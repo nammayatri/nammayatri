@@ -160,8 +160,8 @@ type FleetUnlinkVehicleAPI =
   Capture "fleetOwnerId" Text
     :> Capture "vehicleNo" Text
     :> Capture "driverId" (Id Common.Driver)
-    :> "unlink"
     :> "fleet"
+    :> "unlink"
     :> Post '[JSON] APISuccess
 
 type FleetRemoveVehicleAPI =

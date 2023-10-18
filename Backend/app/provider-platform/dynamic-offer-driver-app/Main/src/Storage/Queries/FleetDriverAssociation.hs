@@ -72,10 +72,7 @@ instance FromTType' BeamFDVA.FleetDriverAssociation FleetDriverAssociation where
         FleetDriverAssociation
           { id = Id id,
             driverId = Id driverId,
-            fleetOwnerId = fleetOwnerId,
-            isActive = isActive,
-            createdAt = createdAt,
-            updatedAt = updatedAt
+            ..
           }
 
 instance ToTType' BeamFDVA.FleetDriverAssociation FleetDriverAssociation where

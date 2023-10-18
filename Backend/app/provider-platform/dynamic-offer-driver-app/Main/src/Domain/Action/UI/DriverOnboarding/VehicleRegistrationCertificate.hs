@@ -263,10 +263,8 @@ onVerifyRC verificationReq output = do
       mEncryptedRC <- encrypt `mapM` output.registration_number
       modelNamesHashMap <- asks (.modelNamesHashMap)
       let mbFitnessEpiry = convertTextToUTC output.fitness_upto <|> Just (DT.UTCTime (TO.fromOrdinalDate 1900 1) 0)
-      fleetOwnerId <- case output.registration_number of
-        Just regNum -> Just <$> Redis.safeGet (makeFleetOwnerKey regNum)
-        _ -> return Nothing
-      let mVehicleRC = createRC rCConfigs rCInsuranceConfigs output id verificationReq.documentImageId1 now verificationReq.dashboardPassedVehicleVariant modelNamesHashMap <$> mEncryptedRC <*> mbFitnessEpiry <*> fleetOwnerId
+      fleetOwnerId <- maybe (pure Nothing) (Redis.safeGet . makeFleetOwnerKey) output.registration_number
+      let mVehicleRC = createRC rCConfigs rCInsuranceConfigs output id verificationReq.documentImageId1 now verificationReq.dashboardPassedVehicleVariant fleetOwnerId modelNamesHashMap <$> mEncryptedRC <*> mbFitnessEpiry
       case mVehicleRC of
         Just vehicleRC -> do
           RCQuery.upsert vehicleRC
@@ -420,12 +418,12 @@ createRC ::
   Id Image.Image ->
   UTCTime ->
   Maybe Vehicle.Variant ->
+  Maybe Text ->
   HML.Map Text Text ->
   EncryptedHashedField 'AsEncrypted Text ->
   UTCTime ->
-  Maybe Text ->
   Domain.VehicleRegistrationCertificate
-createRC rcconfigs rcInsurenceConfigs output id imageId now mbVariant modelNamesHashMap edl expiry mbFleetOwnerId = do
+createRC rcconfigs rcInsurenceConfigs output id imageId now mbVariant mbFleetOwnerId modelNamesHashMap edl expiry = do
   let insuranceValidity = convertTextToUTC output.insurance_validity
   let vehicleClass = output.vehicle_class
   let vehicleCapacity = (readMaybe . T.unpack) =<< output.seating_capacity

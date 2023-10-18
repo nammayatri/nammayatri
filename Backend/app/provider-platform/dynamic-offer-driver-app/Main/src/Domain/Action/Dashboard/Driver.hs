@@ -116,10 +116,10 @@ import qualified Storage.Queries.DriverFee as QDF
 import qualified Storage.Queries.DriverInformation as QDriverInfo
 import qualified Storage.Queries.DriverOnboarding.AadhaarVerification as AV
 import qualified Storage.Queries.DriverOnboarding.DriverLicense as QDriverLicense
+import qualified Storage.Queries.DriverOnboarding.DriverRCAssociation as QDRCA
 import qualified Storage.Queries.DriverOnboarding.DriverRCAssociation as QRCAssociation
 import qualified Storage.Queries.DriverOnboarding.Status as QDocStatus
 import qualified Storage.Queries.DriverOnboarding.VehicleRegistrationCertificate as RCQuery
-import qualified Storage.Queries.DriverRCAssociation as QDRCA
 import qualified Storage.Queries.FleetDriverAssociation as FDV
 import qualified Storage.Queries.Invoice as QINV
 import qualified Storage.Queries.Person as QPerson
