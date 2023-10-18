@@ -44,21 +44,13 @@ import android.text.SpannableString;
 import android.text.Spanned;
 import android.text.style.StyleSpan;
 import android.util.Log;
-
-import androidx.annotation.RequiresApi;
-import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.app.NotificationCompat;
 import androidx.core.app.NotificationManagerCompat;
-
 import com.google.firebase.analytics.FirebaseAnalytics;
-
 import org.json.JSONException;
 import org.json.JSONObject;
-
-import java.io.BufferedReader;
 import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.text.SimpleDateFormat;
@@ -69,11 +61,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Random;
 import java.util.TimeZone;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-
 import javax.net.ssl.HttpsURLConnection;
-
 import in.juspay.mobility.app.callbacks.CallBack;
 
 
@@ -81,7 +69,6 @@ public class NotificationUtils {
 
     private static final String LOG_TAG = "LocationServices";
     private static final String TAG = "NotificationUtils";
-
     public static String CHANNEL_ID = "General";
     public static String FLOATING_NOTIFICATION = "FLOATING_NOTIFICATION";
     public static String DRIVER_HAS_REACHED = "DRIVER_HAS_REACHED";
@@ -97,14 +84,12 @@ public class NotificationUtils {
     public static Uri soundUri = null;
     public static OverlaySheetService.OverlayBinder binder;
     public static ArrayList<Bundle> listData = new ArrayList<>();
-
     @SuppressLint("MissingPermission")
     private static FirebaseAnalytics mFirebaseAnalytics;
     static Random rand = new Random();
     public static int notificationId = rand.nextInt(1000000);
     public static MediaPlayer mediaPlayer;
     public static Bundle lastRideReq = new Bundle();
-//    public static  String versionName = BuildConfig.VERSION_NAME;
 
     private static final ArrayList<CallBack> callBack = new ArrayList<>();
 
@@ -218,25 +203,34 @@ public class NotificationUtils {
                         }, BIND_AUTO_CREATE);
                     } else {
                         if (overlayFeatureNotAvailable(context)) {
-                            try {
-                                mFirebaseAnalytics.logEvent("low_ram_device", params);
-                                if (RideRequestActivity.getInstance() == null) {
-                                    Intent intent = new Intent(context.getApplicationContext(), RideRequestActivity.class);
-                                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
-                                    intent.putExtras(sheetData);
-                                    context.getApplicationContext().startActivity(intent);
-                                } else {
-                                    RideRequestActivity.getInstance().addToList(sheetData);
+                            Handler handler = new Handler(Looper.getMainLooper());
+                            handler.postDelayed(() -> {
+                                try {
+                                    String reqId = entity_payload.getString("searchRequestId");
+                                    boolean isClearedReq = MyFirebaseMessagingService.clearedRideRequest.containsKey(reqId);
+                                    if (isClearedReq){
+                                        MyFirebaseMessagingService.clearedRideRequest.remove(reqId);
+                                        return;
+                                    }
+                                    mFirebaseAnalytics.logEvent("low_ram_device", params);
+                                    if (RideRequestActivity.getInstance() == null) {
+                                        Intent intent = new Intent(context.getApplicationContext(), RideRequestActivity.class);
+                                        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
+                                        intent.putExtras(sheetData);
+                                        context.getApplicationContext().startActivity(intent);
+                                    } else {
+                                        RideRequestActivity.getInstance().addToList(sheetData);
+                                    }
+                                    lastRideReq = new Bundle();
+                                    lastRideReq.putAll(sheetData);
+                                    lastRideReq.putBoolean("rideReqExpired", rideReqExpired);
+                                    startMediaPlayer(context, R.raw.allocation_request, true);
+                                    RideRequestUtils.createRideRequestNotification(context);
+                                } catch (Exception e) {
+                                    params.putString("exception", e.toString());
+                                    mFirebaseAnalytics.logEvent("exception_in_opening_ride_req_activity", params);
                                 }
-                                lastRideReq = new Bundle();
-                                lastRideReq.putAll(sheetData);
-                                lastRideReq.putBoolean("rideReqExpired", rideReqExpired);
-                                startMediaPlayer(context, R.raw.allocation_request, true);
-                                RideRequestUtils.createRideRequestNotification(context);
-                            } catch (Exception e) {
-                                params.putString("exception", e.toString());
-                                mFirebaseAnalytics.logEvent("exception_in_opening_ride_req_activity", params);
-                            }
+                            }, (sheetData.getInt("keepHiddenForSeconds", 0) * 1000L));
                         }
 
 //                        Log.i("notificationCallback_size", Integer.toString(notificationCallback.size()));
@@ -267,17 +261,33 @@ public class NotificationUtils {
                       }
                   }
             }
-
-            if (notificationType.equals(context.getString(R.string.CLEARED_FARE)) || notificationType.equals(context.getString(R.string.CANCELLED_SEARCH_REQUEST))) {
-                if (binder != null) {
-                    if (!binder.getService().removeCardById(data.getString(context.getString(R.string.entity_ids))))
-                    {
-                        MyFirebaseMessagingService.clearedRideRequest.put(data.getString("entity_ids"),System.currentTimeMillis());
-                    }
-                }
-            }
+            handleClearedReq(context, notificationType, data);
         } catch (Exception e) {
             e.printStackTrace();
+        }
+    }
+
+
+
+    private static void handleClearedReq (Context context, String notificationType, JSONObject data) throws JSONException {
+        if (notificationType.equals(context.getString(R.string.CLEARED_FARE)) || notificationType.equals(context.getString(R.string.CANCELLED_SEARCH_REQUEST))) {
+            if (binder != null) {
+                if (!binder.getService().removeCardById(data.getString(context.getString(R.string.entity_ids))))
+                {
+                    MyFirebaseMessagingService.clearedRideRequest.put(data.getString("entity_ids"),System.currentTimeMillis());
+                }
+            }
+            if (overlayFeatureNotAvailable(context)){
+                RideRequestActivity requestActivity =  RideRequestActivity.getInstance();
+                if (requestActivity != null){
+                    boolean isCardRemoved = RideRequestActivity.getInstance().removeCardById(data.getString(context.getString(R.string.entity_ids)));
+                    if (!isCardRemoved) {
+                        MyFirebaseMessagingService.clearedRideRequest.put(data.getString("entity_ids"),System.currentTimeMillis());
+                    }
+                } else {
+                    MyFirebaseMessagingService.clearedRideRequest.put(data.getString("entity_ids"),System.currentTimeMillis());
+                }
+            }
         }
     }
 
