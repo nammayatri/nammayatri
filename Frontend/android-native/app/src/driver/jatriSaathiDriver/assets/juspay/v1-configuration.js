@@ -6,7 +6,7 @@ window.getMerchantConfig = function () {
     "USER_APP_LINK" : "https://nammayatri.in/link/rider/kTZ1",
     "PRIVACY_POLICY_LINK": "https://docs.google.com/document/d/1-bcjLOZ_gR0Rda2BNmkKnqVds8Pm23v1e7JbSDdM70E",
     "SPECIAL_ZONE_OTP_VIEW": "true",
-    "StringKeys": ["WELCOME_TEXT", "ABOUT_TEXT", "NEED_IT_TO_ENABLE_LOCATION", "CURRENTLY_WE_ALLOW_ONLY_KARNATAKA_REGISTERED_NUMBER", "YOU_ARE_ABOUT_TO_CALL_NAMMA_YATRI_SUPPORT", "YOUR_LOCATION_HELPS_OUR_SYSTEM", "EARNED_ON_APP", "TRAVELLED_ON_APP", "REPORT_ISSUE_CHAT_PLACEHOLDER", "MY_PLAN_TITLE", "CHOOSE_YOUR_PLAN"],
+    "StringKeys": ["WELCOME_TEXT", "ABOUT_TEXT", "NEED_IT_TO_ENABLE_LOCATION", "CURRENTLY_WE_ALLOW_ONLY_KARNATAKA_REGISTERED_NUMBER", "YOU_ARE_ABOUT_TO_CALL_NAMMA_YATRI_SUPPORT", "YOUR_LOCATION_HELPS_OUR_SYSTEM", "EARNED_ON_APP", "TRAVELLED_ON_APP", "REPORT_ISSUE_CHAT_PLACEHOLDER", "MY_PLAN_TITLE", "CHOOSE_YOUR_PLAN", "OFFER_CARD_BANNER_TITLE"],
     "fontType": "Assets",
     "currency": "₹",
     "isGradient" : "false",
@@ -20,7 +20,6 @@ window.getMerchantConfig = function () {
     "primaryBackground": "#2C2F3A",
     "showCorporateAddress" : false,
     "imageUploadOptional" : true,
-    "showPaymentDetails" : false,
     "clientName" : "Yatri Sathi",
     "languageList": [{
         "name": "English",
@@ -50,7 +49,8 @@ window.getMerchantConfig = function () {
       "TRAVELLED_ON_APP" : "Travelled On Yatri Sathi",
       "REPORT_ISSUE_CHAT_PLACEHOLDER" : "Describe your issue. Yatri Sathi will try to resolve it in under 24 hours.",
       "MY_PLAN_TITLE" : "Yatri Sathi Plans",
-      "CHOOSE_YOUR_PLAN" : "Start your Plan Now!"
+      "CHOOSE_YOUR_PLAN" : "Start your Plan Now!",
+      "OFFER_CARD_BANNER_TITLE" : "Setup Autopay and pay only ₹1/ride from Jan 1-31"
     },
     "hindiStrings": {
       "WELCOME_TEXT": "Welcome to Yatri Sathi Driver App",
@@ -63,7 +63,8 @@ window.getMerchantConfig = function () {
       "TRAVELLED_ON_APP" : "यात्री साथी पर तय की गई दूरी",
       "REPORT_ISSUE_CHAT_PLACEHOLDER" : "अपनी समस्या बताएं। यात्री साथी 24 घंटे के अंदर इसका समाधान करने का प्रयास करेगा।",
       "MY_PLAN_TITLE" : "यात्री साथी प्लान्स",
-      "CHOOSE_YOUR_PLAN" : "अपना प्लान शुरू करें!"
+      "CHOOSE_YOUR_PLAN" : "अपना प्लान शुरू करें!",
+      "OFFER_CARD_BANNER_TITLE" : "ऑटोपे सेटअप करें और 1-31 जनवरी तक केवल ₹1/सवारी का पेमेंट करें"
     },
     "bengaliStrings": {
       "WELCOME_TEXT": "Welcome to Yatri Sathi Driver App",
@@ -76,7 +77,8 @@ window.getMerchantConfig = function () {
       "TRAVELLED_ON_APP" : "যাত্রী সাথীতে দূরত্ব ভ্রমণ",
       "REPORT_ISSUE_CHAT_PLACEHOLDER" : "আপনার সমস্যাটি বর্ণনা করুন। যাত্রী সাথী 24 ঘন্টার মধ্যে এটি সমাধান করার চেষ্টা করবেন।",
       "MY_PLAN_TITLE" : "যাত্রী সাথী পরিকল্পনা",
-      "CHOOSE_YOUR_PLAN" : "এখন প্ল্যান শুরু করুন!"
+      "CHOOSE_YOUR_PLAN" : "এখন প্ল্যান শুরু করুন!",
+      "OFFER_CARD_BANNER_TITLE" : "অটোপে সেটআপ করুন এবং জানুয়ারী 1-31 এর মধ্যে শুধুমাত্র ₹1/রাইড প্রদান করুন"
     },
     "logs": ["JUSPAY","FIREBASE","CLEVERTAP"]
     , "fontName" : "PlusJakartaSans"
@@ -91,10 +93,17 @@ window.getMerchantConfig = function () {
     , "subscriptionConfig" : {
       "completePaymentPopup" : true,
       "supportNumber" : "033-44400030",
+      "maxDuesLimit" : 500.0,
       "faqLink" : "https://yatrisathi.in/plans/",
       "optionsMenuItems" : {
         "viewFaqs" : true,
         "viewAutopayDetails" : true
+      },
+      "offerBannerConfig" : {
+        "showDUOfferBanner" : true,
+        "offerBannerValidTill" : "2023-11-01T00:00:00",
+        "offerBannerDeadline" : "Jan 1-31-*$*-ಜನವರಿ 1-31-*$*-1-31 जनवरी-*$*-ஜனவரி 1-31-*$*-জানুয়ারী 1-31",
+        "offerBannerPlans" : ["25ade579-fd9c-4288-a015-337af085e66c"],
       },
       "gradientConfig" : [{"id" : "c1a27b2c-8287-4d79-a5d9-99e1a0026203", colors : ["#29FF4D35", "#29FFE588"]}]
     } 

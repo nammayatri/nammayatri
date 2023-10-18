@@ -39,9 +39,7 @@ type SubscriptionConfig =  {
   enableBlocking :: Boolean,
   completePaymentPopup :: Boolean,
   onBoardingSubscription :: Boolean,
-  showDUOfferBanner :: Boolean,
-  offerBannerValidTill :: String,
-  offerBannerDeadline :: String,
+  offerBannerConfig :: SubscriptionOfferBannerConfig,
   lowDuesLimit :: Number,
   maxDuesLimit :: Number,
   highDueWarningLimit :: Number,
@@ -56,6 +54,13 @@ type SubscriptionConfig =  {
   optionsMenuItems :: SubscriptionOptionsMenuItems,
   gradientConfig :: Array GradientConfig
  }
+
+type SubscriptionOfferBannerConfig = {
+  showDUOfferBanner :: Boolean,
+  offerBannerValidTill :: String,
+  offerBannerDeadline :: String,
+  offerBannerPlans :: Array String
+}
 
 type SubscriptionOptionsMenuItems = {
   managePlan :: Boolean,

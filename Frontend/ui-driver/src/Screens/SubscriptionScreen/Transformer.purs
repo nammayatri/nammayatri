@@ -150,7 +150,7 @@ alternatePlansTransformer (UiPlansResp planResp) state =
 
 getAutoPayDetailsList :: MandateData -> Array KeyValType
 getAutoPayDetailsList (MandateData mandateDetails) = 
-    [   {key : getString MAX_AMOUNT, val : "₹" <> show mandateDetails.maxAmount},
+    [   {key : getString MAX_AMOUNT, val : "₹" <> getFixedTwoDecimals mandateDetails.maxAmount},
         {key : getString FREQUENCY, val : getFrequencyText mandateDetails.frequency},
         {key : getString STATRED_ON, val : convertUTCtoISC  mandateDetails.startDate "Do MMM YYYY"},
         {key : getString EXPIRES_ON, val : convertUTCtoISC  mandateDetails.endDate "Do MMM YYYY"}

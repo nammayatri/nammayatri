@@ -363,6 +363,7 @@ eval AfterRender state = continue state { props { mapRendered = true}}
 
 eval BackPressed state = do
   if state.props.showGenericAccessibilityPopUp then continue state{props{showGenericAccessibilityPopUp = false}}
+  else if state.props.showRideRating then continue state{props{showRideRating = false}}
   else if state.props.currentStage == ST.RideCompleted then do
     _ <- pure $ minimizeApp ""
     continue state
@@ -386,6 +387,7 @@ eval BackPressed state = do
   else if state.data.driverGotoState.confirmGotoCancel then continue state { data { driverGotoState { confirmGotoCancel = false }}} 
   else if state.data.driverGotoState.showGoto then continue state { data { driverGotoState { showGoto = false }}} 
   else if state.data.driverGotoState.goToPopUpType /= ST.NO_POPUP_VIEW then continue state { data { driverGotoState { goToPopUpType = ST.NO_POPUP_VIEW }}} 
+  else if state.props.showRideRating then continue state{props{showRideRating = false}}
   else do
     _ <- pure $ minimizeApp ""
     continue state
@@ -905,6 +907,10 @@ eval (RCDeactivatedAC PopUpModal.OnButton1Click) state = exit $ GoToVehicleDetai
 eval (RCDeactivatedAC PopUpModal.OnButton2Click) state = continue state {props {rcDeactivePopup = false}}
 
 eval (AccessibilityBannerAction (Banner.OnClick)) state = continue state{props{showGenericAccessibilityPopUp = true}}
+
+eval (PaymentBannerAC (Banner.OnClick)) state = do
+  _ <- pure $ showDialer state.data.config.subscriptionConfig.supportNumber false
+  continue state
 
 eval _ state = continue state
 

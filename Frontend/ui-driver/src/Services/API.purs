@@ -2556,7 +2556,7 @@ instance encodeOfferEntity :: Encode OfferEntity where encode = defaultEncode
 newtype SubscribePlanReq = SubscribePlanReq String
 
 newtype SubscribePlanResp = SubscribePlanResp {
-  orderResp :: CreateOrderRes,
+  orderResp :: CreateOrderRes, 
   orderId :: String
 }
 

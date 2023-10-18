@@ -482,6 +482,8 @@ offerCardBannerConfig isPlanCard bannerProps=
             "KN_IN" | len > 1 -> 1
             "HI_IN" | len > 2 -> 2
             "TA_IN" | len > 3 -> 3
+            "BN_IN" | len > 4 -> 4
+            "ML_IN" | len > 5 -> 5
             _ -> 0
     date = Mb.fromMaybe "" (strArray DA.!! (getLanguage (DA.length strArray)))
     title' = getVarString OFFER_CARD_BANNER_TITLE [date]
@@ -493,7 +495,10 @@ offerCardBannerConfig isPlanCard bannerProps=
         titleColor = Color.black800,
         actionText = getString OFFER_CARD_BANNER_DESC,
         actionTextColor = Color.black800,
-        imageUrl = "ny_ic_autopay_setup_banner,"<>(HU.getAssetStoreLink FunctionCall)<>"ny_ic_autopay_setup_banner.png",
+        imageUrl = case getValueToLocalStore LANGUAGE_KEY of
+                      "HI_IN" -> "ny_ic_autopay_setup_banner_hi,"<>(HU.getAssetStoreLink FunctionCall)<>"ny_ic_autopay_setup_banner_hi.png"
+                      "BN_IN" -> "ny_ic_autopay_setup_banner_bn,"<>(HU.getAssetStoreLink FunctionCall)<>"ny_ic_autopay_setup_banner_bn.png"
+                      _       -> "ny_ic_autopay_setup_banner,"<>(HU.getAssetStoreLink FunctionCall)<>"ny_ic_autopay_setup_banner.png",
         isBanner = true,
         alertText = getString OFFER_CARD_BANNER_ALERT,
         alertTextColor = Color.red,

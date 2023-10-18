@@ -530,7 +530,6 @@ aadhaarVerificationFlow = do
       deleteValueFromLocalStore BUNDLE_VERSION
       deleteValueFromLocalStore DRIVER_ID
       deleteValueFromLocalStore SET_ALTERNATE_TIME
-      deleteValueFromLocalStore TIMES_OPENED_NEW_SUBSCRIPTION
       _ <- pure $ firebaseLogEvent "logout"
       pure $ factoryResetApp ""
       loginFlow
@@ -590,7 +589,6 @@ uploadDrivingLicenseFlow = do
       deleteValueFromLocalStore SET_ALTERNATE_TIME
       deleteValueFromLocalStore ONBOARDING_SUBSCRIPTION_SCREEN_COUNT
       deleteValueFromLocalStore FREE_TRIAL_DAYS
-      deleteValueFromLocalStore TIMES_OPENED_NEW_SUBSCRIPTION
       pure $ factoryResetApp ""
       _ <- lift $ lift $ liftFlow $ logEvent logField_ "logout"
       loginFlow
@@ -701,7 +699,6 @@ addVehicleDetailsflow addRcFromProf = do
       deleteValueFromLocalStore SET_ALTERNATE_TIME
       deleteValueFromLocalStore ONBOARDING_SUBSCRIPTION_SCREEN_COUNT
       deleteValueFromLocalStore FREE_TRIAL_DAYS
-      deleteValueFromLocalStore TIMES_OPENED_NEW_SUBSCRIPTION
       pure $ factoryResetApp ""
       _ <- lift $ lift $ liftFlow $ logEvent logField_  "logout"
       loginFlow
@@ -804,7 +801,6 @@ applicationSubmittedFlow screenType = do
       deleteValueFromLocalStore SET_ALTERNATE_TIME
       deleteValueFromLocalStore ONBOARDING_SUBSCRIPTION_SCREEN_COUNT
       deleteValueFromLocalStore FREE_TRIAL_DAYS
-      deleteValueFromLocalStore TIMES_OPENED_NEW_SUBSCRIPTION
       pure $ factoryResetApp ""
       _ <- lift $ lift $ liftFlow $ logEvent logField_ "logout"
       loginFlow
@@ -843,7 +839,6 @@ driverProfileFlow = do
       deleteValueFromLocalStore SET_ALTERNATE_TIME
       deleteValueFromLocalStore ONBOARDING_SUBSCRIPTION_SCREEN_COUNT
       deleteValueFromLocalStore FREE_TRIAL_DAYS
-      deleteValueFromLocalStore TIMES_OPENED_NEW_SUBSCRIPTION
       pure $ factoryResetApp ""
       _ <- lift $ lift $ liftFlow $ logEvent logField_ "logout"
       loginFlow
@@ -2376,7 +2371,7 @@ ackScreenFlow = do
 subScriptionFlow :: FlowBT String Unit
 subScriptionFlow = do
   appConfig <- getAppConfig Constants.appConfig 
-  modifyScreenState $ SubscriptionScreenStateType (\subscriptionScreen -> subscriptionScreen{data{config = appConfig.subscriptionConfig, bottomNavConfig = appConfig.bottomNavConfig},props{isSelectedLangTamil = (getValueToLocalNativeStore LANGUAGE_KEY) == "TA_IN", offerBannerProps {showOfferBanner = appConfig.subscriptionConfig.showDUOfferBanner, offerBannerValidTill = appConfig.subscriptionConfig.offerBannerValidTill, offerBannerDeadline = appConfig.subscriptionConfig.offerBannerDeadline}}})
+  modifyScreenState $ SubscriptionScreenStateType (\subscriptionScreen -> subscriptionScreen{data{config = appConfig.subscriptionConfig, bottomNavConfig = appConfig.bottomNavConfig},props{isSelectedLangTamil = (getValueToLocalNativeStore LANGUAGE_KEY) == "TA_IN", offerBannerProps {showOfferBanner = appConfig.subscriptionConfig.offerBannerConfig.showDUOfferBanner, offerBannerValidTill = appConfig.subscriptionConfig.offerBannerConfig.offerBannerValidTill, offerBannerDeadline = appConfig.subscriptionConfig.offerBannerConfig.offerBannerDeadline}}})
   void $ lift $ lift $ loaderText (getString LOADING) (getString PLEASE_WAIT_WHILE_IN_PROGRESS)
   uiAction <- UI.subscriptionScreen
   case uiAction of
@@ -2793,15 +2788,17 @@ updateBannerAndPopupFlags = do
       freeTrialDays = fromMaybe 0 getDriverInfoResp.freeTrialDaysLeft
       shouldShowPopup = getValueToLocalStore APP_SESSION_TRACK_COUNT == "true" && getValueToLocalNativeStore IS_RIDE_ACTIVE == "false" && (isOnFreeTrial FunctionCall || (pendingTotalManualDues /= 0.0)) && getDriverInfoResp.subscribed && appConfig.subscriptionConfig.enableSubscriptionPopups
       autoPayStatus = getAutopayStatus getDriverInfoResp.autoPayStatus
-      autopayBannerType = case autoPayNotActive, isOnFreeTrial FunctionCall, (pendingTotalManualDues /= 0.0) of
-                              true, true, _  -> FREE_TRIAL_BANNER
-                              _, false, true -> do
-                                          if pendingTotalManualDues < subscriptionConfig.lowDuesLimit then LOW_DUES_BANNER
-                                          else if pendingTotalManualDues >= subscriptionConfig.lowDuesLimit && pendingTotalManualDues < subscriptionConfig.highDueWarningLimit then CLEAR_DUES_BANNER
-                                          else if pendingTotalManualDues >= subscriptionConfig.highDueWarningLimit && pendingTotalManualDues < subscriptionConfig.maxDuesLimit then DUE_LIMIT_WARNING_BANNER
-                                          else NO_SUBSCRIPTION_BANNER
-                              true, _, _ -> if isNothing getDriverInfoResp.autoPayStatus then NO_SUBSCRIPTION_BANNER else SETUP_AUTOPAY_BANNER
-                              _, _, _        -> NO_SUBSCRIPTION_BANNER
+      autopayBannerType = if subscriptionConfig.enableSubscriptionPopups then
+                            case autoPayNotActive, isOnFreeTrial FunctionCall, (pendingTotalManualDues /= 0.0) of
+                                true, true, _  -> FREE_TRIAL_BANNER
+                                _, false, true -> do
+                                            if pendingTotalManualDues < subscriptionConfig.lowDuesLimit then LOW_DUES_BANNER
+                                            else if pendingTotalManualDues >= subscriptionConfig.lowDuesLimit && pendingTotalManualDues < subscriptionConfig.highDueWarningLimit then CLEAR_DUES_BANNER
+                                            else if pendingTotalManualDues >= subscriptionConfig.highDueWarningLimit && pendingTotalManualDues < subscriptionConfig.maxDuesLimit then DUE_LIMIT_WARNING_BANNER
+                                            else NO_SUBSCRIPTION_BANNER
+                                true, _, _ -> if isNothing getDriverInfoResp.autoPayStatus then NO_SUBSCRIPTION_BANNER else SETUP_AUTOPAY_BANNER
+                                _, _, _        -> NO_SUBSCRIPTION_BANNER
+                          else NO_SUBSCRIPTION_BANNER
       subscriptionPopupType = case isOnFreeTrial FunctionCall, autoPayNotActive, shouldShowPopup of
                                   true, _, true -> case freeTrialDays of
                                                       _ | freeTrialDays == 3 || freeTrialDays == 2 || freeTrialDays == 1 -> FREE_TRIAL_POPUP
