@@ -16,6 +16,7 @@ module Storage.Queries.DriverInformation.Internal where
 
 import qualified Domain.Types.DriverInformation as DriverInfo
 import qualified Domain.Types.Person as DP
+import qualified Domain.Types.SearchRequest as DSR
 import Kernel.Beam.Functions (findAllWithKV)
 import Kernel.Prelude
 import Kernel.Types.App (MonadFlow)
@@ -31,8 +32,8 @@ getDriverInfos ::
 getDriverInfos personKeys = do
   findAllWithKV [Se.Is BeamDI.driverId $ Se.In personKeys]
 
-getDriverInfosWithCond :: MonadFlow m => [Id DP.Person] -> Bool -> Bool -> m [DriverInfo.DriverInformation]
-getDriverInfosWithCond driverLocs onlyNotOnRide onlyOnRide =
+getDriverInfosWithCond :: MonadFlow m => [Id DP.Person] -> Bool -> Bool -> DSR.SearchRequestTag -> m [DriverInfo.DriverInformation]
+getDriverInfosWithCond driverLocs onlyNotOnRide onlyOnRide searchRequestTag =
   findAllWithKV
     [ Se.And
         ( [ Se.Is BeamDI.driverId $ Se.In personsKeys,
@@ -52,6 +53,7 @@ getDriverInfosWithCond driverLocs onlyNotOnRide onlyOnRide =
             Se.Is BeamDI.blocked $ Se.Eq False
           ]
             <> ([Se.Is BeamDI.onRide $ Se.Eq (not onlyNotOnRide) | not (onlyNotOnRide && onlyOnRide)])
+            <> ([Se.Is BeamDI.optForRental $ Se.Eq True | searchRequestTag == DSR.RENTAL])
         )
     ]
   where

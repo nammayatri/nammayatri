@@ -11,6 +11,7 @@ import qualified Domain.Types.Booking as DB
 import Domain.Types.DriverInformation as DriverInfo
 import Domain.Types.Merchant
 import Domain.Types.Person as Person
+import qualified Domain.Types.SearchRequest as DSR
 import Domain.Types.Vehicle as DV
 import Kernel.External.Maps as Maps
 import qualified Kernel.External.Notification.FCM.Types as FCM
@@ -48,16 +49,17 @@ data NearestDriversResultCurrentlyOnRide = NearestDriversResultCurrentlyOnRide
 getNearestDriversCurrentlyOnRide ::
   (MonadFlow m, MonadTime m, MonadReader r m, LT.HasLocationService m r, CoreMetrics m) =>
   Maybe Variant ->
+  DSR.SearchRequestTag ->
   LatLong ->
   Meters ->
   Id Merchant ->
   Maybe Seconds ->
   Meters ->
   m [NearestDriversResultCurrentlyOnRide]
-getNearestDriversCurrentlyOnRide mbVariant fromLocLatLong radiusMeters merchantId mbDriverPositionInfoExpiry reduceRadiusValue = do
+getNearestDriversCurrentlyOnRide mbVariant searchRequestTag fromLocLatLong radiusMeters merchantId mbDriverPositionInfoExpiry reduceRadiusValue = do
   let onRideRadius = radiusMeters - reduceRadiusValue
   driverLocs' <- Int.getDriverLocsWithCond merchantId mbDriverPositionInfoExpiry fromLocLatLong onRideRadius
-  driverInfos' <- Int.getDriverInfosWithCond (driverLocs' <&> (.driverId)) False True
+  driverInfos' <- Int.getDriverInfosWithCond (driverLocs' <&> (.driverId)) False True searchRequestTag
   vehicles' <- Int.getVehicles driverInfos'
   drivers' <- Int.getDrivers vehicles'
   driverQuote' <- Int.getDriverQuote $ map ((.getId) . (.id)) drivers'

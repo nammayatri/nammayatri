@@ -336,17 +336,17 @@ handler merchant sReq' =
       let merchantId = merchant.id
       if null farePolicies
         then do
-          logDebug "Trip doesnot match any fare policy constraints."
+          logDebug "Trip does not match any fare policy constraints."
           return []
         else do
-          driverPoolNotOnRide <- calculateDriverPool Estimate driverPoolCfg Nothing fromLocation merchantId True Nothing
+          driverPoolNotOnRide <- calculateDriverPool Estimate driverPoolCfg Nothing DSR.ON_DEMAND fromLocation merchantId True Nothing
           logDebug $ "Driver Pool not on ride " <> show driverPoolNotOnRide
           driverPoolCurrentlyOnRide <-
             if null driverPoolNotOnRide
               then do
                 transporter <- CTC.findByMerchantId merchantId >>= fromMaybeM (TransporterConfigDoesNotExist merchantId.getId)
                 if transporter.includeDriverCurrentlyOnRide
-                  then calculateDriverPoolCurrentlyOnRide Estimate driverPoolCfg Nothing fromLocation merchantId Nothing
+                  then calculateDriverPoolCurrentlyOnRide Estimate driverPoolCfg Nothing DSR.ON_DEMAND fromLocation merchantId Nothing
                   else pure []
               else pure []
           let driverPool =
