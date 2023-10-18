@@ -192,6 +192,8 @@ planList (driverId, merchantId) _mbLimit _mbOffset = do
 currentPlan :: (Id SP.Person, Id DM.Merchant) -> Flow CurrentPlanRes
 currentPlan (driverId, _merchantId) = do
   driverInfo <- DI.findById (cast driverId) >>= fromMaybeM (PersonNotFound driverId.getId)
+  transporterConfig <- QTC.findByMerchantId _merchantId >>= fromMaybeM (TransporterConfigNotFound _merchantId.getId)
+  let allowAtMerchantLevel = isJust transporterConfig.driverFeeCalculationTime --- to do : temporary fix will resolve in future
   mDriverPlan <- B.runInReplica $ QDPlan.findByDriverId driverId
   mPlan <- maybe (pure Nothing) (\p -> QPD.findByIdAndPaymentMode p.planId (maybe AUTOPAY (.planType) mDriverPlan)) mDriverPlan
   mandateDetailsEntity <- mkMandateDetailEntity (join (mDriverPlan <&> (.mandateId)))
@@ -203,7 +205,7 @@ currentPlan (driverId, _merchantId) = do
   let mbMandateSetupDate = mDriverPlan >>= (.mandateSetupDate)
   let mandateSetupDate = maybe now (\date -> if checkIFActiveStatus driverInfo.autoPayStatus then date else now) mbMandateSetupDate
   currentPlanEntity <- maybe (pure Nothing) (convertPlanToPlanEntity driverId mandateSetupDate True >=> (pure . Just)) mPlan
-  mbInvoice <- listToMaybe <$> QINV.findLatestNonAutopayActiveByDriverId driverId
+  mbInvoice <- listToMaybe <$> QINV.findLatestNonAutopayActiveByDriverId driverId allowAtMerchantLevel
   (orderId, lastPaymentType) <-
     case mbInvoice of
       Just invoice -> do
@@ -363,7 +365,7 @@ validateInActiveMandateExists driverId driverPlan = do
 createMandateInvoiceAndOrder :: Id SP.Person -> Id DM.Merchant -> Plan -> Flow (Payment.CreateOrderResp, Id DOrder.PaymentOrder)
 createMandateInvoiceAndOrder driverId merchantId plan = do
   transporterConfig <- QTC.findByMerchantId merchantId >>= fromMaybeM (TransporterConfigNotFound merchantId.getId)
-  let allowAtMerchantLevel = isJust transporterConfig.driverFeeCalculationTime
+  let allowAtMerchantLevel = isJust transporterConfig.driverFeeCalculationTime --- to do : temporary fix will resolve in future
   driverManualDuesFees <- if allowAtMerchantLevel then QDF.findAllByStatusAndDriverId driverId [DF.PAYMENT_OVERDUE] else return []
   driverRegisterationFee <- QDF.findLatestRegisterationFeeByDriverId (cast driverId)
   now <- getCurrentTime

@@ -160,13 +160,14 @@ findLatestAutopayActiveByDriverFeeId driverFeeId = do
     (Just 1)
     Nothing
 
-findLatestNonAutopayActiveByDriverId :: MonadFlow m => Id Person -> m [Domain.Invoice]
-findLatestNonAutopayActiveByDriverId driverId = do
+findLatestNonAutopayActiveByDriverId :: MonadFlow m => Id Person -> Bool -> m [Domain.Invoice]
+findLatestNonAutopayActiveByDriverId driverId isAllowedManual = do
+  let allowedTypes = [Domain.MANDATE_SETUP_INVOICE] <> [Domain.MANUAL_INVOICE | isAllowedManual]
   findAllWithOptionsKV
     [ Se.And
         [ Se.Is BeamI.driverId $ Se.Eq (getId driverId),
           Se.Is BeamI.invoiceStatus $ Se.Eq Domain.ACTIVE_INVOICE,
-          Se.Is BeamI.paymentMode $ Se.Not $ Se.Eq Domain.AUTOPAY_INVOICE
+          Se.Is BeamI.paymentMode $ Se.In allowedTypes
         ]
     ]
     (Se.Desc BeamI.createdAt)
