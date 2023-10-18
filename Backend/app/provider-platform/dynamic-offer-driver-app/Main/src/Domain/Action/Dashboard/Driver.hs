@@ -81,6 +81,7 @@ import qualified Domain.Types.DriverStats as DDriverStats
 import qualified Domain.Types.Invoice as INV
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
+import qualified Domain.Types.Ride as SRide
 import qualified Domain.Types.Vehicle as DVeh
 import Environment
 import Kernel.Beam.Functions as B
@@ -96,6 +97,7 @@ import Lib.Scheduler.JobStorageType.SchedulerType as JC
 import SharedLogic.Allocator
 import qualified SharedLogic.DeleteDriver as DeleteDriver
 import qualified SharedLogic.DriverFee as SLDriverFee
+import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
 import Storage.CachedQueries.DriverBlockReason as DBR
@@ -104,6 +106,7 @@ import qualified Storage.Queries.Driver.DriverFlowStatus as QDFS
 import qualified Storage.Queries.Driver.GoHomeFeature.DriverHomeLocation as QDHL
 import Storage.Queries.DriverFee (findPendingFeesByDriverId)
 import qualified Storage.Queries.DriverFee as QDF
+import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.DriverInformation as QDriverInfo
 import qualified Storage.Queries.DriverOnboarding.AadhaarVerification as AV
 import qualified Storage.Queries.DriverOnboarding.DriverLicense as QDriverLicense
@@ -989,16 +992,19 @@ data InvoiceInfoToUpdateAfterParse = InvoiceInfoToUpdateAfterParse
 ---------------------------------------------------------------------
 clearOnRideStuckDrivers :: ShortId DM.Merchant -> Maybe Int -> Flow Common.ClearOnRideStuckDriversRes
 clearOnRideStuckDrivers merchantShortId dbSyncTime = do
-  _merchant <- findMerchantByShortId merchantShortId
+  merchant <- findMerchantByShortId merchantShortId
   now <- getCurrentTime
   let dbSyncInterVal = addUTCTime (fromIntegral (- fromMaybe 1 dbSyncTime) * 60) now
-  driverInfos <- B.runInReplica $ QPerson.getOnRideStuckDriverIds dbSyncInterVal
+  driverInfosAndRideDetails <- B.runInReplica $ QPerson.getOnRideStuckDriverIds dbSyncInterVal
   driverIds <-
     mapM
-      ( \driverInf -> do
-          return (cast driverInf.driverId)
+      ( \dI -> do
+          QDI.updateOnRide (cast dI.driverInfo.driverId) False
+          void $ LF.rideDetails dI.ride.id SRide.CANCELLED merchant.id dI.ride.driverId dI.ride.fromLocation.lat dI.ride.fromLocation.lon
+          return (cast dI.driverInfo.driverId)
       )
-      driverInfos
+      driverInfosAndRideDetails
+
   return Common.ClearOnRideStuckDriversRes {driverIds = driverIds}
 
 ---------------------------------------------------------------------

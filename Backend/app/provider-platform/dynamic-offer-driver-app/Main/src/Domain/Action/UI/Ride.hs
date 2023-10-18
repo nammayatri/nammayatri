@@ -250,6 +250,7 @@ otpRideCreate driver otpCode booking = do
   void $ LF.rideDetails ride.id ride.status transporter.id ride.driverId booking.fromLocation.lat booking.fromLocation.lon
   QBooking.updateStatus booking.id DRB.TRIP_ASSIGNED
   QRide.createRide ride
+  QDI.updateOnRide (cast driver.id) True
 
   QDFS.updateStatus driver.id DDFS.RIDE_ASSIGNED {rideId = ride.id}
   QRideD.create rideDetails
