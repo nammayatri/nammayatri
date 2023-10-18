@@ -643,5 +643,6 @@ const bengaliStrings = {
   "VIEW_DRIVER_RECEIPT" : "ড্রাইভারের রসিদ দেখুন",
   "DRIVER_RECEIPT" : "ড্রাইভার রসিদ",
   "HELP" : "সাহায্য",
-  "FARE_INFO_TEXT" : ""
+  "FARE_INFO_TEXT" : "",
+  "FASTER" : "দ্রুততর"
 }

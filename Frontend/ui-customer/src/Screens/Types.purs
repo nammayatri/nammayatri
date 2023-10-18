@@ -704,6 +704,7 @@ type HomeScreenStateProps =
   , showDisabilityPopUp :: Boolean
   , isChatNotificationDismissed :: Boolean
   , searchLocationModelProps :: SearchLocationModelProps
+  , flowWithoutOffers :: Boolean
   }
 
 type SearchLocationModelProps = {

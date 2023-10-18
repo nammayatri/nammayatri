@@ -624,5 +624,6 @@ const kannadaStrings = {
   "VIEW_DRIVER_RECEIPT" : "ಚಾಲಕ ರಶೀದಿಯನ್ನು ವೀಕ್ಷಿಸಿ",
   "DRIVER_RECEIPT" : "ಚಾಲಕ ರಶೀದಿ",
   "HELP" : "ಸಹಾಯ",
-  "FARE_INFO_TEXT" : ""
+  "FARE_INFO_TEXT" : "",
+  "FASTER" : "ವೇಗವಾಗಿ"
 }

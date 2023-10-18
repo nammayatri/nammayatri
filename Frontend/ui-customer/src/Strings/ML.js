@@ -640,5 +640,6 @@ const malayalamStrings = {
   "VIEW_DRIVER_RECEIPT" : "ഡ്രൈവർ രസീത് കാണുക",
   "DRIVER_RECEIPT" : "ഡ്രൈവർ രസീത്",
   "HELP" : "സഹായം",
-  "FARE_INFO_TEXT" : ""
+  "FARE_INFO_TEXT" : "",
+  "FASTER" : "വേഗത്തിൽ"
 }

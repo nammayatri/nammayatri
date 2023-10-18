@@ -98,21 +98,22 @@ getLocationBlockerPopUpConfig state = let
     , width = MATCH_PARENT 
     , gravity = CENTER
     , visibility = VISIBLE
+    , margin = MarginBottom 0
     }
   , primaryText {
       visibility = GONE
     }
   , secondaryText {
       text = getString PLEASE_ENABLE_LOCATION_PERMISSION
-    , margin = MarginTop 20
+    , margin = MarginTop 0
     , padding = Padding 0 0 0 0
     }
   , coverImageConfig {
       imageUrl = if (os == "IOS") then "ny_ic_enable_location_in_settings_ios," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_enable_location_in_settings_ios.png"
                  else "ny_ic_enable_location_in_settings_android," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_enable_location_in_settings_android.png"
     , visibility = VISIBLE
-    , width = V 280
-    , height = V 200
+    , width = MATCH_PARENT
+    , height = V 260
     , margin = Margin 0 0 0 0 
     }
   , option1 {

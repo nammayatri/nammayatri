@@ -629,5 +629,6 @@ const hindiStrings = {
   "VIEW_DRIVER_RECEIPT" : "ड्राइवर रसीद देखें",
   "DRIVER_RECEIPT" : "ड्राइवर रसीद",
   "HELP" : "सहायता",
-  "FARE_INFO_TEXT" : ""
+  "FARE_INFO_TEXT" : "",
+  "FASTER" : "और तेज"
 }
