@@ -59,6 +59,8 @@ type AppConfig =
   , estimateAndQuoteConfig :: EstimateAndQuoteConfig
   , customerTip :: CustomerTip
   , enableContactSupport :: Boolean
+  , features :: Features
+  , rideCompletedCardConfig :: RideCompletedCardConfig
   } 
 
 type NotifyRideConfirmationConfig = {
@@ -116,6 +118,8 @@ type SearchLocationConfig = {
   lottieWidth :: Int,
   primaryButtonHeight :: Int
 , backArrow :: String
+, editTextBackground :: String
+, editTextDefaultColor :: String
 }
 
 type QuoteListConfig = {
@@ -159,9 +163,22 @@ type TerminateBtnConfig = {
 type EstimateAndQuoteConfig = {
   variantTypes :: Array (Array String),
   variantOrder :: Array String
+  , enableOnlyAuto :: Boolean
 }
 
 type CustomerTip = {
   auto :: Boolean,
   cabs :: Boolean
+}
+
+type Features = {
+  enableAutoReadOtp :: Boolean
+  }
+
+type RideCompletedCardConfig = {
+  topCard :: TopCardConfig
+}
+
+type TopCardConfig = {
+  gradient :: String
 }

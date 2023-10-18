@@ -69,6 +69,7 @@ commonConfig =
         , estimateAndQuoteConfig : 
             { variantTypes : [ ["SUV"], ["HATCHBACK", "TAXI_PLUS", "SEDAN"], ["TAXI"] ]
             , variantOrder : ["HATCHBACK", "TAXI_PLUS", "SEDAN", "TAXI", "SUV"]
+            , enableOnlyAuto : false
             }
         , mapConfig : 
             { locateOnMapConfig : 
@@ -92,4 +93,18 @@ commonConfig =
         , showChargeDesc : false
         , vehicleMarkerSize : 90
         , enableContactSupport : true
+        , features : {
+            enableAutoReadOtp : true
+          }
+        , rideCompletedCardConfig : {
+            topCard : {
+              gradient : "#29334A"
+            } 
+          }
+        , showDisabilityBanner : false
+        , searchLocationConfig : {
+          showAdditionalChargesText : false
+        , editTextBackground : "#313440"
+        , editTextDefaultColor : "#A7A7A7"
+        }
         }

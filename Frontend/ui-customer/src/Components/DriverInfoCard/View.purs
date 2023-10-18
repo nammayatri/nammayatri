@@ -688,7 +688,7 @@ driverInfoView push state =
               ][]
               , if state.props.currentSearchResultType == QUOTES  then headerTextView push state else contactView push state
               , otpAndWaitView push state
-              , separator (Margin 16 (if(state.props.currentStage == RideStarted && state.data.config.nyBrandingVisibility) then 16 else 0) 16 0) (V 1) Color.grey900 $ ((state.props.currentStage == RideAccepted || state.props.currentStage == RideStarted) && state.data.config.nyBrandingVisibility) || (state.props.currentStage == RideAccepted && not state.data.config.showPickUpandDrop)
+              , separator (Margin 16 (if(state.props.currentStage == RideStarted && state.data.config.nyBrandingVisibility) then 16 else 0) 16 0) (V 1) Color.grey900 $ (state.props.currentStage == RideAccepted && not state.data.config.showPickUpandDrop)
               , driverDetailsView push state
               , separator (MarginHorizontal 16 16) (V 1) Color.grey900 true
               , paymentMethodView push state (getString RIDE_FARE) true

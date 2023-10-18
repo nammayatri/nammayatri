@@ -610,10 +610,12 @@ continueWithTipButtonConfig state = let
     continueWithTipButtonConfig' = config
       { textConfig
         { text = state.tipViewProps.primaryButtonText
+        ,  color = state.appConfig.primaryTextColor 
         , accessibilityHint = state.tipViewProps.primaryButtonText <> " : Button" 
         }
       , id = "ContinueWithTipButtonQuoteList"
       , margin = MarginTop 10
+      , background = state.appConfig.primaryBackground
       }
   in continueWithTipButtonConfig'
 

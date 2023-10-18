@@ -66,7 +66,7 @@ view push state =
             [ height WRAP_CONTENT
             , width MATCH_PARENT
             , orientation VERTICAL
-            , background Color.black900
+            , background state.appConfig.primaryBackground
             , padding $ PaddingVertical safeMarginTop 16
             ][  linearLayout
                 [ orientation HORIZONTAL
@@ -86,7 +86,7 @@ view push state =
                       , width $ V 23
                       , accessibilityHint "Back : Button"
                       , accessibility ENABLE
-                      , imageWithFallback state.homeScreenConfig.searchLocationConfig.backArrow
+                      , imageWithFallback state.appConfig.searchLocationConfig.backArrow
                       ]
                   ]
                   , sourceDestinationImageView state
@@ -134,7 +134,7 @@ searchLottieLoader push state =
   , id (getNewIDWithTag "searchLoader")
   , visibility if state.showLoader then VISIBLE else GONE
   , afterRender (\action -> do
-    void $ pure $ startLottieProcess lottieAnimationConfig {rawJson = (getAssetsBaseUrl FunctionCall) <> "lottie/primary_button_loader.json", lottieId = (getNewIDWithTag "searchLoader"), scaleType="CENTER_CROP", repeat = true, speed = 0.8 }
+    void $ pure $ startLottieProcess lottieAnimationConfig {rawJson = (getAssetsBaseUrl FunctionCall) <> "lottie/search_loader.json", lottieId = (getNewIDWithTag "searchLoader"), scaleType="CENTER_CROP", repeat = true, speed = 0.8 }
     push action
     ) (const NoAction)
   ]
@@ -231,27 +231,26 @@ sourceDestinationEditTextView state push =
       [ height WRAP_CONTENT
       , width MATCH_PARENT
       , orientation HORIZONTAL
-      , background Color.darkGreyishBlue
+      , background state.appConfig.searchLocationConfig.editTextBackground
       , cornerRadius 4.0 
       , stroke $ if state.isSource == Just true && state.isSearchLocation == LocateOnMap then "1," <> Color.yellowText else "0," <> Color.yellowText
       ][ editText $
             [ height $ V 37
             , weight 1.0
             , text state.source
-            , color if not(state.isSource == Just true) then Color.black600 else Color.white900
-            , background Color.darkGreyishBlue
+            , color if not(state.isSource == Just true) then state.appConfig.searchLocationConfig.editTextDefaultColor else Color.white900
             , singleLine true
             , ellipsize true
             , cornerRadius 4.0
             , padding (Padding 8 7 32 7)
             , lineHeight "24"
-            , cursorColor state.homeScreenConfig.primaryTextColor
+            , cursorColor state.appConfig.primaryTextColor
             , accessibilityHint "Pickup Location Editable field"
             , accessibility ENABLE
             , hint (getString START_)
-            , hintColor Color.black600
+            , hintColor state.appConfig.searchLocationConfig.editTextDefaultColor
             , id $ getNewIDWithTag "SourceEditText"
-            , afterRender (\action -> do
+            , afterRender (\_ -> do
                   _ <- pure $ showKeyboard case state.isSource of
                                             Just true  -> (getNewIDWithTag "SourceEditText")
                                             Just false -> (getNewIDWithTag "DestinationEditText")
@@ -304,23 +303,23 @@ sourceDestinationEditTextView state push =
         , cornerRadius 4.0
         , orientation HORIZONTAL
         , margin $ MarginTop 12
-        , background Color.darkGreyishBlue
+        , background state.appConfig.searchLocationConfig.editTextBackground
         , stroke if state.isSource == Just false && state.isSearchLocation == LocateOnMap then "1," <> Color.yellowText else "0," <> Color.yellowText
         ]
         [ editText
             ( [ height $ V 37
               , weight 1.0
               , text state.destination
-              , color if (state.isSource == Just true) then Color.black600 else Color.white900
+              , color if (state.isSource == Just true) then state.appConfig.searchLocationConfig.editTextDefaultColor else Color.white900
               , stroke $ "0," <> Color.black
               , padding (Padding 8 7 4 7)
               , hint (getString WHERE_TO)
-              , hintColor Color.black600
+              , hintColor state.appConfig.searchLocationConfig.editTextDefaultColor
               , singleLine true
               , ellipsize true
               , accessibilityHint "Destination Location Editable field"
               , accessibility ENABLE
-              , cursorColor state.homeScreenConfig.primaryTextColor
+              , cursorColor state.appConfig.primaryTextColor
               , id $ getNewIDWithTag "DestinationEditText"
               , afterRender (\action -> do
                   _ <- pure $ showKeyboard case state.isSource of
@@ -391,7 +390,7 @@ searchResultsView state push =
         ][  linearLayout
             [ height WRAP_CONTENT
             , width MATCH_PARENT
-            , cornerRadius state.homeScreenConfig.primaryButtonCornerRadius
+            , cornerRadius state.appConfig.primaryButtonCornerRadius
             , stroke $ "1," <> Color.grey900
             , orientation VERTICAL
             ](mapWithIndex (\index item ->
@@ -421,13 +420,13 @@ primaryButtonConfig state =
     primaryButtonConfig' = config
       { textConfig
         { text = if state.isSearchLocation == LocateOnMap then if state.isSource == Just true then (getString CONFIRM_PICKUP_LOCATION) else (getString CONFIRM_DROP_LOCATION) else ""
-        , color = state.homeScreenConfig.primaryTextColor
+        , color = state.appConfig.primaryTextColor
         , height = V 40
         }
-      , height = V state.homeScreenConfig.searchLocationConfig.primaryButtonHeight
+      , height = V state.appConfig.searchLocationConfig.primaryButtonHeight
       , gravity = CENTER
-      , cornerRadius = state.homeScreenConfig.primaryButtonCornerRadius
-      , background = state.homeScreenConfig.primaryBackground
+      , cornerRadius = state.appConfig.primaryButtonCornerRadius
+      , background = state.appConfig.primaryBackground
       , margin = (MarginHorizontal 16 16)
       , isClickable = true
       , id = "SelectLocationFromMap"
