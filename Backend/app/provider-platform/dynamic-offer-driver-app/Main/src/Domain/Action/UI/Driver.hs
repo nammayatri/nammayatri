@@ -159,7 +159,7 @@ import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import Lib.Payment.Domain.Types.PaymentTransaction
 import Lib.Payment.Storage.Queries.PaymentTransaction
 import Lib.SessionizerMetrics.Types.Event
-import SharedLogic.CallBAP (sendDriverOffer)
+import qualified SharedLogic.CallBAP as CallBAP
 import qualified SharedLogic.DeleteDriver as DeleteDriverOnCheck
 import qualified SharedLogic.DriverFee as SLDriverFee
 import qualified SharedLogic.DriverLocation as DLoc
@@ -1149,7 +1149,6 @@ offerQuote ::
     HasPrettyLogger m r,
     HasField "driverQuoteExpirationSeconds" r NominalDiffTime,
     HasField "coreVersion" r Text,
-    HasField "nwAddress" r BaseUrl,
     HasField "driverUnlockDelay" r Seconds,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     HasFlowEnv m r '["selfUIUrl" ::: BaseUrl],
@@ -1159,7 +1158,9 @@ offerQuote ::
     HasHttpClientOptions r c,
     HasShortDurationRetryCfg r c,
     HasPrettyLogger m r,
-    EventStreamFlow m r
+    EventStreamFlow m r,
+    EncFlow m r,
+    HasField "s3Env" r (S3.S3Env m)
   ) =>
   (Id SP.Person, Id DM.Merchant) ->
   DriverOfferReq ->
@@ -1175,7 +1176,6 @@ respondQuote ::
     HasPrettyLogger m r,
     HasField "driverQuoteExpirationSeconds" r NominalDiffTime,
     HasField "coreVersion" r Text,
-    HasField "nwAddress" r BaseUrl,
     HasField "driverUnlockDelay" r Seconds,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     HasFlowEnv m r '["selfUIUrl" ::: BaseUrl],
@@ -1186,7 +1186,9 @@ respondQuote ::
     EsqLocRepDBFlow m r,
     HasPrettyLogger m r,
     MonadFlow m,
-    EventStreamFlow m r
+    EventStreamFlow m r,
+    EncFlow m r,
+    HasField "s3Env" r (S3.S3Env m)
   ) =>
   (Id SP.Person, Id DM.Merchant) ->
   DriverRespondReq ->
@@ -1253,7 +1255,7 @@ respondQuote (driverId, _) req = do
               driverFCMPulledList <- if shouldPullFCMForOthers then QSRD.findAllActiveWithoutRespBySearchTryId searchTryId else pure []
               -- Adding +1 in quoteCount because one more quote added above (QDrQt.create driverQuote)
               sendRemoveRideRequestNotification driverFCMPulledList organization.id driverQuote.estimatedFare
-              sendDriverOffer organization searchReq searchTry driverQuote
+              CallBAP.sendDriverOffer organization searchReq searchTry driverQuote
               pure driverFCMPulledList
             Reject -> do
               _ <- QSRD.updateDriverResponse sReqFD.id req.response
@@ -1318,9 +1320,8 @@ respondQuote (driverId, _) req = do
       pure $ not $ null activeQuotes
     getQuoteLimit merchantId dist = do
       driverPoolCfg <- DP.getDriverPoolConfig merchantId dist
-      pure driverPoolCfg.driverQuoteLimit -- FIXME fromIntegral driverPoolCfg.driverQuoteLimit
+      pure driverPoolCfg.driverQuoteLimit
     sendRemoveRideRequestNotification driverSearchReqs orgId estimatedFare = do
-      -- FIXME duplicated logic
       for_ driverSearchReqs $ \driverReq -> do
         _ <- QSRD.updateDriverResponse driverReq.id Pulled
         driver_ <- runInReplica $ QPerson.findById driverReq.driverId >>= fromMaybeM (PersonNotFound driverReq.driverId.getId)
@@ -1342,78 +1343,76 @@ respondQuote (driverId, _) req = do
       bookingId <- sReqFD.bookingId & fromMaybeM (InternalError "searchRequestForDriver field not present for RENTAL tag: bookingId")
       booking <- QRB.findById bookingId >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
       let merchantId = booking.providerId
-      driverFCMPulledList <-
-        case req.response of
-          Pulled -> throwError UnexpectedResponseValue
-          Accept -> do
-            QSRD.findAllActiveWithoutRespBySearchRequestId sReqFD.requestId
-          Reject -> do
-            _ <- QSRD.updateDriverResponse sReqFD.id req.response
-            pure []
-      DS.driverScoreEventHandler $ buildDriverRespondEventPayload searchTry.id merchantId driverFCMPulledList
-
+      case req.response of
+        Pulled -> throwError UnexpectedResponseValue
+        Accept -> do
+          driverFCMPulledList <- QSRD.findAllActiveWithoutRespBySearchRequestId sReqFD.requestId
+          DS.driverScoreEventHandler $ buildDriverRespondEventPayload searchTry.id merchantId driverFCMPulledList
+        Reject -> do
+          QSRD.updateDriverResponse sReqFD.id req.response
       --- create ride ---
-
       -- FIXME remove duplication with Domain.Action.Beckn.Confirm
-      unless (booking.status == DB.SCHEDULED) $
-        throwError (BookingInvalidStatus $ show booking.status)
-      riderId <- booking.riderId & fromMaybeM (BookingFieldNotPresent "riderId")
+      when (req.response == Accept) $ do
+        unless (booking.status == DB.SCHEDULED) $
+          throwError (BookingInvalidStatus $ show booking.status)
+        riderId <- booking.riderId & fromMaybeM (BookingFieldNotPresent "riderId")
 
-      riderDetails <- QRD.findById riderId >>= fromMaybeM (RiderDetailsNotFound riderId.getId)
-      otpCode <- case riderDetails.otpCode of
-        Nothing -> do
-          otpCode <- generateOTPCode
-          QRD.updateOtpCode riderDetails.id otpCode
-          pure otpCode
-        Just otp -> pure otp
+        riderDetails <- QRD.findById riderId >>= fromMaybeM (RiderDetailsNotFound riderId.getId)
+        otpCode <- case riderDetails.otpCode of
+          Nothing -> do
+            otpCode <- generateOTPCode
+            QRD.updateOtpCode riderDetails.id otpCode
+            pure otpCode
+          Just otp -> pure otp
 
-      ride <- buildRide booking otpCode merchantId
-      triggerRideCreatedEvent RideEventData {ride = ride, personId = cast driver.id, merchantId}
-      enableLocationTrackingService <- asks (.enableLocationTrackingService)
-      when enableLocationTrackingService $ do
-        void $ LF.rideDetails ride.id ride.status merchantId ride.driverId booking.fromLocation.lat booking.fromLocation.lon
-      rideDetails <- buildRideDetails ride driver
-      driverSearchReqs <- QSRD.findAllActiveBySTId searchTryId
-      let searchRequestId = searchTry.requestId
-      routeInfo :: Maybe DRR.RouteInfo <- Redis.safeGet (DSearch.searchRequestKey $ getId searchRequestId)
-      case routeInfo of
-        Just route -> Redis.setExp (DSearch.searchRequestKey $ getId ride.id) route 14400
-        Nothing -> logDebug "Unable to get the key"
+        ride <- buildRide booking otpCode merchantId
+        triggerRideCreatedEvent RideEventData {ride = ride, personId = cast driver.id, merchantId}
+        enableLocationTrackingService <- asks (.enableLocationTrackingService)
+        when enableLocationTrackingService $ do
+          void $ LF.rideDetails ride.id ride.status merchantId ride.driverId booking.fromLocation.lat booking.fromLocation.lon
+        rideDetails <- buildRideDetails ride driver
+        driverSearchReqs <- QSRD.findAllActiveBySTId searchTryId
+        let searchRequestId = searchTry.requestId
+        routeInfo :: Maybe DRR.RouteInfo <- Redis.safeGet (DSearch.searchRequestKey $ getId searchRequestId)
+        case routeInfo of
+          Just route -> Redis.setExp (DSearch.searchRequestKey $ getId ride.id) route 14400
+          Nothing -> logDebug "Unable to get the key"
 
-      -- critical updates
-      QRB.updateStatus booking.id DB.TRIP_ASSIGNED
-      QRide.createRide ride
-      DLoc.updateOnRide driver.merchantId driver.id True
+        -- critical updates
+        QRB.updateStatus booking.id DB.TRIP_ASSIGNED
+        QRide.createRide ride
+        DLoc.updateOnRide driver.merchantId driver.id True
 
-      -- non-critical updates
-      QDFS.updateStatus driver.id DDFS.RIDE_ASSIGNED {rideId = ride.id}
-      QRB.updateRiderId booking.id riderDetails.id
-      QRideD.create rideDetails
-      QSRD.setInactiveBySRId searchRequestId
+        -- non-critical updates
+        QDFS.updateStatus driver.id DDFS.RIDE_ASSIGNED {rideId = ride.id}
+        QRB.updateRiderId booking.id riderDetails.id
+        QRideD.create rideDetails
+        QSRD.setInactiveBySRId searchRequestId
 
-      QBE.logRideConfirmedEvent booking.id
-      QBE.logDriverAssignedEvent (cast driver.id) booking.id ride.id
+        QBE.logRideConfirmedEvent booking.id
+        QBE.logDriverAssignedEvent (cast driver.id) booking.id ride.id
 
-      for_ driverSearchReqs $ \driverReq -> do
-        let driverId' = driverReq.driverId
-        unless (driverId' == driverId) $ do
-          DP.decrementTotalQuotesCount merchantId (cast driverReq.driverId) driverReq.searchTryId
-          DP.removeSearchReqIdFromMap merchantId driverId' driverReq.searchTryId
-          _ <- QSRD.updateDriverResponse driverReq.id DSRD.Pulled
-          driver_ <- QPerson.findById driverId' >>= fromMaybeM (PersonNotFound driverId.getId)
-          Notify.notifyDriverClearedFare merchantId driverId' driverReq.searchTryId booking.estimatedFare driver_.deviceToken
+        for_ driverSearchReqs $ \driverReq -> do
+          let driverId' = driverReq.driverId
+          unless (driverId' == driverId) $ do
+            DP.decrementTotalQuotesCount merchantId (cast driverReq.driverId) driverReq.searchTryId
+            DP.removeSearchReqIdFromMap merchantId driverId' driverReq.searchTryId
+            _ <- QSRD.updateDriverResponse driverReq.id DSRD.Pulled
+            driver_ <- QPerson.findById driverId' >>= fromMaybeM (PersonNotFound driverId.getId)
+            Notify.notifyDriverClearedFare merchantId driverId' driverReq.searchTryId booking.estimatedFare driver_.deviceToken
 
-      uBooking <- QRB.findById booking.id >>= fromMaybeM (BookingNotFound booking.id.getId)
-      let notificationType = FCM.DRIVER_ASSIGNMENT
-          notificationTitle = "Driver has been assigned the ride!"
-      let message =
-            cs $
-              unwords
-                [ "You have been assigned a ride for",
-                  cs (showTimeIst uBooking.startTime) <> ".",
-                  "Check the app for more details."
-                ]
-      Notify.notifyDriver merchantId notificationType notificationTitle message driver.id driver.deviceToken
+        uBooking <- QRB.findById booking.id >>= fromMaybeM (BookingNotFound booking.id.getId)
+        let notificationType = FCM.DRIVER_ASSIGNMENT
+            notificationTitle = "Driver has been assigned the ride!"
+        let message =
+              cs $
+                unwords
+                  [ "You have been assigned a ride for",
+                    cs (showTimeIst uBooking.startTime) <> ".",
+                    "Check the app for more details."
+                  ]
+        Notify.notifyDriver merchantId notificationType notificationTitle message driver.id driver.deviceToken
+        void $ CallBAP.sendRideAssignedUpdateToBAP uBooking ride
 
     -- TODO remove duplication
     buildRide booking otp merchantId = do
