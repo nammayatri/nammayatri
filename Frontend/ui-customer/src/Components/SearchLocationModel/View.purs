@@ -79,21 +79,29 @@ view push state =
             [ orientation HORIZONTAL
             , height $ V 105 
             , width MATCH_PARENT
-             ][ linearLayout
-                [ height WRAP_CONTENT
-                , width WRAP_CONTENT
-                , onClick push (const GoBack)
-                , disableClickFeedback true
-                , margin (Margin 9 21 0 0)
-                , gravity CENTER
-                , padding (Padding 4 4 4 4)
-                ]
-              [ imageView
-                  [ height $ V 23
-                  , width $ V 23
-                  , accessibilityHint "Back : Button"
-                  , accessibility ENABLE
-                  , imageWithFallback state.homeScreenConfig.searchLocationConfig.backArrow
+            , orientation VERTICAL
+            , background state.appConfig.primaryBackground
+            , padding $ PaddingVertical safeMarginTop 16
+            ][  linearLayout
+                [ orientation HORIZONTAL
+                , height $ V 105 
+                , width MATCH_PARENT
+                 ][ linearLayout
+                    [ height WRAP_CONTENT
+                    , width WRAP_CONTENT
+                    , onClick push (const GoBack)
+                    , disableClickFeedback true
+                    , margin (Margin 9 21 0 0)
+                    , gravity CENTER
+                    , padding (Padding 4 4 4 4)
+                    ]
+                  [ imageView
+                      [ height $ V 23
+                      , width $ V 23
+                      , accessibilityHint "Back : Button"
+                      , accessibility ENABLE
+                      , imageWithFallback state.appConfig.searchLocationConfig.backArrow
+                      ]
                   ]
               ]
               , sourceDestinationImageView state

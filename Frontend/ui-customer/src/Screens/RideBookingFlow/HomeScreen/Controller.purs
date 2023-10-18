@@ -1805,14 +1805,12 @@ eval (StartLocationTracking item) state = do
     _ -> continue state
 
 eval (GetEstimates (GetQuotesRes quotesRes)) state = do
-  if isLocalStageOn SearchLocationModel then  continue state 
-  else 
-    case null quotesRes.quotes of
-      false -> specialZoneFlow quotesRes.quotes state
-      true -> case (getMerchant FunctionCall) of
-        YATRI -> estimatesListFlow quotesRes.estimates state
-        YATRISATHI -> estimatesListFlow quotesRes.estimates state
-        _ -> estimatesFlow quotesRes.estimates state
+  case null quotesRes.quotes of
+    false -> specialZoneFlow quotesRes.quotes state
+    true -> case (getMerchant FunctionCall) of
+      YATRI -> estimatesListFlow quotesRes.estimates state
+      YATRISATHI -> estimatesListFlow quotesRes.estimates state
+      _ -> estimatesFlow quotesRes.estimates state
 
 
 eval (EstimatesTryAgain (GetQuotesRes quotesRes)) state = do
