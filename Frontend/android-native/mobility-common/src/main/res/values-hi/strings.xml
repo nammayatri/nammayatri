@@ -9,4 +9,10 @@
     <string name="location">Location</string>
     <string name="phone">फ़ोन </string>
     <string name="no_enabled_browser">आपके डिवाइस में कोई सक्षम ब्राउज़र नहीं मिला, कृपया ब्राउज़र को सक्षम या स्थापित करें</string>
+    <string name="driver_receipt_downloaded">ड्राइवर रसीद डाउनलोड हो गई!!!</string>
+    <string name="driver_receipt_for_your_ride_is_downloaded">आपकी सवारी के लिए ड्राइवर रसीद डाउनलोड हो गई है!!!</string>
+    <string name="qr_for_your_vpa_is_downloaded">आपके वीपीए के लिए क्यूआर डाउनलोड हो गया है!!!</string>
+    <string name="invoice_downloaded">रसीद डाउनलोड!!!</string>
+    <string name="invoice_for_your_ride_is_downloaded">आपकी सवारी की रसीद डाउनलोड हो गई है!!!</string>
+    <string name="qr_downloaded">QR डाउनलोड!!!</string>
 </resources>
