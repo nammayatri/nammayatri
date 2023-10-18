@@ -89,6 +89,7 @@ type API =
            :<|> DriverSubscriptionDriverFeeAndInvoiceUpdateAPI
            :<|> GetFleetDriverVehicleAssociationAPI
            :<|> GetFleetDriverAssociationAPI
+           :<|> GetFleetVehicleAssociationAPI
            :<|> SetVehicleDriverRcStatusForFleetAPI
        )
 
@@ -272,6 +273,10 @@ type GetFleetDriverAssociationAPI =
   ApiAuth 'DRIVER_OFFER_BPP 'FLEET 'GET_DRIVER_ASSOCIATION
     :> Common.GetFleetDriverAssociationAPI
 
+type GetFleetVehicleAssociationAPI =
+  ApiAuth 'DRIVER_OFFER_BPP 'FLEET 'GET_VEHICLE_ASSOCIATION
+    :> Common.GetFleetVehicleAssociationAPI
+
 type SetVehicleDriverRcStatusForFleetAPI =
   ApiAuth 'DRIVER_OFFER_BPP 'FLEET 'SET_VEHICLE_DRIVER_RC_STATUS_FOR_FLEET
     :> Common.SetVehicleDriverRcStatusForFleetAPI
@@ -323,6 +328,7 @@ handler merchantId =
     :<|> updateSubscriptionDriverFeeAndInvoice merchantId
     :<|> getFleetDriverVehicleAssociation merchantId
     :<|> getFleetDriverAssociation merchantId
+    :<|> getFleetVehicleAssociation merchantId
     :<|> setVehicleDriverRcStatusForFleet merchantId
 
 buildTransaction ::
@@ -620,6 +626,11 @@ getFleetDriverAssociation :: ShortId DM.Merchant -> ApiTokenInfo -> Maybe Int ->
 getFleetDriverAssociation merhcantId apiTokenInfo mbLimit mbOffset = withFlowHandlerAPI $ do
   checkedMerchantId <- merchantAccessCheck merhcantId apiTokenInfo.merchant.shortId
   Client.callDriverOfferBPP checkedMerchantId (.drivers.getFleetDriverAssociation) apiTokenInfo.personId.getId mbLimit mbOffset
+
+getFleetVehicleAssociation :: ShortId DM.Merchant -> ApiTokenInfo -> Maybe Int -> Maybe Int -> FlowHandler Common.DrivertoVehicleAssociationRes
+getFleetVehicleAssociation merhcantId apiTokenInfo mbLimit mbOffset = withFlowHandlerAPI $ do
+  checkedMerchantId <- merchantAccessCheck merhcantId apiTokenInfo.merchant.shortId
+  Client.callDriverOfferBPP checkedMerchantId (.drivers.getFleetVehicleAssociation) apiTokenInfo.personId.getId mbLimit mbOffset
 
 setVehicleDriverRcStatusForFleet :: ShortId DM.Merchant -> ApiTokenInfo -> Id Common.Driver -> Common.RCStatusReq -> FlowHandler APISuccess
 setVehicleDriverRcStatusForFleet merchantShortId apiTokenInfo driverId req = withFlowHandlerAPI $ do

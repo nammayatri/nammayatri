@@ -58,6 +58,7 @@ module Domain.Action.Dashboard.Driver
     fleetRemoveDriver,
     getFleetDriverVehicleAssociation,
     getFleetDriverAssociation,
+    getFleetVehicleAssociation,
     getAllDriverForFleet,
   )
 where
@@ -767,6 +768,7 @@ getFleetDriverVehicleAssociation _merchantShortId fleetOwnerId mbLimit mbOffset 
       let unencryptedDriverNo = fromMaybe " " driver.unencryptedMobileNumber
       phoneNumberHash <- getDbHash (T.toLower unencryptedDriverNo)
       vehicle <- QVehicle.findByAnyOf (Just decryptedVehicleRC) Nothing >>= fromMaybeM (VehicleNotFound decryptedVehicleRC)
+      let vehicleType = castVehicleVariantDashboard (Just vehicle.variant)
       completedRides <- QRD.totalRidesByFleetOwnerPerVehicleAndDriver (Just fleetOwnerId) vehicle.registrationNo phoneNumberHash
       earning <- QRide.totalEarningsByFleetOwnerPerVehicleAndDriver (Just fleetOwnerId) vehicle.registrationNo driver.id
       pure $
@@ -779,7 +781,8 @@ getFleetDriverVehicleAssociation _merchantShortId fleetOwnerId mbLimit mbOffset 
 getFleetDriverAssociation :: ShortId DM.Merchant -> Text -> Maybe Int -> Maybe Int -> Flow Common.DrivertoVehicleAssociationRes
 getFleetDriverAssociation _merchantShortId fleetOwnerId mbLimit mbOffset = do
   joinRes <- QDRCA.mapping (Just fleetOwnerId) mbLimit mbOffset
-  listItems <- mapM createFleetDriverAssociationListItem joinRes
+  let filteredRes = filter (\(_, _, drca) -> drca.isRcActive) joinRes
+  listItems <- mapM createFleetDriverAssociationListItem filteredRes
   pure $ Common.DrivertoVehicleAssociationRes {fleetOwnerId = fleetOwnerId, listItem = listItems}
   where
     createFleetDriverAssociationListItem :: EncFlow m r => (VehicleRegistrationCertificate, FleetDriverAssociation, DriverRCAssociation) -> m Common.DriveVehicleAssociationListItem
@@ -791,9 +794,34 @@ getFleetDriverAssociation _merchantShortId fleetOwnerId mbLimit mbOffset = do
       decryptedVehicleRC <- decrypt vehicleRC.certificateNumber
       vehicle <- QVehicle.findByAnyOf (Just decryptedVehicleRC) Nothing >>= fromMaybeM (VehicleNotFound decryptedVehicleRC)
       let unencryptedDriverNo = fromMaybe " " driver.unencryptedMobileNumber
+          vehicleType = castVehicleVariantDashboard (Just vehicle.variant)
       phoneNumberHash <- getDbHash (T.toLower unencryptedDriverNo)
       completedRides <- QRD.totalRidesByFleetOwnerPerDriver (Just fleetOwnerId) phoneNumberHash
       earning <- QRide.totalEarningsByFleetOwnerPerDriver (Just fleetOwnerId) driver.id
+      pure $
+        Common.DriveVehicleAssociationListItem
+          { vehicleNo = vehicle.registrationNo,
+            status = castDriverStatus driverInfo'.mode,
+            ..
+          }
+
+getFleetVehicleAssociation :: ShortId DM.Merchant -> Text -> Maybe Int -> Maybe Int -> Flow Common.DrivertoVehicleAssociationRes
+getFleetVehicleAssociation _merchantShortId fleetOwnerId mbLimit mbOffset = do
+  joinRes <- QDRCA.mapping (Just fleetOwnerId) mbLimit mbOffset
+  listItems <- mapM createFleetVehicleAssociationListItem joinRes
+  pure $ Common.DrivertoVehicleAssociationRes {fleetOwnerId = fleetOwnerId, listItem = listItems}
+  where
+    createFleetVehicleAssociationListItem :: EncFlow m r => (VehicleRegistrationCertificate, FleetDriverAssociation, DriverRCAssociation) -> m Common.DriveVehicleAssociationListItem
+    createFleetVehicleAssociationListItem (vehicleRC, _fda, drca) = do
+      decryptedVehicleRC <- decrypt vehicleRC.certificateNumber
+      vehicle <- QVehicle.findByAnyOf (Just decryptedVehicleRC) Nothing >>= fromMaybeM (VehicleNotFound decryptedVehicleRC)
+      let driverId = drca.driverId
+      driver <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+      completedRides <- QRD.totalRidesByFleetOwnerPerVehicle (Just fleetOwnerId) vehicle.registrationNo
+      earning <- QRide.totalEarningsByFleetOwnerPerVehicle (Just fleetOwnerId) vehicle.registrationNo
+      driverInfo' <- QDriverInfo.findById (cast driverId) >>= fromMaybeM DriverInfoNotFound
+      let driverName = driver.firstName <> " " <> fromMaybe "" driver.lastName
+          vehicleType = castVehicleVariantDashboard (Just vehicle.variant)
       pure $
         Common.DriveVehicleAssociationListItem
           { vehicleNo = vehicle.registrationNo,
