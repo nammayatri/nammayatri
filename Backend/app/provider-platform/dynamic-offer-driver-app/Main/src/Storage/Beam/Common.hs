@@ -31,6 +31,7 @@ import Storage.Beam.DriverOnboarding.OperatingCity
 import Storage.Beam.DriverOnboarding.VehicleRegistrationCertificate
 import Storage.Beam.DriverReferral
 import Storage.Beam.Exophone
+import Storage.Beam.FleetDriverAssociation
 import Storage.Beam.Geometry
 import Storage.Beam.Invoice
 import Storage.Beam.Message.Message
@@ -76,7 +77,8 @@ atlasDB =
         message = messageTable,
         messageTranslation = messageTranslationTable,
         driverGoHomeRequest = driverGoHomeRequestTable,
-        driverReferral = driverReferralTable
+        driverReferral = driverReferralTable,
+        fleetDriverAssociation = fleetDriverAssociationTable
       }
 
 data AtlasDB f = AtlasDB
@@ -107,6 +109,7 @@ data AtlasDB f = AtlasDB
     driverReferral :: f (B.TableEntity DriverReferralT),
     driverFee :: f (B.TableEntity DriverFeeT),
     notification :: f (B.TableEntity NotificationT),
-    invoice :: f (B.TableEntity InvoiceT)
+    invoice :: f (B.TableEntity InvoiceT),
+    fleetDriverAssociation :: f (B.TableEntity FleetDriverAssociationT)
   }
   deriving (Generic, B.Database be)

@@ -50,9 +50,14 @@ module Domain.Action.Dashboard.Driver
     getAllVehicleForFleet,
     fleetUnlinkVehicle,
     fleetRemoveVehicle,
+    fleetTotalEarning,
+    fleetVehicleEarning,
+    fleetDriverEarning,
     updateSubscriptionDriverFeeAndInvoice,
     setVehicleDriverRcStatusForFleet,
     fleetRemoveDriver,
+    getFleetDriverVehicleAssociation,
+    getFleetDriverAssociation,
     getAllDriverForFleet,
   )
 where
@@ -78,6 +83,7 @@ import Domain.Types.DriverOnboarding.Error
 import qualified Domain.Types.DriverOnboarding.IdfyVerification as IV
 import Domain.Types.DriverOnboarding.Image (Image)
 import Domain.Types.DriverOnboarding.VehicleRegistrationCertificate
+import Domain.Types.FleetDriverAssociation
 import qualified Domain.Types.FleetDriverAssociation as DTFDA
 import qualified Domain.Types.Invoice as INV
 import qualified Domain.Types.Merchant as DM
@@ -112,10 +118,13 @@ import qualified Storage.Queries.DriverOnboarding.DriverLicense as QDriverLicens
 import qualified Storage.Queries.DriverOnboarding.DriverRCAssociation as QRCAssociation
 import qualified Storage.Queries.DriverOnboarding.Status as QDocStatus
 import qualified Storage.Queries.DriverOnboarding.VehicleRegistrationCertificate as RCQuery
+import qualified Storage.Queries.DriverRCAssociation as QDRCA
 import qualified Storage.Queries.FleetDriverAssociation as FDV
 import qualified Storage.Queries.Invoice as QINV
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.RegistrationToken as QR
+import Storage.Queries.Ride as QRide
+import qualified Storage.Queries.RideDetails as QRD
 import qualified Storage.Queries.Vehicle as QVehicle
 import qualified Tools.Auth as Auth
 import Tools.Error
@@ -713,7 +722,7 @@ addVehicleForFleet merchantShortId reqDriverPhoneNo mbMobileCountryCode fleetOwn
   let merchantId = driver.merchantId
   unless (merchant.id == merchantId) $ throwError (PersonDoesNotExist driver.id.getId)
   vehicle <- RCQuery.findLastVehicleRCWrapper req.registrationNo
-  whenJust vehicle $ \veh -> when (isJust veh.fleetOwnerId && veh.fleetOwnerId /= (Just fleetOwnerId)) throwError VehicleBelongsToAnotherFleet
+  whenJust vehicle $ \veh -> when (isJust veh.fleetOwnerId && veh.fleetOwnerId /= Just fleetOwnerId) $ throwError VehicleBelongsToAnotherFleet
   Redis.set (DomainRC.makeFleetOwnerKey req.registrationNo) fleetOwnerId -- setting this value here , so while creation of creation of vehicle we can add fleet owner id
   void $ runVerifyRCFlow driver.id merchant req (Just True)
   logTagInfo "dashboard -> addVehicle : " (show driver.id)
@@ -737,6 +746,65 @@ setVehicleDriverRcStatusForFleet merchantShortId reqDriverId fleetOwnerId req = 
   _ <- DomainRC.linkRCStatus (personId, merchant.id) (DomainRC.RCStatusReq {isActivate = req.isActivate, rcNo = req.rcNo})
   logTagInfo "dashboard -> addVehicle : " (show driver.id)
   pure Success
+
+---------------------------------------------------------------------
+
+getFleetDriverVehicleAssociation :: ShortId DM.Merchant -> Text -> Maybe Int -> Maybe Int -> Flow Common.DrivertoVehicleAssociationRes
+getFleetDriverVehicleAssociation _merchantShortId fleetOwnerId mbLimit mbOffset = do
+  joinRes <- QDRCA.mapping (Just fleetOwnerId) mbLimit mbOffset
+  listItems <- mapM createDriverVehicleAssociationListItem joinRes
+  pure $ Common.DrivertoVehicleAssociationRes {fleetOwnerId = fleetOwnerId, listItem = listItems}
+  where
+    createDriverVehicleAssociationListItem :: EncFlow m r => (VehicleRegistrationCertificate, FleetDriverAssociation, DriverRCAssociation) -> m Common.DriveVehicleAssociationListItem
+    createDriverVehicleAssociationListItem (vehicleRC, _fda, drca) = do
+      let driverId = drca.driverId
+      driver <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+      let driverName = driver.firstName <> " " <> fromMaybe "" driver.lastName
+      driverInfo' <- QDriverInfo.findById (cast driverId) >>= fromMaybeM DriverInfoNotFound
+      decryptedVehicleRC <- decrypt vehicleRC.certificateNumber
+      let unencryptedDriverNo = fromMaybe " " driver.unencryptedMobileNumber
+      phoneNumberHash <- getDbHash (T.toLower unencryptedDriverNo)
+      vehicle <- QVehicle.findByAnyOf (Just decryptedVehicleRC) Nothing >>= fromMaybeM (VehicleNotFound decryptedVehicleRC)
+      completedRides <- QRD.totalRidesByFleetOwnerPerVehicleAndDriver (Just fleetOwnerId) vehicle.registrationNo phoneNumberHash
+      earning <- QRide.totalEarningsByFleetOwnerPerVehicleAndDriver (Just fleetOwnerId) vehicle.registrationNo driver.id
+      pure $
+        Common.DriveVehicleAssociationListItem
+          { vehicleNo = vehicle.registrationNo,
+            status = castDriverStatus driverInfo'.mode,
+            ..
+          }
+
+getFleetDriverAssociation :: ShortId DM.Merchant -> Text -> Maybe Int -> Maybe Int -> Flow Common.DrivertoVehicleAssociationRes
+getFleetDriverAssociation _merchantShortId fleetOwnerId mbLimit mbOffset = do
+  joinRes <- QDRCA.mapping (Just fleetOwnerId) mbLimit mbOffset
+  listItems <- mapM createFleetDriverAssociationListItem joinRes
+  pure $ Common.DrivertoVehicleAssociationRes {fleetOwnerId = fleetOwnerId, listItem = listItems}
+  where
+    createFleetDriverAssociationListItem :: EncFlow m r => (VehicleRegistrationCertificate, FleetDriverAssociation, DriverRCAssociation) -> m Common.DriveVehicleAssociationListItem
+    createFleetDriverAssociationListItem (vehicleRC, _fda, drca) = do
+      let driverId = drca.driverId
+      driver <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+      let driverName = driver.firstName <> " " <> fromMaybe "" driver.lastName
+      driverInfo' <- QDriverInfo.findById (cast driverId) >>= fromMaybeM DriverInfoNotFound
+      decryptedVehicleRC <- decrypt vehicleRC.certificateNumber
+      vehicle <- QVehicle.findByAnyOf (Just decryptedVehicleRC) Nothing >>= fromMaybeM (VehicleNotFound decryptedVehicleRC)
+      let unencryptedDriverNo = fromMaybe " " driver.unencryptedMobileNumber
+      phoneNumberHash <- getDbHash (T.toLower unencryptedDriverNo)
+      completedRides <- QRD.totalRidesByFleetOwnerPerDriver (Just fleetOwnerId) phoneNumberHash
+      earning <- QRide.totalEarningsByFleetOwnerPerDriver (Just fleetOwnerId) driver.id
+      pure $
+        Common.DriveVehicleAssociationListItem
+          { vehicleNo = vehicle.registrationNo,
+            status = castDriverStatus driverInfo'.mode,
+            ..
+          }
+
+castDriverStatus :: Maybe DrInfo.DriverMode -> Common.DriverMode
+castDriverStatus = \case
+  Just DrInfo.ONLINE -> Common.ONLINE
+  Just DrInfo.OFFLINE -> Common.OFFLINE
+  Just DrInfo.SILENT -> Common.SILENT
+  Nothing -> Common.OFFLINE
 
 ---------------------------------------------------------------------
 
@@ -1162,3 +1230,77 @@ fleetRemoveDriver _merchantShortId fleetOwnerId driverId = do
     when (isJust isFleetDriver) $ throwError (InvalidRequest "Driver is linked to fleet Vehicle , first unlink then try")
   FDV.updateFleetDriverActiveStatus fleetOwnerId personId False
   pure Success
+
+fleetTotalEarning :: ShortId DM.Merchant -> Text -> Flow Common.FleetEarningRes
+fleetTotalEarning _merchantShortId fleetOwnerId = do
+  totalRides <- QRD.totalRidesByFleetOwner (Just fleetOwnerId)
+  totalEarning <- QRide.totalEarningsByFleetOwner (Just fleetOwnerId)
+  let vehicleNo = Nothing
+      driverId = Nothing
+      driverName = Nothing
+      status = Nothing
+      vehicleType = Nothing
+  pure $ Common.FleetEarningRes {..}
+
+fleetVehicleEarning :: ShortId DM.Merchant -> Text -> Text -> Maybe (Id Common.Driver) -> Flow Common.FleetEarningRes
+fleetVehicleEarning _merchantShortId fleetOwnerId vehicleNo mbDriverId = do
+  case mbDriverId of
+    Just driverId -> fleetVehicleEarningPerDriver fleetOwnerId vehicleNo driverId
+    Nothing -> do
+      totalRides <- QRD.totalRidesByFleetOwnerPerVehicle (Just fleetOwnerId) vehicleNo
+      totalEarning <- QRide.totalEarningsByFleetOwnerPerVehicle (Just fleetOwnerId) vehicleNo
+      vehicle <- QVehicle.findByRegistrationNo vehicleNo >>= fromMaybeM (VehicleNotFound vehicleNo)
+      let vehicleType = castVehicleVariantDashboard (Just vehicle.variant)
+      pure $
+        Common.FleetEarningRes
+          { driverId = Nothing,
+            driverName = Nothing,
+            vehicleNo = Just vehicleNo,
+            status = Nothing,
+            ..
+          }
+
+fleetVehicleEarningPerDriver :: Text -> Text -> Id Common.Driver -> Flow Common.FleetEarningRes
+fleetVehicleEarningPerDriver fleetOwnerId vehicleNo driverId = do
+  let dId = cast @Common.Driver @DP.Person driverId
+  driver <- QPerson.findById dId >>= fromMaybeM (PersonNotFound dId.getId)
+  let unencryptedDriverNo = fromMaybe " " driver.unencryptedMobileNumber
+  phoneNumberHash <- getDbHash (T.toLower unencryptedDriverNo)
+  totalRides <- QRD.totalRidesByFleetOwnerPerVehicleAndDriver (Just fleetOwnerId) vehicleNo phoneNumberHash
+  totalEarning <- QRide.totalEarningsByFleetOwnerPerVehicleAndDriver (Just fleetOwnerId) vehicleNo driver.id
+  let driverName = driver.firstName <> " " <> fromMaybe "" driver.lastName
+  vehicle <- QVehicle.findByRegistrationNo vehicleNo >>= fromMaybeM (VehicleNotFound vehicleNo)
+  let vehicleType = castVehicleVariantDashboard (Just vehicle.variant)
+  driverInfo' <- QDriverInfo.findById (cast dId) >>= fromMaybeM DriverInfoNotFound
+  pure $
+    Common.FleetEarningRes
+      { driverId = Just driverId,
+        driverName = Just driverName,
+        totalRides = totalRides,
+        totalEarning = totalEarning,
+        vehicleNo = Just vehicleNo,
+        status = Just $ castDriverStatus driverInfo'.mode,
+        ..
+      }
+
+fleetDriverEarning :: ShortId DM.Merchant -> Text -> Id Common.Driver -> Flow Common.FleetEarningRes
+fleetDriverEarning _merchantShortId fleetOwnerId driverId = do
+  let personId = cast @Common.Driver @DP.Person driverId
+  driver <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  let unencryptedDriverNo = fromMaybe " " driver.unencryptedMobileNumber
+  phoneNumberHash <- getDbHash (T.toLower unencryptedDriverNo)
+  let driverName = driver.firstName <> " " <> fromMaybe "" driver.lastName
+  totalRides <- QRD.totalRidesByFleetOwnerPerDriver (Just fleetOwnerId) phoneNumberHash
+  totalEarning <- QRide.totalEarningsByFleetOwnerPerDriver (Just fleetOwnerId) driver.id
+  driverInfo' <- QDriverInfo.findById personId >>= fromMaybeM DriverInfoNotFound
+  pure $
+    Common.FleetEarningRes
+      { driverId = Just driverId,
+        driverName = Just driverName,
+        totalRides = totalRides,
+        totalEarning = totalEarning,
+        vehicleNo = Nothing,
+        status = Just $ castDriverStatus driverInfo'.mode,
+        vehicleType = Nothing,
+        ..
+      }
