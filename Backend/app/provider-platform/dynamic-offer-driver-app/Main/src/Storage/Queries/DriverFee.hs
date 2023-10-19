@@ -422,9 +422,39 @@ findAllByTimeMerchantAndStatus (Id merchantId) startTime endTime status = do
   findAllWithKV
     [ Se.And
         [ Se.Is BeamDF.merchantId $ Se.Eq merchantId,
-          Se.Is BeamDF.startTime $ Se.GreaterThanOrEq startTime,
-          Se.Is BeamDF.startTime $ Se.LessThanOrEq endTime,
+          Se.Is BeamDF.endTime $ Se.GreaterThanOrEq startTime,
+          Se.Is BeamDF.endTime $ Se.LessThanOrEq endTime,
           Se.Is BeamDF.status $ Se.In status
+        ]
+    ]
+
+findAllPendingInRange :: MonadFlow m => Id Merchant -> UTCTime -> UTCTime -> m [DriverFee]
+findAllPendingInRange (Id merchantId) startTime endTime = do
+  findAllWithKV
+    [ Se.And
+        [ Se.Is BeamDF.merchantId $ Se.Eq merchantId,
+          Se.Is BeamDF.endTime $ Se.GreaterThanOrEq startTime,
+          Se.Is BeamDF.endTime $ Se.LessThanOrEq endTime
+        ]
+    ]
+
+findAllOverdueInRange :: MonadFlow m => Id Merchant -> UTCTime -> UTCTime -> m [DriverFee]
+findAllOverdueInRange (Id merchantId) startTime endTime = do
+  findAllWithKV
+    [ Se.And
+        [ Se.Is BeamDF.merchantId $ Se.Eq merchantId,
+          Se.Is BeamDF.payBy $ Se.GreaterThanOrEq startTime,
+          Se.Is BeamDF.payBy $ Se.LessThanOrEq endTime
+        ]
+    ]
+
+findAllCollectionInRange :: MonadFlow m => Id Merchant -> UTCTime -> UTCTime -> m [DriverFee]
+findAllCollectionInRange (Id merchantId) startTime endTime = do
+  findAllWithKV
+    [ Se.And
+        [ Se.Is BeamDF.merchantId $ Se.Eq merchantId,
+          Se.Is BeamDF.collectedAt $ Se.GreaterThanOrEq (Just startTime),
+          Se.Is BeamDF.collectedAt $ Se.LessThanOrEq (Just endTime)
         ]
     ]
 

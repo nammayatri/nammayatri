@@ -35,7 +35,7 @@ import Kernel.Utils.SlidingWindowCounters
 import Kernel.Utils.Time
 import SharedLogic.Merchant
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as SCT
-import Storage.Queries.DriverFee (findAllByStatus, findAllByTimeMerchantAndStatus, findAllByVolunteerIds)
+import Storage.Queries.DriverFee (findAllByStatus, findAllByVolunteerIds, findAllCollectionInRange, findAllOverdueInRange, findAllPendingInRange)
 import Storage.Queries.Volunteer (findAllByPlace)
 import Tools.Error
 
@@ -44,19 +44,17 @@ getAllDriverFeeHistory merchantShortId mbFrom mbTo = do
   merchant <- findMerchantByShortId merchantShortId
   transporterConfig <- SCT.findByMerchantId merchant.id >>= fromMaybeM (TransporterConfigNotFound merchant.id.getId)
   now <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
-  let defaultFrom = UTCTime (fromGregorian 2020 1 1) (realToFrac transporterConfig.driverPaymentCycleStartTime) -- can be in common
-      from = case mbFrom of
-        Nothing -> defaultFrom
-        Just from_ -> addUTCTime (-1 * transporterConfig.driverPaymentCycleDuration) (UTCTime (utctDay from_) (realToFrac transporterConfig.driverPaymentCycleStartTime))
-      to = case mbTo of
-        Nothing -> now
-        Just to_ -> UTCTime (utctDay to_) (realToFrac transporterConfig.driverPaymentCycleStartTime)
-  allDriverFee <- findAllByTimeMerchantAndStatus merchant.id from to [PAYMENT_PENDING, PAYMENT_OVERDUE, EXEMPTED, CLEARED, COLLECTED_CASH]
-  let clearedFees = getFeeWithStatus [CLEARED] allDriverFee
-      pendingFees = getFeeWithStatus [PAYMENT_PENDING] allDriverFee
-      overdueFees = getFeeWithStatus [PAYMENT_OVERDUE] allDriverFee
-      exemptedFees = getFeeWithStatus [EXEMPTED] allDriverFee
-      cashedFees = getFeeWithStatus [COLLECTED_CASH] allDriverFee
+  let defaultFrom = UTCTime (fromGregorian 2020 1 1) 0 -- can be in common
+      from = fromMaybe defaultFrom mbFrom
+      to = fromMaybe now mbTo
+
+  pendingFees <- findAllPendingInRange merchant.id from to
+  overdueFees <- findAllOverdueInRange merchant.id from to
+  collectionFees <- findAllCollectionInRange merchant.id from to
+
+  let clearedFees = getFeeWithStatus [CLEARED] collectionFees
+      exemptedFees = getFeeWithStatus [EXEMPTED] collectionFees
+      cashedFees = getFeeWithStatus [COLLECTED_CASH] collectionFees
   pure
     [ Common.AllFees Common.CLEARED (getNumRides clearedFees) (getNumDrivers clearedFees) (getTotalAmount clearedFees),
       Common.AllFees Common.COLLECTED_CASH (getNumRides cashedFees) (getNumDrivers cashedFees) (getTotalAmount cashedFees),
