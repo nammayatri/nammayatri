@@ -51,6 +51,7 @@ import Screens.NotificationsScreen.ScreenData as NotificationsScreenData
 import Screens.ReferralScreen.ScreenData as ReferralScreenData
 import Screens.BookingOptionsScreen.ScreenData as BookingOptionsScreenData
 import LoaderOverlay.ScreenData as LoaderOverlayScreenData
+import Calendar.Controller as CalendarScreenData
 import Screens.AcknowledgementScreen.ScreenData as AcknowledgementScreenData
 import Screens.SubscriptionScreen.ScreenData as SubscriptionScreenData
 import Screens.PaymentHistoryScreen.ScreenData as PaymentHistoryScreenData
@@ -96,6 +97,7 @@ newtype GlobalState = GlobalState {
   , referralScreen :: ReferralScreenState
   , bookingOptionsScreen :: BookingOptionsScreenState
   , loaderOverlay :: LoaderOverlayScreenData.LoaderOverlayState
+  , calendarScreen :: CalendarScreenData.CalendarScreenState
   , acknowledgementScreen :: AcknowledgementScreenState
   , aadhaarVerificationScreen :: AadhaarVerificationScreenState
   , globalProps :: GlobalProps
@@ -147,6 +149,7 @@ defaultGlobalState = GlobalState {
 , onBoardingSubscriptionScreen : OnBoardingSubscriptionScreenData.initData
 , paymentHistoryScreen : PaymentHistoryScreenData.initData
 , driverSavedLocationScreen : DriverSavedLocationScreenData.initData
+, calendarScreen : CalendarScreenData.initData
 }
 
 defaultGlobalProps :: GlobalProps

@@ -44,6 +44,7 @@ import Screens.Types (AboutUsScreenState, AccountSetUpScreenState, AddNewAddress
 import Screens.AppUpdatePopUp.ScreenData as AppUpdatePopUpScreenData
 import Foreign.Object ( Object(..), empty)
 import Foreign (Foreign)
+import Calendar.Controller as CalendarScreenData
 
 type FlowBT e a = BackT (ExceptT e (Free (FlowWrapper GlobalState))) a
 
@@ -69,6 +70,7 @@ newtype GlobalState = GlobalState {
   , emergencyContactsScreen :: EmergencyContactsScreenState
   , welcomeScreen :: WelcomeScreenState
   , loaderOverlay :: LoaderScreenScreenData.LoaderOverlayState
+  , calendarScreen :: CalendarScreenData.CalendarScreenState
   }
 
 defaultGlobalState :: GlobalState
@@ -94,6 +96,7 @@ defaultGlobalState = GlobalState {
   , emergencyContactsScreen : EmergencyContactsScreenData.initData
   , welcomeScreen : WelcomeScreenData.initData
   , loaderOverlay : LoaderScreenScreenData.initData
+  , calendarScreen : CalendarScreenData.initData
   }
 data ACCOUNT_SET_UP_SCREEN_OUTPUT = GO_HOME AccountSetUpScreenState | GO_BACK
 

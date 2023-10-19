@@ -21,7 +21,7 @@ import Common.Types.Sdk (SDKRequest(..), SDKResponse(..))
 import Control.Monad.Except (runExcept)
 import Control.Monad.Except.Trans (lift)
 import Control.Monad.State as S
-import Common.Types.App (Version(..), DateObj, CalendarDate, CalendarWeek, YoutubeData)
+import Common.Types.App (Version(..), DateObj, CalendarDate, CalendarWeek, YoutubeData, CalendarModalDateObject, CalendarModalWeekObject, CalendarConfig(..))
 import Data.Either (Either(..))
 import Data.Function.Uncurried (Fn2)
 import Data.Int as INT
@@ -61,6 +61,7 @@ import Data.Function.Uncurried (Fn1(..), runFn2)
 import Data.Either (Either(..), either, hush)
 import Data.Foldable (foldl)
 import Log (printLog)
+import Debug (spy)
 
 foreign import callAPI :: EffectFn7 String String String String Boolean Boolean String Unit
 foreign import callAPIWithOptions :: EffectFn8 String String String String Boolean Boolean String String Unit
@@ -91,7 +92,13 @@ foreign import getVideoID :: String -> String
 foreign import getImageUrl :: String -> String
 foreign import getPastDays :: Int -> Array CalendarDate
 foreign import getPastWeeks :: Int -> Array CalendarWeek
+foreign import getWeeksInMonth :: Int -> Int -> Array CalendarModalWeekObject
 
+foreign import getCurrentDay :: String -> CalendarModalDateObject
+
+foreign import decrementMonth :: Int -> Int -> CalendarModalDateObject
+
+foreign import incrementMonth :: Int -> Int -> CalendarModalDateObject
 
 os :: String
 os = getOs unit
@@ -278,3 +285,88 @@ getYoutubeData videoId videoType videoHeight = {
   videoType : videoType,
   videoHeight : videoHeight
 }
+
+decrementCalendarMonth :: CalendarModalDateObject ->  Maybe CalendarModalDateObject ->  Maybe CalendarModalDateObject -> CalendarConfig
+decrementCalendarMonth selectedTimeSpan startDate endDate  = do
+  let decrementedMonthDate = decrementMonth selectedTimeSpan.intMonth selectedTimeSpan.year
+      weeks = getWeeksInMonth decrementedMonthDate.year decrementedMonthDate.intMonth
+      modifiedWeeks = getPreviousState startDate endDate weeks
+  { selectedTimeSpan : decrementedMonthDate,
+    weeks : modifiedWeeks,
+    startDate : startDate,
+    endDate : endDate
+  }
+
+incrementCalendarMonth :: CalendarModalDateObject ->  Maybe CalendarModalDateObject ->  Maybe CalendarModalDateObject -> CalendarConfig
+incrementCalendarMonth selectedTimeSpan startDate endDate  = do
+  let incrementedMonthDate = incrementMonth selectedTimeSpan.intMonth selectedTimeSpan.year
+      weeks = getWeeksInMonth incrementedMonthDate.year incrementedMonthDate.intMonth
+      modifiedWeeks = getPreviousState startDate endDate weeks
+  { selectedTimeSpan : incrementedMonthDate,
+    weeks : modifiedWeeks,
+    startDate : startDate,
+    endDate : endDate
+  }
+
+
+updateWeeks :: CalendarModalDateObject -> Boolean -> CalendarModalDateObject -> CalendarModalWeekObject ->  CalendarModalWeekObject
+updateWeeks selDate isStart startDate week =
+  if selDate == startDate then week
+  else if isStart then 
+    let modifiedData = map (\date -> if date.date == selDate.date && date.intMonth == selDate.intMonth then date {isStart = true} else date) week.week
+    in {week : modifiedData}
+  else
+    let modifiedData = map (\date -> if date.day == "" then date
+                                    else if date.day == startDate.day then date {isStart = true, isInRange = false}
+                                    else if date.day == selDate.day then date {isEnd = true, isInRange = false}
+                                    else if date.day > startDate.day && date.day < selDate.day then date {isInRange = true, isStart = false, isEnd = false}
+                                    else date) week.week
+    in {week : modifiedData}
+
+revertWeeks :: CalendarModalWeekObject ->  CalendarModalWeekObject
+revertWeeks week =
+    let modifiedData = map (\date -> date {isStart = false, isEnd = false, isInRange = false}) week.week
+    in {week : modifiedData}
+
+getPreviousState :: Maybe CalendarModalDateObject -> Maybe CalendarModalDateObject -> Array CalendarModalWeekObject -> Array CalendarModalWeekObject
+getPreviousState mbStartDate mbEndDate weeks = do
+  case mbStartDate of
+    Nothing -> weeks
+    Just startDate -> do
+      case mbEndDate of 
+        Nothing -> map (updateWeeks startDate true dummyDateItem) weeks
+        Just endDate -> do
+          map (updateWeeks endDate false startDate) weeks
+
+dummyDateItem = {date : 0, isInRange : false, isStart : false, isEnd : false, day : "", shortMonth : "", year : 0, intMonth : 0, utcDate : ""}
+
+selectRangeCalendarDate :: CalendarModalDateObject -> Maybe CalendarModalDateObject -> Maybe CalendarModalDateObject -> Array CalendarModalWeekObject -> CalendarConfig
+selectRangeCalendarDate date mbStartDate mbEndDate weeks = do
+  if date.date == 0 then { startDate : mbStartDate, endDate : mbEndDate, weeks : weeks, selectedTimeSpan : date }
+  else do
+    case mbStartDate of
+      Nothing -> do
+        let modifiedDates = map (updateWeeks date true dummyDateItem) weeks
+        { startDate : Just date, endDate : Nothing, weeks : modifiedDates, selectedTimeSpan : date }
+      Just startDate -> do
+          case mbEndDate of
+              Nothing -> do
+                  if date.day == startDate.day then { startDate : mbStartDate, endDate : mbEndDate, weeks : weeks, selectedTimeSpan : date }
+                  else do
+                    let modStartDate = if ((startDate.day > date.day && startDate.intMonth == date.intMonth && startDate.year == date.year) || (startDate.intMonth  > date.intMonth && startDate.year == date.year) || startDate.year > date.year) then date else startDate
+                        modEndDate = if ((startDate.day > date.day && startDate.intMonth == date.intMonth && startDate.year == date.year) || (startDate.intMonth  > date.intMonth && startDate.year == date.year) || startDate.year > date.year) then startDate else date
+                        modifiedDates = map (updateWeeks modEndDate false modStartDate) weeks
+                    { startDate : Just modStartDate, endDate : Just modEndDate, weeks : modifiedDates, selectedTimeSpan : modStartDate}
+              Just _ -> do
+                let revertDates = map (revertWeeks) weeks
+                    modifiedDates = map (updateWeeks date true dummyDateItem) revertDates
+                { startDate : Just date, endDate : Nothing, weeks : modifiedDates, selectedTimeSpan : date }
+
+selectSingleCalendarDate :: CalendarModalDateObject -> Maybe CalendarModalDateObject -> Maybe CalendarModalDateObject -> Array CalendarModalWeekObject -> CalendarConfig
+selectSingleCalendarDate date mbStartDate mbEndDate weeks = do
+  if date.date == 0 then { startDate : mbStartDate, endDate : mbEndDate, weeks : weeks, selectedTimeSpan : date }
+  else do
+    case mbStartDate of 
+      _ -> do
+        let modifiedDates = map (updateWeeks date true dummyDateItem) weeks
+        { startDate : Just date, endDate : Nothing, weeks : modifiedDates, selectedTimeSpan : date }

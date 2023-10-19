@@ -13,7 +13,7 @@
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Components.Calendar (module Reexport) where
+module Calendar (module Reexport) where
 
-import Components.Calendar.View as Reexport
-import Components.Calendar.Controller as Reexport
+import Calendar.View as Reexport
+import Calendar.Controller as Reexport

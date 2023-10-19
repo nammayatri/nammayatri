@@ -28,8 +28,8 @@ import Data.Number (pi, sin, cos, asin, sqrt)
 
 import MerchantConfig.Utils
 
-import Common.Types.App (LazyCheck(..), CalendarDate, CalendarWeek, PaymentStatus(..))
-import Types.App (FlowBT)
+import Common.Types.App (LazyCheck(..), CalendarDate, CalendarWeek, PaymentStatus(..), CalendarModalDateObject(..))
+import Types.App (FlowBT, GlobalState(..))
 import Control.Monad.Except (runExcept)
 import Data.Array ((!!), fold) as DA
 import Data.Array.NonEmpty (fromArray)
@@ -47,7 +47,8 @@ import Data.Traversable (traverse)
 import Effect (Effect)
 import Effect.Aff (Aff (..), error, killFiber, launchAff, launchAff_, makeAff, nonCanceler, Fiber)
 import Effect.Class (liftEffect)
-import Engineering.Helpers.Commons (parseFloat, setText, getCurrentUTC, getPastDays, getPastWeeks) as ReExport
+import Engineering.Helpers.Commons (getCurrentDay, parseFloat, setText, getCurrentUTC, getPastDays, getPastWeeks) as ReExport
+import Engineering.Helpers.Commons (getCurrentDay, getWeeksInMonth, selectSingleCalendarDate, selectRangeCalendarDate)
 import Foreign (Foreign)
 import Foreign.Class (class Decode, class Encode, decode)
 import Juspay.OTP.Reader (initiateSMSRetriever)
@@ -79,7 +80,10 @@ import Screens.Types (UpiApps(..), LocalStoreSubscriptionInfo)
 import Data.Int (fromString, even, fromNumber)
 import Data.Number.Format (fixed, toStringWith)
 import Data.Function.Uncurried (Fn1)
-
+import Debug (spy)
+import Presto.Core.Types.Language.Flow (Flow, doAff, getState, modifyState, delay)
+import Components.PrimaryButton as PrimaryButton
+import Calendar.Controller (CalendarScreenConfig(..))
 
 foreign import shuffle :: forall a. Array a -> Array a
 foreign import generateUniqueId :: Unit -> String
@@ -328,6 +332,29 @@ getCommonAssetStoreLink lazy = case (getMerchant lazy) of
 type AffSuccess s = (s -> Effect Unit)
 type MicroAPPInvokeSignature = String -> (AffSuccess String) ->  Effect Unit
 
+
+initializeCalendarConfig :: forall action. Boolean -> Maybe CalendarModalDateObject -> Maybe CalendarModalDateObject -> CalendarScreenConfig ->  Flow GlobalState Unit -- (action -> Effect Unit) -> (Maybe CalendarModalDateObject -> Maybe CalendarModalDateObject -> action) -> Flow GlobalState Unit
+initializeCalendarConfig selectTodaysDate prevSelectedStartDate prevSelectedEndDate calendarScreenCfg = do
+  let res = case prevSelectedStartDate of
+              Nothing -> do
+                let currentDay = getCurrentDay ""
+                    weeks = getWeeksInMonth currentDay.year currentDay.intMonth
+                if selectTodaysDate then (selectSingleCalendarDate currentDay Nothing Nothing weeks)
+                else { selectedTimeSpan : currentDay, weeks : weeks, startDate : Nothing, endDate : Nothing }
+              Just startDate -> do
+                case prevSelectedEndDate of
+                  Nothing -> do
+                    let weeks = getWeeksInMonth startDate.year startDate.intMonth
+                    selectSingleCalendarDate startDate Nothing Nothing weeks
+                  Just endDate -> do
+                    let weeks = getWeeksInMonth startDate.year startDate.intMonth
+                    selectRangeCalendarDate endDate (Just startDate) Nothing weeks
+  let imgConfig = {  rightArrowImage : "ny_ic_arrow_right," <> (getAssetStoreLink FunctionCall) <> "ny_ic_arrow_right.png"
+  , chevronLeftImageBlack :  "ny_ic_chevron_left_black," <> (getAssetStoreLink FunctionCall) <> "ny_ic_chevron_left_black.png"
+  , chevronLeftImageGrey : "ny_ic_chevron_left_grey," <> (getAssetStoreLink FunctionCall) <> "ny_ic_chevron_left_grey.png"
+  , chevronRightImageBlack : "ny_ic_chevron_right_black," <> (getAssetStoreLink FunctionCall) <> "ny_ic_chevron_right_black.png"
+  , chevronRightImageGrey : "ny_ic_chevron_right_grey_900," <> (getAssetStoreLink FunctionCall) <> "ny_ic_chevron_right_grey_900.png" }
+  void $ modifyState (\(GlobalState state) -> GlobalState state { calendarScreen { calendarConfig = res, imageConfig = imgConfig, calendarScreenConfig = calendarScreenCfg} })
 
 foreign import startPP :: MicroAPPInvokeSignature
 

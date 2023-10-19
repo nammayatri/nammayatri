@@ -330,17 +330,26 @@ type CalendarModalDateObject =
   , isInRange :: Boolean
   , isStart :: Boolean
   , isEnd :: Boolean
+  , day :: String
   , utcDate :: String
   , shortMonth :: String
   , year :: Int
   , intMonth :: Int
   }
 
+type CalendarImageConfig =
+  { rightArrowImage :: String
+  , chevronLeftImageBlack :: String
+  , chevronLeftImageGrey :: String
+  , chevronRightImageBlack :: String
+  , chevronRightImageGrey :: String
+  }
+
 type CalendarModalWeekObject = {
   week :: Array CalendarModalDateObject
 }
 
-type ModifiedCalendarObject = {
+type CalendarConfig = {
   selectedTimeSpan :: CalendarModalDateObject,
   weeks :: Array CalendarModalWeekObject,
   startDate :: Maybe CalendarModalDateObject,

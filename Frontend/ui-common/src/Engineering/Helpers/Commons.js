@@ -459,3 +459,78 @@ export const getImageUrl = function (url) {
     console.log("error in getImageUrl " + e);
   }
 };
+
+
+export const getCurrentDay = function (dummy) {
+  var date = new Date();
+  return { day: formatDates(date, "YYYY-MM-DD", "en-us"), date: date.getDate(), shortMonth: date.toLocaleString('default', { month: 'short' }), year: date.getFullYear(), intMonth : date.getMonth(),
+           isInRange : false, isStart: false , isEnd: false, utcDate: date.toISOString() }
+}
+
+export const decrementMonth = function (month) {
+  return function (year){
+    try{
+      const date = new Date(year, month-1, 1);
+      let dateObj = { day: formatDates(date, "YYYY-MM-DD", "en-us"), date: date.getDate(), shortMonth: date.toLocaleString('default', { month: 'short' }), year: date.getFullYear(), intMonth : date.getMonth(),
+      isInRange : false, isStart: false , isEnd: false, utcDate: date.toISOString() }
+      return dateObj;
+    } catch (e) {
+      console.log("error in decrementMonth", e);
+    }
+  }
+}
+
+export const incrementMonth = function (month) {
+  return function (year){
+    try{
+      const date = new Date(year, month+1, 1);
+      let dateObj = { day: formatDates(date, "YYYY-MM-DD", "en-us"), date: date.getDate(), shortMonth: date.toLocaleString('default', { month: 'short' }), year: date.getFullYear(), intMonth : date.getMonth(),
+      isInRange : false, isStart: false , isEnd: false, utcDate: date.toISOString()}
+      return dateObj;
+    } catch (e) {
+      console.log("error in incrementMonth", e);
+    }
+  }
+}
+
+export const getWeeksInMonth = function (year) {
+  return function (month) {
+    try {
+      let result = []
+      var date = new Date(year, month, 1);
+      let diff = date.getDay();
+
+      let startPadding = diff;
+      while (date.getMonth() == month){
+        let week = [];
+        for(var i = 0 ; i < 7; i++){
+          if(startPadding){
+            let dateObj = { day: "", date: 0, shortMonth: "", year: year, intMonth: month,
+                        isInRange : false, isStart: false , isEnd: false, utcDate: "" }
+            week.push(dateObj);
+            startPadding --;
+          }else{
+            let dateObj = { day: formatDates(date, "YYYY-MM-DD", "en-us"), date: date.getDate(), shortMonth: date.toLocaleString('default', { month: 'short' }), year: year, intMonth: month,
+                        isInRange : false, isStart: false , isEnd: false, utcDate: date.toISOString() }
+            week.push(dateObj)
+            date.setDate(date.getDate() + 1);
+          }
+
+          if(date.getMonth() != month) break;
+        }
+        if(date.getMonth() != month && date.getDay() != 0) {
+          let endPadding = 6 - date.getDay() + 1;
+          while(endPadding --){
+            let dateObj = { day: "", date: 0, shortMonth: "", year: year, intMonth: month,
+            isInRange : false, isStart: false , isEnd: false, utcDate: "" }
+            week.push(dateObj);
+          }
+        }
+        result.push({week: week})
+      }
+      return result;
+    } catch (e) {
+      console.log("error in getWeeksInMonth", e);
+    }
+  }
+};
