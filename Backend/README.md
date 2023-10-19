@@ -207,7 +207,6 @@ Each of the application has particular set of defined APIs and Schemas. To get a
 | Application                              | Port   |
 | -----------------------------------------|--------|
 | rider-app                                | `8013` |
-| static-offer-driver-app                  | `8014` |
 | beckn-gateway                            | `8015` |
 | dynamic-offer-driver-app                 | `8016` |
 | mock-registry                            | `8020` |
@@ -231,12 +230,6 @@ Each package has clear separation of focuses w.r.t the functionality it provides
 |       ├── Main (public-transport-rider-platform-exe)
 |       └── search-consumer	(public-transport-search-consumer-exe)
 ├── provider-platform                               : encapsulates all the provider side microservices
-|   ├── static-offer-driver-app                     : Microservices that power fixed price ride
-|   |   |                                             hailing service
-|   |   ├── Allocator (allocation-service-exe)      : Allocation service that matches a driver
-|   |   |                                             to a ride
-|   |   ├── Main (static-offer-driver-app-exe)      : Frontend facing APIs, driver app
-|   |   └── Scheduler (transporter-scheduler-exe)   : Job scheduler for scheduling rental rides
 |   ├── dynamic-offer-driver-app                    : Microservices that power dynamic pricing,
 |   |   |                                             as quoted by the driver, service
 |   |   ├── Allocator (driver-offer-allocator-exe)  : Allocation service that matches a driver
