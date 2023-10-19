@@ -152,7 +152,11 @@ handler transporter req validateRes = do
           pure otpCode
         Just otp -> pure otp
 
-      ride <- buildRide driver.id booking ghrId req.customerPhoneNumber otpCode
+      toLocation <- case booking.bookingDetails of
+        DRB.BookingDetailsOnDemand {toLocation} -> pure toLocation
+        _ -> throwError (BookingFieldNotPresent "toLocation")
+
+      ride <- buildRide driver.id booking ghrId req.customerPhoneNumber otpCode toLocation
       triggerRideCreatedEvent RideEventData {ride = ride, personId = cast driver.id, merchantId = transporter.id}
       enableLocationTrackingService <- asks (.enableLocationTrackingService)
       when enableLocationTrackingService $ do
@@ -175,11 +179,7 @@ handler transporter req validateRes = do
       QRB.updateRiderId booking.id riderDetails.id
       QRideD.create rideDetails
       QL.updateAddress booking.fromLocation.id req.fromAddress
-      case booking.bookingDetails of
-        DRB.BookingDetailsOnDemand {..} -> do
-          whenJust req.toAddress $ \toAddr -> QL.updateAddress toLocation.id toAddr
-        _ -> do
-          throwError $ InvalidRequest ""
+      whenJust req.toAddress $ \toAddr -> QL.updateAddress toLocation.id toAddr
       QDQ.setInactiveBySTId driverQuote.searchTryId
       QSRD.setInactiveBySTId driverQuote.searchTryId
       whenJust req.mbRiderName $ QRB.updateRiderName booking.id
@@ -299,37 +299,12 @@ handler transporter req validateRes = do
             cs (showTimeIst booking.startTime) <> ".",
             "Check the app for more details."
           ]
-    buildRide driverId booking ghrId _ otp = do
+    buildRide driverId booking ghrId _ otp toLocation = do
       guid <- Id <$> generateGUID
       shortId <- generateShortId
       -- let otp = T.takeEnd 4 customerPhoneNumber
       now <- getCurrentTime
-      endRideOtp <- generateOTPCode -- startRide otp code adding logic can be added later
       trackingUrl <- buildTrackingUrl guid
-      let (rideType, rideDetails) = case booking.bookingDetails of
-            BookingDetailsOnDemand {..} ->
-              ( DRide.ON_DEMAND,
-                DRide.RideDetailsOnDemand
-                  { toLocation = toLocation,
-                    driverGoHomeRequestId = ghrId,
-                    driverDeviatedFromRoute = Just False,
-                    numberOfSnapToRoadCalls = Nothing,
-                    numberOfDeviation = Nothing,
-                    uiDistanceCalculationWithAccuracy = Nothing,
-                    uiDistanceCalculationWithoutAccuracy = Nothing
-                  }
-              )
-            BookingDetailsRental {} ->
-              ( DRide.RENTAL,
-                DRide.RideDetailsRental
-                  { rentalToLocation = Nothing,
-                    odometerStartReading = Nothing,
-                    odometerEndReading = Nothing,
-                    odometerStartReadingImagePath = Nothing,
-                    odometerEndReadingImagePath = Nothing,
-                    endRideOtp = Just endRideOtp
-                  }
-              )
       return
         DRide.Ride
           { id = guid,
@@ -352,19 +327,27 @@ handler transporter req validateRes = do
             fromLocation = booking.fromLocation, --check if correct
             fareParametersId = Nothing,
             distanceCalculationFailed = Nothing,
+            rideDetails =
+              DRide.RideDetailsOnDemand
+                { toLocation = toLocation,
+                  driverGoHomeRequestId = ghrId,
+                  driverDeviatedFromRoute = Just False,
+                  numberOfSnapToRoadCalls = Nothing,
+                  numberOfDeviation = Nothing,
+                  uiDistanceCalculationWithAccuracy = Nothing,
+                  uiDistanceCalculationWithoutAccuracy = Nothing
+                },
+            rideType = DRide.ON_DEMAND,
             createdAt = now,
-            updatedAt = now,
-            rideDetails = rideDetails,
-            rideType = rideType
+            updatedAt = now
           }
 
     buildTrackingUrl rideId = do
       bppUIUrl <- asks (.selfUIUrl)
-      let rideid = T.unpack (getId rideId)
       return $
         bppUIUrl
           { --TODO: find a way to build it using existing types from Routes
-            baseUrlPath = baseUrlPath bppUIUrl <> "/driver/location/" <> rideid
+            baseUrlPath = baseUrlPath bppUIUrl <> "/driver/location/" <> T.unpack rideId.getId
           }
 
 getRiderDetails :: (EncFlow m r, EsqDBFlow m r) => Id DM.Merchant -> Text -> Text -> UTCTime -> m (DRD.RiderDetails, Bool)
