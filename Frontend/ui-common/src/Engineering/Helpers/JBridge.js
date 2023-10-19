@@ -300,6 +300,32 @@ export const isLocationPermissionEnabled = function (unit) {
   };
 };
 
+export const checkAndAskNotificationPermission = function(unit) {
+    const lastAppOpened = getKeyInSharedPrefKeys("LAST_APP_OPENED");
+    const appOpenCount = getKeyInSharedPrefKeys("APP_OPEN_COUNT");
+    let check = true;
+    if(lastAppOpened != '__failed'){
+      if(lastAppOpened != new Date().toLocaleDateString()){
+        if(parseInt(appOpenCount) >= 2){
+          check = true;
+        }else{
+          check = false;
+          JBridge.setKeysInSharedPrefs("LAST_APP_OPENED",new Date().toLocaleDateString());
+          JBridge.setKeysInSharedPrefs("APP_OPEN_COUNT",String(parseInt(appOpenCount)+1));
+        }
+      }else{
+        check = false;
+      }
+    }else{
+      JBridge.setKeysInSharedPrefs("LAST_APP_OPENED",new Date().toLocaleDateString());
+      JBridge.setKeysInSharedPrefs("APP_OPEN_COUNT","0");
+    }
+
+    if(check && window.__OS == "ANDROID" && window.JBridge.checkAndAskNotificationPermission){
+      return window.JBridge.checkAndAskNotificationPermission();
+    }
+};
+
 export const getLocationPermissionStatus = function (unit) {
   try{
     if(window.__OS == "IOS"){

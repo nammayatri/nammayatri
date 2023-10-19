@@ -215,6 +215,7 @@ public class MobilityCommonBridge extends HyperBridge {
     protected String DTUTILS = "DTUTILS";
     protected String OVERRIDE = "OVERRIDE";
     protected String CALLBACK = "CALLBACK";
+    protected  String NOTIFICATION = "NOTIFICATION";
     protected String phoneNumber;
     protected String invoice;
     CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
@@ -360,6 +361,19 @@ public class MobilityCommonBridge extends HyperBridge {
     @JavascriptInterface
     public boolean isLocationPermissionEnabled() {
         return (ActivityCompat.checkSelfPermission(bridgeComponents.getContext(), ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(bridgeComponents.getContext(), Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED);
+    }
+
+    @JavascriptInterface
+    public void checkAndAskNotificationPermission(){
+        if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && !(ActivityCompat.checkSelfPermission(bridgeComponents.getContext(), POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED)){
+            try {
+                if (bridgeComponents.getActivity() != null) {
+                    ActivityCompat.requestPermissions(bridgeComponents.getActivity(), new String[]{POST_NOTIFICATIONS}, REQUEST_CODE_NOTIFICATION_PERMISSION);
+                }
+            } catch (Exception e) {
+                Log.e(NOTIFICATION, "Exception in request notification permission", e);
+            }
+        }
     }
 
     private void showLocationOnMap(final String zoomType) {
