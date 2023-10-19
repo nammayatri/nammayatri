@@ -310,7 +310,7 @@ otpRideCreate driver otpCode booking = do
             cs (showTimeIst uBooking.startTime) <> ".",
             "Check the app for more details."
           ]
-    buildRide otp driverId merchantId _ghrId = do
+    buildRide otp driverId merchantId ghrId = do
       guid <- Id <$> generateGUID
       shortId <- generateShortId
       now <- getCurrentTime
@@ -320,8 +320,8 @@ otpRideCreate driver otpCode booking = do
               ( DRide.ON_DEMAND,
                 DRide.RideDetailsOnDemand
                   { toLocation = toLocation,
-                    driverGoHomeRequestId = Nothing,
-                    driverDeviatedFromRoute = Nothing,
+                    driverGoHomeRequestId = ghrId,
+                    driverDeviatedFromRoute = Just False,
                     numberOfSnapToRoadCalls = Nothing,
                     numberOfDeviation = Nothing,
                     uiDistanceCalculationWithAccuracy = Nothing,
@@ -364,16 +364,7 @@ otpRideCreate driver otpCode booking = do
             createdAt = now,
             updatedAt = now,
             rideDetails = rideDetails,
-            rideType = rideType,
-            driverDeviatedFromRoute = Nothing, -- FIX ME
-            numberOfSnapToRoadCalls = Nothing,
-            numberOfDeviation = Nothing,
-            uiDistanceCalculationWithAccuracy = Nothing,
-            uiDistanceCalculationWithoutAccuracy = Nothing,
-            driverGoHomeRequestId = Nothing,
-            odometerStartReading = Nothing,
-            odometerEndReading = Nothing,
-            endRideOtp = Nothing
+            rideType = rideType
           }
 
     buildTrackingUrl rideId = do

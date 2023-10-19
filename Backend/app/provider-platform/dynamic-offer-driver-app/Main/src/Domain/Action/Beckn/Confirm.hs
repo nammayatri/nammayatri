@@ -355,16 +355,7 @@ handler transporter req validateRes = do
             createdAt = now,
             updatedAt = now,
             rideDetails = rideDetails,
-            rideType = rideType,
-            driverDeviatedFromRoute = Just False, -- duplicated
-            numberOfSnapToRoadCalls = Nothing,
-            numberOfDeviation = Nothing,
-            uiDistanceCalculationWithAccuracy = Nothing,
-            uiDistanceCalculationWithoutAccuracy = Nothing,
-            driverGoHomeRequestId = ghrId, -- duplicated
-            odometerEndReading = Nothing,
-            odometerStartReading = Nothing,
-            endRideOtp = Just endRideOtp
+            rideType = rideType
           }
 
     buildTrackingUrl rideId = do

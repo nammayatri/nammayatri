@@ -354,8 +354,6 @@ endRide handle@ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.g
                fareParametersId = Just newFareParams.id,
                distanceCalculationFailed = distanceCalculationFailed,
                pickupDropOutsideOfThreshold = pickupDropOutsideOfThreshold,
-               odometerStartReading = rideOld.odometerStartReading, -- send to bap
-               odometerEndReading = odometerEndReading,
                rideDetails = case rideOld.rideDetails of
                  DRide.RideDetailsOnDemand {} -> rideOld.rideDetails
                  DRide.RideDetailsRental {} -> rideOld.rideDetails{odometerEndReading = odometerEndReading}

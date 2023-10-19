@@ -581,7 +581,6 @@ instance FromTType' BeamR.Ride Ride where
                 fareParametersId = Id <$> fareParametersId,
                 trackingUrl = tUrl,
                 rideDetails = details,
-                driverGoHomeRequestId = Id <$> driverGoHomeRequestId,
                 ..
               }
       RENTAL -> do
@@ -592,7 +591,7 @@ instance FromTType' BeamR.Ride Ride where
         tUrl <- parseBaseUrl trackingUrl
         let details =
               RideDetailsRental
-                { DRide.rentalToLocation = Nothing, -- FIX ME: Why are these fields in both ride and rideDetails? Please remove redundancy
+                { DRide.rentalToLocation = Nothing,
                   endRideOtp = endRideOtp,
                   odometerStartReading = odometerStartReading,
                   odometerEndReading = odometerEndReading,
@@ -612,7 +611,6 @@ instance FromTType' BeamR.Ride Ride where
                 fareParametersId = Id <$> fareParametersId,
                 trackingUrl = tUrl,
                 rideDetails = details,
-                driverGoHomeRequestId = Id <$> driverGoHomeRequestId,
                 ..
               }
 

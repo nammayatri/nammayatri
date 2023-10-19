@@ -74,6 +74,8 @@ data Ride = Ride
     shortId :: ShortId Ride,
     merchantId :: Maybe (Id DM.Merchant),
     status :: RideStatus,
+    rideType :: RideType,
+    rideDetails :: SpecificRideDetails,
     driverId :: Id DPers.Person,
     otp :: Text,
     trackingUrl :: BaseUrl,
@@ -90,17 +92,6 @@ data Ride = Ride
     distanceCalculationFailed :: Maybe Bool,
     pickupDropOutsideOfThreshold :: Maybe Bool,
     createdAt :: UTCTime,
-    updatedAt :: UTCTime,
-    rideDetails :: SpecificRideDetails,
-    rideType :: RideType,
-    driverDeviatedFromRoute :: Maybe Bool,
-    numberOfSnapToRoadCalls :: Maybe Int,
-    numberOfDeviation :: Maybe Bool,
-    uiDistanceCalculationWithAccuracy :: Maybe Int,
-    uiDistanceCalculationWithoutAccuracy :: Maybe Int,
-    driverGoHomeRequestId :: Maybe (Id DriverGoHomeRequest),
-    odometerStartReading :: Maybe Centesimal,
-    odometerEndReading :: Maybe Centesimal,
-    endRideOtp :: Maybe Text
+    updatedAt :: UTCTime
   }
   deriving (Generic, Show, Eq, ToJSON, FromJSON)

@@ -255,6 +255,10 @@ rideInfo merchantShortId reqRideId = do
   customerPhoneNo <- decrypt riderDetails.mobileNumber
   driverPhoneNo <- mapM decrypt rideDetails.driverNumber
   now <- getCurrentTime
+  let (odometerStartReading', odometerEndReading') = case ride.rideDetails of
+        DRide.RideDetailsRental {odometerStartReading, odometerEndReading} -> (odometerStartReading, odometerEndReading)
+        _ -> (Nothing, Nothing)
+
   pure
     Common.RideInfoRes
       { rideId = cast @DRide.Ride @Common.Ride ride.id,
@@ -296,8 +300,8 @@ rideInfo merchantShortId reqRideId = do
         bookingToRideStartDuration = timeDiffInMinutes <$> ride.tripStartTime <*> (Just booking.createdAt),
         distanceCalculationFailed = ride.distanceCalculationFailed,
         vehicleVariant = castDVehicleVariant <$> rideDetails.vehicleVariant,
-        odometerStartReading = ride.odometerStartReading,
-        odometerEndReading = ride.odometerEndReading
+        odometerStartReading = odometerStartReading',
+        odometerEndReading = odometerEndReading'
       }
 
 mkLocationAPIEntity :: DLoc.Location -> Common.LocationAPIEntity
