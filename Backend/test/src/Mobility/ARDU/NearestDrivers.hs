@@ -15,6 +15,7 @@
 module Mobility.ARDU.NearestDrivers (spec) where
 
 import qualified "dynamic-offer-driver-app" Domain.Types.DriverInformation as DI
+import qualified "dynamic-offer-driver-app" Domain.Types.SearchRequest as DSR
 import qualified "dynamic-offer-driver-app" Environment as ARDUEnv
 import EulerHS.Prelude
 import Kernel.External.Maps.Types (LatLong (..))
@@ -48,21 +49,21 @@ testOrder :: IO ()
 testOrder = do
   res <-
     runARDUFlow "Test ordering" $
-      S.getNearestDrivers Nothing pickupPoint 5000 org1 False (Just hour) <&> getIds
+      S.getNearestDrivers Nothing DSR.ON_DEMAND pickupPoint 5000 org1 False (Just hour) <&> getIds
   res `shouldSatisfy` equals [closestDriver, furthestDriver]
 
 testInRadius :: IO ()
 testInRadius = do
   res <-
     runARDUFlow "Test radius filtration" $
-      S.getNearestDrivers Nothing pickupPoint 800 org1 False (Just hour) <&> getIds
+      S.getNearestDrivers Nothing DSR.ON_DEMAND pickupPoint 800 org1 False (Just hour) <&> getIds
   res `shouldSatisfy` equals [closestDriver]
 
 testNotInRadius :: IO ()
 testNotInRadius = do
   res <-
     runARDUFlow "Test outside radius filtration" $
-      S.getNearestDrivers Nothing pickupPoint 10 org1 False (Just hour) <&> getIds
+      S.getNearestDrivers Nothing DSR.ON_DEMAND pickupPoint 10 org1 False (Just hour) <&> getIds
   res `shouldSatisfy` equals []
 
 getIds :: [Q.NearestDriversResult] -> [Text]

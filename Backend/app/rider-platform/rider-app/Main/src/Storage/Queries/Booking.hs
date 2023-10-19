@@ -18,11 +18,13 @@ module Storage.Queries.Booking where
 import Control.Applicative
 import Data.Ord
 import qualified Database.Beam as B
+import Database.Beam.Postgres (Postgres)
 import qualified Domain.Types.Booking.BookingLocation as DBBL
 import Domain.Types.Booking.Type as Domain
 import qualified Domain.Types.Booking.Type as DRB
 import Domain.Types.Estimate (Estimate)
 import Domain.Types.FarePolicy.FareProductType as DFF
+import qualified Domain.Types.FarePolicy.FareProductType as DFP
 import qualified Domain.Types.FarePolicy.FareProductType as DQuote
 import qualified Domain.Types.Location as DL
 import qualified Domain.Types.LocationMapping as DLM
@@ -103,10 +105,10 @@ updateOtpCodeBookingId rbId otp = do
     ]
     [Se.Is BeamB.id (Se.Eq $ getId rbId)]
 
-findLatestByRiderIdAndStatus :: MonadFlow m => Id Person -> [BookingStatus] -> m (Maybe BookingStatus)
-findLatestByRiderIdAndStatus (Id riderId) bookingStatusList =
+findLatestByRiderIdAndStatusObj :: MonadFlow m => Id Person -> BookingStatusObj -> m (Maybe BookingStatus)
+findLatestByRiderIdAndStatusObj (Id riderId) bookingStatusObj =
   do
-    let options = [Se.And [Se.Is BeamB.riderId $ Se.Eq riderId, Se.Is BeamB.status $ Se.In bookingStatusList]]
+    let options = [Se.And [Se.Is BeamB.riderId $ Se.Eq riderId, bookingStatusObjClause bookingStatusObj]]
         sortBy = Se.Desc BeamB.createdAt
         limit' = Just 1
     findAllWithOptionsKV options sortBy limit' Nothing
@@ -159,6 +161,16 @@ findCountByRideIdStatusAndTime (Id personId) status startTime endTime = do
 findByRiderIdAndStatus :: MonadFlow m => Id Person -> [BookingStatus] -> m [Booking]
 findByRiderIdAndStatus (Id personId) statusList = findAllWithKV [Se.And [Se.Is BeamB.riderId $ Se.Eq personId, Se.Is BeamB.status $ Se.In statusList]]
 
+findByRiderIdAndStatusObj :: MonadFlow m => Id Person -> BookingStatusObj -> m [Booking]
+findByRiderIdAndStatusObj (Id personId) statusObj = findAllWithKV [Se.And [Se.Is BeamB.riderId $ Se.Eq personId, bookingStatusObjClause statusObj]]
+
+bookingStatusObjClause :: BookingStatusObj -> Se.Clause Postgres BeamB.BookingT
+bookingStatusObjClause statusObj =
+  Se.Or
+    [ Se.And [Se.Is BeamB.status $ Se.In statusObj.normalBooking, Se.Is BeamB.fareProductType $ Se.Not $ Se.Eq DFP.RENTAL],
+      Se.And [Se.Is BeamB.status $ Se.In statusObj.rentalBooking, Se.Is BeamB.fareProductType $ Se.Eq DFP.RENTAL]
+    ]
+
 findAssignedByRiderId :: MonadFlow m => Id Person -> m (Maybe Booking)
 findAssignedByRiderId (Id personId) = findOneWithKV [Se.And [Se.Is BeamB.riderId $ Se.Eq personId, Se.Is BeamB.status $ Se.Eq TRIP_ASSIGNED]]
 
@@ -204,7 +216,7 @@ findStuckBookings (Id merchantId) bookingIds now =
       [ Se.And
           [ Se.Is BeamB.merchantId $ Se.Eq merchantId,
             Se.Is BeamB.id (Se.In $ getId <$> bookingIds),
-            Se.Is BeamB.status $ Se.In [NEW, CONFIRMED, TRIP_ASSIGNED],
+            Se.Is BeamB.status $ Se.In [NEW, CONFIRMED, TRIP_ASSIGNED], -- FIXME do not cancel rentals on both bap and bpp side
             Se.Is BeamB.createdAt $ Se.LessThanOrEq updatedTimestamp
           ]
       ]

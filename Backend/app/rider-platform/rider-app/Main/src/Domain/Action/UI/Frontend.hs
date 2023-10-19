@@ -87,7 +87,7 @@ notifyEvent personId req = do
   _ <- case req.event of
     RATE_DRIVER_SKIPPED -> QPFS.updateStatus personId DPFS.IDLE
     SEARCH_CANCELLED -> do
-      activeBooking <- B.runInReplica $ QB.findLatestByRiderIdAndStatus personId DRB.activeBookingStatus
+      activeBooking <- B.runInReplica $ QB.findLatestByRiderIdAndStatusObj personId DRB.activeBookingStatusObj
       whenJust activeBooking $ \_ -> throwError (InvalidRequest "ACTIVE_BOOKING_EXISTS")
       QPFS.updateStatus personId DPFS.IDLE
   QPFS.clearCache personId
