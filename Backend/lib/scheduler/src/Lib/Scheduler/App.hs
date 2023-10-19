@@ -23,7 +23,7 @@ import Kernel.Storage.Esqueleto.Config (prepareEsqDBEnv)
 import Kernel.Storage.Hedis (connectHedis, connectHedisCluster)
 import qualified Kernel.Tools.Metrics.CoreMetrics as Metrics
 import qualified Kernel.Tools.Metrics.Init as Metrics
-import Kernel.Types.Common (Seconds (..))
+import Kernel.Types.Common (Seconds (..), Tables)
 import Kernel.Utils.App
 import Kernel.Utils.Common (threadDelaySec)
 import Kernel.Utils.IOLogging (prepareLoggerEnv)
@@ -41,9 +41,10 @@ runSchedulerService ::
   (JobProcessor t, FromJSON t) =>
   SchedulerConfig ->
   JobInfoMap ->
+  Tables ->
   SchedulerHandle t ->
   IO ()
-runSchedulerService s@SchedulerConfig {..} jobInfoMap handle_ = do
+runSchedulerService s@SchedulerConfig {..} jobInfoMap tables handle_ = do
   hostname <- getPodName
   version <- lookupDeploymentVersion
   loggerEnv <- prepareLoggerEnv loggerConfig hostname

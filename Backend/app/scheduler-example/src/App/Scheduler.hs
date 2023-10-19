@@ -59,7 +59,7 @@ runExampleScheduler configModifier = do
   let loggerConfig = appCfg.loggerConfig
   loggerEnv <- prepareLoggerEnv loggerConfig Nothing
   let loggerRes = LoggerResources {..}
-  runSchedulerService appCfg mempty $ schedulerHandle loggerRes
+  runSchedulerService appCfg mempty (Tables [] [] []) $ schedulerHandle loggerRes
 
 -----------------
 

@@ -27,6 +27,7 @@ import qualified Data.ByteString as BS
 import Data.Singletons (fromSing)
 import qualified Data.Time as T hiding (getCurrentTime)
 import qualified EulerHS.Language as L
+import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude hiding (mask, throwIO)
 import qualified Kernel.Storage.Hedis.Queries as Hedis
 import Kernel.Tools.LoopGracefully (loopGracefully)
@@ -57,6 +58,8 @@ handler :: forall t. (JobProcessor t, FromJSON t) => SchedulerHandle t -> Schedu
 handler hnd = do
   schedulerType <- asks (.schedulerType)
   maxThreads <- asks (.maxThreads)
+  tables <- L.getOption KBT.Tables
+  logDebug $ "Got tables before split " <> show tables
   case schedulerType of
     RedisBased -> do
       mapConcurrently (const $ loopGracefully [runnerIterationRedis hnd runTask]) [1 .. maxThreads]
@@ -193,6 +196,8 @@ registerExecutionResult SchedulerHandle {..} j@(AnyJob job@Job {..}) result = do
       logInfo $ "job id " <> show id <> " already executed "
     Complete -> do
       logInfo $ "job successfully completed on try " <> show (currErrors + 1)
+      tables <- L.getOption KBT.Tables
+      logDebug $ "Got tables" <> show tables
       markAsComplete jobType' job.id
       fork "" $ incrementStreamCounter "Executor"
     Terminate description -> do

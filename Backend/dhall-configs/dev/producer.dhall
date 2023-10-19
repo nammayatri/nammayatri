@@ -71,7 +71,7 @@ in  { hedisCfg
     , cacheConfig
     , schedulerSetName = "Scheduled_Jobs"
     , entryId = "*"
-    , reviverInterval = +1000
+    , reviverInterval = +5
     , reviveThreshold = +3600
     , schedulerType = common.schedulerType.DbBased
     , maxShards = +5
