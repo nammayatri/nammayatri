@@ -33,7 +33,7 @@ import Engineering.Helpers.Commons (getNewIDWithTag, isPreviousVersion, os, safe
 import Engineering.Helpers.LogEvent (logEvent)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (debounceFunction, getLocationName, getPreviousVersion, getSearchType)
+import Helpers.Utils (getLocationName, getPreviousVersion, getSearchType)
 import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
 import JBridge (getBtnLoader, showKeyboard, getCurrentPosition, firebaseLogEvent)
 import Language.Strings (getString)

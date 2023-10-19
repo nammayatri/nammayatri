@@ -79,29 +79,21 @@ view push state =
             [ orientation HORIZONTAL
             , height $ V 105 
             , width MATCH_PARENT
-            , orientation VERTICAL
-            , background state.appConfig.primaryBackground
-            , padding $ PaddingVertical safeMarginTop 16
-            ][  linearLayout
-                [ orientation HORIZONTAL
-                , height $ V 105 
-                , width MATCH_PARENT
-                 ][ linearLayout
-                    [ height WRAP_CONTENT
-                    , width WRAP_CONTENT
-                    , onClick push (const GoBack)
-                    , disableClickFeedback true
-                    , margin (Margin 9 21 0 0)
-                    , gravity CENTER
-                    , padding (Padding 4 4 4 4)
-                    ]
-                  [ imageView
-                      [ height $ V 23
-                      , width $ V 23
-                      , accessibilityHint "Back : Button"
-                      , accessibility ENABLE
-                      , imageWithFallback state.appConfig.searchLocationConfig.backArrow
-                      ]
+             ][ linearLayout
+                [ height WRAP_CONTENT
+                , width WRAP_CONTENT
+                , onClick push (const GoBack)
+                , disableClickFeedback true
+                , margin (Margin 9 21 0 0)
+                , gravity CENTER
+                , padding (Padding 4 4 4 4)
+                ]
+              [ imageView
+                  [ height $ V 23
+                  , width $ V 23
+                  , accessibilityHint "Back : Button"
+                  , accessibility ENABLE
+                  , imageWithFallback state.config.searchLocationConfig.backArrow
                   ]
               ]
               , sourceDestinationImageView state
@@ -318,7 +310,7 @@ sourceDestinationEditTextView state push =
               , cornerRadius 4.0
               , padding (Padding 8 7 32 7)
               , lineHeight "24"
-              , cursorColor state.homeScreenConfig.primaryTextColor
+              , cursorColor state.config.primaryTextColor
               , accessibilityHint "Pickup Location Editable field"
               , accessibility ENABLE
               , hint (getString START_)
@@ -505,7 +497,7 @@ recenterButtonView push state =
 
 bottomBtnsView :: forall w . SearchLocationModelState -> (Action  -> Effect Unit) -> PrestoDOM (Effect Unit) w
 bottomBtnsView state push =
-  let showBottomButtonView = if state.isSearchLocation == LocateOnMap || (not state.isRideServiceable) || state.bookingStage == Rental then false else true
+  let showBottomButtonView = if state.isSearchLocation == LocateOnMap || (not state.isRideServiceable) || state.isSource == Nothing then false else true
   in
   linearLayout
     [ height WRAP_CONTENT
@@ -618,7 +610,7 @@ destinationEditTextView push state =
         , ellipsize true
         , accessibilityHint "Destination Location Editable field"
         , accessibility ENABLE
-        , cursorColor state.homeScreenConfig.primaryTextColor
+        , cursorColor state.config.primaryTextColor
         , id $ getNewIDWithTag "DestinationEditText"
         , afterRender (\action -> do
             _ <- pure $ showKeyboard case state.isSource of
@@ -689,7 +681,6 @@ dateTimerView push state =
   , margin $ MarginTop 12
   , background Color.darkGreyishBlue
   , orientation VERTICAL
-  , clickable isClickable
   ][  linearLayout
       [ width MATCH_PARENT
       , height WRAP_CONTENT
@@ -707,7 +698,8 @@ dateTimerView push state =
           , ellipsize true
           , accessibilityHint "Select Date And Time"
           , accessibility ENABLE
-          , cursorColor state.homeScreenConfig.primaryTextColor 
+          , cursorColor state.config.primaryTextColor 
+          , clickable isClickable
           , onClick push (const FocusDateAndTime)
           ] <> FontStyle.subHeading1 LanguageStyle 
         , linearLayout -- TO BE ADDED LATER FOR CLEARING TEXT
@@ -716,15 +708,15 @@ dateTimerView push state =
           , gravity CENTER
           , margin $ MarginTop 2
           -- , onClick (\action -> timePicker push $ TimePicker ) (const EditDateAndTime)
+          , clickable isClickable
           , onClick push (const EditDate)
           , accessibilityHint "Edit Date And Time"
           , accessibility ENABLE
-          ]
-          [ imageView
-              [ height $ V 19
-              , width $ V 19
-              , imageWithFallback $ "ys_edit_pencil," <> (getAssetStoreLink FunctionCall) <> "ys_edit_pencil.png"
-              ]
+          ][imageView
+            [ height $ V 19
+            , width $ V 19
+            , imageWithFallback $ "ys_edit_pencil," <> (getAssetStoreLink FunctionCall) <> "ys_edit_pencil.png"
+            ]
           ]
       ]
   ]
@@ -772,7 +764,7 @@ primaryButtonConfigConfirm state = let
     primaryButtonConfig' = config 
       { textConfig
       { text = "Confirm Date"
-      , color = if isJust state.rentalData.dateConfig.startDate then state.homeScreenConfig.primaryTextColor else Color.yellow100
+      , color = if isJust state.rentalData.dateConfig.startDate then state.config.primaryTextColor else Color.yellow100
       }
       , margin = (Margin 16 0 16 0)
       , cornerRadius = 8.0
