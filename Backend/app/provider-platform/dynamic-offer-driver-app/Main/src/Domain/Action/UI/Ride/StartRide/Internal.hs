@@ -27,23 +27,19 @@ import Lib.SessionizerMetrics.Types.Event
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified Storage.Queries.BusinessEvent as QBE
-import qualified Storage.Queries.DriverLocation as DrLoc
 import qualified Storage.Queries.Driver.DriverFlowStatus as QDFS
 import qualified Storage.Queries.Ride as QRide
 import Tools.Error
 import Tools.Event
 
-startRideTransaction :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EventStreamFlow m r, HasField "enableLocationTrackingService" r Bool) => Id SP.Person -> SRide.Ride -> SRB.Booking -> LatLong -> Maybe Centesimal -> m ()
+startRideTransaction :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EventStreamFlow m r, LT.HasLocationService m r) => Id SP.Person -> SRide.Ride -> SRB.Booking -> LatLong -> Maybe Centesimal -> m ()
 startRideTransaction driverId ride booking firstPoint odometerStartReading = do
   when (booking.bookingType == SRB.RentalBooking) $ do
     unless (isJust odometerStartReading) $ throwError $ InternalError "No odometer start reading found"
     void $ QRide.updateOdometerStartReading ride.id odometerStartReading
   triggerRideStartEvent RideEventData {ride = ride{status = SRide.INPROGRESS}, personId = driverId, merchantId = booking.providerId}
+  void $ LF.rideStart ride.id firstPoint.lat firstPoint.lon booking.providerId driverId
   QRide.updateStatus ride.id SRide.INPROGRESS
   QRide.updateStartTimeAndLoc ride.id firstPoint
   QBE.logRideCommencedEvent (cast driverId) booking.id ride.id
   QDFS.updateStatus driverId DDFS.ON_RIDE {rideId = ride.id}
-  now <- getCurrentTime
-  enableLocationTrackingService <- asks (.enableLocationTrackingService)
-  unless enableLocationTrackingService $
-    void $ DrLoc.upsertGpsCoord driverId firstPoint now booking.providerId

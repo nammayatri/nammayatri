@@ -67,7 +67,7 @@ handler merchant sReq estimate = do
       QDQ.setInactiveAllDQByEstId sReq.estimateId now
       farePolicy <- getFarePolicy merchantId estimate.vehicleVariant searchReq.area
       searchTry <- createNewSearchTry farePolicy searchReq
-      driverPoolConfig <- getDriverPoolConfig merchantId searchReq.searchRequestDetails.estimatedDistance
+      driverPoolConfig <- getDriverPoolConfig merchantId (Just searchTry.vehicleVariant) searchReq.searchRequestDetails.estimatedDistance
       goHomeCfg <- CQGHC.findByMerchantId merchantId
       let driverExtraFeeBounds = DFarePolicy.findDriverExtraFeeBoundsByDistance searchReq.searchRequestDetails.estimatedDistance <$> farePolicy.driverExtraFeeBounds
       (res, isGoHomeBatch) <- sendSearchRequestToDrivers' driverPoolConfig searchReq searchTry merchant driverExtraFeeBounds goHomeCfg
@@ -94,6 +94,8 @@ handler merchant sReq estimate = do
                   distance = searchReq'.searchRequestDetails.estimatedDistance,
                   rideTime = sReq.pickupTime,
                   waitingTime = Nothing,
+                  actualRideDuration = Nothing,
+                  avgSpeedOfVehicle = Nothing,
                   driverSelectedFare = Nothing,
                   customerExtraFee = sReq.customerExtraFee,
                   nightShiftCharge = Nothing,

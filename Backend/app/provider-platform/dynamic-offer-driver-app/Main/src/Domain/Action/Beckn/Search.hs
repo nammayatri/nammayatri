@@ -220,6 +220,8 @@ handler merchant sReq' =
                         distance = result.distance,
                         rideTime = sReq.pickupTime,
                         waitingTime = Nothing,
+                        actualRideDuration = Nothing,
+                        avgSpeedOfVehicle = Nothing,
                         driverSelectedFare = Nothing,
                         customerExtraFee = Nothing,
                         nightShiftCharge = Nothing,
@@ -302,7 +304,7 @@ handler merchant sReq' =
     listVehicleVariantHelper farePolicy = catMaybes $ everyPossibleVariant <&> \var -> find ((== var) . (.vehicleVariant)) farePolicy
 
     buildEstimates onDemandSearchRequest farePolicies result fromLocation toLocation specialLocationTag area routeInfo = do
-      driverPoolCfg <- getDriverPoolConfig merchant.id result.distance
+      driverPoolCfg <- getDriverPoolConfig merchant.id Nothing result.distance
       estimateInfos <- buildEstimatesInfos onDemandSearchRequest fromLocation toLocation driverPoolCfg result farePolicies specialLocationTag area routeInfo
       return (Nothing, Just estimateInfos)
 

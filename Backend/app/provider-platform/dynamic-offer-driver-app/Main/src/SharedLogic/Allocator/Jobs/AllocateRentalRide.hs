@@ -25,7 +25,7 @@ import qualified Domain.Types.SearchTry as DST
 import qualified Kernel.Beam.Functions as B
 import Kernel.Prelude hiding (handle)
 import Kernel.Storage.Esqueleto as Esq
-import Kernel.Storage.Esqueleto.Config (EsqLocDBFlow, EsqLocRepDBFlow)
+--import Kernel.Storage.Esqueleto.Config (EsqLocDBFlow, EsqLocRepDBFlow)
 import Kernel.Utils.Common
 import Lib.Scheduler
 import SharedLogic.Allocator (AllocatorJobType (..))
@@ -48,9 +48,6 @@ allocateRentalRide ::
     EsqDBReplicaFlow m r,
     Metrics.HasSendSearchRequestToDriverMetrics m r,
     CacheFlow m r,
-    EsqDBFlow m r,
-    EsqLocDBFlow m r,
-    EsqLocRepDBFlow m r,
     Log m,
     MonadFlow m,
     LT.HasLocationService m r
@@ -79,9 +76,6 @@ sendSearchRequestToDrivers' ::
     EsqDBReplicaFlow m r,
     Metrics.HasSendSearchRequestToDriverMetrics m r,
     CacheFlow m r,
-    EsqDBFlow m r,
-    EsqLocDBFlow m r,
-    EsqLocRepDBFlow m r,
     Log m,
     LT.HasLocationService m r
   ) =>
