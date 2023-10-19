@@ -32,7 +32,7 @@ view config push =
   [ width MATCH_PARENT
   , height MATCH_PARENT
   , clickable true
-  , background Color.white900
+  , background if config.isDriver then Color.grey700 else Color.white900
   ] $ [  mainView config push 
     , stickyButtonView config push 
   ] <> if config.customerIssueCard.reportIssueView then [reportIssueView config push] else []
