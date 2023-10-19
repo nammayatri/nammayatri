@@ -23,6 +23,9 @@ module Domain.Action.UI.Ride.StartRide
   )
 where
 
+import AWS.S3 as S3
+import qualified Data.Text as T
+import Data.Time.Format.ISO8601 (iso8601Show)
 import qualified Domain.Action.UI.Ride.StartRide.Internal as SInternal
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.Merchant as DM
@@ -48,6 +51,7 @@ import Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
 import Storage.CachedQueries.Merchant.TransporterConfig as QTC
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.DriverInformation as QDI
+import qualified Storage.Queries.Person as Person
 import qualified Storage.Queries.Ride as QRide
 import Tools.Error
 
@@ -57,6 +61,7 @@ data DriverStartRideReq = DriverStartRideReq
   { rideOtp :: Text,
     point :: LatLong,
     odometerStartReading :: Maybe Centesimal,
+    odometerStartImage :: Maybe Text,
     requestor :: DP.Person
   }
 
@@ -90,7 +95,7 @@ buildStartRideHandle merchantId = do
         whenWithLocationUpdatesLock = LocUpd.whenWithLocationUpdatesLock
       }
 
-type StartRideFlow m r = (MonadThrow m, Log m, CacheFlow m r, EsqDBFlow m r, MonadTime m, CoreMetrics m, MonadReader r m, HasField "enableAPILatencyLogging" r Bool, HasField "enableAPIPrometheusMetricLogging" r Bool, LT.HasLocationService m r)
+type StartRideFlow m r = (MonadThrow m, Log m, CacheFlow m r, EsqDBFlow m r, MonadTime m, CoreMetrics m, MonadReader r m, HasField "enableAPILatencyLogging" r Bool, HasField "enableAPIPrometheusMetricLogging" r Bool, HasField "s3Env" r (S3.S3Env m), LT.HasLocationService m r)
 
 driverStartRide ::
   (StartRideFlow m r) =>
@@ -149,21 +154,32 @@ startRide ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.getId)
   unless (isValidRideStatus (ride.status)) $ throwError $ RideInvalidStatus "This ride cannot be started"
 
   --enableLocationTrackingService <- asks (.enableLocationTrackingService)
-  (point, odometerStartReading) <- case req of
+  (point, odometerStartReading, odometerStartImage) <- case req of
     DriverReq driverReq -> do
       when (driverReq.rideOtp /= ride.otp) $ throwError IncorrectOTP
       when (booking.bookingType == SRB.RentalBooking && isNothing driverReq.odometerStartReading) $ throwError $ InternalError "No odometer start reading found"
       logTagInfo "driver -> startRide : " ("DriverId " <> getId driverId <> ", RideId " <> getId ride.id)
-      pure (driverReq.point, driverReq.odometerStartReading)
+      pure (driverReq.point, driverReq.odometerStartReading, driverReq.odometerStartImage)
     DashboardReq dashboardReq -> do
       logTagInfo "dashboard -> startRide : " ("DriverId " <> getId driverId <> ", RideId " <> getId ride.id)
       case dashboardReq.point of
-        Just point -> pure (point, Nothing)
+        Just point -> pure (point, Nothing, Nothing)
         Nothing -> do
           driverLocation <- do
             driverLocations <- LF.driversLocation [driverId]
             listToMaybe driverLocations & fromMaybeM LocationNotFound
-          pure (getCoordinates driverLocation, Nothing)
+          pure (getCoordinates driverLocation, Nothing, Nothing)
+
+  when (booking.bookingType == SRB.RentalBooking) $ do
+    case odometerStartImage of
+      Nothing -> throwError $ InternalError "No odometer start reading found"
+      Just image -> do
+        person <- Person.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+        let merchantId = person.merchantId
+        imagePath <- createPath driverId.getId merchantId.getId (getId ride.id)
+        _ <- fork "S3 Put Image" $ S3.put (T.unpack imagePath) image
+        void $ QRide.updateOdometerEndReadingImagePath rideId (Just imagePath)
+
   whenWithLocationUpdatesLock driverId $ do
     withTimeAPI "startRide" "startRideAndUpdateLocation" $ startRideAndUpdateLocation driverId ride booking point odometerStartReading
     withTimeAPI "startRide" "initializeDistanceCalculation" $ initializeDistanceCalculation ride.id driverId point
@@ -172,6 +188,25 @@ startRide ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.getId)
   pure APISuccess.Success
   where
     isValidRideStatus status = status == DRide.NEW
+    createPath ::
+      (MonadTime m, MonadReader r m, HasField "s3Env" r (S3.S3Env m)) =>
+      Text ->
+      Text ->
+      Text ->
+      m Text
+    createPath driverId' merchantId' rideId' = do
+      pathPrefix <- asks (.s3Env.pathPrefix)
+      now <- getCurrentTime
+      let fileName = T.replace (T.singleton ':') (T.singleton '-') (T.pack $ iso8601Show now)
+      return
+        ( pathPrefix <> "/ride-odometer-reading/" <> "org-" <> merchantId' <> "/"
+            <> driverId'
+            <> "/"
+            <> rideId'
+            <> "/"
+            <> fileName
+            <> ".png"
+        )
 
 makeStartRideIdKey :: Id DP.Person -> Text
 makeStartRideIdKey driverId = "StartRideKey:PersonId-" <> driverId.getId

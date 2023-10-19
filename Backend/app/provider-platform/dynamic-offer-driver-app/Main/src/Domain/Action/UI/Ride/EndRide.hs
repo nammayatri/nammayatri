@@ -27,8 +27,11 @@ module Domain.Action.UI.Ride.EndRide
   )
 where
 
+import AWS.S3 as S3
 import Data.OpenApi.Internal.Schema (ToSchema)
+import qualified Data.Text as T
 import Data.Time hiding (getCurrentTime, secondsToNominalDiffTime)
+import Data.Time.Format.ISO8601 (iso8601Show)
 import qualified Domain.Action.UI.Ride.EndRide.Internal as RideEndInt
 import Domain.Action.UI.Route as DMaps
 import qualified Domain.Types.Booking as SRB
@@ -87,6 +90,7 @@ data DriverEndRideReq = DriverEndRideReq
     uiDistanceCalculationWithAccuracy :: Maybe Int,
     uiDistanceCalculationWithoutAccuracy :: Maybe Int,
     odometerEndReading :: Maybe Centesimal,
+    odometerEndImage :: Maybe Text,
     endRideOtp :: Maybe Text
   }
 
@@ -150,7 +154,7 @@ buildEndRideHandle merchantId = do
         uiDistanceCalculation = QRide.updateUiDistanceCalculation
       }
 
-type EndRideFlow m r = (MonadFlow m, CoreMetrics m, MonadReader r m, HasField "enableAPILatencyLogging" r Bool, HasField "enableAPIPrometheusMetricLogging" r Bool, LT.HasLocationService m r)
+type EndRideFlow m r = (MonadFlow m, CoreMetrics m, MonadReader r m, HasField "enableAPILatencyLogging" r Bool, HasField "enableAPIPrometheusMetricLogging" r Bool, HasField "s3Env" r (S3Env m), LT.HasLocationService m r)
 
 driverEndRide ::
   (EndRideFlow m r, CacheFlow m r, EsqDBFlow m r, EncFlow m r) =>
@@ -256,6 +260,13 @@ endRide handle@ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.g
         case req of
           DriverReq driverReq -> do
             logTagInfo "driver -> endRide : " ("DriverId " <> getId driverId <> ", RideId " <> getId rideOld.id)
+            case driverReq.odometerEndImage of
+              Nothing -> pure ()
+              Just image -> do
+                let merchantId = driverReq.requestor.id
+                imagePath <- createPath driverId.getId merchantId.getId rideId.getId
+                _ <- fork "S3 Put Image" $ S3.put (T.unpack imagePath) image
+                void $ QRide.updateOdometerStartReadingImagePath rideId (Just imagePath)
             pure (driverReq.point, driverReq.odometerEndReading :: Maybe Centesimal)
           DashboardReq dashboardReq -> do
             logTagInfo "dashboard -> endRide : " ("DriverId " <> getId driverId <> ", RideId " <> getId rideOld.id)
@@ -370,6 +381,25 @@ endRide handle@ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.g
 
   return $ EndRideResp {result = "Success", homeLocationReached = homeLocationReached'}
   where
+    createPath ::
+      (MonadTime m, MonadReader r m, HasField "s3Env" r (S3.S3Env m)) =>
+      Text ->
+      Text ->
+      Text ->
+      m Text
+    createPath driverId' merchantId' rideId' = do
+      pathPrefix <- asks (.s3Env.pathPrefix)
+      now <- getCurrentTime
+      let fileName = T.replace (T.singleton ':') (T.singleton '-') (T.pack $ iso8601Show now)
+      return
+        ( pathPrefix <> "/ride-odometer-reading/" <> "org-" <> merchantId' <> "/"
+            <> driverId'
+            <> "/"
+            <> rideId'
+            <> "/"
+            <> fileName
+            <> ".png"
+        )
     buildRoutesReq tripEndPoint driverHomeLocation =
       Maps.GetRoutesReq
         { waypoints = tripEndPoint :| [driverHomeLocation],
