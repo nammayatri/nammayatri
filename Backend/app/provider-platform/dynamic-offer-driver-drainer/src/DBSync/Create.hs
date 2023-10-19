@@ -6,9 +6,7 @@ module DBSync.Create where
 
 import Config.Env
 import Control.Exception (throwIO)
-import Data.Aeson (Value (Object), encode)
 import qualified Data.Aeson as A
-import qualified Data.ByteString.Lazy as BSL
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.HashMap.Strict as HM
 import Data.Maybe
@@ -127,10 +125,7 @@ runCreateCommands cmds streamKey = do
           cmdsToErrorQueue = map ("command" :: String,) byteStream
       let objList = map getData byteStream
       let mapList = mapMaybe thd objList
-      EL.logDebug ("ELEM Vijay" :: Text) (show objList)
-      EL.logDebug ("List Vijay" :: Text) (show mapList)
       let insertList = mapMaybe (generateInsertForTable . getData) byteStream
-      EL.logDebug ("Insert Vijay" :: Text) (show insertList)
       Env {..} <- ask
       maxRetries <- EL.runIO getMaxRetries
       if null object || model `elem` _dontEnableDbTables then pure [Right entryIds] else runCreateWithRecursion dbConf model dbObjects cmdsToErrorQueue entryIds 0 maxRetries False
@@ -209,29 +204,8 @@ streamDriverDrainerCreates producer dbObject streamKey model = do
         { prTopic = TopicName topicName,
           prPartition = UnassignedPartition,
           prKey = Just $ TE.encodeUtf8 streamKey,
-          prValue = Just . LBS.toStrict $ encode event
+          prValue = Just . LBS.toStrict $ A.encode event
         }
-
--- runCreateQuery :: (EL.KVDBStreamEntryID, ByteString) -> Text -> ReaderT Env EL.Flow (Either EL.KVDBStreamEntryID EL.KVDBStreamEntryID)
--- runCreateQuery createDataEntries _ =
---   let (mbModel, mbObject, mbMappings) = getData (snd createDataEntries)
---       insertQuery = generateInsertForTable (mbModel, mbObject, mbMappings)
---    in case insertQuery of
---         Just query -> do
---           EL.logDebug ("QueryVijay" :: Text) (show insertQuery)
---           Env {..} <- ask
---           res <- EL.runIO $  execute_ _pgConnection . Query $ TE.encodeUtf8 query
---           EL.logInfo ("Insert result " :: Text) (show res)
---           if res > 0
---             then do
---               EL.logInfo ("Insert successful " :: Text) ("Insert successful for query" <> query <> "with streamData" <> TE.decodeUtf8 (snd createDataEntries))
---               pure $ Right (fst createDataEntries)
---             else do
---               EL.logInfo ("Insert failed " :: Text) ("Insert failed for query" <> query <> "with streamData" <> TE.decodeUtf8 (snd createDataEntries))
---               pure $ Left (fst createDataEntries)
---         Nothing -> do
---           EL.logInfo ("No query generated for streamData " :: Text) (TE.decodeUtf8 (snd createDataEntries))
---           pure $ Left (fst createDataEntries)
 
 newtype QueryError = QueryError Text
   deriving (Show)
@@ -246,42 +220,34 @@ executeQuery conn query = do
     Left e -> throwIO $ QueryError $ "Query execution failed: " <> T.pack (show e)
     Right _ -> return ()
 
+-- | Run a create query for a single entry in the stream
 runCreateQuery :: (EL.KVDBStreamEntryID, ByteString) -> Text -> ReaderT Env EL.Flow (Either EL.KVDBStreamEntryID EL.KVDBStreamEntryID)
 runCreateQuery createDataEntries _ =
   let (mbModel, mbObject, mbMappings) = getData (snd createDataEntries)
       insertQuery = generateInsertForTable (mbModel, mbObject, mbMappings)
    in case insertQuery of
         Just query -> do
-          EL.logDebug ("QueryVijay" :: Text) (show insertQuery)
           Env {..} <- ask
           result <- EL.runIO $ try $ executeQuery _pgConnection (Query $ TE.encodeUtf8 query)
           case result of
             Left (QueryError errorMsg) -> do
-              EL.logError ("Query execution error " :: Text) errorMsg
+              EL.logError ("QUERY INSERT FAILED" :: Text) errorMsg
               pure $ Left (fst createDataEntries)
             Right _ -> do
-              EL.logInfo ("Insert successful " :: Text) ("Insert successful for query" <> query <> "with streamData" <> TE.decodeUtf8 (snd createDataEntries))
+              EL.logInfo ("QUERY INSERT SUCCESSFUL" :: Text) (" Insert successful for query :: " <> query <> " with streamData :: " <> TE.decodeUtf8 (snd createDataEntries))
               pure $ Right (fst createDataEntries)
-        -- Right res -> do
-        --   EL.logInfo ("Insert result " :: Text) (show res)
-        --   if res > 0
-        --     then do
-        --       EL.logInfo ("Insert successful " :: Text) ("Insert successful for query" <> query <> "with streamData" <> TE.decodeUtf8 (snd createDataEntries))
-        --       pure $ Right (fst createDataEntries)
-        --     else do
-        --       EL.logInfo ("Insert failed " :: Text) ("Insert failed for query" <> query <> "with streamData" <> TE.decodeUtf8 (snd createDataEntries))
-        --       pure $ Left (fst createDataEntries)
         Nothing -> do
           EL.logInfo ("No query generated for streamData: " :: Text) (TE.decodeUtf8 (snd createDataEntries))
           pure $ Left (fst createDataEntries)
 
+-- This function is used to extract the model name, object and mappings from the stream data
 getData :: ByteString -> (Maybe T.Text, Maybe A.Object, Maybe A.Object)
 getData dbCommandByteString = do
-  case A.decode $ BSL.fromStrict dbCommandByteString of
-    Just _decodedDBCommandObject@(Data.Aeson.Object o) ->
+  case A.decode $ LBS.fromStrict dbCommandByteString of
+    Just _decodedDBCommandObject@(A.Object o) ->
       let mbModel = case HM.lookup "contents" o of
             Just _commandArray@(A.Array a) -> case V.last a of
-              _commandObject@(Data.Aeson.Object command) -> case HM.lookup "tag" command of
+              _commandObject@(A.Object command) -> case HM.lookup "tag" command of
                 Just (A.String modelTag) -> pure $ T.pack (quietSnake (T.unpack (T.take (T.length modelTag - 6) modelTag)))
                 _ -> Nothing
               _ -> Nothing
@@ -289,21 +255,22 @@ getData dbCommandByteString = do
 
           mbObject = case HM.lookup "contents" o of
             Just _commandArray@(A.Array a) -> case V.last a of
-              _commandObject@(Data.Aeson.Object command) -> case HM.lookup "contents" command of
-                Just (Data.Aeson.Object object) -> return object
+              _commandObject@(A.Object command) -> case HM.lookup "contents" command of
+                Just (A.Object object) -> return object
                 _ -> Nothing
               _ -> Nothing
             _ -> Nothing
           mbMapings = case HM.lookup "contents" o of
             Just _commandArray@(A.Array a) -> case V.last a of
-              _commandObject@(Data.Aeson.Object command) -> case HM.lookup "mappings" command of
-                Just (Data.Aeson.Object mappingArray) -> return mappingArray
+              _commandObject@(A.Object command) -> case HM.lookup "mappings" command of
+                Just (A.Object mappingArray) -> return mappingArray
                 _ -> Nothing
               _ -> Nothing
             _ -> Nothing
        in (mbModel, mbObject, mbMapings)
     _ -> (Nothing, Nothing, Nothing)
 
+-- | Generate an insert query for the atlas_driver_offer_bpp schema
 generateInsertForTable :: (Maybe Text, Maybe A.Object, Maybe A.Object) -> Maybe Text
 generateInsertForTable (mbModel, mbObject, mbMappings) =
   case (mbModel, mbObject) of
@@ -322,15 +289,16 @@ generateInsertForTable (mbModel, mbObject, mbMappings) =
     quote x = "'" <> x <> "'"
     quote' x = "\"" <> x <> "\""
 
+-- | Since we cant pass NULL in query without converting it to string we are removing null values from the object
 removeNullAndEmptyValues :: A.Object -> A.Object
 removeNullAndEmptyValues = HM.filter (not . isNullOrEmpty)
 
--- Check if a value is null or an empty string
 isNullOrEmpty :: A.Value -> Bool
 isNullOrEmpty A.Null = True
 isNullOrEmpty (A.String str) = null str
 isNullOrEmpty _ = False
 
+-- | As some of the keys in the object are not same as the column names in the table we are replacing them with the actual column names
 replaceMappings :: [T.Text] -> A.Object -> [T.Text]
 replaceMappings elements obj = map replaceElement elements
   where
@@ -339,13 +307,15 @@ replaceMappings elements obj = map replaceElement elements
         Just (A.String value) -> value
         _ -> element
 
-valueToText :: Data.Aeson.Value -> T.Text
+-- | Convert a JSON value to a text representation that can be used in a SQL query
+-- | Note : this function may need some modifications to handle if there's any case which needs to be handled
+valueToText :: A.Value -> T.Text
 valueToText (A.String t) = t
 valueToText (A.Number n) =
   if Sci.isInteger n
     then T.pack (show (Sci.coefficient n)) -- Convert to integer if it's an integer
     else T.pack (show (Sci.toRealFloat n)) -- Convert to floating-point
 valueToText (A.Bool b) = if b then "true" else "false"
-valueToText (A.Array a) = show (map valueToText (V.toList a))
-valueToText (A.Object obj) = show (A.encode obj)
+valueToText (A.Array a) = "{" <> T.intercalate "," (map valueToText (V.toList a)) <> "}"
+valueToText (A.Object obj) = T.pack (show (A.encode obj))
 valueToText A.Null = "null"
