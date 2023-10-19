@@ -467,7 +467,7 @@ cancelConfirmationConfig state = let
     backgroundClickable = false,
     cornerRadius = (PTD.Corners 15.0 true true true true),
     coverImageConfig {
-      imageUrl =  if (state.data.activeRide.specialLocationTag == Nothing && (HU.getRequiredTag "text" state.data.activeRide.specialLocationTag) == Nothing) 
+      imageUrl =  if (state.data.activeRide.specialLocationTag == Nothing || (HU.getRequiredTag "text" state.data.activeRide.specialLocationTag) == Nothing) 
                     then "ic_cancel_prevention," <> (getAssetStoreLink FunctionCall) <> "ny_ic_cancel_prevention.png"
                   else HU.getRideLabelData "cancelConfirmImage" state.data.activeRide.specialLocationTag
     , visibility = VISIBLE

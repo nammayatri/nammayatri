@@ -2086,7 +2086,7 @@ homeScreenFlow = do
       updateDriverDataToStates
       modifyScreenState $ GlobalPropsType (\globalProps -> globalProps { gotoPopupType = ST.NO_POPUP_VIEW })
       homeScreenFlow
-    CLEAR_PENDING_DUES -> clearPendingDuesFlow
+    CLEAR_PENDING_DUES -> clearPendingDuesFlow true
     ENABLE_GOTO_API state id currentLocation -> do
       activateResp <- lift $ lift $ Remote.activateDriverGoTo id currentLocation
       pure $ toggleBtnLoader "" false
