@@ -103,17 +103,13 @@ dropDBCommand dbStreamKey entryId = do
       void $ publishDBSyncMetric Event.DropDBCommandError
       EL.logError ("DROP_DB_COMMAND_ERROR" :: Text) $ ("entryId : " :: Text) <> show entryId <> (", Error : " :: Text) <> show e
 
-runCriticalDBSyncOperations :: Text -> [(CreateDBCommand, ByteString)] -> [(UpdateDBCommand, ByteString)] -> [(DeleteDBCommand, ByteString)] -> [(EL.KVDBStreamEntryID, ByteString)] -> ExceptT Int Flow Int
-runCriticalDBSyncOperations dbStreamKey createEntries updateEntries deleteEntries createDataEntries = do
-  let streamdata = map snd createDataEntries
+runCriticalDBSyncOperations :: Text -> [(UpdateDBCommand, ByteString)] -> [(DeleteDBCommand, ByteString)] -> [(EL.KVDBStreamEntryID, ByteString)] -> ExceptT Int Flow Int
+runCriticalDBSyncOperations dbStreamKey updateEntries deleteEntries createDataEntries = do
   let updateStreamdata = map snd updateEntries
-  EL.logDebug ("DATA: " :: Text) (show streamdata)
   EL.logDebug ("UPDTE::: " :: Text) (show updateStreamdata)
   isForcePushEnabled <- pureRightExceptT $ fromMaybe False <$> getValueFromRedis C.forceDrainEnabledKey
   {- run bulk-inserts parallel -}
   (cSucc, cFail) <- pureRightExceptT $ executeInSequence' runCreateQuery ([], []) dbStreamKey createDataEntries
-  EL.logDebug ("CREATE SUCCESS: " :: Text) (show cSucc)
-  EL.logDebug ("CREATE FAIL: " :: Text) (show cFail)
   void $ pureRightExceptT $ publishDBSyncMetric $ Event.DrainerQueryExecutes "Create" (fromIntegral $ length cSucc)
   void $ pureRightExceptT $ publishDBSyncMetric $ Event.DrainerQueryExecutes "CreateInBatch" (if null cSucc then 0 else 1)
   void $
@@ -129,7 +125,7 @@ runCriticalDBSyncOperations dbStreamKey createEntries updateEntries deleteEntrie
         if isForcePushEnabled
           then do
             EL.logError ("CREATE FAILED: Force Sync is enabled" :: Text) (show cFail :: Text)
-            void $ pureRightExceptT $ addValueToErrorQueue (T.pack C.ecRedisFailedStream) ((\(_, bts) -> ("command", bts)) <$> filter (\(CreateDBCommand id _ _ _ _ _, _) -> id `elem` cFail) createEntries)
+            void $ pureRightExceptT $ addValueToErrorQueue (T.pack C.ecRedisFailedStream) ((\(_, bts) -> ("command", bts)) <$> filter (\(id, _) -> id `elem` cFail) createDataEntries)
             pureRightExceptT $ traverse_ (dropDBCommand dbStreamKey) cFail
             pure (length cSucc)
           else do
@@ -210,12 +206,12 @@ process dbStreamKey count = do
     run :: [(EL.KVDBStreamEntryID, [(Text, ByteString)])] -> Flow Int
     run entries = do
       commands <- catMaybes <$> traverse (parseDBCommand dbStreamKey) entries
-      let createEntries = mapMaybe filterCreateCommands commands
-          updateEntries = mapMaybe filterUpdateCommands commands
+      -- let createEntries = mapMaybe filterCreateCommands commands
+      let updateEntries = mapMaybe filterUpdateCommands commands
           deleteEntries = mapMaybe filterDeleteCommands commands
           createDataEntries = mapMaybe filterCreateCommands' commands
 
-      dbsyncOperationsOutput <- runExceptT $ runCriticalDBSyncOperations dbStreamKey createEntries updateEntries deleteEntries createDataEntries
+      dbsyncOperationsOutput <- runExceptT $ runCriticalDBSyncOperations dbStreamKey updateEntries deleteEntries createDataEntries
       case dbsyncOperationsOutput of
         Left cnt -> do
           stopDrainer
