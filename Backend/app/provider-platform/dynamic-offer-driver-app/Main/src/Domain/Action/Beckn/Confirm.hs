@@ -156,9 +156,6 @@ handler transporter req validateRes = do
 
       ride <- buildRide driver.id booking ghrId req.customerPhoneNumber otpCode toLocation
       triggerRideCreatedEvent RideEventData {ride = ride, personId = cast driver.id, merchantId = transporter.id}
-      enableLocationTrackingService <- asks (.enableLocationTrackingService)
-      when enableLocationTrackingService $ do
-        void $ LF.rideDetails ride.id ride.status transporter.id ride.driverId booking.fromLocation.lat booking.fromLocation.lon
       rideDetails <- buildRideDetails ride driver
       driverSearchReqs <- QSRD.findAllActiveBySTId driverQuote.searchTryId
       routeInfo :: Maybe RouteInfo <- safeGet (searchRequestKey $ getId driverQuote.requestId)
@@ -169,7 +166,8 @@ handler transporter req validateRes = do
       -- critical updates
       QRB.updateStatus booking.id DRB.TRIP_ASSIGNED
       QRide.createRide ride
-      DLoc.updateOnRide driver.merchantId driver.id True
+      QDI.updateOnRide (cast driver.id) True
+      void $ LF.rideDetails ride.id DRide.NEW transporter.id ride.driverId booking.fromLocation.lat booking.fromLocation.lon
 
       -- non-critical updates
       when isNewRider $ QRD.create riderDetails

@@ -302,24 +302,20 @@ endRide handle@ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.g
   whenWithLocationUpdatesLock driverId $ do
     thresholdConfig <- findConfig >>= fromMaybeM (InternalError "TransportConfigNotFound")
     now <- getCurrentTime
+    tripEndPoints <- do
+      res <- LF.rideEnd rideId tripEndPoint.lat tripEndPoint.lon booking.providerId driverId
+      pure $ toList res.loc
     (chargeableDistance, finalFare, mbUpdatedFareParams, ride, pickupDropOutsideOfThreshold, distanceCalculationFailed) <-
       case odometerEndReading of
         Nothing -> do
           case req of
             CronJobReq _ -> do
               logTagInfo "cron job -> endRide : " "Do not call snapToRoad, return estimates as final values."
-              (chargeableDistance, finalFare, mbUpdatedFareParams) <- recalculateFareForDistance handle booking rideOld booking.estimatedDistance thresholdConfig.timeDiffFromUtc
+              (chargeableDistance, finalFare, mbUpdatedFareParams) <- recalculateFareForDistance handle booking rideOld booking.estimatedDistance thresholdConfig
               pure (chargeableDistance, finalFare, mbUpdatedFareParams, rideOld, Nothing, Nothing)
             _ -> do
               -- here we update the current ride, so below we fetch the updated version
               pickupDropOutsideOfThreshold <- isPickupDropOutsideOfThreshold booking rideOld tripEndPoint thresholdConfig
-              enableLocationTrackingService <- asks (.enableLocationTrackingService)
-              tripEndPoints <-
-                if enableLocationTrackingService
-                  then do
-                    res <- LF.rideEnd rideId tripEndPoint.lat tripEndPoint.lon booking.providerId driverId
-                    pure $ toList res.loc
-                  else pure [tripEndPoint]
               whenJust (nonEmpty tripEndPoints) \tripEndPoints' -> do
                 withTimeAPI "endRide" "finalDistanceCalculation" $ finalDistanceCalculation rideOld.id driverId tripEndPoints' booking.estimatedDistance pickupDropOutsideOfThreshold
 
@@ -338,7 +334,7 @@ endRide handle@ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.g
           (recalcDistance, finalFare, mbUpdatedFareParams) <- case farePolicy.farePolicyDetails of
             DFP.ProgressiveDetails _ -> throwError $ InternalError "Rental does not support progressive FP"
             DFP.SlabsDetails _ -> throwError $ InternalError "Rental does not support slab FP"
-            DFP.RentalDetails _ -> recalculateFareForDistance handle booking rideOld (Meters $ round (endReading - fromMaybe 0 rideOld.rideDetails.odometerStartReading) * 1000) thresholdConfig.timeDiffFromUtc
+            DFP.RentalDetails _ -> recalculateFareForDistance handle booking rideOld (Meters $ round (endReading - fromMaybe 0 rideOld.rideDetails.odometerStartReading) * 1000) thresholdConfig
           ride <- QRide.findById (cast rideOld.id) >>= fromMaybeM (RideDoesNotExist rideOld.id.getId)
           pure (recalcDistance, finalFare, mbUpdatedFareParams, ride, Nothing, Nothing)
     let newFareParams = fromMaybe booking.fareParams mbUpdatedFareParams

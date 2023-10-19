@@ -44,8 +44,9 @@ import qualified Tools.Metrics as Metrics
 
 allocateRentalRide ::
   ( EncFlow m r,
-    TranslateFlow m r,
+    EsqDBFlow m r,
     EsqDBReplicaFlow m r,
+    TranslateFlow m r,
     Metrics.HasSendSearchRequestToDriverMetrics m r,
     CacheFlow m r,
     Log m,
@@ -60,7 +61,7 @@ allocateRentalRide Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) $ do
   searchReq <- B.runInReplica $ QSR.findById searchTry.requestId >>= fromMaybeM (SearchRequestNotFound searchTry.requestId.getId)
   booking <- QB.findById jobData.bookingId >>= fromMaybeM (BookingNotFound jobData.bookingId.getId)
   merchant <- CQM.findById searchReq.providerId >>= fromMaybeM (MerchantNotFound (searchReq.providerId.getId))
-  driverPoolConfig <- getDriverPoolConfig merchant.id booking.estimatedDistance
+  driverPoolConfig <- getDriverPoolConfig merchant.id (Just booking.vehicleVariant) booking.estimatedDistance
   goHomeCfg <- CQGHC.findByMerchantId merchant.id
   (res, _) <- sendSearchRequestToDrivers' driverPoolConfig searchTry searchReq booking merchant Nothing goHomeCfg
   return res
@@ -72,6 +73,7 @@ allocateRentalRide Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) $ do
 
 sendSearchRequestToDrivers' ::
   ( EncFlow m r,
+    EsqDBFlow m r,
     TranslateFlow m r,
     EsqDBReplicaFlow m r,
     Metrics.HasSendSearchRequestToDriverMetrics m r,

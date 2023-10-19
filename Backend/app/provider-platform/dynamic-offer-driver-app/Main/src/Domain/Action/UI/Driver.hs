@@ -140,7 +140,7 @@ import qualified Kernel.External.Verification.Interface.InternalScripts as IF
 import Kernel.Prelude (NominalDiffTime, baseUrlPath)
 import Kernel.Serviceability (rideServiceable)
 import Kernel.Sms.Config
-import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow, EsqLocDBFlow, EsqLocRepDBFlow)
+import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.APISuccess (APISuccess (Success))
 import qualified Kernel.Types.APISuccess as APISuccess
@@ -163,10 +163,11 @@ import Lib.SessionizerMetrics.Types.Event
 import qualified SharedLogic.CallBAP as CallBAP
 import qualified SharedLogic.DeleteDriver as DeleteDriverOnCheck
 import qualified SharedLogic.DriverFee as SLDriverFee
-import qualified SharedLogic.DriverLocation as DLoc
 import SharedLogic.DriverMode as DMode
 import SharedLogic.DriverOnboarding
 import SharedLogic.DriverPool as DP
+import qualified SharedLogic.External.LocationTrackingService.Flow as LF
+import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.FareCalculator
 import SharedLogic.FarePolicy
 import qualified SharedLogic.MessageBuilder as MessageBuilder
@@ -1146,8 +1147,8 @@ offerQuote ::
     HasField "driverUnlockDelay" r Seconds,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     HasFlowEnv m r '["selfUIUrl" ::: BaseUrl],
-    EsqLocDBFlow m r,
-    EsqLocRepDBFlow m r,
+    --EsqLocDBFlow m r,
+    --EsqLocRepDBFlow m r,
     LT.HasLocationService m r,
     HasHttpClientOptions r c,
     HasShortDurationRetryCfg r c,
@@ -1176,8 +1177,8 @@ respondQuote ::
     LT.HasLocationService m r,
     HasHttpClientOptions r c,
     HasShortDurationRetryCfg r c,
-    EsqLocDBFlow m r,
-    EsqLocRepDBFlow m r,
+    --EsqLocDBFlow m r,
+    --EsqLocRepDBFlow m r,
     HasPrettyLogger m r,
     MonadFlow m,
     EventStreamFlow m r,
@@ -1217,7 +1218,7 @@ respondQuote (driverId, _) req = do
               logDebug $ "offered fare: " <> show req.offeredFare
               whenM thereAreActiveQuotes (throwError FoundActiveQuotes)
               when (sReqFD.response == Just Reject) (throwError QuoteAlreadyRejected)
-              quoteLimit <- getQuoteLimit searchReq.providerId searchReq.estimatedDistance searchTry.vehicleVariant
+              quoteLimit <- getQuoteLimit searchReq.providerId searchReq.searchRequestDetails.estimatedDistance searchTry.vehicleVariant
               quoteCount <- runInReplica $ QDrQt.countAllBySTId searchTry.id
               when (quoteCount >= quoteLimit) (throwError QuoteAlreadyRejected)
               farePolicy <- getFarePolicy organization.id sReqFD.vehicleVariant searchReq.area
@@ -1233,13 +1234,15 @@ respondQuote (driverId, _) req = do
                       distance = searchReq.searchRequestDetails.estimatedDistance,
                       rideTime = sReqFD.startTime,
                       waitingTime = Nothing,
+                      actualRideDuration = Nothing,
+                      avgSpeedOfVehicle = Nothing,
                       driverSelectedFare = mbOfferedFare,
                       customerExtraFee = searchTry.customerExtraFee,
                       nightShiftCharge = Nothing,
                       rentalRideParams = Nothing
                     }
-              estimateId <- searchTry.estimateId & fromMaybeM (InternalError "SearchTry field not present: estimateId")
-              driverQuote <- buildDriverQuote driver searchReq sReqFD estimateId fareParams
+              estimateID <- searchTry.estimateId & fromMaybeM (InternalError "SearchTry field not present: estimateId")
+              driverQuote <- buildDriverQuote driver searchReq sReqFD estimateID fareParams
               triggerQuoteEvent QuoteEventData {quote = driverQuote}
               _ <- QDrQt.create driverQuote
               _ <- QSRD.updateDriverResponse sReqFD.id req.response
@@ -1247,7 +1250,7 @@ respondQuote (driverId, _) req = do
               let shouldPullFCMForOthers = (quoteCount + 1) >= quoteLimit || (searchReq.searchRequestDetails.autoAssignEnabled == Just True)
               driverFCMPulledList <- if shouldPullFCMForOthers then QSRD.findAllActiveWithoutRespBySearchTryId searchTryId else pure []
               -- Adding +1 in quoteCount because one more quote added above (QDrQt.create driverQuote)
-              sendRemoveRideRequestNotification driverFCMPulledList organization.id driverQuote.estimatedFare
+              sendRemoveRideRequestNotification driverFCMPulledList organization.id driverQuote
               CallBAP.sendDriverOffer organization searchReq searchTry driverQuote
               pure driverFCMPulledList
             Reject -> do
@@ -1318,7 +1321,7 @@ respondQuote (driverId, _) req = do
       for_ driverSearchReqs $ \driverReq -> do
         _ <- QSRD.updateDriverResponse driverReq.id Pulled
         driver_ <- runInReplica $ QPerson.findById driverReq.driverId >>= fromMaybeM (PersonNotFound driverReq.driverId.getId)
-        Notify.notifyDriverClearedFare orgId driverReq.driverId driverReq.searchTryId estimatedFare driver_.deviceToken
+        Notify.notifyDriverClearedFare orgId driverReq.driverId driverReq.searchTryId driverQuote.estimatedFare driver_.deviceToken
 
     respondRentalRide searchTry = do
       let searchTryId = searchTry.id
@@ -1359,9 +1362,10 @@ respondQuote (driverId, _) req = do
 
         ride <- buildRide booking otpCode merchantId
         triggerRideCreatedEvent RideEventData {ride = ride, personId = cast driver.id, merchantId}
-        enableLocationTrackingService <- asks (.enableLocationTrackingService)
-        when enableLocationTrackingService $ do
-          void $ LF.rideDetails ride.id ride.status merchantId ride.driverId booking.fromLocation.lat booking.fromLocation.lon
+        --enableLocationTrackingService <- asks (.enableLocationTrackingService)
+        --when enableLocationTrackingService $ do
+        --- PLEASE FIX ME ----
+        void $ LF.rideDetails ride.id ride.status merchantId ride.driverId booking.fromLocation.lat booking.fromLocation.lon
         rideDetails <- buildRideDetails ride driver
         driverSearchReqs <- QSRD.findAllActiveBySTId searchTryId
         let searchRequestId = searchTry.requestId
@@ -1373,7 +1377,7 @@ respondQuote (driverId, _) req = do
         -- critical updates
         QRB.updateStatus booking.id DB.TRIP_ASSIGNED
         QRide.createRide ride
-        DLoc.updateOnRide driver.merchantId driver.id True
+        -- DLoc.updateOnRide driver.merchantId driver.id True -- FIX ME RENTAL
 
         -- non-critical updates
         QDFS.updateStatus driver.id DDFS.RIDE_ASSIGNED {rideId = ride.id}
@@ -1404,7 +1408,7 @@ respondQuote (driverId, _) req = do
                     "Check the app for more details."
                   ]
         Notify.notifyDriver merchantId notificationType notificationTitle message driver.id driver.deviceToken
-        void $ CallBAP.sendRideAssignedUpdateToBAP uBooking ride
+    --void $ CallBAP.sendRideAssignedUpdateToBAP uBooking ride -- FIX ME RENTAL
 
     -- TODO remove duplication
     buildRide booking otp merchantId = do
@@ -1472,7 +1476,8 @@ respondQuote (driverId, _) req = do
             vehicleColor = Just vehicle.color,
             vehicleVariant = Just vehicle.variant,
             vehicleModel = Just vehicle.model,
-            vehicleClass = Nothing
+            vehicleClass = Nothing,
+            fleetOwnerId = Nothing
           }
 
 getStats ::
