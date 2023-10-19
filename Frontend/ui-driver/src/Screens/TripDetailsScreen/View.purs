@@ -173,7 +173,7 @@ tagView state config =
       , padding $ Padding 12 5 12 5
       , margin $ MarginRight 5
       ][  imageView
-          [ imageWithFallback $ item.image <> ","
+          [ imageWithFallback $ item.image <> ","  <> (getAssetStoreLink FunctionCall) <> item.image <> ".png"
           , height $ V 16
           , width $ V 16
           ]

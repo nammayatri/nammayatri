@@ -222,7 +222,7 @@ searchLocation state push visibility' =
                     , imageView
                         [ height $ V 22
                         , width $ V 22
-                        , imageWithFallback $ "ic_cancel_unfilled," <> (getAssetStoreLink FunctionCall) <> "ic_cancel_unfilled.png"
+                        , imageWithFallback $ "ic_cancel_unfilled," <> (getAssetStoreLink FunctionCall) <> "ny_ic_cancel_unfilled.png"
                         , padding $ Padding 4 4 4 4
                         , onClick push $ const ClearSearch
                         ]
@@ -270,7 +270,7 @@ bottomButtons state push =
             [ imageView
                 [ height $ V 18
                 , width $ V 18
-                , imageWithFallback $ "ic_location_marker," <> (getAssetStoreLink FunctionCall) <> "ic_location_marker.png"
+                , imageWithFallback $ "ic_location_marker," <> (getAssetStoreLink FunctionCall) <> "ny_ic_location_marker.png"
                 ]
             , textView
                 $ [ height MATCH_PARENT
