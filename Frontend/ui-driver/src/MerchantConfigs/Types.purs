@@ -62,5 +62,6 @@ type ProfileConfig = {
 }
 
 type GotoConfig = {
-  maxGotoLocations :: Int
+  maxGotoLocations :: Int,
+  enableGoto :: Boolean
 }

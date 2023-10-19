@@ -76,7 +76,8 @@ commonConfig =
         , enablePurpleRideBanner : false
         , showPaymentDetails : true
         , gotoConfig : {
-            maxGotoLocations : 5
+            maxGotoLocations : 5,
+            enableGoto : false
         }
         , profileVerification : {
           aadharVerificationRequired : false

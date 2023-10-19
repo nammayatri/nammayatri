@@ -25,7 +25,7 @@ import Components.PrimaryButton as PrimaryButton
 import Components.PrimaryButton as PrimaryButtonController
 import Components.PrimaryEditText as PrimaryEditText
 import Components.PrimaryEditText.Controller as PrimaryEditTextController
-import Data.Array ((!!), union, drop, filter, elem, length, foldl, any)
+import Data.Array ((!!), union, drop, filter, elem, length, foldl, any, all)
 import Data.Int (fromString)
 import Data.Lens.Getter ((^.))
 import Data.Maybe (fromMaybe, Maybe(..), isJust)
@@ -358,7 +358,7 @@ eval (GetDriverInfoResponse (SA.GetDriverInfoResp driverProfileResp)) state = do
                                       payerVpa = fromMaybe "" driverProfileResp.payerVpa,
                                       autoPayStatus = getAutopayStatus driverProfileResp.autoPayStatus
                                       },
-                    props { hideGoto = not driverProfileResp.isGoHomeEnabled || driverGoHomeInfo.status == Just "ACTIVE"}}
+                    props { enableGoto = driverProfileResp.isGoHomeEnabled && driverGoHomeInfo.status /= Just "ACTIVE" && state.data.config.gotoConfig.enableGoto }}
 
 eval (GetRcsDataResponse  (SA.GetAllRcDataResp rcDataArray)) state = do
   let rctransformedData = makeRcsTransformData rcDataArray
@@ -625,7 +625,7 @@ makeRcsTransformData (listRes) = map (\ (SA.GetAllRcDataRecords rc)-> {
 
 optionList :: DriverProfileScreenState -> Array Listtype
 optionList state =
-    (if (not any ( _ == true )[isLocalStageOn ST.RideAccepted, isLocalStageOn ST.RideStarted, isLocalStageOn ST.ChatWithCustomer, state.props.hideGoto]) then [{menuOptions: GO_TO_LOCATIONS , icon:"ny_ic_loc_grey,https://assets.juspay.in/nammayatri/images/driver/ny_ic_loc_grey.png"}] else []) <>
+    (if state.props.enableGoto && (all ( _ == false )[isLocalStageOn ST.RideAccepted, isLocalStageOn ST.RideStarted, isLocalStageOn ST.ChatWithCustomer]) then [{menuOptions: GO_TO_LOCATIONS , icon:"ny_ic_loc_grey,https://assets.juspay.in/nammayatri/images/driver/ny_ic_loc_grey.png"}] else []) <>
     (if (getMerchant FunctionCall /= NAMMAYATRI)  then [{menuOptions: DRIVER_BOOKING_OPTIONS , icon:"ic_booking_options,https://assets.juspay.in/nammayatri/images/driver/ic_booking_options.png"}] else []) <>
     [
       {menuOptions: APP_INFO_SETTINGS , icon:"ny_ic_app_info,https://assets.juspay.in/nammayatri/images/driver/ny_ic_app_info.png"},

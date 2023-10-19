@@ -362,7 +362,7 @@ type DriverProfileScreenProps = {
   showBookingOptionForTaxi :: Boolean,
   upiQrView :: Boolean,
   paymentInfoView :: Boolean,
-  hideGoto :: Boolean
+  enableGoto :: Boolean
 }
 data Gender = MALE | FEMALE | OTHER | PREFER_NOT_TO_SAY
 
