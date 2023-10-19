@@ -310,10 +310,10 @@ processMandate driverId mandateStatus startDate endDate mandateId maxAmount paye
     mbDriverPlan <- QDP.findByMandateId mandateId
     driver <- B.runInReplica $ QP.findById driverId >>= fromMaybeM (PersonDoesNotExist driverId.getId)
     Redis.whenWithLockRedis (mandateProcessingLockKey mandateId.getId) 60 $ do
-      QDI.updateAutoPayStatusAndPayerVpa (castAutoPayStatus mandateStatus) Nothing (cast driverId)
       QM.updateMandateDetails mandateId DM.INACTIVE Nothing payerApp Nothing mandatePaymentFlow --- should we store driver Id in mandate table ?
       case mbDriverPlan of
         Just driverPlan -> do
+          QDI.updateAutoPayStatusAndPayerVpa (castAutoPayStatus mandateStatus) Nothing (cast driverId)
           QDP.updatePaymentModeByDriverId (cast driverPlan.driverId) DP.MANUAL
           when (mandateStatus == Payment.PAUSED) $ do
             QDF.updateAllExecutionPendingToManualOverdueByDriverId (cast driver.id)
