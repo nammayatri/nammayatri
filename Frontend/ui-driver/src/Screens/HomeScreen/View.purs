@@ -95,6 +95,7 @@ screen initialState =
   , name : "HomeScreen"
   , globalEvents : [
         ( \push -> do
+          _ <- pure $ JB.checkAndAskNotificationPermission unit
           _ <- pure $ printLog "initial State" initialState
           _ <- HU.storeCallBackForNotification push Notification
           _ <- HU.storeCallBackTime push TimeUpdate

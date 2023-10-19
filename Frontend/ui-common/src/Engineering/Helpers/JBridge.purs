@@ -85,6 +85,7 @@ foreign import shareImageMessage :: String -> ShareImageConfig -> Unit
 foreign import showInAppNotification :: String -> String -> String -> String -> String -> String -> String -> String -> Int -> Effect Unit
 foreign import enableMyLocation :: Boolean -> Unit
 foreign import isLocationPermissionEnabled :: Unit -> Effect Boolean
+foreign import checkAndAskNotificationPermission :: Unit -> Effect Unit
 foreign import isMicrophonePermissionEnabled :: Unit -> Effect Boolean
 -- foreign import getPackageName   :: Effect String
 foreign import getVersionCode   :: Effect Int
