@@ -319,7 +319,7 @@ const bengaliStrings = {
   "ADD_SAVED_LOCATION_FROM_SETTINGS": "*আপনি সাইড মেনু> ফেভারিট থেকে নতুন প্রিয় যুক্ত করতে পারেন",
   "YOU_WILL_BE_ASKED_TO_SELECT_CONTACTS": "আপনাকে 3 টি পরিচিতি নির্বাচন করতে বলা হবে",
   "AUTO_ASSIGN_A_RIDE": "একটি যাত্রা অটো-অ্যাসাইন করুন",
-  "IS_WAITING_FOR_YOU": "আপনার জন্য অপেক্ষা করছে...",
+  "IS_WAITING_AT_PICKUP": "তোলার জন্য অপেক্ষা করছে",
   "WAIT_TIME_TOO_LONG": "অপেক্ষার সময়টা খুব বেশি",
   "GOT_ANOTHER_RIDE_ELSE_WHERE": "অন্য কোথাও অন্য একটি যাত্রা পেয়েছি",
   "DRIVER_WAS_RUDE": "ড্রাইভার অভদ্র ছিল",
@@ -638,5 +638,15 @@ const bengaliStrings = {
   "AC_SUV" : "এসি এসইউভি",
   "RIDE_TYPE" : "রাইড টাইপ",
   "ERNAKULAM_LIMIT_CHARGE": "পিকআপ বা গন্তব্য যদি এর্নাকুলাম কর্পোরেশনের সীমার বাইরে থাকে তবে ভাড়া 1.5x হবে",
-  "SELECT_LOCATION_ON_MAP" : "মানচিত্রে অবস্থান নির্বাচন করুন"
+  "SELECT_LOCATION_ON_MAP" : "মানচিত্রে অবস্থান নির্বাচন করুন",
+  "WAIT_TIMER" : "ওয়েট টাইমার",
+  "CHARGES_APPLICABLE_AFTER_3_MINS" : "3 মিনিট পরে চার্জ প্রযোজ্য",
+  "REACHING_YOUR_DESTINATION_IN_" : "এতে আপনার গন্তব্যে পৌঁছানো হচ্ছে",
+  "WAITING_AT_PICKUP" : "পিকআপে অপেক্ষা করছে",
+  "LEARN_MORE" : "আরো জানুন",
+  "PICKUP" : "পিকআপ",
+  "PAY_BY_CASH_OR_UPI" : "নগদ / UPI দ্বারা পেমেন্ট করুন",
+  "YOU_WILL_PAY_FOR_EVERY_MINUTE" : "প্রথম ৩ মিনিটের জন্য ওয়েটিং চার্জ শূন্য। আপনাকে\nপ্রতি মিনিটে ₹1.5 চার্জ করা হবে\nএর পরে অপেক্ষা করার সময় নেই।",
+  "WAIT_TIMER" : "ওয়েট টাইমার",
+  "HOW_LONG_DRIVER_WAITED_FOR_PICKUP" : "আপনাকে দেখায়\nড্রাইভার পিকআপে কতক্ষণ অপেক্ষা করেছে।"
 }

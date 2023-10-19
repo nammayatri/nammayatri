@@ -231,6 +231,26 @@ fadeInWithDelay delay =
     , PrestoAnim.delay delay
     ]
 
+fadeInWithDuration :: Int -> Boolean -> PrestoAnim.Animation
+fadeInWithDuration duration = 
+  PrestoAnim.Animation
+    [ PrestoAnim.duration duration
+    , PrestoAnim.toAlpha 1.0
+    , PrestoAnim.fromAlpha 0.0
+    , PrestoAnim.interpolator $ PrestoAnim.EaseIn
+    , PrestoAnim.repeatCount PrestoAnim.NoRepeat
+    ]
+
+fadeOutWithDuration :: Int -> Boolean -> PrestoAnim.Animation
+fadeOutWithDuration duration = 
+  PrestoAnim.Animation
+    [ PrestoAnim.duration duration
+    , PrestoAnim.toAlpha 0.0
+    , PrestoAnim.fromAlpha 1.0
+    , PrestoAnim.interpolator $ PrestoAnim.EaseIn
+    , PrestoAnim.repeatCount PrestoAnim.NoRepeat
+    ]
+
 translateYAnimFromTopWithAlpha:: AnimConfig -> PrestoAnim.Animation
 translateYAnimFromTopWithAlpha config =
    PrestoAnim.Animation

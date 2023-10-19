@@ -80,6 +80,7 @@ import Language.Strings (getString)
 import Language.Types (STR(..))
 import Data.Int (round, toNumber)
 import Data.Boolean (otherwise)
+import Data.Function.Uncurried (Fn1)
 
 -- shuffle' :: forall a. Array a -> Effect (Array a)
 -- shuffle' array = do
@@ -185,6 +186,8 @@ foreign import addCarousel :: Array CarouselModel -> String -> Effect Unit
 foreign import getMobileNumber :: EffectFn2 String String String
 
 foreign import extractKeyByRegex :: Fn2 String String String
+foreign import getPixels :: Fn1 String Number
+foreign import getDeviceDefaultDensity ::Fn1 String Number
 
 data TimeUnit
   = HOUR

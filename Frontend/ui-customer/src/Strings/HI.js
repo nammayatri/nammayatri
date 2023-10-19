@@ -320,7 +320,7 @@ const hindiStrings = {
   "ADD_SAVED_LOCATION_FROM_SETTINGS": "*आप साइड मेनू > पसंदीदा से नया पसंदीदा जोड़ सकते हैं",
   "YOU_WILL_BE_ASKED_TO_SELECT_CONTACTS": "आपको अधिकतम 3 संपर्कों का चयन करने के लिए कहा जाएगा",
   "AUTO_ASSIGN_A_RIDE": "राइड को ऑटो-असाइन करें",
-  "IS_WAITING_FOR_YOU": "इंतज़ार कर रहे है...",
+  "IS_WAITING_AT_PICKUP": "लेने का इंतज़ार कर रहा है",
   "WAIT_TIME_TOO_LONG": "प्रतीक्षा समय बहुत लंबा है",
   "GOT_ANOTHER_RIDE_ELSE_WHERE": "दूसरी सवारी मिली",
   "DRIVER_WAS_RUDE": "ड्राइवर बदतमीजी कर रहा था",
@@ -622,5 +622,15 @@ const hindiStrings = {
   "SENT_OTP_VIA_WHATSAPP" : "व्हाट्सएप के माध्यम से ओटीपी भेजा गया है", 
   "SENT_OTP_VIA_SMS" : "ओटीपी एसएमएस के माध्यम से भेजा गया है",
   "ERNAKULAM_LIMIT_CHARGE": "यदि पिकअप या गंतव्य एर्नाकुलम निगम सीमा के बाहर है तो किराया 1.5 गुना होगा",
-  "SELECT_LOCATION_ON_MAP" : "मानचित्र पर स्थान चुनें"
+  "SELECT_LOCATION_ON_MAP" : "मानचित्र पर स्थान चुनें",
+  "WAIT_TIMER" : "प्रतीक्षा टाइमर",
+  "CHARGES_APPLICABLE_AFTER_3_MINS" : "3 मिनट के बाद शुल्क लागू",
+  "REACHING_YOUR_DESTINATION_IN_" : "अपनी मंजिल तक पहुंचना",
+  "WAITING_AT_PICKUP" : "पिकअप की प्रतीक्षा में",
+  "LEARN_MORE" : "और जानें",
+  "PICKUP" : "पिकअप",
+  "PAY_BY_CASH_OR_UPI" : "भुगतान नकद / UPI द्वारा करें ",
+  "YOU_WILL_PAY_FOR_EVERY_MINUTE" : "पहले 3 मिनट के लिए प्रतीक्षा \nशुल्क शून्य है। उसके बाद आपसे प्रति \nमिनट प्रतीक्षा समय के लिए \n₹1.5 शुल्क लिया जाएगा।",
+  "WAIT_TIMER" : "प्रतीक्षा टाइमर",
+  "HOW_LONG_DRIVER_WAITED_FOR_PICKUP" : "आपको दिखाता है कि\nड्राइवर ने पिकअप के लिए कितनी देर तक इंतजार किया है।"
 }

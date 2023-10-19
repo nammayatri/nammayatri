@@ -323,7 +323,7 @@ const englishStrings = {
   "ADD_SAVED_LOCATION_FROM_SETTINGS": "*You can add new favourites from Side menu > Favourites",
   "YOU_WILL_BE_ASKED_TO_SELECT_CONTACTS": "You will be asked to select upto 3  contacts",
   "AUTO_ASSIGN_A_RIDE": "Auto-assign a ride",
-  "IS_WAITING_FOR_YOU": "is waiting for you...",
+  "IS_WAITING_AT_PICKUP": "is waiting at pick up",
   "WAIT_TIME_TOO_LONG": "Wait time too long",
   "GOT_ANOTHER_RIDE_ELSE_WHERE": "Got another ride elsewhere",
   "DRIVER_WAS_RUDE": "Driver was rude",
@@ -622,5 +622,15 @@ const englishStrings = {
   "AC_SUV" : "AC SUV",
   "RIDE_TYPE" : "Ride Type",
   "ERNAKULAM_LIMIT_CHARGE": "Fare will be 1.5x if the pickup or destination lies outside Ernakulam corporation limits",
-  "SELECT_LOCATION_ON_MAP" : "Select location on map"
+  "SELECT_LOCATION_ON_MAP" : "Select location on map",
+  "WAIT_TIMER" : "Wait Timer",
+  "CHARGES_APPLICABLE_AFTER_3_MINS" : "Charges applicable after 3 mins",
+  "REACHING_YOUR_DESTINATION_IN_" : "Reaching your Destination in ",
+  "WAITING_AT_PICKUP" : "is waiting at pickup ",
+  "LEARN_MORE" : "Learn more",
+  "PICKUP" : "Pickup",
+  "PAY_BY_CASH_OR_UPI" : "Pay by Cash / UPI ",
+  "YOU_WILL_PAY_FOR_EVERY_MINUTE" : "Waiting charge is zero for \nthe first 3 minutes. You will\nbe charged for ₹1.5 per minute\nof wait time after that.",
+  "WAIT_TIMER" : "Wait Timer",
+  "HOW_LONG_DRIVER_WAITED_FOR_PICKUP" : "Shows you how long the\ndriver has waited at pickup."
 }

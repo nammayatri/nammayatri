@@ -20,7 +20,7 @@ import Components.LocationListItem.Controller (dummyLocationListState)
 import Components.SettingSideBar.Controller (SettingSideBarState, Status(..))
 import Components.ChooseVehicle.Controller (SearchType(..)) as CV
 import Data.Maybe (Maybe(..))
-import Screens.Types (Contact, DriverInfoCard, HomeScreenState, LocationListItemState, PopupType(..), RatingCard(..), SearchLocationModelType(..), Stage(..), Address, EmergencyHelpModelState,Location, ZoneType(..), SpecialTags, TipViewStage(..), SearchResultType(..))
+import Screens.Types (Contact, DriverInfoCard, HomeScreenState, LocationListItemState, PopupType(..), RatingCard(..), SearchLocationModelType(..), Stage(..), Address, EmergencyHelpModelState,Location, ZoneType(..), SpecialTags, TipViewStage(..), SearchResultType(..), SheetState(..))
 import Services.API (DriverOfferAPIEntity(..), QuoteAPIDetails(..), QuoteAPIEntity(..), PlaceName(..), LatLong(..), SpecialLocation(..), QuoteAPIContents(..), RideBookingRes(..), RideBookingAPIDetails(..), RideBookingDetails(..), FareRange(..), FareBreakupAPIEntity(..))
 import Prelude (($) ,negate)
 import Data.Array (head)
@@ -128,6 +128,11 @@ initData = {
     , nearByDrivers : Nothing
     , disability : Nothing
     , searchLocationModelData : dummySearchLocationModelData
+    , waitTimeInfo : false
+    , lastSentMessage : { message : "", sentBy : "", timeStamp : "", type : "", delay : 0 }
+    , lastReceivedMessage : { message : "", sentBy : "", timeStamp : "", type : "", delay : 0 }
+    , triggerPatchCounter : 0
+    , peekHeight : 0
     },
     props: {
       rideRequestFlow : false
@@ -225,6 +230,15 @@ initData = {
     , showDisabilityPopUp : false
     , isChatNotificationDismissed : false
     , searchLocationModelProps : dummySearchLocationModelProps
+    , sentQuickMessage : false
+    , isMessagesLoaded : false
+    , bottomSheetState : STATE_COLLAPSED
+    , chatSheetState : STATE_COLLAPSED
+    , chatSheetSlide : 0.0
+    , isChatExpanding : true
+    , isKeyboardOpen : false
+    , hasTrackingIssues : false
+    , removeMessageNotification : false
     }
 }
 

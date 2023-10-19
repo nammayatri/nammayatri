@@ -32,7 +32,7 @@ import Foreign.Object (Object)
 import Halogen.VDom.DOM.Prop (PropValue)
 import Prelude (class Eq, class Show)
 import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode, defaultDecode, defaultEncode)
-import PrestoDOM (LetterSpacing, BottomSheetState(..))
+import PrestoDOM (BottomSheetState(..), LetterSpacing)
 import Services.API (AddressComponents, BookingLocationAPIEntity, EstimateAPIEntity(..), QuoteAPIEntity, RideBookingRes, Route)
 
 type Contacts = {
@@ -604,6 +604,11 @@ type HomeScreenStateData =
   , nearByDrivers :: Maybe Int
   , disability :: Maybe DisabilityT
   , searchLocationModelData :: SearchLocationModelData
+  , waitTimeInfo :: Boolean
+  , lastSentMessage :: ChatComponent
+  , lastReceivedMessage :: ChatComponent
+  , triggerPatchCounter :: Int
+  , peekHeight :: Int
   }
 
 type DisabilityT = 
@@ -703,6 +708,15 @@ type HomeScreenStateProps =
   , showDisabilityPopUp :: Boolean
   , isChatNotificationDismissed :: Boolean
   , searchLocationModelProps :: SearchLocationModelProps
+  , sentQuickMessage :: Boolean
+  , isMessagesLoaded :: Boolean
+  , bottomSheetState :: SheetState
+  , chatSheetState :: SheetState
+  , chatSheetSlide :: Number
+  , isChatExpanding :: Boolean
+  , isKeyboardOpen :: Boolean
+  , hasTrackingIssues :: Boolean
+  , removeMessageNotification :: Boolean
   }
 
 type SearchLocationModelProps = {
@@ -752,6 +766,14 @@ type CustomerTipProps = {
   , tipForDriver :: Int
   , isTipSelected :: Boolean
 }
+
+data SheetState = STATE_DRAGGING | STATE_SETTLING | STATE_EXPANDED | STATE_COLLAPSED | STATE_HIDDEN | STATE_HALF_EXPANDED
+
+derive instance genericSheetState :: Generic SheetState _
+instance showSheetState :: Show SheetState where show = genericShow
+instance eqSheetState :: Eq SheetState where eq = genericEq
+instance encodeSheetState :: Encode SheetState where encode = defaultEnumEncode
+instance decodeSheetState :: Decode SheetState where decode = defaultEnumDecode
 
 data TipViewStage = DEFAULT | TIP_AMOUNT_SELECTED | TIP_ADDED_TO_SEARCH | RETRY_SEARCH_WITH_TIP
 

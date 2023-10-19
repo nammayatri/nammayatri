@@ -88,6 +88,24 @@ removeYAnimFromTopConfig = animConfig {
 , toAlpha = 0.0
 }
 
+removeYAnimConfig :: Int -> Int-> Common.AnimConfig
+removeYAnimConfig from to = animConfig {
+  duration = 1000
+, fromY = from
+, toY = to 
+, fromAlpha = 0.0
+, toAlpha = 1.0
+}
+
+translateYAnimMessageConfig :: Direction -> Common.AnimConfig
+translateYAnimMessageConfig direction = animConfig {
+  duration = 1000
+, fromY = case direction of
+            BOTTOM_TOP -> if os == "IOS" then (screenHeight unit) else (140)
+            TOP_BOTTOM -> (-140)
+            _          -> 0
+}
+
 translateFullYAnimWithDurationConfig :: Int -> Common.AnimConfig
 translateFullYAnimWithDurationConfig duration = animConfig {
   duration = duration

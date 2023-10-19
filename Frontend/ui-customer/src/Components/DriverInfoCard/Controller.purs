@@ -15,12 +15,13 @@
 
 module Components.DriverInfoCard.Controller where
 
+import MerchantConfig.Types
+import Components.MessagingView as MessagingView
 import Components.PrimaryButton as PrimaryButtonController
 import Components.SourceToDestination as SourceToDestinationController
-import Screens.Types(Stage, ZoneType(..), SearchResultType)
-import Data.Maybe(Maybe)
-import Components.ChatView as ChatView
-import MerchantConfig.Types
+import Data.Maybe (Maybe)
+import PrestoDOM (Length(..), Orientation(..))
+import Screens.Types (Stage, ZoneType(..), SearchResultType)
 
 data Action = NoAction
             | Support
@@ -38,6 +39,8 @@ data Action = NoAction
             | LoadMessages
             | OnNavigateToZone
             | ExpandBottomSheet
+            | WaitingInfo
+            | SendQuickMessage String
 
 type DriverInfoCardState =
   { props :: DriverInfoCardProps
@@ -56,7 +59,9 @@ type DriverInfoCardProps =
     estimatedTime :: String,
     zoneType :: ZoneType,
     isChatOpened :: Boolean,
-    chatcallbackInitiated :: Boolean
+    chatcallbackInitiated :: Boolean,
+    sentQuickMessage :: Boolean,
+    isMessagesLoaded :: Boolean
   }
 
 type DriverInfoCardData =
@@ -90,7 +95,9 @@ type DriverInfoCardData =
   , isSpecialZone :: Boolean
   , isLocationTracking :: Boolean
   , bookingCreatedAt :: String
-  , lastMessage :: ChatView.ChatComponent
+  , lastMessage :: MessagingView.ChatComponent
   , config :: AppConfig
   , vehicleVariant :: String
+  , chatSuggestions :: Array String
+  , quickMessage :: MessagingView.ChatComponent
   }

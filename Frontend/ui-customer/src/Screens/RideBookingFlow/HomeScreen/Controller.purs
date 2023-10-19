@@ -18,8 +18,6 @@ module Screens.HomeScreen.Controller where
 import Accessor (_estimatedFare, _estimateId, _vehicleVariant, _status, _estimateFareBreakup, _title, _price, _totalFareRange, _maxFare, _minFare, _nightShiftRate, _nightShiftEnd, _nightShiftMultiplier, _nightShiftStart, _selectedQuotes, _specialLocationTag)
 import Common.Types.App (EventPayload(..), GlobalPayload(..), LazyCheck(..), OptionButtonList, Payload(..), RateCardType(..), FeedbackAnswer(..))
 import Components.Banner as Banner
-import Components.ChatView as ChatView
-import Components.ChatView.Controller as ChatView
 import Components.ChooseVehicle as ChooseVehicleController
 import Components.ChooseYourRide as ChooseYourRide
 import Components.ChooseYourRide.Controller as ChooseYourRideController
@@ -32,8 +30,9 @@ import Components.LocationListItem.Controller as LocationListItemController
 import Components.LocationTagBar as LocationTagBarController
 import Components.MenuButton as MenuButton
 import Components.MenuButton as MenuButton
-import Components.RideCompletedCard.Controller as RideCompletedCard
 import Components.MenuButton.Controller (Action(..)) as MenuButtonController
+import Components.MessagingView as MessagingView
+import Components.MessagingView.Controller as MessagingView
 import Components.PopUpModal.Controller as PopUpModal
 import Components.PricingTutorialModel.Controller as PricingTutorialModelController
 import Components.PrimaryButton.Controller as PrimaryButtonController
@@ -44,71 +43,71 @@ import Components.QuoteListModel.View (dummyQuoteList)
 import Components.RateCard as RateCard
 import Components.RatingCard as RatingCard
 import Components.RequestInfoCard as RequestInfoCard
+import Components.RideCompletedCard.Controller as RideCompletedCard
 import Components.SaveFavouriteCard as SaveFavouriteCardController
 import Components.SavedLocationCard.Controller as SavedLocationCardController
 import Components.SearchLocationModel.Controller as SearchLocationModelController
 import Components.SelectListModal.Controller as CancelRidePopUp
 import Components.SettingSideBar.Controller as SettingSideBarController
 import Components.SourceToDestination.Controller as SourceToDestinationController
-import Control.Monad.Except.Trans (runExceptT)
+import Constants (defaultDensity)
 import Control.Monad.Except.Trans (runExceptT)
 import Control.Monad.Trans.Class (lift)
 import Control.Transformers.Back.Trans (runBackT)
-import Control.Transformers.Back.Trans (runBackT)
 import Data.Array ((!!), filter, null, any, snoc, length, head, last, sortBy, union, elem, findIndex)
+import Data.Function (const)
+import Data.Function.Uncurried (runFn1)
 import Data.Function.Uncurried (runFn3)
-import Data.Int (toNumber, round)
-import Data.Int (toNumber, round, fromString)
+import Data.Int (toNumber, round, fromString, ceil)
 import Data.Lens ((^.))
+import Data.List ((:))
 import Data.Maybe (Maybe(..), fromMaybe, isJust)
-import Data.Number (fromString) as NUM
+import Data.Number (fromString, round) as NUM
+import Data.Number (pow, (%))
 import Data.String as STR
 import Debug (spy)
 import Effect (Effect)
 import Effect.Aff (launchAff)
+import Effect.Class (liftEffect)
 import Effect.Uncurried (runEffectFn5)
 import Effect.Unsafe (unsafePerformEffect)
 import Engineering.Helpers.Commons (clearTimer, flowRunner, getNewIDWithTag, os, getExpiryTime, convertUTCtoISC, getCurrentUTC, isPreviousVersion)
 import Engineering.Helpers.LogEvent (logEvent, logEventWithTwoParams, logEventWithMultipleParams)
 import Engineering.Helpers.Suggestions (getMessageFromKey, getSuggestionsfromKey)
+import Engineering.Helpers.Suggestions (getMessageFromKey, getSuggestionsfromKey)
 import Foreign (unsafeToForeign)
 import Foreign.Class (encode)
-import Helpers.Utils (addToRecentSearches, getCurrentLocationMarker, clearCountDownTimer, getDistanceBwCordinates, getLocationName, getScreenFromStage, getSearchType, parseNewContacts, performHapticFeedback, setText, terminateApp, updateInputString, withinTimeRange, toString, secondsToHms, recentDistance)
-import JBridge (addMarker, animateCamera, currentPosition, exitLocateOnMap, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, getCurrentPosition, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, locateOnMap, minimizeApp, openNavigation, openUrlInApp, removeAllPolylines, removeMarker, requestKeyboardShow, requestLocation, shareTextMessage, showDialer, toast, toggleBtnLoader, goBackPrevWebPage, stopChatListenerService, sendMessage, getCurrentLatLong, isInternetAvailable, emitJOSEvent, startLottieProcess, getSuggestionfromKey, scrollToEnd, lottieAnimationConfig, methodArgumentCount, getChatMessages, scrollViewFocus)
+import Helpers.Utils (addToRecentSearches, getCurrentLocationMarker, clearCountDownTimer, getDistanceBwCordinates, getLocationName, getScreenFromStage, getSearchType, parseNewContacts, performHapticFeedback, setText, terminateApp, updateInputString, withinTimeRange, toString, secondsToHms, recentDistance, getPixels, getDeviceDefaultDensity)
+import JBridge (addMarker, animateCamera, currentPosition, exitLocateOnMap, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, getCurrentPosition, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, locateOnMap, minimizeApp, openNavigation, openUrlInApp, removeAllPolylines, removeMarker, requestKeyboardShow, requestLocation, shareTextMessage, showDialer, toast, toggleBtnLoader, goBackPrevWebPage, stopChatListenerService, sendMessage, getCurrentLatLong, isInternetAvailable, emitJOSEvent, startLottieProcess, getSuggestionfromKey, scrollToEnd, lottieAnimationConfig, methodArgumentCount, getChatMessages, scrollViewFocus, getLayoutBounds, getHeightFromPercent)
 import Language.Strings (getString, getEN)
 import Language.Types (STR(..))
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, printLog, trackAppTextInput, trackAppScreenEvent)
 import MerchantConfig.DefaultConfig as DC
 import MerchantConfig.Utils (Merchant(..), getMerchant, getValueFromConfig)
-import Prelude (class Applicative, class Show, Unit, Ordering, bind, compare, discard, map, negate, pure, show, unit, not, ($), (&&), (-), (/=), (<>), (==), (>), (||), (>=), void, (<), (*), (<=), (/), (+))
+import Prelude (class Applicative, class Show, Unit, Ordering, bind, compare, discard, map, negate, pure, show, unit, not, mod, ($), (&&), (-), (/=), (<>), (==), (>), (||), (>=), void, (<), (*), (<=), (/), (+))
 import Presto.Core.Types.API (ErrorResponse)
-import PrestoDOM (Eval, Visibility(..), BottomSheetState(..), continue, continueWithCmd, defaultPerformLog, exit, payload, updateAndExit)
+import Presto.Core.Types.Language.Flow (doAff)
+import PrestoDOM (BottomSheetState(..), Eval, ScrollState(..), Visibility(..), continue, continueWithCmd, defaultPerformLog, exit, payload, updateAndExit)
+import PrestoDOM.Properties (sheetState) as PP
 import PrestoDOM.Types.Core (class Loggable)
 import Resources.Constants (encodeAddress)
 import Screens (ScreenName(..), getScreen)
 import Screens.AddNewAddressScreen.Controller (validTag, getSavedTagsFromHome)
 import Screens.HomeScreen.ScreenData (dummyAddress, dummyQuoteAPIEntity, dummyZoneType)
 import Screens.HomeScreen.ScreenData as HomeScreenData
+import Screens.HomeScreen.ScreenData as HomeScreenData
 import Screens.HomeScreen.Transformer (dummyRideAPIEntity, getDriverInfo, getEstimateList, getQuoteList, getSpecialZoneQuotes, transformContactList, getNearByDrivers, getEstimatesInfo, dummyEstimateEntity)
+import Screens.RideBookingFlow.HomeScreen.Config (reportIssueOptions)
 import Screens.RideBookingFlow.HomeScreen.Config (setTipViewData)
+import Screens.RideBookingFlow.HomeScreen.Config (setTipViewData, reportIssueOptions, metersToKm)
 import Screens.SuccessScreen.Handler as UI
-import Screens.Types (HomeScreenState, Location, SearchResultType(..), LocationListItemState, PopupType(..), SearchLocationModelType(..), Stage(..), CardType(..), RatingCard, CurrentLocationDetailsWithDistance(..), CurrentLocationDetails, LocationItemType(..), CallType(..), ZoneType(..), SpecialTags, TipViewStage(..))
+import Screens.Types (CallType(..), CardType(..), CurrentLocationDetails, CurrentLocationDetailsWithDistance(..), HomeScreenState, Location, LocationItemType(..), LocationListItemState, PopupType(..), RatingCard, SearchLocationModelType(..), SearchResultType(..), SheetState(..), SpecialTags, Stage(..), TipViewStage(..), ZoneType(..))
+import Screens.Types (TipViewData(..), TipViewProps(..), RateCardDetails, PermissionScreenStage(..))
 import Services.API (EstimateAPIEntity(..), FareRange, GetDriverLocationResp, GetQuotesRes(..), GetRouteResp, LatLong(..), OfferRes, PlaceName(..), QuoteAPIEntity(..), RideBookingRes(..), SelectListRes(..), SelectedQuotes(..), RideBookingAPIDetails(..), GetPlaceNameResp(..))
 import Services.Backend as Remote
 import Services.Config (getDriverNumber, getSupportNumber)
 import Storage (KeyStore(..), isLocalStageOn, updateLocalStage, getValueToLocalStore, setValueToLocalStore, getValueToLocalNativeStore, setValueToLocalNativeStore)
-import Control.Monad.Trans.Class (lift)
-import Presto.Core.Types.Language.Flow (doAff)
-import Effect.Class (liftEffect)
-import Screens.HomeScreen.ScreenData as HomeScreenData
 import Types.App (defaultGlobalState)
-import Screens.RideBookingFlow.HomeScreen.Config (setTipViewData, reportIssueOptions, metersToKm)
-import Screens.Types (TipViewData(..) , TipViewProps(..), RateCardDetails, PermissionScreenStage(..))
-import Engineering.Helpers.Suggestions (getMessageFromKey, getSuggestionsfromKey)
-import PrestoDOM.Properties (sheetState) as PP
-import Screens.RideBookingFlow.HomeScreen.Config(reportIssueOptions)
-import Data.Function (const)
-import Data.List ((:))
 
 instance showAction :: Show Action where
   show _ = ""
@@ -457,14 +456,13 @@ instance loggableAction :: Loggable Action where
     -- UpdateMessages msg sender timeStamp -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "update_messages"
     -- InitializeChat -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "initialize_chat"
     -- RemoveChat -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "remove_chat"
-    -- ChatViewActionController act -> case act of
-    --   ChatView.SendMessage -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_app_messaging" "send_message"
-    --   ChatView.SendSuggestion suggestion -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_app_messaging" "send_suggestion"
-    --   ChatView.BackPressed -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_app_messaging" "back_pressed"
-    --   ChatView.TextChanged input -> trackAppTextInput appId (getScreen HOME_SCREEN) "in_app_messaging" "text_changed"
-    --   ChatView.Call -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_app_messaging" "call_driver"
-    --   ChatView.Navigate -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_app_messaging" "navigate_to_google_maps"
-    --   ChatView.NoAction -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_app_messaging" "no_action"
+    -- MessagingViewActionController act -> case act of
+    --   MessagingView.SendMessage -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_app_messaging" "send_message"
+    --   MessagingView.SendSuggestion suggestion -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_app_messaging" "send_suggestion"
+    --   MessagingView.BackPressed -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_app_messaging" "back_pressed"
+    --   MessagingView.TextChanged input -> trackAppTextInput appId (getScreen HOME_SCREEN) "in_app_messaging" "text_changed"
+    --   MessagingView.Call -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_app_messaging" "call_driver"
+    --   MessagingView.NoAction -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_app_messaging" "no_action"
     -- OnResumeCallback -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "on_resume_callback"
     -- CheckFlowStatusAction -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "check_flow_status"
     -- GoToEditProfile -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "go_to_my_profile"
@@ -595,7 +593,7 @@ data Action = NoAction
             | InitializeChat
             | RemoveChat
             | OpenChatScreen
-            | ChatViewActionController ChatView.Action
+            | MessagingViewActionController MessagingView.Action
             | HideLiveDashboard String
             | LiveDashboardAction
             | OnResumeCallback
@@ -625,6 +623,15 @@ data Action = NoAction
             | LoadMessages
             | KeyboardCallback String
             | NotifyDriverStatusCountDown Int String String String
+            | WaitingInfo
+            | ZoneOTPExpiryAction String String Int
+            | ShareRide
+            | ScrollStateChanged String
+            | RemoveNotification
+            | MessageDriver
+            | SendQuickMessage String
+            | ButtonTimer Int String String String
+            | MessageViewAnimationEnd
 
 
 eval :: Action -> HomeScreenState -> Eval Action ScreenOutput HomeScreenState
@@ -647,7 +654,7 @@ eval (KeyboardCallback keyBoardState) state = do
   if isLocalStageOn ChatWithDriver && isOpen then
     void $ pure $ scrollToEnd (getNewIDWithTag "ChatScrollView") true 
   else pure unit
-  continue state
+  continue state {props {isKeyboardOpen = isOpen}}
 
 eval (NotifyDriverStatusCountDown seconds id status timerID) state = do 
   if status == "EXPIRED" then do
@@ -742,13 +749,13 @@ eval (DriverInfoCardActionController (DriverInfoCardController.LoadMessages)) st
   let allMessages = getChatMessages ""
   case (last allMessages) of
       Just value -> if value.message == "" then continue state {data { messagesSize = show (fromMaybe 0 (fromString state.data.messagesSize) + 1)}, props {canSendSuggestion = true, isChatNotificationDismissed = false}} else
-                      if value.sentBy == "Customer" then updateMessagesWithCmd state {data {messages = allMessages, suggestionsList = []}, props {canSendSuggestion = true,  isChatNotificationDismissed = false}}
+                      if value.sentBy == "Customer" then updateMessagesWithCmd state {data {messages = allMessages, suggestionsList = [], lastMessage = value, lastSentMessage = value}, props {canSendSuggestion = true,  isChatNotificationDismissed = false, isMessagesLoaded = true}}
                       else do
                         let readMessages = fromMaybe 0 (fromString (getValueToLocalNativeStore READ_MESSAGES))
                             unReadMessages = (if readMessages == 0 && state.props.currentStage /= ChatWithDriver then true else (if (readMessages < (length allMessages) && state.props.currentStage /= ChatWithDriver) then true else false))
                             suggestions = getCustomerSuggestions state $ getSuggestionsfromKey value.message
                             isChatNotificationDismissed = not state.props.isChatNotificationDismissed || state.data.lastMessage.message /= value.message
-                        updateMessagesWithCmd state {data {messages = allMessages, suggestionsList = suggestions, lastMessage = value }, props {unReadMessages = unReadMessages, showChatNotification = isChatNotificationDismissed && unReadMessages, canSendSuggestion = true,  isChatNotificationDismissed = false}}
+                        updateMessagesWithCmd state {data {messages = allMessages, suggestionsList = suggestions, lastMessage = value, lastSentMessage = dummyChatComponent, lastReceivedMessage = value}, props {unReadMessages = unReadMessages, showChatNotification = isChatNotificationDismissed && unReadMessages, canSendSuggestion = true, isChatNotificationDismissed = false, sentQuickMessage = false, isMessagesLoaded = true}}
       Nothing -> continue state {props {canSendSuggestion = true}}
 
 eval (OpenChatScreen) state = do
@@ -757,16 +764,21 @@ eval (OpenChatScreen) state = do
       pure $ (DriverInfoCardActionController (DriverInfoCardController.MessageDriver))
     ]
 
-eval (ChatViewActionController (ChatView.TextChanged value)) state = continue state{data{messageToBeSent = (STR.trim value)},props{sendMessageActive = (STR.length (STR.trim value)) >= 1}}
+eval (MessageDriver) state = do
+    continueWithCmd state{props{openChatScreen = false}} [do
+      pure $ (DriverInfoCardActionController (DriverInfoCardController.MessageDriver))
+    ]
 
-eval(ChatViewActionController (ChatView.Call)) state = do
+eval (MessagingViewActionController (MessagingView.TextChanged value)) state = continue state{data{messageToBeSent = (STR.trim value)},props{sendMessageActive = (STR.length (STR.trim value)) >= 1}}
+
+eval(MessagingViewActionController (MessagingView.Call)) state = do
   _ <- pure $ performHapticFeedback unit
   _ <- pure $ hideKeyboardOnNavigation true
   if length state.data.config.callOptions > 1 then
     continue state { props { showCallPopUp = true } }
   else callDriver state $ fromMaybe "ANONYMOUS" $ state.data.config.callOptions !! 0
 
-eval (ChatViewActionController (ChatView.SendMessage)) state = do
+eval (MessagingViewActionController (MessagingView.SendMessage)) state = do
   if state.data.messageToBeSent /= ""
   then do
     pure $ sendMessage state.data.messageToBeSent
@@ -775,12 +787,35 @@ eval (ChatViewActionController (ChatView.SendMessage)) state = do
   else
     continue state
 
-eval (ChatViewActionController (ChatView.BackPressed)) state = do
+eval (MessagingViewActionController (MessagingView.BackPressed)) state = do
   _ <- pure $ performHapticFeedback unit
   _ <- pure $ hideKeyboardOnNavigation true
   continueWithCmd state [do
       pure $ BackPressed
     ]
+
+eval (MessagingViewActionController (MessagingView.ScrollStateChanged scrollState)) state = do
+  _ <- pure $ spy "XYZ" scrollState
+  let sheetState = case scrollState of 
+                "1" -> STATE_DRAGGING
+                "2" -> STATE_SETTLING
+                "3" -> STATE_EXPANDED
+                "4" -> STATE_COLLAPSED
+                "5" -> STATE_HIDDEN
+                "6" -> STATE_HALF_EXPANDED
+                _ -> STATE_HIDDEN
+  if sheetState == STATE_COLLAPSED then 
+     void $ pure $ scrollToEnd (getNewIDWithTag "ChatScrollView") true
+  else pure unit
+  let isCollapsing = state.props.chatSheetState == STATE_EXPANDED && sheetState == STATE_DRAGGING
+  continue state {props {chatSheetState = sheetState, isChatExpanding = not isCollapsing}}
+
+eval (MessagingViewActionController (MessagingView.OnSlide position)) state = do
+  _ <- pure $ spy "OnSlide" position
+  let isCollapsing = state.props.chatSheetSlide > position
+  continue state {props{chatSheetSlide = position, isChatExpanding = not isCollapsing}}
+
+eval (MessagingViewActionController (MessagingView.NoAction)) state = continue state
 
 eval ScrollToBottom state = do
   _ <- pure $ scrollToEnd (getNewIDWithTag "ChatScrollView") true
@@ -797,6 +832,16 @@ eval RemoveChat state = do
     pure $ NoAction
   ]
 
+eval WaitingInfo state = do
+  continue state{data{waitTimeInfo  = true }}
+
+eval (RequestInfoCardAction RequestInfoCard.Close) state = continue state { data  {waitTimeInfo =false}}
+
+eval (SendQuickMessage chatSuggestion) state = do
+  let message = getMessageFromKey chatSuggestion "EN_US"
+  _ <- pure $ sendMessage message
+  continue state {props {sentQuickMessage = true,unReadMessages = false}}
+
 eval (DriverInfoCardActionController (DriverInfoCardController.MessageDriver)) state = do
   if (getValueFromConfig "isChatEnabled") == "true" then do
     if not state.props.chatcallbackInitiated then continue state else do
@@ -804,15 +849,21 @@ eval (DriverInfoCardActionController (DriverInfoCardController.MessageDriver)) s
       _ <- pure $ updateLocalStage ChatWithDriver
       _ <- pure $ setValueToLocalNativeStore READ_MESSAGES (show (length state.data.messages))
       let allMessages = getChatMessages ""
-      continue state {data{messages = allMessages}, props {currentStage = ChatWithDriver, sendMessageActive = false, unReadMessages = false, showChatNotification = false, isChatOpened = true , isChatNotificationDismissed = false}}
+      continue state {data{messages = allMessages}, props {currentStage = ChatWithDriver, sendMessageActive = false, unReadMessages = false, showChatNotification = false, isChatOpened = true, isChatNotificationDismissed = false, chatSheetState = state.props.bottomSheetState, chatSheetSlide = if state.props.bottomSheetState == STATE_EXPANDED then 1.0 else 0.0}}
   else continueWithCmd state[ do
         pure $ DriverInfoCardActionController (DriverInfoCardController.CallDriver)
       ]
 
-eval (DriverInfoCardActionController (DriverInfoCardController.RemoveNotification)) state = do
-  continue state {props { showChatNotification = false, isChatNotificationDismissed = true}}
+eval RemoveNotification state = do
+  continue state {props { showChatNotification = false, isChatNotificationDismissed = true, sentQuickMessage = false}, data {lastSentMessage = dummyChatComponent}}
 
-eval (ChatViewActionController (ChatView.SendSuggestion chatSuggestion)) state = do
+eval MessageViewAnimationEnd state = do
+  let isNotificationExpanded = state.props.showChatNotification && state.props.isMessagesLoaded
+  let showNotification = (length (getChatMessages "") == 0 || state.props.showChatNotification) && state.props.currentStage == RideAccepted
+  continue state {props { removeMessageNotification = isNotificationExpanded, showChatNotification = showNotification}}
+  
+
+eval (MessagingViewActionController (MessagingView.SendSuggestion chatSuggestion)) state = do
   if state.props.canSendSuggestion then do
     let message = getMessageFromKey chatSuggestion "EN_US"
     _ <- pure $ sendMessage message
@@ -821,6 +872,34 @@ eval (ChatViewActionController (ChatView.SendSuggestion chatSuggestion)) state =
   else continue state
 
 ------------------------------- ChatService - End --------------------------
+
+eval (ButtonTimer seconds id status timerID) state = do
+  let newState = state{data{triggerPatchCounter = state.data.triggerPatchCounter + 1}}
+  if status == "EXPIRED"
+    then do
+      _ <- pure $ clearTimer timerID
+      if state.data.lastMessage.sentBy /= "Driver" then
+      continueWithCmd newState [ do
+        pure $ RemoveNotification
+      ]
+      else continue newState
+  else
+      continue newState
+
+eval (DriverInfoCardActionController (DriverInfoCardController.NoAction)) state = do
+  void $ pure $ spy "PRAVEEN" ""
+  continue state {data{triggerPatchCounter = state.data.triggerPatchCounter + 1,peekHeight = getPeekHeight state}}
+
+eval (ScrollStateChanged scrollState) state = do
+  let sheetState = case scrollState of 
+              "1" -> STATE_DRAGGING
+              "2" -> STATE_SETTLING
+              "3" -> STATE_EXPANDED
+              "4" -> STATE_COLLAPSED
+              "5" -> STATE_HIDDEN
+              "6" -> STATE_HALF_EXPANDED
+              _ -> STATE_HIDDEN
+  continue state {props {bottomSheetState = sheetState}}
 
 eval (DriverInfoCardActionController (DriverInfoCardController.CallDriver)) state = do
   if length state.data.config.callOptions > 1 then
@@ -889,7 +968,7 @@ eval BackPressed state = do
                         if state.props.showCallPopUp then continue state {props{showCallPopUp = false}}
                          else do
                             _ <- pure $ updateLocalStage RideAccepted
-                            continue state {props {currentStage = RideAccepted}}
+                            continue state {props {currentStage = RideAccepted, chatSheetState = STATE_COLLAPSED, chatSheetSlide = 0.0}}
     RideRating ->     do
                       _ <- pure $ updateLocalStage RideCompleted
                       continue state {props {currentStage = RideCompleted}}
@@ -912,6 +991,7 @@ eval BackPressed state = do
                           else if state.props.emergencyHelpModal then continue state {props {emergencyHelpModal = false}}
                           else if state.props.callSupportPopUp then continue state {props {callSupportPopUp = false}}
                           else if state.data.ratingViewState.openReportIssue then continue state {data {ratingViewState {openReportIssue = false}}}
+                          else if state.data.waitTimeInfo then continue state { data {waitTimeInfo =false} }
                           else do
                               pure $ terminateApp state.props.currentStage false
                               continue state
@@ -1183,7 +1263,7 @@ eval (WaitingTimeAction timerID timeInMinutes seconds) state = do
                 else pure unit
   continue state { data { driverInfoCardState { waitingTime = timeInMinutes} }, props { waitingTimeTimerIds = union state.props.waitingTimeTimerIds [timerID] } }
 
-eval (DriverInfoCardActionController (DriverInfoCardController.ZoneOTPExpiryAction timerID timeInMinutes seconds)) state = do
+eval (ZoneOTPExpiryAction timerID timeInMinutes seconds) state = do
   if seconds <= 0 then do
     _ <- pure $ toast $ getString OTP_FOR_THE_JATRI_SATHI_ZONE_HAS_BEEN_EXPIRED_PLEASE_TRY_LOOKING_AGAIN
     _ <- pure $ clearTimer timerID
@@ -1227,7 +1307,7 @@ eval (DriverInfoCardActionController (DriverInfoCardController.OpenEmergencyHelp
   continue state{props{emergencyHelpModal = true}}
 
 eval (DriverInfoCardActionController (DriverInfoCardController.ExpandBottomSheet)) state = continue state{props{sheetState = if state.props.sheetState == EXPANDED then COLLAPSED else EXPANDED}}
-eval (DriverInfoCardActionController (DriverInfoCardController.ShareRide)) state = do
+eval ShareRide state = do
   continueWithCmd state
         [ do
             _ <- pure $ shareTextMessage (getValueToLocalStore USER_NAME <> "is on a Namma Yatri Ride") $ "👋 Hey,\n\nI am riding with Namma Driver " <> (state.data.driverInfoCardState.driverName) <> "! Track this ride on: " <> ("https://nammayatri.in/track/?id="<>state.data.driverInfoCardState.rideId) <> "\n\nVehicle number: " <> (state.data.driverInfoCardState.registrationNumber)
@@ -1918,6 +1998,9 @@ eval (GenderBannerModal (Banner.OnClick)) state = exit $ GoToMyProfile state tru
 
 eval _ state = continue state
 
+dummyChatComponent :: MessagingView.ChatComponent
+dummyChatComponent = { message : "", sentBy : "", timeStamp : "", type : "", delay : 0 }
+
 validateSearchInput :: HomeScreenState -> String -> Eval Action ScreenOutput HomeScreenState
 validateSearchInput state searchString =
   if STR.length (STR.trim searchString) > 2 && searchString /= state.data.source && (searchString /= state.data.destination || ((getSearchType unit) == "direct_search") && (state.props.isSearchLocation == SearchLocation)) then
@@ -2353,3 +2436,16 @@ getCustomerSuggestions :: HomeScreenState -> Array String -> Array String
 getCustomerSuggestions state suggestions = case (length suggestions == 0) of
                                   true -> if (metersToKm state.data.driverInfoCardState.distance state) == (getString AT_PICKUP) then getSuggestionsfromKey "customerDefaultAP" else getSuggestionsfromKey "customerDefaultBP"
                                   false -> suggestions
+
+getPeekHeight :: HomeScreenState -> Int
+getPeekHeight state = 
+  let headerLayout = spy "DriverInfoHeaderView" (runFn1 getLayoutBounds $ getNewIDWithTag "DriverInfoHeaderView")
+      distanceLayout = spy "DriverInfoDistanceView" (runFn1 getLayoutBounds $ getNewIDWithTag "DriverInfoDistanceView")
+      detailsLayout =  spy "DriverDetailsView" (runFn1 getLayoutBounds $ getNewIDWithTag "DriverDetailsView")
+      paymentLayout =  spy "PaymentMethodView" (runFn1 getLayoutBounds $ getNewIDWithTag "PaymentMethodView")
+      metroLayout =  spy "MetroRideView" (runFn1 getLayoutBounds $ getNewIDWithTag "MetroRideView")
+      pixels = runFn1 getPixels ""
+      density = (runFn1 getDeviceDefaultDensity "")/  defaultDensity
+      currentPeekHeight = (if state.props.currentStage == RideAccepted then headerLayout.height else distanceLayout.height) + detailsLayout.height + paymentLayout.height + metroLayout.height
+      requiredPeekHeight = ceil (((toNumber currentPeekHeight) /pixels) * density)
+    in if requiredPeekHeight == 0 || detailsLayout.height == 0 || paymentLayout.height == 0 then 0 else requiredPeekHeight + 44

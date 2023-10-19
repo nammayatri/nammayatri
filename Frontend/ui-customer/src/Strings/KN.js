@@ -320,7 +320,7 @@ const kannadaStrings = {
   "ADD_SAVED_LOCATION_FROM_SETTINGS": "*ನೀವು ಸೈಡ್ ಮೆನು > ಮೆಚ್ಚಿನವುಗಳಿಂದ ಹೊಸ ಮೆಚ್ಚಿನವುಗಳನ್ನು ಸೇರಿಸಬಹುದು",
   "YOU_WILL_BE_ASKED_TO_SELECT_CONTACTS": "3 ಸಂಪರ್ಕಗಳವರೆಗೆ ಆಯ್ಕೆ ಮಾಡಲು ನಿಮ್ಮನ್ನು ಕೇಳಲಾಗುತ್ತದೆ",
   "AUTO_ASSIGN_A_RIDE": "ಸವಾರಿಯನ್ನು ಸ್ವಯಂ ನಿಯೋಜಿಸಿ",
-  "IS_WAITING_FOR_YOU": "ಕಾಯುತ್ತಿದ್ದಾರೆ...",
+  "IS_WAITING_AT_PICKUP": "ಪಿಕ್ ಅಪ್ ನಲ್ಲಿ ಕಾಯುತ್ತಿದೆ",
   "WAIT_TIME_TOO_LONG": "ತುಂಬಾ ಸಮಯ ಕಾಯಿರಿ",
   "GOT_ANOTHER_RIDE_ELSE_WHERE": "ಮತ್ತೆಲ್ಲೋ ಮತ್ತೊಂದು ಸವಾರಿ ಸಿಕ್ಕಿತು",
   "DRIVER_WAS_RUDE": "ಚಾಲಕ ಅಸಭ್ಯವಾಗಿ ವರ್ತಿಸಿದ",
@@ -619,5 +619,14 @@ const kannadaStrings = {
   "RIDE_TYPE" : "ರೈಡ್ ಪ್ರಕಾರ",
   "ERNAKULAM_LIMIT_CHARGE": "ಪಿಕಪ್ ಅಥವಾ ಗಮ್ಯಸ್ಥಾನವು ಎರ್ನಾಕುಲಂ ಕಾರ್ಪೊರೇಷನ್ ಮಿತಿಯಿಂದ ಹೊರಗಿದ್ದರೆ ದರವು 1.5x ಆಗಿರುತ್ತದೆ",
   "SELECT_LOCATION_ON_MAP" : "ನಕ್ಷೆಯಲ್ಲಿ ಸ್ಥಳವನ್ನು ಆಯ್ಕೆಮಾಡಿ",
-  "SPACIOUS" : "ವಿಶಾಲವಾದ"
+  "SPACIOUS" : "ವಿಶಾಲವಾದ",
+  "CHARGES_APPLICABLE_AFTER_3_MINS" : "3 ನಿಮಿಷಗಳ ನಂತರ ಅನ್ವಯವಾಗುವ ಶುಲ್ಕಗಳು",
+  "REACHING_YOUR_DESTINATION_IN_" : "ನಿಮ್ಮ ಗಮ್ಯಸ್ಥಾನವನ್ನು ತಲುಪುತ್ತದೆ",
+  "WAITING_AT_PICKUP" : " ಪಿಕಪ್‌ನಲ್ಲಿ ಕಾಯುತ್ತಿದೆ ",
+  "LEARN_MORE" : "ಇನ್ನಷ್ಟು ತಿಳಿಯಿರಿ",
+  "PICKUP" : "ಪಿಕಪ್",
+  "PAY_BY_CASH_OR_UPI" : "ನಗದು / UPI ಮೂಲಕ ಪಾವತಿಸಿ ",
+  "YOU_WILL_PAY_FOR_EVERY_MINUTE" : "\nಮೊದಲ 3 ನಿಮಿಷಗಳವರೆಗೆ ಕಾಯುವ ಶುಲ್ಕ ಶೂನ್ಯವಾಗಿರುತ್ತದೆ. \nಅದರ ನಂತರ ಪ್ರತಿ ನಿಮಿಷದ ಕಾಯುವ ಸಮಯಕ್ಕೆ ₹1.5 ಶುಲ್ಕ ವಿಧಿಸಲಾಗುತ್ತದೆ.",
+  "WAIT_TIMER" : "ವೇಟ್ ಟೈಮರ್",
+  "HOW_LONG_DRIVER_WAITED_FOR_PICKUP" : "ಪಿಕಪ್‌ನಲ್ಲಿ \nಡ್ರೈವರ್ ಎಷ್ಟು ಸಮಯ ಕಾಯುತ್ತಿದ್ದಾರೆಂದು ನಿಮಗೆ ತೋರಿಸುತ್ತದೆ."
 }

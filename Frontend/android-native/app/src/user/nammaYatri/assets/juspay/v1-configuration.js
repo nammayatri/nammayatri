@@ -97,8 +97,8 @@ window.getMerchantConfig = function () {
       "showNumberPlateSuffix": false,
       "numberPlateBackground" : "#E9BE4D",
       "showCancelPrevention" : true,
-      "callHeight": 24,
-      "callWidth": 24,
+      "callHeight": 32,
+      "callWidth": 32,
       "showTrackingButton" : true
     },
     "profileBackground": "#2C2F3A",
