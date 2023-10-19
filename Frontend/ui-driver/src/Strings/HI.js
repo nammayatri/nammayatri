@@ -1011,7 +1011,7 @@ const hindiStrings = {
   GOTO_LOC_REACHED : "“गो-टू” स्थान पर पहुँच गया!",
   GET_READY_FOR_YS_SUBSCRIPTION : "यात्री साथी योजनाओं के लिए तैयार हो जाएं!",
   SIGNUP_EARLY_FOR_SPECIAL_OFFERS : "विशेष ऑफर के लिए जल्दी साइन अप करें",
-  GUARANTEED_FIXED_PRICE : "1 जनवरी, 2025 तक निश्चित मूल्य की गारंटी",
+  GUARANTEED_FIXED_PRICE : "1 जनवरी 2025 तक कोई मूल्य परिवर्तन नहीं।",
   INTRODUCTORY_OFFER_TO_BE_ANNOUNCED_SOON : "परिचयात्मक ऑफर की घोषणा जल्द ही की जाएगी!",
   NO_CHARGES_TILL : "31 दिसंबर तक कोई शुल्क नहीं",
 }

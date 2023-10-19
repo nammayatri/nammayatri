@@ -31,7 +31,6 @@ view push state =
   , height MATCH_PARENT
   , orientation VERTICAL
   , gravity BOTTOM
-  , clickable true
   ][ PrestoAnim.animationSet [ Anim.translateYAnim AnimConfig.translateYAnimConfig ] $
       linearLayout
       [ width MATCH_PARENT
@@ -42,6 +41,7 @@ view push state =
       , padding $ Padding 16 10 16 (if isJust state.cancelButtonText then 0 else 16)
       , gravity CENTER
       , stroke $ "1," <> Color.grey900
+      , clickable true
       ][ commonTV push state.title Color.black800 FontStyle.h2 CENTER 8 NoAction false (PaddingTop 0)
         , commonTV push state.description Color.black800 FontStyle.subHeading2 CENTER 8 NoAction true (PaddingTop 0)
         , paymentReview push state

@@ -587,7 +587,7 @@ headerView push state =
 
 myPlanBodyview :: forall w. (Action -> Effect Unit) -> SubscriptionScreenState -> PrestoDOM (Effect Unit) w 
 myPlanBodyview push state =
-  let isFreezed = (state.data.orderId /= Nothing)
+  let isFreezed = ((state.data.config.enableSubscriptionPopups && state.data.orderId /= Nothing) || state.props.lastPaymentType == Just "AUTOPAY_REGISTRATION")
   in 
   scrollView
   [ height MATCH_PARENT
@@ -1789,7 +1789,7 @@ lottieView state viewId margin' padding'=
   , padding padding'
   , cornerRadius 4.0
   , background Color.blue600
-  , alpha if (state.data.orderId /= Nothing) then 0.4 else 1.0
+  , alpha if ((state.data.config.enableSubscriptionPopups && state.data.orderId /= Nothing) || state.props.lastPaymentType == Just "AUTOPAY_REGISTRATION") then 0.4 else 1.0
   ][
     lottieAnimationView
     [ id (getNewIDWithTag viewId)

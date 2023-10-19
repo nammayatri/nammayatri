@@ -2220,7 +2220,7 @@ nyPaymentFlow planCardConfig fromJoinPlan = do
                 setSubscriptionStatus Success statusResp.status planCardConfig
                 getDriverInfoApiResp <- lift $ lift $ Remote.getDriverInfoApi (GetDriverInfoReq{})
                 case getDriverInfoApiResp of
-                  Right resp -> modifyScreenState $ GlobalPropsType $ \glopalProps -> glopalProps{driverInformation = resp}
+                  Right resp -> modifyScreenState $ GlobalPropsType $ \glopalProps -> glopalProps{driverInformation = Just resp}
                   Left _ -> pure unit
                 updateDriverDataToStates
             PS.AUTHORIZATION_FAILED -> setSubscriptionStatus Failed statusResp.status planCardConfig

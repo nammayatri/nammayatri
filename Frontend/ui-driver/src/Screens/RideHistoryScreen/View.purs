@@ -309,6 +309,8 @@ calendarView push state =
 
 ridesView :: forall w . PrestoList.ListItem -> (Action -> Effect Unit) -> ST.RideHistoryScreenState -> PrestoDOM (Effect Unit) w
 ridesView rideListItem push state =
+  let showNoRides = (DA.length (prestoListFilter state.currentTab state.prestoListArrayItems) > 0)
+  in
   relativeLayout
   [ width MATCH_PARENT
   , height MATCH_PARENT
@@ -373,8 +375,8 @@ ridesView rideListItem push state =
                     , width MATCH_PARENT
                     , padding (PaddingBottom safeMarginBottom)
                     , visibility $ case state.shimmerLoader of
-                              ST.AnimatedOut ->  if (DA.length (prestoListFilter state.currentTab state.prestoListArrayItems) > 0) then GONE else VISIBLE
-                              _ -> if state.props.showPaymentHistory then VISIBLE else GONE
+                              ST.AnimatedOut ->  if showNoRides then GONE else VISIBLE
+                              _ -> if (state.props.showPaymentHistory && not showNoRides) then VISIBLE else GONE
                     ][  ErrorModal.view (push <<< ErrorModalActionController) (errorModalConfig state)]
               ])
             ]
