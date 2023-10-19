@@ -271,7 +271,7 @@ window.getMerchantConfig = function () {
       }
   , "estimateAndQuoteConfig" : 
       { "variantTypes" : [ ["SUV"], ["SEDAN", "HATCHBACK", "TAXI_PLUS"], ["TAXI"] ]
-      , "variantOrder" : ["HATCHBACK", "TAXI_PLUS", "SEDAN", "TAXI", "SUV"]
+      , "variantOrder" : ["SEDAN", "HATCHBACK", "TAXI_PLUS", "TAXI", "SUV"]
       , "enableOnlyAuto" : false
       }
   })
