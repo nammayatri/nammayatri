@@ -112,7 +112,7 @@ confirm DConfirmReq {..} = do
         pure (Just estimate.bppEstimateId.getId)
       DQuote.OneWaySpecialZoneDetails details -> pure (Just details.quoteId)
   searchRequest <- QSReq.findById quote.requestId >>= fromMaybeM (SearchRequestNotFound quote.requestId.getId)
-  activeBooking <- QRideB.findByRiderIdAndStatus personId DRB.activeBookingStatus
+  activeBooking <- QRideB.findByRiderIdAndStatusObj personId DRB.activeBookingStatusObj
   unless (null activeBooking) $ throwError $ InvalidRequest "ACTIVE_BOOKING_PRESENT"
   when (searchRequest.validTill < now) $
     throwError SearchRequestExpired

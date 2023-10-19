@@ -350,7 +350,7 @@ handler merchantId req initReq = do
             bookingDetails,
             estimatedFare = rentalQuote.baseFare,
             riderName = Nothing,
-            estimatedDuration = Seconds $ rentalQuote.baseDuration.getHours * 3600,
+            estimatedDuration = rentalQuote.baseDuration,
             fareParams = rentalQuote.fareParams,
             disabilityTag = disabilityTag,
             area = searchRequest.area,

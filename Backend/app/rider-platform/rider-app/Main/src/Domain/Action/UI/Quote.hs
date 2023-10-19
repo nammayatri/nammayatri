@@ -77,7 +77,7 @@ instance ToSchema OfferRes where
 getQuotes :: (CacheFlow m r, EsqDBReplicaFlow m r, EsqDBFlow m r) => Id SSR.SearchRequest -> m GetQuotesRes
 getQuotes searchRequestId = do
   searchRequest <- runInReplica $ QSR.findById searchRequestId >>= fromMaybeM (SearchRequestDoesNotExist searchRequestId.getId)
-  activeBooking <- runInReplica $ QBooking.findLatestByRiderIdAndStatus searchRequest.riderId DRB.activeBookingStatus
+  activeBooking <- runInReplica $ QBooking.findLatestByRiderIdAndStatusObj searchRequest.riderId DRB.activeBookingStatusObj
   whenJust activeBooking $ \_ -> throwError (InvalidRequest "ACTIVE_BOOKING_ALREADY_PRESENT")
   logDebug $ "search Request is : " <> show searchRequest
   offers <- getOffers searchRequest

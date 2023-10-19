@@ -62,7 +62,7 @@ handleError etr action =
 
 mapToDomainBookingStatus :: OnStatus.BookingStatus -> DBooking.BookingStatus
 mapToDomainBookingStatus OnStatus.NEW_BOOKING = DBooking.NEW
-mapToDomainBookingStatus OnStatus.BOOKING_SCHEDULED = DBooking.SCHEDULED
+mapToDomainBookingStatus OnStatus.BOOKING_CONFIRMED = DBooking.CONFIRMED
 mapToDomainBookingStatus OnStatus.TRIP_ASSIGNED = DBooking.TRIP_ASSIGNED
 mapToDomainBookingStatus OnStatus.BOOKING_COMPLETED = DBooking.COMPLETED
 mapToDomainBookingStatus OnStatus.BOOKING_CANCELLED = DBooking.CANCELLED
