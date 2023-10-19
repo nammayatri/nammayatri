@@ -354,6 +354,8 @@ endRide handle@ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.g
                fareParametersId = Just newFareParams.id,
                distanceCalculationFailed = distanceCalculationFailed,
                pickupDropOutsideOfThreshold = pickupDropOutsideOfThreshold,
+               odometerStartReading = rideOld.odometerStartReading, -- send to bap
+               odometerEndReading = odometerEndReading,
                rideDetails = case rideOld.rideDetails of
                  DRide.RideDetailsOnDemand {} -> rideOld.rideDetails
                  DRide.RideDetailsRental {} -> rideOld.rideDetails{odometerEndReading = odometerEndReading}
@@ -518,51 +520,3 @@ calculateFinalValuesForFailedDistanceCalculations handle@ServiceHandle {..} book
                 else do
                   logTagInfo "Inaccurate Location Updates and Pickup/Drop Deviated." ("DistanceDiff: " <> show distanceDiff)
                   recalculateFareForDistance handle booking ride (booking.estimatedDistance + highPrecMetersToMeters thresholdConfig.upwardsRecomputeBuffer) thresholdConfig.timeDiffFromUtc
-
--- calcRentalFare :: MonadFlow m => Seconds -> Int -> DFP.FPRentalDetailsD s -> DRide.Ride -> Seconds -> UTCTime -> Maybe DFP.NightShiftBounds -> m (Meters, Money, Maybe FareParameters, DRide.Ride, Maybe Bool, Maybe Bool)
--- calcRentalFare estimatedDuration endReading rd rideOld timeDiffFromUtc now nightShiftBounds = do
---   actualDistance <- case rideOld.odometerStartReading of
---     Nothing -> throwError $ InternalError "No start reading found" -- Impossible case
---     Just startReading -> pure (endReading - startReading)
---   (actualDuration, tripStartTime) <- case rideOld.tripStartTime of
---     Nothing -> throwError $ InternalError "No start time found" -- Impossible case
---     Just startTime -> pure (round (now `diffUTCTime` startTime) `div` 3600, startTime)
---   let chargedDuration = max actualDuration (estimatedDuration.getSeconds `div` 60)
---       fareByTime = Money $ rd.baseFare.getMoney + (chargedDuration * rd.perHourCharge.getMoney)
---       extraKm = actualDistance - (chargedDuration * rd.perHourFreeKms)
---       distanceBuffer = DFP.findFPRentalDetailsByDuration chargedDuration rd.distanceBuffers
---       fareByDistAndTime = if extraKm >= distanceBuffer.bufferKms then Money (fareByTime.getMoney + extraKm * rd.perExtraKmRate.getMoney) else fareByTime
---       rideEndDate = utctDay (addUTCTime (fromIntegral timeDiffFromUtc) now)
---       nightAllowance = isNightAllowanceApplicable nightShiftBounds rideEndDate (addUTCTime (fromIntegral timeDiffFromUtc) tripStartTime) (addUTCTime (secondsToNominalDiffTime timeDiffFromUtc) now)
---       totalFare = if nightAllowance then fareByDistAndTime + rd.nightShiftAllowance else fareByDistAndTime
---   ride <- QRide.findById (cast rideOld.id) >>= fromMaybeM (RideDoesNotExist rideOld.id.getId)
---   logDebug $
---     "Fare by time :"
---       <> show fareByTime
---       <> ", Fare by dist and time :"
---       <> show fareByDistAndTime
---       <> ", Night allowance: "
---       <> show nightAllowance
---   pure (Meters actualDistance * 1000, totalFare, Nothing, ride, Nothing, Nothing)
-
--- isNightAllowanceApplicable :: Maybe DFP.NightShiftBounds -> Day -> UTCTime -> UTCTime -> Bool
--- isNightAllowanceApplicable nightShiftBounds rideEndDate tripStartTime now = do
---   case nightShiftBounds of
---     Nothing -> False
---     Just bounds -> do
---       let nightShiftStartTime = timeOfDayToDiffTime bounds.nightShiftStart
---           nightShiftEndTime = timeOfDayToDiffTime bounds.nightShiftEnd
---       if nightShiftStartTime <= 6 * 60 * 60 -- NS starting and ending on same date
---         then isNightShift rideEndDate nightShiftStartTime nightShiftEndTime tripStartTime now 0 0
---         else isNightShift rideEndDate nightShiftStartTime nightShiftEndTime tripStartTime now (-1) 0 || isNightShift rideEndDate nightShiftStartTime nightShiftEndTime tripStartTime now 0 1
-
--- isNightShift :: Day -> DiffTime -> DiffTime -> UTCTime -> UTCTime -> Integer -> Integer -> Bool
--- isNightShift rideEndDate nightShiftStartTime nightShiftEndTime tripStartTime now startAdd endAdd = do
---   let curNightShiftStartTs = UTCTime (addDays startAdd rideEndDate) nightShiftStartTime
---       curNightShiftEndTs = UTCTime (addDays endAdd rideEndDate) nightShiftEndTime
---       curMxStart = max curNightShiftStartTs tripStartTime
---       curMnEnd = min curNightShiftEndTs now
---   curMnEnd >= curMxStart
-
--- timeOfDayToDiffTime :: TimeOfDay -> DiffTime -- TODO :  Move to Kernel
--- timeOfDayToDiffTime (TimeOfDay h m s) = secondsToDiffTime $ fromIntegral (h * 3600 + m * 60 + floor s)

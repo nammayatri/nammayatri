@@ -295,7 +295,9 @@ rideInfo merchantShortId reqRideId = do
         driverInitiatedCallCount,
         bookingToRideStartDuration = timeDiffInMinutes <$> ride.tripStartTime <*> (Just booking.createdAt),
         distanceCalculationFailed = ride.distanceCalculationFailed,
-        vehicleVariant = castDVehicleVariant <$> rideDetails.vehicleVariant
+        vehicleVariant = castDVehicleVariant <$> rideDetails.vehicleVariant,
+        odometerStartReading = ride.odometerStartReading,
+        odometerEndReading = ride.odometerEndReading
       }
 
 mkLocationAPIEntity :: DLoc.Location -> Common.LocationAPIEntity

@@ -253,7 +253,9 @@ data RideInfoRes = RideInfoRes
     driverInitiatedCallCount :: Int,
     bookingToRideStartDuration :: Maybe Minutes,
     distanceCalculationFailed :: Maybe Bool,
-    vehicleVariant :: Maybe Variant
+    vehicleVariant :: Maybe Variant,
+    odometerStartReading :: Maybe Centesimal,
+    odometerEndReading :: Maybe Centesimal
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
