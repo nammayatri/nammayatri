@@ -233,8 +233,6 @@ getDistanceBwCordinates lat1 long1 lat2 long2 = do
 toRad :: Number -> Number
 toRad n = (n * pi) / 180.0
 
-
-
 capitalizeFirstChar :: String -> String
 capitalizeFirstChar inputStr =
   let splitedArray = DS.split (DS.Pattern " ") (inputStr)
@@ -242,16 +240,11 @@ capitalizeFirstChar inputStr =
     in DS.joinWith " " output
 
 getDowngradeOptions :: String -> Array String
-getDowngradeOptions variant = case getMerchant FunctionCall of
-                                YATRISATHI -> case variant of
-                                                "TAXI" -> []
-                                                "SUV"  -> ["HATCHBACK", "SEDAN"]
-                                                _      -> ["TAXI"]
-                                _          -> case variant of
-                                                "SEDAN" -> ["HATCHBACK"]
-                                                "SUV" -> ["HATCHBACK", "SEDAN"]
-                                                "TAXI_PLUS" -> ["TAXI"]
-                                                _ -> []
+getDowngradeOptions variant = case variant of
+                                "TAXI"  -> []
+                                "SUV"   -> ["SEDAN", "HATCHBACK"]
+                                "SEDAN" -> ["HATCHBACK", "TAXI"] 
+                                _       -> ["TAXI"]
 
 getVehicleType :: String -> String
 getVehicleType vehicleType =
@@ -332,7 +325,6 @@ getCommonAssetStoreLink lazy = case (getMerchant lazy) of
   MOBILITY_PM -> "https://assets.juspay.in/beckn/mobilitypaytm/mobilitypaytmcommon/"
   PASSCULTURE -> "https://assets.juspay.in/beckn/passculture/passculturecommon/"
   MOBILITY_RS -> "https://assets.juspay.in/beckn/passculture/passculturecommon/"
-
 
 type AffSuccess s = (s -> Effect Unit)
 type MicroAPPInvokeSignature = String -> (AffSuccess String) ->  Effect Unit
