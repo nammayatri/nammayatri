@@ -82,7 +82,7 @@ data ConfirmQuoteDetails
   deriving (Show, Generic)
 
 calculateRentalEstimateFare :: Int -> RentalSlab -> Money
-calculateRentalEstimateFare _ _ = Money 100 --TODO
+calculateRentalEstimateFare duration RentalSlab {..} = baseFare + perHourCharge * Money duration + nightShiftCharge
 
 confirm ::
   ( EsqDBFlow m r,
@@ -117,17 +117,18 @@ confirm DConfirmReq {..} = do
   when (searchRequest.validTill < now) $
     throwError SearchRequestExpired
   unless (searchRequest.riderId == personId) $ throwError AccessDenied
+  updatedFareQuote <- QQuote.findById quoteId >>= fromMaybeM (QuoteDoesNotExist quoteId.getId)
   let fromLocation = searchRequest.fromLocation
       mbToLocation = searchRequest.toLocation
-      driverId = getDriverId quote.quoteDetails
+      driverId = getDriverId updatedFareQuote.quoteDetails
   exophone <- findRandomExophone searchRequest.merchantId
-  booking <- buildBooking searchRequest fulfillmentId quote fromLocation mbToLocation exophone now startTime Nothing paymentMethodId driverId
+  booking <- buildBooking searchRequest fulfillmentId updatedFareQuote fromLocation mbToLocation exophone now startTime Nothing paymentMethodId driverId
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   riderPhone <- mapM decrypt person.mobileNumber
   let riderName = person.firstName
   triggerBookingCreatedEvent BookingEventData {booking = booking}
   merchant <- CQM.findById booking.merchantId >>= fromMaybeM (MerchantNotFound booking.merchantId.getId)
-  details <- mkConfirmQuoteDetails quote.quoteDetails fulfillmentId
+  details <- mkConfirmQuoteDetails updatedFareQuote.quoteDetails fulfillmentId
   paymentMethod <- forM paymentMethodId $ \paymentMethodId' -> do
     paymentMethod <-
       CQMPM.findByIdAndMerchantId paymentMethodId' searchRequest.merchantId
@@ -139,17 +140,17 @@ confirm DConfirmReq {..} = do
   -- DB.runTransaction $ do
   _ <- QRideB.createBooking booking
   _ <- QPFS.updateStatus searchRequest.riderId DPFS.WAITING_FOR_DRIVER_ASSIGNMENT {bookingId = booking.id, validTill = searchRequest.validTill}
-  _ <- QEstimate.updateStatusByRequestId quote.requestId DEstimate.COMPLETED
+  _ <- QEstimate.updateStatusByRequestId updatedFareQuote.requestId DEstimate.COMPLETED
   QPFS.clearCache searchRequest.riderId
   return $
     DConfirmRes
       { booking,
-        providerId = quote.providerId,
-        providerUrl = quote.providerUrl,
-        itemId = quote.itemId,
+        providerId = updatedFareQuote.providerId,
+        providerUrl = updatedFareQuote.providerUrl,
+        itemId = updatedFareQuote.itemId,
         fromLoc = fromLocation,
         toLoc = mbToLocation,
-        vehicleVariant = quote.vehicleVariant,
+        vehicleVariant = updatedFareQuote.vehicleVariant,
         quoteDetails = details,
         searchRequestId = searchRequest.id,
         maxEstimatedDistance = searchRequest.maxDistance,
