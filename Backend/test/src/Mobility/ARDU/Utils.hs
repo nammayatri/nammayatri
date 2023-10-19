@@ -191,7 +191,7 @@ getQuotesByEstimateId appToken estimateId =
 
 confirmWithCheck :: Text -> Id AppQuote.Quote -> ClientsM (Id AppRB.Booking, TRB.Booking, TRide.Ride)
 confirmWithCheck appToken quoteId = do
-  bBookingId <- fmap (.bookingId) $ callBAP $ BapAPI.appConfirmRide appToken quoteId Nothing
+  bBookingId <- fmap (.bookingId) $ callBAP $ BapAPI.appConfirmRide appToken quoteId Nothing Nothing Nothing
 
   void . pollDesc "booking exists" $ do
     initRB <- getBAPBooking bBookingId
@@ -237,7 +237,7 @@ endRide ::
   Id AppRB.Booking ->
   ClientsM ()
 endRide driver destination tRide bBookingId = do
-  void . callBPP $ API.ui.ride.rideEnd driver.token tRide.id $ RideAPI.EndRideReq destination Nothing Nothing
+  void . callBPP $ API.ui.ride.rideEnd driver.token tRide.id $ RideAPI.EndRideReq destination Nothing Nothing Nothing Nothing
   void $
     pollDesc "ride completed" $ do
       completedRBStatusResult <- callBAP (appBookingStatus bBookingId appRegistrationToken)

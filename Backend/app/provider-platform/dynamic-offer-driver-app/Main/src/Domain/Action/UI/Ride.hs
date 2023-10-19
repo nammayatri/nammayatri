@@ -12,20 +12,27 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE DerivingStrategies #-}
+{-# OPTIONS_GHC -Wno-unused-top-binds #-}
 
 module Domain.Action.UI.Ride
   ( DriverRideRes (..),
     DriverRideListRes (..),
     OTPRideReq (..),
+    UploadOdometerReadingReq (..),
+    OdometerReadingRes (..),
     listDriverRides,
     arrivedAtPickup,
     otpRideCreate,
+    uploadOdometerReading,
+    getOdometerReading,
   )
 where
 
+import AWS.S3 as S3
 import Data.String.Conversions
 import qualified Data.Text as T
 import Data.Time (Day)
+import Data.Time.Format.ISO8601
 import qualified Domain.Action.Beckn.Confirm as DConfirm
 import qualified Domain.Action.Beckn.Search as BS
 import qualified Domain.Types.BapMetadata as DSM
@@ -70,6 +77,7 @@ import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.BusinessEvent as QBE
 import qualified Storage.Queries.Driver.DriverFlowStatus as QDFS
 import qualified Storage.Queries.DriverInformation as QDI
+import qualified Storage.Queries.Person as Person
 import qualified Storage.Queries.Rating as QR
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RideDetails as QRD
@@ -79,12 +87,22 @@ import Tools.Error
 import Tools.Event
 import qualified Tools.Notifications as Notify
 
+newtype UploadOdometerReadingReq = UploadOdometerReadingReq
+  { imageBase64 :: Text
+  }
+  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
+
+newtype OdometerReadingRes = OdometerReadingRes
+  { imageBase64 :: Text
+  }
+  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
+
 data DriverRideRes = DriverRideRes
   { id :: Id DRide.Ride,
     shortRideId :: ShortId DRide.Ride,
     status :: DRide.RideStatus,
     fromLocation :: DLoc.LocationAPIEntity,
-    toLocation :: DLoc.LocationAPIEntity,
+    toLocation :: Maybe DLoc.LocationAPIEntity,
     driverName :: Text,
     driverNumber :: Maybe Text,
     vehicleVariant :: DVeh.Variant,
@@ -149,7 +167,7 @@ listDriverRides driverId mbLimit mbOffset mbOnlyActive mbRideStatus mbDay = do
     driverNumber <- RD.getDriverNumber rideDetail
     mbExophone <- CQExophone.findByPrimaryPhone booking.primaryExophone
     bapMetadata <- CQSM.findById (Id booking.bapId)
-    let goHomeReqId = ride.driverGoHomeRequestId
+    let goHomeReqId = Nothing
     pure $ mkDriverRideRes rideDetail driverNumber rideRating mbExophone (ride, booking) bapMetadata goHomeReqId (Just driverInfo)
   pure . DriverRideListRes $ driverRideLis
 
@@ -170,12 +188,17 @@ mkDriverRideRes rideDetails driverNumber rideRating mbExophone (ride, booking) b
           fareParams{driverSelectedFare = Nothing -- it should not be part of estimatedBaseFare
                     }
   let initial = "" :: Text
+  let (_, toLocation') = case booking.bookingDetails of
+        DRB.BookingDetailsOnDemand {..} ->
+          (DRide.ON_DEMAND, Just toLocation)
+        DRB.BookingDetailsRental {} ->
+          (DRide.RENTAL, Nothing)
   DriverRideRes
     { id = ride.id,
       shortRideId = ride.shortId,
       status = ride.status,
       fromLocation = DLoc.makeLocationAPIEntity booking.fromLocation,
-      toLocation = DLoc.makeLocationAPIEntity booking.toLocation,
+      toLocation = DLoc.makeLocationAPIEntity <$> toLocation',
       driverName = rideDetails.driverName,
       driverNumber,
       vehicleNumber = rideDetails.vehicleNumber,
@@ -193,7 +216,7 @@ mkDriverRideRes rideDetails driverNumber rideRating mbExophone (ride, booking) b
       pickupDropOutsideOfThreshold = ride.pickupDropOutsideOfThreshold,
       tripStartTime = ride.tripStartTime,
       tripEndTime = ride.tripEndTime,
-      specialLocationTag = booking.specialLocationTag,
+      specialLocationTag = Nothing,
       rideRating = rideRating <&> (.ratingValue),
       chargeableDistance = ride.chargeableDistance,
       exoPhone = maybe booking.primaryExophone (\exophone -> if not exophone.isPrimaryDown then exophone.primaryPhone else exophone.backupPhone) mbExophone,
@@ -268,7 +291,7 @@ otpRideCreate driver otpCode booking = do
   driverNumber <- RD.getDriverNumber rideDetails
   mbExophone <- CQExophone.findByPrimaryPhone booking.primaryExophone
   bapMetadata <- CQSM.findById (Id booking.bapId)
-  pure $ mkDriverRideRes rideDetails driverNumber Nothing mbExophone (ride, booking) bapMetadata ride.driverGoHomeRequestId Nothing
+  pure $ mkDriverRideRes rideDetails driverNumber Nothing mbExophone (ride, booking) bapMetadata Nothing Nothing
   where
     errHandler uBooking transporter exc
       | Just BecknAPICallError {} <- fromException @BecknAPICallError exc = DConfirm.cancelBooking uBooking (Just driver) transporter >> throwM exc
@@ -289,6 +312,30 @@ otpRideCreate driver otpCode booking = do
       shortId <- generateShortId
       now <- getCurrentTime
       trackingUrl <- buildTrackingUrl guid
+      let (rideType, rideDetails) = case booking.bookingDetails of
+            DRB.BookingDetailsOnDemand {..} ->
+              ( DRide.ON_DEMAND,
+                DRide.RideDetailsOnDemand
+                  { toLocation = toLocation,
+                    driverGoHomeRequestId = ghrId,
+                    driverDeviatedFromRoute = Just False,
+                    numberOfSnapToRoadCalls = Nothing,
+                    numberOfDeviation = Nothing,
+                    uiDistanceCalculationWithAccuracy = Nothing,
+                    uiDistanceCalculationWithoutAccuracy = Nothing
+                  }
+              )
+            DRB.BookingDetailsRental {} ->
+              ( DRide.RENTAL,
+                DRide.RideDetailsRental
+                  { rentalToLocation = Nothing,
+                    odometerStartReading = Nothing,
+                    odometerStartReadingImagePath = Nothing,
+                    odometerEndReading = Nothing,
+                    odometerEndReadingImagePath = Nothing,
+                    endRideOtp = Nothing
+                  }
+              )
       return
         DRide.Ride
           { id = guid,
@@ -308,18 +355,13 @@ otpRideCreate driver otpCode booking = do
             tripEndTime = Nothing,
             tripStartPos = Nothing,
             fromLocation = booking.fromLocation,
-            toLocation = booking.toLocation,
             tripEndPos = Nothing,
             fareParametersId = Nothing,
             distanceCalculationFailed = Nothing,
             createdAt = now,
             updatedAt = now,
-            driverDeviatedFromRoute = Just False,
-            numberOfSnapToRoadCalls = Nothing,
-            numberOfDeviation = Nothing,
-            uiDistanceCalculationWithAccuracy = Nothing,
-            uiDistanceCalculationWithoutAccuracy = Nothing,
-            driverGoHomeRequestId = ghrId
+            rideDetails = rideDetails,
+            rideType = rideType
           }
 
     buildTrackingUrl rideId = do
@@ -350,3 +392,52 @@ otpRideCreate driver otpCode booking = do
     isNotAllowedVehicleVariant driverVehicle bookingVehicle =
       (bookingVehicle == DVeh.TAXI_PLUS || bookingVehicle == DVeh.SEDAN || bookingVehicle == DVeh.SUV || bookingVehicle == DVeh.HATCHBACK)
         && driverVehicle == DVeh.TAXI
+
+uploadOdometerReading ::
+  Id DP.Person ->
+  Id DRide.Ride ->
+  Maybe Bool ->
+  UploadOdometerReadingReq ->
+  Flow APISuccess
+uploadOdometerReading driverId rideId isStartRide req = do
+  person <- Person.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+  let merchantId = person.merchantId
+  imagePath <- createPath driverId.getId merchantId.getId
+  _ <- fork "S3 Put Image" $ S3.put (T.unpack imagePath) req.imageBase64
+  _ <-
+    if fromMaybe True isStartRide
+      then QRide.updateOdometerStartReadingImagePath rideId (Just req.imageBase64)
+      else QRide.updateOdometerEndReadingImagePath rideId (Just req.imageBase64)
+  pure Success
+  where
+    createPath ::
+      (MonadTime m, MonadReader r m, HasField "s3Env" r (S3.S3Env m)) =>
+      Text ->
+      Text ->
+      m Text
+    createPath driverId' merchantId' = do
+      pathPrefix <- asks (.s3Env.pathPrefix)
+      now <- getCurrentTime
+      let fileName = T.replace (T.singleton ':') (T.singleton '-') (T.pack $ iso8601Show now)
+      return
+        ( pathPrefix <> "/ride-odometer-reading/" <> "org-" <> merchantId' <> "/"
+            <> driverId'
+            <> "/"
+            <> fileName
+            <> ".png"
+        )
+
+getOdometerReading ::
+  Id DRide.Ride ->
+  Maybe Bool ->
+  Flow OdometerReadingRes
+getOdometerReading rideId isStartRide = do
+  ride <- QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
+  let imagePath =
+        if fromMaybe True isStartRide
+          then ride.rideDetails.odometerStartReadingImagePath
+          else ride.rideDetails.odometerEndReadingImagePath
+  when (isNothing imagePath) $ do
+    throwError $ InvalidRequest "Ride Not Found"
+  image <- S3.get (T.unpack $ fromJust imagePath)
+  pure $ OdometerReadingRes image

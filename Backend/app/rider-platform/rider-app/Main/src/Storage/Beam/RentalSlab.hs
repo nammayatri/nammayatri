@@ -24,8 +24,11 @@ import Tools.Beam.UtilsTH
 
 data RentalSlabT f = RentalSlabT
   { id :: B.C f Text,
-    baseDistance :: B.C f Kilometers,
-    baseDuration :: B.C f Hours
+    baseFare :: B.C f Money,
+    perHourCharge :: B.C f Money,
+    perHourFreeKms :: B.C f Int,
+    perExtraKmRate :: B.C f Money,
+    nightShiftCharge :: B.C f Money
   }
   deriving (Generic, B.Beamable)
 

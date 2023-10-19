@@ -56,6 +56,7 @@ data StartRideReq = DriverReq DriverStartRideReq | DashboardReq DashboardStartRi
 data DriverStartRideReq = DriverStartRideReq
   { rideOtp :: Text,
     point :: LatLong,
+    odometerStartReading :: Maybe Centesimal,
     requestor :: DP.Person
   }
 
@@ -67,7 +68,8 @@ data DashboardStartRideReq = DashboardStartRideReq
 data ServiceHandle m = ServiceHandle
   { findRideById :: Id DRide.Ride -> m (Maybe DRide.Ride),
     findBookingById :: Id SRB.Booking -> m (Maybe SRB.Booking),
-    startRideAndUpdateLocation :: Id DP.Person -> DRide.Ride -> Id SRB.Booking -> LatLong -> Id DM.Merchant -> m (),
+    findLocationByDriverId :: Id DP.Person -> m (Maybe DDrLoc.DriverLocation),
+    startRideAndUpdateLocation :: Id DP.Person -> DRide.Ride -> SRB.Booking -> LatLong -> Maybe Centesimal -> m (),
     notifyBAPRideStarted :: SRB.Booking -> DRide.Ride -> m (),
     rateLimitStartRide :: Id DP.Person -> Id DRide.Ride -> m (),
     initializeDistanceCalculation :: Id DRide.Ride -> Id DP.Person -> LatLong -> m (),
@@ -146,22 +148,30 @@ startRide ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.getId)
 
   unless (isValidRideStatus (ride.status)) $ throwError $ RideInvalidStatus "This ride cannot be started"
 
-  point <- case req of
+  enableLocationTrackingService <- asks (.enableLocationTrackingService)
+  (point, odometerStartReading) <- case req of
     DriverReq driverReq -> do
       when (driverReq.rideOtp /= ride.otp) $ throwError IncorrectOTP
+      when (booking.bookingType == SRB.RentalBooking && isNothing driverReq.odometerStartReading) $ throwError $ InternalError "No odometer start reading found"
       logTagInfo "driver -> startRide : " ("DriverId " <> getId driverId <> ", RideId " <> getId ride.id)
-      pure driverReq.point
+      pure (driverReq.point, driverReq.odometerStartReading)
     DashboardReq dashboardReq -> do
       logTagInfo "dashboard -> startRide : " ("DriverId " <> getId driverId <> ", RideId " <> getId ride.id)
       case dashboardReq.point of
-        Just point -> pure point
+        Just point -> pure (point, Nothing)
         Nothing -> do
           driverLocation <- do
-            driverLocations <- LF.driversLocation [driverId]
-            listToMaybe driverLocations & fromMaybeM LocationNotFound
-          pure $ getCoordinates driverLocation
+            if enableLocationTrackingService
+              then do
+                driverLocations <- LF.driversLocation [driverId]
+                listToMaybe driverLocations & fromMaybeM LocationNotFound
+              else findLocationByDriverId driverId >>= fromMaybeM LocationNotFound
+          pure (getCoordinates driverLocation, Nothing)
   whenWithLocationUpdatesLock driverId $ do
-    withTimeAPI "startRide" "startRideAndUpdateLocation" $ startRideAndUpdateLocation driverId ride booking.id point booking.providerId
+    withTimeAPI "startRide" "startRideAndUpdateLocation" $ startRideAndUpdateLocation driverId ride booking point odometerStartReading
+    when enableLocationTrackingService $ do
+      ltsRes <- LF.rideStart rideId point.lat point.lon booking.providerId driverId
+      logTagInfo "ltsRes" (show ltsRes)
     withTimeAPI "startRide" "initializeDistanceCalculation" $ initializeDistanceCalculation ride.id driverId point
     withTimeAPI "startRide" "notifyBAPRideStarted" $ notifyBAPRideStarted booking ride
   CQDGR.setDriverGoHomeIsOnRide driverId booking.providerId

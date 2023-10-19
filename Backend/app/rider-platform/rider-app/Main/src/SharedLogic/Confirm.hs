@@ -49,7 +49,9 @@ import Tools.Event
 data DConfirmReq = DConfirmReq
   { personId :: Id DP.Person,
     quoteId :: Id DQuote.Quote,
-    paymentMethodId :: Maybe (Id DMPM.MerchantPaymentMethod)
+    paymentMethodId :: Maybe (Id DMPM.MerchantPaymentMethod),
+    startTime :: Maybe UTCTime,
+    rentalDuration :: Maybe Int
   }
 
 data DConfirmRes = DConfirmRes
@@ -66,7 +68,9 @@ data DConfirmRes = DConfirmRes
     searchRequestId :: Id DSReq.SearchRequest,
     merchant :: DM.Merchant,
     maxEstimatedDistance :: Maybe HighPrecMeters,
-    paymentMethodInfo :: Maybe DMPM.PaymentMethodInfo
+    paymentMethodInfo :: Maybe DMPM.PaymentMethodInfo,
+    startTime :: Maybe UTCTime,
+    rentalDuration :: Maybe Int
   }
   deriving (Show, Generic)
 
@@ -76,6 +80,9 @@ data ConfirmQuoteDetails
   | ConfirmAutoDetails Text (Maybe Text)
   | ConfirmOneWaySpecialZoneDetails Text
   deriving (Show, Generic)
+
+calculateRentalEstimateFare :: Int -> RentalSlab -> Money
+calculateRentalEstimateFare _ _ = Money 100 --TODO
 
 confirm ::
   ( EsqDBFlow m r,
@@ -90,8 +97,13 @@ confirm DConfirmReq {..} = do
   now <- getCurrentTime
   fulfillmentId <-
     case quote.quoteDetails of
-      DQuote.OneWayDetails _ -> pure (Nothing)
-      DQuote.RentalDetails _ -> pure (Nothing)
+      DQuote.OneWayDetails _ -> pure Nothing
+      DQuote.RentalDetails rentalOffer -> do
+        unless (isJust startTime && isJust rentalDuration) $ throwError $ InvalidRequest "Rental confirm quote should have startTime param"
+        --here i can update the quote estimate fare
+        let estimateFare = calculateRentalEstimateFare (fromJust rentalDuration) rentalOffer
+        _ <- QQuote.updateQuoteEstimateFare quoteId estimateFare
+        pure $ Just rentalOffer.id.getId
       DQuote.DriverOfferDetails driverOffer -> do
         estimate <- QEstimate.findById driverOffer.estimateId >>= fromMaybeM EstimateNotFound
         when (DEstimate.isCancelled estimate.status) $ throwError $ EstimateCancelled estimate.id.getId
@@ -100,7 +112,7 @@ confirm DConfirmReq {..} = do
         pure (Just estimate.bppEstimateId.getId)
       DQuote.OneWaySpecialZoneDetails details -> pure (Just details.quoteId)
   searchRequest <- QSReq.findById quote.requestId >>= fromMaybeM (SearchRequestNotFound quote.requestId.getId)
-  activeBooking <- QRideB.findByRiderIdAndStatus personId DRB.activeBookingStatus
+  activeBooking <- QRideB.findByRiderIdAndStatusObj personId DRB.activeBookingStatusObj
   unless (null activeBooking) $ throwError $ InvalidRequest "ACTIVE_BOOKING_PRESENT"
   when (searchRequest.validTill < now) $
     throwError SearchRequestExpired
@@ -109,7 +121,7 @@ confirm DConfirmReq {..} = do
       mbToLocation = searchRequest.toLocation
       driverId = getDriverId quote.quoteDetails
   exophone <- findRandomExophone searchRequest.merchantId
-  booking <- buildBooking searchRequest fulfillmentId quote fromLocation mbToLocation exophone now Nothing paymentMethodId driverId
+  booking <- buildBooking searchRequest fulfillmentId quote fromLocation mbToLocation exophone now startTime Nothing paymentMethodId driverId
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   riderPhone <- mapM decrypt person.mobileNumber
   let riderName = person.firstName
@@ -148,7 +160,7 @@ confirm DConfirmReq {..} = do
     mkConfirmQuoteDetails quoteDetails fulfillmentId = do
       case quoteDetails of
         DQuote.OneWayDetails _ -> pure ConfirmOneWayDetails
-        DQuote.RentalDetails RentalSlab {..} -> pure $ ConfirmRentalDetails $ RentalSlabAPIEntity {..}
+        DQuote.RentalDetails RentalSlab {..} -> pure $ ConfirmRentalDetails $ RentalSlabAPIEntity {bppQuoteId = id.getId, ..}
         DQuote.DriverOfferDetails driverOffer -> do
           bppEstimateId <- fulfillmentId & fromMaybeM (InternalError "FulfillmentId not found in Init. this error should never come.")
           pure $ ConfirmAutoDetails bppEstimateId driverOffer.driverId
@@ -167,11 +179,12 @@ buildBooking ::
   Maybe DL.Location ->
   DExophone.Exophone ->
   UTCTime ->
+  Maybe UTCTime ->
   Maybe Text ->
   Maybe (Id DMPM.MerchantPaymentMethod) ->
   Maybe Text ->
   m DRB.Booking
-buildBooking searchRequest mbFulfillmentId quote fromLoc mbToLoc exophone now otpCode paymentMethodId driverId = do
+buildBooking searchRequest mbFulfillmentId quote fromLoc mbToLoc exophone now startTime otpCode paymentMethodId driverId = do
   id <- generateGUID
   bookingDetails <- buildBookingDetails
   return $
@@ -191,7 +204,7 @@ buildBooking searchRequest mbFulfillmentId quote fromLoc mbToLoc exophone now ot
         providerName = quote.providerName,
         itemId = quote.itemId,
         providerMobileNumber = quote.providerMobileNumber,
-        startTime = searchRequest.startTime,
+        startTime = fromMaybe now startTime,
         riderId = searchRequest.riderId,
         fromLocation = fromLoc,
         estimatedFare = quote.estimatedFare,

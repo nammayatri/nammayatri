@@ -15,6 +15,7 @@
 
 module Storage.Queries.Quote where
 
+import Data.Ratio
 import Domain.Types.DriverOffer as DDO
 import Domain.Types.Estimate
 import Domain.Types.FarePolicy.FareProductType as DFFP
@@ -52,6 +53,15 @@ create quote = do
 
 createMany :: MonadFlow m => [Quote] -> m ()
 createMany = traverse_ create
+
+updateQuoteEstimateFare :: MonadFlow m => Id Quote -> Money -> m ()
+updateQuoteEstimateFare quoteId estimatedFare = do
+  let highPrecMoney = HighPrecMoney $ fromIntegral (getMoney estimatedFare) % 1
+  updateOneWithKV
+    [ Se.Set BeamQ.estimatedFare highPrecMoney,
+      Se.Set BeamQ.estimatedTotalFare highPrecMoney
+    ]
+    [Se.Is BeamQ.id (Se.Eq $ getId quoteId)]
 
 findById :: MonadFlow m => Id Quote -> m (Maybe Quote)
 findById quoteId = findOneWithKV [Se.Is BeamQ.id $ Se.Eq (getId quoteId)]

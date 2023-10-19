@@ -49,7 +49,10 @@ bookingInfo merchantShortId otpCode = do
       Common.BookingInfoResponse
         { bookingId = cast id,
           fromLocation = buildBookingLocation fromLocation,
-          toLocation = buildBookingLocation toLocation,
+          toLocation =
+            buildBookingLocation <$> case bookingDetails of
+              Domain.BookingDetailsOnDemand {..} -> Just toLocation
+              Domain.BookingDetailsRental {} -> Nothing,
           estimatedDistance,
           estimatedFare,
           estimatedDuration,
@@ -80,10 +83,10 @@ assignCreateAndStartOtpRide :: ShortId DM.Merchant -> Common.AssignCreateAndStar
 assignCreateAndStartOtpRide _ Common.AssignCreateAndStartOtpRideAPIReq {..} = do
   requestor <- findPerson (cast driverId)
   booking <- runInReplica $ QBooking.findById (cast bookingId) >>= fromMaybeM (BookingNotFound bookingId.getId)
-  rideOtp <- booking.specialZoneOtpCode & fromMaybeM (InternalError "otpCode not found for special zone booking")
+  rideOtp <- Nothing & fromMaybeM (InternalError "otpCode not found for special zone booking")
 
   ride <- DRide.otpRideCreate requestor rideOtp booking
-  let driverReq = RideStart.DriverStartRideReq {rideOtp, point, requestor}
+  let driverReq = RideStart.DriverStartRideReq rideOtp point Nothing requestor
   fork "sending dashboard sms - start ride" $ do
     mride <- runInReplica $ QRide.findById ride.id >>= fromMaybeM (RideDoesNotExist ride.id.getId)
     Sms.sendDashboardSms booking.providerId Sms.BOOKING (Just mride) mride.driverId (Just booking) 0

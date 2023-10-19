@@ -57,6 +57,7 @@ import qualified Domain.Types.Merchant.DriverIntelligentPoolConfig as DIPC
 import Domain.Types.Merchant.DriverPoolConfig
 import qualified Domain.Types.Person as DP
 import Domain.Types.SearchRequest
+import qualified Domain.Types.SearchRequest as DSR
 import Domain.Types.SearchTry
 import Domain.Types.Vehicle.Variant (Variant)
 import EulerHS.Prelude hiding (id)
@@ -571,12 +572,13 @@ calculateDriverPool ::
   PoolCalculationStage ->
   DriverPoolConfig ->
   Maybe Variant ->
+  DSR.SearchRequestTag ->
   a ->
   Id DM.Merchant ->
   Bool ->
   Maybe PoolRadiusStep ->
   m [DriverPoolResult]
-calculateDriverPool poolStage driverPoolCfg mbVariant pickup merchantId onlyNotOnRide mRadiusStep = do
+calculateDriverPool poolStage driverPoolCfg mbVariant searchRequestTag pickup merchantId onlyNotOnRide mRadiusStep = do
   let radius = getRadius mRadiusStep
   let coord = getCoordinates pickup
   now <- getCurrentTime
@@ -584,6 +586,7 @@ calculateDriverPool poolStage driverPoolCfg mbVariant pickup merchantId onlyNotO
     measuringDurationToLog INFO "calculateDriverPool" $
       QPG.getNearestDrivers
         mbVariant
+        searchRequestTag
         coord
         radius
         merchantId
@@ -625,13 +628,14 @@ calculateDriverPoolWithActualDist ::
   PoolCalculationStage ->
   DriverPoolConfig ->
   Maybe Variant ->
+  DSR.SearchRequestTag ->
   a ->
   Id DM.Merchant ->
   Bool ->
   Maybe PoolRadiusStep ->
   m [DriverPoolWithActualDistResult]
-calculateDriverPoolWithActualDist poolCalculationStage driverPoolCfg mbVariant pickup merchantId onlyNotOnRide mRadiusStep = do
-  driverPool <- calculateDriverPool poolCalculationStage driverPoolCfg mbVariant pickup merchantId onlyNotOnRide mRadiusStep
+calculateDriverPoolWithActualDist poolCalculationStage driverPoolCfg mbVariant searchRequestTag pickup merchantId onlyNotOnRide mRadiusStep = do
+  driverPool <- calculateDriverPool poolCalculationStage driverPoolCfg mbVariant searchRequestTag pickup merchantId onlyNotOnRide mRadiusStep
   case driverPool of
     [] -> return []
     (a : pprox) -> do
@@ -657,11 +661,12 @@ calculateDriverPoolCurrentlyOnRide ::
   PoolCalculationStage ->
   DriverPoolConfig ->
   Maybe Variant ->
+  DSR.SearchRequestTag ->
   a ->
   Id DM.Merchant ->
   Maybe PoolRadiusStep ->
   m [DriverPoolResultCurrentlyOnRide]
-calculateDriverPoolCurrentlyOnRide poolStage driverPoolCfg mbVariant pickup merchantId mRadiusStep = do
+calculateDriverPoolCurrentlyOnRide poolStage driverPoolCfg mbVariant searchRequestTag pickup merchantId mRadiusStep = do
   let radius = getRadius mRadiusStep
   let coord = getCoordinates pickup
   now <- getCurrentTime
@@ -670,6 +675,7 @@ calculateDriverPoolCurrentlyOnRide poolStage driverPoolCfg mbVariant pickup merc
       B.runInReplica $
         QP.getNearestDriversCurrentlyOnRide
           mbVariant
+          searchRequestTag
           coord
           radius
           merchantId
@@ -708,12 +714,13 @@ calculateDriverCurrentlyOnRideWithActualDist ::
   PoolCalculationStage ->
   DriverPoolConfig ->
   Maybe Variant ->
+  DSR.SearchRequestTag ->
   a ->
   Id DM.Merchant ->
   Maybe PoolRadiusStep ->
   m [DriverPoolWithActualDistResult]
-calculateDriverCurrentlyOnRideWithActualDist poolCalculationStage driverPoolCfg mbVariant pickup merchantId mRadiusStep = do
-  driverPool <- calculateDriverPoolCurrentlyOnRide poolCalculationStage driverPoolCfg mbVariant pickup merchantId mRadiusStep
+calculateDriverCurrentlyOnRideWithActualDist poolCalculationStage driverPoolCfg mbVariant searchRequestTag pickup merchantId mRadiusStep = do
+  driverPool <- calculateDriverPoolCurrentlyOnRide poolCalculationStage driverPoolCfg mbVariant searchRequestTag pickup merchantId mRadiusStep
   case driverPool of
     [] -> return []
     (a : pprox) -> do

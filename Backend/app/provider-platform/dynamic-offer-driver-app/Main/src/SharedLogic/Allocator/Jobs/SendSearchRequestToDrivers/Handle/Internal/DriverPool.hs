@@ -34,6 +34,7 @@ import Domain.Types.Merchant.TransporterConfig (TransporterConfig)
 import Domain.Types.Person (Driver)
 import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.SearchTry as DST
+import qualified Domain.Types.Vehicle.Variant as DVeh
 import EulerHS.Prelude hiding (id)
 import Kernel.Randomizer (randomizeList)
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
@@ -51,8 +52,7 @@ import qualified Storage.CachedQueries.Merchant.TransporterConfig as TC
 import Tools.Maps as Maps
 
 isBatchNumExceedLimit ::
-  ( EsqDBFlow m r,
-    CacheFlow m r
+  ( CacheFlow m r
   ) =>
   DriverPoolConfig ->
   Id DST.SearchTry ->
@@ -74,15 +74,16 @@ prepareDriverPoolBatch ::
   ) =>
   DriverPoolConfig ->
   DSR.SearchRequest ->
-  DST.SearchTry ->
+  Id DST.SearchTry ->
+  DVeh.Variant ->
   PoolBatchNum ->
   GoHomeConfig ->
   m DriverPoolWithActualDistResultWithFlags
-prepareDriverPoolBatch driverPoolCfg searchReq searchTry batchNum goHomeConfig = withLogTag ("BatchNum-" <> show batchNum) $ do
+prepareDriverPoolBatch driverPoolCfg searchReq searchTryId vehicleVariant batchNum goHomeConfig = withLogTag ("BatchNum-" <> show batchNum) $ do
   previousBatchesDrivers <- getPreviousBatchesDrivers
   logDebug $ "PreviousBatchesDrivers-" <> show previousBatchesDrivers
   poolBatchWithFlags <- prepareDriverPoolBatch' previousBatchesDrivers True
-  incrementDriverRequestCount (fst poolBatchWithFlags) searchTry.id
+  incrementDriverRequestCount (fst poolBatchWithFlags) searchTryId
   pure $ buildDriverPoolWithActualDistResultWithFlags poolBatchWithFlags previousBatchesDrivers
   where
     buildDriverPoolWithActualDistResultWithFlags poolBatchWithFlags prevBatchDrivers =
@@ -92,7 +93,7 @@ prepareDriverPoolBatch driverPoolCfg searchReq searchTry batchNum goHomeConfig =
           prevBatchDrivers = prevBatchDrivers
         }
     getPreviousBatchesDrivers = do
-      batches <- previouslyAttemptedDrivers searchTry.id
+      batches <- previouslyAttemptedDrivers searchTryId
       return $ (.driverPoolResult.driverId) <$> batches
 
     prepareDriverPoolBatch' previousBatchesDrivers doGoHomePooling = do
@@ -186,36 +187,36 @@ prepareDriverPoolBatch driverPoolCfg searchReq searchTry batchNum goHomeConfig =
               driverPoolCfg.distanceBasedBatchSplit
 
         calcGoHomeDriverPool = do
-          calculateGoHomeDriverPool $
-            CalculateGoHomeDriverPoolReq
-              { poolStage = DriverSelection,
-                driverPoolCfg = driverPoolCfg,
-                goHomeCfg = goHomeConfig,
-                variant = Just searchTry.vehicleVariant,
-                fromLocation = searchReq.fromLocation,
-                toLocation = searchReq.toLocation, -- last or all ?
-                merchantId = searchReq.providerId
-              }
-
+          case searchReq.tag of
+            DSR.ON_DEMAND ->
+              calculateGoHomeDriverPool $
+                CalculateGoHomeDriverPoolReq
+                  { poolStage = DriverSelection,
+                    driverPoolCfg = driverPoolCfg,
+                    goHomeCfg = goHomeConfig,
+                    variant = Just vehicleVariant,
+                    fromLocation = searchReq.searchRequestDetails.fromLocation,
+                    toLocation = searchReq.searchRequestDetails.toLocation,
+                    merchantId = searchReq.providerId
+                  }
+            DSR.RENTAL -> pure [] -- RENTAL
         calcDriverPool radiusStep = do
-          let vehicleVariant = searchTry.vehicleVariant
-              merchantId = searchReq.providerId
-          let pickupLoc = searchReq.fromLocation
+          let merchantId = searchReq.providerId
+          let pickupLoc = searchReq.searchRequestDetails.fromLocation
           let pickupLatLong = LatLong pickupLoc.lat pickupLoc.lon
-          calculateDriverPoolWithActualDist DriverSelection driverPoolCfg (Just vehicleVariant) pickupLatLong merchantId True (Just radiusStep)
+          calculateDriverPoolWithActualDist DriverSelection driverPoolCfg (Just vehicleVariant) searchReq.tag pickupLatLong merchantId True (Just radiusStep)
         calcDriverCurrentlyOnRidePool radiusStep transporterConfig = do
           let merchantId = searchReq.providerId
           if transporterConfig.includeDriverCurrentlyOnRide && (radiusStep - 1) > 0
             then do
-              let vehicleVariant = searchTry.vehicleVariant
-              let pickupLoc = searchReq.fromLocation
+              let pickupLoc = searchReq.searchRequestDetails.fromLocation
               let pickupLatLong = LatLong pickupLoc.lat pickupLoc.lon
-              calculateDriverCurrentlyOnRideWithActualDist DriverSelection driverPoolCfg (Just vehicleVariant) pickupLatLong merchantId (Just $ radiusStep - 1)
+              calculateDriverCurrentlyOnRideWithActualDist DriverSelection driverPoolCfg (Just vehicleVariant) searchReq.tag pickupLatLong merchantId (Just $ radiusStep - 1)
             else pure []
         fillBatch merchantId allNearbyDrivers batch intelligentPoolConfig blockListedDrivers = do
           let batchDriverIds = batch <&> (.driverPoolResult.driverId)
           let driversNotInBatch = filter (\dpr -> dpr.driverPoolResult.driverId `notElem` batchDriverIds) allNearbyDrivers
-          driversWithValidReqAmount <- filterM (\dpr -> checkRequestCount searchTry.id dpr.driverPoolResult.driverId driverPoolCfg) driversNotInBatch
+          driversWithValidReqAmount <- filterM (\dpr -> checkRequestCount searchTryId dpr.driverPoolResult.driverId driverPoolCfg) driversNotInBatch
           nonGoHomeDriversWithValidReqCount <- filterM (\dpr -> (CQDGR.getDriverGoHomeRequestInfo dpr.driverPoolResult.driverId searchReq.providerId (Just goHomeConfig)) <&> (/= Just DDGR.ACTIVE) . (.status)) driversWithValidReqAmount
           let nonGoHomeNormalDriversWithValidReqCount = filter (\ngd -> ngd.driverPoolResult.driverId `notElem` blockListedDrivers) nonGoHomeDriversWithValidReqCount
           let fillSize = batchSize - length batch
@@ -233,8 +234,8 @@ prepareDriverPoolBatch driverPoolCfg searchReq searchTry batchNum goHomeConfig =
               Random -> pure $ take fillSize nonGoHomeNormalDriversWithValidReqCount
         cacheBatch batch = do
           logDebug $ "Caching batch-" <> show batch
-          batches <- previouslyAttemptedDrivers searchTry.id
-          Redis.withCrossAppRedis $ Redis.setExp (previouslyAttemptedDriversKey searchTry.id) (batches <> batch) (60 * 30)
+          batches <- previouslyAttemptedDrivers searchTryId
+          Redis.withCrossAppRedis $ Redis.setExp (previouslyAttemptedDriversKey searchTryId) (batches <> batch) (60 * 30)
         -- splitDriverPoolForSorting :: minQuotes Int -> [DriverPool Array] -> ([GreaterThanMinQuotesDP], [LessThanMinQuotesDP])
         splitDriverPoolForSorting merchantId minQuotes =
           foldrM
@@ -431,13 +432,14 @@ getNextDriverPoolBatch ::
   ) =>
   DriverPoolConfig ->
   DSR.SearchRequest ->
-  DST.SearchTry ->
+  Id DST.SearchTry ->
+  DVeh.Variant ->
   GoHomeConfig ->
   m DriverPoolWithActualDistResultWithFlags
-getNextDriverPoolBatch driverPoolConfig searchReq searchTry goHomeConfig = withLogTag "getNextDriverPoolBatch" do
-  batchNum <- getPoolBatchNum searchTry.id
-  incrementBatchNum searchTry.id
-  prepareDriverPoolBatch driverPoolConfig searchReq searchTry batchNum goHomeConfig
+getNextDriverPoolBatch driverPoolConfig searchReq searchTryId vehicleVariant goHomeConfig = withLogTag "getNextDriverPoolBatch" do
+  batchNum <- getPoolBatchNum searchTryId
+  incrementBatchNum searchTryId
+  prepareDriverPoolBatch driverPoolConfig searchReq searchTryId vehicleVariant batchNum goHomeConfig
 
 getPoolBatchNum :: (Redis.HedisFlow m r) => Id DST.SearchTry -> m PoolBatchNum
 getPoolBatchNum searchTryId = do

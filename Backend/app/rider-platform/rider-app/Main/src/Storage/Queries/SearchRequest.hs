@@ -109,7 +109,7 @@ instance FromTType' BeamSR.SearchRequest SearchRequest where
               toLocationMappings = filter (\loc -> loc.order /= 0) mappings
           fromLocMap <- listToMaybe fromLocationMapping & fromMaybeM (InternalError "Entity Mappings For FromLocation Not Found")
           fl <- QL.findById fromLocMap.locationId >>= fromMaybeM (InternalError $ "FromLocation not found in search request for fromLocationId: " <> fromLocMap.locationId.getId)
-          when (null toLocationMappings) $ throwError (InternalError "Entity Mappings For ToLocation Not Found")
+          --when (null toLocationMappings) $ throwError (InternalError "Entity Mappings For ToLocation Not Found")
           tl <-
             if null toLocationMappings
               then return Nothing

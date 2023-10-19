@@ -17,6 +17,7 @@
 module SharedLogic.Allocator where
 
 import Data.Singletons.TH
+import Domain.Types.Booking as DB
 import qualified Domain.Types.FarePolicy as DFP
 import qualified Domain.Types.Merchant as DM
 import Domain.Types.Merchant.Overlay
@@ -38,6 +39,7 @@ data AllocatorJobType
   | CalculateDriverFees
   | OrderAndNotificationStatusUpdate
   | SendOverlay
+  | AllocateRentalRide
   deriving (Generic, FromDhall, Eq, Ord, Show, Read, FromJSON, ToJSON)
 
 genSingletons [''AllocatorJobType]
@@ -54,6 +56,7 @@ instance JobProcessor AllocatorJobType where
   restoreAnyJobInfo SCalculateDriverFees jobData = AnyJobInfo <$> restoreJobInfo SCalculateDriverFees jobData
   restoreAnyJobInfo SOrderAndNotificationStatusUpdate jobData = AnyJobInfo <$> restoreJobInfo SOrderAndNotificationStatusUpdate jobData
   restoreAnyJobInfo SSendOverlay jobData = AnyJobInfo <$> restoreJobInfo SSendOverlay jobData
+  restoreAnyJobInfo SAllocateRentalRide jobData = AnyJobInfo <$> restoreJobInfo SAllocateRentalRide jobData
 
 data SendSearchRequestToDriverJobData = SendSearchRequestToDriverJobData
   { searchTryId :: Id DST.SearchTry,
@@ -159,3 +162,13 @@ data SendOverlayJobData = SendOverlayJobData
 instance JobInfoProcessor 'SendOverlay
 
 type instance JobContent 'SendOverlay = SendOverlayJobData
+
+data AllocateRentalRideJobData = AllocateRentalRideJobData
+  { bookingId :: Id Booking,
+    searchTryId :: Id DST.SearchTry
+  }
+  deriving (Generic, Show, Eq, FromJSON, ToJSON)
+
+instance JobInfoProcessor 'AllocateRentalRide
+
+type instance JobContent 'AllocateRentalRide = AllocateRentalRideJobData

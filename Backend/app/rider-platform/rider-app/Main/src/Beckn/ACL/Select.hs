@@ -40,8 +40,9 @@ buildSelectReq dSelectRes = do
   order <- buildOrder dSelectRes
   pure $ BecknReq context $ Select.SelectMessage order
 
-buildOrder :: (Monad m, Log m, MonadThrow m) => DSelect.DSelectRes -> m Select.Order
+buildOrder :: (Monad m, Log m, MonadThrow m, MonadTime m) => DSelect.DSelectRes -> m Select.Order
 buildOrder res = do
+  currentTime <- getCurrentTime
   let start = mkLocation $ DSearchCommon.makeSearchReqLoc' res.searchRequest.fromLocation
   toLocation <- res.searchRequest.toLocation & fromMaybeM (InternalError "To location address not found")
   let end = mkLocation $ DSearchCommon.makeSearchReqLoc' toLocation
@@ -63,12 +64,14 @@ buildOrder res = do
           Select.FulfillmentInfo
             { start =
                 Select.StartInfo
-                  { location = start
+                  { location = start,
+                    time = Select.TimeTimestamp currentTime
                   },
               end =
-                Select.StopInfo
-                  { location = end
-                  },
+                Just $
+                  Select.StopInfo
+                    { location = end
+                    },
               id = res.estimate.bppEstimateId.getId,
               vehicle = Select.Vehicle {category = variant},
               _type = Select.RIDE

@@ -71,6 +71,7 @@ module Domain.Action.UI.Driver
     getHistoryEntryDetailsEntityV2,
     calcExecutionTime,
     fetchDriverPhoto,
+    setRental,
   )
 where
 
@@ -82,10 +83,13 @@ import Data.List (intersect, (\\))
 import qualified Data.List as DL
 import qualified Data.Map as M
 import Data.OpenApi (ToSchema)
+import Data.String.Conversions
 import qualified Data.Text as T
 import Data.Time (Day, UTCTime (UTCTime, utctDay), fromGregorian)
 import Data.Time.Format.ISO8601 (iso8601Show)
+import qualified Domain.Action.Beckn.Search as DSearch
 import Domain.Action.UI.DriverOnboarding.AadhaarVerification (fetchAndCacheAadhaarImage)
+import qualified Domain.Types.Booking as DB
 import qualified Domain.Types.Driver.DriverFlowStatus as DDFS
 import qualified Domain.Types.Driver.GoHomeFeature.DriverGoHomeRequest as DDGR
 import qualified Domain.Types.Driver.GoHomeFeature.DriverHomeLocation as DDHL
@@ -107,8 +111,12 @@ import Domain.Types.Merchant.TransporterConfig
 import qualified Domain.Types.MetaData as MD
 import Domain.Types.Person (Person, PersonAPIEntity)
 import qualified Domain.Types.Person as SP
+import qualified Domain.Types.Ride as DRide
+import qualified Domain.Types.RideDetails as DRD
+import qualified Domain.Types.RideRoute as DRR
 import qualified Domain.Types.SearchRequest as DSR
 import Domain.Types.SearchRequestForDriver
+import qualified Domain.Types.SearchRequestForDriver as DSRD
 import qualified Domain.Types.SearchTry as DST
 import Domain.Types.Vehicle (VehicleAPIEntity)
 import qualified Domain.Types.Vehicle as SV
@@ -129,10 +137,10 @@ import qualified Kernel.External.Payment.Interface.Types as Payment
 import qualified Kernel.External.SMS.MyValueFirst.Flow as SF
 import qualified Kernel.External.SMS.MyValueFirst.Types as SMS
 import qualified Kernel.External.Verification.Interface.InternalScripts as IF
-import Kernel.Prelude (NominalDiffTime)
+import Kernel.Prelude (NominalDiffTime, baseUrlPath)
 import Kernel.Serviceability (rideServiceable)
 import Kernel.Sms.Config
-import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
+import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow, EsqLocDBFlow, EsqLocRepDBFlow)
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.APISuccess (APISuccess (Success))
 import qualified Kernel.Types.APISuccess as APISuccess
@@ -152,9 +160,10 @@ import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import Lib.Payment.Domain.Types.PaymentTransaction
 import Lib.Payment.Storage.Queries.PaymentTransaction
 import Lib.SessionizerMetrics.Types.Event
-import SharedLogic.CallBAP (sendDriverOffer)
+import qualified SharedLogic.CallBAP as CallBAP
 import qualified SharedLogic.DeleteDriver as DeleteDriverOnCheck
 import qualified SharedLogic.DriverFee as SLDriverFee
+import qualified SharedLogic.DriverLocation as DLoc
 import SharedLogic.DriverMode as DMode
 import SharedLogic.DriverOnboarding
 import SharedLogic.DriverPool as DP
@@ -168,6 +177,9 @@ import Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
 import qualified Storage.CachedQueries.GoHomeConfig as CQGHC
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as CQTC
+import qualified Storage.Queries.Booking as QB
+import qualified Storage.Queries.Booking as QRB
+import qualified Storage.Queries.BusinessEvent as QBE
 import qualified Storage.Queries.Driver.DriverFlowStatus as QDFS
 import qualified Storage.Queries.Driver.GoHomeFeature.DriverGoHomeRequest as QDGR
 import qualified Storage.Queries.Driver.GoHomeFeature.DriverHomeLocation as QDHL
@@ -186,10 +198,13 @@ import qualified Storage.Queries.RegistrationToken as QR
 import qualified Storage.Queries.RegistrationToken as QRegister
 import Storage.Queries.Ride as Ride
 import qualified Storage.Queries.Ride as QRide
+import qualified Storage.Queries.RideDetails as QRideD
+import qualified Storage.Queries.RiderDetails as QRD
 import qualified Storage.Queries.SearchRequest as QSR
 import qualified Storage.Queries.SearchRequestForDriver as QSRD
 import qualified Storage.Queries.SearchTry as QST
 import qualified Storage.Queries.Vehicle as QV
+import qualified Storage.Queries.Vehicle as QVeh
 import qualified Storage.Queries.Vehicle as QVehicle
 import qualified Tools.Auth as Auth
 import Tools.Error
@@ -212,6 +227,7 @@ data DriverInformationRes = DriverInformationRes
     onRide :: Bool,
     verified :: Bool,
     enabled :: Bool,
+    optForRental :: Bool,
     blocked :: Bool,
     subscribed :: Bool,
     paymentPending :: Bool,
@@ -258,6 +274,7 @@ data DriverEntityRes = DriverEntityRes
     subscribed :: Bool,
     paymentPending :: Bool,
     verified :: Bool,
+    optForRental :: Bool,
     registeredAt :: UTCTime,
     language :: Maybe Maps.Language,
     alternateNumber :: Maybe Text,
@@ -604,6 +621,7 @@ createDriverDetails personId adminId merchantId = do
             compAadhaarImagePath = Nothing,
             availableUpiApps = Nothing,
             payerVpa = Nothing,
+            optForRental = transporterConfig.rentalRequests,
             lastEnabledOn = Just now,
             enabledAt = Just now,
             createdAt = now,
@@ -664,7 +682,14 @@ setActivity (personId, merchantId) isActive mode = do
       DMode.getDriverStatus mode isActive
   pure APISuccess.Success
 
-activateGoHomeFeature :: (CacheFlow m r, EsqDBFlow m r) => (Id SP.Person, Id DM.Merchant) -> Id DDHL.DriverHomeLocation -> LatLong -> m APISuccess.APISuccess
+setRental :: (MonadFlow m, CacheFlow m r) => (Id SP.Person, Id DM.Merchant) -> Bool -> m APISuccess.APISuccess
+setRental (personId, _) isRental = do
+  void $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  let driverId = cast personId
+  QDriverInformation.updateRental driverId isRental
+  pure APISuccess.Success
+
+activateGoHomeFeature :: (CacheFlow m r, EsqDBFlow m r, LT.HasLocationService m r) => (Id SP.Person, Id DM.Merchant) -> Id DDHL.DriverHomeLocation -> LatLong -> m APISuccess.APISuccess
 activateGoHomeFeature (driverId, merchantId) driverHomeLocationId driverLocation = do
   goHomeConfig <- CQGHC.findByMerchantId merchantId
   unless (goHomeConfig.enableGoHome) $ throwError GoHomeFeaturePermanentlyDisabled
@@ -814,6 +839,7 @@ buildDriverEntityRes (person, driverInfo) = do
         blocked = driverInfo.blocked,
         verified = driverInfo.verified,
         subscribed = driverInfo.subscribed,
+        optForRental = driverInfo.optForRental,
         paymentPending = driverInfo.paymentPending,
         registeredAt = person.createdAt,
         language = person.language,
@@ -1093,7 +1119,13 @@ getNearbySearchRequests (driverId, merchantId) = do
       searchRequest <- runInReplica $ QSR.findById searchTry.requestId >>= fromMaybeM (SearchRequestNotFound searchTry.requestId.getId)
       bapMetadata <- CQSM.findById (Id searchRequest.bapId)
       popupDelaySeconds <- DP.getPopupDelay searchRequest.providerId (cast driverId) cancellationRatio cancellationScoreRelatedConfig transporterConfig.defaultPopupDelay
-      return $ makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadata popupDelaySeconds (Seconds 0) searchTry.vehicleVariant -- Seconds 0 as we don't know where he/she lies within the driver pool, anyways this API is not used in prod now.
+      case nearbyReq.searchRequestTag of
+        DSR.ON_DEMAND -> do
+          return $ makeSearchRequestForDriverAPIEntity nearbyReq searchRequest (OnDemandSearchDetails {searchTry}) bapMetadata popupDelaySeconds (Seconds 0) searchTry.vehicleVariant -- Seconds 0 as we don't know where he/she lies within the driver pool, anyways this API is not used in prod now.
+        DSR.RENTAL -> do
+          bookingId <- nearbyReq.bookingId & fromMaybeM (InternalError "searchRequestForDriver field not present for RENTAL tag: bookingId")
+          booking <- QB.findById bookingId >>= fromMaybeM (BookingNotFound bookingId.getId)
+          return $ makeSearchRequestForDriverAPIEntity nearbyReq searchRequest (RentalSearchDetails {booking, searchTry}) bapMetadata popupDelaySeconds (Seconds 0) booking.vehicleVariant -- Seconds 0 as we don't know where he/she lies within the driver pool, anyways this API is not used in prod now.
     mkCancellationScoreRelatedConfig :: TransporterConfig -> CancellationScoreRelatedConfig
     mkCancellationScoreRelatedConfig tc = CancellationScoreRelatedConfig tc.popupDelayToAddAsPenalty tc.thresholdCancellationScore tc.minRidesForCancellationScore
 
@@ -1111,13 +1143,18 @@ offerQuote ::
     HasPrettyLogger m r,
     HasField "driverQuoteExpirationSeconds" r NominalDiffTime,
     HasField "coreVersion" r Text,
-    HasField "nwAddress" r BaseUrl,
     HasField "driverUnlockDelay" r Seconds,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    HasFlowEnv m r '["selfUIUrl" ::: BaseUrl],
+    EsqLocDBFlow m r,
+    EsqLocRepDBFlow m r,
+    LT.HasLocationService m r,
     HasHttpClientOptions r c,
     HasShortDurationRetryCfg r c,
     HasPrettyLogger m r,
-    EventStreamFlow m r
+    EventStreamFlow m r,
+    EncFlow m r,
+    HasField "s3Env" r (S3.S3Env m)
   ) =>
   (Id SP.Person, Id DM.Merchant) ->
   DriverOfferReq ->
@@ -1133,14 +1170,19 @@ respondQuote ::
     HasPrettyLogger m r,
     HasField "driverQuoteExpirationSeconds" r NominalDiffTime,
     HasField "coreVersion" r Text,
-    HasField "nwAddress" r BaseUrl,
     HasField "driverUnlockDelay" r Seconds,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    HasFlowEnv m r '["selfUIUrl" ::: BaseUrl],
+    LT.HasLocationService m r,
     HasHttpClientOptions r c,
     HasShortDurationRetryCfg r c,
+    EsqLocDBFlow m r,
+    EsqLocRepDBFlow m r,
     HasPrettyLogger m r,
     MonadFlow m,
-    EventStreamFlow m r
+    EventStreamFlow m r,
+    EncFlow m r,
+    HasField "s3Env" r (S3.S3Env m)
   ) =>
   (Id SP.Person, Id DM.Merchant) ->
   DriverRespondReq ->
@@ -1150,68 +1192,70 @@ respondQuote (driverId, _) req = do
     searchTryId <- req.searchRequestId <|> req.searchTryId & fromMaybeM (InvalidRequest "searchTryId field is not present.")
     searchTry <- QST.findById searchTryId >>= fromMaybeM (SearchTryNotFound searchTryId.getId)
     now <- getCurrentTime
-    when (searchTry.validTill < now) $ throwError SearchRequestExpired
-    searchReq <- QSR.findById searchTry.requestId >>= fromMaybeM (SearchRequestNotFound searchTry.requestId.getId)
-    let mbOfferedFare = req.offeredFare
-    organization <- CQM.findById searchReq.providerId >>= fromMaybeM (MerchantDoesNotExist searchReq.providerId.getId)
-    driver <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
-    driverInfo <- QDriverInformation.findById (cast driverId) >>= fromMaybeM DriverInfoNotFound
-    when driverInfo.onRide $ throwError DriverOnRide
-    mSReqFD <- QSRD.findByDriverAndSearchTryId driverId searchTry.id
-    sReqFD <-
-      case mSReqFD of
-        Just srfd -> return srfd
-        Nothing -> do
-          logError $ "Search request not found for the driver with driverId " <> driverId.getId <> " and searchTryId " <> searchTryId.getId
-          throwError RideRequestAlreadyAccepted
-    driverFCMPulledList <-
-      case req.response of
-        Pulled -> throwError UnexpectedResponseValue
-        Accept -> do
-          when (searchReq.autoAssignEnabled == Just True) $ do
-            whenM (CS.isSearchTryCancelled searchTryId) $
-              throwError (InternalError "SEARCH_TRY_CANCELLED")
-            CS.markSearchTryAsAssigned searchTryId
-          logDebug $ "offered fare: " <> show req.offeredFare
-          whenM thereAreActiveQuotes (throwError FoundActiveQuotes)
-          when (sReqFD.response == Just Reject) (throwError QuoteAlreadyRejected)
-          quoteLimit <- getQuoteLimit searchReq.providerId searchReq.estimatedDistance searchTry.vehicleVariant
-          quoteCount <- runInReplica $ QDrQt.countAllBySTId searchTry.id
-          when (quoteCount >= quoteLimit) (throwError QuoteAlreadyRejected)
-          farePolicy <- getFarePolicy organization.id sReqFD.vehicleVariant searchReq.area
-          let driverExtraFeeBounds = DFarePolicy.findDriverExtraFeeBoundsByDistance searchReq.estimatedDistance <$> farePolicy.driverExtraFeeBounds
-          whenJust mbOfferedFare $ \off ->
-            whenJust driverExtraFeeBounds $ \driverExtraFeeBounds' ->
-              unless (isAllowedExtraFee driverExtraFeeBounds' off) $
-                throwError $ NotAllowedExtraFee $ show off
-          fareParams <-
-            calculateFareParameters
-              CalculateFareParametersParams
-                { farePolicy = farePolicy,
-                  distance = searchReq.estimatedDistance,
-                  rideTime = sReqFD.startTime,
-                  waitingTime = Nothing,
-                  actualRideDuration = Nothing,
-                  avgSpeedOfVehicle = Nothing,
-                  driverSelectedFare = mbOfferedFare,
-                  customerExtraFee = searchTry.customerExtraFee,
-                  nightShiftCharge = Nothing
-                }
-          driverQuote <- buildDriverQuote driver searchReq sReqFD searchTry.estimateId fareParams
-          triggerQuoteEvent QuoteEventData {quote = driverQuote}
-          _ <- QDrQt.create driverQuote
-          _ <- QSRD.updateDriverResponse sReqFD.id req.response
-          QDFS.updateStatus sReqFD.driverId DDFS.OFFERED_QUOTE {quoteId = driverQuote.id, validTill = driverQuote.validTill}
-          let shouldPullFCMForOthers = (quoteCount + 1) >= quoteLimit || (searchReq.autoAssignEnabled == Just True)
-          driverFCMPulledList <- if shouldPullFCMForOthers then QSRD.findAllActiveWithoutRespBySearchTryId searchTryId else pure []
-          -- Adding +1 in quoteCount because one more quote added above (QDrQt.create driverQuote)
-          sendRemoveRideRequestNotification driverFCMPulledList organization.id driverQuote
-          sendDriverOffer organization searchReq searchTry driverQuote
-          pure driverFCMPulledList
-        Reject -> do
-          _ <- QSRD.updateDriverResponse sReqFD.id req.response
-          pure []
-    DS.driverScoreEventHandler $ buildDriverRespondEventPayload searchTry.id searchReq.providerId driverFCMPulledList
+    let searchRequestTag = searchTry.tag
+    case searchRequestTag of
+      DSR.ON_DEMAND {} -> do
+        when (searchTry.validTill < now) $ throwError SearchRequestExpired
+        searchReq <- QSR.findById searchTry.requestId >>= fromMaybeM (SearchRequestNotFound searchTry.requestId.getId)
+        let mbOfferedFare = req.offeredFare
+        organization <- CQM.findById searchReq.providerId >>= fromMaybeM (MerchantDoesNotExist searchReq.providerId.getId)
+        driver <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+        driverInfo <- QDriverInformation.findById (cast driverId) >>= fromMaybeM DriverInfoNotFound
+        when driverInfo.onRide $ throwError DriverOnRide
+        sReqFD <-
+          QSRD.findByDriverAndSearchTryId driverId searchTry.id
+            >>= fromMaybeM NoSearchRequestForDriver
+        unless (sReqFD.searchRequestTag == DSR.ON_DEMAND) $ throwError (InvalidRequest "Invalid searchRequestTag")
+        driverFCMPulledList <-
+          case req.response of
+            Pulled -> throwError UnexpectedResponseValue
+            Accept -> do
+              when (searchReq.searchRequestDetails.autoAssignEnabled == Just True) $ do
+                whenM (CS.isSearchTryCancelled searchTryId) $
+                  throwError (InternalError "SEARCH_TRY_CANCELLED")
+                CS.markSearchTryAsAssigned searchTryId
+              logDebug $ "offered fare: " <> show req.offeredFare
+              whenM thereAreActiveQuotes (throwError FoundActiveQuotes)
+              when (sReqFD.response == Just Reject) (throwError QuoteAlreadyRejected)
+              quoteLimit <- getQuoteLimit searchReq.providerId searchReq.estimatedDistance searchTry.vehicleVariant
+              quoteCount <- runInReplica $ QDrQt.countAllBySTId searchTry.id
+              when (quoteCount >= quoteLimit) (throwError QuoteAlreadyRejected)
+              farePolicy <- getFarePolicy organization.id sReqFD.vehicleVariant searchReq.area
+              let driverExtraFeeBounds = DFarePolicy.findDriverExtraFeeBoundsByDistance searchReq.searchRequestDetails.estimatedDistance <$> farePolicy.driverExtraFeeBounds
+              whenJust mbOfferedFare $ \off ->
+                whenJust driverExtraFeeBounds $ \driverExtraFeeBounds' ->
+                  unless (isAllowedExtraFee driverExtraFeeBounds' off) $
+                    throwError $ NotAllowedExtraFee $ show off
+              fareParams <-
+                calculateFareParameters
+                  CalculateFareParametersParams
+                    { farePolicy = farePolicy,
+                      distance = searchReq.searchRequestDetails.estimatedDistance,
+                      rideTime = sReqFD.startTime,
+                      waitingTime = Nothing,
+                      driverSelectedFare = mbOfferedFare,
+                      customerExtraFee = searchTry.customerExtraFee,
+                      nightShiftCharge = Nothing,
+                      rentalRideParams = Nothing
+                    }
+              estimateId <- searchTry.estimateId & fromMaybeM (InternalError "SearchTry field not present: estimateId")
+              driverQuote <- buildDriverQuote driver searchReq sReqFD estimateId fareParams
+              triggerQuoteEvent QuoteEventData {quote = driverQuote}
+              _ <- QDrQt.create driverQuote
+              _ <- QSRD.updateDriverResponse sReqFD.id req.response
+              QDFS.updateStatus sReqFD.driverId DDFS.OFFERED_QUOTE {quoteId = driverQuote.id, validTill = driverQuote.validTill}
+              let shouldPullFCMForOthers = (quoteCount + 1) >= quoteLimit || (searchReq.searchRequestDetails.autoAssignEnabled == Just True)
+              driverFCMPulledList <- if shouldPullFCMForOthers then QSRD.findAllActiveWithoutRespBySearchTryId searchTryId else pure []
+              -- Adding +1 in quoteCount because one more quote added above (QDrQt.create driverQuote)
+              sendRemoveRideRequestNotification driverFCMPulledList organization.id driverQuote.estimatedFare
+              CallBAP.sendDriverOffer organization searchReq searchTry driverQuote
+              pure driverFCMPulledList
+            Reject -> do
+              _ <- QSRD.updateDriverResponse sReqFD.id req.response
+              pure []
+        DS.driverScoreEventHandler $ buildDriverRespondEventPayload searchTry.id searchReq.providerId driverFCMPulledList
+      DSR.RENTAL -> do
+        respondRentalRide searchTry
   pure Success
   where
     buildDriverRespondEventPayload searchTryId merchantId restActiveDriverSearchReqs =
@@ -1230,34 +1274,38 @@ respondQuote (driverId, _) req = do
       Fare.FareParameters ->
       m DDrQuote.DriverQuote
     buildDriverQuote driver searchReq sd estimateId fareParams = do
-      guid <- generateGUID
-      now <- getCurrentTime
-      driverQuoteExpirationSeconds <- asks (.driverQuoteExpirationSeconds)
-      let estimatedFare = fareSum fareParams
-      pure
-        DDrQuote.DriverQuote
-          { id = guid,
-            requestId = searchReq.id,
-            searchTryId = sd.searchTryId,
-            searchRequestForDriverId = Just sd.id,
-            driverId,
-            driverName = driver.firstName,
-            driverRating = SP.roundToOneDecimal <$> driver.rating,
-            status = DDrQuote.Active,
-            vehicleVariant = sd.vehicleVariant,
-            distance = searchReq.estimatedDistance,
-            distanceToPickup = sd.actualDistanceToPickup,
-            durationToPickup = sd.durationToPickup,
-            createdAt = now,
-            updatedAt = now,
-            validTill = addUTCTime driverQuoteExpirationSeconds now,
-            providerId = searchReq.providerId,
-            estimatedFare,
-            fareParams,
-            specialLocationTag = searchReq.specialLocationTag,
-            goHomeRequestId = sd.goHomeRequestId,
-            estimateId
-          }
+      case searchReq.searchRequestDetails of
+        DSR.SearchRequestDetailsOnDemand {..} -> do
+          guid <- generateGUID
+          now <- getCurrentTime
+          driverQuoteExpirationSeconds <- asks (.driverQuoteExpirationSeconds)
+          let estimatedFare = fareSum fareParams
+          pure
+            DDrQuote.DriverQuote
+              { id = guid,
+                requestId = searchReq.id,
+                searchTryId = sd.searchTryId,
+                searchRequestForDriverId = Just sd.id,
+                driverId,
+                driverName = driver.firstName,
+                driverRating = SP.roundToOneDecimal <$> driver.rating,
+                status = DDrQuote.Active,
+                vehicleVariant = sd.vehicleVariant,
+                distance = estimatedDistance,
+                distanceToPickup = sd.actualDistanceToPickup,
+                durationToPickup = sd.durationToPickup,
+                createdAt = now,
+                updatedAt = now,
+                validTill = addUTCTime driverQuoteExpirationSeconds now,
+                providerId = searchReq.providerId,
+                estimatedFare,
+                fareParams,
+                specialLocationTag = specialLocationTag,
+                goHomeRequestId = sd.goHomeRequestId,
+                estimateId
+              }
+        DSR.SearchRequestDetailsRental {} -> do
+          throwError $ InvalidRequest "Driver cant build rental quotes"
     thereAreActiveQuotes = do
       driverUnlockDelay <- asks (.driverUnlockDelay)
       activeQuotes <- QDrQt.findActiveQuotesByDriverId driverId driverUnlockDelay
@@ -1270,7 +1318,162 @@ respondQuote (driverId, _) req = do
       for_ driverSearchReqs $ \driverReq -> do
         _ <- QSRD.updateDriverResponse driverReq.id Pulled
         driver_ <- runInReplica $ QPerson.findById driverReq.driverId >>= fromMaybeM (PersonNotFound driverReq.driverId.getId)
-        Notify.notifyDriverClearedFare orgId driverReq.driverId driverReq.searchTryId driverQuote.estimatedFare driver_.deviceToken
+        Notify.notifyDriverClearedFare orgId driverReq.driverId driverReq.searchTryId estimatedFare driver_.deviceToken
+
+    respondRentalRide searchTry = do
+      let searchTryId = searchTry.id
+      driver <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+      driverInfo <- QDriverInformation.findById (cast driverId) >>= fromMaybeM DriverInfoNotFound
+      when driverInfo.onRide $ throwError DriverOnRide
+      sReqFD <-
+        QSRD.findByDriverAndSearchTryId driverId searchTryId
+          >>= fromMaybeM NoSearchRequestForDriver
+      unless (sReqFD.searchRequestTag == DSR.RENTAL) $ throwError (InvalidRequest "Invalid searchRequestTag")
+      whenJust req.offeredFare $ \_ -> throwError (InternalError "Driver can't offer rental fare")
+      whenM thereAreActiveQuotes (throwError FoundActiveQuotes)
+      when (sReqFD.response == Just Reject) (throwError QuoteAlreadyRejected)
+      bookingId <- sReqFD.bookingId & fromMaybeM (InternalError "searchRequestForDriver field not present for RENTAL tag: bookingId")
+      booking <- QRB.findById bookingId >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
+      let merchantId = booking.providerId
+      case req.response of
+        Pulled -> throwError UnexpectedResponseValue
+        Accept -> do
+          driverFCMPulledList <- QSRD.findAllActiveWithoutRespBySearchRequestId sReqFD.requestId
+          DS.driverScoreEventHandler $ buildDriverRespondEventPayload searchTry.id merchantId driverFCMPulledList
+        Reject -> do
+          QSRD.updateDriverResponse sReqFD.id req.response
+      --- create ride ---
+      -- FIXME remove duplication with Domain.Action.Beckn.Confirm
+      when (req.response == Accept) $ do
+        unless (booking.status == DB.CONFIRMED) $
+          throwError (BookingInvalidStatus $ show booking.status)
+        riderId <- booking.riderId & fromMaybeM (BookingFieldNotPresent "riderId")
+
+        riderDetails <- QRD.findById riderId >>= fromMaybeM (RiderDetailsNotFound riderId.getId)
+        otpCode <- case riderDetails.otpCode of
+          Nothing -> do
+            otpCode <- generateOTPCode
+            QRD.updateOtpCode riderDetails.id otpCode
+            pure otpCode
+          Just otp -> pure otp
+
+        ride <- buildRide booking otpCode merchantId
+        triggerRideCreatedEvent RideEventData {ride = ride, personId = cast driver.id, merchantId}
+        enableLocationTrackingService <- asks (.enableLocationTrackingService)
+        when enableLocationTrackingService $ do
+          void $ LF.rideDetails ride.id ride.status merchantId ride.driverId booking.fromLocation.lat booking.fromLocation.lon
+        rideDetails <- buildRideDetails ride driver
+        driverSearchReqs <- QSRD.findAllActiveBySTId searchTryId
+        let searchRequestId = searchTry.requestId
+        routeInfo :: Maybe DRR.RouteInfo <- Redis.safeGet (DSearch.searchRequestKey $ getId searchRequestId)
+        case routeInfo of
+          Just route -> Redis.setExp (DSearch.searchRequestKey $ getId ride.id) route 14400
+          Nothing -> logDebug "Unable to get the key"
+
+        -- critical updates
+        QRB.updateStatus booking.id DB.TRIP_ASSIGNED
+        QRide.createRide ride
+        DLoc.updateOnRide driver.merchantId driver.id True
+
+        -- non-critical updates
+        QDFS.updateStatus driver.id DDFS.RIDE_ASSIGNED {rideId = ride.id}
+        QRB.updateRiderId booking.id riderDetails.id
+        QRideD.create rideDetails
+        QSRD.setInactiveBySRId searchRequestId
+
+        QBE.logRideConfirmedEvent booking.id
+        QBE.logDriverAssignedEvent (cast driver.id) booking.id ride.id
+
+        for_ driverSearchReqs $ \driverReq -> do
+          let driverId' = driverReq.driverId
+          unless (driverId' == driverId) $ do
+            DP.decrementTotalQuotesCount merchantId (cast driverReq.driverId) driverReq.searchTryId
+            DP.removeSearchReqIdFromMap merchantId driverId' driverReq.searchTryId
+            _ <- QSRD.updateDriverResponse driverReq.id DSRD.Pulled
+            driver_ <- QPerson.findById driverId' >>= fromMaybeM (PersonNotFound driverId.getId)
+            Notify.notifyDriverClearedFare merchantId driverId' driverReq.searchTryId booking.estimatedFare driver_.deviceToken
+
+        uBooking <- QRB.findById booking.id >>= fromMaybeM (BookingNotFound booking.id.getId)
+        let notificationType = FCM.DRIVER_ASSIGNMENT
+            notificationTitle = "Driver has been assigned the ride!"
+        let message =
+              cs $
+                unwords
+                  [ "You have been assigned a ride for",
+                    cs (showTimeIst uBooking.startTime) <> ".",
+                    "Check the app for more details."
+                  ]
+        Notify.notifyDriver merchantId notificationType notificationTitle message driver.id driver.deviceToken
+        void $ CallBAP.sendRideAssignedUpdateToBAP uBooking ride
+
+    -- TODO remove duplication
+    buildRide booking otp merchantId = do
+      guid <- Id <$> generateGUID
+      shortId <- generateShortId
+      now <- getCurrentTime
+      endRideOtp <- generateOTPCode -- startRide otp code adding logic can be added later
+      trackingUrl <- buildTrackingUrl guid
+      return
+        DRide.Ride
+          { id = guid,
+            pickupDropOutsideOfThreshold = Nothing,
+            bookingId = booking.id,
+            shortId = shortId,
+            merchantId = Just merchantId,
+            status = DRide.NEW,
+            driverId = cast driverId,
+            otp = otp,
+            trackingUrl = trackingUrl,
+            fare = Nothing,
+            traveledDistance = 0,
+            chargeableDistance = Nothing,
+            driverArrivalTime = Nothing,
+            tripStartTime = Nothing,
+            tripEndTime = Nothing,
+            tripStartPos = Nothing,
+            tripEndPos = Nothing,
+            fromLocation = booking.fromLocation,
+            fareParametersId = Nothing,
+            distanceCalculationFailed = Nothing,
+            createdAt = now,
+            updatedAt = now,
+            rideDetails =
+              DRide.RideDetailsRental
+                { rentalToLocation = Nothing,
+                  odometerStartReading = Nothing,
+                  odometerEndReading = Nothing,
+                  odometerStartReadingImagePath = Nothing,
+                  odometerEndReadingImagePath = Nothing,
+                  endRideOtp = Just endRideOtp
+                },
+            rideType = DRide.RENTAL
+          }
+
+    buildTrackingUrl rideId = do
+      bppUIUrl <- asks (.selfUIUrl)
+      let rideid = T.unpack (getId rideId)
+      return $
+        bppUIUrl
+          { --TODO: find a way to build it using existing types from Routes
+            baseUrlPath = baseUrlPath bppUIUrl <> "/driver/location/" <> rideid
+          }
+
+    buildRideDetails ride driver = do
+      vehicle <-
+        QVeh.findById ride.driverId
+          >>= fromMaybeM (VehicleNotFound ride.driverId.getId)
+      return
+        DRD.RideDetails
+          { id = ride.id,
+            driverName = driver.firstName,
+            driverNumber = driver.mobileNumber,
+            driverCountryCode = driver.mobileCountryCode,
+            vehicleNumber = vehicle.registrationNo,
+            vehicleColor = Just vehicle.color,
+            vehicleVariant = Just vehicle.variant,
+            vehicleModel = Just vehicle.model,
+            vehicleClass = Nothing
+          }
 
 getStats ::
   (EsqDBReplicaFlow m r, EsqDBFlow m r, EncFlow m r, CacheFlow m r) =>
@@ -1296,6 +1499,7 @@ getStats (driverId, merchantId) date = do
                       ( \x -> case fareParametersDetails x of
                           ProgressiveDetails det -> Just (deadKmFare det)
                           SlabDetails _ -> Nothing
+                          RentalDetails _ -> Nothing
                       )
                 )
                   fareParameters

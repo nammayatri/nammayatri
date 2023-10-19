@@ -18,6 +18,7 @@ module Domain.Types.FarePolicy (module Reexport, module Domain.Types.FarePolicy)
 import Domain.Types.Common
 import Domain.Types.FarePolicy.DriverExtraFeeBounds as Reexport
 import Domain.Types.FarePolicy.FarePolicyProgressiveDetails as Reexport
+import Domain.Types.FarePolicy.FarePolicyRentalDetails as Reexport
 import Domain.Types.FarePolicy.FarePolicySlabsDetails as Reexport
 import Domain.Types.Merchant
 import Domain.Types.Vehicle.Variant
@@ -47,7 +48,7 @@ instance FromJSON (FarePolicyD 'Unsafe)
 
 instance ToJSON (FarePolicyD 'Unsafe)
 
-data FarePolicyDetailsD (s :: UsageSafety) = ProgressiveDetails (FPProgressiveDetailsD s) | SlabsDetails (FPSlabsDetailsD s)
+data FarePolicyDetailsD (s :: UsageSafety) = ProgressiveDetails (FPProgressiveDetailsD s) | SlabsDetails (FPSlabsDetailsD s) | RentalDetails (FPRentalDetailsD s)
   deriving (Generic, Show)
 
 type FarePolicyDetails = FarePolicyDetailsD 'Safe
@@ -64,11 +65,11 @@ data NightShiftBounds = NightShiftBounds
 
 data AllowedTripDistanceBounds = AllowedTripDistanceBounds
   { maxAllowedTripDistance :: Meters,
-    minAllowedTripDistance :: Meters
+    minAllowedTripDistance :: Meters -- search on basis of flow
   }
   deriving (Generic, Eq, Show, ToJSON, FromJSON, ToSchema)
 
-data FarePolicyType = Progressive | Slabs
+data FarePolicyType = Progressive | Slabs | Rental
   deriving stock (Show, Eq, Read, Ord, Generic)
   deriving anyclass (FromJSON, ToJSON)
 
@@ -78,6 +79,7 @@ getFarePolicyType :: FarePolicy -> FarePolicyType
 getFarePolicyType farePolicy = case farePolicy.farePolicyDetails of
   ProgressiveDetails _ -> Progressive
   SlabsDetails _ -> Slabs
+  RentalDetails _ -> Rental
 
 data FullFarePolicy = FullFarePolicy
   { id :: Id FarePolicy,
@@ -103,3 +105,5 @@ farePolicyToFullFarePolicy merchantId vehicleVariant FarePolicy {..} =
 type FullDriverExtraFeeBounds = (Id FarePolicy, DriverExtraFeeBounds)
 
 type FullFarePolicyProgressiveDetails = (Id FarePolicy, FPProgressiveDetails)
+
+type FullFarePolicyRentalDetails = (Id FarePolicy, FPRentalDetails)

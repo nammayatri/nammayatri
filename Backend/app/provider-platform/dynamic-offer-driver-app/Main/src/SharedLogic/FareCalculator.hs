@@ -11,12 +11,15 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# OPTIONS_GHC -Wno-deprecations #-}
+{-# OPTIONS_GHC -Wno-type-defaults #-}
 
 module SharedLogic.FareCalculator
   ( mkBreakupList,
     fareSum,
     pureFareSum,
     CalculateFareParametersParams (..),
+    RentalRideParams (..),
     calculateFareParameters,
     isNightShift,
     timeZoneIST,
@@ -25,11 +28,16 @@ where
 
 import qualified Data.List.NonEmpty as NE
 import Data.Time
-  ( LocalTime (localTimeOfDay),
+  ( Day,
+    DiffTime,
+    LocalTime (localTimeOfDay),
     TimeOfDay (..),
     TimeZone,
+    UTCTime (UTCTime, utctDay),
+    addDays,
     midnight,
     minutesToTimeZone,
+    secondsToDiffTime,
     utcToLocalTime,
   )
 import Domain.Types.FareParameters
@@ -41,6 +49,9 @@ import Domain.Types.Vehicle.Variant
 import EulerHS.Prelude hiding (id, map)
 import Kernel.Prelude
 import Kernel.Utils.Common
+
+-- import Kernel.Utils.Common (Kilometers(getKilometers), Meters (getMeters))
+-- import Extra (intToFloat)
 
 mkBreakupList :: (Money -> breakupItemPrice) -> (Text -> breakupItemPrice -> breakupItem) -> FareParameters -> [breakupItem]
 mkBreakupList mkPrice mkBreakupItem fareParams = do
@@ -100,7 +111,7 @@ mkBreakupList mkPrice mkBreakupItem fareParams = do
     processFareParamsDetails dayPartRate = \case
       DFParams.ProgressiveDetails det -> mkFPProgressiveDetailsBreakupList dayPartRate det
       DFParams.SlabDetails det -> mkFPSlabDetailsBreakupList det
-
+      DFParams.RentalDetails _ -> [] -- FIX ME
     mkFPProgressiveDetailsBreakupList dayPartRate det = do
       let deadKmFareCaption = "DEAD_KILOMETER_FARE"
           deadKmFareItem = mkBreakupItem deadKmFareCaption (mkPrice det.deadKmFare)
@@ -152,24 +163,42 @@ data CalculateFareParametersParams = CalculateFareParametersParams
     avgSpeedOfVehicle :: Maybe AvgSpeedOfVechilePerKm,
     driverSelectedFare :: Maybe Money,
     customerExtraFee :: Maybe Money,
-    nightShiftCharge :: Maybe Money
+    nightShiftCharge :: Maybe Money,
+    rentalRideParams :: Maybe RentalRideParams
+  }
+
+data RentalRideParams = RentalRideParams
+  { rideStartTime :: Maybe UTCTime,
+    rideEndTime :: UTCTime,
+    actualDistanceInKm :: Int,
+    chargedDurationInHr :: Int,
+    nightShiftOverlapChecking :: Bool,
+    timeDiffFromUtc :: Seconds
   }
 
 calculateFareParameters ::
-  (Log m, MonadGuid m, MonadThrow m) =>
+  (Log m, MonadGuid m, MonadThrow m, MonadTime m) =>
   CalculateFareParametersParams ->
   m FareParameters
 calculateFareParameters params = do
   logTagInfo "FareCalculator" $ "Initiating fare calculation for organization " +|| params.farePolicy.merchantId ||+ " and vehicle variant " +|| params.farePolicy.vehicleVariant ||+ ""
   let fp = params.farePolicy
   id <- generateGUID
-  let isNightShiftChargeIncluded = isNightShift <$> fp.nightShiftBounds <*> Just params.rideTime
-      (baseFare, nightShiftCharge, waitingChargeInfo, fareParametersDetails) = processFarePolicyDetails fp.farePolicyDetails
+  now <- getCurrentTime
+  (rideStartTime, rideEndTime) <- case params.rentalRideParams of
+    Just params_ -> pure (params_.rideStartTime, Just params_.rideEndTime)
+    _ -> pure (Nothing, Nothing)
+  let timeDiffFromUtc = maybe 19800 (.timeDiffFromUtc) (params.rentalRideParams)
+  isNightShiftChargeIncluded <- case (rideEndTime, rideStartTime) of
+    (Just endTime, Just startTime) -> if maybe False (.nightShiftOverlapChecking) (params.rentalRideParams) then pure $ Just $ isNightAllowanceApplicable fp.nightShiftBounds endTime startTime now timeDiffFromUtc else pure $ isNightShift <$> fp.nightShiftBounds <*> Just params.rideTime
+    _ -> pure (Just False)
+  let (baseFare, nightShiftCharge, waitingChargeInfo, fareParametersDetails) = processFarePolicyDetails fp.farePolicyDetails
       (partOfNightShiftCharge, notPartOfNightShiftCharge, _) = countFullFareOfParamsDetails fareParametersDetails
       fullRideCost {-without govtCharges, platformFee, waitingCharge, notPartOfNightShiftCharge and nightShift-} =
         baseFare
           + fromMaybe 0 fp.serviceCharge
           + partOfNightShiftCharge
+
   let resultNightShiftCharge = (\isCoefIncluded -> if isCoefIncluded then countNightShiftCharge fullRideCost <$> nightShiftCharge else Nothing) =<< isNightShiftChargeIncluded
       resultWaitingCharge = countWaitingCharge =<< waitingChargeInfo
       fullRideCostN {-without govtCharges and platformFee-} =
@@ -200,7 +229,8 @@ calculateFareParameters params = do
                 countPlatformFee -- Mb change platformFee from Nothing to proper value
                   fullCompleteRideCost
                   (DFP.findFPSlabsDetailsSlabByDistance params.distance det.slabs & (.platformFeeInfo))
-                  fareParametersDetails,
+                  fareParametersDetails
+              DFP.RentalDetails _ -> fareParametersDetails,
             ..
           }
   logTagInfo "FareCalculator" $ "Fare parameters calculated: " +|| fareParams ||+ ""
@@ -209,6 +239,25 @@ calculateFareParameters params = do
     processFarePolicyDetails = \case
       DFP.ProgressiveDetails det -> processFPProgressiveDetails det
       DFP.SlabsDetails det -> processFPSlabsDetailsSlab $ DFP.findFPSlabsDetailsSlabByDistance params.distance det.slabs
+      DFP.RentalDetails det -> processFPRentalDetails det
+
+    processFPRentalDetails DFP.FPRentalDetails {..} = do
+      let chargedDuration = maybe 0 (.chargedDurationInHr) (params.rentalRideParams)
+          fareByTime = Money $ chargedDuration * perHourCharge.getMoney
+          extraKm = case (.actualDistanceInKm) <$> params.rentalRideParams of
+            Nothing -> 0
+            Just dist -> dist - (chargedDuration * perHourFreeKms)
+          distanceBuffer = DFP.findFPRentalDetailsByDuration chargedDuration distanceBuffers
+          extraDistFare = if extraKm > distanceBuffer.bufferKms then Money (extraKm * perExtraKmRate.getMoney) else 0
+      ( baseFare,
+        nightShiftCharge,
+        Nothing,
+        DFParams.RentalDetails $
+          DFParams.FParamsRentalDetails
+            { timeBasedFare = fareByTime,
+              extraDistFare = extraDistFare
+            }
+        )
 
     processFPProgressiveDetails DFP.FPProgressiveDetails {..} = do
       let mbExtraDistance =
@@ -272,6 +321,7 @@ calculateFareParameters params = do
     countPlatformFee :: Money -> Maybe PlatformFeeInfo -> FareParametersDetails -> FareParametersDetails
     countPlatformFee fullCompleteRideCost platformFeeInfo = \case
       (DFParams.ProgressiveDetails det) -> DFParams.ProgressiveDetails det -- should be impossible anyway
+      (DFParams.RentalDetails det) -> DFParams.RentalDetails det
       (DFParams.SlabDetails _det) ->
         DFParams.SlabDetails $ maybe (FParamsSlabDetails Nothing Nothing Nothing) countPlatformFeeMath platformFeeInfo
       where
@@ -310,6 +360,7 @@ countFullFareOfParamsDetails :: DFParams.FareParametersDetails -> (Money, Money,
 countFullFareOfParamsDetails = \case
   DFParams.ProgressiveDetails det -> (fromMaybe 0 det.extraKmFare, det.deadKmFare, 0) -- (partOfNightShiftCharge, notPartOfNightShiftCharge)
   DFParams.SlabDetails det -> (0, 0, fromMaybe 0 det.platformFee + roundToIntegral (fromMaybe 0 det.sgst + fromMaybe 0 det.cgst))
+  DFParams.RentalDetails det -> (0, det.timeBasedFare + det.extraDistFare, 0)
 
 isNightShift ::
   DFP.NightShiftBounds ->
@@ -331,3 +382,27 @@ isTimeWithinBounds startTime endTime time =
       let midnightBeforeTimeleap = TimeOfDay 23 59 60
       (startTime < time && time < midnightBeforeTimeleap) || (midnight <= time && time < endTime)
     else startTime < time && time < endTime
+
+isNightAllowanceApplicable :: Maybe DFP.NightShiftBounds -> UTCTime -> UTCTime -> UTCTime -> Seconds -> Bool
+isNightAllowanceApplicable nightShiftBounds tripEndTime tripStartTime now timeDiffFromUtc = do
+  let localRideEndDate = utctDay $ addUTCTime (secondsToNominalDiffTime timeDiffFromUtc) tripEndTime
+      localTripStartTime = addUTCTime (secondsToNominalDiffTime timeDiffFromUtc) tripStartTime
+  case nightShiftBounds of
+    Nothing -> False
+    Just bounds -> do
+      let nightShiftStartTime = timeOfDayToDiffTime bounds.nightShiftStart
+          nightShiftEndTime = timeOfDayToDiffTime bounds.nightShiftEnd
+      if nightShiftStartTime <= 6 * 60 * 60 -- NS starting and ending on same date
+        then isNightShiftOverlap localRideEndDate nightShiftStartTime nightShiftEndTime localTripStartTime now 0 0
+        else isNightShiftOverlap localRideEndDate nightShiftStartTime nightShiftEndTime localTripStartTime now (-1) 0 || isNightShiftOverlap localRideEndDate nightShiftStartTime nightShiftEndTime localTripStartTime now 0 1
+
+isNightShiftOverlap :: Day -> DiffTime -> DiffTime -> UTCTime -> UTCTime -> Integer -> Integer -> Bool
+isNightShiftOverlap rideEndDate nightShiftStartTime nightShiftEndTime tripStartTime now startAdd endAdd = do
+  let curNightShiftStartTs = UTCTime (addDays startAdd rideEndDate) nightShiftStartTime
+      curNightShiftEndTs = UTCTime (addDays endAdd rideEndDate) nightShiftEndTime
+      curMxStart = max curNightShiftStartTs tripStartTime
+      curMnEnd = min curNightShiftEndTs now
+  curMnEnd >= curMxStart
+
+timeOfDayToDiffTime :: TimeOfDay -> DiffTime -- TODO :  Move to Kernel
+timeOfDayToDiffTime (TimeOfDay h m s) = secondsToDiffTime $ fromIntegral (h * 3600 + m * 60 + floor s)

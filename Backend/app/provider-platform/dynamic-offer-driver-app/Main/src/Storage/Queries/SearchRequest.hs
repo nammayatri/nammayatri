@@ -1,3 +1,4 @@
+{-# OPTIONS_GHC -Wno-deprecations #-}
 {-
  Copyright 2022-23, Juspay India Pvt Ltd
 
@@ -38,15 +39,27 @@ createDSReq' = createWithKV
 
 create :: MonadFlow m => SearchRequest -> m ()
 create dsReq = do
-  _ <- whenNothingM_ (QL.findById dsReq.fromLocation.id) $ do QL.create dsReq.fromLocation
-  _ <- whenNothingM_ (QL.findById dsReq.toLocation.id) $ do QL.create dsReq.toLocation
+  case dsReq.searchRequestDetails of
+    SearchRequestDetailsOnDemand {fromLocation, toLocation} -> do
+      _ <- whenNothingM_ (QL.findById fromLocation.id) $ do QL.create fromLocation
+      _ <- whenNothingM_ (QL.findById toLocation.id) $ do QL.create toLocation
+      pure ()
+    SearchRequestDetailsRental {rentalFromLocation} -> do
+      _ <- whenNothingM_ (QL.findById rentalFromLocation.id) $ do QL.create rentalFromLocation
+      pure ()
   createDSReq' dsReq
 
 createDSReq :: MonadFlow m => SearchRequest -> m ()
 createDSReq searchRequest = do
-  fromLocationMap <- SLM.buildPickUpLocationMapping searchRequest.fromLocation.id searchRequest.id.getId DLM.SEARCH_REQUEST
-  toLocationMaps <- SLM.buildDropLocationMapping searchRequest.toLocation.id searchRequest.id.getId DLM.SEARCH_REQUEST
-  QLM.create fromLocationMap >> QLM.create toLocationMaps >> create searchRequest
+  let details = searchRequest.searchRequestDetails
+  case searchRequest.tag of
+    ON_DEMAND -> do
+      fromLocationMap <- SLM.buildPickUpLocationMapping details.fromLocation.id searchRequest.id.getId DLM.SEARCH_REQUEST
+      toLocationMaps <- SLM.buildDropLocationMapping details.toLocation.id searchRequest.id.getId DLM.SEARCH_REQUEST
+      QLM.create fromLocationMap >> QLM.create toLocationMaps >> create searchRequest
+    RENTAL -> do
+      fromLocationMap <- SLM.buildPickUpLocationMapping details.rentalFromLocation.id searchRequest.id.getId DLM.SEARCH_REQUEST
+      QLM.create fromLocationMap >> create searchRequest
 
 findById :: MonadFlow m => Id SearchRequest -> m (Maybe SearchRequest)
 findById (Id searchRequestId) = findOneWithKV [Se.Is BeamSR.id $ Se.Eq searchRequestId]
@@ -69,76 +82,144 @@ updateAutoAssign searchRequestId autoAssignedEnabled =
 
 instance FromTType' BeamSR.SearchRequest SearchRequest where
   fromTType' BeamSR.SearchRequestT {..} = do
-    mappings <- QLM.findByEntityId id
-    (fl, tl) <-
-      if null mappings -- HANDLING OLD DATA : TO BE REMOVED AFTER SOME TIME
-        then do
-          logInfo "Accessing Search Request Location Table"
-          pickupLoc <- upsertLocationForOldData (Id <$> fromLocationId) id
-          pickupLocMapping <- SLM.buildPickUpLocationMapping pickupLoc.id id DLM.SEARCH_REQUEST
-          QLM.create pickupLocMapping
+    case tag of
+      ON_DEMAND -> do
+        mappings <- QLM.findByEntityId id
+        (fl, tl) <-
+          if null mappings -- HANDLING OLD DATA : TO BE REMOVED AFTER SOME TIME
+            then do
+              logInfo "Accessing Search Request Location Table"
+              pickupLoc <- upsertLocationForOldData (Id <$> fromLocationId) id
+              pickupLocMapping <- SLM.buildPickUpLocationMapping pickupLoc.id id DLM.SEARCH_REQUEST
+              QLM.create pickupLocMapping
 
-          dropLoc <- upsertLocationForOldData (Id <$> toLocationId) id
-          dropLocMapping <- SLM.buildDropLocationMapping dropLoc.id id DLM.SEARCH_REQUEST
-          QLM.create dropLocMapping
-          return (pickupLoc, dropLoc)
-        else do
-          let fromLocationMapping = filter (\loc -> loc.order == 0) mappings
-              toLocationMappings = filter (\loc -> loc.order /= 0) mappings
+              dropLoc <- upsertLocationForOldData (Id <$> toLocationId) id
+              dropLocMapping <- SLM.buildDropLocationMapping dropLoc.id id DLM.SEARCH_REQUEST
+              QLM.create dropLocMapping
+              return (pickupLoc, dropLoc)
+            else do
+              let fromLocationMapping = filter (\loc -> loc.order == 0) mappings
+                  toLocationMappings = filter (\loc -> loc.order /= 0) mappings
 
-          fromLocMap <- listToMaybe fromLocationMapping & fromMaybeM (InternalError "Entity Mappings For FromLocation Not Found")
-          fl <- QL.findById fromLocMap.locationId >>= fromMaybeM (InternalError $ "FromLocation not found in search request for fromLocationId: " <> fromLocMap.locationId.getId)
+              fromLocMap <- listToMaybe fromLocationMapping & fromMaybeM (InternalError "Entity Mappings For FromLocation Not Found")
+              fl <- QL.findById fromLocMap.locationId >>= fromMaybeM (InternalError $ "FromLocation not found in search request for fromLocationId: " <> fromLocMap.locationId.getId)
 
-          when (null toLocationMappings) $ throwError (InternalError "Entity Mappings For ToLocation Not Found")
-          let toLocMap = maximumBy (comparing (.order)) toLocationMappings
-          tl <- QL.findById toLocMap.locationId >>= fromMaybeM (InternalError $ "ToLocation not found in search request for toLocationId: " <> toLocMap.locationId.getId)
-          return (fl, tl)
-    pUrl <- parseBaseUrl bapUri
-    pure $
-      Just
-        SearchRequest
-          { id = Id id,
-            transactionId = transactionId,
-            providerId = Id providerId,
-            fromLocation = fl,
-            toLocation = tl,
-            area = area,
-            bapId = bapId,
-            bapUri = pUrl,
-            bapCity = bapCity,
-            bapCountry = bapCountry,
-            estimatedDistance = estimatedDistance,
-            estimatedDuration = estimatedDuration,
-            customerLanguage = customerLanguage,
-            disabilityTag = disabilityTag,
-            device = device,
-            createdAt = createdAt,
-            specialLocationTag = specialLocationTag,
-            autoAssignEnabled = autoAssignEnabled
-          }
+              when (null toLocationMappings) $ throwError (InternalError "Entity Mappings For ToLocation Not Found")
+              let toLocMap = maximumBy (comparing (.order)) toLocationMappings
+              tl <- QL.findById toLocMap.locationId >>= fromMaybeM (InternalError $ "ToLocation not found in search request for toLocationId: " <> toLocMap.locationId.getId)
+              return (fl, tl)
+        pUrl <- parseBaseUrl bapUri
+        pure $
+          Just
+            SearchRequest
+              { id = Id id,
+                transactionId = transactionId,
+                providerId = Id providerId,
+                searchRequestDetails =
+                  SearchRequestDetailsOnDemand
+                    { fromLocation = fl,
+                      toLocation = tl,
+                      estimatedDistance = estimatedDistance,
+                      estimatedDuration = estimatedDuration,
+                      specialLocationTag = specialLocationTag,
+                      autoAssignEnabled = autoAssignEnabled
+                    },
+                area = area,
+                bapId = bapId,
+                bapUri = pUrl,
+                bapCity = bapCity,
+                bapCountry = bapCountry,
+                customerLanguage = customerLanguage,
+                disabilityTag = disabilityTag,
+                device = device,
+                createdAt = createdAt,
+                tag = tag
+              }
+      RENTAL -> do
+        mappings <- QLM.findByEntityId id
+        fl <-
+          if null mappings -- HANDLING OLD DATA : TO BE REMOVED AFTER SOME TIME
+            then do
+              logInfo "Accessing Search Request Location Table"
+              pickupLoc <- upsertLocationForOldData (Id <$> fromLocationId) id
+              pickupLocMapping <- SLM.buildPickUpLocationMapping pickupLoc.id id DLM.SEARCH_REQUEST
+              QLM.create pickupLocMapping
+              return pickupLoc
+            else do
+              let fromLocationMapping = filter (\loc -> loc.order == 0) mappings
+              fromLocMap <- listToMaybe fromLocationMapping & fromMaybeM (InternalError "Entity Mappings For FromLocation Not Found")
+              QL.findById fromLocMap.locationId >>= fromMaybeM (InternalError $ "FromLocation not found in search request for fromLocationId: " <> fromLocMap.locationId.getId)
+        pUrl <- parseBaseUrl bapUri
+        pure $
+          Just
+            SearchRequest
+              { id = Id id,
+                transactionId = transactionId,
+                providerId = Id providerId,
+                searchRequestDetails =
+                  SearchRequestDetailsRental
+                    { rentalFromLocation = fl
+                    },
+                area = area,
+                bapId = bapId,
+                bapUri = pUrl,
+                bapCity = bapCity,
+                bapCountry = bapCountry,
+                customerLanguage = customerLanguage,
+                disabilityTag = disabilityTag,
+                device = device,
+                createdAt = createdAt,
+                tag = tag
+              }
 
 instance ToTType' BeamSR.SearchRequest SearchRequest where
   toTType' SearchRequest {..} = do
-    BeamSR.SearchRequestT
-      { BeamSR.id = getId id,
-        BeamSR.transactionId = transactionId,
-        BeamSR.providerId = getId providerId,
-        BeamSR.fromLocationId = Just $ getId fromLocation.id,
-        BeamSR.toLocationId = Just $ getId toLocation.id,
-        BeamSR.area = area,
-        BeamSR.bapId = bapId,
-        BeamSR.bapUri = showBaseUrl bapUri,
-        BeamSR.bapCity = bapCity,
-        BeamSR.bapCountry = bapCountry,
-        BeamSR.estimatedDistance = estimatedDistance,
-        BeamSR.estimatedDuration = estimatedDuration,
-        BeamSR.customerLanguage = customerLanguage,
-        BeamSR.disabilityTag = disabilityTag,
-        BeamSR.device = device,
-        BeamSR.createdAt = createdAt,
-        BeamSR.autoAssignEnabled = autoAssignEnabled,
-        BeamSR.specialLocationTag = specialLocationTag
-      }
+    let details = searchRequestDetails
+    case tag of
+      ON_DEMAND ->
+        BeamSR.SearchRequestT
+          { BeamSR.id = getId id,
+            BeamSR.transactionId = transactionId,
+            BeamSR.providerId = getId providerId,
+            BeamSR.fromLocationId = Just $ getId details.fromLocation.id,
+            BeamSR.toLocationId = Just $ getId details.toLocation.id,
+            BeamSR.area = area,
+            BeamSR.bapId = bapId,
+            BeamSR.bapUri = showBaseUrl bapUri,
+            BeamSR.bapCity = bapCity,
+            BeamSR.bapCountry = bapCountry,
+            BeamSR.estimatedDistance = details.estimatedDistance,
+            BeamSR.estimatedDuration = details.estimatedDuration,
+            BeamSR.customerLanguage = customerLanguage,
+            BeamSR.disabilityTag = disabilityTag,
+            BeamSR.device = device,
+            BeamSR.createdAt = createdAt,
+            BeamSR.autoAssignEnabled = details.autoAssignEnabled,
+            BeamSR.specialLocationTag = details.specialLocationTag,
+            BeamSR.tag = tag
+          }
+      RENTAL ->
+        BeamSR.SearchRequestT
+          { BeamSR.id = getId id,
+            BeamSR.transactionId = transactionId,
+            BeamSR.providerId = getId providerId,
+            BeamSR.fromLocationId = Just $ getId details.rentalFromLocation.id,
+            BeamSR.toLocationId = Nothing,
+            BeamSR.area = area,
+            BeamSR.bapId = bapId,
+            BeamSR.bapUri = showBaseUrl bapUri,
+            BeamSR.bapCity = bapCity,
+            BeamSR.bapCountry = bapCountry,
+            BeamSR.estimatedDistance = 0,
+            BeamSR.estimatedDuration = 0,
+            BeamSR.customerLanguage = customerLanguage,
+            BeamSR.disabilityTag = disabilityTag,
+            BeamSR.device = device,
+            BeamSR.createdAt = createdAt,
+            BeamSR.autoAssignEnabled = Nothing,
+            BeamSR.specialLocationTag = Nothing,
+            BeamSR.tag = tag
+          }
 
 -- FUNCTIONS FOR HANDLING OLD DATA : TO BE REMOVED AFTER SOME TIME
 

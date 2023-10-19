@@ -41,21 +41,27 @@ buildInitReq subscriber req = do
   let context = req.context
   Context.validateContext Context.INIT context
   let order = req.message.order
+  let startTime = order.fulfillment.start.time.timestamp
   _ <- case order.items of
     [it] -> pure it
     _ -> throwError $ InvalidRequest "There must be exactly one item in init request"
   fulfillmentId <- order.fulfillment.id & fromMaybeM (InvalidRequest "FulfillmentId not found. It should either be estimateId or quoteId")
   let maxEstimatedDistance = getMaxEstimateDistance =<< order.fulfillment.tags
+  let rentalDuration = getRentalDuration =<< order.fulfillment.tags
   let initTypeReq = buildInitTypeReq order.fulfillment._type
+  case initTypeReq of
+    DInit.InitRentalReq ->
+      when (isNothing rentalDuration) $ throwError (InvalidRequest "No rental duration passed")
+    _ -> pure ()
   -- should we check start time and other details?
   unless (subscriber.subscriber_id == context.bap_id) $
     throwError (InvalidRequest "Invalid bap_id")
   unless (subscriber.subscriber_url == context.bap_uri) $
     throwError (InvalidRequest "Invalid bap_uri")
-
   pure
     DInit.InitReq
       { estimateId = fulfillmentId,
+        messageId = context.message_id,
         bapId = subscriber.subscriber_id,
         bapUri = subscriber.subscriber_url,
         bapCity = context.city,
@@ -63,12 +69,14 @@ buildInitReq subscriber req = do
         vehicleVariant = castVehicleVariant order.fulfillment.vehicle.category,
         driverId = order.provider <&> (.id),
         paymentMethodInfo = mkPaymentMethodInfo order.payment,
+        startTime = startTime,
         ..
       }
   where
     buildInitTypeReq = \case
       Init.RIDE_OTP -> DInit.InitSpecialZoneReq
       Init.RIDE -> DInit.InitNormalReq
+      Init.RENTAL -> DInit.InitRentalReq
     castVehicleVariant = \case
       Init.SEDAN -> VehVar.SEDAN
       Init.SUV -> VehVar.SUV
@@ -91,3 +99,9 @@ getMaxEstimateDistance tagGroups = do
   tagValue <- Common.getTag "estimations" "max_estimated_distance" tagGroups
   maxEstimatedDistance <- readMaybe $ T.unpack tagValue
   Just $ HighPrecMeters maxEstimatedDistance
+
+getRentalDuration :: Init.TagGroups -> Maybe Int
+getRentalDuration tagGroups = do
+  tagValue <- Common.getTag "rental_info" "rental_duration" tagGroups
+  rentalDuration <- readMaybe $ T.unpack tagValue
+  Just rentalDuration

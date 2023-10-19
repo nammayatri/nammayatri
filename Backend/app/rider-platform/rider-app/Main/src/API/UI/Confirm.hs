@@ -44,6 +44,8 @@ type API =
     :> Capture "quoteId" (Id Quote.Quote)
     :> "confirm"
     :> QueryParam "paymentMethodId" (Id DMPM.MerchantPaymentMethod)
+    :> QueryParam "startTime" UTCTime
+    :> QueryParam "rentalDuration" Int
     :> Post '[JSON] ConfirmRes
 
 newtype ConfirmRes = ConfirmRes
@@ -62,10 +64,12 @@ confirm ::
   (Id SP.Person, Id Merchant.Merchant) ->
   Id Quote.Quote ->
   Maybe (Id DMPM.MerchantPaymentMethod) ->
+  Maybe UTCTime ->
+  Maybe Int ->
   FlowHandler ConfirmRes
-confirm (personId, _) quoteId mbPaymentMethodId =
+confirm (personId, _) quoteId mbPaymentMethodId startTime rentalDuration =
   withFlowHandlerAPI . withPersonIdLogTag personId $ do
-    dConfirmRes <- DConfirm.confirm personId quoteId mbPaymentMethodId
+    dConfirmRes <- DConfirm.confirm personId quoteId mbPaymentMethodId startTime rentalDuration
     becknInitReq <- ACL.buildInitReq dConfirmRes
     handle (errHandler dConfirmRes.booking) $
       void $ withShortRetry $ CallBPP.init dConfirmRes.providerUrl becknInitReq

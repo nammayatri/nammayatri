@@ -16,6 +16,7 @@
 module Domain.Types.SearchRequestForDriver where
 
 import qualified Domain.Types.BapMetadata as DSM
+import qualified Domain.Types.Booking as DB
 import Domain.Types.Driver.GoHomeFeature.DriverGoHomeRequest (DriverGoHomeRequest)
 import qualified Domain.Types.DriverInformation as DI
 import qualified Domain.Types.Location as DLoc
@@ -49,10 +50,13 @@ data SearchRequestForDriverResponse
 
 $(mkBeamInstancesForEnum ''SearchRequestForDriverResponse)
 
+-- rename RideRequestForDriver or RideRequest?
 data SearchRequestForDriver = SearchRequestForDriver
   { id :: Id SearchRequestForDriver,
     requestId :: Id DSR.SearchRequest,
+    searchRequestTag :: DSR.SearchRequestTag,
     searchTryId :: Id DST.SearchTry,
+    bookingId :: Maybe (Id DB.Booking), -- only for rental case
     merchantId :: Maybe (Id DM.Merchant),
     startTime :: UTCTime,
     searchRequestValidTill :: UTCTime,
@@ -85,6 +89,7 @@ data SearchRequestForDriver = SearchRequestForDriver
 data SearchRequestForDriverAPIEntity = SearchRequestForDriverAPIEntity
   { searchRequestId :: Id DST.SearchTry, -- TODO: Deprecated, to be removed
     searchTryId :: Id DST.SearchTry,
+    searchRequestTag :: DSR.SearchRequestTag,
     bapName :: Maybe Text,
     bapLogo :: Maybe BaseUrl,
     startTime :: UTCTime,
@@ -94,10 +99,11 @@ data SearchRequestForDriverAPIEntity = SearchRequestForDriverAPIEntity
     baseFare :: Money,
     customerExtraFee :: Maybe Money,
     fromLocation :: DSSL.SearchReqLocation,
-    toLocation :: DSSL.SearchReqLocation,
+    toLocation :: Maybe DSSL.SearchReqLocation,
     newFromLocation :: DLoc.Location,
-    newToLocation :: DLoc.Location, -- we need to show all requests or last one ?
+    newToLocation :: Maybe DLoc.Location, -- we need to show all requests or last one ?
     distance :: Meters,
+    duration :: Maybe Seconds, -- only for rental case (baseDuration)
     driverLatLong :: LatLong,
     driverMinExtraFee :: Maybe Money,
     driverMaxExtraFee :: Maybe Money,
@@ -110,24 +116,42 @@ data SearchRequestForDriverAPIEntity = SearchRequestForDriverAPIEntity
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show, PrettyShow)
 
-makeSearchRequestForDriverAPIEntity :: SearchRequestForDriver -> DSR.SearchRequest -> DST.SearchTry -> Maybe DSM.BapMetadata -> Seconds -> Seconds -> Variant.Variant -> SearchRequestForDriverAPIEntity
-makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadata delayDuration keepHiddenForSeconds requestedVehicleVariant =
+data SearchDetails
+  = OnDemandSearchDetails
+      {searchTry :: DST.SearchTry}
+  | RentalSearchDetails
+      { searchTry :: DST.SearchTry,
+        booking :: DB.Booking
+      }
+
+makeSearchRequestForDriverAPIEntity :: SearchRequestForDriver -> DSR.SearchRequest -> SearchDetails -> Maybe DSM.BapMetadata -> Seconds -> Seconds -> Variant.Variant -> SearchRequestForDriverAPIEntity
+makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchDetails bapMetadata delayDuration keepHiddenForSeconds requestedVehicleVariant = do
+  let (searchRequestTag, baseFare, customerExtraFee, distance, duration, newToLocation, specialLocationTag) = case searchDetails of
+        OnDemandSearchDetails {searchTry} -> do
+          let distance' = searchRequest.searchRequestDetails.estimatedDistance
+              newToLocation' = Just $ searchRequest.searchRequestDetails.toLocation
+              specialLocationTag' = searchRequest.searchRequestDetails.specialLocationTag
+          (DSR.ON_DEMAND, searchTry.baseFare, searchTry.customerExtraFee, distance', Nothing, newToLocation', specialLocationTag')
+        RentalSearchDetails {booking} -> do
+          let distance' = booking.estimatedDistance
+          (DSR.RENTAL, booking.estimatedFare, Nothing, distance', Just booking.estimatedDuration, Nothing, Nothing)
   SearchRequestForDriverAPIEntity
     { searchRequestId = nearbyReq.searchTryId,
       searchTryId = nearbyReq.searchTryId,
+      searchRequestTag,
       bapName = bapMetadata <&> (.name),
       bapLogo = bapMetadata <&> (.logoUrl),
       startTime = nearbyReq.startTime,
       searchRequestValidTill = nearbyReq.searchRequestValidTill,
       distanceToPickup = nearbyReq.actualDistanceToPickup,
       durationToPickup = nearbyReq.durationToPickup,
-      baseFare = searchTry.baseFare,
-      customerExtraFee = searchTry.customerExtraFee,
-      fromLocation = convertDomainType searchRequest.fromLocation,
-      toLocation = convertDomainType searchRequest.toLocation,
-      newFromLocation = searchRequest.fromLocation,
-      newToLocation = searchRequest.toLocation,
-      distance = searchRequest.estimatedDistance,
+      baseFare = baseFare,
+      customerExtraFee,
+      fromLocation = convertDomainType searchRequest.searchRequestDetails.fromLocation,
+      toLocation = convertDomainType <$> newToLocation,
+      newFromLocation = searchRequest.searchRequestDetails.fromLocation,
+      newToLocation,
+      distance,
       driverLatLong =
         LatLong
           { lat = fromMaybe 0.0 nearbyReq.lat,
@@ -136,7 +160,7 @@ makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadat
       driverMinExtraFee = nearbyReq.driverMinExtraFee,
       driverMaxExtraFee = nearbyReq.driverMaxExtraFee,
       rideRequestPopupDelayDuration = delayDuration,
-      specialLocationTag = searchRequest.specialLocationTag,
+      specialLocationTag,
       disabilityTag = searchRequest.disabilityTag,
       keepHiddenForSeconds = keepHiddenForSeconds,
       goHomeRequestId = nearbyReq.goHomeRequestId,

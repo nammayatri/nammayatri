@@ -17,6 +17,7 @@ module Storage.Beam.SearchRequest where
 
 import qualified Database.Beam as B
 import qualified Domain.Types.FareProduct as FareProductD
+import qualified Domain.Types.SearchRequest as Domain
 import Kernel.Prelude
 import Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common hiding (id)
@@ -41,7 +42,8 @@ data SearchRequestT f = SearchRequestT
     device :: B.C f (Maybe Text),
     autoAssignEnabled :: B.C f (Maybe Bool),
     specialLocationTag :: B.C f (Maybe Text),
-    createdAt :: B.C f UTCTime
+    createdAt :: B.C f UTCTime,
+    tag :: B.C f Domain.SearchRequestTag
   }
   deriving (Generic, B.Beamable)
 

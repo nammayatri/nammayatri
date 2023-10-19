@@ -138,7 +138,7 @@ makeBookingAPIEntity booking activeRide allRides fareBreakups mbExophone mbPayme
     mkBookingAPIDetails :: BookingDetails -> BookingAPIDetails
     mkBookingAPIDetails = \case
       OneWayDetails details -> OneWayAPIDetails . mkOneWayAPIDetails $ details
-      RentalDetails DRentalSlab.RentalSlab {..} -> RentalAPIDetails DRentalSlab.RentalSlabAPIEntity {..}
+      RentalDetails DRentalSlab.RentalSlab {..} -> RentalAPIDetails DRentalSlab.RentalSlabAPIEntity {bppQuoteId = id.getId, ..}
       DriverOfferDetails details -> DriverOfferAPIDetails . mkOneWayAPIDetails $ details
       OneWaySpecialZoneDetails details -> OneWaySpecialZoneAPIDetails . mkOneWaySpecialZoneAPIDetails $ details
       where

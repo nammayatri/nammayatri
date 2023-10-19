@@ -23,26 +23,44 @@ import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.GenericPretty
+import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
 import qualified Tools.Maps as Maps
+
+data SearchRequestDetails
+  = SearchRequestDetailsOnDemand
+      { fromLocation :: DLoc.Location,
+        toLocation :: DLoc.Location,
+        estimatedDistance :: Meters,
+        estimatedDuration :: Seconds,
+        specialLocationTag :: Maybe Text,
+        autoAssignEnabled :: Maybe Bool
+      }
+  | SearchRequestDetailsRental
+      { rentalFromLocation :: DLoc.Location
+      }
+  deriving (Generic, Show)
+
+data SearchRequestTag = ON_DEMAND | RENTAL
+  deriving stock (Show, Eq, Read, Ord, Generic)
+  deriving anyclass (FromJSON, ToJSON, ToSchema)
+  deriving (PrettyShow) via Showable SearchRequestTag
+
+$(mkBeamInstancesForEnum ''SearchRequestTag)
 
 data SearchRequest = SearchRequest
   { id :: Id SearchRequest,
     transactionId :: Text,
     providerId :: Id DM.Merchant,
-    fromLocation :: DLoc.Location,
-    toLocation :: DLoc.Location,
+    searchRequestDetails :: SearchRequestDetails,
     area :: Maybe FareProductD.Area,
     bapId :: Text,
     bapUri :: BaseUrl,
     bapCity :: Maybe Context.City,
     bapCountry :: Maybe Context.Country,
-    estimatedDistance :: Meters,
-    estimatedDuration :: Seconds,
-    specialLocationTag :: Maybe Text,
-    autoAssignEnabled :: Maybe Bool,
     device :: Maybe Text,
     customerLanguage :: Maybe Maps.Language,
     disabilityTag :: Maybe Text,
-    createdAt :: UTCTime
+    createdAt :: UTCTime,
+    tag :: SearchRequestTag
   }
-  deriving (Generic, PrettyShow, Show)
+  deriving (Generic, Show)

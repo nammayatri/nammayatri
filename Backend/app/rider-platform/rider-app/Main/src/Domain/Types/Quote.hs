@@ -109,7 +109,7 @@ newtype OneWaySpecialZoneQuoteAPIDetails = OneWaySpecialZoneQuoteAPIDetails
 
 mkQuoteAPIDetails :: QuoteDetails -> QuoteAPIDetails
 mkQuoteAPIDetails = \case
-  RentalDetails DRentalSlab.RentalSlab {..} -> RentalAPIDetails DRentalSlab.RentalSlabAPIEntity {..}
+  RentalDetails DRentalSlab.RentalSlab {..} -> RentalAPIDetails DRentalSlab.RentalSlabAPIEntity {bppQuoteId = id.getId, ..}
   OneWayDetails OneWayQuoteDetails {..} -> OneWayAPIDetails OneWayQuoteAPIDetails {..}
   DriverOfferDetails DDriverOffer.DriverOffer {..} -> DriverOfferAPIDetails DDriverOffer.DriverOfferAPIEntity {..}
   OneWaySpecialZoneDetails DSpecialZoneQuote.SpecialZoneQuote {..} -> OneWaySpecialZoneAPIDetails DSpecialZoneQuote.SpecialZoneQuoteAPIEntity {..}

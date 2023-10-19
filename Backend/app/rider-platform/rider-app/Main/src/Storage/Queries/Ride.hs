@@ -22,6 +22,7 @@ import Database.Beam.Backend (autoSqlValueSyntax)
 import qualified Database.Beam.Backend as BeamBackend
 import Domain.Types.Booking.Type as Booking
 import qualified Domain.Types.Booking.Type as DRB
+import qualified Domain.Types.FarePolicy.FareProductType as DFP
 import qualified Domain.Types.LocationMapping as DLM
 import Domain.Types.Merchant
 import Domain.Types.Person
@@ -151,6 +152,7 @@ findStuckRideItems (Id merchantId) bookingIds now = do
     findAllWithDb
       [ Se.And
           [ Se.Is BeamB.providerId $ Se.Eq merchantId,
+            Se.Is BeamB.fareProductType $ Se.Not $ Se.Eq DFP.RENTAL,
             Se.Is BeamB.id $ Se.In $ getId <$> bookingIds
           ]
       ]

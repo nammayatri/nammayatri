@@ -11,7 +11,6 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-{-# LANGUAGE TypeApplications #-}
 
 module Domain.Action.Beckn.Select
   ( DSelectReq (..),
@@ -63,68 +62,69 @@ handler merchant sReq estimate = do
   let merchantId = merchant.id
   now <- getCurrentTime
   searchReq <- QSR.findById estimate.requestId >>= fromMaybeM (SearchRequestNotFound estimate.requestId.getId)
-  QDQ.setInactiveAllDQByEstId sReq.estimateId now
-  farePolicy <- getFarePolicy merchantId estimate.vehicleVariant searchReq.area
-
-  searchTry <- createNewSearchTry farePolicy searchReq
-  driverPoolConfig <- getDriverPoolConfig merchantId (Just searchTry.vehicleVariant) searchReq.estimatedDistance
-  goHomeCfg <- CQGHC.findByMerchantId merchantId
-  let driverExtraFeeBounds = DFarePolicy.findDriverExtraFeeBoundsByDistance searchReq.estimatedDistance <$> farePolicy.driverExtraFeeBounds
-  (res, isGoHomeBatch) <- sendSearchRequestToDrivers' driverPoolConfig searchReq searchTry merchant driverExtraFeeBounds goHomeCfg
-  let inTime = fromIntegral (if isGoHomeBatch then goHomeCfg.goHomeBatchDelay else driverPoolConfig.singleBatchProcessTime)
-  case res of
-    ReSchedule _ -> do
-      maxShards <- asks (.maxShards)
-      when sReq.autoAssignEnabled $ QSR.updateAutoAssign searchReq.id sReq.autoAssignEnabled
-      JC.createJobIn @_ @'SendSearchRequestToDriver inTime maxShards $
-        SendSearchRequestToDriverJobData
-          { searchTryId = searchTry.id,
-            estimatedRideDistance = searchReq.estimatedDistance,
-            driverExtraFeeBounds = driverExtraFeeBounds
-          }
-    _ -> return ()
-  where
-    createNewSearchTry :: DFP.FullFarePolicy -> DSR.SearchRequest -> Flow DST.SearchTry
-    createNewSearchTry farePolicy searchReq = do
-      mbLastSearchTry <- QST.findLastByRequestId searchReq.id
-      fareParams <-
-        calculateFareParameters
-          CalculateFareParametersParams
-            { farePolicy = farePolicy,
-              distance = searchReq.estimatedDistance,
-              rideTime = sReq.pickupTime,
-              waitingTime = Nothing,
-              actualRideDuration = Nothing,
-              avgSpeedOfVehicle = Nothing,
-              driverSelectedFare = Nothing,
-              customerExtraFee = sReq.customerExtraFee,
-              nightShiftCharge = Nothing
-            }
-      let estimatedFare = fareSum fareParams
-          pureEstimatedFare = pureFareSum fareParams
-      searchTry <- case mbLastSearchTry of
-        Nothing -> do
-          searchTry <- buildSearchTry merchant.id searchReq.id estimate sReq estimatedFare 0 DST.INITIAL
-          _ <- QST.create searchTry
+  case searchReq.tag of
+    DSR.ON_DEMAND -> do
+      QDQ.setInactiveAllDQByEstId sReq.estimateId now
+      farePolicy <- getFarePolicy merchantId estimate.vehicleVariant searchReq.area
+      searchTry <- createNewSearchTry farePolicy searchReq
+      driverPoolConfig <- getDriverPoolConfig merchantId searchReq.searchRequestDetails.estimatedDistance
+      goHomeCfg <- CQGHC.findByMerchantId merchantId
+      let driverExtraFeeBounds = DFarePolicy.findDriverExtraFeeBoundsByDistance searchReq.searchRequestDetails.estimatedDistance <$> farePolicy.driverExtraFeeBounds
+      (res, isGoHomeBatch) <- sendSearchRequestToDrivers' driverPoolConfig searchReq searchTry merchant driverExtraFeeBounds goHomeCfg
+      let inTime = fromIntegral (if isGoHomeBatch then goHomeCfg.goHomeBatchDelay else driverPoolConfig.singleBatchProcessTime)
+      case res of
+        ReSchedule _ -> do
+          maxShards <- asks (.maxShards)
+          when sReq.autoAssignEnabled $ QSR.updateAutoAssign searchReq.id sReq.autoAssignEnabled
+          JC.createJobIn @_ @'SendSearchRequestToDriver inTime maxShards $
+            SendSearchRequestToDriverJobData
+              { searchTryId = searchTry.id,
+                estimatedRideDistance = searchReq.searchRequestDetails.estimatedDistance,
+                driverExtraFeeBounds = driverExtraFeeBounds
+              }
+        _ -> return ()
+      where
+        createNewSearchTry :: DFP.FullFarePolicy -> DSR.SearchRequest -> Flow DST.SearchTry
+        createNewSearchTry farePolicy searchReq' = do
+          mbLastSearchTry <- QST.findLastByRequestId searchReq'.id
+          fareParams <-
+            calculateFareParameters
+              CalculateFareParametersParams
+                { farePolicy = farePolicy,
+                  distance = searchReq'.searchRequestDetails.estimatedDistance,
+                  rideTime = sReq.pickupTime,
+                  waitingTime = Nothing,
+                  driverSelectedFare = Nothing,
+                  customerExtraFee = sReq.customerExtraFee,
+                  nightShiftCharge = Nothing,
+                  rentalRideParams = Nothing
+                }
+          let estimatedFare = fareSum fareParams
+              pureEstimatedFare = pureFareSum fareParams
+          searchTry <- case mbLastSearchTry of
+            Nothing -> do
+              searchTry <- buildSearchTry merchant.id searchReq.id estimate sReq estimatedFare 0 DST.INITIAL
+              _ <- QST.create searchTry
+              return searchTry
+            Just oldSearchTry -> do
+              let searchRepeatType = if oldSearchTry.status == DST.ACTIVE then DST.CANCELLED_AND_RETRIED else DST.RETRIED
+              unless (pureEstimatedFare == oldSearchTry.baseFare - fromMaybe 0 oldSearchTry.customerExtraFee) $
+                throwError SearchTryEstimatedFareChanged
+              searchTry <- buildSearchTry merchant.id searchReq.id estimate sReq estimatedFare (oldSearchTry.searchRepeatCounter + 1) searchRepeatType
+              when (oldSearchTry.status == DST.ACTIVE) $ do
+                QST.updateStatus oldSearchTry.id DST.CANCELLED
+                void $ QDQ.setInactiveBySTId oldSearchTry.id
+              _ <- QST.create searchTry
+              return searchTry
+          logDebug $
+            "search try id=" <> show searchTry.id
+              <> "; estimated distance = "
+              <> show searchReq.searchRequestDetails.estimatedDistance
+              <> "; estimated base fare:"
+              <> show estimatedFare
           return searchTry
-        Just oldSearchTry -> do
-          let searchRepeatType = if oldSearchTry.status == DST.ACTIVE then DST.CANCELLED_AND_RETRIED else DST.RETRIED
-          unless (pureEstimatedFare == oldSearchTry.baseFare - fromMaybe 0 oldSearchTry.customerExtraFee) $
-            throwError SearchTryEstimatedFareChanged
-          searchTry <- buildSearchTry merchant.id searchReq.id estimate sReq estimatedFare (oldSearchTry.searchRepeatCounter + 1) searchRepeatType
-          when (oldSearchTry.status == DST.ACTIVE) $ do
-            QST.updateStatus oldSearchTry.id DST.CANCELLED
-            void $ QDQ.setInactiveBySTId oldSearchTry.id
-          _ <- QST.create searchTry
-          return searchTry
-
-      logDebug $
-        "search try id=" <> show searchTry.id
-          <> "; estimated distance = "
-          <> show searchReq.estimatedDistance
-          <> "; estimated base fare:"
-          <> show estimatedFare
-      return searchTry
+    DSR.RENTAL -> do
+      throwError $ InvalidRequest "RENTAL is not present in select api,use confirm"
 
 buildSearchTry ::
   ( MonadTime m,
@@ -150,7 +150,8 @@ buildSearchTry merchantId searchReqId estimate sReq baseFare searchRepeatCounter
     DST.SearchTry
       { id = id_,
         requestId = searchReqId,
-        estimateId = estimate.id,
+        tag = DSR.ON_DEMAND,
+        estimateId = Just estimate.id,
         merchantId = Just merchantId,
         messageId = sReq.messageId,
         startTime = sReq.pickupTime,

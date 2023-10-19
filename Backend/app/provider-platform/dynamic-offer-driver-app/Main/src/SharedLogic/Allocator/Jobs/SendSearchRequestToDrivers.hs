@@ -19,6 +19,7 @@ import Domain.Types.GoHomeConfig (GoHomeConfig)
 import Domain.Types.Merchant (Merchant)
 import Domain.Types.Merchant.DriverPoolConfig
 import Domain.Types.SearchRequest (SearchRequest)
+import qualified Domain.Types.SearchRequestForDriver as DSRD
 import Domain.Types.SearchTry (SearchTry)
 import qualified Kernel.Beam.Functions as B
 import Kernel.Prelude hiding (handle)
@@ -85,12 +86,13 @@ sendSearchRequestToDrivers' ::
 sendSearchRequestToDrivers' driverPoolConfig searchReq searchTry merchant driverExtraFeeBounds goHomeCfg = do
   handler handle goHomeCfg
   where
+    searchDetails = DSRD.OnDemandSearchDetails {searchTry}
     handle =
       Handle
         { isBatchNumExceedLimit = I.isBatchNumExceedLimit driverPoolConfig searchTry.id,
           isReceivedMaxDriverQuotes = I.isReceivedMaxDriverQuotes driverPoolConfig searchTry.id,
-          getNextDriverPoolBatch = I.getNextDriverPoolBatch driverPoolConfig searchReq searchTry,
-          sendSearchRequestToDrivers = I.sendSearchRequestToDrivers searchReq searchTry driverExtraFeeBounds driverPoolConfig,
+          getNextDriverPoolBatch = I.getNextDriverPoolBatch driverPoolConfig searchReq searchTry.id searchTry.vehicleVariant,
+          sendSearchRequestToDrivers = I.sendSearchRequestToDrivers searchReq searchDetails driverExtraFeeBounds driverPoolConfig,
           getRescheduleTime = I.getRescheduleTime driverPoolConfig.singleBatchProcessTime,
           setBatchDurationLock = I.setBatchDurationLock searchTry.id driverPoolConfig.singleBatchProcessTime,
           createRescheduleTime = I.createRescheduleTime driverPoolConfig.singleBatchProcessTime,

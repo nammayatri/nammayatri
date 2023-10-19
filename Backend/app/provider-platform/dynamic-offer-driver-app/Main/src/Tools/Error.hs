@@ -15,7 +15,7 @@
 module Tools.Error (module Tools.Error) where
 
 import EulerHS.Prelude
-import Kernel.Types.Error as Tools.Error hiding (PersonError)
+import Kernel.Types.Error as Tools.Error hiding (PersonError, RideError)
 import Kernel.Types.Error.BaseError.HTTPError
 import Kernel.Utils.Common (Meters)
 
@@ -32,6 +32,20 @@ instance IsHTTPError RatingError where
   toHttpCode InvalidRatingValue = E400
 
 instance IsAPIError RatingError
+
+data RideError
+  = InvalidRideRequest
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''RideError
+
+instance IsBaseError RideError
+
+instance IsHTTPError RideError where
+  toErrorCode InvalidRideRequest = "INVALID_RIDE_START_REQUEST"
+  toHttpCode InvalidRideRequest = E400 -- should we keep it 500?
+
+instance IsAPIError RideError
 
 data FarePolicyError
   = NoFarePolicy

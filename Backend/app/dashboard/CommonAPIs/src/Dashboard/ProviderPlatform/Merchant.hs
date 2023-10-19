@@ -336,6 +336,7 @@ data DriverPoolConfigCreateReq = DriverPoolConfigCreateReq
     poolSortingType :: PoolSortingType,
     distanceBasedBatchSplit :: [BatchSplitByPickupDistance],
     singleBatchProcessTime :: Seconds,
+    singleBatchProcessTimeRental :: Seconds,
     radiusShrinkValueForDriversOnRide :: Meters,
     driverToDestinationDistanceThreshold :: Meters,
     driverToDestinationDuration :: Seconds,
@@ -362,6 +363,7 @@ validateDriverPoolConfigCreateReq DriverPoolConfigCreateReq {..} =
       validateField "maxNumberOfBatches" maxNumberOfBatches $ Min @Int 1,
       validateField "maxParallelSearchRequests" maxParallelSearchRequests $ Min @Int 1,
       validateField "singleBatchProcessTime" singleBatchProcessTime $ Min @Seconds 1,
+      validateField "singleBatchProcessTimeRental" singleBatchProcessTime $ Min @Seconds 1,
       validateField "radiusShrinkValueForDriversOnRide" radiusShrinkValueForDriversOnRide $ Min @Meters 1,
       validateField "driverToDestinationDistanceThreshold" driverToDestinationDistanceThreshold $ Min @Meters 1,
       validateField "driverToDestinationDuration" driverToDestinationDuration $ Min @Seconds 1

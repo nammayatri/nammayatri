@@ -24,9 +24,8 @@ module SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal
 where
 
 import Domain.Types.Merchant.DriverPoolConfig
-import Domain.Types.SearchTry as DST
+import qualified Domain.Types.SearchTry as DST
 import Kernel.Prelude
--- import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Storage.Hedis (HedisFlow)
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
@@ -42,7 +41,7 @@ isSearchTryValid ::
     EsqDBFlow m r,
     Log m
   ) =>
-  Id SearchTry ->
+  Id DST.SearchTry ->
   m Bool
 isSearchTryValid searchTryId = do
   (validTill, status) <- QST.getSearchTryStatusAndValidTill searchTryId >>= fromMaybeM (SearchTryDoesNotExist searchTryId.getId)
@@ -55,7 +54,7 @@ isReceivedMaxDriverQuotes ::
     Log m
   ) =>
   DriverPoolConfig ->
-  Id SearchTry ->
+  Id DST.SearchTry ->
   m Bool
 isReceivedMaxDriverQuotes driverPoolCfg searchTryId = do
   totalQuotesRecieved <- length <$> QDQ.findAllBySTId searchTryId
@@ -76,14 +75,14 @@ setBatchDurationLock ::
   ( MonadFlow m,
     HedisFlow m r
   ) =>
-  Id SearchTry ->
+  Id DST.SearchTry ->
   Seconds ->
   m (Maybe UTCTime)
-setBatchDurationLock searchRequestId singleBatchProcessTime = do
+setBatchDurationLock searchTryId singleBatchProcessTime = do
   now <- getCurrentTime
-  res <- Hedis.setNxExpire (getId searchRequestId) (fromIntegral singleBatchProcessTime) now
+  res <- Hedis.setNxExpire (getId searchTryId) (fromIntegral singleBatchProcessTime) now
   if not res
-    then do Hedis.get (getId searchRequestId)
+    then do Hedis.get (getId searchTryId)
     else return Nothing
 
 createRescheduleTime ::
@@ -94,6 +93,6 @@ createRescheduleTime ::
 createRescheduleTime singleBatchProcessTime lastProcTime = do
   return $ fromIntegral singleBatchProcessTime `addUTCTime` lastProcTime
 
-cancelSearchTry :: (EsqDBFlow m r) => Id SearchTry -> m ()
+cancelSearchTry :: (EsqDBFlow m r) => Id DST.SearchTry -> m ()
 -- cancelSearchTry searchTryId = Esq.runTransaction $ QST.updateStatus searchTryId DST.CANCELLED
 cancelSearchTry searchTryId = QST.updateStatus searchTryId DST.CANCELLED

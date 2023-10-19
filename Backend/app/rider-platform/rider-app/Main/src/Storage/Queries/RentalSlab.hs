@@ -35,14 +35,16 @@ instance FromTType' BeamRS.RentalSlab RentalSlab where
       Just
         RentalSlab
           { id = Id id,
-            baseDistance = baseDistance,
-            baseDuration = baseDuration
+            ..
           }
 
 instance ToTType' BeamRS.RentalSlab RentalSlab where
   toTType' RentalSlab {..} = do
     BeamRS.RentalSlabT
       { BeamRS.id = getId id,
-        BeamRS.baseDistance = baseDistance,
-        BeamRS.baseDuration = baseDuration
+        BeamRS.baseFare = baseFare,
+        BeamRS.perHourCharge = perHourCharge,
+        BeamRS.perHourFreeKms = perHourFreeKms,
+        BeamRS.perExtraKmRate = perExtraKmRate,
+        BeamRS.nightShiftCharge = nightShiftCharge
       }

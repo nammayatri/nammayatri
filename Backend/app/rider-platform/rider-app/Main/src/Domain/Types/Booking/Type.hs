@@ -30,8 +30,17 @@ import Kernel.Types.Id
 import Kernel.Utils.TH (mkHttpInstancesForEnum)
 import Tools.Beam.UtilsTH
 
-activeBookingStatus :: [BookingStatus]
-activeBookingStatus = [NEW, CONFIRMED, AWAITING_REASSIGNMENT, TRIP_ASSIGNED]
+data BookingStatusObj = BookingStatusObj
+  { normalBooking :: [BookingStatus],
+    rentalBooking :: [BookingStatus]
+  }
+
+activeBookingStatusObj :: BookingStatusObj
+activeBookingStatusObj =
+  BookingStatusObj
+    { normalBooking = [NEW, CONFIRMED, AWAITING_REASSIGNMENT, TRIP_ASSIGNED],
+      rentalBooking = [TRIP_ASSIGNED]
+    }
 
 data BookingStatus
   = NEW
