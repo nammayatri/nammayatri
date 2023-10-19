@@ -364,14 +364,15 @@ gotoRecenterAndSupport state push =
       [ width WRAP_CONTENT
       , height if showReportText then MATCH_PARENT else WRAP_CONTENT
       , gravity CENTER_VERTICAL
-      ][ if state.data.driverGotoState.gotoEnabledForMerchant then gotoButton push state else linearLayout[][]
+      ][ if state.data.driverGotoState.gotoEnabledForMerchant && state.data.config.gotoConfig.enableGoto
+      then gotoButton push state else linearLayout[][]
         , helpAndSupportBtnView push showReportText
         , recenterBtnView state push
       ]
   ]
   where 
     showReportText = state.props.currentStage == ST.HomeScreen
-    centerView = state.data.driverGotoState.gotoEnabledForMerchant && state.props.driverStatusSet /= ST.Offline && state.props.currentStage == ST.HomeScreen
+    centerView = state.data.driverGotoState.gotoEnabledForMerchant && state.props.driverStatusSet /= ST.Offline && state.props.currentStage == ST.HomeScreen && state.data.config.gotoConfig.enableGoto
 
 
 rateCardView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w

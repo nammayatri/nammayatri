@@ -120,7 +120,7 @@ initData = {
     showBookingOptionForTaxi : false,
     upiQrView : false,
     paymentInfoView : false,
-    hideGoto : false
+    enableGoto : false
    }
 }
 
