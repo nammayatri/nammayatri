@@ -541,7 +541,7 @@ helpAndSupportBtnView push showReportText =
   ][ imageView
      [ width $ V 15
      , height $ V 15
-     , imageWithFallback "ny_ic_vector,https://assets.juspay.in/nammayatri/images/common/ic_report_help.png"
+     , imageWithFallback $ "ny_ic_vector," <> (HU.getAssetStoreLink FunctionCall) <> "ny_ic_vector.png"
      ]
    , textView $
      [ weight 1.0

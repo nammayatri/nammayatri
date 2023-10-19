@@ -53,7 +53,7 @@ view push state =
         [ imageView
             [ imageWithFallback case tag of
                 "home" -> "ny_ic_home," <> getAssetStoreLink FunctionCall <> "ny_ic_home.png"
-                _ -> "ic_location_unfilled," <> getAssetStoreLink FunctionCall <> "ic_location_unfilled.png"
+                _ -> "ic_location_unfilled," <> getAssetStoreLink FunctionCall <> "ny_ic_location_unfilled.png"
             , height $ V 20
             , margin $ Margin 0 2 12 0
             , width $ V 20

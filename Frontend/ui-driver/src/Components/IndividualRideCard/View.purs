@@ -23,7 +23,7 @@ import Components.SeparatorView.View as SeparatorView
 import Effect (Effect)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (getCommonAssetStoreLink)
+import Helpers.Utils (getCommonAssetStoreLink, getAssetStoreLink)
 import JBridge (getArray)
 import Language.Strings (getString)
 import Language.Types (STR(..))
@@ -140,7 +140,7 @@ tagView config =
       , padding $ Padding 10 4 10 4
       , margin $ MarginRight 5
       ][  imageView
-          [ imageWithFallback $ item.image <> ","
+          [ imageWithFallback $ item.image <> "," <> (getAssetStoreLink FunctionCall) <> item.image <> ".png"
           , height $ V 14
           , width $ V 14
           ]
