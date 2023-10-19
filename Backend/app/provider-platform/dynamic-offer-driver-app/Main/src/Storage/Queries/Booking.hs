@@ -107,6 +107,7 @@ findStuckBookings (Id merchantId) bookingIds now = do
           [ Se.Is BeamB.providerId (Se.Eq merchantId),
             Se.Is BeamB.id (Se.In (getId <$> bookingIds)),
             Se.Is BeamB.status (Se.In [NEW, TRIP_ASSIGNED]),
+            Se.Is BeamB.bookingType $ Se.Not $ Se.Eq RentalBooking,
             Se.Is BeamB.createdAt (Se.LessThanOrEq updatedTimestamp)
           ]
       ]

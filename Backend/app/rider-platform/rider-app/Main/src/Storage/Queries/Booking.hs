@@ -216,7 +216,8 @@ findStuckBookings (Id merchantId) bookingIds now =
       [ Se.And
           [ Se.Is BeamB.merchantId $ Se.Eq merchantId,
             Se.Is BeamB.id (Se.In $ getId <$> bookingIds),
-            Se.Is BeamB.status $ Se.In [NEW, CONFIRMED, TRIP_ASSIGNED], -- FIXME do not cancel rentals on both bap and bpp side
+            Se.Is BeamB.status $ Se.In [NEW, CONFIRMED, TRIP_ASSIGNED],
+            Se.Is BeamB.fareProductType $ Se.Not $ Se.Eq DFP.RENTAL,
             Se.Is BeamB.createdAt $ Se.LessThanOrEq updatedTimestamp
           ]
       ]

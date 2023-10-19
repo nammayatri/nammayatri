@@ -478,6 +478,7 @@ findStuckRideItems (Id merchantId) bookingIds now = do
     findAllWithKV
       [ Se.And
           [ Se.Is BeamR.status $ Se.Eq Ride.NEW,
+            Se.Is BeamR.rideType $ Se.Not $ Se.Eq RENTAL,
             Se.Is BeamR.createdAt $ Se.LessThanOrEq now6HrBefore,
             Se.Is BeamR.bookingId $ Se.In $ getId . DBooking.id <$> bookings
           ]
