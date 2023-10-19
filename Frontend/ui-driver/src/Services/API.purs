@@ -2163,7 +2163,6 @@ data CreateOrderReq = CreateOrderReq String
 newtype CreateOrderRes = CreateOrderRes
   {
     sdk_payload :: PaymentPagePayload,
-    status :: String ,
     id :: String,
     order_id :: String,
     payment_links :: PaymentLinks
@@ -2556,7 +2555,6 @@ newtype SubscribePlanReq = SubscribePlanReq String
 
 newtype SubscribePlanResp = SubscribePlanResp {
   orderResp :: CreateOrderRes,
-  status :: String,
   orderId :: String
 }
 
