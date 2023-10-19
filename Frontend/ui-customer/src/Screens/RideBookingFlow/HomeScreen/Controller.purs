@@ -2229,7 +2229,7 @@ estimatesFlow estimatedQuotes state = do
             }
   else do
     _ <- pure $ hideKeyboardOnNavigation true
-    _ <- pure $ toast (getString NO_DRIVER_AVAILABLE_AT_THE_MOMENT_PLEASE_TRY_AGAIN)
+    _ <- pure $ if (null estimatesInfo.estimatedVarient) then toast (getString NO_DRIVER_AVAILABLE_AT_THE_MOMENT_PLEASE_TRY_AGAIN) else unit
     let lang = getValueToLocalStore LANGUAGE_KEY
     continue
       state
