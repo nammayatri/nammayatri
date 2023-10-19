@@ -16,6 +16,7 @@
 module Domain.Types.QuoteRental where
 
 import qualified Domain.Types.FareParameters as Params
+import Domain.Types.FarePolicy
 import qualified Domain.Types.Merchant as DMerchant
 import Domain.Types.SearchRequest
 import qualified Domain.Types.Vehicle.Variant as Variant
@@ -26,6 +27,7 @@ import Kernel.Types.Id
 data QuoteRental = QuoteRental
   { id :: Id QuoteRental,
     searchRequestId :: Id SearchRequest,
+    farePolicyId :: Id FarePolicy,
     providerId :: Id DMerchant.Merchant,
     vehicleVariant :: Variant.Variant,
     estimatedFinishTime :: UTCTime,

@@ -25,6 +25,7 @@ data QuoteRentalT f = QuoteRentalT
   { id :: B.C f Text,
     searchRequestId :: B.C f Text,
     providerId :: B.C f Text,
+    farePolicyId :: B.C f Text,
     vehicleVariant :: B.C f Variant.Variant,
     validTill :: B.C f LocalTime,
     fareParametersId :: B.C f Text,

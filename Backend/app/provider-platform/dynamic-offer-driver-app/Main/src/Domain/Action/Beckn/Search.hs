@@ -282,25 +282,22 @@ handler merchant sReq' =
                     nightShiftCharge = Nothing,
                     rentalRideParams = Nothing
                   }
-            buildRentalQuote
-              rentalSearchReq
-              fareParams
-              merchant.id
-              initialDistance
-              rentalFarePolicy.vehicleVariant
-              initialDuration
-        -- let z = concat listOfRentalQuotes
-        for_ listOfRentalQuotes QQuoteRental.create
-        return (Just (mkRentalQuoteInfo fromLocation now fullFarePolicies <$> listOfRentalQuotes), Nothing)
+            rentalQuote <-
+              buildRentalQuote
+                rentalSearchReq
+                fareParams
+                merchant.id
+                initialDistance
+                rentalFarePolicy.vehicleVariant
+                initialDuration
+                rentalFarePolicy.id
+            pure (rentalQuote, rentalFarePolicy)
+        for_ listOfRentalQuotes (QQuoteRental.create . fst)
+        return (Just (mkRentalQuoteInfo fromLocation now <$> listOfRentalQuotes), Nothing)
       merchantPaymentMethods <- CQMPM.findAllByMerchantId merchantId
       let paymentMethodsInfo = DMPM.mkPaymentMethodInfo <$> merchantPaymentMethods
       buildSearchRes merchant fromLocationLatLong Nothing mbEstimateInfos Nothing quotes searchMetricsMVar paymentMethodsInfo
   where
-    -- getRentalPolicies = map
-    --       ( \farepolicy -> case farepolicy.farePolicyDetails of
-    --           FarePolicyD.RentalDetails det -> map (, farepolicy) (toList det.slabs)
-    --           _ -> []
-    --       )
     listVehicleVariantHelper farePolicy = catMaybes $ everyPossibleVariant <&> \var -> find ((== var) . (.vehicleVariant)) farePolicy
 
     buildEstimates onDemandSearchRequest farePolicies result fromLocation toLocation specialLocationTag area routeInfo = do
@@ -539,8 +536,9 @@ buildRentalQuote ::
   Meters ->
   DVeh.Variant ->
   Seconds ->
+  Id FarePolicyD.FarePolicy ->
   m DQuoteRental.QuoteRental
-buildRentalQuote productSearchRequest fareParams transporterId distance vehicleVariant duration = do
+buildRentalQuote productSearchRequest fareParams transporterId distance vehicleVariant duration farePolicyId = do
   quoteId <- Id <$> generateGUID
   now <- getCurrentTime
   let estimatedFare = fareSum fareParams
@@ -551,6 +549,7 @@ buildRentalQuote productSearchRequest fareParams transporterId distance vehicleV
     DQuoteRental.QuoteRental
       { id = quoteId,
         searchRequestId = productSearchRequest.id,
+        farePolicyId = farePolicyId,
         providerId = transporterId,
         createdAt = now,
         updatedAt = now,
@@ -569,13 +568,12 @@ mkQuoteInfo fromLoc toLoc startTime DQuoteSpecialZone.QuoteSpecialZone {..} = do
       ..
     }
 
-mkRentalQuoteInfo :: DLoc.Location -> UTCTime -> [FarePolicyD.FullFarePolicy] -> DQuoteRental.QuoteRental -> RentalQuoteInfo
-mkRentalQuoteInfo fromLoc startTime fullFarePolicies DQuoteRental.QuoteRental {..} = do
+mkRentalQuoteInfo :: DLoc.Location -> UTCTime -> (DQuoteRental.QuoteRental, FarePolicyD.FullFarePolicy) -> RentalQuoteInfo
+mkRentalQuoteInfo fromLoc startTime (DQuoteRental.QuoteRental {..}, farePolicy) = do
   let fromLocation = Maps.getCoordinates fromLoc
-      farePolicy = find ((== vehicleVariant) . (.vehicleVariant)) fullFarePolicies
       (perHourCharge, perExtraKmRate, perHourFreeKms, nightShiftCharge) = do
-        case (.farePolicyDetails) <$> farePolicy of
-          Just (FarePolicyD.RentalDetails fpRentalDetails) ->
+        case farePolicy.farePolicyDetails of
+          (FarePolicyD.RentalDetails fpRentalDetails) ->
             ( fpRentalDetails.perHourCharge,
               fpRentalDetails.perExtraKmRate,
               fpRentalDetails.perHourFreeKms,

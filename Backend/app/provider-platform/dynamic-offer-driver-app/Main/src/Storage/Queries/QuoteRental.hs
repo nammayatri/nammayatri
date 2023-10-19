@@ -66,6 +66,7 @@ instance FromTType' BeamQR.QuoteRental QuoteRental where
         QuoteRental
           { id = Id id,
             searchRequestId = Id searchRequestId,
+            farePolicyId = Id farePolicyId,
             providerId = Id providerId,
             vehicleVariant = vehicleVariant,
             estimatedFinishTime = estimatedFinishTime,
@@ -84,6 +85,7 @@ instance ToTType' BeamQR.QuoteRental QuoteRental where
       { BeamQR.id = getId id,
         BeamQR.searchRequestId = getId searchRequestId,
         BeamQR.providerId = getId providerId,
+        BeamQR.farePolicyId = getId farePolicyId,
         BeamQR.vehicleVariant = vehicleVariant,
         BeamQR.estimatedFinishTime = estimatedFinishTime,
         BeamQR.createdAt = T.utcToLocalTime T.utc createdAt,

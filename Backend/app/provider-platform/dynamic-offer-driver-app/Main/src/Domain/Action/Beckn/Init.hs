@@ -20,8 +20,10 @@ import qualified Domain.Types.BookingCancellationReason as DBCR
 import qualified Domain.Types.DriverQuote as DDQ
 import qualified Domain.Types.Exophone as DExophone
 import qualified Domain.Types.FareParameters as DFP
-import qualified Domain.Types.FareProduct as FareProductD
 -- import qualified Domain.Types.Location as DLoc
+
+import qualified Domain.Types.FarePolicy as FarePolicyD
+import qualified Domain.Types.FareProduct as FareProductD
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.QuoteRental as DQR
@@ -43,6 +45,7 @@ import Kernel.Utils.Common
 import Lib.SessionizerMetrics.Types.Event
 import qualified SharedLogic.CallBAP as BP
 import qualified Storage.CachedQueries.Exophone as CQExophone
+import qualified Storage.CachedQueries.FarePolicy as QFP
 import qualified Storage.CachedQueries.Merchant as QM
 import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as CQMPM
 import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as CMSUC
@@ -174,10 +177,22 @@ handler merchantId req initReq = do
     InitRentalReq -> do
       case initReq of
         RENTAL_QUOTE (rentalQuote, searchRequest) -> do
+          (duration :: Int) <- case req.rentalDuration of
+            Nothing -> throwError $ InvalidRequest "Request Invalid"
+            Just duration' -> pure duration'
+
+          farePolicy <- QFP.findById rentalQuote.farePolicyId >>= fromMaybeM NoFarePolicy
+          -- let fullFarePolicy = FarePolicyD.farePolicyToFullFarePolicy fareProduct.merchantId fareProduct.vehicleVariant farePolicy
+          let (sDistance, sDuration, sFare) = case farePolicy.farePolicyDetails of
+                FarePolicyD.RentalDetails fPDetails -> (Meters $ duration * fPDetails.perHourFreeKms, Seconds duration, Money $ (getMoney fPDetails.perHourCharge) * duration)
+                _ -> (0, 0, 0)
+          _ <- QRQuote.updateBaseFields rentalQuote.id sDistance sDuration sFare
+          updatedRentalQuotes <- QRQuote.findById (Id req.estimateId) >>= fromMaybeM (QuoteNotFound req.estimateId)
+
           --- TODO -- Update Rental Quote estimate fare and estimate duration
           --- make booking properly --with estimates and duration
           searchTry <- buildRentalSearchTry searchRequest.id req.startTime rentalQuote
-          booking <- buildRentalBooking rentalQuote searchRequest req.startTime DRB.RentalBooking now (mbPaymentMethod <&> (.id)) paymentUrl searchRequest.disabilityTag
+          booking <- buildRentalBooking updatedRentalQuotes searchRequest req.startTime DRB.RentalBooking now (mbPaymentMethod <&> (.id)) paymentUrl searchRequest.disabilityTag
           _ <- QRB.createBooking booking
           QST.create searchTry
           return (booking, Nothing, Nothing)
