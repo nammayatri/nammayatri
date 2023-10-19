@@ -31,6 +31,7 @@ import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Common
+import Kernel.Types.Error (TransporterError (..))
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.DriverScore as DS
@@ -40,6 +41,7 @@ import SharedLogic.DriverPool
 import SharedLogic.GoogleTranslate
 import qualified Storage.CachedQueries.BapMetadata as CQSM
 import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
+import qualified Storage.CachedQueries.Merchant.TransporterConfig as SCT
 import qualified Storage.Queries.SearchRequestForDriver as QSRD
 import Tools.Maps as Maps
 import qualified Tools.Notifications as Notify
@@ -86,8 +88,13 @@ sendSearchRequestToDrivers searchReq searchTry driverExtraFeeBounds driverPoolCo
 
   forM_ driverPoolZipSearchRequests $ \(dPoolRes, sReqFD) -> do
     let language = fromMaybe Maps.ENGLISH dPoolRes.driverPoolResult.language
-    let translatedSearchReq = fromMaybe searchReq $ M.lookup language languageDictionary
-    let entityData = makeSearchRequestForDriverAPIEntity sReqFD translatedSearchReq searchTry bapMetadata dPoolRes.intelligentScores.rideRequestPopupDelayDuration dPoolRes.keepHiddenForSeconds searchTry.vehicleVariant
+    transporterConfig <- SCT.findByMerchantOpCityId searchReq.merchantOperatingCityId >>= fromMaybeM (TransporterConfigNotFound searchReq.merchantOperatingCityId.getId)
+    let needTranslation = language `elem` transporterConfig.languagesToBeTranslated
+    let translatedSearchReq =
+          if needTranslation
+            then fromMaybe searchReq $ M.lookup language languageDictionary
+            else searchReq
+    let entityData = makeSearchRequestForDriverAPIEntity sReqFD translatedSearchReq searchTry bapMetadata dPoolRes.intelligentScores.rideRequestPopupDelayDuration dPoolRes.keepHiddenForSeconds searchTry.vehicleVariant needTranslation
 
     Notify.notifyOnNewSearchRequestAvailable searchReq.merchantOperatingCityId sReqFD.driverId dPoolRes.driverPoolResult.driverDeviceToken entityData
   where
@@ -196,8 +203,12 @@ addLanguageToDictionary ::
   m LanguageDictionary
 addLanguageToDictionary searchReq dict dPoolRes = do
   let language = fromMaybe Maps.ENGLISH dPoolRes.driverPoolResult.language
-  if isJust $ M.lookup language dict
-    then return dict
-    else do
-      translatedSearchReq <- translateSearchReq searchReq language
-      pure $ M.insert language translatedSearchReq dict
+  transporterConfig <- SCT.findByMerchantOpCityId searchReq.merchantOperatingCityId >>= fromMaybeM (TransporterConfigNotFound searchReq.merchantOperatingCityId.getId)
+  if language `elem` transporterConfig.languagesToBeTranslated
+    then
+      if isJust $ M.lookup language dict
+        then return dict
+        else do
+          translatedSearchReq <- translateSearchReq searchReq language
+          pure $ M.insert language translatedSearchReq dict
+    else return dict
