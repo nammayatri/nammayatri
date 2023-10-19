@@ -170,7 +170,7 @@ window.getMerchantConfig = function () {
         "query" : "google.navigation:q=%f,%f"
       , "packageName" : "com.google.android.apps.maps"
     }
-    , "estimateAndQuoteConfig" : { "enableOnlyAuto" : false
+    , "estimateAndQuoteConfig" : { "enableOnlyAuto" : true
     }
   })
 }

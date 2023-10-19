@@ -188,6 +188,9 @@ window.getMerchantConfig = function () {
   , "callOptions" : ["ANONYMOUS", "DIRECT"]
   , "showDisabilityBanner" : true
   , "enableContactSupport" : false
+  , "estimateAndQuoteConfig" :
+                { "enableOnlyAuto" : true
+                }
   })
 }
 
