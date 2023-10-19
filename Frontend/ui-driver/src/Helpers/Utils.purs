@@ -243,7 +243,7 @@ getDowngradeOptions :: String -> Array String
 getDowngradeOptions variant = case variant of
                                 "TAXI"  -> []
                                 "SUV"   -> ["SEDAN", "HATCHBACK"]
-                                "SEDAN" -> ["HATCHBACK", "TAXI"] 
+                                "SEDAN" -> ["TAXI", "HATCHBACK"] 
                                 _       -> ["TAXI"]
 
 getVehicleType :: String -> String
