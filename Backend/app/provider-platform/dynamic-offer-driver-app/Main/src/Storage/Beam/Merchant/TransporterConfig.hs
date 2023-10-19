@@ -18,6 +18,7 @@ module Storage.Beam.Merchant.TransporterConfig where
 
 import qualified Data.Aeson as A
 import qualified Database.Beam as B
+import Kernel.External.Types (Language)
 import Kernel.Prelude
 import Kernel.Types.Common
 import Tools.Beam.UtilsTH
@@ -104,6 +105,7 @@ data TransporterConfigT f = TransporterConfigT
     badDebtTimeThreshold :: B.C f Seconds,
     volunteerSmsSendingLimit :: B.C f (Maybe A.Value),
     driverSmsReceivingLimit :: B.C f (Maybe A.Value),
+    languagesToBeTranslated :: B.C f [Language],
     createdAt :: B.C f UTCTime,
     updatedAt :: B.C f UTCTime
   }

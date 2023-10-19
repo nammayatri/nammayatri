@@ -1086,7 +1086,7 @@ getNearbySearchRequests (driverId, _, merchantOpCityId) = do
       searchRequest <- runInReplica $ QSR.findById searchTry.requestId >>= fromMaybeM (SearchRequestNotFound searchTry.requestId.getId)
       bapMetadata <- CQSM.findById (Id searchRequest.bapId)
       popupDelaySeconds <- DP.getPopupDelay merchantOpCityId (cast driverId) cancellationRatio cancellationScoreRelatedConfig transporterConfig.defaultPopupDelay
-      return $ makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadata popupDelaySeconds (Seconds 0) searchTry.vehicleVariant -- Seconds 0 as we don't know where he/she lies within the driver pool, anyways this API is not used in prod now.
+      return $ makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadata popupDelaySeconds (Seconds 0) searchTry.vehicleVariant False -- Seconds 0 as we don't know where he/she lies within the driver pool, anyways this API is not used in prod now.
     mkCancellationScoreRelatedConfig :: TransporterConfig -> CancellationScoreRelatedConfig
     mkCancellationScoreRelatedConfig tc = CancellationScoreRelatedConfig tc.popupDelayToAddAsPenalty tc.thresholdCancellationScore tc.minRidesForCancellationScore
 

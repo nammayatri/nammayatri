@@ -20,6 +20,7 @@ import Domain.Types.Merchant (Merchant)
 import Domain.Types.Merchant.MerchantOperatingCity (MerchantOperatingCity)
 import EulerHS.Prelude hiding (id)
 import Kernel.External.Notification.FCM.Types (FCMConfig)
+import Kernel.External.Types (Language)
 import Kernel.Types.Common
 import Kernel.Types.Id
 
@@ -111,6 +112,7 @@ data TransporterConfigD u = TransporterConfig
     canSuvDowngradeToTaxi :: Bool,
     rcLimit :: Int,
     automaticRCActivationCutOff :: Seconds,
+    languagesToBeTranslated :: [Language],
     isAvoidToll :: Bool,
     aadhaarImageResizeConfig :: Maybe AadhaarImageResizeConfig,
     enableFaceVerification :: Bool,

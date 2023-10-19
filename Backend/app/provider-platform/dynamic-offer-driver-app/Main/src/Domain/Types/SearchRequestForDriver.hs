@@ -109,12 +109,13 @@ data SearchRequestForDriverAPIEntity = SearchRequestForDriverAPIEntity
     disabilityTag :: Maybe Text,
     keepHiddenForSeconds :: Seconds,
     goHomeRequestId :: Maybe (Id DriverGoHomeRequest),
-    requestedVehicleVariant :: Variant.Variant
+    requestedVehicleVariant :: Variant.Variant,
+    isTranslated :: Bool
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show, PrettyShow)
 
-makeSearchRequestForDriverAPIEntity :: SearchRequestForDriver -> DSR.SearchRequest -> DST.SearchTry -> Maybe DSM.BapMetadata -> Seconds -> Seconds -> Variant.Variant -> SearchRequestForDriverAPIEntity
-makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadata delayDuration keepHiddenForSeconds requestedVehicleVariant =
+makeSearchRequestForDriverAPIEntity :: SearchRequestForDriver -> DSR.SearchRequest -> DST.SearchTry -> Maybe DSM.BapMetadata -> Seconds -> Seconds -> Variant.Variant -> Bool -> SearchRequestForDriverAPIEntity
+makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadata delayDuration keepHiddenForSeconds requestedVehicleVariant isTranslated =
   SearchRequestForDriverAPIEntity
     { searchRequestId = nearbyReq.searchTryId,
       searchTryId = nearbyReq.searchTryId,
