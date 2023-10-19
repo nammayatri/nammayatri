@@ -35,13 +35,14 @@ import Domain.Types.DriverInformation
 import qualified Domain.Types.LocationMapping as DLM
 import Domain.Types.Merchant
 import Domain.Types.Person
+import Domain.Types.Ride as DDR
 import Domain.Types.Ride as DR
 import Domain.Types.Ride as Ride
 import qualified Domain.Types.Ride as DRide
 import Domain.Types.RideDetails as RideDetails
 import Domain.Types.RiderDetails as RiderDetails
 import qualified EulerHS.Language as L
-import EulerHS.Prelude hiding (id, null, sum, traverse_)
+import EulerHS.Prelude hiding (id, length, null, sum, traverse_)
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.External.Maps.Types (LatLong (..), lat, lon)
@@ -491,6 +492,11 @@ createMapping bookingId rideId = do
   void $ QLM.create fromLocationRideMapping >> QLM.create toLocationRideMappings
   return [fromLocationRideMapping, toLocationRideMappings]
 
+totalRidesByFleetOwner :: MonadFlow m => Maybe Text -> m Int
+totalRidesByFleetOwner fleetIdWanted = do
+  res <- findAllWithDb [Se.Is BeamRD.fleetOwnerId $ Se.Eq fleetIdWanted]
+  pure $ length res
+
 totalEarningsByFleetOwner :: MonadFlow m => Maybe Text -> m Int
 totalEarningsByFleetOwner fleetId = do
   dbConf <- getMasterBeamConfig
@@ -499,20 +505,20 @@ totalEarningsByFleetOwner fleetId = do
       B.select $
         do
           rideDetails' <- B.filter_' (\rideDetails'' -> BeamRD.fleetOwnerId rideDetails'' B.==?. B.val_ fleetId) (B.all_ (SBC.rideDetails SBC.atlasDB))
-          B.join_' (SBC.ride SBC.atlasDB) (\ride'' -> BeamR.id ride'' B.==?. BeamRD.id rideDetails')
+          B.join_' (SBC.ride SBC.atlasDB) (\ride'' -> BeamR.id ride'' B.==?. BeamRD.id rideDetails' B.&&?. BeamR.status ride'' B.==?. B.val_ DDR.COMPLETED)
   resTable <- case res of
     Right res' -> mapM fromTType' res'
     Left _ -> pure []
   pure $ sum (getMoney <$> mapMaybe DR.fare (catMaybes resTable))
 
 totalEarningsByFleetOwnerPerVehicle :: MonadFlow m => Maybe Text -> Text -> m Int
-totalEarningsByFleetOwnerPerVehicle fleetId vehicleNumberWanted = do
+totalEarningsByFleetOwnerPerVehicle fleetId vehicleNumber = do
   dbConf <- getMasterBeamConfig
   res <- L.runDB dbConf $
     L.findRows $
       B.select $
         do
-          rideDetails' <- B.filter_' (\rideDetails'' -> (BeamRD.fleetOwnerId rideDetails'' B.==?. B.val_ fleetId) B.&&?. (BeamRD.vehicleNumber rideDetails'' B.==?. B.val_ vehicleNumberWanted)) (B.all_ (SBC.rideDetails SBC.atlasDB))
+          rideDetails' <- B.filter_' (\rideDetails'' -> (BeamRD.fleetOwnerId rideDetails'' B.==?. B.val_ fleetId) B.&&?. (BeamRD.vehicleNumber rideDetails'' B.==?. B.val_ vehicleNumber)) (B.all_ (SBC.rideDetails SBC.atlasDB))
           B.join_' (SBC.ride SBC.atlasDB) (\ride'' -> BeamR.id ride'' B.==?. BeamRD.id rideDetails')
   resTable <- case res of
     Right res' -> mapM fromTType' res'
@@ -537,20 +543,122 @@ totalEarningsByFleetOwnerPerDriver fleetId driverId = do
     Left _ -> pure []
   pure $ sum (getMoney <$> mapMaybe DR.fare (catMaybes resTable))
 
-totalEarningsByFleetOwnerPerVehicleAndDriver :: MonadFlow m => Maybe Text -> Text -> Id Person -> m Int
-totalEarningsByFleetOwnerPerVehicleAndDriver fleetId vehicleNumberWanted driverId = do
+totalRidesCompletedInFleet :: MonadFlow m => Maybe Text -> m Int
+totalRidesCompletedInFleet fleetId = do
   dbConf <- getMasterBeamConfig
   res <- L.runDB dbConf $
     L.findRows $
       B.select $
         do
-          rideDetails' <- B.filter_' (\rideDetails'' -> BeamRD.fleetOwnerId rideDetails'' B.==?. B.val_ fleetId B.&&?. BeamRD.vehicleNumber rideDetails'' B.==?. B.val_ vehicleNumberWanted) (B.all_ (SBC.rideDetails SBC.atlasDB))
-          filteredRide <- B.filter_'
-            ( \ride'' -> BeamR.driverId ride'' B.==?. B.val_ driverId.getId
+          B.aggregate_ (\_ -> B.as_ @Int B.countAll_) $
+            B.filter_'
+              (\ride'' -> ride''.status B.==?. B.val_ DDR.COMPLETED)
+              do
+                rideDetails' <- B.filter_' (\rideDetails'' -> BeamRD.fleetOwnerId rideDetails'' B.==?. B.val_ fleetId) (B.all_ (SBC.rideDetails SBC.atlasDB))
+                B.join_' (SBC.ride SBC.atlasDB) (\ride'' -> BeamR.id ride'' B.==?. BeamRD.id rideDetails')
+  pure $ either (const 0) (\r -> if null r then 0 else head r) res
+
+totalRidesCancelledInFleet :: MonadFlow m => Maybe Text -> m Int
+totalRidesCancelledInFleet fleetId = do
+  dbConf <- getMasterBeamConfig
+  res <- L.runDB dbConf $
+    L.findRows $
+      B.select $
+        do
+          B.aggregate_ (\_ -> B.as_ @Int B.countAll_) $
+            B.filter_'
+              (\ride'' -> ride''.status B.==?. B.val_ DDR.CANCELLED)
+              do
+                rideDetails' <- B.filter_' (\rideDetails'' -> BeamRD.fleetOwnerId rideDetails'' B.==?. B.val_ fleetId) (B.all_ (SBC.rideDetails SBC.atlasDB))
+                B.join_' (SBC.ride SBC.atlasDB) (\ride'' -> BeamR.id ride'' B.==?. BeamRD.id rideDetails')
+  pure $ either (const 0) (\r -> if null r then 0 else head r) res
+
+totalRidesAssignedInFleet :: MonadFlow m => Maybe Text -> m Int
+totalRidesAssignedInFleet fleetId = do
+  dbConf <- getMasterBeamConfig
+  res <- L.runDB dbConf $
+    L.findRows $
+      B.select $
+        do
+          rideDetails' <- B.filter_' (\rideDetails'' -> BeamRD.fleetOwnerId rideDetails'' B.==?. B.val_ fleetId) (B.all_ (SBC.rideDetails SBC.atlasDB))
+          B.filter_'
+            ( \ride'' -> ride''.status B.==?. B.val_ DDR.COMPLETED
             )
             do
               B.join_' (SBC.ride SBC.atlasDB) (\ride'' -> BeamR.id ride'' B.==?. BeamRD.id rideDetails')
-          pure filteredRide
+  resTable <- case res of
+    Right res' -> mapM fromTType' res'
+    Left _ -> pure []
+  pure $ length resTable
+
+totalRidesByFleetOwnerPerVehicle :: MonadFlow m => Maybe Text -> Text -> m Int
+totalRidesByFleetOwnerPerVehicle fleetId vehicleNumber = do
+  dbConf <- getMasterBeamConfig
+  res <- L.runDB dbConf $
+    L.findRows $
+      B.select $
+        do
+          rideDetails' <- B.filter_' (\rideDetails'' -> (BeamRD.fleetOwnerId rideDetails'' B.==?. B.val_ fleetId) B.&&?. (BeamRD.vehicleNumber rideDetails'' B.==?. B.val_ vehicleNumber)) (B.all_ (SBC.rideDetails SBC.atlasDB))
+          B.filter_'
+            ( \ride'' -> ride''.status B.==?. B.val_ DDR.COMPLETED
+            )
+            do
+              B.join_' (SBC.ride SBC.atlasDB) (\ride'' -> BeamR.id ride'' B.==?. BeamRD.id rideDetails')
+  resTable <- case res of
+    Right res' -> mapM fromTType' res'
+    Left _ -> pure []
+  pure $ length resTable
+
+totalRidesByFleetOwnerPerDriver :: MonadFlow m => Maybe Text -> Id Person -> m Int
+totalRidesByFleetOwnerPerDriver fleetId driverId = do
+  dbConf <- getMasterBeamConfig
+  res <- L.runDB dbConf $
+    L.findRows $
+      B.select $
+        do
+          rideDetails' <- B.filter_' (\rideDetails'' -> BeamRD.fleetOwnerId rideDetails'' B.==?. B.val_ fleetId) (B.all_ (SBC.rideDetails SBC.atlasDB))
+          B.filter_'
+            ( \ride'' -> (ride''.status B.==?. B.val_ DDR.COMPLETED) B.&&?. (BeamR.driverId ride'' B.==?. B.val_ driverId.getId)
+            )
+            do
+              B.join_' (SBC.ride SBC.atlasDB) (\ride'' -> BeamR.id ride'' B.==?. BeamRD.id rideDetails')
+  resTable <- case res of
+    Right res' -> mapM fromTType' res'
+    Left _ -> pure []
+  pure $ length resTable
+
+totalRidesByFleetOwnerPerVehicleAndDriver :: MonadFlow m => Maybe Text -> Text -> Id Person -> m Int
+totalRidesByFleetOwnerPerVehicleAndDriver fleetId vehicleNumber driverId = do
+  dbConf <- getMasterBeamConfig
+  res <- L.runDB dbConf $
+    L.findRows $
+      B.select $
+        do
+          rideDetails' <- B.filter_' (\rideDetails'' -> (BeamRD.fleetOwnerId rideDetails'' B.==?. B.val_ fleetId) B.&&?. (BeamRD.vehicleNumber rideDetails'' B.==?. B.val_ vehicleNumber)) (B.all_ (SBC.rideDetails SBC.atlasDB))
+          B.filter_'
+            ( \ride'' -> (ride''.status B.==?. B.val_ DDR.COMPLETED) B.&&?. (BeamR.driverId ride'' B.==?. B.val_ driverId.getId)
+            )
+            do
+              B.join_' (SBC.ride SBC.atlasDB) (\ride'' -> BeamR.id ride'' B.==?. BeamRD.id rideDetails')
+  resTable <- case res of
+    Right res' -> mapM fromTType' res'
+    Left _ -> pure []
+  pure $ length resTable
+
+totalEarningsByFleetOwnerPerVehicleAndDriver :: MonadFlow m => Maybe Text -> Text -> Id Person -> m Int
+totalEarningsByFleetOwnerPerVehicleAndDriver fleetId vehicleNumber driverId = do
+  dbConf <- getMasterBeamConfig
+  res <-
+    L.runDB dbConf $
+      L.findRows $
+        B.select $
+          do
+            rideDetails' <- B.filter_' (\rideDetails'' -> BeamRD.fleetOwnerId rideDetails'' B.==?. B.val_ fleetId B.&&?. BeamRD.vehicleNumber rideDetails'' B.==?. B.val_ vehicleNumber) (B.all_ (SBC.rideDetails SBC.atlasDB))
+            B.filter_'
+              ( \ride'' -> ride''.status B.==?. B.val_ DDR.COMPLETED B.&&?. BeamR.driverId ride'' B.==?. B.val_ driverId.getId
+              )
+              do
+                B.join_' (SBC.ride SBC.atlasDB) (\ride'' -> BeamR.id ride'' B.==?. BeamRD.id rideDetails')
   resTable <- case res of
     Right res' -> mapM fromTType' res'
     Left _ -> pure []

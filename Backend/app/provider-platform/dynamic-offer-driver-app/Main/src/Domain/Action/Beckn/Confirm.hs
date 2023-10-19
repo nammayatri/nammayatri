@@ -354,7 +354,9 @@ cancelBooking booking mbDriver transporter = do
   mbRide <- QRide.findActiveByRBId booking.id
   bookingCancellationReason <- case mbDriver of
     Nothing -> buildBookingCancellationReason booking.id Nothing mbRide transporterId'
-    Just driver -> buildBookingCancellationReason booking.id (Just driver.id) mbRide transporterId'
+    Just driver -> do
+      QDI.updateOnRide driver.id False
+      buildBookingCancellationReason booking.id (Just driver.id) mbRide transporterId'
 
   QRB.updateStatus booking.id DRB.CANCELLED
   QBCR.upsert bookingCancellationReason

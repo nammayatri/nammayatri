@@ -65,6 +65,15 @@ findLastVehicleRC :: (MonadFlow m) => DbHash -> m (Maybe VehicleRegistrationCert
 findLastVehicleRC certNumberHash = do
   findAllWithOptionsKV [Se.Is BeamVRC.certificateNumberHash $ Se.Eq certNumberHash] (Se.Desc BeamVRC.fitnessExpiry) Nothing Nothing <&> listToMaybe
 
+findByRCIdAndFleetOwnerId :: MonadFlow m => Id VehicleRegistrationCertificate -> Text -> m (Maybe VehicleRegistrationCertificate)
+findByRCIdAndFleetOwnerId (Id rcId) fleetOwnerId =
+  findOneWithKV
+    [ Se.And
+        [ Se.Is BeamVRC.id $ Se.Eq rcId,
+          Se.Is BeamVRC.fleetOwnerId $ Se.Eq $ Just fleetOwnerId
+        ]
+    ]
+
 updateVehicleVariant :: (MonadFlow m) => Id VehicleRegistrationCertificate -> Maybe Vehicle.Variant -> m ()
 updateVehicleVariant (Id vehicleRegistrationCertificateId) variant = do
   updateOneWithKV
@@ -86,6 +95,14 @@ findAllByFleetOwnerId fleetOwnerId limit offset = do
     (Se.Desc BeamVRC.updatedAt)
     (Just limit)
     (Just offset)
+
+findAllByFleetOwnerId' :: MonadFlow m => Text -> m [VehicleRegistrationCertificate]
+findAllByFleetOwnerId' fleetOwnerId = do
+  findAllWithOptionsKV
+    [Se.Is BeamVRC.fleetOwnerId $ Se.Eq $ Just fleetOwnerId]
+    (Se.Desc BeamVRC.updatedAt)
+    Nothing
+    Nothing
 
 findLastVehicleRCWrapper :: (MonadFlow m, EncFlow m r) => Text -> m (Maybe VehicleRegistrationCertificate)
 findLastVehicleRCWrapper certNumber = do

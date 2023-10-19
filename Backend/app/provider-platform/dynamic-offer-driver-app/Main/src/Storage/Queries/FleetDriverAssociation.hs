@@ -56,6 +56,14 @@ findAllActiveDriverByFleetOwnerId fleetOwnerId limit offset = do
     (Just limit)
     (Just offset)
 
+findAllDriverByFleetOwnerId :: MonadFlow m => Text -> Int -> Int -> m [FleetDriverAssociation]
+findAllDriverByFleetOwnerId fleetOwnerId limit offset = do
+  findAllWithOptionsKV
+    [Se.Is BeamFDVA.fleetOwnerId $ Se.Eq fleetOwnerId]
+    (Se.Desc BeamFDVA.updatedAt)
+    (Just limit)
+    (Just offset)
+
 updateFleetDriverActiveStatus :: MonadFlow m => Text -> Id Person -> Bool -> m ()
 updateFleetDriverActiveStatus fleetOwnerId driverId isActive = do
   now <- getCurrentTime

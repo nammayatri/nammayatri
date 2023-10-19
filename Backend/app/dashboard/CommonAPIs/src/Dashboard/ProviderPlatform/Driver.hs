@@ -779,7 +779,7 @@ data FleetVehicleStatsListItem = FleetVehicleStatsListItem
 type FleetTotalEarningAPI =
   "fleet"
     :> "totalEarning"
-    :> Get '[JSON] FleetEarningRes
+    :> Get '[JSON] FleetTotalEarningResponse
 
 type FleetVehicleEarningAPI =
   "fleet"
@@ -796,6 +796,15 @@ data FleetEarningRes = FleetEarningRes
     driverName :: Maybe Text,
     status :: Maybe DriverMode,
     vehicleType :: Maybe Variant
+  }
+  deriving (Generic, ToJSON, ToSchema, FromJSON)
+
+data FleetTotalEarningResponse = FleetTotalEarningResponse
+  { totalRides :: Int,
+    totalEarning :: Int,
+    totalVehicle :: Int,
+    conversionRate :: Double,
+    cancellationRate :: Double
   }
   deriving (Generic, ToJSON, ToSchema, FromJSON)
 
@@ -924,10 +933,11 @@ type GetFleetDriverVehicleAssociationAPI =
 data DriveVehicleAssociationListItem = DriveVehicleAssociationListItem
   { vehicleNo :: Text,
     driverName :: Text,
-    status :: DriverMode,
+    status :: Maybe DriverMode,
     completedRides :: Int,
     vehicleType :: Maybe Variant,
-    earning :: Int
+    earning :: Int,
+    isDriverActive :: Bool
   }
   deriving (Generic, ToJSON, ToSchema, FromJSON)
 

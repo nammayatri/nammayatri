@@ -518,7 +518,7 @@ fleetRemoveDriver merchantShortId apiTokenInfo driverId = withFlowHandlerAPI $ d
   checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
   Client.callDriverOfferBPP checkedMerchantId (.drivers.fleetRemoveDriver) apiTokenInfo.personId.getId driverId
 
-fleetTotalEarning :: ShortId DM.Merchant -> ApiTokenInfo -> FlowHandler Common.FleetEarningRes
+fleetTotalEarning :: ShortId DM.Merchant -> ApiTokenInfo -> FlowHandler Common.FleetTotalEarningResponse
 fleetTotalEarning merchantShortId apiTokenInfo = withFlowHandlerAPI $ do
   checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
   Client.callDriverOfferBPP checkedMerchantId (.drivers.fleetTotalEarning) apiTokenInfo.personId.getId
