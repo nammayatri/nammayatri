@@ -349,6 +349,7 @@ disabilityOptionView state push =
     , height WRAP_CONTENT
     , width WRAP_CONTENT
     , margin $ MarginBottom 16
+    , color Color.black600
     ] <> FontStyle.body3 TypoGraphy
   ] <> (DA.mapWithIndex (\index item -> GenericRadioButton.view (push <<< GenericRadioButtonAC) (getRadioButtonConfig index item state)) [ (getString NO), (getString YES)])
     <> if state.data.disabilityOptions.activeIndex == 1 then [claimerView state push] else []

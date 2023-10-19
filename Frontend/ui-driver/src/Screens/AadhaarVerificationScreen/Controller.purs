@@ -120,8 +120,8 @@ eval action state = case action of
   Logout -> do
     pure $ hideKeyboardOnNavigation true
     continue state{props{showLogoutPopup = true}}
-  PopUpModalAC (PopUpModal.OnButton1Click) -> continue $ (state {props {showLogoutPopup = false}})
-  PopUpModalAC (PopUpModal.OnButton2Click) -> exit $ LogOut state
+  PopUpModalAC (PopUpModal.PrimaryButton1 PrimaryButton.OnClick) -> continue $ (state {props {showLogoutPopup = false}})
+  PopUpModalAC (PopUpModal.PrimaryButton2 PrimaryButton.OnClick) -> exit $ LogOut state
 
   DatePicker _ resp year month date -> do 
     case resp of 

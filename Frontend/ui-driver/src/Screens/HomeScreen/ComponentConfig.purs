@@ -51,7 +51,7 @@ import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (unit, ($), (-), (/), (<), (<=), (<>), (==), (>=), (||), (>), (/=), show, map, (&&), not, bottom, (<>), (*), negate, otherwise)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Padding(..), Visibility(..), Accessiblity(..), cornerRadius, padding, gravity)
+import PrestoDOM (Accessiblity(..), Gravity(..), Length(..), Margin(..), Padding(..), Visibility(..), Orientation(..), cornerRadius, gravity, padding)
 import PrestoDOM.Types.DomAttributes as PTD
 import Resource.Constants as Const
 import Screens.Types (AutoPayStatus(..), SubscriptionBannerType(..), SubscriptionPopupType(..), GoToPopUpType(..))
@@ -101,9 +101,20 @@ endRidePopUp state = let
   config' = PopUpModal.config
   popUpConfig' = config'{
     primaryText {text = (getString END_RIDE)},
-    secondaryText {text = (getString ARE_YOU_SURE_YOU_WANT_TO_END_THE_RIDE)},
-    option1 {text =(getString GO_BACK)},
-    option2 {text = (getString END_RIDE)}
+    secondaryText {text = (getString ARE_YOU_SURE_YOU_WANT_TO_END_THE_RIDE)}
+    , primaryButtonLayout {
+      visibility = VISIBLE
+      , button1 {
+        textConfig{
+          text=getString GO_BACK
+        } 
+      }
+      , button2 {
+        textConfig{
+          text=getString END_RIDE
+        } 
+      }
+    }
   }
 in popUpConfig'
 
@@ -197,22 +208,27 @@ linkAadhaarPopupConfig state = let
   popUpConfig' = config'{
     gravity = CENTER,
     margin = MarginHorizontal 24 24 ,
-    buttonLayoutMargin = Margin 16 0 16 20 ,
     primaryText {
       text = (getString AADHAAR_LINKING_REQUIRED)
     , margin = Margin 16 24 16 4 },
     secondaryText {
       text = (getString AADHAAR_LINKING_REQUIRED_DESCRIPTION)
-    , margin = MarginBottom 24},
-    option1 {
-      text = (getString LINK_AADHAAR_ID)
-    , background = Color.black900
-    , color = Color.yellow900
-    },
-    option2 {
-      visibility = false
-    },
-    backgroundClickable = true,
+    , margin = MarginBottom 24}
+    , primaryButtonLayout {
+        visibility = VISIBLE 
+      , margin = Margin 16 0 16 20 
+      , button1 {
+          textConfig{
+            text = (getString LINK_AADHAAR_ID)
+          , color = Color.yellow900
+          }
+          , background = Color.black900
+        }
+      , button2 {
+          visibility = GONE
+        }
+    }
+    , backgroundClickable = true,
     dismissPopup = true,
     cornerRadius = (PTD.Corners 15.0 true true true true),
     coverImageConfig {
@@ -229,7 +245,6 @@ offerPopupConfig isImageUrl  (PromotionPopupConfig ob) =
   PopUpModal.config {
     gravity = CENTER,
     margin = MarginHorizontal 24 24 ,
-    buttonLayoutMargin = Margin 16 0 16 5 ,
     topTitle {
       text = ob.heading
     , visibility = VISIBLE
@@ -239,14 +254,20 @@ offerPopupConfig isImageUrl  (PromotionPopupConfig ob) =
     , margin = Margin 16 24 16 4 },
     secondaryText {
       text = ob.description
-    , margin = MarginBottom 24},
-    option1 {
-      text = getString JOIN_NOW
-    , background = Color.black900
-    , color = Color.yellow900
-    },
-    option2 {
-      visibility = false
+    , margin = MarginBottom 24}
+    , primaryButtonLayout{
+      visibility = VISIBLE 
+      , margin = Margin 16 0 16 5 
+      , button1 {
+        textConfig {
+          text = getString JOIN_NOW
+          , color = Color.yellow900
+        }
+        , background = Color.black900
+      }
+      , button2 {
+        visibility = GONE
+      }
     },
     backgroundClickable = false,
     cornerRadius = (PTD.Corners 15.0 true true true true),
@@ -279,7 +300,6 @@ freeTrialEndingPopupConfig state =
   PopUpModal.config {
     gravity = CENTER,
     margin = MarginHorizontal 24 24 ,
-    buttonLayoutMargin = Margin 16 0 16 5 ,
     primaryText {
       text = case noOfDaysLeft of
         3 -> getString FREE_TRIAL_ENDING_IN_2_DAYS
@@ -290,15 +310,21 @@ freeTrialEndingPopupConfig state =
     secondaryText {
       text = if autoPayStatus == NO_AUTOPAY then getString JOIN_A_PLAN_TO_CONTINUE_TAKING_RIDES else getString SETUP_AUTOPAY_FOR_EASY_PAYMENTS
     , margin = MarginBottom 24
-    },
-    option1 {
-      text = if autoPayStatus == NO_AUTOPAY then getString JOIN_NOW else getString SETUP_AUTOPAY
-    , background = Color.black900
-    , color = Color.yellow900
-    },
-    option2 {
-      visibility = false
-    },
+    }
+    , primaryButtonLayout {
+      visibility = VISIBLE
+      , margin = Margin 16 0 16 5 
+      , button1 {
+        textConfig {
+          text = if autoPayStatus == NO_AUTOPAY then getString JOIN_NOW else getString SETUP_AUTOPAY
+          , color = Color.yellow900
+        }
+        , background = Color.black900
+      }
+      , button2{
+        visibility = GONE
+      }
+    }, 
     backgroundClickable = true,
     cornerRadius = (PTD.Corners 15.0 true true true true),
     coverImageConfig {
@@ -336,7 +362,6 @@ paymentPendingPopupConfig state =
   PopUpModal.config {
     gravity = CENTER,
     margin = MarginHorizontal 24 24 ,
-    buttonLayoutMargin = Margin 16 0 16 if popupType == LOW_DUES_CLEAR_POPUP then 20 else 5 ,
     dismissPopup = true,
     topTitle {
       text = case popupType of
@@ -368,14 +393,20 @@ paymentPendingPopupConfig state =
         , padding : Padding 0 0 0 0
       }
     },
-    option1 {
-      text = getString CLEAR_DUES <> dues
-    , background = Color.black900
-    , color = Color.yellow900
-    , showShimmer = state.data.paymentState.showShimmer
-    },
-    option2 {
-      visibility = false
+    primaryButtonLayout {
+      visibility = VISIBLE
+      , margin = Margin 16 0 16 if popupType == LOW_DUES_CLEAR_POPUP then 20 else 5 
+      , button1 {
+        textConfig {
+          text = getString CLEAR_DUES <> dues
+        , color = Color.yellow900
+        }
+        , enableLoader = state.data.paymentState.showShimmer
+        , background = Color.black900
+      }
+      , button2 {
+        visibility = GONE
+      }
     },
     backgroundClickable = true,
     cornerRadius = (PTD.Corners 15.0 true true true true),
@@ -423,36 +454,37 @@ cancelConfirmationConfig state = let
   popUpConfig' = config'{
     gravity = CENTER,
     margin = MarginHorizontal 24 24 ,
-    buttonLayoutMargin = Margin 16 24 16 20 ,
     primaryText {
       text = case state.data.activeRide.specialLocationTag of
               Nothing -> getString FREQUENT_CANCELLATIONS_WILL_LEAD_TO_LESS_RIDES
               Just specialLocationTag -> getString $ getCancelAlertText $ HU.getRideLabelData  "cancelText" $ Just specialLocationTag
-    , margin = Margin 16 24 16 0 },
-    secondaryText {
-      visibility = if state.data.activeRide.specialLocationTag == (Just "GOTO") then VISIBLE else GONE,
-      text = getString GO_TO_CANCELLATION_DESC,
-      margin = MarginTop 6
-      },
-    option1 {
-      text = (getString CONTINUE)
-    , width = V $ (((EHC.screenWidth unit)-92)/2) 
-    , isClickable = state.data.cancelRideConfirmationPopUp.continueEnabled
-    , timerValue = state.data.cancelRideConfirmationPopUp.delayInSeconds
-    , enableTimer = true
-    , background = Color.white900
-    , strokeColor = Color.black500
-    , color = Color.black700
-    },
-    option2 {
-      text = (getString GO_BACK)
-    , margin = MarginLeft 12
-    , width = V $ (((EHC.screenWidth unit)-92)/2)
-    , color = Color.yellow900
-    , strokeColor = Color.black900
-    , background = Color.black900
-    },
-    backgroundClickable = false,
+    , margin = Margin 16 24 16 24 },
+    secondaryText {visibility = GONE}
+    , primaryButtonLayout{
+      visibility = VISIBLE
+      , button1TimerValue = state.data.cancelRideConfirmationPopUp.delayInSeconds
+      , enableButton1Timer = true
+      ,  margin = Margin 16 0 16 20 
+      , button1 {
+        textConfig{
+          text = (getString CONTINUE) <> (if state.data.cancelRideConfirmationPopUp.delayInSeconds > 0 then  "(" <> show state.data.cancelRideConfirmationPopUp.delayInSeconds <> ")" else "")
+        , color = Color.black700
+        }
+        , background = Color.white900
+        , stroke = "1," <> Color.black500
+        , isClickable = state.data.cancelRideConfirmationPopUp.continueEnabled
+      }
+      , button2 {
+        textConfig {
+          text = (getString GO_BACK)
+        , color = Color.yellow900
+        }
+        , margin = MarginLeft 12
+        , stroke = "1," <> Color.black900
+        , background = Color.black900
+      }
+    }
+    , backgroundClickable = false,
     cornerRadius = (PTD.Corners 15.0 true true true true),
     coverImageConfig {
       imageUrl = fetchImage FF_ASSET  if (state.data.activeRide.specialLocationTag == Nothing || (HU.getRequiredTag "text" state.data.activeRide.specialLocationTag) == Nothing) 
@@ -471,10 +503,10 @@ driverRCPopUpConfig state = let
   popUpConfig' = config'{
     backgroundClickable = false,
     gravity = CENTER,
-    buttonLayoutMargin =(Margin 0 0 0 0),
+   
     cornerRadius = (PTD.Corners 16.0 true true true true), 
     padding = Padding 16 24 16 16,
-    optionButtonOrientation = "VERTICAL",
+    
     margin = MarginHorizontal 24 24, 
     primaryText {
       text =  getString RC_DEACTIVATED, 
@@ -485,24 +517,28 @@ driverRCPopUpConfig state = let
       color = Color.black700,
       margin = (Margin 0 0 0 0)
     } ,
-    option1 {
-      background = Color.black900,
-      text = getString GO_TO_VEHICLE_DETAILS,
-      color = Color.yellow900, 
-      margin = MarginTop 24,
-      width = MATCH_PARENT, 
-      height = WRAP_CONTENT 
-    } , 
-    option2 {
-      background = Color.white900, 
-      text = getString CLOSE,
-      width = MATCH_PARENT, 
-      height = WRAP_CONTENT ,
-      color =  Color.black650,
-      strokeColor = Color.white900, 
-      padding = Padding 16 6 16 6, 
-      margin = Margin 0 8 0 0
-    }, 
+    primaryButtonLayout {
+      visibility = VISIBLE
+      , margin = Margin 0 0 0 0
+      , orientation = VERTICAL
+      , button1{
+        textConfig {
+          text = getString GO_TO_VEHICLE_DETAILS,
+          color = Color.yellow900
+        }
+        , margin = MarginTop 24
+        , background = Color.black900
+      }
+      , button2 {
+        textConfig {
+          text = getString CLOSE,
+          color =  Color.black650
+        },
+        stroke = "1," <> Color.white900, 
+        padding = Padding 16 6 16 6, 
+        margin = Margin 0 8 0 0
+      }
+    },
     coverImageConfig {
       visibility = VISIBLE,
       imageUrl = fetchImage FF_ASSET "ny_rc_deactivated",
@@ -568,13 +604,18 @@ silentModeConfig state = let
   , secondaryText {
       text =  getString SILENT_MODE_PROMPT
     }
-    , option1 {
-      text =   getString GO_OFFLINE
-      , width = (V 140)
-    }
-  , option2 {
-      width = (V 170)
-      , text =  getString GO_SILENT
+  , primaryButtonLayout {
+      visibility = VISIBLE
+      , button1{
+        textConfig {
+          text = getString GO_OFFLINE
+        }
+      }
+      , button2{
+        textConfig {
+          text = getString GO_SILENT
+        }
+      }
     }
   }
   in popUpConfig'
@@ -848,7 +889,7 @@ accessibilityPopUpConfig state =
       {
         gravity = CENTER,
         margin = MarginHorizontal 24 24 ,
-        buttonLayoutMargin = Margin 16 0 16 20 ,
+        
         primaryText {
           text = popupData.primaryText
         , margin = Margin 16 24 16 4 },
@@ -856,13 +897,19 @@ accessibilityPopUpConfig state =
           text = popupData.secondaryText
         , textStyle = SubHeading2
         , margin = MarginBottom 24},
-        option1 {
-          text = getString GOT_IT
-        , background = Color.black900
-        , color = Color.yellow900
-        },
-        option2 {
-          visibility = false
+        primaryButtonLayout {
+          visibility = VISIBLE,
+          margin = Margin 16 0 16 20 ,
+          button1 {
+            textConfig {
+              text = getString GOT_IT
+            , color = Color.yellow900
+            }
+            , background = Color.black900
+          },
+          button2 {
+            visibility = GONE
+          }
         },
         backgroundClickable = false,
         cornerRadius = (PTD.Corners 15.0 true true true true),
@@ -902,7 +949,6 @@ genericAccessibilityPopUpConfig state = let
     {
       gravity = CENTER,
         margin = MarginHorizontal 24 24 ,
-        buttonLayoutMargin = Margin 16 0 16 20 ,
         primaryText {
           text = getString WHAT_ARE_PURPLE_RIDES
         , margin = Margin 16 24 16 4 },
@@ -910,15 +956,21 @@ genericAccessibilityPopUpConfig state = let
           text = getString LEARN_HOW_YOU_CAN_HELP_CUSTOMERS_REQUIRING_SPECIAL_ASSISTANCE
         , textStyle = SubHeading2
         , margin = MarginBottom 24},
-        option1 {
-          text = getString GOT_IT
-        , background = Color.black900
-        , color = Color.yellow900
-        },
-        option2 {
-          visibility = false
-        },
-        backgroundClickable = false,
+        primaryButtonLayout {
+          visibility = VISIBLE
+          , margin = Margin 16 0 16 20
+          , button1 {
+            textConfig {
+              text = getString GOT_IT
+            , color = Color.yellow900
+            }
+            , background = Color.black900
+          }
+          , button2 {
+            visibility = GONE
+          }
+        }
+        , backgroundClickable = false,
         cornerRadius = (PTD.Corners 15.0 true true true true),
         coverImageConfig {
           visibility = GONE
@@ -944,20 +996,28 @@ chatBlockerPopUpConfig state = let
     margin = (MarginHorizontal 16 16),
     primaryText {text = (getString CUSTOMER_HAS_LOW_VISION)},
     secondaryText {text = (getString PLEASE_CONSIDER_CALLING_THEM )},
-    option1{ text = (getString GOT_IT),
-      width = MATCH_PARENT,
-      background = Color.black900,
-      strokeColor = Color.black900,
-      color = Color.yellow900,
-      margin = MarginHorizontal 16 16
-      },
-    option2{text = (getString PROCEED_TO_CHAT),
-      strokeColor = Color.white900,
-      color = Color.black650,
-      background = Color.white900,
-      margin = MarginHorizontal 16 16 ,
-      width = MATCH_PARENT},
-    optionButtonOrientation = "VERTICAL",
+    primaryButtonLayout {
+      visibility = VISIBLE 
+      ,  orientation = VERTICAL
+      , button1 {
+        textConfig {
+          text = (getString GOT_IT),
+          color = Color.yellow900
+        },
+        background = Color.black900,
+        stroke = "1," <> Color.black900,
+        margin = MarginHorizontal 16 16
+      }
+      , button2 {
+          textConfig {
+            text = (getString PROCEED_TO_CHAT),
+            color = Color.black650
+          }
+          , background = Color.white900
+          , margin = MarginHorizontal 16 16 
+          , stroke = "1," <> Color.white900
+        }
+    },
     dismissPopup = true
   }
   in popUpConfig'
@@ -1100,7 +1160,6 @@ getRideCompletedConfig state = let
       cornerRadius = PTD.Corners 15.0 true true true true,
       margin = MarginHorizontal 16 16,
       padding = PaddingTop 24,
-      buttonLayoutMargin = Margin 0 0 0 0,
       primaryText {
         text = getString CONTACT_SUPPORT <> "?",
         margin = MarginBottom 12
@@ -1108,12 +1167,19 @@ getRideCompletedConfig state = let
       secondaryText {
         text = getString YOU_ARE_ABOUT_TO_CALL_NAMMA_YATRI_SUPPORT,
         margin = MarginBottom 16
-      },
-      option1 {
-        text = getString CANCEL
-      },
-      option2 {
-        text = getString CALL_SUPPORT
+      }
+      , primaryButtonLayout {
+        visibility = VISIBLE
+        , button1 {
+          textConfig{
+            text = getString CANCEL
+          }
+        }
+        , button2 {
+          textConfig{
+            text = getString CALL_SUPPORT
+          }
+        }
       }
     },
     badgeCard{
@@ -1164,90 +1230,95 @@ getRatingCardConfig state = RatingCard.ratingCardConfig {
   }
 
 subsBlockerPopUpConfig :: ST.HomeScreenState -> PopUpModal.Config
-subsBlockerPopUpConfig state = PopUpModal.config {
-    cornerRadius = PTD.Corners 15.0 true true true true
-    , buttonLayoutMargin = MarginTop 0
-    , margin = MarginHorizontal 16 16
-    , padding = Padding 16 16 16 16
-    , gravity = CENTER
-    , backgroundColor =  Color.black9000
-    , backgroundClickable = false
-    , optionButtonOrientation = "HORIZONTAL"
-  ,primaryText {
-      text = getString JOIN_A_PLAN_TO_START_EARNING
-    , margin = Margin 16 16 16 0
-    , color = Color.black800
-    , textStyle = Heading2
-    },
-    option1 {
-      text = getString JOIN_NOW
-    , color = Color.yellow900
-    , background = Color.black900
-    , visibility = true
-    , margin = MarginTop 16
-    , width = MATCH_PARENT
-
-    },
-    coverImageConfig {
-      imageUrl = fetchImage FF_ASSET "ny_ic_sub_save_more"
-    , visibility = VISIBLE
-    , width = V 280
-    , height = V 250
-    },
-  secondaryText {visibility = GONE},
-  option2 { 
-    visibility = false
-  },
-  optionWithHtml {
-    textOpt1 {
-      color = Color.black650
-      , text = getString NEED_HELP
-      , textStyle = SubHeading2
+subsBlockerPopUpConfig state = let
+    config = PopUpModal.config
+    popUpConf' = config {
+      cornerRadius = PTD.Corners 15.0 true true true true
+      , margin = MarginHorizontal 16 16
+      , padding = Padding 16 16 16 16
+      , gravity = CENTER
+      , backgroundColor =  Color.black9000
+      , backgroundClickable = false
+    ,primaryText {
+        text = getString JOIN_A_PLAN_TO_START_EARNING
+      , margin = Margin 16 16 16 0
+      , color = Color.black800
+      , textStyle = Heading2
+     },
+      coverImageConfig {
+        imageUrl = fetchImage FF_ASSET "ny_ic_sub_save_more"
       , visibility = VISIBLE
-    }
-    , textOpt2 {
-      color = Color.blue800
-      , textStyle = SubHeading2
-      , text = getString CALL_SUPPORT
-      , visibility = VISIBLE
-    } 
-    , image {
-        imageUrl = fetchImage FF_ASSET "ny_ic_phone_filled_blue"
-        , height = V 16
-        , width = V 16
-        , visibility = VISIBLE
-        , margin = Margin 3 1 3 0
+      , width = V 280
+      , height = V 250
       }
-    , strokeColor = Color.white900
-    , margin = MarginHorizontal 16 16
-    , background = Color.white900
-    , visibility = true
-    , isClickable = true
-    },
-  dismissPopup = false
-    }
+    , primaryButtonLayout{
+        visibility = VISIBLE
+        , margin = MarginTop 0
+        , button1 {
+            textConfig{
+              text = getString JOIN_NOW
+              , color = Color.yellow900
+            }
+            , background = Color.black900
+            , margin = MarginTop 16
+          }
+        , button2 {
+          visibility = GONE
+        }
+      },
+    secondaryText {visibility = GONE},
+    optionWithHtml {
+      textOpt1 {
+        color = Color.black650
+        , text = getString NEED_HELP
+        , textStyle = SubHeading2
+        , visibility = VISIBLE
+      }
+      , textOpt2 {
+        color = Color.blue800
+        , textStyle = SubHeading2
+        , text = getString CALL_SUPPORT
+        , visibility = VISIBLE
+      } 
+      , image {
+          imageUrl = fetchImage FF_ASSET "ny_ic_phone_filled_blue"
+          , height = V 16
+          , width = V 16
+          , visibility = VISIBLE
+          , margin = Margin 3 1 3 0
+        }
+      , strokeColor = Color.white900
+      , margin = MarginHorizontal 16 16
+      , background = Color.white900
+      , visibility = true
+      , isClickable = true
+      },
+    dismissPopup = false
+    } in popUpConf'
 
 gotoKnowMoreConfig :: ST.HomeScreenState-> PopUpModal.Config
 gotoKnowMoreConfig state = PopUpModal.config {
-    optionButtonOrientation = "HORIZONTAL",
-    buttonLayoutMargin = Margin 16 0 16 20,
     gravity = CENTER,
     margin = MarginHorizontal 20 20,
     cornerRadius = PTD.Corners 15.0 true true true true,
     primaryText{ text = getString KNOW_MORE},
     secondaryText{text = getString THIS_FEATURE_WILL_BE_APPLICABLE,
     margin = MarginVertical 16 20,
-    color = Color.black600},
-    option1 {
-      text = getString GO_BACK,
-      margin = MarginHorizontal 16 16,
-      color = "#339DFF",
-      background = Color.white900,
-      strokeColor = Color.white900,
-      width = MATCH_PARENT
-    },
-    option2 {
-      visibility = false
+    color = Color.black600}
+    , primaryButtonLayout {
+      visibility = VISIBLE
+      , margin = Margin 16 0 16 20
+      , button1 {
+        textConfig{
+          text = getString GO_BACK
+          , color = Color.dodgerBlue
+        }
+        , background = Color.white900
+        , stroke = "1," <> Color.white900
+      }
+      , button2 {
+        visibility = GONE
+      }
     }
   }
 
@@ -1257,8 +1328,6 @@ gotoKnowMoreConfig state = PopUpModal.config {
 gotoRequestPopupConfig :: ST.HomeScreenState -> PopUpModal.Config
 gotoRequestPopupConfig state = PopUpModal.config {
     gravity = CENTER,
-    optionButtonOrientation = "HORIZONTAL",
-    buttonLayoutMargin = Margin 16 0 16 20,
     margin = MarginHorizontal 20 20, 
     primaryText {
       text = strings.primaryText
@@ -1268,17 +1337,23 @@ gotoRequestPopupConfig state = PopUpModal.config {
       text = strings.secondaryText
     , textStyle = Body5
     , margin = MarginBottom 20 },
-    option1 {
-      text = strings.buttonText
-    , color = Color.yellow900
-    , background = Color.black900
-    , strokeColor = Color.transparent
-    , textStyle = FontStyle.SubHeading1
-    , width = MATCH_PARENT
-    },
-    option2 { visibility = false
-    },
-    cornerRadius = PTD.Corners 15.0 true true true true,
+    primaryButtonLayout{
+      visibility = VISIBLE
+      , margin = Margin 16 0 16 20
+      , button1 {
+        textConfig {
+          text = strings.buttonText
+        , color = Color.yellow900
+        , textStyle = FontStyle.SubHeading1
+        }
+        , background = Color.black900
+        , stroke = "1," <> Color.transparent
+      }
+      , button2{
+        visibility = GONE
+      }
+    }
+    , cornerRadius = PTD.Corners 15.0 true true true true,
     coverImageConfig {
       imageUrl = strings.imageURL
     , visibility = VISIBLE
@@ -1328,8 +1403,6 @@ gotoCounterStrings popupType = case popupType of
 ------------------------------------------------------------------------------gotoLocInRange------------------------------------------------------------------------------------
 gotoLocInRangeConfig :: ST.HomeScreenState-> PopUpModal.Config
 gotoLocInRangeConfig _ = PopUpModal.config {
-    optionButtonOrientation = "HORIZONTAL",
-    buttonLayoutMargin = Margin 16 0 16 20,
     gravity = CENTER,
     margin = MarginHorizontal 20 20,
     cornerRadius = PTD.Corners 15.0 true true true true,
@@ -1338,23 +1411,25 @@ gotoLocInRangeConfig _ = PopUpModal.config {
       text = getString GOTO_IS_APPLICABLE_FOR,
       margin = MarginVertical 16 20,
       color = Color.black600},
-    option1 {
-      text = getString GOT_IT,
-      margin = MarginHorizontal 16 16,
-      color = Color.yellow900,
-      background = Color.black900,
-      strokeColor = Color.white900,
-      width = MATCH_PARENT
-    },
-    option2 {
-      visibility = false
+    primaryButtonLayout {
+      visibility = VISIBLE
+      , margin =  Margin 16 0 16 20
+      , button1 {
+          textConfig {
+            text = getString GOT_IT,
+            color = Color.yellow900
+          }
+          , background = Color.black900
+          , stroke = "1," <> Color.white900
+        }
+      , button2{
+        visibility = GONE
+      }
     }
   }
 
 disableGotoConfig :: ST.HomeScreenState-> PopUpModal.Config
 disableGotoConfig _ = PopUpModal.config {
-  optionButtonOrientation = "VERTICAL",
-  buttonLayoutMargin = Margin 16 0 16 20,
   gravity = CENTER,
   backgroundClickable = false,
   margin = MarginHorizontal 20 20,
@@ -1362,22 +1437,26 @@ disableGotoConfig _ = PopUpModal.config {
   primaryText{ text = getString DISABLE_GOTO_STR},
   secondaryText{text = getString YOU_STILL_HAVE_TIME_LEFT,
   margin = Margin 0 16 0 20,
-  color = Color.black600},
-  option1 {
-    text = getString YES_DISABLE,
-    margin = MarginHorizontal 16 16,
-    color = Color.yellow900,
-    background = Color.black900,
-    strokeColor = Color.white900,
-    width = MATCH_PARENT
-  },
-  option2 {
-    text = getString CANCEL,
-    margin = MarginHorizontal 16 16,
-    color = Color.black650,
-    background = Color.white900,
-    strokeColor = Color.white900,
-    width = MATCH_PARENT
+  color = Color.black600}
+  , primaryButtonLayout {
+    visibility = VISIBLE
+    , orientation = VERTICAL
+    , button1 {
+      textConfig {
+        text = getString YES_DISABLE
+        , color = Color.yellow900
+      }
+      , background = Color.black900,
+      stroke = "1," <> Color.white900
+    }
+    , button2 {
+      textConfig {
+        text = getString CANCEL,
+        color = Color.black650
+      }
+      , background = Color.white900
+      , stroke = "1," <> Color.white900
+    }
   }
 }
 

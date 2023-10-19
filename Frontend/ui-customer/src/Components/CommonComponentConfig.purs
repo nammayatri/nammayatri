@@ -38,7 +38,7 @@ accessibilityPopUpConfig selectedDisability =
        {
          gravity = CENTER,
          margin = MarginHorizontal 24 24 ,
-         buttonLayoutMargin = Margin 16 0 16 20 ,
+         
          primaryText {
            text = popupData.primaryText
          , margin = Margin 16 16 16 4 
@@ -48,15 +48,21 @@ accessibilityPopUpConfig selectedDisability =
          , padding = PaddingHorizontal 16 16
          , margin = MarginVertical 8 8
          , gravity = LEFT},
-         option1 {
-           text = getString GOT_IT
-         , background = Color.black900
-         , color = Color.yellow900
-         },
-         option2 {
-           visibility = false
-         },
-         backgroundClickable = false,
+         primaryButtonLayout {
+          visibility = VISIBLE 
+          , margin = Margin 16 0 16 20 
+          , button1 {
+            textConfig {
+              text = getString GOT_IT
+            , color = Color.yellow900
+            }
+            , background = Color.black900
+          }
+          , button2 {
+            visibility = GONE
+          }
+         }
+         , backgroundClickable = false,
          cornerRadius = (PTD.Corners 15.0 true true true true),
          coverImageConfig {
            imageUrl = popupData.imageUrl

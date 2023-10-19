@@ -74,8 +74,6 @@ instance loggableAction :: Loggable Action where
           trackAppEndScreen appId (getScreen SAVED_LOCATION_SCREEN)
         PrimaryButtonController.NoAction -> trackAppActionClick appId (getScreen SAVED_LOCATION_SCREEN) "error_modal_action" "primary_button_no_action"
     PopUpModalAction act -> case act of 
-      PopUpModal.OnButton1Click -> trackAppActionClick appId (getScreen SAVED_LOCATION_SCREEN) "popup_modal_action" "on_goback"
-      PopUpModal.OnButton2Click -> trackAppActionClick appId (getScreen SAVED_LOCATION_SCREEN) "popup_modal_action" "on_delete_location"
       PopUpModal.NoAction -> trackAppActionClick appId (getScreen SAVED_LOCATION_SCREEN) "popup_modal_action" "no_action"
       PopUpModal.OnImageClick -> trackAppActionClick appId (getScreen SAVED_LOCATION_SCREEN) "popup_modal_action" "image"
       PopUpModal.ETextController act -> trackAppTextInput appId (getScreen SAVED_LOCATION_SCREEN) "popup_modal_action" "primary_edit_text"
@@ -84,6 +82,7 @@ instance loggableAction :: Loggable Action where
       PopUpModal.OnSecondaryTextClick -> trackAppScreenEvent appId (getScreen SAVED_LOCATION_SCREEN) "popup_modal_action" "secondary_text_clicked"
       PopUpModal.DismissPopup -> trackAppScreenEvent appId (getScreen SAVED_LOCATION_SCREEN) "popup_modal_action" "popup_dismissed"
       PopUpModal.OptionWithHtmlClick -> trackAppScreenEvent appId (getScreen SAVED_LOCATION_SCREEN) "popup_modal_action" "option_with_html_clicked"
+      _ -> pure unit
     SavedLocationListAPIResponseAction respList -> trackAppScreenEvent appId (getScreen SAVED_LOCATION_SCREEN) "in_screen" "saved_location_list"
     NoAction -> trackAppScreenEvent appId (getScreen SAVED_LOCATION_SCREEN) "in_screen" "no_action"
 
@@ -115,8 +114,8 @@ eval (BackPressed flag) state = do
 eval (SavedLocationCardAction (SavedLocationCardController.DeleteLocation tagName)) state = do 
   continue state{props{showDeleteLocationModel = true}, data{deleteTag = (Just tagName)}}
 
-eval (PopUpModalAction (PopUpModal.OnButton1Click)) state = continue state{props{showDeleteLocationModel = false}, data{deleteTag = Nothing}}
-eval (PopUpModalAction (PopUpModal.OnButton2Click)) state = exit $ DeleteLocation (fromMaybe "" state.data.deleteTag)
+eval (PopUpModalAction (PopUpModal.PrimaryButton1 PrimaryButtonController.OnClick)) state = continue state{props{showDeleteLocationModel = false}, data{deleteTag = Nothing}}
+eval (PopUpModalAction (PopUpModal.PrimaryButton2 PrimaryButtonController.OnClick)) state = exit $ DeleteLocation (fromMaybe "" state.data.deleteTag)
 eval (GenericHeaderAC (GenericHeaderController.PrefixImgOnClick)) state = exit $ GoBack
 
 eval (SavedLocationListAPIResponseAction respList) state = do 

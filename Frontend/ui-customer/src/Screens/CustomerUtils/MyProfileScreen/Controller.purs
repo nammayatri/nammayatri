@@ -67,7 +67,7 @@ instance loggableAction :: Loggable Action where
     GenericRadioButtonAC _ -> trackAppActionClick appId (getScreen MY_PROFILE_SCREEN) "in_screen" "disability_radio_btn_click"
     MoreInfo _ ->  trackAppActionClick appId (getScreen MY_PROFILE_SCREEN) "in_screen" "learn_more_button_click"
     AccessibilityPopUpAC act -> case act of 
-      PopUpModal.OnButton2Click -> trackAppActionClick appId (getScreen MY_PROFILE_SCREEN) "popup_modal_action" "select_disability_option"
+      PopUpModal.PrimaryButton2 PrimaryButton.OnClick -> trackAppActionClick appId (getScreen MY_PROFILE_SCREEN) "popup_modal_action" "select_disability_option"
       _ -> pure unit
 data Action = GenericHeaderActionController GenericHeader.Action
             | BackPressed MyProfileScreenState
@@ -184,7 +184,7 @@ eval (SpecialAssistanceListAC action) state = do
 
 eval (MoreInfo fieldType) state = continue state {props { showAccessibilityPopUp = true}}
 
-eval (AccessibilityPopUpAC (PopUpModal.OnButton1Click)) state = do 
+eval (AccessibilityPopUpAC (PopUpModal.PrimaryButton1 PrimaryButton.OnClick)) state = do 
   _ <- pure $ pauseYoutubeVideo unit
   continue state {props{showAccessibilityPopUp = false}}
 

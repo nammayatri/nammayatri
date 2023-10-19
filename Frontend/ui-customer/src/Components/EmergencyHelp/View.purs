@@ -183,23 +183,29 @@ callPoliceConfig state  =
     , margin = (Margin 40 23 40 12)
     , textStyle = FontStyle.SubHeading1
     }
-    , option1 {
-      text = getString CANCEL_
-    , strokeColor = state.config.primaryBackground
-    , background = state.config.popupBackground
-    , color = state.config.primaryBackground
-    }
-    , option2 {
-      text = getString DIAL_112
-    , width = (V 140) 
-    , strokeColor = state.config.primaryBackground
-    , background = state.config.primaryBackground
-    , color = state.config.primaryTextColor
-    }
+    , primaryButtonLayout {
+        visibility = VISIBLE
+      , button1 {
+          textConfig{
+            text = getString CANCEL_
+          , color = state.config.primaryBackground
+          }
+        , stroke = "1," <> state.config.primaryBackground
+        , background = state.config.popupBackground
+        }
+      , button2 {
+          textConfig {
+            text = getString DIAL_112
+          , color = state.config.primaryTextColor
+          } 
+        , background = state.config.primaryBackground
+        , stroke = "1," <> state.config.primaryBackground
+        }
+      }
     , backgroundClickable = true
     , secondaryText {
       text = getString YOU_ARE_ABOUT_TO_CALL_NEAREST_EMERGENCY_CENTRE
-    , margin = (Margin 40 0 40 32) }
+    , margin = (Margin 40 0 40 0) }
     , gravity = CENTER
     , margin = (Margin 16 0 16 0)
     , cornerRadius = (Corners 15.0 true true true true)
@@ -215,22 +221,29 @@ contactSupportConfig state  =
       text = (<>) (getString CALL_NAMMA_YATRI_SUPPORT) "?"
     , margin = (Margin 40 23 40 12)
     }
-    , option1 {
-      text = getString CANCEL_
-    , strokeColor = state.config.primaryBackground
-    , background = state.config.popupBackground
-    , color = state.config.primaryBackground
-    }
-    , option2 {
-      text = getString CALL_SUPPORT
-    , strokeColor = state.config.primaryBackground
-    , background = state.config.primaryBackground
-    , color = state.config.primaryTextColor
+    , primaryButtonLayout {
+        visibility = VISIBLE
+      , button1 {
+          textConfig {
+            text = getString CANCEL_
+          , color = state.config.primaryBackground
+          }
+        , stroke = "1," <> state.config.primaryBackground
+        , background = state.config.popupBackground
+        }
+      , button2 {
+          textConfig {
+            text = getString CALL_SUPPORT
+          , color = state.config.primaryTextColor
+          }
+        , stroke = "1," <> state.config.primaryBackground
+        , background = state.config.primaryBackground
+        }
     }
     , backgroundClickable = true
     , secondaryText {
       text = getString YOU_ARE_ABOUT_TO_CALL_NAMMA_YATRI_SUPPORT
-    , margin = (Margin 40 0 40 32) }
+    , margin = (Margin 40 0 40 0) }
     , gravity = CENTER
     , margin = (MarginHorizontal 16 16)
     , cornerRadius = (Corners 20.0 true true true true)
@@ -244,19 +257,27 @@ callEmergencyContactConfig state  =
   popUpConfig' = config' {
     primaryText {
       text = (<>) (getString CALL_EMERGENCY_CONTACTS) "?"
-    , margin = (Margin 40 23 40 12) 
+    , margin = (Margin 40 23 40 0) 
     }
-    , option1 {
-      text = getString CANCEL_
-    , strokeColor = state.config.primaryBackground
-    , background = state.config.popupBackground
-    , color = state.config.primaryBackground
-    }
-    , option2 {
-      text = getString PLACE_CALL
-    , strokeColor = state.config.primaryBackground
-    , background = state.config.primaryBackground
-    , color = state.config.primaryTextColor
+    , primaryButtonLayout {
+        visibility = VISIBLE 
+      , margin = Margin 16 0 16 24
+      , button1 {
+          textConfig {
+            text = getString CANCEL_
+          , color = state.config.primaryBackground
+          }
+          , stroke = "1," <> state.config.primaryBackground
+          , background = state.config.popupBackground
+        }
+      , button2 {
+          textConfig {
+            text = getString PLACE_CALL
+          , color = state.config.primaryTextColor
+          }
+          , stroke = "1," <> state.config.primaryBackground
+          , background = state.config.primaryBackground
+        }
     }
     , backgroundClickable = true
     , secondaryText {
@@ -280,21 +301,29 @@ callSuccessfulConfig state  =
   popUpConfig' = config' {
     primaryText {
       text = (<>) (getString WAS_YOUR_CALL_SUCCESSFUL) "?"
-    , margin = (Margin 40 23 40 46)
+    , margin = (Margin 40 23 40 0)
     }
-    , option1 {
-      text = (getString NO)
-    , margin = (MarginRight 8) 
-    , strokeColor = state.config.primaryBackground
-    , background = state.config.popupBackground
-    , color = state.config.primaryBackground
-    }
-    , option2 {
-      text = (getString YES)
-    , margin = (MarginLeft 8)
-    , strokeColor = state.config.primaryBackground
-    , background = state.config.primaryBackground
-    , color = state.config.primaryTextColor
+    , primaryButtonLayout{
+      visibility = VISIBLE
+      , margin = Margin 0 0 0 0
+      , button1 {
+        textConfig {
+          text = (getString NO)
+        , color = state.config.primaryBackground
+        }
+        , margin = (MarginRight 8) 
+        , stroke = "1," <> state.config.primaryBackground
+        , background = state.config.popupBackground
+      }
+      , button2 {
+        textConfig {
+           text = (getString YES)
+        , color = state.config.primaryTextColor
+        }
+        , margin = (MarginLeft 8)
+        , stroke = "1," <> state.config.primaryBackground
+        , background = state.config.primaryBackground
+      }
     }
     , backgroundClickable = true
     , secondaryText {

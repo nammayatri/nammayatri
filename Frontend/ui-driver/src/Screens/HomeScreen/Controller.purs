@@ -15,15 +15,18 @@
 
 module Screens.HomeScreen.Controller where
 
+import Constants
 import Helpers.Utils
 import Screens.SubscriptionScreen.Controller
-import Engineering.Helpers.BackTrack (getState, liftFlowBT)
+
+import Common.Resources.Constants (zoomLevel)
 import Common.Styles.Colors as Color
 import Common.Types.App (OptionButtonList, APIPaymentStatus(..), PaymentStatus(..), LazyCheck(..)) as Common
 import Components.Banner as Banner
 import Components.BottomNavBar as BottomNavBar
 import Components.ChatView as ChatView
 import Components.ChatView as ChatView
+import Components.GoToLocationModal as GoToLocationModal
 import Components.InAppKeyboardModal as InAppKeyboardModal
 import Components.MakePaymentModal as MakePaymentModal
 import Components.PopUpModal as PopUpModal
@@ -35,58 +38,56 @@ import Components.RideActionModal as RideActionModal
 import Components.RideCompletedCard as RideCompletedCard
 import Components.SelectListModal as SelectListModal
 import Components.StatsModel.Controller as StatsModelController
-import Components.GoToLocationModal as GoToLocationModal
+import Control.Monad.Except (runExceptT)
+import Control.Monad.Except.Trans (lift)
 import Control.Monad.State (state)
+import Control.Transformers.Back.Trans (runBackT)
 import Data.Array as Array
+import Data.Either (Either(..))
+import Data.Function.Uncurried (runFn1)
 import Data.Int (round, toNumber, fromString, ceil)
 import Data.Lens ((^.))
 import Data.Maybe (Maybe(..), fromMaybe, isJust, isNothing)
 import Data.Number (fromString) as Number
 import Data.String (Pattern(..), Replacement(..), drop, length, take, trim, replaceAll, toLower)
 import Effect (Effect)
+import Effect.Aff (launchAff)
 import Effect.Class (liftEffect)
 import Effect.Uncurried (runEffectFn4)
+import Effect.Uncurried (runEffectFn4)
 import Effect.Unsafe (unsafePerformEffect)
+import Engineering.Helpers.BackTrack (getState, liftFlowBT)
 import Engineering.Helpers.Commons (clearTimer, getCurrentUTC, getNewIDWithTag, convertUTCtoISC, isPreviousVersion)
-import JBridge (animateCamera, enableMyLocation, firebaseLogEvent, getCurrentPosition, getHeightFromPercent, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, minimizeApp, openNavigation, removeAllPolylines, requestLocation, showDialer, showMarker, toast, firebaseLogEventWithTwoParams,sendMessage, stopChatListenerService, getSuggestionfromKey, scrollToEnd, waitingCountdownTimer, getChatMessages, cleverTapCustomEvent, metaLogEvent, toggleBtnLoader, openUrlInApp)
+import Engineering.Helpers.Commons (flowRunner)
+import Engineering.Helpers.Commons (liftFlow)
 import Engineering.Helpers.LogEvent (logEvent, logEventWithTwoParams)
 import Engineering.Helpers.Suggestions (getMessageFromKey, getSuggestionsfromKey)
 import Engineering.Helpers.Utils (saveObject)
+import Helpers.Utils as HU
+import JBridge (animateCamera, enableMyLocation, firebaseLogEvent, getCurrentPosition, getHeightFromPercent, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, minimizeApp, openNavigation, removeAllPolylines, requestLocation, showDialer, showMarker, toast, firebaseLogEventWithTwoParams, sendMessage, stopChatListenerService, getSuggestionfromKey, scrollToEnd, waitingCountdownTimer, getChatMessages, cleverTapCustomEvent, metaLogEvent, toggleBtnLoader, openUrlInApp)
+import JBridge as JB
 import Language.Strings (getString, getEN)
 import Language.Types (STR(..))
 import Log (printLog, trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppTextInput, trackAppScreenEvent)
+import MerchantConfig.Utils (getMerchant, Merchant(..))
 import Prelude (class Show, Unit, bind, discard, map, not, pure, show, unit, void, ($), (&&), (*), (+), (-), (/), (/=), (<), (<>), (==), (>), (||), (<=), (>=), when)
 import PrestoDOM (Eval, continue, continueWithCmd, exit, updateAndExit, updateWithCmdAndExit)
+import PrestoDOM.Core (getPushFn)
 import PrestoDOM.Types.Core (class Loggable)
 import Resource.Constants (decodeAddress)
 import Screens (ScreenName(..), getScreen)
+import Screens.HomeScreen.ComponentConfig (rideActionModalConfig)
 import Screens.Types as ST
 import Services.API (GetRidesHistoryResp, RidesInfo(..), Status(..), GetCurrentPlanResp(..), PlanEntity(..), PaymentBreakUp(..))
+import Services.API as API
 import Services.Accessor (_lat, _lon)
+import Services.Backend as Remote
 import Services.Config (getCustomerNumber)
+import Services.Config (getSupportNumber)
 import Storage (KeyStore(..), deleteValueFromLocalStore, getValueToLocalNativeStore, getValueToLocalStore, setValueToLocalNativeStore, setValueToLocalStore)
 import Types.App (FlowBT, GlobalState(..), HOME_SCREENOUTPUT(..), ScreenType(..))
-import Types.ModifyScreenState (modifyScreenState)
-import Services.Config (getSupportNumber)
-import Helpers.Utils as HU
-import JBridge as JB
-import Effect.Uncurried (runEffectFn4)
-import Constants 
-import Data.Function.Uncurried (runFn1)
-import Screens.HomeScreen.ComponentConfig (rideActionModalConfig)
-import MerchantConfig.Utils (getMerchant, Merchant(..))
-import Common.Resources.Constants (zoomLevel)
-import Control.Monad.Except (runExceptT)
-import Control.Transformers.Back.Trans (runBackT)
-import Effect.Aff (launchAff)
-import Engineering.Helpers.Commons (flowRunner)
 import Types.App (defaultGlobalState)
-import Services.API as API
-import Services.Backend as Remote
-import Engineering.Helpers.Commons (liftFlow)
-import PrestoDOM.Core (getPushFn)
-import Control.Monad.Except.Trans (lift)
-import Data.Either (Either(..))
+import Types.ModifyScreenState (modifyScreenState)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -347,18 +348,18 @@ eval (GoToButtonClickAC PrimaryButtonController.OnClick) state = do
 
 eval ClickInfo state = continue state {data { driverGotoState {goToInfo = true}}}
 
-eval (GotoKnowMoreAction PopUpModal.OnButton1Click) state = continue state { data { driverGotoState { goToInfo = false } }} 
+eval (GotoKnowMoreAction (PopUpModal.PrimaryButton1 PrimaryButtonController.OnClick)) state = continue state { data { driverGotoState { goToInfo = false } }} 
 
-eval (ConfirmDisableGoto PopUpModal.OnButton2Click) state = continue state { data { driverGotoState { confirmGotoCancel = false } }} 
+eval (ConfirmDisableGoto (PopUpModal.PrimaryButton2 PrimaryButtonController.OnClick)) state = continue state { data { driverGotoState { confirmGotoCancel = false } }} 
 
-eval (ConfirmDisableGoto PopUpModal.OnButton1Click) state = updateAndExit state{ data { driverGotoState { confirmGotoCancel = false } }}  $ DisableGoto state{ data { driverGotoState { confirmGotoCancel = false } }} 
+eval (ConfirmDisableGoto (PopUpModal.PrimaryButton1 PrimaryButtonController.OnClick)) state = updateAndExit state{ data { driverGotoState { confirmGotoCancel = false } }}  $ DisableGoto state{ data { driverGotoState { confirmGotoCancel = false } }} 
 
-eval (GotoRequestPopupAction (PopUpModal.OnButton1Click)) state = 
+eval (GotoRequestPopupAction (PopUpModal.PrimaryButton1 PrimaryButtonController.OnClick)) state = 
   case state.data.driverGotoState.goToPopUpType of
     ST.VALIDITY_EXPIRED -> exit $ RefreshGoTo state { data { driverGotoState { goToPopUpType = ST.NO_POPUP_VIEW } }} 
     _ -> continue state { data { driverGotoState { goToPopUpType = ST.NO_POPUP_VIEW} }} 
 
-eval (GotoLocInRangeAction (PopUpModal.OnButton1Click)) state = continue state { data { driverGotoState { gotoLocInRange = false } }} 
+eval (GotoLocInRangeAction (PopUpModal.PrimaryButton1 PrimaryButtonController.OnClick)) state = continue state { data { driverGotoState { gotoLocInRange = false } }} 
 
 eval (GoToLocationModalAC (GoToLocationModal.CardClicked item)) state = continue state {data { driverGotoState {selectedGoTo = item.id}}}
 
@@ -461,7 +462,7 @@ eval (BottomNavBarAction (BottomNavBar.OnNavigate item)) state = do
       exit $ SubscriptionScreen state
     _ -> continue state
 
-eval (OfferPopupAC PopUpModal.OnButton1Click) state = do
+eval (OfferPopupAC (PopUpModal.PrimaryButton1 PrimaryButtonController.OnClick)) state = do
   _ <- pure $ setValueToLocalNativeStore SHOW_JOIN_NAMMAYATRI "__failed"
   _ <- pure $ cleverTapCustomEvent "ny_driver_in_app_popup_join_now"
   _ <- pure $ metaLogEvent "ny_driver_in_app_popup_join_now"
@@ -472,7 +473,7 @@ eval (OfferPopupAC PopUpModal.OptionWithHtmlClick) state = do
   _ <- pure $ setValueToLocalNativeStore SHOW_JOIN_NAMMAYATRI "__failed"
   continue state {props { showOffer = false }}
 
-eval (PaymentPendingPopupAC PopUpModal.OnButton1Click) state = do
+eval (PaymentPendingPopupAC (PopUpModal.PrimaryButton1 PrimaryButtonController.OnClick)) state = do
   if state.props.subscriptionPopupType == ST.GO_ONLINE_BLOCKER then do
     _ <- pure $ cleverTapCustomEvent "ny_driver_due_payment_settle_now"
     _ <- pure $ metaLogEvent "ny_driver_due_payment_settle_now"
@@ -520,7 +521,7 @@ eval (PaymentPendingPopupAC PopUpModal.DismissPopup) state = do
   else pure unit
   continue state {props{ subscriptionPopupType = ST.NO_SUBSCRIPTION_POPUP}}
 
-eval (FreeTrialEndingAC PopUpModal.OnButton1Click) state = do
+eval (FreeTrialEndingAC (PopUpModal.PrimaryButton1 PrimaryButtonController.OnClick)) state = do
   exit $ SubscriptionScreen state
 
 eval (FreeTrialEndingAC PopUpModal.OptionWithHtmlClick) state = do
@@ -688,13 +689,13 @@ eval (UpdateWaitTime status) state = continue state { props { waitTimeStatus = s
 
 eval (WaitTimerCallback timerID timeInMinutes seconds) state = continue state { data {activeRide { waitingTime = timeInMinutes, waitTimerId = timerID}}}
 
-eval (PopUpModalAction (PopUpModal.OnButton1Click)) state = continue $ (state {props {endRidePopUp = false}})
-eval (PopUpModalAction (PopUpModal.OnButton2Click)) state = do
+eval (PopUpModalAction (PopUpModal.PrimaryButton1 PrimaryButtonController.OnClick)) state = continue $ (state {props {endRidePopUp = false}})
+eval (PopUpModalAction (PopUpModal.PrimaryButton2 PrimaryButtonController.OnClick)) state = do
   _ <- pure $ removeAllPolylines ""
   updateAndExit state {props {endRidePopUp = false, rideActionModal = false}} $ EndRide state {props {endRidePopUp = false, rideActionModal = false, zoneRideBooking = true}}
 
 
-eval (GenericAccessibilityPopUpAction PopUpModal.OnButton1Click) state = continue state{props{showGenericAccessibilityPopUp = false}}
+eval (GenericAccessibilityPopUpAction (PopUpModal.PrimaryButton1 PrimaryButtonController.OnClick)) state = continue state{props{showGenericAccessibilityPopUp = false}}
 
 eval (CancelRideModalAction (SelectListModal.UpdateIndex indexValue)) state = continue state { data = state.data { cancelRideModal  { activeIndex = Just indexValue, selectedReasonCode = (fromMaybe dummyCancelReason $ state.data.cancelRideModal.selectionOptions Array.!!indexValue).reasonCode } } }
 eval (CancelRideModalAction (SelectListModal.TextChanged  valId newVal)) state = continue state { data {cancelRideModal { selectedReasonDescription = newVal, selectedReasonCode = "OTHER"}}}
@@ -720,11 +721,11 @@ eval (CancelRideModalAction (SelectListModal.Button2 PrimaryButtonController.OnC
         continue state
 
 
-eval (PopUpModalCancelConfirmationAction (PopUpModal.OnButton2Click)) state = do
+eval (PopUpModalCancelConfirmationAction (PopUpModal.PrimaryButton2 PrimaryButtonController.OnClick)) state = do
   _ <- pure $ clearTimer state.data.cancelRideConfirmationPopUp.timerID
   continue state {props{cancelConfirmationPopup = false}, data{cancelRideConfirmationPopUp{timerID = "" , continueEnabled=false, enableTimer=false}}}
 
-eval (PopUpModalCancelConfirmationAction (PopUpModal.OnButton1Click)) state = continue state {props {cancelRideModalShow = true, cancelConfirmationPopup = false},data {cancelRideConfirmationPopUp{enableTimer = false}, cancelRideModal {activeIndex=Nothing, selectedReasonCode="", selectionOptions = cancellationReasons "" }}}
+eval (PopUpModalCancelConfirmationAction (PopUpModal.PrimaryButton1 PrimaryButtonController.OnClick)) state = continue state {props {cancelRideModalShow = true, cancelConfirmationPopup = false},data {cancelRideConfirmationPopUp{enableTimer = false}, cancelRideModal {activeIndex=Nothing, selectedReasonCode="", selectionOptions = cancellationReasons "" }}}
 
 eval (PopUpModalCancelConfirmationAction (PopUpModal.CountDown seconds id status timerID)) state = do
   if status == "EXPIRED" && seconds == 0 then do
@@ -815,8 +816,8 @@ eval (SwitchDriverStatus status) state =
             let checkIfLastWasSilent = state.props.driverStatusSet == ST.Silent
             continue state { props { goOfflineModal = checkIfLastWasSilent, silentPopUpView = not checkIfLastWasSilent }}
 
-eval (PopUpModalSilentAction (PopUpModal.OnButton1Click)) state = exit (DriverAvailabilityStatus state{props{silentPopUpView = false}} ST.Offline)
-eval (PopUpModalSilentAction (PopUpModal.OnButton2Click)) state = exit (DriverAvailabilityStatus state{props{silentPopUpView = false}} ST.Silent)
+eval (PopUpModalSilentAction (PopUpModal.PrimaryButton1 PrimaryButtonController.OnClick)) state = exit (DriverAvailabilityStatus state{props{silentPopUpView = false}} ST.Offline)
+eval (PopUpModalSilentAction (PopUpModal.PrimaryButton2 PrimaryButtonController.OnClick)) state = exit (DriverAvailabilityStatus state{props{silentPopUpView = false}} ST.Silent)
 
 eval GoToProfile state =  do
   _ <- pure $ setValueToLocalNativeStore PROFILE_DEMO "false"
@@ -869,23 +870,24 @@ eval (GenderBannerModal (Banner.OnClick)) state = exit $ GotoEditGenderScreen
 
 eval RemovePaymentBanner state = if state.data.paymentState.blockedDueToPayment then
                                                   continue state else continue state {data { paymentState {paymentStatusBanner = false}}}
-eval (LinkAadhaarPopupAC PopUpModal.OnButton1Click) state = exit $ AadhaarVerificationFlow state
+eval (LinkAadhaarPopupAC (PopUpModal.PrimaryButton1 PrimaryButtonController.OnClick)) state = exit $ AadhaarVerificationFlow state
 
 eval (LinkAadhaarPopupAC PopUpModal.DismissPopup) state = continue state {props{showAadharPopUp = false}}
-eval (PopUpModalAccessibilityAction PopUpModal.OnButton1Click) state = continue state{props{showAccessbilityPopup = false}}
+eval (PopUpModalAccessibilityAction (PopUpModal.PrimaryButton1 PrimaryButtonController.OnClick)) state = continue state{props{showAccessbilityPopup = false}}
 
-eval (GenericAccessibilityPopUpAction PopUpModal.OnButton1Click) state = continue state{props{showGenericAccessibilityPopUp = false}}
-eval (PopUpModalChatBlockerAction PopUpModal.OnButton2Click) state = continueWithCmd state{props{showChatBlockerPopUp = false}} [do
+eval (GenericAccessibilityPopUpAction (PopUpModal.PrimaryButton1 PrimaryButtonController.OnClick)) state = continue state{props{showGenericAccessibilityPopUp = false}}
+
+eval (PopUpModalChatBlockerAction (PopUpModal.PrimaryButton2 PrimaryButtonController.OnClick)) state = continueWithCmd state{props{showChatBlockerPopUp = false}} [do
       pure $ RideActionModalAction (RideActionModal.MessageCustomer)
   ]
 
-eval (StartEarningPopupAC PopUpModal.OnButton1Click) state = exit $ SubscriptionScreen state { data{paymentState {showBlockingPopup = false}}}
+eval (StartEarningPopupAC (PopUpModal.PrimaryButton1 PrimaryButtonController.OnClick)) state = exit $ SubscriptionScreen state { data{paymentState {showBlockingPopup = false}}}
 
 eval (StartEarningPopupAC (PopUpModal.OptionWithHtmlClick)) state = do
   _ <- pure $ showDialer state.data.config.subscriptionConfig.supportNumber false
   continue state
 
-eval (PopUpModalChatBlockerAction PopUpModal.OnButton1Click) state = continueWithCmd state{props{showChatBlockerPopUp = false}} [do
+eval (PopUpModalChatBlockerAction (PopUpModal.PrimaryButton1 PrimaryButtonController.OnClick)) state = continueWithCmd state{props{showChatBlockerPopUp = false}} [do
       pure $ PopUpModalChatBlockerAction PopUpModal.DismissPopup
     ]
 
@@ -913,8 +915,8 @@ eval (RideCompletedAC (RideCompletedCard.UpiQrRendered id)) state = do
                 ]
 
 eval (RideCompletedAC (RideCompletedCard.Support)) state = continue state {props {showContactSupportPopUp = true}}
-eval (RideCompletedAC (RideCompletedCard.ContactSupportPopUpAC PopUpModal.OnButton1Click)) state = continue state {props {showContactSupportPopUp = false}}
-eval (RideCompletedAC (RideCompletedCard.ContactSupportPopUpAC PopUpModal.OnButton2Click)) state =  do
+eval (RideCompletedAC (RideCompletedCard.ContactSupportPopUpAC (PopUpModal.PrimaryButton1 PrimaryButtonController.OnClick))) state = continue state {props {showContactSupportPopUp = false}}
+eval (RideCompletedAC (RideCompletedCard.ContactSupportPopUpAC (PopUpModal.PrimaryButton2 PrimaryButtonController.OnClick))) state =  do
                                                                                                       _ <- pure $ showDialer (getSupportNumber "") false 
                                                                                                       continue state
 eval (RideCompletedAC (RideCompletedCard.ContactSupportPopUpAC PopUpModal.DismissPopup)) state = continue state {props {showContactSupportPopUp = false}}
@@ -929,9 +931,9 @@ eval (RatingCardAC (RatingCard.FeedbackChanged feedback)) state = continue state
 eval (RatingCardAC (RatingCard.BackPressed)) state = continue state {props {showRideRating = false}}
 eval (RatingCardAC (RatingCard.PrimaryButtonAC PrimaryButtonController.OnClick)) state = exit $ PostRideFeedback state {props {showRideRating = false, showRideCompleted = false}}
 
-eval (RCDeactivatedAC PopUpModal.OnButton1Click) state = exit $ GoToVehicleDetailScreen state 
+eval (RCDeactivatedAC (PopUpModal.PrimaryButton1 PrimaryButtonController.OnClick)) state = exit $ GoToVehicleDetailScreen state 
 
-eval (RCDeactivatedAC PopUpModal.OnButton2Click) state = continue state {props {rcDeactivePopup = false}}
+eval (RCDeactivatedAC (PopUpModal.PrimaryButton2 PrimaryButtonController.OnClick)) state = continue state {props {rcDeactivePopup = false}}
 
 eval (AccessibilityBannerAction (Banner.OnClick)) state = continue state{props{showGenericAccessibilityPopUp = true}}
 

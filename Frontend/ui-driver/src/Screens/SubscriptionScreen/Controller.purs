@@ -178,7 +178,7 @@ eval (HeaderRightClick menuType) state =  if state.props.optionsMenuState == men
                                              then continue state {props{ optionsMenuState = ALL_COLLAPSED}}
                                           else continue state {props{ optionsMenuState = menuType}}
 
-eval (PopUpModalAC (PopUpModal.OnButton1Click)) state = case state.props.popUpState of
+eval (PopUpModalAC (PopUpModal.PrimaryButton1 PrimaryButton.OnClick)) state = case state.props.popUpState of
                   Mb.Just SuccessPopup -> updateAndExit state { props{showShimmer = true, popUpState = Mb.Nothing}} $ Refresh
                   Mb.Just FailedPopup ->  continue state{props { popUpState = Mb.Nothing}}
                   Mb.Just DuesClearedPopup -> exit $ Refresh
@@ -188,7 +188,7 @@ eval (PopUpModalAC (PopUpModal.OnButton1Click)) state = case state.props.popUpSt
                   Mb.Just PaymentSuccessPopup -> updateAndExit state { props{showShimmer = true, popUpState = Mb.Nothing}} $ Refresh
                   Mb.Nothing -> continue state
 
-eval (PopUpModalAC (PopUpModal.OnButton2Click)) state = case state.props.redirectToNav of
+eval (PopUpModalAC (PopUpModal.PrimaryButton2 PrimaryButton.OnClick)) state = case state.props.redirectToNav of
             "Home" -> exit $ HomeScreen state{props { popUpState = Mb.Nothing, redirectToNav = ""}}
             "Rides" -> exit $ RideHistory state{props { popUpState = Mb.Nothing, redirectToNav = ""}}
             "Alert" -> do
@@ -204,9 +204,9 @@ eval (PopUpModalAC (PopUpModal.OptionWithHtmlClick)) state = continueWithCmd sta
 
 eval (PopUpModalAC (PopUpModal.DismissPopup)) state = continue state{props { popUpState = Mb.Nothing}}
 
-eval (ConfirmCancelPopup (PopUpModal.OnButton1Click)) state = continue state { props { confirmCancel = false}}
+eval (ConfirmCancelPopup (PopUpModal.PrimaryButton1 PrimaryButton.OnClick)) state = continue state { props { confirmCancel = false}}
 
-eval (ConfirmCancelPopup (PopUpModal.OnButton2Click)) state = do
+eval (ConfirmCancelPopup (PopUpModal.PrimaryButton2 PrimaryButton.OnClick)) state = do
   _ <- pure $ cleverTapCustomEvent "ny_driver_cancel_autopay"
   _ <- pure $ metaLogEvent "ny_driver_cancel_autopay"
   let _ = unsafePerformEffect $ firebaseLogEvent "ny_driver_cancel_autopay"

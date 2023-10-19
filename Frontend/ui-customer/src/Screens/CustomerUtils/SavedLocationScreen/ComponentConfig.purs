@@ -46,19 +46,26 @@ requestDeletePopUp state = let
         text = (getString ARE_YOU_SURE_YOU_WANT_TO_REMOVE_FAVOURITE_)
       , color = Color.black700
       , margin = (Margin 16 12 16 40)
-        },
-      option1 {
-        text = (getString CANCEL_STR)
-      , color = Color.black700
-      , strokeColor = Color.black700
-      },
-      option2 {text = (getString YES_REMOVE)
-      , background = Color.red
-      , color = Color.white900
-      , strokeColor = Color.red
-      , margin = (MarginLeft 12)
-      }
-     
+        }
+     , primaryButtonLayout {
+        visibility = VISIBLE 
+        , button1 {
+          textConfig {
+            text = (getString CANCEL_STR)
+          , color = Color.black700
+          }
+          , stroke = "1," <> Color.black700
+        }
+        , button2 {
+          textConfig {
+            text = (getString YES_REMOVE)
+          , color = Color.white900
+          }
+          , background = Color.red
+          , stroke = "1," <> Color.red
+          , margin = (MarginLeft 12)
+        }
+     }
     }
   in popUpConfig'
 

@@ -60,16 +60,16 @@ instance loggableAction :: Loggable Action where
       "RC" -> trackAppActionClick appId (getScreen APPLICATION_STATUS_SCREEN) "in_screen" "RC_retry_on_click"
       _ -> trackAppActionClick appId (getScreen APPLICATION_STATUS_SCREEN) "in_screen" "retry_on_click"
     PopUpModalAction act -> case act of
-      PopUpModal.OnButton1Click -> trackAppActionClick appId (getScreen APPLICATION_STATUS_SCREEN) "popup_modal" "on_goback"
       PopUpModal.Tipbtnclick _ _ -> trackAppActionClick appId (getScreen APPLICATION_STATUS_SCREEN) "popup_modal" "tip_button_click"
       PopUpModal.DismissPopup -> trackAppActionClick appId (getScreen APPLICATION_STATUS_SCREEN) "popup_modal" "dismiss_popup"
-      PopUpModal.OnButton2Click -> trackAppActionClick appId (getScreen APPLICATION_STATUS_SCREEN) "popup_modal" "call_support"
       PopUpModal.NoAction -> trackAppActionClick appId (getScreen APPLICATION_STATUS_SCREEN) "popup_modal_action" "no_action"
       PopUpModal.OnImageClick -> trackAppActionClick appId (getScreen APPLICATION_STATUS_SCREEN) "popup_modal_action" "image"
       PopUpModal.OnSecondaryTextClick -> trackAppScreenEvent appId (getScreen APPLICATION_STATUS_SCREEN) "popup_modal_action" "secondary_text_clicked"
       PopUpModal.ETextController act -> trackAppTextInput appId (getScreen APPLICATION_STATUS_SCREEN) "popup_modal_action" "primary_edit_text"
       PopUpModal.OptionWithHtmlClick -> trackAppScreenEvent appId (getScreen APPLICATION_STATUS_SCREEN) "popup_modal_action" "option_with_html_clicked"
       PopUpModal.CountDown arg1 arg2 arg3 arg4 -> trackAppScreenEvent appId (getScreen APPLICATION_STATUS_SCREEN) "popup_modal_action" "countdown_updated"
+      (PopUpModal.PrimaryButton1 _) -> pure unit
+      (PopUpModal.PrimaryButton2 _) -> pure unit 
     ExitGoToEnterOtp ->  trackAppActionClick appId (getScreen APPLICATION_STATUS_SCREEN) "in_screen" "enter_otp"
     CompleteOnBoardingAction PrimaryButtonController.OnClick -> trackAppActionClick appId (getScreen APPLICATION_STATUS_SCREEN) "in_screen" "onboardingview"
     CompleteOnBoardingAction PrimaryButtonController.NoAction -> trackAppActionClick appId (getScreen APPLICATION_STATUS_SCREEN) "in_screen" "na_action"
@@ -135,8 +135,8 @@ eval (DriverRegistrationStatusAction (DriverRegistrationStatusResp resp)) state 
       let timeDifference = (getExpiryTime (getValueToLocalStore DOCUMENT_UPLOAD_TIME) true)/3600
       if (timeDifference>=48 && (resp.dlVerificationStatus == "PENDING" || resp.rcVerificationStatus == "PENDING")) then continue state{data { dlVerificationStatus = resp.dlVerificationStatus, rcVerificationStatus = resp.rcVerificationStatus},props{onBoardingFailure = true,isVerificationFailed = false}}
       else continue state { data { dlVerificationStatus = resp.dlVerificationStatus, rcVerificationStatus = resp.rcVerificationStatus}, props{onBoardingFailure = onBoardingStatus, isVerificationFailed = popup_visibility}}
-eval (PopUpModalAction (PopUpModal.OnButton1Click)) state = continue state{props{popupview=false}}
-eval (PopUpModalAction (PopUpModal.OnButton2Click)) state = do
+eval (PopUpModalAction (PopUpModal.PrimaryButton1 PrimaryButtonController.OnClick)) state = continue state{props{popupview=false}}
+eval (PopUpModalAction (PopUpModal.PrimaryButton2 PrimaryButtonController.OnClick)) state = do
   _ <- pure $ showDialer (getSupportNumber "") false -- TODO: FIX_DIALER
   continue state
 eval (AlternateMobileNumberAction (ReferralMobileNumberController.OnBackClick)) state = do

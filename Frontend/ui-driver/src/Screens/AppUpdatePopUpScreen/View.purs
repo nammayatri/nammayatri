@@ -276,14 +276,17 @@ appUpdatedModelConfig state =
   , secondaryText {
       text =state.appUpdatedView.secondaryText
     }
-    , option1 {
-     visibility = false
+  , primaryButtonLayout {
+    visibility = VISIBLE
+    , button1 {
+      visibility = GONE 
     }
-  , option2 {
-      text =  state.appUpdatedView.optionTwoText,
-      padding = (Padding 16 0 16 0),
-      margin = (Margin 12 0 12 16)
+    , button2 {
+      textConfig{
+        text =  state.appUpdatedView.optionTwoText
+      }
     }
+  }
   , coverImageConfig {
       imageUrl = fetchImage FF_ASSET $ state.appUpdatedView.coverImageUrl
     , visibility = if state.appUpdatedView.coverImageUrl /= "" then VISIBLE else GONE

@@ -351,21 +351,28 @@ addCommentModelConfig state =
       config'
         { gravity = CENTER
         , margin = (MarginHorizontal 16 16)
-        , buttonLayoutMargin = (Margin 0 16 16 0)
         , editTextVisibility = VISIBLE
         , dismissPopupConfig { visibility = VISIBLE, height = V 12, width = V 12, margin = (Margin 0 21 22 0), padding = (Padding 8 8 8 8) }
         , eTextConfig { editText { placeholder = (getString ENTER_YOUR_COMMENT) }, topLabel { visibility = GONE, text = (getString ENTER_YOUR_COMMENT), color = Color.black900 }, margin = (Margin 16 16 16 0) }
         , primaryText { text = (getString ADD_A_COMMENT), gravity = LEFT, margin = (Margin 16 21 0 0) }
         , secondaryText { visibility = GONE }
-        , option1 { visibility = false }
-        , option2
-          { text = (getString POST_COMMENT)
-          , background = Color.white900
-          , color = Color.blue800
-          , strokeColor = Color.white900
-          , padding = (Padding 16 0 16 0)
-          , isClickable = state.commentBtnActive
+        , primaryButtonLayout{
+          visibility = VISIBLE 
+          , margin = Margin 0 16 16 0
+          , button1 {
+            visibility = GONE 
           }
+          , button2 {
+            textConfig {
+              text = (getString POST_COMMENT)
+            , color = Color.blue800
+            }
+            , isClickable = state.commentBtnActive
+            , padding = (Padding 16 0 16 0)
+            , stroke = "1," <> Color.white900
+            , background = Color.white900
+          }
+        }
         , cornerRadius = (Corners 15.0 true true true true)
         }
   in

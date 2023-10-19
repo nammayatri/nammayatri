@@ -66,6 +66,7 @@ type TextConfig =
   , accessibilityHint :: String
   , weight :: Maybe Number
   , textFromHtml :: Maybe String
+  , padding :: Padding
   }
 
 
@@ -99,6 +100,7 @@ config =   {
     , accessibilityHint : ""
     , weight : Nothing
     , textFromHtml : Nothing
+    , padding : Padding 0 0 0 0
     }
   , width: MATCH_PARENT
   , height: V 50

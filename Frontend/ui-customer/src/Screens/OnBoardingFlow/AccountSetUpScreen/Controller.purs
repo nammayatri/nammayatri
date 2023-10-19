@@ -23,6 +23,7 @@ import Components.PrimaryButton as PrimaryButtonController
 import Components.PrimaryEditText as PrimaryEditTextController
 import Components.SelectListModal as SelectListModal
 import Components.StepsHeaderModel.Controller as StepsHeaderModelController
+import Data.Array as DA
 import Data.Maybe (Maybe(..), fromMaybe)
 import Data.String (length, trim)
 import Engineering.Helpers.Commons (getNewIDWithTag)
@@ -34,7 +35,6 @@ import PrestoDOM (Eval, continue, continueWithCmd, exit, id, updateAndExit)
 import PrestoDOM.Types.Core (class Loggable)
 import Screens (ScreenName(..), getScreen)
 import Screens.Types (AccountSetUpScreenState, Gender(..), ActiveFieldAccountSetup(..), ErrorType(..))
-import Data.Array as DA
 
 instance showAction :: Show Action where
   show _ = ""
@@ -58,10 +58,6 @@ instance loggableAction :: Loggable Action where
         trackAppEndScreen appId (getScreen ACCOUNT_SET_UP_SCREEN)
       GenericHeaderController.SuffixImgOnClick -> trackAppActionClick appId (getScreen ACCOUNT_SET_UP_SCREEN) "generic_header_action" "forward_icon"
     PopUpModalAction act -> case act of
-      PopUpModal.OnButton1Click -> trackAppActionClick appId (getScreen ACCOUNT_SET_UP_SCREEN) "popup_modal_action" "on_goback"
-      PopUpModal.OnButton2Click -> do
-        trackAppActionClick appId (getScreen ACCOUNT_SET_UP_SCREEN) "popup_modal_action" "register_on_different_number"
-        trackAppEndScreen appId (getScreen ACCOUNT_SET_UP_SCREEN)
       PopUpModal.NoAction -> trackAppActionClick appId (getScreen ACCOUNT_SET_UP_SCREEN) "popup_modal_action" "no_action"
       PopUpModal.OnImageClick -> trackAppActionClick appId (getScreen ACCOUNT_SET_UP_SCREEN) "popup_modal_action" "image"
       PopUpModal.ETextController act -> trackAppTextInput appId (getScreen ACCOUNT_SET_UP_SCREEN) "popup_modal_action" "primary_edit_text"
@@ -70,6 +66,9 @@ instance loggableAction :: Loggable Action where
       PopUpModal.DismissPopup -> trackAppScreenEvent appId (getScreen ACCOUNT_SET_UP_SCREEN) "popup_modal_action" "popup_dismissed"
       PopUpModal.OnSecondaryTextClick -> trackAppScreenEvent appId (getScreen ACCOUNT_SET_UP_SCREEN) "popup_modal_action" "secondary_text_clicked"
       PopUpModal.OptionWithHtmlClick -> trackAppScreenEvent appId (getScreen ACCOUNT_SET_UP_SCREEN) "popup_modal_action" "option_with_html_clicked"
+      (PopUpModal.PrimaryButton1 _) -> pure unit
+      (PopUpModal.PrimaryButton2 _) -> pure unit
+      _ -> pure unit
     ShowOptions -> trackAppActionClick appId (getScreen ACCOUNT_SET_UP_SCREEN) "in_screen" "show_options"
     EditTextFocusChanged -> trackAppActionClick appId (getScreen ACCOUNT_SET_UP_SCREEN) "name_edit_text_focus_changed" "edit_text"
     TextChanged value -> trackAppTextInput appId (getScreen ACCOUNT_SET_UP_SCREEN) "name_text_changed" "edit_text"
@@ -145,9 +144,9 @@ eval BackPressed state = do
       _ <- pure $ clearCountDownTimer ""
       continue state { props { backPressed = true } }
 
-eval (PopUpModalAction (PopUpModal.OnButton1Click)) state = continue state { props { backPressed = false } }
+eval (PopUpModalAction (PopUpModal.PrimaryButton1 PrimaryButtonController.OnClick)) state = continue state { props { backPressed = false } }
 
-eval (PopUpModalAction (PopUpModal.OnButton2Click)) state = exit $ ChangeMobileNumber
+eval (PopUpModalAction (PopUpModal.PrimaryButton2 PrimaryButtonController.OnClick)) state = exit $ ChangeMobileNumber
 
 eval (GenericRadioButtonAC (GenericRadioButton.OnSelect idx)) state = do 
   let newState = state{data{disabilityOptions = 

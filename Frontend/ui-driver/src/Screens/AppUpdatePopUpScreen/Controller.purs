@@ -84,8 +84,8 @@ eval OnResumeCallBack state = do
       pure ExitScreen
     else pure NoAction
     ]
-eval (AppUpdatedModelAction (PopUpModal.OnButton1Click)) state = exit Decline
-eval (AppUpdatedModelAction (PopUpModal.OnButton2Click)) state = exit Accept
+eval (AppUpdatedModelAction (PopUpModal.PrimaryButton1 PrimaryButtonController.OnClick)) state = exit Decline
+eval (AppUpdatedModelAction (PopUpModal.PrimaryButton2 PrimaryButtonController.OnClick)) state = exit Accept
 eval ExitScreen state = exit Exit
 eval _ state = continue state
 

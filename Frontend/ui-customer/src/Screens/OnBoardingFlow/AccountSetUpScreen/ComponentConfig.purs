@@ -27,7 +27,7 @@ import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude ((/=), (==), negate)
-import PrestoDOM (Length(..), Margin(..))
+import PrestoDOM (Length(..), Margin(..), Visibility(..))
 import Screens.Types as ST
 import Styles.Colors as Color
 import Common.Types.App
@@ -77,18 +77,25 @@ goBackPopUpModelConfig state =
       config'
         { primaryText { text = (getString GO_BACK_) }
         , secondaryText { text = (getString REGISTER_USING_DIFFERENT_NUMBER) }
-        , option1 { 
-            background = state.data.config.popupBackground
-          , strokeColor = state.data.config.primaryBackground
-          , color = state.data.config.primaryBackground
-          , text = (getString NO)
+        , primaryButtonLayout {
+          visibility = VISIBLE
+          , button1 {
+            textConfig {
+                color = state.data.config.primaryBackground
+              , text = (getString NO)
+            }
+            , stroke = "1," <> state.data.config.primaryBackground
+            , background = state.data.config.popupBackground
           }
-        , option2 { 
-            color = state.data.config.primaryTextColor
-          , strokeColor = state.data.config.primaryBackground
-          , background = state.data.config.primaryBackground
-          , text = (getString YES)
+          , button2 {
+            textConfig {
+              color = state.data.config.primaryTextColor
+              , text = (getString YES)
+            }
+            , stroke = "1," <> state.data.config.primaryBackground
+            , background = state.data.config.primaryBackground
           }
+        }
         }
   in
     popUpConfig

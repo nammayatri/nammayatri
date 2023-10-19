@@ -70,9 +70,6 @@ instance loggableAction :: Loggable Action where
     InAppKeyboardModalOtp (InAppKeyboardModal.OnClickBack text) -> trackAppActionClick appId (getScreen DRIVER_DETAILS_SCREEN) "in_app_otp_modal" "on_click_back"
     InAppKeyboardModalOtp (InAppKeyboardModal.BackPressed) -> trackAppActionClick appId (getScreen DRIVER_DETAILS_SCREEN) "in_app_otp_modal" "on_backpressed"
     InAppKeyboardModalOtp (InAppKeyboardModal.OnClickDone text) -> trackAppActionClick appId (getScreen DRIVER_DETAILS_SCREEN) "in_app_otp_modal" "on_click_done"
-    PopUpModalAction (PopUpModal.OnButton1Click) -> trackAppActionClick appId (getScreen DRIVER_DETAILS_SCREEN) "pop_up_modal" "On_click_button1"
-    PopUpModalAction (PopUpModal.OnButton2Click) -> trackAppActionClick appId (getScreen DRIVER_DETAILS_SCREEN) "pop_up_modal" "On_click_button2"
-    PopUpModalActions (PopUpModal.OnButton2Click) -> trackAppActionClick appId (getScreen DRIVER_DETAILS_SCREEN) "pop_up_modal2" "On_click_button2"
     InAppKeyboardModalOtp (InAppKeyboardModal.OnClickResendOtp) -> trackAppActionClick appId (getScreen DRIVER_DETAILS_SCREEN) "in_app_otp_modal" "on_click_done"
     _ -> trackAppActionClick appId (getScreen DRIVER_DETAILS_SCREEN) "in_app_otp_modal" "on_click_done"
 
@@ -214,12 +211,12 @@ eval (InAppKeyboardModalOtp (InAppKeyboardModal.OnSelection key index)) state = 
     focusIndex = length alternateMobileOtp
   continue state { props = state.props { alternateMobileOtp = alternateMobileOtp, enterOtpFocusIndex = focusIndex, otpIncorrect = false } }
 
-eval (PopUpModalAction (PopUpModal.OnButton1Click))
+eval (PopUpModalAction (PopUpModal.PrimaryButton1 PrimaryButtonController.OnClick))
   state = continue state {props{ removeNumberPopup = false}}
-eval (PopUpModalAction (PopUpModal.OnButton2Click)) state = do
+eval (PopUpModalAction (PopUpModal.PrimaryButton2 PrimaryButtonController.OnClick)) state = do
   exit (RemoveAlternateNumber state {data = state.data {  driverAlternateMobile =Nothing }, props = state.props {removeNumberPopup = false, otpIncorrect = false, keyboardModalType = NONE,isEditAlternateMobile = false}})
 
-eval (PopUpModalActions (PopUpModal.OnButton2Click)) state = do
+eval (PopUpModalActions (PopUpModal.PrimaryButton2 PrimaryButtonController.OnClick)) state = do
    exit (GoToHomeScreen state {data = state.data{ driverAlternateMobile = (if(state.props.isEditAlternateMobile) then state.data.driverAlternateMobile else Nothing), driverEditAlternateMobile = Nothing } ,props =state.props{  otpIncorrect = false ,otpAttemptsExceeded = false ,keyboardModalType = NONE , alternateMobileOtp = "",checkAlternateNumber =(not state.props.isEditAlternateMobile) }})
 
 eval (InAppKeyboardModalOtp (InAppKeyboardModal.OnClickDone text)) state = do

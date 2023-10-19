@@ -1214,18 +1214,18 @@ eval (DriverInfoCardActionController (DriverInfoCardController.Support)) state =
 
 eval (CancelSearchAction PopUpModal.DismissPopup) state = do continue state {props { cancelSearchCallDriver = false }}
 
-eval (CancelSearchAction PopUpModal.OnButton1Click) state = do
+eval (CancelSearchAction (PopUpModal.PrimaryButton1 PrimaryButtonController.OnClick)) state = do
   if length state.data.config.callOptions > 1 then
     continue state { props { showCallPopUp = true, cancelSearchCallDriver = false } }
   else callDriver state $ fromMaybe "ANONYMOUS" $ state.data.config.callOptions !! 0
 
-eval (CancelSearchAction PopUpModal.OnButton2Click) state = do
+eval (CancelSearchAction (PopUpModal.PrimaryButton2 PrimaryButtonController.OnClick)) state = do
   continue state { props { isCancelRide = true, cancellationReasons = cancelReasons "", cancelRideActiveIndex = Nothing, cancelReasonCode = "", cancelDescription = "", cancelSearchCallDriver = false } }
 
 eval (DriverInfoCardActionController (DriverInfoCardController.CancelRide infoCard)) state =
   if state.data.config.driverInfoConfig.showCancelPrevention && not state.props.isSpecialZone then
     continue state { props { cancelSearchCallDriver = true } }
-      else continueWithCmd state [ pure $ CancelSearchAction PopUpModal.OnButton2Click]
+      else continueWithCmd state [ pure $ CancelSearchAction (PopUpModal.PrimaryButton2 PrimaryButtonController.OnClick)]
 
 eval (DriverInfoCardActionController (DriverInfoCardController.LocationTracking)) state = do
   _ <- pure $ performHapticFeedback unit
@@ -1251,7 +1251,7 @@ eval (EmergencyHelpModalAC (EmergencyHelpController.ContactSupportPopup)) state 
 
 eval (EmergencyHelpModalAC (EmergencyHelpController.CallContactPopUp item)) state= continue state{props{emergencyHelpModelState{showCallContactPopUp = true, currentlySelectedContact = item}}}
 
-eval (EmergencyHelpModalAC (EmergencyHelpController.CallEmergencyContact PopUpModal.OnButton1Click)) state = continue state{props{emergencyHelpModelState{showCallContactPopUp = false}}}
+eval (EmergencyHelpModalAC (EmergencyHelpController.CallEmergencyContact (PopUpModal.PrimaryButton1 PrimaryButtonController.OnClick))) state = continue state{props{emergencyHelpModelState{showCallContactPopUp = false}}}
 
 eval (EmergencyHelpModalAC (EmergencyHelpController.StoreContacts)) state  = do
   if ((getValueToLocalStore CONTACTS == "__failed") || (getValueToLocalStore CONTACTS == "(null)")) then do
@@ -1265,26 +1265,26 @@ eval (EmergencyHelpModalAC (EmergencyHelpController.StoreContacts)) state  = do
 
 eval (EmergencyHelpModalAC (EmergencyHelpController.AddedEmergencyContacts)) state  =  updateAndExit state{props{emergencyHelpModelState{isSelectEmergencyContact = true}}} $ GoToEmergencyContacts state {props {emergencyHelpModelState{isSelectEmergencyContact = true}}}
 
-eval (EmergencyHelpModalAC (EmergencyHelpController.CallEmergencyContact PopUpModal.OnButton2Click)) state = do
+eval (EmergencyHelpModalAC (EmergencyHelpController.CallEmergencyContact (PopUpModal.PrimaryButton2 PrimaryButtonController.OnClick))) state = do
     void <- pure $ showDialer state.props.emergencyHelpModelState.currentlySelectedContact.phoneNo false -- TODO: FIX_DIALER
     let newState = state{props{emergencyHelpModelState{showCallContactPopUp = false, waitingDialerCallback = true}}}
     updateAndExit newState $ CallContact newState
 
-eval (EmergencyHelpModalAC (EmergencyHelpController.CallSuccessful PopUpModal.OnButton1Click)) state = do
+eval (EmergencyHelpModalAC (EmergencyHelpController.CallSuccessful (PopUpModal.PrimaryButton1 PrimaryButtonController.OnClick))) state = do
     let newState = state{props{emergencyHelpModelState{waitingDialerCallback = false, showCallSuccessfulPopUp = false, sosStatus = "NotResolved"}}}
     updateAndExit newState $ UpdateSosStatus newState
-eval (EmergencyHelpModalAC (EmergencyHelpController.CallSuccessful PopUpModal.OnButton2Click)) state = do
+eval (EmergencyHelpModalAC (EmergencyHelpController.CallSuccessful (PopUpModal.PrimaryButton2 PrimaryButtonController.OnClick))) state = do
     let newState = state{props{emergencyHelpModelState{waitingDialerCallback = false, showCallSuccessfulPopUp = false, sosStatus = "Resolved"}}}
     updateAndExit newState $ UpdateSosStatus newState
 
-eval (EmergencyHelpModalAC (EmergencyHelpController.CallPolice PopUpModal.OnButton1Click)) state = continue state{props{emergencyHelpModelState{showCallPolicePopUp = false}}}
-eval (EmergencyHelpModalAC (EmergencyHelpController.CallPolice PopUpModal.OnButton2Click)) state = do
+eval (EmergencyHelpModalAC (EmergencyHelpController.CallPolice (PopUpModal.PrimaryButton1 PrimaryButtonController.OnClick))) state = continue state{props{emergencyHelpModelState{showCallPolicePopUp = false}}}
+eval (EmergencyHelpModalAC (EmergencyHelpController.CallPolice (PopUpModal.PrimaryButton2 PrimaryButtonController.OnClick))) state = do
     void $ pure $  showDialer "112" false -- TODO: FIX_DIALER
     let newState = state{props{emergencyHelpModelState{showCallPolicePopUp = false, waitingDialerCallback = true}}}
     updateAndExit newState $ CallPolice newState
 
-eval (EmergencyHelpModalAC (EmergencyHelpController.ContactSupport PopUpModal.OnButton1Click)) state = continue state{props{emergencyHelpModelState{showContactSupportPopUp = false}}}
-eval (EmergencyHelpModalAC (EmergencyHelpController.ContactSupport PopUpModal.OnButton2Click)) state = do
+eval (EmergencyHelpModalAC (EmergencyHelpController.ContactSupport (PopUpModal.PrimaryButton1 PrimaryButtonController.OnClick))) state = continue state{props{emergencyHelpModelState{showContactSupportPopUp = false}}}
+eval (EmergencyHelpModalAC (EmergencyHelpController.ContactSupport (PopUpModal.PrimaryButton2 PrimaryButtonController.OnClick))) state = do
     void $ pure $  showDialer (getSupportNumber "") false -- TODO: FIX_DIALER
     let newState = state{props{emergencyHelpModelState{showContactSupportPopUp = false, waitingDialerCallback = true}}}
     updateAndExit newState $ CallSupport newState
@@ -1571,7 +1571,7 @@ eval (QuoteListModelActionController (QuoteListModelController.HomeButtonActionC
 
 eval (Restart err) state = exit $ LocationSelected (fromMaybe dummyListItem state.data.selectedLocationListItem) false state
 
-eval (PopUpModalAction (PopUpModal.OnButton1Click)) state =   case state.props.isPopUp of
+eval (PopUpModalAction (PopUpModal.PrimaryButton1 PrimaryButtonController.OnClick)) state = case state.props.isPopUp of
   TipsPopUp -> do
     _ <- pure $ performHapticFeedback unit
     let _ = unsafePerformEffect $ logEvent state.data.logField if state.props.customerTip.isTipSelected then ("ny_added_tip_for_" <> (show state.props.currentStage)) else "ny_no_tip_added"
@@ -1594,7 +1594,7 @@ eval (PopUpModalAction (PopUpModal.OnButton1Click)) state =   case state.props.i
       let newState = state{props{findingRidesAgain = true , searchExpire = (getSearchExpiryTime "LazyCheck"), currentStage = RetryFindingQuote, sourceSelectedOnMap = true, isPopUp = NoPopUp}}
       updateAndExit newState $ RetryFindingQuotes true newState
 
-eval (PopUpModalAction (PopUpModal.OnButton2Click)) state = case state.props.isPopUp of
+eval (PopUpModalAction (PopUpModal.PrimaryButton2 PrimaryButtonController.OnClick)) state = case state.props.isPopUp of
     TipsPopUp -> case state.props.currentStage of
       QuoteList -> do
         _ <- pure $ performHapticFeedback unit
@@ -1629,25 +1629,24 @@ eval (PopUpModalAction (PopUpModal.DismissPopup)) state = do
   let newState = if (isLocalStageOn QuoteList) then state else state{props{isPopUp = NoPopUp, customerTip{tipActiveIndex = 1,tipForDriver = 10, isTipSelected = false} }}
   continue newState
 
-eval (DistanceOutsideLimitsActionController (PopUpModal.OnButton2Click)) state = do
+eval (DistanceOutsideLimitsActionController (PopUpModal.PrimaryButton2 PrimaryButtonController.OnClick)) state = do
   _ <- pure $ performHapticFeedback unit
   _ <- pure $ updateLocalStage SearchLocationModel
   continue state { props { isPopUp = NoPopUp, rideRequestFlow = false, currentStage = SearchLocationModel, searchId = "", isSearchLocation = SearchLocation, isSource = Just false, isSrcServiceable = true, isDestServiceable = true, isRideServiceable = true } }
 
-eval (ShortDistanceActionController (PopUpModal.OnButton2Click)) state = do
+eval (ShortDistanceActionController (PopUpModal.PrimaryButton2 PrimaryButtonController.OnClick)) state = do
   _ <- pure $ performHapticFeedback unit
   _ <- pure $ exitLocateOnMap ""
   exit $ UpdatedSource state
 
-eval (ShortDistanceActionController (PopUpModal.OnButton1Click)) state = do
+eval (ShortDistanceActionController (PopUpModal.PrimaryButton1 PrimaryButtonController.OnClick)) state = do
   _ <- pure $ performHapticFeedback unit
   _ <- pure $ updateLocalStage SearchLocationModel
   continue state{props{isSource = Just false, isPopUp = NoPopUp, rideRequestFlow = false, currentStage = SearchLocationModel, searchId = "", isSearchLocation = SearchLocation}}
 
+eval (EstimateChangedPopUpController (PopUpModal.PrimaryButton1 PrimaryButtonController.OnClick)) state = exit GoToHome
 
-eval (EstimateChangedPopUpController (PopUpModal.OnButton1Click)) state = exit GoToHome
-
-eval (EstimateChangedPopUpController (PopUpModal.OnButton2Click)) state = do
+eval (EstimateChangedPopUpController (PopUpModal.PrimaryButton2 PrimaryButtonController.OnClick)) state = do
   _ <- pure $ updateLocalStage FindingQuotes
   let
     updatedState = state { props { currentStage = FindingQuotes, isEstimateChanged = false, searchExpire = (getSearchExpiryTime "LazyCheck") } }
@@ -1810,25 +1809,25 @@ eval (SkipAccessibilityUpdateAC PrimaryButtonController.OnClick) state = do
   _ <- pure $ pauseYoutubeVideo unit
   continue state{props{showEducationalCarousel = false}}
 
-eval (DisabilityPopUpAC PopUpModal.OnButton1Click) state = do 
+eval (DisabilityPopUpAC (PopUpModal.PrimaryButton1 PrimaryButtonController.OnClick)) state = do 
   _ <- pure $ pauseYoutubeVideo unit
   continue state{props{showDisabilityPopUp = false}}
 
 eval ShowRateCard state = do
   continue state { props { showRateCard = true } }
 
-eval (PopUpModalShareAppAction PopUpModal.OnButton1Click) state= continue state{props{showShareAppPopUp=false}}
+eval (PopUpModalShareAppAction (PopUpModal.PrimaryButton1 PrimaryButtonController.OnClick)) state= continue state{props{showShareAppPopUp=false}}
 
-eval (PopUpModalShareAppAction PopUpModal.OnButton2Click) state= do
+eval (PopUpModalShareAppAction (PopUpModal.PrimaryButton2 PrimaryButtonController.OnClick)) state= do
   _ <- pure $ setValueToLocalStore SHARE_APP_COUNT "-1"
   _ <- pure $ shareTextMessage (getValueFromConfig "shareAppTitle") (getValueFromConfig "shareAppContent")
   continue state{props{showShareAppPopUp=false}}
 
-eval (CallSupportAction PopUpModal.OnButton1Click) state= do
+eval (CallSupportAction (PopUpModal.PrimaryButton1 PrimaryButtonController.OnClick)) state= do
   _ <- pure $ performHapticFeedback unit
   continue state{props{callSupportPopUp=false}}
 
-eval (CallSupportAction PopUpModal.OnButton2Click) state= do
+eval (CallSupportAction (PopUpModal.PrimaryButton2 PrimaryButtonController.OnClick)) state= do
   _ <- pure $ performHapticFeedback unit
   _ <- pure $ showDialer (getSupportNumber "") false -- TODO: FIX_DIALER
   let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_ride_support_click"

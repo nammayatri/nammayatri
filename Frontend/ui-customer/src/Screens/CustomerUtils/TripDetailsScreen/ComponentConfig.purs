@@ -64,19 +64,26 @@ confirmLostAndFoundConfig state = let
       secondaryText {
         text = (getString TRY_CONNECTING_WITH_THE_DRIVER)
       , margin = (Margin 0 4 0 20)}
-      , option1 { 
-          background = state.data.config.popupBackground
-        , strokeColor = state.data.config.primaryBackground
-        , color = state.data.config.primaryBackground
-        , text = (getString CANCEL_)
+      , primaryButtonLayout {
+        visibility = VISIBLE 
+        , button1 {
+          textConfig {
+            color = state.data.config.primaryBackground
+          , text = (getString CANCEL_)
+          }
+          , background = state.data.config.popupBackground
+          , stroke = "1," <> state.data.config.primaryBackground
         }
-      , option2 { 
-          color = state.data.config.primaryTextColor
-        , strokeColor = state.data.config.primaryBackground
-        , background = state.data.config.primaryBackground
-        , text = (getString REQUEST_CALLBACK)
-        , margin = MarginLeft 12
+        , button2 {
+          textConfig {
+            color = state.data.config.primaryTextColor
+          , text = (getString REQUEST_CALLBACK)
+          }
+          , stroke = "1," <> state.data.config.primaryBackground
+          , background = state.data.config.primaryBackground
+          , margin = MarginLeft 12
         }
+      }
     }
     in popUpConfig'
 

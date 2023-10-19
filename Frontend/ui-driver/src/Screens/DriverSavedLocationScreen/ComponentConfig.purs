@@ -69,11 +69,21 @@ confirmDeletePopupConfig :: ST.DriverSavedLocationScreenState -> PopUpModal.Conf
 confirmDeletePopupConfig state = PopUpModal.config
   { primaryText { text = getString REMOVE_PREF_LOC <> "'" <> state.props.selectedLocation.tag <> "'?"}
   , secondaryText { text = getString CONF_REMOVE_PREF_LOC}
-  , option1 { text = getString CANCEL}
-  , option2 { 
-      text = getString YES_REMOVE
-    , background = Color.red
-    , color = Color.white900
-    , strokeColor = Color.red
+  , primaryButtonLayout {
+    visibility = VISIBLE
+    , button1 {
+      textConfig {
+        text = getString CANCEL
+      }
+    }
+    , button2 {
+      textConfig {
+        text = getString YES_REMOVE
+      , color = Color.white900
+      }
+      , stroke = "1," <> Color.red
+      , background = "1," <> Color.red
     }
   }
+  }
+

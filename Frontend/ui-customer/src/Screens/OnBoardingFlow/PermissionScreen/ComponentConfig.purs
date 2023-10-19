@@ -90,7 +90,6 @@ getLocationBlockerPopUpConfig state = let
     cornerRadius = Corners 15.0 true true true true
   , gravity = CENTER
   , margin = MarginHorizontal 24 24
-  , buttonLayoutMargin = Margin 0 0 0 0 
   , padding = Padding 16 20 16 20
   , topTitle {
       text = getString ENABLE_LOCATION_PERMISSION_TO
@@ -115,11 +114,8 @@ getLocationBlockerPopUpConfig state = let
     , height = V 260
     , margin = Margin 0 0 0 0 
     }
-  , option1 {
-      visibility = false
-    }
-  , option2 {
-      visibility = false
-    }
+  , primaryButtonLayout {
+    visibility = GONE
+  }
   }
   in config'

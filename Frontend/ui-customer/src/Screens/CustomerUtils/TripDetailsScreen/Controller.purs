@@ -54,10 +54,6 @@ instance loggableAction :: Loggable Action where
         Copy -> trackAppActionClick appId (getScreen TRIP_DETAILS_SCREEN) "in_screen" "copy"
         ShowPopUp -> trackAppActionClick appId (getScreen TRIP_DETAILS_SCREEN) "in_screen" "show_confirmation_popup"
         PopUpModalAction act -> case act of
-            PopUpModalController.OnButton1Click -> trackAppActionClick appId (getScreen TRIP_DETAILS_SCREEN) "popup_modal_action" "contact_driver_decline"
-            PopUpModalController.OnButton2Click -> do
-                trackAppActionClick appId (getScreen TRIP_DETAILS_SCREEN) "popup_modal_action" "contact_driver_accept"
-                trackAppEndScreen appId (getScreen TRIP_DETAILS_SCREEN)
             PopUpModalController.NoAction -> trackAppActionClick appId (getScreen TRIP_DETAILS_SCREEN) "popup_modal_action" "no_action"
             PopUpModalController.OnImageClick -> trackAppActionClick appId (getScreen TRIP_DETAILS_SCREEN) "popup_modal_action" "image"
             PopUpModalController.ETextController act -> trackAppTextInput appId (getScreen TRIP_DETAILS_SCREEN) "popup_modal_action" "primary_edit_text"
@@ -66,6 +62,7 @@ instance loggableAction :: Loggable Action where
             PopUpModalController.OnSecondaryTextClick -> trackAppScreenEvent appId (getScreen TRIP_DETAILS_SCREEN) "popup_modal_action" "secondary_text_clicked"
             PopUpModalController.OptionWithHtmlClick -> trackAppScreenEvent appId (getScreen TRIP_DETAILS_SCREEN) "popup_modal_action" "option_with_html_clicked"
             PopUpModalController.DismissPopup -> trackAppScreenEvent appId (getScreen TRIP_DETAILS_SCREEN) "popup_modal_action" "popup_dismissed"
+            _ -> pure unit
         SourceToDestinationActionController (SourceToDestinationController.Dummy) -> trackAppScreenEvent appId (getScreen TRIP_DETAILS_SCREEN) "in_screen" "source_to_destination"
         NoAction -> trackAppScreenEvent appId (getScreen TRIP_DETAILS_SCREEN) "in_screen" "no_action"
 
@@ -90,9 +87,9 @@ eval BackPressed state = exit $ GoBack state.props.fromMyRides
 
 eval ShowPopUp state = continue state{props{showConfirmationPopUp = true}}
 
-eval (PopUpModalAction (PopUpModalController.OnButton1Click)) state = continue state{props{showConfirmationPopUp = false}}
+eval (PopUpModalAction (PopUpModalController.PrimaryButton1 PrimaryButtonController.OnClick)) state = continue state{props{showConfirmationPopUp = false}}
 
-eval (PopUpModalAction (PopUpModalController.OnButton2Click)) state = exit $ ConnectWithDriver state{props{showConfirmationPopUp = false}}
+eval (PopUpModalAction (PopUpModalController.PrimaryButton2 PrimaryButtonController.OnClick)) state = exit $ ConnectWithDriver state{props{showConfirmationPopUp = false}}
 
 eval ViewInvoice state = exit $ GoToInvoice state
 

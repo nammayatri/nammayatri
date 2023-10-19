@@ -58,11 +58,18 @@ completeOnboardingConfig state = let
   , secondaryText {
       text = getString YOU_ARE_ABOUT_TO_CALL_NAMMA_YATRI_SUPPORT
     }
-    , option1 {
-     text =  getString CANCEL
+  , primaryButtonLayout {
+    visibility = VISIBLE
+    , button1 {
+      textConfig {
+        text =  getString CANCEL
+      }
     }
-  , option2 {
-      text =  getString CALL_SUPPORT
+    , button2 {
+      textConfig {
+        text = getString CALL_SUPPORT
+      }
     }
+  }
   }
   in popUpConfig'

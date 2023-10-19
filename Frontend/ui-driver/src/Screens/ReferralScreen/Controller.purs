@@ -80,26 +80,22 @@ instance loggableAction :: Loggable Action where
         trackAppEndScreen appId (getScreen REFERRAL_SCREEN)
       GenericHeader.SuffixImgOnClick -> trackAppActionClick appId (getScreen REFERRAL_SCREEN) "generic_header_action" "forward_icon"
     PasswordModalAction act -> case act of
-      PopUpModal.OnButton2Click -> do
-        trackAppActionClick appId (getScreen REFERRAL_SCREEN) "password_popup_modal_action" "confirm_password"
-        trackAppEndScreen appId (getScreen REFERRAL_SCREEN)
       PopUpModal.ETextController act -> case act of
         PrimaryEditTextController.TextChanged valId newVal -> trackAppTextInput appId (getScreen REFERRAL_SCREEN) "referral_code_text_changed" "popup_modal_edit_password"
         PrimaryEditTextController.FocusChanged _ -> trackAppTextInput appId (getScreen REFERRAL_SCREEN) "referral_code_text_focus_changed" "popup_modal_edit_password"
       PopUpModal.OnImageClick -> trackAppActionClick appId (getScreen REFERRAL_SCREEN) "password_popup_modal_action" "close_icon"
-      PopUpModal.OnButton1Click -> trackAppActionClick appId (getScreen REFERRAL_SCREEN) "password_popup_modal_action" "no_action"
       PopUpModal.CountDown arg1 arg2 arg3 arg4 -> trackAppScreenEvent appId (getScreen REFERRAL_SCREEN) "password_popup_modal_action" "countdown_updated"
       PopUpModal.NoAction -> trackAppActionClick appId (getScreen REFERRAL_SCREEN) "password_popup_modal_action" "no_action"
       PopUpModal.Tipbtnclick arg1 arg2 -> trackAppScreenEvent appId (getScreen REFERRAL_SCREEN) "popup_modal_action" "tip_clicked"
       PopUpModal.OptionWithHtmlClick -> trackAppScreenEvent appId (getScreen ABOUT_US_SCREEN) "popup_modal_action" "option_with_html_clicked"
       PopUpModal.OnSecondaryTextClick -> trackAppScreenEvent appId (getScreen ABOUT_US_SCREEN) "popup_modal_action" "secondary_text_clicked"
       PopUpModal.DismissPopup -> trackAppScreenEvent appId (getScreen REFERRAL_SCREEN) "popup_modal_action" "popup_dismissed"
+      (PopUpModal.PrimaryButton1 _) -> pure unit
+      (PopUpModal.PrimaryButton2 _) -> pure unit 
     SuccessScreenExpireCountDwon seconds id status timerId -> do
       if status == "EXPIRED" then trackAppScreenEvent appId (getScreen REFERRAL_SCREEN) "in_screen" "countdown_expired"
         else trackAppScreenEvent appId (getScreen REFERRAL_SCREEN) "in_screen" "countdown_updated"
     ContactSupportAction act -> case act of
-      PopUpModal.OnButton1Click -> trackAppActionClick appId (getScreen REFERRAL_SCREEN) "contact_support_popup_modal_action" "cancel"
-      PopUpModal.OnButton2Click -> trackAppActionClick appId (getScreen REFERRAL_SCREEN) "contact_support_popup_modal_action" "call_support"
       PopUpModal.OnImageClick -> trackAppActionClick appId (getScreen REFERRAL_SCREEN) "contact_support_popup_modal_action" "close_icon"
       PopUpModal.ETextController act -> trackAppTextInput appId (getScreen REFERRAL_SCREEN) "contact_support_popup_modal_action" "primary_edit_text"
       PopUpModal.CountDown arg1 arg2 arg3 arg4 -> trackAppScreenEvent appId (getScreen REFERRAL_SCREEN) "contact_support_popup_modal_action" "countdown_updated"
@@ -108,6 +104,8 @@ instance loggableAction :: Loggable Action where
       PopUpModal.OptionWithHtmlClick -> trackAppScreenEvent appId (getScreen REFERRAL_SCREEN) "popup_modal_action" "option_with_html_clicked"
       PopUpModal.OnSecondaryTextClick -> trackAppScreenEvent appId (getScreen ABOUT_US_SCREEN) "popup_modal_action" "secondary_text_clicked"
       PopUpModal.DismissPopup -> trackAppScreenEvent appId (getScreen REFERRAL_SCREEN) "popup_modal_action" "popup_dismissed"
+      (PopUpModal.PrimaryButton1 _) -> pure unit
+      (PopUpModal.PrimaryButton2 _) -> pure unit 
     GoToAlertScreen -> do
       trackAppActionClick appId (getScreen REFERRAL_SCREEN) "in_screen" "for_updates_see_alerts"
       trackAppEndScreen appId (getScreen REFERRAL_SCREEN)
@@ -265,7 +263,7 @@ eval (PasswordModalAction (PopUpModal.OnImageClick)) state = do
     continue state { data = state.data{ password = "" }, props = state.props { passwordPopUpVisible = not state.props.passwordPopUpVisible , confirmBtnActive = false }}
 
 
-eval (PasswordModalAction (PopUpModal.OnButton2Click)) state = do
+eval (PasswordModalAction (PopUpModal.PrimaryButton2 PrimaryButton.OnClick)) state = do
     _ <- pure $ hideKeyboardOnNavigation true
     exit $ LinkReferralApi state
 
@@ -279,8 +277,8 @@ eval (PasswordModalAction (PopUpModal.ETextController (PrimaryEditTextController
             else pure unit
   continue state{ data{ password = newVal } , props { confirmBtnActive = (length newVal == 5)}}
 
-eval (ContactSupportAction (PopUpModal.OnButton1Click)) state = continue state { props = state.props { callSupportPopUpVisible = not state.props.callSupportPopUpVisible  }}
-eval (ContactSupportAction (PopUpModal.OnButton2Click)) state = do
+eval (ContactSupportAction (PopUpModal.PrimaryButton1 PrimaryButton.OnClick)) state = continue state { props = state.props { callSupportPopUpVisible = not state.props.callSupportPopUpVisible  }}
+eval (ContactSupportAction (PopUpModal.PrimaryButton2 PrimaryButton.OnClick)) state = do
     void $ pure $ showDialer (getSupportNumber "") false -- TODO: FIX_DIALER
     continue state { props = state.props { callSupportPopUpVisible = not state.props.callSupportPopUpVisible  }}
 

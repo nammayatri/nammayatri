@@ -178,7 +178,7 @@ const kannadaStrings = {
   UNFORTANUTELY_WE_ARE_NOT_AVAILABLE__YET_FOR_YOU: "ದುರದೃಷ್ಟವಶಾತ್, ನಾವು ನಿಮಗಾಗಿ ಇನ್ನೂ ಲಭ್ಯವಿಲ್ಲ. ನಾವು ಶೀಘ್ರದಲ್ಲೇ ನಿಮಗೆ ತಿಳಿಸುತ್ತೇವೆ.",
   EMPTY_RIDES: "ಖಾಲಿ ಸವಾರಿಗಳು",
   YOU_HAVE_NOT_TAKEN_A_TRIP_YET: "ನೀವು ಇನ್ನೂ ಪ್ರವಾಸ ಕೈಗೊಂಡಿಲ್ಲ",
-  BOOK_NOW: "ಈಗ ಪುಸ್ತಕ",
+  BOOK_NOW: "ಈಗ ಬುಕ್ ಮಾಡಿ",
   RESEND_OTP_IN: "OTP ಅನ್ನು ಮರುಕಳುಹಿಸಿ - ",
   WE_NEED_ACCESS_TO_YOUR_LOCATION: "ನಮಗೆ ನಿಮ್ಮ ಸ್ಥಳದ ಅನುಮತಿಯ ಅಗತ್ಯವಿದೆ",
   YOUR_LOCATION_HELPS_OUR_SYSTEM: "ನಿಮ್ಮ ಸ್ಥಳದ ಅನುಮತಿಯು ಸಿಸ್ಟಂ ಅನ್ನು ಆಟೋಗಳ ಮೂಲಕ ಮ್ಯಾಪ್ ಮಾಡಲು ಸಹಾಯ ಮಾಡುತ್ತದೆ ಮತ್ತು ನಿಮಗೆ ಸಾಧ್ಯವಿರುವ ಸವಾರಿಯನ್ನು ಪಡೆಯಲು ಸಹಾಯ ಮಾಡುತ್ತದೆ.",

@@ -444,3 +444,6 @@ peacoat = "#33394A"
 
 mangolia :: Color 
 mangolia = "#F4ECFF"
+
+dodgerBlue :: Color 
+dodgerBlue = "#339DFF"

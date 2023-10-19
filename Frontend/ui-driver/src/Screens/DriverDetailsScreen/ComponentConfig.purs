@@ -52,17 +52,25 @@ removeAlternateNumberConfig state = let
         text = (getString ARE_YOU_SURE_YOU_WANT_TO_REMOVE_YOUR_ALTERNATE_MOBILE_NUMBER)
       , color = Color.black700
       , margin = (Margin 16 12 16 40)
-        },
-      option1 {
-        text = (getString CANCEL)
-      , color = Color.black900
-      , strokeColor = Color.black700
-      },
-      option2 {text = (getString YES_REMOVE_IT)
-      , background = Color.red
-      , color = Color.white900
-      , strokeColor = Color.red
-      , margin = (MarginLeft 12) 
+        }
+      , primaryButtonLayout {
+        visibility = VISIBLE 
+        , button1 {
+          textConfig {
+            text = (getString CANCEL)
+          , color = Color.black900
+          }
+          , stroke = "1," <> Color.black700
+        }
+        , button2 {
+          textConfig {
+            text = getString YES_REMOVE_IT
+          , color = Color.white900
+          }
+          , stroke = "1," <> Color.red
+          , margin = (MarginLeft 12) 
+          , background = Color.red
+        }
       }
     }
   in popUpConfig'
@@ -113,18 +121,20 @@ enterOtpExceededModalStateConfig state = let
       , margin = (Margin 24 0 24 32)
       , visibility = VISIBLE
         },
-      option1 {
-        text = (getString TRY_AGAIN_LATER)
-      , color = Color.black900
-      , strokeColor = Color.black700
-      , visibility =false
-      },
-      option2 {text = (getString TRY_AGAIN_LATER)
-      , color = Color.yellow900
-      , strokeColor = Color.white900
-      , margin = (Margin 16 0 16 0 )
-      , width = (V 50)
-      , background = Color.black900
+      primaryButtonLayout {
+        visibility = VISIBLE
+        , button1 {
+          visibility = GONE
+        }
+        , button2 {
+          textConfig {
+            text = (getString TRY_AGAIN_LATER)
+          , color = Color.yellow900
+          }
+        , stroke = "1," <> Color.white900
+        , margin = (Margin 16 0 16 0 )
+        , background = Color.black900
+        }
       }
     }
   in popUpConf'

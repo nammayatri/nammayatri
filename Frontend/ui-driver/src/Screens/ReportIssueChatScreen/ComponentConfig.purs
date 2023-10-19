@@ -63,32 +63,6 @@ primaryButtonConfig text = let
   in primaryButtonConfig'
 
 
-addAudioModelConfig :: ReportIssueChatScreenState -> PopUpModal.Config
-addAudioModelConfig state =
-  let
-    config' = PopUpModal.config
-
-    popUpConfig' =
-      config'
-        {
-          editTextVisibility = VISIBLE
-        -- , dismissPopupConfig { visibility = VISIBLE, height = V 12, width = V 12, margin = (Margin 0 21 22 0), padding = (Padding 8 8 8 8) }
-        , eTextConfig { editText { placeholder = (getString ENTER_YOUR_COMMENT), text = (getString ENTER_YOUR_COMMENT), color = Color.black900 }, margin = (Margin 16 16 16 0) }
-        , primaryText { text = (getString ADD_A_COMMENT) }
-        , secondaryText { visibility = GONE }
-        -- , option1 { visibility = false }
-        , option2
-          { text = (getString POST_COMMENT)
-          , background = Color.white900
-          , color = Color.blue800
-          , strokeColor = Color.white900
-          , padding = (Padding 16 0 16 0)
-          -- , isClickable = state.commentBtnActive
-          }
-        -- , cornerRadius = (Corners 15.0 true true true true)
-        }
-  in
-    popUpConfig'
     
 doneButtonConfig :: ReportIssueChatScreenState -> PrimaryButton.Config
 doneButtonConfig state = let

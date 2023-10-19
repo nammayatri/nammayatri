@@ -93,8 +93,6 @@ instance loggableAction :: Loggable Action where
             trackAppEndScreen appId (getScreen HELP_AND_SUPPORT_SCREEN)
           PrimaryButton.NoAction -> trackAppActionClick appId (getScreen HELP_AND_SUPPORT_SCREEN) "api_failure_error_modal_action" "primary_button_no_action"
       PopupModelActionController act -> case act of
-        PopUpModal.OnButton1Click -> trackAppActionClick appId (getScreen HELP_AND_SUPPORT_SCREEN) "popup_modal_action" "call_driver_cancel"
-        PopUpModal.OnButton2Click -> trackAppActionClick appId (getScreen HELP_AND_SUPPORT_SCREEN) "popup_modal_action" "call_driver_accept"
         PopUpModal.NoAction -> trackAppActionClick appId (getScreen HELP_AND_SUPPORT_SCREEN) "popup_modal_action" "no_action"
         PopUpModal.OnImageClick -> trackAppActionClick appId (getScreen HELP_AND_SUPPORT_SCREEN) "popup_modal_action" "image"
         PopUpModal.ETextController act -> trackAppTextInput appId (getScreen HELP_AND_SUPPORT_SCREEN) "popup_modal_action" "primary_edit_text"
@@ -103,6 +101,7 @@ instance loggableAction :: Loggable Action where
         PopUpModal.Tipbtnclick arg1 arg2 -> trackAppScreenEvent appId (getScreen HELP_AND_SUPPORT_SCREEN) "popup_modal_action" "tip_clicked"
         PopUpModal.DismissPopup -> trackAppScreenEvent appId (getScreen HELP_AND_SUPPORT_SCREEN) "popup_modal_action" "popup_dismissed"
         PopUpModal.OptionWithHtmlClick -> trackAppScreenEvent appId (getScreen HELP_AND_SUPPORT_SCREEN) "popup_modal_action" "option_with_html_clicked"
+        _ -> pure unit
       SourceToDestinationActionController (SourceToDestination.Dummy) -> trackAppScreenEvent appId (getScreen HELP_AND_SUPPORT_SCREEN) "in_screen" "source_to_destination_updated"
       FAQs -> trackAppScreenEvent appId (getScreen HELP_AND_SUPPORT_SCREEN) "in_screen" "faq_action"
       RideBookingListAPIResponseAction rideList status -> trackAppScreenEvent appId (getScreen HELP_AND_SUPPORT_SCREEN) "in_screen" "ride_booking_list_api_response"
@@ -120,10 +119,6 @@ instance loggableAction :: Loggable Action where
             trackAppEndScreen appId (getScreen HELP_AND_SUPPORT_SCREEN)
         PrimaryButton.NoAction -> trackAppActionClick appId (getScreen HELP_AND_SUPPORT_SCREEN) "primary_button" "no_action"
       PopUpModalAction act -> case act of
-        PopUpModal.OnButton1Click -> trackAppActionClick appId (getScreen HELP_AND_SUPPORT_SCREEN) "show_delete_popup_modal_action" "delete_account_cancel"
-        PopUpModal.OnButton2Click -> do
-          trackAppActionClick appId (getScreen HELP_AND_SUPPORT_SCREEN) "show_delete_popup_modal_action" "delete_account_accept"
-          trackAppEndScreen appId (getScreen HELP_AND_SUPPORT_SCREEN)
         PopUpModal.NoAction -> trackAppActionClick appId (getScreen HELP_AND_SUPPORT_SCREEN) "show_delete_popup_modal_action" "no_action"
         PopUpModal.OnImageClick -> trackAppActionClick appId (getScreen HELP_AND_SUPPORT_SCREEN) "show_delete_popup_modal_action" "image"
         PopUpModal.ETextController act -> trackAppTextInput appId (getScreen HELP_AND_SUPPORT_SCREEN) "show_delete_popup_modal_action" "primary_edit_text"
@@ -132,11 +127,10 @@ instance loggableAction :: Loggable Action where
         PopUpModal.Tipbtnclick arg1 arg2 -> trackAppScreenEvent appId (getScreen HELP_AND_SUPPORT_SCREEN) "show_delete_popup_modal_action" "tip_clicked"
         PopUpModal.OptionWithHtmlClick -> trackAppScreenEvent appId (getScreen HELP_AND_SUPPORT_SCREEN) "popup_modal_action" "option_with_html_clicked"
         PopUpModal.DismissPopup -> trackAppScreenEvent appId (getScreen HELP_AND_SUPPORT_SCREEN) "show_delete_popup_modal_action" "popup_dismissed"
+        (PopUpModal.PrimaryButton1 _) -> pure unit
+        (PopUpModal.PrimaryButton2 _) -> pure unit 
+        _ -> pure unit 
       AccountDeletedModalAction act -> case act of
-        PopUpModal.OnButton1Click -> do
-          trackAppActionClick appId (getScreen HELP_AND_SUPPORT_SCREEN) "delete_account_popup_modal_action" "account_deleted"
-          trackAppEndScreen appId (getScreen HELP_AND_SUPPORT_SCREEN)
-        PopUpModal.OnButton2Click -> trackAppActionClick appId (getScreen HELP_AND_SUPPORT_SCREEN) "delete_account_popup_modal_action" "button_2"
         PopUpModal.NoAction -> trackAppActionClick appId (getScreen HELP_AND_SUPPORT_SCREEN) "delete_account_popup_modal_action" "no_action"
         PopUpModal.OnImageClick -> trackAppActionClick appId (getScreen HELP_AND_SUPPORT_SCREEN) "delete_account_popup_modal_action" "image"
         PopUpModal.ETextController act -> trackAppTextInput appId (getScreen HELP_AND_SUPPORT_SCREEN) "delete_account_popup_modal_action" "primary_edit_text"
@@ -145,6 +139,9 @@ instance loggableAction :: Loggable Action where
         PopUpModal.Tipbtnclick arg1 arg2 -> trackAppScreenEvent appId (getScreen HELP_AND_SUPPORT_SCREEN) "delete_account_popup_modal_action" "tip_clicked"
         PopUpModal.OptionWithHtmlClick -> trackAppScreenEvent appId (getScreen HELP_AND_SUPPORT_SCREEN) "popup_modal_action" "option_with_html_clicked"
         PopUpModal.DismissPopup -> trackAppScreenEvent appId (getScreen HELP_AND_SUPPORT_SCREEN) "delete_account_popup_modal_action" "popup_dismissed"
+        (PopUpModal.PrimaryButton1 _) -> pure unit
+        (PopUpModal.PrimaryButton2 _) -> pure unit 
+        _ -> pure unit
 
 
 data Action = BackPressed Boolean
@@ -215,9 +212,9 @@ eval (RideBookingListAPIResponseAction rideList status) state = do
       "failure"   -> continue updatedState{props{apiFailure = true}}
       _           -> continue updatedState
 
-eval (PopupModelActionController (PopUpModal.OnButton1Click)) state = continue state{props{isCallConfirmation = false}}
+eval (PopupModelActionController (PopUpModal.PrimaryButton1 PrimaryButton.OnClick)) state = continue state{props{isCallConfirmation = false}}
 
-eval (PopupModelActionController (PopUpModal.OnButton2Click)) state = do
+eval (PopupModelActionController (PopUpModal.PrimaryButton2 PrimaryButton.OnClick)) state = do
   let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_help_and_support_call_performed"
   void $ pure $ showDialer (getSupportNumber "") false -- TODO: FIX_DIALER
   continue state{props{isCallConfirmation = false}}
@@ -241,12 +238,12 @@ eval (PrimaryButtonAC (PrimaryButton.OnClick)) state = do
   _ <- pure $ hideKeyboardOnNavigation true
   continue state{ data { accountStatus = CONFIRM_REQ} }
 
-eval (PopUpModalAction (PopUpModal.OnButton1Click)) state = continue state {data{ accountStatus= ACTIVE}}
-eval (PopUpModalAction (PopUpModal.OnButton2Click)) state = do 
+eval (PopUpModalAction (PopUpModal.PrimaryButton1 PrimaryButton.OnClick)) state = continue state {data{ accountStatus= ACTIVE}}
+eval (PopUpModalAction (PopUpModal.PrimaryButton2 PrimaryButton.OnClick)) state = do 
   let email = if isEmailPresent FunctionCall then getValueToLocalStore USER_EMAIL else state.data.email
   exit $ ConfirmDeleteAccount state{data{email=email}}
-eval (AccountDeletedModalAction (PopUpModal.OnButton1Click)) state =  updateAndExit (state {data{accountStatus = ACTIVE}} ) $ GoHome
-eval (AccountDeletedModalAction (PopUpModal.OnButton2Click)) state =  updateAndExit (state {data{accountStatus = ACTIVE}} ) $ GoHome
+eval (AccountDeletedModalAction (PopUpModal.PrimaryButton1 PrimaryButton.OnClick)) state =  updateAndExit (state {data{accountStatus = ACTIVE}} ) $ GoHome
+eval (AccountDeletedModalAction (PopUpModal.PrimaryButton2 PrimaryButton.OnClick)) state =  updateAndExit (state {data{accountStatus = ACTIVE}} ) $ GoHome
 
 eval _ state = continue state
 

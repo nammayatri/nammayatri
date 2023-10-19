@@ -68,10 +68,6 @@ instance loggableAction :: Loggable Action where
     ContactListPrimaryButtonActionController onclick-> trackAppScreenEvent appId (getScreen EMERGENCY_CONTACS_SCREEN) "in_screen" "primary_button_action_controller"
     ContactListScroll value -> trackAppScreenEvent appId (getScreen EMERGENCY_CONTACS_SCREEN) "in_screen" "contact_text_changed"
     CheckingContactList -> trackAppScreenEvent appId (getScreen EMERGENCY_CONTACS_SCREEN) "in_screen" "checking_contact_list"
-    PopUpModalAction act -> case act of
-      PopUpModal.OnButton1Click -> trackAppActionClick appId (getScreen EMERGENCY_CONTACS_SCREEN) "in_screen" "pop_up_modal_action_on_button1_click"
-      PopUpModal.OnButton2Click -> trackAppActionClick appId (getScreen EMERGENCY_CONTACS_SCREEN) "in_screen" "pop_up_modal_action_on_button2_click"
-      _ -> pure unit
     FetchContacts -> trackAppActionClick appId (getScreen EMERGENCY_CONTACS_SCREEN) "in_screen" "fetch_contacts"
     LoadMoreContacts -> trackAppScreenEvent appId (getScreen EMERGENCY_CONTACS_SCREEN) "in_screen" "loading more contacts"
     _ -> pure unit
@@ -119,14 +115,14 @@ eval (PrimaryButtonActionControll PrimaryButton.OnClick) state = continueWithCmd
 
 eval (ContactListScrollStateChanged scrollState) state = continue state
 
-eval (PopUpModalAction PopUpModal.OnButton2Click) state = do
+eval (PopUpModalAction (PopUpModal.PrimaryButton2 PrimaryButton.OnClick)) state = do
   let newContacts = filter (\x -> x.number <> x.name /= state.data.removedContactDetail.number <> state.data.removedContactDetail.name) state.data.contactsList
   let newPrestoList = map (\x -> if ((fromProp x.number) <> (fromProp x.name) == state.data.removedContactDetail.number <> state.data.removedContactDetail.name) then contactTransformerProp state.data.removedContactDetail{isSelected = false} else x) state.data.prestoListArrayItems
   contactsInString <- pure $ toStringJSON newContacts
   _ <- pure $ setValueToLocalStore CONTACTS contactsInString
   exit $ PostContacts state{data{contactsList = newContacts, prestoListArrayItems = newPrestoList}}
 
-eval (PopUpModalAction (PopUpModal.OnButton1Click)) state = continue state{props{showInfoPopUp = false}}
+eval (PopUpModalAction (PopUpModal.PrimaryButton1 PrimaryButton.OnClick)) state = continue state{props{showInfoPopUp = false}}
 
 eval (ContactsCallback allContacts) state = do
   let flag = case last allContacts of

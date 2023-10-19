@@ -120,17 +120,24 @@ callConfirmationPopup state = let
       secondaryText {
         visibility = GONE
         },
-      option1 {
-        text = (getString GO_BACK_)
-      , strokeColor = state.data.config.primaryBackground
-      , background = state.data.config.popupBackground
-      , color = state.data.config.primaryBackground
-      },
-      option2 {
-        text = (getString CALL)
-      , strokeColor = state.data.config.primaryBackground
-      , background = state.data.config.primaryBackground
-      , color = state.data.config.primaryTextColor
+      primaryButtonLayout {
+        visibility = VISIBLE 
+        , button1 {
+          textConfig {
+            text = (getString GO_BACK_)
+            , color = state.data.config.primaryBackground
+          }
+          , stroke = "1," <> state.data.config.primaryBackground
+          , background = state.data.config.popupBackground
+        }
+        , button2 {
+          textConfig{
+            text = (getString CALL)
+          , color = state.data.config.primaryTextColor
+          }
+          , stroke = "1," <> state.data.config.primaryBackground
+          , background = state.data.config.primaryBackground
+        }
       }
     }
   in popUpConfig'
@@ -254,15 +261,23 @@ requestDeletePopUp state = let
       primaryText { text = getString DEL_ACCOUNT },
       secondaryText { text = getString ACCOUNT_DELETION_CONFIRMATION,
       padding = PaddingHorizontal 36 36,
-      color = Color.black600},
-      option1 {
-        text = getString CANCEL_STR
-      },
-      option2 {text = getString YES_DELETE_IT
-      , background = Color.red
-      , color = Color.white900
-      , strokeColor = Color.red }
-     
+      color = Color.black600}
+      , primaryButtonLayout {
+        visibility = VISIBLE
+        , button1 {
+            textConfig {
+              text = getString CANCEL_STR
+            }
+        }
+        , button2 {
+          textConfig {
+            text = getString YES_DELETE_IT
+          , color = Color.white900
+          }
+          , background = Color.red
+          , stroke = "1," <>Color.red
+        }
+      }
     }
   in popUpConfig'
 
@@ -274,12 +289,17 @@ accountDeletedPopUp state = let
       secondaryText{text = getString WE_WILL_DELETE_YOUR_ACCOUNT,
       padding = PaddingHorizontal 16 16,
       color = Color.black600},
-      option1 {
-        visibility = false
-      },
-      option2 {
-        text = getString OKAY_GOT_IT,
-        margin = MarginHorizontal 16 16
+      primaryButtonLayout {
+          visibility = VISIBLE
+          , button1 {
+            visibility = GONE 
+          }
+          , button2 {
+            textConfig{
+              text = getString OKAY_GOT_IT
+            }
+            , margin = MarginHorizontal 16 16
+          }
       }
     }
     in popUpConfig'

@@ -24,6 +24,7 @@ import Components.NotificationDetailModel as NotificationDetailModel
 import Components.NotificationDetailModel.Controller (fetchTitleAndUrl)
 import Components.PopUpModal as PopUpModal
 import Components.PrimaryEditText as PrimaryEditText
+import Components.PrimaryButton as PrimaryButton
 import Control.Monad.Except (runExceptT)
 import Control.Transformers.Back.Trans (runBackT)
 import Data.Array ((!!), union, length, unionBy, any, filter) as Array
@@ -153,7 +154,7 @@ eval (NotificationDetailModelAC (NotificationDetailModel.AddCommentModelAction (
         }
       }
 
-eval (NotificationDetailModelAC (NotificationDetailModel.AddCommentModelAction PopUpModal.OnButton2Click)) state = do
+eval (NotificationDetailModelAC (NotificationDetailModel.AddCommentModelAction (PopUpModal.PrimaryButton2 PrimaryButton.OnClick))) state = do
   _ <- pure $ hideKeyboardOnNavigation true
   case state.notificationDetailModelState.comment of
     Just comment -> do

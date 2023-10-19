@@ -214,8 +214,6 @@ popupModalConfig state = let
       , gravity = CENTER
       , backgroundColor =  Color.black9000
       , backgroundClickable = DA.any (_ == state.props.popUpState) [Mb.Just SupportPopup, Mb.Just FailedPopup]
-      , buttonLayoutMargin = MarginBottom 0
-      , optionButtonOrientation = if state.props.popUpState == Mb.Just SupportPopup then "VERTICAL" else "HORIZONTAL"
     ,primaryText {
         text = case state.props.popUpState of
                   Mb.Just SuccessPopup -> (getString PLAN_ACTIVATED_SUCCESSFULLY)
@@ -231,8 +229,13 @@ popupModalConfig state = let
       , color = Color.black800
       , textStyle = Heading2
      },
-      option1 {
-        text = case state.props.popUpState of
+      primaryButtonLayout {
+        visibility = VISIBLE 
+      , orientation = if state.props.popUpState == Mb.Just SupportPopup then VERTICAL else HORIZONTAL
+      , margin = MarginTop 10
+      , button1 {
+          textConfig {
+            text = case state.props.popUpState of
                   Mb.Just SuccessPopup -> getString GOT_IT
                   Mb.Just FailedPopup -> getString RETRY_PAYMENT_STR
                   Mb.Just DuesClearedPopup -> getString GOT_IT
@@ -241,23 +244,32 @@ popupModalConfig state = let
                   Mb.Just SupportPopup -> getString CALL_SUPPORT
                   Mb.Just PaymentSuccessPopup -> getString PAYMENT_SUCCESSFUL
                   Mb.Nothing -> ""
-      , color = Color.yellow900
-      , background = Color.black900
-      , visibility =true
-      , margin = MarginTop 16
-      , width = case state.props.popUpState of
-                  Mb.Just SupportPopup -> MATCH_PARENT
-                  _                    -> (V 156)
-      , image {
-          imageUrl = HU.fetchImage HU.FF_ASSET "ny_ic_phone_filled_yellow"
-          , height = (V 16)
-          , width = (V 16)
-          , visibility = if Mb.Just SupportPopup == state.props.popUpState then VISIBLE else GONE
-          , margin = MarginRight 8
+            , color = Color.yellow900
+            
+          }
+          , background = Color.black900
+          , isPrefixImage = Mb.Just SupportPopup == state.props.popUpState
+          , prefixImageConfig {
+            imageUrl = HU.fetchImage HU.FF_ASSET "ny_ic_phone_filled_yellow"
+            , height = (V 16)
+            , width = (V 16)
+            , margin = MarginRight 8
+          }
         }
-      },
-      coverImageConfig {
-        imageUrl =  HU.fetchImage HU.FF_ASSET $ case state.props.popUpState of
+      , button2 {
+          visibility = if state.props.popUpState == Mb.Just SupportPopup then VISIBLE else GONE
+        , textConfig {
+            text = getString CANCEL
+          , color = Color.black650
+          }
+          , background = Color.white900
+          , stroke = "1," <> Color.white900
+          , width = MATCH_PARENT
+          , margin = (Margin 0 0 0 0)
+        }
+      }
+      , coverImageConfig {
+        imageUrl =  case state.props.popUpState of
           Mb.Just SuccessPopup -> "ny_ic_green_tick"
           Mb.Just SwitchedPlan -> "ny_ic_green_tick"
           Mb.Just FailedPopup -> "ny_failed"
@@ -286,15 +298,7 @@ popupModalConfig state = let
       , visibility = if DA.any (_ == state.props.popUpState) [Mb.Just FailedPopup, Mb.Just SwitchedPlan, Mb.Just SupportPopup] then VISIBLE else GONE
       , textStyle = if Mb.Just SupportPopup == state.props.popUpState then SubHeading1 else Body1
       },
-    option2 { 
-      visibility = state.props.popUpState == Mb.Just SupportPopup
-      , text = getString CANCEL
-      , color = Color.black650
-      , background = Color.white900
-      , strokeColor = Color.white900
-      , width = MATCH_PARENT
-      , margin = (Margin 0 0 0 0)
-    },
+
     optionWithHtml {
       textOpt1 {
         color = Color.black650
@@ -342,19 +346,27 @@ confirmCancelPopupConfig state = let
         text = getString DO_YOU_WANT_TO_CANCEL_DESC
       , color = Color.black700
       , margin = (Margin 16 12 16 40)
-        },
-      option1 {
-        text = getString NO
-      , color = Color.black900
-      , strokeColor = Color.black700
-      },
-      option2 {text = getString YES_CANCEL
-      , background = Color.red
-      , color = Color.white900
-      , strokeColor = Color.red
-      , margin = MarginLeft 12
-      },
-      coverImageConfig {
+        }
+      , primaryButtonLayout {
+        visibility = VISIBLE
+        , button1 {
+          textConfig{
+            text = getString NO
+          , color = Color.black900
+          }
+          , stroke = "1," <> Color.black700
+        }
+        , button2 {
+          textConfig {
+            text = getString YES_CANCEL
+          , color = Color.white900
+          }
+          , stroke = "1," <> Color.red
+          , margin = MarginLeft 12
+          , background = Color.red
+        }
+      }
+      , coverImageConfig {
         imageUrl = HU.fetchImage HU.FF_ASSET "ny_ic_pause_autopay"
       , visibility = VISIBLE
       , width = V 265

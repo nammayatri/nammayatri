@@ -175,7 +175,7 @@ eval (GoToLocationModalAC (GoToLocationModal.EditLocation loc)) state = do
 
 eval (GoToLocationModalAC (GoToLocationModal.DeleteLocation loc)) state = continue state { props { confirmDelete = true, selectedLocation = loc} }
 
-eval (PopUpModalAction PopUpModal.OnButton2Click) state = do
+eval (PopUpModalAction (PopUpModal.PrimaryButton2 PrimaryButton.OnClick)) state = do
   let
     id = state.props.selectedLocation.id
   if id /= "" then
@@ -183,7 +183,7 @@ eval (PopUpModalAction PopUpModal.OnButton2Click) state = do
   else
     continue state
 
-eval (PopUpModalAction PopUpModal.OnButton1Click) state = continue state { props { confirmDelete = false } }
+eval (PopUpModalAction (PopUpModal.PrimaryButton1 PrimaryButton.OnClick)) state = continue state { props { confirmDelete = false } }
 
 eval (SuggestionClick pred) state = case pred.placeId of
   Just id -> exit $ GetPlaceNameAPI state { props { selectedPrediction = pred, fromEditButton = Just FromPrediction } } id

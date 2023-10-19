@@ -27,6 +27,7 @@ import Screens (getScreen, ScreenName(..))
 import Engineering.Helpers.LogEvent (logEvent)
 import Effect.Unsafe (unsafePerformEffect)
 import Components.PopUpModal as PopUpModal
+import Components.PrimaryButton as PrimaryButton
 
 
 instance showAction :: Show Action where
@@ -56,8 +57,8 @@ eval OnCloseClick state = do
 eval OnAccept state = do 
   let _ = unsafePerformEffect $ logEvent state.logField "ny_user_update_popup_click"
   exit Accept
-eval (AppUpdatedModelAction (PopUpModal.OnButton1Click)) state = exit Decline
-eval (AppUpdatedModelAction (PopUpModal.OnButton2Click)) state = exit Accept
+eval (AppUpdatedModelAction (PopUpModal.PrimaryButton1 PrimaryButton.OnClick)) state = exit Decline
+eval (AppUpdatedModelAction (PopUpModal.PrimaryButton2 PrimaryButton.OnClick)) state = exit Accept
 eval AfterRender state = continue state
 eval _ state = continue state
 

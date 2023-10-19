@@ -16,7 +16,7 @@
 module Components.PopUpModal.Controller where
 
 import Common.Styles.Colors as Color
-import PrestoDOM (Padding(..), Margin(..), Gravity(..), Visibility(..), Length(..))
+import PrestoDOM (Padding(..), Margin(..), Gravity(..), Visibility(..), Length(..), Orientation(..))
 import Font.Size as FontSize
 import Font.Style (Style(..))
 import Common.Types.App as Common
@@ -25,10 +25,9 @@ import Components.PrimaryEditText.Controller as PrimaryEditTextController
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Prelude ((<>))
 import Data.Maybe as Mb
+import Components.PrimaryButton as PrimaryButton
 
-data Action = OnButton1Click
-            | OnButton2Click
-            | NoAction
+data Action = NoAction
             | ETextController PrimaryEditTextController.Action
             | CountDown Int String String String
             | OnImageClick
@@ -36,14 +35,14 @@ data Action = OnButton1Click
             | DismissPopup
             | OptionWithHtmlClick
             | OnSecondaryTextClick
+            | PrimaryButton1 PrimaryButton.Action
+            | PrimaryButton2 PrimaryButton.Action
 
 type Config = {
     primaryText :: TextConfig,
     customerTipArray :: Array String,
     customerTipArrayWithValues :: Array Int,
     secondaryText :: TextConfig,
-    option1 :: ButtonConfig,
-    option2 :: ButtonConfig,
     tipButton :: ButtonConfig,
     backgroundClickable :: Boolean,
     customerTipAvailable :: Boolean,
@@ -51,8 +50,6 @@ type Config = {
     margin :: Margin,
     gravity :: Gravity,
     activeIndex :: Int,
-    optionButtonOrientation :: String,
-    buttonLayoutMargin :: Margin,
     tipLayoutMargin :: Margin,
     eTextConfig :: PrimaryEditTextController.Config,
     editTextVisibility :: Visibility,
@@ -73,6 +70,7 @@ type Config = {
     optionWithHtml :: OptionWithHtmlConfig,
     topTitle :: TopTitle,
     listViewArray :: Array String,
+    primaryButtonLayout :: PrimaryButtonLayout,
     coverVideoConfig :: CoverVideoConfig
 }
 
@@ -85,6 +83,24 @@ type CoverVideoConfig = {
   mediaUrl :: String ,
   mediaType :: String ,
   id :: String
+}
+
+type PrimaryButtonLayout = {
+  width :: Length
+, height :: Length
+, orientation :: Orientation
+, gravity :: Gravity
+, visibility :: Visibility
+, gap :: Int
+, margin :: Margin
+, button1TimerValue :: Int 
+, button2TimerValue :: Int 
+, enableButton1Timer :: Boolean
+, enableButton2Timer :: Boolean
+, timer1ID :: String
+, timer2ID :: String
+, button1 :: PrimaryButton.Config
+, button2 :: PrimaryButton.Config
 }
 
 type ContactViewConfig = {
@@ -172,8 +188,7 @@ type TopTitle = {
 
 config :: Config
 config = {
-  optionButtonOrientation: "HORIZONTAL"
-  , activeIndex : 1
+   activeIndex : 1
   , customerTipAvailable : false
   , backgroundClickable : true
   , customerTipArray : []
@@ -182,7 +197,6 @@ config = {
   , margin : (Margin 0 0 0 0)
   , gravity : BOTTOM
   , backgroundColor : Color.black9000
-  , buttonLayoutMargin : (Margin 0 0 0 25)
   , editTextVisibility : GONE
   , tipLayoutMargin : (Margin 0 0 0 0)
   , padding : (Padding 0 0 0 0)
@@ -256,56 +270,6 @@ config = {
     }
     , showShimmer : false
   } 
-  , option1 : {
-      background : Color.white900
-    , text : "Button1"
-    , strokeColor : Color.black900
-    , color : Color.black900
-    , visibility : true
-    , margin : (Margin 0 0 0 0)
-    , isClickable : true
-    , width : (V 156)
-    , padding : (Padding 0 0 0 0)
-    , timerValue : 5
-    , enableTimer : false
-    , timerID : ""
-    , height : (V 48)
-    , textStyle : SubHeading1
-    , image : {
-        visibility : GONE
-        , imageUrl : ""
-        , height : (V 0)
-        , width : (V 0)
-        , margin : (Margin 0 0 0 0)
-        , padding : (Padding 0 0 0 0)
-    }
-    , showShimmer : false
-    }
-  , option2 : {
-      background : Color.black900
-    , text : "Button2"
-    , strokeColor : Color.black900
-    , color : Color.yellow900
-    , visibility : true
-    , margin : (Margin 12 0 0 16)
-    , isClickable : true
-    , width : (V 156)
-    , padding : (Padding 0 0 0 0)
-    , timerValue : 5
-    , enableTimer : false
-    , timerID : ""
-    , height : (V 48)
-    , textStyle : SubHeading1
-    , image : {
-        visibility : GONE
-        , imageUrl : ""
-        , height : (V 0)
-        , width : (V 0)
-        , margin : (Margin 0 0 0 0)
-        , padding : (Padding 0 0 0 0)
-    }
-    , showShimmer : false
-    }
   , optionWithHtml : {
       background : Color.black900,
       strokeColor : Color.black900,
@@ -407,6 +371,44 @@ config = {
         mediaType : "",
         mediaUrl : "",
         id : ""
+    }
+    , primaryButtonLayout : {
+        width : MATCH_PARENT
+      , height : WRAP_CONTENT 
+      , orientation : HORIZONTAL
+      , gravity : CENTER
+      , visibility : GONE
+      , gap : 6
+      , margin : Margin 16 16 16 16
+      , button1TimerValue : 5
+      , button2TimerValue : 5 
+      , enableButton1Timer : false
+      , enableButton2Timer : false
+      , timer1ID : ""
+      , timer2ID : ""
+      , button1 : PrimaryButton.config{
+                    visibility = VISIBLE
+                  , textConfig {
+                      padding = PaddingBottom 4
+                    , color = Color.black900
+                    , textStyle = SubHeading1
+                    }
+                  , background = Color.white900
+                  , stroke = "1," <> Color.black900
+                  , margin = Margin 0 0 0 0
+                  , isClickable = true  
+                }
+      , button2 :  PrimaryButton.config{
+                    visibility = VISIBLE
+                  , textConfig {
+                      padding = PaddingBottom 4
+                    , color = Color.yellow900
+                    , textStyle = SubHeading1
+                    }
+                  , background = Color.black900
+                  , stroke = "1," <> Color.black900
+                  , margin = Margin 0 0 0 0
+                }
     }
 }
 

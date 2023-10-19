@@ -79,18 +79,27 @@ removeContactPopUpModelConfig state =
       config'
         { primaryText { text = (getString REMOVE) <> " " <> state.data.removedContactDetail.name }
         , secondaryText { text = (getString ARE_YOU_SURE_YOU_WANT_TO_REMOVE_CONTACT) }
-        , option1
-          { text = (getString CANCEL_)
-          , strokeColor = Color.black700
+        , primaryButtonLayout {
+          visibility = VISIBLE
+          , button1 {
+            textConfig {
+              text = (getString CANCEL_)
+            }
+            , stroke = "1," <> Color.black700
           }
-        , option2
-          { text = (getString YES_REMOVE)
-          , background = Color.red
-          , color = Color.white900
-          , strokeColor = Color.red
+          , button2 {
+            textConfig {
+              text = (getString YES_REMOVE)
+            
+            , color = Color.white900
+           
+            }
+            , background = Color.red
+            , stroke = "1," <> Color.red
           }
+        }
         , backgroundClickable = false
-        , buttonLayoutMargin = MarginBottom if os == "IOS" then 0 else 24
+        
         }
   in
     popUpConfig'

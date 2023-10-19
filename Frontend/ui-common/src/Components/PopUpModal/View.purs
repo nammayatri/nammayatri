@@ -17,11 +17,11 @@ module Components.PopUpModal.View where
 import Prelude (Unit, const, unit, ($), (<>), (/), (-), (+), (==), (||), (&&), (>), (/=),  not, (<<<), bind, discard, show, pure, map)
 import Effect (Effect)
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Padding(..), Orientation(..), PrestoDOM, Visibility(..), Accessiblity(..), afterRender, imageView, imageUrl, background, clickable, color, cornerRadius, fontStyle, gravity, height, linearLayout, margin, onClick, orientation, text, textSize, textView, width, stroke, alignParentBottom, relativeLayout, padding, visibility, onBackPressed, alpha, imageWithFallback, weight, accessibilityHint, accessibility, textFromHtml, shimmerFrameLayout, onAnimationEnd, id)
-import Components.PopUpModal.Controller (Action(..), Config, CoverVideoConfig)
+import Components.PopUpModal.Controller (Action(..), Config, CoverVideoConfig,PrimaryButtonLayout)
 import PrestoDOM.Properties (lineHeight, cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Font.Style as FontStyle
-import Common.Styles.Colors as Color
+import Common.Styles.Colors as Color 
 import Font.Size as FontSize
 import Engineering.Helpers.Commons (screenHeight, screenWidth, getNewIDWithTag, getVideoID, getYoutubeData)
 import PrestoDOM.Properties (cornerRadii)
@@ -39,6 +39,7 @@ import Data.String (replaceAll, Replacement(..), Pattern(..))
 import Data.Function.Uncurried (runFn3)
 import PrestoDOM.Animation as PrestoAnim
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
+import Components.PrimaryButton as PrimaryButton
 
 view :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push state =
@@ -51,9 +52,9 @@ view push state =
     , background state.backgroundColor
     , afterRender
         ( \action -> do
-            if (state.option2.enableTimer || state.option1.enableTimer) then do
+            if (state.primaryButtonLayout.enableButton2Timer || state.primaryButtonLayout.enableButton1Timer) then do
               let
-                timerValue' = if state.option2.enableTimer then state.option2.timerValue else state.option1.timerValue
+                timerValue' = if state.primaryButtonLayout.enableButton2Timer then state.primaryButtonLayout.button2TimerValue else state.primaryButtonLayout.button1TimerValue
               if os == "IOS" then
                 liftEffect $ startTimerWithTime (show timerValue') "" "1" push CountDown
               else
@@ -69,7 +70,7 @@ view push state =
             clearTheTimer state
             pure unit
         )
-        if state.backgroundClickable && state.dismissPopup then const DismissPopup else if state.backgroundClickable then const OnButton1Click else const NoAction
+        if state.backgroundClickable && state.dismissPopup then const DismissPopup else if state.backgroundClickable then const (PrimaryButton1 PrimaryButton.OnClick) else const NoAction
     , gravity state.gravity
     ][ linearLayout
         [ width MATCH_PARENT
@@ -238,164 +239,7 @@ view push state =
             ]
             [ PrimaryEditText.view (push <<< ETextController) (state.eTextConfig) ]
         , tipsView push state
-        , linearLayout
-            [ width MATCH_PARENT
-            , height WRAP_CONTENT
-            , gravity CENTER
-            , orientation HORIZONTAL
-            , margin state.buttonLayoutMargin
-            ]
-            [   linearLayout
-                [ width $ if state.optionButtonOrientation == "VERTICAL" then MATCH_PARENT else if (not state.option1.visibility) || (not state.option2.visibility) then MATCH_PARENT else WRAP_CONTENT
-                , height WRAP_CONTENT
-                , orientation if state.optionButtonOrientation == "VERTICAL" then VERTICAL else HORIZONTAL
-                ]
-                [ linearLayout
-                    [ if state.option2.visibility then width state.option1.width else weight 1.0
-                    , background state.option1.background
-                    , height $ V 48
-                    , cornerRadius 8.0
-                    , visibility $ if state.option1.visibility then VISIBLE else GONE
-                    , stroke $ "1," <> state.option1.strokeColor
-                    , clickable state.option1.isClickable
-                    , alpha $ if state.option1.isClickable then 1.0 else 0.5
-                    , margin  state.option1.margin
-                    , padding  state.option1.padding
-                    , gravity CENTER
-                    , accessibility DISABLE
-                    , onClick
-                        ( \action -> do
-                            _ <- push action
-                            clearTheTimer state
-                            pure unit
-                        )
-                        (const OnButton1Click)
-                    ]
-                    [   shimmerFrameLayout
-                        [ width MATCH_PARENT
-                        , height MATCH_PARENT
-                        , visibility $  if state.option1.showShimmer then VISIBLE else GONE
-                        , cornerRadius 8.0
-                        ][ linearLayout
-                            [ width MATCH_PARENT
-                            , height MATCH_PARENT
-                            , background Color.white200
-                            , cornerRadius 8.0
-                            ][]
-                        ]
-                        , linearLayout
-                        [ width $ MATCH_PARENT
-                        , height $ MATCH_PARENT
-                        , visibility $ if state.option1.showShimmer then GONE else VISIBLE
-                        , gravity $ CENTER
-                        ]
-                        [ imageView [
-                            imageWithFallback state.option1.image.imageUrl
-                            , height state.option1.image.height
-                            , width state.option1.image.width
-                            , margin state.option1.image.margin
-                            , visibility state.option1.image.visibility
-                            , padding state.option1.image.padding
-                            ]
-                            , textView $
-                            [ width WRAP_CONTENT
-                            , height WRAP_CONTENT
-                            , accessibility ENABLE
-                            , text $ if state.option1.enableTimer && state.option1.timerValue > 0 then (state.option1.text <> " (" <> (show state.option1.timerValue) <> ")") else state.option1.text
-                            , accessibilityHint $ (if state.option1.enableTimer && state.option1.timerValue > 0 then ( state.option1.text <> " (" <> (show state.option1.timerValue) <> ")") else (replaceAll (Pattern ",") (Replacement ":") state.option1.text)) <> " : Button"
-                            , color $ state.option1.color
-                            , gravity CENTER
-                            ] <> (FontStyle.getFontStyle state.option1.textStyle LanguageStyle)
-                        ]
-                    ]
-                , linearLayout
-                    [ if state.option1.visibility then width state.option2.width else weight 1.0
-                    , height state.option2.height
-                    , background state.option2.background
-                    , cornerRadius 8.0
-                    , visibility if state.option2.visibility then VISIBLE else GONE
-                    , stroke ("1," <> state.option2.strokeColor)
-                    , margin state.option2.margin
-                    , gravity CENTER
-                    , onClick
-                        ( \action -> do
-                            _ <- push action
-                            clearTheTimer state
-                            pure unit
-                        )
-                        (const OnButton2Click)
-                    , padding state.option2.padding
-                    , accessibility DISABLE
-                    , orientation VERTICAL
-                    , clickable state.option2.isClickable
-                    , alpha (if state.option2.isClickable then 1.0 else 0.5)
-                    ]
-                    [   imageView [
-                            imageWithFallback state.option2.image.imageUrl
-                            , height state.option2.image.height
-                            , width state.option2.image.width
-                            , margin state.option2.image.margin
-                            , visibility state.option2.image.visibility
-                            , padding state.option2.image.padding
-                        ]
-                        , textView $ 
-                        [ width WRAP_CONTENT
-                        , height WRAP_CONTENT
-                        , accessibility ENABLE
-                        , text $ if state.option2.enableTimer && state.option2.timerValue > 0 then (state.option2.text <> " (" <> (show state.option2.timerValue) <> ")") else state.option2.text
-                        , accessibilityHint $ (if state.option2.enableTimer && state.option2.timerValue > 0 then (state.option2.text <> " (" <> (show state.option2.timerValue) <> ")") else (replaceAll (Pattern ",") (Replacement ":") state.option2.text)) <> " : Button"
-                        , color state.option2.color
-                        , gravity CENTER
-                        ] <> (FontStyle.getFontStyle state.option2.textStyle LanguageStyle)
-                    ]
-                ]
-            ]
-        , linearLayout [
-            height state.optionWithHtml.height
-            , width  state.optionWithHtml.width
-            , margin state.optionWithHtml.margin
-            , clickable state.optionWithHtml.isClickable
-            , background state.optionWithHtml.background
-            , cornerRadius state.optionWithHtml.cornerRadius
-            , visibility if state.optionWithHtml.visibility then VISIBLE else GONE
-            , stroke ("1," <> state.optionWithHtml.strokeColor)
-            , gravity CENTER
-            , alpha (if state.optionWithHtml.isClickable then 1.0 else 0.5)
-            , onClick
-                ( \action -> do
-                    _ <- push action
-                    clearTheTimer state
-                    pure unit
-                )
-                (const OptionWithHtmlClick)
-          ][
-                textView $
-                [ textFromHtml $ state.optionWithHtml.textOpt1.text
-                , accessibilityHint state.optionWithHtml.textOpt1.text
-                , accessibility ENABLE
-                , color $ state.optionWithHtml.textOpt1.color
-                , margin $ state.optionWithHtml.textOpt1.margin
-                , gravity $ state.optionWithHtml.textOpt1.gravity
-                , visibility $ state.optionWithHtml.textOpt1.visibility
-                ] <> (FontStyle.getFontStyle state.optionWithHtml.textOpt1.textStyle LanguageStyle)
-                , imageView [
-                    imageWithFallback state.optionWithHtml.image.imageUrl
-                    , height state.optionWithHtml.image.height
-                    , width state.optionWithHtml.image.width
-                    , margin state.optionWithHtml.image.margin
-                    , visibility state.optionWithHtml.image.visibility
-                    , padding state.optionWithHtml.image.padding
-                ]
-                , textView $
-                [ textFromHtml $ state.optionWithHtml.textOpt2.text
-                , accessibilityHint state.optionWithHtml.textOpt2.text
-                , accessibility ENABLE
-                , color $ state.optionWithHtml.textOpt2.color
-                , margin $ state.optionWithHtml.textOpt2.margin
-                , gravity $ state.optionWithHtml.textOpt2.gravity
-                , visibility $ state.optionWithHtml.textOpt2.visibility
-                ] <> (FontStyle.getFontStyle state.optionWithHtml.textOpt2.textStyle LanguageStyle)
-            ]
+        , primaryButtonsView push state.primaryButtonLayout
         ]
     ]
 
@@ -540,10 +384,10 @@ tipsView push state =
 
 clearTheTimer :: Config -> Effect Unit
 clearTheTimer config =
-  if config.option1.enableTimer then do
-    pure $ clearTimer config.option1.timerID
-  else if config.option2.enableTimer then do
-    pure $ clearTimer config.option2.timerID
+  if config.primaryButtonLayout.enableButton1Timer then do
+    pure $ clearTimer config.primaryButtonLayout.timer1ID
+  else if config.primaryButtonLayout.enableButton2Timer then do
+    pure $ clearTimer config.primaryButtonLayout.timer2ID
   else
     pure unit
 
@@ -589,3 +433,37 @@ contactView push state =
     ]
 
 
+-- youtubeData :: CoverVideoConfig -> String -> YoutubeData
+-- youtubeData state mediaType =
+--   { videoTitle: "title"
+--   , setVideoTitle: false
+--   , showMenuButton: false
+--   , showDuration: true
+--   , showSeekBar: true
+--   , videoId: getVideoID state.mediaUrl
+--   , videoType: mediaType
+--   }
+
+primaryButtonsView :: forall w. (Action -> Effect Unit) -> PrimaryButtonLayout -> PrestoDOM (Effect Unit) w 
+primaryButtonsView push config = 
+    linearLayout[
+      width config.width
+    , height config.height
+    , orientation config.orientation
+    , gravity config.gravity
+    , visibility config.visibility
+    , margin config.margin
+    ][
+        linearLayout[
+          weight 1.0
+        , gravity CENTER
+        , margin $ case (config.button1.visibility == VISIBLE && config.button2.visibility == VISIBLE), config.orientation of 
+                    true, VERTICAL ->  MarginBottom config.gap
+                    true, HORIZONTAL ->  MarginRight config.gap
+                    _, _ -> Margin 0 0 0 0
+        ][PrimaryButton.view (push <<< PrimaryButton1)  config.button1]
+      , linearLayout[
+          weight 1.0
+        , gravity CENTER
+        ][PrimaryButton.view (push <<< PrimaryButton2)  config.button2]
+    ]

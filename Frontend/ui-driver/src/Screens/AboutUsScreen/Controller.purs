@@ -27,6 +27,7 @@ import Data.String (length)
 import JBridge (toast)
 import Storage (KeyStore(..), setValueToLocalStore, getValueToLocalStore)
 import Data.Array (elem)
+import Components.PrimaryButton as PrimaryButton 
 
 instance showAction :: Show Action where
   show _ = ""
@@ -39,10 +40,6 @@ instance loggableAction :: Loggable Action where
         else trackAppEndScreen appId (getScreen ABOUT_US_SCREEN)
     ShowDemoPopUp -> trackAppActionClick appId (getScreen ABOUT_US_SCREEN) "in_screen" "show_demo_popup_onclick"
     PopUpModalDemoModeAction act -> case act of
-      PopUpModal.OnButton1Click -> trackAppActionClick appId (getScreen ABOUT_US_SCREEN) "popup_modal" "button_1_onclick"
-      PopUpModal.OnButton2Click -> do
-        trackAppActionClick appId (getScreen ABOUT_US_SCREEN) "popup_modal" "button_2_onclick"
-        trackAppEndScreen appId (getScreen ABOUT_US_SCREEN)
       PopUpModal.OnImageClick -> trackAppActionClick appId (getScreen ABOUT_US_SCREEN) "popup_modal" "image_onclick"
       PopUpModal.ETextController act -> case act of 
         PrimaryEditTextController.TextChanged valId newVal -> trackAppTextInput appId (getScreen ABOUT_US_SCREEN) "popup_modal_password_text_changed" "primary_edit_text"
@@ -53,6 +50,8 @@ instance loggableAction :: Loggable Action where
       PopUpModal.DismissPopup -> trackAppScreenEvent appId (getScreen ABOUT_US_SCREEN) "popup_modal_action" "popup_dismissed"
       PopUpModal.OnSecondaryTextClick -> trackAppScreenEvent appId (getScreen ABOUT_US_SCREEN) "popup_modal_action" "secondary_text_clicked"
       PopUpModal.OptionWithHtmlClick -> trackAppScreenEvent appId (getScreen ABOUT_US_SCREEN) "popup_modal_action" "option_with_html_clicked"
+      (PopUpModal.PrimaryButton1 _) -> pure unit
+      (PopUpModal.PrimaryButton2 _) -> pure unit 
     TermsAndConditionAction -> trackAppActionClick appId (getScreen ABOUT_US_SCREEN) "in_screen" "t_&_c"
     NoAction -> trackAppScreenEvent appId (getScreen ABOUT_US_SCREEN) "in_screen" "no_action"
     
@@ -70,10 +69,10 @@ eval ShowDemoPopUp state = do
       continue state {props {enableDemoModeCount = state.props.enableDemoModeCount + 1}}
 eval (BackPressed flag) state =  if state.props.demoModePopup then continue state {props{enableConfirmPassword=false,demoModePopup = false}} else exit GoBack
 eval NoAction state = continue state
-eval (PopUpModalDemoModeAction (PopUpModal.OnButton2Click)) state = do
+eval (PopUpModalDemoModeAction (PopUpModal.PrimaryButton2 PrimaryButton.OnClick)) state = do
   _ <- pure $ setValueToLocalStore IS_DEMOMODE_ENABLED  "true"
   updateAndExit state {props{enableConfirmPassword = false,demoModePopup = false}} $ GoToHome state {props{enableConfirmPassword = false,demoModePopup = false}}
-eval (PopUpModalDemoModeAction (PopUpModal.OnButton1Click)) state = continue state --{props{enableConfirmPassword=false,demoModePopup = false}}
+eval (PopUpModalDemoModeAction (PopUpModal.PrimaryButton1 PrimaryButton.OnClick)) state = continue state --{props{enableConfirmPassword=false,demoModePopup = false}}
 eval (PopUpModalDemoModeAction (PopUpModal.OnImageClick)) state = continue state {props{demoModePopup = false}}
 eval (PopUpModalDemoModeAction (PopUpModal.ETextController (PrimaryEditTextController.TextChanged valId newVal))) state = do
   _ <- pure $ setValueToLocalStore DEMO_MODE_PASSWORD newVal
