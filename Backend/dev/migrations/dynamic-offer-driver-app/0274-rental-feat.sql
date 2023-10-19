@@ -1,5 +1,3 @@
-ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN odometer_start_reading int;
-ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN odometer_end_reading int;
 ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN end_ride_otp char(4);
 
 ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN opt_for_rental boolean NOT NULL DEFAULT false; -- only for local

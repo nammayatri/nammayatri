@@ -24,26 +24,16 @@ ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN odometer_end_reading double p
 ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN ride_type character varying(36);
 
 --to identify rental or ondemand ride
-ALTER TABLE atlas_driver_offer_bpp.search_request ADD COLUMN tag character varying(36) default "ON_DEMAND";
-
-ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN opt_for_rental boolean default true;
+ALTER TABLE atlas_driver_offer_bpp.search_request ADD COLUMN tag character varying(36) default 'ON_DEMAND';
 
 ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN odometer_start_reading_image_path CHARACTER VARYING(255);
 ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN odometer_end_reading_image_path CHARACTER VARYING(255);
 
-alter table atlas_app.rental_slab add column base_fare int;
-alter table atlas_app.rental_slab add column per_hour_charge int;
-alter table atlas_app.rental_slab add column per_hour_free_kms int;
-alter table atlas_app.rental_slab add column per_extra_km_rate int;
-alter table atlas_app.rental_slab add column night_shift_charge int;
-alter table atlas_app.rental_slab drop column base_distance;
-alter table atlas_app.rental_slab drop column base_duration;
-
 ALTER TABLE atlas_driver_offer_bpp.driver_pool_config ADD COLUMN single_batch_process_time_rental bigint DEFAULT 60;
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN allocate_rental_ride_time_diff bigint DEFAULT 900;
 
-ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ADD COLUMN search_request_tag character varying(36) default "ON_DEMAND";
+ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ADD COLUMN search_request_tag character varying(36) default 'ON_DEMAND';
 ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ADD COLUMN booking_id character(36);
 
-ALTER TABLE atlas_driver_offer_bpp.search_try ADD COLUMN tag character varying(36) default "ON_DEMAND";
+ALTER TABLE atlas_driver_offer_bpp.search_try ADD COLUMN tag character varying(36) default 'ON_DEMAND';
 ALTER TABLE atlas_driver_offer_bpp.search_try ALTER COLUMN estimate_id DROP NOT NULL;
