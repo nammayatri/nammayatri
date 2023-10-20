@@ -135,6 +135,8 @@ view push state =
 
 quoteListView :: forall w. (Action -> Effect Unit) -> SearchLocationModelState -> PrestoDOM (Effect Unit) w
 quoteListView push state =
+  let quoteListVisible = state.isSource == Nothing && state.bookingStage == Rental
+  in
   linearLayout
     [ height WRAP_CONTENT
     , width MATCH_PARENT
@@ -142,7 +144,7 @@ quoteListView push state =
     , margin $ MarginTop 16
     , alignParentBottom "true,-1"
     , afterRender push (const NoAction)
-    , visibility if state.isSource == Nothing then VISIBLE else GONE
+    , visibility if quoteListVisible then VISIBLE else GONE
     ][  textView $
         [ width MATCH_PARENT
         , height WRAP_CONTENT
@@ -289,7 +291,7 @@ sourceDestinationEditTextView state push =
       , orientation VERTICAL
       , margin if os == "IOS" then (Margin 0 18 15 0) else (Margin 0 16 16 0)
       , height $ V 121
-    
+      , clickable false
       ][linearLayout
         [ height WRAP_CONTENT
         , width MATCH_PARENT
