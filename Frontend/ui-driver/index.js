@@ -7,6 +7,7 @@ window.version = __VERSION__;
 let previousDateObject = new Date();
 const refreshThreshold = 300;
 console.warn("Hello World");
+Android.runInUI("android.webkit.WebView->setWebContentsDebuggingEnabled:b_true;","null");
 loadConfig();
 
 window.isObject = function (object) {
@@ -294,13 +295,13 @@ if (typeof window.JOS != "undefined") {
   console.error("JOS not present")
 }
 
-var sessionInfo = JSON.parse(JBridge.getDeviceInfo())
+// var sessionInfo = JSON.parse(JBridge.getDeviceInfo())
 
-if (sessionInfo.package_name.includes("debug")) {
-  logger.enableLogger();
-} else {
-  logger.disableLogger();
-}
+// if (sessionInfo.package_name.includes("debug")) {
+//   logger.enableLogger();
+// } else {
+//   logger.disableLogger();
+// }
 
 function makeEvent(_type, _data) {
   return { type : _type, data : _data };
