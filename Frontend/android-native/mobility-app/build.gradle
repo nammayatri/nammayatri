@@ -73,7 +73,4 @@ dependencies {
     implementation 'com.google.maps.android:android-maps-utils:2.4.0'
     implementation 'com.google.mlkit:translate:17.0.1'
     implementation fileTree(dir: 'libs', include: ['*.jar', '*.aar'])
-    implementation 'com.clevertap.android:clevertap-hms-sdk:1.3.3'
-    implementation 'com.huawei.hms:push:6.11.0.300'
-    implementation 'com.clevertap.android:clevertap-xiaomi-sdk:1.5.3'
 }
