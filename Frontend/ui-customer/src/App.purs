@@ -40,7 +40,7 @@ import Screens.EmergencyContactsScreen.ScreenData as EmergencyContactsScreenData
 import Screens.OnBoardingFlow.PermissionScreen.ScreenData as PermissionScreenData
 import Screens.CustomerUtils.AboutUsScreen.ScreenData as AboutUsScreenData
 import Screens.OnBoardingFlow.WelcomeScreen.ScreenData as WelcomeScreenData
-import Screens.Types (AboutUsScreenState, AccountSetUpScreenState, AddNewAddressScreenState, AppUpdatePopUpState, ChooseLanguageScreenState, ContactUsScreenState, EnterMobileNumberScreenState, HelpAndSupportScreenState, HomeScreenState, InvoiceScreenState, LocItemType, LocationListItemState, MyProfileScreenState, MyRidesScreenState, PermissionScreenState, SavedLocationScreenState, SelectLanguageScreenState, SplashScreenState, TripDetailsScreenState, ReferralScreenState, EmergencyContactsScreenState, CallType, WelcomeScreenState, PermissionScreenStage)
+import Screens.Types (AboutUsScreenState, AccountSetUpScreenState, AddNewAddressScreenState, AppUpdatePopUpState, ChooseLanguageScreenState, ContactUsScreenState, EnterMobileNumberScreenState, HelpAndSupportScreenState, HomeScreenState, InvoiceScreenState, LocItemType, LocationListItemState, MyProfileScreenState, MyRidesScreenState, PermissionScreenState, SavedLocationScreenState, SelectLanguageScreenState, SplashScreenState, TripDetailsScreenState, ReferralScreenState, EmergencyContactsScreenState, CallType, WelcomeScreenState, PermissionScreenStage, RentalFlowType(..))
 import Screens.AppUpdatePopUp.ScreenData as AppUpdatePopUpScreenData
 import Foreign.Object ( Object(..), empty)
 import Foreign (Foreign)
@@ -160,6 +160,7 @@ data HOME_SCREEN_OUTPUT = LOGOUT
                         | TRIGGER_PERMISSION_FLOW PermissionScreenStage
                         | REPORT_ISSUE HomeScreenState
                         | RIDE_DETAILS_SCREEN HomeScreenState
+                        | RENTAL_FLOW RentalFlowType HomeScreenState
 
 data SELECT_LANGUAGE_SCREEN_OUTPUT = GO_TO_HOME_SCREEN | UPDATE_LANGUAGE SelectLanguageScreenState
 

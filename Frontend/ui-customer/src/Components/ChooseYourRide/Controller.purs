@@ -5,6 +5,7 @@ import Components.ChooseVehicle.Controller as ChooseVehicleController
 import Components.PrimaryButton.Controller as PrimaryButtonController
 import MerchantConfig.DefaultConfig as DC
 import MerchantConfig.Types
+import Screens.Types (RentalStage(..))
 
 data Action
   = NoAction

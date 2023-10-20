@@ -644,5 +644,7 @@ const bengaliStrings = {
   "HELP" : "সাহায্য",
   "FARE_INFO_TEXT" : "",
   "FASTER" : "দ্রুততর",
-  "PLEASE_ENABLE_LOCATION_PERMISSION" : "অনুগ্রহ করে রাইড খোঁজা শুরু করতে সেটিংস অ্যাপ থেকে অবস্থানের অনুমতি সক্ষম করুন।"
+  "PLEASE_ENABLE_LOCATION_PERMISSION" : "অনুগ্রহ করে রাইড খোঁজা শুরু করতে সেটিংস অ্যাপ থেকে অবস্থানের অনুমতি সক্ষম করুন।",
+  "SELECT_LOCATION_ON_MAP" : "মানচিত্রে অবস্থান নির্বাচন করুন" , 
+  "BOOK_A_RENTAL" : "একটি ভাড়া বুক করুন"
 }

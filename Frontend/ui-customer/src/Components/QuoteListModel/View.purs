@@ -38,7 +38,7 @@ import MerchantConfig.Utils (getValueFromConfig)
 import Prelude (Unit, show, bind, const, map, pure, unit, not, void, ($), (&&), (+), (/), (/=), (<<<), (<>), (==), (||), discard)
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), Accessiblity(..), PrestoDOM, Visibility(..), afterRender, accessibilityHint ,alignParentBottom, background, clickable, color, cornerRadius, ellipsize, fontStyle, gravity, height, id, imageUrl, imageView, imageWithFallback, lineHeight, linearLayout, lottieAnimationView, margin, onClick, orientation, padding, relativeLayout, scrollBarY, scrollView, singleLine, stroke, text, textSize, textView, visibility, weight, width, accessibility)
 import PrestoDOM.Animation as PrestoAnim
-import Screens.Types (Stage(..))
+import Screens.Types (Stage(..), BookingStage(..))
 import Storage (KeyStore(..), getValueToLocalStore)
 import Storage (isLocalStageOn)
 import Styles.Colors as Color
@@ -153,12 +153,13 @@ sourceDestinationImageView state =
         , accessibility DISABLE
         , imageWithFallback $ "ny_ic_pickup," <> (getAssetStoreLink FunctionCall) <> "ny_ic_pickup.png"
         ]
-      , SeparatorView.view separatorConfig
+      , if(state.bookingStage == Rental) then textView [] else SeparatorView.view separatorConfig
       , imageView
         [ height $ V 15
         , width $ V 15
         , accessibility DISABLE
         , imageWithFallback $ "ny_ic_drop," <> (getAssetStoreLink FunctionCall) <> "ny_ic_drop.png"  
+        , visibility if(state.bookingStage == Rental) then GONE else VISIBLE
         ]
       ]
 
@@ -193,17 +194,18 @@ sourceDestinationView state push =
         , singleLine true
         ] <> FontStyle.paragraphText TypoGraphy
       ]
-      , SeparatorView.view separatorConfig
+      , if(state.bookingStage == Rental) then textView [] else SeparatorView.view separatorConfig
       , linearLayout
       [ height WRAP_CONTENT
       , width WRAP_CONTENT
       , gravity CENTER_VERTICAL
+      , visibility if(state.bookingStage == Rental) then GONE else VISIBLE
       ][ 
         imageView
         [ height $ V 15
         , width $ V 15
         , accessibility DISABLE
-        , imageWithFallback $ "ny_ic_drop," <> (getAssetStoreLink FunctionCall) <> "ny_ic_drop.png"  
+        , imageWithFallback $ "ny_ic_drop," <> (getAssetStoreLink FunctionCall) <> "ny_ic_drop.png" 
         ]
         , textView $
         [ height WRAP_CONTENT

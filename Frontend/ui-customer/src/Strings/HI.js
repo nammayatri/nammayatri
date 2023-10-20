@@ -630,5 +630,6 @@ const hindiStrings = {
   "HELP" : "सहायता",
   "FARE_INFO_TEXT" : "",
   "FASTER" : "और तेज",
-  "PLEASE_ENABLE_LOCATION_PERMISSION" : "सवारी की तलाश शुरू करने के लिए कृपया सेटिंग ऐप से स्थान अनुमतियां सक्षम करें।"
+  "PLEASE_ENABLE_LOCATION_PERMISSION" : "सवारी की तलाश शुरू करने के लिए कृपया सेटिंग ऐप से स्थान अनुमतियां सक्षम करें।",
+  "BOOK_A_RENTAL" : "किराये की बुकिंग करें"
 }

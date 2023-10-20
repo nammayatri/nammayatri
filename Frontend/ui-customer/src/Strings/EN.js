@@ -627,5 +627,6 @@ const englishStrings = {
   "DRIVER_RECEIPT" : "Driver Receipt",
   "HELP" : "Help",
   "FARE_INFO_TEXT" : "",
-  "PLEASE_ENABLE_LOCATION_PERMISSION" : "Please enable location permissions from the settings app to start looking for rides."
+  "PLEASE_ENABLE_LOCATION_PERMISSION" : "Please enable location permissions from the settings app to start looking for rides.",
+  "BOOK_A_RENTAL" : "Book a Rental"
 }

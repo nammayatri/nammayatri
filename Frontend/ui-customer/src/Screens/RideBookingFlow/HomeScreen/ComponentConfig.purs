@@ -37,8 +37,10 @@ import Components.PrimaryButton as PrimaryButton
 import Components.QuoteListModel as QuoteListModel
 import Components.RateCard as RateCard
 import Components.RatingCard as RatingCard
+import Components.FareBreakupScreen as FareBreakupScreen
 import Components.RequestInfoCard as RequestInfoCard
 import Components.RideCompletedCard as RideCompletedCard
+import Components.RentalScheduleRide as RentalScheduleRide
 import Components.SearchLocationModel as SearchLocationModel
 import Components.SearchLocationModel as SearchLocationModel
 import Components.SelectListModal as CancelRidePopUpConfig
@@ -49,10 +51,7 @@ import Data.Array as DA
 import Data.Either (Either(..))
 import Data.Int (toNumber)
 import Data.Int as INT
-import Data.Int as INT
 import Data.Maybe (Maybe(..), fromMaybe)
-import Data.String as DS
-import Data.String as DS
 import Data.String as DS
 import Effect (Effect)
 import Engineering.Helpers.Commons as EHC
@@ -66,12 +65,12 @@ import Helpers.Utils as HU
 import JBridge as JB
 import Language.Types (STR(..))
 import MerchantConfig.Utils as MU
-import PrestoDOM (Accessiblity(..))
+import PrestoDOM (Accessiblity(..), imageWithFallback )
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Resources.Constants (getKmMeter)
 import Resources.Constants (getKmMeter)
-import Screens.Types (DriverInfoCard, Stage(..), ZoneType(..), TipViewData, TipViewStage(..), TipViewProps)
+import Screens.Types (DriverInfoCard, Stage(..), ZoneType(..), TipViewData, TipViewStage(..), TipViewProps, RentalStage(..))
 import Screens.Types as ST
 import Storage (KeyStore(..), getValueToLocalStore, isLocalStageOn, setValueToLocalStore)
 import Styles.Colors as Color
@@ -192,8 +191,9 @@ skipButtonConfig state =
         , id = "SkipButton"
         , enableLoader = (JB.getBtnLoader "SkipButton")
         , visibility = if not issueFaced || state.data.ratingViewState.doneButtonVisibility then VISIBLE else GONE
-        , isClickable = issueFaced || state.data.ratingViewState.selectedRating > 0
-        , alpha = if issueFaced || (state.data.ratingViewState.selectedRating >= 1) then 1.0 else 0.4
+        -- , isClickable = issueFaced || state.data.ratingViewState.selectedRating > 0
+        , isClickable = true
+        -- , alpha = if issueFaced || (state.data.ratingViewState.selectedRating >= 1) then 1.0 else 0.4
         }
   in
     primaryButtonConfig'
@@ -224,6 +224,35 @@ whereToButtonConfig state =
         , margin = (Margin 17 0 17 0)
         }
       , id = "WheretoButton"
+      }
+  in primaryButtonConfig'
+
+bookARentalButtonConfig :: ST.HomeScreenState -> PrimaryButton.Config
+bookARentalButtonConfig state =
+  let
+    config = PrimaryButton.config
+    primaryButtonConfig' = config
+      { textConfig
+        { text = (getString BOOK_A_RENTAL)
+        , width = MATCH_PARENT
+        , gravity = LEFT
+        , color = Color.black800
+        , accessibilityHint = "Book a Rental : Button"
+        }
+      , height = V 48
+      , gravity = CENTER_VERTICAL
+      , cornerRadius = 8.0
+      , margin = (Margin 16 12 16 0)
+      , isClickable = true
+      , isPrefixImage = true
+      , background = Color.blue600
+      , prefixImageConfig
+        { imageUrl = "ny_ic_timer_clock," <> (getAssetStoreLink FunctionCall) <> "ny_ic_timer_clock.png"
+        , height = V 16
+        , width = V 21
+        , margin = (Margin 17 0 17 0)
+        }
+      , id = "bookARentalButton"
       }
   in primaryButtonConfig'
 
@@ -623,8 +652,6 @@ rateCardConfig state =
   in
     rateCardConfig'
 
-
-
 yatriRateCardList :: String -> ST.HomeScreenState -> Array FareList
 yatriRateCardList vehicleVariant state = do
   let lang = getValueToLocalStore LANGUAGE_KEY
@@ -711,6 +738,8 @@ driverInfoCardViewState state = { props:
                                   , currentSearchResultType : state.data.currentSearchResultType
                                   , isChatOpened : state.props.isChatOpened
                                   , chatcallbackInitiated : state.props.chatcallbackInitiated
+                                  , bookingStage : state.props.bookingStage
+                                  , rentalData : state.props.rentalData
                                   }
                               , data: driverInfoTransformer state
                             }
@@ -856,7 +885,17 @@ searchLocationModelViewState state = { isSearchLocation: state.props.isSearchLoc
                                     , isAutoComplete: state.props.searchLocationModelProps.isAutoComplete
                                     , showLoader: state.props.searchLocationModelProps.showLoader
                                     , prevLocation: state.data.searchLocationModelData.prevLocation
+                                    , bookingStage : state.props.bookingStage
+                                    , rentalData : state.props.rentalData
+                                    , config : state.data.config
                                     }
+                              
+rentalFareBreakupScreenViewState :: ST.HomeScreenState -> FareBreakupScreen.FareBreakupScreenState
+rentalFareBreakupScreenViewState state = { selectedQuote: state.data.specialZoneQuoteList
+                                         , homeScreenConfig: state.data.config
+                                         , baseDuration: state.props.rentalData.baseDuration
+                                         , baseDistance: state.props.rentalData.baseDistance
+                                         }
 
 quoteListModelViewState :: ST.HomeScreenState -> QuoteListModel.QuoteListModelState
 quoteListModelViewState state = { source: state.data.source
@@ -871,6 +910,8 @@ quoteListModelViewState state = { source: state.data.source
                             , progress : state.props.findingQuotesProgress
                             , appConfig : state.data.config
                             , vehicleVariant : state.data.selectedEstimatesObject.vehicleVariant
+                            , bookingStage : state.props.bookingStage
+                            , rentalData : state.props.rentalData
                             }
 
 rideRequestAnimConfig :: AnimConfig.AnimConfig
@@ -1234,3 +1275,105 @@ getFareUpdatedString diffInDist = do
                                                         "KN_IN" -> "ನಿಮ್ಮ ಸವಾರಿ " <> dist <> " ಕಿಮೀ ಉದ್ದವಾಗಿದೆ"
                                                         "ML_IN" -> "താങ്കളുടെ യാത്ര " <> dist <> " Km കൂടുതലായിരുന്നു"
                                                         _       -> "your ride was " <> dist <> " km longer")
+
+primaryButtonConfirmAndBookConfig :: ST.HomeScreenState -> PrimaryButton.Config
+primaryButtonConfirmAndBookConfig state =
+  let
+    config = PrimaryButton.config
+    primaryButtonConfig' =
+      config
+        { textConfig
+          { text = (getString CONFIRM_AND_BOOK)
+          , color = state.data.config.primaryTextColor
+          , accessibilityHint = "Confirm And Book : Button"
+          }
+        , cornerRadius = state.data.config.primaryButtonCornerRadius
+        , margin = (Margin 16 8 16 14)
+        , id = "ConfirmAndBookButton"
+        , background = state.data.config.primaryBackground
+        }
+  in
+    primaryButtonConfig'
+
+rentalPackageConfig :: ST.HomeScreenState -> PopUpModal.Config
+rentalPackageConfig state = let
+  config' = PopUpModal.config
+  popUpConfig' = config'{
+    gravity = CENTER
+  , margin = MarginHorizontal 16 16
+  , buttonLayoutMargin = Margin 16 0 16 20
+  , topTitle {
+      margin = Margin 16 24 16 16
+    , color = Color.blue600
+    , gravity = LEFT
+    , text = "Rental Package"
+  }
+  , secondaryText {
+      text = "Final fare will be based on the actual duration, rounded up to the nearest hour OR the trip duration you select (whichever is higher)."
+    , margin = Margin 16 0 16 24
+    , color = Color.black650
+    , gravity = LEFT
+  }
+  , option1 {
+      text = "Got it!"
+    , strokeColor = Color.white900
+    , color = Color.blue800
+  }
+  , option2 {
+    visibility = false
+  }
+  , backgroundClickable = true
+  , dismissPopup = true
+  , cornerRadius = (Corners 15.0 true true true true)
+  }
+  in popUpConfig'
+
+rentalRateCardConfig state =
+  let
+    config' = RateCard.config
+    rentalRateCardConfig' =
+      config'
+        { rentalPackage = true
+        , rentalDetails {
+            title = "Rental Package"
+          }
+        , nightShiftMultiplier = HU.toString (state.data.rateCard.nightShiftMultiplier)
+        , currentRateCardType = RentalPackage
+        , alertDialogPrimaryColor = state.data.config.alertDialogPrimaryColor
+        , buttonText = Just (getString GOT_IT)
+        , driverAdditionsImage = "ys_ic_ratecard," <> (getCommonAssetStoreLink FunctionCall) <> "ys_ic_ratecard.png"
+        , applicableCharges = if state.data.rateCard.nightCharges && state.data.rateCard.vehicleVariant == "AUTO_RICKSHAW" then (getString NIGHT_TIMES_OF) <> (HU.toString (state.data.rateCard.nightShiftMultiplier)) <> (getString DAYTIME_CHARGES_APPLIED_AT_NIGHT)
+                                 else (getString DAY_TIMES_OF) <> (HU.toString (state.data.rateCard.nightShiftMultiplier)) <> (getString DAYTIME_CHARGES_APPLICABLE_AT_NIGHT)
+        , title = "Rental Package"
+        , fareList = case MU.getMerchant FunctionCall of
+                      MU.NAMMAYATRI -> nyRateCardList state
+                      MU.YATRI -> yatriRateCardList state.data.rateCard.vehicleVariant state
+                      _ -> []
+
+        , otherOptions  = [
+          {key : "DRIVER_ADDITIONS", val : (getString DRIVER_ADDITIONS)},
+          {key : "FARE_UPDATE_POLICY", val : (getString FARE_UPDATE_POLICY)}]
+
+        , additionalStrings = []
+          <> if state.data.rateCard.vehicleVariant == "AUTO_RICKSHAW" && (MU.getValueFromConfig "showChargeDesc") then [{key : "CHARGE_DESCRIPTION", val : (getString ERNAKULAM_LIMIT_CHARGE)}] else []
+        }
+  in
+    rentalRateCardConfig'
+
+rentalScheduleRideConfig :: ST.HomeScreenState -> RentalScheduleRide.RentalScheduleState
+rentalScheduleRideConfig state =
+  let
+    config' = RentalScheduleRide.config
+    rentalScheduleRideConfig' = config'{
+      baseDuration = state.props.rentalData.baseDuration
+    , baseDistance = state.props.rentalData.baseDistance
+    , isCancelled = false --if (state.props.rentalStage == RentalCancel) then true else false
+    , primaryButton = {
+        text : "Okay" --if(state.props.rentalStage == RentalCancel) then "Try Again" else "Okay"
+      , cornerRadius : state.data.config.primaryButtonCornerRadius
+      , background : state.data.config.primaryBackground
+      , height : state.data.config.searchLocationConfig.primaryButtonHeight 
+      }
+    }
+  in
+    rentalScheduleRideConfig'

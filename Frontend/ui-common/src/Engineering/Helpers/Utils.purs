@@ -60,6 +60,7 @@ foreign import getCurrentDay :: String -> CalendarModalDateObject
 foreign import decrementMonth :: Int -> Int -> CalendarModalDateObject
 
 foreign import incrementMonth :: Int -> Int -> CalendarModalDateObject
+foreign import getDayBeforeOrAfter :: String -> Int -> Boolean -> CalendarModalDateObject
 
 saveToLocalStore' :: String -> String -> EffectFnAff Unit
 saveToLocalStore' = saveToLocalStoreImpl

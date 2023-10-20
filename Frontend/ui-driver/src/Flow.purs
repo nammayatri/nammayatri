@@ -23,7 +23,6 @@ import Common.Types.App (APIPaymentStatus(..)) as PS
 import Common.Types.App (Version(..), LazyCheck(..), PaymentStatus(..), Event, FCMBundleUpdate)
 import Components.ChatView.Controller (makeChatComponent')
 import Constants as Constants
-import Constants as Constants
 import Control.Monad.Except (runExceptT)
 import Control.Monad.Except.Trans (lift)
 import Control.Transformers.Back.Trans (runBackT)

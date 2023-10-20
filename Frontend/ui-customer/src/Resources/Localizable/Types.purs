@@ -639,6 +639,7 @@ data STR
  | DRIVER_RECEIPT
  | HELP
  | FARE_INFO_TEXT
+ | BOOK_A_RENTAL
 
 getKeyString :: STR -> String
 getKeyString key = case key of
@@ -1266,3 +1267,4 @@ getKeyString key = case key of
   DRIVER_RECEIPT -> "DRIVER_RECEIPT"
   HELP -> "HELP"
   FARE_INFO_TEXT -> "FARE_INFO_TEXT"
+  BOOK_A_RENTAL -> "BOOK_A_RENTAL"

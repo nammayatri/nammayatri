@@ -1444,6 +1444,7 @@ public class MobilityCommonBridge extends HyperBridge {
     //endregion
 
     // region DATE / TIME UTILS
+
     @JavascriptInterface
     @RequiresApi(api = Build.VERSION_CODES.N)
     public void timePicker(final String callback) {

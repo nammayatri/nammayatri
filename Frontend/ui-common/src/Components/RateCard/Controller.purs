@@ -52,7 +52,17 @@ type Config = {
     otherOptions :: Array FareList,
     additionalStrings :: Array FareList,
     driverAdditionsImage :: String,
-    fareInfoText :: String
+    fareInfoText :: String,
+    rentalPackage :: Boolean,
+    rentalDetails :: RentalConfig
+}
+
+type RentalConfig = {
+    title :: String
+  , titleHeight :: String
+  , titleSuffixImage :: String
+  , farePackageImage :: String
+  , buttonText :: String
 }
 
 config :: Config 
@@ -76,5 +86,13 @@ config = {
     fareList : [],
     otherOptions : [],
     additionalStrings : [],
-    fareInfoText : ""
+    fareInfoText : "",
+    rentalPackage : false,
+    rentalDetails : {
+      title: "",
+      titleHeight : "",
+      titleSuffixImage : "",
+      farePackageImage : "",
+      buttonText : "Got It!"
+    }
 }

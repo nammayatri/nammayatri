@@ -161,6 +161,7 @@ view push state =
                     )(const NoAction)
                 ][]
             ]]
+        
         , linearLayout
             [ width MATCH_PARENT
             , height WRAP_CONTENT
@@ -209,6 +210,7 @@ view push state =
           ][ textView $
              [ width WRAP_CONTENT
              , height WRAP_CONTENT
+             , textSize FontSize.a_12
              , color $ state.secondaryText.color
              , gravity $ state.secondaryText.gravity
              , textFromHtml state.secondaryText.text

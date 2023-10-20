@@ -24,7 +24,7 @@ import Animation (translateInXForwardAnim, translateInXBackwardAnim)
 import Effect (Effect)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Language.Strings (getString)
+import Language.Strings (getString) 
 import Language.Types (STR(..))
 import Prelude (Unit, ($), const, (<>), (>),(==), (||), (&&), (/), (*), (/=), (+), (<<<), unit)
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), background, color, cornerRadius, imageUrl, fontStyle, gravity, height, imageView, textFromHtml,imageWithFallback, linearLayout, margin, onClick, orientation, padding, text, textSize, textView, visibility, weight, width, lineHeight,fontStyle, scrollView, maxLines, singleLine)
@@ -51,7 +51,7 @@ view push config =
   , background Color.black9000
   , onClick push $ const BackPressed
   ][ linearLayout
-     [ width MATCH_PARENT
+    [ width MATCH_PARENT
      , height WRAP_CONTENT
      , orientation VERTICAL
      , background Color.white900
@@ -63,27 +63,33 @@ view push config =
         , background if config.nightCharges then Color.black900 else Color.blue600
         , orientation HORIZONTAL
         , cornerRadii $ Corners 16.0 true true false false
+        , weight 0.1
         ][ 
           linearLayout
            [ width WRAP_CONTENT
            , height WRAP_CONTENT
            , orientation VERTICAL
            , padding $ Padding 16 22 16 0
+           , weight 0.1
+           , gravity LEFT 
            ][ commonTV push config.title (if config.nightCharges then Color.white900 else Color.black800) FontStyle.h1 LEFT 0 NoAction
             , commonTV push config.description (if config.nightCharges then Color.black500 else Color.black700) FontStyle.tags LEFT 3 NoAction
             ]
-         , imageView
-           [ width MATCH_PARENT
-           , height $ V 90
-           , imageWithFallback case config.currentRateCardType of
-              PaymentFareBreakup -> ""
-              _ -> if config.nightCharges then "ny_ic_night," <> (getAssetStoreLink FunctionCall) <> "https://assets.juspay.in/nammayatri/images/user/ny_ic_night.png" 
-                                          else "ny_ic_day,"<> (getAssetStoreLink FunctionCall) <>"https://assets.juspay.in/nammayatri/images/user/ny_ic_day.png"
-           ]  
+         , if(config.currentRateCardType == RentalPackage) 
+            then suffixTitleImageView push config 
+            else imageView
+                  [ width $ MATCH_PARENT
+                  , height $ V 90
+                  , imageWithFallback $ case config.currentRateCardType of
+                      PaymentFareBreakup -> ""
+                      _ -> if config.nightCharges then "ny_ic_night," <> (getAssetStoreLink FunctionCall) <> "https://assets.juspay.in/nammayatri/images/user/ny_ic_night.png" 
+                                                  else "ny_ic_day,"<> (getAssetStoreLink FunctionCall) <>"https://assets.juspay.in/nammayatri/images/user/ny_ic_day.png"
+                  , gravity RIGHT
+                  ]
          ]
       ,linearLayout
         [ width MATCH_PARENT
-        , height if config.currentRateCardType == PaymentFareBreakup then WRAP_CONTENT else if config.showDetails then  (V 350) else (V 250) -- check in IOS (Added to handle glitch)
+        , height if config.currentRateCardType == PaymentFareBreakup || config.currentRateCardType == RentalPackage then WRAP_CONTENT else if config.showDetails then  (V 350) else (V 250) -- check in IOS (Added to handle glitch)
         , orientation HORIZONTAL
         ][PrestoAnim.animationSet [ if (DA.any (_ == config.currentRateCardType) [ PaymentFareBreakup, DefaultRateCard]) then (translateInXBackwardAnim config.onFirstPage) else (translateInXForwardAnim true) ] $
           case config.currentRateCardType of 
@@ -91,6 +97,7 @@ view push config =
             DriverAddition -> driverAdditionView push config 
             FareUpdate -> fareUpdateView push config
             PaymentFareBreakup -> paymentfareBreakup push config
+            RentalPackage -> rentalPackageView push config
             _ -> defaultRateCardView push config 
         ]     
       ,linearLayout
@@ -98,11 +105,21 @@ view push config =
       , height WRAP_CONTENT
       , padding $ PaddingBottom 20
       ][ case config.buttonText of
-          Just text ->  commonTV push text Color.blue800 FontStyle.subHeading1 CENTER 8 (if config.currentRateCardType == DefaultRateCard then Close else GoToDefaultStart)
+          Just text ->  commonTV push text Color.blue800 FontStyle.subHeading1 CENTER 8 (if config.currentRateCardType == DefaultRateCard || config.currentRateCardType == RentalPackage then Close else GoToDefaultStart)
           Nothing -> linearLayout[][]
       ]
     ]      
   ]
+
+suffixTitleImageView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
+suffixTitleImageView push config =  
+  imageView
+    [ height MATCH_PARENT
+    , width $ V 81
+    , imageWithFallback $ "ys_ic_suv_right," <> (getAssetStoreLink FunctionCall) <> "ys_ic_suv_right.png"
+    , weight 0.0
+    , gravity RIGHT
+    ]
 
 fareList :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w 
 fareList push config = 
@@ -279,7 +296,7 @@ driverAdditionView push config =
      , imageView
         [ height $ V 110
         , width MATCH_PARENT
-        , imageWithFallback config.driverAdditionsImage
+        , imageWithFallback $ config.driverAdditionsImage
         , margin $ MarginTop 12
         ] 
      , commonTV push (getStringByKey config "DRIVER_MAY_NOT_CHARGE_THIS_ADDITIONAL_FARE") Color.black650 FontStyle.body3 LEFT 12 NoAction
@@ -345,7 +362,7 @@ paymentfareBreakup push config =
           , gravity RIGHT
           , weight 1.0
           ]
-        ]
+        ] 
       , PrimaryButton.view (push <<< PrimaryButtonAC) (primaryButtonConfig config)
   ]
 
@@ -386,3 +403,25 @@ getStringByKey config key = do
   case arr DA.!! 0 of
     Just ob -> ob.val
     Nothing -> ""
+
+rentalPackageView :: forall w . (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
+rentalPackageView push config = 
+  linearLayout
+    [ height WRAP_CONTENT
+    , width MATCH_PARENT
+    , orientation VERTICAL
+    , padding $ PaddingHorizontal 16 16
+    , margin $ MarginBottom 12
+    ] 
+    [ commonTV push "Final fare will be based on the actual duration, rounded up to the nearest hour OR the trip duration you select (whichever is higher)." Color.black650 FontStyle.paragraphText LEFT 16 NoAction
+    , commonTV push "Any distance covered in excess of the included kms will be charged extra" Color.black650 FontStyle.paragraphText LEFT 20 NoAction
+    , imageView
+        [ height $ V 118
+        , width MATCH_PARENT
+        , imageWithFallback $ "ys_ic_ratecard," <> (getAssetStoreLink FunctionCall) <> "ys_ic_ratecard.png"
+        , margin $ MarginVertical 12 12
+        , gravity CENTER
+        ]
+    , commonTV push "Note: A flat night time fee of ₹150 will be charged if your ride starts/ends at a time between 10 PM and 5 AM" Color.black650 FontStyle.paragraphText LEFT 0 NoAction
+    , commonTV push "Parking fees and tolls are not included. Please pay those separately to the driver." Color.black650 FontStyle.paragraphText LEFT 20 NoAction
+    ]

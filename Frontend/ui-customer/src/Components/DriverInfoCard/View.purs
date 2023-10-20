@@ -20,6 +20,7 @@ import Animation (fadeIn, fadeInWithDelay)
 import Common.Types.App (LazyCheck(..))
 import Components.DriverInfoCard.Controller (Action(..), DriverInfoCardState)
 import Components.PrimaryButton as PrimaryButton
+import Components.SeparatorView.View as SeparatorView
 import Components.SourceToDestination as SourceToDestination
 import Data.Array as Array
 import Data.Maybe (fromMaybe)
@@ -42,7 +43,7 @@ import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Properties (cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
-import Screens.Types (Stage(..), ZoneType(..), SearchResultType(..))
+import Screens.Types (Stage(..), ZoneType(..), SearchResultType(..), BookingStage(..))
 import Storage (isLocalStageOn, getValueToLocalStore)
 import Styles.Colors as Color
 import Common.Styles.Colors as CommonColor
@@ -688,6 +689,8 @@ driverInfoView push state =
               ][]
               , if state.props.currentSearchResultType == QUOTES  then headerTextView push state else contactView push state
               , otpAndWaitView push state
+              , rentalRideView push state
+              , rentalTimeAndOdometerView push state
               , separator (Margin 16 (if(state.props.currentStage == RideStarted && state.data.config.nyBrandingVisibility) then 16 else 0) 16 0) (V 1) Color.grey900 $ (state.props.currentStage == RideAccepted && not state.data.config.showPickUpandDrop)
               , driverDetailsView push state
               , separator (MarginHorizontal 16 16) (V 1) Color.grey900 true
@@ -1233,3 +1236,168 @@ getVehicleImage variant vehicleDetail = do
                         "SUV" -> "ny_ic_suv_concept," <> url <> "ny_ic_suv_concept.png"
                         _     -> "ny_ic_sedan_concept," <> url <> "ny_ic_sedan_concept.png"
         _          -> "ic_white_taxi," <> url <> "ic_white_taxi.png"
+
+rentalRideView :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM (Effect Unit) w
+rentalRideView push state = 
+  linearLayout
+    [ height WRAP_CONTENT
+    , width MATCH_PARENT
+    , gravity CENTER_HORIZONTAL
+    , margin $ MarginHorizontal 16 16
+    , visibility if(state.props.bookingStage == Rental && state.props.currentStage /= RideStarted) then VISIBLE else GONE
+    ] [ linearLayout
+        [ height WRAP_CONTENT
+        , width MATCH_PARENT
+        , gravity CENTER
+        ][
+          linearLayout
+          [ width WRAP_CONTENT
+          , height WRAP_CONTENT
+          , cornerRadius 9.0
+          , background Color.white900
+          , margin $ MarginHorizontal 16 16
+          , gravity CENTER
+          , padding $ Padding 10 8 10 8
+          , weight 1.0
+          , stroke $ "1,"<> Color.grey900
+          , orientation HORIZONTAL
+          ] [ textView (
+              [ width WRAP_CONTENT
+              , height WRAP_CONTENT
+              , accessibility ENABLE
+              , textSize FontSize.a_14
+              , text $ "Rental Ride"
+              , color Color.black700
+              , margin $ MarginRight 8
+              ] <> FontStyle.body1 TypoGraphy) 
+            , textView(
+              [ width WRAP_CONTENT
+              , height WRAP_CONTENT
+              , accessibility ENABLE
+              , textSize FontSize.a_14
+              , text $ state.props.rentalData.baseDuration <> "hr"
+              , color Color.black800
+              ] <> FontStyle.subHeading1 TypoGraphy)
+            , imageView 
+                [ imageWithFallback $ "ys_ic_elipse," <> (getAssetStoreLink FunctionCall) <> "ys_ic_elipse.png"
+                , height $ V 3
+                , width $ V 3
+                , margin $ MarginHorizontal 6 6
+                ]
+            , textView(
+              [ width WRAP_CONTENT
+              , height WRAP_CONTENT
+              , accessibility ENABLE
+              , textSize FontSize.a_14
+              , text $ state.props.rentalData.baseDistance <>"km"
+              , color Color.black800
+              ] <> FontStyle.subHeading1 TypoGraphy)
+          ]
+        ]
+    ]
+
+rentalTimeAndOdometerView :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM (Effect Unit) w
+rentalTimeAndOdometerView push state = 
+  linearLayout
+    [ height WRAP_CONTENT
+    , width MATCH_PARENT
+    , cornerRadius 9.0
+    , background Color.white900
+    , padding $ Padding 16 8 16 8
+    , margin $ Margin 16 8 16 8
+    , stroke $ "1,"<> Color.grey900
+    , orientation HORIZONTAL
+    , afterRender push $ const NoAction
+    , weight 0.0
+    ] [ rideTimeView push state
+      , separatorView true
+      , startingODOView push state
+    ]
+
+rideTimeView :: forall w . (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM (Effect Unit) w
+rideTimeView push state =
+  linearLayout
+    [ height WRAP_CONTENT
+    , width WRAP_CONTENT
+    , gravity CENTER
+    , orientation VERTICAL
+    , weight 1.0
+    , padding $ PaddingLeft 4
+    ][ textView $
+       [ height WRAP_CONTENT
+        , width WRAP_CONTENT
+        , text "Ride Time"
+        , color Color.black650
+        , ellipsize true
+        , singleLine true
+        -- , fontSize FontSize.a_12
+        ] <> FontStyle.tags TypoGraphy
+      , linearLayout
+        [ height MATCH_PARENT
+        , width MATCH_PARENT
+        , gravity CENTER
+        , orientation HORIZONTAL
+        ] [
+          textView $
+            [ height WRAP_CONTENT
+            , width WRAP_CONTENT
+            , text "1:59hr / "
+            , color Color.black900
+            , ellipsize true
+            , singleLine true
+            , fontSize FontSize.a_14
+            ] <> FontStyle.body18 TypoGraphy
+          , textView $
+            [ height WRAP_CONTENT
+            , width WRAP_CONTENT
+            , text $ state.props.rentalData.baseDuration <> "hr"
+            , color Color.black800
+            , ellipsize true
+            , singleLine true
+            , fontSize FontSize.a_14
+            ] <> FontStyle.body18 TypoGraphy
+        ]
+    ]
+
+startingODOView :: forall w . (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM (Effect Unit) w
+startingODOView push state = 
+  linearLayout
+    [ height WRAP_CONTENT
+    , width WRAP_CONTENT
+    , gravity CENTER
+    , orientation VERTICAL
+    , weight 0.9
+    ][ textView $
+       [ height WRAP_CONTENT
+        , width WRAP_CONTENT
+        , text "Starting ODO"
+        , color Color.black700
+        , ellipsize true
+        , singleLine true
+        -- , fontSize FontSize.a_12
+        ] <> FontStyle.tags TypoGraphy
+      , textView $
+        [ height WRAP_CONTENT
+        , width WRAP_CONTENT
+        , text "21447 km"
+        , color Color.black800
+        , ellipsize true
+        , singleLine true
+        , fontSize FontSize.a_14
+        ] <> FontStyle.body18 TypoGraphy
+    ]
+  
+separatorView :: forall w . Boolean -> PrestoDOM (Effect Unit) w
+separatorView visibility' =
+  linearLayout
+    [ height MATCH_PARENT
+    , margin $ MarginHorizontal 25 20
+    , gravity CENTER
+    , weight 1.0
+    , visibility if visibility' then VISIBLE else GONE
+    ][ linearLayout
+      [ width $ V 1
+      , background Color.lightGrey
+      , height MATCH_PARENT
+      ][]
+    ]

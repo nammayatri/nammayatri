@@ -641,5 +641,6 @@ const malayalamStrings = {
   "HELP" : "സഹായം",
   "FARE_INFO_TEXT" : "",
   "FASTER" : "വേഗത്തിൽ",
-  "PLEASE_ENABLE_LOCATION_PERMISSION" : "റൈഡുകൾക്കായി തിരയാൻ ക്രമീകരണ ആപ്പിൽ നിന്ന് ലൊക്കേഷൻ അനുമതികൾ പ്രാപ്തമാക്കുക."
+  "PLEASE_ENABLE_LOCATION_PERMISSION" : "റൈഡുകൾക്കായി തിരയാൻ ക്രമീകരണ ആപ്പിൽ നിന്ന് ലൊക്കേഷൻ അനുമതികൾ പ്രാപ്തമാക്കുക.",
+  "BOOK_A_RENTAL" : "ഒരു വാടകയ്ക്ക് ബുക്ക് ചെയ്യുക"
 }

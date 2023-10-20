@@ -458,6 +458,7 @@
       "shape_profile_drawable" : true,
       "silent_popup_background" : true,
       "up_hand_arrow" : true,
-      "widget_close_gradient" : true
+      "widget_close_gradient" : true,
+      "ys_ic_calendar" : true
    }
 }
