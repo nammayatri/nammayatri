@@ -153,7 +153,7 @@ defaultGlobalProps :: GlobalProps
 defaultGlobalProps = {
   aadhaarVerificationRequired : false,
   driverInformation : Nothing,
-  driverRideStats : HomeScreenData.dummyDriverRideStats,
+  driverRideStats : Nothing,
   callScreen : ScreenNames.HOME_SCREEN,
   gotoPopupType : NO_POPUP_VIEW
 }
