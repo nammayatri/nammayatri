@@ -239,8 +239,8 @@ handler merchantId req initReq = do
                 DRB.BookingDetailsRental
                   { rentalToLocation = Nothing
                   }
-      let fromLocation = case searchRequest.searchRequestDetails of
-            DSR.SearchRequestDetailsOnDemand {} -> fromLocation
+      let fromLocation' = case searchRequest.searchRequestDetails of
+            DSR.SearchRequestDetailsOnDemand {..} -> fromLocation
             DSR.SearchRequestDetailsRental {..} -> rentalFromLocation
       pure
         DRB.Booking
@@ -266,6 +266,7 @@ handler merchantId req initReq = do
             disabilityTag = disabilityTag,
             area = searchRequest.area,
             paymentMethodId = mbPaymentMethodId,
+            fromLocation = fromLocation',
             ..
           }
     buildBookingSpecialzone ::

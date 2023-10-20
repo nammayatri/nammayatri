@@ -12,7 +12,6 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-type-defaults #-}
 
 module Storage.Queries.LocationMapping where
 
@@ -21,7 +20,9 @@ import Domain.Types.LocationMapping
 import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.Common
+import Kernel.Types.Error
 import Kernel.Types.Id
+import Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified Storage.Beam.LocationMapping as BeamLM
 
@@ -46,14 +47,18 @@ updatePastMappingVersions entityId order = do
 
 incrementVersion :: MonadFlow m => LocationMapping -> m ()
 incrementVersion mapping = do
-  let newVersion = getNewVersion mapping.version
+  newVersion <- getNewVersion mapping
   updateVersion mapping.entityId mapping.order newVersion
 
-getNewVersion :: Text -> Text
-getNewVersion oldVersion =
-  case T.splitOn "-" oldVersion of
-    ["v", versionNum] -> "v-" <> T.pack (show (read (T.unpack versionNum) + 1))
-    _ -> "v-1"
+getNewVersion :: MonadFlow m => LocationMapping -> m Text
+getNewVersion mapping =
+  case T.splitOn "-" mapping.version of
+    ["v", versionNum] -> do
+      oldVersionInt <-
+        fromEitherM (InternalError . (("Location mapping version parse failed: id: " <> mapping.id.getId <> "; err: ") <>)) $
+          readEither @String @Integer (T.unpack versionNum)
+      pure $ "v-" <> T.pack (show (oldVersionInt + 1))
+    _ -> pure "v-1"
 
 updateVersion :: MonadFlow m => Text -> Int -> Text -> m ()
 updateVersion entityId order version =
