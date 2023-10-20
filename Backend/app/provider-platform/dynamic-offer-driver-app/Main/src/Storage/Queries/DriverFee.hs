@@ -434,7 +434,8 @@ findAllPendingInRange (Id merchantId) startTime endTime = do
     [ Se.And
         [ Se.Is BeamDF.merchantId $ Se.Eq merchantId,
           Se.Is BeamDF.endTime $ Se.GreaterThanOrEq startTime,
-          Se.Is BeamDF.endTime $ Se.LessThanOrEq endTime
+          Se.Is BeamDF.endTime $ Se.LessThanOrEq endTime,
+          Se.Is BeamDF.status $ Se.Eq Domain.PAYMENT_PENDING
         ]
     ]
 
@@ -444,7 +445,8 @@ findAllOverdueInRange (Id merchantId) startTime endTime = do
     [ Se.And
         [ Se.Is BeamDF.merchantId $ Se.Eq merchantId,
           Se.Is BeamDF.payBy $ Se.GreaterThanOrEq startTime,
-          Se.Is BeamDF.payBy $ Se.LessThanOrEq endTime
+          Se.Is BeamDF.payBy $ Se.LessThanOrEq endTime,
+          Se.Is BeamDF.status $ Se.Eq Domain.PAYMENT_OVERDUE
         ]
     ]
 
