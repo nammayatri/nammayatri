@@ -105,10 +105,10 @@ dropDBCommand dbStreamKey entryId = do
       void $ publishDBSyncMetric Event.DropDBCommandError
       EL.logError ("DROP_DB_COMMAND_ERROR" :: Text) $ ("entryId : " :: Text) <> show entryId <> (", Error : " :: Text) <> show e
 
-runCriticalDBSyncOperations :: Text -> [(UpdateDBCommand, ByteString)] -> [(DeleteDBCommand, ByteString)] -> [(EL.KVDBStreamEntryID, ByteString)] -> ExceptT Int Flow Int
+runCriticalDBSyncOperations :: Text -> [(EL.KVDBStreamEntryID, ByteString)] -> [(DeleteDBCommand, ByteString)] -> [(EL.KVDBStreamEntryID, ByteString)] -> ExceptT Int Flow Int
 runCriticalDBSyncOperations dbStreamKey updateEntries deleteEntries createDataEntries = do
   let updateStreamdata = map snd updateEntries
-  EL.logDebug ("UPDTE::: " :: Text) (show updateStreamdata)
+  EL.logDebug ("UPD :: " :: Text) (show updateStreamdata)
   isForcePushEnabled <- pureRightExceptT $ fromMaybe False <$> getValueFromRedis C.forceDrainEnabledKey
   {- run bulk-inserts parallel -}
   (cSucc, cFail) <- pureRightExceptT $ executeInSequence' runCreateQuery ([], []) dbStreamKey createDataEntries
@@ -135,7 +135,7 @@ runCriticalDBSyncOperations dbStreamKey updateEntries deleteEntries createDataEn
             throwE (length cSucc)
       else pure (length cSucc)
   {- run updates parallel -}
-  (uSucc, uFail) <- pureRightExceptT $ executeInSequence runUpdateCommands ([], []) dbStreamKey updateEntries
+  (uSucc, uFail) <- pureRightExceptT $ executeInSequence' runUpdateQuery ([], []) dbStreamKey updateEntries
   void $ pureRightExceptT $ publishDBSyncMetric $ Event.DrainerQueryExecutes "Update" (fromIntegral $ length uSucc)
   void $
     if null uSucc
@@ -150,7 +150,8 @@ runCriticalDBSyncOperations dbStreamKey updateEntries deleteEntries createDataEn
         if isForcePushEnabled
           then do
             EL.logError ("UPDATE FAILED: Force Sync is enabled" :: Text) (show uFail :: Text)
-            void $ pureRightExceptT $ addValueToErrorQueue (T.pack C.ecRedisFailedStream) ((\(_, bts) -> ("command", bts)) <$> filter (\(UpdateDBCommand id _ _ _ _ _, _) -> id `elem` uFail) updateEntries)
+            -- void $ pureRightExceptT $ addValueToErrorQueue (T.pack C.ecRedisFailedStream) ((\(_, bts) -> ("command", bts)) <$> filter (\(UpdateDBCommand id _ _ _ _ _, _) -> id `elem` uFail) updateEntries)
+            void $ pureRightExceptT $ addValueToErrorQueue (T.pack C.ecRedisFailedStream) ((\(_, bts) -> ("command", bts)) <$> filter (\(id, _) -> id `elem` uFail) updateEntries)
             pureRightExceptT $ traverse_ (dropDBCommand dbStreamKey) uFail
             pure (length cSucc + length uSucc)
           else do
@@ -218,7 +219,7 @@ process dbStreamKey count = do
     run entries = do
       commands <- catMaybes <$> traverse (parseDBCommand dbStreamKey) entries
       -- let createEntries = mapMaybe filterCreateCommands commands
-      let updateEntries = mapMaybe filterUpdateCommands commands
+      let updateEntries = mapMaybe filterUpdateCommands' commands
           deleteEntries = mapMaybe filterDeleteCommands commands
           createDataEntries = mapMaybe filterCreateCommands' commands
 
