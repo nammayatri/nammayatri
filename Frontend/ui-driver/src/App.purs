@@ -58,6 +58,7 @@ import Screens.OnBoardingSubscriptionScreen.ScreenData as OnBoardingSubscription
 import Screens.AppUpdatePopUpScreen.ScreenData as AppUpdatePopUpScreenData
 import Screens (ScreenName(..)) as ScreenNames
 import Screens.DriverSavedLocationScreen.ScreenData as DriverSavedLocationScreenData
+import Data.Maybe (Maybe(..))
 
 type FlowBT e a = BackT (ExceptT e (Free (FlowWrapper GlobalState))) a
 
@@ -151,7 +152,7 @@ defaultGlobalState = GlobalState {
 defaultGlobalProps :: GlobalProps
 defaultGlobalProps = {
   aadhaarVerificationRequired : false,
-  driverInformation : DriverProfileScreenData.dummyDriverInfo,
+  driverInformation : Nothing,
   driverRideStats : HomeScreenData.dummyDriverRideStats,
   callScreen : ScreenNames.HOME_SCREEN,
   gotoPopupType : NO_POPUP_VIEW

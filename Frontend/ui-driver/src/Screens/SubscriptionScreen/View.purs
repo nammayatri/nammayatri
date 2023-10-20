@@ -68,11 +68,12 @@ import Screens (getScreen)
 import Screens as ScreenNames
 import Screens.SubscriptionScreen.Controller (Action(..), ScreenOutput, eval, getAllFareFromArray, getPlanPrice)
 import Screens.Types (AutoPayStatus(..), DueItem, GlobalProps, KioskLocation(..), MyPlanData, OfferBanner, OptionsMenuState(..), PlanCardConfig, PromoConfig, SubscriptionScreenState, SubscriptionSubview(..))
-import Services.API (FeeType(..), GetCurrentPlanResp(..), GetDriverInfoResp(..), KioskLocationRes(..), KioskLocationResp(..), OrderStatusRes(..), PaymentBreakUp(..), UiPlansResp(..))
+import Services.API (FeeType(..), GetCurrentPlanResp(..), GetDriverInfoResp(..), KioskLocationRes(..), KioskLocationResp(..), OrderStatusRes(..), PaymentBreakUp(..), UiPlansResp(..), GetDriverInfoReq(..))
 import Services.Backend as Remote
 import Storage (KeyStore(..), getValueToLocalNativeStore, getValueToLocalStore, setValueToLocalStore, isOnFreeTrial)
 import Styles.Colors as Color
 import Types.App (GlobalState(..), defaultGlobalState)
+import Screens.DriverProfileScreen.ScreenData (dummyDriverInfo)
 
 screen :: SubscriptionScreenState -> GlobalState -> Screen Action SubscriptionScreenState ScreenOutput
 screen initialState globalState =
@@ -98,7 +99,7 @@ loadData :: forall action. (action -> Effect Unit) ->  (UiPlansResp -> action) -
 loadData push loadPlans loadAlternatePlans loadMyPlans loadHelpCentre errorAction state (GlobalState globalState) = do
   if any ( _ == state.props.subView )[JoinPlan, MyPlan, NoSubView] then do
     let globalProp = globalState.globalProps
-    let (GetDriverInfoResp driverInfo) = globalProp.driverInformation
+    (GetDriverInfoResp driverInfo) <- getDriverInfoDataFromCache globalProp.driverInformation
     if isJust driverInfo.autoPayStatus then do 
       currentPlan <- Remote.getCurrentPlan ""
       case currentPlan of
@@ -124,6 +125,17 @@ loadData push loadPlans loadAlternatePlans loadMyPlans loadHelpCentre errorActio
       Left err -> if err.code /= 404 then doAff do liftEffect $ push $ errorAction err
                   else doAff do liftEffect $ push $ loadHelpCentre state.props.currentLat state.props.currentLon []
   else pure unit
+
+
+getDriverInfoDataFromCache :: Maybe GetDriverInfoResp -> Flow GlobalState GetDriverInfoResp
+getDriverInfoDataFromCache resp = do
+  case resp of 
+    Just cacheResp -> pure cacheResp
+    Nothing -> do
+      driverInfoResp <- Remote.getDriverInfoApi (GetDriverInfoReq {})
+      case driverInfoResp of
+        Right latestResp -> pure latestResp
+        Left _ -> pure dummyDriverInfo
 
 paymentStatusPooling :: forall action. String -> Int -> Int -> Int -> SubscriptionScreenState -> (action -> Effect Unit) -> (APIPaymentStatus -> action) -> Flow GlobalState Unit
 paymentStatusPooling orderId count base power state push action = do

@@ -77,6 +77,7 @@ import Screens.BookingOptionsScreen.Controller (downgradeOptionsConfig)
 import Screens.BookingOptionsScreen.ScreenData as BookingOptionsScreenData
 import Screens.DriverDetailsScreen.Controller (getGenderValue, genders, getGenderState)
 import Screens.DriverProfileScreen.Controller (getDowngradeOptionsSelected)
+import Screens.DriverProfileScreen.ScreenData (dummyDriverInfo)
 import Screens.DriverProfileScreen.Transformer (transformSelectedVehicles)
 import Screens.Handlers (homeScreen)
 import Screens.DriverSavedLocationScreen.Transformer (getLocationArray)
@@ -319,7 +320,7 @@ getDriverInfoFlow event activeRideResp = do
           pure unit
         setValueToLocalStore IS_DRIVER_ENABLED "true"
         resp <- Remote.getDriverProfileStatsBT (DriverProfileStatsReq (getcurrentdate ""))
-        modifyScreenState $ GlobalPropsType $ \globalProps -> globalProps{driverInformation = GetDriverInfoResp getDriverInfoResp, driverRideStats = resp}
+        modifyScreenState $ GlobalPropsType $ \globalProps -> globalProps{driverInformation = Just (GetDriverInfoResp getDriverInfoResp), driverRideStats = resp}
         updateDriverDataToStates
         _ <- liftFlowBT $ runEffectFn1 consumeBP unit
         permissionsGiven <- checkAll3Permissions
@@ -387,7 +388,7 @@ checkPreRequisites activeRideResp = do
 checkAndUpdateRCStatus :: FlowBT String Boolean
 checkAndUpdateRCStatus = do
   (GlobalState globalstate) <- getState
-  let (GetDriverInfoResp getDriverInfoResp) = globalstate.globalProps.driverInformation
+  (GetDriverInfoResp getDriverInfoResp) <- getDriverInfoDataFromCache (GlobalState globalstate)
   case getDriverInfoResp.linkedVehicle of
     Nothing -> do
       when (globalstate.homeScreen.props.driverStatusSet /= Offline) $ changeDriverStatus Offline
@@ -399,9 +400,9 @@ checkAndUpdateRCStatus = do
 
 checkStatusAndStartLocationUpdates :: FlowBT String Unit
 checkStatusAndStartLocationUpdates = do
-  (GlobalState globalstate) <- getState 
-  let (GetDriverInfoResp getDriverInfoResp) = globalstate.globalProps.driverInformation
-      isNoDriverMode = isNothing getDriverInfoResp.mode
+  globalstate <- getState 
+  (GetDriverInfoResp getDriverInfoResp) <- getDriverInfoDataFromCache globalstate
+  let isNoDriverMode = isNothing getDriverInfoResp.mode
       driverMode = fromMaybe "" getDriverInfoResp.mode
       isOffline = if isNoDriverMode  then getDriverInfoResp.active else driverMode == "OFFLINE"
       currentMode = if isNoDriverMode then show $ updateDriverStatus (getDriverInfoResp.active) else driverMode
@@ -890,9 +891,9 @@ driverProfileFlow = do
         Right (MakeRcActiveOrInactiveResp response) -> do
           pure $ toast $ if state.data.isRCActive then "RC-"<>state.data.rcNumber<>" "<> (getString DEACTIVATED) else "RC-"<>state.data.rcNumber<> (getString IS_ACTIVE_NOW)
           if state.data.isRCActive then do
-            (GlobalState globalstate) <- getState
-            let (GetDriverInfoResp getDriverInfoResp)= globalstate.globalProps.driverInformation
-                status = getDriverStatus $ fromMaybe "" getDriverInfoResp.mode
+            globalstate <- getState
+            (GetDriverInfoResp getDriverInfoResp) <- getDriverInfoDataFromCache globalstate
+            let status = getDriverStatus $ fromMaybe "" getDriverInfoResp.mode
             when (status /= Offline) $ changeDriverStatus Offline
             modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props {rcActive = false, rcDeactivePopup = true}})
           else modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props {rcActive = true, rcDeactivePopup = false}}) 
@@ -913,7 +914,7 @@ driverProfileFlow = do
             getDriverInfoApiResp <- lift $ lift $ Remote.getDriverInfoApi (GetDriverInfoReq{})
             case getDriverInfoApiResp of
               Right getDriverInfoResp -> do
-                modifyScreenState $ GlobalPropsType $ \globalProps -> globalProps{driverInformation = getDriverInfoResp}
+                modifyScreenState $ GlobalPropsType $ \globalProps -> globalProps{driverInformation = Just getDriverInfoResp}
                 updateDriverDataToStates
               Left _ -> pure unit
     GO_TO_DELETE_RC state -> do 
@@ -1760,10 +1761,11 @@ homeScreenFlow = do
   _ <- pure $ cleverTapSetLocation unit
   if (getValueToLocalNativeStore IS_RIDE_ACTIVE) == "true" && (not $ any (\item -> isLocalStageOn item) [RideAccepted, RideStarted, ChatWithCustomer]) then currentRideFlow Nothing
     else pure unit
-  (GlobalState globalState) <- getState
+  globalState <- getState
   appConfig <- getAppConfig Constants.appConfig
-  when appConfig.subscriptionConfig.enableBlocking $ do checkDriverBlockingStatus globalState.globalProps.driverInformation
-  when appConfig.subscriptionConfig.completePaymentPopup $ checkDriverPaymentStatus globalState.globalProps.driverInformation
+  getDriverInfoResp <- getDriverInfoDataFromCache globalState
+  when appConfig.subscriptionConfig.enableBlocking $ do checkDriverBlockingStatus getDriverInfoResp
+  when appConfig.subscriptionConfig.completePaymentPopup $ checkDriverPaymentStatus getDriverInfoResp
   updateBannerAndPopupFlags
   lift $ lift $ doAff do liftEffect hideSplash
   void $ lift $ lift $ toggleLoader false
@@ -1789,10 +1791,10 @@ homeScreenFlow = do
       let currentTime = (convertUTCtoISC (getCurrentUTC "") "HH:mm:ss")
       liftFlowBT $ logEventWithParams logField_ label "Timestamp" currentTime
       changeDriverStatus status
-      (GlobalState gs) <- getState
-      let (GetDriverInfoResp getDriverInfoResp) = gs.globalProps.driverInformation
-          (API.DriverGoHomeInfo driverGoHomeInfo) = getDriverInfoResp.driverGoHomeInfo
-      modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen {props {showOffer = status == Online && state.props.driverStatusSet == Offline && getDriverInfoResp.autoPayStatus == Nothing }, data {
+      gs <- getState
+      (GetDriverInfoResp getDriverInfoRes) <- getDriverInfoDataFromCache gs
+      let (API.DriverGoHomeInfo driverGoHomeInfo) = getDriverInfoRes.driverGoHomeInfo
+      modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen {props {showOffer = status == Online && state.props.driverStatusSet == Offline && getDriverInfoRes.autoPayStatus == Nothing }, data {
         driverGotoState {
           isGotoEnabled = driverGoHomeInfo.status == Just "ACTIVE"
         }
@@ -1891,7 +1893,7 @@ homeScreenFlow = do
       when state.data.driverGotoState.isGotoEnabled do
         getDriverInfoResp <- Remote.getDriverInfoBT (GetDriverInfoReq { })
         modifyScreenState $ GlobalPropsType (\globalProps -> globalProps 
-          { driverInformation = getDriverInfoResp,
+          { driverInformation = Just getDriverInfoResp,
             gotoPopupType = case endRideResp.homeLocationReached of 
               Nothing -> ST.NO_POPUP_VIEW
               Just true -> ST.REACHED_HOME
@@ -1914,7 +1916,7 @@ homeScreenFlow = do
       if getValueToLocalStore HAS_TAKEN_FIRST_RIDE == "true" then do
         getDriverInfoResp <- Remote.getDriverInfoBT (GetDriverInfoReq { })
         let (GetDriverInfoResp getDriverInfoResp) = getDriverInfoResp
-        modifyScreenState $ GlobalPropsType $ \globalProps -> globalProps{driverInformation = (GetDriverInfoResp getDriverInfoResp)}
+        modifyScreenState $ GlobalPropsType $ \globalProps -> globalProps{driverInformation = Just (GetDriverInfoResp getDriverInfoResp)}
         if (isJust getDriverInfoResp.numberOfRides && (fromMaybe 0 getDriverInfoResp.numberOfRides == 1))
           then do
             let currdate = getcurrentdate ""
@@ -1968,8 +1970,8 @@ homeScreenFlow = do
       void $ Remote.driverActiveInactiveBT "true" $ toUpper $ show Online
       _ <- updateStage $ HomeScreenStage HomeScreen
       when state.data.driverGotoState.isGotoEnabled do
-        getDriverInfoResp <- Remote.getDriverInfoBT (GetDriverInfoReq { })
-        modifyScreenState $ GlobalPropsType (\globalProps -> globalProps {driverInformation = getDriverInfoResp, gotoPopupType = if (fromMaybe false cancelRideResp.isGoHomeDisabled) then ST.REDUCED 0 else ST.NO_POPUP_VIEW})
+        driverInfoResp <- Remote.getDriverInfoBT (GetDriverInfoReq { })
+        modifyScreenState $ GlobalPropsType (\globalProps -> globalProps {driverInformation = Just driverInfoResp, gotoPopupType = if (fromMaybe false cancelRideResp.isGoHomeDisabled) then ST.REDUCED 0 else ST.NO_POPUP_VIEW})
       updateDriverDataToStates
       modifyScreenState $ GlobalPropsType (\globalProps -> globalProps { gotoPopupType = ST.NO_POPUP_VIEW })
       removeChatService ""
@@ -2000,7 +2002,7 @@ homeScreenFlow = do
       modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{ props {rideActionModal = false, cancelRideModalShow = false, enterOtpModal = false, routeVisible = false, refreshAnimation = false}})
       getDriverInfoApiResp <- lift $ lift $ Remote.getDriverInfoApi (GetDriverInfoReq{})
       case getDriverInfoApiResp of
-        Right resp -> modifyScreenState $ GlobalPropsType $ \globalProps -> globalProps{driverInformation = resp}
+        Right resp -> modifyScreenState $ GlobalPropsType $ \globalProps -> globalProps{driverInformation = Just resp}
         Left _ -> pure unit
       updateDriverDataToStates
       homeScreenFlow
@@ -2075,8 +2077,8 @@ homeScreenFlow = do
     POST_RIDE_FEEDBACK state-> do 
       _ <- lift $ lift $ Remote.postRideFeedback state.data.endRideData.rideId state.data.endRideData.rating state.data.endRideData.feedback
       (GlobalState globalstate) <- getState
-      let (GetDriverInfoResp getDriverInfoResp) = globalstate.globalProps.driverInformation
-          (API.DriverGoHomeInfo driverGoHomeInfo) = getDriverInfoResp.driverGoHomeInfo
+      (GetDriverInfoResp getDriverInfoResp) <- getDriverInfoDataFromCache (GlobalState globalstate)
+      let (API.DriverGoHomeInfo driverGoHomeInfo) = getDriverInfoResp.driverGoHomeInfo
       when state.data.driverGotoState.isGotoEnabled do
         modifyScreenState $ GlobalPropsType $ \globalProps -> globalProps { 
             gotoPopupType = case globalstate.globalProps.gotoPopupType of
@@ -2094,8 +2096,8 @@ homeScreenFlow = do
         Right resp -> do 
           _ <- pure $ toast $ getString GOTO_LOC_IS_ENABLED
           modifyScreenState $ HomeScreenStateType (\_ -> state { data { driverGotoState { showGoto = false}}})
-          getDriverInfoResp <- Remote.getDriverInfoBT (GetDriverInfoReq { })
-          modifyScreenState $ GlobalPropsType (\globalProps -> globalProps {driverInformation = getDriverInfoResp})
+          driverInfoResp <- Remote.getDriverInfoBT (GetDriverInfoReq { })
+          modifyScreenState $ GlobalPropsType (\globalProps -> globalProps {driverInformation = Just driverInfoResp})
           updateDriverDataToStates
         Left errorPayload ->if (decodeErrorCode errorPayload.response.errorMessage) == "DRIVER_CLOSE_TO_HOME_LOCATION" then modifyScreenState $ HomeScreenStateType (\_ -> state{data { driverGotoState {gotoLocInRange = true
                                 , savedLocationsArray = getDisabledLocById id state.data.driverGotoState.savedLocationsArray, selectedGoTo = ""}}})
@@ -2116,8 +2118,8 @@ homeScreenFlow = do
         Right _ -> do
           _ <- pure $ toast $ getString GOTO_LOC_IS_DISABLED
           _ <- pure $ clearTimer state.data.driverGotoState.timerId
-          getDriverInfoResp <- Remote.getDriverInfoBT (GetDriverInfoReq { })
-          modifyScreenState $ GlobalPropsType (\globalProps -> globalProps {driverInformation = getDriverInfoResp})
+          driverInfoResp <- Remote.getDriverInfoBT (GetDriverInfoReq { })
+          modifyScreenState $ GlobalPropsType (\globalProps -> globalProps {driverInformation = Just driverInfoResp})
           updateDriverDataToStates
         Left errorPayload -> pure $ toast $ Remote.getCorrespondingErrorMessage errorPayload
       homeScreenFlow
@@ -2128,8 +2130,8 @@ homeScreenFlow = do
     REFRESH_GOTO state -> do
       let defState = HomeScreenData.initData
       modifyScreenState $ HomeScreenStateType (\_ -> state { data { driverGotoState = defState.data.driverGotoState}})
-      getDriverInfoResp <- Remote.getDriverInfoBT (GetDriverInfoReq { })
-      modifyScreenState $ GlobalPropsType (\globalProps -> globalProps {driverInformation = getDriverInfoResp})
+      driverInfoResp <- Remote.getDriverInfoBT (GetDriverInfoReq { })
+      modifyScreenState $ GlobalPropsType (\globalProps -> globalProps {driverInformation = Just driverInfoResp})
       updateDriverDataToStates
       homeScreenFlow
   homeScreenFlow
@@ -2165,7 +2167,7 @@ clearPendingDuesFlow showLoader = do
                                                                                         ]
             getDriverInfoApiResp <- lift $ lift $ Remote.getDriverInfoApi (GetDriverInfoReq{})
             case getDriverInfoApiResp of
-              Right resp -> modifyScreenState $ GlobalPropsType $ \glopalProps -> glopalProps{driverInformation = resp}
+              Right resp -> modifyScreenState $ GlobalPropsType $ \glopalProps -> glopalProps{driverInformation = Just resp}
               Left _ -> pure unit
             updateDriverDataToStates
             pure unit
@@ -2232,7 +2234,7 @@ setSubscriptionStatus paymentStatus apiPaymentStatus planCardConfig = do
       liftFlowBT $ JB.firebaseLogEvent "ny_driver_subscription_success"
       getDriverInfoApiResp <- lift $ lift $ Remote.getDriverInfoApi (GetDriverInfoReq{})
       case getDriverInfoApiResp of
-        Right resp -> modifyScreenState $ GlobalPropsType $ \glopalProps -> glopalProps{driverInformation = resp}
+        Right resp -> modifyScreenState $ GlobalPropsType $ \glopalProps -> glopalProps{driverInformation = Just resp}
         Left _ -> pure unit
       updateDriverDataToStates
       modifyScreenState $ SubscriptionScreenStateType (\subscribeScreenState -> subscribeScreenState { props {popUpState = Just SuccessPopup}})
@@ -2385,7 +2387,7 @@ subScriptionFlow = do
       case suspendMandate of 
         Right resp -> do 
           getDriverInfoResp <- Remote.getDriverInfoBT (GetDriverInfoReq { })
-          modifyScreenState $ GlobalPropsType (\globalProps -> globalProps {driverInformation = getDriverInfoResp})
+          modifyScreenState $ GlobalPropsType (\globalProps -> globalProps {driverInformation = Just getDriverInfoResp})
           updateDriverDataToStates
           let (GlobalState defGlobalState) = defaultGlobalState
           modifyScreenState $ SubscriptionScreenStateType (\_ -> defGlobalState.subscriptionScreen{props{isEndRideModal = state.props.isEndRideModal}})
@@ -2413,7 +2415,7 @@ subScriptionFlow = do
       case resumeMandate of 
         Right resp -> do
           getDriverInfoResp <- Remote.getDriverInfoBT (GetDriverInfoReq { })
-          modifyScreenState $ GlobalPropsType (\globalProps -> globalProps {driverInformation = getDriverInfoResp})
+          modifyScreenState $ GlobalPropsType (\globalProps -> globalProps {driverInformation = Just getDriverInfoResp})
           updateDriverDataToStates
           let (GlobalState defGlobalState) = defaultGlobalState
           modifyScreenState $ SubscriptionScreenStateType (\_ -> defGlobalState.subscriptionScreen)
@@ -2433,7 +2435,7 @@ subScriptionFlow = do
     REFRESH_SUSCRIPTION -> do
       getDriverInfoResp <- Remote.getDriverInfoBT (GetDriverInfoReq { })
       (GlobalState state) <- getState
-      modifyScreenState $ GlobalPropsType (\globalProps -> globalProps {driverInformation = getDriverInfoResp})
+      modifyScreenState $ GlobalPropsType (\globalProps -> globalProps {driverInformation = Just getDriverInfoResp})
       updateDriverDataToStates
       let (GlobalState defGlobalState) = defaultGlobalState
           isEndRideModal = state.subscriptionScreen.props.isEndRideModal
@@ -2530,15 +2532,15 @@ popUpScreenFlow entityPayload = do
 
 changeDriverStatus :: DriverStatus -> FlowBT String Unit 
 changeDriverStatus status = do
-  (GlobalState globalState) <- getState
-  let GetDriverInfoResp getDriverInfoResp = globalState.globalProps.driverInformation
-      API.DriverGoHomeInfo driverGoHomeInfo = getDriverInfoResp.driverGoHomeInfo
+  globalState <- getState
+  (GetDriverInfoResp getDriverInfoResp) <- getDriverInfoDataFromCache globalState
+  let API.DriverGoHomeInfo driverGoHomeInfo = getDriverInfoResp.driverGoHomeInfo
       qParam = toUpper $ show status
       isDriverActive = any ( _ == status) [Online, Silent]
   void $ Remote.driverActiveInactiveBT (show isDriverActive) qParam
   when (driverGoHomeInfo.status == Just "ACTIVE" && status == Offline) do
     void $ lift $ lift $ Remote.deactivateDriverGoTo "" -- disabling goto when driver is Offline
-    modifyScreenState $ GlobalPropsType $ \glopalProps -> glopalProps{driverInformation = GetDriverInfoResp getDriverInfoResp {driverGoHomeInfo = API.DriverGoHomeInfo driverGoHomeInfo { status = Nothing} } }
+    modifyScreenState $ GlobalPropsType $ \glopalProps -> glopalProps{driverInformation = Just $ GetDriverInfoResp getDriverInfoResp {driverGoHomeInfo = API.DriverGoHomeInfo driverGoHomeInfo { status = Nothing} } }
   modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props {statusOnline = isDriverActive, driverStatusSet = status}})
   updateDriverStatusGlobal qParam isDriverActive
   void $ setValueToLocalStore DRIVER_STATUS if any ( _ == status) [Online, Silent] then "true" else "false"
@@ -2547,12 +2549,22 @@ changeDriverStatus status = do
   void $ setValueToLocalStore RIDE_T_FREQUENCY (if status == Online then "20000" else "30000")
   setValueToLocalStore DRIVER_MIN_DISPLACEMENT (if any ( _ == status) [Online, Silent] then "8.0" else "25.0")
 
+getDriverInfoDataFromCache :: GlobalState -> FlowBT String GetDriverInfoResp
+getDriverInfoDataFromCache (GlobalState globalState) = do
+  if isJust globalState.globalProps.driverInformation then do 
+    let driverInfoResp = fromMaybe dummyDriverInfo globalState.globalProps.driverInformation
+    pure driverInfoResp
+  else do
+    driverInfoResp <- Remote.getDriverInfoBT (GetDriverInfoReq {})
+    modifyScreenState $ GlobalPropsType $ \glopalProps -> glopalProps{driverInformation = Just $ driverInfoResp}
+    pure driverInfoResp
+
 updateDriverStatusGlobal :: String -> Boolean -> FlowBT String Unit
 updateDriverStatusGlobal mode active= do
-  (GlobalState globalState) <- getState
-  let (GetDriverInfoResp getDriverInfoResp) = globalState.globalProps.driverInformation
+  globalState <- getState
+  (GetDriverInfoResp getDriverInfoResp) <- getDriverInfoDataFromCache globalState
   let updatedResponse = getDriverInfoResp{mode = Just mode, active = active}
-  modifyScreenState $ GlobalPropsType $ \globalProps -> globalProps{driverInformation = GetDriverInfoResp updatedResponse}
+  modifyScreenState $ GlobalPropsType $ \globalProps -> globalProps{driverInformation = Just (GetDriverInfoResp updatedResponse)}
 
 driverRideRatingFlow :: FlowBT String Unit
 driverRideRatingFlow = do
@@ -2608,8 +2620,8 @@ getPaymentPageLangKey key = case key of
 updateDriverDataToStates :: FlowBT String Unit
 updateDriverDataToStates = do
   (GlobalState globalstate) <- getState
+  (GetDriverInfoResp getDriverInfoResp) <- getDriverInfoDataFromCache (GlobalState globalstate)
   let (DriverProfileStatsResp resp) = globalstate.globalProps.driverRideStats
-      (GetDriverInfoResp getDriverInfoResp)= globalstate.globalProps.driverInformation
       (API.DriverGoHomeInfo driverGoHomeInfo) = getDriverInfoResp.driverGoHomeInfo
       (Vehicle linkedVehicle) = (fromMaybe dummyVehicleObject getDriverInfoResp.linkedVehicle)
       showGender = not (isJust (getGenderValue getDriverInfoResp.gender))
@@ -2649,7 +2661,7 @@ updateDriverDataToStates = do
     , driverGender = getGenderState getDriverInfoResp.gender
     , capacity = fromMaybe 2 linkedVehicle.capacity
     , downgradeOptions = getDowngradeOptions linkedVehicle.variant
-    , vehicleSelected = getDowngradeOptionsSelected globalstate.globalProps.driverInformation
+    , vehicleSelected = getDowngradeOptionsSelected (GetDriverInfoResp getDriverInfoResp)
     , profileImg = getDriverInfoResp.aadhaarCardPhoto}})
   modifyScreenState $ ReferralScreenStateType (\ referralScreen -> referralScreen{ data { driverInfo  
     {  driverName = getDriverInfoResp.firstName
@@ -2747,10 +2759,10 @@ checkDriverBlockingStatus (GetDriverInfoResp getDriverInfoResp) = do
 
 updateBannerAndPopupFlags :: FlowBT String Unit
 updateBannerAndPopupFlags = do
-  (GlobalState globalstate) <- getState
+  globalstate <- getState
+  (GetDriverInfoResp getDriverInfoResp) <- getDriverInfoDataFromCache globalstate
   appConfig <- getAppConfig Constants.appConfig
-  let (GetDriverInfoResp getDriverInfoResp)= globalstate.globalProps.driverInformation
-      autoPayNotActive = isNothing getDriverInfoResp.autoPayStatus || getDriverInfoResp.autoPayStatus /= Just "ACTIVE"
+  let autoPayNotActive = isNothing getDriverInfoResp.autoPayStatus || getDriverInfoResp.autoPayStatus /= Just "ACTIVE"
       pendingTotalManualDues = fromMaybe 0.0 getDriverInfoResp.manualDues
       subscriptionConfig = appConfig.subscriptionConfig
       freeTrialDays = fromMaybe 0 getDriverInfoResp.freeTrialDaysLeft
