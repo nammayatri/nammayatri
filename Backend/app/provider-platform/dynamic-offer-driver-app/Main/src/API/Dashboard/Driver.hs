@@ -192,7 +192,7 @@ type FleetTotalEarningAPI =
   Capture "fleetOwnerId" Text
     :> "fleet"
     :> "totalEarning"
-    :> Get '[JSON] Common.FleetEarningRes
+    :> Get '[JSON] Common.FleetTotalEarningResponse
 
 type FleetVehicleEarningAPI =
   Capture "fleetOwnerId" Text
@@ -375,7 +375,7 @@ fleetRemoveVehicle merchantShortId fleetOwnerId = withFlowHandlerAPI . DDriver.f
 fleetRemoveDriver :: ShortId DM.Merchant -> Text -> Id Common.Driver -> FlowHandler APISuccess
 fleetRemoveDriver merchantShortId fleetOwnerId = withFlowHandlerAPI . DDriver.fleetRemoveDriver merchantShortId fleetOwnerId
 
-fleetTotalEarning :: ShortId DM.Merchant -> Text -> FlowHandler Common.FleetEarningRes
+fleetTotalEarning :: ShortId DM.Merchant -> Text -> FlowHandler Common.FleetTotalEarningResponse
 fleetTotalEarning merchantShortId = withFlowHandlerAPI . DDriver.fleetTotalEarning merchantShortId
 
 fleetVehicleEarning :: ShortId DM.Merchant -> Text -> Text -> Maybe (Id Common.Driver) -> FlowHandler Common.FleetEarningRes
