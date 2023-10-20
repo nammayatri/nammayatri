@@ -1609,7 +1609,7 @@ instance eqAadhaarStage :: Eq AadhaarStage where eq = genericEq
 type GlobalProps = {
   aadhaarVerificationRequired :: Boolean,
   driverInformation :: Maybe GetDriverInfoResp,
-  driverRideStats :: DriverProfileStatsResp,
+  driverRideStats :: Maybe DriverProfileStatsResp,
   callScreen :: ScreenName,
   gotoPopupType :: GoToPopUpType
 }
