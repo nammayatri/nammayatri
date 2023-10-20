@@ -12,23 +12,28 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Domain.Types.RentalSlab where
+module Domain.Types.RentalDetails where
 
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
-import Kernel.Utils.GenericPretty (PrettyShow)
 
--- TODO To be removed
-data RentalSlab = RentalSlab
-  { id :: Id RentalSlab, --not used in domain layer
-    baseDistance :: Kilometers,
-    baseDuration :: Hours
+data RentalDetails = RentalDetails
+  { id :: Id RentalDetails, --not used in domain layer
+    baseFare :: Money,
+    perHourCharge :: Money,
+    perHourFreeKms :: Int,
+    perExtraKmRate :: Money,
+    nightShiftCharge :: Money
   }
-  deriving (Generic, Show, PrettyShow)
+  deriving (Generic, Show)
 
-data RentalSlabAPIEntity = RentalSlabAPIEntity
-  { baseDistance :: Kilometers,
-    baseDuration :: Hours
+data RentalDetailsAPIEntity = RentalDetailsAPIEntity
+  { bppQuoteId :: Text,
+    baseFare :: Money,
+    perHourCharge :: Money,
+    perHourFreeKms :: Int,
+    perExtraKmRate :: Money,
+    nightShiftCharge :: Money
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)

@@ -15,7 +15,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
 
-module Storage.Beam.RentalSlab where
+module Storage.Beam.RentalDetails where
 
 import qualified Database.Beam as B
 import Kernel.Prelude
@@ -23,21 +23,24 @@ import Kernel.Types.Common hiding (id)
 import Tools.Beam.UtilsTH
 
 -- TODO To be removed
-data RentalSlabT f = RentalSlabT
+data RentalDetailsT f = RentalDetailsT
   { id :: B.C f Text,
-    baseDistance :: B.C f Kilometers,
-    baseDuration :: B.C f Hours
+    baseFare :: B.C f Money,
+    perHourCharge :: B.C f Money,
+    perHourFreeKms :: B.C f Int,
+    perExtraKmRate :: B.C f Money,
+    nightShiftCharge :: B.C f Money
   }
   deriving (Generic, B.Beamable)
 
-instance B.Table RentalSlabT where
-  data PrimaryKey RentalSlabT f
+instance B.Table RentalDetailsT where
+  data PrimaryKey RentalDetailsT f
     = Id (B.C f Text)
     deriving (Generic, B.Beamable)
   primaryKey = Id . id
 
-type RentalSlab = RentalSlabT Identity
+type RentalDetails = RentalDetailsT Identity
 
-$(enableKVPG ''RentalSlabT ['id] [])
+$(enableKVPG ''RentalDetailsT ['id] [])
 
-$(mkTableInstances ''RentalSlabT "rental_slab")
+$(mkTableInstances ''RentalDetailsT "rental_details")

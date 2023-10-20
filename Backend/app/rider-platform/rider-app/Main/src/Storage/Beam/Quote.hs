@@ -39,7 +39,7 @@ data QuoteT f = QuoteT
     distanceToNearestDriver :: B.C f (Maybe HighPrecMeters),
     vehicleVariant :: B.C f VehVar.VehicleVariant,
     tripTermsId :: B.C f (Maybe Text),
-    rentalSlabId :: B.C f (Maybe Text),
+    rentalDetailsId :: B.C f (Maybe Text),
     driverOfferId :: B.C f (Maybe Text),
     merchantId :: B.C f Text,
     specialZoneQuoteId :: B.C f (Maybe Text),

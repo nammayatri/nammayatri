@@ -13,36 +13,38 @@
 -}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Storage.Queries.RentalSlab where
+module Storage.Queries.RentalDetails where
 
-import Domain.Types.RentalSlab
+import Domain.Types.RentalDetails
 import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
 import qualified Sequelize as Se
-import qualified Storage.Beam.RentalSlab as BeamRS
+import qualified Storage.Beam.RentalDetails as BeamRS
 
-createRentalSlab :: MonadFlow m => RentalSlab -> m ()
-createRentalSlab = createWithKV
+createRentalDetails :: MonadFlow m => RentalDetails -> m ()
+createRentalDetails = createWithKV
 
-findById :: MonadFlow m => Id RentalSlab -> m (Maybe RentalSlab)
+findById :: MonadFlow m => Id RentalDetails -> m (Maybe RentalDetails)
 findById rentalSlabId = findOneWithKV [Se.Is BeamRS.id $ Se.Eq (getId rentalSlabId)]
 
-instance FromTType' BeamRS.RentalSlab RentalSlab where
-  fromTType' BeamRS.RentalSlabT {..} = do
+instance FromTType' BeamRS.RentalDetails RentalDetails where
+  fromTType' BeamRS.RentalDetailsT {..} = do
     pure $
       Just
-        RentalSlab
+        RentalDetails
           { id = Id id,
-            baseDistance = baseDistance,
-            baseDuration = baseDuration
+            ..
           }
 
-instance ToTType' BeamRS.RentalSlab RentalSlab where
-  toTType' RentalSlab {..} = do
-    BeamRS.RentalSlabT
+instance ToTType' BeamRS.RentalDetails RentalDetails where
+  toTType' RentalDetails {..} = do
+    BeamRS.RentalDetailsT
       { BeamRS.id = getId id,
-        BeamRS.baseDistance = baseDistance,
-        BeamRS.baseDuration = baseDuration
+        BeamRS.baseFare = baseFare,
+        BeamRS.perHourCharge = perHourCharge,
+        BeamRS.perHourFreeKms = perHourFreeKms,
+        BeamRS.perExtraKmRate = perExtraKmRate,
+        BeamRS.nightShiftCharge = nightShiftCharge
       }

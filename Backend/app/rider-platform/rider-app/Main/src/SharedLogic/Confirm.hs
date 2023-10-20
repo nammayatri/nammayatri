@@ -23,7 +23,7 @@ import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Person.PersonFlowStatus as DPFS
 import qualified Domain.Types.Quote as DQuote
-import Domain.Types.RentalSlab
+import Domain.Types.RentalDetails
 import qualified Domain.Types.SearchRequest as DSReq
 import Domain.Types.VehicleVariant (VehicleVariant)
 import Kernel.External.Encryption (decrypt)
@@ -76,13 +76,13 @@ data DConfirmRes = DConfirmRes
 
 data ConfirmQuoteDetails
   = ConfirmOneWayDetails
-  | ConfirmRentalDetails RentalSlabAPIEntity
+  | ConfirmRentalDetails RentalDetailsAPIEntity
   | ConfirmAutoDetails Text (Maybe Text)
   | ConfirmOneWaySpecialZoneDetails Text
   deriving (Show, Generic)
 
-calculateRentalEstimateFare :: Int -> RentalSlab -> Money
-calculateRentalEstimateFare duration RentalSlab {..} = baseFare + perHourCharge * Money duration + nightShiftCharge
+calculateRentalEstimateFare :: Int -> RentalDetails -> Money
+calculateRentalEstimateFare duration RentalDetails {..} = baseFare + perHourCharge * Money duration + nightShiftCharge
 
 confirm ::
   ( EsqDBFlow m r,
@@ -98,12 +98,12 @@ confirm DConfirmReq {..} = do
   fulfillmentId <-
     case quote.quoteDetails of
       DQuote.OneWayDetails _ -> pure Nothing
-      DQuote.RentalDetails rentalOffer -> do
+      DQuote.RentalDetails rentalDetails -> do
         unless (isJust startTime && isJust rentalDuration) $ throwError $ InvalidRequest "Rental confirm quote should have startTime param"
         --here i can update the quote estimate fare
-        let estimateFare = calculateRentalEstimateFare (fromJust rentalDuration) rentalOffer
+        let estimateFare = calculateRentalEstimateFare (fromJust rentalDuration) rentalDetails
         _ <- QQuote.updateQuoteEstimateFare quoteId estimateFare
-        pure $ Just rentalOffer.id.getId
+        pure $ Just rentalDetails.id.getId
       DQuote.DriverOfferDetails driverOffer -> do
         estimate <- QEstimate.findById driverOffer.estimateId >>= fromMaybeM EstimateNotFound
         when (DEstimate.isCancelled estimate.status) $ throwError $ EstimateCancelled estimate.id.getId
@@ -161,7 +161,7 @@ confirm DConfirmReq {..} = do
     mkConfirmQuoteDetails quoteDetails fulfillmentId = do
       case quoteDetails of
         DQuote.OneWayDetails _ -> pure ConfirmOneWayDetails
-        DQuote.RentalDetails RentalSlab {..} -> pure $ ConfirmRentalDetails $ RentalSlabAPIEntity {bppQuoteId = id.getId, ..}
+        DQuote.RentalDetails RentalDetails {..} -> pure $ ConfirmRentalDetails $ RentalDetailsAPIEntity {bppQuoteId = id.getId, ..}
         DQuote.DriverOfferDetails driverOffer -> do
           bppEstimateId <- fulfillmentId & fromMaybeM (InternalError "FulfillmentId not found in Init. this error should never come.")
           pure $ ConfirmAutoDetails bppEstimateId driverOffer.driverId
@@ -222,7 +222,7 @@ buildBooking searchRequest mbFulfillmentId quote fromLoc mbToLoc exophone now st
   where
     buildBookingDetails = case quote.quoteDetails of
       DQuote.OneWayDetails _ -> DRB.OneWayDetails <$> buildOneWayDetails
-      DQuote.RentalDetails rentalSlab -> pure $ DRB.RentalDetails rentalSlab
+      DQuote.RentalDetails rentalDetails -> pure $ DRB.RentalDetails rentalDetails
       DQuote.DriverOfferDetails _ -> DRB.DriverOfferDetails <$> buildOneWayDetails
       DQuote.OneWaySpecialZoneDetails _ -> DRB.OneWaySpecialZoneDetails <$> buildOneWaySpecialZoneDetails
     buildOneWayDetails = do

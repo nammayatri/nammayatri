@@ -36,7 +36,7 @@ import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.Person.PersonFlowStatus as DPFS
 import qualified Domain.Types.Quote as DQuote
-import qualified Domain.Types.RentalSlab as DRentalSlab
+import qualified Domain.Types.RentalDetails as DRentalDetails
 import Domain.Types.SearchRequest
 import qualified Domain.Types.SearchRequest as DSearchReq
 import qualified Domain.Types.SpecialZoneQuote as DSpecialZoneQuote
@@ -239,8 +239,8 @@ buildQuote requestId providerInfo now merchantId QuoteInfo {..} = do
   quoteDetails' <- case quoteDetails of
     OneWayDetails oneWayDetails ->
       pure.DQuote.OneWayDetails $ mkOneWayQuoteDetails oneWayDetails
-    RentalDetails rentalSlab -> do
-      DQuote.RentalDetails <$> buildRentalSlab rentalSlab
+    RentalDetails rentalDetails -> do
+      DQuote.RentalDetails <$> buildRentalDetails rentalDetails
     OneWaySpecialZoneDetails details -> do
       DQuote.OneWaySpecialZoneDetails <$> buildOneWaySpecialZoneQuoteDetails details
   pure
@@ -265,10 +265,10 @@ buildOneWaySpecialZoneQuoteDetails OneWaySpecialZoneQuoteDetails {..} = do
   id <- generateGUID
   pure DSpecialZoneQuote.SpecialZoneQuote {..}
 
-buildRentalSlab :: MonadFlow m => RentalQuoteDetails -> m DRentalSlab.RentalSlab
-buildRentalSlab RentalQuoteDetails {..} = do
+buildRentalDetails :: MonadFlow m => RentalQuoteDetails -> m DRentalDetails.RentalDetails
+buildRentalDetails RentalQuoteDetails {..} = do
   let quoteId = Id id
-  pure DRentalSlab.RentalSlab {id = quoteId, ..}
+  pure DRentalDetails.RentalDetails {id = quoteId, ..}
 
 buildTripTerms ::
   MonadFlow m =>

@@ -49,7 +49,7 @@ import qualified Storage.Queries.DriverOffer ()
 import qualified Storage.Queries.Location as QL
 import qualified Storage.Queries.LocationMapping as QLM
 import qualified Storage.Queries.Quote ()
-import Storage.Queries.RentalSlab as QueryRS
+import Storage.Queries.RentalDetails as QueryRD
 import qualified Storage.Queries.TripTerms as QTT
 
 createBooking' :: MonadFlow m => Booking -> m ()
@@ -255,7 +255,7 @@ instance FromTType' BeamB.Booking Booking where
               upsertToLocationAndMappingForOldData toLocationId id
               DRB.OneWayDetails <$> buildOneWayDetails toLocationId
             DFF.RENTAL -> do
-              qd <- getRentalDetails rentalSlabId
+              qd <- getRentalDetails rentalDetailsId
               case qd of
                 Nothing -> throwError (InternalError "No Rental Details present")
                 Just a -> pure a
@@ -277,7 +277,7 @@ instance FromTType' BeamB.Booking Booking where
           bookingDetails <- case fareProductType of
             DFF.ONE_WAY -> DRB.OneWayDetails <$> buildOneWayDetails toLocId
             DFF.RENTAL -> do
-              qd <- getRentalDetails rentalSlabId
+              qd <- getRentalDetails rentalDetailsId
               case qd of
                 Nothing -> throwError (InternalError "No Rental Details present")
                 Just a -> pure a
@@ -336,17 +336,17 @@ instance FromTType' BeamB.Booking Booking where
               toLocation = toLocation,
               ..
             }
-      getRentalDetails rentalSlabId' = do
-        res <- maybe (pure Nothing) (QueryRS.findById . Id) rentalSlabId'
+      getRentalDetails rentalDetailsId' = do
+        res <- maybe (pure Nothing) (QueryRD.findById . Id) rentalDetailsId'
         case res of
-          Just rentalSlab -> pure $ Just $ DRB.RentalDetails rentalSlab
+          Just rentalDetails -> pure $ Just $ DRB.RentalDetails rentalDetails
           Nothing -> pure Nothing
 
 instance ToTType' BeamB.Booking Booking where
   toTType' DRB.Booking {..} =
-    let (fareProductType, toLocationId, distance, rentalSlabId, otpCode) = case bookingDetails of
+    let (fareProductType, toLocationId, distance, rentalDetailsId, otpCode) = case bookingDetails of
           DRB.OneWayDetails details -> (DQuote.ONE_WAY, Just (getId details.toLocation.id), Just details.distance, Nothing, Nothing)
-          DRB.RentalDetails rentalSlab -> (DQuote.RENTAL, Nothing, Nothing, Just . getId $ rentalSlab.id, Nothing)
+          DRB.RentalDetails rentalDetails -> (DQuote.RENTAL, Nothing, Nothing, Just . getId $ rentalDetails.id, Nothing)
           DRB.DriverOfferDetails details -> (DQuote.DRIVER_OFFER, Just (getId details.toLocation.id), Just details.distance, Nothing, Nothing)
           DRB.OneWaySpecialZoneDetails details -> (DQuote.ONE_WAY_SPECIAL_ZONE, Just (getId details.toLocation.id), Just details.distance, Nothing, details.otpCode)
      in BeamB.BookingT
@@ -377,7 +377,7 @@ instance ToTType' BeamB.Booking Booking where
             BeamB.vehicleVariant = vehicleVariant,
             BeamB.distance = distance,
             BeamB.tripTermsId = getId <$> (tripTerms <&> (.id)),
-            BeamB.rentalSlabId = rentalSlabId,
+            BeamB.rentalDetailsId = rentalDetailsId,
             BeamB.merchantId = getId merchantId,
             BeamB.specialLocationTag = specialLocationTag,
             BeamB.createdAt = createdAt,

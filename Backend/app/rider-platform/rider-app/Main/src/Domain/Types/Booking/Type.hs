@@ -21,7 +21,7 @@ import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.Person as DPerson
 import qualified Domain.Types.Quote as DQuote
-import qualified Domain.Types.RentalSlab as DRentalSlab
+import qualified Domain.Types.RentalDetails as DRentalDetails
 import qualified Domain.Types.TripTerms as DTripTerms
 import Domain.Types.VehicleVariant (VehicleVariant)
 import Kernel.Prelude
@@ -92,7 +92,7 @@ data Booking = Booking
 
 data BookingDetails
   = OneWayDetails OneWayBookingDetails
-  | RentalDetails DRentalSlab.RentalSlab
+  | RentalDetails DRentalDetails.RentalDetails
   | DriverOfferDetails OneWayBookingDetails
   | OneWaySpecialZoneDetails OneWaySpecialZoneBookingDetails
   deriving (Show)

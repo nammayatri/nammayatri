@@ -52,7 +52,7 @@ data BookingT f = BookingT
     otpCode :: B.C f (Maybe Text),
     vehicleVariant :: B.C f VehVar.VehicleVariant,
     tripTermsId :: B.C f (Maybe Text),
-    rentalSlabId :: B.C f (Maybe Text),
+    rentalDetailsId :: B.C f (Maybe Text),
     merchantId :: B.C f Text,
     specialLocationTag :: B.C f (Maybe Text),
     createdAt :: B.C f UTCTime,
