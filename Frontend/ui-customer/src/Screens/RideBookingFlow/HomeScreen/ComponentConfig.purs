@@ -227,6 +227,35 @@ whereToButtonConfig state =
       }
   in primaryButtonConfig'
 
+bookARentalButtonConfig :: ST.HomeScreenState -> PrimaryButton.Config
+bookARentalButtonConfig state =
+  let
+    config = PrimaryButton.config
+    primaryButtonConfig' = config
+      { textConfig
+        { text = ("Book a Rental")
+        , width = MATCH_PARENT
+        , gravity = LEFT
+        , color = Color.black800
+        , accessibilityHint = "Book a Rental : Button"
+        }
+      , height = V 48
+      , gravity = CENTER_VERTICAL
+      , cornerRadius = 8.0
+      , margin = (Margin 16 12 16 0)
+      , isClickable = true
+      , isPrefixImage = true
+      , background = Color.blue600
+      , prefixImageConfig
+        { imageUrl = "ny_ic_timer_clock," <> (getAssetStoreLink FunctionCall) <> "ny_ic_timer_clock.png"
+        , height = V 16
+        , width = V 21
+        , margin = (Margin 17 0 17 0)
+        }
+      , id = "bookARentalButton"
+      }
+  in primaryButtonConfig'
+
 primaryButtonRequestRideConfig :: ST.HomeScreenState -> PrimaryButton.Config
 primaryButtonRequestRideConfig state =
   let
@@ -856,6 +885,8 @@ searchLocationModelViewState state = { isSearchLocation: state.props.isSearchLoc
                                     , isAutoComplete: state.props.searchLocationModelProps.isAutoComplete
                                     , showLoader: state.props.searchLocationModelProps.showLoader
                                     , prevLocation: state.data.searchLocationModelData.prevLocation
+                                    , bookingStage : state.props.bookingStage
+                                    , rentalData : state.props.rentalData
                                     }
 
 quoteListModelViewState :: ST.HomeScreenState -> QuoteListModel.QuoteListModelState

@@ -68,19 +68,20 @@ import Effect (Effect)
 import Effect.Aff (launchAff)
 import Effect.Uncurried (runEffectFn5)
 import Effect.Unsafe (unsafePerformEffect)
-import Engineering.Helpers.Commons (clearTimer, flowRunner, getNewIDWithTag, os, getExpiryTime, convertUTCtoISC, getCurrentUTC, isPreviousVersion)
+import Engineering.Helpers.Commons (clearTimer, flowRunner, getNewIDWithTag, os, getExpiryTime, convertUTCtoISC, getCurrentUTC, isPreviousVersion, isSame)
 import Engineering.Helpers.LogEvent (logEvent, logEventWithTwoParams, logEventWithMultipleParams)
 import Engineering.Helpers.Suggestions (getMessageFromKey, getSuggestionsfromKey)
+import Engineering.Helpers.Utils (selectSingleCalendarDate)
 import Foreign (unsafeToForeign)
 import Foreign.Class (encode)
-import Helpers.Utils (addToRecentSearches, getCurrentLocationMarker, clearCountDownTimer, getDistanceBwCordinates, getLocationName, getScreenFromStage, getSearchType, parseNewContacts, performHapticFeedback, setText, terminateApp, withinTimeRange, toString, secondsToHms, recentDistance)
+import Helpers.Utils (addToRecentSearches, getCurrentLocationMarker, clearCountDownTimer, getDistanceBwCordinates, getLocationName, getScreenFromStage, getSearchType, parseNewContacts, performHapticFeedback, setText, terminateApp, withinTimeRange, toString, secondsToHms, recentDistance, clearFocus, getWeeksInMonth, getCurrentDay, getDayBeforeOrAfter)
 import JBridge (addMarker, animateCamera, currentPosition, exitLocateOnMap, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, getCurrentPosition, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, locateOnMap, minimizeApp, openNavigation, openUrlInApp, removeAllPolylines, removeMarker, requestKeyboardShow, requestLocation, shareTextMessage, showDialer, toast, toggleBtnLoader, goBackPrevWebPage, stopChatListenerService, sendMessage, getCurrentLatLong, isInternetAvailable, emitJOSEvent, startLottieProcess, getSuggestionfromKey, scrollToEnd, lottieAnimationConfig, methodArgumentCount, getChatMessages, scrollViewFocus, updateInputString, checkAndAskNotificationPermission)
 import Language.Strings (getString, getEN)
 import Language.Types (STR(..))
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, printLog, trackAppTextInput, trackAppScreenEvent)
 import MerchantConfig.DefaultConfig as DC
 import MerchantConfig.Utils (Merchant(..), getMerchant, getValueFromConfig)
-import Prelude (class Applicative, class Show, Unit, Ordering, bind, compare, discard, map, negate, pure, show, unit, not, ($), (&&), (-), (/=), (<>), (==), (>), (||), (>=), void, (<), (*), (<=), (/), (+))
+import Prelude (class Applicative, class Show, Unit, Ordering, bind, compare, discard, map, negate, pure, show, unit, not, mod, ($), (&&), (-), (/=), (<>), (==), (>), (||), (>=), void, (<), (*), (<=), (/), (+))
 import Presto.Core.Types.API (ErrorResponse)
 import PrestoDOM (Eval, Visibility(..), BottomSheetState(..), continue, continueWithCmd, defaultPerformLog, exit, payload, updateAndExit)
 import PrestoDOM.Types.Core (class Loggable)
@@ -92,7 +93,7 @@ import Screens.HomeScreen.ScreenData as HomeScreenData
 import Screens.HomeScreen.Transformer (dummyRideAPIEntity, getDriverInfo, getEstimateList, getQuoteList, getSpecialZoneQuotes, transformContactList, getNearByDrivers, getEstimatesInfo, dummyEstimateEntity)
 import Screens.RideBookingFlow.HomeScreen.Config (setTipViewData)
 import Screens.SuccessScreen.Handler as UI
-import Screens.Types (HomeScreenState, Location, SearchResultType(..), LocationListItemState, PopupType(..), SearchLocationModelType(..), Stage(..), CardType(..), RatingCard, CurrentLocationDetailsWithDistance(..), CurrentLocationDetails, LocationItemType(..), CallType(..), ZoneType(..), SpecialTags, TipViewStage(..))
+import Screens.Types (HomeScreenState, Location, SearchResultType(..), LocationListItemState, PopupType(..), SearchLocationModelType(..), Stage(..), CardType(..), RatingCard, CurrentLocationDetailsWithDistance(..), CurrentLocationDetails, LocationItemType(..), CallType(..), ZoneType(..), SpecialTags, TipViewStage(..), BookingStage(..), RentalFlowType(..))
 import Services.API (EstimateAPIEntity(..), FareRange, GetDriverLocationResp, GetQuotesRes(..), GetRouteResp, LatLong(..), OfferRes, PlaceName(..), QuoteAPIEntity(..), RideBookingRes(..), SelectListRes(..), SelectedQuotes(..), RideBookingAPIDetails(..), GetPlaceNameResp(..))
 import Services.Backend as Remote
 import Services.Config (getDriverNumber, getSupportNumber)
@@ -103,12 +104,13 @@ import Effect.Class (liftEffect)
 import Screens.HomeScreen.ScreenData as HomeScreenData
 import Types.App (defaultGlobalState)
 import Screens.RideBookingFlow.HomeScreen.Config (setTipViewData, reportIssueOptions, metersToKm)
-import Screens.Types (TipViewData(..) , TipViewProps(..), RateCardDetails, PermissionScreenStage(..))
+import Screens.Types (TipViewData(..) , TipViewProps(..), RateCardDetails, PermissionScreenStage(..), RentalStage(..))
 import Engineering.Helpers.Suggestions (getMessageFromKey, getSuggestionsfromKey)
 import PrestoDOM.Properties (sheetState) as PP
 import Screens.RideBookingFlow.HomeScreen.Config(reportIssueOptions)
 import Data.Function (const)
 import Data.List ((:))
+import Components.Calendar as Calendar
 
 instance showAction :: Show Action where
   show _ = ""
@@ -515,6 +517,7 @@ data ScreenOutput = LogoutUser
                   | RetryFindingQuotes Boolean HomeScreenState
                   | ReportIssue HomeScreenState
                   | RideDetailsScreen HomeScreenState
+                  | RentalFlow RentalFlowType HomeScreenState
 
 data Action = NoAction
             | BackPressed
@@ -626,7 +629,8 @@ data Action = NoAction
             | LoadMessages
             | KeyboardCallback String
             | NotifyDriverStatusCountDown Int String String String
-
+            | RentalButtonAction PrimaryButtonController.Action
+            | ClearEditTextFocus String
 
 eval :: Action -> HomeScreenState -> Eval Action ScreenOutput HomeScreenState
 
@@ -1395,6 +1399,76 @@ eval (SearchLocationModelActionController (SearchLocationModelController.SourceC
           pure NoAction
       ]
 
+eval (SearchLocationModelActionController SearchLocationModelController.EditDate) state = do
+  let currentDay = getCurrentDay ""
+      pastLimit = getDayBeforeOrAfter currentDay.utcDate 1 true
+      futureLimit = getDayBeforeOrAfter currentDay.utcDate 20 false
+      weeks = getWeeksInMonth currentDay.year currentDay.intMonth
+      
+      res = case state.props.rentalData.dateConfig.selectedDay of 
+              Nothing ->  {startDate : Nothing, endDate : Nothing, selectedTimeSpan : currentDay, weeks : weeks}
+              Just date -> selectSingleCalendarDate date Nothing Nothing weeks
+      newState = state{ props{ isSource = Nothing, rentalData{  showDatePopup = true
+                                                              , dateConfig{ weeks = res.weeks
+                                                                          , startDate = res.startDate
+                                                                          , endDate = Nothing
+                                                                          , selectedTimeSpan = currentDay
+                                                                          , pastLimit = pastLimit
+                                                                          , futureLimit = futureLimit
+                                                                          , selectedDay = state.props.rentalData.dateConfig.selectedDay
+                                                                          } } } }
+  continueWithCmd newState
+    [ do
+        _ <- pure $ hideKeyboardOnNavigation true
+        _ <- pure $ clearFocus (getNewIDWithTag "SourceEditText")
+        pure $ NoAction
+    ]
+
+eval (SearchLocationModelActionController (SearchLocationModelController.CalendarAction (Calendar.SelectDate res))) state = do
+  continue state{ props{ rentalData{ dateConfig{ startDate = res.startDate, endDate = res.endDate, weeks = res.weeks, selectedTimeSpan = res.selectedTimeSpan } } } }
+
+eval (SearchLocationModelActionController (SearchLocationModelController.CalendarAction Calendar.HideCalendarPopup)) state =
+  continue state{ props{ rentalData{ showDatePopup = false } } }
+  
+eval (SearchLocationModelActionController (SearchLocationModelController.CalendarAction (Calendar.PrimaryButtonCancelActionController PrimaryButtonController.OnClick))) state =
+  continue state{ props{ rentalData{ showDatePopup = false } } }
+
+eval (SearchLocationModelActionController (SearchLocationModelController.CalendarAction (Calendar.PrimaryButtonActionController PrimaryButtonController.OnClick))) state =
+  case state.props.rentalData.dateConfig.startDate of
+    Just date -> continue state{ props{ rentalData{ selectedDate = convertUTCtoISC date.utcDate "DD/MM/YYYY", showDatePopup = false, dateConfig{ selectedDay = state.props.rentalData.dateConfig.startDate } } } }
+    Nothing   -> continue state
+
+eval (SearchLocationModelActionController (SearchLocationModelController.CalendarAction (Calendar.IncrementMonth res))) state =
+  continue state{ props{ rentalData{ dateConfig{ weeks = res.weeks, selectedTimeSpan = res.selectedTimeSpan } } } }
+
+eval (SearchLocationModelActionController (SearchLocationModelController.CalendarAction (Calendar.DecrementMonth res))) state =
+  continue state{ props{ rentalData{ dateConfig{ weeks = res.weeks, selectedTimeSpan = res.selectedTimeSpan } } } }
+
+eval (RentalButtonAction (PrimaryButtonController.OnClick)) state = do
+  let currentDateAndTime = getCurrentUTC ""
+  _ <- pure $ performHapticFeedback unit
+  exit $ UpdateSavedLocation state{props{ isSource = Nothing
+                                        , isSearchLocation = SearchLocation
+                                        , currentStage = SearchLocationModel
+                                        , searchLocationModelProps{crossBtnSrcVisibility = false}
+                                        , bookingStage = Rental 
+                                        , rentalData{ quoteList = SearchLocationModelController.chooseYourRideConfig.quoteList, selectedDate = convertUTCtoISC currentDateAndTime "DD-MM-YYYY", selectedTime = convertUTCtoISC (getCurrentUTC "") "hh:mm A" }}
+                                  , data{ source=(getString CURRENT_LOCATION)}}
+
+eval (SearchLocationModelActionController (SearchLocationModelController.TimePicker hour min)) state = do
+  let timeFormat = if hour > 12 then "PM" else "AM"
+      hours = show $ if hour `mod` 12 == 0 then 12 else hour `mod` 12
+      minutes = if min < 10 then "0" <> (show min) else show min
+  continue state{props{rentalData{selectedTime = hours <> ":" <> minutes <> " " <> timeFormat }}}
+
+eval (SearchLocationModelActionController (SearchLocationModelController.ChooseVehicleAC (ChooseVehicleController.OnSelect quote))) state = do
+  let updatedQuotes = map (\item -> item{activeIndex = quote.index}) state.props.rentalData.quoteList
+  continue state { props { rentalData = state.props.rentalData{quoteList = updatedQuotes} }}
+
+eval (SearchLocationModelActionController (SearchLocationModelController.RentalConfirmAndBookAction PrimaryButtonController.OnClick)) state = do
+  _ <- pure $ updateLocalStage ConfirmingLocation
+  exit $ RentalFlow RENTAL_CONFIRM_PICKUP state
+
 eval (SearchLocationModelActionController (SearchLocationModelController.DestinationChanged input)) state = do
   if (input /= state.data.destination) then do
     continueWithCmd state { props { isRideServiceable = true, searchLocationModelProps{crossBtnDestVisibility = (STR.length input) > 2, isAutoComplete = if (STR.length input)>2 then state.props.searchLocationModelProps.isAutoComplete else false}} }
@@ -1409,26 +1483,47 @@ eval (SearchLocationModelActionController (SearchLocationModelController.Destina
           pure NoAction
       ]
 
-eval (SearchLocationModelActionController (SearchLocationModelController.EditTextFocusChanged textType)) state = do
+eval (SearchLocationModelActionController SearchLocationModelController.FocusDateAndTime) state = do
+  let newState = state{ props{ isSource = Nothing } }
+  continueWithCmd newState
+    [ do
+        _ <- pure $ hideKeyboardOnNavigation true
+        _ <- pure $ clearFocus (getNewIDWithTag "SourceEditText")
+        pure $ NoAction
+    ]
+
+eval (ClearEditTextFocus editTextId) state = do
+  let newState = state{ props{ isSource = Nothing } }
+  continueWithCmd state
+    [ do
+        _ <- pure $ hideKeyboardOnNavigation true
+        _ <- pure $ clearFocus (getNewIDWithTag editTextId)
+        pure $ NoAction
+    ]
+
+eval (SearchLocationModelActionController (SearchLocationModelController.EditTextFocusChanged textType hasFocus)) state = do
   _ <- pure $ spy "searchLocationModal" textType
-  if textType == "D" then
-    continueWithCmd state { props { isSource = Just false, searchLocationModelProps{crossBtnDestVisibility = (STR.length state.data.destination) > 2}}, data {source = if state.data.source == "" then state.data.searchLocationModelData.prevLocation else state.data.source} }
-      [ do
-          if state.props.isSearchLocation /= LocateOnMap then do
-            _ <- (pure $ setText (getNewIDWithTag "DestinationEditText") state.data.destination)
-            pure $ NoAction
-          else
-            pure $ NoAction
-      ]
-  else
-    continueWithCmd state { props { isSource = Just true, searchLocationModelProps{crossBtnSrcVisibility = (STR.length state.data.source) > 2}} }
-      [ do
-          if state.props.isSearchLocation /= LocateOnMap && state.props.isSource == Just true then do
-            _ <- (pure $ setText (getNewIDWithTag "SourceEditText") state.data.source) 
-            pure $ NoAction
-          else
-            pure $ NoAction
-      ]
+  if isSame true hasFocus then do
+    if textType == "D" then
+      continueWithCmd state { props { isSource = Just false, searchLocationModelProps{crossBtnDestVisibility = (STR.length state.data.destination) > 2}}, data {source = if state.data.source == "" then state.data.searchLocationModelData.prevLocation else state.data.source} }
+        [ do
+            if state.props.isSearchLocation /= LocateOnMap then do
+              _ <- (pure $ setText (getNewIDWithTag "DestinationEditText") state.data.destination)
+              pure $ NoAction
+            else
+              pure $ NoAction
+        ]
+    else
+      continueWithCmd state { props { isSource = Just true, searchLocationModelProps{crossBtnSrcVisibility = (STR.length state.data.source) > 2}, rentalData{ showDatePopup = false }} }
+        [ do
+            if state.props.isSearchLocation /= LocateOnMap && state.props.isSource == Just true then do
+              _ <- (pure $ setText (getNewIDWithTag "SourceEditText") state.data.source) 
+              pure $ NoAction
+            else
+              pure $ NoAction
+        ]
+  else do
+    continue state
 
 eval (SearchLocationModelActionController (SearchLocationModelController.NoAction)) state = continue state
 

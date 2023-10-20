@@ -17,7 +17,7 @@ module Screens.Types where
 
 import MerchantConfig.Types
 
-import Common.Types.App (CountryCodeObj, OTPChannel, OptionButtonList, RateCardType, FeedbackAnswer)
+import Common.Types.App (CountryCodeObj, OTPChannel, OptionButtonList, RateCardType, FeedbackAnswer, CalendarModalDateObject, CalendarModalWeekObject)
 import Components.ChatView.Controller (ChatComponent)
 import Components.ChooseVehicle.Controller as ChooseVehicle
 import Components.QuoteListItem.Controller (QuoteListItemState)
@@ -537,6 +537,24 @@ derive instance genericStage :: Generic Stage _
 instance eqStage :: Eq Stage where eq = genericEq
 instance showStage :: Show Stage where show = genericShow
 
+data RentalStage = NotRental
+                 | RentalSearchLocation
+                 | RentalSlab
+                 | RentalFareBreakup
+                 | RentalScheduleRide
+                 | RentalSearchRides
+
+derive instance rentalGenericStage :: Generic RentalStage _
+instance rentalEqStage :: Eq RentalStage where eq = genericEq
+instance rentalShowStage :: Show RentalStage where show = genericShow
+
+data BookingStage = NormalBooking
+                  | Rental
+                  
+derive instance genericBookingStage :: Generic BookingStage _
+instance eqBookingStage :: Eq BookingStage where eq = genericEq
+instance showBookingStage :: Show BookingStage where show = genericShow
+
 data SearchLocationModelType = SearchLocation | LocateOnMap | NoView
 
 data PopupType = Logout | ConfirmBack | NoPopUp | ActiveQuotePopUp | TipsPopUp
@@ -705,7 +723,29 @@ type HomeScreenStateProps =
   , isChatNotificationDismissed :: Boolean
   , searchLocationModelProps :: SearchLocationModelProps
   , flowWithoutOffers :: Boolean
+  , bookingStage :: BookingStage
+  , rentalData :: RentalConfig
   }
+
+type RentalConfig = {
+    selectedDate :: String
+  , selectedTime :: String
+  , showDatePopup :: Boolean
+  , dateConfig :: RentalDateConfig
+  , quoteList :: Array ChooseVehicle.Config
+}
+
+type RentalDateConfig = {
+    weeks :: Array CalendarModalWeekObject
+  , startDate :: Maybe CalendarModalDateObject
+  , endDate :: Maybe CalendarModalDateObject
+  , selectedTimeSpan :: CalendarModalDateObject
+  , pastLimit :: CalendarModalDateObject
+  , futureLimit :: CalendarModalDateObject
+  , selectedDay :: Maybe CalendarModalDateObject
+}
+
+data RentalFlowType = RENTAL_CONFIRM_PICKUP
 
 type SearchLocationModelProps = {
     isAutoComplete :: Boolean
