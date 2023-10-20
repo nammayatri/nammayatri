@@ -1,9 +1,11 @@
 {-# OPTIONS_GHC -Wno-type-defaults #-}
 {-# OPTIONS_GHC -Wno-unused-local-binds #-}
+{-# OPTIONS_GHC -Wno-unused-matches #-}
 
 module DBSync.Update where
 
 import Config.Env
+import Control.Exception
 import Data.Aeson as A
 import qualified Data.Aeson.Key as AesonKey
 import qualified Data.Aeson.KeyMap as AKM
@@ -12,15 +14,20 @@ import qualified Data.ByteString.Lazy as BSL
 import qualified Data.ByteString.Lazy as LBS
 import Data.Either.Extra (mapLeft)
 import Data.Maybe (fromJust)
+import qualified Data.Scientific as Sci
 import qualified Data.Serialize as Serialize
 import Data.Text as T hiding (elem, map)
 import qualified Data.Text.Encoding as TE
+import qualified Data.Vector as V
 import Database.Beam as B hiding (runUpdate)
+import Database.Beam.Postgres
+import Database.PostgreSQL.Simple hiding (QueryError)
+import Database.PostgreSQL.Simple.Types
 import EulerHS.CachedSqlDBQuery as CDB
 import EulerHS.KVConnector.Types as EKT
 import EulerHS.KVConnector.Utils as Utils
 import qualified EulerHS.Language as EL
-import EulerHS.Prelude hiding (id)
+import EulerHS.Prelude hiding (id, try)
 import EulerHS.Types as ET
 import Kafka.Producer as KafkaProd
 import Kafka.Producer as Producer
@@ -77,7 +84,7 @@ getUpdatedValue tag _ = do
   res <- EL.runKVDB BeamFunction.meshConfig.kvRedis $ EL.get $ fromString $ T.unpack tag
   case res of
     Right (Just r) -> do
-      let (decodeResult :: MeshResult [table Identity], isLive) = Utils.decodeToField $ BSL.fromChunks [r]
+      let (decodeResult :: MeshResult [table Identity], _) = Utils.decodeToField $ BSL.fromChunks [r]
        in case decodeResult of
             Right [decodeRes] -> return $ Right decodeRes
             Right _ -> return $ Left (UnexpectedError "Redis Error: No Data for the key")
@@ -268,3 +275,233 @@ getPKeyandValuesList pKeyAndValue = go (T.splitOn "_" pKeyTrimmed) []
     pKeyTrimmed = case T.splitOn "{" pKeyAndValue of
       [] -> ""
       (x : _) -> x
+
+newtype QueryError = QueryError Text
+  deriving (Show)
+
+instance Exception QueryError
+
+-- Execute a query and throw a custom error if it fails
+executeQuery :: Connection -> Query -> IO ()
+executeQuery conn query' = do
+  result <- try $ execute_ conn query' :: IO (Either SomeException Int64)
+  case result of
+    Left e -> throwIO $ QueryError $ "Query execution failed: " <> T.pack (show e)
+    Right _ -> return ()
+
+runUpdateQuery :: (EL.KVDBStreamEntryID, ByteString) -> Text -> ReaderT Env EL.Flow (Either EL.KVDBStreamEntryID EL.KVDBStreamEntryID)
+runUpdateQuery updateDataEntries _ =
+  let (mbModel, mbObject, mbMappings) = getData (snd updateDataEntries)
+      updateQuery = getUpdateQueryForTable (mbModel, mbObject, mbMappings)
+   in case updateQuery of
+        Just query' -> do
+          Env {..} <- ask
+          result <- EL.runIO $ try $ executeQuery _pgConnection (Query $ TE.encodeUtf8 query')
+          case result of
+            Left (QueryError errorMsg) -> do
+              EL.logError ("QUERY UPDATE FAILED" :: Text) (errorMsg <> " for query :: " <> query')
+              pure $ Left (fst updateDataEntries)
+            Right _ -> do
+              EL.logInfo ("QUERY UPDATE SUCCESSFUL" :: Text) (" Update successful for query :: " <> query' <> " with streamData :: " <> TE.decodeUtf8 (snd updateDataEntries))
+              pure $ Right (fst updateDataEntries)
+        Nothing -> do
+          EL.logInfo ("No query generated for streamData: " :: Text) (TE.decodeUtf8 (snd updateDataEntries))
+          pure $ Left (fst updateDataEntries)
+
+-- This function is used to extract the model name, object and mappings from the stream data
+getData :: ByteString -> (Maybe T.Text, Maybe A.Array, Maybe A.Object)
+getData dbCommandByteString = do
+  case A.decode $ LBS.fromStrict dbCommandByteString of
+    Just _decodedDBCommandObject@(A.Object o) ->
+      let mbModel = case HM.lookup "contents" o of
+            Just _commandArray@(A.Array a) -> case V.last a of
+              _commandObject@(A.Object command) -> case HM.lookup "tag" command of
+                Just (A.String modelTag) -> pure $ T.pack (quietSnake (T.unpack (T.take (T.length modelTag - 7) modelTag)))
+                _ -> Nothing
+              _ -> Nothing
+            _ -> Nothing
+
+          mbSetAndWhereArray = case HM.lookup "contents" o of
+            Just _commandArray@(A.Array a) -> case V.last a of
+              _commandObject@(A.Object command) -> case HM.lookup "contents" command of
+                Just (A.Array ar) -> return ar
+                _ -> Nothing
+              _ -> Nothing
+            _ -> Nothing
+
+          mbMapings = case HM.lookup "mappings" o of
+            Just (A.Object obj) -> return obj
+            _ -> Nothing
+
+          updatedModel = case HM.lookup "updatedModel" o of
+            Just (A.Object obj) -> return obj
+            _ -> Nothing
+       in (mbModel, mbSetAndWhereArray, mbMapings)
+    _ -> (Nothing, Nothing, Nothing)
+
+getUpdateQueryForTable :: (Maybe Text, Maybe Array, Maybe Object) -> Maybe Text
+getUpdateQueryForTable (mbModel, mbArray, mbMappings) = do
+  case (mbModel, mbArray) of
+    (Just model, Just array') -> do
+      let (setValues, [whereValues]) = getSetAndWhereClause (Just array')
+          correctWhereClauseText = makeWhereCondition whereValues (fromMaybe HM.empty mbMappings)
+          setQuery = makeSetConditions setValues (fromMaybe HM.empty mbMappings)
+      if T.null correctWhereClauseText
+        then Nothing
+        else Just $ "UPDATE atlas_driver_offer_bpp." <> quote' (textToSnakeCaseText model) <> " SET " <> setQuery <> " WHERE " <> correctWhereClauseText <> ";"
+    _ -> Nothing
+
+makeSetConditions :: [(Text, Value)] -> A.Object -> Text
+makeSetConditions setValues mbMappings = do
+  let setClauseText = map (second valueToText) setValues
+  let correctSetClausetext = map (\(k, v) -> (replaceMappings k mbMappings, v)) setClauseText
+  T.intercalate "," (map (\(k, v) -> (quote' . textToSnakeCaseText) k <> "=" <> v) correctSetClausetext)
+
+quote' :: Text -> Text
+quote' t = "\"" <> t <> "\""
+
+quote :: Text -> Text
+quote t = "'" <> t <> "'"
+
+makeWhereCondition :: Value -> A.Object -> Text
+makeWhereCondition values mappings = case values of
+  A.Object obj -> do
+    let key = HM.keys obj
+    case key of
+      ["$and"] -> getArrayConditionText (fromMaybe A.emptyObject (HM.lookup "$and" obj)) " AND " mappings
+      ["$or"] -> getArrayConditionText (fromMaybe A.emptyObject (HM.lookup "$or" obj)) " OR " mappings
+      -- these conditions need to be implemented safely before using in production
+      -- ["$gt"] -> "( " <>
+      -- ["$gte"] -> " >= " <>
+      -- ["$lt"] -> " < " <>
+      -- ["$lte"] -> " <= " <>
+      -- ["$ne"] -> " <> " <>
+      -- ["$notIn"] -> " NOT IN " <>
+      -- ["$in"] -> " IN " <>
+      [key'] -> quote' (textToSnakeCaseText $ replaceMappings key' mappings) <> " = " <> textToSnakeCaseText (valueToText (fromMaybe A.Null (HM.lookup key' obj)))
+      _ -> ""
+  _ -> ""
+
+getArrayConditionText :: Value -> Text -> A.Object -> Text
+getArrayConditionText arr cnd mappings = case arr of
+  A.Array arr' -> case V.toList arr' of
+    [] -> ""
+    [x] -> makeWhereCondition x mappings
+    (x : xs) -> "(" <> makeWhereCondition x mappings <> ")" <> cnd <> getArrayConditionText (A.Array (V.fromList xs)) cnd mappings
+  _ -> ""
+
+textToSnakeCaseText :: Text -> Text
+textToSnakeCaseText = T.pack . quietSnake . T.unpack
+
+replaceMappings :: Text -> A.Object -> Text
+replaceMappings element obj =
+  case HM.lookup element obj of
+    Just (A.String value) -> value
+    _ -> element
+
+extractValues :: Value -> [Value]
+extractValues (Array arr) = toList arr
+extractValues _ = []
+
+extractBothValues :: Value -> Maybe (Text, Value)
+extractBothValues (Object obj) = do
+  mbVal <- (,) <$> HM.lookup "value0" obj <*> HM.lookup "value1" obj
+  case mbVal of
+    (A.String val0, val1) -> Just (val0, val1)
+    _ -> Nothing
+extractBothValues _ = Nothing
+
+getSetAndWhereClause :: Maybe A.Array -> ([(Text, A.Value)], [A.Value])
+getSetAndWhereClause jsonArray = case toList <$> jsonArray of
+  Just [firstArray, secondArray] -> do
+    let firstList = extractValues firstArray
+        secondList = extractValues secondArray
+        setValues = mapMaybe extractBothValues firstList
+        whereValues = mapMaybe extractBothValues secondList
+        whereConditions = map snd whereValues
+     in (setValues, whereConditions)
+  _ -> ([], [])
+
+valueToText :: A.Value -> T.Text
+valueToText (A.String t) = quote t
+valueToText (A.Number n) =
+  quote $
+    if Sci.isInteger n
+      then T.pack (show (Sci.coefficient n)) -- Convert to integer if it's an integer
+      else T.pack (show (Sci.toRealFloat n)) -- Convert to floating-point
+valueToText (A.Bool b) = quote $ if b then "true" else "false"
+valueToText (A.Array a) = quote $ "{" <> T.intercalate "," (map valueToText' (V.toList a)) <> "}" --in case of array of value of a key in object
+valueToText (A.Object obj) = quote $ T.pack (show (A.encode obj))
+valueToText A.Null = "null"
+
+valueToText' :: A.Value -> T.Text
+valueToText' (A.String t) = t
+valueToText' (A.Number n) =
+  if Sci.isInteger n
+    then T.pack (show (Sci.coefficient n)) -- Convert to integer if it's an integer
+    else T.pack (show (Sci.toRealFloat n)) -- Convert to floating-point
+valueToText' (A.Bool b) = if b then "true" else "false"
+valueToText' (A.Array a) = "{" <> T.intercalate "," (map valueToText' (V.toList a)) <> "}" --in case of array of value of a key in object
+valueToText' (A.Object obj) = T.pack (show (A.encode obj))
+valueToText' _ = "null"
+
+-- {
+--     "tag": "Update",
+--     "contents": [
+--         [],
+--         "customer_id_cth_wVpvhsvczuQZ7Cic{shard-8}",
+--         1672405027778,
+--         "ECRDB",
+--         {
+--             "tag": "CustomerOptions",
+--             "contents": [
+--                 [
+--                     {
+--                         "value1": "2022-12-30T12:57:07Z",
+--                         "value0": "lastUpdated"
+--                     },
+--                     {
+--                         "value1": "7076607678",
+--                         "value0": "mobileNumber"
+--                     },
+--                     {
+--                         "value1": "91",
+--                         "value0": "mobileCountryCode"
+--                     },
+--                     {
+--                         "value1": "malav42@gmail.com",
+--                         "value0": "emailAddress"
+--                     },
+--                     {
+--                         "value1": "Malav12",
+--                         "value0": "firstName"
+--                     },
+--                     {
+--                         "value1": "Shawn124",
+--                         "value0": "lastName"
+--                     }
+--                 ],
+--                 {
+--                     "value1": {
+--                         "$and": [
+--                             {
+--                                 "$or": [
+--                                     {
+--                                         "id": "cth_wVpvhsvczuQZ7Cic"
+--                                     },
+--                                     {
+--                                         "objectReferenceId": "cth_wVpvhsvczuQZ7Cic"
+--                                     }
+--                                 ]
+--                             },
+--                             {
+--                                 "merchantAccountId": 80
+--                             }
+--                         ]
+--                     },
+--                     "value0": "where"
+--                 }
+--             ]
+--         }
+--     ]
+-- }

@@ -231,7 +231,7 @@ runCreateQuery createDataEntries _ =
           result <- EL.runIO $ try $ executeQuery _pgConnection (Query $ TE.encodeUtf8 query)
           case result of
             Left (QueryError errorMsg) -> do
-              EL.logError ("QUERY INSERT FAILED" :: Text) errorMsg
+              EL.logError ("QUERY INSERT FAILED" :: Text) (errorMsg <> " for query :: " <> query)
               pure $ Left (fst createDataEntries)
             Right _ -> do
               EL.logInfo ("QUERY INSERT SUCCESSFUL" :: Text) (" Insert successful for query :: " <> query <> " with streamData :: " <> TE.decodeUtf8 (snd createDataEntries))
@@ -274,48 +274,72 @@ getData dbCommandByteString = do
 generateInsertForTable :: (Maybe Text, Maybe A.Object, Maybe A.Object) -> Maybe Text
 generateInsertForTable (mbModel, mbObject, mbMappings) =
   case (mbModel, mbObject) of
-    (Just model, Just object) -> do
-      let object' = removeNullAndEmptyValues object
+    (Just model, Just object') -> do
+      -- let object' = removeNullAndEmptyValues object
       let keys = HM.keys object'
-          newKeys = replaceMappings keys (fromJust mbMappings)
-          newKeys' = map (quote' . T.pack . quietSnake . T.unpack) newKeys
-          values = map (quote . valueToText . fromMaybe "" . (`HM.lookup` object')) keys
+          newKeys = map (`replaceMappings` fromMaybe HM.empty mbMappings) keys
+          newKeys' = map (quote' . textToSnakeCaseText) newKeys
+          values = map (valueToText . fromMaybe A.Null . (`HM.lookup` object')) keys
           table = "atlas_driver_offer_bpp." <> model
           inserts = T.intercalate ", " newKeys'
           valuesList = T.intercalate ", " values
       Just $ "INSERT INTO " <> table <> " (" <> inserts <> ") VALUES (" <> valuesList <> ");"
     _ -> Nothing
-  where
-    quote x = "'" <> x <> "'"
-    quote' x = "\"" <> x <> "\""
 
 -- | Since we cant pass NULL in query without converting it to string we are removing null values from the object
-removeNullAndEmptyValues :: A.Object -> A.Object
-removeNullAndEmptyValues = HM.filter (not . isNullOrEmpty)
+-- removeNullAndEmptyValues :: A.Object -> A.Object
+-- removeNullAndEmptyValues = HM.filter (not . isNullOrEmpty)
 
-isNullOrEmpty :: A.Value -> Bool
-isNullOrEmpty A.Null = True
-isNullOrEmpty (A.String str) = null str
-isNullOrEmpty _ = False
+-- isNullOrEmpty :: A.Value -> Bool
+-- isNullOrEmpty A.Null = True
+-- isNullOrEmpty (A.String str) = null str
+-- isNullOrEmpty _ = False
 
 -- | As some of the keys in the object are not same as the column names in the table we are replacing them with the actual column names
-replaceMappings :: [T.Text] -> A.Object -> [T.Text]
-replaceMappings elements obj = map replaceElement elements
-  where
-    replaceElement element =
-      case HM.lookup element obj of
-        Just (A.String value) -> value
-        _ -> element
+replaceMappings :: Text -> A.Object -> Text
+replaceMappings element obj =
+  case HM.lookup element obj of
+    Just (A.String value) -> value
+    _ -> element
+
+textToSnakeCaseText :: Text -> Text
+textToSnakeCaseText = T.pack . quietSnake . T.unpack
 
 -- | Convert a JSON value to a text representation that can be used in a SQL query
 -- | Note : this function may need some modifications to handle if there's any case which needs to be handled
 valueToText :: A.Value -> T.Text
-valueToText (A.String t) = t
+valueToText (A.String t) = quote t
 valueToText (A.Number n) =
+  quote $
+    if Sci.isInteger n
+      then T.pack (show (Sci.coefficient n)) -- Convert to integer if it's an integer
+      else T.pack (show (Sci.toRealFloat n)) -- Convert to floating-point
+valueToText (A.Bool b) = quote $ if b then "true" else "false"
+valueToText (A.Array a) = quote $ "{" <> T.intercalate "," (map valueToText' (V.toList a)) <> "}" --in case of array of value of a key in object
+valueToText (A.Object obj) = quote $ T.pack (show (A.encode obj))
+valueToText A.Null = "null"
+
+-- to be used in case of value is an array of values
+valueToText' :: A.Value -> T.Text
+valueToText' (A.String t) = t
+valueToText' (A.Number n) =
   if Sci.isInteger n
     then T.pack (show (Sci.coefficient n)) -- Convert to integer if it's an integer
     else T.pack (show (Sci.toRealFloat n)) -- Convert to floating-point
-valueToText (A.Bool b) = if b then "true" else "false"
-valueToText (A.Array a) = "{" <> T.intercalate "," (map valueToText (V.toList a)) <> "}"
-valueToText (A.Object obj) = T.pack (show (A.encode obj))
-valueToText A.Null = "null"
+valueToText' (A.Bool b) = if b then "true" else "false"
+valueToText' (A.Array a) = "{" <> T.intercalate "," (map valueToText' (V.toList a)) <> "}" --in case of array of value of a key in object
+valueToText' (A.Object obj) = T.pack (show (A.encode obj))
+valueToText' _ = "null"
+
+quote' :: Text -> Text
+quote' t = "\"" <> t <> "\""
+
+quote :: Text -> Text
+quote t = "'" <> t <> "'"
+
+getCreateObjectForKafka :: Text -> A.Object -> A.Value
+getCreateObjectForKafka model content =
+  A.object
+    [ "contents" A..= content,
+      "tag" A..= model
+    ]

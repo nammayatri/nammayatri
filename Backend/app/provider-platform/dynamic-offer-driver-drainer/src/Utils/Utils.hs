@@ -123,9 +123,17 @@ filterUpdateCommands :: (L.KVDBStreamEntryID, DBCommand, ByteString) -> Maybe (U
 filterUpdateCommands (id, Update a b c d e, val) = Just (UpdateDBCommand id a b c d e, val)
 filterUpdateCommands _ = Nothing
 
+filterUpdateCommands' :: (L.KVDBStreamEntryID, DBCommand, ByteString) -> Maybe (L.KVDBStreamEntryID, ByteString)
+filterUpdateCommands' (id, Update {}, val) = Just (id, val)
+filterUpdateCommands' _ = Nothing
+
 filterDeleteCommands :: (L.KVDBStreamEntryID, DBCommand, ByteString) -> Maybe (DeleteDBCommand, ByteString)
 filterDeleteCommands (id, Delete a b c d e, val) = Just (DeleteDBCommand id a b c d e, val)
 filterDeleteCommands _ = Nothing
+
+filterDeleteCommands' :: (L.KVDBStreamEntryID, DBCommand, ByteString) -> Maybe (L.KVDBStreamEntryID, ByteString)
+filterDeleteCommands' (id, Delete {}, val) = Just (id, val)
+filterDeleteCommands' _ = Nothing
 
 getStreamName :: Text -> Flow (Maybe Text)
 getStreamName streamName = do
