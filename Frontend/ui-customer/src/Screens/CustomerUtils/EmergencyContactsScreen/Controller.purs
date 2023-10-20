@@ -35,7 +35,7 @@ import Control.Transformers.Back.Trans (runBackT)
 import Data.String (split, Pattern(..), Replacement(..), replaceAll)
 import PrestoDOM.Types.Core (class Loggable, toPropValue)
 import Data.Ord (min)
-import Engineering.Helpers.Utils (loaderText, toggleLoader)
+import Engineering.Helpers.Utils (loaderText, toggleLoader, fromProp)
 import Effect.Unsafe (unsafePerformEffect)
 import Engineering.Helpers.LogEvent (logEvent)
 
@@ -121,9 +121,10 @@ eval (ContactListScrollStateChanged scrollState) state = continue state
 
 eval (PopUpModalAction PopUpModal.OnButton2Click) state = do
   let newContacts = filter (\x -> x.number <> x.name /= state.data.removedContactDetail.number <> state.data.removedContactDetail.name) state.data.contactsList
+  let newPrestoList = map (\x -> if ((fromProp x.number) <> (fromProp x.name) == state.data.removedContactDetail.number <> state.data.removedContactDetail.name) then contactTransformerProp state.data.removedContactDetail{isSelected = false} else x) state.data.prestoListArrayItems
   contactsInString <- pure $ toStringJSON newContacts
   _ <- pure $ setValueToLocalStore CONTACTS contactsInString
-  exit $ PostContacts state{data{contactsList = newContacts}}
+  exit $ PostContacts state{data{contactsList = newContacts, prestoListArrayItems = newPrestoList}}
 
 eval (PopUpModalAction (PopUpModal.OnButton1Click)) state = continue state{props{showInfoPopUp = false}}
 

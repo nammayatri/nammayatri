@@ -41,6 +41,8 @@ import MerchantConfig.Types (AppConfig)
 import Presto.Core.Types.Language.Flow (Flow, doAff, getState, modifyState, delay)
 import PrestoDOM.Core (terminateUI)
 import Types.App (FlowBT, GlobalState(..))
+import Unsafe.Coerce (unsafeCoerce)
+import Halogen.VDom.DOM.Prop (PropValue)
 
 
 foreign import toggleLoaderIOS :: EffectFn1 Boolean Unit
@@ -249,3 +251,6 @@ ifelse :: forall a. Boolean -> a -> a -> a
 ifelse p a b = if p then a else b
 
 infixl 1 ifelse as ?
+
+fromProp :: PropValue -> String
+fromProp = unsafeCoerce
