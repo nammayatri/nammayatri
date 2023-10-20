@@ -173,6 +173,16 @@ findLatestNonAutopayActiveByDriverId driverId = do
     (Just 1)
     Nothing
 
+findAllNonAutopayActiveByDriverId :: MonadFlow m => Id Person -> m [Domain.Invoice]
+findAllNonAutopayActiveByDriverId driverId = do
+  findAllWithKV
+    [ Se.And
+        [ Se.Is BeamI.driverId $ Se.Eq (getId driverId),
+          Se.Is BeamI.invoiceStatus $ Se.Eq Domain.ACTIVE_INVOICE,
+          Se.Is BeamI.paymentMode $ Se.Not $ Se.Eq Domain.AUTOPAY_INVOICE
+        ]
+    ]
+
 updateInvoiceStatusByInvoiceId :: MonadFlow m => Domain.InvoiceStatus -> Id Domain.Invoice -> m ()
 updateInvoiceStatusByInvoiceId invoiceStatus invoiceId = do
   now <- getCurrentTime
@@ -180,7 +190,7 @@ updateInvoiceStatusByInvoiceId invoiceStatus invoiceId = do
     [ Se.Set BeamI.invoiceStatus invoiceStatus,
       Se.Set BeamI.updatedAt now
     ]
-    [Se.Is BeamI.id (Se.Eq $ getId invoiceId)]
+    ([Se.Is BeamI.id (Se.Eq $ getId invoiceId)] <> [Se.Is BeamI.invoiceStatus $ Se.Not (Se.In [Domain.SUCCESS, Domain.FAILED]) | invoiceStatus == Domain.INACTIVE])
 
 updateInvoiceStatusByDriverFeeIds :: MonadFlow m => Domain.InvoiceStatus -> [Id DriverFee] -> m ()
 updateInvoiceStatusByDriverFeeIds status driverFeeIds = do

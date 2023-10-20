@@ -22,6 +22,7 @@ module Domain.Action.UI.Payment
   )
 where
 
+import Data.List (nub)
 import Domain.Action.UI.Ride.EndRide.Internal
 import Domain.Types.DriverFee
 import qualified Domain.Types.DriverInformation as DI
@@ -182,7 +183,10 @@ processPayment merchantId driverId orderId sendNotification = do
   Redis.whenWithLockRedis (paymentProcessingLockKey driverId.getId) 60 $ do
     QDF.updateStatusByIds CLEARED driverFeeIds now
     QDFS.clearPaymentStatus driverId driverInfo.active
-    QIN.updateInvoiceStatusByInvoiceId INV.SUCCESS (cast orderId)
+    Redis.whenWithLockRedis (invoiceProcessingLockKey orderId.getId) 60 $ do
+      QIN.updateInvoiceStatusByInvoiceId INV.SUCCESS (cast orderId)
+      fork ("make all other non-autopay active invoice inactive for driver" <> driverId.getId) $ do
+        mkAllActiveManualAndMandateInvoiceInactive driverId ((invoice <&> (.paymentMode)) == Just INV.AUTOPAY_INVOICE)
     updatePaymentStatus driverId merchantId
     when sendNotification $ notifyPaymentSuccessIfNotNotified driver orderId
 
@@ -212,7 +216,8 @@ notifyAndUpdateInvoiceStatusIfPaymentFailed driverId orderId orderStatus eventNa
   let paymentMode = if isJust activeExecutionInvoice then DP.AUTOPAY else DP.MANUAL
   let (notifyFailure, updateFailure) = toNotifyFailure (isJust activeExecutionInvoice) eventName orderStatus
   when (updateFailure || (not fromWebhook && notifyFailure)) $ do
-    QIN.updateInvoiceStatusByInvoiceId INV.FAILED (cast orderId)
+    Redis.whenWithLockRedis (invoiceProcessingLockKey orderId.getId) 60 $
+      QIN.updateInvoiceStatusByInvoiceId INV.FAILED (cast orderId)
     case activeExecutionInvoice of
       Just invoice' -> do
         QDF.updateAutoPayToManual invoice'.driverFeeId
@@ -351,3 +356,16 @@ processMandate driverId mandateStatus startDate endDate mandateId maxAmount paye
       case existingMandateEntry of
         Just mandateEntry -> (mandateEntry.status /= DM.ACTIVE && autoPayStatus /= Just DI.SUSPENDED) || (mandateEntry.status == DM.ACTIVE && isNothing (mandateEntry.payerVpa))
         Nothing -> True
+
+mkAllActiveManualAndMandateInvoiceInactive :: (MonadFlow m, CacheFlow m r) => Id DP.Person -> Bool -> m ()
+mkAllActiveManualAndMandateInvoiceInactive driverId isAutoPayExecutionSuccess = do
+  if isAutoPayExecutionSuccess
+    then pure ()
+    else do
+      invoiceIds <- nub . map (.id) <$> QIN.findAllNonAutopayActiveByDriverId driverId
+      mapM_
+        ( \invoiceId -> do
+            Redis.whenWithLockRedis (invoiceProcessingLockKey invoiceId.getId) 60 $ do
+              QIN.updateInvoiceStatusByInvoiceId INV.INACTIVE invoiceId
+        )
+        invoiceIds
