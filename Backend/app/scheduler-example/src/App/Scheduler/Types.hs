@@ -33,7 +33,7 @@ data SchedulerJobType
   | FakeJobType
   | TestTermination
   deriving stock (Generic, Show, Read, Eq, Ord)
-  deriving anyclass (FromJSON, ToJSON, FromDhall)
+  deriving anyclass (FromJSON, ToJSON, FromDhall, ToSchema)
   deriving (PrettyShow) via Showable SchedulerJobType
 
 genSingletons [''SchedulerJobType]

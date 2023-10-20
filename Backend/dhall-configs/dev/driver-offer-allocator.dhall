@@ -30,10 +30,10 @@ let schedulerConfig =
       , graceTerminationPeriod = +10
       , enableRedisLatencyLogging = False
       , enablePrometheusMetricLogging = True
-      , groupName = "myGroup"
+      , groupName = appCfg.groupName
       , schedulerType = common.schedulerType.DbBased
-      , schedulerSetName = "Scheduled_Jobs"
-      , streamName = "Available_Jobs"
+      , schedulerSetName = appCfg.schedulerSetName
+      , streamName = appCfg.streamName
       , maxThreads = +10
       , block = +10000
       , readCount = +1
@@ -41,8 +41,12 @@ let schedulerConfig =
 
 in  { appCfg =
             appCfg
-        //  { loggerConfig =
-                    appCfg.loggerConfig
+        //  { loggerConfig = appCfg.loggerConfig
+            , groupName = appCfg.groupName
+            , schedulerType = appCfg.schedulerType
+            , schedulerSetName = appCfg.schedulerSetName
+            , streamName =
+                    appCfg.streamName
                 //  { logFilePath = "/tmp/driver-offer-allocator.log" }
             }
     , schedulerConfig

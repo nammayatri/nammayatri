@@ -42,7 +42,7 @@ data StoredJobInfo = StoredJobInfo
   deriving (Generic, ToJSON, FromJSON)
 
 type JobFlow t e =
-  (JobProcessor t, JobInfoProcessor e, SingI e, ToJSON t, FromJSON t)
+  (JobProcessor t, JobInfoProcessor e, SingI e, ToJSON t, FromJSON t, ToSchema t)
 
 type JobFlowE t e =
   (JobProcessor t, JobInfoProcessor e, SingI e)
@@ -55,7 +55,7 @@ data JobInfo (e :: t) = (JobProcessor t, JobInfoProcessor e) =>
     jobData :: JobContent e -- user defined, one per job handler
   }
 
-class (Show t, Read t, Demote t ~ t, SingKind t, Eq t) => JobProcessor t where
+class (Show t, Read t, Demote t ~ t, SingKind t, Eq t, ToSchema t, ToJSON t, FromJSON t) => JobProcessor t where
   restoreAnyJobInfoMain :: StoredJobInfo -> Maybe (AnyJobInfo t)
   default restoreAnyJobInfoMain :: StoredJobInfo -> Maybe (AnyJobInfo t)
   restoreAnyJobInfoMain storedContent = do
@@ -141,7 +141,7 @@ data Job (e :: t) = JobFlow t e =>
 data SchedulerType = RedisBased | DbBased deriving (Show, Enum, Eq, Read, Generic, FromDhall)
 
 data JobStatus = Pending | Completed | Failed | Revived
-  deriving (Show, Eq, Read, Generic, FromJSON, ToJSON, Ord)
+  deriving (Show, Eq, Read, Generic, FromJSON, ToJSON, Ord, ToSchema)
   deriving (PrettyShow) via Showable JobStatus
 
 derivePersistField "JobStatus"

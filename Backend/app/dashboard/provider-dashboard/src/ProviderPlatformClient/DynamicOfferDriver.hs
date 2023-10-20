@@ -36,6 +36,7 @@ import qualified Dashboard.ProviderPlatform.Volunteer as Volunteer
 import qualified Data.ByteString.Lazy as LBS
 import qualified "dynamic-offer-driver-app" Domain.Action.Dashboard.Fleet.Registration as Fleet
 import qualified "dynamic-offer-driver-app" Domain.Action.Dashboard.Overlay as Overlay
+import qualified "dynamic-offer-driver-app" Domain.Action.Dashboard.Scheduler as Scheduler
 import qualified "dynamic-offer-driver-app" Domain.Action.UI.Driver as ADriver
 import qualified "dynamic-offer-driver-app" Domain.Action.UI.Plan as Subscription
 import qualified "dynamic-offer-driver-app" Domain.Types.Invoice as INV
@@ -64,7 +65,8 @@ data DriverOfferAPIs = DriverOfferAPIs
     driverRegistration :: DriverRegistrationAPIs,
     issue :: IssueAPIs,
     revenue :: RevenueAPIs,
-    subscription :: SubscriptionAPIs
+    subscription :: SubscriptionAPIs,
+    scheduler :: SchedulerAPIs
   }
 
 data DriversAPIs = DriversAPIs
@@ -136,6 +138,11 @@ data RidesAPIs = RidesAPIs
 data BookingsAPIs = BookingsAPIs
   { stuckBookingsCancel :: Booking.StuckBookingsCancelReq -> Euler.EulerClient Booking.StuckBookingsCancelRes,
     multipleBookingSync :: Booking.MultipleBookingSyncReq -> Euler.EulerClient Booking.MultipleBookingSyncResp
+  }
+
+data SchedulerAPIs = SchedulerAPIs
+  { listScheduler :: Scheduler.ListSchedulerReq -> Euler.EulerClient Scheduler.ListSchedulerResp,
+    updateScheduler :: Scheduler.UpdateSchedulerReq -> Euler.EulerClient APISuccess
   }
 
 data MerchantAPIs = MerchantAPIs
@@ -238,6 +245,7 @@ mkDriverOfferAPIs merchantId token = do
   let issue = IssueAPIs {..}
   let revenue = RevenueAPIs {..}
   let overlay = OverlayAPIs {..}
+  let scheduler = SchedulerAPIs {..}
   DriverOfferAPIs {..}
   where
     driversClient
@@ -251,7 +259,8 @@ mkDriverOfferAPIs merchantId token = do
       :<|> volunteerClient
       :<|> issueClient
       :<|> revenueClient
-      :<|> overlayClient = clientWithMerchant (Proxy :: Proxy BPP.API') merchantId token
+      :<|> overlayClient
+      :<|> schedulerClient = clientWithMerchant (Proxy :: Proxy BPP.API') merchantId token
 
     planList
       :<|> planSelect
@@ -374,6 +383,9 @@ mkDriverOfferAPIs merchantId token = do
       :<|> listOverlay
       :<|> overlayInfo
       :<|> scheduleOverlay = overlayClient
+
+    listScheduler
+      :<|> updateScheduler = schedulerClient
 
     issueCategoryList
       :<|> issueList

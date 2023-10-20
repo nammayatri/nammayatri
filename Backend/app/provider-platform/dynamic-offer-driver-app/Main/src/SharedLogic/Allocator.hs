@@ -38,7 +38,7 @@ data AllocatorJobType
   | CalculateDriverFees
   | OrderAndNotificationStatusUpdate
   | SendOverlay
-  deriving (Generic, FromDhall, Eq, Ord, Show, Read, FromJSON, ToJSON)
+  deriving (Generic, FromDhall, Eq, Ord, Show, Read, FromJSON, ToJSON, ToSchema)
 
 genSingletons [''AllocatorJobType]
 showSingInstance ''AllocatorJobType

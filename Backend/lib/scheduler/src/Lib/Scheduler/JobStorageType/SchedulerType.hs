@@ -102,6 +102,13 @@ findAll = do
     RedisBased -> RQ.findAll
     DbBased -> DBQ.findAll
 
+findAllWithinWindow :: forall m r t. (FromTType'' BeamST.SchedulerJob (AnyJob t), JobExecutor r m, JobProcessor t) => LocalTime -> Maybe LocalTime -> Maybe JobStatus -> Maybe Text -> m [AnyJob t]
+findAllWithinWindow from mbTo mbJobStatus mbJobType = do
+  schedulerType <- asks (.schedulerType)
+  case schedulerType of
+    RedisBased -> RQ.findAllWithinWindow from mbTo mbJobStatus mbJobType
+    DbBased -> DBQ.findAllWithinWindow from mbTo mbJobStatus mbJobType
+
 findById :: forall t m r. (FromTType'' BeamST.SchedulerJob (AnyJob t), JobExecutor r m, JobProcessor t) => Id AnyJob -> m (Maybe (AnyJob t))
 findById id = do
   schedulerType <- asks (.schedulerType)

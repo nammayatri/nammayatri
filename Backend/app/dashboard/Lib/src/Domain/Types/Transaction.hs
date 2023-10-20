@@ -24,6 +24,7 @@ import qualified "rider-app" API.Dashboard.RideBooking.Profile as BAP
 import qualified "rider-app" API.Dashboard.RideBooking.Registration as BAP
 import qualified "rider-app" API.Dashboard.RideBooking.Search as BAP
 import qualified "rider-app" API.Dashboard.RideBooking.Select as BAP
+import qualified "dynamic-offer-driver-app" API.Dashboard.Scheduler as BPP
 import qualified "dynamic-offer-driver-app" API.Dashboard.Subscription as BPP
 import qualified "dashboard-helper-api" Dashboard.Common.Booking as Common
 import qualified "dashboard-helper-api" Dashboard.Common.Exotel as Common
@@ -82,4 +83,5 @@ data Endpoint
   | SpecialZoneAPI Common.SpecialZoneEndpoint
   | SubscriptionAPI BPP.SubscriptionEndpoint
   | OverlayAPI BPP.OverlayEndpoint
+  | SchedulerAPI BPP.SchedulerEndpoint
   deriving (Show, Read)

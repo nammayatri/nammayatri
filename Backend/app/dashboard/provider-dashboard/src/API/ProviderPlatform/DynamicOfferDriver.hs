@@ -28,6 +28,7 @@ import qualified API.ProviderPlatform.DynamicOfferDriver.Message as Message
 import qualified API.ProviderPlatform.DynamicOfferDriver.Overlay as Overlay
 import qualified API.ProviderPlatform.DynamicOfferDriver.Revenue as Revenue
 import qualified API.ProviderPlatform.DynamicOfferDriver.Ride as Ride
+import qualified API.ProviderPlatform.DynamicOfferDriver.Scheduler as Scheduler
 import qualified API.ProviderPlatform.DynamicOfferDriver.Subscription as Subscription
 import qualified API.ProviderPlatform.DynamicOfferDriver.Volunteer as Volunteer
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
@@ -50,6 +51,7 @@ type API =
            :<|> Volunteer.API
            :<|> Revenue.API
            :<|> Overlay.API
+           :<|> Scheduler.API
        )
 
 handler :: FlowServer API
@@ -66,3 +68,4 @@ handler merchantId =
     :<|> Volunteer.handler merchantId
     :<|> Revenue.handler merchantId
     :<|> Overlay.handler merchantId
+    :<|> Scheduler.handler merchantId

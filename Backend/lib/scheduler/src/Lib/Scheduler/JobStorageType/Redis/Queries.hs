@@ -21,16 +21,18 @@ import qualified Data.Aeson as A
 import qualified Data.Aeson as DA
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as BL
-import Data.HashMap.Strict as HM hiding (map)
+import Data.HashMap.Strict as HM hiding (filter, map)
 import qualified Data.Text as T
 import Data.Text.Encoding as DT
+import Data.Text.Encoding as TSE
+import Data.Time
 import Kernel.Prelude
 import Kernel.Storage.Hedis
 import qualified Kernel.Storage.Hedis.Queries as Hedis
 import Kernel.Tools.Metrics.CoreMetrics.Types
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
-import Kernel.Utils.Common (logDebug)
+import Kernel.Utils.Common (getCurrentTimestamp, logDebug)
 import Kernel.Utils.Time (utcToMilliseconds)
 import Lib.Scheduler.Environment
 import qualified Lib.Scheduler.ScheduleJob as ScheduleJob
@@ -55,6 +57,26 @@ createJobByTime byTime maxShards jobData = do
 
 findAll :: (JobExecutor r m, JobProcessor t) => m [AnyJob t]
 findAll = return []
+
+findAllWithinWindow :: (JobExecutor r m, JobProcessor t) => LocalTime -> Maybe LocalTime -> Maybe JobStatus -> Maybe Text -> m [AnyJob t]
+findAllWithinWindow from mbTo mbJobStatus mbJobType = do
+  startTime <- convertToTimeStamp from
+  endTime <- maybe getCurrentTimestamp convertToTimeStamp mbTo
+  setName <- asks (.schedulerSetName)
+  jobsBS <- Hedis.withNonCriticalCrossAppRedis $ Hedis.zRangeByScore setName startTime endTime
+  let parsedJobs = map ((DA.eitherDecode . BL.fromStrict . DT.encodeUtf8) . TSE.decodeUtf8) jobsBS
+  case sequence parsedJobs of
+    Right jobs -> return $ filterJobs jobs
+    Left err -> do
+      logDebug $ "error" <> T.pack err
+      return []
+  where
+    filterJobs = filter (\(AnyJob job) -> (isNothing mbJobStatus || (job.status == fromJust mbJobStatus)) && (isNothing mbJobType || (storedJobType (storeJobInfo job.jobInfo) == fromJust mbJobType)))
+
+convertToTimeStamp :: Monad m => LocalTime -> m Double
+convertToTimeStamp localTime = do
+  let utcTime = zonedTimeToUTC (ZonedTime localTime utc)
+  pure $ utcToMilliseconds utcTime
 
 findById :: (JobExecutor r m, JobProcessor t) => Id AnyJob -> m (Maybe (AnyJob t))
 findById _ = pure Nothing
@@ -125,7 +147,7 @@ getReadyTask = do
       return []
 
 updateStatus :: (JobExecutor r m) => JobStatus -> Id AnyJob -> m ()
-updateStatus _ _ = pure ()
+updateStatus _ _ = pure () -- @Piyush - please find the update status for redis based scheduler
 
 markAsComplete :: (JobExecutor r m) => Id AnyJob -> m ()
 markAsComplete _ = pure ()

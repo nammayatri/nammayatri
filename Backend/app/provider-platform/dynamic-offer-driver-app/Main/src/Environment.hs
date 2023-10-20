@@ -125,7 +125,9 @@ data AppCfg = AppCfg
     ltsCfg :: LocationTrackingeServiceConfig,
     dontEnableForDb :: [Text],
     modelNamesMap :: M.Map Text Text,
-    maxMessages :: Text
+    maxMessages :: Text,
+    streamName :: Text,
+    groupName :: Text
   }
   deriving (Generic, FromDhall)
 
@@ -198,7 +200,9 @@ data AppEnv = AppEnv
     ltsCfg :: LocationTrackingeServiceConfig,
     dontEnableForDb :: [Text],
     maxMessages :: Text,
-    modelNamesHashMap :: HM.Map Text Text
+    modelNamesHashMap :: HM.Map Text Text,
+    streamName :: Text,
+    groupName :: Text
   }
   deriving (Generic)
 

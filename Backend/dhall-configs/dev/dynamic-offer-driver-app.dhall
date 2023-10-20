@@ -275,10 +275,12 @@ in  { esqDBCfg
     , eventStreamMap = eventStreamMappings
     , tables
     , locationTrackingServiceKey = sec.locationTrackingServiceKey
-    , schedulerSetName = "Scheduled_Jobs"
-    , schedulerType = common.schedulerType.DbBased
     , ltsCfg = LocationTrackingeServiceConfig
     , dontEnableForDb
     , maxMessages
     , modelNamesMap
+    , groupName = "myGroup"
+    , schedulerType = common.schedulerType.DbBased
+    , schedulerSetName = "Scheduled_Jobs"
+    , streamName = "Available_Jobs"
     }

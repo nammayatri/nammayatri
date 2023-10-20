@@ -45,6 +45,7 @@ library
       API.Dashboard.Overlay
       API.Dashboard.Revenue
       API.Dashboard.Ride
+      API.Dashboard.Scheduler
       API.Dashboard.Subscription
       API.Dashboard.Volunteer
       API.Internal
@@ -120,6 +121,7 @@ library
       Domain.Action.Dashboard.Overlay
       Domain.Action.Dashboard.Revenue
       Domain.Action.Dashboard.Ride
+      Domain.Action.Dashboard.Scheduler
       Domain.Action.Dashboard.Volunteer
       Domain.Action.Internal.Auth
       Domain.Action.Internal.BulkLocUpdate

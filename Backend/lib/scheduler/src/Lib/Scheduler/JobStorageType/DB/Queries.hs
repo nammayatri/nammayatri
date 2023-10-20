@@ -105,6 +105,19 @@ createJobByTime byTime maxShards jobData = do
 findAll :: forall m r t. (FromTType'' BeamST.SchedulerJob (AnyJob t), JobMonad r m) => m [AnyJob t]
 findAll = findAllWithKVScheduler [Se.Is BeamST.id $ Se.Not $ Se.Eq ""]
 
+findAllWithinWindow :: forall m r t. (FromTType'' BeamST.SchedulerJob (AnyJob t), JobMonad r m) => LocalTime -> Maybe LocalTime -> Maybe JobStatus -> Maybe Text -> m [AnyJob t]
+findAllWithinWindow from mbTo mbJobStatus mbJobType =
+  findAllWithKVScheduler
+    [ Se.And
+        ( [ Se.Is BeamST.id $ Se.Not $ Se.Eq "",
+            Se.Is BeamST.scheduledAt $ Se.GreaterThanOrEq from
+          ]
+            <> [Se.Is BeamST.status $ Se.Eq (fromJust mbJobStatus) | isJust mbJobStatus]
+            <> [Se.Is BeamST.jobType $ Se.Eq (fromJust mbJobType) | isJust mbJobType]
+            <> [Se.Is BeamST.scheduledAt $ Se.LessThanOrEq (fromJust mbTo) | isJust mbTo]
+        )
+    ]
+
 findById :: forall m r t. (FromTType'' BeamST.SchedulerJob (AnyJob t), JobMonad r m) => Id AnyJob -> m (Maybe (AnyJob t))
 findById (Id id) = findOneWithKVScheduler [Se.Is BeamST.id $ Se.Eq id]
 

@@ -36,6 +36,7 @@ library
       API.ProviderPlatform.DynamicOfferDriver.Overlay
       API.ProviderPlatform.DynamicOfferDriver.Revenue
       API.ProviderPlatform.DynamicOfferDriver.Ride
+      API.ProviderPlatform.DynamicOfferDriver.Scheduler
       API.ProviderPlatform.DynamicOfferDriver.Subscription
       API.ProviderPlatform.DynamicOfferDriver.Volunteer
       API.SpecialZone
