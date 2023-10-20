@@ -1,0 +1,19 @@
+name: DB Change Check
+
+on:
+  pull_request:
+    paths:
+    - '**.sql'
+
+jobs:
+  db_check:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+      with:
+        fetch-depth: 2
+
+    - name: Run DB change check script
+      run: ./Backend/db-check.sh
