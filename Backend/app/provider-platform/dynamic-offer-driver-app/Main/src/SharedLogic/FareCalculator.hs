@@ -111,7 +111,7 @@ mkBreakupList mkPrice mkBreakupItem fareParams = do
     processFareParamsDetails dayPartRate = \case
       DFParams.ProgressiveDetails det -> mkFPProgressiveDetailsBreakupList dayPartRate det
       DFParams.SlabDetails det -> mkFPSlabDetailsBreakupList det
-      DFParams.RentalDetails _ -> [] -- FIX ME
+      DFParams.RentalDetails det -> mkFPRentalDetails det
     mkFPProgressiveDetailsBreakupList dayPartRate det = do
       let deadKmFareCaption = "DEAD_KILOMETER_FARE"
           deadKmFareItem = mkBreakupItem deadKmFareCaption (mkPrice det.deadKmFare)
@@ -131,6 +131,12 @@ mkBreakupList mkPrice mkBreakupItem fareParams = do
           cgstCaption = "CGST"
           mbCgstItem = mkBreakupItem cgstCaption . mkPrice . roundToIntegral <$> det.cgst
       catMaybes [mbPlatformFeeItem, mbSgstItem, mbCgstItem]
+    mkFPRentalDetails det = do
+      let timeBasedFareCaption = "TIME_BASED_FARE"
+          mbTimeBasedFare = mkBreakupItem timeBasedFareCaption (mkPrice det.timeBasedFare)
+          extraDistFareCaption = "EXTRA_DISTANCE_FARE"
+          mbExtraDistFare = mkBreakupItem extraDistFareCaption (mkPrice det.extraDistFare)
+      catMaybes [Just mbTimeBasedFare, Just mbExtraDistFare]
 
 -- TODO: make some tests for it
 
