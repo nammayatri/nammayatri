@@ -456,7 +456,8 @@ findAllCollectionInRange (Id merchantId) startTime endTime = do
     [ Se.And
         [ Se.Is BeamDF.merchantId $ Se.Eq merchantId,
           Se.Is BeamDF.collectedAt $ Se.GreaterThanOrEq (Just startTime),
-          Se.Is BeamDF.collectedAt $ Se.LessThanOrEq (Just endTime)
+          Se.Is BeamDF.collectedAt $ Se.LessThanOrEq (Just endTime),
+          Se.Is BeamDF.status $ Se.In [CLEARED, COLLECTED_CASH, EXEMPTED]
         ]
     ]
 

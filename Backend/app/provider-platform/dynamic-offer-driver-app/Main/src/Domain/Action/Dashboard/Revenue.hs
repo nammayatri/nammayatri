@@ -28,6 +28,7 @@ import Domain.Types.DriverFee
 import qualified Domain.Types.Merchant as DM
 import Environment
 import EulerHS.Prelude hiding (id)
+import qualified Kernel.Beam.Functions as B
 import Kernel.Types.Id
 import qualified Kernel.Types.SlidingWindowCounters as KS
 import Kernel.Utils.Common (HighPrecMoney, fromMaybeM)
@@ -48,9 +49,9 @@ getAllDriverFeeHistory merchantShortId mbFrom mbTo = do
       from = fromMaybe defaultFrom mbFrom
       to = fromMaybe now mbTo
 
-  pendingFees <- findAllPendingInRange merchant.id from to
-  overdueFees <- findAllOverdueInRange merchant.id from to
-  collectionFees <- findAllCollectionInRange merchant.id from to
+  pendingFees <- B.runInReplica $ findAllPendingInRange merchant.id from to
+  overdueFees <- B.runInReplica $ findAllOverdueInRange merchant.id from to
+  collectionFees <- B.runInReplica $ findAllCollectionInRange merchant.id from to
 
   let clearedFees = getFeeWithStatus [CLEARED] collectionFees
       exemptedFees = getFeeWithStatus [EXEMPTED] collectionFees
@@ -75,17 +76,17 @@ getCollectionHistory merchantShortId volunteerId place mbFrom mbTo = do
   let defaultFrom = UTCTime (fromGregorian 2020 1 1) 0
       from_ = fromMaybe defaultFrom mbFrom
       to = fromMaybe now mbTo
-  let rangeBasis = if (diffUTCTime to from_ > 24 * 60 * 60) then KS.Days else KS.Hours
+  let rangeBasis = if diffUTCTime to from_ > 24 * 60 * 60 then KS.Days else KS.Hours
   offlineCollections <- case (place, volunteerId) of
-    (Nothing, Nothing) -> findAllByStatus merchant.id COLLECTED_CASH from_ to
-    (Nothing, Just cId) -> findAllByVolunteerIds merchant.id [cId] from_ to
+    (Nothing, Nothing) -> B.runInReplica $ findAllByStatus merchant.id COLLECTED_CASH from_ to
+    (Nothing, Just cId) -> B.runInReplica $ findAllByVolunteerIds merchant.id [cId] from_ to
     (Just stn, _) -> do
       volunteers <- findAllByPlace stn
       let relevantIds = case volunteerId of
             Just cId -> [cId | cId `elem` ((.id.getId) <$> volunteers)]
             _ -> (.id.getId) <$> volunteers
-      findAllByVolunteerIds merchant.id relevantIds from_ to
-  onlineCollections <- findAllByStatus merchant.id CLEARED from_ to
+      B.runInReplica $ findAllByVolunteerIds merchant.id relevantIds from_ to
+  onlineCollections <- B.runInReplica $ findAllByStatus merchant.id CLEARED from_ to
   let offlineCollectionsRes = getCollectionSummary offlineCollections rangeBasis
   let onlineCollectionsRes = getCollectionSummary onlineCollections rangeBasis
   pure $ Common.CollectionList onlineCollectionsRes offlineCollectionsRes
