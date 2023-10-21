@@ -22,7 +22,17 @@ jobs:
         echo "::set-output name=result::$RESULT"
       continue-on-error: true
 
+    - name: Check if there's an error in DB Check
+      id: check_error
+      run: |
+        if [ -z "${{ steps.db_check.outputs.result }}" ]; then
+          echo "::set-output name=error_detected::no"
+        else
+          echo "::set-output name=error_detected::yes"
+        fi
+
     - name: Create GitHub Check Run
+      if: steps.check_error.outputs.error_detected == 'yes'
       id: create_check
       run: |
         echo "Creating check run..."
@@ -39,6 +49,7 @@ jobs:
         echo "CHECK_RUN_ID=$CHECK_RUN_ID" >> $GITHUB_ENV
 
     - name: Annotate GitHub Check
+      if: steps.check_error.outputs.error_detected == 'yes'
       run: |
         # Parse the output of db-check.sh
         echo "Output from db-check.sh: ${{ steps.db_check.outputs.result }}"
@@ -72,6 +83,7 @@ jobs:
         done
 
     - name: Complete GitHub Check Run
+      if: steps.check_error.outputs.error_detected == 'yes'
       run: |
         curl -s -X PATCH \
           -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
