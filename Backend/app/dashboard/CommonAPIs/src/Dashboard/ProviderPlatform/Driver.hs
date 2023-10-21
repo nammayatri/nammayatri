@@ -931,13 +931,15 @@ type GetFleetDriverVehicleAssociationAPI =
     :> Get '[JSON] DrivertoVehicleAssociationRes
 
 data DriveVehicleAssociationListItem = DriveVehicleAssociationListItem
-  { vehicleNo :: Text,
+  { driverId :: Maybe Text,
+    vehicleNo :: Text,
     driverName :: Text,
     status :: Maybe DriverMode,
     completedRides :: Int,
     vehicleType :: Maybe Variant,
     earning :: Int,
-    isDriverActive :: Bool
+    isDriverActive :: Bool,
+    isRcAssociated :: Bool
   }
   deriving (Generic, ToJSON, ToSchema, FromJSON)
 
