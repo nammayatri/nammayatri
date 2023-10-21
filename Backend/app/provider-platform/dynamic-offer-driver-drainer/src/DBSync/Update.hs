@@ -152,7 +152,7 @@ runUpdateCommands (cmd, val) dbStreamKey = do
     UpdateDBCommand id _ tag _ _ (RideDetailsOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val dbStreamKey setClauses tag whereClause ("RideDetails" :: Text) =<< dbConf
     UpdateDBCommand id _ tag _ _ (RiderDetailsOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val dbStreamKey setClauses tag whereClause ("RiderDetails" :: Text) =<< dbConf
     UpdateDBCommand id _ tag _ _ (SearchRequestOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val dbStreamKey setClauses tag whereClause ("SearchRequest" :: Text) =<< dbConf
-    UpdateDBCommand id _ tag _ _ (SearchRequestForDriverOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val dbStreamKey setClauses tag whereClause ("SearchRequestForDriver" :: Text) =<< dbConf
+    UpdateDBCommand id _ tag _ _ (SearchRequestForDriverOptions _ setClauses whereClause) -> runUpdateInKafka id val dbStreamKey setClauses tag whereClause ("SearchRequestForDriver" :: Text) =<< dbConf
     UpdateDBCommand id _ tag _ _ (SearchRequestSpecialZoneOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val dbStreamKey setClauses tag whereClause ("SearchRequestSpecialZone" :: Text) =<< dbConf
     UpdateDBCommand id _ tag _ _ (SearchTryOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val dbStreamKey setClauses tag whereClause ("SearchTry" :: Text) =<< dbConf
     UpdateDBCommand id _ tag _ _ (VehicleOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val dbStreamKey setClauses tag whereClause ("Vehicle" :: Text) =<< dbConf
@@ -173,7 +173,7 @@ runUpdateCommands (cmd, val) dbStreamKey = do
       Env {..} <- ask
       if model `elem` _dontEnableDbTables then pure $ Right id else runUpdateWithRetries id value setClause whereClause model dbConf 0 maxRetries
     -- If KAFKA_PUSH is false then entry will be there in DB Else Updates entry in Kafka only.
-    runUpdateInKafka id value dbStreamKey' setClause whereClause model dbConf tag = do
+    runUpdateInKafka id value dbStreamKey' setClause tag whereClause model dbConf = do
       isPushToKafka' <- EL.runIO isPushToKafka
       if not isPushToKafka'
         then runUpdate id value dbStreamKey' setClause whereClause model dbConf
@@ -211,7 +211,7 @@ runUpdateCommands (cmd, val) dbStreamKey = do
       if not isPushToKafka'
         then runUpdate id value dbStreamKey' setClause whereClause model dbConf
         else do
-          res <- runUpdateInKafka id value dbStreamKey' setClause whereClause model dbConf tag
+          res <- runUpdateInKafka id value dbStreamKey' setClause tag whereClause model dbConf
           either (\_ -> pure $ Left (UnexpectedError "Kafka Error", id)) (\_ -> runUpdate id value dbStreamKey' setClause whereClause model dbConf) res
 
     runUpdateWithRetries id value setClause whereClause model dbConf retryIndex maxRetries = do
