@@ -118,8 +118,7 @@ buildEstimate searchReqId startTime dist specialLocationTag farePolicy = do
             || breakup.title == "DEAD_KILOMETER_FARE"
             || breakup.title == "DRIVER_MIN_EXTRA_FEE"
             || breakup.title == "DRIVER_MAX_EXTRA_FEE"
-        _ ->
-          -- FIX ME
+        DFParams.Slab ->
           breakup.title == "BASE_DISTANCE_FARE"
             || breakup.title == "SERVICE_CHARGE"
             || breakup.title == "WAITING_OR_PICKUP_CHARGES"
@@ -128,6 +127,7 @@ buildEstimate searchReqId startTime dist specialLocationTag farePolicy = do
             || breakup.title == "CGST"
             || breakup.title == "FIXED_GOVERNMENT_RATE"
             || breakup.title == "NIGHT_SHIFT_CHARGE"
+        DFParams.Rental -> False -- not used for now
 
 mkAdditionalBreakups :: (Money -> breakupItemPrice) -> (Text -> breakupItemPrice -> breakupItem) -> Meters -> FullFarePolicy -> [breakupItem]
 mkAdditionalBreakups mkPrice mkBreakupItem distance farePolicy = do

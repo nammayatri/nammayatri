@@ -86,7 +86,7 @@ data Booking = Booking
   }
   deriving (Generic)
 
-data BookingType = SpecialZoneBooking | NormalBooking | RentalBooking -- FIX ME
+data BookingType = SpecialZoneBooking | NormalBooking | RentalBooking
   deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 $(mkBeamInstancesForEnum ''BookingType)

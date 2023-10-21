@@ -273,15 +273,14 @@ endRide handle@ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.g
             case dashboardReq.point of
               Just point -> pure (point, Nothing)
               Nothing -> do
-                error "TODO"
+                throwError $ InvalidRequest "End point required"
           CronJobReq cronJobReq -> do
             logTagInfo "cron job -> endRide : " ("DriverId " <> getId driverId <> ", RideId " <> getId rideOld.id)
             case cronJobReq.point of
               Just point -> pure (point, Nothing)
               Nothing -> do
-                error "TODO"
-          CallBasedReq _ -> do
-            error "TODO"
+                throwError $ InvalidRequest "End point required"
+          CallBasedReq _ -> throwError $ InvalidRequest "Not allowed call based ending using rental for now"
 
   goHomeConfig <- CQGHC.findByMerchantId booking.providerId
   ghInfo <- CQDGR.getDriverGoHomeRequestInfo driverId booking.providerId (Just goHomeConfig)

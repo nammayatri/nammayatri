@@ -79,6 +79,7 @@ import AWS.S3 as S3
 import Control.Monad.Extra (mapMaybeM)
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Message as Common
 import Data.Either.Extra (eitherToMaybe)
+import qualified Data.HashMap as HM
 import Data.List (intersect, (\\))
 import qualified Data.List as DL
 import qualified Data.Map as M
@@ -185,6 +186,7 @@ import qualified Storage.Queries.Driver.DriverFlowStatus as QDFS
 import qualified Storage.Queries.Driver.GoHomeFeature.DriverGoHomeRequest as QDGR
 import qualified Storage.Queries.Driver.GoHomeFeature.DriverHomeLocation as QDHL
 import qualified Storage.Queries.DriverFee as QDF
+import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.DriverInformation as QDriverInformation
 import qualified Storage.Queries.DriverQuote as QDrQt
 import qualified Storage.Queries.DriverReferral as QDR
@@ -1143,6 +1145,7 @@ offerQuote ::
     EsqDBReplicaFlow m r,
     HasPrettyLogger m r,
     HasField "driverQuoteExpirationSeconds" r NominalDiffTime,
+    HasField "modelNamesHashMap" r (HM.Map Text Text),
     HasField "coreVersion" r Text,
     HasField "driverUnlockDelay" r Seconds,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
@@ -1170,6 +1173,7 @@ respondQuote ::
     EsqDBReplicaFlow m r,
     HasPrettyLogger m r,
     HasField "driverQuoteExpirationSeconds" r NominalDiffTime,
+    HasField "modelNamesHashMap" r (HM.Map Text Text),
     HasField "coreVersion" r Text,
     HasField "driverUnlockDelay" r Seconds,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
@@ -1362,9 +1366,6 @@ respondQuote (driverId, _) req = do
 
         ride <- buildRide booking otpCode merchantId
         triggerRideCreatedEvent RideEventData {ride = ride, personId = cast driver.id, merchantId}
-        --enableLocationTrackingService <- asks (.enableLocationTrackingService)
-        --when enableLocationTrackingService $ do
-        --- PLEASE FIX ME ----
         void $ LF.rideDetails ride.id ride.status merchantId ride.driverId booking.fromLocation.lat booking.fromLocation.lon
         rideDetails <- buildRideDetails ride driver
         driverSearchReqs <- QSRD.findAllActiveBySTId searchTryId
@@ -1377,7 +1378,8 @@ respondQuote (driverId, _) req = do
         -- critical updates
         QRB.updateStatus booking.id DB.TRIP_ASSIGNED
         QRide.createRide ride
-        -- DLoc.updateOnRide driver.merchantId driver.id True -- FIX ME RENTAL
+        QDI.updateOnRide (cast driver.id) True
+        -- DLoc.updateOnRide driver.merchantId driver.id True -- Check this
 
         -- non-critical updates
         QDFS.updateStatus driver.id DDFS.RIDE_ASSIGNED {rideId = ride.id}
@@ -1408,7 +1410,7 @@ respondQuote (driverId, _) req = do
                     "Check the app for more details."
                   ]
         Notify.notifyDriver merchantId notificationType notificationTitle message driver.id driver.deviceToken
-    --void $ CallBAP.sendRideAssignedUpdateToBAP uBooking ride -- FIX ME RENTAL
+        void $ CallBAP.sendRideAssignedUpdateToBAP uBooking ride -- FIX ME RENTAL
 
     -- TODO remove duplication
     buildRide booking otp merchantId = do

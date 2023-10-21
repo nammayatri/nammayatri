@@ -130,7 +130,8 @@ buildStartRideReq otp initialPoint =
   RideAPI.StartRideReq
     { RideAPI.rideOtp = otp,
       point = initialPoint,
-      odometerStartReading = Just 0
+      odometerStartReading = Just 0,
+      odometerStartImage = Nothing
     }
 
 getDriverOfferBppBaseUrl :: BaseUrl

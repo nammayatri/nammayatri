@@ -36,7 +36,7 @@ data FareParameters = FareParameters
   }
   deriving (Generic, Show, Eq, PrettyShow)
 
-data FareParametersDetails = ProgressiveDetails FParamsProgressiveDetails | SlabDetails FParamsSlabDetails | RentalDetails FParamsRentalDetails -- FIX ME
+data FareParametersDetails = ProgressiveDetails FParamsProgressiveDetails | SlabDetails FParamsSlabDetails | RentalDetails FParamsRentalDetails
   deriving (Generic, Show, Eq, PrettyShow)
 
 data FParamsProgressiveDetails = FParamsProgressiveDetails
