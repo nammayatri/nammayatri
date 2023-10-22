@@ -2,7 +2,7 @@ CREATE TABLE atlas_driver_offer_bpp.quote_rental (
 id character(36) NOT NULL PRIMARY KEY,
 search_request_id character(36) REFERENCES atlas_driver_offer_bpp.search_request (id) NOT NULL,
 provider_id character(36) REFERENCES atlas_driver_offer_bpp.merchant (id) NOT NULL,
-policy_id character(36) REFERENCES atlas_driver_offer_bpp.fare_policy (id) NOT NULL,
+fare_policy_id character(36) REFERENCES atlas_driver_offer_bpp.fare_policy (id) NOT NULL,
 base_distance integer NOT NULL,
 base_duration integer NOT NULL,
 base_fare integer NOT NULL,
@@ -12,7 +12,6 @@ vehicle_variant character varying(255) NOT NULL,
 valid_till timestamp NOT NULL,
 created_at timestamp NOT NULL,
 updated_at timestamp NOT NULL
-
 );
 
 ALTER TABLE atlas_driver_offer_bpp.quote_rental OWNER TO atlas_driver_offer_bpp_user;

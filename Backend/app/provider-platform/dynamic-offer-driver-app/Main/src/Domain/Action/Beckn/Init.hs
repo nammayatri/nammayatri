@@ -183,10 +183,30 @@ handler merchantId req initReq = do
 
           farePolicy <- QFP.findById rentalQuote.farePolicyId >>= fromMaybeM NoFarePolicy
           -- let fullFarePolicy = FarePolicyD.farePolicyToFullFarePolicy fareProduct.merchantId fareProduct.vehicleVariant farePolicy
-          let (sDistance, sDuration, sFare) = case farePolicy.farePolicyDetails of
-                FarePolicyD.RentalDetails fPDetails -> (Meters $ duration * fPDetails.perHourFreeKms, Seconds duration, Money $ (getMoney fPDetails.perHourCharge) * duration)
+          let (distance, duration, nightShiftCharge) = case farePolicy.farePolicyDetails of
+                FarePolicyD.RentalDetails fPDetails -> (Meters $ duration * fPDetails.perHourFreeKms, Seconds duration, fPDetails.nightShiftCharge)
                 _ -> (0, 0, 0)
-          _ <- QRQuote.updateBaseFields rentalQuote.id sDistance sDuration sFare
+          let fullFarePolicies = FarePolicyD.farePolicyToFullFarePolicy merchantId.getId req.vehicleVariant farePolicy
+          fareParams <-
+            calculateFareParameters
+              CalculateFareParametersParams
+                { farePolicy = fullFarePolicies,
+                  distance = distance,
+                  rideTime = sReq.pickupTime,
+                  waitingTime = Nothing,
+                  actualRideDuration = Nothing,
+                  avgSpeedOfVehicle = Nothing,
+                  driverSelectedFare = Nothing,
+                  customerExtraFee = Nothing,
+                  nightShiftCharge = nightShiftCharge,
+                  rentalRideParams = Nothing
+                }
+          let estimatedFare = fareSum fareParams
+              estimatedFinishTime = fromIntegral duration `addUTCTime` startTime
+          searchRequestExpirationSeconds <- asks (.searchRequestExpirationSeconds)
+          let validTill = searchRequestExpirationSeconds `addUTCTime` now
+          let updateRentalQuote = rentalQuote{baseDistance = distance, baseDuration = duration, baseFare = estimatedFare, fareParams = fareParams, validTill = validTill, updatedAt = now, estimatedFinishTime = estimatedFinishTime}
+          _ <- QRQuote.createNewFareParamAndUpdateQuote rentalQuote.id updateRentalQuote
           updatedRentalQuotes <- QRQuote.findById (Id req.estimateId) >>= fromMaybeM (QuoteNotFound req.estimateId)
 
           --- TODO -- Update Rental Quote estimate fare and estimate duration
@@ -358,7 +378,7 @@ handler merchantId req initReq = do
             bapCity = Just req.bapCity,
             bapCountry = Just req.bapCountry,
             riderId = Nothing,
-            vehicleVariant = SEDAN,
+            vehicleVariant = rentalQuote.vehicleVariant,
             estimatedDistance = rentalQuote.baseDistance,
             maxEstimatedDistance = req.maxEstimatedDistance,
             createdAt = now,
