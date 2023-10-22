@@ -16,8 +16,10 @@ module API.ProviderPlatform.DynamicOfferDriver.Subscription where
 
 import qualified "dynamic-offer-driver-app" API.Dashboard.Subscription as SD
 import Dashboard.Common as Common
+import qualified "dynamic-offer-driver-app" Domain.Action.UI.Payment as APayment
 import qualified "dynamic-offer-driver-app" Domain.Action.UI.Plan as DTPlan
 import Domain.Types.AccessMatrix
+import qualified "dynamic-offer-driver-app" Domain.Types.Invoice as INV
 import "lib-dashboard" Domain.Types.Merchant as DMerchant
 import qualified "dynamic-offer-driver-app" Domain.Types.Plan as DPlan
 import qualified Domain.Types.Transaction as DT
@@ -39,6 +41,7 @@ type API =
            :<|> SuspendPlan
            :<|> SubscribePlan
            :<|> CurrentPlan
+           :<|> PaymentStatus
        )
 
 type ListPlan =
@@ -61,6 +64,10 @@ type CurrentPlan =
   ApiAuth 'DRIVER_OFFER_BPP 'SUBSCRIPTION 'CURRENT_PLAN
     :> SD.CurrentPlan
 
+type PaymentStatus =
+  ApiAuth 'DRIVER_OFFER_BPP 'SUBSCRIPTION 'PAYMENT_STATUS
+    :> SD.OrderStatus
+
 buildTransaction ::
   ( MonadFlow m
   ) =>
@@ -78,6 +85,7 @@ handler merchantId =
     :<|> planSuspend merchantId
     :<|> planSubscribe merchantId
     :<|> currentPlan merchantId
+    :<|> paymentStatus merchantId
 
 planList :: ShortId DMerchant.Merchant -> ApiTokenInfo -> Id Common.Driver -> FlowHandler DTPlan.PlanListAPIRes
 planList merchantShortId apiTokenInfo driverId = withFlowHandlerAPI $ do
@@ -109,3 +117,8 @@ currentPlan :: ShortId DMerchant.Merchant -> ApiTokenInfo -> Id Common.Driver ->
 currentPlan merchantShortId apiTokenInfo driverId = withFlowHandlerAPI $ do
   checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
   Client.callDriverOfferBPP checkedMerchantId (.subscription.currentPlan) driverId
+
+paymentStatus :: ShortId DMerchant.Merchant -> ApiTokenInfo -> Id Common.Driver -> Id INV.Invoice -> FlowHandler APayment.PaymentStatusResp
+paymentStatus merchantShortId apiTokenInfo driverId invoiceId = withFlowHandlerAPI $ do
+  checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
+  Client.callDriverOfferBPP checkedMerchantId (.subscription.paymentStatus) driverId invoiceId

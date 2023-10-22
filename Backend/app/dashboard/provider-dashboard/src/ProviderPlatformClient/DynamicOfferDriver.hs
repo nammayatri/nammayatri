@@ -37,6 +37,7 @@ import qualified Data.ByteString.Lazy as LBS
 import qualified "dynamic-offer-driver-app" Domain.Action.Dashboard.Fleet.Registration as Fleet
 import qualified "dynamic-offer-driver-app" Domain.Action.Dashboard.Overlay as Overlay
 import qualified "dynamic-offer-driver-app" Domain.Action.UI.Driver as ADriver
+import qualified "dynamic-offer-driver-app" Domain.Action.UI.Payment as APayment
 import qualified "dynamic-offer-driver-app" Domain.Action.UI.Plan as Subscription
 import qualified "dynamic-offer-driver-app" Domain.Types.Invoice as INV
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
@@ -221,7 +222,8 @@ data SubscriptionAPIs = SubscriptionAPIs
     planSelect :: Id Driver.Driver -> Id DPlan.Plan -> Euler.EulerClient APISuccess,
     planSuspend :: Id Driver.Driver -> Euler.EulerClient APISuccess,
     planSubscribe :: Id Driver.Driver -> Id DPlan.Plan -> Euler.EulerClient Subscription.PlanSubscribeRes,
-    currentPlan :: Id Driver.Driver -> Euler.EulerClient Subscription.CurrentPlanRes
+    currentPlan :: Id Driver.Driver -> Euler.EulerClient Subscription.CurrentPlanRes,
+    paymentStatus :: Id Driver.Driver -> Id INV.Invoice -> Euler.EulerClient APayment.PaymentStatusResp
   }
 
 mkDriverOfferAPIs :: CheckedShortId DM.Merchant -> Text -> DriverOfferAPIs
@@ -257,7 +259,8 @@ mkDriverOfferAPIs merchantId token = do
       :<|> planSelect
       :<|> planSuspend
       :<|> planSubscribe
-      :<|> currentPlan = subscriptionClient
+      :<|> currentPlan
+      :<|> paymentStatus = subscriptionClient
 
     driverDocumentsInfo
       :<|> driverAadhaarInfo
