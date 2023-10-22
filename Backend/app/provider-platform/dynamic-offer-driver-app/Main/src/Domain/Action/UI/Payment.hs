@@ -43,7 +43,6 @@ import qualified Kernel.External.Payment.Types as Payment
 import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto (EsqDBReplicaFlow, Transactionable)
-import qualified Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Storage.Hedis.Queries as Hedis
 import Kernel.Types.Common hiding (id)
@@ -96,7 +95,7 @@ mkOrderAPIEntity DOrder.PaymentOrder {..} = do
 
 -- order status -----------------------------------------------------
 
-getStatus :: (ServiceFlow m r, Transactionable m, EncFlow m r, EsqDBReplicaFlow m r, EsqDBFlow m r, CacheFlow m r) => (Id DP.Person, Id DM.Merchant) -> Id DOrder.PaymentOrder -> m DPayment.PaymentStatusResp
+getStatus :: (ServiceFlow m r, Transactionable m, EncFlow m r, EsqDBReplicaFlow m r, EsqDBFlow m r, CacheFlow m r, MonadFlow m) => (Id DP.Person, Id DM.Merchant) -> Id DOrder.PaymentOrder -> m DPayment.PaymentStatusResp
 getStatus (personId, merchantId) orderId = do
   let commonPersonId = cast @DP.Person @DPayment.Person personId
       orderStatusCall = Payment.orderStatus merchantId -- api call
@@ -243,7 +242,7 @@ sendNotificationIfNotSent key expiry actions = do
 pdnNotificationStatus ::
   ( CacheFlow m r,
     EsqDBFlow m r,
-    Esq.EsqDBReplicaFlow m r,
+    EsqDBReplicaFlow m r,
     EncFlow m r,
     MonadFlow m,
     HasShortDurationRetryCfg r c,

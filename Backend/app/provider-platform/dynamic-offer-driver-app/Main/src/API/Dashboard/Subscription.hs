@@ -16,7 +16,9 @@ module API.Dashboard.Subscription where
 
 import qualified API.UI.Plan as DPlan
 import qualified "dashboard-helper-api" Dashboard.Common as DP
+import qualified Domain.Action.UI.Payment as APayment
 import qualified Domain.Action.UI.Plan as DTPlan
+import qualified Domain.Types.Invoice as INV
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Plan as DPlan
 import Environment
@@ -45,6 +47,7 @@ type API =
            :<|> SuspendPlan
            :<|> SubscribePlan
            :<|> CurrentPlan
+           :<|> OrderStatus
        )
 
 type ListPlan =
@@ -73,6 +76,12 @@ type CurrentPlan =
   Capture "driverId" (Id DP.Driver)
     :> Get '[JSON] DTPlan.CurrentPlanRes
 
+type OrderStatus =
+  Capture "driverId" (Id DP.Driver)
+    :> Capture "orderId" (Id INV.Invoice)
+    :> "status"
+    :> Get '[JSON] APayment.PaymentStatusResp
+
 handler :: ShortId DM.Merchant -> FlowServer API
 handler merchantId =
   planList merchantId
@@ -80,6 +89,7 @@ handler merchantId =
     :<|> planSuspend merchantId
     :<|> planSubscribe merchantId
     :<|> currentPlan merchantId
+    :<|> paymentStatus merchantId
 
 planList :: ShortId DM.Merchant -> Id DP.Driver -> FlowHandler DTPlan.PlanListAPIRes
 planList merchantShortId driverId = do
@@ -106,3 +116,8 @@ currentPlan :: ShortId DM.Merchant -> Id DP.Driver -> FlowHandler DTPlan.Current
 currentPlan merchantShortId driverId = do
   m <- withFlowHandlerAPI $ findMerchantByShortId merchantShortId
   DPlan.currentPlan (cast driverId, m.id)
+
+paymentStatus :: ShortId DM.Merchant -> Id DP.Driver -> Id INV.Invoice -> FlowHandler APayment.PaymentStatusResp
+paymentStatus merchantShortId driverId invoiceId = do
+  m <- withFlowHandlerAPI $ findMerchantByShortId merchantShortId
+  withFlowHandlerAPI $ APayment.getStatus (cast driverId, m.id) (cast invoiceId)
