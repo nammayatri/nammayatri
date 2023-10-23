@@ -18,7 +18,7 @@ import qualified Beckn.ACL.Common as Common
 import Beckn.Types.Core.Taxi.Common.TimeTimestamp (TimeTimestamp (TimeTimestamp))
 import qualified Beckn.Types.Core.Taxi.OnConfirm as OnConfirm
 import qualified Domain.Action.Beckn.Confirm as DConfirm
-import qualified Domain.Types.Booking as DConfirm
+import qualified Domain.Types.Booking as DB
 import qualified Domain.Types.Location as DL
 import Kernel.Prelude
 import Kernel.Types.Beckn.DecimalValue
@@ -38,12 +38,15 @@ buildOnConfirmMessage res = do
   let (mbDriverId, mbDriverName) = case res.bookingTypeDetails of
         DConfirm.DConfirmResNormalBooking details -> (Just details.driverId, Just details.driverName)
         _ -> (Nothing, Nothing)
-  fulfillmentDetails <- case booking.bookingType of
-    DConfirm.SpecialZoneBooking -> do
-      otpCode <- booking.bookingDetails.specialZoneOtpCode & fromMaybeM (OtpNotFoundForSpecialZoneBooking booking.id.getId)
-      toLocation <- fromMaybeM (InvalidRequest "ToLocation Not Present") res.toLocation
-      return $ mkSpecialZoneFulfillmentInfo res.fromLocation toLocation otpCode booking.quoteId OnConfirm.RIDE_OTP res.riderPhoneNumber res.riderMobileCountryCode res.riderName vehicleVariant booking.startTime
-    _ -> return $ mkFulfillmentInfo res.fromLocation res.toLocation booking.quoteId OnConfirm.RIDE mbDriverName res.riderPhoneNumber res.riderMobileCountryCode res.riderName vehicleVariant booking.startTime
+  fulfillmentDetails <- case booking.bookingDetails of
+    DB.DetailsOnDemand details -> do
+      case booking.bookingType of
+        DB.SpecialZoneBooking -> do
+          otpCode <- details.specialZoneOtpCode & fromMaybeM (OtpNotFoundForSpecialZoneBooking booking.id.getId)
+          toLocation <- fromMaybeM (InvalidRequest "ToLocation Not Present") res.toLocation
+          return $ mkSpecialZoneFulfillmentInfo res.fromLocation toLocation otpCode booking.quoteId OnConfirm.RIDE_OTP res.riderPhoneNumber res.riderMobileCountryCode res.riderName vehicleVariant booking.startTime
+        _ -> return $ mkFulfillmentInfo res.fromLocation res.toLocation booking.quoteId OnConfirm.RIDE mbDriverName res.riderPhoneNumber res.riderMobileCountryCode res.riderName vehicleVariant booking.startTime
+    DB.DetailsRental _ -> return $ mkFulfillmentInfo res.fromLocation res.toLocation booking.quoteId OnConfirm.RIDE mbDriverName res.riderPhoneNumber res.riderMobileCountryCode res.riderName vehicleVariant booking.startTime
   return $
     OnConfirm.OnConfirmMessage
       { order =

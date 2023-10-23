@@ -189,9 +189,9 @@ mkDriverRideRes rideDetails driverNumber rideRating mbExophone (ride, booking) b
                     }
   let initial = "" :: Text
   let (_, toLocation') = case booking.bookingDetails of
-        DRB.BookingDetailsOnDemand {..} ->
+        DRB.DetailsOnDemand DRB.BookingDetailsOnDemand {..} ->
           (DRide.ON_DEMAND, Just toLocation)
-        DRB.BookingDetailsRental {} ->
+        DRB.DetailsRental DRB.BookingDetailsRental {} ->
           (DRide.RENTAL, Nothing)
   DriverRideRes
     { id = ride.id,
@@ -313,7 +313,7 @@ otpRideCreate driver otpCode booking = do
       now <- getCurrentTime
       trackingUrl <- buildTrackingUrl guid
       let (rideType, rideDetails) = case booking.bookingDetails of
-            DRB.BookingDetailsOnDemand {..} ->
+            DRB.DetailsOnDemand DRB.BookingDetailsOnDemand {..} ->
               ( DRide.ON_DEMAND,
                 DRide.RideDetailsOnDemand
                   { toLocation = toLocation,
@@ -325,7 +325,7 @@ otpRideCreate driver otpCode booking = do
                     uiDistanceCalculationWithoutAccuracy = Nothing
                   }
               )
-            DRB.BookingDetailsRental {} ->
+            DRB.DetailsRental DRB.BookingDetailsRental {} ->
               ( DRide.RENTAL,
                 DRide.RideDetailsRental
                   { rentalToLocation = Nothing,

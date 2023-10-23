@@ -262,8 +262,8 @@ rideInfo merchantShortId reqRideId = do
         rideOtp = ride.otp,
         customerPickupLocation = mkLocationAPIEntity booking.fromLocation,
         customerDropLocation = case booking.bookingDetails of
-          DBooking.BookingDetailsOnDemand {toLocation} -> Just $ mkLocationAPIEntity toLocation
-          DBooking.BookingDetailsRental {} -> Nothing,
+          DBooking.DetailsOnDemand DBooking.BookingDetailsOnDemand {toLocation} -> Just $ mkLocationAPIEntity toLocation
+          DBooking.DetailsRental DBooking.BookingDetailsRental {} -> Nothing,
         actualDropLocation = ride.tripEndPos,
         driverId = cast @DP.Person @Common.Driver driverId,
         driverName = rideDetails.driverName,

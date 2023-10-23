@@ -46,21 +46,21 @@ createBooking' = createWithKV
 create :: MonadFlow m => Booking -> m ()
 create dBooking = do
   case dBooking.bookingDetails of
-    BookingDetailsOnDemand {..} -> do
+    DetailsOnDemand BookingDetailsOnDemand {..} -> do
       _ <- whenNothingM_ (QL.findById dBooking.fromLocation.id) $ do QL.create dBooking.fromLocation
       whenNothingM_ (QL.findById toLocation.id) $ do QL.create toLocation
-    BookingDetailsRental _ -> do
+    DetailsRental BookingDetailsRental {} -> do
       whenNothingM_ (QL.findById dBooking.fromLocation.id) $ do QL.create dBooking.fromLocation
   createBooking' dBooking
 
 createBooking :: MonadFlow m => Booking -> m ()
 createBooking booking = do
   case booking.bookingDetails of
-    BookingDetailsOnDemand {..} -> do
+    DetailsOnDemand BookingDetailsOnDemand {..} -> do
       fromLocationMap <- SLM.buildPickUpLocationMapping booking.fromLocation.id booking.id.getId DLM.BOOKING
       toLocationMaps <- SLM.buildDropLocationMapping toLocation.id booking.id.getId DLM.BOOKING
       QLM.create fromLocationMap >> QLM.create toLocationMaps >> create booking
-    BookingDetailsRental _ -> do
+    DetailsRental BookingDetailsRental {} -> do
       fromLocationMap <- SLM.buildPickUpLocationMapping booking.fromLocation.id booking.id.getId DLM.BOOKING
       QLM.create fromLocationMap >> create booking
 
@@ -157,9 +157,10 @@ instance FromTType' BeamB.Booking Booking where
               fl <- QL.findById fromLocMap.locationId >>= fromMaybeM (InternalError $ "FromLocation not found in booking for fromLocationId: " <> fromLocMap.locationId.getId)
               return (fl, Nothing)
         let bookingDetails =
-              BookingDetailsRental
-                { rentalToLocation = tl
-                }
+              DetailsRental
+                BookingDetailsRental
+                  { rentalToLocation = tl
+                  }
         if isJust fp
           then
             pure $
@@ -223,11 +224,12 @@ instance FromTType' BeamB.Booking Booking where
               tl <- QL.findById toLocMap.locationId >>= fromMaybeM (InternalError $ "ToLocation not found in booking for toLocationId: " <> toLocMap.locationId.getId)
               return (fl, tl)
         let bookingDetails =
-              BookingDetailsOnDemand
-                { specialLocationTag = specialLocationTag,
-                  specialZoneOtpCode = specialZoneOtpCode,
-                  toLocation = tl
-                }
+              DetailsOnDemand
+                BookingDetailsOnDemand
+                  { specialLocationTag = specialLocationTag,
+                    specialZoneOtpCode = specialZoneOtpCode,
+                    toLocation = tl
+                  }
         if isJust fp
           then
             pure $
@@ -269,7 +271,7 @@ instance FromTType' BeamB.Booking Booking where
 instance ToTType' BeamB.Booking Booking where
   toTType' Booking {..} =
     case bookingDetails of
-      BookingDetailsOnDemand {..} ->
+      DetailsOnDemand BookingDetailsOnDemand {..} ->
         BeamB.BookingT
           { BeamB.id = getId id,
             BeamB.transactionId = transactionId,
@@ -302,7 +304,7 @@ instance ToTType' BeamB.Booking Booking where
             BeamB.createdAt = createdAt,
             BeamB.updatedAt = updatedAt
           }
-      BookingDetailsRental {..} ->
+      DetailsRental BookingDetailsRental {..} ->
         BeamB.BookingT
           { BeamB.id = getId id,
             BeamB.transactionId = transactionId,

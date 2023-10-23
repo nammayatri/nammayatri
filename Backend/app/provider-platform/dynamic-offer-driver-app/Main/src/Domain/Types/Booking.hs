@@ -44,14 +44,20 @@ $(mkBeamInstancesForEnum ''BookingStatus)
 $(mkHttpInstancesForEnum ''BookingStatus)
 
 data BookingDetails
-  = BookingDetailsOnDemand
-      { specialZoneOtpCode :: Maybe Text,
-        specialLocationTag :: Maybe Text,
-        toLocation :: DLoc.Location
-      }
-  | BookingDetailsRental
-      { rentalToLocation :: Maybe DLoc.Location
-      }
+  = DetailsOnDemand BookingDetailsOnDemand
+  | DetailsRental BookingDetailsRental
+  deriving (Generic)
+
+data BookingDetailsOnDemand = BookingDetailsOnDemand -- FIXME separate details type for special zone
+  { specialZoneOtpCode :: Maybe Text,
+    specialLocationTag :: Maybe Text,
+    toLocation :: DLoc.Location
+  }
+  deriving (Generic)
+
+newtype BookingDetailsRental = BookingDetailsRental
+  { rentalToLocation :: Maybe DLoc.Location
+  }
   deriving (Generic)
 
 data Booking = Booking

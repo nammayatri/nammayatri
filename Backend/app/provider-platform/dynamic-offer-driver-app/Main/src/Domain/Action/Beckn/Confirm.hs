@@ -91,7 +91,7 @@ data DConfirmReq = DConfirmReq
 data DConfirmRes = DConfirmRes
   { booking :: DRB.Booking,
     fromLocation :: DL.Location,
-    toLocation :: Maybe DL.Location,
+    toLocation :: Maybe DL.Location, -- FIXME move to details
     riderDetails :: DRD.RiderDetails,
     riderMobileCountryCode :: Text,
     riderPhoneNumber :: Text,
@@ -151,8 +151,8 @@ handler transporter req validateRes = do
         Just otp -> pure otp
 
       toLocation <- case booking.bookingDetails of
-        DRB.BookingDetailsOnDemand {toLocation} -> pure toLocation
-        _ -> throwError (BookingFieldNotPresent "toLocation")
+        DRB.DetailsOnDemand DRB.BookingDetailsOnDemand {toLocation} -> pure toLocation
+        DRB.DetailsRental _ -> throwError (BookingFieldNotPresent "toLocation")
 
       ride <- buildRide driver.id booking ghrId req.customerPhoneNumber otpCode toLocation
       triggerRideCreatedEvent RideEventData {ride = ride, personId = cast driver.id, merchantId = transporter.id}
@@ -204,7 +204,7 @@ handler transporter req validateRes = do
             riderName = req.mbRiderName,
             transporter,
             fromLocation = uBooking.fromLocation,
-            toLocation = Just uBooking.bookingDetails.toLocation,
+            toLocation = Just toLocation,
             vehicleVariant = req.vehicleVariant,
             bookingTypeDetails =
               DConfirmResNormalBooking
@@ -215,16 +215,16 @@ handler transporter req validateRes = do
                   }
           }
     DConfirmSpecialZoneBookingValidateRes _quote -> do
+      toLocation <- case booking.bookingDetails of
+        DRB.DetailsOnDemand DRB.BookingDetailsOnDemand {toLocation} -> pure toLocation
+        DRB.DetailsRental _ -> throwError (BookingFieldNotPresent "toLocation")
+
       otpCode <- generateOTPCode
       QRB.updateSpecialZoneOtpCode booking.id otpCode
       when isNewRider $ QRD.create riderDetails
       QRB.updateRiderId booking.id riderDetails.id
       QL.updateAddress booking.fromLocation.id req.fromAddress
-      case booking.bookingDetails of
-        DRB.BookingDetailsOnDemand {..} -> do
-          whenJust req.toAddress $ \toAddr -> QL.updateAddress toLocation.id toAddr
-        _ -> do
-          throwError $ InvalidRequest ""
+      whenJust req.toAddress $ \toAddr -> QL.updateAddress toLocation.id toAddr
       whenJust req.mbRiderName $ QRB.updateRiderName booking.id
       QBE.logRideConfirmedEvent booking.id
 
@@ -239,7 +239,7 @@ handler transporter req validateRes = do
             riderName = req.mbRiderName,
             transporter,
             fromLocation = uBooking.fromLocation,
-            toLocation = Just uBooking.bookingDetails.toLocation,
+            toLocation = Just toLocation,
             vehicleVariant = req.vehicleVariant,
             bookingTypeDetails = DConfirmResSpecialZoneBooking
           }
@@ -252,11 +252,11 @@ handler transporter req validateRes = do
       QL.updateAddress booking.fromLocation.id req.fromAddress
       QRB.updateRiderId booking.id riderDetails.id
       case booking.bookingDetails of
-        DRB.BookingDetailsRental {..} -> do
+        DRB.DetailsRental DRB.BookingDetailsRental {..} -> do
           whenJust req.toAddress $ \toAddr -> case rentalToLocation of
             Just rentalToLocation' -> QL.updateAddress rentalToLocation'.id toAddr
             Nothing -> error "create toLocation"
-        _ -> do
+        DRB.DetailsOnDemand _ -> do
           throwError $ InternalError "Expected rental booking details"
       whenJust req.mbRiderName $ QRB.updateRiderName booking.id
 

@@ -63,12 +63,12 @@ getNearestDriversCurrentlyOnRide mbVariant searchRequestTag fromLocLatLong radiu
   vehicles' <- Int.getVehicles driverInfos'
   drivers' <- Int.getDrivers vehicles'
   driverQuote' <- Int.getDriverQuote $ map ((.getId) . (.id)) drivers'
-  bookingInfo' <- Int.getBookingInfo driverQuote'
+  bookingInfo' <- Int.getBookingInfoExceptRentals driverQuote'
   let bookingLocationIds' =
         bookingInfo'
           <&> ( \booking -> case booking.bookingDetails of
-                  DB.BookingDetailsOnDemand {toLocation} -> Just toLocation.id
-                  DB.BookingDetailsRental _ -> Nothing
+                  DB.DetailsOnDemand DB.BookingDetailsOnDemand {toLocation} -> Just toLocation.id
+                  DB.DetailsRental DB.BookingDetailsRental {} -> Nothing -- should never happen
               )
   let (driverLocs, driverInfos, vehicles, drivers, driverQuote, bookingInfo, bookingLocationIds) = unzip7 $ map (\(a, b, c, d, e, f, g) -> (a, b, c, d, e, f, fromJust g)) $ filter (\(_, _, _, _, _, _, x) -> isJust x) $ zip7 driverLocs' driverInfos' vehicles' drivers' driverQuote' bookingInfo' bookingLocationIds'
   bookingLocation <- QL.getBookingLocs bookingLocationIds
@@ -91,7 +91,9 @@ getNearestDriversCurrentlyOnRide mbVariant searchRequestTag fromLocLatLong radiu
       location <- HashMap.lookup driverId' locationHashMap
       quote <- HashMap.lookup driverId' quotesHashMap
       booking <- HashMap.lookup quote.id bookingHashMap
-      bookingLocation <- HashMap.lookup booking.bookingDetails.toLocation.id bookingLocsHashMap
+      bookingLocation <- case booking.bookingDetails of
+        DB.DetailsOnDemand details -> HashMap.lookup details.toLocation.id bookingLocsHashMap
+        DB.DetailsRental _ -> Nothing -- should never happen
       info <- HashMap.lookup driverId' driverInfoHashMap
       person <- HashMap.lookup driverId' personHashMap
       let driverLocationPoint = LatLong {lat = location.lat, lon = location.lon}

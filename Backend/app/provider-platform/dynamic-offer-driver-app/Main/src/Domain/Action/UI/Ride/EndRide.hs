@@ -39,6 +39,7 @@ import qualified Domain.Types.Driver.GoHomeFeature.DriverGoHomeRequest as DDGR
 import Domain.Types.FareParameters as Fare
 import qualified Domain.Types.FarePolicy as DFP
 import qualified Domain.Types.FareProduct as DFareProduct
+import qualified Domain.Types.Location as DL
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.Merchant.TransporterConfig as DTConf
@@ -236,8 +237,8 @@ endRide handle@ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.g
   unless (rideOld.status == DRide.INPROGRESS) $ throwError $ RideInvalidStatus "This ride cannot be ended"
 
   (tripEndPoint, odometerEndReading) <-
-    case rideOld.rideDetails of
-      DRide.RideDetailsOnDemand {} -> do
+    case booking.bookingDetails of
+      SRB.DetailsOnDemand details -> do
         case req of
           DriverReq driverReq -> do
             logTagInfo "driver -> endRide : " ("DriverId " <> getId driverId <> ", RideId " <> getId rideOld.id)
@@ -247,16 +248,16 @@ endRide handle@ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.g
             case dashboardReq.point of
               Just point -> pure (point, Nothing)
               Nothing -> do
-                pure (getCoordinates booking.bookingDetails.toLocation, Nothing)
+                pure (getCoordinates details.toLocation, Nothing) -- FIXME dashboardReq.odometerEndReading
           CronJobReq cronJobReq -> do
             logTagInfo "cron job -> endRide : " ("DriverId " <> getId driverId <> ", RideId " <> getId rideOld.id)
             case cronJobReq.point of
               Just point -> pure (point, Nothing)
               Nothing -> do
-                pure (getCoordinates booking.bookingDetails.toLocation, Nothing)
+                pure (getCoordinates details.toLocation, Nothing)
           CallBasedReq _ -> do
-            pure (getCoordinates booking.bookingDetails.toLocation, Nothing)
-      DRide.RideDetailsRental {} -> do
+            pure (getCoordinates details.toLocation, Nothing)
+      SRB.DetailsRental _ -> do
         case req of
           DriverReq driverReq -> do
             logTagInfo "driver -> endRide : " ("DriverId " <> getId driverId <> ", RideId " <> getId rideOld.id)
@@ -325,7 +326,10 @@ endRide handle@ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.g
               pure (chargeableDistance, finalFare, mbUpdatedFareParams, rideOld, Nothing, Nothing)
             _ -> do
               -- here we update the current ride, so below we fetch the updated version
-              pickupDropOutsideOfThreshold <- isPickupDropOutsideOfThreshold booking rideOld tripEndPoint thresholdConfig
+              bookingToLocation <- case booking.bookingDetails of
+                SRB.DetailsOnDemand details -> pure details.toLocation
+                SRB.DetailsRental _ -> throwError (InvalidRequest "odometerEndReading is mandatory for rentals")
+              pickupDropOutsideOfThreshold <- isPickupDropOutsideOfThreshold booking bookingToLocation rideOld tripEndPoint thresholdConfig
               whenJust (nonEmpty tripEndPoints) \tripEndPoints' -> do
                 withTimeAPI "endRide" "finalDistanceCalculation" $ finalDistanceCalculation rideOld.id driverId tripEndPoints' booking.estimatedDistance pickupDropOutsideOfThreshold
 
@@ -470,8 +474,8 @@ recalculateFareForDistance ServiceHandle {..} booking ride recalcDistance thresh
   putDiffMetric merchantId fareDiff distanceDiff
   return (recalcDistance, finalFare, Just fareParams)
 
-isPickupDropOutsideOfThreshold :: (MonadThrow m, Log m, MonadTime m, MonadGuid m) => SRB.Booking -> DRide.Ride -> LatLong -> DTConf.TransporterConfig -> m Bool
-isPickupDropOutsideOfThreshold booking ride tripEndPoint thresholdConfig = do
+isPickupDropOutsideOfThreshold :: (MonadThrow m, Log m, MonadTime m, MonadGuid m) => SRB.Booking -> DL.Location -> DRide.Ride -> LatLong -> DTConf.TransporterConfig -> m Bool
+isPickupDropOutsideOfThreshold booking bookingToLocation ride tripEndPoint thresholdConfig = do
   let mbTripStartLoc = ride.tripStartPos
   -- for old trips with mbTripStartLoc = Nothing we always recalculate fare
   case mbTripStartLoc of
@@ -480,7 +484,7 @@ isPickupDropOutsideOfThreshold booking ride tripEndPoint thresholdConfig = do
       let pickupLocThreshold = metersToHighPrecMeters thresholdConfig.pickupLocThreshold
       let dropLocThreshold = metersToHighPrecMeters thresholdConfig.dropLocThreshold
       let pickupDifference = abs $ distanceBetweenInMeters (getCoordinates booking.fromLocation) tripStartLoc
-      let dropDifference = abs $ distanceBetweenInMeters (getCoordinates booking.bookingDetails.toLocation) tripEndPoint
+      let dropDifference = abs $ distanceBetweenInMeters (getCoordinates bookingToLocation) tripEndPoint
       let pickupDropOutsideOfThreshold = (pickupDifference >= pickupLocThreshold) || (dropDifference >= dropLocThreshold)
 
       logTagInfo "Locations differences" $

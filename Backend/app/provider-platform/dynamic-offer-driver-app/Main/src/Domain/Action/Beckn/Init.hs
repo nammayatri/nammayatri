@@ -267,11 +267,12 @@ handler merchantId req initReq = do
         case searchRequest.searchRequestDetails of
           DSR.SearchReqDetailsOnDemand DSR.SearchRequestDetailsOnDemand {..} -> do
             let details =
-                  DRB.BookingDetailsOnDemand
-                    { specialZoneOtpCode = Nothing,
-                      specialLocationTag,
-                      toLocation
-                    }
+                  DRB.DetailsOnDemand
+                    DRB.BookingDetailsOnDemand
+                      { specialZoneOtpCode = Nothing,
+                        specialLocationTag,
+                        toLocation
+                      }
             pure (details, fromLocation)
           DSR.SearchReqDetailsRental DSR.SearchRequestDetailsRental {} -> do
             throwError $ InvalidRequest "Rental is not allowed here"
@@ -319,11 +320,12 @@ handler merchantId req initReq = do
     buildBookingSpecialzone specialZoneQuote searchRequestForSpecialZone quoteId startTime bookingType now mbPaymentMethodId paymentUrl disabilityTag = do
       id <- Id <$> generateGUID
       let bookingOnDemand =
-            DRB.BookingDetailsOnDemand
-              { specialZoneOtpCode = Nothing,
-                specialLocationTag = Nothing,
-                toLocation = searchRequestForSpecialZone.toLocation
-              }
+            DRB.DetailsOnDemand
+              DRB.BookingDetailsOnDemand
+                { specialZoneOtpCode = Nothing,
+                  specialLocationTag = Nothing,
+                  toLocation = searchRequestForSpecialZone.toLocation
+                }
       exophone <- findRandomExophone merchantId
       pure
         DRB.Booking
@@ -374,9 +376,10 @@ handler merchantId req initReq = do
             throwError $ InvalidRequest "On Demand is not allowed here"
           DSR.SearchReqDetailsRental DSR.SearchRequestDetailsRental {rentalFromLocation} -> do
             let details =
-                  DRB.BookingDetailsRental
-                    { rentalToLocation = Nothing
-                    }
+                  DRB.DetailsRental
+                    DRB.BookingDetailsRental
+                      { rentalToLocation = Nothing
+                      }
             pure (details, rentalFromLocation)
       pure
         DRB.Booking
