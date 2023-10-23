@@ -61,64 +61,66 @@ public class RemoteAssetsDownloader extends Service {
     }
 
     @Override
-    public int onStartCommand(Intent intent, int flags, int startId) {
-        JSONObject payload = new JSONObject();
-        JSONObject outerPayload = new JSONObject();
-        String merchantType = intent.getStringExtra("merchantType");
-        String bundleType = intent.getStringExtra("bundleType");
+    public int onStartCommand(@Nullable Intent intent, int flags, int startId) {
+        if (intent != null){
+            JSONObject payload = new JSONObject();
+            JSONObject outerPayload = new JSONObject();
+            String merchantType = intent.getStringExtra("merchantType");
+            String bundleType = intent.getStringExtra("bundleType");
 
-        if(bundleType.equals("FCM")){
-            return updateBundle(intent, null, getApplicationContext());
-        }
-
-        if(hyperServices == null){
-            hyperServices = new HyperServices(this);
-        }
-        if (merchantType != null && !hyperServices.isInitialised()) {
-        try {
-            payload.put("clientId", getResources().getString(R.string.client_id));
-            payload.put("merchantId", getResources().getString(R.string.merchant_id));
-            payload.put("action", "initiate");
-            payload.put("logLevel", 1);
-            payload.put("isBootable", false);
-            payload.put("bundleTimeOut",-1);
-            payload.put(PaymentConstants.ENV, "prod");
-            outerPayload.put("requestId", UUID.randomUUID());
-            outerPayload.put("service", getService(merchantType));
-            outerPayload.put("betaAssets", false);
-            outerPayload.put(PaymentConstants.PAYLOAD, payload);
-        } catch (Exception e){
-            e.printStackTrace();
-        }
-        hyperServices.initiate(outerPayload, new HyperPaymentsCallback() {
-            @Override
-            public void onStartWaitingDialogCreated(@Nullable View view) {
-
+            if (bundleType.equals("FCM")) {
+                return updateBundle(intent, null, getApplicationContext());
             }
 
-            @Override
-            public void onEvent(JSONObject jsonObject, JuspayResponseHandler juspayResponseHandler) {
-                String event = jsonObject.optString("event");
-                System.out.println("onEvent -> "+ jsonObject);
-                if (event.equals("terminate")) {
-                    hyperServices.terminate();
-                    onDestroy();
+            if (hyperServices == null) {
+                hyperServices = new HyperServices(this);
+            }
+            if (merchantType != null && !hyperServices.isInitialised()) {
+                try {
+                    payload.put("clientId", getResources().getString(R.string.client_id));
+                    payload.put("merchantId", getResources().getString(R.string.merchant_id));
+                    payload.put("action", "initiate");
+                    payload.put("logLevel", 1);
+                    payload.put("isBootable", false);
+                    payload.put("bundleTimeOut", -1);
+                    payload.put(PaymentConstants.ENV, "prod");
+                    outerPayload.put("requestId", UUID.randomUUID());
+                    outerPayload.put("service", getService(merchantType));
+                    outerPayload.put("betaAssets", false);
+                    outerPayload.put(PaymentConstants.PAYLOAD, payload);
+                } catch (Exception e) {
+                    e.printStackTrace();
                 }
-            }
+                hyperServices.initiate(outerPayload, new HyperPaymentsCallback() {
+                    @Override
+                    public void onStartWaitingDialogCreated(@Nullable View view) {
 
-            @Nullable
-            @Override
-            public View getMerchantView(ViewGroup viewGroup, MerchantViewType merchantViewType) {
-                return null;
-            }
+                    }
 
-            @Nullable
-            @Override
-            public WebViewClient createJuspaySafeWebViewClient() {
-                return null;
+                    @Override
+                    public void onEvent(JSONObject jsonObject, JuspayResponseHandler juspayResponseHandler) {
+                        String event = jsonObject.optString("event");
+                        System.out.println("onEvent -> " + jsonObject);
+                        if (event.equals("terminate")) {
+                            hyperServices.terminate();
+                            onDestroy();
+                        }
+                    }
+
+                    @Nullable
+                    @Override
+                    public View getMerchantView(ViewGroup viewGroup, MerchantViewType merchantViewType) {
+                        return null;
+                    }
+
+                    @Nullable
+                    @Override
+                    public WebViewClient createJuspaySafeWebViewClient() {
+                        return null;
+                    }
+                });
             }
-        });
-    }
+        }
         return START_NOT_STICKY;
     }
 
