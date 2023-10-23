@@ -814,8 +814,6 @@ instance ToTType' BeamR.Ride Ride where
             BeamR.pickupDropOutsideOfThreshold = pickupDropOutsideOfThreshold,
             BeamR.fareParametersId = getId <$> fareParametersId,
             BeamR.distanceCalculationFailed = distanceCalculationFailed,
-            BeamR.createdAt = createdAt,
-            BeamR.updatedAt = updatedAt,
             BeamR.driverDeviatedFromRoute = driverDeviatedFromRoute,
             BeamR.numberOfSnapToRoadCalls = numberOfSnapToRoadCalls,
             BeamR.numberOfDeviation = numberOfDeviation,
@@ -827,7 +825,9 @@ instance ToTType' BeamR.Ride Ride where
             BeamR.odometerStartReadingImagePath = Nothing,
             BeamR.odometerEndReadingImagePath = Nothing,
             BeamR.endRideOtp = Nothing,
-            BeamR.rideType = rideType
+            BeamR.rideType = ON_DEMAND,
+            BeamR.createdAt = createdAt,
+            BeamR.updatedAt = updatedAt
           }
       RideDetailsRental {..} -> do
         BeamR.RideT
@@ -852,8 +852,6 @@ instance ToTType' BeamR.Ride Ride where
             BeamR.pickupDropOutsideOfThreshold = pickupDropOutsideOfThreshold,
             BeamR.fareParametersId = getId <$> fareParametersId,
             BeamR.distanceCalculationFailed = distanceCalculationFailed,
-            BeamR.createdAt = createdAt,
-            BeamR.updatedAt = updatedAt,
             BeamR.driverDeviatedFromRoute = Nothing,
             BeamR.numberOfSnapToRoadCalls = Nothing,
             BeamR.numberOfDeviation = Nothing,
@@ -865,5 +863,7 @@ instance ToTType' BeamR.Ride Ride where
             BeamR.odometerStartReadingImagePath = odometerStartReadingImagePath,
             BeamR.odometerEndReadingImagePath = odometerEndReadingImagePath,
             BeamR.endRideOtp = endRideOtp,
-            BeamR.rideType = rideType
+            BeamR.rideType = RENTAL,
+            BeamR.createdAt = createdAt,
+            BeamR.updatedAt = updatedAt
           }

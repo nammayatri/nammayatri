@@ -312,9 +312,9 @@ otpRideCreate driver otpCode booking = do
       shortId <- generateShortId
       now <- getCurrentTime
       trackingUrl <- buildTrackingUrl guid
-      let (rideType, rideDetails) = case booking.bookingDetails of
+      let rideDetails = case booking.bookingDetails of
             DRB.DetailsOnDemand DRB.BookingDetailsOnDemand {..} ->
-              ( DRide.ON_DEMAND,
+              DRide.DetailsOnDemand
                 DRide.RideDetailsOnDemand
                   { toLocation = toLocation,
                     driverGoHomeRequestId = ghrId,
@@ -324,9 +324,8 @@ otpRideCreate driver otpCode booking = do
                     uiDistanceCalculationWithAccuracy = Nothing,
                     uiDistanceCalculationWithoutAccuracy = Nothing
                   }
-              )
             DRB.DetailsRental DRB.BookingDetailsRental {} ->
-              ( DRide.RENTAL,
+              DRide.DetailsRental
                 DRide.RideDetailsRental
                   { rentalToLocation = Nothing,
                     odometerStartReading = Nothing,
@@ -335,7 +334,6 @@ otpRideCreate driver otpCode booking = do
                     odometerEndReadingImagePath = Nothing,
                     endRideOtp = Nothing
                   }
-              )
       return
         DRide.Ride
           { id = guid,
@@ -360,8 +358,7 @@ otpRideCreate driver otpCode booking = do
             distanceCalculationFailed = Nothing,
             createdAt = now,
             updatedAt = now,
-            rideDetails = rideDetails,
-            rideType = rideType
+            rideDetails = rideDetails
           }
 
     buildTrackingUrl rideId = do

@@ -74,7 +74,6 @@ data Ride = Ride
     shortId :: ShortId Ride,
     merchantId :: Maybe (Id DM.Merchant),
     status :: RideStatus,
-    rideType :: RideType,
     rideDetails :: SpecificRideDetails,
     driverId :: Id DPers.Person,
     otp :: Text,

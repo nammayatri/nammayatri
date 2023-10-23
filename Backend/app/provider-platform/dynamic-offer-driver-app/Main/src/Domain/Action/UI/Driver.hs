@@ -1444,15 +1444,15 @@ respondQuote (driverId, _) req = do
             createdAt = now,
             updatedAt = now,
             rideDetails =
-              DRide.RideDetailsRental
-                { rentalToLocation = Nothing,
-                  odometerStartReading = Nothing,
-                  odometerEndReading = Nothing,
-                  odometerStartReadingImagePath = Nothing,
-                  odometerEndReadingImagePath = Nothing,
-                  endRideOtp = Just endRideOtp
-                },
-            rideType = DRide.RENTAL
+              DRide.DetailsRental
+                DRide.RideDetailsRental
+                  { rentalToLocation = Nothing,
+                    odometerStartReading = Nothing,
+                    odometerEndReading = Nothing,
+                    odometerStartReadingImagePath = Nothing,
+                    odometerEndReadingImagePath = Nothing,
+                    endRideOtp = Just endRideOtp
+                  }
           }
 
     buildTrackingUrl rideId = do

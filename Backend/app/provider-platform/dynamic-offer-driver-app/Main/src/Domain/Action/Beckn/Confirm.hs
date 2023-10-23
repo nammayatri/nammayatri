@@ -324,16 +324,16 @@ handler transporter req validateRes = do
             fareParametersId = Nothing,
             distanceCalculationFailed = Nothing,
             rideDetails =
-              DRide.RideDetailsOnDemand
-                { toLocation = toLocation,
-                  driverGoHomeRequestId = ghrId,
-                  driverDeviatedFromRoute = Just False,
-                  numberOfSnapToRoadCalls = Nothing,
-                  numberOfDeviation = Nothing,
-                  uiDistanceCalculationWithAccuracy = Nothing,
-                  uiDistanceCalculationWithoutAccuracy = Nothing
-                },
-            rideType = DRide.ON_DEMAND,
+              DRide.DetailsOnDemand
+                DRide.RideDetailsOnDemand
+                  { toLocation = toLocation,
+                    driverGoHomeRequestId = ghrId,
+                    driverDeviatedFromRoute = Just False,
+                    numberOfSnapToRoadCalls = Nothing,
+                    numberOfDeviation = Nothing,
+                    uiDistanceCalculationWithAccuracy = Nothing,
+                    uiDistanceCalculationWithoutAccuracy = Nothing
+                  },
             createdAt = now,
             updatedAt = now
           }
