@@ -53,7 +53,6 @@ library
       Beckn.ACL.OnStatus
       Beckn.ACL.Status
       Beckn.Context
-      Beckn.Core
       Beckn.Spec.API.Confirm
       Beckn.Spec.API.OnCancel
       Beckn.Spec.API.OnConfirm

@@ -37,7 +37,6 @@ import Lib.SessionizerMetrics.Types.Event
 import SharedLogic.Allocator
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers
 import qualified SharedLogic.CallBAP as BP
-import SharedLogic.DriverMode as DMode
 import SharedLogic.DriverPool
 import qualified SharedLogic.DriverPool as DP
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
@@ -147,7 +146,6 @@ cancelRideTransaction ::
   m ()
 cancelRideTransaction booking ride bookingCReason merchantId = do
   let driverId = cast ride.driverId
-  driverInfo <- QDI.findById (cast ride.driverId) >>= fromMaybeM (PersonNotFound ride.driverId.getId)
   QDI.updateOnRide (cast ride.driverId) False
   void $ LF.rideDetails ride.id DRide.CANCELLED merchantId ride.driverId booking.fromLocation.lat booking.fromLocation.lon
   void $ QRide.updateStatus ride.id DRide.CANCELLED

@@ -154,7 +154,6 @@ import Lib.SessionizerMetrics.Types.Event
 import SharedLogic.CallBAP (sendDriverOffer)
 import qualified SharedLogic.DeleteDriver as DeleteDriverOnCheck
 import qualified SharedLogic.DriverFee as SLDriverFee
-import SharedLogic.DriverMode as DMode
 import SharedLogic.DriverOnboarding
 import SharedLogic.DriverPool as DP
 import SharedLogic.FareCalculator

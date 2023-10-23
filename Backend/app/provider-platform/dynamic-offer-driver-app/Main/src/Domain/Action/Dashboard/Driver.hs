@@ -448,7 +448,6 @@ recordPayment isExempted merchantShortId reqDriverId requestorId = do
   unless (merchant.id == merchantId) $ throwError (PersonDoesNotExist personId.getId)
   driverFees <- findPendingFeesByDriverId driverId
   let totalFee = sum $ map (\fee -> fromIntegral fee.govtCharges + fee.platformFee.fee + fee.platformFee.cgst + fee.platformFee.sgst) driverFees
-  driverInfo_ <- QDriverInfo.findById driverId >>= fromMaybeM (PersonNotFound reqDriverId.getId)
   transporterConfig <- SCT.findByMerchantId merchant.id >>= fromMaybeM (TransporterConfigNotFound merchant.id.getId)
   now <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
   QDriverInfo.updatePendingPayment False driverId

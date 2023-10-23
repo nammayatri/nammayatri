@@ -35,7 +35,6 @@ import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth (SignatureAuthResult (..))
 import Lib.SessionizerMetrics.Types.Event
 import qualified SharedLogic.CallBAP as BP
-import qualified SharedLogic.DriverMode as DMode
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified SharedLogic.SearchTryLocker as CS
@@ -80,7 +79,6 @@ cancel ::
 cancel req merchant booking = do
   mbRide <- QRide.findActiveByRBId req.bookingId
   whenJust mbRide $ \ride -> do
-    driverInfo <- QDI.findById (cast ride.driverId) >>= fromMaybeM (PersonNotFound ride.driverId.getId)
     QDI.updateOnRide (cast ride.driverId) False
     void $ LF.rideDetails ride.id SRide.CANCELLED merchant.id ride.driverId booking.fromLocation.lat booking.fromLocation.lon
     QRide.updateStatus ride.id SRide.CANCELLED
