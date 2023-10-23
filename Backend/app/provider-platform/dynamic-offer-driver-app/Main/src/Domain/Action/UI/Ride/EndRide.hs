@@ -216,10 +216,10 @@ endRide handle@ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.g
     DriverReq driverReq -> do
       let requestor = driverReq.requestor
       case rideOld.rideDetails of
-        DRide.RideDetailsOnDemand {} -> pure ()
-        DRide.RideDetailsRental {} -> do
+        DRide.DetailsOnDemand _ -> pure ()
+        DRide.DetailsRental details -> do
           when (isJust driverReq.odometerEndReading) $ do
-            when (driverReq.endRideOtp /= rideOld.rideDetails.endRideOtp) $ throwError IncorrectOTP
+            when (driverReq.endRideOtp /= details.endRideOtp) $ throwError IncorrectOTP
       uiDistanceCalculation rideOld.id driverReq.uiDistanceCalculationWithAccuracy driverReq.uiDistanceCalculationWithoutAccuracy -- more checks?
       case requestor.role of
         DP.DRIVER -> unless (requestor.id == driverId) $ throwError NotAnExecutor
@@ -236,7 +236,7 @@ endRide handle@ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.g
 
   unless (rideOld.status == DRide.INPROGRESS) $ throwError $ RideInvalidStatus "This ride cannot be ended"
 
-  (tripEndPoint, odometerEndReading) <-
+  (tripEndPoint, mbOdometerEndReading) <-
     case booking.bookingDetails of
       SRB.DetailsOnDemand details -> do
         case req of
@@ -287,7 +287,7 @@ endRide handle@ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.g
   ghInfo <- CQDGR.getDriverGoHomeRequestInfo driverId booking.providerId (Just goHomeConfig)
 
   homeLocationReached' <-
-    if isNothing odometerEndReading && ghInfo.status == Just DDGR.ACTIVE && goHomeConfig.enableGoHome
+    if isNothing mbOdometerEndReading && ghInfo.status == Just DDGR.ACTIVE && goHomeConfig.enableGoHome
       then do
         case ghInfo.driverGoHomeRequestId of
           Nothing -> do
@@ -317,8 +317,8 @@ endRide handle@ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.g
       res <- LF.rideEnd rideId tripEndPoint.lat tripEndPoint.lon booking.providerId driverId
       pure $ toList res.loc
     (chargeableDistance, finalFare, mbUpdatedFareParams, ride, pickupDropOutsideOfThreshold, distanceCalculationFailed) <-
-      case odometerEndReading of
-        Nothing -> do
+      case booking.bookingDetails of
+        SRB.DetailsOnDemand details ->
           case req of
             CronJobReq _ -> do
               logTagInfo "cron job -> endRide : " "Do not call snapToRoad, return estimates as final values."
@@ -326,10 +326,7 @@ endRide handle@ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.g
               pure (chargeableDistance, finalFare, mbUpdatedFareParams, rideOld, Nothing, Nothing)
             _ -> do
               -- here we update the current ride, so below we fetch the updated version
-              bookingToLocation <- case booking.bookingDetails of
-                SRB.DetailsOnDemand details -> pure details.toLocation
-                SRB.DetailsRental _ -> throwError (InvalidRequest "odometerEndReading is mandatory for rentals")
-              pickupDropOutsideOfThreshold <- isPickupDropOutsideOfThreshold booking bookingToLocation rideOld tripEndPoint thresholdConfig
+              pickupDropOutsideOfThreshold <- isPickupDropOutsideOfThreshold booking details.toLocation rideOld tripEndPoint thresholdConfig
               whenJust (nonEmpty tripEndPoints) \tripEndPoints' -> do
                 withTimeAPI "endRide" "finalDistanceCalculation" $ finalDistanceCalculation rideOld.id driverId tripEndPoints' booking.estimatedDistance pickupDropOutsideOfThreshold
 
@@ -342,15 +339,16 @@ endRide handle@ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.g
                   then calculateFinalValuesForFailedDistanceCalculations handle booking ride tripEndPoint pickupDropOutsideOfThreshold thresholdConfig
                   else calculateFinalValuesForCorrectDistanceCalculations handle booking ride booking.maxEstimatedDistance pickupDropOutsideOfThreshold thresholdConfig
               pure (chargeableDistance, finalFare, mbUpdatedFareParams, ride, Just pickupDropOutsideOfThreshold, Just distanceCalculationFailed)
-        Just endReading -> do
+        SRB.DetailsRental _ -> do
+          rideDetails <- case rideOld.rideDetails of
+            DRide.DetailsOnDemand _ -> throwError (InternalError "on demand ride is not allowed for rental booking")
+            DRide.DetailsRental details -> pure details
+          odometerEndReading <- mbOdometerEndReading & fromMaybeM (InvalidRequest "odometerEndReading is mandatory for rentals")
           farePolicy <- getFarePolicy booking.providerId booking.vehicleVariant booking.area
           logInfo $ "farePolicia :" <> show farePolicy
-          (recalcDistance, finalFare, mbUpdatedFareParams) <- case farePolicy.farePolicyDetails of
-            DFP.ProgressiveDetails _ -> throwError $ InternalError "Rental does not support progressive FP"
-            DFP.SlabsDetails _ -> throwError $ InternalError "Rental does not support slab FP"
-            DFP.RentalDetails _ -> recalculateFareForDistance handle booking rideOld (Meters $ round (endReading - fromMaybe 0 rideOld.rideDetails.odometerStartReading) * 1000) thresholdConfig
-          ride <- QRide.findById (cast rideOld.id) >>= fromMaybeM (RideDoesNotExist rideOld.id.getId)
-          pure (recalcDistance, finalFare, mbUpdatedFareParams, ride, Nothing, Nothing)
+          (recalcDistance, finalFare, mbUpdatedFareParams) <- do
+            recalculateFareForDistance handle booking rideOld (Meters $ round (odometerEndReading - fromMaybe 0 rideDetails.odometerStartReading) * 1000) thresholdConfig
+          pure (recalcDistance, finalFare, mbUpdatedFareParams, rideOld, Nothing, Nothing)
     let newFareParams = fromMaybe booking.fareParams mbUpdatedFareParams
     let updRide =
           ride{tripEndTime = Just now,
@@ -361,8 +359,8 @@ endRide handle@ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.g
                distanceCalculationFailed = distanceCalculationFailed,
                pickupDropOutsideOfThreshold = pickupDropOutsideOfThreshold,
                rideDetails = case rideOld.rideDetails of
-                 DRide.RideDetailsOnDemand {} -> rideOld.rideDetails
-                 DRide.RideDetailsRental {} -> rideOld.rideDetails{odometerEndReading = odometerEndReading}
+                 DRide.DetailsOnDemand DRide.RideDetailsOnDemand {} -> rideOld.rideDetails
+                 DRide.DetailsRental details -> DRide.DetailsRental (details{odometerEndReading = mbOdometerEndReading})
               }
     -- we need to store fareParams only when they changed
     withTimeAPI "endRide" "endRideTransaction" $ endRideTransaction (cast @DP.Person @DP.Driver driverId) booking updRide mbUpdatedFareParams booking.riderId newFareParams thresholdConfig booking.providerId
@@ -423,7 +421,7 @@ recalculateFareForDistance ServiceHandle {..} booking ride recalcDistance thresh
   tripEndTime <- getCurrentTime
   farePolicy <- getFarePolicy merchantId booking.vehicleVariant booking.area
   fareParams <- case ride.rideDetails of
-    DRide.RideDetailsOnDemand {} ->
+    DRide.DetailsOnDemand DRide.RideDetailsOnDemand {} ->
       calculateFareParameters
         Fare.CalculateFareParametersParams
           { farePolicy = farePolicy,
@@ -437,7 +435,7 @@ recalculateFareForDistance ServiceHandle {..} booking ride recalcDistance thresh
             nightShiftCharge = booking.fareParams.nightShiftCharge, -- TODO: Make below checks on bookingType
             rentalRideParams = Nothing
           }
-    DRide.RideDetailsRental {odometerStartReading} ->
+    DRide.DetailsRental DRide.RideDetailsRental {odometerStartReading} ->
       calculateFareParameters
         Fare.CalculateFareParametersParams
           { farePolicy = farePolicy,

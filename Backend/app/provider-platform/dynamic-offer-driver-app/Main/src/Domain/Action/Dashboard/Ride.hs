@@ -251,8 +251,8 @@ rideInfo merchantShortId reqRideId = do
   driverPhoneNo <- mapM decrypt rideDetails.driverNumber
   now <- getCurrentTime
   let (odometerStartReading', odometerEndReading') = case ride.rideDetails of
-        DRide.RideDetailsRental {odometerStartReading, odometerEndReading} -> (odometerStartReading, odometerEndReading)
-        _ -> (Nothing, Nothing)
+        DRide.DetailsRental DRide.RideDetailsRental {odometerStartReading, odometerEndReading} -> (odometerStartReading, odometerEndReading)
+        DRide.DetailsOnDemand _ -> (Nothing, Nothing)
 
   pure
     Common.RideInfoRes

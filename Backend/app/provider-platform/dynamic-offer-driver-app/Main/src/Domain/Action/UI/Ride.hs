@@ -430,10 +430,13 @@ getOdometerReading ::
   Flow OdometerReadingRes
 getOdometerReading rideId isStartRide = do
   ride <- QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
-  let imagePath =
+  imagePath <- case ride.rideDetails of
+    DRide.DetailsRental details ->
+      pure
         if fromMaybe True isStartRide
-          then ride.rideDetails.odometerStartReadingImagePath
-          else ride.rideDetails.odometerEndReadingImagePath
+          then details.odometerStartReadingImagePath
+          else details.odometerEndReadingImagePath
+    DRide.DetailsOnDemand _ -> throwError $ InvalidRequest "Should be rental ride"
   when (isNothing imagePath) $ do
     throwError $ InvalidRequest "Ride Not Found"
   image <- S3.get (T.unpack $ fromJust imagePath)
