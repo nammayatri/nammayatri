@@ -97,7 +97,6 @@ data DeleteModel
   | BusinessEventDelete
   | CallStatusDelete
   | CancellationReasonDelete
-  | DriverFlowStatusDelete
   | DriverBlockReasonDelete
   | FleetDriverAssociationDelete
   | DriverFeeDelete
@@ -182,7 +181,6 @@ getTagDelete BookingCancellationReasonDelete = "BookingCancellationReasonOptions
 getTagDelete BusinessEventDelete = "BusinessEventOptions"
 getTagDelete CallStatusDelete = "CallStatusOptions"
 getTagDelete CancellationReasonDelete = "CancellationReasonOptions"
-getTagDelete DriverFlowStatusDelete = "DriverFlowStatusOptions"
 getTagDelete DriverBlockReasonDelete = "DriverBlockReasonOptions"
 getTagDelete FleetDriverAssociationDelete = "FleetDriverAssociationOptions"
 getTagDelete DriverFeeDelete = "DriverFeeOptions"
@@ -265,7 +263,6 @@ parseTagDelete "BookingCancellationReasonOptions" = return BookingCancellationRe
 parseTagDelete "BusinessEventOptions" = return BusinessEventDelete
 parseTagDelete "CallStatusOptions" = return CallStatusDelete
 parseTagDelete "CancellationReasonOptions" = return CancellationReasonDelete
-parseTagDelete "DriverFlowStatusOptions" = return DriverFlowStatusDelete
 parseTagDelete "DriverFeeOptions" = return DriverFeeDelete
 parseTagDelete "DriverInformationOptions" = return DriverInformationDelete
 parseTagDelete "AadhaarOtpReqOptions" = return AadhaarOtpReqDelete
@@ -451,9 +448,6 @@ instance FromJSON DBDeleteObject where
       CancellationReasonDelete -> do
         whereClause <- parseDeleteCommandValues contents
         return $ CancellationReasonDeleteOptions deleteModel whereClause
-      DriverFlowStatusDelete -> do
-        whereClause <- parseDeleteCommandValues contents
-        return $ DriverFlowStatusDeleteOptions deleteModel whereClause
       DriverBlockReasonDelete -> do
         whereClause <- parseDeleteCommandValues contents
         return $ DriverBlockReasonDeleteOptions deleteModel whereClause

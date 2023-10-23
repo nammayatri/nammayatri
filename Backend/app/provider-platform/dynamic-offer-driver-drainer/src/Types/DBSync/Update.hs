@@ -98,7 +98,6 @@ data UpdateModel
   | BusinessEventUpdate
   | CallStatusUpdate
   | CancellationReasonUpdate
-  | DriverFlowStatusUpdate
   | DriverBlockReasonUpdate
   | FleetDriverAssociationUpdate
   | DriverFeeUpdate
@@ -183,7 +182,6 @@ getTagUpdate BookingCancellationReasonUpdate = "BookingCancellationReasonOptions
 getTagUpdate BusinessEventUpdate = "BusinessEventOptions"
 getTagUpdate CallStatusUpdate = "CallStatusOptions"
 getTagUpdate CancellationReasonUpdate = "CancellationReasonOptions"
-getTagUpdate DriverFlowStatusUpdate = "DriverFlowStatusOptions"
 getTagUpdate DriverBlockReasonUpdate = "DriverBlockReasonOptions"
 getTagUpdate FleetDriverAssociationUpdate = "FleetDriverAssociationOptions"
 getTagUpdate DriverFeeUpdate = "DriverFeeOptions"
@@ -267,7 +265,6 @@ parseTagUpdate "BookingCancellationReasonOptions" = return BookingCancellationRe
 parseTagUpdate "BusinessEventOptions" = return BusinessEventUpdate
 parseTagUpdate "CallStatusOptions" = return CallStatusUpdate
 parseTagUpdate "CancellationReasonOptions" = return CancellationReasonUpdate
-parseTagUpdate "DriverFlowStatusOptions" = return DriverFlowStatusUpdate
 parseTagUpdate "DriverBlockReasonOptions" = return DriverBlockReasonUpdate
 parseTagUpdate "FleetDriverAssociationOptions" = return FleetDriverAssociationUpdate
 parseTagUpdate "DriverFeeOptions" = return DriverFeeUpdate
@@ -456,9 +453,6 @@ instance FromJSON DBUpdateObject where
       CancellationReasonUpdate -> do
         (updVals, whereClause) <- parseUpdateCommandValues contents
         return $ CancellationReasonOptions updateModel updVals whereClause
-      DriverFlowStatusUpdate -> do
-        (updVals, whereClause) <- parseUpdateCommandValues contents
-        return $ DriverFlowStatusOptions updateModel updVals whereClause
       DriverBlockReasonUpdate -> do
         (updVals, whereClause) <- parseUpdateCommandValues contents
         return $ DriverBlockReasonOptions updateModel updVals whereClause

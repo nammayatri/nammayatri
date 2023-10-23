@@ -25,7 +25,6 @@ import qualified API.UI.DriverOnboarding as DriverOnboarding
 import qualified API.UI.DriverProfileSummary as DriverProfileSummary
 import qualified API.UI.DriverReferral as DriverReferral
 import qualified API.UI.ExotelEndRide as ExotelEndRide
-import qualified API.UI.Frontend as Frontend
 import qualified API.UI.Issue as Issue
 import qualified API.UI.KioskLocation as KioskLocation
 import qualified API.UI.LeaderBoard as LeaderBoard
@@ -60,7 +59,6 @@ type API =
            :<|> Driver.API
            :<|> DriverProfileSummary.API
            :<|> Vehicle.API
-           :<|> Frontend.API
            :<|> Transporter.API
            :<|> Route.API
            :<|> Maps.API
@@ -91,7 +89,6 @@ handler =
     :<|> Driver.handler
     :<|> DriverProfileSummary.handler
     :<|> Vehicle.handler
-    :<|> Frontend.handler
     :<|> Transporter.handler
     :<|> Route.handler
     :<|> Maps.handler
