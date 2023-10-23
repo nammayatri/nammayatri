@@ -25,6 +25,8 @@ import Halogen.VDom.DOM.Prop (Prop)
 import Components.PopUpModal as PopUpModal
 import MerchantConfig.Utils (getValueFromConfig)
 import Language.Strings (getString)
+import JBridge as JB
+import Data.Function.Uncurried (runFn1)
 
 view :: forall w. Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 view config push =
@@ -56,7 +58,9 @@ topGradientView config push =
     , orientation VERTICAL
     , padding $ Padding 16 16 16 16
     , gradient $ Linear (if os == "IOS" then 90.0 else 0.0) config.topCard.gradient
-    ][  topPillAndSupportView config push
+    , id $ getNewIDWithTag "topViewId"
+    ]
+    [  topPillAndSupportView config push
       , priceAndDistanceUpdateView config push 
       , whiteHorizontalLine config
       , rideDetailsButtonView config push 
@@ -220,16 +224,21 @@ bottomCardView config push =
 
 customerSideBottomCardsView :: forall w. Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 customerSideBottomCardsView config push = 
-  linearLayout[
-    height WRAP_CONTENT
-  , width MATCH_PARENT
-  , orientation VERTICAL
-  , padding $ Padding 16 16 16 16
-  , background Color.white900
-  , gravity CENTER
+  scrollView[
+    width MATCH_PARENT,
+    height $ if os == "IOS" then getBottomCardHeight "topViewId" else WRAP_CONTENT
   ][
-    customerIssueView config push
-  , customerRatingDriverView config push
+    linearLayout[
+      height WRAP_CONTENT
+    , width MATCH_PARENT
+    , orientation VERTICAL
+    , padding $ Padding 16 16 16 16
+    , background Color.white900
+    , gravity CENTER
+    ][
+      customerIssueView config push
+    , customerRatingDriverView config push
+    ]
   ]
 
 
@@ -646,3 +655,6 @@ whiteHorizontalLine config =
     , height $ V 1
     , background if config.isDriver then Color.white900 else Color.black800
     ][]
+
+getBottomCardHeight :: String -> Length 
+getBottomCardHeight id = V $ (screenHeight unit) - (runFn1 JB.getLayoutBounds $ getNewIDWithTag id).height - 82
