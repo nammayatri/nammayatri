@@ -609,8 +609,8 @@ export const drawRoute = function (data) {
                     return function (mapRouteConfig) {
                       return function () {
                         console.log("I AM HERE ------------------ IN DRAW ROUTE");
-
-                        try {
+                        mapRouteConfig.isAnimation = false // TODO : Fix the animation 
+                        try{
                           return window.JBridge.drawRoute(JSON.stringify(data), style, trackColor, isActual, sourceMarker, destMarker, polylineWidth, type, sourceName, destinationName, JSON.stringify(mapRouteConfig));
                         } catch (err) {
                           /*
