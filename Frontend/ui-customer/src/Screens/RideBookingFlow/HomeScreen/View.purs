@@ -78,7 +78,7 @@ import MerchantConfig.Utils (Merchant(..), getMerchant, getValueFromConfig)
 import Prelude (Unit, bind, const, discard, map, negate, not, pure, show, unit, void, when, ($), (&&), (*), (+), (-), (/), (/=), (<), (<<<), (<=), (<>), (==), (>), (||))
 import Presto.Core.Types.API (ErrorResponse)
 import Presto.Core.Types.Language.Flow (Flow, doAff, delay)
-import PrestoDOM (Accessiblity(..), BottomSheetState(..), Gradient(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), accessibility, accessibilityFocusable, accessibilityHint, adjustViewWithKeyboard, afterRender, alignParentBottom, background, bottomShift, clickable, color, cornerRadius, disableClickFeedback, ellipsize, focusable, fontStyle, frameLayout, gradient, gravity, halfExpandedRatio, height, horizontalScrollView, id, imageView, imageWithFallback, layoutGravity, lineHeight, linearLayout, lottieAnimationView, margin, maxLines, onBackPressed, onClick, onStateChanged, orientation, padding, peakHeight, relativeLayout, scrollBarX, scrollView, singleLine, stroke, text, textFromHtml, textSize, textView, topShift, url, visibility, webView, weight, width, onAnimationEnd, shimmerFrameLayout, rotation)
+import PrestoDOM (Accessiblity(..), BottomSheetState(..), Gradient(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), Shadow(..), accessibility, accessibilityFocusable, accessibilityHint, adjustViewWithKeyboard, afterRender, alignParentBottom, background, bottomShift, clickable, color, cornerRadius, disableClickFeedback, ellipsize, focusable, fontStyle, frameLayout, gradient, gravity, halfExpandedRatio, height, horizontalScrollView, id, imageView, imageWithFallback, layoutGravity, lineHeight, linearLayout, lottieAnimationView, margin, maxLines, onBackPressed, onClick, onStateChanged, orientation, padding, peakHeight, relativeLayout, scrollBarX, scrollView, singleLine, stroke, text, textFromHtml, textSize, textView, topShift, url, visibility, webView, weight, width, onAnimationEnd, shimmerFrameLayout, rotation, shadow, clipChildren)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Elements.Elements (bottomSheetLayout, coordinatorLayout)
 import PrestoDOM.Properties (cornerRadii, sheetState)
@@ -430,6 +430,7 @@ rideInfoView push state =
      ][ linearLayout
        [ height $ MATCH_PARENT
        , width MATCH_PARENT
+       , clipChildren false
        ][ otpAndWaitView push state
          , trackRideView push state
          , driverInfoActionView push state 
@@ -2096,11 +2097,14 @@ trackRideView push state =
   linearLayout
   [ height $ WRAP_CONTENT
   , weight 1.0
+  , clipChildren false
   ][ linearLayout
     [ height $ WRAP_CONTENT
     , width $ WRAP_CONTENT
     , background Color.white900
     , cornerRadius 32.0
+    , margin $ Margin 10 10 10 10
+    , shadow $ Shadow 0.1 0.1 10.0 24.0 Color.greyBackDarkColor 0.5
     , padding $ Padding 8 12 8 12
     , visibility if state.props.currentStage == RideStarted then VISIBLE else GONE
     , onClick push $ const $ StartLocationTracking "GOOGLE_MAP"
@@ -2131,6 +2135,7 @@ otpAndWaitView push state =
   , orientation HORIZONTAL
   , margin $ MarginBottom 8
   , visibility if (any (_ == state.props.currentStage) [ RideAccepted, ChatWithDriver]) then VISIBLE else GONE
+  , clipChildren false
   ][ frameLayout
     [ height WRAP_CONTENT
     , width WRAP_CONTENT
@@ -2141,7 +2146,8 @@ otpAndWaitView push state =
       , background Color.white900
       , gravity CENTER
       , clickable true
-      , margin $ MarginRight 12
+      , margin $ Margin 10 10 10 10
+      , shadow $ Shadow 0.1 0.1 10.0 24.0 Color.greyBackDarkColor 0.5
       ][ textView $
         [ width WRAP_CONTENT
         , height WRAP_CONTENT
@@ -2165,6 +2171,8 @@ otpAndWaitView push state =
                       true -> VISIBLE
                       false -> if (state.props.currentStage) == RideStarted then GONE else if state.data.driverInfoCardState.driverArrived then VISIBLE else GONE
     , gravity CENTER
+    , margin $ Margin 10 10 10 10
+    , shadow $ Shadow 0.1 0.1 10.0 24.0 Color.greyBackDarkColor 0.5
     ][ textView $ 
       [ width WRAP_CONTENT
       , height WRAP_CONTENT
@@ -2284,11 +2292,11 @@ driverInfoActionView push state =
   , visibility if (any (_ == state.props.currentStage) [ RideAccepted, RideStarted, ChatWithDriver ]) then VISIBLE else GONE
   , background Color.white900
   , accessibility if state.props.currentStage == RideStarted then DISABLE else DISABLE_DESCENDANT
-  , stroke $ "1,"<> Color.grey900
   , cornerRadius 32.0
   , padding $ Padding 12 12 12 12
-  , margin $ MarginBottom 8
   , onClick push $ const ShareRide
+  , margin $ Margin 10 10 10 10
+  , shadow $ Shadow 0.1 0.1 10.0 24.0 Color.greyBackDarkColor 0.5
   ][ imageView
       [ imageWithFallback $ "ny_ic_share_icon," <> (getAssetStoreLink FunctionCall) <> "ny_ic_share_icon.png"
       , height $ V 16
