@@ -156,6 +156,8 @@ let tables =
 
 let dontEnableForDb = [] : List Text
 
+let dontEnableForKafka = [] : List Text
+
 let maxMessages
     : Text
     = "1"
@@ -218,5 +220,6 @@ in  { esqDBCfg
     , eventStreamMap = eventStreamMappings
     , tables
     , dontEnableForDb
+    , dontEnableForKafka
     , maxMessages
     }
