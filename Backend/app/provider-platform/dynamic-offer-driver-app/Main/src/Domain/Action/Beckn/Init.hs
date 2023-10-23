@@ -32,7 +32,6 @@ import qualified Domain.Types.RideRoute as RI
 import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.SearchRequestSpecialZone as DSRSZ
 import qualified Domain.Types.SearchTry as DST
-import Domain.Types.Vehicle.Variant
 import qualified Domain.Types.Vehicle.Variant as Veh
 import Kernel.Prelude
 import Kernel.Randomizer (getRandomElement)
@@ -44,6 +43,8 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.SessionizerMetrics.Types.Event
 import qualified SharedLogic.CallBAP as BP
+import SharedLogic.FareCalculator
+import qualified SharedLogic.FareCalculator as Fare
 import qualified Storage.CachedQueries.Exophone as CQExophone
 import qualified Storage.CachedQueries.FarePolicy as QFP
 import qualified Storage.CachedQueries.Merchant as QM
@@ -182,11 +183,45 @@ handler merchantId req initReq = do
             Just duration' -> pure duration'
 
           farePolicy <- QFP.findById rentalQuote.farePolicyId >>= fromMaybeM NoFarePolicy
-          -- let fullFarePolicy = FarePolicyD.farePolicyToFullFarePolicy fareProduct.merchantId fareProduct.vehicleVariant farePolicy
-          let (sDistance, sDuration, sFare) = case farePolicy.farePolicyDetails of
-                FarePolicyD.RentalDetails fPDetails -> (Meters $ duration * fPDetails.perHourFreeKms, Seconds duration, Money $ (getMoney fPDetails.perHourCharge) * duration)
-                _ -> (0, 0, 0)
-          _ <- QRQuote.updateBaseFields rentalQuote.id sDistance sDuration sFare
+          let (distance, durationInSeconds, nightShiftCharge) = case farePolicy.farePolicyDetails of
+                FarePolicyD.RentalDetails fPDetails -> do
+                  let totalDurationInSeconds = duration * 3600
+                      nightCharges = case fPDetails.nightShiftCharge of
+                        Just (FarePolicyD.ConstantNightShiftCharge charge) -> Just charge
+                        _ -> Nothing
+                  (duration * fPDetails.perHourFreeKms, Seconds totalDurationInSeconds, nightCharges)
+                _ -> (0, 0, Nothing)
+          let fullFarePolicies = FarePolicyD.farePolicyToFullFarePolicy merchantId req.vehicleVariant farePolicy
+              estimatedFinishTime = fromIntegral duration `addUTCTime` req.startTime
+          fareParams <-
+            calculateFareParameters
+              CalculateFareParametersParams
+                { farePolicy = fullFarePolicies,
+                  distance = Meters distance,
+                  rideTime = req.startTime,
+                  waitingTime = Nothing,
+                  actualRideDuration = Nothing,
+                  avgSpeedOfVehicle = Nothing,
+                  driverSelectedFare = Nothing,
+                  customerExtraFee = Nothing,
+                  nightShiftCharge = nightShiftCharge,
+                  rentalRideParams =
+                    Just
+                      Fare.RentalRideParams
+                        { rideStartTime = Just req.startTime,
+                          rideEndTime = estimatedFinishTime,
+                          actualDistanceInKm = distance,
+                          chargedDurationInHr = duration,
+                          nightShiftOverlapChecking = True,
+                          timeDiffFromUtc = 19800
+                        }
+                }
+          let estimatedFare = fareSum fareParams
+
+          searchRequestExpirationSeconds <- asks (.searchRequestExpirationSeconds)
+          let validTill = searchRequestExpirationSeconds `addUTCTime` now
+          let updateRentalQuote = rentalQuote{baseDistance = Meters distance, baseDuration = durationInSeconds, baseFare = estimatedFare, fareParams = fareParams, validTill = validTill, updatedAt = now, estimatedFinishTime = estimatedFinishTime}
+          _ <- QRQuote.createNewFareParamAndUpdateQuote rentalQuote.id updateRentalQuote
           updatedRentalQuotes <- QRQuote.findById (Id req.estimateId) >>= fromMaybeM (QuoteNotFound req.estimateId)
 
           --- TODO -- Update Rental Quote estimate fare and estimate duration

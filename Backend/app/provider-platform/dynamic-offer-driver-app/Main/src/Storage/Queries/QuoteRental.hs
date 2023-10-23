@@ -49,14 +49,19 @@ countAllByRequestId searchReqID = do
 findById :: MonadFlow m => Id QuoteRental -> m (Maybe QuoteRental)
 findById (Id dQuoteId) = findOneWithKV [Se.Is BeamQR.id $ Se.Eq dQuoteId]
 
-updateBaseFields :: MonadFlow m => Id QuoteRental -> Meters -> Seconds -> Money -> m ()
-updateBaseFields (Id id) baseDistance baseDuration baseFare =
-  updateOneWithKV
-    [ Se.Set BeamQR.baseDistance baseDistance,
-      Se.Set BeamQR.baseDuration baseDuration,
-      Se.Set BeamQR.baseFare baseFare
-    ]
-    [Se.Is BeamQR.id (Se.Eq id)]
+createNewFareParamAndUpdateQuote :: MonadFlow m => Id QuoteRental -> QuoteRental -> m ()
+createNewFareParamAndUpdateQuote (Id id) quoteRental =
+  SQFP.create quoteRental.fareParams
+    >> updateOneWithKV
+      [ Se.Set BeamQR.baseDistance quoteRental.baseDistance,
+        Se.Set BeamQR.baseDuration quoteRental.baseDuration,
+        Se.Set BeamQR.baseFare quoteRental.baseFare,
+        Se.Set BeamQR.fareParametersId $ getId quoteRental.fareParams.id,
+        Se.Set BeamQR.validTill (T.utcToLocalTime T.utc quoteRental.validTill),
+        Se.Set BeamQR.updatedAt (T.utcToLocalTime T.utc quoteRental.updatedAt),
+        Se.Set BeamQR.estimatedFinishTime quoteRental.estimatedFinishTime
+      ]
+      [Se.Is BeamQR.id (Se.Eq id)]
 
 instance FromTType' BeamQR.QuoteRental QuoteRental where
   fromTType' BeamQR.QuoteRentalT {..} = do
