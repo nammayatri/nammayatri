@@ -358,22 +358,18 @@ data LatLon = LatLon String String
 data Translation = Translation String
 
 getCurrentLocation :: Number -> Number -> Number -> Number -> Int -> FlowBT String LatLon
-getCurrentLocation currentLat currentLon sourceLat sourceLon timeOut = do
+getCurrentLocation currentLat currentLon defaultLat defaultLon timeOut = do
   (LatLon startRideCurrentLat startRideCurrentLong) <- (lift $ lift $ doAff $ makeAff \cb -> getCurrentPositionWithTimeout (cb <<< Right) LatLon timeOut $> nonCanceler)
   if(startRideCurrentLat /= "0.0" && startRideCurrentLong /= "0.0") then
     pure (LatLon startRideCurrentLat startRideCurrentLong)
   else do
-    if sourceLat /= 0.0 && sourceLon /= 0.0 && currentLat /= 0.0 && currentLon /= 0.0 then do
-      let distanceDiff = (getDistanceBwCordinates currentLat currentLon sourceLat sourceLon)
-          rideLat = show $ if distanceDiff <= 0.10 then  currentLat else sourceLat
-          rideLong = show $ if distanceDiff <= 0.10 then currentLon else sourceLon
+    if defaultLat /= 0.0 && defaultLon /= 0.0 && currentLat /= 0.0 && currentLon /= 0.0 then do
+      let distanceDiff = (getDistanceBwCordinates currentLat currentLon defaultLat defaultLon)
+          rideLat = show $ if distanceDiff <= 0.10 then  currentLat else defaultLat
+          rideLong = show $ if distanceDiff <= 0.10 then currentLon else defaultLon
       pure (LatLon rideLat rideLong)
       else do
-        rideLat <- lift $ lift $ loadS $ show LAST_KNOWN_LAT 
-        rideLong <- lift $ lift $ loadS $ show LAST_KNOWN_LON
-        case rideLat,rideLong of
-          Just lat, Just lon -> pure (LatLon lat lon)
-          _,_ -> pure (LatLon "0.0" "0.0")
+        pure (LatLon (show defaultLat) (show defaultLon))
 
 translateString :: String -> Int -> FlowBT String String 
 translateString toTranslate timeOut = do
