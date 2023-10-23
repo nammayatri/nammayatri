@@ -124,6 +124,7 @@ data AppCfg = AppCfg
     jobInfoMapx :: M.Map AllocatorJobType Bool,
     ltsCfg :: LocationTrackingeServiceConfig,
     dontEnableForDb :: [Text],
+    dontEnableForKafka :: [Text],
     modelNamesMap :: M.Map Text Text,
     maxMessages :: Text
   }
@@ -197,6 +198,7 @@ data AppEnv = AppEnv
     schedulerType :: SchedulerType,
     ltsCfg :: LocationTrackingeServiceConfig,
     dontEnableForDb :: [Text],
+    dontEnableForKafka :: [Text],
     maxMessages :: Text,
     modelNamesHashMap :: HM.Map Text Text
   }

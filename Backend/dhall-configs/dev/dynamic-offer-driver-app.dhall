@@ -137,75 +137,8 @@ let kafkaProducerCfg =
 
 let tables =
       { enableKVForWriteAlso =
-            [ { nameOfTable = "registration_token", percentEnable = 100 }
-            , { nameOfTable = "search_request", percentEnable = 100 }
-            , { nameOfTable = "search_try", percentEnable = 100 }
-            , { nameOfTable = "driver_information", percentEnable = 100 }
-            , { nameOfTable = "driver_flow_status", percentEnable = 100 }
-            , { nameOfTable = "business_event", percentEnable = 100 }
-            , { nameOfTable = "booking", percentEnable = 100 }
-            , { nameOfTable = "estimate", percentEnable = 100 }
-            , { nameOfTable = "fare_parameters", percentEnable = 100 }
-            , { nameOfTable = "fare_parameters_progressive_details"
-              , percentEnable = 100
-              }
-            , { nameOfTable = "booking_location", percentEnable = 100 }
-            , { nameOfTable = "ride_details", percentEnable = 100 }
-            , { nameOfTable = "rider_details", percentEnable = 100 }
-            , { nameOfTable = "driver_stats", percentEnable = 100 }
-            , { nameOfTable = "driver_quote", percentEnable = 100 }
-            , { nameOfTable = "search_request_location", percentEnable = 100 }
-            , { nameOfTable = "fare_parameters_slab_details"
-              , percentEnable = 100
-              }
-            , { nameOfTable = "booking_cancellation_reason"
-              , percentEnable = 100
-              }
-            , { nameOfTable = "rating", percentEnable = 100 }
-            , { nameOfTable = "beckn_request", percentEnable = 100 }
-            , { nameOfTable = "ride", percentEnable = 100 }
-            , { nameOfTable = "search_request_for_driver", percentEnable = 100 }
-            , { nameOfTable = "person", percentEnable = 100 }
-            , { nameOfTable = "vehicle", percentEnable = 100 }
-            , { nameOfTable = "driver_rc_association", percentEnable = 100 }
-            , { nameOfTable = "driver_referral", percentEnable = 100 }
-            , { nameOfTable = "message", percentEnable = 100 }
-            , { nameOfTable = "idfy_verification", percentEnable = 100 }
-            , { nameOfTable = "location_mapping", percentEnable = 100 }
-            ]
-          : List { nameOfTable : Text, percentEnable : Natural }
-      , enableKVForRead =
-            [ "registration_token"
-            , "search_request"
-            , "search_try"
-            , "driver_information"
-            , "driver_flow_status"
-            , "business_event"
-            , "booking"
-            , "estimate"
-            , "fare_parameters"
-            , "fare_parameters_progressive_details"
-            , "booking_location"
-            , "ride_details"
-            , "rider_details"
-            , "driver_stats"
-            , "driver_quote"
-            , "search_request_location"
-            , "fare_parameters_slab_details"
-            , "booking_cancellation_reason"
-            , "rating"
-            , "beckn_request"
-            , "search_request_for_driver"
-            , "ride"
-            , "person"
-            , "vehicle"
-            , "driver_rc_association"
-            , "driver_referral"
-            , "message"
-            , "idfy_verification"
-            , "location_mapping"
-            ]
-          : List Text
+          [] : List { nameOfTable : Text, percentEnable : Natural }
+      , enableKVForRead = [] : List Text
       , kafkaNonKVTables = [] : List Text
       }
 
@@ -266,7 +199,7 @@ let LocationTrackingeServiceConfig = { url = "http://localhost:8081/" }
 
 let maxMessages
     : Text
-    = "1"
+    = "5000"
 
 let modelNamesMap =
       [ { mapKey = "MARUTI ALTO (Some random verioning)"

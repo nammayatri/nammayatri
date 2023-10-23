@@ -103,13 +103,11 @@ dropDBCommand dbStreamKey entryId = do
       void $ publishDBSyncMetric Event.DropDBCommandError
       EL.logError ("DROP_DB_COMMAND_ERROR" :: Text) $ ("entryId : " :: Text) <> show entryId <> (", Error : " :: Text) <> show e
 
-runCriticalDBSyncOperations :: Text -> [(EL.KVDBStreamEntryID, ByteString)] -> [(DeleteDBCommand, ByteString)] -> [(EL.KVDBStreamEntryID, ByteString)] -> ExceptT Int Flow Int
+runCriticalDBSyncOperations :: Text -> [(EL.KVDBStreamEntryID, ByteString)] -> [(EL.KVDBStreamEntryID, ByteString)] -> [(EL.KVDBStreamEntryID, ByteString)] -> ExceptT Int Flow Int
 runCriticalDBSyncOperations dbStreamKey updateEntries deleteEntries createDataEntries = do
-  let updateStreamdata = map snd updateEntries
-  EL.logDebug ("UPD :: " :: Text) (show updateStreamdata)
   isForcePushEnabled <- pureRightExceptT $ fromMaybe False <$> getValueFromRedis C.forceDrainEnabledKey
   {- run bulk-inserts parallel -}
-  (cSucc, cFail) <- pureRightExceptT $ executeInSequence' runCreateQuery ([], []) dbStreamKey createDataEntries
+  (cSucc, cFail) <- pureRightExceptT $ executeInSequence runCreate ([], []) dbStreamKey createDataEntries
   void $ pureRightExceptT $ publishDBSyncMetric $ Event.DrainerQueryExecutes "Create" (fromIntegral $ length cSucc)
   void $ pureRightExceptT $ publishDBSyncMetric $ Event.DrainerQueryExecutes "CreateInBatch" (if null cSucc then 0 else 1)
   void $
@@ -133,7 +131,7 @@ runCriticalDBSyncOperations dbStreamKey updateEntries deleteEntries createDataEn
             throwE (length cSucc)
       else pure (length cSucc)
   {- run updates parallel -}
-  (uSucc, uFail) <- pureRightExceptT $ executeInSequence' runUpdateQuery ([], []) dbStreamKey updateEntries
+  (uSucc, uFail) <- pureRightExceptT $ executeInSequence rundUpdate ([], []) dbStreamKey updateEntries
   void $ pureRightExceptT $ publishDBSyncMetric $ Event.DrainerQueryExecutes "Update" (fromIntegral $ length uSucc)
   void $
     if null uSucc
@@ -157,7 +155,7 @@ runCriticalDBSyncOperations dbStreamKey updateEntries deleteEntries createDataEn
             throwE (length cSucc + length uSucc)
       else pure (length cSucc + length uSucc)
   {- run deletes parallel -}
-  (dSucc, dFail) <- pureRightExceptT $ executeInSequence runDeleteCommands ([], []) dbStreamKey deleteEntries
+  (dSucc, dFail) <- pureRightExceptT $ executeInSequence runDelete ([], []) dbStreamKey deleteEntries
   void $ pureRightExceptT $ publishDBSyncMetric $ Event.DrainerQueryExecutes "Delete" (fromIntegral $ length dSucc)
   void $
     if null dSucc
@@ -171,7 +169,7 @@ runCriticalDBSyncOperations dbStreamKey updateEntries deleteEntries createDataEn
       if isForcePushEnabled
         then do
           EL.logError ("DELETE FAILED: Force Sync is enabled" :: Text) (show dFail :: Text)
-          void $ pureRightExceptT $ addValueToErrorQueue (T.pack C.ecRedisFailedStream) ((\(_, bts) -> ("command", bts)) <$> filter (\(DeleteDBCommand id _ _ _ _ _, _) -> id `elem` dFail) deleteEntries)
+          void $ pureRightExceptT $ addValueToErrorQueue (T.pack C.ecRedisFailedStream) ((\(_, bts) -> ("command", bts)) <$> filter (\(id, _) -> id `elem` dFail) deleteEntries)
           pureRightExceptT $ traverse_ (dropDBCommand dbStreamKey) dFail
           pure (length cSucc + length uSucc + length dSucc)
         else do
@@ -179,11 +177,6 @@ runCriticalDBSyncOperations dbStreamKey updateEntries deleteEntries createDataEn
           throwE (length cSucc + length uSucc + length dSucc)
     else pure (length cSucc + length uSucc + length dSucc)
   where
-    -- runCreateCommandsAndMergeOutput (succ, fail) resp = do
-    --   pure $ case resp of
-    --     Right createIds -> (succ <> createIds, fail)
-    --     Left createIds -> (succ, fail <> createIds)
-
     pureRightExceptT = ExceptT . (Right <$>)
 
 process :: Text -> Integer -> Flow Int
@@ -207,10 +200,9 @@ process dbStreamKey count = do
     run :: [(EL.KVDBStreamEntryID, [(Text, ByteString)])] -> Flow Int
     run entries = do
       commands <- catMaybes <$> traverse (parseDBCommand dbStreamKey) entries
-      -- let createEntries = mapMaybe filterCreateCommands commands
-      let updateEntries = mapMaybe filterUpdateCommands' commands
+      let updateEntries = mapMaybe filterUpdateCommands commands
           deleteEntries = mapMaybe filterDeleteCommands commands
-          createDataEntries = mapMaybe filterCreateCommands' commands
+          createDataEntries = mapMaybe filterCreateCommands commands
 
       dbsyncOperationsOutput <- runExceptT $ runCriticalDBSyncOperations dbStreamKey updateEntries deleteEntries createDataEntries
       case dbsyncOperationsOutput of
