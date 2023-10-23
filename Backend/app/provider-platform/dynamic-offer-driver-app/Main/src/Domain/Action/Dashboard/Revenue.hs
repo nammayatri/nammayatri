@@ -53,9 +53,9 @@ getAllDriverFeeHistory merchantShortId mbFrom mbTo = do
   overdueFees <- B.runInReplica $ findAllOverdueInRange merchant.id from to
   collectionFees <- B.runInReplica $ findAllCollectionInRange merchant.id from to
 
-  let clearedFees = getFeeWithStatus [CLEARED] collectionFees
-      exemptedFees = getFeeWithStatus [EXEMPTED] collectionFees
-      cashedFees = getFeeWithStatus [COLLECTED_CASH] collectionFees
+  let clearedFees = getFeeWithStatus CLEARED collectionFees
+      exemptedFees = getFeeWithStatus EXEMPTED collectionFees
+      cashedFees = getFeeWithStatus COLLECTED_CASH collectionFees
   pure
     [ Common.AllFees Common.CLEARED (getNumRides clearedFees) (getNumDrivers clearedFees) (getTotalAmount clearedFees),
       Common.AllFees Common.COLLECTED_CASH (getNumRides cashedFees) (getNumDrivers cashedFees) (getTotalAmount cashedFees),
@@ -65,7 +65,7 @@ getAllDriverFeeHistory merchantShortId mbFrom mbTo = do
     ]
   where
     getNumDrivers fee = length $ DL.nub (map driverId fee)
-    getFeeWithStatus status = filter (\fee_ -> fee_.status `elem` status)
+    getFeeWithStatus status = filter (\fee_ -> fee_.status == status)
     getNumRides fee = sum $ map numRides fee
     getTotalAmount fee = sum $ map (\fee_ -> fromIntegral fee_.govtCharges + fee_.platformFee.fee + fee_.platformFee.cgst + fee_.platformFee.sgst) fee
 

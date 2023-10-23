@@ -1,0 +1,1 @@
+CREATE INDEX idx_driver_fee_status ON atlas_driver_offer_bpp.driver_fee USING btree (merchant_id);

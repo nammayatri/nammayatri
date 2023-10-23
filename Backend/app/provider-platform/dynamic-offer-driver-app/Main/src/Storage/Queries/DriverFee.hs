@@ -389,9 +389,9 @@ findAllByStatus :: MonadFlow m => Id Merchant -> DriverFeeStatus -> UTCTime -> U
 findAllByStatus (Id merchantId) status from to = do
   findAllWithOptionsKV
     [ Se.Is BeamDF.merchantId $ Se.Eq merchantId,
+      Se.Is BeamDF.status $ Se.Eq status,
       Se.Is BeamDF.collectedAt $ Se.GreaterThanOrEq (Just from),
-      Se.Is BeamDF.collectedAt $ Se.LessThanOrEq (Just to),
-      Se.Is BeamDF.status $ Se.Eq status
+      Se.Is BeamDF.collectedAt $ Se.LessThanOrEq (Just to)
     ]
     (Se.Desc BeamDF.updatedAt)
     Nothing
@@ -433,9 +433,9 @@ findAllPendingInRange (Id merchantId) startTime endTime = do
   findAllWithKV
     [ Se.And
         [ Se.Is BeamDF.merchantId $ Se.Eq merchantId,
+          Se.Is BeamDF.status $ Se.Eq Domain.PAYMENT_PENDING,
           Se.Is BeamDF.endTime $ Se.GreaterThanOrEq startTime,
-          Se.Is BeamDF.endTime $ Se.LessThanOrEq endTime,
-          Se.Is BeamDF.status $ Se.Eq Domain.PAYMENT_PENDING
+          Se.Is BeamDF.endTime $ Se.LessThanOrEq endTime
         ]
     ]
 
@@ -444,9 +444,9 @@ findAllOverdueInRange (Id merchantId) startTime endTime = do
   findAllWithKV
     [ Se.And
         [ Se.Is BeamDF.merchantId $ Se.Eq merchantId,
+          Se.Is BeamDF.status $ Se.Eq Domain.PAYMENT_OVERDUE,
           Se.Is BeamDF.payBy $ Se.GreaterThanOrEq startTime,
-          Se.Is BeamDF.payBy $ Se.LessThanOrEq endTime,
-          Se.Is BeamDF.status $ Se.Eq Domain.PAYMENT_OVERDUE
+          Se.Is BeamDF.payBy $ Se.LessThanOrEq endTime
         ]
     ]
 
@@ -455,9 +455,9 @@ findAllCollectionInRange (Id merchantId) startTime endTime = do
   findAllWithKV
     [ Se.And
         [ Se.Is BeamDF.merchantId $ Se.Eq merchantId,
+          Se.Is BeamDF.status $ Se.In [CLEARED, COLLECTED_CASH, EXEMPTED],
           Se.Is BeamDF.collectedAt $ Se.GreaterThanOrEq (Just startTime),
-          Se.Is BeamDF.collectedAt $ Se.LessThanOrEq (Just endTime),
-          Se.Is BeamDF.status $ Se.In [CLEARED, COLLECTED_CASH, EXEMPTED]
+          Se.Is BeamDF.collectedAt $ Se.LessThanOrEq (Just endTime)
         ]
     ]
 
