@@ -35,9 +35,6 @@ library
       Event.Event
       Types.Config
       Types.DBSync
-      Types.DBSync.Create
-      Types.DBSync.Delete
-      Types.DBSync.Update
       Types.Event
       Utils.Config
       Utils.Event
