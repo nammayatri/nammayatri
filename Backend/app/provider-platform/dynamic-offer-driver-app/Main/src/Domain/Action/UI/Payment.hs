@@ -319,7 +319,9 @@ processMandate driverId mandateStatus startDate endDate mandateId maxAmount paye
             QDF.updateAllExecutionPendingToManualOverdueByDriverId (cast driver.id)
             QIN.inActivateAllAutopayActiveInvoices (cast driver.id)
             notifyPaymentModeManualOnCancel driver.merchantId driver.id driver.deviceToken
-        Nothing -> pure ()
+        Nothing -> do
+          mbDriverPlanByDriverId <- QDP.findByDriverId driverId
+          when (isNothing $ mbDriverPlanByDriverId >>= (.mandateId)) $ do QDI.updateAutoPayStatusAndPayerVpa (castAutoPayStatus mandateStatus) Nothing (cast driverId)
   where
     castAutoPayStatus = \case
       Payment.CREATED -> Just DI.PENDING
