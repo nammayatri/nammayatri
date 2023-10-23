@@ -116,6 +116,7 @@ data AppCfg = AppCfg
     eventStreamMap :: [EventStreamMap],
     tables :: Tables,
     dontEnableForDb :: [Text],
+    dontEnableForKafka :: [Text],
     maxMessages :: Text,
     incomingAPIResponseTimeout :: Int
   }
@@ -180,6 +181,7 @@ data AppEnv = AppEnv
     eventStreamMap :: [EventStreamMap],
     eventRequestCounter :: EventCounterMetric,
     dontEnableForDb :: [Text],
+    dontEnableForKafka :: [Text],
     maxMessages :: Text,
     incomingAPIResponseTimeout :: Int
   }
