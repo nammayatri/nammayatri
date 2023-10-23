@@ -187,29 +187,33 @@ prepareDriverPoolBatch driverPoolCfg searchReq searchTryId vehicleVariant batchN
               driverPoolCfg.distanceBasedBatchSplit
 
         calcGoHomeDriverPool = do
-          case searchReq.tag of
-            DSR.ON_DEMAND ->
+          case searchReq.searchRequestDetails of
+            DSR.SearchReqDetailsOnDemand details ->
               calculateGoHomeDriverPool $
                 CalculateGoHomeDriverPoolReq
                   { poolStage = DriverSelection,
                     driverPoolCfg = driverPoolCfg,
                     goHomeCfg = goHomeConfig,
                     variant = Just vehicleVariant,
-                    fromLocation = searchReq.searchRequestDetails.fromLocation,
-                    toLocation = searchReq.searchRequestDetails.toLocation,
+                    fromLocation = details.fromLocation,
+                    toLocation = details.toLocation,
                     merchantId = searchReq.providerId
                   }
-            DSR.RENTAL -> pure [] -- RENTAL
+            DSR.SearchReqDetailsRental _ -> pure [] -- RENTAL
         calcDriverPool radiusStep = do
           let merchantId = searchReq.providerId
-          let pickupLoc = searchReq.searchRequestDetails.fromLocation
+          let pickupLoc = case searchReq.searchRequestDetails of
+                DSR.SearchReqDetailsOnDemand details -> details.fromLocation
+                DSR.SearchReqDetailsRental details -> details.rentalFromLocation -- FIXME use fromLocation from booking
           let pickupLatLong = LatLong pickupLoc.lat pickupLoc.lon
           calculateDriverPoolWithActualDist DriverSelection driverPoolCfg (Just vehicleVariant) searchReq.tag pickupLatLong merchantId True (Just radiusStep)
         calcDriverCurrentlyOnRidePool radiusStep transporterConfig = do
           let merchantId = searchReq.providerId
           if transporterConfig.includeDriverCurrentlyOnRide && (radiusStep - 1) > 0
             then do
-              let pickupLoc = searchReq.searchRequestDetails.fromLocation
+              let pickupLoc = case searchReq.searchRequestDetails of
+                    DSR.SearchReqDetailsOnDemand details -> details.fromLocation
+                    DSR.SearchReqDetailsRental details -> details.rentalFromLocation -- FIXME use fromLocation from booking
               let pickupLatLong = LatLong pickupLoc.lat pickupLoc.lon
               calculateDriverCurrentlyOnRideWithActualDist DriverSelection driverPoolCfg (Just vehicleVariant) searchReq.tag pickupLatLong merchantId (Just $ radiusStep - 1)
             else pure []

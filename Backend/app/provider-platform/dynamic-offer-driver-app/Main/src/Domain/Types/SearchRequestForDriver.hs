@@ -117,24 +117,33 @@ data SearchRequestForDriverAPIEntity = SearchRequestForDriverAPIEntity
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show, PrettyShow)
 
 data SearchDetails
-  = OnDemandSearchDetails
-      {searchTry :: DST.SearchTry}
-  | RentalSearchDetails
-      { searchTry :: DST.SearchTry,
-        booking :: DB.Booking
-      }
+  = OnDemandDetails OnDemandSearchDetails
+  | RentalDetails RentalSearchDetails
+
+data OnDemandSearchDetails = OnDemandSearchDetails
+  { searchTry :: DST.SearchTry,
+    searchReqDetails :: DSR.SearchRequestDetailsOnDemand
+  }
+
+data RentalSearchDetails = RentalSearchDetails
+  { searchTry :: DST.SearchTry, -- FIXME remove
+    booking :: DB.Booking,
+    searchReqDetails :: DSR.SearchRequestDetailsRental
+  }
 
 makeSearchRequestForDriverAPIEntity :: SearchRequestForDriver -> DSR.SearchRequest -> SearchDetails -> Maybe DSM.BapMetadata -> Seconds -> Seconds -> Variant.Variant -> SearchRequestForDriverAPIEntity
 makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchDetails bapMetadata delayDuration keepHiddenForSeconds requestedVehicleVariant = do
-  let (searchRequestTag, baseFare, customerExtraFee, distance, duration, newToLocation, specialLocationTag) = case searchDetails of
-        OnDemandSearchDetails {searchTry} -> do
-          let distance' = searchRequest.searchRequestDetails.estimatedDistance
-              newToLocation' = Just $ searchRequest.searchRequestDetails.toLocation
-              specialLocationTag' = searchRequest.searchRequestDetails.specialLocationTag
-          (DSR.ON_DEMAND, searchTry.baseFare, searchTry.customerExtraFee, distance', Nothing, newToLocation', specialLocationTag')
-        RentalSearchDetails {booking} -> do
+  let (searchRequestTag, baseFare, customerExtraFee, distance, duration, newFromLocation, newToLocation, specialLocationTag) = case searchDetails of
+        OnDemandDetails OnDemandSearchDetails {searchTry, searchReqDetails} -> do
+          let distance' = searchReqDetails.estimatedDistance
+              newFromLocation' = searchReqDetails.fromLocation
+              newToLocation' = Just $ searchReqDetails.toLocation
+              specialLocationTag' = searchReqDetails.specialLocationTag
+          (DSR.ON_DEMAND, searchTry.baseFare, searchTry.customerExtraFee, distance', Nothing, newFromLocation', newToLocation', specialLocationTag')
+        RentalDetails RentalSearchDetails {booking, searchReqDetails} -> do
           let distance' = booking.estimatedDistance
-          (DSR.RENTAL, booking.estimatedFare, Nothing, distance', Just booking.estimatedDuration, Nothing, Nothing)
+              newFromLocation' = searchReqDetails.rentalFromLocation -- FIXME bookingDetails.fromLocation
+          (DSR.RENTAL, booking.estimatedFare, Nothing, distance', Just booking.estimatedDuration, newFromLocation', Nothing, Nothing)
   SearchRequestForDriverAPIEntity
     { searchRequestId = nearbyReq.searchTryId,
       searchTryId = nearbyReq.searchTryId,
@@ -147,9 +156,9 @@ makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchDetails bapMet
       durationToPickup = nearbyReq.durationToPickup,
       baseFare = baseFare,
       customerExtraFee,
-      fromLocation = convertDomainType searchRequest.searchRequestDetails.fromLocation,
+      fromLocation = convertDomainType newFromLocation,
       toLocation = convertDomainType <$> newToLocation,
-      newFromLocation = searchRequest.searchRequestDetails.fromLocation,
+      newFromLocation,
       newToLocation,
       distance,
       driverLatLong =

@@ -27,17 +27,23 @@ import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
 import qualified Tools.Maps as Maps
 
 data SearchRequestDetails
-  = SearchRequestDetailsOnDemand
-      { fromLocation :: DLoc.Location,
-        toLocation :: DLoc.Location,
-        estimatedDistance :: Meters,
-        estimatedDuration :: Seconds,
-        specialLocationTag :: Maybe Text,
-        autoAssignEnabled :: Maybe Bool
-      }
-  | SearchRequestDetailsRental
-      { rentalFromLocation :: DLoc.Location
-      }
+  = SearchReqDetailsOnDemand SearchRequestDetailsOnDemand
+  | SearchReqDetailsRental SearchRequestDetailsRental
+  deriving (Generic, Show)
+
+data SearchRequestDetailsOnDemand = SearchRequestDetailsOnDemand
+  { fromLocation :: DLoc.Location,
+    toLocation :: DLoc.Location,
+    estimatedDistance :: Meters,
+    estimatedDuration :: Seconds,
+    specialLocationTag :: Maybe Text,
+    autoAssignEnabled :: Maybe Bool
+  }
+  deriving (Generic, Show)
+
+newtype SearchRequestDetailsRental = SearchRequestDetailsRental
+  { rentalFromLocation :: DLoc.Location
+  }
   deriving (Generic, Show)
 
 data SearchRequestTag = ON_DEMAND | RENTAL
@@ -61,6 +67,6 @@ data SearchRequest = SearchRequest
     customerLanguage :: Maybe Maps.Language,
     disabilityTag :: Maybe Text,
     createdAt :: UTCTime,
-    tag :: SearchRequestTag
+    tag :: SearchRequestTag -- FIXME redundant,use details instead
   }
   deriving (Generic, Show)

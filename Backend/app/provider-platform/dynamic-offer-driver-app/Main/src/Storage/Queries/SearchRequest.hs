@@ -39,24 +39,23 @@ createDSReq' = createWithKV
 create :: MonadFlow m => SearchRequest -> m ()
 create dsReq = do
   case dsReq.searchRequestDetails of
-    SearchRequestDetailsOnDemand {fromLocation, toLocation} -> do
+    SearchReqDetailsOnDemand SearchRequestDetailsOnDemand {fromLocation, toLocation} -> do
       _ <- whenNothingM_ (QL.findById fromLocation.id) $ do QL.create fromLocation
       _ <- whenNothingM_ (QL.findById toLocation.id) $ do QL.create toLocation
       pure ()
-    SearchRequestDetailsRental {rentalFromLocation} -> do
+    SearchReqDetailsRental SearchRequestDetailsRental {rentalFromLocation} -> do
       _ <- whenNothingM_ (QL.findById rentalFromLocation.id) $ do QL.create rentalFromLocation
       pure ()
   createDSReq' dsReq
 
 createDSReq :: MonadFlow m => SearchRequest -> m ()
 createDSReq searchRequest = do
-  let details = searchRequest.searchRequestDetails
-  case searchRequest.tag of
-    ON_DEMAND -> do
+  case searchRequest.searchRequestDetails of
+    SearchReqDetailsOnDemand details -> do
       fromLocationMap <- SLM.buildPickUpLocationMapping details.fromLocation.id searchRequest.id.getId DLM.SEARCH_REQUEST
       toLocationMaps <- SLM.buildDropLocationMapping details.toLocation.id searchRequest.id.getId DLM.SEARCH_REQUEST
       QLM.create fromLocationMap >> QLM.create toLocationMaps >> create searchRequest
-    RENTAL -> do
+    SearchReqDetailsRental details -> do
       fromLocationMap <- SLM.buildPickUpLocationMapping details.rentalFromLocation.id searchRequest.id.getId DLM.SEARCH_REQUEST
       QLM.create fromLocationMap >> create searchRequest
 
@@ -115,14 +114,15 @@ instance FromTType' BeamSR.SearchRequest SearchRequest where
                 transactionId = transactionId,
                 providerId = Id providerId,
                 searchRequestDetails =
-                  SearchRequestDetailsOnDemand
-                    { fromLocation = fl,
-                      toLocation = tl,
-                      estimatedDistance = estimatedDistance,
-                      estimatedDuration = estimatedDuration,
-                      specialLocationTag = specialLocationTag,
-                      autoAssignEnabled = autoAssignEnabled
-                    },
+                  SearchReqDetailsOnDemand
+                    SearchRequestDetailsOnDemand
+                      { fromLocation = fl,
+                        toLocation = tl,
+                        estimatedDistance = estimatedDistance,
+                        estimatedDuration = estimatedDuration,
+                        specialLocationTag = specialLocationTag,
+                        autoAssignEnabled = autoAssignEnabled
+                      },
                 area = area,
                 bapId = bapId,
                 bapUri = pUrl,
@@ -156,9 +156,10 @@ instance FromTType' BeamSR.SearchRequest SearchRequest where
                 transactionId = transactionId,
                 providerId = Id providerId,
                 searchRequestDetails =
-                  SearchRequestDetailsRental
-                    { rentalFromLocation = fl
-                    },
+                  SearchReqDetailsRental
+                    SearchRequestDetailsRental
+                      { rentalFromLocation = fl
+                      },
                 area = area,
                 bapId = bapId,
                 bapUri = pUrl,
@@ -173,9 +174,8 @@ instance FromTType' BeamSR.SearchRequest SearchRequest where
 
 instance ToTType' BeamSR.SearchRequest SearchRequest where
   toTType' SearchRequest {..} = do
-    let details = searchRequestDetails
-    case tag of
-      ON_DEMAND ->
+    case searchRequestDetails of
+      SearchReqDetailsOnDemand details ->
         BeamSR.SearchRequestT
           { BeamSR.id = getId id,
             BeamSR.transactionId = transactionId,
@@ -197,7 +197,7 @@ instance ToTType' BeamSR.SearchRequest SearchRequest where
             BeamSR.specialLocationTag = details.specialLocationTag,
             BeamSR.tag = tag
           }
-      RENTAL ->
+      SearchReqDetailsRental details ->
         BeamSR.SearchRequestT
           { BeamSR.id = getId id,
             BeamSR.transactionId = transactionId,

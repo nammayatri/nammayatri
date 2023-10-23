@@ -71,57 +71,33 @@ mkOnSelectMessage req@DOnSelectReq {..} = do
 
 mkFulfillment :: DOnSelectReq -> DQuote.DriverQuote -> OS.FulfillmentInfo
 mkFulfillment dReq quote = do
-  let searchDetails = dReq.searchRequest.searchRequestDetails
-  case dReq.searchRequest.tag of
-    DSR.ON_DEMAND -> do
-      let fromLocation = searchDetails.fromLocation
-      let toLocation = searchDetails.toLocation -- have to take last or all ?
-      OS.FulfillmentInfo
-        { id = quote.estimateId.getId,
-          start =
-            OS.StartInfo
-              { location = makeLocation fromLocation,
-                time = OS.TimeTimestamp dReq.now
-              },
-          end =
-            Just $
-              OS.StopInfo
-                { location = makeLocation toLocation
-                },
-          vehicle =
-            OS.Vehicle
-              { category = castVariant quote.vehicleVariant
-              },
-          _type = OS.RIDE,
-          agent =
-            OS.Agent
-              { name = Just quote.driverName,
-                rateable = Just True,
-                tags = OS.TG [mkAgentTags]
-              }
-        }
-    DSR.RENTAL -> do
-      let fromLocation = searchDetails.rentalFromLocation
-      OS.FulfillmentInfo
-        { id = quote.estimateId.getId,
-          start =
-            OS.StartInfo
-              { location = makeLocation fromLocation,
-                time = OS.TimeTimestamp dReq.now
-              },
-          end = Nothing,
-          vehicle =
-            OS.Vehicle
-              { category = castVariant quote.vehicleVariant
-              },
-          _type = OS.RIDE,
-          agent =
-            OS.Agent
-              { name = Just quote.driverName,
-                rateable = Just True,
-                tags = OS.TG [mkAgentTags]
-              }
-        }
+  let (fromLocation, mbToLocation) = case dReq.searchRequest.searchRequestDetails of
+        DSR.SearchReqDetailsOnDemand details -> (details.fromLocation, Just details.toLocation)
+        DSR.SearchReqDetailsRental details -> (details.rentalFromLocation, Nothing)
+  OS.FulfillmentInfo
+    { id = quote.estimateId.getId,
+      start =
+        OS.StartInfo
+          { location = makeLocation fromLocation,
+            time = OS.TimeTimestamp dReq.now
+          },
+      end =
+        mbToLocation <&> \toLocation -> do
+          OS.StopInfo
+            { location = makeLocation toLocation -- have to take last or all ?
+            },
+      vehicle =
+        OS.Vehicle
+          { category = castVariant quote.vehicleVariant
+          },
+      _type = OS.RIDE,
+      agent =
+        OS.Agent
+          { name = Just quote.driverName,
+            rateable = Just True,
+            tags = OS.TG [mkAgentTags]
+          }
+    }
   where
     mkAgentTags =
       OS.TagGroup

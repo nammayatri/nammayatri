@@ -156,7 +156,7 @@ handler merchantId req initReq = do
     InitNormalReq -> do
       case initReq of
         DRIVER_QUOTE (driverQuote, searchRequest, searchTry) -> do
-          booking <- buildBooking searchRequest driverQuote driverQuote.id.getId searchTry.startTime DRB.NormalBooking now (mbPaymentMethod <&> (.id)) paymentUrl searchRequest.disabilityTag
+          booking <- buildNormalBooking searchRequest driverQuote driverQuote.id.getId searchTry.startTime DRB.NormalBooking now (mbPaymentMethod <&> (.id)) paymentUrl searchRequest.disabilityTag
           triggerBookingCreatedEvent BookingEventData {booking = booking, personId = driverQuote.driverId, merchantId = transporter.id}
           QST.updateStatus searchTry.id DST.COMPLETED
           _ <- QRB.createBooking booking
@@ -236,7 +236,8 @@ handler merchantId req initReq = do
   let startTime = req.startTime
   pure InitRes {..}
   where
-    buildBooking ::
+    -- TODO unite buildNormalBooking and buildRentalBooking
+    buildNormalBooking ::
       ( CacheFlow m r,
         EsqDBFlow m r,
         HasField "transactionId" sr Text,
@@ -258,25 +259,22 @@ handler merchantId req initReq = do
       Maybe Text ->
       Maybe Text ->
       m DRB.Booking
-    buildBooking searchRequest driverQuote quoteId startTime bookingType now mbPaymentMethodId paymentUrl disabilityTag = do
+    buildNormalBooking searchRequest driverQuote quoteId startTime bookingType now mbPaymentMethodId paymentUrl disabilityTag = do
       id <- Id <$> generateGUID
-
       exophone <- findRandomExophone merchantId
-      let bookingDetails =
-            case searchRequest.searchRequestDetails of
-              DSR.SearchRequestDetailsOnDemand {..} ->
-                DRB.BookingDetailsOnDemand
-                  { specialZoneOtpCode = Nothing,
-                    specialLocationTag,
-                    toLocation
-                  }
-              DSR.SearchRequestDetailsRental {} ->
-                DRB.BookingDetailsRental
-                  { rentalToLocation = Nothing
-                  }
-      let fromLocation' = case searchRequest.searchRequestDetails of
-            DSR.SearchRequestDetailsOnDemand {..} -> fromLocation
-            DSR.SearchRequestDetailsRental {..} -> rentalFromLocation
+
+      (bookingDetails, fromLocation') <-
+        case searchRequest.searchRequestDetails of
+          DSR.SearchReqDetailsOnDemand DSR.SearchRequestDetailsOnDemand {..} -> do
+            let details =
+                  DRB.BookingDetailsOnDemand
+                    { specialZoneOtpCode = Nothing,
+                      specialLocationTag,
+                      toLocation
+                    }
+            pure (details, fromLocation)
+          DSR.SearchReqDetailsRental DSR.SearchRequestDetailsRental {} -> do
+            throwError $ InvalidRequest "Rental is not allowed here"
       pure
         DRB.Booking
           { transactionId = searchRequest.transactionId,
@@ -370,18 +368,16 @@ handler merchantId req initReq = do
     buildRentalBooking rentalQuote searchRequest startTime bookingType now mbPaymentMethodId paymentUrl disabilityTag = do
       id <- Id <$> generateGUID
       exophone <- findRandomExophone merchantId
-      bookingDetails <- do
+      (bookingDetails, fromLocation) <- do
         case searchRequest.searchRequestDetails of
-          DSR.SearchRequestDetailsOnDemand {} -> do
+          DSR.SearchReqDetailsOnDemand DSR.SearchRequestDetailsOnDemand {} -> do
             throwError $ InvalidRequest "On Demand is not allowed here"
-          DSR.SearchRequestDetailsRental {} ->
-            return $
-              DRB.BookingDetailsRental
-                { rentalToLocation = Nothing
-                }
-      fromLocation <- case searchRequest.searchRequestDetails of
-        DSR.SearchRequestDetailsOnDemand {} -> throwError $ InvalidRequest "On Demand is not allowed here"
-        DSR.SearchRequestDetailsRental {..} -> return rentalFromLocation
+          DSR.SearchReqDetailsRental DSR.SearchRequestDetailsRental {rentalFromLocation} -> do
+            let details =
+                  DRB.BookingDetailsRental
+                    { rentalToLocation = Nothing
+                    }
+            pure (details, rentalFromLocation)
       pure
         DRB.Booking
           { transactionId = searchRequest.transactionId,

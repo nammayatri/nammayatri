@@ -116,7 +116,6 @@ import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RideDetails as DRD
 import qualified Domain.Types.RideRoute as DRR
 import qualified Domain.Types.SearchRequest as DSR
-import Domain.Types.SearchRequestForDriver
 import qualified Domain.Types.SearchRequestForDriver as DSRD
 import qualified Domain.Types.SearchTry as DST
 import Domain.Types.Vehicle (VehicleAPIEntity)
@@ -385,7 +384,7 @@ validateUpdateDriverReq UpdateDriverReq {..} =
 type UpdateDriverRes = DriverInformationRes
 
 newtype GetNearbySearchRequestsRes = GetNearbySearchRequestsRes
-  { searchRequestsForDriver :: [SearchRequestForDriverAPIEntity]
+  { searchRequestsForDriver :: [DSRD.SearchRequestForDriverAPIEntity]
   }
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema, PrettyShow)
@@ -401,7 +400,7 @@ data DriverRespondReq = DriverRespondReq
   { offeredFare :: Maybe Money,
     searchRequestId :: Maybe (Id DST.SearchTry), -- TODO: Deprecated, to be removed
     searchTryId :: Maybe (Id DST.SearchTry),
-    response :: SearchRequestForDriverResponse
+    response :: DSRD.SearchRequestForDriverResponse
   }
   deriving stock (Generic)
   deriving anyclass (FromJSON, ToJSON, ToSchema)
@@ -1122,13 +1121,15 @@ getNearbySearchRequests (driverId, merchantId) = do
       searchRequest <- runInReplica $ QSR.findById searchTry.requestId >>= fromMaybeM (SearchRequestNotFound searchTry.requestId.getId)
       bapMetadata <- CQSM.findById (Id searchRequest.bapId)
       popupDelaySeconds <- DP.getPopupDelay searchRequest.providerId (cast driverId) cancellationRatio cancellationScoreRelatedConfig transporterConfig.defaultPopupDelay
-      case nearbyReq.searchRequestTag of
-        DSR.ON_DEMAND -> do
-          return $ makeSearchRequestForDriverAPIEntity nearbyReq searchRequest (OnDemandSearchDetails {searchTry}) bapMetadata popupDelaySeconds (Seconds 0) searchTry.vehicleVariant -- Seconds 0 as we don't know where he/she lies within the driver pool, anyways this API is not used in prod now.
-        DSR.RENTAL -> do
+      case searchRequest.searchRequestDetails of
+        DSR.SearchReqDetailsOnDemand searchReqDetails -> do
+          let searchDetails = DSRD.OnDemandDetails $ DSRD.OnDemandSearchDetails {searchTry, searchReqDetails}
+          return $ DSRD.makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchDetails bapMetadata popupDelaySeconds (Seconds 0) searchTry.vehicleVariant -- Seconds 0 as we don't know where he/she lies within the driver pool, anyways this API is not used in prod now.
+        DSR.SearchReqDetailsRental searchReqDetails -> do
           bookingId <- nearbyReq.bookingId & fromMaybeM (InternalError "searchRequestForDriver field not present for RENTAL tag: bookingId")
           booking <- QB.findById bookingId >>= fromMaybeM (BookingNotFound bookingId.getId)
-          return $ makeSearchRequestForDriverAPIEntity nearbyReq searchRequest (RentalSearchDetails {booking, searchTry}) bapMetadata popupDelaySeconds (Seconds 0) booking.vehicleVariant -- Seconds 0 as we don't know where he/she lies within the driver pool, anyways this API is not used in prod now.
+          let searchDetails = DSRD.RentalDetails DSRD.RentalSearchDetails {booking, searchTry, searchReqDetails}
+          return $ DSRD.makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchDetails bapMetadata popupDelaySeconds (Seconds 0) booking.vehicleVariant -- Seconds 0 as we don't know where he/she lies within the driver pool, anyways this API is not used in prod now.
     mkCancellationScoreRelatedConfig :: TransporterConfig -> CancellationScoreRelatedConfig
     mkCancellationScoreRelatedConfig tc = CancellationScoreRelatedConfig tc.popupDelayToAddAsPenalty tc.thresholdCancellationScore tc.minRidesForCancellationScore
 
@@ -1164,7 +1165,7 @@ offerQuote ::
   DriverOfferReq ->
   m APISuccess
 offerQuote (driverId, merchantId) DriverOfferReq {..} = do
-  let response = Accept
+  let response = DSRD.Accept
   respondQuote (driverId, merchantId) DriverRespondReq {searchRequestId = Nothing, searchTryId = Just searchRequestId, ..}
 
 respondQuote ::
@@ -1196,12 +1197,12 @@ respondQuote (driverId, _) req = do
   Redis.whenWithLockRedis (offerQuoteLockKey driverId) 60 $ do
     searchTryId <- req.searchRequestId <|> req.searchTryId & fromMaybeM (InvalidRequest "searchTryId field is not present.")
     searchTry <- QST.findById searchTryId >>= fromMaybeM (SearchTryNotFound searchTryId.getId)
+    searchReq <- QSR.findById searchTry.requestId >>= fromMaybeM (SearchRequestNotFound searchTry.requestId.getId)
     now <- getCurrentTime
-    let searchRequestTag = searchTry.tag
-    case searchRequestTag of
-      DSR.ON_DEMAND {} -> do
+    -- let searchRequestTag = searchTry.tag
+    case searchReq.searchRequestDetails of
+      DSR.SearchReqDetailsOnDemand details -> do
         when (searchTry.validTill < now) $ throwError SearchRequestExpired
-        searchReq <- QSR.findById searchTry.requestId >>= fromMaybeM (SearchRequestNotFound searchTry.requestId.getId)
         let mbOfferedFare = req.offeredFare
         organization <- CQM.findById searchReq.providerId >>= fromMaybeM (MerchantDoesNotExist searchReq.providerId.getId)
         driver <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
@@ -1210,23 +1211,22 @@ respondQuote (driverId, _) req = do
         sReqFD <-
           QSRD.findByDriverAndSearchTryId driverId searchTry.id
             >>= fromMaybeM NoSearchRequestForDriver
-        unless (sReqFD.searchRequestTag == DSR.ON_DEMAND) $ throwError (InvalidRequest "Invalid searchRequestTag")
         driverFCMPulledList <-
           case req.response of
-            Pulled -> throwError UnexpectedResponseValue
-            Accept -> do
-              when (searchReq.searchRequestDetails.autoAssignEnabled == Just True) $ do
+            DSRD.Pulled -> throwError UnexpectedResponseValue
+            DSRD.Accept -> do
+              when (details.autoAssignEnabled == Just True) $ do
                 whenM (CS.isSearchTryCancelled searchTryId) $
                   throwError (InternalError "SEARCH_TRY_CANCELLED")
                 CS.markSearchTryAsAssigned searchTryId
               logDebug $ "offered fare: " <> show req.offeredFare
               whenM thereAreActiveQuotes (throwError FoundActiveQuotes)
-              when (sReqFD.response == Just Reject) (throwError QuoteAlreadyRejected)
-              quoteLimit <- getQuoteLimit searchReq.providerId searchReq.searchRequestDetails.estimatedDistance searchTry.vehicleVariant
+              when (sReqFD.response == Just DSRD.Reject) (throwError QuoteAlreadyRejected)
+              quoteLimit <- getQuoteLimit searchReq.providerId details.estimatedDistance searchTry.vehicleVariant
               quoteCount <- runInReplica $ QDrQt.countAllBySTId searchTry.id
               when (quoteCount >= quoteLimit) (throwError QuoteAlreadyRejected)
               farePolicy <- getFarePolicy organization.id sReqFD.vehicleVariant searchReq.area
-              let driverExtraFeeBounds = DFarePolicy.findDriverExtraFeeBoundsByDistance searchReq.searchRequestDetails.estimatedDistance <$> farePolicy.driverExtraFeeBounds
+              let driverExtraFeeBounds = DFarePolicy.findDriverExtraFeeBoundsByDistance details.estimatedDistance <$> farePolicy.driverExtraFeeBounds
               whenJust mbOfferedFare $ \off ->
                 whenJust driverExtraFeeBounds $ \driverExtraFeeBounds' ->
                   unless (isAllowedExtraFee driverExtraFeeBounds' off) $
@@ -1235,7 +1235,7 @@ respondQuote (driverId, _) req = do
                 calculateFareParameters
                   CalculateFareParametersParams
                     { farePolicy = farePolicy,
-                      distance = searchReq.searchRequestDetails.estimatedDistance,
+                      distance = details.estimatedDistance,
                       rideTime = sReqFD.startTime,
                       waitingTime = Nothing,
                       actualRideDuration = Nothing,
@@ -1251,17 +1251,17 @@ respondQuote (driverId, _) req = do
               _ <- QDrQt.create driverQuote
               _ <- QSRD.updateDriverResponse sReqFD.id req.response
               QDFS.updateStatus sReqFD.driverId DDFS.OFFERED_QUOTE {quoteId = driverQuote.id, validTill = driverQuote.validTill}
-              let shouldPullFCMForOthers = (quoteCount + 1) >= quoteLimit || (searchReq.searchRequestDetails.autoAssignEnabled == Just True)
+              let shouldPullFCMForOthers = (quoteCount + 1) >= quoteLimit || (details.autoAssignEnabled == Just True)
               driverFCMPulledList <- if shouldPullFCMForOthers then QSRD.findAllActiveWithoutRespBySearchTryId searchTryId else pure []
               -- Adding +1 in quoteCount because one more quote added above (QDrQt.create driverQuote)
               sendRemoveRideRequestNotification driverFCMPulledList organization.id driverQuote
               CallBAP.sendDriverOffer organization searchReq searchTry driverQuote
               pure driverFCMPulledList
-            Reject -> do
+            DSRD.Reject -> do
               _ <- QSRD.updateDriverResponse sReqFD.id req.response
               pure []
         DS.driverScoreEventHandler $ buildDriverRespondEventPayload searchTry.id searchReq.providerId driverFCMPulledList
-      DSR.RENTAL -> do
+      DSR.SearchReqDetailsRental _ -> do
         respondRentalRide searchTry
   pure Success
   where
@@ -1276,13 +1276,13 @@ respondQuote (driverId, _) req = do
       (MonadFlow m, MonadReader r m, HasField "driverQuoteExpirationSeconds" r NominalDiffTime) =>
       SP.Person ->
       DSR.SearchRequest ->
-      SearchRequestForDriver ->
+      DSRD.SearchRequestForDriver ->
       Id DEstimate.Estimate ->
       Fare.FareParameters ->
       m DDrQuote.DriverQuote
     buildDriverQuote driver searchReq sd estimateId fareParams = do
       case searchReq.searchRequestDetails of
-        DSR.SearchRequestDetailsOnDemand {..} -> do
+        DSR.SearchReqDetailsOnDemand DSR.SearchRequestDetailsOnDemand {..} -> do
           guid <- generateGUID
           now <- getCurrentTime
           driverQuoteExpirationSeconds <- asks (.driverQuoteExpirationSeconds)
@@ -1311,7 +1311,7 @@ respondQuote (driverId, _) req = do
                 goHomeRequestId = sd.goHomeRequestId,
                 estimateId
               }
-        DSR.SearchRequestDetailsRental {} -> do
+        DSR.SearchReqDetailsRental DSR.SearchRequestDetailsRental {} -> do
           throwError $ InvalidRequest "Driver cant build rental quotes"
     thereAreActiveQuotes = do
       driverUnlockDelay <- asks (.driverUnlockDelay)
@@ -1323,7 +1323,7 @@ respondQuote (driverId, _) req = do
       pure $ fromIntegral driverPoolCfg.driverQuoteLimit
     sendRemoveRideRequestNotification driverSearchReqs orgId driverQuote = do
       for_ driverSearchReqs $ \driverReq -> do
-        _ <- QSRD.updateDriverResponse driverReq.id Pulled
+        _ <- QSRD.updateDriverResponse driverReq.id DSRD.Pulled
         driver_ <- runInReplica $ QPerson.findById driverReq.driverId >>= fromMaybeM (PersonNotFound driverReq.driverId.getId)
         Notify.notifyDriverClearedFare orgId driverReq.driverId driverReq.searchTryId driverQuote.estimatedFare driver_.deviceToken
 
@@ -1338,20 +1338,20 @@ respondQuote (driverId, _) req = do
       unless (sReqFD.searchRequestTag == DSR.RENTAL) $ throwError (InvalidRequest "Invalid searchRequestTag")
       whenJust req.offeredFare $ \_ -> throwError (InternalError "Driver can't offer rental fare")
       whenM thereAreActiveQuotes (throwError FoundActiveQuotes)
-      when (sReqFD.response == Just Reject) (throwError QuoteAlreadyRejected)
+      when (sReqFD.response == Just DSRD.Reject) (throwError QuoteAlreadyRejected)
       bookingId <- sReqFD.bookingId & fromMaybeM (InternalError "searchRequestForDriver field not present for RENTAL tag: bookingId")
       booking <- QRB.findById bookingId >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
       let merchantId = booking.providerId
       case req.response of
-        Pulled -> throwError UnexpectedResponseValue
-        Accept -> do
+        DSRD.Pulled -> throwError UnexpectedResponseValue
+        DSRD.Accept -> do
           driverFCMPulledList <- QSRD.findAllActiveWithoutRespBySearchRequestId sReqFD.requestId
           DS.driverScoreEventHandler $ buildDriverRespondEventPayload searchTry.id merchantId driverFCMPulledList
-        Reject -> do
+        DSRD.Reject -> do
           QSRD.updateDriverResponse sReqFD.id req.response
       --- create ride ---
       -- FIXME remove duplication with Domain.Action.Beckn.Confirm
-      when (req.response == Accept) $ do
+      when (req.response == DSRD.Accept) $ do
         unless (booking.status == DB.CONFIRMED) $
           throwError (BookingInvalidStatus $ show booking.status)
         riderId <- booking.riderId & fromMaybeM (BookingFieldNotPresent "riderId")

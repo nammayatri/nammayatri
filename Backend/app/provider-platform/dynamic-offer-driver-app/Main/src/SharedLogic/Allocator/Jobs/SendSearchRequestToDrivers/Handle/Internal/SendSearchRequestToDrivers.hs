@@ -71,10 +71,10 @@ sendSearchRequestToDrivers searchReq searchDetails driverExtraFeeBounds driverPo
   bapMetadata <- CQSM.findById (Id searchReq.bapId)
   now <- getCurrentTime
   let (searchTry', vehVariant, searchReqTag, mbBookingId, startTime, singleBatchProcessTime) = case searchDetails of
-        OnDemandSearchDetails {searchTry} -> do
+        OnDemandDetails OnDemandSearchDetails {searchTry} -> do
           let singleBatchProcessTime' = driverPoolConfig.singleBatchProcessTime
           (searchTry, searchTry.vehicleVariant, DSR.ON_DEMAND, Nothing, searchTry.startTime, singleBatchProcessTime')
-        RentalSearchDetails {booking, searchTry} -> do
+        RentalDetails RentalSearchDetails {booking, searchTry} -> do
           let singleBatchProcessTime' = driverPoolConfig.singleBatchProcessTimeRental
           (searchTry, booking.vehicleVariant, DSR.RENTAL, Just booking.id, booking.startTime, singleBatchProcessTime')
   let searchTryId = searchTry'.id
@@ -193,22 +193,24 @@ translateSearchReq ::
   m DSR.SearchRequest
 translateSearchReq req@DSR.SearchRequest {..} language = do
   searchRequestDetails' <- case req.searchRequestDetails of
-    DSR.SearchRequestDetailsOnDemand {..} -> do
+    DSR.SearchReqDetailsOnDemand DSR.SearchRequestDetailsOnDemand {..} -> do
       from <- buildTranslatedSearchReqLocation fromLocation (Just language)
       to <- buildTranslatedSearchReqLocation toLocation (Just language)
       pure $
-        DSR.SearchRequestDetailsOnDemand
-          { fromLocation = from,
-            toLocation = to,
-            ..
-          }
-    DSR.SearchRequestDetailsRental {..} -> do
+        DSR.SearchReqDetailsOnDemand
+          DSR.SearchRequestDetailsOnDemand
+            { fromLocation = from,
+              toLocation = to,
+              ..
+            }
+    DSR.SearchReqDetailsRental DSR.SearchRequestDetailsRental {..} -> do
       from <- buildTranslatedSearchReqLocation rentalFromLocation (Just language)
-      pure
-        DSR.SearchRequestDetailsRental
-          { rentalFromLocation = from,
-            ..
-          }
+      pure $
+        DSR.SearchReqDetailsRental
+          DSR.SearchRequestDetailsRental
+            { rentalFromLocation = from,
+              ..
+            }
   pure $
     DSR.SearchRequest
       { searchRequestDetails = searchRequestDetails',

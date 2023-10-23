@@ -20,12 +20,12 @@ import Domain.Types.GoHomeConfig (GoHomeConfig)
 import Domain.Types.Merchant (Merchant)
 import Domain.Types.Merchant.DriverPoolConfig
 import Domain.Types.SearchRequest (SearchRequest)
+import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.SearchRequestForDriver as DSRD
 import qualified Domain.Types.SearchTry as DST
 import qualified Kernel.Beam.Functions as B
 import Kernel.Prelude hiding (handle)
 import Kernel.Storage.Esqueleto as Esq
---import Kernel.Storage.Esqueleto.Config (EsqLocDBFlow, EsqLocRepDBFlow)
 import Kernel.Utils.Common
 import Lib.Scheduler
 import SharedLogic.Allocator (AllocatorJobType (..))
@@ -90,10 +90,13 @@ sendSearchRequestToDrivers' ::
   GoHomeConfig ->
   m (ExecutionResult, Bool)
 sendSearchRequestToDrivers' driverPoolConfig searchTry searchReq booking merchant driverExtraFeeBounds goHomeCfg = do
-  handler handle goHomeCfg
+  searchReqDetails <- case searchReq.searchRequestDetails of
+    DSR.SearchReqDetailsOnDemand _ -> throwError (InternalError "Rental now allowed here")
+    DSR.SearchReqDetailsRental details -> pure details
+  let searchDetails = DSRD.RentalDetails DSRD.RentalSearchDetails {booking, searchTry, searchReqDetails}
+  handler (handle searchDetails) goHomeCfg
   where
-    searchDetails = DSRD.RentalSearchDetails {booking, searchTry}
-    handle =
+    handle searchDetails =
       Handle
         { isBatchNumExceedLimit = I.isBatchNumExceedLimit driverPoolConfig searchTry.id,
           isReceivedMaxDriverQuotes = pure $ booking.status /= DB.CONFIRMED,
