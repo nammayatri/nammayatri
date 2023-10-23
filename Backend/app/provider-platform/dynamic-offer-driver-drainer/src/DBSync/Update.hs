@@ -92,7 +92,6 @@ runUpdateCommands (cmd, val) dbStreamKey = do
     UpdateDBCommand id _ tag _ _ (BusinessEventOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val dbStreamKey setClauses tag whereClause ("BusinessEvent" :: Text) =<< dbConf
     UpdateDBCommand id _ tag _ _ (CallStatusOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val dbStreamKey setClauses tag whereClause ("CallStatus" :: Text) =<< dbConf
     UpdateDBCommand id _ tag _ _ (CancellationReasonOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val dbStreamKey setClauses tag whereClause ("CancellationReason" :: Text) =<< dbConf
-    UpdateDBCommand id _ tag _ _ (DriverFlowStatusOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val dbStreamKey setClauses tag whereClause ("DriverFlowStatus" :: Text) =<< dbConf
     UpdateDBCommand id _ tag _ _ (DriverBlockReasonOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val dbStreamKey setClauses tag whereClause ("DriverBlockReason" :: Text) =<< dbConf
     UpdateDBCommand id _ tag _ _ (FleetDriverAssociationOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val dbStreamKey setClauses tag whereClause ("FleetDriverAssociation" :: Text) =<< dbConf
     UpdateDBCommand id _ tag _ _ (DriverFeeOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val dbStreamKey setClauses tag whereClause ("DriverFee" :: Text) =<< dbConf

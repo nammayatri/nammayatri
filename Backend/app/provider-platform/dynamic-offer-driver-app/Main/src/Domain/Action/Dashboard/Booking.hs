@@ -24,7 +24,6 @@ import qualified Data.HashMap.Internal as HashMap
 import qualified Domain.Types.Booking as DBooking
 import qualified Domain.Types.BookingCancellationReason as DBCR
 import qualified Domain.Types.CancellationReason as DCR
-import qualified Domain.Types.Driver.DriverFlowStatus as DDFS
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
@@ -39,7 +38,6 @@ import SharedLogic.Merchant (findMerchantByShortId)
 import qualified SharedLogic.SyncRide as SyncRide
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.BookingCancellationReason as QBCR
-import qualified Storage.Queries.Driver.DriverFlowStatus as QDFS
 import qualified Storage.Queries.DriverInformation as QDrInfo
 import qualified Storage.Queries.Ride as QRide
 
@@ -70,10 +68,6 @@ stuckBookingsCancel merchantShortId req = do
   QBooking.cancelBookings allStuckBookingIds now
   for_ (bcReasons <> bcReasonsWithRides) QBCR.upsert
   QDrInfo.updateNotOnRideMultiple stuckDriverIds
-  for_ stuckRideItems $ \item -> do
-    if item.driverActive
-      then QDFS.updateStatus item.driverId DDFS.ACTIVE
-      else QDFS.updateStatus item.driverId DDFS.IDLE
   logTagInfo "dashboard -> stuckBookingsCancel: " $ show allStuckBookingIds
   pure $ mkStuckBookingsCancelRes stuckBookingIds stuckRideItems
 

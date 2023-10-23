@@ -13,7 +13,6 @@ import qualified "dynamic-offer-driver-app" Storage.Beam.BookingCancellationReas
 import qualified "dynamic-offer-driver-app" Storage.Beam.BusinessEvent as BusinessEvent
 import qualified "dynamic-offer-driver-app" Storage.Beam.CallStatus as CallStatus
 import qualified "dynamic-offer-driver-app" Storage.Beam.CancellationReason as CancellationReason
-import qualified "dynamic-offer-driver-app" Storage.Beam.Driver.DriverFlowStatus as DriverFlowStatus
 import qualified "dynamic-offer-driver-app" Storage.Beam.Driver.GoHomeFeature.DriverGoHomeRequest as DriverGoHomeRequest
 import qualified "dynamic-offer-driver-app" Storage.Beam.Driver.GoHomeFeature.DriverHomeLocation as DriverHomeLocation
 import qualified "dynamic-offer-driver-app" Storage.Beam.DriverBlockReason as DriverBlockReason
@@ -348,7 +347,6 @@ data DBDeleteObject
   | BusinessEventDeleteOptions DeleteModel (Where Postgres BusinessEvent.BusinessEventT)
   | CallStatusDeleteOptions DeleteModel (Where Postgres CallStatus.CallStatusT)
   | CancellationReasonDeleteOptions DeleteModel (Where Postgres CancellationReason.CancellationReasonT)
-  | DriverFlowStatusDeleteOptions DeleteModel (Where Postgres DriverFlowStatus.DriverFlowStatusT)
   | DriverBlockReasonDeleteOptions DeleteModel (Where Postgres DriverBlockReason.DriverBlockReasonT)
   | FleetDriverAssociationDeleteOptions DeleteModel (Where Postgres FleetDriverAssociation.FleetDriverAssociationT)
   | DriverFeeDeleteOptions DeleteModel (Where Postgres DriverFee.DriverFeeT)

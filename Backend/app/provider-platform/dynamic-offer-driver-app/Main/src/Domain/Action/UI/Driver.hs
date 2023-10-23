@@ -86,7 +86,6 @@ import qualified Data.Text as T
 import Data.Time (Day, UTCTime (UTCTime, utctDay), fromGregorian)
 import Data.Time.Format.ISO8601 (iso8601Show)
 import Domain.Action.UI.DriverOnboarding.AadhaarVerification (fetchAndCacheAadhaarImage)
-import qualified Domain.Types.Driver.DriverFlowStatus as DDFS
 import qualified Domain.Types.Driver.GoHomeFeature.DriverGoHomeRequest as DDGR
 import qualified Domain.Types.Driver.GoHomeFeature.DriverHomeLocation as DDHL
 import qualified Domain.Types.DriverFee as DDF
@@ -168,7 +167,6 @@ import Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
 import qualified Storage.CachedQueries.GoHomeConfig as CQGHC
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as CQTC
-import qualified Storage.Queries.Driver.DriverFlowStatus as QDFS
 import qualified Storage.Queries.Driver.GoHomeFeature.DriverGoHomeRequest as QDGR
 import qualified Storage.Queries.Driver.GoHomeFeature.DriverHomeLocation as QDHL
 import qualified Storage.Queries.DriverFee as QDF
@@ -533,11 +531,10 @@ createDriver admin req = do
   person <- buildDriver req.person merchantId
   vehicle <- buildVehicle req.vehicle person.id merchantId
   metaData <- buildMetaData req.metaData person.id
-  _ <- QPerson.create person
-  _ <- QDFS.create $ makeIdleDriverFlowStatus person
+  void $ QPerson.create person
   createDriverDetails person.id admin.id merchantId
-  _ <- QVehicle.create vehicle
-  _ <- QMeta.create metaData
+  void $ QVehicle.create vehicle
+  void $ QMeta.create metaData
   logTagInfo ("orgAdmin-" <> getId admin.id <> " -> createDriver : ") (show person.id)
   org <-
     CQM.findById merchantId
@@ -557,12 +554,6 @@ createDriver admin req = do
   return $ OnboardDriverRes personAPIEntity
   where
     duplicateCheck cond err = whenM (isJust <$> cond) $ throwError $ InvalidRequest err
-    makeIdleDriverFlowStatus person =
-      DDFS.DriverFlowStatus
-        { personId = person.id,
-          flowStatus = DDFS.IDLE,
-          updatedAt = person.updatedAt
-        }
 
 createDriverDetails ::
   ( HasCacheConfig r,
@@ -609,7 +600,7 @@ createDriverDetails personId adminId merchantId = do
             createdAt = now,
             updatedAt = now
           }
-  _ <- QDriverStats.createInitialDriverStats driverId
+  void $ QDriverStats.createInitialDriverStats driverId
   QDriverInformation.create driverInfo
   pure ()
   where
@@ -644,7 +635,7 @@ getInformation (personId, merchantId) = do
 
 setActivity :: (CacheFlow m r, EsqDBFlow m r) => (Id SP.Person, Id DM.Merchant) -> Bool -> Maybe DriverInfo.DriverMode -> m APISuccess.APISuccess
 setActivity (personId, merchantId) isActive mode = do
-  _ <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  void $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   let driverId = cast personId
   when (isActive || (isJust mode && (mode == Just DriverInfo.SILENT || mode == Just DriverInfo.ONLINE))) $ do
     driverInfo <- QDriverInformation.findById driverId >>= fromMaybeM DriverInfoNotFound
@@ -656,12 +647,7 @@ setActivity (personId, merchantId) isActive mode = do
     unless (driverInfo.enabled) $ throwError DriverAccountDisabled
     unless (driverInfo.subscribed || transporterConfig.openMarketUnBlocked) $ throwError DriverUnsubscribed
     unless (not driverInfo.blocked) $ throwError DriverAccountBlocked
-  _ <- QDriverInformation.updateActivity driverId isActive (mode <|> Just DriverInfo.OFFLINE)
-  driverStatus <- QDFS.getStatus personId >>= fromMaybeM (PersonNotFound personId.getId)
-  logInfo $ "driverStatus " <> show driverStatus
-  unless (driverStatus `notElem` [DDFS.IDLE, DDFS.ACTIVE, DDFS.SILENT]) $ do
-    QDFS.updateStatus personId $
-      DMode.getDriverStatus mode isActive
+  void $ QDriverInformation.updateActivity driverId isActive (mode <|> Just DriverInfo.OFFLINE)
   pure APISuccess.Success
 
 activateGoHomeFeature :: (CacheFlow m r, EsqDBFlow m r) => (Id SP.Person, Id DM.Merchant) -> Id DDHL.DriverHomeLocation -> LatLong -> m APISuccess.APISuccess
@@ -846,7 +832,7 @@ changeDriverEnableState admin personId isEnabled = do
     QPerson.findById personId
       >>= fromMaybeM (PersonDoesNotExist personId.getId)
   unless (person.merchantId == admin.merchantId) $ throwError Unauthorized
-  _ <- QDriverInformation.updateEnabledState driverId isEnabled
+  void $ QDriverInformation.updateEnabledState driverId isEnabled
   unless isEnabled $ void (QDriverInformation.updateActivity driverId False (Just DriverInfo.OFFLINE))
   unless isEnabled $ do
     Notify.notifyDriver person.merchantId FCM.ACCOUNT_DISABLED notificationTitle notificationMessage person.id person.deviceToken
@@ -870,7 +856,6 @@ deleteDriver admin driverId = do
   QR.deleteByPersonId driverId
   QVehicle.deleteById driverId
   QDHL.deleteByDriverId driverId
-  QDFS.deleteById driverId
   QPerson.deleteById driverId
   logTagInfo ("orgAdmin-" <> getId admin.id <> " -> deleteDriver : ") (show driverId)
   return Success
@@ -956,7 +941,7 @@ updateMetaData ::
   MetaDataReq ->
   m APISuccess
 updateMetaData (personId, _) req = do
-  _ <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  void $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   QMeta.updateMetaData personId req.device req.deviceOS req.deviceDateTime req.appPermissions
   return Success
 
@@ -1199,9 +1184,8 @@ respondQuote (driverId, _) req = do
                 }
           driverQuote <- buildDriverQuote driver searchReq sReqFD searchTry.estimateId fareParams
           triggerQuoteEvent QuoteEventData {quote = driverQuote}
-          _ <- QDrQt.create driverQuote
-          _ <- QSRD.updateDriverResponse sReqFD.id req.response
-          QDFS.updateStatus sReqFD.driverId DDFS.OFFERED_QUOTE {quoteId = driverQuote.id, validTill = driverQuote.validTill}
+          void $ QDrQt.create driverQuote
+          void $ QSRD.updateDriverResponse sReqFD.id req.response
           let shouldPullFCMForOthers = (quoteCount + 1) >= quoteLimit || (searchReq.autoAssignEnabled == Just True)
           driverFCMPulledList <- if shouldPullFCMForOthers then QSRD.findAllActiveWithoutRespBySearchTryId searchTryId else pure []
           -- Adding +1 in quoteCount because one more quote added above (QDrQt.create driverQuote)
@@ -1209,7 +1193,7 @@ respondQuote (driverId, _) req = do
           sendDriverOffer organization searchReq searchTry driverQuote
           pure driverFCMPulledList
         Reject -> do
-          _ <- QSRD.updateDriverResponse sReqFD.id req.response
+          void $ QSRD.updateDriverResponse sReqFD.id req.response
           pure []
     DS.driverScoreEventHandler $ buildDriverRespondEventPayload searchTry.id searchReq.providerId driverFCMPulledList
   pure Success
@@ -1268,7 +1252,7 @@ respondQuote (driverId, _) req = do
       pure $ fromIntegral driverPoolCfg.driverQuoteLimit
     sendRemoveRideRequestNotification driverSearchReqs orgId driverQuote = do
       for_ driverSearchReqs $ \driverReq -> do
-        _ <- QSRD.updateDriverResponse driverReq.id Pulled
+        void $ QSRD.updateDriverResponse driverReq.id Pulled
         driver_ <- runInReplica $ QPerson.findById driverReq.driverId >>= fromMaybeM (PersonNotFound driverReq.driverId.getId)
         Notify.notifyDriverClearedFare orgId driverReq.driverId driverReq.searchTryId driverQuote.estimatedFare driver_.deviceToken
 
@@ -1498,7 +1482,7 @@ verifyAuth (personId, _) req = do
         mobileCountryCode = fromMaybe "+91" person.mobileCountryCode
     mobileNumberHash <- getDbHash altMobNo
     mbPerson <- QPerson.findByMobileNumberAndMerchant mobileCountryCode mobileNumberHash person.merchantId
-    _ <- QPerson.updateAlternateMobileNumberAndCode driver
+    void $ QPerson.updateAlternateMobileNumberAndCode driver
     expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
     Redis.setExp (makeAlternateNumberVerifiedKey personId) True expTime
     whenJust mbPerson $ \oldPerson -> do
@@ -1566,7 +1550,7 @@ remove (personId, _) = do
           { SP.unencryptedAlternateMobileNumber = Nothing,
             SP.alternateMobileNumber = Nothing
           }
-  _ <- QPerson.updateAlternateMobileNumberAndCode driver
+  void $ QPerson.updateAlternateMobileNumberAndCode driver
   return Success
 
 -- history should be on basis of invoice instead of driverFee id

@@ -26,7 +26,6 @@ import qualified Data.Map as M
 import Data.Ord
 import Data.Time hiding (getCurrentTime, secondsToNominalDiffTime)
 import Domain.Action.UI.Ride.EndRide.Internal (getDriverFeeBillNumberKey, getPlan, mkDriverFeeBillNumberKey)
-import qualified Domain.Types.Driver.DriverFlowStatus as DDFS
 import Domain.Types.DriverFee
 import qualified Domain.Types.Invoice as INV
 import Domain.Types.Mandate (Mandate)
@@ -51,7 +50,6 @@ import SharedLogic.Allocator
 import SharedLogic.DriverFee (roundToHalf)
 import qualified SharedLogic.Payment as SPayment
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as SCT
-import qualified Storage.Queries.Driver.DriverFlowStatus as QDFS
 import Storage.Queries.DriverFee as QDF
 import Storage.Queries.DriverInformation (updatePendingPayment, updateSubscription)
 import Storage.Queries.DriverPlan
@@ -185,7 +183,6 @@ calculateDriverFeeForDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getI
               mapM_ updateAutoPayToManual driverFeeIds
               updateAutoPayToManual driverFee.id
               updateSubscription False (cast driverFee.driverId)
-              QDFS.updateStatus (cast driverFee.driverId) DDFS.PAYMENT_OVERDUE -- only updating when blocked. Is this being used?
             else do
               unless (totalFee == 0) $ processDriverFee paymentMode driverFee
 
@@ -341,9 +338,7 @@ unsubscribeDriverForPaymentOverdue Job {id, jobInfo} = withLogTag ("JobId-" <> i
   forM_ feeZipDriver $ \(driverFee, mbPerson) -> do
     Redis.whenWithLockRedis (paymentProcessingLockKey driverFee.driverId.getId) 60 $ do
       -- Esq.runTransaction $ do
-      _ <- updateStatus PAYMENT_OVERDUE driverFee.id now
-      whenJust mbPerson $ \person -> do
-        QDFS.updateStatus (cast person.id) DDFS.PAYMENT_OVERDUE
+      updateStatus PAYMENT_OVERDUE driverFee.id now
       whenJust mbPerson $ \person -> updateSubscription False (cast person.id) -- fix later: take tabular updates inside transaction
   return Complete
 

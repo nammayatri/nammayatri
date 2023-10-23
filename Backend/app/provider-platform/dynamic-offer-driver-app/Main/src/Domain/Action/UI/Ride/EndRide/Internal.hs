@@ -38,7 +38,6 @@ import qualified Data.Map as M
 import Data.Time hiding (getCurrentTime, secondsToNominalDiffTime)
 import Data.Time.Calendar.OrdinalDate (sundayStartWeek)
 import qualified Domain.Types.Booking as SRB
-import qualified Domain.Types.Driver.DriverFlowStatus as DDFS
 import qualified Domain.Types.DriverFee as DF
 import qualified Domain.Types.DriverInformation as DI
 import Domain.Types.DriverPlan
@@ -74,7 +73,6 @@ import Storage.CachedQueries.Merchant.LeaderBoardConfig as QLeaderConfig
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as SCT
 import qualified Storage.CachedQueries.Plan as CQP
 import qualified Storage.Queries.Booking as QRB
-import qualified Storage.Queries.Driver.DriverFlowStatus as QDFS
 import qualified Storage.Queries.DriverFee as QDF
 import qualified Storage.Queries.DriverInformation as QDI
 import Storage.Queries.DriverPlan (findByDriverId)
@@ -119,9 +117,6 @@ endRideTransaction driverId booking ride mbFareParams mbRiderDetailsId newFarePa
   QRide.updateAll ride.id ride
 
   driverInfo <- QDI.findById (cast ride.driverId) >>= fromMaybeM (PersonNotFound ride.driverId.getId)
-  if driverInfo.active
-    then QDFS.updateStatus ride.driverId DDFS.ACTIVE
-    else QDFS.updateStatus ride.driverId DDFS.IDLE
   QDriverStats.updateIdleTime driverId
   QDriverStats.incrementTotalRidesAndTotalDist (cast ride.driverId) (fromMaybe 0 ride.chargeableDistance)
 

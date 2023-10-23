@@ -42,7 +42,6 @@ import qualified SharedLogic.SearchTryLocker as CS
 import qualified Storage.CachedQueries.Merchant as QM
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BookingCancellationReason as QBCR
-import qualified Storage.Queries.Driver.DriverFlowStatus as QDFS
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.DriverQuote as QDQ
 import qualified Storage.Queries.Person as QPers
@@ -85,7 +84,6 @@ cancel req merchant booking = do
     QDI.updateOnRide (cast ride.driverId) False
     void $ LF.rideDetails ride.id SRide.CANCELLED merchant.id ride.driverId booking.fromLocation.lat booking.fromLocation.lon
     QRide.updateStatus ride.id SRide.CANCELLED
-    QDFS.updateStatus ride.driverId $ DMode.getDriverStatus driverInfo.mode driverInfo.active
 
   bookingCR <- buildBookingCancellationReason
   QBCR.upsert bookingCR

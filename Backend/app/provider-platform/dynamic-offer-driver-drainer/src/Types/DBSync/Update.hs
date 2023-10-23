@@ -13,7 +13,6 @@ import qualified "dynamic-offer-driver-app" Storage.Beam.BookingCancellationReas
 import qualified "dynamic-offer-driver-app" Storage.Beam.BusinessEvent as BusinessEvent
 import qualified "dynamic-offer-driver-app" Storage.Beam.CallStatus as CallStatus
 import qualified "dynamic-offer-driver-app" Storage.Beam.CancellationReason as CancellationReason
-import qualified "dynamic-offer-driver-app" Storage.Beam.Driver.DriverFlowStatus as DriverFlowStatus
 import qualified "dynamic-offer-driver-app" Storage.Beam.Driver.GoHomeFeature.DriverGoHomeRequest as DriverGoHomeRequest
 import qualified "dynamic-offer-driver-app" Storage.Beam.Driver.GoHomeFeature.DriverHomeLocation as DriverHomeLocation
 import qualified "dynamic-offer-driver-app" Storage.Beam.DriverBlockReason as DriverBlockReason
@@ -353,7 +352,6 @@ data DBUpdateObject
   | BusinessEventOptions UpdateModel [Set Postgres BusinessEvent.BusinessEventT] (Where Postgres BusinessEvent.BusinessEventT)
   | CallStatusOptions UpdateModel [Set Postgres CallStatus.CallStatusT] (Where Postgres CallStatus.CallStatusT)
   | CancellationReasonOptions UpdateModel [Set Postgres CancellationReason.CancellationReasonT] (Where Postgres CancellationReason.CancellationReasonT)
-  | DriverFlowStatusOptions UpdateModel [Set Postgres DriverFlowStatus.DriverFlowStatusT] (Where Postgres DriverFlowStatus.DriverFlowStatusT)
   | DriverBlockReasonOptions UpdateModel [Set Postgres DriverBlockReason.DriverBlockReasonT] (Where Postgres DriverBlockReason.DriverBlockReasonT)
   | FleetDriverAssociationOptions UpdateModel [Set Postgres FleetDriverAssociation.FleetDriverAssociationT] (Where Postgres FleetDriverAssociation.FleetDriverAssociationT)
   | DriverFeeOptions UpdateModel [Set Postgres DriverFee.DriverFeeT] (Where Postgres DriverFee.DriverFeeT)

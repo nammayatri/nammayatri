@@ -110,7 +110,6 @@ import SharedLogic.Merchant (findMerchantByShortId)
 import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
 import Storage.CachedQueries.DriverBlockReason as DBR
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as SCT
-import qualified Storage.Queries.Driver.DriverFlowStatus as QDFS
 import qualified Storage.Queries.Driver.GoHomeFeature.DriverHomeLocation as QDHL
 import Storage.Queries.DriverFee (findPendingFeesByDriverId)
 import qualified Storage.Queries.DriverFee as QDF
@@ -455,7 +454,6 @@ recordPayment isExempted merchantShortId reqDriverId requestorId = do
   QDriverInfo.updatePendingPayment False driverId
   QDriverInfo.updateSubscription True driverId
   mapM_ (QDF.updateCollectedPaymentStatus (paymentStatus isExempted) (Just requestorId) now) ((.id) <$> driverFees)
-  QDFS.clearPaymentStatus (cast driverId) driverInfo_.active
   invoices <- (B.runInReplica . QINV.findActiveManualOrMandateSetupInvoiceByFeeId . (.id)) `mapM` driverFees
   mapM_ (QINV.updateInvoiceStatusByInvoiceId INV.SUCCESS . (.id)) (concat invoices)
   fork "sending dashboard sms - collected cash" $ do

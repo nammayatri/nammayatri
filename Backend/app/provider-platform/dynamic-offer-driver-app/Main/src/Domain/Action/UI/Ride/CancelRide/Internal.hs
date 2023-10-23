@@ -50,7 +50,6 @@ import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as QTC
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BookingCancellationReason as QBCR
-import qualified Storage.Queries.Driver.DriverFlowStatus as QDFS
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.DriverQuote as QDQ
 import qualified Storage.Queries.DriverStats as QDriverStats
@@ -154,7 +153,6 @@ cancelRideTransaction booking ride bookingCReason merchantId = do
   void $ QRide.updateStatus ride.id DRide.CANCELLED
   QBCR.upsert bookingCReason
   void $ QRB.updateStatus booking.id SRB.CANCELLED
-  void $ QDFS.updateStatus ride.driverId $ DMode.getDriverStatus driverInfo.mode driverInfo.active
   when (bookingCReason.source == SBCR.ByDriver) $ QDriverStats.updateIdleTime driverId
 
 repeatSearch ::
