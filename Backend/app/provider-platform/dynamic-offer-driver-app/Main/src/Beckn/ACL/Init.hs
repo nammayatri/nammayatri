@@ -47,7 +47,7 @@ buildInitReq subscriber req = do
     _ -> throwError $ InvalidRequest "There must be exactly one item in init request"
   fulfillmentId <- order.fulfillment.id & fromMaybeM (InvalidRequest "FulfillmentId not found. It should either be estimateId or quoteId")
   let maxEstimatedDistance = getMaxEstimateDistance =<< order.fulfillment.tags
-  let rentalDuration = getRentalDuration =<< order.fulfillment.tags
+  let rentalDuration = getRentalDurationInHr =<< order.fulfillment.tags
   let initTypeReq = buildInitTypeReq order.fulfillment._type
   case initTypeReq of
     DInit.InitRentalReq ->
@@ -69,7 +69,7 @@ buildInitReq subscriber req = do
         vehicleVariant = castVehicleVariant order.fulfillment.vehicle.category,
         driverId = order.provider <&> (.id),
         paymentMethodInfo = mkPaymentMethodInfo order.payment,
-        startTime = startTime,
+        startTime,
         ..
       }
   where
@@ -100,8 +100,8 @@ getMaxEstimateDistance tagGroups = do
   maxEstimatedDistance <- readMaybe $ T.unpack tagValue
   Just $ HighPrecMeters maxEstimatedDistance
 
-getRentalDuration :: Init.TagGroups -> Maybe Int
-getRentalDuration tagGroups = do
+getRentalDurationInHr :: Init.TagGroups -> Maybe Int
+getRentalDurationInHr tagGroups = do
   tagValue <- Common.getTag "rental_info" "rental_duration" tagGroups
-  rentalDuration <- readMaybe $ T.unpack tagValue
-  Just rentalDuration
+  rentalDurationInHr <- readMaybe $ T.unpack tagValue
+  Just rentalDurationInHr
