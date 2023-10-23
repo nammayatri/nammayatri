@@ -131,8 +131,7 @@ instance FromTType' BeamSR.SearchRequest SearchRequest where
                 customerLanguage = customerLanguage,
                 disabilityTag = disabilityTag,
                 device = device,
-                createdAt = createdAt,
-                tag = tag
+                createdAt = createdAt
               }
       RENTAL -> do
         mappings <- QLM.findByEntityId id
@@ -168,8 +167,7 @@ instance FromTType' BeamSR.SearchRequest SearchRequest where
                 customerLanguage = customerLanguage,
                 disabilityTag = disabilityTag,
                 device = device,
-                createdAt = createdAt,
-                tag = tag
+                createdAt = createdAt
               }
 
 instance ToTType' BeamSR.SearchRequest SearchRequest where
@@ -195,7 +193,7 @@ instance ToTType' BeamSR.SearchRequest SearchRequest where
             BeamSR.createdAt = createdAt,
             BeamSR.autoAssignEnabled = details.autoAssignEnabled,
             BeamSR.specialLocationTag = details.specialLocationTag,
-            BeamSR.tag = tag
+            BeamSR.tag = ON_DEMAND
           }
       SearchReqDetailsRental details ->
         BeamSR.SearchRequestT
@@ -217,7 +215,7 @@ instance ToTType' BeamSR.SearchRequest SearchRequest where
             BeamSR.createdAt = createdAt,
             BeamSR.autoAssignEnabled = Nothing,
             BeamSR.specialLocationTag = Nothing,
-            BeamSR.tag = tag
+            BeamSR.tag = RENTAL
           }
 
 -- FUNCTIONS FOR HANDLING OLD DATA : TO BE REMOVED AFTER SOME TIME

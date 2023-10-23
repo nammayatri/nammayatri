@@ -66,7 +66,11 @@ data SearchRequest = SearchRequest
     device :: Maybe Text,
     customerLanguage :: Maybe Maps.Language,
     disabilityTag :: Maybe Text,
-    createdAt :: UTCTime,
-    tag :: SearchRequestTag -- FIXME redundant,use details instead
+    createdAt :: UTCTime
   }
   deriving (Generic, Show)
+
+getSearchRequestTag :: SearchRequest -> SearchRequestTag
+getSearchRequestTag searchReq = case searchReq.searchRequestDetails of
+  SearchReqDetailsOnDemand _ -> ON_DEMAND
+  SearchReqDetailsRental _ -> RENTAL
