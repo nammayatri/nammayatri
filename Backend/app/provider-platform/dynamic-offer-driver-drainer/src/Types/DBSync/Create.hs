@@ -10,7 +10,6 @@ import qualified "dynamic-offer-driver-app" Storage.Beam.BookingCancellationReas
 import qualified "dynamic-offer-driver-app" Storage.Beam.BusinessEvent as BusinessEvent
 import qualified "dynamic-offer-driver-app" Storage.Beam.CallStatus as CallStatus
 import qualified "dynamic-offer-driver-app" Storage.Beam.CancellationReason as CancellationReason
-import qualified "dynamic-offer-driver-app" Storage.Beam.Driver.DriverFlowStatus as DriverFlowStatus
 import qualified "dynamic-offer-driver-app" Storage.Beam.Driver.GoHomeFeature.DriverGoHomeRequest as DriverGoHomeRequest
 import qualified "dynamic-offer-driver-app" Storage.Beam.Driver.GoHomeFeature.DriverHomeLocation as DriverHomeLocation
 import qualified "dynamic-offer-driver-app" Storage.Beam.DriverBlockReason as DriverBlockReason
@@ -93,7 +92,6 @@ data DBCreateObject
   | BusinessEventObject BusinessEvent.BusinessEvent
   | CallStatusObject CallStatus.CallStatus
   | CancellationReasonObject CancellationReason.CancellationReason
-  | DriverFlowStatusObject DriverFlowStatus.DriverFlowStatus
   | DriverBlockReasonObject DriverBlockReason.DriverBlockReason
   | FleetDriverAssociationObject FleetDriverAssociation.FleetDriverAssociation
   | DriverFeeObject DriverFee.DriverFee
@@ -181,7 +179,6 @@ modelName (BookingCancellationReasonObject _) = "BookingCancellationReason"
 modelName (BusinessEventObject _) = "BusinessEvent"
 modelName (CallStatusObject _) = "CallStatus"
 modelName (CancellationReasonObject _) = "CancellationReason"
-modelName (DriverFlowStatusObject _) = "DriverFlowStatus"
 modelName (DriverBlockReasonObject _) = "DriverBlockReason"
 modelName (FleetDriverAssociationObject _) = "FleetDriverAssociation"
 modelName (DriverFeeObject _) = "DriverFee"

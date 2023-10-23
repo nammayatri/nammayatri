@@ -22,7 +22,6 @@ import Kernel.Types.APISuccess (APISuccess (Success))
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import SharedLogic.Merchant (findMerchantByShortId)
-import qualified Storage.Queries.Driver.DriverFlowStatus as QDriverFlowStatus
 import qualified Storage.Queries.DriverInformation as QDriverInfo
 import qualified Storage.Queries.DriverOnboarding.AadhaarOtp as AadhaarOtp
 import qualified Storage.Queries.DriverOnboarding.AadhaarVerification as AV
@@ -65,7 +64,6 @@ deleteDriver merchantShortId reqDriverId = do
   QR.deleteByPersonId reqDriverId
   QVehicle.deleteById reqDriverId
   QDriverInfo.deleteById (cast reqDriverId)
-  QDriverFlowStatus.deleteById reqDriverId
   QMessage.deleteByPersonId reqDriverId
   QIssueReport.deleteByPersonId reqDriverId
   AadhaarOtp.deleteByPersonIdForGenerate reqDriverId

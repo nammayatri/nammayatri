@@ -30,7 +30,6 @@ import qualified Domain.Action.Beckn.Confirm as DConfirm
 import qualified Domain.Action.Beckn.Search as BS
 import qualified Domain.Types.BapMetadata as DSM
 import qualified Domain.Types.Booking as DRB
-import qualified Domain.Types.Driver.DriverFlowStatus as DDFS
 import qualified Domain.Types.Driver.GoHomeFeature.DriverGoHomeRequest as DDGR
 import qualified Domain.Types.DriverInformation as DI
 import qualified Domain.Types.Exophone as DExophone
@@ -68,7 +67,6 @@ import qualified Storage.CachedQueries.Exophone as CQExophone
 import Storage.CachedQueries.Merchant as QM
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.BusinessEvent as QBE
-import qualified Storage.Queries.Driver.DriverFlowStatus as QDFS
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.Rating as QR
 import qualified Storage.Queries.Ride as QRide
@@ -217,8 +215,7 @@ arrivedAtPickup rideId req = do
   driverReachedDistance <- asks (.driverReachedDistance)
   unless (distance < driverReachedDistance) $ throwError $ DriverNotAtPickupLocation ride.driverId.getId
   unless (isJust ride.driverArrivalTime) $ do
-    _ <- QRide.updateArrival rideId
-    _ <- QDFS.updateStatus ride.driverId DDFS.WAITING_FOR_CUSTOMER {rideId}
+    QRide.updateArrival rideId
     BP.sendDriverArrivalUpdateToBAP booking ride ride.driverArrivalTime
   pure Success
   where
@@ -252,7 +249,6 @@ otpRideCreate driver otpCode booking = do
   QDI.updateOnRide (cast driver.id) True
   void $ LF.rideDetails ride.id DRide.NEW transporter.id ride.driverId booking.fromLocation.lat booking.fromLocation.lon
 
-  QDFS.updateStatus driver.id DDFS.RIDE_ASSIGNED {rideId = ride.id}
   QRideD.create rideDetails
 
   QBE.logDriverAssignedEvent (cast driver.id) booking.id ride.id

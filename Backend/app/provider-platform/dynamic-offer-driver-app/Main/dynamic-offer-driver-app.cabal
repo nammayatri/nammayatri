@@ -60,7 +60,6 @@ library
       API.UI.DriverProfileSummary
       API.UI.DriverReferral
       API.UI.ExotelEndRide
-      API.UI.Frontend
       API.UI.Issue
       API.UI.KioskLocation
       API.UI.LeaderBoard
@@ -138,7 +137,6 @@ library
       Domain.Action.UI.DriverProfileSummary
       Domain.Action.UI.DriverReferral
       Domain.Action.UI.ExotelEndRide
-      Domain.Action.UI.Frontend
       Domain.Action.UI.Issue
       Domain.Action.UI.KioskLocation
       Domain.Action.UI.LeaderBoard
@@ -171,7 +169,6 @@ library
       Domain.Types.CallStatus
       Domain.Types.CancellationReason
       Domain.Types.Common
-      Domain.Types.Driver.DriverFlowStatus
       Domain.Types.Driver.GoHomeFeature.DriverGoHomeRequest
       Domain.Types.Driver.GoHomeFeature.DriverHomeLocation
       Domain.Types.DriverBlockReason
@@ -279,7 +276,6 @@ library
       SharedLogic.CallBAPInternal
       SharedLogic.DeleteDriver
       SharedLogic.DriverFee
-      SharedLogic.DriverMode
       SharedLogic.DriverOnboarding
       SharedLogic.DriverPool
       SharedLogic.DriverPool.Config
@@ -313,7 +309,6 @@ library
       Storage.Beam.CallStatus
       Storage.Beam.CancellationReason
       Storage.Beam.Common
-      Storage.Beam.Driver.DriverFlowStatus
       Storage.Beam.Driver.GoHomeFeature.DriverGoHomeRequest
       Storage.Beam.Driver.GoHomeFeature.DriverHomeLocation
       Storage.Beam.DriverBlockReason
@@ -436,7 +431,6 @@ library
       Storage.Queries.BusinessEvent
       Storage.Queries.CallStatus
       Storage.Queries.CancellationReason
-      Storage.Queries.Driver.DriverFlowStatus
       Storage.Queries.Driver.GoHomeFeature.DriverGoHomeRequest
       Storage.Queries.Driver.GoHomeFeature.DriverGoHomeRequest.Internal
       Storage.Queries.Driver.GoHomeFeature.DriverHomeLocation

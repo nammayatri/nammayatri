@@ -27,7 +27,6 @@ where
 
 import Data.OpenApi hiding (info, url)
 import Domain.Action.UI.DriverReferral
-import qualified Domain.Types.Driver.DriverFlowStatus as DDFS
 import qualified Domain.Types.DriverInformation as DriverInfo
 import qualified Domain.Types.Merchant as DO
 import qualified Domain.Types.Person as SP
@@ -53,7 +52,6 @@ import Kernel.Utils.Validation
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import Storage.CachedQueries.Merchant as QMerchant
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as CQTC
-import qualified Storage.Queries.Driver.DriverFlowStatus as QDFS
 import qualified Storage.Queries.DriverInformation as QD
 import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.Person as QP
@@ -281,17 +279,9 @@ verifyHitsCountKey id = "BPP:Registration:verify:" <> getId id <> ":hitsCount"
 createDriverWithDetails :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r) => AuthReq -> Maybe Version -> Maybe Version -> Id DO.Merchant -> Bool -> m SP.Person
 createDriverWithDetails req mbBundleVersion mbClientVersion merchantId isDashboard = do
   person <- makePerson req mbBundleVersion mbClientVersion merchantId isDashboard
-  _ <- QP.create person
-  _ <- QDFS.create $ makeIdleDriverFlowStatus person
+  void $ QP.create person
   createDriverDetails (person.id) merchantId
   pure person
-  where
-    makeIdleDriverFlowStatus person =
-      DDFS.DriverFlowStatus
-        { personId = person.id,
-          flowStatus = DDFS.IDLE,
-          updatedAt = person.updatedAt
-        }
 
 verify ::
   ( HasFlowEnv m r '["apiRateLimitOptions" ::: APIRateLimitOptions],

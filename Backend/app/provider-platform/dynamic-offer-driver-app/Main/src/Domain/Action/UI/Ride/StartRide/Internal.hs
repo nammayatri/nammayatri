@@ -15,7 +15,6 @@
 module Domain.Action.UI.Ride.StartRide.Internal (startRideTransaction) where
 
 import qualified Domain.Types.Booking as SRB
-import qualified Domain.Types.Driver.DriverFlowStatus as DDFS
 import qualified Domain.Types.Merchant as Dmerch
 import qualified Domain.Types.Person as SP
 import qualified Domain.Types.Ride as SRide
@@ -28,7 +27,6 @@ import Lib.SessionizerMetrics.Types.Event
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified Storage.Queries.BusinessEvent as QBE
-import qualified Storage.Queries.Driver.DriverFlowStatus as QDFS
 import qualified Storage.Queries.Ride as QRide
 import Tools.Event
 
@@ -39,4 +37,3 @@ startRideTransaction driverId ride bookingId firstPoint merchantId = do
   QRide.updateStatus ride.id SRide.INPROGRESS
   QRide.updateStartTimeAndLoc ride.id firstPoint
   QBE.logRideCommencedEvent (cast driverId) bookingId ride.id
-  QDFS.updateStatus driverId DDFS.ON_RIDE {rideId = ride.id}
