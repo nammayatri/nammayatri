@@ -15,6 +15,7 @@
 module Beckn.ACL.Confirm where
 
 import qualified Beckn.Types.Core.Taxi.API.Confirm as Confirm
+import Beckn.Types.Core.Taxi.Common.FulfillmentType
 import qualified Beckn.Types.Core.Taxi.Confirm as Confirm
 import Domain.Action.Beckn.Confirm as DConfirm
 import qualified Domain.Types.Location as DL
@@ -23,8 +24,10 @@ import Kernel.Prelude
 import Kernel.Product.Validation.Context
 import Kernel.Types.App
 import qualified Kernel.Types.Beckn.Context as Context
+import Kernel.Types.Error
 import Kernel.Types.Field
 import Kernel.Types.Id
+import Kernel.Utils.Error.Throwing
 
 buildConfirmReq ::
   (HasFlowEnv m r '["coreVersion" ::: Text]) =>
@@ -41,7 +44,9 @@ buildConfirmReq req = do
       mbRiderName = fulfillment.customer.person <&> (.name)
       vehicleVariant = castVehicleVariant fulfillment.vehicle.category
       driverId = req.message.order.provider <&> (.id)
-      toAddress = castAddress . (.location.address) <$> fulfillment.end
+  toAddress <- case fulfillment._type of
+    RENTAL -> pure Nothing
+    _ -> Just <$> ((castAddress . (.location.address) <$> fulfillment.end) & fromMaybeM (InvalidRequest "end location missing"))
 
   return $
     DConfirm.DConfirmReq

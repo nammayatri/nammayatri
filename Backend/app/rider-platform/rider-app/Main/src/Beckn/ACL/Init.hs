@@ -123,7 +123,7 @@ mkFulfillmentInfo fulfillmentType mbBppFullfillmentId fromLoc mbToLoc mbMaxDista
                               { display = (\_ -> Just True) =<< mbMaxDistance,
                                 code = (\_ -> Just "max_estimated_distance") =<< mbMaxDistance,
                                 name = (\_ -> Just "Max Estimated Distance") =<< mbMaxDistance,
-                                value = (\distance -> Just $ show $ distance) =<< mbMaxDistance
+                                value = (Just . show) =<< mbMaxDistance
                               }
                           ]
                       }
@@ -139,7 +139,7 @@ mkFulfillmentInfo fulfillmentType mbBppFullfillmentId fromLoc mbToLoc mbMaxDista
                                    { display = (\_ -> Just True) =<< rentalDuration,
                                      code = (\_ -> Just "rental_duration") =<< rentalDuration,
                                      name = (\_ -> Just "How may hours selected") =<< rentalDuration,
-                                     value = (\distance -> Just $ show $ distance) =<< rentalDuration
+                                     value = (Just . show) =<< rentalDuration
                                    }
                                ]
                            }
