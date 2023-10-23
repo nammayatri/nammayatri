@@ -4,8 +4,7 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Types.DBSync
-  ( module X,
-    Env (..),
+  ( Env (..),
     Types.DBSync.Flow,
     History,
     StateRef (..),
@@ -18,6 +17,7 @@ module Types.DBSync
   )
 where
 
+import Data.Aeson (Object)
 import Database.Beam.Postgres (Connection)
 import EulerHS.KVConnector.DBSync
 import EulerHS.KVConnector.Types
@@ -31,9 +31,6 @@ import Kernel.Streaming.Kafka.Producer.Types
 import Kernel.Types.Logging
 import Kernel.Utils.Dhall (FromDhall)
 import Types.Config
-import Types.DBSync.Create as X
-import Types.DBSync.Delete as X
-import Types.DBSync.Update as X
 import Types.Event as Event
 
 data Env = Env
@@ -77,16 +74,16 @@ data DBSyncException
 instance Exception DBSyncException
 
 data DBCommand
-  = Create DBCommandVersion Tag Double DBName DBCreateObject
-  | Update DBCommandVersion Tag Double DBName DBUpdateObject
-  | Delete DBCommandVersion Tag Double DBName DBDeleteObject
+  = Create DBCommandVersion Tag Double DBName Object
+  | Update DBCommandVersion Tag Double DBName Object
+  | Delete DBCommandVersion Tag Double DBName Object
   deriving (Generic, ToJSON, FromJSON)
 
-data CreateDBCommand = CreateDBCommand EL.KVDBStreamEntryID DBCommandVersion Tag Double DBName DBCreateObject
+data CreateDBCommand = CreateDBCommand EL.KVDBStreamEntryID DBCommandVersion Tag Double DBName Object
 
-data UpdateDBCommand = UpdateDBCommand EL.KVDBStreamEntryID DBCommandVersion Tag Double DBName DBUpdateObject
+data UpdateDBCommand = UpdateDBCommand EL.KVDBStreamEntryID DBCommandVersion Tag Double DBName Object
 
-data DeleteDBCommand = DeleteDBCommand EL.KVDBStreamEntryID DBCommandVersion Tag Double DBName DBDeleteObject
+data DeleteDBCommand = DeleteDBCommand EL.KVDBStreamEntryID DBCommandVersion Tag Double DBName Object
 
 deriving stock instance Show EL.KVDBStreamEntryID
 

@@ -622,11 +622,11 @@
         "tinylog": "tinylog"
       },
       "locked": {
-        "lastModified": 1702549068,
-        "narHash": "sha256-th4rnWCZYXlHPbUrcwd9F977xrqmocn9YfrA+JYvr6s=",
+        "lastModified": 1703747170,
+        "narHash": "sha256-vBzg+Dgrf43qE6TOV/jsLzfGUlLhO7W8S3D1H622cic=",
         "owner": "enigma-commits",
         "repo": "euler-hs",
-        "rev": "50a9fc56258ceed718a1e84951550821738d83a3",
+        "rev": "289b99e168e4e2ca6523202c90ed285d902b5a8c",
         "type": "github"
       },
       "original": {
