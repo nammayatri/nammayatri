@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - 'Frontend/ui-customer/**'
+      - 'Frontend/ui-common/**'
 
 jobs:
   build:
