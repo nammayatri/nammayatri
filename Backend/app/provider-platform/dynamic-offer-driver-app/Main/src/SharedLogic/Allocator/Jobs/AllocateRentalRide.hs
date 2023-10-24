@@ -20,7 +20,6 @@ import Domain.Types.GoHomeConfig (GoHomeConfig)
 import Domain.Types.Merchant (Merchant)
 import Domain.Types.Merchant.DriverPoolConfig
 import Domain.Types.SearchRequest (SearchRequest)
-import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.SearchRequestForDriver as DSRD
 import qualified Domain.Types.SearchTry as DST
 import qualified Kernel.Beam.Functions as B
@@ -90,10 +89,7 @@ sendSearchRequestToDrivers' ::
   GoHomeConfig ->
   m (ExecutionResult, Bool)
 sendSearchRequestToDrivers' driverPoolConfig searchTry searchReq booking merchant driverExtraFeeBounds goHomeCfg = do
-  searchReqDetails <- case searchReq.searchRequestDetails of
-    DSR.SearchReqDetailsOnDemand _ -> throwError (InternalError "Rental now allowed here")
-    DSR.SearchReqDetailsRental details -> pure details
-  let searchDetails = DSRD.RentalDetails DSRD.RentalSearchDetails {booking, searchTry, searchReqDetails}
+  let searchDetails = DSRD.RentalDetails DSRD.RentalSearchDetails {booking, searchTry}
   handler (handle searchDetails) goHomeCfg
   where
     handle searchDetails =

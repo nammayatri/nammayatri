@@ -48,7 +48,7 @@ data BookingDetails
   | DetailsRental BookingDetailsRental
   deriving (Generic)
 
-data BookingDetailsOnDemand = BookingDetailsOnDemand -- FIXME separate details type for special zone
+data BookingDetailsOnDemand = BookingDetailsOnDemand
   { specialZoneOtpCode :: Maybe Text,
     specialLocationTag :: Maybe Text,
     toLocation :: DLoc.Location

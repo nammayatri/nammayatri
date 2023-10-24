@@ -1125,10 +1125,10 @@ getNearbySearchRequests (driverId, merchantId) = do
         DSR.SearchReqDetailsOnDemand searchReqDetails -> do
           let searchDetails = DSRD.OnDemandDetails $ DSRD.OnDemandSearchDetails {searchTry, searchReqDetails}
           return $ DSRD.makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchDetails bapMetadata popupDelaySeconds (Seconds 0) searchTry.vehicleVariant -- Seconds 0 as we don't know where he/she lies within the driver pool, anyways this API is not used in prod now.
-        DSR.SearchReqDetailsRental searchReqDetails -> do
+        DSR.SearchReqDetailsRental _ -> do
           bookingId <- nearbyReq.bookingId & fromMaybeM (InternalError "searchRequestForDriver field not present for RENTAL tag: bookingId")
           booking <- QB.findById bookingId >>= fromMaybeM (BookingNotFound bookingId.getId)
-          let searchDetails = DSRD.RentalDetails DSRD.RentalSearchDetails {booking, searchTry, searchReqDetails}
+          let searchDetails = DSRD.RentalDetails DSRD.RentalSearchDetails {booking, searchTry}
           return $ DSRD.makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchDetails bapMetadata popupDelaySeconds (Seconds 0) booking.vehicleVariant -- Seconds 0 as we don't know where he/she lies within the driver pool, anyways this API is not used in prod now.
     mkCancellationScoreRelatedConfig :: TransporterConfig -> CancellationScoreRelatedConfig
     mkCancellationScoreRelatedConfig tc = CancellationScoreRelatedConfig tc.popupDelayToAddAsPenalty tc.thresholdCancellationScore tc.minRidesForCancellationScore

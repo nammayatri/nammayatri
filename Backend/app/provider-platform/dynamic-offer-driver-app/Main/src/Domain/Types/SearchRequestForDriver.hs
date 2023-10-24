@@ -126,9 +126,8 @@ data OnDemandSearchDetails = OnDemandSearchDetails
   }
 
 data RentalSearchDetails = RentalSearchDetails
-  { searchTry :: DST.SearchTry, -- FIXME remove
-    booking :: DB.Booking,
-    searchReqDetails :: DSR.SearchRequestDetailsRental
+  { searchTry :: DST.SearchTry,
+    booking :: DB.Booking
   }
 
 makeSearchRequestForDriverAPIEntity :: SearchRequestForDriver -> DSR.SearchRequest -> SearchDetails -> Maybe DSM.BapMetadata -> Seconds -> Seconds -> Variant.Variant -> SearchRequestForDriverAPIEntity
@@ -140,9 +139,9 @@ makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchDetails bapMet
               newToLocation' = Just $ searchReqDetails.toLocation
               specialLocationTag' = searchReqDetails.specialLocationTag
           (DSR.ON_DEMAND, searchTry.baseFare, searchTry.customerExtraFee, distance', Nothing, newFromLocation', newToLocation', specialLocationTag')
-        RentalDetails RentalSearchDetails {booking, searchReqDetails} -> do
+        RentalDetails RentalSearchDetails {booking} -> do
           let distance' = booking.estimatedDistance
-              newFromLocation' = searchReqDetails.rentalFromLocation -- FIXME bookingDetails.fromLocation
+              newFromLocation' = booking.fromLocation
           (DSR.RENTAL, booking.estimatedFare, Nothing, distance', Just booking.estimatedDuration, newFromLocation', Nothing, Nothing)
   SearchRequestForDriverAPIEntity
     { searchRequestId = nearbyReq.searchTryId,
