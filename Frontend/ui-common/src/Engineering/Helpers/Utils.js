@@ -1,3 +1,5 @@
+const JBridge = window.JBridge;
+
 export const toggleLoaderIOS = function(flag){
   console.log("inside toggle loader")
   return JBridge.toggleLoader(flag);
@@ -16,24 +18,24 @@ export const getFromWindow = function (key) {
 
 export const saveToLocalStoreImpl = function(key) {
   return function (state) {
-      window.JBridge.setKeysInSharedPrefs(key, state);
-      return function () {
-      };
+    window.JBridge.setKeysInSharedPrefs(key, state);
+    return function () {
     };
+  };
 }
 
 export const fetchFromLocalStoreImpl = function(key) {
   return function (just) {
-      return function (nothing) {
-        return function () {
-          var state = JBridge.getFromSharedPrefs(key);
-          if (state != "__failed" && state != "(null)") {
-            return just(state);
-          }
-          return nothing;
-        };
+    return function (nothing) {
+      return function () {
+        const state = JBridge.getFromSharedPrefs(key);
+        if (state != "__failed" && state != "(null)") {
+          return just(state);
+        }
+        return nothing;
       };
     };
+  };
 }
 export const reboot = window.JOS.emitEvent("java")("onEvent")(JSON.stringify({event:"reboot"}))()
 
@@ -44,8 +46,8 @@ export const decrementMonth = function (month) {
   return function (year){
     try{
       const date = new Date(year, month-1, 1);
-      let d = { utcDate: date.toISOString(), date: date.getDate(), shortMonth: date.toLocaleString('default', { month: 'short' }), year: date.getFullYear(), intMonth : date.getMonth(),
-      isInRange : false, isStart: false , isEnd: false }
+      const d = { utcDate: date.toISOString(), date: date.getDate(), shortMonth: date.toLocaleString("default", { month: "short" }), year: date.getFullYear(), intMonth : date.getMonth(),
+        isInRange : false, isStart: false , isEnd: false }
       return d;
     } catch (e) {
       console.log("error in decrementMonth", e);
@@ -57,8 +59,8 @@ export const incrementMonth = function (month) {
   return function (year){
     try{
       const date = new Date(year, month+1, 1);
-      let d= { utcDate: date.toISOString(), date: date.getDate(), shortMonth: date.toLocaleString('default', { month: 'short' }), year: date.getFullYear(), intMonth : date.getMonth(),
-      isInRange : false, isStart: false , isEnd: false }
+      const d= { utcDate: date.toISOString(), date: date.getDate(), shortMonth: date.toLocaleString("default", { month: "short" }), year: date.getFullYear(), intMonth : date.getMonth(),
+        isInRange : false, isStart: false , isEnd: false }
       return d;
     } catch (e) {
       console.log("error in incrementMonth", e);
@@ -69,22 +71,22 @@ export const incrementMonth = function (month) {
 export const getWeeksInMonth = function (year) {
   return function (month) {
     try {
-      let result = []
-      var date = new Date(year, month, 1);
-      let diff = date.getDay();
+      const result = []
+      const date = new Date(year, month, 1);
+      const diff = date.getDay();
 
       let startPadding = diff;
       while (date.getMonth() == month){
-        let week = [];
-        for(var i = 0 ; i < 7; i++){
+        const week = [];
+        for(let i = 0 ; i < 7; i++){
           if(startPadding){
-            let obj = { utcDate: "", date: 0, shortMonth: "", year: year, intMonth: month,
-                        isInRange : false, isStart: false , isEnd: false }
+            const obj = { utcDate: "", date: 0, shortMonth: "", year: year, intMonth: month,
+              isInRange : false, isStart: false , isEnd: false }
             week.push(obj);
             startPadding --;
           }else{
-            let obj = { utcDate: date.toISOString(), date: date.getDate(), shortMonth: date.toLocaleString('default', { month: 'short' }), year: year, intMonth: month,
-                        isInRange : false, isStart: false , isEnd: false }
+            const obj = { utcDate: date.toISOString(), date: date.getDate(), shortMonth: date.toLocaleString("default", { month: "short" }), year: year, intMonth: month,
+              isInRange : false, isStart: false , isEnd: false }
             week.push(obj)
             date.setDate(date.getDate() + 1);
           }
@@ -94,8 +96,8 @@ export const getWeeksInMonth = function (year) {
         if(date.getMonth() != month && date.getDay() != 0) {
           let endPadding = 6 - date.getDay() + 1;
           while(endPadding --){
-            let obj = { utcDate: "", date: 0, shortMonth: "", year: year, intMonth: month,
-            isInRange : false, isStart: false , isEnd: false }
+            const obj = { utcDate: "", date: 0, shortMonth: "", year: year, intMonth: month,
+              isInRange : false, isStart: false , isEnd: false }
             week.push(obj);
           }
         }
@@ -109,7 +111,7 @@ export const getWeeksInMonth = function (year) {
 };
 
 export const getCurrentDay = function (dummy) {
-  var date = new Date();
-  return { utcDate: date.toISOString(), date: date.getDate(), shortMonth: date.toLocaleString('default', { month: 'short' }), year: date.getFullYear(), intMonth : date.getMonth(),
-           isInRange : false, isStart: false , isEnd: false }
+  const date = new Date();
+  return { utcDate: date.toISOString(), date: date.getDate(), shortMonth: date.toLocaleString("default", { month: "short" }), year: date.getFullYear(), intMonth : date.getMonth(),
+    isInRange : false, isStart: false , isEnd: false }
 }

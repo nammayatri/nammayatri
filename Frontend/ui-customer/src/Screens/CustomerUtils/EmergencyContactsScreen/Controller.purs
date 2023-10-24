@@ -13,7 +13,7 @@ import Screens (ScreenName(..), getScreen)
 import JBridge (toast)
 import Screens.Types (EmergencyContactsScreenState , ContactDetail, NewContacts, NewContactsProp)
 import Data.Array (length, sortBy, filter, snoc, elem, null, unionBy, elem, head, tail, catMaybes, (!!), take, last, slice, union)
-import Helpers.Utils (storeCallBackContacts, parseNewContacts, contactPermission, setText, toString, setEnabled, setRefreshing)
+import Helpers.Utils (storeCallBackContacts, parseNewContacts, contactPermission, setText, toStringJSON, setEnabled, setRefreshing)
 import Log (printLog)
 import Screens.EmergencyContactsScreen.Transformer (getContactList)
 import Language.Strings (getString)
@@ -121,7 +121,7 @@ eval (ContactListScrollStateChanged scrollState) state = continue state
 
 eval (PopUpModalAction PopUpModal.OnButton2Click) state = do
   let newContacts = filter (\x -> x.number <> x.name /= state.data.removedContactDetail.number <> state.data.removedContactDetail.name) state.data.contactsList
-  contactsInString <- pure $ toString newContacts
+  contactsInString <- pure $ toStringJSON newContacts
   _ <- pure $ setValueToLocalStore CONTACTS contactsInString
   exit $ PostContacts state{data{contactsList = newContacts}}
 
@@ -303,7 +303,7 @@ eval (ContactListPrimaryButtonActionController PrimaryButton.OnClick) state = do
       contact {number =  DS.drop ((DS.length contact.number) - 10) contact.number}
     else contact
   ) selectedContacts)
-  contactsInString <- pure $ toString validSelectedContacts
+  contactsInString <- pure $ toStringJSON validSelectedContacts
   _ <- pure $ setValueToLocalStore CONTACTS contactsInString
   updateAndExit state $ PostContacts state{data{editedText = "", contactsList = validSelectedContacts, prestoListArrayItems = [], offsetForEmergencyContacts = 0}, props{showContactList = false}}
 

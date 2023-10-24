@@ -26,7 +26,7 @@ import Services.API (GetRidesHistoryResp,IssueReportDriverListItem(..),Status(..
 import Language.Types(STR(..))
 import Services.Config (getSupportNumber)
 import JBridge (showDialer)
-import Helpers.Utils (getTime,getCurrentUTC,differenceBetweenTwoUTC,toString)
+import Helpers.Utils (getTime,getCurrentUTC,differenceBetweenTwoUTC,toStringJSON)
 import Data.Array (foldr,cons,filter,reverse)
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppScreenEvent)
 import Components.IssueListFlow as IssueListFlow
@@ -132,12 +132,12 @@ getApiIssueList issueList = (map (\(IssueReportDriverListItem issue) -> {
 }) issueList)
 
 getExactTime :: Int -> String
-getExactTime sec = if (sec > 31536000) then (toString (sec / 31536000)) <> (" ") <> (getString YEARS_AGO)
-                    else if (sec > 2592000) then (toString (sec / 2592000)) <> (" ") <> (getString MONTHS_AGO)
-                    else if  (sec > 86400) then (toString (sec / 86400)) <> (" ") <> (getString DAYS_AGO)
-                    else if (sec > 3600) then (toString (sec / 3600)) <> (" ") <> (getString HOURS_AGO)
-                    else if  (sec > 60) then (toString (sec / 60)) <> (" ") <> (getString MIN_AGO)
-                    else (toString (sec) <> (" ") <> (getString SEC_AGO))
+getExactTime sec = if (sec > 31536000) then (toStringJSON (sec / 31536000)) <> (" ") <> (getString YEARS_AGO)
+                    else if (sec > 2592000) then (toStringJSON (sec / 2592000)) <> (" ") <> (getString MONTHS_AGO)
+                    else if  (sec > 86400) then (toStringJSON (sec / 86400)) <> (" ") <> (getString DAYS_AGO)
+                    else if (sec > 3600) then (toStringJSON (sec / 3600)) <> (" ") <> (getString HOURS_AGO)
+                    else if  (sec > 60) then (toStringJSON (sec / 60)) <> (" ") <> (getString MIN_AGO)
+                    else (toStringJSON (sec) <> (" ") <> (getString SEC_AGO))
 
 getUpdatedIssueList :: String -> Array IssueInfo -> Array IssueInfo
 getUpdatedIssueList status list = (filter (\(issue) -> ((issue.status == status)||(status /= "RESOLVED" && issue.status /= "RESOLVED")) ) list )

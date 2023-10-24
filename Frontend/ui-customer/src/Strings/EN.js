@@ -1,11 +1,3 @@
-export function getStringValue(key) {
-  if (key in englishStrings) {
-    return englishStrings[key];
-  }
-  console.error(key + " not found in englishStrings");
-  return "";
-}
-
 const englishStrings = {
   "DOWNLOAD_INVOICE": "Download Invoice",
   "REPORT_AN_ISSUE": "Report an Issue",
@@ -429,8 +421,6 @@ const englishStrings = {
   "TRY_LOOKING_FOR_RIDES_AGAIN": "It seems to be a very busy day. You may try looking for rides again",
   "NO_TIP": "₹0 Tip",
   "CUSTOMER_TIP_DESCRIPTION": "^Extra amount added by the customer to increase the chances of getting a ride.",
-  "PLEASE_WAIT_I_WILL_BE_THERE": "Please wait, I'll be there",
-  "UNREACHABLE_PLEASE_CALL_BACK": "Unreachable, Please call back",
   "PLACE_CALL": "Place Call",
   "DIRECT_CALL": "Direct Call",
   "ANONYMOUS_CALL": "Anonymous Call",
@@ -576,7 +566,6 @@ const englishStrings = {
   "FINDING_QUOTES_TEXT": "Searching for cabs around",
   "FASTER" : "Faster",
   "NEW_" : "New",
-  "PLATFORM_FEE" : "Platform Fee",
   "SGST" : "SGST",
   "OTP_EXPIRED" : "Otp Expired",
   "OTP_EXPIRED_DESCRIPTION" : "Your ride OTP expired. Please book again to get a ride",
@@ -628,4 +617,12 @@ const englishStrings = {
   "HELP" : "Help",
   "FARE_INFO_TEXT" : "",
   "PLEASE_ENABLE_LOCATION_PERMISSION" : "Please enable location permissions from the settings app to start looking for rides."
+}
+
+export function getStringValue(key) {
+  if (key in englishStrings) {
+    return englishStrings[key];
+  }
+  console.error(key + " not found in englishStrings");
+  return "";
 }

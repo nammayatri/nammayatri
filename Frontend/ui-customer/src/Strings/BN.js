@@ -1,11 +1,3 @@
-export function getStringValue(key) {
-  if (key in bengaliStrings) {
-    return bengaliStrings[key];
-  }
-  console.error(key + " key not found in bengaliStrings");
-  return "";
-}
-
 const bengaliStrings = {
   "DOWNLOAD_INVOICE": "চালান ডাউনলোড করুন",
   "REPORT_AN_ISSUE": "সমস্যা বিবৃতি করুন",
@@ -369,10 +361,8 @@ const bengaliStrings = {
   "BOARD_THE_FIRST" : "যাত্রী সাথী জোন থেকে প্রথম",
   "TAXI" : "ট্যাক্সিতে ",
   "TAXI_FROM_ZONE" : "চড়ুন",
-  "TAXI" : "ট্যাক্সিতে" ,
   "AC" : "এসি",
   "NON_AC" : "নন-এসি",
-  "TAXI_FROM_ZONE" : "চড়ুন",
   "PAY_VIA_CASH_OR_UPI" : "নগদ / UPI এর মাধ্যমে অর্থ প্রদান করুন",
   "LET_TRY_THAT_AGAIN": "Let's try that again...",
   "EMERGENCY_CONTACS_ADDED_SUCCESSFULLY": "জরুরী যোগাযোগ সফলভাবে যোগ করা হয়েছে",
@@ -488,7 +478,6 @@ const bengaliStrings = {
   "DRIVER_PREFERRED_YOUR_SPECIAL_REQUEST": "ড্রাইভার আপনার বিশেষ অনুরোধকে অগ্রাধিকার দিয়েছে এবং ইতিমধ্যে ",
   "AND_HAS_TRAVELLED": " ভ্রমণ করেছে।",
   "PLEASE_FIND_REVISED_FARE_ESTIMATE": "অনুগ্রহ করে সংশোধিত আনুমানিক ভাড়া খুঁজুন। রাতের চার্জ দিনের চার্জের 1.5 গুণ।",
-  "GO_TO_ZONE" : "যাত্রী সাথী জোনে যান" ,
   "FARE_ESTIMATE" : "ভাড়া অনুমান" ,
   "TIP_SELECTED" : "টিপ নির্বাচিত",
   "ADD_A_TIP_TO_FIND_A_RIDE_QUICKER" : "দ্রুত একটি রাইড খুঁজে পেতে একটি টিপ যোগ করুন!",
@@ -511,25 +500,6 @@ const bengaliStrings = {
   "HATCHBACK" : "হ্যাচব্যাক",
   "SUV" : "এসইউভি",
   "SEDAN" : "সেডান",
-  "CHANGE_OF_PLANS" : "পরিকল্পনার পরিবর্তন",
-  "DRIVER_IS_NOT_MOVING" : "চালক নড়ছে না",
-  "WRONG_PICKUP_LOCATION" : "ভুল পিক আপ অবস্থান",
-  "DRIVER_MIGHT_BE_TAKING_ALTERNATE_ROUTE" : "চালক হয়তো বিকল্প পথ নিচ্ছেন।",
-  "DRIVER_IS_NOT_MOVING_Q" : "চালক নড়ছে না?",
-  "WOULD_YOU_LIKE_TO_CHECK_WITH_THE_DRIVER_BEFORE_CANCELLING" : "\nআপনি বাতিল করার আগে ড্রাইভারের সাথে চেক করতে চান?",
-  "DRIVER_IS_NEAR_YOUR_LOCATION" : "ড্রাইভার আপনার অবস্থানের কাছাকাছি আছে.",
-  "SOME_OTHER_REASON" : "অন্য কোনো কারণ।",
-  "NO_LONGER_REQUIRE_A_RIDE_DUE_TO_CHANGE_IN_PLANS" : "পরিকল্পনা পরিবর্তনের কারণে আর যাত্রার প্রয়োজন নেই",
-  "CANCELLING_AS_I_GOT_A_RIDE_ON_ANOTHER_APP" : "আমি অন্য অ্যাপে রাইড পেয়েছি বলে বাতিল করা হচ্ছে",
-  "DRIVER_LOCATION_WASNT_CHANGING_ON_THE_MAP" : "ম্যাপে ড্রাইভারের অবস্থান পরিবর্তন করা হয়নি",
-  "DRIVER_WAS_TAKING_TOO_LONG_TO_REACH_THE_PICKUP_LOCATION" : "চালক পিকআপ অবস্থানে পৌঁছতে অনেক সময় নিচ্ছিলেন",
-  "THE_PICKUP_LOCATION_ENTERED_WAS_WRONG" : "প্রবেশ করা পিকআপ অবস্থান ভুল ছিল",
-  "YOUR_DRIVER_IS_JUST" : "আপনার ড্রাইভার মাত্র ",
-  "M_AWAY" : " মিটার দূরে.",
-  "DRIVER_HAS_ALREADY_TRAVELLED" : "ড্রাইভার ইতিমধ্যে ",
-  "HAS_TRAVELLED" : " ভ্রমণ করেছেন",
-  "PLEASE_CONTACT_THE_DRIVER_BEFORE_CANCELLING" : "\nবাতিল করার আগে ড্রাইভারের সাথে যোগাযোগ করুন",
-  "WAIT_FOR_DRIVER" : "ড্রাইভারের জন্য অপেক্ষা করুন",
   "DRIVER_IS_ALREADY_ON_THE_WAY_TO_YOUR_LOCATION" : "ড্রাইভার ইতিমধ্যে আপনার অবস্থানের পথে আছে.",
   "OTP_PAGE_HAS_BEEN_EXPIRED_PLEASE_REQUEST_OTP_AGAIN" : "OTP পৃষ্ঠার মেয়াদ শেষ হয়ে গেছে, অনুগ্রহ করে আবার OTP অনুরোধ করুন",
   "OTP_ENTERING_LIMIT_EXHAUSTED_PLEASE_TRY_AGAIN_LATER" : "OTP ইনপুট সীমা পৌঁছে গেছে, অনুগ্রহ করে পরে আবার চেষ্টা করুন",
@@ -590,9 +560,6 @@ const bengaliStrings = {
   "ASKED_FOR_EXTRA_FARE": "বাড়তি ভাড়া চেয়েছেন",
   "ANYTHING_THAT_YOU_WOULD_LIKE_TO_TELL_US" : "আপনি আমাদের বলতে চান যে কিছু? (ঐচ্ছিক)",
   "PLEASE_WAIT" : "অনুগ্রহপূর্বক অপেক্ষা করুন",
-  "EMAIL_EXISTS_ALREADY" : "ই - মেইল   টি আগে থেকেই আছে",
-  "PLATFORM_FEE" : "প্ল্যাটফর্ম ফি",
-  "EMAIL_EXISTS_ALREADY" : "ই - মেইল   টি আগে থেকেই আছে",
   "PLATFORM_FEE" : "প্ল্যাটফর্ম ফি",
   "SGST" : "এসজিএসটি",
   "OTP_EXPIRED" : "OTP মেয়াদ শেষ",
@@ -645,4 +612,12 @@ const bengaliStrings = {
   "FARE_INFO_TEXT" : "",
   "FASTER" : "দ্রুততর",
   "PLEASE_ENABLE_LOCATION_PERMISSION" : "অনুগ্রহ করে রাইড খোঁজা শুরু করতে সেটিংস অ্যাপ থেকে অবস্থানের অনুমতি সক্ষম করুন।"
+}
+
+export function getStringValue(key) {
+  if (key in bengaliStrings) {
+    return bengaliStrings[key];
+  }
+  console.error(key + " key not found in bengaliStrings");
+  return "";
 }

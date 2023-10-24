@@ -23,7 +23,7 @@ import Effect (Effect)
 import Engineering.Helpers.Commons (getNewIDWithTag)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (toString)
+import Helpers.Utils (toStringJSON)
 import JBridge (startLottieProcess, lottieAnimationConfig)
 import Language.Strings (getString)
 import Language.Types (STR(..))
@@ -107,4 +107,4 @@ lottieLoaderView state push activeIndex text =
   ]
 
 getIdForScreenIndex :: Int -> String
-getIdForScreenIndex activeIndex = getNewIDWithTag ("NotificationBellAlertView" <> (toString activeIndex))
+getIdForScreenIndex activeIndex = getNewIDWithTag ("NotificationBellAlertView" <> (toStringJSON activeIndex))

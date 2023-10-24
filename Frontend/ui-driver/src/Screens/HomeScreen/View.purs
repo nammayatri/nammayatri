@@ -154,10 +154,10 @@ screen initialState =
                                   else pure unit
                                 push GetMessages
             "RideStarted"    -> do
-                                _ <- pure $ setValueToLocalNativeStore RIDE_START_LAT (HU.toString initialState.data.activeRide.src_lat)
-                                _ <- pure $ setValueToLocalNativeStore RIDE_START_LON (HU.toString initialState.data.activeRide.src_lon)
-                                _ <- pure $ setValueToLocalNativeStore RIDE_END_LAT (HU.toString initialState.data.activeRide.dest_lat)
-                                _ <- pure $ setValueToLocalNativeStore RIDE_END_LON (HU.toString initialState.data.activeRide.dest_lon)
+                                _ <- pure $ setValueToLocalNativeStore RIDE_START_LAT (HU.toStringJSON initialState.data.activeRide.src_lat)
+                                _ <- pure $ setValueToLocalNativeStore RIDE_START_LON (HU.toStringJSON initialState.data.activeRide.src_lon)
+                                _ <- pure $ setValueToLocalNativeStore RIDE_END_LAT (HU.toStringJSON initialState.data.activeRide.dest_lat)
+                                _ <- pure $ setValueToLocalNativeStore RIDE_END_LON (HU.toStringJSON initialState.data.activeRide.dest_lon)
                                 _ <- pure $ setValueToLocalNativeStore WAYPOINT_DEVIATION_COUNT "0"
                                 _ <- pure $ setValueToLocalNativeStore TOLERANCE_EARTH "100.0"
                                 _ <- pure $ setValueToLocalStore RIDE_G_FREQUENCY "50000"

@@ -49,7 +49,7 @@ import Engineering.Helpers.Utils (loaderText, toggleLoader)
 import Foreign (MultipleErrors, unsafeToForeign)
 import Foreign.Class (class Encode, encode)
 import Foreign.Generic (decodeJSON, encodeJSON)
-import Helpers.Utils (decodeError, addToPrevCurrLoc, addToRecentSearches, adjustViewWithKeyboard, checkPrediction, clearWaitingTimer, differenceOfLocationLists, drawPolygon, filterRecentSearches, getAssetStoreLink, getCurrentDate, getCurrentLocationMarker, getCurrentLocationsObjFromLocal, getDistanceBwCordinates, getGlobalPayload, getMobileNumber, getNewTrackingId, getObjFromLocal, getPrediction, getRecentSearches, getScreenFromStage, getSearchType, parseFloat, parseNewContacts, removeLabelFromMarker, requestKeyboardShow, saveCurrentLocations, seperateByWhiteSpaces, setText, showCarouselScreen, sortPredctionByDistance, toString, triggerRideStatusEvent, withinTimeRange, fetchDefaultPickupPoint, recentDistance)
+import Helpers.Utils (decodeError, addToPrevCurrLoc, addToRecentSearches, adjustViewWithKeyboard, checkPrediction, clearWaitingTimer, differenceOfLocationLists, drawPolygon, filterRecentSearches, getAssetStoreLink, getCurrentDate, getCurrentLocationMarker, getCurrentLocationsObjFromLocal, getDistanceBwCordinates, getGlobalPayload, getMobileNumber, getNewTrackingId, getObjFromLocal, getPrediction, getRecentSearches, getScreenFromStage, getSearchType, parseFloat, parseNewContacts, removeLabelFromMarker, requestKeyboardShow, saveCurrentLocations, seperateByWhiteSpaces, setText, showCarouselScreen, sortPredctionByDistance, toStringJSON, triggerRideStatusEvent, withinTimeRange, fetchDefaultPickupPoint, recentDistance)
 import JBridge (addMarker, cleverTapSetLocation, currentPosition, drawRoute, emitJOSEvent, enableMyLocation, factoryResetApp, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, firebaseUserID, generateSessionId, getLocationPermissionStatus, getVersionCode, getVersionName, hideKeyboardOnNavigation, hideLoader, initiateLocationServiceClient, isCoordOnPath, isInternetAvailable, isLocationEnabled, isLocationPermissionEnabled, launchInAppRatingPopup, locateOnMap, locateOnMapConfig, metaLogEvent, openNavigation, reallocateMapFragment, removeAllPolylines, saveSuggestionDefs, saveSuggestions, setCleverTapUserData, setCleverTapUserProp, setFCMTokenWithTimeOut, stopChatListenerService, toast, toggleBtnLoader, updateRoute, updateRouteMarker)
 import Language.Strings (getString)
 import Language.Types (STR(..))
@@ -751,7 +751,7 @@ homeScreenFlow = do
       routeResponse <- Remote.drawMapRoute state.props.sourceLat state.props.sourceLong state.props.destinationLat state.props.destinationLong (Remote.normalRoute "") "NORMAL" state.data.source state.data.destination rideSearchRes.routeInfo "pickup" (specialLocationConfig "" "" false getPolylineAnimationConfig) 
       case rideSearchRes.routeInfo of
         Just (Route response) -> do
-          let distance = if response.distance < 1000 then toString(response.distance)  <> " m" else parseFloat(INT.toNumber(response.distance) / 1000.0) 2 <> " km"
+          let distance = if response.distance < 1000 then toStringJSON(response.distance)  <> " m" else parseFloat(INT.toNumber(response.distance) / 1000.0) 2 <> " km"
               duration = (show (response.duration / 60)) <> " min"
               Snapped points = response.points
           case head points, last points of
@@ -1387,7 +1387,7 @@ homeScreenFlow = do
           name: item.name,
           isSelected: true
         }) res.defaultEmergencyNumbers
-      contactsInString <- pure $ toString contacts
+      contactsInString <- pure $ toStringJSON contacts
       _ <- pure $ setValueToLocalStore CONTACTS (contactsInString)
       contactsInJson <- pure $ parseNewContacts contactsInString
       let newContacts = transformContactList contactsInJson
@@ -1495,7 +1495,7 @@ rideSearchFlow flowType = do
               routeResponse <- Remote.drawMapRoute finalState.props.sourceLat finalState.props.sourceLong finalState.props.destinationLat finalState.props.destinationLong (Remote.normalRoute "") "NORMAL" address.formattedAddress finalState.data.destination rideSearchRes.routeInfo "pickup" (specialLocationConfig sourceSpecialTagIcon destSpecialTagIcon false getPolylineAnimationConfig) 
               case rideSearchRes.routeInfo of
                 Just (Route response) -> do
-                  let distance = if response.distance < 1000 then toString(response.distance)  <> " m" else parseFloat(INT.toNumber(response.distance) / 1000.0) 2 <> " km"
+                  let distance = if response.distance < 1000 then toStringJSON(response.distance)  <> " m" else parseFloat(INT.toNumber(response.distance) / 1000.0) 2 <> " km"
                       duration = (show (response.duration / 60)) <> " min"
                       Snapped points = response.points
                   case head points, last points of
@@ -1722,7 +1722,7 @@ emergencyScreenFlow = do
           name: item.name,
           isSelected: true
         }) res.defaultEmergencyNumbers
-      contactsInString <- pure $ toString contacts
+      contactsInString <- pure $ toStringJSON contacts
       _ <- pure $ setValueToLocalStore CONTACTS (contactsInString)
       modifyScreenState $  EmergencyContactsScreenStateType (\emergencyContactsScreen -> state{data{contactsList = contacts}})
       emergencyScreenFlow

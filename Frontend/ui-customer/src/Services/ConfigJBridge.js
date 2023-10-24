@@ -1,3 +1,4 @@
+const JBridge = window.JBridge;
 export const getKeyInSharedPrefKeysConfig = function (key) {
   return JBridge.getKeysInSharedPref(key);
 };

@@ -72,7 +72,7 @@ import Engineering.Helpers.LogEvent (logEvent, logEventWithTwoParams, logEventWi
 import Engineering.Helpers.Suggestions (getMessageFromKey, getSuggestionsfromKey)
 import Foreign (unsafeToForeign)
 import Foreign.Class (encode)
-import Helpers.Utils (addToRecentSearches, getCurrentLocationMarker, clearCountDownTimer, getDistanceBwCordinates, getLocationName, getScreenFromStage, getSearchType, parseNewContacts, performHapticFeedback, setText, terminateApp, withinTimeRange, toString, secondsToHms, recentDistance)
+import Helpers.Utils (addToRecentSearches, getCurrentLocationMarker, clearCountDownTimer, getDistanceBwCordinates, getLocationName, getScreenFromStage, getSearchType, parseNewContacts, performHapticFeedback, setText, terminateApp, withinTimeRange, toStringJSON, secondsToHms, recentDistance)
 import JBridge (addMarker, animateCamera, currentPosition, exitLocateOnMap, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, getCurrentPosition, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, locateOnMap, minimizeApp, openNavigation, openUrlInApp, removeAllPolylines, removeMarker, requestKeyboardShow, requestLocation, shareTextMessage, showDialer, toast, toggleBtnLoader, goBackPrevWebPage, stopChatListenerService, sendMessage, getCurrentLatLong, isInternetAvailable, emitJOSEvent, startLottieProcess, getSuggestionfromKey, scrollToEnd, lottieAnimationConfig, methodArgumentCount, getChatMessages, scrollViewFocus, updateInputString, checkAndAskNotificationPermission, locateOnMapConfig)
 import Language.Strings (getString, getEN)
 import Language.Types (STR(..))
@@ -2331,8 +2331,8 @@ specialZoneRideFlow  (RideBookingRes response) state = do
   exit $ RideConfirmed newState { props { isInApp = true } }
 
 getRateCardArray :: Boolean -> String -> Int -> Int -> Int -> Array {title :: String , description :: String}
-getRateCardArray nightCharges lang baseFare extraFare additionalFare = ([ { title :( if (lang == "EN_US") then (getString MIN_FARE_UPTO) <> " 2 km" else "2 km " <> (getString MIN_FARE_UPTO) ) <> if nightCharges then " 🌙" else "" , description : "₹" <> toString (baseFare) }
-                      , { title : (getString RATE_ABOVE_MIN_FARE) <> if nightCharges then " 🌙" else "", description : "₹" <> toString (extraFare) <> " / km"} ]
+getRateCardArray nightCharges lang baseFare extraFare additionalFare = ([ { title :( if (lang == "EN_US") then (getString MIN_FARE_UPTO) <> " 2 km" else "2 km " <> (getString MIN_FARE_UPTO) ) <> if nightCharges then " 🌙" else "" , description : "₹" <> toStringJSON (baseFare) }
+                      , { title : (getString RATE_ABOVE_MIN_FARE) <> if nightCharges then " 🌙" else "", description : "₹" <> toStringJSON (extraFare) <> " / km"} ]
                       <> if (getMerchant FunctionCall) == NAMMAYATRI && additionalFare > 0 then [ {title : (getString DRIVER_ADDITIONS) , description : (getString PERCENTAGE_OF_NOMINAL_FARE)}] else [])
 
 findingQuotesSearchExpired :: Boolean -> Int

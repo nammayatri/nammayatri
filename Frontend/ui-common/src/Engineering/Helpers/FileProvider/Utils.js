@@ -1,5 +1,6 @@
+const JBridge = window.JBridge;
 function isObject(item) {
-  return (item && typeof item === 'object' && !Array.isArray(item));
+  return (item && typeof item === "object" && !Array.isArray(item));
 }
 
 export const appendConfigToDocument = function (data) {
@@ -14,8 +15,25 @@ export const appendConfigToDocument = function (data) {
 }
 
 export const mergeforegin = function (object) {
-  var finalObject;
-  for (var i = 0; i < object.length; i++) {
+  let finalObject;
+  function mergeObjects(obj1, obj2) {
+    const returnObject = Object.assign({}, obj1);
+    Object.keys(obj2).forEach(key => {
+      if (isObject(obj2[key])) {
+        if (!(key in returnObject))
+          Object.assign(returnObject, {
+            [key]: obj2[key]
+          });
+        else
+          returnObject[key] = mergeObjects(returnObject[key], obj2[key]);
+      } else {
+        returnObject[key] = obj2[key];
+      }
+    });
+    return returnObject;
+  }
+
+  for (let i = 0; i < object.length; i++) {
     let currentObject;
     if (isObject(object[i])) {
       currentObject = object[i];
@@ -26,18 +44,7 @@ export const mergeforegin = function (object) {
       finalObject = Object.assign({}, currentObject);
       continue;
     } else {
-      Object.keys(currentObject).forEach(key => {
-        if (isObject(currentObject[key])) {
-          if (!(key in finalObject))
-            Object.assign(finalObject, {
-              [key]: currentObject[key]
-            });
-          else
-            finalObject[key] = mergeforegin([finalObject[key], currentObject[key]]);
-        } else {
-          finalObject[key] = currentObject[key];
-        }
-      });
+      finalObject = mergeObjects(finalObject, currentObject);
     }
   }
   return finalObject;
@@ -46,7 +53,7 @@ export const mergeforegin = function (object) {
 export const loadInWindow = function (key, value) {
   try { // Checking whether it is a Stringified JSON
     window[key] = JSON.parse(value);
-  } catch {
+  } catch (err){
     window[key] = value;
   }
 }

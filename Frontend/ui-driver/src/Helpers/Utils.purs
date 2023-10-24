@@ -93,7 +93,7 @@ foreign import differenceBetweenTwoUTC :: String -> String -> Int
 foreign import clearTimer :: String -> Unit
 foreign import clearPopUpTimer :: String -> Unit
 foreign import clearAllTimer :: String -> Unit
-foreign import toString :: forall a. a-> String
+foreign import toStringJSON :: forall a. a-> String
 foreign import toInt :: forall a. a -> String
 foreign import setRefreshing :: String -> Boolean -> Unit
 foreign import setEnabled :: String -> Boolean -> Unit

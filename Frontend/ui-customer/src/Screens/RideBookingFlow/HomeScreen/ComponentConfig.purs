@@ -517,7 +517,7 @@ shortDistanceConfig state =
       config'
         { backgroundClickable = false
         , primaryText
-          { text = (getString YOUR_TRIP_IS_TOO_SHORT_YOU_ARE_JUST) <> HU.toString (state.props.distance) <> (getString METERS_AWAY_FROM_YOUR_DESTINATION)
+          { text = (getString YOUR_TRIP_IS_TOO_SHORT_YOU_ARE_JUST) <> HU.toStringJSON (state.props.distance) <> (getString METERS_AWAY_FROM_YOUR_DESTINATION)
           , margin = (Margin 16 20 16 0)
           }
         , secondaryText
@@ -584,7 +584,7 @@ rateCardConfig state =
     rateCardConfig' =
       config'
         { nightCharges = state.data.rateCard.nightCharges
-        , nightShiftMultiplier = HU.toString (state.data.rateCard.nightShiftMultiplier)
+        , nightShiftMultiplier = HU.toStringJSON (state.data.rateCard.nightShiftMultiplier)
         , currentRateCardType = state.data.rateCard.currentRateCardType
         , onFirstPage = state.data.rateCard.onFirstPage
         , showDetails = state.data.config.searchLocationConfig.showRateCardDetails
@@ -593,8 +593,8 @@ rateCardConfig state =
         , buttonText = Just if state.data.rateCard.currentRateCardType == DefaultRateCard then (getString GOT_IT) else (getString GO_BACK_)
         , driverAdditionsImage = if (state.data.config.autoVariantEnabled && state.data.rateCard.vehicleVariant == "AUTO_RICKSHAW") then "ny_ic_driver_addition_table2,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_driver_addition_table2.png" 
                                    else "ny_ic_driver_additions_yatri,https://assets.juspay.in/beckn/yatri/user/images/ny_ic_driver_additions_yatri.png" 
-        , applicableCharges = if state.data.rateCard.nightCharges && state.data.rateCard.vehicleVariant == "AUTO_RICKSHAW" then (getString NIGHT_TIMES_OF) <> (HU.toString (state.data.rateCard.nightShiftMultiplier)) <> (getString DAYTIME_CHARGES_APPLIED_AT_NIGHT)
-                                 else (getString DAY_TIMES_OF) <> (HU.toString (state.data.rateCard.nightShiftMultiplier)) <> (getString DAYTIME_CHARGES_APPLICABLE_AT_NIGHT)
+        , applicableCharges = if state.data.rateCard.nightCharges && state.data.rateCard.vehicleVariant == "AUTO_RICKSHAW" then (getString NIGHT_TIMES_OF) <> (HU.toStringJSON (state.data.rateCard.nightShiftMultiplier)) <> (getString DAYTIME_CHARGES_APPLIED_AT_NIGHT)
+                                 else (getString DAY_TIMES_OF) <> (HU.toStringJSON (state.data.rateCard.nightShiftMultiplier)) <> (getString DAYTIME_CHARGES_APPLICABLE_AT_NIGHT)
         , title = case MU.getMerchant FunctionCall of
                       MU.NAMMAYATRI -> getString RATE_CARD
                       MU.YATRI -> getVehicleTitle state.data.rateCard.vehicleVariant
@@ -668,9 +668,9 @@ getVehicleTitle vehicle =
 
 nyRateCardList :: ST.HomeScreenState -> Array FareList
 nyRateCardList state =
-  ([{key : ((getString MIN_FARE_UPTO) <> if state.data.rateCard.nightCharges then " 🌙" else ""), val : ("₹" <> HU.toString (state.data.rateCard.baseFare))},
-    {key : ((getString RATE_ABOVE_MIN_FARE) <> if state.data.rateCard.nightCharges then " 🌙" else ""), val : ("₹" <> HU.toString (state.data.rateCard.extraFare) <> "/ km")},
-    {key : (getString DRIVER_PICKUP_CHARGES), val : ("₹" <> HU.toString (state.data.rateCard.pickUpCharges))}
+  ([{key : ((getString MIN_FARE_UPTO) <> if state.data.rateCard.nightCharges then " 🌙" else ""), val : ("₹" <> HU.toStringJSON (state.data.rateCard.baseFare))},
+    {key : ((getString RATE_ABOVE_MIN_FARE) <> if state.data.rateCard.nightCharges then " 🌙" else ""), val : ("₹" <> HU.toStringJSON (state.data.rateCard.extraFare) <> "/ km")},
+    {key : (getString DRIVER_PICKUP_CHARGES), val : ("₹" <> HU.toStringJSON (state.data.rateCard.pickUpCharges))}
     ]) <> (if (MU.getMerchant FunctionCall) == MU.NAMMAYATRI && (state.data.rateCard.additionalFare > 0) then
     [{key : (getString DRIVER_ADDITIONS), val : (getString PERCENTAGE_OF_NOMINAL_FARE)}] else [])
 
@@ -759,7 +759,7 @@ metersToKm :: Int -> ST.HomeScreenState -> String
 metersToKm distance state =
   if (distance <= 10) then
     (if (state.props.currentStage == ST.RideStarted) then (getString AT_DROP) else (getString AT_PICKUP))
-  else if (distance < 1000) then (HU.toString distance <> " m " <> (getString AWAY_C)) else (HU.parseFloat ((INT.toNumber distance) / 1000.0)) 2 <> " km " <> (getString AWAY_C)
+  else if (distance < 1000) then (HU.toStringJSON distance <> " m " <> (getString AWAY_C)) else (HU.parseFloat ((INT.toNumber distance) / 1000.0)) 2 <> " km " <> (getString AWAY_C)
 
 
 driverInfoTransformer :: ST.HomeScreenState -> DriverInfoCardData

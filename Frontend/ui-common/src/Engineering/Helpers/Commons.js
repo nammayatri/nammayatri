@@ -2,7 +2,7 @@ import { callbackMapper as PrestoCallbackMapper } from "presto-ui";
 
 const { JBridge, Android } = window;
 
-var countDownTimers = {};
+const countDownTimers = {};
 
 export const getOs = function () {
   if (window.__OS) {
@@ -30,19 +30,6 @@ const getEncodedData = function(data) {
   return data;
 }
 
-
-export const showUIImpl = function (sc, screen) {
-  return function () {
-    var screenJSON = JSON.parse(screen);
-    var screenName = screenJSON.tag;
-    screenJSON.screen = screenName;
-    if (screenName == "InitScreen") {
-      screenJSON.screen = "INIT_UI";
-    }
-    window.__duiShowScreen(sc, screenJSON);
-  };
-};
-
 export const getNewIDWithTag = function(tag){
   window.__usedID = window.__usedID || {}
   window.__usedID[tag] = window.__usedID[tag] || "" + window.createPrestoElement().__id;
@@ -54,7 +41,7 @@ export const callAPI = function () {
 }
 
 export const callAPIWithOptions = function () {
-  if (typeof window.JBridge.callAPIWithOptions == 'function') {
+  if (typeof window.JBridge.callAPIWithOptions == "function") {
     return window.JBridge.callAPIWithOptions(arguments[0], arguments[1], getEncodedData(arguments[2]), getEncodedData(arguments[3]), arguments[4], arguments[5], arguments[6], arguments[7]);
   } else {
     return window.JBridge.callAPI(arguments[0], arguments[1], getEncodedData(arguments[2]), getEncodedData(arguments[3]), arguments[4], arguments[5], arguments[7]);
@@ -86,53 +73,36 @@ export const getWindowVariable = function(key) {
 }
 
 export const setWindowVariableImpl = function(key) {
-    return function(value) {
-      return function() {
-        if(typeof window !== "undefined") {
-           window[key] =value;
-        }
-        return;
+  return function(value) {
+    return function() {
+      if(typeof window !== "undefined") {
+        window[key] =value;
       }
+        
     }
+  }
 }
 
 export const callSahay = function (request) {
-    return function (_error, success) {
-      window.__HANDLERLSP = function (response) {
-        var reqJson = JSON.parse(request);
-        var resJson = JSON.parse(response);
+  return function (_error, success) {
+    window.__HANDLERLSP = function (response) {
+      const reqJson = JSON.parse(request);
+      const resJson = JSON.parse(response);
 
-        if (reqJson.event != resJson.event) {
-          console.error("callSahay", "Got response for different event", "Expected", reqJson.event, "Received", resJson.event);
-        }
-
-        console.warn("callSahay", "Got response", response);
-        success(response);
+      if (reqJson.event != resJson.event) {
+        console.error("callSahay", "Got response for different event", "Expected", reqJson.event, "Received", resJson.event);
       }
 
-      console.warn("callSahay", "Sending payload", request);
-      window.JBridge.processWithSdk(request);
-
-      // return function() {};
-    };
-  };
-
-export const setScreenImpl = function(screen) {
-  return function() {
-    setTimeout(function() {
-      if(window.idToBeRemoved) {
-          Android.runInUI("set_VIEW=ctx->findViewById:i_" + window.idToBeRemoved + ";get_VIEW->removeAllViews;", null);
-          Android.runInUI("set_VIEW=ctx->findViewById:i_" + window.idToBeRemoved + ";set_PARENT=get_VIEW->getParent;get_PARENT->removeView:get_VIEW;", null);
-          window.idToBeRemoved = null;
-      }
-    }, 1200);
-    window.__dui_screen = screen
-    if(typeof window.pageId == "undefined"){
-        window.pageid = -1;
+      console.warn("callSahay", "Got response", response);
+      success(response);
     }
-    ++window.pageId
-  }
-}
+
+    console.warn("callSahay", "Sending payload", request);
+    window.JBridge.processWithSdk(request);
+
+    // return function() {};
+  };
+};
 
 export const screenWidth = function(){
   return screen.width;
@@ -148,7 +118,7 @@ export const safeMarginTopImpl = function () {
       return parent.__DEVICE_DETAILS.safe_area_frame.y
     }
   } catch(e){
-
+    console.log("error in safeMarginTopImpl", e);
   }
 
   return 0;
@@ -156,36 +126,42 @@ export const safeMarginTopImpl = function () {
 
 export const safeMarginBottomImpl = function () {
   try{
-    var d = parent.__DEVICE_DETAILS;
+    const d = parent.__DEVICE_DETAILS;
     if (!d || !d.safe_area_frame) {
       return 0;
     }
     return (d.screen_height - d.safe_area_frame.height - d.safe_area_frame.y);
   } catch(e){
     return 0;
-  }
+  } 
 }
 
 export const bundleVersion = function(){
   return window.version;
 }
 
-export const setText = function (id) {
-  return function (text) {
-          setTextImpl(id, text, text.length);
+function setTextImpl(id, text, pos) {
+  if (window.__OS === "ANDROID") {
+    let cmd = "set_view=ctx->findViewById:i_" + id + ";";
+    cmd += "get_view->setText:cs_" + text + ";";
+    cmd += "get_view->setSelection:i_" + pos + ";";
+    Android.runInUI(cmd, null);
+  } else {
+    Android.runInUI({id: id, text: text});
+    Android.runInUI({id: id, cursorPosition: pos});
   }
 }
 
-function setTextImpl(id, text, pos) {
-  if (__OS === "ANDROID") {
-      var cmd = "set_view=ctx->findViewById:i_" + id + ";";
-      cmd += "get_view->setText:cs_" + text + ";";
-      cmd += "get_view->setSelection:i_" + pos + ";";
-      Android.runInUI(cmd, null);
-  } else {
-      Android.runInUI({id: id, text: text});
-      Android.runInUI({id: id, cursorPosition: pos});
+export const setText = function (id) {
+  return function (text) {
+    setTextImpl(id, text, text.length);
   }
+}
+
+function instantGetTimer (fn , delay) {
+  fn();
+  window.timerId = setInterval( fn, delay );
+  return window.timerId;
 }
 
 export const countDown = function (countDownTime) {
@@ -196,17 +172,17 @@ export const countDown = function (countDownTime) {
           if (countDownTimers[id] != undefined) {
             clearInterval(parseInt(countDownTimers[id]));
           }
-          var callback = PrestoCallbackMapper.map(function () {
-            var countDown = countDownTime;
+          const callback = PrestoCallbackMapper.map(function () {
+            let countDownCounter = countDownTime;
             countDownTimers[id] = instantGetTimer(function () {
-              var timerIID = countDownTimers[id];
+              const timerIID = countDownTimers[id];
               if (timerIID != undefined) {
-                countDown -= 1;
-                if (countDown <= 0) {
+                countDownCounter -= 1;
+                if (countDownCounter <= 0) {
                   delete countDownTimers[id];
                   cb(action(0)(id)("EXPIRED")(timerIID))();
                 } else {
-                  cb(action(countDown)(id)("INPROGRESS")(timerIID))();
+                  cb(action(countDownCounter)(id)("INPROGRESS")(timerIID))();
                 }
               }
             }, 1000);
@@ -218,35 +194,29 @@ export const countDown = function (countDownTime) {
   }
 }
 
-function instantGetTimer (fn , delay) {
-  fn();
-  window.timerId = setInterval( fn, delay );
-  return window.timerId;
-}
-
 export const clearTimer = function (a)
 {
   clearInterval(parseInt(a));
 };
 
 export const getExpiryTime = function (str1) {
-    return function (reverse) {
-      try {
-      var expiry = new Date(str1);
-      var current = new Date();
-      var diff = (expiry.getTime() - current.getTime())/ 1000;
+  return function (reverse) {
+    try {
+      const expiry = new Date(str1);
+      const current = new Date();
+      let diff = (expiry.getTime() - current.getTime())/ 1000;
       if (reverse)
-        {
-          diff = (current.getTime() - expiry.getTime())/ 1000;
-        }
+      {
+        diff = (current.getTime() - expiry.getTime())/ 1000;
+      }
       diff = (Math.round(diff));
       if (diff >= 0)
-          return (diff);
-        else
-          return 0;
-      } catch (err) {
-        console.log("error in getExpiryTime " + err);
-      }
+        return (diff);
+      else
+        return 0;
+    } catch (err) {
+      console.log("error in getExpiryTime " + err);
+    }
   };
 };
 
@@ -255,26 +225,17 @@ export const getCurrentTimeStamp = function () {
 };
 
 export const getCurrentUTC = function (str) {
-  var result = new Date().toISOString();
+  const result = new Date().toISOString();
   console.log(result);
   return result;
 };
 
-export const convertUTCtoISC = function (str) {
-  return function (format) {
-    var localTime = new Date(str);
-    const language = JBridge.getFromSharedPrefs("LANGUAGE_KEY");
-    localTime = formatDates(localTime, format, getFormattedLanguage(language));
-    return localTime;
-  };
-};
-
 export const getDateFromObj = function (obj){
-  let date = new Date(`${obj.month} ${obj.date}, ${obj.year}`);
-  var dd = String(date.getDate()).padStart(2, '0');
-  var mm = String(date.getMonth() + 1).padStart(2, '0'); //January is 0!
-  var yyyy = date.getFullYear();
-  return  yyyy + '-' + mm + '-' + dd;
+  const date = new Date(`${obj.month} ${obj.date}, ${obj.year}`);
+  const dd = String(date.getDate()).padStart(2, "0");
+  const mm = String(date.getMonth() + 1).padStart(2, "0"); //January is 0!
+  const yyyy = date.getFullYear();
+  return  yyyy + "-" + mm + "-" + dd;
 }
 
 function getFormattedLanguage(language){
@@ -287,20 +248,14 @@ function getFormattedLanguage(language){
   else return "en-us";
 }
 
-export const getFormattedDate = function (str) {
-  var date = new Date(str);
-  const language = JBridge.getFromSharedPrefs("LANGUAGE_KEY");
-  return formatDates(new Date(date),"MMMM Do, YYYY", getFormattedLanguage(language));
-}
-
 export const getPastDays = function (count) {
   try {
-    let result = [];
+    const result = [];
     const language = JBridge.getFromSharedPrefs("LANGUAGE_KEY");
-    for (var i = 0; i < count; i++) {
-      let d = new Date();
+    for (let i = 0; i < count; i++) {
+      const d = new Date();
       d.setDate(d.getDate() - i);
-      let obj = { utcDate: d.toISOString(), date: d.getDate(), month: d.toLocaleString(getFormattedLanguage(language), { month: 'short' }), year: d.getFullYear() };
+      const obj = { utcDate: d.toISOString(), date: d.getDate(), month: d.toLocaleString(getFormattedLanguage(language), { month: "short" }), year: d.getFullYear() };
       result.push(obj);
     }
     console.log(language, getFormattedLanguage(language))
@@ -313,20 +268,20 @@ export const getPastDays = function (count) {
 
 export const getPastWeeks = function (count) {
   try {
-    let result = []
-    var currentDate = new Date();
+    const result = []
+    const currentDate = new Date();
     while (currentDate.getDay() != 0) {
-        currentDate.setDate(currentDate.getDate() - 1);
+      currentDate.setDate(currentDate.getDate() - 1);
     }
     const language = JBridge.getFromSharedPrefs("LANGUAGE_KEY");
     currentDate.setDate(currentDate.getDate() + 7);
-    for (var i = 0; i < count; i++) {
-      let dStart = new Date(currentDate);
-      let dEnd = new Date(currentDate);
+    for (let i = 0; i < count; i++) {
+      const dStart = new Date(currentDate);
+      const dEnd = new Date(currentDate);
       dStart.setDate(dStart.getDate() - 7 * (i + 1));
       dEnd.setDate(dEnd.getDate() - (7 * i + 1));
-      let obj = { utcStartDate: dStart.toISOString(), startDate: dStart.getDate(), utcEndDate: dEnd.toISOString(), endDate: dEnd.getDate(),
-                  startMonth: dStart.toLocaleString(getFormattedLanguage(language), { month: 'short' }), endMonth: dEnd.toLocaleString(getFormattedLanguage(language), { month: 'short' }) }
+      const obj = { utcStartDate: dStart.toISOString(), startDate: dStart.getDate(), utcEndDate: dEnd.toISOString(), endDate: dEnd.getDate(),
+        startMonth: dStart.toLocaleString(getFormattedLanguage(language), { month: "short" }), endMonth: dEnd.toLocaleString(getFormattedLanguage(language), { month: "short" }) }
       result.push(obj)
     }
     console.log(result);
@@ -340,101 +295,101 @@ export const getPastWeeks = function (count) {
 
 function formatDates(date, format, language) {
   const mappings = {
-    'h': () => {
-      var hours = date.getHours();
+    "h": () => {
+      let hours = date.getHours();
       hours = hours % 12 || 12;
       return `${hours}`;
     },
-    'hh': () => {
-      var hours = ('0' + date.getHours()).slice(-2);
+    "hh": () => {
+      let hours = ("0" + date.getHours()).slice(-2);
       hours = hours % 12 || 12;
       return `${hours}`;
     },
-    'HH': () => {
-      const hours = ('0' + date.getHours()).slice(-2);
+    "HH": () => {
+      const hours = ("0" + date.getHours()).slice(-2);
       return `${hours}`;
     },
-    'a': () => {
+    "a": () => {
       const hours = date.getHours();
-      const ampm = hours < 12 ? 'am' : 'pm';
+      const ampm = hours < 12 ? "am" : "pm";
       return `${ampm}`;
     },
-    'A': () => {
+    "A": () => {
       const hours = date.getHours();
-      const ampm = hours < 12 ? 'AM' : 'PM';
+      const ampm = hours < 12 ? "AM" : "PM";
       return `${ampm}`;
     },
-    'mm': () => {
-      const minutes = ('0' + date.getMinutes()).slice(-2);
+    "mm": () => {
+      const minutes = ("0" + date.getMinutes()).slice(-2);
       return `${minutes}`;
     },
-    'ss': () => {
-      const seconds = ('0' + date.getSeconds()).slice(-2);
+    "ss": () => {
+      const seconds = ("0" + date.getSeconds()).slice(-2);
       return `${seconds}`;
     },
-    'DD': () => {
-      const day = ('0' + date.getDate()).slice(-2);
+    "DD": () => {
+      const day = ("0" + date.getDate()).slice(-2);
       return `${day}`;
     },
-    'MM': () => {
-      const month = ('0' + (date.getMonth() + 1)).slice(-2);
+    "MM": () => {
+      const month = ("0" + (date.getMonth() + 1)).slice(-2);
       return `${month}`;
     },
-    'YYYY': () => {
+    "YYYY": () => {
       const year = date.getFullYear();
       return `${year}`;
     },
-    'D': () => {
+    "D": () => {
       const day = date.getDate();
       return `${day}`;
     },
-    'Do': () => {
+    "Do": () => {
       const day = date.getDate();
       let daySuffix;
       if (day === 1 || day === 21 || day === 31) {
-        daySuffix = 'st';
+        daySuffix = "st";
       } else if (day === 2 || day === 22) {
-        daySuffix = 'nd';
+        daySuffix = "nd";
       } else if (day === 3 || day === 23) {
-        daySuffix = 'rd';
+        daySuffix = "rd";
       } else {
-        daySuffix = 'th';
+        daySuffix = "th";
       }
       return `${day}${daySuffix}`;
     },
-    'MMM': () => {
-      const month = date.toLocaleDateString(language, { month: 'short' });
+    "MMM": () => {
+      const month = date.toLocaleDateString(language, { month: "short" });
       return `${month}`;
     },
-    'MMMM': () => {
-      const month = date.toLocaleDateString(language, { month: 'long' });
+    "MMMM": () => {
+      const month = date.toLocaleDateString(language, { month: "long" });
       return `${month}`;
     },
-    'ddd': () => {
-      const weekdays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    "ddd": () => {
+      const weekdays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
       const weekday = weekdays[date.getDay()];
       return `${weekday}`;
     },
-    'llll': () => {
-      const weekdays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    "llll": () => {
+      const weekdays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+      const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
       const weekday = weekdays[date.getDay()];
       const day = date.getDate();
       const month = months[date.getMonth()];
       const year = date.getFullYear();
-      var hours = date.getHours();
+      let hours = date.getHours();
       hours = hours % 12 || 12;
-      const ampm = hours < 12 ? 'AM' : 'PM';
-      const minutes = ('0' + date.getMinutes()).slice(-2);
+      const ampm = hours < 12 ? "AM" : "PM";
+      const minutes = ("0" + date.getMinutes()).slice(-2);
       return `${weekday}, ${month} ${day}, ${year} ${hours}:${minutes} ${ampm}`;
     }
   }
 
-  var reg = /(:| |\/|-|,)/g;
-  var arr = format.split(reg);
-  var result = '';
+  const reg = /(:| |\/|-|,)/g;
+  const arr = format.split(reg);
+  let result = "";
   for (const a of arr) {
-    var maps = mappings[a];
+    const maps = mappings[a];
     if (maps) {
       result += maps();
     } else {
@@ -445,14 +400,29 @@ function formatDates(date, format, language) {
 }
 
 export function formatCurrencyWithCommas(amount) {
-  amount = parseFloat(amount.replace(/[^0-9.-]+/g, ''));
+  amount = parseFloat(amount.replace(/[^0-9.-]+/g, ""));
   if (isNaN(amount)) {
     return "";
   }
-  return amount.toLocaleString('en-IN');
+  return amount.toLocaleString("en-IN");
 }
 
 export function camelCaseToSentenceCase(string){
-  var result = string.replaceAll(/([A-Z])/g, ' $1');
+  const result = string.replaceAll(/([A-Z])/g, " $1");
   return (result.substring(0, 1).toUpperCase() + result.substring(1).toLowerCase());
+}
+
+export const convertUTCtoISC = function (str) {
+  return function (format) {
+    let localTime = new Date(str);
+    const language = JBridge.getFromSharedPrefs("LANGUAGE_KEY");
+    localTime = formatDates(localTime, format, getFormattedLanguage(language));
+    return localTime;
+  };
+};
+
+export const getFormattedDate = function (str) {
+  const date = new Date(str);
+  const language = JBridge.getFromSharedPrefs("LANGUAGE_KEY");
+  return formatDates(new Date(date),"MMMM Do, YYYY", getFormattedLanguage(language));
 }

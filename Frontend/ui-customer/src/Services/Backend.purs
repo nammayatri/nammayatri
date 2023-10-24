@@ -30,7 +30,7 @@ import Engineering.Helpers.Commons (liftFlow, os, bundleVersion)
 import Engineering.Helpers.Commons (liftFlow, os, bundleVersion, isPreviousVersion)
 import Engineering.Helpers.Utils as EHU
 import Foreign.Generic (encode)
-import Helpers.Utils (decodeError, toString, getTime, getPreviousVersion)
+import Helpers.Utils (decodeError, getTime, getPreviousVersion)
 import JBridge (Locations, factoryResetApp, setKeyInSharedPrefKeys, toast, drawRoute, toggleBtnLoader)
 import JBridge (factoryResetApp, setKeyInSharedPrefKeys, toast, removeAllPolylines, stopChatListenerService, MapRouteConfig)
 import Juspay.OTP.Reader as Readers
