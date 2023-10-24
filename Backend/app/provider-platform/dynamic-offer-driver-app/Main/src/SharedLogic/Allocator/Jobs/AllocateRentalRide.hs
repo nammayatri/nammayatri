@@ -65,10 +65,7 @@ allocateRentalRide Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) $ do
   (res, _) <- sendSearchRequestToDrivers' driverPoolConfig searchTry searchReq booking merchant Nothing goHomeCfg
   return res
 
--- TODO remove redundant constraints everywhere:
--- EsqDBFlow m r,
--- EsqLocDBFlow m r,
--- EsqLocRepDBFlow m r,
+-- TODO remove redundant Esq constraints everywhere
 
 sendSearchRequestToDrivers' ::
   ( EncFlow m r,

@@ -98,7 +98,8 @@ createRide ride = do
     DRide.DetailsOnDemand RideDetailsOnDemand {toLocation} -> do
       toLocationMaps <- SLM.buildDropLocationMapping toLocation.id ride.id.getId DLM.RIDE
       QLM.create fromLocationMap >> QLM.create toLocationMaps >> create ride
-    DRide.DetailsRental RideDetailsRental {} -> pure ()
+    DRide.DetailsRental RideDetailsRental {} -> do
+      QLM.create fromLocationMap >> create ride
 
 findById :: MonadFlow m => Id Ride -> m (Maybe Ride)
 findById (Id rideId) = findOneWithKV [Se.Is BeamR.id $ Se.Eq rideId]

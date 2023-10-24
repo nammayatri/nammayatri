@@ -31,12 +31,12 @@ data QuoteRental = QuoteRental
     providerId :: Id DMerchant.Merchant,
     vehicleVariant :: Variant.Variant,
     estimatedFinishTime :: UTCTime,
-    createdAt :: UTCTime,
-    updatedAt :: UTCTime,
     validTill :: UTCTime,
     baseDistance :: Meters,
     baseDuration :: Seconds,
     baseFare :: Money,
-    fareParams :: Params.FareParameters
+    fareParams :: Params.FareParameters,
+    createdAt :: UTCTime,
+    updatedAt :: UTCTime
   }
   deriving (Generic, Show)

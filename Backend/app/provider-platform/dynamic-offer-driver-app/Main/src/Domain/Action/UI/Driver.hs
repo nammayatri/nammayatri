@@ -1335,8 +1335,7 @@ respondQuote (driverId, _) req = do
       sReqFD <-
         QSRD.findByDriverAndSearchTryId driverId searchTryId
           >>= fromMaybeM NoSearchRequestForDriver
-      unless (sReqFD.searchRequestTag == DSR.RENTAL) $ throwError (InvalidRequest "Invalid searchRequestTag")
-      whenJust req.offeredFare $ \_ -> throwError (InternalError "Driver can't offer rental fare")
+      whenJust req.offeredFare $ \_ -> throwError (InvalidRequest "Driver can't offer rental fare")
       whenM thereAreActiveQuotes (throwError FoundActiveQuotes)
       when (sReqFD.response == Just DSRD.Reject) (throwError QuoteAlreadyRejected)
       bookingId <- sReqFD.bookingId & fromMaybeM (InternalError "searchRequestForDriver field not present for RENTAL tag: bookingId")
@@ -1382,6 +1381,7 @@ respondQuote (driverId, _) req = do
         -- DLoc.updateOnRide driver.merchantId driver.id True -- Check this
 
         -- non-critical updates
+        QST.updateStatus searchTry.id DST.COMPLETED
         QDFS.updateStatus driver.id DDFS.RIDE_ASSIGNED {rideId = ride.id}
         QRB.updateRiderId booking.id riderDetails.id
         QRideD.create rideDetails
