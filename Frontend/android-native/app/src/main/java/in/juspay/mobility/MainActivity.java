@@ -250,10 +250,10 @@ public class MainActivity extends AppCompatActivity {
         boolean isMigrated = migrateLocalStore(getApplicationContext());
         mFirebaseAnalytics.logEvent(isMigrated ?"migrate_local_store_success" : "migrate_local_store_failed",new Bundle());
         String clientId = getApplicationContext().getResources().getString(R.string.client_id);
-        CleverTapAPI cleverTap = CleverTapAPI.getDefaultInstance(getApplicationContext());
-        CleverTapAPI.createNotificationChannel(getApplicationContext(),clientId,clientId,"notification",NotificationManager.IMPORTANCE_MAX,true);
-        CleverTapAPI.setDebugLevel(CleverTapAPI.LogLevel.VERBOSE);
-        cleverTap.enableDeviceNetworkInfoReporting(true);
+//        CleverTapAPI cleverTap = CleverTapAPI.getDefaultInstance(getApplicationContext());
+//        CleverTapAPI.createNotificationChannel(getApplicationContext(),clientId,clientId,"notification",NotificationManager.IMPORTANCE_MAX,true);
+//        CleverTapAPI.setDebugLevel(CleverTapAPI.LogLevel.VERBOSE);
+//        cleverTap.enableDeviceNetworkInfoReporting(true);
         activity = this;
         sharedPref = getApplicationContext().getSharedPreferences(this.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
         sharedPref.edit().putString("DEVICE_DETAILS", getDeviceDetails()).apply();

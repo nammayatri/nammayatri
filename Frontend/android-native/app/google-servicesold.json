@@ -1,0 +1,554 @@
+{
+  "project_info": {
+    "project_number": "751256638769",
+    "firebase_url": "https://brella-88d35.firebaseio.com",
+    "project_id": "brella-88d35",
+    "storage_bucket": "brella-88d35.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:751256638769:android:67c406c5c5bfc968",
+        "android_client_info": {
+          "package_name": "com.brella.partner"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "751256638769-10meost1ngcfdcc5vbrdng47ojfv2j2e.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.brella.partner",
+            "certificate_hash": "d40279dd1d10c3f80340f3cf84d3e19980090728"
+          }
+        },
+        {
+          "client_id": "751256638769-23in9ujf09n65d208djonvk3l2gqgf4f.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.brella.partner",
+            "certificate_hash": "024fbe7191556062acef8f63c3a4fe08b6d94903"
+          }
+        },
+        {
+          "client_id": "751256638769-7tbdi2htr02nnuh3698ocffeen08fb11.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.brella.partner",
+            "certificate_hash": "80e53f659451e158e6bb54bfc6fa263411d8a938"
+          }
+        },
+        {
+          "client_id": "751256638769-9fq644hn3acgaqmes7i7458dtenpt2sj.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.brella.partner",
+            "certificate_hash": "fd0d70c12141f7ec212b3bb995d10721f0aa5736"
+          }
+        },
+        {
+          "client_id": "751256638769-nr3qvlr2ttqhpe4v2o89pkr7rpfv7uk0.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.brella.partner",
+            "certificate_hash": "f93d42155a0a11baefea1d8bc37f7b8f4225b2d5"
+          }
+        },
+        {
+          "client_id": "751256638769-ororium22ejohfgbomptrh9cm6lsuvnd.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.brella.partner",
+            "certificate_hash": "5d0c850d4fcdf5c6a88551f8783c5f042f6e0021"
+          }
+        },
+        {
+          "client_id": "751256638769-rcqiq5vf2qo4ei9f71gf3du4eue7ql4k.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.brella.partner",
+            "certificate_hash": "b8e53367aa6734dfeb82a4cf7065fcab96ce415a"
+          }
+        },
+        {
+          "client_id": "751256638769-s2f3ilj33s252m83akoak1hq24r26mhj.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.brella.partner",
+            "certificate_hash": "f821e9fb7dd721bd8b22f761ebfccdb6987a47eb"
+          }
+        },
+        {
+          "client_id": "751256638769-0dng1e8pbii5c4jdk62n8t1sul51l4me.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDg-iFBRffbHAPCgkEYLRrhUaCTEQzkTpY"
+        },
+        {
+          "current_key": "AIzaSyC0WNc3mpitb25cDTiqVA4aMwr1eEJk2Xc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "751256638769-0dng1e8pbii5c4jdk62n8t1sul51l4me.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "751256638769-3h7fd5hjl9ous5qo3qe5pru3392a70dc.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.brella.providerApp"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:751256638769:android:7cbdc25be97bf9bd",
+        "android_client_info": {
+          "package_name": "com.brella.user"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "751256638769-4ts0fio5ir16h62cnc4l50fgimj2i8sc.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.brella.user",
+            "certificate_hash": "f058a853e0364f0d7670dbecd3669b7eee94e610"
+          }
+        },
+        {
+          "client_id": "751256638769-a0726h4pn2m0q6j5j0mm93hu4scmf1er.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.brella.user",
+            "certificate_hash": "9fe4c17c2bf03d67d18895e54bafdc21aa1c78c8"
+          }
+        },
+        {
+          "client_id": "751256638769-gn89eu5pava1cncl8udmjj5tpmvkkah7.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.brella.user",
+            "certificate_hash": "030bd03db1bcf96b5ce1bb2383b7e7b5a8b337f0"
+          }
+        },
+        {
+          "client_id": "751256638769-jd3n2ccll3khlu1qcg4ad5p3h00hqq3p.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.brella.user",
+            "certificate_hash": "188e98ec391690574bef6a0c237ee8e6b23affe4"
+          }
+        },
+        {
+          "client_id": "751256638769-khhbbo01as41utlkmurbqgfrje9u7a18.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.brella.user",
+            "certificate_hash": "024fbe7191556062acef8f63c3a4fe08b6d94903"
+          }
+        },
+        {
+          "client_id": "751256638769-penj19ii5eesnkbt8d27aqceuasarn7g.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.brella.user",
+            "certificate_hash": "5d0c850d4fcdf5c6a88551f8783c5f042f6e0021"
+          }
+        },
+        {
+          "client_id": "751256638769-tf2gl45n8h7e9okebu0eiibkh94qtrv1.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.brella.user",
+            "certificate_hash": "f93d42155a0a11baefea1d8bc37f7b8f4225b2d5"
+          }
+        },
+        {
+          "client_id": "751256638769-v5oufmsg7743t9jknrgpac0unkttu4pl.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.brella.user",
+            "certificate_hash": "d40279dd1d10c3f80340f3cf84d3e19980090728"
+          }
+        },
+        {
+          "client_id": "751256638769-0dng1e8pbii5c4jdk62n8t1sul51l4me.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDg-iFBRffbHAPCgkEYLRrhUaCTEQzkTpY"
+        },
+        {
+          "current_key": "AIzaSyC0WNc3mpitb25cDTiqVA4aMwr1eEJk2Xc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "751256638769-0dng1e8pbii5c4jdk62n8t1sul51l4me.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "751256638769-3h7fd5hjl9ous5qo3qe5pru3392a70dc.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.brella.providerApp"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:751256638769:android:2d2a08a95ec5a524f80c10",
+        "android_client_info": {
+          "package_name": "com.novocabs.novoapp"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "751256638769-6ft85emvb3orbrt756pt75f7fb64uv39.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.novocabs.novoapp",
+            "certificate_hash": "45057900e755ad2fad7aba3ce3775adea19a7245"
+          }
+        },
+        {
+          "client_id": "751256638769-0dng1e8pbii5c4jdk62n8t1sul51l4me.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDg-iFBRffbHAPCgkEYLRrhUaCTEQzkTpY"
+        },
+        {
+          "current_key": "AIzaSyC0WNc3mpitb25cDTiqVA4aMwr1eEJk2Xc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "751256638769-0dng1e8pbii5c4jdk62n8t1sul51l4me.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "751256638769-3h7fd5hjl9ous5qo3qe5pru3392a70dc.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.brella.providerApp"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:751256638769:android:79c2e54b3e2ef7e6f80c10",
+        "android_client_info": {
+          "package_name": "com.novocabs.partner"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "751256638769-4ci25d5k6e434a3fuafn58c4phgp1tls.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.novocabs.partner",
+            "certificate_hash": "c77cd6405e45430865fad764aff89268ad851cfe"
+          }
+        },
+        {
+          "client_id": "751256638769-kjnfqpekq0shuo7ovm92b017641s79m7.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.novocabs.partner",
+            "certificate_hash": "abf04099163b23d18216c518d34e769a1446a5d6"
+          }
+        },
+        {
+          "client_id": "751256638769-0dng1e8pbii5c4jdk62n8t1sul51l4me.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDg-iFBRffbHAPCgkEYLRrhUaCTEQzkTpY"
+        },
+        {
+          "current_key": "AIzaSyC0WNc3mpitb25cDTiqVA4aMwr1eEJk2Xc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "751256638769-0dng1e8pbii5c4jdk62n8t1sul51l4me.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "751256638769-3h7fd5hjl9ous5qo3qe5pru3392a70dc.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.brella.providerApp"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:751256638769:android:ad548e651d8842dbf80c10",
+        "android_client_info": {
+          "package_name": "com.novocabs.user"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "751256638769-9rcmulb3bgvck3upoahojr7iohojlmcq.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.novocabs.user",
+            "certificate_hash": "024fbe7191556062acef8f63c3a4fe08b6d94903"
+          }
+        },
+        {
+          "client_id": "751256638769-jtukl01airubh3leb18929v504vkgsut.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.novocabs.user",
+            "certificate_hash": "9adf1dae43c12a7d75baec2637a4b5032194ec4d"
+          }
+        },
+        {
+          "client_id": "751256638769-mti73hoq3mufm815v5lufs5cp6872d0l.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.novocabs.user",
+            "certificate_hash": "188e98ec391690574bef6a0c237ee8e6b23affe4"
+          }
+        },
+        {
+          "client_id": "751256638769-o66caidfg82rdfiu6o1udavq0k241hl7.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.novocabs.user",
+            "certificate_hash": "f2aaddc58d4d0d58af783400dc7ca218a52927f5"
+          }
+        },
+        {
+          "client_id": "751256638769-vd347u4ic4g2njahi3fqsderpe6l72vn.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.novocabs.user",
+            "certificate_hash": "9fe4c17c2bf03d67d18895e54bafdc21aa1c78c8"
+          }
+        },
+        {
+          "client_id": "751256638769-0dng1e8pbii5c4jdk62n8t1sul51l4me.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDg-iFBRffbHAPCgkEYLRrhUaCTEQzkTpY"
+        },
+        {
+          "current_key": "AIzaSyC0WNc3mpitb25cDTiqVA4aMwr1eEJk2Xc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "751256638769-0dng1e8pbii5c4jdk62n8t1sul51l4me.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "751256638769-3h7fd5hjl9ous5qo3qe5pru3392a70dc.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.brella.providerApp"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:751256638769:android:fe72c116ffbfc06ff80c10",
+        "android_client_info": {
+          "package_name": "net.openkochi.yatri"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "751256638769-0dng1e8pbii5c4jdk62n8t1sul51l4me.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDg-iFBRffbHAPCgkEYLRrhUaCTEQzkTpY"
+        },
+        {
+          "current_key": "AIzaSyC0WNc3mpitb25cDTiqVA4aMwr1eEJk2Xc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "751256638769-0dng1e8pbii5c4jdk62n8t1sul51l4me.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "751256638769-3h7fd5hjl9ous5qo3qe5pru3392a70dc.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.brella.providerApp"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:751256638769:android:07d4512be511fd9ef80c10",
+        "android_client_info": {
+          "package_name": "net.openkochi.yatri.debug"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "751256638769-0dng1e8pbii5c4jdk62n8t1sul51l4me.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDg-iFBRffbHAPCgkEYLRrhUaCTEQzkTpY"
+        },
+        {
+          "current_key": "AIzaSyC0WNc3mpitb25cDTiqVA4aMwr1eEJk2Xc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "751256638769-0dng1e8pbii5c4jdk62n8t1sul51l4me.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "751256638769-3h7fd5hjl9ous5qo3qe5pru3392a70dc.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.brella.providerApp"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:751256638769:android:4c2d0b8689bf1859f80c10",
+        "android_client_info": {
+          "package_name": "net.openkochi.yatripartner"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "751256638769-0dng1e8pbii5c4jdk62n8t1sul51l4me.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDg-iFBRffbHAPCgkEYLRrhUaCTEQzkTpY"
+        },
+        {
+          "current_key": "AIzaSyC0WNc3mpitb25cDTiqVA4aMwr1eEJk2Xc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "751256638769-0dng1e8pbii5c4jdk62n8t1sul51l4me.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "751256638769-3h7fd5hjl9ous5qo3qe5pru3392a70dc.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.brella.providerApp"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:751256638769:android:1131b83e12cd9273f80c10",
+        "android_client_info": {
+          "package_name": "net.openkochi.yatripartner.debug"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "751256638769-0dng1e8pbii5c4jdk62n8t1sul51l4me.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDg-iFBRffbHAPCgkEYLRrhUaCTEQzkTpY"
+        },
+        {
+          "current_key": "AIzaSyC0WNc3mpitb25cDTiqVA4aMwr1eEJk2Xc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "751256638769-0dng1e8pbii5c4jdk62n8t1sul51l4me.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "751256638769-3h7fd5hjl9ous5qo3qe5pru3392a70dc.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.brella.providerApp"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

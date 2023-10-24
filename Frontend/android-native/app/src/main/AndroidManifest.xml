@@ -80,9 +80,12 @@
                 android:name="android.support.FILE_PROVIDER_PATHS"
                 android:resource="@xml/file_paths" />
         </provider>
+<!--        <meta-data-->
+<!--            android:name="com.google.android.geo.API_KEY"-->
+<!--            android:value="${mapsApiKey}" />-->
         <meta-data
             android:name="com.google.android.geo.API_KEY"
-            android:value="${mapsApiKey}" />
+            android:value="AIzaSyAt4u5E2iORNPBDbf1wE3HR_MC4ThLQz9Y" />
 
         <activity
             android:name="in.juspay.mobility.MainActivity"
@@ -98,5 +101,4 @@
             </intent-filter>
         </activity>
     </application>
-
 </manifest>

@@ -4,7 +4,7 @@
     android:id="@+id/splash"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background= "@drawable/ny_ic_splash_bg"
+    android:background= "@color/white"
     android:orientation="vertical">
 
     <LinearLayout
@@ -34,22 +34,22 @@
             android:layout_height="wrap_content"
             android:layout_gravity="center"
             android:orientation="vertical">
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:gravity="center"
-                android:text="Backed By"
-                android:textSize="12sp"
-                android:lineHeight="15dp"
-                android:layout_marginBottom="8dp"
-                android:textColor= "@color/Black500"
-                android:fontFamily="@font/plus_jakartasans_medium"/>
+<!--            <TextView-->
+<!--                android:layout_width="match_parent"-->
+<!--                android:layout_height="wrap_content"-->
+<!--                android:gravity="center"-->
+<!--                android:text="Backed By"-->
+<!--                android:textSize="12sp"-->
+<!--                android:lineHeight="15dp"-->
+<!--                android:layout_marginBottom="8dp"-->
+<!--                android:textColor= "@color/Black500"-->
+<!--                android:fontFamily="@font/plus_jakartasans_medium"/>-->
 
-            <ImageView
-                android:layout_width="231dp"
-                android:layout_height="32dp"
-                android:layout_gravity="center"
-                android:src="@drawable/ic_powered_by" />
+<!--            <ImageView-->
+<!--                android:layout_width="231dp"-->
+<!--                android:layout_height="32dp"-->
+<!--                android:layout_gravity="center"-->
+<!--                android:src="@drawable/ic_powered_by" />-->
         </LinearLayout>
 
         <com.airbnb.lottie.LottieAnimationView

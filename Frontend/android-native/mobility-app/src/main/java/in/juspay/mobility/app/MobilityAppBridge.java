@@ -64,7 +64,7 @@ public class MobilityAppBridge extends HyperBridge {
     private static final String UTILS = "UTILS";
 
     private static FirebaseAnalytics mFirebaseAnalytics;
-    CleverTapAPI clevertapDefaultInstance;
+//    CleverTapAPI clevertapDefaultInstance;
     protected static String storeChatMessageCallBack = null;
     public static String storeCallBackOpenChatScreen = null;
     public static String storeDetectPhoneNumbersCallBack = null;
@@ -106,7 +106,7 @@ public class MobilityAppBridge extends HyperBridge {
         mFirebaseAnalytics = FirebaseAnalytics.getInstance(bridgeComponents.getContext());
         ChatService.registerCallback(callBack);
         InAppNotification.registerCallback(callBack);
-        clevertapDefaultInstance = CleverTapAPI.getDefaultInstance(bridgeComponents.getContext());
+//        clevertapDefaultInstance = CleverTapAPI.getDefaultInstance(bridgeComponents.getContext());
     }
 
     @JavascriptInterface
@@ -394,76 +394,76 @@ public class MobilityAppBridge extends HyperBridge {
         }
     }
 
-    @JavascriptInterface
-    public void cleverTapEvent(String event, String params) {
-        if (clevertapDefaultInstance != null) {
-            Map<String, Object> resultMap = new HashMap<>();
-            try {
-                JSONArray jsonArray = new JSONArray(params);
+//    @JavascriptInterface
+//    public void cleverTapEvent(String event, String params) {
+//        if (clevertapDefaultInstance != null) {
+//            Map<String, Object> resultMap = new HashMap<>();
+//            try {
+//                JSONArray jsonArray = new JSONArray(params);
+//
+//                for (int i = 0; i < jsonArray.length(); i++) {
+//                    JSONObject jsonObject = jsonArray.getJSONObject(i);
+//                    String key = jsonObject.getString("key");
+//                    Object value = jsonObject.get("value");
+//                    resultMap.put(key, value);
+//                }
+//            } catch (JSONException e) {
+//                e.printStackTrace();
+//                return;
+//            }
+//            clevertapDefaultInstance.pushEvent(event, resultMap);
+//        }
+//    }
 
-                for (int i = 0; i < jsonArray.length(); i++) {
-                    JSONObject jsonObject = jsonArray.getJSONObject(i);
-                    String key = jsonObject.getString("key");
-                    Object value = jsonObject.get("value");
-                    resultMap.put(key, value);
-                }
-            } catch (JSONException e) {
-                e.printStackTrace();
-                return;
-            }
-            clevertapDefaultInstance.pushEvent(event, resultMap);
-        }
-    }
-
-    @JavascriptInterface
-    public void setCleverTapUserData(String key, String value) {
-        HashMap<String, Object> profileUpdate = new HashMap<>();
-        try {
-            profileUpdate.put(key, value);
-        } catch (Exception e) {
-            Log.e(UTILS, "Error sending user data: " + e);
-        }
-
-        if (clevertapDefaultInstance != null) {
-            clevertapDefaultInstance.onUserLogin(profileUpdate);
-            SharedPreferences sharedPrefs = bridgeComponents.getContext().getSharedPreferences(bridgeComponents.getContext().getString(R.string.preference_file_key), Context.MODE_PRIVATE);
-            String fcmRegId = sharedPrefs.getString("FCM_TOKEN", "null");
-            clevertapDefaultInstance.pushFcmRegistrationId(fcmRegId, true);
-        }
-    }
-
-    @JavascriptInterface
-    public void setCleverTapUserProp(String key, String value) {
-        HashMap<String, Object> profileUpdate = new HashMap<>();
-        try {
-            profileUpdate.put(key, value);
-        } catch (Exception e) {
-            Log.e(UTILS, "Error sending user data: " + e);
-        }
-        if (clevertapDefaultInstance != null)
-            clevertapDefaultInstance.pushProfile(profileUpdate);
-    }
-
-
-    @JavascriptInterface
-    public void cleverTapCustomEvent(String event) {
-        if (clevertapDefaultInstance != null)
-            clevertapDefaultInstance.pushEvent(event);
-    }
-
-    @JavascriptInterface
-    public void cleverTapCustomEventWithParams(String event, String paramKey, String paramValue) {
-        HashMap<String, Object> mapCustomEvent = new HashMap<>();
-        mapCustomEvent.put(paramKey, paramValue);
-        if (clevertapDefaultInstance != null)
-            clevertapDefaultInstance.pushEvent(event, mapCustomEvent);
-    }
-
-    @JavascriptInterface
-    public void cleverTapSetLocation() {
-        Location location = clevertapDefaultInstance.getLocation();
-        clevertapDefaultInstance.setLocation(location);
-    }
+//    @JavascriptInterface
+//    public void setCleverTapUserData(String key, String value) {
+//        HashMap<String, Object> profileUpdate = new HashMap<>();
+//        try {
+//            profileUpdate.put(key, value);
+//        } catch (Exception e) {
+//            Log.e(UTILS, "Error sending user data: " + e);
+//        }
+//
+//        if (clevertapDefaultInstance != null) {
+//            clevertapDefaultInstance.onUserLogin(profileUpdate);
+//            SharedPreferences sharedPrefs = bridgeComponents.getContext().getSharedPreferences(bridgeComponents.getContext().getString(R.string.preference_file_key), Context.MODE_PRIVATE);
+//            String fcmRegId = sharedPrefs.getString("FCM_TOKEN", "null");
+//            clevertapDefaultInstance.pushFcmRegistrationId(fcmRegId, true);
+//        }
+//    }
+//
+//    @JavascriptInterface
+//    public void setCleverTapUserProp(String key, String value) {
+//        HashMap<String, Object> profileUpdate = new HashMap<>();
+//        try {
+//            profileUpdate.put(key, value);
+//        } catch (Exception e) {
+//            Log.e(UTILS, "Error sending user data: " + e);
+//        }
+//        if (clevertapDefaultInstance != null)
+//            clevertapDefaultInstance.pushProfile(profileUpdate);
+//    }
+//
+//
+//    @JavascriptInterface
+//    public void cleverTapCustomEvent(String event) {
+//        if (clevertapDefaultInstance != null)
+//            clevertapDefaultInstance.pushEvent(event);
+//    }
+//
+//    @JavascriptInterface
+//    public void cleverTapCustomEventWithParams(String event, String paramKey, String paramValue) {
+//        HashMap<String, Object> mapCustomEvent = new HashMap<>();
+//        mapCustomEvent.put(paramKey, paramValue);
+//        if (clevertapDefaultInstance != null)
+//            clevertapDefaultInstance.pushEvent(event, mapCustomEvent);
+//    }
+//
+//    @JavascriptInterface
+//    public void cleverTapSetLocation() {
+//        Location location = clevertapDefaultInstance.getLocation();
+//        clevertapDefaultInstance.setLocation(location);
+//    }
 
     @JavascriptInterface
     public void openWhatsAppSupport(String contactNumber) {

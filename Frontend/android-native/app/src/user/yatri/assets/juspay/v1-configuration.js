@@ -21,7 +21,7 @@ window.getMerchantConfig = function () {
     "showRateCard": "false",
     "showDashboard": "false",
     "enableShareRide": "false",
-    "shareAppTitle": "Share Yatri!",
+    "shareAppTitle": "Share Novo!",
     "shareAppContent": "Hey there!\n\nCheck out Yatri, India's first open mobility cab hailing app built for commuters in Kochi.\n100% Open Source\n\nDownload Yatri now! \n" + (getAppLink(window.__OS)) + "\n\n#beOpen #chooseOpen",
     "DOCUMENT_LINK": "https://docs.google.com/document/d/1zmQWO_L4EjyCXC3xSlp1f3DS2wI4HfbHxg42tXelWe0",
     "PRIVACY_POLICY_LINK": "https://docs.google.com/document/d/1gI_P4oZnVwE0O71rI4Mi8rpZbL9rsIRkyewbql85Np8",
@@ -30,8 +30,8 @@ window.getMerchantConfig = function () {
     "isShareAppEnabled": "true",
     "apiLoaderLottie": "primary_button_loader.json",
     "isChatEnabled": "true",
-    "primaryTextColor": "#FCC32C",
-    "primaryBackground": "#2C2F3A",
+    "primaryTextColor": "#FFFFFF",
+    "primaryBackground": "#6048E4",
     "showCorporateAddress" : false,
     "gradient": [],
     "loaderColor": "",
@@ -39,7 +39,7 @@ window.getMerchantConfig = function () {
     "showQuoteFindingText" : false,
     "addFavouriteScreenBackArrow" : "ny_ic_chevron_left_white,https://assets.juspay.in/nammayatri/images/user/ny_ic_chevron_left_white.png",
     "searchLocationTheme": "#2C2F3A",
-    "estimateConfirmText": "Request a NammaYatri Ride",
+    "estimateConfirmText": "Request a Novo Ride",
     "autoConfirmingLoaderColor": "#80B2FF",
     "showPickUpandDrop": true,
     "currency": "₹",
@@ -58,7 +58,7 @@ window.getMerchantConfig = function () {
       "vehicleWidth": 40
     },
     "searchLocationConfig": {
-      "searchLocationTheme": "#2C2F3A",
+      "searchLocationTheme": "#6048E4",
       "setLocationOnMapColor" : "#6D7280",
       "strokeColor": "1,#E5E7EB",
       "enableLocationTagbar" : "true",
@@ -114,7 +114,7 @@ window.getMerchantConfig = function () {
       "noQuotesImageWidth": 137,
       "closeIcon" : "ny_ic_close_white,https://assets.juspay.in/beckn/yatri/user/images/ny_ic_close_white.png"
     },
-    "profileBackground": "#2C2F3A",
+    "profileBackground": "#6048E4",
     "profileEditGravity" : "center",
     "profileName": "#FFFFFF",
     "profileImage": "#012A72",
@@ -133,21 +133,21 @@ window.getMerchantConfig = function () {
     "red" : "#E55454",
     "popupBackground" : "#FFFFFF",
     "englishStrings": {
-      "ABOUT_APP_DESCRIPTION": "Yatri is an open platform to connect commuters with transport providers. The app makes it convenient for travellers to find available means of transport, and avail these options by connecting them with service providers ",
-      "WELCOME_TEXT": "Welcome to Yatri",
+      "ABOUT_APP_DESCRIPTION": "Novo is an open platform to connect commuters with transport providers. The app makes it convenient for travellers to find available means of transport, and avail these options by connecting them with service providers ",
+      "WELCOME_TEXT": "Welcome to Novo",
       "REQUEST_AUTO_RIDE": "Request Ride",
-      "CURRENTLY_WE_ARE_LIVE_IN_": "Currently we're live in Kochi, you can enjoy our services there",
+      "CURRENTLY_WE_ARE_LIVE_IN_": "Currently we're live in JK, you can enjoy our services there",
       "DRIVER_PICKUP_CHARGES": "Service Charges",
-      "YOU_ARE_ABOUT_TO_CALL_NAMMA_YATRI_SUPPORT" : "You are about to place a call to the Yatri Support Team. Do you want to proceed?",
-      "SUCCESSFUL_ONBOARD": "You have successfully signed on to \n Yatri",
+      "YOU_ARE_ABOUT_TO_CALL_NAMMA_YATRI_SUPPORT" : "You are about to place a call to the Novo Support Team. Do you want to proceed?",
+      "SUCCESSFUL_ONBOARD": "You have successfully signed on to \n Novo",
       "ABOUT_REFERRAL_PROGRAM_DISCRIPTION": "The referral program incentivises drivers to accept more rides, cancel less and serve you better by recognising and rewarding worthy drivers. \n\n You can help out by entering the driver’s referral code  and improve the quality of rides for the Yatri Community!",
       "YOU_CAN_GET_REFERRAL_CODE_FROM_DRIVER": "\nYou can get a referral code by asking your Yatri Driver.",
       "YOUR_LOCATION_HELPS_OUR_SYSTEM" : "Your location helps our system to map down all the near by taxis and get you the quickest ride possible.",
-      "LOCATION_PERMISSION_SUBTITLE_NEW_USER" : "Welcome to Yatri \nTo start booking rides, please allow us to find you!",
+      "LOCATION_PERMISSION_SUBTITLE_NEW_USER" : "Welcome to Novo \nTo start booking rides, please allow us to find you!",
       "REGISTERED_ADDRESS_DESCRIPTION_ADDITIONAL" : "",
       "CORPORATE_ADDRESS_DESCRIPTION_ADDITIONAL" : "",
-      "CALL_NAMMA_YATRI_SUPPORT" : "Call Yatri Support",
-      "YOUR_FEEDBACK_HELPS_US" : "Your feedback helps us improve the Yatri experience"
+      "CALL_NAMMA_YATRI_SUPPORT" : "Call Novo Support",
+      "YOUR_FEEDBACK_HELPS_US" : "Your feedback helps us improve the Novo experience"
     },
     "malayalamStrings": {
       "WELCOME_TEXT" : "യാത്രയിലേക്ക് സ്വാഗതം",
@@ -201,7 +201,7 @@ window.getMerchantConfig = function () {
     "query" : "google.navigation:q=%f,%f"
   , "packageName" : "com.google.android.apps.maps"
 }
-  , "SUPPORT_EMAIL" : "nammayatri.support@juspay.in"
+  , "SUPPORT_EMAIL" : "support@novocabs.com"
   , "OTP_MESSAGE_REGEX" : "is your OTP for login to [A-Za-z]+ [A-Za-z]+"
   })
 }

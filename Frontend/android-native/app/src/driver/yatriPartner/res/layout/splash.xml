@@ -61,11 +61,11 @@
             android:layout_gravity="center"
             android:orientation="horizontal">
 
-            <ImageView
-                android:layout_width="231dp"
-                android:layout_height="32dp"
-                android:layout_gravity="center"
-                android:src="@drawable/ic_powered_by" />
+<!--            <ImageView-->
+<!--                android:layout_width="231dp"-->
+<!--                android:layout_height="32dp"-->
+<!--                android:layout_gravity="center"-->
+<!--                android:src="@drawable/ic_powered_by" />-->
         </LinearLayout>
 
         <com.airbnb.lottie.LottieAnimationView
