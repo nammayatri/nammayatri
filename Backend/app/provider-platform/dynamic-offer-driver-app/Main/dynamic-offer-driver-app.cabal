@@ -113,7 +113,6 @@ library
       Domain.Action.Dashboard.DriverReferral
       Domain.Action.Dashboard.Exotel
       Domain.Action.Dashboard.Fleet.Registration
-      Domain.Action.Dashboard.Issue
       Domain.Action.Dashboard.Merchant
       Domain.Action.Dashboard.Message
       Domain.Action.Dashboard.Overlay
@@ -137,7 +136,6 @@ library
       Domain.Action.UI.DriverProfileSummary
       Domain.Action.UI.DriverReferral
       Domain.Action.UI.ExotelEndRide
-      Domain.Action.UI.Issue
       Domain.Action.UI.KioskLocation
       Domain.Action.UI.LeaderBoard
       Domain.Action.UI.Maps
@@ -205,11 +203,6 @@ library
       Domain.Types.Geometry
       Domain.Types.GoHomeConfig
       Domain.Types.Invoice
-      Domain.Types.Issue.Comment
-      Domain.Types.Issue.IssueCategory
-      Domain.Types.Issue.IssueOption
-      Domain.Types.Issue.IssueReport
-      Domain.Types.Issue.IssueTranslation
       Domain.Types.KioskLocation
       Domain.Types.KioskLocationTranslation
       Domain.Types.LeaderBoardConfig
@@ -217,7 +210,6 @@ library
       Domain.Types.LocationMapping
       Domain.Types.Mandate
       Domain.Types.Maps.PlaceNameCache
-      Domain.Types.MediaFile
       Domain.Types.Merchant
       Domain.Types.Merchant.DriverIntelligentPoolConfig
       Domain.Types.Merchant.DriverPoolConfig
@@ -346,11 +338,7 @@ library
       Storage.Beam.Geometry
       Storage.Beam.GoHomeConfig
       Storage.Beam.Invoice
-      Storage.Beam.Issue.Comment
-      Storage.Beam.Issue.IssueCategory
-      Storage.Beam.Issue.IssueOption
-      Storage.Beam.Issue.IssueReport
-      Storage.Beam.Issue.IssueTranslation
+      Storage.Beam.IssueManagement
       Storage.Beam.KioskLocation
       Storage.Beam.KioskLocationTranslation
       Storage.Beam.LeaderBoardConfig
@@ -358,7 +346,6 @@ library
       Storage.Beam.LocationMapping
       Storage.Beam.Mandate
       Storage.Beam.Maps.PlaceNameCache
-      Storage.Beam.MediaFile
       Storage.Beam.Merchant
       Storage.Beam.Merchant.DriverIntelligentPoolConfig
       Storage.Beam.Merchant.DriverPoolConfig
@@ -402,13 +389,10 @@ library
       Storage.CachedQueries.FarePolicy
       Storage.CachedQueries.FareProduct
       Storage.CachedQueries.GoHomeConfig
-      Storage.CachedQueries.Issue.IssueCategory
-      Storage.CachedQueries.Issue.IssueOption
       Storage.CachedQueries.KioskLocation
       Storage.CachedQueries.KioskLocationTranslation
       Storage.CachedQueries.LeaderBoardConfig
       Storage.CachedQueries.Maps.PlaceNameCache
-      Storage.CachedQueries.MediaFile
       Storage.CachedQueries.Merchant
       Storage.CachedQueries.Merchant.DriverIntelligentPoolConfig
       Storage.CachedQueries.Merchant.DriverPoolConfig
@@ -473,11 +457,6 @@ library
       Storage.Queries.Instances.DriverInformation
       Storage.Queries.Instances.Person
       Storage.Queries.Invoice
-      Storage.Queries.Issue.Comment
-      Storage.Queries.Issue.IssueCategory
-      Storage.Queries.Issue.IssueOption
-      Storage.Queries.Issue.IssueReport
-      Storage.Queries.Issue.IssueTranslation
       Storage.Queries.KioskLocation
       Storage.Queries.KioskLocationTranslation
       Storage.Queries.LeaderBoardConfig
@@ -485,7 +464,6 @@ library
       Storage.Queries.LocationMapping
       Storage.Queries.Mandate
       Storage.Queries.Maps.PlaceNameCache
-      Storage.Queries.MediaFile
       Storage.Queries.Merchant
       Storage.Queries.Merchant.DriverIntelligentPoolConfig
       Storage.Queries.Merchant.DriverPoolConfig

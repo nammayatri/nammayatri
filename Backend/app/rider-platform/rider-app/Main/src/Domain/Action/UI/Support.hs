@@ -27,6 +27,7 @@ import Domain.Types.Person as Person
 import Domain.Types.Quote (Quote)
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
+import qualified IssueManagement.Common as Domain
 import Kernel.External.Encryption (decrypt)
 import qualified Kernel.External.Ticket.Interface.Types as Ticket
 import Kernel.Types.APISuccess
@@ -98,7 +99,7 @@ buildDBIssue (Id customerId) SendIssueReq {..} = do
         reason = issue.reason,
         description = issue.description,
         ticketId = Nothing, -- third party id
-        status = DIssue.OPEN,
+        status = Domain.OPEN,
         createdAt = time,
         updatedAt = time
       }

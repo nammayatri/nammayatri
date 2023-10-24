@@ -18,12 +18,16 @@ module API.ProviderPlatform.DynamicOfferDriver.Issue
   )
 where
 
-import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Issue as Common
+import qualified "dashboard-helper-api" Dashboard.Common as DC
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
 import qualified "lib-dashboard" Domain.Types.Transaction as DT
 import "lib-dashboard" Environment
+import qualified IssueManagement.Common as DIssue
+import qualified IssueManagement.Common.Dashboard.Issue as Common
+import IssueManagement.Domain.Types.Issue.IssueCategory
+import IssueManagement.Domain.Types.Issue.IssueReport
+import Kernel.Beam.Functions
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.APISuccess (APISuccess)
 import Kernel.Types.Error (PersonError (..))
 import Kernel.Types.Id
@@ -87,7 +91,7 @@ handler merchantId =
 
 buildTransaction ::
   ( MonadFlow m,
-    Common.HideSecrets request
+    DC.HideSecrets request
   ) =>
   Common.IssueEndpoint ->
   ApiTokenInfo ->
@@ -100,19 +104,19 @@ issueCategoryList merchantShortId apiTokenInfo = withFlowHandlerAPI $ do
   checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
   Client.callDriverOfferBPP checkedMerchantId (.issue.issueCategoryList)
 
-issueList :: ShortId DM.Merchant -> ApiTokenInfo -> Maybe Int -> Maybe Int -> Maybe Common.IssueStatus -> Maybe (Id Common.IssueCategory) -> Maybe Text -> FlowHandler Common.IssueReportListResponse
+issueList :: ShortId DM.Merchant -> ApiTokenInfo -> Maybe Int -> Maybe Int -> Maybe DIssue.IssueStatus -> Maybe (Id IssueCategory) -> Maybe Text -> FlowHandler Common.IssueReportListResponse
 issueList merchantShortId apiTokenInfo mbLimit mbOffset mbStatus mbCategoryId mbAssignee = withFlowHandlerAPI $ do
   checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
   Client.callDriverOfferBPP checkedMerchantId (.issue.issueList) mbLimit mbOffset mbStatus mbCategoryId mbAssignee
 
-issueInfo :: ShortId DM.Merchant -> ApiTokenInfo -> Id Common.IssueReport -> FlowHandler Common.IssueInfoRes
+issueInfo :: ShortId DM.Merchant -> ApiTokenInfo -> Id IssueReport -> FlowHandler Common.IssueInfoRes
 issueInfo merchantShortId apiTokenInfo issueReportId_ = withFlowHandlerAPI $ do
   checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
   addAuthorDetails =<< Client.callDriverOfferBPP checkedMerchantId (.issue.issueInfo) issueReportId_
   where
     mkAuthorDetail :: Common.IssueReportCommentItem -> Flow Common.IssueReportCommentItem
     mkAuthorDetail Common.IssueReportCommentItem {..} = do
-      author <- Esq.runInReplica (QP.findById $ cast authorDetail.authorId) >>= fromMaybeM (PersonNotFound authorDetail.authorId.getId)
+      author <- runInReplica (QP.findById $ cast authorDetail.authorId) >>= fromMaybeM (PersonNotFound authorDetail.authorId.getId)
       let authorDetail_ =
             Common.AuthorDetail
               { authorId = cast author.id,
@@ -133,7 +137,7 @@ issueInfo merchantShortId apiTokenInfo issueReportId_ = withFlowHandlerAPI $ do
             ..
           }
 
-issueUpdate :: ShortId DM.Merchant -> ApiTokenInfo -> Id Common.IssueReport -> Common.IssueUpdateReq -> FlowHandler APISuccess
+issueUpdate :: ShortId DM.Merchant -> ApiTokenInfo -> Id IssueReport -> Common.IssueUpdateReq -> FlowHandler APISuccess
 issueUpdate merchantShortId apiTokenInfo issueReportId req = withFlowHandlerAPI $ do
   checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
   transaction <- buildTransaction Common.IssueUpdateEndpoint apiTokenInfo (Just req)
@@ -146,7 +150,7 @@ issueUpdate merchantShortId apiTokenInfo issueReportId req = withFlowHandlerAPI 
           ..
         }
 
-issueAddComment :: ShortId DM.Merchant -> ApiTokenInfo -> Id Common.IssueReport -> Common.IssueAddCommentReq -> FlowHandler APISuccess
+issueAddComment :: ShortId DM.Merchant -> ApiTokenInfo -> Id IssueReport -> Common.IssueAddCommentReq -> FlowHandler APISuccess
 issueAddComment merchantShortId apiTokenInfo issueReportId req = withFlowHandlerAPI $ do
   checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
   transaction <- buildTransaction Common.IssueAddCommentEndpoint apiTokenInfo (Just req)
