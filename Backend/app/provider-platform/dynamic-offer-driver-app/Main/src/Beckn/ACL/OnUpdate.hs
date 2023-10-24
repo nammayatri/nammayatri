@@ -147,11 +147,7 @@ mkFullfillment mbDriver ride booking mbVehicle mbImage tags = do
           { id = ride.id.getId,
             start =
               RideAssignedOU.StartInfo
-                { authorization =
-                    case booking.bookingType of
-                      DRB.SpecialZoneBooking -> Just authorization
-                      DRB.NormalBooking -> Just authorization -- TODO :: Remove authorization for NormalBooking once Customer side code is decoupled.
-                      DRB.RentalBooking -> Just authorization,
+                { authorization = Just authorization,
                   location =
                     RideAssignedOU.Location
                       { gps = RideAssignedOU.Gps {lat = booking.fromLocation.lat, lon = booking.fromLocation.lon}

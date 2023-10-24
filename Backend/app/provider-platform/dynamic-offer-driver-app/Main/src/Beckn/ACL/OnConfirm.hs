@@ -41,7 +41,8 @@ buildOnConfirmMessage res = do
   fulfillmentDetails <- case booking.bookingType of
     DConfirm.SpecialZoneBooking -> do
       otpCode <- booking.bookingDetails.specialZoneOtpCode & fromMaybeM (OtpNotFoundForSpecialZoneBooking booking.id.getId)
-      return $ mkSpecialZoneFulfillmentInfo res.fromLocation res.toLocation otpCode booking.quoteId OnConfirm.RIDE_OTP res.riderPhoneNumber res.riderMobileCountryCode res.riderName vehicleVariant booking.startTime
+      toLocation <- fromMaybeM (InvalidRequest "ToLocation Not Present") res.toLocation
+      return $ mkSpecialZoneFulfillmentInfo res.fromLocation toLocation otpCode booking.quoteId OnConfirm.RIDE_OTP res.riderPhoneNumber res.riderMobileCountryCode res.riderName vehicleVariant booking.startTime
     _ -> return $ mkFulfillmentInfo res.fromLocation res.toLocation booking.quoteId OnConfirm.RIDE mbDriverName res.riderPhoneNumber res.riderMobileCountryCode res.riderName vehicleVariant booking.startTime
   return $
     OnConfirm.OnConfirmMessage
@@ -175,7 +176,7 @@ mkFulfillmentInfo fromLoc toLoc fulfillmentId fulfillmentType driverName riderPh
               }
     }
 
-mkSpecialZoneFulfillmentInfo :: DL.Location -> Maybe DL.Location -> Text -> Text -> OnConfirm.FulfillmentType -> Text -> Text -> Maybe Text -> OnConfirm.VehicleVariant -> UTCTime -> OnConfirm.FulfillmentInfo
+mkSpecialZoneFulfillmentInfo :: DL.Location -> DL.Location -> Text -> Text -> OnConfirm.FulfillmentType -> Text -> Text -> Maybe Text -> OnConfirm.VehicleVariant -> UTCTime -> OnConfirm.FulfillmentInfo
 mkSpecialZoneFulfillmentInfo fromLoc toLoc otp fulfillmentId fulfillmentType riderPhoneNumber riderMobileCountryCode mbRiderName vehicleVariant now = do
   let authorization =
         Just $
@@ -201,12 +202,10 @@ mkSpecialZoneFulfillmentInfo fromLoc toLoc otp fulfillmentId fulfillmentType rid
             time = TimeTimestamp now
           },
       end =
-        ( \toLoc' ->
-            OnConfirm.StopInfo
-              { location = mklocation toLoc'
-              }
-        )
-          <$> toLoc,
+        Just
+          OnConfirm.StopInfo
+            { location = mklocation toLoc
+            },
       vehicle =
         OnConfirm.Vehicle
           { category = vehicleVariant
