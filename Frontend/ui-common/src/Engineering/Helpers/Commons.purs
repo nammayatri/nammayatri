@@ -62,16 +62,12 @@ import Data.Either (Either(..), either, hush)
 import Data.Foldable (foldl)
 import Log (printLog)
 
-foreign import showUIImpl :: Fn2 (String -> Effect  Unit) String (Effect Unit)
-showUI' :: Fn2 (String -> Effect  Unit) String (Effect Unit)
-showUI' = showUIImpl
 foreign import callAPI :: EffectFn7 String String String String Boolean Boolean String Unit
 foreign import callAPIWithOptions :: EffectFn8 String String String String Boolean Boolean String String Unit
 foreign import callbackMapper :: forall a. a -> String
 foreign import atobImpl :: String -> String
 foreign import getWindowVariable :: forall a. String -> (a -> (Maybe a)) -> (Maybe a) -> Effect a
 foreign import setWindowVariableImpl :: forall a. String -> a -> Effect Unit
-foreign import setScreenImpl :: String -> Effect Unit
 foreign import screenWidth :: Unit -> Int
 foreign import screenHeight :: Unit -> Int
 foreign import bundleVersion :: Unit -> String

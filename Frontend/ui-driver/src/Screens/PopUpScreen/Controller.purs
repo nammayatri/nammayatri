@@ -22,7 +22,7 @@ import Language.Strings(getString)
 import Language.Types (STR(..))
 import Components.RideAllocationModal.Controller as RideAllocationModal
 import Data.Array as Array
-import Helpers.Utils (clearPopUpTimer, toString, secondsLeft, objectToAllocationType, clearAllTimer)
+import Helpers.Utils (clearPopUpTimer, toStringJSON, secondsLeft, objectToAllocationType, clearAllTimer)
 import Data.Maybe
 import Log
 import JBridge (deletePopUpCallBack)

@@ -34,7 +34,7 @@ import Screens.HelpAndSupportScreen.ScreenData (otherIssueList,IssueOptions(..))
 import Services.API (FetchIssueListResp(..),FetchIssueListReq(..))
 import Services.Backend as Remote
 import Effect.Aff (launchAff)
-import Helpers.Utils (toString, getCommonAssetStoreLink, getAssetStoreLink)
+import Helpers.Utils (toStringJSON, getCommonAssetStoreLink, getAssetStoreLink)
 import Engineering.Helpers.Commons (flowRunner, screenWidth)
 import Effect.Class (liftEffect)
 import Language.Types(STR(..))
@@ -286,7 +286,7 @@ allOtherTopics state push =
               ][  textView $
                   [ height WRAP_CONTENT
                   , weight 1.0
-                  , text  (if (optionItem.menuOptions) == OngoingIssues then ((getIssueTitle optionItem.menuOptions) <> " : " <> (toString (length (state.data.ongoingIssueList)))) else if (optionItem.menuOptions) == ResolvedIssues then (getIssueTitle optionItem.menuOptions)  else (getIssueTitle optionItem.menuOptions))
+                  , text  (if (optionItem.menuOptions) == OngoingIssues then ((getIssueTitle optionItem.menuOptions) <> " : " <> (toStringJSON (length (state.data.ongoingIssueList)))) else if (optionItem.menuOptions) == ResolvedIssues then (getIssueTitle optionItem.menuOptions)  else (getIssueTitle optionItem.menuOptions))
                   , margin (MarginLeft 10)
                   , color Color.black800
                   ] <> FontStyle.body5 LanguageStyle
@@ -314,7 +314,7 @@ issueListState state = let
         issueListTypeModal = state.data.issueListType ,
         headerConfig {
           headTextConfig {
-            text = (if (state.data.issueListType == ST.ONGOING_ISSUES_MODAL) then (( getString ONGOING_ISSUE) <>(" : ") <> (toString (length state.data.ongoingIssueList))) else ((getString RESOLVED_ISSUE)))
+            text = (if (state.data.issueListType == ST.ONGOING_ISSUES_MODAL) then (( getString ONGOING_ISSUE) <>(" : ") <> (toStringJSON (length state.data.ongoingIssueList))) else ((getString RESOLVED_ISSUE)))
           }
         },
         fourthTextConfig {

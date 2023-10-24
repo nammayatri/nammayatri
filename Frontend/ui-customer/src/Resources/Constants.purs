@@ -23,7 +23,7 @@ import Data.Int (toNumber)
 import Data.Lens ((^.))
 import Data.Maybe (Maybe(..), fromMaybe, isJust)
 import Data.String (Pattern(..), Replacement(..), contains, joinWith, replaceAll, split, trim)
-import Helpers.Utils (getAssetStoreLink, parseFloat, toString, extractKeyByRegex)
+import Helpers.Utils (getAssetStoreLink, parseFloat, toStringJSON, extractKeyByRegex)
 import Engineering.Helpers.Commons (os)
 import Language.Strings (getString, getEN)
 import Language.Types (STR(..))
@@ -256,7 +256,7 @@ getFilteredFares :: Array FareBreakupAPIEntity -> Array FareBreakupAPIEntity
 getFilteredFares = filter (\(FareBreakupAPIEntity item) -> (all (_ /=  item.description) (getMerchantSpecificFilteredFares (getMerchant FunctionCall))))--["EXTRA_DISTANCE_FARE", "TOTAL_FARE", "BASE_DISTANCE_FARE", "CGST", "NIGHT_SHIFT_CHARGE"]) )
 
 getKmMeter :: Int -> String
-getKmMeter distance = if (distance < 1000) then toString distance <> " m" else (parseFloat ((toNumber distance)/ 1000.0)) 2 <> " km"
+getKmMeter distance = if (distance < 1000) then toStringJSON distance <> " m" else (parseFloat ((toNumber distance)/ 1000.0)) 2 <> " km"
 
 -- Info ::
 -- Vehicle Variants for yatri sathi are SEDAN_TAXI (SEDAN , SUV, HATCHBACK) and NON_AC_TAXI (TAXI)

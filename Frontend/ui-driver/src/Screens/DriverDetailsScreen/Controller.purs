@@ -37,7 +37,7 @@ import Debug (spy)
 import Data.String (take, length, drop)
 import Data.String.CodeUnits (charAt)
 import Data.Int (fromString)
-import Helpers.Utils(toString,getGenderIndex)
+import Helpers.Utils(toStringJSON,getGenderIndex)
 import Components.SelectListModal as SelectListModal
 import Components.PrimaryButton as PrimaryButtonController
 import Common.Types.App (OptionButtonList)

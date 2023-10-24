@@ -1,11 +1,3 @@
-export function getStringValue(key) {
-  if (key in frenchStrings) {
-    return frenchStrings[key];
-  }
-  console.error(key + " not found in englishStrings");
-  return "";
-}
-
 const frenchStrings = {
   LETS_GET_STARTED: "Commençons",
   YOUR_APPLICATION_HAS_BEEN_SUBMITTED_SUCCESSFULLY_AND_IS_UNDER_VERIFICATION: "Votre demande a été soumise avec succès et est en cours de vérification",
@@ -329,7 +321,7 @@ const frenchStrings = {
   CONFIRM_REFERRAL_CODE: "Confirmer le code de référence",
   CONFIRM_REFERRAL_CODE_HINT: "Code de référence à nouveau",
   YOUR_REFERRAL_CODE: "Votre code de référence",
-  FIRST_REFERRAL_SUCCESSFUL: "Première référence réussie! \ Nreward déverrouillée!",
+  FIRST_REFERRAL_SUCCESSFUL: "Première référence réussie! \n reward déverrouillée!",
   AWAITING_REFERRAL_RIDE: "En attente de trajet de référence",
   CHECK_THIS_SPACE_WHEN_YOU_GET_REFERRAL_ALERT: "Vérifiez cet espace lorsque vous avez une alerte de référence",
   REFERRED_CUSTOMERS: "Clients référés",
@@ -355,7 +347,6 @@ const frenchStrings = {
   TRY_SILENT_MODE: "Essayez le mode silencieux?",
   RIDE_FARE: "Tarif de conduite",
   RIDE_DISTANCE: "Distance du trajet",
-  FARE_UPDATED: "Tarif mis à jour",
   START_YOUR_CHAT_USING_THESE_QUICK_CHAT_SUGGESTIONS: "Commencez votre chat en utilisant ces suggestions de chat rapides",
   START_YOUR_CHAT_WITH_THE_DRIVER: "Commencez votre conversation avec le pilote",
   MESSAGE: "Message",
@@ -371,7 +362,7 @@ const frenchStrings = {
   LOOKING_FOR_YOU_AT_PICKUP: "Vous cherchez au ramassage",
   SILENT: "Silencieux",
   GO_ONLINE: "ALLER!",
-  GO_ONLINE_PROMPT: "Vous êtes actuellement hors ligne \ NTO Obtenez des demandes de conduite, allez en ligne maintenant!",
+  GO_ONLINE_PROMPT: "Vous êtes actuellement hors ligne \n TO Obtenez des demandes de conduite, allez en ligne maintenant!",
   LIVE_DASHBOARD: "Tableau de bord en direct",
   CLICK_TO_ACCESS_YOUR_ACCOUNT: "Cliquez ici pour accéder à votre compte",
   ADD_ALTERNATE_NUMBER: "Ajouter un numéro alternatif",
@@ -398,7 +389,7 @@ const frenchStrings = {
   LIMIT_EXCEEDED_FOR_ALTERNATE_NUMBER: "S'il vous plaît réessayer après un certain temps",
   ALTERNATE_NUMBER_CANNOT_BE_ADDED: "Le numéro alternatif ne peut pas être ajouté",
   ADD_ALTERNATE_NUMBER_IN_MEANTIME: "Ce processus peut prendre jusqu'à deux jours ouvrables En attendant, vous pouvez ajouter un autre numéro de téléphone portable",
-  VERIFICATION_IS_TAKING_A_BIT_LONGER: "On dirait que votre vérification prend un peu \ nlonger que prévu \ Nyou peut contacter le support pour vous aider",
+  VERIFICATION_IS_TAKING_A_BIT_LONGER: "On dirait que votre vérification prend un peu \n longer que prévu \n you peut contacter le support pour vous aider",
   COMPLETE_ONBOARDING: "Finalisez le processus d'intégration",
   PERSON_WITH_THIS_NUMBER_ALREADY_EXISTS: "La personne avec ce numéro de mobile existe déjà",
   DEMO: "Démo",
@@ -563,7 +554,6 @@ const frenchStrings = {
   NAMMA_YATRI_PLANS : "À propos de nous",
   SWITCH_TO : "Passer à {}",
   PLEASE_TRY_AGAIN : "Veuillez réessayer",
-  PLEASE_TRY_AGAIN : "Veuillez réessayer",
   PLAN_NOT_FOUND : "Plan introuvable",
   MANDATE_NOT_FOUND : "Mandat introuvable",
   ACTIVE_MANDATE_EXISTS : "Le mandat actif existe déjà",
@@ -579,13 +569,13 @@ const frenchStrings = {
   RESUME_AUTOPAY : "Paiement automatique repris",
   PAYMENT_CANCELLED: "Vous avez annulé votre paiement automatique UPI. Vous pouvez effacer vos cotisations manuellement",
   UPI_AUTOPAY_S : "UPI Paiement automatique",
-	MANUAL_PAYMENT_STR : "Paiement manuel",
+  MANUAL_PAYMENT_STR : "Paiement manuel",
   DAILY_UNLIMITED : "quotidiennement illimité",
   DAILY_PER_RIDE : "quotidiennement par trajet",
   DAILY_UNLIMITED_PLAN_DESC : "Profitez de trajets illimités, tous les jours",
   DAILY_PER_RIDE_PLAN_DESC : "Jusqu'à un maximum de ₹35 par jour",
   PAY_TO_JOIN_THIS_PLAN : "Payez 1 ₹ pour rejoindre ce plan",
-	OFFERS_NOT_APPLICABLE : "Les offres ne s'appliquent que si elles sont complétées",
+  OFFERS_NOT_APPLICABLE : "Les offres ne s'appliquent que si elles sont complétées",
   PAUSED_STR : "En pause",
   PENDING_STR : "En attente",
   SWITCH_PLAN_STR : "Plan de commutation?",
@@ -605,7 +595,7 @@ const frenchStrings = {
   NO_HELP_CENTER_IS_ACTIVE_NOW : "Aucun centre d'aide n'est actif pour le moment",
   HELP_CENTERS_LOCATION_WILL_APPEAR_HERE_ONCE_THEY_ARE_ACTIVE : "Les emplacements des centres d'aide apparaîtront ici une fois qu'ils seront actifs",
   SUPPORT : "Support",
-	NEED_HELP_JOINING_THE_PLAN : "Besoin d'aide pour rejoindre le plan ou le automatique?",
+  NEED_HELP_JOINING_THE_PLAN : "Besoin d'aide pour rejoindre le plan ou le automatique?",
   NEED_HELP : "Besoin d'aide?",
   SETUP_AUTOPAY_NOW_TO_GET_SPECIAL_DISCOUNTS  : "Configurez le automatique maintenant pour obtenir des remises spéciales",
   SETUP_NOW : "Configuration maintenant",
@@ -634,11 +624,7 @@ const frenchStrings = {
   CUSTOMER_HAS_LOW_MOBILITY_GO_TO_EXACT_LOC: "Le client a une mobilité réduite. Veuillez vous rendre à l'emplacement exact de prise en charge.",
   CUSTOMER_HAS_POOR_HEARING_CHAT_WITH_THEM_INSTEAD_OF_CALLING: "Le conducteur a une mauvaise audition. Discutez avec eux au lieu d'appeler.",
   CUSTOMER_HAS_LOW_VISION_CALL_THEM_INSTEAD_OF_CHATTING: "Le client a une mauvaise vision. Appelez-les au lieu de discuter.",
-	PLEASE_HELP_THEM_AS_YOU_CAN: "Veuillez les aider autant que vous le pouvez",
-	SETUP_NOW : "Configuration maintenant",
-	NEED_HELP_JOINING_THE_PLAN : "Besoin d'aide pour adhérer au plan ?Contactez-nous",
-  NEED_HELP_CALL_SUPPORT : "Besoin d'aide? <span style='color:#2194FF'>Appeler l'assistance</span>",
-  SUPPORT : "Soutien",
+  PLEASE_HELP_THEM_AS_YOU_CAN: "Veuillez les aider autant que vous le pouvez",
   SAVED_DUE_TO_ZERO_COMMISSION : "Enregistré grâce à une\ncommission zéro",
   TIP_EARNED_FROM_CUSTOMER : "Pourboire gagné\ndu client",
   COLLECT_VIA_CASE_UPI : "Collecter via Cash/UPI",
@@ -676,7 +662,6 @@ const frenchStrings = {
   GST_INCLUDE : "(incl. 18% TPS)",
   SCHEDULED_AT : "Planifié à",
   PAYMENT_STATUS : "Statut du paiement",
-  NOTIFICATION_SCHEDULED : "Notification programmée",
   NOTIFICATION_ATTEMPTING : "Tentative de notification",
   EXECUTION_SCHEDULED : "Exécution Planifiée",
   EXECUTION_ATTEMPTING : "Tentative d'exécution",
@@ -731,14 +716,22 @@ const frenchStrings = {
   PAYMENT_PENDING : "Paiement en attente",
   DOWNGRADE_AVAILABLE_ONLY_FOR_AC_VEHICLES : "L'option de rétrogradation du véhicule n'est disponible que pour les véhicules avec climatisation",
   DOWNGRADING_VEHICLE_WILL_ALLOW_YOU_TO_TAKE_BOTH_1 : "Le déclassement de votre véhicule vous permettra de prendre à la fois des trajets en",
-	DOWNGRADING_VEHICLE_WILL_ALLOW_YOU_TO_TAKE_BOTH_2 : "et des trajets en",
-	DOWNGRADING_VEHICLE_WILL_ALLOW_YOU_TO_TAKE_BOTH_3 : "",
+  DOWNGRADING_VEHICLE_WILL_ALLOW_YOU_TO_TAKE_BOTH_2 : "et des trajets en",
+  DOWNGRADING_VEHICLE_WILL_ALLOW_YOU_TO_TAKE_BOTH_3 : "",
   AC_CAB : "Cabine AC",
   AC_SUV : "SUV climatisé",
   DOWNGRADE_VEHICLE : "véhicule déclassé",
   WHAT_ARE_PURPLE_RIDES : "Qu'est-ce que les Purple Rides ?",
   ECONOMICAL : "Économique",
-	SPACIOUS : "Spacieux",
-	COMFY : "Confortable",
-	PEOPLE : "personnes"
+  SPACIOUS : "Spacieux",
+  COMFY : "Confortable",
+  PEOPLE : "personnes"
+}
+
+export function getStringValue(key) {
+  if (key in frenchStrings) {
+    return frenchStrings[key];
+  }
+  console.error(key + " not found in englishStrings");
+  return "";
 }

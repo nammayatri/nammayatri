@@ -32,7 +32,7 @@ import Engineering.Helpers.Commons (liftFlow, bundleVersion)
 import Engineering.Helpers.Utils (toggleLoader)
 import Foreign.Generic (encode)
 import Foreign.NullOrUndefined (undefined)
-import Helpers.Utils (decodeErrorCode, getTime, toString, decodeErrorMessage)
+import Helpers.Utils (decodeErrorCode, getTime, toStringJSON, decodeErrorMessage)
 import JBridge (setKeyInSharedPrefKeys, toast, factoryResetApp, stopLocationPollingAPI, Locations, getVersionName, stopChatListenerService)
 import Juspay.OTP.Reader as Readers
 import Language.Strings (getString)

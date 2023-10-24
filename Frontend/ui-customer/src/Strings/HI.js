@@ -1,11 +1,3 @@
-export function getStringValue(key) {
-  if (key in hindiStrings) {
-    return hindiStrings[key];
-  }
-  console.error(key + " not found in hindiString");
-  return "";
-}
-
 const hindiStrings = {
   "DOWNLOAD_INVOICE": "इनवाइस को डाउनलोड करें",
   "REPORT_AN_ISSUE": "मामले की रिपोर्ट दर्ज करें",
@@ -373,9 +365,7 @@ const hindiStrings = {
   "TAXI" : "टैक्सी" ,
   "AC" : "एसी",
   "NON_AC" : "नॉन-एसी",
-  "TAXI_FROM_ZONE" : "में सवार हों",
   "CHOOSE_YOUR_RIDE": "अपनी सवारी चुनें",
-  "PAY_VIA_CASH_OR_UPI": "नकद / यूपीआई के माध्यम से भुगतान करें",
   "ECONOMICAL": "किफ़ायती",
   "COMFY": "आरामदायक",
   "NAVIGATE": "नेविगेट",
@@ -572,12 +562,7 @@ const hindiStrings = {
   "ASKED_FOR_EXTRA_FARE": "अतिरिक्त किराया मांगा",
   "ANYTHING_THAT_YOU_WOULD_LIKE_TO_TELL_US" : "कुछ भी जो आप हमें बताना चाहेंगे? (वैकल्पिक)",
   "PLEASE_WAIT" : "कृपया प्रतीक्षा करें",
-  "THIS_FIELD_IS_REQUIRED" : "यह फ़ील्ड आवश्यक है",
-  "EMAIL_EXISTS_ALREADY" : "ईमेल पहले से ही मौजूद है",
   "PLATFORM_FEE" : "प्लेटफार्म शुल्क",
-  "THIS_FIELD_IS_REQUIRED" : "यह फ़ील्ड आवश्यक है",
-  "EMAIL_EXISTS_ALREADY" : "ईमेल पहले से ही मौजूद है",
-  "PLATFORM_FEE" : "प्लेटफ़ॉर्म शुल्क",
   "SGST" : "एसजीएसटी",
   "OTP_EXPIRED" : "ओटीपी समाप्त हो गया",
   "OTP_EXPIRED_DESCRIPTION" : "आपकी सवारी ओटीपी समाप्त हो गई है। सवारी पाने के लिए कृपया दोबारा बुकिंग करें",
@@ -623,7 +608,6 @@ const hindiStrings = {
   "ERNAKULAM_LIMIT_CHARGE": "यदि पिकअप या गंतव्य एर्नाकुलम निगम सीमा के बाहर है तो किराया 1.5 गुना होगा",
   "SELECT_LOCATION_ON_MAP" : "मानचित्र पर स्थान चुनें",
   "SENT_OTP_ VIA_WHATSAPP" : "व्हाट्सएप के माध्यम से OTP भेजा गया",  
-  "SENT_OTP_VIA_SMS" : "SMS के माध्यम से भेजा गया OTP",
   "DOWNLOAD_DRIVER_RECEIPT" : "ड्राइवर रसीद डाउनलोड करें",
   "VIEW_DRIVER_RECEIPT" : "ड्राइवर रसीद देखें",
   "DRIVER_RECEIPT" : "ड्राइवर रसीद",
@@ -631,4 +615,12 @@ const hindiStrings = {
   "FARE_INFO_TEXT" : "",
   "FASTER" : "और तेज",
   "PLEASE_ENABLE_LOCATION_PERMISSION" : "सवारी की तलाश शुरू करने के लिए कृपया सेटिंग ऐप से स्थान अनुमतियां सक्षम करें।"
+}
+
+export function getStringValue(key) {
+  if (key in hindiStrings) {
+    return hindiStrings[key];
+  }
+  console.error(key + " not found in hindiString");
+  return "";
 }

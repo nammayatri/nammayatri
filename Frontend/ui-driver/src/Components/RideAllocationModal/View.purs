@@ -26,7 +26,7 @@ import PrestoDOM.Properties (background, color, cornerRadius, fontStyle, gravity
 import Engineering.Helpers.Commons (screenWidth, screenHeight, flowRunner)
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Helpers.Utils (countDown, toString, parseFloat)
+import Helpers.Utils (countDown, toStringJSON, parseFloat)
 import Effect.Class (liftEffect)
 import Effect.Aff (launchAff_)
 import Control.Monad.Trans.Class (lift)
@@ -266,7 +266,7 @@ reducePrice push config =
   ][  textView $
       [ width WRAP_CONTENT
       , height WRAP_CONTENT
-      , text ("- " <> toString(config.reducePrice))
+      , text ("- " <> toStringJSON(config.reducePrice))
       , color if (config.totalPrice > config.basePrice) then Color.greyTextColor else Color.borderGreyColor
       ] <> FontStyle.h3 LanguageStyle
   ]
@@ -296,7 +296,7 @@ increasePrice push config =
   ][  textView $
       [ width WRAP_CONTENT
       , height WRAP_CONTENT
-      , text ("+ " <> toString(config.increasePrice))
+      , text ("+ " <> toStringJSON(config.increasePrice))
       , color if (config.totalPrice >= config.basePrice + config.increasePrice * 3.0) then Color.borderGreyColor else Color.greyTextColor
       ] <> FontStyle.h3 LanguageStyle
   ]
