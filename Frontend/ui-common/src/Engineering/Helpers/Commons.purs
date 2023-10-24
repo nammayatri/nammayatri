@@ -97,7 +97,6 @@ os = getOs unit
 sendSdkRequest :: forall a b st. EncodeWithOptions a => DecodeWithOptions (Maybe b) => SDKRequest a  -> Flow st (SDKResponse b)
 sendSdkRequest request@(SDKRequest req) = do
   result <- doAff do (fromEffectFnAff <<< callSahay $ request')
-  {--_ <- pure $ spy "Got result fromm makeAff"--}
   case runExcept $ defaultDecodeJSON result of
     Right response -> pure response
     Left err -> do

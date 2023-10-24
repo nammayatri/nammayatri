@@ -2350,7 +2350,6 @@ dummyLocationData = LocationData {
 checkAndUpdateLocations :: FlowBT String Unit
 checkAndUpdateLocations = do
   payload <- liftFlowBT $ getGlobalPayload unit
-  _ <- pure $ spy "inside checkAndUpdateLocations" ""
   case payload of
     Just (GlobalPayload payload') -> do
       _ <- pure $ spy "inside right" payload'
