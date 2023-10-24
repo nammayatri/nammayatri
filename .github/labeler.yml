@@ -1,0 +1,17 @@
+frontend:
+  - 'Frontend/**'
+
+ui-common:
+  - 'Frontend/ui-common/**'
+
+native:
+  - 'Frontend/android-native/**'
+
+driver:
+  - 'Frontend/ui-driver/**'
+
+customer:
+  - 'Frontend/ui-customer/**'
+
+backend:
+  - 'Backend/**'
