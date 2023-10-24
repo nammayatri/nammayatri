@@ -25,6 +25,7 @@
             easy-ps.purs-0_15_4
             easy-ps.spago
             easy-ps.psa
+            easy-ps.purty
             pkgs.dhall
             pkgs.nodejs-14_x
           ];

@@ -8,5 +8,6 @@
       enable = true;
       files = lib.mkForce "Frontend/.*\\.js$";
     };
+    purty.enable = true;
   };
 }
