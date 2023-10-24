@@ -25,7 +25,6 @@ library
       Dashboard.Common.Booking
       Dashboard.Common.DriverReferral
       Dashboard.Common.Exotel
-      Dashboard.Common.Issue
       Dashboard.Common.Merchant
       Dashboard.Common.Message
       Dashboard.Common.Ride
@@ -33,7 +32,6 @@ library
       Dashboard.ProviderPlatform.Driver
       Dashboard.ProviderPlatform.Driver.Registration
       Dashboard.ProviderPlatform.DriverReferral
-      Dashboard.ProviderPlatform.Issue
       Dashboard.ProviderPlatform.Merchant
       Dashboard.ProviderPlatform.Message
       Dashboard.ProviderPlatform.Revenue
