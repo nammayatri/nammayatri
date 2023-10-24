@@ -101,7 +101,6 @@ sendSdkRequest request@(SDKRequest req) = do
   case runExcept $ defaultDecodeJSON result of
     Right response -> pure response
     Left err -> do
-     {--_ <- pure $ spy "Failed to decode response : " (show err)--}
      pure $ SDKResponse
           {
             success : false,

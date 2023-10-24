@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - 'Frontend/ui-driver/**'
+      - 'Frontend/ui-common/**'
 
 jobs:
   build:
