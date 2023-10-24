@@ -1,10 +1,3 @@
-export function getStringValue(key) {
-  if (key in malayalamStrings) {
-    return malayalamStrings[key];
-  }
-  return "error in getCommonEN";
-}
-
 const malayalamStrings = {
   "DOWNLOAD_INVOICE": "ഇൻവോയ്സ് ഡൗൺലോഡ് ചെയ്യുക",
   "REPORT_AN_ISSUE": "ഒരു പ്രശ്നം റിപ്പോർട്ടുചെയ്യുക",
@@ -264,7 +257,6 @@ const malayalamStrings = {
   "AWAY": "ദൂരെ",
   "AT_PICKUP": "പിക്കപ്പ് ലൊക്കേഷനിൽ",
   "FARE_UPDATED": "നിരക്ക് മാറി",
-  "DRIVERS_MAY_QUOTE_EXTRA_TO_COVER_FOR_TRAFFIC": "റൂട്ടിലെ മാറ്റം കാരണം മൊത്തം നിരക്ക് മാറിയേക്കാം",
   "AT_DROP": "ഡ്രോപ്പ് ലൊക്കേഷനിൽ",
   "EMERGENCY_HELP": "അടിയന്തര സഹായം",
   "CALL_POLICE": "പോലീസിനെ വിളിക്കുക",
@@ -506,25 +498,6 @@ const malayalamStrings = {
   "HATCHBACK" : "ഹാച്ച്ബാക്ക്",
   "SUV" : "സ്ഉവി",
   "SEDAN" : "സെഡാൻ",
-  "CHANGE_OF_PLANS" : "പദ്ധതികളുടെ മാറ്റം",
-  "DRIVER_IS_NOT_MOVING" : "ഡ്രൈവർ നീങ്ങുന്നില്ല",
-  "WRONG_PICKUP_LOCATION" : "തെറ്റായ പിക്കപ്പ് ലൊക്കേഷൻ",
-  "DRIVER_MIGHT_BE_TAKING_ALTERNATE_ROUTE" : "ഡ്രൈവർ ഒരു ഇതര റൂട്ട് എടുക്കുന്നുണ്ടാകാം.",
-  "DRIVER_IS_NOT_MOVING_Q" : "ഡ്രൈവർ നീങ്ങുന്നില്ല?",
-  "WOULD_YOU_LIKE_TO_CHECK_WITH_THE_DRIVER_BEFORE_CANCELLING" : "\nറദ്ദാക്കുന്നതിന് മുമ്പ് ഡ്രൈവറുമായി പരിശോധിക്കാൻ നിങ്ങൾക്ക് താൽപ്പര്യമുണ്ടോ?",
-  "DRIVER_IS_NEAR_YOUR_LOCATION" : "ഡ്രൈവർ നിങ്ങളുടെ സ്ഥലത്തിനടുത്താണ്.",
-  "SOME_OTHER_REASON" : "മറ്റെന്തെങ്കിലും കാരണം.",
-  "NO_LONGER_REQUIRE_A_RIDE_DUE_TO_CHANGE_IN_PLANS" : "പ്ലാനുകളിലെ മാറ്റം കാരണം ഇനി ഒരു റൈഡ് ആവശ്യമില്ല",
-  "CANCELLING_AS_I_GOT_A_RIDE_ON_ANOTHER_APP" : "മറ്റൊരു ആപ്പിൽ യാത്ര ചെയ്തതിനാൽ റദ്ദാക്കുന്നു",
-  "DRIVER_LOCATION_WASNT_CHANGING_ON_THE_MAP" : "മാപ്പിൽ ഡ്രൈവർ ലൊക്കേഷൻ മാറുന്നില്ല",
-  "DRIVER_WAS_TAKING_TOO_LONG_TO_REACH_THE_PICKUP_LOCATION" : "ഡ്രൈവർ പിക്കപ്പ് ലൊക്കേഷനിൽ എത്താൻ വളരെയധികം സമയമെടുത്തു",
-  "THE_PICKUP_LOCATION_ENTERED_WAS_WRONG" : "നൽകിയ പിക്കപ്പ് ലൊക്കേഷൻ തെറ്റാണ്",
-  "YOUR_DRIVER_IS_JUST" : "നിങ്ങളുടെ ഡ്രൈവർ വെറും ",
-  "M_AWAY" : " മീറ്റർ അകലെയാണ്.",
-  "DRIVER_HAS_ALREADY_TRAVELLED" : "ഡ്രൈവർ ഇതിനകം ",
-  "HAS_TRAVELLED" : " സഞ്ചരിച്ചു",
-  "PLEASE_CONTACT_THE_DRIVER_BEFORE_CANCELLING" : "\nറദ്ദാക്കുന്നതിന് മുമ്പ് ഡ്രൈവറെ ബന്ധപ്പെടുക",
-  "WAIT_FOR_DRIVER" : "ഡ്രൈവർക്കായി കാത്തിരിക്കുക",
   "DRIVER_IS_ALREADY_ON_THE_WAY_TO_YOUR_LOCATION" : "ഡ്രൈവർ നിങ്ങളുടെ ലൊക്കേഷനിലേക്കുള്ള വഴിയിലാണ്.",
   "OTP_PAGE_HAS_BEEN_EXPIRED_PLEASE_REQUEST_OTP_AGAIN" : "OTP പേജ് കാലഹരണപ്പെട്ടു, ദയവായി OTP വീണ്ടും അഭ്യർത്ഥിക്കുക",
   "OTP_ENTERING_LIMIT_EXHAUSTED_PLEASE_TRY_AGAIN_LATER" : "OTP ഇൻപുട്ട് പരിധി എത്തിയിരിക്കുന്നു, ദയവായി പിന്നീട് വീണ്ടും ശ്രമിക്കുക",
@@ -586,8 +559,6 @@ const malayalamStrings = {
   "ASKED_FOR_EXTRA_FARE": "അധിക കൂലി ചോദിച്ചു",
   "ANYTHING_THAT_YOU_WOULD_LIKE_TO_TELL_US" : "നിങ്ങൾ ഞങ്ങളോട് പറയാൻ ആഗ്രഹിക്കുന്ന എന്തെങ്കിലും? (ഓപ്ഷണൽ)",
   "PLEASE_WAIT" : "കാത്തിരിക്കൂ",
-  "THIS_FIELD_IS_REQUIRED" : "ഈ ഫീൽഡ് പൂരിപ്പിക്കേണ്ടതുണ്ട്",
-  "EMAIL_EXISTS_ALREADY" : "ഇമെയില് നേരത്തെ ഉള്ളതാണ്",
   "PLATFORM_FEE" : "പ്ലാറ്റ്ഫോം ഫീസ്",
   "SGST" : "SGST",
   "CGST" : "CGST",
@@ -597,7 +568,6 @@ const malayalamStrings = {
   "MISC_WAITING_CHARGE" : "മറ്റ്. (വെയിറ്റിംഗ് ചാർജുകൾ ഉൾപ്പെടെ)",
   "AC_TAXI" : "AC ടാക്സി",
   "NON_AC_TAXI": "എസി ടാക്സി ഇല്ല",
-  "ASKED_FOR_EXTRA_FARE": "അധിക പണം ആവശ്യപ്പെട്ടു",
   "AUTO_RICKSHAW" : "ഓട്ടോ റിക്ഷ",
   "GET_OTP_VIA_WHATSAPP" : "വാട്ട്‌സ്ആപ്പ് വഴി OTP നേടുക",
   "OR" : "അഥവാ",
@@ -642,4 +612,11 @@ const malayalamStrings = {
   "FARE_INFO_TEXT" : "",
   "FASTER" : "വേഗത്തിൽ",
   "PLEASE_ENABLE_LOCATION_PERMISSION" : "റൈഡുകൾക്കായി തിരയാൻ ക്രമീകരണ ആപ്പിൽ നിന്ന് ലൊക്കേഷൻ അനുമതികൾ പ്രാപ്തമാക്കുക."
+}
+
+export function getStringValue(key) {
+  if (key in malayalamStrings) {
+    return malayalamStrings[key];
+  }
+  return "error in getCommonEN";
 }

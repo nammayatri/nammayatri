@@ -1,11 +1,3 @@
-export function getStringValue(key) {
-  if (key in kannadaStrings) {
-    return kannadaStrings[key];
-  }
-  console.error(key + " not found in kannadaString");
-  return "";
-}
-
 const kannadaStrings = {
   "DOWNLOAD_INVOICE": "ಸರಕುಪಟ್ಟಿ ಡೌನ್‌ಲೋಡ್ ಮಾಡಿ",
   "REPORT_AN_ISSUE": "ಸಮಸ್ಯೆಯನ್ನು ವರದಿ ಮಾಡಿ",
@@ -370,11 +362,9 @@ const kannadaStrings = {
   "CHOOSE_YOUR_RIDE": "ನಿಮ್ಮ ಸವಾರಿಯನ್ನು ಆರಿಸಿ",
   "BOARD_THE_FIRST": "ಯಾತ್ರಿ ಸತಿ ವಲಯದಿಂದ ಮೊದಲ",
   "TAXI_FROM_ZONE" : "ಟ್ಯಾಕ್ಸಿ ಹತ್ತಿ",
-  "BOARD_THE_FIRST": "ಯಾತ್ರಿ ಸತಿ ವಲಯದಿಂದ ಮೊದಲ",
   "TAXI" : "ಟ್ಯಾಕ್ಸಿ" ,
   "AC" : "ಎಸಿ",
   "NON_AC" : "ನಾನ್-ಎಸಿ",
-  "TAXI_FROM_ZONE" : "ಹತ್ತಿ",
   "PAY_VIA_CASH_OR_UPI": "ನಗದು / UPI ಮೂಲಕ ಪಾವತಿಸಿ",
   "ECONOMICAL": "ಆರ್ಥಿಕ",
   "COMFY": "ಆರಾಮದಾಯಕ",
@@ -568,11 +558,6 @@ const kannadaStrings = {
   "ASKED_FOR_EXTRA_FARE": "ಚಾಲಕ ಹೆಚ್ಚು ವೆಚ್ಚವನ್ನು ವಸೂಲಿ ಮಾಡಿದ",
   "ANYTHING_THAT_YOU_WOULD_LIKE_TO_TELL_US" : "ನೀವು ನಮಗೆ ಹೇಳಲು ಬಯಸುವ ಯಾವುದಾದರೂ? (ಐಚ್ಛಿಕ)",
   "PLEASE_WAIT" : "ದಯಮಾಡಿ ನಿರೀಕ್ಷಿಸಿ",
-  "THIS_FIELD_IS_REQUIRED" : "ಈ ಜಾಗ ಬೇಕಾಗಿದೆ",
-  "EMAIL_EXISTS_ALREADY" : "ಇಮೇಲ್ ಈಗಾಗಲೇ ಅಸ್ತಿತ್ವದಲ್ಲಿದೆ",
-  "PLATFORM_FEE" : "ಪ್ಲಾಟ್‌ಫಾರ್ಮ್ ಶುಲ್ಕ",
-  "THIS_FIELD_IS_REQUIRED" : "ಈ ಜಾಗ ಬೇಕಾಗಿದೆ",
-  "EMAIL_EXISTS_ALREADY" : "ಇಮೇಲ್ ಈಗಾಗಲೇ ಅಸ್ತಿತ್ವದಲ್ಲಿದೆ",
   "PLATFORM_FEE" : "ಪ್ಲಾಟ್‌ಫಾರ್ಮ್ ಶುಲ್ಕ",
   "SGST" : "SGST",
   "OTP_EXPIRED" : "OTP ಅವಧಿ ಮುಗಿದಿದೆ",
@@ -626,4 +611,12 @@ const kannadaStrings = {
   "FARE_INFO_TEXT" : "",
   "FASTER" : "ವೇಗವಾಗಿ",
   "PLEASE_ENABLE_LOCATION_PERMISSION" : "ಸವಾರಿಗಳಿಗಾಗಿ ಹುಡುಕುವುದನ್ನು ಪ್ರಾರಂಭಿಸಲು ದಯವಿಟ್ಟು ಸೆಟ್ಟಿಂಗ್‌ಗಳ ಅಪ್ಲಿಕೇಶನ್‌ನಿಂದ ನಮ್ಮ ಯಾತ್ರಿಗೆ ಸ್ಥಳ ಅನುಮತಿಗಳನ್ನು ಸಕ್ರಿಯಗೊಳಿಸಿ."
+}
+
+export function getStringValue(key) {
+  if (key in kannadaStrings) {
+    return kannadaStrings[key];
+  }
+  console.error(key + " not found in kannadaString");
+  return "";
 }

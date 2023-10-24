@@ -1,19 +1,12 @@
-const hindiStrings = require("./../../src/Strings/HI.js");
-const kannadaStrings = require("./../../src/Strings/KN.js");
-const englishStrings = require("./../../src/Strings/EN.js");
-const bengaliStrings = require("./../../src/Strings/BN.js");
-const malayalamStrings = require("./../../src/Strings/ML.js");
-const tamilStrings = require("./../../src/Strings/TA.js");
-const frenchStrings = require("./../../src/Strings/FR.js")
+import * as hindiStrings from "./../../src/Strings/HI.js";
+import * as kannadaStrings from "./../../src/Strings/KN.js";
+import * as englishStrings from "./../../src/Strings/EN.js";
+import * as bengaliStrings from "./../../src/Strings/BN.js";
+import * as malayalamStrings from "./../../src/Strings/ML.js";
+import * as tamilStrings from "./../../src/Strings/TA.js";
+import * as frenchStrings from "./../../src/Strings/FR.js";
 
-
-export const getStringFromConfig = function (key) {
-
-  if (window.appConfig.StringKeys.includes(key)){
-    return getMerchantString(key);
-  }
-  return getStringFromCommon(key);
-}
+const JBridge = window.JBridge;
 
 export const getValueFromConfig = function (constructorKey){
   if (constructorKey in window.appConfig){
@@ -24,7 +17,7 @@ export const getValueFromConfig = function (constructorKey){
 }
 
 function getStringFromCommon(key) {
-  var selectedLanguage = JBridge.getKeysInSharedPref("LANGUAGE_KEY");
+  const selectedLanguage = JBridge.getKeysInSharedPref("LANGUAGE_KEY");
   switch (selectedLanguage) {
     case "HI_IN":
       return hindiStrings.getStringValue(key);
@@ -48,7 +41,7 @@ export const getENStrings = function (constructorKey){
 }
 
 export const getMerchantString = function(key) {
-  var selectedLanguage = JBridge.getKeysInSharedPref("LANGUAGE_KEY");
+  const selectedLanguage = JBridge.getKeysInSharedPref("LANGUAGE_KEY");
   switch (selectedLanguage) {
     case "HI_IN":
       return window.appConfig.hindiStrings[key];
@@ -67,6 +60,15 @@ export const getMerchantString = function(key) {
   }
 }
 
+export const getStringFromConfig = function (key) {
+
+  if (window.appConfig.StringKeys.includes(key)){
+    return getMerchantString(key);
+  }
+  return getStringFromCommon(key);
+}
+
+
 export const getMerchantId = function(id) {
   return window.merchantID;
 }
@@ -84,18 +86,18 @@ export const getMerchantConfig = function (just) {
 
 export const getStringWithVar = function (str) {
   return function (vals) {
-      try {
-        let currentIndex = 0;
+    try {
+      let currentIndex = 0;
         
-        const regex = /{}/g;
+      const regex = /{}/g;
     
-        const processedString = str.replace(regex, () => {
-          const currentValue = vals[currentIndex++];
-          return currentValue ? currentValue : "";
-        });
-        return processedString;
-      } catch (err) {
-        console.log(err);
-      }
+      const processedString = str.replace(regex, () => {
+        const currentValue = vals[currentIndex++];
+        return currentValue ? currentValue : "";
+      });
+      return processedString;
+    } catch (err) {
+      console.log(err);
     }
+  }
 }

@@ -1,12 +1,3 @@
-
-export function getStringValue(key) {
-  if (key in englishStrings) {
-    return englishStrings[key];
-  }
-  console.error(key + " not found in englishStrings");
-  return "";
-}
-
 const englishStrings = {
   INACCURATE_DATE_AND_TIME: "Inaccurate Date & Time!",
   ADJUST_YOUR_DEVICE_DATE_AND_TIME_AND_TRY_AGAIN: "Adjust your device date and time and try again",
@@ -114,7 +105,7 @@ const englishStrings = {
   REGISTRATION_CERTIFICATE_IMAGE: "Registration Certificate (RC) Image",
   HOME: "Home",
   RIDES: "Rides",
-	MY_RIDES: "My Rides",
+  MY_RIDES: "My Rides",
   PROFILE: "Profile",
   ENTER_DRIVING_LICENSE_NUMBER: "Enter Driving License Number",
   WHERE_IS_MY_LICENSE_NUMBER: "Where is my License Number?",
@@ -363,7 +354,6 @@ const englishStrings = {
   TRY_SILENT_MODE : "Try silent mode?",
   RIDE_FARE : "Ride Fare" ,
   RIDE_DISTANCE : "Ride Distance",
-  FARE_UPDATED : "Fare updated",
   START_YOUR_CHAT_USING_THESE_QUICK_CHAT_SUGGESTIONS : "Start your chat using these quick chat suggestions",
   START_YOUR_CHAT_WITH_THE_DRIVER : "Start your chat with the driver",
   MESSAGE : "Message",
@@ -584,7 +574,6 @@ const englishStrings = {
   PLATFORM_FEE : "Platform Fee",
   GST  : "GST",
   TOTAL_PAYABLE : "Total Payable",
-  GOT_IT : "Got it",
   VIEW_DETAILS : "View Details",
   PAYMENT_SUCCESSFUL : "Payment Successful!",
   PAYMENT_PENDING : "Payment Pending!",
@@ -661,24 +650,24 @@ const englishStrings = {
   ENJOY_THESE_BENEFITS : "Enjoy these benefits ",
   CHOOSE_YOUR_PLAN : "Choose a Plan Now!",
   SKIP_FOR_NOW : "Skip For Now",
-	NAMMAYATRI_PLANS  : "Namma Yatri Plans",
-	SEVEN_DAY_FREE_TRIAL_ACTIVATED : "7-Day FREE TRIAL Activated!",
-	TAKE_UNLIMITED_RIDES_FOR_THE_NEXT_SEVEN_DAYS : "Take unlimited rides for the first 7 days",
-	EVERY_RIDE_AT_ZERO_COMMISSION : "Every ride at ZERO Commission!",
-	EARN_UPTO_PER_DAY : "Earn upto ₹2500 a day!",
-	HOW_THIS_WORKS : "How this Works",
-	SIGN_UP_FOR_AUTOPAY_BY_PAYING_JUST : "Sign up for Autopay by paying just ₹1",
+  NAMMAYATRI_PLANS  : "Namma Yatri Plans",
+  SEVEN_DAY_FREE_TRIAL_ACTIVATED : "7-Day FREE TRIAL Activated!",
+  TAKE_UNLIMITED_RIDES_FOR_THE_NEXT_SEVEN_DAYS : "Take unlimited rides for the first 7 days",
+  EVERY_RIDE_AT_ZERO_COMMISSION : "Every ride at ZERO Commission!",
+  EARN_UPTO_PER_DAY : "Earn upto ₹2500 a day!",
+  HOW_THIS_WORKS : "How this Works",
+  SIGN_UP_FOR_AUTOPAY_BY_PAYING_JUST : "Sign up for Autopay by paying just ₹1",
   GET_REMINDED_ABOUT_YOUR_PLAN_SETUP : "Get reminded about your plan setup",
   FREE_TRIAL_REMINDER : "Day 5: FREE TRIAL reminder",
   PLAN_STARTS : "Day 7: Plan Starts",
   EASY_AUTOMATIC_PAYMENTS_START : "Easy, automatic payments start",
-	FREE_UNTIL : "Free until ",
-	PER_RIDE : "per ride",
-	PER_DAY : "per day",
-	OFFER : "Offer",
+  FREE_UNTIL : "Free until ",
+  PER_RIDE : "per ride",
+  PER_DAY : "per day",
+  OFFER : "Offer",
   OFFERS : "Offers",
-	YOU_ARE_ON_THE_FREE_TRIAL : "You are on the FREE TRIAL",
-	SETUP_AUTOPAY_BEFORE_THE_TRAIL_PERIOD_EXPIRES : "Setup Autopay before the trial period expires",
+  YOU_ARE_ON_THE_FREE_TRIAL : "You are on the FREE TRIAL",
+  SETUP_AUTOPAY_BEFORE_THE_TRAIL_PERIOD_EXPIRES : "Setup Autopay before the trial period expires",
   GET_FREE_TRAIL_UNTIL : "Get Free Trial until ",
   CLEAR_DUES : "Clear Dues",
   PAYMENT_PENDING_ALERT : "⚠️ Payment Pending! ⚠️",
@@ -766,7 +755,7 @@ const englishStrings = {
   YOUR_PAYMENT_WAS_UNSUCCESSFUL : "Your payment attempt was unsuccessful.",
   PAYMENT_CANCELLED : "You have cancelled your UPI Autopay. You can clear your dues manually.",
   UPI_AUTOPAY_S : "UPI Autopay",
-	MANUAL_PAYMENT_STR : "Manual Payment",
+  MANUAL_PAYMENT_STR : "Manual Payment",
   DAILY_UNLIMITED : "DAILY UNLIMITED",
   DAILY_PER_RIDE : "DAILY PER RIDE",
   DAILY_UNLIMITED_PLAN_DESC : "Enjoy UNLIMITED rides, every day",
@@ -775,7 +764,7 @@ const englishStrings = {
   NO : "No",
   YES_CANCEL : "Yes, Cancel",
   PAY_TO_JOIN_THIS_PLAN : "Pay ₹1 to join plan",
-	OFFERS_NOT_APPLICABLE : "Offers not applicable unless completed",
+  OFFERS_NOT_APPLICABLE : "Offers not applicable unless completed",
   PAUSED_STR : "Paused",
   PENDING_STR : "Pending",
   SWITCH_PLAN_STR : "Switch Plan?",
@@ -799,10 +788,10 @@ const englishStrings = {
   CLOSE: "Close", 
   RC_DEACTIVATED : "RC is Deactivated", 
   RC_DEACTIVATED_DETAILS : "Your RC is currently active on another driver's account. Activate an RC to start taking rides",
-	NEED_HELP_JOINING_THE_PLAN : "Need help with joining the plan or Autopay?",
+  NEED_HELP_JOINING_THE_PLAN : "Need help with joining the plan or Autopay?",
   NEED_HELP : "Need Help?",
   SETUP_AUTOPAY_NOW_TO_GET_SPECIAL_DISCOUNTS  : "Setup Autopay to get special discounts",
-	SETUP_NOW : "Setup Now",
+  SETUP_NOW : "Setup Now",
   NEED_HELP_CALL_SUPPORT : "Need Help? <span style='color:#2194FF'>Call Support</span>",
   CUSTOMER_HAS_LOW_MOBILITY: "Customer has low mobility",
   CUSTOMER_HAS_DISABILITY: "Customer has a disability",
@@ -827,10 +816,6 @@ const englishStrings = {
   PLEASE_HELP_THEM_AS_YOU_CAN : "Please help them as you can",
   LEARN_HOW_YOU_CAN_HELP_CUSTOMERS_REQUIRING_SPECIAL_ASSISTANCE : "Learn how you can help customers requiring special assistance",
   ASSISTANCE_REQUIRED : "Assistance Required",
-  SETUP_AUTOPAY_NOW_TO_GET_SPECIAL_DISCOUNTS  : "Setup Autopay now to get special discounts",
-	SETUP_NOW : "Setup Now",
-	NEED_HELP_JOINING_THE_PLAN : "Need help with joining the plan? Contact us",
-  NEED_HELP_CALL_SUPPORT : "Need Help? <span style='color:#2194FF'>Call Support</span>",
   SAVED_DUE_TO_ZERO_COMMISSION : "Saved due to\nZero Commission", 
   TIP_EARNED_FROM_CUSTOMER : "Tip earned\nfrom customer",
   COLLECT_VIA_CASE_UPI : "Collect via Cash/UPI",
@@ -856,7 +841,6 @@ const englishStrings = {
   PAYMENT_MODE : "Payment Mode",
   TXN_ID : "Order ID",
   AMOUNT_PAID : "Amount Paid",
-  OFFER : "Offer",
   NOTIFICATION_SCHEDULED : "Notification Scheduled!",
   MANUAL_DUES : "Manual dues",
   AUTOPAY_IN_PROGRESS : "Autopay in progress",
@@ -872,7 +856,6 @@ const englishStrings = {
   GST_INCLUDE : "(incl. 18% GST)",
   SCHEDULED_AT : "Scheduled at",
   PAYMENT_STATUS : "Payment Status",
-  NOTIFICATION_SCHEDULED :  "Notification Scheduled", 
   NOTIFICATION_ATTEMPTING :  "Notification Attempting", 
   EXECUTION_SCHEDULED :  "Execution Scheduled", 
   EXECUTION_ATTEMPTING : "Execution Attempting", 
@@ -1010,4 +993,13 @@ const englishStrings = {
   DRAG_TO_ADJUST : "Drag to adjust your location",
   LOCATION_ALREADY_EXISTS : "Location already exists as",
   MIN_LEFT : "Min left"
+}
+
+
+export function getStringValue(key) {
+  if (key in englishStrings) {
+    return englishStrings[key];
+  }
+  console.error(key + " not found in englishStrings");
+  return "";
 }

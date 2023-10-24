@@ -1,0 +1,48 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+purscriptFiles=$(git diff --cached --name-only --diff-filter=ACM | grep ".purs$" || true;)
+jsFiles=$(git diff --cached --name-only --diff-filter=ACM | grep '.js$' || true;)
+currentDir=$(pwd)
+# Will Enable the pre-commit hook for purs files later
+# for file in $purscriptFiles
+# do
+#   basePath=$(echo $file | cut -f 1,2 -d "/")
+#   filePath=$(echo $file | cut -d "/" -f 3-)
+#   if [ $(echo $file | cut -f 2 -d "/") == "ui-common" ]; then
+#   basePath="Frontend/ui-customer"
+#   filePath=$"../ui-common/$filePath"
+#   fi
+#   cd $basePath
+#   echo "Formatting File $file"
+#   npx purty format --write "$filePath"
+#   git add $filePath
+#   cd $currentDir
+# done
+
+lintSuccess=true
+echo $jsFiles
+config="../.eslintrc.json"
+for file in $jsFiles
+do
+  basePath=$(echo $file | cut -f 1,2 -d "/")
+  filePath=$(echo $file | cut -d "/" -f 3-)
+  if [ $(echo $file | cut -f 2 -d "/") == "ui-common" ]; then
+  basePath="Frontend/ui-customer"
+  filePath=$"../ui-common/$filePath"
+  fi
+  cd $basePath
+  npx eslint --exit-on-fatal-error -c $config $filePath
+  if [[ "$?" == 0 ]]; then
+    echo "\033[0;32m Linting File $file" "Passed"
+  else
+    echo "\033[0;31m Linting File $file" " Failed"
+    lintSuccess=false
+  fi
+  cd $currentDir
+done
+
+if ! $lintSuccess; then 
+    echo "\033[0;31m Commit Failed : Please fix the ESLint errors"
+    exit 1
+  fi

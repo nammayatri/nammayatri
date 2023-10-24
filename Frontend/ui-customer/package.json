@@ -45,17 +45,19 @@
     "commitlint-config-jira": "^1.6.4",
     "commitlint-plugin-jira-rules": "^1.6.4",
     "cz-conventional-changelog": "^3.3.0",
+    "eslint": "^8.52.0",
+    "eslint-config-google": "^0.14.0",
     "filemanager-webpack-plugin": "^2.0.5",
     "husky": "^8.0.1",
     "node-notifier": "^10.0.1",
     "npm-run-all": "^4.1.5",
+    "purty": "^7.0.0",
     "semantic-release": "^19.0.5",
     "uglify-js": "^3.17.4",
     "webpack": "^4.41.5",
     "webpack-cli": "^3.3.10",
     "webpack-dev-server": "^3.10.1",
-    "webpack-merge": "^5.8.0",
-    "purty": "^7.0.0"
+    "webpack-merge": "^5.8.0"
   },
   "dependencies": {
     "axios": "^0.27.1",

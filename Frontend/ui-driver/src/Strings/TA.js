@@ -1,11 +1,3 @@
-export function getStringValue(key) {
-  if (key in tamilStrings) {
-    return tamilStrings[key];
-  }
-  console.error(key +  " not found in tamilStrings");
-  return "";
-}
-
 const tamilStrings = {
   INACCURATE_DATE_AND_TIME: "துல்லியமற்ற தேதி & நேரம்!",
   ADJUST_YOUR_DEVICE_DATE_AND_TIME_AND_TRY_AGAIN: "உங்கள் மொபைல் தேதி மற்றும் நேரத்தை சரிசெய்து மீண்டும் முயற்சிக்கவும்",
@@ -113,7 +105,7 @@ const tamilStrings = {
   REGISTRATION_CERTIFICATE_IMAGE: "பதிவு சான்றிதழ் (ஆர்.சி) படம்",
   HOME: "இல்லம்",
   RIDES: "சவாரி",
-	MY_RIDES: "எனது சவாரிகள்",
+  MY_RIDES: "எனது சவாரிகள்",
   PROFILE: "சுயவிவரம்",
   ENTER_DRIVING_LICENSE_NUMBER: "ஓட்டுநர் உரிம எண்ணை உள்ளிடவும்",
   WHERE_IS_MY_LICENSE_NUMBER: "எனது உரிம எண் எங்கே?",
@@ -376,7 +368,6 @@ const tamilStrings = {
   GO_ONLINE_PROMPT : "நீங்கள் தற்போது ஆஃப்லைனில் உள்ளீர்கள். \n சவாரிகளைப் பெற, இப்போதே ஆன்லைனில் செல்லுங்கள்!",
   LIVE_DASHBOARD : "நேரடி புள்ளிவிவரங்கள் டாஷ்போர்டு",
   CLICK_TO_ACCESS_YOUR_ACCOUNT : "உங்கள் சுயவிவரத்தைக் காண இங்கே கிளிக் செய்யவும்",
-  LOAD_OLDER_ALERTS : "அதிகமாய் ஏற்று",
   ADD_ALTERNATE_NUMBER : "மற்றொரு எண்ணைச் சேர்க்கவும்",
   ENTER_ALTERNATE_MOBILE_NUMBER : "மற்றொரு மொபைல் எண்ணை உள்ளிடவும்",
   PLEASE_ENTER_A_VALID_10_DIGIT_NUMBER : "சரியான 10 இலக்க எண்ணை உள்ளிடவும்",
@@ -510,9 +501,7 @@ const tamilStrings = {
   OTP_RESEND_LIMIT_EXCEEDED : "மீண்டும் OTP அனுப்புவதற்கான வரம்பு மீறப்பட்டது",
   LIMIT_EXCEEDED_FOR_ALTERNATE_NUMBER : "பல தவறான முயற்சிகள். பின்னர் மீண்டும் முயற்சிக்கவும்",
   ALTERNATE_NUMBER_CANNOT_BE_ADDED : "மற்றொரு எண்ணைச் சேர்க்க முடியாது",
-  ADD_ALTERNATE_NUMBER_IN_MEANTIME : "இந்தச் செயல்முறை முடிய 2 வேலை நாட்கள் வரை ஆகலாம். இதற்கிடையில், நீங்கள் \nமாற்று மொபைல் எண்ணைச் சேர்க்கலாம்.",
   SELECT_THE_LANGUAGES_YOU_CAN_SPEAK : "நீங்கள் பேசக்கூடிய மொழிகளைத் தேர்ந்தெடுக்கவும்",
-  ALTERNATE_NUMBER_CANNOT_BE_ADDED : "மாற்று எண்ணைச் சேர்க்க முடியாது",
   OTP_RESENT : "OTP மீண்டும் அனுப்பவும்",
   SEDAN : "செடான்",
   SUV : "SUV",
@@ -630,24 +619,24 @@ const tamilStrings = {
   ENJOY_THESE_BENEFITS : "நன்மைகள்‌",
   CHOOSE_YOUR_PLAN : "திட்டம் தேர்ந்தெடுவீர்‌!",
   SKIP_FOR_NOW : "இப்போதைக்கு தவிர்க்கவும்",
-	NAMMAYATRI_PLANS  : "நம்ம யாத்ரி திட்டங்கள்",
-	SEVEN_DAY_FREE_TRIAL_ACTIVATED : "7 நாள் இலவச சோதனை செயல்படுத்தப்பட்டது!",
-	TAKE_UNLIMITED_RIDES_FOR_THE_NEXT_SEVEN_DAYS : "முதல் 7 நாட்களுக்கு வரம்பற்ற சவாரி செய்யுங்கள்",
-	EVERY_RIDE_AT_ZERO_COMMISSION : "ZERO கமிஷனில் ஒவ்வொரு சவாரியும்!",
-	EARN_UPTO_PER_DAY : "ஒரு நாளைக்கு ₹2500 வரை சம்பாதிக்கவும்!",
-	HOW_THIS_WORKS : "இது எப்படி வேலை செய்கிறது",
-	SIGN_UP_FOR_AUTOPAY_BY_PAYING_JUST : "வெறும் ₹1 செலுத்தி தன்னியக்கச் செலுத்துதலுக்குப் பதிவு செய்யவும்",
+  NAMMAYATRI_PLANS  : "நம்ம யாத்ரி திட்டங்கள்",
+  SEVEN_DAY_FREE_TRIAL_ACTIVATED : "7 நாள் இலவச சோதனை செயல்படுத்தப்பட்டது!",
+  TAKE_UNLIMITED_RIDES_FOR_THE_NEXT_SEVEN_DAYS : "முதல் 7 நாட்களுக்கு வரம்பற்ற சவாரி செய்யுங்கள்",
+  EVERY_RIDE_AT_ZERO_COMMISSION : "ZERO கமிஷனில் ஒவ்வொரு சவாரியும்!",
+  EARN_UPTO_PER_DAY : "ஒரு நாளைக்கு ₹2500 வரை சம்பாதிக்கவும்!",
+  HOW_THIS_WORKS : "இது எப்படி வேலை செய்கிறது",
+  SIGN_UP_FOR_AUTOPAY_BY_PAYING_JUST : "வெறும் ₹1 செலுத்தி தன்னியக்கச் செலுத்துதலுக்குப் பதிவு செய்யவும்",
   GET_REMINDED_ABOUT_YOUR_PLAN_SETUP : "உங்கள் திட்ட அமைப்பைப் பற்றி நினைவூட்டுங்கள்",
   FREE_TRIAL_REMINDER : "நாள் 5: இலவச சோதனை நினைவூட்டல்",
   PLAN_STARTS : "நாள் 7: திட்டம் தொடங்குகிறது",
   EASY_AUTOMATIC_PAYMENTS_START : "எளிதான, தானாக பணம் செலுத்துதல் தொடங்கும்",
-	FREE_UNTIL : " வரை இலவசம்",
-	PER_RIDE : "ஒரு சவாரிக்கு",
-	PER_DAY : "ஒரு நாளைக்கு",
-	OFFER : "சலுகை",
+  FREE_UNTIL : " வரை இலவசம்",
+  PER_RIDE : "ஒரு சவாரிக்கு",
+  PER_DAY : "ஒரு நாளைக்கு",
+  OFFER : "சலுகை",
   OFFERS : "சலுகைகள்",
-	YOU_ARE_ON_THE_FREE_TRIAL : "நீங்கள் இலவச சோதனையில் இருக்கிறீர்கள்",
-	SETUP_AUTOPAY_BEFORE_THE_TRAIL_PERIOD_EXPIRES : "சோதனைக் காலம் காலாவதியாகும் முன் தானாகப் பணம் செலுத்துதலை அமைக்கவும்",
+  YOU_ARE_ON_THE_FREE_TRIAL : "நீங்கள் இலவச சோதனையில் இருக்கிறீர்கள்",
+  SETUP_AUTOPAY_BEFORE_THE_TRAIL_PERIOD_EXPIRES : "சோதனைக் காலம் காலாவதியாகும் முன் தானாகப் பணம் செலுத்துதலை அமைக்கவும்",
   PAY_TO_JOIN_THIS_PLAN : "திட்டத்தில் சேர ₹1 செலுத்தவும்",
   GET_FREE_TRAIL_UNTIL : "வரை இலவசம்‌",
   CLEAR_DUES : "பாக்கிகளை செலுத்தவும்‌",
@@ -744,7 +733,7 @@ const tamilStrings = {
   AUTOPAY_CANCELLED : "தானியங்கு கட்டணம் ரத்து செய்யப்பட்டது",
   NO : "இல்லை",
   YES_CANCEL : "ஆம், ரத்துசெய்",
-	OFFERS_NOT_APPLICABLE : "பூர்த்தி செய்யாத வரை சலுகைகள் பொருந்தாது",
+  OFFERS_NOT_APPLICABLE : "பூர்த்தி செய்யாத வரை சலுகைகள் பொருந்தாது",
   PAUSED_STR : "இடைநிறுத்தப்பட்டது",
   PENDING_STR : "நிலுவையில் உள்ளது",
   PLAN_SWITCHED_TO : "திட்டம் மாறியது",
@@ -764,7 +753,7 @@ const tamilStrings = {
   NO_HELP_CENTER_IS_ACTIVE_NOW : "தற்போது எந்த உதவி மையமும் செயல்படவில்லை",
   HELP_CENTERS_LOCATION_WILL_APPEAR_HERE_ONCE_THEY_ARE_ACTIVE : "உதவி மையங்கள் செயல்பட்டவுடன் அவற்றின் இருப்பிடங்கள் இங்கே தோன்றும்",
   SUPPORT : "ஆதரவு",
-	NEED_HELP_JOINING_THE_PLAN : "திட்டம் அல்லது ஆட்டோ பே இல் சேர உதவி தேவையா?",
+  NEED_HELP_JOINING_THE_PLAN : "திட்டம் அல்லது ஆட்டோ பே இல் சேர உதவி தேவையா?",
   NEED_HELP : "திட்டத்தில் சேர உதவி வேண்டுமா?",
   SETUP_AUTOPAY_NOW_TO_GET_SPECIAL_DISCOUNTS  : "சிறப்பு தள்ளுபடியைப் பெற இப்போதே ஆட்டோ பேயை அமைக்கவும்",
   SETUP_NOW : "இப்போதே அமைக்கவும்",
@@ -796,9 +785,6 @@ const tamilStrings = {
   PLEASE_HELP_THEM_AS_YOU_CAN : "தயவுசெய்து உங்களால் முடிந்தவரை அவர்களுக்கு உதவவும்",
   LEARN_HOW_YOU_CAN_HELP_CUSTOMERS_REQUIRING_SPECIAL_ASSISTANCE : "சிறப்பு உதவி தேவைப்படும் வாடிக்கையாளர்களுக்கு நீங்கள் எவ்வாறு உதவலாம் என்பதை அறிக",
   ASSISTANCE_REQUIRED : "உதவி தேவை",
-	SETUP_NOW : "இப்போதே அமைக்கவும்",
-	NEED_HELP_JOINING_THE_PLAN : "திட்டத்தில் சேர உதவி வேண்டுமா?எங்களை தொடர்பு கொள்ளவும்",
-  NEED_HELP_CALL_SUPPORT : "திட்டத்தில் சேர உதவி வேண்டுமா? <span style='color:#2194FF'>எங்களை தொடர்பு கொள்ளவும்</span>",
   SAVED_DUE_TO_ZERO_COMMISSION : "ஜீரோ கமிஷனால்\n சேமிக்கப்பட்டது", 
   TIP_EARNED_FROM_CUSTOMER : "வாடிக்கையாளரிடமிருந்து\nபெறப்பட்ட டிப்",
   COLLECT_VIA_CASE_UPI : "பணம்/UPI மூலம் சேகரிக்கவும்",
@@ -824,7 +810,6 @@ const tamilStrings = {
   PAYMENT_MODE : "கட்டண முறை",
   TXN_ID : "குறிப்பு எண் ஐடி",
   AMOUNT_PAID : "செலுத்தப்பட்ட தொகை",
-  OFFER: "சலுகை",
   NOTIFICATION_SCHEDULED : "அறிவிப்பு திட்டமிடப்பட்டுள்ளது!",
   MANUAL_DUES : "கைமுறை நிலுவைத் தொகை",
   AUTOPAY_IN_PROGRESS : "தானாகச் செலுத்துதல் நடந்து கொண்டிருக்கிறது",
@@ -840,7 +825,6 @@ const tamilStrings = {
   GST_INCLUDE : "(18% GST உட்பட)",
   SCHEDULED_AT : "திட்டமிடப்பட்டது",
   PAYMENT_STATUS : "கட்டண நிலை",
-  NOTIFICATION_SCHEDULED : "அறிவிப்பு திட்டமிடப்பட்டது",
   NOTIFICATION_ATTEMPTING : "அறிவிப்பு முயற்சி",
   EXECUTION_SCHEDULED : "செயல்படுத்தல் திட்டமிடப்பட்டது",
   EXECUTION_ATTEMPTING : "செயல்படுத்தும் முயற்சி",
@@ -901,8 +885,8 @@ const tamilStrings = {
   PAYMENT_PENDING : "கொடுப்பனவு நிலுவை",
   DOWNGRADE_AVAILABLE_ONLY_FOR_AC_VEHICLES : "குறைவு வாகன விருப்பம் எஸிக் வாகன்களுக்கு மட்டும் கிடைக்கின்றது",
   DOWNGRADING_VEHICLE_WILL_ALLOW_YOU_TO_TAKE_BOTH_1 : "உங்கள் வாகனத்தை தரமிறக்கினால்,",
-	DOWNGRADING_VEHICLE_WILL_ALLOW_YOU_TO_TAKE_BOTH_2 : "சவாரிகள் மற்றும்",
-	DOWNGRADING_VEHICLE_WILL_ALLOW_YOU_TO_TAKE_BOTH_3 : "சவாரிகள் இரண்டிலும் நீங்கள் செல்லலாம்",
+  DOWNGRADING_VEHICLE_WILL_ALLOW_YOU_TO_TAKE_BOTH_2 : "சவாரிகள் மற்றும்",
+  DOWNGRADING_VEHICLE_WILL_ALLOW_YOU_TO_TAKE_BOTH_3 : "சவாரிகள் இரண்டிலும் நீங்கள் செல்லலாம்",
   AC_CAB : "ஏசி வண்டி",
   AC_SUV : "ஏசி எஸ்யூவி",
   DOWNGRADE_VEHICLE : "தரமிறக்கும் வாகனம்",
@@ -980,4 +964,12 @@ const tamilStrings = {
   LOCATION_ALREADY_EXISTS : "இடம் ஏற்கனவே உள்ளது",
   MIN_LEFT : "இன்னும் நிமிடம்",
   GOTO_LOC_REACHED : "“கோ-டூ” இருப்பிடத்தை அடைந்தது!"
+}
+
+export function getStringValue(key) {
+  if (key in tamilStrings) {
+    return tamilStrings[key];
+  }
+  console.error(key +  " not found in tamilStrings");
+  return "";
 }
