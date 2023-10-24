@@ -1757,7 +1757,6 @@ onBoardingSubscriptionScreenFlow onBoardingSubscriptionViewCount = do
 homeScreenFlow :: FlowBT String Unit
 homeScreenFlow = do
   logField_ <- lift $ lift $ getLogFields
-  _ <- pure $ printLog "HOME_SCREEN_FLOW" "."
   _ <- pure $ delay $ Milliseconds 1.0
   _ <- pure $ printLog "Registration token" (getValueToLocalStore REGISTERATION_TOKEN)
   _ <- pure $ cleverTapSetLocation unit

@@ -388,7 +388,6 @@ currentFlowStatus = do
   _ <- pure $ setValueToLocalStore DRIVER_ARRIVAL_ACTION "TRIGGER_DRIVER_ARRIVAL"
   verifyProfile "LazyCheck"
   (FlowStatusRes flowStatus) <- Remote.flowStatusBT "LazyCheck"
-  void $ pure $ spy "flowStatus" flowStatus
   case flowStatus.currentStatus of
     WAITING_FOR_DRIVER_OFFERS currentStatus -> goToFindingQuotesStage currentStatus.estimateId false
     DRIVER_OFFERED_QUOTE currentStatus      -> goToFindingQuotesStage currentStatus.estimateId true
@@ -843,7 +842,6 @@ homeScreenFlow = do
         updateSourceLocation ""
         (GlobalState updatedState) <- getState
         let bothLocationChangedState = updatedState.homeScreen
-        _ <- pure $ spy "destination prediction clicked state ---->>> " bothLocationChangedState
         (ServiceabilityRes sourceServiceabilityResp) <- Remote.originServiceabilityBT (Remote.makeServiceabilityReq bothLocationChangedState.props.sourceLat bothLocationChangedState.props.sourceLong)
         let srcServiceable = sourceServiceabilityResp.serviceable
         let (SpecialLocation srcSpecialLocation) = fromMaybe HomeScreenData.specialLocation (sourceServiceabilityResp.specialLocation)
@@ -944,7 +942,6 @@ homeScreenFlow = do
     CONFIRM_RIDE state -> do
           _ <- pure $ enableMyLocation false
           let selectedQuote = if state.props.isSpecialZone && state.data.currentSearchResultType == QUOTES then state.data.specialZoneSelectedQuote else state.props.selectedQuote
-          _ <- pure $ spy "selected Quote " selectedQuote
           if isJust selectedQuote then do
             updateLocalStage ConfirmingRide
             response  <- lift $ lift $ Remote.rideConfirm (fromMaybe "" selectedQuote)
