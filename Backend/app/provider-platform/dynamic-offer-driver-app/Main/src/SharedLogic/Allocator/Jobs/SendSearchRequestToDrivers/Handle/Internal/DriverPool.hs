@@ -27,6 +27,7 @@ import qualified Data.List as DL
 import Domain.Types.Driver.GoHomeFeature.DriverGoHomeRequest as DDGR
 import qualified Domain.Types.DriverInformation as DriverInfo
 import Domain.Types.GoHomeConfig (GoHomeConfig)
+import qualified Domain.Types.Location as DL
 import Domain.Types.Merchant (Merchant)
 import Domain.Types.Merchant.DriverIntelligentPoolConfig
 import Domain.Types.Merchant.DriverPoolConfig
@@ -74,12 +75,13 @@ prepareDriverPoolBatch ::
   ) =>
   DriverPoolConfig ->
   DSR.SearchRequest ->
+  DL.Location ->
   Id DST.SearchTry ->
   DVeh.Variant ->
   PoolBatchNum ->
   GoHomeConfig ->
   m DriverPoolWithActualDistResultWithFlags
-prepareDriverPoolBatch driverPoolCfg searchReq searchTryId vehicleVariant batchNum goHomeConfig = withLogTag ("BatchNum-" <> show batchNum) $ do
+prepareDriverPoolBatch driverPoolCfg searchReq pickupLoc searchTryId vehicleVariant batchNum goHomeConfig = withLogTag ("BatchNum-" <> show batchNum) $ do
   previousBatchesDrivers <- getPreviousBatchesDrivers
   logDebug $ "PreviousBatchesDrivers-" <> show previousBatchesDrivers
   poolBatchWithFlags <- prepareDriverPoolBatch' previousBatchesDrivers True
@@ -202,9 +204,6 @@ prepareDriverPoolBatch driverPoolCfg searchReq searchTryId vehicleVariant batchN
             DSR.SearchReqDetailsRental _ -> pure [] -- RENTAL
         calcDriverPool radiusStep = do
           let merchantId = searchReq.providerId
-          let pickupLoc = case searchReq.searchRequestDetails of
-                DSR.SearchReqDetailsOnDemand details -> details.fromLocation
-                DSR.SearchReqDetailsRental details -> details.rentalFromLocation -- FIXME use fromLocation from booking
           let pickupLatLong = LatLong pickupLoc.lat pickupLoc.lon
           let searchReqTag = DSR.getSearchRequestTag searchReq
           calculateDriverPoolWithActualDist DriverSelection driverPoolCfg (Just vehicleVariant) searchReqTag pickupLatLong merchantId True (Just radiusStep)
@@ -212,9 +211,6 @@ prepareDriverPoolBatch driverPoolCfg searchReq searchTryId vehicleVariant batchN
           let merchantId = searchReq.providerId
           if transporterConfig.includeDriverCurrentlyOnRide && (radiusStep - 1) > 0
             then do
-              let pickupLoc = case searchReq.searchRequestDetails of
-                    DSR.SearchReqDetailsOnDemand details -> details.fromLocation
-                    DSR.SearchReqDetailsRental details -> details.rentalFromLocation -- FIXME use fromLocation from booking
               let pickupLatLong = LatLong pickupLoc.lat pickupLoc.lon
               let searchReqTag = DSR.getSearchRequestTag searchReq
               calculateDriverCurrentlyOnRideWithActualDist DriverSelection driverPoolCfg (Just vehicleVariant) searchReqTag pickupLatLong merchantId (Just $ radiusStep - 1)
@@ -438,14 +434,15 @@ getNextDriverPoolBatch ::
   ) =>
   DriverPoolConfig ->
   DSR.SearchRequest ->
+  DL.Location ->
   Id DST.SearchTry ->
   DVeh.Variant ->
   GoHomeConfig ->
   m DriverPoolWithActualDistResultWithFlags
-getNextDriverPoolBatch driverPoolConfig searchReq searchTryId vehicleVariant goHomeConfig = withLogTag "getNextDriverPoolBatch" do
+getNextDriverPoolBatch driverPoolConfig searchReq pickupLoc searchTryId vehicleVariant goHomeConfig = withLogTag "getNextDriverPoolBatch" do
   batchNum <- getPoolBatchNum searchTryId
   incrementBatchNum searchTryId
-  prepareDriverPoolBatch driverPoolConfig searchReq searchTryId vehicleVariant batchNum goHomeConfig
+  prepareDriverPoolBatch driverPoolConfig searchReq pickupLoc searchTryId vehicleVariant batchNum goHomeConfig
 
 getPoolBatchNum :: (Redis.HedisFlow m r) => Id DST.SearchTry -> m PoolBatchNum
 getPoolBatchNum searchTryId = do

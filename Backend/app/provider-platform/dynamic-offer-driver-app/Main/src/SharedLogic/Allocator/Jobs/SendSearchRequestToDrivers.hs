@@ -89,13 +89,13 @@ sendSearchRequestToDrivers' driverPoolConfig searchReq searchTry merchant driver
     DSR.SearchReqDetailsOnDemand details -> pure details
     DSR.SearchReqDetailsRental _ -> throwError (InternalError "Rental now allowed here")
   let searchDetails = DSRD.OnDemandDetails DSRD.OnDemandSearchDetails {searchTry, searchReqDetails}
-  handler (handle searchDetails) goHomeCfg
+  handler (handle searchDetails searchReqDetails.fromLocation) goHomeCfg
   where
-    handle searchDetails =
+    handle searchDetails pickupLoc =
       Handle
         { isBatchNumExceedLimit = I.isBatchNumExceedLimit driverPoolConfig searchTry.id,
           isReceivedMaxDriverQuotes = I.isReceivedMaxDriverQuotes driverPoolConfig searchTry.id,
-          getNextDriverPoolBatch = I.getNextDriverPoolBatch driverPoolConfig searchReq searchTry.id searchTry.vehicleVariant,
+          getNextDriverPoolBatch = I.getNextDriverPoolBatch driverPoolConfig searchReq pickupLoc searchTry.id searchTry.vehicleVariant,
           sendSearchRequestToDrivers = I.sendSearchRequestToDrivers searchReq searchDetails driverExtraFeeBounds driverPoolConfig,
           getRescheduleTime = I.getRescheduleTime driverPoolConfig.singleBatchProcessTime,
           setBatchDurationLock = I.setBatchDurationLock searchTry.id driverPoolConfig.singleBatchProcessTime,
