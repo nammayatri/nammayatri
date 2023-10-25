@@ -30,7 +30,6 @@ import qualified EulerHS.Language as L
 import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude hiding (mask, throwIO)
 import qualified Kernel.Storage.Hedis.Queries as Hedis
-import Kernel.Tools.LoopGracefully (loopGracefully)
 import Kernel.Tools.Metrics.CoreMetrics
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
@@ -40,6 +39,7 @@ import Lib.Scheduler.Environment
 import Lib.Scheduler.JobHandler
 import Lib.Scheduler.Metrics
 import Lib.Scheduler.Types
+import SharedService.ProviderPlatform.LoopGracefully (loopGracefully)
 
 data SchedulerHandle t = SchedulerHandle
   { jobHandlers :: JobHandlersList t,
@@ -62,7 +62,7 @@ handler hnd = do
   logDebug $ "Got tables before split " <> show tables
   case schedulerType of
     RedisBased -> do
-      mapConcurrently (const $ loopGracefully [runnerIterationRedis hnd runTask]) [1 .. maxThreads]
+      mapConcurrently (loopGracefully [runnerIterationRedis hnd runTask]) [1 .. maxThreads]
     DbBased -> do
       executionChannels :: [Chan (AnyJob t)] <- L.runIO $ mapM (const newChan) [1 .. maxThreads]
       mapM_ (fork "executing tasks" . executeTaskInChan) executionChannels
@@ -95,7 +95,7 @@ mapConcurrently :: Traversable t => (a -> SchedulerM ()) -> t a -> SchedulerM ()
 mapConcurrently action = mapM_ (fork "mapThread" . action)
 
 runnerIterationRedis :: forall t. (JobProcessor t, FromJSON t) => SchedulerHandle t -> (AnyJob t -> SchedulerM ()) -> SchedulerM ()
-runnerIterationRedis hnd@SchedulerHandle {..} runTask = do
+runnerIterationRedis SchedulerHandle {..} runTask = do
   logInfo "Starting runner iteration"
   key <- asks (.streamName)
   groupName <- asks (.groupName)
@@ -106,7 +106,6 @@ runnerIterationRedis hnd@SchedulerHandle {..} runTask = do
   logTagDebug "Available tasks - Count" . show $ length filteredTasks
   logTagDebug "Available tasks" . show $ map @_ @(Id AnyJob) (\(AnyJob Job {..}, _) -> parentJobId) filteredTasks
   mapM_ runTask filteredTasks'
-  runnerIterationRedis hnd runTask
   unless (null recordIds) do
     void $ Hedis.withNonCriticalCrossAppRedis $ Hedis.xAck key groupName recordIds
     void $ Hedis.withNonCriticalCrossAppRedis $ Hedis.xDel key recordIds
@@ -191,6 +190,8 @@ registerExecutionResult :: forall t. (JobProcessor t) => SchedulerHandle t -> An
 registerExecutionResult SchedulerHandle {..} j@(AnyJob job@Job {..}) result = do
   let jobType' = show (fromSing $ jobType jobInfo)
   logDebug $ "Current Job Id with Status : " <> show id <> " " <> show result
+  tts <- L.getOption KBT.Tables
+  logDebug $ "Got tables 2 " <> show tts
   case result of
     DuplicateExecution -> do
       logInfo $ "job id " <> show id <> " already executed "

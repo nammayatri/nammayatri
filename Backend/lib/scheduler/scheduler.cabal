@@ -93,6 +93,7 @@ library
     , record-hasfield
     , sequelize
     , servant-server
+    , shared-services
     , singletons
     , template-haskell
     , text

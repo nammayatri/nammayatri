@@ -82,6 +82,7 @@ dependencies:
   - postgresql-simple
   - random
   - unordered-containers
+  - shared-services
 
 ghc-options:
   - -fwrite-ide-info
@@ -104,3 +105,4 @@ library:
     - -Werror
   dependencies:
     - mobility-core
+    - shared-services

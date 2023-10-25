@@ -24,6 +24,7 @@ library
       SharedService.Common
       SharedService.Common.Issue
       SharedService.ProviderPlatform.Issue
+      SharedService.ProviderPlatform.LoopGracefully
   other-modules:
       Paths_shared_services
   hs-source-dirs:

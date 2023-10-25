@@ -1,5 +1,5 @@
 let non_persistent_redis_cfg =
-      { redis_host = "0.0.0.0"
+      { redis_host = "localhost"
       , redis_port = 6379
       , redis_pool_size = 10
       , redis_partition = 0
@@ -11,7 +11,7 @@ let non_persistent_redis_cfg =
       }
 
 let persistent_redis_cfg =
-      { redis_host = "0.0.0.0"
+      { redis_host = "localhost"
       , redis_port = 6379
       , redis_pool_size = 10
       , redis_partition = 0
