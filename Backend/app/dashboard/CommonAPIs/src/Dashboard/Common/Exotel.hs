@@ -22,8 +22,8 @@ where
 
 import Dashboard.Common as Reexport
 import Data.Aeson
-import Data.Aeson.Types
 import qualified Data.Aeson.Key as AesonKey (fromText)
+import Data.Aeson.Types
 import Data.OpenApi
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto

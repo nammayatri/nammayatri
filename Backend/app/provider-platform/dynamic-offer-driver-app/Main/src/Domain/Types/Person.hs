@@ -13,8 +13,8 @@
 -}
 {-# LANGUAGE ApplicativeDo #-}
 {-# LANGUAGE DerivingStrategies #-}
-{-# OPTIONS_GHC -Wno-type-defaults #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wno-type-defaults #-}
 
 module Domain.Types.Person where
 

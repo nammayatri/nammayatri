@@ -16,8 +16,8 @@ module API.Handler where
 
 import qualified API.Types as API
 import qualified Data.ByteString as BS
-import qualified EulerHS.Types as ET
 import Environment
+import qualified EulerHS.Types as ET
 import Kernel.Prelude
 import Kernel.Tools.Metrics.CoreMetrics
 import Kernel.Types.App
