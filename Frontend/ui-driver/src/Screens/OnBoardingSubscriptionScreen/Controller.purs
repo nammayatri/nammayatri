@@ -57,6 +57,6 @@ eval (LoadPlans plans) state = do
 eval (SelectPlan config ) state = continue state {data { selectedPlanItem = Just config }}
 eval (JoinPlanAC PrimaryButton.OnClick) state = updateAndExit state $ StartFreeTrialExit state
 eval CallSupport state = do
-  _ <- pure $ JB.showDialer "08069490091" false
+  _ <- pure $ JB.showDialer "08069724800" false
   continue state
 eval _ state = continue state
