@@ -76,7 +76,7 @@ ui = do
       :<|> driverClient
       :<|> rideClient = client (Proxy :: Proxy UIAPI)
 
-    _ :<|> (_ :<|> _ :<|> rideStart :<|> rideEnd :<|> rideCancel) :<|> (_ :<|> _) = rideClient
+    _ :<|> (_ :<|> _ :<|> rideStart :<|> rideEnd :<|> rideCancel :<|> _) = rideClient
 
     ( _
         :<|> _
@@ -131,7 +131,8 @@ buildStartRideReq otp initialPoint =
     { RideAPI.rideOtp = otp,
       point = initialPoint,
       odometerStartReading = Just 0,
-      odometerStartImage = Nothing
+      odometerStartImage = Nothing,
+      odometerStartImageExtension = Nothing
     }
 
 getDriverOfferBppBaseUrl :: BaseUrl

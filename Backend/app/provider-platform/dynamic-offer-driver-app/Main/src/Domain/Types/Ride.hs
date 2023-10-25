@@ -60,9 +60,9 @@ data RideDetailsOnDemand = RideDetailsOnDemand
 
 data RideDetailsRental = RideDetailsRental
   { rentalToLocation :: Maybe DL.Location,
-    odometerStartReadingImagePath :: Maybe Text,
+    odometerStartReadingImageId :: Maybe Text,
     odometerStartReading :: Maybe Centesimal,
-    odometerEndReadingImagePath :: Maybe Text,
+    odometerEndReadingImageId :: Maybe Text,
     odometerEndReading :: Maybe Centesimal,
     endRideOtp :: Maybe Text
   }

@@ -25,9 +25,9 @@ where
 
 import AWS.S3 as S3
 import qualified Data.Text as T
-import Data.Time.Format.ISO8601 (iso8601Show)
 import qualified Domain.Action.UI.Ride.StartRide.Internal as SInternal
 import qualified Domain.Types.Booking as SRB
+import qualified Domain.Types.MediaFile as Domain
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
@@ -49,8 +49,10 @@ import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
 import Storage.CachedQueries.Merchant.TransporterConfig as QTC
+import qualified Storage.CachedQueries.Merchant.TransporterConfig as CQTC
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.DriverInformation as QDI
+import qualified Storage.Queries.MediaFile as MFQuery
 import qualified Storage.Queries.Person as Person
 import qualified Storage.Queries.Ride as QRide
 import Tools.Error
@@ -62,6 +64,7 @@ data DriverStartRideReq = DriverStartRideReq
     point :: LatLong,
     odometerStartReading :: Maybe Centesimal,
     odometerStartImage :: Maybe Text,
+    odometerStartImageExtension :: Maybe Text,
     requestor :: DP.Person
   }
 
@@ -154,33 +157,38 @@ startRide ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.getId)
   unless (isValidRideStatus (ride.status)) $ throwError $ RideInvalidStatus "This ride cannot be started"
 
   --enableLocationTrackingService <- asks (.enableLocationTrackingService)
-  (point, odometerStartReading, odometerStartImage) <- case req of
+  (point, odometerStartReading, odometerStartImage, odometerStartImageExtension) <- case req of
     DriverReq driverReq -> do
       when (driverReq.rideOtp /= ride.otp) $ throwError IncorrectOTP
       when (booking.bookingType == SRB.RentalBooking && isNothing driverReq.odometerStartReading) $ throwError $ InvalidRequest "No odometer start reading found"
       logTagInfo "driver -> startRide : " ("DriverId " <> getId driverId <> ", RideId " <> getId ride.id)
-      pure (driverReq.point, driverReq.odometerStartReading, driverReq.odometerStartImage)
+      pure (driverReq.point, driverReq.odometerStartReading, driverReq.odometerStartImage, driverReq.odometerStartImageExtension)
     DashboardReq dashboardReq -> do
       logTagInfo "dashboard -> startRide : " ("DriverId " <> getId driverId <> ", RideId " <> getId ride.id)
       case dashboardReq.point of
-        Just point -> pure (point, Nothing, Nothing)
+        Just point -> pure (point, Nothing, Nothing, Nothing)
         Nothing -> do
           driverLocation <- do
             driverLocations <- LF.driversLocation [driverId]
             listToMaybe driverLocations & fromMaybeM LocationNotFound
-          pure (getCoordinates driverLocation, Nothing, Nothing)
+          pure (getCoordinates driverLocation, Nothing, Nothing, Nothing)
 
   (updRide, mbRideEndOtp) <- case ride.rideDetails of
     DRide.DetailsOnDemand _ -> pure (ride, Nothing)
     DRide.DetailsRental details -> do
       case odometerStartImage of
-        Nothing -> throwError $ InvalidRequest "No odometer start reading found"
+        Nothing -> throwError $ InvalidRequest "No odometer start Image reading found"
         Just image -> do
           person <- Person.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
-          let merchantId = person.merchantId
-          imagePath <- createPath driverId.getId merchantId.getId (getId ride.id)
-          _ <- fork "S3 Put Image" $ S3.put (T.unpack imagePath) image
-          void $ QRide.updateOdometerEndReadingImagePath rideId (Just imagePath)
+          -- let merchantId = person.merchantId
+          transporterConfig <- CQTC.findByMerchantId (person.merchantId) >>= fromMaybeM (TransporterConfigNotFound (getId (person.merchantId)))
+          imagePath <- createPath (getId ride.id) odometerStartImageExtension
+          let imageUrl =
+                transporterConfig.mediaFileUrlPattern
+                  & T.replace "<DOMAIN>" "driver/odometer/startImage"
+                  & T.replace "<FILE_PATH>" imagePath
+          _ <- try @_ @SomeException $ S3.put (T.unpack imagePath) image
+          createMediaFile imageUrl ride
       endRideOtp <- Just <$> generateOTPCode
       pure (ride{rideDetails = DRide.DetailsRental details{endRideOtp = endRideOtp}}, endRideOtp)
 
@@ -193,24 +201,35 @@ startRide ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.getId)
   where
     isValidRideStatus status = status == DRide.NEW
     createPath ::
-      (MonadTime m, MonadReader r m, HasField "s3Env" r (S3.S3Env m)) =>
+      (MonadTime m, Log m, MonadThrow m, MonadReader r m, HasField "s3Env" r (S3.S3Env m)) =>
       Text ->
-      Text ->
-      Text ->
+      Maybe Text ->
       m Text
-    createPath driverId' merchantId' rideId' = do
+    createPath rideId' imageType = do
       pathPrefix <- asks (.s3Env.pathPrefix)
-      now <- getCurrentTime
-      let fileName = T.replace (T.singleton ':') (T.singleton '-') (T.pack $ iso8601Show now)
+      let fileName = T.pack "startOdometerReadingImage"
+      extension <- case imageType of
+        Just "image/jpeg" -> pure "jpg"
+        _ -> throwError $ InvalidRequest "File Format Not Supported"
       return
-        ( pathPrefix <> "/ride-odometer-reading/" <> "org-" <> merchantId' <> "/"
-            <> driverId'
-            <> "/"
+        ( pathPrefix <> "/ride-odometer-reading/" <> "/"
             <> rideId'
             <> "/"
             <> fileName
-            <> ".png"
+            <> extension
         )
+    createMediaFile fileUrl ride = do
+      id' <- generateGUID
+      now <- getCurrentTime
+      let fileEntity =
+            Domain.MediaFile
+              { id = id',
+                _type = Domain.Image,
+                url = fileUrl,
+                createdAt = now
+              }
+      MFQuery.create fileEntity
+      QRide.updateOdometerStartReadingImageId (ride.id) (Just $ getId fileEntity.id)
 
 makeStartRideIdKey :: Id DP.Person -> Text
 makeStartRideIdKey driverId = "StartRideKey:PersonId-" <> driverId.getId
