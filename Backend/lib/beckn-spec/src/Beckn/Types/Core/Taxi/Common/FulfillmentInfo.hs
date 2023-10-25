@@ -61,7 +61,7 @@ data FulfillmentType
 data FulfillmentInfo = FulfillmentInfo
   { id :: Text, -- bppRideId
     start :: StartInfo,
-    end :: Maybe EndInfo,
+    end :: EndInfo,
     agent :: Maybe Agent,
     _type :: FulfillmentType,
     vehicle :: Maybe Vehicle,
@@ -78,8 +78,9 @@ instance ToJSON FulfillmentInfo where
 instance ToSchema FulfillmentInfo where
   declareNamedSchema = genericDeclareUnNamedSchema $ fromAesonOptions stripPrefixUnderscoreAndRemoveNullFields
 
-newtype EndInfo = EndInfo
-  { location :: Location
+data EndInfo = EndInfo
+  { authorization :: Maybe Authorization,
+    location :: Maybe Location
   }
   deriving (Generic, Show, FromJSON, ToJSON)
 

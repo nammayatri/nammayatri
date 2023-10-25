@@ -1417,7 +1417,6 @@ respondQuote (driverId, _) req = do
       guid <- Id <$> generateGUID
       shortId <- generateShortId
       now <- getCurrentTime
-      endRideOtp <- generateOTPCode -- startRide otp code adding logic can be added later
       trackingUrl <- buildTrackingUrl guid
       return
         DRide.Ride
@@ -1451,7 +1450,7 @@ respondQuote (driverId, _) req = do
                     odometerEndReading = Nothing,
                     odometerStartReadingImagePath = Nothing,
                     odometerEndReadingImagePath = Nothing,
-                    endRideOtp = Just endRideOtp
+                    endRideOtp = Nothing
                   }
           }
 

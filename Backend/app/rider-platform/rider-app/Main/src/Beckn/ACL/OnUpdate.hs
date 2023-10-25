@@ -15,6 +15,7 @@
 module Beckn.ACL.OnUpdate (buildOnUpdateReq) where
 
 import Beckn.ACL.Common (getTag)
+import qualified Beckn.Types.Core.Taxi.Common.FulfillmentInfo as OnUpdate
 import qualified Beckn.Types.Core.Taxi.OnUpdate as OnUpdate
 import qualified Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.BookingCancelledEvent as OnUpdate
 import qualified Data.Text as T
@@ -86,11 +87,16 @@ parseEvent _ (OnUpdate.RideAssigned taEvent) = do
 parseEvent _ (OnUpdate.RideStarted rsEvent) = do
   tagsGroup <- fromMaybeM (InvalidRequest "agent tags is not present in RideStarted Event.") rsEvent.fulfillment.tags
   let odometerStartReading :: Maybe Centesimal = readMaybe . T.unpack =<< getTag "ride_distance_details" "odometer_start_reading" tagsGroup
+  endAuthorization <- case rsEvent.fulfillment._type of
+    OnUpdate.RENTAL -> do
+      Just <$> fromMaybeM (InvalidRequest "authorization is not present in RideAssigned Event.") (rsEvent.fulfillment.end.authorization)
+    _ -> pure Nothing
   return $
     DOnUpdate.RideStartedReq
       { bppBookingId = Id rsEvent.id,
         bppRideId = Id rsEvent.fulfillment.id,
-        odometerStartReading = odometerStartReading
+        odometerStartReading = odometerStartReading,
+        endRideOtp = endAuthorization <&> (.token)
       }
 parseEvent _ (OnUpdate.RideCompleted rcEvent) = do
   tagsGroup <- fromMaybeM (InvalidRequest "agent tags is not present in RideCompleted Event.") rcEvent.fulfillment.tags

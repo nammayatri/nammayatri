@@ -117,6 +117,7 @@ updateMultiple rideId ride = do
       Se.Set BeamR.rideEndTime ride.rideEndTime,
       Se.Set BeamR.odometerStartReading ride.odometerStartReading,
       Se.Set BeamR.odometerEndReading ride.odometerEndReading,
+      Se.Set BeamR.endRideOtp ride.endRideOtp,
       Se.Set BeamR.updatedAt now
     ]
     [Se.Is BeamR.id (Se.Eq $ getId rideId)]
@@ -387,6 +388,7 @@ instance FromTType' BeamR.Ride Ride where
             vehicleColor = vehicleColor,
             vehicleVariant = vehicleVariant,
             otp = otp,
+            endRideOtp = endRideOtp,
             trackingUrl = tUrl,
             fare = roundToIntegral <$> fare,
             totalFare = roundToIntegral <$> totalFare,
@@ -420,6 +422,7 @@ instance ToTType' BeamR.Ride Ride where
         BeamR.vehicleColor = vehicleColor,
         BeamR.vehicleVariant = vehicleVariant,
         BeamR.otp = otp,
+        BeamR.endRideOtp = endRideOtp,
         BeamR.trackingUrl = showBaseUrl <$> trackingUrl,
         BeamR.fare = realToFrac <$> fare,
         BeamR.totalFare = realToFrac <$> totalFare,

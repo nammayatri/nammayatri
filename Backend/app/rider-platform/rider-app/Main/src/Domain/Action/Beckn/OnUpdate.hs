@@ -82,7 +82,8 @@ data OnUpdateReq
   | RideStartedReq
       { bppBookingId :: Id SRB.BPPBooking,
         odometerStartReading :: Maybe Centesimal,
-        bppRideId :: Id SRide.BPPRide
+        bppRideId :: Id SRide.BPPRide,
+        endRideOtp :: Maybe Text
       }
   | RideCompletedReq
       { bppBookingId :: Id SRB.BPPBooking,
@@ -143,7 +144,8 @@ data ValidatedOnUpdateReq
         bppRideId :: Id SRide.BPPRide,
         odometerStartReading :: Maybe Centesimal,
         booking :: SRB.Booking,
-        ride :: SRide.Ride
+        ride :: SRide.Ride,
+        endRideOtp :: Maybe Text
       }
   | ValidatedRideCompletedReq
       { bppBookingId :: Id SRB.BPPBooking,
@@ -288,13 +290,14 @@ onUpdate ValidatedRideAssignedReq {..} = do
             traveledDistance = Nothing,
             driverArrivalTime = Nothing,
             vehicleVariant = booking.vehicleVariant,
-            createdAt = now,
-            updatedAt = now,
             rideStartTime = Nothing,
             rideEndTime = Nothing,
             rideRating = Nothing,
             odometerStartReading = Nothing,
             odometerEndReading = Nothing,
+            endRideOtp = Nothing,
+            createdAt = now,
+            updatedAt = now,
             ..
           }
 onUpdate ValidatedRideStartedReq {..} = do
@@ -304,7 +307,8 @@ onUpdate ValidatedRideStartedReq {..} = do
         ride{status = SRide.INPROGRESS,
              rideStartTime = Just rideStartTime,
              odometerStartReading = odometerStartReading,
-             rideEndTime = Nothing
+             rideEndTime = Nothing,
+             endRideOtp = endRideOtp
             }
   triggerRideStartedEvent RideEventData {ride = updRideForStartReq, personId = booking.riderId, merchantId = booking.merchantId}
   _ <- QRide.updateMultiple updRideForStartReq.id updRideForStartReq

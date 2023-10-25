@@ -158,7 +158,7 @@ instance ToTType' BeamSR.SearchRequest SearchRequest where
                 specialLocationTag' = details.specialLocationTag
             (tag', fromLocationId', toLocationId', estimatedDistance', estimatedDuration', autoAssignEnabled', specialLocationTag')
           SearchReqDetailsRental details -> do
-            let tag' = ON_DEMAND
+            let tag' = RENTAL
                 fromLocationId' = Just $ getId details.rentalFromLocation.id
                 toLocationId' = Nothing
                 estimatedDistance' = 0

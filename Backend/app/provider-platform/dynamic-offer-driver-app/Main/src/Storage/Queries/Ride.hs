@@ -219,6 +219,15 @@ updateStatus rideId status = do
     ]
     [Se.Is BeamR.id (Se.Eq $ getId rideId)]
 
+updateEndRideOtp :: MonadFlow m => Id Ride -> Text -> m ()
+updateEndRideOtp rideId endRideOtp = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set BeamR.endRideOtp (Just endRideOtp),
+      Se.Set BeamR.updatedAt now
+    ]
+    [Se.Is BeamR.id (Se.Eq $ getId rideId)]
+
 updateUiDistanceCalculation :: MonadFlow m => Id Ride -> Maybe Int -> Maybe Int -> m ()
 updateUiDistanceCalculation rideId dist1 dist2 = do
   now <- getCurrentTime
