@@ -154,19 +154,23 @@ mkFullfillment mbDriver ride booking mbVehicle mbImage tags = do
                       }
                 },
             end =
-              Just $
-                RideAssignedOU.EndInfo
-                  { location =
+              RideAssignedOU.EndInfo
+                { location =
+                    Just $
                       RideAssignedOU.Location
                         { gps = RideAssignedOU.Gps {lat = toLocation.lat, lon = toLocation.lon} -- assuming locations will always be in correct order in list
-                        }
-                  },
+                        },
+                  authorization = Nothing
+                },
             agent,
             _type = if booking.bookingType == DRB.NormalBooking then RideAssignedOU.RIDE else RideAssignedOU.RIDE_OTP,
             vehicle = veh,
             ..
           }
-    DRB.DetailsRental DRB.BookingDetailsRental {..} ->
+    DRB.DetailsRental DRB.BookingDetailsRental {..} -> do
+      rideDetails <- case ride.rideDetails of
+        DRide.DetailsOnDemand _ -> throwError (InternalError "ON_DEMAND not allowed here")
+        DRide.DetailsRental details -> pure details
       pure $
         RideAssignedOU.FulfillmentInfo
           { id = ride.id.getId,
@@ -179,15 +183,19 @@ mkFullfillment mbDriver ride booking mbVehicle mbImage tags = do
                       }
                 },
             end =
-              rentalToLocation
-                <&> ( \toLoc ->
-                        RideAssignedOU.EndInfo
-                          { location =
-                              RideAssignedOU.Location
-                                { gps = RideAssignedOU.Gps {lat = toLoc.lat, lon = toLoc.lon} -- assuming locations will always be in correct order in list
-                                }
-                          }
-                    ),
+              RideAssignedOU.EndInfo
+                { location =
+                    rentalToLocation <&> \toLoc ->
+                      RideAssignedOU.Location
+                        { gps = RideAssignedOU.Gps {lat = toLoc.lat, lon = toLoc.lon} -- assuming locations will always be in correct order in list
+                        },
+                  authorization =
+                    rideDetails.endRideOtp <&> \endRideOtp ->
+                      RideAssignedOU.Authorization
+                        { _type = "OTP",
+                          token = endRideOtp
+                        }
+                },
             agent,
             _type = RideAssignedOU.RENTAL,
             vehicle = veh,

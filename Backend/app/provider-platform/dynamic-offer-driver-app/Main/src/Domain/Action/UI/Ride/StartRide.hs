@@ -74,7 +74,7 @@ data ServiceHandle m = ServiceHandle
   { findRideById :: Id DRide.Ride -> m (Maybe DRide.Ride),
     findBookingById :: Id SRB.Booking -> m (Maybe SRB.Booking),
     --findLocationByDriverId :: Id DP.Person -> m (Maybe DDrLoc.DriverLocation),
-    startRideAndUpdateLocation :: Id DP.Person -> DRide.Ride -> SRB.Booking -> LatLong -> Maybe Centesimal -> m (),
+    startRideAndUpdateLocation :: Id DP.Person -> DRide.Ride -> SRB.Booking -> LatLong -> Maybe Centesimal -> Maybe Text -> m (),
     notifyBAPRideStarted :: SRB.Booking -> DRide.Ride -> m (),
     rateLimitStartRide :: Id DP.Person -> Id DRide.Ride -> m (),
     initializeDistanceCalculation :: Id DRide.Ride -> Id DP.Person -> LatLong -> m (),
@@ -170,20 +170,24 @@ startRide ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.getId)
             listToMaybe driverLocations & fromMaybeM LocationNotFound
           pure (getCoordinates driverLocation, Nothing, Nothing)
 
-  when (booking.bookingType == SRB.RentalBooking) $ do
-    case odometerStartImage of
-      Nothing -> throwError $ InvalidRequest "No odometer start reading found"
-      Just image -> do
-        person <- Person.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
-        let merchantId = person.merchantId
-        imagePath <- createPath driverId.getId merchantId.getId (getId ride.id)
-        _ <- fork "S3 Put Image" $ S3.put (T.unpack imagePath) image
-        void $ QRide.updateOdometerEndReadingImagePath rideId (Just imagePath)
+  (updRide, mbRideEndOtp) <- case ride.rideDetails of
+    DRide.DetailsOnDemand _ -> pure (ride, Nothing)
+    DRide.DetailsRental details -> do
+      case odometerStartImage of
+        Nothing -> throwError $ InvalidRequest "No odometer start reading found"
+        Just image -> do
+          person <- Person.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+          let merchantId = person.merchantId
+          imagePath <- createPath driverId.getId merchantId.getId (getId ride.id)
+          _ <- fork "S3 Put Image" $ S3.put (T.unpack imagePath) image
+          void $ QRide.updateOdometerEndReadingImagePath rideId (Just imagePath)
+      endRideOtp <- Just <$> generateOTPCode
+      pure (ride{rideDetails = DRide.DetailsRental details{endRideOtp = endRideOtp}}, endRideOtp)
 
   whenWithLocationUpdatesLock driverId $ do
-    withTimeAPI "startRide" "startRideAndUpdateLocation" $ startRideAndUpdateLocation driverId ride booking point odometerStartReading
+    withTimeAPI "startRide" "startRideAndUpdateLocation" $ startRideAndUpdateLocation driverId ride booking point odometerStartReading mbRideEndOtp
     withTimeAPI "startRide" "initializeDistanceCalculation" $ initializeDistanceCalculation ride.id driverId point
-    withTimeAPI "startRide" "notifyBAPRideStarted" $ notifyBAPRideStarted booking ride
+    withTimeAPI "startRide" "notifyBAPRideStarted" $ notifyBAPRideStarted booking updRide -- endRideOtp used in request
   CQDGR.setDriverGoHomeIsOnRide driverId booking.providerId
   pure APISuccess.Success
   where

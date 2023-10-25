@@ -6,7 +6,7 @@
 @merchantId = favorit0-0000-0000-0000-00000favorit
 
 # time in future
-@rentalStartTime = 2023-10-24T17:05:15.585221416Z
+@rentalStartTime = 2023-10-25T17:02:15.585221416Z
 # @now = $localDatetime iso8601
 
 # @name healthcheck
@@ -202,7 +202,9 @@ content-type: application/json
     "point": {
             "lat": 14.445332,
             "lon": 75.919028
-    }
+    },
+    "odometerStartReading" : 10,
+    "odometerStartImage" : "odometerStartImage"
 }
 
 ###
@@ -292,6 +294,18 @@ content-type: application/json
 
 ###
 
+# @name list3
+GET {{app-host}}/rideBooking/list
+  ?offset=0
+  &limit=50
+  &onlyActive=false
+content-type: application/json
+token: {{app-token}}
+
+###
+
+@endRideOtp = {{list2.response.body.list[0].rideList[0].endRideOtp}}
+
 # @name rideEnd
 POST {{driver-offer-bpp-host}}/ui/driver/ride/{{rideId}}/end
 token: {{token1}}
@@ -301,7 +315,10 @@ content-type: application/json
   "point": {
     "lat": 14.441555,
     "lon": 75.922259
-  }
+  },
+"odometerEndReading" : 10,
+"odometerEndImage" : "odometerEndImage",
+"endRideOtp" : "{{endRideOtp}}"
 }
 
 ###
