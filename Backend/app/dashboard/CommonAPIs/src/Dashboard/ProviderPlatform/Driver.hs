@@ -539,9 +539,17 @@ data VerificationStatus = PENDING | VALID | INVALID
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data DowngradePreference = DowngradePreference
+  { canDowngradeToSedan :: Bool,
+    canDowngradeToHatchback :: Bool,
+    canDowngradeToTaxi :: Bool
+  }
+  deriving (Generic, ToSchema, ToJSON, FromJSON)
+
 data RCStatusReq = RCStatusReq
   { rcNo :: Text,
-    isActivate :: Bool
+    isActivate :: Bool,
+    downgradePreference :: Maybe DowngradePreference
   }
   deriving (Generic, ToSchema, ToJSON, FromJSON)
 
