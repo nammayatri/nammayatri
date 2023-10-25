@@ -2072,17 +2072,17 @@ export const addCarouselWithVideoExists = function () {
 }
 
 export const addCarousel = function (carouselModalJson, id) {
-    var carouselJson = JSON.stringify(carouselModalJson);
-    var data = JSON.parse(carouselJson);
-    var originalArray = data.carouselData;
-    if(JBridge.addCarouselWithVideo){
-      return JBridge.addCarouselWithVideo(carouselJson, id);
-    }
-    else if(JBridge.addCarousel){
-      const modifiedArray = originalArray.map(item => JSON.stringify({ image : item.imageConfig.image , title : item.titleConfig.text , description : item.descriptionConfig.text }));
-      return JBridge.addCarousel(modifiedArray, id);
-    }
-  };
+  const carouselJson = JSON.stringify(carouselModalJson);
+  const data = JSON.parse(carouselJson);
+  const originalArray = data.carouselData;
+  if(JBridge.addCarouselWithVideo){
+    return JBridge.addCarouselWithVideo(carouselJson, id);
+  }
+  else if(JBridge.addCarousel){
+    const modifiedArray = originalArray.map(item => JSON.stringify({ image : item.imageConfig.image , title : item.titleConfig.text , description : item.descriptionConfig.text }));
+    return JBridge.addCarousel(modifiedArray, id);
+  }
+};
 
 export const storeCallBackLocateOnMap = function (cb) {
   return function (action) {
