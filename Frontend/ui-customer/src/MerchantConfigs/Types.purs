@@ -1,6 +1,4 @@
 module MerchantConfig.Types where
-import Prelude
-import Styles.Types (FontType)
 
 type AppConfig =
   {
@@ -61,6 +59,7 @@ type AppConfig =
   , enableContactSupport :: Boolean
   , features :: Features
   , rideCompletedCardConfig :: RideCompletedCardConfig
+  , mapConfig :: MapConfig
   } 
 
 type NotifyRideConfirmationConfig = {
@@ -181,4 +180,20 @@ type RideCompletedCardConfig = {
 
 type TopCardConfig = {
   gradient :: String
+}
+
+type MapConfig = {
+  locateOnMapConfig :: LocateOnMapConfigs,
+  labelTextSize :: Int,
+  animationDuration :: Int
+}
+
+type LocateOnMapConfigs = {
+  dottedLineConfig :: DottedLineConfig
+}
+
+type DottedLineConfig = {
+  visible :: Boolean,
+  range :: Int,
+  color :: String
 }

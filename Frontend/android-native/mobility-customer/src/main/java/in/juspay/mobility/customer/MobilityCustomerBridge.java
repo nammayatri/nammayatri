@@ -1,19 +1,10 @@
 package in.juspay.mobility.customer;
 
-import static android.Manifest.permission.CAMERA;
-import static android.Manifest.permission.READ_EXTERNAL_STORAGE;
-import static android.Manifest.permission.WRITE_EXTERNAL_STORAGE;
-
 import android.Manifest;
 import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
-import android.animation.AnimatorSet;
-import android.animation.ArgbEvaluator;
 import android.animation.ValueAnimator;
 import android.annotation.SuppressLint;
-import android.app.NotificationChannel;
-import android.app.NotificationManager;
-import android.app.PendingIntent;
 import android.content.ContentResolver;
 import android.content.Context;
 import android.content.Intent;
@@ -22,8 +13,6 @@ import android.database.Cursor;
 import android.graphics.Color;
 import android.graphics.pdf.PdfDocument;
 import android.location.Location;
-import android.media.AudioAttributes;
-import android.media.RingtoneManager;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Handler;
@@ -38,8 +27,6 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import androidx.core.app.ActivityCompat;
-import androidx.core.app.NotificationCompat;
-import androidx.core.app.NotificationManagerCompat;
 import androidx.core.content.ContextCompat;
 import androidx.core.content.FileProvider;
 
@@ -47,9 +34,7 @@ import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.ButtCap;
-import com.google.android.gms.maps.model.CameraPosition;
 import com.google.android.gms.maps.model.Dash;
-import com.google.android.gms.maps.model.Gap;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.LatLngBounds;
 import com.google.android.gms.maps.model.Marker;
@@ -75,10 +60,11 @@ import java.lang.reflect.Method;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -281,7 +267,7 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
                     JSONObject specialLocationObject = new JSONObject(specialLocation);
                     String destinationSpecialTagIcon = specialLocationObject.getString("destSpecialTagIcon");
 
-                    destMarker.setIcon((BitmapDescriptorFactory.fromBitmap(getMarkerBitmapFromView(eta, dest, destinationSpecialTagIcon.equals("") ? null : destinationSpecialTagIcon))));
+                    destMarker.setIcon((BitmapDescriptorFactory.fromBitmap(getMarkerBitmapFromView(eta, dest, destinationSpecialTagIcon.equals("") ? null : destinationSpecialTagIcon, MarkerType.NORMAL_MARKER))));
                     destMarker.setTitle("Driver is " + eta);
                     if (polyline != null) {
                         polyline.setEndCap(new ButtCap());
@@ -390,18 +376,18 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
         return jsonObject;
     }
 
-    public void drawMarkers(double lat, double lng, String name) {
+    public void addZoneMarker(double lat, double lng, String name, String icon) {
         ExecutorManager.runOnMainThread(() -> {
             try {
                 MarkerOptions markerOptionsObj = new MarkerOptions()
                         .title("")
                         .position(new LatLng(lat, lng))
-                        .anchor(0.49f, 0.78f)
-                        .icon(BitmapDescriptorFactory.fromBitmap(getMarkerBitmapFromView(name, "ny_ic_zone_pickup_marker",null)));
+                        .anchor(0.5f, 0.5f)
+                        .icon(BitmapDescriptorFactory.fromBitmap(getMarkerBitmapFromView("", icon,null, MarkerType.SPECIAL_ZONE_MARKER)));
                 Marker m = googleMap.addMarker(markerOptionsObj);
                 if (m != null) {
                     m.hideInfoWindow();
-                    pickupPointsZoneMarkers.add(m);
+                    zoneMarkers.put(name,m);
                 }
             } catch (Exception e) {
                 Log.d("error on pickup markers", e.toString());
@@ -422,13 +408,13 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
                     layer = new GeoJsonLayer(googleMap, geo);
                     GeoJsonPolygonStyle polyStyle = layer.getDefaultPolygonStyle();
                     polyStyle.setFillColor(Color.argb(25, 0, 102, 255));
-                    polyStyle.setStrokeWidth(2);
+                    polyStyle.setStrokeWidth(3);
                     polyStyle.setStrokeColor(Color.BLUE);
                     if (locationName.length() > 0) {
                         if (userPositionMarker == null) {
                             upsertMarker(CURRENT_LOCATION, String.valueOf(getKeyInNativeSharedPrefKeys("LAST_KNOWN_LAT")), String.valueOf(getKeyInNativeSharedPrefKeys("LAST_KNOWN_LON")), 160, 0.5f, 0.9f); //TODO this function will be removed
                         } else {
-                            userPositionMarker.setIcon(BitmapDescriptorFactory.fromBitmap(getMarkerBitmapFromView(locationName, CURRENT_LOCATION, null)));
+                            userPositionMarker.setIcon(BitmapDescriptorFactory.fromBitmap(getMarkerBitmapFromView(locationName, CURRENT_LOCATION, null, MarkerType.NORMAL_MARKER)));
                             userPositionMarker.setTitle("");
                             LatLng latLng = new LatLng(Double.parseDouble(getKeyInNativeSharedPrefKeys("LAST_KNOWN_LAT")), Double.parseDouble(getKeyInNativeSharedPrefKeys("LAST_KNOWN_LON")));
                         }
@@ -450,7 +436,7 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
                     layer.removeLayerFromMap();
                 }
                 if (userPositionMarker != null) {
-                    userPositionMarker.setIcon(BitmapDescriptorFactory.fromBitmap(getMarkerBitmapFromView("", CURRENT_LOCATION, null)));
+                    userPositionMarker.setIcon(BitmapDescriptorFactory.fromBitmap(getMarkerBitmapFromView("", CURRENT_LOCATION, null, MarkerType.NORMAL_MARKER)));
                     userPositionMarker.setTitle("");
                 }
             } catch (Exception e) {
@@ -468,7 +454,8 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
               String lon = payload.optString("lon", "0.0");
               String geoJson = payload.optString("geoJson", "");
               String points = payload.optString("points", "[]");
-              float zoomLevel = (float)payload.optDouble("zoomLevel", 17.0);
+              float zoomLevel = (float) payload.optDouble("zoomLevel", 17.0);
+              final TextView labelView = payload.optString("labelId", "").equals("") ? null : Objects.requireNonNull(bridgeComponents.getActivity()).findViewById(Integer.parseInt(payload.getString("labelId")));
               if (geoJson.equals("") || points.equals("[]")){
                 locateOnMap(goToCurrentLocation,lat,lon,zoomLevel);
                 return;
@@ -483,8 +470,9 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
                 @Override
                 public void run() {
                     try {
-                        if (pickupPointsZoneMarkers != null) {
-                            for (Marker m : pickupPointsZoneMarkers) {
+                        if (zoneMarkers != null) {
+                            for (Map.Entry<String, Marker> set : zoneMarkers.entrySet()) {
+                                Marker m = set.getValue();
                                 m.setVisible(false);
                             }
                         }
@@ -513,7 +501,7 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
                         JSONArray zonePoints = null;
                         zonePoints = new JSONArray(points);
                         for (int i = 0; i < zonePoints.length(); i++) {
-                            drawMarkers((Double) zonePoints.getJSONObject(i).get("lat"), (Double) zonePoints.getJSONObject(i).get("lng"), "");
+                            addZoneMarker((Double) zonePoints.getJSONObject(i).get("lat"), (Double) zonePoints.getJSONObject(i).get("lng"), (String) zonePoints.getJSONObject(i).get("place"), "ny_ic_zone_pickup_marker_yellow");
                         }
                     } catch (JSONException e) {
                         e.printStackTrace();
@@ -524,6 +512,17 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
                         @Override
                         public void onCameraMove() {
                             dottedLineFromCurrentPosition(googleMap.getCameraPosition().target.latitude, googleMap.getCameraPosition().target.longitude, dottedLineVisible, dottedLineRange, dottedLineColor);
+                        }
+                    });
+                    
+                    googleMap.setOnCameraMoveStartedListener(new GoogleMap.OnCameraMoveStartedListener() {
+                        @Override
+                        public void onCameraMoveStarted(int i) {
+                            if (labelView != null)
+                                labelView.setVisibility(View.INVISIBLE);
+                            Marker m = zoneMarkers.get("selectedGate");
+                            if (m != null)
+                                m.setVisible(false);
                         }
                     });
 
@@ -553,6 +552,10 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
                                                         if(SphericalUtil.computeDistanceBetween(googleMap.getCameraPosition().target, new LatLng((Double)zonePoints.getJSONObject(i).get("lat"), (Double) zonePoints.getJSONObject(i).get("lng")))<=1){
                                                             zoneName = (String)zonePoints.getJSONObject(i).get("place");
                                                             isOnGate = true;
+                                                            Marker m = zoneMarkers.get("selectedGate");
+                                                            if (m != null)
+                                                                m.setVisible(false);
+                                                            addZoneMarker((Double)zonePoints.getJSONObject(i).get("lat"), (Double) zonePoints.getJSONObject(i).get("lng"), "selectedGate", "ny_ic_selected_zone_pickup_marker_yellow");
                                                         }
                                                     }
 
@@ -566,6 +569,11 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
                                                     zoneName = "LatLon";
                                                 }
                                                 if (storeLocateOnMapCallBack != null && (!isPointInsidePolygon || isOnGate)){
+                                                    if (labelView != null && isOnGate) {
+                                                        String labelText = zoneName.length() > labelTextSize ? zoneName.substring(0, labelTextSize-3) + "..." : zoneName;
+                                                        labelView.setText(labelText);
+                                                        labelView.setVisibility(View.VISIBLE);
+                                                    }
                                                     String javascript = String.format("window.callUICallback('%s','%s','%s','%s');", storeLocateOnMapCallBack, zoneName, lat1, lng);
                                                     Log.e(CALLBACK, javascript);
                                                     bridgeComponents.getJsCallback().addJsToWebView(javascript);

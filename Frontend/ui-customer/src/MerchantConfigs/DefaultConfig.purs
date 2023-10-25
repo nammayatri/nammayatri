@@ -148,4 +148,15 @@ config =
         gradient : "#29334A"
       } 
   }
+  , mapConfig : 
+      { locateOnMapConfig : 
+          { dottedLineConfig : 
+              { visible : true
+              , range : 100
+              , color : "#323643"
+              }
+          }
+      , labelTextSize : 30
+      , animationDuration : 400
+      }
   }
