@@ -341,7 +341,7 @@ eval (TryAgainButtonAC PrimaryButton.OnClick) state =
       else updateAndExit updateState $ Refresh
 
 eval CallSupport state = do
-  _ <- pure $ showDialer "08069490091" false
+  _ <- pure $ showDialer "08069724800" false
   continue state
 
 eval (CallHelpCenter phone) state = do

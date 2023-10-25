@@ -853,7 +853,7 @@ eval (PopUpModalChatBlockerAction PopUpModal.OnButton2Click) state = continueWit
 eval (StartEarningPopupAC PopUpModal.OnButton1Click) state = exit $ SubscriptionScreen state { data{paymentState {showBlockingPopup = false}}}
 
 eval (StartEarningPopupAC (PopUpModal.OptionWithHtmlClick)) state = do
-  _ <- pure $ showDialer "08069490091" false
+  _ <- pure $ showDialer "08069724800" false
   continue state
 
 eval (PopUpModalChatBlockerAction PopUpModal.OnButton1Click) state = continueWithCmd state{props{showChatBlockerPopUp = false}} [do
