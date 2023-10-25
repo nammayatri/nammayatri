@@ -53,8 +53,8 @@ data RideT f = RideT
     driverGoHomeRequestId :: B.C f (Maybe Text),
     odometerStartReading :: B.C f (Maybe Centesimal),
     odometerEndReading :: B.C f (Maybe Centesimal),
-    odometerStartReadingImagePath :: B.C f (Maybe Text),
-    odometerEndReadingImagePath :: B.C f (Maybe Text),
+    odometerStartReadingImageId :: B.C f (Maybe Text),
+    odometerEndReadingImageId :: B.C f (Maybe Text),
     endRideOtp :: B.C f (Maybe Text),
     rideType :: B.C f Domain.RideType
   }

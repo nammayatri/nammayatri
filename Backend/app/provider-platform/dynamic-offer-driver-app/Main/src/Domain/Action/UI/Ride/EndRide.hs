@@ -31,7 +31,6 @@ import AWS.S3 as S3
 import Data.OpenApi.Internal.Schema (ToSchema)
 import qualified Data.Text as T
 import Data.Time hiding (getCurrentTime, secondsToNominalDiffTime)
-import Data.Time.Format.ISO8601 (iso8601Show)
 import qualified Domain.Action.UI.Ride.EndRide.Internal as RideEndInt
 import Domain.Action.UI.Route as DMaps
 import qualified Domain.Types.Booking as SRB
@@ -40,6 +39,7 @@ import Domain.Types.FareParameters as Fare
 import qualified Domain.Types.FarePolicy as DFP
 import qualified Domain.Types.FareProduct as DFareProduct
 import qualified Domain.Types.Location as DL
+import qualified Domain.Types.MediaFile as Domain
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.Merchant.TransporterConfig as DTConf
@@ -70,9 +70,12 @@ import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
 import qualified Storage.CachedQueries.GoHomeConfig as CQGHC
 import qualified Storage.CachedQueries.Merchant as MerchantS
 import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as CQMPM
+import qualified Storage.CachedQueries.Merchant.TransporterConfig as CQTC
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as QTConf
 import qualified Storage.Queries.Booking as QRB
 import Storage.Queries.Driver.GoHomeFeature.DriverGoHomeRequest as QDGR
+import qualified Storage.Queries.MediaFile as MFQuery
+import qualified Storage.Queries.Person as Person
 import qualified Storage.Queries.Ride as QRide
 import Tools.Error
 import qualified Tools.SMS as Sms
@@ -92,6 +95,7 @@ data DriverEndRideReq = DriverEndRideReq
     uiDistanceCalculationWithoutAccuracy :: Maybe Int,
     odometerEndReading :: Maybe Centesimal,
     odometerEndImage :: Maybe Text,
+    odometerEndImageExtension :: Maybe Text,
     endRideOtp :: Maybe Text
   }
 
@@ -264,10 +268,17 @@ endRide handle@ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.g
             case driverReq.odometerEndImage of
               Nothing -> pure ()
               Just image -> do
-                let merchantId = driverReq.requestor.id
-                imagePath <- createPath driverId.getId merchantId.getId rideId.getId
-                _ <- fork "S3 Put Image" $ S3.put (T.unpack imagePath) image
-                void $ QRide.updateOdometerStartReadingImagePath rideId (Just imagePath)
+                person <- Person.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+
+                let merchantId = person.merchantId
+                transporterConfig <- CQTC.findByMerchantId merchantId >>= fromMaybeM (TransporterConfigNotFound (getId merchantId))
+                imagePath <- createPath (getId rideId) driverReq.odometerEndImageExtension
+                let imageUrl =
+                      transporterConfig.mediaFileUrlPattern
+                        & T.replace "<DOMAIN>" "driver/odometer/endImage"
+                        & T.replace "<FILE_PATH>" imagePath
+                _ <- try @_ @SomeException $ S3.put (T.unpack imagePath) image
+                createMediaFile imageUrl rideId
             pure (driverReq.point, driverReq.odometerEndReading :: Maybe Centesimal)
           DashboardReq dashboardReq -> do
             logTagInfo "dashboard -> endRide : " ("DriverId " <> getId driverId <> ", RideId " <> getId rideOld.id)
@@ -383,24 +394,35 @@ endRide handle@ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.g
   return $ EndRideResp {result = "Success", homeLocationReached = homeLocationReached'}
   where
     createPath ::
-      (MonadTime m, MonadReader r m, HasField "s3Env" r (S3.S3Env m)) =>
+      (MonadTime m, Log m, MonadThrow m, MonadReader r m, HasField "s3Env" r (S3.S3Env m)) =>
       Text ->
-      Text ->
-      Text ->
+      Maybe Text ->
       m Text
-    createPath driverId' merchantId' rideId' = do
+    createPath rideId' imageType = do
       pathPrefix <- asks (.s3Env.pathPrefix)
-      now <- getCurrentTime
-      let fileName = T.replace (T.singleton ':') (T.singleton '-') (T.pack $ iso8601Show now)
+      let fileName = T.pack "endOdometerReadingImage"
+      extension <- case imageType of
+        Just "image/jpeg" -> pure "jpg"
+        _ -> throwError $ InvalidRequest "File Format Not Supported"
       return
-        ( pathPrefix <> "/ride-odometer-reading/" <> "org-" <> merchantId' <> "/"
-            <> driverId'
-            <> "/"
+        ( pathPrefix <> "/ride-odometer-reading/" <> "/"
             <> rideId'
             <> "/"
             <> fileName
-            <> ".png"
+            <> extension
         )
+    createMediaFile fileUrl rideId' = do
+      id' <- generateGUID
+      now <- getCurrentTime
+      let fileEntity =
+            Domain.MediaFile
+              { id = id',
+                _type = Domain.Image,
+                url = fileUrl,
+                createdAt = now
+              }
+      MFQuery.create fileEntity
+      QRide.updateOdometerEndReadingImageId rideId' (Just $ getId fileEntity.id)
     buildRoutesReq tripEndPoint driverHomeLocation =
       Maps.GetRoutesReq
         { waypoints = tripEndPoint :| [driverHomeLocation],

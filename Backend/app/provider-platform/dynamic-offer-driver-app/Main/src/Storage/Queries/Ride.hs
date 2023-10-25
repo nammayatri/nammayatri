@@ -238,17 +238,21 @@ updateUiDistanceCalculation rideId dist1 dist2 = do
     ]
     [Se.Is BeamR.id (Se.Eq $ getId rideId)]
 
-updateOdometerStartReadingImagePath :: MonadFlow m => Id Ride -> Maybe Text -> m ()
-updateOdometerStartReadingImagePath rideId startReadingImage = do
+updateOdometerStartReadingImageId :: MonadFlow m => Id Ride -> Maybe Text -> m ()
+updateOdometerStartReadingImageId rideId startReadingImage = do
+  now <- getCurrentTime
   updateOneWithKV
-    [ Se.Set BeamR.odometerStartReadingImagePath startReadingImage
+    [ Se.Set BeamR.odometerStartReadingImageId startReadingImage,
+      Se.Set BeamR.updatedAt now
     ]
     [Se.Is BeamR.id (Se.Eq $ getId rideId)]
 
-updateOdometerEndReadingImagePath :: MonadFlow m => Id Ride -> Maybe Text -> m ()
-updateOdometerEndReadingImagePath rideId endReadingImage = do
+updateOdometerEndReadingImageId :: MonadFlow m => Id Ride -> Maybe Text -> m ()
+updateOdometerEndReadingImageId rideId endReadingImage = do
+  now <- getCurrentTime
   updateOneWithKV
-    [ Se.Set BeamR.odometerEndReadingImagePath endReadingImage
+    [ Se.Set BeamR.odometerEndReadingImageId endReadingImage,
+      Se.Set BeamR.updatedAt now
     ]
     [Se.Is BeamR.id (Se.Eq $ getId rideId)]
 
@@ -778,8 +782,8 @@ instance FromTType' BeamR.Ride Ride where
                     endRideOtp = endRideOtp,
                     odometerStartReading = odometerStartReading,
                     odometerEndReading = odometerEndReading,
-                    odometerStartReadingImagePath = odometerStartReadingImagePath,
-                    odometerEndReadingImagePath = odometerEndReadingImagePath
+                    odometerStartReadingImageId = odometerStartReadingImageId,
+                    odometerEndReadingImageId = odometerEndReadingImageId
                   }
         pure $
           Just
@@ -831,8 +835,8 @@ instance ToTType' BeamR.Ride Ride where
             BeamR.driverGoHomeRequestId = getId <$> driverGoHomeRequestId,
             BeamR.odometerStartReading = Nothing,
             BeamR.odometerEndReading = Nothing,
-            BeamR.odometerStartReadingImagePath = Nothing,
-            BeamR.odometerEndReadingImagePath = Nothing,
+            BeamR.odometerStartReadingImageId = Nothing,
+            BeamR.odometerEndReadingImageId = Nothing,
             BeamR.endRideOtp = Nothing,
             BeamR.rideType = ON_DEMAND,
             BeamR.createdAt = createdAt,
@@ -869,8 +873,8 @@ instance ToTType' BeamR.Ride Ride where
             BeamR.driverGoHomeRequestId = Nothing,
             BeamR.odometerStartReading = odometerStartReading,
             BeamR.odometerEndReading = odometerEndReading,
-            BeamR.odometerStartReadingImagePath = odometerStartReadingImagePath,
-            BeamR.odometerEndReadingImagePath = odometerEndReadingImagePath,
+            BeamR.odometerStartReadingImageId = odometerStartReadingImageId,
+            BeamR.odometerEndReadingImageId = odometerEndReadingImageId,
             BeamR.endRideOtp = endRideOtp,
             BeamR.rideType = RENTAL,
             BeamR.createdAt = createdAt,

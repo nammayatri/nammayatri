@@ -1449,8 +1449,8 @@ respondQuote (driverId, _) req = do
                   { rentalToLocation = Nothing,
                     odometerStartReading = Nothing,
                     odometerEndReading = Nothing,
-                    odometerStartReadingImagePath = Nothing,
-                    odometerEndReadingImagePath = Nothing,
+                    odometerStartReadingImageId = Nothing,
+                    odometerEndReadingImageId = Nothing,
                     endRideOtp = Nothing
                   }
           }
