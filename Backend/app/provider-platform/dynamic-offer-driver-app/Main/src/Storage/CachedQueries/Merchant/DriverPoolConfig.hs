@@ -18,6 +18,7 @@ module Storage.CachedQueries.Merchant.DriverPoolConfig
     create,
     findAllByMerchantId,
     findByMerchantIdAndTripDistance,
+    findByMerchantIdAndTripDistanceAndDVeh,
     update,
   )
 where
@@ -26,6 +27,7 @@ import Data.Coerce (coerce)
 import Domain.Types.Common
 import Domain.Types.Merchant (Merchant)
 import Domain.Types.Merchant.DriverPoolConfig
+import qualified Domain.Types.Vehicle.Variant as DVeh
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
@@ -43,6 +45,9 @@ findAllByMerchantId id =
 
 findByMerchantIdAndTripDistance :: (CacheFlow m r, EsqDBFlow m r) => Id Merchant -> Meters -> m (Maybe DriverPoolConfig)
 findByMerchantIdAndTripDistance merchantId tripDistance = find (\config -> config.tripDistance == tripDistance) <$> findAllByMerchantId merchantId
+
+findByMerchantIdAndTripDistanceAndDVeh :: (CacheFlow m r, EsqDBFlow m r) => Id Merchant -> Meters -> Maybe DVeh.Variant -> m (Maybe DriverPoolConfig)
+findByMerchantIdAndTripDistanceAndDVeh merchantId tripDistance variant = find (\config -> config.tripDistance == tripDistance && config.vehicleVariant == variant) <$> findAllByMerchantId merchantId
 
 cacheDriverPoolConfigs :: (CacheFlow m r) => Id Merchant -> [DriverPoolConfig] -> m ()
 cacheDriverPoolConfigs merchantId cfg = do
