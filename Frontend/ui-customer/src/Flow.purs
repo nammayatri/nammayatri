@@ -1157,7 +1157,7 @@ homeScreenFlow = do
       let sourceLat = if sourceServiceabilityResp.serviceable then lat else updatedState.props.sourceLat
           sourceLong = if sourceServiceabilityResp.serviceable then long else updatedState.props.sourceLong
       _ <- pure $ firebaseLogEvent $ "ny_loc_unserviceable_" <> show (not sourceServiceabilityResp.serviceable)
-      modifyScreenState $ HomeScreenStateType (\homeScreen -> updatedState{data{ polygonCoordinates = fromMaybe "" sourceServiceabilityResp.geoJson } ,props{sourceLat = sourceLat, sourceLong = sourceLong, isSrcServiceable =sourceServiceabilityResp.serviceable , showlocUnserviceablePopUp = (not sourceServiceabilityResp.serviceable)}})
+      modifyScreenState $ HomeScreenStateType (\homeScreen -> updatedState{data{ polygonCoordinates = fromMaybe "" sourceServiceabilityResp.geoJson } ,props{locateOnMapLocation{sourceLat = sourceLat, sourceLng = sourceLong}, sourceLat = sourceLat, sourceLong = sourceLong, isSrcServiceable =sourceServiceabilityResp.serviceable , showlocUnserviceablePopUp = (not sourceServiceabilityResp.serviceable)}})
       homeScreenFlow
     HOME_SCREEN -> do
         (GlobalState state) <- getState
@@ -1196,30 +1196,54 @@ homeScreenFlow = do
         liftFlowBT $ runEffectFn1 locateOnMap locateOnMapConfig { goToCurrentLocation = false, lat = lat, lon = lon, geoJson = (fromMaybe "" sourceServiceabilityResp.geoJson), points = pickUpPoints, zoomLevel = zoomLevel, labelId = getNewIDWithTag "LocateOnMapPin"}
         homeScreenFlow
       else do
-        PlaceName placeDetails <- getPlaceName lat lon gateAddress
-        _ <- liftFlowBT $ logEvent logField_ "ny_user_placename_api_lom_onDrag"
+        let cachedLat = (if state.props.isSource == Just true then state.props.locateOnMapLocation.sourceLat else state.props.locateOnMapLocation.destinationLat)
+            cachedLon = (if state.props.isSource == Just true then state.props.locateOnMapLocation.sourceLng else state.props.locateOnMapLocation.destinationLng)
+            cachedLocation = (if state.props.isSource == Just true then state.props.locateOnMapLocation.source else state.props.locateOnMapLocation.destination)
+            distanceBetweenLatLong = getDistanceBwCordinates lat lon cachedLat cachedLon
+            isMoreThan20Meters = distanceBetweenLatLong > (state.data.config.mapConfig.locateOnMapConfig.apiTriggerRadius/1000.0) 
         modifyScreenState $ HomeScreenStateType (\homeScreen ->
-        homeScreen {
-          data {
-            destination = if state.props.isSource == Just false && state.props.currentStage /= ConfirmingLocation then placeDetails.formattedAddress else homeScreen.data.destination,
-            source = if state.props.isSource == Just true then placeDetails.formattedAddress else homeScreen.data.source,
-            sourceAddress = case state.props.isSource , (state.props.currentStage /= ConfirmingLocation) of
-              Just true, true -> encodeAddress placeDetails.formattedAddress placeDetails.addressComponents Nothing
-              _ , _-> encodeAddress homeScreen.data.source [] state.props.sourcePlaceId,
-            destinationAddress = case state.props.isSource,(state.props.currentStage /= ConfirmingLocation) of
-              Just false , true -> encodeAddress placeDetails.formattedAddress placeDetails.addressComponents Nothing
-              _ , _ -> encodeAddress homeScreen.data.destination [] state.props.destinationPlaceId
-          },
-          props {
-            sourcePlaceId = if state.props.isSource == Just true then Nothing else homeScreen.props.sourcePlaceId,
-            destinationPlaceId = if state.props.isSource == Just false then Nothing else homeScreen.props.destinationPlaceId,
-            destinationLat = if state.props.isSource == Just false && state.props.currentStage /= ConfirmingLocation then lat else state.props.destinationLat,
-            destinationLong = if state.props.isSource == Just false && state.props.currentStage /= ConfirmingLocation then lon else state.props.destinationLong,
-            sourceLat = if state.props.isSource == Just true then lat else state.props.sourceLat,
-            sourceLong = if state.props.isSource == Just true then lon else state.props.sourceLong,
-            confirmLocationCategory = srcSpecialLocation.category
+            homeScreen { 
+              props {
+                sourcePlaceId = if state.props.isSource == Just true then Nothing else homeScreen.props.sourcePlaceId,
+                destinationPlaceId = if state.props.isSource == Just false then Nothing else homeScreen.props.destinationPlaceId,
+                destinationLat = if state.props.isSource == Just false && state.props.currentStage /= ConfirmingLocation then lat else state.props.destinationLat,
+                destinationLong = if state.props.isSource == Just false && state.props.currentStage /= ConfirmingLocation then lon else state.props.destinationLong,
+                sourceLat = if state.props.isSource == Just true then lat else state.props.sourceLat,
+                sourceLong = if state.props.isSource == Just true then lon else state.props.sourceLong,
+                confirmLocationCategory = srcSpecialLocation.category
+                }
+              })
+        if isMoreThan20Meters || cachedLocation == "" then do
+          PlaceName placeDetails <- getPlaceName lat lon gateAddress
+          _ <- liftFlowBT $ logEvent logField_ "ny_user_placename_api_lom_onDrag"
+          modifyScreenState $ HomeScreenStateType (\homeScreen ->
+          homeScreen {
+            data {
+              destination = if state.props.isSource == Just false && state.props.currentStage /= ConfirmingLocation then placeDetails.formattedAddress else homeScreen.data.destination,
+              source = if state.props.isSource == Just true then placeDetails.formattedAddress else homeScreen.data.source,
+              sourceAddress = case state.props.isSource , (state.props.currentStage /= ConfirmingLocation) of
+                Just true, true -> encodeAddress placeDetails.formattedAddress placeDetails.addressComponents Nothing
+                _ , _-> encodeAddress homeScreen.data.source [] state.props.sourcePlaceId,
+              destinationAddress = case state.props.isSource,(state.props.currentStage /= ConfirmingLocation) of
+                Just false , true -> encodeAddress placeDetails.formattedAddress placeDetails.addressComponents Nothing
+                _ , _ -> encodeAddress homeScreen.data.destination [] state.props.destinationPlaceId
             }
-          })
+            })
+        else do
+          _ <- liftFlowBT $ logEvent logField_ "ny_user_placename_cache_lom_onDrag"
+          modifyScreenState $ HomeScreenStateType (\homeScreen ->
+            homeScreen {
+              data {
+                destination = if state.props.isSource == Just false && state.props.currentStage /= ConfirmingLocation then state.props.locateOnMapLocation.destination else homeScreen.data.destination,
+                source = if state.props.isSource == Just true then state.props.locateOnMapLocation.source else homeScreen.data.source,
+                sourceAddress = case state.props.isSource , (state.props.currentStage /= ConfirmingLocation) of
+                  Just true, true -> state.props.locateOnMapLocation.sourceAddress 
+                  _ , _-> state.data.sourceAddress, 
+                destinationAddress = case state.props.isSource,(state.props.currentStage /= ConfirmingLocation) of
+                  Just false , true -> state.props.locateOnMapLocation.destinationAddress 
+                  _ , _ -> state.data.destinationAddress 
+              }
+              })
         let _ = spy "UPDATE_LOCATION_NAME" "UPDATE_LOCATION_NAME"
         homeScreenFlow
     UPDATE_PICKUP_NAME state lat lon -> do
@@ -1239,21 +1263,36 @@ homeScreenFlow = do
         liftFlowBT $ runEffectFn1 locateOnMap locateOnMapConfig { goToCurrentLocation = false, lat = lat, lon = lon, geoJson = (fromMaybe "" sourceServiceabilityResp.geoJson), points = pickUpPoints, zoomLevel = zoomLevel, labelId = getNewIDWithTag "LocateOnMapPin"}
         homeScreenFlow
       else do
-        PlaceName address <- getPlaceName lat lon gateAddress
-        _ <- liftFlowBT $ logEvent logField_ "ny_user_placename_api_cpu_onDrag"
+        let distanceBetweenLatLong = getDistanceBwCordinates lat lon state.props.locateOnMapLocation.sourceLat state.props.locateOnMapLocation.sourceLng
+            isMoreThan20Meters = distanceBetweenLatLong > (state.data.config.mapConfig.locateOnMapConfig.apiTriggerRadius/1000.0)
         modifyScreenState $ HomeScreenStateType (\homeScreen ->
-        homeScreen {
-          data {
-            source = address.formattedAddress ,
-            sourceAddress = encodeAddress address.formattedAddress address.addressComponents Nothing },
-          props {
-            sourceLat = lat ,
-            sourceLong = lon,
-            confirmLocationCategory = srcSpecialLocation.category
+          homeScreen {
+            props {
+              sourceLat = lat ,
+              sourceLong = lon,
+              confirmLocationCategory = srcSpecialLocation.category
+              }
+            })
+        if isMoreThan20Meters then do
+          PlaceName address <- getPlaceName lat lon gateAddress
+          _ <- liftFlowBT $ logEvent logField_ "ny_user_placename_api_cpu_onDrag"
+          modifyScreenState $ HomeScreenStateType (\homeScreen ->
+          homeScreen {
+            data {
+              source = address.formattedAddress ,
+              sourceAddress = encodeAddress address.formattedAddress address.addressComponents Nothing }
+            })
+        else do
+          _ <- liftFlowBT $ logEvent logField_ "ny_user_placename_cache_cpu_onDrag"
+          modifyScreenState $ HomeScreenStateType (\homeScreen ->
+          homeScreen {
+            data {
+              source = state.props.locateOnMapLocation.source,
+              sourceAddress = state.props.locateOnMapLocation.sourceAddress
             }
-          })
-        let _ = spy "UPDATE_PICKUP_LOCATION_NAME" "UPDATE_PICKUP_LOCATION_NAME"
-        homeScreenFlow
+            })
+      let _ = spy "UPDATE_PICKUP_LOCATION_NAME" "UPDATE_PICKUP_LOCATION_NAME"
+      homeScreenFlow
     GO_TO_FAVOURITES_  -> do
         _ <- lift $ lift $ liftFlow $ logEvent logField_ "ny_user_addresses"
         savedLocationFlow
@@ -1469,7 +1508,7 @@ rideSearchFlow flowType = do
         false -> do
           pure $ removeAllPolylines ""
           liftFlowBT $ runEffectFn1 locateOnMap locateOnMapConfig { goToCurrentLocation = false, lat = finalState.props.sourceLat, lon = finalState.props.sourceLong, geoJson = finalState.data.polygonCoordinates, points = finalState.data.nearByPickUpPoints, zoomLevel = zoomLevel, labelId = getNewIDWithTag "LocateOnMapPin"}
-          modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{currentStage = ConfirmingLocation,rideRequestFlow = true}})
+          modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{currentStage = ConfirmingLocation,rideRequestFlow = true, locateOnMapLocation{sourceLat = finalState.props.sourceLat, sourceLng = finalState.props.sourceLong, source = finalState.data.source, sourceAddress = finalState.data.sourceAddress}}})
           _ <- pure $ updateLocalStage ConfirmingLocation
           void $ lift $ lift $ toggleLoader false
         true -> do

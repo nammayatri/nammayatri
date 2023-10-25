@@ -1415,23 +1415,9 @@ eval (SearchLocationModelActionController (SearchLocationModelController.Destina
 eval (SearchLocationModelActionController (SearchLocationModelController.EditTextFocusChanged textType)) state = do
   _ <- pure $ spy "searchLocationModal" textType
   if textType == "D" then
-    continueWithCmd state { props { isSource = Just false, searchLocationModelProps{crossBtnDestVisibility = (STR.length state.data.destination) > 2}}, data {source = if state.data.source == "" then state.data.searchLocationModelData.prevLocation else state.data.source} }
-      [ do
-          if state.props.isSearchLocation /= LocateOnMap then do
-            _ <- (pure $ setText (getNewIDWithTag "DestinationEditText") state.data.destination)
-            pure $ NoAction
-          else
-            pure $ NoAction
-      ]
+    continue state { props { isSource = Just false, searchLocationModelProps{crossBtnDestVisibility = (STR.length state.data.destination) > 2}}, data {source = if state.data.source == "" then state.data.searchLocationModelData.prevLocation else state.data.source} }
   else
-    continueWithCmd state { props { isSource = Just true, searchLocationModelProps{crossBtnSrcVisibility = (STR.length state.data.source) > 2}} }
-      [ do
-          if state.props.isSearchLocation /= LocateOnMap && state.props.isSource == Just true then do
-            _ <- (pure $ setText (getNewIDWithTag "SourceEditText") state.data.source) 
-            pure $ NoAction
-          else
-            pure $ NoAction
-      ]
+    continue state { props { isSource = Just true, searchLocationModelProps{crossBtnSrcVisibility = (STR.length state.data.source) > 2}} }
 
 eval (SearchLocationModelActionController (SearchLocationModelController.NoAction)) state = continue state
 
@@ -1473,14 +1459,34 @@ eval (SearchLocationModelActionController (SearchLocationModelController.SetLoca
   let isSource = case state.props.isSource of
                     Just true -> true
                     _         -> false
-      lat = if (not isSource && state.props.destinationLat /= 0.0 && state.props.destinationLong /= 0.0) then state.props.destinationLat else state.props.sourceLat
-      lon = if (not isSource && state.props.destinationLat /= 0.0 && state.props.destinationLong /= 0.0) then state.props.destinationLong else state.props.sourceLong
+      isDestinationNotEmpty = (not isSource && state.props.destinationLat /= 0.0 && state.props.destinationLong /= 0.0)
+      lat = if isDestinationNotEmpty then state.props.destinationLat else state.props.sourceLat
+      lon = if isDestinationNotEmpty then state.props.destinationLong else state.props.sourceLong
   _ <- pure $ hideKeyboardOnNavigation true
   _ <- pure $ removeAllPolylines ""
   _ <- pure $ unsafePerformEffect $ runEffectFn1 locateOnMap locateOnMapConfig { goToCurrentLocation = false, lat = lat, lon = lon, geoJson = state.data.polygonCoordinates, points = state.data.nearByPickUpPoints, zoomLevel = pickupZoomLevel, labelId = getNewIDWithTag "LocateOnMapPin"}
   pure $ unsafePerformEffect $ logEvent state.data.logField if state.props.isSource == Just true  then "ny_user_src_set_location_on_map" else "ny_user_dest_set_location_on_map"
   let srcValue = if state.data.source == "" then getString CURRENT_LOCATION else state.data.source
-  let newState = state{data{source = srcValue}, props{isSearchLocation = LocateOnMap, currentStage = SearchLocationModel, locateOnMap = true, isRideServiceable = true, showlocUnserviceablePopUp = false, searchLocationModelProps{isAutoComplete = false}}}
+  let newState = state
+                  { data {source = srcValue}
+                  , props { isSearchLocation = LocateOnMap
+                          , currentStage = SearchLocationModel
+                          , locateOnMap = true,
+                           isRideServiceable = true
+                           , showlocUnserviceablePopUp = false
+                           , searchLocationModelProps{isAutoComplete = false}
+                           , locateOnMapLocation
+                              { sourceLat = state.props.sourceLat
+                              , sourceLng = state.props.sourceLong
+                              , source = state.data.source
+                              , sourceAddress = state.data.sourceAddress
+                              , destinationLat = if state.props.destinationLat /= 0.0 then state.props.destinationLat else state.props.sourceLat
+                              , destinationLng = if state.props.destinationLong /= 0.0 then state.props.destinationLong else state.props.sourceLong
+                              , destination = state.data.destination
+                              , destinationAddress = state.data.destinationAddress 
+                              }
+                           }
+                    }
   (updateAndExit newState) $ UpdatedState newState false
 
 eval (SearchLocationModelActionController (SearchLocationModelController.UpdateSource lat lng name)) state = do
@@ -1858,7 +1864,9 @@ eval UpdateSourceFromPastLocations state = do
   continue state{data{source = nearestLocation.locationDetails.placeName, sourceAddress = encodeAddress nearestLocation.locationDetails.placeName [] Nothing}}
 
 eval (UpdateLocAndLatLong lat lng) state = do
-  continueWithCmd state{props{sourceLat = (fromMaybe 0.0 (NUM.fromString lat)), sourceLong = (fromMaybe 0.0 (NUM.fromString lng))}} [do
+  let slat = fromMaybe 0.0 (NUM.fromString lat)
+      slng = fromMaybe 0.0 (NUM.fromString lng)
+  continueWithCmd state{props{sourceLat = slat, sourceLong = slng , locateOnMapLocation {sourceLat = slat, sourceLng = slng, source = state.data.source, sourceAddress = state.data.sourceAddress}}} [do
     if os == "IOS" then do
       _ <- addMarker (getCurrentLocationMarker (getValueToLocalStore VERSION_NAME)) 9.9 9.9 160 (0.5) (0.9)
       pure unit

@@ -52,6 +52,7 @@ type AppConfig =
   , callOptions :: Array String
   , autoVariantEnabled :: Boolean
   , showDisabilityBanner :: Boolean
+  , mapConfig :: MapConfig
   , enableWhatsappOTP :: Array String
   , notifyRideConfirmationConfig :: NotifyRideConfirmationConfig
   , estimateAndQuoteConfig :: EstimateAndQuoteConfig
@@ -59,7 +60,6 @@ type AppConfig =
   , enableContactSupport :: Boolean
   , features :: Features
   , rideCompletedCardConfig :: RideCompletedCardConfig
-  , mapConfig :: MapConfig
   , purpleRideConfig :: PurpleRideConfig
   } 
 
@@ -191,6 +191,7 @@ type MapConfig = {
 
 type LocateOnMapConfigs = {
   dottedLineConfig :: DottedLineConfig
+, apiTriggerRadius :: Number
 }
 
 type DottedLineConfig = {
