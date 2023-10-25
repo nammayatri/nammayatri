@@ -640,16 +640,26 @@ export const updateRouteMarker = function (data) {
   }
 }
 
+export const methodArgumentCount = function (functionName) {
+  try {
+    return window.JBridge.methodArgumentCount(functionName);
+  } catch (error) {
+    console.log("error inside argumentCount : " + error)
+    return 0;
+  }
+}
+
+
 export const updateRoute = (configObj) => {
   if (window.JBridge.updateRoute) {
-      try {
-        if (methodArgumentCount("updateRoute") == 1)
+    try {
+      if (methodArgumentCount("updateRoute") == 1)
         return window.JBridge.updateRoute(JSON.stringify(configObj));
-        else
+      else
         return window.JBridge.updateRoute(JSON.stringify(configObj.json), configObj.destMarker, configObj.eta, configObj.srcMarker, JSON.stringify(configObj.specialLocation), configObj.zoomLevel);
-      } catch (e) {
-        return window.JBridge.updateRoute(JSON.stringify(configObj.json), configObj.destMarker, configObj.eta, configObj.srcMarker, JSON.stringify(configObj.specialLocation));
-      }
+    } catch (e) {
+      return window.JBridge.updateRoute(JSON.stringify(configObj.json), configObj.destMarker, configObj.eta, configObj.srcMarker, JSON.stringify(configObj.specialLocation));
+    }
   }
 };
 
@@ -1578,18 +1588,18 @@ export const showKeyboard = function (id) {
 }
 
 export const locateOnMap = (configObj) => {
-    try {
-      if (methodArgumentCount("locateOnMap") == 1)
+  try {
+    if (methodArgumentCount("locateOnMap") == 1)
       return JBridge.locateOnMap(JSON.stringify(configObj));
-      else
+    else
       return JBridge.locateOnMap(configObj.goToCurrentLocation, configObj.lat, configObj.lon, JSON.stringify(configObj.geoJson), JSON.stringify(configObj.points));
+  } catch (err) {
+    try{
+      return JBridge.locateOnMap(configObj.goToCurrentLocation, configObj.lat, configObj.lon);
     } catch (e) {
-        try{
-          return JBridge.locateOnMap(configObj.goToCurrentLocation, configObj.lat, configObj.lon);
-        } catch (e) {
-            return JBridge.locateOnMap(configObj.goToCurrentLocation, configObj.lat, configObj.lon, configObj.zoomLevel);
-        }
+      return JBridge.locateOnMap(configObj.goToCurrentLocation, configObj.lat, configObj.lon, configObj.zoomLevel);
     }
+  }
 };
 
 export const exitLocateOnMap = function (str) {
@@ -1601,15 +1611,6 @@ export const shareTextMessage = function (str) {
     if (JBridge.shareTextMessage) {
       JBridge.shareTextMessage(str, message);
     }
-  }
-}
-
-export const methodArgumentCount = function (functionName) {
-  try {
-    return window.JBridge.methodArgumentCount(functionName);
-  } catch (error) {
-    console.log("error inside argumentCount : " + error)
-    return 0;
   }
 }
 
