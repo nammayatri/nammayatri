@@ -171,7 +171,8 @@ calculateDriverFeeForDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getI
 
           let paymentMode = maybe MANUAL (.planType) mbDriverPlan
           unless (totalFee == 0) $ do
-            driverFeeSplitter paymentMode plan feeWithoutDiscount totalFee driverFee mandateId now
+            driverFeeUpdateWithPlanAndOffer <- QDF.findById driverFee.id >>= fromMaybeM (InternalError $ "driverFee not found with driverFee id : " <> driverFee.id.getId)
+            driverFeeSplitter paymentMode plan feeWithoutDiscount totalFee driverFeeUpdateWithPlanAndOffer mandateId now
             updatePendingPayment True (cast driverFee.driverId)
 
           -- blocking
