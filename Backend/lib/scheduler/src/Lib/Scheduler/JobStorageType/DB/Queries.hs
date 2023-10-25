@@ -75,28 +75,28 @@ instance (JobProcessor t) => ToTType'' BeamST.SchedulerJob (AnyJob t) where
         BeamST.parentJobId = getId parentJobId
       }
 
-createJob :: forall t (e :: t) m r. (JobFlow t e, JobCreator r m) => Int -> JobContent e -> m ()
-createJob maxShards jobData = do
+createJob :: forall t (e :: t) m r. (JobFlow t e, JobCreator r m) => Text -> Int -> JobContent e -> m ()
+createJob uuid maxShards jobData = do
   void $
-    ScheduleJob.createJob @t @e @m createWithKVScheduler maxShards $
+    ScheduleJob.createJob @t @e @m uuid createWithKVScheduler maxShards $
       JobEntry
         { jobData = jobData,
           maxErrors = 5
         }
 
-createJobIn :: forall t (e :: t) m r. (Log m, JobFlow t e, JobCreator r m) => NominalDiffTime -> Int -> JobContent e -> m ()
-createJobIn inTime maxShards jobData = do
+createJobIn :: forall t (e :: t) m r. (Log m, JobFlow t e, JobCreator r m) => Text -> NominalDiffTime -> Int -> JobContent e -> m ()
+createJobIn uuid inTime maxShards jobData = do
   void $
-    ScheduleJob.createJobIn @t @e @m createWithKVScheduler inTime maxShards $
+    ScheduleJob.createJobIn @t @e @m uuid createWithKVScheduler inTime maxShards $
       JobEntry
         { jobData = jobData,
           maxErrors = 5
         }
 
-createJobByTime :: forall t (e :: t) m r. (JobFlow t e, JobCreator r m) => UTCTime -> Int -> JobContent e -> m ()
-createJobByTime byTime maxShards jobData = do
+createJobByTime :: forall t (e :: t) m r. (JobFlow t e, JobCreator r m) => Text -> UTCTime -> Int -> JobContent e -> m ()
+createJobByTime uuid byTime maxShards jobData = do
   void $
-    ScheduleJob.createJobByTime @t @e @m createWithKVScheduler byTime maxShards $
+    ScheduleJob.createJobByTime @t @e @m uuid createWithKVScheduler byTime maxShards $
       JobEntry
         { jobData = jobData,
           maxErrors = 5

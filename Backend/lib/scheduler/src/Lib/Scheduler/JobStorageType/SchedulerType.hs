@@ -37,6 +37,7 @@ import Lib.Scheduler.Types
 createJob :: forall t (e :: t) m r. (JobFlow t e, JobCreator r m) => Int -> JobContent e -> m ()
 createJob maxShards jobData = do
   schedulerType <- asks (.schedulerType)
+  uuid <- generateGUIDText
   let jobType = show $ fromSing (sing :: Sing e)
   case schedulerType of
     RedisBased -> do
@@ -44,17 +45,18 @@ createJob maxShards jobData = do
       logDebug $ "LONG RUNNING " <> show longRunning
       if longRunning
         then do
-          DBQ.createJob @t @e maxShards jobData
-          RQ.createJob @t @e maxShards jobData
+          DBQ.createJob @t @e uuid maxShards jobData
+          RQ.createJob @t @e uuid maxShards jobData
         else do
-          RQ.createJob @t @e maxShards jobData
+          RQ.createJob @t @e uuid maxShards jobData
     DbBased -> do
       logDebug "DB BASED JOB "
-      DBQ.createJob @t @e maxShards jobData
+      DBQ.createJob @t @e uuid maxShards jobData
 
 createJobIn :: forall t (e :: t) m r. (JobFlow t e, JobCreator r m) => NominalDiffTime -> Int -> JobContent e -> m ()
 createJobIn inTime maxShards jobData = do
   schedulerType <- asks (.schedulerType)
+  uuid <- generateGUIDText
   let jobType = show $ fromSing (sing :: Sing e)
   case schedulerType of
     RedisBased -> do
@@ -62,13 +64,13 @@ createJobIn inTime maxShards jobData = do
       logDebug $ "LONG RUNNING " <> show longRunning
       if longRunning
         then do
-          DBQ.createJobIn @t @e inTime maxShards jobData
-          RQ.createJobIn @t @e inTime maxShards jobData
+          DBQ.createJobIn @t @e uuid inTime maxShards jobData
+          RQ.createJobIn @t @e uuid inTime maxShards jobData
         else do
-          RQ.createJobIn @t @e inTime maxShards jobData
+          RQ.createJobIn @t @e uuid inTime maxShards jobData
     DbBased -> do
       logDebug "DB BASED JOB "
-      DBQ.createJobIn @t @e inTime maxShards jobData
+      DBQ.createJobIn @t @e uuid inTime maxShards jobData
 
 isLongRunning :: (JobCreator r m) => Text -> m Bool
 isLongRunning jType = do
@@ -80,6 +82,7 @@ isLongRunning jType = do
 createJobByTime :: forall t (e :: t) m r. (JobFlow t e, JobCreator r m) => UTCTime -> Int -> JobContent e -> m ()
 createJobByTime byTime maxShards jobData = do
   schedulerType <- asks (.schedulerType)
+  uuid <- generateGUIDText
   let jobType = show $ fromSing (sing :: Sing e)
   case schedulerType of
     RedisBased -> do
@@ -87,13 +90,13 @@ createJobByTime byTime maxShards jobData = do
       logDebug $ "LONG RUNNING " <> show longRunning
       if longRunning
         then do
-          DBQ.createJobByTime @t @e byTime maxShards jobData
-          RQ.createJobByTime @t @e byTime maxShards jobData
+          DBQ.createJobByTime @t @e uuid byTime maxShards jobData
+          RQ.createJobByTime @t @e uuid byTime maxShards jobData
         else do
-          RQ.createJobByTime @t @e byTime maxShards jobData
+          RQ.createJobByTime @t @e uuid byTime maxShards jobData
     DbBased -> do
       logDebug "DB BASED JOB "
-      DBQ.createJobByTime @t @e byTime maxShards jobData
+      DBQ.createJobByTime @t @e uuid byTime maxShards jobData
 
 findAll :: forall t m r. (FromTType'' BeamST.SchedulerJob (AnyJob t), JobExecutor r m, JobProcessor t) => m [AnyJob t]
 findAll = do

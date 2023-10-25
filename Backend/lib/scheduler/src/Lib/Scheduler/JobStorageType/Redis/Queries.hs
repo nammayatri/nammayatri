@@ -36,22 +36,22 @@ import Lib.Scheduler.Environment
 import qualified Lib.Scheduler.ScheduleJob as ScheduleJob
 import Lib.Scheduler.Types
 
-createJob :: forall t (e :: t) m r. (JobFlow t e, JobCreator r m) => Int -> JobContent e -> m ()
-createJob maxShards jobData = do
-  void $ ScheduleJob.createJob @t @e createJobFunc maxShards $ JobEntry {jobData = jobData, maxErrors = 5}
+createJob :: forall t (e :: t) m r. (JobFlow t e, JobCreator r m) => Text -> Int -> JobContent e -> m ()
+createJob uuid maxShards jobData = do
+  void $ ScheduleJob.createJob @t @e uuid createJobFunc maxShards $ JobEntry {jobData = jobData, maxErrors = 5}
 
-createJobIn :: forall t (e :: t) m r. (JobFlow t e, JobCreator r m) => NominalDiffTime -> Int -> JobContent e -> m ()
-createJobIn inTime maxShards jobData = do
-  void $ ScheduleJob.createJobIn @t @e createJobFunc inTime maxShards $ JobEntry {jobData = jobData, maxErrors = 5}
+createJobIn :: forall t (e :: t) m r. (JobFlow t e, JobCreator r m) => Text -> NominalDiffTime -> Int -> JobContent e -> m ()
+createJobIn uuid inTime maxShards jobData = do
+  void $ ScheduleJob.createJobIn @t @e uuid createJobFunc inTime maxShards $ JobEntry {jobData = jobData, maxErrors = 5}
 
 createJobFunc :: (HedisFlow m r, HasField "schedulerSetName" r Text) => AnyJob t -> m ()
 createJobFunc (AnyJob job) = do
   key <- asks (.schedulerSetName)
   Hedis.withNonCriticalCrossAppRedis $ Hedis.zAdd key [(utcToMilliseconds job.scheduledAt, AnyJob job)]
 
-createJobByTime :: forall t (e :: t) m r. (JobFlow t e, JobCreator r m) => UTCTime -> Int -> JobContent e -> m ()
-createJobByTime byTime maxShards jobData = do
-  void $ ScheduleJob.createJobByTime @t @e createJobFunc byTime maxShards $ JobEntry {jobData = jobData, maxErrors = 5}
+createJobByTime :: forall t (e :: t) m r. (JobFlow t e, JobCreator r m) => Text -> UTCTime -> Int -> JobContent e -> m ()
+createJobByTime uuid byTime maxShards jobData = do
+  void $ ScheduleJob.createJobByTime @t @e uuid createJobFunc byTime maxShards $ JobEntry {jobData = jobData, maxErrors = 5}
 
 findAll :: (JobExecutor r m, JobProcessor t) => m [AnyJob t]
 findAll = return []
@@ -146,13 +146,10 @@ updateKey _ _ other = other
 reSchedule :: forall t m r. (JobCreator r m, HasField "schedulerSetName" r Text, JobProcessor t, ToJSON t) => AnyJob t -> UTCTime -> m ()
 reSchedule j byTime = do
   let jobJson = toJSON j
-  uuid <- generateGUIDText
   key <- asks (.schedulerSetName)
   let A.String newScheduleTime = toJSON byTime
   let newJOB = updateKey "scheduledAt" newScheduleTime jobJson
-  let newJOB' = updateKey "id" uuid newJOB
-  let newJOB'' = updateKey "parentJobId" uuid newJOB'
-  Hedis.withNonCriticalCrossAppRedis $ Hedis.zAdd key [(utcToMilliseconds byTime, newJOB'')]
+  Hedis.withNonCriticalCrossAppRedis $ Hedis.zAdd key [(utcToMilliseconds byTime, newJOB)]
 
 updateFailureCount :: (JobExecutor r m) => Id AnyJob -> Int -> m ()
 updateFailureCount _ _ = pure ()

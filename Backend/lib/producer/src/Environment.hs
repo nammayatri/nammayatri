@@ -47,7 +47,7 @@ data AppCfg = AppCfg
     cacheConfig :: CF.CacheConfig,
     schedulerSetName :: Text,
     entryId :: Text,
-    reviverInterval :: Seconds,
+    reviverInterval :: Minutes,
     reviveThreshold :: Seconds,
     maxShards :: Int,
     metricsPort :: Int,
@@ -82,7 +82,7 @@ data AppEnv = AppEnv
     schedulerSetName :: Text,
     entryId :: Text,
     schedulerType :: SchedulerType,
-    reviverInterval :: Seconds,
+    reviverInterval :: Minutes,
     reviveThreshold :: Seconds,
     runReviver :: Bool
   }
