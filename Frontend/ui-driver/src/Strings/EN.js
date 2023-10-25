@@ -764,7 +764,7 @@ const englishStrings = {
   NO : "No",
   YES_CANCEL : "Yes, Cancel",
   PAY_TO_JOIN_THIS_PLAN : "Pay only ₹1 to join plan",
-	OFFERS_NOT_APPLICABLE : "Offers not applicable unless completed",
+  OFFERS_NOT_APPLICABLE : "Offers not applicable unless completed",
   PAUSED_STR : "Paused",
   PENDING_STR : "Pending",
   SWITCH_PLAN_STR : "Switch Plan?",

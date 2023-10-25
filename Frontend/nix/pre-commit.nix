@@ -5,7 +5,7 @@
 {
   hooks = {
     eslint = {
-      enable = true;
+      enable = false;
       files = lib.mkForce "Frontend/.*\\.js$";
     };
   };

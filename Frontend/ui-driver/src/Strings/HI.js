@@ -991,9 +991,9 @@ const hindiStrings = {
   LOCATION_ALREADY_EXISTS : "स्थान पहले से मौजूद है",
   MIN_LEFT : "मिनट शेष",
   GOTO_LOC_REACHED : "“गो-टू” स्थान पर पहुँच गया!",
-  GET_READY_FOR_YS_SUBSCRIPTION : "यात्री साथी योजनाओं के लिए तैयार हो जाएं!",
-  SIGNUP_EARLY_FOR_SPECIAL_OFFERS : "विशेष ऑफर के लिए जल्दी साइन अप करें",
-  GUARANTEED_FIXED_PRICE : "1 जनवरी 2025 तक कीमत में कोई बदलाव नहीं।",
+  GET_READY_FOR_YS_SUBSCRIPTION : "यात्री साथी योजनाओं के लिए तैयार हो जाएं!",
+  SIGNUP_EARLY_FOR_SPECIAL_OFFERS : "विशेष ऑफर के लिए जल्दी साइन अप करें",
+  GUARANTEED_FIXED_PRICE : "1 जनवरी 2025 तक कीमत में कोई बदलाव नहीं।",
   INTRODUCTORY_OFFER_TO_BE_ANNOUNCED_SOON : "परिचयात्मक ऑफर की घोषणा जल्द ही की जाएगी!",
   NO_CHARGES_TILL : "31 दिसंबर तक कोई शुल्क नहीं"
 }

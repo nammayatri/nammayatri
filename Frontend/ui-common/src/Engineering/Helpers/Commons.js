@@ -426,24 +426,16 @@ export const getFormattedDate = function (str) {
   const language = JBridge.getFromSharedPrefs("LANGUAGE_KEY");
   return formatDates(new Date(date),"MMMM Do, YYYY", getFormattedLanguage(language));
 }
-export const getImageUrl = function (url) {
-  try {
-    let videoId = getVideoID(url);
-    return ("https://img.youtube.com/vi/" + videoId + "/maxresdefault.jpg");
-  }catch (e) {
-    console.log("error in getImageUrl " + e);
-  }
-};
 
 export const getVideoID = function (url) {
   try {
     if (url === "") {
       return "";
     }
-    var ID = '';
-    var updatedURL = url.replace(/(>|<)/gi, '').split(/(vi\/|v=|\/v\/|youtu\.be\/|\/embed\/|\/shorts\/)/);
+    let ID = "";
+    const updatedURL = url.replace(/(>|<)/gi, "").split(/(vi\/|v=|\/v\/|youtu\.be\/|\/embed\/|\/shorts\/)/);
     if (updatedURL[2] !== undefined) {
-      ID = updatedURL[2].split(/[^0-9a-z_\-]/i);
+      ID = updatedURL[2].split(/[^0-9a-z_-]/i);
       ID = ID[0];
     }
     else {
@@ -458,3 +450,12 @@ export const getVideoID = function (url) {
     console.log("error in getVideoID " + e);
   }
 }
+
+export const getImageUrl = function (url) {
+  try {
+    const videoId = getVideoID(url);
+    return ("https://img.youtube.com/vi/" + videoId + "/maxresdefault.jpg");
+  }catch (e) {
+    console.log("error in getImageUrl " + e);
+  }
+};
