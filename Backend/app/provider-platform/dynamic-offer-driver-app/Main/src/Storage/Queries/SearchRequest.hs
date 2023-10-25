@@ -80,9 +80,10 @@ updateAutoAssign searchRequestId autoAssignedEnabled =
 
 instance FromTType' BeamSR.SearchRequest SearchRequest where
   fromTType' BeamSR.SearchRequestT {..} = do
-    case tag of
+    mappings <- QLM.findByEntityId id
+    pUrl <- parseBaseUrl bapUri
+    details <- case tag of
       ON_DEMAND -> do
-        mappings <- QLM.findByEntityId id
         (fl, tl) <-
           if null mappings -- HANDLING OLD DATA : TO BE REMOVED AFTER SOME TIME
             then do
@@ -106,117 +107,71 @@ instance FromTType' BeamSR.SearchRequest SearchRequest where
               let toLocMap = maximumBy (comparing (.order)) toLocationMappings
               tl <- QL.findById toLocMap.locationId >>= fromMaybeM (InternalError $ "ToLocation not found in search request for toLocationId: " <> toLocMap.locationId.getId)
               return (fl, tl)
-        pUrl <- parseBaseUrl bapUri
         pure $
-          Just
-            SearchRequest
-              { id = Id id,
-                transactionId = transactionId,
-                providerId = Id providerId,
-                searchRequestDetails =
-                  SearchReqDetailsOnDemand
-                    SearchRequestDetailsOnDemand
-                      { fromLocation = fl,
-                        toLocation = tl,
-                        estimatedDistance = estimatedDistance,
-                        estimatedDuration = estimatedDuration,
-                        specialLocationTag = specialLocationTag,
-                        autoAssignEnabled = autoAssignEnabled
-                      },
-                area = area,
-                bapId = bapId,
-                bapUri = pUrl,
-                bapCity = bapCity,
-                bapCountry = bapCountry,
-                customerLanguage = customerLanguage,
-                disabilityTag = disabilityTag,
-                device = device,
-                createdAt = createdAt
+          SearchReqDetailsOnDemand
+            SearchRequestDetailsOnDemand
+              { fromLocation = fl,
+                toLocation = tl,
+                estimatedDistance = estimatedDistance,
+                estimatedDuration = estimatedDuration,
+                specialLocationTag = specialLocationTag,
+                autoAssignEnabled = autoAssignEnabled
               }
       RENTAL -> do
-        mappings <- QLM.findByEntityId id
-        fl <-
-          if null mappings -- HANDLING OLD DATA : TO BE REMOVED AFTER SOME TIME
-            then do
-              logInfo "Accessing Search Request Location Table"
-              pickupLoc <- upsertLocationForOldData (Id <$> fromLocationId) id
-              pickupLocMapping <- SLM.buildPickUpLocationMapping pickupLoc.id id DLM.SEARCH_REQUEST
-              QLM.create pickupLocMapping
-              return pickupLoc
-            else do
-              let fromLocationMapping = filter (\loc -> loc.order == 0) mappings
-              fromLocMap <- listToMaybe fromLocationMapping & fromMaybeM (InternalError "Entity Mappings For FromLocation Not Found")
-              QL.findById fromLocMap.locationId >>= fromMaybeM (InternalError $ "FromLocation not found in search request for fromLocationId: " <> fromLocMap.locationId.getId)
-        pUrl <- parseBaseUrl bapUri
+        fl <- do
+          let fromLocationMapping = filter (\loc -> loc.order == 0) mappings
+          fromLocMap <- listToMaybe fromLocationMapping & fromMaybeM (InternalError "Entity Mappings For FromLocation Not Found")
+          QL.findById fromLocMap.locationId >>= fromMaybeM (InternalError $ "FromLocation not found in search request for fromLocationId: " <> fromLocMap.locationId.getId)
         pure $
-          Just
-            SearchRequest
-              { id = Id id,
-                transactionId = transactionId,
-                providerId = Id providerId,
-                searchRequestDetails =
-                  SearchReqDetailsRental
-                    SearchRequestDetailsRental
-                      { rentalFromLocation = fl
-                      },
-                area = area,
-                bapId = bapId,
-                bapUri = pUrl,
-                bapCity = bapCity,
-                bapCountry = bapCountry,
-                customerLanguage = customerLanguage,
-                disabilityTag = disabilityTag,
-                device = device,
-                createdAt = createdAt
+          SearchReqDetailsRental
+            SearchRequestDetailsRental
+              { rentalFromLocation = fl
               }
+    pure $
+      Just
+        SearchRequest
+          { id = Id id,
+            transactionId = transactionId,
+            providerId = Id providerId,
+            searchRequestDetails = details,
+            area = area,
+            bapId = bapId,
+            bapUri = pUrl,
+            bapCity = bapCity,
+            bapCountry = bapCountry,
+            customerLanguage = customerLanguage,
+            disabilityTag = disabilityTag,
+            device = device,
+            createdAt = createdAt
+          }
 
 instance ToTType' BeamSR.SearchRequest SearchRequest where
   toTType' SearchRequest {..} = do
-    case searchRequestDetails of
-      SearchReqDetailsOnDemand details ->
-        BeamSR.SearchRequestT
-          { BeamSR.id = getId id,
-            BeamSR.transactionId = transactionId,
-            BeamSR.providerId = getId providerId,
-            BeamSR.fromLocationId = Just $ getId details.fromLocation.id,
-            BeamSR.toLocationId = Just $ getId details.toLocation.id,
-            BeamSR.area = area,
-            BeamSR.bapId = bapId,
-            BeamSR.bapUri = showBaseUrl bapUri,
-            BeamSR.bapCity = bapCity,
-            BeamSR.bapCountry = bapCountry,
-            BeamSR.estimatedDistance = details.estimatedDistance,
-            BeamSR.estimatedDuration = details.estimatedDuration,
-            BeamSR.customerLanguage = customerLanguage,
-            BeamSR.disabilityTag = disabilityTag,
-            BeamSR.device = device,
-            BeamSR.createdAt = createdAt,
-            BeamSR.autoAssignEnabled = details.autoAssignEnabled,
-            BeamSR.specialLocationTag = details.specialLocationTag,
-            BeamSR.tag = ON_DEMAND
-          }
-      SearchReqDetailsRental details ->
-        BeamSR.SearchRequestT
-          { BeamSR.id = getId id,
-            BeamSR.transactionId = transactionId,
-            BeamSR.providerId = getId providerId,
-            BeamSR.fromLocationId = Just $ getId details.rentalFromLocation.id,
-            BeamSR.toLocationId = Nothing,
-            BeamSR.area = area,
-            BeamSR.bapId = bapId,
-            BeamSR.bapUri = showBaseUrl bapUri,
-            BeamSR.bapCity = bapCity,
-            BeamSR.bapCountry = bapCountry,
-            BeamSR.estimatedDistance = 0,
-            BeamSR.estimatedDuration = 0,
-            BeamSR.customerLanguage = customerLanguage,
-            BeamSR.disabilityTag = disabilityTag,
-            BeamSR.device = device,
-            BeamSR.createdAt = createdAt,
-            BeamSR.autoAssignEnabled = Nothing,
-            BeamSR.specialLocationTag = Nothing,
-            BeamSR.tag = RENTAL
-          }
+    let (tag, fromLocationId, toLocationId, estimatedDistance, estimatedDuration, autoAssignEnabled, specialLocationTag) = case searchRequestDetails of
+          SearchReqDetailsOnDemand details -> do
+            let tag' = ON_DEMAND
+                fromLocationId' = Just $ getId details.fromLocation.id
+                toLocationId' = Just $ getId details.toLocation.id
+                estimatedDistance' = details.estimatedDistance
+                estimatedDuration' = details.estimatedDuration
+                autoAssignEnabled' = details.autoAssignEnabled
+                specialLocationTag' = details.specialLocationTag
+            (tag', fromLocationId', toLocationId', estimatedDistance', estimatedDuration', autoAssignEnabled', specialLocationTag')
+          SearchReqDetailsRental details -> do
+            let tag' = ON_DEMAND
+                fromLocationId' = Just $ getId details.rentalFromLocation.id
+                toLocationId' = Nothing
+                estimatedDistance' = 0
+                estimatedDuration' = 0
+                autoAssignEnabled' = Nothing
+                specialLocationTag' = Nothing
+            (tag', fromLocationId', toLocationId', estimatedDistance', estimatedDuration', autoAssignEnabled', specialLocationTag')
+    BeamSR.SearchRequestT
+      { BeamSR.id = getId id,
+        BeamSR.providerId = getId providerId,
+        BeamSR.bapUri = showBaseUrl bapUri,
+        ..
+      }
 
 -- FUNCTIONS FOR HANDLING OLD DATA : TO BE REMOVED AFTER SOME TIME
 
