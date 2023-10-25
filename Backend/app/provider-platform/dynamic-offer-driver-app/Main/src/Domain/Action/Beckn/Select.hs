@@ -62,14 +62,14 @@ handler merchant sReq estimate = do
   let merchantId = merchant.id
   now <- getCurrentTime
   searchReq <- QSR.findById estimate.requestId >>= fromMaybeM (SearchRequestNotFound estimate.requestId.getId)
-  case searchReq.tag of
-    DSR.ON_DEMAND -> do
+  case searchReq.searchRequestDetails of
+    DSR.SearchReqDetailsOnDemand details -> do
       QDQ.setInactiveAllDQByEstId sReq.estimateId now
       farePolicy <- getFarePolicy merchantId estimate.vehicleVariant searchReq.area
       searchTry <- createNewSearchTry farePolicy searchReq
-      driverPoolConfig <- getDriverPoolConfig merchantId (Just searchTry.vehicleVariant) searchReq.searchRequestDetails.estimatedDistance
+      driverPoolConfig <- getDriverPoolConfig merchantId (Just searchTry.vehicleVariant) details.estimatedDistance
       goHomeCfg <- CQGHC.findByMerchantId merchantId
-      let driverExtraFeeBounds = DFarePolicy.findDriverExtraFeeBoundsByDistance searchReq.searchRequestDetails.estimatedDistance <$> farePolicy.driverExtraFeeBounds
+      let driverExtraFeeBounds = DFarePolicy.findDriverExtraFeeBoundsByDistance details.estimatedDistance <$> farePolicy.driverExtraFeeBounds
       (res, isGoHomeBatch) <- sendSearchRequestToDrivers' driverPoolConfig searchReq searchTry merchant driverExtraFeeBounds goHomeCfg
       let inTime = fromIntegral (if isGoHomeBatch then goHomeCfg.goHomeBatchDelay else driverPoolConfig.singleBatchProcessTime)
       case res of
@@ -79,7 +79,7 @@ handler merchant sReq estimate = do
           JC.createJobIn @_ @'SendSearchRequestToDriver inTime maxShards $
             SendSearchRequestToDriverJobData
               { searchTryId = searchTry.id,
-                estimatedRideDistance = searchReq.searchRequestDetails.estimatedDistance,
+                estimatedRideDistance = details.estimatedDistance,
                 driverExtraFeeBounds = driverExtraFeeBounds
               }
         _ -> return ()
@@ -91,7 +91,7 @@ handler merchant sReq estimate = do
             calculateFareParameters
               CalculateFareParametersParams
                 { farePolicy = farePolicy,
-                  distance = searchReq'.searchRequestDetails.estimatedDistance,
+                  distance = details.estimatedDistance,
                   rideTime = sReq.pickupTime,
                   waitingTime = Nothing,
                   actualRideDuration = Nothing,
@@ -121,11 +121,11 @@ handler merchant sReq estimate = do
           logDebug $
             "search try id=" <> show searchTry.id
               <> "; estimated distance = "
-              <> show searchReq.searchRequestDetails.estimatedDistance
+              <> show details.estimatedDistance
               <> "; estimated base fare:"
               <> show estimatedFare
           return searchTry
-    DSR.RENTAL -> do
+    DSR.SearchReqDetailsRental _ -> do
       throwError $ InvalidRequest "RENTAL is not present in select api,use confirm"
 
 buildSearchTry ::

@@ -117,7 +117,7 @@ cancelRideImpl rideId bookingCReason = do
     if isRepeatSearch
       then do
         case searchReq.searchRequestDetails of
-          DSR.SearchRequestDetailsOnDemand {..} -> do
+          DSR.SearchReqDetailsOnDemand DSR.SearchRequestDetailsOnDemand {..} -> do
             blockListedDriverList <- addDriverToSearchCancelledList searchReq.id ride
             driverPoolCfg <- getDriverPoolConfig merchant.id (Just searchTry.vehicleVariant) estimatedDistance
             logDebug $ "BlockListed Drivers-" <> show blockListedDriverList
@@ -126,7 +126,7 @@ cancelRideImpl rideId bookingCReason = do
             if not (null newDriverPool)
               then repeatSearch merchant farePolicy searchReq searchTry booking ride SBCR.ByDriver now driverPoolCfg
               else BP.sendBookingCancelledUpdateToBAP booking merchant bookingCReason.source
-          DSR.SearchRequestDetailsRental {} -> BP.sendBookingCancelledUpdateToBAP booking merchant bookingCReason.source
+          DSR.SearchReqDetailsRental DSR.SearchRequestDetailsRental {} -> BP.sendBookingCancelledUpdateToBAP booking merchant bookingCReason.source
       else BP.sendBookingCancelledUpdateToBAP booking merchant bookingCReason.source
   where
     addDriverToSearchCancelledList searchReqId ride = do
@@ -191,8 +191,8 @@ repeatSearch merchant farePolicy searchReq searchTry booking ride cancellationSo
   _ <- QST.create newSearchTry
   goHomeCfg <- CQGHC.findByMerchantId merchant.id
   let driverExtraFeeBounds = case searchReq.searchRequestDetails of
-        DSR.SearchRequestDetailsOnDemand {..} -> DFP.findDriverExtraFeeBoundsByDistance estimatedDistance <$> farePolicy.driverExtraFeeBounds
-        DSR.SearchRequestDetailsRental {} -> Nothing
+        DSR.SearchReqDetailsOnDemand DSR.SearchRequestDetailsOnDemand {..} -> DFP.findDriverExtraFeeBoundsByDistance estimatedDistance <$> farePolicy.driverExtraFeeBounds
+        DSR.SearchReqDetailsRental DSR.SearchRequestDetailsRental {} -> Nothing
   (res, _) <-
     sendSearchRequestToDrivers'
       driverPoolConfig
@@ -210,8 +210,8 @@ repeatSearch merchant farePolicy searchReq searchTry booking ride cancellationSo
         SendSearchRequestToDriverJobData
           { searchTryId = newSearchTry.id,
             estimatedRideDistance = case searchReq.searchRequestDetails of
-              DSR.SearchRequestDetailsOnDemand {..} -> estimatedDistance
-              DSR.SearchRequestDetailsRental {} -> booking.estimatedDistance,
+              DSR.SearchReqDetailsOnDemand DSR.SearchRequestDetailsOnDemand {..} -> estimatedDistance
+              DSR.SearchReqDetailsRental DSR.SearchRequestDetailsRental {} -> booking.estimatedDistance,
             driverExtraFeeBounds = driverExtraFeeBounds
           }
     _ -> return ()

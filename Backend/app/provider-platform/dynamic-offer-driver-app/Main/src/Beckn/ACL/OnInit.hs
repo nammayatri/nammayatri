@@ -76,7 +76,7 @@ mkOnInitMessage res = do
                       },
                   end =
                     case res.booking.bookingDetails of
-                      DRB.BookingDetailsOnDemand {..} -> do
+                      DRB.DetailsOnDemand DRB.BookingDetailsOnDemand {..} -> do
                         Just
                           OnInit.StopInfo
                             { location =
@@ -89,7 +89,7 @@ mkOnInitMessage res = do
                                     address = castAddress toLocation.address
                                   }
                             }
-                      DRB.BookingDetailsRental {} -> do
+                      DRB.DetailsRental DRB.BookingDetailsRental {} -> do
                         Nothing,
                   vehicle =
                     OnInit.Vehicle

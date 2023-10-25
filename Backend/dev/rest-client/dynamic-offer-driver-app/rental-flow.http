@@ -1,22 +1,28 @@
 @token1 = {{driver-offer-bpp-auto-token1}}
-@token2 = {{driver-offer-bpp-auto-token2}}
 
 @driverId = favorit-auto1-0000000000000000000000
 @driver-offer-bpp-host = http://localhost:8016
 @location-tracking-service-host = http://localhost:8081
 @merchantId = favorit0-0000-0000-0000-00000favorit
 
+# time in future
+@rentalStartTime = 2023-10-24T17:05:15.585221416Z
+# @now = $localDatetime iso8601
 
 # @name healthcheck
 GET {{driver-offer-bpp-host}}/ui
 
 ###
-
 # @name healthcheck
 GET {{app-host}}
-
 ###
 
+# @name setActive
+POST {{driver-offer-bpp-host}}/ui/driver/setActivity?active=true&mode="ONLINE"
+content-type: application/json
+token: {{token1}}
+
+###
 @adminToken = favorit-admin-0000000000000000-token
 
 # @name updateVehicle
@@ -26,7 +32,7 @@ content-type: application/json
 token: {{adminToken}}
 
 {
-    "variant" : "AUTO_RICKSHAW"
+    "variant" : "SEDAN"
 }
 
 ###
@@ -34,7 +40,7 @@ token: {{adminToken}}
 POST {{location-tracking-service-host}}/ui/driver/location
 token: {{token1}}
 mId: {{merchantId}}
-vt: AUTO_RICKSHAW
+vt: SEDAN
 dm: ONLINE
 content-type: application/json
 
@@ -52,35 +58,10 @@ content-type: application/json
 
 ###
 
-# @name setActive
-POST {{driver-offer-bpp-host}}/ui/driver/setActivity?active=true&mode="ONLINE"
+# @name enableRental
+POST {{driver-offer-bpp-host}}/ui/driver/enableRental?flag=true
 content-type: application/json
 token: {{token1}}
-
-###
-
-# @name createDriver
-POST {{driver-offer-bpp-host}}/ui/org/driver
-content-type: application/json
-token: ea37f941-427a-4085-a7d0-96240f166672
-
-{
-  "person" : {
-    "firstName": "Jonh",
-    "middleName": " Maybeext",
-    "lastName": "Maybext",
-    "mobileNumber": "9602580675",
-    "mobileCountryCode": "+7"
-  },
-  "vehicle" : {
-    "category": "CAR",
-    "model": "Ford",
-    "variant": "SEDAN",
-    "color": "White",
-    "registrationNo": "6001",
-    "capacity": 120
-  }
-}
 
 ###
 
@@ -90,7 +71,7 @@ content-type: application/json
 token: {{app-token}}
 
 {
-  "fareProductType" : "ONE_WAY",
+  "fareProductType" : "RENTAL",
   "contents" : {
     "origin": {
       "address": {
@@ -108,22 +89,7 @@ token: {{app-token}}
           "lon": 75.919028
       }
     },
-    "destination": {
-      "address": {
-              "street": "Hadadi Rd",
-              "state": "Karnataka",
-              "door": "",
-              "country": "India",
-              "city": "Davanagere",
-              "building": "207",
-              "areaCode": "",
-              "area": "Nituvalli"
-          },
-      "gps": {
-          "lat": 14.441555,
-          "lon": 75.922259
-      }
-    }
+    "startTime" : "{{rentalStartTime}}"
   }
 }
 
@@ -137,27 +103,40 @@ content-type: application/json
 token: {{app-token}}
 
 ###
+@selectedQuoteId = {{quotes.response.body.quotes[0].onRentalCab.id}}
 
-# @name select
-@estimateId = {{quotes.response.body.estimates[0].id}}
+# @name confirmQuote
 
-@paymentMethodId = {{quotes.response.body.paymentMethods[0].id}}
+# POST {{app-host}}/rideSearch/quotes/{{selectedQuoteId}}/confirm?paymentMethodId={{paymentMethodId}}
 
-# paymentMethodId will work only if autoAssignEnabledV2 is true
-# else paymentMethodId should be specified in confirm API
-
-# "paymentMethodId" : "{{paymentMethodId}}"
-
-POST {{app-host}}/estimate/{{estimateId}}/select2 HTTP/1.1
+POST {{app-host}}/rideSearch/quotes/{{selectedQuoteId}}/confirm?startTime={{rentalStartTime}}&rentalDuration=2
 content-type: application/json
 token: {{app-token}}
 
-{
-  "customerExtraFee" : 10,
-  "autoAssignEnabled" : false,
-  "autoAssignEnabledV2" : false,
-  "paymentMethodId" : null
-}
+###
+
+# Should be updated just before AllocateRentalRide job triggered:
+# job.scheduledAt = max booking.createdAt (rentalStartTime - 15 mins)
+
+# @name updatePosition
+POST {{location-tracking-service-host}}/ui/driver/location
+token: {{token1}}
+mId: {{merchantId}}
+vt: SEDAN
+dm: ONLINE
+content-type: application/json
+
+[
+    {
+        "pt": {
+            "lat": 14.445332,
+            "lon": 75.919028
+
+        },
+        "ts": "{{$localDatetime iso8601}}",
+        "acc": 0
+    }
+]
 
 ###
 
@@ -167,35 +146,18 @@ token: {{token1}}
 
 ###
 
-# @name offerQuote
+
+###
+
+# @name offerRide
 POST {{driver-offer-bpp-host}}/ui/driver/searchRequest/quote/respond
 token: {{token1}}
 content-type: application/json
 
 {
-    "offeredFare": 10,
     "searchTryId": "{{nearbySearchRequest.response.body.searchRequestsForDriver[0].searchTryId}}",
     "response" : "Accept"
 }
-
-###
-
-# @name selectedQuotes
-GET {{app-host}}/estimate/{{estimateId}}/quotes
-content-type: application/json
-token: {{app-token}}
-
-###
-
-@selectedQuoteId = {{selectedQuotes.response.body.selectedQuotes[0].id}}
-
-# @name confirmQuote
-
-# POST {{app-host}}/rideSearch/quotes/{{selectedQuoteId}}/confirm?paymentMethodId={{paymentMethodId}}
-
-POST {{app-host}}/rideSearch/quotes/{{selectedQuoteId}}/confirm
-content-type: application/json
-token: {{app-token}}
 
 ###
 
@@ -251,7 +213,7 @@ content-type: application/json
 POST {{location-tracking-service-host}}/ui/driver/location
 token: {{token1}}
 mId: {{merchantId}}
-vt: AUTO_RICKSHAW
+vt: SEDAN
 dm: ONLINE
 content-type: application/json
 
@@ -297,7 +259,7 @@ content-type: application/json
 POST {{location-tracking-service-host}}/ui/driver/location
 token: {{token1}}
 mId: {{merchantId}}
-vt: AUTO_RICKSHAW
+vt: SEDAN
 dm: ONLINE
 content-type: application/json
 
@@ -330,11 +292,6 @@ content-type: application/json
 
 ###
 
-# for testing thresholds specific for bpp, run
-# INSERT INTO atlas_driver_offer_bpp.transporter_config (organization_id, pickup_loc_threshold, drop_loc_threshold, created_at, updated_at) VALUES
-# 	('favorit0-0000-0000-0000-00000favorit', 500, 500, '2022-04-12 15:15:42.233691+00', '2022-04-12 15:15:42.233691+00'),
-# 	('nearest-drivers-testing-organization', 500, 500, '2022-04-12 15:15:42.233691+00', '2022-04-12 15:15:42.233691+00');
-
 # @name rideEnd
 POST {{driver-offer-bpp-host}}/ui/driver/ride/{{rideId}}/end
 token: {{token1}}
@@ -347,32 +304,6 @@ content-type: application/json
   }
 }
 
-###
-
-# @name rideCancelByDriver
-POST {{driver-offer-bpp-host}}/ui/driver/ride/{{rideId}}/cancel
-token: {{token1}}
-content-type: application/json
-
-{
-  "reasonCode": "OTHER",
-  "additionalInfo" : "Rider is too cute"
-}
-
-###
-
-# @name rideCancelByUser
-POST {{app-host}}/rideBooking/{{bookingId}}/cancel
-content-type: application/json
-token: {{app-token}}
-
-{
-  "reasonCode": "OTHER",
-  "reasonStage": "OnAssign",
-  "additionalInfo": "driver is late"
-}
-
-### OnSearch | OnConfirm | OnAssign
 ###
 
 @bapRideId = {{list2.response.body.list[0].rideList[0].id}}

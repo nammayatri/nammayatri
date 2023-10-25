@@ -251,8 +251,8 @@ rideInfo merchantShortId reqRideId = do
   driverPhoneNo <- mapM decrypt rideDetails.driverNumber
   now <- getCurrentTime
   let (odometerStartReading', odometerEndReading') = case ride.rideDetails of
-        DRide.RideDetailsRental {odometerStartReading, odometerEndReading} -> (odometerStartReading, odometerEndReading)
-        _ -> (Nothing, Nothing)
+        DRide.DetailsRental DRide.RideDetailsRental {odometerStartReading, odometerEndReading} -> (odometerStartReading, odometerEndReading)
+        DRide.DetailsOnDemand _ -> (Nothing, Nothing)
 
   pure
     Common.RideInfoRes
@@ -262,8 +262,8 @@ rideInfo merchantShortId reqRideId = do
         rideOtp = ride.otp,
         customerPickupLocation = mkLocationAPIEntity booking.fromLocation,
         customerDropLocation = case booking.bookingDetails of
-          DBooking.BookingDetailsOnDemand {toLocation} -> Just $ mkLocationAPIEntity toLocation
-          DBooking.BookingDetailsRental {} -> Nothing,
+          DBooking.DetailsOnDemand DBooking.BookingDetailsOnDemand {toLocation} -> Just $ mkLocationAPIEntity toLocation
+          DBooking.DetailsRental DBooking.BookingDetailsRental {} -> Nothing,
         actualDropLocation = ride.tripEndPos,
         driverId = cast @DP.Person @Common.Driver driverId,
         driverName = rideDetails.driverName,

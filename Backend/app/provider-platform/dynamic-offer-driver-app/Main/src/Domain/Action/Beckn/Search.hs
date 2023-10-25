@@ -436,8 +436,7 @@ buildSearchRequest DSearchReqOnDemand' {..} providerId fromLocation toLocation e
         area = Just area,
         bapCity = Just bapCity,
         bapCountry = Just bapCountry,
-        searchRequestDetails = searchDetails,
-        tag = DSR.ON_DEMAND,
+        searchRequestDetails = DSR.SearchReqDetailsOnDemand searchDetails,
         ..
       }
 
@@ -462,8 +461,7 @@ buildRentalSearchRequest DSearchReqRental' {..} providerId fromLocation = do
         area = Nothing,
         bapCity = Just bapCity,
         bapCountry = Just bapCountry,
-        searchRequestDetails = searchDetails,
-        tag = DSR.RENTAL,
+        searchRequestDetails = DSR.SearchReqDetailsRental searchDetails,
         ..
       }
 

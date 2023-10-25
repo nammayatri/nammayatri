@@ -43,23 +43,29 @@ $(mkBeamInstancesForEnum ''RideStatus)
 $(mkHttpInstancesForEnum ''RideStatus)
 
 data SpecificRideDetails
-  = RideDetailsOnDemand
-      { toLocation :: DL.Location,
-        driverGoHomeRequestId :: Maybe (Id DriverGoHomeRequest),
-        driverDeviatedFromRoute :: Maybe Bool,
-        numberOfSnapToRoadCalls :: Maybe Int,
-        numberOfDeviation :: Maybe Bool,
-        uiDistanceCalculationWithAccuracy :: Maybe Int,
-        uiDistanceCalculationWithoutAccuracy :: Maybe Int
-      }
-  | RideDetailsRental
-      { rentalToLocation :: Maybe DL.Location,
-        odometerStartReadingImagePath :: Maybe Text,
-        odometerStartReading :: Maybe Centesimal,
-        odometerEndReadingImagePath :: Maybe Text,
-        odometerEndReading :: Maybe Centesimal,
-        endRideOtp :: Maybe Text
-      }
+  = DetailsOnDemand RideDetailsOnDemand
+  | DetailsRental RideDetailsRental
+  deriving (Generic, Show, Eq, ToJSON, FromJSON)
+
+data RideDetailsOnDemand = RideDetailsOnDemand
+  { toLocation :: DL.Location,
+    driverGoHomeRequestId :: Maybe (Id DriverGoHomeRequest),
+    driverDeviatedFromRoute :: Maybe Bool,
+    numberOfSnapToRoadCalls :: Maybe Int,
+    numberOfDeviation :: Maybe Bool,
+    uiDistanceCalculationWithAccuracy :: Maybe Int,
+    uiDistanceCalculationWithoutAccuracy :: Maybe Int
+  }
+  deriving (Generic, Show, Eq, ToJSON, FromJSON)
+
+data RideDetailsRental = RideDetailsRental
+  { rentalToLocation :: Maybe DL.Location,
+    odometerStartReadingImagePath :: Maybe Text,
+    odometerStartReading :: Maybe Centesimal,
+    odometerEndReadingImagePath :: Maybe Text,
+    odometerEndReading :: Maybe Centesimal,
+    endRideOtp :: Maybe Text
+  }
   deriving (Generic, Show, Eq, ToJSON, FromJSON)
 
 data RideType = ON_DEMAND | RENTAL
@@ -74,7 +80,6 @@ data Ride = Ride
     shortId :: ShortId Ride,
     merchantId :: Maybe (Id DM.Merchant),
     status :: RideStatus,
-    rideType :: RideType,
     rideDetails :: SpecificRideDetails,
     driverId :: Id DPers.Person,
     otp :: Text,

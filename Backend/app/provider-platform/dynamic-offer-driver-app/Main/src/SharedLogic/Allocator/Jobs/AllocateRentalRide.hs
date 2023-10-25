@@ -25,7 +25,6 @@ import qualified Domain.Types.SearchTry as DST
 import qualified Kernel.Beam.Functions as B
 import Kernel.Prelude hiding (handle)
 import Kernel.Storage.Esqueleto as Esq
---import Kernel.Storage.Esqueleto.Config (EsqLocDBFlow, EsqLocRepDBFlow)
 import Kernel.Utils.Common
 import Lib.Scheduler
 import SharedLogic.Allocator (AllocatorJobType (..))
@@ -66,10 +65,7 @@ allocateRentalRide Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) $ do
   (res, _) <- sendSearchRequestToDrivers' driverPoolConfig searchTry searchReq booking merchant Nothing goHomeCfg
   return res
 
--- TODO remove redundant constraints everywhere:
--- EsqDBFlow m r,
--- EsqLocDBFlow m r,
--- EsqLocRepDBFlow m r,
+-- TODO remove redundant Esq constraints everywhere
 
 sendSearchRequestToDrivers' ::
   ( EncFlow m r,
@@ -90,14 +86,14 @@ sendSearchRequestToDrivers' ::
   GoHomeConfig ->
   m (ExecutionResult, Bool)
 sendSearchRequestToDrivers' driverPoolConfig searchTry searchReq booking merchant driverExtraFeeBounds goHomeCfg = do
-  handler handle goHomeCfg
+  let searchDetails = DSRD.RentalDetails DSRD.RentalSearchDetails {booking, searchTry}
+  handler (handle searchDetails) goHomeCfg
   where
-    searchDetails = DSRD.RentalSearchDetails {booking, searchTry}
-    handle =
+    handle searchDetails =
       Handle
         { isBatchNumExceedLimit = I.isBatchNumExceedLimit driverPoolConfig searchTry.id,
           isReceivedMaxDriverQuotes = pure $ booking.status /= DB.CONFIRMED,
-          getNextDriverPoolBatch = I.getNextDriverPoolBatch driverPoolConfig searchReq searchTry.id booking.vehicleVariant,
+          getNextDriverPoolBatch = I.getNextDriverPoolBatch driverPoolConfig searchReq booking.fromLocation searchTry.id booking.vehicleVariant,
           sendSearchRequestToDrivers = I.sendSearchRequestToDrivers searchReq searchDetails driverExtraFeeBounds driverPoolConfig,
           getRescheduleTime = I.getRescheduleTime driverPoolConfig.singleBatchProcessTimeRental,
           setBatchDurationLock = I.setBatchDurationLock searchTry.id driverPoolConfig.singleBatchProcessTimeRental,

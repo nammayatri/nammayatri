@@ -141,7 +141,7 @@ mkFullfillment mbDriver ride booking mbVehicle mbImage tags = do
             token = ride.otp
           }
   case booking.bookingDetails of
-    DRB.BookingDetailsOnDemand {..} ->
+    DRB.DetailsOnDemand DRB.BookingDetailsOnDemand {..} ->
       pure $
         RideAssignedOU.FulfillmentInfo
           { id = ride.id.getId,
@@ -166,7 +166,7 @@ mkFullfillment mbDriver ride booking mbVehicle mbImage tags = do
             vehicle = veh,
             ..
           }
-    DRB.BookingDetailsRental {..} ->
+    DRB.DetailsRental DRB.BookingDetailsRental {..} ->
       pure $
         RideAssignedOU.FulfillmentInfo
           { id = ride.id.getId,

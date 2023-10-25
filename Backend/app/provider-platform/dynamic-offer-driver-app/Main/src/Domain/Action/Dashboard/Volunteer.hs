@@ -51,8 +51,8 @@ bookingInfo merchantShortId otpCode = do
           fromLocation = buildBookingLocation fromLocation,
           toLocation =
             buildBookingLocation <$> case bookingDetails of
-              Domain.BookingDetailsOnDemand {..} -> Just toLocation
-              Domain.BookingDetailsRental {} -> Nothing,
+              Domain.DetailsOnDemand Domain.BookingDetailsOnDemand {..} -> Just toLocation
+              Domain.DetailsRental Domain.BookingDetailsRental {} -> Nothing,
           estimatedDistance,
           estimatedFare,
           estimatedDuration,

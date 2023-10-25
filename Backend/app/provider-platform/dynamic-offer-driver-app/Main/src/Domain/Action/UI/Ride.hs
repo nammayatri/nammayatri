@@ -189,9 +189,9 @@ mkDriverRideRes rideDetails driverNumber rideRating mbExophone (ride, booking) b
                     }
   let initial = "" :: Text
   let (_, toLocation') = case booking.bookingDetails of
-        DRB.BookingDetailsOnDemand {..} ->
+        DRB.DetailsOnDemand DRB.BookingDetailsOnDemand {..} ->
           (DRide.ON_DEMAND, Just toLocation)
-        DRB.BookingDetailsRental {} ->
+        DRB.DetailsRental DRB.BookingDetailsRental {} ->
           (DRide.RENTAL, Nothing)
   DriverRideRes
     { id = ride.id,
@@ -312,9 +312,9 @@ otpRideCreate driver otpCode booking = do
       shortId <- generateShortId
       now <- getCurrentTime
       trackingUrl <- buildTrackingUrl guid
-      let (rideType, rideDetails) = case booking.bookingDetails of
-            DRB.BookingDetailsOnDemand {..} ->
-              ( DRide.ON_DEMAND,
+      let rideDetails = case booking.bookingDetails of
+            DRB.DetailsOnDemand DRB.BookingDetailsOnDemand {..} ->
+              DRide.DetailsOnDemand
                 DRide.RideDetailsOnDemand
                   { toLocation = toLocation,
                     driverGoHomeRequestId = ghrId,
@@ -324,9 +324,8 @@ otpRideCreate driver otpCode booking = do
                     uiDistanceCalculationWithAccuracy = Nothing,
                     uiDistanceCalculationWithoutAccuracy = Nothing
                   }
-              )
-            DRB.BookingDetailsRental {} ->
-              ( DRide.RENTAL,
+            DRB.DetailsRental DRB.BookingDetailsRental {} ->
+              DRide.DetailsRental
                 DRide.RideDetailsRental
                   { rentalToLocation = Nothing,
                     odometerStartReading = Nothing,
@@ -335,7 +334,6 @@ otpRideCreate driver otpCode booking = do
                     odometerEndReadingImagePath = Nothing,
                     endRideOtp = Nothing
                   }
-              )
       return
         DRide.Ride
           { id = guid,
@@ -360,8 +358,7 @@ otpRideCreate driver otpCode booking = do
             distanceCalculationFailed = Nothing,
             createdAt = now,
             updatedAt = now,
-            rideDetails = rideDetails,
-            rideType = rideType
+            rideDetails = rideDetails
           }
 
     buildTrackingUrl rideId = do
@@ -433,10 +430,13 @@ getOdometerReading ::
   Flow OdometerReadingRes
 getOdometerReading rideId isStartRide = do
   ride <- QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
-  let imagePath =
+  imagePath <- case ride.rideDetails of
+    DRide.DetailsRental details ->
+      pure
         if fromMaybe True isStartRide
-          then ride.rideDetails.odometerStartReadingImagePath
-          else ride.rideDetails.odometerEndReadingImagePath
+          then details.odometerStartReadingImagePath
+          else details.odometerEndReadingImagePath
+    DRide.DetailsOnDemand _ -> throwError $ InvalidRequest "Should be rental ride"
   when (isNothing imagePath) $ do
     throwError $ InvalidRequest "Ride Not Found"
   image <- S3.get (T.unpack $ fromJust imagePath)

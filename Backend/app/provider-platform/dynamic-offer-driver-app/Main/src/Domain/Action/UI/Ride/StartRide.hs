@@ -157,7 +157,7 @@ startRide ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.getId)
   (point, odometerStartReading, odometerStartImage) <- case req of
     DriverReq driverReq -> do
       when (driverReq.rideOtp /= ride.otp) $ throwError IncorrectOTP
-      when (booking.bookingType == SRB.RentalBooking && isNothing driverReq.odometerStartReading) $ throwError $ InternalError "No odometer start reading found"
+      when (booking.bookingType == SRB.RentalBooking && isNothing driverReq.odometerStartReading) $ throwError $ InvalidRequest "No odometer start reading found"
       logTagInfo "driver -> startRide : " ("DriverId " <> getId driverId <> ", RideId " <> getId ride.id)
       pure (driverReq.point, driverReq.odometerStartReading, driverReq.odometerStartImage)
     DashboardReq dashboardReq -> do
@@ -172,7 +172,7 @@ startRide ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.getId)
 
   when (booking.bookingType == SRB.RentalBooking) $ do
     case odometerStartImage of
-      Nothing -> throwError $ InternalError "No odometer start reading found"
+      Nothing -> throwError $ InvalidRequest "No odometer start reading found"
       Just image -> do
         person <- Person.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
         let merchantId = person.merchantId
