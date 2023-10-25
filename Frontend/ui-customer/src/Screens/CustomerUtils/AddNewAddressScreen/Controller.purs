@@ -52,7 +52,6 @@ import Screens.Types (AddNewAddressScreenState, CardType(..), Location, Location
 import Services.API (AddressComponents, Prediction, SavedReqLocationAPIEntity(..))
 import Storage (KeyStore(..), getValueToLocalStore)
 import JBridge (fromMetersToKm)
-import Debug(spy)
 import Common.Resources.Constants (pickupZoomLevel)
 
 instance showAction :: Show Action where
@@ -160,7 +159,7 @@ eval (ClearEditText) state = do
   continue state{props{isSearchedLocationServiceable = true}}
 
 eval SetLocationOnMap state = do 
-  let _ = unsafePerformEffect $ runEffectFn1 locateOnMap locateOnMapConfig { goToCurrentLocation = true, lat = 0.0, lon = 0.0, geoJson = state.data.polygonCoordinates, points = state.data.nearByPickUpPoints, zoomLevel = pickupZoomLevel}
+  let _ = unsafePerformEffect $ runEffectFn1 locateOnMap locateOnMapConfig { goToCurrentLocation = true, lat = 0.0, lon = 0.0, geoJson = state.data.polygonCoordinates, points = state.data.nearByPickUpPoints, zoomLevel = pickupZoomLevel, labelId = getNewIDWithTag "AddAddressPin"}
   _ <- pure $ removeAllPolylines ""
   _ <- pure $ hideKeyboardOnNavigation true
   _ <- pure $ toggleBtnLoader "" false

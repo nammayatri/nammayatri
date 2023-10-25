@@ -314,7 +314,7 @@ view push state =
                     [ width MATCH_PARENT
                     , height MATCH_PARENT
                     , background Color.transparent
-                    , padding (PaddingBottom if showLabel then (if os == "IOS" then 53 else 70) else (if os == "IOS" then 18 else 34))
+                    , padding (PaddingBottom if os == "IOS" then 53 else 70)
                     , gravity CENTER
                     , accessibility DISABLE
                     , orientation VERTICAL
@@ -325,14 +325,15 @@ view push state =
                         , background Color.black800
                         , color Color.white900
                         , accessibility DISABLE_DESCENDANT
-                        , text if DS.length state.props.defaultPickUpPoint > 30 then
-                                  (DS.take 28 state.props.defaultPickUpPoint) <> "..."
+                        , text if DS.length state.props.defaultPickUpPoint > state.data.config.mapConfig.labelTextSize then
+                                  (DS.take (state.data.config.mapConfig.labelTextSize - 3) state.props.defaultPickUpPoint) <> "..."
                                else
                                   state.props.defaultPickUpPoint
                         , padding (Padding 5 5 5 5)
                         , margin (MarginBottom 5)
                         , cornerRadius 5.0
-                        , visibility if (showLabel && ((state.props.currentStage == ConfirmingLocation) || state.props.locateOnMap)) then VISIBLE else GONE
+                        , visibility if (showLabel && ((state.props.currentStage == ConfirmingLocation) || state.props.locateOnMap)) then VISIBLE else INVISIBLE
+                        , id (getNewIDWithTag "LocateOnMapPin")
                         ]
                     , imageView
                         [ width $ V 35
@@ -2223,30 +2224,26 @@ currentLocationView push state =
 
 nearByPickUpPointsView :: forall w . HomeScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 nearByPickUpPointsView state push =
-  let childId = getNewIDWithTag "scrollViewChild"
-      pickupPointLength = length state.data.nearByPickUpPoints
-      parentHeight = floor ((toNumber ((runFn1 getLayoutBounds childId).height / pickupPointLength)) * 1.8)
-  in
-    scrollView
-      [ height $ V if parentHeight > 0 then parentHeight else 130
-      , width MATCH_PARENT
-      , orientation VERTICAL
-      , padding $ Padding 5 20 0 5
-      , visibility if state.props.defaultPickUpPoint /= "" then VISIBLE else GONE
-      , id $ getNewIDWithTag "scrollViewParent"
-      ][linearLayout
-        [ height WRAP_CONTENT
-        , width MATCH_PARENT
-        , orientation VERTICAL
-        , id $ getNewIDWithTag "scrollViewChild"
-        , afterRender push (const AfterRender)
-        ](mapWithIndex (\index item ->
-                        linearLayout
-                        [ height WRAP_CONTENT
-                        , width MATCH_PARENT
-                        , margin $ MarginBottom 12
-                          ][MenuButton.view (push <<< MenuButtonActionController) (menuButtonConfig state item)]) state.data.nearByPickUpPoints)
-      ]
+  scrollView
+  [ height $ V 130
+  , width MATCH_PARENT
+  , orientation VERTICAL
+  , padding $ Padding 5 20 0 5
+  , visibility if state.props.defaultPickUpPoint /= "" then VISIBLE else GONE
+  , id $ getNewIDWithTag "scrollViewParent"
+  ][linearLayout
+    [ height WRAP_CONTENT
+    , width MATCH_PARENT
+    , orientation VERTICAL
+    , id $ getNewIDWithTag "scrollViewChild"
+    , afterRender push (const AfterRender)
+    ](mapWithIndex (\index item ->
+                    linearLayout
+                    [ height WRAP_CONTENT
+                    , width MATCH_PARENT
+                    , margin $ MarginBottom 12
+                      ][MenuButton.view (push <<< MenuButtonActionController) (menuButtonConfig state item)]) state.data.nearByPickUpPoints)
+  ]
 
 confirmingLottieView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 confirmingLottieView push state =

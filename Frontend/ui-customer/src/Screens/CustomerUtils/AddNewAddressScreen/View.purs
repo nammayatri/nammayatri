@@ -83,7 +83,7 @@ view push state =
           _ <- (JB.showMap (EHC.getNewIDWithTag "AddNewAddressHomeScreenMap") true "satellite" pickupZoomLevel push MAPREADY)
           pure $ HU.setText (EHC.getNewIDWithTag "SavedLocationEditText") (state.data.address)
           pure $ HU.setText (EHC.getNewIDWithTag "SaveAsEditText") (state.data.addressSavedAs)
-          _ <- runEffectFn1 JB.locateOnMap JB.locateOnMapConfig { goToCurrentLocation = true, lat = 0.0, lon = 0.0, geoJson = "", points = [], zoomLevel = pickupZoomLevel}
+          _ <- runEffectFn1 JB.locateOnMap JB.locateOnMapConfig { goToCurrentLocation = true, lat = 0.0, lon = 0.0, geoJson = "", points = [], zoomLevel = pickupZoomLevel, labelId = EHC.getNewIDWithTag "AddAddressPin"}
           _ <- if (state.data.activeIndex == Just 2 && state.props.showSavePlaceView) then JB.requestKeyboardShow (EHC.getNewIDWithTag ("SaveAsEditText")) else pure unit
           pure unit
           ) (const AfterRender)
@@ -106,22 +106,23 @@ view push state =
       , height MATCH_PARENT
       , background Color.transparent
       , accessibility DISABLE_DESCENDANT
-      , padding (PaddingBottom if showLabel then (if EHC.os == "IOS" then 40 else 70) else (if EHC.os == "IOS" then 5 else 34))
+      , padding $ PaddingBottom 80
       , gravity CENTER
       , orientation VERTICAL
       ][ textView
          [ width WRAP_CONTENT
          , height WRAP_CONTENT
-         , background Color.black800
+         , background Color.black900
          , color Color.white900
-         , text if DS.length state.props.defaultPickUpPoint > 30 then
-                  (DS.take 28 state.props.defaultPickUpPoint) <> "..."
-                else
-                  state.props.defaultPickUpPoint
-         , padding (Padding 5 5 5 5)
+         , text if DS.length state.props.defaultPickUpPoint > state.data.config.mapConfig.labelTextSize then
+                     (DS.take (state.data.config.mapConfig.labelTextSize - 3) state.props.defaultPickUpPoint) <> "..."
+                  else
+                     state.props.defaultPickUpPoint
+         , padding (Padding 7 7 7 7)
          , margin (MarginBottom 5)
          , cornerRadius 5.0
-         , visibility if showLabel then VISIBLE else GONE
+         , visibility if showLabel then VISIBLE else INVISIBLE
+         , id (EHC.getNewIDWithTag "AddAddressPin")
          ]
        , imageView
          [ width $ V 60

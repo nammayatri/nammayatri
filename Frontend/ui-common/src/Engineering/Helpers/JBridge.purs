@@ -380,6 +380,7 @@ type LocateOnMapConfig = {
   , geoJson :: String
   , points :: (Array Location)
   , zoomLevel :: Number
+  , labelId :: String
 }
 
 locateOnMapConfig :: LocateOnMapConfig
@@ -390,6 +391,7 @@ locateOnMapConfig = {
   , geoJson : ""
   , points : []
   , zoomLevel : if (os == "IOS") then 19.0 else 17.0
+  , labelId : ""
 }
 
 

@@ -79,6 +79,7 @@ commonConfig =
                     , color : "#323643"
                     }
                 }
+            , labelTextSize : 30
             , animationDuration : 400
             }
         , notifyRideConfirmationConfig : 

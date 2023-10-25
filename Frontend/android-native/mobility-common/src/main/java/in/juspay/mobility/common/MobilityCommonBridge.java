@@ -33,7 +33,6 @@ import android.content.SharedPreferences;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
-import android.content.res.Configuration;
 import android.content.res.Resources;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -41,7 +40,6 @@ import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.PorterDuff;
 import android.graphics.Rect;
-import android.graphics.Typeface;
 import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
 import android.icu.util.Calendar;
@@ -56,7 +54,6 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
-import android.os.Parcelable;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.VibrationEffect;
@@ -89,13 +86,6 @@ import android.widget.NumberPicker;
 import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
-import android.content.Context;
-import android.graphics.Color;
-import android.graphics.drawable.Drawable;
-import android.os.Bundle;
-import android.widget.ImageView;
-import android.widget.LinearLayout;
-import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.RequiresApi;
@@ -106,7 +96,6 @@ import androidx.core.app.NotificationManagerCompat;
 import androidx.core.content.ContextCompat;
 import androidx.core.content.FileProvider;
 import androidx.core.location.LocationManagerCompat;
-import androidx.core.view.ViewCompat;
 import androidx.fragment.app.FragmentActivity;
 import androidx.fragment.app.FragmentManager;
 import androidx.fragment.app.FragmentTransaction;
@@ -147,7 +136,6 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.BufferedReader;
-import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
@@ -168,6 +156,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.TimeZone;
 
 import in.juspay.hyper.bridge.HyperBridge;
@@ -192,7 +181,7 @@ public class MobilityCommonBridge extends HyperBridge {
     //Maps
     protected JSONObject markers = new JSONObject();
     protected GoogleMap googleMap;
-    protected ArrayList<Marker> pickupPointsZoneMarkers = new ArrayList<>();
+    protected HashMap <String, Marker> zoneMarkers = new HashMap <String, Marker>();
     protected GeoJsonLayer layer;
     protected String regToken, baseUrl;
     protected String zoneName = "";
@@ -235,6 +224,7 @@ public class MobilityCommonBridge extends HyperBridge {
     protected int animationDuration = 400;
     protected JSONObject locateOnMapConfig = null;
     protected String downloadLayout;
+    protected int labelTextSize = 30;
 
 
     public MobilityCommonBridge(BridgeComponents bridgeComponents) {
@@ -271,7 +261,7 @@ public class MobilityCommonBridge extends HyperBridge {
         polyline = null;
         googleMap = null;
         markers = new JSONObject();
-        pickupPointsZoneMarkers = new ArrayList<>();
+        zoneMarkers = new HashMap<>();
         layer = null;
         if(onGlobalLayoutListener != null && bridgeComponents.getActivity() != null) {
             View parentView = bridgeComponents.getActivity().findViewById(android.R.id.content);
@@ -536,8 +526,9 @@ public class MobilityCommonBridge extends HyperBridge {
                     googleMap.setOnCameraMoveListener(null);
                     googleMap.setOnCameraIdleListener(null);
                 }
-                if (pickupPointsZoneMarkers != null) {
-                    for (Marker m : pickupPointsZoneMarkers) {
+                if (zoneMarkers != null) {
+                    for (Map.Entry<String, Marker> set : zoneMarkers.entrySet()) {
+                        Marker m = set.getValue();
                         m.setVisible(false);
                     }
                 }
@@ -1121,7 +1112,7 @@ public class MobilityCommonBridge extends HyperBridge {
                         MarkerOptions markerObj = new MarkerOptions()
                                 .title("")
                                 .position(dest)
-                                .icon(BitmapDescriptorFactory.fromBitmap(getMarkerBitmapFromView(destinationName, destMarker, destinationSpecialTagIcon.equals("") ? null : destinationSpecialTagIcon)));
+                                .icon(BitmapDescriptorFactory.fromBitmap(getMarkerBitmapFromView(destinationName, destMarker, destinationSpecialTagIcon.equals("") ? null : destinationSpecialTagIcon, MarkerType.NORMAL_MARKER)));
 
                         Marker tempmarker = googleMap.addMarker(markerObj);
                         markers.put(destMarker, tempmarker);
@@ -1143,7 +1134,7 @@ public class MobilityCommonBridge extends HyperBridge {
                             MarkerOptions markerObj = new MarkerOptions()
                                     .title("")
                                     .position(source)
-                                    .icon(BitmapDescriptorFactory.fromBitmap(getMarkerBitmapFromView(sourceName, sourceMarker, sourceSpecialTagIcon.equals("") ? null : sourceSpecialTagIcon)));
+                                    .icon(BitmapDescriptorFactory.fromBitmap(getMarkerBitmapFromView(sourceName, sourceMarker, sourceSpecialTagIcon.equals("") ? null : sourceSpecialTagIcon, MarkerType.NORMAL_MARKER)));
                             Marker tempmarker = googleMap.addMarker(markerObj);
                             markers.put(sourceMarker, tempmarker);
                         }
@@ -1179,7 +1170,7 @@ public class MobilityCommonBridge extends HyperBridge {
                             MarkerOptions markerObj = new MarkerOptions()
                                     .title("")
                                     .position(sourceLatLng)
-                                    .icon(BitmapDescriptorFactory.fromBitmap(getMarkerBitmapFromView(sourceName, sourceMarker, sourceTag.equals("") ? null : sourceTag)));
+                                    .icon(BitmapDescriptorFactory.fromBitmap(getMarkerBitmapFromView(sourceName, sourceMarker, sourceTag.equals("") ? null : sourceTag, MarkerType.NORMAL_MARKER)));
                             Marker marker = googleMap.addMarker(markerObj);
                             markers.put(sourceMarker, marker);
                         }
@@ -1189,7 +1180,7 @@ public class MobilityCommonBridge extends HyperBridge {
                             MarkerOptions markerObj = new MarkerOptions()
                                     .title("")
                                     .position(destinationLatLng)
-                                    .icon(BitmapDescriptorFactory.fromBitmap(getMarkerBitmapFromView(destinationName, destinationMarker, destinationTag.equals("") ? null : destinationTag)));
+                                    .icon(BitmapDescriptorFactory.fromBitmap(getMarkerBitmapFromView(destinationName, destinationMarker, destinationTag.equals("") ? null : destinationTag, MarkerType.NORMAL_MARKER)));
                             Marker marker = googleMap.addMarker(markerObj);
                             markers.put(destinationMarker, marker);
                         }
@@ -1202,24 +1193,20 @@ public class MobilityCommonBridge extends HyperBridge {
     }
 
     @SuppressLint({"UseCompatLoadingForDrawables", "SetTextI18n"})
-    protected Bitmap getMarkerBitmapFromView(String locationName, String imageName, String specialLocationTagIcon) {
+    protected Bitmap getMarkerBitmapFromView(String locationName, String imageName, String specialLocationTagIcon, MarkerType markerType) {
         Context context = bridgeComponents.getContext();
         @SuppressLint("InflateParams")
-        View customMarkerView = ((LayoutInflater) context.getSystemService(Context.LAYOUT_INFLATER_SERVICE)).inflate(context.getResources().getLayout(context.getResources().getIdentifier(imageName.equals("ny_ic_zone_pickup_marker") ? "zone_label_layout" : "marker_label_layout", "layout", context.getPackageName())), null);
+        String layoutName = markerType.equals(MarkerType.SPECIAL_ZONE_MARKER) ? "zone_label_layout" : "marker_label_layout";
+        View customMarkerView = ((LayoutInflater) context.getSystemService(Context.LAYOUT_INFLATER_SERVICE)).inflate(context.getResources().getLayout(context.getResources().getIdentifier(layoutName, "layout", context.getPackageName())), null);
         View ImageAndTextView = customMarkerView.findViewById(R.id.zone_image_and_text);
         TextView label = customMarkerView.findViewById(R.id.marker_text);
         if (locationName.equals("")) {
             ImageAndTextView.setVisibility(View.GONE);
         } else {
-            if (locationName.length() <= 27) {
-                label.setText(locationName);
-                label.setImportantForAccessibility(TextView.IMPORTANT_FOR_ACCESSIBILITY_YES);
-                label.setContentDescription(locationName);
-            } else {
-                label.setText(locationName.substring(0, 17) + "...");
-                label.setImportantForAccessibility(TextView.IMPORTANT_FOR_ACCESSIBILITY_YES);
-                label.setContentDescription(locationName.substring(0, 17) + "...");
-            }
+            String labelText = locationName.length() > labelTextSize ? locationName.substring(0, labelTextSize-3) + "..." : locationName;
+            label.setText(labelText);
+            label.setImportantForAccessibility(TextView.IMPORTANT_FOR_ACCESSIBILITY_YES);
+            label.setContentDescription(labelText);
         }
         try {
             if (specialLocationTagIcon != null) {
@@ -1234,22 +1221,20 @@ public class MobilityCommonBridge extends HyperBridge {
         }
         ImageView pointer = customMarkerView.findViewById(R.id.pointer_img);
         try {
-            if (imageName.equals("ny_ic_zone_pickup_marker")) {
-                pointer.setImageDrawable(context.getResources().getDrawable(context.getResources().getIdentifier("ny_ic_zone_pickup_marker_yellow", "drawable", context.getPackageName())));
+            pointer.setImageDrawable(context.getResources().getDrawable(context.getResources().getIdentifier(imageName, "drawable", context.getPackageName())));
+            if (markerType.equals(MarkerType.SPECIAL_ZONE_MARKER)) {
                 ViewGroup.LayoutParams layoutParams = pointer.getLayoutParams();
-                layoutParams.height = 40;
-                layoutParams.width = 40;
+                layoutParams.height = 45;
+                layoutParams.width = 45;
                 pointer.setLayoutParams(layoutParams);
             } else {
-                pointer.setImageDrawable(context.getResources().getDrawable(context.getResources().getIdentifier(imageName, "drawable", context.getPackageName())));
                 if (imageName.equals("ny_ic_customer_current_location")) {
                     ViewGroup.LayoutParams layoutParams = pointer.getLayoutParams();
                     layoutParams.height = 160;
                     layoutParams.width = 160;
                     pointer.setImportantForAccessibility(2);
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P)
                         pointer.setAccessibilityHeading(false);
-                    }
                     pointer.setLayoutParams(layoutParams);
                 }
             }
@@ -1259,8 +1244,7 @@ public class MobilityCommonBridge extends HyperBridge {
         customMarkerView.measure(View.MeasureSpec.UNSPECIFIED, View.MeasureSpec.UNSPECIFIED);
         customMarkerView.layout(0, 0, customMarkerView.getMeasuredWidth(), customMarkerView.getMeasuredHeight());
         customMarkerView.buildDrawingCache();
-        Bitmap returnedBitmap = Bitmap.createBitmap(customMarkerView.getMeasuredWidth(), customMarkerView.getMeasuredHeight(),
-                Bitmap.Config.ARGB_8888);
+        Bitmap returnedBitmap = Bitmap.createBitmap(customMarkerView.getMeasuredWidth(), customMarkerView.getMeasuredHeight(), Bitmap.Config.ARGB_8888);
         Canvas canvas = new Canvas(returnedBitmap);
         canvas.drawColor(Color.WHITE, PorterDuff.Mode.SRC_IN);
         Drawable drawable = customMarkerView.getBackground();
@@ -1398,6 +1382,7 @@ public class MobilityCommonBridge extends HyperBridge {
                         JSONObject googleMapConfig = new JSONObject(mapConfig);
                         animationDuration = googleMapConfig.optInt("animationDuration", 400);
                         locateOnMapConfig = googleMapConfig.optJSONObject("locateOnMapConfig");
+                        labelTextSize = googleMapConfig.optInt("labelTextSize", 30);
                         SupportMapFragment mapFragment = SupportMapFragment.newInstance();
                         FragmentManager supportFragmentManager = ((FragmentActivity) bridgeComponents.getActivity()).getSupportFragmentManager();
                         FragmentTransaction fragmentTransaction = supportFragmentManager.beginTransaction();
@@ -2340,6 +2325,11 @@ public class MobilityCommonBridge extends HyperBridge {
     public static class ZoomType {
         public static final String NO_ZOOM = "NO_ZOOM";
         public static final String ZOOM = "ZOOM";
+    }
+
+    public static enum MarkerType {
+        SPECIAL_ZONE_MARKER,
+        NORMAL_MARKER
     }
 
     @JavascriptInterface
