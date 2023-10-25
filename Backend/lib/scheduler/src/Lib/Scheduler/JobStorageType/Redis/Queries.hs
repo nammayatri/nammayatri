@@ -19,8 +19,8 @@
 module Lib.Scheduler.JobStorageType.Redis.Queries where
 
 import qualified Data.Aeson as A
-import qualified Data.Aeson.KeyMap as AKM
 import qualified Data.Aeson.Key as AesonKey
+import qualified Data.Aeson.KeyMap as AKM
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as BL
 import qualified Data.HashMap.Strict as HMS

@@ -11,7 +11,6 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
 {-# OPTIONS_GHC -Wwarn=incomplete-uni-patterns #-}
 
 module Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.RideCompletedEvent
@@ -27,7 +26,7 @@ import Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.OnUpdateEventType (OnUpdateE
 import qualified Control.Lens as L
 import Data.Aeson as A
 import Data.OpenApi hiding (Example, example, tags, title, value)
-import EulerHS.Prelude hiding (id, fromList)
+import EulerHS.Prelude hiding (fromList, id)
 import GHC.Exts (fromList)
 import Kernel.Utils.GenericPretty (PrettyShow)
 import Kernel.Utils.Schema
