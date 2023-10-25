@@ -730,8 +730,7 @@ data FleetDriversAPIEntity = FleetDriversAPIEntity
 -- unlink vehicle ---------------------------------------
 
 type FleetUnlinkVehicleAPI =
-  Capture "vehicleNo" Text
-    :> Capture "driverId" (Id Driver)
+  Capture "driverId" (Id Driver)
     :> "fleet"
     :> "unlink"
     :> Post '[JSON] APISuccess
@@ -932,9 +931,10 @@ type GetFleetDriverVehicleAssociationAPI =
 
 data DriveVehicleAssociationListItem = DriveVehicleAssociationListItem
   { driverId :: Maybe Text,
-    vehicleNo :: Text,
-    driverName :: Text,
+    vehicleNo :: Maybe Text,
+    driverName :: Maybe Text,
     status :: Maybe DriverMode,
+    driverPhoneNo :: Maybe Text,
     completedRides :: Int,
     vehicleType :: Maybe Variant,
     earning :: Int,
