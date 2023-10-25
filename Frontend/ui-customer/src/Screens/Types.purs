@@ -703,6 +703,7 @@ type HomeScreenStateProps =
   , searchLocationModelProps :: SearchLocationModelProps
   , flowWithoutOffers :: Boolean
   , showEducationalCarousel :: Boolean
+  , locateOnMapLocation :: LocateOnMapLocation
   }
 
 type SearchLocationModelProps = {
@@ -714,6 +715,17 @@ type SearchLocationModelProps = {
 
 type SearchLocationModelData = {
     prevLocation :: String
+}
+
+type LocateOnMapLocation = {
+    source :: String
+  , sourceAddress :: Address
+  , sourceLat :: Number
+  , sourceLng :: Number
+  , destination :: String
+  , destinationAddress :: Address
+  , destinationLat :: Number
+  , destinationLng :: Number
 }
 
 type RouteEndPoints = {

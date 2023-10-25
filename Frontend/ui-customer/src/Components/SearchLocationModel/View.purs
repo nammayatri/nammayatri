@@ -40,7 +40,7 @@ import Language.Types (STR(..))
 import MerchantConfig.Utils (Merchant(..), getMerchant)
 import Prelude ((<>))
 import Prelude (Unit, bind, const, map, pure, unit, ($), (&&), (+), (-), (/), (/=), (<<<), (<>), (==), (||), not, discard, (>=), void)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Accessiblity(..), Padding(..), PrestoDOM, Visibility(..), Accessiblity(..), accessibilityHint ,adjustViewWithKeyboard, afterRender, alignParentBottom, alpha, autoCorrectionType, background, clickable, color, cornerRadius, cursorColor, disableClickFeedback, editText, ellipsize, fontStyle, frameLayout, gravity, height, hint, hintColor, id, imageUrl, imageView, imageWithFallback, inputTypeI, lineHeight, linearLayout, margin, onBackPressed, onChange, onClick, onFocus, orientation, padding, relativeLayout, scrollBarY, scrollView, singleLine, stroke, text, textSize, textView, visibility, weight, width, accessibility, lottieAnimationView, layoutGravity)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Accessiblity(..), Padding(..), PrestoDOM, Visibility(..), Accessiblity(..), accessibilityHint ,adjustViewWithKeyboard, afterRender, alignParentBottom, alpha, autoCorrectionType, background, clickable, color, cornerRadius, cursorColor, disableClickFeedback, editText, ellipsize, fontStyle, frameLayout, gravity, height, hint, hintColor, id, imageUrl, imageView, imageWithFallback, inputTypeI, lineHeight, linearLayout, margin, onBackPressed, onChange, onClick, onFocus, orientation, padding, relativeLayout, scrollBarY, scrollView, singleLine, stroke, text, textSize, textView, visibility, weight, width, accessibility, lottieAnimationView, layoutGravity, selectAllOnFocus)
 import PrestoDOM.Animation as PrestoAnim
 import Resources.Constants (getDelayForAutoComplete)
 import Screens.Types (SearchLocationModelType(..), LocationListItemState)
@@ -266,6 +266,7 @@ sourceDestinationEditTextView state push =
                 SourceChanged
             , inputTypeI if state.isSearchLocation == LocateOnMap then 0 else 1
             , onFocus push $ const $ EditTextFocusChanged "S"
+              , selectAllOnFocus true
             , autoCorrectionType 1
             ] <> FontStyle.subHeading1 LanguageStyle
         , linearLayout
@@ -337,6 +338,7 @@ sourceDestinationEditTextView state push =
                   DestinationChanged
               , inputTypeI if state.isSearchLocation == LocateOnMap then 0 else 1
               , onFocus push $ const $ EditTextFocusChanged "D"
+              , selectAllOnFocus true
               , autoCorrectionType 1
               ]
                 <> FontStyle.subHeading1 TypoGraphy

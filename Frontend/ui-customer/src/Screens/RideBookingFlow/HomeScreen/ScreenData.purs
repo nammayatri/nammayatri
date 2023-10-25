@@ -227,6 +227,16 @@ initData = {
     , searchLocationModelProps : dummySearchLocationModelProps
     , flowWithoutOffers : true
     , showEducationalCarousel : false
+    , locateOnMapLocation : {
+        source : ""
+      , sourceLat : 0.0
+      , sourceLng : 0.0
+      , sourceAddress : dummyAddress
+      , destination : ""
+      , destinationLat : 0.0
+      , destinationLng : 0.0
+      , destinationAddress : dummyAddress
+      }
     }
 }
 
