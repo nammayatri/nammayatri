@@ -224,14 +224,15 @@ driverPoolConfigCreate ::
   ShortId DM.Merchant ->
   ApiTokenInfo ->
   Meters ->
+  Maybe Common.Variant ->
   Common.DriverPoolConfigCreateReq ->
   FlowHandler APISuccess
-driverPoolConfigCreate merchantShortId apiTokenInfo tripDistance req = withFlowHandlerAPI $ do
+driverPoolConfigCreate merchantShortId apiTokenInfo tripDistance variant req = withFlowHandlerAPI $ do
   runRequestValidation Common.validateDriverPoolConfigCreateReq req
   checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
   transaction <- buildTransaction Common.DriverPoolConfigCreateEndpoint apiTokenInfo (Just req)
   T.withTransactionStoring transaction $
-    Client.callDriverOfferBPP checkedMerchantId (.merchant.driverPoolConfigCreate) tripDistance req
+    Client.callDriverOfferBPP checkedMerchantId (.merchant.driverPoolConfigCreate) tripDistance variant req
 
 driverIntelligentPoolConfig ::
   ShortId DM.Merchant ->

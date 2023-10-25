@@ -225,7 +225,7 @@ driverPoolConfigUpdate ::
 driverPoolConfigUpdate merchantShortId tripDistance variant req = do
   runRequestValidation Common.validateDriverPoolConfigUpdateReq req
   merchant <- findMerchantByShortId merchantShortId
-  config <- CQDPC.findByMerchantIdAndTripDistance merchant.id tripDistance >>= fromMaybeM (DriverPoolConfigDoesNotExist merchant.id.getId tripDistance)
+  config <- CQDPC.findByMerchantIdAndTripDistanceAndDVeh merchant.id tripDistance (castVehicleVariant <$> variant) >>= fromMaybeM (DriverPoolConfigDoesNotExist merchant.id.getId tripDistance)
   let updConfig =
         config{minRadiusOfSearch = maybe config.minRadiusOfSearch (.value) req.minRadiusOfSearch,
                maxRadiusOfSearch = maybe config.maxRadiusOfSearch (.value) req.maxRadiusOfSearch,
@@ -260,14 +260,15 @@ castBatchSplitByPickupDistance Common.BatchSplitByPickupDistance {..} = DriverPo
 driverPoolConfigCreate ::
   ShortId DM.Merchant ->
   Meters ->
+  Maybe Common.Variant ->
   Common.DriverPoolConfigCreateReq ->
   Flow APISuccess
-driverPoolConfigCreate merchantShortId tripDistance req = do
+driverPoolConfigCreate merchantShortId tripDistance variant req = do
   runRequestValidation Common.validateDriverPoolConfigCreateReq req
   merchant <- findMerchantByShortId merchantShortId
-  mbConfig <- CQDPC.findByMerchantIdAndTripDistance merchant.id tripDistance
+  mbConfig <- CQDPC.findByMerchantIdAndTripDistanceAndDVeh merchant.id tripDistance (castVehicleVariant <$> variant)
   whenJust mbConfig $ \_ -> throwError (DriverPoolConfigAlreadyExists merchant.id.getId tripDistance)
-  newConfig <- buildDriverPoolConfig merchant.id tripDistance req
+  newConfig <- buildDriverPoolConfig merchant.id tripDistance variant req
   _ <- CQDPC.create newConfig
   -- We should clear cache here, because cache contains list of all configs for current merchantId
   CQDPC.clearCache merchant.id
@@ -278,9 +279,10 @@ buildDriverPoolConfig ::
   MonadTime m =>
   Id DM.Merchant ->
   Meters ->
+  Maybe Common.Variant ->
   Common.DriverPoolConfigCreateReq ->
   m DDPC.DriverPoolConfig
-buildDriverPoolConfig merchantId tripDistance Common.DriverPoolConfigCreateReq {..} = do
+buildDriverPoolConfig merchantId tripDistance vehicleVariant Common.DriverPoolConfigCreateReq {..} = do
   now <- getCurrentTime
   pure
     DDPC.DriverPoolConfig
