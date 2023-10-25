@@ -93,7 +93,8 @@ data SchedulerEnv = SchedulerEnv
     enableRedisLatencyLogging :: Bool,
     enablePrometheusMetricLogging :: Bool,
     maxThreads :: Int,
-    jobInfoMap :: JobInfoMap
+    jobInfoMap :: JobInfoMap,
+    tables :: Tables
   }
   deriving (Generic)
 
@@ -125,11 +126,6 @@ runSchedulerM schedulerConfig env action = do
               esqDBReplicaCfg = schedulerConfig.esqDBCfg,
               hedisClusterCfg = schedulerConfig.hedisClusterCfg
             }
-          ( Tables
-              { enableKVForWriteAlso = [],
-                enableKVForRead = [],
-                kafkaNonKVTables = []
-              }
-          )
+          env.tables
       )
     runFlowR flowRt env action

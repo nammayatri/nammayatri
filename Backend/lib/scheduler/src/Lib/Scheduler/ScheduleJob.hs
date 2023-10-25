@@ -34,27 +34,29 @@ import Lib.Scheduler.Types
 createJob ::
   forall t (e :: t) m r.
   (JobFlow t e, JobMonad r m) =>
+  Text ->
   (AnyJob t -> m ()) ->
   Int ->
   JobEntry e ->
   m (Id AnyJob)
-createJob createJobFunc maxShards jobEntry = do
+createJob uuid createJobFunc maxShards jobEntry = do
   now <- getCurrentTime
-  createJobImpl createJobFunc now maxShards jobEntry
+  createJobImpl uuid createJobFunc now maxShards jobEntry
 
 createJobIn ::
   forall t (e :: t) m r.
   (JobFlow t e, JobMonad r m) =>
+  Text ->
   (AnyJob t -> m ()) ->
   NominalDiffTime ->
   Int ->
   JobEntry e ->
   m (Id AnyJob)
-createJobIn createJobFunc diff maxShards jobEntry = do
+createJobIn uuid createJobFunc diff maxShards jobEntry = do
   now <- getCurrentTime
   when (diff < 0) $ throwError $ InternalError "job can only be scheduled for now or for future"
   let scheduledAt = addUTCTime diff now
-  createJobImpl createJobFunc scheduledAt maxShards jobEntry
+  createJobImpl uuid createJobFunc scheduledAt maxShards jobEntry
 
 -- createJobIn' ::
 --   forall t (e :: t) m.
@@ -73,12 +75,13 @@ createJobIn createJobFunc diff maxShards jobEntry = do
 createJobByTime ::
   forall t (e :: t) m r.
   (JobFlow t e, JobMonad r m) =>
+  Text ->
   (AnyJob t -> m ()) ->
   UTCTime ->
   Int ->
   JobEntry e ->
   m (Id AnyJob)
-createJobByTime createJobFunc scheduledAt maxShards jobEntry = do
+createJobByTime uuid createJobFunc scheduledAt maxShards jobEntry = do
   now <- getCurrentTime
   when (scheduledAt <= now) $
     throwError $
@@ -86,27 +89,27 @@ createJobByTime createJobFunc scheduledAt maxShards jobEntry = do
         "job can only be scheduled for the future\
         \ using createJobByTime, for scheduling for\
         \ now use createJobIn function instead"
-  createJobImpl createJobFunc scheduledAt maxShards jobEntry
+  createJobImpl uuid createJobFunc scheduledAt maxShards jobEntry
 
 createJobImpl ::
   forall t (e :: t) m r.
   (JobFlow t e, JobMonad r m) =>
+  Text ->
   (AnyJob t -> m ()) ->
   UTCTime ->
   Int ->
   JobEntry e ->
   m (Id AnyJob)
-createJobImpl createJobFunc scheduledAt maxShards JobEntry {..} = do
+createJobImpl uuid createJobFunc scheduledAt maxShards JobEntry {..} = do
   when (maxErrors <= 0) $ throwError $ InternalError "maximum errors should be positive"
   now <- getCurrentTime
-  uuid <- generateGUIDText
   let id = Id uuid
   let shardId :: Int = idToShardNumber . fromJust $ UU.fromText uuid -- using fromJust because its never going to fail
   let job = makeJob shardId id now
   createJobFunc $ AnyJob job
   pure id
   where
-    idToShardNumber uuid = fromIntegral ((\(a, b, c, d) -> a + b + c + d) (UU.toWords uuid)) `mod` maxShards
+    idToShardNumber uuidTxt = fromIntegral ((\(a, b, c, d) -> a + b + c + d) (UU.toWords uuidTxt)) `mod` maxShards
     makeJob shardId id currentTime =
       Job
         { id = id,

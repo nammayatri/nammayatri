@@ -27,6 +27,7 @@ import qualified Data.ByteString as BS
 import Data.Singletons (fromSing)
 import qualified Data.Time as T hiding (getCurrentTime)
 import qualified EulerHS.Language as L
+import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude hiding (mask, throwIO)
 import qualified Kernel.Storage.Hedis.Queries as Hedis
 import Kernel.Tools.LoopGracefully (loopGracefully)
@@ -57,9 +58,17 @@ handler :: forall t. (JobProcessor t, FromJSON t) => SchedulerHandle t -> Schedu
 handler hnd = do
   schedulerType <- asks (.schedulerType)
   maxThreads <- asks (.maxThreads)
+  tables <- L.getOption KBT.Tables
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case schedulerType of
     RedisBased -> do
-      mapConcurrently (const $ loopGracefully [runnerIterationRedis hnd runTask]) [1 .. maxThreads]
+      mapConcurrently
+        ( const $ do
+            L.setOption KBT.Tables (fromJust tables) -- this case should never come
+            L.setOption KBT.PsqlDbCfg (fromJust dbConf) -- this case should never come
+            loopGracefully [runnerIterationRedis hnd runTask]
+        )
+        [1 .. maxThreads]
     DbBased -> do
       executionChannels :: [Chan (AnyJob t)] <- L.runIO $ mapM (const newChan) [1 .. maxThreads]
       mapM_ (fork "executing tasks" . executeTaskInChan) executionChannels
@@ -92,7 +101,7 @@ mapConcurrently :: Traversable t => (a -> SchedulerM ()) -> t a -> SchedulerM ()
 mapConcurrently action = mapM_ (fork "mapThread" . action)
 
 runnerIterationRedis :: forall t. (JobProcessor t, FromJSON t) => SchedulerHandle t -> (AnyJob t -> SchedulerM ()) -> SchedulerM ()
-runnerIterationRedis hnd@SchedulerHandle {..} runTask = do
+runnerIterationRedis SchedulerHandle {..} runTask = do
   logInfo "Starting runner iteration"
   key <- asks (.streamName)
   groupName <- asks (.groupName)
@@ -103,7 +112,6 @@ runnerIterationRedis hnd@SchedulerHandle {..} runTask = do
   logTagDebug "Available tasks - Count" . show $ length filteredTasks
   logTagDebug "Available tasks" . show $ map @_ @(Id AnyJob) (\(AnyJob Job {..}, _) -> parentJobId) filteredTasks
   mapM_ runTask filteredTasks'
-  runnerIterationRedis hnd runTask
   unless (null recordIds) do
     void $ Hedis.withNonCriticalCrossAppRedis $ Hedis.xAck key groupName recordIds
     void $ Hedis.withNonCriticalCrossAppRedis $ Hedis.xDel key recordIds
@@ -199,7 +207,7 @@ registerExecutionResult SchedulerHandle {..} j@(AnyJob job@Job {..}) result = do
       logInfo $ "job terminated on try " <> show (currErrors + 1) <> "; reason: " <> description
       markAsFailed jobType' job.id
     ReSchedule reScheduledTime -> do
-      logInfo $ "job rescheduled on time = " <> show reScheduledTime
+      logInfo $ "job rescheduled on time = " <> show reScheduledTime <> " jobType :" <> jobType'
       reSchedule jobType' j reScheduledTime
     Retry ->
       let newErrorsCount = job.currErrors + 1

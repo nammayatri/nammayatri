@@ -66,14 +66,14 @@ in  { hedisCfg
     , enablePrometheusMetricLogging = True
     , waitTimeMilliSec = +1000.0
     , producerTimestampKey = "producerTimestampKey"
-    , batchSize = +10
+    , batchSize = +1
     , streamName = "Available_Jobs"
     , cacheConfig
     , schedulerSetName = "Scheduled_Jobs"
     , entryId = "*"
-    , reviverInterval = +1000
-    , reviveThreshold = +3600
-    , schedulerType = common.schedulerType.DbBased
+    , reviverInterval = +2
+    , reviveThreshold = +2
+    , schedulerType = common.schedulerType.RedisBased
     , maxShards = +5
     , metricsPort = +9990
     , tables

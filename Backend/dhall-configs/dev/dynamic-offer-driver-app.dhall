@@ -174,9 +174,7 @@ let AllocatorJobType =
       >
 
 let jobInfoMapx =
-      [ { mapKey = AllocatorJobType.SendSearchRequestToDriver
-        , mapValue = False
-        }
+      [ { mapKey = AllocatorJobType.SendSearchRequestToDriver, mapValue = True }
       , { mapKey = AllocatorJobType.SendPaymentReminderToDriver
         , mapValue = False
         }
@@ -276,7 +274,7 @@ in  { esqDBCfg
     , tables
     , locationTrackingServiceKey = sec.locationTrackingServiceKey
     , schedulerSetName = "Scheduled_Jobs"
-    , schedulerType = common.schedulerType.DbBased
+    , schedulerType = common.schedulerType.RedisBased
     , ltsCfg = LocationTrackingeServiceConfig
     , dontEnableForDb
     , maxMessages

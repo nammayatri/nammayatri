@@ -74,10 +74,9 @@ runReviver = do
   reviverInterval <- asks (.reviverInterval)
   T.UTCTime _ todaysDiffTime <- getCurrentTime
   let secondsTillNow = T.diffTimeToPicoseconds todaysDiffTime `div` 1000000000000
-      shouldRunReviver = secondsTillNow `mod` (fromIntegral reviverInterval.getSeconds) == 0
-  if shouldRunReviver
-    then Hedis.whenWithLockRedis reviverLockKey 300 runReviver'
-    else threadDelayMilliSec 5000
+      shouldRunReviver = secondsTillNow `mod` (fromIntegral reviverInterval.getMinutes) == 0
+  when shouldRunReviver $ Hedis.whenWithLockRedis reviverLockKey 300 runReviver'
+  threadDelayMilliSec 60000
 
 runReviver' :: Flow ()
 runReviver' = do
@@ -97,7 +96,7 @@ runReviver' = do
       let newJob =
             Job
               { id = newid,
-                parentJobId = x.id,
+                parentJobId = x.parentJobId,
                 scheduledAt = now,
                 jobInfo = jobInfo,
                 shardId = shardId,
