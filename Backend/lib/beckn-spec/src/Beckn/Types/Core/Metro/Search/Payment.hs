@@ -22,8 +22,8 @@ where
 
 import Beckn.Types.Core.Metro.Search.Time (Time)
 import Data.Aeson (Value (..), object, withObject, (.:), (.=))
-import Data.Aeson.Types (typeMismatch)
 import qualified Data.Aeson.KeyMap as AKM (delete, fromHashMapText, toHashMapText)
+import Data.Aeson.Types (typeMismatch)
 import Data.OpenApi (ToSchema)
 import EulerHS.Prelude hiding (State)
 import Kernel.Types.App (BaseUrl)
