@@ -27,7 +27,6 @@ import qualified Data.ByteString as BS
 import Data.Singletons (fromSing)
 import qualified Data.Time as T hiding (getCurrentTime)
 import qualified EulerHS.Language as L
-import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude hiding (mask, throwIO)
 import qualified Kernel.Storage.Hedis.Queries as Hedis
 import Kernel.Tools.LoopGracefully (loopGracefully)
@@ -58,17 +57,9 @@ handler :: forall t. (JobProcessor t, FromJSON t) => SchedulerHandle t -> Schedu
 handler hnd = do
   schedulerType <- asks (.schedulerType)
   maxThreads <- asks (.maxThreads)
-  tables <- L.getOption KBT.Tables
-  dbConf <- L.getOption KBT.PsqlDbCfg
   case schedulerType of
     RedisBased -> do
-      mapConcurrently
-        ( const $ do
-            L.setOption KBT.Tables (fromJust tables) -- this case should never come
-            L.setOption KBT.PsqlDbCfg (fromJust dbConf) -- this case should never come
-            loopGracefully [runnerIterationRedis hnd runTask]
-        )
-        [1 .. maxThreads]
+      loopGracefully $ replicate maxThreads (runnerIterationRedis hnd runTask)
     DbBased -> do
       executionChannels :: [Chan (AnyJob t)] <- L.runIO $ mapM (const newChan) [1 .. maxThreads]
       mapM_ (fork "executing tasks" . executeTaskInChan) executionChannels
