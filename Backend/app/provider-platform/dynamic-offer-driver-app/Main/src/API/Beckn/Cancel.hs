@@ -53,9 +53,9 @@ cancel transporterId subscriber req =
           fork ("cancelBooking:" <> cancelReq.bookingId.getId) $
             DCancel.cancel cancelReq merchant booking
       Right cancelSearchReq -> do
-        searchReq <- DCancel.validateCancelSearchRequest transporterId subscriber cancelSearchReq
+        searchTry <- DCancel.validateCancelSearchRequest transporterId subscriber cancelSearchReq
         fork ("cancelSearch:" <> cancelSearchReq.transactionId) $
-          DCancel.cancelSearch transporterId cancelSearchReq searchReq
+          DCancel.cancelSearch transporterId cancelSearchReq searchTry
     return Ack
 
 cancelLockKey :: Text -> Text
