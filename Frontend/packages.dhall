@@ -168,7 +168,7 @@ in  upstream
       , "web-events"
       ]
     , repo = "https://github.com/juspay/purescript-presto-dom.git"
-    , version = "nammayatri"
+    , version = "nammayatri-pilot"
     }
   with halogen-vdom =
     { dependencies =

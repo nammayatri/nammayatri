@@ -63,7 +63,7 @@
     "axios": "^0.27.1",
     "core-js": "^2.6.11",
     "moment": "^2.27.0",
-    "presto-ui": "git+https://github.com/juspay/presto-ui.git#nammayatri",
+    "presto-ui": "git+https://github.com/juspay/presto-ui.git#nammayatri-pilot",
     "purty": "^7.0.0",
     "ramda": "^0.26.1",
     "regenerator-runtime": "^0.13.5",
