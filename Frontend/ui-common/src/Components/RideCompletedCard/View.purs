@@ -82,6 +82,7 @@ topPillAndSupportView config push =
             width MATCH_PARENT
           , height WRAP_CONTENT
           , gravity RIGHT
+          , visibility if config.enableContactSupport then VISIBLE else GONE
           ][imageView
               [ height $ V 40
               , width $ V 40

@@ -415,8 +415,10 @@ public class MainActivity extends AppCompatActivity {
         NotificationUtils.createNotificationChannel(this, NotificationUtils.FLOATING_NOTIFICATION);
         NotificationUtils.createNotificationChannel(this, NotificationUtils.RINGING_CHANNEL_ID);
         NotificationUtils.createNotificationChannel(this, NotificationUtils.TRIP_STARTED);
+        NotificationUtils.createNotificationChannel(this, NotificationUtils.TRIP_STARTED_TALKBACK);
         NotificationUtils.createNotificationChannel(this, NotificationUtils.CANCELLED_PRODUCT);
         NotificationUtils.createNotificationChannel(this, NotificationUtils.DRIVER_HAS_REACHED);
+        NotificationUtils.createNotificationChannel(this, NotificationUtils.TRIP_FINISHED);
     }
 
     public void updateConfigURL() {

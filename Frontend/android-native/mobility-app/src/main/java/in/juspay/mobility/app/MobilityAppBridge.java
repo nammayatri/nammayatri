@@ -584,7 +584,9 @@ public class MobilityAppBridge extends HyperBridge {
                 
     @JavascriptInterface
     public void pauseYoutubeVideo() {
-        if (youTubePlayerView != null) {
+        if(vpAdapter != null)
+            vpAdapter.pauseYoutubeVideo();
+        if ( youtubePlayer != null) {
             youtubePlayer.pause();
         }
     }
