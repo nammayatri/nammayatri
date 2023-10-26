@@ -214,7 +214,7 @@ buildOnUpdateMessage RideAssignedBuildReq {..} = do
 buildOnUpdateMessage RideStartedBuildReq {..} = do
   odometerStartReading :: Maybe Centesimal <- case ride.rideDetails of
     DetailsOnDemand _ -> pure Nothing
-    DetailsRental det -> pure det.odometerEndReading
+    DetailsRental det -> pure det.odometerStartReading
   let tagGroups =
         [ Tags.TagGroup
             { display = False,

@@ -85,10 +85,7 @@ parseEvent _ (OnUpdate.RideAssigned taEvent) = do
       }
 parseEvent _ (OnUpdate.RideStarted rsEvent) = do
   tagsGroup <- fromMaybeM (InvalidRequest "agent tags is not present in RideStarted Event.") rsEvent.fulfillment.tags
-  odometerStartReading :: Centesimal <-
-    fromMaybeM (InvalidRequest "odometer_start_reading is not present.") $
-      readMaybe . T.unpack
-        =<< getTag "ride_distance_details" "odometer_start_reading" tagsGroup
+  let odometerStartReading :: Maybe Centesimal = readMaybe . T.unpack =<< getTag "ride_distance_details" "odometer_start_reading" tagsGroup
   return $
     DOnUpdate.RideStartedReq
       { bppBookingId = Id rsEvent.id,
@@ -101,10 +98,7 @@ parseEvent _ (OnUpdate.RideCompleted rcEvent) = do
     fromMaybeM (InvalidRequest "chargeable_distance is not present.") $
       readMaybe . T.unpack
         =<< getTag "ride_distance_details" "chargeable_distance" tagsGroup
-  odometerEndReading :: Centesimal <-
-    fromMaybeM (InvalidRequest "odometer_end_reading is not present.") $
-      readMaybe . T.unpack
-        =<< getTag "ride_distance_details" "odometer_end_reading" tagsGroup
+  let odometerEndReading :: Maybe Centesimal = readMaybe . T.unpack =<< getTag "ride_distance_details" "odometer_end_reading" tagsGroup
   traveledDistance :: HighPrecMeters <-
     fromMaybeM (InvalidRequest "traveled_distance is not present.") $
       readMaybe . T.unpack
