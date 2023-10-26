@@ -1157,7 +1157,7 @@ homeScreenFlow = do
       let sourceLat = if sourceServiceabilityResp.serviceable then lat else updatedState.props.sourceLat
           sourceLong = if sourceServiceabilityResp.serviceable then long else updatedState.props.sourceLong
       _ <- pure $ firebaseLogEvent $ "ny_loc_unserviceable_" <> show (not sourceServiceabilityResp.serviceable)
-      modifyScreenState $ HomeScreenStateType (\homeScreen -> updatedState{data{ polygonCoordinates = fromMaybe "" sourceServiceabilityResp.geoJson } ,props{locateOnMapLocation{sourceLat = sourceLat, sourceLng = sourceLong}, sourceLat = sourceLat, sourceLong = sourceLong, isSrcServiceable =sourceServiceabilityResp.serviceable , showlocUnserviceablePopUp = (not sourceServiceabilityResp.serviceable)}})
+      modifyScreenState $ HomeScreenStateType (\homeScreen -> updatedState{data{ polygonCoordinates = fromMaybe "" sourceServiceabilityResp.geoJson } ,props{locateOnMapLocation{sourceLat = sourceLat, sourceLng = sourceLong, source= (getString CURRENT_LOCATION)}, sourceLat = sourceLat, sourceLong = sourceLong, isSrcServiceable =sourceServiceabilityResp.serviceable , showlocUnserviceablePopUp = (not sourceServiceabilityResp.serviceable)}})
       homeScreenFlow
     HOME_SCREEN -> do
         (GlobalState state) <- getState
