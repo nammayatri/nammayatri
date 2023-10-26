@@ -10,6 +10,7 @@ INSERT INTO atlas_driver_offer_bpp.fare_policy (id, night_shift_start, night_shi
 
 INSERT INTO atlas_driver_offer_bpp.fare_product (id, merchant_id, fare_policy_id, vehicle_variant, area, flow) VALUES ('294abc7f-9cc9-e3t3-3c8b-7721c6f1809f', 'favorit0-0000-0000-0000-00000favorit', '71b52524-e773-03dc-5853-290132ce6fd5', 'SEDAN', 'Default', 'RENTAL');
 INSERT INTO atlas_driver_offer_bpp.fare_product (id, merchant_id, fare_policy_id, vehicle_variant, area, flow) VALUES ('394abc7f-9cc9-e3t3-3c8b-7721c6f1809f', 'favorit0-0000-0000-0000-00000favorit', '51b42524-e113-03dc-5453-290032ce6fd5', 'SUV', 'Default', 'RENTAL');
+INSERT INTO atlas_driver_offer_bpp.fare_product (id, merchant_id, fare_policy_id, vehicle_variant, area, flow) VALUES ('494abc7f-9cc9-e3t3-3c8b-7721c6f1809f', 'favorit0-0000-0000-0000-00000favorit', '51b42524-e113-03dc-5453-290032ce6fd5', 'AUTO_RICKSHAW', 'Default', 'RENTAL');
 
 CREATE TABLE atlas_driver_offer_bpp.fare_policy_rental_details (
   id serial PRIMARY KEY,
@@ -27,7 +28,7 @@ CREATE TABLE atlas_driver_offer_bpp.fare_policy_rental_details_distance_buffers 
   fare_policy_id character(36) NOT NULL REFERENCES atlas_driver_offer_bpp.fare_policy(id),
   ride_duration integer NOT NULL,
   buffer_kms integer NOT NULL,
-  CONSTRAINT fare_policy_rental_details_distance_buffers_unique_ride_duration UNIQUE (fare_policy_id, ride_duration)
+  CONSTRAINT fp_rental_details_distance_buffers_unique_ride_duration UNIQUE (fare_policy_id, ride_duration)
 );
 ALTER TABLE atlas_driver_offer_bpp.fare_policy_rental_details_distance_buffers OWNER TO atlas_driver_offer_bpp_user;
 

@@ -115,7 +115,7 @@ data ServiceHandle m = ServiceHandle
     getMerchant :: Id DM.Merchant -> m (Maybe DM.Merchant),
     endRideTransaction :: Id DP.Driver -> SRB.Booking -> DRide.Ride -> Maybe FareParameters -> Maybe (Id RD.RiderDetails) -> FareParameters -> DTConf.TransporterConfig -> Id DM.Merchant -> m (),
     notifyCompleteToBAP :: SRB.Booking -> DRide.Ride -> Fare.FareParameters -> Maybe DMPM.PaymentMethodInfo -> Maybe Text -> m (),
-    getFarePolicy :: Id DM.Merchant -> DVeh.Variant -> Maybe DFareProduct.Area -> m DFP.FullFarePolicy,
+    getFarePolicy :: Id DM.Merchant -> DVeh.Variant -> Maybe DFareProduct.Area -> DFareProduct.FlowType -> m DFP.FullFarePolicy,
     calculateFareParameters :: Fare.CalculateFareParametersParams -> m Fare.FareParameters,
     putDiffMetric :: Id DM.Merchant -> Money -> Meters -> m (),
     isDistanceCalculationFailed :: Id DP.Person -> m Bool,
@@ -344,7 +344,7 @@ endRide handle@ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.g
             DRide.DetailsOnDemand _ -> throwError (InternalError "on demand ride is not allowed for rental booking")
             DRide.DetailsRental details -> pure details
           odometerEndReading <- mbOdometerEndReading & fromMaybeM (InvalidRequest "odometerEndReading is mandatory for rentals")
-          farePolicy <- getFarePolicy booking.providerId booking.vehicleVariant booking.area
+          farePolicy <- getFarePolicy booking.providerId booking.vehicleVariant booking.area DFareProduct.RENTAL
           logInfo $ "farePolicia :" <> show farePolicy
           (recalcDistance, finalFare, mbUpdatedFareParams) <- do
             recalculateFareForDistance handle booking rideOld (Meters $ round (odometerEndReading - fromMaybe 0 rideDetails.odometerStartReading) * 1000) thresholdConfig
@@ -419,7 +419,8 @@ recalculateFareForDistance ServiceHandle {..} booking ride recalcDistance thresh
   -- maybe compare only distance fare?
   let estimatedFare = Fare.fareSum booking.fareParams
   tripEndTime <- getCurrentTime
-  farePolicy <- getFarePolicy merchantId booking.vehicleVariant booking.area
+  let flowType = SRB.castFlowType booking.bookingType
+  farePolicy <- getFarePolicy merchantId booking.vehicleVariant booking.area flowType
   fareParams <- case ride.rideDetails of
     DRide.DetailsOnDemand DRide.RideDetailsOnDemand {} ->
       calculateFareParameters
