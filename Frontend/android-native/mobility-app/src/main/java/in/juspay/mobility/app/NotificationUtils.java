@@ -73,7 +73,7 @@ public class NotificationUtils {
     public static String FLOATING_NOTIFICATION = "FLOATING_NOTIFICATION";
     public static String DRIVER_HAS_REACHED = "DRIVER_HAS_REACHED";
     public static String ALLOCATION_TYPE = "NEW_RIDE_AVAILABLE";
-    public static String TRIP_CHANNEL_ID = "TRIP_STARTED";
+    public static String TRIP_STARTED = "TRIP_STARTED";
     public static String CANCELLED_PRODUCT = "CANCELLED_PRODUCT";
     public static String DRIVER_ASSIGNMENT = "DRIVER_ASSIGNMENT";
     public static String TRIP_FINISHED = "TRIP_FINISHED";
@@ -317,7 +317,7 @@ public class NotificationUtils {
         if (ALLOCATION_TYPE.equals(notificationType)) {
             System.out.println("showNotification:- " + notificationType);
             channelId = RINGING_CHANNEL_ID;
-        } else if (TRIP_CHANNEL_ID.equals(notificationType) || CANCELLED_PRODUCT.equals(notificationType) || DRIVER_HAS_REACHED.equals(notificationType)) {
+        } else if (TRIP_STARTED.equals(notificationType) || CANCELLED_PRODUCT.equals(notificationType) || DRIVER_HAS_REACHED.equals(notificationType)) {
             System.out.println("showNotification:- " + notificationType);
             channelId = notificationType;
         } else {
@@ -352,7 +352,7 @@ public class NotificationUtils {
             Uri notificationSound;
             if (notificationType.equals(ALLOCATION_TYPE)) {
                 notificationSound = Uri.parse("android.resource://" + context.getPackageName() + "/" + R.raw.allocation_request);
-            } else if (notificationType.equals(TRIP_CHANNEL_ID)) {
+            } else if (notificationType.equals(TRIP_STARTED)) {
                 notificationSound = Uri.parse("android.resource://" + context.getPackageName() + "/" + R.raw.notify_otp_sound);
                 mBuilder.setSound(notificationSound);
             } else if (notificationType.equals(CANCELLED_PRODUCT) || notificationType.equals(REALLOCATE_PRODUCT)){
@@ -372,8 +372,9 @@ public class NotificationUtils {
         SharedPreferences sharedPref = context.getSharedPreferences(
                 context.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
                 
-        if (TRIP_CHANNEL_ID.equals(notificationType)) {
+        if (TRIP_STARTED.equals(notificationType)) {
             if (key.equals("USER")) {
+                startMediaPlayer(context,R.raw.notify_otp_sound, true);
                 Utils.logEvent ("ny_user_ride_started", context);
             }
             else
@@ -409,13 +410,12 @@ public class NotificationUtils {
         }
         if (DRIVER_ASSIGNMENT.equals(notificationType)) {
             mFirebaseAnalytics = FirebaseAnalytics.getInstance(context);
+            startMediaPlayer(context, R.raw.ride_assigned, true);
             if (key.equals("USER")) {
                 Utils.logEvent ("ny_user_ride_assigned", context);
             }
-            else
-                Utils.logEvent("driver_assigned", context);
             if (key.equals("DRIVER")) {
-                startMediaPlayer(context, R.raw.ride_assigned, true);
+                Utils.logEvent("driver_assigned", context);
             }
         }
         notificationId++;
@@ -424,7 +424,7 @@ public class NotificationUtils {
                 callBack.get(i).driverCallBack(notificationType);
             }
         }
-        if ((TRIP_FINISHED.equals(notificationType) || DRIVER_ASSIGNMENT.equals(notificationType) || REALLOCATE_PRODUCT.equals(notificationType) || CANCELLED_PRODUCT.equals(notificationType) || TRIP_CHANNEL_ID.equals(notificationType)) && (key.equals("USER"))) {
+        if ((TRIP_FINISHED.equals(notificationType) || DRIVER_ASSIGNMENT.equals(notificationType) || REALLOCATE_PRODUCT.equals(notificationType) || CANCELLED_PRODUCT.equals(notificationType) || TRIP_STARTED.equals(notificationType)) && (key.equals("USER"))) {
             for (int i = 0; i < callBack.size(); i++) {
                 callBack.get(i).customerCallBack(notificationType);
             }
@@ -470,7 +470,7 @@ public class NotificationUtils {
                 System.out.println("Channel" + channel_Id);
                 if (channel_Id.equals(RINGING_CHANNEL_ID)) {
                     soundUri = Uri.parse("android.resource://" + context.getPackageName() + "/" + R.raw.allocation_request);
-                } else if (channel_Id.equals(TRIP_CHANNEL_ID)) {
+                } else if (channel_Id.equals(TRIP_STARTED)) {
                     soundUri = Uri.parse("android.resource://" + context.getPackageName() + "/" + R.raw.notify_otp_sound);
                 } else if (channel_Id.equals(CANCELLED_PRODUCT)) {
                     soundUri = Uri.parse("android.resource://" + context.getPackageName() + "/" + R.raw.cancel_notification_sound);
