@@ -14,7 +14,6 @@ import Data.Array as DA
 import Data.Either (Either(..))
 import Data.Int as DI
 import Data.Lens ((^.))
-import Data.Maybe (fromMaybe, isNothing)
 import Data.Maybe as Mb
 import Data.Number (fromString) as Number
 import Data.Number.Format (fixed, toStringWith)
@@ -265,7 +264,7 @@ eval (LoadPlans plans) state = do
       data{ joinPlanData {allPlans = planListTransformer plans state.data.config.enableIntroductoryView state.data.config.gradientConfig,
                             subscriptionStartDate = (convertUTCtoISC planResp.subscriptionStartTime "Do MMM")}},
       props{showShimmer = false, subView = JoinPlan,  
-            joinPlanProps { selectedPlanItem = if (isNothing state.props.joinPlanProps.selectedPlanItem) then getSelectedPlan plans state.data.config.gradientConfig else state.props.joinPlanProps.selectedPlanItem}} }
+            joinPlanProps { selectedPlanItem = if (Mb.isNothing state.props.joinPlanProps.selectedPlanItem) then getSelectedPlan plans state.data.config.gradientConfig else state.props.joinPlanProps.selectedPlanItem}} }
 
 eval (LoadHelpCentre lat lon kioskLocationList) state = do
   let transformedKioskList = transformKioskLocations kioskLocationList lat lon
@@ -311,7 +310,7 @@ eval (LoadMyPlans plans) state = do
       _ <- pure $ setCleverTapUserProp [{key : "Plan", value : unsafeToForeign planEntity.name},
                                         {key : "Subscription Offer", value : unsafeToForeign (map (\(OfferEntity offer) -> offer.title) planEntity.offers)},
                                         {key : "Driver Due Amount" , value : unsafeToForeign (planEntity.currentDues)},
-                                        {key : "Autopay status", value : unsafeToForeign (fromMaybe "Nothing" currentPlanResp.autoPayStatus)},
+                                        {key : "Autopay status", value : unsafeToForeign (Mb.fromMaybe "Nothing" currentPlanResp.autoPayStatus)},
                                         {key : "Search Request Eligibility", value : unsafeToForeign $ if isOverdue then "FALSE" else "TRUE"},
                                         {key : "Driver AutoPay Dues", value : unsafeToForeign planEntity.autopayDues},
                                         {key : "Driver Manual Dues", value : unsafeToForeign $ planEntity.currentDues - planEntity.autopayDues}]
@@ -324,7 +323,7 @@ eval (LoadMyPlans plans) state = do
           _ <- pure $ setCleverTapUserProp [{key : "Mandate status", value : unsafeToForeign mandateDetails.status},
                                             {key : "Autopay Max Amount Register", value : unsafeToForeign mandateDetails.maxAmount},
                                             {key : "Payment method" , value : unsafeToForeign $ if mandateDetails.status == "ACTIVE" then "Autopay" else "Manual"},
-                                            {key : "UPI ID availability", value : unsafeToForeign $ if isNothing mandateDetails.payerVpa then "FALSE" else "TRUE"}]
+                                            {key : "UPI ID availability", value : unsafeToForeign $ if Mb.isNothing mandateDetails.payerVpa then "FALSE" else "TRUE"}]
           continue newState 
             {data {
                 myPlanData {

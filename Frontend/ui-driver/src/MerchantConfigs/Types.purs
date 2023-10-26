@@ -47,6 +47,7 @@ type SubscriptionConfig =  {
   enableBlocking :: Boolean,
   completePaymentPopup :: Boolean,
   onBoardingSubscription :: Boolean,
+  showLaterButtonforTimeRange :: Boolean,
   offerBannerConfig :: SubscriptionOfferBannerConfig,
   lowDuesLimit :: Number,
   maxDuesLimit :: Number,

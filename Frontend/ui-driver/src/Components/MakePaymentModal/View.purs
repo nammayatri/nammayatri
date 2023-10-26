@@ -31,7 +31,6 @@ view push state =
   , height MATCH_PARENT
   , orientation VERTICAL
   , gravity BOTTOM
-  , clickable true
   ][ PrestoAnim.animationSet [ Anim.translateYAnim AnimConfig.translateYAnimConfig ] $
       linearLayout
       [ width MATCH_PARENT

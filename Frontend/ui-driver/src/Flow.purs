@@ -147,7 +147,7 @@ baseAppFlow baseFlow event = do
       setValueToLocalStore VERSION_NAME versionName
       setValueToLocalStore BUNDLE_VERSION bundle
       setValueToLocalStore BASE_URL (getBaseUrl "dummy")
-      setValueToLocalStore RIDE_REQUEST_BUFFER "-3"
+      setValueToLocalStore RIDE_REQUEST_BUFFER "0"
       setValueToLocalStore IS_BANNER_ACTIVE "True"
       setValueToLocalStore MESSAGES_DELAY "0"
       setValueToLocalStore SHOW_PAYMENT_MODAL "true"
@@ -311,6 +311,9 @@ getDriverInfoFlow event activeRideResp = do
         modifyScreenState $ GlobalPropsType $ \globalProps -> globalProps{driverInformation = Just (GetDriverInfoResp getDriverInfoResp), driverRideStats = Just resp}
         updateDriverDataToStates
         _ <- liftFlowBT $ runEffectFn1 consumeBP unit
+        if (isJust getDriverInfoResp.autoPayStatus) then 
+          setValueToLocalStore TIMES_OPENED_NEW_SUBSCRIPTION "5"
+        else pure unit
         permissionsGiven <- checkAll3Permissions
         if permissionsGiven
           then handleDeepLinksFlow event activeRideResp
