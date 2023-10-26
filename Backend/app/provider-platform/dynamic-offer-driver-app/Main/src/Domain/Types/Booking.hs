@@ -95,4 +95,10 @@ data Booking = Booking
 data BookingType = SpecialZoneBooking | NormalBooking | RentalBooking
   deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
 
+castFlowType :: BookingType -> FareProductD.FlowType
+castFlowType = \case
+  NormalBooking -> FareProductD.NORMAL
+  SpecialZoneBooking -> FareProductD.RIDE_OTP
+  RentalBooking -> FareProductD.RENTAL
+
 $(mkBeamInstancesForEnum ''BookingType)

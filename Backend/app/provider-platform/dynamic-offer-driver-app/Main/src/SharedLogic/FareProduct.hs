@@ -20,7 +20,7 @@ import Kernel.Utils.Common
 import qualified Lib.Queries.SpecialLocation as QSpecialLocation
 import qualified Lib.Queries.SpecialLocationPriority as QSpecialLocationPriority
 import qualified Lib.Types.SpecialLocation as DSpecialLocation
-import qualified Storage.CachedQueries.FareProduct as QFareProduct
+import qualified Storage.Queries.FareProduct as QFareProduct
 
 data FareProducts = FareProducts
   { fareProducts :: [DFareProduct.FareProduct],
@@ -63,7 +63,7 @@ getAllFareProducts merchantId fromLocationLatLong toLocationLatLong = do
   where
     getPickupFareProductsAndSpecialLocationTag pickupSpecialLocation specialLocationTag = do
       let area = DFareProduct.Pickup pickupSpecialLocation.id
-      fareProducts <- getFareProducts area
+      fareProducts <- getFareProducts area DFareProduct.RIDE_OTP
       return $
         FareProducts
           { fareProducts,
@@ -72,7 +72,7 @@ getAllFareProducts merchantId fromLocationLatLong toLocationLatLong = do
           }
     getDropFareProductsAndSpecialLocationTag dropSpecialLocation specialLocationTag = do
       let area = DFareProduct.Drop dropSpecialLocation.id
-      fareProducts <- getFareProducts area
+      fareProducts <- getFareProducts area DFareProduct.RIDE_OTP
       return $
         FareProducts
           { fareProducts,
@@ -81,7 +81,7 @@ getAllFareProducts merchantId fromLocationLatLong toLocationLatLong = do
           }
 
     getDefaultFareProducts = do
-      fareProducts <- QFareProduct.findAllFareProductForVariants merchantId DFareProduct.Default
+      fareProducts <- QFareProduct.findAllFareProductForVariants merchantId DFareProduct.Default DFareProduct.NORMAL
       return $
         FareProducts
           { fareProducts,
@@ -91,8 +91,8 @@ getAllFareProducts merchantId fromLocationLatLong toLocationLatLong = do
 
     mkSpecialLocationTag pickupSpecialLocationCategory dropSpecialLocationCategory priority = pickupSpecialLocationCategory <> "_" <> dropSpecialLocationCategory <> "_" <> "Priority" <> priority
 
-    getFareProducts area = do
-      fareProducts <- QFareProduct.findAllFareProductForVariants merchantId area
+    getFareProducts area flow = do
+      fareProducts <- QFareProduct.findAllFareProductForVariants merchantId area flow
       if null fareProducts && area /= DFareProduct.Default
-        then QFareProduct.findAllFareProductForVariants merchantId DFareProduct.Default
+        then QFareProduct.findAllFareProductForVariants merchantId DFareProduct.Default DFareProduct.NORMAL
         else return fareProducts

@@ -19,7 +19,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified SharedLogic.FareProduct as FareProduct
 import qualified Storage.CachedQueries.FarePolicy as QFP
-import qualified Storage.CachedQueries.FareProduct as QFareProduct
+import qualified Storage.Queries.FareProduct as QFareProduct
 import Tools.Error
 import Tools.Maps
 
@@ -29,20 +29,21 @@ data FarePoliciesProduct = FarePoliciesProduct
     area :: FareProductD.Area,
     specialLocationTag :: Maybe Text
   }
+  deriving (Show)
 
-getFarePolicy :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id Merchant -> Variant -> Maybe FareProductD.Area -> m FarePolicyD.FullFarePolicy
-getFarePolicy merchantId vehVariant Nothing = do
-  fareProduct <- QFareProduct.findByMerchantVariantArea merchantId vehVariant FareProductD.Default >>= fromMaybeM NoFareProduct
+getFarePolicy :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id Merchant -> Variant -> Maybe FareProductD.Area -> FareProductD.FlowType -> m FarePolicyD.FullFarePolicy
+getFarePolicy merchantId vehVariant Nothing flow = do
+  fareProduct <- QFareProduct.findByMerchantVariantAreaFlow merchantId vehVariant FareProductD.Default flow >>= fromMaybeM NoFareProduct
   farePolicy <- QFP.findById fareProduct.farePolicyId >>= fromMaybeM NoFarePolicy
   return $ FarePolicyD.farePolicyToFullFarePolicy fareProduct.merchantId fareProduct.vehicleVariant farePolicy
-getFarePolicy merchantId vehVariant (Just area) = do
-  mbFareProduct <- QFareProduct.findByMerchantVariantArea merchantId vehVariant area
+getFarePolicy merchantId vehVariant (Just area) flow = do
+  mbFareProduct <- QFareProduct.findByMerchantVariantAreaFlow merchantId vehVariant area flow
   case mbFareProduct of
     Just fareProduct -> do
       farePolicy <- QFP.findById fareProduct.farePolicyId >>= fromMaybeM NoFarePolicy
       return $ FarePolicyD.farePolicyToFullFarePolicy fareProduct.merchantId fareProduct.vehicleVariant farePolicy
     Nothing -> do
-      fareProduct <- QFareProduct.findByMerchantVariantArea merchantId vehVariant FareProductD.Default >>= fromMaybeM NoFareProduct
+      fareProduct <- QFareProduct.findByMerchantVariantAreaFlow merchantId vehVariant FareProductD.Default flow >>= fromMaybeM NoFareProduct
       farePolicy <- QFP.findById fareProduct.farePolicyId >>= fromMaybeM NoFarePolicy
       return $ FarePolicyD.farePolicyToFullFarePolicy fareProduct.merchantId fareProduct.vehicleVariant farePolicy
 

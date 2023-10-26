@@ -6,7 +6,7 @@
 @merchantId = favorit0-0000-0000-0000-00000favorit
 
 # time in future
-@rentalStartTime = 2023-10-25T17:02:15.585221416Z
+@rentalStartTime = 2023-10-26T10:17:15.585221416Z
 # @now = $localDatetime iso8601
 
 # @name healthcheck
@@ -304,7 +304,7 @@ token: {{app-token}}
 
 ###
 
-@endRideOtp = {{list2.response.body.list[0].rideList[0].endRideOtp}}
+@endRideOtp = {{list3.response.body.list[0].rideList[0].endRideOtp}}
 
 # @name rideEnd
 POST {{driver-offer-bpp-host}}/ui/driver/ride/{{rideId}}/end

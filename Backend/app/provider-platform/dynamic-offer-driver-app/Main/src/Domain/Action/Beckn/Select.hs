@@ -22,6 +22,7 @@ where
 import qualified Domain.Types.Estimate as DEst
 import qualified Domain.Types.FarePolicy as DFP
 import qualified Domain.Types.FarePolicy as DFarePolicy
+import qualified Domain.Types.FareProduct as DFareProduct
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.SearchTry as DST
@@ -65,7 +66,7 @@ handler merchant sReq estimate = do
   case searchReq.searchRequestDetails of
     DSR.SearchReqDetailsOnDemand details -> do
       QDQ.setInactiveAllDQByEstId sReq.estimateId now
-      farePolicy <- getFarePolicy merchantId estimate.vehicleVariant searchReq.area
+      farePolicy <- getFarePolicy merchantId estimate.vehicleVariant searchReq.area DFareProduct.NORMAL
       searchTry <- createNewSearchTry farePolicy searchReq
       driverPoolConfig <- getDriverPoolConfig merchantId (Just searchTry.vehicleVariant) details.estimatedDistance
       goHomeCfg <- CQGHC.findByMerchantId merchantId

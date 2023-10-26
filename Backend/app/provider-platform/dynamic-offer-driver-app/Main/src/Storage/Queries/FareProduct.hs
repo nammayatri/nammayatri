@@ -13,12 +13,7 @@
 -}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Storage.Queries.FareProduct
-  {-# WARNING
-    "This module contains direct calls to the table. \
-  \ But most likely you need a version from CachedQueries with caching results feature."
-    #-}
-where
+module Storage.Queries.FareProduct where
 
 import Domain.Types.FareProduct
 import qualified Domain.Types.FareProduct as Domain
@@ -35,8 +30,16 @@ findAllFareProductForVariants ::
   MonadFlow m =>
   Id Merchant ->
   Domain.Area ->
+  Domain.FlowType ->
   m [Domain.FareProduct]
-findAllFareProductForVariants (Id merchantId) area = findAllWithKV [Se.And [Se.Is BeamFP.merchantId $ Se.Eq merchantId, Se.Is BeamFP.area $ Se.Eq area]]
+findAllFareProductForVariants (Id merchantId) area flow =
+  findAllWithKV
+    [ Se.And
+        [ Se.Is BeamFP.merchantId $ Se.Eq merchantId,
+          Se.Is BeamFP.area $ Se.Eq area,
+          Se.Is BeamFP.flow $ Se.Eq flow
+        ]
+    ]
 
 findAllFareProductForFlow ::
   MonadFlow m =>
@@ -45,18 +48,20 @@ findAllFareProductForFlow ::
   m [Domain.FareProduct]
 findAllFareProductForFlow (Id merchantId) flow = findAllWithKV [Se.And [Se.Is BeamFP.merchantId $ Se.Eq merchantId, Se.Is BeamFP.flow $ Se.Eq flow]]
 
-findByMerchantVariantArea ::
+findByMerchantVariantAreaFlow ::
   MonadFlow m =>
   Id Merchant ->
   Variant ->
   Domain.Area ->
+  Domain.FlowType ->
   m (Maybe Domain.FareProduct)
-findByMerchantVariantArea (Id merchantId) vehicleVariant area =
+findByMerchantVariantAreaFlow (Id merchantId) vehicleVariant area flow =
   findOneWithKV
     [ Se.And
         [ Se.Is BeamFP.merchantId $ Se.Eq merchantId,
           Se.Is BeamFP.area $ Se.Eq area,
-          Se.Is BeamFP.vehicleVariant $ Se.Eq vehicleVariant
+          Se.Is BeamFP.vehicleVariant $ Se.Eq vehicleVariant,
+          Se.Is BeamFP.flow $ Se.Eq flow
         ]
     ]
 

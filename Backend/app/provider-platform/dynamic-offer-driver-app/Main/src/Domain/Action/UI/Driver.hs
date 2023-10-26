@@ -105,6 +105,7 @@ import Domain.Types.FareParameters
 import qualified Domain.Types.FareParameters as Fare
 import Domain.Types.FarePolicy (DriverExtraFeeBounds (..))
 import qualified Domain.Types.FarePolicy as DFarePolicy
+import qualified Domain.Types.FareProduct as DFareProduct
 import qualified Domain.Types.Invoice as INV
 import qualified Domain.Types.MediaFile as Domain
 import qualified Domain.Types.Merchant as DM
@@ -1225,7 +1226,7 @@ respondQuote (driverId, _) req = do
               quoteLimit <- getQuoteLimit searchReq.providerId details.estimatedDistance searchTry.vehicleVariant
               quoteCount <- runInReplica $ QDrQt.countAllBySTId searchTry.id
               when (quoteCount >= quoteLimit) (throwError QuoteAlreadyRejected)
-              farePolicy <- getFarePolicy organization.id sReqFD.vehicleVariant searchReq.area
+              farePolicy <- getFarePolicy organization.id sReqFD.vehicleVariant searchReq.area DFareProduct.NORMAL
               let driverExtraFeeBounds = DFarePolicy.findDriverExtraFeeBoundsByDistance details.estimatedDistance <$> farePolicy.driverExtraFeeBounds
               whenJust mbOfferedFare $ \off ->
                 whenJust driverExtraFeeBounds $ \driverExtraFeeBounds' ->
