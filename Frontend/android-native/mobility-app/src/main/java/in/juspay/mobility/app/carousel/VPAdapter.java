@@ -180,10 +180,11 @@ public class VPAdapter extends RecyclerView.Adapter<VPAdapter.ViewHolder> {
             });
     }
 
-    @JavascriptInterface
-    public static void pauseYoutubeVideo() {
+    public void pauseYoutubeVideo() {
         if (youTubePlayerView != null) {
-            youtubePlayer.pause();
+            if(youtubePlayer != null)
+                youtubePlayer.pause();
+            youTubePlayerView = null;
         }
     }
 

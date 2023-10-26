@@ -80,6 +80,7 @@ public class NotificationUtils {
     public static String RINGING_CHANNEL_ID = "RINGING_ALERT";
     public static String REALLOCATE_PRODUCT = "REALLOCATE_PRODUCT";
     public static String DRIVER_REACHED = "DRIVER_REACHED";
+    public static String TRIP_STARTED_TALKBACK = "TRIP_STARTED_TALKBACK";
     public static String NO_VARIANT = "NO_VARIANT";
     public static Uri soundUri = null;
     public static OverlaySheetService.OverlayBinder binder;
@@ -298,6 +299,8 @@ public class NotificationUtils {
         if (imageUrl != null) {
             bitmap = getBitmapfromUrl(imageUrl);
         }
+        SharedPreferences sharedPref = context.getSharedPreferences(context.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
+        String disabilityName = sharedPref.getString("DISABILITY_NAME", "");
         final PackageManager pm = context.getPackageManager();
         Intent intent = pm.getLaunchIntentForPackage(context.getPackageName());
         System.out.println("Notificationn Utils Data" + data.toString());
@@ -314,14 +317,22 @@ public class NotificationUtils {
         String merchantType = context.getString(R.string.service);
         String key = merchantType.contains("provider") ? "DRIVER" : "USER";
         System.out.println("key" + key);
+        System.out.println("showNotification:- " + notificationType);
         if (ALLOCATION_TYPE.equals(notificationType)) {
-            System.out.println("showNotification:- " + notificationType);
             channelId = RINGING_CHANNEL_ID;
-        } else if (TRIP_STARTED.equals(notificationType) || CANCELLED_PRODUCT.equals(notificationType) || DRIVER_HAS_REACHED.equals(notificationType)) {
-            System.out.println("showNotification:- " + notificationType);
+        } else if(TRIP_STARTED.equals(notificationType))
+            {
+            if (disabilityName.equals("BLIND_LOW_VISION")){
+                channelId = TRIP_STARTED_TALKBACK;
+            }else {
+                channelId = notificationType;
+            }
+        } else if (CANCELLED_PRODUCT.equals(notificationType) || DRIVER_HAS_REACHED.equals(notificationType)) {
             channelId = notificationType;
-        } else {
-            System.out.println("showNotification:- " + notificationType);
+        } else if (TRIP_FINISHED.equals(notificationType) && disabilityName.equals("BLIND_LOW_VISION")){
+            channelId = TRIP_FINISHED;
+        }
+        else {
             channelId = FLOATING_NOTIFICATION;
         }
 
@@ -347,7 +358,7 @@ public class NotificationUtils {
                     .setChannelId(channelId);
         }
 
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
+       if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
             System.out.println("Default sound");
             Uri notificationSound;
             if (notificationType.equals(ALLOCATION_TYPE)) {
@@ -358,19 +369,21 @@ public class NotificationUtils {
             } else if (notificationType.equals(CANCELLED_PRODUCT) || notificationType.equals(REALLOCATE_PRODUCT)){
                 notificationSound = Uri.parse("android.resource://" + context.getPackageName() + "/" + R.raw.cancel_notification_sound);
                 mBuilder.setSound(notificationSound);
-             } else {
+             } else if (notificationType.equals(TRIP_FINISHED) && disabilityName.equals("BLIND_LOW_VISION")){
+                notificationSound = Uri.parse("android.resource://" + context.getPackageName() + "/" + R.raw.ride_completed_talkback);
+                mBuilder.setSound(notificationSound);
+            }else {
                 notificationSound = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
             }
             System.out.println("Default sound" + notificationSound);
-        }
+       }
         NotificationManagerCompat notificationManager = NotificationManagerCompat.from(context);
         System.out.println("In clean notification before notify");
 
         if (notificationType.equals(ALLOCATION_TYPE)) {
             System.out.println("In clean notification if");
         }
-        SharedPreferences sharedPref = context.getSharedPreferences(
-                context.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
+
                 
         if (TRIP_STARTED.equals(notificationType)) {
             if (key.equals("USER")) {
@@ -405,7 +418,14 @@ public class NotificationUtils {
             if (key.equals("DRIVER") && msg.contains("Customer had to cancel your ride")) {
                 startMediaPlayer(context, R.raw.ride_cancelled_media, true);
             } else {
-                startMediaPlayer(context, R.raw.cancel_notification_sound, false);
+                int cancellationSound = R.raw.cancel_notification_sound;
+                if (disabilityName.equals("BLIND_LOW_VISION"))
+                {  if (msg.contains("The driver had to cancel the ride"))
+                    cancellationSound = R.raw.ride_cancelled_by_driver;
+                    else
+                        cancellationSound = R.raw.you_have_cancelled_the_ride;
+                }
+                startMediaPlayer(context, cancellationSound, false);
             }
         }
         if (DRIVER_ASSIGNMENT.equals(notificationType)) {
@@ -416,6 +436,9 @@ public class NotificationUtils {
             }
             if (key.equals("DRIVER")) {
                 Utils.logEvent("driver_assigned", context);
+            }   else{
+                    if(disabilityName.equals("BLIND_LOW_VISION"))
+                        startMediaPlayer(context, R.raw.ride_assigned_talkback, true);
             }
         }
         notificationId++;
@@ -467,7 +490,6 @@ public class NotificationUtils {
                 }
                 NotificationChannel channel = new NotificationChannel(channel_Id, channel_Id, importance);
                 channel.setDescription(description);
-                System.out.println("Channel" + channel_Id);
                 if (channel_Id.equals(RINGING_CHANNEL_ID)) {
                     soundUri = Uri.parse("android.resource://" + context.getPackageName() + "/" + R.raw.allocation_request);
                 } else if (channel_Id.equals(TRIP_STARTED)) {
@@ -476,10 +498,13 @@ public class NotificationUtils {
                     soundUri = Uri.parse("android.resource://" + context.getPackageName() + "/" + R.raw.cancel_notification_sound);
                 } else if (channel_Id.equals(DRIVER_HAS_REACHED)) {
                     soundUri = Uri.parse("android.resource://" + context.getPackageName() + "/" + R.raw.driver_arrived);
+                } else if (channel_Id.equals(TRIP_FINISHED)) {
+                    soundUri = Uri.parse("android.resource://" + context.getPackageName() + "/" + R.raw.ride_completed_talkback);
+                } else if (channel_Id.equals(TRIP_STARTED_TALKBACK)){
+                    soundUri = Uri.parse("android.resource://" + context.getPackageName() + "/" + R.raw.ride_started_talkback);
                 } else {
                     soundUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
                 }
-                System.out.println("Channel" + soundUri);
                 AudioAttributes attributes = new AudioAttributes.Builder()
                         .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
                         .setUsage(AudioAttributes.USAGE_NOTIFICATION)

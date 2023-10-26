@@ -1584,7 +1584,11 @@ export const locateOnMap = (configObj) => {
       else
       return JBridge.locateOnMap(configObj.goToCurrentLocation, configObj.lat, configObj.lon, JSON.stringify(configObj.geoJson), JSON.stringify(configObj.points));
     } catch (e) {
-      return JBridge.locateOnMap(configObj.goToCurrentLocation, configObj.lat, configObj.lon);
+        try{
+          return JBridge.locateOnMap(configObj.goToCurrentLocation, configObj.lat, configObj.lon);
+        } catch (e) {
+            return JBridge.locateOnMap(configObj.goToCurrentLocation, configObj.lat, configObj.lon, configObj.zoomLevel);
+        }
     }
 };
 
@@ -2073,6 +2077,12 @@ export const setYoutubePlayer = function (json, viewId, videoStatus) {
     }
   }
 };
+
+export const pauseYoutubeVideo = function (unit){
+  if (JBridge.pauseYoutubeVideo) {
+    return JBridge.pauseYoutubeVideo();
+  }
+}
 
 export const supportsInbuildYoutubePlayer = function () {
   return JBridge.setYoutubePlayer ;

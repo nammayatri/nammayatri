@@ -437,6 +437,9 @@ currentFlowStatus = do
       void $ pure $ setCleverTapUserData "Identity" (getValueToLocalStore CUSTOMER_ID)
       void $ pure $ setCleverTapUserData "Phone" ("+91" <> (getValueToLocalStore MOBILE_NUMBER))
       setValueToLocalStore DISABILITY_UPDATED $ if (isNothing response.hasDisability) then "false" else "true"
+      case response.disability of
+        Just disabilityType -> setValueToLocalStore DISABILITY_NAME disabilityType 
+        Nothing -> pure unit
       setValueToLocalStore REFERRAL_STATUS  $ if response.hasTakenRide then "HAS_TAKEN_RIDE" else if (response.referralCode /= Nothing && not response.hasTakenRide) then "REFERRED_NOT_TAKEN_RIDE" else "NOT_REFERRED_NOT_TAKEN_RIDE"
       setValueToLocalStore HAS_TAKEN_FIRST_RIDE if response.hasTakenRide then "true" else "false"
       (PersonStatsRes resp) <- Remote.getPersonStatsBT ""

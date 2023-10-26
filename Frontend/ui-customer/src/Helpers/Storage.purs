@@ -80,6 +80,7 @@ data KeyStore
   | DISABILITY_POPUP_TRIGGERED
   | BUNDLE_TIME_OUT
   | NOTIFIED_CUSTOMER
+  | DISABILITY_NAME 
 
 derive instance genericKeyStore :: Generic KeyStore _
 

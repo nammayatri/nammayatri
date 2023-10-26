@@ -236,6 +236,7 @@ foreign import storeKeyBoardCallback :: forall action. EffectFn2 (action -> Effe
 foreign import scrollViewFocus :: String -> Int -> Boolean
 foreign import clearChatMessages :: Effect Unit
 foreign import getLocationPermissionStatus :: Fn1 Unit String 
+foreign import pauseYoutubeVideo :: Unit -> Unit 
 foreign import storeCallBackLocateOnMap :: forall action. (action -> Effect Unit) -> (String -> String -> String -> action) -> Effect Unit
 foreign import debounceFunction :: forall action. Int -> (action -> Effect Unit) -> (String -> Boolean -> action) -> Boolean -> Effect Unit
 foreign import updateInputString :: String -> Unit
