@@ -880,8 +880,8 @@ castDriverStatus = \case
 
 ---------------------------------------------------------------------
 
-fleetUnlinkVehicle :: ShortId DM.Merchant -> Text -> Text -> Id Common.Driver -> Flow APISuccess
-fleetUnlinkVehicle merchantShortId fleetOwnerId vehicleNo reqDriverId = do
+fleetUnlinkVehicle :: ShortId DM.Merchant -> Text -> Id Common.Driver -> Text -> Flow APISuccess
+fleetUnlinkVehicle merchantShortId fleetOwnerId reqDriverId vehicleNo = do
   merchant <- findMerchantByShortId merchantShortId
   let driverId = cast @Common.Driver @DP.Driver reqDriverId
   let personId = cast @Common.Driver @DP.Person reqDriverId

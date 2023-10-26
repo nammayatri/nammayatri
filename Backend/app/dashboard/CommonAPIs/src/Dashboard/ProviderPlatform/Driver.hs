@@ -730,8 +730,8 @@ data FleetDriversAPIEntity = FleetDriversAPIEntity
 -- unlink vehicle ---------------------------------------
 
 type FleetUnlinkVehicleAPI =
-  Capture "vehicleNo" Text
-    :> Capture "driverId" (Id Driver)
+  Capture "driverId" (Id Driver)
+    :> Capture "vehicleNo" Text
     :> "fleet"
     :> "unlink"
     :> Post '[JSON] APISuccess

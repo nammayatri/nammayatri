@@ -503,10 +503,10 @@ getAllDriverForFleet merchantShortId apiTokenInfo mbLimit mbOffset = withFlowHan
   checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
   Client.callDriverOfferBPP checkedMerchantId (.drivers.getAllDriverForFleet) apiTokenInfo.personId.getId mbLimit mbOffset
 
-fleetUnlinkVehicle :: ShortId DM.Merchant -> ApiTokenInfo -> Text -> Id Common.Driver -> FlowHandler APISuccess
-fleetUnlinkVehicle merchantShortId apiTokenInfo vehicleNo driverId = withFlowHandlerAPI $ do
+fleetUnlinkVehicle :: ShortId DM.Merchant -> ApiTokenInfo -> Id Common.Driver -> Text -> FlowHandler APISuccess
+fleetUnlinkVehicle merchantShortId apiTokenInfo driverId vehicleNo = withFlowHandlerAPI $ do
   checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
-  Client.callDriverOfferBPP checkedMerchantId (.drivers.fleetUnlinkVehicle) apiTokenInfo.personId.getId vehicleNo driverId
+  Client.callDriverOfferBPP checkedMerchantId (.drivers.fleetUnlinkVehicle) apiTokenInfo.personId.getId driverId vehicleNo
 
 fleetRemoveVehicle :: ShortId DM.Merchant -> ApiTokenInfo -> Text -> FlowHandler APISuccess
 fleetRemoveVehicle merchantShortId apiTokenInfo vehicleNo = withFlowHandlerAPI $ do

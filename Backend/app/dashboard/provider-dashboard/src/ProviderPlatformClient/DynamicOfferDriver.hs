@@ -96,7 +96,7 @@ data DriversAPIs = DriversAPIs
     addVehicleForFleet :: Text -> Maybe Text -> Text -> Driver.AddVehicleReq -> Euler.EulerClient APISuccess,
     getAllVehicleForFleet :: Text -> Maybe Int -> Maybe Int -> Euler.EulerClient Driver.ListVehicleRes,
     getAllDriverForFleet :: Text -> Maybe Int -> Maybe Int -> Euler.EulerClient Driver.FleetListDriverRes,
-    fleetUnlinkVehicle :: Text -> Text -> Id Driver.Driver -> Euler.EulerClient APISuccess,
+    fleetUnlinkVehicle :: Text -> Id Driver.Driver -> Text -> Euler.EulerClient APISuccess,
     fleetRemoveVehicle :: Text -> Text -> Euler.EulerClient APISuccess,
     fleetRemoveDriver :: Text -> Id Driver.Driver -> Euler.EulerClient APISuccess,
     fleetTotalEarning :: Text -> Euler.EulerClient Driver.FleetTotalEarningResponse,
