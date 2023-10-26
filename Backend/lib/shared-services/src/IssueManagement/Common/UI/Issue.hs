@@ -35,7 +35,7 @@ data IssueReportReq = IssueReportReq
     optionId :: Maybe (Id IssueOption),
     categoryId :: Id IssueCategory,
     description :: Text,
-    chats :: [Chat]
+    chats :: Maybe [Chat]
   }
   deriving (Generic, FromJSON, ToSchema, Show)
 

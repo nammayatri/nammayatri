@@ -312,8 +312,9 @@ createIssueReport (personId, merchantId) mbLanguage Common.IssueReportReq {..} i
   issueMessageTranslationList <- mapM (\messageId -> CQIM.findByIdAndLanguage messageId language identifier) issueConfig.onCreateIssueMsgs
   let messages = mkIssueMessageList $ sequence issueMessageTranslationList
   now <- getCurrentTime
+  let chats_ = fromMaybe [] chats
   let updatedChats =
-        chats
+        chats_
           ++ [ Chat
                  { chatId = "",
                    timestamp = now,
