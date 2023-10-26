@@ -14,8 +14,8 @@
 
 module Main (main) where
 
-import "kafka-consumers" App (startKafkaConsumer)
+import "kafka-consumers" App (startKafkaConsumers)
 import Prelude
 
 main :: IO ()
-main = startKafkaConsumer
+main = startKafkaConsumers

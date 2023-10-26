@@ -12,9 +12,10 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module App (startKafkaConsumer) where
+module App (startKafkaConsumers) where
 
 import qualified Consumer.Flow as CF
+import Control.Concurrent
 import Data.Function
 import Environment
 import EulerHS.Interpreters (runFlow)
@@ -27,15 +28,41 @@ import Kernel.Prelude
 import Kernel.Utils.Common hiding (id)
 import Kernel.Utils.Dhall (readDhallConfigDefault)
 import qualified Kernel.Utils.FlowLogging as L
-import System.Environment (lookupEnv)
+-- import Control.Concurrent.Supervisor
 
-startKafkaConsumer :: IO ()
-startKafkaConsumer = do
-  consumerType :: ConsumerType <- read . fromMaybe "AVAILABILITY_TIME" <$> lookupEnv "CONSUMER_TYPE"
+forkThread :: IO () -> IO (MVar ())
+forkThread proc = do
+  mVar <- newEmptyMVar
+  _ <- forkFinally proc (\_ -> putMVar mVar ())
+  return mVar
+
+runConsumer :: ConsumerType -> IO ()
+runConsumer consumerType = do
+  putStrLn (("Thread started" <> (show consumerType) <> "\n")::Text)
   configFile <- CF.getConfigNameFromConsumertype consumerType
   appCfg :: AppCfg <- readDhallConfigDefault configFile
   appEnv <- buildAppEnv appCfg consumerType
   startConsumerWithEnv appCfg appEnv
+  putStrLn ("Thread ended\n" :: Text)
+
+startKafkaConsumers :: IO ()
+startKafkaConsumers = do
+  let consumerTypes :: [ConsumerType] = [read "AVAILABILITY_TIME", read "BROADCAST_MESSAGE", read "PERSON_STATS"]
+  putStrLn ("Running consumers in thread" :: Text)
+  threads <- forM consumerTypes (\v -> forkThread (runConsumer v))
+  mapM_ takeMVar threads
+  return ()
+
+-- startKafkaConsumers :: IO ()
+-- startKafkaConsumers = do
+--   let consumerTypes :: [ConsumerType] = [read "AVAILABILITY_TIME", read "BROADCAST_MESSAGE", read "PERSON_STATS"]
+--   putStrLn ("Running consumers in thread" :: Text)
+--   supervisor <- newSupervisor
+--   forM_ consumerTypes $ \v -> do
+--     mVar <- forkThread (runConsumer v)
+--     superviseWith supervisor (Just v) mVar (const $ runConsumer v)
+--   waitForSupervisor supervisor
+--   return ()
 
 startConsumerWithEnv :: AppCfg -> AppEnv -> IO ()
 startConsumerWithEnv appCfg appEnv@AppEnv {..} = do
