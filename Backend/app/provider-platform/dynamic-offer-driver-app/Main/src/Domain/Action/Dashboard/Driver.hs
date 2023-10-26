@@ -891,8 +891,8 @@ castDriverStatus = \case
 
 ---------------------------------------------------------------------
 
-fleetUnlinkVehicle :: ShortId DM.Merchant -> Text -> Id Common.Driver -> Flow APISuccess
-fleetUnlinkVehicle merchantShortId fleetOwnerId reqDriverId = do
+fleetUnlinkVehicle :: ShortId DM.Merchant -> Text -> Id Common.Driver -> Text -> Flow APISuccess
+fleetUnlinkVehicle merchantShortId fleetOwnerId reqDriverId vehicleNo = do
   merchant <- findMerchantByShortId merchantShortId
   let driverId = cast @Common.Driver @DP.Driver reqDriverId
   let personId = cast @Common.Driver @DP.Person reqDriverId
@@ -909,6 +909,8 @@ fleetUnlinkVehicle merchantShortId fleetOwnerId reqDriverId = do
   DomainRC.deactivateCurrentRC personId
   QVehicle.deleteById personId
   QDriverInfo.updateEnabledVerifiedState driverId False False
+  rc <- RCQuery.findLastVehicleRCWrapper vehicleNo >>= fromMaybeM (RCNotFound vehicleNo)
+  _ <- QRCAssociation.endAssociationForRC personId rc.id
   logTagInfo "fleet -> unlinkVehicle : " (show personId)
   pure Success
 
