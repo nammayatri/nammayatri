@@ -105,7 +105,7 @@ mkFullfillment ::
   m RideFulfillment.FulfillmentInfo
 mkFullfillment mbDriver ride booking mbVehicle mbImage tags = do
   agent <-
-    flip mapM mbDriver $ \driver -> do
+    forM mbDriver $ \driver -> do
       let agentTags =
             [ Tags.TagGroup
                 { display = False,
@@ -212,7 +212,20 @@ buildOnUpdateMessage RideAssignedBuildReq {..} = do
         update_target = "order.fufillment.state.code, order.fulfillment.agent, order.fulfillment.vehicle" <> ", order.fulfillment.start.authorization" -- TODO :: Remove authorization for NormalBooking once Customer side code is decoupled.
       }
 buildOnUpdateMessage RideStartedBuildReq {..} = do
-  fulfillment <- mkFullfillment (Just driver) ride booking (Just vehicle) Nothing Nothing
+  odometerStartReading :: Maybe Centesimal <- case ride.rideDetails of
+    DetailsOnDemand _ -> pure Nothing
+    DetailsRental det -> pure det.odometerEndReading
+  let tagGroups =
+        [ Tags.TagGroup
+            { display = False,
+              code = "ride_distance_details",
+              name = "Ride Distance Details",
+              list =
+                [ Tags.Tag (Just False) (Just "odometer_start_reading") (Just "Odometer Start Reading") (show <$> odometerStartReading)
+                ]
+            }
+        ]
+  fulfillment <- mkFullfillment (Just driver) ride booking (Just vehicle) Nothing (Just $ Tags.TG tagGroups)
   return $
     OnUpdate.OnUpdateMessage
       { order =
@@ -227,6 +240,9 @@ buildOnUpdateMessage req@RideCompletedBuildReq {} = do
   chargeableDistance :: HighPrecMeters <-
     realToFrac <$> req.ride.chargeableDistance
       & fromMaybeM (InternalError "Ride chargeable distance is not present.")
+  odometerEndReading :: Maybe Centesimal <- case req.ride.rideDetails of
+    DetailsOnDemand _ -> pure Nothing
+    DetailsRental det -> pure det.odometerEndReading
   let traveledDistance :: HighPrecMeters = req.ride.traveledDistance
   let tagGroups =
         [ Tags.TagGroup
@@ -235,7 +251,8 @@ buildOnUpdateMessage req@RideCompletedBuildReq {} = do
               name = "Ride Distance Details",
               list =
                 [ Tags.Tag (Just False) (Just "chargeable_distance") (Just "Chargeable Distance") (Just $ show chargeableDistance),
-                  Tags.Tag (Just False) (Just "traveled_distance") (Just "Traveled Distance") (Just $ show traveledDistance)
+                  Tags.Tag (Just False) (Just "traveled_distance") (Just "Traveled Distance") (Just $ show traveledDistance),
+                  Tags.Tag (Just False) (Just "odometer_end_reading") (Just "Odometer End Reading") (show <$> odometerEndReading)
                 ]
             }
         ]

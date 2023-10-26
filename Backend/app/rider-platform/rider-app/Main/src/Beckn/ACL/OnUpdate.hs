@@ -84,10 +84,16 @@ parseEvent _ (OnUpdate.RideAssigned taEvent) = do
         vehicleModel = vehicle.model
       }
 parseEvent _ (OnUpdate.RideStarted rsEvent) = do
+  tagsGroup <- fromMaybeM (InvalidRequest "agent tags is not present in RideStarted Event.") rsEvent.fulfillment.tags
+  odometerStartReading :: Centesimal <-
+    fromMaybeM (InvalidRequest "odometer_start_reading is not present.") $
+      readMaybe . T.unpack
+        =<< getTag "ride_distance_details" "odometer_start_reading" tagsGroup
   return $
     DOnUpdate.RideStartedReq
       { bppBookingId = Id rsEvent.id,
-        bppRideId = Id rsEvent.fulfillment.id
+        bppRideId = Id rsEvent.fulfillment.id,
+        odometerStartReading = odometerStartReading
       }
 parseEvent _ (OnUpdate.RideCompleted rcEvent) = do
   tagsGroup <- fromMaybeM (InvalidRequest "agent tags is not present in RideCompleted Event.") rcEvent.fulfillment.tags
@@ -95,6 +101,10 @@ parseEvent _ (OnUpdate.RideCompleted rcEvent) = do
     fromMaybeM (InvalidRequest "chargeable_distance is not present.") $
       readMaybe . T.unpack
         =<< getTag "ride_distance_details" "chargeable_distance" tagsGroup
+  odometerEndReading :: Centesimal <-
+    fromMaybeM (InvalidRequest "odometer_end_reading is not present.") $
+      readMaybe . T.unpack
+        =<< getTag "ride_distance_details" "odometer_end_reading" tagsGroup
   traveledDistance :: HighPrecMeters <-
     fromMaybeM (InvalidRequest "traveled_distance is not present.") $
       readMaybe . T.unpack
@@ -107,6 +117,7 @@ parseEvent _ (OnUpdate.RideCompleted rcEvent) = do
         totalFare = roundToIntegral rcEvent.quote.price.computed_value,
         chargeableDistance = chargeableDistance,
         traveledDistance = traveledDistance,
+        odometerEndReading = odometerEndReading,
         fareBreakups = mkOnUpdateFareBreakup <$> rcEvent.quote.breakup,
         paymentUrl = rcEvent.payment >>= (.uri)
       }

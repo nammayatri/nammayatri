@@ -81,6 +81,7 @@ data OnUpdateReq
       }
   | RideStartedReq
       { bppBookingId :: Id SRB.BPPBooking,
+        odometerStartReading :: Centesimal,
         bppRideId :: Id SRide.BPPRide
       }
   | RideCompletedReq
@@ -91,6 +92,7 @@ data OnUpdateReq
         fareBreakups :: [OnUpdateFareBreakup],
         chargeableDistance :: HighPrecMeters,
         traveledDistance :: HighPrecMeters,
+        odometerEndReading :: Centesimal,
         paymentUrl :: Maybe Text
       }
   | BookingCancelledReq
@@ -139,6 +141,7 @@ data ValidatedOnUpdateReq
   | ValidatedRideStartedReq
       { bppBookingId :: Id SRB.BPPBooking,
         bppRideId :: Id SRide.BPPRide,
+        odometerStartReading :: Centesimal,
         booking :: SRB.Booking,
         ride :: SRide.Ride
       }
@@ -149,6 +152,7 @@ data ValidatedOnUpdateReq
         totalFare :: Money,
         fareBreakups :: [OnUpdateFareBreakup],
         chargeableDistance :: HighPrecMeters,
+        odometerEndReading :: Centesimal,
         booking :: SRB.Booking,
         ride :: SRide.Ride,
         person :: DP.Person,
@@ -289,6 +293,8 @@ onUpdate ValidatedRideAssignedReq {..} = do
             rideStartTime = Nothing,
             rideEndTime = Nothing,
             rideRating = Nothing,
+            odometerStartReading = Nothing,
+            odometerEndReading = Nothing,
             ..
           }
 onUpdate ValidatedRideStartedReq {..} = do
@@ -297,6 +303,7 @@ onUpdate ValidatedRideStartedReq {..} = do
   let updRideForStartReq =
         ride{status = SRide.INPROGRESS,
              rideStartTime = Just rideStartTime,
+             odometerStartReading = Just odometerStartReading,
              rideEndTime = Nothing
             }
   triggerRideStartedEvent RideEventData {ride = updRideForStartReq, personId = booking.riderId, merchantId = booking.merchantId}
@@ -316,6 +323,7 @@ onUpdate ValidatedRideCompletedReq {..} = do
              fare = Just fare,
              totalFare = Just totalFare,
              chargeableDistance = Just chargeableDistance,
+             odometerEndReading = Just odometerEndReading,
              rideEndTime = Just rideEndTime
             }
   breakups <- traverse (buildFareBreakup booking.id) fareBreakups

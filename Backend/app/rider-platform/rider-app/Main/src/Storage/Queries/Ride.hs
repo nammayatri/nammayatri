@@ -115,6 +115,8 @@ updateMultiple rideId ride = do
       Se.Set BeamR.chargeableDistance ride.chargeableDistance,
       Se.Set BeamR.rideStartTime ride.rideStartTime,
       Se.Set BeamR.rideEndTime ride.rideEndTime,
+      Se.Set BeamR.odometerStartReading ride.odometerStartReading,
+      Se.Set BeamR.odometerEndReading ride.odometerEndReading,
       Se.Set BeamR.updatedAt now
     ]
     [Se.Is BeamR.id (Se.Eq $ getId rideId)]
@@ -430,5 +432,7 @@ instance ToTType' BeamR.Ride Ride where
         BeamR.createdAt = createdAt,
         BeamR.updatedAt = updatedAt,
         BeamR.driverMobileCountryCode = driverMobileCountryCode,
-        BeamR.driverImage = driverImage
+        BeamR.driverImage = driverImage,
+        BeamR.odometerStartReading = odometerStartReading,
+        BeamR.odometerEndReading = odometerEndReading
       }
