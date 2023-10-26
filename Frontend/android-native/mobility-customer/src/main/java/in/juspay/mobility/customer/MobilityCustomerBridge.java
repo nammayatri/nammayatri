@@ -463,10 +463,6 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
               ExecutorManager.runOnMainThread(new Runnable() {
                 double x = 0.0;
                 double y = 0.0;
-                final JSONObject dottedLineConfig = locateOnMapConfig != null ? locateOnMapConfig.optJSONObject("dottedLineConfig") : null;
-                final String dottedLineColor = dottedLineConfig != null ? dottedLineConfig.optString("color", "#323643") : "#323643";
-                final double dottedLineRange = dottedLineConfig != null ? dottedLineConfig.optDouble("range", 100.0f) : 100.0f;
-                final boolean dottedLineVisible = dottedLineConfig != null && dottedLineConfig.optBoolean("visible", false);
                 @Override
                 public void run() {
                     try {
@@ -507,13 +503,6 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
                         e.printStackTrace();
                         e.printStackTrace();
                     }
-
-                    googleMap.setOnCameraMoveListener(new GoogleMap.OnCameraMoveListener() {
-                        @Override
-                        public void onCameraMove() {
-                            dottedLineFromCurrentPosition(googleMap.getCameraPosition().target.latitude, googleMap.getCameraPosition().target.longitude, dottedLineVisible, dottedLineRange, dottedLineColor);
-                        }
-                    });
                     
                     googleMap.setOnCameraMoveStartedListener(new GoogleMap.OnCameraMoveStartedListener() {
                         @Override

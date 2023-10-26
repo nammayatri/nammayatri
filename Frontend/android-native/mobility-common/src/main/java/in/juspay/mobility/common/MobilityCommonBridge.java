@@ -469,10 +469,6 @@ public class MobilityCommonBridge extends HyperBridge {
     @JavascriptInterface
     public void locateOnMap(boolean goToCurrentLocation, final String lat, final String lon, float zoomLevel) {
         try {
-            final JSONObject dottedLineConfig = locateOnMapConfig != null ? locateOnMapConfig.optJSONObject("dottedLineConfig") : null;
-            final String dottedLineColor = dottedLineConfig != null ? dottedLineConfig.optString("color", "#323643") : "#323643";
-            final double dottedLineRange = dottedLineConfig != null ? dottedLineConfig.optDouble("range", 100.0f) : 100.0f;
-            final boolean dottedLineVisible = dottedLineConfig != null && dottedLineConfig.optBoolean("visible", false);
             ExecutorManager.runOnMainThread(() -> {
                 removeMarker("ny_ic_customer_current_location");
                 LatLng position = new LatLng(0.0, 0.0);
@@ -490,13 +486,6 @@ public class MobilityCommonBridge extends HyperBridge {
                     googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(position, zoomLevel));
                     googleMap.moveCamera(CameraUpdateFactory.zoomTo(googleMap.getCameraPosition().zoom + 2.0f));
                 }
-
-                googleMap.setOnCameraMoveListener(new GoogleMap.OnCameraMoveListener() {
-                    @Override
-                    public void onCameraMove() {
-                        dottedLineFromCurrentPosition(googleMap.getCameraPosition().target.latitude, googleMap.getCameraPosition().target.longitude, dottedLineVisible, dottedLineRange, dottedLineColor);
-                    }
-                });
 
                 googleMap.setOnCameraIdleListener(() -> {
                     double lat1 = (googleMap.getCameraPosition().target.latitude);

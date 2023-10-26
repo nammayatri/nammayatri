@@ -845,7 +845,7 @@ eval BackPressed state = do
                                 if state.props.isSearchLocation == LocateOnMap then do
                                     _ <- pure $ exitLocateOnMap ""
                                     _ <- pure $ hideKeyboardOnNavigation true
-                                    continue state{props{isSearchLocation = SearchLocation}}
+                                    continue state{props{isSearchLocation = SearchLocation, locateOnMap = false}}
                                   else do
                                     if (getSearchType unit) == "direct_search" then
                                       pure $ terminateApp state.props.currentStage false
@@ -1080,7 +1080,7 @@ eval (SettingSideBarActionController (SettingSideBarController.LiveStatsDashboar
 eval (SearchLocationModelActionController (SearchLocationModelController.PrimaryButtonActionController PrimaryButtonController.OnClick)) state = do
   _ <- pure $ performHapticFeedback unit
   _ <- pure $ exitLocateOnMap ""
-  let newState = state{props{isSource = Just false, sourceSelectedOnMap = if (state.props.isSource == Just true) then true else state.props.sourceSelectedOnMap, isSearchLocation = SearchLocation, currentStage = SearchLocationModel, locateOnMap = false}}
+  let newState = state{props{isSource = Just false, isSearchLocation = SearchLocation, currentStage = SearchLocationModel, locateOnMap = false}}
   updateAndExit newState $ LocationSelected (fromMaybe dummyListItem state.data.selectedLocationListItem) false newState
 
 eval (PrimaryButtonActionController (PrimaryButtonController.OnClick)) state = do
@@ -1096,7 +1096,6 @@ eval (PrimaryButtonActionController (PrimaryButtonController.OnClick)) state = d
         _ <- pure $ updateLocalStage FindingEstimate
         let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_confirm_pickup"
         let updatedState = state{props{currentStage = FindingEstimate, locateOnMap = false}}
-        -- updateAndExit (updatedState) (UpdatedSource updatedState)
         updateAndExit updatedState $  (UpdatedSource updatedState)
       SettingPrice -> do
                         _ <- pure $ performHapticFeedback unit
@@ -1373,13 +1372,6 @@ eval (SearchLocationModelActionController (SearchLocationModelController.Locatio
   locationSelected item {tag = if condition then "" else item.tag, showDistance = Just false} true state{ props { sourceSelectedOnMap = if condition then false else state.props.sourceSelectedOnMap }, data { nearByDrivers = Nothing } }
 
 eval (ExitLocationSelected item addToRecents)state = exit $ LocationSelected item  addToRecents state
-
-eval (SearchLocationModelActionController (SearchLocationModelController.PrimaryButtonActionController  PrimaryButtonController.OnClick)) state =
-      case state.props.selectedQuote,(null state.data.quoteListModelState),(getValueToLocalStore LOCAL_STAGE) of
-                    Nothing, true, "SearchLocationModel"  -> exit $ LocationSelected (fromMaybe dummyListItem state.data.selectedLocationListItem) false state
-                    Just _ , false, _                     -> exit $ ConfirmRide state
-                    Nothing, true, "QuoteList"            -> exit $ GoToHome
-                    _,_,_                                 -> continue state
 
 eval (SearchLocationModelActionController (SearchLocationModelController.DebounceCallBack searchString isSource)) state = do
   if (STR.length searchString > 2) && (isSource == fromMaybe true state.props.isSource) then
