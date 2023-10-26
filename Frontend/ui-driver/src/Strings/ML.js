@@ -1,6 +1,6 @@
 const mlStrings = {
   INACCURATE_DATE_AND_TIME: "കൃത്യമല്ലാത്ത തീയതിയും സമയവും!",
-  ADJUST_YOUR_DEVICE_DATE_AND_TIME_AND_TRY_AGAIN: "നിങ്ങളുടെ ഉപകരണത്തിന്റെ തീയതിയും സമയവും ക്രമീകരിച്ച് വീണ്ടും ശ്രമിക്കുക",
+  ADJUST_YOUR_DEVICE_DATE_AND_TIME_AND_TRY_AGAIN: "നിങ്ങളുടെ സെറ്റിംഗ്സ് ആപ്പിൾ നിന്ന് ഓട്ടോമാറ്റിക് ഡേറ്റും ടൈമും സെറ്റ് ചെയ്യുക",
   THE_CURRENT_DATE_AND_TIME_IS: "നിലവിലെ തീയതിയും സമയവുമാണ്",
   GO_TO_SETTING: "ക്രമീകരണങ്ങളിലേക്ക് പോകുക",
   LETS_GET_STARTED: "ആരംഭിക്കുക",

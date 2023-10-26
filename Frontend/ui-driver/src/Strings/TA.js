@@ -1,6 +1,6 @@
 const tamilStrings = {
   INACCURATE_DATE_AND_TIME: "துல்லியமற்ற தேதி & நேரம்!",
-  ADJUST_YOUR_DEVICE_DATE_AND_TIME_AND_TRY_AGAIN: "உங்கள் மொபைல் தேதி மற்றும் நேரத்தை சரிசெய்து மீண்டும் முயற்சிக்கவும்",
+  ADJUST_YOUR_DEVICE_DATE_AND_TIME_AND_TRY_AGAIN: "உங்கள் அமைப்புகள் பயன்பாட்டிலிருந்து தானியங்கு (நெட்வொர்க் வழங்கிய) தேதி மற்றும் நேர அமைப்பைத் தேர்ந்தெடுக்கவும்.",
   THE_CURRENT_DATE_AND_TIME_IS: "தற்போதைய தேதி மற்றும் நேரம்",
   GO_TO_SETTING: "அமைப்புகளுக்குச் செல்லவும்",
   LETS_GET_STARTED: "ஆரம்பிக்கலாம்",

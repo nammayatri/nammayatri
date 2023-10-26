@@ -163,11 +163,15 @@ window.onPause = function () {
 window.onResume = function () {
   console.error("onEvent onResume");
   if (window.onResumeListeners && Array.isArray(window.onResumeListeners)) {
-    for (let i = 0; i < window.onResumeListeners.length;i++) {
-      window.onResumeListeners[i].call();
+    for (let i = 0; i < window.onResumeListeners.length; i++) {
+      try {
+        window.onResumeListeners[i].call();
+      } catch (err) {
+        console.error(err);
+      }
     }
   }
-  if(window.scrollAction) {
+  if (window.scrollAction) {
     window.scrollAction();
   }
 }
@@ -209,7 +213,7 @@ window["onEvent'"] = function (event, args) {
   console.log(event, args);
   if (event == "onBackPressed") {
     purescript.onEvent(event)();
-  }  else if (event == "onLocationChanged") {
+  } else if (event == "onLocationChanged") {
     purescript.onConnectivityEvent("LOCATION_DISABLED")();
   } else if (event == "onInternetChanged") {
     purescript.onConnectivityEvent("INTERNET_ACTION")();
@@ -219,16 +223,16 @@ window["onEvent'"] = function (event, args) {
   } else if (event == "onResume") {
     window.onResume();
     refreshFlow();
-  } else if(event == "onBundleUpdated"){
+  } else if (event == "onBundleUpdated") {
     purescript.onBundleUpdatedEvent(JSON.parse(args))();
-  // else if (event == "onTimeChanged") {
-  //   if(window.dateCallback != undefined) {
-  //     window.dateCallback();
-  //   } else {
-  //     purescript.onConnectivityEvent("CHECKING_DATE_TIME")();
-  //   }  -- Need To Refactor 
+  } else if (event == "onTimeChanged") {
+    if (window.dateCallback != undefined) {
+      window.dateCallback();
+    } else {
+      purescript.onConnectivityEvent("CHECK_NETWORK_TIME")();
+    }
   } else if ((event == "onKeyboardOpen" || event == "onKeyboardClose") && window.keyBoardCallback) {
-      window.keyBoardCallback(event);
+    window.keyBoardCallback(event);
   }
 }
 window["onEvent"] = function (jsonPayload, args, callback) { // onEvent from hyperPay

@@ -18,7 +18,7 @@ module Screens.AppUpdatePopUpScreen.Controller where
 import Prelude (Unit, pure, unit, class Show, bind)
 
 import Effect (Effect)
-import PrestoDOM (Eval, Props, exit, continue)
+import PrestoDOM (Eval, Props, exit, continue, continueWithCmd)
 import Prelude (($))
 import PrestoDOM.Types.Core (class Loggable)
 import Screens.Types (AppUpdatePopUpScreenState)
@@ -29,8 +29,9 @@ import Components.PrimaryButton.Controller as PrimaryButtonController
 import JBridge as JB
 import Components.PrimaryButton as PrimaryButton
 import Storage (KeyStore(..), setValueToLocalStore)
+import Effect.Uncurried (runEffectFn1)
 
-data ScreenOutput = Decline | Accept | DateAndTime
+data ScreenOutput = Decline | Accept | Exit
 
 instance showAction :: Show Action where
   show _ = ""
@@ -41,17 +42,20 @@ instance loggableAction :: Loggable Action where
     OnCloseClick -> trackAppActionClick appId (getScreen APP_UPDATE_POPUP_SCREEN) "in_screen" "on_close_click"
     OnAccept -> trackAppActionClick appId (getScreen APP_UPDATE_POPUP_SCREEN) "in_screen" "on_accept_click"
     BackPressed -> trackAppActionClick appId (getScreen APP_UPDATE_POPUP_SCREEN) "in_screen" "on_accept_click"
-    DateCallBack -> trackAppActionClick appId (getScreen APP_UPDATE_POPUP_SCREEN) "in_screen" "on_accept_click"
+    OnResumeCallBack -> trackAppActionClick appId (getScreen APP_UPDATE_POPUP_SCREEN) "in_screen" "on_accept_click"
     PrimaryButtonActionController action-> trackAppActionClick appId (getScreen APP_UPDATE_POPUP_SCREEN) "in_screen" "on_accept_click"
     AppUpdatedModelAction action-> trackAppActionClick appId (getScreen APP_UPDATE_POPUP_SCREEN) "in_screen" "on_popupmodal_click"
-    
+    _ -> pure unit
+
 data Action = OnCloseClick
             | OnAccept
             | AfterRender
             | BackPressed
-            | DateCallBack
+            | OnResumeCallBack
             | PrimaryButtonActionController PrimaryButtonController.Action
             | AppUpdatedModelAction PopUpModal.Action
+            | NoAction
+            | ExitScreen
 
 
 eval :: Action -> AppUpdatePopUpScreenState -> Eval Action ScreenOutput AppUpdatePopUpScreenState
@@ -59,17 +63,30 @@ eval OnCloseClick state = do
     exit Decline 
 eval OnAccept state = do 
     exit Accept 
-eval (PrimaryButtonActionController (PrimaryButton.OnClick)) state = do 
-  _ <- pure $ JB.launchDateSettings ""
-  _ <- pure $ setValueToLocalStore LAUNCH_DATE_SETTING "true"
-  continue state
+eval (PrimaryButtonActionController (PrimaryButton.OnClick)) state = do
+  continueWithCmd state [do
+    isEnabled <- runEffectFn1 JB.isNetworkTimeEnabled unit
+    if isEnabled then do
+      pure OnResumeCallBack
+    else do
+      _ <- pure $ JB.launchDateSettings ""
+      pure NoAction
+    ]
+
+
 eval BackPressed state = do 
   _ <- pure $ JB.minimizeApp ""
   continue state
-eval DateCallBack state = do
-    exit DateAndTime
+eval OnResumeCallBack state = do
+  continueWithCmd state [do
+    isEnabled <- runEffectFn1 JB.isNetworkTimeEnabled unit
+    if isEnabled then do
+      pure ExitScreen
+    else pure NoAction
+    ]
 eval (AppUpdatedModelAction (PopUpModal.OnButton1Click)) state = exit Decline
 eval (AppUpdatedModelAction (PopUpModal.OnButton2Click)) state = exit Accept
+eval ExitScreen state = exit Exit
 eval _ state = continue state
 
 overrides :: String -> (Action -> Effect Unit) -> AppUpdatePopUpScreenState -> Props (Effect Unit)

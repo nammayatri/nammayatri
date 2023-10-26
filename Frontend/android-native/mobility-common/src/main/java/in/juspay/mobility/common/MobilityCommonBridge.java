@@ -163,6 +163,8 @@ import java.util.TimeZone;
 
 
 import in.juspay.hyper.bridge.HyperBridge;
+import in.juspay.hyper.constants.LogCategory;
+import in.juspay.hyper.constants.LogSubCategory;
 import in.juspay.hyper.core.BridgeComponents;
 import in.juspay.hyper.core.ExecutorManager;
 import in.juspay.hyper.core.JsCallback;
@@ -208,6 +210,7 @@ public class MobilityCommonBridge extends HyperBridge {
     protected String OVERRIDE = "OVERRIDE";
     protected String CALLBACK = "CALLBACK";
     protected  String NOTIFICATION = "NOTIFICATION";
+    protected  String LOG_TAG = MobilityCommonBridge.class.getSimpleName();
     protected String phoneNumber;
     protected String invoice;
     CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
@@ -1620,6 +1623,22 @@ public class MobilityCommonBridge extends HyperBridge {
             }
         });
     }
+
+    @JavascriptInterface
+    public boolean isNetworkTimeEnabled() {
+        try{
+            String timeSettings = android.provider.Settings.Global.getString(
+                    bridgeComponents.getContext().getContentResolver(),
+                    android.provider.Settings.Global.AUTO_TIME);
+            if (timeSettings != null) {
+                return timeSettings.equals("1");
+            }
+            return true;
+        } catch (Exception e) {
+            bridgeComponents.getTrackerInterface().trackAndLogException(LOG_TAG, LogCategory.ACTION, LogSubCategory.Action.USER, UTILS, "Exception in isNetworkTimeEnabled", e);
+            return true;
+        }
+    }
     //endregion
 
     // region OTHER UTILS
@@ -2330,7 +2349,7 @@ public class MobilityCommonBridge extends HyperBridge {
         public static final String ZOOM = "ZOOM";
     }
 
-    public static enum MarkerType {
+    public enum MarkerType {
         SPECIAL_ZONE_MARKER,
         NORMAL_MARKER
     }

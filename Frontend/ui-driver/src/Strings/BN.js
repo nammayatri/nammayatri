@@ -1,6 +1,6 @@
 const bengaliStrings = {
   INACCURATE_DATE_AND_TIME: "ভুল তারিখ ও সময়!",
-  ADJUST_YOUR_DEVICE_DATE_AND_TIME_AND_TRY_AGAIN: "আপনার ডিভাইসের তারিখ এবং সময় সামঞ্জস্য করুন এবং আবার চেষ্টা করুন",
+  ADJUST_YOUR_DEVICE_DATE_AND_TIME_AND_TRY_AGAIN: "আপনার সেটিংস অ্যাপ থেকে স্বয়ংক্রিয় (নেটওয়ার্ক-প্রদত্ত) তারিখ এবং সময় সেট করুন।",
   THE_CURRENT_DATE_AND_TIME_IS: "বর্তমান তারিখ এবং সময় হল",
   GO_TO_SETTING: "সেটিংস এ যান",
   LETS_GET_STARTED: "চল শুরু করি",

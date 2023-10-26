@@ -413,7 +413,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
     private void showRR(JSONObject entity_payload, JSONObject payload){
         SharedPreferences sharedPref = getApplicationContext().getSharedPreferences(this.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
         sharedPref.edit().putString(getString(R.string.RIDE_STATUS), getString(R.string.NEW_RIDE_AVAILABLE)).apply();
-        if (sharedPref.getString("DRIVER_STATUS_N", "null").equals("Silent") && (sharedPref.getString("ACTIVITY_STATUS", "null").equals("onPause") || sharedPref.getString("ACTIVITY_STATUS", "null").equals("onDestroy")) || sharedPref.getString("IS_VALID_TIME","true").equals("false")) {
+        if (sharedPref.getString("DRIVER_STATUS_N", "null").equals("Silent") && (sharedPref.getString("ACTIVITY_STATUS", "null").equals("onPause") || sharedPref.getString("ACTIVITY_STATUS", "null").equals("onDestroy"))) {
             startWidgetService(null, payload, entity_payload);
         } else {
             NotificationUtils.showAllocationNotification(this, payload, entity_payload);

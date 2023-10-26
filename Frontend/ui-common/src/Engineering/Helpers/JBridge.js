@@ -1392,6 +1392,20 @@ export const storeCallBackDriverLocationPermission = function (cb) {
   }
 }
 
+export const storeOnResumeCallback = function (cb, action) {
+  try {
+    const callback = function () {
+      cb(action)();
+    }
+    console.log ("onResumeListeners",callback);
+    if (window.onResumeListeners) {
+      window.onResumeListeners.push(callback);
+    }
+  } catch (error) {
+    console.log("Error occurred in storeOnResumeCallback ------", error);
+  }
+}
+
 export const storeCallBackInternetAction = function (cb) {
   return function (action) {
     return function () {
@@ -2126,4 +2140,10 @@ export const debounceFunction = function (delay) {
 export const updateInputString = function (a) {
   console.log("UPDATED STRING " + a);
   inputForDebounce = a;
+}
+export const isNetworkTimeEnabled = function () {
+  if (JBridge.isNetworkTimeEnabled) {
+    return JBridge.isNetworkTimeEnabled();
+  }
+  return true;
 }

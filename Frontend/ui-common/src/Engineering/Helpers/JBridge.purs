@@ -241,6 +241,8 @@ foreign import debounceFunction :: forall action. Int -> (action -> Effect Unit)
 foreign import updateInputString :: String -> Unit
 foreign import supportsInbuildYoutubePlayer :: Unit -> Boolean 
 foreign import addCarouselWithVideoExists :: Unit -> Boolean
+foreign import isNetworkTimeEnabled :: EffectFn1 Unit Boolean
+foreign import storeOnResumeCallback :: forall action. Fn2 (action -> Effect Unit) action Unit
 
 type LottieAnimationConfig = {
     rawJson :: String
