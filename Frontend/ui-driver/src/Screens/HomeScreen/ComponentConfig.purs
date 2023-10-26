@@ -705,7 +705,10 @@ waitTimeInfoCardConfig _ = let
 
 makePaymentState :: ST.HomeScreenState -> MakePaymentModal.MakePaymentModalState
 makePaymentState state = 
-  let payableAndGST = EHC.formatCurrencyWithCommas (show state.data.paymentState.payableAndGST) in {
+  let payableAndGST = EHC.formatCurrencyWithCommas (show state.data.paymentState.payableAndGST)
+      useTimeRange = (state.data.config.subscriptionConfig.showLaterButtonforTimeRange && not JB.withinTimeRange "14:00:00" "10:00:00" (EHC.convertUTCtoISC(EHC.getCurrentUTC "") "HH:mm:ss"))
+  in 
+  {
     title : getString GREAT_JOB,
     description : getDescription state,
     description2 : getString COMPLETE_PAYMENT_TO_CONTINUE,
@@ -717,8 +720,7 @@ makePaymentState state =
                           "BN_IN" -> "এখন " <> payableAndGST <> " পে করুন"
                           _       -> "Pay ₹" <> payableAndGST <> " now"
                       ),
-    cancelButtonText : if (JB.withinTimeRange "14:00:00" "10:00:00" (EHC.convertUTCtoISC(EHC.getCurrentUTC "") "HH:mm:ss")
-                            && not state.data.paymentState.laterButtonVisibility) then Nothing else Just $ getString LATER,
+    cancelButtonText : if useTimeRange || state.data.paymentState.laterButtonVisibility then Just $ getString LATER else Nothing,
     ridesCount : state.data.paymentState.rideCount,
     feeItem : [
       { feeType : MakePaymentModal.TOTAL_COLLECTED,

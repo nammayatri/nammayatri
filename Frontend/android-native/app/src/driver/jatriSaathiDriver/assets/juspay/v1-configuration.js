@@ -14,7 +14,6 @@ window.getMerchantConfig = function () {
     "gradient": [],
     "addFavouriteScreenBackArrow" : "ny_ic_chevron_left_white,https://assets.juspay.in/nammayatri/images/user/ny_ic_chevron_left_white.png",
     "popupBackground" : "#FFFFFF",
-    "addFavouriteScreenBackArrow" : "ny_ic_chevron_left_white,https://assets.juspay.in/nammayatri/images/user/ny_ic_chevron_left_white.png",
     "apiLoaderLottie": "primary_button_loader.json",
     "primaryTextColor": "#FCC32C",
     "primaryBackground": "#2C2F3A",
@@ -22,20 +21,20 @@ window.getMerchantConfig = function () {
     "imageUploadOptional" : true,
     "clientName" : "Yatri Sathi",
     "languageList": [{
-        "name": "English",
-        "value": "EN_US",
-        "subtitle": "ইংরেজি"
-      },
-      {
-        "name": "বাংলা",
-        "value": "BN_IN",
-        "subtitle": "Bengali"
-      },
-      {
-        "name": "हिंदी",
-        "value": "HI_IN",
-        "subtitle": "Hindi"
-      }
+      "name": "English",
+      "value": "EN_US",
+      "subtitle": "ইংরেজি"
+    },
+    {
+      "name": "বাংলা",
+      "value": "BN_IN",
+      "subtitle": "Bengali"
+    },
+    {
+      "name": "हिंदी",
+      "value": "HI_IN",
+      "subtitle": "Hindi"
+    }
     ],
     "engilshInNative" : "ইংরেজি",
     "englishStrings": {
@@ -88,7 +87,7 @@ window.getMerchantConfig = function () {
     , "defaultLanguage" : "EN_US"
     , "navigationAppConfig" : {
       "query" : "google.navigation:q=%f,%f"
-    , "packageName" : "com.google.android.apps.maps"
+      , "packageName" : "com.google.android.apps.maps"
     }
     , "subscriptionConfig" : {
       "completePaymentPopup" : true,
@@ -101,11 +100,11 @@ window.getMerchantConfig = function () {
       },
       "offerBannerConfig" : {
         "showDUOfferBanner" : true,
-        "offerBannerValidTill" : "2023-11-01T00:00:00",
+        "offerBannerValidTill" : "2023-11-16T00:00:00",
         "offerBannerDeadline" : "Jan 1-31-*$*-ಜನವರಿ 1-31-*$*-1-31 जनवरी-*$*-ஜனவரி 1-31-*$*-জানুয়ারী 1-31",
         "offerBannerPlans" : ["25ade579-fd9c-4288-a015-337af085e66c"],
       },
-      "gradientConfig" : [{"id" : "c1a27b2c-8287-4d79-a5d9-99e1a0026203", colors : ["#29FF4D35", "#29FFE588"]}]
+      "gradientConfig" : [{"id" : "c1a27b2c-8287-4d79-a5d9-99e1a0026203", colors : ["#29FF4D35", "#29FFE588"]},{"id" : "5eed42c1-2388-4a86-b68b-d9da2f674091", colors : ["#29FF4D35", "#29FFE588"]}]
     } 
     , "OTP_MESSAGE_REGEX" : "is your OTP for login to [A-Za-z]+ [A-Za-z]+ [A-Za-z]+"
     , "autoPayBanner" : false
@@ -117,10 +116,10 @@ window.getMerchantConfig = function () {
       "aadharVerificationRequired" : true
     } 
     , "bottomNavConfig" : {
-          "subscription" : 
+      "subscription" : 
             { "isVisible" : true,
               "showNew" : true
             }
-        }
+    }
   })
 }

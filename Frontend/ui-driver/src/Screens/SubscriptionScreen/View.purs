@@ -103,6 +103,7 @@ loadData push loadPlans loadAlternatePlans loadMyPlans loadHelpCentre errorActio
     (GetDriverInfoResp driverInfo) <- getDriverInfoDataFromCache globalProp.driverInformation
     if isJust driverInfo.autoPayStatus then do 
       currentPlan <- Remote.getCurrentPlan ""
+      _ <- pure $ setValueToLocalStore TIMES_OPENED_NEW_SUBSCRIPTION "5"
       case currentPlan of
         Right resp -> doAff do liftEffect $ push $ loadMyPlans resp
         Left err -> doAff do liftEffect $ push $ errorAction err
@@ -117,7 +118,9 @@ loadData push loadPlans loadAlternatePlans loadMyPlans loadHelpCentre errorActio
               case uiPlans of
                 Right plansResp -> doAff do liftEffect $ push $ loadPlans plansResp
                 Left err -> doAff do liftEffect $ push $ errorAction err
-            Just _ -> doAff do liftEffect $ push $ loadMyPlans resp'
+            Just _ -> do
+                _ <- pure $ setValueToLocalStore TIMES_OPENED_NEW_SUBSCRIPTION "5"
+                doAff do liftEffect $ push $ loadMyPlans resp'
         Left err -> doAff do liftEffect $ push $ errorAction err
   else if (state.props.subView == FindHelpCentre) then do
     locations <- Remote.getKioskLocations ""

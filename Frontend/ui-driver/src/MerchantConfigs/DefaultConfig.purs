@@ -25,6 +25,7 @@ config =
   , subscriptionConfig : {
     enableBlocking : false,
     completePaymentPopup : false,
+    showLaterButtonforTimeRange : false,
     onBoardingSubscription : false,
     offerBannerConfig : {
       showDUOfferBanner : false,
