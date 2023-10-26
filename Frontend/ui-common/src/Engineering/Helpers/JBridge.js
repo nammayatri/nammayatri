@@ -642,15 +642,14 @@ export const updateRouteMarker = function (data) {
 
 export const updateRoute = (configObj) => {
   if (window.JBridge.updateRoute) {
-    try {
-      return window.JBridge.updateRoute(JSON.stringify(configObj));
-    } catch (err) {
       try {
-        return window.JBridge.updateRoute(configObj.json, configObj.destMarker, configObj.eta, configObj.srcMarker, JSON.stringify(configObj.specialLocation), configObj.zoomLevel);
+        if (methodArgumentCount("updateRoute") == 1)
+        return window.JBridge.updateRoute(JSON.stringify(configObj));
+        else
+        return window.JBridge.updateRoute(JSON.stringify(configObj.json), configObj.destMarker, configObj.eta, configObj.srcMarker, JSON.stringify(configObj.specialLocation), configObj.zoomLevel);
       } catch (e) {
-        return window.JBridge.updateRoute(configObj.json, configObj.destMarker, configObj.eta, JSON.stringify(configObj.specialLocation));
+        return window.JBridge.updateRoute(JSON.stringify(configObj.json), configObj.destMarker, configObj.eta, configObj.srcMarker, JSON.stringify(configObj.specialLocation));
       }
-    }
   }
 };
 
@@ -1579,16 +1578,14 @@ export const showKeyboard = function (id) {
 }
 
 export const locateOnMap = (configObj) => {
-  try {
-    console.log(JSON.stringify(configObj))
-    return JBridge.locateOnMap(JSON.stringify(configObj));
-  } catch (err) {
     try {
-      return JBridge.locateOnMap(configObj.goToCurrentLocation, configObj.lat, configObj.lon, configObj.geoJson, JSON.stringify(configObj.points));
+      if (methodArgumentCount("locateOnMap") == 1)
+      return JBridge.locateOnMap(JSON.stringify(configObj));
+      else
+      return JBridge.locateOnMap(configObj.goToCurrentLocation, configObj.lat, configObj.lon, JSON.stringify(configObj.geoJson), JSON.stringify(configObj.points));
     } catch (e) {
       return JBridge.locateOnMap(configObj.goToCurrentLocation, configObj.lat, configObj.lon);
     }
-  }
 };
 
 export const exitLocateOnMap = function (str) {
@@ -2093,8 +2090,8 @@ export const addCarousel = function (carouselModalJson, id) {
     return JBridge.addCarouselWithVideo(carouselJson, id);
   }
   else if(JBridge.addCarousel){
-    const modifiedArray = originalArray.map(item => JSON.stringify({ image : item.imageConfig.image , title : item.titleConfig.text , description : item.descriptionConfig.text }));
-    return JBridge.addCarousel(modifiedArray, id);
+    const modifiedArray = originalArray.map(item => ({ image : item.imageConfig.image , title : item.titleConfig.text , description : item.descriptionConfig.text }));
+    return JBridge.addCarousel(JSON.stringify(modifiedArray), id);
   }
 };
 
