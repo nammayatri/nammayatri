@@ -171,7 +171,6 @@ foreign import clearCountDownTimer :: String -> Unit
 foreign import contactPermission :: Unit -> Effect Unit
 foreign import performHapticFeedback :: Unit -> Effect Unit
 foreign import adjustViewWithKeyboard :: String -> Effect Unit
-foreign import storeOnResumeCallback :: forall action. (action -> Effect Unit) -> action -> Effect Unit
 
 foreign import getMobileNumber :: EffectFn2 String String String
 

@@ -370,23 +370,6 @@ export const performHapticFeedback = function () {
   }
 }
 
-export const storeOnResumeCallback = function (cb) {
-  return function (action) {
-    return function () {
-      try {
-        const callback = function () {
-          cb(action)();
-        }
-        if (window.onResumeListeners){
-          window.onResumeListeners.push(callback);
-        }
-      }
-      catch (error) {
-        console.log("Error occurred in storeOnResumeCallback ------", error);
-      }
-    }
-  }
-}
 
 export const drawPolygon = function(geoJson) {
   return function (locationName) {

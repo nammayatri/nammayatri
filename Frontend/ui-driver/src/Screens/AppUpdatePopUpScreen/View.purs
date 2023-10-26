@@ -57,7 +57,8 @@ screen initialState =
       let _ = spy "AppUpdatePopUpScreen--------action" action
       eval state action)
   , globalEvents : [(\push -> do
-      pure $ pure $ runFn2 JB.dateCallback push DateCallBack
+      _ <- pure $ runFn2 JB.dateCallback push OnResumeCallBack
+      pure $ pure $ runFn2 JB.storeOnResumeCallback push OnResumeCallBack
     )]
   }
 

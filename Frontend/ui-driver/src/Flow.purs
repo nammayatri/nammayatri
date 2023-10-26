@@ -120,7 +120,7 @@ baseAppFlow :: Boolean -> Maybe Event -> FlowBT String Unit
 baseAppFlow baseFlow event = do
     versionCode <- lift $ lift $ liftFlow $ getVersionCode
     checkVersion versionCode
-    -- checkDateAndTime -- Need To Refactor
+    checkTimeSettings
     cacheAppParameters versionCode baseFlow
     void $ lift $ lift $ liftFlow $ initiateLocationServiceClient
     when baseFlow $ lift $ lift $ initUI
@@ -200,30 +200,16 @@ appUpdatedFlow payload = do
       lift $ lift $ doAff do liftEffect reboot
     Later -> pure unit
 
-checkDateAndTime :: FlowBT String Unit
-checkDateAndTime = do
-  _ <- pure $ setValueToLocalStore LAUNCH_DATE_SETTING "false"
-  (CurrentDateAndTimeRes current)  <- Remote.currentDateAndTimeBT ""
-  if(current == {timestamp : Nothing}) then pure unit
+checkTimeSettings :: FlowBT String Unit
+checkTimeSettings = do
+  isEnabled <- liftFlowBT $ runEffectFn1 JB.isNetworkTimeEnabled unit
+  if isEnabled then do
+    liftFlowBT $ unregisterDateAndTime
   else do
-    let currentTimeStamp = current.timestamp
-    let deviceDateTimeStamp = getCurrentTimeStamp unit
-    let timeDiff = (((fromMaybe ( toNumber 0) currentTimeStamp )) - deviceDateTimeStamp)
-    let timeDiffInMins = (timeDiff) / toNumber (1000)
-    let absTimeDiff = if timeDiffInMins < toNumber 0 then timeDiffInMins * toNumber (-1) else timeDiffInMins
-    if (absTimeDiff < toNumber 10 ) then do
-      setValueToLocalStore IS_VALID_TIME "true"
-      liftFlowBT $ unregisterDateAndTime
-      liftFlowBT $ stopLocationPollingAPI
-      liftFlowBT $ startLocationPollingAPI
-    else
-      when (absTimeDiff >= toNumber 10 ) do
-        _ <- pure $ setValueToLocalStore LAUNCH_DATE_SETTING "true"
-        setValueToLocalStore IS_VALID_TIME "false"
-        modifyScreenState $ AppUpdatePopUpScreenType (\appUpdatePopUpScreenState -> appUpdatePopUpScreenState { updatePopup =DateAndTime })
-        lift $ lift $ doAff do liftEffect hideSplash
-        _ <- UI.handleAppUpdatePopUp
-        checkDateAndTime
+    modifyScreenState $ AppUpdatePopUpScreenType (\appUpdatePopUpScreenState -> appUpdatePopUpScreenState { updatePopup =DateAndTime })
+    lift $ lift $ doAff do liftEffect hideSplash
+    _ <- UI.handleAppUpdatePopUp
+    checkTimeSettings
 
 getLatestAndroidVersion :: Merchant -> Int
 getLatestAndroidVersion merchant =

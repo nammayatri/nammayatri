@@ -1,6 +1,6 @@
 const hindiStrings = {
   INACCURATE_DATE_AND_TIME: "गलत दिनांक और समय!",
-  ADJUST_YOUR_DEVICE_DATE_AND_TIME_AND_TRY_AGAIN: "अपनी डिवाइस की तारीख और समय समायोजित करें और पुनः प्रयास करें",
+  ADJUST_YOUR_DEVICE_DATE_AND_TIME_AND_TRY_AGAIN: "कृपया अपने सेटिंग ऐप से दिनांक और समय को स्वचालित (नेटवर्क-प्रदत्त) पर सेट करें।",
   THE_CURRENT_DATE_AND_TIME_IS: "वर्तमान दिनांक और समय है",
   GO_TO_SETTING: "सेटिंग्स में जाओ",
   LETS_GET_STARTED: "चलिए शुरू करते हैं",

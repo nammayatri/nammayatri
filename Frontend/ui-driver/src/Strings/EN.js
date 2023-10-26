@@ -1,6 +1,6 @@
 const englishStrings = {
   INACCURATE_DATE_AND_TIME: "Inaccurate Date & Time!",
-  ADJUST_YOUR_DEVICE_DATE_AND_TIME_AND_TRY_AGAIN: "Adjust your device date and time and try again",
+  ADJUST_YOUR_DEVICE_DATE_AND_TIME_AND_TRY_AGAIN: "Please set date and time to automatic (network-provided) from your settings app.",
   THE_CURRENT_DATE_AND_TIME_IS: "The current date and time is",
   GO_TO_SETTING: "Go to Settings",
   LETS_GET_STARTED: "Let's get started",

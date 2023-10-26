@@ -632,14 +632,11 @@ public class LocationUpdateService extends Service {
                 executorLocUpdate.execute(() -> {
                     Log.d(LOG_TAG, "DriverUpdateLoc Executor Executed");
                     Map<String, String> baseHeaders = callAPIHandler.getBaseHeaders(context);
-
-                    String isValidTime = sharedPref.getString("IS_VALID_TIME", "true");
-
                     String baseUrl = sharedPref.getString("BASE_URL", "null");
                     String orderUrl = baseUrl + "/driver/location";
                     String result = null;
 
-                    if (baseHeaders.containsKey("token") && !Objects.equals(baseHeaders.get("token"), "__failed") && isValidTime.equals("true")) {
+                    if (baseHeaders.containsKey("token") && !Objects.equals(baseHeaders.get("token"), "__failed")) {
                         Log.d(LOG_TAG, "DriverUpdateLoc TOKEN | ValidTime Passed");
                         baseHeaders.put("source", log);
                         String merchantId = getValueFromStorage("MERCHANT_ID");
@@ -853,12 +850,9 @@ public class LocationUpdateService extends Service {
                     Date locTime = new Date(locTimeMilliSeconds);
                     String thisLocationTimeStamp = sdf.format(locTime);
                     SharedPreferences sharedPref = context.getSharedPreferences(context.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
-                    String isValidTime = sharedPref.getString("IS_VALID_TIME", "true");
-                    if (isValidTime.equals("true")) {
-                        updateStorage("LAST_KNOWN_LAT", String.valueOf(lastLatitudeValue));
-                        updateStorage("LAST_KNOWN_LON", String.valueOf(lastLongitudeValue));
-                        callDriverCurrentLocationAPI(lastLocation, thisLocationTimeStamp, "fused_location_callback", LocationSource.LastLocation.toString(), TriggerFunction.GoogleCallback.toString());
-                    }
+                    updateStorage("LAST_KNOWN_LAT", String.valueOf(lastLatitudeValue));
+                    updateStorage("LAST_KNOWN_LON", String.valueOf(lastLongitudeValue));
+                    callDriverCurrentLocationAPI(lastLocation, thisLocationTimeStamp, "fused_location_callback", LocationSource.LastLocation.toString(), TriggerFunction.GoogleCallback.toString());
                     prevLat = lastLatitudeValue;
                     prevLon = lastLongitudeValue;
                 }
@@ -922,12 +916,9 @@ public class LocationUpdateService extends Service {
                                         Date locTime = new Date(locTimeMilliSeconds);
                                         String thisLocationTimeStamp = sdf.format(locTime);
                                         SharedPreferences sharedPref = context.getSharedPreferences(context.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
-                                        String isValidTime = sharedPref.getString("IS_VALID_TIME", "true");
-                                        if (isValidTime.equals("true")) {
                                             updateStorage("LAST_KNOWN_LAT", String.valueOf(lastLatitudeValue));
                                             updateStorage("LAST_KNOWN_LON", String.valueOf(lastLongitudeValue));
                                             callDriverCurrentLocationAPI(location, thisLocationTimeStamp, "timer_task", LocationSource.CurrentLocation.toString(), TriggerFunction.TimerTask.toString());
-                                        }
                                     } else {
                                         System.out.println("LOCATION_UPDATE: CURRENT LOCATION IS NULL");
                                         callDriverCurrentLocationAPI(location, sdf.format(new Date()), "timer_task_null_location", LocationSource.CurrentLocation.toString(), TriggerFunction.TimerTask.toString());
@@ -939,8 +930,7 @@ public class LocationUpdateService extends Service {
                         fusedLocationProviderClient.getLastLocation()
                                 .addOnSuccessListener(location -> {
                                     SharedPreferences sharedPref = context.getSharedPreferences(context.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
-                                    String isValidTime = sharedPref.getString("IS_VALID_TIME", "true");
-                                    if (location != null && isValidTime.equals("true")) {
+                                    if (location != null) {
                                         updateStorage("LAST_KNOWN_LAT", String.valueOf(lastLatitudeValue));
                                         updateStorage("LAST_KNOWN_LON", String.valueOf(lastLongitudeValue));
                                         long locTimeMilliSeconds = location.getTime();
