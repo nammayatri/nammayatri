@@ -49,23 +49,22 @@ INSERT INTO atlas_driver_offer_bpp.fare_policy_rental_details_distance_buffers (
 ('51b42524-e113-03dc-5453-290032ce6fd5', 5, 8);
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN rental_requests BOOLEAN NOT NULL DEFAULT false;
-UPDATE atlas_driver_offer_bpp.transporter_config SET rental_requests = true where merchant_id = 'favorit0-0000-0000-0000-00000favorit' -- YS
+UPDATE atlas_driver_offer_bpp.transporter_config SET rental_requests = true where merchant_id = 'favorit0-0000-0000-0000-00000favorit'; -- YS
 
 CREATE TABLE atlas_driver_offer_bpp.quote_rental (
 id character(36) NOT NULL PRIMARY KEY,
 search_request_id character(36) REFERENCES atlas_driver_offer_bpp.search_request (id) NOT NULL,
 provider_id character(36) REFERENCES atlas_driver_offer_bpp.merchant (id) NOT NULL,
-policy_id character(36) REFERENCES atlas_driver_offer_bpp.fare_policy (id) NOT NULL,
+fare_policy_id character(36) REFERENCES atlas_driver_offer_bpp.fare_policy (id) NOT NULL,
+vehicle_variant character varying(255) NOT NULL,
+valid_till timestamp NOT NULL,
+fare_parameters_id character(36) REFERENCES atlas_driver_offer_bpp.fare_parameters(id) NOT NULL,
+estimated_finish_time timestamp with time zone NOT NULL,
 base_distance integer NOT NULL,
 base_duration integer NOT NULL,
 base_fare integer NOT NULL,
-fare_parameters_id character(36) REFERENCES atlas_driver_offer_bpp.fare_parameters(id) NOT NULL,
-estimated_finish_time timestamp with time zone NOT NULL,
-vehicle_variant character varying(255) NOT NULL,
-valid_till timestamp NOT NULL,
 created_at timestamp NOT NULL,
 updated_at timestamp NOT NULL
-
 );
 
 ALTER TABLE atlas_driver_offer_bpp.quote_rental OWNER TO atlas_driver_offer_bpp_user;
