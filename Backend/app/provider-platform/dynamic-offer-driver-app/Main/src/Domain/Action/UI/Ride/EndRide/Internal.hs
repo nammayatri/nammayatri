@@ -312,31 +312,30 @@ createDriverFee merchantId driverId rideFare newFareParams maxShards driverInfo 
   transporterConfig <- SCT.findByMerchantId merchantId >>= fromMaybeM (TransporterConfigNotFound merchantId.getId)
   freeTrialDaysLeft <- getFreeTrialDaysLeft transporterConfig.freeTrialDays driverInfo
   mbDriverPlan <- findByDriverId (cast driverId)
-  unless (freeTrialDaysLeft > 0 || (transporterConfig.isPlanMandatory && isNothing mbDriverPlan)) $ do
-    let govtCharges = fromMaybe 0 newFareParams.govtCharges
-    let (platformFee, cgst, sgst) = case newFareParams.fareParametersDetails of
-          DFare.ProgressiveDetails _ -> (0, 0, 0)
-          DFare.SlabDetails fpDetails -> (maybe 0 fromIntegral fpDetails.platformFee, fromMaybe 0 fpDetails.cgst, fromMaybe 0 fpDetails.sgst)
-    let totalDriverFee = fromIntegral govtCharges + platformFee + cgst + sgst
-    now <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
-    lastDriverFee <- QDF.findLatestFeeByDriverId driverId
-    driverFee <- mkDriverFee now merchantId driverId rideFare govtCharges platformFee cgst sgst transporterConfig
-    when (totalDriverFee > 0 || isJust mbDriverPlan) $ do
-      numRides <- case lastDriverFee of
-        Just ldFee ->
-          if now >= ldFee.startTime && now < ldFee.endTime
-            then do
-              QDF.updateFee ldFee.id rideFare govtCharges platformFee cgst sgst now True
-              return (ldFee.numRides + 1)
-            else do
-              QDF.create driverFee
-              return 1
-        Nothing -> do
-          QDF.create driverFee
-          return 1
-      plan <- getPlan mbDriverPlan merchantId
-      fork "Sending switch plan nudge" $ PaymentNudge.sendSwitchPlanNudge transporterConfig driverInfo plan mbDriverPlan numRides
-      scheduleJobs transporterConfig driverFee merchantId maxShards now
+  let govtCharges = fromMaybe 0 newFareParams.govtCharges
+  let (platformFee, cgst, sgst) = case newFareParams.fareParametersDetails of
+        DFare.ProgressiveDetails _ -> (0, 0, 0)
+        DFare.SlabDetails fpDetails -> (maybe 0 fromIntegral fpDetails.platformFee, fromMaybe 0 fpDetails.cgst, fromMaybe 0 fpDetails.sgst)
+  let totalDriverFee = fromIntegral govtCharges + platformFee + cgst + sgst
+  now <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
+  lastDriverFee <- QDF.findLatestFeeByDriverId driverId
+  driverFee <- mkDriverFee now merchantId driverId rideFare govtCharges platformFee cgst sgst transporterConfig
+  when (totalDriverFee > 0 || (totalDriverFee <= 0 && transporterConfig.isPlanMandatory && isJust mbDriverPlan && freeTrialDaysLeft == 0)) $ do
+    numRides <- case lastDriverFee of
+      Just ldFee ->
+        if now >= ldFee.startTime && now < ldFee.endTime
+          then do
+            QDF.updateFee ldFee.id rideFare govtCharges platformFee cgst sgst now True
+            return (ldFee.numRides + 1)
+          else do
+            QDF.create driverFee
+            return 1
+      Nothing -> do
+        QDF.create driverFee
+        return 1
+    plan <- getPlan mbDriverPlan merchantId
+    fork "Sending switch plan nudge" $ PaymentNudge.sendSwitchPlanNudge transporterConfig driverInfo plan mbDriverPlan numRides
+    scheduleJobs transporterConfig driverFee merchantId maxShards now
 
 scheduleJobs :: (CacheFlow m r, EsqDBFlow m r, HasField "schedulerSetName" r Text, HasField "schedulerType" r SchedulerType, HasField "jobInfoMap" r (M.Map Text Bool)) => TransporterConfig -> DF.DriverFee -> Id Merchant -> Int -> UTCTime -> m ()
 scheduleJobs transporterConfig driverFee merchantId maxShards now = do
