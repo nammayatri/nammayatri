@@ -10,13 +10,13 @@ import IssueManagement.Storage.BeamFlow
 import IssueManagement.Tools.UtilsTH
 import Kernel.Types.Id
 
-create :: BeamFlow m => Comment.Comment -> m ()
+create :: BeamFlow m r => Comment.Comment -> m ()
 create = createWithKV
 
-findById :: BeamFlow m => Id Comment -> m (Maybe Comment)
+findById :: BeamFlow m r => Id Comment -> m (Maybe Comment)
 findById (Id id) = findOneWithKV [Is BeamC.id $ Eq id]
 
-findAllByIssueReportId :: BeamFlow m => Id IssueReport -> m [Comment]
+findAllByIssueReportId :: BeamFlow m r => Id IssueReport -> m [Comment]
 findAllByIssueReportId (Id issueReportId) = findAllWithOptionsKV [Is BeamC.issueReportId $ Eq issueReportId] (Desc BeamC.createdAt) Nothing Nothing
 
 instance FromTType' BeamC.Comment Comment where

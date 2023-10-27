@@ -27,6 +27,7 @@ data SearchRequestT f = SearchRequestT
   { id :: B.C f Text,
     transactionId :: B.C f Text,
     providerId :: B.C f Text,
+    merchantOperatingCityId :: B.C f (Maybe Text),
     fromLocationId :: B.C f (Maybe Text),
     toLocationId :: B.C f (Maybe Text),
     area :: B.C f (Maybe FareProductD.Area),

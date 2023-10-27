@@ -27,6 +27,7 @@ import EulerHS.Prelude
 import Kernel.External.Maps.Types (LatLong (..))
 import Kernel.Types.APISuccess
 import Kernel.Types.App
+import Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import Servant hiding (Context)
 import Servant.Client
@@ -113,8 +114,8 @@ newtype DashboardMultipleRideAPIs = DashboardMultipleRideAPIs
   { multipleRideSync :: Dashboard.MultipleRideSyncReq -> ClientM Dashboard.MultipleRideSyncRes
   }
 
-dashboard :: ShortId TDM.Merchant -> Text -> DashboardAPIs
-dashboard merchantId token = do
+dashboard :: ShortId TDM.Merchant -> Context.City -> Text -> DashboardAPIs
+dashboard merchantId _ token = do
   let ride = DashboardRideAPIs {..}
   DashboardAPIs {..}
   where

@@ -41,14 +41,16 @@ import Kernel.Beam.Functions
 import Kernel.External.AadhaarVerification.Interface.Types
 import Kernel.Prelude
 import Kernel.Types.APISuccess (APISuccess (Success))
+import Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import SharedLogic.Merchant (findMerchantByShortId)
+import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import Storage.Queries.DriverOnboarding.Image as QImage
 import qualified Storage.Queries.FleetDriverAssociation as QFDV
 import qualified Tools.AadhaarVerification as AadhaarVerification
 
-documentsList :: ShortId DM.Merchant -> Id Common.Driver -> Flow Common.DocumentsListResponse
-documentsList merchantShortId driverId = do
+documentsList :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Flow Common.DocumentsListResponse
+documentsList merchantShortId _ driverId = do
   merchant <- findMerchantByShortId merchantShortId
   licImgs <- map (.id.getId) <$> runInReplica (findImagesByPersonAndType merchant.id (cast driverId) DriverLicense)
   vehRegImgs <- map (.id.getId) <$> runInReplica (findImagesByPersonAndType merchant.id (cast driverId) VehicleRegistrationCertificate)
@@ -58,8 +60,8 @@ documentsList merchantShortId driverId = do
         vehicleRegistrationCertificate = vehRegImgs
       }
 
-getDocument :: ShortId DM.Merchant -> Id Common.Image -> Flow Common.GetDocumentResponse
-getDocument merchantShortId imageId = do
+getDocument :: ShortId DM.Merchant -> Context.City -> Id Common.Image -> Flow Common.GetDocumentResponse
+getDocument merchantShortId _ imageId = do
   merchant <- findMerchantByShortId merchantShortId
   img <- getImage merchant.id (cast imageId)
   pure Common.GetDocumentResponse {imageBase64 = img}
@@ -68,39 +70,42 @@ mapImageType :: Common.DocumentType -> Domain.ImageType
 mapImageType Common.DriverLicense = Domain.DriverLicense
 mapImageType Common.VehicleRegistrationCertificate = Domain.VehicleRegistrationCertificate
 
-uploadDocument :: ShortId DM.Merchant -> Id Common.Driver -> Common.UploadDocumentReq -> Flow Common.UploadDocumentResp
-uploadDocument merchantShortId driverId_ req = do
+uploadDocument :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Common.UploadDocumentReq -> Flow Common.UploadDocumentResp
+uploadDocument merchantShortId opCity driverId_ req = do
   merchant <- findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   res <-
     validateImage
       True
-      (cast driverId_, cast merchant.id)
+      (cast driverId_, cast merchant.id, merchantOpCityId)
       ImageValidateRequest
         { image = req.imageBase64,
           imageType = mapImageType req.imageType
         }
   pure $ Common.UploadDocumentResp {imageId = cast res.imageId}
 
-registerDL :: ShortId DM.Merchant -> Id Common.Driver -> Common.RegisterDLReq -> Flow APISuccess
-registerDL merchantShortId driverId_ Common.RegisterDLReq {..} = do
+registerDL :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Common.RegisterDLReq -> Flow APISuccess
+registerDL merchantShortId opCity driverId_ Common.RegisterDLReq {..} = do
   merchant <- findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   verifyDL
     True
     (Just merchant)
-    (cast driverId_, cast merchant.id)
+    (cast driverId_, cast merchant.id, merchantOpCityId)
     DriverDLReq
       { imageId1 = cast imageId1,
         imageId2 = fmap cast imageId2,
         ..
       }
 
-registerRC :: ShortId DM.Merchant -> Id Common.Driver -> Common.RegisterRCReq -> Flow APISuccess
-registerRC merchantShortId driverId_ Common.RegisterRCReq {..} = do
+registerRC :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Common.RegisterRCReq -> Flow APISuccess
+registerRC merchantShortId opCity driverId_ Common.RegisterRCReq {..} = do
   merchant <- findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   verifyRC
     True
     (Just merchant)
-    (cast driverId_, cast merchant.id)
+    (cast driverId_, cast merchant.id, merchantOpCityId)
     ( DriverRCReq
         { imageId = cast imageId,
           ..
@@ -108,35 +113,39 @@ registerRC merchantShortId driverId_ Common.RegisterRCReq {..} = do
     )
     Nothing
 
-generateAadhaarOtp :: ShortId DM.Merchant -> Id Common.Driver -> Common.GenerateAadhaarOtpReq -> Flow Common.GenerateAadhaarOtpRes
-generateAadhaarOtp merchantShortId driverId_ req = do
+generateAadhaarOtp :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Common.GenerateAadhaarOtpReq -> Flow Common.GenerateAadhaarOtpRes
+generateAadhaarOtp merchantShortId opCity driverId_ req = do
   merchant <- findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   res <-
     AV.generateAadhaarOtp
       True
       (Just merchant)
       (cast driverId_)
+      merchantOpCityId
       AadhaarVerification.AadhaarOtpReq
         { aadhaarNumber = req.aadhaarNumber,
           consent = req.consent
         }
   pure (convertVerifyOtp res)
 
-verifyAadhaarOtp :: ShortId DM.Merchant -> Id Common.Driver -> Common.VerifyAadhaarOtpReq -> Flow Common.VerifyAadhaarOtpRes
-verifyAadhaarOtp merchantShortId driverId_ req = do
+verifyAadhaarOtp :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Common.VerifyAadhaarOtpReq -> Flow Common.VerifyAadhaarOtpRes
+verifyAadhaarOtp merchantShortId opCity driverId_ req = do
   merchant <- findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   res <-
     AV.verifyAadhaarOtp
       (Just merchant)
       (cast driverId_)
+      merchantOpCityId
       AV.VerifyAadhaarOtpReq
         { otp = req.otp,
           shareCode = req.shareCode
         }
   pure (convertSubmitOtp res)
 
-auth :: ShortId DM.Merchant -> Common.AuthReq -> Flow Common.AuthRes
-auth merchantShortId req = do
+auth :: ShortId DM.Merchant -> Context.City -> Common.AuthReq -> Flow Common.AuthRes
+auth merchantShortId opCity req = do
   merchant <- findMerchantByShortId merchantShortId
   res <-
     DReg.auth
@@ -144,7 +153,8 @@ auth merchantShortId req = do
       DReg.AuthReq
         { mobileNumber = req.mobileNumber,
           mobileCountryCode = req.mobileCountryCode,
-          merchantId = merchant.id.getId
+          merchantId = merchant.id.getId,
+          merchantOperatingCity = Just opCity
         }
       Nothing
       Nothing

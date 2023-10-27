@@ -38,6 +38,7 @@ import Domain.Types.DriverOnboarding.DriverRCAssociation
 import Domain.Types.DriverOnboarding.Error
 import qualified Domain.Types.Location as DLoc
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.Vehicle as DVeh
@@ -220,6 +221,7 @@ rideRoute merchantShortId reqRideId = do
 rideInfo ::
   ( EncFlow m r,
     CacheFlow m r,
+    EsqDBFlow m r,
     HasFlowEnv m r '["ltsCfg" ::: LocationTrackingeServiceConfig]
   ) =>
   ShortId DM.Merchant ->
@@ -396,13 +398,12 @@ currentActiveRide _ vehicleNumber = do
 
 ---------------------------------------------------------------------
 
-bookingWithVehicleNumberAndPhone :: ShortId DM.Merchant -> Common.BookingWithVehicleAndPhoneReq -> Flow Common.BookingWithVehicleAndPhoneRes
-bookingWithVehicleNumberAndPhone merchantShortId req = do
+bookingWithVehicleNumberAndPhone :: DM.Merchant -> Id DMOC.MerchantOperatingCity -> Common.BookingWithVehicleAndPhoneReq -> Flow Common.BookingWithVehicleAndPhoneRes
+bookingWithVehicleNumberAndPhone merchant merchantOpCityId req = do
   alreadyInProcess :: Maybe Bool <- Redis.safeGet apiProcessKey
   if isNothing alreadyInProcess
     then do
       Redis.setExp apiProcessKey True 60
-      merchant <- findMerchantByShortId merchantShortId
       phoneNumberHash <- getDbHash req.phoneNumber
       person <- QPerson.findByMobileNumberAndMerchant req.countryCode phoneNumberHash merchant.id >>= fromMaybeM (DriverNotFound req.phoneNumber)
       mblinkedVehicle <- VQuery.findById person.id
@@ -412,10 +413,10 @@ bookingWithVehicleNumberAndPhone merchantShortId req = do
         mbvehicle <- VQuery.findByRegistrationNo req.vehicleNumber
         whenJust mbvehicle $ \vehicle -> do
           activeRideId <- runInReplica $ QRide.getActiveByDriverId vehicle.driverId
-          whenJust activeRideId $ \rideId -> endActiveRide rideId.id merchant.id
+          whenJust activeRideId $ \rideId -> endActiveRide rideId.id merchant.id merchantOpCityId
       when req.endRideForDriver do
         activeRideId <- runInReplica $ QRide.getActiveByDriverId person.id
-        whenJust activeRideId $ \rideId -> endActiveRide rideId.id merchant.id
+        whenJust activeRideId $ \rideId -> endActiveRide rideId.id merchant.id merchantOpCityId
       now <- getCurrentTime
       case mblinkedVehicle of
         Just vehicle -> do
@@ -444,13 +445,13 @@ bookingWithVehicleNumberAndPhone merchantShortId req = do
               { rcNo = req.vehicleNumber,
                 isActivate = True
               }
-      void $ DomainRC.linkRCStatus (personId, merchantId) rcStatusReq
+      void $ DomainRC.linkRCStatus (personId, merchantId, merchantOpCityId) rcStatusReq
     createRCAssociation driverId rc = do
       driverRCAssoc <- makeRCAssociation driverId rc.id (DomainRC.convertTextToUTC (Just "2099-12-12"))
       DAQuery.create driverRCAssoc
 
-endActiveRide :: Id DRide.Ride -> Id DM.Merchant -> Flow ()
-endActiveRide rideId merchantId = do
+endActiveRide :: Id DRide.Ride -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Flow ()
+endActiveRide rideId merchantId merchantOpCityId = do
   let dashboardReq = EHandler.DashboardEndRideReq {point = Nothing, merchantId}
-  shandle <- EHandler.buildEndRideHandle merchantId
+  shandle <- EHandler.buildEndRideHandle merchantId merchantOpCityId
   void $ EHandler.dashboardEndRide shandle rideId dashboardReq

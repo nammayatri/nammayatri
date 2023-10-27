@@ -79,7 +79,7 @@ driverDevicePingService = startService "driverDevicePingService" do
     withLogTag driverId.getId do
       log INFO "Ping driver"
       driver <- SQP.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
-      notifyDevice driver.merchantId TRIGGER_SERVICE "You were inactive" "Please check the app" driverId (Just token)
+      notifyDevice driver.merchantOperatingCityId TRIGGER_SERVICE "You were inactive" "Please check the app" driverId (Just token)
   asks (.notificationMinDelay)
     >>= threadDelay . (.getMicroseconds)
 

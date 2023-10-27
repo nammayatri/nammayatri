@@ -24,16 +24,17 @@ import Kernel.External.Maps.Types (LatLong)
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
+import Kernel.Utils.Common
 import qualified Storage.Beam.Common as BeamCommon
 import qualified Storage.Beam.Geometry as BeamG
 
-findGeometriesContaining :: forall m. MonadFlow m => LatLong -> [Text] -> m [Geometry]
+findGeometriesContaining :: forall m r. (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => LatLong -> [Text] -> m [Geometry]
 findGeometriesContaining gps regions = do
   dbConf <- getMasterBeamConfig
   geoms <- L.runDB dbConf $ L.findRows $ B.select $ B.filter_' (\BeamG.GeometryT {..} -> containsPoint' (gps.lon, gps.lat) B.&&?. B.sqlBool_ (region `B.in_` (B.val_ <$> regions))) $ B.all_ (BeamCommon.geometry BeamCommon.atlasDB)
   catMaybes <$> mapM fromTType' (fromRight [] geoms)
 
-someGeometriesContain :: forall m. MonadFlow m => LatLong -> [Text] -> m Bool
+someGeometriesContain :: forall m r. (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => LatLong -> [Text] -> m Bool
 someGeometriesContain gps regions = do
   geometries <- findGeometriesContaining gps regions
   pure $ not $ null geometries

@@ -41,6 +41,8 @@ data Ride = Ride
     createdAt :: UTCTime
   }
 
+data MerchantOperatingCity
+
 data PersonE e = Person
   { id :: Id Person,
     language :: Maybe Language,

@@ -21,13 +21,14 @@ import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id as KTI
+import Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified Storage.Beam.FleetDriverAssociation as BeamFDVA
 
-create :: MonadFlow m => FleetDriverAssociation -> m ()
+create :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => FleetDriverAssociation -> m ()
 create = createWithKV
 
-findByDriverIdAndFleetOwnerId :: MonadFlow m => Id Person -> Text -> m (Maybe FleetDriverAssociation)
+findByDriverIdAndFleetOwnerId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> Text -> m (Maybe FleetDriverAssociation)
 findByDriverIdAndFleetOwnerId driverId fleetOwnerId =
   findOneWithKV
     [ Se.And
@@ -36,7 +37,7 @@ findByDriverIdAndFleetOwnerId driverId fleetOwnerId =
         ]
     ]
 
-upsert :: MonadFlow m => FleetDriverAssociation -> m ()
+upsert :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => FleetDriverAssociation -> m ()
 upsert a@FleetDriverAssociation {..} = do
   res <- findOneWithKV [Se.And [Se.Is BeamFDVA.driverId $ Se.Eq (a.driverId.getId), Se.Is BeamFDVA.fleetOwnerId $ Se.Eq a.fleetOwnerId]]
   if isJust res
@@ -48,7 +49,7 @@ upsert a@FleetDriverAssociation {..} = do
         [Se.And [Se.Is BeamFDVA.driverId $ Se.Eq (a.driverId.getId), Se.Is BeamFDVA.fleetOwnerId $ Se.Eq a.fleetOwnerId]]
     else createWithKV a
 
-findAllActiveDriverByFleetOwnerId :: MonadFlow m => Text -> Int -> Int -> m [FleetDriverAssociation]
+findAllActiveDriverByFleetOwnerId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> Int -> Int -> m [FleetDriverAssociation]
 findAllActiveDriverByFleetOwnerId fleetOwnerId limit offset = do
   findAllWithOptionsKV
     [Se.And [Se.Is BeamFDVA.fleetOwnerId $ Se.Eq fleetOwnerId, Se.Is BeamFDVA.isActive $ Se.Eq True]]
@@ -56,7 +57,7 @@ findAllActiveDriverByFleetOwnerId fleetOwnerId limit offset = do
     (Just limit)
     (Just offset)
 
-findAllDriverByFleetOwnerId :: MonadFlow m => Text -> Int -> Int -> m [FleetDriverAssociation]
+findAllDriverByFleetOwnerId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> Int -> Int -> m [FleetDriverAssociation]
 findAllDriverByFleetOwnerId fleetOwnerId limit offset = do
   findAllWithOptionsKV
     [Se.Is BeamFDVA.fleetOwnerId $ Se.Eq fleetOwnerId]
@@ -64,7 +65,7 @@ findAllDriverByFleetOwnerId fleetOwnerId limit offset = do
     (Just limit)
     (Just offset)
 
-updateFleetDriverActiveStatus :: MonadFlow m => Text -> Id Person -> Bool -> m ()
+updateFleetDriverActiveStatus :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> Id Person -> Bool -> m ()
 updateFleetDriverActiveStatus fleetOwnerId driverId isActive = do
   now <- getCurrentTime
   updateOneWithKV

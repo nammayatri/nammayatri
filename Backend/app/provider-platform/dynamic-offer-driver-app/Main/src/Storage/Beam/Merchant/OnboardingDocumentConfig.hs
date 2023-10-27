@@ -24,6 +24,7 @@ import Tools.Beam.UtilsTH
 
 data OnboardingDocumentConfigT f = OnboardingDocumentConfigT
   { merchantId :: B.C f Text,
+    merchantOperatingCityId :: B.C f Text,
     documentType :: B.C f Domain.DocumentType,
     checkExtraction :: B.C f Bool,
     checkExpiry :: B.C f Bool,
@@ -39,7 +40,7 @@ instance B.Table OnboardingDocumentConfigT where
   data PrimaryKey OnboardingDocumentConfigT f
     = Id (B.C f Text) (B.C f Domain.DocumentType)
     deriving (Generic, B.Beamable)
-  primaryKey = Id <$> merchantId <*> documentType
+  primaryKey = Id <$> merchantOperatingCityId <*> documentType
 
 type OnboardingDocumentConfig = OnboardingDocumentConfigT Identity
 
@@ -48,6 +49,6 @@ getConfigJSON = \case
   Domain.DLValidClasses cfg -> encodeToText cfg
   Domain.RCValidClasses cfg -> encodeToText cfg
 
-$(enableKVPG ''OnboardingDocumentConfigT ['merchantId, 'documentType] [['merchantId]])
+$(enableKVPG ''OnboardingDocumentConfigT ['merchantOperatingCityId, 'documentType] [['merchantOperatingCityId]])
 
 $(mkTableInstances ''OnboardingDocumentConfigT "onboarding_document_configs")

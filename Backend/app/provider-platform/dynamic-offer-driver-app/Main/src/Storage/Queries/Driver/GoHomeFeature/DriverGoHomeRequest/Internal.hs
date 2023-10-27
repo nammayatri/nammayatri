@@ -26,7 +26,7 @@ import Kernel.Utils.Common hiding (Value)
 import qualified Sequelize as Se
 import qualified Storage.Beam.Driver.GoHomeFeature.DriverGoHomeRequest as BeamDDGR
 
-getDriverGoHomeReqNearby :: (MonadFlow m) => [Id Driver] -> m [DriverGoHomeRequest]
+getDriverGoHomeReqNearby :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Id Driver] -> m [DriverGoHomeRequest]
 getDriverGoHomeReqNearby driverIds = do
   findAllWithKV [Se.And [Se.Is BeamDDGR.driverId $ Se.In $ getId <$> driverIds, Se.Is BeamDDGR.status $ Se.Eq DDGR.ACTIVE]]
 

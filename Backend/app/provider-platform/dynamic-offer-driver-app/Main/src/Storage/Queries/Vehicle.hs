@@ -30,10 +30,10 @@ import Sequelize as Se
 import qualified Storage.Beam.Common as BeamCommon
 import qualified Storage.Beam.Vehicle as BeamV
 
-create :: MonadFlow m => Vehicle -> m ()
+create :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Vehicle -> m ()
 create = createWithKV
 
-upsert :: MonadFlow m => Vehicle -> m ()
+upsert :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Vehicle -> m ()
 upsert a@Vehicle {..} = do
   res <- findOneWithKV [Se.Is BeamV.registrationNo $ Se.Eq a.registrationNo]
   if isJust res
@@ -53,10 +53,10 @@ upsert a@Vehicle {..} = do
         [Se.Is BeamV.registrationNo (Se.Eq a.registrationNo)]
     else createWithKV a
 
-findById :: (MonadFlow m) => Id Person -> m (Maybe Vehicle)
+findById :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> m (Maybe Vehicle)
 findById (Id driverId) = findOneWithKV [Se.Is BeamV.driverId $ Se.Eq driverId]
 
-updateVehicleRec :: MonadFlow m => Vehicle -> m ()
+updateVehicleRec :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Vehicle -> m ()
 updateVehicleRec vehicle = do
   now <- getCurrentTime
   updateOneWithKV
@@ -75,24 +75,24 @@ updateVehicleRec vehicle = do
     ]
     [Se.Is BeamV.driverId (Se.Eq $ getId vehicle.driverId)]
 
-updateVehicleName :: (MonadFlow m) => Maybe Text -> Id Person -> m ()
+updateVehicleName :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Maybe Text -> Id Person -> m ()
 updateVehicleName vehicleName (Id driverId) = do
   now <- getCurrentTime
   updateWithKV
     [Se.Set BeamV.updatedAt now, Se.Set BeamV.vehicleName vehicleName]
     [Se.Is BeamV.driverId (Se.Eq driverId)]
 
-updateVehicleModel :: (MonadFlow m) => Text -> Id Person -> m ()
+updateVehicleModel :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> Id Person -> m ()
 updateVehicleModel vehicleModel (Id driverId) = do
   now <- getCurrentTime
   updateWithKV
     [Se.Set BeamV.updatedAt now, Se.Set BeamV.model vehicleModel]
     [Se.Is BeamV.driverId (Se.Eq driverId)]
 
-deleteById :: MonadFlow m => Id Person -> m ()
+deleteById :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> m ()
 deleteById (Id driverId) = deleteWithKV [Se.Is BeamV.driverId (Se.Eq driverId)]
 
-findByAnyOf :: MonadFlow m => Maybe Text -> Maybe (Id Person) -> m (Maybe Vehicle)
+findByAnyOf :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Maybe Text -> Maybe (Id Person) -> m (Maybe Vehicle)
 findByAnyOf registrationNoM vehicleIdM =
   findOneWithKV
     [ Se.And
@@ -105,7 +105,7 @@ findByAnyOf registrationNoM vehicleIdM =
         )
     ]
 
-findAllByVariantRegNumMerchantId :: MonadFlow m => Maybe Variant.Variant -> Maybe Text -> Integer -> Integer -> Id Merchant -> m [Vehicle]
+findAllByVariantRegNumMerchantId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Maybe Variant.Variant -> Maybe Text -> Integer -> Integer -> Id Merchant -> m [Vehicle]
 findAllByVariantRegNumMerchantId variantM mbRegNum limitVal offsetVal (Id merchantId') = do
   dbConf <- getMasterBeamConfig
   vehicles <-
@@ -124,7 +124,7 @@ findAllByVariantRegNumMerchantId variantM mbRegNum limitVal offsetVal (Id mercha
                   $ B.all_ (BeamCommon.vehicle BeamCommon.atlasDB)
   catMaybes <$> mapM fromTType' (fromRight [] vehicles)
 
-findByRegistrationNo :: MonadFlow m => Text -> m (Maybe Vehicle)
+findByRegistrationNo :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> m (Maybe Vehicle)
 findByRegistrationNo registrationNo = findOneWithKV [Se.Is BeamV.registrationNo $ Se.Eq registrationNo]
 
 instance FromTType' BeamV.Vehicle Vehicle where

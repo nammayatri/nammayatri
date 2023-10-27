@@ -31,10 +31,10 @@ import qualified Storage.Beam.QuoteSpecialZone as BeamQSZ
 import Storage.Queries.FareParameters as BeamQFP
 import qualified Storage.Queries.FareParameters as SQFP
 
-create :: MonadFlow m => QuoteSpecialZone -> m ()
+create :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => QuoteSpecialZone -> m ()
 create quote = SQFP.create quote.fareParams >> createWithKV quote
 
-countAllByRequestId :: MonadFlow m => Id SearchRequestSpecialZone -> m Int
+countAllByRequestId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id SearchRequestSpecialZone -> m Int
 countAllByRequestId searchReqID = do
   dbConf <- getMasterBeamConfig
   resp <-
@@ -46,7 +46,7 @@ countAllByRequestId searchReqID = do
               B.all_ (BeamCommon.quoteSpecialZone BeamCommon.atlasDB)
   pure (either (const 0) (fromMaybe 0) resp)
 
-findById :: MonadFlow m => Id QuoteSpecialZone -> m (Maybe QuoteSpecialZone)
+findById :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id QuoteSpecialZone -> m (Maybe QuoteSpecialZone)
 findById (Id dQuoteId) = findOneWithKV [Se.Is BeamQSZ.id $ Se.Eq dQuoteId]
 
 instance FromTType' BeamQSZ.QuoteSpecialZone QuoteSpecialZone where

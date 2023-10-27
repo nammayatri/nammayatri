@@ -14,6 +14,8 @@ import Kernel.Types.Version
 import Kernel.Utils.Common hiding (Value)
 import Kernel.Utils.Version
 import qualified Storage.Beam.Person as BeamP
+import qualified Storage.CachedQueries.Merchant as CQM
+import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import Storage.Queries.Booking ()
 import qualified Storage.Queries.DriverOnboarding.DriverLicense ()
 import qualified Storage.Queries.DriverOnboarding.DriverRCAssociation ()
@@ -22,12 +24,15 @@ import Storage.Queries.DriverQuote ()
 import Storage.Queries.Instances.DriverInformation ()
 import Storage.Queries.Ride ()
 import Storage.Queries.Vehicle ()
+import Tools.Error
 
 instance FromTType' BeamP.Person Person where
-  fromTType' :: (L.MonadFlow m, Log m) => BeamP.Person -> m (Maybe Person)
+  fromTType' :: (L.MonadFlow m, Log m, CacheFlow m r, EsqDBFlow m r) => BeamP.Person -> m (Maybe Person)
   fromTType' BeamP.PersonT {..} = do
     bundleVersion' <- forM bundleVersion readVersion
     clientVersion' <- forM clientVersion readVersion
+    merchant <- CQM.findById (Id merchantId) >>= fromMaybeM (MerchantNotFound merchantId)
+    merchantOpCityId <- CQMOC.getMerchantOpCityId (Id <$> merchantOperatingCityId) merchant Nothing
     pure $
       Just
         Person
@@ -50,6 +55,7 @@ instance FromTType' BeamP.Person Person where
             rating = rating,
             isNew = isNew,
             merchantId = Id merchantId,
+            merchantOperatingCityId = merchantOpCityId,
             deviceToken = deviceToken,
             whatsappNotificationEnrollStatus = whatsappNotificationEnrollStatus,
             language = language,
@@ -86,6 +92,7 @@ instance ToTType' BeamP.Person Person where
         BeamP.rating = rating,
         BeamP.isNew = isNew,
         BeamP.merchantId = getId merchantId,
+        BeamP.merchantOperatingCityId = Just $ getId merchantOperatingCityId,
         BeamP.deviceToken = deviceToken,
         BeamP.whatsappNotificationEnrollStatus = whatsappNotificationEnrollStatus,
         BeamP.language = language,

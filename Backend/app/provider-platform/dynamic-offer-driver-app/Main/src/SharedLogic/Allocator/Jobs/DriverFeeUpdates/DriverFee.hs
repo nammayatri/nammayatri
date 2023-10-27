@@ -30,6 +30,7 @@ import Domain.Types.DriverFee
 import qualified Domain.Types.Invoice as INV
 import Domain.Types.Mandate (Mandate)
 import Domain.Types.Merchant
+import Domain.Types.Merchant.MerchantOperatingCity
 import Domain.Types.Merchant.Overlay (OverlayCondition (..))
 import Domain.Types.Merchant.TransporterConfig (TransporterConfig)
 import Domain.Types.Person
@@ -49,6 +50,8 @@ import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import SharedLogic.Allocator
 import SharedLogic.DriverFee (calculatePlatformFeeAttr, roundToHalf)
 import qualified SharedLogic.Payment as SPayment
+import qualified Storage.CachedQueries.Merchant as CQM
+import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as SCT
 import Storage.Queries.DriverFee as QDF
 import Storage.Queries.DriverInformation (updatePendingPayment, updateSubscription)
@@ -83,7 +86,7 @@ sendPaymentReminderToDriver Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId
         overdueFeeNotif <- B.runInReplica $ findOldestFeeByStatus (cast driver.id) PAYMENT_OVERDUE
         let paymentTitle = "Bill generated"
             paymentMessage = "You have taken " <> show (driverFee.numRides + maybe 0 (.numRides) overdueFeeNotif) <> " ride(s) since the last payment. Complete payment now to get trips seamlessly"
-        (Notify.sendNotificationToDriver driver.merchantId FCM.SHOW Nothing FCM.PAYMENT_PENDING paymentTitle paymentMessage driver.id driver.deviceToken) `C.catchAll` \e -> C.mask_ $ logError $ "FCM for payment reminder to driver id " <> driver.id.getId <> " failed. Error: " <> show e
+        (Notify.sendNotificationToDriver driver.merchantOperatingCityId FCM.SHOW Nothing FCM.PAYMENT_PENDING paymentTitle paymentMessage driver.id driver.deviceToken) `C.catchAll` \e -> C.mask_ $ logError $ "FCM for payment reminder to driver id " <> driver.id.getId <> " failed. Error: " <> show e
   forM_ feeZipDriver $ \(driverFee, mbPerson) -> do
     whenJust mbPerson $ \person -> do
       Redis.whenWithLockRedis (paymentProcessingLockKey driverFee.driverId.getId) 60 $ do
@@ -94,7 +97,7 @@ sendPaymentReminderToDriver Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId
     Just (driverFee, _) -> do
       driver <- B.runInReplica $ QPerson.findById (cast driverFee.driverId) >>= fromMaybeM (PersonDoesNotExist driverFee.driverId.getId)
       -- driver <- QPerson.findById (cast driverFee.driverId) >>= fromMaybeM (PersonDoesNotExist driverFee.driverId.getId)
-      transporterConfig <- SCT.findByMerchantId driver.merchantId >>= fromMaybeM (TransporterConfigNotFound driver.merchantId.getId)
+      transporterConfig <- SCT.findByMerchantOpCityId driver.merchantOperatingCityId >>= fromMaybeM (TransporterConfigNotFound driver.merchantOperatingCityId.getId)
       ReSchedule <$> getRescheduledTime transporterConfig.driverPaymentReminderInterval
 
 calculateDriverFeeForDrivers ::
@@ -114,11 +117,14 @@ calculateDriverFeeForDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getI
   -- handle 1st time
   let jobData = jobInfo.jobData
       merchantId = jobData.merchantId
+      mbMerchantOpCityId = jobData.merchantOperatingCityId
       startTime = jobData.startTime
       endTime = jobData.endTime
       applyOfferCall = TPayment.offerApply merchantId
   now <- getCurrentTime
-  transporterConfig <- SCT.findByMerchantId merchantId >>= fromMaybeM (TransporterConfigNotFound merchantId.getId)
+  merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
+  merchantOpCityId <- CQMOC.getMerchantOpCityId mbMerchantOpCityId merchant Nothing
+  transporterConfig <- SCT.findByMerchantOpCityId merchantOpCityId >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   driverFees <- findAllFeesInRangeWithStatus (Just merchantId) startTime endTime ONGOING transporterConfig.driverFeeCalculatorBatchSize
   let threshold = transporterConfig.driverFeeRetryThresholdConfig
   driverFeesToProccess <-
@@ -193,7 +199,7 @@ calculateDriverFeeForDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getI
     Nothing -> do
       Hedis.del (mkDriverFeeBillNumberKey merchantId)
       maxShards <- asks (.maxShards)
-      scheduleJobs transporterConfig startTime endTime merchantId maxShards
+      scheduleJobs transporterConfig startTime endTime merchantId merchantOpCityId maxShards
       return Complete
     _ -> ReSchedule <$> getRescheduledTime (fromMaybe 5 transporterConfig.driverFeeCalculatorBatchGap)
   where
@@ -262,7 +268,7 @@ getFinalOrderAmount feeWithoutDiscount merchantId transporterConfig driver plan 
       updateCollectedPaymentStatus CLEARED Nothing now driverFee.id
       return (0, 0, Nothing, Nothing)
     else do
-      offers <- SPayment.offerListCache merchantId (makeOfferReq feeWithoutDiscount driver plan dutyDate registrationDateLocal driverFee.numRides) -- handle UDFs
+      offers <- SPayment.offerListCache merchantId driver.merchantOperatingCityId (makeOfferReq feeWithoutDiscount driver plan dutyDate registrationDateLocal driverFee.numRides) -- handle UDFs
       (finalOrderAmount, offerId, offerTitle) <-
         if null offers.offerResp
           then pure (feeWithoutDiscount, Nothing, Nothing)
@@ -328,7 +334,7 @@ unsubscribeDriverForPaymentOverdue Job {id, jobInfo} = withLogTag ("JobId-" <> i
       Just driver -> do
         let paymentTitle = "Bill generated"
             paymentMessage = "You have taken " <> show driverFee.numRides <> " ride(s) since the last payment. Complete payment now to get trips seamlessly"
-        (Notify.sendNotificationToDriver driver.merchantId FCM.SHOW Nothing FCM.PAYMENT_OVERDUE paymentTitle paymentMessage driver.id driver.deviceToken) `C.catchAll` \e -> C.mask_ $ logError $ "FCM for removing subsciption of driver id " <> driver.id.getId <> " failed. Error: " <> show e
+        (Notify.sendNotificationToDriver driver.merchantOperatingCityId FCM.SHOW Nothing FCM.PAYMENT_OVERDUE paymentTitle paymentMessage driver.id driver.deviceToken) `C.catchAll` \e -> C.mask_ $ logError $ "FCM for removing subsciption of driver id " <> driver.id.getId <> " failed. Error: " <> show e
   forM_ feeZipDriver $ \(driverFee, mbPerson) -> do
     Redis.whenWithLockRedis (paymentProcessingLockKey driverFee.driverId.getId) 60 $ do
       -- Esq.runTransaction $ do
@@ -336,7 +342,7 @@ unsubscribeDriverForPaymentOverdue Job {id, jobInfo} = withLogTag ("JobId-" <> i
       whenJust mbPerson $ \person -> updateSubscription False (cast person.id) -- fix later: take tabular updates inside transaction
   return Complete
 
-calcDriverFeeAttr :: (MonadFlow m) => Maybe (Id Merchant) -> DriverFeeStatus -> UTCTime -> UTCTime -> m [(DriverFee, Maybe Person)]
+calcDriverFeeAttr :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Maybe (Id Merchant) -> DriverFeeStatus -> UTCTime -> UTCTime -> m [(DriverFee, Maybe Person)]
 calcDriverFeeAttr merchantId driverFeeStatus startTime endTime = do
   driverFees <- findFeesInRangeWithStatus merchantId startTime endTime driverFeeStatus Nothing
   let relevantDriverIds = (.driverId) <$> driverFees
@@ -347,7 +353,7 @@ calcDriverFeeAttr merchantId driverFeeStatus startTime endTime = do
 getRescheduledTime :: (MonadFlow m) => NominalDiffTime -> m UTCTime
 getRescheduledTime gap = addUTCTime gap <$> getCurrentTime
 
-updateSerialOrderForInvoicesInWindow :: (MonadFlow m, CacheFlow m r) => Id DriverFee -> Id Merchant -> UTCTime -> UTCTime -> m ()
+updateSerialOrderForInvoicesInWindow :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id DriverFee -> Id Merchant -> UTCTime -> UTCTime -> m ()
 updateSerialOrderForInvoicesInWindow driverFeeId merchantId startTime endTime = do
   Hedis.whenWithLockRedis (billNumberGenerationLockKey driverFeeId.getId) 60 $ do
     --- change lock based on mechantId --
@@ -384,14 +390,15 @@ mkInvoiceAgainstDriverFee driverFee = do
         createdAt = now
       }
 
-scheduleJobs :: (CacheFlow m r, EsqDBFlow m r, HasField "schedulerSetName" r Text, HasField "schedulerType" r SchedulerType, HasField "jobInfoMap" r (M.Map Text Bool)) => TransporterConfig -> UTCTime -> UTCTime -> Id Merchant -> Int -> m ()
-scheduleJobs transporterConfig startTime endTime merchantId maxShards = do
+scheduleJobs :: (CacheFlow m r, EsqDBFlow m r, HasField "schedulerSetName" r Text, HasField "schedulerType" r SchedulerType, HasField "jobInfoMap" r (M.Map Text Bool)) => TransporterConfig -> UTCTime -> UTCTime -> Id Merchant -> Id MerchantOperatingCity -> Int -> m ()
+scheduleJobs transporterConfig startTime endTime merchantId merchantOpCityId maxShards = do
   now <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
   let dfNotificationTime = transporterConfig.driverAutoPayNotificationTime
   let dfCalculationJobTs = diffUTCTime (addUTCTime dfNotificationTime endTime) now
   createJobIn @_ @'SendPDNNotificationToDriver dfCalculationJobTs maxShards $
     SendPDNNotificationToDriverJobData
       { merchantId = merchantId,
+        merchantOperatingCityId = Just merchantOpCityId,
         startTime = startTime,
         endTime = endTime
       }

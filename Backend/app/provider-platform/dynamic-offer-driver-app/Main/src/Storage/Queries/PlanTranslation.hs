@@ -22,13 +22,14 @@ import Kernel.External.Types (Language)
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
+import Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified Storage.Beam.PlanTranslation as BeamPT
 
-create :: MonadFlow m => PlanTranslation -> m ()
+create :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => PlanTranslation -> m ()
 create = createWithKV
 
-findByPlanIdAndLanguage :: MonadFlow m => Id Plan.Plan -> Language -> m (Maybe PlanTranslation)
+findByPlanIdAndLanguage :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Plan.Plan -> Language -> m (Maybe PlanTranslation)
 findByPlanIdAndLanguage (Id planId) language = findOneWithKV [Se.And [Se.Is BeamPT.planId $ Se.Eq planId, Se.Is BeamPT.language $ Se.Eq language]]
 
 instance FromTType' BeamPT.PlanTranslation PlanTranslation where

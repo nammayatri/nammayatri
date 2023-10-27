@@ -34,7 +34,7 @@ broadcastMessage messageDict driverId = do
   mDriver <- Person.findById (Id driverId)
   whenJust mDriver $ \driver -> do
     let message = maybe messageDict.defaultMessage (flip (HM.findWithDefault messageDict.defaultMessage) messageDict.translations . show) driver.language
-    exep <- try @_ @SomeException (sendMessageToDriver driver.merchantId FCM.SHOW (Just FCM.HIGH) FCM.NEW_MESSAGE message.title message.shortDescription driver.id message.id driver.deviceToken)
+    exep <- try @_ @SomeException (sendMessageToDriver driver.merchantOperatingCityId FCM.SHOW (Just FCM.HIGH) FCM.NEW_MESSAGE message.title message.shortDescription driver.id message.id driver.deviceToken)
     let dStatus = case exep of
           Left _ -> Types.Failed
           Right _ -> Types.Success

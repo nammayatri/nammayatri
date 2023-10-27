@@ -9,6 +9,7 @@ where
 import qualified Data.Text as T
 import qualified Domain.Types.DriverReferral as D
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as SP
 import qualified Kernel.Beam.Functions as B
 import Kernel.Prelude
@@ -40,14 +41,14 @@ createDriverReferral ::
     EsqDBFlow m r,
     MonadTime m
   ) =>
-  (Id SP.Person, Id DM.Merchant) ->
+  (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
   Bool ->
   ReferralLinkReq ->
   m APISuccess
-createDriverReferral (driverId, merchantId) isDashboard ReferralLinkReq {..} = do
+createDriverReferral (driverId, _, merchantOpCityId) isDashboard ReferralLinkReq {..} = do
   unless (TU.validateAllDigitWithMinLength 6 referralCode) $
     throwError $ InvalidRequest "Referral Code must have 6 digits."
-  transporterConfig <- QTC.findByMerchantId merchantId >>= fromMaybeM (TransporterConfigNotFound merchantId.getId)
+  transporterConfig <- QTC.findByMerchantOpCityId merchantOpCityId >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   when (transporterConfig.referralLinkPassword /= referralLinkPassword && not isDashboard) $
     throwError $ InvalidRequest "Invalid Password."
   mbLastReferralCodeWithDriver <- B.runInReplica $ QRD.findById driverId
@@ -78,9 +79,9 @@ generateReferralCode ::
     EsqDBFlow m r,
     MonadTime m
   ) =>
-  (Id SP.Person, Id DM.Merchant) ->
+  (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
   m GenerateReferralCodeRes
-generateReferralCode (driverId, _) = do
+generateReferralCode (driverId, _, _) = do
   mbReferralCodeWithDriver <- B.runInReplica $ QRD.findById driverId
 
   case mbReferralCodeWithDriver of

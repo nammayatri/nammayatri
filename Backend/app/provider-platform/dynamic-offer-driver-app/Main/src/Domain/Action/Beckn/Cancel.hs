@@ -97,7 +97,7 @@ cancel req merchant booking = do
   whenJust mbRide $ \ride ->
     fork "cancelRide - Notify driver" $ do
       driver <- QPers.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
-      Notify.notifyOnCancel merchant.id booking driver.id driver.deviceToken bookingCR.source
+      Notify.notifyOnCancel booking.merchantOperatingCityId booking driver.id driver.deviceToken bookingCR.source
   where
     buildBookingCancellationReason = do
       return $
@@ -123,7 +123,7 @@ cancelSearch ::
   CancelSearchReq ->
   ST.SearchTry ->
   m ()
-cancelSearch merchantId req searchTry = do
+cancelSearch _merchantId req searchTry = do
   CS.whenSearchTryCancellable searchTry.id $ do
     driverSearchReqs <- QSRD.findAllActiveBySRId searchTry.requestId
     logTagInfo ("transactionId-" <> req.transactionId) "Search Request Cancellation"
@@ -132,10 +132,11 @@ cancelSearch merchantId req searchTry = do
     _ <- QDQ.setInactiveBySRId searchTry.requestId
     for_ driverSearchReqs $ \driverReq -> do
       driver_ <- QPerson.findById driverReq.driverId >>= fromMaybeM (PersonNotFound driverReq.driverId.getId)
-      Notify.notifyOnCancelSearchRequest merchantId driverReq.driverId driver_.deviceToken driverReq.searchTryId
+      Notify.notifyOnCancelSearchRequest searchTry.merchantOperatingCityId driverReq.driverId driver_.deviceToken driverReq.searchTryId
 
 validateCancelSearchRequest ::
-  ( EsqDBFlow m r
+  ( CacheFlow m r,
+    EsqDBFlow m r
   ) =>
   Id DM.Merchant ->
   SignatureAuthResult ->

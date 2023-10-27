@@ -23,7 +23,7 @@ import Tools.Beam.UtilsTH
 
 data ExophoneT f = ExophoneT
   { id :: B.C f Text,
-    -- merchantId :: B.C f Text,
+    merchantId :: B.C f Text,
     merchantOperatingCityId :: B.C f Text,
     primaryPhone :: B.C f Text,
     backupPhone :: B.C f Text,

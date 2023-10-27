@@ -26,13 +26,13 @@ import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
 import Kernel.Utils.Common
 
-findById :: (CacheFlow m r, BeamFlow m) => Id MediaFile -> Identifier -> m (Maybe MediaFile)
+findById :: BeamFlow m r => Id MediaFile -> Identifier -> m (Maybe MediaFile)
 findById mediaFileId identifier =
   Hedis.withCrossAppRedis (Hedis.safeGet $ makeMediaFileByIdKey mediaFileId identifier) >>= \case
     Just a -> pure a
     Nothing -> cacheMediaFileById mediaFileId identifier /=<< Queries.findById mediaFileId
 
-findAllInForIssueReportId :: (CacheFlow m r, BeamFlow m) => [Id MediaFile] -> Id IssueReport -> Identifier -> m [MediaFile]
+findAllInForIssueReportId :: BeamFlow m r => [Id MediaFile] -> Id IssueReport -> Identifier -> m [MediaFile]
 findAllInForIssueReportId mediaFileIds issueReportId identifier =
   Hedis.withCrossAppRedis (Hedis.safeGet $ makeMediaFileByIssueReportIdKey issueReportId identifier) >>= \case
     Just a -> pure a

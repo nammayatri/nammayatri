@@ -21,22 +21,23 @@ import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
 import qualified Kernel.Types.Id as KTI
+import Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified Storage.Beam.FarePolicy.FarePolicySlabDetails.FarePolicySlabDetailsSlab as BeamFPSS
 
 findAll' ::
-  MonadFlow m =>
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
   Id DFP.FarePolicy ->
   m [BeamFPSS.FullFarePolicySlabsDetailsSlab]
 findAll' (Id farePolicyId) = findAllWithOptionsKV [Se.Is BeamFPSS.farePolicyId $ Se.Eq farePolicyId] (Se.Asc BeamFPSS.startDistance) Nothing Nothing
 
 findById'' ::
-  MonadFlow m =>
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
   Id DFP.FarePolicy ->
   m (Maybe BeamFPSS.FullFarePolicySlabsDetailsSlab)
 findById'' (Id farePolicyId) = findAllWithKV [Se.Is BeamFPSS.farePolicyId $ Se.Eq farePolicyId] <&> listToMaybe
 
-deleteAll' :: MonadFlow m => Id DFP.FarePolicy -> m ()
+deleteAll' :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DFP.FarePolicy -> m ()
 deleteAll' (Id farePolicyId) = deleteWithKV [Se.Is BeamFPSS.farePolicyId $ Se.Eq farePolicyId]
 
 instance FromTType' BeamFPSS.FarePolicySlabsDetailsSlab BeamFPSS.FullFarePolicySlabsDetailsSlab where

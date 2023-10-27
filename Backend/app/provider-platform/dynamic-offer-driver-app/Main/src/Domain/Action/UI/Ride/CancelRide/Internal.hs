@@ -97,14 +97,14 @@ cancelRideImpl rideId bookingCReason = do
     triggerRideCancelledEvent RideEventData {ride = ride{status = DRide.CANCELLED}, personId = driver.id, merchantId = merchantId}
     triggerBookingCancelledEvent BookingEventData {booking = booking{status = SRB.CANCELLED}, personId = driver.id, merchantId = merchantId}
     when (bookingCReason.source == SBCR.ByDriver) $
-      DS.driverScoreEventHandler DST.OnDriverCancellation {merchantId = merchantId, driverId = driver.id, rideFare = Just booking.estimatedFare}
-    Notify.notifyOnCancel merchantId booking driver.id driver.deviceToken bookingCReason.source
+      DS.driverScoreEventHandler ride.merchantOperatingCityId DST.OnDriverCancellation {merchantId = merchantId, driverId = driver.id, rideFare = Just booking.estimatedFare}
+    Notify.notifyOnCancel ride.merchantOperatingCityId booking driver.id driver.deviceToken bookingCReason.source
 
   fork "cancelRide - Notify BAP" $ do
     driverQuote <- QDQ.findById (Id booking.quoteId) >>= fromMaybeM (QuoteNotFound booking.quoteId)
     searchTry <- QST.findById driverQuote.searchTryId >>= fromMaybeM (SearchTryNotFound driverQuote.searchTryId.getId)
     searchReq <- QSR.findById searchTry.requestId >>= fromMaybeM (SearchRequestNotFound searchTry.requestId.getId)
-    transpConf <- QTC.findByMerchantId merchant.id >>= fromMaybeM (TransporterConfigNotFound merchant.id.getId)
+    transpConf <- QTC.findByMerchantOpCityId searchReq.merchantOperatingCityId >>= fromMaybeM (TransporterConfigNotFound searchReq.merchantOperatingCityId.getId)
     let searchRepeatLimit = transpConf.searchRepeatLimit
     now <- getCurrentTime
     farePolicy <- getFarePolicy searchReq.providerId searchTry.vehicleVariant searchReq.area
@@ -115,7 +115,7 @@ cancelRideImpl rideId bookingCReason = do
     if isRepeatSearch
       then do
         blockListedDriverList <- addDriverToSearchCancelledList searchReq.id ride
-        driverPoolCfg <- getDriverPoolConfig merchant.id (Just searchTry.vehicleVariant) searchReq.estimatedDistance
+        driverPoolCfg <- getDriverPoolConfig ride.merchantOperatingCityId (Just searchTry.vehicleVariant) searchReq.estimatedDistance
         logDebug $ "BlockListed Drivers-" <> show blockListedDriverList
         driverPool <- calculateDriverPool DP.Estimate driverPoolCfg (Just searchTry.vehicleVariant) searchReq.fromLocation merchant.id True Nothing
         let newDriverPool = filter (\dpr -> cast dpr.driverId `notElem` blockListedDriverList) driverPool
@@ -180,9 +180,8 @@ repeatSearch ::
   m ()
 repeatSearch merchant farePolicy searchReq searchTry booking ride cancellationSource now driverPoolConfig = do
   newSearchTry <- buildSearchTry searchTry
-
   _ <- QST.create newSearchTry
-  goHomeCfg <- CQGHC.findByMerchantId merchant.id
+  goHomeCfg <- CQGHC.findByMerchantOpCityId searchReq.merchantOperatingCityId
   let driverExtraFeeBounds = DFP.findDriverExtraFeeBoundsByDistance searchReq.estimatedDistance <$> farePolicy.driverExtraFeeBounds
   (res, _) <-
     sendSearchRequestToDrivers'

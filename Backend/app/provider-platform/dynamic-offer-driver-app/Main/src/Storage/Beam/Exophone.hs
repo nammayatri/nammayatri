@@ -24,6 +24,7 @@ import Tools.Beam.UtilsTH
 data ExophoneT f = ExophoneT
   { id :: B.C f Text,
     merchantId :: B.C f Text,
+    merchantOperatingCityId :: B.C f Text,
     primaryPhone :: B.C f Text,
     backupPhone :: B.C f Text,
     exophoneType :: B.C f Domain.ExophoneType,
@@ -42,6 +43,6 @@ instance B.Table ExophoneT where
 
 type Exophone = ExophoneT Identity
 
-$(enableKVPG ''ExophoneT ['id] [['merchantId], ['primaryPhone], ['backupPhone]])
+$(enableKVPG ''ExophoneT ['id] [['merchantOperatingCityId], ['primaryPhone], ['backupPhone]])
 
 $(mkTableInstances ''ExophoneT "exophone")

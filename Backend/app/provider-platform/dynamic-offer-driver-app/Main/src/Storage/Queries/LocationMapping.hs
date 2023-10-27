@@ -22,29 +22,30 @@ import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
+import Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified Storage.Beam.LocationMapping as BeamLM
 
-create :: MonadFlow m => LocationMapping -> m ()
+create :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => LocationMapping -> m ()
 create = createWithKV
 
-countOrders :: MonadFlow m => Text -> m Int
+countOrders :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> m Int
 countOrders entityId = findAllWithKVAndConditionalDB [Se.Is BeamLM.entityId $ Se.Eq entityId] <&> length
 
-findByEntityId :: MonadFlow m => Text -> m [LocationMapping] --TODO : SORT BY ORDER
+findByEntityId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> m [LocationMapping] --TODO : SORT BY ORDER
 findByEntityId entityId = findAllWithKVAndConditionalDB [Se.Is BeamLM.entityId $ Se.Eq entityId]
 
-findAllByEntityIdAndOrder :: MonadFlow m => Text -> Int -> m [LocationMapping]
+findAllByEntityIdAndOrder :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> Int -> m [LocationMapping]
 findAllByEntityIdAndOrder entityId order =
   findAllWithKVAndConditionalDB
     [Se.And [Se.Is BeamLM.entityId $ Se.Eq entityId, Se.Is BeamLM.order $ Se.Eq order]]
 
-updatePastMappingVersions :: MonadFlow m => Text -> Int -> m ()
+updatePastMappingVersions :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> Int -> m ()
 updatePastMappingVersions entityId order = do
   mappings <- findAllByEntityIdAndOrder entityId order
   traverse_ incrementVersion mappings
 
-incrementVersion :: MonadFlow m => LocationMapping -> m ()
+incrementVersion :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => LocationMapping -> m ()
 incrementVersion mapping = do
   let newVersion = getNewVersion mapping.version
   updateVersion mapping.entityId mapping.order newVersion
@@ -55,7 +56,7 @@ getNewVersion oldVersion =
     ["v", versionNum] -> "v-" <> T.pack (show (read (T.unpack versionNum) + 1))
     _ -> "v-1"
 
-updateVersion :: MonadFlow m => Text -> Int -> Text -> m ()
+updateVersion :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> Int -> Text -> m ()
 updateVersion entityId order version =
   updateOneWithKV
     [Se.Set BeamLM.version version]

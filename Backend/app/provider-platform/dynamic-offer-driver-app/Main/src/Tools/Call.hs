@@ -18,6 +18,7 @@ module Tools.Call
 where
 
 import Domain.Types.Merchant
+import Domain.Types.Merchant.MerchantOperatingCity
 import qualified Domain.Types.Merchant.MerchantServiceConfig as DMSC
 import Domain.Types.Merchant.MerchantServiceUsageConfig (MerchantServiceUsageConfig)
 import Kernel.External.Call as Reexport hiding
@@ -37,6 +38,7 @@ initiateCall ::
     ToJSON a
   ) =>
   Id Merchant ->
+  Id MerchantOperatingCity ->
   InitiateCallReq a ->
   m InitiateCallResp
 initiateCall = runWithServiceConfig Call.initiateCall (.initiateCall)
@@ -46,13 +48,14 @@ runWithServiceConfig ::
   (CallServiceConfig -> req -> m resp) ->
   (MerchantServiceUsageConfig -> CallService) ->
   Id Merchant ->
+  Id MerchantOperatingCity ->
   req ->
   m resp
-runWithServiceConfig func getCfg merchantId req = do
-  merchantConfig <- QMSUC.findByMerchantId merchantId >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantId.getId)
+runWithServiceConfig func getCfg merchantId merchantOpCityId req = do
+  merchantConfig <- QMSUC.findByMerchantOpCityId merchantOpCityId >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
   merchantCallServiceConfig <-
     QMSC.findByMerchantIdAndService merchantId (DMSC.CallService $ getCfg merchantConfig)
-      >>= fromMaybeM (MerchantServiceConfigNotFound merchantId.getId "call" (show $ getCfg merchantConfig))
+      >>= fromMaybeM (MerchantServiceConfigNotFound merchantOpCityId.getId "call" (show $ getCfg merchantConfig))
   case merchantCallServiceConfig.serviceConfig of
     DMSC.CallServiceConfig msc -> func msc req
     _ -> throwError $ InternalError "Unknown ServiceConfig"

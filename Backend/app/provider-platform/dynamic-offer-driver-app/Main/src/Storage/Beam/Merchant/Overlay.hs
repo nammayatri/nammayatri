@@ -28,6 +28,7 @@ import Tools.Beam.UtilsTH
 data OverlayT f = OverlayT
   { id :: B.C f Text,
     merchantId :: B.C f Text,
+    merchantOperatingCityId :: B.C f Text,
     overlayKey :: B.C f Text,
     language :: B.C f Language,
     udf1 :: B.C f (Maybe Text),
@@ -57,6 +58,6 @@ instance B.Table OverlayT where
 
 type Overlay = OverlayT Identity
 
-$(enableKVPG ''OverlayT ['id] [['merchantId, 'overlayKey]])
+$(enableKVPG ''OverlayT ['id] [['merchantOperatingCityId, 'overlayKey]])
 
 $(mkTableInstances ''OverlayT "merchant_overlay")

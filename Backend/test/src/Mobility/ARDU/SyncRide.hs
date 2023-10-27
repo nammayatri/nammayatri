@@ -20,7 +20,7 @@ import qualified "rider-app" Domain.Types.Ride as DAppBackendRide
 import EulerHS.Prelude
 import HSpec
 import Mobility.ARDU.APICalls (getDriverOfferBppBaseUrl)
-import Mobility.ARDU.Fixtures (arduDriver1, nammaYatriPartnerMerchantShortId)
+import Mobility.ARDU.Fixtures (arduDriver1, nammaYatriDefaultOperatingCity, nammaYatriPartnerMerchantShortId)
 import Mobility.ARDU.Utils as Utils
 import Mobility.AppBackend.Fixtures
 import Mobility.Fixtures.Routes
@@ -55,7 +55,7 @@ cancelSyncFlow = do
   bapRide.status `shouldBeDesc` DAppBackendRide.NEW $
     "providerPlatformRideId: " <> show providerPlatformRideId.getId <> "; bap ride status:"
 
-  rideSync nammaYatriPartnerMerchantShortId providerPlatformRideId
+  rideSync nammaYatriPartnerMerchantShortId nammaYatriDefaultOperatingCity providerPlatformRideId
 
   syncRide <- getBPPRideById providerPlatformRideId
   syncRide.status `shouldBeDesc` DDriverOfferRide.CANCELLED $

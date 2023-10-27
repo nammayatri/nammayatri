@@ -12,10 +12,10 @@ import IssueManagement.Storage.BeamFlow
 import IssueManagement.Tools.UtilsTH
 import Kernel.Types.Id
 
-create :: BeamFlow m => IssueReport.IssueReport -> m ()
+create :: BeamFlow m r => IssueReport.IssueReport -> m ()
 create = createWithKV
 
-findAllWithOptions :: BeamFlow m => Maybe Int -> Maybe Int -> Maybe IssueStatus -> Maybe (Id IssueCategory) -> Maybe Text -> m [IssueReport]
+findAllWithOptions :: BeamFlow m r => Maybe Int -> Maybe Int -> Maybe IssueStatus -> Maybe (Id IssueCategory) -> Maybe Text -> m [IssueReport]
 findAllWithOptions mbLimit mbOffset mbStatus mbCategoryId mbAssignee =
   findAllWithOptionsKV conditions (Desc BeamIR.createdAt) (Just limitVal) (Just offsetVal)
   where
@@ -30,24 +30,24 @@ findAllWithOptions mbLimit mbOffset mbStatus mbCategoryId mbAssignee =
             ]
       ]
 
-findById :: BeamFlow m => Id IssueReport -> m (Maybe IssueReport)
+findById :: BeamFlow m r => Id IssueReport -> m (Maybe IssueReport)
 findById (Id issueReportId) = findOneWithKV [And [Is BeamIR.id $ Eq issueReportId, Is BeamIR.deleted $ Eq False]]
 
-findAllByPerson :: BeamFlow m => Id Person -> m [IssueReport]
+findAllByPerson :: BeamFlow m r => Id Person -> m [IssueReport]
 findAllByPerson (Id personId) = findAllWithKV [And [Is BeamIR.personId $ Eq personId, Is BeamIR.deleted $ Eq False]]
 
-safeToDelete :: BeamFlow m => Id IssueReport -> Id Person -> m (Maybe IssueReport)
+safeToDelete :: BeamFlow m r => Id IssueReport -> Id Person -> m (Maybe IssueReport)
 safeToDelete (Id issueReportId) (Id personId) = findOneWithKV [And [Is BeamIR.id $ Eq issueReportId, Is BeamIR.personId $ Eq personId, Is BeamIR.deleted $ Eq False]]
 
-isSafeToDelete :: BeamFlow m => Id IssueReport -> Id Person -> m Bool
+isSafeToDelete :: BeamFlow m r => Id IssueReport -> Id Person -> m Bool
 isSafeToDelete issueReportId personId = do
   findSafeToDelete <- safeToDelete issueReportId personId
   return $ isJust findSafeToDelete
 
-deleteByPersonId :: BeamFlow m => Id Person -> m ()
+deleteByPersonId :: BeamFlow m r => Id Person -> m ()
 deleteByPersonId (Id personId) = deleteWithKV [Is BeamIR.personId (Eq personId)]
 
-updateAsDeleted :: BeamFlow m => Id IssueReport -> m ()
+updateAsDeleted :: BeamFlow m r => Id IssueReport -> m ()
 updateAsDeleted issueReportId = do
   now <- getCurrentTime
   updateOneWithKV
@@ -56,38 +56,38 @@ updateAsDeleted issueReportId = do
     ]
     [Is BeamIR.id (Eq $ getId issueReportId)]
 
-updateStatusAssignee :: BeamFlow m => Id IssueReport -> Maybe IssueStatus -> Maybe Text -> m ()
+updateStatusAssignee :: BeamFlow m r => Id IssueReport -> Maybe IssueStatus -> Maybe Text -> m ()
 updateStatusAssignee issueReportId status assignee = do
   now <- getCurrentTime
   updateOneWithKV
     ([Set BeamIR.updatedAt $ T.utcToLocalTime T.utc now] <> if isJust status then [Set BeamIR.status (fromJust status)] else [] <> ([Set BeamIR.assignee assignee | isJust assignee]))
     [Is BeamIR.id (Eq $ getId issueReportId)]
 
-updateOption :: BeamFlow m => Id IssueReport -> Id IssueOption -> m ()
+updateOption :: BeamFlow m r => Id IssueReport -> Id IssueOption -> m ()
 updateOption issueReportId (Id optionId) = do
   now <- getCurrentTime
   updateOneWithKV
     [Set BeamIR.optionId (Just optionId), Set BeamIR.updatedAt $ T.utcToLocalTime T.utc now]
     [Is BeamIR.id (Eq $ getId issueReportId)]
 
-updateIssueStatus :: BeamFlow m => Text -> IssueStatus -> m ()
+updateIssueStatus :: BeamFlow m r => Text -> IssueStatus -> m ()
 updateIssueStatus ticketId status = do
   now <- getCurrentTime
   updateOneWithKV
     [Set BeamIR.status status, Set BeamIR.updatedAt $ T.utcToLocalTime T.utc now]
     [Is BeamIR.ticketId (Eq (Just ticketId))]
 
-updateTicketId :: BeamFlow m => Id IssueReport -> Text -> m ()
+updateTicketId :: BeamFlow m r => Id IssueReport -> Text -> m ()
 updateTicketId issueId ticketId = do
   now <- getCurrentTime
   updateOneWithKV
     [Set BeamIR.ticketId (Just ticketId), Set BeamIR.updatedAt $ T.utcToLocalTime T.utc now]
     [Is BeamIR.id (Eq $ getId issueId)]
 
-findByTicketId :: BeamFlow m => Text -> m (Maybe IssueReport)
+findByTicketId :: BeamFlow m r => Text -> m (Maybe IssueReport)
 findByTicketId ticketId = findOneWithKV [Is BeamIR.ticketId $ Eq (Just ticketId)]
 
-updateChats :: BeamFlow m => Id IssueReport -> [Chat] -> m ()
+updateChats :: BeamFlow m r => Id IssueReport -> [Chat] -> m ()
 updateChats issueId chats = do
   now <- getCurrentTime
   updateOneWithKV

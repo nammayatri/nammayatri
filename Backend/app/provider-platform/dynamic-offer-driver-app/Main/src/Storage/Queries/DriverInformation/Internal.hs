@@ -18,20 +18,20 @@ import qualified Domain.Types.DriverInformation as DriverInfo
 import qualified Domain.Types.Person as DP
 import Kernel.Beam.Functions (findAllWithKV)
 import Kernel.Prelude
-import Kernel.Types.App (MonadFlow)
 import Kernel.Types.Id
+import Kernel.Utils.Common
 import qualified Sequelize as Se
 import Storage.Beam.DriverInformation as BeamDI
 import qualified Storage.Queries.Instances.DriverInformation ()
 
 getDriverInfos ::
-  MonadFlow m =>
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
   [Text] ->
   m [DriverInfo.DriverInformation]
 getDriverInfos personKeys = do
   findAllWithKV [Se.Is BeamDI.driverId $ Se.In personKeys]
 
-getDriverInfosWithCond :: MonadFlow m => [Id DP.Person] -> Bool -> Bool -> m [DriverInfo.DriverInformation]
+getDriverInfosWithCond :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Id DP.Person] -> Bool -> Bool -> m [DriverInfo.DriverInformation]
 getDriverInfosWithCond driverLocs onlyNotOnRide onlyOnRide =
   findAllWithKV
     [ Se.And

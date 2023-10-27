@@ -15,13 +15,12 @@ module Storage.CachedQueries.BapMetadata where
 
 import Domain.Types.BapMetadata
 import Kernel.Prelude
-import qualified Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.Queries.BapMetadata as Queries
 
-findById :: (CacheFlow m r, Esq.EsqDBFlow m r) => Id BapMetadata -> m (Maybe BapMetadata)
+findById :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id BapMetadata -> m (Maybe BapMetadata)
 findById bapMetadataId =
   Hedis.withCrossAppRedis (Hedis.safeGet $ makeBapMetadataByIdKey bapMetadataId) >>= \case
     Just a -> pure a

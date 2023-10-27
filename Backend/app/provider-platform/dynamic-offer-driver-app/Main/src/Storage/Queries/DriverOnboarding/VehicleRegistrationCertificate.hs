@@ -22,13 +22,14 @@ import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
+import Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified Storage.Beam.DriverOnboarding.VehicleRegistrationCertificate as BeamVRC
 
-create :: MonadFlow m => VehicleRegistrationCertificate -> m ()
+create :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => VehicleRegistrationCertificate -> m ()
 create = createWithKV
 
-upsert :: MonadFlow m => VehicleRegistrationCertificate -> m ()
+upsert :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => VehicleRegistrationCertificate -> m ()
 upsert a@VehicleRegistrationCertificate {..} = do
   res <- findOneWithKV [Se.And [Se.Is BeamVRC.certificateNumberHash $ Se.Eq (a.certificateNumber & (.hash)), Se.Is BeamVRC.fitnessExpiry $ Se.Eq a.fitnessExpiry]]
   if isJust res
@@ -52,20 +53,20 @@ upsert a@VehicleRegistrationCertificate {..} = do
         [Se.And [Se.Is BeamVRC.certificateNumberHash $ Se.Eq (a.certificateNumber & (.hash)), Se.Is BeamVRC.fitnessExpiry $ Se.Eq a.fitnessExpiry]]
     else createWithKV a
 
-findById :: MonadFlow m => Id VehicleRegistrationCertificate -> m (Maybe VehicleRegistrationCertificate)
+findById :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id VehicleRegistrationCertificate -> m (Maybe VehicleRegistrationCertificate)
 findById (Id vrcID) = findOneWithKV [Se.Is BeamVRC.id $ Se.Eq vrcID]
 
-updateFleetOwnerId :: MonadFlow m => Id VehicleRegistrationCertificate -> Maybe Text -> m ()
+updateFleetOwnerId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id VehicleRegistrationCertificate -> Maybe Text -> m ()
 updateFleetOwnerId (Id rcId) fleetOwnerId =
   updateWithKV
     [Se.Set BeamVRC.fleetOwnerId fleetOwnerId]
     [Se.Is BeamVRC.id $ Se.Eq rcId]
 
-findLastVehicleRC :: (MonadFlow m) => DbHash -> m (Maybe VehicleRegistrationCertificate)
+findLastVehicleRC :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => DbHash -> m (Maybe VehicleRegistrationCertificate)
 findLastVehicleRC certNumberHash = do
   findAllWithOptionsKV [Se.Is BeamVRC.certificateNumberHash $ Se.Eq certNumberHash] (Se.Desc BeamVRC.fitnessExpiry) Nothing Nothing <&> listToMaybe
 
-findByRCIdAndFleetOwnerId :: MonadFlow m => Id VehicleRegistrationCertificate -> Text -> m (Maybe VehicleRegistrationCertificate)
+findByRCIdAndFleetOwnerId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id VehicleRegistrationCertificate -> Text -> m (Maybe VehicleRegistrationCertificate)
 findByRCIdAndFleetOwnerId (Id rcId) fleetOwnerId =
   findOneWithKV
     [ Se.And
@@ -74,21 +75,21 @@ findByRCIdAndFleetOwnerId (Id rcId) fleetOwnerId =
         ]
     ]
 
-updateVehicleVariant :: (MonadFlow m) => Id VehicleRegistrationCertificate -> Maybe Vehicle.Variant -> m ()
+updateVehicleVariant :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id VehicleRegistrationCertificate -> Maybe Vehicle.Variant -> m ()
 updateVehicleVariant (Id vehicleRegistrationCertificateId) variant = do
   updateOneWithKV
     [Se.Set BeamVRC.vehicleVariant variant]
     [Se.Is BeamVRC.id (Se.Eq vehicleRegistrationCertificateId)]
 
-findByRCAndExpiry :: MonadFlow m => EncryptedHashedField 'AsEncrypted Text -> UTCTime -> m (Maybe VehicleRegistrationCertificate)
+findByRCAndExpiry :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => EncryptedHashedField 'AsEncrypted Text -> UTCTime -> m (Maybe VehicleRegistrationCertificate)
 findByRCAndExpiry certNumber expiry = do
   let certNumberHash = certNumber & (.hash)
   findOneWithKV [Se.And [Se.Is BeamVRC.certificateNumberHash $ Se.Eq certNumberHash, Se.Is BeamVRC.fitnessExpiry $ Se.Eq expiry]]
 
-findAllById :: MonadFlow m => [Id VehicleRegistrationCertificate] -> m [VehicleRegistrationCertificate]
+findAllById :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Id VehicleRegistrationCertificate] -> m [VehicleRegistrationCertificate]
 findAllById rcIds = findAllWithKV [Se.Is BeamVRC.id $ Se.In $ map (.getId) rcIds]
 
-findAllByFleetOwnerId :: MonadFlow m => Text -> Int -> Int -> m [VehicleRegistrationCertificate]
+findAllByFleetOwnerId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> Int -> Int -> m [VehicleRegistrationCertificate]
 findAllByFleetOwnerId fleetOwnerId limit offset = do
   findAllWithOptionsKV
     [Se.Is BeamVRC.fleetOwnerId $ Se.Eq $ Just fleetOwnerId]
@@ -96,7 +97,7 @@ findAllByFleetOwnerId fleetOwnerId limit offset = do
     (Just limit)
     (Just offset)
 
-findAllByFleetOwnerId' :: MonadFlow m => Text -> m [VehicleRegistrationCertificate]
+findAllByFleetOwnerId' :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> m [VehicleRegistrationCertificate]
 findAllByFleetOwnerId' fleetOwnerId = do
   findAllWithOptionsKV
     [Se.Is BeamVRC.fleetOwnerId $ Se.Eq $ Just fleetOwnerId]
@@ -104,16 +105,16 @@ findAllByFleetOwnerId' fleetOwnerId = do
     Nothing
     Nothing
 
-findLastVehicleRCWrapper :: (MonadFlow m, EncFlow m r) => Text -> m (Maybe VehicleRegistrationCertificate)
+findLastVehicleRCWrapper :: (MonadFlow m, EncFlow m r, EsqDBFlow m r, CacheFlow m r) => Text -> m (Maybe VehicleRegistrationCertificate)
 findLastVehicleRCWrapper certNumber = do
   certNumberHash <- getDbHash certNumber
   runInReplica $ findLastVehicleRC certNumberHash
 
-findLastVehicleRCFleet :: (MonadFlow m) => DbHash -> Text -> m (Maybe VehicleRegistrationCertificate)
+findLastVehicleRCFleet :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => DbHash -> Text -> m (Maybe VehicleRegistrationCertificate)
 findLastVehicleRCFleet certNumberHash fleetOwnerId = do
   findAllWithOptionsKV [Se.And [Se.Is BeamVRC.certificateNumberHash $ Se.Eq certNumberHash, Se.Is BeamVRC.fleetOwnerId $ Se.Eq $ Just fleetOwnerId]] (Se.Desc BeamVRC.updatedAt) Nothing Nothing <&> listToMaybe
 
-findLastVehicleRCFleet' :: (MonadFlow m, EncFlow m r) => Text -> Text -> m (Maybe VehicleRegistrationCertificate)
+findLastVehicleRCFleet' :: (MonadFlow m, EncFlow m r, CacheFlow m r, EsqDBFlow m r) => Text -> Text -> m (Maybe VehicleRegistrationCertificate)
 findLastVehicleRCFleet' certNumber fleetOwnerId = do
   certNumberHash <- getDbHash certNumber
   runInReplica $ findLastVehicleRCFleet certNumberHash fleetOwnerId
