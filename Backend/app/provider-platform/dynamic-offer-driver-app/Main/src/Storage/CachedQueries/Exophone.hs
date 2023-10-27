@@ -17,20 +17,20 @@ module Storage.CachedQueries.Exophone
   ( create,
     findByPhone,
     findByPrimaryPhone,
-    findAllByMerchantId,
-    findAllCallExophoneByMerchantId,
+    findAllByMerchantOpCityId,
+    findAllCallExophoneByMerchantOpCityId,
     findAllExophones,
     updateAffectedPhones,
-    deleteByMerchantId,
+    deleteByMerchantOpCityId,
     clearCache,
     clearAllCache,
     findByEndRidePhone,
-    findByMerchantServiceAndExophoneType,
+    findByMerchantOpCityIdServiceAndExophoneType,
   )
 where
 
 import Domain.Types.Exophone
-import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import Kernel.External.Call.Types (CallService)
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
@@ -38,14 +38,14 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.Queries.Exophone as Queries
 
-findAllByMerchantId :: (CacheFlow m r, EsqDBFlow m r) => Id DM.Merchant -> m [Exophone]
-findAllByMerchantId merchantId =
-  Hedis.safeGet (makeMerchantIdKey merchantId) >>= \case
+findAllByMerchantOpCityId :: (CacheFlow m r, EsqDBFlow m r) => Id DMOC.MerchantOperatingCity -> m [Exophone]
+findAllByMerchantOpCityId merchantOpCityId =
+  Hedis.safeGet (makeMerchantOpCityIdKey merchantOpCityId) >>= \case
     Just a -> return a
-    Nothing -> cacheExophones merchantId /=<< Queries.findAllByMerchantId merchantId
+    Nothing -> cacheExophones merchantOpCityId /=<< Queries.findAllByMerchantOpCityId merchantOpCityId
 
-findAllCallExophoneByMerchantId :: (CacheFlow m r, EsqDBFlow m r) => Id DM.Merchant -> m [Exophone]
-findAllCallExophoneByMerchantId merchantId = filter (\exophone -> exophone.exophoneType == CALL_RIDE) <$> findAllByMerchantId merchantId
+findAllCallExophoneByMerchantOpCityId :: (CacheFlow m r, EsqDBFlow m r) => Id DMOC.MerchantOperatingCity -> m [Exophone]
+findAllCallExophoneByMerchantOpCityId merchantOpCityId = filter (\exophone -> exophone.exophoneType == CALL_RIDE) <$> findAllByMerchantOpCityId merchantOpCityId
 
 findByPhone :: (CacheFlow m r, EsqDBFlow m r) => Text -> m (Maybe Exophone)
 findByPhone phone = find (\exophone -> (exophone.primaryPhone == phone || exophone.backupPhone == phone) && exophone.exophoneType == CALL_RIDE) <$> findAllByPhone phone
@@ -62,27 +62,27 @@ findAllByPhone phone =
     Nothing -> do
       exophones <- Queries.findAllByPhone phone
       case exophones of
-        exophone : _ -> cacheExophones exophone.merchantId exophones
+        exophone : _ -> cacheExophones exophone.merchantOperatingCityId exophones
         _ -> pure ()
       pure exophones
-    Just merchantId ->
-      Hedis.safeGet (makeMerchantIdKey merchantId) >>= \case
+    Just merchantOpCityId ->
+      Hedis.safeGet (makeMerchantOpCityIdKey merchantOpCityId) >>= \case
         Just a -> return a
-        Nothing -> cacheExophones merchantId /=<< Queries.findAllByPhone phone
+        Nothing -> cacheExophones merchantOpCityId /=<< Queries.findAllByPhone phone
 
-findAllExophones :: MonadFlow m => m [Exophone]
+findAllExophones :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => m [Exophone]
 findAllExophones = Queries.findAllExophones
 
-findByMerchantServiceAndExophoneType :: (CacheFlow m r, EsqDBFlow m r) => Id DM.Merchant -> CallService -> ExophoneType -> m [Exophone]
-findByMerchantServiceAndExophoneType merchantId service exophoneType =
-  Hedis.safeGet (makeMerchantIdServiceExophoneTypeKey merchantId service exophoneType) >>= \case
+findByMerchantOpCityIdServiceAndExophoneType :: (CacheFlow m r, EsqDBFlow m r) => Id DMOC.MerchantOperatingCity -> CallService -> ExophoneType -> m [Exophone]
+findByMerchantOpCityIdServiceAndExophoneType merchantOpCityId service exophoneType =
+  Hedis.safeGet (makeMerchantOpCityIdServiceExophoneTypeKey merchantOpCityId service exophoneType) >>= \case
     Just a -> return a
-    Nothing -> cacheExophonesByMerchantServiceAndExophoneType merchantId service exophoneType /=<< Queries.findByMerchantServiceAndExophoneType merchantId service exophoneType
+    Nothing -> cacheExophonesByMerchantOpCityIdServiceAndExophoneType merchantOpCityId service exophoneType /=<< Queries.findByMerchantOpCityIdServiceAndExophoneType merchantOpCityId service exophoneType
 
 -- Call it after any update
-clearCache :: Hedis.HedisFlow m r => Id DM.Merchant -> [Exophone] -> m ()
-clearCache merchantId exophones = do
-  Hedis.del (makeMerchantIdKey merchantId)
+clearCache :: Hedis.HedisFlow m r => Id DMOC.MerchantOperatingCity -> [Exophone] -> m ()
+clearCache merchantOpCityId exophones = do
+  Hedis.del (makeMerchantOpCityIdKey merchantOpCityId)
   forM_ exophones $ \exophone -> do
     Hedis.del (makePhoneKey exophone.primaryPhone)
     Hedis.del (makePhoneKey exophone.backupPhone)
@@ -91,41 +91,41 @@ clearAllCache :: Hedis.HedisFlow m r => m ()
 clearAllCache = Hedis.delByPattern patternKey
 
 -- test with empty list
-cacheExophones :: CacheFlow m r => Id DM.Merchant -> [Exophone] -> m ()
-cacheExophones merchantId exophones = do
+cacheExophones :: CacheFlow m r => Id DMOC.MerchantOperatingCity -> [Exophone] -> m ()
+cacheExophones merchantOpCityId exophones = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
-  let merchantIdKey = makeMerchantIdKey merchantId
-  Hedis.setExp merchantIdKey exophones expTime
+  let merchantOpCityIdKey = makeMerchantOpCityIdKey merchantOpCityId
+  Hedis.setExp merchantOpCityIdKey exophones expTime
   forM_ exophones $ \exophone -> do
-    Hedis.setExp (makePhoneKey exophone.primaryPhone) merchantId expTime
-    Hedis.setExp (makePhoneKey exophone.backupPhone) merchantId expTime
+    Hedis.setExp (makePhoneKey exophone.primaryPhone) merchantOpCityId expTime
+    Hedis.setExp (makePhoneKey exophone.backupPhone) merchantOpCityId expTime
 
-cacheExophonesByMerchantServiceAndExophoneType :: CacheFlow m r => Id DM.Merchant -> CallService -> ExophoneType -> [Exophone] -> m ()
-cacheExophonesByMerchantServiceAndExophoneType merchantId service exophoneType exophones = do
+cacheExophonesByMerchantOpCityIdServiceAndExophoneType :: CacheFlow m r => Id DMOC.MerchantOperatingCity -> CallService -> ExophoneType -> [Exophone] -> m ()
+cacheExophonesByMerchantOpCityIdServiceAndExophoneType merchantOpCityId service exophoneType exophones = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
-  let merchantServiceAndExophoneTypeKey = makeMerchantIdServiceExophoneTypeKey merchantId service exophoneType
+  let merchantServiceAndExophoneTypeKey = makeMerchantOpCityIdServiceExophoneTypeKey merchantOpCityId service exophoneType
   Hedis.setExp merchantServiceAndExophoneTypeKey exophones expTime
   forM_ exophones $ \exophone -> do
-    Hedis.setExp (makePhoneKey exophone.primaryPhone) merchantId expTime
-    Hedis.setExp (makePhoneKey exophone.backupPhone) merchantId expTime
+    Hedis.setExp (makePhoneKey exophone.primaryPhone) merchantOpCityId expTime
+    Hedis.setExp (makePhoneKey exophone.backupPhone) merchantOpCityId expTime
 
-makeMerchantIdKey :: Id DM.Merchant -> Text
-makeMerchantIdKey merchantId = "CachedQueries:Exophones:MerchantId-" <> merchantId.getId
+makeMerchantOpCityIdKey :: Id DMOC.MerchantOperatingCity -> Text
+makeMerchantOpCityIdKey merchantOpCityId = "CachedQueries:Exophones:MerchantOpCityId-" <> merchantOpCityId.getId
 
 makePhoneKey :: Text -> Text
 makePhoneKey phone = "CachedQueries:Exophones:Phone-" <> phone
 
-makeMerchantIdServiceExophoneTypeKey :: Id DM.Merchant -> CallService -> ExophoneType -> Text
-makeMerchantIdServiceExophoneTypeKey merchantId service exophoneType = "CachedQueries:Exophones:MerchantId-" <> merchantId.getId <> ":CallService-" <> show service <> ":ExophoneType-" <> show exophoneType
+makeMerchantOpCityIdServiceExophoneTypeKey :: Id DMOC.MerchantOperatingCity -> CallService -> ExophoneType -> Text
+makeMerchantOpCityIdServiceExophoneTypeKey merchantOpCityId service exophoneType = "CachedQueries:Exophones:MerchantOpCityId-" <> merchantOpCityId.getId <> ":CallService-" <> show service <> ":ExophoneType-" <> show exophoneType
 
 patternKey :: Text
 patternKey = "CachedQueries:Exophones:*"
 
-create :: MonadFlow m => Exophone -> m ()
+create :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Exophone -> m ()
 create = Queries.create
 
-updateAffectedPhones :: MonadFlow m => [Text] -> m ()
+updateAffectedPhones :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => [Text] -> m ()
 updateAffectedPhones = Queries.updateAffectedPhones
 
-deleteByMerchantId :: MonadFlow m => Id DM.Merchant -> m ()
-deleteByMerchantId = Queries.deleteByMerchantId
+deleteByMerchantOpCityId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id DMOC.MerchantOperatingCity -> m ()
+deleteByMerchantOpCityId = Queries.deleteByMerchantOpCityId

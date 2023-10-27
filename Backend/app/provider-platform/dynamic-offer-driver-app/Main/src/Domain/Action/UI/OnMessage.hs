@@ -19,6 +19,7 @@ module Domain.Action.UI.OnMessage
 where
 
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.Ride as Ride
 import Kernel.Beam.Functions
@@ -39,8 +40,8 @@ data FCMReq = FCMReq
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
-sendMessageFCM :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, HasShortDurationRetryCfg r c, HasFlowEnv m r '["nwAddress" ::: BaseUrl], HasHttpClientOptions r c) => (Id Person.Person, Id DM.Merchant) -> FCMReq -> m APISuccess.APISuccess
-sendMessageFCM (_personId, _) FCMReq {..} = do
+sendMessageFCM :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, HasShortDurationRetryCfg r c, HasFlowEnv m r '["nwAddress" ::: BaseUrl], HasHttpClientOptions r c) => (Id Person.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> FCMReq -> m APISuccess.APISuccess
+sendMessageFCM (_personId, _, _) FCMReq {..} = do
   ride <- runInReplica $ QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
   unless (isValidRideStatus (ride.status)) $ throwError $ RideInvalidStatus "The ride has already started."
   booking <- runInReplica $ QBooking.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)

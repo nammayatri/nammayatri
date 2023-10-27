@@ -34,14 +34,14 @@ import qualified Storage.Beam.FleetDriverAssociation as BeamFDA
 import Storage.Queries.DriverOnboarding.VehicleRegistrationCertificate ()
 import Storage.Queries.FleetDriverAssociation ()
 
-create :: MonadFlow m => DriverRCAssociation -> m ()
+create :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => DriverRCAssociation -> m ()
 create = createWithKV
 
-findById :: MonadFlow m => Id DriverRCAssociation -> m (Maybe DriverRCAssociation)
+findById :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DriverRCAssociation -> m (Maybe DriverRCAssociation)
 findById (Id drcaId) = findOneWithKV [Se.Is BeamDRCA.id $ Se.Eq drcaId]
 
 findAllByDriverId ::
-  MonadFlow m =>
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
   Id Person ->
   m [(DriverRCAssociation, VehicleRegistrationCertificate)]
 findAllByDriverId driverId = do
@@ -68,23 +68,23 @@ buildCertHM :: [VehicleRegistrationCertificate] -> HashMap.HashMap Text VehicleR
 buildCertHM regCerts =
   HashMap.fromList $ map (\r -> (r.id.getId, r)) regCerts
 
-getRegCerts :: MonadFlow m => [DriverRCAssociation] -> m [VehicleRegistrationCertificate]
+getRegCerts :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [DriverRCAssociation] -> m [VehicleRegistrationCertificate]
 getRegCerts rcAssocs = findAllWithKV [Se.Is BeamVRC.id $ Se.In $ getId <$> fetchRcIdFromAssocs rcAssocs]
 
 fetchRcIdFromAssocs :: [DriverRCAssociation] -> [Id VehicleRegistrationCertificate]
 fetchRcIdFromAssocs = map (.rcId)
 
-getRcAssocs :: MonadFlow m => Id Person -> m [DriverRCAssociation]
+getRcAssocs :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> m [DriverRCAssociation]
 getRcAssocs (Id driverId) = findAllWithOptionsKV [Se.Is BeamDRCA.driverId $ Se.Eq driverId] (Se.Desc BeamDRCA.associatedOn) Nothing Nothing
 
-endAssociationForRC :: MonadFlow m => Id Person -> Id VehicleRegistrationCertificate -> m ()
+endAssociationForRC :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> Id VehicleRegistrationCertificate -> m ()
 endAssociationForRC (Id driverId) (Id rcId) = do
   now <- getCurrentTime
   updateWithKV
     [Se.Set BeamDRCA.associatedTill $ Just now]
     [Se.And [Se.Is BeamDRCA.driverId (Se.Eq driverId), Se.Is BeamDRCA.associatedTill (Se.GreaterThan $ Just now), Se.Is BeamDRCA.rcId (Se.Eq rcId)]]
 
-deleteByDriverId :: MonadFlow m => Id Person -> m ()
+deleteByDriverId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> m ()
 deleteByDriverId (Id driverId) = deleteWithKV [Se.Is BeamDRCA.driverId (Se.Eq driverId)]
 
 instance FromTType' BeamDRCA.DriverRCAssociation DriverRCAssociation where
@@ -115,35 +115,35 @@ instance ToTType' BeamDRCA.DriverRCAssociation DriverRCAssociation where
         BeamDRCA.isRcActive = isRcActive
       }
 
-findActiveAssociationByRC :: MonadFlow m => Id VehicleRegistrationCertificate -> m (Maybe DriverRCAssociation)
+findActiveAssociationByRC :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id VehicleRegistrationCertificate -> m (Maybe DriverRCAssociation)
 findActiveAssociationByRC (Id rcId) = findOneWithKV [Se.And [Se.Is BeamDRCA.rcId $ Se.Eq rcId, Se.Is BeamDRCA.isRcActive $ Se.Eq True]]
 
-findActiveAssociationByDriver :: MonadFlow m => Id Person -> m (Maybe DriverRCAssociation)
+findActiveAssociationByDriver :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> m (Maybe DriverRCAssociation)
 findActiveAssociationByDriver (Id driverId) = findOneWithKV [Se.And [Se.Is BeamDRCA.driverId $ Se.Eq driverId, Se.Is BeamDRCA.isRcActive $ Se.Eq True]]
 
-deactivateRCForDriver :: MonadFlow m => Id Person -> Id VehicleRegistrationCertificate -> m ()
+deactivateRCForDriver :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> Id VehicleRegistrationCertificate -> m ()
 deactivateRCForDriver (Id driverId) (Id rcId) = updateWithKV [Se.Set BeamDRCA.isRcActive False] [Se.And [Se.Is BeamDRCA.driverId $ Se.Eq driverId, Se.Is BeamDRCA.rcId $ Se.Eq rcId]]
 
-activateRCForDriver :: MonadFlow m => Id Person -> Id VehicleRegistrationCertificate -> UTCTime -> m ()
+activateRCForDriver :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> Id VehicleRegistrationCertificate -> UTCTime -> m ()
 activateRCForDriver (Id driverId) (Id rcId) now = updateWithKV [Se.Set BeamDRCA.isRcActive True] [Se.And [Se.Is BeamDRCA.driverId $ Se.Eq driverId, Se.Is BeamDRCA.rcId $ Se.Eq rcId, Se.Is BeamDRCA.associatedTill $ Se.GreaterThan $ Just now]]
 
-findLinkedByRCIdAndDriverId :: MonadFlow m => Id Person -> Id VehicleRegistrationCertificate -> UTCTime -> m (Maybe DriverRCAssociation)
+findLinkedByRCIdAndDriverId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> Id VehicleRegistrationCertificate -> UTCTime -> m (Maybe DriverRCAssociation)
 findLinkedByRCIdAndDriverId (Id driverId) (Id rcId) now = findOneWithKV [Se.And [Se.Is BeamDRCA.driverId $ Se.Eq driverId, Se.Is BeamDRCA.rcId $ Se.Eq rcId, Se.Is BeamDRCA.associatedTill $ Se.GreaterThan $ Just now]]
 
-findLatestByRCIdAndDriverId :: MonadFlow m => Id VehicleRegistrationCertificate -> Id Person -> m (Maybe DriverRCAssociation)
+findLatestByRCIdAndDriverId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id VehicleRegistrationCertificate -> Id Person -> m (Maybe DriverRCAssociation)
 findLatestByRCIdAndDriverId (Id rcId) (Id driverId) =
   findAllWithOptionsKV [Se.And [Se.Is BeamDRCA.rcId $ Se.Eq rcId, Se.Is BeamDRCA.driverId $ Se.Eq driverId]] (Se.Desc BeamDRCA.associatedTill) (Just 1) Nothing <&> listToMaybe
 
-findLatestLinkedByRCId :: MonadFlow m => Id VehicleRegistrationCertificate -> UTCTime -> m (Maybe DriverRCAssociation)
+findLatestLinkedByRCId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id VehicleRegistrationCertificate -> UTCTime -> m (Maybe DriverRCAssociation)
 findLatestLinkedByRCId (Id rcId) now =
   findAllWithOptionsKV [Se.And [Se.Is BeamDRCA.rcId $ Se.Eq rcId, Se.Is BeamDRCA.associatedTill $ Se.GreaterThan $ Just now]] (Se.Desc BeamDRCA.associatedOn) (Just 1) Nothing <&> listToMaybe
 
-findAllLinkedByDriverId :: MonadFlow m => Id Person -> m [DriverRCAssociation]
+findAllLinkedByDriverId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> m [DriverRCAssociation]
 findAllLinkedByDriverId (Id driverId) = do
   now <- getCurrentTime
   findAllWithOptionsKV [Se.Is BeamDRCA.driverId $ Se.Eq driverId, Se.Is BeamDRCA.associatedTill $ Se.GreaterThan $ Just now] (Se.Desc BeamDRCA.associatedOn) Nothing Nothing
 
-mapping :: MonadFlow m => Maybe Text -> Maybe Int -> Maybe Int -> m [(VehicleRegistrationCertificate, FleetDriverAssociation, DriverRCAssociation)]
+mapping :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Maybe Text -> Maybe Int -> Maybe Int -> m [(VehicleRegistrationCertificate, FleetDriverAssociation, DriverRCAssociation)]
 mapping fleetIdWanted mbLimit mbOffset = do
   dbConf <- getMasterBeamConfig
   res <- L.runDB dbConf $

@@ -2,7 +2,7 @@
 
 module Storage.Queries.Notification where
 
-import Data.Time (UTCTime (UTCTime, utctDay), addUTCTime, secondsToDiffTime)
+import Data.Time (UTCTime (UTCTime, utctDay), secondsToDiffTime)
 import qualified Domain.Types.DriverFee as DF
 import Domain.Types.Notification as Domain
 import Kernel.Beam.Functions (FromTType' (fromTType'), ToTType' (toTType'), createWithKV, findAllWithKV, findAllWithOptionsKV, findOneWithKV, updateWithKV)
@@ -11,22 +11,23 @@ import qualified Kernel.External.Payment.Juspay.Types as Payment
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
+import Kernel.Utils.Common
 import qualified Sequelize as Se
 import Storage.Beam.Notification as BeamI hiding (Id)
 
-create :: MonadFlow m => Domain.Notification -> m ()
+create :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Domain.Notification -> m ()
 create = createWithKV
 
-findById :: MonadFlow m => Id Domain.Notification -> m (Maybe Domain.Notification)
+findById :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Domain.Notification -> m (Maybe Domain.Notification)
 findById (Id notificationId) = findOneWithKV [Se.Is BeamI.id $ Se.Eq notificationId]
 
-findByShortId :: MonadFlow m => Text -> m (Maybe Domain.Notification)
+findByShortId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> m (Maybe Domain.Notification)
 findByShortId shortId = findOneWithKV [Se.Is BeamI.shortId $ Se.Eq shortId]
 
-findAllByDriverFeeIdAndStatus :: MonadFlow m => [Id DF.DriverFee] -> NotificationStatus -> m [Domain.Notification]
+findAllByDriverFeeIdAndStatus :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Id DF.DriverFee] -> NotificationStatus -> m [Domain.Notification]
 findAllByDriverFeeIdAndStatus driverFeeIds status = findAllWithKV [Se.And [Se.Is BeamI.driverFeeId $ Se.In (getId <$> driverFeeIds), Se.Is BeamI.status $ Se.Eq status]]
 
-findAllByStatusWithLimit :: MonadFlow m => [NotificationStatus] -> Int -> m [Domain.Notification]
+findAllByStatusWithLimit :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [NotificationStatus] -> Int -> m [Domain.Notification]
 findAllByStatusWithLimit status limit = do
   endTime <- getCurrentTime
   let startTime = addUTCTime (-1 * 3 * 3600 * 24) endTime
@@ -46,7 +47,7 @@ findAllByStatusWithLimit status limit = do
     (Just limit)
     Nothing
 
-updatePendingToFailed :: MonadFlow m => m ()
+updatePendingToFailed :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => m ()
 updatePendingToFailed = do
   endTime <- getCurrentTime
   let startTime = addUTCTime (-1 * 3 * 3600 * 24) endTime
@@ -58,7 +59,7 @@ updatePendingToFailed = do
         ]
     ]
 
-updateNotificationStatusById :: MonadFlow m => Id Domain.Notification -> Payment.NotificationStatus -> m ()
+updateNotificationStatusById :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Domain.Notification -> Payment.NotificationStatus -> m ()
 updateNotificationStatusById notificationId notificationStatus = do
   now <- getCurrentTime
   updateWithKV
@@ -67,7 +68,7 @@ updateNotificationStatusById notificationId notificationStatus = do
     ]
     [Se.Is BeamI.id (Se.Eq $ getId notificationId)]
 
-updateLastCheckedOn :: MonadFlow m => [Id Domain.Notification] -> m ()
+updateLastCheckedOn :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Id Domain.Notification] -> m ()
 updateLastCheckedOn notificationIds = do
   now <- getCurrentTime
   let lastCheckedAt = UTCTime (utctDay now) (secondsToDiffTime 0)
@@ -77,7 +78,7 @@ updateLastCheckedOn notificationIds = do
     ]
     [Se.Is BeamI.id (Se.In $ getId <$> notificationIds)]
 
-updateNotificationResponseById :: MonadFlow m => Id Domain.Notification -> MandateNotificationRes -> m ()
+updateNotificationResponseById :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Domain.Notification -> MandateNotificationRes -> m ()
 updateNotificationResponseById notificationId response = do
   now <- getCurrentTime
   mNotification <- findById notificationId

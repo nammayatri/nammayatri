@@ -19,6 +19,7 @@ module SharedLogic.Allocator where
 import Data.Singletons.TH
 import qualified Domain.Types.FarePolicy as DFP
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import Domain.Types.Merchant.Overlay
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.SearchTry as DST
@@ -103,7 +104,8 @@ type instance JobContent 'SendSearchRequestToDriver = SendSearchRequestToDriverJ
 data SendPDNNotificationToDriverJobData = SendPDNNotificationToDriverJobData
   { startTime :: UTCTime,
     endTime :: UTCTime,
-    merchantId :: Id DM.Merchant
+    merchantId :: Id DM.Merchant,
+    merchantOperatingCityId :: Maybe (Id DMOC.MerchantOperatingCity)
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON)
 
@@ -114,7 +116,8 @@ type instance JobContent 'SendPDNNotificationToDriver = SendPDNNotificationToDri
 data MandateExecutionInfo = MandateExecutionInfo
   { startTime :: UTCTime,
     endTime :: UTCTime,
-    merchantId :: Id DM.Merchant
+    merchantId :: Id DM.Merchant,
+    merchantOperatingCityId :: Maybe (Id DMOC.MerchantOperatingCity)
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON)
 
@@ -124,6 +127,7 @@ type instance JobContent 'MandateExecution = MandateExecutionInfo
 
 data CalculateDriverFeesJobData = CalculateDriverFeesJobData
   { merchantId :: Id DM.Merchant,
+    merchantOperatingCityId :: Maybe (Id DMOC.MerchantOperatingCity),
     startTime :: UTCTime,
     endTime :: UTCTime
   }
@@ -133,8 +137,9 @@ instance JobInfoProcessor 'CalculateDriverFees
 
 type instance JobContent 'CalculateDriverFees = CalculateDriverFeesJobData
 
-newtype OrderAndNotificationStatusUpdateJobData = OrderAndNotificationStatusUpdateJobData
-  { merchantId :: Id DM.Merchant
+data OrderAndNotificationStatusUpdateJobData = OrderAndNotificationStatusUpdateJobData
+  { merchantId :: Id DM.Merchant,
+    merchantOperatingCityId :: Maybe (Id DMOC.MerchantOperatingCity)
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON)
 

@@ -34,6 +34,7 @@ import Domain.Types.DriverOnboarding.AadhaarVerification
 import qualified Domain.Types.DriverOnboarding.AadhaarVerification as VDomain
 import Domain.Types.DriverOnboarding.Error
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as Person
 import Environment
 import Kernel.Beam.Functions
@@ -74,9 +75,10 @@ generateAadhaarOtp ::
   Bool ->
   Maybe DM.Merchant ->
   Id Person.Person ->
+  Id DMOC.MerchantOperatingCity ->
   AadhaarVerification.AadhaarOtpReq ->
   Flow AadhaarVerification.AadhaarVerificationResp
-generateAadhaarOtp isDashboard mbMerchant personId req = do
+generateAadhaarOtp isDashboard mbMerchant personId merchantOpCityId req = do
   person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   driverInfo <- DriverInfo.findById (cast personId) >>= fromMaybeM (PersonNotFound personId.getId)
   when driverInfo.blocked $ throwError DriverAccountBlocked
@@ -89,9 +91,9 @@ generateAadhaarOtp isDashboard mbMerchant personId req = do
   let tryKey = makeGenerateOtpTryKey person.id
   numberOfTries :: Maybe Int <- Redis.safeGet tryKey
   let tried = fromMaybe 0 numberOfTries
-  transporterConfig <- CTC.findByMerchantId person.merchantId >>= fromMaybeM (TransporterConfigNotFound person.merchantId.getId)
+  transporterConfig <- CTC.findByMerchantOpCityId merchantOpCityId >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   unless (isDashboard || tried < transporterConfig.onboardingTryLimit) $ throwError (GenerateAadhaarOtpExceedLimit personId.getId)
-  res <- AadhaarVerification.generateAadhaarOtp person.merchantId $ req
+  res <- AadhaarVerification.generateAadhaarOtp person.merchantId merchantOpCityId req
   aadhaarOtpEntity <- mkAadhaarOtp personId res
   _ <- Query.createForGenerate aadhaarOtpEntity
   cacheAadhaarVerifyTries personId tried res.transactionId aadhaarHash isDashboard
@@ -109,9 +111,10 @@ cacheAadhaarVerifyTries personId tried transactionId aadhaarNumberHash isDashboa
 verifyAadhaarOtp ::
   Maybe DM.Merchant ->
   Id Person.Person ->
+  Id DMOC.MerchantOperatingCity ->
   VerifyAadhaarOtpReq ->
   Flow AadhaarVerification.AadhaarOtpVerifyRes
-verifyAadhaarOtp mbMerchant personId req = do
+verifyAadhaarOtp mbMerchant personId merchantOpCityId req = do
   person <- Person.findById personId >>= fromMaybeM (PersonNotFound (getId personId))
   driverInfo <- DriverInfo.findById (cast personId) >>= fromMaybeM (PersonNotFound (getId personId))
   when (driverInfo.blocked) $ throwError DriverAccountBlocked
@@ -129,7 +132,7 @@ verifyAadhaarOtp mbMerchant personId req = do
                 shareCode = req.shareCode,
                 transactionId = tId
               }
-      res <- AadhaarVerification.verifyAadhaarOtp person.merchantId aadhaarVerifyReq
+      res <- AadhaarVerification.verifyAadhaarOtp person.merchantId merchantOpCityId aadhaarVerifyReq
       aadhaarVerifyEntity <- mkAadhaarVerify personId tId res
       Query.createForVerify aadhaarVerifyEntity
       if res.code == pack "1002"
@@ -143,8 +146,8 @@ verifyAadhaarOtp mbMerchant personId req = do
               aadhaarEntity <- mkAadhaar personId res.name res.gender res.date_of_birth (Just aadhaarNumberHash) Nothing True (Just orgImageFilePath)
               Q.create aadhaarEntity
               DriverInfo.updateAadhaarVerifiedState (cast personId) True
-              Status.statusHandler (person.id, person.merchantId) Nothing
-              uploadCompressedAadhaarImage person res.image imageType >> pure ()
+              Status.statusHandler (person.id, person.merchantId, merchantOpCityId) Nothing
+              uploadCompressedAadhaarImage person merchantOpCityId res.image imageType >> pure ()
         else throwError $ InternalError "Aadhaar Verification failed, Please try again"
       pure res
     Nothing -> throwError TransactionIdNotFound
@@ -157,18 +160,18 @@ fetchAndCacheAadhaarImage driver driverInfo =
       Nothing -> do
         aadhaarVerification <- runInReplica (QAV.findByDriverId driverInfo.driverId) >>= fromMaybeM (InternalError $ "Count not find aadhaar verification data for the provided user : " <> getId driverInfo.driverId)
         case aadhaarVerification.driverImagePath of
-          Nothing -> backfillAadhaarImage driver aadhaarVerification
+          Nothing -> backfillAadhaarImage driver driver.merchantOperatingCityId aadhaarVerification
           Just imgPath -> do
             uploadedImage <- CQDI.getDriverImageByDriverId driverInfo.driverId imgPath
             let imageType = getImageExtension uploadedImage
-            (compImage, resultComp) <- uploadCompressedAadhaarImage driver uploadedImage imageType
+            (compImage, resultComp) <- uploadCompressedAadhaarImage driver driver.merchantOperatingCityId uploadedImage imageType
             case resultComp of
               Left _ -> return (Just uploadedImage)
               Right _ -> CQDI.cacheDriverImageByDriverId driverInfo.driverId compImage >> return (Just compImage)
     else pure Nothing
 
-backfillAadhaarImage :: (MonadFlow m, MonadTime m, MonadReader r m, HasField "s3Env" r (S3.S3Env m), CacheFlow m r, EsqDBFlow m r) => Person.Person -> AadhaarVerification -> m (Maybe Text)
-backfillAadhaarImage person aadhaarVerification =
+backfillAadhaarImage :: (MonadFlow m, MonadTime m, MonadReader r m, HasField "s3Env" r (S3.S3Env m), CacheFlow m r, EsqDBFlow m r) => Person.Person -> Id DMOC.MerchantOperatingCity -> AadhaarVerification -> m (Maybe Text)
+backfillAadhaarImage person merchantOpCityId aadhaarVerification =
   case aadhaarVerification.driverImage of
     Nothing -> return Nothing
     Just image -> do
@@ -178,7 +181,7 @@ backfillAadhaarImage person aadhaarVerification =
         Left _ -> return $ Just image
         Right _ -> do
           QAV.updateDriverImagePath person.id orgImageFilePath
-          (compImage, resultComp) <- uploadCompressedAadhaarImage person image imageType
+          (compImage, resultComp) <- uploadCompressedAadhaarImage person merchantOpCityId image imageType
           case resultComp of
             Left _ -> return $ Just image
             Right _ -> return $ Just compImage
@@ -189,9 +192,9 @@ uploadOriginalAadhaarImage person image imageType = do
   resultOrg <- try @_ @SomeException $ S3.put (unpack orgImageFilePath) image
   pure (orgImageFilePath, resultOrg)
 
-uploadCompressedAadhaarImage :: (HasField "s3Env" r (S3.S3Env m), MonadFlow m, MonadTime m, CacheFlow m r, EsqDBFlow m r) => Person.Person -> Text -> ImageType -> m (Text, Either SomeException ())
-uploadCompressedAadhaarImage person image imageType = do
-  transporterConfig <- CTC.findByMerchantId (person.merchantId) >>= fromMaybeM (TransporterConfigNotFound (getId (person.merchantId)))
+uploadCompressedAadhaarImage :: (HasField "s3Env" r (S3.S3Env m), MonadFlow m, MonadTime m, CacheFlow m r, EsqDBFlow m r) => Person.Person -> Id DMOC.MerchantOperatingCity -> Text -> ImageType -> m (Text, Either SomeException ())
+uploadCompressedAadhaarImage person merchantOpCityId image imageType = do
+  transporterConfig <- CTC.findByMerchantOpCityId merchantOpCityId >>= fromMaybeM (TransporterConfigNotFound (merchantOpCityId.getId))
   let mbconfig = transporterConfig.aadhaarImageResizeConfig
   compImageFilePath <- createFilePath (getId person.id) Common.Image "/driver-aadhaar-photo-resized/" (parseImageExtension imageType)
   compImage <- maybe (return image) (\cfg -> fromMaybe image <$> resizeImage cfg.height cfg.width image imageType) mbconfig

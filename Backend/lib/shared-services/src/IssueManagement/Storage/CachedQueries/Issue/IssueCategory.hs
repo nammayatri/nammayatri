@@ -27,19 +27,19 @@ import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow)
 
-findAllByLanguage :: (CacheFlow m r, BeamFlow m) => Language -> Identifier -> m [(IssueCategory, Maybe IssueTranslation)]
+findAllByLanguage :: BeamFlow m r => Language -> Identifier -> m [(IssueCategory, Maybe IssueTranslation)]
 findAllByLanguage language identifier =
   Hedis.withCrossAppRedis (Hedis.safeGet $ makeIssueCategoryByLanguageKey language identifier) >>= \case
     Just a -> pure a
     Nothing -> cacheAllIssueCategoryByLanguage language identifier /=<< Queries.findAllByLanguage language
 
-findById :: (CacheFlow m r, BeamFlow m) => Id IssueCategory -> Identifier -> m (Maybe IssueCategory)
+findById :: BeamFlow m r => Id IssueCategory -> Identifier -> m (Maybe IssueCategory)
 findById issueCategoryId identifier =
   Hedis.withCrossAppRedis (Hedis.safeGet $ makeIssueCategoryByIdKey issueCategoryId identifier) >>= \case
     Just a -> pure a
     Nothing -> cacheIssueCategoryById issueCategoryId identifier /=<< Queries.findById issueCategoryId
 
-findByIdAndLanguage :: (CacheFlow m r, BeamFlow m) => Id IssueCategory -> Language -> Identifier -> m (Maybe (IssueCategory, Maybe IssueTranslation))
+findByIdAndLanguage :: BeamFlow m r => Id IssueCategory -> Language -> Identifier -> m (Maybe (IssueCategory, Maybe IssueTranslation))
 findByIdAndLanguage issueCategoryId language identifier =
   Hedis.withCrossAppRedis (Hedis.safeGet $ makeIssueCategoryByIdAndLanguageKey issueCategoryId language identifier) >>= \case
     Just a -> pure a

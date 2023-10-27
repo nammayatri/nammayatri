@@ -28,6 +28,7 @@ import qualified Domain.Types.DriverInformation as DI
 import qualified Domain.Types.Invoice as INV
 import qualified Domain.Types.Mandate as DM
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Merchant.MerchantServiceConfig as DMSC
 import Domain.Types.Notification (Notification)
 import qualified Domain.Types.Person as DP
@@ -72,8 +73,8 @@ import qualified Tools.Payment as Payment
 import qualified Tools.PaymentNudge as PaymentNudge
 
 -- create order -----------------------------------------------------
-createOrder :: (Id DP.Person, Id DM.Merchant) -> Id INV.Invoice -> Flow Payment.CreateOrderResp
-createOrder (driverId, merchantId) invoiceId = do
+createOrder :: (Id DP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Id INV.Invoice -> Flow Payment.CreateOrderResp
+createOrder (driverId, merchantId, _) invoiceId = do
   invoices <- B.runInReplica $ QIN.findAllByInvoiceId invoiceId
   driverFees <- (B.runInReplica . QDF.findById . (.driverFeeId)) `mapM` invoices
   (createOrderResp, _) <- SPayment.createOrder (driverId, merchantId) (catMaybes driverFees, []) Nothing INV.MANUAL_INVOICE (getIdAndShortId <$> listToMaybe invoices)
@@ -81,8 +82,8 @@ createOrder (driverId, merchantId) invoiceId = do
   where
     getIdAndShortId inv = (inv.id, inv.invoiceShortId)
 
-getOrder :: (Id DP.Person, Id DM.Merchant) -> Id DOrder.PaymentOrder -> Flow DOrder.PaymentOrderAPIEntity
-getOrder (personId, _) orderId = do
+getOrder :: (Id DP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Id DOrder.PaymentOrder -> Flow DOrder.PaymentOrderAPIEntity
+getOrder (personId, _, _) orderId = do
   order <- QOrder.findById orderId >>= fromMaybeM (PaymentOrderNotFound orderId.getId)
   unless (order.personId == cast personId) $ throwError NotAnExecutor
   mkOrderAPIEntity order
@@ -94,8 +95,8 @@ mkOrderAPIEntity DOrder.PaymentOrder {..} = do
 
 -- order status -----------------------------------------------------
 
-getStatus :: (ServiceFlow m r, Transactionable m, EncFlow m r, EsqDBReplicaFlow m r, EsqDBFlow m r, CacheFlow m r, MonadFlow m) => (Id DP.Person, Id DM.Merchant) -> Id DOrder.PaymentOrder -> m DPayment.PaymentStatusResp
-getStatus (personId, merchantId) orderId = do
+getStatus :: (ServiceFlow m r, Transactionable m, EncFlow m r, EsqDBReplicaFlow m r, EsqDBFlow m r, CacheFlow m r, MonadFlow m) => (Id DP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Id DOrder.PaymentOrder -> m DPayment.PaymentStatusResp
+getStatus (personId, merchantId, _) orderId = do
   let commonPersonId = cast @DP.Person @DPayment.Person personId
       orderStatusCall = Payment.orderStatus merchantId -- api call
   order <- QOrder.findById orderId >>= fromMaybeM (PaymentOrderNotFound orderId.getId)
@@ -169,7 +170,7 @@ juspayWebhookHandler merchantShortId authData value = do
 processPayment :: (MonadFlow m, CacheFlow m r, EsqDBReplicaFlow m r, EsqDBFlow m r) => Id DM.Merchant -> Id DP.Person -> Id DOrder.PaymentOrder -> Bool -> m ()
 processPayment merchantId driverId orderId sendNotification = do
   driver <- B.runInReplica $ QP.findById driverId >>= fromMaybeM (PersonDoesNotExist driverId.getId)
-  transporterConfig <- SCT.findByMerchantId merchantId >>= fromMaybeM (TransporterConfigNotFound merchantId.getId)
+  transporterConfig <- SCT.findByMerchantOpCityId driver.merchantOperatingCityId >>= fromMaybeM (TransporterConfigNotFound driver.merchantOperatingCityId.getId)
   now <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
   invoices <- QIN.findAllByInvoiceId (cast orderId)
   let invoice = listToMaybe invoices
@@ -182,7 +183,7 @@ processPayment merchantId driverId orderId sendNotification = do
     updatePaymentStatus driverId merchantId
     when sendNotification $ notifyPaymentSuccessIfNotNotified driver orderId
 
-updatePaymentStatus :: (MonadFlow m, CacheFlow m r) => Id DP.Person -> Id DM.Merchant -> m ()
+updatePaymentStatus :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id DP.Person -> Id DM.Merchant -> m ()
 updatePaymentStatus driverId merchantId = do
   dueInvoices <- QDF.findAllPendingAndDueDriverFeeByDriverId (cast driverId)
   let totalDue = sum $ map (\dueInvoice -> SLDriverFee.roundToHalf $ fromIntegral dueInvoice.govtCharges + dueInvoice.platformFee.fee + dueInvoice.platformFee.cgst + dueInvoice.platformFee.sgst) dueInvoices
@@ -197,7 +198,7 @@ notifyPaymentSuccessIfNotNotified :: (CacheFlow m r, EsqDBFlow m r) => DP.Person
 notifyPaymentSuccessIfNotNotified driver orderId = do
   let key = "driver-offer:SuccessNotif-" <> orderId.getId
   sendNotificationIfNotSent key 86400 $ do
-    notifyPaymentSuccess driver.merchantId driver.id driver.deviceToken orderId
+    notifyPaymentSuccess driver.merchantOperatingCityId driver.id driver.deviceToken orderId
 
 shouldSendSuccessNotification :: Payment.MandateStatus -> Bool
 shouldSendSuccessNotification mandateStatus = mandateStatus `notElem` [Payment.REVOKED, Payment.FAILURE, Payment.EXPIRED, Payment.PAUSED]
@@ -248,10 +249,10 @@ pdnNotificationStatus ::
     EsqDBFlow m r,
     EncFlow m r
   ) =>
-  (Id DP.Person, Id DM.Merchant) ->
+  (Id DP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
   Id Notification ->
   m DPayments.NotificationStatusResp
-pdnNotificationStatus (_, merchantId) notificationId = do
+pdnNotificationStatus (_, merchantId, _) notificationId = do
   pdnNotification <- QNTF.findById notificationId >>= fromMaybeM (InternalError $ "No Notification Sent With Id" <> notificationId.getId)
   resp <- Payment.mandateNotificationStatus merchantId (mkNotificationRequest pdnNotification.shortId)
   processNotification pdnNotification.shortId resp.status

@@ -23,20 +23,21 @@ import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
+import Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified Storage.Beam.Message.Message as BeamM
 import qualified Storage.Queries.Message.MessageTranslation as MT
 
-createMessage :: MonadFlow m => Message -> m ()
+createMessage :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Message -> m ()
 createMessage msg = do
   let mT = fmap (fn msg.id) (msg.messageTranslations)
       fn id' (Domain.Types.Message.Message.MessageTranslation language_ title_ description_ shortDescription_ label_ createdAt_) = DomainMT.MessageTranslation id' language_ title_ label_ description_ shortDescription_ createdAt_
   MT.createMany mT >> createWithKV msg
 
-create :: MonadFlow m => Message -> m ()
+create :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Message -> m ()
 create = createWithKV
 
-findById :: MonadFlow m => Id Message -> m (Maybe RawMessage)
+findById :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Message -> m (Maybe RawMessage)
 findById (Id messageId) = do
   message <- findOneWithKV [Se.Is BeamM.id $ Se.Eq messageId]
   pure $
@@ -57,7 +58,7 @@ findById (Id messageId) = do
     )
       <$> message
 
-findAllWithLimitOffset :: MonadFlow m => Maybe Int -> Maybe Int -> Id Merchant -> m [RawMessage]
+findAllWithLimitOffset :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Maybe Int -> Maybe Int -> Id Merchant -> m [RawMessage]
 findAllWithLimitOffset mbLimit mbOffset merchantIdParam = do
   messages <- findAllWithOptionsDb [Se.Is BeamM.merchantId $ Se.Eq (getId merchantIdParam)] (Se.Desc BeamM.createdAt) (Just limitVal) (Just offsetVal)
   pure $
@@ -82,7 +83,7 @@ findAllWithLimitOffset mbLimit mbOffset merchantIdParam = do
     limitVal = min (fromMaybe 10 mbLimit) 10
     offsetVal = fromMaybe 0 mbOffset
 
-updateMessageLikeCount :: MonadFlow m => Id Message -> Int -> m ()
+updateMessageLikeCount :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Message -> Int -> m ()
 updateMessageLikeCount messageId value = do
   findById messageId >>= \case
     Nothing -> pure ()
@@ -92,7 +93,7 @@ updateMessageLikeCount messageId value = do
         [Se.Set BeamM.likeCount $ likeCount + value]
         [Se.Is BeamM.id (Se.Eq $ getId messageId)]
 
-updateMessageViewCount :: MonadFlow m => Id Message -> Int -> m ()
+updateMessageViewCount :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Message -> Int -> m ()
 updateMessageViewCount messageId value = do
   findById messageId >>= \case
     Just msg -> do

@@ -36,6 +36,7 @@ import Domain.Types.FareParameters as Fare
 import qualified Domain.Types.FarePolicy as DFP
 import qualified Domain.Types.FareProduct as DFareProduct
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.Merchant.TransporterConfig as DTConf
 import qualified Domain.Types.Person as DP
@@ -105,7 +106,7 @@ data ServiceHandle m = ServiceHandle
   { findBookingById :: Id SRB.Booking -> m (Maybe SRB.Booking),
     findRideById :: Id DRide.Ride -> m (Maybe DRide.Ride),
     getMerchant :: Id DM.Merchant -> m (Maybe DM.Merchant),
-    endRideTransaction :: Id DP.Driver -> SRB.Booking -> DRide.Ride -> Maybe FareParameters -> Maybe (Id RD.RiderDetails) -> FareParameters -> DTConf.TransporterConfig -> Id DM.Merchant -> m (),
+    endRideTransaction :: Id DP.Driver -> SRB.Booking -> DRide.Ride -> Maybe FareParameters -> Maybe (Id RD.RiderDetails) -> FareParameters -> DTConf.TransporterConfig -> m (),
     notifyCompleteToBAP :: SRB.Booking -> DRide.Ride -> Fare.FareParameters -> Maybe DMPM.PaymentMethodInfo -> Maybe Text -> m (),
     getFarePolicy :: Id DM.Merchant -> DVeh.Variant -> Maybe DFareProduct.Area -> m DFP.FullFarePolicy,
     calculateFareParameters :: Fare.CalculateFareParametersParams -> m Fare.FareParameters,
@@ -117,14 +118,14 @@ data ServiceHandle m = ServiceHandle
     findConfig :: m (Maybe DTConf.TransporterConfig),
     whenWithLocationUpdatesLock :: Id DP.Person -> m () -> m (),
     getDistanceBetweenPoints :: LatLong -> LatLong -> [LatLong] -> m Meters,
-    findPaymentMethodByIdAndMerchantId :: Id DMPM.MerchantPaymentMethod -> Id DM.Merchant -> m (Maybe DMPM.MerchantPaymentMethod),
-    sendDashboardSms :: Id DM.Merchant -> Sms.DashboardMessageType -> Maybe DRide.Ride -> Id DP.Person -> Maybe SRB.Booking -> HighPrecMoney -> m (),
+    findPaymentMethodByIdAndMerchantId :: Id DMPM.MerchantPaymentMethod -> Id DMOC.MerchantOperatingCity -> m (Maybe DMPM.MerchantPaymentMethod),
+    sendDashboardSms :: Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Sms.DashboardMessageType -> Maybe DRide.Ride -> Id DP.Person -> Maybe SRB.Booking -> HighPrecMoney -> m (),
     uiDistanceCalculation :: Id DRide.Ride -> Maybe Int -> Maybe Int -> m ()
   }
 
-buildEndRideHandle :: Id DM.Merchant -> Flow (ServiceHandle Flow)
-buildEndRideHandle merchantId = do
-  defaultRideInterpolationHandler <- LocUpd.buildRideInterpolationHandler merchantId True
+buildEndRideHandle :: Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Flow (ServiceHandle Flow)
+buildEndRideHandle merchantId merchantOpCityId = do
+  defaultRideInterpolationHandler <- LocUpd.buildRideInterpolationHandler merchantId merchantOpCityId True
   return $
     ServiceHandle
       { findBookingById = QRB.findById,
@@ -139,10 +140,10 @@ buildEndRideHandle merchantId = do
         finalDistanceCalculation = LocUpd.finalDistanceCalculation defaultRideInterpolationHandler,
         getInterpolatedPoints = LocUpd.getInterpolatedPoints defaultRideInterpolationHandler,
         clearInterpolatedPoints = LocUpd.clearInterpolatedPoints defaultRideInterpolationHandler,
-        findConfig = QTConf.findByMerchantId merchantId,
+        findConfig = QTConf.findByMerchantOpCityId merchantOpCityId,
         whenWithLocationUpdatesLock = LocUpd.whenWithLocationUpdatesLock,
-        getDistanceBetweenPoints = RideEndInt.getDistanceBetweenPoints merchantId,
-        findPaymentMethodByIdAndMerchantId = CQMPM.findByIdAndMerchantId,
+        getDistanceBetweenPoints = RideEndInt.getDistanceBetweenPoints merchantId merchantOpCityId,
+        findPaymentMethodByIdAndMerchantId = CQMPM.findByIdAndMerchantOpCityId,
         sendDashboardSms = Sms.sendDashboardSms,
         uiDistanceCalculation = QRide.updateUiDistanceCalculation
       }
@@ -242,8 +243,8 @@ endRide handle@ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.g
     CallBasedReq _ -> do
       pure $ getCoordinates booking.toLocation
 
-  goHomeConfig <- CQGHC.findByMerchantId booking.providerId
-  ghInfo <- CQDGR.getDriverGoHomeRequestInfo driverId booking.providerId (Just goHomeConfig)
+  goHomeConfig <- CQGHC.findByMerchantOpCityId booking.merchantOperatingCityId
+  ghInfo <- CQDGR.getDriverGoHomeRequestInfo driverId booking.merchantOperatingCityId (Just goHomeConfig)
 
   homeLocationReached' <-
     if ghInfo.status == Just DDGR.ACTIVE && goHomeConfig.enableGoHome
@@ -257,15 +258,15 @@ endRide handle@ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.g
             case mbDriverGoHomeReq of
               Just driverGoHomeReq -> do
                 let driverHomeLocation = Maps.LatLong {lat = driverGoHomeReq.lat, lon = driverGoHomeReq.lon}
-                routesResp <- DMaps.getTripRoutes (driverId, booking.providerId) (buildRoutesReq tripEndPoint driverHomeLocation)
+                routesResp <- DMaps.getTripRoutes (driverId, booking.providerId, booking.merchantOperatingCityId) (buildRoutesReq tripEndPoint driverHomeLocation)
                 logDebug $ "Routes resp for EndRide API :" <> show routesResp <> "(source, dest) :" <> show (tripEndPoint, driverHomeLocation)
                 let driverHomeDists = mapMaybe (.distance) routesResp
                 if any ((<= goHomeConfig.destRadiusMeters) . getMeters) driverHomeDists
                   then do
-                    CQDGR.deactivateDriverGoHomeRequest booking.providerId driverId DDGR.SUCCESS ghInfo (Just True)
+                    CQDGR.deactivateDriverGoHomeRequest booking.merchantOperatingCityId driverId DDGR.SUCCESS ghInfo (Just True)
                     return $ Just True
                   else do
-                    CQDGR.resetDriverGoHomeRequest booking.providerId driverId goHomeConfig ghInfo
+                    CQDGR.resetDriverGoHomeRequest booking.merchantOperatingCityId driverId goHomeConfig ghInfo
                     return $ Just False
               Nothing -> return Nothing
       else return Nothing
@@ -308,11 +309,11 @@ endRide handle@ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.g
                pickupDropOutsideOfThreshold = pickupDropOutsideOfThreshold
               }
     -- we need to store fareParams only when they changed
-    withTimeAPI "endRide" "endRideTransaction" $ endRideTransaction (cast @DP.Person @DP.Driver driverId) booking updRide mbUpdatedFareParams booking.riderId newFareParams thresholdConfig booking.providerId
+    withTimeAPI "endRide" "endRideTransaction" $ endRideTransaction (cast @DP.Person @DP.Driver driverId) booking updRide mbUpdatedFareParams booking.riderId newFareParams thresholdConfig
     withTimeAPI "endRide" "clearInterpolatedPoints" $ clearInterpolatedPoints driverId
 
     mbPaymentMethod <- forM booking.paymentMethodId $ \paymentMethodId -> do
-      findPaymentMethodByIdAndMerchantId paymentMethodId booking.providerId
+      findPaymentMethodByIdAndMerchantId paymentMethodId booking.merchantOperatingCityId
         >>= fromMaybeM (MerchantPaymentMethodNotFound paymentMethodId.getId)
     let mbPaymentUrl = DMPM.getPostpaidPaymentUrl =<< mbPaymentMethod
     let mbPaymentMethodInfo = DMPM.mkPaymentMethodInfo <$> mbPaymentMethod
@@ -322,7 +323,7 @@ endRide handle@ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.g
       case req of
         CallBasedReq callBasedEndRideReq -> do
           let requestor = callBasedEndRideReq.requestor
-          sendDashboardSms requestor.merchantId Sms.ENDRIDE (Just ride) driverId (Just booking) (fromIntegral finalFare)
+          sendDashboardSms requestor.merchantId booking.merchantOperatingCityId Sms.ENDRIDE (Just ride) driverId (Just booking) (fromIntegral finalFare)
         _ -> pure ()
 
   return $ EndRideResp {result = "Success", homeLocationReached = homeLocationReached'}

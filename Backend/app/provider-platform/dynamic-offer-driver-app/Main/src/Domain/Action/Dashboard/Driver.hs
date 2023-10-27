@@ -95,6 +95,7 @@ import qualified Domain.Types.FleetDriverAssociation as DTFDA
 import qualified Domain.Types.Invoice as INV
 import qualified Domain.Types.Merchant as DM
 import Domain.Types.Merchant.MerchantMessage (MessageKey)
+import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import Domain.Types.Merchant.TransporterConfig (DashboardMediaSendingLimit (..))
 import qualified Domain.Types.Message.Message as Domain
 import qualified Domain.Types.Person as DP
@@ -109,6 +110,7 @@ import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Streaming.Kafka.Producer (produceMessage)
 import Kernel.Types.APISuccess (APISuccess (Success))
+import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import qualified Kernel.Types.SlidingWindowCounters as SWC
 import Kernel.Utils.Common
@@ -124,6 +126,7 @@ import qualified SharedLogic.MessageBuilder as MessageBuilder
 import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
 import Storage.CachedQueries.DriverBlockReason as DBR
 import qualified Storage.CachedQueries.Merchant.MerchantMessage as QMM
+import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.Overlay as CMP
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as SCT
 import qualified Storage.Queries.Driver.GoHomeFeature.DriverHomeLocation as QDHL
@@ -152,11 +155,12 @@ import qualified Tools.SMS as Sms
 import Tools.Whatsapp as Whatsapp
 
 -- FIXME: not tested yet because of no onboarding test data
-driverDocumentsInfo :: ShortId DM.Merchant -> Flow Common.DriverDocumentsInfoRes
-driverDocumentsInfo merchantShortId = do
+driverDocumentsInfo :: ShortId DM.Merchant -> Context.City -> Flow Common.DriverDocumentsInfoRes
+driverDocumentsInfo merchantShortId opCity = do
   merchant <- findMerchantByShortId merchantShortId
   now <- getCurrentTime
-  transporterConfig <- SCT.findByMerchantId merchant.id >>= fromMaybeM (TransporterConfigNotFound merchant.id.getId)
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  transporterConfig <- SCT.findByMerchantOpCityId merchantOpCityId >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   let onboardingTryLimit = transporterConfig.onboardingTryLimit
   drivers <- B.runInReplica $ QDocStatus.fetchDriverDocsInfo merchant.id Nothing
   pure $ foldl' (func onboardingTryLimit now) Common.emptyInfo drivers
@@ -226,8 +230,8 @@ limitOffset mbLimit mbOffset =
   maybe identity take mbLimit . maybe identity drop mbOffset
 
 ---------------------------------------------------------------------
-listDrivers :: ShortId DM.Merchant -> Maybe Int -> Maybe Int -> Maybe Bool -> Maybe Bool -> Maybe Bool -> Maybe Bool -> Maybe Text -> Maybe Text -> Flow Common.DriverListRes
-listDrivers merchantShortId mbLimit mbOffset mbVerified mbEnabled mbBlocked mbSubscribed mbSearchPhone mbVehicleNumberSearchString = do
+listDrivers :: ShortId DM.Merchant -> Context.City -> Maybe Int -> Maybe Int -> Maybe Bool -> Maybe Bool -> Maybe Bool -> Maybe Bool -> Maybe Text -> Maybe Text -> Flow Common.DriverListRes
+listDrivers merchantShortId _ mbLimit mbOffset mbVerified mbEnabled mbBlocked mbSubscribed mbSearchPhone mbVehicleNumberSearchString = do
   merchant <- findMerchantByShortId merchantShortId
   let limit = min maxLimit . fromMaybe defaultLimit $ mbLimit
       offset = fromMaybe 0 mbOffset
@@ -265,8 +269,8 @@ buildDriverListItem (person, driverInformation, mbVehicle) = do
 
 ---------------------------------------------------------------------
 
-getDriverDue :: ShortId DM.Merchant -> Maybe Text -> Text -> Flow [Common.DriverOutstandingBalanceResp] -- add mig and totalFee
-getDriverDue merchantShortId mbMobileCountryCode phone = do
+getDriverDue :: ShortId DM.Merchant -> Context.City -> Maybe Text -> Text -> Flow [Common.DriverOutstandingBalanceResp] -- add mig and totalFee
+getDriverDue merchantShortId _ mbMobileCountryCode phone = do
   let mobileCountryCode = fromMaybe "+91" mbMobileCountryCode
   merchant <- findMerchantByShortId merchantShortId
   mobileNumber <- getDbHash phone
@@ -302,8 +306,8 @@ getDriverDue merchantShortId mbMobileCountryCode phone = do
       INACTIVE -> Common.INACTIVE
 
 ---------------------------------------------------------------------
-driverAadhaarInfo :: ShortId DM.Merchant -> Id Common.Driver -> Flow Common.DriverAadhaarInfoRes
-driverAadhaarInfo merchantShortId driverId = do
+driverAadhaarInfo :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Flow Common.DriverAadhaarInfoRes
+driverAadhaarInfo merchantShortId _ driverId = do
   merchant <- findMerchantByShortId merchantShortId
   let personId = cast @Common.Driver @DP.Person driverId
   driver <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
@@ -324,16 +328,16 @@ driverAadhaarInfo merchantShortId driverId = do
     Nothing -> throwError $ InvalidRequest "no aadhaar data is found"
 
 ---------------------------------- -----------------------------------
-driverActivity :: ShortId DM.Merchant -> Flow Common.DriverActivityRes
-driverActivity merchantShortId = do
+driverActivity :: ShortId DM.Merchant -> Context.City -> Flow Common.DriverActivityRes
+driverActivity merchantShortId _ = do
   merchant <- findMerchantByShortId merchantShortId
   Common.mkDriverActivityRes <$> B.runInReplica (QDriverInfo.countDrivers merchant.id)
 
 ---------------------------------------------------------------------
-enableDriver :: ShortId DM.Merchant -> Id Common.Driver -> Flow APISuccess
-enableDriver merchantShortId reqDriverId = do
+enableDriver :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Flow APISuccess
+enableDriver merchantShortId opCity reqDriverId = do
   merchant <- findMerchantByShortId merchantShortId
-
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   let driverId = cast @Common.Driver @DP.Driver reqDriverId
   let personId = cast @Common.Driver @DP.Person reqDriverId
   driver <-
@@ -352,12 +356,12 @@ enableDriver merchantShortId reqDriverId = do
   QDriverInfo.updateEnabledState driverId True
   logTagInfo "dashboard -> enableDriver : " (show personId)
   fork "sending dashboard sms - onboarding" $ do
-    Sms.sendDashboardSms merchant.id Sms.ONBOARDING Nothing personId Nothing 0
+    Sms.sendDashboardSms merchant.id merchantOpCityId Sms.ONBOARDING Nothing personId Nothing 0
   pure Success
 
 ---------------------------------------------------------------------
-disableDriver :: ShortId DM.Merchant -> Id Common.Driver -> Flow APISuccess
-disableDriver merchantShortId reqDriverId = do
+disableDriver :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Flow APISuccess
+disableDriver merchantShortId _ reqDriverId = do
   merchant <- findMerchantByShortId merchantShortId
 
   let driverId = cast @Common.Driver @DP.Driver reqDriverId
@@ -375,8 +379,8 @@ disableDriver merchantShortId reqDriverId = do
 
 ---------------------------------------------------------------------
 
-blockDriverWithReason :: ShortId DM.Merchant -> Id Common.Driver -> Common.BlockDriverWithReasonReq -> Flow APISuccess
-blockDriverWithReason merchantShortId reqDriverId req = do
+blockDriverWithReason :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Common.BlockDriverWithReasonReq -> Flow APISuccess
+blockDriverWithReason merchantShortId _ reqDriverId req = do
   merchant <- findMerchantByShortId merchantShortId
 
   let driverId = cast @Common.Driver @DP.Driver reqDriverId
@@ -406,8 +410,8 @@ blockDriverWithReason merchantShortId reqDriverId req = do
 ---------------------------------------------------------------------
 --TODO : To Be Deprecated
 
-blockDriver :: ShortId DM.Merchant -> Id Common.Driver -> Flow APISuccess
-blockDriver merchantShortId reqDriverId = do
+blockDriver :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Flow APISuccess
+blockDriver merchantShortId _ reqDriverId = do
   merchant <- findMerchantByShortId merchantShortId
 
   let driverId = cast @Common.Driver @DP.Driver reqDriverId
@@ -440,12 +444,12 @@ convertToCommon res =
     }
 
 ---------------------------------------------------------------------
-collectCash :: ShortId DM.Merchant -> Id Common.Driver -> Text -> Flow APISuccess
+collectCash :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Text -> Flow APISuccess
 collectCash = recordPayment False
 
 ---------------------------------------------------------------------
 
-exemptCash :: ShortId DM.Merchant -> Id Common.Driver -> Text -> Flow APISuccess
+exemptCash :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Text -> Flow APISuccess
 exemptCash = recordPayment True
 
 ---------------------------------------------------------------------
@@ -455,10 +459,10 @@ paymentStatus isExempted
   | isExempted = EXEMPTED
   | otherwise = COLLECTED_CASH
 
-recordPayment :: Bool -> ShortId DM.Merchant -> Id Common.Driver -> Text -> Flow APISuccess
-recordPayment isExempted merchantShortId reqDriverId requestorId = do
+recordPayment :: Bool -> ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Text -> Flow APISuccess
+recordPayment isExempted merchantShortId opCity reqDriverId requestorId = do
   merchant <- findMerchantByShortId merchantShortId
-
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   let driverId = cast @Common.Driver @DP.Driver reqDriverId
   let personId = cast @Common.Driver @DP.Person reqDriverId
   driver <- B.runInReplica (QPerson.findById personId) >>= fromMaybeM (PersonDoesNotExist personId.getId)
@@ -468,7 +472,7 @@ recordPayment isExempted merchantShortId reqDriverId requestorId = do
   unless (merchant.id == merchantId) $ throwError (PersonDoesNotExist personId.getId)
   driverFees <- findPendingFeesByDriverId driverId
   let totalFee = sum $ map (\fee -> fromIntegral fee.govtCharges + fee.platformFee.fee + fee.platformFee.cgst + fee.platformFee.sgst) driverFees
-  transporterConfig <- SCT.findByMerchantId merchant.id >>= fromMaybeM (TransporterConfigNotFound merchant.id.getId)
+  transporterConfig <- SCT.findByMerchantOpCityId merchantOpCityId >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   now <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
   QDriverInfo.updatePendingPayment False driverId
   QDriverInfo.updateSubscription True driverId
@@ -476,12 +480,12 @@ recordPayment isExempted merchantShortId reqDriverId requestorId = do
   invoices <- (B.runInReplica . QINV.findActiveManualOrMandateSetupInvoiceByFeeId . (.id)) `mapM` driverFees
   mapM_ (QINV.updateInvoiceStatusByInvoiceId INV.SUCCESS . (.id)) (concat invoices)
   fork "sending dashboard sms - collected cash" $ do
-    Sms.sendDashboardSms merchantId Sms.CASH_COLLECTED Nothing personId Nothing totalFee
+    Sms.sendDashboardSms merchantId merchantOpCityId Sms.CASH_COLLECTED Nothing personId Nothing totalFee
   pure Success
 
 ---------------------------------------------------------------------
-unblockDriver :: ShortId DM.Merchant -> Id Common.Driver -> Flow APISuccess
-unblockDriver merchantShortId reqDriverId = do
+unblockDriver :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Flow APISuccess
+unblockDriver merchantShortId _ reqDriverId = do
   merchant <- findMerchantByShortId merchantShortId
 
   let driverId = cast @Common.Driver @DP.Driver reqDriverId
@@ -497,8 +501,8 @@ unblockDriver merchantShortId reqDriverId = do
   logTagInfo "dashboard -> unblockDriver : " (show personId)
   pure Success
 
-driverLocation :: ShortId DM.Merchant -> Maybe Int -> Maybe Int -> Common.DriverIds -> Flow Common.DriverLocationRes
-driverLocation merchantShortId mbLimit mbOffset req = do
+driverLocation :: ShortId DM.Merchant -> Context.City -> Maybe Int -> Maybe Int -> Common.DriverIds -> Flow Common.DriverLocationRes
+driverLocation merchantShortId _ mbLimit mbOffset req = do
   merchant <- findMerchantByShortId merchantShortId
   let driverIds = coerce req.driverIds
   allDrivers <- QPerson.findAllDriversByIdsFirstNameAsc merchant.id driverIds
@@ -531,8 +535,8 @@ buildDriverLocationListItem f = do
 mobileIndianCode :: Text
 mobileIndianCode = "+91"
 
-driverInfo :: ShortId DM.Merchant -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Text -> Bool -> Flow Common.DriverInfoRes
-driverInfo merchantShortId mbMobileNumber mbMobileCountryCode mbVehicleNumber mbDlNumber mbRcNumber fleetOwnerId mbFleet = do
+driverInfo :: ShortId DM.Merchant -> Context.City -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Text -> Bool -> Flow Common.DriverInfoRes
+driverInfo merchantShortId _ mbMobileNumber mbMobileCountryCode mbVehicleNumber mbDlNumber mbRcNumber fleetOwnerId mbFleet = do
   when mbFleet $ do
     when (isNothing mbVehicleNumber) $ throwError $ InvalidRequest "Fleet Owner can only search with vehicle Number"
     vehicleInfo <- RCQuery.findLastVehicleRCFleet' (fromMaybe " " mbVehicleNumber) fleetOwnerId
@@ -640,12 +644,12 @@ castVerificationStatus = \case
   IV.INVALID -> Common.INVALID
 
 ---------------------------------------------------------------------
-deleteDriver :: ShortId DM.Merchant -> Id Common.Driver -> Flow APISuccess
-deleteDriver merchantShortId = DeleteDriver.deleteDriver merchantShortId . cast
+deleteDriver :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Flow APISuccess
+deleteDriver merchantShortId _ = DeleteDriver.deleteDriver merchantShortId . cast
 
 ---------------------------------------------------------------------
-unlinkVehicle :: ShortId DM.Merchant -> Id Common.Driver -> Flow APISuccess
-unlinkVehicle merchantShortId reqDriverId = do
+unlinkVehicle :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Flow APISuccess
+unlinkVehicle merchantShortId _ reqDriverId = do
   merchant <- findMerchantByShortId merchantShortId
 
   let driverId = cast @Common.Driver @DP.Driver reqDriverId
@@ -664,8 +668,8 @@ unlinkVehicle merchantShortId reqDriverId = do
   pure Success
 
 ---------------------------------------------------------------------
-updatePhoneNumber :: ShortId DM.Merchant -> Id Common.Driver -> Common.UpdatePhoneNumberReq -> Flow APISuccess
-updatePhoneNumber merchantShortId reqDriverId req = do
+updatePhoneNumber :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Common.UpdatePhoneNumberReq -> Flow APISuccess
+updatePhoneNumber merchantShortId _ reqDriverId req = do
   runRequestValidation Common.validateUpdatePhoneNumberReq req
   merchant <- findMerchantByShortId merchantShortId
 
@@ -698,11 +702,11 @@ updatePhoneNumber merchantShortId reqDriverId req = do
   pure Success
 
 ---------------------------------------------------------------------
-addVehicle :: ShortId DM.Merchant -> Id Common.Driver -> Common.AddVehicleReq -> Flow APISuccess
-addVehicle merchantShortId reqDriverId req = do
+addVehicle :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Common.AddVehicleReq -> Flow APISuccess
+addVehicle merchantShortId opCity reqDriverId req = do
   runRequestValidation Common.validateAddVehicleReq req
   merchant <- findMerchantByShortId merchantShortId
-
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   let personId = cast @Common.Driver @DP.Person reqDriverId
   driver <-
     QPerson.findById personId
@@ -718,7 +722,7 @@ addVehicle merchantShortId reqDriverId req = do
   let updDriver = driver {DP.firstName = req.driverName} :: DP.Person
   QPerson.updatePersonRec personId updDriver
 
-  runVerifyRCFlow personId merchant req Nothing
+  runVerifyRCFlow personId merchant merchantOpCityId req Nothing
   checkIfVehicleCreatedInRC <- QVehicle.findById personId
   unless (isJust checkIfVehicleCreatedInRC) $ do
     vehicle <- buildVehicle merchantId personId req
@@ -730,10 +734,11 @@ addVehicle merchantShortId reqDriverId req = do
 
 ---------------------------------------------------------------------
 
-addVehicleForFleet :: ShortId DM.Merchant -> Text -> Maybe Text -> Text -> Common.AddVehicleReq -> Flow APISuccess
-addVehicleForFleet merchantShortId reqDriverPhoneNo mbMobileCountryCode fleetOwnerId req = do
+addVehicleForFleet :: ShortId DM.Merchant -> Context.City -> Text -> Maybe Text -> Text -> Common.AddVehicleReq -> Flow APISuccess
+addVehicleForFleet merchantShortId opCity reqDriverPhoneNo mbMobileCountryCode fleetOwnerId req = do
   runRequestValidation Common.validateAddVehicleReq req
   merchant <- findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   phoneNumberHash <- getDbHash reqDriverPhoneNo
   let mobileCountryCode = fromMaybe mobileIndianCode mbMobileCountryCode
   driver <- QPerson.findByMobileNumberAndMerchant mobileCountryCode phoneNumberHash merchant.id >>= fromMaybeM (DriverNotFound reqDriverPhoneNo)
@@ -743,15 +748,16 @@ addVehicleForFleet merchantShortId reqDriverPhoneNo mbMobileCountryCode fleetOwn
   vehicle <- RCQuery.findLastVehicleRCWrapper req.registrationNo
   whenJust vehicle $ \veh -> when (isJust veh.fleetOwnerId && veh.fleetOwnerId /= Just fleetOwnerId) $ throwError VehicleBelongsToAnotherFleet
   Redis.set (DomainRC.makeFleetOwnerKey req.registrationNo) fleetOwnerId -- setting this value here , so while creation of creation of vehicle we can add fleet owner id
-  void $ runVerifyRCFlow driver.id merchant req (Just True)
+  void $ runVerifyRCFlow driver.id merchant merchantOpCityId req (Just True)
   logTagInfo "dashboard -> addVehicle : " (show driver.id)
   pure Success
 
 ---------------------------------------------------------------------
 
-setVehicleDriverRcStatusForFleet :: ShortId DM.Merchant -> Id Common.Driver -> Text -> Common.RCStatusReq -> Flow APISuccess
-setVehicleDriverRcStatusForFleet merchantShortId reqDriverId fleetOwnerId req = do
+setVehicleDriverRcStatusForFleet :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Text -> Common.RCStatusReq -> Flow APISuccess
+setVehicleDriverRcStatusForFleet merchantShortId opCity reqDriverId fleetOwnerId req = do
   merchant <- findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   let personId = cast @Common.Driver @DP.Person reqDriverId
   driver <- B.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   isFleetDriver <- FDV.findByDriverIdAndFleetOwnerId personId fleetOwnerId
@@ -762,14 +768,14 @@ setVehicleDriverRcStatusForFleet merchantShortId reqDriverId fleetOwnerId req = 
   vehicle <- RCQuery.findLastVehicleRCWrapper req.rcNo >>= fromMaybeM (VehicleDoesNotExist req.rcNo)
   unless (isJust vehicle.fleetOwnerId && vehicle.fleetOwnerId == Just fleetOwnerId) $ throwError (FleetOwnerVehicleMismatchError fleetOwnerId)
   Redis.set (DomainRC.makeFleetOwnerKey req.rcNo) fleetOwnerId
-  _ <- DomainRC.linkRCStatus (personId, merchant.id) (DomainRC.RCStatusReq {isActivate = req.isActivate, rcNo = req.rcNo})
+  _ <- DomainRC.linkRCStatus (personId, merchant.id, merchantOpCityId) (DomainRC.RCStatusReq {isActivate = req.isActivate, rcNo = req.rcNo})
   logTagInfo "dashboard -> addVehicle : " (show driver.id)
   pure Success
 
 ---------------------------------------------------------------------
 
-getFleetDriverVehicleAssociation :: ShortId DM.Merchant -> Text -> Maybe Int -> Maybe Int -> Flow Common.DrivertoVehicleAssociationRes
-getFleetDriverVehicleAssociation _merchantShortId fleetOwnerId mbLimit mbOffset = do
+getFleetDriverVehicleAssociation :: ShortId DM.Merchant -> Context.City -> Text -> Maybe Int -> Maybe Int -> Flow Common.DrivertoVehicleAssociationRes
+getFleetDriverVehicleAssociation _merchantShortId _opCity fleetOwnerId mbLimit mbOffset = do
   let limit = min 25 $ fromMaybe 10 mbLimit -- TODO: we have to make this query more efficient
       offset = fromMaybe 0 mbOffset
   listOfAllDrivers <- FDV.findAllDriverByFleetOwnerId fleetOwnerId limit offset
@@ -778,7 +784,7 @@ getFleetDriverVehicleAssociation _merchantShortId fleetOwnerId mbLimit mbOffset 
   let filteredItems = filter (.isRcAssociated) listItems
   pure $ Common.DrivertoVehicleAssociationRes {fleetOwnerId = fleetOwnerId, listItem = filteredItems}
   where
-    createDriverVehicleAssociationListItem :: EncFlow m r => [FleetDriverAssociation] -> [VehicleRegistrationCertificate] -> m [Common.DriveVehicleAssociationListItem]
+    createDriverVehicleAssociationListItem :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r) => [FleetDriverAssociation] -> [VehicleRegistrationCertificate] -> m [Common.DriveVehicleAssociationListItem]
     createDriverVehicleAssociationListItem fdaList vrcaList = do
       now <- getCurrentTime
       fmap concat $
@@ -805,15 +811,15 @@ getFleetDriverVehicleAssociation _merchantShortId fleetOwnerId mbLimit mbOffset 
                     }
             pure listItem
 
-getFleetDriverAssociation :: ShortId DM.Merchant -> Text -> Maybe Int -> Maybe Int -> Flow Common.DrivertoVehicleAssociationRes
-getFleetDriverAssociation _merchantShortId fleetOwnerId mbLimit mbOffset = do
+getFleetDriverAssociation :: ShortId DM.Merchant -> Context.City -> Text -> Maybe Int -> Maybe Int -> Flow Common.DrivertoVehicleAssociationRes
+getFleetDriverAssociation _merchantShortId _opCity fleetOwnerId mbLimit mbOffset = do
   let limit = fromMaybe 10 mbLimit
       offset = fromMaybe 0 mbOffset
   listOfAllDrivers <- FDV.findAllDriverByFleetOwnerId fleetOwnerId limit offset
   listItems <- createFleetDriverAssociationListItem listOfAllDrivers
   pure $ Common.DrivertoVehicleAssociationRes {fleetOwnerId = fleetOwnerId, listItem = listItems}
   where
-    createFleetDriverAssociationListItem :: EncFlow m r => [FleetDriverAssociation] -> m [Common.DriveVehicleAssociationListItem]
+    createFleetDriverAssociationListItem :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r) => [FleetDriverAssociation] -> m [Common.DriveVehicleAssociationListItem]
     createFleetDriverAssociationListItem fdaList = do
       forM fdaList $ \fda -> do
         driver <- QPerson.findById fda.driverId >>= fromMaybeM (PersonNotFound fda.driverId.getId)
@@ -846,15 +852,15 @@ getFleetDriverAssociation _merchantShortId fleetOwnerId mbLimit mbOffset = do
                 }
         pure ls
 
-getFleetVehicleAssociation :: ShortId DM.Merchant -> Text -> Maybe Int -> Maybe Int -> Flow Common.DrivertoVehicleAssociationRes
-getFleetVehicleAssociation _merchantShortId fleetOwnerId mbLimit mbOffset = do
+getFleetVehicleAssociation :: ShortId DM.Merchant -> Context.City -> Text -> Maybe Int -> Maybe Int -> Flow Common.DrivertoVehicleAssociationRes
+getFleetVehicleAssociation _merchantShortId _opCity fleetOwnerId mbLimit mbOffset = do
   let limit = fromMaybe 10 mbLimit
       offset = fromMaybe 0 mbOffset
   listOfAllVehicle <- RCQuery.findAllByFleetOwnerId fleetOwnerId limit offset
   listItems <- createFleetVehicleAssociationListItem listOfAllVehicle
   pure $ Common.DrivertoVehicleAssociationRes {fleetOwnerId = fleetOwnerId, listItem = listItems}
   where
-    createFleetVehicleAssociationListItem :: EncFlow m r => [VehicleRegistrationCertificate] -> m [Common.DriveVehicleAssociationListItem]
+    createFleetVehicleAssociationListItem :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r) => [VehicleRegistrationCertificate] -> m [Common.DriveVehicleAssociationListItem]
     createFleetVehicleAssociationListItem vrcList = do
       now <- getCurrentTime
       forM vrcList $ \vrc -> do
@@ -934,8 +940,8 @@ fleetUnlinkVehicle merchantShortId fleetOwnerId reqDriverId vehicleNo = do
   logTagInfo "fleet -> unlinkVehicle : " (show personId)
   pure Success
 
-runVerifyRCFlow :: Id DP.Person -> DM.Merchant -> Common.AddVehicleReq -> Maybe Bool -> Flow ()
-runVerifyRCFlow personId merchant req multipleRC = do
+runVerifyRCFlow :: Id DP.Person -> DM.Merchant -> Id DMOC.MerchantOperatingCity -> Common.AddVehicleReq -> Maybe Bool -> Flow ()
+runVerifyRCFlow personId merchant merchantOpCityId req multipleRC = do
   let rcReq =
         DomainRC.DriverRCReq
           { vehicleRegistrationCertNumber = req.registrationNo,
@@ -944,7 +950,7 @@ runVerifyRCFlow personId merchant req multipleRC = do
             dateOfRegistration = Nothing,
             multipleRC = multipleRC
           }
-  void $ DomainRC.verifyRC True (Just merchant) (personId, merchant.id) rcReq (Just $ castVehicleVariant req.variant)
+  void $ DomainRC.verifyRC True (Just merchant) (personId, merchant.id, merchantOpCityId) rcReq (Just $ castVehicleVariant req.variant)
 
 buildVehicle :: MonadFlow m => Id DM.Merchant -> Id DP.Person -> Common.AddVehicleReq -> m DVeh.Vehicle
 buildVehicle merchantId personId req = do
@@ -989,8 +995,8 @@ castVehicleVariantDashboard = \case
   _ -> Nothing
 
 ---------------------------------------------------------------------
-getAllVehicleForFleet :: ShortId DM.Merchant -> Text -> Maybe Int -> Maybe Int -> Flow Common.ListVehicleRes
-getAllVehicleForFleet _ fleetOwnerId mbLimit mbOffset = do
+getAllVehicleForFleet :: ShortId DM.Merchant -> Context.City -> Text -> Maybe Int -> Maybe Int -> Flow Common.ListVehicleRes
+getAllVehicleForFleet _ _ fleetOwnerId mbLimit mbOffset = do
   let limit = fromMaybe 10 mbLimit
       offset = fromMaybe 0 mbOffset
   vehicleList <- RCQuery.findAllByFleetOwnerId fleetOwnerId limit offset
@@ -1030,8 +1036,8 @@ convertToDriverAPIEntity DP.Person {..} =
     }
 
 ---------------------------------------------------------------------
-updateDriverName :: ShortId DM.Merchant -> Id Common.Driver -> Common.UpdateDriverNameReq -> Flow APISuccess
-updateDriverName merchantShortId reqDriverId req = do
+updateDriverName :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Common.UpdateDriverNameReq -> Flow APISuccess
+updateDriverName merchantShortId _ reqDriverId req = do
   runRequestValidation Common.validateUpdateDriverNameReq req
   merchant <- findMerchantByShortId merchantShortId
 
@@ -1053,8 +1059,8 @@ updateDriverName merchantShortId reqDriverId req = do
   pure Success
 
 ---------------------------------------------------------------------
-unlinkDL :: ShortId DM.Merchant -> Id Common.Driver -> Flow APISuccess
-unlinkDL merchantShortId driverId = do
+unlinkDL :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Flow APISuccess
+unlinkDL merchantShortId _ driverId = do
   merchant <- findMerchantByShortId merchantShortId
 
   let driverId_ = cast @Common.Driver @DP.Driver driverId
@@ -1070,10 +1076,11 @@ unlinkDL merchantShortId driverId = do
   pure Success
 
 ---------------------------------------------------------------------
-unlinkAadhaar :: ShortId DM.Merchant -> Id Common.Driver -> Flow APISuccess
-unlinkAadhaar merchantShortId driverId = do
+unlinkAadhaar :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Flow APISuccess
+unlinkAadhaar merchantShortId opCity driverId = do
   merchant <- findMerchantByShortId merchantShortId
-  transporterConfig <- SCT.findByMerchantId merchant.id >>= fromMaybeM (TransporterConfigNotFound merchant.id.getId)
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  transporterConfig <- SCT.findByMerchantOpCityId merchantOpCityId >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   let driverId_ = cast @Common.Driver @DP.Driver driverId
   let personId = cast @Common.Driver @DP.Person driverId
 
@@ -1086,11 +1093,11 @@ unlinkAadhaar merchantShortId driverId = do
   pure Success
 
 ---------------------------------------------------------------------
-endRCAssociation :: ShortId DM.Merchant -> Id Common.Driver -> Flow APISuccess
-endRCAssociation merchantShortId reqDriverId = do
+endRCAssociation :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Flow APISuccess
+endRCAssociation merchantShortId opCity reqDriverId = do
   -- API should be deprecated
   merchant <- findMerchantByShortId merchantShortId
-
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   let driverId = cast @Common.Driver @DP.Driver reqDriverId
   let personId = cast @Common.Driver @DP.Person reqDriverId
 
@@ -1105,50 +1112,54 @@ endRCAssociation merchantShortId reqDriverId = do
   case mVehicleRC of
     Just vehicleRC -> do
       rcNo <- decrypt vehicleRC.certificateNumber
-      void $ DomainRC.deleteRC (personId, merchant.id) (DomainRC.DeleteRCReq {rcNo}) True
+      void $ DomainRC.deleteRC (personId, merchant.id, merchantOpCityId) (DomainRC.DeleteRCReq {rcNo}) True
     Nothing -> throwError (InvalidRequest "No linked RC  to driver")
 
   QDriverInfo.updateEnabledVerifiedState driverId False False
   logTagInfo "dashboard -> endRCAssociation : " (show personId)
   pure Success
 
-setRCStatus :: ShortId DM.Merchant -> Id Common.Driver -> Common.RCStatusReq -> Flow APISuccess
-setRCStatus merchantShortId reqDriverId Common.RCStatusReq {..} = do
+setRCStatus :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Common.RCStatusReq -> Flow APISuccess
+setRCStatus merchantShortId opCity reqDriverId Common.RCStatusReq {..} = do
   merchant <- findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   let personId = cast @Common.Driver @DP.Person reqDriverId
   driver <- B.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   -- merchant access checking
   unless (merchant.id == driver.merchantId) $ throwError (PersonDoesNotExist personId.getId)
-  DomainRC.linkRCStatus (personId, merchant.id) (DomainRC.RCStatusReq {..})
+  DomainRC.linkRCStatus (personId, merchant.id, merchantOpCityId) (DomainRC.RCStatusReq {..})
 
-deleteRC :: ShortId DM.Merchant -> Id Common.Driver -> Common.DeleteRCReq -> Flow APISuccess
-deleteRC merchantShortId reqDriverId Common.DeleteRCReq {..} = do
+deleteRC :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Common.DeleteRCReq -> Flow APISuccess
+deleteRC merchantShortId opCity reqDriverId Common.DeleteRCReq {..} = do
   merchant <- findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   let personId = cast @Common.Driver @DP.Person reqDriverId
   driver <- B.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   -- merchant access checking
   unless (merchant.id == driver.merchantId) $ throwError (PersonDoesNotExist personId.getId)
 
-  DomainRC.deleteRC (personId, merchant.id) (DomainRC.DeleteRCReq {..}) False
+  DomainRC.deleteRC (personId, merchant.id, merchantOpCityId) (DomainRC.DeleteRCReq {..}) False
 
-getPaymentHistory :: ShortId DM.Merchant -> Id Common.Driver -> Maybe INV.InvoicePaymentMode -> Maybe Int -> Maybe Int -> Flow Driver.HistoryEntityV2
-getPaymentHistory merchantShortId driverId invoicePaymentMode limit offset = do
+getPaymentHistory :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Maybe INV.InvoicePaymentMode -> Maybe Int -> Maybe Int -> Flow Driver.HistoryEntityV2
+getPaymentHistory merchantShortId opCity driverId invoicePaymentMode limit offset = do
   merchant <- findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   let personId = cast @Common.Driver @DP.Person driverId
   driver <- B.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   unless (merchant.id == driver.merchantId) $ throwError (PersonDoesNotExist personId.getId)
-  Driver.getDriverPaymentsHistoryV2 (personId, merchant.id) invoicePaymentMode limit offset
+  Driver.getDriverPaymentsHistoryV2 (personId, merchant.id, merchantOpCityId) invoicePaymentMode limit offset
 
-getPaymentHistoryEntityDetails :: ShortId DM.Merchant -> Id Common.Driver -> Id INV.Invoice -> Flow Driver.HistoryEntryDetailsEntityV2
-getPaymentHistoryEntityDetails merchantShortId driverId invoiceId = do
+getPaymentHistoryEntityDetails :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Id INV.Invoice -> Flow Driver.HistoryEntryDetailsEntityV2
+getPaymentHistoryEntityDetails merchantShortId opCity driverId invoiceId = do
   merchant <- findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   let personId = cast @Common.Driver @DP.Person driverId
   driver <- B.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   unless (merchant.id == driver.merchantId) $ throwError (PersonDoesNotExist personId.getId)
-  Driver.getHistoryEntryDetailsEntityV2 (personId, merchant.id) invoiceId.getId
+  Driver.getHistoryEntryDetailsEntityV2 (personId, merchant.id, merchantOpCityId) invoiceId.getId
 
-updateSubscriptionDriverFeeAndInvoice :: ShortId DM.Merchant -> Id Common.Driver -> Common.SubscriptionDriverFeesAndInvoicesToUpdate -> Flow Common.SubscriptionDriverFeesAndInvoicesToUpdate
-updateSubscriptionDriverFeeAndInvoice merchantShortId driverId Common.SubscriptionDriverFeesAndInvoicesToUpdate {..} = do
+updateSubscriptionDriverFeeAndInvoice :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Common.SubscriptionDriverFeesAndInvoicesToUpdate -> Flow Common.SubscriptionDriverFeesAndInvoicesToUpdate
+updateSubscriptionDriverFeeAndInvoice merchantShortId _ driverId Common.SubscriptionDriverFeesAndInvoicesToUpdate {..} = do
   merchant <- findMerchantByShortId merchantShortId
   now <- getCurrentTime
   let personId = cast @Common.Driver @DP.Person driverId
@@ -1223,8 +1234,8 @@ data InvoiceInfoToUpdateAfterParse = InvoiceInfoToUpdateAfterParse
   }
 
 ---------------------------------------------------------------------
-clearOnRideStuckDrivers :: ShortId DM.Merchant -> Maybe Int -> Flow Common.ClearOnRideStuckDriversRes
-clearOnRideStuckDrivers merchantShortId dbSyncTime = do
+clearOnRideStuckDrivers :: ShortId DM.Merchant -> Context.City -> Maybe Int -> Flow Common.ClearOnRideStuckDriversRes
+clearOnRideStuckDrivers merchantShortId _ dbSyncTime = do
   merchant <- findMerchantByShortId merchantShortId
   now <- getCurrentTime
   let dbSyncInterVal = addUTCTime (fromIntegral (- fromMaybe 1 dbSyncTime) * 60) now
@@ -1241,10 +1252,11 @@ clearOnRideStuckDrivers merchantShortId dbSyncTime = do
   return Common.ClearOnRideStuckDriversRes {driverIds = driverIds}
 
 ---------------------------------------------------------------------
-getDriverHomeLocation :: ShortId DM.Merchant -> Id Common.Driver -> Flow Common.GetHomeLocationsRes
-getDriverHomeLocation merchantShortId driverId = do
+getDriverHomeLocation :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Flow Common.GetHomeLocationsRes
+getDriverHomeLocation merchantShortId opCity driverId = do
   merchant <- findMerchantByShortId merchantShortId
-  dghLocs <- DDriver.getHomeLocations (cast driverId, cast merchant.id)
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  dghLocs <- DDriver.getHomeLocations (cast driverId, cast merchant.id, merchantOpCityId)
   return (buildDriverHomeLocationAPIEntity <$> dghLocs.locations)
   where
     buildDriverHomeLocationAPIEntity dghLocs =
@@ -1256,8 +1268,8 @@ getDriverHomeLocation merchantShortId driverId = do
           tag = dghLocs.tag
         }
 
-updateDriverHomeLocation :: ShortId DM.Merchant -> Id Common.Driver -> Common.UpdateDriverHomeLocationReq -> Flow APISuccess
-updateDriverHomeLocation _ _ req = do
+updateDriverHomeLocation :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Common.UpdateDriverHomeLocationReq -> Flow APISuccess
+updateDriverHomeLocation _ _ _ req = do
   QDHL.updateHomeLocationById (cast req.id) buildDriverHomeLocationEntity
   return Success
   where
@@ -1269,15 +1281,16 @@ updateDriverHomeLocation _ _ req = do
           tag = req.tag
         }
 
-incrementDriverGoToCount :: ShortId DM.Merchant -> Id Common.Driver -> Flow APISuccess
-incrementDriverGoToCount merchantShortId driverId = do
+incrementDriverGoToCount :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Flow APISuccess
+incrementDriverGoToCount merchantShortId opCity driverId = do
   merchant <- findMerchantByShortId merchantShortId
-  CQDGR.increaseDriverGoHomeRequestCount merchant.id (cast driverId)
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  CQDGR.increaseDriverGoHomeRequestCount merchantOpCityId (cast driverId)
   return Success
 
 ---------------------------------------------------------------------
-driverAadhaarInfoByPhone :: ShortId DM.Merchant -> Text -> Flow Common.DriverAadhaarInfoByPhoneReq
-driverAadhaarInfoByPhone merchantShortId phoneNumber = do
+driverAadhaarInfoByPhone :: ShortId DM.Merchant -> Context.City -> Text -> Flow Common.DriverAadhaarInfoByPhoneReq
+driverAadhaarInfoByPhone merchantShortId _ phoneNumber = do
   merchant <- findMerchantByShortId merchantShortId
   mobileNumberHash <- getDbHash phoneNumber
   driver <- QPerson.findByMobileNumberAndMerchant "+91" mobileNumberHash merchant.id >>= fromMaybeM (InvalidRequest "Person not found")
@@ -1296,8 +1309,8 @@ driverAadhaarInfoByPhone merchantShortId phoneNumber = do
 ---------------------------------------------------------------------
 
 ---------------------------------------------------------------------
-updateByPhoneNumber :: ShortId DM.Merchant -> Text -> Common.UpdateDriverDataReq -> Flow APISuccess
-updateByPhoneNumber merchantShortId phoneNumber req = do
+updateByPhoneNumber :: ShortId DM.Merchant -> Context.City -> Text -> Common.UpdateDriverDataReq -> Flow APISuccess
+updateByPhoneNumber merchantShortId _ phoneNumber req = do
   mobileNumberHash <- getDbHash phoneNumber
   aadhaarNumberHash <- getDbHash req.driverAadhaarNumber
   aadhaarInfo <- AV.findByAadhaarNumberHash aadhaarNumberHash
@@ -1313,8 +1326,8 @@ updateByPhoneNumber merchantShortId phoneNumber req = do
   QDriverInfo.updateAadhaarVerifiedState (cast driver.id) True
   pure Success
 
-fleetRemoveVehicle :: ShortId DM.Merchant -> Text -> Text -> Flow APISuccess
-fleetRemoveVehicle _merchantShortId fleetOwnerId_ vehicleNo = do
+fleetRemoveVehicle :: ShortId DM.Merchant -> Context.City -> Text -> Text -> Flow APISuccess
+fleetRemoveVehicle _merchantShortId _ fleetOwnerId_ vehicleNo = do
   vehicle <- QVehicle.findByRegistrationNo vehicleNo
   whenJust vehicle $ \veh -> do
     isFleetDriver <- FDV.findByDriverIdAndFleetOwnerId veh.driverId fleetOwnerId_
@@ -1326,8 +1339,8 @@ fleetRemoveVehicle _merchantShortId fleetOwnerId_ vehicleNo = do
   where
     updatedVehicleRegistrationCertificate VehicleRegistrationCertificate {..} = VehicleRegistrationCertificate {fleetOwnerId = Nothing, ..}
 
-fleetRemoveDriver :: ShortId DM.Merchant -> Text -> Id Common.Driver -> Flow APISuccess
-fleetRemoveDriver _merchantShortId fleetOwnerId driverId = do
+fleetRemoveDriver :: ShortId DM.Merchant -> Context.City -> Text -> Id Common.Driver -> Flow APISuccess
+fleetRemoveDriver _merchantShortId _ fleetOwnerId driverId = do
   let personId = cast @Common.Driver @DP.Person driverId
   associationList <- QRCAssociation.findAllLinkedByDriverId personId
   fleetOwnerRcList <- RCQuery.findAllByFleetOwnerId' fleetOwnerId
@@ -1337,8 +1350,8 @@ fleetRemoveDriver _merchantShortId fleetOwnerId driverId = do
   FDV.updateFleetDriverActiveStatus fleetOwnerId personId False
   pure Success
 
-fleetTotalEarning :: ShortId DM.Merchant -> Text -> Flow Common.FleetTotalEarningResponse -- TODO: This is thing should be in interval level this will become very slow when the data will grow
-fleetTotalEarning _merchantShortId fleetOwnerId = do
+fleetTotalEarning :: ShortId DM.Merchant -> Context.City -> Text -> Flow Common.FleetTotalEarningResponse -- TODO: This is thing should be in interval level this will become very slow when the data will grow
+fleetTotalEarning _merchantShortId _ fleetOwnerId = do
   totalRides <- QRD.totalRidesByFleetOwner (Just fleetOwnerId)
   totalCompletedRides <- QRD.totalRidesCompletedInFleet (Just fleetOwnerId)
   totalCancelledRides <- QRD.totalRidesCancelledInFleet (Just fleetOwnerId)
@@ -1354,8 +1367,8 @@ nonZero a
   | a <= 0 = 1
   | otherwise = a
 
-fleetVehicleEarning :: ShortId DM.Merchant -> Text -> Text -> Maybe (Id Common.Driver) -> Flow Common.FleetEarningRes
-fleetVehicleEarning _merchantShortId fleetOwnerId vehicleNo mbDriverId = do
+fleetVehicleEarning :: ShortId DM.Merchant -> Context.City -> Text -> Text -> Maybe (Id Common.Driver) -> Flow Common.FleetEarningRes
+fleetVehicleEarning _merchantShortId _ fleetOwnerId vehicleNo mbDriverId = do
   case mbDriverId of
     Just driverId -> fleetVehicleEarningPerDriver fleetOwnerId vehicleNo driverId
     Nothing -> do
@@ -1402,8 +1415,8 @@ fleetVehicleEarningPerDriver fleetOwnerId vehicleNo driverId = do
         ..
       }
 
-fleetDriverEarning :: ShortId DM.Merchant -> Text -> Id Common.Driver -> Flow Common.FleetEarningRes
-fleetDriverEarning _merchantShortId fleetOwnerId driverId = do
+fleetDriverEarning :: ShortId DM.Merchant -> Context.City -> Text -> Id Common.Driver -> Flow Common.FleetEarningRes
+fleetDriverEarning _merchantShortId _ fleetOwnerId driverId = do
   let personId = cast @Common.Driver @DP.Person driverId
   driver <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   driverActiveRcAssociation <- QRCAssociation.findActiveAssociationByDriver personId
@@ -1461,12 +1474,12 @@ data VolunteerTransactionStorageReq = VolunteerTransactionStorageReq
 instance HideSecrets VolunteerTransactionStorageReq where
   hideSecrets = identity
 
-sendSmsToDriver :: ShortId DM.Merchant -> Id Common.Driver -> Text -> SendSmsReq -> Flow APISuccess
-sendSmsToDriver merchantShortId driverId volunteerId _req@SendSmsReq {..} = do
+sendSmsToDriver :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Text -> SendSmsReq -> Flow APISuccess
+sendSmsToDriver merchantShortId opCity driverId volunteerId _req@SendSmsReq {..} = do
   merchant <- findMerchantByShortId merchantShortId
-
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   -- limit checking
-  transporterConfig <- SCT.findByMerchantId merchant.id >>= fromMaybeM (TransporterConfigNotFound merchant.id.getId)
+  transporterConfig <- SCT.findByMerchantOpCityId merchantOpCityId >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   void $ checkIfVolunteerSMSSendingLimitExceeded volunteerId transporterConfig.volunteerSmsSendingLimit channel
   void $ checkIfDriverSMSReceivingLimitExceeded driverId.getId transporterConfig.driverSmsReceivingLimit channel
 
@@ -1482,20 +1495,20 @@ sendSmsToDriver merchantShortId driverId volunteerId _req@SendSmsReq {..} = do
   withLogTag ("personId_" <> personId.getId) $ do
     case channel of
       SMS -> do
-        message <- MessageBuilder.buildGenericMessage driver.merchantId messageKey MessageBuilder.BuildGenericMessageReq {}
-        Sms.sendSMS driver.merchantId (Sms.SendSMSReq message phoneNumber sender)
+        message <- MessageBuilder.buildGenericMessage merchantOpCityId messageKey MessageBuilder.BuildGenericMessageReq {}
+        Sms.sendSMS driver.merchantId merchantOpCityId (Sms.SendSMSReq message phoneNumber sender)
           >>= Sms.checkSmsResult
       WHATSAPP -> do
         merchantMessage <-
-          QMM.findByMerchantIdAndMessageKey driver.merchantId messageKey
+          QMM.findByMerchantOpCityIdAndMessageKey merchantOpCityId messageKey
             >>= fromMaybeM (MerchantMessageNotFound driver.merchantId.getId (show messageKey))
         let jsonData = merchantMessage.jsonData
-        result <- Whatsapp.whatsAppSendMessageWithTemplateIdAPI driver.merchantId (Whatsapp.SendWhatsAppMessageWithTemplateIdApIReq phoneNumber merchantMessage.templateId jsonData.var1 jsonData.var2 jsonData.var3 (Just merchantMessage.containsUrlButton))
+        result <- Whatsapp.whatsAppSendMessageWithTemplateIdAPI driver.merchantId merchantOpCityId (Whatsapp.SendWhatsAppMessageWithTemplateIdApIReq phoneNumber merchantMessage.templateId jsonData.var1 jsonData.var2 jsonData.var3 (Just merchantMessage.containsUrlButton))
         when (result._response.status /= "success") $ throwError (InternalError "Unable to send Whatsapp message via dashboard")
       OVERLAY -> whenJust overlayKey $ \oKey -> do
-        mOverlay <- CMP.findByMerchantIdPNKeyLangaugeUdf driver.merchantId oKey (fromMaybe ENGLISH driver.language) Nothing
+        mOverlay <- CMP.findByMerchantOpCityIdPNKeyLangaugeUdf merchantOpCityId oKey (fromMaybe ENGLISH driver.language) Nothing
         whenJust mOverlay $ \overlay -> do
-          TN.sendOverlay driver.merchantId driver.id driver.deviceToken overlay.title overlay.description overlay.imageUrl overlay.okButtonText overlay.cancelButtonText overlay.actions overlay.link overlay.endPoint overlay.method overlay.reqBody overlay.delay overlay.contactSupportNumber overlay.toastMessage overlay.secondaryActions overlay.socialMediaLinks
+          TN.sendOverlay merchantOpCityId driver.id driver.deviceToken overlay.title overlay.description overlay.imageUrl overlay.okButtonText overlay.cancelButtonText overlay.actions overlay.link overlay.endPoint overlay.method overlay.reqBody overlay.delay overlay.contactSupportNumber overlay.toastMessage overlay.secondaryActions overlay.socialMediaLinks
       ALERT -> whenJust messageId $ \_mId -> do
         topicName <- asks (.broadcastMessageTopic)
         message <- B.runInReplica $ MQuery.findById (Id _mId) >>= fromMaybeM (InvalidRequest "Message Not Found")

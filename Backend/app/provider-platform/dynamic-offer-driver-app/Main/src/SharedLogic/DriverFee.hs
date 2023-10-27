@@ -49,7 +49,7 @@ data PlatformFee = PlatformFee
     sgst :: HighPrecMoney
   }
 
-groupDriverFeeByInvoices :: (EsqDBReplicaFlow m r, EsqDBFlow m r, MonadFlow m) => [DDF.DriverFee] -> m [DriverFeeByInvoice]
+groupDriverFeeByInvoices :: (EsqDBReplicaFlow m r, EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [DDF.DriverFee] -> m [DriverFeeByInvoice]
 groupDriverFeeByInvoices driverFees_ = do
   let pendingFees = filter (\df -> elem df.status [DDF.PAYMENT_PENDING, DDF.PAYMENT_OVERDUE]) driverFees_
 
@@ -60,13 +60,13 @@ groupDriverFeeByInvoices driverFees_ = do
 
   return ([pendingFeeInvoiceResp | pendingFeeInvoiceResp.totalFee /= 0] <> otherInvoiceResp)
   where
-    getUniqueInvoiceIds :: (EsqDBReplicaFlow m r, MonadFlow m) => [DDF.DriverFee] -> Id INV.Invoice -> m [Id INV.Invoice]
+    getUniqueInvoiceIds :: (EsqDBReplicaFlow m r, MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [DDF.DriverFee] -> Id INV.Invoice -> m [Id INV.Invoice]
     getUniqueInvoiceIds driverFees pendingFeeInvoiceId = do
       invoices <- (QINV.findValidByDriverFeeId . (.id)) `mapM` driverFees
       let uniqueInvoicesIds = map (.id) (mergeSortAndRemoveDuplicate invoices)
       return $ filter (pendingFeeInvoiceId /=) uniqueInvoicesIds
 
-    getInvoiceIdForPendingFees :: (EsqDBReplicaFlow m r, EsqDBFlow m r, MonadFlow m) => [DDF.DriverFee] -> m (Id INV.Invoice)
+    getInvoiceIdForPendingFees :: (EsqDBReplicaFlow m r, EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [DDF.DriverFee] -> m (Id INV.Invoice)
     getInvoiceIdForPendingFees pendingFees = do
       invoices <- (runInReplica . QINV.findActiveManualInvoiceByFeeId . (.id)) `mapM` pendingFees
       let sortedInvoices = mergeSortAndRemoveDuplicate invoices
@@ -82,7 +82,7 @@ groupDriverFeeByInvoices driverFees_ = do
               inactivateInvoices rest
               return invoice.id
 
-    inactivateInvoices :: (EsqDBFlow m r, MonadFlow m) => [INV.Invoice] -> m ()
+    inactivateInvoices :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [INV.Invoice] -> m ()
     inactivateInvoices = mapM_ (QINV.updateInvoiceStatusByInvoiceId INV.INACTIVE . (.id))
 
     mergeSortAndRemoveDuplicate :: [[INV.Invoice]] -> [INV.Invoice]
@@ -90,7 +90,7 @@ groupDriverFeeByInvoices driverFees_ = do
       let uniqueInvoices = DL.nubBy (\x y -> x.id == y.id) (concat invoices)
       sortOn (Down . (.createdAt)) uniqueInvoices
 
-    insertInvoiceAgainstDriverFee :: (EsqDBFlow m r, MonadFlow m) => [DDF.DriverFee] -> m (Id INV.Invoice)
+    insertInvoiceAgainstDriverFee :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [DDF.DriverFee] -> m (Id INV.Invoice)
     insertInvoiceAgainstDriverFee driverFees = do
       invoiceId <- generateGUID
       invoiceShortId <- generateShortId
@@ -117,7 +117,7 @@ groupDriverFeeByInvoices driverFees_ = do
         }
 
     buildDriverFeeByInvoice ::
-      (EsqDBReplicaFlow m r, MonadFlow m) =>
+      (EsqDBReplicaFlow m r, MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
       [DDF.DriverFee] ->
       Maybe DDF.DriverFeeStatus ->
       Id INV.Invoice ->
@@ -146,7 +146,7 @@ groupDriverFeeByInvoices driverFees_ = do
 
       return $ DriverFeeByInvoice {..}
 
-changeAutoPayFeesAndInvoicesForDriverFeesToManual :: MonadFlow m => [Id DDF.DriverFee] -> [Id DDF.DriverFee] -> m ()
+changeAutoPayFeesAndInvoicesForDriverFeesToManual :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Id DDF.DriverFee] -> [Id DDF.DriverFee] -> m ()
 changeAutoPayFeesAndInvoicesForDriverFeesToManual alldriverFeeIdsInBatch validDriverFeeIds = do
   let driverFeeIdsToBeShiftedToManual = alldriverFeeIdsInBatch \\ validDriverFeeIds
   QDF.updateToManualFeeByDriverFeeIds driverFeeIdsToBeShiftedToManual

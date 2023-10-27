@@ -21,7 +21,7 @@ module Storage.Queries.Merchant.TransporterConfig
 where
 
 import qualified Data.Aeson as A
-import Domain.Types.Merchant
+import Domain.Types.Merchant.MerchantOperatingCity
 import Domain.Types.Merchant.TransporterConfig
 import Kernel.Beam.Functions
 import qualified Kernel.External.Notification.FCM.Types as FCM
@@ -31,29 +31,29 @@ import Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified Storage.Beam.Merchant.TransporterConfig as BeamTC
 
-findByMerchantId :: MonadFlow m => Id Merchant -> m (Maybe TransporterConfig)
-findByMerchantId (Id merchantId) = findOneWithKV [Se.Is BeamTC.merchantId $ Se.Eq merchantId]
+findByMerchantOpCityId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id MerchantOperatingCity -> m (Maybe TransporterConfig)
+findByMerchantOpCityId (Id merchantOperatingCityId) = findOneWithKV [Se.Is BeamTC.merchantOperatingCityId $ Se.Eq merchantOperatingCityId]
 
-updateFCMConfig :: MonadFlow m => Id Merchant -> BaseUrl -> Text -> m ()
-updateFCMConfig (Id merchantId) fcmUrl fcmServiceAccount = do
+updateFCMConfig :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id MerchantOperatingCity -> BaseUrl -> Text -> m ()
+updateFCMConfig (Id merchantOperatingCityId) fcmUrl fcmServiceAccount = do
   now <- getCurrentTime
   updateOneWithKV
     [ Se.Set BeamTC.fcmUrl $ showBaseUrl fcmUrl,
       Se.Set BeamTC.fcmServiceAccount fcmServiceAccount,
       Se.Set BeamTC.updatedAt now
     ]
-    [Se.Is BeamTC.merchantId (Se.Eq merchantId)]
+    [Se.Is BeamTC.merchantOperatingCityId (Se.Eq merchantOperatingCityId)]
 
-updateReferralLinkPassword :: MonadFlow m => Id Merchant -> Text -> m ()
-updateReferralLinkPassword (Id merchantId) newPassword = do
+updateReferralLinkPassword :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id MerchantOperatingCity -> Text -> m ()
+updateReferralLinkPassword (Id merchantOperatingCityId) newPassword = do
   now <- getCurrentTime
   updateOneWithKV
     [ Se.Set BeamTC.referralLinkPassword newPassword,
       Se.Set BeamTC.updatedAt now
     ]
-    [Se.Is BeamTC.merchantId (Se.Eq merchantId)]
+    [Se.Is BeamTC.merchantOperatingCityId (Se.Eq merchantOperatingCityId)]
 
-update :: MonadFlow m => TransporterConfig -> m ()
+update :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => TransporterConfig -> m ()
 update config = do
   now <- getCurrentTime
   updateOneWithKV
@@ -88,7 +88,7 @@ update config = do
       Se.Set BeamTC.orderAndNotificationStatusCheckTimeLimit (nominalDiffTimeToSeconds config.orderAndNotificationStatusCheckTimeLimit),
       Se.Set BeamTC.updatedAt now
     ]
-    [Se.Is BeamTC.merchantId (Se.Eq $ getId config.merchantId)]
+    [Se.Is BeamTC.merchantOperatingCityId (Se.Eq $ getId config.merchantOperatingCityId)]
 
 instance FromTType' BeamTC.TransporterConfig TransporterConfig where
   fromTType' BeamTC.TransporterConfigT {..} = do
@@ -97,6 +97,7 @@ instance FromTType' BeamTC.TransporterConfig TransporterConfig where
       Just
         TransporterConfig
           { merchantId = Id merchantId,
+            merchantOperatingCityId = Id merchantOperatingCityId,
             fcmConfig =
               FCM.FCMConfig
                 { fcmUrl = fcmUrl',
@@ -134,6 +135,7 @@ instance ToTType' BeamTC.TransporterConfig TransporterConfig where
   toTType' TransporterConfig {..} = do
     BeamTC.TransporterConfigT
       { BeamTC.merchantId = getId merchantId,
+        BeamTC.merchantOperatingCityId = getId merchantOperatingCityId,
         BeamTC.pickupLocThreshold = pickupLocThreshold,
         BeamTC.dropLocThreshold = dropLocThreshold,
         BeamTC.rideTimeEstimatedThreshold = rideTimeEstimatedThreshold,

@@ -27,6 +27,7 @@ import Environment
 import EulerHS.Prelude
 import qualified Kernel.External.Payment.Juspay.Webhook as Juspay
 import qualified Kernel.External.Verification.Interface.Idfy as Idfy
+import Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Servant.BasicAuth ()
@@ -48,6 +49,10 @@ type MainAPI =
              :> Idfy.IdfyWebhookAPI
          )
     :<|> ( Capture "merchantId" (ShortId DM.Merchant)
+             :> Capture "city" Context.City
+             :> Idfy.IdfyWebhookAPI
+         )
+    :<|> ( Capture "merchantId" (ShortId DM.Merchant)
              :> Juspay.JuspayWebhookAPI
          )
     :<|> Dashboard.API
@@ -62,6 +67,7 @@ mainServer =
     :<|> Beckn.handler
     :<|> oldIdfyWebhookHandler
     :<|> idfyWebhookHandler
+    :<|> idfyWebhookV2Handler
     :<|> juspayWebhookHandler
     :<|> Dashboard.handler
     :<|> Internal.handler
@@ -93,6 +99,15 @@ writeSwaggerHTMLFlow = lift $ BS.readFile "swagger/index.html"
 
 writeOpenAPIFlow :: FlowServer OpenAPI
 writeOpenAPIFlow = pure openAPI
+
+idfyWebhookV2Handler ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Maybe Text ->
+  Value ->
+  FlowHandler AckResponse
+idfyWebhookV2Handler merchantShortId opCity secret =
+  withFlowHandlerAPI . DriverOnboarding.idfyWebhookV2Handler merchantShortId opCity secret
 
 idfyWebhookHandler ::
   ShortId DM.Merchant ->

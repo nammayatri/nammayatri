@@ -21,7 +21,7 @@ module Storage.Queries.GoHomeConfig
 where
 
 import Domain.Types.GoHomeConfig
-import Domain.Types.Merchant
+import Domain.Types.Merchant.MerchantOperatingCity
 import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.Id
@@ -29,8 +29,8 @@ import Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified Storage.Beam.GoHomeConfig as BeamGHC
 
-findByMerchantId :: (MonadFlow m) => Id Merchant -> m (Maybe GoHomeConfig)
-findByMerchantId (Id merchantId) = findOneWithKV [Se.Is BeamGHC.merchantId $ Se.Eq merchantId]
+findByMerchantOpCityId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id MerchantOperatingCity -> m (Maybe GoHomeConfig)
+findByMerchantOpCityId (Id merchantOperatingCityId) = findOneWithKV [Se.Is BeamGHC.merchantOperatingCityId $ Se.Eq merchantOperatingCityId]
 
 instance FromTType' BeamGHC.GoHomeConfig GoHomeConfig where
   fromTType' BeamGHC.GoHomeConfigT {..} = do
@@ -38,6 +38,7 @@ instance FromTType' BeamGHC.GoHomeConfig GoHomeConfig where
       Just
         GoHomeConfig
           { merchantId = Id merchantId,
+            merchantOperatingCityId = Id merchantOperatingCityId,
             goHomeFromLocationRadius = goHomeFromLocationRadius,
             goHomeWayPointRadius = goHomeWayPointRadius,
             goHomeBatchDelay = Seconds goHomeBatchDelay,
@@ -51,6 +52,7 @@ instance ToTType' BeamGHC.GoHomeConfig GoHomeConfig where
   toTType' GoHomeConfig {..} = do
     BeamGHC.GoHomeConfigT
       { BeamGHC.merchantId = getId merchantId,
+        BeamGHC.merchantOperatingCityId = getId merchantOperatingCityId,
         BeamGHC.goHomeFromLocationRadius = goHomeFromLocationRadius,
         BeamGHC.goHomeWayPointRadius = goHomeWayPointRadius,
         BeamGHC.goHomeBatchDelay = getSeconds goHomeBatchDelay,

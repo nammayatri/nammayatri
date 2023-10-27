@@ -24,6 +24,7 @@ import Servant
 import Storage.Beam.IssueManagement ()
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.Queries.Person as QP
+import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QR
 import Tools.Auth
 import Tools.Error
@@ -110,8 +111,8 @@ castRideInfo merchantShortId rideId = do
           area = ent.address.area
         }
 
-castTicket :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r) => Id Common.Merchant -> TIT.CreateTicketReq -> m TIT.CreateTicketResp
-castTicket merchantId req = TT.createTicket (Id req.personId) (cast merchantId) Nothing req
+castTicket :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r) => Id Common.Merchant -> Id Common.MerchantOperatingCity -> TIT.CreateTicketReq -> m TIT.CreateTicketResp
+castTicket merchantId merchantOperatingCityId = TT.createTicket (cast merchantId) (cast merchantOperatingCityId)
 
 castMerchantById :: (CacheFlow m r, EsqDBFlow m r) => Id Common.Merchant -> m (Maybe Common.Merchant)
 castMerchantById merchantId = do
@@ -136,7 +137,9 @@ fetchMedia :: (Id SP.Person, Id DM.Merchant) -> Text -> FlowHandler Text
 fetchMedia (personId, merchantId) = withFlowHandlerAPI . Common.fetchMedia (cast personId, cast merchantId)
 
 createIssueReport :: (Id SP.Person, Id DM.Merchant) -> Maybe Language -> Common.IssueReportReq -> FlowHandler Common.IssueReportRes
-createIssueReport (personId, merchantId) mbLanguage req = withFlowHandlerAPI $ Common.createIssueReport (cast personId, cast merchantId) mbLanguage req customerIssueHandle CUSTOMER
+createIssueReport (personId, merchantId) mbLanguage req = withFlowHandlerAPI $ do
+  person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  Common.createIssueReport (cast personId, cast merchantId, cast person.merchantOperatingCityId) mbLanguage req customerIssueHandle CUSTOMER
 
 issueMediaUpload :: (Id SP.Person, Id DM.Merchant) -> Common.IssueMediaUploadReq -> FlowHandler Common.IssueMediaUploadRes
 issueMediaUpload (personId, merchantId) req = withFlowHandlerAPI $ Common.issueMediaUpload (cast personId, cast merchantId) req (buildIssueMediaUploadConfig merchantId)

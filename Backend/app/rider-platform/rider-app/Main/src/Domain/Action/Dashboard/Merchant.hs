@@ -72,7 +72,7 @@ merchantUpdate merchantShortId city req = do
   whenJust req.exoPhones \exophones -> do
     CQExophone.deleteByMerchantOperatingCityId merchantOperatingCity.id
     forM_ exophones $ \exophoneReq -> do
-      exophone <- buildExophone merchantOperatingCity.id now exophoneReq
+      exophone <- buildExophone merchant.id merchantOperatingCity.id now exophoneReq
       CQExophone.create exophone
 
   CQM.clearCache updMerchant
@@ -84,12 +84,13 @@ merchantUpdate merchantShortId city req = do
   where
     getAllPhones es = (es <&> (.primaryPhone)) <> (es <&> (.backupPhone))
 
-buildExophone :: MonadGuid m => Id DMOC.MerchantOperatingCity -> UTCTime -> Common.ExophoneReq -> m DExophone.Exophone
-buildExophone merchantOperatingCityId now req = do
+buildExophone :: MonadGuid m => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> UTCTime -> Common.ExophoneReq -> m DExophone.Exophone
+buildExophone merchantId merchantOperatingCityId now req = do
   uid <- generateGUID
   pure
     DExophone.Exophone
       { id = uid,
+        merchantId,
         merchantOperatingCityId,
         primaryPhone = req.primaryPhone,
         backupPhone = req.backupPhone,

@@ -23,16 +23,16 @@ import Kernel.Utils.Common
 import qualified Sequelize as Se
 import Storage.Beam.Mandate as BeamM hiding (Id)
 
-create :: MonadFlow m => Domain.Mandate -> m ()
+create :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Domain.Mandate -> m ()
 create = createWithKV
 
-findById :: MonadFlow m => Id Domain.Mandate -> m (Maybe Domain.Mandate)
+findById :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Domain.Mandate -> m (Maybe Domain.Mandate)
 findById (Id mandateId) = findOneWithKV [Se.Is BeamM.id $ Se.Eq mandateId]
 
-findByStatus :: MonadFlow m => Text -> [MandateStatus] -> m (Maybe Domain.Mandate)
+findByStatus :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> [MandateStatus] -> m (Maybe Domain.Mandate)
 findByStatus mandateId status = findOneWithKV [Se.And [Se.Is BeamM.id $ Se.Eq mandateId, Se.Is BeamM.status $ Se.In status]]
 
-updateMandateDetails :: MonadFlow m => Id Domain.Mandate -> MandateStatus -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> m ()
+updateMandateDetails :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Domain.Mandate -> MandateStatus -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> m ()
 updateMandateDetails (Id mandateId) status payerVpa payerApp payerAppName mandatePaymentFlow = do
   now <- getCurrentTime
   updateOneWithKV
@@ -44,7 +44,7 @@ updateMandateDetails (Id mandateId) status payerVpa payerApp payerAppName mandat
     )
     [Se.Is BeamM.id (Se.Eq mandateId)]
 
-updateStatus :: MonadFlow m => Id Domain.Mandate -> MandateStatus -> m ()
+updateStatus :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Domain.Mandate -> MandateStatus -> m ()
 updateStatus (Id mandateId) status = do
   now <- getCurrentTime
   updateOneWithKV

@@ -34,7 +34,7 @@ data NearestDriversResult = NearestDriversResult
   deriving (Generic, Show, PrettyShow, HasCoordinates)
 
 getNearestDrivers ::
-  (MonadFlow m, MonadTime m, LT.HasLocationService m r, CoreMetrics m) =>
+  (MonadFlow m, MonadTime m, LT.HasLocationService m r, CoreMetrics m, EsqDBFlow m r, CacheFlow m r) =>
   Maybe Variant ->
   LatLong ->
   Meters ->

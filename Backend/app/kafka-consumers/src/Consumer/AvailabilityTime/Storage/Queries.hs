@@ -19,14 +19,14 @@ import qualified Consumer.AvailabilityTime.Storage.Beam.Tables as BeamDA
 import qualified Consumer.AvailabilityTime.Types as Domain
 import Kernel.Beam.Functions
 import Kernel.Prelude
-import Kernel.Types.App (MonadFlow)
 import Kernel.Types.Id (Id (..))
+import Kernel.Utils.Common
 import qualified Sequelize as Se
 
-create :: MonadFlow m => Domain.DriverAvailability -> m ()
+create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.DriverAvailability -> m ()
 create = createWithKV
 
-findLatestByDriverIdAndMerchantId :: MonadFlow m => Domain.DriverId -> Domain.MerchantId -> m (Maybe Domain.DriverAvailability)
+findLatestByDriverIdAndMerchantId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.DriverId -> Domain.MerchantId -> m (Maybe Domain.DriverAvailability)
 findLatestByDriverIdAndMerchantId driverId merchantId =
   findAllWithOptionsKV
     [ Se.And
@@ -39,7 +39,7 @@ findLatestByDriverIdAndMerchantId driverId merchantId =
     Nothing
     <&> listToMaybe
 
-findAvailableTimeInBucketByDriverIdAndMerchantId :: MonadFlow m => Domain.DriverId -> Domain.MerchantId -> UTCTime -> UTCTime -> m (Maybe Domain.DriverAvailability)
+findAvailableTimeInBucketByDriverIdAndMerchantId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.DriverId -> Domain.MerchantId -> UTCTime -> UTCTime -> m (Maybe Domain.DriverAvailability)
 findAvailableTimeInBucketByDriverIdAndMerchantId driverId merchantId bucketStartTime bucketEndTime =
   findAllWithOptionsKV
     [ Se.And
@@ -54,7 +54,7 @@ findAvailableTimeInBucketByDriverIdAndMerchantId driverId merchantId bucketStart
     Nothing
     <&> listToMaybe
 
-createOrUpdateDriverAvailability :: MonadFlow m => Domain.DriverAvailability -> m ()
+createOrUpdateDriverAvailability :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.DriverAvailability -> m ()
 createOrUpdateDriverAvailability d@Domain.DriverAvailability {..} = do
   mbOldBucketAvailableTime <- findAvailableTimeInBucketByDriverIdAndMerchantId driverId merchantId bucketStartTime bucketEndTime
   case mbOldBucketAvailableTime of

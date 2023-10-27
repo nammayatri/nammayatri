@@ -33,6 +33,7 @@ import qualified Data.Text as T
 import qualified Domain.Types.CallStatus as SCS
 import Domain.Types.DriverOnboarding.Error
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import Domain.Types.Person as Person
 import qualified Domain.Types.Ride as SRide
 import EulerHS.Prelude (Alternative ((<|>)))
@@ -91,8 +92,9 @@ initiateCallToCustomer ::
     HasFlowEnv m r '["selfUIUrl" ::: BaseUrl]
   ) =>
   Id SRide.Ride ->
+  Id DMOC.MerchantOperatingCity ->
   m CallRes
-initiateCallToCustomer rideId = do
+initiateCallToCustomer rideId merchantOpCityId = do
   ride <- QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
   booking <- QRB.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
   (customerPhone, providerPhone) <- getCustomerAndDriverPhones rideId
@@ -103,7 +105,7 @@ initiateCallToCustomer rideId = do
             toPhoneNum = customerPhone,
             attachments = Attachments $ CallAttachments {callStatusId = callStatusId, entityId = rideId.getId}
           }
-  exotelResponse <- initiateCall booking.providerId callReq
+  exotelResponse <- initiateCall booking.providerId merchantOpCityId callReq
   logTagInfo ("RideId: " <> getId rideId) "Call initiated from driver to customer."
   callStatus <- buildCallStatus callStatusId exotelResponse
   _ <- QCallStatus.create callStatus
@@ -123,8 +125,8 @@ initiateCallToCustomer rideId = do
             createdAt = now
           }
 
-getDriverMobileNumber :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r, HasField "esqDBReplicaEnv" r EsqDBEnv, HasField "loggerEnv" r LoggerEnv) => (Id Person.Person, Id DM.Merchant) -> Text -> m CallRes
-getDriverMobileNumber (driverId, merchantId) rcNo = do
+getDriverMobileNumber :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r, HasField "esqDBReplicaEnv" r EsqDBEnv, HasField "loggerEnv" r LoggerEnv) => (Id Person.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Text -> m CallRes
+getDriverMobileNumber (driverId, merchantId, merchantOpCityId) rcNo = do
   vehicleRC <- RCQuery.findLastVehicleRCWrapper rcNo >>= fromMaybeM (RCNotFound rcNo)
   rcActiveAssociation <- DAQuery.findActiveAssociationByRC vehicleRC.id >>= fromMaybeM ActiveRCNotFound
   callStatusId <- generateGUID
@@ -136,7 +138,7 @@ getDriverMobileNumber (driverId, merchantId) rcNo = do
             toPhoneNum = driverRequestedNumber,
             attachments = Attachments $ CallAttachments {callStatusId = callStatusId, entityId = vehicleRC.id.getId}
           }
-  exotelResponse <- initiateCall merchantId callReq
+  exotelResponse <- initiateCall merchantId merchantOpCityId callReq
   callStatus <- buildCallStatus callStatusId exotelResponse vehicleRC.id.getId
   QCallStatus.create callStatus
   return $ CallRes callStatusId
@@ -163,14 +165,14 @@ getDecryptedMobileNumberByDriverId driverId = do
     Just mobNum -> decrypt mobNum
     Nothing -> throwError $ InvalidRequest "Mobile Number not found."
 
-callStatusCallback :: EsqDBFlow m r => CallCallbackReq -> m CallCallbackRes
+callStatusCallback :: (CacheFlow m r, EsqDBFlow m r) => CallCallbackReq -> m CallCallbackRes
 callStatusCallback req = do
   let callStatusId = req.customField.callStatusId
   _ <- QCallStatus.findById callStatusId >>= fromMaybeM CallStatusDoesNotExist
   _ <- QCallStatus.updateCallStatus callStatusId (exotelStatusToInterfaceStatus req.status) req.conversationDuration (Just req.recordingUrl)
   return Ack
 
-directCallStatusCallback :: EsqDBFlow m r => Text -> ExotelCallStatus -> Maybe Text -> Maybe Int -> Maybe Int -> m CallCallbackRes
+directCallStatusCallback :: (CacheFlow m r, EsqDBFlow m r) => Text -> ExotelCallStatus -> Maybe Text -> Maybe Int -> Maybe Int -> m CallCallbackRes
 directCallStatusCallback callSid dialCallStatus recordingUrl_ callDuratioExotel callDurationFallback = do
   let callDuration = callDuratioExotel <|> callDurationFallback
   callStatus <- QCallStatus.findByCallSid callSid >>= fromMaybeM CallStatusDoesNotExist
@@ -236,12 +238,12 @@ getCustomerMobileNumber callSid callFrom_ callTo_ dtmfNumber_ callStatus = do
             createdAt = now
           }
 
-getCallStatus :: MonadFlow m => Id SCS.CallStatus -> m GetCallStatusRes
+getCallStatus :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id SCS.CallStatus -> m GetCallStatusRes
 getCallStatus callStatusId = do
   runInReplica $ QCallStatus.findById callStatusId >>= fromMaybeM CallStatusDoesNotExist <&> SCS.makeCallStatusAPIEntity
 
 -- | Get customer's mobile phone
-getCustomerPhone :: (EncFlow m r, MonadFlow m) => SRide.Ride -> m Text
+getCustomerPhone :: (EncFlow m r, MonadFlow m, CacheFlow m r, EsqDBFlow m r) => SRide.Ride -> m Text
 getCustomerPhone ride = do
   booking <- QRB.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
   riderId <-
@@ -252,7 +254,7 @@ getCustomerPhone ride = do
   return $ riderDetails.mobileCountryCode <> decMobNum
 
 -- | Get driver's mobile phone
-getDriverPhone :: (EncFlow m r, MonadFlow m) => SRide.Ride -> m Text
+getDriverPhone :: (EncFlow m r, MonadFlow m, CacheFlow m r, EsqDBFlow m r) => SRide.Ride -> m Text
 getDriverPhone ride = do
   driver <- runInReplica $ QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
   decMobNum <- mapM decrypt driver.mobileNumber
@@ -260,7 +262,7 @@ getDriverPhone ride = do
   phonenum & fromMaybeM (InternalError "Driver has no phone number.")
 
 -- | Returns phones pair or throws an error
-getCustomerAndDriverPhones :: (EncFlow m r, MonadFlow m) => Id SRide.Ride -> m (Text, Text)
+getCustomerAndDriverPhones :: (EncFlow m r, MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id SRide.Ride -> m (Text, Text)
 getCustomerAndDriverPhones rideId = do
   ride <-
     QRide.findById rideId

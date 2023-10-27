@@ -40,6 +40,7 @@ import qualified Kernel.External.Maps as Maps
 import Kernel.External.Maps.Types
 import Kernel.Prelude
 import Kernel.Types.APISuccess (APISuccess)
+import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common (Money)
 import Kernel.Types.Id
 import qualified Mobility.ARDU.APICalls as API
@@ -348,9 +349,9 @@ clearCachedMapsConfig = runARDUFlow "clear cached maps config" do
   TCQMSC.clearCache Fixtures.nammaYatriPartnerMerchantId (TDMSC.MapsService Maps.Google)
   TCQMSC.clearCache Fixtures.otherMerchant2Id (TDMSC.MapsService Maps.Google)
 
-rideSync :: ShortId TDM.Merchant -> Id TRide.Ride -> ClientsM ()
-rideSync merchantId rideId = do
-  let dashboardAPI = API.dashboard merchantId Fixtures.dashboardToken
+rideSync :: ShortId TDM.Merchant -> Context.City -> Id TRide.Ride -> ClientsM ()
+rideSync merchantId city rideId = do
+  let dashboardAPI = API.dashboard merchantId city Fixtures.dashboardToken
   void . callBPP $ dashboardAPI.ride.rideSync (cast rideId)
 
 withFakeBapUrl :: TRB.Booking -> ClientsM () -> ClientsM ()

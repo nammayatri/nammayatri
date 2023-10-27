@@ -18,6 +18,7 @@ module Domain.Types.SearchTry where
 import Data.Aeson
 import qualified Domain.Types.Estimate as DEst
 import Domain.Types.Merchant as DM
+import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.Vehicle.Variant as Variant
 import Kernel.Prelude
@@ -32,6 +33,7 @@ data SearchTry = SearchTry
     requestId :: Id DSR.SearchRequest,
     estimateId :: Id DEst.Estimate,
     merchantId :: Maybe (Id DM.Merchant),
+    merchantOperatingCityId :: Id DMOC.MerchantOperatingCity,
     messageId :: Text,
     startTime :: UTCTime,
     validTill :: UTCTime,

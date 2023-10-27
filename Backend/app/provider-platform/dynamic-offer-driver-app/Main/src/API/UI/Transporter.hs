@@ -23,6 +23,7 @@ where
 
 import qualified Domain.Action.UI.Transporter as DTransporter
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as SP
 import Environment
 import EulerHS.Prelude hiding (id)
@@ -50,5 +51,5 @@ handler =
 updateTransporter :: SP.Person -> Id DM.Merchant -> DTransporter.UpdateTransporterReq -> FlowHandler DTransporter.UpdateTransporterRes
 updateTransporter admin merchantId = withFlowHandlerAPI . DTransporter.updateTransporter admin merchantId
 
-getTransporter :: (Id SP.Person, Id DM.Merchant) -> FlowHandler DTransporter.TransporterRec
+getTransporter :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> FlowHandler DTransporter.TransporterRec
 getTransporter = withFlowHandlerAPI . DTransporter.getTransporter

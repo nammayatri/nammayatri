@@ -14,7 +14,7 @@ SELECT
     city
 FROM atlas_app.merchant;
 
------------------------------------------------------ Config / Message / PaymentMethod Table Migrations -----------------------------------------------
+----------------------------------------------------- Service Usage Config / Message / PaymentMethod / Exophone / Config Table Migrations -----------------------------------------------
 -- Add the new column
 ALTER TABLE atlas_app.merchant_service_usage_config
 ADD COLUMN merchant_operating_city_id character(36) REFERENCES atlas_app.merchant_operating_city (id);
@@ -23,6 +23,12 @@ ALTER TABLE atlas_app.merchant_message
 ADD COLUMN merchant_operating_city_id character(36) REFERENCES atlas_app.merchant_operating_city (id);
 
 ALTER TABLE atlas_app.merchant_payment_method
+ADD COLUMN merchant_operating_city_id character(36) REFERENCES atlas_app.merchant_operating_city (id);
+
+ALTER TABLE atlas_app.exophone
+ADD COLUMN merchant_operating_city_id character(36) REFERENCES atlas_app.merchant_operating_city (id);
+
+ALTER TABLE atlas_app.merchant_config
 ADD COLUMN merchant_operating_city_id character(36) REFERENCES atlas_app.merchant_operating_city (id);
 
 -- Update the values of the new column
@@ -41,6 +47,16 @@ SET merchant_operating_city_id = merchant_operating_city.id
 FROM atlas_app.merchant_operating_city
 WHERE atlas_app.merchant_payment_method.merchant_id = merchant_operating_city.merchant_id;
 
+UPDATE atlas_app.exophone
+SET merchant_operating_city_id = merchant_operating_city.id
+FROM atlas_app.merchant_operating_city
+WHERE atlas_app.exophone.merchant_id = merchant_operating_city.merchant_id;
+
+UPDATE atlas_app.merchant_config
+SET merchant_operating_city_id = merchant_operating_city.id
+FROM atlas_app.merchant_operating_city
+WHERE atlas_app.merchant_config.merchant_id = merchant_operating_city.merchant_id;
+
 -- Set the column as NOT NULL
 ALTER TABLE atlas_app.merchant_service_usage_config
 ALTER COLUMN merchant_operating_city_id SET NOT NULL;
@@ -49,6 +65,12 @@ ALTER TABLE atlas_app.merchant_message
 ALTER COLUMN merchant_operating_city_id SET NOT NULL;
 
 ALTER TABLE atlas_app.merchant_payment_method
+ALTER COLUMN merchant_operating_city_id SET NOT NULL;
+
+ALTER TABLE atlas_app.exophone
+ALTER COLUMN merchant_operating_city_id SET NOT NULL;
+
+ALTER TABLE atlas_app.merchant_config
 ALTER COLUMN merchant_operating_city_id SET NOT NULL;
 
 -- Drop the primary key constraint
@@ -74,6 +96,12 @@ ADD PRIMARY KEY (merchant_operating_city_id, message_key);
 -- DROP COLUMN merchant_id;
 
 -- ALTER TABLE atlas_app.merchant_payment_method
+-- DROP COLUMN merchant_id;
+
+-- ALTER TABLE atlas_app.exophone
+-- DROP COLUMN merchant_id;
+
+-- ALTER TABLE atlas_app.merchant_config
 -- DROP COLUMN merchant_id;
 ----------------------------------------------------------------------- END --------------------------------------------------------------------------
 

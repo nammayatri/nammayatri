@@ -29,14 +29,15 @@ import Kernel.Beam.Functions
 import Kernel.External.Maps.Types (LatLong (..), lat, lon)
 import Kernel.Types.Common
 import Kernel.Types.Id
+import Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified Storage.Beam.BookingCancellationReason as BeamBCR
 import qualified Storage.Beam.Common as BeamCommon
 
-create :: MonadFlow m => DBCR.BookingCancellationReason -> m ()
+create :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => DBCR.BookingCancellationReason -> m ()
 create = createWithKV
 
-findAllCancelledByDriverId :: MonadFlow m => Id Person -> m Int
+findAllCancelledByDriverId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> m Int
 findAllCancelledByDriverId driverId = do
   dbConf <- getMasterBeamConfig
   res <- L.runDB dbConf $
@@ -52,13 +53,13 @@ findAllCancelledByDriverId driverId = do
               B.all_ (BeamCommon.bookingCancellationReason BeamCommon.atlasDB)
   pure $ either (const 0) (\r -> if Data.List.null r then 0 else Data.List.head r) res
 
-findByBookingId :: MonadFlow m => Id Booking -> m (Maybe BookingCancellationReason)
+findByBookingId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Booking -> m (Maybe BookingCancellationReason)
 findByBookingId (Id bookingId) = findOneWithKV [Se.Is BeamBCR.bookingId $ Se.Eq bookingId]
 
-findByRideId :: MonadFlow m => Id Ride -> m (Maybe BookingCancellationReason)
+findByRideId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Ride -> m (Maybe BookingCancellationReason)
 findByRideId (Id rideId) = findOneWithKV [Se.Is BeamBCR.rideId $ Se.Eq (Just rideId)]
 
-upsert :: MonadFlow m => BookingCancellationReason -> m ()
+upsert :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => BookingCancellationReason -> m ()
 upsert cancellationReason = do
   res <- findOneWithKV [Se.Is BeamBCR.bookingId $ Se.Eq (getId cancellationReason.bookingId)]
   if isJust res
@@ -72,7 +73,7 @@ upsert cancellationReason = do
         [Se.Is BeamBCR.bookingId (Se.Eq $ getId cancellationReason.bookingId)]
     else createWithKV cancellationReason
 
-findAllBookingIdsCancelledByDriverId :: MonadFlow m => Id Person -> m [Id Booking]
+findAllBookingIdsCancelledByDriverId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> m [Id Booking]
 findAllBookingIdsCancelledByDriverId driverId = findAllWithDb [Se.And [Se.Is BeamBCR.driverId $ Se.Eq (Just $ getId driverId), Se.Is BeamBCR.source $ Se.Eq ByDriver]] <&> (DBCR.bookingId <$>)
 
 instance FromTType' (BeamBCR.BookingCancellationReasonT Identity) BookingCancellationReason where

@@ -85,7 +85,7 @@ instance FromTType' BeamE.Exophone Exophone where
       Just
         Exophone
           { id = Id id,
-            -- merchantId = Id merchantId,
+            merchantId = Id merchantId,
             merchantOperatingCityId = Id merchantOperatingCityId,
             primaryPhone = primaryPhone,
             backupPhone = backupPhone,
@@ -99,7 +99,7 @@ instance ToTType' BeamE.Exophone Exophone where
   toTType' Exophone {..} = do
     BeamE.ExophoneT
       { BeamE.id = getId id,
-        -- BeamE.merchantId = getId merchantId,
+        BeamE.merchantId = getId merchantId,
         BeamE.merchantOperatingCityId = getId merchantOperatingCityId,
         BeamE.primaryPhone = primaryPhone,
         BeamE.backupPhone = backupPhone,

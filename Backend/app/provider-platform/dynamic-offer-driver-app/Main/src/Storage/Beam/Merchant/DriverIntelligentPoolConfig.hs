@@ -23,6 +23,7 @@ import Tools.Beam.UtilsTH
 
 data DriverIntelligentPoolConfigT f = DriverIntelligentPoolConfigT
   { merchantId :: B.C f Text,
+    merchantOperatingCityId :: B.C f Text,
     actualPickupDistanceWeightage :: B.C f Int,
     availabilityTimeWeightage :: B.C f Int,
     availabilityTimeWindowOption :: B.C f SWC.SlidingWindowOptions,
@@ -47,10 +48,10 @@ instance B.Table DriverIntelligentPoolConfigT where
   data PrimaryKey DriverIntelligentPoolConfigT f
     = Id (B.C f Text)
     deriving (Generic, B.Beamable)
-  primaryKey = Id . merchantId
+  primaryKey = Id . merchantOperatingCityId
 
 type DriverIntelligentPoolConfig = DriverIntelligentPoolConfigT Identity
 
-$(enableKVPG ''DriverIntelligentPoolConfigT ['merchantId] [])
+$(enableKVPG ''DriverIntelligentPoolConfigT ['merchantOperatingCityId] [])
 
 $(mkTableInstances ''DriverIntelligentPoolConfigT "driver_intelligent_pool_config")

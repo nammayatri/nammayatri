@@ -26,6 +26,7 @@ where
 import qualified Domain.Action.UI.Ride.StartRide.Internal as SInternal
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
 import Environment (Flow)
@@ -74,9 +75,9 @@ data ServiceHandle m = ServiceHandle
     whenWithLocationUpdatesLock :: Id DP.Person -> m () -> m ()
   }
 
-buildStartRideHandle :: Id DM.Merchant -> Flow (ServiceHandle Flow)
-buildStartRideHandle merchantId = do
-  defaultRideInterpolationHandler <- LocUpd.buildRideInterpolationHandler merchantId False
+buildStartRideHandle :: Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Flow (ServiceHandle Flow)
+buildStartRideHandle merchantId merchantOpCityId = do
+  defaultRideInterpolationHandler <- LocUpd.buildRideInterpolationHandler merchantId merchantOpCityId False
   pure
     ServiceHandle
       { findRideById = QRide.findById,
@@ -129,8 +130,8 @@ startRide ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.getId)
   openMarketAllow <-
     maybe
       (pure False)
-      ( \merchantId -> do
-          transporterConfig <- QTC.findByMerchantId merchantId >>= fromMaybeM (TransporterConfigNotFound (getId merchantId))
+      ( \_ -> do
+          transporterConfig <- QTC.findByMerchantOpCityId ride.merchantOperatingCityId >>= fromMaybeM (TransporterConfigNotFound (getId ride.merchantOperatingCityId))
           pure $ transporterConfig.openMarketUnBlocked
       )
       driverInfo.merchantId
@@ -164,7 +165,7 @@ startRide ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.getId)
     withTimeAPI "startRide" "startRideAndUpdateLocation" $ startRideAndUpdateLocation driverId ride booking.id point booking.providerId
     withTimeAPI "startRide" "initializeDistanceCalculation" $ initializeDistanceCalculation ride.id driverId point
     withTimeAPI "startRide" "notifyBAPRideStarted" $ notifyBAPRideStarted booking ride
-  CQDGR.setDriverGoHomeIsOnRide driverId booking.providerId
+  CQDGR.setDriverGoHomeIsOnRide driverId ride.merchantOperatingCityId
   pure APISuccess.Success
   where
     isValidRideStatus status = status == DRide.NEW

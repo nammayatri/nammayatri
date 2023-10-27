@@ -18,6 +18,7 @@ module Tools.Ticket
 where
 
 import Domain.Types.Merchant
+import Domain.Types.Merchant.MerchantOperatingCity (MerchantOperatingCity)
 import qualified Domain.Types.Merchant.MerchantServiceConfig as DMSC
 import EulerHS.Prelude
 import qualified Kernel.External.Ticket.Interface as Ticket
@@ -29,17 +30,18 @@ import Kernel.Utils.Common
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as QMSC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as QMSUC
 
-createTicket :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r) => Id Merchant -> TIT.CreateTicketReq -> m TIT.CreateTicketResp
+createTicket :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r) => Id Merchant -> Id MerchantOperatingCity -> TIT.CreateTicketReq -> m TIT.CreateTicketResp
 createTicket = runWithServiceConfig Ticket.createTicket
 
 runWithServiceConfig ::
   (EncFlow m r, CacheFlow m r, EsqDBFlow m r) =>
   (TIT.IssueTicketServiceConfig -> req -> m resp) ->
   Id Merchant ->
+  Id MerchantOperatingCity ->
   req ->
   m resp
-runWithServiceConfig func merchantId req = do
-  merchantConfig <- QMSUC.findByMerchantId merchantId >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantId.getId)
+runWithServiceConfig func merchantId merchantOpCityId req = do
+  merchantConfig <- QMSUC.findByMerchantOpCityId merchantOpCityId >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
   merchantIssueTicketServiceConfig <-
     QMSC.findByMerchantIdAndService merchantId (DMSC.IssueTicketService merchantConfig.issueTicketService)
       >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantId.getId)

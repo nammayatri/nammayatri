@@ -26,13 +26,13 @@ import Sequelize as Se
 import qualified Storage.Beam.Feedback.FeedbackBadge as BFFB
 import Prelude hiding (id)
 
-createFeedbackBadge :: MonadFlow m => FeedbackBadge -> m ()
+createFeedbackBadge :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => FeedbackBadge -> m ()
 createFeedbackBadge = createWithKV
 
-findFeedbackBadgeForDriver :: MonadFlow m => Id Person -> Text -> m (Maybe FeedbackBadge)
+findFeedbackBadgeForDriver :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> Text -> m (Maybe FeedbackBadge)
 findFeedbackBadgeForDriver (Id driverId) badge = findOneWithKV [Se.And [Se.Is BFFB.driverId $ Se.Eq driverId, Se.Is BFFB.badge $ Se.Eq badge]]
 
-updateFeedbackBadge :: MonadFlow m => FeedbackBadge -> Int -> m ()
+updateFeedbackBadge :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => FeedbackBadge -> Int -> m ()
 updateFeedbackBadge feedbackBadge newBadgeCount = do
   now <- getCurrentTime
   updateWithKV
@@ -41,7 +41,7 @@ updateFeedbackBadge feedbackBadge newBadgeCount = do
     ]
     [Se.And [Se.Is BFFB.id $ Se.Eq $ getId feedbackBadge.id, Se.Is BFFB.driverId $ Se.Eq $ getId feedbackBadge.driverId]]
 
-findAllFeedbackBadgeForDriver :: MonadFlow m => Id Person -> m [FeedbackBadge]
+findAllFeedbackBadgeForDriver :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> m [FeedbackBadge]
 findAllFeedbackBadgeForDriver (Id driverId) = findAllWithKV [Se.Is BFFB.driverId $ Se.Eq driverId]
 
 instance FromTType' BFFB.FeedbackBadge FeedbackBadge where

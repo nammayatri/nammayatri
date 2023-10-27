@@ -25,19 +25,19 @@ import Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified Storage.Beam.DriverOnboarding.AadhaarVerification as BeamAV
 
-create :: MonadFlow m => AadhaarVerification -> m ()
+create :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => AadhaarVerification -> m ()
 create = createWithKV
 
-findByDriverId :: MonadFlow m => Id Person -> m (Maybe AadhaarVerification)
+findByDriverId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> m (Maybe AadhaarVerification)
 findByDriverId (Id driverId) = findOneWithKV [Se.Is BeamAV.driverId $ Se.Eq driverId]
 
-deleteByDriverId :: MonadFlow m => Id Person -> m ()
+deleteByDriverId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> m ()
 deleteByDriverId (Id driverId) = deleteWithKV [Se.Is BeamAV.driverId (Se.Eq driverId)]
 
-findByAadhaarNumberHash :: MonadFlow m => DbHash -> m (Maybe AadhaarVerification)
+findByAadhaarNumberHash :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => DbHash -> m (Maybe AadhaarVerification)
 findByAadhaarNumberHash aadhaarHash = findOneWithKV [Se.Is BeamAV.aadhaarNumberHash $ Se.Eq (Just aadhaarHash)]
 
-findByPhoneNumberAndUpdate :: MonadFlow m => Text -> Text -> Text -> Maybe DbHash -> Bool -> Id Person -> m ()
+findByPhoneNumberAndUpdate :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> Text -> Text -> Maybe DbHash -> Bool -> Id Person -> m ()
 findByPhoneNumberAndUpdate name gender dob aadhaarNumberHash isVerified personId = do
   now <- getCurrentTime
   updateWithKV
@@ -50,10 +50,10 @@ findByPhoneNumberAndUpdate name gender dob aadhaarNumberHash isVerified personId
     ]
     [Se.Is BeamAV.driverId (Se.Eq $ getId personId)]
 
-deleteByPersonId :: MonadFlow m => Id Person -> m ()
+deleteByPersonId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> m ()
 deleteByPersonId (Id personId) = deleteWithKV [Se.Is BeamAV.driverId (Se.Eq personId)]
 
-updateDriverImagePath :: MonadFlow m => Id Person -> Text -> m ()
+updateDriverImagePath :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> Text -> m ()
 updateDriverImagePath (Id personId) imagePath =
   updateOneWithKV
     [Se.Set BeamAV.driverImagePath (Just imagePath)]

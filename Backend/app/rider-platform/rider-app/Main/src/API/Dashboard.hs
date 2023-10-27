@@ -57,7 +57,7 @@ handler =
         :<|> Ride.handler merchantId
         :<|> RideBookings.handler merchantId
         :<|> IssueList.handler merchantId
-        :<|> Issue.handler merchantId
+        :<|> Issue.handler merchantId city
   )
     :<|> exotelHandler
 
