@@ -413,6 +413,7 @@ library
       Storage.CachedQueries.DriverReferral
       Storage.CachedQueries.Exophone
       Storage.CachedQueries.FarePolicy
+      Storage.CachedQueries.FareProduct
       Storage.CachedQueries.GoHomeConfig
       Storage.CachedQueries.Issue.IssueCategory
       Storage.CachedQueries.Issue.IssueOption

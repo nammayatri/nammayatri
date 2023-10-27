@@ -20,7 +20,7 @@ import Kernel.Utils.Common
 import qualified Lib.Queries.SpecialLocation as QSpecialLocation
 import qualified Lib.Queries.SpecialLocationPriority as QSpecialLocationPriority
 import qualified Lib.Types.SpecialLocation as DSpecialLocation
-import qualified Storage.Queries.FareProduct as QFareProduct
+import qualified Storage.CachedQueries.FareProduct as QFareProduct
 
 data FareProducts = FareProducts
   { fareProducts :: [DFareProduct.FareProduct],
