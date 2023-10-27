@@ -9,6 +9,7 @@ window.version = __VERSION__;
 console.warn("Hello World MASTER ONE");
 let previousDateObject = new Date();
 const refreshThreshold = 30;
+Android.runInUI("android.webkit.WebView->setWebContentsDebuggingEnabled:b_true;","null");
 loadConfig();
 
 let eventObject = {
@@ -260,12 +261,12 @@ if (typeof window.JOS != "undefined") {
   console.error("JOS not present")
 }
 
-var sessionInfo = JSON.parse(JBridge.getDeviceInfo())
-if(sessionInfo.package_name.includes(".debug") || sessionInfo.package_name.includes(".staging")){
-  logger.enableLogger();
-}else{
-  logger.disableLogger();
-}
+// var sessionInfo = JSON.parse(JBridge.getDeviceInfo())
+// if(sessionInfo.package_name.includes(".debug") || sessionInfo.package_name.includes(".staging")){
+//   logger.enableLogger();
+// }else{
+//   logger.disableLogger();
+// }
 
 function loadConfig() {
   var config = require("./output/Helpers.FileProvider.Utils");
