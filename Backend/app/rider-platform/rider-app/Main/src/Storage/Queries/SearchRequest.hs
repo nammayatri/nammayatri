@@ -109,7 +109,7 @@ instance FromTType' BeamSR.SearchRequest SearchRequest where
               toLocationMappings = filter (\loc -> loc.order /= 0) mappings
           fromLocMap <- listToMaybe fromLocationMapping & fromMaybeM (InternalError "Entity Mappings For FromLocation Not Found")
           fl <- QL.findById fromLocMap.locationId >>= fromMaybeM (InternalError $ "FromLocation not found in search request for fromLocationId: " <> fromLocMap.locationId.getId)
-          --when (null toLocationMappings) $ throwError (InternalError "Entity Mappings For ToLocation Not Found")
+          when (tag == ON_DEMAND && null toLocationMappings) $ throwError (InternalError "Entity Mappings For ToLocation Not Found")
           tl <-
             if null toLocationMappings
               then return Nothing
@@ -140,7 +140,8 @@ instance FromTType' BeamSR.SearchRequest SearchRequest where
             autoAssignEnabledV2 = autoAssignEnabledV2,
             availablePaymentMethods = Id <$> availablePaymentMethods,
             selectedPaymentMethodId = Id <$> selectedPaymentMethodId,
-            createdAt = createdAt
+            createdAt = createdAt,
+            tag = tag
           }
 
 instance ToTType' BeamSR.SearchRequest SearchRequest where
@@ -166,7 +167,8 @@ instance ToTType' BeamSR.SearchRequest SearchRequest where
         BeamSR.autoAssignEnabledV2 = autoAssignEnabledV2,
         BeamSR.availablePaymentMethods = getId <$> availablePaymentMethods,
         BeamSR.selectedPaymentMethodId = getId <$> selectedPaymentMethodId,
-        BeamSR.createdAt = createdAt
+        BeamSR.createdAt = createdAt,
+        BeamSR.tag = tag
       }
 
 -- FUNCTIONS FOR HANDLING OLD DATA : TO BE REMOVED AFTER SOME TIME

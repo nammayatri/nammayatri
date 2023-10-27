@@ -13,3 +13,4 @@ ALTER TABLE atlas_app.quote RENAME COLUMN rental_slab_id TO rental_details_id;
 ALTER TABLE atlas_app.booking RENAME COLUMN rental_slab_id TO rental_details_id;
 
 ALTER TABLE atlas_app.ride ADD COLUMN end_ride_otp char(4);
+ALTER TABLE atlas_app.search_request ADD COLUMN tag character varying(36) default 'ON_DEMAND';
