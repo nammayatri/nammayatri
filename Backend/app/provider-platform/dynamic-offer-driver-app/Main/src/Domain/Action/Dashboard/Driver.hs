@@ -1309,13 +1309,11 @@ fleetRemoveVehicle _merchantShortId fleetOwnerId_ vehicleNo = do
 fleetRemoveDriver :: ShortId DM.Merchant -> Text -> Id Common.Driver -> Flow APISuccess
 fleetRemoveDriver _merchantShortId fleetOwnerId driverId = do
   let personId = cast @Common.Driver @DP.Person driverId
-  vehicle <- QVehicle.findById personId
-  whenJust vehicle $ \veh -> do
-    isFleetDriver <- FDV.findByDriverIdAndFleetOwnerId veh.driverId fleetOwnerId
-    when (isJust isFleetDriver) $ do
-      vehicleAssociation <- RCQuery.findLastVehicleRCWrapper veh.registrationNo
-      whenJust vehicleAssociation $ \vehicleAssociation' -> do
-        when (vehicleAssociation'.fleetOwnerId == Just fleetOwnerId) $ throwError (InvalidRequest "Driver is linked to fleet Vehicle , first unlink then try")
+  associationList <- QRCAssociation.findAllLinkedByDriverId personId
+  fleetOwnerRcList <- RCQuery.findAllByFleetOwnerId' fleetOwnerId
+  let rcAssociatedList :: [Id VehicleRegistrationCertificate] = map (.id) fleetOwnerRcList
+  let rcAssociatedWithFleet = any (\rcAssoc -> rcAssoc.rcId `elem` rcAssociatedList) associationList
+  when rcAssociatedWithFleet $ throwError (InvalidRequest "Driver is linked to fleet Vehicle , first unlink then try")
   FDV.updateFleetDriverActiveStatus fleetOwnerId personId False
   pure Success
 
