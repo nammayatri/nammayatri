@@ -45,7 +45,8 @@ buildOnConfirmMessage res = do
           otpCode <- details.specialZoneOtpCode & fromMaybeM (OtpNotFoundForSpecialZoneBooking booking.id.getId)
           toLocation <- fromMaybeM (InvalidRequest "ToLocation Not Present") res.toLocation
           return $ mkSpecialZoneFulfillmentInfo res.fromLocation toLocation otpCode booking.quoteId OnConfirm.RIDE_OTP res.riderPhoneNumber res.riderMobileCountryCode res.riderName vehicleVariant booking.startTime
-        _ -> return $ mkFulfillmentInfo res.fromLocation res.toLocation booking.quoteId OnConfirm.RIDE mbDriverName res.riderPhoneNumber res.riderMobileCountryCode res.riderName vehicleVariant booking.startTime
+        DB.NormalBooking -> return $ mkFulfillmentInfo res.fromLocation res.toLocation booking.quoteId OnConfirm.RIDE mbDriverName res.riderPhoneNumber res.riderMobileCountryCode res.riderName vehicleVariant booking.startTime
+        DB.RentalBooking -> return $ mkFulfillmentInfo res.fromLocation res.toLocation booking.quoteId OnConfirm.RIDE mbDriverName res.riderPhoneNumber res.riderMobileCountryCode res.riderName vehicleVariant booking.startTime
     DB.DetailsRental _ -> return $ mkFulfillmentInfo res.fromLocation res.toLocation booking.quoteId OnConfirm.RIDE mbDriverName res.riderPhoneNumber res.riderMobileCountryCode res.riderName vehicleVariant booking.startTime
   return $
     OnConfirm.OnConfirmMessage

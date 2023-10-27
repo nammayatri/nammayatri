@@ -74,7 +74,13 @@ confirm transporterId (SignatureAuthResult _ subscriber) req =
                   void $
                     BP.sendRideAssignedUpdateToBAP dConfirmRes.booking ride
               DS.driverScoreEventHandler DST.OnNewRideAssigned {merchantId = transporterId, driverId = Id driverId}
-            _ -> do
+            DConfirm.DConfirmResRentalBooking -> do
+              fork "on_confirm/on_update" $ do
+                handle (errHandler' dConfirmRes transporter) $ do
+                  onConfirmMessage <- ACL.buildOnConfirmMessage dConfirmRes
+                  void $
+                    BP.callOnConfirm dConfirmRes.transporter context onConfirmMessage
+            DConfirm.DConfirmResSpecialZoneBooking -> do
               fork "on_confirm/on_update" $ do
                 handle (errHandler' dConfirmRes transporter) $ do
                   onConfirmMessage <- ACL.buildOnConfirmMessage dConfirmRes

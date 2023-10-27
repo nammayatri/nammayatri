@@ -37,8 +37,6 @@ import qualified Domain.Types.Estimate as DEst
 import Domain.Types.FareParameters
 import qualified Domain.Types.FarePolicy as DFP
 import qualified Domain.Types.FarePolicy as FarePolicyD
--- import qualified Storage.CachedQueries.FareProduct as QFareProduct
-
 import Domain.Types.FarePolicy.Common
 import qualified Domain.Types.FareProduct as DFareProduct
 import qualified Domain.Types.Location as DLoc
@@ -82,8 +80,6 @@ import Tools.Error
 import Tools.Event
 import qualified Tools.Maps as Maps
 import qualified Tools.Metrics.ARDUBPPMetrics as Metrics
-
--- import qualified Control.Monad as NE
 
 data DSearchReqOnDemand' = DSearchReqOnDemand'
   { messageId :: Text,

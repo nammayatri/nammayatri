@@ -20,8 +20,6 @@ import qualified Domain.Types.BookingCancellationReason as DBCR
 import qualified Domain.Types.DriverQuote as DDQ
 import qualified Domain.Types.Exophone as DExophone
 import qualified Domain.Types.FareParameters as DFP
--- import qualified Domain.Types.Location as DLoc
-
 import qualified Domain.Types.FarePolicy as FarePolicyD
 import qualified Domain.Types.FareProduct as FareProductD
 import qualified Domain.Types.Merchant as DM
@@ -60,8 +58,6 @@ import qualified Storage.Queries.SearchRequestSpecialZone as QSRSpecialZone
 import qualified Storage.Queries.SearchTry as QST
 import Tools.Error
 import Tools.Event
-
--- import qualified Storage.Beam.SearchRequest as searchRequestForSpecialZone
 
 data ValidateInitResponse
   = DRIVER_QUOTE (DDQ.DriverQuote, DSR.SearchRequest, DST.SearchTry)
@@ -221,11 +217,8 @@ handler merchantId req initReq = do
           searchRequestExpirationSeconds <- asks (.searchRequestExpirationSeconds)
           let validTill = searchRequestExpirationSeconds `addUTCTime` now
           let updateRentalQuote = rentalQuote{baseDistance = Meters distance, baseDuration = durationInSeconds, baseFare = estimatedFare, fareParams = fareParams, validTill = validTill, updatedAt = now, estimatedFinishTime = estimatedFinishTime}
-          _ <- QRQuote.createNewFareParamAndUpdateQuote rentalQuote.id updateRentalQuote
+          void $ QRQuote.createNewFareParamAndUpdateQuote rentalQuote.id updateRentalQuote
           updatedRentalQuotes <- QRQuote.findById (Id req.estimateId) >>= fromMaybeM (QuoteNotFound req.estimateId)
-
-          --- TODO -- Update Rental Quote estimate fare and estimate duration
-          --- make booking properly --with estimates and duration
           searchTry <- buildRentalSearchTry searchRequest.id req.startTime rentalQuote
           booking <- buildRentalBooking updatedRentalQuotes searchRequest req.startTime DRB.RentalBooking now (mbPaymentMethod <&> (.id)) paymentUrl searchRequest.disabilityTag
           _ <- QRB.createBooking booking
