@@ -55,6 +55,7 @@ import qualified Domain.Types.Merchant as DM
 import Domain.Types.Merchant.DriverIntelligentPoolConfig (IntelligentScores (IntelligentScores))
 import qualified Domain.Types.Merchant.DriverIntelligentPoolConfig as DIPC
 import Domain.Types.Merchant.DriverPoolConfig
+import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
 import Domain.Types.SearchRequest
 import Domain.Types.SearchTry
@@ -64,8 +65,6 @@ import qualified Kernel.Beam.Functions as B
 import Kernel.Prelude (head)
 import qualified Kernel.Randomizer as Rnd
 import Kernel.Storage.Esqueleto
-import qualified Kernel.Storage.Esqueleto as Esq
-import Kernel.Storage.Esqueleto.Config (EsqLocRepDBFlow)
 import Kernel.Storage.Hedis
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Error
@@ -106,8 +105,8 @@ mkOldRatioKey driverId ratioType = "driver-offer:DriverPool:" <> ratioType <> ":
 mkAvailableTimeKey :: Text -> Text
 mkAvailableTimeKey driverId = "driver-offer:DriverPool:Available-Time:DriverId-" <> driverId
 
-windowFromIntelligentPoolConfig :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DM.Merchant -> (DIPC.DriverIntelligentPoolConfig -> SWC.SlidingWindowOptions) -> m SWC.SlidingWindowOptions
-windowFromIntelligentPoolConfig merchantId windowKey = maybe defaultWindow windowKey <$> DIP.findByMerchantId merchantId
+windowFromIntelligentPoolConfig :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> (DIPC.DriverIntelligentPoolConfig -> SWC.SlidingWindowOptions) -> m SWC.SlidingWindowOptions
+windowFromIntelligentPoolConfig merchantOpCityId windowKey = maybe defaultWindow windowKey <$> DIP.findByMerchantOpCityId merchantOpCityId
   where
     defaultWindow = SWC.SlidingWindowOptions 7 SWC.Days
 
@@ -116,40 +115,40 @@ withAcceptanceRatioWindowOption ::
     EsqDBFlow m r,
     CacheFlow m r
   ) =>
-  Id DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
   (SWC.SlidingWindowOptions -> m a) ->
   m a
-withAcceptanceRatioWindowOption merchantId fn = windowFromIntelligentPoolConfig merchantId (.acceptanceRatioWindowOption) >>= fn
+withAcceptanceRatioWindowOption merchantOpCityId fn = windowFromIntelligentPoolConfig merchantOpCityId (.acceptanceRatioWindowOption) >>= fn
 
 withCancellationRatioWindowOption ::
   ( Redis.HedisFlow m r,
     EsqDBFlow m r,
     CacheFlow m r
   ) =>
-  Id DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
   (SWC.SlidingWindowOptions -> m a) ->
   m a
-withCancellationRatioWindowOption merchantId fn = windowFromIntelligentPoolConfig merchantId (.cancellationRatioWindowOption) >>= fn
+withCancellationRatioWindowOption merchantOpCityId fn = windowFromIntelligentPoolConfig merchantOpCityId (.cancellationRatioWindowOption) >>= fn
 
 withAvailabilityTimeWindowOption ::
   ( Redis.HedisFlow m r,
     EsqDBFlow m r,
     CacheFlow m r
   ) =>
-  Id DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
   (SWC.SlidingWindowOptions -> m a) ->
   m a
-withAvailabilityTimeWindowOption merchantId fn = windowFromIntelligentPoolConfig merchantId (.availabilityTimeWindowOption) >>= fn
+withAvailabilityTimeWindowOption merchantOpCityId fn = windowFromIntelligentPoolConfig merchantOpCityId (.availabilityTimeWindowOption) >>= fn
 
 withMinQuotesToQualifyIntelligentPoolWindowOption ::
   ( Redis.HedisFlow m r,
     EsqDBFlow m r,
     CacheFlow m r
   ) =>
-  Id DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
   (SWC.SlidingWindowOptions -> m a) ->
   m a
-withMinQuotesToQualifyIntelligentPoolWindowOption merchantId fn = windowFromIntelligentPoolConfig merchantId (.minQuotesToQualifyForIntelligentPoolWindowOption) >>= fn
+withMinQuotesToQualifyIntelligentPoolWindowOption merchantOpCityId fn = windowFromIntelligentPoolConfig merchantOpCityId (.minQuotesToQualifyForIntelligentPoolWindowOption) >>= fn
 
 decrementTotalQuotesCount ::
   ( Redis.HedisFlow m r,
@@ -157,13 +156,14 @@ decrementTotalQuotesCount ::
     CacheFlow m r
   ) =>
   Id DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
   Id DP.Driver ->
   Id SearchTry ->
   m ()
-decrementTotalQuotesCount merchantId driverId sreqId = do
+decrementTotalQuotesCount merchantId merchantOpCityId driverId sreqId = do
   mbSreqCounted <- find (\(srId, (_, isCounted)) -> srId == sreqId.getId && isCounted) <$> getSearchRequestInfoMap merchantId driverId
   whenJust mbSreqCounted $
-    const . Redis.withCrossAppRedis $ withAcceptanceRatioWindowOption merchantId $ SWC.decrementWindowCount (mkTotalQuotesKey driverId.getId)
+    const . Redis.withCrossAppRedis $ withAcceptanceRatioWindowOption merchantOpCityId $ SWC.decrementWindowCount (mkTotalQuotesKey driverId.getId)
 
 incrementTotalQuotesCount ::
   ( Redis.HedisFlow m r,
@@ -171,19 +171,20 @@ incrementTotalQuotesCount ::
     CacheFlow m r
   ) =>
   Id DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
   Id DP.Person ->
   SearchRequest ->
   UTCTime ->
   ExpirationTime ->
   m ()
-incrementTotalQuotesCount merchantId driverId searchReq validTill singleBatchProcessTime = do
+incrementTotalQuotesCount merchantId merchantOpCityId driverId searchReq validTill singleBatchProcessTime = do
   now <- getCurrentTime
   srCount <- getValidSearchRequestCount merchantId (cast driverId) now
-  Redis.withCrossAppRedis $ withMinQuotesToQualifyIntelligentPoolWindowOption merchantId $ SWC.incrementWindowCount (mkQuotesCountKey driverId.getId) -- total quotes sent count in different sliding window (used in driver pool for random vs intelligent filtering)
+  Redis.withCrossAppRedis $ withMinQuotesToQualifyIntelligentPoolWindowOption merchantOpCityId $ SWC.incrementWindowCount (mkQuotesCountKey driverId.getId) -- total quotes sent count in different sliding window (used in driver pool for random vs intelligent filtering)
   let shouldCount = srCount < 1
   addSearchRequestInfoToCache searchReq.id merchantId (cast driverId) (validTill, shouldCount) singleBatchProcessTime
   when shouldCount $
-    Redis.withCrossAppRedis $ withAcceptanceRatioWindowOption merchantId $ SWC.incrementWindowCount (mkTotalQuotesKey driverId.getId) -- for acceptance ratio calculation
+    Redis.withCrossAppRedis $ withAcceptanceRatioWindowOption merchantOpCityId $ SWC.incrementWindowCount (mkTotalQuotesKey driverId.getId) -- for acceptance ratio calculation
 
 mkParallelSearchRequestKey :: Id DM.Merchant -> Id DP.Driver -> Text
 mkParallelSearchRequestKey mId dId = "driver-offer:DriverPool:Search-Req-Validity-Map-" <> mId.getId <> dId.getId
@@ -236,71 +237,71 @@ incrementQuoteAcceptedCount ::
     EsqDBFlow m r,
     CacheFlow m r
   ) =>
-  Id DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
   Id DP.Person ->
   m ()
-incrementQuoteAcceptedCount merchantId driverId = Redis.withCrossAppRedis . withAcceptanceRatioWindowOption merchantId $ SWC.incrementWindowCount (mkQuotesAcceptedKey driverId.getId)
+incrementQuoteAcceptedCount merchantOpCityId driverId = Redis.withCrossAppRedis . withAcceptanceRatioWindowOption merchantOpCityId $ SWC.incrementWindowCount (mkQuotesAcceptedKey driverId.getId)
 
 getTotalQuotesSent ::
   ( Redis.HedisFlow m r,
     EsqDBFlow m r,
     CacheFlow m r
   ) =>
-  Id DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
   Id DP.Person ->
   m Int
-getTotalQuotesSent merchantId driverId =
-  sum . catMaybes <$> (Redis.withCrossAppRedis . withAcceptanceRatioWindowOption merchantId $ SWC.getCurrentWindowValues (mkTotalQuotesKey driverId.getId))
+getTotalQuotesSent merchantOpCityId driverId =
+  sum . catMaybes <$> (Redis.withCrossAppRedis . withAcceptanceRatioWindowOption merchantOpCityId $ SWC.getCurrentWindowValues (mkTotalQuotesKey driverId.getId))
 
 getLatestAcceptanceRatio ::
   ( EsqDBFlow m r,
     CacheFlow m r,
     Redis.HedisFlow m r
   ) =>
-  Id DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
   Id DP.Driver ->
   m Double
-getLatestAcceptanceRatio merchantId driverId = Redis.withCrossAppRedis . withAcceptanceRatioWindowOption merchantId $ SWC.getLatestRatio (getId driverId) mkQuotesAcceptedKey mkTotalQuotesKey (mkOldRatioKey "AcceptanceRatio")
+getLatestAcceptanceRatio merchantOpCityId driverId = Redis.withCrossAppRedis . withAcceptanceRatioWindowOption merchantOpCityId $ SWC.getLatestRatio (getId driverId) mkQuotesAcceptedKey mkTotalQuotesKey (mkOldRatioKey "AcceptanceRatio")
 
 incrementTotalRidesCount ::
   ( Redis.HedisFlow m r,
     EsqDBFlow m r,
     CacheFlow m r
   ) =>
-  Id DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
   Id DP.Person ->
   m ()
-incrementTotalRidesCount merchantId driverId = Redis.withCrossAppRedis . withCancellationRatioWindowOption merchantId $ SWC.incrementWindowCount (mkTotalRidesKey driverId.getId)
+incrementTotalRidesCount merchantOpCityId driverId = Redis.withCrossAppRedis . withCancellationRatioWindowOption merchantOpCityId $ SWC.incrementWindowCount (mkTotalRidesKey driverId.getId)
 
 getTotalRidesCount ::
   ( Redis.HedisFlow m r,
     EsqDBFlow m r,
     CacheFlow m r
   ) =>
-  Id DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
   Id DP.Driver ->
   m Int
-getTotalRidesCount merchantId driverId = sum . catMaybes <$> (Redis.withCrossAppRedis . withCancellationRatioWindowOption merchantId $ SWC.getCurrentWindowValues (mkTotalRidesKey driverId.getId))
+getTotalRidesCount merchantOpCityId driverId = sum . catMaybes <$> (Redis.withCrossAppRedis . withCancellationRatioWindowOption merchantOpCityId $ SWC.getCurrentWindowValues (mkTotalRidesKey driverId.getId))
 
 incrementCancellationCount ::
   ( Redis.HedisFlow m r,
     EsqDBFlow m r,
     CacheFlow m r
   ) =>
-  Id DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
   Id DP.Person ->
   m ()
-incrementCancellationCount merchantId driverId = Redis.withCrossAppRedis . withCancellationRatioWindowOption merchantId $ SWC.incrementWindowCount (mkRideCancelledKey driverId.getId)
+incrementCancellationCount merchantOpCityId driverId = Redis.withCrossAppRedis . withCancellationRatioWindowOption merchantOpCityId $ SWC.incrementWindowCount (mkRideCancelledKey driverId.getId)
 
 getLatestCancellationRatio' ::
   ( EsqDBFlow m r,
     CacheFlow m r,
     Redis.HedisFlow m r
   ) =>
-  Id DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
   Id DP.Driver ->
   m Double
-getLatestCancellationRatio' merchantId driverId = Redis.withCrossAppRedis . withCancellationRatioWindowOption merchantId $ SWC.getLatestRatio driverId.getId mkRideCancelledKey mkTotalRidesKey (mkOldRatioKey "CancellationRatio")
+getLatestCancellationRatio' merchantOpCityId driverId = Redis.withCrossAppRedis . withCancellationRatioWindowOption merchantOpCityId $ SWC.getLatestRatio driverId.getId mkRideCancelledKey mkTotalRidesKey (mkOldRatioKey "CancellationRatio")
 
 getLatestCancellationRatio ::
   ( EsqDBFlow m r,
@@ -308,13 +309,13 @@ getLatestCancellationRatio ::
     Redis.HedisFlow m r
   ) =>
   CancellationScoreRelatedConfig ->
-  Id DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
   Id DP.Driver ->
   m Double
-getLatestCancellationRatio cancellationScoreRelatedConfig merchantId driverId = do
-  isThresholdRidesDone <- isThresholdRidesCompleted driverId merchantId cancellationScoreRelatedConfig
+getLatestCancellationRatio cancellationScoreRelatedConfig merchantOpCityId driverId = do
+  isThresholdRidesDone <- isThresholdRidesCompleted driverId merchantOpCityId cancellationScoreRelatedConfig
   if isThresholdRidesDone
-    then getLatestCancellationRatio' merchantId driverId
+    then getLatestCancellationRatio' merchantOpCityId driverId
     else pure 0
 
 getCurrentWindowAvailability ::
@@ -323,10 +324,10 @@ getCurrentWindowAvailability ::
     CacheFlow m r,
     FromJSON a
   ) =>
-  Id DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
   Id DP.Driver ->
   m [Maybe a]
-getCurrentWindowAvailability merchantId driverId = Redis.withCrossAppRedis . withAvailabilityTimeWindowOption merchantId $ SWC.getCurrentWindowValues (mkAvailableTimeKey driverId.getId)
+getCurrentWindowAvailability merchantOpCityId driverId = Redis.withCrossAppRedis . withAvailabilityTimeWindowOption merchantOpCityId $ SWC.getCurrentWindowValues (mkAvailableTimeKey driverId.getId)
 
 mkQuotesCountKey :: Text -> Text
 mkQuotesCountKey driverId = "driver-offer:DriverPool:Total-quotes-sent:DriverId-" <> driverId
@@ -337,62 +338,62 @@ getQuotesCount ::
     EsqDBFlow m r,
     Num a
   ) =>
-  Id DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
   Id DP.Driver ->
   m a
-getQuotesCount merchantId driverId = sum . catMaybes <$> (Redis.withCrossAppRedis . withMinQuotesToQualifyIntelligentPoolWindowOption merchantId $ SWC.getCurrentWindowValues (mkQuotesCountKey driverId.getId))
+getQuotesCount merchantOpCityId driverId = sum . catMaybes <$> (Redis.withCrossAppRedis . withMinQuotesToQualifyIntelligentPoolWindowOption merchantOpCityId $ SWC.getCurrentWindowValues (mkQuotesCountKey driverId.getId))
 
 isThresholdRidesCompleted ::
   ( CacheFlow m r,
     EsqDBFlow m r
   ) =>
   Id DP.Driver ->
-  Id DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
   CancellationScoreRelatedConfig ->
   m Bool
-isThresholdRidesCompleted driverId merchantId cancellationScoreRelatedConfig = do
+isThresholdRidesCompleted driverId merchantOpCityId cancellationScoreRelatedConfig = do
   let minRidesForCancellationScore = fromMaybe 5 cancellationScoreRelatedConfig.minRidesForCancellationScore
-  totalRides <- getTotalRidesCount merchantId driverId
+  totalRides <- getTotalRidesCount merchantOpCityId driverId
   pure $ totalRides >= minRidesForCancellationScore
 
 getPopupDelay ::
   ( CacheFlow m r,
     EsqDBFlow m r
   ) =>
-  Id DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
   Id DP.Driver ->
   Double ->
   CancellationScoreRelatedConfig ->
   Seconds ->
   m Seconds
-getPopupDelay merchantId driverId cancellationRatio cancellationScoreRelatedConfig defaultPopupDelay = do
+getPopupDelay merchantOpCityId driverId cancellationRatio cancellationScoreRelatedConfig defaultPopupDelay = do
   let cancellationRatioThreshold = fromIntegral $ fromMaybe 40 cancellationScoreRelatedConfig.thresholdCancellationScore
   (defaultPopupDelay +)
     <$> if cancellationRatio * 100 > cancellationRatioThreshold
       then do
-        isThresholdRidesDone <- isThresholdRidesCompleted driverId merchantId cancellationScoreRelatedConfig
+        isThresholdRidesDone <- isThresholdRidesCompleted driverId merchantOpCityId cancellationScoreRelatedConfig
         pure $
           if isThresholdRidesDone
             then fromMaybe (Seconds 0) cancellationScoreRelatedConfig.popupDelayToAddAsPenalty
             else Seconds 0
       else pure $ Seconds 0
 
-mkDriverLocationUpdatesKey :: Id DM.Merchant -> Id DP.Person -> Text
-mkDriverLocationUpdatesKey mId dId = "driver-offer:DriverPool:mId-" <> mId.getId <> ":dId:" <> dId.getId
+mkDriverLocationUpdatesKey :: Id DMOC.MerchantOperatingCity -> Id DP.Person -> Text
+mkDriverLocationUpdatesKey mocId dId = "driver-offer:DriverPool:mocId-" <> mocId.getId <> ":dId:" <> dId.getId
 
 updateDriverSpeedInRedis ::
   ( CacheFlow m r,
     EsqDBFlow m r
   ) =>
-  Id DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
   Id DP.Person ->
   LatLong ->
   UTCTime ->
   m ()
-updateDriverSpeedInRedis merchantId driverId points timeStamp = Redis.withCrossAppRedis $ do
-  locationUpdateSampleTime <- maybe 3 (.locationUpdateSampleTime) <$> DIP.findByMerchantId merchantId
+updateDriverSpeedInRedis merchantOpCityId driverId points timeStamp = Redis.withCrossAppRedis $ do
+  locationUpdateSampleTime <- maybe 3 (.locationUpdateSampleTime) <$> DIP.findByMerchantOpCityId merchantOpCityId
   now <- getCurrentTime
-  let driverLocationUpdatesKey = mkDriverLocationUpdatesKey merchantId driverId
+  let driverLocationUpdatesKey = mkDriverLocationUpdatesKey merchantOpCityId driverId
   locationUpdatesList :: [(LatLong, UTCTime)] <-
     sortOn (Down . snd)
       . ((points, timeStamp) :)
@@ -408,14 +409,14 @@ getDriverAverageSpeed ::
   ( CacheFlow m r,
     EsqDBFlow m r
   ) =>
-  Id DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
   Id DP.Person ->
   m Double
-getDriverAverageSpeed merchantId driverId = Redis.withCrossAppRedis $ do
-  intelligentPoolConfig <- DIP.findByMerchantId merchantId
+getDriverAverageSpeed merchantOpCityId driverId = Redis.withCrossAppRedis $ do
+  intelligentPoolConfig <- DIP.findByMerchantOpCityId merchantOpCityId
   let minLocationUpdates = maybe 3 (.minLocationUpdates) intelligentPoolConfig
       defaultDriverSpeed = maybe 27.0 (.defaultDriverSpeed) intelligentPoolConfig
-  let driverLocationUpdatesKey = mkDriverLocationUpdatesKey merchantId driverId
+  let driverLocationUpdatesKey = mkDriverLocationUpdatesKey merchantOpCityId driverId
   locationUpdatesList :: [(LatLong, UTCTime)] <- concat <$> Redis.safeGet driverLocationUpdatesKey
   let locationUpdatesCount = length locationUpdatesList
   if locationUpdatesCount > minLocationUpdates
@@ -440,7 +441,6 @@ calculateGoHomeDriverPool ::
   ( EncFlow m r,
     CacheFlow m r,
     EsqDBFlow m r,
-    Esq.EsqDBReplicaFlow m r,
     CoreMetrics m,
     MonadIO m,
     HasCoordinates a,
@@ -448,8 +448,9 @@ calculateGoHomeDriverPool ::
     CoreMetrics m
   ) =>
   CalculateGoHomeDriverPoolReq a ->
+  Id DMOC.MerchantOperatingCity ->
   m [DriverPoolWithActualDistResult]
-calculateGoHomeDriverPool CalculateGoHomeDriverPoolReq {..} = do
+calculateGoHomeDriverPool CalculateGoHomeDriverPoolReq {..} merchantOpCityId = do
   now <- getCurrentTime
   approxDriverPool <-
     measuringDurationToLog INFO "calculateDriverPool" $
@@ -470,19 +471,19 @@ calculateGoHomeDriverPool CalculateGoHomeDriverPoolReq {..} = do
   goHomeRequests <-
     mapMaybeM
       ( \driver -> runMaybeT $ do
-          ghrId <- MaybeT $ CQDGR.getDriverGoHomeRequestInfo driver.driverId merchantId Nothing <&> (.driverGoHomeRequestId)
+          ghrId <- MaybeT $ CQDGR.getDriverGoHomeRequestInfo driver.driverId merchantOpCityId Nothing <&> (.driverGoHomeRequestId)
           goHomeReq <- MaybeT $ QDGR.findById ghrId
           return (goHomeReq, driver)
       )
       randomDriverPool
-  merchant <- CTC.findByMerchantId merchantId >>= fromMaybeM (TransporterConfigDoesNotExist merchantId.getId)
+  merchant <- CTC.findByMerchantOpCityId merchantOpCityId >>= fromMaybeM (TransporterConfigDoesNotExist merchantId.getId)
 
   let convertedDriverPoolRes = map (\(ghr, driver) -> (ghr,driver,) $ makeDriverPoolRes driver) goHomeRequests
   driverGoHomePoolWithActualDistance <-
     case convertedDriverPoolRes of
       [] -> return []
       _ -> do
-        driverGoHomePoolWithActualDistance <- zipWith (curry (\((ghr, driver, _), dpwAD) -> (ghr, driver, dpwAD))) convertedDriverPoolRes . NE.toList <$> computeActualDistance merchantId fromLocation (NE.fromList $ map (\(_, _, c) -> c) convertedDriverPoolRes)
+        driverGoHomePoolWithActualDistance <- zipWith (curry (\((ghr, driver, _), dpwAD) -> (ghr, driver, dpwAD))) convertedDriverPoolRes . NE.toList <$> computeActualDistance merchantId merchantOpCityId fromLocation (NE.fromList $ map (\(_, _, c) -> c) convertedDriverPoolRes)
         case driverPoolCfg.actualDistanceThreshold of
           Nothing -> return driverGoHomePoolWithActualDistance
           Just threshold -> do
@@ -522,7 +523,7 @@ calculateGoHomeDriverPool CalculateGoHomeDriverPoolReq {..} = do
       mapM
         ( \(ghReq, driver, driverGoHomePoolWithActualDistance) -> do
             routes <-
-              DRoute.getTripRoutes (driver.driverId, merchantId) $
+              DRoute.getTripRoutes (driver.driverId, merchantId, merchantOpCityId) $
                 Maps.GetRoutesReq
                   { waypoints = getCoordinates driver :| [getCoordinates ghReq],
                     mode = Just Maps.CAR,
@@ -563,8 +564,6 @@ calculateDriverPool ::
   ( EncFlow m r,
     CacheFlow m r,
     EsqDBFlow m r,
-    Esq.EsqDBReplicaFlow m r,
-    EsqLocRepDBFlow m r,
     CoreMetrics m,
     MonadFlow m,
     HasCoordinates a,
@@ -619,8 +618,6 @@ calculateDriverPoolWithActualDist ::
   ( EncFlow m r,
     CacheFlow m r,
     EsqDBFlow m r,
-    Esq.EsqDBReplicaFlow m r,
-    EsqLocRepDBFlow m r,
     CoreMetrics m,
     HasCoordinates a,
     LT.HasLocationService m r
@@ -630,15 +627,16 @@ calculateDriverPoolWithActualDist ::
   Maybe Variant ->
   a ->
   Id DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
   Bool ->
   Maybe PoolRadiusStep ->
   m [DriverPoolWithActualDistResult]
-calculateDriverPoolWithActualDist poolCalculationStage driverPoolCfg mbVariant pickup merchantId onlyNotOnRide mRadiusStep = do
+calculateDriverPoolWithActualDist poolCalculationStage driverPoolCfg mbVariant pickup merchantId merchantOpCityId onlyNotOnRide mRadiusStep = do
   driverPool <- calculateDriverPool poolCalculationStage driverPoolCfg mbVariant pickup merchantId onlyNotOnRide mRadiusStep
   case driverPool of
     [] -> return []
     (a : pprox) -> do
-      driverPoolWithActualDist <- computeActualDistance merchantId pickup (a :| pprox)
+      driverPoolWithActualDist <- computeActualDistance merchantId merchantOpCityId pickup (a :| pprox)
       let filtDriverPoolWithActualDist = case driverPoolCfg.actualDistanceThreshold of
             Nothing -> NE.toList driverPoolWithActualDist
             Just threshold -> NE.filter (filterFunc threshold) driverPoolWithActualDist
@@ -651,8 +649,6 @@ calculateDriverPoolCurrentlyOnRide ::
   ( EncFlow m r,
     CacheFlow m r,
     EsqDBFlow m r,
-    EsqLocRepDBFlow m r,
-    Esq.EsqDBReplicaFlow m r,
     MonadFlow m,
     HasCoordinates a,
     LT.HasLocationService m r,
@@ -704,8 +700,6 @@ calculateDriverCurrentlyOnRideWithActualDist ::
   ( EncFlow m r,
     CacheFlow m r,
     EsqDBFlow m r,
-    Esq.EsqDBReplicaFlow m r,
-    EsqLocRepDBFlow m r,
     HasCoordinates a,
     LT.HasLocationService m r,
     CoreMetrics m
@@ -715,16 +709,17 @@ calculateDriverCurrentlyOnRideWithActualDist ::
   Maybe Variant ->
   a ->
   Id DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
   Maybe PoolRadiusStep ->
   m [DriverPoolWithActualDistResult]
-calculateDriverCurrentlyOnRideWithActualDist poolCalculationStage driverPoolCfg mbVariant pickup merchantId mRadiusStep = do
+calculateDriverCurrentlyOnRideWithActualDist poolCalculationStage driverPoolCfg mbVariant pickup merchantId merchantOpCityId mRadiusStep = do
   driverPool <- calculateDriverPoolCurrentlyOnRide poolCalculationStage driverPoolCfg mbVariant pickup merchantId mRadiusStep
   case driverPool of
     [] -> return []
     (a : pprox) -> do
       let driverPoolResultsWithDriverLocationAsDestinationLocation = driverResultFromDestinationLocation <$> (a :| pprox)
           driverToDestinationDistanceThreshold = driverPoolCfg.driverToDestinationDistanceThreshold
-      driverPoolWithActualDistFromDestinationLocation <- computeActualDistance merchantId pickup driverPoolResultsWithDriverLocationAsDestinationLocation
+      driverPoolWithActualDistFromDestinationLocation <- computeActualDistance merchantId merchantOpCityId pickup driverPoolResultsWithDriverLocationAsDestinationLocation
       driverPoolWithActualDistFromCurrentLocation <- traverse (calculateActualDistanceCurrently driverToDestinationDistanceThreshold) (a :| pprox)
       let driverPoolWithActualDist = NE.zipWith (curry combine) driverPoolWithActualDistFromDestinationLocation driverPoolWithActualDistFromCurrentLocation
           filtDriverPoolWithActualDist = case driverPoolCfg.actualDistanceThreshold of
@@ -749,7 +744,7 @@ calculateDriverCurrentlyOnRideWithActualDist poolCalculationStage driverPoolCfg 
       let temp = DriverPoolResult {..}
       if distanceFromDriverToDestination < driverToDestinationDistanceThreshold
         then do
-          transporter <- CTC.findByMerchantId merchantId >>= fromMaybeM (TransporterConfigNotFound merchantId.getId)
+          transporter <- CTC.findByMerchantOpCityId merchantOpCityId >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
           let defaultPopupDelay = fromMaybe 2 transporter.popupDelayToAddAsPenalty
           let time = driverPoolCfg.driverToDestinationDuration
           pure
@@ -762,7 +757,7 @@ calculateDriverCurrentlyOnRideWithActualDist poolCalculationStage driverPoolCfg 
                 keepHiddenForSeconds = Seconds 0,
                 goHomeReqId = Nothing
               }
-        else computeActualDistanceOneToOne merchantId (LatLong destinationLat destinationLon) temp
+        else computeActualDistanceOneToOne merchantId merchantOpCityId (LatLong destinationLat destinationLon) temp
     combine (DriverPoolWithActualDistResult {actualDistanceToPickup = x, actualDurationToPickup = y}, DriverPoolWithActualDistResult {..}) =
       DriverPoolWithActualDistResult
         { actualDistanceToPickup = x + actualDistanceToPickup,
@@ -777,11 +772,12 @@ computeActualDistanceOneToOne ::
     HasCoordinates a
   ) =>
   Id DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
   a ->
   DriverPoolResult ->
   m DriverPoolWithActualDistResult
-computeActualDistanceOneToOne merchantId pickup driverPoolResult = do
-  (ele :| _) <- computeActualDistance merchantId pickup (driverPoolResult :| [])
+computeActualDistanceOneToOne merchantId merchantOpCityId pickup driverPoolResult = do
+  (ele :| _) <- computeActualDistance merchantId merchantOpCityId pickup (driverPoolResult :| [])
   pure ele
 
 computeActualDistance ::
@@ -791,14 +787,15 @@ computeActualDistance ::
     HasCoordinates a
   ) =>
   Id DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
   a ->
   NonEmpty DriverPoolResult ->
   m (NonEmpty DriverPoolWithActualDistResult)
-computeActualDistance orgId pickup driverPoolResults = do
+computeActualDistance orgId merchantOpCityId pickup driverPoolResults = do
   let pickupLatLong = getCoordinates pickup
-  transporter <- CTC.findByMerchantId orgId >>= fromMaybeM (TransporterConfigDoesNotExist orgId.getId)
+  transporter <- CTC.findByMerchantOpCityId merchantOpCityId >>= fromMaybeM (TransporterConfigDoesNotExist merchantOpCityId.getId)
   getDistanceResults <-
-    Maps.getEstimatedPickupDistances orgId $
+    Maps.getEstimatedPickupDistances orgId merchantOpCityId $
       Maps.GetDistancesReq
         { origins = driverPoolResults,
           destinations = pickupLatLong :| [],

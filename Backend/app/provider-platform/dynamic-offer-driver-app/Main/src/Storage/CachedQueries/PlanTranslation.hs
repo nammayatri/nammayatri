@@ -11,7 +11,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.Queries.PlanTranslation as Queries
 
-findByPlanIdAndLanguage :: (CacheFlow m r, MonadFlow m) => Id Plan -> Language -> m (Maybe PlanTranslation)
+findByPlanIdAndLanguage :: (CacheFlow m r, MonadFlow m, EsqDBFlow m r) => Id Plan -> Language -> m (Maybe PlanTranslation)
 findByPlanIdAndLanguage (Id planId) language =
   Hedis.withCrossAppRedis (Hedis.safeGet $ makePlanIdAndLanguageKey (Id planId) language) >>= \case
     Just a -> pure a

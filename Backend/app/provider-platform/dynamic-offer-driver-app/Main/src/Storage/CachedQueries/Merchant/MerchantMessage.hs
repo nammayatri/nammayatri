@@ -14,37 +14,37 @@
 {-# OPTIONS_GHC -Wno-deprecations #-}
 
 module Storage.CachedQueries.Merchant.MerchantMessage
-  ( findByMerchantIdAndMessageKey,
+  ( findByMerchantOpCityIdAndMessageKey,
     clearCache,
   )
 where
 
 import Data.Coerce (coerce)
 import Domain.Types.Common
-import Domain.Types.Merchant (Merchant)
 import Domain.Types.Merchant.MerchantMessage
+import Domain.Types.Merchant.MerchantOperatingCity
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.Queries.Merchant.MerchantMessage as Queries
 
-findByMerchantIdAndMessageKey :: (CacheFlow m r, EsqDBFlow m r) => Id Merchant -> MessageKey -> m (Maybe MerchantMessage)
-findByMerchantIdAndMessageKey id messageKey =
-  Hedis.get (makeMerchantIdAndMessageKey id messageKey) >>= \case
+findByMerchantOpCityIdAndMessageKey :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> MessageKey -> m (Maybe MerchantMessage)
+findByMerchantOpCityIdAndMessageKey id messageKey =
+  Hedis.get (makeMerchantOpCityIdAndMessageKey id messageKey) >>= \case
     Just a -> return . Just $ coerce @(MerchantMessageD 'Unsafe) @MerchantMessage a
-    Nothing -> flip whenJust cacheMerchantMessage /=<< Queries.findByMerchantIdAndMessageKey id messageKey
+    Nothing -> flip whenJust cacheMerchantMessage /=<< Queries.findByMerchantOpCityIdAndMessageKey id messageKey
 
 cacheMerchantMessage :: CacheFlow m r => MerchantMessage -> m ()
 cacheMerchantMessage merchantMessage = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
-  let idKey = makeMerchantIdAndMessageKey merchantMessage.merchantId merchantMessage.messageKey
+  let idKey = makeMerchantOpCityIdAndMessageKey merchantMessage.merchantOperatingCityId merchantMessage.messageKey
   Hedis.setExp idKey (coerce @MerchantMessage @(MerchantMessageD 'Unsafe) merchantMessage) expTime
 
-makeMerchantIdAndMessageKey :: Id Merchant -> MessageKey -> Text
-makeMerchantIdAndMessageKey id messageKey = "CachedQueries:MerchantMessage:MerchantId-" <> id.getId <> ":MessageKey-" <> show messageKey
+makeMerchantOpCityIdAndMessageKey :: Id MerchantOperatingCity -> MessageKey -> Text
+makeMerchantOpCityIdAndMessageKey id messageKey = "CachedQueries:MerchantMessage:MerchantOperatingCityId-" <> id.getId <> ":MessageKey-" <> show messageKey
 
 -- Call it after any update
-clearCache :: Hedis.HedisFlow m r => Id Merchant -> MessageKey -> m ()
-clearCache merchantId messageKey = do
-  Hedis.del (makeMerchantIdAndMessageKey merchantId messageKey)
+clearCache :: Hedis.HedisFlow m r => Id MerchantOperatingCity -> MessageKey -> m ()
+clearCache merchantOpCityId messageKey = do
+  Hedis.del (makeMerchantOpCityIdAndMessageKey merchantOpCityId messageKey)

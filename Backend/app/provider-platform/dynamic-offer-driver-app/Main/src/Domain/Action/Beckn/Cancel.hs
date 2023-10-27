@@ -29,7 +29,6 @@ import qualified Domain.Types.Ride as SRide
 import qualified Domain.Types.SearchRequest as DSR
 import EulerHS.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
-import Kernel.Storage.Esqueleto.Config (EsqLocDBFlow, EsqLocRepDBFlow)
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -68,8 +67,6 @@ newtype CancelSearchReq = CancelSearchReq
 cancel ::
   ( EsqDBFlow m r,
     Esq.EsqDBReplicaFlow m r,
-    EsqLocDBFlow m r,
-    EsqLocRepDBFlow m r,
     CacheFlow m r,
     HasHttpClientOptions r c,
     EncFlow m r,
@@ -107,7 +104,7 @@ cancel req merchant booking = do
   whenJust mbRide $ \ride ->
     fork "cancelRide - Notify driver" $ do
       driver <- QPers.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
-      Notify.notifyOnCancel merchant.id booking driver.id driver.deviceToken bookingCR.source
+      Notify.notifyOnCancel booking.merchantOperatingCityId booking driver.id driver.deviceToken bookingCR.source
   where
     buildBookingCancellationReason = do
       return $
@@ -133,7 +130,7 @@ cancelSearch ::
   CancelSearchReq ->
   Id DSR.SearchRequest ->
   m ()
-cancelSearch merchantId req searchRequestId = do
+cancelSearch _merchantId req searchRequestId = do
   searchTry <- QST.findActiveTryByRequestId searchRequestId >>= fromMaybeM (SearchTryDoesNotExist $ "searchRequestId-" <> searchRequestId.getId)
   CS.whenSearchTryCancellable searchTry.id $ do
     driverSearchReqs <- QSRD.findAllActiveBySRId searchRequestId
@@ -143,10 +140,11 @@ cancelSearch merchantId req searchRequestId = do
     _ <- QDQ.setInactiveBySRId searchRequestId
     for_ driverSearchReqs $ \driverReq -> do
       driver_ <- QPerson.findById driverReq.driverId >>= fromMaybeM (PersonNotFound driverReq.driverId.getId)
-      Notify.notifyOnCancelSearchRequest merchantId driverReq.driverId driver_.deviceToken driverReq.searchTryId
+      Notify.notifyOnCancelSearchRequest searchTry.merchantOperatingCityId driverReq.driverId driver_.deviceToken driverReq.searchTryId
 
 validateCancelSearchRequest ::
-  ( EsqDBFlow m r
+  ( CacheFlow m r,
+    EsqDBFlow m r
   ) =>
   Id DM.Merchant ->
   SignatureAuthResult ->

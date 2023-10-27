@@ -9,16 +9,17 @@ import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
+import Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified Storage.Beam.Issue.Comment as BeamC
 
-create :: MonadFlow m => Comment.Comment -> m ()
+create :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Comment.Comment -> m ()
 create = createWithKV
 
-findById :: MonadFlow m => Id Comment -> m (Maybe Comment)
+findById :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Comment -> m (Maybe Comment)
 findById (Id id) = findOneWithKV [Se.Is BeamC.id $ Se.Eq id]
 
-findAllByIssueReportId :: MonadFlow m => Id IssueReport -> m [Comment]
+findAllByIssueReportId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id IssueReport -> m [Comment]
 findAllByIssueReportId (Id issueReportId) = findAllWithOptionsKV [Se.Is BeamC.issueReportId $ Se.Eq issueReportId] (Se.Desc BeamC.createdAt) Nothing Nothing
 
 instance FromTType' BeamC.Comment Comment where

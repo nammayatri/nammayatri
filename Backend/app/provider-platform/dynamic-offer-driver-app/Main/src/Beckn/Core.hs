@@ -37,7 +37,9 @@ import Storage.Beam.BecknRequest ()
 
 withCallback ::
   ( HasFlowEnv m r '["nwAddress" ::: BaseUrl, "httpClientOptions" ::: HttpClientOptions],
-    HasShortDurationRetryCfg r c
+    HasShortDurationRetryCfg r c,
+    CacheFlow m r,
+    EsqDBFlow m r
   ) =>
   DM.Merchant ->
   WithBecknCallbackMig api callback_success m
@@ -45,7 +47,7 @@ withCallback = withCallback' withShortRetry
 
 withCallback' ::
   (m () -> m ()) ->
-  HasFlowEnv m r '["nwAddress" ::: BaseUrl] =>
+  (HasFlowEnv m r '["nwAddress" ::: BaseUrl], EsqDBFlow m r, CacheFlow m r) =>
   DM.Merchant ->
   WithBecknCallbackMig api callback_success m
 withCallback' doWithCallback transporter action api context cbUrl f = do
@@ -62,6 +64,7 @@ logBecknRequest ::
   (HasField "coreMetrics" f CoreMetricsContainer) =>
   (HasField "loggerEnv" f LoggerEnv) =>
   (HasField "version" f DeploymentVersion) =>
+  (MonadFlow m, CacheFlow m r, EsqDBFlow m r) =>
   EnvR f ->
   Application ->
   Application

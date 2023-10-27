@@ -22,13 +22,14 @@ import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
+import Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified Storage.Beam.RideDetails as BeamRD
 
-create :: MonadFlow m => DRD.RideDetails -> m ()
+create :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => DRD.RideDetails -> m ()
 create = createWithKV
 
-findById :: MonadFlow m => Id SR.Ride -> m (Maybe RideDetails)
+findById :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id SR.Ride -> m (Maybe RideDetails)
 findById (Id rideDetailsId) = findOneWithKV [Se.Is BeamRD.id $ Se.Eq rideDetailsId]
 
 instance FromTType' BeamRD.RideDetails RideDetails where

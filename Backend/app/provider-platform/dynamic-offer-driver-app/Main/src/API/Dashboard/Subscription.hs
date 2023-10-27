@@ -22,11 +22,13 @@ import qualified Domain.Types.Plan as DPlan
 import Environment
 import Kernel.Storage.Esqueleto (derivePersistField)
 import Kernel.Types.APISuccess
+import qualified Kernel.Types.Beckn.City as City
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
 import SharedLogic.Merchant
+import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Queries.DriverInformation as DI
 import Prelude
 
@@ -73,36 +75,41 @@ type CurrentPlan =
   Capture "driverId" (Id DP.Driver)
     :> Get '[JSON] DTPlan.CurrentPlanRes
 
-handler :: ShortId DM.Merchant -> FlowServer API
-handler merchantId =
-  planList merchantId
-    :<|> planSelect merchantId
-    :<|> planSuspend merchantId
-    :<|> planSubscribe merchantId
-    :<|> currentPlan merchantId
+handler :: ShortId DM.Merchant -> City.City -> FlowServer API
+handler merchantId city =
+  planList merchantId city
+    :<|> planSelect merchantId city
+    :<|> planSuspend merchantId city
+    :<|> planSubscribe merchantId city
+    :<|> currentPlan merchantId city
 
-planList :: ShortId DM.Merchant -> Id DP.Driver -> FlowHandler DTPlan.PlanListAPIRes
-planList merchantShortId driverId = do
+planList :: ShortId DM.Merchant -> City.City -> Id DP.Driver -> FlowHandler DTPlan.PlanListAPIRes
+planList merchantShortId opCity driverId = do
   m <- withFlowHandlerAPI $ findMerchantByShortId merchantShortId
-  DPlan.planList (cast driverId, m.id) (Just 0) (Just 50)
+  mOCityId <- withFlowHandlerAPI $ CQMOC.getMerchantOpCityId Nothing m (Just opCity)
+  DPlan.planList (cast driverId, m.id, mOCityId) (Just 0) (Just 50)
 
-planSelect :: ShortId DM.Merchant -> Id DP.Driver -> Id DPlan.Plan -> FlowHandler APISuccess
-planSelect merchantShortId driverId planId = do
+planSelect :: ShortId DM.Merchant -> City.City -> Id DP.Driver -> Id DPlan.Plan -> FlowHandler APISuccess
+planSelect merchantShortId opCity driverId planId = do
   m <- withFlowHandlerAPI $ findMerchantByShortId merchantShortId
-  DPlan.planSelect planId (cast driverId, m.id)
+  mOCityId <- withFlowHandlerAPI $ CQMOC.getMerchantOpCityId Nothing m (Just opCity)
+  DPlan.planSelect planId (cast driverId, m.id, mOCityId)
 
-planSuspend :: ShortId DM.Merchant -> Id DP.Driver -> FlowHandler APISuccess
-planSuspend merchantShortId driverId = withFlowHandlerAPI $ do
+planSuspend :: ShortId DM.Merchant -> City.City -> Id DP.Driver -> FlowHandler APISuccess
+planSuspend merchantShortId opCity driverId = withFlowHandlerAPI $ do
   m <- findMerchantByShortId merchantShortId
-  DTPlan.planSuspend True (cast driverId, m.id)
+  mOCityId <- CQMOC.getMerchantOpCityId Nothing m (Just opCity)
+  DTPlan.planSuspend True (cast driverId, m.id, mOCityId)
 
-planSubscribe :: ShortId DM.Merchant -> Id DP.Driver -> Id DPlan.Plan -> FlowHandler DTPlan.PlanSubscribeRes
-planSubscribe merchantShortId driverId planId = withFlowHandlerAPI $ do
+planSubscribe :: ShortId DM.Merchant -> City.City -> Id DP.Driver -> Id DPlan.Plan -> FlowHandler DTPlan.PlanSubscribeRes
+planSubscribe merchantShortId opCity driverId planId = withFlowHandlerAPI $ do
   m <- findMerchantByShortId merchantShortId
+  mOCityId <- CQMOC.getMerchantOpCityId Nothing m (Just opCity)
   driverInfo <- DI.findById (cast driverId) >>= fromMaybeM (PersonNotFound driverId.getId)
-  DTPlan.planSubscribe planId True (cast driverId, m.id) driverInfo
+  DTPlan.planSubscribe planId True (cast driverId, m.id, mOCityId) driverInfo
 
-currentPlan :: ShortId DM.Merchant -> Id DP.Driver -> FlowHandler DTPlan.CurrentPlanRes
-currentPlan merchantShortId driverId = do
+currentPlan :: ShortId DM.Merchant -> City.City -> Id DP.Driver -> FlowHandler DTPlan.CurrentPlanRes
+currentPlan merchantShortId opCity driverId = do
   m <- withFlowHandlerAPI $ findMerchantByShortId merchantShortId
-  DPlan.currentPlan (cast driverId, m.id)
+  mOCityId <- withFlowHandlerAPI $ CQMOC.getMerchantOpCityId Nothing m (Just opCity)
+  DPlan.currentPlan (cast driverId, m.id, mOCityId)

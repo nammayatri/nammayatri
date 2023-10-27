@@ -20,6 +20,7 @@ import qualified Domain.Types.Merchant as DM
 import Environment
 import Kernel.Prelude
 import Kernel.Types.APISuccess (APISuccess)
+import qualified Kernel.Types.Beckn.City as City
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
@@ -35,41 +36,41 @@ type API =
     :<|> Common.AuthAPI
     :<|> Common.VerifyAPI
 
-handler :: ShortId DM.Merchant -> FlowServer API
-handler merchantId =
-  documentsList merchantId
-    :<|> getDocument merchantId
-    :<|> uploadDocument merchantId
-    :<|> registerDL merchantId
-    :<|> registerRC merchantId
-    :<|> generateAadhaarOtp merchantId
-    :<|> verifyAadhaarOtp merchantId
-    :<|> auth merchantId
+handler :: ShortId DM.Merchant -> City.City -> FlowServer API
+handler merchantId city =
+  documentsList merchantId city
+    :<|> getDocument merchantId city
+    :<|> uploadDocument merchantId city
+    :<|> registerDL merchantId city
+    :<|> registerRC merchantId city
+    :<|> generateAadhaarOtp merchantId city
+    :<|> verifyAadhaarOtp merchantId city
+    :<|> auth merchantId city
     :<|> verify
 
-documentsList :: ShortId DM.Merchant -> Id Common.Driver -> FlowHandler Common.DocumentsListResponse
-documentsList merchantShortId = withFlowHandlerAPI . DReg.documentsList merchantShortId
+documentsList :: ShortId DM.Merchant -> City.City -> Id Common.Driver -> FlowHandler Common.DocumentsListResponse
+documentsList merchantShortId opCity = withFlowHandlerAPI . DReg.documentsList merchantShortId opCity
 
-getDocument :: ShortId DM.Merchant -> Id Common.Image -> FlowHandler Common.GetDocumentResponse
-getDocument merchantShortId = withFlowHandlerAPI . DReg.getDocument merchantShortId
+getDocument :: ShortId DM.Merchant -> City.City -> Id Common.Image -> FlowHandler Common.GetDocumentResponse
+getDocument merchantShortId opCity = withFlowHandlerAPI . DReg.getDocument merchantShortId opCity
 
-uploadDocument :: ShortId DM.Merchant -> Id Common.Driver -> Common.UploadDocumentReq -> FlowHandler Common.UploadDocumentResp
-uploadDocument merchantShortId driverId_ = withFlowHandlerAPI . DReg.uploadDocument merchantShortId driverId_
+uploadDocument :: ShortId DM.Merchant -> City.City -> Id Common.Driver -> Common.UploadDocumentReq -> FlowHandler Common.UploadDocumentResp
+uploadDocument merchantShortId opCity driverId_ = withFlowHandlerAPI . DReg.uploadDocument merchantShortId opCity driverId_
 
-registerDL :: ShortId DM.Merchant -> Id Common.Driver -> Common.RegisterDLReq -> FlowHandler APISuccess
-registerDL merchantShortId driverId_ = withFlowHandlerAPI . DReg.registerDL merchantShortId driverId_
+registerDL :: ShortId DM.Merchant -> City.City -> Id Common.Driver -> Common.RegisterDLReq -> FlowHandler APISuccess
+registerDL merchantShortId opCity driverId_ = withFlowHandlerAPI . DReg.registerDL merchantShortId opCity driverId_
 
-registerRC :: ShortId DM.Merchant -> Id Common.Driver -> Common.RegisterRCReq -> FlowHandler APISuccess
-registerRC merchantShortId driverId_ = withFlowHandlerAPI . DReg.registerRC merchantShortId driverId_
+registerRC :: ShortId DM.Merchant -> City.City -> Id Common.Driver -> Common.RegisterRCReq -> FlowHandler APISuccess
+registerRC merchantShortId opCity driverId_ = withFlowHandlerAPI . DReg.registerRC merchantShortId opCity driverId_
 
-generateAadhaarOtp :: ShortId DM.Merchant -> Id Common.Driver -> Common.GenerateAadhaarOtpReq -> FlowHandler Common.GenerateAadhaarOtpRes
-generateAadhaarOtp merchantShortId driverId_ = withFlowHandlerAPI . DReg.generateAadhaarOtp merchantShortId driverId_
+generateAadhaarOtp :: ShortId DM.Merchant -> City.City -> Id Common.Driver -> Common.GenerateAadhaarOtpReq -> FlowHandler Common.GenerateAadhaarOtpRes
+generateAadhaarOtp merchantShortId opCity driverId_ = withFlowHandlerAPI . DReg.generateAadhaarOtp merchantShortId opCity driverId_
 
-verifyAadhaarOtp :: ShortId DM.Merchant -> Id Common.Driver -> Common.VerifyAadhaarOtpReq -> FlowHandler Common.VerifyAadhaarOtpRes
-verifyAadhaarOtp merchantShortId driverId_ = withFlowHandlerAPI . DReg.verifyAadhaarOtp merchantShortId driverId_
+verifyAadhaarOtp :: ShortId DM.Merchant -> City.City -> Id Common.Driver -> Common.VerifyAadhaarOtpReq -> FlowHandler Common.VerifyAadhaarOtpRes
+verifyAadhaarOtp merchantShortId opCity driverId_ = withFlowHandlerAPI . DReg.verifyAadhaarOtp merchantShortId opCity driverId_
 
-auth :: ShortId DM.Merchant -> Common.AuthReq -> FlowHandler Common.AuthRes
-auth merchantShortId = withFlowHandlerAPI . DReg.auth merchantShortId
+auth :: ShortId DM.Merchant -> City.City -> Common.AuthReq -> FlowHandler Common.AuthRes
+auth merchantShortId opCity = withFlowHandlerAPI . DReg.auth merchantShortId opCity
 
 verify :: Text -> Common.AuthVerifyReq -> FlowHandler APISuccess
 verify authId = withFlowHandlerAPI . DReg.verify authId

@@ -27,13 +27,13 @@ import qualified Domain.Action.UI.Ride.StartRide.Internal as SInternal
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.DriverLocation as DDrLoc
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
 import Environment (Flow)
 import EulerHS.Prelude
 import Kernel.External.Maps.HasCoordinates
 import Kernel.External.Maps.Types
-import Kernel.Storage.Esqueleto.Config (EsqLocDBFlow)
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Tools.Metrics.CoreMetrics
 import qualified Kernel.Types.APISuccess as APISuccess
@@ -78,9 +78,9 @@ data ServiceHandle m = ServiceHandle
     whenWithLocationUpdatesLock :: Id DP.Person -> m () -> m ()
   }
 
-buildStartRideHandle :: Id DM.Merchant -> Flow (ServiceHandle Flow)
-buildStartRideHandle merchantId = do
-  defaultRideInterpolationHandler <- LocUpd.buildRideInterpolationHandler merchantId False
+buildStartRideHandle :: Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Flow (ServiceHandle Flow)
+buildStartRideHandle merchantId merchantOpCityId = do
+  defaultRideInterpolationHandler <- LocUpd.buildRideInterpolationHandler merchantId merchantOpCityId False
   pure
     ServiceHandle
       { findRideById = QRide.findById,
@@ -93,7 +93,7 @@ buildStartRideHandle merchantId = do
         whenWithLocationUpdatesLock = LocUpd.whenWithLocationUpdatesLock
       }
 
-type StartRideFlow m r = (MonadThrow m, Log m, EsqLocDBFlow m r, CacheFlow m r, EsqDBFlow m r, MonadTime m, CoreMetrics m, MonadReader r m, HasField "enableAPILatencyLogging" r Bool, HasField "enableAPIPrometheusMetricLogging" r Bool, LT.HasLocationService m r)
+type StartRideFlow m r = (MonadThrow m, Log m, CacheFlow m r, EsqDBFlow m r, MonadTime m, CoreMetrics m, MonadReader r m, HasField "enableAPILatencyLogging" r Bool, HasField "enableAPIPrometheusMetricLogging" r Bool, LT.HasLocationService m r)
 
 driverStartRide ::
   (StartRideFlow m r) =>
@@ -134,8 +134,8 @@ startRide ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.getId)
   openMarketAllow <-
     maybe
       (pure False)
-      ( \merchantId -> do
-          transporterConfig <- QTC.findByMerchantId merchantId >>= fromMaybeM (TransporterConfigNotFound (getId merchantId))
+      ( \_ -> do
+          transporterConfig <- QTC.findByMerchantOpCityId ride.merchantOperatingCityId >>= fromMaybeM (TransporterConfigNotFound (getId ride.merchantOperatingCityId))
           pure $ transporterConfig.openMarketUnBlocked
       )
       driverInfo.merchantId
@@ -176,7 +176,7 @@ startRide ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.getId)
       logTagInfo "ltsRes" (show ltsRes)
     withTimeAPI "startRide" "initializeDistanceCalculation" $ initializeDistanceCalculation ride.id driverId point
     withTimeAPI "startRide" "notifyBAPRideStarted" $ notifyBAPRideStarted booking ride
-  CQDGR.setDriverGoHomeIsOnRide driverId booking.providerId
+  CQDGR.setDriverGoHomeIsOnRide driverId ride.merchantOperatingCityId
   pure APISuccess.Success
   where
     isValidRideStatus status = status == DRide.NEW

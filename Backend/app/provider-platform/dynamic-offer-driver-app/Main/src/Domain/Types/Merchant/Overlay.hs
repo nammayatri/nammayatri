@@ -18,6 +18,7 @@ module Domain.Types.Merchant.Overlay where
 import Data.Aeson
 import Domain.Types.Common (UsageSafety (..))
 import Domain.Types.Merchant (Merchant)
+import Domain.Types.Merchant.MerchantOperatingCity
 import Domain.Types.Plan (PaymentMode (..))
 import Kernel.External.Types (Language)
 import Kernel.Prelude
@@ -34,6 +35,7 @@ data OverlayCondition
 data OverlayD (s :: UsageSafety) = Overlay
   { id :: Id Overlay,
     merchantId :: Id Merchant,
+    merchantOperatingCityId :: Id MerchantOperatingCity,
     overlayKey :: Text,
     language :: Language,
     udf1 :: Maybe Text,

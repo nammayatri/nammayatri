@@ -24,7 +24,7 @@ import Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified Storage.Beam.LeaderBoardConfig as BeamLBC
 
-findLeaderBoardConfigbyType :: MonadFlow m => LeaderBoardType -> Id Merchant -> m (Maybe LeaderBoardConfigs)
+findLeaderBoardConfigbyType :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => LeaderBoardType -> Id Merchant -> m (Maybe LeaderBoardConfigs)
 findLeaderBoardConfigbyType leaderBType (Id merchantId) =
   findOneWithKV
     [ Se.And

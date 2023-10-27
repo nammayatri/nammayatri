@@ -509,11 +509,11 @@
         "sequelize": "sequelize"
       },
       "locked": {
-        "lastModified": 1696936853,
-        "narHash": "sha256-Ph1Bdq7YTKHy+TxADVYYyV60dqiSMeot4KCwqshx1zk=",
+        "lastModified": 1697525861,
+        "narHash": "sha256-FDnmkTRc29RxOPbtLnCyHtKoUAKAXO5pEujkmIWjBs8=",
         "owner": "juspay",
         "repo": "euler-hs",
-        "rev": "3c35933830b4c67489c5661a5bb4b1ccabbf3061",
+        "rev": "a3ea4d2223dd10348821388219f0afdb076ee4d8",
         "type": "github"
       },
       "original": {
@@ -2359,17 +2359,17 @@
         "prometheus-haskell": "prometheus-haskell_2"
       },
       "locked": {
-        "lastModified": 1697470728,
-        "narHash": "sha256-oHQ7fDBhM7JRYCoT1sE2bwkbhip5JZOohwAAOSwQvA4=",
-        "owner": "nammayatri",
-        "repo": "shared-kernel",
-        "rev": "838dc2e2548b1f9b3d32b8bbe8ae9a617e9c29bf",
-        "type": "github"
+        "lastModified": 1698322528,
+        "narHash": "sha256-KC2CUMCGoaC3wOA5GhhFG+ftnNcbvQhkiiOS7vdMdfI=",
+        "ref": "refs/heads/backend/feature/bap/introduce-concept-of-city",
+        "rev": "d49bba2f53a818d91ab9b32e462cafd6a90fea68",
+        "revCount": 229,
+        "type": "git",
+        "url": "file:///Users/vaibhav.dubey/Projects/shared-kernel"
       },
       "original": {
-        "owner": "nammayatri",
-        "repo": "shared-kernel",
-        "type": "github"
+        "type": "git",
+        "url": "file:///Users/vaibhav.dubey/Projects/shared-kernel"
       }
     },
     "systems": {

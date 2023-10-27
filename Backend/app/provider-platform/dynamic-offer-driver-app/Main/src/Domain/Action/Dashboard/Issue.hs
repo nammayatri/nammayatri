@@ -16,6 +16,7 @@ import Kernel.External.Encryption (decrypt)
 import Kernel.External.Types (Language (..))
 import Kernel.Prelude
 import Kernel.Types.APISuccess (APISuccess (Success))
+import qualified Kernel.Types.Beckn.City as City
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.CachedQueries.Issue.IssueCategory as CQIC
@@ -26,8 +27,8 @@ import qualified Storage.Queries.Issue.IssueReport as QIR
 import qualified Storage.Queries.Person as QP
 import Tools.Error
 
-issueCategoryList :: ShortId DM.Merchant -> Flow Common.IssueCategoryListRes
-issueCategoryList _merchantShortId = do
+issueCategoryList :: ShortId DM.Merchant -> City.City -> Flow Common.IssueCategoryListRes
+issueCategoryList _merchantShortId _ = do
   issueCategoryTranslationList <- CQIC.findAllByLanguage ENGLISH
   pure $ Common.IssueCategoryListRes {categories = mkIssueCategory <$> issueCategoryTranslationList}
   where
@@ -55,8 +56,8 @@ toCommonIssueStatus = \case
   DIR.RESOLVED -> Common.RESOLVED
   DIR.CLOSED -> Common.CLOSED
 
-issueList :: ShortId DM.Merchant -> Maybe Int -> Maybe Int -> Maybe Common.IssueStatus -> Maybe (Id DIC.IssueCategory) -> Maybe Text -> Flow Common.IssueReportListResponse
-issueList _merchantShortId mbLimit mbOffset mbStatus mbCategoryId mbAssignee = do
+issueList :: ShortId DM.Merchant -> City.City -> Maybe Int -> Maybe Int -> Maybe Common.IssueStatus -> Maybe (Id DIC.IssueCategory) -> Maybe Text -> Flow Common.IssueReportListResponse
+issueList _merchantShortId _ mbLimit mbOffset mbStatus mbCategoryId mbAssignee = do
   issueReports <- B.runInReplica $ QIR.findAllWithOptions mbLimit mbOffset (toDomainIssueStatus <$> mbStatus) mbCategoryId mbAssignee
   let count = length issueReports
   let summary = Common.Summary {totalCount = count, count}
@@ -78,8 +79,8 @@ issueList _merchantShortId mbLimit mbOffset mbStatus mbCategoryId mbAssignee = d
             createdAt = issueReport.createdAt
           }
 
-issueInfo :: ShortId DM.Merchant -> Id DIR.IssueReport -> Flow Common.IssueInfoRes
-issueInfo _merchantShortId issueReportId = do
+issueInfo :: ShortId DM.Merchant -> City.City -> Id DIR.IssueReport -> Flow Common.IssueInfoRes
+issueInfo _merchantShortId _ issueReportId = do
   issueReport <- B.runInReplica $ QIR.findById issueReportId >>= fromMaybeM (IssueReportDoNotExist issueReportId.getId)
   mediaFiles <- CQMF.findAllInForIssueReportId issueReport.mediaFiles issueReportId
   comments <- B.runInReplica (QC.findAllByIssueReportId issueReport.id)
@@ -137,8 +138,8 @@ issueInfo _merchantShortId issueReportId = do
           timestamp = comment.createdAt
         }
 
-issueUpdate :: ShortId DM.Merchant -> Id DIR.IssueReport -> Common.IssueUpdateByUserReq -> Flow APISuccess
-issueUpdate _merchantShortId issueReportId req = do
+issueUpdate :: ShortId DM.Merchant -> City.City -> Id DIR.IssueReport -> Common.IssueUpdateByUserReq -> Flow APISuccess
+issueUpdate _merchantShortId _ issueReportId req = do
   unless (isJust req.status || isJust req.assignee) $
     throwError $ InvalidRequest "Empty request, no fields to update."
   _ <- QIR.findById issueReportId >>= fromMaybeM (IssueReportDoNotExist issueReportId.getId)
@@ -159,8 +160,8 @@ issueUpdate _merchantShortId issueReportId req = do
               createdAt = now
             }
 
-issueAddComment :: ShortId DM.Merchant -> Id DIR.IssueReport -> Common.IssueAddCommentByUserReq -> Flow APISuccess
-issueAddComment _merchantShortId issueReportId req = do
+issueAddComment :: ShortId DM.Merchant -> City.City -> Id DIR.IssueReport -> Common.IssueAddCommentByUserReq -> Flow APISuccess
+issueAddComment _merchantShortId _ issueReportId req = do
   void $ QIR.findById issueReportId >>= fromMaybeM (IssueReportDoNotExist issueReportId.getId)
   _ <- QC.create =<< mkComment
   pure Success
@@ -177,12 +178,12 @@ issueAddComment _merchantShortId issueReportId req = do
             createdAt = now
           }
 
-issueFetchMedia :: ShortId DM.Merchant -> Text -> Flow Text
-issueFetchMedia _ filePath =
+issueFetchMedia :: ShortId DM.Merchant -> City.City -> Text -> Flow Text
+issueFetchMedia _ _ filePath =
   S3.get $ T.unpack filePath
 
-ticketStatusCallBack :: ShortId DM.Merchant -> Common.TicketStatusCallBackReq -> Flow APISuccess
-ticketStatusCallBack _ req = do
+ticketStatusCallBack :: ShortId DM.Merchant -> City.City -> Common.TicketStatusCallBackReq -> Flow APISuccess
+ticketStatusCallBack _ _ req = do
   _ <- QIR.findByTicketId req.ticketId >>= fromMaybeM (TicketDoesNotExist req.ticketId)
   QIR.updateIssueStatus req.ticketId (toDomainIssueStatus req.status)
   return Success

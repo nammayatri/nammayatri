@@ -69,5 +69,5 @@ clearCache merchantId serviceName = do
   Hedis.withCrossAppRedis $ Hedis.del (makeMerchantIdAndServiceKey merchantId serviceName)
   Hedis.withCrossAppRedis $ Hedis.del (makeServiceNameKey serviceName)
 
-upsertMerchantServiceConfig :: MonadFlow m => MerchantServiceConfig -> m ()
+upsertMerchantServiceConfig :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => MerchantServiceConfig -> m ()
 upsertMerchantServiceConfig = Queries.upsertMerchantServiceConfig

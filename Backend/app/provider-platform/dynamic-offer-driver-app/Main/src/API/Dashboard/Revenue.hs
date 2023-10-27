@@ -23,6 +23,7 @@ import qualified Domain.Action.Dashboard.Revenue as DRevenue
 import qualified Domain.Types.Merchant as DM
 import Environment
 import GHC.Base
+import Kernel.Types.Beckn.City as City
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
@@ -32,13 +33,13 @@ type API =
     :> Common.GetCollectionHistory
     :<|> Common.GetAllDriverFeeHistory
 
-handler :: ShortId DM.Merchant -> FlowServer API
-handler merchantId =
-  getCollectionHistory merchantId
-    :<|> getAllDriverFeeHistory merchantId
+handler :: ShortId DM.Merchant -> City.City -> FlowServer API
+handler merchantId city =
+  getCollectionHistory merchantId city
+    :<|> getAllDriverFeeHistory merchantId city
 
-getCollectionHistory :: ShortId DM.Merchant -> Maybe Text -> Maybe Text -> Maybe UTCTime -> Maybe UTCTime -> FlowHandler Common.CollectionList
-getCollectionHistory merchantShortId volunteerId place mbFrom mbTo = withFlowHandlerAPI $ DRevenue.getCollectionHistory merchantShortId volunteerId place mbFrom mbTo
+getCollectionHistory :: ShortId DM.Merchant -> City.City -> Maybe Text -> Maybe Text -> Maybe UTCTime -> Maybe UTCTime -> FlowHandler Common.CollectionList
+getCollectionHistory merchantShortId opCity volunteerId place mbFrom mbTo = withFlowHandlerAPI $ DRevenue.getCollectionHistory merchantShortId opCity volunteerId place mbFrom mbTo
 
-getAllDriverFeeHistory :: ShortId DM.Merchant -> Maybe UTCTime -> Maybe UTCTime -> FlowHandler [Common.AllFees]
-getAllDriverFeeHistory merchantShortId mbFrom mbTo = withFlowHandlerAPI $ DRevenue.getAllDriverFeeHistory merchantShortId mbFrom mbTo
+getAllDriverFeeHistory :: ShortId DM.Merchant -> City.City -> Maybe UTCTime -> Maybe UTCTime -> FlowHandler [Common.AllFees]
+getAllDriverFeeHistory merchantShortId opCity mbFrom mbTo = withFlowHandlerAPI $ DRevenue.getAllDriverFeeHistory merchantShortId opCity mbFrom mbTo

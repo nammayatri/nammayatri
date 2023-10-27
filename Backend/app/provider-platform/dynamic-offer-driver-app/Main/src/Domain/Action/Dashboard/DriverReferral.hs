@@ -33,24 +33,28 @@ import Environment
 import qualified EulerHS.Language as L
 import Kernel.Prelude
 import Kernel.Types.APISuccess (APISuccess (..))
+import qualified Kernel.Types.Beckn.City as City
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Kernel.Utils.Text as TU
 import SharedLogic.Merchant (findMerchantByShortId)
+import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as SCT
 import Tools.Error
 
 ---------------------------------------------------------------------
 updateReferralLinkPassword ::
   ShortId DM.Merchant ->
+  City.City ->
   Common.ReferralLinkPasswordUpdateAPIReq ->
   Flow APISuccess
-updateReferralLinkPassword merchantShortId req = do
+updateReferralLinkPassword merchantShortId opCity req = do
   unless (TU.validateAllDigitWithMinLength 5 req.referralLinkPassword) $
     throwError (InvalidRequest "Password should be minimum 5 digits in length")
   merchant <- findMerchantByShortId merchantShortId
-  _ <- SCT.updateReferralLinkPassword merchant.id req.referralLinkPassword
-  SCT.clearCache merchant.id
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  _ <- SCT.updateReferralLinkPassword merchantOpCityId req.referralLinkPassword
+  SCT.clearCache merchantOpCityId
   logTagInfo "dashboard -> updateReferralLinkPassword : " (show merchant.id)
   pure Success
 
@@ -64,10 +68,12 @@ instance FromNamedRecord CSVRow where
 
 linkDriverReferralCode ::
   ShortId DM.Merchant ->
+  City.City ->
   Common.ReferralLinkReq ->
   Flow Common.LinkReport
-linkDriverReferralCode merchantShortId Common.ReferralLinkReq {..} = do
+linkDriverReferralCode merchantShortId opCity Common.ReferralLinkReq {..} = do
   merchant <- findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   csvData <- L.runIO $ BS.readFile file
   dIdRefIdMap <-
     case (decodeByName $ LBS.fromStrict csvData :: Either String (Header, V.Vector CSVRow)) of
@@ -76,7 +82,7 @@ linkDriverReferralCode merchantShortId Common.ReferralLinkReq {..} = do
   linkingResult <-
     mapM
       ( \(CSVRow dId refId) -> do
-          linkingRes <- try @_ @SomeException (createDriverReferral (dId, merchant.id) True (mkRefLinkReq refId))
+          linkingRes <- try @_ @SomeException (createDriverReferral (dId, merchant.id, merchantOpCityId) True (mkRefLinkReq refId))
           pure (dId, linkingRes)
       )
       dIdRefIdMap

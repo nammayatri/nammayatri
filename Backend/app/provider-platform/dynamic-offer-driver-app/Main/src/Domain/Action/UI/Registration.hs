@@ -30,6 +30,7 @@ import Domain.Action.UI.DriverReferral
 import qualified Domain.Types.Driver.DriverFlowStatus as DDFS
 import qualified Domain.Types.DriverInformation as DriverInfo
 import qualified Domain.Types.Merchant as DO
+import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as SP
 import qualified Domain.Types.RegistrationToken as SR
 import EulerHS.Prelude hiding (id)
@@ -39,9 +40,10 @@ import Kernel.External.Maps.Types (LatLong (..))
 import Kernel.External.Notification.FCM.Types (FCMRecipientToken)
 import Kernel.External.Whatsapp.Interface.Types as Whatsapp
 import Kernel.Sms.Config
-import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow, EsqLocDBFlow)
+import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.APISuccess
+import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common as BC
 import Kernel.Types.Id
 import qualified Kernel.Types.Predicate as P
@@ -53,6 +55,8 @@ import Kernel.Utils.SlidingWindowLimiter
 import Kernel.Utils.Validation
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import Storage.CachedQueries.Merchant as QMerchant
+-- import qualified Kernel.Storage.Esqueleto as Esq
+import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as CQTC
 import qualified Storage.Queries.Driver.DriverFlowStatus as QDFS
 import qualified Storage.Queries.DriverInformation as QD
@@ -65,12 +69,11 @@ import Tools.Error
 import Tools.SMS as Sms hiding (Success)
 import Tools.Whatsapp as Whatsapp
 
--- import qualified Kernel.Storage.Esqueleto as Esq
-
 data AuthReq = AuthReq
   { mobileNumber :: Text,
     mobileCountryCode :: Text,
-    merchantId :: Text
+    merchantId :: Text,
+    merchantOperatingCity :: Context.City
   }
   deriving (Generic, FromJSON, ToSchema)
 
@@ -117,7 +120,6 @@ auth ::
     CacheFlow m r,
     EsqDBFlow m r,
     EsqDBReplicaFlow m r,
-    EsqLocDBFlow m r,
     EncFlow m r
   ) =>
   Bool ->
@@ -135,15 +137,16 @@ auth isDashboard req mbBundleVersion mbClientVersion = do
   merchant <-
     QMerchant.findById merchantId
       >>= fromMaybeM (MerchantNotFound merchantId.getId)
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just req.merchantOperatingCity)
   person <-
     QP.findByMobileNumberAndMerchant countryCode mobileNumberHash merchant.id
-      >>= maybe (createDriverWithDetails req mbBundleVersion mbClientVersion merchant.id isDashboard) return
+      >>= maybe (createDriverWithDetails req mbBundleVersion mbClientVersion merchant.id merchantOpCityId isDashboard) return
   checkSlidingWindowLimit (authHitsCountKey person)
   let entityId = getId $ person.id
       useFakeOtpM = useFakeSms smsCfg
       scfg = sessionConfig smsCfg
   let mkId = getId merchantId
-  token <- makeSession scfg entityId mkId SR.USER (show <$> useFakeOtpM)
+  token <- makeSession scfg entityId mkId SR.USER (show <$> useFakeOtpM) merchantOpCityId.getId
   _ <- QR.create token
   QP.updatePersonVersions person mbBundleVersion mbClientVersion
   whenNothing_ useFakeOtpM $ do
@@ -153,21 +156,21 @@ auth isDashboard req mbBundleVersion mbClientVersion = do
         sender = smsCfg.sender
     withLogTag ("personId_" <> getId person.id) $ do
       message <-
-        MessageBuilder.buildSendOTPMessage person.merchantId $
+        MessageBuilder.buildSendOTPMessage merchantOpCityId $
           MessageBuilder.BuildSendOTPMessageReq
             { otp = otpCode,
               hash = otpHash
             }
-      Sms.sendSMS person.merchantId (Sms.SendSMSReq message phoneNumber sender)
+      Sms.sendSMS person.merchantId merchantOpCityId (Sms.SendSMSReq message phoneNumber sender)
         >>= Sms.checkSmsResult
   let attempts = SR.attempts token
       authId = SR.id token
   return $ AuthRes {attempts, authId}
 
-createDriverDetails :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r) => Id SP.Person -> Id DO.Merchant -> m ()
-createDriverDetails personId merchantId = do
+createDriverDetails :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r) => Id SP.Person -> Id DO.Merchant -> Id DMOC.MerchantOperatingCity -> m ()
+createDriverDetails personId merchantId merchantOpCityId = do
   now <- getCurrentTime
-  transporterConfig <- CQTC.findByMerchantId merchantId >>= fromMaybeM (TransporterConfigNotFound merchantId.getId)
+  transporterConfig <- CQTC.findByMerchantOpCityId merchantOpCityId >>= fromMaybeM (TransporterConfigNotFound merchantId.getId)
   let driverId = cast personId
   let driverInfo =
         DriverInfo.DriverInformation
@@ -203,8 +206,8 @@ createDriverDetails personId merchantId = do
   QD.create driverInfo
   pure ()
 
-makePerson :: EncFlow m r => AuthReq -> Maybe Version -> Maybe Version -> Id DO.Merchant -> Bool -> m SP.Person
-makePerson req mbBundleVersion mbClientVersion merchantId isDashboard = do
+makePerson :: EncFlow m r => AuthReq -> Maybe Version -> Maybe Version -> Id DO.Merchant -> Id DMOC.MerchantOperatingCity -> Bool -> m SP.Person
+makePerson req mbBundleVersion mbClientVersion merchantId merchantOperatingCityId isDashboard = do
   pid <- BC.generateGUID
   now <- getCurrentTime
   encMobNum <- encrypt req.mobileNumber
@@ -227,6 +230,7 @@ makePerson req mbBundleVersion mbClientVersion merchantId isDashboard = do
         identifier = Nothing,
         rating = Nothing,
         merchantId = merchantId,
+        merchantOperatingCityId = merchantOperatingCityId,
         isNew = True,
         onboardedFromDashboard = isDashboard,
         deviceToken = Nothing,
@@ -243,7 +247,9 @@ makePerson req mbBundleVersion mbClientVersion merchantId isDashboard = do
       }
 
 makeSession ::
-  ( MonadFlow m,
+  ( CacheFlow m r,
+    EsqDBFlow m r,
+    MonadFlow m,
     EsqDBReplicaFlow m r
   ) =>
   SmsSessionConfig ->
@@ -251,8 +257,9 @@ makeSession ::
   Text ->
   SR.RTEntityType ->
   Maybe Text ->
+  Text ->
   m SR.RegistrationToken
-makeSession SmsSessionConfig {..} entityId merchantId entityType fakeOtp = do
+makeSession SmsSessionConfig {..} entityId merchantId entityType fakeOtp merchantOpCityId = do
   otp <- maybe generateOTPCode return fakeOtp
   rtid <- generateGUID
   token <- generateGUID
@@ -271,6 +278,7 @@ makeSession SmsSessionConfig {..} entityId merchantId entityType fakeOtp = do
         tokenExpiry = tokenExpiry,
         entityId = entityId,
         merchantId = merchantId,
+        merchantOperatingCityId = merchantOpCityId,
         entityType = entityType,
         createdAt = now,
         updatedAt = now,
@@ -281,13 +289,13 @@ makeSession SmsSessionConfig {..} entityId merchantId entityType fakeOtp = do
 verifyHitsCountKey :: Id SP.Person -> Text
 verifyHitsCountKey id = "BPP:Registration:verify:" <> getId id <> ":hitsCount"
 
-createDriverWithDetails :: (EncFlow m r, EsqDBFlow m r, EsqLocDBFlow m r, CacheFlow m r) => AuthReq -> Maybe Version -> Maybe Version -> Id DO.Merchant -> Bool -> m SP.Person
-createDriverWithDetails req mbBundleVersion mbClientVersion merchantId isDashboard = do
-  person <- makePerson req mbBundleVersion mbClientVersion merchantId isDashboard
+createDriverWithDetails :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r) => AuthReq -> Maybe Version -> Maybe Version -> Id DO.Merchant -> Id DMOC.MerchantOperatingCity -> Bool -> m SP.Person
+createDriverWithDetails req mbBundleVersion mbClientVersion merchantId merchantOpCityId isDashboard = do
+  person <- makePerson req mbBundleVersion mbClientVersion merchantId merchantOpCityId isDashboard
   now <- getCurrentTime
   _ <- QP.create person
   _ <- QDFS.create $ makeIdleDriverFlowStatus person
-  createDriverDetails (person.id) merchantId
+  createDriverDetails (person.id) merchantId merchantOpCityId
   QDriverLocation.create person.id initLatLong now merchantId
   pure person
   where
@@ -318,7 +326,7 @@ verify tokenId req = do
   unless (authValueHash == req.otp) $ throwError InvalidAuthData
   person <- checkPersonExists entityId
   fork "generating the referral code for driver" $ do
-    void $ generateReferralCode (person.id, person.merchantId)
+    void $ generateReferralCode (person.id, person.merchantId, Id merchantOperatingCityId)
 
   let isNewPerson = person.isNew
   let deviceToken = Just req.deviceToken
@@ -334,7 +342,7 @@ verify tokenId req = do
     fork "whatsapp_opt_api_call" $ do
       case decPerson.mobileNumber of
         Nothing -> throwError $ AuthBlocked "Mobile Number is null"
-        Just mobileNo -> callWhatsappOptApi mobileNo person.merchantId person.id req.whatsappNotificationEnroll
+        Just mobileNo -> callWhatsappOptApi mobileNo person.id req.whatsappNotificationEnroll person.merchantId (Id merchantOperatingCityId)
   let personAPIEntity = SP.makePersonAPIEntity decPerson
   return $ AuthVerifyRes token personAPIEntity
   where
@@ -348,20 +356,21 @@ callWhatsappOptApi ::
     CacheFlow m r
   ) =>
   Text ->
-  Id DO.Merchant ->
   Id SP.Person ->
   Maybe Whatsapp.OptApiMethods ->
+  Id DO.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
   m ()
-callWhatsappOptApi mobileNo merchantId personId hasOptedIn = do
+callWhatsappOptApi mobileNo personId hasOptedIn merchantId merchantOpCityId = do
   let status = fromMaybe Whatsapp.OPT_IN hasOptedIn
-  void $ Whatsapp.whatsAppOptAPI merchantId $ Whatsapp.OptApiReq {phoneNumber = mobileNo, method = status}
+  void $ Whatsapp.whatsAppOptAPI merchantId merchantOpCityId $ Whatsapp.OptApiReq {phoneNumber = mobileNo, method = status}
   QP.updateWhatsappNotificationEnrollStatus personId $ Just status
 
-checkRegistrationTokenExists :: MonadFlow m => Id SR.RegistrationToken -> m SR.RegistrationToken
+checkRegistrationTokenExists :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => Id SR.RegistrationToken -> m SR.RegistrationToken
 checkRegistrationTokenExists tokenId =
   QR.findById tokenId >>= fromMaybeM (TokenNotFound $ getId tokenId)
 
-checkPersonExists :: MonadFlow m => Text -> m SP.Person
+checkPersonExists :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => Text -> m SP.Person
 checkPersonExists entityId =
   QP.findById (Id entityId) >>= fromMaybeM (PersonNotFound entityId)
 
@@ -386,17 +395,17 @@ resend tokenId = do
       sender = smsCfg.sender
   withLogTag ("personId_" <> entityId) $ do
     message <-
-      MessageBuilder.buildSendOTPMessage person.merchantId $
+      MessageBuilder.buildSendOTPMessage (Id merchantOperatingCityId) $
         MessageBuilder.BuildSendOTPMessageReq
           { otp = otpCode,
             hash = otpHash
           }
-    Sms.sendSMS person.merchantId (Sms.SendSMSReq message phoneNumber sender)
+    Sms.sendSMS person.merchantId (Id merchantOperatingCityId) (Sms.SendSMSReq message phoneNumber sender)
       >>= Sms.checkSmsResult
   _ <- QR.updateAttempts (attempts - 1) id
   return $ AuthRes tokenId (attempts - 1)
 
-cleanCachedTokens :: (EsqDBFlow m r, Redis.HedisFlow m r) => Id SP.Person -> m ()
+cleanCachedTokens :: (EsqDBFlow m r, Redis.HedisFlow m r, CacheFlow m r) => Id SP.Person -> m ()
 cleanCachedTokens personId = do
   regTokens <- QR.findAllByPersonId personId
   for_ regTokens $ \regToken -> do
@@ -408,9 +417,9 @@ logout ::
     CacheFlow m r,
     Redis.HedisFlow m r
   ) =>
-  (Id SP.Person, Id DO.Merchant) ->
+  (Id SP.Person, Id DO.Merchant, Id DMOC.MerchantOperatingCity) ->
   m APISuccess
-logout (personId, _) = do
+logout (personId, _, _) = do
   cleanCachedTokens personId
   uperson <-
     QP.findById personId

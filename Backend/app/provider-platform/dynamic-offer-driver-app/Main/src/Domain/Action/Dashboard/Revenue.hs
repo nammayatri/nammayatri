@@ -28,6 +28,7 @@ import Domain.Types.DriverFee
 import qualified Domain.Types.Merchant as DM
 import Environment
 import EulerHS.Prelude hiding (id)
+import qualified Kernel.Types.Beckn.City as City
 import Kernel.Types.Id
 import Kernel.Utils.Common (HighPrecMoney)
 import Kernel.Utils.Time
@@ -35,8 +36,8 @@ import SharedLogic.Merchant
 import Storage.Queries.DriverFee (findAllByStatus, findAllByTimeMerchantAndStatus, findAllByVolunteerIds)
 import Storage.Queries.Volunteer (findAllByPlace)
 
-getAllDriverFeeHistory :: ShortId DM.Merchant -> Maybe UTCTime -> Maybe UTCTime -> Flow [Common.AllFees]
-getAllDriverFeeHistory merchantShortId mbFrom mbTo = do
+getAllDriverFeeHistory :: ShortId DM.Merchant -> City.City -> Maybe UTCTime -> Maybe UTCTime -> Flow [Common.AllFees]
+getAllDriverFeeHistory merchantShortId _ mbFrom mbTo = do
   now <- getCurrentTime
   merchant <- findMerchantByShortId merchantShortId
   let defaultFrom = UTCTime (fromGregorian 2020 1 1) 0 -- can be in common
@@ -61,8 +62,8 @@ getAllDriverFeeHistory merchantShortId mbFrom mbTo = do
     getNumRides fee = sum $ map numRides fee
     getTotalAmount fee = sum $ map (\fee_ -> fromIntegral fee_.govtCharges + fee_.platformFee.fee + fee_.platformFee.cgst + fee_.platformFee.sgst) fee
 
-getCollectionHistory :: ShortId DM.Merchant -> Maybe Text -> Maybe Text -> Maybe UTCTime -> Maybe UTCTime -> Flow Common.CollectionList
-getCollectionHistory merchantShortId volunteerId place mbFrom mbTo = do
+getCollectionHistory :: ShortId DM.Merchant -> City.City -> Maybe Text -> Maybe Text -> Maybe UTCTime -> Maybe UTCTime -> Flow Common.CollectionList
+getCollectionHistory merchantShortId _ volunteerId place mbFrom mbTo = do
   now <- getCurrentTime
   merchant <- findMerchantByShortId merchantShortId
   let defaultFrom = UTCTime (fromGregorian 2020 1 1) 0

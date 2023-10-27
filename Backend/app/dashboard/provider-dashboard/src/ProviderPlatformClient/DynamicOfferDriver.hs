@@ -45,6 +45,7 @@ import Domain.Types.ServerName
 import qualified EulerHS.Types as Euler
 import Kernel.Prelude
 import Kernel.Types.APISuccess (APISuccess)
+import qualified Kernel.Types.Beckn.City as City
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
@@ -216,8 +217,8 @@ data SubscriptionAPIs = SubscriptionAPIs
     currentPlan :: Id Driver.Driver -> Euler.EulerClient Subscription.CurrentPlanRes
   }
 
-mkDriverOfferAPIs :: CheckedShortId DM.Merchant -> Text -> DriverOfferAPIs
-mkDriverOfferAPIs merchantId token = do
+mkDriverOfferAPIs :: CheckedShortId DM.Merchant -> City.City -> Text -> DriverOfferAPIs
+mkDriverOfferAPIs merchantId opCity token = do
   let drivers = DriversAPIs {..}
   let rides = RidesAPIs {..}
   let subscription = SubscriptionAPIs {..}
@@ -243,7 +244,7 @@ mkDriverOfferAPIs merchantId token = do
       :<|> volunteerClient
       :<|> issueClient
       :<|> revenueClient
-      :<|> overlayClient = clientWithMerchant (Proxy :: Proxy BPP.API') merchantId token
+      :<|> overlayClient = clientWithMerchant (Proxy :: Proxy BPP.API') merchantId opCity token
 
     planList
       :<|> planSelect
@@ -377,9 +378,10 @@ callDriverOfferBPP ::
     CallServerAPI DriverOfferAPIs m r b c
   ) =>
   CheckedShortId DM.Merchant ->
+  City.City ->
   (DriverOfferAPIs -> b) ->
   c
-callDriverOfferBPP merchantId = callServerAPI @_ @m @r DRIVER_OFFER_BPP (mkDriverOfferAPIs merchantId) "callDriverOfferBPP"
+callDriverOfferBPP merchantId opCity = callServerAPI @_ @m @r DRIVER_OFFER_BPP (mkDriverOfferAPIs merchantId opCity) "callDriverOfferBPP"
 
 newtype ExotelAPIs = ExotelAPIs
   { exotelHeartbeat :: Exotel.ExotelHeartbeatReq -> Euler.EulerClient APISuccess

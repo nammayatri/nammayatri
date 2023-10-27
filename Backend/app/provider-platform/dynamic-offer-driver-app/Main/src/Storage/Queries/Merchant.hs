@@ -29,23 +29,23 @@ import Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified Storage.Beam.Merchant as BeamM
 
-findById :: MonadFlow m => Id Merchant -> m (Maybe Merchant)
+findById :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Merchant -> m (Maybe Merchant)
 findById (Id merchantId) = findOneWithKV [Se.Is BeamM.id $ Se.Eq merchantId]
 
-findBySubscriberId :: MonadFlow m => ShortId Subscriber -> m (Maybe Merchant)
+findBySubscriberId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => ShortId Subscriber -> m (Maybe Merchant)
 findBySubscriberId (ShortId subscriberId) = findOneWithKV [Se.Is BeamM.subscriberId $ Se.Eq subscriberId]
 
-findByShortId :: MonadFlow m => ShortId Merchant -> m (Maybe Merchant)
+findByShortId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => ShortId Merchant -> m (Maybe Merchant)
 findByShortId (ShortId shortId) = findOneWithKV [Se.Is BeamM.shortId $ Se.Eq shortId]
 
-loadAllProviders :: MonadFlow m => m [Merchant]
+loadAllProviders :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => m [Merchant]
 loadAllProviders = do
   findAllWithDb [Se.And [Se.Is BeamM.status $ Se.Eq DM.APPROVED, Se.Is BeamM.enabled $ Se.Eq True]]
 
-findAll :: MonadFlow m => m [Merchant]
+findAll :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => m [Merchant]
 findAll = findAllWithDb [Se.Is BeamM.id $ Se.Not $ Se.Eq $ getId ""]
 
-update :: MonadFlow m => Merchant -> m ()
+update :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Merchant -> m ()
 update org = do
   now <- getCurrentTime
   updateOneWithKV

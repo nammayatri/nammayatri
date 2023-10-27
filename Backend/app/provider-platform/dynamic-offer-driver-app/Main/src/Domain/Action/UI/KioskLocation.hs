@@ -20,6 +20,7 @@ where
 
 import qualified Domain.Types.KioskLocation as DTK
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as Person
 import Environment
 import EulerHS.Prelude hiding (id)
@@ -33,8 +34,8 @@ import Tools.Error
 
 type KioskLocationRes = [DTK.KioskLocation]
 
-listKioskLocations :: (Id Person.Person, Id DM.Merchant) -> Flow KioskLocationRes
-listKioskLocations (personId, mId) = do
+listKioskLocations :: (Id Person.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Flow KioskLocationRes
+listKioskLocations (personId, mId, _) = do
   locations <- CQK.fetchAllKioskLocationsByMerchant mId
   driver <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   let language = fromMaybe ENGLISH driver.language

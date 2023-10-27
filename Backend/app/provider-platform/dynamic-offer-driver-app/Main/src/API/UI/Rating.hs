@@ -20,6 +20,7 @@ where
 
 import qualified Domain.Action.UI.Rating as Domain
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as SP
 import Environment
 import EulerHS.Prelude
@@ -40,5 +41,5 @@ handler :: FlowServer API
 handler =
   rating
 
-rating :: (Id SP.Person, Id DM.Merchant) -> CallBAPInternal.FeedbackReq -> FlowHandler APISuccess
-rating (_, _) req = withFlowHandlerAPI $ Domain.rating req
+rating :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> CallBAPInternal.FeedbackReq -> FlowHandler APISuccess
+rating (_, _, _) req = withFlowHandlerAPI $ Domain.rating req

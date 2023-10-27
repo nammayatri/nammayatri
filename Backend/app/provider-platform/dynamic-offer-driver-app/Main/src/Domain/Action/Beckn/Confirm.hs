@@ -35,7 +35,6 @@ import Kernel.External.Encryption
 import qualified Kernel.External.Notification.FCM.Types as FCM
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
-import Kernel.Storage.Esqueleto.Config (EsqLocDBFlow, EsqLocRepDBFlow)
 import Kernel.Storage.Hedis
 import Kernel.Types.Common
 import Kernel.Types.Error
@@ -98,9 +97,7 @@ data DConfirmRes = DConfirmRes
 handler ::
   ( CacheFlow m r,
     EsqDBFlow m r,
-    EsqLocDBFlow m r,
     Esq.EsqDBReplicaFlow m r,
-    EsqLocRepDBFlow m r,
     HedisFlow m r,
     HasPrettyLogger m r,
     HasHttpClientOptions r c,
@@ -125,8 +122,8 @@ handler transporter req quote = do
     DRB.NormalBooking -> do
       case quote of
         Left (driver, driverQuote) -> do
-          cfg <- QGHC.findByMerchantId transporter.id
-          ghrId <- if cfg.enableGoHome then CGHR.getDriverGoHomeRequestInfo driver.id transporter.id (Just cfg) <&> (.driverGoHomeRequestId) else return Nothing
+          cfg <- QGHC.findByMerchantOpCityId booking.merchantOperatingCityId
+          ghrId <- if cfg.enableGoHome then CGHR.getDriverGoHomeRequestInfo driver.id booking.merchantOperatingCityId (Just cfg) <&> (.driverGoHomeRequestId) else return Nothing
 
           otpCode <- case riderDetails.otpCode of
             Nothing -> do
@@ -169,14 +166,14 @@ handler transporter req quote = do
           for_ driverSearchReqs $ \driverReq -> do
             let driverId = driverReq.driverId
             unless (driverId == driver.id) $ do
-              DP.decrementTotalQuotesCount transporter.id (cast driverReq.driverId) driverReq.searchTryId
+              DP.decrementTotalQuotesCount transporter.id booking.merchantOperatingCityId (cast driverReq.driverId) driverReq.searchTryId
               DP.removeSearchReqIdFromMap transporter.id driverId driverReq.searchTryId
               _ <- QSRD.updateDriverResponse driverReq.id SReqD.Pulled
               driver_ <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
-              Notify.notifyDriverClearedFare transporter.id driverId driverReq.searchTryId driverQuote.estimatedFare driver_.deviceToken
+              Notify.notifyDriverClearedFare booking.merchantOperatingCityId driverId driverReq.searchTryId driverQuote.estimatedFare driver_.deviceToken
 
           uBooking <- QRB.findById booking.id >>= fromMaybeM (BookingNotFound booking.id.getId)
-          Notify.notifyDriver transporter.id notificationType notificationTitle (message uBooking) driver.id driver.deviceToken
+          Notify.notifyDriver booking.merchantOperatingCityId notificationType notificationTitle (message uBooking) driver.id driver.deviceToken
 
           pure
             DConfirmRes
@@ -247,6 +244,7 @@ handler transporter req quote = do
             bookingId = booking.id,
             shortId = shortId,
             merchantId = Just booking.providerId,
+            merchantOperatingCityId = booking.merchantOperatingCityId,
             status = DRide.NEW,
             driverId = cast driverId,
             otp = otp,
@@ -282,7 +280,7 @@ handler transporter req quote = do
             baseUrlPath = baseUrlPath bppUIUrl <> "/driver/location/" <> rideid
           }
 
-getRiderDetails :: (EncFlow m r, EsqDBFlow m r) => Id DM.Merchant -> Text -> Text -> UTCTime -> m (DRD.RiderDetails, Bool)
+getRiderDetails :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r) => Id DM.Merchant -> Text -> Text -> UTCTime -> m (DRD.RiderDetails, Bool)
 getRiderDetails merchantId customerMobileCountryCode customerPhoneNumber now =
   QRD.findByMobileNumberAndMerchant customerPhoneNumber merchantId >>= \case
     Nothing -> fmap (,True) . encrypt =<< buildRiderDetails
@@ -339,8 +337,6 @@ cancelBooking ::
   ( EsqDBFlow m r,
     CacheFlow m r,
     Esq.EsqDBReplicaFlow m r,
-    EsqLocDBFlow m r,
-    EsqLocRepDBFlow m r,
     EncFlow m r,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     HasHttpClientOptions r c,
@@ -375,7 +371,7 @@ cancelBooking booking mbDriver transporter = do
       Nothing -> throwError (PersonNotFound ride.driverId.getId)
       Just driver -> do
         fork "cancelRide - Notify driver" $ do
-          Notify.notifyOnCancel transporter.id booking driver.id driver.deviceToken bookingCancellationReason.source
+          Notify.notifyOnCancel booking.merchantOperatingCityId booking driver.id driver.deviceToken bookingCancellationReason.source
   where
     buildBookingCancellationReason bookingId driverId ride merchantId = do
       return $
@@ -395,8 +391,6 @@ validateRequest ::
   ( CacheFlow m r,
     EsqDBFlow m r,
     Esq.EsqDBReplicaFlow m r,
-    EsqLocDBFlow m r,
-    EsqLocRepDBFlow m r,
     HasPrettyLogger m r,
     HasHttpClientOptions r c,
     EncFlow m r,

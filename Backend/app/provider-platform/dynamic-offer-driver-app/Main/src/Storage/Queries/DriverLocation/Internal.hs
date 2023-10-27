@@ -26,7 +26,7 @@ import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified Storage.Queries.DriverLocation as QueriesDL
 
 getDriverLocsWithCond ::
-  (MonadFlow m, MonadTime m, MonadReader r m, LT.HasLocationService m r, CoreMetrics m) =>
+  (MonadFlow m, MonadTime m, MonadReader r m, LT.HasLocationService m r, CoreMetrics m, CacheFlow m r, EsqDBFlow m r) =>
   Id Merchant ->
   Maybe Seconds ->
   LatLong ->

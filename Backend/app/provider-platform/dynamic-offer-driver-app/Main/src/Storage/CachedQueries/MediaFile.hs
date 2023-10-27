@@ -20,11 +20,12 @@ import Domain.Types.MediaFile
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Hedis as Hedis
+import Kernel.Types.Common
 import Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, MonadFlow)
+import Kernel.Utils.Common (CacheFlow)
 import qualified Storage.Queries.MediaFile as Queries
 
-findById :: (CacheFlow m r, MonadFlow m) => Id MediaFile -> m (Maybe MediaFile)
+findById :: (CacheFlow m r, MonadFlow m, EsqDBFlow m r) => Id MediaFile -> m (Maybe MediaFile)
 findById mediaFileId =
   Hedis.withCrossAppRedis (Hedis.safeGet $ makeMediaFileByIdKey mediaFileId) >>= \case
     Just a -> pure a

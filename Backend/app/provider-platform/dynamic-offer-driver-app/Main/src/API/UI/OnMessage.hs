@@ -20,6 +20,7 @@ where
 
 import qualified Domain.Action.UI.OnMessage as Dfcm
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as Person
 import Environment
 import EulerHS.Prelude
@@ -38,5 +39,5 @@ type API =
 handler :: FlowServer API
 handler = sendMessageFCM
 
-sendMessageFCM :: (Id Person.Person, Id DM.Merchant) -> Dfcm.FCMReq -> FlowHandler APISuccess.APISuccess
-sendMessageFCM (personId, merchantId) = withFlowHandlerAPI . Dfcm.sendMessageFCM (personId, merchantId)
+sendMessageFCM :: (Id Person.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Dfcm.FCMReq -> FlowHandler APISuccess.APISuccess
+sendMessageFCM (personId, merchantId, merchantOpCityId) = withFlowHandlerAPI . Dfcm.sendMessageFCM (personId, merchantId, merchantOpCityId)

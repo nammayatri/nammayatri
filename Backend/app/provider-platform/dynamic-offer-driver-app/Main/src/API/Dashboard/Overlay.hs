@@ -20,6 +20,7 @@ import Environment
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto (derivePersistField)
 import Kernel.Types.APISuccess (APISuccess (..))
+import qualified Kernel.Types.Beckn.City as City
 import Kernel.Types.Id
 import Kernel.Utils.Common (withFlowHandlerAPI)
 import Servant hiding (Unauthorized, throwError)
@@ -65,25 +66,25 @@ type ScheduleOverlayAPI =
     :> ReqBody '[JSON] DOverlay.ScheduleOverlay
     :> Post '[JSON] APISuccess
 
-handler :: ShortId DM.Merchant -> FlowServer API
-handler merchantId =
-  createOverlay merchantId
-    :<|> deleteOverlay merchantId
-    :<|> listOverlay merchantId
-    :<|> overlayInfo merchantId
-    :<|> scheduleOverlay merchantId
+handler :: ShortId DM.Merchant -> City.City -> FlowServer API
+handler merchantId city =
+  createOverlay merchantId city
+    :<|> deleteOverlay merchantId city
+    :<|> listOverlay merchantId city
+    :<|> overlayInfo merchantId city
+    :<|> scheduleOverlay merchantId city
 
-createOverlay :: ShortId DM.Merchant -> DOverlay.CreateOverlayReq -> FlowHandler APISuccess
-createOverlay merchantShortId req = withFlowHandlerAPI $ DOverlay.createOverlay merchantShortId req
+createOverlay :: ShortId DM.Merchant -> City.City -> DOverlay.CreateOverlayReq -> FlowHandler APISuccess
+createOverlay merchantShortId opCity req = withFlowHandlerAPI $ DOverlay.createOverlay merchantShortId opCity req
 
-deleteOverlay :: ShortId DM.Merchant -> DOverlay.DeleteOverlayReq -> FlowHandler APISuccess
-deleteOverlay merchantShortId req = withFlowHandlerAPI $ DOverlay.deleteOverlay merchantShortId req
+deleteOverlay :: ShortId DM.Merchant -> City.City -> DOverlay.DeleteOverlayReq -> FlowHandler APISuccess
+deleteOverlay merchantShortId opCity req = withFlowHandlerAPI $ DOverlay.deleteOverlay merchantShortId opCity req
 
-listOverlay :: ShortId DM.Merchant -> FlowHandler DOverlay.ListOverlayResp
-listOverlay = withFlowHandlerAPI . DOverlay.listOverlay
+listOverlay :: ShortId DM.Merchant -> City.City -> FlowHandler DOverlay.ListOverlayResp
+listOverlay merchantShortId = withFlowHandlerAPI . DOverlay.listOverlay merchantShortId
 
-overlayInfo :: ShortId DM.Merchant -> DOverlay.OverlayInfoReq -> FlowHandler DOverlay.OverlayInfoResp
-overlayInfo merchantShortId = withFlowHandlerAPI . DOverlay.overlayInfo merchantShortId
+overlayInfo :: ShortId DM.Merchant -> City.City -> DOverlay.OverlayInfoReq -> FlowHandler DOverlay.OverlayInfoResp
+overlayInfo merchantShortId opCity = withFlowHandlerAPI . DOverlay.overlayInfo merchantShortId opCity
 
-scheduleOverlay :: ShortId DM.Merchant -> DOverlay.ScheduleOverlay -> FlowHandler APISuccess
-scheduleOverlay merchantShortId = withFlowHandlerAPI . DOverlay.scheduleOverlay merchantShortId
+scheduleOverlay :: ShortId DM.Merchant -> City.City -> DOverlay.ScheduleOverlay -> FlowHandler APISuccess
+scheduleOverlay merchantShortId opCity = withFlowHandlerAPI . DOverlay.scheduleOverlay merchantShortId opCity

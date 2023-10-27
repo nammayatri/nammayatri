@@ -26,11 +26,13 @@ import qualified Domain.Types.Ride as DRide
 import Environment
 import Kernel.Prelude
 import Kernel.Types.APISuccess (APISuccess (..))
+import qualified Kernel.Types.Beckn.City as City
 import Kernel.Types.Id
 import Kernel.Utils.Common (Money, logTagInfo, withFlowHandlerAPI)
 import Kernel.Utils.Validation (runRequestValidation)
 import Servant hiding (Unauthorized, throwError)
 import SharedLogic.Merchant (findMerchantByShortId)
+import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 
 type API =
   "ride"
@@ -49,24 +51,25 @@ type API =
            :<|> Common.TicketRideListAPI
        )
 
-handler :: ShortId DM.Merchant -> FlowServer API
-handler merchantId =
-  rideList merchantId
-    :<|> rideStart merchantId
-    :<|> rideEnd merchantId
-    :<|> multipleRideEnd merchantId
-    :<|> currentActiveRide merchantId
-    :<|> rideCancel merchantId
-    :<|> multipleRideCancel merchantId
-    :<|> rideInfo merchantId
-    :<|> rideSync merchantId
-    :<|> multipleRideSync merchantId
-    :<|> rideRoute merchantId
-    :<|> bookingWithVehicleNumberAndPhone merchantId
-    :<|> ticketRideList merchantId
+handler :: ShortId DM.Merchant -> City.City -> FlowServer API
+handler merchantId city =
+  rideList merchantId city
+    :<|> rideStart merchantId city
+    :<|> rideEnd merchantId city
+    :<|> multipleRideEnd merchantId city
+    :<|> currentActiveRide merchantId city
+    :<|> rideCancel merchantId city
+    :<|> multipleRideCancel merchantId city
+    :<|> rideInfo merchantId city
+    :<|> rideSync merchantId city
+    :<|> multipleRideSync merchantId city
+    :<|> rideRoute merchantId city
+    :<|> bookingWithVehicleNumberAndPhone merchantId city
+    :<|> ticketRideList merchantId city
 
 rideList ::
   ShortId DM.Merchant ->
+  City.City ->
   Maybe Int ->
   Maybe Int ->
   Maybe Common.BookingStatus ->
@@ -77,32 +80,35 @@ rideList ::
   Maybe UTCTime ->
   Maybe UTCTime ->
   FlowHandler Common.RideListRes
-rideList merchantShortId mbLimit mbOffset mbBookingStatus mbShortRideId mbCustomerPhone mbFareDiff mbfrom mbto =
+rideList merchantShortId _ mbLimit mbOffset mbBookingStatus mbShortRideId mbCustomerPhone mbFareDiff mbfrom mbto =
   withFlowHandlerAPI . DRide.rideList merchantShortId mbLimit mbOffset mbBookingStatus mbShortRideId mbCustomerPhone mbFareDiff mbfrom mbto
 
-rideStart :: ShortId DM.Merchant -> Id Common.Ride -> Common.StartRideReq -> FlowHandler APISuccess
-rideStart merchantShortId reqRideId Common.StartRideReq {point} = withFlowHandlerAPI $ do
+rideStart :: ShortId DM.Merchant -> City.City -> Id Common.Ride -> Common.StartRideReq -> FlowHandler APISuccess
+rideStart merchantShortId opCity reqRideId Common.StartRideReq {point} = withFlowHandlerAPI $ do
   merchant <- findMerchantByShortId merchantShortId
   let rideId = cast @Common.Ride @DRide.Ride reqRideId
   let merchantId = merchant.id
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   let dashboardReq = SHandler.DashboardStartRideReq {point, merchantId}
-  shandle <- SHandler.buildStartRideHandle merchantId
+  shandle <- SHandler.buildStartRideHandle merchantId merchantOpCityId
   SHandler.dashboardStartRide shandle rideId dashboardReq
 
-rideEnd :: ShortId DM.Merchant -> Id Common.Ride -> Common.EndRideReq -> FlowHandler APISuccess
-rideEnd merchantShortId reqRideId Common.EndRideReq {point} = withFlowHandlerAPI $ do
+rideEnd :: ShortId DM.Merchant -> City.City -> Id Common.Ride -> Common.EndRideReq -> FlowHandler APISuccess
+rideEnd merchantShortId opCity reqRideId Common.EndRideReq {point} = withFlowHandlerAPI $ do
   merchant <- findMerchantByShortId merchantShortId
   let rideId = cast @Common.Ride @DRide.Ride reqRideId
   let merchantId = merchant.id
   let dashboardReq = EHandler.DashboardEndRideReq {point, merchantId}
-  shandle <- EHandler.buildEndRideHandle merchantId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  shandle <- EHandler.buildEndRideHandle merchantId merchantOpCityId
   EHandler.dashboardEndRide shandle rideId dashboardReq
 
-multipleRideEnd :: ShortId DM.Merchant -> Common.MultipleRideEndReq -> FlowHandler Common.MultipleRideEndResp
-multipleRideEnd merchantShortId req = withFlowHandlerAPI $ do
+multipleRideEnd :: ShortId DM.Merchant -> City.City -> Common.MultipleRideEndReq -> FlowHandler Common.MultipleRideEndResp
+multipleRideEnd merchantShortId opCity req = withFlowHandlerAPI $ do
   runRequestValidation Common.validateMultipleRideEndReq req
   merchant <- findMerchantByShortId merchantShortId
-  shandle <- EHandler.buildEndRideHandle merchant.id
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  shandle <- EHandler.buildEndRideHandle merchant.id merchantOpCityId
   logTagInfo "dashboard -> multipleRideEnd : " $ show (req.rides <&> (.rideId))
   respItems <- forM req.rides $ \reqItem -> do
     info <- handle Common.listItemErrHandler $ do
@@ -117,11 +123,11 @@ multipleRideEnd merchantShortId req = withFlowHandlerAPI $ do
     pure $ Common.MultipleRideSyncRespItem {rideId = reqItem.rideId, info}
   pure $ Common.MultipleRideSyncResp {list = respItems}
 
-currentActiveRide :: ShortId DM.Merchant -> Text -> FlowHandler (Id Common.Ride)
-currentActiveRide merchantShortId vehicleNumber = withFlowHandlerAPI $ DRide.currentActiveRide merchantShortId vehicleNumber
+currentActiveRide :: ShortId DM.Merchant -> City.City -> Text -> FlowHandler (Id Common.Ride)
+currentActiveRide merchantShortId _ vehicleNumber = withFlowHandlerAPI $ DRide.currentActiveRide merchantShortId vehicleNumber
 
-rideCancel :: ShortId DM.Merchant -> Id Common.Ride -> Common.CancelRideReq -> FlowHandler APISuccess
-rideCancel merchantShortId reqRideId Common.CancelRideReq {reasonCode, additionalInfo} = withFlowHandlerAPI $ do
+rideCancel :: ShortId DM.Merchant -> City.City -> Id Common.Ride -> Common.CancelRideReq -> FlowHandler APISuccess
+rideCancel merchantShortId _ reqRideId Common.CancelRideReq {reasonCode, additionalInfo} = withFlowHandlerAPI $ do
   merchant <- findMerchantByShortId merchantShortId
   let rideId = cast @Common.Ride @DRide.Ride reqRideId
   let dashboardReq =
@@ -131,8 +137,8 @@ rideCancel merchantShortId reqRideId Common.CancelRideReq {reasonCode, additiona
           }
   CHandler.dashboardCancelRideHandler CHandler.cancelRideHandle merchant.id rideId dashboardReq
 
-multipleRideCancel :: ShortId DM.Merchant -> Common.MultipleRideCancelReq -> FlowHandler Common.MultipleRideCancelResp
-multipleRideCancel merchantShortId req = withFlowHandlerAPI $ do
+multipleRideCancel :: ShortId DM.Merchant -> City.City -> Common.MultipleRideCancelReq -> FlowHandler Common.MultipleRideCancelResp
+multipleRideCancel merchantShortId _ req = withFlowHandlerAPI $ do
   runRequestValidation Common.validateMultipleRideCancelReq req
   merchant <- findMerchantByShortId merchantShortId
   logTagInfo "dashboard -> multipleRideCancel : " $ show (req.rides <&> (.rideId))
@@ -149,20 +155,23 @@ multipleRideCancel merchantShortId req = withFlowHandlerAPI $ do
     pure $ Common.MultipleRideSyncRespItem {rideId = reqItem.rideId, info}
   pure $ Common.MultipleRideSyncResp {list = respItems}
 
-rideInfo :: ShortId DM.Merchant -> Id Common.Ride -> FlowHandler Common.RideInfoRes
-rideInfo merchantShortId = withFlowHandlerAPI . DRide.rideInfo merchantShortId
+rideInfo :: ShortId DM.Merchant -> City.City -> Id Common.Ride -> FlowHandler Common.RideInfoRes
+rideInfo merchantShortId _ = withFlowHandlerAPI . DRide.rideInfo merchantShortId
 
-rideSync :: ShortId DM.Merchant -> Id Common.Ride -> FlowHandler Common.RideSyncRes
-rideSync merchantShortId = withFlowHandlerAPI . DRide.rideSync merchantShortId
+rideSync :: ShortId DM.Merchant -> City.City -> Id Common.Ride -> FlowHandler Common.RideSyncRes
+rideSync merchantShortId _ = withFlowHandlerAPI . DRide.rideSync merchantShortId
 
-multipleRideSync :: ShortId DM.Merchant -> Common.MultipleRideSyncReq -> FlowHandler Common.MultipleRideSyncRes
-multipleRideSync merchantShortId = withFlowHandlerAPI . DRide.multipleRideSync merchantShortId
+multipleRideSync :: ShortId DM.Merchant -> City.City -> Common.MultipleRideSyncReq -> FlowHandler Common.MultipleRideSyncRes
+multipleRideSync merchantShortId _ = withFlowHandlerAPI . DRide.multipleRideSync merchantShortId
 
-rideRoute :: ShortId DM.Merchant -> Id Common.Ride -> FlowHandler Common.RideRouteRes
-rideRoute merchantShortId rideId = withFlowHandlerAPI $ DRide.rideRoute merchantShortId rideId
+rideRoute :: ShortId DM.Merchant -> City.City -> Id Common.Ride -> FlowHandler Common.RideRouteRes
+rideRoute merchantShortId _ rideId = withFlowHandlerAPI $ DRide.rideRoute merchantShortId rideId
 
-bookingWithVehicleNumberAndPhone :: ShortId DM.Merchant -> Common.BookingWithVehicleAndPhoneReq -> FlowHandler Common.BookingWithVehicleAndPhoneRes
-bookingWithVehicleNumberAndPhone merchantShortId = withFlowHandlerAPI . DRide.bookingWithVehicleNumberAndPhone merchantShortId
+bookingWithVehicleNumberAndPhone :: ShortId DM.Merchant -> City.City -> Common.BookingWithVehicleAndPhoneReq -> FlowHandler Common.BookingWithVehicleAndPhoneRes
+bookingWithVehicleNumberAndPhone merchantShortId opCity req = withFlowHandlerAPI $ do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  DRide.bookingWithVehicleNumberAndPhone merchant merchantOpCityId req
 
-ticketRideList :: ShortId DM.Merchant -> Maybe (ShortId Common.Ride) -> Maybe Text -> Maybe Text -> Maybe Text -> FlowHandler Common.TicketRideListRes
-ticketRideList merchantShortId mbRideShortId mbCountryCode mbPhoneNumber mbSupportPhoneNumber = withFlowHandlerAPI $ DRide.ticketRideList merchantShortId mbRideShortId mbCountryCode mbPhoneNumber mbSupportPhoneNumber
+ticketRideList :: ShortId DM.Merchant -> City.City -> Maybe (ShortId Common.Ride) -> Maybe Text -> Maybe Text -> Maybe Text -> FlowHandler Common.TicketRideListRes
+ticketRideList merchantShortId _ mbRideShortId mbCountryCode mbPhoneNumber mbSupportPhoneNumber = withFlowHandlerAPI $ DRide.ticketRideList merchantShortId mbRideShortId mbCountryCode mbPhoneNumber mbSupportPhoneNumber

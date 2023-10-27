@@ -119,9 +119,7 @@ runSchedulerM schedulerConfig env action = do
           ConnectionConfigDriver
             { esqDBCfg = schedulerConfig.esqDBCfg,
               esqDBReplicaCfg = schedulerConfig.esqDBCfg,
-              hedisClusterCfg = schedulerConfig.hedisClusterCfg,
-              locationDbCfg = schedulerConfig.esqDBCfg,
-              locationDbReplicaCfg = schedulerConfig.esqDBCfg
+              hedisClusterCfg = schedulerConfig.hedisClusterCfg
             }
           ( Tables
               { enableKVForWriteAlso = [],

@@ -23,7 +23,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.Queries.KioskLocation as Queries
 
-fetchAllKioskLocationsByMerchant :: (CacheFlow m r, MonadFlow m) => Id Merchant -> m [KioskLocation]
+fetchAllKioskLocationsByMerchant :: (CacheFlow m r, MonadFlow m, EsqDBFlow m r) => Id Merchant -> m [KioskLocation]
 fetchAllKioskLocationsByMerchant (Id merchantId) =
   Hedis.withCrossAppRedis (Hedis.safeGet $ makeMerchantIdKey (Id merchantId)) >>= \case
     Just a -> pure a

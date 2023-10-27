@@ -14,8 +14,8 @@
 
 module SharedLogic.DriverPool.Config where
 
-import Domain.Types.Merchant
 import Domain.Types.Merchant.DriverPoolConfig
+import Domain.Types.Merchant.MerchantOperatingCity
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Error
@@ -33,11 +33,11 @@ data CancellationScoreRelatedConfig = CancellationScoreRelatedConfig
 
 getDriverPoolConfig ::
   (CacheFlow m r, EsqDBFlow m r) =>
-  Id Merchant ->
+  Id MerchantOperatingCity ->
   Meters ->
   m DriverPoolConfig
-getDriverPoolConfig merchantId dist = do
-  configs <- CDP.findAllByMerchantId merchantId
+getDriverPoolConfig merchantOpCityId dist = do
+  configs <- CDP.findAllByMerchantOpCityId merchantOpCityId
   let applicableConfig = find filterByDist configs
   case configs of
     [] -> throwError $ InvalidRequest "DriverPoolConfig not found"

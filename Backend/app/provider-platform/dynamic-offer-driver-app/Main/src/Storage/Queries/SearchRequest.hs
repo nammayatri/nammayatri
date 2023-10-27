@@ -29,36 +29,38 @@ import Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified SharedLogic.LocationMapping as SLM
 import qualified Storage.Beam.SearchRequest as BeamSR
+import qualified Storage.CachedQueries.Merchant as CQM
+import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Queries.Location as QL
 import qualified Storage.Queries.LocationMapping as QLM
 import qualified Storage.Queries.SearchRequest.SearchReqLocation as QSRL
 
-createDSReq' :: MonadFlow m => SearchRequest -> m ()
+createDSReq' :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => SearchRequest -> m ()
 createDSReq' = createWithKV
 
-create :: MonadFlow m => SearchRequest -> m ()
+create :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => SearchRequest -> m ()
 create dsReq = do
   _ <- whenNothingM_ (QL.findById dsReq.fromLocation.id) $ do QL.create dsReq.fromLocation
   _ <- whenNothingM_ (QL.findById dsReq.toLocation.id) $ do QL.create dsReq.toLocation
   createDSReq' dsReq
 
-createDSReq :: MonadFlow m => SearchRequest -> m ()
+createDSReq :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => SearchRequest -> m ()
 createDSReq searchRequest = do
   fromLocationMap <- SLM.buildPickUpLocationMapping searchRequest.fromLocation.id searchRequest.id.getId DLM.SEARCH_REQUEST
   toLocationMaps <- SLM.buildDropLocationMapping searchRequest.toLocation.id searchRequest.id.getId DLM.SEARCH_REQUEST
   QLM.create fromLocationMap >> QLM.create toLocationMaps >> create searchRequest
 
-findById :: MonadFlow m => Id SearchRequest -> m (Maybe SearchRequest)
+findById :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id SearchRequest -> m (Maybe SearchRequest)
 findById (Id searchRequestId) = findOneWithKV [Se.Is BeamSR.id $ Se.Eq searchRequestId]
 
-getRequestIdfromTransactionId :: MonadFlow m => Id SearchRequest -> m (Maybe (Id SearchRequest))
+getRequestIdfromTransactionId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id SearchRequest -> m (Maybe (Id SearchRequest))
 getRequestIdfromTransactionId (Id tId) = findOneWithKV [Se.Is BeamSR.transactionId $ Se.Eq tId] <&> fmap Domain.id
 
-findByTransactionId :: MonadFlow m => Text -> m (Maybe (Id SearchRequest))
+findByTransactionId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> m (Maybe (Id SearchRequest))
 findByTransactionId transactionId = findOneWithKV [Se.And [Se.Is BeamSR.transactionId $ Se.Eq transactionId]] <&> (Domain.id <$>)
 
 updateAutoAssign ::
-  MonadFlow m =>
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
   Id SearchRequest ->
   Bool ->
   m ()
@@ -94,12 +96,15 @@ instance FromTType' BeamSR.SearchRequest SearchRequest where
           tl <- QL.findById toLocMap.locationId >>= fromMaybeM (InternalError $ "ToLocation not found in search request for toLocationId: " <> toLocMap.locationId.getId)
           return (fl, tl)
     pUrl <- parseBaseUrl bapUri
+    merchant <- CQM.findById (Id providerId) >>= fromMaybeM (MerchantNotFound providerId)
+    merchantOpCityId <- CQMOC.getMerchantOpCityId (Id <$> merchantOperatingCityId) merchant bapCity
     pure $
       Just
         SearchRequest
           { id = Id id,
             transactionId = transactionId,
             providerId = Id providerId,
+            merchantOperatingCityId = merchantOpCityId,
             fromLocation = fl,
             toLocation = tl,
             area = area,
@@ -123,6 +128,7 @@ instance ToTType' BeamSR.SearchRequest SearchRequest where
       { BeamSR.id = getId id,
         BeamSR.transactionId = transactionId,
         BeamSR.providerId = getId providerId,
+        BeamSR.merchantOperatingCityId = Just $ getId merchantOperatingCityId,
         BeamSR.fromLocationId = Just $ getId fromLocation.id,
         BeamSR.toLocationId = Just $ getId toLocation.id,
         BeamSR.area = area,
@@ -142,7 +148,7 @@ instance ToTType' BeamSR.SearchRequest SearchRequest where
 
 -- FUNCTIONS FOR HANDLING OLD DATA : TO BE REMOVED AFTER SOME TIME
 
-buildLocation :: MonadFlow m => DSSL.SearchReqLocation -> m DL.Location
+buildLocation :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => DSSL.SearchReqLocation -> m DL.Location
 buildLocation DSSL.SearchReqLocation {..} =
   return $
     DL.Location
@@ -155,7 +161,7 @@ buildLocation DSSL.SearchReqLocation {..} =
         ..
       }
 
-upsertLocationForOldData :: MonadFlow m => Maybe (Id DSSL.SearchReqLocation) -> Text -> m DL.Location
+upsertLocationForOldData :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Maybe (Id DSSL.SearchReqLocation) -> Text -> m DL.Location
 upsertLocationForOldData locationId searchReqId = do
   loc <- QSRL.findById `mapM` locationId >>= fromMaybeM (InternalError "LocationId Not Found in Search Request Location Table")
   location <- maybe (throwError $ InternalError $ "Location not found in SearchRequest for Search Request Id:" <> show searchReqId) buildLocation loc

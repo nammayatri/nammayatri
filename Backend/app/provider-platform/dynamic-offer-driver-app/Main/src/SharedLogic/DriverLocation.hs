@@ -19,7 +19,6 @@ import Domain.Types.Merchant
 import Domain.Types.Person as Person
 import Kernel.External.Maps
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto.Config (EsqLocDBFlow, EsqLocRepDBFlow)
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Error
 import Kernel.Types.Id
@@ -28,7 +27,7 @@ import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.DriverLocation as DLQueries
 import Tools.Error
 
-upsertGpsCoord :: (CacheFlow m r, MonadFlow m, EsqLocDBFlow m r, EsqLocRepDBFlow m r, MonadReader r m, HasField "enableLocationTrackingService" r Bool) => Id Person -> LatLong -> UTCTime -> Id Merchant -> m ()
+upsertGpsCoord :: (CacheFlow m r, MonadFlow m, MonadReader r m, HasField "enableLocationTrackingService" r Bool, EsqDBFlow m r) => Id Person -> LatLong -> UTCTime -> Id Merchant -> m ()
 upsertGpsCoord driverId latLong calculationTime merchantId = do
   enableLocationTrackingService <- asks (.enableLocationTrackingService)
   when enableLocationTrackingService $ do
@@ -49,7 +48,7 @@ upsertGpsCoord driverId latLong calculationTime merchantId = do
 makeDriverLocationKey :: Id Person -> Text
 makeDriverLocationKey id = "DriverLocation:PersonId-" <> id.getId
 
-findById :: (CacheFlow m r, MonadFlow m, EsqLocRepDBFlow m r, MonadReader r m, HasField "enableLocationTrackingService" r Bool) => Id Person -> m (Maybe DriverLocation)
+findById :: (CacheFlow m r, MonadFlow m, MonadReader r m, HasField "enableLocationTrackingService" r Bool, EsqDBFlow m r) => Id Person -> m (Maybe DriverLocation)
 findById id = do
   enableLocationTrackingService <- asks (.enableLocationTrackingService)
   when enableLocationTrackingService $ do
@@ -64,7 +63,7 @@ cacheDriverLocation driverLocation = do
   let driverLocationKey = makeDriverLocationKey driverLocation.driverId
   Hedis.setExp driverLocationKey driverLocation expTime
 
-updateOnRide :: (CacheFlow m r, MonadFlow m, EsqLocDBFlow m r, EsqLocRepDBFlow m r, HasField "enableLocationTrackingService" r Bool) => Id Merchant -> Id Person.Person -> Bool -> m ()
+updateOnRide :: (CacheFlow m r, MonadFlow m, HasField "enableLocationTrackingService" r Bool, EsqDBFlow m r) => Id Merchant -> Id Person.Person -> Bool -> m ()
 updateOnRide merchantId driverId onRide = do
   QDI.updateOnRide (cast driverId) onRide
   enableLocationTrackingService <- asks (.enableLocationTrackingService)

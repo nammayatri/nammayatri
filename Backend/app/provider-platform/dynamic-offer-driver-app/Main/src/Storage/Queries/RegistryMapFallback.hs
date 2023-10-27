@@ -19,16 +19,17 @@ import Domain.Types.RegistryMapFallback
 import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.Common
+import Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified Storage.Beam.RegistryMapFallback as BeamRMT
 
-findBySubscriberId :: MonadFlow m => Text -> m [RegistryMapFallback]
+findBySubscriberId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> m [RegistryMapFallback]
 findBySubscriberId subscriberId = findAllWithKV [Se.Is BeamRMT.subscriberId $ Se.Eq subscriberId]
 
-findByUniqueId :: MonadFlow m => Text -> m [RegistryMapFallback]
+findByUniqueId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> m [RegistryMapFallback]
 findByUniqueId uniqueId = findAllWithKV [Se.Is BeamRMT.uniqueId $ Se.Eq uniqueId]
 
-findBySubscriberIdAndUniqueId :: MonadFlow m => Text -> Text -> m (Maybe RegistryMapFallback)
+findBySubscriberIdAndUniqueId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> Text -> m (Maybe RegistryMapFallback)
 findBySubscriberIdAndUniqueId subscriberId uniqueId = findOneWithKV [Se.And [Se.Is BeamRMT.subscriberId $ Se.Eq subscriberId, Se.Is BeamRMT.uniqueId $ Se.Eq uniqueId]]
 
 instance FromTType' BeamRMT.RegistryMapFallback RegistryMapFallback where

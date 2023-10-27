@@ -28,6 +28,7 @@ import qualified Domain.Types.DriverOnboarding.IdfyVerification as IV
 import qualified Domain.Types.DriverOnboarding.Image as Image
 import qualified Domain.Types.DriverOnboarding.VehicleRegistrationCertificate as RC
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as SP
 import Environment
 import Kernel.External.Encryption
@@ -59,16 +60,16 @@ data StatusRes = StatusRes
   }
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-statusHandler :: (Id SP.Person, Id DM.Merchant) -> Maybe Bool -> Flow StatusRes
-statusHandler (personId, merchantId) multipleRC = do
+statusHandler :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe Bool -> Flow StatusRes
+statusHandler (personId, merchantId, merchantOpCityId) multipleRC = do
   -- multipleRC flag is temporary to support backward compatibility
-  transporterConfig <- findByMerchantId merchantId >>= fromMaybeM (TransporterConfigNotFound merchantId.getId)
-  (dlStatus, mDL) <- getDLAndStatus personId transporterConfig.onboardingTryLimit
-  (rcStatus, mRC) <- getRCAndStatus personId transporterConfig.onboardingTryLimit multipleRC
+  transporterConfig <- findByMerchantOpCityId merchantOpCityId >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  (dlStatus, mDL) <- getDLAndStatus personId merchantOpCityId transporterConfig.onboardingTryLimit
+  (rcStatus, mRC) <- getRCAndStatus personId merchantOpCityId transporterConfig.onboardingTryLimit multipleRC
   (aadhaarStatus, _) <- getAadhaarStatus personId
 
   when (rcStatus == VALID && isNothing multipleRC) $
-    activateRCAutomatically personId merchantId mRC
+    activateRCAutomatically personId merchantId merchantOpCityId mRC
 
   when (dlStatus == VALID && rcStatus == VALID && (aadhaarStatus == VALID || not transporterConfig.aadhaarVerificationRequired)) $ do
     enableDriver personId mDL
@@ -84,22 +85,22 @@ getAadhaarStatus personId = do
         else return (MANUAL_VERIFICATION_REQUIRED, Just aadhaarCard)
     Nothing -> return (NO_DOC_AVAILABLE, Nothing)
 
-getDLAndStatus :: Id SP.Person -> Int -> Flow (ResponseStatus, Maybe DL.DriverLicense)
-getDLAndStatus driverId onboardingTryLimit = do
+getDLAndStatus :: Id SP.Person -> Id DMOC.MerchantOperatingCity -> Int -> Flow (ResponseStatus, Maybe DL.DriverLicense)
+getDLAndStatus driverId merchantOpCityId onboardingTryLimit = do
   mDriverLicense <- DLQuery.findByDriverId driverId
   status <-
     case mDriverLicense of
       Just driverLicense -> return $ mapStatus driverLicense.verificationStatus
       Nothing -> do
-        checkIfInVerification driverId onboardingTryLimit Image.DriverLicense
+        checkIfInVerification driverId merchantOpCityId onboardingTryLimit Image.DriverLicense
   return (status, mDriverLicense)
 
-getRCAndStatus :: Id SP.Person -> Int -> Maybe Bool -> Flow (ResponseStatus, Maybe RC.VehicleRegistrationCertificate)
-getRCAndStatus driverId onboardingTryLimit multipleRC = do
+getRCAndStatus :: Id SP.Person -> Id DMOC.MerchantOperatingCity -> Int -> Maybe Bool -> Flow (ResponseStatus, Maybe RC.VehicleRegistrationCertificate)
+getRCAndStatus driverId merchantOpCityId onboardingTryLimit multipleRC = do
   associations <- DRAQuery.findAllLinkedByDriverId driverId
   if null associations
     then do
-      status <- checkIfInVerification driverId onboardingTryLimit Image.VehicleRegistrationCertificate
+      status <- checkIfInVerification driverId merchantOpCityId onboardingTryLimit Image.VehicleRegistrationCertificate
       return (status, Nothing)
     else do
       mVehicleRCs <- RCQuery.findById `mapM` ((.rcId) <$> associations)
@@ -126,10 +127,10 @@ mapStatus = \case
   IV.VALID -> VALID
   IV.INVALID -> INVALID
 
-checkIfInVerification :: Id SP.Person -> Int -> Image.ImageType -> Flow ResponseStatus
-checkIfInVerification driverId onboardingTryLimit docType = do
+checkIfInVerification :: Id SP.Person -> Id DMOC.MerchantOperatingCity -> Int -> Image.ImageType -> Flow ResponseStatus
+checkIfInVerification driverId merchantOpCityId onboardingTryLimit docType = do
   verificationReq <- IVQuery.findLatestByDriverIdAndDocType driverId docType
-  images <- IQuery.findRecentByPersonIdAndImageType driverId docType
+  images <- IQuery.findRecentByPersonIdAndImageType driverId merchantOpCityId docType
   pure $ verificationStatus onboardingTryLimit (length images) verificationReq
 
 verificationStatus :: Int -> Int -> Maybe IV.IdfyVerification -> ResponseStatus
@@ -152,13 +153,13 @@ enableDriver personId (Just dl) = do
     DIQuery.verifyAndEnableDriver personId
     whenJust dl.driverName $ \name -> Person.updateName personId name
 
-activateRCAutomatically :: Id SP.Person -> Id DM.Merchant -> Maybe RC.VehicleRegistrationCertificate -> Flow ()
-activateRCAutomatically _ _ Nothing = return ()
-activateRCAutomatically personId merchantId (Just rc) = do
+activateRCAutomatically :: Id SP.Person -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe RC.VehicleRegistrationCertificate -> Flow ()
+activateRCAutomatically _ _ _ Nothing = return ()
+activateRCAutomatically personId merchantId merchantOpCityId (Just rc) = do
   rcNumber <- decrypt rc.certificateNumber
   let rcStatusReq =
         DomainRC.RCStatusReq
           { rcNo = rcNumber,
             isActivate = True
           }
-  void $ DomainRC.linkRCStatus (personId, merchantId) rcStatusReq
+  void $ DomainRC.linkRCStatus (personId, merchantId, merchantOpCityId) rcStatusReq

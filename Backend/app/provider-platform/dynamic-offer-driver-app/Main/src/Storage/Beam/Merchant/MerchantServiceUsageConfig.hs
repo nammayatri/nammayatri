@@ -28,6 +28,7 @@ import Tools.Beam.UtilsTH
 
 data MerchantServiceUsageConfigT f = MerchantServiceUsageConfigT
   { merchantId :: B.C f Text,
+    merchantOperatingCityId :: B.C f Text,
     initiateCall :: B.C f CallService,
     getDistances :: B.C f MapsService,
     getEstimatedPickupDistances :: B.C f MapsService,
@@ -55,10 +56,10 @@ instance B.Table MerchantServiceUsageConfigT where
   data PrimaryKey MerchantServiceUsageConfigT f
     = Id (B.C f Text)
     deriving (Generic, B.Beamable)
-  primaryKey = Id . merchantId
+  primaryKey = Id . merchantOperatingCityId
 
 type MerchantServiceUsageConfig = MerchantServiceUsageConfigT Identity
 
-$(enableKVPG ''MerchantServiceUsageConfigT ['merchantId] [])
+$(enableKVPG ''MerchantServiceUsageConfigT ['merchantOperatingCityId] [])
 
 $(mkTableInstances ''MerchantServiceUsageConfigT "merchant_service_usage_config")

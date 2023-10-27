@@ -20,6 +20,7 @@ where
 
 import qualified Domain.Action.UI.KioskLocation as DKioskLocation
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as Person
 import Environment
 import Kernel.Prelude
@@ -38,5 +39,5 @@ type API =
 handler :: FlowServer API
 handler = listKioskLocations
 
-listKioskLocations :: (Id Person.Person, Id DM.Merchant) -> FlowHandler DKioskLocation.KioskLocationRes
+listKioskLocations :: (Id Person.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> FlowHandler DKioskLocation.KioskLocationRes
 listKioskLocations = withFlowHandlerAPI . DKioskLocation.listKioskLocations

@@ -24,6 +24,7 @@ where
 import qualified Domain.Action.UI.Location as DLocation
 import qualified Domain.Action.UI.Location.UpdateLocation as DLocation
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.Ride as SRide
 import Environment
@@ -49,10 +50,10 @@ handler =
   getLocation
     :<|> updateLocation
 
-updateLocation :: (Id Person.Person, Id DM.Merchant) -> DLocation.UpdateLocationReq -> FlowHandler APISuccess
-updateLocation (personId, _) waypoints = withFlowHandlerAPI $ do
-  hdl <- DLocation.buildUpdateLocationHandle personId
-  DLocation.updateLocationHandler hdl waypoints
+updateLocation :: (Id Person.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> DLocation.UpdateLocationReq -> FlowHandler APISuccess
+updateLocation (personId, _, merchantOpCityId) waypoints = withFlowHandlerAPI $ do
+  hdl <- DLocation.buildUpdateLocationHandle personId merchantOpCityId
+  DLocation.updateLocationHandler hdl waypoints merchantOpCityId
 
 getLocation :: Id SRide.Ride -> FlowHandler DLocation.GetLocationRes
 getLocation = withFlowHandlerAPI . DLocation.getLocation

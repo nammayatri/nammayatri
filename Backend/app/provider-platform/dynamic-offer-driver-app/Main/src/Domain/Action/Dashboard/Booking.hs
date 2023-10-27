@@ -32,6 +32,7 @@ import Environment
 import Kernel.Beam.Functions as B
 import Kernel.External.Maps (LatLong (..))
 import Kernel.Prelude
+import qualified Kernel.Types.Beckn.City as City
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -55,9 +56,10 @@ import qualified Storage.Queries.Ride as QRide
 
 stuckBookingsCancel ::
   ShortId DM.Merchant ->
+  City.City ->
   Common.StuckBookingsCancelReq ->
   Flow Common.StuckBookingsCancelRes
-stuckBookingsCancel merchantShortId req = do
+stuckBookingsCancel merchantShortId _ req = do
   merchant <- findMerchantByShortId merchantShortId
   let reqBookingIds = cast @Common.Booking @DBooking.Booking <$> req.bookingIds
 
@@ -124,9 +126,10 @@ mkStuckBookingsCancelRes stuckBookingIds stuckRideItems = do
 ---------------------------------------------------------------------
 multipleBookingSync ::
   ShortId DM.Merchant ->
+  City.City ->
   Common.MultipleBookingSyncReq ->
   Flow Common.MultipleBookingSyncResp
-multipleBookingSync merchantShortId req = do
+multipleBookingSync merchantShortId _ req = do
   runRequestValidation Common.validateMultipleBookingSyncReq req
   merchant <- findMerchantByShortId merchantShortId
   let reqBookingIds = cast @Common.Booking @DBooking.Booking . (.bookingId) <$> req.bookings

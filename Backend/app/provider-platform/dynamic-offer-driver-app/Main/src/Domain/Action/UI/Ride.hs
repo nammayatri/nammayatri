@@ -67,6 +67,7 @@ import qualified Storage.CachedQueries.BapMetadata as CQSM
 import qualified Storage.CachedQueries.Driver.GoHomeRequest as CGHR
 import qualified Storage.CachedQueries.Exophone as CQExophone
 import Storage.CachedQueries.Merchant as QM
+import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.BusinessEvent as QBE
 import qualified Storage.Queries.Driver.DriverFlowStatus as QDFS
@@ -233,13 +234,13 @@ otpRideCreate driver otpCode booking = do
   vehicle <- QVeh.findById driver.id >>= fromMaybeM (VehicleNotFound driver.id.getId)
   when (isNotAllowedVehicleVariant vehicle.variant booking.vehicleVariant) $ throwError $ InvalidRequest "Wrong Vehicle Variant"
   when (booking.status `elem` [DRB.COMPLETED, DRB.CANCELLED]) $ throwError (BookingInvalidStatus $ show booking.status)
-
+  merchantOpCityId <- CQMOC.getMerchantOpCityId booking.merchantOperatingCityId transporter booking.bapCity
   driverInfo <- QDI.findById (cast driver.id) >>= fromMaybeM DriverInfoNotFound
   unless (driverInfo.subscribed) $ throwError DriverUnsubscribed
   unless (driverInfo.enabled) $ throwError DriverAccountDisabled
   when driverInfo.onRide $ throwError DriverOnRide
-  ghrId <- (CGHR.getDriverGoHomeRequestInfo driver.id booking.providerId) Nothing <&> (.driverGoHomeRequestId)
-  ride <- buildRide otpCode driver.id (Just transporter.id) ghrId
+  ghrId <- (CGHR.getDriverGoHomeRequestInfo driver.id merchantOpCityId) Nothing <&> (.driverGoHomeRequestId)
+  ride <- buildRide otpCode driver.id (Just transporter.id) merchantOpCityId ghrId
   rideDetails <- buildRideDetails ride
 
   -- moving route from booking id to ride id
@@ -262,11 +263,11 @@ otpRideCreate driver otpCode booking = do
   triggerRideCreatedEvent RideEventData {ride = ride, personId = driver.id, merchantId = transporter.id}
 
   uBooking <- runInReplica $ QBooking.findById booking.id >>= fromMaybeM (BookingNotFound booking.id.getId) -- in replica db we can have outdated value
-  Notify.notifyDriver transporter.id notificationType notificationTitle (message uBooking) driver.id driver.deviceToken
+  Notify.notifyDriver merchantOpCityId notificationType notificationTitle (message uBooking) driver.id driver.deviceToken
 
   handle (errHandler uBooking transporter) $ BP.sendRideAssignedUpdateToBAP uBooking ride
 
-  DS.driverScoreEventHandler DST.OnNewRideAssigned {merchantId = transporter.id, driverId = driver.id}
+  DS.driverScoreEventHandler merchantOpCityId DST.OnNewRideAssigned {merchantId = transporter.id, driverId = driver.id}
 
   driverNumber <- RD.getDriverNumber rideDetails
   mbExophone <- CQExophone.findByPrimaryPhone booking.primaryExophone
@@ -287,7 +288,7 @@ otpRideCreate driver otpCode booking = do
             cs (showTimeIst uBooking.startTime) <> ".",
             "Check the app for more details."
           ]
-    buildRide otp driverId merchantId ghrId = do
+    buildRide otp driverId merchantId merchantOpCityId ghrId = do
       guid <- Id <$> generateGUID
       shortId <- generateShortId
       now <- getCurrentTime
@@ -299,6 +300,7 @@ otpRideCreate driver otpCode booking = do
             bookingId = booking.id,
             shortId = shortId,
             merchantId = merchantId,
+            merchantOperatingCityId = Just merchantOpCityId,
             status = DRide.NEW,
             driverId = cast driverId,
             otp = otp,

@@ -17,6 +17,7 @@ module Domain.Types.Merchant.MerchantMessage where
 
 import Domain.Types.Common (UsageSafety (..))
 import Domain.Types.Merchant (Merchant)
+import Domain.Types.Merchant.MerchantOperatingCity
 import Kernel.Prelude
 import Kernel.Types.Id
 import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
@@ -37,6 +38,7 @@ $(mkBeamInstancesForEnum ''MessageKey)
 
 data MerchantMessageD (s :: UsageSafety) = MerchantMessage
   { merchantId :: Id Merchant,
+    merchantOperatingCityId :: Id MerchantOperatingCity,
     messageKey :: MessageKey,
     message :: Text,
     updatedAt :: UTCTime,

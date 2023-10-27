@@ -47,6 +47,7 @@ data PersonT f = PersonT
     isNew :: B.C f Bool,
     onboardedFromDashboard :: B.C f Bool,
     merchantId :: B.C f Text,
+    merchantOperatingCityId :: B.C f (Maybe Text),
     deviceToken :: B.C f (Maybe FCMRecipientToken),
     language :: B.C f (Maybe Language),
     whatsappNotificationEnrollStatus :: B.C f (Maybe OptApiMethods),

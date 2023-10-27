@@ -32,6 +32,7 @@ import qualified Kernel.Utils.Predicates as P
 import Kernel.Utils.Validation
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import Storage.CachedQueries.Merchant as QMerchant
+import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import Tools.Error
 import Tools.SMS as Sms hiding (Success)
 
@@ -67,6 +68,7 @@ fleetOwnerLogin req = do
   merchant <-
     QMerchant.findByShortId merchantId
       >>= fromMaybeM (MerchantNotFound merchantId.getShortId)
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just req.city)
   let useFakeOtpM = useFakeSms smsCfg
   otp <- maybe generateOTPCode (return . show) useFakeOtpM
   whenNothing_ useFakeOtpM $ do
@@ -77,12 +79,12 @@ fleetOwnerLogin req = do
     withLogTag ("mobileNumber" <> req.mobileNumber) $
       do
         message <-
-          MessageBuilder.buildSendOTPMessage merchant.id $
+          MessageBuilder.buildSendOTPMessage merchantOpCityId $
             MessageBuilder.BuildSendOTPMessageReq
               { otp = otpCode,
                 hash = otpHash
               }
-        Sms.sendSMS merchant.id (Sms.SendSMSReq message phoneNumber sender)
+        Sms.sendSMS merchant.id merchantOpCityId (Sms.SendSMSReq message phoneNumber sender)
         >>= Sms.checkSmsResult
   let key = makeMobileNumberOtpKey mobileNumber
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)

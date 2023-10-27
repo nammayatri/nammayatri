@@ -21,6 +21,7 @@ where
 
 import qualified Domain.Action.UI.Frontend as DFrontend
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as Person
 import Environment
 import EulerHS.Prelude
@@ -39,5 +40,5 @@ handler :: FlowServer API
 handler =
   getDriverFlowStatus
 
-getDriverFlowStatus :: (Id Person.Person, Id DM.Merchant) -> FlowHandler DFrontend.GetDriverFlowStatusRes
+getDriverFlowStatus :: (Id Person.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> FlowHandler DFrontend.GetDriverFlowStatusRes
 getDriverFlowStatus = withFlowHandlerAPI . DFrontend.getDriverFlowStatus

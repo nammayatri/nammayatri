@@ -23,36 +23,37 @@ import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
+import Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified Storage.Beam.DriverPlan as BeamDF
 
-create :: MonadFlow m => DriverPlan -> m ()
+create :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => DriverPlan -> m ()
 create = createWithKV
 
-findByDriverId :: MonadFlow m => Id Person -> m (Maybe DriverPlan)
+findByDriverId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> m (Maybe DriverPlan)
 findByDriverId (Id driverId) = findOneWithKV [Se.Is BeamDF.driverId $ Se.Eq driverId]
 
-findAllByDriverIdsAndPaymentMode :: MonadFlow m => [Id Person] -> PaymentMode -> m [DriverPlan]
+findAllByDriverIdsAndPaymentMode :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Id Person] -> PaymentMode -> m [DriverPlan]
 findAllByDriverIdsAndPaymentMode driverIds paymentMode = findAllWithKV [Se.And [Se.Is BeamDF.driverId $ Se.In (getId <$> driverIds), Se.Is BeamDF.planType $ Se.Eq paymentMode]]
 
-findByMandateId :: MonadFlow m => Id Mandate -> m (Maybe DriverPlan)
+findByMandateId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Mandate -> m (Maybe DriverPlan)
 findByMandateId (Id mandateId) = findOneWithKV [Se.Is BeamDF.mandateId $ Se.Eq (Just mandateId)]
 
-updatePlanIdByDriverId :: MonadFlow m => Id Person -> Id Plan -> m ()
+updatePlanIdByDriverId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> Id Plan -> m ()
 updatePlanIdByDriverId (Id driverId) (Id planId) = do
   now <- getCurrentTime
   updateOneWithKV
     [Se.Set BeamDF.planId planId, Se.Set BeamDF.updatedAt now]
     [Se.Is BeamDF.driverId (Se.Eq driverId)]
 
-updateMandateIdByDriverId :: MonadFlow m => Id Person -> Id Mandate -> m ()
+updateMandateIdByDriverId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> Id Mandate -> m ()
 updateMandateIdByDriverId driverId (Id mandateId) = do
   now <- getCurrentTime
   updateOneWithKV
     [Se.Set BeamDF.mandateId (Just mandateId), Se.Set BeamDF.updatedAt now]
     [Se.Is BeamDF.driverId (Se.Eq (getId driverId))]
 
-updatePaymentModeByDriverId :: MonadFlow m => Id Person -> PaymentMode -> m ()
+updatePaymentModeByDriverId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> PaymentMode -> m ()
 updatePaymentModeByDriverId driverId paymentMode = do
   now <- getCurrentTime
   updateOneWithKV
@@ -61,7 +62,7 @@ updatePaymentModeByDriverId driverId paymentMode = do
     ]
     [Se.Is BeamDF.driverId (Se.Eq (getId driverId))]
 
-updateMandateSetupDateByDriverId :: MonadFlow m => Id Person -> m ()
+updateMandateSetupDateByDriverId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> m ()
 updateMandateSetupDateByDriverId driverId = do
   now <- getCurrentTime
   updateOneWithKV

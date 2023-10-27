@@ -26,22 +26,25 @@ import Environment
 import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.APISuccess (APISuccess (Success))
+import qualified Kernel.Types.Beckn.City as City
 import Kernel.Types.Common (Forkable (fork), MonadTime (getCurrentTime))
 import Kernel.Types.Id
 import Kernel.Utils.Common (fromMaybeM)
 import SharedLogic.Merchant (findMerchantByShortId)
 import SharedLogic.Person (findPerson)
+import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as TC
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.Ride as QRide
 import Tools.Error
 import qualified Tools.SMS as Sms
 
-bookingInfo :: ShortId DM.Merchant -> Text -> Flow Common.BookingInfoResponse
-bookingInfo merchantShortId otpCode = do
+bookingInfo :: ShortId DM.Merchant -> City.City -> Text -> Flow Common.BookingInfoResponse
+bookingInfo merchantShortId opCity otpCode = do
   merchant <- findMerchantByShortId merchantShortId
   now <- getCurrentTime
-  transporterConfig <- TC.findByMerchantId merchant.id >>= fromMaybeM (TransporterConfigNotFound merchant.id.getId)
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  transporterConfig <- TC.findByMerchantOpCityId merchantOpCityId >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   booking <- runInReplica $ QBooking.findBookingBySpecialZoneOTP merchant.id otpCode now transporterConfig.specialZoneBookingOtpExpiry >>= fromMaybeM (BookingNotFoundForSpecialZoneOtp otpCode)
   return $ buildMessageInfoResponse booking
   where
@@ -76,17 +79,16 @@ bookingInfo merchantShortId otpCode = do
         { ..
         }
 
-assignCreateAndStartOtpRide :: ShortId DM.Merchant -> Common.AssignCreateAndStartOtpRideAPIReq -> Flow APISuccess
-assignCreateAndStartOtpRide _ Common.AssignCreateAndStartOtpRideAPIReq {..} = do
+assignCreateAndStartOtpRide :: ShortId DM.Merchant -> City.City -> Common.AssignCreateAndStartOtpRideAPIReq -> Flow APISuccess
+assignCreateAndStartOtpRide _ _ Common.AssignCreateAndStartOtpRideAPIReq {..} = do
   requestor <- findPerson (cast driverId)
   booking <- runInReplica $ QBooking.findById (cast bookingId) >>= fromMaybeM (BookingNotFound bookingId.getId)
   rideOtp <- booking.specialZoneOtpCode & fromMaybeM (InternalError "otpCode not found for special zone booking")
-
   ride <- DRide.otpRideCreate requestor rideOtp booking
   let driverReq = RideStart.DriverStartRideReq {rideOtp, point, requestor}
   fork "sending dashboard sms - start ride" $ do
     mride <- runInReplica $ QRide.findById ride.id >>= fromMaybeM (RideDoesNotExist ride.id.getId)
-    Sms.sendDashboardSms booking.providerId Sms.BOOKING (Just mride) mride.driverId (Just booking) 0
-  shandle <- RideStart.buildStartRideHandle requestor.merchantId
+    Sms.sendDashboardSms booking.providerId booking.merchantOperatingCityId Sms.BOOKING (Just mride) mride.driverId (Just booking) 0
+  shandle <- RideStart.buildStartRideHandle requestor.merchantId booking.merchantOperatingCityId
   void $ RideStart.driverStartRide shandle ride.id driverReq
   return Success
