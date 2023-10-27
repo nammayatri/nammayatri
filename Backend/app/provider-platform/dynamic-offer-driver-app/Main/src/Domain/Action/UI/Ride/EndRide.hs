@@ -269,7 +269,6 @@ endRide handle@ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.g
               Nothing -> pure ()
               Just image -> do
                 person <- Person.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
-
                 let merchantId = person.merchantId
                 transporterConfig <- CQTC.findByMerchantId merchantId >>= fromMaybeM (TransporterConfigNotFound (getId merchantId))
                 imagePath <- createPath (getId rideId) driverReq.odometerEndImageExtension

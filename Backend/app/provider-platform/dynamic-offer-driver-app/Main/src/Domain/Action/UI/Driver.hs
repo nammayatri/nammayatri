@@ -1183,8 +1183,6 @@ respondQuote ::
     LT.HasLocationService m r,
     HasHttpClientOptions r c,
     HasShortDurationRetryCfg r c,
-    --EsqLocDBFlow m r,
-    --EsqLocRepDBFlow m r,
     HasPrettyLogger m r,
     MonadFlow m,
     EventStreamFlow m r,

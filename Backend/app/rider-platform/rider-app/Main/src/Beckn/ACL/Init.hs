@@ -16,9 +16,6 @@
 module Beckn.ACL.Init (buildInitReq) where
 
 import qualified Beckn.ACL.Common as Common
--- import Environment
--- import Kernel.External.Maps.Types (LatLong)
-
 import Beckn.Types.Core.Taxi.Common.TimeTimestamp
 import qualified Beckn.Types.Core.Taxi.Init as Init
 import Control.Lens ((%~))
@@ -138,7 +135,7 @@ mkFulfillmentInfo fulfillmentType mbBppFullfillmentId fromLoc mbToLoc mbMaxDista
                                [ Init.Tag
                                    { display = (\_ -> Just True) =<< rentalDuration,
                                      code = (\_ -> Just "rental_duration") =<< rentalDuration,
-                                     name = (\_ -> Just "How may hours selected") =<< rentalDuration,
+                                     name = (\_ -> Just "Rental Duration") =<< rentalDuration,
                                      value = (Just . show) =<< rentalDuration
                                    }
                                ]

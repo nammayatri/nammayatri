@@ -100,7 +100,6 @@ confirm DConfirmReq {..} = do
       DQuote.OneWayDetails _ -> pure Nothing
       DQuote.RentalDetails rentalDetails -> do
         unless (isJust startTime && isJust rentalDuration) $ throwError $ InvalidRequest "Rental confirm quote should have startTime param"
-        --here i can update the quote estimate fare
         let estimateFare = calculateRentalEstimateFare (fromJust rentalDuration) rentalDetails
         _ <- QQuote.updateQuoteEstimateFare quoteId estimateFare
         pure $ Just rentalDetails.id.getId
