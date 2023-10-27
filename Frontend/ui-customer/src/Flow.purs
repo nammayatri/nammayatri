@@ -507,19 +507,8 @@ currentFlowStatus = do
                        , sourceAddress = flowStatusData.sourceAddress
                        , destinationAddress = flowStatusData.destinationAddress }
                 })
-            Nothing -> cancelFindingQuotes
-        else cancelFindingQuotes
-
-    cancelFindingQuotes :: FlowBT String Unit
-    cancelFindingQuotes = do
-      (GlobalState globalState) <- getState
-      let homeScreenState = globalState.homeScreen
-          updatedHomeScreenState = if homeScreenState.props.customerTip.enableTips then 
-                            tipEnabledState homeScreenState{props{isPopUp = TipsPopUp}} 
-                         else homeScreenState{props{isPopUp = ConfirmBack}}
-      modifyScreenState $ HomeScreenStateType (\homeScreen -> updatedHomeScreenState)
-      setValueToLocalStore LOCAL_STAGE (show QuoteList)
-      updateFlowStatus SEARCH_CANCELLED
+            Nothing -> updateFlowStatus SEARCH_CANCELLED
+        else updateFlowStatus SEARCH_CANCELLED
 
 
 chooseLanguageScreenFlow :: FlowBT String Unit
@@ -713,7 +702,6 @@ homeScreenFlow = do
   flow <- UI.homeScreen
   case flow of
     CHECK_FLOW_STATUS -> currentFlowStatus
-    ON_RESUME_APP -> currentFlowStatus
     GO_TO_MY_RIDES -> do
       modifyScreenState $ MyRideScreenStateType (\myRidesScreen -> myRidesScreen{data{offsetValue = 0}})
       myRidesScreenFlow true

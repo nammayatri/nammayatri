@@ -143,9 +143,6 @@ homeScreen = do
     FetchContacts updatedState -> do
       modifyScreenState $ HomeScreenStateType (\homeScreenState -> updatedState)
       App.BackT $ App.BackPoint <$> (pure $ GO_TO_FETCH_CONTACTS updatedState)
-    OnResumeApp updatedState -> do
-      modifyScreenState $ HomeScreenStateType (\homeScreenState -> updatedState)
-      App.BackT $ App.BackPoint <$> (pure ON_RESUME_APP)
     CheckCurrentStatus -> App.BackT $ App.NoBack <$> (pure $ CHECK_CURRENT_STATUS)
     CheckFlowStatus updatedState -> do
       modifyScreenState $ HomeScreenStateType (\homeScreenState -> updatedState)
