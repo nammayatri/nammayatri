@@ -147,19 +147,18 @@ instance FromTType' BeamB.Booking Booking where
     (fl, bookingDetails) <- case bookingType of
       RentalBooking -> do
         let fromLocationMapping = filter (\loc -> loc.order == 0) mappings
+        let toLocationMappings = filter (\loc -> loc.order /= 0) mappings
+
         fromLocMap <- listToMaybe fromLocationMapping & fromMaybeM (InternalError "Entity Mappings For FromLocation Not Found")
         fl <- QL.findById fromLocMap.locationId >>= fromMaybeM (InternalError $ "FromLocation not found in booking for fromLocationId: " <> fromLocMap.locationId.getId)
-        tl <- forM toLocationId $ \_ -> do
-          let toLocationMappings = filter (\loc -> loc.order /= 0) mappings
-          when (null toLocationMappings) $ throwError (InternalError "Entity Mappings For ToLocation Not Found")
-          let toLocMap = maximumBy (comparing (.order)) toLocationMappings
-          QL.findById toLocMap.locationId >>= fromMaybeM (InternalError $ "ToLocation not found in booking for toLocationId: " <> toLocMap.locationId.getId)
+        rentalToLocation <-
+          if null toLocationMappings
+            then pure Nothing
+            else do
+              let toLocMap = maximumBy (comparing (.order)) toLocationMappings
+              Just <$> (QL.findById toLocMap.locationId >>= fromMaybeM (InternalError $ "ToLocation not found in booking for toLocationId: " <> toLocMap.locationId.getId))
 
-        let bookingDetails =
-              DetailsRental
-                BookingDetailsRental
-                  { rentalToLocation = tl
-                  }
+        let bookingDetails = DetailsRental BookingDetailsRental {rentalToLocation}
         return (fl, bookingDetails)
       _ -> do
         unless (isJust toLocationId) $ throwError (InternalError "OnDemand should have to location")
