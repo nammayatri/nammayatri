@@ -20,19 +20,19 @@ module Storage.Queries.Merchant.DriverIntelligentPoolConfig
     #-}
 where
 
-import Domain.Types.Merchant
 import Domain.Types.Merchant.DriverIntelligentPoolConfig
+import Domain.Types.Merchant.MerchantOperatingCity
 import Kernel.Beam.Functions
 import Kernel.Prelude
-import Kernel.Types.Common (MonadFlow, MonadTime (getCurrentTime))
 import Kernel.Types.Id
+import Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified Storage.Beam.Merchant.DriverIntelligentPoolConfig as BeamDIPC
 
-findByMerchantId :: MonadFlow m => Id Merchant -> m (Maybe DriverIntelligentPoolConfig)
-findByMerchantId (Id merchantId) = findOneWithKV [Se.Is BeamDIPC.merchantId $ Se.Eq merchantId]
+findByMerchantOpCityId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id MerchantOperatingCity -> m (Maybe DriverIntelligentPoolConfig)
+findByMerchantOpCityId (Id merchantOperatingCityId) = findOneWithKV [Se.Is BeamDIPC.merchantOperatingCityId $ Se.Eq merchantOperatingCityId]
 
-update :: MonadFlow m => DriverIntelligentPoolConfig -> m ()
+update :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => DriverIntelligentPoolConfig -> m ()
 update config = do
   now <- getCurrentTime
   updateOneWithKV
@@ -52,7 +52,7 @@ update config = do
       Se.Set BeamDIPC.defaultDriverSpeed config.defaultDriverSpeed,
       Se.Set BeamDIPC.updatedAt now
     ]
-    [Se.Is BeamDIPC.merchantId (Se.Eq $ getId config.merchantId)]
+    [Se.Is BeamDIPC.merchantOperatingCityId (Se.Eq $ getId config.merchantOperatingCityId)]
 
 instance FromTType' BeamDIPC.DriverIntelligentPoolConfig DriverIntelligentPoolConfig where
   fromTType' BeamDIPC.DriverIntelligentPoolConfigT {..} = do
@@ -60,6 +60,7 @@ instance FromTType' BeamDIPC.DriverIntelligentPoolConfig DriverIntelligentPoolCo
       Just
         DriverIntelligentPoolConfig
           { merchantId = Id merchantId,
+            merchantOperatingCityId = Id merchantOperatingCityId,
             actualPickupDistanceWeightage = actualPickupDistanceWeightage,
             availabilityTimeWeightage = availabilityTimeWeightage,
             availabilityTimeWindowOption = availabilityTimeWindowOption,
@@ -83,6 +84,7 @@ instance ToTType' BeamDIPC.DriverIntelligentPoolConfig DriverIntelligentPoolConf
   toTType' DriverIntelligentPoolConfig {..} = do
     BeamDIPC.DriverIntelligentPoolConfigT
       { BeamDIPC.merchantId = getId merchantId,
+        BeamDIPC.merchantOperatingCityId = getId merchantOperatingCityId,
         BeamDIPC.actualPickupDistanceWeightage = actualPickupDistanceWeightage,
         BeamDIPC.availabilityTimeWeightage = availabilityTimeWeightage,
         BeamDIPC.availabilityTimeWindowOption = availabilityTimeWindowOption,

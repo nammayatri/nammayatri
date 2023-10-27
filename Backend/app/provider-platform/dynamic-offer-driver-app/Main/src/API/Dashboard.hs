@@ -30,6 +30,7 @@ import qualified API.Dashboard.Subscription as Subscription
 import qualified API.Dashboard.Volunteer as Volunteer
 import qualified Domain.Types.Merchant as DM
 import Environment
+import Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import Servant
 import Tools.Auth
@@ -37,6 +38,7 @@ import Tools.Auth
 type API =
   "dashboard"
     :> ( Capture "merchantId" (ShortId DM.Merchant)
+           :> Capture "city" Context.City
            :> API'
        )
     :<|> ExotelAPI
@@ -60,19 +62,19 @@ type API' =
 
 handler :: FlowServer API
 handler =
-  ( \merchantId _dashboard ->
-      Driver.handler merchantId
-        :<|> Ride.handler merchantId
-        :<|> Subscription.handler merchantId
-        :<|> Booking.handler merchantId
-        :<|> Merchant.handler merchantId
-        :<|> Message.handler merchantId
-        :<|> DriverReferral.handler merchantId
-        :<|> DriverRegistration.handler merchantId
-        :<|> Volunteer.handler merchantId
-        :<|> Issue.handler merchantId
-        :<|> Revenue.handler merchantId
-        :<|> Overlay.handler merchantId
+  ( \merchantId city _dashboard ->
+      Driver.handler merchantId city
+        :<|> Ride.handler merchantId city
+        :<|> Subscription.handler merchantId city
+        :<|> Booking.handler merchantId city
+        :<|> Merchant.handler merchantId city
+        :<|> Message.handler merchantId city
+        :<|> DriverReferral.handler merchantId city
+        :<|> DriverRegistration.handler merchantId city
+        :<|> Volunteer.handler merchantId city
+        :<|> Issue.handler merchantId city
+        :<|> Revenue.handler merchantId city
+        :<|> Overlay.handler merchantId city
   )
     :<|> exotelHandler
     :<|> fleetHandler

@@ -18,15 +18,14 @@ import Domain.Types.DriverInformation as DriverInfo
 import Domain.Types.Vehicle as DV
 import Kernel.Beam.Functions (findAllWithKV)
 import Kernel.Prelude
-import Kernel.Types.App (MonadFlow)
 import Kernel.Types.Id
-import Kernel.Utils.Logging (Log)
+import Kernel.Utils.Common
 import qualified Sequelize as Se
 import Storage.Beam.Vehicle as BeamV
 import Storage.Queries.Vehicle ()
 
 getVehicles ::
-  (MonadFlow m, Log m) =>
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Log m) =>
   [DriverInfo.DriverInformation] ->
   m [DV.Vehicle]
 getVehicles driverInfo = findAllWithKV [Se.Is BeamV.driverId $ Se.In personKeys]

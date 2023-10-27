@@ -15,39 +15,39 @@
 
 module Storage.CachedQueries.Merchant.DriverIntelligentPoolConfig
   ( clearCache,
-    findByMerchantId,
+    findByMerchantOpCityId,
     update,
   )
 where
 
 import Data.Coerce (coerce)
 import Domain.Types.Common
-import Domain.Types.Merchant (Merchant)
 import Domain.Types.Merchant.DriverIntelligentPoolConfig
+import Domain.Types.Merchant.MerchantOperatingCity
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.Queries.Merchant.DriverIntelligentPoolConfig as Queries
 
-findByMerchantId :: (CacheFlow m r, EsqDBFlow m r) => Id Merchant -> m (Maybe DriverIntelligentPoolConfig)
-findByMerchantId id =
-  Hedis.withCrossAppRedis (Hedis.safeGet $ makeMerchantIdKey id) >>= \case
+findByMerchantOpCityId :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> m (Maybe DriverIntelligentPoolConfig)
+findByMerchantOpCityId id =
+  Hedis.withCrossAppRedis (Hedis.safeGet $ makeMerchantOpCityIdKey id) >>= \case
     Just a -> return . Just $ coerce @(DriverIntelligentPoolConfigD 'Unsafe) @DriverIntelligentPoolConfig a
-    Nothing -> flip whenJust cacheDriverIntelligentPoolConfig /=<< Queries.findByMerchantId id
+    Nothing -> flip whenJust cacheDriverIntelligentPoolConfig /=<< Queries.findByMerchantOpCityId id
 
 cacheDriverIntelligentPoolConfig :: CacheFlow m r => DriverIntelligentPoolConfig -> m ()
 cacheDriverIntelligentPoolConfig cfg = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
-  let merchantIdKey = makeMerchantIdKey cfg.merchantId
+  let merchantIdKey = makeMerchantOpCityIdKey cfg.merchantOperatingCityId
   Hedis.withCrossAppRedis $ Hedis.setExp merchantIdKey (coerce @DriverIntelligentPoolConfig @(DriverIntelligentPoolConfigD 'Unsafe) cfg) expTime
 
-makeMerchantIdKey :: Id Merchant -> Text
-makeMerchantIdKey id = "driver-offer:CachedQueries:DriverIntelligentPoolConfig:MerchantId-" <> id.getId
+makeMerchantOpCityIdKey :: Id MerchantOperatingCity -> Text
+makeMerchantOpCityIdKey id = "driver-offer:CachedQueries:DriverIntelligentPoolConfig:MerchantOperatingCityId-" <> id.getId
 
 -- Call it after any update
-clearCache :: Hedis.HedisFlow m r => Id Merchant -> m ()
-clearCache = Hedis.withCrossAppRedis . Hedis.del . makeMerchantIdKey
+clearCache :: Hedis.HedisFlow m r => Id MerchantOperatingCity -> m ()
+clearCache = Hedis.withCrossAppRedis . Hedis.del . makeMerchantOpCityIdKey
 
-update :: MonadFlow m => DriverIntelligentPoolConfig -> m ()
+update :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => DriverIntelligentPoolConfig -> m ()
 update = Queries.update

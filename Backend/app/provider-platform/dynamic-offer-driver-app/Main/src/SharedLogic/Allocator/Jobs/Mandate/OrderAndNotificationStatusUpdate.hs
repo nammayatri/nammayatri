@@ -12,6 +12,8 @@ import Kernel.Types.Id (cast)
 import Kernel.Utils.Common
 import Lib.Scheduler
 import SharedLogic.Allocator
+import qualified Storage.CachedQueries.Merchant as CQM
+import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as SCT
 import qualified Storage.Queries.DriverFee as QDF
 import qualified Storage.Queries.Invoice as QINV
@@ -32,7 +34,10 @@ notificationAndOrderStatusUpdate ::
 notificationAndOrderStatusUpdate (Job {id, jobInfo}) = withLogTag ("JobId-" <> id.getId) do
   let jobData = jobInfo.jobData
       merchantId = jobData.merchantId
-  transporterConfig <- SCT.findByMerchantId merchantId >>= fromMaybeM (TransporterConfigNotFound merchantId.getId)
+      mbMerchantOpCityId = jobData.merchantOperatingCityId
+  merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
+  merchantOpCityId <- CQMOC.getMerchantOpCityId mbMerchantOpCityId merchant Nothing
+  transporterConfig <- SCT.findByMerchantOpCityId merchantOpCityId >>= fromMaybeM (TransporterConfigNotFound merchantId.getId)
   let batchSizeOfNotification = transporterConfig.updateNotificationStatusBatchSize
       batchSizeOfOrderStatus = transporterConfig.updateOrderStatusBatchSize
   allPendingNotification <- QNTF.findAllByStatusWithLimit [PaymentInterface.NOTIFICATION_CREATED, PaymentInterface.PENDING] batchSizeOfNotification
@@ -44,19 +49,19 @@ notificationAndOrderStatusUpdate (Job {id, jobInfo}) = withLogTag ("JobId-" <> i
   forM_ allPendingNotification $ \notification -> do
     fork ("notification status call for notification id : " <> notification.id.getId) $ do
       driverFee <- QDF.findById notification.driverFeeId >>= fromMaybeM (InternalError "Fee not found")
-      void $ SharedPayment.pdnNotificationStatus (driverFee.driverId, merchantId) notification.id
+      void $ SharedPayment.pdnNotificationStatus (driverFee.driverId, merchantId, merchantOpCityId) notification.id
   forM_ allPendingOrders $ \invoice -> do
     fork ("order call for order id : " <> invoice.id.getId) $ do
       let driverId = invoice.driverId
-      void $ SharedPayment.getStatus (driverId, jobData.merchantId) (cast invoice.id)
+      void $ SharedPayment.getStatus (driverId, jobData.merchantId, merchantOpCityId) (cast invoice.id)
   if null allPendingNotification && null allPendingOrders
     then return Complete
     else ReSchedule <$> getRescheduledTime transporterConfig
 
-getRescheduledTime :: (MonadTime m) => TransporterConfig -> m UTCTime
+getRescheduledTime :: (MonadTime m, CacheFlow m r, EsqDBFlow m r) => TransporterConfig -> m UTCTime
 getRescheduledTime tc = addUTCTime tc.mandateNotificationRescheduleInterval <$> getCurrentTime
 
-updateInvoicesPendingToFailedAfterRetry :: (MonadFlow m) => TransporterConfig -> m ()
+updateInvoicesPendingToFailedAfterRetry :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => TransporterConfig -> m ()
 updateInvoicesPendingToFailedAfterRetry transporterConfig = do
   let timeCheckLimit = transporterConfig.orderAndNotificationStatusCheckTimeLimit
   activeExecutionInvoices <- QINV.findAllAutoPayInvoicesActiveOlderThanProvidedDuration timeCheckLimit

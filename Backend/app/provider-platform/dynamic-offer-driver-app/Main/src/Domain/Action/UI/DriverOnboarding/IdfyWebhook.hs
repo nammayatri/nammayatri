@@ -17,6 +17,7 @@ module Domain.Action.UI.DriverOnboarding.IdfyWebhook
   ( onVerify,
     idfyWebhookHandler,
     oldIdfyWebhookHandler,
+    idfyWebhookV2Handler,
   )
 where
 
@@ -31,10 +32,12 @@ import qualified Kernel.External.Verification.Idfy.WebhookHandler as Idfy
 import qualified Kernel.External.Verification.Interface.Idfy as Idfy
 import Kernel.Prelude
 import Kernel.Types.Beckn.Ack
+import Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import SharedLogic.Merchant (findMerchantByShortId)
+import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as CQMSUC
 import qualified Storage.Queries.DriverOnboarding.IdfyVerification as IVQuery
@@ -66,8 +69,33 @@ idfyWebhookHandler ::
 idfyWebhookHandler merchantShortId secret val = do
   merchant <- findMerchantByShortId merchantShortId
   let merchantId = merchant.id
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant Nothing
   merchantServiceUsageConfig <-
-    CQMSUC.findByMerchantId merchantId
+    CQMSUC.findByMerchantOpCityId merchantOpCityId
+      >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantId.getId)
+  merchantServiceConfig <-
+    CQMSC.findByMerchantIdAndService merchantId (DMSC.VerificationService merchantServiceUsageConfig.verificationService)
+      >>= fromMaybeM (InternalError $ "No verification service provider configured for the merchant, merchantId:" <> merchantId.getId)
+  case merchantServiceConfig.serviceConfig of
+    DMSC.VerificationServiceConfig vsc -> do
+      case vsc of
+        Verification.IdfyConfig idfyCfg -> do
+          Idfy.webhookHandler idfyCfg onVerify secret val
+        Verification.FaceVerificationConfig _ -> throwError $ InternalError "Incorrect service config for Idfy"
+    _ -> throwError $ InternalError "Unknown Service Config"
+
+idfyWebhookV2Handler ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Maybe Text ->
+  Value ->
+  Flow AckResponse
+idfyWebhookV2Handler merchantShortId opCity secret val = do
+  merchant <- findMerchantByShortId merchantShortId
+  let merchantId = merchant.id
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  merchantServiceUsageConfig <-
+    CQMSUC.findByMerchantOpCityId merchantOpCityId
       >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantId.getId)
   merchantServiceConfig <-
     CQMSC.findByMerchantIdAndService merchantId (DMSC.VerificationService merchantServiceUsageConfig.verificationService)
@@ -88,7 +116,7 @@ onVerify resp respDump = do
   ack_ <- maybe (pure Ack) (verifyDocument verificationReq) resp.result
   person <- runInReplica $ QP.findById verificationReq.driverId >>= fromMaybeM (PersonDoesNotExist verificationReq.driverId.getId)
   -- running statusHandler to enable Driver
-  _ <- Status.statusHandler (verificationReq.driverId, person.merchantId) verificationReq.multipleRC
+  _ <- Status.statusHandler (verificationReq.driverId, person.merchantId, person.merchantOperatingCityId) verificationReq.multipleRC
 
   return ack_
   where

@@ -35,6 +35,7 @@ data BookingT f = BookingT
     disabilityTag :: B.C f (Maybe Text),
     area :: B.C f (Maybe FareProductD.Area),
     providerId :: B.C f Text,
+    merchantOperatingCityId :: B.C f (Maybe Text),
     primaryExophone :: B.C f Text,
     bapId :: B.C f Text,
     bapUri :: B.C f Text,

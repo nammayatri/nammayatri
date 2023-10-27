@@ -29,21 +29,24 @@ import qualified Domain.Types.Merchant as DM
 import Environment
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Beam.Functions as B
+import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import qualified Kernel.Types.SlidingWindowCounters as KS
 import Kernel.Utils.Common (HighPrecMoney, fromMaybeM)
 import Kernel.Utils.SlidingWindowCounters
 import Kernel.Utils.Time
 import SharedLogic.Merchant
+import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as SCT
 import Storage.Queries.DriverFee (findAllByStatus, findAllByVolunteerIds, findAllCollectionInRange, findAllOverdueInRange, findAllPendingInRange)
 import Storage.Queries.Volunteer (findAllByPlace)
 import Tools.Error
 
-getAllDriverFeeHistory :: ShortId DM.Merchant -> Maybe UTCTime -> Maybe UTCTime -> Flow [Common.AllFees]
-getAllDriverFeeHistory merchantShortId mbFrom mbTo = do
+getAllDriverFeeHistory :: ShortId DM.Merchant -> Context.City -> Maybe UTCTime -> Maybe UTCTime -> Flow [Common.AllFees]
+getAllDriverFeeHistory merchantShortId opCity mbFrom mbTo = do
   merchant <- findMerchantByShortId merchantShortId
-  transporterConfig <- SCT.findByMerchantId merchant.id >>= fromMaybeM (TransporterConfigNotFound merchant.id.getId)
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  transporterConfig <- SCT.findByMerchantOpCityId merchantOpCityId >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   now <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
   let defaultFrom = UTCTime (fromGregorian 2020 1 1) 0 -- can be in common
       from = fromMaybe defaultFrom mbFrom
@@ -69,8 +72,8 @@ getAllDriverFeeHistory merchantShortId mbFrom mbTo = do
     getNumRides fee = sum $ map numRides fee
     getTotalAmount fee = sum $ map (\fee_ -> fromIntegral fee_.govtCharges + fee_.platformFee.fee + fee_.platformFee.cgst + fee_.platformFee.sgst) fee
 
-getCollectionHistory :: ShortId DM.Merchant -> Maybe Text -> Maybe Text -> Maybe UTCTime -> Maybe UTCTime -> Flow Common.CollectionList
-getCollectionHistory merchantShortId volunteerId place mbFrom mbTo = do
+getCollectionHistory :: ShortId DM.Merchant -> Context.City -> Maybe Text -> Maybe Text -> Maybe UTCTime -> Maybe UTCTime -> Flow Common.CollectionList
+getCollectionHistory merchantShortId _ volunteerId place mbFrom mbTo = do
   now <- getCurrentTime
   merchant <- findMerchantByShortId merchantShortId
   let defaultFrom = UTCTime (fromGregorian 2020 1 1) 0

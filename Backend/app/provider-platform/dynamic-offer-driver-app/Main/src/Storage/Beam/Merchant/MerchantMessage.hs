@@ -23,6 +23,7 @@ import Tools.Beam.UtilsTH
 
 data MerchantMessageT f = MerchantMessageT
   { merchantId :: B.C f Text,
+    merchantOperatingCityId :: B.C f Text,
     messageKey :: B.C f Domain.MessageKey,
     message :: B.C f Text,
     templateId :: B.C f (Maybe Text),
@@ -41,6 +42,6 @@ instance B.Table MerchantMessageT where
 
 type MerchantMessage = MerchantMessageT Identity
 
-$(enableKVPG ''MerchantMessageT ['merchantId, 'messageKey] [])
+$(enableKVPG ''MerchantMessageT ['merchantOperatingCityId, 'messageKey] [])
 
 $(mkTableInstances ''MerchantMessageT "merchant_message")

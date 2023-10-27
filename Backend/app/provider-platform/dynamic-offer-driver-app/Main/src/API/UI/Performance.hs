@@ -2,6 +2,7 @@ module API.UI.Performance where
 
 import qualified Domain.Action.UI.Performance as Domain
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as SP
 import Environment (FlowHandler, FlowServer)
 import Kernel.Prelude
@@ -19,5 +20,5 @@ handler :: FlowServer API
 handler =
   getDriverPerformance
 
-getDriverPerformance :: (Id SP.Person, Id DM.Merchant) -> FlowHandler Domain.PerformanceRes
+getDriverPerformance :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> FlowHandler Domain.PerformanceRes
 getDriverPerformance = withFlowHandlerAPI . Domain.getDriverPerformance

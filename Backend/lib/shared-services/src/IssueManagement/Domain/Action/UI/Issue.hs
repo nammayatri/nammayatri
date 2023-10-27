@@ -47,7 +47,7 @@ data ServiceHandle m = ServiceHandle
     findPersonById :: Id Person -> m (Maybe Person),
     findMerchant :: Id Merchant -> m (Maybe Merchant),
     getRideInfo :: ShortId Merchant -> Id Ride -> m RideInfoRes,
-    createTicket :: Id Merchant -> TIT.CreateTicketReq -> m TIT.CreateTicketResp
+    createTicket :: Id Merchant -> Id MerchantOperatingCity -> TIT.CreateTicketReq -> m TIT.CreateTicketResp
   }
 
 getLanguage :: EsqDBReplicaFlow m r => Id Person -> Maybe Language -> ServiceHandle m -> m Language
@@ -61,17 +61,17 @@ getLanguage personId mbLanguage issueHandle = do
   return $ fromMaybe ENGLISH extractLanguage
 
 getIssueCategory ::
-  ( BeamFlow m,
+  ( BeamFlow m r,
     EsqDBReplicaFlow m r,
     CoreMetrics m,
     CacheFlow m r
   ) =>
-  (Id Person, Id Merchant) ->
+  (Id Person, Id Merchant, Id MerchantOperatingCity) ->
   Maybe Language ->
   ServiceHandle m ->
   Identifier ->
   m Common.IssueCategoryListRes
-getIssueCategory (personId, _) mbLanguage issueHandle identifier = do
+getIssueCategory (personId, _, _) mbLanguage issueHandle identifier = do
   language <- getLanguage personId mbLanguage issueHandle
   issueCategoryTranslationList <- CQIC.findAllByLanguage language identifier
   pure $ Common.IssueCategoryListRes {categories = mkIssueCategory <$> issueCategoryTranslationList}
@@ -86,12 +86,12 @@ getIssueCategory (personId, _) mbLanguage issueHandle identifier = do
         }
 
 getIssueOption ::
-  ( BeamFlow m,
+  ( BeamFlow m r,
     EsqDBReplicaFlow m r,
     CoreMetrics m,
     CacheFlow m r
   ) =>
-  (Id Person, Id Merchant) ->
+  (Id Person, Id Merchant, Id MerchantOperatingCity) ->
   Id D.IssueCategory ->
   Maybe (Id D.IssueOption) ->
   Maybe (Id D.IssueReport) ->
@@ -99,7 +99,7 @@ getIssueOption ::
   ServiceHandle m ->
   Identifier ->
   m Common.IssueOptionListRes
-getIssueOption (personId, _) issueCategoryId issueOptionId issueReportId mbLanguage issueHandle identifier = do
+getIssueOption (personId, _, _) issueCategoryId issueOptionId issueReportId mbLanguage issueHandle identifier = do
   language <- getLanguage personId mbLanguage issueHandle
   issueMessageTranslationList <- case issueOptionId of
     Nothing -> CQIM.findAllByCategoryIdAndLanguage issueCategoryId language identifier
@@ -139,16 +139,16 @@ getIssueOption (personId, _) issueCategoryId issueOptionId issueReportId mbLangu
       }
 
 issueReportList ::
-  ( BeamFlow m,
+  ( BeamFlow m r,
     CacheFlow m r,
     EsqDBReplicaFlow m r
   ) =>
-  (Id Person, Id Merchant) ->
+  (Id Person, Id Merchant, Id MerchantOperatingCity) ->
   Maybe Language ->
   ServiceHandle m ->
   Identifier ->
   m Common.IssueReportListRes
-issueReportList (personId, _) mbLanguage issueHandle identifier = do
+issueReportList (personId, _, _) mbLanguage issueHandle identifier = do
   language <- getLanguage personId mbLanguage issueHandle
   issueReports <- QIR.findAllByPerson personId
   issueConfig <- CQI.findIssueConfig identifier >>= fromMaybeM (InternalError "IssueConfigNotFound")
@@ -158,7 +158,7 @@ issueReportList (personId, _) mbLanguage issueHandle identifier = do
   where
     processIssueReport ::
       ( CacheFlow m r,
-        BeamFlow m
+        BeamFlow m r
       ) =>
       D.IssueConfig ->
       UTCTime ->
@@ -190,7 +190,7 @@ issueReportList (personId, _) mbLanguage issueHandle identifier = do
 
     mkIssueReport ::
       ( CacheFlow m r,
-        BeamFlow m
+        BeamFlow m r
       ) =>
       D.IssueReport ->
       Maybe IssueStatus ->
@@ -207,7 +207,7 @@ issueReportList (personId, _) mbLanguage issueHandle identifier = do
           }
 
 createFilePath ::
-  ( BeamFlow m,
+  ( BeamFlow m r,
     MonadTime m,
     MonadReader r m,
     HasField "s3Env" r (S3Env m)
@@ -228,7 +228,7 @@ createFilePath personId fileType validatedFileExtention = do
         <> validatedFileExtention
     )
 
-createMediaEntry :: BeamFlow m => Text -> Common.FileType -> m Common.IssueMediaUploadRes
+createMediaEntry :: BeamFlow m r => Text -> Common.FileType -> m Common.IssueMediaUploadRes
 createMediaEntry url fileType = do
   fileEntity <- mkFile url
   _ <- QMF.create fileEntity
@@ -249,16 +249,16 @@ createMediaEntry url fileType = do
           }
 
 issueMediaUpload ::
-  ( BeamFlow m,
+  ( BeamFlow m r,
     MonadTime m,
     MonadReader r m,
     HasField "s3Env" r (S3Env m)
   ) =>
-  (Id Person, Id Merchant) ->
+  (Id Person, Id Merchant, Id MerchantOperatingCity) ->
   Common.IssueMediaUploadReq ->
   m Common.IssueMediaUploadConfig ->
   m Common.IssueMediaUploadRes
-issueMediaUpload (personId, _) Common.IssueMediaUploadReq {..} issueMediaUploadConfig = do
+issueMediaUpload (personId, _, _) Common.IssueMediaUploadReq {..} issueMediaUploadConfig = do
   contentType <- validateContentType
   config <- issueMediaUploadConfig
   fileSize <- L.runIO $ withFile file ReadMode hFileSize
@@ -282,7 +282,7 @@ issueMediaUpload (personId, _) Common.IssueMediaUploadReq {..} issueMediaUploadC
         Common.Image | reqContentType == "image/jpeg" -> pure "jpg"
         _ -> throwError $ FileFormatNotSupported reqContentType
 
-fetchMedia :: (HasField "s3Env" r (S3Env m), MonadReader r m, BeamFlow m) => (Id Person, Id Merchant) -> Text -> m Text
+fetchMedia :: (HasField "s3Env" r (S3Env m), MonadReader r m, BeamFlow m r) => (Id Person, Id Merchant, Id MerchantOperatingCity) -> Text -> m Text
 fetchMedia _personId filePath =
   S3.get $ T.unpack filePath
 
@@ -290,15 +290,15 @@ createIssueReport ::
   ( CacheFlow m r,
     EsqDBReplicaFlow m r,
     EncFlow m r,
-    BeamFlow m
+    BeamFlow m r
   ) =>
-  (Id Person, Id Merchant) ->
+  (Id Person, Id Merchant, Id MerchantOperatingCity) ->
   Maybe Language ->
   Common.IssueReportReq ->
   ServiceHandle m ->
   Identifier ->
   m Common.IssueReportRes
-createIssueReport (personId, merchantId) mbLanguage Common.IssueReportReq {..} issueHandle identifier = do
+createIssueReport (personId, merchantId, merchantOpCityId) mbLanguage Common.IssueReportReq {..} issueHandle identifier = do
   category <- CQIC.findById (cast categoryId) identifier >>= fromMaybeM (IssueCategoryDoNotExist categoryId.getId)
   mbOption <- forM optionId \justOptionId -> do
     CQIO.findByIdAndCategoryId (cast justOptionId) (cast categoryId) identifier >>= fromMaybeM (IssueOptionInvalid justOptionId.getId categoryId.getId)
@@ -343,7 +343,7 @@ createIssueReport (personId, merchantId) mbLanguage Common.IssueReportReq {..} i
   _ <- QIR.create issueReport
   merchant <- issueHandle.findMerchant merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   ticket <- buildTicket issueReport category mbOption mbRide merchant.shortId mediaFileUrls issueHandle identifier
-  ticketResponse <- try @_ @SomeException (issueHandle.createTicket merchantId ticket)
+  ticketResponse <- try @_ @SomeException (issueHandle.createTicket merchantId merchantOpCityId ticket)
   case ticketResponse of
     Right ticketResponse' -> do
       QIR.updateTicketId issueReport.id ticketResponse'.ticketId
@@ -373,7 +373,7 @@ createIssueReport (personId, merchantId) mbLanguage Common.IssueReportReq {..} i
             chats = updatedChats
           }
 
-    buildTicket :: (CacheFlow m r, EsqDBReplicaFlow m r, EncFlow m r, BeamFlow m) => D.IssueReport -> D.IssueCategory -> Maybe D.IssueOption -> Maybe Ride -> ShortId Merchant -> [Text] -> ServiceHandle m -> Identifier -> m TIT.CreateTicketReq
+    buildTicket :: (CacheFlow m r, EsqDBReplicaFlow m r, EncFlow m r, BeamFlow m r) => D.IssueReport -> D.IssueCategory -> Maybe D.IssueOption -> Maybe Ride -> ShortId Merchant -> [Text] -> ServiceHandle m -> Identifier -> m TIT.CreateTicketReq
     buildTicket issue category mbOption mbRide merchantShortId mediaFileUrls issueServiceHandle identifier_ = do
       info <- forM mbRide (buildRideInfo merchantShortId issueServiceHandle)
       person <- issueServiceHandle.findPersonById personId >>= fromMaybeM (PersonNotFound personId.getId)
@@ -392,7 +392,7 @@ createIssueReport (personId, merchantId) mbLanguage Common.IssueReportReq {..} i
             rideDescription = info
           }
 
-    buildRideInfo :: (CacheFlow m r, EsqDBReplicaFlow m r, BeamFlow m) => ShortId Merchant -> ServiceHandle m -> Ride -> m TIT.RideInfo
+    buildRideInfo :: (CacheFlow m r, EsqDBReplicaFlow m r, BeamFlow m r) => ShortId Merchant -> ServiceHandle m -> Ride -> m TIT.RideInfo
     buildRideInfo merchantShortId issueServiceHandle ride = do
       res <- issueServiceHandle.getRideInfo merchantShortId (cast ride.id)
       return
@@ -420,15 +420,15 @@ createIssueReport (personId, merchantId) mbLanguage Common.IssueReportReq {..} i
 issueInfo ::
   ( EsqDBReplicaFlow m r,
     CacheFlow m r,
-    BeamFlow m
+    BeamFlow m r
   ) =>
   Id D.IssueReport ->
-  (Id Person, Id Merchant) ->
+  (Id Person, Id Merchant, Id MerchantOperatingCity) ->
   Maybe Language ->
   ServiceHandle m ->
   Identifier ->
   m Common.IssueInfoRes
-issueInfo issueReportId (personId, _) mbLanguage issueHandle identifier = do
+issueInfo issueReportId (personId, _, _) mbLanguage issueHandle identifier = do
   language <- getLanguage personId mbLanguage issueHandle
   issueReport <- QIR.findById issueReportId >>= fromMaybeM (IssueReportDoNotExist issueReportId.getId)
   mediaFiles <- CQMF.findAllInForIssueReportId issueReport.mediaFiles issueReportId identifier
@@ -530,14 +530,14 @@ issueInfo issueReportId (personId, _) mbLanguage issueHandle identifier = do
 
 updateIssueOption ::
   ( CacheFlow m r,
-    BeamFlow m
+    BeamFlow m r
   ) =>
   Id D.IssueReport ->
-  (Id Person, Id Merchant) ->
+  (Id Person, Id Merchant, Id MerchantOperatingCity) ->
   Common.IssueUpdateReq ->
   Identifier ->
   m APISuccess
-updateIssueOption issueReportId (_, _) Common.IssueUpdateReq {..} identifier = do
+updateIssueOption issueReportId (_, _, _) Common.IssueUpdateReq {..} identifier = do
   void $ QIR.findById issueReportId >>= fromMaybeM (IssueReportDoNotExist issueReportId.getId)
   void $ CQIO.findByIdAndCategoryId (cast optionId) (cast categoryId) identifier >>= fromMaybeM (IssueOptionInvalid optionId.getId categoryId.getId)
   _ <- QIR.updateOption issueReportId (cast optionId)
@@ -546,13 +546,13 @@ updateIssueOption issueReportId (_, _) Common.IssueUpdateReq {..} identifier = d
 deleteIssue ::
   ( EsqDBReplicaFlow m r,
     CacheFlow m r,
-    BeamFlow m
+    BeamFlow m r
   ) =>
   Id D.IssueReport ->
-  (Id Person, Id Merchant) ->
+  (Id Person, Id Merchant, Id MerchantOperatingCity) ->
   Identifier ->
   m APISuccess
-deleteIssue issueReportId (personId, _) identifier = do
+deleteIssue issueReportId (personId, _, _) identifier = do
   unlessM (B.runInReplica (QIR.isSafeToDelete issueReportId personId)) $
     throwError (InvalidRequest "This issue is either already deleted, or is not associated to this person.")
   issueReport <- QIR.findById issueReportId >>= fromMaybeM (IssueReportDoNotExist issueReportId.getId)
@@ -563,16 +563,16 @@ deleteIssue issueReportId (personId, _) identifier = do
 updateIssueStatus ::
   ( EsqDBReplicaFlow m r,
     CacheFlow m r,
-    BeamFlow m
+    BeamFlow m r
   ) =>
-  (Id Person, Id Merchant) ->
+  (Id Person, Id Merchant, Id MerchantOperatingCity) ->
   Id D.IssueReport ->
   Maybe Language ->
   Common.IssueStatusUpdateReq ->
   ServiceHandle m ->
   Identifier ->
   m Common.IssueStatusUpdateRes
-updateIssueStatus (personId, _) issueReportId mbLanguage Common.IssueStatusUpdateReq {..} issueHandle identifier = do
+updateIssueStatus (personId, _, _) issueReportId mbLanguage Common.IssueStatusUpdateReq {..} issueHandle identifier = do
   language <- getLanguage personId mbLanguage issueHandle
   issueReport <- QIR.findById issueReportId >>= fromMaybeM (IssueReportDoNotExist issueReportId.getId)
   case status of

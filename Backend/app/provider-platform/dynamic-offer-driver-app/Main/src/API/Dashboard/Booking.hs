@@ -19,6 +19,7 @@ import qualified Domain.Action.Dashboard.Booking as DBooking
 import qualified Domain.Types.Merchant as DM
 import Environment
 import Kernel.Prelude
+import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant hiding (throwError)
@@ -29,13 +30,13 @@ type API =
            :<|> Common.MultipleBookingSyncAPI
        )
 
-handler :: ShortId DM.Merchant -> FlowServer API
-handler merchantId =
-  stuckBookingsCancel merchantId
-    :<|> multipleBookingSync merchantId
+handler :: ShortId DM.Merchant -> Context.City -> FlowServer API
+handler merchantId city =
+  stuckBookingsCancel merchantId city
+    :<|> multipleBookingSync merchantId city
 
-stuckBookingsCancel :: ShortId DM.Merchant -> Common.StuckBookingsCancelReq -> FlowHandler Common.StuckBookingsCancelRes
-stuckBookingsCancel merchantShortId = withFlowHandlerAPI . DBooking.stuckBookingsCancel merchantShortId
+stuckBookingsCancel :: ShortId DM.Merchant -> Context.City -> Common.StuckBookingsCancelReq -> FlowHandler Common.StuckBookingsCancelRes
+stuckBookingsCancel merchantShortId opCity = withFlowHandlerAPI . DBooking.stuckBookingsCancel merchantShortId opCity
 
-multipleBookingSync :: ShortId DM.Merchant -> Common.MultipleBookingSyncReq -> FlowHandler Common.MultipleBookingSyncResp
-multipleBookingSync merchantShortId = withFlowHandlerAPI . DBooking.multipleBookingSync merchantShortId
+multipleBookingSync :: ShortId DM.Merchant -> Context.City -> Common.MultipleBookingSyncReq -> FlowHandler Common.MultipleBookingSyncResp
+multipleBookingSync merchantShortId opCity = withFlowHandlerAPI . DBooking.multipleBookingSync merchantShortId opCity

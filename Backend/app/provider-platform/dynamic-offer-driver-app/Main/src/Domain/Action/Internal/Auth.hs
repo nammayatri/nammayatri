@@ -34,7 +34,7 @@ internalAuth token apiKey merchantId = do
   locationTrackingServiceKey <- asks (.locationTrackingServiceKey)
   unless (apiKey == Just locationTrackingServiceKey) $ do
     throwError $ InvalidRequest "Invalid API key"
-  (driverId, currentMerchantId) <- verifyPerson (fromMaybe "" token)
+  (driverId, currentMerchantId, _merchantOpCityId) <- verifyPerson (fromMaybe "" token)
   unless (currentMerchantId == fromMaybe "" merchantId) $ do
     throwError $ InvalidRequest "Invalid merchant id"
   pure $

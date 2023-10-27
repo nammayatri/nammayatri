@@ -9,7 +9,7 @@ import IssueManagement.Storage.BeamFlow
 import IssueManagement.Tools.UtilsTH
 import Kernel.Types.Id
 
-findOne :: BeamFlow m => m (Maybe IssueConfig)
+findOne :: BeamFlow m r => m (Maybe IssueConfig)
 findOne = findOneWithKV [Is BeamIC.id $ Not $ Eq ""]
 
 instance FromTType' BeamIC.IssueConfig IssueConfig where

@@ -20,6 +20,7 @@ import qualified Domain.Types.Merchant as DM
 import Environment
 import Kernel.Prelude
 import Kernel.Types.APISuccess (APISuccess (..))
+import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import Kernel.Utils.Common (withFlowHandlerAPI)
 import Servant hiding (Unauthorized, throwError)
@@ -30,19 +31,21 @@ type API =
            :<|> Common.ReferralProgramLinkCodeAPI
        )
 
-handler :: ShortId DM.Merchant -> FlowServer API
-handler merchantId =
-  updateReferralLinkPassword merchantId
-    :<|> linkDriverReferralCode merchantId
+handler :: ShortId DM.Merchant -> Context.City -> FlowServer API
+handler merchantId city =
+  updateReferralLinkPassword merchantId city
+    :<|> linkDriverReferralCode merchantId city
 
 updateReferralLinkPassword ::
   ShortId DM.Merchant ->
+  Context.City ->
   Common.ReferralLinkPasswordUpdateAPIReq ->
   FlowHandler APISuccess
-updateReferralLinkPassword merchantShortId = withFlowHandlerAPI . DRe.updateReferralLinkPassword merchantShortId
+updateReferralLinkPassword merchantShortId opCity = withFlowHandlerAPI . DRe.updateReferralLinkPassword merchantShortId opCity
 
 linkDriverReferralCode ::
   ShortId DM.Merchant ->
+  Context.City ->
   Common.ReferralLinkReq ->
   FlowHandler Common.LinkReport
-linkDriverReferralCode merchantShortId = withFlowHandlerAPI . DRe.linkDriverReferralCode merchantShortId
+linkDriverReferralCode merchantShortId opCity = withFlowHandlerAPI . DRe.linkDriverReferralCode merchantShortId opCity

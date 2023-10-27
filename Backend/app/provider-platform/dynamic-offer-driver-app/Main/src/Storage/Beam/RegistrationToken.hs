@@ -33,6 +33,7 @@ data RegistrationTokenT f = RegistrationTokenT
     tokenExpiry :: B.C f Int,
     entityId :: B.C f Text,
     merchantId :: B.C f Text,
+    merchantOperatingCityId :: B.C f Text,
     entityType :: B.C f Domain.RTEntityType,
     createdAt :: B.C f UTCTime,
     updatedAt :: B.C f UTCTime,

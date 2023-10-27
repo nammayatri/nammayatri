@@ -18,14 +18,15 @@ import qualified Domain.Types.Person as DP
 import Domain.Types.Vehicle as DV
 import Kernel.Beam.Functions
 import Kernel.Prelude
-import Kernel.Types.App (MonadFlow)
+import Kernel.Types.Common
 import Kernel.Types.Id
+import Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified Storage.Beam.Person as BeamP
 import Storage.Queries.Instances.Person ()
 
 getDrivers ::
-  (MonadFlow m) =>
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
   [DV.Vehicle] ->
   m [DP.Person]
 getDrivers vehicles = findAllWithKV [Se.And [Se.Is BeamP.id $ Se.In personKeys, Se.Is BeamP.role $ Se.Eq DP.DRIVER]]

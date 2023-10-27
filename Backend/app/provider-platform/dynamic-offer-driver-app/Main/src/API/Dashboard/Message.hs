@@ -20,6 +20,7 @@ import qualified Domain.Types.Merchant as DM
 import Environment
 import Kernel.Prelude
 import Kernel.Types.APISuccess (APISuccess)
+import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import Kernel.Utils.Common (withFlowHandlerAPI)
 import Servant hiding (throwError)
@@ -36,41 +37,41 @@ type API =
            :<|> Common.MessageReceiverListAPI
        )
 
-handler :: ShortId DM.Merchant -> FlowServer API
-handler merchantId =
-  uploadFile merchantId
-    :<|> addLinkAsMedia merchantId
-    :<|> addMessage merchantId
-    :<|> sendMessage merchantId
-    :<|> messageList merchantId
-    :<|> messageInfo merchantId
-    :<|> messageDeliveryInfo merchantId
-    :<|> messageReceiverList merchantId
+handler :: ShortId DM.Merchant -> Context.City -> FlowServer API
+handler merchantId city =
+  uploadFile merchantId city
+    :<|> addLinkAsMedia merchantId city
+    :<|> addMessage merchantId city
+    :<|> sendMessage merchantId city
+    :<|> messageList merchantId city
+    :<|> messageInfo merchantId city
+    :<|> messageDeliveryInfo merchantId city
+    :<|> messageReceiverList merchantId city
 
-addLinkAsMedia :: ShortId DM.Merchant -> Common.AddLinkAsMedia -> FlowHandler Common.UploadFileResponse
-addLinkAsMedia merchantShortId = withFlowHandlerAPI . DMessage.addLinkAsMedia merchantShortId
+addLinkAsMedia :: ShortId DM.Merchant -> Context.City -> Common.AddLinkAsMedia -> FlowHandler Common.UploadFileResponse
+addLinkAsMedia merchantShortId opCity = withFlowHandlerAPI . DMessage.addLinkAsMedia merchantShortId opCity
 
-uploadFile :: ShortId DM.Merchant -> Common.UploadFileRequest -> FlowHandler Common.UploadFileResponse
-uploadFile merchantShortId = withFlowHandlerAPI . DMessage.uploadFile merchantShortId
+uploadFile :: ShortId DM.Merchant -> Context.City -> Common.UploadFileRequest -> FlowHandler Common.UploadFileResponse
+uploadFile merchantShortId opCity = withFlowHandlerAPI . DMessage.uploadFile merchantShortId opCity
 
-addMessage :: ShortId DM.Merchant -> Common.AddMessageRequest -> FlowHandler Common.AddMessageResponse
-addMessage merchantShortId = withFlowHandlerAPI . DMessage.addMessage merchantShortId
+addMessage :: ShortId DM.Merchant -> Context.City -> Common.AddMessageRequest -> FlowHandler Common.AddMessageResponse
+addMessage merchantShortId opCity = withFlowHandlerAPI . DMessage.addMessage merchantShortId opCity
 
-sendMessage :: ShortId DM.Merchant -> Common.SendMessageRequest -> FlowHandler APISuccess
-sendMessage merchantShortId = withFlowHandlerAPI . DMessage.sendMessage merchantShortId
+sendMessage :: ShortId DM.Merchant -> Context.City -> Common.SendMessageRequest -> FlowHandler APISuccess
+sendMessage merchantShortId opCity = withFlowHandlerAPI . DMessage.sendMessage merchantShortId opCity
 
-messageList :: ShortId DM.Merchant -> Maybe Int -> Maybe Int -> FlowHandler Common.MessageListResponse
-messageList merchantShortId mbLimit =
-  withFlowHandlerAPI . DMessage.messageList merchantShortId mbLimit
+messageList :: ShortId DM.Merchant -> Context.City -> Maybe Int -> Maybe Int -> FlowHandler Common.MessageListResponse
+messageList merchantShortId opCity mbLimit =
+  withFlowHandlerAPI . DMessage.messageList merchantShortId opCity mbLimit
 
-messageInfo :: ShortId DM.Merchant -> Id Common.Message -> FlowHandler Common.MessageInfoResponse
-messageInfo merchantShortId =
-  withFlowHandlerAPI . DMessage.messageInfo merchantShortId . cast
+messageInfo :: ShortId DM.Merchant -> Context.City -> Id Common.Message -> FlowHandler Common.MessageInfoResponse
+messageInfo merchantShortId opCity =
+  withFlowHandlerAPI . DMessage.messageInfo merchantShortId opCity . cast
 
-messageDeliveryInfo :: ShortId DM.Merchant -> Id Common.Message -> FlowHandler Common.MessageDeliveryInfoResponse
-messageDeliveryInfo merchantShortId =
-  withFlowHandlerAPI . DMessage.messageDeliveryInfo merchantShortId . cast
+messageDeliveryInfo :: ShortId DM.Merchant -> Context.City -> Id Common.Message -> FlowHandler Common.MessageDeliveryInfoResponse
+messageDeliveryInfo merchantShortId opCity =
+  withFlowHandlerAPI . DMessage.messageDeliveryInfo merchantShortId opCity . cast
 
-messageReceiverList :: ShortId DM.Merchant -> Id Common.Message -> Maybe Text -> Maybe Common.MessageDeliveryStatus -> Maybe Int -> Maybe Int -> FlowHandler Common.MessageReceiverListResponse
-messageReceiverList merchantShortId messageId number status limit =
-  withFlowHandlerAPI . DMessage.messageReceiverList merchantShortId (cast messageId) number status limit
+messageReceiverList :: ShortId DM.Merchant -> Context.City -> Id Common.Message -> Maybe Text -> Maybe Common.MessageDeliveryStatus -> Maybe Int -> Maybe Int -> FlowHandler Common.MessageReceiverListResponse
+messageReceiverList merchantShortId opCity messageId number status limit =
+  withFlowHandlerAPI . DMessage.messageReceiverList merchantShortId opCity (cast messageId) number status limit

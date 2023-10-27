@@ -17,14 +17,13 @@ module Storage.Queries.DriverQuote.Internal where
 import Domain.Types.DriverQuote as DriverQuote
 import Kernel.Beam.Functions (findAllWithKV)
 import Kernel.Prelude
-import Kernel.Types.App (MonadFlow)
-import Kernel.Utils.Common (Log)
+import Kernel.Utils.Common
 import qualified Sequelize as Se
 import Storage.Beam.DriverQuote as BeamDQ
 import Storage.Queries.Instances.Person ()
 
 getDriverQuote ::
-  (MonadFlow m, Log m) =>
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Log m) =>
   [Text] ->
   m [DriverQuote.DriverQuote]
 getDriverQuote personKeys =

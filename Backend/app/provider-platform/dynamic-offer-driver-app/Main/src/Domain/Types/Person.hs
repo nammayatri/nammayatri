@@ -21,6 +21,7 @@ import Data.Aeson
 import Data.OpenApi (ToSchema)
 import Data.Time
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import EulerHS.Prelude hiding (id)
 import qualified IssueManagement.Domain.Types.MediaFile as M
 import Kernel.External.Encryption
@@ -92,7 +93,8 @@ data PersonE e = Person
     clientVersion :: Maybe Version,
     unencryptedAlternateMobileNumber :: Maybe Text,
     alternateMobileNumber :: Maybe (EncryptedHashedField e Text),
-    faceImageId :: Maybe (Id M.MediaFile)
+    faceImageId :: Maybe (Id M.MediaFile),
+    merchantOperatingCityId :: Id DMOC.MerchantOperatingCity
   }
   deriving (Generic)
 

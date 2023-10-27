@@ -24,6 +24,7 @@ import qualified Domain.Types.Estimate as DEst
 import qualified Domain.Types.FarePolicy as DFP
 import qualified Domain.Types.FarePolicy as DFarePolicy
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.SearchTry as DST
 import Environment
@@ -67,8 +68,8 @@ handler merchant sReq estimate = do
   farePolicy <- getFarePolicy merchantId estimate.vehicleVariant searchReq.area
 
   searchTry <- createNewSearchTry farePolicy searchReq
-  driverPoolConfig <- getDriverPoolConfig merchantId (Just searchTry.vehicleVariant) searchReq.estimatedDistance
-  goHomeCfg <- CQGHC.findByMerchantId merchantId
+  driverPoolConfig <- getDriverPoolConfig searchReq.merchantOperatingCityId (Just searchTry.vehicleVariant) searchReq.estimatedDistance
+  goHomeCfg <- CQGHC.findByMerchantOpCityId searchReq.merchantOperatingCityId
   let driverExtraFeeBounds = DFarePolicy.findDriverExtraFeeBoundsByDistance searchReq.estimatedDistance <$> farePolicy.driverExtraFeeBounds
   (res, isGoHomeBatch) <- sendSearchRequestToDrivers' driverPoolConfig searchReq searchTry merchant driverExtraFeeBounds goHomeCfg
   let inTime = fromIntegral (if isGoHomeBatch then goHomeCfg.goHomeBatchDelay else driverPoolConfig.singleBatchProcessTime)
@@ -104,14 +105,14 @@ handler merchant sReq estimate = do
           pureEstimatedFare = pureFareSum fareParams
       searchTry <- case mbLastSearchTry of
         Nothing -> do
-          searchTry <- buildSearchTry merchant.id searchReq.id estimate sReq estimatedFare 0 DST.INITIAL
+          searchTry <- buildSearchTry merchant.id searchReq.merchantOperatingCityId searchReq.id estimate sReq estimatedFare 0 DST.INITIAL
           _ <- QST.create searchTry
           return searchTry
         Just oldSearchTry -> do
           let searchRepeatType = if oldSearchTry.status == DST.ACTIVE then DST.CANCELLED_AND_RETRIED else DST.RETRIED
           unless (pureEstimatedFare == oldSearchTry.baseFare - fromMaybe 0 oldSearchTry.customerExtraFee) $
             throwError SearchTryEstimatedFareChanged
-          searchTry <- buildSearchTry merchant.id searchReq.id estimate sReq estimatedFare (oldSearchTry.searchRepeatCounter + 1) searchRepeatType
+          searchTry <- buildSearchTry merchant.id searchReq.merchantOperatingCityId searchReq.id estimate sReq estimatedFare (oldSearchTry.searchRepeatCounter + 1) searchRepeatType
           when (oldSearchTry.status == DST.ACTIVE) $ do
             QST.updateStatus oldSearchTry.id DST.CANCELLED
             void $ QDQ.setInactiveBySTId oldSearchTry.id
@@ -133,6 +134,7 @@ buildSearchTry ::
     HasField "searchRequestExpirationSeconds" r NominalDiffTime
   ) =>
   Id DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
   Id DSR.SearchRequest ->
   DEst.Estimate ->
   DSelectReq ->
@@ -140,7 +142,7 @@ buildSearchTry ::
   Int ->
   DST.SearchRepeatType ->
   m DST.SearchTry
-buildSearchTry merchantId searchReqId estimate sReq baseFare searchRepeatCounter searchRepeatType = do
+buildSearchTry merchantId merchantOpCityId searchReqId estimate sReq baseFare searchRepeatCounter searchRepeatType = do
   now <- getCurrentTime
   id_ <- Id <$> generateGUID
   searchRequestExpirationSeconds <- asks (.searchRequestExpirationSeconds)
@@ -152,6 +154,7 @@ buildSearchTry merchantId searchReqId estimate sReq baseFare searchRepeatCounter
         requestId = searchReqId,
         estimateId = estimate.id,
         merchantId = Just merchantId,
+        merchantOperatingCityId = merchantOpCityId,
         messageId = sReq.messageId,
         startTime = sReq.pickupTime,
         validTill = validTill_,

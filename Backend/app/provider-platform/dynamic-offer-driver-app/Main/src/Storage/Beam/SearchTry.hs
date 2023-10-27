@@ -27,6 +27,7 @@ data SearchTryT f = SearchTryT
     messageId :: B.C f Text,
     requestId :: B.C f Text,
     merchantId :: B.C f (Maybe Text),
+    merchantOperatingCityId :: B.C f (Maybe Text),
     startTime :: B.C f UTCTime,
     validTill :: B.C f UTCTime,
     estimateId :: B.C f Text,

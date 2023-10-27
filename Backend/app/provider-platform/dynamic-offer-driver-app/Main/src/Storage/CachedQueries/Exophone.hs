@@ -70,7 +70,7 @@ findAllByPhone phone =
         Just a -> return a
         Nothing -> cacheExophones merchantId /=<< Queries.findAllByPhone phone
 
-findAllExophones :: MonadFlow m => m [Exophone]
+findAllExophones :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => m [Exophone]
 findAllExophones = Queries.findAllExophones
 
 findByMerchantServiceAndExophoneType :: (CacheFlow m r, EsqDBFlow m r) => Id DM.Merchant -> CallService -> ExophoneType -> m [Exophone]
@@ -121,11 +121,11 @@ makeMerchantIdServiceExophoneTypeKey merchantId service exophoneType = "CachedQu
 patternKey :: Text
 patternKey = "CachedQueries:Exophones:*"
 
-create :: MonadFlow m => Exophone -> m ()
+create :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Exophone -> m ()
 create = Queries.create
 
-updateAffectedPhones :: MonadFlow m => [Text] -> m ()
+updateAffectedPhones :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => [Text] -> m ()
 updateAffectedPhones = Queries.updateAffectedPhones
 
-deleteByMerchantId :: MonadFlow m => Id DM.Merchant -> m ()
+deleteByMerchantId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id DM.Merchant -> m ()
 deleteByMerchantId = Queries.deleteByMerchantId

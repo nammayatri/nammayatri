@@ -18,13 +18,13 @@ import qualified Domain.Types.Booking as Booking
 import Domain.Types.DriverQuote (DriverQuote)
 import Kernel.Beam.Functions (findAllWithKV)
 import Kernel.Prelude
-import Kernel.Types.App (MonadFlow)
+import Kernel.Utils.Common
 import qualified Sequelize as Se
 import Storage.Beam.Booking as BeamB
 import Storage.Queries.Instances.Person ()
 
 getBookingInfo ::
-  (MonadFlow m) =>
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
   [DriverQuote] ->
   m [Booking.Booking]
 getBookingInfo driverQuote =

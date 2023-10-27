@@ -60,8 +60,8 @@ sendSearchRequestToDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId)
   searchReq <- B.runInReplica $ QSR.findById searchTry.requestId >>= fromMaybeM (SearchRequestNotFound searchTry.requestId.getId)
   -- searchReq <- QSR.findById searchTry.requestId >>= fromMaybeM (SearchRequestNotFound searchTry.requestId.getId)
   merchant <- CQM.findById searchReq.providerId >>= fromMaybeM (MerchantNotFound (searchReq.providerId.getId))
-  driverPoolConfig <- getDriverPoolConfig merchant.id (Just searchTry.vehicleVariant) jobData.estimatedRideDistance
-  goHomeCfg <- CQGHC.findByMerchantId merchant.id
+  driverPoolConfig <- getDriverPoolConfig searchReq.merchantOperatingCityId (Just searchTry.vehicleVariant) jobData.estimatedRideDistance
+  goHomeCfg <- CQGHC.findByMerchantOpCityId searchReq.merchantOperatingCityId
   (res, _) <- sendSearchRequestToDrivers' driverPoolConfig searchReq searchTry merchant jobData.driverExtraFeeBounds goHomeCfg
   return res
 

@@ -20,18 +20,21 @@ import "dashboard-helper-api" Dashboard.Common (HideSecrets (hideSecrets))
 import Data.Ord
 import Data.Time hiding (getCurrentTime)
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Merchant.Overlay as DTMO
 import Environment
 import Kernel.External.Notification.FCM.Types as FCM
 import Kernel.External.Types (Language (..))
 import Kernel.Prelude
 import Kernel.Types.APISuccess (APISuccess (Success))
+import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import SharedLogic.Allocator
 import SharedLogic.Merchant (findMerchantByShortId)
+import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.Overlay as CMP
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as CQTC
 import qualified Storage.Queries.Merchant.Overlay as SQMO
@@ -71,22 +74,24 @@ data OverlayContent = OverlayContent
 instance HideSecrets CreateOverlayReq where
   hideSecrets = identity
 
-createOverlay :: ShortId DM.Merchant -> CreateOverlayReq -> Flow APISuccess
-createOverlay merchantShortId req = do
+createOverlay :: ShortId DM.Merchant -> Context.City -> CreateOverlayReq -> Flow APISuccess
+createOverlay merchantShortId opCity req = do
   merchant <- findMerchantByShortId merchantShortId
-  overlayPresent <- SQMO.findAllByOverlayKeyUdf merchant.id req.overlayKey req.udf1
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  overlayPresent <- SQMO.findAllByOverlayKeyUdf merchantOpCityId req.overlayKey req.udf1
   unless (null overlayPresent) $ throwError $ OverlayKeyAndUdfAlreadyPresent ("overlayKey : " <> req.overlayKey <> " and " <> "udf : " <> show req.udf1)
-  overlays <- mapM (buildOverlay merchant.id req) req.contents
+  overlays <- mapM (buildOverlay merchant.id merchantOpCityId req) req.contents
   SQMO.createMany overlays
   pure Success
   where
-    buildOverlay :: Id DM.Merchant -> CreateOverlayReq -> OverlayContent -> Flow DTMO.Overlay
-    buildOverlay merchantId _overlay@CreateOverlayReq {..} _content@OverlayContent {..} = do
+    buildOverlay :: Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> CreateOverlayReq -> OverlayContent -> Flow DTMO.Overlay
+    buildOverlay merchantId merchantOpCityId _overlay@CreateOverlayReq {..} _content@OverlayContent {..} = do
       guid <- Id <$> generateGUID
       return
         DTMO.Overlay
           { id = guid,
-            merchantId = merchantId,
+            merchantId,
+            merchantOperatingCityId = merchantOpCityId,
             ..
           }
 
@@ -106,13 +111,14 @@ instance HideSecrets DeleteOverlayReq where
 availableLanguages :: [Language]
 availableLanguages = [ENGLISH, HINDI, KANNADA, TAMIL, MALAYALAM, BENGALI, FRENCH]
 
-deleteOverlay :: ShortId DM.Merchant -> DeleteOverlayReq -> Flow APISuccess
-deleteOverlay merchantShortId req = do
+deleteOverlay :: ShortId DM.Merchant -> Context.City -> DeleteOverlayReq -> Flow APISuccess
+deleteOverlay merchantShortId opCity req = do
   merchant <- findMerchantByShortId merchantShortId
-  overlayPresent <- SQMO.findAllByOverlayKeyUdf merchant.id req.overlayKey req.udf1
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  overlayPresent <- SQMO.findAllByOverlayKeyUdf merchantOpCityId req.overlayKey req.udf1
   when (null overlayPresent) $ throwError $ OverlayKeyAndUdfNotFound ("overlayKey : " <> req.overlayKey <> " and " <> "udf : " <> show req.udf1)
-  SQMO.deleteByOverlayKeyMerchantIdUdf merchant.id req.overlayKey req.udf1
-  mapM_ (\language -> CMP.clearMerchantIdPNKeyLangaugeUdf merchant.id req.overlayKey language req.udf1) availableLanguages
+  SQMO.deleteByOverlayKeyMerchantIdUdf merchantOpCityId req.overlayKey req.udf1
+  mapM_ (\language -> CMP.clearMerchantIdPNKeyLangaugeUdf merchantOpCityId req.overlayKey language req.udf1) availableLanguages
   pure Success
 
 -- ============================================
@@ -140,10 +146,11 @@ instance HideSecrets OverlayItem where
 
 type ListOverlayResp = [OverlayItem]
 
-listOverlay :: ShortId DM.Merchant -> Flow ListOverlayResp
-listOverlay merchantShortId = do
+listOverlay :: ShortId DM.Merchant -> Context.City -> Flow ListOverlayResp
+listOverlay merchantShortId opCity = do
   merchant <- findMerchantByShortId merchantShortId
-  SQMO.findAllByLanguage merchant.id ENGLISH >>= mapM buildListOverlayResp
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  SQMO.findAllByLanguage merchantOpCityId ENGLISH >>= mapM buildListOverlayResp
   where
     buildListOverlayResp _overlay@DTMO.Overlay {..} = do
       return OverlayItem {..}
@@ -163,10 +170,11 @@ data OverlayInfoReq = OverlayInfoReq
 instance HideSecrets OverlayInfoReq where
   hideSecrets = identity
 
-overlayInfo :: ShortId DM.Merchant -> OverlayInfoReq -> Flow OverlayInfoResp
-overlayInfo merchantShortId req = do
+overlayInfo :: ShortId DM.Merchant -> Context.City -> OverlayInfoReq -> Flow OverlayInfoResp
+overlayInfo merchantShortId opCity req = do
   merchant <- findMerchantByShortId merchantShortId
-  overlays <- SQMO.findAllByOverlayKeyUdf merchant.id req.overlayKey req.udf1
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  overlays <- SQMO.findAllByOverlayKeyUdf merchantOpCityId req.overlayKey req.udf1
   buildOverlayInfoResp overlays
   where
     buildOverlayInfoResp overlays = do
@@ -200,11 +208,12 @@ data ScheduleOverlay = ScheduleOverlay
 instance HideSecrets ScheduleOverlay where
   hideSecrets = identity
 
-scheduleOverlay :: ShortId DM.Merchant -> ScheduleOverlay -> Flow APISuccess
-scheduleOverlay merchantShortId req@ScheduleOverlay {..} = do
+scheduleOverlay :: ShortId DM.Merchant -> Context.City -> ScheduleOverlay -> Flow APISuccess
+scheduleOverlay merchantShortId opCity req@ScheduleOverlay {..} = do
   merchant <- findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   maxShards <- asks (.maxShards)
-  transporterConfig <- CQTC.findByMerchantId merchant.id >>= fromMaybeM (TransporterConfigNotFound merchant.id.getId)
+  transporterConfig <- CQTC.findByMerchantOpCityId merchantOpCityId >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   now <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
   let scheduledTime = UTCTime (utctDay now) (timeOfDayToTime req.scheduleTime)
   let jobScheduledTime =

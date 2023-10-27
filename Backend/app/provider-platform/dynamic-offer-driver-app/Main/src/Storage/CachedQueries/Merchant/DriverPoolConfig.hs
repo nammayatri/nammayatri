@@ -16,17 +16,17 @@
 module Storage.CachedQueries.Merchant.DriverPoolConfig
   ( clearCache,
     create,
-    findAllByMerchantId,
-    findByMerchantIdAndTripDistance,
-    findByMerchantIdAndTripDistanceAndDVeh,
+    findAllByMerchantOpCityId,
+    findByMerchantOpCityIdAndTripDistance,
+    findByMerchantOpCityIdAndTripDistanceAndDVeh,
     update,
   )
 where
 
 import Data.Coerce (coerce)
 import Domain.Types.Common
-import Domain.Types.Merchant (Merchant)
 import Domain.Types.Merchant.DriverPoolConfig
+import Domain.Types.Merchant.MerchantOperatingCity
 import qualified Domain.Types.Vehicle.Variant as DVeh
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
@@ -34,33 +34,33 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.Queries.Merchant.DriverPoolConfig as Queries
 
-create :: MonadFlow m => DriverPoolConfig -> m ()
+create :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => DriverPoolConfig -> m ()
 create = Queries.create
 
-findAllByMerchantId :: (CacheFlow m r, EsqDBFlow m r) => Id Merchant -> m [DriverPoolConfig]
-findAllByMerchantId id =
-  Hedis.withCrossAppRedis (Hedis.safeGet $ makeMerchantIdKey id) >>= \case
+findAllByMerchantOpCityId :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> m [DriverPoolConfig]
+findAllByMerchantOpCityId id =
+  Hedis.withCrossAppRedis (Hedis.safeGet $ makeMerchantOpCityIdKey id) >>= \case
     Just a -> return $ fmap (coerce @(DriverPoolConfigD 'Unsafe) @DriverPoolConfig) a
-    Nothing -> cacheDriverPoolConfigs id /=<< Queries.findAllByMerchantId id
+    Nothing -> cacheDriverPoolConfigs id /=<< Queries.findAllByMerchantOpCityId id
 
-findByMerchantIdAndTripDistance :: (CacheFlow m r, EsqDBFlow m r) => Id Merchant -> Meters -> m (Maybe DriverPoolConfig)
-findByMerchantIdAndTripDistance merchantId tripDistance = find (\config -> config.tripDistance == tripDistance) <$> findAllByMerchantId merchantId
+findByMerchantOpCityIdAndTripDistance :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Meters -> m (Maybe DriverPoolConfig)
+findByMerchantOpCityIdAndTripDistance merchantOpCityId tripDistance = find (\config -> config.tripDistance == tripDistance) <$> findAllByMerchantOpCityId merchantOpCityId
 
-findByMerchantIdAndTripDistanceAndDVeh :: (CacheFlow m r, EsqDBFlow m r) => Id Merchant -> Meters -> Maybe DVeh.Variant -> m (Maybe DriverPoolConfig)
-findByMerchantIdAndTripDistanceAndDVeh merchantId tripDistance variant = find (\config -> config.tripDistance == tripDistance && config.vehicleVariant == variant) <$> findAllByMerchantId merchantId
+findByMerchantOpCityIdAndTripDistanceAndDVeh :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Meters -> Maybe DVeh.Variant -> m (Maybe DriverPoolConfig)
+findByMerchantOpCityIdAndTripDistanceAndDVeh merchantOpCityId tripDistance variant = find (\config -> config.tripDistance == tripDistance && config.vehicleVariant == variant) <$> findAllByMerchantOpCityId merchantOpCityId
 
-cacheDriverPoolConfigs :: (CacheFlow m r) => Id Merchant -> [DriverPoolConfig] -> m ()
-cacheDriverPoolConfigs merchantId cfg = do
+cacheDriverPoolConfigs :: (CacheFlow m r) => Id MerchantOperatingCity -> [DriverPoolConfig] -> m ()
+cacheDriverPoolConfigs merchantOpCityId cfg = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
-  let merchantIdKey = makeMerchantIdKey merchantId
+  let merchantIdKey = makeMerchantOpCityIdKey merchantOpCityId
   Hedis.withCrossAppRedis $ Hedis.setExp merchantIdKey (coerce @[DriverPoolConfig] @[DriverPoolConfigD 'Unsafe] cfg) expTime
 
-makeMerchantIdKey :: Id Merchant -> Text
-makeMerchantIdKey id = "driver-offer:CachedQueries:DriverPoolConfig:MerchantId-" <> id.getId
+makeMerchantOpCityIdKey :: Id MerchantOperatingCity -> Text
+makeMerchantOpCityIdKey id = "driver-offer:CachedQueries:DriverPoolConfig:MerchantOperatingCityId-" <> id.getId
 
 -- Call it after any update
-clearCache :: Hedis.HedisFlow m r => Id Merchant -> m ()
-clearCache = Hedis.withCrossAppRedis . Hedis.del . makeMerchantIdKey
+clearCache :: Hedis.HedisFlow m r => Id MerchantOperatingCity -> m ()
+clearCache = Hedis.withCrossAppRedis . Hedis.del . makeMerchantOpCityIdKey
 
-update :: MonadFlow m => DriverPoolConfig -> m ()
+update :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => DriverPoolConfig -> m ()
 update = Queries.update

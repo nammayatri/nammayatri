@@ -26,13 +26,13 @@ import Lib.Payment.Storage.Beam.BeamFlow
 import qualified Lib.Payment.Storage.Beam.PaymentOrder as BeamPO
 import qualified Sequelize as Se
 
-findById :: BeamFlow m => Id DOrder.PaymentOrder -> m (Maybe DOrder.PaymentOrder)
+findById :: BeamFlow m r => Id DOrder.PaymentOrder -> m (Maybe DOrder.PaymentOrder)
 findById (Id paymentOrder) = findOneWithKV [Se.Is BeamPO.id $ Se.Eq paymentOrder]
 
-findByShortId :: BeamFlow m => ShortId DOrder.PaymentOrder -> m (Maybe DOrder.PaymentOrder)
+findByShortId :: BeamFlow m r => ShortId DOrder.PaymentOrder -> m (Maybe DOrder.PaymentOrder)
 findByShortId (ShortId shortId) = findOneWithKV [Se.Is BeamPO.shortId $ Se.Eq shortId]
 
-findLatestByPersonId :: BeamFlow m => Text -> m (Maybe DOrder.PaymentOrder)
+findLatestByPersonId :: BeamFlow m r => Text -> m (Maybe DOrder.PaymentOrder)
 findLatestByPersonId personId =
   findAllWithOptionsKV
     [Se.Is BeamPO.personId $ Se.Eq personId]
@@ -41,10 +41,10 @@ findLatestByPersonId personId =
     Nothing
     <&> listToMaybe
 
-create :: BeamFlow m => DOrder.PaymentOrder -> m ()
+create :: BeamFlow m r => DOrder.PaymentOrder -> m ()
 create = createWithKV
 
-updateStatusAndError :: BeamFlow m => DOrder.PaymentOrder -> Maybe Text -> Maybe Text -> m ()
+updateStatusAndError :: BeamFlow m r => DOrder.PaymentOrder -> Maybe Text -> Maybe Text -> m ()
 updateStatusAndError order bankErrorMessage bankErrorCode = do
   now <- getCurrentTime
   updateWithKV
@@ -55,7 +55,7 @@ updateStatusAndError order bankErrorMessage bankErrorCode = do
     ]
     [Se.Is BeamPO.id $ Se.Eq $ getId order.id]
 
-updateStatusToExpired :: BeamFlow m => Id DOrder.PaymentOrder -> m ()
+updateStatusToExpired :: BeamFlow m r => Id DOrder.PaymentOrder -> m ()
 updateStatusToExpired orderId = do
   now <- getCurrentTime
   updateWithKV
@@ -64,7 +64,7 @@ updateStatusToExpired orderId = do
     ]
     [Se.Is BeamPO.id $ Se.Eq $ getId orderId]
 
-updateStatus :: BeamFlow m => Id DOrder.PaymentOrder -> Text -> Payment.TransactionStatus -> m ()
+updateStatus :: BeamFlow m r => Id DOrder.PaymentOrder -> Text -> Payment.TransactionStatus -> m ()
 updateStatus orderId paymentServiceOrderId status = do
   now <- getCurrentTime
   mOrder <- findById orderId

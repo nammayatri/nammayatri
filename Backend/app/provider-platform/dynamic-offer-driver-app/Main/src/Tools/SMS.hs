@@ -21,7 +21,8 @@ module Tools.SMS
 where
 
 import qualified Domain.Types.Booking as SRB
-import Domain.Types.Merchant
+import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Merchant.MerchantServiceConfig as DMSC
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DR
@@ -44,21 +45,21 @@ import qualified Storage.CachedQueries.Merchant.TransporterConfig as SCT
 import qualified Storage.Queries.Person as QPerson
 import Tools.Error
 
-sendSMS :: ServiceFlow m r => Id Merchant -> SendSMSReq -> m SendSMSRes
-sendSMS merchantId = Sms.sendSMS handler
+sendSMS :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> SendSMSReq -> m SendSMSRes
+sendSMS merchantId merchantOpCityId = Sms.sendSMS handler
   where
     handler = Sms.SmsHandler {..}
 
     getProvidersPriorityList = do
-      merchantConfig <- QMSUC.findByMerchantId merchantId >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantId.getId)
+      merchantConfig <- QMSUC.findByMerchantOpCityId merchantOpCityId >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
       let smsServiceProviders = merchantConfig.smsProvidersPriorityList
-      when (null smsServiceProviders) $ throwError $ InternalError ("No sms service provider configured for the merchant, merchantId:" <> merchantId.getId)
+      when (null smsServiceProviders) $ throwError $ InternalError ("No sms service provider configured for the merchant, merchantOpCityId:" <> merchantOpCityId.getId)
       pure smsServiceProviders
 
     getProviderConfig provider = do
       merchantSmsServiceConfig <-
         QMSC.findByMerchantIdAndService merchantId (DMSC.SmsService provider)
-          >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantId.getId)
+          >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
       case merchantSmsServiceConfig.serviceConfig of
         DMSC.SmsServiceConfig msc -> pure msc
         _ -> throwError $ InternalError "Unknown Service Config"
@@ -70,15 +71,16 @@ sendDashboardSms ::
     HasFlowEnv m r '["smsCfg" ::: SmsConfig],
     ServiceFlow m r
   ) =>
-  Id Merchant ->
+  Id DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
   DashboardMessageType ->
   Maybe DR.Ride ->
   Id DP.Person ->
   Maybe SRB.Booking ->
   HighPrecMoney ->
   m ()
-sendDashboardSms merchantId messageType mbRide driverId mbBooking amount = do
-  transporterConfig <- SCT.findByMerchantId merchantId >>= fromMaybeM (TransporterConfigNotFound merchantId.getId)
+sendDashboardSms merchantId merchantOpCityId messageType mbRide driverId mbBooking amount = do
+  transporterConfig <- SCT.findByMerchantOpCityId merchantOpCityId >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   if transporterConfig.enableDashboardSms
     then do
       driver <- B.runInReplica $ QPerson.findById driverId >>= fromMaybeM (PersonDoesNotExist driverId.getId)
@@ -93,33 +95,33 @@ sendDashboardSms merchantId messageType mbRide driverId mbBooking amount = do
         BOOKING -> whenJust mbRide \ride ->
           whenJust mbBooking \booking -> do
             message <-
-              MessageBuilder.buildBookingMessage merchantId $
+              MessageBuilder.buildBookingMessage merchantOpCityId $
                 MessageBuilder.BuildBookingMessageReq
                   { otp = ride.otp,
                     amount = show booking.estimatedFare
                   }
-            sendSMS merchantId (Sms.SendSMSReq message phoneNumber sender) >>= Sms.checkSmsResult
+            sendSMS merchantId merchantOpCityId (Sms.SendSMSReq message phoneNumber sender) >>= Sms.checkSmsResult
         ENDRIDE -> whenJust mbRide \ride -> do
           message <-
-            MessageBuilder.buildEndRideMessage merchantId $
+            MessageBuilder.buildEndRideMessage merchantOpCityId $
               MessageBuilder.BuildEndRideMessageReq
                 { rideAmount = show amount,
                   rideShortId = ride.shortId.getShortId
                 }
-          sendSMS merchantId (Sms.SendSMSReq message phoneNumber sender) >>= Sms.checkSmsResult
+          sendSMS merchantId merchantOpCityId (Sms.SendSMSReq message phoneNumber sender) >>= Sms.checkSmsResult
         ONBOARDING -> do
           message <-
-            MessageBuilder.buildOnboardingMessage merchantId $
+            MessageBuilder.buildOnboardingMessage merchantOpCityId $
               MessageBuilder.BuildOnboardingMessageReq
                 {
                 }
-          sendSMS merchantId (Sms.SendSMSReq message phoneNumber sender) >>= Sms.checkSmsResult
+          sendSMS merchantId merchantOpCityId (Sms.SendSMSReq message phoneNumber sender) >>= Sms.checkSmsResult
         CASH_COLLECTED -> do
           message <-
-            MessageBuilder.buildCollectCashMessage merchantId $
+            MessageBuilder.buildCollectCashMessage merchantOpCityId $
               MessageBuilder.BuildCollectCashMessageReq
                 { amount = show amount
                 }
-          sendSMS merchantId (Sms.SendSMSReq message phoneNumber sender) >>= Sms.checkSmsResult
+          sendSMS merchantId merchantOpCityId (Sms.SendSMSReq message phoneNumber sender) >>= Sms.checkSmsResult
     else do
       logInfo "Merchant not configured to send dashboard sms"

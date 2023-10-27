@@ -23,6 +23,8 @@ import Lib.Scheduler
 import SharedLogic.Allocator
 import SharedLogic.DriverFee (changeAutoPayFeesAndInvoicesForDriverFeesToManual, roundToHalf)
 import Storage.Beam.Payment ()
+import qualified Storage.CachedQueries.Merchant as CQM
+import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as SCT
 import qualified Storage.Queries.DriverFee as QDF
 import qualified Storage.Queries.DriverInformation as QDI
@@ -45,9 +47,12 @@ startMandateExecutionForDriver Job {id, jobInfo} = withLogTag ("JobId-" <> id.ge
   (response, timetaken) <- measureDuration $ do
     let jobData = jobInfo.jobData
         merchantId = jobData.merchantId
+        mbMerchantOpCityId = jobData.merchantOperatingCityId
         startTime = jobData.startTime
         endTime = jobData.endTime
-    transporterConfig <- SCT.findByMerchantId merchantId >>= fromMaybeM (TransporterConfigNotFound merchantId.getId)
+    merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
+    merchantOpCityId <- CQMOC.getMerchantOpCityId mbMerchantOpCityId merchant Nothing
+    transporterConfig <- SCT.findByMerchantOpCityId merchantOpCityId >>= fromMaybeM (TransporterConfigNotFound merchantId.getId)
     let limit = transporterConfig.driverFeeMandateExecutionBatchSize
     executionDate' <- getCurrentTime
     driverFees <- QDF.findDriverFeeInRangeWithOrderNotExecutedAndPending merchantId limit startTime endTime
@@ -88,7 +93,9 @@ startMandateExecutionForDriver Job {id, jobInfo} = withLogTag ("JobId-" <> id.ge
         )
 
 buildExecutionRequestAndInvoice ::
-  ( MonadFlow m
+  ( MonadFlow m,
+    CacheFlow m r,
+    EsqDBFlow m r
   ) =>
   DF.DriverFee ->
   NTF.Notification ->

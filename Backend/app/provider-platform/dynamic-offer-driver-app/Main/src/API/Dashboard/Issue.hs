@@ -12,23 +12,25 @@ import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Kernel.Types.APISuccess (APISuccess)
+import qualified Kernel.Types.Beckn.Context as Context
+import Kernel.Types.Common
 import Kernel.Types.Id
-import Kernel.Utils.Common (withFlowHandlerAPI)
+import Kernel.Utils.Common
 import Servant hiding (Unauthorized, throwError)
 import Storage.Beam.IssueManagement ()
 import qualified Storage.Queries.Person as QP
 
 type API = IMD.DashboardIssueAPI
 
-handler :: ShortId DM.Merchant -> FlowServer API
-handler merchantId =
-  issueCategoryList merchantId
-    :<|> issueList merchantId
-    :<|> issueInfo merchantId
-    :<|> issueUpdate merchantId
-    :<|> issueAddComment merchantId
-    :<|> issueFetchMedia merchantId
-    :<|> ticketStatusCallBack merchantId
+handler :: ShortId DM.Merchant -> Context.City -> FlowServer API
+handler merchantId city =
+  issueCategoryList merchantId city
+    :<|> issueList merchantId city
+    :<|> issueInfo merchantId city
+    :<|> issueUpdate merchantId city
+    :<|> issueAddComment merchantId city
+    :<|> issueFetchMedia merchantId city
+    :<|> ticketStatusCallBack merchantId city
 
 dashboardIssueHandle :: DIssue.ServiceHandle Flow
 dashboardIssueHandle =
@@ -36,7 +38,7 @@ dashboardIssueHandle =
     { findPersonById = castPersonById
     }
 
-castPersonById :: EsqDBReplicaFlow m r => Id Common.Person -> m (Maybe Common.Person)
+castPersonById :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id Common.Person -> m (Maybe Common.Person)
 castPersonById driverId = do
   person <- runInReplica $ QP.findById (cast driverId)
   return $ fmap castDriver person
@@ -53,41 +55,46 @@ castPersonById driverId = do
 
 issueCategoryList ::
   ShortId DM.Merchant ->
+  Context.City ->
   FlowHandler Common.IssueCategoryListRes
-issueCategoryList (ShortId merchantShortId) = withFlowHandlerAPI $ DIssue.issueCategoryList (ShortId merchantShortId) Common.DRIVER
+issueCategoryList (ShortId merchantShortId) opCity = withFlowHandlerAPI $ DIssue.issueCategoryList (ShortId merchantShortId) opCity Common.DRIVER
 
 issueList ::
   ShortId DM.Merchant ->
+  Context.City ->
   Maybe Int ->
   Maybe Int ->
   Maybe Common.IssueStatus ->
   Maybe (Id IssueCategory) ->
   Maybe Text ->
   FlowHandler Common.IssueReportListResponse
-issueList (ShortId merchantShortId) mbLimit mbOffset mbStatus mbCategoryId mbAssignee = withFlowHandlerAPI $ DIssue.issueList (ShortId merchantShortId) mbLimit mbOffset mbStatus (cast <$> mbCategoryId) mbAssignee Common.DRIVER
+issueList (ShortId merchantShortId) opCity mbLimit mbOffset mbStatus mbCategoryId mbAssignee = withFlowHandlerAPI $ DIssue.issueList (ShortId merchantShortId) opCity mbLimit mbOffset mbStatus (cast <$> mbCategoryId) mbAssignee Common.DRIVER
 
 issueInfo ::
   ShortId DM.Merchant ->
+  Context.City ->
   Id IssueReport ->
   FlowHandler Common.IssueInfoRes
-issueInfo (ShortId merchantShortId) issueReportId = withFlowHandlerAPI $ DIssue.issueInfo (ShortId merchantShortId) (cast issueReportId) dashboardIssueHandle Common.DRIVER
+issueInfo (ShortId merchantShortId) opCity issueReportId = withFlowHandlerAPI $ DIssue.issueInfo (ShortId merchantShortId) opCity (cast issueReportId) dashboardIssueHandle Common.DRIVER
 
 issueUpdate ::
   ShortId DM.Merchant ->
+  Context.City ->
   Id IssueReport ->
   Common.IssueUpdateByUserReq ->
   FlowHandler APISuccess
-issueUpdate (ShortId merchantShortId) issueReportId req = withFlowHandlerAPI $ DIssue.issueUpdate (ShortId merchantShortId) (cast issueReportId) req
+issueUpdate (ShortId merchantShortId) opCity issueReportId req = withFlowHandlerAPI $ DIssue.issueUpdate (ShortId merchantShortId) opCity (cast issueReportId) req
 
 issueAddComment ::
   ShortId DM.Merchant ->
+  Context.City ->
   Id IssueReport ->
   Common.IssueAddCommentByUserReq ->
   FlowHandler APISuccess
-issueAddComment (ShortId merchantShortId) issueReportId req = withFlowHandlerAPI $ DIssue.issueAddComment (ShortId merchantShortId) (cast issueReportId) req
+issueAddComment (ShortId merchantShortId) opCity issueReportId req = withFlowHandlerAPI $ DIssue.issueAddComment (ShortId merchantShortId) opCity (cast issueReportId) req
 
-issueFetchMedia :: ShortId DM.Merchant -> Text -> FlowHandler Text
-issueFetchMedia (ShortId merchantShortId) = withFlowHandlerAPI . DIssue.issueFetchMedia (ShortId merchantShortId)
+issueFetchMedia :: ShortId DM.Merchant -> Context.City -> Text -> FlowHandler Text
+issueFetchMedia (ShortId merchantShortId) _opCity = withFlowHandlerAPI . DIssue.issueFetchMedia (ShortId merchantShortId)
 
-ticketStatusCallBack :: ShortId DM.Merchant -> Common.TicketStatusCallBackReq -> FlowHandler APISuccess
-ticketStatusCallBack (ShortId merchantShortId) = withFlowHandlerAPI . DIssue.ticketStatusCallBack (ShortId merchantShortId) Common.DRIVER
+ticketStatusCallBack :: ShortId DM.Merchant -> Context.City -> Common.TicketStatusCallBackReq -> FlowHandler APISuccess
+ticketStatusCallBack (ShortId merchantShortId) opCity = withFlowHandlerAPI . DIssue.ticketStatusCallBack (ShortId merchantShortId) opCity Common.DRIVER

@@ -9,6 +9,7 @@ import Domain.Types.DriverPlan as DPlan
 import qualified Domain.Types.Invoice as INV
 import Domain.Types.Mandate (Mandate)
 import Domain.Types.Merchant
+import Domain.Types.Merchant.MerchantOperatingCity (MerchantOperatingCity)
 import Domain.Types.Merchant.TransporterConfig
 import qualified Domain.Types.Notification as NTF
 import Domain.Types.Person as P
@@ -24,6 +25,8 @@ import Lib.Scheduler
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import SharedLogic.Allocator
 import SharedLogic.DriverFee (changeAutoPayFeesAndInvoicesForDriverFeesToManual, roundToHalf)
+import qualified Storage.CachedQueries.Merchant as CQM
+import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as SCT
 import qualified Storage.Queries.DriverFee as QDF
 import qualified Storage.Queries.DriverInformation as QDI
@@ -51,16 +54,18 @@ sendPDNNotificationToDriver Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId
   (response, timetaken) <- measureDuration $ do
     let jobData = jobInfo.jobData
         merchantId = jobData.merchantId
+        mbMerchantOpCityId = jobData.merchantOperatingCityId
         startTime = jobData.startTime
         endTime = jobData.endTime
-
-    transporterConfig <- SCT.findByMerchantId merchantId >>= fromMaybeM (TransporterConfigNotFound merchantId.getId)
+    merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
+    merchantOpCityId <- CQMOC.getMerchantOpCityId mbMerchantOpCityId merchant Nothing
+    transporterConfig <- SCT.findByMerchantOpCityId merchantOpCityId >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
     let limit = transporterConfig.driverFeeMandateNotificationBatchSize
     driverFees <- QDF.findDriverFeeInRangeWithNotifcationNotSentAndStatus merchantId limit startTime endTime DF.PAYMENT_PENDING
     if null driverFees
       then do
         maxShards <- asks (.maxShards)
-        scheduleJobs transporterConfig startTime endTime merchantId maxShards
+        scheduleJobs transporterConfig startTime endTime merchantId merchantOpCityId maxShards
         return Complete
       else do
         let driverIdsWithPendingFee = driverFees <&> (.driverId)
@@ -118,8 +123,8 @@ data DriverInfoForPDNotification = DriverInfoForPDNotification
 getRescheduledTime :: MonadTime m => TransporterConfig -> m UTCTime
 getRescheduledTime tc = addUTCTime tc.mandateNotificationRescheduleInterval <$> getCurrentTime
 
-scheduleJobs :: (CacheFlow m r, EsqDBFlow m r, HasField "schedulerSetName" r Text, HasField "schedulerType" r SchedulerType, HasField "jobInfoMap" r (M.Map Text Bool)) => TransporterConfig -> UTCTime -> UTCTime -> Id Merchant -> Int -> m ()
-scheduleJobs transporterConfig startTime endTime merchantId maxShards = do
+scheduleJobs :: (CacheFlow m r, EsqDBFlow m r, HasField "schedulerSetName" r Text, HasField "schedulerType" r SchedulerType, HasField "jobInfoMap" r (M.Map Text Bool)) => TransporterConfig -> UTCTime -> UTCTime -> Id Merchant -> Id MerchantOperatingCity -> Int -> m ()
+scheduleJobs transporterConfig startTime endTime merchantId merchantOpCityId maxShards = do
   now <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
   let dfExecutionTime = transporterConfig.driverAutoPayExecutionTime
       dfNotificationTime = transporterConfig.driverAutoPayNotificationTime
@@ -129,12 +134,14 @@ scheduleJobs transporterConfig startTime endTime merchantId maxShards = do
   createJobIn @_ @'MandateExecution dfCalculationJobTs maxShards $
     MandateExecutionInfo
       { merchantId = merchantId,
+        merchantOperatingCityId = Just merchantOpCityId,
         startTime = startTime,
         endTime = endTime
       }
   createJobIn @_ @'OrderAndNotificationStatusUpdate orderAndNotiifcationJobTs maxShards $
     OrderAndNotificationStatusUpdateJobData
-      { merchantId = merchantId
+      { merchantId = merchantId,
+        merchantOperatingCityId = Just merchantOpCityId
       }
 
 sendAsyncNotification ::

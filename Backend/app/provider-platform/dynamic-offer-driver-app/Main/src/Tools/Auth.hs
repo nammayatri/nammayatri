@@ -16,6 +16,7 @@ module Tools.Auth where
 
 import Data.Text as T
 import qualified Domain.Types.Merchant as Merchant
+import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.Person as SP
 import qualified Domain.Types.RegistrationToken as SR
@@ -52,14 +53,14 @@ type TokenAuth = HeaderAuth "token" VerifyToken
 data VerifyToken = VerifyToken
 
 instance VerificationMethod VerifyToken where
-  type VerificationResult VerifyToken = (Id Person.Person, Id Merchant.Merchant)
+  type VerificationResult VerifyToken = (Id Person.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity)
   verificationDescription =
     "Checks whether token is registered.\
     \If you don't have a token, use registration endpoints."
 
 verifyTokenAction ::
   forall m r.
-  (HasEsqEnv m r, Redis.HedisFlow m r, HasField "authTokenCacheExpiry" r Seconds, MonadFlow m) =>
+  (HasEsqEnv m r, Redis.HedisFlow m r, HasField "authTokenCacheExpiry" r Seconds, MonadFlow m, Utils.CacheFlow m r, Utils.EsqDBFlow m r) =>
   VerificationAction VerifyToken m
 verifyTokenAction = VerificationAction verifyPerson
 
@@ -79,13 +80,13 @@ verifyAdmin user = do
     throwError AccessDenied
   return user
 
-verifyToken :: (HasEsqEnv m r, MonadFlow m) => RegToken -> m SR.RegistrationToken
+verifyToken :: (HasEsqEnv m r, MonadFlow m, Utils.EsqDBFlow m r, Utils.CacheFlow m r) => RegToken -> m SR.RegistrationToken
 verifyToken regToken = do
   QR.findByToken regToken
     >>= Utils.fromMaybeM (InvalidToken regToken)
     >>= validateToken
 
-validateAdmin :: (HasEsqEnv m r, EncFlow m r) => RegToken -> m Person.Person
+validateAdmin :: (HasEsqEnv m r, EncFlow m r, Utils.EsqDBFlow m r, Utils.CacheFlow m r) => RegToken -> m Person.Person
 validateAdmin regToken = do
   SR.RegistrationToken {..} <- verifyToken regToken
   user <-
@@ -93,26 +94,27 @@ validateAdmin regToken = do
       >>= fromMaybeM (PersonNotFound entityId)
   verifyAdmin user
 
-verifyPerson :: (HasEsqEnv m r, Redis.HedisFlow m r, HasField "authTokenCacheExpiry" r Seconds, MonadFlow m) => RegToken -> m (Id Person.Person, Id Merchant.Merchant)
+verifyPerson :: (HasEsqEnv m r, Redis.HedisFlow m r, HasField "authTokenCacheExpiry" r Seconds, MonadFlow m, Utils.EsqDBFlow m r, Utils.CacheFlow m r) => RegToken -> m (Id Person.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity)
 verifyPerson token = do
   let key = authTokenCacheKey token
   authTokenCacheExpiry <- getSeconds <$> asks (.authTokenCacheExpiry)
   result <- Redis.safeGet key
   case result of
-    Just (personId, merchantId) -> return (personId, merchantId)
+    Just (personId, merchantId, merchantOperatingCityId) -> return (personId, merchantId, merchantOperatingCityId)
     Nothing -> do
       sr <- verifyToken token
       let expiryTime = min sr.tokenExpiry authTokenCacheExpiry
       let personId = Id sr.entityId
       let merchantId = Id sr.merchantId
-      Redis.setExp key (personId, merchantId) expiryTime
-      return (personId, merchantId)
+      let merchantOperatingCityId = Id sr.merchantOperatingCityId
+      Redis.setExp key (personId, merchantId, merchantOperatingCityId) expiryTime
+      return (personId, merchantId, merchantOperatingCityId)
 
 authTokenCacheKey :: RegToken -> Text
 authTokenCacheKey regToken =
   "providerPlatform:authTokenCacheKey:" <> regToken
 
-validateAdminAction :: forall m r. (HasEsqEnv m r, EncFlow m r) => VerificationAction AdminVerifyToken m
+validateAdminAction :: forall m r. (HasEsqEnv m r, EncFlow m r, Utils.CacheFlow m r, Utils.EsqDBFlow m r) => VerificationAction AdminVerifyToken m
 validateAdminAction = VerificationAction validateAdmin
 
 validateToken :: (HasEsqEnv m r, MonadFlow m) => SR.RegistrationToken -> m SR.RegistrationToken
@@ -153,7 +155,7 @@ verifyDashboard incomingToken = do
     then pure Dashboard
     else throwError (InvalidToken "dashboard token") -- we shouldn't show to dashboard user incoming token
 
-clearDriverSession :: (HasEsqEnv m r, Redis.HedisFlow m r, MonadFlow m) => Id Person.Person -> m ()
+clearDriverSession :: (HasEsqEnv m r, Redis.HedisFlow m r, MonadFlow m, Utils.CacheFlow m r, Utils.EsqDBFlow m r) => Id Person.Person -> m ()
 clearDriverSession personId = do
   regTokens <- QR.findAllByPersonId personId
   for_ regTokens $ \regToken -> do

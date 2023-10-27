@@ -21,6 +21,7 @@ import Domain.Types.FareParameters (FareParameters)
 import qualified Domain.Types.FareProduct as FareProductD
 import qualified Domain.Types.Location as DLoc
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.RiderDetails as DRD
 import qualified Domain.Types.Vehicle.Variant as DVeh
@@ -53,6 +54,7 @@ data Booking = Booking
     disabilityTag :: Maybe Text,
     area :: Maybe FareProductD.Area,
     providerId :: Id DM.Merchant, -- FIXME merchantId
+    merchantOperatingCityId :: Id DMOC.MerchantOperatingCity,
     primaryExophone :: Text,
     bapId :: Text,
     bapUri :: BaseUrl,

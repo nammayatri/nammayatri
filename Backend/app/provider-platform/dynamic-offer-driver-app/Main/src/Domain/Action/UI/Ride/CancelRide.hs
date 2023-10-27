@@ -29,6 +29,7 @@ import Domain.Types.CancellationReason (CancellationReasonCode (..))
 import qualified Domain.Types.Driver.GoHomeFeature.DriverGoHomeRequest as DDGR
 import Domain.Types.Merchant
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
 import Environment
@@ -58,7 +59,7 @@ data ServiceHandle m = ServiceHandle
     findById :: Id DP.Person -> m (Maybe DP.Person),
     cancelRide :: Id DRide.Ride -> DBCR.BookingCancellationReason -> m (),
     findBookingByIdInReplica :: Id SRB.Booking -> m (Maybe SRB.Booking),
-    pickUpDistance :: Id DM.Merchant -> LatLong -> LatLong -> m Meters
+    pickUpDistance :: Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> LatLong -> LatLong -> m Meters
   }
 
 cancelRideHandle :: ServiceHandle Flow
@@ -113,7 +114,7 @@ cancelRideImpl ServiceHandle {..} requestorId rideId req = do
   ride <- findRideById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
   unless (isValidRide ride) $ throwError $ RideInvalidStatus "This ride cannot be canceled"
   let driverId = ride.driverId
-
+  booking <- findBookingByIdInReplica ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
   (rideCancelationReason, cancellationCnt, isGoToDisabled) <- case requestorId of
     PersonRequestorId personId -> do
       authPerson <-
@@ -127,8 +128,8 @@ cancelRideImpl ServiceHandle {..} requestorId rideId req = do
           buildRideCancelationReason Nothing Nothing Nothing DBCR.ByMerchant ride (Just driver.merchantId) >>= \res -> return (res, Nothing, Nothing)
         DP.DRIVER -> do
           unless (authPerson.id == driverId) $ throwError NotAnExecutor
-          goHomeConfig <- CQGHC.findByMerchantId authPerson.merchantId
-          dghInfo <- CQDGR.getDriverGoHomeRequestInfo driverId driver.merchantId (Just goHomeConfig)
+          goHomeConfig <- CQGHC.findByMerchantOpCityId booking.merchantOperatingCityId
+          dghInfo <- CQDGR.getDriverGoHomeRequestInfo driverId booking.merchantOperatingCityId (Just goHomeConfig)
           (cancellationCount, isGoToDisabled) <-
             if dghInfo.status == Just DDGR.ACTIVE
               then do
@@ -137,7 +138,7 @@ cancelRideImpl ServiceHandle {..} requestorId rideId req = do
                 let cancelCnt = driverGoHomeReq.numCancellation + 1
                 QDGR.updateCancellationCount driverGoHomeReq.id cancelCnt
                 when (cancelCnt == goHomeConfig.cancellationCnt) $
-                  CQDGR.deactivateDriverGoHomeRequest driver.merchantId driverId DDGR.SUCCESS dghInfo (Just False)
+                  CQDGR.deactivateDriverGoHomeRequest booking.merchantOperatingCityId driverId DDGR.SUCCESS dghInfo (Just False)
                 return (Just cancelCnt, Just $ cancelCnt == goHomeConfig.cancellationCnt)
               else do
                 return (Nothing, Nothing)
@@ -145,9 +146,8 @@ cancelRideImpl ServiceHandle {..} requestorId rideId req = do
           mbLocation <- do
             driverLocations <- LF.driversLocation [driverId]
             return $ listToMaybe driverLocations
-          booking <- findBookingByIdInReplica ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
           disToPickup <- forM mbLocation $ \location -> do
-            pickUpDistance booking.providerId (getCoordinates location) (getCoordinates booking.fromLocation)
+            pickUpDistance booking.providerId booking.merchantOperatingCityId (getCoordinates location) (getCoordinates booking.fromLocation)
           let currentDriverLocation = getCoordinates <$> mbLocation
           buildRideCancelationReason currentDriverLocation disToPickup (Just driverId) DBCR.ByDriver ride (Just driver.merchantId) >>= \res -> return (res, cancellationCount, isGoToDisabled)
       return (rideCancellationReason, mbCancellationCnt, isGoToDisabled)
@@ -184,12 +184,13 @@ driverDistanceToPickup ::
     Maps.HasCoordinates tripEndPos
   ) =>
   Id Merchant ->
+  Id DMOC.MerchantOperatingCity ->
   tripStartPos ->
   tripEndPos ->
   m Meters
-driverDistanceToPickup merchantId tripStartPos tripEndPos = do
+driverDistanceToPickup merchantId merchantOpCityId tripStartPos tripEndPos = do
   distRes <-
-    Maps.getDistanceForCancelRide merchantId $
+    Maps.getDistanceForCancelRide merchantId merchantOpCityId $
       Maps.GetDistanceReq
         { origin = tripStartPos,
           destination = tripEndPos,

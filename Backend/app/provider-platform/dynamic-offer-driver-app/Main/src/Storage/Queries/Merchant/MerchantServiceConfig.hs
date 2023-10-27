@@ -37,18 +37,18 @@ import qualified Kernel.External.Whatsapp.Interface as Whatsapp
 import Kernel.Prelude as P
 import Kernel.Types.Common
 import Kernel.Types.Id
-import Kernel.Utils.Error
+import Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified Storage.Beam.Merchant.MerchantServiceConfig as BeamMSC
 import Tools.Error
 
-findByMerchantIdAndService :: MonadFlow m => Id Merchant -> ServiceName -> m (Maybe MerchantServiceConfig)
+findByMerchantIdAndService :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Merchant -> ServiceName -> m (Maybe MerchantServiceConfig)
 findByMerchantIdAndService (Id merchantId) serviceName = findOneWithKV [Se.And [Se.Is BeamMSC.merchantId $ Se.Eq merchantId, Se.Is BeamMSC.serviceName $ Se.Eq serviceName]]
 
-findOne :: MonadFlow m => ServiceName -> m (Maybe MerchantServiceConfig)
+findOne :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => ServiceName -> m (Maybe MerchantServiceConfig)
 findOne serviceName = findAllWithOptionsKV [Se.Is BeamMSC.serviceName $ Se.Eq serviceName] (Se.Desc BeamMSC.createdAt) (Just 1) Nothing <&> listToMaybe
 
-upsertMerchantServiceConfig :: MonadFlow m => MerchantServiceConfig -> m ()
+upsertMerchantServiceConfig :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => MerchantServiceConfig -> m ()
 upsertMerchantServiceConfig merchantServiceConfig = do
   now <- getCurrentTime
   let (_serviceName, configJSON) = BeamMSC.getServiceNameConfigJSON merchantServiceConfig.serviceConfig

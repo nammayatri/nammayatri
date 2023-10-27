@@ -23,6 +23,7 @@ import Kernel.External.Types (Language (..))
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.APISuccess (APISuccess (Success))
+import Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common
 import Kernel.Types.Error
 import Kernel.Types.Id
@@ -32,8 +33,8 @@ newtype ServiceHandle m = ServiceHandle
   { findPersonById :: Id Person -> m (Maybe Person)
   }
 
-issueCategoryList :: (CacheFlow m r, BeamFlow m) => ShortId Merchant -> Identifier -> m Common.IssueCategoryListRes
-issueCategoryList _merchantShortId identifier = do
+issueCategoryList :: BeamFlow m r => ShortId Merchant -> Context.City -> Identifier -> m Common.IssueCategoryListRes
+issueCategoryList _merchantShortId _opCity identifier = do
   issueCategoryTranslationList <- CQIC.findAllByLanguage ENGLISH identifier
   pure $ Common.IssueCategoryListRes {categories = mkIssueCategory <$> issueCategoryTranslationList}
   where
@@ -46,11 +47,11 @@ issueCategoryList _merchantShortId identifier = do
         }
 
 issueList ::
-  ( CacheFlow m r,
-    BeamFlow m,
+  ( BeamFlow m r,
     Esq.EsqDBReplicaFlow m r
   ) =>
   ShortId Merchant ->
+  Context.City ->
   Maybe Int ->
   Maybe Int ->
   Maybe IssueStatus ->
@@ -58,14 +59,14 @@ issueList ::
   Maybe Text ->
   Identifier ->
   m Common.IssueReportListResponse
-issueList _merchantShortId mbLimit mbOffset mbStatus mbCategoryId mbAssignee identifier = do
+issueList _merchantShortId _opCity mbLimit mbOffset mbStatus mbCategoryId mbAssignee identifier = do
   issueReports <- B.runInReplica $ QIR.findAllWithOptions mbLimit mbOffset mbStatus mbCategoryId mbAssignee
   let count = length issueReports
   let summary = Common.Summary {totalCount = count, count}
   issues <- mapM mkIssueReport issueReports
   pure $ Common.IssueReportListResponse {issues, summary}
   where
-    mkIssueReport :: (CacheFlow m r, Esq.EsqDBReplicaFlow m r, BeamFlow m) => DIR.IssueReport -> m Common.IssueReportListItem
+    mkIssueReport :: (CacheFlow m r, Esq.EsqDBReplicaFlow m r, BeamFlow m r) => DIR.IssueReport -> m Common.IssueReportListItem
     mkIssueReport issueReport = do
       category <- CQIC.findById issueReport.categoryId identifier >>= fromMaybeM (IssueCategoryNotFound issueReport.categoryId.getId)
       pure $
@@ -82,16 +83,16 @@ issueList _merchantShortId mbLimit mbOffset mbStatus mbCategoryId mbAssignee ide
 
 issueInfo ::
   ( Esq.EsqDBReplicaFlow m r,
-    CacheFlow m r,
-    BeamFlow m,
+    BeamFlow m r,
     EncFlow m r
   ) =>
   ShortId Merchant ->
+  Context.City ->
   Id DIR.IssueReport ->
   ServiceHandle m ->
   Identifier ->
   m Common.IssueInfoRes
-issueInfo _merchantShortId issueReportId issueHandle identifier = do
+issueInfo _merchantShortId _opCity issueReportId issueHandle identifier = do
   issueReport <- B.runInReplica $ QIR.findById issueReportId >>= fromMaybeM (IssueReportDoNotExist issueReportId.getId)
   mediaFiles <- CQMF.findAllInForIssueReportId issueReport.mediaFiles issueReportId identifier
   comments <- B.runInReplica (QC.findAllByIssueReportId issueReport.id)
@@ -113,7 +114,7 @@ issueInfo _merchantShortId issueReportId issueHandle identifier = do
         createdAt = issueReport.createdAt
       }
   where
-    mkPersonDetail :: (Esq.EsqDBReplicaFlow m r, CacheFlow m r, EncFlow m r, BeamFlow m) => Person -> m Common.PersonDetail
+    mkPersonDetail :: (Esq.EsqDBReplicaFlow m r, CacheFlow m r, EncFlow m r, BeamFlow m r) => Person -> m Common.PersonDetail
     mkPersonDetail personDetail = do
       mobileNumber <- traverse decrypt personDetail.mobileNumber
       pure $
@@ -141,13 +142,14 @@ issueInfo _merchantShortId issueReportId issueHandle identifier = do
 
 issueUpdate ::
   ( CacheFlow m r,
-    BeamFlow m
+    BeamFlow m r
   ) =>
   ShortId Merchant ->
+  Context.City ->
   Id DIR.IssueReport ->
   Common.IssueUpdateByUserReq ->
   m APISuccess
-issueUpdate _merchantShortId issueReportId req = do
+issueUpdate _merchantShortId _opCity issueReportId req = do
   unless (isJust req.status || isJust req.assignee) $
     throwError $ InvalidRequest "Empty request, no fields to update."
   _ <- QIR.findById issueReportId >>= fromMaybeM (IssueReportDoNotExist issueReportId.getId)
@@ -171,13 +173,14 @@ issueUpdate _merchantShortId issueReportId req = do
 issueAddComment ::
   ( Esq.EsqDBReplicaFlow m r,
     CacheFlow m r,
-    BeamFlow m
+    BeamFlow m r
   ) =>
   ShortId Merchant ->
+  Context.City ->
   Id DIR.IssueReport ->
   Common.IssueAddCommentByUserReq ->
   m APISuccess
-issueAddComment _merchantShortId issueReportId req = do
+issueAddComment _merchantShortId _opCity issueReportId req = do
   void $ QIR.findById issueReportId >>= fromMaybeM (IssueReportDoNotExist issueReportId.getId)
   _ <- QC.create =<< mkComment
   pure Success
@@ -194,20 +197,21 @@ issueAddComment _merchantShortId issueReportId req = do
             createdAt = now
           }
 
-issueFetchMedia :: (HasField "s3Env" r (S3.S3Env m), MonadReader r m, BeamFlow m) => ShortId Merchant -> Text -> m Text
+issueFetchMedia :: (HasField "s3Env" r (S3.S3Env m), MonadReader r m, BeamFlow m r) => ShortId Merchant -> Text -> m Text
 issueFetchMedia _ filePath =
   S3.get $ T.unpack filePath
 
 ticketStatusCallBack ::
   ( Esq.EsqDBReplicaFlow m r,
     CacheFlow m r,
-    BeamFlow m
+    BeamFlow m r
   ) =>
   ShortId Merchant ->
+  Context.City ->
   Identifier ->
   Common.TicketStatusCallBackReq ->
   m APISuccess
-ticketStatusCallBack _ identifier req = do
+ticketStatusCallBack _merchantShortId _opCity identifier req = do
   issueReport <- QIR.findByTicketId req.ticketId >>= fromMaybeM (TicketDoesNotExist req.ticketId)
   issueConfig <- CQI.findIssueConfig identifier >>= fromMaybeM (InternalError "IssueConfigNotFound")
   mbIssueMessages <- mapM (`CQIM.findById` identifier) issueConfig.onKaptMarkIssueResMsgs

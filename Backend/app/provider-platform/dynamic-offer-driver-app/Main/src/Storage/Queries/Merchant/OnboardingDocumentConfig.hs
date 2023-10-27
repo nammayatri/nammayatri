@@ -23,7 +23,7 @@ where
 import Data.Aeson (fromJSON)
 import qualified Data.Aeson as A
 import qualified Data.List
-import Domain.Types.Merchant
+import Domain.Types.Merchant.MerchantOperatingCity
 import Domain.Types.Merchant.OnboardingDocumentConfig
 import qualified Domain.Types.Merchant.OnboardingDocumentConfig as Domain
 import Kernel.Beam.Functions
@@ -34,13 +34,13 @@ import Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified Storage.Beam.Merchant.OnboardingDocumentConfig as BeamODC
 
-create :: MonadFlow m => OnboardingDocumentConfig -> m ()
+create :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => OnboardingDocumentConfig -> m ()
 create = createWithKV
 
-findAllByMerchantId :: MonadFlow m => Id Merchant -> m [OnboardingDocumentConfig]
-findAllByMerchantId (Id merchantId) = findAllWithKV [Se.Is BeamODC.merchantId $ Se.Eq merchantId]
+findAllByMerchantOpCityId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id MerchantOperatingCity -> m [OnboardingDocumentConfig]
+findAllByMerchantOpCityId (Id merchantOperatingCityId) = findAllWithKV [Se.Is BeamODC.merchantOperatingCityId $ Se.Eq merchantOperatingCityId]
 
-update :: MonadFlow m => OnboardingDocumentConfig -> m ()
+update :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => OnboardingDocumentConfig -> m ()
 update config = do
   let supportedClassJson = BeamODC.getConfigJSON config.supportedVehicleClasses
   now <- getCurrentTime
@@ -52,7 +52,7 @@ update config = do
       Se.Set BeamODC.rcNumberPrefix (config.rcNumberPrefix),
       Se.Set BeamODC.updatedAt now
     ]
-    [Se.Is BeamODC.merchantId $ Se.Eq $ getId config.merchantId, Se.Is BeamODC.documentType $ Se.Eq config.documentType]
+    [Se.Is BeamODC.merchantOperatingCityId $ Se.Eq $ getId config.merchantOperatingCityId, Se.Is BeamODC.documentType $ Se.Eq config.documentType]
 
 instance FromTType' BeamODC.OnboardingDocumentConfig OnboardingDocumentConfig where
   fromTType' BeamODC.OnboardingDocumentConfigT {..} = do
@@ -64,6 +64,7 @@ instance FromTType' BeamODC.OnboardingDocumentConfig OnboardingDocumentConfig wh
       Just
         OnboardingDocumentConfig
           { merchantId = Id merchantId,
+            merchantOperatingCityId = Id merchantOperatingCityId,
             documentType = documentType,
             checkExtraction = checkExtraction,
             checkExpiry = checkExpiry,
@@ -89,6 +90,7 @@ instance ToTType' BeamODC.OnboardingDocumentConfig OnboardingDocumentConfig wher
   toTType' OnboardingDocumentConfig {..} = do
     BeamODC.OnboardingDocumentConfigT
       { BeamODC.merchantId = getId merchantId,
+        BeamODC.merchantOperatingCityId = getId merchantOperatingCityId,
         BeamODC.documentType = documentType,
         BeamODC.checkExtraction = checkExtraction,
         BeamODC.checkExpiry = checkExpiry,

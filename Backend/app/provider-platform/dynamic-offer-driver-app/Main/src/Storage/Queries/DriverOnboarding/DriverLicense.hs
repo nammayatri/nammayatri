@@ -22,13 +22,14 @@ import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
+import Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified Storage.Beam.DriverOnboarding.DriverLicense as BeamDL
 
-create :: MonadFlow m => DriverLicense -> m ()
+create :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => DriverLicense -> m ()
 create = createWithKV
 
-upsert :: MonadFlow m => DriverLicense -> m ()
+upsert :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => DriverLicense -> m ()
 upsert a@DriverLicense {..} = do
   res <- findOneWithKV [Se.Is BeamDL.licenseNumberHash $ Se.Eq (a.licenseNumber & (.hash))]
   if isJust res
@@ -45,18 +46,18 @@ upsert a@DriverLicense {..} = do
         [Se.Is BeamDL.licenseNumberHash $ Se.Eq (a.licenseNumber & (.hash))]
     else createWithKV a
 
-findById :: MonadFlow m => Id DriverLicense -> m (Maybe DriverLicense)
+findById :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DriverLicense -> m (Maybe DriverLicense)
 findById (Id dlId) = findOneWithKV [Se.Is BeamDL.id $ Se.Eq dlId]
 
-findByDriverId :: MonadFlow m => Id Person -> m (Maybe DriverLicense)
+findByDriverId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> m (Maybe DriverLicense)
 findByDriverId (Id personId) = findOneWithKV [Se.Is BeamDL.driverId $ Se.Eq personId]
 
-findByDLNumber :: (MonadFlow m, EncFlow m r) => Text -> m (Maybe DriverLicense)
+findByDLNumber :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, EncFlow m r) => Text -> m (Maybe DriverLicense)
 findByDLNumber dlNumber = do
   dlNumberHash <- getDbHash dlNumber
   findOneWithKV [Se.Is BeamDL.licenseNumberHash $ Se.Eq dlNumberHash]
 
-deleteByDriverId :: MonadFlow m => Id Person -> m ()
+deleteByDriverId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> m ()
 deleteByDriverId (Id driverId) = deleteWithKV [Se.Is BeamDL.driverId (Se.Eq driverId)]
 
 instance FromTType' BeamDL.DriverLicense DriverLicense where
