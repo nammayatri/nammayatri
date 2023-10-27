@@ -24,8 +24,7 @@ import qualified Data.Text as T
 import Environment
 import Kernel.Prelude
 import Kernel.Streaming.Kafka.KafkaTable as Kafka
-import Kernel.Types.Error
-import Kernel.Utils.Common (decodeFromText, encodeToText, logDebug, logWarning, throwError)
+import Kernel.Utils.Common (encodeToText, logDebug, logWarning)
 
 -- for now kafkaTable.tableName = "beckn_request", in future can be added other tables
 kafkaTableProcessor :: Map.Map String [Kafka.KafkaTable] -> Flow ()
@@ -35,18 +34,13 @@ kafkaTableProcessor mapKafkaTable = do
     flip Map.traverseWithKey mapKafkaTable $ \filePathWithoutPrefix mappedKafkaTables -> do
       let filePath = pathPrefix <> "/" <> filePathWithoutPrefix
       logDebug $ "MessagesReceived: " <> show (length mappedKafkaTables) <> "; filePath: " <> show filePath
-      existingFile <- handle @Flow @SomeException (pure . const "") (S3.get filePath)
-      if T.null existingFile
+      existingTableContent <- handle @Flow @SomeException (pure . const "") (S3.get filePath)
+      let newTableContent = T.concat ((<> "\n") . (encodeToText @A.Value) . (.tableContent) <$> mappedKafkaTables)
+      if T.null existingTableContent
         then do
+          -- normal case
           logDebug $ "Create new file: " <> show filePath
-          S3.put filePath (encodeToText @[A.Value] (mappedKafkaTables <&> (.tableContent))) -- normal case
         else do
-          let mbExistingRequests :: Maybe [A.Value] = decodeFromText existingFile
-          case mbExistingRequests of
-            Just existingKafkaTables -> do
-              -- overwriting file because of some drainer delay
-              logWarning $ "Overwriting file with beckn requests: " <> show filePath
-              S3.put filePath (encodeToText @[A.Value] $ existingKafkaTables <> (mappedKafkaTables <&> (.tableContent)))
-            Nothing -> do
-              -- should never happen
-              throwError (InternalError $ "Could not decode existing file: " <> show filePath)
+          -- overwriting file because of some drainer delay
+          logWarning $ "Overwriting file with beckn requests: " <> show filePath
+      S3.put filePath $ existingTableContent <> newTableContent
