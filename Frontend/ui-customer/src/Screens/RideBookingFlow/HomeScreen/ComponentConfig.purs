@@ -281,7 +281,6 @@ primaryButtonRequestRideConfig state =
         , cornerRadius = state.data.config.primaryButtonCornerRadius
         , margin = (Margin 0 32 0 0)
         , id = "RequestRideButton"
-        , enableLoader = (JB.getBtnLoader "RequestRideButton")
         , background = state.data.config.primaryBackground
         }
   in

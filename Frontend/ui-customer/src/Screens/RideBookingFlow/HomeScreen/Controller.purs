@@ -508,7 +508,6 @@ data ScreenOutput = LogoutUser
                   | CallPolice HomeScreenState
                   | UpdateSosStatus HomeScreenState
                   | FetchContacts HomeScreenState
-                  | OnResumeApp HomeScreenState
                   | CheckCurrentStatus
                   | CheckFlowStatus HomeScreenState
                   | ExitToPermissionFlow PermissionScreenStage
@@ -683,17 +682,22 @@ eval OnResumeCallback state =
   else 
     case getValueToLocalNativeStore LOCAL_STAGE of
       "FindingQuotes" -> do
+        let secondsLeft = findingQuotesSearchExpired false
         case (methodArgumentCount "startLottieProcess") == 1 of
           true  -> do
-            let secondsLeft = findingQuotesSearchExpired false
-                findingQuotesProgress = 1.0 - (toNumber secondsLeft)/(toNumber (getSearchExpiryTime "LazyCheck"))
+            let findingQuotesProgress = 1.0 - (toNumber secondsLeft)/(toNumber (getSearchExpiryTime "LazyCheck"))
             if secondsLeft > 0 then
               void $ pure $ startLottieProcess lottieAnimationConfig {rawJson = "progress_loader_line", lottieId = (getNewIDWithTag "lottieLoaderAnimProgress"), minProgress = findingQuotesProgress, scaleType="CENTER_CROP"}
             else pure unit
           false -> pure unit
         case flowWithoutOffers WithoutOffers of
-          true  -> exit $ OnResumeApp state
-          false -> continue state
+          true | secondsLeft <= 0 -> do
+              _ <- pure $ updateLocalStage QuoteList
+              continueWithCmd state [do
+                let response = SelectListRes { selectedQuotes: Nothing, bookingId : Nothing }
+                pure $ GetQuotesList response
+              ]
+          _ -> continue state
       "QuoteList" -> do
         let findingQuotesProgress = 1.0 - 30.0/(toNumber (getSearchExpiryTime "LazyCheck"))
         void $ pure $ startLottieProcess lottieAnimationConfig {rawJson = "progress_loader_line", lottieId = (getNewIDWithTag "lottieLoaderAnimProgress"), minProgress = findingQuotesProgress, scaleType="CENTER_CROP"}
