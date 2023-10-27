@@ -26,6 +26,7 @@ import Components.PrimaryEditText.Controller as PrimaryEditTextController
 import Data.String (length)
 import JBridge (toast)
 import Storage (KeyStore(..), setValueToLocalStore, getValueToLocalStore)
+import Data.Array (elem)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -79,4 +80,5 @@ eval (PopUpModalDemoModeAction (PopUpModal.ETextController (PrimaryEditTextContr
   continue state{ props{ enableConfirmPassword = (validateDemoMode newVal) }}
 eval _ state = continue state
 
-validateDemoMode newVal = ((length newVal) >= 7 && (newVal == "7891234" || newVal ==  "8917234" || newVal ==  "9178234" || newVal ==  "1789234")) && (length newVal) >= 7
+validateDemoMode :: String -> Boolean
+validateDemoMode newVal = length newVal >= 7 && newVal `elem` ["7891234", "8917234", "9178234", "1789234","7891789","7891788", "7891567", "7891678"]

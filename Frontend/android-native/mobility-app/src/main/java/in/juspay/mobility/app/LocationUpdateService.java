@@ -571,6 +571,22 @@ public class LocationUpdateService extends Service {
                         point.put("lat", 12.522069908884921);
                         point.put("lon", 76.89518072273476);
                         break;
+                    case "7891789":
+                        point.put("lat", 23.06194031948526);
+                        point.put("lon", 88.7637073215878);
+                        break;
+                    case "7891788":
+                        point.put("lat", 24.338294091147212);
+                        point.put("lon", 88.1949706368274);
+                        break;
+                    case "7891567":
+                        point.put("lat", 9.869715234892222);
+                        point.put("lon", 76.37632251438302);
+                        break;
+                    case "7891678":
+                        point.put("lat", 9.955097514840311);
+                        point.put("lon", 76.37173322025349);
+                        break;
                     default:
                         point.put("lat", latitude);
                         point.put("lon", longitude);

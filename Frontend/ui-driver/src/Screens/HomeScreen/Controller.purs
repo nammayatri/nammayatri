@@ -934,18 +934,22 @@ checkPermissionAndUpdateDriverMarker state = do
 
 showDriverMarker :: ST.HomeScreenState -> String -> ST.Location -> Effect Unit
 showDriverMarker state marker location = do
-  case (getValueToLocalStore DEMO_MODE_PASSWORD) of
-    "7891234" -> updateAutoIcon 13.311895563147432 76.93981481869986
-    "8917234" -> updateAutoIcon 13.260559676317829 76.4785809882692
-    "9178234" -> updateAutoIcon 13.160550263780683 76.66727044721313
-    "1789234" -> updateAutoIcon 12.522069908884921 76.89518072273476
+  case getValueToLocalStore DEMO_MODE_PASSWORD of
+    "7891234" -> updateDemoLocationIcon 13.311895563147432 76.93981481869986
+    "8917234" -> updateDemoLocationIcon 13.260559676317829 76.4785809882692
+    "9178234" -> updateDemoLocationIcon 13.160550263780683 76.66727044721313
+    "1789234" -> updateDemoLocationIcon 12.522069908884921 76.89518072273476
+    "7891789" -> updateDemoLocationIcon 23.06194031948526 88.7637073215878
+    "7891788" -> updateDemoLocationIcon 24.338294091147212 88.1949706368274
+    "7891567" -> updateDemoLocationIcon 9.869715234892222 76.37632251438302
+    "7891678" -> updateDemoLocationIcon 9.955097514840311 76.37173322025349
     _ -> do
       _ <- pure $ enableMyLocation true
       animateCamera location.lat location.lon zoomLevel "ZOOM"
 
-updateAutoIcon :: Number -> Number -> Effect Unit
-updateAutoIcon lat lng = do
-  _ <- showMarker "ic_vehicle_side" lat lng 100 0.5 0.5
+updateDemoLocationIcon :: Number -> Number -> Effect Unit
+updateDemoLocationIcon lat lng = do
+  _ <- showMarker "ny_ic_demo_location" lat lng 100 0.5 0.5
   _ <- pure $ enableMyLocation true
   animateCamera lat lng zoomLevel "ZOOM"
 
