@@ -11,27 +11,28 @@ import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
+import Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified Storage.Beam.Common as BeamCommon
 import qualified Storage.Beam.DriverReferral as BeamDR
 
-create :: MonadFlow m => DDR.DriverReferral -> m ()
+create :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => DDR.DriverReferral -> m ()
 create = createWithKV
 
 findByRefferalCode ::
-  MonadFlow m =>
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
   Id DriverReferral ->
   m (Maybe DriverReferral)
 findByRefferalCode (Id referralId) = findOneWithKV [Se.Is BeamDR.referralCode $ Se.Eq referralId]
 
 findById ::
-  MonadFlow m =>
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
   Id SP.Person ->
   m (Maybe DriverReferral)
 findById (Id driverId) = findOneWithKV [Se.Is BeamDR.driverId $ Se.Eq driverId]
 
 getLastRefferalCode ::
-  (MonadFlow m, Log m) =>
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Log m) =>
   m Integer
 getLastRefferalCode = do
   dbConf <- getMasterBeamConfig

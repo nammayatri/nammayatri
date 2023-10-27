@@ -19,6 +19,7 @@ import qualified Data.Time as DT
 import Domain.Types.DriverOnboarding.Error
 import Domain.Types.DriverOnboarding.Image
 import Domain.Types.Merchant
+import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import Domain.Types.Person (Person)
 import Kernel.Beam.Functions
 import qualified Kernel.Beam.Functions as B
@@ -34,23 +35,23 @@ import qualified Storage.Beam.DriverOnboarding.Image as BeamI
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as QTC
 import qualified Storage.Queries.Person as QP
 
-create :: MonadFlow m => Image -> m ()
+create :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Image -> m ()
 create = createWithKV
 
-findById :: MonadFlow m => Id Image -> m (Maybe Image)
+findById :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Image -> m (Maybe Image)
 findById (Id imageid) = findOneWithKV [Se.Is BeamI.id $ Se.Eq imageid]
 
-findImagesByPersonAndType :: MonadFlow m => Id Merchant -> Id Person -> ImageType -> m [Image]
+findImagesByPersonAndType :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Merchant -> Id Person -> ImageType -> m [Image]
 findImagesByPersonAndType (Id merchantId) (Id personId) imgType =
   findAllWithKV
     [ Se.And
         [Se.Is BeamI.personId $ Se.Eq personId, Se.Is BeamI.merchantId $ Se.Eq merchantId, Se.Is BeamI.imageType $ Se.Eq imgType]
     ]
 
-findRecentByPersonIdAndImageType :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> ImageType -> m [Image]
-findRecentByPersonIdAndImageType personId imgtype = do
-  person <- B.runInReplica $ QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  transporterConfig <- QTC.findByMerchantId person.merchantId >>= fromMaybeM (TransporterConfigNotFound person.merchantId.getId)
+findRecentByPersonIdAndImageType :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> Id DMOC.MerchantOperatingCity -> ImageType -> m [Image]
+findRecentByPersonIdAndImageType personId merchantOpCityId imgtype = do
+  _ <- B.runInReplica $ QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  transporterConfig <- QTC.findByMerchantOpCityId merchantOpCityId >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   let onboardingRetryTimeInHours = transporterConfig.onboardingRetryTimeInHours
       onBoardingRetryTimeInHours' = intToNominalDiffTime onboardingRetryTimeInHours
   now <- getCurrentTime
@@ -61,22 +62,22 @@ findRecentByPersonIdAndImageType personId imgtype = do
   where
     hoursAgo i now = negate (3600 * i) `DT.addUTCTime` now
 
-updateToValid :: MonadFlow m => Id Image -> m ()
+updateToValid :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Image -> m ()
 updateToValid (Id id) =
   updateWithKV
     [Se.Set BeamI.isValid True]
     [Se.Is BeamI.id (Se.Eq id)]
 
-findByMerchantId :: MonadFlow m => Id Merchant -> m [Image]
+findByMerchantId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Merchant -> m [Image]
 findByMerchantId (Id merchantId) = findAllWithKV [Se.Is BeamI.merchantId $ Se.Eq merchantId]
 
-addFailureReason :: MonadFlow m => Id Image -> DriverOnboardingError -> m ()
+addFailureReason :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Image -> DriverOnboardingError -> m ()
 addFailureReason (Id id) reason =
   updateWithKV
     [Se.Set BeamI.failureReason $ Just reason]
     [Se.Is BeamI.id (Se.Eq id)]
 
-deleteByPersonId :: MonadFlow m => Id Person -> m ()
+deleteByPersonId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> m ()
 deleteByPersonId (Id personId) = deleteWithKV [Se.Is BeamI.personId (Se.Eq personId)]
 
 instance FromTType' BeamI.Image Image where

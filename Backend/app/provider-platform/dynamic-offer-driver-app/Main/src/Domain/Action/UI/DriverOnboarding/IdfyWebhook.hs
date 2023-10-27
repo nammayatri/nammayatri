@@ -23,6 +23,7 @@ where
 import qualified Domain.Action.UI.DriverOnboarding.DriverLicense as DL
 import qualified Domain.Action.UI.DriverOnboarding.Status as Status
 import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as RC
+import Domain.Types.DriverOnboarding.IdfyVerification
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Merchant.MerchantServiceConfig as DMSC
 import Environment
@@ -35,6 +36,7 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import SharedLogic.Merchant (findMerchantByShortId)
+import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as CQMSUC
 import qualified Storage.Queries.DriverOnboarding.IdfyVerification as IVQuery
@@ -67,7 +69,7 @@ idfyWebhookHandler merchantShortId secret val = do
   merchant <- findMerchantByShortId merchantShortId
   let merchantId = merchant.id
   merchantServiceUsageConfig <-
-    CQMSUC.findByMerchantId merchantId
+    CQMSUC.findByMerchantOpCityId merchantId
       >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantId.getId)
   merchantServiceConfig <-
     CQMSC.findByMerchantIdAndService merchantId (DMSC.VerificationService merchantServiceUsageConfig.verificationService)
@@ -88,7 +90,7 @@ onVerify resp respDump = do
   ack_ <- maybe (pure Ack) (verifyDocument verificationReq) resp.result
   person <- runInReplica $ QP.findById verificationReq.driverId >>= fromMaybeM (PersonDoesNotExist verificationReq.driverId.getId)
   -- running statusHandler to enable Driver
-  _ <- Status.statusHandler (verificationReq.driverId, person.merchantId) verificationReq.multipleRC
+  _ <- Status.statusHandler (verificationReq.driverId, person.merchantId, verificationReq.merchantOperatingCityId) verificationReq.multipleRC
 
   return ack_
   where

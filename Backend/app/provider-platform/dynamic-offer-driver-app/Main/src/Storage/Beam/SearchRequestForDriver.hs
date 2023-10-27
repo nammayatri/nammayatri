@@ -37,6 +37,7 @@ data SearchRequestForDriverT f = SearchRequestForDriverT
     requestId :: B.C f Text,
     searchTryId :: B.C f Text,
     merchantId :: B.C f (Maybe Text),
+    merchantOperatingCityId :: B.C f (Maybe Text),
     startTime :: B.C f UTCTime,
     actualDistanceToPickup :: B.C f Meters,
     straightLineDistanceToPickup :: B.C f Meters,

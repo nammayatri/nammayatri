@@ -45,6 +45,7 @@ import Domain.Types.DriverPlan
 import qualified Domain.Types.FareParameters as DFare
 import Domain.Types.Merchant
 import qualified Domain.Types.Merchant.LeaderBoardConfig as LConfig
+import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import Domain.Types.Merchant.TransporterConfig
 import qualified Domain.Types.Person as DP
 import Domain.Types.Plan
@@ -56,7 +57,6 @@ import Kernel.External.Maps
 import qualified Kernel.External.Notification.FCM.Types as FCM
 import Kernel.Prelude hiding (whenJust)
 import qualified Kernel.Storage.Esqueleto as Esq
-import Kernel.Storage.Esqueleto.Config (EsqLocDBFlow, EsqLocRepDBFlow)
 import Kernel.Storage.Hedis as Hedis
 import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.Common hiding (getCurrentTime)
@@ -95,10 +95,8 @@ import qualified Tools.PaymentNudge as PaymentNudge
 endRideTransaction ::
   ( CacheFlow m r,
     EsqDBFlow m r,
-    EsqLocDBFlow m r,
     EncFlow m r,
     Esq.EsqDBReplicaFlow m r,
-    EsqLocRepDBFlow m r,
     HasField "minTripDistanceForReferralCfg" r (Maybe HighPrecMeters),
     HasField "maxShards" r Int,
     EventStreamFlow m r,
@@ -114,15 +112,13 @@ endRideTransaction ::
   Maybe (Id RD.RiderDetails) ->
   DFare.FareParameters ->
   TransporterConfig ->
-  Id Merchant ->
   m ()
-endRideTransaction driverId booking ride mbFareParams mbRiderDetailsId newFareParams thresholdConfig merchantId = do
-  DLoc.updateOnRide merchantId ride.driverId False
+endRideTransaction driverId booking ride mbFareParams mbRiderDetailsId newFareParams thresholdConfig = do
+  DLoc.updateOnRide booking.providerId ride.driverId False
   QRide.updateStatus ride.id Ride.COMPLETED
   QRB.updateStatus booking.id SRB.COMPLETED
   whenJust mbFareParams QFare.create
   QRide.updateAll ride.id ride
-
   driverInfo <- QDI.findById (cast ride.driverId) >>= fromMaybeM (PersonNotFound ride.driverId.getId)
   if driverInfo.active
     then QDFS.updateStatus ride.driverId DDFS.ACTIVE
@@ -132,14 +128,14 @@ endRideTransaction driverId booking ride mbFareParams mbRiderDetailsId newFarePa
 
   when (thresholdConfig.subscription) $ do
     maxShards <- asks (.maxShards)
-    createDriverFee merchantId driverId ride.fare newFareParams maxShards driverInfo
+    createDriverFee booking.providerId booking.merchantOperatingCityId driverId ride.fare newFareParams maxShards driverInfo
 
-  triggerRideEndEvent RideEventData {ride = ride{status = Ride.COMPLETED}, personId = cast driverId, merchantId = merchantId}
-  triggerBookingCompletedEvent BookingEventData {booking = booking{status = SRB.COMPLETED}, personId = cast driverId, merchantId = merchantId}
+  triggerRideEndEvent RideEventData {ride = ride{status = Ride.COMPLETED}, personId = cast driverId, merchantId = booking.providerId}
+  triggerBookingCompletedEvent BookingEventData {booking = booking{status = SRB.COMPLETED}, personId = cast driverId, merchantId = booking.providerId}
 
-  sendReferralFCM ride mbRiderDetailsId
-  updateLeaderboardZScore merchantId ride
-  DS.driverScoreEventHandler DST.OnRideCompletion {merchantId = merchantId, driverId = cast driverId, ride = ride}
+  sendReferralFCM ride mbRiderDetailsId booking.merchantOperatingCityId
+  updateLeaderboardZScore booking.providerId booking.merchantOperatingCityId ride
+  DS.driverScoreEventHandler booking.merchantOperatingCityId DST.OnRideCompletion {merchantId = booking.providerId, driverId = cast driverId, ride = ride}
 
 sendReferralFCM ::
   ( CacheFlow m r,
@@ -149,8 +145,9 @@ sendReferralFCM ::
   ) =>
   Ride.Ride ->
   Maybe (Id RD.RiderDetails) ->
+  Id DMOC.MerchantOperatingCity ->
   m ()
-sendReferralFCM ride mbRiderDetailsId = do
+sendReferralFCM ride mbRiderDetailsId merchantOpCityId = do
   mbRiderDetails <- join <$> QRD.findById `mapM` mbRiderDetailsId
   minTripDistanceForReferralCfg <- asks (.minTripDistanceForReferralCfg)
   let shouldUpdateRideComplete =
@@ -166,25 +163,25 @@ sendReferralFCM ride mbRiderDetailsId = do
             let referralMessage = "Congratulations!"
             let referralTitle = "Your referred customer has completed their first Namma Yatri ride"
             driver <- SQP.findById referredDriverId >>= fromMaybeM (PersonNotFound referredDriverId.getId)
-            sendNotificationToDriver driver.merchantId FCM.SHOW Nothing FCM.REFERRAL_ACTIVATED referralTitle referralMessage driver.id driver.deviceToken
+            sendNotificationToDriver merchantOpCityId FCM.SHOW Nothing FCM.REFERRAL_ACTIVATED referralTitle referralMessage driver.id driver.deviceToken
           Nothing -> pure ()
 
-updateLeaderboardZScore :: (Esq.EsqDBFlow m r, Esq.EsqDBReplicaFlow m r, CacheFlow m r) => Id Merchant -> Ride.Ride -> m ()
-updateLeaderboardZScore merchantId ride = do
+updateLeaderboardZScore :: (Esq.EsqDBFlow m r, Esq.EsqDBReplicaFlow m r, CacheFlow m r) => Id Merchant -> Id DMOC.MerchantOperatingCity -> Ride.Ride -> m ()
+updateLeaderboardZScore merchantId merchantOpCityId ride = do
   fork "Updating ZScore for driver" . Hedis.withNonCriticalRedis $ do
     nowUtc <- getCurrentTime
     let rideDate = getCurrentDate nowUtc
     driverZscore <- Hedis.zScore (makeDailyDriverLeaderBoardKey merchantId rideDate) $ ride.driverId.getId
-    updateDriverDailyZscore ride rideDate driverZscore ride.chargeableDistance merchantId
+    updateDriverDailyZscore ride rideDate driverZscore ride.chargeableDistance merchantId merchantOpCityId
     let (_, currDayIndex) = sundayStartWeek rideDate
     let weekStartDate = addDays (fromIntegral (- currDayIndex)) rideDate
     let weekEndDate = addDays (fromIntegral (6 - currDayIndex)) rideDate
     driverWeeklyZscore <- Hedis.zScore (makeWeeklyDriverLeaderBoardKey merchantId weekStartDate weekEndDate) $ ride.driverId.getId
-    updateDriverWeeklyZscore ride rideDate weekStartDate weekEndDate driverWeeklyZscore ride.chargeableDistance merchantId
+    updateDriverWeeklyZscore ride rideDate weekStartDate weekEndDate driverWeeklyZscore ride.chargeableDistance merchantId merchantOpCityId
 
-updateDriverDailyZscore :: (Esq.EsqDBFlow m r, Esq.EsqDBReplicaFlow m r, CacheFlow m r) => Ride.Ride -> Day -> Maybe Double -> Maybe Meters -> Id Merchant -> m ()
-updateDriverDailyZscore ride rideDate driverZscore chargeableDistance merchantId = do
-  mbdDailyLeaderBoardConfig <- QLeaderConfig.findLeaderBoardConfigbyType LConfig.DAILY merchantId
+updateDriverDailyZscore :: (Esq.EsqDBFlow m r, Esq.EsqDBReplicaFlow m r, CacheFlow m r) => Ride.Ride -> Day -> Maybe Double -> Maybe Meters -> Id Merchant -> Id DMOC.MerchantOperatingCity -> m ()
+updateDriverDailyZscore ride rideDate driverZscore chargeableDistance merchantId merchantOpCityId = do
+  mbdDailyLeaderBoardConfig <- QLeaderConfig.findLeaderBoardConfigbyType LConfig.DAILY merchantOpCityId
   whenJust mbdDailyLeaderBoardConfig $ \dailyLeaderBoardConfig -> do
     when dailyLeaderBoardConfig.isEnabled $ do
       (LocalTime _ localTime) <- utcToLocalTime timeZoneIST <$> getCurrentTime
@@ -202,9 +199,9 @@ updateDriverDailyZscore ride rideDate driverZscore chargeableDistance merchantId
       driversListWithScores' <- Hedis.zrevrangeWithscores (makeDailyDriverLeaderBoardKey merchantId rideDate) 0 (limit -1)
       Hedis.setExp (makeCachedDailyDriverLeaderBoardKey merchantId rideDate) driversListWithScores' (dailyLeaderBoardConfig.leaderBoardExpiry.getSeconds * dailyLeaderBoardConfig.numberOfSets)
 
-updateDriverWeeklyZscore :: (Esq.EsqDBFlow m r, Esq.EsqDBReplicaFlow m r, CacheFlow m r) => Ride.Ride -> Day -> Day -> Day -> Maybe Double -> Maybe Meters -> Id Merchant -> m ()
-updateDriverWeeklyZscore ride rideDate weekStartDate weekEndDate driverZscore rideChargeableDistance merchantId = do
-  mbWeeklyLeaderBoardConfig <- QLeaderConfig.findLeaderBoardConfigbyType LConfig.WEEKLY merchantId
+updateDriverWeeklyZscore :: (Esq.EsqDBFlow m r, Esq.EsqDBReplicaFlow m r, CacheFlow m r) => Ride.Ride -> Day -> Day -> Day -> Maybe Double -> Maybe Meters -> Id Merchant -> Id DMOC.MerchantOperatingCity -> m ()
+updateDriverWeeklyZscore ride rideDate weekStartDate weekEndDate driverZscore rideChargeableDistance merchantId merchantOpCityId = do
+  mbWeeklyLeaderBoardConfig <- QLeaderConfig.findLeaderBoardConfigbyType LConfig.WEEKLY merchantOpCityId
   whenJust mbWeeklyLeaderBoardConfig $ \weeklyLeaderBoardConfig -> do
     when weeklyLeaderBoardConfig.isEnabled $ do
       (LocalTime _ localTime) <- utcToLocalTime timeZoneIST <$> getCurrentTime
@@ -259,16 +256,17 @@ getDistanceBetweenPoints ::
     EsqDBFlow m r
   ) =>
   Id Merchant ->
+  Id DMOC.MerchantOperatingCity ->
   LatLong ->
   LatLong ->
   [LatLong] ->
   m Meters
-getDistanceBetweenPoints merchantId origin destination interpolatedPoints = do
+getDistanceBetweenPoints merchantId merchantOpCityId origin destination interpolatedPoints = do
   -- somehow interpolated points pushed to redis in reversed order, so we need to reverse it back
   let pickedWaypoints = origin :| (pickWaypoints interpolatedPoints <> [destination])
   logTagInfo "endRide" $ "pickedWaypoints: " <> show pickedWaypoints
   routeResponse <-
-    Maps.getRoutes merchantId $
+    Maps.getRoutes merchantId merchantOpCityId $
       Maps.GetRoutesReq
         { waypoints = pickedWaypoints,
           mode = Just Maps.CAR,
@@ -312,14 +310,15 @@ createDriverFee ::
     HasField "jobInfoMap" r (M.Map Text Bool)
   ) =>
   Id Merchant ->
+  Id DMOC.MerchantOperatingCity ->
   Id DP.Driver ->
   Maybe Money ->
   DFare.FareParameters ->
   Int ->
   DI.DriverInformation ->
   m ()
-createDriverFee merchantId driverId rideFare newFareParams maxShards driverInfo = do
-  transporterConfig <- SCT.findByMerchantId merchantId >>= fromMaybeM (TransporterConfigNotFound merchantId.getId)
+createDriverFee merchantId merchantOpCityId driverId rideFare newFareParams maxShards driverInfo = do
+  transporterConfig <- SCT.findByMerchantOpCityId merchantOpCityId >>= fromMaybeM (TransporterConfigNotFound merchantId.getId)
   freeTrialDaysLeft <- getFreeTrialDaysLeft transporterConfig.freeTrialDays driverInfo
   mbDriverPlan <- findByDriverId (cast driverId)
   unless (freeTrialDaysLeft > 0 || (transporterConfig.isPlanMandatory && isNothing mbDriverPlan)) $ do
@@ -397,7 +396,8 @@ scheduleJobs transporterConfig driverFee merchantId maxShards now = do
 mkDriverFee ::
   ( MonadFlow m,
     CoreMetrics m,
-    CacheFlow m r
+    CacheFlow m r,
+    EsqDBFlow m r
   ) =>
   UTCTime ->
   Id Merchant ->
@@ -443,7 +443,7 @@ mkDriverFee now merchantId driverId rideFare govtCharges platformFee cgst sgst t
         ..
       }
 
-getPlan :: (MonadFlow m, CacheFlow m r) => Maybe DriverPlan -> Id Merchant -> m (Maybe Plan)
+getPlan :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Maybe DriverPlan -> Id Merchant -> m (Maybe Plan)
 getPlan mbDriverPlan merchantId = do
   case mbDriverPlan of
     Just dp -> CQP.findByIdAndPaymentMode dp.planId dp.planType

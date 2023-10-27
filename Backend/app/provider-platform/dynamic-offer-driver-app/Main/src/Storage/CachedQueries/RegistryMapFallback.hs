@@ -20,19 +20,19 @@ import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Utils.Common
 import Storage.Queries.RegistryMapFallback as Queries
 
-findBySubscriberId :: (CacheFlow m r, MonadFlow m) => Text -> m [RegistryMapFallback]
+findBySubscriberId :: (CacheFlow m r, MonadFlow m, EsqDBFlow m r) => Text -> m [RegistryMapFallback]
 findBySubscriberId subscriberId =
   Hedis.safeGet (makeSubscriberIdKey subscriberId) >>= \case
     Just a -> return a
     Nothing -> cacheRegistryMapFallbacks (makeSubscriberIdKey subscriberId) /=<< Queries.findBySubscriberId subscriberId
 
-findByUniqueId :: (CacheFlow m r, MonadFlow m) => Text -> m [RegistryMapFallback]
+findByUniqueId :: (CacheFlow m r, MonadFlow m, EsqDBFlow m r) => Text -> m [RegistryMapFallback]
 findByUniqueId uniqueId =
   Hedis.safeGet (makeUniqueIdKey uniqueId) >>= \case
     Just a -> return a
     Nothing -> cacheRegistryMapFallbacks (makeUniqueIdKey uniqueId) /=<< Queries.findByUniqueId uniqueId
 
-findBySubscriberIdAndUniqueId :: (CacheFlow m r, MonadFlow m) => Text -> Text -> m (Maybe RegistryMapFallback)
+findBySubscriberIdAndUniqueId :: (CacheFlow m r, MonadFlow m, EsqDBFlow m r) => Text -> Text -> m (Maybe RegistryMapFallback)
 findBySubscriberIdAndUniqueId subId uniqueId =
   Hedis.safeGet (makeSubscriberIdAndUniqueIdKey subId uniqueId) >>= \case
     Just a -> return a

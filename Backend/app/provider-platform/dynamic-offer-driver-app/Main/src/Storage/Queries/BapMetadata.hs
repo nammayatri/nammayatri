@@ -20,10 +20,11 @@ import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
+import Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified Storage.Beam.BapMetadata as BeamBMD
 
-findById :: MonadFlow m => Id BapMetadata -> m (Maybe BapMetadata)
+findById :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id BapMetadata -> m (Maybe BapMetadata)
 findById (Id metaDataId) = findOneWithKV [Se.Is BeamBMD.id $ Se.Eq metaDataId]
 
 instance FromTType' BeamBMD.BapMetadata BapMetadata where

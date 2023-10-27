@@ -27,6 +27,7 @@ import qualified Data.List.NonEmpty as NE
 import qualified Domain.Types.DriverInformation as DDInfo
 import Domain.Types.DriverLocation (DriverLocation)
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.Ride as DRide
 import Environment (Flow)
@@ -95,10 +96,11 @@ data DriverLocationUpdateStreamData = DriverLocationUpdateStreamData
 
 buildUpdateLocationHandle ::
   Id Person.Person ->
+  Id DMOC.MerchantOperatingCity ->
   Flow (UpdateLocationHandle Flow)
-buildUpdateLocationHandle driverId = do
+buildUpdateLocationHandle driverId merchantOpCityId = do
   driver <- runInReplica $ QP.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
-  defaultRideInterpolationHandler <- LocUpd.buildRideInterpolationHandler driver.merchantId False
+  defaultRideInterpolationHandler <- LocUpd.buildRideInterpolationHandler driver.merchantId merchantOpCityId False
   pure $
     UpdateLocationHandle
       { driver,
@@ -142,11 +144,12 @@ updateLocationHandler ::
   ) =>
   UpdateLocationHandle m ->
   UpdateLocationReq ->
+  Id DMOC.MerchantOperatingCity ->
   m APISuccess
-updateLocationHandler UpdateLocationHandle {..} waypoints = withLogTag "driverLocationUpdate" $
+updateLocationHandler UpdateLocationHandle {..} waypoints merchantOpCityId = withLogTag "driverLocationUpdate" $
   withLogTag ("driverId-" <> driver.id.getId) $ do
     let driverId = driver.id
-    thresholdConfig <- QTConf.findByMerchantId driver.merchantId >>= fromMaybeM (TransporterConfigNotFound driver.merchantId.getId)
+    thresholdConfig <- QTConf.findByMerchantOpCityId merchantOpCityId >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
     driverInfo <- DInfo.findById (cast driverId) >>= fromMaybeM (PersonNotFound driverId.getId)
     when (length waypoints > 100) $ logError $ "way points more then 100 points" <> show (length waypoints) <> " on_ride:" <> show driverInfo.onRide
     logInfo $ "got location updates: " <> getId driverId <> " " <> encodeToText waypoints
@@ -181,7 +184,7 @@ updateLocationHandler UpdateLocationHandle {..} waypoints = withLogTag "driverLo
           let newWaypoints = a :| ax
           fork "update driver speed in redis" $
             forM_ (a : ax) $ \point -> do
-              updateDriverSpeedInRedis driver.merchantId driverId point.pt point.ts
+              updateDriverSpeedInRedis merchantOpCityId driverId point.pt point.ts
           maybe
             (logInfo "No ride is assigned to driver, ignoring")
             (\(rideId, rideStatus) -> when (rideStatus == DRide.INPROGRESS) $ addIntermediateRoutePoints rideId $ NE.map (.pt) newWaypoints)

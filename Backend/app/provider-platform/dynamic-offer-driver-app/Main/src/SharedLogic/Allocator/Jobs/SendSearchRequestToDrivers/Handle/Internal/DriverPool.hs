@@ -27,16 +27,16 @@ import qualified Data.List as DL
 import Domain.Types.Driver.GoHomeFeature.DriverGoHomeRequest as DDGR
 import qualified Domain.Types.DriverInformation as DriverInfo
 import Domain.Types.GoHomeConfig (GoHomeConfig)
-import Domain.Types.Merchant (Merchant)
 import Domain.Types.Merchant.DriverIntelligentPoolConfig
 import Domain.Types.Merchant.DriverPoolConfig
+import Domain.Types.Merchant.MerchantOperatingCity (MerchantOperatingCity)
 import Domain.Types.Merchant.TransporterConfig (TransporterConfig)
 import Domain.Types.Person (Driver)
 import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.SearchTry as DST
 import EulerHS.Prelude hiding (id)
 import Kernel.Randomizer (randomizeList)
-import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow, EsqLocDBFlow, EsqLocRepDBFlow)
+import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Error
 import Kernel.Types.Id
@@ -68,8 +68,6 @@ previouslyAttemptedDriversKey searchTryId = "Driver-Offer:PreviouslyAttemptedDri
 prepareDriverPoolBatch ::
   ( EncFlow m r,
     EsqDBReplicaFlow m r,
-    EsqLocDBFlow m r,
-    EsqLocRepDBFlow m r,
     EsqDBFlow m r,
     CacheFlow m r,
     LT.HasLocationService m r
@@ -82,8 +80,9 @@ prepareDriverPoolBatch ::
   m DriverPoolWithActualDistResultWithFlags
 prepareDriverPoolBatch driverPoolCfg searchReq searchTry batchNum goHomeConfig = withLogTag ("BatchNum-" <> show batchNum) $ do
   previousBatchesDrivers <- getPreviousBatchesDrivers
+  let merchantOpCityId = searchReq.merchantOperatingCityId
   logDebug $ "PreviousBatchesDrivers-" <> show previousBatchesDrivers
-  poolBatchWithFlags <- prepareDriverPoolBatch' previousBatchesDrivers True
+  poolBatchWithFlags <- prepareDriverPoolBatch' previousBatchesDrivers True merchantOpCityId
   incrementDriverRequestCount (fst poolBatchWithFlags) searchTry.id
   pure $ buildDriverPoolWithActualDistResultWithFlags poolBatchWithFlags previousBatchesDrivers
   where
@@ -97,65 +96,65 @@ prepareDriverPoolBatch driverPoolCfg searchReq searchTry batchNum goHomeConfig =
       batches <- previouslyAttemptedDrivers searchTry.id
       return $ (.driverPoolResult.driverId) <$> batches
 
-    prepareDriverPoolBatch' previousBatchesDrivers doGoHomePooling = do
+    prepareDriverPoolBatch' previousBatchesDrivers doGoHomePooling merchantOpCityId_ = do
       radiusStep <- getPoolRadiusStep searchReq.id
-      transporterConfig <- TC.findByMerchantId searchReq.providerId >>= fromMaybeM (TransporterConfigDoesNotExist searchReq.providerId.getId)
-      intelligentPoolConfig <- DIP.findByMerchantId searchReq.providerId >>= fromMaybeM (InternalError "Intelligent Pool Config not found")
+      transporterConfig <- TC.findByMerchantOpCityId merchantOpCityId_ >>= fromMaybeM (TransporterConfigDoesNotExist searchReq.providerId.getId)
+      intelligentPoolConfig <- DIP.findByMerchantOpCityId merchantOpCityId_ >>= fromMaybeM (InternalError "Intelligent Pool Config not found")
       blockListedDrivers <- Redis.withCrossAppRedis $ Redis.getList (mkBlockListedDriversKey searchReq.id)
       logDebug $ "Blocked Driver List-" <> show blockListedDrivers
       allNearbyGoHomeDrivers <-
         if batchNum == 0 && goHomeConfig.enableGoHome && doGoHomePooling
-          then calcGoHomeDriverPool
+          then calcGoHomeDriverPool merchantOpCityId_
           else return []
       (currentDriverPoolBatch, isGoToPool) <-
         if notNull allNearbyGoHomeDrivers
-          then (,True) <$> calculateGoHomeBatch transporterConfig intelligentPoolConfig allNearbyGoHomeDrivers blockListedDrivers
+          then (,True) <$> calculateGoHomeBatch merchantOpCityId_ transporterConfig intelligentPoolConfig allNearbyGoHomeDrivers blockListedDrivers
           else do
-            allNearbyDriversCurrentlyNotOnRide <- calcDriverPool radiusStep
-            allNearbyDriversCurrentlyOnRide <- calcDriverCurrentlyOnRidePool radiusStep transporterConfig
-            (,False) <$> calculateNormalBatch transporterConfig intelligentPoolConfig (allNearbyDriversCurrentlyOnRide <> allNearbyDriversCurrentlyNotOnRide) radiusStep blockListedDrivers
+            allNearbyDriversCurrentlyNotOnRide <- calcDriverPool radiusStep merchantOpCityId_
+            allNearbyDriversCurrentlyOnRide <- calcDriverCurrentlyOnRidePool radiusStep transporterConfig merchantOpCityId_
+            (,False) <$> calculateNormalBatch merchantOpCityId_ transporterConfig intelligentPoolConfig (allNearbyDriversCurrentlyOnRide <> allNearbyDriversCurrentlyNotOnRide) radiusStep blockListedDrivers
       cacheBatch currentDriverPoolBatch
       pure (addDistanceSplitConfigBasedDelaysForDriversWithinBatch currentDriverPoolBatch, isGoToPool)
       where
-        calculateGoHomeBatch transporterConfig intelligentPoolConfig allNearbyGoHomeDrivers blockListedDrivers = do
+        calculateGoHomeBatch mOCityId transporterConfig intelligentPoolConfig allNearbyGoHomeDrivers blockListedDrivers = do
           let allNearbyGoHomeDrivers' = filter (\dpr -> dpr.driverPoolResult.driverId `notElem` blockListedDrivers) allNearbyGoHomeDrivers
           logDebug $ "GoHomeDriverPool-" <> show allNearbyGoHomeDrivers'
           let onlyNewGoHomeDrivers = filter (\dpr -> dpr.driverPoolResult.driverId `notElem` previousBatchesDrivers) allNearbyGoHomeDrivers'
-          goHomeDriverPoolBatch <- mkDriverPoolBatch onlyNewGoHomeDrivers intelligentPoolConfig transporterConfig
+          goHomeDriverPoolBatch <- mkDriverPoolBatch mOCityId onlyNewGoHomeDrivers intelligentPoolConfig transporterConfig
           logDebug $ "GoHomeDriverPoolBatch-" <> show goHomeDriverPoolBatch
           pure goHomeDriverPoolBatch
 
-        calculateNormalBatch transporterConfig intelligentPoolConfig normalDriverPool radiusStep blockListedDrivers = do
+        calculateNormalBatch mOCityId transporterConfig intelligentPoolConfig normalDriverPool radiusStep blockListedDrivers = do
           logDebug $ "NormalDriverPool-" <> show normalDriverPool
-          allNearbyNonGoHomeDrivers <- filterM (\dpr -> (CQDGR.getDriverGoHomeRequestInfo dpr.driverPoolResult.driverId searchReq.providerId (Just goHomeConfig)) <&> (/= Just DDGR.ACTIVE) . (.status)) normalDriverPool
+          allNearbyNonGoHomeDrivers <- filterM (\dpr -> (CQDGR.getDriverGoHomeRequestInfo dpr.driverPoolResult.driverId mOCityId (Just goHomeConfig)) <&> (/= Just DDGR.ACTIVE) . (.status)) normalDriverPool
           let allNearbyDrivers = filter (\dpr -> dpr.driverPoolResult.driverId `notElem` blockListedDrivers) allNearbyNonGoHomeDrivers
           let onlyNewNormalDrivers = filter (\dpr -> dpr.driverPoolResult.driverId `notElem` previousBatchesDrivers) allNearbyDrivers
           if length onlyNewNormalDrivers < batchSize && not (isAtMaxRadiusStep radiusStep)
             then do
               incrementPoolRadiusStep searchReq.id
-              (batch, _) <- prepareDriverPoolBatch' previousBatchesDrivers False
+              (batch, _) <- prepareDriverPoolBatch' previousBatchesDrivers False mOCityId
               pure batch
             else do
-              normalDriverPoolBatch <- mkDriverPoolBatch onlyNewNormalDrivers intelligentPoolConfig transporterConfig
+              normalDriverPoolBatch <- mkDriverPoolBatch mOCityId onlyNewNormalDrivers intelligentPoolConfig transporterConfig
               logDebug $ "NormalDriverPoolBatch-" <> show normalDriverPoolBatch
               if length normalDriverPoolBatch < batchSize
                 then do
-                  filledBatch <- fillBatch searchReq.providerId normalDriverPool normalDriverPoolBatch intelligentPoolConfig blockListedDrivers
+                  filledBatch <- fillBatch mOCityId normalDriverPool normalDriverPoolBatch intelligentPoolConfig blockListedDrivers
                   logDebug $ "FilledDriverPoolBatch-" <> show filledBatch
                   pure filledBatch
                 else do
                   pure normalDriverPoolBatch
 
-        mkDriverPoolBatch onlyNewDrivers intelligentPoolConfig transporterConfig = do
+        mkDriverPoolBatch mOCityId onlyNewDrivers intelligentPoolConfig transporterConfig = do
           case sortingType of
-            Intelligent -> makeIntelligentDriverPool searchReq.providerId onlyNewDrivers intelligentPoolConfig transporterConfig
+            Intelligent -> makeIntelligentDriverPool mOCityId onlyNewDrivers intelligentPoolConfig transporterConfig
             Random -> makeRandomDriverPool onlyNewDrivers
 
-        makeIntelligentDriverPool merchantId onlyNewDrivers intelligentPoolConfig transporterConfig = do
-          let sortWithDriverScore' = sortWithDriverScore merchantId (Just transporterConfig) intelligentPoolConfig driverPoolCfg
+        makeIntelligentDriverPool mOCityId onlyNewDrivers intelligentPoolConfig transporterConfig = do
+          let sortWithDriverScore' = sortWithDriverScore mOCityId (Just transporterConfig) intelligentPoolConfig driverPoolCfg
           (sortedDriverPool, randomizedDriverPool) <-
             bimapM (sortWithDriverScore' [AcceptanceRatio, CancellationRatio, AvailableTime, DriverSpeed, ActualPickupDistance] True) (sortWithDriverScore' [AvailableTime, DriverSpeed, ActualPickupDistance] False)
-              =<< splitDriverPoolForSorting merchantId intelligentPoolConfig.minQuotesToQualifyForIntelligentPool onlyNewDrivers
+              =<< splitDriverPoolForSorting mOCityId intelligentPoolConfig.minQuotesToQualifyForIntelligentPool onlyNewDrivers
           let sortedDriverPoolWithSilentSort = splitSilentDriversAndSortWithDistance sortedDriverPool
           let randomizedDriverPoolWithSilentSort = splitSilentDriversAndSortWithDistance randomizedDriverPool
           takeDriversUsingPoolPercentage (sortedDriverPoolWithSilentSort, randomizedDriverPoolWithSilentSort) batchSize intelligentPoolConfig
@@ -199,36 +198,36 @@ prepareDriverPoolBatch driverPoolCfg searchReq searchTry batchNum goHomeConfig =
                 merchantId = searchReq.providerId
               }
 
-        calcDriverPool radiusStep = do
+        calcDriverPool radiusStep merchantOpCityId = do
           let vehicleVariant = searchTry.vehicleVariant
               merchantId = searchReq.providerId
           let pickupLoc = searchReq.fromLocation
           let pickupLatLong = LatLong pickupLoc.lat pickupLoc.lon
-          calculateDriverPoolWithActualDist DriverSelection driverPoolCfg (Just vehicleVariant) pickupLatLong merchantId True (Just radiusStep)
-        calcDriverCurrentlyOnRidePool radiusStep transporterConfig = do
+          calculateDriverPoolWithActualDist DriverSelection driverPoolCfg (Just vehicleVariant) pickupLatLong merchantId merchantOpCityId True (Just radiusStep)
+        calcDriverCurrentlyOnRidePool radiusStep transporterConfig merchantOpCityId = do
           let merchantId = searchReq.providerId
           if transporterConfig.includeDriverCurrentlyOnRide && (radiusStep - 1) > 0
             then do
               let vehicleVariant = searchTry.vehicleVariant
               let pickupLoc = searchReq.fromLocation
               let pickupLatLong = LatLong pickupLoc.lat pickupLoc.lon
-              calculateDriverCurrentlyOnRideWithActualDist DriverSelection driverPoolCfg (Just vehicleVariant) pickupLatLong merchantId (Just $ radiusStep - 1)
+              calculateDriverCurrentlyOnRideWithActualDist DriverSelection driverPoolCfg (Just vehicleVariant) pickupLatLong merchantId merchantOpCityId (Just $ radiusStep - 1)
             else pure []
-        fillBatch merchantId allNearbyDrivers batch intelligentPoolConfig blockListedDrivers = do
+        fillBatch merchantOpCityId allNearbyDrivers batch intelligentPoolConfig blockListedDrivers = do
           let batchDriverIds = batch <&> (.driverPoolResult.driverId)
           let driversNotInBatch = filter (\dpr -> dpr.driverPoolResult.driverId `notElem` batchDriverIds) allNearbyDrivers
           driversWithValidReqAmount <- filterM (\dpr -> checkRequestCount searchTry.id dpr.driverPoolResult.driverId driverPoolCfg) driversNotInBatch
-          nonGoHomeDriversWithValidReqCount <- filterM (\dpr -> (CQDGR.getDriverGoHomeRequestInfo dpr.driverPoolResult.driverId searchReq.providerId (Just goHomeConfig)) <&> (/= Just DDGR.ACTIVE) . (.status)) driversWithValidReqAmount
+          nonGoHomeDriversWithValidReqCount <- filterM (\dpr -> (CQDGR.getDriverGoHomeRequestInfo dpr.driverPoolResult.driverId merchantOpCityId (Just goHomeConfig)) <&> (/= Just DDGR.ACTIVE) . (.status)) driversWithValidReqAmount
           let nonGoHomeNormalDriversWithValidReqCount = filter (\ngd -> ngd.driverPoolResult.driverId `notElem` blockListedDrivers) nonGoHomeDriversWithValidReqCount
           let fillSize = batchSize - length batch
-          transporterConfig <- TC.findByMerchantId merchantId
+          transporterConfig <- TC.findByMerchantOpCityId merchantOpCityId
           (batch <>)
             <$> case sortingType of
               Intelligent -> do
-                let sortWithDriverScore' = sortWithDriverScore merchantId transporterConfig intelligentPoolConfig driverPoolCfg
+                let sortWithDriverScore' = sortWithDriverScore merchantOpCityId transporterConfig intelligentPoolConfig driverPoolCfg
                 (sortedDriverPool, randomizedDriverPool) <-
                   bimapM (sortWithDriverScore' [AcceptanceRatio, CancellationRatio, AvailableTime, DriverSpeed, ActualPickupDistance] True) (sortWithDriverScore' [AvailableTime, DriverSpeed, ActualPickupDistance] False)
-                    =<< splitDriverPoolForSorting merchantId intelligentPoolConfig.minQuotesToQualifyForIntelligentPool nonGoHomeNormalDriversWithValidReqCount -- snd means taking drivers who recieved less then X(config- minQuotesToQualifyForIntelligentPool) quotes
+                    =<< splitDriverPoolForSorting merchantOpCityId intelligentPoolConfig.minQuotesToQualifyForIntelligentPool nonGoHomeNormalDriversWithValidReqCount -- snd means taking drivers who recieved less then X(config- minQuotesToQualifyForIntelligentPool) quotes
                 let sortedDriverPoolWithSilentSort = splitSilentDriversAndSortWithDistance sortedDriverPool
                 let randomizedDriverPoolWithSilentSort = splitSilentDriversAndSortWithDistance randomizedDriverPool
                 takeDriversUsingPoolPercentage (sortedDriverPoolWithSilentSort, randomizedDriverPoolWithSilentSort) fillSize intelligentPoolConfig
@@ -290,7 +289,7 @@ sortWithDriverScore ::
     EsqDBFlow m r,
     MonadFlow m
   ) =>
-  Id Merchant ->
+  Id MerchantOperatingCity ->
   Maybe TransporterConfig ->
   DriverIntelligentPoolConfig ->
   DriverPoolConfig ->
@@ -299,12 +298,12 @@ sortWithDriverScore ::
   [DriverPoolWithActualDistResult] ->
   m [DriverPoolWithActualDistResult]
 sortWithDriverScore _ Nothing _ _ _ _ dp = logInfo "Weightages not available in DB, going with random selection" *> randomizeAndLimitSelection dp
-sortWithDriverScore merchantId (Just transporterConfig) intelligentPoolConfig driverPoolCfg factorsToCalculate isPartOfIntelligentPool dp = do
+sortWithDriverScore merchantOpCityId (Just transporterConfig) intelligentPoolConfig driverPoolCfg factorsToCalculate isPartOfIntelligentPool dp = do
   logTagInfo "Weightage config for intelligent driver pool" $ show transporterConfig
   let driverIds = map (.driverPoolResult.driverId) dp
   let driverActualDistances = map ((.driverPoolResult.driverId) &&& (.driverPoolResult.distanceToPickup)) dp
   let cancellationScoreRelatedConfig = CancellationScoreRelatedConfig transporterConfig.popupDelayToAddAsPenalty transporterConfig.thresholdCancellationScore transporterConfig.minRidesForCancellationScore
-  calculatedScores <- mapM (fetchScore merchantId driverActualDistances driverIds intelligentPoolConfig driverPoolCfg cancellationScoreRelatedConfig) factorsToCalculate
+  calculatedScores <- mapM (fetchScore merchantOpCityId driverActualDistances driverIds intelligentPoolConfig driverPoolCfg cancellationScoreRelatedConfig) factorsToCalculate
   let overallScore = calculateOverallScore calculatedScores
   driverPoolWithoutTie <- breakSameScoreTies $ groupByScore overallScore
   let sortedDriverPool = concatMap snd . sortOn (Down . fst) $ HM.toList driverPoolWithoutTie
@@ -330,7 +329,7 @@ sortWithDriverScore merchantId (Just transporterConfig) intelligentPoolConfig dr
       popupDelay <-
         maybe
           (pure transporterConfig.defaultPopupDelay)
-          (\cr -> getPopupDelay merchantId dObj.driverPoolResult.driverId cr cancellationScoreRelatedConfig transporterConfig.defaultPopupDelay)
+          (\cr -> getPopupDelay merchantOpCityId dObj.driverPoolResult.driverId cr cancellationScoreRelatedConfig transporterConfig.defaultPopupDelay)
           cancellationRatio
       pure $
         dObj
@@ -348,7 +347,7 @@ sortWithDriverScore merchantId (Just transporterConfig) intelligentPoolConfig dr
                 map snd . sortOn (Down . Down . fst)
                   <$> mapM
                     ( \dObj -> do
-                        quotes <- getTotalQuotesSent merchantId (cast dObj.driverPoolResult.driverId)
+                        quotes <- getTotalQuotesSent merchantOpCityId (cast dObj.driverPoolResult.driverId)
                         pure (quotes, dObj)
                     )
                     dObjArr
@@ -368,7 +367,7 @@ fetchScore ::
   ( CacheFlow m r,
     EsqDBFlow m r
   ) =>
-  Id Merchant ->
+  Id MerchantOperatingCity ->
   [(Id Driver, Meters)] ->
   [Id Driver] ->
   DriverIntelligentPoolConfig ->
@@ -376,21 +375,21 @@ fetchScore ::
   CancellationScoreRelatedConfig ->
   IntelligentFactors ->
   m (HM.Map Text Double)
-fetchScore merchantId driverActualDistanceList driverIds intelligentPoolConfig driverPoolCfg cancellationScoreRelatedConfig factor =
+fetchScore merchantOpCityId driverActualDistanceList driverIds intelligentPoolConfig driverPoolCfg cancellationScoreRelatedConfig factor =
   HM.fromList <$> case factor of
     AcceptanceRatio | intelligentPoolConfig.acceptanceRatioWeightage /= 0 -> do
-      acceptanceRatios <- getRatios (getLatestAcceptanceRatio merchantId) driverIds
+      acceptanceRatios <- getRatios (getLatestAcceptanceRatio merchantOpCityId) driverIds
       getScoreWithWeight (intelligentPoolConfig.acceptanceRatioWeightage) acceptanceRatios
     CancellationRatio | intelligentPoolConfig.cancellationRatioWeightage /= 0 -> do
       cancellationRatios <-
-        getRatios (getLatestCancellationRatio cancellationScoreRelatedConfig merchantId) driverIds
+        getRatios (getLatestCancellationRatio cancellationScoreRelatedConfig merchantOpCityId) driverIds
       getScoreWithWeight (intelligentPoolConfig.cancellationRatioWeightage) cancellationRatios
     AvailableTime | intelligentPoolConfig.availabilityTimeWeightage /= 0 -> do
       let maxAvailbaleTime = fromIntegral $ intelligentPoolConfig.availabilityTimeWindowOption.period * convertPeriodTypeToSeconds intelligentPoolConfig.availabilityTimeWindowOption.periodType
-      driversAvailableTimeRatio <- map (second ((/ maxAvailbaleTime) . sum . catMaybes)) <$> getRatios (getCurrentWindowAvailability merchantId) driverIds
+      driversAvailableTimeRatio <- map (second ((/ maxAvailbaleTime) . sum . catMaybes)) <$> getRatios (getCurrentWindowAvailability merchantOpCityId) driverIds
       getScoreWithWeight (intelligentPoolConfig.availabilityTimeWeightage) driversAvailableTimeRatio
     DriverSpeed | intelligentPoolConfig.driverSpeedWeightage /= 0 -> do
-      averageSpeeds <- getRatios (getDriverAverageSpeed merchantId . cast) driverIds
+      averageSpeeds <- getRatios (getDriverAverageSpeed merchantOpCityId . cast) driverIds
       getSpeedScore (intelligentPoolConfig.driverSpeedWeightage) averageSpeeds
     ActualPickupDistance | intelligentPoolConfig.actualPickupDistanceWeightage /= 0 -> do
       pure $ map (bimap (.getId) ((* (fromIntegral intelligentPoolConfig.actualPickupDistanceWeightage)) . fromIntegral . flip div (fromMaybe (Meters 1) (driverPoolCfg.actualDistanceThreshold)))) driverActualDistanceList
@@ -428,8 +427,6 @@ getNextDriverPoolBatch ::
   ( EncFlow m r,
     CacheFlow m r,
     EsqDBReplicaFlow m r,
-    EsqLocDBFlow m r,
-    EsqLocRepDBFlow m r,
     EsqDBFlow m r,
     LT.HasLocationService m r
   ) =>

@@ -46,7 +46,7 @@ handler req = do
   booking <- QRB.findById req.bookingId >>= fromMaybeM (BookingDoesNotExist req.bookingId.getId)
   paymentMethodId <- booking.paymentMethodId & fromMaybeM (InvalidRequest "Payment method not specified for this booking.")
   paymentMethod <-
-    CQMPM.findByIdAndMerchantId paymentMethodId booking.providerId
+    CQMPM.findByIdAndMerchantOpCityId paymentMethodId booking.merchantOperatingCityId
       >>= fromMaybeM (MerchantPaymentMethodNotFound paymentMethodId.getId)
   let paymentMethodInfo = DMPM.mkPaymentMethodInfo paymentMethod
   unless (req.paymentMethodInfo == paymentMethodInfo) $

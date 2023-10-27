@@ -85,7 +85,7 @@ sendPaymentReminderToDriver Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId
         overdueFeeNotif <- B.runInReplica $ findOldestFeeByStatus (cast driver.id) PAYMENT_OVERDUE
         let paymentTitle = "Bill generated"
             paymentMessage = "You have taken " <> show (driverFee.numRides + maybe 0 (.numRides) overdueFeeNotif) <> " ride(s) since the last payment. Complete payment now to get trips seamlessly"
-        (Notify.sendNotificationToDriver driver.merchantId FCM.SHOW Nothing FCM.PAYMENT_PENDING paymentTitle paymentMessage driver.id driver.deviceToken) `C.catchAll` \e -> C.mask_ $ logError $ "FCM for payment reminder to driver id " <> driver.id.getId <> " failed. Error: " <> show e
+        (Notify.sendNotificationToDriver driver.merchantOperatingCityId FCM.SHOW Nothing FCM.PAYMENT_PENDING paymentTitle paymentMessage driver.id driver.deviceToken) `C.catchAll` \e -> C.mask_ $ logError $ "FCM for payment reminder to driver id " <> driver.id.getId <> " failed. Error: " <> show e
   forM_ feeZipDriver $ \(driverFee, mbPerson) -> do
     whenJust mbPerson $ \person -> do
       Redis.whenWithLockRedis (paymentProcessingLockKey driverFee.driverId.getId) 60 $ do
@@ -96,7 +96,7 @@ sendPaymentReminderToDriver Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId
     Just (driverFee, _) -> do
       driver <- B.runInReplica $ QPerson.findById (cast driverFee.driverId) >>= fromMaybeM (PersonDoesNotExist driverFee.driverId.getId)
       -- driver <- QPerson.findById (cast driverFee.driverId) >>= fromMaybeM (PersonDoesNotExist driverFee.driverId.getId)
-      transporterConfig <- SCT.findByMerchantId driver.merchantId >>= fromMaybeM (TransporterConfigNotFound driver.merchantId.getId)
+      transporterConfig <- SCT.findByMerchantOpCityId driver.merchantOperatingCityId >>= fromMaybeM (TransporterConfigNotFound driver.merchantId.getId)
       ReSchedule <$> getRescheduledTime transporterConfig.driverPaymentReminderInterval
 
 calculateDriverFeeForDrivers ::
@@ -120,7 +120,7 @@ calculateDriverFeeForDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getI
       endTime = jobData.endTime
       applyOfferCall = TPayment.offerApply merchantId
   now <- getCurrentTime
-  transporterConfig <- SCT.findByMerchantId merchantId >>= fromMaybeM (TransporterConfigNotFound merchantId.getId)
+  transporterConfig <- SCT.findByMerchantOpCityId merchantId >>= fromMaybeM (TransporterConfigNotFound merchantId.getId)
   driverFees <- findAllFeesInRangeWithStatus (Just merchantId) startTime endTime ONGOING transporterConfig.driverFeeCalculatorBatchSize
   let threshold = transporterConfig.driverFeeRetryThresholdConfig
   driverFeesToProccess <-
@@ -271,7 +271,7 @@ getFinalOrderAmount feeWithoutDiscount merchantId transporterConfig driver plan 
       updateCollectedPaymentStatus CLEARED Nothing now driverFee.id
       return (0, 0, Nothing, Nothing)
     else do
-      offers <- SPayment.offerListCache merchantId (makeOfferReq feeWithoutDiscount driver plan dutyDate registrationDateLocal driverFee.numRides) -- handle UDFs
+      offers <- SPayment.offerListCache merchantId driver.merchantOperatingCityId (makeOfferReq feeWithoutDiscount driver plan dutyDate registrationDateLocal driverFee.numRides) -- handle UDFs
       (finalOrderAmount, offerId, offerTitle) <-
         if null offers.offerResp
           then pure (feeWithoutDiscount, Nothing, Nothing)
@@ -337,7 +337,7 @@ unsubscribeDriverForPaymentOverdue Job {id, jobInfo} = withLogTag ("JobId-" <> i
       Just driver -> do
         let paymentTitle = "Bill generated"
             paymentMessage = "You have taken " <> show driverFee.numRides <> " ride(s) since the last payment. Complete payment now to get trips seamlessly"
-        (Notify.sendNotificationToDriver driver.merchantId FCM.SHOW Nothing FCM.PAYMENT_OVERDUE paymentTitle paymentMessage driver.id driver.deviceToken) `C.catchAll` \e -> C.mask_ $ logError $ "FCM for removing subsciption of driver id " <> driver.id.getId <> " failed. Error: " <> show e
+        (Notify.sendNotificationToDriver driver.merchantOperatingCityId FCM.SHOW Nothing FCM.PAYMENT_OVERDUE paymentTitle paymentMessage driver.id driver.deviceToken) `C.catchAll` \e -> C.mask_ $ logError $ "FCM for removing subsciption of driver id " <> driver.id.getId <> " failed. Error: " <> show e
   forM_ feeZipDriver $ \(driverFee, mbPerson) -> do
     Redis.whenWithLockRedis (paymentProcessingLockKey driverFee.driverId.getId) 60 $ do
       -- Esq.runTransaction $ do

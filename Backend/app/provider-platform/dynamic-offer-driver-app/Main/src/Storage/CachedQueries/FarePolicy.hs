@@ -56,5 +56,5 @@ clearCacheById :: HedisFlow m r => Id FarePolicy -> m ()
 clearCacheById fid = Hedis.withCrossAppRedis $ do
   Hedis.del (makeIdKey fid)
 
-update :: MonadFlow m => FarePolicy -> m ()
+update :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => FarePolicy -> m ()
 update = Queries.update

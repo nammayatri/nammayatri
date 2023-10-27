@@ -27,6 +27,7 @@ where
 
 import Data.OpenApi (ToSchema)
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as SP
 import Domain.Types.Vehicle as SV
 import qualified Domain.Types.Vehicle.Variant as Variant
@@ -93,7 +94,7 @@ data Driver = Driver
   }
   deriving (Generic, FromJSON, ToJSON, ToSchema)
 
-listVehicles :: EsqDBReplicaFlow m r => SP.Person -> Maybe Variant.Variant -> Maybe Text -> Maybe Int -> Maybe Int -> m ListVehicleRes
+listVehicles :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => SP.Person -> Maybe Variant.Variant -> Maybe Text -> Maybe Int -> Maybe Int -> m ListVehicleRes
 listVehicles admin variantM mbRegNum limitM offsetM = do
   let merchantId = admin.merchantId
   personList <- B.runInReplica $ QP.findAllByMerchantId [SP.DRIVER] merchantId
@@ -104,7 +105,7 @@ listVehicles admin variantM mbRegNum limitM offsetM = do
     limit = toInteger $ fromMaybe 50 limitM
     offset = toInteger $ fromMaybe 0 offsetM
 
-updateVehicle :: EsqDBFlow m r => SP.Person -> Id SP.Person -> UpdateVehicleReq -> m UpdateVehicleRes
+updateVehicle :: (CacheFlow m r, EsqDBFlow m r) => SP.Person -> Id SP.Person -> UpdateVehicleReq -> m UpdateVehicleRes
 updateVehicle admin driverId req = do
   let merchantId = admin.merchantId
   runRequestValidation validateUpdateVehicleReq req
@@ -133,8 +134,8 @@ updateVehicle admin driverId req = do
   logTagInfo ("orgAdmin-" <> getId admin.id <> " -> updateVehicle : ") (show updatedVehicle)
   return $ SV.makeVehicleAPIEntity updatedVehicle
 
-getVehicle :: EsqDBReplicaFlow m r => (Id SP.Person, Id DM.Merchant) -> Maybe Text -> Maybe (Id SP.Person) -> m GetVehicleRes
-getVehicle (personId, _) registrationNoM vehicleIdM = do
+getVehicle :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe Text -> Maybe (Id SP.Person) -> m GetVehicleRes
+getVehicle (personId, _, _) registrationNoM vehicleIdM = do
   user <- B.runInReplica $ QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   vehicle <- case (registrationNoM, vehicleIdM) of
     (Nothing, Nothing) -> throwError $ InvalidRequest "You should pass registration number and vehicle id."

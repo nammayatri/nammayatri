@@ -14,15 +14,15 @@
 {-# OPTIONS_GHC -Wno-deprecations #-}
 
 module Storage.CachedQueries.Merchant.OnboardingDocumentConfig
-  ( findAllByMerchantId,
-    findByMerchantIdAndDocumentType,
+  ( findAllByMerchantOpCityId,
+    findByMerchantOpCityIdAndDocumentType,
     clearCache,
     create,
     update,
   )
 where
 
-import Domain.Types.Merchant (Merchant)
+import Domain.Types.Merchant.MerchantOperatingCity
 import Domain.Types.Merchant.OnboardingDocumentConfig as DTO
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
@@ -30,30 +30,30 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.Queries.Merchant.OnboardingDocumentConfig as Queries
 
-create :: MonadFlow m => OnboardingDocumentConfig -> m ()
+create :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => OnboardingDocumentConfig -> m ()
 create = Queries.create
 
-findAllByMerchantId :: (CacheFlow m r, EsqDBFlow m r) => Id Merchant -> m [DTO.OnboardingDocumentConfig]
-findAllByMerchantId id =
-  Hedis.withCrossAppRedis (Hedis.safeGet $ makeMerchantIdKey id) >>= \case
+findAllByMerchantOpCityId :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> m [DTO.OnboardingDocumentConfig]
+findAllByMerchantOpCityId id =
+  Hedis.withCrossAppRedis (Hedis.safeGet $ makeMerchantOpCityIdKey id) >>= \case
     Just a -> return a
-    Nothing -> cacheOnboardingDocumentConfigs id /=<< Queries.findAllByMerchantId id
+    Nothing -> cacheOnboardingDocumentConfigs id /=<< Queries.findAllByMerchantOpCityId id
 
-findByMerchantIdAndDocumentType :: (CacheFlow m r, EsqDBFlow m r) => Id Merchant -> DocumentType -> m (Maybe DTO.OnboardingDocumentConfig)
-findByMerchantIdAndDocumentType merchantId documentType = find (\config -> config.documentType == documentType) <$> findAllByMerchantId merchantId
+findByMerchantOpCityIdAndDocumentType :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> DocumentType -> m (Maybe DTO.OnboardingDocumentConfig)
+findByMerchantOpCityIdAndDocumentType merchantOpCityId documentType = find (\config -> config.documentType == documentType) <$> findAllByMerchantOpCityId merchantOpCityId
 
-cacheOnboardingDocumentConfigs :: (CacheFlow m r) => Id Merchant -> [DTO.OnboardingDocumentConfig] -> m ()
-cacheOnboardingDocumentConfigs merchantId configs = do
+cacheOnboardingDocumentConfigs :: (CacheFlow m r) => Id MerchantOperatingCity -> [DTO.OnboardingDocumentConfig] -> m ()
+cacheOnboardingDocumentConfigs merchantOpCityId configs = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
-  let key = makeMerchantIdKey merchantId
+  let key = makeMerchantOpCityIdKey merchantOpCityId
   Hedis.withCrossAppRedis $ Hedis.setExp key configs expTime
 
-makeMerchantIdKey :: Id Merchant -> Text
-makeMerchantIdKey merchantId = "driver-offer:CachedQueries:OnboardingDocumentConfig:MerchantId-" <> merchantId.getId
+makeMerchantOpCityIdKey :: Id MerchantOperatingCity -> Text
+makeMerchantOpCityIdKey merchantOpCityId = "driver-offer:CachedQueries:OnboardingDocumentConfig:MerchantOpCityId-" <> merchantOpCityId.getId
 
 -- Call it after any update
-clearCache :: Hedis.HedisFlow m r => Id Merchant -> m ()
-clearCache = Hedis.withCrossAppRedis . Hedis.del . makeMerchantIdKey
+clearCache :: Hedis.HedisFlow m r => Id MerchantOperatingCity -> m ()
+clearCache = Hedis.withCrossAppRedis . Hedis.del . makeMerchantOpCityIdKey
 
-update :: MonadFlow m => OnboardingDocumentConfig -> m ()
+update :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => OnboardingDocumentConfig -> m ()
 update = Queries.update

@@ -23,6 +23,7 @@ import Tools.Beam.UtilsTH
 
 data TransporterConfigT f = TransporterConfigT
   { merchantId :: B.C f Text,
+    merchantOperatingCityId :: B.C f Text,
     pickupLocThreshold :: B.C f Meters,
     dropLocThreshold :: B.C f Meters,
     rideTimeEstimatedThreshold :: B.C f Seconds,
@@ -99,10 +100,10 @@ instance B.Table TransporterConfigT where
   data PrimaryKey TransporterConfigT f
     = Id (B.C f Text)
     deriving (Generic, B.Beamable)
-  primaryKey = Id . merchantId
+  primaryKey = Id . merchantOperatingCityId
 
 type TransporterConfig = TransporterConfigT Identity
 
-$(enableKVPG ''TransporterConfigT ['merchantId] [])
+$(enableKVPG ''TransporterConfigT ['merchantOperatingCityId] [])
 
 $(mkTableInstancesWithTModifier ''TransporterConfigT "transporter_config" [("automaticRCActivationCutOff", "automatic_r_c_activation_cut_off")])

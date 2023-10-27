@@ -20,6 +20,7 @@ module Tools.AadhaarVerification
 where
 
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.Merchant.MerchantOperatingCity as DM
 import qualified Domain.Types.Merchant.MerchantServiceConfig as DMSC
 import Kernel.External.AadhaarVerification as Reexport hiding
   ( generateAadhaarOtp,
@@ -37,6 +38,7 @@ import Tools.Error
 generateAadhaarOtp ::
   ServiceFlow m r =>
   Id DM.Merchant ->
+  Id DM.MerchantOperatingCity ->
   AadhaarOtpReq ->
   m AadhaarVerificationResp
 generateAadhaarOtp = runWithServiceConfig Verification.generateAadhaarOtp
@@ -44,6 +46,7 @@ generateAadhaarOtp = runWithServiceConfig Verification.generateAadhaarOtp
 verifyAadhaarOtp ::
   ServiceFlow m r =>
   Id DM.Merchant ->
+  Id DM.MerchantOperatingCity ->
   AadhaarOtpVerifyReq ->
   m AadhaarOtpVerifyRes
 verifyAadhaarOtp = runWithServiceConfig Verification.verifyAadhaarOtp
@@ -52,15 +55,16 @@ runWithServiceConfig ::
   ServiceFlow m r =>
   (AadhaarVerificationServiceConfig -> req -> m resp) ->
   Id DM.Merchant ->
+  Id DM.MerchantOperatingCity ->
   req ->
   m resp
-runWithServiceConfig func merchantId req = do
+runWithServiceConfig func merchantId merchantOpCityId req = do
   merchantServiceUsageConfig <-
-    CQMSUC.findByMerchantId merchantId
-      >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantId.getId)
+    CQMSUC.findByMerchantOpCityId merchantOpCityId
+      >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
   merchantServiceConfig <-
     CQMSC.findByMerchantIdAndService merchantId (DMSC.AadhaarVerificationService merchantServiceUsageConfig.aadhaarVerificationService)
-      >>= fromMaybeM (InternalError $ "No Aadhaar Verification service provider configured for the merchant, merchantId:" <> merchantId.getId)
+      >>= fromMaybeM (InternalError $ "No Aadhaar Verification service provider configured for the merchant, merchantOpCityId:" <> merchantOpCityId.getId)
   case merchantServiceConfig.serviceConfig of
     DMSC.AadhaarVerificationServiceConfig vsc -> func vsc req
     _ -> throwError $ InternalError "Unknown Service Config"

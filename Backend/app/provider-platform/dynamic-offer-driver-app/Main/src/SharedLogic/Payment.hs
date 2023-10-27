@@ -18,6 +18,7 @@ import Data.Time (utctDay)
 import Domain.Types.DriverFee
 import qualified Domain.Types.Invoice as INV
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
 import qualified Kernel.Beam.Functions as B
 import Kernel.External.Encryption
@@ -121,9 +122,9 @@ mkInvoiceAgainstDriverFee id shortId now maxMandateAmount paymentMode driverFee 
       createdAt = now
     }
 
-offerListCache :: (MonadFlow m, ServiceFlow m r) => Id DM.Merchant -> Payment.OfferListReq -> m Payment.OfferListResp
-offerListCache merchantId req = do
-  transporterConfig <- SCT.findByMerchantId merchantId >>= fromMaybeM (TransporterConfigNotFound merchantId.getId)
+offerListCache :: (MonadFlow m, ServiceFlow m r) => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Payment.OfferListReq -> m Payment.OfferListResp
+offerListCache merchantId merchantOpCityId req = do
+  transporterConfig <- SCT.findByMerchantOpCityId merchantOpCityId >>= fromMaybeM (TransporterConfigNotFound merchantId.getId)
   if transporterConfig.useOfferListCache
     then do
       key <- makeOfferListCacheKey transporterConfig.cacheOfferListByDriverId req

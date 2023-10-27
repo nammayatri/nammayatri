@@ -20,6 +20,7 @@ import Domain.Types.Driver.GoHomeFeature.DriverGoHomeRequest (DriverGoHomeReques
 import qualified Domain.Types.DriverInformation as DI
 import qualified Domain.Types.Location as DLoc
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import Domain.Types.Person
 import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.SearchRequest.SearchReqLocation as DSSL
@@ -54,6 +55,7 @@ data SearchRequestForDriver = SearchRequestForDriver
     requestId :: Id DSR.SearchRequest,
     searchTryId :: Id DST.SearchTry,
     merchantId :: Maybe (Id DM.Merchant),
+    merchantOperatingCityId :: Id DMOC.MerchantOperatingCity,
     startTime :: UTCTime,
     searchRequestValidTill :: UTCTime,
     driverId :: Id Person,

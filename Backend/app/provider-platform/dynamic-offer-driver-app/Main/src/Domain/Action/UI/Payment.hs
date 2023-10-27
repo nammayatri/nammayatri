@@ -134,7 +134,7 @@ juspayWebhookHandler merchantShortId authData value = do
   merchant <- findMerchantByShortId merchantShortId
   let merchantId = merchant.id
   merchantServiceConfig <-
-    CQMSC.findByMerchantIdAndService merchantId (DMSC.PaymentService Payment.Juspay)
+    CQMSC.findByMerchantOpCityIdAndService merchantId (DMSC.PaymentService Payment.Juspay)
       >>= fromMaybeM (MerchantServiceConfigNotFound merchantId.getId "Payment" (show Payment.Juspay))
   case merchantServiceConfig.serviceConfig of
     DMSC.PaymentServiceConfig psc -> do
@@ -172,7 +172,7 @@ processPayment :: (MonadFlow m, CacheFlow m r, EsqDBReplicaFlow m r, EsqDBFlow m
 processPayment merchantId driverId orderId sendNotification = do
   driver <- B.runInReplica $ QP.findById driverId >>= fromMaybeM (PersonDoesNotExist driverId.getId)
   driverInfo <- QDI.findById (cast driverId) >>= fromMaybeM (PersonNotFound driverId.getId)
-  transporterConfig <- SCT.findByMerchantId merchantId >>= fromMaybeM (TransporterConfigNotFound merchantId.getId)
+  transporterConfig <- SCT.findByMerchantOpCityId driver.merchantOperatingCityId >>= fromMaybeM (TransporterConfigNotFound merchantId.getId)
   now <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
   invoices <- QIN.findAllByInvoiceId (cast orderId)
   let invoice = listToMaybe invoices

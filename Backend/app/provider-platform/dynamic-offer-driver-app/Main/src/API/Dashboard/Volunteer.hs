@@ -20,6 +20,7 @@ import qualified Domain.Types.Merchant as DM
 import Environment
 import Kernel.Prelude
 import Kernel.Types.APISuccess (APISuccess)
+import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import Kernel.Utils.Common (withFlowHandlerAPI)
 import Servant hiding (throwError)
@@ -30,14 +31,14 @@ type API =
            :<|> Common.AssignCreateAndStartOtpRideAPI
        )
 
-handler :: ShortId DM.Merchant -> FlowServer API
-handler merchantId =
-  bookingInfo merchantId
-    :<|> assignCreateAndStartOtpRide merchantId
+handler :: ShortId DM.Merchant -> Context.City -> FlowServer API
+handler merchantId city =
+  bookingInfo merchantId city
+    :<|> assignCreateAndStartOtpRide merchantId city
 
-bookingInfo :: ShortId DM.Merchant -> Text -> FlowHandler Common.BookingInfoResponse
-bookingInfo merchantShortId =
-  withFlowHandlerAPI . DVolunteer.bookingInfo merchantShortId
+bookingInfo :: ShortId DM.Merchant -> Context.City -> Text -> FlowHandler Common.BookingInfoResponse
+bookingInfo merchantShortId opCity =
+  withFlowHandlerAPI . DVolunteer.bookingInfo merchantShortId opCity
 
-assignCreateAndStartOtpRide :: ShortId DM.Merchant -> Common.AssignCreateAndStartOtpRideAPIReq -> FlowHandler APISuccess
-assignCreateAndStartOtpRide merchantShortId = withFlowHandlerAPI . DVolunteer.assignCreateAndStartOtpRide merchantShortId
+assignCreateAndStartOtpRide :: ShortId DM.Merchant -> Context.City -> Common.AssignCreateAndStartOtpRideAPIReq -> FlowHandler APISuccess
+assignCreateAndStartOtpRide merchantShortId opCity = withFlowHandlerAPI . DVolunteer.assignCreateAndStartOtpRide merchantShortId opCity

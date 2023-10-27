@@ -21,19 +21,20 @@ import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
+import Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified Storage.Beam.MediaFile as BeamMF
 
-create :: MonadFlow m => DMF.MediaFile -> m ()
+create :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => DMF.MediaFile -> m ()
 create = createWithKV
 
-findById :: MonadFlow m => Id MediaFile -> m (Maybe MediaFile)
+findById :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id MediaFile -> m (Maybe MediaFile)
 findById (Id mediaFileId) = findOneWithKV [Se.Is BeamMF.id $ Se.Eq mediaFileId]
 
-findAllIn :: MonadFlow m => [Id MediaFile] -> m [MediaFile]
+findAllIn :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Id MediaFile] -> m [MediaFile]
 findAllIn mfList = findAllWithKV [Se.Is BeamMF.id $ Se.In $ getId <$> mfList]
 
-deleteById :: MonadFlow m => Id MediaFile -> m ()
+deleteById :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id MediaFile -> m ()
 deleteById (Id mediaFileId) = deleteWithKV [Se.Is BeamMF.id (Se.Eq mediaFileId)]
 
 instance FromTType' BeamMF.MediaFile MediaFile where

@@ -4,6 +4,7 @@ import qualified Domain.Action.UI.Issue as Domain
 import qualified Domain.Types.Issue.IssueCategory as Domain
 import qualified Domain.Types.Issue.IssueReport as Domain
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as SP
 import Environment
 import EulerHS.Prelude hiding (id)
@@ -60,29 +61,29 @@ handler =
     :<|> updateIssueOption
     :<|> deleteIssue
 
-issueReportDriverList :: (Id SP.Person, Id DM.Merchant) -> Maybe Language -> FlowHandler Common.IssueReportDriverListRes
-issueReportDriverList (driverId, merchantId) = withFlowHandlerAPI . Domain.issueReportDriverList (driverId, merchantId)
+issueReportDriverList :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe Language -> FlowHandler Common.IssueReportDriverListRes
+issueReportDriverList (driverId, merchantId, merchantOpCityId) = withFlowHandlerAPI . Domain.issueReportDriverList (driverId, merchantId, merchantOpCityId)
 
-fetchMedia :: (Id SP.Person, Id DM.Merchant) -> Text -> FlowHandler Text
-fetchMedia (driverId, merchantId) = withFlowHandlerAPI . Domain.fetchMedia (driverId, merchantId)
+fetchMedia :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Text -> FlowHandler Text
+fetchMedia (driverId, merchantId, merchantOpCityId) = withFlowHandlerAPI . Domain.fetchMedia (driverId, merchantId, merchantOpCityId)
 
-createIssueReport :: (Id SP.Person, Id DM.Merchant) -> Common.IssueReportReq -> FlowHandler Common.IssueReportRes
-createIssueReport (driverId, merchantId) = withFlowHandlerAPI . Domain.createIssueReport (driverId, merchantId)
+createIssueReport :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Common.IssueReportReq -> FlowHandler Common.IssueReportRes
+createIssueReport (driverId, merchantId, merchantOpCityId) = withFlowHandlerAPI . Domain.createIssueReport (driverId, merchantId, merchantOpCityId)
 
-issueMediaUpload :: (Id SP.Person, Id DM.Merchant) -> Common.IssueMediaUploadReq -> FlowHandler Common.IssueMediaUploadRes
-issueMediaUpload (driverId, merchantId) = withFlowHandlerAPI . Domain.issueMediaUpload (driverId, merchantId)
+issueMediaUpload :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Common.IssueMediaUploadReq -> FlowHandler Common.IssueMediaUploadRes
+issueMediaUpload (driverId, merchantId, merchantOpCityId) = withFlowHandlerAPI . Domain.issueMediaUpload (driverId, merchantId, merchantOpCityId)
 
-issueInfo :: Id Domain.IssueReport -> (Id SP.Person, Id DM.Merchant) -> Maybe Language -> FlowHandler Common.IssueInfoRes
-issueInfo issueReportId (driverId, merchantId) = withFlowHandlerAPI . Domain.issueInfo issueReportId (driverId, merchantId)
+issueInfo :: Id Domain.IssueReport -> (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe Language -> FlowHandler Common.IssueInfoRes
+issueInfo issueReportId (driverId, merchantId, merchantOpCityId) = withFlowHandlerAPI . Domain.issueInfo issueReportId (driverId, merchantId, merchantOpCityId)
 
-updateIssueOption :: Id Domain.IssueReport -> (Id SP.Person, Id DM.Merchant) -> Common.IssueUpdateReq -> FlowHandler APISuccess
-updateIssueOption issueReportId (driverId, merchantId) = withFlowHandlerAPI . Domain.updateIssueOption issueReportId (driverId, merchantId)
+updateIssueOption :: Id Domain.IssueReport -> (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Common.IssueUpdateReq -> FlowHandler APISuccess
+updateIssueOption issueReportId (driverId, merchantId, merchantOpCityId) = withFlowHandlerAPI . Domain.updateIssueOption issueReportId (driverId, merchantId, merchantOpCityId)
 
-deleteIssue :: Id Domain.IssueReport -> (Id SP.Person, Id DM.Merchant) -> FlowHandler APISuccess
+deleteIssue :: Id Domain.IssueReport -> (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> FlowHandler APISuccess
 deleteIssue issueReportId = withFlowHandlerAPI . Domain.deleteIssue issueReportId
 
-getIssueCategory :: (Id SP.Person, Id DM.Merchant) -> Maybe Language -> FlowHandler Common.IssueCategoryListRes
-getIssueCategory (driverId, merchantId) = withFlowHandlerAPI . Domain.getIssueCategory (driverId, merchantId)
+getIssueCategory :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe Language -> FlowHandler Common.IssueCategoryListRes
+getIssueCategory (driverId, merchantId, merchantOpCityId) = withFlowHandlerAPI . Domain.getIssueCategory (driverId, merchantId, merchantOpCityId)
 
-getIssueOption :: (Id SP.Person, Id DM.Merchant) -> Id Common.IssueCategory -> Maybe Language -> FlowHandler Common.IssueOptionListRes
-getIssueOption (driverId, merchantId) issueCategoryId = withFlowHandlerAPI . Domain.getIssueOption (driverId, merchantId) (cast @Common.IssueCategory @Domain.IssueCategory issueCategoryId)
+getIssueOption :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Id Common.IssueCategory -> Maybe Language -> FlowHandler Common.IssueOptionListRes
+getIssueOption (driverId, merchantId, merchantOpCityId) issueCategoryId = withFlowHandlerAPI . Domain.getIssueOption (driverId, merchantId, merchantOpCityId) (cast @Common.IssueCategory @Domain.IssueCategory issueCategoryId)

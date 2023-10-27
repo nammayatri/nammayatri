@@ -24,7 +24,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.Queries.KioskLocationTranslation as Queries
 
-findByKioskLocationIdAndLanguage :: (CacheFlow m r, MonadFlow m) => Id KioskLocation -> Language -> m (Maybe KioskLocationTranslation)
+findByKioskLocationIdAndLanguage :: (CacheFlow m r, MonadFlow m, EsqDBFlow m r) => Id KioskLocation -> Language -> m (Maybe KioskLocationTranslation)
 findByKioskLocationIdAndLanguage (Id kioskLocationId) language =
   Hedis.withCrossAppRedis (Hedis.safeGet $ makeKioskLocationAndLanguageKey (Id kioskLocationId) language) >>= \case
     Just a -> pure a

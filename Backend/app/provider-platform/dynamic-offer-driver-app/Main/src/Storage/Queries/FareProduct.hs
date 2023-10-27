@@ -28,18 +28,19 @@ import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
+import Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified Storage.Beam.FareProduct as BeamFP
 
 findAllFareProductForVariants ::
-  MonadFlow m =>
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
   Id Merchant ->
   Domain.Area ->
   m [Domain.FareProduct]
 findAllFareProductForVariants (Id merchantId) area = findAllWithKV [Se.And [Se.Is BeamFP.merchantId $ Se.Eq merchantId, Se.Is BeamFP.area $ Se.Eq area]]
 
 findByMerchantVariantArea ::
-  MonadFlow m =>
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
   Id Merchant ->
   Variant ->
   Domain.Area ->

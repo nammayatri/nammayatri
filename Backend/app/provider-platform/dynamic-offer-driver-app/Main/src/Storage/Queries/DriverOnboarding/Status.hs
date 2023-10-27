@@ -28,8 +28,9 @@ import qualified EulerHS.Language as L
 import qualified EulerHS.Prelude as Prelude
 import Kernel.Beam.Functions
 import Kernel.Prelude
-import Kernel.Types.Common (MonadFlow)
+import Kernel.Types.Common
 import Kernel.Types.Id
+import Kernel.Utils.Common
 import qualified Storage.Beam.Common as BeamCommon
 import qualified Storage.Beam.DriverInformation as BeamDI
 import qualified Storage.Beam.DriverOnboarding.DriverLicense as BeamDL
@@ -55,7 +56,7 @@ data DriverDocsInfo = DriverDocsInfo
     numVehRegImages :: Int
   }
 
-imagesAggTableCTEbyDoctype :: MonadFlow m => Image.ImageType -> m [(Text, Int)]
+imagesAggTableCTEbyDoctype :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Image.ImageType -> m [(Text, Int)]
 imagesAggTableCTEbyDoctype imageType' = do
   dbConf <- getMasterBeamConfig
   resp <-
@@ -67,7 +68,7 @@ imagesAggTableCTEbyDoctype imageType' = do
               B.all_ (BeamCommon.image BeamCommon.atlasDB)
   pure (Prelude.fromRight [] resp)
 
-fetchDriverDocsInfo :: MonadFlow m => Id Merchant -> Maybe (NonEmpty (Id Driver)) -> m [DriverDocsInfo]
+fetchDriverDocsInfo :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Merchant -> Maybe (NonEmpty (Id Driver)) -> m [DriverDocsInfo]
 fetchDriverDocsInfo merchantId' mbDriverIds = do
   dbConf <- getMasterBeamConfig
   res <- L.runDB dbConf $

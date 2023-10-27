@@ -22,6 +22,7 @@ import Data.Time.Calendar.OrdinalDate (sundayStartWeek)
 import Domain.Action.UI.Ride.EndRide.Internal as RideEndInt
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Merchant.LeaderBoardConfig as LConfig
+import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import Domain.Types.Person
 import qualified Kernel.Beam.Functions as B
 import Kernel.Prelude
@@ -52,14 +53,14 @@ data LeaderBoardRes = LeaderBoardRes
 
 getDailyDriverLeaderBoard ::
   (Esq.EsqDBFlow m r, Esq.EsqDBReplicaFlow m r, EncFlow m r, CacheFlow m r) =>
-  (Id Person, Id DM.Merchant) ->
+  (Id Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
   Day ->
   m LeaderBoardRes
-getDailyDriverLeaderBoard (personId, merchantId) day = do
+getDailyDriverLeaderBoard (personId, merchantId, merchantOpCityId) day = do
   now <- getCurrentTime
   let currentDate = RideEndInt.getCurrentDate now
   let dateDiff = diffDays currentDate day
-  dailyLeaderBoardConfig <- QLeaderConfig.findLeaderBoardConfigbyType LConfig.DAILY merchantId >>= fromMaybeM (InternalError "Leaderboard configs not present")
+  dailyLeaderBoardConfig <- QLeaderConfig.findLeaderBoardConfigbyType LConfig.DAILY merchantOpCityId >>= fromMaybeM (InternalError "Leaderboard configs not present")
   unless dailyLeaderBoardConfig.isEnabled . throwError $ InvalidRequest "Leaderboard Not Available"
   let numberOfSets = fromIntegral dailyLeaderBoardConfig.numberOfSets
   when (dateDiff > numberOfSets - 1 || dateDiff < 0) $
@@ -104,17 +105,17 @@ getDailyDriverLeaderBoard (personId, merchantId) day = do
 
 getWeeklyDriverLeaderBoard ::
   (Esq.EsqDBFlow m r, Esq.EsqDBReplicaFlow m r, EncFlow m r, Redis.HedisFlow m r, CacheFlow m r) =>
-  (Id Person, Id DM.Merchant) ->
+  (Id Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
   Day ->
   Day ->
   m LeaderBoardRes
-getWeeklyDriverLeaderBoard (personId, merchantId) fromDate toDate = do
+getWeeklyDriverLeaderBoard (personId, merchantId, merchantOpCityId) fromDate toDate = do
   now <- getCurrentTime
   let currentDate = RideEndInt.getCurrentDate now
   let (currWeekNumber, _) = sundayStartWeek currentDate
   let (reqWeekNumber, reqDayIndex) = sundayStartWeek fromDate
   let weekDiff = currWeekNumber - reqWeekNumber
-  weeklyLeaderBoardConfig <- QLeaderConfig.findLeaderBoardConfigbyType LConfig.WEEKLY merchantId >>= fromMaybeM (InternalError "Leaderboard configs not present")
+  weeklyLeaderBoardConfig <- QLeaderConfig.findLeaderBoardConfigbyType LConfig.WEEKLY merchantOpCityId >>= fromMaybeM (InternalError "Leaderboard configs not present")
   unless weeklyLeaderBoardConfig.isEnabled . throwError $ InvalidRequest "Leaderboard Not Available"
   let numberOfSets = weeklyLeaderBoardConfig.numberOfSets
   when (weekDiff > numberOfSets - 1 || weekDiff < 0) $

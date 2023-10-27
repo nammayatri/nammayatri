@@ -31,10 +31,9 @@ import qualified Domain.Types.SearchTry as DST
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Hedis as Redis
-import Kernel.Types.CacheFlow
 import Kernel.Types.Common
 import Kernel.Types.Id
-import Kernel.Utils.Common (addUTCTime, logInfo)
+import Kernel.Utils.Common
 import qualified Lib.DriverScore as DS
 import qualified Lib.DriverScore.Types as DST
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool (getPoolBatchNum)
@@ -72,6 +71,7 @@ sendSearchRequestToDrivers searchReq searchTry driverExtraFeeBounds driverPoolCo
   batchNumber <- getPoolBatchNum searchTry.id
   languageDictionary <- foldM (addLanguageToDictionary searchReq) M.empty driverPool
   DS.driverScoreEventHandler
+    searchReq.merchantOperatingCityId
     DST.OnNewSearchRequestForDrivers
       { driverPool = driverPool,
         merchantId = searchReq.providerId,
@@ -83,7 +83,7 @@ sendSearchRequestToDrivers searchReq searchTry driverExtraFeeBounds driverPoolCo
 
   searchRequestsForDrivers <- mapM (buildSearchRequestForDriver batchNumber validTill) driverPool
   let driverPoolZipSearchRequests = zip driverPool searchRequestsForDrivers
-  whenM (anyM (\driverId -> CQDGR.getDriverGoHomeRequestInfo driverId searchReq.providerId (Just goHomeConfig) <&> isNothing . (.status)) prevBatchDrivers) $ QSRD.setInactiveBySTId searchTry.id -- inactive previous request by drivers so that they can make new offers.
+  whenM (anyM (\driverId -> CQDGR.getDriverGoHomeRequestInfo driverId searchReq.merchantOperatingCityId (Just goHomeConfig) <&> isNothing . (.status)) prevBatchDrivers) $ QSRD.setInactiveBySTId searchTry.id -- inactive previous request by drivers so that they can make new offers.
   _ <- QSRD.createMany searchRequestsForDrivers
   forM_ searchRequestsForDrivers $ \sReqFD -> do
     QDFS.updateStatus sReqFD.driverId DDFS.GOT_SEARCH_REQUEST {requestId = searchTry.id, searchTryId = searchTry.id, validTill = sReqFD.searchRequestValidTill}
@@ -93,7 +93,7 @@ sendSearchRequestToDrivers searchReq searchTry driverExtraFeeBounds driverPoolCo
     let translatedSearchReq = fromMaybe searchReq $ M.lookup language languageDictionary
     let entityData = makeSearchRequestForDriverAPIEntity sReqFD translatedSearchReq searchTry bapMetadata dPoolRes.intelligentScores.rideRequestPopupDelayDuration dPoolRes.keepHiddenForSeconds searchTry.vehicleVariant
 
-    Notify.notifyOnNewSearchRequestAvailable searchReq.providerId sReqFD.driverId dPoolRes.driverPoolResult.driverDeviceToken entityData
+    Notify.notifyOnNewSearchRequestAvailable searchReq.merchantOperatingCityId sReqFD.driverId dPoolRes.driverPoolResult.driverDeviceToken entityData
   where
     getSearchRequestValidTill = do
       now <- getCurrentTime
@@ -119,6 +119,7 @@ sendSearchRequestToDrivers searchReq searchTry driverExtraFeeBounds driverPoolCo
                 searchTryId = searchTry.id,
                 startTime = searchTry.startTime,
                 merchantId = Just searchReq.providerId,
+                merchantOperatingCityId = searchReq.merchantOperatingCityId,
                 searchRequestValidTill = validTill,
                 driverId = cast dpRes.driverId,
                 vehicleVariant = dpRes.variant,

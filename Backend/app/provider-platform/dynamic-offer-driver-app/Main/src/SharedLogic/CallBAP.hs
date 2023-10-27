@@ -164,7 +164,7 @@ sendRideAssignedUpdateToBAP booking ride = do
   driver <- QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
   vehicle <- QVeh.findById ride.driverId >>= fromMaybeM (VehicleNotFound ride.driverId.getId)
   driverInfo <- QDI.findById (cast ride.driverId) >>= fromMaybeM DriverInfoNotFound
-  resp <- try @_ @SomeException (fetchAndCacheAadhaarImage driver driverInfo)
+  resp <- try @_ @SomeException (fetchAndCacheAadhaarImage driver booking.merchantOperatingCityId driverInfo)
   let image = join (eitherToMaybe resp)
   let rideAssignedBuildReq = ACL.RideAssignedBuildReq {..}
   rideAssignedMsg <- ACL.buildOnUpdateMessage rideAssignedBuildReq

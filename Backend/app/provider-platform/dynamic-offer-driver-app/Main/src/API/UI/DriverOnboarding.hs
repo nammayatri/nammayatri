@@ -21,6 +21,7 @@ import qualified Domain.Action.UI.DriverOnboarding.Referral as DriverOnboarding
 import qualified Domain.Action.UI.DriverOnboarding.Status as DriverOnboarding
 import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as DriverOnboarding
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.Merchant.MerchantOperatingCity as DM
 import qualified Domain.Types.Person as DP
 import Environment
 import EulerHS.Prelude
@@ -100,38 +101,38 @@ handler =
     :<|> deleteRC
     :<|> getAllLinkedRCs
 
-verifyDL :: (Id DP.Person, Id DM.Merchant) -> DriverOnboarding.DriverDLReq -> FlowHandler DriverOnboarding.DriverDLRes
-verifyDL (personId, merchantId) = withFlowHandlerAPI . DriverOnboarding.verifyDL False Nothing (personId, merchantId)
+verifyDL :: (Id DP.Person, Id DM.Merchant, Id DM.MerchantOperatingCity) -> DriverOnboarding.DriverDLReq -> FlowHandler DriverOnboarding.DriverDLRes
+verifyDL (personId, merchantId, merchantOpCityId) = withFlowHandlerAPI . DriverOnboarding.verifyDL False Nothing (personId, merchantId, merchantOpCityId)
 
-verifyRC :: (Id DP.Person, Id DM.Merchant) -> DriverOnboarding.DriverRCReq -> FlowHandler DriverOnboarding.DriverRCRes
-verifyRC (personId, merchantId) req = withFlowHandlerAPI $ DriverOnboarding.verifyRC False Nothing (personId, merchantId) req Nothing
+verifyRC :: (Id DP.Person, Id DM.Merchant, Id DM.MerchantOperatingCity) -> DriverOnboarding.DriverRCReq -> FlowHandler DriverOnboarding.DriverRCRes
+verifyRC (personId, merchantId, merchantOpCityId) req = withFlowHandlerAPI $ DriverOnboarding.verifyRC False Nothing (personId, merchantId, merchantOpCityId) req Nothing
 
-statusHandler :: (Id DP.Person, Id DM.Merchant) -> FlowHandler DriverOnboarding.StatusRes
-statusHandler (personId, merchantId) = withFlowHandlerAPI $ DriverOnboarding.statusHandler (personId, merchantId) (Just True)
+statusHandler :: (Id DP.Person, Id DM.Merchant, Id DM.MerchantOperatingCity) -> FlowHandler DriverOnboarding.StatusRes
+statusHandler (personId, merchantId, merchantOpCityId) = withFlowHandlerAPI $ DriverOnboarding.statusHandler (personId, merchantId, merchantOpCityId) (Just True)
 
-validateImage :: (Id DP.Person, Id DM.Merchant) -> Image.ImageValidateRequest -> FlowHandler Image.ImageValidateResponse
-validateImage (personId, merchantId) = withFlowHandlerAPI . Image.validateImage False (personId, merchantId)
+validateImage :: (Id DP.Person, Id DM.Merchant, Id DM.MerchantOperatingCity) -> Image.ImageValidateRequest -> FlowHandler Image.ImageValidateResponse
+validateImage (personId, merchantId, merchantOpCityId) = withFlowHandlerAPI . Image.validateImage False (personId, merchantId, merchantOpCityId)
 
-validateImageFile :: (Id DP.Person, Id DM.Merchant) -> Image.ImageValidateFileRequest -> FlowHandler Image.ImageValidateResponse
-validateImageFile (personId, merchantId) = withFlowHandlerAPI . Image.validateImageFile False (personId, merchantId)
+validateImageFile :: (Id DP.Person, Id DM.Merchant, Id DM.MerchantOperatingCity) -> Image.ImageValidateFileRequest -> FlowHandler Image.ImageValidateResponse
+validateImageFile (personId, merchantId, merchantOpCityId) = withFlowHandlerAPI . Image.validateImageFile False (personId, merchantId, merchantOpCityId)
 
-generateAadhaarOtp :: (Id DP.Person, Id DM.Merchant) -> AadhaarVerification.AadhaarOtpReq -> FlowHandler AadhaarVerification.AadhaarVerificationResp
-generateAadhaarOtp (personId, _) = withFlowHandlerAPI . AV.generateAadhaarOtp False Nothing personId
+generateAadhaarOtp :: (Id DP.Person, Id DM.Merchant, Id DM.MerchantOperatingCity) -> AadhaarVerification.AadhaarOtpReq -> FlowHandler AadhaarVerification.AadhaarVerificationResp
+generateAadhaarOtp (personId, _, merchantOpCityId) = withFlowHandlerAPI . AV.generateAadhaarOtp False Nothing personId merchantOpCityId
 
-verifyAadhaarOtp :: (Id DP.Person, Id DM.Merchant) -> AV.VerifyAadhaarOtpReq -> FlowHandler AadhaarVerification.AadhaarOtpVerifyRes
-verifyAadhaarOtp (personId, _) = withFlowHandlerAPI . AV.verifyAadhaarOtp Nothing personId
+verifyAadhaarOtp :: (Id DP.Person, Id DM.Merchant, Id DM.MerchantOperatingCity) -> AV.VerifyAadhaarOtpReq -> FlowHandler AadhaarVerification.AadhaarOtpVerifyRes
+verifyAadhaarOtp (personId, _, merchantOpCityId) = withFlowHandlerAPI . AV.verifyAadhaarOtp Nothing personId merchantOpCityId
 
-unVerifiedAadhaarData :: (Id DP.Person, Id DM.Merchant) -> AV.UnVerifiedDataReq -> FlowHandler APISuccess
-unVerifiedAadhaarData (personId, _) = withFlowHandlerAPI . AV.unVerifiedAadhaarData personId
+unVerifiedAadhaarData :: (Id DP.Person, Id DM.Merchant, Id DM.MerchantOperatingCity) -> AV.UnVerifiedDataReq -> FlowHandler APISuccess
+unVerifiedAadhaarData (personId, _, _) = withFlowHandlerAPI . AV.unVerifiedAadhaarData personId
 
-addReferral :: (Id DP.Person, Id DM.Merchant) -> DriverOnboarding.ReferralReq -> FlowHandler DriverOnboarding.ReferralRes
-addReferral (personId, merchantId) = withFlowHandlerAPI . DriverOnboarding.addReferral (personId, merchantId)
+addReferral :: (Id DP.Person, Id DM.Merchant, Id DM.MerchantOperatingCity) -> DriverOnboarding.ReferralReq -> FlowHandler DriverOnboarding.ReferralRes
+addReferral (personId, merchantId, merchantOpCityId) = withFlowHandlerAPI . DriverOnboarding.addReferral (personId, merchantId, merchantOpCityId)
 
-setRCStatus :: (Id DP.Person, Id DM.Merchant) -> DriverOnboarding.RCStatusReq -> FlowHandler APISuccess
-setRCStatus (personId, merchantId) = withFlowHandlerAPI . DriverOnboarding.linkRCStatus (personId, merchantId)
+setRCStatus :: (Id DP.Person, Id DM.Merchant, Id DM.MerchantOperatingCity) -> DriverOnboarding.RCStatusReq -> FlowHandler APISuccess
+setRCStatus (personId, merchantId, merchantOpCityId) = withFlowHandlerAPI . DriverOnboarding.linkRCStatus (personId, merchantId, merchantOpCityId)
 
-deleteRC :: (Id DP.Person, Id DM.Merchant) -> DriverOnboarding.DeleteRCReq -> FlowHandler APISuccess
-deleteRC (personId, merchantId) req = withFlowHandlerAPI $ DriverOnboarding.deleteRC (personId, merchantId) req False
+deleteRC :: (Id DP.Person, Id DM.Merchant, Id DM.MerchantOperatingCity) -> DriverOnboarding.DeleteRCReq -> FlowHandler APISuccess
+deleteRC (personId, merchantId, merchantOpCityId) req = withFlowHandlerAPI $ DriverOnboarding.deleteRC (personId, merchantId, merchantOpCityId) req False
 
-getAllLinkedRCs :: (Id DP.Person, Id DM.Merchant) -> FlowHandler [DriverOnboarding.LinkedRC]
-getAllLinkedRCs (personId, merchantId) = withFlowHandlerAPI $ DriverOnboarding.getAllLinkedRCs (personId, merchantId)
+getAllLinkedRCs :: (Id DP.Person, Id DM.Merchant, Id DM.MerchantOperatingCity) -> FlowHandler [DriverOnboarding.LinkedRC]
+getAllLinkedRCs (personId, merchantId, merchantOpCityId) = withFlowHandlerAPI $ DriverOnboarding.getAllLinkedRCs (personId, merchantId, merchantOpCityId)

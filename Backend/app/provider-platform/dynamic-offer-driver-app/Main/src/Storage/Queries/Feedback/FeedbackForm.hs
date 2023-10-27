@@ -20,13 +20,14 @@ import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
+import Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified Storage.Beam.Feedback.FeedbackForm as BFF
 
-findAllFeedback :: MonadFlow m => m [FeedbackFormRes]
+findAllFeedback :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => m [FeedbackFormRes]
 findAllFeedback = findAllWithDb [Se.Is BFF.id $ Se.Not $ Se.Eq ""]
 
-findAllFeedbackByRating :: MonadFlow m => Int -> m [FeedbackFormRes]
+findAllFeedbackByRating :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Int -> m [FeedbackFormRes]
 findAllFeedbackByRating rating = findAllWithDb [Se.Or [Se.Is BFF.rating $ Se.Eq $ Just rating, Se.Is BFF.rating $ Se.Eq Nothing]]
 
 instance FromTType' BFF.FeedbackForm FeedbackFormRes where

@@ -20,6 +20,7 @@ where
 
 import qualified Domain.Types.Driver.DriverFlowStatus as DDFS
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
 import Kernel.Prelude
 import Kernel.Types.Id
@@ -35,8 +36,8 @@ data GetDriverFlowStatusRes = GetDriverFlowStatusRes
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
-getDriverFlowStatus :: (CacheFlow m r, EsqDBFlow m r, MonadTime m) => (Id DP.Person, Id DM.Merchant) -> m GetDriverFlowStatusRes
-getDriverFlowStatus (personId, _) = do
+getDriverFlowStatus :: (CacheFlow m r, EsqDBFlow m r, MonadTime m) => (Id DP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> m GetDriverFlowStatusRes
+getDriverFlowStatus (personId, _, _) = do
   -- should not be run in replica
   driverStatus <- QDFS.getStatus personId >>= fromMaybeM (PersonNotFound personId.getId)
   case driverStatus of

@@ -44,7 +44,7 @@ data NearestDriversResultCurrentlyOnRide = NearestDriversResultCurrentlyOnRide
   deriving (Generic, Show, PrettyShow, HasCoordinates)
 
 getNearestDriversCurrentlyOnRide ::
-  (MonadFlow m, MonadTime m, MonadReader r m, LT.HasLocationService m r, CoreMetrics m) =>
+  (MonadFlow m, MonadTime m, MonadReader r m, LT.HasLocationService m r, CoreMetrics m, CacheFlow m r, EsqDBFlow m r) =>
   Maybe Variant ->
   LatLong ->
   Meters ->

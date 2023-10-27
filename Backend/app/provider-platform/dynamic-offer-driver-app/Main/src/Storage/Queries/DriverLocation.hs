@@ -17,7 +17,6 @@ module Storage.Queries.DriverLocation where
 
 import Data.Either
 import Data.Maybe as Mb
-import Data.Time (addUTCTime)
 import qualified Database.Beam as B
 import Database.Beam.Postgres
 import Database.Beam.Postgres.Syntax (PgExpressionSyntax (..), emit)
@@ -31,18 +30,18 @@ import Kernel.External.Maps.Types (LatLong (..))
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
-import Kernel.Utils.Error
+import Kernel.Utils.Common
 import qualified Storage.Beam.Common as BeamCommon
 import qualified Storage.Beam.DriverLocation as BeamDL
 import Tools.Error
 
-create :: MonadFlow m => Id Person -> LatLong -> UTCTime -> Id Merchant -> m ()
+create :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> LatLong -> UTCTime -> Id Merchant -> m ()
 create drLocationId latLong updateTime merchantId = do
   now <- getCurrentTime
   dbConf <- getLocationDbBeamConfig
   void $ L.runDB dbConf $ L.insertRows $ B.insert (BeamCommon.driverLocation BeamCommon.atlasDB) $ B.insertExpressions [BeamDL.toRowExpression (getId drLocationId) latLong updateTime now (getId merchantId)]
 
-findById :: (MonadFlow m, MonadReader r m, HasField "enableLocationTrackingService" r Bool) => Id Person -> m (Maybe DriverLocation)
+findById :: (MonadFlow m, MonadReader r m, HasField "enableLocationTrackingService" r Bool, CacheFlow m r, EsqDBFlow m r) => Id Person -> m (Maybe DriverLocation)
 findById (Id driverLocationId) = do
   enableLocationTrackingService <- asks (.enableLocationTrackingService)
   when enableLocationTrackingService $ do
@@ -59,7 +58,7 @@ findById (Id driverLocationId) = do
     Right (Just geom) -> fromTType' geom
     _ -> return Nothing
 
-upsertGpsCoord :: (MonadFlow m, MonadReader r m, HasField "enableLocationTrackingService" r Bool) => Id Person -> LatLong -> UTCTime -> Id Merchant -> m DriverLocation
+upsertGpsCoord :: (MonadFlow m, MonadReader r m, HasField "enableLocationTrackingService" r Bool, CacheFlow m r, EsqDBFlow m r) => Id Person -> LatLong -> UTCTime -> Id Merchant -> m DriverLocation
 upsertGpsCoord drLocationId latLong calculationTime merchantId' = do
   enableLocationTrackingService <- asks (.enableLocationTrackingService)
   when enableLocationTrackingService $ do
@@ -81,7 +80,7 @@ upsertGpsCoord drLocationId latLong calculationTime merchantId' = do
           }
   return updatedRecord
   where
-    updateRecords :: MonadFlow m => Text -> LatLong -> UTCTime -> UTCTime -> m ()
+    updateRecords :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> LatLong -> UTCTime -> UTCTime -> m ()
     updateRecords drLocationId' latLong' calculationTime' now' = do
       dbConf <- getLocationDbBeamConfig
       void $
@@ -98,7 +97,7 @@ upsertGpsCoord drLocationId latLong calculationTime merchantId' = do
               )
               (\BeamDL.DriverLocationT {..} -> driverId B.==. B.val_ drLocationId')
 
-deleteById :: MonadFlow m => Id Person -> m ()
+deleteById :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> m ()
 deleteById (Id driverId') = do
   dbConf <- getLocationDbBeamConfig
   void $
@@ -110,7 +109,7 @@ deleteById (Id driverId') = do
         )
 
 getDriverLocsFromMerchId ::
-  (MonadFlow m, MonadReader r m, HasField "enableLocationTrackingService" r Bool) =>
+  (MonadFlow m, MonadReader r m, HasField "enableLocationTrackingService" r Bool, CacheFlow m r, EsqDBFlow m r) =>
   Maybe Seconds ->
   LatLong ->
   Int ->
@@ -141,7 +140,7 @@ byDist :: (Double, Double) -> BQ.QGenExpr context Postgres s Double
 byDist (lat, lon) = BQ.QExpr (\_ -> PgExpressionSyntax (emit $ "point <-> 'SRID=4326;POINT(" <> show lon <> " " <> show lat <> ")'"))
 
 findAllDriverLocations ::
-  (MonadFlow m, MonadReader r m, HasField "enableLocationTrackingService" r Bool) =>
+  (MonadFlow m, MonadReader r m, HasField "enableLocationTrackingService" r Bool, CacheFlow m r, EsqDBFlow m r) =>
   [Id Person] ->
   Maybe Seconds ->
   UTCTime ->
@@ -164,7 +163,7 @@ findAllDriverLocations driverIds mbDriverPositionInfoExpiry now = do
   catMaybes <$> mapM fromTType' (fromRight [] geoms)
 
 getDriverLocations ::
-  (MonadFlow m, MonadReader r m, HasField "enableLocationTrackingService" r Bool) =>
+  (MonadFlow m, MonadReader r m, HasField "enableLocationTrackingService" r Bool, CacheFlow m r, EsqDBFlow m r) =>
   UTCTime ->
   m [DriverLocation]
 getDriverLocations before = do
@@ -184,7 +183,7 @@ getDriverLocations before = do
   catMaybes <$> mapM fromTType' (fromRight [] geoms)
 
 getDriverLocs ::
-  (MonadFlow m, MonadReader r m, HasField "enableLocationTrackingService" r Bool) =>
+  (MonadFlow m, MonadReader r m, HasField "enableLocationTrackingService" r Bool, CacheFlow m r, EsqDBFlow m r) =>
   [Id Person] ->
   Id Merchant ->
   m [DriverLocation]

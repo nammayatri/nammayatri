@@ -21,6 +21,7 @@ import qualified Domain.Types.DriverInformation as DI
 import Domain.Types.DriverOnboarding.Error
 import qualified Domain.Types.DriverOnboarding.Image as Domain
 import qualified Domain.Types.Merchant as DTM
+import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import Domain.Types.Person
 import Environment
 import Kernel.External.Ticket.Interface.Types as Ticket
@@ -33,14 +34,15 @@ import qualified Tools.Ticket as TT
 notifyErrorToSupport ::
   Person ->
   Id DTM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
   Maybe T.Text ->
   T.Text ->
   [Maybe DriverOnboardingError] ->
   Flow ()
-notifyErrorToSupport person merchantId driverPhone _ errs = do
+notifyErrorToSupport person merchantId merchantOpCityId driverPhone _ errs = do
   let reasons = catMaybes $ catMaybes $ toMsg <$> errs
   let description = T.intercalate ", " reasons
-  _ <- TT.createTicket merchantId (mkTicket description)
+  _ <- TT.createTicket merchantId merchantOpCityId (mkTicket description)
   return ()
   where
     toMsg e = toMessage <$> e

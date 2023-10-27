@@ -228,6 +228,7 @@ library
       Domain.Types.Merchant.DriverPoolConfig
       Domain.Types.Merchant.LeaderBoardConfig
       Domain.Types.Merchant.MerchantMessage
+      Domain.Types.Merchant.MerchantOperatingCity
       Domain.Types.Merchant.MerchantPaymentMethod
       Domain.Types.Merchant.MerchantServiceConfig
       Domain.Types.Merchant.MerchantServiceUsageConfig
@@ -373,6 +374,7 @@ library
       Storage.Beam.Merchant.DriverPoolConfig
       Storage.Beam.Merchant.LeaderBoardConfig
       Storage.Beam.Merchant.MerchantMessage
+      Storage.Beam.Merchant.MerchantOperatingCity
       Storage.Beam.Merchant.MerchantPaymentMethod
       Storage.Beam.Merchant.MerchantServiceConfig
       Storage.Beam.Merchant.MerchantServiceUsageConfig
@@ -423,6 +425,7 @@ library
       Storage.CachedQueries.Merchant.DriverPoolConfig
       Storage.CachedQueries.Merchant.LeaderBoardConfig
       Storage.CachedQueries.Merchant.MerchantMessage
+      Storage.CachedQueries.Merchant.MerchantOperatingCity
       Storage.CachedQueries.Merchant.MerchantPaymentMethod
       Storage.CachedQueries.Merchant.MerchantServiceConfig
       Storage.CachedQueries.Merchant.MerchantServiceUsageConfig
@@ -501,6 +504,7 @@ library
       Storage.Queries.Merchant.DriverPoolConfig
       Storage.Queries.Merchant.LeaderBoardConfig
       Storage.Queries.Merchant.MerchantMessage
+      Storage.Queries.Merchant.MerchantOperatingCity
       Storage.Queries.Merchant.MerchantPaymentMethod
       Storage.Queries.Merchant.MerchantServiceConfig
       Storage.Queries.Merchant.MerchantServiceUsageConfig

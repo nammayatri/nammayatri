@@ -17,6 +17,7 @@
 module Domain.Types.DriverOnboarding.IdfyVerification where
 
 import Domain.Types.DriverOnboarding.Image
+import Domain.Types.Merchant.MerchantOperatingCity
 import Domain.Types.Person
 import Domain.Types.Vehicle as Vehicle
 import Kernel.External.Encryption
@@ -51,6 +52,7 @@ data IdfyVerificationE e = IdfyVerification
     idfyResponse :: Maybe Text,
     multipleRC :: Maybe Bool,
     dashboardPassedVehicleVariant :: Maybe Vehicle.Variant,
+    merchantOperatingCityId :: Id MerchantOperatingCity,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }

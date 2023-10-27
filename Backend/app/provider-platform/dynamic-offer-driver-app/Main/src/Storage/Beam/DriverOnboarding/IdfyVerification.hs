@@ -40,6 +40,7 @@ data IdfyVerificationT f = IdfyVerificationT
     idfyResponse :: B.C f (Maybe Text),
     multipleRC :: B.C f (Maybe Bool),
     dashboardPassedVehicleVariant :: B.C f (Maybe Vehicle.Variant),
+    merchantOperatingCityId :: B.C f Text,
     createdAt :: B.C f UTCTime,
     updatedAt :: B.C f UTCTime
   }

@@ -24,10 +24,10 @@ import Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified Storage.Beam.MetaData as BeamMD
 
-create :: MonadFlow m => MetaData -> m ()
+create :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => MetaData -> m ()
 create = createWithKV
 
-updateMetaData :: MonadFlow m => Id Person -> Maybe Text -> Maybe Text -> Maybe UTCTime -> Maybe Text -> m ()
+updateMetaData :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> Maybe Text -> Maybe Text -> Maybe UTCTime -> Maybe Text -> m ()
 updateMetaData personId device deviceOS deviceDateTime appPermissions = do
   now <- getCurrentTime
   updateOneWithKV

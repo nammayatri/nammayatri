@@ -23,13 +23,13 @@ import Kernel.Utils.Common
 import Sequelize as Se
 import qualified Storage.Beam.Volunteer as BeamV
 
-create :: MonadFlow m => Volunteer -> m ()
+create :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Volunteer -> m ()
 create = createWithKV
 
-findById :: (MonadFlow m) => Id Volunteer -> m (Maybe Volunteer)
+findById :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Volunteer -> m (Maybe Volunteer)
 findById (Id volunteerId) = findOneWithKV [Se.Is BeamV.id $ Se.Eq volunteerId]
 
-findAllByPlace :: (MonadFlow m) => Text -> m [Volunteer]
+findAllByPlace :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> m [Volunteer]
 findAllByPlace place = findAllWithKV [Se.Is BeamV.place $ Se.Eq place]
 
 instance FromTType' BeamV.Volunteer Volunteer where
