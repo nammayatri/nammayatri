@@ -16,6 +16,8 @@ module App (startKafkaConsumers) where
 
 import qualified Consumer.Flow as CF
 import Control.Concurrent
+import Control.Concurrent.STM
+import Control.Concurrent.Supervisor
 import Data.Function
 import Environment
 import EulerHS.Interpreters (runFlow)
@@ -28,17 +30,10 @@ import Kernel.Prelude
 import Kernel.Utils.Common hiding (id)
 import Kernel.Utils.Dhall (readDhallConfigDefault)
 import qualified Kernel.Utils.FlowLogging as L
--- import Control.Concurrent.Supervisor
-
-forkThread :: IO () -> IO (MVar ())
-forkThread proc = do
-  mVar <- newEmptyMVar
-  _ <- forkFinally proc (\_ -> putMVar mVar ())
-  return mVar
 
 runConsumer :: ConsumerType -> IO ()
 runConsumer consumerType = do
-  putStrLn (("Thread started" <> (show consumerType) <> "\n")::Text)
+  putStrLn (("Thread started " <> show consumerType <> "\n") :: Text)
   configFile <- CF.getConfigNameFromConsumertype consumerType
   appCfg :: AppCfg <- readDhallConfigDefault configFile
   appEnv <- buildAppEnv appCfg consumerType
@@ -46,23 +41,26 @@ runConsumer consumerType = do
   putStrLn ("Thread ended\n" :: Text)
 
 startKafkaConsumers :: IO ()
-startKafkaConsumers = do
-  let consumerTypes :: [ConsumerType] = [read "AVAILABILITY_TIME", read "BROADCAST_MESSAGE", read "PERSON_STATS"]
-  putStrLn ("Running consumers in thread" :: Text)
-  threads <- forM consumerTypes (\v -> forkThread (runConsumer v))
-  mapM_ takeMVar threads
-  return ()
-
--- startKafkaConsumers :: IO ()
--- startKafkaConsumers = do
---   let consumerTypes :: [ConsumerType] = [read "AVAILABILITY_TIME", read "BROADCAST_MESSAGE", read "PERSON_STATS"]
---   putStrLn ("Running consumers in thread" :: Text)
---   supervisor <- newSupervisor
---   forM_ consumerTypes $ \v -> do
---     mVar <- forkThread (runConsumer v)
---     superviseWith supervisor (Just v) mVar (const $ runConsumer v)
---   waitForSupervisor supervisor
---   return ()
+startKafkaConsumers =
+  bracketOnError
+    ( do
+        putStrLn ("Running consumers in thread" :: Text)
+        sup1 <- newSupervisor OneForOne
+        sup2 <- newSupervisor OneForOne
+        sup3 <- newSupervisor OneForOne
+        _ <- forkSupervised sup1 fibonacciRetryPolicy (runConsumer BROADCAST_MESSAGE)
+        _ <- forkSupervised sup2 fibonacciRetryPolicy (runConsumer AVAILABILITY_TIME)
+        _ <- forkSupervised sup3 fibonacciRetryPolicy (runConsumer PERSON_STATS)
+        _ <- forkIO (go (eventStream sup1))
+        return sup1
+    )
+    shutdownSupervisor
+    (\_ -> Control.Concurrent.threadDelay 10000000000)
+  where
+    go eS = do
+      newE <- atomically $ readTQueue eS
+      print newE
+      go eS
 
 startConsumerWithEnv :: AppCfg -> AppEnv -> IO ()
 startConsumerWithEnv appCfg appEnv@AppEnv {..} = do
