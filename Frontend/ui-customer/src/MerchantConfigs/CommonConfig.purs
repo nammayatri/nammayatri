@@ -76,6 +76,15 @@ commonConfig =
             , variantOrder : ["HATCHBACK", "TAXI_PLUS", "SEDAN", "TAXI", "SUV", "AUTO_RICKSHAW"]
             , enableOnlyAuto : false
             }
+        , suggestedTripsAndLocationConfig : 
+          { geohashLimitForMap : 60,
+            geohashPrecision : 7,
+            locationsToBeShown : 5,
+            tripsToBeShown : 5,
+            locationsToBeStored : 30,
+            tripsToBeStored : 30,
+            frequencyWeight : 0.7
+          }
         , mapConfig : 
             { locateOnMapConfig : 
                 { dottedLineConfig : 

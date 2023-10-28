@@ -19,13 +19,13 @@ import Engineering.Helpers.LogEvent
 
 import Accessor (_computedPrice, _contents, _formattedAddress, _id, _lat, _lon, _status, _toLocation, _signatureAuthData, _payload, _view_param, _show_splash, _middleName, _firstName, _lastName)
 import Common.Types.App (GlobalPayload(..), SignatureAuthData(..), Payload(..), Version(..), LocationData(..), EventPayload(..), ClevertapEventParams, OTPChannel(..), LazyCheck(..), FCMBundleUpdate)
-import Components.LocationListItem.Controller (dummyLocationListState)
+import Components.LocationListItem.Controller (locationListStateObj, dummyAddress)
 import Components.SavedLocationCard.Controller (getCardType)
 import Components.SettingSideBar.Controller as SettingSideBarController
 import Constants as Constants
 import Control.Monad.Except (runExcept)
 import Control.Monad.Except.Trans (lift)
-import Data.Array (catMaybes, filter, length, null, snoc, (!!), any, sortBy, head, uncons, last)
+import Data.Array (catMaybes, reverse, filter, length, null, snoc, (!!), any, sortBy, head, uncons, last, concat)
 import Data.Array as Arr
 import Data.Either (Either(..))
 import Data.Function.Uncurried (runFn3, runFn2, runFn1)
@@ -73,17 +73,16 @@ import Screens.HelpAndSupportScreen.ScreenData as HelpAndSupportScreenData
 import Screens.HomeScreen.Controller (flowWithoutOffers, getSearchExpiryTime, isTipEnabled, findingQuotesSearchExpired, tipEnabledState)
 import Screens.HomeScreen.ScreenData (dummyRideBooking)
 import Screens.HomeScreen.ScreenData as HomeScreenData
+import Screens.SelectLanguageScreen.ScreenData as SelectLanguageScreenData
 import Screens.HomeScreen.Transformer (getLocationList, getDriverInfo, dummyRideAPIEntity, encodeAddressDescription, getPlaceNameResp, getUpdatedLocationList, transformContactList, getSpecialTag)
 import Screens.InvoiceScreen.Controller (ScreenOutput(..)) as InvoiceScreenOutput
 import Screens.MyProfileScreen.ScreenData as MyProfileScreenData
 import Screens.TicketBookingScreen.ScreenData as TicketBookingScreenData
 import Screens.ReferralScreen.ScreenData as ReferralScreen
-import Screens.RideBookingFlow.HomeScreen.Config (getTipViewData, setTipViewData)
-import Screens.RideBookingFlow.HomeScreen.Config (specialLocationIcons, specialLocationConfig, updateRouteMarkerConfig)
-import Screens.SavedLocationScreen.Controller (getSavedLocationForAddNewAddressScreen)
-import Screens.SelectLanguageScreen.ScreenData as SelectLanguageScreenData
 import Screens.TicketInfoScreen.ScreenData as TicketInfoScreenData
-import Screens.Types (TicketBookingScreenStage(..), CardType(..), AddNewAddressScreenState(..), SearchResultType(..), CurrentLocationDetails(..), CurrentLocationDetailsWithDistance(..), DeleteStatus(..), HomeScreenState, LocItemType(..), PopupType(..), SearchLocationModelType(..), Stage(..), LocationListItemState, LocationItemType(..), NewContacts, NotifyFlowEventType(..), FlowStatusData(..), ErrorType(..), ZoneType(..), TipViewData(..),TripDetailsGoBackType(..), Location, DisabilityT(..), UpdatePopupType(..) , PermissionScreenStage(..), TicketBookingItem(..), TicketBookings(..), TicketBookingScreenData(..),TicketInfoScreenData(..),IndividualBookingItem(..))
+import Screens.Types (TicketBookingScreenStage(..), CardType(..), AddNewAddressScreenState(..), SearchResultType(..), CurrentLocationDetails(..), CurrentLocationDetailsWithDistance(..), DeleteStatus(..), HomeScreenState, LocItemType(..), PopupType(..), SearchLocationModelType(..), Stage(..), LocationListItemState, LocationItemType(..), NewContacts, NotifyFlowEventType(..), FlowStatusData(..), ErrorType(..), ZoneType(..), TipViewData(..),TripDetailsGoBackType(..), Location, DisabilityT(..), UpdatePopupType(..) , PermissionScreenStage(..), TicketBookingItem(..), TicketBookings(..), TicketBookingScreenData(..),TicketInfoScreenData(..),IndividualBookingItem(..), SuggestionsMap(..), Suggestions(..))
+import Screens.RideBookingFlow.HomeScreen.Config (specialLocationIcons, specialLocationConfig, updateRouteMarkerConfig, getTipViewData, setTipViewData)
+import Screens.SavedLocationScreen.Controller (getSavedLocationForAddNewAddressScreen)
 import Screens.Types (Gender(..)) as Gender
 import Services.API --(AddressGeometry(..), BookingLocationAPIEntity(..), CancelEstimateRes(..), ConfirmRes(..), ContactDetails(..), DeleteSavedLocationReq(..), FlowStatus(..), FlowStatusRes(..), GatesInfo(..), Geometry(..), GetDriverLocationResp(..), GetEmergContactsReq(..), GetEmergContactsResp(..), GetPlaceNameResp(..), GetProfileRes(..), LatLong(..), LocationS(..), LogOutReq(..), LogOutRes(..), PlaceName(..), ResendOTPResp(..), RideAPIEntity(..), RideBookingAPIDetails(..), RideBookingDetails(..), RideBookingListRes(..), RideBookingRes(..), Route(..), SavedLocationReq(..), SavedLocationsListRes(..), SearchLocationResp(..), SearchRes(..), ServiceabilityRes(..), SpecialLocation(..), TriggerOTPResp(..), UserSosRes(..), VerifyTokenResp(..), ServiceabilityResDestination(..), SelectEstimateRes(..), UpdateProfileReq(..), OnCallRes(..), Snapped(..), AddressComponents(..), FareBreakupAPIEntity(..), GetDisabilityListResp(..), Disability(..), PersonStatsRes(..))
 import Services.API --(AuthType(..), AddressGeometry(..), BookingLocationAPIEntity(..), CancelEstimateRes(..), ConfirmRes(..), ContactDetails(..), DeleteSavedLocationReq(..), FlowStatus(..), FlowStatusRes(..), GatesInfo(..), Geometry(..), GetDriverLocationResp(..), GetEmergContactsReq(..), GetEmergContactsResp(..), GetPlaceNameResp(..), GetProfileRes(..), LatLong(..), LocationS(..), LogOutReq(..), LogOutRes(..), PlaceName(..), ResendOTPResp(..), RideAPIEntity(..), RideBookingAPIDetails(..), RideBookingDetails(..), RideBookingListRes(..), RideBookingRes(..), Route(..), SavedLocationReq(..), SavedLocationsListRes(..), SearchLocationResp(..), SearchRes(..), ServiceabilityRes(..), SpecialLocation(..), TriggerOTPResp(..), UserSosRes(..), VerifyTokenResp(..), ServiceabilityResDestination(..), TriggerSignatureOTPResp(..), User(..), OnCallRes(..)) --TODO:: Need to fix duplicate imports
@@ -109,6 +108,9 @@ import Helpers.Auth
 import Helpers.Version
 import Helpers.Ride
 import Helpers.Firebase
+import Data.Map as Map
+import Foreign.Class (class Encode)
+import SuggestionUtils
 
 baseAppFlow :: GlobalPayload -> Boolean-> FlowBT String Unit
 baseAppFlow gPayload callInitUI = do
@@ -634,6 +636,7 @@ homeScreenFlow = do
         modifyScreenState $ HomeScreenStateType (\homeScreen -> bothLocationChangedState{data{polygonCoordinates = fromMaybe "" sourceServiceabilityResp.geoJson,nearByPickUpPoints=pickUpPoints},props{city = sourceServiceabilityResp.city , isSpecialZone =  (sourceServiceabilityResp.geoJson) /= Nothing, confirmLocationCategory = if length pickUpPoints > 0 then state.props.confirmLocationCategory else "", findingQuotesProgress = 0.0 }})
         if (addToRecents) then
           addLocationToRecents item bothLocationChangedState sourceServiceabilityResp.serviceable destServiceabilityResp.serviceable
+          fetchAndModifyLocationLists bothLocationChangedState.data.savedLocations
           else pure unit
         (GlobalState globalState) <- getState
         let updateScreenState = globalState.homeScreen
@@ -662,7 +665,8 @@ homeScreenFlow = do
       _ <- lift $ lift $ liftFlow $ logEvent logField_ event
       let sortedByDistanceList = sortPredctionByDistance searchLocationResp.predictions
       let predictionList = getLocationList sortedByDistanceList
-      let recentLists =  recentDistance state.data.recentSearchs.predictionArray state.props.sourceLat state.props.sourceLong
+      let sortedtWithDistance =  recentDistance state.data.recentSearchs.predictionArray state.props.sourceLat state.props.sourceLong
+      let recentLists = if state.props.isSource == Just true then sortedtWithDistance else state.data.destinationSuggestions
       let filteredRecentsList = filterRecentSearches recentLists predictionList
       let filteredPredictionList = differenceOfLocationLists predictionList filteredRecentsList
       modifyScreenState $ HomeScreenStateType (\homeScreen -> state{data{locationList =
@@ -805,8 +809,25 @@ homeScreenFlow = do
                                         else pure unit
                                         _ <- pure $ clearWaitingTimer <$> state.props.waitingTimeTimerIds
                                         let newState = homeScreenState{data{route = Nothing},props{isCancelRide = false,waitingTimeTimerIds = [], showShareAppPopUp = (INT.round $ (fromMaybe 0.0 (fromString (getValueToLocalStore SHARE_APP_COUNT)))) `mod` 4 == 0, showChatNotification = false, cancelSearchCallDriver = false  }}
-                                        modifyScreenState $ HomeScreenStateType (\homeScreen -> newState)
                                         lift $ lift $ triggerRideStatusEvent notification Nothing (Just state.props.bookingId) $ getScreenFromStage state.props.currentStage
+                                        let currTrip = {sourceLat : srcLat, 
+                                                      sourceLong : srcLon, 
+                                                      destLat : dstLat, 
+                                                      destLong : dstLon, 
+                                                      source : state.data.driverInfoCardState.source,
+                                                      destination  : state.data.driverInfoCardState.destination,
+                                                      sourceAddress : state.data.sourceAddress,
+                                                      destinationAddress : state.data.destinationAddress,
+                                                      locationScore: Just 1.0,
+                                                      recencyDate : Nothing,
+                                                      frequencyCount : Just 1,
+                                                      isSpecialZone : state.props.isSpecialZone
+                                                      }
+                                            currentSourceGeohash = runFn3 encodeGeohash srcLat srcLon state.data.config.suggestedTripsAndLocationConfig.geohashPrecision
+                                            currentMap = currentState.homeScreen.data.suggestionsData.suggestionsMap
+                                            updatedMap = (addOrUpdateSuggestedTrips currentSourceGeohash currTrip currentMap state.data.config.suggestedTripsAndLocationConfig)
+                                        _ <- pure $ setSuggestionsMap updatedMap
+                                        modifyScreenState $ HomeScreenStateType (\homeScreen -> newState{data{suggestionsData{suggestionsMap =updatedMap }}})
                                       homeScreenFlow
             "TRIP_FINISHED"       -> do -- TRIP FINISHED
                                       if (getValueToLocalStore HAS_TAKEN_FIRST_RIDE == "false") then do
@@ -996,11 +1017,31 @@ homeScreenFlow = do
               })
         if isMoreThan20Meters || cachedLocation == "" then do
           PlaceName placeDetails <- getPlaceName lat lon gateAddress
+          let currentLocationItem = Just (locationListStateObj{
+                              prefixImageUrl = "ny_ic_recent_search,https://assets.juspay.in/nammayatri/images/user/ny_ic_recent_search.png"
+                            , postfixImageUrl = "ny_ic_fav,https://assets.juspay.in/nammayatri/images/user/ny_ic_fav.png"
+                            , title = (fromMaybe "" ((split (Pattern ",") (placeDetails.formattedAddress)) !! 0))
+                            , subTitle = let formattedAddress = placeDetails.formattedAddress
+                                             index = fromMaybe 0 (indexOf (Pattern ",") formattedAddress)
+                                          in drop (index + 2) formattedAddress
+                            , placeId = placeDetails.placeId
+                            , lat = Just (if state.props.currentStage /= ConfirmingLocation then lat 
+                                        else if (state.props.isSource == Just true) then state.props.sourceLat
+                                        else state.props.destinationLat)
+                            , lon = Just (if state.props.currentStage /= ConfirmingLocation then lon 
+                                         else if (state.props.isSource == Just true) then state.props.sourceLong
+                                         else state.props.destinationLong)
+                            , description = placeDetails.formattedAddress
+                            , tagType = Just $ show LOC_LIST
+                            , locationItemType = Just SUGGESTED_DESTINATIONS
+                            , fullAddress = encodeAddress placeDetails.formattedAddress placeDetails.addressComponents Nothing
+                        })
           _ <- liftFlowBT $ logEvent logField_ "ny_user_placename_api_lom_onDrag"
           modifyScreenState $ HomeScreenStateType (\homeScreen ->
           homeScreen {
             data {
               destination = if state.props.isSource == Just false && state.props.currentStage /= ConfirmingLocation then placeDetails.formattedAddress else homeScreen.data.destination,
+              selectedLocationListItem = currentLocationItem, 
               source = if state.props.isSource == Just true then placeDetails.formattedAddress else homeScreen.data.source,
               sourceAddress = case state.props.isSource , (state.props.currentStage /= ConfirmingLocation) of
                 Just true, true -> encodeAddress placeDetails.formattedAddress placeDetails.addressComponents Nothing
@@ -1108,24 +1149,12 @@ homeScreenFlow = do
         else
           homeScreenFlow
     UPDATE_SAVED_LOCATION -> do
+      (GlobalState currentState) <- getState
       savedLocationResp <- lift $ lift $ Remote.getSavedLocationList ""
       updateSourceLocation ""
       case savedLocationResp of
         Right (SavedLocationsListRes listResp) -> do
-          recentPredictionsObject <- lift $ lift $ getObjFromLocal currentState.homeScreen
-          let savedLocationWithHomeOrWorkTag = (filter (\listItem ->  (listItem.prefixImageUrl == fetchImage FF_ASSET "ny_ic_home_blue" || (listItem.prefixImageUrl == fetchImage FF_ASSET "ny_ic_work_blue"))) (AddNewAddress.getSavedLocations listResp.list))
-              recents = (differenceOfLocationLists recentPredictionsObject.predictionArray savedLocationWithHomeOrWorkTag)
-              savedLocationsWithOtherTag = (filter (\listItem -> not(listItem.prefixImageUrl == fetchImage FF_ASSET "ny_ic_home_blue" || listItem.prefixImageUrl == fetchImage FF_ASSET "ny_ic_work_blue")) (AddNewAddress.getSavedLocations listResp.list))
-              updatedList = (map (\item ->  item { postfixImageUrl = if not (checkPrediction item savedLocationsWithOtherTag) then fetchImage FF_ASSET "ny_ic_fav_red"
-                                                                        else fetchImage FF_ASSET "ny_ic_fav" }) (recents))
-              predicArray = (recentDistance updatedList currentState.homeScreen.props.sourceLat currentState.homeScreen.props.sourceLong)
-          modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen
-                                                                    { data
-                                                                      { savedLocations = (AddNewAddress.getSavedLocations listResp.list)
-                                                                      , recentSearchs {predictionArray = predicArray}
-                                                                      , locationList = predicArray
-                                                                      }
-                                                                    })
+          fetchAndModifyLocationLists (AddNewAddress.getSavedLocations listResp.list)
           homeScreenFlow
         Left (err) -> homeScreenFlow
 
@@ -1267,7 +1296,7 @@ getDistanceDiff state lat lon = do
     "" ->  modifyScreenState $ HomeScreenStateType (\homeScreen -> state{props{isSaveFavourite = true}})
     _  -> do
             _ <- pure $ toast  (getString ALREADY_EXISTS)
-            modifyScreenState $ HomeScreenStateType (\homeScreen -> state{data{saveFavouriteCard{selectedItem = dummyLocationListState}}})
+            modifyScreenState $ HomeScreenStateType (\homeScreen -> state{data{saveFavouriteCard{selectedItem = locationListStateObj}}})
   homeScreenFlow
 
 
@@ -1342,8 +1371,9 @@ rideSearchFlow flowType = do
                       modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{searchId = rideSearchRes.searchId,currentStage = FindingEstimate, rideRequestFlow = true, isSearchLocation = SearchLocation, sourcePlaceId = Nothing, destinationPlaceId = Nothing, isShorterTrip = false}, data {source = finalState.data.source, sourceAddress = finalState.data.sourceAddress, nearByDrivers = Nothing}})
                   void $ lift $ lift $ toggleLoader false
                 Nothing -> pure unit
-    else modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{isSource = Just false, isRideServiceable = true, isSrcServiceable = true, isDestServiceable = true, currentStage = SearchLocationModel}})
-
+    else do
+      modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data {locationList = finalState.data.recentSearchs.predictionArray}, props{isSource = Just false, isRideServiceable = true, isSrcServiceable = true, isDestServiceable = true, currentStage = SearchLocationModel}})
+      pure unit 
   homeScreenFlow
 
 dummyAddressGeometry :: AddressGeometry
@@ -1667,8 +1697,12 @@ savedLocationFlow = do
     ADD_NEW_LOCATION state-> do
       (GlobalState newState) <- getState
       resp <- lift $ lift $ getRecentSearches newState.addNewAddressScreen
+      let currentGeoHash = runFn3 encodeGeohash (fromMaybe 0.0 $ fromString $ getValueToLocalNativeStore LAST_KNOWN_LAT) (fromMaybe 0.0 $ fromString $ getValueToLocalNativeStore LAST_KNOWN_LON) newState.homeScreen.data.config.suggestedTripsAndLocationConfig.geohashPrecision
+          suggestionsMap = getSuggestionsMapFromLocal FunctionCall
+          suggestionsObject = (fromMaybe dummySuggestionsObject (getSuggestedRidesAndLocations currentGeoHash suggestionsMap newState.homeScreen.data.config.suggestedTripsAndLocationConfig.geohashLimitForMap))
+          suggestedDestinationsArr = (differenceOfLocationLists suggestionsObject.destinationSuggestions (AddNewAddress.getSavedLocations savedLocationResp.list))
       let recents = map
-                    (\item -> item{postfixImageUrl = "", postfixImageVisibility = false}) (differenceOfLocationLists (resp.predictionArray) ((AddNewAddress.getSavedLocations savedLocationResp.list)))
+                    (\item -> item{postfixImageUrl = "", postfixImageVisibility = false}) suggestedDestinationsArr
       modifyScreenState $ AddNewAddressScreenStateType (\addNewAddressScreen -> addNewAddressScreen{data{savedLocations = getSavedLocationForAddNewAddressScreen state.data.savedLocations ,locationList = recents ,placeName = "",address = "",addressSavedAs="", recentSearchs{predictionArray = recents},savedTags = (AddNewAddress.getSavedTags savedLocationResp.list)}, props{showSavePlaceView = false, editLocation = false, isLocationServiceable = true, isSearchedLocationServiceable = true, isLocateOnMap = false, fromHome = false}})
       case (AddNewAddress.validTag (AddNewAddress.getSavedTags savedLocationResp.list) "HOME" ""), (AddNewAddress.validTag (AddNewAddress.getSavedTags savedLocationResp.list) "WORK" "") of
           false   , false    -> modifyScreenState $ AddNewAddressScreenStateType(\addNewAddressScreen -> addNewAddressScreen{data{activeIndex = (Just 2), selectedTag = (Just OTHER_TAG) }, props{editSavedLocation = false}})
@@ -1958,30 +1992,10 @@ checkAndUpdateSavedLocations :: HomeScreenState -> FlowBT String Unit
 checkAndUpdateSavedLocations state = do
   if (getValueToLocalStore RELOAD_SAVED_LOCATION == "true") || (state.props.currentStage == HomeScreen)
     then do
-      recentPredictionsObject <- lift $ lift $ getObjFromLocal state
       (savedLocationResp )<- lift $ lift $ Remote.getSavedLocationList ""
       case savedLocationResp of
         Right (SavedLocationsListRes listResp) -> do
-          let savedLocationWithHomeOrWorkTag = (filter (\listItem ->  (listItem.prefixImageUrl == fetchImage FF_ASSET "ny_ic_home_blue" || (listItem.prefixImageUrl == fetchImage FF_ASSET "ny_ic_work_blue"))) (AddNewAddress.getSavedLocations listResp.list))
-          let recent = (differenceOfLocationLists recentPredictionsObject.predictionArray savedLocationWithHomeOrWorkTag)
-          let twoElements = catMaybes ([] <> [recent!!0] <> [recent!!1])
-          setValueToLocalStore RELOAD_SAVED_LOCATION "false"
-          modifyScreenState $
-            HomeScreenStateType
-              (\homeScreen ->
-                homeScreen
-                {
-                  data
-                  { recentSearchs
-                    { predictionArray =
-                        map
-                          (\item -> item { postfixImageUrl =  if not (checkPrediction item (AddNewAddress.getSavedLocations listResp.list)) then fetchImage FF_ASSET "ny_ic_fav_red" else fetchImage FF_ASSET "ny_ic_fav" } ) twoElements},
-                      savedLocations = (AddNewAddress.getSavedLocations listResp.list),
-                      locationList =  map
-                          (\item -> item { postfixImageUrl =  if not (checkPrediction item (AddNewAddress.getSavedLocations listResp.list)) then fetchImage FF_ASSET "ny_ic_fav_red" else fetchImage FF_ASSET "ny_ic_fav" } ) recent
-                    }
-                  }
-                )
+          fetchAndModifyLocationLists (AddNewAddress.getSavedLocations listResp.list)
           pure unit
         Left (err) -> pure unit
       pure unit
@@ -1990,25 +2004,82 @@ checkAndUpdateSavedLocations state = do
 addLocationToRecents :: LocationListItemState -> HomeScreenState -> Boolean -> Boolean -> FlowBT String Unit
 addLocationToRecents item state srcServiceable destServiceable = do
   let serviceable = if (state.props.isSource == Just false) then destServiceable else srcServiceable
+      lat = if (state.props.isSource == Just false) then state.props.destinationLat else state.props.sourceLat
+      lon = if (state.props.isSource == Just false) then state.props.destinationLong else state.props.sourceLong
   case item.locationItemType of
     Just PREDICTION -> do
-        let lat = if (state.props.isSource == Just false) then state.props.destinationLat else state.props.sourceLat
-        let lon = if (state.props.isSource == Just false) then state.props.destinationLong else state.props.sourceLong
         saveToRecents item lat lon serviceable
-    _ -> saveToRecents item (fromMaybe 0.0 item.lat) (fromMaybe 0.0 item.lon) serviceable
+        when (state.props.isSource == Just false) $ do
+          setSuggestionsMapInLocal item lat lon serviceable state
+    _ -> do 
+        saveToRecents item (fromMaybe 0.0 item.lat) (fromMaybe 0.0 item.lon) serviceable
+        when (state.props.isSource == Just false) $ do
+          setSuggestionsMapInLocal item (fromMaybe 0.0 item.lat) (fromMaybe 0.0 item.lon) serviceable state
   pure unit
 
 saveToRecents :: LocationListItemState -> Number -> Number -> Boolean -> FlowBT String Unit
 saveToRecents item lat lon serviceability = do
   (GlobalState currentState) <- getState
   recentPredictionsObject <- lift $ lift $ getObjFromLocal currentState.homeScreen
-  if serviceability then do
-    modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{recentSearchs{predictionArray = addToRecentSearches item{lat = Just lat, lon = Just lon} recentPredictionsObject.predictionArray}, locationList = ((addToRecentSearches item{lat = Just lat, lon = Just lon} recentPredictionsObject.predictionArray) )}})
+  if serviceability && lat /= 0.0 && lon /= 0.0 then do
+    modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{ data { recentSearchs { predictionArray = addToRecentSearches item{lat = Just lat, lon = Just lon, locationScore = Just 0.0} recentPredictionsObject.predictionArray}}
+                                                                      })
     (GlobalState modifiedState) <- getState
     _ <- pure $ saveObject "RECENT_SEARCHES" modifiedState.homeScreen.data.recentSearchs
     pure unit
-    else pure unit
-  pure unit
+  else pure unit
+
+setSuggestionsMapInLocal :: LocationListItemState -> Number -> Number -> Boolean -> HomeScreenState -> FlowBT String Unit
+setSuggestionsMapInLocal item lat lon serviceability state= do
+    (GlobalState currentState) <- getState
+    when (serviceability) $ do
+      let currentSourceGeohash = runFn3 encodeGeohash currentState.homeScreen.props.sourceLat currentState.homeScreen.props.sourceLong state.data.config.suggestedTripsAndLocationConfig.geohashPrecision
+      let destinationWithLatLong = item{lat = Just lat, lon = Just lon}
+      let currentMap = currentState.homeScreen.data.suggestionsData.suggestionsMap
+      let updatedMap = (addOrUpdateSuggestedDestination currentSourceGeohash destinationWithLatLong currentMap state.data.config.suggestedTripsAndLocationConfig)
+      modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{suggestionsData {suggestionsMap=updatedMap}}})
+      _ <- pure $ setSuggestionsMap updatedMap
+      pure unit
+
+getSuggestionsMapFromLocal :: LazyCheck -> SuggestionsMap 
+getSuggestionsMapFromLocal lazycheck = case (fetchSuggestionsFromLocal (show SUGGESTIONS_MAP)) of 
+                    Right a -> a
+                    Left err -> Map.empty
+
+fetchAndModifyLocationLists :: Array (LocationListItemState) -> FlowBT String Unit
+fetchAndModifyLocationLists savedLocationResp = do 
+    (GlobalState currentState) <- getState
+    recentPredictionsObject <- lift $ lift $ getObjFromLocal currentState.homeScreen
+    let state = currentState.homeScreen
+        suggestionsConfig = state.data.config.suggestedTripsAndLocationConfig
+        savedLocationWithHomeOrWorkTag = (filter (\listItem ->  (listItem.prefixImageUrl == "ny_ic_home_blue,https://assets.juspay.in/nammayatri/images/user/ny_ic_home_blue.png"|| (listItem.prefixImageUrl == "ny_ic_work_blue,https://assets.juspay.in/nammayatri/images/user/ny_ic_work_blue.png"))) (savedLocationResp))
+        recents = (differenceOfLocationLists recentPredictionsObject.predictionArray savedLocationWithHomeOrWorkTag)
+        savedLocationsWithOtherTag = (filter (\listItem -> not(listItem.prefixImageUrl == "ny_ic_home_blue,https://assets.juspay.in/nammayatri/images/user/ny_ic_home_blue.png" || listItem.prefixImageUrl == "ny_ic_work_blue,https://assets.juspay.in/nammayatri/images/user/ny_ic_work_blue.png")) (savedLocationResp))
+        suggestionsMap = getSuggestionsMapFromLocal FunctionCall
+        currentGeoHash = if (state.props.sourceLat /= 0.0 && state.props.sourceLong /= 0.0) 
+                          then runFn3 encodeGeohash state.props.sourceLat state.props.sourceLong suggestionsConfig.geohashPrecision
+                          else runFn3 encodeGeohash (fromMaybe 0.0 $ fromString $ getValueToLocalNativeStore LAST_KNOWN_LAT) (fromMaybe 0.0 $ fromString $ getValueToLocalNativeStore LAST_KNOWN_LON) suggestionsConfig.geohashPrecision
+        geohashNeighbors = Arr.cons currentGeoHash (geohashNeighbours currentGeoHash)
+        currentGeoHashDestinations = (fromMaybe dummySuggestionsObject (getSuggestedRidesAndLocations currentGeoHash suggestionsMap suggestionsConfig.geohashLimitForMap))
+        arrWithNeighbors = (concat (map (\hash -> (fromMaybe dummySuggestionsObject (getSuggestedRidesAndLocations hash suggestionsMap suggestionsConfig.geohashLimitForMap)).destinationSuggestions) geohashNeighbors)) 
+        sortedList = Arr.take 30 (Arr.reverse (Arr.sortWith (\d -> fromMaybe 0.0 d.locationScore) arrWithNeighbors))
+        suggestedDestinationsArr = (differenceOfLocationLists sortedList savedLocationWithHomeOrWorkTag)
+        recentSearchesWithoutSuggested =  (differenceOfLocationLists (recents) suggestedDestinationsArr)
+        sugestedFinalList =  suggestedDestinationsArr <> (Arr.take (suggestionsConfig.locationsToBeStored - (length suggestedDestinationsArr)) recentSearchesWithoutSuggested)
+        updatedList = (map (\item ->  item { postfixImageUrl = if not (checkPrediction item savedLocationsWithOtherTag) then "ny_ic_fav_red,https://assets.juspay.in/nammayatri/images/user/ny_ic_fav_red.png"
+                                                                        else "ny_ic_fav,https://assets.juspay.in/nammayatri/images/user/ny_ic_fav.png" }) (sugestedFinalList))
+    
+    modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{ data
+                                                                        { savedLocations = savedLocationResp
+                                                                        , recentSearchs {predictionArray = recents}
+                                                                        , locationList = updatedList
+                                                                        , destinationSuggestions = updatedList
+                                                                        , suggestionsData{suggestionsMap = suggestionsMap}
+                                                                        , tripSuggestions = currentGeoHashDestinations.tripSuggestions
+                                                                        }
+                                                                      })
+    pure unit
+
 
 
 addLocToCurrLoc :: Number -> Number -> String -> FlowBT String Unit
@@ -2057,7 +2128,13 @@ updateDistanceInfo state lat lon = do
             addNewAddressScreenFlow ""
 
 dummyLocationListItemState :: LocationListItemState
-dummyLocationListItemState = dummyLocationListState{locationItemType = Just PREDICTION}
+dummyLocationListItemState = locationListStateObj{locationItemType = Just PREDICTION}
+
+dummySuggestionsObject :: Suggestions
+dummySuggestionsObject = {
+  destinationSuggestions : [],
+  tripSuggestions : []
+}
 
 removeChatService :: String -> FlowBT String Unit -- TODO:: Create a chat service and remove this
 removeChatService _ = do
@@ -2175,6 +2252,7 @@ getPlaceName lat long location = do
       , location : LatLong { lat : lat, lon : long }
       , plusCode : Nothing
       , addressComponents : [] <> catMaybes [addressComponent]
+      , placeId : Nothing
       }
     mkAddressComponent :: Location -> String -> AddressComponents
     mkAddressComponent location addressType =

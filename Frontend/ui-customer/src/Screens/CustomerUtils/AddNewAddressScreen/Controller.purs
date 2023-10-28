@@ -319,6 +319,9 @@ getLocation prediction = {
   , distance : Just (fromMetersToKm (fromMaybe 0 (prediction ^. _distance)))
   , showDistance : Just $ checkShowDistance (fromMaybe 0 (prediction ^. _distance))
   , actualDistance : (prediction ^. _distance)
+  , frequencyCount : Just 0
+  , recencyDate : Just ""
+  , locationScore : Just 0.0
 }
 
 encodeAddressDescription :: AddNewAddressScreenState -> SavedReqLocationAPIEntity
@@ -379,6 +382,10 @@ getSavedLocations savedLocation =  (map (\ (SavedReqLocationAPIEntity item) ->
 , distance : Nothing
 , showDistance : Just false
 , actualDistance : Nothing
+, frequencyCount : Nothing
+, recencyDate : Nothing
+, locationScore : Nothing
+
 }) savedLocation )
 
 getSavedTags :: (Array SavedReqLocationAPIEntity) -> Array String

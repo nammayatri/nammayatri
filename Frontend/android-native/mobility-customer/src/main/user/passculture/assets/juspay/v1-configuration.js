@@ -166,8 +166,8 @@ window.getMerchantConfig = function () {
       "visibility" : true,
       "title" : "",
       "imageUrl" : "ny_ic_go_home,https://assets.juspay.in/beckn/passculture/user/images/ny_ic_go_home.png"
-  }
-  , "showDeleteAccount" : false
+  },
+  "showDeleteAccount" : false
   , "fontName" : "Montserrat"
   , "fontKannada" : "Montserrat"
   , "showGenderBanner" : false

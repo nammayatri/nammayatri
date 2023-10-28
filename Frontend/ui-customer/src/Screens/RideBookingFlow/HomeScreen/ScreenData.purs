@@ -16,7 +16,7 @@
 module Screens.HomeScreen.ScreenData where
 
 import Common.Types.App (RateCardType(..))
-import Components.LocationListItem.Controller (dummyLocationListState)
+import Components.LocationListItem.Controller (locationListStateObj)
 import Components.SettingSideBar.Controller (SettingSideBarState, Status(..))
 import Components.ChooseVehicle.Controller (SearchType(..)) as CV
 import Data.Maybe (Maybe(..))
@@ -29,6 +29,7 @@ import Foreign.Object (empty)
 import MerchantConfig.DefaultConfig as DC
 import Screens.MyRidesScreen.ScreenData (dummyBookingDetails)
 import PrestoDOM (BottomSheetState(..))
+import Data.Map as Map 
 
 initData :: HomeScreenState
 initData = {
@@ -47,6 +48,9 @@ initData = {
     , locationList : []
     , savedLocations : []
     , recentSearchs : { predictionArray : []}
+    , destinationSuggestions : []
+    , tripSuggestions: []
+    , suggestionsData : { suggestionsMap: Map.empty }
     , previousCurrentLocations : {pastCurrentLocations:[]}
     , selectList : []
     , quoteListModelState : []
@@ -74,7 +78,7 @@ initData = {
         address : ""
       , tag : ""
       , tagExists : false
-      , selectedItem : dummyLocationListState
+      , selectedItem : locationListStateObj
       , tagData : []
       , isBtnActive : false
       }
@@ -407,7 +411,8 @@ dummyLocationName = PlaceName {
     "lon" : 0.0
   },
   "plusCode" : Nothing,
-  "addressComponents" : []
+  "addressComponents" : [],
+  "placeId" : Just ""
 }
 
 specialLocation :: SpecialLocation
