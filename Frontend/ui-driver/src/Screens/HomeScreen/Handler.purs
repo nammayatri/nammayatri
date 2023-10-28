@@ -64,15 +64,15 @@ homeScreen = do
       App.BackT $ App.BackPoint <$> pure (DRIVER_AVAILABILITY_STATUS updatedState status)
     StartRide updatedState -> do
       modifyScreenState $ HomeScreenStateType (\_ → updatedState)
-      LatLon lat lon <- getCurrentLocation updatedState.data.currentDriverLat updatedState.data.currentDriverLon  updatedState.data.activeRide.src_lat updatedState.data.activeRide.src_lon 700
+      LatLon lat lon <- getCurrentLocation updatedState.data.currentDriverLat updatedState.data.currentDriverLon  updatedState.data.activeRide.src_lat updatedState.data.activeRide.src_lon 700 false
       App.BackT $ App.NoBack <$> (pure $ GO_TO_START_RIDE {id: updatedState.data.activeRide.id, otp : updatedState.props.rideOtp , lat : lat , lon : lon } updatedState) 
     StartZoneRide  updatedState -> do
       modifyScreenState $ HomeScreenStateType (\_ → updatedState)
-      LatLon lat lon <- getCurrentLocation updatedState.data.currentDriverLat updatedState.data.currentDriverLon  updatedState.data.activeRide.src_lat updatedState.data.activeRide.src_lon 1000
+      LatLon lat lon <- getCurrentLocation updatedState.data.currentDriverLat updatedState.data.currentDriverLon  updatedState.data.activeRide.src_lat updatedState.data.activeRide.src_lon 1000 true
       App.BackT $ App.NoBack <$> (pure $ GO_TO_START_ZONE_RIDE {otp : updatedState.props.rideOtp , lat : lat , lon : lon }) 
     EndRide updatedState -> do
       modifyScreenState $ HomeScreenStateType (\_ → updatedState)
-      LatLon lat lon <- getCurrentLocation updatedState.data.currentDriverLat updatedState.data.currentDriverLon  updatedState.data.activeRide.dest_lat updatedState.data.activeRide.dest_lon 700
+      LatLon lat lon <- getCurrentLocation updatedState.data.currentDriverLat updatedState.data.currentDriverLon  updatedState.data.activeRide.dest_lat updatedState.data.activeRide.dest_lon 700 false
       App.BackT $ App.BackPoint <$> (pure $ GO_TO_END_RIDE {id : updatedState.data.activeRide.id, lat : lat, lon : lon} updatedState)
     SelectListModal updatedState -> do
       modifyScreenState $ HomeScreenStateType (\_ → updatedState)
@@ -123,7 +123,7 @@ homeScreen = do
       modifyScreenState $ HomeScreenStateType (\_ -> updatedState)
       App.BackT $ App.NoBack <$> (pure $ CLEAR_PENDING_DUES)
     EnableGoto updatedState locationId -> do
-      LatLon lat lon <- getCurrentLocation updatedState.data.currentDriverLat updatedState.data.currentDriverLon  updatedState.data.activeRide.dest_lat updatedState.data.activeRide.dest_lon 700
+      LatLon lat lon <- getCurrentLocation updatedState.data.currentDriverLat updatedState.data.currentDriverLon  updatedState.data.activeRide.dest_lat updatedState.data.activeRide.dest_lon 700 false
       modifyScreenState $ HomeScreenStateType (\_ → updatedState)
       App.BackT $ App.NoBack <$> (pure $ ENABLE_GOTO_API updatedState locationId (lat <> "," <> lon))
     LoadGotoLocations updatedState -> do 
