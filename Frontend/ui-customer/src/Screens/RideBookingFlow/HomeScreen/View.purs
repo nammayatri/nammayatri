@@ -45,7 +45,7 @@ import Components.SettingSideBar as SettingSideBar
 import Control.Monad.Except (runExceptT)
 import Control.Monad.Trans.Class (lift)
 import Control.Transformers.Back.Trans (runBackT)
-import Data.Array (any, length, mapWithIndex, null, (!!), head)
+import Data.Array (any, length, mapWithIndex, null,take, (!!),head)
 import Data.Either (Either(..))
 import Data.Int (ceil, floor, fromNumber, fromString, toNumber)
 import Data.Function.Uncurried (runFn1)
@@ -83,7 +83,7 @@ import Screens.HomeScreen.Controller (Action(..), ScreenOutput, checkCurrentLoca
 import Screens.HomeScreen.ScreenData as HomeScreenData
 import Screens.HomeScreen.Transformer (transformSavedLocations)
 import Screens.RideBookingFlow.HomeScreen.Config
-import Screens.Types (HomeScreenState, LocationListItemState, PopupType(..), SearchLocationModelType(..), Stage(..), CallType(..), ZoneType(..), SearchResultType(..))
+import Screens.Types (HomeScreenState, LocationListItemState, PopupType(..), SearchLocationModelType(..), Stage(..), CallType(..), ZoneType(..), SearchResultType(..), Trip(..))
 import Services.API (GetDriverLocationResp(..), GetQuotesRes(..), GetRouteResp(..), LatLong(..), RideAPIEntity(..), RideBookingRes(..), Route(..), SavedLocationsListRes(..), SearchReqLocationAPIEntity(..), SelectListRes(..), Snapped(..), GetPlaceNameResp(..), PlaceName(..))
 import Services.Backend (getDriverLocation, getQuotes, getRoute, makeGetRouteReq, rideBooking, selectList, driverTracking, rideTracking, walkCoordinates, walkCoordinate, getSavedLocationList)
 import Services.Backend as Remote
@@ -308,8 +308,8 @@ view push state =
                     , accessibility DISABLE_DESCENDANT
                     , id (getNewIDWithTag "CustomerHomeScreenMap")
                     , visibility if state.props.isSrcServiceable then VISIBLE else GONE
+                    ][]
                     ]
-                    []]
                 , imageView
                     [ width  MATCH_PARENT
                     , height  MATCH_PARENT
@@ -393,7 +393,8 @@ view push state =
                       ][ PrestoAnim.animationSet [ fadeIn state.props.showEducationalCarousel] $ carouselView state push ]] 
                     else [])
         ]
-    ] 
+    
+    ]
 
 rideCompletedCardView ::  forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 rideCompletedCardView push state = 
@@ -870,7 +871,7 @@ recentSearchesView state push =
     , height WRAP_CONTENT
     , orientation VERTICAL
     , margin $ MarginTop 16
-    , visibility if state.data.recentSearchs.predictionArray == [] then GONE else VISIBLE
+    , visibility if state.data.destinationSuggestions == [] then GONE else VISIBLE
     ]
     [ linearLayout
         [ height MATCH_PARENT
@@ -892,12 +893,12 @@ recentSearchesView state push =
                       [ height $ V 1
                       , width MATCH_PARENT
                       , background Color.lightGreyShade
-                      , visibility if (index == (length state.data.recentSearchs.predictionArray) - 1) || (state.props.isBanner) then GONE else VISIBLE
+                      , visibility if (index == (length state.data.destinationSuggestions) - 1) || (state.props.isBanner) then GONE else VISIBLE
                       ]
                       []
                   ]
             )
-            state.data.recentSearchs.predictionArray
+            (take 2 state.data.destinationSuggestions)
         )
     ]
 

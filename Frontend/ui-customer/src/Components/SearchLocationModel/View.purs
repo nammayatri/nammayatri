@@ -24,7 +24,7 @@ import Components.LocationListItem as LocationListItem
 import Components.LocationTagBar as LocationTagBar
 import Components.PrimaryButton as PrimaryButton
 import Components.SearchLocationModel.Controller (Action(..), SearchLocationModelState)
-import Data.Array (mapWithIndex, length)
+import Data.Array (mapWithIndex, length,take)
 import Data.Function (flip)
 import Data.Maybe (Maybe(..), fromMaybe)
 import Debug (spy)

@@ -42,6 +42,7 @@ type AppConfig =
     cancelSearchTextColor :: String,
     cancelReasonConfig :: CancelReasonConfig,
     terminateBtnConfig :: TerminateBtnConfig,
+    suggestedTripsAndLocationConfig  :: SuggestedDestinationAndTripsConfig,
     showDeleteAccount :: Boolean
   , autoSelectBackground :: String
   , showGenderBanner :: Boolean
@@ -147,6 +148,16 @@ type QuoteListConfig = {
   noQuotesImageHeight :: Int,
   noQuotesImageWidth :: Int,
   closeIcon :: String
+}
+ 
+type SuggestedDestinationAndTripsConfig = {
+  geohashLimitForMap :: Int,
+  geohashPrecision :: Int,
+  locationsToBeShown :: Int,
+  tripsToBeShown :: Int,
+  locationsToBeStored :: Int,
+  tripsToBeStored :: Int,
+  frequencyWeight :: Number
 }
 
 type Language =  {

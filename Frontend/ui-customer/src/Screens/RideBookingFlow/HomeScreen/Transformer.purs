@@ -84,6 +84,9 @@ getLocation prediction = {
   , distance : Just (fromMetersToKm (fromMaybe 0 (prediction ^._distance)))
   , showDistance : Just $ checkShowDistance (fromMaybe 0 (prediction ^._distance))
   , actualDistance : (prediction ^._distance)
+  , frequencyCount : Just 0
+  , recencyDate : Just ""
+  , locationScore : Just 0.0
 }
 
 checkShowDistance :: Int ->  Boolean
@@ -247,7 +250,8 @@ makePlaceNameResp lat lon =
             lon : lon
           },
           plusCode : Nothing,
-          addressComponents : []
+          addressComponents : [],
+          placeId : Nothing
         }
         ])
 
