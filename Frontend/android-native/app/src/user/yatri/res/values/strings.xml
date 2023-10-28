@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name" translatable="false">Yatri</string>
+    <string name="app_name" translatable="false">Novo</string>
     <string name="client_id" translatable="false">open-kochi</string>
     <string name="service" translatable="false">yatri</string>
     <string name="dev_port" translatable="false">8081</string>

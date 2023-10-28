@@ -163,7 +163,6 @@
 		D905E9FD2898193000323822 /* PlusJakartaSans-ExtraLightItalic.ttf in Resources */ = {isa = PBXBuildFile; fileRef = D905E9E12898193000323822 /* PlusJakartaSans-ExtraLightItalic.ttf */; };
 		DC054B3A298D183F00D5AE7C /* Notifications.swift in Sources */ = {isa = PBXBuildFile; fileRef = DC054B39298D183F00D5AE7C /* Notifications.swift */; };
 		DC054B3B298D183F00D5AE7C /* Notifications.swift in Sources */ = {isa = PBXBuildFile; fileRef = DC054B39298D183F00D5AE7C /* Notifications.swift */; };
-		DC14E50E28A50A2500305899 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = DC14E50828A50A2500305899 /* GoogleService-Info.plist */; };
 		DC14E51028A50A2500305899 /* NammaYatriRelease-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = DC14E50928A50A2500305899 /* NammaYatriRelease-Info.plist */; };
 		DC14E51128A50A2500305899 /* NammaYatriDebug-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = DC14E50B28A50A2500305899 /* NammaYatriDebug-Info.plist */; };
 		DC2BA11928AA0A5E005D9E92 /* ny_ic_location_marker.png in Resources */ = {isa = PBXBuildFile; fileRef = DC2BA08228AA0A5E005D9E92 /* ny_ic_location_marker.png */; };
@@ -999,7 +998,6 @@
 				D905E9F72898193000323822 /* PlusJakartaSans-Bold.ttf in Resources */,
 				60A354DB29C8581E00182D29 /* v1-index_bundle.jsa in Resources */,
 				6065914929805CFF00CD7613 /* ny_ic_day.png in Resources */,
-				DC14E50E28A50A2500305899 /* GoogleService-Info.plist in Resources */,
 				F3E22736292B463A00ADA088 /* ny_ic_location_unserviceable.png in Resources */,
 				BF45277D28AA5E45000D142E /* ny_ic_share.png in Resources */,
 				BFCD9839299B90C2009CA63D /* ny_ic_share_app.png in Resources */,
@@ -1436,6 +1434,9 @@
 				MARKETING_VERSION = 1.2;
 				PRODUCT_BUNDLE_IDENTIFIER = in.juspay.nammayatri;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = 1;
@@ -1477,6 +1478,9 @@
 				MARKETING_VERSION = 1.2;
 				PRODUCT_BUNDLE_IDENTIFIER = in.juspay.nammayatri;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = 1;
@@ -1606,7 +1610,7 @@
 				CODE_SIGN_ENTITLEMENTS = "NammaYatri-Debug.entitlements";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 4;
-				DEVELOPMENT_TEAM = YM9U73Z2JM;
+				DEVELOPMENT_TEAM = "";
 				ENABLE_BITCODE = YES;
 				"EXCLUDED_ARCHS[sdk=iphonesimulator*]" = arm64;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -1631,6 +1635,9 @@
 				MARKETING_VERSION = 1.2;
 				PRODUCT_BUNDLE_IDENTIFIER = in.juspay.nammayatri.debug;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = 1;
@@ -1646,7 +1653,7 @@
 				CODE_SIGN_ENTITLEMENTS = "NammaYatri-Debug.entitlements";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 4;
-				DEVELOPMENT_TEAM = YM9U73Z2JM;
+				DEVELOPMENT_TEAM = "";
 				ENABLE_BITCODE = YES;
 				EXCLUDED_ARCHS = "";
 				"EXCLUDED_ARCHS[sdk=iphonesimulator*]" = arm64;
@@ -1672,6 +1679,9 @@
 				MARKETING_VERSION = 1.2;
 				PRODUCT_BUNDLE_IDENTIFIER = in.juspay.nammayatri.debug;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = 1;

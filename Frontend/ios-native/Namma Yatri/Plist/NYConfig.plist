@@ -5,8 +5,8 @@
 	<key>local_assets</key>
 	<true/>
 	<key>merchantId</key>
-	<string></string>
+	<string>YATRI</string>
 	<key>baseUrl</key>
-	<string></string>
+	<string>https://www.kashmircabs.net/v2</string>
 </dict>
 </plist>
