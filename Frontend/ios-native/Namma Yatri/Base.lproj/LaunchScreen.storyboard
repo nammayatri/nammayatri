@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<document type="com.apple.InterfaceBuilder3.CocoaTouch.Storyboard.XIB" version="3.0" toolsVersion="21507" targetRuntime="iOS.CocoaTouch" propertyAccessControl="none" useAutolayout="YES" launchScreen="YES" useTraitCollections="YES" useSafeAreas="YES" colorMatched="YES" initialViewController="lo5-4k-PRe">
+    <device id="retina6_72" orientation="portrait" appearance="light"/>
+    <dependencies>
+        <deployment identifier="iOS"/>
+        <plugIn identifier="com.apple.InterfaceBuilder.IBCocoaTouchPlugin" version="21505"/>
+        <capability name="Safe area layout guides" minToolsVersion="9.0"/>
+        <capability name="System colors in document resources" minToolsVersion="11.0"/>
+        <capability name="documents saved in the Xcode 8 format" minToolsVersion="8.0"/>
+    </dependencies>
+    <scenes>
+        <!--View Controller-->
+        <scene sceneID="5AW-K2-LFb">
+            <objects>
+                <viewController id="lo5-4k-PRe" sceneMemberID="viewController">
+                    <view key="view" contentMode="scaleToFill" id="cfI-pz-W51">
+                        <rect key="frame" x="0.0" y="0.0" width="430" height="932"/>
+                        <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
+                        <subviews>
+                            <imageView clipsSubviews="YES" userInteractionEnabled="NO" contentMode="scaleAspectFill" horizontalHuggingPriority="251" verticalHuggingPriority="251" image="ny_ic_splash_bg.png" translatesAutoresizingMaskIntoConstraints="NO" id="FLr-9x-E3n">
+                                <rect key="frame" x="0.0" y="0.0" width="430" height="932"/>
+                            </imageView>
+                            <imageView clipsSubviews="YES" userInteractionEnabled="NO" contentMode="scaleAspectFit" fixedFrame="YES" image="ny_ic_namma_yatri_logo_new.png" translatesAutoresizingMaskIntoConstraints="NO" id="jta-YJ-SXj">
+                                <rect key="frame" x="0.0" y="440" width="430" height="52"/>
+                                <autoresizingMask key="autoresizingMask" flexibleMinX="YES" flexibleMaxX="YES" flexibleMinY="YES" flexibleMaxY="YES"/>
+                            </imageView>
+                            <imageView clipsSubviews="YES" userInteractionEnabled="NO" contentMode="scaleAspectFit" image="ny_ic_no_commision.png" id="Cn5-gR-N6X">
+                                <rect key="frame" x="68" y="815" width="294" height="58"/>
+                                <autoresizingMask key="autoresizingMask" flexibleMinX="YES" widthSizable="YES" flexibleMaxX="YES" flexibleMinY="YES"/>
+                            </imageView>
+                        </subviews>
+                        <viewLayoutGuide key="safeArea" id="lIE-sd-eCb"/>
+                        <color key="backgroundColor" systemColor="systemBackgroundColor"/>
+                        <constraints>
+                            <constraint firstItem="lIE-sd-eCb" firstAttribute="trailing" secondItem="FLr-9x-E3n" secondAttribute="trailing" id="RNR-ys-prX"/>
+                            <constraint firstAttribute="bottom" secondItem="FLr-9x-E3n" secondAttribute="bottom" id="aY5-Ks-67D"/>
+                            <constraint firstItem="FLr-9x-E3n" firstAttribute="leading" secondItem="lIE-sd-eCb" secondAttribute="leading" id="fct-y4-EyJ"/>
+                            <constraint firstItem="FLr-9x-E3n" firstAttribute="top" secondItem="cfI-pz-W51" secondAttribute="top" id="pGA-Mu-cKG"/>
+                        </constraints>
+                    </view>
+                </viewController>
+                <placeholder placeholderIdentifier="IBFirstResponder" id="c1o-8i-khK" userLabel="First Responder" customClass="UIResponder" sceneMemberID="firstResponder"/>
+            </objects>
+            <point key="canvasLocation" x="555.34883720930236" y="273.6051502145923"/>
+        </scene>
+    </scenes>
+    <resources>
+        <image name="ny_ic_no_commision.png" width="240" height="44"/>
+        <image name="ny_ic_namma_yatri_logo_new.png" width="176" height="52"/>
+        <image name="ny_ic_splash_bg.png" width="654" height="780"/>
+        <systemColor name="systemBackgroundColor">
+            <color white="1" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
+        </systemColor>
+    </resources>
+</document>

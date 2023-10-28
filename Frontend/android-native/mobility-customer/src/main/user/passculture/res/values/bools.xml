@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <bool name="local_assets">false</bool>
-    <bool name="use_local_assets">false</bool>
+    <bool name="local_assets">true</bool>
+    <bool name="use_local_assets">true</bool>
 </resources><!-- These should be FALSE for release -->

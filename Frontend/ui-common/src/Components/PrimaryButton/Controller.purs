@@ -96,7 +96,7 @@ config =   {
   , alpha: 1.0
   , isClickable: true
   , visibility: VISIBLE
-  , background : Color.black900
+  , background : Color.novopurple
   , gravity : CENTER
   , isSuffixImage : false
   , suffixImageConfig :
