@@ -23,12 +23,12 @@ data Action = OnClick LocationListItemState
             | FavClick LocationListItemState
 
 
-dummyLocationListState :: LocationListItemState
-dummyLocationListState = { prefixImageUrl : ""
+locationListStateObj :: LocationListItemState
+locationListStateObj = { prefixImageUrl : ""
   , postfixImageUrl : ""
   , postfixImageVisibility : true
-  , title : "Work"
-  , subTitle : "KIAL Rd, Devanahalli, Bengaluru,  Karnataka"
+  , title : ""
+  , subTitle : ""
   , placeId : Nothing
   , lat : Nothing
   , lon : Nothing
@@ -48,6 +48,9 @@ dummyLocationListState = { prefixImageUrl : ""
   , distance : Nothing
   , showDistance : Just false
   , actualDistance : Nothing
+  , frequencyCount : Nothing
+  , recencyDate : Nothing
+  , locationScore : Nothing
   }
 
 dummyAddress :: Address
