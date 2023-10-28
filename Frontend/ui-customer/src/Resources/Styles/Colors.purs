@@ -341,7 +341,7 @@ black9000 :: Color
 black9000 = "#CC2C2F3A"
 
 yellow900 :: Color
-yellow900 = "#FCC32C"
+yellow900 = "#ffffff"
 
 blue600 :: Color
 blue600 = "#F4F7FF"

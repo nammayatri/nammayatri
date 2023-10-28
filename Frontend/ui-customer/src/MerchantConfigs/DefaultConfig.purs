@@ -5,16 +5,16 @@ import MerchantConfig.Types
 config :: AppConfig
 config =
   { primaryTextColor: "#FCC32C"
-  , primaryBackground: "#2C2F3A"
-  , estimateConfirmText: "Request a NammaYatri Ride"
+  , primaryBackground: "#6048E4"
+  , estimateConfirmText: "Request a Novo Ride"
   , autoConfirmingLoaderColor: "#80B2FF"
-  , quoteListModelBackground: "#2C2F3A"
+  , quoteListModelBackground: "#6048E4"
   , currency: "₹"
   , isGradient: "false"
   , primaryButtonCornerRadius: 8.0
   , gradient: []
   , showPickUpandDrop: true
-  , alertDialogPrimaryColor: "#2194FF"
+  , alertDialogPrimaryColor: "#6048E4"
   , cancelSearchTextColor: "#E55454"
   , showHamMenu : true
   , showQuoteFindingText : false
@@ -26,14 +26,14 @@ config =
     , vehicleWidth: 40
     }
   , quoteListModel:
-    { backgroundColor: "#2C2F3A"
+    { backgroundColor: "#6048E4"
     , textColor: "#FFFFFF"
-    , loaderColor: "#80B2FF"
+    , loaderColor: "#6048E4"
     , otpTextBackground : "#2C2F3A"
     , otpBackground: "#F1F1F1"
     , otpTextColor: "#FFFFFF"
     , otpTitleColor : "#6D7280"
-    , selectRideTextColor: "#2C2F3A"
+    , selectRideTextColor: "#6048E4"
     , lineImage : "ic_line"
     , lottieHeight : 300
     , lottieWidth : 300
@@ -43,7 +43,7 @@ config =
     , closeIcon : "ny_ic_close_white,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_close_white.png"
     }
   , searchLocationConfig : 
-    { searchLocationTheme: "#2C2F3A"
+    { searchLocationTheme: "#6048E4"
     , setLocationOnMapColor:"#6D7280"
     , strokeColor: "1,#E5E7EB"
     , enableLocationTagbar : "true"
@@ -74,7 +74,7 @@ config =
     }
   , ratingConfig : 
     { secondaryButtonTextColor : "#FCC32C"
-    , secondaryButtonStroke : "1,#2C2F3A"
+    , secondaryButtonStroke : "1,#6048E4"
     , buttonCornerRadius : 8.0
     }
   , cancelReasonConfig : 
@@ -82,16 +82,16 @@ config =
     , secondaryButtonStroke : "1,#2C2F3A"
     , buttonCornerRadius : 8.0
     }
-  , profileBackground: "#2C2F3A"
+  , profileBackground: "#6048E4"
   , profileName: "#FFFFFF"
   , profileImage: "#012A72"
-  , feedbackBackground: "#2C2F3A"
+  , feedbackBackground: "#6048E4"
   , sideBarList: [ "MyRides", "Favorites", "EmergencyContacts", "HelpAndSupport", "Language", "Separator", "ShareApp", "LiveStatsDashboard", "Logout" ]
-  , rateCardColor: "#2C2F3A"
+  , rateCardColor: "#6048E4"
   , nyBrandingVisibility: false
   , fontType: "Assets"
   , languageList : []
-  , confirmPickUpLocationBorder: "#101010"
+  , confirmPickUpLocationBorder: "#6048E4"
   , bannerConfig : {
         backgroundColor : "#F0FAF0"
       , title : "Complete your profile for a personalised ride experience"

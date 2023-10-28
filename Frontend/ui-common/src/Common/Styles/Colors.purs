@@ -22,7 +22,7 @@ black800 :: Color
 black800 = "#454545"
 
 black900 :: Color
-black900 = "#2C2F3A"
+black900 = "#6048E4"
 
 black9000 :: Color
 black9000 = "#CC2C2F3A"
@@ -67,7 +67,7 @@ white900 :: Color
 white900 = "#FFFFFF"
 
 yellow900 :: Color
-yellow900 = "#FCC32C"
+yellow900 = "#ffffff"
 
 -- Theme Colors
 
