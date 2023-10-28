@@ -33,6 +33,7 @@ data KeyStore
   | USER_NAME
   | LOCAL_STAGE
   | RECENT_SEARCHES
+  | SUGGESTIONS_MAP
   | CUSTOMER_ID
   | TRACKING_DRIVER
   | TRACKING_ENABLED
@@ -84,6 +85,9 @@ data KeyStore
   | ESTIMATE_DATA
   | REFERRER_URL
   | PAYMENT_STATUS_POOLING
+  | LAST_KNOWN_LAT
+  | LAST_KNOWN_LON
+  | SOURCE_GEOHASHES
 
 derive instance genericKeyStore :: Generic KeyStore _
 

@@ -51,6 +51,9 @@ initData = {
     , distance : Nothing
     , showDistance : Just false
     , actualDistance : Nothing
+    , frequencyCount : Nothing
+    , recencyDate : Nothing
+    , locationScore : Nothing
   }
   , address : ""
   , activeIndex : (Just 2)

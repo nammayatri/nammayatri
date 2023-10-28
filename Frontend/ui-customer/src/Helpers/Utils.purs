@@ -20,8 +20,8 @@ module Helpers.Utils
     where
 
 import Accessor (_distance_meters)
-import Common.Types.App (EventPayload(..), GlobalPayload(..), LazyCheck(..), Payload(..), InnerPayload)
-import Components.LocationListItem.Controller (dummyLocationListState)
+import Common.Types.App (EventPayload(..), GlobalPayload(..), LazyCheck(..), Payload(..), InnerPayload, CarouselModal)
+import Components.LocationListItem.Controller (locationListStateObj)
 import Control.Monad.Except (runExcept)
 import Control.Monad.Free (resume)
 import Data.Array (cons, deleteAt, drop, filter, head, length, null, sortBy, sortWith, tail, (!!), reverse)
@@ -30,7 +30,7 @@ import Data.Date (Date)
 import Data.Either (Either(..), hush)
 import Data.Eq.Generic (genericEq)
 import Data.Foldable (or)
-import Data.Function.Uncurried (Fn2, runFn3)
+import Data.Function.Uncurried (Fn2, runFn3, Fn3)
 import Data.Generic.Rep (class Generic)
 import Data.Lens ((^.))
 import Data.Maybe (Maybe(..), fromMaybe)
@@ -63,10 +63,11 @@ import MerchantConfig.Utils (Merchant(..), getMerchant, getValueFromConfig)
 import Prelude (class Eq, class Ord, class Show, Unit, bind, compare, comparing, mod, discard, identity, map, not, pure, show, unit, void, ($), (*), (+), (-), (/), (/=), (<), (<#>), (<*>), (<<<), (<=), (<>), (=<<), (==), (>), (>>>), (||), (&&), (<$>), (>=))
 import Presto.Core.Flow (Flow, doAff)
 import Presto.Core.Types.Language.Flow (FlowWrapper(..), getState, modifyState)
+import Screens.Types (RecentlySearchedObject,SuggestionsMap, SuggestionsData(..), HomeScreenState, AddNewAddressScreenState, LocationListItemState, PreviousCurrentLocations(..), CurrentLocationDetails, LocationItemType(..), NewContacts, Contacts, FareComponent)
 import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode)
 import PrestoDOM.Core (terminateUI)
 import Screens.Types (AddNewAddressScreenState, Contacts, CurrentLocationDetails, FareComponent, HomeScreenState, LocationItemType(..), LocationListItemState, NewContacts, PreviousCurrentLocations, RecentlySearchedObject, Stage(..), Location)
-import Screens.Types (RecentlySearchedObject, HomeScreenState, AddNewAddressScreenState, LocationListItemState, PreviousCurrentLocations(..), CurrentLocationDetails, LocationItemType(..), NewContacts, Contacts, FareComponent)
+import Screens.Types (RecentlySearchedObject, HomeScreenState, AddNewAddressScreenState, LocationListItemState, PreviousCurrentLocations(..), CurrentLocationDetails, LocationItemType(..), NewContacts, Contacts, FareComponent, SuggestionsMap, SuggestionsData(..),SourceGeoHash)
 import Services.API (Prediction)
 import Storage (KeyStore(..), getValueToLocalStore)
 import Types.App (GlobalState(..))
@@ -97,12 +98,14 @@ foreign import getNextDateV2 :: String -> String
 foreign import compareDate :: EffectFn2 String String Boolean
 foreign import storeCallBackContacts :: forall action. (action -> Effect Unit) -> ((Array Contacts) -> action) -> Effect Unit
 foreign import parseNewContacts :: String -> (Array NewContacts)
+foreign import parseSourceHashArray :: String -> Array SourceGeoHash
 
 foreign import secondsToHms :: Int -> String
 
 foreign import getTime :: Unit -> Int
 
 foreign import drawPolygon :: String -> String -> Effect Unit
+foreign import getDifferenceBetweenDates :: Fn2 String String Int
 
 foreign import removeLabelFromMarker :: EffectFn1 Number Unit
 -- foreign import generateSessionToken :: String -> String
@@ -306,7 +309,7 @@ checkPrediction :: LocationListItemState -> Array LocationListItemState -> Boole
 checkPrediction prediction predictionArr = if (length (filter (\ ( item) -> (item.placeId) == (prediction.placeId))(predictionArr)) > 0) then false else true
 
 getPrediction :: LocationListItemState -> Array LocationListItemState -> LocationListItemState
-getPrediction prediction predictionArr = (fromMaybe dummyLocationListState ((filter (\ ( item) -> (item.placeId) == (prediction.placeId))(predictionArr)) !! 0))
+getPrediction prediction predictionArr = (fromMaybe locationListStateObj ((filter (\ ( item) -> (item.placeId) == (prediction.placeId))(predictionArr)) !! 0))
 
 addSearchOnTop :: LocationListItemState -> Array LocationListItemState -> Array LocationListItemState
 addSearchOnTop prediction predictionArr = cons prediction (filter (\ ( item) -> (item.placeId) /= (prediction.placeId))(predictionArr))
