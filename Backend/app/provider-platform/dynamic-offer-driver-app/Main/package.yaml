@@ -6,6 +6,12 @@ author: "nammayatri"
 maintainer: "nammayatri"
 copyright: "2023 Juspay Technologies Private Limited"
 
+flags:
+  Local:
+    description: Enable this flag for faster compile times
+    manual: true
+    default: false
+
 # Metadata used when publishing your package
 # synopsis:            Short description of your package
 # category:            Web
@@ -122,6 +128,20 @@ library:
     - -Widentities
     - -fhide-source-paths
     - -Werror
+  when:
+    - condition: flag(Local)
+      then:
+        ghc-options:
+          - -O0
+          - -funfolding-use-threshold20
+          - -fno-cse
+          - -fmax-simplifier-iterations1
+          - -fno-specialise-aggressively
+          - -j4
+      else:
+        ghc-options:
+          - -O2
+          - -j4
   dependencies:
     - mobility-core
     - beckn-spec
@@ -139,6 +159,20 @@ executables:
       - -threaded
       - -rtsopts
       - '"-with-rtsopts=-N -T"'
+    when:
+    - condition: flag(Local)
+      then:
+        ghc-options:
+          - -O0
+          - -funfolding-use-threshold20
+          - -fno-cse
+          - -fmax-simplifier-iterations1
+          - -fno-specialise-aggressively
+          - -j4
+      else:
+        ghc-options:
+          - -O2
+          - -j4
     dependencies:
       - dynamic-offer-driver-app
       - mobility-core

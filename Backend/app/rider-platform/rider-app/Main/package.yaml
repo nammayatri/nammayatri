@@ -8,6 +8,12 @@ copyright: "2023 Juspay Technologies Private Limited"
 
 synopsis: The nammayatri rider application
 
+flags:
+  Local:
+    description: Enable this flag for faster compile times
+    manual: true
+    default: false
+
 # To avoid duplicated efforts in documentation and dealing with the
 # complications of embedding Haddock markup inside cabal files, it is
 # common to point users to the README.md file.
@@ -113,6 +119,20 @@ library:
     - -Widentities
     - -fhide-source-paths
     - -Werror
+  when:
+    - condition: flag(Local)
+      then:
+        ghc-options:
+          - -O0
+          - -funfolding-use-threshold20
+          - -fno-cse
+          - -fmax-simplifier-iterations1
+          - -fno-specialise-aggressively
+          - -j4
+      else:
+        ghc-options:
+          - -O2
+          - -j4
   dependencies:
     - mobility-core
     - beckn-spec
@@ -123,6 +143,7 @@ library:
     - sessionizer-metrics
     - beckn-services
     - shared-services
+
 executables:
   rider-app-exe:
     main: Main.hs
@@ -131,6 +152,20 @@ executables:
       - -threaded
       - -rtsopts
       - '"-with-rtsopts=-N -T"'
+    when:
+    - condition: flag(Local)
+      then:
+        ghc-options:
+          - -O0
+          - -funfolding-use-threshold20
+          - -fno-cse
+          - -fmax-simplifier-iterations1
+          - -fno-specialise-aggressively
+          - -j4
+      else:
+        ghc-options:
+          - -O2
+          - -j4
     dependencies:
       - rider-app
       - mobility-core
