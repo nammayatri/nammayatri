@@ -135,6 +135,6 @@ getRideStatus rideId personId = withLogTag ("personId-" <> personId.getId) do
           DB.OneWaySpecialZoneDetails details -> Just $ makeLocationAPIEntity details.toLocation
           DB.DriverOfferDetails details -> Just $ makeLocationAPIEntity details.toLocation,
         ride = makeRideAPIEntity ride,
-        customer = SPerson.makePersonAPIEntity decRider tag,
+        customer = SPerson.makePersonAPIEntity decRider tag Nothing,
         driverPosition = mbPos <&> (.currPoint)
       }

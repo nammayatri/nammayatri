@@ -19,6 +19,7 @@ module Domain.Types.Person where
 import Data.Aeson
 import qualified Domain.Types.Merchant as DMerchant
 import Domain.Types.Merchant.MerchantOperatingCity as DMOC
+import qualified Domain.Types.Merchant.RiderConfig as DRC
 import qualified Domain.Types.MerchantConfig as DMC
 import Kernel.External.Encryption
 import qualified Kernel.External.Maps as Maps
@@ -97,7 +98,11 @@ data PersonE e = Person
     createdAt :: UTCTime,
     updatedAt :: UTCTime,
     bundleVersion :: Maybe Version,
-    clientVersion :: Maybe Version
+    clientVersion :: Maybe Version,
+    shareEmergencyContacts :: Bool,
+    nightSafetyChecks :: Bool,
+    triggerSupport :: Bool,
+    hasCompletedSafetySetup :: Bool
   }
   deriving (Generic)
 
@@ -137,6 +142,8 @@ data PersonAPIEntity = PersonAPIEntity
     hasDisability :: Maybe Bool,
     disability :: Maybe Text,
     gender :: Gender,
+    hasCompletedSafetySetup :: Bool,
+    enableLocalPoliceSupport :: Maybe Bool,
     bundleVersion :: Maybe Version,
     clientVersion :: Maybe Version
   }
@@ -149,11 +156,12 @@ data PersonCityInformation = PersonCityInformation
   }
   deriving (Generic, Show, FromJSON, ToJSON)
 
-makePersonAPIEntity :: DecryptedPerson -> Maybe Text -> PersonAPIEntity
-makePersonAPIEntity Person {..} disability =
+makePersonAPIEntity :: DecryptedPerson -> Maybe Text -> Maybe DRC.RiderConfig -> PersonAPIEntity
+makePersonAPIEntity Person {..} disability riderConfig =
   PersonAPIEntity
     { maskedMobileNumber = maskText <$> mobileNumber,
       maskedDeviceToken = maskText <$> deviceToken,
       hasTakenRide = hasTakenValidRide,
+      enableLocalPoliceSupport = (.enableLocalPoliceSupport) <$> riderConfig,
       ..
     }

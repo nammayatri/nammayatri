@@ -4,9 +4,9 @@ module Domain.Types.Sos where
 
 import Domain.Types.Person (Person)
 import Domain.Types.Ride (Ride)
+import Kernel.Beam.Lib.UtilsTH (mkBeamInstancesForEnum)
 import Kernel.Prelude
 import Kernel.Types.Id
-import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
 
 data Sos = Sos
   { id :: Id Sos,
@@ -14,6 +14,7 @@ data Sos = Sos
     rideId :: Id Ride,
     status :: SosStatus,
     flow :: SosType,
+    ticketId :: Maybe Text,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }
@@ -22,7 +23,7 @@ data Sos = Sos
 newtype EmergencyContactId = EmergencyContactId Text
   deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-data SosType = Police | CustomerCare | EmergencyContact EmergencyContactId
+data SosType = Police | CustomerCare | EmergencyContact | SafetyFlow EmergencyContactId
   deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 data SosStatus
