@@ -20,9 +20,11 @@ import android.app.Activity;
 import android.app.ActivityManager;
 import android.app.AlertDialog;
 import android.app.NotificationManager;
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentSender;
+import android.content.ServiceConnection;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.net.Uri;
@@ -30,6 +32,7 @@ import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
+import android.os.IBinder;
 import android.provider.Settings;
 import android.util.DisplayMetrics;
 import android.util.Log;
@@ -89,6 +92,7 @@ import in.juspay.mobility.app.InAppNotification;
 import in.juspay.mobility.app.LocationUpdateService;
 import in.juspay.mobility.app.MyFirebaseMessagingService;
 import in.juspay.mobility.app.NotificationUtils;
+import in.juspay.mobility.app.OverlaySheetService;
 import in.juspay.mobility.app.RideRequestActivity;
 import in.juspay.mobility.app.TranslatorMLKit;
 import in.juspay.mobility.app.WidgetService;
@@ -107,6 +111,8 @@ public class MainActivity extends AppCompatActivity {
     private HyperServices hyperServices;
     private Context context;
     private Activity activity;
+    private WidgetService.CacheHyperService chs;
+    private static WidgetService.WidgetBinder widgetBinder;
     @Nullable
     private SharedPreferences sharedPref;
     @SuppressLint("StaticFieldLeak")
@@ -310,7 +316,8 @@ public class MainActivity extends AppCompatActivity {
         
         WebView.setWebContentsDebuggingEnabled(true);
         sharedPref = context.getSharedPreferences(this.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
-
+        chs = () -> hyperServices;
+        WidgetService.registerCacheHyperService(chs);
         if (MERCHANT_TYPE.equals("DRIVER")) {
             widgetService = new Intent(this, WidgetService.class);
             getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
@@ -339,6 +346,22 @@ public class MainActivity extends AppCompatActivity {
             } catch (Settings.SettingNotFoundException e) {
                 isSystemAnimEnabled = false;
             }
+        }
+        if (widgetService != null){
+            bindService(widgetService, new ServiceConnection() {
+                @Override
+                public void onServiceConnected(ComponentName name, IBinder service) {
+                    if (service instanceof WidgetService.WidgetBinder) {
+                        widgetBinder = (WidgetService.WidgetBinder) service;
+                    }
+                    System.out.println("WS - onServiceConnected");
+                }
+
+                @Override
+                public void onServiceDisconnected(ComponentName name) {
+                    System.out.println("WS - onServiceDisconnected");
+                }
+            },BIND_ADJUST_WITH_ACTIVITY);
         }
 
         updateConfigURL();
@@ -449,7 +472,6 @@ public class MainActivity extends AppCompatActivity {
 
     private void initApp(String viewParam, String deepLinkJSON) {
 
-        hyperServices = new HyperServices(this, findViewById(R.id.cl_dui_container));
         final JSONObject json = new JSONObject();
         JSONObject payload = new JSONObject();
 
@@ -465,95 +487,109 @@ public class MainActivity extends AppCompatActivity {
         } catch (JSONException e) {
             e.printStackTrace();
         }
-        hyperServices.initiate(json, new HyperPaymentsCallbackAdapter() {
-            @Override
-            public void onEvent(JSONObject jsonObject, JuspayResponseHandler juspayResponseHandler) {
-                Log.d(LOG_TAG, "onEvent: " + jsonObject.toString());
-                String event = jsonObject.optString("event");
-                switch (event) {
-                    case "initiate_result":
-                        try {
-                            JSONObject innerPayload = json.getJSONObject(PaymentConstants.PAYLOAD);
-                            innerPayload.put("action", "process");
-                            if (getIntent().hasExtra("NOTIFICATION_DATA") || (getIntent().hasExtra("notification_type") && getIntent().hasExtra("entity_ids") && getIntent().hasExtra("entity_type"))) {
-                                innerPayload.put("notificationData", getNotificationDataFromIntent());
-                            }
-                            json.put(PaymentConstants.PAYLOAD, innerPayload);
-                        } catch (JSONException e) {
-                            Log.e(LOG_TAG, e.toString());
-                        }
-                        hyperServices.process(json);
-                        break;
-                    case "hide_loader":
-                    case "hide_splash":
-                        String key = getResources().getString(R.string.service);
-                        if (key.equals("nammayatri") && isSystemAnimEnabled) {
-                            isHideSplashEventCalled = true;
-                        } else {
-                            hideSplash();
-                        }
-                        break;
-                    case "show_splash":
-                        View v = findViewById(R.id.splash);
-                        if (v != null) {
-                            findViewById(R.id.splash).setVisibility(View.VISIBLE);
-                        }
-                        break;
-                    case "reboot":
-                        Log.i(LOG_TAG, "event reboot");
-                        hyperServices.terminate();
-                        hyperServices = null;
-                        initApp(null,null);
-                        break;
-                    case "in_app_notification":
-                        String title = jsonObject.optString("title");
-                        String message = jsonObject.optString("message");
-                        String channelId = jsonObject.optString("channelId");
-                        String action1Text = jsonObject.optString("action1Text");
-                        String action2Text = jsonObject.optString("action2Text");
-                        String action1Image = jsonObject.optString("action1Image");
-                        String action2Image = jsonObject.optString("action2Image");
-                        String onTapAction = jsonObject.optString("onTapAction");
-                        int durationInMilliSeconds = Integer.parseInt(jsonObject.optString("durationInMilliSeconds"));
-                        showInAppNotification(title, message, onTapAction, action1Text, action2Text, action1Image, action2Image, channelId, durationInMilliSeconds, context);
-                        break;
-                    case "process_result":
-                        try {
-                            JSONObject innerPayload = jsonObject.getJSONObject(PaymentConstants.PAYLOAD);
-                            if (innerPayload.getString("action").equals("terminate")) {
-                                minimizeApp(context);
-                            }
-                        } catch (Exception ignored) {
-                        } break;
-                    case "log_stream":
-                        JSONObject payload;
-                        try {
-                            payload = jsonObject.getJSONObject("payload");
-                            HashMap<String, String> params = new HashMap<>();
-                            switch (payload.optString("label")) {
-                                case "current_screen":
-                                    params.put("screen_name", payload.getJSONObject("value").getString("screen_name"));
-                                    in.juspay.mobility.app.Utils.logEventWithParams("ny_driver_payment_current_screen", params ,context);
-                                    break;
-                                case "button_clicked":
-                                    params.put("button_name",payload.getJSONObject("value").getString("button_name"));
-                                    in.juspay.mobility.app.Utils.logEventWithParams("ny_driver_payment_button_clicked",params ,context);
-                                    break;
-                                case "upi_apps":
-                                    params.put("app_name",payload.getJSONObject("value").getString("appName"));
-                                    params.put("package_name",payload.getJSONObject("value").getString("packageName"));
-                                    in.juspay.mobility.app.Utils.logEventWithParams("ny_driver_payment_upi_app_selected",params ,context);
-                                    break;
-                                default:
-                            }
-                        } catch (JSONException e) {
-                            Log.e(LOG_TAG, "empty payload" + json);
-                        }
-                    default:
-                        Log.e(LOG_TAG, "json_payload" + json);
-                }
+        System.out.println("WS - widgetBinder" + (widgetBinder != null));
+        System.out.println("WS - widgetBinder.getService" + (widgetBinder != null && (widgetBinder.getService().cachedHS != null)));
+        if (widgetBinder != null && widgetBinder.getService().cachedHS != null){
+            hyperServices = widgetBinder.getService().cachedHS;
+            try {
+                JSONObject js = json;
+                js.put("cache", true);
+                hyperServices.process(this,js);
+            } catch (JSONException e) {
+                throw new RuntimeException(e);
             }
-        });
+        } else {
+            hyperServices = new HyperServices(this, findViewById(R.id.cl_dui_container));
+            hyperServices.initiate(json, new HyperPaymentsCallbackAdapter() {
+                @Override
+                public void onEvent(JSONObject jsonObject, JuspayResponseHandler juspayResponseHandler) {
+                    Log.d(LOG_TAG, "onEvent: " + jsonObject.toString());
+                    String event = jsonObject.optString("event");
+                    switch (event) {
+                        case "initiate_result":
+                            try {
+                                JSONObject innerPayload = json.getJSONObject(PaymentConstants.PAYLOAD);
+                                innerPayload.put("action", "process");
+                                if (getIntent().hasExtra("NOTIFICATION_DATA") || (getIntent().hasExtra("notification_type") && getIntent().hasExtra("entity_ids") && getIntent().hasExtra("entity_type"))) {
+                                    innerPayload.put("notificationData", getNotificationDataFromIntent());
+                                }
+                                json.put(PaymentConstants.PAYLOAD, innerPayload);
+                            } catch (JSONException e) {
+                                Log.e(LOG_TAG, e.toString());
+                            }
+                            hyperServices.process(json);
+                            break;
+                        case "hide_loader":
+                        case "hide_splash":
+                            String key = getResources().getString(R.string.service);
+                            if (key.equals("nammayatri") && isSystemAnimEnabled) {
+                                isHideSplashEventCalled = true;
+                            } else {
+                                hideSplash();
+                            }
+                            break;
+                        case "show_splash":
+                            View v = findViewById(R.id.splash);
+                            if (v != null) {
+                                findViewById(R.id.splash).setVisibility(View.VISIBLE);
+                            }
+                            break;
+                        case "reboot":
+                            Log.i(LOG_TAG, "event reboot");
+                            hyperServices.terminate();
+                            hyperServices = null;
+                            initApp(null,null);
+                            break;
+                        case "in_app_notification":
+                            String title = jsonObject.optString("title");
+                            String message = jsonObject.optString("message");
+                            String channelId = jsonObject.optString("channelId");
+                            String action1Text = jsonObject.optString("action1Text");
+                            String action2Text = jsonObject.optString("action2Text");
+                            String action1Image = jsonObject.optString("action1Image");
+                            String action2Image = jsonObject.optString("action2Image");
+                            String onTapAction = jsonObject.optString("onTapAction");
+                            int durationInMilliSeconds = Integer.parseInt(jsonObject.optString("durationInMilliSeconds"));
+                            showInAppNotification(title, message, onTapAction, action1Text, action2Text, action1Image, action2Image, channelId, durationInMilliSeconds, context);
+                            break;
+                        case "process_result":
+                            try {
+                                JSONObject innerPayload = jsonObject.getJSONObject(PaymentConstants.PAYLOAD);
+                                if (innerPayload.getString("action").equals("terminate")) {
+                                    minimizeApp(context);
+                                }
+                            } catch (Exception ignored) {
+                            } break;
+                        case "log_stream":
+                            JSONObject payload;
+                            try {
+                                payload = jsonObject.getJSONObject("payload");
+                                HashMap<String, String> params = new HashMap<>();
+                                switch (payload.optString("label")) {
+                                    case "current_screen":
+                                        params.put("screen_name", payload.getJSONObject("value").getString("screen_name"));
+                                        in.juspay.mobility.app.Utils.logEventWithParams("ny_driver_payment_current_screen", params ,context);
+                                        break;
+                                    case "button_clicked":
+                                        params.put("button_name",payload.getJSONObject("value").getString("button_name"));
+                                        in.juspay.mobility.app.Utils.logEventWithParams("ny_driver_payment_button_clicked",params ,context);
+                                        break;
+                                    case "upi_apps":
+                                        params.put("app_name",payload.getJSONObject("value").getString("appName"));
+                                        params.put("package_name",payload.getJSONObject("value").getString("packageName"));
+                                        in.juspay.mobility.app.Utils.logEventWithParams("ny_driver_payment_upi_app_selected",params ,context);
+                                        break;
+                                    default:
+                                }
+                            } catch (JSONException e) {
+                                Log.e(LOG_TAG, "empty payload" + json);
+                            }
+                        default:
+                            Log.e(LOG_TAG, "json_payload" + json);
+                    }
+                }
+            });
+        }
     }
 
     public void showAlertForUpdate() {
@@ -687,9 +723,9 @@ public class MainActivity extends AppCompatActivity {
             if (NotificationUtils.overlayFeatureNotAvailable(this)) {
                 checkRideRequest();
             }
-            if (widgetService != null) {
-                stopService(widgetService);
-            }
+//            if (widgetService != null) {
+//                stopService(widgetService);
+//            }
         }
     }
 
@@ -723,9 +759,9 @@ public class MainActivity extends AppCompatActivity {
                 this.sendBroadcast(broadcastIntent);
             }
         }
-        if (hyperServices != null) {
-            hyperServices.terminate();
-        }
+//        if (hyperServices != null) {
+//            hyperServices.terminate();
+//        }
         ChatService.deRegisterInAppCallback(inappCallBack);
         MyFirebaseMessagingService.deRegisterBundleUpdateCallback(bundleUpdateCallBack);
         MyFirebaseMessagingService.deRegisterShowNotificationCallBack(inappCallBack);
@@ -880,7 +916,7 @@ public class MainActivity extends AppCompatActivity {
         payload.put("action", action);
         payload.put("logLevel",1);
         payload.put("isBootable",true);
-        payload.put(PaymentConstants.ENV, "prod");
+        payload.put(PaymentConstants.ENV, "master");
         int bundleTimeOut = Integer.parseInt(KeyValueStore.read(this,getString(R.string.preference_file_key),"BUNDLE_TIME_OUT","500"));
         payload.put("bundleTimeOut",bundleTimeOut);
         return payload;

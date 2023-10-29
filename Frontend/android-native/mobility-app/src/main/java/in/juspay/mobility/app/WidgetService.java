@@ -17,11 +17,13 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.PixelFormat;
 import android.media.MediaPlayer;
+import android.os.Binder;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
+import android.os.PowerManager;
 import android.os.VibrationEffect;
 import android.os.Vibrator;
 import android.provider.Settings;
@@ -53,12 +55,16 @@ import org.json.JSONObject;
 
 import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.LinkedList;
 import java.util.Locale;
 import java.util.Queue;
+import java.util.Stack;
 import java.util.TimeZone;
+
+import in.juspay.services.HyperServices;
 
 
 public class WidgetService extends Service {
@@ -71,11 +77,25 @@ public class WidgetService extends Service {
     private JSONObject entity_payload, data;
     private boolean isRemovingInProcess = false;
     private final Queue<Intent> rideRequestQueue = new LinkedList<>();
+    private static final Stack<CacheHyperService> cacheHyperServices = new Stack<>();
+    public  HyperServices cachedHS = null;
 
     private final Bundle params = new Bundle();
 
     private static FirebaseAnalytics mFirebaseAnalytics;
     private int LAYOUT_FLAG;
+
+    public interface CacheHyperService {
+        HyperServices getHyperservice();
+    }
+
+    public static void registerCacheHyperService (CacheHyperService cacheHS) {
+        cacheHyperServices.add(cacheHS);
+    }
+
+    public static void deregisterCacheHyperService (CacheHyperService cacheHS) {
+        cacheHyperServices.remove(cacheHS);
+    }
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
@@ -90,6 +110,13 @@ public class WidgetService extends Service {
                 rideRequestQueue.offer(intent);
             } else if (intentMessage != null && !intentMessage.equals("CLEAR_FARE")) {
                 addMessageToWidget(intent);
+            }
+        }
+        while (!cacheHyperServices.isEmpty()) {
+            CacheHyperService current = cacheHyperServices.pop();
+            if (current!= null && current.getHyperservice() != null) {
+                cachedHS = current.getHyperservice();
+                cacheHyperServices.empty();
             }
         }
         return START_STICKY;
@@ -442,7 +469,7 @@ public class WidgetService extends Service {
                             imageClose.setVisibility(View.GONE);
 
                             if (isCloseEnabled) {
-                                stopSelf();
+//                                stopSelf();
                             } else {
                                 ValueAnimator valueAnimator = ValueAnimator.ofFloat(widgetLayoutParams.x, 0);
                                 valueAnimator.setDuration(getResources().getInteger(R.integer.WIDGET_CORNER_ANIMATION_DURATION));
@@ -458,18 +485,19 @@ public class WidgetService extends Service {
 
                                 //click definition
                                 if (Math.abs(initialTouchX - motionEvent.getRawX()) < 5 && Math.abs(initialTouchY - motionEvent.getRawY()) < 5) {
-                                    long ramBasedTime = getTimeBasedOnRamSize();
-                                    if (sharedPref.getString("MAPS_OPENED", "null").equals("true") || sharedPref.getString("IS_RIDE_ACTIVE", "null").equals("true")) {
-                                        Handler mainLooper = new Handler(Looper.getMainLooper());
-                                        minimizeApp();
-                                        View loaderView = getLoaderView();
-                                        mainLooper.postDelayed(() -> {
-                                            loaderView.setVisibility(View.GONE);
-                                            openMainActivity();
-                                            }, ramBasedTime );
-                                    } else {
-                                        openMainActivity();
-                                    }
+                                    openMainActivity();
+//                                    long ramBasedTime = getTimeBasedOnRamSize();
+//                                    if (sharedPref.getString("MAPS_OPENED", "null").equals("true") || sharedPref.getString("IS_RIDE_ACTIVE", "null").equals("true")) {
+//                                        Handler mainLooper = new Handler(Looper.getMainLooper());
+//                                        minimizeApp();
+//                                        View loaderView = getLoaderView();
+//                                        mainLooper.postDelayed(() -> {
+//                                            loaderView.setVisibility(View.GONE);
+//                                            openMainActivity();
+//                                            }, ramBasedTime );
+//                                    } else {
+//                                        openMainActivity();
+//                                    }
                                 }
                             }
                             return true;
@@ -569,7 +597,7 @@ public class WidgetService extends Service {
         Intent intent = getPackageManager().getLaunchIntentForPackage(getPackageName());
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
         getApplicationContext().startActivity(intent);
-        stopSelf();
+//        stopSelf();
     }
 
     public void minimizeApp() {
@@ -582,6 +610,12 @@ public class WidgetService extends Service {
     @Nullable
     @Override
     public IBinder onBind(Intent intent) {
-        return null;
+        return new WidgetService.WidgetBinder();
+    }
+
+    public class WidgetBinder extends Binder {
+        public WidgetService getService() {
+            return WidgetService.this;
+        }
     }
 }
