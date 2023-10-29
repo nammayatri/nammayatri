@@ -594,7 +594,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
     @SuppressLint("InflateParams")
     private void showOverLayPopup() {
         firebaseLogEvent("Overlay_is_popped_up");
-        if (!Settings.canDrawOverlays(this)) return;
+        if (!Settings.canDrawOverlays(getApplicationContext())) return;
         windowManager = (WindowManager) getSystemService(Context.WINDOW_SERVICE);
         int layoutParamsType;
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
@@ -612,7 +612,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
         params.dimAmount = 0.6f;
         params.gravity = Gravity.CENTER;
         params.screenOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT;
-        LayoutInflater inflater = ((LayoutInflater) getSystemService(Context.LAYOUT_INFLATER_SERVICE));
+        LayoutInflater inflater = ((LayoutInflater) getApplicationContext().getSystemService(Context.LAYOUT_INFLATER_SERVICE));
         floatyView = inflater.inflate(R.layout.viewpager_layout_view, null);
         TextView merchantLogo = floatyView.findViewById(R.id.merchantLogo);
         if (key != null && key.equals("yatrisathiprovider")){
