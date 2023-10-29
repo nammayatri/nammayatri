@@ -14,33 +14,30 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE TemplateHaskell #-}
 
-module Storage.Beam.Sos where
+module Storage.Beam.SosMedia where
 
+import qualified Data.Time as Time
 import qualified Database.Beam as B
+import Database.Beam.MySQL ()
 import qualified Domain.Types.Sos as Domain
-import Kernel.Prelude
-import Tools.Beam.UtilsTH
+import IssueManagement.Tools.UtilsTH
 
-data SosT f = SosT
+data SosMediaT f = SosMediaT
   { id :: B.C f Text,
-    personId :: B.C f Text,
-    rideId :: B.C f Text,
-    flow :: B.C f Domain.SosType,
-    status :: B.C f Domain.SosStatus,
-    createdAt :: B.C f UTCTime,
-    updatedAt :: B.C f UTCTime,
-    ticketId :: B.C f (Maybe Text)
+    fileType :: B.C f Domain.MediaType,
+    url :: B.C f Text,
+    createdAt :: B.C f Time.LocalTime
   }
   deriving (Generic, B.Beamable)
 
-instance B.Table SosT where
-  data PrimaryKey SosT f
+instance B.Table SosMediaT where
+  data PrimaryKey SosMediaT f
     = Id (B.C f Text)
     deriving (Generic, B.Beamable)
   primaryKey = Id . id
 
-type Sos = SosT Identity
+type SosMedia = SosMediaT Identity
 
-$(enableKVPG ''SosT ['id] [])
+$(enableKVPG ''SosMediaT ['id] [])
 
-$(mkTableInstances ''SosT "sos")
+$(mkTableInstances ''SosMediaT "sos_media" "atlas_app")

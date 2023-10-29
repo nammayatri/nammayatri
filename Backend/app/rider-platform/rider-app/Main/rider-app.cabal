@@ -273,6 +273,7 @@ library
       Storage.Beam.SearchRequest
       Storage.Beam.SearchRequest.SearchReqLocation
       Storage.Beam.Sos
+      Storage.Beam.SosMedia
       Storage.Beam.SpecialZoneQuote
       Storage.Beam.TripTerms
       Storage.Beam.Webengage
@@ -337,6 +338,7 @@ library
       Storage.Queries.SearchRequest
       Storage.Queries.SearchRequest.SearchReqLocation
       Storage.Queries.Sos
+      Storage.Queries.SosMedia
       Storage.Queries.SpecialZoneQuote
       Storage.Queries.TripTerms
       Storage.Queries.Webengage
@@ -512,6 +514,7 @@ executable rider-app-exe
     , beam-core
     , beam-mysql
     , beam-postgres
+    , beckn-services
     , beckn-spec
     , bytestring
     , casing

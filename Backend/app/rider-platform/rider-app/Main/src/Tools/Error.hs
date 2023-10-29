@@ -127,6 +127,32 @@ instance IsHTTPError PersonStatsError where
 
 instance IsAPIError PersonStatsError
 
+data MediaFileError
+  = FileSizeExceededError Text
+  | FileDoNotExist Text
+  | FileFormatNotSupported Text
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''MediaFileError
+
+instance IsHTTPError MediaFileError where
+  toErrorCode = \case
+    FileSizeExceededError _ -> "FILE_SIZE_EXCEEDED"
+    FileDoNotExist _ -> "FILE_DO_NOT_EXIST"
+    FileFormatNotSupported _ -> "FILE_FORMAT_NOT_SUPPORTED"
+  toHttpCode = \case
+    FileSizeExceededError _ -> E400
+    FileDoNotExist _ -> E400
+    FileFormatNotSupported _ -> E400
+
+instance IsAPIError MediaFileError
+
+instance IsBaseError MediaFileError where
+  toMessage = \case
+    FileSizeExceededError fileSize -> Just $ "Filesize is " <> fileSize <> " Bytes, which is more than the allowed 10MB limit."
+    FileDoNotExist fileId -> Just $ "MediaFile with fileId \"" <> show fileId <> "\" do not exist."
+    FileFormatNotSupported fileFormat -> Just $ "MediaFile with fileFormat \"" <> show fileFormat <> "\" not supported."
+
 newtype DisabilityError
   = DisabilityDoesNotExist Text
   deriving (Eq, Show, IsBecknAPIError)

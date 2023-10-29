@@ -99,6 +99,7 @@ dependencies:
   - casing
   - postgresql-simple
   - random
+  - beckn-services
 
 ghc-options:
   - -fwrite-ide-info

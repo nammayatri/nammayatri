@@ -381,5 +381,28 @@ instance ToTType' BeamP.Person Person where
         BeamP.createdAt = createdAt,
         BeamP.updatedAt = updatedAt,
         BeamP.bundleVersion = versionToText <$> bundleVersion,
-        BeamP.clientVersion = versionToText <$> clientVersion
+        BeamP.clientVersion = versionToText <$> clientVersion,
+        BeamP.shareEmergencyContacts = shareEmergencyContacts,
+        BeamP.nightSafetyChecks = nightSafetyChecks,
+        BeamP.triggerNYSupport = triggerNYSupport,
+        BeamP.hasCompletedSafetySetup = hasCompletedSafetySetup
       }
+
+updateEmergencyInfo ::
+  MonadFlow m =>
+  Id Person ->
+  Maybe Bool ->
+  Maybe Bool ->
+  Maybe Bool ->
+  Maybe Bool ->
+  m ()
+updateEmergencyInfo (Id personId) shareEmergencyContacts triggerNYSupport nightSafetyChecks hasCompletedSafetySetup = do
+  now <- getCurrentTime
+  updateWithKV
+    ( [Se.Set BeamP.updatedAt now]
+        <> [Se.Set BeamP.shareEmergencyContacts (fromJust shareEmergencyContacts) | isJust shareEmergencyContacts]
+        <> [Se.Set BeamP.triggerNYSupport (fromJust triggerNYSupport) | isJust triggerNYSupport]
+        <> [Se.Set BeamP.nightSafetyChecks (fromJust nightSafetyChecks) | isJust nightSafetyChecks]
+        <> [Se.Set BeamP.hasCompletedSafetySetup (fromJust hasCompletedSafetySetup) | isJust hasCompletedSafetySetup]
+    )
+    [Se.Is BeamP.id (Se.Eq personId)]

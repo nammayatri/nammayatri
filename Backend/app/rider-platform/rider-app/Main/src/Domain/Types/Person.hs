@@ -97,7 +97,11 @@ data PersonE e = Person
     createdAt :: UTCTime,
     updatedAt :: UTCTime,
     bundleVersion :: Maybe Version,
-    clientVersion :: Maybe Version
+    clientVersion :: Maybe Version,
+    shareEmergencyContacts :: Bool,
+    nightSafetyChecks :: Bool,
+    triggerNYSupport :: Bool,
+    hasCompletedSafetySetup :: Bool
   }
   deriving (Generic)
 
@@ -137,6 +141,7 @@ data PersonAPIEntity = PersonAPIEntity
     hasDisability :: Maybe Bool,
     disability :: Maybe Text,
     gender :: Gender,
+    hasCompletedSafetySetup :: Bool,
     bundleVersion :: Maybe Version,
     clientVersion :: Maybe Version
   }

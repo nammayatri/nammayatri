@@ -20,10 +20,15 @@ module Domain.Action.UI.Profile
     PersonDefaultEmergencyNumber (..),
     UpdateProfileDefaultEmergencyNumbersResp,
     GetProfileDefaultEmergencyNumbersResp (..),
+    UpdateEmergencySettingsReq (..),
+    UpdateEmergencySettingsResp,
+    EmergencySettingsRes,
     getPersonDetails,
     updatePerson,
     updateDefaultEmergencyNumbers,
     getDefaultEmergencyNumbers,
+    updateEmergencySettings,
+    getEmergencySettings,
   )
 where
 
@@ -216,6 +221,8 @@ updateDefaultEmergencyNumbers personId req = do
   now <- getCurrentTime
   let uniqueRecords = getUniquePersonByMobileNumber req
   newPersonDENList <- buildPersonDefaultEmergencyNumber now `mapM` uniqueRecords
+  when (null newPersonDENList) $ do
+    void $ updateEmergencySettings personId updateSettingReq
   QPersonDEN.replaceAll personId newPersonDENList
   pure APISuccess.Success
   where
@@ -229,6 +236,13 @@ updateDefaultEmergencyNumbers personId req = do
             createdAt = now,
             ..
           }
+    updateSettingReq =
+      UpdateEmergencySettingsReq
+        { shareEmergencyContacts = Just False,
+          triggerNYSupport = Nothing,
+          hasCompletedSafetySetup = Nothing,
+          nightSafetyChecks = Nothing
+        }
 
 getDefaultEmergencyNumbers :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r) => (Id Person.Person, Id Merchant.Merchant) -> m GetProfileDefaultEmergencyNumbersResp
 getDefaultEmergencyNumbers (personId, _) = do
@@ -239,3 +253,50 @@ getDefaultEmergencyNumbers (personId, _) = do
 getUniquePersonByMobileNumber :: UpdateProfileDefaultEmergencyNumbersReq -> [PersonDefaultEmergencyNumber]
 getUniquePersonByMobileNumber req =
   nubBy ((==) `on` mobileNumber) req.defaultEmergencyNumbers
+
+data UpdateEmergencySettingsReq = UpdateEmergencySettingsReq
+  { shareEmergencyContacts :: Maybe Bool,
+    triggerNYSupport :: Maybe Bool,
+    nightSafetyChecks :: Maybe Bool,
+    hasCompletedSafetySetup :: Maybe Bool
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema)
+
+type UpdateEmergencySettingsResp = APISuccess.APISuccess
+
+updateEmergencySettings :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r) => Id Person.Person -> UpdateEmergencySettingsReq -> m UpdateEmergencySettingsResp
+updateEmergencySettings personId req = do
+  personENList <- runInReplica $ QPersonDEN.findAllByPersonId personId
+  when (fromMaybe False req.shareEmergencyContacts && null personENList) do
+    throwError (InvalidRequest "Add atleast one emergency contact.")
+  void $
+    QPerson.updateEmergencyInfo
+      personId
+      req.shareEmergencyContacts
+      req.triggerNYSupport
+      req.nightSafetyChecks
+      req.hasCompletedSafetySetup
+  pure APISuccess.Success
+
+data EmergencySettingsRes = EmergencySettingsRes
+  { shareEmergencyContacts :: Bool,
+    triggerNYSupport :: Bool,
+    nightSafetyChecks :: Bool,
+    hasCompletedSafetySetup :: Bool,
+    defaultEmergencyNumbers :: [DPDEN.PersonDefaultEmergencyNumberAPIEntity]
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema)
+
+getEmergencySettings :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r) => (Id Person.Person, Id Merchant.Merchant) -> m EmergencySettingsRes
+getEmergencySettings (personId, _) = do
+  person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  personENList <- runInReplica $ QPersonDEN.findAllByPersonId personId
+  decPersonENList <- decrypt `mapM` personENList
+  return $
+    EmergencySettingsRes
+      { shareEmergencyContacts = person.shareEmergencyContacts,
+        triggerNYSupport = person.triggerNYSupport,
+        nightSafetyChecks = person.nightSafetyChecks,
+        hasCompletedSafetySetup = person.hasCompletedSafetySetup,
+        defaultEmergencyNumbers = DPDEN.makePersonDefaultEmergencyNumberAPIEntity <$> decPersonENList
+      }

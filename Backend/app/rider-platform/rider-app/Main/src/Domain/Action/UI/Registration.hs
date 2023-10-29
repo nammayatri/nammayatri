@@ -331,7 +331,11 @@ buildPerson req mobileNumber notificationToken bundleVersion clientVersion merch
         aadhaarVerified = False,
         bundleVersion = bundleVersion,
         clientVersion = clientVersion,
-        whatsappNotificationEnrollStatus = Nothing
+        whatsappNotificationEnrollStatus = Nothing,
+        shareEmergencyContacts = False,
+        triggerNYSupport = True,
+        nightSafetyChecks = True,
+        hasCompletedSafetySetup = False
       }
 
 -- FIXME Why do we need to store always the same authExpiry and tokenExpiry from config? info field is always Nothing
