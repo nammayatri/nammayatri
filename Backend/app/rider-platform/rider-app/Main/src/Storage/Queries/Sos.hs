@@ -3,6 +3,7 @@
 module Storage.Queries.Sos where
 
 import Domain.Types.Person as Person ()
+import qualified Domain.Types.Ride as SRide
 import Domain.Types.Sos as Sos
 import Kernel.Beam.Functions
 import Kernel.Prelude
@@ -27,6 +28,13 @@ updateStatus sosId status = do
 findById :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Sos.Sos -> m (Maybe Sos)
 findById sosId = findOneWithKV [Se.Is BeamS.id $ Se.Eq (getId sosId)]
 
+findByRideIdAndStatus :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id SRide.Ride -> SosStatus -> m (Maybe Sos)
+findByRideIdAndStatus rideId status =
+  findOneWithKV
+    [ Se.Is BeamS.rideId $ Se.Eq (getId rideId),
+      Se.Is BeamS.status $ Se.Not $ Se.Eq status
+    ]
+
 instance FromTType' BeamS.Sos Sos where
   fromTType' BeamS.SosT {..} = do
     pure $
@@ -37,6 +45,7 @@ instance FromTType' BeamS.Sos Sos where
             rideId = Id rideId,
             status = status,
             flow = flow,
+            ticketId = ticketId,
             createdAt = createdAt,
             updatedAt = updatedAt
           }
@@ -49,6 +58,7 @@ instance ToTType' BeamS.Sos Sos where
         BeamS.rideId = getId rideId,
         BeamS.status = status,
         BeamS.flow = flow,
+        BeamS.ticketId = ticketId,
         BeamS.createdAt = createdAt,
         BeamS.updatedAt = updatedAt
       }

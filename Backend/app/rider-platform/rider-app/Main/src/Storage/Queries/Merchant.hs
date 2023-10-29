@@ -93,7 +93,8 @@ instance FromTType' BeamM.Merchant Merchant where
             aadhaarVerificationTryLimit = aadhaarVerificationTryLimit,
             aadhaarKeyExpiryTime = aadhaarKeyExpiryTime,
             mediaFileSizeUpperLimit = mediaFileSizeUpperLimit,
-            mediaFileUrlPattern = mediaFileUrlPattern
+            mediaFileUrlPattern = mediaFileUrlPattern,
+            trackingShortUrlPattern = trackingShortUrlPattern
           }
 
 instance ToTType' BeamM.Merchant Merchant where
@@ -128,5 +129,6 @@ instance ToTType' BeamM.Merchant Merchant where
         BeamM.aadhaarVerificationTryLimit = aadhaarVerificationTryLimit,
         BeamM.aadhaarKeyExpiryTime = aadhaarKeyExpiryTime,
         BeamM.mediaFileSizeUpperLimit = mediaFileSizeUpperLimit,
-        BeamM.mediaFileUrlPattern = mediaFileUrlPattern
+        BeamM.mediaFileUrlPattern = mediaFileUrlPattern,
+        BeamM.trackingShortUrlPattern = trackingShortUrlPattern
       }

@@ -30,6 +30,8 @@ data MessageKey
   | SET_AS_DEFAULT_EMERGENCY_NUMBER
   | SEND_OTP
   | SEND_BOOKING_OTP
+  | SEND_SOS_ALERT
+  | MARK_RIDE_AS_SAFE
   deriving (Generic, Show, Read, FromJSON, ToJSON, Eq, Ord)
 
 $(mkBeamInstancesForEnum ''MessageKey)
