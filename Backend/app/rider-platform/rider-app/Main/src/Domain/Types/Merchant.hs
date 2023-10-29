@@ -36,8 +36,8 @@ data MerchantD (s :: UsageSafety) = Merchant
     registryUrl :: BaseUrl,
     bapId :: Text,
     bapUniqueKeyId :: Text,
-    driverOfferBaseUrl :: BaseUrl,
-    driverOfferApiKey :: Text,
+    driverOfferBaseUrl :: Maybe BaseUrl, -- remove after full_rollout
+    driverOfferApiKey :: Maybe Text, -- remove after full_rollout
     driverOfferMerchantId :: Text,
     geoHashPrecisionValue :: Int,
     minimumDriverRatesCount :: Int,

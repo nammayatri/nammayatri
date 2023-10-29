@@ -147,6 +147,13 @@ let hccfg =
       , connectTimeout = None Integer
       }
 
+let driverOfferBppInternal =
+      { name = "DRIVER_OFFER_BPP"
+      , url = "http://localhost:8016"
+      , apiKey = sec.driverOfferAPIKey
+      , internalAPIKey = sec.internalAPIKey
+      }
+
 let tables =
       { enableKVForWriteAlso =
           [] : List { nameOfTable : Text, percentEnable : Natural }
@@ -191,7 +198,7 @@ in  { esqDBCfg
         //  { logFilePath = "/tmp/rider-app.log", logRawSql = True }
     , googleTranslateUrl = common.googleTranslateUrl
     , googleTranslateKey = common.googleTranslateKey
-    , internalAPIKey = sec.internalAPIKey
+    , driverOfferBppInternal
     , metricsSearchDurationTimeout = +45
     , graceTerminationPeriod = +90
     , apiRateLimitOptions

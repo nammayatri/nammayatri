@@ -41,7 +41,7 @@ data MerchantT f = MerchantT
     country :: B.C f Context.Country,
     verified :: B.C f Bool,
     enabled :: B.C f Bool,
-    internalApiKey :: B.C f Text,
+    internalApiKey :: B.C f (Maybe Text),
     minimumDriverRatesCount :: B.C f Int,
     createdAt :: B.C f UTCTime,
     updatedAt :: B.C f UTCTime,

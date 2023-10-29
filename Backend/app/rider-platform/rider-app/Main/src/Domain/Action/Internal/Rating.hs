@@ -28,6 +28,7 @@ import Kernel.Types.CacheFlow
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common hiding (id)
+import SharedLogic.CallBPPInternal (DriverOfferBppInternal)
 import qualified Storage.CachedQueries.Merchant as QMerc
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.Person as QP
@@ -47,19 +48,19 @@ rating ::
     EsqDBFlow m r,
     CacheFlow m r,
     EncFlow m r,
-    HasFlowEnv m r '["internalAPIKey" ::: Text]
+    HasFlowEnv m r '["driverOfferBppInternal" ::: DriverOfferBppInternal]
   ) =>
   Maybe Text ->
   FeedbackReq ->
   m APISuccess
 rating apiKey FeedbackReq {..} = do
-  internalAPIKey <- asks (.internalAPIKey)
+  driverOfferBppInternal <- asks (.driverOfferBppInternal)
   ride <- B.runInReplica $ QRide.findByBPPRideId rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
   booking <- B.runInReplica $ B.runInReplica $ QBooking.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
   person <- B.runInReplica $ QP.findById booking.riderId >>= fromMaybeM (PersonDoesNotExist booking.riderId.getId)
   merchant <- QMerc.findById person.merchantId >>= fromMaybeM (MerchantNotFound person.merchantId.getId)
   _ <- validateRequest ratingValue ride.status
-  unless (Just internalAPIKey == apiKey) $
+  unless (Just driverOfferBppInternal.internalAPIKey == apiKey) $
     throwError $ AuthBlocked "Invalid BPP internal api key"
 
   ratingu <- B.runInReplica $ QRating.findRatingForRide ride.id
@@ -92,9 +93,8 @@ calculateAverageRating personId minimumDriverRatesCount ratingValue totalRatings
     logTagInfo "PersonAPI" "No rating found to calculate"
   if totalRatings >= minimumDriverRatesCount
     then do
-      let isValidRating = True
       logTagInfo "PersonAPI" $ "New average rating for person " +|| personId ||+ ""
-      void $ QP.updateAverageRating personId newRatingsCount newTotalRatingScore isValidRating
+      void $ QP.updateAverageRating personId newRatingsCount newTotalRatingScore True
     else do
       let isValidRating = False
       void $ QP.updateAverageRating personId newRatingsCount newTotalRatingScore isValidRating

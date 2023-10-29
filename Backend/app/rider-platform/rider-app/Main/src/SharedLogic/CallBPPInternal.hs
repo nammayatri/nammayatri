@@ -6,6 +6,7 @@ import Kernel.External.Slack.Types
 import Kernel.Prelude
 import Kernel.Types.APISuccess
 import Kernel.Utils.Common hiding (Error)
+import Kernel.Utils.Dhall (FromDhall)
 import qualified Kernel.Utils.Servant.Client as EC
 import Servant hiding (throwError)
 import Tools.Metrics (CoreMetrics)
@@ -16,6 +17,14 @@ data RefereeLinkInfoReq = RefereeLinkInfoReq
     customerMobileCountryCode :: Text
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
+
+data DriverOfferBppInternal = DriverOfferBppInternal
+  { name :: Text,
+    url :: BaseUrl,
+    apiKey :: Text,
+    internalAPIKey :: Text
+  }
+  deriving (Generic, FromDhall)
 
 type LinkRefereeAPI =
   "internal"

@@ -28,6 +28,7 @@ instance FromTType' BeamP.Person Person where
   fromTType' BeamP.PersonT {..} = do
     bundleVersion' <- forM bundleVersion readVersion
     clientVersion' <- forM clientVersion readVersion
+    let rating' = calculateRating totalRatingScore totalRatings
     pure $
       Just
         Person
@@ -47,7 +48,10 @@ instance FromTType' BeamP.Person Person where
             mobileCountryCode = mobileCountryCode,
             passwordHash = passwordHash,
             identifier = identifier,
-            rating = rating,
+            rating = rating',
+            totalRatings = totalRatings,
+            totalRatingScore = totalRatingScore,
+            isValidRating = isValidRating,
             isNew = isNew,
             merchantId = Id merchantId,
             deviceToken = deviceToken,
@@ -84,6 +88,9 @@ instance ToTType' BeamP.Person Person where
         BeamP.passwordHash = passwordHash,
         BeamP.identifier = identifier,
         BeamP.rating = rating,
+        BeamP.totalRatings = totalRatings,
+        BeamP.totalRatingScore = totalRatingScore,
+        BeamP.isValidRating = isValidRating,
         BeamP.isNew = isNew,
         BeamP.merchantId = getId merchantId,
         BeamP.deviceToken = deviceToken,
@@ -99,3 +106,8 @@ instance ToTType' BeamP.Person Person where
         BeamP.faceImageId = getId <$> faceImageId,
         BeamP.alternateMobileNumberEncrypted = alternateMobileNumber <&> unEncrypted . (.encrypted)
       }
+
+calculateRating :: Int -> Int -> Maybe Centesimal
+calculateRating totalRatings totalRatingScore
+  | totalRatings > 0 = Just $ fromIntegral totalRatingScore / fromIntegral totalRatings
+  | otherwise = Just 0

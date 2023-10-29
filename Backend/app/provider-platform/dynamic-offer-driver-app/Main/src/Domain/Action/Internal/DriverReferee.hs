@@ -26,6 +26,7 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Kernel.Utils.Text as TU
+import SharedLogic.CallBAPInternal (AppBackendBapInternal)
 import qualified Storage.CachedQueries.Merchant as QM
 import qualified Storage.Queries.DriverReferral as QDR
 import qualified Storage.Queries.RiderDetails as QRD
@@ -41,15 +42,17 @@ linkReferee ::
   ( MonadFlow m,
     EsqDBFlow m r,
     CacheFlow m r,
-    EncFlow m r
+    EncFlow m r,
+    HasFlowEnv m r '["appBackendBapInternal" ::: AppBackendBapInternal]
   ) =>
   Id Merchant ->
   Maybe Text ->
   RefereeLinkInfoReq ->
   m APISuccess
 linkReferee merchantId apiKey RefereeLinkInfoReq {..} = do
+  appBackendBapInternal <- asks (.appBackendBapInternal)
   merchant <- QM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
-  unless (Just merchant.internalApiKey == apiKey) $
+  unless (Just appBackendBapInternal.internalAPIKey == apiKey) $
     throwError $ AuthBlocked "Invalid BPP internal api key"
   unless (TU.validateAllDigitWithMinLength 6 referralCode.getId) $
     throwError $ InvalidRequest "Referral Code must have 6 digits"

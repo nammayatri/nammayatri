@@ -148,7 +148,7 @@ let appBackendBapInternal =
       { name = "APP_BACKEND"
       , url = "http://localhost:8013/"
       , apiKey = sec.appBackendApikey
-      , internalKey = sec.internalKey
+      , internalAPIKey = sec.internalAPIKey
       }
 
 let registryMap =

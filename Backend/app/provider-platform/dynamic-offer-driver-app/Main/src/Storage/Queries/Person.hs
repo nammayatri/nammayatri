@@ -477,11 +477,13 @@ setIsNewFalse (Id personId) = do
 deleteById :: MonadFlow m => Id Person -> m ()
 deleteById (Id personId) = deleteWithKV [Se.Is BeamP.id (Se.Eq personId)]
 
-updateAverageRating :: MonadFlow m => Id Person -> Centesimal -> m ()
-updateAverageRating (Id personId) newAverageRating = do
+updateAverageRating :: (MonadFlow m) => Id Person -> Int -> Int -> Bool -> m ()
+updateAverageRating (Id personId) totalRatingsCount' totalRatingScore' isValidRating' = do
   now <- getCurrentTime
   updateOneWithKV
-    [ Se.Set BeamP.rating (Just newAverageRating),
+    [ Se.Set (\BeamP.PersonT {..} -> totalRatings) totalRatingsCount',
+      Se.Set (\BeamP.PersonT {..} -> totalRatingScore) totalRatingScore',
+      Se.Set BeamP.isValidRating isValidRating',
       Se.Set BeamP.updatedAt now
     ]
     [Se.Is BeamP.id (Se.Eq personId)]

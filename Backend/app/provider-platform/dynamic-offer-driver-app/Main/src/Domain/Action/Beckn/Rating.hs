@@ -43,6 +43,7 @@ handler :: Id Merchant -> DRatingReq -> DRide.Ride -> Flow ()
 handler merchantId req ride = do
   merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantDoesNotExist merchantId.getId)
   rating <- B.runInReplica $ QRating.findRatingForRide ride.id
+  person <- B.runInReplica $ QP.findById ride.driverId >>= fromMaybeM (PersonDoesNotExist ride.driverId.getId)
   let driverId = ride.driverId
   let ratingValue = req.ratingValue
       feedbackDetails = req.feedbackDetails
@@ -56,24 +57,29 @@ handler merchantId req ride = do
       logTagInfo "FeedbackAPI" $
         "Updating existing rating for " +|| ride.id ||+ " with new rating " +|| ratingValue ||+ "."
       QRating.updateRating rideRating.id driverId ratingValue feedbackDetails
-  calculateAverageRating driverId merchant.minimumDriverRatesCount
+  calculateAverageRating driverId merchant.minimumDriverRatesCount ratingValue person.totalRatings person.totalRatingScore
 
 calculateAverageRating ::
   (EsqDBFlow m r, EncFlow m r) =>
   Id DP.Person ->
   Int ->
+  Int ->
+  Int ->
+  Int ->
   m ()
-calculateAverageRating personId minimumDriverRatesCount = do
+calculateAverageRating personId minimumDriverRatesCount ratingValue totalRatings totalRatingScore = do
   logTagInfo "PersonAPI" $ "Recalculating average rating for driver " +|| personId ||+ ""
-  allRatings <- B.runInReplica $ QRating.findAllRatingsForPerson personId
-  let ratingsSum = fromIntegral $ sum (allRatings <&> (.ratingValue))
-  let ratingCount = length allRatings
-  when (ratingCount == 0) $
+  let newRatingsCount = totalRatings + 1
+  let newTotalRatingScore = totalRatingScore + ratingValue
+  when (totalRatings == 0) $
     logTagInfo "PersonAPI" "No rating found to calculate"
-  when (ratingCount >= minimumDriverRatesCount) $ do
-    let newAverage = ratingsSum / fromIntegral ratingCount
-    logTagInfo "PersonAPI" $ "New average rating for person " +|| personId ||+ " , rating is " +|| newAverage ||+ ""
-    void $ QP.updateAverageRating personId newAverage
+  if totalRatings >= minimumDriverRatesCount
+    then do
+      logTagInfo "PersonAPI" $ "New average rating for person " +|| personId ||+ ""
+      void $ QP.updateAverageRating personId newRatingsCount newTotalRatingScore True
+    else do
+      let isValidRating = False
+      void $ QP.updateAverageRating personId newRatingsCount newTotalRatingScore isValidRating
 
 buildRating :: MonadFlow m => Id DRide.Ride -> Id DP.Person -> Int -> Maybe Text -> m DRating.Rating
 buildRating rideId driverId ratingValue feedbackDetails = do

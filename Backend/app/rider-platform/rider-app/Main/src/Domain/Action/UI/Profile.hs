@@ -125,14 +125,14 @@ getPersonDetails (personId, _) = do
   decPerson <- decrypt person
   return $ Person.makePersonAPIEntity decPerson tag
 
-updatePerson :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r) => Id Person.Person -> UpdateProfileReq -> m APISuccess.APISuccess
+updatePerson :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasFlowEnv m r '["driverOfferBppInternal" ::: DriverOfferBppInternal]) => Id Person.Person -> UpdateProfileReq -> m APISuccess.APISuccess
 updatePerson personId req = do
+  driverOfferBppInternal <- asks (.driverOfferBppInternal)
   mPerson <- join <$> QPerson.findByEmail `mapM` req.email
   whenJust mPerson (\_ -> throwError PersonEmailExists)
   mbEncEmail <- encrypt `mapM` req.email
 
-  refCode <- join <$> validateRefferalCode personId `mapM` req.referralCode
-
+  refCode <- join <$> validateRefferalCode driverOfferBppInternal.apiKey driverOfferBppInternal.url personId `mapM` req.referralCode
   void $
     QPerson.updatePersonalInfo
       personId
@@ -181,8 +181,8 @@ updateDisability hasDisability mbDisability personId = do
               }
   pure APISuccess.Success
 
-validateRefferalCode :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r) => Id Person.Person -> Text -> m (Maybe Text)
-validateRefferalCode personId refCode = do
+validateRefferalCode :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r) => Text -> BaseUrl -> Id Person.Person -> Text -> m (Maybe Text)
+validateRefferalCode driverOfferApiKey driverOfferBaseUrl personId refCode = do
   unless (TU.validateAllDigitWithMinLength 6 refCode) (throwError $ InvalidRequest "Referral Code must have 6 digits")
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId) >>= decrypt
   when (person.hasTakenValidRide) do
@@ -196,7 +196,7 @@ validateRefferalCode personId refCode = do
       merchant <- QMerchant.findById person.merchantId >>= fromMaybeM (MerchantNotFound person.merchantId.getId)
       case (person.mobileNumber, person.mobileCountryCode) of
         (Just mobileNumber, Just countryCode) -> do
-          void $ CallBPPInternal.linkReferee merchant.driverOfferApiKey merchant.driverOfferBaseUrl merchant.driverOfferMerchantId refCode mobileNumber countryCode
+          void $ CallBPPInternal.linkReferee driverOfferApiKey driverOfferBaseUrl merchant.driverOfferMerchantId refCode mobileNumber countryCode
           return $ Just refCode
         _ -> throwError (InvalidRequest "Mobile number is null")
 

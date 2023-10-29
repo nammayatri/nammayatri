@@ -37,7 +37,7 @@ data AppBackendBapInternal = AppBackendBapInternal
   { name :: Text,
     url :: BaseUrl,
     apiKey :: Text,
-    internalKey :: Text
+    internalAPIKey :: Text
   }
   deriving (Generic, FromDhall)
 

@@ -78,7 +78,10 @@ data PersonE e = Person
     mobileCountryCode :: Maybe Text,
     passwordHash :: Maybe DbHash,
     identifier :: Maybe Text,
-    rating :: Maybe Centesimal,
+    rating :: Maybe Centesimal, -- remove this after full_rollout
+    totalRatings :: Int,
+    totalRatingScore :: Int,
+    isValidRating :: Bool,
     isNew :: Bool,
     onboardedFromDashboard :: Bool,
     merchantId :: Id DM.Merchant,

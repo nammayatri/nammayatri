@@ -57,7 +57,7 @@ instance FromTType' BeamM.Merchant Merchant where
   fromTType' BeamM.MerchantT {..} = do
     gwUrl <- parseBaseUrl gatewayUrl
     regUrl <- parseBaseUrl registryUrl
-    doBaseUrl <- parseBaseUrl driverOfferBaseUrl
+    doBaseUrl <- parseBaseUrl `mapM` driverOfferBaseUrl
     let geofencingConfig =
           Geo.GeofencingConfig
             { origin = originRestriction,
@@ -112,7 +112,7 @@ instance ToTType' BeamM.Merchant Merchant where
         BeamM.destinationRestriction = destination,
         BeamM.gatewayUrl = showBaseUrl gatewayUrl,
         BeamM.registryUrl = showBaseUrl registryUrl,
-        BeamM.driverOfferBaseUrl = showBaseUrl driverOfferBaseUrl,
+        BeamM.driverOfferBaseUrl = showBaseUrl <$> driverOfferBaseUrl,
         BeamM.driverOfferApiKey = driverOfferApiKey,
         BeamM.driverOfferMerchantId = driverOfferMerchantId,
         BeamM.geoHashPrecisionValue = geoHashPrecisionValue,

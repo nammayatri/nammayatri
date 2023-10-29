@@ -57,7 +57,7 @@ data MerchantD (s :: UsageSafety) = Merchant
     status :: Status,
     verified :: Bool,
     enabled :: Bool,
-    internalApiKey :: Text,
+    internalApiKey :: Maybe Text, -- remove after full_rollout
     geoHashPrecisionValue :: Int,
     minimumDriverRatesCount :: Int,
     createdAt :: UTCTime,
