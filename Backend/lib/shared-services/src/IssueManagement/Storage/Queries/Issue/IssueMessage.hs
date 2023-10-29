@@ -15,16 +15,16 @@ import IssueManagement.Tools.UtilsTH hiding (label)
 import Kernel.External.Types (Language)
 import Kernel.Types.Id
 
-findAllIssueTranslationWithSeCondition :: BeamFlow m => [Clause Postgres BeamIT.IssueTranslationT] -> m [IssueTranslation]
+findAllIssueTranslationWithSeCondition :: BeamFlow m r => [Clause Postgres BeamIT.IssueTranslationT] -> m [IssueTranslation]
 findAllIssueTranslationWithSeCondition = findAllWithKV
 
-findAllIssueMessageWithSeCondition :: BeamFlow m => [Clause Postgres BeamIM.IssueMessageT] -> OrderBy BeamIM.IssueMessageT -> Maybe Int -> Maybe Int -> m [IssueMessage]
+findAllIssueMessageWithSeCondition :: BeamFlow m r => [Clause Postgres BeamIM.IssueMessageT] -> OrderBy BeamIM.IssueMessageT -> Maybe Int -> Maybe Int -> m [IssueMessage]
 findAllIssueMessageWithSeCondition = findAllWithOptionsKV
 
-findById :: BeamFlow m => Id IssueMessage -> m (Maybe IssueMessage)
+findById :: BeamFlow m r => Id IssueMessage -> m (Maybe IssueMessage)
 findById issueMessageId = findOneWithKV [Is BeamIM.id $ Eq (getId issueMessageId)]
 
-findByIdAndLanguage :: BeamFlow m => Id IssueMessage -> Language -> m (Maybe (IssueMessage, Maybe IssueTranslation))
+findByIdAndLanguage :: BeamFlow m r => Id IssueMessage -> Language -> m (Maybe (IssueMessage, Maybe IssueTranslation))
 findByIdAndLanguage issueMessageId language = do
   iMessages <- findAllWithKV [Is BeamIM.id $ Eq (getId issueMessageId)]
   iTranslations <- findAllIssueTranslationWithSeCondition [And [Is BeamIT.language $ Eq language, Is BeamIT.sentence $ In (DomainIM.message <$> iMessages)]]
@@ -35,7 +35,7 @@ findByIdAndLanguage issueMessageId language = do
        in dInfosWithTranslations <> if not (null iTranslations') then (\iTranslation'' -> (iMessage, Just iTranslation'')) <$> iTranslations' else [(iMessage, Nothing)]
     headMaybe dInfosWithTranslations' = if null dInfosWithTranslations' then Nothing else Just (head dInfosWithTranslations')
 
-findAllByCategoryIdAndLanguage :: BeamFlow m => Id IssueCategory -> Language -> m [(IssueMessage, Maybe IssueTranslation)]
+findAllByCategoryIdAndLanguage :: BeamFlow m r => Id IssueCategory -> Language -> m [(IssueMessage, Maybe IssueTranslation)]
 findAllByCategoryIdAndLanguage (Id issueCategoryId) language = do
   iMessages <- findAllIssueMessageWithSeCondition [Is BeamIM.categoryId $ Eq $ Just issueCategoryId] (Asc BeamIM.priority) Nothing Nothing
   iTranslations <- findAllIssueTranslationWithSeCondition [And [Is BeamIT.language $ Eq language, Is BeamIT.sentence $ In (DomainIM.message <$> iMessages)]]
@@ -45,7 +45,7 @@ findAllByCategoryIdAndLanguage (Id issueCategoryId) language = do
       let iTranslations' = filter (\iTranslation -> iTranslation.sentence == iMessage.message) iTranslations
        in dInfosWithTranslations <> if not (null iTranslations') then (\iTranslation'' -> (iMessage, Just iTranslation'')) <$> iTranslations' else [(iMessage, Nothing)]
 
-findAllByOptionIdAndLanguage :: BeamFlow m => Id IssueOption -> Language -> m [(IssueMessage, Maybe IssueTranslation)]
+findAllByOptionIdAndLanguage :: BeamFlow m r => Id IssueOption -> Language -> m [(IssueMessage, Maybe IssueTranslation)]
 findAllByOptionIdAndLanguage (Id issueOptionId) language = do
   iMessages <- findAllIssueMessageWithSeCondition [Is BeamIM.optionId $ Eq $ Just issueOptionId] (Asc BeamIM.priority) Nothing Nothing
   iTranslations <- findAllIssueTranslationWithSeCondition [And [Is BeamIT.language $ Eq language, Is BeamIT.sentence $ In (DomainIM.message <$> iMessages)]]

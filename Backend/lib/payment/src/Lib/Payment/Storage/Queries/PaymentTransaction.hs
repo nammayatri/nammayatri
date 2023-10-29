@@ -25,10 +25,10 @@ import Lib.Payment.Storage.Beam.BeamFlow
 import qualified Lib.Payment.Storage.Beam.PaymentTransaction as BeamPT
 import qualified Sequelize as Se
 
-create :: BeamFlow m => PaymentTransaction -> m ()
+create :: BeamFlow m r => PaymentTransaction -> m ()
 create = createWithKV
 
-updateMultiple :: BeamFlow m => PaymentTransaction -> m ()
+updateMultiple :: BeamFlow m r => PaymentTransaction -> m ()
 updateMultiple transaction = do
   now <- getCurrentTime
   updateWithKV
@@ -52,10 +52,10 @@ updateMultiple transaction = do
     ]
     [Se.Is BeamPT.id $ Se.Eq $ getId transaction.id]
 
-findByTxnUUID :: BeamFlow m => Text -> m (Maybe PaymentTransaction)
+findByTxnUUID :: BeamFlow m r => Text -> m (Maybe PaymentTransaction)
 findByTxnUUID txnUUID = findOneWithKV [Se.Is BeamPT.txnUUID $ Se.Eq $ Just txnUUID]
 
-findAllByOrderId :: BeamFlow m => Id PaymentOrder -> m [PaymentTransaction]
+findAllByOrderId :: BeamFlow m r => Id PaymentOrder -> m [PaymentTransaction]
 findAllByOrderId (Id orderId) =
   findAllWithOptionsKV
     [Se.Is BeamPT.orderId $ Se.Eq orderId]
@@ -63,7 +63,7 @@ findAllByOrderId (Id orderId) =
     Nothing
     Nothing
 
-findNewTransactionByOrderId :: BeamFlow m => Id PaymentOrder -> m (Maybe PaymentTransaction)
+findNewTransactionByOrderId :: BeamFlow m r => Id PaymentOrder -> m (Maybe PaymentTransaction)
 findNewTransactionByOrderId (Id orderId) =
   findAllWithOptionsKV
     [ Se.And

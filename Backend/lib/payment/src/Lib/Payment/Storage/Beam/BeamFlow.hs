@@ -15,12 +15,15 @@
 module Lib.Payment.Storage.Beam.BeamFlow where
 
 import Kernel.Beam.Lib.UtilsTH as Reexport
+import Kernel.Types.CacheFlow (CacheFlow)
 import Kernel.Types.Common as Reexport hiding (id)
 import qualified Lib.Payment.Storage.Beam.PaymentOrder as BeamPO
 import qualified Lib.Payment.Storage.Beam.PaymentTransaction as BeamPT
 
-type BeamFlow m =
+type BeamFlow m r =
   ( MonadFlow m,
     HasSchemaName BeamPO.PaymentOrderT,
-    HasSchemaName BeamPT.PaymentTransactionT
+    HasSchemaName BeamPT.PaymentTransactionT,
+    CacheFlow m r,
+    EsqDBFlow m r
   )

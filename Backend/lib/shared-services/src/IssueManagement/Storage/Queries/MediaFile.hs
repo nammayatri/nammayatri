@@ -22,16 +22,16 @@ import IssueManagement.Storage.BeamFlow
 import IssueManagement.Tools.UtilsTH
 import Kernel.Types.Id
 
-create :: BeamFlow m => DMF.MediaFile -> m ()
+create :: BeamFlow m r => DMF.MediaFile -> m ()
 create = createWithKV
 
-findById :: BeamFlow m => Id MediaFile -> m (Maybe MediaFile)
+findById :: BeamFlow m r => Id MediaFile -> m (Maybe MediaFile)
 findById (Id mediaFileId) = findOneWithKV [Is BeamMF.id $ Eq mediaFileId]
 
-findAllIn :: BeamFlow m => [Id MediaFile] -> m [MediaFile]
+findAllIn :: BeamFlow m r => [Id MediaFile] -> m [MediaFile]
 findAllIn mfList = findAllWithKV [Is BeamMF.id $ In $ getId <$> mfList]
 
-deleteById :: BeamFlow m => Id MediaFile -> m ()
+deleteById :: BeamFlow m r => Id MediaFile -> m ()
 deleteById (Id mediaFileId) = deleteWithKV [Is BeamMF.id (Eq mediaFileId)]
 
 instance FromTType' BeamMF.MediaFile MediaFile where

@@ -9,8 +9,9 @@ import qualified IssueManagement.Storage.Beam.Issue.IssueReport as BeamIR
 import qualified IssueManagement.Storage.Beam.Issue.IssueTranslation as BeamIT
 import qualified IssueManagement.Storage.Beam.MediaFile as BeamMF
 import IssueManagement.Tools.UtilsTH
+import Kernel.Types.CacheFlow (CacheFlow)
 
-type BeamFlow m =
+type BeamFlow m r =
   ( MonadFlow m,
     HasSchemaName BeamC.CommentT,
     HasSchemaName BeamIC.IssueCategoryT,
@@ -19,5 +20,7 @@ type BeamFlow m =
     HasSchemaName BeamIO.IssueOptionT,
     HasSchemaName BeamIR.IssueReportT,
     HasSchemaName BeamIT.IssueTranslationT,
-    HasSchemaName BeamMF.MediaFileT
+    HasSchemaName BeamMF.MediaFileT,
+    EsqDBFlow m r,
+    CacheFlow m r
   )

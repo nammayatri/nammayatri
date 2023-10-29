@@ -32,7 +32,7 @@ newtype ServiceHandle m = ServiceHandle
   { findPersonById :: Id Person -> m (Maybe Person)
   }
 
-issueCategoryList :: (CacheFlow m r, BeamFlow m) => ShortId Merchant -> Identifier -> m Common.IssueCategoryListRes
+issueCategoryList :: (CacheFlow m r, BeamFlow m r) => ShortId Merchant -> Identifier -> m Common.IssueCategoryListRes
 issueCategoryList _merchantShortId identifier = do
   issueCategoryTranslationList <- CQIC.findAllByLanguage ENGLISH identifier
   pure $ Common.IssueCategoryListRes {categories = mkIssueCategory <$> issueCategoryTranslationList}
@@ -47,7 +47,7 @@ issueCategoryList _merchantShortId identifier = do
 
 issueList ::
   ( CacheFlow m r,
-    BeamFlow m,
+    BeamFlow m r,
     Esq.EsqDBReplicaFlow m r
   ) =>
   ShortId Merchant ->
@@ -65,7 +65,7 @@ issueList _merchantShortId mbLimit mbOffset mbStatus mbCategoryId mbAssignee ide
   issues <- mapM mkIssueReport issueReports
   pure $ Common.IssueReportListResponse {issues, summary}
   where
-    mkIssueReport :: (CacheFlow m r, Esq.EsqDBReplicaFlow m r, BeamFlow m) => DIR.IssueReport -> m Common.IssueReportListItem
+    mkIssueReport :: (CacheFlow m r, Esq.EsqDBReplicaFlow m r, BeamFlow m r) => DIR.IssueReport -> m Common.IssueReportListItem
     mkIssueReport issueReport = do
       category <- CQIC.findById issueReport.categoryId identifier >>= fromMaybeM (IssueCategoryNotFound issueReport.categoryId.getId)
       pure $
@@ -83,7 +83,7 @@ issueList _merchantShortId mbLimit mbOffset mbStatus mbCategoryId mbAssignee ide
 issueInfo ::
   ( Esq.EsqDBReplicaFlow m r,
     CacheFlow m r,
-    BeamFlow m,
+    BeamFlow m r,
     EncFlow m r
   ) =>
   ShortId Merchant ->
@@ -113,7 +113,7 @@ issueInfo _merchantShortId issueReportId issueHandle identifier = do
         createdAt = issueReport.createdAt
       }
   where
-    mkPersonDetail :: (Esq.EsqDBReplicaFlow m r, CacheFlow m r, EncFlow m r, BeamFlow m) => Person -> m Common.PersonDetail
+    mkPersonDetail :: (Esq.EsqDBReplicaFlow m r, CacheFlow m r, EncFlow m r, BeamFlow m r) => Person -> m Common.PersonDetail
     mkPersonDetail personDetail = do
       mobileNumber <- traverse decrypt personDetail.mobileNumber
       pure $
@@ -141,7 +141,7 @@ issueInfo _merchantShortId issueReportId issueHandle identifier = do
 
 issueUpdate ::
   ( CacheFlow m r,
-    BeamFlow m
+    BeamFlow m r
   ) =>
   ShortId Merchant ->
   Id DIR.IssueReport ->
@@ -171,7 +171,7 @@ issueUpdate _merchantShortId issueReportId req = do
 issueAddComment ::
   ( Esq.EsqDBReplicaFlow m r,
     CacheFlow m r,
-    BeamFlow m
+    BeamFlow m r
   ) =>
   ShortId Merchant ->
   Id DIR.IssueReport ->
@@ -194,14 +194,14 @@ issueAddComment _merchantShortId issueReportId req = do
             createdAt = now
           }
 
-issueFetchMedia :: (HasField "s3Env" r (S3.S3Env m), MonadReader r m, BeamFlow m) => ShortId Merchant -> Text -> m Text
+issueFetchMedia :: (HasField "s3Env" r (S3.S3Env m), MonadReader r m, BeamFlow m r) => ShortId Merchant -> Text -> m Text
 issueFetchMedia _ filePath =
   S3.get $ T.unpack filePath
 
 ticketStatusCallBack ::
   ( Esq.EsqDBReplicaFlow m r,
     CacheFlow m r,
-    BeamFlow m
+    BeamFlow m r
   ) =>
   ShortId Merchant ->
   Identifier ->

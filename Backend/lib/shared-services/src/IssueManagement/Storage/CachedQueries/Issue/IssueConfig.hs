@@ -24,7 +24,7 @@ import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Utils.Common (CacheFlow)
 
-findIssueConfig :: (CacheFlow m r, BeamFlow m) => Identifier -> m (Maybe IssueConfig)
+findIssueConfig :: (CacheFlow m r, BeamFlow m r) => Identifier -> m (Maybe IssueConfig)
 findIssueConfig identifier =
   Hedis.withCrossAppRedis (Hedis.safeGet $ makeIssueConfigKey identifier) >>= \case
     Just a -> pure a
