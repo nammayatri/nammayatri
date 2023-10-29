@@ -477,7 +477,7 @@ public class NotificationUtils {
     }
 
     private static boolean checkPermission(Context context) {
-        return Settings.canDrawOverlays(context);
+        return Settings.canDrawOverlays(context.getApplicationContext());
     }
 
     public static void createNotificationChannel(Context context, String channel_Id) {
