@@ -206,8 +206,6 @@ sendMessage merchantShortId Common.SendMessageRequest {..} = do
   where
     addToKafka message driverId = do
       topicName <- asks (.broadcastMessageTopic)
-      now <- getCurrentTime
-      void $ try @_ @SomeException (MRQuery.create (mkMessageReport now driverId)) -- avoid extra DB call to check if driverId exists
       msg <- createMessageLanguageDict message
       produceMessage
         (topicName, Just (encodeUtf8 $ getId driverId))
@@ -228,19 +226,6 @@ sendMessage merchantShortId Common.SendMessageRequest {..} = do
 
     addTranslation Domain.RawMessage {..} trans =
       (show trans.language, Domain.RawMessage {title = trans.title, description = trans.description, shortDescription = trans.shortDescription, label = trans.label, ..})
-
-    mkMessageReport now driverId =
-      Domain.MessageReport
-        { driverId,
-          messageId = Id messageId,
-          deliveryStatus = Domain.Queued,
-          readStatus = False,
-          likeStatus = False,
-          messageDynamicFields = M.empty,
-          reply = Nothing,
-          createdAt = now,
-          updatedAt = now
-        }
 
 messageList :: ShortId DM.Merchant -> Maybe Int -> Maybe Int -> Flow Common.MessageListResponse
 messageList merchantShortId mbLimit mbOffset = do
