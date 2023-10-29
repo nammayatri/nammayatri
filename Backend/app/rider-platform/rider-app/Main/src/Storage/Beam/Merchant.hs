@@ -67,7 +67,8 @@ data MerchantT f = MerchantT
     aadhaarVerificationTryLimit :: B.C f Int,
     aadhaarKeyExpiryTime :: B.C f Seconds,
     mediaFileSizeUpperLimit :: B.C f Int,
-    mediaFileUrlPattern :: B.C f Text
+    mediaFileUrlPattern :: B.C f Text,
+    trackingShortUrlPattern :: B.C f Text
   }
   deriving (Generic, B.Beamable)
 

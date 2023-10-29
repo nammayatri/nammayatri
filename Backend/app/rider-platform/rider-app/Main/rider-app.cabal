@@ -197,6 +197,7 @@ library
       Domain.Types.Merchant.MerchantPaymentMethod
       Domain.Types.Merchant.MerchantServiceConfig
       Domain.Types.Merchant.MerchantServiceUsageConfig
+      Domain.Types.Merchant.RiderConfig
       Domain.Types.MerchantConfig
       Domain.Types.OnSearchEvent
       Domain.Types.Person
@@ -269,6 +270,7 @@ library
       Storage.Beam.Merchant.MerchantPaymentMethod
       Storage.Beam.Merchant.MerchantServiceConfig
       Storage.Beam.Merchant.MerchantServiceUsageConfig
+      Storage.Beam.Merchant.RiderConfig
       Storage.Beam.MerchantConfig
       Storage.Beam.OnSearchEvent
       Storage.Beam.Payment
@@ -307,6 +309,7 @@ library
       Storage.CachedQueries.Merchant.MerchantPaymentMethod
       Storage.CachedQueries.Merchant.MerchantServiceConfig
       Storage.CachedQueries.Merchant.MerchantServiceUsageConfig
+      Storage.CachedQueries.Merchant.RiderConfig
       Storage.CachedQueries.MerchantConfig
       Storage.CachedQueries.Person
       Storage.CachedQueries.Person.PersonFlowStatus
@@ -340,6 +343,7 @@ library
       Storage.Queries.Merchant.MerchantPaymentMethod
       Storage.Queries.Merchant.MerchantServiceConfig
       Storage.Queries.Merchant.MerchantServiceUsageConfig
+      Storage.Queries.Merchant.RiderConfig
       Storage.Queries.MerchantConfig
       Storage.Queries.OnSearchEvent
       Storage.Queries.Person

@@ -52,7 +52,8 @@ data MerchantD (s :: UsageSafety) = Merchant
     aadhaarVerificationTryLimit :: Int,
     aadhaarKeyExpiryTime :: Seconds,
     mediaFileSizeUpperLimit :: Int,
-    mediaFileUrlPattern :: Text
+    mediaFileUrlPattern :: Text,
+    trackingShortUrlPattern :: Text
   }
   deriving (Generic, Show)
 

@@ -14,33 +14,33 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE TemplateHaskell #-}
 
-module Storage.Beam.Sos where
+module Storage.Beam.Merchant.RiderConfig where
 
 import qualified Database.Beam as B
-import qualified Domain.Types.Sos as Domain
-import Kernel.Prelude
+import Database.Beam.MySQL ()
+import GHC.Generics (Generic)
+import Kernel.Prelude hiding (Generic)
 import Tools.Beam.UtilsTH
 
-data SosT f = SosT
-  { id :: B.C f Text,
-    personId :: B.C f Text,
-    rideId :: B.C f Text,
-    flow :: B.C f Domain.SosType,
-    status :: B.C f Domain.SosStatus,
+data RiderConfigT f = RiderConfigT
+  { merchantOperatingCityId :: B.C f Text,
+    enableLocalPoliceSupport :: B.C f Bool,
+    localPoliceNumber :: B.C f (Maybe Text),
+    enableSupportForSafety :: B.C f Bool,
+    videoFileSizeUpperLimit :: B.C f Int,
     createdAt :: B.C f UTCTime,
-    updatedAt :: B.C f UTCTime,
-    ticketId :: B.C f (Maybe Text)
+    updatedAt :: B.C f UTCTime
   }
   deriving (Generic, B.Beamable)
 
-instance B.Table SosT where
-  data PrimaryKey SosT f
+instance B.Table RiderConfigT where
+  data PrimaryKey RiderConfigT f
     = Id (B.C f Text)
     deriving (Generic, B.Beamable)
-  primaryKey = Id . id
+  primaryKey = Id . merchantOperatingCityId
 
-type Sos = SosT Identity
+type RiderConfig = RiderConfigT Identity
 
-$(enableKVPG ''SosT ['id] [])
+$(enableKVPG ''RiderConfigT ['merchantOperatingCityId] [])
 
-$(mkTableInstances ''SosT "sos")
+$(mkTableInstances ''RiderConfigT "rider_config")
