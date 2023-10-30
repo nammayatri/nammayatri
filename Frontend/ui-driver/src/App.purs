@@ -249,6 +249,7 @@ data DRIVER_PROFILE_SCREEN_OUTPUT = DRIVER_DETAILS_SCREEN
                                     | UPDATE_LANGUAGES (Array String)
                                     | SUBCRIPTION 
                                     | SAVED_LOCATIONS_SCREEN
+                                    | GO_HOME
 
 
 data DRIVER_DETAILS_SCREEN_OUTPUT = VERIFY_OTP DriverDetailsScreenState

@@ -100,4 +100,4 @@ driverProfileScreen = do
                                                 , downgradeOptions = driverDetailsScreen.data.downgradeOptions
                                                 , vehicleSelected = driverDetailsScreen.data.vehicleSelected
                                                 , profileImg = driverDetailsScreen.data.profileImg}})
-      App.BackT $ pure App.GoBack
+      App.BackT $ App.NoBack <$> pure GO_HOME
