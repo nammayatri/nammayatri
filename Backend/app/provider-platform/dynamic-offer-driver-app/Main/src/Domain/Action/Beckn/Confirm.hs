@@ -130,7 +130,9 @@ handler transporter req quote = do
               pure otpCode
             Just otp -> pure otp
 
-          ride <- buildRide driver.id booking ghrId req.customerPhoneNumber otpCode
+          inProgressRide <- QRide.findInProgressRideByDriverId driver.id
+          ride <- buildRide driver.id booking ghrId req.customerPhoneNumber otpCode (bool DRide.NEW DRide.UPCOMING (isJust inProgressRide))
+
           triggerRideCreatedEvent RideEventData {ride = ride, personId = cast driver.id, merchantId = transporter.id}
           rideDetails <- buildRideDetails ride driver
           driverSearchReqs <- QSRD.findAllActiveBySTId driverQuote.searchTryId
@@ -140,7 +142,7 @@ handler transporter req quote = do
             Nothing -> logDebug "Unable to get the key"
 
           -- critical updates
-          QRB.updateStatus booking.id DRB.TRIP_ASSIGNED
+          QRB.updateStatus booking.id (bool DRB.TRIP_ASSIGNED DRB.UPCOMING_TRIP_ASSIGNED (isJust inProgressRide))
           QRide.createRide ride
           QDI.updateOnRide (cast driver.id) True
           void $ LF.rideDetails ride.id DRide.NEW transporter.id ride.driverId booking.fromLocation.lat booking.fromLocation.lon
@@ -226,7 +228,7 @@ handler transporter req quote = do
             cs (showTimeIst booking.startTime) <> ".",
             "Check the app for more details."
           ]
-    buildRide driverId booking ghrId _ otp = do
+    buildRide driverId booking ghrId _ otp rstatus = do
       guid <- Id <$> generateGUID
       shortId <- generateShortId
       -- let otp = T.takeEnd 4 customerPhoneNumber
@@ -240,7 +242,7 @@ handler transporter req quote = do
             shortId = shortId,
             merchantId = Just booking.providerId,
             merchantOperatingCityId = booking.merchantOperatingCityId,
-            status = DRide.NEW,
+            status = rstatus,
             driverId = cast driverId,
             otp = otp,
             trackingUrl = trackingUrl,

@@ -37,6 +37,8 @@ data BookingStatus
   | TRIP_ASSIGNED
   | COMPLETED
   | CANCELLED
+  | UPCOMING
+  | UPCOMING_TRIP_ASSIGNED
   deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 $(mkBeamInstancesForEnum ''BookingStatus)

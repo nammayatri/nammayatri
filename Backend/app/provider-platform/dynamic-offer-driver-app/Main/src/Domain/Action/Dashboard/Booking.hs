@@ -123,7 +123,7 @@ multipleBookingSync merchantShortId _ req = do
         Just (booking, mbRide) -> do
           case mbRide of
             Just ride -> do
-              let bookingNewStatus = case ride.status of
+              let bookingNewStatus = case ride.status of -- TODO FWB: What to do here?
                     DRide.NEW -> DBooking.TRIP_ASSIGNED
                     DRide.INPROGRESS -> DBooking.TRIP_ASSIGNED
                     DRide.COMPLETED -> DBooking.COMPLETED

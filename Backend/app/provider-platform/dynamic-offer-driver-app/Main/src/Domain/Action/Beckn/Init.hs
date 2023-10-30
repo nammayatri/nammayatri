@@ -50,6 +50,7 @@ import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.DriverQuote as QDQuote
 import qualified Storage.Queries.QuoteSpecialZone as QSZoneQuote
+import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.SearchRequest as QSR
 import qualified Storage.Queries.SearchRequestSpecialZone as QSRSpecialZone
 import qualified Storage.Queries.SearchTry as QST
@@ -139,7 +140,8 @@ handler merchantId req eitherReq = do
     InitNormalReq -> do
       case eitherReq of
         Left (driverQuote, searchRequest, searchTry) -> do
-          booking <- buildBooking searchRequest driverQuote driverQuote.id.getId searchTry.startTime DRB.NormalBooking now (mbPaymentMethod <&> (.id)) paymentUrl searchRequest.disabilityTag merchantOpCityId
+          inProgressRide <- QRide.findInProgressRideByDriverId driverQuote.driverId
+          booking <- buildBooking searchRequest driverQuote driverQuote.id.getId searchTry.startTime DRB.NormalBooking now (mbPaymentMethod <&> (.id)) paymentUrl searchRequest.disabilityTag merchantOpCityId (bool DRB.NEW DRB.UPCOMING (isJust inProgressRide))
           triggerBookingCreatedEvent BookingEventData {booking = booking, personId = driverQuote.driverId, merchantId = transporter.id}
           QST.updateStatus searchTry.id DST.COMPLETED
           _ <- QRB.createBooking booking
@@ -148,7 +150,7 @@ handler merchantId req eitherReq = do
     InitSpecialZoneReq -> do
       case eitherReq of
         Right (specialZoneQuote, searchRequest) -> do
-          booking <- buildBooking searchRequest specialZoneQuote specialZoneQuote.id.getId searchRequest.startTime DRB.SpecialZoneBooking now (mbPaymentMethod <&> (.id)) paymentUrl Nothing merchantOpCityId
+          booking <- buildBooking searchRequest specialZoneQuote specialZoneQuote.id.getId searchRequest.startTime DRB.SpecialZoneBooking now (mbPaymentMethod <&> (.id)) paymentUrl Nothing merchantOpCityId DRB.NEW
           _ <- QRB.createBooking booking
           -- moving route from search request id to booking id
           routeInfo :: Maybe RI.RouteInfo <- Redis.safeGet (BS.searchRequestKey $ getId searchRequest.id)
@@ -185,8 +187,9 @@ handler merchantId req eitherReq = do
       Maybe Text ->
       Maybe Text ->
       Id DMOC.MerchantOperatingCity ->
+      DRB.BookingStatus ->
       m DRB.Booking
-    buildBooking searchRequest driverQuote quoteId startTime bookingType now mbPaymentMethodId paymentUrl disabilityTag merchantOpCityId = do
+    buildBooking searchRequest driverQuote quoteId startTime bookingType now mbPaymentMethodId paymentUrl disabilityTag merchantOpCityId bookingStatus = do
       id <- Id <$> generateGUID
       let fromLocation = searchRequest.fromLocation
           toLocation = searchRequest.toLocation
@@ -194,7 +197,7 @@ handler merchantId req eitherReq = do
       pure
         DRB.Booking
           { transactionId = searchRequest.transactionId,
-            status = DRB.NEW,
+            status = bookingStatus,
             providerId = merchantId,
             merchantOperatingCityId = merchantOpCityId,
             primaryExophone = exophone.primaryPhone,

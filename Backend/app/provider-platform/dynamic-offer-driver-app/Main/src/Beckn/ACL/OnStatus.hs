@@ -38,7 +38,7 @@ mkOnStatusMessage res =
             status = mapToBecknRideStatus ride.status
           }
 
-mapToBecknBookingStatus :: DBooking.BookingStatus -> OnStatus.BookingStatus
+mapToBecknBookingStatus :: DBooking.BookingStatus -> OnStatus.BookingStatus -- TODO FWB: What to do here?
 mapToBecknBookingStatus DBooking.NEW = OnStatus.NEW_BOOKING
 mapToBecknBookingStatus DBooking.TRIP_ASSIGNED = OnStatus.TRIP_ASSIGNED
 mapToBecknBookingStatus DBooking.COMPLETED = OnStatus.BOOKING_COMPLETED

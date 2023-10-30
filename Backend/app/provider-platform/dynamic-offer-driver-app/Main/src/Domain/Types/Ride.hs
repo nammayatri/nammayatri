@@ -36,6 +36,7 @@ data RideStatus
   | INPROGRESS
   | COMPLETED
   | CANCELLED
+  | UPCOMING
   deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, BP.ToParamSchema)
 
 $(mkBeamInstancesForEnum ''RideStatus)

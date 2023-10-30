@@ -667,6 +667,9 @@ totalEarningsByFleetOwnerPerVehicleAndDriver fleetId vehicleNumber driverId = do
     Left _ -> pure []
   pure $ sum (getMoney <$> mapMaybe DR.fare (catMaybes resTable))
 
+findInProgressRideByDriverId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Driver -> m (Maybe Ride)
+findInProgressRideByDriverId (Id driverId) = findOneWithKV [Se.And [Se.Is BeamR.driverId $ Se.Eq driverId, Se.Is BeamR.status $ Se.Eq Ride.INPROGRESS]]
+
 instance FromTType' BeamR.Ride Ride where
   fromTType' BeamR.RideT {..} = do
     mappings <- QLM.findByEntityId id
