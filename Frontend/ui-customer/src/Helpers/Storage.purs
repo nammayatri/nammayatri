@@ -81,6 +81,7 @@ data KeyStore
   | BUNDLE_TIME_OUT
   | NOTIFIED_CUSTOMER
   | DISABILITY_NAME 
+  | ESTIMATE_DATA
 
 derive instance genericKeyStore :: Generic KeyStore _
 
