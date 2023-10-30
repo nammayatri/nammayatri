@@ -63,7 +63,6 @@ import android.util.Base64;
 import android.util.DisplayMetrics;
 import android.util.Log;
 import android.util.TypedValue;
-import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -100,7 +99,6 @@ import androidx.core.location.LocationManagerCompat;
 import androidx.fragment.app.FragmentActivity;
 import androidx.fragment.app.FragmentManager;
 import androidx.fragment.app.FragmentTransaction;
-import androidx.viewpager2.widget.ViewPager2;
 
 import com.airbnb.lottie.LottieAnimationView;
 import com.google.android.gms.common.api.ApiException;
@@ -233,6 +231,7 @@ public class MobilityCommonBridge extends HyperBridge {
     protected int labelTextSize = 30;
 
 
+
     public MobilityCommonBridge(BridgeComponents bridgeComponents) {
         super(bridgeComponents);
         bridgeComponents.getJsCallback().addJsToWebView("window.JBridge.setAnalyticsHeader(JSON.stringify({\"x-client-id\": \"mobility\"}));");
@@ -245,8 +244,8 @@ public class MobilityCommonBridge extends HyperBridge {
     private void fetchAndUpdateLastKnownLocation() {
         String lat = getKeyInNativeSharedPrefKeys("LAST_KNOWN_LAT");
         String lon = getKeyInNativeSharedPrefKeys("LAST_KNOWN_LON");
-        lastLatitudeValue = lat != "__failed" ? Double.parseDouble(lat) : lastLatitudeValue;
-        lastLongitudeValue = lon != "__failed" ? Double.parseDouble(lon) : lastLongitudeValue;
+        lastLatitudeValue = !lat.equals("__failed") ? Double.parseDouble(lat) : lastLatitudeValue;
+        lastLongitudeValue = !lon.equals("__failed") ? Double.parseDouble(lon) : lastLongitudeValue;
     }
 
     public static boolean isClassAvailable(String className) {
@@ -756,6 +755,23 @@ public class MobilityCommonBridge extends HyperBridge {
                 Log.i(MAPS, "Marker creation error for " + title, e);
             }
         });
+    }
+
+    @JavascriptInterface
+    public String getLocationNameSDK(double latitude, double longitude) {
+        Geocoder geocoder = new Geocoder(bridgeComponents.getContext(), Locale.getDefault());
+        try {
+            List<Address> addresses = geocoder.getFromLocation(latitude, longitude, 1);
+            if ( geocoder.isPresent() && addresses != null && addresses.size() > 0) {
+                Address address = addresses.get(0);
+                return address.getAddressLine(0);
+            } else {
+                return "NO_LOCATION_FOUND";
+            }
+        } catch (Exception e) {
+            Log.e("COMMON_BRIDGE", "Error getting location name", e);
+            return "NO_LOCATION_FOUND";
+        }
     }
 
     private MarkerOptions makeMarkerObject(final String title, final double lat, final double lng, final int markerSize, final float anchorV, final float anchorV1) {
