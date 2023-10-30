@@ -1597,8 +1597,9 @@ tripDetailsScreenFlow fromMyRides = do
       modifyScreenState $ InvoiceScreenStateType (\invoiceScreen -> invoiceScreen {props{fromHomeScreen = false},data{totalAmount = updatedState.data.totalAmount, date = updatedState.data.date, tripCharges = updatedState.data.totalAmount, selectedItem = updatedState.data.selectedItem, config = updatedState.data.config}})
       invoiceScreenFlow
     GO_TO_HOME state -> do
-      if state.props.fromMyRides == Home then
+      if state.props.fromMyRides == Home then do
         modifyScreenState $ HomeScreenStateType (\homeScreen -> HomeScreenData.initData)
+        updateLocalStage HomeScreen
         else modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen {  data{settingSideBar{opened = SettingSideBarController.CLOSED}}})
       homeScreenFlow
     CONNECT_WITH_DRIVER updatedState -> do

@@ -2246,7 +2246,7 @@ estimatesFlow estimatedQuotes state = do
                                   , currentRateCardType: DefaultRateCard
                                   , onFirstPage: false
                                   , baseFare: estimatesInfo.baseFare, extraFare: estimatesInfo.extraFare, pickUpCharges: estimatesInfo.pickUpCharges
-                                  , vehicleVariant : ""
+                                  , vehicleVariant : estimatesInfo.defaultQuote.vehicleVariant
                                   }
                                   ,
                       showPreferences = isTipEnabled state,
