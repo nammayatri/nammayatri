@@ -30,6 +30,7 @@ data OverlayCondition
   | PaymentOverdueBetween Int Int
   | FreeTrialDaysLeft Int
   | InvoiceGenerated PaymentMode
+  | BlockedDrivers
   | InactiveAutopay
   deriving (Generic, Show, Eq, FromJSON, ToJSON, ToSchema)
 

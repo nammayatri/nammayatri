@@ -80,6 +80,9 @@ sendOverlayToDriver (Job {id, jobInfo}) = withLogTag ("JobId-" <> id.getId) do
           driverInfo <- QDI.findById driverId >>= fromMaybeM (PersonDoesNotExist driverId.getId)
           currUdf1 <- getCurrentAutoPayStatusUDF driverInfo
           when (currUdf1 == jobDataInfo.udf1) $ sendOverlay driver jobDataInfo.overlayKey jobDataInfo.udf1 0
+        DOverlay.BlockedDrivers -> do
+          manualDues <- getManualDues driverId jobDataInfo.timeDiffFromUtc jobDataInfo.driverFeeOverlaySendingTimeLimitInDays
+          when (manualDues > 0) $ sendOverlay driver jobDataInfo.overlayKey jobDataInfo.udf1 manualDues
         _ -> pure ()
 
     getCurrentAutoPayStatusUDF driverInfo = do
@@ -160,6 +163,7 @@ getBatchedDriverIds merchantId jobId condition freeTrialDays timeDiffFromUtc dri
         driverIds <- case condition of
           DOverlay.PaymentOverdueGreaterThan _ -> QDI.fetchAllDriversWithPaymentPending merchantId <&> (<&> (.driverId))
           DOverlay.PaymentOverdueBetween _ _ -> QDI.fetchAllDriversWithPaymentPending merchantId <&> (<&> (.driverId))
+          DOverlay.BlockedDrivers -> QDI.fetchAllBlockedDriversWithSubscribedFalse merchantId <&> (<&> (.driverId))
           DOverlay.FreeTrialDaysLeft numOfDays -> do
             now <- getCurrentTime
             let startTime = addUTCTime (-1 * fromIntegral timeDiffFromUtc) $ addUTCTime (-1 * 86400 * fromIntegral (freeTrialDays - (numOfDays - 1))) (UTCTime (utctDay now) (secondsToDiffTime 0))
