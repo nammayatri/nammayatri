@@ -92,8 +92,12 @@ sendOverlayToDriver (Job {id, jobInfo}) = withLogTag ("JobId-" <> id.getId) do
     getManualDues driverId timeDiffFromUtc driverFeeOverlaySendingTimeLimitInDays = do
       windowEndTime <- getLocalCurrentTime timeDiffFromUtc
       let windowStartTime = addUTCTime (-1 * fromIntegral driverFeeOverlaySendingTimeLimitInDays * 86400) (UTCTime (utctDay windowEndTime) (secondsToDiffTime 0))
-      pendingDriverFees <- QDF.findAllOverdueDriverFeeByDriverIdWithinWindow driverId windowStartTime windowEndTime
-      return $ sum $ map (\dueInvoice -> SLDriverFee.roundToHalf (fromIntegral dueInvoice.govtCharges + dueInvoice.platformFee.fee + dueInvoice.platformFee.cgst + dueInvoice.platformFee.sgst)) pendingDriverFees
+      pendingDriverFees <- QDF.findAllOverdueDriverFeeByDriverId driverId
+      let filteredDriverFees = filter (\driverFee -> driverFee.startTime >= windowStartTime) pendingDriverFees
+      return $
+        if null filteredDriverFees
+          then 0
+          else sum $ map (\dueInvoice -> SLDriverFee.roundToHalf (fromIntegral dueInvoice.govtCharges + dueInvoice.platformFee.fee + dueInvoice.platformFee.cgst + dueInvoice.platformFee.sgst)) pendingDriverFees
 
 getRescheduledTime :: (MonadTime m) => TransporterConfig -> m UTCTime
 getRescheduledTime tc = addUTCTime tc.mandateNotificationRescheduleInterval <$> getCurrentTime
