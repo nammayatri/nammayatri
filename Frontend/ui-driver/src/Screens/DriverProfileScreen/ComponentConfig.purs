@@ -287,7 +287,7 @@ enterOtpState state = let
         text = getString OTP_SENT_TO <> fromMaybe "" state.data.driverEditAlternateMobile
       , color = Color.black800
       , margin = MarginBottom 8
-      , visibility = if state.props.otpIncorrect == false then VISIBLE else GONE
+      , visibility = if not state.props.otpIncorrect then VISIBLE else GONE
       },
       imageConfig {
           alpha = if DS.length state.props.alternateMobileOtp < 4 || state.props.otpIncorrect then 0.3 else 1.0

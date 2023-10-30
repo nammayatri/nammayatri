@@ -697,8 +697,8 @@ driverInfoView push state =
                 [ width MATCH_PARENT
                 , height if os == "IOS" then (V 210) else WRAP_CONTENT
                 , orientation VERTICAL
-                ][ if state.props.currentSearchResultType == QUOTES then destinationView push state else if state.data.config.showPickUpandDrop == false then dummyView push else sourceDistanceView push state
-                  , separator (Margin 0 0 0 0) (V 1) Color.grey900 (Array.any (_ == state.props.currentStage) [ RideAccepted, RideStarted, ChatWithDriver ] && (state.data.config.showPickUpandDrop == true))
+                ][ if state.props.currentSearchResultType == QUOTES then destinationView push state else if not state.data.config.showPickUpandDrop then dummyView push else sourceDistanceView push state
+                  , separator (Margin 0 0 0 0) (V 1) Color.grey900 (Array.any (_ == state.props.currentStage) [ RideAccepted, RideStarted, ChatWithDriver ] && state.data.config.showPickUpandDrop)
                   , cancelRideLayout push state
                 ]
               ]

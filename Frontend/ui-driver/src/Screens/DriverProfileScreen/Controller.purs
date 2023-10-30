@@ -367,11 +367,11 @@ eval (GetRcsDataResponse  (SA.GetAllRcDataResp rcDataArray)) state = do
       let activeRcVal = rctransformedData
       continue state{data{rcDataArray = rctransformedData, inactiveRCArray = drop 1 rctransformedData, activeRCData = fromMaybe ({ rcStatus : false, rcDetails : {certificateNumber : "", vehicleColor : Nothing, vehicleModel : Nothing}}) (activeRcVal!!0)}}
     else do
-      let activeRcVal = filter (\rc -> rc.rcStatus == true) rctransformedData
+      let activeRcVal = filter _.rcStatus rctransformedData
       if (length activeRcVal == 0)
         then continue state {data{rcDataArray = rctransformedData, inactiveRCArray = drop 1 rctransformedData, activeRCData = fromMaybe ({ rcStatus : false, rcDetails : {certificateNumber : "", vehicleColor : Nothing, vehicleModel : Nothing}}) (rctransformedData!!0) }}
         else
-          continue state{data{rcDataArray = rctransformedData, inactiveRCArray = filter (\rc -> rc.rcStatus/=true) $ rctransformedData, activeRCData = fromMaybe ({ rcStatus : false, rcDetails : {certificateNumber : "", vehicleColor : Nothing, vehicleModel : Nothing}}) (activeRcVal!!0)}}
+          continue state{data{rcDataArray = rctransformedData, inactiveRCArray = filter (not _.rcStatus) $ rctransformedData, activeRCData = fromMaybe ({ rcStatus : false, rcDetails : {certificateNumber : "", vehicleColor : Nothing, vehicleModel : Nothing}}) (activeRcVal!!0)}}
 
 eval (DriverSummary response) state = do
   let (DriverProfileSummaryRes resp) = response
@@ -610,7 +610,7 @@ getGenderName gender =
 
 getSelectedLanguages :: DriverProfileScreenState -> Array String
 getSelectedLanguages state =
-  let languages = filter (\a -> a.isSelected == true) state.data.languageList
+  let languages = filter _.isSelected state.data.languageList
   in  foldl (\acc item -> acc <> [item.value]) [] languages
 
 

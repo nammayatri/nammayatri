@@ -252,7 +252,7 @@ eval (TagSelected index) state = do
                               , selectedTag = getTag index
                               , addressSavedAs = if index /= 2 then "" else state.data.addressSavedAs}
                       , props { placeNameExists = if index /= 2 then false else state.props.placeNameExists 
-                              , isBtnActive = (index == 2 && state.data.addressSavedAs /= "") || (index == 2 && state.props.editLocation == true && state.data.placeName /="" ) || index == 1 || index == 0
+                              , isBtnActive = (index == 2 && state.data.addressSavedAs /= "") || (index == 2 && state.props.editLocation && state.data.placeName /="" ) || index == 1 || index == 0
                                               }}
         else do
           void $ pure $ toast ((case (toLower activeTag) of

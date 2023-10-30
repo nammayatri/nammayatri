@@ -127,7 +127,7 @@ view push state =
         [ width MATCH_PARENT
           , height MATCH_PARENT
           , background Color.lightBlack900
-          , visibility if state.props.logoutModalView == true then VISIBLE else GONE
+          , visibility if state.props.logoutModalView then VISIBLE else GONE
           ][ PopUpModal.view (push <<<PopUpModalAction) (logoutPopUp state) ]
         , if state.props.upiQrView then renderQRView state push  else dummyTextView
         , if state.props.showLiveDashboard then showLiveStatsDashboard push state else dummyTextView

@@ -161,7 +161,7 @@ applyReferralView state push =
   , alignParentBottom "true,-1"
   , padding (Padding 20 0 16 20)
   , margin (MarginBottom 40)
-  , visibility if(state.props.referralViewstatus == true) then GONE else VISIBLE
+  , visibility if state.props.referralViewstatus then GONE else VISIBLE
   , cornerRadius 8.0
   ][  textView $
       [ text (getString HAVE_A_REFERRAL)
@@ -181,7 +181,7 @@ referralAppliedView state push =
   , height MATCH_PARENT
   , orientation VERTICAL
   , gravity BOTTOM
-  , visibility if(state.props.referralViewstatus == true) then VISIBLE else GONE
+  , visibility if state.props.referralViewstatus then VISIBLE else GONE
   ][  relativeLayout
       [ height WRAP_CONTENT
       , width MATCH_PARENT
@@ -514,7 +514,7 @@ referralView state push =
   , gravity BOTTOM
   , orientation HORIZONTAL
   , padding (Padding 20 10 20 40)
-  , visibility if(state.props.referralViewstatus == true) then GONE else VISIBLE
+  , visibility if state.props.referralViewstatus then GONE else VISIBLE
   ][  textView
       ([ width WRAP_CONTENT
         , height WRAP_CONTENT

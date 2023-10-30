@@ -74,7 +74,7 @@ navData screenName bottomNavConfig = do
           screenName : ScreenNames.ALERTS_SCREEN
         }
       ]
-      processedNavOptions = DA.filter (\item -> item.isVisible) navdata
+      processedNavOptions = DA.filter (_.isVisible) navdata
   {
    activeIndex : getActiveIndex screenName processedNavOptions,
    navButton: navdata

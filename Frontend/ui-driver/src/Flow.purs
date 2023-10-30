@@ -871,7 +871,7 @@ driverProfileFlow = do
                                                                                             , vehicleName = state.data.vehicleModelName
                                                                                             , vehicleCapacity = state.data.capacity
                                                                                             , downgradeOptions = downgradeOptions}
-                                                                                     , props{ downgraded = not (length (filter (\vehicle -> not vehicle.isSelected) downgradeOptions) > 0) && not (null downgradeOptions) }
+                                                                                     , props{ downgraded = not (length (filter (not _.isSelected) downgradeOptions) > 0) && not (null downgradeOptions) }
                                                                                      })
       bookingOptionsFlow
     GO_TO_ACTIVATE_OR_DEACTIVATE_RC state -> do
@@ -965,7 +965,7 @@ driverProfileFlow = do
                   driverProfileFlow
 
     VERIFY_OTP1 state -> do
-       let toast_value = if (state.props.isEditAlternateMobile == false) then (getString NUMBER_ADDED_SUCCESSFULLY) else (getString NUMBER_EDITED_SUCCESSFULLY)
+       let toast_value = if not state.props.isEditAlternateMobile then (getString NUMBER_ADDED_SUCCESSFULLY) else (getString NUMBER_EDITED_SUCCESSFULLY)
            finalAlternateMobileNumber = state.data.driverEditAlternateMobile
        getVerifyAlternateMobileOtpResp <- lift $ lift $ Remote.verifyAlternateNumberOTP (makeVerifyAlternateNumberOtpRequest (state.props.alternateMobileOtp))
        case getVerifyAlternateMobileOtpResp of
@@ -1069,12 +1069,12 @@ driverDetailsFlow = do
                   driverDetailsFlow
               else do
                   pure $ toast $ getString SOMETHING_WENT_WRONG
-                  modifyScreenState $ DriverDetailsScreenStateType (\driverDetailsScreen -> updatedState {data{ driverAlternateMobile = (if(updatedState.props.isEditAlternateMobile) then updatedState.data.driverAlternateMobile else Nothing), driverEditAlternateMobile = Nothing} , props{  otpIncorrect = false ,otpAttemptsExceeded = false ,keyboardModalType = NONE , alternateMobileOtp = "",checkAlternateNumber =(updatedState.props.isEditAlternateMobile == false) }})
+                  modifyScreenState $ DriverDetailsScreenStateType (\driverDetailsScreen -> updatedState {data{ driverAlternateMobile = (if(updatedState.props.isEditAlternateMobile) then updatedState.data.driverAlternateMobile else Nothing), driverEditAlternateMobile = Nothing} , props{  otpIncorrect = false ,otpAttemptsExceeded = false ,keyboardModalType = NONE , alternateMobileOtp = "",checkAlternateNumber = not updatedState.props.isEditAlternateMobile }})
                   driverDetailsFlow
 
 
     VERIFY_OTP state -> do
-       let toast_value = if (state.props.isEditAlternateMobile == false) then (getString NUMBER_ADDED_SUCCESSFULLY) else (getString NUMBER_EDITED_SUCCESSFULLY)
+       let toast_value = if not state.props.isEditAlternateMobile then (getString NUMBER_ADDED_SUCCESSFULLY) else (getString NUMBER_EDITED_SUCCESSFULLY)
            finalAlternateMobileNumber = state.data.driverEditAlternateMobile
        getVerifyAlternateMobileOtpResp <- lift $ lift $ Remote.verifyAlternateNumberOTP (makeVerifyAlternateNumberOtpRequest (state.props.alternateMobileOtp))
        case getVerifyAlternateMobileOtpResp of
@@ -1102,7 +1102,7 @@ driverDetailsFlow = do
                   driverDetailsFlow
             else do
                 pure $ toast $ getString SOMETHING_WENT_WRONG
-                modifyScreenState $ DriverDetailsScreenStateType (\driverDetailsScreen -> state {data{ driverAlternateMobile = (if(state.props.isEditAlternateMobile) then state.data.driverAlternateMobile else Nothing), driverEditAlternateMobile = Nothing} , props{  otpIncorrect = false ,otpAttemptsExceeded = false ,keyboardModalType = NONE , alternateMobileOtp = "",checkAlternateNumber =(state.props.isEditAlternateMobile == false) }})
+                modifyScreenState $ DriverDetailsScreenStateType (\driverDetailsScreen -> state {data{ driverAlternateMobile = (if(state.props.isEditAlternateMobile) then state.data.driverAlternateMobile else Nothing), driverEditAlternateMobile = Nothing} , props{  otpIncorrect = false ,otpAttemptsExceeded = false ,keyboardModalType = NONE , alternateMobileOtp = "",checkAlternateNumber = not state.props.isEditAlternateMobile }})
                 driverDetailsFlow
 
 
@@ -2748,8 +2748,8 @@ getUpiApps :: FlowBT String Unit
 getUpiApps = do
   resp <- lift $ lift $ doAff $ makeAff (\cb -> (runEffectFn1 getAvailableUpiApps (cb <<< Right) ) $> nonCanceler)
   let (UpdateDriverInfoReq req) = Remote.mkUpdateDriverInfoReq ""
-  let appsSupportMandate = runFn1 stringifyJSON $ map (\item -> item.appName) $ filter (\item -> item.supportsMandate) resp
-  let appsNotSupportMandate = runFn1 stringifyJSON $ map (\item -> item.appName) $ filter (\item -> not item.supportsMandate) resp
+  let appsSupportMandate = runFn1 stringifyJSON $ map _.appName $ filter (_.supportsMandate) resp
+  let appsNotSupportMandate = runFn1 stringifyJSON $ map _.appName $ filter (not _.supportsMandate) resp
   pure $ setCleverTapUserProp [{key : "appsSupportMandate", value : unsafeToForeign appsSupportMandate},
                                {key : "appsNotSupportMandate", value : unsafeToForeign appsNotSupportMandate}]
   void $ Remote.updateDriverInfoBT (UpdateDriverInfoReq req{availableUpiApps = Just $ runFn1 stringifyJSON resp})

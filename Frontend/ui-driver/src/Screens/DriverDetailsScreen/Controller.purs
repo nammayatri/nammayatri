@@ -15,7 +15,7 @@
 
 module Screens.DriverDetailsScreen.Controller where
 
-import Prelude (class Show, unit, (/=), ($), (<>), (>), (-), (==), (||), (<=), (+),(<),(<=), pure, bind, discard,(&&),show)
+import Prelude (class Show, unit, (/=), ($), (<>), (>), (-), (==), (||), (<=), (+),(<),(<=), pure, bind, discard,(&&),show, not)
 import PrestoDOM (Eval, continue, exit, continueWithCmd)
 import Screens.Types (DriverDetailsScreenState, KeyboardModalType(..))
 import PrestoDOM.Types.Core (class Loggable)
@@ -164,15 +164,15 @@ eval ClickRemoveAlternateNumber state = do
     continue state { props = state.props {removeNumberPopup = true}}
 
 eval (InAppKeyboardModalMobile (InAppKeyboardModal.BackPressed)) state = do
-  continue state { data = state.data {driverAlternateMobile = (if (state.props.isEditAlternateMobile == false) then (Nothing) else state.data.driverAlternateMobile), driverEditAlternateMobile = Nothing}, props = state.props {keyboardModalType = NONE, checkAlternateNumber = (state.props.isEditAlternateMobile == false),numberExistError= false ,isEditAlternateMobile = false}}
+  continue state { data = state.data {driverAlternateMobile = (if not state.props.isEditAlternateMobile then (Nothing) else state.data.driverAlternateMobile), driverEditAlternateMobile = Nothing}, props = state.props {keyboardModalType = NONE, checkAlternateNumber = not state.props.isEditAlternateMobile,numberExistError= false ,isEditAlternateMobile = false}}
 
 eval (InAppKeyboardModalMobile (InAppKeyboardModal.OnClickTextCross)) state = do
-  continue state {data {driverEditAlternateMobile = Nothing, driverAlternateMobile = (if (state.props.isEditAlternateMobile == false) then (Nothing) else state.data.driverAlternateMobile)},props {numberExistError= false, checkAlternateNumber = true}}
+  continue state {data {driverEditAlternateMobile = Nothing, driverAlternateMobile = (if not state.props.isEditAlternateMobile then (Nothing) else state.data.driverAlternateMobile)},props {numberExistError= false, checkAlternateNumber = true}}
 
 eval (InAppKeyboardModalMobile (InAppKeyboardModal.OnSelection key index)) state = do
-  let newVal = if (state.props.isEditAlternateMobile == false) then ((fromMaybe "" state.data.driverAlternateMobile) <> key) else ((fromMaybe "" state.data.driverEditAlternateMobile) <> key)
+  let newVal = if not state.props.isEditAlternateMobile then ((fromMaybe "" state.data.driverAlternateMobile) <> key) else ((fromMaybe "" state.data.driverEditAlternateMobile) <> key)
   if(length newVal == 0) then
-  continue state {data = state.data {driverAlternateMobile = (if (state.props.isEditAlternateMobile) then (state.data.driverAlternateMobile) else Nothing), driverEditAlternateMobile = Nothing }, props = state.props {checkAlternateNumber = (state.props.isEditAlternateMobile == false), numberExistError = false}}
+  continue state {data = state.data {driverAlternateMobile = (if (state.props.isEditAlternateMobile) then (state.data.driverAlternateMobile) else Nothing), driverEditAlternateMobile = Nothing }, props = state.props {checkAlternateNumber = not state.props.isEditAlternateMobile, numberExistError = false}}
   else if length newVal <= 10 then (do
               let isValidMobileNumber = case (charAt 0 newVal) of
                                     Just a -> if a=='0' || a=='1' || a=='2' then false
@@ -182,7 +182,7 @@ eval (InAppKeyboardModalMobile (InAppKeyboardModal.OnSelection key index)) state
                                                    else false )
                                               else true
                                     Nothing -> true
-              continue state { data = state.data { driverAlternateMobile = (if (state.props.isEditAlternateMobile == false) then Just newVal else state.data.driverAlternateMobile), driverEditAlternateMobile = Just newVal }, props = state.props {checkAlternateNumber = isValidMobileNumber} }
+              continue state { data = state.data { driverAlternateMobile = (if not state.props.isEditAlternateMobile then Just newVal else state.data.driverAlternateMobile), driverEditAlternateMobile = Just newVal }, props = state.props {checkAlternateNumber = isValidMobileNumber} }
   )else continue state
 
 eval (InAppKeyboardModalMobile (InAppKeyboardModal.OnClickBack text)) state = do
@@ -190,11 +190,11 @@ eval (InAppKeyboardModalMobile (InAppKeyboardModal.OnClickBack text)) state = do
     then continue state
     else do
     let newVal = (if length( text ) > 0 then (take (length ( text ) - 1 ) text) else "" )
-    continue state { data = state.data {driverAlternateMobile = (if (state.props.isEditAlternateMobile == false) then (if newVal=="" then Nothing else Just newVal) else state.data.driverAlternateMobile), driverEditAlternateMobile = (if newVal=="" then Nothing else Just newVal)  } , props = state.props { checkAlternateNumber = true, numberExistError = false}}
+    continue state { data = state.data {driverAlternateMobile = (if (not state.props.isEditAlternateMobile) then (if newVal=="" then Nothing else Just newVal) else state.data.driverAlternateMobile), driverEditAlternateMobile = (if newVal=="" then Nothing else Just newVal)  } , props = state.props { checkAlternateNumber = true, numberExistError = false}}
 
 eval (InAppKeyboardModalMobile (InAppKeyboardModal.OnClickDone text)) state = do
   _ <- pure $ spy "Enter done" ""
-  exit (ValidateAlternateNumber state {data = state.data {  driverAlternateMobile = (if (state.props.isEditAlternateMobile == false) then Just text else state.data.driverAlternateMobile) , driverEditAlternateMobile = Just text}, props = state.props {keyboardModalType = OTP, numberExistError = false,otpIncorrect = false}})
+  exit (ValidateAlternateNumber state {data = state.data {  driverAlternateMobile = (if (not state.props.isEditAlternateMobile) then Just text else state.data.driverAlternateMobile) , driverEditAlternateMobile = Just text}, props = state.props {keyboardModalType = OTP, numberExistError = false,otpIncorrect = false}})
 
 eval (InAppKeyboardModalOtp (InAppKeyboardModal.OnClickResendOtp)) state = do
   exit (ResendAlternateNumberOTP state)
@@ -220,7 +220,7 @@ eval (PopUpModalAction (PopUpModal.OnButton2Click)) state = do
   exit (RemoveAlternateNumber state {data = state.data {  driverAlternateMobile =Nothing }, props = state.props {removeNumberPopup = false, otpIncorrect = false, keyboardModalType = NONE,isEditAlternateMobile = false}})
 
 eval (PopUpModalActions (PopUpModal.OnButton2Click)) state = do
-   exit (GoToHomeScreen state {data = state.data{ driverAlternateMobile = (if(state.props.isEditAlternateMobile) then state.data.driverAlternateMobile else Nothing), driverEditAlternateMobile = Nothing } ,props =state.props{  otpIncorrect = false ,otpAttemptsExceeded = false ,keyboardModalType = NONE , alternateMobileOtp = "",checkAlternateNumber =(state.props.isEditAlternateMobile == false) }})
+   exit (GoToHomeScreen state {data = state.data{ driverAlternateMobile = (if(state.props.isEditAlternateMobile) then state.data.driverAlternateMobile else Nothing), driverEditAlternateMobile = Nothing } ,props =state.props{  otpIncorrect = false ,otpAttemptsExceeded = false ,keyboardModalType = NONE , alternateMobileOtp = "",checkAlternateNumber =(not state.props.isEditAlternateMobile) }})
 
 eval (InAppKeyboardModalOtp (InAppKeyboardModal.OnClickDone text)) state = do
     exit (VerifyAlternateNumberOTP state)

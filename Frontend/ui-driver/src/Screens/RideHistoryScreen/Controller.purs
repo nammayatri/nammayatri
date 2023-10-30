@@ -286,10 +286,10 @@ rideListResponseTransformer list =  map (\(RidesInfo ride) -> {
 
 
 prestoListFilter :: String -> Array ItemState -> Array ItemState
-prestoListFilter statusType list = (filter (\(ride) -> (ride.status == (toPropValue statusType)) ) list )
+prestoListFilter statusType list = filter (\ride -> ride.status == (toPropValue statusType) ) list
 
 rideListFilter :: String -> Array IndividualRideCardState -> Array IndividualRideCardState
-rideListFilter statusType list = (filter (\(ride) -> (ride.status == statusType) ) list )
+rideListFilter statusType list = filter (\ride -> ride.status == statusType) list
 
 dummyCard :: IndividualRideCardState
 dummyCard =  {

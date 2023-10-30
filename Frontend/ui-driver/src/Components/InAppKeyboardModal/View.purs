@@ -131,7 +131,7 @@ singleTextBox push state =
   , visibility if state.modalType == KeyboardModalType.MOBILE__NUMBER then VISIBLE else GONE
   , clickable false
   , padding (Padding 16 16 16 16)
-  , stroke ("1," <> if (state.isValidAlternateNumber == false ) then Color.textDanger else Color.borderColorLight )
+  , stroke ("1," <> if not state.isValidAlternateNumber then Color.textDanger else Color.borderColorLight )
   ][textView $
       [ width state.inputTextConfig.width
       , height state.inputTextConfig.height
@@ -238,7 +238,7 @@ keyboard push state =
            , cornerRadii $ if key == "back" then Corners 30.0 false false false true else Corners 30.0 false false true false
            , onClick push if key == "back" then (const (OnClickBack state.inputTextConfig.text)) else (const (OnClickDone state.inputTextConfig.text))
            , clickable if key == "back" then true else 
-                      if ((length state.inputTextConfig.text == 4  && state.modalType == KeyboardModalType.OTP && state.otpIncorrect == false) || (length state.inputTextConfig.text == 10  && state.modalType == KeyboardModalType.MOBILE__NUMBER && state.isValidAlternateNumber==true)) then true else false 
+                      if ((length state.inputTextConfig.text == 4  && state.modalType == KeyboardModalType.OTP && not state.otpIncorrect ) || (length state.inputTextConfig.text == 10  && state.modalType == KeyboardModalType.MOBILE__NUMBER && state.isValidAlternateNumber)) then true else false 
            ][ 
                 if key == "back" then 
                 imageView
