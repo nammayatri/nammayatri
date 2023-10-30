@@ -996,7 +996,13 @@ const hindiStrings = {
   GUARANTEED_FIXED_PRICE : "1 जनवरी 2025 तक कीमत में कोई बदलाव नहीं।",
   INTRODUCTORY_OFFER_TO_BE_ANNOUNCED_SOON : "परिचयात्मक ऑफर की घोषणा जल्द ही की जाएगी!",
   NO_CHARGES_TILL : "31 दिसंबर तक कोई शुल्क नहीं",
-  AND : " और "
+  AND : " और ",
+  DIRECT_PAYMENT_NO_COMMISSIONS : "सीधा भुगतान.\nकोई कमीशन नहीं",
+  CUSTOMER_PAYS_DIRECTLY : "ग्राहक आपको सीधे नकद या यूपीआई के माध्यम से भुगतान करता है",
+  HUNDRED_PERCENT_FARE_GOES_TO_YOU : "100% किराया\nआपको जाता है!",
+  FARE_SHOWN_IS_FARE_YOU_GET : "दिखाया गया किराया वही किराया है जो आपको मिलता है।\nकोई छिपा हुआ शुल्क नहीं।",
+  BE_A_PART_OF_OPEN_MOBILITY_REVOLUTION : "ओपन\nमोबिलिटी क्रांति का हिस्सा बनें!",
+  OUR_DATA_AND_PRODUCT_ARE_TRANSPARENT : "हमारा डेटा और उत्पाद रोडमैप सभी के लिए पारदर्शी है।"
 }
 
 

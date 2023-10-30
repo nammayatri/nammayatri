@@ -31,6 +31,7 @@ import Screens (ScreenName(..), getScreen)
 import MerchantConfig.Utils (getValueFromConfig)
 import Effect.Unsafe (unsafePerformEffect)
 import Engineering.Helpers.LogEvent (logEvent)
+import Components.StepsHeaderModal.Controller as StepsHeaderModalController
 
 instance showAction :: Show Action where
   show _ = ""
@@ -54,6 +55,7 @@ instance loggableAction :: Loggable Action where
     CheckBoxClicked -> trackAppScreenEvent appId (getScreen ENTER_MOBILE_NUMBER_SCREEN) "in_screen" "checkbox_clicked"
     CheckClickability -> trackAppScreenEvent appId (getScreen ENTER_MOBILE_NUMBER_SCREEN) "in_screen" "check_clickability"
     NoAction -> trackAppScreenEvent appId (getScreen ENTER_MOBILE_NUMBER_SCREEN) "in_screen" "no_action"
+    _ -> trackAppScreenEvent appId (getScreen ENTER_MOBILE_NUMBER_SCREEN) "in_screen" "no_action"
 
 data ScreenOutput = GoBack | GoToNextScreen EnterMobileNumberScreenState
 data Action = BackPressed 
@@ -64,12 +66,16 @@ data Action = BackPressed
             | CheckClickability
             | AfterRender
             | NonDisclosureAgreementAction
+            | StepsHeaderModalAC StepsHeaderModalController.Action
 
 eval :: Action -> EnterMobileNumberScreenState -> Eval Action ScreenOutput EnterMobileNumberScreenState
 eval AfterRender state = continue state
-eval BackPressed state = exit GoBack
+eval BackPressed state = do
+        pure $ hideKeyboardOnNavigation true
+        exit GoBack
 eval (PrimaryEditTextAction PrimaryEditText.OnClick) state = continue state
 eval (PrimaryButtonActionController (PrimaryButton.OnClick)) state = exit (GoToNextScreen state)
+eval (StepsHeaderModalAC StepsHeaderModalController.OnArrowClick) state = continueWithCmd state [ do pure $ BackPressed]
 eval (PrimaryEditTextAction (PrimaryEditText.TextChanged valId newVal)) state = do
   _ <- if length newVal == 10 then do
             pure $ hideKeyboardOnNavigation true 

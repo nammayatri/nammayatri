@@ -969,7 +969,13 @@ const tamilStrings = {
   GUARANTEED_FIXED_PRICE : "ஜனவரி 1, 2025 வரை நிலையான விலைக்கு உத்தரவாதம்",
   INTRODUCTORY_OFFER_TO_BE_ANNOUNCED_SOON : "அறிமுக சலுகை விரைவில் அறிவிக்கப்படும்!",
   NO_CHARGES_TILL : "டிசம்பர் 31 வரை கட்டணம் இல்லை",
-  AND : " மற்றும் "
+  AND : " மற்றும் ",
+  DIRECT_PAYMENT_NO_COMMISSIONS : "நேரடி கட்டணம்.\nகமிஷன் இல்லை",
+  CUSTOMER_PAYS_DIRECTLY : "வாடிக்கையாளர் உங்களுக்கு நேரடியாக \nபணம் அல்லது UPI மூலம் பணம் செலுத்துகிறார்",
+  HUNDRED_PERCENT_FARE_GOES_TO_YOU : "100% கட்டணம்\nஉங்களுக்குச் செல்லும்!",
+  FARE_SHOWN_IS_FARE_YOU_GET : "காட்டப்படும் கட்டணம் நீங்கள் பெறும் கட்டணமாகும்.\nமறைக்கப்பட்ட கட்டணங்கள் இல்லை.",
+  BE_A_PART_OF_OPEN_MOBILITY_REVOLUTION : "திறந்த\nமொபிலிட்டி புரட்சியின் ஒரு பகுதியாக இருங்கள்!",
+  OUR_DATA_AND_PRODUCT_ARE_TRANSPARENT : "எங்களின் தரவு மற்றும் தயாரிப்பு வரைபடமானது\nஅனைவருக்கும் வெளிப்படையானது."
 }
 
 export function getStringValue(key) {

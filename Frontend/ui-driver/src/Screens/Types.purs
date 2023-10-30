@@ -417,7 +417,8 @@ type EnterMobileNumberScreenStateData = {
 
 type EnterMobileNumberScreenStateProps = {
   btnActive :: Boolean,
-  isValid :: Boolean
+  isValid :: Boolean,
+  mobileNumberEditFocused :: Boolean
 }
 
 --------------------------------------------------------------- BankDetailScreenState -----------------------------------------------------------------------------
@@ -1993,4 +1994,26 @@ type Tag = {
   visibility :: Boolean, 
   text :: String, 
   textColor :: String
+}
+
+---------------------------------------------DriverWelcomeScreen -------------------------------------
+
+type CarouselModel = {
+  image :: String,
+  title :: String,
+  description :: String
+}
+
+type WelcomeScreenState = {
+  data :: WelcomeScreenData
+}
+
+type WelcomeScreenData = {
+  carouselModel :: Array CarouselModel
+}
+
+type StepsHeaderModelState = {
+  activeIndex :: Int,
+  textArray :: Array String,
+  backArrowVisibility :: Boolean
 }
