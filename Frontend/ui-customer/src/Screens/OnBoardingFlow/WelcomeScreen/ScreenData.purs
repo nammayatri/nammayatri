@@ -33,8 +33,8 @@ initData = {
                 margin : { top : 6 , bottom : 0 , right : 20 , left : 20 }
               }
             })
-              [ {image : "carousel_1", imageHeight : 260, title : "The fastest auto booking\napp is here!", description : "Our speedy booking process means <br> you get a ride quickly and easily.", gravity : 17},
-                {image : "carousel_2", imageHeight : 260, title : "No more\nsurge pricing!", description : "Experience fair and consistent fares, <br> even during peak hours.",  gravity : 17 },
+              [ {image : "carousel_1", imageHeight : 260, title : "The fastest auto booking\napp is here!", description : "Our speedy booking process means \n you get a ride quickly and easily.", gravity : 17},
+                {image : "carousel_2", imageHeight : 260, title : "No more\nsurge pricing!", description : "Experience fair and consistent fares, \n even during peak hours.",  gravity : 17 },
                 {image : "carousel_4", imageHeight : 260, title : "Inclusive and accessible \n for everyone!", description : "We strive to provide all our users an \n even & equal experience.",  gravity : 17},
                 {image : "carousel_3", imageHeight : 260, title : "Be a part of the Open\nMobility Revolution!", description : "Our data and product roadmap are\ntransparent for all.", gravity : 17}
               ]
