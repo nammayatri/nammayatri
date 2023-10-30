@@ -19,12 +19,15 @@ import qualified Domain.Types.Merchant as DM
 import Domain.Types.Merchant.MerchantOperatingCity
 import Kernel.Beam.Functions
 import Kernel.Prelude
-import Kernel.Types.App -- vaibhav
+import Kernel.Types.App
 import Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified Storage.Beam.Merchant.MerchantOperatingCity as BeamMOC
+
+findById :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id MerchantOperatingCity -> m (Maybe MerchantOperatingCity)
+findById (Id merchantOpCityId) = findOneWithKV [Se.Is BeamMOC.id $ Se.Eq merchantOpCityId]
 
 findByMerchantIdAndCity :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DM.Merchant -> Context.City -> m (Maybe MerchantOperatingCity)
 findByMerchantIdAndCity (Id merchantId) city = findOneWithKV [Se.And [Se.Is BeamMOC.merchantId $ Se.Eq merchantId, Se.Is BeamMOC.city $ Se.Eq city]]

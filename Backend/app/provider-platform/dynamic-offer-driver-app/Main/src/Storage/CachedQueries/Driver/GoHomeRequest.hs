@@ -11,7 +11,7 @@ import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config (EsqDBFlow)
 import Kernel.Storage.Hedis (withCrossAppRedis)
 import qualified Kernel.Storage.Hedis as Hedis
-import Kernel.Types.App (MonadFlow) -- vaibhav
+import Kernel.Types.App (MonadFlow)
 import Kernel.Types.CacheFlow
 import Kernel.Types.Common (MonadTime (getCurrentTime), generateGUID)
 import Kernel.Types.Id (Id)

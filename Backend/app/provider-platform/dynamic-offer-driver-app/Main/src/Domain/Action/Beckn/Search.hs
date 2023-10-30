@@ -151,7 +151,7 @@ handler merchant sReq = do
   toLocation <- buildSearchReqLocation merchantId merchantOpCityId sessiontoken sReq.dropAddrress sReq.customerLanguage sReq.dropLocation
   let routeInfo = RouteInfo {distance = sReq.routeDistance, duration = sReq.routeDuration, points = sReq.routePoints}
 
-  allFarePoliciesProduct <- getAllFarePoliciesProduct merchantId fromLocationLatLong toLocationLatLong
+  allFarePoliciesProduct <- getAllFarePoliciesProduct merchantId merchantOpCityId fromLocationLatLong toLocationLatLong
   let farePolicies = selectFarePolicy result.distance allFarePoliciesProduct.farePolicies
   (quotes, mbEstimateInfos) <-
     case allFarePoliciesProduct.flow of
