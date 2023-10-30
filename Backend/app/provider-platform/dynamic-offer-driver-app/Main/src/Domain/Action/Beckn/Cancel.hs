@@ -145,7 +145,7 @@ validateCancelSearchRequest ::
 validateCancelSearchRequest _ _ req = do
   let transactionId = req.transactionId
   searchReqId <- QSR.findByTransactionId transactionId >>= fromMaybeM (SearchRequestNotFound $ "transactionId-" <> transactionId)
-  QST.findActiveTryByRequestId searchReqId >>= fromMaybeM (SearchTryDoesNotExist $ "searchRequestId-" <> searchReqId.getId)
+  QST.findTryByRequestId searchReqId >>= fromMaybeM (SearchTryDoesNotExist $ "searchRequestId-" <> searchReqId.getId)
 
 validateCancelRequest ::
   ( EsqDBFlow m r,
