@@ -87,6 +87,15 @@ fetchAllDriversWithPaymentPending merchantId = do
         ]
     ]
 
+fetchAllBlockedDriversWithSubscribedFalse :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Merchant -> m [DriverInformation]
+fetchAllBlockedDriversWithSubscribedFalse merchantId = do
+  findAllWithDb
+    [ Se.And
+        [ Se.Is BeamDI.subscribed $ Se.Eq False,
+          Se.Is BeamDI.merchantId $ Se.Eq (Just merchantId.getId)
+        ]
+    ]
+
 fetchAllAvailableByIds :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Id Person.Driver] -> m [DriverInformation]
 fetchAllAvailableByIds driversIds = findAllWithKV [Se.And [Se.Is BeamDI.driverId $ Se.In (getId <$> driversIds), Se.Is BeamDI.active $ Se.Eq True, Se.Is BeamDI.onRide $ Se.Eq False]]
 
