@@ -6,6 +6,7 @@ import qualified Control.Concurrent as Control
 import Data.Aeson as A
 import qualified Data.ByteString.Char8 as C8
 import qualified Data.ByteString.Lazy as BSL
+import qualified Data.HashMap.Strict as HM
 import qualified Data.Text as T
 import Data.Text.Encoding as DTE
 import qualified Data.Text.Encoding.Error as DTE
@@ -15,8 +16,10 @@ import qualified EulerHS.Language as EL
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
 import GHC.Float (int2Double)
+import Kernel.Beam.Types (TableMappings (..))
 import System.Posix.Signals (raiseSignal, sigKILL)
 import System.Random.PCG
+import Text.Casing (quietSnake)
 import Types.DBSync
 import Types.Event
 import qualified Utils.Redis as RQ
@@ -154,3 +157,21 @@ shutDownHandler = do
   putStrLn ("SHUTTING DOWN DRAINER in " ++ show ((fromIntegral shutDownPeriod :: Double) / 1000000) ++ " seconds" :: String)
   delay shutDownPeriod
   raiseSignal sigKILL
+
+getMaps ::
+  forall table.
+  TableMappings (table Identity) =>
+  [table Identity] ->
+  [(String, String)]
+getMaps _ = getTableMappings @(table Identity)
+
+textToSnakeCaseText :: Text -> Text
+textToSnakeCaseText = T.pack . quietSnake . T.unpack
+
+replaceMappings :: A.Value -> HM.HashMap Text Text -> A.Value
+replaceMappings (A.Object obj) mapp =
+  A.Object $
+    HM.fromList $
+      map (\(key, val) -> (textToSnakeCaseText $ fromMaybe key (HM.lookup key mapp), val)) $
+        HM.toList obj
+replaceMappings x _ = x

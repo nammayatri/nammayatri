@@ -6,7 +6,7 @@
 
     # Backend inputs
     shared-kernel = {
-      url = "github:nammayatri/shared-kernel";
+      url = "github:nammayatri/shared-kernel/backend/custom-mapping-template-haskell";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
