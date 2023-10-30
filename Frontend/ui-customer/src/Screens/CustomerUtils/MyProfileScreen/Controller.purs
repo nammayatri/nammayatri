@@ -15,7 +15,7 @@ import Components.GenericRadioButton as GenericRadioButton
 import Components.SelectListModal as SelectListModal
 import Resources.Constants as Constants
 import Data.Maybe (Maybe(..), fromMaybe, isJust, isNothing)
-import JBridge (hideKeyboardOnNavigation, requestKeyboardShow ,firebaseLogEvent)
+import JBridge (hideKeyboardOnNavigation, requestKeyboardShow ,firebaseLogEvent, pauseYoutubeVideo)
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppTextInput, trackAppScreenEvent)
 import Prelude (class Show, pure, unit, ($), discard, bind, not, (<>), (<), (==), (&&), (/=), (||), (>=))
 import PrestoDOM (Eval, continue, continueWithCmd, exit, updateAndExit)
@@ -184,7 +184,9 @@ eval (SpecialAssistanceListAC action) state = do
 
 eval (MoreInfo fieldType) state = continue state {props { showAccessibilityPopUp = true}}
 
-eval (AccessibilityPopUpAC (PopUpModal.OnButton1Click)) state = continue state {props{showAccessibilityPopUp = false}}
+eval (AccessibilityPopUpAC (PopUpModal.OnButton1Click)) state = do 
+  _ <- pure $ pauseYoutubeVideo unit
+  continue state {props{showAccessibilityPopUp = false}}
 
 eval _ state = continue state
 

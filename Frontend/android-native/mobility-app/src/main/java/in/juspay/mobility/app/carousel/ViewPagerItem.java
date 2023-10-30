@@ -1,5 +1,8 @@
 package in.juspay.mobility.app.carousel;
 
+import android.util.Log;
+
+import org.json.JSONException;
 import org.json.JSONObject;
 
 public class ViewPagerItem {
@@ -16,6 +19,19 @@ public class ViewPagerItem {
         this.contentType = contentType;
         this.gravity = gravity;
     }
+
+
+    public ViewPagerItem(int imageID, String heading, String description) {
+        this.imageID = imageID;
+        try {
+            titleConfig = new JSONObject().put("text", heading);
+            descriptionConfig = new JSONObject().put("text", description);
+        } catch (JSONException e) {
+            Log.e("ViewPagerItem","Exception in ViewPagerItem");
+        }
+    }
+
+
 
     public int getImageHeight() { return imageConfig.optInt("height", 260);}
 
