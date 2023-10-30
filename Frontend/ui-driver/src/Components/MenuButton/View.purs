@@ -25,7 +25,7 @@ import Font.Style as FontStyle
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Prelude ((<>), (||), not)
 import Prelude (Unit, const, ($), (==))
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), background, color, fontStyle, frameLayout, gravity, height, imageUrl, imageView, imageWithFallback, linearLayout, margin, onClick, orientation, padding, text, textSize, textView, visibility, weight, width)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), background, color, cornerRadius, fontStyle, frameLayout, gravity, height, imageUrl, imageView, imageWithFallback, linearLayout, margin, onClick, orientation, padding, stroke, text, textSize, textView, visibility, weight, width)
 import Styles.Colors as Color
 
 view 
@@ -48,9 +48,13 @@ view push state =
           [ height WRAP_CONTENT
           , width MATCH_PARENT
           , orientation HORIZONTAL
-          , padding (Padding 16 24 0 0)
+          , padding (Padding 16 16 16 16)
+          , margin $ MarginBottom 16
           , onClick push (const (OnSelection state))
           , gravity CENTER_VERTICAL
+          , cornerRadius 6.0
+          , background if state.isSelected then state.selectedBackgroundColor else Color.white900
+          , stroke if state.isSelected then "1,"<>state.selectedStrokeColor else "1,"<>state.notSelectedStrokeColor
           ][ linearLayout
               [ height WRAP_CONTENT
               , width WRAP_CONTENT
@@ -65,6 +69,7 @@ view push state =
                 [ width WRAP_CONTENT
                 , height WRAP_CONTENT
                 , text state.text.subtitle
+                , visibility if state.text.subtitle == "" then GONE else VISIBLE
                 ] <> if state.isSelected then FontStyle.subHeading2 TypoGraphy else FontStyle.body5 TypoGraphy
               ]
             ,linearLayout

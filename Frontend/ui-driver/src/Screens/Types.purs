@@ -2005,12 +2005,25 @@ type CarouselModel = {
 }
 
 type WelcomeScreenState = {
-  data :: WelcomeScreenData
+  data :: WelcomeScreenData,
+  props :: WelcomeScreenProps
 }
 
 type WelcomeScreenData = {
-  carouselModel :: Array CarouselModel
+  carouselModel :: Array CarouselModel,
+  config :: AppConfig
 }
+
+type WelcomeScreenProps = {
+  selectedLanguage :: String,
+  currentStage :: WelcomeScreenStage
+}
+
+data WelcomeScreenStage = SELECT_LANG | SELECT_CITY | ENABLE_LOCATION | CAROUSEL | DETECT_LOCATION
+
+derive instance genericWelcomeScreenStage :: Generic WelcomeScreenStage _
+instance showWelcomeScreenStage :: Show WelcomeScreenStage where show = genericShow
+instance eqWelcomeScreenStage :: Eq WelcomeScreenStage where eq = genericEq
 
 type StepsHeaderModelState = {
   activeIndex :: Int,

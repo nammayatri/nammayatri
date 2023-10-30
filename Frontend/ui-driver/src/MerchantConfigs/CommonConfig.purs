@@ -133,4 +133,22 @@ commonConfig =
           enableWaitTime : true,
           thresholdDist : 0.05
         }
-        }
+        , cityConfig : [
+              {
+                cityName : "Bengaluru",
+                mapImage : "ny_ic_bengalore_map,"
+              },
+              {
+                cityName : "Hyderabad",
+                mapImage : "ny_ic_bengalore_map,"
+              },
+              {
+                cityName : "Mysore",
+                mapImage : "ny_ic_bengalore_map,"
+              },
+              {
+                cityName : "Delhi",
+                mapImage : "ny_ic_bengalore_map,"
+              }
+         ]
+  }
