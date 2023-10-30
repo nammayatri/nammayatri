@@ -1031,3 +1031,11 @@ export const setValueToLocalStore = function (key,value){
   JBridge.setInSharedPrefs(key, value);
 }
 
+export const addCarousel = function (modelArray) {
+  return function (id) {
+    var stringifyModelArray = JSON.stringify(modelArray)
+    if(JBridge.addCarousel){
+      return JBridge.addCarousel(stringifyModelArray, id);
+    }
+  };
+};

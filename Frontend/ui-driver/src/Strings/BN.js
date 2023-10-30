@@ -973,7 +973,13 @@ const bengaliStrings = {
   NO : "না",
   YES_CANCEL : "হ্যাঁ, বাতিল",
   AUTOPAY_CANCELLED : "অটোপে বাতিল করা হয়েছে",
-  YOUR_DUES_DESCRIPTION_MANUAL : "নিরবচ্ছিন্ন রাইডগুলি চালিয়ে যেতে সীমাতে পৌঁছানোর আগে অনুগ্রহ করে আপনার বকেয়া পরিশোধ করুন৷ আপনি সহজে, ঝামেলামুক্ত অর্থপ্রদানের জন্য <b>একটি UPI অটোপে সেট আপ</b> করতে পারেন।"
+  YOUR_DUES_DESCRIPTION_MANUAL : "নিরবচ্ছিন্ন রাইডগুলি চালিয়ে যেতে সীমাতে পৌঁছানোর আগে অনুগ্রহ করে আপনার বকেয়া পরিশোধ করুন৷ আপনি সহজে, ঝামেলামুক্ত অর্থপ্রদানের জন্য <b>একটি UPI অটোপে সেট আপ</b> করতে পারেন।",
+  DIRECT_PAYMENT_NO_COMMISSIONS : "সরাসরি অর্থপ্রদান।\nকোন কমিশন নেই",
+	CUSTOMER_PAYS_DIRECTLY : "গ্রাহক আপনাকে সরাসরি \nনগদ বা UPI এর মাধ্যমে অর্থ প্রদান করে",
+	HUNDRED_PERCENT_FARE_GOES_TO_YOU : "ভাড়ার 100%\nআপনার কাছে যাবে!",
+	FARE_SHOWN_IS_FARE_YOU_GET : "দেখানো ভাড়া হল আপনি যে ভাড়া পাবেন।\nকোন লুকানো চার্জ নেই।",
+	BE_A_PART_OF_OPEN_MOBILITY_REVOLUTION : "ওপেন মোবিলিটি রেভোলিউশনের অংশ হোন\n!",
+	OUR_DATA_AND_PRODUCT_ARE_TRANSPARENT : "আমাদের ডেটা এবং পণ্যের রোডম্যাপ\nসকলের জন্য স্বচ্ছ৷"
 }
 
 export function getStringValue(key) {

@@ -19,7 +19,7 @@ import Control.Transformers.Back.Trans (BackT)
 import Control.Monad.Except.Trans (ExceptT)
 import Control.Monad.Free (Free)
 import Presto.Core.Types.Language.Flow (FlowWrapper)
-import Screens.Types (AadhaarVerificationScreenState, AboutUsScreenState, ActiveRide,BookingOptionsScreenState, AddVehicleDetailsScreenState, AppUpdatePopUpScreenState, ApplicationStatusScreenState, BankDetailScreenState, CategoryListType, ChooseLanguageScreenState, DriverDetailsScreenState, DriverProfileScreenState, DriverRideRatingScreenState, DriverStatus, EditAadhaarDetailsScreenState, EditBankDetailsScreenState, EnterMobileNumberScreenState, EnterOTPScreenState, HelpAndSupportScreenState, HomeScreenState, IndividualRideCardState, NoInternetScreenState, NotificationsScreenState, PermissionsScreenState, PopUpScreenState, ReferralScreenState, RegistrationScreenState, ReportIssueChatScreenState, RideDetailScreenState, RideHistoryScreenState, RideSelectionScreenState, SelectLanguageScreenState, SplashScreenState, TripDetailsScreenState, UploadAdhaarScreenState, UploadDrivingLicenseState, VehicleDetailsScreenState, WriteToUsScreenState, AcknowledgementScreenState, UpdatePopupType(..), SubscriptionScreenState, OnBoardingSubscriptionScreenState, PaymentHistoryScreenState, HomeScreenStage(..), GlobalProps, DriverSavedLocationScreenState, GoToPopUpType(..))
+import Screens.Types (AadhaarVerificationScreenState, AboutUsScreenState, ActiveRide,BookingOptionsScreenState, AddVehicleDetailsScreenState, AppUpdatePopUpScreenState, ApplicationStatusScreenState, BankDetailScreenState, CategoryListType, ChooseLanguageScreenState, DriverDetailsScreenState, DriverProfileScreenState, DriverRideRatingScreenState, DriverStatus, EditAadhaarDetailsScreenState, EditBankDetailsScreenState, EnterMobileNumberScreenState, EnterOTPScreenState, HelpAndSupportScreenState, HomeScreenState, IndividualRideCardState, NoInternetScreenState, NotificationsScreenState, PermissionsScreenState, PopUpScreenState, ReferralScreenState, RegistrationScreenState, ReportIssueChatScreenState, RideDetailScreenState, RideHistoryScreenState, RideSelectionScreenState, SelectLanguageScreenState, SplashScreenState, TripDetailsScreenState, UploadAdhaarScreenState, UploadDrivingLicenseState, VehicleDetailsScreenState, WriteToUsScreenState, AcknowledgementScreenState, UpdatePopupType(..), SubscriptionScreenState, OnBoardingSubscriptionScreenState, PaymentHistoryScreenState, HomeScreenStage(..), GlobalProps, DriverSavedLocationScreenState, GoToPopUpType(..), WelcomeScreenState)
 import Screens.ChooseLanguageScreen.ScreenData as ChooseLanguageScreenData
 import Screens.EnterMobileNumberScreen.ScreenData as EnterMobileNumberScreenData
 import Screens.AadhaarVerificationScreen.ScreenData as EnterAadhaarNumberScreenData
@@ -59,6 +59,7 @@ import Screens.AppUpdatePopUpScreen.ScreenData as AppUpdatePopUpScreenData
 import Screens (ScreenName(..)) as ScreenNames
 import Screens.DriverSavedLocationScreen.ScreenData as DriverSavedLocationScreenData
 import Data.Maybe (Maybe(..))
+import Screens.WelcomeScreen.ScreenData as WelcomeScreenData
 
 type FlowBT e a = BackT (ExceptT e (Free (FlowWrapper GlobalState))) a
 
@@ -103,6 +104,7 @@ newtype GlobalState = GlobalState {
   , onBoardingSubscriptionScreen :: OnBoardingSubscriptionScreenState
   , paymentHistoryScreen :: PaymentHistoryScreenState
   , driverSavedLocationScreen :: DriverSavedLocationScreenState
+  , welcomeScreen :: WelcomeScreenState
   }
 
 defaultGlobalState :: GlobalState
@@ -147,6 +149,7 @@ defaultGlobalState = GlobalState {
 , onBoardingSubscriptionScreen : OnBoardingSubscriptionScreenData.initData
 , paymentHistoryScreen : PaymentHistoryScreenData.initData
 , driverSavedLocationScreen : DriverSavedLocationScreenData.initData
+, welcomeScreen : WelcomeScreenData.initData
 }
 
 defaultGlobalProps :: GlobalProps
@@ -397,3 +400,5 @@ data DRIVE_SAVED_LOCATION_OUTPUT = EXIT_FROM_SCREEN
                                   | DELETE_PLACE DriverSavedLocationScreenState String
                                   | CHANGE_VIEW 
                                   | UPDATE_HOME_LOCATION DriverSavedLocationScreenState
+                      
+data WELCOME_SCREEN_OUTPUT = GoToMobileNumberScreen

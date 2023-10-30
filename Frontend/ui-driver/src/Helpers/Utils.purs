@@ -75,7 +75,7 @@ import JBridge (getCurrentPositionWithTimeout, firebaseLogEventWithParams, trans
 import Effect.Uncurried(EffectFn1, EffectFn4, EffectFn3,runEffectFn3)
 import Storage (KeyStore(..), isOnFreeTrial, getValueToLocalNativeStore)
 import Styles.Colors as Color
-import Screens.Types (UpiApps(..), LocalStoreSubscriptionInfo)
+import Screens.Types (UpiApps(..), LocalStoreSubscriptionInfo, CarouselModel)
 import Data.Int (fromString, even, fromNumber)
 import Data.Number.Format (fixed, toStringWith)
 import Data.Function.Uncurried (Fn1)
@@ -135,6 +135,8 @@ foreign import renewFile :: EffectFn3 String String (AffSuccess Boolean) Unit
 
 foreign import getDateAfterNDays :: Int -> String
 foreign import  downloadQR  :: String -> Effect Unit
+
+foreign import addCarousel :: Array CarouselModel -> String -> Effect Unit
 
 foreign import _generateQRCode :: EffectFn5 String String Int Int (AffSuccess String) Unit
 

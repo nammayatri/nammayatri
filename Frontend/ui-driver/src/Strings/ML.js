@@ -940,7 +940,13 @@ const mlStrings = {
   DO_YOU_WANT_TO_CANCEL_DESC : "നിങ്ങൾ ഓട്ടോപേ റദ്ദാക്കാൻ പോവുകയാണ്.\nയാന്ത്രിക പേയ്‌മെന്റുകൾ പുനരാരംഭിക്കുന്നതിന് നിങ്ങൾ വീണ്ടും ഓട്ടോപേ സജ്ജീകരിക്കേണ്ടതുണ്ട്.",
   NO : "ഇല്ല",
   YES_CANCEL : "അതെ, റദ്ദാക്കുക",
-  AUTOPAY_CANCELLED : "ഓട്ടോപേ റദ്ദാക്കി"
+  AUTOPAY_CANCELLED : "ഓട്ടോപേ റദ്ദാക്കി",
+  DIRECT_PAYMENT_NO_COMMISSIONS : "നേരിട്ടുള്ള പേയ്‌മെന്റ്.\nകമ്മീഷനുകളൊന്നുമില്ല",
+  CUSTOMER_PAYS_DIRECTLY : "ഉപഭോക്താവ് നിങ്ങൾക്ക് നേരിട്ട് \nപണം അല്ലെങ്കിൽ UPI വഴി പണം നൽകുന്നു",
+  HUNDRED_PERCENT_FARE_GOES_TO_YOU : "നിരക്കിന്റെ 100%\nനിങ്ങൾക്കായി!",
+  FARE_SHOWN_IS_FARE_YOU_GET : "കാണിച്ചിരിക്കുന്ന നിരക്ക് നിങ്ങൾക്ക് ലഭിക്കുന്ന നിരക്കാണ്.\nമറഞ്ഞിരിക്കുന്ന നിരക്കുകളൊന്നുമില്ല.",
+  BE_A_PART_OF_OPEN_MOBILITY_REVOLUTION : "ഓപ്പൺ\nമൊബിലിറ്റി വിപ്ലവത്തിന്റെ ഭാഗമാകൂ!",
+  OUR_DATA_AND_PRODUCT_ARE_TRANSPARENT : "ഞങ്ങളുടെ ഡാറ്റയും ഉൽപ്പന്ന റോഡ്‌മാപ്പും\nഎല്ലാവർക്കും സുതാര്യമാണ്."
 }
 
 export function getStringValue(key) {

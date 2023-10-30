@@ -998,6 +998,12 @@ const englishStrings = {
   GUARANTEED_FIXED_PRICE : "Guaranteed fixed price until \nJan 1, 2025",
   INTRODUCTORY_OFFER_TO_BE_ANNOUNCED_SOON : "Introductory offer will be announced soon!",
   NO_CHARGES_TILL : "No charges till Dec 31",
+  DIRECT_PAYMENT_NO_COMMISSIONS : "Direct payment.\nNo commissions",
+  CUSTOMER_PAYS_DIRECTLY : "Customer pays to you directly via \ncash or UPI",
+  HUNDRED_PERCENT_FARE_GOES_TO_YOU : "100% of the fare\ngoes to you!",
+  FARE_SHOWN_IS_FARE_YOU_GET : "The fare shown is the fare you get.\nNo hidden charges.",
+  BE_A_PART_OF_OPEN_MOBILITY_REVOLUTION : "Be a part of the Open\nMobility Revolution!",
+  OUR_DATA_AND_PRODUCT_ARE_TRANSPARENT : "Our data and product roadmap are\ntransparent for all."
 }
 
 

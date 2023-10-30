@@ -967,7 +967,13 @@ const kannadaStrings = {
   SIGNUP_EARLY_FOR_SPECIAL_OFFERS : "ವಿಶೇಷ ಕೊಡುಗೆಗಳಿಗಾಗಿ ಮುಂಚಿತವಾಗಿ ಸೈನ್ ಅಪ್ ಮಾಡಿ",
   GUARANTEED_FIXED_PRICE : "ಜನವರಿ 1, 2025 ರವರೆಗೆ ಖಾತರಿಪಡಿಸಿದ ಸ್ಥಿರ ಬೆಲೆ",
   INTRODUCTORY_OFFER_TO_BE_ANNOUNCED_SOON : "ಪರಿಚಯಾತ್ಮಕ ಕೊಡುಗೆಯನ್ನು ಶೀಘ್ರದಲ್ಲೇ ಪ್ರಕಟಿಸಲಾಗುವುದು!",
-  NO_CHARGES_TILL : "ಡಿಸೆಂಬರ್ 31 ರವರೆಗೆ ಯಾವುದೇ ಶುಲ್ಕಗಳಿಲ್ಲ"
+  NO_CHARGES_TILL : "ಡಿಸೆಂಬರ್ 31 ರವರೆಗೆ ಯಾವುದೇ ಶುಲ್ಕಗಳಿಲ್ಲ",
+  DIRECT_PAYMENT_NO_COMMISSIONS : "ನೇರ ಪಾವತಿ.\nಯಾವುದೇ ಆಯೋಗಗಳು",
+  CUSTOMER_PAYS_DIRECTLY : "ಗ್ರಾಹಕರು ನಿಮಗೆ ನೇರವಾಗಿ \nನಗದು ಅಥವಾ UPI ಮೂಲಕ ಪಾವತಿಸುತ್ತಾರೆ",
+  HUNDRED_PERCENT_FARE_GOES_TO_YOU : "100% ದರವು ನಿಮಗೆ ಹೋಗುತ್ತದೆ!",
+  FARE_SHOWN_IS_FARE_YOU_GET : "ತೋರಿಸಿರುವ ದರವು ನೀವು ಪಡೆಯುವ ದರವಾಗಿದೆ.\nಯಾವುದೇ ಗುಪ್ತ ಶುಲ್ಕಗಳಿಲ್ಲ.",
+  BE_A_PART_OF_OPEN_MOBILITY_REVOLUTION : "ಮುಕ್ತ\nಮೊಬಿಲಿಟಿ ಕ್ರಾಂತಿಯ ಭಾಗವಾಗಿರಿ!",
+  OUR_DATA_AND_PRODUCT_ARE_TRANSPARENT : "ನಮ್ಮ ಡೇಟಾ ಮತ್ತು ಉತ್ಪನ್ನದ ಮಾರ್ಗಸೂಚಿ\nಎಲ್ಲರಿಗೂ ಪಾರದರ್ಶಕವಾಗಿದೆ."
 }
 
 
