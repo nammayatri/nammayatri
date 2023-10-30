@@ -10,9 +10,10 @@ import qualified Data.Aeson.KeyMap as AKM
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.ByteString.Lazy as LBS
 import Data.Either.Extra (mapLeft)
+import Data.HashMap.Strict as HM hiding (map)
 import Data.Maybe (fromJust)
 import qualified Data.Serialize as Serialize
-import qualified Data.Text as T
+import Data.Text as T hiding (map)
 import qualified Data.Text.Encoding as TE
 import Database.Beam as B hiding (runUpdate)
 import EulerHS.CachedSqlDBQuery as CDB
@@ -149,8 +150,9 @@ runUpdateCommands (cmd, val) streamKey = do
           case res of
             Right dataObj -> do
               Env {..} <- ask
-              let updatedJSON = getDbUpdateDataJson model dataObj
-              res'' <- EL.runIO $ streamRiderDrainerUpdates _kafkaConnection updatedJSON dbStreamKey'
+              let mappings = HM.fromList (map (bimap T.pack T.pack) (getMaps [dataObj]))
+                  newObject = replaceMappings (toJSON dataObj) mappings
+              res'' <- EL.runIO $ streamRiderDrainerUpdates _kafkaConnection newObject dbStreamKey' model
               either
                 ( \_ -> do
                     void $ publishDBSyncMetric Event.KafkaPushFailure
@@ -162,7 +164,7 @@ runUpdateCommands (cmd, val) streamKey = do
             Left _ -> do
               let updatedJSON = getDbUpdateDataJson model $ updValToJSON $ jsonKeyValueUpdates setClause <> getPKeyandValuesList tag
               Env {..} <- ask
-              res'' <- EL.runIO $ streamRiderDrainerUpdates _kafkaConnection updatedJSON dbStreamKey'
+              res'' <- EL.runIO $ streamRiderDrainerUpdates _kafkaConnection updatedJSON dbStreamKey' model
               either
                 ( \_ -> do
                     void $ publishDBSyncMetric Event.KafkaPushFailure
@@ -195,9 +197,9 @@ runUpdateCommands (cmd, val) streamKey = do
         (Right _, _) -> do
           pure $ Right id
 
-streamRiderDrainerUpdates :: ToJSON a => Producer.KafkaProducer -> a -> Text -> IO (Either Text ())
-streamRiderDrainerUpdates producer dbObject dbStreamKey = do
-  let topicName = "rider-drainer"
+streamRiderDrainerUpdates :: ToJSON a => Producer.KafkaProducer -> a -> Text -> Text -> IO (Either Text ())
+streamRiderDrainerUpdates producer dbObject dbStreamKey model = do
+  let topicName = "rider-drainer-" <> T.pack (camel (T.unpack model)) <> "BAP"
   result' <- KafkaProd.produceMessage producer (message topicName dbObject)
   case result' of
     Just err -> pure $ Left $ T.pack ("Kafka Error: " <> show err)
