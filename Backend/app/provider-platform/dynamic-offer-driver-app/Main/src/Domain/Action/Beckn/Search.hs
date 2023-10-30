@@ -137,6 +137,8 @@ data RentalQuoteInfo = RentalQuoteInfo
     perHourFreeKms :: Int,
     perExtraKmRate :: Money,
     nightShiftCharge :: Maybe Money,
+    nightShiftStart :: Maybe TimeOfDay,
+    nightShiftEnd :: Maybe TimeOfDay,
     fromLocation :: LatLong,
     rentalTag :: Maybe Text,
     startTime :: UTCTime
@@ -564,6 +566,11 @@ mkQuoteInfo fromLoc toLoc startTime DQuoteSpecialZone.QuoteSpecialZone {..} = do
 mkRentalQuoteInfo :: DLoc.Location -> UTCTime -> (DQuoteRental.QuoteRental, FarePolicyD.FullFarePolicy) -> RentalQuoteInfo
 mkRentalQuoteInfo fromLoc startTime (DQuoteRental.QuoteRental {..}, farePolicy) = do
   let fromLocation = Maps.getCoordinates fromLoc
+      (nightShiftStart, nightShiftEnd) = do
+        case farePolicy.nightShiftBounds of
+          Nothing -> (Nothing, Nothing)
+          Just nightShiftBound -> (Just nightShiftBound.nightShiftStart, Just nightShiftBound.nightShiftEnd)
+
       (perHourCharge, perExtraKmRate, perHourFreeKms, nightShiftCharge) = do
         case farePolicy.farePolicyDetails of
           (FarePolicyD.RentalDetails fpRentalDetails) ->

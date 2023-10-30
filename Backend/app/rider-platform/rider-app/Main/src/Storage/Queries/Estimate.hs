@@ -102,11 +102,11 @@ instance FromTType' BeamE.Estimate Estimate where
             tripTerms = trip,
             estimateBreakupList = etB,
             nightShiftInfo =
-              ((,,,) <$> nightShiftCharge <*> oldNightShiftCharge <*> nightShiftStart <*> nightShiftEnd)
-                <&> \(nightShiftCharge', oldNightShiftCharge', nightShiftStart', nightShiftEnd') ->
+              ((,,) <$> nightShiftCharge <*> nightShiftStart <*> nightShiftEnd)
+                <&> \(nightShiftCharge', nightShiftStart', nightShiftEnd') ->
                   DE.NightShiftInfo
                     { nightShiftCharge = nightShiftCharge',
-                      oldNightShiftCharge = oldNightShiftCharge',
+                      oldNightShiftCharge = oldNightShiftCharge,
                       nightShiftStart = nightShiftStart',
                       nightShiftEnd = nightShiftEnd'
                     },
@@ -143,7 +143,7 @@ instance ToTType' BeamE.Estimate Estimate where
         BeamE.driversLocation = driversLocation,
         BeamE.tripTermsId = getId <$> (tripTerms <&> (.id)),
         BeamE.nightShiftCharge = nightShiftInfo <&> (.nightShiftCharge),
-        BeamE.oldNightShiftCharge = nightShiftInfo <&> (.oldNightShiftCharge),
+        BeamE.oldNightShiftCharge = (.oldNightShiftCharge) =<< nightShiftInfo,
         BeamE.nightShiftStart = nightShiftInfo <&> (.nightShiftStart),
         BeamE.nightShiftEnd = nightShiftInfo <&> (.nightShiftEnd),
         BeamE.status = status,

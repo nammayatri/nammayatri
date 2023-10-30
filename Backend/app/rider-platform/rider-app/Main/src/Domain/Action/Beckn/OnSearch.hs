@@ -103,7 +103,7 @@ data EstimateInfo = EstimateInfo
 
 data NightShiftInfo = NightShiftInfo
   { nightShiftCharge :: Money,
-    oldNightShiftCharge :: Centesimal,
+    oldNightShiftCharge :: Maybe Centesimal,
     nightShiftStart :: TimeOfDay,
     nightShiftEnd :: TimeOfDay
   }
@@ -152,7 +152,7 @@ data RentalQuoteDetails = RentalQuoteDetails
     perHourCharge :: Money,
     perHourFreeKms :: Int,
     perExtraKmRate :: Money,
-    nightShiftCharge :: Money
+    nightShiftInfo :: Maybe NightShiftInfo
   }
 
 validateRequest :: DOnSearchReq -> Flow ValidatedOnSearchReq
@@ -268,7 +268,12 @@ buildOneWaySpecialZoneQuoteDetails OneWaySpecialZoneQuoteDetails {..} = do
 buildRentalDetails :: MonadFlow m => RentalQuoteDetails -> m DRentalDetails.RentalDetails
 buildRentalDetails RentalQuoteDetails {..} = do
   let quoteId = Id id
-  pure DRentalDetails.RentalDetails {id = quoteId, ..}
+      nightShiftinfo' =
+        ( \nightShiftInfo'' ->
+            DRentalDetails.NightShiftInfo nightShiftInfo''.nightShiftCharge Nothing nightShiftInfo''.nightShiftStart nightShiftInfo''.nightShiftEnd
+        )
+          <$> nightShiftInfo
+  pure DRentalDetails.RentalDetails {id = quoteId, nightShiftInfo = nightShiftinfo', ..}
 
 buildTripTerms ::
   MonadFlow m =>

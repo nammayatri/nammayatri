@@ -24,9 +24,17 @@ data RentalDetails = RentalDetails
     perHourCharge :: Money,
     perHourFreeKms :: Int,
     perExtraKmRate :: Money,
-    nightShiftCharge :: Money
+    nightShiftInfo :: Maybe NightShiftInfo
   }
   deriving (Generic, Show)
+
+data NightShiftInfo = NightShiftInfo
+  { nightShiftCharge :: Money,
+    oldNightShiftCharge :: Maybe Centesimal,
+    nightShiftStart :: TimeOfDay,
+    nightShiftEnd :: TimeOfDay
+  }
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
 data RentalDetailsAPIEntity = RentalDetailsAPIEntity
   { bppQuoteId :: Text,
@@ -35,6 +43,6 @@ data RentalDetailsAPIEntity = RentalDetailsAPIEntity
     perHourCharge :: Money,
     perHourFreeKms :: Int,
     perExtraKmRate :: Money,
-    nightShiftCharge :: Money
+    nightShiftInfo :: Maybe NightShiftInfo
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)

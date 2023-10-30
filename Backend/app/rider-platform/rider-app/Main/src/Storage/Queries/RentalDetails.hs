@@ -31,6 +31,7 @@ findById rentalSlabId = findOneWithKV [Se.Is BeamRS.id $ Se.Eq (getId rentalSlab
 
 instance FromTType' BeamRS.RentalDetails RentalDetails where
   fromTType' BeamRS.RentalDetailsT {..} = do
+    let nightShiftInfo = ((,,) <$> nightShiftCharge <*> nightShiftStart <*> nightShiftEnd) <&> \(nightShiftCharge', nightShiftStart', nightShiftEnd') -> NightShiftInfo nightShiftCharge' Nothing nightShiftStart' nightShiftEnd'
     pure $
       Just
         RentalDetails
@@ -46,5 +47,7 @@ instance ToTType' BeamRS.RentalDetails RentalDetails where
         BeamRS.perHourCharge = perHourCharge,
         BeamRS.perHourFreeKms = perHourFreeKms,
         BeamRS.perExtraKmRate = perExtraKmRate,
-        BeamRS.nightShiftCharge = nightShiftCharge
+        BeamRS.nightShiftCharge = (.nightShiftCharge) <$> nightShiftInfo,
+        BeamRS.nightShiftStart = (.nightShiftStart) <$> nightShiftInfo,
+        BeamRS.nightShiftEnd = (.nightShiftEnd) <$> nightShiftInfo
       }

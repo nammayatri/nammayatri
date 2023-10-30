@@ -81,9 +81,6 @@ data ConfirmQuoteDetails
   | ConfirmOneWaySpecialZoneDetails Text
   deriving (Show, Generic)
 
-calculateRentalEstimateFare :: Int -> RentalDetails -> Money
-calculateRentalEstimateFare duration RentalDetails {..} = baseFare + perHourCharge * Money duration + nightShiftCharge
-
 confirm ::
   ( EsqDBFlow m r,
     CacheFlow m r,
@@ -102,8 +99,6 @@ confirm DConfirmReq {..} = do
         startTime <- mbStartTime & fromMaybeM (InvalidRequest "Rental confirm quote should have startTime param")
         rentalDuration <- mbRentalDuration & fromMaybeM (InvalidRequest "Rental confirm quote should have rentalDuration param")
         checkRentalBookingsOverlapping startTime rentalDuration
-        let estimateFare = calculateRentalEstimateFare rentalDuration rentalDetails
-        _ <- QQuote.updateQuoteEstimateFare quoteId estimateFare
         pure $ Just rentalDetails.id.getId
       DQuote.DriverOfferDetails driverOffer -> do
         estimate <- QEstimate.findById driverOffer.estimateId >>= fromMaybeM EstimateNotFound
@@ -118,18 +113,17 @@ confirm DConfirmReq {..} = do
   when (searchRequest.validTill < now) $
     throwError SearchRequestExpired
   unless (searchRequest.riderId == personId) $ throwError AccessDenied
-  updatedFareQuote <- QQuote.findById quoteId >>= fromMaybeM (QuoteDoesNotExist quoteId.getId)
   let fromLocation = searchRequest.fromLocation
       mbToLocation = searchRequest.toLocation
-      driverId = getDriverId updatedFareQuote.quoteDetails
+      driverId = getDriverId quote.quoteDetails
   exophone <- findRandomExophone searchRequest.merchantId
-  booking <- buildBooking searchRequest fulfillmentId updatedFareQuote fromLocation mbToLocation exophone now mbStartTime Nothing paymentMethodId driverId mbRentalDuration
+  booking <- buildBooking searchRequest fulfillmentId quote fromLocation mbToLocation exophone now mbStartTime Nothing paymentMethodId driverId mbRentalDuration
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   riderPhone <- mapM decrypt person.mobileNumber
   let riderName = person.firstName
   triggerBookingCreatedEvent BookingEventData {booking = booking}
   merchant <- CQM.findById booking.merchantId >>= fromMaybeM (MerchantNotFound booking.merchantId.getId)
-  details <- mkConfirmQuoteDetails updatedFareQuote.quoteDetails fulfillmentId
+  details <- mkConfirmQuoteDetails quote.quoteDetails fulfillmentId
   paymentMethod <- forM paymentMethodId $ \paymentMethodId' -> do
     paymentMethod <-
       CQMPM.findByIdAndMerchantId paymentMethodId' searchRequest.merchantId
@@ -141,17 +135,17 @@ confirm DConfirmReq {..} = do
   -- DB.runTransaction $ do
   _ <- QRideB.createBooking booking
   _ <- QPFS.updateStatus searchRequest.riderId DPFS.WAITING_FOR_DRIVER_ASSIGNMENT {bookingId = booking.id, validTill = searchRequest.validTill}
-  _ <- QEstimate.updateStatusByRequestId updatedFareQuote.requestId DEstimate.COMPLETED
+  _ <- QEstimate.updateStatusByRequestId quote.requestId DEstimate.COMPLETED
   QPFS.clearCache searchRequest.riderId
   return $
     DConfirmRes
       { booking,
-        providerId = updatedFareQuote.providerId,
-        providerUrl = updatedFareQuote.providerUrl,
-        itemId = updatedFareQuote.itemId,
+        providerId = quote.providerId,
+        providerUrl = quote.providerUrl,
+        itemId = quote.itemId,
         fromLoc = fromLocation,
         toLoc = mbToLocation,
-        vehicleVariant = updatedFareQuote.vehicleVariant,
+        vehicleVariant = quote.vehicleVariant,
         quoteDetails = details,
         searchRequestId = searchRequest.id,
         maxEstimatedDistance = searchRequest.maxDistance,

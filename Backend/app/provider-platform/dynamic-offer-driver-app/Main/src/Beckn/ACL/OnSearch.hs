@@ -244,7 +244,7 @@ mkQuoteEntitiesRental start provider it = do
                   minimum_value = baseFare,
                   maximum_value = baseFare
                 },
-            tags = Just $ OS.TG [mkRentalTag it]
+            tags = Just $ OS.TG [mkRentalTag it, mkRentalRateCardTag it]
           }
   QuoteEntities
     { fulfillment,
@@ -274,8 +274,16 @@ mkQuoteEntitiesRental start provider it = do
                   code = Just "rental_base_distance",
                   name = Just "Base Distance",
                   value = Just $ show info.baseDistance.getMeters
-                },
-              OS.Tag
+                }
+            ]
+        }
+    mkRentalRateCardTag info =
+      OS.TagGroup
+        { display = False,
+          code = "rate_card",
+          name = "Rate Card",
+          list =
+            [ OS.Tag
                 { display = Just True,
                   code = Just "rental_per_hour_charge",
                   name = Just "Per Hour Charge",
@@ -295,9 +303,21 @@ mkQuoteEntitiesRental start provider it = do
                 },
               OS.Tag
                 { display = Just True,
-                  code = Just "rental_night_shift_charge",
+                  code = Just "night_shift_charge",
                   name = Just "Night Shift Charge",
                   value = show . (.getMoney) <$> info.nightShiftCharge
+                },
+              OS.Tag
+                { display = (\_ -> Just False) =<< info.nightShiftStart,
+                  code = (\_ -> Just "night_shift_start") =<< info.nightShiftStart,
+                  name = (\_ -> Just "Night Shift Start Timings") =<< info.nightShiftStart,
+                  value = (Just . show) =<< info.nightShiftStart
+                },
+              OS.Tag
+                { display = (\_ -> Just False) =<< info.nightShiftEnd,
+                  code = (\_ -> Just "night_shift_end") =<< info.nightShiftEnd,
+                  name = (\_ -> Just "Night Shift End Timings") =<< info.nightShiftEnd,
+                  value = (Just . show) =<< info.nightShiftEnd
                 }
             ]
         }

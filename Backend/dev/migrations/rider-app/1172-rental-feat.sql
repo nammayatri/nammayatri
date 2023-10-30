@@ -4,7 +4,9 @@ CREATE TABLE atlas_app.rental_details (
     per_hour_charge int NOT NULL,
     per_hour_free_kms int NOT NULL,
     per_extra_km_rate int NOT NULL,
-    night_shift_charge int NOT NULL
+    night_shift_charge int,
+    night_shift_start time without time zone,
+    night_shift_end time without time zone
 );
 
 ALTER TABLE atlas_app.rental_details OWNER TO atlas_app_user;

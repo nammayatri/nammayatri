@@ -29,7 +29,9 @@ data RentalDetailsT f = RentalDetailsT
     perHourCharge :: B.C f Money,
     perHourFreeKms :: B.C f Int,
     perExtraKmRate :: B.C f Money,
-    nightShiftCharge :: B.C f Money
+    nightShiftCharge :: B.C f (Maybe Money),
+    nightShiftStart :: B.C f (Maybe TimeOfDay),
+    nightShiftEnd :: B.C f (Maybe TimeOfDay)
   }
   deriving (Generic, B.Beamable)
 
