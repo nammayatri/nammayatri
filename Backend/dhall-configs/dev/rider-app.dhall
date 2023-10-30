@@ -158,7 +158,7 @@ let dontEnableForDb = [] : List Text
 
 let maxMessages
     : Text
-    = "1"
+    = "5000"
 
 in  { esqDBCfg
     , esqDBReplicaCfg

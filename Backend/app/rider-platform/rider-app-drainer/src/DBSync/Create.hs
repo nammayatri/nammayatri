@@ -7,9 +7,8 @@ module DBSync.Create where
 import Config.Env
 import Data.Aeson (encode)
 import qualified Data.ByteString.Lazy as LBS
-import qualified Data.HashMap.Strict as HM
 import Data.Maybe (fromJust)
-import qualified Data.Text as T
+import qualified Data.Text as T hiding (elem)
 import qualified Data.Text.Encoding as TE
 import EulerHS.CachedSqlDBQuery as CDB
 import EulerHS.Language as EL
@@ -18,8 +17,8 @@ import EulerHS.Prelude
 import EulerHS.Types as ET
 import Kafka.Producer as KafkaProd
 import Kafka.Producer as Producer
+import Kernel.Beam.Lib.Utils (getMappings, replaceMappings)
 import qualified Kernel.Beam.Types as KBT
-import Text.Casing (camel)
 import Types.DBSync
 import Types.Event as Event
 import Utils.Utils
@@ -96,7 +95,7 @@ runCreateCommands cmds streamKey = do
             then pure [Right []]
             else do
               let objectIdentity = map (\(a, _, _, _) -> a) object
-                  mappings = HM.fromList (map (bimap T.pack T.pack) (getMaps objectIdentity))
+                  mappings = getMappings objectIdentity
                   newObjects = map (\object' -> replaceMappings (toJSON object') mappings) objectIdentity
                   entryIds = map (\(_, _, entryId', _) -> entryId') object
               Env {..} <- ask
@@ -148,7 +147,7 @@ runCreateCommands cmds streamKey = do
 
 streamRiderDrainerCreates :: ToJSON a => Producer.KafkaProducer -> [a] -> Text -> Text -> IO (Either Text ())
 streamRiderDrainerCreates producer dbObject streamKey model = do
-  let topicName = "rider-drainer-" <> T.pack (camel (T.unpack model)) <> "BAP"
+  let topicName = "aap-sessionizer-" <> T.toLower model
   result' <- mapM (KafkaProd.produceMessage producer . message topicName) dbObject
   if any isJust result' then pure $ Left ("Kafka Error: " <> show result') else pure $ Right ()
   where

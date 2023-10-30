@@ -13,7 +13,7 @@ import qualified Data.ByteString.Lazy as LBS
 import Data.Either.Extra (mapLeft)
 import Data.Maybe (fromJust)
 import qualified Data.Serialize as Serialize
-import qualified Data.Text as T
+import Data.Text as T hiding (elem, map)
 import qualified Data.Text.Encoding as TE
 import Database.Beam as B hiding (runUpdate)
 import EulerHS.CachedSqlDBQuery as CDB
@@ -25,9 +25,10 @@ import EulerHS.Types as ET
 import Kafka.Producer as KafkaProd
 import Kafka.Producer as Producer
 import qualified Kernel.Beam.Functions as BeamFunction
+import Kernel.Beam.Lib.Utils (getMappings, replaceMappings)
 import qualified Kernel.Beam.Types as KBT
 import Sequelize (Model, Set, Where)
-import Text.Casing
+import Text.Casing (pascal)
 import Types.DBSync
 import Types.Event as Event
 import Utils.Utils
@@ -184,8 +185,9 @@ runUpdateCommands (cmd, val) dbStreamKey = do
           case res of
             Right dataObj -> do
               Env {..} <- ask
-              let updatedJSON = getDbUpdateDataJson model dataObj
-              res'' <- EL.runIO $ streamDriverDrainerUpdates _kafkaConnection updatedJSON dbStreamKey'
+              let mappings = getMappings [dataObj]
+                  newObject = replaceMappings (toJSON dataObj) mappings
+              res'' <- EL.runIO $ streamDriverDrainerUpdates _kafkaConnection newObject dbStreamKey' model
               either
                 ( \_ -> do
                     void $ publishDBSyncMetric Event.KafkaPushFailure
@@ -197,7 +199,7 @@ runUpdateCommands (cmd, val) dbStreamKey = do
             Left _ -> do
               let updatedJSON = getDbUpdateDataJson model $ updValToJSON $ jsonKeyValueUpdates setClause <> getPKeyandValuesList tag
               Env {..} <- ask
-              res'' <- EL.runIO $ streamDriverDrainerUpdates _kafkaConnection updatedJSON dbStreamKey'
+              res'' <- EL.runIO $ streamDriverDrainerUpdates _kafkaConnection updatedJSON dbStreamKey' model
               either
                 ( \_ -> do
                     void $ publishDBSyncMetric Event.KafkaPushFailure
@@ -230,9 +232,9 @@ runUpdateCommands (cmd, val) dbStreamKey = do
         (Right _, _) -> do
           pure $ Right id
 
-streamDriverDrainerUpdates :: ToJSON a => Producer.KafkaProducer -> a -> Text -> IO (Either Text ())
-streamDriverDrainerUpdates producer dbObject dbStreamKey = do
-  let topicName = "driver-drainer"
+streamDriverDrainerUpdates :: ToJSON a => Producer.KafkaProducer -> a -> Text -> Text -> IO (Either Text ())
+streamDriverDrainerUpdates producer dbObject dbStreamKey model = do
+  let topicName = "adob-sessionizer-" <> T.toLower model
   result' <- KafkaProd.produceMessage producer (message topicName dbObject)
   case result' of
     Just err -> pure $ Left $ T.pack ("Kafka Error: " <> show err)
