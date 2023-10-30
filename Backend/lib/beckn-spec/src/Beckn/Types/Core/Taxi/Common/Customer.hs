@@ -37,7 +37,7 @@ instance FromJSON Customer where
 instance ToJSON Customer where
   toJSON = genericToJSON $ stripPrefixUnderscoreIfAny {omitNothingFields = True}
 
-data Contact = Contact
+newtype Contact = Contact
   { phone :: Phone
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)

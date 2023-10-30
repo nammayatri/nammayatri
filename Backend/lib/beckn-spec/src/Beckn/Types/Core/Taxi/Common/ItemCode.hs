@@ -51,7 +51,7 @@ instance Show ItemCode where
   show _ = error "ItemCode content doesn't correspond its FareProductType/"
 
 instance Read ItemCode where
-  readsPrec d' r' =
+  readsPrec d' =
     readParen
       (d' > app_prec)
       ( \r ->
@@ -80,7 +80,6 @@ instance Read ItemCode where
                    (v1, r2) <- readsPrec (app_prec + 1) r1
                ]
       )
-      r'
     where
       app_prec = 10
       stripPrefix pref r = bool [] [List.drop (length pref) r] $ List.isPrefixOf pref r

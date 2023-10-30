@@ -76,7 +76,7 @@ data VehicleRegistrationCertificateAPIEntity = VehicleRegistrationCertificateAPI
 instance EncryptedItem VehicleRegistrationCertificate where
   type Unencrypted VehicleRegistrationCertificate = (DecryptedVehicleRegistrationCertificate, HashSalt)
   encryptItem (VehicleRegistrationCertificate {..}, salt) = do
-    certificateNumber_ <- encryptItem $ (,salt) certificateNumber
+    certificateNumber_ <- encryptItem (certificateNumber, salt)
     return VehicleRegistrationCertificate {certificateNumber = certificateNumber_, ..}
   decryptItem VehicleRegistrationCertificate {..} = do
     certificateNumber_ <- fst <$> decryptItem certificateNumber
@@ -85,7 +85,7 @@ instance EncryptedItem VehicleRegistrationCertificate where
 instance EncryptedItem' VehicleRegistrationCertificate where
   type UnencryptedItem VehicleRegistrationCertificate = DecryptedVehicleRegistrationCertificate
   toUnencrypted a salt = (a, salt)
-  fromUnencrypted a = fst a
+  fromUnencrypted = fst
 
 makeRCAPIEntity :: VehicleRegistrationCertificate -> Text -> VehicleRegistrationCertificateAPIEntity
 makeRCAPIEntity VehicleRegistrationCertificate {..} rcDecrypted =

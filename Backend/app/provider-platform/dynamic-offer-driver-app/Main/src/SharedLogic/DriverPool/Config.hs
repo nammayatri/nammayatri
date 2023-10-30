@@ -15,8 +15,8 @@
 module SharedLogic.DriverPool.Config where
 
 import Domain.Types.Merchant.DriverPoolConfig
-import qualified Domain.Types.Vehicle.Variant as Variant
 import Domain.Types.Merchant.MerchantOperatingCity
+import qualified Domain.Types.Vehicle.Variant as Variant
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Error

@@ -52,4 +52,4 @@ instance EncryptedItem Person where
 instance EncryptedItem' Person where
   type UnencryptedItem Person = DecryptedPerson
   toUnencrypted a salt = (a, salt)
-  fromUnencrypted a = fst a
+  fromUnencrypted = fst

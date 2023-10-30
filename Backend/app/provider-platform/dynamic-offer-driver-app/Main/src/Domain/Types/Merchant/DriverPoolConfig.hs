@@ -17,8 +17,8 @@ module Domain.Types.Merchant.DriverPoolConfig where
 import Data.Time (UTCTime)
 import Domain.Types.Common
 import Domain.Types.Merchant (Merchant)
-import qualified Domain.Types.Vehicle.Variant as DVeh
 import Domain.Types.Merchant.MerchantOperatingCity
+import qualified Domain.Types.Vehicle.Variant as DVeh
 import EulerHS.Prelude hiding (id)
 import Kernel.Types.Common
 import Kernel.Types.Id

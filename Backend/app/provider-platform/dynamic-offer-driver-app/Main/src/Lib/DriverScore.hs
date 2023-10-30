@@ -106,7 +106,7 @@ eventPayloadHandler _ DST.OnRideCompletion {..} = do
         else do
           mbBooking <- B.runInReplica $ BQ.findById ride.bookingId
           -- mbBooking <- BQ.findById ride.bookingId
-          let incrementBonusEarningsBy = fromMaybe 0 $ (\booking -> Just $ fromMaybe 0 (getMoney <$> booking.fareParams.driverSelectedFare) + fromMaybe 0 (getMoney <$> booking.fareParams.customerExtraFee)) =<< mbBooking
+          let incrementBonusEarningsBy = fromMaybe 0 $ (\booking -> Just $ maybe 0 getMoney (booking.fareParams.driverSelectedFare) + maybe 0 getMoney (booking.fareParams.customerExtraFee)) =<< mbBooking
           incrementLateNightTripsCountBy <- isLateNightRide ride
           pure (fromMaybe (Money 0) ride.fare, incrementBonusEarningsBy, incrementLateNightTripsCountBy, 10)
     -- Esq.runNoTransaction $ do

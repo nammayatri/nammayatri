@@ -105,7 +105,7 @@ mkFullfillment ::
   m RideFulfillment.FulfillmentInfo
 mkFullfillment mbDriver ride booking mbVehicle mbImage tags = do
   agent <-
-    flip mapM mbDriver $ \driver -> do
+    forM mbDriver $ \driver -> do
       let agentTags =
             [ Tags.TagGroup
                 { display = False,
