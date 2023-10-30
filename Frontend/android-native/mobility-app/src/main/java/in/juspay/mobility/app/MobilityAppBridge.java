@@ -43,6 +43,8 @@ import com.google.android.play.core.review.ReviewManager;
 import com.google.android.play.core.review.ReviewManagerFactory;
 import com.google.firebase.analytics.FirebaseAnalytics;
 import com.google.firebase.messaging.FirebaseMessaging;
+import com.google.firebase.perf.FirebasePerformance;
+import com.google.firebase.perf.metrics.Trace;
 import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.YouTubePlayer;
 import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.listeners.AbstractYouTubePlayerListener;
 import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.listeners.YouTubePlayerFullScreenListener;
@@ -92,6 +94,8 @@ public class MobilityAppBridge extends HyperBridge {
     public static YouTubePlayer youtubePlayer;
     public static float videoDuration = 0;
 
+    protected HashMap<String, Trace> traceElements;
+
     private static final ArrayList<SendMessageCallBack> sendMessageCallBacks = new ArrayList<>();
     CallBack callBack = new CallBack() {
         @Override
@@ -132,6 +136,7 @@ public class MobilityAppBridge extends HyperBridge {
         ChatService.registerCallback(callBack);
         InAppNotification.registerCallback(callBack);
         RemoteAssetsDownloader.registerCallback(callBack);
+        traceElements = new HashMap<>();
         clevertapDefaultInstance = CleverTapAPI.getDefaultInstance(bridgeComponents.getContext());
     }
 
@@ -183,6 +188,22 @@ public class MobilityAppBridge extends HyperBridge {
     public static void firebaseLogEvent(String event) {
         Bundle params = new Bundle();
         mFirebaseAnalytics.logEvent(event, params);
+    }
+
+    @JavascriptInterface
+    public void startTracingPerf(String attribute){
+        Trace myTrace = FirebasePerformance.getInstance().newTrace(attribute);
+        myTrace.start();
+        traceElements.put(attribute, myTrace);
+    }
+
+    @JavascriptInterface
+    public void stopTracingPerf(String attribute){
+        if(traceElements.containsKey(attribute)) {
+            Trace myTrace = traceElements.get(attribute);
+            myTrace.stop();
+            traceElements.remove(attribute);
+        }
     }
 
     @JavascriptInterface

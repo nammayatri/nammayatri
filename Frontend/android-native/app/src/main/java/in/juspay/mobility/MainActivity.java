@@ -66,6 +66,7 @@ import com.google.android.play.core.install.model.AppUpdateType;
 import com.google.android.play.core.install.model.UpdateAvailability;
 import com.google.firebase.analytics.FirebaseAnalytics;
 import com.google.firebase.messaging.FirebaseMessaging;
+import com.google.firebase.perf.metrics.AddTrace;
 import com.google.gson.Gson;
 
 import org.json.JSONException;
@@ -264,6 +265,7 @@ public class MainActivity extends AppCompatActivity {
 
     @SuppressLint("SetJavaScriptEnabled")
     @Override
+    @AddTrace(name = "onCreateTrace", enabled = true /* optional */)
     protected void onCreate(Bundle savedInstanceState) {
 
         Vector<String> res = handleDeepLinkIfAvailable(getIntent());
