@@ -114,6 +114,7 @@ import Constants.Configs
 import Engineering.Helpers.Commons as EHC
 import PrestoDOM (initUI)
 import Common.Resources.Constants (zoomLevel)
+import Types.App as TA
 
 
 baseAppFlow :: Boolean -> Maybe Event -> FlowBT String Unit
@@ -203,9 +204,12 @@ appUpdatedFlow payload = do
 checkTimeSettings :: FlowBT String Unit
 checkTimeSettings = do
   isEnabled <- liftFlowBT $ runEffectFn1 JB.isNetworkTimeEnabled unit
+  logField_ <- lift $ lift $ getLogFields
   if isEnabled then do
+    liftFlowBT $ logEvent logField_ "ny_network_time_enabled"
     liftFlowBT $ unregisterDateAndTime
   else do
+    liftFlowBT $ logEvent logField_ "ny_network_time_disabled"
     modifyScreenState $ AppUpdatePopUpScreenType (\appUpdatePopUpScreenState -> appUpdatePopUpScreenState { updatePopup =DateAndTime })
     lift $ lift $ doAff do liftEffect hideSplash
     _ <- UI.handleAppUpdatePopUp
@@ -352,6 +356,9 @@ handleDeepLinksFlow event activeRideResp = do
             "plans" | getValueToLocalNativeStore IS_RIDE_ACTIVE /= "true" && getValueToLocalNativeStore DISABLE_WIDGET /= "true" -> do
               lift $ lift $ doAff do liftEffect hideSplash
               updateAvailableAppsAndGoToSubs
+            "lang" -> do
+              lift $ lift $ doAff do liftEffect hideSplash 
+              selectLanguageFlow
             _ -> pure unit
         Nothing -> pure unit
   (GlobalState allState) <- getState
@@ -928,6 +935,7 @@ driverProfileFlow = do
       _ <- Remote.callDriverToDriverBT  state.data.rcNumber
       pure $ toast $ (getString CALL_REQUEST_HAS_BEEN_PLACED)
       driverProfileFlow
+    TA.GO_HOME -> homeScreenFlow
 
 
     DRIVER_ALTERNATE_CALL_API1 updatedState -> do
@@ -1237,6 +1245,8 @@ goToLocationFlow = do
 
 selectLanguageFlow :: FlowBT String Unit
 selectLanguageFlow = do
+  let selectLang = getValueToLocalStore LANGUAGE_KEY
+  modifyScreenState $ SelectLanguageScreenStateType (\selectLangState -> selectLangState{ props{ selectedLanguage = if (selectLang == "__failed") then "EN_US" else selectLang}})
   action <- UI.selectLanguageScreen
   case action of
     CHANGE_LANGUAGE -> do

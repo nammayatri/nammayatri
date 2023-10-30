@@ -44,11 +44,13 @@ public class TranslatorMLKit {
     public Translator downloadModel(String initialLanguage, String finalLanguage) {
         if (finalLanguage == null || finalLanguage.equals("null")) {
             finalLanguage = "en";
+        } else if (finalLanguage.length() >= 2){
+            finalLanguage = finalLanguage.substring(0, 2).toLowerCase();
         }
         TranslatorOptions options =
                 new TranslatorOptions.Builder()
                         .setSourceLanguage(initialLanguage)
-                        .setTargetLanguage(finalLanguage.substring(0, 2).toLowerCase())
+                        .setTargetLanguage(finalLanguage)
                         .build();
         final Translator scopedTranslator =
                 Translation.getClient(options);
