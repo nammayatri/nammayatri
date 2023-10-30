@@ -51,9 +51,8 @@ import Components.SelectListModal.Controller as CancelRidePopUp
 import Components.SettingSideBar.Controller as SettingSideBarController
 import Components.SourceToDestination.Controller as SourceToDestinationController
 import Control.Monad.Except.Trans (runExceptT)
-import Control.Monad.Except.Trans (runExceptT)
+import Control.Monad.Except (runExcept)
 import Control.Monad.Trans.Class (lift)
-import Control.Transformers.Back.Trans (runBackT)
 import Control.Transformers.Back.Trans (runBackT)
 import Data.Array ((!!), filter, null, any, snoc, length, head, last, sortBy, union, elem, findIndex)
 import Data.Function.Uncurried (runFn3)
@@ -109,6 +108,7 @@ import Screens.RideBookingFlow.HomeScreen.Config(reportIssueOptions)
 import Data.Function (const)
 import Data.List ((:))
 import Common.Resources.Constants (zoomLevel, pickupZoomLevel)
+import Screens.RideBookingFlow.HomeScreen.Config
 
 instance showAction :: Show Action where
   show _ = ""
@@ -2218,14 +2218,21 @@ tipEnabledState state = state { props{customerTip {isTipSelected= true, tipForDr
 isTipEnabled :: HomeScreenState -> Boolean
 isTipEnabled state = do
     let tipConfig = state.data.config.customerTip
-    case state.data.selectedEstimatesObject.vehicleVariant of 
-        "AUTO_RICKSHAW" -> tipConfig.auto
-        _ -> tipConfig.cabs
+        selectedEstimatesObject = getSelectedEstimatesObject "Lazy"
+    case selectedEstimatesObject of
+      Just obj -> 
+        case obj.vehicleVariant of 
+            "AUTO_RICKSHAW" -> tipConfig.auto
+            _ -> tipConfig.cabs
+      Nothing -> case state.data.selectedEstimatesObject.vehicleVariant of 
+                    "AUTO_RICKSHAW" -> tipConfig.auto
+                    _ -> tipConfig.cabs
 
 estimatesFlow :: Array EstimateAPIEntity -> HomeScreenState -> Eval Action ScreenOutput HomeScreenState
 estimatesFlow estimatedQuotes state = do
   let estimatesInfo = getEstimatesInfo estimatedQuotes "AUTO_RICKSHAW" state
       _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_estimate"
+  void $ pure $ setSelectedEstimatesObject estimatesInfo.defaultQuote
   if not (null estimatesInfo.estimatedVarient) && isLocalStageOn FindingEstimate then do
     let lang = getValueToLocalStore LANGUAGE_KEY
     exit
@@ -2262,6 +2269,7 @@ estimatesFlow estimatedQuotes state = do
                             , baseFare: estimatesInfo.baseFare, extraFare: estimatesInfo.extraFare, pickUpCharges: estimatesInfo.pickUpCharges
                             , vehicleVariant : ""
                             }
+                , selectedEstimatesObject = estimatesInfo.defaultQuote
                 }
         }
 
@@ -2269,6 +2277,7 @@ specialZoneFlow :: Array OfferRes -> HomeScreenState -> Eval Action ScreenOutput
 specialZoneFlow estimatedQuotes state = do
   let quoteList = getSpecialZoneQuotes estimatedQuotes state.data.config.estimateAndQuoteConfig
       defaultQuote = fromMaybe ChooseVehicleController.config (quoteList !! 0)
+  void $ pure $ setSelectedEstimatesObject defaultQuote
   if ((not (null quoteList)) && (isLocalStageOn FindingEstimate)) then do
     let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_quote"
     _ <- pure $ updateLocalStage SettingPrice
@@ -2283,6 +2292,7 @@ specialZoneFlow estimatedQuotes state = do
 estimatesListFlow :: Array EstimateAPIEntity -> HomeScreenState -> Eval Action ScreenOutput HomeScreenState
 estimatesListFlow estimates state = do
   let estimatesInfo = getEstimatesInfo estimates "" state
+  void $ pure $ setSelectedEstimatesObject estimatesInfo.defaultQuote
   if ((not (null estimatesInfo.quoteList)) && (isLocalStageOn FindingEstimate)) then do
     let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_quote"
         nearByDrivers = getNearByDrivers estimates

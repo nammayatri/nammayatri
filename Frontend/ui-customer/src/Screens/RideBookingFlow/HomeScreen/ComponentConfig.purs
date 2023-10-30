@@ -77,6 +77,9 @@ import Storage (KeyStore(..), getValueToLocalStore, isLocalStageOn, setValueToLo
 import Styles.Colors as Color
 import Common.Types.App (LazyCheck(..))
 import Engineering.Helpers.Suggestions (getSuggestionsfromKey)
+import Components.ChooseVehicle.Controller as ChooseVehicle
+import Foreign.Generic (decode, encode, Foreign, decodeJSON, encodeJSON, class Decode, class Encode)
+import Data.Either (Either(..))
 
 shareAppConfig :: ST.HomeScreenState -> PopUpModal.Config
 shareAppConfig state = let
@@ -897,19 +900,23 @@ searchLocationModelViewState state = { isSearchLocation: state.props.isSearchLoc
                                     }
 
 quoteListModelViewState :: ST.HomeScreenState -> QuoteListModel.QuoteListModelState
-quoteListModelViewState state = { source: state.data.source
-                            , destination: state.data.destination
-                            , quoteListModel: state.data.quoteListModelState
-                            , selectedQuote: state.props.selectedQuote
-                            , autoSelecting: state.props.autoSelecting
-                            , searchExpire: state.props.searchExpire
-                            , showProgress : (DA.null state.data.quoteListModelState) && isLocalStageOn FindingQuotes
-                            , tipViewProps : getTipViewProps state.props.tipViewProps
-                            , findingRidesAgain : state.props.findingRidesAgain
-                            , progress : state.props.findingQuotesProgress
-                            , appConfig : state.data.config
-                            , vehicleVariant : state.data.selectedEstimatesObject.vehicleVariant
-                            }
+quoteListModelViewState state = let vehicleVariant = case (getSelectedEstimatesObject "Lazy") of
+                                                        Nothing -> state.data.selectedEstimatesObject.vehicleVariant
+                                                        Just obj -> obj.vehicleVariant
+                                in
+                                { source: state.data.source
+                                , destination: state.data.destination
+                                , quoteListModel: state.data.quoteListModelState
+                                , selectedQuote: state.props.selectedQuote
+                                , autoSelecting: state.props.autoSelecting
+                                , searchExpire: state.props.searchExpire
+                                , showProgress : (DA.null state.data.quoteListModelState) && isLocalStageOn FindingQuotes
+                                , tipViewProps : getTipViewProps state.props.tipViewProps
+                                , findingRidesAgain : state.props.findingRidesAgain
+                                , progress : state.props.findingQuotesProgress
+                                , appConfig : state.data.config
+                                , vehicleVariant : vehicleVariant
+                                }
 
 rideRequestAnimConfig :: AnimConfig.AnimConfig
 rideRequestAnimConfig =
@@ -1301,3 +1308,12 @@ getCarouselData state =
         {image : "ny_ic_locomotor_arrival" , videoLink : "" , videoHeight :  0, imageHeight :  160, imageBgColor :  Color.blue600, title :   (getString EDUCATIONAL_POP_UP_SLIDE_4_TITLE) , description :  (getString EDUCATIONAL_POP_UP_SLIDE_4_SUBTITLE) , descTextSize : 12, carouselBgColor :  Color.grey700, gravity : 0},
         {image : "ny_ic_disability_illustration" , videoLink : "" , videoHeight :  0, imageHeight :  160, imageBgColor :  Color.white900, title :   (getString EDUCATIONAL_POP_UP_SLIDE_5_TITLE) , description :  (getString EDUCATIONAL_POP_UP_SLIDE_5_SUBTITLE) , descTextSize : 12 ,carouselBgColor :  Color.grey700, gravity : 0}
       ]
+
+setSelectedEstimatesObject :: Encode ChooseVehicle.Config => ChooseVehicle.Config -> Effect Unit
+setSelectedEstimatesObject object = void $ pure $ setValueToLocalStore ESTIMATE_DATA (encodeJSON object)
+
+getSelectedEstimatesObject :: String -> Maybe ChooseVehicle.Config
+getSelectedEstimatesObject dummy =
+  case runExcept (decodeJSON (getValueToLocalStore ESTIMATE_DATA) :: _ ChooseVehicle.Config) of
+    Right res -> Just res
+    Left err -> Nothing

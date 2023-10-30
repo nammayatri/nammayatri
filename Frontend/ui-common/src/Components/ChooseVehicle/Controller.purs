@@ -4,6 +4,8 @@ import Prelude (class Eq, class Show )
 import Data.Eq.Generic (genericEq)
 import Data.Generic.Rep (class Generic)
 import Data.Show.Generic (genericShow)
+import Foreign.Generic (decode, encode, class Decode, class Encode)
+import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode)
 
 data Action
   = NoAction
@@ -35,6 +37,8 @@ data SearchType = QUOTES | ESTIMATES
 derive instance genericSearchType :: Generic SearchType _
 instance eqSearchType :: Eq SearchType where eq = genericEq
 instance showSearchType :: Show SearchType where show = genericShow
+instance encodeSearchType :: Encode SearchType where encode = defaultEnumEncode
+instance decodeSearchType :: Decode SearchType where decode = defaultEnumDecode
 
 
 config :: Config
