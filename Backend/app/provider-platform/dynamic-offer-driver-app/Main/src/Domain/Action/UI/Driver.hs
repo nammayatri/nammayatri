@@ -137,6 +137,7 @@ import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.APISuccess (APISuccess (Success))
 import qualified Kernel.Types.APISuccess as APISuccess
+import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import Kernel.Types.Predicate
 import Kernel.Types.SlidingWindowLimiter
@@ -167,6 +168,7 @@ import qualified Storage.CachedQueries.BapMetadata as CQSM
 import Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
 import qualified Storage.CachedQueries.GoHomeConfig as CQGHC
 import qualified Storage.CachedQueries.Merchant as CQM
+import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as CQTC
 import qualified Storage.Queries.Driver.GoHomeFeature.DriverGoHomeRequest as QDGR
 import qualified Storage.Queries.Driver.GoHomeFeature.DriverHomeLocation as QDHL
@@ -202,6 +204,7 @@ data DriverInformationRes = DriverInformationRes
     firstName :: Text,
     middleName :: Maybe Text,
     lastName :: Maybe Text,
+    operatingCity :: Context.City,
     numberOfRides :: Int,
     mobileNumber :: Maybe Text,
     linkedVehicle :: Maybe VehicleAPIEntity,
@@ -1048,6 +1051,7 @@ buildMetaData req personId = do
 
 makeDriverInformationRes :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id DMOC.MerchantOperatingCity -> DriverEntityRes -> DM.Merchant -> Maybe (Id DR.DriverReferral) -> DriverStats -> DDGR.CachedGoHomeRequest -> Maybe HighPrecMoney -> Maybe HighPrecMoney -> m DriverInformationRes
 makeDriverInformationRes merchantOpCityId DriverEntityRes {..} org referralCode driverStats dghInfo currentDues manualDues = do
+  merchantOperatingCity <- CQMOC.findById merchantOpCityId >>= fromMaybeM (MerchantOperatingCityNotFound merchantOpCityId.getId)
   CQGHC.findByMerchantOpCityId merchantOpCityId >>= \cfg ->
     return $
       DriverInformationRes
@@ -1056,6 +1060,7 @@ makeDriverInformationRes merchantOpCityId DriverEntityRes {..} org referralCode 
           numberOfRides = driverStats.totalRides,
           driverGoHomeInfo = dghInfo,
           isGoHomeEnabled = cfg.enableGoHome,
+          operatingCity = merchantOperatingCity.city,
           ..
         }
 
@@ -1165,7 +1170,7 @@ respondQuote (driverId, _, merchantOpCityId) req = do
           quoteLimit <- getQuoteLimit merchantOpCityId searchReq.estimatedDistance searchTry.vehicleVariant
           quoteCount <- runInReplica $ QDrQt.countAllBySTId searchTry.id
           when (quoteCount >= quoteLimit) (throwError QuoteAlreadyRejected)
-          farePolicy <- getFarePolicy organization.id sReqFD.vehicleVariant searchReq.area
+          farePolicy <- getFarePolicy merchantOpCityId sReqFD.vehicleVariant searchReq.area
           let driverExtraFeeBounds = DFarePolicy.findDriverExtraFeeBoundsByDistance searchReq.estimatedDistance <$> farePolicy.driverExtraFeeBounds
           whenJust mbOfferedFare $ \off ->
             whenJust driverExtraFeeBounds $ \driverExtraFeeBounds' ->

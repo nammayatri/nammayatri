@@ -16,7 +16,7 @@
 module Storage.CachedQueries.FareProduct where
 
 import Domain.Types.FareProduct
-import Domain.Types.Merchant (Merchant)
+import Domain.Types.Merchant.MerchantOperatingCity (MerchantOperatingCity)
 import Domain.Types.Vehicle.Variant (Variant (..))
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
@@ -25,30 +25,30 @@ import Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow)
 import qualified Storage.Queries.FareProduct as Queries
 
-findAllFareProductForVariants :: (CacheFlow m r, Esq.EsqDBFlow m r) => Id Merchant -> Area -> m [FareProduct]
-findAllFareProductForVariants merchantId area =
-  Hedis.withCrossAppRedis (Hedis.safeGet $ makeFareProductForVariantsByMerchantIdAndAreaKey merchantId area) >>= \case
+findAllFareProductForVariants :: (CacheFlow m r, Esq.EsqDBFlow m r) => Id MerchantOperatingCity -> Area -> m [FareProduct]
+findAllFareProductForVariants merchantOpCityId area =
+  Hedis.withCrossAppRedis (Hedis.safeGet $ makeFareProductForVariantsByMerchantIdAndAreaKey merchantOpCityId area) >>= \case
     Just a -> pure a
-    Nothing -> cacheAllFareProductForVariantsByMerchantIdAndArea merchantId area /=<< Queries.findAllFareProductForVariants merchantId area
+    Nothing -> cacheAllFareProductForVariantsByMerchantIdAndArea merchantOpCityId area /=<< Queries.findAllFareProductForVariants merchantOpCityId area
 
-cacheAllFareProductForVariantsByMerchantIdAndArea :: (CacheFlow m r) => Id Merchant -> Area -> [FareProduct] -> m ()
-cacheAllFareProductForVariantsByMerchantIdAndArea merchantId area fareProducts = do
+cacheAllFareProductForVariantsByMerchantIdAndArea :: (CacheFlow m r) => Id MerchantOperatingCity -> Area -> [FareProduct] -> m ()
+cacheAllFareProductForVariantsByMerchantIdAndArea merchantOpCityId area fareProducts = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
-  Hedis.withCrossAppRedis $ Hedis.setExp (makeFareProductForVariantsByMerchantIdAndAreaKey merchantId area) fareProducts expTime
+  Hedis.withCrossAppRedis $ Hedis.setExp (makeFareProductForVariantsByMerchantIdAndAreaKey merchantOpCityId area) fareProducts expTime
 
-makeFareProductForVariantsByMerchantIdAndAreaKey :: Id Merchant -> Area -> Text
-makeFareProductForVariantsByMerchantIdAndAreaKey merchantId area = "driver-offer:CachedQueries:FareProduct:MerchantId-" <> getId merchantId <> ":Area-" <> show area
+makeFareProductForVariantsByMerchantIdAndAreaKey :: Id MerchantOperatingCity -> Area -> Text
+makeFareProductForVariantsByMerchantIdAndAreaKey merchantOpCityId area = "driver-offer:CachedQueries:FareProduct:MerchantOpCityId-" <> getId merchantOpCityId <> ":Area-" <> show area
 
-findByMerchantVariantArea :: (CacheFlow m r, Esq.EsqDBFlow m r) => Id Merchant -> Variant -> Area -> m (Maybe FareProduct)
-findByMerchantVariantArea merchantId vehicleVariant area =
-  Hedis.withCrossAppRedis (Hedis.safeGet $ makeFareProductByMerchantVariantAreaKey merchantId vehicleVariant area) >>= \case
+findByMerchantVariantArea :: (CacheFlow m r, Esq.EsqDBFlow m r) => Id MerchantOperatingCity -> Variant -> Area -> m (Maybe FareProduct)
+findByMerchantVariantArea merchantOpCityId vehicleVariant area =
+  Hedis.withCrossAppRedis (Hedis.safeGet $ makeFareProductByMerchantVariantAreaKey merchantOpCityId vehicleVariant area) >>= \case
     Just a -> pure a
-    Nothing -> flip whenJust (cacheFareProductByMerchantVariantArea merchantId vehicleVariant area) /=<< Queries.findByMerchantVariantArea merchantId vehicleVariant area
+    Nothing -> flip whenJust (cacheFareProductByMerchantVariantArea merchantOpCityId vehicleVariant area) /=<< Queries.findByMerchantOpCityIdVariantArea merchantOpCityId vehicleVariant area
 
-cacheFareProductByMerchantVariantArea :: (CacheFlow m r) => Id Merchant -> Variant -> Area -> FareProduct -> m ()
-cacheFareProductByMerchantVariantArea merchantId vehicleVariant area fareProduct = do
+cacheFareProductByMerchantVariantArea :: (CacheFlow m r) => Id MerchantOperatingCity -> Variant -> Area -> FareProduct -> m ()
+cacheFareProductByMerchantVariantArea merchantOpCityId vehicleVariant area fareProduct = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
-  Hedis.withCrossAppRedis $ Hedis.setExp (makeFareProductByMerchantVariantAreaKey merchantId vehicleVariant area) fareProduct expTime
+  Hedis.withCrossAppRedis $ Hedis.setExp (makeFareProductByMerchantVariantAreaKey merchantOpCityId vehicleVariant area) fareProduct expTime
 
-makeFareProductByMerchantVariantAreaKey :: Id Merchant -> Variant -> Area -> Text
-makeFareProductByMerchantVariantAreaKey merchantId vehicleVariant area = "driver-offer:CachedQueries:FareProduct:MerchantId-" <> getId merchantId <> ":Variant-" <> show vehicleVariant <> ":Area-" <> show area
+makeFareProductByMerchantVariantAreaKey :: Id MerchantOperatingCity -> Variant -> Area -> Text
+makeFareProductByMerchantVariantAreaKey merchantOpCityId vehicleVariant area = "driver-offer:CachedQueries:FareProduct:MerchantOpCityId-" <> getId merchantOpCityId <> ":Variant-" <> show vehicleVariant <> ":Area-" <> show area

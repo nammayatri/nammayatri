@@ -61,11 +61,10 @@ data DSelectReq = DSelectReq
 
 handler :: DM.Merchant -> DSelectReq -> DEst.Estimate -> Flow ()
 handler merchant sReq estimate = do
-  let merchantId = merchant.id
   now <- getCurrentTime
   searchReq <- QSR.findById estimate.requestId >>= fromMaybeM (SearchRequestNotFound estimate.requestId.getId)
   QDQ.setInactiveAllDQByEstId sReq.estimateId now
-  farePolicy <- getFarePolicy merchantId estimate.vehicleVariant searchReq.area
+  farePolicy <- getFarePolicy searchReq.merchantOperatingCityId estimate.vehicleVariant searchReq.area
 
   searchTry <- createNewSearchTry farePolicy searchReq
   driverPoolConfig <- getDriverPoolConfig searchReq.merchantOperatingCityId (Just searchTry.vehicleVariant) searchReq.estimatedDistance
