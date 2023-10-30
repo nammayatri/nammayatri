@@ -48,6 +48,7 @@ data OnboardingDocumentConfig = OnboardingDocumentConfig
     supportedVehicleClasses :: SupportedVehicleClasses,
     vehicleClassCheckType :: VehicleClassCheckType,
     rcNumberPrefix :: Text,
+    rcNumberPrefixList :: [Text],
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }

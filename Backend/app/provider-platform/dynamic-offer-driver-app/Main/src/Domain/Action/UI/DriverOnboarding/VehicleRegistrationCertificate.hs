@@ -108,12 +108,13 @@ data RCStatusReq = RCStatusReq
   }
   deriving (Generic, ToSchema, ToJSON, FromJSON)
 
-validateDriverRCReq :: Text -> Validate DriverRCReq
+validateDriverRCReq :: [Text] -> Validate DriverRCReq
 validateDriverRCReq rcNumberPrefix DriverRCReq {..} =
   sequenceA_
     [validateField "vehicleRegistrationCertNumber" vehicleRegistrationCertNumber certNum]
   where
-    certNum = LengthInRange 5 12 `And` (string (T.unpack rcNumberPrefix) <> star (latinUC \/ digit \/ ","))
+    certNum = LengthInRange 5 12 `And` (string ("(" <> concatList <> ")") <> star (latinUC \/ digit \/ ","))
+    concatList = T.unpack $ T.intercalate "|" rcNumberPrefix
 
 verifyRC ::
   Bool ->
@@ -133,7 +134,7 @@ verifyRC isDashboard mbMerchant (personId, merchantId, merchantOpCityId) req@Dri
       Just fleetDriver -> do
         unless fleetDriver.isActive $ throwError (InvalidRequest "Driver is not active with this fleet, add this driver to the fleet before adding a vehicle with them")
   onboardingDocumentConfig <- SCO.findByMerchantOpCityIdAndDocumentType merchantOpCityId ODC.RC >>= fromMaybeM (OnboardingDocumentConfigNotFound merchantOpCityId.getId (show ODC.RC))
-  runRequestValidation (validateDriverRCReq onboardingDocumentConfig.rcNumberPrefix) req
+  runRequestValidation (validateDriverRCReq onboardingDocumentConfig.rcNumberPrefixList) req
   driverInfo <- DIQuery.findById (cast personId) >>= fromMaybeM (PersonNotFound personId.getId)
   when driverInfo.blocked $ throwError DriverAccountBlocked
   whenJust mbMerchant $ \merchant -> do

@@ -473,6 +473,7 @@ data OnboardingDocumentConfigItem = OnboardingDocumentConfigItem
     supportedVehicleClasses :: SupportedVehicleClasses,
     vehicleClassCheckType :: VehicleClassCheckType,
     rcNumberPrefix :: Text,
+    rcNumberPrefixList :: Maybe [Text],
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }
@@ -553,6 +554,7 @@ data OnboardingDocumentConfigUpdateReq = OnboardingDocumentConfigUpdateReq
     checkExpiry :: Maybe (MandatoryValue Bool),
     supportedVehicleClasses :: Maybe SupportedVehicleClasses, -- value wrapper make no sense for lists and objects
     rcNumberPrefix :: Maybe (MandatoryValue Text),
+    rcNumberPrefixList :: Maybe (MandatoryValue [Text]),
     vehicleClassCheckType :: Maybe (MandatoryValue VehicleClassCheckType)
   }
   deriving stock (Show, Generic)
@@ -577,6 +579,7 @@ data OnboardingDocumentConfigCreateReq = OnboardingDocumentConfigCreateReq
     checkExpiry :: Bool,
     supportedVehicleClasses :: SupportedVehicleClasses,
     rcNumberPrefix :: Text,
+    rcNumberPrefixList :: Maybe [Text],
     vehicleClassCheckType :: VehicleClassCheckType
   }
   deriving stock (Show, Generic)

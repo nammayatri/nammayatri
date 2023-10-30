@@ -368,6 +368,7 @@ mkOnboardingDocumentConfigRes DODC.OnboardingDocumentConfig {..} =
     { documentType = castDDocumentType documentType,
       vehicleClassCheckType = castDVehicleClassCheckType vehicleClassCheckType,
       supportedVehicleClasses = castDSupportedVehicleClasses supportedVehicleClasses,
+      rcNumberPrefixList = Just rcNumberPrefixList,
       ..
     }
 
@@ -422,7 +423,8 @@ onboardingDocumentConfigUpdate merchantShortId opCity reqDocumentType req = do
                checkExpiry = maybe config.checkExpiry (.value) req.checkExpiry,
                supportedVehicleClasses = maybe config.supportedVehicleClasses castSupportedVehicleClasses req.supportedVehicleClasses,
                vehicleClassCheckType = maybe config.vehicleClassCheckType (castVehicleClassCheckType . (.value)) req.vehicleClassCheckType,
-               rcNumberPrefix = maybe config.rcNumberPrefix (.value) req.rcNumberPrefix
+               rcNumberPrefix = maybe config.rcNumberPrefix (.value) req.rcNumberPrefix,
+               rcNumberPrefixList = maybe config.rcNumberPrefixList (.value) req.rcNumberPrefixList
               }
   _ <- CQODC.update updConfig
   CQODC.clearCache merchantOpCityId
@@ -498,6 +500,7 @@ buildOnboardingDocumentConfig merchantId merchantOpCityId documentType Common.On
         merchantOperatingCityId = merchantOpCityId,
         vehicleClassCheckType = castVehicleClassCheckType vehicleClassCheckType,
         supportedVehicleClasses = castSupportedVehicleClasses supportedVehicleClasses,
+        rcNumberPrefixList = fromMaybe [] rcNumberPrefixList,
         updatedAt = now,
         createdAt = now,
         ..
