@@ -1589,7 +1589,7 @@ export const showKeyboard = function (id) {
 
 export const locateOnMap = (configObj) => {
   try {
-    if (methodArgumentCount("locateOnMap") == 1)
+    if ( window.__OS == "IOS" || (window.__OS == "ANDROID" && methodArgumentCount("locateOnMap") == 1))
       return JBridge.locateOnMap(JSON.stringify(configObj));
     else
       return JBridge.locateOnMap(configObj.goToCurrentLocation, configObj.lat, configObj.lon, JSON.stringify(configObj.geoJson), JSON.stringify(configObj.points));
