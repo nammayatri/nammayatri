@@ -6,7 +6,7 @@ import qualified Data.Aeson as A
 import qualified Data.ByteString.Lazy as LBS
 import Data.Either.Extra (mapLeft)
 import Data.Maybe
-import qualified Data.Text as T
+import qualified Data.Text as T hiding (elem)
 import qualified Data.Text.Encoding as TE
 import EulerHS.CachedSqlDBQuery as CDB
 import EulerHS.KVConnector.DBSync
@@ -116,28 +116,30 @@ runDeleteCommands (cmd, val) dbStreamKey = do
       if model `elem` _dontEnableDbTables then pure $ Right id else runDeleteWithRetries id value whereClause model dbConf 0 maxRetries
     -- If KAFKA_PUSH is false then entry will be there in DB Else Delete entry in Kafka only.
     runDeleteInKafka id value dbstremKey whereClause model dbConf = do
-      isPushToKafka' <- EL.runIO isPushToKafka
-      if not isPushToKafka'
-        then runDelete id value dbstremKey whereClause model dbConf
-        else do
-          Env {..} <- ask
-          res <- EL.runIO $ streamDriverDrainerDeletes _kafkaConnection (getDbDeleteDataJson model whereClause) dbstremKey
-          either
-            ( \_ -> do
-                void $ publishDBSyncMetric Event.KafkaPushFailure
-                EL.logError ("ERROR:" :: Text) ("Kafka Create Error " :: Text)
-                pure $ Left (UnexpectedError "Kafka Error", id)
-            )
-            (\_ -> pure $ Right id)
-            res
-    -- Delete entry in DB if KAFKA_PUSH key is set to false. Else Delete in both.
+      runDelete id value dbstremKey whereClause model dbConf -- we are not pushing delete events to kafka | Todo : To be removed in new drainer PR
+      -- isPushToKafka' <- EL.runIO isPushToKafka
+      -- if not isPushToKafka'
+      --   then runDelete id value dbstremKey whereClause model dbConf
+      --   else do
+      --     Env {..} <- ask
+      --     res <- EL.runIO $ streamRiderDrainerDeletes _kafkaConnection (getDbDeleteDataJson model whereClause) dbstremKey
+      --     either
+      --       ( \_ -> do
+      --           void $ publishDBSyncMetric Event.KafkaPushFailure
+      --           EL.logError ("ERROR:" :: Text) ("Kafka Create Error " :: Text)
+      --           pure $ Left (UnexpectedError "Kafka Error", id)
+      --       )
+      --       (\_ -> pure $ Right id)
+      --       res
+      -- Delete entry in DB if KAFKA_PUSH key is set to false. Else Delete in both.
+      -- Delete entry in DB if KAFKA_PUSH key is set to false. Else Delete in both.
     runDeleteInKafkaAndDb id value dbStreamKey' whereClause model dbConf = do
       isPushToKafka' <- EL.runIO isPushToKafka
       if not isPushToKafka'
         then runDelete id value dbStreamKey' whereClause model dbConf
         else do
-          res <- runDeleteInKafka id value dbStreamKey' whereClause model dbConf
-          either (\_ -> pure $ Left (UnexpectedError "Kafka Error", id)) (\_ -> runDelete id value dbStreamKey' whereClause model dbConf) res
+          runDeleteInKafka id value dbStreamKey' whereClause model dbConf
+    -- either (\_ -> pure $ Left (UnexpectedError "Kafka Error", id)) (\_ -> runDelete id value dbStreamKey' whereClause model dbConf) res
 
     runDeleteWithRetries id value whereClause model dbConf retryIndex maxRetries = do
       res <- mapLeft MDBError <$> CDB.deleteAllReturning dbConf whereClause

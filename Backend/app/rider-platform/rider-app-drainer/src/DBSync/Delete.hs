@@ -6,7 +6,7 @@ import qualified Data.Aeson as A
 import qualified Data.ByteString.Lazy as LBS
 import Data.Either.Extra (mapLeft)
 import Data.Maybe (fromJust)
-import qualified Data.Text as T
+import qualified Data.Text as T hiding (elem)
 import qualified Data.Text.Encoding as TE
 import EulerHS.CachedSqlDBQuery as CDB
 import EulerHS.KVConnector.DBSync
@@ -103,8 +103,8 @@ runDeleteCommands (cmd, val) dbStreamKey = do
       if not isPushToKafka'
         then runDelete id value dbstremKey whereClause model dbConf
         else do
-          res <- runDeleteInKafka id value dbstremKey whereClause model dbConf
-          either (\_ -> pure $ Left (UnexpectedError "Kafka Error", id)) (\_ -> runDelete id value dbstremKey whereClause model dbConf) res
+          runDeleteInKafka id value dbstremKey whereClause model dbConf
+    -- either (\_ -> pure $ Left (UnexpectedError "Kafka Error", id)) (\_ -> runDelete id value dbstremKey whereClause model dbConf) res
 
     runDeleteWithRetries id value whereClause model dbConf retryIndex maxRetries = do
       res <- mapLeft MDBError <$> CDB.deleteAllReturning dbConf whereClause
