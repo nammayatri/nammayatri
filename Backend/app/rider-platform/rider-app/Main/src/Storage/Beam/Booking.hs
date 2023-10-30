@@ -53,6 +53,7 @@ data BookingT f = BookingT
     vehicleVariant :: B.C f VehVar.VehicleVariant,
     tripTermsId :: B.C f (Maybe Text),
     rentalDetailsId :: B.C f (Maybe Text),
+    rentalBaseDuration :: B.C f (Maybe Hours),
     merchantId :: B.C f Text,
     specialLocationTag :: B.C f (Maybe Text),
     createdAt :: B.C f UTCTime,

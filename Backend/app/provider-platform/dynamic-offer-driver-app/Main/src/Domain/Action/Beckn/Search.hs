@@ -11,7 +11,6 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-{-# OPTIONS_GHC -Wno-deprecations #-}
 
 module Domain.Action.Beckn.Search
   ( DSearchReq (..),
@@ -66,11 +65,11 @@ import SharedLogic.FareCalculator
 import SharedLogic.FarePolicy
 import SharedLogic.GoogleMaps
 import qualified Storage.CachedQueries.FarePolicy as QFP
+import qualified Storage.CachedQueries.FareProduct as QFareProduct
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as CQMPM
 import Storage.CachedQueries.Merchant.TransporterConfig as CTC
 import qualified Storage.Queries.Estimate as QEst
-import qualified Storage.Queries.FareProduct as QFareProduct
 import qualified Storage.Queries.Geometry as QGeometry
 import qualified Storage.Queries.QuoteRental as QQuoteRental
 import qualified Storage.Queries.QuoteSpecialZone as QQuoteSpecialZone
@@ -244,7 +243,7 @@ handler merchant sReq' =
           merchantId = merchant.id
       sessiontoken <- generateGUIDText
       fromLocation <- buildSearchReqLocation merchantId sessiontoken sReq.pickupAddress sReq.customerLanguage sReq.pickupLocation
-      fareProducts <- QFareProduct.findAllFareProductForFlow merchantId DFareProduct.RENTAL
+      fareProducts <- QFareProduct.findAllFareProductForVariants merchantId DFareProduct.Default DFareProduct.RENTAL
       logDebug $ "fareProducts" <> show fareProducts
       fullFarePolicies <-
         mapM

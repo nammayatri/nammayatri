@@ -86,7 +86,7 @@ mkConfirmMessage res = do
       VehVar.TAXI_PLUS -> Confirm.TAXI_PLUS
     fulfillmentType = case res.bookingDetails of
       DRB.OneWaySpecialZoneDetails _ -> Confirm.RIDE_OTP
-      DRB.RentalDetails _ -> Confirm.RENTAL
+      DRB.RentalDetails _ _ -> Confirm.RENTAL
       _ -> Confirm.RIDE
 
 mkFulfillment :: Maybe Text -> Confirm.FulfillmentType -> DL.Location -> Maybe DL.Location -> Text -> Text -> Maybe Text -> Confirm.VehicleVariant -> UTCTime -> Confirm.FulfillmentInfo

@@ -6,7 +6,7 @@
 @merchantId = favorit0-0000-0000-0000-00000favorit
 
 # time in future
-@rentalStartTime = 2023-10-26T10:17:15.585221416Z
+@rentalStartTime = 2023-10-30T06:20:15.585221416Z
 # @now = $localDatetime iso8601
 
 # @name healthcheck
@@ -204,7 +204,8 @@ content-type: application/json
             "lon": 75.919028
     },
     "odometerStartReading" : 10,
-    "odometerStartImage" : "odometerStartImage"
+    "odometerStartImage" : "odometerStartImage",
+    "odometerStartImageExtension" : "image/jpeg"
 }
 
 ###
@@ -318,7 +319,8 @@ content-type: application/json
   },
 "odometerEndReading" : 10,
 "odometerEndImage" : "odometerEndImage",
-"endRideOtp" : "{{endRideOtp}}"
+"endRideOtp" : "{{endRideOtp}}",
+"odometerEndImageExtension" : "image/jpeg"
 }
 
 ###

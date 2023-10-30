@@ -13,7 +13,12 @@
 -}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Storage.Queries.FareProduct where
+module Storage.Queries.FareProduct
+  {-# WARNING
+    "This module contains direct calls to the table. \
+  \ But most likely you need a version from CachedQueries with caching results feature."
+    #-}
+where
 
 import Domain.Types.FareProduct
 import qualified Domain.Types.FareProduct as Domain

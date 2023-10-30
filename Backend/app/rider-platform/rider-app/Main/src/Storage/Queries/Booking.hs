@@ -60,7 +60,7 @@ create dBooking = do
   _ <- whenNothingM_ (QL.findById dBooking.fromLocation.id) $ do QL.create (dBooking.fromLocation)
   _ <- case dBooking.bookingDetails of
     OneWayDetails toLoc -> void $ whenNothingM_ (QL.findById toLoc.toLocation.id) $ do QL.create toLoc.toLocation
-    RentalDetails _ -> pure ()
+    RentalDetails _ _ -> pure ()
     DriverOfferDetails toLoc -> void $ whenNothingM_ (QL.findById toLoc.toLocation.id) $ do QL.create toLoc.toLocation
     OneWaySpecialZoneDetails toLoc -> void $ whenNothingM_ (QL.findById toLoc.toLocation.id) $ do QL.create toLoc.toLocation
   void $ createBooking' dBooking
@@ -70,7 +70,7 @@ createBooking booking = do
   fromLocationMap <- SLM.buildPickUpLocationMapping booking.fromLocation.id booking.id.getId DLM.BOOKING
   mbToLocationMap <- case booking.bookingDetails of
     DRB.OneWayDetails detail -> Just <$> SLM.buildDropLocationMapping detail.toLocation.id booking.id.getId DLM.BOOKING
-    DRB.RentalDetails _ -> return Nothing
+    DRB.RentalDetails _ _ -> return Nothing
     DRB.DriverOfferDetails detail -> Just <$> SLM.buildDropLocationMapping detail.toLocation.id booking.id.getId DLM.BOOKING
     DRB.OneWaySpecialZoneDetails detail -> Just <$> SLM.buildDropLocationMapping detail.toLocation.id booking.id.getId DLM.BOOKING
 
@@ -338,22 +338,24 @@ instance FromTType' BeamB.Booking Booking where
             }
       getRentalDetails rentalDetailsId' = do
         res <- maybe (pure Nothing) (QueryRD.findById . Id) rentalDetailsId'
+        baseDuration <- rentalBaseDuration & fromMaybeM (InternalError "rentalBaseDuration is null for rental booking")
         case res of
-          Just rentalDetails -> pure $ Just $ DRB.RentalDetails rentalDetails
+          Just rentalDetails -> pure $ Just $ DRB.RentalDetails (DRB.BaseDuration baseDuration) rentalDetails
           Nothing -> pure Nothing
 
 instance ToTType' BeamB.Booking Booking where
   toTType' DRB.Booking {..} =
-    let (fareProductType, toLocationId, distance, rentalDetailsId, otpCode) = case bookingDetails of
-          DRB.OneWayDetails details -> (DQuote.ONE_WAY, Just (getId details.toLocation.id), Just details.distance, Nothing, Nothing)
-          DRB.RentalDetails rentalDetails -> (DQuote.RENTAL, Nothing, Nothing, Just . getId $ rentalDetails.id, Nothing)
-          DRB.DriverOfferDetails details -> (DQuote.DRIVER_OFFER, Just (getId details.toLocation.id), Just details.distance, Nothing, Nothing)
-          DRB.OneWaySpecialZoneDetails details -> (DQuote.ONE_WAY_SPECIAL_ZONE, Just (getId details.toLocation.id), Just details.distance, Nothing, details.otpCode)
+    let (fareProductType, toLocationId, distance, rentalDetailsId, otpCode, rentalBaseDuration) = case bookingDetails of
+          DRB.OneWayDetails details -> (DQuote.ONE_WAY, Just (getId details.toLocation.id), Just details.distance, Nothing, Nothing, Nothing)
+          DRB.RentalDetails (DRB.BaseDuration baseDuration) rentalDetails -> (DQuote.RENTAL, Nothing, Nothing, Just . getId $ rentalDetails.id, Nothing, Just baseDuration)
+          DRB.DriverOfferDetails details -> (DQuote.DRIVER_OFFER, Just (getId details.toLocation.id), Just details.distance, Nothing, Nothing, Nothing)
+          DRB.OneWaySpecialZoneDetails details -> (DQuote.ONE_WAY_SPECIAL_ZONE, Just (getId details.toLocation.id), Just details.distance, Nothing, details.otpCode, Nothing)
      in BeamB.BookingT
           { BeamB.id = getId id,
             BeamB.transactionId = transactionId,
             BeamB.fareProductType = fareProductType,
             BeamB.bppBookingId = getId <$> bppBookingId,
+            BeamB.rentalBaseDuration = rentalBaseDuration,
             BeamB.quoteId = getId <$> quoteId,
             BeamB.paymentMethodId = getId <$> paymentMethodId,
             BeamB.paymentUrl = paymentUrl,

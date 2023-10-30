@@ -19,7 +19,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified SharedLogic.FareProduct as FareProduct
 import qualified Storage.CachedQueries.FarePolicy as QFP
-import qualified Storage.Queries.FareProduct as QFareProduct
+import qualified Storage.CachedQueries.FareProduct as QFareProduct
 import Tools.Error
 import Tools.Maps
 

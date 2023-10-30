@@ -229,7 +229,6 @@ handler merchantId req initReq = do
   let startTime = req.startTime
   pure InitRes {..}
   where
-    -- TODO unite buildNormalBooking and buildRentalBooking
     buildNormalBooking ::
       ( CacheFlow m r,
         EsqDBFlow m r,
