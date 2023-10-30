@@ -68,6 +68,7 @@ import Storage.CachedQueries.Merchant as QM
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.BusinessEvent as QBE
 import qualified Storage.Queries.DriverInformation as QDI
+import Storage.Queries.DriverOnboarding.VehicleRegistrationCertificate as QVRC
 import qualified Storage.Queries.Rating as QR
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RideDetails as QRD
@@ -330,6 +331,7 @@ otpRideCreate driver otpCode booking = do
       vehicle <-
         QVeh.findById ride.driverId
           >>= fromMaybeM (VehicleNotFound ride.driverId.getId)
+      vehicleRegCert <- QVRC.findLastVehicleRCWrapper vehicle.registrationNo
       return
         DRD.RideDetails
           { id = ride.id,
@@ -341,7 +343,7 @@ otpRideCreate driver otpCode booking = do
             vehicleVariant = Just vehicle.variant,
             vehicleModel = Just vehicle.model,
             vehicleClass = Nothing,
-            fleetOwnerId = Nothing
+            fleetOwnerId = vehicleRegCert >>= (.fleetOwnerId)
           }
     isNotAllowedVehicleVariant driverVehicle bookingVehicle =
       (bookingVehicle == DVeh.TAXI_PLUS || bookingVehicle == DVeh.SEDAN || bookingVehicle == DVeh.SUV || bookingVehicle == DVeh.HATCHBACK)
