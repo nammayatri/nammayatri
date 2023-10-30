@@ -55,4 +55,4 @@ instance EncryptedItem RiderDetails where
 instance EncryptedItem' RiderDetails where
   type UnencryptedItem RiderDetails = RiderDetailsDecrypted
   toUnencrypted a salt = (a, salt)
-  fromUnencrypted a = fst a
+  fromUnencrypted = fst

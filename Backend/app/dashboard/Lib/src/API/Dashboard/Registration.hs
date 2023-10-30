@@ -48,13 +48,12 @@ type API =
 
 handler :: FlowServer API
 handler =
-  ( login
-      :<|> logout
-      :<|> logoutAllMerchants
-      :<|> enable2fa
-      :<|> switchMerchant
-      :<|> registerFleetOwner
-  )
+  login
+    :<|> logout
+    :<|> logoutAllMerchants
+    :<|> enable2fa
+    :<|> switchMerchant
+    :<|> registerFleetOwner
 
 login :: DReg.LoginReq -> FlowHandler DReg.LoginRes
 login = withFlowHandlerAPI . DReg.login

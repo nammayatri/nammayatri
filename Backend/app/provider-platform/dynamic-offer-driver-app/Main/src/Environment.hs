@@ -236,7 +236,7 @@ buildAppEnv cfg@AppCfg {..} = do
       driverQuoteExpirationSeconds = fromIntegral cfg.driverQuoteExpirationSeconds
       s3Env = buildS3Env cfg.s3Config
       s3EnvPublic = buildS3Env cfg.s3PublicConfig
-  return AppEnv {modelNamesHashMap = (HM.fromList $ M.toList modelNamesMap), ..}
+  return AppEnv {modelNamesHashMap = HM.fromList $ M.toList modelNamesMap, ..}
 
 releaseAppEnv :: AppEnv -> IO ()
 releaseAppEnv AppEnv {..} = do

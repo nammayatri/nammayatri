@@ -48,7 +48,7 @@ type DecryptedDriverLicense = DriverLicenseE 'AsUnencrypted
 instance EncryptedItem DriverLicense where
   type Unencrypted DriverLicense = (DecryptedDriverLicense, HashSalt)
   encryptItem (DriverLicense {..}, salt) = do
-    licenseNumber_ <- encryptItem $ (,salt) licenseNumber
+    licenseNumber_ <- encryptItem (licenseNumber, salt)
     return DriverLicense {licenseNumber = licenseNumber_, ..}
   decryptItem DriverLicense {..} = do
     licenseNumber_ <- fst <$> decryptItem licenseNumber
@@ -57,4 +57,4 @@ instance EncryptedItem DriverLicense where
 instance EncryptedItem' DriverLicense where
   type UnencryptedItem DriverLicense = DecryptedDriverLicense
   toUnencrypted a salt = (a, salt)
-  fromUnencrypted a = fst a
+  fromUnencrypted = fst

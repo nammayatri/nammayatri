@@ -40,7 +40,7 @@ notifyErrorToSupport ::
   [Maybe DriverOnboardingError] ->
   Flow ()
 notifyErrorToSupport person merchantId merchantOpCityId driverPhone _ errs = do
-  let reasons = catMaybes $ catMaybes $ toMsg <$> errs
+  let reasons = catMaybes $ mapMaybe toMsg errs
   let description = T.intercalate ", " reasons
   _ <- TT.createTicket merchantId merchantOpCityId (mkTicket description)
   return ()

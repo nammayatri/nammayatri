@@ -38,9 +38,9 @@ toTuple occo = (occo.context, occo.order)
 
 instance Cache OnConfirmContextOrder (MockM AppEnv) where
   type CacheKey OnConfirmContextOrder = Text
-  getKey key = Hed.get key
-  setKey key val = Hed.set key val
-  delKey key = Hed.del key
+  getKey = Hed.get
+  setKey = Hed.set
+  delKey = Hed.del
 
 writeOrder :: Context -> Order -> MockM AppEnv ()
 writeOrder ctx order = do

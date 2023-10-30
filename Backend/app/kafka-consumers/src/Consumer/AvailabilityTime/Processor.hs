@@ -61,7 +61,7 @@ calculateAvailableTime merchantId driverId (fstTime : restTimeSeries) = do
       _ -> do
         whenJust cachedLastAvailableTime $ \_ -> logTagDebug "DRIVER_AVAILABILITY:LAT" "not commited to Redis in previous iteration"
         -- lstAvalTime <- maybe fstTime (.lastAvailableTime) <$> DB.runInReplica (Q.findLatestByDriverIdAndMerchantId driverId merchantId)
-        lstAvalTime <- maybe fstTime (.lastAvailableTime) <$> (Q.findLatestByDriverIdAndMerchantId driverId merchantId)
+        lstAvalTime <- maybe fstTime (.lastAvailableTime) <$> Q.findLatestByDriverIdAndMerchantId driverId merchantId
         Redis.setExp mkLastTimeStampKey (lstAvalTime, True) 28800 -- 8 hours
         pure lstAvalTime
   timeBetweenUpdates <- asks (.timeBetweenUpdates)

@@ -38,7 +38,7 @@ instance IsHTTPError TransportStationError where
 
 instance IsAPIError TransportStationError
 
-data PaymentDetailsError
+newtype PaymentDetailsError
   = PaymentDetailsNotFound Text
   deriving (Eq, Show, IsBecknAPIError)
 

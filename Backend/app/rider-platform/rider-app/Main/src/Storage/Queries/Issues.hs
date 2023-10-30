@@ -50,7 +50,7 @@ findByCustomerId (Id customerId) mbLimit mbOffset fromDate toDate = do
   where
     getIssueWithPerson persons acc issue =
       let persons' = filter (\p -> p.id == issue.customerId) persons
-       in acc <> ((\p -> (issue, p)) <$> persons')
+       in acc <> ((issue,) <$> persons')
 
 -- Finding issues over non-Id; do it through DB
 findAllIssue :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Merchant -> Maybe Int -> Maybe Int -> UTCTime -> UTCTime -> m [(Issue, Person)]
@@ -69,7 +69,7 @@ findAllIssue (Id merchantId) mbLimit mbOffset fromDate toDate = do
   where
     getIssueWithPerson persons acc issue =
       let persons' = filter (\p -> p.id == issue.customerId) persons
-       in acc <> ((\p -> (issue, p)) <$> persons')
+       in acc <> ((issue,) <$> persons')
 
 instance FromTType' BeamI.Issue Issue where
   fromTType' BeamI.IssueT {..} = do

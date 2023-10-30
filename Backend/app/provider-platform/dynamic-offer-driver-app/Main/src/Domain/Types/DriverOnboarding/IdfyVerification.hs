@@ -63,7 +63,7 @@ type DecryptedIdfyVerification = IdfyVerificationE 'AsUnencrypted
 instance EncryptedItem IdfyVerification where
   type Unencrypted IdfyVerification = (DecryptedIdfyVerification, HashSalt)
   encryptItem (IdfyVerification {..}, salt) = do
-    documentNumber_ <- encryptItem $ (,salt) documentNumber
+    documentNumber_ <- encryptItem (documentNumber, salt)
     return IdfyVerification {documentNumber = documentNumber_, ..}
   decryptItem IdfyVerification {..} = do
     documentNumber_ <- fst <$> decryptItem documentNumber
@@ -72,4 +72,4 @@ instance EncryptedItem IdfyVerification where
 instance EncryptedItem' IdfyVerification where
   type UnencryptedItem IdfyVerification = DecryptedIdfyVerification
   toUnencrypted a salt = (a, salt)
-  fromUnencrypted a = fst a
+  fromUnencrypted = fst
