@@ -10,10 +10,9 @@ import qualified Data.Aeson.KeyMap as AKM
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.ByteString.Lazy as LBS
 import Data.Either.Extra (mapLeft)
-import Data.HashMap.Strict as HM hiding (map)
 import Data.Maybe (fromJust)
 import qualified Data.Serialize as Serialize
-import Data.Text as T hiding (map)
+import Data.Text as T hiding (elem, map)
 import qualified Data.Text.Encoding as TE
 import Database.Beam as B hiding (runUpdate)
 import EulerHS.CachedSqlDBQuery as CDB
@@ -25,6 +24,7 @@ import EulerHS.Types as ET
 import Kafka.Producer as KafkaProd
 import Kafka.Producer as Producer
 import qualified Kernel.Beam.Functions as BeamFunction
+import Kernel.Beam.Lib.Utils (getMappings, replaceMappings)
 import qualified Kernel.Beam.Types as KBT
 import Sequelize (Model, Set, Where)
 import Text.Casing
@@ -150,7 +150,7 @@ runUpdateCommands (cmd, val) streamKey = do
           case res of
             Right dataObj -> do
               Env {..} <- ask
-              let mappings = HM.fromList (map (bimap T.pack T.pack) (getMaps [dataObj]))
+              let mappings = getMappings [dataObj]
                   newObject = replaceMappings (toJSON dataObj) mappings
               res'' <- EL.runIO $ streamRiderDrainerUpdates _kafkaConnection newObject dbStreamKey' model
               either
@@ -199,7 +199,7 @@ runUpdateCommands (cmd, val) streamKey = do
 
 streamRiderDrainerUpdates :: ToJSON a => Producer.KafkaProducer -> a -> Text -> Text -> IO (Either Text ())
 streamRiderDrainerUpdates producer dbObject dbStreamKey model = do
-  let topicName = "rider-drainer-" <> T.pack (camel (T.unpack model)) <> "BAP"
+  let topicName = "aap-sessionizer-" <> T.toLower model
   result' <- KafkaProd.produceMessage producer (message topicName dbObject)
   case result' of
     Just err -> pure $ Left $ T.pack ("Kafka Error: " <> show err)

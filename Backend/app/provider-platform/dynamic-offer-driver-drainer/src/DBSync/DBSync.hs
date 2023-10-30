@@ -9,7 +9,7 @@ import DBSync.Update
 import qualified Data.Aeson as A
 import qualified Data.Aeson.KeyMap as AKM
 import qualified Data.ByteString.Lazy as BL
-import qualified Data.Text as T
+import qualified Data.Text as T hiding (elem)
 import qualified Data.Text.Encoding as DTE
 import qualified Data.Vector as V
 import qualified Database.Redis as R

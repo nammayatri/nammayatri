@@ -7,6 +7,7 @@ import Config.Env
 import Data.Aeson (encode)
 import qualified Data.ByteString.Lazy as LBS
 import Data.Maybe
+import qualified Data.Text as T hiding (elem)
 import qualified Data.Text.Encoding as TE
 import EulerHS.CachedSqlDBQuery as CDB
 import EulerHS.Language as EL
@@ -15,6 +16,7 @@ import EulerHS.Prelude
 import EulerHS.Types as ET
 import Kafka.Producer as KafkaProd
 import Kafka.Producer as Producer
+import Kernel.Beam.Lib.Utils (getMappings, replaceMappings)
 import qualified Kernel.Beam.Types as KBT
 import Types.DBSync
 import Types.Event as Event
@@ -125,10 +127,12 @@ runCreateCommands cmds streamKey = do
           if null object
             then pure [Right []]
             else do
-              let dataObjects = map (\(_, _, _, dataObject) -> dataObject) object
+              let objectIdentity = map (\(a, _, _, _) -> a) object
+                  mappings = getMappings objectIdentity
+                  newObjects = map (\object' -> replaceMappings (toJSON object') mappings) objectIdentity
                   entryIds = map (\(_, _, entryId', _) -> entryId') object
               Env {..} <- ask
-              res <- EL.runIO $ streamDriverDrainerCreates _kafkaConnection dataObjects streamKey'
+              res <- EL.runIO $ streamDriverDrainerCreates _kafkaConnection newObjects streamKey' model
               either
                 ( \_ -> do
                     void $ publishDBSyncMetric Event.KafkaPushFailure
@@ -177,9 +181,9 @@ runCreateCommands cmds streamKey = do
           EL.logError ("Create failed: " :: Text) (show cmdsToErrorQueue <> "\n Error: " <> show x :: Text)
           pure [Left entryIds]
 
-streamDriverDrainerCreates :: ToJSON a => Producer.KafkaProducer -> [a] -> Text -> IO (Either Text ())
-streamDriverDrainerCreates producer dbObject streamKey = do
-  let topicName = "driver-drainer"
+streamDriverDrainerCreates :: ToJSON a => Producer.KafkaProducer -> [a] -> Text -> Text -> IO (Either Text ())
+streamDriverDrainerCreates producer dbObject streamKey model = do
+  let topicName = "adob-sessionizer-" <> T.toLower model
   result' <- mapM (KafkaProd.produceMessage producer . message topicName) dbObject
   if any isJust result' then pure $ Left ("Kafka Error: " <> show result') else pure $ Right ()
   where

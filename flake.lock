@@ -2973,16 +2973,15 @@
         "prometheus-haskell": "prometheus-haskell_2"
       },
       "locked": {
-        "lastModified": 1698674164,
-        "narHash": "sha256-DRLE/o8jH5Y72dILBSCI9YE4Qac1BBY+ZigdOdJZ4+o=",
+        "lastModified": 1700646940,
+        "narHash": "sha256-y0/EB7Khyi4hcfhZ4uqnh53otkmGyYERXmoAqk0Ep/o=",
         "owner": "nammayatri",
         "repo": "shared-kernel",
-        "rev": "274a55a106b1f09c66f66e6c4496ede99772bf7d",
+        "rev": "eba7cd9369ea7ed1c925ee3b50fd37f915338038",
         "type": "github"
       },
       "original": {
         "owner": "nammayatri",
-        "ref": "backend/custom-mapping-template-haskell",
         "repo": "shared-kernel",
         "type": "github"
       }
