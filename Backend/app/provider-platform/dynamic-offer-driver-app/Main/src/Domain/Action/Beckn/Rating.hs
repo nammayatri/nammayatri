@@ -37,7 +37,8 @@ import Tools.Error
 data DRatingReq = DRatingReq
   { bookingId :: Id DBooking.Booking,
     ratingValue :: Int,
-    feedbackDetails :: [Maybe Text]
+    feedbackDetails :: [Maybe Text],
+    issueId :: Maybe Text
   }
 
 handler :: Id Merchant -> DRatingReq -> DRide.Ride -> Flow ()
@@ -51,16 +52,18 @@ handler merchantId req ride = do
         Just "True" -> Just True
         Just "False" -> Just False
         _ -> Nothing
+      issueId = req.issueId
+      isSafe = Just $ isNothing issueId
   _ <- case rating of
     Nothing -> do
       logTagInfo "FeedbackAPI" $
         "Creating a new record for " +|| ride.id ||+ " with rating " +|| ratingValue ||+ "."
-      newRating <- buildRating ride.id driverId ratingValue feedbackDetails wasOfferedAssistance
+      newRating <- buildRating ride.id driverId ratingValue feedbackDetails issueId isSafe wasOfferedAssistance
       QRating.create newRating
     Just rideRating -> do
       logTagInfo "FeedbackAPI" $
         "Updating existing rating for " +|| ride.id ||+ " with new rating " +|| ratingValue ||+ "."
-      QRating.updateRating rideRating.id driverId ratingValue feedbackDetails wasOfferedAssistance
+      QRating.updateRating rideRating.id driverId ratingValue feedbackDetails issueId isSafe wasOfferedAssistance
   calculateAverageRating driverId merchant.minimumDriverRatesCount
 
 calculateAverageRating ::
@@ -80,8 +83,8 @@ calculateAverageRating personId minimumDriverRatesCount = do
     logTagInfo "PersonAPI" $ "New average rating for person " +|| personId ||+ " , rating is " +|| newAverage ||+ ""
     void $ QP.updateAverageRating personId newAverage
 
-buildRating :: MonadFlow m => Id DRide.Ride -> Id DP.Person -> Int -> Maybe Text -> Maybe Bool -> m DRating.Rating
-buildRating rideId driverId ratingValue feedbackDetails wasOfferedAssistance = do
+buildRating :: MonadFlow m => Id DRide.Ride -> Id DP.Person -> Int -> Maybe Text -> Maybe Text -> Maybe Bool -> Maybe Bool -> m DRating.Rating
+buildRating rideId driverId ratingValue feedbackDetails issueId isSafe wasOfferedAssistance = do
   id <- Id <$> L.generateGUID
   now <- getCurrentTime
   let createdAt = now

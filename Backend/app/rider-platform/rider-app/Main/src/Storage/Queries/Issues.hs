@@ -15,6 +15,7 @@
 
 module Storage.Queries.Issues where
 
+import Domain.Types.Booking.Type as Booking
 import Domain.Types.Issue as Issue
 import Domain.Types.Merchant
 import Domain.Types.Person (Person)
@@ -71,6 +72,9 @@ findAllIssue (Id merchantId) mbLimit mbOffset fromDate toDate = do
       let persons' = filter (\p -> p.id == issue.customerId) persons
        in acc <> ((\p -> (issue, p)) <$> persons')
 
+findNightIssueByBookingId :: MonadFlow m => Id Booking -> m (Maybe Issue)
+findNightIssueByBookingId (Id bookingId) = findOneWithKV [Se.And [Se.Is BeamI.bookingId $ Se.Eq (Just bookingId), Se.Is BeamI.nightSafety $ Se.Eq True]]
+
 instance FromTType' BeamI.Issue Issue where
   fromTType' BeamI.IssueT {..} = do
     pure $
@@ -84,6 +88,7 @@ instance FromTType' BeamI.Issue Issue where
             description = description,
             ticketId = ticketId,
             status = status,
+            nightSafety = nightSafety,
             createdAt = createdAt,
             updatedAt = updatedAt
           }
@@ -99,6 +104,7 @@ instance ToTType' BeamI.Issue Issue where
         BeamI.description = description,
         BeamI.ticketId = ticketId,
         BeamI.status = status,
+        BeamI.nightSafety = nightSafety,
         BeamI.createdAt = createdAt,
         BeamI.updatedAt = updatedAt
       }

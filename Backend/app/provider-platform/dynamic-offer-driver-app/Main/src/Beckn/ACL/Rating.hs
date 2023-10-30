@@ -57,5 +57,6 @@ buildRatingReq subscriber req = do
             case wasOfferedAssistance of
               Just offeredAssistance -> offeredAssistance.answer
               _ -> Nothing
-          ]
+          ],
+        issueId = req.message.issueId
       }

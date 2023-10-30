@@ -37,6 +37,7 @@ buildRatingReq DFeedback.FeedbackRes {..} = do
         Rating.RatingMessage
           { id = bppBookingId.getId,
             value = ratingValue,
+            issueId = issueId,
             feedback_form =
               [ Rating.FeedbackForm
                   { question = "Evaluate your ride experience.",

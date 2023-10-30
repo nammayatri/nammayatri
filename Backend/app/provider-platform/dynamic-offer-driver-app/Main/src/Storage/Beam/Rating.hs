@@ -26,6 +26,8 @@ data RatingT f = RatingT
     ratingValue :: B.C f Int,
     feedbackDetails :: B.C f (Maybe Text),
     wasOfferedAssistance :: B.C f (Maybe Bool),
+    isSafe :: B.C f (Maybe Bool),
+    issueId :: B.C f (Maybe Text),
     createdAt :: B.C f UTCTime,
     updatedAt :: B.C f UTCTime
   }
