@@ -74,7 +74,7 @@ onInit req = do
   bppBookingId <- booking.bppBookingId & fromMaybeM (BookingFieldNotPresent "bppBookingId")
   let fromLocation = booking.fromLocation
   let mbToLocation = case booking.bookingDetails of
-        DRB.RentalDetails _ -> Nothing
+        DRB.RentalDetails _ _ -> Nothing
         DRB.OneWayDetails details -> Just details.toLocation
         DRB.DriverOfferDetails details -> Just details.toLocation
         DRB.OneWaySpecialZoneDetails details -> Just details.toLocation

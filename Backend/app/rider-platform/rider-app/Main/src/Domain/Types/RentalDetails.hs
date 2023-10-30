@@ -19,7 +19,7 @@ import Kernel.Types.Common
 import Kernel.Types.Id
 
 data RentalDetails = RentalDetails
-  { id :: Id RentalDetails, --not used in domain layer
+  { id :: Id RentalDetails,
     baseFare :: Money,
     perHourCharge :: Money,
     perHourFreeKms :: Int,
@@ -30,6 +30,7 @@ data RentalDetails = RentalDetails
 
 data RentalDetailsAPIEntity = RentalDetailsAPIEntity
   { bppQuoteId :: Text,
+    baseDuration :: Maybe Hours,
     baseFare :: Money,
     perHourCharge :: Money,
     perHourFreeKms :: Int,

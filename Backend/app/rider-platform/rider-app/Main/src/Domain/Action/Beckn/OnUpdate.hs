@@ -274,7 +274,7 @@ onUpdate ValidatedRideAssignedReq {..} = do
       let fromLocation = booking.fromLocation
           toLocation = case booking.bookingDetails of
             SRB.OneWayDetails details -> Just details.toLocation
-            SRB.RentalDetails _ -> Nothing
+            SRB.RentalDetails _ _ -> Nothing
             SRB.DriverOfferDetails details -> Just details.toLocation
             SRB.OneWaySpecialZoneDetails details -> Just details.toLocation
       return

@@ -92,9 +92,12 @@ data Booking = Booking
 
 data BookingDetails
   = OneWayDetails OneWayBookingDetails
-  | RentalDetails DRentalDetails.RentalDetails
+  | RentalDetails BaseDuration DRentalDetails.RentalDetails
   | DriverOfferDetails OneWayBookingDetails
   | OneWaySpecialZoneDetails OneWaySpecialZoneBookingDetails
+  deriving (Show)
+
+newtype BaseDuration = BaseDuration Hours
   deriving (Show)
 
 data OneWayBookingDetails = OneWayBookingDetails

@@ -52,7 +52,7 @@ buildInitMessage res = do
         SConfirm.ConfirmOneWaySpecialZoneDetails quoteId -> (Init.RIDE_OTP, Just quoteId, Nothing) --need to be  checked
   let vehicleVariant = castVehicleVariant res.vehicleVariant
   now <- getCurrentTime
-  let st = fromMaybe now res.startTime
+  let st = fromMaybe now res.mbStartTime
   pure
     Init.InitMessage
       { order =
@@ -69,7 +69,7 @@ buildInitMessage res = do
                     breakup = Nothing
                   },
               billing = mkBilling res.riderPhone res.riderName,
-              fulfillment = mkFulfillmentInfo fulfillmentType mbBppFullfillmentId res.fromLoc res.toLoc res.maxEstimatedDistance vehicleVariant st res.rentalDuration,
+              fulfillment = mkFulfillmentInfo fulfillmentType mbBppFullfillmentId res.fromLoc res.toLoc res.maxEstimatedDistance vehicleVariant st res.mbRentalDuration,
               payment = mkPayment res.paymentMethodInfo,
               provider = mkProvider mbDriverId
             }
