@@ -23,6 +23,7 @@ import Environment
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
 import Kernel.Beam.Functions as B
+import Kernel.Prelude (head, (!!))
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -36,7 +37,7 @@ import Tools.Error
 data DRatingReq = DRatingReq
   { bookingId :: Id DBooking.Booking,
     ratingValue :: Int,
-    feedbackDetails :: Maybe Text
+    feedbackDetails :: [Maybe Text]
   }
 
 handler :: Id Merchant -> DRatingReq -> DRide.Ride -> Flow ()
@@ -45,17 +46,21 @@ handler merchantId req ride = do
   rating <- B.runInReplica $ QRating.findRatingForRide ride.id
   let driverId = ride.driverId
   let ratingValue = req.ratingValue
-      feedbackDetails = req.feedbackDetails
+      feedbackDetails = head req.feedbackDetails
+      wasOfferedAssistance = case req.feedbackDetails !! 1 of
+        Just "True" -> Just True
+        Just "False" -> Just False
+        _ -> Nothing
   _ <- case rating of
     Nothing -> do
       logTagInfo "FeedbackAPI" $
         "Creating a new record for " +|| ride.id ||+ " with rating " +|| ratingValue ||+ "."
-      newRating <- buildRating ride.id driverId ratingValue feedbackDetails
+      newRating <- buildRating ride.id driverId ratingValue feedbackDetails wasOfferedAssistance
       QRating.create newRating
     Just rideRating -> do
       logTagInfo "FeedbackAPI" $
         "Updating existing rating for " +|| ride.id ||+ " with new rating " +|| ratingValue ||+ "."
-      QRating.updateRating rideRating.id driverId ratingValue feedbackDetails
+      QRating.updateRating rideRating.id driverId ratingValue feedbackDetails wasOfferedAssistance
   calculateAverageRating driverId merchant.minimumDriverRatesCount
 
 calculateAverageRating ::
@@ -75,8 +80,8 @@ calculateAverageRating personId minimumDriverRatesCount = do
     logTagInfo "PersonAPI" $ "New average rating for person " +|| personId ||+ " , rating is " +|| newAverage ||+ ""
     void $ QP.updateAverageRating personId newAverage
 
-buildRating :: MonadFlow m => Id DRide.Ride -> Id DP.Person -> Int -> Maybe Text -> m DRating.Rating
-buildRating rideId driverId ratingValue feedbackDetails = do
+buildRating :: MonadFlow m => Id DRide.Ride -> Id DP.Person -> Int -> Maybe Text -> Maybe Bool -> m DRating.Rating
+buildRating rideId driverId ratingValue feedbackDetails wasOfferedAssistance = do
   id <- Id <$> L.generateGUID
   now <- getCurrentTime
   let createdAt = now

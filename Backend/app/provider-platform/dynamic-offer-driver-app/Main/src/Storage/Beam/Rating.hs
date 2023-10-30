@@ -25,6 +25,7 @@ data RatingT f = RatingT
     driverId :: B.C f Text,
     ratingValue :: B.C f Int,
     feedbackDetails :: B.C f (Maybe Text),
+    wasOfferedAssistance :: B.C f (Maybe Bool),
     createdAt :: B.C f UTCTime,
     updatedAt :: B.C f UTCTime
   }

@@ -15,6 +15,7 @@
 module Beckn.ACL.Rating where
 
 import qualified Beckn.Types.Core.Taxi.API.Rating as Rating
+import Beckn.Types.Core.Taxi.Rating.FeedbackForm
 import qualified Domain.Action.Beckn.Rating as DRating
 import Kernel.Prelude
 import Kernel.Product.Validation.Context
@@ -31,6 +32,15 @@ buildRatingReq ::
   m DRating.DRatingReq
 buildRatingReq subscriber req = do
   let context = req.context
+  let feedbackFormParsedAsObject = readMaybe (show req.message.feedback_form) :: Maybe FeedbackForm
+  let feedbackFormParsedAsArray = readMaybe (show req.message.feedback_form) :: Maybe [FeedbackForm]
+  feedbackFormList <- do
+    case (feedbackFormParsedAsObject, feedbackFormParsedAsArray) of
+      (Just object, _) -> return [object]
+      (Nothing, Just array) -> return array
+      (_, _) -> return []
+  let feedback_form = find (\form -> form.question == "Evaluate your ride experience.") feedbackFormList
+  let wasOfferedAssistance = find (\form -> form.question == "Was Assistance Offered?") feedbackFormList
   validateContext Context.RATING context
   unless (subscriber.subscriber_id == context.bap_id) $
     throwError (InvalidRequest "Invalid bap_id")
@@ -40,5 +50,12 @@ buildRatingReq subscriber req = do
     DRating.DRatingReq
       { bookingId = Id $ req.message.id,
         ratingValue = req.message.value,
-        feedbackDetails = req.message.feedback_form.answer
+        feedbackDetails =
+          [ case feedback_form of
+              Just feedbck_form -> feedbck_form.answer
+              _ -> Nothing,
+            case wasOfferedAssistance of
+              Just offeredAssistance -> offeredAssistance.answer
+              _ -> Nothing
+          ]
       }

@@ -26,6 +26,7 @@ data Rating = Rating
     driverId :: Id Person,
     ratingValue :: Int,
     feedbackDetails :: Maybe Text,
+    wasOfferedAssistance :: Maybe Bool,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }

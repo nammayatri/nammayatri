@@ -38,9 +38,17 @@ buildRatingReq DFeedback.FeedbackRes {..} = do
           { id = bppBookingId.getId,
             value = ratingValue,
             feedback_form =
-              Rating.FeedbackForm
-                { question = "Evaluate your ride experience.",
-                  answer = feedbackDetails
-                }
+              [ Rating.FeedbackForm
+                  { question = "Evaluate your ride experience.",
+                    answer = feedbackDetails
+                  },
+                Rating.FeedbackForm
+                  { question = "Was Assistance Offered?",
+                    answer = case wasOfferedAssistance of
+                      Just True -> Just "True"
+                      Just False -> Just "False"
+                      _ -> Nothing
+                  }
+              ]
           }
   pure $ BecknReq context message

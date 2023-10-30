@@ -19,6 +19,7 @@ module Domain.Action.UI.Feedback
   )
 where
 
+import qualified Domain.Action.Internal.Rating as DRating
 import qualified Domain.Types.Booking as DBooking
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person.PersonFlowStatus as DPFS
@@ -32,13 +33,15 @@ import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
 import qualified Storage.Queries.Booking as QRB
+import qualified Storage.Queries.Rating as QRating
 import qualified Storage.Queries.Ride as QRide
 import Tools.Error
 
 data FeedbackReq = FeedbackReq
   { rideId :: Id DRide.Ride,
     rating :: Int,
-    feedbackDetails :: Maybe Text
+    feedbackDetails :: Maybe Text,
+    wasOfferedAssistance :: Maybe Bool
   }
   deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
 
@@ -50,6 +53,7 @@ data FeedbackRes = FeedbackRes
     providerUrl :: BaseUrl,
     transactionId :: Text,
     merchant :: DM.Merchant,
+    wasOfferedAssistance :: Maybe Bool,
     city :: Context.City
   }
 
@@ -67,11 +71,19 @@ feedback request = do
   _ <- QPFS.updateStatus booking.riderId DPFS.IDLE
   _ <- QRide.updateRideRating rideId ratingValue
   QPFS.clearCache booking.riderId
+  ratingu <- QRating.findRatingForRide rideId
+  _ <- case ratingu of
+    Nothing -> do
+      newRating <- DRating.buildRating rideId booking.riderId ratingValue feedbackDetails request.wasOfferedAssistance
+      QRating.create newRating
+    Just rideRating -> do
+      QRating.updateRating rideRating.id booking.riderId ratingValue feedbackDetails request.wasOfferedAssistance
   let merchantOperatingCityId = booking.merchantOperatingCityId
   city <- CQMOC.findById merchantOperatingCityId >>= fmap (.city) . fromMaybeM (MerchantOperatingCityNotFound merchantOperatingCityId.getId)
   pure
     FeedbackRes
-      { providerId = booking.providerId,
+      { wasOfferedAssistance = request.wasOfferedAssistance,
+        providerId = booking.providerId,
         providerUrl = booking.providerUrl,
         transactionId = booking.transactionId,
         ..

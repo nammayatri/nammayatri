@@ -1,0 +1,1 @@
+ALTER TABLE atlas_app.rating ADD was_offered_assistance boolean;
