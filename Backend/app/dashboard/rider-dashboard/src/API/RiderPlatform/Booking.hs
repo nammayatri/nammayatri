@@ -23,6 +23,7 @@ import qualified "lib-dashboard" Domain.Types.Merchant as DM
 import qualified Domain.Types.Transaction as DT
 import "lib-dashboard" Environment
 import Kernel.Prelude
+import qualified Kernel.Types.Beckn.City as City
 import Kernel.Types.Id
 import Kernel.Utils.Common (MonadFlow, withFlowHandlerAPI)
 import Kernel.Utils.Validation (runRequestValidation)
@@ -46,10 +47,10 @@ type MultipleBookingSyncAPI =
   ApiAuth 'APP_BACKEND 'RIDES 'MULTIPLE_BOOKING_SYNC
     :> Common.MultipleBookingSyncAPI
 
-handler :: ShortId DM.Merchant -> FlowServer API
-handler merchantId =
-  stuckBookingsCancel merchantId
-    :<|> multipleBookingSync merchantId
+handler :: ShortId DM.Merchant -> City.City -> FlowServer API
+handler merchantId city =
+  stuckBookingsCancel merchantId city
+    :<|> multipleBookingSync merchantId city
 
 buildTransaction ::
   ( MonadFlow m,
@@ -62,17 +63,17 @@ buildTransaction ::
 buildTransaction endpoint apiTokenInfo =
   T.buildTransaction (DT.BookingAPI endpoint) (Just APP_BACKEND) (Just apiTokenInfo) Nothing Nothing
 
-stuckBookingsCancel :: ShortId DM.Merchant -> ApiTokenInfo -> Common.StuckBookingsCancelReq -> FlowHandler Common.StuckBookingsCancelRes
-stuckBookingsCancel merchantShortId apiTokenInfo req = withFlowHandlerAPI $ do
-  checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
+stuckBookingsCancel :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.StuckBookingsCancelReq -> FlowHandler Common.StuckBookingsCancelRes
+stuckBookingsCancel merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI $ do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction Common.StuckBookingsCancelEndpoint apiTokenInfo (Just req)
   T.withResponseTransactionStoring transaction $
-    Client.callRiderApp checkedMerchantId (.bookings.stuckBookingsCancel) req
+    Client.callRiderApp checkedMerchantId opCity (.bookings.stuckBookingsCancel) req
 
-multipleBookingSync :: ShortId DM.Merchant -> ApiTokenInfo -> Common.MultipleBookingSyncReq -> FlowHandler Common.MultipleBookingSyncResp
-multipleBookingSync merchantShortId apiTokenInfo req = withFlowHandlerAPI $ do
+multipleBookingSync :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.MultipleBookingSyncReq -> FlowHandler Common.MultipleBookingSyncResp
+multipleBookingSync merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI $ do
   runRequestValidation Common.validateMultipleBookingSyncReq req
-  checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction Common.MultipleBookingSyncEndpoint apiTokenInfo (Just req)
   T.withResponseTransactionStoring transaction $
-    Client.callRiderApp checkedMerchantId (.bookings.multipleBookingSync) req
+    Client.callRiderApp checkedMerchantId opCity (.bookings.multipleBookingSync) req

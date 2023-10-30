@@ -55,6 +55,7 @@ import qualified Kernel.External.Maps as Maps
 import Kernel.Prelude
 import Kernel.Tools.Metrics.CoreMetrics
 import Kernel.Types.APISuccess (APISuccess)
+import qualified Kernel.Types.Beckn.City as City
 import Kernel.Types.Id
 import Kernel.Utils.Common hiding (callAPI)
 import Servant hiding (route)
@@ -182,8 +183,8 @@ data IssueAPIs = IssueAPIs
     ticketStatusCallBack_ :: Issue.TicketStatusCallBackReq -> Euler.EulerClient APISuccess
   }
 
-mkAppBackendAPIs :: CheckedShortId DM.Merchant -> Text -> AppBackendAPIs
-mkAppBackendAPIs merchantId token = do
+mkAppBackendAPIs :: CheckedShortId DM.Merchant -> City.City -> Text -> AppBackendAPIs
+mkAppBackendAPIs merchantId city token = do
   let customers = CustomerAPIs {..}
   let bookings = BookingsAPIs {..}
   let merchant = MerchantAPIs {..}
@@ -209,7 +210,7 @@ mkAppBackendAPIs merchantId token = do
       :<|> ridesClient
       :<|> rideBookingClient
       :<|> issueClient
-      :<|> issueV2Client = clientWithMerchant (Proxy :: Proxy BAP.API') merchantId token
+      :<|> issueV2Client = clientWithMerchantAndCity (Proxy :: Proxy BAP.API') merchantId city token
 
     customerList
       :<|> customerDelete
@@ -295,6 +296,7 @@ callRiderApp ::
     CallServerAPI AppBackendAPIs m r b c
   ) =>
   CheckedShortId DM.Merchant ->
+  City.City ->
   (AppBackendAPIs -> b) ->
   c
-callRiderApp merchantId = callServerAPI @_ @m @r APP_BACKEND (mkAppBackendAPIs merchantId) "callRiderApp"
+callRiderApp merchantId city = callServerAPI @_ @m @r APP_BACKEND (mkAppBackendAPIs merchantId city) "callRiderApp"

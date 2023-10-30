@@ -29,7 +29,15 @@ import Kernel.Types.Id
 import Servant hiding (throwError)
 import Tools.Auth (DashboardTokenAuth)
 
+-- TODO :: Deprecated, Remove after successful deployment
 type API =
+  "dashboard"
+    :> ( Capture "merchantId" (ShortId DM.Merchant)
+           :> API'
+       )
+    :<|> ExotelAPI
+
+type APIV2 =
   "dashboard"
     :> ( Capture "merchantId" (ShortId DM.Merchant)
            :> Capture "city" Context.City
@@ -48,8 +56,29 @@ type API' =
            :<|> Issue.API
        )
 
+-- TODO :: Deprecated, Remove after successful deployment
 handler :: FlowServer API
 handler =
+  ( \merchantId _dashboard -> do
+      let city = getCity merchantId.getShortId
+      Customer.handler merchantId
+        :<|> Booking.handler merchantId
+        :<|> Merchant.handler merchantId city
+        :<|> Ride.handler merchantId
+        :<|> RideBookings.handler merchantId
+        :<|> IssueList.handler merchantId
+        :<|> Issue.handler merchantId city
+  )
+    :<|> exotelHandler
+  where
+    getCity = \case
+      "NAMMA_YATRI" -> Context.Bangalore
+      "YATRI" -> Context.Kochi
+      "JATRI_SAATHI" -> Context.Kolkata
+      _ -> Context.AnyCity
+
+handlerV2 :: FlowServer APIV2
+handlerV2 =
   ( \merchantId city _dashboard ->
       Customer.handler merchantId
         :<|> Booking.handler merchantId

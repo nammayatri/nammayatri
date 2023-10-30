@@ -18,6 +18,7 @@ import qualified Domain.Types.Merchant as DMerchant
 import Domain.Types.Person.Type
 import qualified Domain.Types.Role as DRole
 import Kernel.Prelude
+import Kernel.Types.Beckn.City as City
 import Kernel.Types.Id
 
 data PersonAPIEntity = PersonAPIEntity
@@ -29,12 +30,19 @@ data PersonAPIEntity = PersonAPIEntity
     mobileNumber :: Text,
     mobileCountryCode :: Text,
     availableMerchants :: [ShortId DMerchant.Merchant],
+    availableCitiesForMerchant :: Maybe [AvailableCitiesForMerchant],
     registeredAt :: UTCTime
   }
   deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
 
-makePersonAPIEntity :: DecryptedPerson -> DRole.Role -> [ShortId DMerchant.Merchant] -> PersonAPIEntity
-makePersonAPIEntity Person {..} personRole availableMerchants =
+data AvailableCitiesForMerchant = AvailableCitiesForMerchant
+  { merchantShortId :: ShortId DMerchant.Merchant,
+    operatingCity :: [City.City]
+  }
+  deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
+
+makePersonAPIEntity :: DecryptedPerson -> DRole.Role -> [ShortId DMerchant.Merchant] -> Maybe [AvailableCitiesForMerchant] -> PersonAPIEntity
+makePersonAPIEntity Person {..} personRole availableMerchants availableCitiesForMerchant =
   PersonAPIEntity
     { registeredAt = createdAt,
       role = DRole.mkRoleAPIEntity personRole,

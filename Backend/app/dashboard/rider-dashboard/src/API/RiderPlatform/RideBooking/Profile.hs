@@ -23,6 +23,7 @@ import qualified Domain.Types.Transaction as DT
 import "lib-dashboard" Environment
 import EulerHS.Prelude
 import Kernel.Types.APISuccess
+import qualified Kernel.Types.Beckn.City as City
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified RiderPlatformClient.RiderApp as Client
@@ -39,10 +40,10 @@ type API =
              :> BAP.CustomerUpdateProfileAPI
        )
 
-handler :: ShortId DM.Merchant -> FlowServer API
-handler merchantId =
-  callGetPersonDetails merchantId
-    :<|> callUpdatePerson merchantId
+handler :: ShortId DM.Merchant -> City.City -> FlowServer API
+handler merchantId city =
+  callGetPersonDetails merchantId city
+    :<|> callUpdatePerson merchantId city
 
 buildTransaction ::
   ( MonadFlow m,
@@ -55,14 +56,14 @@ buildTransaction ::
 buildTransaction endpoint apiTokenInfo =
   T.buildTransaction (DT.ProfileAPI endpoint) (Just APP_BACKEND) (Just apiTokenInfo) Nothing Nothing
 
-callGetPersonDetails :: ShortId DM.Merchant -> ApiTokenInfo -> Id DP.Person -> FlowHandler DProfile.ProfileRes
-callGetPersonDetails merchantShortId apiTokenInfo personId = withFlowHandlerAPI $ do
-  checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
-  Client.callRiderApp checkedMerchantId (.rideBooking.profile.personDetails) personId
+callGetPersonDetails :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id DP.Person -> FlowHandler DProfile.ProfileRes
+callGetPersonDetails merchantShortId opCity apiTokenInfo personId = withFlowHandlerAPI $ do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  Client.callRiderApp checkedMerchantId opCity (.rideBooking.profile.personDetails) personId
 
-callUpdatePerson :: ShortId DM.Merchant -> ApiTokenInfo -> Id DP.Person -> DProfile.UpdateProfileReq -> FlowHandler APISuccess
-callUpdatePerson merchantShortId apiTokenInfo personId req = withFlowHandlerAPI $ do
-  checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
+callUpdatePerson :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id DP.Person -> DProfile.UpdateProfileReq -> FlowHandler APISuccess
+callUpdatePerson merchantShortId opCity apiTokenInfo personId req = withFlowHandlerAPI $ do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction BAP.UpdatePersonEndPoint apiTokenInfo T.emptyRequest
   T.withTransactionStoring transaction $
-    Client.callRiderApp checkedMerchantId (.rideBooking.profile.updatePerson) personId req
+    Client.callRiderApp checkedMerchantId opCity (.rideBooking.profile.updatePerson) personId req

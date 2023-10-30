@@ -24,13 +24,14 @@ import qualified Domain.Types.Transaction as DT
 import "lib-dashboard" Environment
 import EulerHS.Prelude
 import Kernel.Types.APISuccess
+import qualified Kernel.Types.Beckn.City as City
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified RiderPlatformClient.RiderApp as Client
 import Servant
 import qualified SharedLogic.Transaction as T
 import "lib-dashboard" Tools.Auth
-import Tools.Auth.Merchant (merchantAccessCheck)
+import Tools.Auth.Merchant (merchantCityAccessCheck)
 
 type API =
   "registration"
@@ -44,12 +45,12 @@ type API =
              :> BAP.CustomerLogout
        )
 
-handler :: ShortId DM.Merchant -> FlowServer API
-handler merchantId =
-  callAuth merchantId
-    :<|> callVerify merchantId
-    :<|> callResend merchantId
-    :<|> callLogout merchantId
+handler :: ShortId DM.Merchant -> City.City -> FlowServer API
+handler merchantId city =
+  callAuth merchantId city
+    :<|> callVerify merchantId city
+    :<|> callResend merchantId city
+    :<|> callLogout merchantId city
 
 buildTransaction ::
   ( MonadFlow m,
@@ -62,30 +63,30 @@ buildTransaction ::
 buildTransaction endpoint apiTokenInfo =
   T.buildTransaction (DT.RegistrationAPI endpoint) (Just APP_BACKEND) (Just apiTokenInfo) Nothing Nothing
 
-callAuth :: ShortId DM.Merchant -> ApiTokenInfo -> BAP.CustomerAuthReq -> FlowHandler DR.AuthRes
-callAuth merchantShortId apiTokenInfo req = withFlowHandlerAPI $ do
-  checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
+callAuth :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> BAP.CustomerAuthReq -> FlowHandler DR.AuthRes
+callAuth merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI $ do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction BAP.RegistrationAuthEndPoint apiTokenInfo T.emptyRequest
   T.withTransactionStoring transaction $
-    Client.callRiderApp checkedMerchantId (.rideBooking.registration.auth) req
+    Client.callRiderApp checkedMerchantId opCity (.rideBooking.registration.auth) req
 
-callVerify :: ShortId DM.Merchant -> ApiTokenInfo -> Id DTR.RegistrationToken -> DR.AuthVerifyReq -> FlowHandler DR.AuthVerifyRes
-callVerify merchantShortId apiTokenInfo tokenId req = withFlowHandlerAPI $ do
-  checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
+callVerify :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id DTR.RegistrationToken -> DR.AuthVerifyReq -> FlowHandler DR.AuthVerifyRes
+callVerify merchantShortId opCity apiTokenInfo tokenId req = withFlowHandlerAPI $ do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction BAP.RegistrationVerifyEndPoint apiTokenInfo T.emptyRequest
   T.withTransactionStoring transaction $
-    Client.callRiderApp checkedMerchantId (.rideBooking.registration.verify) tokenId req
+    Client.callRiderApp checkedMerchantId opCity (.rideBooking.registration.verify) tokenId req
 
-callResend :: ShortId DM.Merchant -> ApiTokenInfo -> Id DTR.RegistrationToken -> FlowHandler DR.ResendAuthRes
-callResend merchantShortId apiTokenInfo tokenId = withFlowHandlerAPI $ do
-  checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
+callResend :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id DTR.RegistrationToken -> FlowHandler DR.ResendAuthRes
+callResend merchantShortId opCity apiTokenInfo tokenId = withFlowHandlerAPI $ do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction BAP.RegistrationResendEndPoint apiTokenInfo T.emptyRequest
   T.withTransactionStoring transaction $
-    Client.callRiderApp checkedMerchantId (.rideBooking.registration.resend) tokenId
+    Client.callRiderApp checkedMerchantId opCity (.rideBooking.registration.resend) tokenId
 
-callLogout :: ShortId DM.Merchant -> ApiTokenInfo -> Id SP.Person -> FlowHandler APISuccess
-callLogout merchantShortId apiTokenInfo personId = withFlowHandlerAPI $ do
-  checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
+callLogout :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id SP.Person -> FlowHandler APISuccess
+callLogout merchantShortId opCity apiTokenInfo personId = withFlowHandlerAPI $ do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction BAP.RegistrationLogoutEndPoint apiTokenInfo T.emptyRequest
   T.withTransactionStoring transaction $
-    Client.callRiderApp checkedMerchantId (.rideBooking.registration.logout) personId
+    Client.callRiderApp checkedMerchantId opCity (.rideBooking.registration.logout) personId

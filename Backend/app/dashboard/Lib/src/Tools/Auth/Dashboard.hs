@@ -21,6 +21,7 @@ import Domain.Types.Role as Reexport (DashboardAccessType (..))
 import qualified Domain.Types.Role as DRole
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
+import qualified Kernel.Types.Beckn.City as City
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -48,7 +49,8 @@ data DashboardPayload (at :: DRole.DashboardAccessType)
 
 data TokenInfo = TokenInfo
   { personId :: Id DP.Person,
-    merchantId :: Id DMerchant.Merchant
+    merchantId :: Id DMerchant.Merchant,
+    city :: City.City
   }
 
 instance VerificationMethod VerifyDashboard where
@@ -71,9 +73,9 @@ verifyDashboard ::
   RegToken ->
   m TokenInfo
 verifyDashboard requiredAccessType token = do
-  (personId, merchantId) <- Common.verifyPerson token
+  (personId, merchantId, city) <- Common.verifyPerson token
   void $ verifyDashboardAccess requiredAccessType personId
-  pure TokenInfo {personId, merchantId}
+  pure TokenInfo {personId, merchantId, city}
 
 instance
   forall (at :: DRole.DashboardAccessType).

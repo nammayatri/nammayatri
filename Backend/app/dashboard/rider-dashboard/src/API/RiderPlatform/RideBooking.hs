@@ -30,6 +30,7 @@ import qualified API.RiderPlatform.RideBooking.Search as Search
 import qualified API.RiderPlatform.RideBooking.Select as Select
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
 import "lib-dashboard" Environment
+import Kernel.Types.Beckn.City as City
 import Kernel.Types.Id
 import Servant
 
@@ -47,15 +48,15 @@ type API =
            :<|> Cancel.API
        )
 
-handler :: ShortId DM.Merchant -> FlowServer API
-handler merchantId =
-  Registration.handler merchantId
-    :<|> Profile.handler merchantId
-    :<|> Search.handler merchantId
-    :<|> Quote.handler merchantId
-    :<|> Select.handler merchantId
-    :<|> Confirm.handler merchantId
-    :<|> Booking.handler merchantId
-    :<|> Maps.handler merchantId
-    :<|> FlowStatus.handler merchantId
-    :<|> Cancel.handler merchantId
+handler :: ShortId DM.Merchant -> City.City -> FlowServer API
+handler merchantId city =
+  Registration.handler merchantId city
+    :<|> Profile.handler merchantId city
+    :<|> Search.handler merchantId city
+    :<|> Quote.handler merchantId city
+    :<|> Select.handler merchantId city
+    :<|> Confirm.handler merchantId city
+    :<|> Booking.handler merchantId city
+    :<|> Maps.handler merchantId city
+    :<|> FlowStatus.handler merchantId city
+    :<|> Cancel.handler merchantId city

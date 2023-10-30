@@ -62,5 +62,5 @@ fleetOwnerVerfiy req = withFlowHandlerAPI $ do
   let merchantId = ShortId req.merchantId :: ShortId DM.Merchant
   merchant <- QMerchant.findByShortId merchantId >>= fromMaybeM (MerchantDoesNotExist merchantId.getShortId)
   _ <- Client.callDynamicOfferDriverAppFleetApi (.fleetOwnerVerify) req
-  token <- DR.generateToken person.id merchant.id
+  token <- DR.generateToken person.id merchant.id req.city
   pure $ DP.FleetOwnerVerifyRes {authToken = token}

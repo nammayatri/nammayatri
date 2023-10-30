@@ -21,6 +21,7 @@ import qualified "rider-app" Domain.Types.Person as DP
 import qualified "rider-app" Domain.Types.SearchRequest as SSR
 import "lib-dashboard" Environment
 import Kernel.Prelude
+import qualified Kernel.Types.Beckn.City as City
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified RiderPlatformClient.RiderApp as Client
@@ -33,10 +34,10 @@ type API =
     :> ApiAuth 'APP_BACKEND 'CUSTOMERS 'GETQUOTE
     :> BAP.CustomerGetQuoteAPI
 
-handler :: ShortId DM.Merchant -> FlowServer API
+handler :: ShortId DM.Merchant -> City.City -> FlowServer API
 handler = callGetQuotes
 
-callGetQuotes :: ShortId DM.Merchant -> ApiTokenInfo -> Id SSR.SearchRequest -> Id DP.Person -> FlowHandler DQuote.GetQuotesRes
-callGetQuotes merchantShortId apiTokenInfo searchRequestId personId = withFlowHandlerAPI $ do
-  checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
-  Client.callRiderApp checkedMerchantId (.rideBooking.quote.getQuote) searchRequestId personId
+callGetQuotes :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id SSR.SearchRequest -> Id DP.Person -> FlowHandler DQuote.GetQuotesRes
+callGetQuotes merchantShortId opCity apiTokenInfo searchRequestId personId = withFlowHandlerAPI $ do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  Client.callRiderApp checkedMerchantId opCity (.rideBooking.quote.getQuote) searchRequestId personId

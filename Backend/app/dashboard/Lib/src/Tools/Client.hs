@@ -14,12 +14,13 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE UndecidableSuperClasses #-}
 
-module Tools.Client (DataServer (..), CallServerAPI (..), clientWithMerchant) where
+module Tools.Client (DataServer (..), CallServerAPI (..), clientWithMerchant, clientWithMerchantAndCity) where
 
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.ServerName as DSN
 import qualified EulerHS.Types as Euler
 import Kernel.Prelude
+import qualified Kernel.Types.Beckn.City as City
 import Kernel.Types.Error
 import Kernel.Utils.Common hiding (Error, callAPI)
 import Kernel.Utils.Dhall (FromDhall)
@@ -86,9 +87,22 @@ type ApiWithMerchant api =
     :> Capture "merchantId" (CheckedShortId DM.Merchant)
     :> api
 
+type ApiWithMerchantAndCity api =
+  "dashboard"
+    :> Capture "merchantId" (CheckedShortId DM.Merchant)
+    :> Capture "city" City.City
+    :> api
+
 clientWithMerchant ::
   forall api.
   HasClient Euler.EulerClient api =>
   Proxy api ->
   Client Euler.EulerClient (ApiWithMerchant api)
 clientWithMerchant _ = Euler.client (Proxy @(ApiWithMerchant api))
+
+clientWithMerchantAndCity ::
+  forall api.
+  HasClient Euler.EulerClient api =>
+  Proxy api ->
+  Client Euler.EulerClient (ApiWithMerchantAndCity api)
+clientWithMerchantAndCity _ = Euler.client (Proxy @(ApiWithMerchantAndCity api))

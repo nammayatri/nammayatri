@@ -19,6 +19,7 @@ import qualified Domain.Types.MerchantAccess as DAccess
 import qualified Domain.Types.Person as DP
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
+import qualified Kernel.Types.Beckn.City as City
 import Kernel.Types.Id
 import Storage.Tabular.Merchant
 import Storage.Tabular.MerchantAccess
@@ -30,12 +31,36 @@ findByPersonIdAndMerchantId ::
   (Transactionable m) =>
   Id DP.Person ->
   Id DMerchant.Merchant ->
-  m (Maybe DAccess.MerchantAccess)
-findByPersonIdAndMerchantId personId merchantId = findOne $ do
+  m [DAccess.MerchantAccess]
+findByPersonIdAndMerchantId personId merchantId = findAll $ do
   merchantAccess <- from $ table @MerchantAccessT
   where_ $
     merchantAccess ^. MerchantAccessPersonId ==. val (toKey personId)
       &&. merchantAccess ^. MerchantAccessMerchantId ==. val (toKey merchantId)
+  return merchantAccess
+
+findByPersonIdAndMerchantIdAndCity ::
+  (Transactionable m) =>
+  Id DP.Person ->
+  Id DMerchant.Merchant ->
+  City.City ->
+  m (Maybe DAccess.MerchantAccess)
+findByPersonIdAndMerchantIdAndCity personId merchantId city = findOne $ do
+  merchantAccess <- from $ table @MerchantAccessT
+  where_ $
+    merchantAccess ^. MerchantAccessPersonId ==. val (toKey personId)
+      &&. merchantAccess ^. MerchantAccessMerchantId ==. val (toKey merchantId)
+      &&. merchantAccess ^. MerchantAccessOperatingCity ==. val city
+  return merchantAccess
+
+findAllMerchantAccessByPersonId ::
+  (Transactionable m) =>
+  Id DP.Person ->
+  m [DAccess.MerchantAccess]
+findAllMerchantAccessByPersonId personId = findAll $ do
+  merchantAccess <- from $ table @MerchantAccessT
+  where_ $
+    merchantAccess ^. MerchantAccessPersonId ==. val (toKey personId)
   return merchantAccess
 
 findAllByPersonId ::
