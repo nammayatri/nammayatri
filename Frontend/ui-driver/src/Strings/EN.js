@@ -1004,7 +1004,15 @@ const englishStrings = {
   HUNDRED_PERCENT_FARE_GOES_TO_YOU : "100% of the fare\ngoes to you!",
   FARE_SHOWN_IS_FARE_YOU_GET : "The fare shown is the fare you get.\nNo hidden charges.",
   BE_A_PART_OF_OPEN_MOBILITY_REVOLUTION : "Be a part of the Open\nMobility Revolution!",
-  OUR_DATA_AND_PRODUCT_ARE_TRANSPARENT : "Our data and product roadmap are\ntransparent for all."
+  OUR_DATA_AND_PRODUCT_ARE_TRANSPARENT : "Our data and product roadmap are\ntransparent for all.",
+  YOUR_DETECTED_LOCATION_IS : "Your detected location is",
+  LANGUAGE_DETECTED : "Language detected",
+  CHANGE_LANGUAGE_STR : "Change Language",
+  SELECT_LOCATION : "Select Location",
+  SELECT_LOCATION_DESC : "Select the location where you want to take rides",
+  SELECT_LANGUAGE_DESC : "Select the language you can read",
+  CONFIRM_LANGUAGE : "Confirm Language",
+  GET_STARTED : "Get Started",
 }
 
 

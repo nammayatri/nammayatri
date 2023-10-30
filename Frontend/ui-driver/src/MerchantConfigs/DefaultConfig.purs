@@ -105,4 +105,22 @@ config =
   , mapConfig : 
       { animationDuration : 500
       }
+  , cityConfig : [
+    {
+      cityName : "Bengaluru",
+      mapImage : "ny_ic_bengalore_map,"
+    },
+    {
+      cityName : "Hyderabad",
+      mapImage : "ny_ic_bengalore_map,"
+    },
+    {
+      cityName : "Mysore",
+      mapImage : "ny_ic_bengalore_map,"
+    },
+    {
+      cityName : "Delhi",
+      mapImage : "ny_ic_bengalore_map,"
+    }
+  ]
 }

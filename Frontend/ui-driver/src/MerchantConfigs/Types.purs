@@ -20,7 +20,8 @@ type AppConfig =
     bottomNavConfig :: BottomNavConfig,
     purpleRideConfig :: PurpleRideConfig,
     mapConfig :: MapConfig,
-    waitTimeConfig :: WaitTimeConfig
+    waitTimeConfig :: WaitTimeConfig,
+    cityConfig :: Array CityConfig
   } 
 
 type PurpleRideConfig = {
@@ -125,5 +126,8 @@ type MapConfig = {
 
 type WaitTimeConfig = {
   enableWaitTime :: Boolean,
-  thresholdDist :: Number
+  thresholdDist :: Number}
+type CityConfig = {
+  cityName :: String,
+  mapImage :: String
 }
