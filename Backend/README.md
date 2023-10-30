@@ -76,6 +76,11 @@ direnv allow                 # Run this only once.
 
 This will drop you into a [shell environment][nix-shell] containing all project dependencies. Inside the nix shell, run `,` to see the available commands specific to nammayatri development.
 
+To enable fast build on local use:
+```sh
+cabal configure -f local # Run this only once.
+```
+
 To compile the project, use [cabal]:
 
 ```sh
