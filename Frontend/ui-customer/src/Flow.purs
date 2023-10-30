@@ -1794,8 +1794,8 @@ permissionScreenFlow = do
                       currentFlowStatus
     TURN_ON_INTERNET -> case (getValueToLocalStore USER_NAME == "__failed") of
                             true -> pure unit
-                            _ -> if (os == "IOS" && permissionConditionB == false) then modifyScreenState $ PermissionScreenStateType (\permissionScreen -> permissionScreen {stage = LOCATION_DENIED})
-                                 else if (not (permissionConditionA && permissionConditionB) )then do 
+                            _ -> if os == "IOS" && not permissionConditionB then modifyScreenState $ PermissionScreenStateType (\permissionScreen -> permissionScreen {stage = LOCATION_DENIED})
+                                 else if not (permissionConditionA && permissionConditionB) then do 
                                   modifyScreenState $ PermissionScreenStateType (\permissionScreen -> permissionScreen {stage = LOCATION_DISABLED})
                                   permissionScreenFlow 
                                  else currentFlowStatus

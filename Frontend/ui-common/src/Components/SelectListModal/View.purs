@@ -479,7 +479,7 @@ horizontalLine index activeIndex config =
   , width MATCH_PARENT
   , background Color.grey800
   , padding (PaddingVertical 2 2)
-  , visibility if(((fromMaybe dummyReason( (config.selectionOptions)!!index)).textBoxRequired == true && index == activeIndex) || (config.showBgColor)) then GONE else VISIBLE
+  , visibility if(((fromMaybe dummyReason( (config.selectionOptions)!!index)).textBoxRequired && index == activeIndex) || (config.showBgColor)) then GONE else VISIBLE
   ][]
 
 dummyTextView :: forall w . PrestoDOM (Effect Unit) w

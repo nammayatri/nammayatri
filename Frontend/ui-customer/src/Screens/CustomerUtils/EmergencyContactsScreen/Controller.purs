@@ -207,7 +207,7 @@ eval BackPressed state =
               pure unit
           pure LoadMoreContacts
         ]
-  else if (state.props.showInfoPopUp == true) then
+  else if state.props.showInfoPopUp then
     continue state{props{showInfoPopUp = false, showContactList = false}}
   else
     exit $ GoToHomeScreen
@@ -270,14 +270,14 @@ eval (NewContactActionController (NewContactController.ContactSelected index)) s
   let item = if ((DS.length contact.number) > 10 && (DS.length contact.number) <= 12 && ((DS.take 1 contact.number) == "0" || (DS.take 2 contact.number) == "91")) then
     contact {number =  DS.drop ((DS.length contact.number) - 10) contact.number}
   else contact
-  if (((length state.data.contactsList) >= 3) && (item.isSelected == false)) then do
+  if (((length state.data.contactsList) >= 3) && not item.isSelected ) then do
     _ <- pure $ toast $ getString LIMIT_REACHED_3_OF_3_EMERGENCY_CONTACTS_ALREADY_ADDED
     continue state
   else if((DS.length item.number) /= 10 || (fromMaybe 0 (fromString (DS.take 1 item.number)) < 6)) then do
     _ <- pure $ toast (getString INVALID_CONTACT_FORMAT)
     continue state
   else do
-    let contactListState = if(contact.isSelected == false) then state{ data {contactsList = (snoc state.data.contactsList item{isSelected = true}) } } else state { data {contactsList = filter (\x -> ((if DS.length contact.number == 10 then "" else "91") <> x.number <> x.name  /= contact.number <> contact.name)) state.data.contactsList}}
+    let contactListState = if not contact.isSelected then state{ data {contactsList = (snoc state.data.contactsList item{isSelected = true}) } } else state { data {contactsList = filter (\x -> ((if DS.length contact.number == 10 then "" else "91") <> x.number <> x.name  /= contact.number <> contact.name)) state.data.contactsList}}
     let newState = contactListState { data = contactListState.data { contactsNewList = map (\x ->
       if ((x.number <> x.name  == contact.number <> contact.name)) then x { isSelected = not (x.isSelected) }
       else x
@@ -298,7 +298,7 @@ eval (NewContactActionController (NewContactController.ContactSelected index)) s
 
 eval (ContactListPrimaryButtonActionController PrimaryButton.OnClick) state = do
   let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_emergency_contact_added"
-  let selectedContacts = filter (\x -> x.isSelected) state.data.contactsNewList
+  let selectedContacts = filter (_.isSelected) state.data.contactsNewList
   let validSelectedContacts = (map (\contact ->
     if ((DS.length contact.number) > 10 && (DS.length contact.number) <= 12 && ((DS.take 1 contact.number) == "0" || (DS.take 2 contact.number) == "91")) then
       contact {number =  DS.drop ((DS.length contact.number) - 10) contact.number}

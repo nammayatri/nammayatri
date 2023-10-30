@@ -266,7 +266,7 @@ view push state =
                 _ <- push action
                 _ <- getCurrentPosition push CurrentLocation
                 _ <- showMap (getNewIDWithTag "CustomerHomeScreenMap") isCurrentLocationEnabled "satellite" zoomLevel push MAPREADY
-                if(state.props.openChatScreen == true && state.props.currentStage == RideAccepted) then push OpenChatScreen
+                if state.props.openChatScreen && state.props.currentStage == RideAccepted then push OpenChatScreen
                 else pure unit
                 case state.props.currentStage of
                   HomeScreen -> if ((getSearchType unit) == "direct_search") then push DirectSearch else pure unit
@@ -786,7 +786,7 @@ buttonLayout state push =
             , padding (PaddingTop 16)
             ]
             [ PrimaryButton.view (push <<< PrimaryButtonActionController) (whereToButtonConfig state)
-            , if (((state.data.savedLocations == []) && state.data.recentSearchs.predictionArray == [] && state.props.isBanner == false && (getValueToLocalStore DISABILITY_UPDATED == "true" && (not state.data.config.showDisabilityBanner ) ) ) || state.props.isSearchLocation == LocateOnMap) then emptyLayout state else recentSearchesAndFavourites state push
+            , if (((state.data.savedLocations == []) && state.data.recentSearchs.predictionArray == [] && not state.props.isBanner && (getValueToLocalStore DISABILITY_UPDATED == "true" && (not state.data.config.showDisabilityBanner ) ) ) || state.props.isSearchLocation == LocateOnMap) then emptyLayout state else recentSearchesAndFavourites state push
             ]
         ]
 
@@ -1767,8 +1767,8 @@ rideTrackingView push state =
                 , background Color.transparent
                 , sheetState state.props.sheetState 
                 , accessibility DISABLE
-                , peakHeight if (state.props.currentStage == RideAccepted && state.data.config.nyBrandingVisibility == true) then getHeightFromPercent 66
-                             else if (state.props.currentStage == RideStarted && state.data.config.nyBrandingVisibility == true) then getHeightFromPercent 52
+                , peakHeight if state.props.currentStage == RideAccepted && state.data.config.nyBrandingVisibility then getHeightFromPercent 66
+                             else if state.props.currentStage == RideStarted && state.data.config.nyBrandingVisibility then getHeightFromPercent 52
                              else getPeakHeight state.props.currentStage
                 , visibility VISIBLE
                 , halfExpandedRatio 0.75

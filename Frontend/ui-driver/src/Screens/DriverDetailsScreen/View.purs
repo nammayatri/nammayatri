@@ -220,7 +220,7 @@ driverDetailsView push state =
                   , alpha 0.9
                   ] <> FontStyle.body1 TypoGraphy
                   , driverSubsection push state optionItem
-                  , if(optionItem.title == DRIVER_MOBILE_INFO && state.props.checkAlternateNumber == true && state.props.keyboardModalType == ST.NONE && state.data.driverAlternateMobile == Nothing) then addAlternateNumber push state else dummyTextView
+                  , if(optionItem.title == DRIVER_MOBILE_INFO && state.props.checkAlternateNumber && state.props.keyboardModalType == ST.NONE && state.data.driverAlternateMobile == Nothing) then addAlternateNumber push state else dummyTextView
                   , horizontalLineView 0 0
               ]
 

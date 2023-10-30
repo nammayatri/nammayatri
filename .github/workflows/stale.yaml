@@ -20,6 +20,6 @@ jobs:
     - uses: actions/stale@v5
       with:
         repo-token: ${{ secrets.GITHUB_TOKEN }}
-        stale-pr-message: 'This PR is stale from more than 45Days now, please update or close this PR if not required'
+        stale-pr-message: 'This PR is stale from more than 30 Days now with no activity, please update or close this PR if not required'
         stale-pr-label: 'no-pr-activity'
-        daysBeforeStale: 45
+        daysBeforeStale: 30

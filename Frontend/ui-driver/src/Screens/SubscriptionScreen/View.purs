@@ -1771,8 +1771,8 @@ getAutoPayStatusPillData autoPayStatus =
 
 showOfferApplicable :: SubscriptionScreenState -> Boolean
 showOfferApplicable state = 
-  let currentPlanOffers = length $ filter (\item -> not item.addedFromUI) state.data.managePlanData.currentPlan.offers
-      selectedPlanOffers = length $ filter (\item -> not item.addedFromUI) state.props.managePlanProps.selectedPlanItem.offers
+  let currentPlanOffers = length $ filter (not _.addedFromUI) state.data.managePlanData.currentPlan.offers
+      selectedPlanOffers = length $ filter (not _.addedFromUI) state.props.managePlanProps.selectedPlanItem.offers
   in state.props.managePlanProps.selectedPlanItem.id /= state.data.managePlanData.currentPlan.id && selectedPlanOffers < currentPlanOffers
 
 commonImageView :: String -> Int -> Int -> Margin -> Padding -> forall w . PrestoDOM (Effect Unit) w

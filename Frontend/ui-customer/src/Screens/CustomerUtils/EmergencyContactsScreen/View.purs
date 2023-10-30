@@ -78,7 +78,7 @@ view listItemm push state =
             [ height MATCH_PARENT
             , width MATCH_PARENT
             , orientation VERTICAL
-            , accessibility if (state.props.showInfoPopUp == true) then DISABLE_DESCENDANT else DISABLE
+            , accessibility if state.props.showInfoPopUp then DISABLE_DESCENDANT else DISABLE
             ]
             [ GenericHeader.view (push <<< ContactListGenericHeaderActionController) (genericHeaderConfig state)
             , linearLayout

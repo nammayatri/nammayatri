@@ -1141,7 +1141,7 @@ getRideCompletedConfig state = let
     theme = LIGHT,
     isPrimaryButtonSticky = true,
     bannerConfig = autopayBannerConfig state false,
-    viewsByOrder = map (\item -> item.elementView) (DA.filter (\item -> item.condition) viewOrderConfig)
+    viewsByOrder = map (_.elementView) (DA.filter (_.condition) viewOrderConfig)
   }
   in config'
 

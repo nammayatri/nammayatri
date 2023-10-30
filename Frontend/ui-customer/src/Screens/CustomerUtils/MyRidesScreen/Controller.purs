@@ -117,7 +117,7 @@ eval (ScrollStateChanged scrollState) state = do
 eval (GenericHeaderActionController (GenericHeader.PrefixImgOnClick )) state = continueWithCmd state [do pure BackPressed]
 
 eval (OnFadeComplete _ ) state = do
-                      if (state.props.receivedResponse == false) then continue state
+                      if not state.props.receivedResponse then continue state
                       else continue state {
                                 shimmerLoader = case state.shimmerLoader of
                                                   AnimatedIn ->AnimatedOut

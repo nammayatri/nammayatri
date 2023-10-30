@@ -197,7 +197,7 @@ eval (Scroll value) state = do
   continue state { loaderButtonVisibility = loadMoreButton }
 
 eval (OnFadeComplete _) state = do
-  if (state.recievedResponse == false) then
+  if not state.recievedResponse then
     continue state
   else
     continue
