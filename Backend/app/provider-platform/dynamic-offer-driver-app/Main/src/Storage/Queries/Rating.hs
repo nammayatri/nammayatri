@@ -31,13 +31,15 @@ import qualified Storage.Beam.Rating as BeamR
 create :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => DR.Rating -> m ()
 create = createWithKV
 
-updateRating :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Rating -> Id Person -> Int -> Maybe Text -> m ()
-updateRating (Id ratingId) (Id driverId) newRatingValue newFeedbackDetails = do
+updateRating :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Rating -> Id Person -> Int -> Maybe Text -> Maybe Text -> Maybe Bool -> m ()
+updateRating (Id ratingId) (Id driverId) newRatingValue newFeedbackDetails newIssueId newStatus = do
   now <- getCurrentTime
   updateOneWithKV
     [ Se.Set BeamR.ratingValue newRatingValue,
       Se.Set BeamR.feedbackDetails newFeedbackDetails,
-      Se.Set BeamR.updatedAt now
+      Se.Set BeamR.updatedAt now,
+      Se.Set BeamR.isSafe newStatus,
+      Se.Set BeamR.issueId newIssueId
     ]
     [Se.And [Se.Is BeamR.id (Se.Eq ratingId), Se.Is BeamR.driverId (Se.Eq driverId)]]
 
@@ -70,6 +72,8 @@ instance FromTType' BeamR.Rating Rating where
             driverId = Id driverId,
             ratingValue = ratingValue,
             feedbackDetails = feedbackDetails,
+            isSafe = isSafe,
+            issueId = issueId,
             createdAt = createdAt,
             updatedAt = updatedAt
           }
@@ -82,6 +86,8 @@ instance ToTType' BeamR.Rating Rating where
         BeamR.driverId = getId driverId,
         BeamR.ratingValue = ratingValue,
         BeamR.feedbackDetails = feedbackDetails,
+        BeamR.isSafe = isSafe,
+        BeamR.issueId = issueId,
         BeamR.createdAt = createdAt,
         BeamR.updatedAt = updatedAt
       }

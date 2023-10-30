@@ -25,6 +25,8 @@ data RatingT f = RatingT
     driverId :: B.C f Text,
     ratingValue :: B.C f Int,
     feedbackDetails :: B.C f (Maybe Text),
+    isSafe :: B.C f (Maybe Bool),
+    issueId :: B.C f (Maybe Text),
     createdAt :: B.C f UTCTime,
     updatedAt :: B.C f UTCTime
   }
