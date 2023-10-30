@@ -379,15 +379,13 @@ findAllByStatusAndDriverId (Id driverId) driverFeeStatus = findAllWithKV [Se.And
 findAllPendingAndDueDriverFeeByDriverId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> m [DriverFee]
 findAllPendingAndDueDriverFeeByDriverId (Id driverId) = findAllWithKV [Se.And [Se.Is BeamDF.feeType $ Se.In [RECURRING_INVOICE, RECURRING_EXECUTION_INVOICE], Se.Is BeamDF.status $ Se.In [PAYMENT_PENDING, PAYMENT_OVERDUE], Se.Is BeamDF.driverId $ Se.Eq driverId]]
 
-findAllOverdueDriverFeeByDriverIdWithinWindow :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> UTCTime -> UTCTime -> m [DriverFee]
-findAllOverdueDriverFeeByDriverIdWithinWindow (Id driverId) from to =
+findAllOverdueDriverFeeByDriverId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> m [DriverFee]
+findAllOverdueDriverFeeByDriverId (Id driverId) =
   findAllWithKV
     [ Se.And
         [ Se.Is BeamDF.feeType $ Se.Eq RECURRING_INVOICE,
           Se.Is BeamDF.status $ Se.Eq PAYMENT_OVERDUE,
-          Se.Is BeamDF.driverId $ Se.Eq driverId,
-          Se.Is BeamDF.startTime $ Se.GreaterThanOrEq from,
-          Se.Is BeamDF.startTime $ Se.LessThanOrEq to
+          Se.Is BeamDF.driverId $ Se.Eq driverId
         ]
     ]
 
