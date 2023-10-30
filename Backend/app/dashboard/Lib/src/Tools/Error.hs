@@ -13,10 +13,15 @@
 -}
 {-# LANGUAGE TemplateHaskell #-}
 
-module Tools.Error where
+module Tools.Error
+  ( module Tools.Error,
+    module Error,
+  )
+where
 
 import Data.Aeson (decode)
 import Kernel.Prelude
+import Kernel.Types.Error as Error
 import Kernel.Types.Error.BaseError.HTTPError.FromResponse
 import Kernel.Types.Error.BaseError.HTTPError.HttpCode
 import Kernel.Utils.Common hiding (Error)

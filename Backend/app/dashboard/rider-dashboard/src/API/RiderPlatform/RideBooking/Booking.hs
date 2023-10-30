@@ -24,6 +24,7 @@ import qualified "rider-app" Domain.Types.Person as DP
 import qualified Domain.Types.Transaction as DT
 import "lib-dashboard" Environment
 import Kernel.Prelude
+import qualified Kernel.Types.Beckn.City as City
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified RiderPlatformClient.RiderApp as Client
@@ -40,10 +41,10 @@ type API =
              :> BAP.CustomerBookingListAPI
        )
 
-handler :: ShortId DM.Merchant -> FlowServer API
-handler merchantId =
-  callBookingStatus merchantId
-    :<|> callBookingList merchantId
+handler :: ShortId DM.Merchant -> City.City -> FlowServer API
+handler merchantId city =
+  callBookingStatus merchantId city
+    :<|> callBookingList merchantId city
 
 buildTransaction ::
   ( MonadFlow m,
@@ -56,14 +57,14 @@ buildTransaction ::
 buildTransaction endpoint apiTokenInfo =
   T.buildTransaction (DT.RBooking endpoint) (Just APP_BACKEND) (Just apiTokenInfo) Nothing Nothing
 
-callBookingStatus :: ShortId DM.Merchant -> ApiTokenInfo -> Id SRB.Booking -> Id DP.Person -> FlowHandler DB.BookingAPIEntity
-callBookingStatus merchantShortId apiTokenInfo bookingId personId = withFlowHandlerAPI $ do
-  checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
+callBookingStatus :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id SRB.Booking -> Id DP.Person -> FlowHandler DB.BookingAPIEntity
+callBookingStatus merchantShortId opCity apiTokenInfo bookingId personId = withFlowHandlerAPI $ do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction BAP.RideStatusEndPoint apiTokenInfo T.emptyRequest
   T.withTransactionStoring transaction $
-    Client.callRiderApp checkedMerchantId (.rideBooking.booking.bookingStatus) bookingId personId
+    Client.callRiderApp checkedMerchantId opCity (.rideBooking.booking.bookingStatus) bookingId personId
 
-callBookingList :: ShortId DM.Merchant -> ApiTokenInfo -> Id DP.Person -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe SRB.BookingStatus -> FlowHandler DBooking.BookingListRes
-callBookingList merchantShortId apiTokenInfo personId limit offset onlyActive status = withFlowHandlerAPI $ do
-  checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
-  Client.callRiderApp checkedMerchantId (.rideBooking.booking.bookingList) personId limit offset onlyActive status
+callBookingList :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id DP.Person -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe SRB.BookingStatus -> FlowHandler DBooking.BookingListRes
+callBookingList merchantShortId opCity apiTokenInfo personId limit offset onlyActive status = withFlowHandlerAPI $ do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  Client.callRiderApp checkedMerchantId opCity (.rideBooking.booking.bookingList) personId limit offset onlyActive status

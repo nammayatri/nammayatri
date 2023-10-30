@@ -17,14 +17,17 @@ module Domain.Types.MerchantAccess where
 import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.Person as DPerson
 import Kernel.Prelude
+import Kernel.Types.Beckn.City as City
 import Kernel.Types.Id
 
 data MerchantAccess = MerchantAccess
   { id :: Id MerchantAccess,
     merchantId :: Id DMerchant.Merchant,
+    merchantShortId :: ShortId DMerchant.Merchant,
     personId :: Id DPerson.Person,
     secretKey :: Maybe Text,
     is2faEnabled :: Bool,
-    createdAt :: UTCTime
+    createdAt :: UTCTime,
+    operatingCity :: City.City
   }
   deriving (Generic, Show)

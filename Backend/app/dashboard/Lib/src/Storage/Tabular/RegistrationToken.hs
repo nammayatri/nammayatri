@@ -23,6 +23,7 @@ import qualified Domain.Types.RegistrationToken as Domain
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
 import Kernel.Types.App (RegToken)
+import Kernel.Types.Beckn.City (City)
 import Kernel.Types.Id
 import Storage.Tabular.Merchant (MerchantTId)
 import Storage.Tabular.Person (PersonTId)
@@ -36,6 +37,7 @@ mkPersist
       personId PersonTId
       merchantId MerchantTId
       createdAt UTCTime
+      operatingCity City
       Primary id
       deriving Generic
     |]

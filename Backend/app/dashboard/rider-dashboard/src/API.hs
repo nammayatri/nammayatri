@@ -38,6 +38,7 @@ type API =
 type MainAPI =
   Dashboard.API
     :<|> BAP.API
+    :<|> BAP.APIV2
 
 handler :: FlowServer API
 handler =
@@ -50,6 +51,7 @@ mainServer :: FlowServer MainAPI
 mainServer =
   Dashboard.handler
     :<|> BAP.handler
+    :<|> BAP.handlerV2
 
 type SwaggerAPI = "swagger" :> Get '[HTML] BS.ByteString
 

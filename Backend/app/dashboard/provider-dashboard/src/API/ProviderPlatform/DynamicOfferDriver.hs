@@ -14,7 +14,9 @@
 
 module API.ProviderPlatform.DynamicOfferDriver
   ( API,
+    APIV2,
     handler,
+    handlerV2,
   )
 where
 
@@ -32,37 +34,70 @@ import qualified API.ProviderPlatform.DynamicOfferDriver.Subscription as Subscri
 import qualified API.ProviderPlatform.DynamicOfferDriver.Volunteer as Volunteer
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
 import "lib-dashboard" Environment
+import qualified Kernel.Types.Beckn.City as City
 import Kernel.Types.Id
 import Servant
 
+-- TODO: Deprecated, Remove after successful deployment
 type API =
   "driver-offer"
     :> Capture "merchantId" (ShortId DM.Merchant)
-    :> ( Driver.API
-           :<|> Ride.API
-           :<|> Subscription.API
-           :<|> Booking.API
-           :<|> Merchant.API
-           :<|> Message.API
-           :<|> DriverReferral.API
-           :<|> DriverRegistration.API
-           :<|> Issue.API
-           :<|> Volunteer.API
-           :<|> Revenue.API
-           :<|> Overlay.API
-       )
+    :> API'
 
+type APIV2 =
+  "driver-offer"
+    :> Capture "merchantId" (ShortId DM.Merchant)
+    :> Capture "city" City.City
+    :> API'
+
+type API' =
+  Driver.API
+    :<|> Ride.API
+    :<|> Subscription.API
+    :<|> Booking.API
+    :<|> Merchant.API
+    :<|> Message.API
+    :<|> DriverReferral.API
+    :<|> DriverRegistration.API
+    :<|> Issue.API
+    :<|> Volunteer.API
+    :<|> Revenue.API
+    :<|> Overlay.API
+
+-- TODO: Deprecated, Remove after successful deployment
 handler :: FlowServer API
-handler merchantId =
-  Driver.handler merchantId
-    :<|> Ride.handler merchantId
-    :<|> Subscription.handler merchantId
-    :<|> Booking.handler merchantId
-    :<|> Merchant.handler merchantId
-    :<|> Message.handler merchantId
-    :<|> DriverReferral.handler merchantId
-    :<|> DriverRegistration.handler merchantId
-    :<|> Issue.handler merchantId
-    :<|> Volunteer.handler merchantId
-    :<|> Revenue.handler merchantId
-    :<|> Overlay.handler merchantId
+handler merchantId = do
+  let city = getCity merchantId.getShortId
+  Driver.handler merchantId city
+    :<|> Ride.handler merchantId city
+    :<|> Subscription.handler merchantId city
+    :<|> Booking.handler merchantId city
+    :<|> Merchant.handler merchantId city
+    :<|> Message.handler merchantId city
+    :<|> DriverReferral.handler merchantId city
+    :<|> DriverRegistration.handler merchantId city
+    :<|> Issue.handler merchantId city
+    :<|> Volunteer.handler merchantId city
+    :<|> Revenue.handler merchantId city
+    :<|> Overlay.handler merchantId city
+  where
+    getCity = \case
+      "NAMMA_YATRI_PARTNER" -> City.Bangalore
+      "YATRI_PARTNER" -> City.Kochi
+      "JATRI_SAATHI_PARTNER" -> City.Kolkata
+      _ -> City.AnyCity
+
+handlerV2 :: FlowServer APIV2
+handlerV2 merchantId city =
+  Driver.handler merchantId city
+    :<|> Ride.handler merchantId city
+    :<|> Subscription.handler merchantId city
+    :<|> Booking.handler merchantId city
+    :<|> Merchant.handler merchantId city
+    :<|> Message.handler merchantId city
+    :<|> DriverReferral.handler merchantId city
+    :<|> DriverRegistration.handler merchantId city
+    :<|> Issue.handler merchantId city
+    :<|> Volunteer.handler merchantId city
+    :<|> Revenue.handler merchantId city
+    :<|> Overlay.handler merchantId city

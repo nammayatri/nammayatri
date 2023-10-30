@@ -19,9 +19,12 @@ import Domain.Types.Person
 import Domain.Types.RegistrationToken
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
+import qualified Kernel.Types.Beckn.City as City
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Storage.Tabular.RegistrationToken
+
+{-# DEPRECATED findByPersonIdAndMerchantId "Use `findByPersonIdAndMerchantIdAndCity` instead of this function" #-}
 
 create :: RegistrationToken -> SqlDB ()
 create = Esq.create
@@ -49,6 +52,16 @@ findAllByPersonIdAndMerchantId personId merchantId =
         &&. regToken ^. RegistrationTokenMerchantId ==. val (toKey merchantId)
     return regToken
 
+findAllByPersonIdAndMerchantIdAndCity :: Transactionable m => Id Person -> Id Merchant -> City.City -> m [RegistrationToken]
+findAllByPersonIdAndMerchantIdAndCity personId merchantId city =
+  findAll $ do
+    regToken <- from $ table @RegistrationTokenT
+    where_ $
+      regToken ^. RegistrationTokenPersonId ==. val (toKey personId)
+        &&. regToken ^. RegistrationTokenMerchantId ==. val (toKey merchantId)
+        &&. regToken ^. RegistrationTokenOperatingCity ==. val city
+    return regToken
+
 findByPersonIdAndMerchantId :: Transactionable m => Id Person -> Id Merchant -> m (Maybe RegistrationToken)
 findByPersonIdAndMerchantId personId merchantId =
   findOne $ do
@@ -56,6 +69,16 @@ findByPersonIdAndMerchantId personId merchantId =
     where_ $
       regToken ^. RegistrationTokenPersonId ==. val (toKey personId)
         &&. regToken ^. RegistrationTokenMerchantId ==. val (toKey merchantId)
+    return regToken
+
+findByPersonIdAndMerchantIdAndCity :: Transactionable m => Id Person -> Id Merchant -> City.City -> m (Maybe RegistrationToken)
+findByPersonIdAndMerchantIdAndCity personId merchantId city =
+  findOne $ do
+    regToken <- from $ table @RegistrationTokenT
+    where_ $
+      regToken ^. RegistrationTokenPersonId ==. val (toKey personId)
+        &&. regToken ^. RegistrationTokenMerchantId ==. val (toKey merchantId)
+        &&. regToken ^. RegistrationTokenOperatingCity ==. val city
     return regToken
 
 deleteAllByPersonId :: Id Person -> SqlDB ()
@@ -71,6 +94,15 @@ deleteAllByPersonIdAndMerchantId personId merchantId =
     where_ $
       regToken ^. RegistrationTokenPersonId ==. val (toKey personId)
         &&. regToken ^. RegistrationTokenMerchantId ==. val (toKey merchantId)
+
+deleteAllByPersonIdAndMerchantIdAndCity :: Id Person -> Id Merchant -> City.City -> SqlDB ()
+deleteAllByPersonIdAndMerchantIdAndCity personId merchantId city =
+  Esq.delete $ do
+    regToken <- from $ table @RegistrationTokenT
+    where_ $
+      regToken ^. RegistrationTokenPersonId ==. val (toKey personId)
+        &&. regToken ^. RegistrationTokenMerchantId ==. val (toKey merchantId)
+        &&. regToken ^. RegistrationTokenOperatingCity ==. val city
 
 deleteById :: Id RegistrationToken -> SqlDB ()
 deleteById = Esq.deleteByKey @RegistrationTokenT

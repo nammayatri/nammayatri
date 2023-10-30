@@ -22,6 +22,7 @@ module Storage.Tabular.MerchantAccess where
 import qualified Domain.Types.MerchantAccess as Domain
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
+import Kernel.Types.Beckn.City (City)
 import Kernel.Types.Id
 import Storage.Tabular.Merchant (MerchantTId)
 import Storage.Tabular.Person (PersonTId)
@@ -33,11 +34,13 @@ mkPersist
       id Text
       personId PersonTId
       merchantId MerchantTId
+      merchantShortId Text
+      operatingCity City
       secretKey Text Maybe
       is2faEnabled Bool
       createdAt UTCTime
       Primary id
-      Unique (MerchantAccessPersonId, MerchantAccessMerchantId)
+      UniquePersonIdOperatingCityMerchantId personId operatingCity merchantId
       deriving Generic
     |]
 
@@ -53,6 +56,7 @@ instance FromTType MerchantAccessT Domain.MerchantAccess where
         { id = Id id,
           merchantId = fromKey merchantId,
           personId = fromKey personId,
+          merchantShortId = ShortId merchantShortId,
           ..
         }
 
@@ -62,5 +66,6 @@ instance ToTType MerchantAccessT Domain.MerchantAccess where
       { id = getId id,
         merchantId = toKey merchantId,
         personId = toKey personId,
+        merchantShortId = getShortId merchantShortId,
         ..
       }

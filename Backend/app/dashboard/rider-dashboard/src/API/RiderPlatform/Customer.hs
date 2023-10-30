@@ -24,6 +24,7 @@ import qualified Domain.Types.Transaction as DT
 import "lib-dashboard" Environment
 import Kernel.Prelude
 import Kernel.Types.APISuccess
+import qualified Kernel.Types.Beckn.City as City
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified RiderPlatformClient.RiderApp as Client
@@ -46,13 +47,13 @@ type API =
              :> Common.CustomerInfoAPI
        )
 
-handler :: ShortId DM.Merchant -> FlowServer API
-handler merchantId =
-  listCustomer merchantId
-    :<|> deleteCustomer merchantId
-    :<|> blockCustomer merchantId
-    :<|> unblockCustomer merchantId
-    :<|> customerInfo merchantId
+handler :: ShortId DM.Merchant -> City.City -> FlowServer API
+handler merchantId city =
+  listCustomer merchantId city
+    :<|> deleteCustomer merchantId city
+    :<|> blockCustomer merchantId city
+    :<|> unblockCustomer merchantId city
+    :<|> customerInfo merchantId city
 
 buildTransaction ::
   ( MonadFlow m,
@@ -67,6 +68,7 @@ buildTransaction endpoint apiTokenInfo =
 
 listCustomer ::
   ShortId DM.Merchant ->
+  City.City ->
   ApiTokenInfo ->
   Maybe Int ->
   Maybe Int ->
@@ -74,48 +76,52 @@ listCustomer ::
   Maybe Bool ->
   Maybe Text ->
   FlowHandler Common.CustomerListRes
-listCustomer merchantShortId apiTokenInfo mbLimit mbOffset enabled blocked phone = withFlowHandlerAPI $ do
-  checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
-  Client.callRiderApp checkedMerchantId (.customers.customerList) mbLimit mbOffset enabled blocked phone
+listCustomer merchantShortId opCity apiTokenInfo mbLimit mbOffset enabled blocked phone = withFlowHandlerAPI $ do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  Client.callRiderApp checkedMerchantId opCity (.customers.customerList) mbLimit mbOffset enabled blocked phone
 
 deleteCustomer ::
   ShortId DM.Merchant ->
+  City.City ->
   ApiTokenInfo ->
   Id Common.Customer ->
   FlowHandler APISuccess
-deleteCustomer merchantShortId apiTokenInfo customerId = withFlowHandlerAPI $ do
-  checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
+deleteCustomer merchantShortId opCity apiTokenInfo customerId = withFlowHandlerAPI $ do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction Common.DeleteCustomerEndpoint apiTokenInfo T.emptyRequest
   T.withTransactionStoring transaction $
-    Client.callRiderApp checkedMerchantId (.customers.customerDelete) customerId
+    Client.callRiderApp checkedMerchantId opCity (.customers.customerDelete) customerId
 
 blockCustomer ::
   ShortId DM.Merchant ->
+  City.City ->
   ApiTokenInfo ->
   Id Common.Customer ->
   FlowHandler APISuccess
-blockCustomer merchantShortId apiTokenInfo customerId = withFlowHandlerAPI $ do
-  checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
+blockCustomer merchantShortId opCity apiTokenInfo customerId = withFlowHandlerAPI $ do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction Common.BlockCustomerEndpoint apiTokenInfo T.emptyRequest
   T.withTransactionStoring transaction $
-    Client.callRiderApp checkedMerchantId (.customers.customerBlock) customerId
+    Client.callRiderApp checkedMerchantId opCity (.customers.customerBlock) customerId
 
 unblockCustomer ::
   ShortId DM.Merchant ->
+  City.City ->
   ApiTokenInfo ->
   Id Common.Customer ->
   FlowHandler APISuccess
-unblockCustomer merchantShortId apiTokenInfo customerId = withFlowHandlerAPI $ do
-  checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
+unblockCustomer merchantShortId opCity apiTokenInfo customerId = withFlowHandlerAPI $ do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction Common.UnblockCustomerEndpoint apiTokenInfo T.emptyRequest
   T.withTransactionStoring transaction $
-    Client.callRiderApp checkedMerchantId (.customers.customerUnblock) customerId
+    Client.callRiderApp checkedMerchantId opCity (.customers.customerUnblock) customerId
 
 customerInfo ::
   ShortId DM.Merchant ->
+  City.City ->
   ApiTokenInfo ->
   Id Common.Customer ->
   FlowHandler Common.CustomerInfoRes
-customerInfo merchantShortId apiTokenInfo customerId = withFlowHandlerAPI $ do
-  checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
-  Client.callRiderApp checkedMerchantId (.customers.customerInfo) customerId
+customerInfo merchantShortId opCity apiTokenInfo customerId = withFlowHandlerAPI $ do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  Client.callRiderApp checkedMerchantId opCity (.customers.customerInfo) customerId

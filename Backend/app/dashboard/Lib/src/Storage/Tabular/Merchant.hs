@@ -23,6 +23,7 @@ import qualified Domain.Types.Merchant as Domain
 import qualified Domain.Types.ServerName as Domain
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
+import Kernel.Types.Beckn.City (City)
 import Kernel.Types.Id
 
 mkPersist
@@ -33,6 +34,8 @@ mkPersist
       shortId Text
       serverName Domain.ServerName
       is2faMandatory Bool
+      defaultOperatingCity City
+      supportedOperatingCities [City]
       createdAt UTCTime
       Primary id
       UniqueMerchantShortId shortId

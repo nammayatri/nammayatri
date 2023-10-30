@@ -24,6 +24,7 @@ import qualified Domain.Types.Transaction as DT
 import "lib-dashboard" Environment
 import Kernel.Prelude
 import Kernel.Types.APISuccess
+import qualified Kernel.Types.Beckn.City as City
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified RiderPlatformClient.RiderApp as Client
@@ -37,7 +38,7 @@ type API =
     :> ApiAuth 'APP_BACKEND 'CUSTOMERS 'CANCEL_BOOKING
     :> BAP.CancelBookingAPI
 
-handler :: ShortId DM.Merchant -> FlowServer API
+handler :: ShortId DM.Merchant -> City.City -> FlowServer API
 handler = callBookingCancel
 
 buildTransaction ::
@@ -51,9 +52,9 @@ buildTransaction ::
 buildTransaction endpoint apiTokenInfo =
   T.buildTransaction (DT.CancelAPI endpoint) (Just APP_BACKEND) (Just apiTokenInfo) Nothing Nothing
 
-callBookingCancel :: ShortId DM.Merchant -> ApiTokenInfo -> Id SRB.Booking -> Id DP.Person -> DCancel.CancelReq -> FlowHandler APISuccess
-callBookingCancel merchantShortId apiTokenInfo bookingId personId req = withFlowHandlerAPI $ do
-  checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
+callBookingCancel :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id SRB.Booking -> Id DP.Person -> DCancel.CancelReq -> FlowHandler APISuccess
+callBookingCancel merchantShortId opCity apiTokenInfo bookingId personId req = withFlowHandlerAPI $ do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction BAP.RideBookingCancelEndPoint apiTokenInfo T.emptyRequest
   T.withTransactionStoring transaction $
-    Client.callRiderApp checkedMerchantId (.rideBooking.cancel.cancelBooking) bookingId personId req
+    Client.callRiderApp checkedMerchantId opCity (.rideBooking.cancel.cancelBooking) bookingId personId req

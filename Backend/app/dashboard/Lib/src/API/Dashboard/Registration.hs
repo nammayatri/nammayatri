@@ -40,6 +40,10 @@ type API =
              :> DashboardAuth 'DASHBOARD_USER
              :> ReqBody '[JSON] DReg.SwitchMerchantReq
              :> Post '[JSON] DReg.LoginRes
+           :<|> "switchMerchantAndCity"
+             :> DashboardAuth 'DASHBOARD_USER
+             :> ReqBody '[JSON] DReg.SwitchMerchantAndCityReq
+             :> Post '[JSON] DReg.LoginRes
            :<|> "fleet"
              :> "register"
              :> ReqBody '[JSON] DReg.FleetRegisterReq
@@ -53,6 +57,7 @@ handler =
     :<|> logoutAllMerchants
     :<|> enable2fa
     :<|> switchMerchant
+    :<|> switchMerchantAndCity
     :<|> registerFleetOwner
 
 login :: DReg.LoginReq -> FlowHandler DReg.LoginRes
@@ -69,6 +74,9 @@ enable2fa = withFlowHandlerAPI . DReg.enable2fa
 
 switchMerchant :: TokenInfo -> DReg.SwitchMerchantReq -> FlowHandler DReg.LoginRes
 switchMerchant token = withFlowHandlerAPI . DReg.switchMerchant token
+
+switchMerchantAndCity :: TokenInfo -> DReg.SwitchMerchantAndCityReq -> FlowHandler DReg.LoginRes
+switchMerchantAndCity token = withFlowHandlerAPI . DReg.switchMerchantAndCity token
 
 registerFleetOwner :: DReg.FleetRegisterReq -> FlowHandler APISuccess
 registerFleetOwner = withFlowHandlerAPI . DReg.registerFleetOwner

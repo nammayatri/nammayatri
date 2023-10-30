@@ -14,7 +14,9 @@
 
 module API.RiderPlatform
   ( API,
+    APIV2,
     handler,
+    handlerV2,
   )
 where
 
@@ -27,27 +29,55 @@ import qualified API.RiderPlatform.Ride as Ride
 import qualified API.RiderPlatform.RideBooking as RideBooking
 import qualified "lib-dashboard" Domain.Types.Merchant as DMerchant
 import "lib-dashboard" Environment
+import qualified Kernel.Types.Beckn.City as City
 import Kernel.Types.Id
 import Servant
 
+-- TODO: Deprecated, Remove after successful deployment
 type API =
   "bap"
     :> Capture "merchantId" (ShortId DMerchant.Merchant)
-    :> ( Customer.API
-           :<|> Booking.API
-           :<|> Merchant.API
-           :<|> Ride.API
-           :<|> RideBooking.API
-           :<|> IssueList.API
-           :<|> Issue.API
-       )
+    :> API'
 
+type APIV2 =
+  "bap"
+    :> Capture "merchantId" (ShortId DMerchant.Merchant)
+    :> Capture "city" City.City
+    :> API'
+
+type API' =
+  Customer.API
+    :<|> Booking.API
+    :<|> Merchant.API
+    :<|> Ride.API
+    :<|> RideBooking.API
+    :<|> IssueList.API
+    :<|> Issue.API
+
+-- TODO: Deprecated, Remove after successful deployment
 handler :: FlowServer API
-handler merchantId =
-  Customer.handler merchantId
-    :<|> Booking.handler merchantId
-    :<|> Merchant.handler merchantId
-    :<|> Ride.handler merchantId
-    :<|> RideBooking.handler merchantId
-    :<|> IssueList.handler merchantId
-    :<|> Issue.handler merchantId
+handler merchantId = do
+  let city = getCity merchantId.getShortId
+  Customer.handler merchantId city
+    :<|> Booking.handler merchantId city
+    :<|> Merchant.handler merchantId city
+    :<|> Ride.handler merchantId city
+    :<|> RideBooking.handler merchantId city
+    :<|> IssueList.handler merchantId city
+    :<|> Issue.handler merchantId city
+  where
+    getCity = \case
+      "NAMMA_YATRI" -> City.Bangalore
+      "YATRI" -> City.Kochi
+      "JATRI_SAATHI" -> City.Kolkata
+      _ -> City.AnyCity
+
+handlerV2 :: FlowServer APIV2
+handlerV2 merchantId city =
+  Customer.handler merchantId city
+    :<|> Booking.handler merchantId city
+    :<|> Merchant.handler merchantId city
+    :<|> Ride.handler merchantId city
+    :<|> RideBooking.handler merchantId city
+    :<|> IssueList.handler merchantId city
+    :<|> Issue.handler merchantId city

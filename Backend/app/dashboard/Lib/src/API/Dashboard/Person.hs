@@ -23,9 +23,11 @@ import Environment
 import Kernel.Prelude
 import Kernel.Types.APISuccess
 import Kernel.Types.Id
-import Kernel.Utils.Common (withFlowHandlerAPI)
+import Kernel.Utils.Common (fromMaybeM, withFlowHandlerAPI)
 import Servant hiding (Unauthorized, throwError)
+import qualified Storage.Queries.Merchant as QMerchant
 import Tools.Auth
+import Tools.Error
 
 type API =
   "admin"
@@ -42,15 +44,27 @@ type API =
              :> "assignRole"
              :> Capture "roleId" (Id DRole.Role)
              :> Post '[JSON] APISuccess
+           -- TODO : Deprecated, Remove after successful deployment
            :<|> DashboardAuth 'DASHBOARD_ADMIN
              :> Capture "personId" (Id DP.Person)
              :> "assignMerchantAccess"
              :> ReqBody '[JSON] DPerson.MerchantAccessReq
              :> Post '[JSON] APISuccess
+           -- End of Deprecated API.
+           :<|> DashboardAuth 'DASHBOARD_ADMIN
+             :> Capture "personId" (Id DP.Person)
+             :> "assignMerchantCityAccess"
+             :> ReqBody '[JSON] DPerson.MerchantCityAccessReq
+             :> Post '[JSON] APISuccess
            :<|> DashboardAuth 'DASHBOARD_ADMIN
              :> Capture "personId" (Id DP.Person)
              :> "resetMerchantAccess"
              :> ReqBody '[JSON] DPerson.MerchantAccessReq
+             :> Post '[JSON] APISuccess
+           :<|> DashboardAuth 'DASHBOARD_ADMIN
+             :> Capture "personid" (Id DP.Person)
+             :> "resetMerchantCityAccess"
+             :> ReqBody '[JSON] DPerson.MerchantCityAccessReq
              :> Post '[JSON] APISuccess
            :<|> "create"
              :> DashboardAuth 'DASHBOARD_ADMIN
@@ -94,8 +108,10 @@ handler :: FlowServer API
 handler =
   ( listPerson
       :<|> assignRole
-      :<|> assignMerchantAccess
+      :<|> assignMerchantAccess -- TODO : Deprecated, Remove after successful deployment
+      :<|> assignMerchantCityAccess
       :<|> resetMerchantAccess
+      :<|> resetMerchantCityAccess
       :<|> createPerson
       :<|> changeEmailByAdmin
       :<|> changePasswordByAdmin
@@ -119,12 +135,22 @@ assignRole tokenInfo personId =
   withFlowHandlerAPI . DPerson.assignRole tokenInfo personId
 
 assignMerchantAccess :: TokenInfo -> Id DP.Person -> DPerson.MerchantAccessReq -> FlowHandler APISuccess
-assignMerchantAccess tokenInfo personId =
-  withFlowHandlerAPI . DPerson.assignMerchantAccess tokenInfo personId
+assignMerchantAccess tokenInfo personId req = do
+  city <- withFlowHandlerAPI $ QMerchant.findByShortId req.merchantId >>= fmap (.defaultOperatingCity) . fromMaybeM (MerchantNotFound req.merchantId.getShortId)
+  let req' = DPerson.MerchantCityAccessReq {merchantId = req.merchantId, operatingCity = city}
+  withFlowHandlerAPI $ DPerson.assignMerchantCityAccess tokenInfo personId req'
+
+assignMerchantCityAccess :: TokenInfo -> Id DP.Person -> DPerson.MerchantCityAccessReq -> FlowHandler APISuccess
+assignMerchantCityAccess tokenInfo personId =
+  withFlowHandlerAPI . DPerson.assignMerchantCityAccess tokenInfo personId
 
 resetMerchantAccess :: TokenInfo -> Id DP.Person -> DPerson.MerchantAccessReq -> FlowHandler APISuccess
 resetMerchantAccess tokenInfo personId =
   withFlowHandlerAPI . DPerson.resetMerchantAccess tokenInfo personId
+
+resetMerchantCityAccess :: TokenInfo -> Id DP.Person -> DPerson.MerchantCityAccessReq -> FlowHandler APISuccess
+resetMerchantCityAccess tokenInfo personId =
+  withFlowHandlerAPI . DPerson.resetMerchantCityAccess tokenInfo personId
 
 profile :: TokenInfo -> FlowHandler DP.PersonAPIEntity
 profile =

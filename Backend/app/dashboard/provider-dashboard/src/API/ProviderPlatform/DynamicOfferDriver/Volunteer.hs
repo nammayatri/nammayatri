@@ -24,6 +24,7 @@ import qualified "lib-dashboard" Domain.Types.Transaction as DT
 import "lib-dashboard" Environment
 import Kernel.Prelude
 import Kernel.Types.APISuccess (APISuccess)
+import qualified Kernel.Types.Beckn.City as City
 import Kernel.Types.Id
 import Kernel.Utils.Common (MonadFlow, withFlowHandlerAPI)
 import qualified ProviderPlatformClient.DynamicOfferDriver as Client
@@ -46,10 +47,10 @@ type AssignCreateAndStartOtpRideAPI =
   ApiAuth 'DRIVER_OFFER_BPP 'VOLUNTEER 'VOLUNTEER_ASSIGN_CREATE_AND_START_OTP_RIDE
     :> Common.AssignCreateAndStartOtpRideAPI
 
-handler :: ShortId DM.Merchant -> FlowServer API
-handler merchantId =
-  bookingInfo merchantId
-    :<|> assignCreateAndStartOtpRide merchantId
+handler :: ShortId DM.Merchant -> City.City -> FlowServer API
+handler merchantId city =
+  bookingInfo merchantId city
+    :<|> assignCreateAndStartOtpRide merchantId city
 
 buildTransaction ::
   ( MonadFlow m,
@@ -62,14 +63,14 @@ buildTransaction ::
 buildTransaction endpoint apiTokenInfo =
   T.buildTransaction (DT.VolunteerAPI endpoint) (Just DRIVER_OFFER_BPP) (Just apiTokenInfo) Nothing Nothing
 
-bookingInfo :: ShortId DM.Merchant -> ApiTokenInfo -> Text -> FlowHandler Common.BookingInfoResponse
-bookingInfo merchantShortId apiTokenInfo otpCode = withFlowHandlerAPI $ do
-  checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
-  Client.callDriverOfferBPP checkedMerchantId (.volunteer.bookingInfo) otpCode
+bookingInfo :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Text -> FlowHandler Common.BookingInfoResponse
+bookingInfo merchantShortId opCity apiTokenInfo otpCode = withFlowHandlerAPI $ do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  Client.callDriverOfferBPP checkedMerchantId opCity (.volunteer.bookingInfo) otpCode
 
-assignCreateAndStartOtpRide :: ShortId DM.Merchant -> ApiTokenInfo -> Common.AssignCreateAndStartOtpRideAPIReq -> FlowHandler APISuccess
-assignCreateAndStartOtpRide merchantShortId apiTokenInfo req = withFlowHandlerAPI $ do
-  checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
+assignCreateAndStartOtpRide :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.AssignCreateAndStartOtpRideAPIReq -> FlowHandler APISuccess
+assignCreateAndStartOtpRide merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI $ do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction Common.AssignCreateAndStartOtpRideEndpoint apiTokenInfo (Just req)
   T.withTransactionStoring transaction $
-    Client.callDriverOfferBPP checkedMerchantId (.volunteer.assignCreateAndStartOtpRide) req
+    Client.callDriverOfferBPP checkedMerchantId opCity (.volunteer.assignCreateAndStartOtpRide) req

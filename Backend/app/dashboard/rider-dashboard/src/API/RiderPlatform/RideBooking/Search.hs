@@ -22,6 +22,7 @@ import qualified "rider-app" Domain.Types.Person as DP
 import qualified Domain.Types.Transaction as DT
 import "lib-dashboard" Environment
 import EulerHS.Prelude
+import qualified Kernel.Types.Beckn.City as City
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified RiderPlatformClient.RiderApp as Client
@@ -35,7 +36,7 @@ type API =
     :> ApiAuth 'APP_BACKEND 'CUSTOMERS 'SEARCH
     :> BAP.CustomerRideSearchAPI
 
-handler :: ShortId DM.Merchant -> FlowServer API
+handler :: ShortId DM.Merchant -> City.City -> FlowServer API
 handler = callSearch
 
 buildTransaction ::
@@ -49,9 +50,9 @@ buildTransaction ::
 buildTransaction endpoint apiTokenInfo =
   T.buildTransaction (DT.SearchAPI endpoint) (Just APP_BACKEND) (Just apiTokenInfo) Nothing Nothing
 
-callSearch :: ShortId DM.Merchant -> ApiTokenInfo -> Id DP.Person -> SH.SearchReq -> FlowHandler SH.SearchRes
-callSearch merchantShortId apiTokenInfo personId req = withFlowHandlerAPI $ do
-  checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
+callSearch :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id DP.Person -> SH.SearchReq -> FlowHandler SH.SearchRes
+callSearch merchantShortId opCity apiTokenInfo personId req = withFlowHandlerAPI $ do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction BAP.SearchEndPoint apiTokenInfo T.emptyRequest
   T.withTransactionStoring transaction $
-    Client.callRiderApp checkedMerchantId (.rideBooking.search.rsearch) personId req
+    Client.callRiderApp checkedMerchantId opCity (.rideBooking.search.rsearch) personId req
