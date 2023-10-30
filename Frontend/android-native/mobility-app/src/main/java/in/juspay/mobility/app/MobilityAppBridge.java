@@ -443,6 +443,97 @@ public class MobilityAppBridge extends HyperBridge {
             });
     }
 
+    // Deprecated on 30 OCT 2023.
+    @JavascriptInterface
+    public void addCarousel(String stringifyArray, String id) {
+        Activity activity = bridgeComponents.getActivity();
+        Context context = bridgeComponents.getContext();
+        LinearLayout parentLayout = null;
+        if (activity != null) {
+            parentLayout = activity.findViewById(Integer.parseInt(id));
+        }
+        if (activity == null || parentLayout == null) return;
+        LinearLayout finalParentLayout = parentLayout;
+        activity.runOnUiThread(() -> {
+            ViewPager2 viewPager2 = new ViewPager2(context);
+            LinearLayout sliderDotsPanel = new LinearLayout(context);
+            LinearLayout.LayoutParams sliderDotsPanelParams = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+            ViewGroup.LayoutParams scrollViewParams = new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
+            LinearLayout.LayoutParams linearLayoutParams = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.MATCH_PARENT);
+            LinearLayout linearLayout = new LinearLayout(context);
+            linearLayout.setOrientation(LinearLayout.VERTICAL);
+            linearLayout.setLayoutParams(linearLayoutParams);
+            ScrollView scrollView = new ScrollView(context);
+            scrollView.setLayoutParams(scrollViewParams);
+
+            //adding data in array list
+            ArrayList<ViewPagerItem> viewPagerItemArrayList = new ArrayList<>();
+            try {
+                JSONArray jsonArray = new JSONArray(stringifyArray);
+                for (int i = 0; i < jsonArray.length(); i++) {
+                    JSONObject jsonObject = jsonArray.getJSONObject(i);
+                    int imageID = Utils.getResIdentifier(context, jsonObject.getString("image"), "drawable");
+                    ViewPagerItem viewPagerItem = new ViewPagerItem(imageID, jsonObject.getString("title"), jsonObject.getString("description"));
+                    viewPagerItemArrayList.add(viewPagerItem);
+                }
+            } catch (Exception e) {
+                Log.e(UTILS, "Exception" + e);
+                return;
+            }
+            VPAdapter vpAdapter = new VPAdapter(viewPagerItemArrayList);
+            viewPager2.setAdapter(vpAdapter);
+
+            // setting the dots layout
+            int dotsCount;
+            ImageView[] dots;
+            dotsCount = vpAdapter.getItemCount();
+            dots = new ImageView[dotsCount];
+            for (int i = 0; i < dotsCount; i++) {
+                dots[i] = new ImageView(context);
+                dots[i].setImageDrawable(ContextCompat.getDrawable(context, R.drawable.carousel_dot_inactive));
+                LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(28, 28);
+                params.setMargins(14, 0, 14, 0);
+                sliderDotsPanel.addView(dots[i], params);
+                dots[0].setImageDrawable(ContextCompat.getDrawable(context, R.drawable.carousel_dot_active));
+                int finalI = i;
+                dots[i].setOnClickListener(view -> viewPager2.setCurrentItem(finalI));
+            }
+            sliderDotsPanel.setLayoutParams(sliderDotsPanelParams);
+
+            viewPager2.registerOnPageChangeCallback(new ViewPager2.OnPageChangeCallback() {
+                @Override
+                public void onPageScrolled(int position, float positionOffset, int positionOffsetPixels) {
+                    super.onPageScrolled(position, positionOffset, positionOffsetPixels);
+                }
+
+                @Override
+                public void onPageSelected(int position) {
+                    //setting active inactive dots
+                    for (int i = 0; i < dotsCount; i++) {
+                        dots[i].setImageDrawable(ContextCompat.getDrawable(context, R.drawable.carousel_dot_inactive));
+                        dots[i].setContentDescription("Page Indicator, Page " + (i + 1) + " : Swipe or Tap To Go To Next Page\"");
+                    }
+                    dots[position].setImageDrawable(ContextCompat.getDrawable(context, R.drawable.carousel_dot_active));
+                    super.onPageSelected(position);
+                }
+
+                @Override
+                public void onPageScrollStateChanged(int state) {
+                    super.onPageScrollStateChanged(state);
+                }
+            });
+            linearLayout.addView(viewPager2);
+            linearLayout.setGravity(Gravity.BOTTOM);
+            linearLayout.addView(sliderDotsPanel);
+            linearLayout.setWeightSum(2);
+            scrollView.addView(linearLayout);
+            scrollView.setFillViewport(true);
+            sliderDotsPanelParams.weight = 1;
+            sliderDotsPanel.setGravity(Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL);
+            finalParentLayout.addView(scrollView);
+        });
+    }
+
     @JavascriptInterface
     public void setYoutubePlayer(String rawJson, final String playerId, String videoStatus) {
         if (bridgeComponents.getActivity() != null) {
@@ -589,6 +680,7 @@ public class MobilityAppBridge extends HyperBridge {
         if ( youtubePlayer != null) {
             youtubePlayer.pause();
         }
+        youTubePlayerView = null;
     }
 
     @JavascriptInterface

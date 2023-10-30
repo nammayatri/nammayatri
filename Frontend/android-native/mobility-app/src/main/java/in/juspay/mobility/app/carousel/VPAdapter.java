@@ -43,7 +43,7 @@ public class VPAdapter extends RecyclerView.Adapter<VPAdapter.ViewHolder> {
     ArrayList<ViewPagerItem> viewPagerItemArrayList;
     public static float videoDuration = 0;
 
-    private final VPAdapterListener listener;
+    private VPAdapterListener listener;
     public static YouTubePlayerView youTubePlayerView ;
     public static YouTubePlayer youtubePlayer;
     public Context context ;
@@ -52,6 +52,10 @@ public class VPAdapter extends RecyclerView.Adapter<VPAdapter.ViewHolder> {
         this.context = context;
         this.listener = listener;
     }
+    public VPAdapter(ArrayList<ViewPagerItem> viewPagerItemArrayList) {
+        this.viewPagerItemArrayList = viewPagerItemArrayList;
+    }
+
     public interface VPAdapterListener{
         void onViewHolderBind(ViewHolder holder, int position, Context context);
     }
@@ -65,7 +69,16 @@ public class VPAdapter extends RecyclerView.Adapter<VPAdapter.ViewHolder> {
 
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
-        listener.onViewHolderBind(holder, position, context);
+        if (listener != null) {
+            listener.onViewHolderBind(holder, position, context);
+        } else {
+            ViewPagerItem viewPagerItem = viewPagerItemArrayList.get(position);
+            holder.imageView.setImageResource(viewPagerItem.imageID);
+            holder.imageView.getLayoutParams().height = (Resources.getSystem().getDisplayMetrics().heightPixels)/3;
+            holder.tvHeading.setText(viewPagerItem.getTitleText());
+            holder.tvDesc.setText(viewPagerItem.getDescriptionText());
+        }
+
     }
     @Override
     public int getItemCount() {
