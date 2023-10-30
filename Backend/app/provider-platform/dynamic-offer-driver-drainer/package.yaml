@@ -126,7 +126,7 @@ library:
       else:
         ghc-options:
           - -O2
-          - -j4  - -Werror
+          - -j4
   dependencies:
     - dynamic-offer-driver-app
     - mobility-core
