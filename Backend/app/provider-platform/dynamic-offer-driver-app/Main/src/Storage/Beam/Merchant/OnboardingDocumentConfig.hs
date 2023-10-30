@@ -30,6 +30,7 @@ data OnboardingDocumentConfigT f = OnboardingDocumentConfigT
     checkExpiry :: B.C f Bool,
     supportedVehicleClassesJSON :: B.C f A.Value,
     rcNumberPrefix :: B.C f Text,
+    rcNumberPrefixList :: B.C f [Text],
     vehicleClassCheckType :: B.C f Domain.VehicleClassCheckType,
     createdAt :: B.C f UTCTime,
     updatedAt :: B.C f UTCTime

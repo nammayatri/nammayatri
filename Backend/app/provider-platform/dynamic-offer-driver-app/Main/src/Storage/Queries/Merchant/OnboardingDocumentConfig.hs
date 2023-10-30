@@ -50,6 +50,7 @@ update config = do
       Se.Set BeamODC.supportedVehicleClassesJSON $ toJSON supportedClassJson,
       Se.Set BeamODC.vehicleClassCheckType (config.vehicleClassCheckType),
       Se.Set BeamODC.rcNumberPrefix (config.rcNumberPrefix),
+      Se.Set BeamODC.rcNumberPrefixList (config.rcNumberPrefixList),
       Se.Set BeamODC.updatedAt now
     ]
     [Se.Is BeamODC.merchantOperatingCityId $ Se.Eq $ getId config.merchantOperatingCityId, Se.Is BeamODC.documentType $ Se.Eq config.documentType]
@@ -71,6 +72,7 @@ instance FromTType' BeamODC.OnboardingDocumentConfig OnboardingDocumentConfig wh
             supportedVehicleClasses = supportedVehicleClasses',
             vehicleClassCheckType = vehicleClassCheckType,
             rcNumberPrefix = rcNumberPrefix,
+            rcNumberPrefixList = rcNumberPrefixList,
             createdAt = createdAt,
             updatedAt = updatedAt
           }
@@ -97,6 +99,7 @@ instance ToTType' BeamODC.OnboardingDocumentConfig OnboardingDocumentConfig wher
         BeamODC.supportedVehicleClassesJSON = toJSON supportedVehicleClasses,
         BeamODC.vehicleClassCheckType = vehicleClassCheckType,
         BeamODC.rcNumberPrefix = rcNumberPrefix,
+        BeamODC.rcNumberPrefixList = rcNumberPrefixList,
         BeamODC.createdAt = createdAt,
         BeamODC.updatedAt = updatedAt
       }
