@@ -35,6 +35,7 @@ import Debug(spy)
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Common.Types.App (LazyCheck(..))
 import Prelude ((<>))
+import PrestoDOM.Animation as PrestoAnim
 import Debug
 
 screen :: ST.SelectLanguageScreenState -> Screen Action ST.SelectLanguageScreenState ScreenOutput
@@ -56,7 +57,7 @@ view
   -> ST.SelectLanguageScreenState
   -> PrestoDOM (Effect Unit) w
 view push state =
-  Anim.screenAnimation $
+  PrestoAnim.animationSet [Anim.fadeIn true] $
   linearLayout
       [ height MATCH_PARENT
       , width MATCH_PARENT
