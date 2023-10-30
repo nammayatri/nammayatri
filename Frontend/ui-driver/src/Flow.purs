@@ -114,6 +114,7 @@ import Constants.Configs
 import Engineering.Helpers.Commons as EHC
 import PrestoDOM (initUI)
 import Common.Resources.Constants (zoomLevel)
+import Types.App as TA
 
 
 baseAppFlow :: Boolean -> Maybe Event -> FlowBT String Unit
@@ -352,6 +353,9 @@ handleDeepLinksFlow event activeRideResp = do
             "plans" | getValueToLocalNativeStore IS_RIDE_ACTIVE /= "true" && getValueToLocalNativeStore DISABLE_WIDGET /= "true" -> do
               lift $ lift $ doAff do liftEffect hideSplash
               updateAvailableAppsAndGoToSubs
+            "lang" -> do
+              lift $ lift $ doAff do liftEffect hideSplash 
+              selectLanguageFlow
             _ -> pure unit
         Nothing -> pure unit
   (GlobalState allState) <- getState
@@ -928,6 +932,7 @@ driverProfileFlow = do
       _ <- Remote.callDriverToDriverBT  state.data.rcNumber
       pure $ toast $ (getString CALL_REQUEST_HAS_BEEN_PLACED)
       driverProfileFlow
+    TA.GO_HOME -> homeScreenFlow
 
 
     DRIVER_ALTERNATE_CALL_API1 updatedState -> do
