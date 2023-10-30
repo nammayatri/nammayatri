@@ -20,13 +20,11 @@ module Lib.Scheduler.Handler
   )
 where
 
-import Control.Concurrent.Chan (Chan, newChan, readChan, writeChan)
 import Control.Monad.Catch
 import qualified Control.Monad.Catch as C
 import qualified Data.ByteString as BS
 import Data.Singletons (fromSing)
 import qualified Data.Time as T hiding (getCurrentTime)
-import qualified EulerHS.Language as L
 import Kernel.Prelude hiding (mask, throwIO)
 import qualified Kernel.Storage.Hedis.Queries as Hedis
 import Kernel.Tools.LoopGracefully (loopGracefully)
@@ -58,35 +56,28 @@ handler hnd = do
   schedulerType <- asks (.schedulerType)
   maxThreads <- asks (.maxThreads)
   case schedulerType of
-    RedisBased -> do
-      mapConcurrently (const $ loopGracefully [runnerIterationRedis hnd runTask]) [1 .. maxThreads]
-    DbBased -> do
-      executionChannels :: [Chan (AnyJob t)] <- L.runIO $ mapM (const newChan) [1 .. maxThreads]
-      mapM_ (fork "executing tasks" . executeTaskInChan) executionChannels
-      loopGracefully [dbBasedHandlerLoop hnd executionChannels]
+    RedisBased -> loopGracefully $ replicate maxThreads (runnerIterationRedis hnd runTask)
+    DbBased -> loopGracefully $ replicate maxThreads (dbBasedHandlerLoop hnd runTask)
   where
-    executeTaskInChan :: Chan (AnyJob t) -> SchedulerM ()
-    executeTaskInChan ch = L.runIO (readChan ch) >>= runTask >> executeTaskInChan ch
-
     runTask :: AnyJob t -> SchedulerM ()
     runTask anyJob@(AnyJob Job {..}) = mask $ \restore -> withLogTag ("JobId = " <> id.getId <> " and " <> "parentJobId = " <> parentJobId.getId) $ do
       res <- measuringDuration registerDuration $ restore (executeTask hnd anyJob) `C.catchAll` defaultCatcher
       registerExecutionResult hnd anyJob res
       releaseLock parentJobId
 
-dbBasedHandlerLoop :: (JobProcessor t, FromJSON t) => SchedulerHandle t -> [Chan (AnyJob t)] -> SchedulerM ()
-dbBasedHandlerLoop hnd executionChannels = do
+dbBasedHandlerLoop :: (JobProcessor t, FromJSON t) => SchedulerHandle t -> (AnyJob t -> SchedulerM ()) -> SchedulerM ()
+dbBasedHandlerLoop hnd runTask = do
   logInfo "Starting runner iteration 1"
   iterSessionId <- generateGUIDText
   before <- getCurrentTime
   withLogTag iterSessionId $ logInfo "Starting runner iteration"
-  runnerIteration hnd executionChannels
+  runnerIteration hnd runTask
   after <- getCurrentTime
   let diff = floor $ abs $ diffUTCTime after before
   loopIntervalSec <- asks (.loopIntervalSec)
   threadDelaySec (loopIntervalSec - diff)
 
--- dbBasedHandlerLoop hnd executionChannels
+-- dbBasedHandlerLoop hnd runTask
 
 mapConcurrently :: Traversable t => (a -> SchedulerM ()) -> t a -> SchedulerM ()
 mapConcurrently action = mapM_ (fork "mapThread" . action)
@@ -108,8 +99,8 @@ runnerIterationRedis hnd@SchedulerHandle {..} runTask = do
     void $ Hedis.withNonCriticalCrossAppRedis $ Hedis.xAck key groupName recordIds
     void $ Hedis.withNonCriticalCrossAppRedis $ Hedis.xDel key recordIds
 
-runnerIteration :: forall t. (JobProcessor t) => SchedulerHandle t -> [Chan (AnyJob t)] -> SchedulerM ()
-runnerIteration SchedulerHandle {..} executionChannels = do
+runnerIteration :: forall t. (JobProcessor t) => SchedulerHandle t -> (AnyJob t -> SchedulerM ()) -> SchedulerM ()
+runnerIteration SchedulerHandle {..} runTask = do
   readyJobs <- getReadyTasks
   let readyTasks = map fst readyJobs
   logTagDebug "All Tasks - Count" . show $ length readyTasks
@@ -119,11 +110,8 @@ runnerIteration SchedulerHandle {..} executionChannels = do
   logTagDebug "Available tasks - Count" . show $ length availableReadyTasksIds
   logTagDebug "Available tasks" . show $ availableReadyTasksIds
   takenTasksUpdatedInfo <- getTasksById availableReadyTasksIds
-  mapConcurrently writeToChan $ zip takenTasksUpdatedInfo $ cycle executionChannels
+  mapConcurrently runTask takenTasksUpdatedInfo
   where
-    writeToChan :: (AnyJob t, Chan (AnyJob t)) -> SchedulerM ()
-    writeToChan (job, ch) = L.runIO $ writeChan ch job
-
     pickTasks :: Int -> [Id AnyJob] -> SchedulerM [Id AnyJob]
     pickTasks _ [] = pure []
     pickTasks 0 _ = pure []
