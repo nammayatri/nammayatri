@@ -141,7 +141,7 @@ public class VPAdapter extends RecyclerView.Adapter<VPAdapter.ViewHolder> {
                                     playerUiController.showYouTubeButton(false);
                                     youTubePlayerView.setCustomPlayerUi(playerUiController.getRootView());
                                     youTubePlayer.seekTo(videoDuration);
-                                    youTubePlayer.loadVideo(videoId, 0);
+                                    youTubePlayer.cueVideo(videoId, 0);
                                     youTubePlayer.play();
 
                                 } catch (Exception e) {
