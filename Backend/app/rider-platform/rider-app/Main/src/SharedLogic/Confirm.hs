@@ -102,6 +102,7 @@ confirm DConfirmReq {..} = do
       DQuote.RentalDetails rentalDetails -> do
         startTime <- mbStartTime & fromMaybeM (InvalidRequest "Rental confirm quote should have startTime param")
         rentalDuration <- mbRentalDuration & fromMaybeM (InvalidRequest "Rental confirm quote should have rentalDuration param")
+        when (rentalDuration <= 0) $ throwError (InvalidRequest "rentalDuration should be > 0")
         checkRentalBookingsOverlapping startTime rentalDuration
         pure $ Just rentalDetails.id.getId
       DQuote.DriverOfferDetails driverOffer -> do
@@ -189,10 +190,7 @@ confirm DConfirmReq {..} = do
           _ -> throwError (InternalError "Should be rental booking")
         let bookingDurationDiffTime = secondsToNominalDiffTime $ Seconds (bookingRentalDuration.getHours * 3600)
             bookingFinishTime = addUTCTime bookingDurationDiffTime booking.startTime
-            startTimeOverlap = booking.startTime >= startTime && booking.startTime <= finishTime
-            finishTimeOverlap = bookingFinishTime >= startTime && bookingFinishTime <= finishTime
-        pure $ startTimeOverlap || finishTimeOverlap
-
+        pure $ not (bookingFinishTime <= startTime || finishTime <= booking.startTime)
       unless (null overlappedBookings) $ throwError (InvalidRequest $ "Overlapped rental bookings: " <> show (overlappedBookings <&> (.id)))
 
 buildBooking ::

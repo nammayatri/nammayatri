@@ -17,6 +17,7 @@ module Domain.Types.RentalDetails where
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
+import Kernel.Utils.JSON (removeNullFields)
 
 data RentalDetails = RentalDetails
   { id :: Id RentalDetails,
@@ -38,11 +39,14 @@ data NightShiftInfo = NightShiftInfo
 
 data RentalDetailsAPIEntity = RentalDetailsAPIEntity
   { bppQuoteId :: Text,
-    baseDuration :: Maybe Hours,
+    baseDuration :: Maybe Hours, -- Nothing for quoteDetails, Just for bookingDetails
     baseFare :: Money,
     perHourCharge :: Money,
     perHourFreeKms :: Int,
     perExtraKmRate :: Money,
     nightShiftInfo :: Maybe NightShiftInfo
   }
-  deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
+  deriving (Generic, FromJSON, Show, ToSchema)
+
+instance ToJSON RentalDetailsAPIEntity where
+  toJSON = genericToJSON removeNullFields
