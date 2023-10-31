@@ -39,7 +39,7 @@ dependencies {
     implementation 'androidx.appcompat:appcompat:1.6.1'
     implementation 'com.google.android.material:material:1.6.0'
     implementation project(':mobility-app')
-    implementation 'in.juspay:hyper:2.1.19-rc.01'
+    implementation 'in.juspay:hyper:2.1.20-nammayatri.02'
     implementation 'com.facebook.shimmer:shimmer:0.5.0'
     testImplementation 'junit:junit:4.13.2'
     androidTestImplementation 'androidx.test.ext:junit:1.1.5'
