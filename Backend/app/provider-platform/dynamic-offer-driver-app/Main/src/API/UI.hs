@@ -20,6 +20,7 @@ where
 
 import qualified API.UI.Call as Call
 import qualified API.UI.CancellationReason as CancellationReason
+import qualified API.UI.City as City
 import qualified API.UI.Driver as Driver
 import qualified API.UI.DriverOnboarding as DriverOnboarding
 import qualified API.UI.DriverProfileSummary as DriverProfileSummary
@@ -77,6 +78,7 @@ type API =
            :<|> RideRoute.API
            :<|> Plan.API
            :<|> KioskLocation.API
+           :<|> City.API
        )
 
 handler :: FlowServer API
@@ -107,3 +109,4 @@ handler =
     :<|> RideRoute.handler
     :<|> Plan.handler
     :<|> KioskLocation.handler
+    :<|> City.handler

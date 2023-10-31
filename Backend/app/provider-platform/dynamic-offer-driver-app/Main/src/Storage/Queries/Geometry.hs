@@ -39,6 +39,20 @@ someGeometriesContain gps regions = do
   geometries <- findGeometriesContaining gps regions
   pure $ not $ null geometries
 
+findGeometriesContainingGps :: forall m r. (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => LatLong -> m [Geometry]
+findGeometriesContainingGps gps = do
+  dbConf <- getMasterBeamConfig
+  geoms <-
+    L.runDB dbConf $
+      L.findRows $
+        B.select $
+          B.filter_'
+            ( \BeamG.GeometryT {} ->
+                containsPoint' (gps.lon, gps.lat)
+            )
+            $ B.all_ (BeamCommon.geometry BeamCommon.atlasDB)
+  catMaybes <$> mapM fromTType' (fromRight [] geoms)
+
 instance FromTType' BeamG.Geometry Geometry where
   fromTType' BeamG.GeometryT {..} = do
     pure $
