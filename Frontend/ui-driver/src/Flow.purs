@@ -204,6 +204,7 @@ appUpdatedFlow payload = do
 checkTimeSettings :: FlowBT String Unit
 checkTimeSettings = do
   isEnabled <- liftFlowBT $ runEffectFn1 JB.isNetworkTimeEnabled unit
+  logField_ <- lift $ lift $ getLogFields
   if isEnabled then do
     liftFlowBT $ logEvent logField_ "ny_network_time_enabled"
     liftFlowBT $ unregisterDateAndTime
