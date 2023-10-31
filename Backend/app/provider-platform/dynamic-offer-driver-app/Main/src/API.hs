@@ -56,6 +56,7 @@ type MainAPI =
              :> Juspay.JuspayWebhookAPI
          )
     :<|> Dashboard.API
+    :<|> Dashboard.APIV2
     :<|> Internal.API
 
 driverOfferAPI :: Proxy DriverOfferAPI
@@ -70,6 +71,7 @@ mainServer =
     :<|> idfyWebhookV2Handler
     :<|> juspayWebhookHandler
     :<|> Dashboard.handler
+    :<|> Dashboard.handlerV2
     :<|> Internal.handler
 
 driverOfferServer :: FlowServer DriverOfferAPI

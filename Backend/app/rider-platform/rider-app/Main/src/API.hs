@@ -52,6 +52,7 @@ type MainAPI =
              :> Juspay.JuspayWebhookAPI
          )
     :<|> Dashboard.API
+    :<|> Dashboard.APIV2
     :<|> Internal.API
 
 handler :: FlowServer API
@@ -69,6 +70,7 @@ mainServer =
     :<|> MetroBeckn.handler
     :<|> juspayWebhookHandler
     :<|> Dashboard.handler
+    :<|> Dashboard.handlerV2
     :<|> Internal.handler
 
 type SwaggerAPI = "swagger" :> Get '[HTML] BS.ByteString
