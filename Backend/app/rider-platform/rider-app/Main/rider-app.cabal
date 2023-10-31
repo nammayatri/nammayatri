@@ -204,6 +204,7 @@ library
       Domain.Types.Quote
       Domain.Types.Rating
       Domain.Types.RegistrationToken
+      Domain.Types.RentalDetails
       Domain.Types.RentalSlab
       Domain.Types.Ride
       Domain.Types.SavedReqLocation
@@ -272,6 +273,7 @@ library
       Storage.Beam.Quote
       Storage.Beam.Rating
       Storage.Beam.RegistrationToken
+      Storage.Beam.RentalDetails
       Storage.Beam.RentalSlab
       Storage.Beam.Ride
       Storage.Beam.SavedReqLocation
@@ -336,6 +338,7 @@ library
       Storage.Queries.Quote
       Storage.Queries.Rating
       Storage.Queries.RegistrationToken
+      Storage.Queries.RentalDetails
       Storage.Queries.RentalSlab
       Storage.Queries.Ride
       Storage.Queries.SavedReqLocation

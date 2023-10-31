@@ -61,6 +61,7 @@ data Ride = Ride
     vehicleColor :: Text,
     vehicleVariant :: VehicleVariant,
     otp :: Text,
+    endRideOtp :: Maybe Text, -- only for rental case
     trackingUrl :: Maybe BaseUrl,
     fare :: Maybe Money,
     totalFare :: Maybe Money,
@@ -70,6 +71,8 @@ data Ride = Ride
     rideStartTime :: Maybe UTCTime,
     rideEndTime :: Maybe UTCTime,
     rideRating :: Maybe Int,
+    odometerStartReading :: Maybe Centesimal,
+    odometerEndReading :: Maybe Centesimal,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }
@@ -89,12 +92,15 @@ data RideAPIEntity = RideAPIEntity
     vehicleVariant :: VehicleVariant,
     vehicleModel :: Text,
     rideOtp :: Text,
+    endRideOtp :: Maybe Text, -- only for rental case
     computedPrice :: Maybe Money,
     chargeableRideDistance :: Maybe HighPrecMeters,
     driverArrivalTime :: Maybe UTCTime,
     rideStartTime :: Maybe UTCTime,
     rideEndTime :: Maybe UTCTime,
     rideRating :: Maybe Int,
+    odometerStartReading :: Maybe Centesimal,
+    odometerEndReading :: Maybe Centesimal,
     createdAt :: UTCTime,
     updatedAt :: UTCTime,
     bppRideId :: Id BPPRide
@@ -109,6 +115,7 @@ makeRideAPIEntity Ride {..} =
           driverNumber = driverMobileNumber',
           driverRatings = driverRating,
           rideOtp = otp,
+          endRideOtp = endRideOtp,
           computedPrice = totalFare,
           chargeableRideDistance = chargeableDistance,
           ..

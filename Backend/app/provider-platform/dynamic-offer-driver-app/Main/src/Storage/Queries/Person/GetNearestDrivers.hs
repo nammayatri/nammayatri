@@ -5,6 +5,7 @@ import qualified Data.Maybe as Mb
 import Domain.Types.DriverInformation as DriverInfo
 import Domain.Types.Merchant
 import Domain.Types.Person as Person
+import qualified Domain.Types.SearchRequest as DSR
 import Domain.Types.Vehicle as DV
 import Kernel.External.Maps as Maps
 import qualified Kernel.External.Notification.FCM.Types as FCM
@@ -36,15 +37,16 @@ data NearestDriversResult = NearestDriversResult
 getNearestDrivers ::
   (MonadFlow m, MonadTime m, LT.HasLocationService m r, CoreMetrics m, EsqDBFlow m r, CacheFlow m r) =>
   Maybe Variant ->
+  DSR.SearchRequestTag ->
   LatLong ->
   Meters ->
   Id Merchant ->
   Bool ->
   Maybe Seconds ->
   m [NearestDriversResult]
-getNearestDrivers mbVariant fromLocLatLong radiusMeters merchantId onlyNotOnRide mbDriverPositionInfoExpiry = do
+getNearestDrivers mbVariant searchRequestTag fromLocLatLong radiusMeters merchantId onlyNotOnRide mbDriverPositionInfoExpiry = do
   driverLocs <- Int.getDriverLocsWithCond merchantId mbDriverPositionInfoExpiry fromLocLatLong radiusMeters
-  driverInfos <- Int.getDriverInfosWithCond (driverLocs <&> (.driverId)) onlyNotOnRide (not onlyNotOnRide)
+  driverInfos <- Int.getDriverInfosWithCond (driverLocs <&> (.driverId)) onlyNotOnRide (not onlyNotOnRide) searchRequestTag
   vehicle <- Int.getVehicles driverInfos
   drivers <- Int.getDrivers vehicle
   logDebug $ "GetNearestDriver - DLoc:- " <> show (length driverLocs) <> " DInfo:- " <> show (length driverInfos) <> " Vehicles:- " <> show (length vehicle) <> " Drivers:- " <> show (length drivers)

@@ -18,11 +18,13 @@ module Storage.Queries.Booking where
 import Control.Applicative
 import Data.Ord
 import qualified Database.Beam as B
+import Database.Beam.Postgres (Postgres)
 import qualified Domain.Types.Booking.BookingLocation as DBBL
 import Domain.Types.Booking.Type as Domain
 import qualified Domain.Types.Booking.Type as DRB
 import Domain.Types.Estimate (Estimate)
 import Domain.Types.FarePolicy.FareProductType as DFF
+import qualified Domain.Types.FarePolicy.FareProductType as DFP
 import qualified Domain.Types.FarePolicy.FareProductType as DQuote
 import qualified Domain.Types.Location as DL
 import qualified Domain.Types.LocationMapping as DLM
@@ -48,7 +50,7 @@ import qualified Storage.Queries.DriverOffer ()
 import qualified Storage.Queries.Location as QL
 import qualified Storage.Queries.LocationMapping as QLM
 import qualified Storage.Queries.Quote ()
-import Storage.Queries.RentalSlab as QueryRS
+import Storage.Queries.RentalDetails as QueryRD
 import qualified Storage.Queries.TripTerms as QTT
 
 createBooking' :: MonadFlow m => Booking -> m ()
@@ -59,7 +61,7 @@ create dBooking = do
   _ <- whenNothingM_ (QL.findById dBooking.fromLocation.id) $ do QL.create (dBooking.fromLocation)
   _ <- case dBooking.bookingDetails of
     OneWayDetails toLoc -> void $ whenNothingM_ (QL.findById toLoc.toLocation.id) $ do QL.create toLoc.toLocation
-    RentalDetails _ -> pure ()
+    RentalDetails _ _ -> pure ()
     DriverOfferDetails toLoc -> void $ whenNothingM_ (QL.findById toLoc.toLocation.id) $ do QL.create toLoc.toLocation
     OneWaySpecialZoneDetails toLoc -> void $ whenNothingM_ (QL.findById toLoc.toLocation.id) $ do QL.create toLoc.toLocation
   void $ createBooking' dBooking
@@ -69,7 +71,7 @@ createBooking booking = do
   fromLocationMap <- SLM.buildPickUpLocationMapping booking.fromLocation.id booking.id.getId DLM.BOOKING
   mbToLocationMap <- case booking.bookingDetails of
     DRB.OneWayDetails detail -> Just <$> SLM.buildDropLocationMapping detail.toLocation.id booking.id.getId DLM.BOOKING
-    DRB.RentalDetails _ -> return Nothing
+    DRB.RentalDetails _ _ -> return Nothing
     DRB.DriverOfferDetails detail -> Just <$> SLM.buildDropLocationMapping detail.toLocation.id booking.id.getId DLM.BOOKING
     DRB.OneWaySpecialZoneDetails detail -> Just <$> SLM.buildDropLocationMapping detail.toLocation.id booking.id.getId DLM.BOOKING
 
@@ -104,10 +106,10 @@ updateOtpCodeBookingId rbId otp = do
     ]
     [Se.Is BeamB.id (Se.Eq $ getId rbId)]
 
-findLatestByRiderIdAndStatus :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> [BookingStatus] -> m (Maybe BookingStatus)
-findLatestByRiderIdAndStatus (Id riderId) bookingStatusList =
+findLatestByRiderIdAndStatusObj :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> BookingStatusObj -> m (Maybe BookingStatus)
+findLatestByRiderIdAndStatusObj (Id riderId) bookingStatusObj =
   do
-    let options = [Se.And [Se.Is BeamB.riderId $ Se.Eq riderId, Se.Is BeamB.status $ Se.In bookingStatusList]]
+    let options = [Se.And [Se.Is BeamB.riderId $ Se.Eq riderId, bookingStatusObjClause bookingStatusObj]]
         sortBy = Se.Desc BeamB.createdAt
         limit' = Just 1
     findAllWithOptionsKV options sortBy limit' Nothing
@@ -160,6 +162,16 @@ findCountByRideIdStatusAndTime (Id personId) status startTime endTime = do
 findByRiderIdAndStatus :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> [BookingStatus] -> m [Booking]
 findByRiderIdAndStatus (Id personId) statusList = findAllWithKV [Se.And [Se.Is BeamB.riderId $ Se.Eq personId, Se.Is BeamB.status $ Se.In statusList]]
 
+findByRiderIdAndStatusObj :: MonadFlow m => Id Person -> BookingStatusObj -> m [Booking]
+findByRiderIdAndStatusObj (Id personId) statusObj = findAllWithKV [Se.And [Se.Is BeamB.riderId $ Se.Eq personId, bookingStatusObjClause statusObj]]
+
+bookingStatusObjClause :: BookingStatusObj -> Se.Clause Postgres BeamB.BookingT
+bookingStatusObjClause statusObj =
+  Se.Or
+    [ Se.And [Se.Is BeamB.status $ Se.In statusObj.normalBooking, Se.Is BeamB.fareProductType $ Se.Not $ Se.Eq DFP.RENTAL],
+      Se.And [Se.Is BeamB.status $ Se.In statusObj.rentalBooking, Se.Is BeamB.fareProductType $ Se.Eq DFP.RENTAL]
+    ]
+
 findAssignedByRiderId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> m (Maybe Booking)
 findAssignedByRiderId (Id personId) = findOneWithKV [Se.And [Se.Is BeamB.riderId $ Se.Eq personId, Se.Is BeamB.status $ Se.Eq TRIP_ASSIGNED]]
 
@@ -206,6 +218,7 @@ findStuckBookings (Id merchantId) bookingIds now =
           [ Se.Is BeamB.merchantId $ Se.Eq merchantId,
             Se.Is BeamB.id (Se.In $ getId <$> bookingIds),
             Se.Is BeamB.status $ Se.In [NEW, CONFIRMED, TRIP_ASSIGNED],
+            Se.Is BeamB.fareProductType $ Se.Not $ Se.Eq DFP.RENTAL,
             Se.Is BeamB.createdAt $ Se.LessThanOrEq updatedTimestamp
           ]
       ]
@@ -243,7 +256,7 @@ instance FromTType' BeamB.Booking Booking where
               upsertToLocationAndMappingForOldData toLocationId id
               DRB.OneWayDetails <$> buildOneWayDetails toLocationId
             DFF.RENTAL -> do
-              qd <- getRentalDetails rentalSlabId
+              qd <- getRentalDetails rentalDetailsId
               case qd of
                 Nothing -> throwError (InternalError "No Rental Details present")
                 Just a -> pure a
@@ -265,7 +278,7 @@ instance FromTType' BeamB.Booking Booking where
           bookingDetails <- case fareProductType of
             DFF.ONE_WAY -> DRB.OneWayDetails <$> buildOneWayDetails toLocId
             DFF.RENTAL -> do
-              qd <- getRentalDetails rentalSlabId
+              qd <- getRentalDetails rentalDetailsId
               case qd of
                 Nothing -> throwError (InternalError "No Rental Details present")
                 Just a -> pure a
@@ -326,10 +339,11 @@ instance FromTType' BeamB.Booking Booking where
               toLocation = toLocation,
               ..
             }
-      getRentalDetails rentalSlabId' = do
-        res <- maybe (pure Nothing) (QueryRS.findById . Id) rentalSlabId'
+      getRentalDetails rentalDetailsId' = do
+        res <- maybe (pure Nothing) (QueryRD.findById . Id) rentalDetailsId'
+        baseDuration <- rentalBaseDuration & fromMaybeM (InternalError "rentalBaseDuration is null for rental booking")
         case res of
-          Just rentalSlab -> pure $ Just $ DRB.RentalDetails rentalSlab
+          Just rentalDetails -> pure $ Just $ DRB.RentalDetails (DRB.BaseDuration baseDuration) rentalDetails
           Nothing -> pure Nothing
       backfillMOCId = \case
         Just mocId -> pure $ Id mocId
@@ -337,16 +351,17 @@ instance FromTType' BeamB.Booking Booking where
 
 instance ToTType' BeamB.Booking Booking where
   toTType' DRB.Booking {..} =
-    let (fareProductType, toLocationId, distance, rentalSlabId, otpCode) = case bookingDetails of
-          DRB.OneWayDetails details -> (DQuote.ONE_WAY, Just (getId details.toLocation.id), Just details.distance, Nothing, Nothing)
-          DRB.RentalDetails rentalSlab -> (DQuote.RENTAL, Nothing, Nothing, Just . getId $ rentalSlab.id, Nothing)
-          DRB.DriverOfferDetails details -> (DQuote.DRIVER_OFFER, Just (getId details.toLocation.id), Just details.distance, Nothing, Nothing)
-          DRB.OneWaySpecialZoneDetails details -> (DQuote.ONE_WAY_SPECIAL_ZONE, Just (getId details.toLocation.id), Just details.distance, Nothing, details.otpCode)
+    let (fareProductType, toLocationId, distance, rentalDetailsId, otpCode, rentalBaseDuration) = case bookingDetails of
+          DRB.OneWayDetails details -> (DQuote.ONE_WAY, Just (getId details.toLocation.id), Just details.distance, Nothing, Nothing, Nothing)
+          DRB.RentalDetails (DRB.BaseDuration baseDuration) rentalDetails -> (DQuote.RENTAL, Nothing, Nothing, Just . getId $ rentalDetails.id, Nothing, Just baseDuration)
+          DRB.DriverOfferDetails details -> (DQuote.DRIVER_OFFER, Just (getId details.toLocation.id), Just details.distance, Nothing, Nothing, Nothing)
+          DRB.OneWaySpecialZoneDetails details -> (DQuote.ONE_WAY_SPECIAL_ZONE, Just (getId details.toLocation.id), Just details.distance, Nothing, details.otpCode, Nothing)
      in BeamB.BookingT
           { BeamB.id = getId id,
             BeamB.transactionId = transactionId,
             BeamB.fareProductType = fareProductType,
             BeamB.bppBookingId = getId <$> bppBookingId,
+            BeamB.rentalBaseDuration = rentalBaseDuration,
             BeamB.quoteId = getId <$> quoteId,
             BeamB.paymentMethodId = getId <$> paymentMethodId,
             BeamB.paymentUrl = paymentUrl,
@@ -370,7 +385,7 @@ instance ToTType' BeamB.Booking Booking where
             BeamB.vehicleVariant = vehicleVariant,
             BeamB.distance = distance,
             BeamB.tripTermsId = getId <$> (tripTerms <&> (.id)),
-            BeamB.rentalSlabId = rentalSlabId,
+            BeamB.rentalDetailsId = rentalDetailsId,
             BeamB.merchantId = getId merchantId,
             BeamB.merchantOperatingCityId = Just $ getId merchantOperatingCityId,
             BeamB.specialLocationTag = specialLocationTag,

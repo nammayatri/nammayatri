@@ -19,6 +19,7 @@ import qualified Beckn.Types.Core.Taxi.API.Search as Search
 import qualified Beckn.Types.Core.Taxi.Search as Search
 import Data.Aeson
 import qualified Data.Text as T
+import Domain.Action.Beckn.Search
 import qualified Domain.Action.Beckn.Search as DSearch
 import Kernel.External.Maps.Interface (LatLong (..))
 import Kernel.External.Types (Language)
@@ -52,26 +53,51 @@ buildSearchReq subscriber req = do
   let disabilityTag = buildDisabilityTag =<< intent.fulfillment.customer
   let messageId = context.message_id
   transactionId <- context.transaction_id & fromMaybeM (InvalidRequest "Missing transaction_id")
-  pure
-    DSearch.DSearchReq
-      { messageId = messageId,
-        transactionId = transactionId,
-        bapId = subscriber.subscriber_id,
-        bapUri = subscriber.subscriber_url,
-        bapCity = context.city,
-        bapCountry = context.country,
-        pickupLocation = LatLong {lat = pickup.location.gps.lat, lon = pickup.location.gps.lon},
-        pickupTime = now,
-        dropLocation = LatLong {lat = dropOff.location.gps.lat, lon = dropOff.location.gps.lon},
-        pickupAddress = pickup.location.address,
-        dropAddrress = dropOff.location.address,
-        routeDistance = distance,
-        routeDuration = duration,
-        device = Nothing,
-        routePoints = buildRoutePoints =<< intent.fulfillment.tags, --------TODO------Take proper input---------
-        customerLanguage = customerLanguage,
-        disabilityTag = disabilityTag
-      }
+  pure $
+    case dropOff of
+      Just toLoc ->
+        DSearchReqOnDemand
+          DSearchReqOnDemand'
+            { messageId = messageId,
+              transactionId = transactionId,
+              bapId = subscriber.subscriber_id,
+              bapUri = subscriber.subscriber_url,
+              bapCity = context.city,
+              bapCountry = context.country,
+              pickupLocation = LatLong {lat = pickup.location.gps.lat, lon = pickup.location.gps.lon},
+              pickupTime = now,
+              dropLocation = LatLong {lat = toLoc.location.gps.lat, lon = toLoc.location.gps.lon},
+              pickupAddress = pickup.location.address,
+              dropAddrress = dropOff >>= (\loc -> loc.location.address),
+              routeDistance = distance,
+              routeDuration = duration,
+              device = Nothing,
+              routePoints = buildRoutePoints =<< intent.fulfillment.tags, --------TODO------Take proper input---------
+              customerLanguage = customerLanguage,
+              disabilityTag = disabilityTag
+            }
+      Nothing ->
+        DSearchReqRental
+          DSearchReqRental'
+            { messageId = messageId,
+              transactionId = transactionId,
+              bapId = subscriber.subscriber_id,
+              bapUri = subscriber.subscriber_url,
+              bapCity = context.city,
+              pickupTime = pickup.time.timestamp,
+              bapCountry = context.country,
+              pickupLocation = LatLong {lat = pickup.location.gps.lat, lon = pickup.location.gps.lon},
+              pickupAddress = pickup.location.address,
+              device = Nothing,
+              customerLanguage = customerLanguage,
+              disabilityTag = disabilityTag
+            }
+
+getSearchReqMessageId :: DSearch.DSearchReq -> Text
+getSearchReqMessageId req =
+  case req of
+    DSearchReqOnDemand DSearchReqOnDemand' {messageId} -> messageId
+    DSearchReqRental DSearchReqRental' {messageId} -> messageId
 
 getDistance :: Search.TagGroups -> Maybe Meters
 getDistance tagGroups = do

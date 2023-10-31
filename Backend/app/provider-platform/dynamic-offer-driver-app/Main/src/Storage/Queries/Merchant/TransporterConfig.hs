@@ -182,8 +182,6 @@ instance ToTType' BeamTC.TransporterConfig TransporterConfig where
         BeamTC.enableDashboardSms = enableDashboardSms,
         BeamTC.subscriptionStartTime = subscriptionStartTime,
         BeamTC.bankErrorExpiry = nominalDiffTimeToSeconds bankErrorExpiry,
-        BeamTC.createdAt = createdAt,
-        BeamTC.updatedAt = updatedAt,
         BeamTC.rcLimit = rcLimit,
         BeamTC.mandateValidity = mandateValidity,
         BeamTC.driverLocationAccuracyBuffer = driverLocationAccuracyBuffer,
@@ -211,4 +209,8 @@ instance ToTType' BeamTC.TransporterConfig TransporterConfig where
         BeamTC.overlayBatchSize = overlayBatchSize,
         BeamTC.volunteerSmsSendingLimit = toJSON <$> volunteerSmsSendingLimit,
         BeamTC.driverSmsReceivingLimit = toJSON <$> driverSmsReceivingLimit
+        BeamTC.rentalRequests = rentalRequests,
+        BeamTC.allocateRentalRideTimeDiff = allocateRentalRideTimeDiff,
+        BeamTC.createdAt = createdAt,
+        BeamTC.updatedAt = updatedAt
       }

@@ -81,7 +81,9 @@ data OnUpdateReq
       }
   | RideStartedReq
       { bppBookingId :: Id SRB.BPPBooking,
-        bppRideId :: Id SRide.BPPRide
+        odometerStartReading :: Maybe Centesimal,
+        bppRideId :: Id SRide.BPPRide,
+        endRideOtp :: Maybe Text
       }
   | RideCompletedReq
       { bppBookingId :: Id SRB.BPPBooking,
@@ -91,6 +93,7 @@ data OnUpdateReq
         fareBreakups :: [OnUpdateFareBreakup],
         chargeableDistance :: HighPrecMeters,
         traveledDistance :: HighPrecMeters,
+        odometerEndReading :: Maybe Centesimal,
         paymentUrl :: Maybe Text
       }
   | BookingCancelledReq
@@ -139,8 +142,10 @@ data ValidatedOnUpdateReq
   | ValidatedRideStartedReq
       { bppBookingId :: Id SRB.BPPBooking,
         bppRideId :: Id SRide.BPPRide,
+        odometerStartReading :: Maybe Centesimal,
         booking :: SRB.Booking,
-        ride :: SRide.Ride
+        ride :: SRide.Ride,
+        endRideOtp :: Maybe Text
       }
   | ValidatedRideCompletedReq
       { bppBookingId :: Id SRB.BPPBooking,
@@ -149,6 +154,7 @@ data ValidatedOnUpdateReq
         totalFare :: Money,
         fareBreakups :: [OnUpdateFareBreakup],
         chargeableDistance :: HighPrecMeters,
+        odometerEndReading :: Maybe Centesimal,
         booking :: SRB.Booking,
         ride :: SRide.Ride,
         person :: DP.Person,
@@ -268,7 +274,7 @@ onUpdate ValidatedRideAssignedReq {..} = do
       let fromLocation = booking.fromLocation
           toLocation = case booking.bookingDetails of
             SRB.OneWayDetails details -> Just details.toLocation
-            SRB.RentalDetails _ -> Nothing
+            SRB.RentalDetails _ _ -> Nothing
             SRB.DriverOfferDetails details -> Just details.toLocation
             SRB.OneWaySpecialZoneDetails details -> Just details.toLocation
       return
@@ -285,11 +291,14 @@ onUpdate ValidatedRideAssignedReq {..} = do
             traveledDistance = Nothing,
             driverArrivalTime = Nothing,
             vehicleVariant = booking.vehicleVariant,
-            createdAt = now,
-            updatedAt = now,
             rideStartTime = Nothing,
             rideEndTime = Nothing,
             rideRating = Nothing,
+            odometerStartReading = Nothing,
+            odometerEndReading = Nothing,
+            endRideOtp = Nothing,
+            createdAt = now,
+            updatedAt = now,
             ..
           }
 onUpdate ValidatedRideStartedReq {..} = do
@@ -298,7 +307,9 @@ onUpdate ValidatedRideStartedReq {..} = do
   let updRideForStartReq =
         ride{status = SRide.INPROGRESS,
              rideStartTime = Just rideStartTime,
-             rideEndTime = Nothing
+             odometerStartReading = odometerStartReading,
+             rideEndTime = Nothing,
+             endRideOtp = endRideOtp
             }
   triggerRideStartedEvent RideEventData {ride = updRideForStartReq, personId = booking.riderId, merchantId = booking.merchantId}
   _ <- QRide.updateMultiple updRideForStartReq.id updRideForStartReq
@@ -317,6 +328,7 @@ onUpdate ValidatedRideCompletedReq {..} = do
              fare = Just fare,
              totalFare = Just totalFare,
              chargeableDistance = Just chargeableDistance,
+             odometerEndReading = odometerEndReading,
              rideEndTime = Just rideEndTime
             }
   breakups <- traverse (buildFareBreakup booking.id) fareBreakups

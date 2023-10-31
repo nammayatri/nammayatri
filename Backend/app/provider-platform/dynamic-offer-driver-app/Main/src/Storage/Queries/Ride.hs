@@ -16,7 +16,7 @@
 
 module Storage.Queries.Ride where
 
-import Control.Monad.Extra hiding (fromMaybeM)
+import Control.Monad.Extra hiding (fromMaybeM, whenJust)
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Ride as Common
 import Data.Either
 import qualified Data.HashMap.Strict as HashMap
@@ -35,10 +35,7 @@ import Domain.Types.DriverInformation
 import qualified Domain.Types.LocationMapping as DLM
 import Domain.Types.Merchant
 import Domain.Types.Person
-import Domain.Types.Ride as DDR
-import Domain.Types.Ride as DR
-import Domain.Types.Ride as Ride
-import qualified Domain.Types.Ride as DRide
+import Domain.Types.Ride as DRide
 import Domain.Types.RideDetails as RideDetails
 import Domain.Types.RiderDetails as RiderDetails
 import qualified EulerHS.Language as L
@@ -46,7 +43,7 @@ import EulerHS.Prelude hiding (id, length, null, sum, traverse_)
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.External.Maps.Types (LatLong (..), lat, lon)
-import Kernel.Prelude hiding (foldl', map)
+import Kernel.Prelude hiding (foldl', map, whenJust)
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -89,14 +86,25 @@ createRide' = createWithKV
 create :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Ride -> m ()
 create ride = do
   _ <- whenNothingM_ (QL.findById ride.fromLocation.id) $ do QL.create ride.fromLocation
-  _ <- whenNothingM_ (QL.findById ride.toLocation.id) $ do QL.create ride.toLocation
+  case ride.rideDetails of
+    DRide.DetailsOnDemand RideDetailsOnDemand {toLocation} -> do
+      whenNothingM_ (QL.findById toLocation.id) $ do QL.create toLocation
+    DRide.DetailsRental RideDetailsRental {rentalToLocation} -> do
+      whenJust rentalToLocation \rentalToLocation' -> do
+        whenNothingM_ (QL.findById rentalToLocation'.id) $ do QL.create rentalToLocation'
   createRide' ride
 
 createRide :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Ride -> m ()
 createRide ride = do
   fromLocationMap <- SLM.buildPickUpLocationMapping ride.fromLocation.id ride.id.getId DLM.RIDE
-  toLocationMaps <- SLM.buildDropLocationMapping ride.toLocation.id ride.id.getId DLM.RIDE
-  QLM.create fromLocationMap >> QLM.create toLocationMaps >> create ride
+  case ride.rideDetails of
+    DRide.DetailsOnDemand RideDetailsOnDemand {toLocation} -> do
+      toLocationMaps <- SLM.buildDropLocationMapping toLocation.id ride.id.getId DLM.RIDE
+      QLM.create fromLocationMap >> QLM.create toLocationMaps >> create ride
+    DRide.DetailsRental RideDetailsRental {rentalToLocation} -> do
+      toLocationMap <- forM rentalToLocation \rentalToLocation' -> do
+        SLM.buildDropLocationMapping rentalToLocation'.id ride.id.getId DLM.RIDE
+      QLM.create fromLocationMap >> whenJust toLocationMap QLM.create >> create ride
 
 findById :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Ride -> m (Maybe Ride)
 findById (Id rideId) = findOneWithKV [Se.Is BeamR.id $ Se.Eq rideId]
@@ -111,13 +119,13 @@ findCompletedRideByGHRId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DD
 findCompletedRideByGHRId (Id ghrId) = findAllWithOptionsKV [Se.And [Se.Is BeamR.driverGoHomeRequestId $ Se.Eq (Just ghrId), Se.Is BeamR.status $ Se.Eq DRide.COMPLETED]] (Se.Desc BeamR.createdAt) (Just 1) Nothing <&> listToMaybe
 
 findActiveByRBId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Booking -> m (Maybe Ride)
-findActiveByRBId (Id rbId) = findOneWithKV [Se.And [Se.Is BeamR.bookingId $ Se.Eq rbId, Se.Is BeamR.status $ Se.Not $ Se.Eq Ride.CANCELLED]]
+findActiveByRBId (Id rbId) = findOneWithKV [Se.And [Se.Is BeamR.bookingId $ Se.Eq rbId, Se.Is BeamR.status $ Se.Not $ Se.Eq DRide.CANCELLED]]
 
 findAllRidesWithSeConditionsCreatedAtDesc :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Se.Clause Postgres BeamR.RideT] -> m [Ride]
 findAllRidesWithSeConditionsCreatedAtDesc conditions = findAllWithOptionsKV conditions (Se.Desc BeamR.createdAt) Nothing Nothing
 
 findAllDriverInfromationFromRides :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Ride] -> m [DriverInformation]
-findAllDriverInfromationFromRides rides = findAllWithKV [Se.And [Se.Is BeamDI.driverId $ Se.In $ getId . DR.driverId <$> rides]]
+findAllDriverInfromationFromRides rides = findAllWithKV [Se.And [Se.Is BeamDI.driverId $ Se.In $ getId . DRide.driverId <$> rides]]
 
 findAllBookingsWithSeConditions :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Se.Clause Postgres BeamB.BookingT] -> m [Booking]
 findAllBookingsWithSeConditions = findAllWithKV
@@ -133,7 +141,7 @@ findAllRidesBookingsByRideId (Id merchantId) rideIds = do
   rides <- findAllRidesWithSeConditions [Se.Is BeamR.id $ Se.In $ getId <$> rideIds]
   let bookingSeCondition =
         [ Se.And
-            [ Se.Is BeamB.id $ Se.In $ getId . DR.bookingId <$> rides,
+            [ Se.Is BeamB.id $ Se.In $ getId . DRide.bookingId <$> rides,
               Se.Is BeamB.providerId $ Se.Eq merchantId
             ]
         ]
@@ -148,7 +156,7 @@ findAllRidesBookingsByRideId (Id merchantId) rideIds = do
 findOneByBookingId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Booking -> m (Maybe Ride)
 findOneByBookingId (Id bookingId) = findAllWithOptionsKV [Se.Is BeamR.bookingId $ Se.Eq bookingId] (Se.Desc BeamR.createdAt) (Just 1) Nothing <&> listToMaybe
 
-findAllByDriverId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe Ride.RideStatus -> Maybe Day -> m [(Ride, Booking)]
+findAllByDriverId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe DRide.RideStatus -> Maybe Day -> m [(Ride, Booking)]
 findAllByDriverId (Id driverId) mbLimit mbOffset mbOnlyActive mbRideStatus mbDay = do
   let limitVal = maybe 10 fromInteger mbLimit
       offsetVal = maybe 0 fromInteger mbOffset
@@ -158,7 +166,7 @@ findAllByDriverId (Id driverId) mbLimit mbOffset mbOnlyActive mbRideStatus mbDay
       [ Se.And
           ( [Se.Is BeamR.driverId $ Se.Eq driverId]
               <> if isOnlyActive
-                then [Se.Is BeamR.status $ Se.Not $ Se.In [Ride.COMPLETED, Ride.CANCELLED]]
+                then [Se.Is BeamR.status $ Se.Not $ Se.In [DRide.COMPLETED, DRide.CANCELLED]]
                 else
                   []
                     <> ([Se.Is BeamR.status $ Se.Eq (fromJust mbRideStatus) | isJust mbRideStatus])
@@ -168,7 +176,7 @@ findAllByDriverId (Id driverId) mbLimit mbOffset mbOnlyActive mbRideStatus mbDay
       (Se.Desc BeamR.createdAt)
       (Just limitVal)
       (Just offsetVal)
-  bookings <- findAllWithOptionsKV [Se.Is BeamB.id $ Se.In $ getId . DR.bookingId <$> rides] (Se.Desc BeamB.createdAt) Nothing Nothing
+  bookings <- findAllWithOptionsKV [Se.Is BeamB.id $ Se.In $ getId . DRide.bookingId <$> rides] (Se.Desc BeamB.createdAt) Nothing Nothing
 
   let rideWithBooking = foldl' (getRideWithBooking bookings) [] rides
   pure $ take limitVal rideWithBooking
@@ -183,17 +191,17 @@ findOneByDriverId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person ->
 findOneByDriverId (Id personId) = findAllWithOptionsKV [Se.Is BeamR.driverId $ Se.Eq personId] (Se.Desc BeamR.createdAt) (Just 1) Nothing <&> listToMaybe
 
 getInProgressByDriverId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> m (Maybe Ride)
-getInProgressByDriverId (Id personId) = findOneWithKV [Se.And [Se.Is BeamR.driverId $ Se.Eq personId, Se.Is BeamR.status $ Se.Eq Ride.INPROGRESS]]
+getInProgressByDriverId (Id personId) = findOneWithKV [Se.And [Se.Is BeamR.driverId $ Se.Eq personId, Se.Is BeamR.status $ Se.Eq DRide.INPROGRESS]]
 
 getInProgressOrNewRideIdAndStatusByDriverId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> m (Maybe (Id Ride, RideStatus))
 getInProgressOrNewRideIdAndStatusByDriverId (Id driverId) = do
-  ride' <- findOneWithKV [Se.And [Se.Is BeamR.driverId $ Se.Eq driverId, Se.Is BeamR.status $ Se.In [Ride.INPROGRESS, Ride.NEW]]]
-  let rideData = (,) <$> (DR.id <$> ride') <*> (DR.status <$> ride')
+  ride' <- findOneWithKV [Se.And [Se.Is BeamR.driverId $ Se.Eq driverId, Se.Is BeamR.status $ Se.In [DRide.INPROGRESS, DRide.NEW]]]
+  let rideData = (,) <$> (DRide.id <$> ride') <*> (DRide.status <$> ride')
   pure rideData
 
 getActiveByDriverId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> m (Maybe Ride)
 getActiveByDriverId (Id personId) =
-  findOneWithKV [Se.And [Se.Is BeamR.driverId $ Se.Eq personId, Se.Is BeamR.status $ Se.In [Ride.INPROGRESS, Ride.NEW]]]
+  findOneWithKV [Se.And [Se.Is BeamR.driverId $ Se.Eq personId, Se.Is BeamR.status $ Se.In [DRide.INPROGRESS, DRide.NEW]]]
 
 getActiveBookingAndRideByDriverId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> m [(Ride, Booking)]
 getActiveBookingAndRideByDriverId (Id personId) = do
@@ -205,7 +213,7 @@ getActiveBookingAndRideByDriverId (Id personId) = do
           (\booking -> return [(ride, booking)])
           (QBooking.findById ride.bookingId)
     )
-    (findOneWithKV [Se.And [Se.Is BeamR.driverId $ Se.Eq personId, Se.Is BeamR.status $ Se.In [Ride.INPROGRESS, Ride.NEW]]])
+    (findOneWithKV [Se.And [Se.Is BeamR.driverId $ Se.Eq personId, Se.Is BeamR.status $ Se.In [DRide.INPROGRESS, DRide.NEW]]])
 
 updateStatus :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Ride -> RideStatus -> m ()
 updateStatus rideId status = do
@@ -216,12 +224,48 @@ updateStatus rideId status = do
     ]
     [Se.Is BeamR.id (Se.Eq $ getId rideId)]
 
+updateEndRideOtp :: MonadFlow m => Id Ride -> Text -> m ()
+updateEndRideOtp rideId endRideOtp = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set BeamR.endRideOtp (Just endRideOtp),
+      Se.Set BeamR.updatedAt now
+    ]
+    [Se.Is BeamR.id (Se.Eq $ getId rideId)]
+
 updateUiDistanceCalculation :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Ride -> Maybe Int -> Maybe Int -> m ()
 updateUiDistanceCalculation rideId dist1 dist2 = do
   now <- getCurrentTime
   updateOneWithKV
     [ Se.Set BeamR.uiDistanceCalculationWithAccuracy dist1,
       Se.Set BeamR.uiDistanceCalculationWithoutAccuracy dist2,
+      Se.Set BeamR.updatedAt now
+    ]
+    [Se.Is BeamR.id (Se.Eq $ getId rideId)]
+
+updateOdometerStartReadingImageId :: MonadFlow m => Id Ride -> Maybe Text -> m ()
+updateOdometerStartReadingImageId rideId startReadingImage = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set BeamR.odometerStartReadingImageId startReadingImage,
+      Se.Set BeamR.updatedAt now
+    ]
+    [Se.Is BeamR.id (Se.Eq $ getId rideId)]
+
+updateOdometerEndReadingImageId :: MonadFlow m => Id Ride -> Maybe Text -> m ()
+updateOdometerEndReadingImageId rideId endReadingImage = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set BeamR.odometerEndReadingImageId endReadingImage,
+      Se.Set BeamR.updatedAt now
+    ]
+    [Se.Is BeamR.id (Se.Eq $ getId rideId)]
+
+updateOdometerEndReading :: MonadFlow m => Id Ride -> Maybe Centesimal -> m ()
+updateOdometerEndReading rideId meters = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set BeamR.odometerEndReading meters,
       Se.Set BeamR.updatedAt now
     ]
     [Se.Is BeamR.id (Se.Eq $ getId rideId)]
@@ -246,6 +290,15 @@ updateStartTimeAndLoc rideId point = do
     ]
     [Se.Is BeamR.id (Se.Eq $ getId rideId)]
 
+updateOdometerStartReading :: MonadFlow m => Id Ride -> Maybe Centesimal -> m ()
+updateOdometerStartReading rideId reading = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set BeamR.odometerStartReading reading,
+      Se.Set BeamR.updatedAt now
+    ]
+    [Se.Is BeamR.id (Se.Eq $ getId rideId)]
+
 updateStatusByIds :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Id Ride] -> RideStatus -> m ()
 updateStatusByIds rideIds status = do
   now <- getCurrentTime
@@ -263,22 +316,29 @@ updateDistance driverId distance snapCalls = do
       Se.Set BeamR.numberOfSnapToRoadCalls (Just snapCalls),
       Se.Set BeamR.updatedAt now
     ]
-    [Se.And [Se.Is BeamR.driverId (Se.Eq $ getId driverId), Se.Is BeamR.status (Se.Eq Ride.INPROGRESS)]]
+    [Se.And [Se.Is BeamR.driverId (Se.Eq $ getId driverId), Se.Is BeamR.status (Se.Eq DRide.INPROGRESS)]]
 
 updateAll :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Ride -> Ride -> m ()
 updateAll rideId ride = do
   now <- getCurrentTime
+
   updateWithKV
-    [ Se.Set BeamR.chargeableDistance ride.chargeableDistance,
-      Se.Set BeamR.fare ride.fare,
-      Se.Set BeamR.tripEndTime ride.tripEndTime,
-      Se.Set BeamR.tripEndLat (ride.tripEndPos <&> (.lat)),
-      Se.Set BeamR.tripEndLon (ride.tripEndPos <&> (.lon)),
-      Se.Set BeamR.fareParametersId (getId <$> ride.fareParametersId),
-      Se.Set BeamR.distanceCalculationFailed ride.distanceCalculationFailed,
-      Se.Set BeamR.pickupDropOutsideOfThreshold ride.pickupDropOutsideOfThreshold,
-      Se.Set BeamR.updatedAt now
-    ]
+    ( [ Se.Set BeamR.chargeableDistance ride.chargeableDistance,
+        Se.Set BeamR.fare ride.fare,
+        Se.Set BeamR.tripEndTime ride.tripEndTime,
+        Se.Set BeamR.tripEndLat (ride.tripEndPos <&> (.lat)),
+        Se.Set BeamR.tripEndLon (ride.tripEndPos <&> (.lon)),
+        Se.Set BeamR.fareParametersId (getId <$> ride.fareParametersId),
+        Se.Set BeamR.distanceCalculationFailed ride.distanceCalculationFailed,
+        Se.Set BeamR.pickupDropOutsideOfThreshold ride.pickupDropOutsideOfThreshold,
+        Se.Set BeamR.updatedAt now
+      ]
+        <> ( case ride.rideDetails of
+               DRide.DetailsOnDemand RideDetailsOnDemand {} -> []
+               DRide.DetailsRental RideDetailsRental {odometerEndReading} ->
+                 [Se.Set BeamR.odometerEndReading odometerEndReading]
+           )
+    )
     [Se.Is BeamR.id (Se.Eq $ getId rideId)]
 
 getCountByStatus :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Merchant -> m [(RideStatus, Int)]
@@ -305,7 +365,7 @@ getRidesForDate driverId date diffTime = do
         [ Se.Is BeamR.driverId $ Se.Eq $ getId driverId,
           Se.Is BeamR.tripEndTime $ Se.GreaterThanOrEq $ Just minDayTime,
           Se.Is BeamR.tripEndTime $ Se.LessThan $ Just maxDayTime,
-          Se.Is BeamR.status $ Se.Eq Ride.COMPLETED
+          Se.Is BeamR.status $ Se.Eq DRide.COMPLETED
         ]
     ]
 
@@ -389,28 +449,28 @@ findAllRideItems merchantId limitVal offsetVal mbBookingStatus mbRideShortId mbC
       r <- catMaybes <$> mapM fromTType' rides
       rd <- catMaybes <$> mapM fromTType' rideDetails
       rdr <- catMaybes <$> mapM fromTType' riderDetails
-      pure $ zip7 (DR.shortId <$> r) (DR.createdAt <$> r) rd rdr (DBooking.riderName <$> b) (liftA2 (-) (DR.fare <$> r) (Just . DBooking.estimatedFare <$> b)) (mkBookingStatus now <$> r)
+      pure $ zip7 (DRide.shortId <$> r) (DRide.createdAt <$> r) rd rdr (DBooking.riderName <$> b) (liftA2 (-) (DRide.fare <$> r) (Just . DBooking.estimatedFare <$> b)) (mkBookingStatus now <$> r)
     Left err -> do
       logError $ "FAILED_TO_FETCH_RIDE_LIST" <> show err
       pure []
   pure $ mkRideItem <$> res'
   where
     mkBookingStatusVal ride =
-      B.ifThenElse_ (ride.status B.==. B.val_ Ride.COMPLETED) (B.val_ Common.COMPLETED) $
-        B.ifThenElse_ (ride.status B.==. B.val_ Ride.NEW B.&&. B.not_ (ride.createdAt B.<=. B.val_ (addUTCTime (- (6 * 60 * 60) :: NominalDiffTime) now))) (B.val_ Common.UPCOMING) $
-          B.ifThenElse_ (ride.status B.==. B.val_ Ride.NEW B.&&. (ride.createdAt B.<=. B.val_ (addUTCTime (- (6 * 60 * 60) :: NominalDiffTime) now))) (B.val_ Common.UPCOMING_6HRS) $
-            B.ifThenElse_ (ride.status B.==. B.val_ Ride.INPROGRESS B.&&. B.not_ (ride.tripStartTime B.<=. B.val_ (Just $ addUTCTime (- (6 * 60 * 60) :: NominalDiffTime) now))) (B.val_ Common.ONGOING) $
-              B.ifThenElse_ (ride.status B.==. B.val_ Ride.CANCELLED) (B.val_ Common.CANCELLED) (B.val_ Common.ONGOING_6HRS)
+      B.ifThenElse_ (ride.status B.==. B.val_ DRide.COMPLETED) (B.val_ Common.COMPLETED) $
+        B.ifThenElse_ (ride.status B.==. B.val_ DRide.NEW B.&&. B.not_ (ride.createdAt B.<=. B.val_ (addUTCTime (- (6 * 60 * 60) :: NominalDiffTime) now))) (B.val_ Common.UPCOMING) $
+          B.ifThenElse_ (ride.status B.==. B.val_ DRide.NEW B.&&. (ride.createdAt B.<=. B.val_ (addUTCTime (- (6 * 60 * 60) :: NominalDiffTime) now))) (B.val_ Common.UPCOMING_6HRS) $
+            B.ifThenElse_ (ride.status B.==. B.val_ DRide.INPROGRESS B.&&. B.not_ (ride.tripStartTime B.<=. B.val_ (Just $ addUTCTime (- (6 * 60 * 60) :: NominalDiffTime) now))) (B.val_ Common.ONGOING) $
+              B.ifThenElse_ (ride.status B.==. B.val_ DRide.CANCELLED) (B.val_ Common.CANCELLED) (B.val_ Common.ONGOING_6HRS)
     fst' (x, _, _, _) = x
     snd' (_, y, _, _) = y
     thd' (_, _, z, _) = z
     fth' (_, _, _, r) = r
     mkBookingStatus now' ride
-      | ride.status == Ride.COMPLETED = Common.COMPLETED
-      | ride.status == Ride.NEW && (ride.createdAt) > addUTCTime (- (6 * 60 * 60) :: NominalDiffTime) now' = Common.UPCOMING
-      | ride.status == Ride.NEW && ride.createdAt <= addUTCTime (- (6 * 60 * 60) :: NominalDiffTime) now' = Common.UPCOMING_6HRS
-      | ride.status == Ride.INPROGRESS && ride.tripStartTime > Just (addUTCTime (- (6 * 60 * 60) :: NominalDiffTime) now') = Common.ONGOING
-      | ride.status == Ride.CANCELLED = Common.CANCELLED
+      | ride.status == DRide.COMPLETED = Common.COMPLETED
+      | ride.status == DRide.NEW && (ride.createdAt) > addUTCTime (- (6 * 60 * 60) :: NominalDiffTime) now' = Common.UPCOMING
+      | ride.status == DRide.NEW && ride.createdAt <= addUTCTime (- (6 * 60 * 60) :: NominalDiffTime) now' = Common.UPCOMING_6HRS
+      | ride.status == DRide.INPROGRESS && ride.tripStartTime > Just (addUTCTime (- (6 * 60 * 60) :: NominalDiffTime) now') = Common.ONGOING
+      | ride.status == DRide.CANCELLED = Common.CANCELLED
       | otherwise = Common.ONGOING_6HRS
     mkRideItem (rideShortId, rideCreatedAt, rideDetails, riderDetails, customerName, fareDiff, bookingStatus) =
       RideItem {..}
@@ -435,7 +495,8 @@ findStuckRideItems (Id merchantId) bookingIds now = do
   rides <-
     findAllWithKV
       [ Se.And
-          [ Se.Is BeamR.status $ Se.Eq Ride.NEW,
+          [ Se.Is BeamR.status $ Se.Eq DRide.NEW,
+            Se.Is BeamR.rideType $ Se.Not $ Se.Eq RENTAL,
             Se.Is BeamR.createdAt $ Se.LessThanOrEq now6HrBefore,
             Se.Is BeamR.bookingId $ Se.In $ getId . DBooking.id <$> bookings
           ]
@@ -472,7 +533,7 @@ findRidesByBookingId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Id Booki
 findRidesByBookingId bookingIds = findAllWithKV [Se.Is BeamR.bookingId $ Se.In $ getId <$> bookingIds]
 
 findCancelledBookingId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> m [Id Booking]
-findCancelledBookingId (Id driverId) = findAllWithKV [Se.And [Se.Is BeamR.driverId $ Se.Eq driverId, Se.Is BeamR.status $ Se.Eq Ride.CANCELLED]] <&> (Ride.bookingId <$>)
+findCancelledBookingId (Id driverId) = findAllWithKV [Se.And [Se.Is BeamR.driverId $ Se.Eq driverId, Se.Is BeamR.status $ Se.Eq DRide.CANCELLED]] <&> (DRide.bookingId <$>)
 
 findRideByRideShortId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => ShortId Ride -> m (Maybe Ride)
 findRideByRideShortId (ShortId shortId) = findOneWithKV [Se.Is BeamR.shortId $ Se.Eq shortId]
@@ -508,11 +569,11 @@ totalEarningsByFleetOwner fleetId = do
       B.select $
         do
           rideDetails' <- B.filter_' (\rideDetails'' -> BeamRD.fleetOwnerId rideDetails'' B.==?. B.val_ fleetId) (B.all_ (SBC.rideDetails SBC.atlasDB))
-          B.join_' (SBC.ride SBC.atlasDB) (\ride'' -> BeamR.id ride'' B.==?. BeamRD.id rideDetails' B.&&?. BeamR.status ride'' B.==?. B.val_ DDR.COMPLETED)
+          B.join_' (SBC.ride SBC.atlasDB) (\ride'' -> BeamR.id ride'' B.==?. BeamRD.id rideDetails' B.&&?. BeamR.status ride'' B.==?. B.val_ DRide.COMPLETED)
   resTable <- case res of
     Right res' -> mapM fromTType' res'
     Left _ -> pure []
-  pure $ sum (getMoney <$> mapMaybe DR.fare (catMaybes resTable))
+  pure $ sum (getMoney <$> mapMaybe DRide.fare (catMaybes resTable))
 
 totalEarningsByFleetOwnerPerVehicle :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Maybe Text -> Text -> m Int
 totalEarningsByFleetOwnerPerVehicle fleetId vehicleNumber = do
@@ -526,7 +587,7 @@ totalEarningsByFleetOwnerPerVehicle fleetId vehicleNumber = do
   resTable <- case res of
     Right res' -> mapM fromTType' res'
     Left _ -> pure []
-  pure $ sum (getMoney <$> mapMaybe DR.fare (catMaybes resTable))
+  pure $ sum (getMoney <$> mapMaybe DRide.fare (catMaybes resTable))
 
 totalEarningsByFleetOwnerPerDriver :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Maybe Text -> Id Person -> m Int
 totalEarningsByFleetOwnerPerDriver fleetId driverId = do
@@ -544,7 +605,7 @@ totalEarningsByFleetOwnerPerDriver fleetId driverId = do
   resTable <- case res of
     Right res' -> mapM fromTType' res'
     Left _ -> pure []
-  pure $ sum (getMoney <$> mapMaybe DR.fare (catMaybes resTable))
+  pure $ sum (getMoney <$> mapMaybe DRide.fare (catMaybes resTable))
 
 totalRidesCompletedInFleet :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Maybe Text -> m Int
 totalRidesCompletedInFleet fleetId = do
@@ -555,7 +616,7 @@ totalRidesCompletedInFleet fleetId = do
         do
           B.aggregate_ (\_ -> B.as_ @Int B.countAll_) $
             B.filter_'
-              (\ride'' -> ride''.status B.==?. B.val_ DDR.COMPLETED)
+              (\ride'' -> ride''.status B.==?. B.val_ DRide.COMPLETED)
               do
                 rideDetails' <- B.filter_' (\rideDetails'' -> BeamRD.fleetOwnerId rideDetails'' B.==?. B.val_ fleetId) (B.all_ (SBC.rideDetails SBC.atlasDB))
                 B.join_' (SBC.ride SBC.atlasDB) (\ride'' -> BeamR.id ride'' B.==?. BeamRD.id rideDetails')
@@ -570,7 +631,7 @@ totalRidesCancelledInFleet fleetId = do
         do
           B.aggregate_ (\_ -> B.as_ @Int B.countAll_) $
             B.filter_'
-              (\ride'' -> ride''.status B.==?. B.val_ DDR.CANCELLED)
+              (\ride'' -> ride''.status B.==?. B.val_ DRide.CANCELLED)
               do
                 rideDetails' <- B.filter_' (\rideDetails'' -> BeamRD.fleetOwnerId rideDetails'' B.==?. B.val_ fleetId) (B.all_ (SBC.rideDetails SBC.atlasDB))
                 B.join_' (SBC.ride SBC.atlasDB) (\ride'' -> BeamR.id ride'' B.==?. BeamRD.id rideDetails')
@@ -585,7 +646,7 @@ totalRidesAssignedInFleet fleetId = do
         do
           rideDetails' <- B.filter_' (\rideDetails'' -> BeamRD.fleetOwnerId rideDetails'' B.==?. B.val_ fleetId) (B.all_ (SBC.rideDetails SBC.atlasDB))
           B.filter_'
-            ( \ride'' -> ride''.status B.==?. B.val_ DDR.COMPLETED
+            ( \ride'' -> ride''.status B.==?. B.val_ DRide.COMPLETED
             )
             do
               B.join_' (SBC.ride SBC.atlasDB) (\ride'' -> BeamR.id ride'' B.==?. BeamRD.id rideDetails')
@@ -603,7 +664,7 @@ totalRidesByFleetOwnerPerVehicle fleetId vehicleNumber = do
         do
           rideDetails' <- B.filter_' (\rideDetails'' -> (BeamRD.fleetOwnerId rideDetails'' B.==?. B.val_ fleetId) B.&&?. (BeamRD.vehicleNumber rideDetails'' B.==?. B.val_ vehicleNumber)) (B.all_ (SBC.rideDetails SBC.atlasDB))
           B.filter_'
-            ( \ride'' -> ride''.status B.==?. B.val_ DDR.COMPLETED
+            ( \ride'' -> ride''.status B.==?. B.val_ DRide.COMPLETED
             )
             do
               B.join_' (SBC.ride SBC.atlasDB) (\ride'' -> BeamR.id ride'' B.==?. BeamRD.id rideDetails')
@@ -621,7 +682,7 @@ totalRidesByFleetOwnerPerDriver fleetId driverId = do
         do
           rideDetails' <- B.filter_' (\rideDetails'' -> BeamRD.fleetOwnerId rideDetails'' B.==?. B.val_ fleetId) (B.all_ (SBC.rideDetails SBC.atlasDB))
           B.filter_'
-            ( \ride'' -> (ride''.status B.==?. B.val_ DDR.COMPLETED) B.&&?. (BeamR.driverId ride'' B.==?. B.val_ driverId.getId)
+            ( \ride'' -> (ride''.status B.==?. B.val_ DRide.COMPLETED) B.&&?. (BeamR.driverId ride'' B.==?. B.val_ driverId.getId)
             )
             do
               B.join_' (SBC.ride SBC.atlasDB) (\ride'' -> BeamR.id ride'' B.==?. BeamRD.id rideDetails')
@@ -639,7 +700,7 @@ totalRidesByFleetOwnerPerVehicleAndDriver fleetId vehicleNumber driverId = do
         do
           rideDetails' <- B.filter_' (\rideDetails'' -> (BeamRD.fleetOwnerId rideDetails'' B.==?. B.val_ fleetId) B.&&?. (BeamRD.vehicleNumber rideDetails'' B.==?. B.val_ vehicleNumber)) (B.all_ (SBC.rideDetails SBC.atlasDB))
           B.filter_'
-            ( \ride'' -> (ride''.status B.==?. B.val_ DDR.COMPLETED) B.&&?. (BeamR.driverId ride'' B.==?. B.val_ driverId.getId)
+            ( \ride'' -> (ride''.status B.==?. B.val_ DRide.COMPLETED) B.&&?. (BeamR.driverId ride'' B.==?. B.val_ driverId.getId)
             )
             do
               B.join_' (SBC.ride SBC.atlasDB) (\ride'' -> BeamR.id ride'' B.==?. BeamRD.id rideDetails')
@@ -658,14 +719,14 @@ totalEarningsByFleetOwnerPerVehicleAndDriver fleetId vehicleNumber driverId = do
           do
             rideDetails' <- B.filter_' (\rideDetails'' -> BeamRD.fleetOwnerId rideDetails'' B.==?. B.val_ fleetId B.&&?. BeamRD.vehicleNumber rideDetails'' B.==?. B.val_ vehicleNumber) (B.all_ (SBC.rideDetails SBC.atlasDB))
             B.filter_'
-              ( \ride'' -> ride''.status B.==?. B.val_ DDR.COMPLETED B.&&?. BeamR.driverId ride'' B.==?. B.val_ driverId.getId
+              ( \ride'' -> ride''.status B.==?. B.val_ DRide.COMPLETED B.&&?. BeamR.driverId ride'' B.==?. B.val_ driverId.getId
               )
               do
                 B.join_' (SBC.ride SBC.atlasDB) (\ride'' -> BeamR.id ride'' B.==?. BeamRD.id rideDetails')
   resTable <- case res of
     Right res' -> mapM fromTType' res'
     Left _ -> pure []
-  pure $ sum (getMoney <$> mapMaybe DR.fare (catMaybes resTable))
+  pure $ sum (getMoney <$> mapMaybe DRide.fare (catMaybes resTable))
 
 instance FromTType' BeamR.Ride Ride where
   fromTType' BeamR.RideT {..} = do
@@ -681,10 +742,6 @@ instance FromTType' BeamR.Ride Ride where
 
     fromLocMap <- listToMaybe fromLocationMapping & fromMaybeM (InternalError "Entity Mappings For FromLocation Not Found")
     fromLocation <- QL.findById fromLocMap.locationId >>= fromMaybeM (InternalError $ "FromLocation not found in ride for fromLocationId: " <> fromLocMap.locationId.getId)
-
-    when (null toLocationMappings) $ throwError (InternalError "Entity Mappings For ToLocation Not Found")
-    let toLocMap = maximumBy (comparing (.order)) toLocationMappings
-    toLocation <- QL.findById toLocMap.locationId >>= fromMaybeM (InternalError $ "ToLocation not found in ride for toLocationId: " <> toLocMap.locationId.getId)
     tUrl <- parseBaseUrl trackingUrl
     merchant <- case merchantId of
       Nothing -> do
@@ -692,6 +749,25 @@ instance FromTType' BeamR.Ride Ride where
         CQM.findById booking.providerId >>= fromMaybeM (MerchantNotFound booking.providerId.getId)
       Just mId -> CQM.findById (Id mId) >>= fromMaybeM (MerchantNotFound mId)
     merchantOpCityId <- CQMOC.getMerchantOpCityId (Id <$> merchantOperatingCityId) merchant Nothing
+    rideDetails <- case rideType of
+      ON_DEMAND -> do
+        when (null toLocationMappings) $ throwError (InternalError "Entity Mappings For ToLocation Not Found")
+        let toLocMap = maximumBy (comparing (.order)) toLocationMappings
+        toLocation <- QL.findById toLocMap.locationId >>= fromMaybeM (InternalError $ "ToLocation not found in ride for toLocationId: " <> toLocMap.locationId.getId)
+        pure $
+          DRide.DetailsOnDemand
+            RideDetailsOnDemand
+              { driverGoHomeRequestId = Id <$> driverGoHomeRequestId,
+                ..
+              }
+      RENTAL -> do
+        rentalToLocation <-
+          if null toLocationMappings
+            then pure Nothing
+            else do
+              let toLocMap = maximumBy (comparing (.order)) toLocationMappings
+              Just <$> (QL.findById toLocMap.locationId >>= fromMaybeM (InternalError $ "ToLocation not found in ride for toLocationId: " <> toLocMap.locationId.getId))
+        pure $ DRide.DetailsRental RideDetailsRental {..}
     pure $
       Just
         Ride
@@ -704,42 +780,41 @@ instance FromTType' BeamR.Ride Ride where
             tripStartPos = LatLong <$> tripStartLat <*> tripStartLon,
             tripEndPos = LatLong <$> tripEndLat <*> tripEndLon,
             fareParametersId = Id <$> fareParametersId,
-            driverGoHomeRequestId = Id <$> driverGoHomeRequestId,
             trackingUrl = tUrl,
             ..
           }
 
 instance ToTType' BeamR.Ride Ride where
-  toTType' Ride {..} =
+  toTType' Ride {..} = do
+    let rideType = case rideDetails of
+          DRide.DetailsOnDemand _ -> ON_DEMAND
+          DRide.DetailsRental _ -> RENTAL
+    let (driverGoHomeRequestId, driverDeviatedFromRoute, numberOfSnapToRoadCalls, numberOfDeviation, uiDistanceCalculationWithAccuracy, uiDistanceCalculationWithoutAccuracy) = case rideDetails of
+          DRide.DetailsOnDemand details -> mkOnDemandDetails details
+          DRide.DetailsRental _ -> (Nothing, Nothing, Nothing, Nothing, Nothing, Nothing)
+    let (odometerStartReadingImageId, odometerStartReading, odometerEndReadingImageId, odometerEndReading, endRideOtp) = case rideDetails of
+          DRide.DetailsOnDemand _ -> (Nothing, Nothing, Nothing, Nothing, Nothing)
+          DRide.DetailsRental details -> mkRentalDetails details
     BeamR.RideT
       { BeamR.id = getId id,
-        BeamR.bookingId = getId bookingId,
-        BeamR.shortId = getShortId shortId,
+        BeamR.bookingId = bookingId.getId,
+        BeamR.shortId = shortId.getShortId,
         BeamR.merchantId = getId <$> merchantId,
         BeamR.merchantOperatingCityId = Just $ getId merchantOperatingCityId,
         BeamR.status = status,
         BeamR.driverId = getId driverId,
         BeamR.otp = otp,
         BeamR.trackingUrl = showBaseUrl trackingUrl,
-        BeamR.fare = fare,
-        BeamR.traveledDistance = traveledDistance,
-        BeamR.chargeableDistance = chargeableDistance,
-        BeamR.driverArrivalTime = driverArrivalTime,
-        BeamR.tripStartTime = tripStartTime,
-        BeamR.tripEndTime = tripEndTime,
         BeamR.tripStartLat = lat <$> tripStartPos,
         BeamR.tripEndLat = lat <$> tripEndPos,
         BeamR.tripStartLon = lon <$> tripStartPos,
         BeamR.tripEndLon = lon <$> tripEndPos,
-        pickupDropOutsideOfThreshold = pickupDropOutsideOfThreshold,
         BeamR.fareParametersId = getId <$> fareParametersId,
-        BeamR.distanceCalculationFailed = distanceCalculationFailed,
-        BeamR.createdAt = createdAt,
-        BeamR.updatedAt = updatedAt,
-        BeamR.driverDeviatedFromRoute = driverDeviatedFromRoute,
-        BeamR.numberOfSnapToRoadCalls = numberOfSnapToRoadCalls,
-        BeamR.numberOfDeviation = numberOfDeviation,
-        BeamR.uiDistanceCalculationWithAccuracy = uiDistanceCalculationWithAccuracy,
-        BeamR.uiDistanceCalculationWithoutAccuracy = uiDistanceCalculationWithoutAccuracy,
-        BeamR.driverGoHomeRequestId = getId <$> driverGoHomeRequestId
+        ..
       }
+    where
+      mkOnDemandDetails DRide.RideDetailsOnDemand {..} = do
+        let driverGoHomeRequestId' = getId <$> driverGoHomeRequestId
+        (driverGoHomeRequestId', driverDeviatedFromRoute, numberOfSnapToRoadCalls, numberOfDeviation, uiDistanceCalculationWithAccuracy, uiDistanceCalculationWithoutAccuracy)
+      mkRentalDetails DRide.RideDetailsRental {..} = do
+        (odometerStartReadingImageId, odometerStartReading, odometerEndReadingImageId, odometerEndReading, endRideOtp)

@@ -41,8 +41,9 @@ buildOneWaySearchReq ::
 buildOneWaySearchReq DOneWaySearch.OneWaySearchRes {..} =
   buildSearchReq
     origin
-    destination
+    (Just destination)
     searchId
+    now
     device
     (shortestRouteInfo >>= (.distance))
     (shortestRouteInfo >>= (.duration))
@@ -61,8 +62,9 @@ buildRentalSearchReq ::
 buildRentalSearchReq DRentalSearch.RentalSearchRes {..} =
   buildSearchReq
     origin
-    origin
+    Nothing
     searchId
+    startTime
     Nothing
     Nothing
     Nothing
@@ -75,8 +77,9 @@ buildRentalSearchReq DRentalSearch.RentalSearchRes {..} =
 buildSearchReq ::
   (MonadFlow m, HasFlowEnv m r '["nwAddress" ::: BaseUrl]) =>
   DSearchCommon.SearchReqLocation ->
-  DSearchCommon.SearchReqLocation ->
+  Maybe DSearchCommon.SearchReqLocation ->
   Id DSearchReq.SearchRequest ->
+  UTCTime ->
   Maybe Text ->
   Maybe Meters ->
   Maybe Seconds ->
@@ -86,35 +89,39 @@ buildSearchReq ::
   Context.City ->
   Maybe [Maps.LatLong] ->
   m (BecknReq Search.SearchMessage)
-buildSearchReq origin destination searchId _ distance duration customerLanguage disabilityTag merchant city mbPoints = do
+buildSearchReq origin destination searchId startTime _ distance duration customerLanguage disabilityTag merchant city mbPoints = do
   let transactionId = getId searchId
       messageId = transactionId
   bapUrl <- asks (.nwAddress) <&> #baseUrlPath %~ (<> "/" <> T.unpack merchant.id.getId)
   context <- buildTaxiContext Context.SEARCH messageId (Just transactionId) merchant.bapId bapUrl Nothing Nothing city merchant.country False
-  let intent = mkIntent origin destination customerLanguage disabilityTag distance duration mbPoints
+  let intent = mkIntent origin destination customerLanguage disabilityTag distance duration mbPoints startTime
   let searchMessage = Search.SearchMessage intent
 
   pure $ BecknReq context searchMessage
 
 mkIntent ::
   DSearchCommon.SearchReqLocation ->
-  DSearchCommon.SearchReqLocation ->
+  Maybe DSearchCommon.SearchReqLocation ->
   Maybe Maps.Language ->
   Maybe Text ->
   Maybe Meters ->
   Maybe Seconds ->
   Maybe [Maps.LatLong] ->
+  UTCTime ->
   Search.Intent
-mkIntent origin destination customerLanguage disabilityTag distance duration mbPoints = do
+mkIntent origin destination customerLanguage disabilityTag distance duration mbPoints startTime = do
   let startLocation =
         Search.StartInfo
-          { location = mkLocation origin
+          { location = mkLocation origin,
+            time = Search.TimeTimestamp startTime
           }
       endLocation =
-        Search.StopInfo
-          { location = mkLocation destination
-          }
-
+        destination
+          <&> ( \dest ->
+                  Search.StopInfo
+                    { location = mkLocation dest
+                    }
+              )
       fulfillment =
         Search.FulfillmentInfo
           { start = startLocation,

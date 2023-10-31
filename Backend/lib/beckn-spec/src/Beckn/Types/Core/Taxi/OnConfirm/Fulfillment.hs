@@ -27,7 +27,7 @@ import Beckn.Types.Core.Taxi.Common.Vehicle
 import Data.Aeson
 import Data.OpenApi (ToSchema (..), defaultSchemaOptions)
 import Kernel.Prelude
-import Kernel.Utils.JSON
+import Kernel.Utils.JSON (stripPrefixUnderscoreIfAny)
 import Kernel.Utils.Schema (genericDeclareUnNamedSchema)
 
 -- If end = Nothing, then bpp sends quotes only for RENTAL

@@ -48,7 +48,7 @@ type BookingInfoAPI =
 data BookingInfoResponse = BookingInfoResponse
   { bookingId :: Id Booking,
     fromLocation :: Location,
-    toLocation :: Location,
+    toLocation :: Maybe Location,
     estimatedDistance :: Meters,
     estimatedFare :: Money,
     estimatedDuration :: Seconds,

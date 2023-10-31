@@ -41,6 +41,7 @@ data DriverPoolConfigD u = DriverPoolConfig
     maxParallelSearchRequests :: Int,
     poolSortingType :: PoolSortingType,
     singleBatchProcessTime :: Seconds,
+    singleBatchProcessTimeRental :: Seconds,
     tripDistance :: Meters,
     radiusShrinkValueForDriversOnRide :: Meters,
     driverToDestinationDistanceThreshold :: Meters,

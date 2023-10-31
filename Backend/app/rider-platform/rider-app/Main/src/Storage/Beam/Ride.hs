@@ -41,6 +41,7 @@ data RideT f = RideT
     vehicleColor :: B.C f Text,
     vehicleVariant :: B.C f VehVar.VehicleVariant,
     otp :: B.C f Text,
+    endRideOtp :: B.C f (Maybe Text),
     trackingUrl :: B.C f (Maybe Text),
     fare :: B.C f (Maybe HighPrecMoney),
     totalFare :: B.C f (Maybe HighPrecMoney),
@@ -51,6 +52,8 @@ data RideT f = RideT
     rideEndTime :: B.C f (Maybe UTCTime),
     rideRating :: B.C f (Maybe Int),
     createdAt :: B.C f UTCTime,
+    odometerStartReading :: B.C f (Maybe Centesimal),
+    odometerEndReading :: B.C f (Maybe Centesimal),
     updatedAt :: B.C f UTCTime,
     driverImage :: B.C f (Maybe Text)
   }

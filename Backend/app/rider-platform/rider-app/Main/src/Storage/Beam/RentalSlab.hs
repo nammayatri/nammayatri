@@ -22,6 +22,7 @@ import Kernel.Prelude
 import Kernel.Types.Common hiding (id)
 import Tools.Beam.UtilsTH
 
+-- TODO To be removed
 data RentalSlabT f = RentalSlabT
   { id :: B.C f Text,
     baseDistance :: B.C f Kilometers,

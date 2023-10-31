@@ -1,0 +1,339 @@
+@token1 = {{driver-offer-bpp-auto-token1}}
+
+@driverId = favorit-auto1-0000000000000000000000
+@driver-offer-bpp-host = http://localhost:8016
+@location-tracking-service-host = http://localhost:8081
+@merchantId = favorit0-0000-0000-0000-00000favorit
+
+# time in future
+@rentalStartTime = 2023-10-30T06:20:15.585221416Z
+# @now = $localDatetime iso8601
+
+# @name healthcheck
+GET {{driver-offer-bpp-host}}/ui
+
+###
+# @name healthcheck
+GET {{app-host}}
+###
+
+# @name setActive
+POST {{driver-offer-bpp-host}}/ui/driver/setActivity?active=true&mode="ONLINE"
+content-type: application/json
+token: {{token1}}
+
+###
+@adminToken = favorit-admin-0000000000000000-token
+
+# @name updateVehicle
+
+POST {{driver-offer-bpp-host}}/ui/org/vehicle/{{driverId}}
+content-type: application/json
+token: {{adminToken}}
+
+{
+    "variant" : "SEDAN"
+}
+
+###
+# @name updateInitial
+POST {{location-tracking-service-host}}/ui/driver/location
+token: {{token1}}
+mId: {{merchantId}}
+vt: SEDAN
+dm: ONLINE
+content-type: application/json
+
+[
+    {
+        "pt": {
+            "lat": 14.445332,
+            "lon": 75.919028
+
+        },
+        "ts": "{{$localDatetime iso8601}}",
+        "acc": 0
+    }
+]
+
+###
+
+# @name enableRental
+POST {{driver-offer-bpp-host}}/ui/driver/enableRental?flag=true
+content-type: application/json
+token: {{token1}}
+
+###
+
+# @name search
+POST {{app-host}}/rideSearch
+content-type: application/json
+token: {{app-token}}
+
+{
+  "fareProductType" : "RENTAL",
+  "contents" : {
+    "origin": {
+      "address": {
+          "street": "60 Feet Rd",
+          "state": "Karnataka",
+          "door": "",
+          "country": "India",
+          "city": "Davanagere",
+          "building": " ",
+          "areaCode": "",
+          "area": "Vidyanagar"
+      },
+      "gps": {
+          "lat": 14.445332,
+          "lon": 75.919028
+      }
+    },
+    "startTime" : "{{rentalStartTime}}"
+  }
+}
+
+###
+
+@searchId = {{search.response.body.searchId}}
+
+# @name quotes
+GET {{app-host}}/rideSearch/{{searchId}}/results
+content-type: application/json
+token: {{app-token}}
+
+###
+@selectedQuoteId = {{quotes.response.body.quotes[0].onRentalCab.id}}
+
+# @name confirmQuote
+
+# POST {{app-host}}/rideSearch/quotes/{{selectedQuoteId}}/confirm?paymentMethodId={{paymentMethodId}}
+
+POST {{app-host}}/rideSearch/quotes/{{selectedQuoteId}}/confirm?startTime={{rentalStartTime}}&rentalDuration=2
+content-type: application/json
+token: {{app-token}}
+
+###
+
+# Should be updated just before AllocateRentalRide job triggered:
+# job.scheduledAt = max booking.createdAt (rentalStartTime - 15 mins)
+
+# @name updatePosition
+POST {{location-tracking-service-host}}/ui/driver/location
+token: {{token1}}
+mId: {{merchantId}}
+vt: SEDAN
+dm: ONLINE
+content-type: application/json
+
+[
+    {
+        "pt": {
+            "lat": 14.445332,
+            "lon": 75.919028
+
+        },
+        "ts": "{{$localDatetime iso8601}}",
+        "acc": 0
+    }
+]
+
+###
+
+# @name nearbySearchRequest
+GET {{driver-offer-bpp-host}}/ui/driver/nearbyRideRequest
+token: {{token1}}
+
+###
+
+
+###
+
+# @name offerRide
+POST {{driver-offer-bpp-host}}/ui/driver/searchRequest/quote/respond
+token: {{token1}}
+content-type: application/json
+
+{
+    "searchTryId": "{{nearbySearchRequest.response.body.searchRequestsForDriver[0].searchTryId}}",
+    "response" : "Accept"
+}
+
+###
+
+@bookingId = {{confirmQuote.response.body.bookingId}}
+
+# @name list2
+GET {{app-host}}/rideBooking/list
+  ?offset=0
+  &limit=50
+  &onlyActive=false
+content-type: application/json
+token: {{app-token}}
+
+###
+
+# @name listOfCompleted
+GET {{app-host}}/rideBooking/list
+  ?offset=0
+  &limit=50
+  &status="COMPLETED"
+content-type: application/json
+token: {{app-token}}
+
+###
+
+# @name driverList
+GET {{driver-offer-bpp-host}}/ui/driver/ride/list?limit=100&offset=0
+token: {{token1}}
+
+###
+
+@rideId = {{driverList.response.body.list[0].id}}
+@otp = {{list2.response.body.list[0].rideList[0].rideOtp}}
+
+# @name startRide
+POST {{driver-offer-bpp-host}}/ui/driver/ride/{{rideId}}/start
+token: {{token1}}
+content-type: application/json
+
+{
+    "rideOtp": "{{otp}}",
+    "point": {
+            "lat": 14.445332,
+            "lon": 75.919028
+    },
+    "odometerStartReading" : 10,
+    "odometerStartImage" : "odometerStartImage",
+    "odometerStartImageExtension" : "image/jpeg"
+}
+
+###
+
+# location updates taken from karnatakaLocationUpdates, so mock-google could handle it
+
+# @name update1
+POST {{location-tracking-service-host}}/ui/driver/location
+token: {{token1}}
+mId: {{merchantId}}
+vt: SEDAN
+dm: ONLINE
+content-type: application/json
+
+[
+    {
+        "pt": {
+            "lat": 14.445332,
+            "lon": 75.919028
+
+        },
+        "ts": "{{$localDatetime iso8601}}"
+    },
+    {
+        "pt": {
+            "lat": 14.445488,
+            "lon": 75.919687
+
+        },
+        "ts": "{{$localDatetime iso8601}}",
+        "aux": "Tharalabalu Badavane"
+    },
+    {
+        "pt": {
+            "lat": 14.445093,
+            "lon": 75.919955
+
+        },
+        "ts": "{{$localDatetime iso8601}}"
+    },
+    {
+        "pt": {
+            "lat": 14.444636,
+            "lon": 75.920288
+        },
+        "ts": "{{$localDatetime iso8601}}",
+        "aux": "1st Main Rd"
+    }
+]
+
+###
+
+# @name update2
+POST {{location-tracking-service-host}}/ui/driver/location
+token: {{token1}}
+mId: {{merchantId}}
+vt: SEDAN
+dm: ONLINE
+content-type: application/json
+
+[
+    {
+        "pt": {
+            "lat": 14.444491,
+            "lon": 75.920846
+        },
+        "ts": "{{$localDatetime iso8601}}",
+        "aux": "2nd Cross Rd"
+    },
+    {
+        "pt": {
+            "lat": 14.443816,
+            "lon": 75.921533
+        },
+        "ts": "{{$localDatetime iso8601}}",
+        "aux": "1, Hadadi Rd"
+    },
+    {
+        "pt": {
+            "lat": 14.441555,
+            "lon": 75.922259
+        },
+        "ts": "{{$localDatetime iso8601}}",
+        "aux": "1, Hadadi Rd"
+    }
+]
+
+###
+
+# @name list3
+GET {{app-host}}/rideBooking/list
+  ?offset=0
+  &limit=50
+  &onlyActive=false
+content-type: application/json
+token: {{app-token}}
+
+###
+
+@endRideOtp = {{list3.response.body.list[0].rideList[0].endRideOtp}}
+
+# @name rideEnd
+POST {{driver-offer-bpp-host}}/ui/driver/ride/{{rideId}}/end
+token: {{token1}}
+content-type: application/json
+
+{
+  "point": {
+    "lat": 14.441555,
+    "lon": 75.922259
+  },
+"odometerEndReading" : 10,
+"odometerEndImage" : "odometerEndImage",
+"endRideOtp" : "{{endRideOtp}}",
+"odometerEndImageExtension" : "image/jpeg"
+}
+
+###
+
+@bapRideId = {{list2.response.body.list[0].rideList[0].id}}
+
+# @name feedback
+POST {{app-host}}/feedback/rateRide
+token: {{app-token}}
+content-type: application/json
+
+{
+  "rideId": "{{bapRideId}}",
+  "rating" : 5,
+  "feedbackDetails": "The ride was good"
+}

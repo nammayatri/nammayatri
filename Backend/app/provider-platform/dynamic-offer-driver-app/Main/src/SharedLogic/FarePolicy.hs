@@ -30,20 +30,21 @@ data FarePoliciesProduct = FarePoliciesProduct
     area :: FareProductD.Area,
     specialLocationTag :: Maybe Text
   }
+  deriving (Show)
 
-getFarePolicy :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id DMOC.MerchantOperatingCity -> Variant -> Maybe FareProductD.Area -> m FarePolicyD.FullFarePolicy
-getFarePolicy merchantOpCityId vehVariant Nothing = do
-  fareProduct <- QFareProduct.findByMerchantVariantArea merchantOpCityId vehVariant FareProductD.Default >>= fromMaybeM NoFareProduct
+getFarePolicy :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id DMOC.MerchantOperatingCity -> Variant -> Maybe FareProductD.Area -> FareProductD.FlowType -> m FarePolicyD.FullFarePolicy
+getFarePolicy merchantOpCityId vehVariant Nothing flow = do
+  fareProduct <- QFareProduct.findByMerchantVariantAreaFlow merchantOpCityId vehVariant FareProductD.Default flow >>= fromMaybeM NoFareProduct
   farePolicy <- QFP.findById fareProduct.farePolicyId >>= fromMaybeM NoFarePolicy
   return $ FarePolicyD.farePolicyToFullFarePolicy fareProduct.merchantId fareProduct.vehicleVariant farePolicy
-getFarePolicy merchantOpCityId vehVariant (Just area) = do
-  mbFareProduct <- QFareProduct.findByMerchantVariantArea merchantOpCityId vehVariant area
+getFarePolicy merchantOpCityId vehVariant (Just area) flow = do
+  mbFareProduct <- QFareProduct.findByMerchantVariantAreaFlow merchantOpCityId vehVariant area flow
   case mbFareProduct of
     Just fareProduct -> do
       farePolicy <- QFP.findById fareProduct.farePolicyId >>= fromMaybeM NoFarePolicy
       return $ FarePolicyD.farePolicyToFullFarePolicy fareProduct.merchantId fareProduct.vehicleVariant farePolicy
     Nothing -> do
-      fareProduct <- QFareProduct.findByMerchantVariantArea merchantOpCityId vehVariant FareProductD.Default >>= fromMaybeM NoFareProduct
+      fareProduct <- QFareProduct.findByMerchantVariantAreaFlow merchantOpCityId vehVariant FareProductD.Default flow >>= fromMaybeM NoFareProduct
       farePolicy <- QFP.findById fareProduct.farePolicyId >>= fromMaybeM NoFarePolicy
       return $ FarePolicyD.farePolicyToFullFarePolicy fareProduct.merchantId fareProduct.vehicleVariant farePolicy
 

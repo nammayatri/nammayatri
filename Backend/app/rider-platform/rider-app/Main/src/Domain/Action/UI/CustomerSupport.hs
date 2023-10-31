@@ -167,7 +167,7 @@ listOrder personId mRequestId mMobile mlimit moffset = do
 buildBookingToOrder :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r) => SP.Person -> DRB.Booking -> m OrderResp
 buildBookingToOrder SP.Person {firstName, lastName, mobileNumber} booking = do
   let mbToLocation = case booking.bookingDetails of
-        DRB.RentalDetails _ -> Nothing
+        DRB.RentalDetails _ _ -> Nothing
         DRB.OneWayDetails details -> Just details.toLocation
         DRB.DriverOfferDetails details -> Just details.toLocation
         DRB.OneWaySpecialZoneDetails details -> Just details.toLocation

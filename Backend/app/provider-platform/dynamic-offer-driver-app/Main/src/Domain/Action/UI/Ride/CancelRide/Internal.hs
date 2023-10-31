@@ -107,21 +107,25 @@ cancelRideImpl rideId bookingCReason = do
     transpConf <- QTC.findByMerchantOpCityId searchReq.merchantOperatingCityId >>= fromMaybeM (TransporterConfigNotFound searchReq.merchantOperatingCityId.getId)
     let searchRepeatLimit = transpConf.searchRepeatLimit
     now <- getCurrentTime
-    farePolicy <- getFarePolicy searchReq.merchantOperatingCityId searchTry.vehicleVariant searchReq.area
+    let flowType = SRB.castFlowType booking.bookingType
+    farePolicy <- getFarePolicy searchReq.merchantOperatingCityId searchTry.vehicleVariant searchReq.area flowType
     let isRepeatSearch =
           searchTry.searchRepeatCounter < searchRepeatLimit
             && bookingCReason.source == SBCR.ByDriver
             && maybe True (\nsBounds -> isJust booking.fareParams.nightShiftCharge == isNightShift nsBounds now) farePolicy.nightShiftBounds
     if isRepeatSearch
       then do
-        blockListedDriverList <- addDriverToSearchCancelledList searchReq.id ride
-        driverPoolCfg <- getDriverPoolConfig ride.merchantOperatingCityId (Just searchTry.vehicleVariant) searchReq.estimatedDistance
-        logDebug $ "BlockListed Drivers-" <> show blockListedDriverList
-        driverPool <- calculateDriverPool DP.Estimate driverPoolCfg (Just searchTry.vehicleVariant) searchReq.fromLocation merchant.id True Nothing
-        let newDriverPool = filter (\dpr -> cast dpr.driverId `notElem` blockListedDriverList) driverPool
-        if not (null newDriverPool)
-          then repeatSearch merchant farePolicy searchReq searchTry booking ride SBCR.ByDriver now driverPoolCfg
-          else BP.sendBookingCancelledUpdateToBAP booking merchant bookingCReason.source
+        case searchReq.searchRequestDetails of
+          DSR.SearchReqDetailsOnDemand DSR.SearchRequestDetailsOnDemand {..} -> do
+            blockListedDriverList <- addDriverToSearchCancelledList searchReq.id ride
+            driverPoolCfg <- getDriverPoolConfig ride.merchantOperatingCityId (Just searchTry.vehicleVariant) estimatedDistance
+            logDebug $ "BlockListed Drivers-" <> show blockListedDriverList
+            driverPool <- calculateDriverPool DP.Estimate driverPoolCfg (Just searchTry.vehicleVariant) searchTry.tag fromLocation merchant.id True Nothing
+            let newDriverPool = filter (\dpr -> cast dpr.driverId `notElem` blockListedDriverList) driverPool
+            if not (null newDriverPool)
+              then repeatSearch merchant farePolicy searchReq searchTry booking ride SBCR.ByDriver now driverPoolCfg
+              else BP.sendBookingCancelledUpdateToBAP booking merchant bookingCReason.source
+          DSR.SearchReqDetailsRental DSR.SearchRequestDetailsRental {} -> BP.sendBookingCancelledUpdateToBAP booking merchant bookingCReason.source
       else BP.sendBookingCancelledUpdateToBAP booking merchant bookingCReason.source
   where
     addDriverToSearchCancelledList searchReqId ride = do
@@ -181,8 +185,10 @@ repeatSearch ::
 repeatSearch merchant farePolicy searchReq searchTry booking ride cancellationSource now driverPoolConfig = do
   newSearchTry <- buildSearchTry searchTry
   _ <- QST.create newSearchTry
-  goHomeCfg <- CQGHC.findByMerchantOpCityId searchReq.merchantOperatingCityId
-  let driverExtraFeeBounds = DFP.findDriverExtraFeeBoundsByDistance searchReq.estimatedDistance <$> farePolicy.driverExtraFeeBounds
+  goHomeCfg <- CQGHC.findByMerchantId searchReq.merchantOperatingCityId
+  let driverExtraFeeBounds = case searchReq.searchRequestDetails of
+        DSR.SearchReqDetailsOnDemand DSR.SearchRequestDetailsOnDemand {..} -> DFP.findDriverExtraFeeBoundsByDistance estimatedDistance <$> farePolicy.driverExtraFeeBounds
+        DSR.SearchReqDetailsRental DSR.SearchRequestDetailsRental {} -> Nothing
   (res, _) <-
     sendSearchRequestToDrivers'
       driverPoolConfig
@@ -199,12 +205,15 @@ repeatSearch merchant farePolicy searchReq searchTry booking ride cancellationSo
       createJobIn @_ @'SendSearchRequestToDriver inTime maxShards $
         SendSearchRequestToDriverJobData
           { searchTryId = newSearchTry.id,
-            estimatedRideDistance = searchReq.estimatedDistance,
+            estimatedRideDistance = case searchReq.searchRequestDetails of
+              DSR.SearchReqDetailsOnDemand DSR.SearchRequestDetailsOnDemand {..} -> estimatedDistance
+              DSR.SearchReqDetailsRental DSR.SearchRequestDetailsRental {} -> booking.estimatedDistance,
             driverExtraFeeBounds = driverExtraFeeBounds
           }
     _ -> return ()
 
-  BP.sendEstimateRepetitionUpdateToBAP booking ride searchTry.estimateId cancellationSource
+  estimateId <- searchTry.estimateId & fromMaybeM (InternalError "SearchTry field not present: estimateId")
+  BP.sendEstimateRepetitionUpdateToBAP booking ride estimateId cancellationSource
   where
     buildSearchTry ::
       ( MonadTime m,

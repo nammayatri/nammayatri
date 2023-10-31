@@ -73,11 +73,31 @@ findAllActiveWithoutRespBySearchTryId (Id searchTryId) =
         )
     ]
 
+findAllActiveWithoutRespBySearchRequestId :: MonadFlow m => Id SearchRequest -> m [SearchRequestForDriver]
+findAllActiveWithoutRespBySearchRequestId (Id searchRequestId) =
+  findAllWithKV
+    [ Se.And
+        ( [Se.Is BeamSRFD.requestId $ Se.Eq searchRequestId]
+            <> [Se.Is BeamSRFD.status $ Se.Eq Domain.Active]
+            <> [Se.Is BeamSRFD.response $ Se.Eq Nothing]
+        )
+    ]
+
 findByDriverAndSearchTryId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> Id SearchTry -> m (Maybe SearchRequestForDriver)
 findByDriverAndSearchTryId (Id driverId) (Id searchTryId) =
   findOneWithKV
     [ Se.And
         ( [Se.Is BeamSRFD.searchTryId $ Se.Eq searchTryId]
+            <> [Se.Is BeamSRFD.status $ Se.Eq Domain.Active]
+            <> [Se.Is BeamSRFD.driverId $ Se.Eq driverId]
+        )
+    ]
+
+findByDriverAndSearchRequestId :: MonadFlow m => Id Person -> Id SearchRequest -> m (Maybe SearchRequestForDriver)
+findByDriverAndSearchRequestId (Id driverId) (Id searchRequestId) =
+  findOneWithKV
+    [ Se.And
+        ( [Se.Is BeamSRFD.requestId $ Se.Eq searchRequestId]
             <> [Se.Is BeamSRFD.status $ Se.Eq Domain.Active]
             <> [Se.Is BeamSRFD.driverId $ Se.Eq driverId]
         )
@@ -133,9 +153,11 @@ instance FromTType' BeamSRFD.SearchRequestForDriver SearchRequestForDriver where
         SearchRequestForDriver
           { id = Id id,
             requestId = Id requestId,
+            searchRequestTag,
             searchTryId = Id searchTryId,
             merchantId = Id <$> merchantId,
             merchantOperatingCityId = merchantOpCityId,
+            bookingId = Id <$> bookingId,
             startTime = startTime,
             searchRequestValidTill = T.localTimeToUTC T.utc searchRequestValidTill,
             driverId = Id driverId,
@@ -168,9 +190,11 @@ instance ToTType' BeamSRFD.SearchRequestForDriver SearchRequestForDriver where
     BeamSRFD.SearchRequestForDriverT
       { BeamSRFD.id = getId id,
         BeamSRFD.requestId = getId requestId,
+        BeamSRFD.searchRequestTag = searchRequestTag,
         BeamSRFD.searchTryId = getId searchTryId,
         BeamSRFD.merchantId = getId <$> merchantId,
         BeamSRFD.merchantOperatingCityId = Just $ getId merchantOperatingCityId,
+        BeamSRFD.bookingId = getId <$> bookingId,
         BeamSRFD.startTime = startTime,
         BeamSRFD.searchRequestValidTill = T.utcToLocalTime T.utc searchRequestValidTill,
         BeamSRFD.driverId = getId driverId,

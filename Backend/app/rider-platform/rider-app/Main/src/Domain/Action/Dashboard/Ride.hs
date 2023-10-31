@@ -312,6 +312,8 @@ rideInfo merchantShortId reqRideId = do
         estimatedRideDuration = estimatedDuration,
         rideDuration = timeDiffInSeconds <$> ride.rideEndTime <*> ride.rideStartTime,
         cancelledTime = cancelledTime,
+        odometerStartReading = ride.odometerStartReading,
+        odometerEndReading = ride.odometerEndReading,
         cancelledBy = cancelledBy
       }
 

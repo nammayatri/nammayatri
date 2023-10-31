@@ -95,6 +95,8 @@ data TransporterConfigT f = TransporterConfigT
     orderAndNotificationStatusCheckTimeLimit :: B.C f Seconds,
     ratingAsDecimal :: B.C f Bool,
     refillVehicleModel :: B.C f Bool,
+    rentalRequests :: B.C f Bool,
+    allocateRentalRideTimeDiff :: B.C f Seconds,
     createdAt :: B.C f UTCTime,
     updatedAt :: B.C f UTCTime,
     volunteerSmsSendingLimit :: B.C f (Maybe A.Value),

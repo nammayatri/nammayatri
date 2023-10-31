@@ -17,6 +17,7 @@
 module Storage.Beam.SearchRequest where
 
 import qualified Database.Beam as B
+import qualified Domain.Types.SearchRequest as DSR
 import Kernel.External.Maps (Language)
 import Kernel.Prelude
 import Kernel.Types.Common hiding (id)
@@ -44,7 +45,8 @@ data SearchRequestT f = SearchRequestT
     autoAssignEnabledV2 :: B.C f (Maybe Bool),
     bundleVersion :: B.C f (Maybe Text),
     clientVersion :: B.C f (Maybe Text),
-    createdAt :: B.C f UTCTime
+    createdAt :: B.C f UTCTime,
+    tag :: B.C f DSR.SearchRequestTag
   }
   deriving (Generic, B.Beamable)
 

@@ -36,6 +36,7 @@ import Kernel.Types.APISuccess
 import Kernel.Types.App
 import Kernel.Types.Id
 import Kernel.Types.Version
+import Kernel.Utils.Time
 import Mobility.AppBackend.Fixtures
 import Servant hiding (Context)
 import Servant.Client
@@ -53,7 +54,7 @@ mkAppCancelReq :: AbeCRC.CancellationStage -> CancelAPI.CancelReq
 mkAppCancelReq stage =
   CancelAPI.CancelReq (AbeCRC.CancellationReasonCode "OTHER") stage Nothing
 
-appConfirmRide :: Text -> Id AbeQuote.Quote -> Maybe (Id AppMPM.MerchantPaymentMethod) -> ClientM ConfirmAPI.ConfirmRes
+appConfirmRide :: Text -> Id AbeQuote.Quote -> Maybe (Id AppMPM.MerchantPaymentMethod) -> Maybe UTCTime -> Maybe Int -> ClientM ConfirmAPI.ConfirmRes
 appConfirmRide = client (Proxy :: Proxy ConfirmAPI.API)
 
 appFeedback :: Text -> AppFeedback.FeedbackReq -> ClientM APISuccess

@@ -111,7 +111,7 @@ onSelect OnSelectValidatedReq {..} = do
       let lowestFareQuote = selectLowestFareQuote quotes
       case lowestFareQuote of
         Just autoAssignQuote -> do
-          let dConfirmReq = SConfirm.DConfirmReq {personId = person.id, quoteId = autoAssignQuote.id, paymentMethodId = searchRequest.selectedPaymentMethodId}
+          let dConfirmReq = SConfirm.DConfirmReq {personId = person.id, quoteId = autoAssignQuote.id, paymentMethodId = searchRequest.selectedPaymentMethodId, mbStartTime = Just now, mbRentalDuration = Nothing}
           dConfirmRes <- SConfirm.confirm dConfirmReq
           becknInitReq <- ACL.buildInitReq dConfirmRes
           handle (errHandler dConfirmRes.booking) $ void $ withShortRetry $ CallBPP.init dConfirmRes.providerUrl becknInitReq

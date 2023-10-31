@@ -20,11 +20,12 @@ import qualified Domain.Types.BookingCancellationReason as DBCR
 import qualified Domain.Types.DriverQuote as DDQ
 import qualified Domain.Types.Exophone as DExophone
 import qualified Domain.Types.FareParameters as DFP
+import qualified Domain.Types.FarePolicy as FarePolicyD
 import qualified Domain.Types.FareProduct as FareProductD
-import qualified Domain.Types.Location as DLoc
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
+import qualified Domain.Types.QuoteRental as DQR
 import qualified Domain.Types.QuoteSpecialZone as DQSZ
 import qualified Domain.Types.RideRoute as RI
 import qualified Domain.Types.SearchRequest as DSR
@@ -41,7 +42,10 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.SessionizerMetrics.Types.Event
 import qualified SharedLogic.CallBAP as BP
+import SharedLogic.FareCalculator
+import qualified SharedLogic.FareCalculator as Fare
 import qualified Storage.CachedQueries.Exophone as CQExophone
+import qualified Storage.CachedQueries.FarePolicy as QFP
 import qualified Storage.CachedQueries.Merchant as QM
 import Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as CQMPM
@@ -49,6 +53,7 @@ import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as CM
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.DriverQuote as QDQuote
+import qualified Storage.Queries.QuoteRental as QRQuote
 import qualified Storage.Queries.QuoteSpecialZone as QSZoneQuote
 import qualified Storage.Queries.SearchRequest as QSR
 import qualified Storage.Queries.SearchRequestSpecialZone as QSRSpecialZone
@@ -56,8 +61,14 @@ import qualified Storage.Queries.SearchTry as QST
 import Tools.Error
 import Tools.Event
 
+data ValidateInitResponse
+  = DRIVER_QUOTE (DDQ.DriverQuote, DSR.SearchRequest, DST.SearchTry)
+  | SPECIAL_QUOTE (DQSZ.QuoteSpecialZone, DSRSZ.SearchRequestSpecialZone)
+  | RENTAL_QUOTE (DQR.QuoteRental, DSR.SearchRequest)
+
 data InitReq = InitReq
-  { estimateId :: Text,
+  { messageId :: Text,
+    estimateId :: Text,
     driverId :: Maybe Text,
     vehicleVariant :: Veh.Variant,
     bapId :: Text,
@@ -66,17 +77,20 @@ data InitReq = InitReq
     bapCountry :: Context.Country,
     initTypeReq :: InitTypeReq,
     maxEstimatedDistance :: Maybe HighPrecMeters,
-    paymentMethodInfo :: Maybe DMPM.PaymentMethodInfo
+    paymentMethodInfo :: Maybe DMPM.PaymentMethodInfo,
+    startTime :: UTCTime,
+    rentalDuration :: Maybe Int
   }
 
-data InitTypeReq = InitSpecialZoneReq | InitNormalReq
+data InitTypeReq = InitSpecialZoneReq | InitNormalReq | InitRentalReq deriving (Show, Eq)
 
 data InitRes = InitRes
   { booking :: DRB.Booking,
     transporter :: DM.Merchant,
     paymentMethodInfo :: Maybe DMPM.PaymentMethodInfo,
     driverName :: Maybe Text,
-    driverId :: Maybe Text
+    driverId :: Maybe Text,
+    startTime :: UTCTime
   }
 
 cancelBooking ::
@@ -119,13 +133,14 @@ cancelBooking booking transporterId = do
 handler ::
   ( CacheFlow m r,
     EsqDBFlow m r,
-    EventStreamFlow m r
+    EventStreamFlow m r,
+    HasField "searchRequestExpirationSeconds" r NominalDiffTime
   ) =>
   Id DM.Merchant ->
   InitReq ->
-  Either (DDQ.DriverQuote, DSR.SearchRequest, DST.SearchTry) (DQSZ.QuoteSpecialZone, DSRSZ.SearchRequestSpecialZone) ->
+  ValidateInitResponse ->
   m InitRes
-handler merchantId req eitherReq = do
+handler merchantId req initReq = do
   transporter <- QM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   now <- getCurrentTime
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing transporter (Just req.bapCity)
@@ -137,18 +152,18 @@ handler merchantId req eitherReq = do
   let paymentUrl = DMPM.getPrepaidPaymentUrl =<< mbPaymentMethod
   (booking, driverName, driverId) <- case req.initTypeReq of
     InitNormalReq -> do
-      case eitherReq of
-        Left (driverQuote, searchRequest, searchTry) -> do
-          booking <- buildBooking searchRequest driverQuote driverQuote.id.getId searchTry.startTime DRB.NormalBooking now (mbPaymentMethod <&> (.id)) paymentUrl searchRequest.disabilityTag merchantOpCityId
+      case initReq of
+        DRIVER_QUOTE (driverQuote, searchRequest, searchTry) -> do
+          booking <- buildNormalBooking searchRequest driverQuote driverQuote.id.getId searchTry.startTime DRB.NormalBooking now (mbPaymentMethod <&> (.id)) paymentUrl searchRequest.disabilityTag merchantOpCityId
           triggerBookingCreatedEvent BookingEventData {booking = booking, personId = driverQuote.driverId, merchantId = transporter.id}
           QST.updateStatus searchTry.id DST.COMPLETED
           _ <- QRB.createBooking booking
           return (booking, Just driverQuote.driverName, Just driverQuote.driverId.getId)
-        Right _ -> throwError $ InvalidRequest "Can't have specialZoneQuote in normal booking"
+        _ -> throwError $ InvalidRequest "Can't have specialZoneQuote in normal booking"
     InitSpecialZoneReq -> do
-      case eitherReq of
-        Right (specialZoneQuote, searchRequest) -> do
-          booking <- buildBooking searchRequest specialZoneQuote specialZoneQuote.id.getId searchRequest.startTime DRB.SpecialZoneBooking now (mbPaymentMethod <&> (.id)) paymentUrl Nothing merchantOpCityId
+      case initReq of
+        SPECIAL_QUOTE (specialZoneQuote, searchRequest) -> do
+          booking <- buildBookingSpecialzone specialZoneQuote searchRequest specialZoneQuote.id.getId searchRequest.startTime DRB.SpecialZoneBooking now (mbPaymentMethod <&> (.id)) paymentUrl Nothing merchantOpCityId
           _ <- QRB.createBooking booking
           -- moving route from search request id to booking id
           routeInfo :: Maybe RI.RouteInfo <- Redis.safeGet (BS.searchRequestKey $ getId searchRequest.id)
@@ -157,17 +172,70 @@ handler merchantId req eitherReq = do
             Nothing -> logDebug "Unable to get the key"
 
           return (booking, Nothing, Nothing)
-        Left _ -> throwError $ InvalidRequest "Can't have driverQuote in specialZone booking"
+        _ -> throwError $ InvalidRequest "Can't have driverQuote in specialZone booking"
+    InitRentalReq -> do
+      case initReq of
+        RENTAL_QUOTE (rentalQuote, searchRequest) -> do
+          (duration :: Int) <- case req.rentalDuration of
+            Nothing -> throwError $ InvalidRequest "Request Invalid"
+            Just duration' -> pure duration'
+
+          farePolicy <- QFP.findById rentalQuote.farePolicyId >>= fromMaybeM NoFarePolicy
+          let (distance, durationInSeconds, nightShiftCharge) = case farePolicy.farePolicyDetails of
+                FarePolicyD.RentalDetails fPDetails -> do
+                  let totalDurationInSeconds = duration * 3600
+                      nightCharges = case fPDetails.nightShiftCharge of
+                        Just (FarePolicyD.ConstantNightShiftCharge charge) -> Just charge
+                        _ -> Nothing
+                  (duration * fPDetails.perHourFreeKms, Seconds totalDurationInSeconds, nightCharges)
+                _ -> (0, 0, Nothing)
+          let fullFarePolicies = FarePolicyD.farePolicyToFullFarePolicy merchantId req.vehicleVariant farePolicy
+              estimatedFinishTime = fromIntegral duration `addUTCTime` req.startTime
+          fareParams <-
+            calculateFareParameters
+              CalculateFareParametersParams
+                { farePolicy = fullFarePolicies,
+                  distance = Meters distance,
+                  rideTime = req.startTime,
+                  waitingTime = Nothing,
+                  actualRideDuration = Nothing,
+                  avgSpeedOfVehicle = Nothing,
+                  driverSelectedFare = Nothing,
+                  customerExtraFee = Nothing,
+                  nightShiftCharge = nightShiftCharge,
+                  rentalRideParams =
+                    Just
+                      Fare.RentalRideParams
+                        { rideStartTime = Just req.startTime,
+                          rideEndTime = estimatedFinishTime,
+                          actualDistanceInKm = distance,
+                          chargedDurationInHr = duration,
+                          nightShiftOverlapChecking = True,
+                          timeDiffFromUtc = 19800
+                        }
+                }
+          let estimatedFare = fareSum fareParams
+
+          searchRequestExpirationSeconds <- asks (.searchRequestExpirationSeconds)
+          let validTill = searchRequestExpirationSeconds `addUTCTime` now
+          let updateRentalQuote = rentalQuote{baseDistance = Meters distance, baseDuration = durationInSeconds, baseFare = estimatedFare, fareParams = fareParams, validTill = validTill, updatedAt = now, estimatedFinishTime = estimatedFinishTime}
+          void $ QRQuote.createNewFareParamAndUpdateQuote rentalQuote.id updateRentalQuote
+          updatedRentalQuotes <- QRQuote.findById (Id req.estimateId) >>= fromMaybeM (QuoteNotFound req.estimateId)
+          searchTry <- buildRentalSearchTry searchRequest.id req.startTime rentalQuote
+          booking <- buildRentalBooking updatedRentalQuotes searchRequest req.startTime DRB.RentalBooking now (mbPaymentMethod <&> (.id)) paymentUrl searchRequest.disabilityTag
+          _ <- QRB.createBooking booking
+          QST.create searchTry
+          return (booking, Nothing, Nothing)
+        _ -> throwError $ InvalidRequest "Can't have driverQuote in specialZone booking"
   let paymentMethodInfo = req.paymentMethodInfo
+  let startTime = req.startTime
   pure InitRes {..}
   where
-    buildBooking ::
+    buildNormalBooking ::
       ( CacheFlow m r,
         EsqDBFlow m r,
         HasField "transactionId" sr Text,
-        HasField "fromLocation" sr DLoc.Location,
-        HasField "toLocation" sr DLoc.Location,
-        HasField "estimatedDuration" sr Seconds,
+        HasField "searchRequestDetails" sr DSR.SearchRequestDetails,
         HasField "area" sr (Maybe FareProductD.Area),
         HasField "vehicleVariant" q Veh.Variant,
         HasField "distance" q Meters,
@@ -186,11 +254,23 @@ handler merchantId req eitherReq = do
       Maybe Text ->
       Id DMOC.MerchantOperatingCity ->
       m DRB.Booking
-    buildBooking searchRequest driverQuote quoteId startTime bookingType now mbPaymentMethodId paymentUrl disabilityTag merchantOpCityId = do
+    buildNormalBooking searchRequest driverQuote quoteId startTime bookingType now mbPaymentMethodId paymentUrl disabilityTag merchantOpCityId = do
       id <- Id <$> generateGUID
-      let fromLocation = searchRequest.fromLocation
-          toLocation = searchRequest.toLocation
       exophone <- findRandomExophone merchantId merchantOpCityId
+
+      (bookingDetails, fromLocation') <-
+        case searchRequest.searchRequestDetails of
+          DSR.SearchReqDetailsOnDemand DSR.SearchRequestDetailsOnDemand {..} -> do
+            let details =
+                  DRB.DetailsOnDemand
+                    DRB.BookingDetailsOnDemand
+                      { specialZoneOtpCode = Nothing,
+                        specialLocationTag,
+                        toLocation
+                      }
+            pure (details, fromLocation)
+          DSR.SearchReqDetailsRental DSR.SearchRequestDetailsRental {} -> do
+            throwError $ InvalidRequest "Rental is not allowed here"
       pure
         DRB.Booking
           { transactionId = searchRequest.transactionId,
@@ -208,17 +288,155 @@ handler merchantId req eitherReq = do
             maxEstimatedDistance = req.maxEstimatedDistance,
             createdAt = now,
             updatedAt = now,
-            fromLocation,
-            toLocation,
+            bookingDetails,
             estimatedFare = driverQuote.estimatedFare,
             riderName = Nothing,
-            estimatedDuration = searchRequest.estimatedDuration,
+            estimatedDuration = 0,
             fareParams = driverQuote.fareParams,
-            specialLocationTag = driverQuote.specialLocationTag,
-            specialZoneOtpCode = Nothing,
             disabilityTag = disabilityTag,
             area = searchRequest.area,
             paymentMethodId = mbPaymentMethodId,
+            fromLocation = fromLocation',
+            ..
+          }
+    buildBookingSpecialzone ::
+      ( CacheFlow m r,
+        EsqDBFlow m r
+      ) =>
+      DQSZ.QuoteSpecialZone ->
+      DSRSZ.SearchRequestSpecialZone ->
+      Text ->
+      UTCTime ->
+      DRB.BookingType ->
+      UTCTime ->
+      Maybe (Id DMPM.MerchantPaymentMethod) ->
+      Maybe Text ->
+      Maybe Text ->
+      m DRB.Booking
+    buildBookingSpecialzone specialZoneQuote searchRequestForSpecialZone quoteId startTime bookingType now mbPaymentMethodId paymentUrl disabilityTag = do
+      id <- Id <$> generateGUID
+      let bookingOnDemand =
+            DRB.DetailsOnDemand
+              DRB.BookingDetailsOnDemand
+                { specialZoneOtpCode = Nothing,
+                  specialLocationTag = Nothing,
+                  toLocation = searchRequestForSpecialZone.toLocation
+                }
+      exophone <- findRandomExophone merchantId
+      pure
+        DRB.Booking
+          { transactionId = searchRequestForSpecialZone.transactionId,
+            status = DRB.NEW,
+            providerId = merchantId,
+            primaryExophone = exophone.primaryPhone,
+            bapId = req.bapId,
+            bapUri = req.bapUri,
+            bapCity = Just req.bapCity,
+            bapCountry = Just req.bapCountry,
+            riderId = Nothing,
+            vehicleVariant = specialZoneQuote.vehicleVariant,
+            estimatedDistance = specialZoneQuote.distance,
+            maxEstimatedDistance = req.maxEstimatedDistance,
+            createdAt = now,
+            fromLocation = searchRequestForSpecialZone.fromLocation,
+            updatedAt = now,
+            bookingDetails = bookingOnDemand,
+            estimatedFare = specialZoneQuote.estimatedFare,
+            riderName = Nothing,
+            estimatedDuration = 0,
+            fareParams = specialZoneQuote.fareParams,
+            disabilityTag = disabilityTag,
+            area = searchRequestForSpecialZone.area,
+            paymentMethodId = mbPaymentMethodId,
+            ..
+          }
+    buildRentalBooking ::
+      ( CacheFlow m r,
+        EsqDBFlow m r
+      ) =>
+      DQR.QuoteRental ->
+      DSR.SearchRequest ->
+      UTCTime ->
+      DRB.BookingType ->
+      UTCTime ->
+      Maybe (Id DMPM.MerchantPaymentMethod) ->
+      Maybe Text ->
+      Maybe Text ->
+      m DRB.Booking
+    buildRentalBooking rentalQuote searchRequest startTime bookingType now mbPaymentMethodId paymentUrl disabilityTag = do
+      id <- Id <$> generateGUID
+      exophone <- findRandomExophone merchantId
+      (bookingDetails, fromLocation) <- do
+        case searchRequest.searchRequestDetails of
+          DSR.SearchReqDetailsOnDemand DSR.SearchRequestDetailsOnDemand {} -> do
+            throwError $ InvalidRequest "On Demand is not allowed here"
+          DSR.SearchReqDetailsRental DSR.SearchRequestDetailsRental {rentalFromLocation} -> do
+            let details =
+                  DRB.DetailsRental
+                    DRB.BookingDetailsRental
+                      { rentalToLocation = Nothing
+                      }
+            pure (details, rentalFromLocation)
+      pure
+        DRB.Booking
+          { transactionId = searchRequest.transactionId,
+            status = DRB.NEW,
+            providerId = merchantId,
+            primaryExophone = exophone.primaryPhone,
+            bapId = req.bapId,
+            bapUri = req.bapUri,
+            bapCity = Just req.bapCity,
+            bapCountry = Just req.bapCountry,
+            riderId = Nothing,
+            vehicleVariant = req.vehicleVariant,
+            estimatedDistance = rentalQuote.baseDistance,
+            maxEstimatedDistance = req.maxEstimatedDistance,
+            createdAt = now,
+            updatedAt = now,
+            bookingDetails,
+            estimatedFare = rentalQuote.baseFare,
+            riderName = Nothing,
+            estimatedDuration = rentalQuote.baseDuration,
+            fareParams = rentalQuote.fareParams,
+            disabilityTag = disabilityTag,
+            area = searchRequest.area,
+            paymentMethodId = mbPaymentMethodId,
+            quoteId = rentalQuote.id.getId,
+            ..
+          }
+    buildRentalSearchTry ::
+      ( MonadTime m,
+        MonadGuid m,
+        MonadReader r m,
+        HasField "searchRequestExpirationSeconds" r NominalDiffTime
+      ) =>
+      Id DSR.SearchRequest ->
+      UTCTime ->
+      DQR.QuoteRental ->
+      m DST.SearchTry
+    buildRentalSearchTry searchReqId startTime rentalQuote = do
+      now <- getCurrentTime
+      id_ <- Id <$> generateGUID
+      searchRequestExpirationSeconds <- asks (.searchRequestExpirationSeconds)
+      let validTill_ = searchRequestExpirationSeconds `addUTCTime` startTime
+          customerExtraFee = Nothing
+      pure
+        DST.SearchTry
+          { id = id_,
+            requestId = searchReqId,
+            tag = DSR.RENTAL,
+            estimateId = Nothing,
+            merchantId = Just merchantId,
+            messageId = req.messageId,
+            startTime,
+            validTill = validTill_,
+            vehicleVariant = rentalQuote.vehicleVariant,
+            status = DST.ACTIVE,
+            createdAt = now,
+            updatedAt = now,
+            searchRepeatType = DST.INITIAL,
+            searchRepeatCounter = 0,
+            baseFare = rentalQuote.baseFare,
             ..
           }
 
@@ -231,7 +449,7 @@ findRandomExophone merchantId merchantOpCityId = do
     e : es -> pure $ e :| es
   getRandomElement nonEmptyExophones
 
-validateRequest :: (CacheFlow m r, EsqDBFlow m r) => Id DM.Merchant -> InitReq -> m (Either (DDQ.DriverQuote, DSR.SearchRequest, DST.SearchTry) (DQSZ.QuoteSpecialZone, DSRSZ.SearchRequestSpecialZone))
+validateRequest :: (CacheFlow m r, EsqDBFlow m r) => Id DM.Merchant -> InitReq -> m ValidateInitResponse
 validateRequest merchantId req = do
   _ <- QM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   now <- getCurrentTime
@@ -243,13 +461,17 @@ validateRequest merchantId req = do
         throwError $ QuoteExpired driverQuote.id.getId
       searchRequest <- QSR.findById driverQuote.requestId >>= fromMaybeM (SearchRequestNotFound driverQuote.requestId.getId)
       searchTry <- QST.findById driverQuote.searchTryId >>= fromMaybeM (SearchTryNotFound driverQuote.searchTryId.getId)
-      return $ Left (driverQuote, searchRequest, searchTry)
+      return $ DRIVER_QUOTE (driverQuote, searchRequest, searchTry)
     InitSpecialZoneReq -> do
       specialZoneQuote <- QSZoneQuote.findById (Id req.estimateId) >>= fromMaybeM (QuoteNotFound req.estimateId)
       when (specialZoneQuote.validTill < now) $
         throwError $ QuoteExpired specialZoneQuote.id.getId
       searchRequest <- QSRSpecialZone.findById specialZoneQuote.searchRequestId >>= fromMaybeM (SearchRequestNotFound specialZoneQuote.searchRequestId.getId)
-      return $ Right (specialZoneQuote, searchRequest)
+      return $ SPECIAL_QUOTE (specialZoneQuote, searchRequest)
+    InitRentalReq -> do
+      rentalQuotes <- QRQuote.findById (Id req.estimateId) >>= fromMaybeM (QuoteNotFound req.estimateId)
+      searchRequest <- QSR.findById (rentalQuotes.searchRequestId) >>= fromMaybeM (SearchRequestNotFound rentalQuotes.searchRequestId.getId)
+      return $ RENTAL_QUOTE (rentalQuotes, searchRequest)
 
 compareMerchantPaymentMethod :: DMPM.PaymentMethodInfo -> DMPM.MerchantPaymentMethod -> Bool
 compareMerchantPaymentMethod providerPaymentMethod DMPM.MerchantPaymentMethod {..} =

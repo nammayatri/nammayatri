@@ -31,6 +31,7 @@ data DriverInformationT f = DriverInformationT
     numOfLocks :: B.C f Int,
     verified :: B.C f Bool,
     subscribed :: B.C f Bool,
+    optForRental :: B.C f Bool,
     paymentPending :: B.C f Bool,
     aadhaarVerified :: B.C f Bool,
     lastEnabledOn :: B.C f (Maybe UTCTime),

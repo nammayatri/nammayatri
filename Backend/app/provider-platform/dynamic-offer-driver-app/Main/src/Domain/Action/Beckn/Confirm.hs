@@ -23,6 +23,7 @@ import qualified Domain.Types.DriverQuote as DDQ
 import qualified Domain.Types.Location as DL
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DPerson
+import qualified Domain.Types.QuoteRental as DQR
 import qualified Domain.Types.QuoteSpecialZone as DQSZ
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.Ride as SRide
@@ -41,7 +42,10 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import qualified Kernel.Types.Registry.Subscriber as Subscriber
 import Kernel.Utils.Common
+import Lib.Scheduler.Environment
+import Lib.Scheduler.JobStorageType.SchedulerType as JC
 import Lib.SessionizerMetrics.Types.Event
+import SharedLogic.Allocator
 import qualified SharedLogic.CallBAP as BP
 import qualified SharedLogic.DriverPool as DP
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
@@ -49,6 +53,7 @@ import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified Storage.CachedQueries.Driver.GoHomeRequest as CGHR
 import Storage.CachedQueries.GoHomeConfig as QGHC
 import Storage.CachedQueries.Merchant as QM
+import qualified Storage.CachedQueries.Merchant.TransporterConfig as CQTC
 import Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.BusinessEvent as QBE
@@ -57,12 +62,15 @@ import Storage.Queries.DriverOnboarding.VehicleRegistrationCertificate as QVRC
 import qualified Storage.Queries.DriverQuote as QDQ
 import qualified Storage.Queries.Location as QL
 import qualified Storage.Queries.Person as QPerson
+import qualified Storage.Queries.QuoteRental as QQR
 import qualified Storage.Queries.QuoteSpecialZone as QQSpecialZone
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RideDetails as QRideD
 import qualified Storage.Queries.RiderDetails as QRD
 import qualified Storage.Queries.SearchRequestForDriver as QSRD
+import qualified Storage.Queries.SearchTry as QST
 import Storage.Queries.Vehicle as QVeh
+import Tools.Error
 import Tools.Event
 import qualified Tools.Notifications as Notify
 
@@ -73,23 +81,32 @@ data DConfirmReq = DConfirmReq
     customerMobileCountryCode :: Text,
     customerPhoneNumber :: Text,
     fromAddress :: DL.LocationAddress,
-    toAddress :: DL.LocationAddress,
+    toAddress :: Maybe DL.LocationAddress,
     mbRiderName :: Maybe Text
   }
 
 data DConfirmRes = DConfirmRes
   { booking :: DRB.Booking,
-    ride :: Maybe DRide.Ride,
     fromLocation :: DL.Location,
-    toLocation :: DL.Location,
+    toLocation :: Maybe DL.Location, -- FIXME move to details
     riderDetails :: DRD.RiderDetails,
     riderMobileCountryCode :: Text,
     riderPhoneNumber :: Text,
     riderName :: Maybe Text,
     vehicleVariant :: VehVar.Variant,
     transporter :: DM.Merchant,
-    driverId :: Maybe Text,
-    driverName :: Maybe Text
+    bookingTypeDetails :: DConfirmResType
+  }
+
+data DConfirmResType
+  = DConfirmResNormalBooking DConfirmResNormalBookingDetails
+  | DConfirmResSpecialZoneBooking
+  | DConfirmResRentalBooking
+
+data DConfirmResNormalBookingDetails = DConfirmResNormalBookingDetails
+  { ride :: DRide.Ride,
+    driverId :: Text,
+    driverName :: Text
   }
 
 handler ::
@@ -102,120 +119,169 @@ handler ::
     EncFlow m r,
     HasFlowEnv m r '["selfUIUrl" ::: BaseUrl],
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    JobCreator r m,
+    HasFlowEnv m r '["maxShards" ::: Int],
     LT.HasLocationService m r,
     HasLongDurationRetryCfg r c,
     EventStreamFlow m r
   ) =>
   DM.Merchant ->
   DConfirmReq ->
-  Either (DPerson.Person, DDQ.DriverQuote) DQSZ.QuoteSpecialZone ->
+  DConfirmValidateRes ->
   m DConfirmRes
-handler transporter req quote = do
+handler transporter req validateRes = do
   booking <- QRB.findById req.bookingId >>= fromMaybeM (BookingDoesNotExist req.bookingId.getId)
   now <- getCurrentTime
   (riderDetails, isNewRider) <- getRiderDetails transporter.id req.customerMobileCountryCode req.customerPhoneNumber now
   unless (booking.status == DRB.NEW) $
     throwError (BookingInvalidStatus $ show booking.status)
-  case booking.bookingType of
-    DRB.NormalBooking -> do
-      case quote of
-        Left (driver, driverQuote) -> do
-          cfg <- QGHC.findByMerchantOpCityId booking.merchantOperatingCityId
-          ghrId <- if cfg.enableGoHome then CGHR.getDriverGoHomeRequestInfo driver.id booking.merchantOperatingCityId (Just cfg) <&> (.driverGoHomeRequestId) else return Nothing
+  case validateRes of
+    DConfirmNormalBookingValidateRes driver driverQuote -> do
+      cfg <- QGHC.findByMerchantOpCityId booking.merchantOperatingCityId
+      ghrId <- if cfg.enableGoHome then CGHR.getDriverGoHomeRequestInfo driver.id booking.merchantOperatingCityId (Just cfg) <&> (.driverGoHomeRequestId) else return Nothing
 
-          otpCode <- case riderDetails.otpCode of
-            Nothing -> do
-              otpCode <- generateOTPCode
-              QRD.updateOtpCode riderDetails.id otpCode
-              pure otpCode
-            Just otp -> pure otp
-
-          ride <- buildRide driver.id booking ghrId req.customerPhoneNumber otpCode
-          triggerRideCreatedEvent RideEventData {ride = ride, personId = cast driver.id, merchantId = transporter.id}
-          rideDetails <- buildRideDetails ride driver
-          driverSearchReqs <- QSRD.findAllActiveBySTId driverQuote.searchTryId
-          routeInfo :: Maybe RouteInfo <- safeGet (searchRequestKey $ getId driverQuote.requestId)
-          case routeInfo of
-            Just route -> setExp (searchRequestKey $ getId ride.id) route 14400
-            Nothing -> logDebug "Unable to get the key"
-
-          -- critical updates
-          QRB.updateStatus booking.id DRB.TRIP_ASSIGNED
-          QRide.createRide ride
-          QDI.updateOnRide (cast driver.id) True
-          void $ LF.rideDetails ride.id DRide.NEW transporter.id ride.driverId booking.fromLocation.lat booking.fromLocation.lon
-
-          -- non-critical updates
-          when isNewRider $ QRD.create riderDetails
-          QRB.updateRiderId booking.id riderDetails.id
-          QRideD.create rideDetails
-          QL.updateAddress booking.fromLocation.id req.fromAddress
-          QL.updateAddress booking.toLocation.id req.toAddress
-          QDQ.setInactiveBySTId driverQuote.searchTryId
-          QSRD.setInactiveBySTId driverQuote.searchTryId
-          whenJust req.mbRiderName $ QRB.updateRiderName booking.id
-
-          QBE.logRideConfirmedEvent booking.id
-          QBE.logDriverAssignedEvent (cast driver.id) booking.id ride.id
-
-          for_ driverSearchReqs $ \driverReq -> do
-            let driverId = driverReq.driverId
-            unless (driverId == driver.id) $ do
-              DP.decrementTotalQuotesCount transporter.id booking.merchantOperatingCityId (cast driverReq.driverId) driverReq.searchTryId
-              DP.removeSearchReqIdFromMap transporter.id driverId driverReq.searchTryId
-              _ <- QSRD.updateDriverResponse driverReq.id SReqD.Pulled
-              driver_ <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
-              Notify.notifyDriverClearedFare booking.merchantOperatingCityId driverId driverReq.searchTryId driverQuote.estimatedFare driver_.deviceToken
-
-          uBooking <- QRB.findById booking.id >>= fromMaybeM (BookingNotFound booking.id.getId)
-          Notify.notifyDriver booking.merchantOperatingCityId notificationType notificationTitle (message uBooking) driver.id driver.deviceToken
-
-          pure
-            DConfirmRes
-              { booking = uBooking,
-                ride = Just ride,
-                riderDetails,
-                riderMobileCountryCode = req.customerMobileCountryCode,
-                riderPhoneNumber = req.customerPhoneNumber,
-                riderName = req.mbRiderName,
-                transporter,
-                fromLocation = uBooking.fromLocation,
-                toLocation = uBooking.toLocation,
-                driverId = Just driver.id.getId,
-                driverName = Just driver.firstName,
-                vehicleVariant = req.vehicleVariant
-              }
-        Right _ -> throwError AccessDenied
-    DRB.SpecialZoneBooking -> do
-      case quote of
-        Left _ -> throwError AccessDenied
-        Right _ -> do
+      otpCode <- case riderDetails.otpCode of
+        Nothing -> do
           otpCode <- generateOTPCode
-          QRB.updateSpecialZoneOtpCode booking.id otpCode
-          when isNewRider $ QRD.create riderDetails
-          QRB.updateRiderId booking.id riderDetails.id
-          QL.updateAddress booking.fromLocation.id req.fromAddress
-          QL.updateAddress booking.toLocation.id req.toAddress
-          whenJust req.mbRiderName $ QRB.updateRiderName booking.id
-          QBE.logRideConfirmedEvent booking.id
+          QRD.updateOtpCode riderDetails.id otpCode
+          pure otpCode
+        Just otp -> pure otp
 
-          uBooking <- QRB.findById booking.id >>= fromMaybeM (BookingNotFound booking.id.getId)
+      toLocation <- case booking.bookingDetails of
+        DRB.DetailsOnDemand DRB.BookingDetailsOnDemand {toLocation} -> pure toLocation
+        DRB.DetailsRental _ -> throwError (BookingFieldNotPresent "toLocation")
 
-          pure
-            DConfirmRes
-              { booking = uBooking,
-                ride = Nothing,
-                riderDetails,
-                riderMobileCountryCode = req.customerMobileCountryCode,
-                riderPhoneNumber = req.customerPhoneNumber,
-                riderName = req.mbRiderName,
-                transporter,
-                fromLocation = uBooking.fromLocation,
-                toLocation = uBooking.toLocation,
-                driverId = Nothing,
-                driverName = Nothing,
-                vehicleVariant = req.vehicleVariant
+      ride <- buildRide driver.id booking ghrId req.customerPhoneNumber otpCode toLocation
+      triggerRideCreatedEvent RideEventData {ride = ride, personId = cast driver.id, merchantId = transporter.id}
+      rideDetails <- buildRideDetails ride driver
+      driverSearchReqs <- QSRD.findAllActiveBySTId driverQuote.searchTryId
+      routeInfo :: Maybe RouteInfo <- safeGet (searchRequestKey $ getId driverQuote.requestId)
+      case routeInfo of
+        Just route -> setExp (searchRequestKey $ getId ride.id) route 14400
+        Nothing -> logDebug "Unable to get the key"
+
+      -- critical updates
+      QRB.updateStatus booking.id DRB.TRIP_ASSIGNED
+      QRide.createRide ride
+      QDI.updateOnRide (cast driver.id) True
+      void $ LF.rideDetails ride.id DRide.NEW transporter.id ride.driverId booking.fromLocation.lat booking.fromLocation.lon
+
+      -- non-critical updates
+      when isNewRider $ QRD.create riderDetails
+      QDFS.updateStatus driver.id DDFS.RIDE_ASSIGNED {rideId = ride.id}
+      QRB.updateRiderId booking.id riderDetails.id
+      QRideD.create rideDetails
+      QL.updateAddress booking.fromLocation.id req.fromAddress
+      whenJust req.toAddress $ \toAddr -> QL.updateAddress toLocation.id toAddr
+      QDQ.setInactiveBySTId driverQuote.searchTryId
+      QSRD.setInactiveBySTId driverQuote.searchTryId
+      whenJust req.mbRiderName $ QRB.updateRiderName booking.id
+
+      QBE.logRideConfirmedEvent booking.id
+      QBE.logDriverAssignedEvent (cast driver.id) booking.id ride.id
+
+      for_ driverSearchReqs $ \driverReq -> do
+        let driverId = driverReq.driverId
+        unless (driverId == driver.id) $ do
+          DP.decrementTotalQuotesCount transporter.id booking.merchantOperatingCityId (cast driverReq.driverId) driverReq.searchTryId
+          DP.removeSearchReqIdFromMap transporter.id driverId driverReq.searchTryId
+          _ <- QSRD.updateDriverResponse driverReq.id SReqD.Pulled
+          driver_ <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+          Notify.notifyDriverClearedFare booking.merchantOperatingCityId driverId driverReq.searchTryId driverQuote.estimatedFare driver_.deviceToken
+
+      uBooking <- QRB.findById booking.id >>= fromMaybeM (BookingNotFound booking.id.getId)
+      Notify.notifyDriver booking.merchantOperatingCityId notificationType notificationTitle (message uBooking) driver.id driver.deviceToken
+
+      pure
+        DConfirmRes
+          { booking = uBooking,
+            riderDetails,
+            riderMobileCountryCode = req.customerMobileCountryCode,
+            riderPhoneNumber = req.customerPhoneNumber,
+            riderName = req.mbRiderName,
+            transporter,
+            fromLocation = uBooking.fromLocation,
+            toLocation = Just toLocation,
+            vehicleVariant = req.vehicleVariant,
+            bookingTypeDetails =
+              DConfirmResNormalBooking
+                DConfirmResNormalBookingDetails
+                  { ride,
+                    driverId = driver.id.getId,
+                    driverName = driver.firstName
+                  }
+          }
+    DConfirmSpecialZoneBookingValidateRes _quote -> do
+      toLocation <- case booking.bookingDetails of
+        DRB.DetailsOnDemand DRB.BookingDetailsOnDemand {toLocation} -> pure toLocation
+        DRB.DetailsRental _ -> throwError (BookingFieldNotPresent "toLocation")
+
+      otpCode <- generateOTPCode
+      QRB.updateSpecialZoneOtpCode booking.id otpCode
+      when isNewRider $ QRD.create riderDetails
+      QRB.updateRiderId booking.id riderDetails.id
+      QL.updateAddress booking.fromLocation.id req.fromAddress
+      whenJust req.toAddress $ \toAddr -> QL.updateAddress toLocation.id toAddr
+      whenJust req.mbRiderName $ QRB.updateRiderName booking.id
+      QBE.logRideConfirmedEvent booking.id
+
+      uBooking <- QRB.findById booking.id >>= fromMaybeM (BookingNotFound booking.id.getId)
+
+      pure
+        DConfirmRes
+          { booking = uBooking,
+            riderDetails,
+            riderMobileCountryCode = req.customerMobileCountryCode,
+            riderPhoneNumber = req.customerPhoneNumber,
+            riderName = req.mbRiderName,
+            transporter,
+            fromLocation = uBooking.fromLocation,
+            toLocation = Just toLocation,
+            vehicleVariant = req.vehicleVariant,
+            bookingTypeDetails = DConfirmResSpecialZoneBooking
+          }
+    DConfirmRentalBookingValidateRes quote -> do
+      -- critical updates
+      QRB.updateStatus booking.id DRB.CONFIRMED
+
+      -- non-critical updates
+      when isNewRider $ QRD.create riderDetails
+      QL.updateAddress booking.fromLocation.id req.fromAddress
+      QRB.updateRiderId booking.id riderDetails.id
+      case booking.bookingDetails of
+        DRB.DetailsRental DRB.BookingDetailsRental {..} -> do
+          whenJust req.toAddress $ \toAddr -> case rentalToLocation of
+            Just rentalToLocation' -> QL.updateAddress rentalToLocation'.id toAddr
+            Nothing -> error "create toLocation"
+        DRB.DetailsOnDemand _ -> do
+          throwError $ InternalError "Expected rental booking details"
+      whenJust req.mbRiderName $ QRB.updateRiderName booking.id
+
+      uBooking <- QRB.findById booking.id >>= fromMaybeM (BookingNotFound booking.id.getId)
+      maxShards <- asks (.maxShards)
+      transporterConfig <- CQTC.findByMerchantId transporter.id >>= fromMaybeM (TransporterConfigNotFound transporter.id.getId)
+      searchTry <- QST.findActiveTryByRequestId quote.searchRequestId >>= fromMaybeM (SearchTryNotFound quote.searchRequestId.getId)
+      let allocateRentalRideTimeDiff = secondsToNominalDiffTime transporterConfig.allocateRentalRideTimeDiff
+      let jobScheduledTime = max 0 $ diffUTCTime (addUTCTime (negate allocateRentalRideTimeDiff) booking.startTime) now
+      let jobData =
+            AllocateRentalRideJobData
+              { searchTryId = searchTry.id,
+                bookingId = booking.id
               }
+      JC.createJobIn @_ @'AllocateRentalRide jobScheduledTime maxShards jobData
+      pure $
+        DConfirmRes
+          { booking = uBooking,
+            riderDetails,
+            riderMobileCountryCode = req.customerMobileCountryCode,
+            riderPhoneNumber = req.customerPhoneNumber,
+            riderName = req.mbRiderName,
+            transporter,
+            fromLocation = uBooking.fromLocation,
+            toLocation = Nothing,
+            vehicleVariant = req.vehicleVariant,
+            bookingTypeDetails = DConfirmResRentalBooking
+          }
   where
     notificationType = FCM.DRIVER_ASSIGNMENT
     notificationTitle = "Driver has been assigned the ride!"
@@ -226,7 +292,7 @@ handler transporter req quote = do
             cs (showTimeIst booking.startTime) <> ".",
             "Check the app for more details."
           ]
-    buildRide driverId booking ghrId _ otp = do
+    buildRide driverId booking ghrId _ otp toLocation = do
       guid <- Id <$> generateGUID
       shortId <- generateShortId
       -- let otp = T.takeEnd 4 customerPhoneNumber
@@ -253,26 +319,29 @@ handler transporter req quote = do
             tripStartPos = Nothing,
             tripEndPos = Nothing,
             fromLocation = booking.fromLocation, --check if correct
-            toLocation = booking.toLocation, --check if correct
             fareParametersId = Nothing,
             distanceCalculationFailed = Nothing,
+            rideDetails =
+              DRide.DetailsOnDemand
+                DRide.RideDetailsOnDemand
+                  { toLocation = toLocation,
+                    driverGoHomeRequestId = ghrId,
+                    driverDeviatedFromRoute = Just False,
+                    numberOfSnapToRoadCalls = Nothing,
+                    numberOfDeviation = Nothing,
+                    uiDistanceCalculationWithAccuracy = Nothing,
+                    uiDistanceCalculationWithoutAccuracy = Nothing
+                  },
             createdAt = now,
-            updatedAt = now,
-            driverDeviatedFromRoute = Just False,
-            numberOfSnapToRoadCalls = Nothing,
-            numberOfDeviation = Nothing,
-            uiDistanceCalculationWithAccuracy = Nothing,
-            uiDistanceCalculationWithoutAccuracy = Nothing,
-            driverGoHomeRequestId = ghrId
+            updatedAt = now
           }
 
     buildTrackingUrl rideId = do
       bppUIUrl <- asks (.selfUIUrl)
-      let rideid = T.unpack (getId rideId)
       return $
         bppUIUrl
           { --TODO: find a way to build it using existing types from Routes
-            baseUrlPath = baseUrlPath bppUIUrl <> "/driver/location/" <> rideid
+            baseUrlPath = baseUrlPath bppUIUrl <> "/driver/location/" <> T.unpack rideId.getId
           }
 
 getRiderDetails :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r) => Id DM.Merchant -> Text -> Text -> UTCTime -> m (DRD.RiderDetails, Bool)
@@ -385,6 +454,11 @@ cancelBooking booking mbDriver transporter = do
             driverDistToPickup = Nothing
           }
 
+data DConfirmValidateRes
+  = DConfirmNormalBookingValidateRes DPerson.Person DDQ.DriverQuote
+  | DConfirmSpecialZoneBookingValidateRes DQSZ.QuoteSpecialZone
+  | DConfirmRentalBookingValidateRes DQR.QuoteRental
+
 validateRequest ::
   ( CacheFlow m r,
     EsqDBFlow m r,
@@ -401,7 +475,7 @@ validateRequest ::
   Id DM.Merchant ->
   DConfirmReq ->
   UTCTime ->
-  m (DM.Merchant, Either (DPerson.Person, DDQ.DriverQuote) DQSZ.QuoteSpecialZone)
+  m (DM.Merchant, DConfirmValidateRes)
 validateRequest subscriber transporterId req now = do
   booking <- QRB.findById req.bookingId >>= fromMaybeM (BookingDoesNotExist req.bookingId.getId)
   let transporterId' = booking.providerId
@@ -413,16 +487,19 @@ validateRequest subscriber transporterId req now = do
   unless (subscriber.subscriber_id == bapMerchantId) $ throwError AccessDenied
   case booking.bookingType of
     DRB.NormalBooking -> do
-      _ <- req.driverId & fromMaybeM (InvalidRequest "driverId Not Found for Normal Booking")
+      void $ req.driverId & fromMaybeM (InvalidRequest "driverId Not Found for Normal Booking")
       driverQuote <- QDQ.findById (Id booking.quoteId) >>= fromMaybeM (QuoteNotFound booking.quoteId)
       driver <- QPerson.findById driverQuote.driverId >>= fromMaybeM (PersonNotFound driverQuote.driverId.getId)
       unless (driverQuote.validTill > now || driverQuote.status == DDQ.Active) $ do
         cancelBooking booking (Just driver) transporter
         throwError $ QuoteExpired driverQuote.id.getId
-      return (transporter, Left (driver, driverQuote))
+      return (transporter, DConfirmNormalBookingValidateRes driver driverQuote)
     DRB.SpecialZoneBooking -> do
       quoteSpecialZone <- QQSpecialZone.findById (Id booking.quoteId) >>= fromMaybeM (QuoteNotFound booking.quoteId)
       unless (quoteSpecialZone.validTill > now) $ do
         cancelBooking booking Nothing transporter
         throwError $ QuoteExpired quoteSpecialZone.id.getId
-      return (transporter, Right quoteSpecialZone)
+      return (transporter, DConfirmSpecialZoneBookingValidateRes quoteSpecialZone)
+    DRB.RentalBooking -> do
+      quoteRental <- QQR.findById (Id booking.quoteId) >>= fromMaybeM (QuoteNotFound booking.quoteId)
+      pure (transporter, DConfirmRentalBookingValidateRes quoteRental)

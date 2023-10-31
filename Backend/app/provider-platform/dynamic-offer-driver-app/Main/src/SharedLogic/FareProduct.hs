@@ -64,7 +64,7 @@ getAllFareProducts merchantId merchantOpCityId fromLocationLatLong toLocationLat
   where
     getPickupFareProductsAndSpecialLocationTag pickupSpecialLocation specialLocationTag = do
       let area = DFareProduct.Pickup pickupSpecialLocation.id
-      fareProducts <- getFareProducts area
+      fareProducts <- getFareProducts area DFareProduct.RIDE_OTP
       return $
         FareProducts
           { fareProducts,
@@ -73,7 +73,7 @@ getAllFareProducts merchantId merchantOpCityId fromLocationLatLong toLocationLat
           }
     getDropFareProductsAndSpecialLocationTag dropSpecialLocation specialLocationTag = do
       let area = DFareProduct.Drop dropSpecialLocation.id
-      fareProducts <- getFareProducts area
+      fareProducts <- getFareProducts area DFareProduct.RIDE_OTP
       return $
         FareProducts
           { fareProducts,
@@ -82,7 +82,7 @@ getAllFareProducts merchantId merchantOpCityId fromLocationLatLong toLocationLat
           }
 
     getDefaultFareProducts = do
-      fareProducts <- QFareProduct.findAllFareProductForVariants merchantOpCityId DFareProduct.Default
+      fareProducts <- QFareProduct.findAllFareProductForVariants merchantOpCityId DFareProduct.Default DFareProduct.NORMAL
       return $
         FareProducts
           { fareProducts,
@@ -92,8 +92,8 @@ getAllFareProducts merchantId merchantOpCityId fromLocationLatLong toLocationLat
 
     mkSpecialLocationTag pickupSpecialLocationCategory dropSpecialLocationCategory priority = pickupSpecialLocationCategory <> "_" <> dropSpecialLocationCategory <> "_" <> "Priority" <> priority
 
-    getFareProducts area = do
-      fareProducts <- QFareProduct.findAllFareProductForVariants merchantOpCityId area
+    getFareProducts area flow = do
+      fareProducts <- QFareProduct.findAllFareProductForVariants merchantOpCityId area flow
       if null fareProducts && area /= DFareProduct.Default
-        then QFareProduct.findAllFareProductForVariants merchantOpCityId DFareProduct.Default
+        then QFareProduct.findAllFareProductForVariants merchantOpCityId DFareProduct.Default DFareProduct.NORMAL
         else return fareProducts
