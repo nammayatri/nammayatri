@@ -591,6 +591,8 @@ getEN stringKey =
         VI_POINTER_2 -> "Drivers will be prompted to sound horn once at the pickup."
         HI_POINTER_1 -> "Drivers will be prompted to text instead of calling."
         HI_POINTER_2 -> " Drivers will be prompted to message you once at the pickup."
+        DID_THE_DRIVER_OFFER_ASSISTANCE -> "Did the driver offer assistance?"
+        WAS_THE_DRIVER_UNDERSTANDING_OF_YOUR_NEEDS -> "Was your driver understanding of your needs and accomodate them on the journey?"
         GENERAL_DISABILITY_DESCRIPTION -> "Drivers will be sensitised to help you with your needs and requests."
         ACCESSIBILITY_TEXT _-> "Namma Yatri, now customised for you!"
         TO_CATER_YOUR_SPECIFIC_NEEDS _ -> "To cater to your specific needs, we have customised certain features of Namma Yatri."

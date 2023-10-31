@@ -438,11 +438,12 @@ rideFeedbackBT payload = do
       errorHandler errorPayload = do
             BackT $ pure GoBack
 
-makeFeedBackReq :: Int -> String -> String -> FeedbackReq
-makeFeedBackReq rating rideId feedback = FeedbackReq
+makeFeedBackReq :: Int -> String -> String -> Maybe Boolean -> FeedbackReq
+makeFeedBackReq rating rideId feedback wasOfferedAssistance = FeedbackReq
     {   "rating" : rating
     ,   "rideId" : rideId
     ,   "feedbackDetails" : feedback
+    ,   "wasOfferedAssistance" : wasOfferedAssistance
     }
 
 
@@ -460,6 +461,7 @@ rideBookingList limit offset onlyActive = do
         withAPIResult (EP.rideBookingList limit offset onlyActive)  unwrapResponse $ callAPI headers (RideBookingListReq limit offset onlyActive)
     where
         unwrapResponse (x) = x
+
 
 
 getProfileBT :: String -> FlowBT String GetProfileRes

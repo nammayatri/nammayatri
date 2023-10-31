@@ -607,6 +607,8 @@ getFR stringKey =
         VI_POINTER_2 -> ""
         HI_POINTER_1 -> ""
         HI_POINTER_2 -> ""
+        DID_THE_DRIVER_OFFER_ASSISTANCE -> "Le chauffeur a-t-il proposé de l'aide ?"
+        WAS_THE_DRIVER_UNDERSTANDING_OF_YOUR_NEEDS -> "Votre chauffeur a-t-il compris vos besoins et les a-t-il accueillis pendant le voyage ?"
         ACCESSIBILITY_TEXT _-> ""
         TO_CATER_YOUR_SPECIFIC_NEEDS _ -> ""
         SPECIAL_ASSISTANCE -> ""
