@@ -17,7 +17,7 @@ module Components.PrimaryButton.View where
 import Effect (Effect)
 import Prelude (Unit, bind, const, discard, pure, unit, void, ($), (&&), (==), (<>))
 import Components.PrimaryButton.Controller (Action(..), Config)
-import PrestoDOM (Gravity(..), Length(..), Orientation(..), PrestoDOM, Visibility(..), Accessiblity(..),afterRender, alpha, background, clickable, color, cornerRadius, fontStyle, gravity, height, id, imageView, lineHeight, linearLayout, lottieAnimationView, margin, onClick, orientation, padding, relativeLayout, stroke, text, textSize, textView, visibility, width, imageWithFallback, gradient, accessibilityHint, accessibility, weight, onAnimationEnd, textFromHtml)
+import PrestoDOM (Gravity(..), Length(..), Orientation(..), PrestoDOM, Visibility(..), Accessiblity(..),afterRender, alpha, background, clickable, color, cornerRadius, fontStyle, gravity, height, id, imageView, lineHeight, linearLayout, lottieAnimationView, margin, onClick, orientation, padding, relativeLayout, stroke, text, textSize, textView, visibility, width, imageWithFallback, gradient, accessibilityHint, accessibility, weight, onAnimationEnd, textFromHtml, rippleColor)
 import JBridge (toggleBtnLoader, getKeyInSharedPrefKeys, startLottieProcess, lottieAnimationConfig)
 import Engineering.Helpers.Commons (getNewIDWithTag, os)
 import MerchantConfig.Utils (getValueFromConfig)
@@ -73,7 +73,8 @@ view push config =
               <> (case config.weight of
                 Nothing -> [width config.width]
                 Just value ->  [weight value])
-              <> (if config.enableButtonLayoutId then [id $ getNewIDWithTag (config.id <> "_buttonLayout")] else []))
+              <> (if config.enableButtonLayoutId then [id $ getNewIDWithTag (config.id <> "_buttonLayout")] else [])
+              <> (if config.enableRippleEffect then [rippleColor config.rippleColor] else []))
             [ linearLayout
                 [ width WRAP_CONTENT
                 , height WRAP_CONTENT

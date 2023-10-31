@@ -53,6 +53,8 @@ type Config =
     , lottieConfig :: LottieConfig
     , weight :: Maybe Number
     , enableButtonLayoutId :: Boolean
+    , enableRippleEffect :: Boolean
+    , rippleColor :: String
   }
 
 type TextConfig =
@@ -113,6 +115,8 @@ config =   {
   , isSuffixImage : false
   , weight : Nothing
   , enableButtonLayoutId : false
+  , enableRippleEffect : true
+  , rippleColor : Color.rippleShade
   , suffixImageConfig :
     {
       height : V 20

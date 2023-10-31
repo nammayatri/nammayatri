@@ -209,3 +209,6 @@ green600 = "#269574"
 
 squidInkBlue :: Color
 squidInkBlue = "#303440"
+
+rippleShade :: Color
+rippleShade = "D5D5D8"
