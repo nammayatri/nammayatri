@@ -81,7 +81,7 @@ commonConfig =
                   apiTriggerRadius: 20.0
                 }
             , labelTextSize : 30
-            , animationDuration : 400
+            , animationDuration : 500
             }
         , notifyRideConfirmationConfig : 
             { notify : false 

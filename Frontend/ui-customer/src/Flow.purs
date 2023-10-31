@@ -818,8 +818,8 @@ homeScreenFlow = do
         let state = newState.homeScreen
 
         case state.props.sourceSelectedOnMap of
-          true  -> pure unit
-          false -> 
+          true | state.props.isSource == Just true -> pure unit
+          _ -> 
             case state.props.isSource of
               Just true -> do
                 (GetPlaceNameResp sourceDetailResp) <- getPlaceNameResp (state.props.sourcePlaceId) (state.props.sourceLat) (state.props.sourceLong) (if state.props.isSource == Just false then dummyLocationListItemState else item)

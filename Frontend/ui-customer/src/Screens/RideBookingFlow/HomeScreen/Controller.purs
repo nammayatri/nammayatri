@@ -1080,7 +1080,7 @@ eval (SettingSideBarActionController (SettingSideBarController.LiveStatsDashboar
 eval (SearchLocationModelActionController (SearchLocationModelController.PrimaryButtonActionController PrimaryButtonController.OnClick)) state = do
   _ <- pure $ performHapticFeedback unit
   _ <- pure $ exitLocateOnMap ""
-  let newState = state{props{isSource = Just false, isSearchLocation = SearchLocation, currentStage = SearchLocationModel, locateOnMap = false}}
+  let newState = state{props{isSource = Just false, isSearchLocation = SearchLocation, currentStage = SearchLocationModel, locateOnMap = false, defaultPickUpPoint = ""}}
   updateAndExit newState $ LocationSelected (fromMaybe dummyListItem state.data.selectedLocationListItem) false newState
 
 eval (PrimaryButtonActionController (PrimaryButtonController.OnClick)) state = do
