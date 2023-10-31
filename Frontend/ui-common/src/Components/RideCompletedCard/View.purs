@@ -26,6 +26,7 @@ import Components.PopUpModal as PopUpModal
 import Language.Strings (getString)
 import JBridge as JB
 import Data.Function.Uncurried (runFn1)
+import Mobility.Prelude
 import ConfigProvider
 
 view :: forall w. Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
@@ -249,7 +250,7 @@ customerIssueView config push =
   scrollView [
     width MATCH_PARENT 
   , height WRAP_CONTENT
-  , visibility $ if config.customerIssueCard.issueFaced then VISIBLE else GONE
+  , visibility $ boolToVisibility (config.customerIssueCard.issueFaced || config.customerIssueCard.wasOfferedAssistanceCardView)
   ][
     linearLayout
     [ width MATCH_PARENT
@@ -267,7 +268,7 @@ customerIssueView config push =
         , gravity CENTER
         , margin $ MarginTop 15
         , orientation VERTICAL
-        , visibility if config.customerIssueCard.selectedYesNoButton == 0 then VISIBLE else GONE
+        , visibility $ boolToVisibility (config.customerIssueCard.selectedYesNoButton == 0 && not config.customerIssueCard.wasOfferedAssistanceCardView)
         ](mapWithIndex (\ index item ->
             linearLayout
             [ height WRAP_CONTENT
@@ -344,6 +345,7 @@ customerRatingDriverView config push =
   , padding $ Padding 10 10 10 10
   , margin $ MarginBottom 24
   , gravity CENTER
+  , visibility $ boolToVisibility (not config.customerIssueCard.wasOfferedAssistanceCardView)
   ][ imageView [
       imageWithFallback $ fetchImage FF_COMMON_ASSET  "ny_ic_driver_avatar"
       , height $ V 56

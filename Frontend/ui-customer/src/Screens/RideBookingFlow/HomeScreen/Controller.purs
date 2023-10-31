@@ -745,7 +745,10 @@ eval OnResumeCallback state =
 
 eval (UpdateSavedLoc savedLoc) state = continue state{data{savedLocations = savedLoc}}
 
-eval ( RideCompletedAC (RideCompletedCard.SelectButton index)) state = continue state { data { ratingViewState { selectedYesNoButton = index, doneButtonVisibility = index == 1}}}
+eval ( RideCompletedAC (RideCompletedCard.SelectButton index)) state = do 
+  if state.props.showOfferedAssistancePopUp 
+  then continue state {data { ratingViewState{selectedYesNoButton = index, doneButtonVisibility = true, wasOfferedAssistance = Just (index==0)}}} 
+  else continue state { data { ratingViewState { selectedYesNoButton = index, doneButtonVisibility = index == 1 }}}
 
 eval ( RideCompletedAC (RideCompletedCard.RateClick index)) state = do
   _ <- pure $ setValueToLocalStore REFERRAL_STATUS "HAS_TAKEN_RIDE"
@@ -1166,37 +1169,41 @@ eval WhereToClick state = do
       updateState = state{props{isSource = Just false, isSearchLocation = SearchLocation, currentStage = SearchLocationModel, searchLocationModelProps{crossBtnSrcVisibility = false, findPlaceIllustration = null state.data.locationList }}, data{source=(getString CURRENT_LOCATION)}}
   exit $ UpdateSavedLocation updateState 
 
-eval (RideCompletedAC (RideCompletedCard.SkipButtonActionController (PrimaryButtonController.OnClick))) state =
-  case state.data.ratingViewState.issueFacedView of
-    true -> do
-            _ <- pure $ setValueToLocalStore REFERRAL_STATUS "HAS_TAKEN_RIDE"
-            continue
-              state
-                { props { currentStage = RideRating }
-                , data
-                  { rideRatingState =
-                    dummyRideRatingState
-                      { driverName = state.data.driverInfoCardState.driverName
-                      , rideId = state.data.driverInfoCardState.rideId
-                      }
+eval (RideCompletedAC (RideCompletedCard.SkipButtonActionController (PrimaryButtonController.OnClick))) state = 
+  if state.props.showOfferedAssistancePopUp then do
+    void $ pure $ toggleBtnLoader "SkipButton" false
+    continue state {data {ratingViewState {selectedYesNoButton = -1}} , props{showOfferedAssistancePopUp = false}} 
+  else 
+    case state.data.ratingViewState.issueFacedView of
+      true -> do
+              _ <- pure $ setValueToLocalStore REFERRAL_STATUS "HAS_TAKEN_RIDE"
+              continue
+                state
+                  { props { currentStage = RideRating }
+                  , data
+                    { rideRatingState =
+                      dummyRideRatingState
+                        { driverName = state.data.driverInfoCardState.driverName
+                        , rideId = state.data.driverInfoCardState.rideId
+                        }
+                    }
                   }
-                }
-    _ ->  if state.data.ratingViewState.selectedRating > 0 then updateAndExit state $ SubmitRating state{ data {rideRatingState {rating = state.data.ratingViewState.selectedRating }}}
-          else do
-            _ <- pure $ firebaseLogEvent "ny_user_ride_skip_feedback"
-            _ <- pure $ setValueToLocalStore RATING_SKIPPED "true"
-            _ <- pure $ runFn3 emitJOSEvent "java" "onEvent" $ encode $ EventPayload {
-                                        event : "process_result"
-                                      , payload : Just {
-                                        action : "feedback_skipped"
-                                      , trip_amount : Just state.data.finalAmount
-                                      , trip_id : Just state.props.bookingId
-                                      , ride_status : Nothing
-                                      , screen : Just $ getScreenFromStage state.props.currentStage
-                                      , exit_app : false
-                                      }
-                                      }
-            updateAndExit state GoToHome
+      _ ->  if state.data.ratingViewState.selectedRating > 0 then updateAndExit state $ SubmitRating state{ data {rideRatingState {rating = state.data.ratingViewState.selectedRating }}}
+            else do
+              _ <- pure $ firebaseLogEvent "ny_user_ride_skip_feedback"
+              _ <- pure $ setValueToLocalStore RATING_SKIPPED "true"
+              _ <- pure $ runFn3 emitJOSEvent "java" "onEvent" $ encode $ EventPayload {
+                                          event : "process_result"
+                                        , payload : Just {
+                                          action : "feedback_skipped"
+                                        , trip_amount : Just state.data.finalAmount
+                                        , trip_id : Just state.props.bookingId
+                                        , ride_status : Nothing
+                                        , screen : Just $ getScreenFromStage state.props.currentStage
+                                        , exit_app : false
+                                        }
+                                        }
+              updateAndExit state GoToHome
 
 eval OpenSettings state = do
   _ <- pure $ hideKeyboardOnNavigation true
