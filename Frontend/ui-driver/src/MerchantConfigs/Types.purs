@@ -18,7 +18,8 @@ type AppConfig =
     gotoConfig :: GotoConfig,
     profileVerification :: ProfileVerificationConfig,
     bottomNavConfig :: BottomNavConfig,
-    purpleRideConfig :: PurpleRideConfig
+    purpleRideConfig :: PurpleRideConfig,
+    mapConfig :: MapConfig
   } 
 
 type PurpleRideConfig = {
@@ -114,4 +115,8 @@ type BottomNavConfig = {
 type BottomNavItemConfig = {
   showNew :: Boolean,
   isVisible :: Boolean
+}
+
+type MapConfig = {
+  animationDuration :: Int
 }

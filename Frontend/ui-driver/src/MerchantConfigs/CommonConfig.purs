@@ -87,7 +87,7 @@ commonConfig =
           }
         , referralType : "QRScreen"
         , mapConfig : 
-            { animationDuration : 400
+            { animationDuration : 500
             }
         , profile :
             { bookingOptionMenuForTaxi : false

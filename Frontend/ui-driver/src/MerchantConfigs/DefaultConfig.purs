@@ -97,4 +97,7 @@ config =
           showNew : false
         }
     }
+  , mapConfig : 
+      { animationDuration : 500
+      }
 }
