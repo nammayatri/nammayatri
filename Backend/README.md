@@ -89,6 +89,16 @@ cabal run lib/location-updates
 , ghcid lib/location-updates
 ```
 
+#### Faster Local Development builds
+
+For much shorter compile times and quicker feedback cycles while developing, you may want to use the builds optimized for local development.
+
+This is now easily & quickly achieved by simply un-commenting the flags under ["DEVELOPMENT FLAGS" section in cabal.project file](cabal.project) when developing.
+
+
+#### Parallel Jobs
+To speed up the compilation times, we use 6 parallel jobs by default. If you have a powerful computer with lots of cores and memory, you can increment the `jobs` setting in [cabal.project](cabal.project) file to run more parallel jobs for faster results. Inversely, if its a low-powered machine, you may consider lowering that number.
+
 #### Running external services
 
 To run the project, we'd first need to run some services. These are provided via docker images, that are built in Nix and run via [arion].
