@@ -34,5 +34,5 @@ instance B.Table InvoiceT where
 
 type Invoice = InvoiceT Identity
 
-$(enableKVPG ''InvoiceT ['id] [])
+$(enableKVPG ''InvoiceT ['id] [['driverFeeId], ['driverId], ['invoiceShortId]])
 $(mkTableInstances ''InvoiceT "invoice")
