@@ -87,6 +87,7 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
     // CallBacks Strings
     private static String storeContactsCallBack = null;
     private static String storeCustomerCallBack = null;
+    public enum MapMode {  NORMAL, SPECIAL_ZONE, HOTSPOT }
 
     public MobilityCustomerBridge(BridgeComponents bridgeComponents) {
         super(bridgeComponents);
@@ -263,7 +264,7 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
                     }
                     Marker currMarker = (Marker) markers.get(src);
                     currMarker.setTitle("Vehicle Icon On Map");
-                    Marker destMarker = (Marker) markers.get(dest);   
+                    Marker destMarker = (Marker) markers.get(dest);
                     JSONObject specialLocationObject = new JSONObject(specialLocation);
                     String destinationSpecialTagIcon = specialLocationObject.getString("destSpecialTagIcon");
 
@@ -367,12 +368,13 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
             if (distance < minDist) {
                 minDist = distance;
                 location = locationB;
-                zoneName = a.getString("place");
+                zoneName = a.has("place") ? a.getString("place") : "";
             }
         }
         jsonObject.put("place", zoneName);
         jsonObject.put("lat", location.getLatitude());
         jsonObject.put("long", location.getLongitude());
+        jsonObject.put("distance", minDist);
         return jsonObject;
     }
 
@@ -387,7 +389,12 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
                 Marker m = googleMap.addMarker(markerOptionsObj);
                 if (m != null) {
                     m.hideInfoWindow();
-                    zoneMarkers.put(name,m);
+                    if (name.equals("")) {
+                        uniqueMarkerId += 1;
+                        zoneMarkers.put(zoneName + String.valueOf(uniqueMarkerId), m);
+                    } else {
+                        zoneMarkers.put(name,m);
+                    }
                 }
             } catch (Exception e) {
                 Log.d("error on pickup markers", e.toString());
@@ -396,33 +403,35 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
     }
 
     @JavascriptInterface
-    public void drawPolygon(String geoJson, String locationName) throws JSONException {
-
+    public void drawPolygon(String geoJson, String locationName) {
         ExecutorManager.runOnMainThread(() -> {
-            if(layer != null){
-                layer.removeLayerFromMap();
-            }
-            if (googleMap != null) {
-                try {
-                    JSONObject geo = new JSONObject(geoJson);
-                    layer = new GeoJsonLayer(googleMap, geo);
-                    GeoJsonPolygonStyle polyStyle = layer.getDefaultPolygonStyle();
-                    polyStyle.setFillColor(Color.argb(25, 0, 102, 255));
-                    polyStyle.setStrokeWidth(3);
-                    polyStyle.setStrokeColor(Color.BLUE);
-                    if (locationName.length() > 0) {
-                        if (userPositionMarker == null) {
-                            upsertMarker(CURRENT_LOCATION, String.valueOf(getKeyInNativeSharedPrefKeys("LAST_KNOWN_LAT")), String.valueOf(getKeyInNativeSharedPrefKeys("LAST_KNOWN_LON")), 160, 0.5f, 0.9f); //TODO this function will be removed
-                        } else {
-                            userPositionMarker.setIcon(BitmapDescriptorFactory.fromBitmap(getMarkerBitmapFromView(locationName, CURRENT_LOCATION, null, MarkerType.NORMAL_MARKER)));
-                            userPositionMarker.setTitle("");
-                            LatLng latLng = new LatLng(Double.parseDouble(getKeyInNativeSharedPrefKeys("LAST_KNOWN_LAT")), Double.parseDouble(getKeyInNativeSharedPrefKeys("LAST_KNOWN_LON")));
+            try {
+                if (layer != null)
+                    layer.removeLayerFromMap();
+                if (googleMap != null) {
+                    try {
+                        JSONObject geo = new JSONObject(geoJson);
+                        layer = new GeoJsonLayer(googleMap, geo);
+                        GeoJsonPolygonStyle polyStyle = layer.getDefaultPolygonStyle();
+                        polyStyle.setFillColor(Color.argb(25, 0, 102, 255));
+                        polyStyle.setStrokeWidth(3);
+                        polyStyle.setStrokeColor(Color.BLUE);
+                        if (locationName.length() > 0) {
+                            if (userPositionMarker == null) {
+                                upsertMarker(CURRENT_LOCATION, String.valueOf(getKeyInNativeSharedPrefKeys("LAST_KNOWN_LAT")), String.valueOf(getKeyInNativeSharedPrefKeys("LAST_KNOWN_LON")), 160, 0.5f, 0.9f); //TODO this function will be removed
+                            } else {
+                                userPositionMarker.setIcon(BitmapDescriptorFactory.fromBitmap(getMarkerBitmapFromView(locationName, CURRENT_LOCATION, null, MarkerType.NORMAL_MARKER)));
+                                userPositionMarker.setTitle("");
+                                LatLng latLng = new LatLng(Double.parseDouble(getKeyInNativeSharedPrefKeys("LAST_KNOWN_LAT")), Double.parseDouble(getKeyInNativeSharedPrefKeys("LAST_KNOWN_LON")));
+                            }
                         }
+                        layer.addLayerToMap();
+                    } catch (JSONException e) {
+                        e.printStackTrace();
                     }
-                    layer.addLayerToMap();
-                } catch (JSONException e) {
-                    e.printStackTrace();
                 }
+            } catch (Exception e) {
+                e.printStackTrace();
             }
         });
     }
@@ -448,6 +457,7 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
     @JavascriptInterface
     public void locateOnMap (String _payload){
         try {
+              System.out.println("debug hotspot payload  : " + _payload);
               JSONObject payload = new JSONObject(_payload);
               boolean goToCurrentLocation = payload.optBoolean("goToCurrentLocation", false) ;
               String lat = payload.optString("lat", "0.0");
@@ -456,62 +466,53 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
               String points = payload.optString("points", "[]");
               float zoomLevel = (float) payload.optDouble("zoomLevel", 17.0);
               final TextView labelView = payload.optString("labelId", "").equals("") ? null : Objects.requireNonNull(bridgeComponents.getActivity()).findViewById(Integer.parseInt(payload.getString("labelId")));
-              if (geoJson.equals("") || points.equals("[]")){
+              if (geoJson.equals("") && points.equals("[]")){
                 locateOnMap(goToCurrentLocation,lat,lon,zoomLevel);
                 return;
               }
               ExecutorManager.runOnMainThread(new Runnable() {
                 double x = 0.0;
                 double y = 0.0;
+                final double goToNearestPointWithinRadius = locateOnMapConfig != null ? locateOnMapConfig.optDouble("goToNearestPointWithinRadius", 25.0) : 25.0;
+                final MapMode mapMode = points.equals("") ? MapMode.NORMAL : (geoJson.equals("") ? MapMode.HOTSPOT : MapMode.SPECIAL_ZONE);
                 @Override
                 public void run() {
                     try {
+                        System.out.println("debug hotspot mapMode : " + mapMode);
+                        System.out.println("debug hotspot zoneMarkers : " + zoneMarkers);
                         if (zoneMarkers != null) {
                             for (Map.Entry<String, Marker> set : zoneMarkers.entrySet()) {
                                 Marker m = set.getValue();
                                 m.setVisible(false);
                             }
                         }
-                        drawPolygon(geoJson, "");
-                        JSONObject geo = new JSONObject(geoJson);
-                        JSONArray coordinates = geo.getJSONArray("coordinates");
-                        JSONArray multiplePolygons = (JSONArray) coordinates.get(0);
-                        JSONArray polygon = (JSONArray) multiplePolygons.get(0);
-                        ArrayList<LatLng> endPoints = getCoordinateEndPoint(polygon);
-
-                        if (endPoints != null) {
-                            LatLng topLeft = endPoints.get(0);
-                            LatLng bottomRight = endPoints.get(1);
-
-                            x = bottomRight.longitude - topLeft.longitude;
-                            y = topLeft.latitude - bottomRight.latitude;
-
-                            double currentLat = goToCurrentLocation ? lastLatitudeValue : Double.parseDouble(lat);
-                            double currentLon = goToCurrentLocation ? lastLongitudeValue : Double.parseDouble(lon);
-
-                            LatLngBounds bounds = LatLngBounds.builder().include(new LatLng(currentLat - y/2, currentLon - x/2)).include(new LatLng(currentLat + y/2, currentLon + x/2)).build();
-                            googleMap.animateCamera(CameraUpdateFactory.newLatLngBounds(bounds,0), animationDuration, null);
-                        }
+                        if (layer != null)
+                            layer.removeLayerFromMap();
+                        if (mapMode.equals(MapMode.SPECIAL_ZONE))
+                            drawPolygon(geoJson, "");
 
                         removeMarker("ny_ic_customer_current_location");
-                        JSONArray zonePoints = null;
-                        zonePoints = new JSONArray(points);
-                        for (int i = 0; i < zonePoints.length(); i++) {
+                        JSONArray zonePoints = new JSONArray(points);
+                        for (int i = 0; i < zonePoints.length(); i++)
                             addZoneMarker((Double) zonePoints.getJSONObject(i).get("lat"), (Double) zonePoints.getJSONObject(i).get("lng"), (String) zonePoints.getJSONObject(i).get("place"), "ny_ic_zone_pickup_marker_yellow");
-                        }
+                        JSONObject nearestPoint = getNearestPoint(googleMap.getCameraPosition().target.latitude, googleMap.getCameraPosition().target.longitude, zonePoints);
+                        if (mapMode.equals(MapMode.SPECIAL_ZONE) || SphericalUtil.computeDistanceBetween(googleMap.getCameraPosition().target, new LatLng(nearestPoint.getDouble("lat"), nearestPoint.getDouble("long"))) < goToNearestPointWithinRadius)
+                            animateCamera(nearestPoint.getDouble("lat"), nearestPoint.getDouble("long"), googleMap.getCameraPosition().zoom, "NO_ZOOM");
+
                     } catch (JSONException e) {
                         e.printStackTrace();
-                        e.printStackTrace();
                     }
-                    
+
                     googleMap.setOnCameraMoveStartedListener(new GoogleMap.OnCameraMoveStartedListener() {
                         @Override
                         public void onCameraMoveStarted(int i) {
-                            if (labelView != null)
-                                labelView.setVisibility(View.INVISIBLE);
-                            Marker m = zoneMarkers.get("selectedGate");
-                            if (m != null)
-                                m.setVisible(false);
+                            if (mapMode.equals(MapMode.SPECIAL_ZONE) || true) {
+                                if (labelView != null)
+                                    labelView.setVisibility(View.INVISIBLE);
+                                Marker m = zoneMarkers.get("selectedGate");
+                                if (m != null)
+                                    m.setVisible(false);
+                            }
                         }
                     });
 
@@ -528,37 +529,49 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
                                         handler.post(() -> {
                                             try {
                                                 boolean isPointInsidePolygon = pointInsidePolygon(geoJson, lat1, lng);
-                                                boolean isOnGate = false;
-                                                if(isPointInsidePolygon){
-                                                    JSONArray zonePoints = new JSONArray(points);
-                                                    System.out.println("Inside zonepoints" + zonePoints);
-                                                    JSONObject nearestPickupPointObj = getNearestPoint(lat1, lng, zonePoints);
-                                                    Location nearestPickupPoint = new Location("");
-                                                    nearestPickupPoint.setLatitude(nearestPickupPointObj.getDouble("lat"));
-                                                    nearestPickupPoint.setLongitude(nearestPickupPointObj.getDouble("long"));
+                                                boolean isOnSpot = false;
+                                                JSONArray zonePoints = new JSONArray(points);
+                                                JSONObject nearestPickupPointObj = getNearestPoint(lat1, lng, zonePoints);
+                                                double nearestPointLat = nearestPickupPointObj.getDouble("lat");
+                                                double nearestPointLng = nearestPickupPointObj.getDouble("long");
+                                                double nearestPointDistance = nearestPickupPointObj.getDouble("distance");
 
-                                                    for(int i=0;i<zonePoints.length();i++){
-                                                        if(SphericalUtil.computeDistanceBetween(googleMap.getCameraPosition().target, new LatLng((Double)zonePoints.getJSONObject(i).get("lat"), (Double) zonePoints.getJSONObject(i).get("lng")))<=1){
-                                                            zoneName = (String)zonePoints.getJSONObject(i).get("place");
-                                                            isOnGate = true;
+                                                if (mapMode.equals(MapMode.SPECIAL_ZONE)) {
+                                                    if (isPointInsidePolygon) {
+                                                        for (int i = 0; i < zonePoints.length(); i++) {
+                                                            if (SphericalUtil.computeDistanceBetween(googleMap.getCameraPosition().target, new LatLng((Double) zonePoints.getJSONObject(i).get("lat"), (Double) zonePoints.getJSONObject(i).get("lng"))) <= 1) {
+                                                                zoneName = (String) zonePoints.getJSONObject(i).get("place");
+                                                                isOnSpot = true;
+                                                                Marker m = zoneMarkers.get("selectedGate");
+                                                                if (m != null)
+                                                                    m.setVisible(false);
+                                                                addZoneMarker((Double) zonePoints.getJSONObject(i).get("lat"), (Double) zonePoints.getJSONObject(i).get("lng"), "selectedGate", "ny_ic_selected_zone_pickup_marker_yellow");
+                                                            }
+                                                        }
+
+                                                        if (SphericalUtil.computeDistanceBetween(googleMap.getCameraPosition().target, new LatLng(nearestPointLat, nearestPointLng)) > 1)
+                                                            animateCamera(nearestPointLat, nearestPointLng, googleMap.getCameraPosition().zoom, "NO_ZOOM");
+                                                    } else {
+                                                        zoneName = "LatLon";
+                                                    }
+                                                } else if (mapMode.equals(MapMode.HOTSPOT)) {
+                                                    System.out.println("debug hotspot zonePoints : " + zonePoints);
+                                                    for (int i = 0; i < zonePoints.length(); i++) {
+                                                        if (SphericalUtil.computeDistanceBetween(googleMap.getCameraPosition().target, new LatLng((Double) zonePoints.getJSONObject(i).get("lat"), (Double) zonePoints.getJSONObject(i).get("lng"))) <= 1) {
                                                             Marker m = zoneMarkers.get("selectedGate");
                                                             if (m != null)
                                                                 m.setVisible(false);
-                                                            addZoneMarker((Double)zonePoints.getJSONObject(i).get("lat"), (Double) zonePoints.getJSONObject(i).get("lng"), "selectedGate", "ny_ic_selected_zone_pickup_marker_yellow");
+                                                            addZoneMarker((Double) zonePoints.getJSONObject(i).get("lat"), (Double) zonePoints.getJSONObject(i).get("lng"), "selectedGate", "ny_ic_selected_zone_pickup_marker_yellow");
+                                                            isOnSpot = true;
                                                         }
                                                     }
-
-                                                    if(SphericalUtil.computeDistanceBetween(googleMap.getCameraPosition().target, new LatLng(nearestPickupPoint.getLatitude(), nearestPickupPoint.getLongitude()))>1){
-                                                        double latitude = nearestPickupPoint.getLatitude();
-                                                        double longitude = nearestPickupPoint.getLongitude();
-                                                        animateCamera(latitude, longitude, 20.0f, ZoomType.NO_ZOOM);
-                                                    }
-                                                }
-                                                else {
+                                                    if (SphericalUtil.computeDistanceBetween(googleMap.getCameraPosition().target, new LatLng(nearestPointLat, nearestPointLng)) > 1 && nearestPointDistance <= goToNearestPointWithinRadius)
+                                                        animateCamera(nearestPointLat, nearestPointLng, googleMap.getCameraPosition().zoom, "NO_ZOOM");
                                                     zoneName = "LatLon";
                                                 }
-                                                if (storeLocateOnMapCallBack != null && (!isPointInsidePolygon || isOnGate)){
-                                                    if (labelView != null && isOnGate) {
+                                                boolean sendCallback = storeLocateOnMapCallBack != null && ((mapMode.equals(MapMode.SPECIAL_ZONE) && (!isPointInsidePolygon || isOnSpot)) || (mapMode.equals(MapMode.HOTSPOT) && (isOnSpot || nearestPointDistance > goToNearestPointWithinRadius)));
+                                                if (sendCallback){
+                                                    if (labelView != null && isOnSpot && mapMode.equals(MapMode.SPECIAL_ZONE)) {
                                                         String labelText = zoneName.length() > labelTextSize ? zoneName.substring(0, labelTextSize-3) + "..." : zoneName;
                                                         labelView.setText(labelText);
                                                         labelView.setVisibility(View.VISIBLE);
@@ -588,27 +601,29 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
 
     private Boolean pointInsidePolygon(String geoJson, Double latitude, Double longitide) {
         try {
-            JSONObject geo = new JSONObject(geoJson);
-            JSONArray coor = geo.getJSONArray("coordinates");
-            JSONArray coor2 = (JSONArray) coor.get(0);
-            JSONArray coor3 = (JSONArray) coor2.get(0);
+            if (!geoJson.equals("")) {
+                JSONObject geo = new JSONObject(geoJson);
+                JSONArray coor = geo.getJSONArray("coordinates");
+                JSONArray coor2 = (JSONArray) coor.get(0);
+                JSONArray coor3 = (JSONArray) coor2.get(0);
 
-            double y = latitude;
-            double x = longitide;
-            boolean inside = false;
-            for (int i = 0, j = coor3.length() - 1; i < coor3.length(); j = i++) {
-                JSONArray point1 = (JSONArray) coor3.get(i);
-                JSONArray point2 = (JSONArray) coor3.get(j);
-                double xi = (double) point1.get(0), yi = (double) point1.get(1);
-                double xj = (double) point2.get(0), yj = (double) point2.get(1);
+                double y = latitude;
+                double x = longitide;
+                boolean inside = false;
+                for (int i = 0, j = coor3.length() - 1; i < coor3.length(); j = i++) {
+                    JSONArray point1 = (JSONArray) coor3.get(i);
+                    JSONArray point2 = (JSONArray) coor3.get(j);
+                    double xi = (double) point1.get(0), yi = (double) point1.get(1);
+                    double xj = (double) point2.get(0), yj = (double) point2.get(1);
 
-                boolean intersect = ((yi > y) != (yj > y)) && (x <= (xj - xi) * (y - yi) / (yj - yi) + xi);
-                if (intersect) {
-                    inside = !inside;
+                    boolean intersect = ((yi > y) != (yj > y)) && (x <= (xj - xi) * (y - yi) / (yj - yi) + xi);
+                    if (intersect) {
+                        inside = !inside;
+                    }
                 }
+                return inside;
             }
-
-            return inside;
+            return false;
         } catch (Exception e) {
             e.printStackTrace();
         }

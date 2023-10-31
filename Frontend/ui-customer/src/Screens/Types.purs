@@ -602,6 +602,7 @@ type HomeScreenStateData =
   , nearByDrivers :: Maybe Int
   , disability :: Maybe DisabilityT
   , searchLocationModelData :: SearchLocationModelData
+  , hotSpotInfo :: Array HotSpotData
   }
 
 type DisabilityT = 
@@ -704,6 +705,7 @@ type HomeScreenStateProps =
   , flowWithoutOffers :: Boolean
   , showEducationalCarousel :: Boolean
   , locateOnMapLocation :: LocateOnMapLocation
+  , hotSpot :: HotSpotProps
   }
 
 type SearchLocationModelProps = {
@@ -1305,3 +1307,12 @@ derive instance genericTipViewData :: Generic TipViewData _
 instance showTipViewData :: Show TipViewData where show = genericShow
 instance encodeTipViewData :: Encode TipViewData where encode = defaultEncode
 instance decodeTipViewData :: Decode TipViewData where decode = defaultDecode
+
+type HotSpotProps = {
+  manuallyMoved :: Boolean
+}
+
+type HotSpotData = {
+    lat :: Number
+  , lon :: Number
+}

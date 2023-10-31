@@ -185,6 +185,7 @@ public class MobilityCommonBridge extends HyperBridge {
     protected JSONObject markers = new JSONObject();
     protected GoogleMap googleMap;
     protected HashMap <String, Marker> zoneMarkers = new HashMap <String, Marker>();
+    protected int uniqueMarkerId = 0;
     protected GeoJsonLayer layer;
     protected String regToken, baseUrl;
     protected String zoneName = "";

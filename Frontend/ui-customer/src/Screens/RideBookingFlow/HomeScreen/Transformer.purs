@@ -38,8 +38,8 @@ import Language.Types (STR(..))
 import PrestoDOM (Visibility(..))
 import Resources.Constants (DecodeAddress(..), decodeAddress, getValueByComponent, getWard, getVehicleCapacity, getFaresList, getKmMeter, fetchVehicleVariant)
 import Screens.HomeScreen.ScreenData (dummyAddress, dummyLocationName, dummySettingBar, dummyZoneType)
-import Screens.Types (DriverInfoCard, LocationListItemState, LocItemType(..), LocationItemType(..), NewContacts, Contact, VehicleVariant(..), TripDetailsScreenState, SearchResultType(..), EstimateInfo, SpecialTags, ZoneType(..), HomeScreenState(..))
-import Services.API (AddressComponents(..), BookingLocationAPIEntity, DeleteSavedLocationReq(..), DriverOfferAPIEntity(..), EstimateAPIEntity(..), GetPlaceNameResp(..), LatLong(..), OfferRes, OfferRes(..), PlaceName(..), Prediction, QuoteAPIContents(..), QuoteAPIEntity(..), RideAPIEntity(..), RideBookingAPIDetails(..), RideBookingRes(..), SavedReqLocationAPIEntity(..), SpecialZoneQuoteAPIDetails(..), FareRange(..), LatLong(..))
+import Screens.Types (DriverInfoCard, LocationListItemState, LocItemType(..), LocationItemType(..), NewContacts, Contact, VehicleVariant(..), TripDetailsScreenState, SearchResultType(..), EstimateInfo, SpecialTags, ZoneType(..), HomeScreenState(..), HotSpotData, Location)
+import Services.API (AddressComponents(..), BookingLocationAPIEntity, DeleteSavedLocationReq(..), DriverOfferAPIEntity(..), EstimateAPIEntity(..), GetPlaceNameResp(..), LatLong(..), OfferRes, OfferRes(..), PlaceName(..), Prediction, QuoteAPIContents(..), QuoteAPIEntity(..), RideAPIEntity(..), RideBookingAPIDetails(..), RideBookingRes(..), SavedReqLocationAPIEntity(..), SpecialZoneQuoteAPIDetails(..), FareRange(..), LatLong(..), HotSpotInfo(..), GatesInfo(..))
 import Services.Backend as Remote
 import Types.App(FlowBT,  GlobalState(..), ScreenType(..))
 import Storage ( setValueToLocalStore, getValueToLocalStore, KeyStore(..))
@@ -555,3 +555,25 @@ getZoneType tag =
     Just "SureMetro" -> METRO
     Just "SureBlockedAreaForAutos" -> AUTO_BLOCKED
     _                -> NOZONE
+
+transformHotSpotInfos :: Array HotSpotInfo -> Array HotSpotData
+transformHotSpotInfos hotSpotInfo = map (\hotSpot -> transformHotSpotInfo hotSpot) hotSpotInfo
+
+transformHotSpotInfo :: HotSpotInfo -> HotSpotData
+transformHotSpotInfo (HotSpotInfo hotSpot) =
+  let (LatLong centroidLatLong) = hotSpot.centroidLatLong
+  in { lat : centroidLatLong.lat, lon : centroidLatLong.lon }
+
+transformHotSpotsToLocations :: Array HotSpotData -> Array Location
+transformHotSpotsToLocations hotSpots = map (\item -> { place: ""
+                                                      , lat  : item.lat
+                                                      , lng : item.lon
+                                                      , address : Nothing}) hotSpots
+
+transformGatesInfo :: Array GatesInfo -> Array Location
+transformGatesInfo gates = map (\(GatesInfo item) -> 
+                                { place: item.name,
+                                  lat  : (item.point)^._lat,
+                                  lng : (item.point)^._lon,
+                                  address : item.address
+                                }) gates

@@ -154,8 +154,10 @@ config =
               { visible : true
               , range : 100
               , color : "#323643"
-              },
-            apiTriggerRadius : 20.0
+              }
+          , apiTriggerRadius : 20.0
+          , showHotSpotsWithinRadius : 50.0
+          , goToNearestPointWithinRadius : 25.0
           }
       , labelTextSize : 30
       , animationDuration : 400

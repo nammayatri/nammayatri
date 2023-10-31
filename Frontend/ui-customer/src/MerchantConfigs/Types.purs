@@ -190,8 +190,10 @@ type MapConfig = {
 }
 
 type LocateOnMapConfigs = {
-  dottedLineConfig :: DottedLineConfig
-, apiTriggerRadius :: Number
+    dottedLineConfig :: DottedLineConfig
+  , apiTriggerRadius :: Number
+  , showHotSpotsWithinRadius :: Number
+  , goToNearestPointWithinRadius :: Number
 }
 
 type DottedLineConfig = {
