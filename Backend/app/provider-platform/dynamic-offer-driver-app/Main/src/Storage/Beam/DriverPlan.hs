@@ -41,5 +41,5 @@ instance B.Table DriverPlanT where
 
 type DriverPlan = DriverPlanT Identity
 
-$(enableKVPG ''DriverPlanT ['driverId] [])
+$(enableKVPG ''DriverPlanT ['driverId] [['mandateId]])
 $(mkTableInstances ''DriverPlanT "driver_plan")
