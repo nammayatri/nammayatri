@@ -2223,7 +2223,8 @@ currentLocationView push state =
                   , singleLine true
                   , accessibility ENABLE
                   , accessibilityHint $ "Pickup Location is " <>  (DS.replaceAll (DS.Pattern ",") (DS.Replacement " ") state.data.source)
-                  , gravity CENTER
+                  , gravity LEFT
+                  , width MATCH_PARENT
                   , padding (Padding 10 16 10 16)
                   , color Color.black800
                   ]

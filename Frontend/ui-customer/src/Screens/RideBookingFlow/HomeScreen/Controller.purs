@@ -1427,7 +1427,7 @@ eval (SearchLocationModelActionController (SearchLocationModelController.SourceC
   else
     pure unit
   let predicArray = (recentDistance state.data.recentSearchs.predictionArray state.props.sourceLat state.props.sourceLong)
-  continue state { data { source = "", recentSearchs {predictionArray = predicArray}, searchLocationModelData{prevLocation = state.data.source}}, props { isSource = Just true, isSrcServiceable = true, isRideServiceable = true, searchLocationModelProps{crossBtnSrcVisibility = false} } }
+  continue state { data { source = "", recentSearchs {predictionArray = predicArray}, locationList = predicArray, searchLocationModelData{prevLocation = state.data.source}}, props { isSource = Just true, isSrcServiceable = true, isRideServiceable = true, searchLocationModelProps{crossBtnSrcVisibility = false} } }
 
 eval (SearchLocationModelActionController (SearchLocationModelController.DestinationClear)) state = do
   _ <- pure $ performHapticFeedback unit
@@ -1436,7 +1436,8 @@ eval (SearchLocationModelActionController (SearchLocationModelController.Destina
     pure unit
   else
     pure unit
-  continue state { data { destination = ""}, props {isSource = Just false, isDestServiceable = true, isRideServiceable = true, searchLocationModelProps{crossBtnDestVisibility = false}} }
+  let predicArray = (recentDistance state.data.recentSearchs.predictionArray state.props.sourceLat state.props.sourceLong)
+  continue state { data { destination = "", locationList = predicArray }, props {isSource = Just false, isDestServiceable = true, isRideServiceable = true, searchLocationModelProps{crossBtnDestVisibility = false}} }
 
 eval (SearchLocationModelActionController (SearchLocationModelController.GoBack)) state = do
   _ <- pure $ performHapticFeedback unit

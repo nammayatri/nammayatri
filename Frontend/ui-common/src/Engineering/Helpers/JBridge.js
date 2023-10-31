@@ -653,7 +653,7 @@ export const methodArgumentCount = function (functionName) {
 export const updateRoute = (configObj) => {
   if (window.JBridge.updateRoute) {
     try {
-      if (methodArgumentCount("updateRoute") == 1)
+      if (window.__OS == "IOS" || (window.__OS == "ANDROID" && (methodArgumentCount("updateRoute") == 1)))
         return window.JBridge.updateRoute(JSON.stringify(configObj));
       else
         return window.JBridge.updateRoute(JSON.stringify(configObj.json), configObj.destMarker, configObj.eta, configObj.srcMarker, JSON.stringify(configObj.specialLocation), configObj.zoomLevel);

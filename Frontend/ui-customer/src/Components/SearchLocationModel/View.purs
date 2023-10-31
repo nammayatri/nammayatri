@@ -125,19 +125,24 @@ searchResultsParentView state push =
 
 searchLottieLoader :: forall w. (Action -> Effect Unit) -> SearchLocationModelState -> PrestoDOM (Effect Unit) w
 searchLottieLoader push state =
-  lottieAnimationView
-  [ height $ if os == "IOS" then V 60 else V 130
-  , width $ if os == "IOS" then V 80 else V 130
-  , padding $ PaddingBottom 80
-  , margin (Margin ((screenWidth unit)/ 2 - 50) ((screenHeight unit)/ 7 - 90) 0 0)
-  , gravity CENTER
-  , id (getNewIDWithTag "searchLoader")
-  , visibility if state.showLoader then VISIBLE else GONE
-  , afterRender (\action -> do
-    void $ pure $ startLottieProcess lottieAnimationConfig {rawJson = (getAssetsBaseUrl FunctionCall) <> "lottie/search_loader.json", lottieId = (getNewIDWithTag "searchLoader"), scaleType="CENTER_CROP", repeat = true, speed = 0.8 }
-    push action
-    ) (const NoAction)
-  ]
+  linearLayout
+  [ height WRAP_CONTENT
+  , width MATCH_PARENT
+  , gravity CENTER_HORIZONTAL
+  ][  lottieAnimationView
+      [ height $ if os == "IOS" then V 170 else V 130
+      , width $ V 130
+      , padding $ PaddingBottom 80
+      , margin (MarginTop ((screenHeight unit)/ 7 - (if os == "IOS" then 140 else 90)))
+      , gravity CENTER
+      , id (getNewIDWithTag "searchLoader")
+      , visibility if state.showLoader then VISIBLE else GONE
+      , afterRender (\action -> do
+        void $ pure $ startLottieProcess lottieAnimationConfig {rawJson = (getAssetsBaseUrl FunctionCall) <> "lottie/search_loader.json", lottieId = (getNewIDWithTag "searchLoader"), scaleType="CENTER_CROP", repeat = true, speed = 0.8 }
+        push action
+        ) (const NoAction)
+      ]
+    ]
 
 locationUnserviceableView :: forall w. SearchLocationModelState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 locationUnserviceableView state push =
