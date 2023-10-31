@@ -60,7 +60,7 @@ public class YoutubeVideoView extends AppCompatActivity {
             youTubePlayerView.release();
         }
         super.onDestroy();
-        if(MobilityAppBridge.youtubePlayer != null) {
+        if(MobilityAppBridge.youtubePlayer != null && MobilityAppBridge.youTubePlayerView != null) {
             MobilityAppBridge.youTubePlayerView.exitFullScreen();
             MobilityAppBridge.youtubePlayer.seekTo(duration);
             MobilityAppBridge.youtubePlayer.play();
