@@ -1242,6 +1242,8 @@ goToLocationFlow = do
 
 selectLanguageFlow :: FlowBT String Unit
 selectLanguageFlow = do
+  let selectLang = getValueToLocalStore LANGUAGE_KEY
+  modifyScreenState $ SelectLanguageScreenStateType (\selectLangState -> selectLangState{ props{ selectedLanguage = if (selectLang == "__failed") then "EN_US" else selectLang}})
   action <- UI.selectLanguageScreen
   case action of
     CHANGE_LANGUAGE -> do
