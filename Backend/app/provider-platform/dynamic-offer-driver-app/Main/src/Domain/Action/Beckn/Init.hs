@@ -49,6 +49,7 @@ import qualified Storage.CachedQueries.FarePolicy as QFP
 import qualified Storage.CachedQueries.Merchant as QM
 import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as CQMPM
 import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as CMSUC
+import qualified Storage.CachedQueries.Merchant.TransporterConfig as CMTC
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.DriverQuote as QDQuote
@@ -184,6 +185,7 @@ handler merchantId req initReq = do
                 _ -> (0, 0, Nothing)
           let fullFarePolicies = FarePolicyD.farePolicyToFullFarePolicy merchantId req.vehicleVariant farePolicy
               estimatedFinishTime = fromIntegral duration `addUTCTime` req.startTime
+          transporterConfig <- CMTC.findByMerchantId merchantId
           fareParams <-
             calculateFareParameters
               CalculateFareParametersParams
@@ -204,7 +206,7 @@ handler merchantId req initReq = do
                           actualDistanceInKm = distance,
                           chargedDurationInHr = duration,
                           nightShiftOverlapChecking = True,
-                          timeDiffFromUtc = 19800
+                          timeDiffFromUtc = maybe (Seconds 19800) (.timeDiffFromUtc) transporterConfig
                         }
                 }
           let estimatedFare = fareSum fareParams

@@ -50,16 +50,3 @@ data NightShiftCharge = ProgressiveNightShiftCharge Float | ConstantNightShiftCh
   deriving anyclass (FromJSON, ToJSON, ToSchema)
 
 $(mkBeamInstancesForJSON ''NightShiftCharge)
-
-data PlatformFeeCharge = ProgressivePlatformFee HighPrecMoney | ConstantPlatformFee Money
-  deriving stock (Show, Eq, Read, Ord, Generic)
-  deriving anyclass (FromJSON, ToJSON, ToSchema)
-
-data PlatformFeeInfo = PlatformFeeInfo
-  { platformFeeCharge :: PlatformFeeCharge,
-    cgst :: Double,
-    sgst :: Double
-  }
-  deriving (Generic, Eq, Show, ToJSON, FromJSON, ToSchema)
-
-$(mkBeamInstancesForJSON ''PlatformFeeCharge)
