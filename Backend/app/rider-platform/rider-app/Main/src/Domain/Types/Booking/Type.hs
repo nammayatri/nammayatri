@@ -32,7 +32,7 @@ import Kernel.Utils.TH (mkHttpInstancesForEnum)
 import Tools.Beam.UtilsTH
 
 activeBookingStatus :: [BookingStatus]
-activeBookingStatus = [NEW, CONFIRMED, AWAITING_REASSIGNMENT, TRIP_ASSIGNED]
+activeBookingStatus = [NEW, CONFIRMED, AWAITING_REASSIGNMENT, TRIP_ASSIGNED, REALLOCATED]
 
 data BookingStatus
   = NEW

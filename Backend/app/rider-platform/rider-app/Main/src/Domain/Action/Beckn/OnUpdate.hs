@@ -26,7 +26,9 @@ module Domain.Action.Beckn.OnUpdate
   )
 where
 
+import qualified Beckn.ACL.Select as SACL
 import Domain.Action.UI.HotSpot
+import qualified Domain.Action.UI.Select as DSelect
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.BookingCancellationReason as SBCR
 import qualified Domain.Types.Estimate as DEstimate
@@ -44,11 +46,15 @@ import Kernel.Beam.Functions
 import qualified Kernel.External.Maps as Maps
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
+import qualified Kernel.Storage.Hedis as Redis
+import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.SessionizerMetrics.Types.Event
 import qualified SharedLogic.CallBPP as CallBPP
 import qualified SharedLogic.MerchantConfig as SMC
+import qualified Storage.CachedQueries.Merchant as QM
+import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.MerchantConfig as CMC
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
 import qualified Storage.Queries.Booking as QRB
@@ -244,7 +250,8 @@ onUpdate ::
     -- HasShortDurationRetryCfg r c, -- uncomment for test update api
     HasField "minTripDistanceForReferralCfg" r (Maybe HighPrecMeters),
     HasBAPMetrics m r,
-    EventStreamFlow m r
+    EventStreamFlow m r,
+    HasField "shortDurationRetryCfg" r RetryCfg
   ) =>
   ValidatedOnUpdateReq ->
   m ()
@@ -415,6 +422,24 @@ onUpdate ValidatedEstimateRepetitionReq {..} = do
   QPFS.clearCache searchReq.riderId
   -- notify customer
   Notify.notifyOnEstimatedReallocated booking estimate.id
+  let merchantOperatingCityId = searchReq.merchantOperatingCityId
+  merchant <- QM.findById searchReq.merchantId >>= fromMaybeM (MerchantNotFound searchReq.merchantId.getId)
+  city <- CQMOC.findById merchantOperatingCityId >>= fmap (.city) . fromMaybeM (MerchantOperatingCityNotFound merchantOperatingCityId.getId)
+  Redis.whenWithLockRedis (selectEstimateLockKey searchReq.riderId) 60 $ do
+    let dSelectRes = mkSelectRes searchReq.customerExtraFee searchReq searchReq.autoAssignEnabled estimate merchant city
+    becknReq <- SACL.buildSelectReq dSelectRes
+    void $ withShortRetry $ CallBPP.select dSelectRes.providerUrl becknReq
+  where
+    mkSelectRes :: Maybe Money -> DSR.SearchRequest -> Maybe Bool -> DEstimate.Estimate -> DMerchant.Merchant -> Context.City -> DSelect.DSelectRes
+    mkSelectRes customerExtraFee searchRequest autoAssignEnabled estimate' merchant city =
+      DSelect.DSelectRes
+        { estimate = estimate',
+          providerId = estimate'.providerId,
+          providerUrl = estimate'.providerUrl,
+          variant = estimate'.vehicleVariant,
+          autoAssignEnabled = isJust autoAssignEnabled && fromMaybe False autoAssignEnabled,
+          ..
+        }
 
 validateRequest ::
   ( CacheFlow m r,
@@ -505,3 +530,6 @@ mkBookingCancellationReason bookingId mbRideId cancellationSource merchantId =
       driverCancellationLocation = Nothing,
       driverDistToPickup = Nothing
     }
+
+selectEstimateLockKey :: Id DP.Person -> Text
+selectEstimateLockKey personId = "Customer:SelectEstimate:CustomerId-" <> personId.getId
