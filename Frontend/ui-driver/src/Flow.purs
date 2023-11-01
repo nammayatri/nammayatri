@@ -313,8 +313,9 @@ getDriverInfoFlow event activeRideResp = do
         else
           pure unit
         setValueToLocalStore IS_DRIVER_ENABLED "true"
-        resp <- Remote.getDriverProfileStatsBT (DriverProfileStatsReq (getcurrentdate ""))
-        modifyScreenState $ GlobalPropsType $ \globalProps -> globalProps{driverInformation = Just (GetDriverInfoResp getDriverInfoResp), driverRideStats = Just resp}
+        (GlobalState allState) <- getState -- TODO:: Temp fix - need to work on improving caching more using SQLite
+        resp <- getDriverStatesFromCache (GlobalState allState) -- Remote.getDriverProfileStatsBT (DriverProfileStatsReq (getcurrentdate ""))
+        -- modifyScreenState $ GlobalPropsType $ \globalProps -> globalProps{driverInformation = Just (GetDriverInfoResp getDriverInfoResp), driverRideStats = Just resp}
         updateDriverDataToStates
         _ <- liftFlowBT $ runEffectFn1 consumeBP unit
         if (isJust getDriverInfoResp.autoPayStatus) then 
@@ -1610,9 +1611,9 @@ currentRideFlow activeRideResp = do
 
   if isJust activeRideResp
     then do
-      _ <- liftFlowBT $ startLocationPollingAPI
       let (GetRidesHistoryResp activeRideResponse) = fromMaybe (GetRidesHistoryResp{list:[]}) activeRideResp
-      (not (null activeRideResponse.list)) ?
+      (not (null activeRideResponse.list)) ? do
+        _ <- liftFlowBT $ startLocationPollingAPI
         activeRidePatch activeRideResponse allState onBoardingSubscriptionViewCount appConfig
         $ noActiveRidePatch allState onBoardingSubscriptionViewCount appConfig
     else do
