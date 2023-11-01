@@ -14,7 +14,6 @@ window.getMerchantConfig = function () {
     "addFavouriteScreenBackArrow" : "ny_ic_chevron_left_white,https://assets.juspay.in/nammayatri/images/user/ny_ic_chevron_left_white.png",
     "popupBackground" : "#FFFFFF",
     "apiLoaderLottie": "primary_button_loader.json",
-    "addFavouriteScreenBackArrow" : "ny_ic_chevron_left_white,https://assets.juspay.in/nammayatri/images/user/ny_ic_chevron_left_white.png",
     "primaryTextColor": "#FCC32C",
     "primaryBackground": "#2C2F3A",
     "showCorporateAddress" : true,
@@ -26,7 +25,7 @@ window.getMerchantConfig = function () {
       {"name":"ಕನ್ನಡ","value":"KN_IN", "subtitle": "Kannada"},
       {"name":"हिंदी","value":"HI_IN", "subtitle": "Hindi"},
       {"name":"தமிழ்","value":"TA_IN", "subtitle": "Tamil"}
-      ],
+    ],
     "engilshInNative" : "ಆಂಗ್ಲ",
     "englishStrings": {
       "WELCOME_TEXT": "Welcome to the Namma Yatri Driver",
@@ -85,10 +84,13 @@ window.getMerchantConfig = function () {
     , "subscriptionConfig" : {
       "enableBlocking" : true,
       "onBoardingSubscription" : true,
+      "showDUOfferBanner" : true,
+      "offerBannerValidTill" : "2024-01-01T00:00:00",
+      "offerBannerDeadline" : "December 31-*$*-ಡಿಸೆಂಬರ್ 31-*$*-31 दिसंबर-*$*-டிசம்பர் 31",
       "offerBannerConfig" : {
         "showDUOfferBanner" : true,
-        "offerBannerValidTill" : "2023-11-02T00:00:00",
-        "offerBannerDeadline" : "November 1-*$*-ನವೆಂಬರ್ 1-*$*-1 नवंबर-*$*-நவம்பர் 1",
+        "offerBannerValidTill" : "2024-01-01T00:00:00",
+        "offerBannerDeadline" : "December 31-*$*-ಡಿಸೆಂಬರ್ 31-*$*-31 दिसंबर-*$*-டிசம்பர் 31",
         "offerBannerPlans" : ["a35ffc7c-de0d-4dcc-83a8-e36a5a29cc1d"],
       },
       "lowDuesLimit" : 25.0,
@@ -108,24 +110,24 @@ window.getMerchantConfig = function () {
       },
     }
     , "rideActionModelConfig" : {
-        "showVehicleVariant" : false
-      }
+      "showVehicleVariant" : false
+    }
     , "referralType" : "LeaderBoard"
     , "gotoConfig" : {
       "maxGotoLocations" : 5,
       "enableGoto" : true
-     }
+    }
     , "bottomNavConfig" : {
-        "subscription" : 
+      "subscription" : 
             { isVisible : true
             }
-      }
+    }
     , "purpleRideConfig" : {
-        "showPurpleVideos" : true,
-        "visualImpairmentVideo" : "https://www.youtube.com/watch?v=2qYXl03N6Jg",
-        "physicalImpairmentVideo" : "https://www.youtube.com/watch?v=B0C6SZTQO6k",
-        "hearingImpairmentVideo" : "https://www.youtube.com/watch?v=udkWOt0serg",
-        "genericAccessibilityVideo" : "https://youtu.be/5s21p2rI58c"
+      "showPurpleVideos" : true,
+      "visualImpairmentVideo" : "https://www.youtube.com/watch?v=2qYXl03N6Jg",
+      "physicalImpairmentVideo" : "https://www.youtube.com/watch?v=B0C6SZTQO6k",
+      "hearingImpairmentVideo" : "https://www.youtube.com/watch?v=udkWOt0serg",
+      "genericAccessibilityVideo" : "https://youtu.be/5s21p2rI58c"
     }
   })
 }
