@@ -1009,7 +1009,7 @@ chooseYourRideConfig state = ChooseYourRide.config
     rideDistance = state.data.rideDistance,
     rideDuration = state.data.rideDuration,
     quoteList = state.data.specialZoneQuoteList,
-    -- quoteList = [ChooseVehicle.dummyBusConfig],
+    -- quoteList = [ChooseVehicle.dummyBusConfig], -- JAYPAL
     showTollExtraCharges = state.data.config.searchLocationConfig.showAdditionalChargesText,
     nearByDrivers = state.data.nearByDrivers
   }

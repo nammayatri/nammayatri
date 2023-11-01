@@ -33,7 +33,7 @@ import Halogen.VDom.DOM.Prop (PropValue)
 import Prelude (class Eq, class Show)
 import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode, defaultDecode, defaultEncode)
 import PrestoDOM (LetterSpacing, BottomSheetState(..))
-import Services.API (AddressComponents, BookingLocationAPIEntity, EstimateAPIEntity(..), QuoteAPIEntity, RideBookingRes, Route)
+import Services.API (AddressComponents, BookingLocationAPIEntity, EstimateAPIEntity(..), QuoteAPIEntity, RideBookingRes, Route, BusTicketRes)
 
 type Contacts = {
   name :: String,
@@ -604,6 +604,7 @@ type HomeScreenStateData =
   , nearByDrivers :: Maybe Int
   , disability :: Maybe DisabilityT
   , searchLocationModelData :: SearchLocationModelData
+  , ticket :: BusTicketRes
   }
 
 type DisabilityT = 
@@ -705,6 +706,9 @@ type HomeScreenStateProps =
   , quantity :: Int
   , isChatNotificationDismissed :: Boolean
   , searchLocationModelProps :: SearchLocationModelProps
+  , selectedBusQuote :: Maybe String
+  , isBusQuoteSelected :: Boolean
+  , ticketId :: String
   }
 
 type SearchLocationModelProps = {

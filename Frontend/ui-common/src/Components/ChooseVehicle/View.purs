@@ -70,6 +70,7 @@ view push config =
           , gravity RIGHT
           , afterRender push (const NoAction)
           , visibility if config.vehicleVariant /= "AUTO_RICKSHAW" then GONE else VISIBLE -- "BUS"
+          -- , visibility if config.vehicleVariant /= "BUS" then GONE else VISIBLE -- JAYPAL: "BUS"
           ][ quantitySelectionView push config ]
   ]
 

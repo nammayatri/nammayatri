@@ -94,7 +94,7 @@ import Screens.HomeScreen.Transformer (dummyRideAPIEntity, getDriverInfo, getEst
 import Screens.RideBookingFlow.HomeScreen.Config (setTipViewData)
 import Screens.SuccessScreen.Handler as UI
 import Screens.Types (HomeScreenState, Location, SearchResultType(..), LocationListItemState, PopupType(..), SearchLocationModelType(..), Stage(..), CardType(..), RatingCard, CurrentLocationDetailsWithDistance(..), CurrentLocationDetails, LocationItemType(..), CallType(..), ZoneType(..), SpecialTags, TipViewStage(..))
-import Services.API (EstimateAPIEntity(..), FareRange, GetDriverLocationResp, GetQuotesRes(..), GetRouteResp, LatLong(..), OfferRes, PlaceName(..), QuoteAPIEntity(..), RideBookingRes(..), SelectListRes(..), SelectedQuotes(..), RideBookingAPIDetails(..), GetPlaceNameResp(..))
+import Services.API (EstimateAPIEntity(..), FareRange, GetDriverLocationResp, GetQuotesRes(..), GetRouteResp, LatLong(..), OfferRes, PlaceName(..), QuoteAPIEntity(..), RideBookingRes(..), SelectListRes(..), SelectedQuotes(..), RideBookingAPIDetails(..), GetPlaceNameResp(..), BusTicketRes(..))
 import Services.Backend as Remote
 import Services.Config (getDriverNumber, getSupportNumber)
 import Storage (KeyStore(..), isLocalStageOn, updateLocalStage, getValueToLocalStore, setValueToLocalStore, getValueToLocalNativeStore, setValueToLocalNativeStore)
@@ -627,6 +627,7 @@ data Action = NoAction
             | LoadMessages
             | KeyboardCallback String
             | NotifyDriverStatusCountDown Int String String String
+            | GetBusConfirmation BusTicketRes
 
 
 eval :: Action -> HomeScreenState -> Eval Action ScreenOutput HomeScreenState
@@ -1752,6 +1753,8 @@ eval (GetRideConfirmation resp) state = do
     false -> normalRideFlow resp state
     true -> specialZoneRideFlow resp state
 
+eval (GetBusConfirmation resp) state = normalBusFlow resp state
+
 eval (NotificationListener notificationType) state = do
   _ <- pure $ printLog "storeCallBackCustomer notificationType" notificationType
   case notificationType of
@@ -1879,11 +1882,15 @@ eval (ChooseYourRideAction (ChooseYourRideController.ChooseVehicleAC ChooseVehic
 eval (ChooseYourRideAction (ChooseYourRideController.ChooseVehicleAC (ChooseVehicleController.OnSelect config))) state = do
   _ <- pure $ spy "OnSelct Triggered" config
   let newQuantity = if config.quantity == 0 then 1 else state.props.quantity
+      isBusQuoteSelected = config.vehicleVariant == "BUS"
+      selectedBusQuote = if isBusQuoteSelected then Just config.id else Nothing
       updatedQuotes = map (\item -> item{activeIndex = config.index, quantity = newQuantity, isSelected = true}) state.data.specialZoneQuoteList
-      newState = state{data{specialZoneQuoteList = updatedQuotes}, props{quantity = newQuantity}}
+      newState = state{data{specialZoneQuoteList = updatedQuotes}, props{quantity = newQuantity, selectedBusQuote = selectedBusQuote, isBusQuoteSelected = isBusQuoteSelected}}
   if state.data.currentSearchResultType == QUOTES then do
               _ <- pure $ setValueToLocalNativeStore SELECTED_VARIANT (config.vehicleVariant)
-              continue newState{data{specialZoneSelectedQuote = Just config.id ,specialZoneSelectedVariant = Just config.vehicleVariant }}
+              if not isBusQuoteSelected 
+                then continue newState{data{specialZoneSelectedQuote = Just config.id ,specialZoneSelectedVariant = Just config.vehicleVariant }}
+                else continue newState{data{selectedVariant = Just config.vehicleVariant}}
               else continue newState{props{estimateId = config.id }, data {selectedEstimatesObject = config}}
 
 eval (ChooseYourRideAction (ChooseYourRideController.ChooseVehicleAC (ChooseVehicleController.ShowRateCard vehicleVariant))) state =
@@ -2329,6 +2336,20 @@ normalRideFlow  (RideBookingRes response) state = do
         , data
           { driverInfoCardState = getDriverInfo state.data.specialZoneSelectedVariant (RideBookingRes response) (state.data.currentSearchResultType == QUOTES)
           }}
+  exit $ RideConfirmed newState { props { isInApp = true } }
+
+normalBusFlow :: BusTicketRes -> HomeScreenState -> Eval Action ScreenOutput HomeScreenState
+normalBusFlow (BusTicket response) state = do
+  let rideStatus = response.status
+      newState = state{ props { currentStage =
+            case rideStatus of
+              "CONFIRMED" -> RideAccepted
+              _ -> HomeScreen
+          , isSearchLocation = NoView
+          , data 
+            { ticket = response }
+          }
+        }
   exit $ RideConfirmed newState { props { isInApp = true } }
 
 specialZoneRideFlow :: RideBookingRes -> HomeScreenState -> Eval Action ScreenOutput HomeScreenState

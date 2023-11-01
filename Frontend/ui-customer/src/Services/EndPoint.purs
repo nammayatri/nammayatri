@@ -150,3 +150,11 @@ disabilityList dummy = (getBaseUrl "39") <> "/disability/list"
 
 personStats :: String -> String
 personStats dummy = (getBaseUrl "40") <> "/personStats"
+
+confirmBus :: String -> Int -> String
+confirmBus quoteId quantity = (getBaseUrl "41") <> "rideSearch/quotes/"<> quoteId <> "/confirmbus?quantity=" <> show quantity
+-- rideSearch/quotes/:quoteId/confirmbus?quantity=()&paymentMethodId=()
+
+busTicket :: String -> String
+busTicket ticketId = (getBaseUrl "42") <> "/busTicket/" <> ticketId
+-- busTicket/{ticketId} -- JAYPAL, confirm endpoint

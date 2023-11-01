@@ -945,19 +945,34 @@ homeScreenFlow = do
           _ <- pure $ spy "selected Quote " selectedQuote
           if isJust selectedQuote then do
             updateLocalStage ConfirmingRide
-            response  <- lift $ lift $ Remote.rideConfirm (fromMaybe "" selectedQuote)
-            case response of
-              Right (ConfirmRes resp) -> do
-                let bookingId = resp.bookingId
-                modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{currentStage = ConfirmingRide, bookingId = bookingId, isPopUp = NoPopUp}})
-                homeScreenFlow
-              Left err  -> do
-                if not (err.code == 400 && (decodeError err.response.errorMessage "errorCode") == "QUOTE_EXPIRED") then pure $ toast (getString ERROR_OCCURED_TRY_AGAIN) else pure unit
-                _ <- setValueToLocalStore AUTO_SELECTING "false"
-                _ <- pure $ updateLocalStage QuoteList
-                modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{currentStage = QuoteList,selectedQuote = Nothing, expiredQuotes = snoc state.props.expiredQuotes (fromMaybe "" state.props.selectedQuote)}, data {quoteListModelState = []}})
-                homeScreenFlow
-            else homeScreenFlow
+            let isBusQuoteSelected = state.props.isBusQuoteSelected
+            if not isBusQuoteSelected then do
+              response  <- lift $ lift $ Remote.rideConfirm (fromMaybe "" selectedQuote)
+              case response of
+                Right (ConfirmRes resp) -> do
+                  let bookingId = resp.bookingId
+                  modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{currentStage = ConfirmingRide, bookingId = bookingId, isPopUp = NoPopUp}})
+                  homeScreenFlow
+                Left err  -> do
+                  if not (err.code == 400 && (decodeError err.response.errorMessage "errorCode") == "QUOTE_EXPIRED") then pure $ toast (getString ERROR_OCCURED_TRY_AGAIN) else pure unit
+                  _ <- setValueToLocalStore AUTO_SELECTING "false"
+                  _ <- pure $ updateLocalStage QuoteList
+                  modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{currentStage = QuoteList,selectedQuote = Nothing, expiredQuotes = snoc state.props.expiredQuotes (fromMaybe "" state.props.selectedQuote)}, data {quoteListModelState = []}})
+                  homeScreenFlow
+            else do -- JAYPAL confirm once
+              response  <- lift $ lift $ Remote.busConfirm (fromMaybe "" selectedQuote)
+              case response of
+                Right (BusConfirmRes resp) -> do
+                  let ticketId = resp.ticketId
+                  modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{currentStage = ConfirmingRide, ticketId = ticketId, isPopUp = NoPopUp}})
+                  homeScreenFlow
+                Left err  -> do
+                  if not (err.code == 400 && (decodeError err.response.errorMessage "errorCode") == "QUOTE_EXPIRED") then pure $ toast (getString ERROR_OCCURED_TRY_AGAIN) else pure unit
+                  _ <- setValueToLocalStore AUTO_SELECTING "false"
+                  _ <- pure $ updateLocalStage QuoteList
+                  modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen {props{currentStage = QuoteList, selectedQuote = Nothing, expiredQuotes = snoc state.props.expiredQuotes (fromMaybe "" state.props.selectedQuote)}, data {quoteListModelState = []}})
+                  homeScreenFlow
+          else homeScreenFlow
     ONGOING_RIDE state -> do
       _ <- pure $ setValueToLocalStore TRACKING_ENABLED "True"
       _ <- pure $ setValueToLocalStore TRACKING_DRIVER "False"

@@ -21,7 +21,7 @@ import Components.SettingSideBar.Controller (SettingSideBarState, Status(..))
 import Components.ChooseVehicle.Controller (SearchType(..)) as CV
 import Data.Maybe (Maybe(..))
 import Screens.Types (Contact, DriverInfoCard, HomeScreenState, LocationListItemState, PopupType(..), RatingCard(..), SearchLocationModelType(..), Stage(..), Address, EmergencyHelpModelState,Location, ZoneType(..), SpecialTags, TipViewStage(..), SearchResultType(..))
-import Services.API (DriverOfferAPIEntity(..), QuoteAPIDetails(..), QuoteAPIEntity(..), PlaceName(..), LatLong(..), SpecialLocation(..), QuoteAPIContents(..), RideBookingRes(..), RideBookingAPIDetails(..), RideBookingDetails(..), FareRange(..), FareBreakupAPIEntity(..))
+import Services.API (DriverOfferAPIEntity(..), QuoteAPIDetails(..), QuoteAPIEntity(..), PlaceName(..), LatLong(..), SpecialLocation(..), QuoteAPIContents(..), RideBookingRes(..), RideBookingAPIDetails(..), RideBookingDetails(..), FareRange(..), FareBreakupAPIEntity(..), BusTicketRes(..))
 import Prelude (($) ,negate)
 import Data.Array (head)
 import Prelude(negate)
@@ -129,6 +129,7 @@ initData = {
     , nearByDrivers : Nothing
     , disability : Nothing
     , searchLocationModelData : dummySearchLocationModelData
+    , ticket : dummyBusTicket
     },
     props: {
       rideRequestFlow : false
@@ -228,6 +229,9 @@ initData = {
     , quantity : 0
     , isChatNotificationDismissed : false
     , searchLocationModelProps : dummySearchLocationModelProps
+    , selectedBusQuote : Nothing
+    , isBusQuoteSelected : false
+    , ticketId : ""
     }
 }
 
@@ -448,4 +452,16 @@ dummyFareBreakUp :: FareBreakupAPIEntity
 dummyFareBreakUp = FareBreakupAPIEntity{
   amount : 0,
   description : "fare"
+}
+
+dummyBusTicket :: BusTicketRes
+dummyBusTicket = BusTicketRes{
+  id : "",
+  status : "",
+  quoteId : Nothing,
+  paymentUrl : Nothing,
+  quantity : 0,
+  pricePerAdult : 0,
+  totalPrice : 0,
+  qrData : ""
 }
