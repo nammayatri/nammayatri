@@ -49,7 +49,7 @@ search ::
 search transporterId (SignatureAuthResult _ subscriber) (SignatureAuthResult _ gateway) req =
   withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
     logTagInfo "Search API Flow" "Reached"
-    dSearchReq <- ACL.buildSearchReq subscriber req
+    dSearchReq <- ACL.buildSearchReq transporterId subscriber req
     Redis.whenWithLockRedis (searchLockKey dSearchReq.messageId transporterId.getId) 60 $ do
       merchant <- DSearch.validateRequest transporterId dSearchReq
       fork "search request processing" $

@@ -29,6 +29,8 @@ import Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified SharedLogic.LocationMapping as SLM
 import qualified Storage.Beam.SearchRequestSpecialZone as BeamSRSZ
+import qualified Storage.CachedQueries.Merchant as CQM
+import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Queries.Location as QL
 import qualified Storage.Queries.LocationMapping as QLM
 import qualified Storage.Queries.SearchRequest as QSL
@@ -94,6 +96,8 @@ instance FromTType' BeamSRSZ.SearchRequestSpecialZone SearchRequestSpecialZone w
           tl <- QL.findById toLoc.locationId >>= fromMaybeM (InternalError $ "ToLocation not found in booking for toLocationId: " <> toLoc.locationId.getId)
           return (fl, tl)
     pUrl <- parseBaseUrl bapUri
+    merchant <- CQM.findById (Id providerId) >>= fromMaybeM (MerchantNotFound providerId)
+    merchantOpCityId <- CQMOC.getMerchantOpCityId (Id <$> merchantOperatingCityId) merchant Nothing
     pure $
       Just
         SearchRequestSpecialZone
@@ -103,6 +107,7 @@ instance FromTType' BeamSRSZ.SearchRequestSpecialZone SearchRequestSpecialZone w
             startTime = startTime,
             validTill = validTill,
             providerId = Id providerId,
+            merchantOperatingCityId = merchantOpCityId,
             fromLocation = fl,
             toLocation = tl,
             area = area,
@@ -123,6 +128,7 @@ instance ToTType' BeamSRSZ.SearchRequestSpecialZone SearchRequestSpecialZone whe
         BeamSRSZ.startTime = startTime,
         BeamSRSZ.validTill = validTill,
         BeamSRSZ.providerId = getId providerId,
+        BeamSRSZ.merchantOperatingCityId = Just $ getId merchantOperatingCityId,
         BeamSRSZ.fromLocationId = Just $ getId fromLocation.id,
         BeamSRSZ.toLocationId = Just $ getId toLocation.id,
         BeamSRSZ.area = area,

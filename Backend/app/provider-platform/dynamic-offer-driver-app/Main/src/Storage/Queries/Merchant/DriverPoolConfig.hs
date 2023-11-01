@@ -64,7 +64,8 @@ instance FromTType' BeamDPC.DriverPoolConfig DriverPoolConfig where
     pure $
       Just
         DriverPoolConfig
-          { merchantId = Id merchantId,
+          { id = Id id,
+            merchantId = Id merchantId,
             merchantOperatingCityId = Id merchantOperatingCityId,
             distanceBasedBatchSplit = distanceBasedBatchSplit,
             minRadiusOfSearch = minRadiusOfSearch,
@@ -92,7 +93,8 @@ instance FromTType' BeamDPC.DriverPoolConfig DriverPoolConfig where
 instance ToTType' BeamDPC.DriverPoolConfig DriverPoolConfig where
   toTType' DriverPoolConfig {..} = do
     BeamDPC.DriverPoolConfigT
-      { BeamDPC.merchantId = getId merchantId,
+      { BeamDPC.id = getId id,
+        BeamDPC.merchantId = getId merchantId,
         BeamDPC.merchantOperatingCityId = getId merchantOperatingCityId,
         BeamDPC.distanceBasedBatchSplit = distanceBasedBatchSplit,
         BeamDPC.minRadiusOfSearch = minRadiusOfSearch,

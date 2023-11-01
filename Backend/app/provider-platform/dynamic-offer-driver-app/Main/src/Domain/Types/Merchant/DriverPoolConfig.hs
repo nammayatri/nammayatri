@@ -25,7 +25,8 @@ import Kernel.Types.Id
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool.Config
 
 data DriverPoolConfigD u = DriverPoolConfig
-  { merchantId :: Id Merchant,
+  { id :: Id DriverPoolConfig,
+    merchantId :: Id Merchant,
     merchantOperatingCityId :: Id MerchantOperatingCity,
     minRadiusOfSearch :: Meters,
     maxRadiusOfSearch :: Meters,

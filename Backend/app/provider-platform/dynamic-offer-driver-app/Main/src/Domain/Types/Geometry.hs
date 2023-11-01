@@ -15,10 +15,12 @@
 module Domain.Types.Geometry where
 
 import Kernel.Prelude
+import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id (Id)
 
 data Geometry = Geometry
   { id :: Id Geometry,
+    city :: Context.City,
     region :: Text
   }
   deriving (Generic, Show)
