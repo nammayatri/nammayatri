@@ -37,7 +37,7 @@ import AWS.S3 as S3
 import Control.Applicative ((<|>))
 import qualified Data.HashMap as HML
 import qualified Data.HashMap.Strict as HM
-import Data.List (find)
+import qualified Data.List as DL
 import Data.Text as T hiding (find, length, map, null, zip)
 import qualified Data.Time as DT
 import qualified Data.Time.Calendar.OrdinalDate as TO
@@ -108,13 +108,15 @@ data RCStatusReq = RCStatusReq
   }
   deriving (Generic, ToSchema, ToJSON, FromJSON)
 
-validateDriverRCReq :: [Text] -> Validate DriverRCReq
-validateDriverRCReq rcNumberPrefix DriverRCReq {..} =
+validateDriverRCReq :: Validate DriverRCReq
+validateDriverRCReq DriverRCReq {..} =
   sequenceA_
     [validateField "vehicleRegistrationCertNumber" vehicleRegistrationCertNumber certNum]
   where
-    certNum = LengthInRange 5 12 `And` (string ("(" <> concatList <> ")") <> star (latinUC \/ digit \/ ","))
-    concatList = T.unpack $ T.intercalate "|" rcNumberPrefix
+    certNum = LengthInRange 5 12 `And` star (latinUC \/ digit \/ ",")
+
+prefixMatchedResult :: Text -> [Text] -> Bool
+prefixMatchedResult rcNumber = DL.any (`T.isPrefixOf` rcNumber)
 
 verifyRC ::
   Bool ->
@@ -124,7 +126,6 @@ verifyRC ::
   Maybe Vehicle.Variant -> -- in case hardcoded variant passed from dashboard, then ignore variant coming from IDFY
   Flow DriverRCRes
 verifyRC isDashboard mbMerchant (personId, merchantId, merchantOpCityId) req@DriverRCReq {..} mbVariant = do
-  -- TODO: check if verifyRC is coming from fleet, check personId should be part of that fleet else throw error
   person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   mbFleetOwnerId <- Redis.safeGet $ makeFleetOwnerKey vehicleRegistrationCertNumber
   whenJust mbFleetOwnerId $ \fleetOwnerId -> do
@@ -134,7 +135,9 @@ verifyRC isDashboard mbMerchant (personId, merchantId, merchantOpCityId) req@Dri
       Just fleetDriver -> do
         unless fleetDriver.isActive $ throwError (InvalidRequest "Driver is not active with this fleet, add this driver to the fleet before adding a vehicle with them")
   onboardingDocumentConfig <- SCO.findByMerchantOpCityIdAndDocumentType merchantOpCityId ODC.RC >>= fromMaybeM (OnboardingDocumentConfigNotFound merchantOpCityId.getId (show ODC.RC))
-  runRequestValidation (validateDriverRCReq onboardingDocumentConfig.rcNumberPrefixList) req
+  let checkPrefixOfRCNumber = prefixMatchedResult vehicleRegistrationCertNumber onboardingDocumentConfig.rcNumberPrefixList
+  unless checkPrefixOfRCNumber $ throwError (InvalidRequest "RC number prefix is not valid")
+  runRequestValidation validateDriverRCReq req
   driverInfo <- DIQuery.findById (cast personId) >>= fromMaybeM (PersonNotFound personId.getId)
   when driverInfo.blocked $ throwError DriverAccountBlocked
   whenJust mbMerchant $ \merchant -> do
@@ -476,7 +479,7 @@ convertTextToUTC a = do
 
 isValidCOVRC :: Maybe Int -> Maybe Text -> [ODC.VehicleClassVariantMap] -> ODC.VehicleClassCheckType -> Text -> (Bool, Maybe Vehicle.Variant)
 isValidCOVRC capacity manufacturer vehicleClassVariantMap validCOVsCheck cov = do
-  let vehicleClassVariant = find checkIfMatch vehicleClassVariantMap
+  let vehicleClassVariant = DL.find checkIfMatch vehicleClassVariantMap
   case vehicleClassVariant of
     Just obj -> (True, Just obj.vehicleVariant)
     Nothing -> (False, Nothing)
