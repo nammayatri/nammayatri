@@ -28,6 +28,7 @@ data SearchRequestSpecialZoneT f = SearchRequestSpecialZoneT
     startTime :: B.C f UTCTime,
     validTill :: B.C f UTCTime,
     providerId :: B.C f Text,
+    merchantOperatingCityId :: B.C f (Maybe Text),
     fromLocationId :: B.C f (Maybe Text),
     toLocationId :: B.C f (Maybe Text),
     area :: B.C f (Maybe FareProductD.Area),

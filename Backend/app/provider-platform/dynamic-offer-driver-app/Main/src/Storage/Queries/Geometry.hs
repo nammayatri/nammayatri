@@ -45,5 +45,5 @@ instance FromTType' BeamG.Geometry Geometry where
       Just
         Geometry
           { id = Id id,
-            region = region
+            ..
           }

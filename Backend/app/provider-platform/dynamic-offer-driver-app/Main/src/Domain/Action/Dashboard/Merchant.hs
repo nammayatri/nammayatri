@@ -288,7 +288,7 @@ driverPoolConfigCreate merchantShortId opCity tripDistance variant req = do
   pure Success
 
 buildDriverPoolConfig ::
-  MonadTime m =>
+  (MonadTime m, MonadGuid m) =>
   Id DM.Merchant ->
   Id DMOC.MerchantOperatingCity ->
   Meters ->
@@ -297,9 +297,11 @@ buildDriverPoolConfig ::
   m DDPC.DriverPoolConfig
 buildDriverPoolConfig merchantId merchantOpCityId tripDistance vehicleVariant Common.DriverPoolConfigCreateReq {..} = do
   now <- getCurrentTime
+  uid <- generateGUID
   pure
     DDPC.DriverPoolConfig
-      { merchantId,
+      { id = Id uid,
+        merchantId,
         merchantOperatingCityId = merchantOpCityId,
         poolSortingType = castPoolSortingType poolSortingType,
         distanceBasedBatchSplit = map castBatchSplitByPickupDistance distanceBasedBatchSplit,

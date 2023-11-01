@@ -159,7 +159,7 @@ handler merchant sReq = do
         whenJustM
           (QSearchRequestSpecialZone.findByMsgIdAndBapIdAndBppId sReq.messageId sReq.bapId merchantId)
           (\_ -> throwError $ InvalidRequest "Duplicate Search request")
-        searchRequestSpecialZone <- buildSearchRequestSpecialZone sReq merchantId fromLocation toLocation result.distance result.duration allFarePoliciesProduct.area
+        searchRequestSpecialZone <- buildSearchRequestSpecialZone sReq merchantId merchantOpCityId fromLocation toLocation result.distance result.duration allFarePoliciesProduct.area
         triggerSearchEvent SearchEventData {searchRequest = Right searchRequestSpecialZone, merchantId = merchantId}
         _ <- QSearchRequestSpecialZone.createSearchRequestSpecialZone searchRequestSpecialZone
         Redis.setExp (searchRequestKey $ getId searchRequestSpecialZone.id) routeInfo 3600
@@ -336,13 +336,14 @@ buildSearchRequestSpecialZone ::
   ) =>
   DSearchReq ->
   Id DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
   DLoc.Location ->
   DLoc.Location ->
   Meters ->
   Seconds ->
   DFareProduct.Area ->
   m DSRSZ.SearchRequestSpecialZone
-buildSearchRequestSpecialZone DSearchReq {..} providerId fromLocation toLocation estimatedDistance estimatedDuration area = do
+buildSearchRequestSpecialZone DSearchReq {..} providerId merchantOpCityId fromLocation toLocation estimatedDistance estimatedDuration area = do
   uuid <- generateGUID
   now <- getCurrentTime
   searchRequestExpirationSeconds <- asks (.searchRequestExpirationSeconds)
@@ -354,6 +355,7 @@ buildSearchRequestSpecialZone DSearchReq {..} providerId fromLocation toLocation
         createdAt = now,
         updatedAt = now,
         area = Just area,
+        merchantOperatingCityId = merchantOpCityId,
         ..
       }
 

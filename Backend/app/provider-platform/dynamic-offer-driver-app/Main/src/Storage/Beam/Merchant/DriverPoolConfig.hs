@@ -23,7 +23,8 @@ import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.Dri
 import Tools.Beam.UtilsTH
 
 data DriverPoolConfigT f = DriverPoolConfigT
-  { merchantId :: B.C f Text,
+  { id :: B.C f Text,
+    merchantId :: B.C f Text,
     merchantOperatingCityId :: B.C f Text,
     distanceBasedBatchSplit :: B.C f [BatchSplitByPickupDistance], -- (PostgresList BatchSplitByPickupDistance)
     minRadiusOfSearch :: B.C f Meters,
@@ -53,10 +54,10 @@ instance B.Table DriverPoolConfigT where
   data PrimaryKey DriverPoolConfigT f
     = Id (B.C f Text)
     deriving (Generic, B.Beamable)
-  primaryKey = Id . merchantOperatingCityId
+  primaryKey = Id . id
 
 type DriverPoolConfig = DriverPoolConfigT Identity
 
-$(enableKVPG ''DriverPoolConfigT ['merchantOperatingCityId] [])
+$(enableKVPG ''DriverPoolConfigT ['id] [])
 
 $(mkTableInstances ''DriverPoolConfigT "driver_pool_config")
