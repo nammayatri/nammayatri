@@ -726,7 +726,6 @@ normalRoute _ = {
     destMarker : if isPreviousVersion (getValueToLocalStore VERSION_NAME) (getPreviousVersion "") then "dest_marker" else "ny_ic_dest_marker"
 }
 
-
 makeSendIssueReq :: Maybe String ->  Maybe String -> String -> String -> SendIssueReq
 makeSendIssueReq email bookingId reason description= SendIssueReq {
     "contactEmail" : email ,
