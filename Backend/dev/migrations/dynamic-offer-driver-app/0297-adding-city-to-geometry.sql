@@ -21,7 +21,7 @@ ALTER TABLE atlas_driver_offer_bpp.driver_pool_config
 ADD COLUMN id character(36);
 
 UPDATE atlas_driver_offer_bpp.driver_pool_config
-SET id = atlas_driver_offer_bpp.uuid_generate_v4();
+SET id = md5(random()::TEXT || clock_timestamp()::TEXT || random()::TEXT || random()::TEXT || random()::TEXT || random()::TEXT)::UUID;
 
 ALTER TABLE atlas_driver_offer_bpp.driver_pool_config
 DROP CONSTRAINT driver_pool_config_pkey;
