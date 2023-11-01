@@ -88,8 +88,8 @@ data KeyStore = USER_NAME
                 | LAUNCH_DATE_SETTING
                 | MESSAGES_DELAY
                 | NEGOTIATION_UNIT
-                | SET_WAITING_TIME
-                | IS_WAIT_TIMER_STOP
+                | WAITING_TIME_STATUS
+                | WAITING_TIME_VAL
                 | VEHICLE_VARIANT
                 | MAX_LIMIT_TO_STORE_LOCATION_PT_NOT
                 | SHOW_PAYMENT_MODAL

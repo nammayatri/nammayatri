@@ -1,0 +1,27 @@
+name: ES-Lint
+
+on:
+  pull_request:
+    paths:
+        - 'Frontend/**'
+  push:
+    branches:
+      - main
+
+jobs:
+  eslint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 19
+      - name: ESLint Code Review
+        uses: yousufkalim/eslint-action@latest
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }} # Optional
+          eslint-args: '--ignore-path=.gitignore'
+          eslintrc: false # Set this to true if you want to use your own .eslintrc rules
+          extensions: 'js,jsx,ts,tsx'
+          auto-fix-before-test: false # Set this to true if want to format and fix all the lint issue before testing
+          annotations: true

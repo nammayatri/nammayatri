@@ -106,12 +106,7 @@ updateStage stage = do
             HomeScreenStateType
               (\state ->
                 state
-                { data {
-                  activeRide {
-                    isDriverArrived = false
-                  }
-                }
-                , props
+                { props
                   {
                     cancelRideModalShow = false,
                     rideActionModal = true,

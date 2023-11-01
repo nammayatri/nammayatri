@@ -83,7 +83,7 @@ import Screens.Handlers (homeScreen)
 import Screens.DriverSavedLocationScreen.Transformer (getLocationArray)
 import Screens.Handlers as UI
 import Screens.HomeScreen.ComponentConfig (mapRouteConfig)
-import Screens.HomeScreen.Controller (activeRideDetail)
+import Screens.HomeScreen.Controller (activeRideDetail, getPreviousVersion)
 import Screens.HomeScreen.ScreenData (initData) as HomeScreenData
 import Screens.HomeScreen.ScreenData (dummyDriverRideStats)
 import Screens.HomeScreen.Transformer (getDisabledLocById)
@@ -115,6 +115,8 @@ import Engineering.Helpers.Commons as EHC
 import PrestoDOM (initUI)
 import Common.Resources.Constants (zoomLevel)
 import Types.App as TA
+import Engineering.Helpers.Suggestions as EHS
+import Resource.Constants as RC
 
 
 baseAppFlow :: Boolean -> Maybe Event -> FlowBT String Unit
@@ -1640,7 +1642,7 @@ currentRideFlow activeRideResp = do
           setValueToLocalNativeStore IS_RIDE_ACTIVE  "true"
           _ <- updateStage $ HomeScreenStage stage
           void $ pure $ setCleverTapUserProp [{key : "Driver On-ride", value : unsafeToForeign "Yes"}]
-          modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data{ activeRide = activeRide{source = sourceMod, destination = destinationMod, isDriverArrived = getDriverArrivedStatus activeRide stage}}, props{ silentPopUpView = false, goOfflineModal = false}})
+          modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data{ activeRide = activeRide{source = sourceMod, destination = destinationMod}}, props{ silentPopUpView = false, goOfflineModal = false}})
         Nothing -> do
           setValueToLocalNativeStore IS_RIDE_ACTIVE  "false"
           _ <- updateStage $ HomeScreenStage HomeScreen
@@ -1652,6 +1654,7 @@ currentRideFlow activeRideResp = do
             else pure unit
     noActiveRidePatch allState onBoardingSubscriptionViewCount appConfig = do
       setValueToLocalNativeStore IS_RIDE_ACTIVE  "false"
+      void $ pure $ setValueToLocalStore WAITING_TIME_STATUS (show ST.NoStatus)
       when (allState.homeScreen.props.currentStage /= HomeScreen) $ do
         updateStage $ HomeScreenStage HomeScreen
       updateDriverDataToStates
@@ -1682,14 +1685,6 @@ updateDriverStatus status = do
   if status && getValueToLocalNativeStore DRIVER_STATUS_N == "Silent" then Silent
     else if status then Online
       else Offline
-
-getDriverArrivedStatus :: ActiveRide -> HomeScreenStage -> Boolean
-getDriverArrivedStatus activeRide stage 
-  | elem stage [RideAccepted,ChatWithCustomer] = do 
-      let lastKnownLat = fromMaybe 0.0 $ Number.fromString $ getValueToLocalNativeStore LAST_KNOWN_LAT
-          lastKnownLon = fromMaybe 0.0 $ Number.fromString $ getValueToLocalNativeStore LAST_KNOWN_LON
-      ((getDistanceBwCordinates lastKnownLat lastKnownLon  activeRide.src_lat activeRide.src_lon) < 0.05) && not activeRide.notifiedCustomer
-  | otherwise = false
 
 checkDriverPaymentStatus :: GetDriverInfoResp -> FlowBT String Unit
 checkDriverPaymentStatus (GetDriverInfoResp getDriverInfoResp) = when
@@ -1836,17 +1831,15 @@ homeScreenFlow = do
       startRideResp <- lift $ lift $ Remote.startRide id (Remote.makeStartRideReq otp (fromMaybe 0.0 (Number.fromString lat)) (fromMaybe 0.0 (Number.fromString lon))) -- driver's lat long during starting ride
       case startRideResp of
         Right startRideResp -> do
-          if((getValueToLocalStore IS_WAIT_TIMER_STOP ) /= "NoView") then
-            setValueToLocalStore IS_WAIT_TIMER_STOP (show ST.Stop)
-          else
-            pure unit
           _ <- pure $ setValueToLocalNativeStore RIDE_ID id
           liftFlowBT $ logEvent logField_ "ny_driver_ride_start"
-          modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{ props {enterOtpModal = false,timerRefresh=false}, data{ route = [], activeRide{status = INPROGRESS}}})
+          modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{ props {enterOtpModal = false}, data{ route = [], activeRide{status = INPROGRESS}}})
           void $ lift $ lift $ toggleLoader false
           _ <- updateStage $ HomeScreenStage RideStarted
           _ <- pure $ setValueToLocalStore TRIGGER_MAPS "true"
           _ <- pure $ setValueToLocalStore TRIP_STATUS "started"
+          void $ pure $ setValueToLocalStore WAITING_TIME_STATUS (show ST.NoStatus)
+          void $ pure $ EHC.clearTimer updatedState.data.activeRide.waitTimerId
           currentRideFlow Nothing
         Left errorPayload -> do
           let errResp = errorPayload.response
@@ -1904,7 +1897,7 @@ homeScreenFlow = do
       _ <- pure $ metaLogEvent "ny_driver_ride_ended"
       liftFlowBT $ firebaseLogEvent "ny_driver_ride_ended"
       _ <- pure $ removeAllPolylines ""
-      _ <- pure $ setValueToLocalStore IS_WAIT_TIMER_STOP "NoView"
+      void $ pure $ setValueToLocalStore WAITING_TIME_STATUS (show ST.NoStatus)
       _ <- pure $ setValueToLocalNativeStore IS_RIDE_ACTIVE  "false"
       void $ pure $ setCleverTapUserProp [{key : "Driver On-ride", value : unsafeToForeign "No"}]
       _ <- pure $ setValueToLocalStore DRIVER_STATUS_N "Online"
@@ -1964,7 +1957,8 @@ homeScreenFlow = do
                                                                                         {key : "Estimated Ride Distance (meters)" , value : unsafeToForeign state.data.activeRide.distance}]
       API.DriverCancelRideResponse cancelRideResp <- Remote.cancelRide id (Remote.makeCancelRideReq info reason)
       _ <- pure if state.data.driverGotoState.timerId /= "" then clearTimer state.data.driverGotoState.timerId else unit
-      _ <- pure $ setValueToLocalStore IS_WAIT_TIMER_STOP "NoView"
+      void $ pure $ setValueToLocalStore WAITING_TIME_STATUS (show ST.NoStatus)
+      void $ pure $ EHC.clearTimer state.data.activeRide.waitTimerId
       _ <- pure $ removeAllPolylines ""
       _ <- pure $ setValueToLocalStore DRIVER_STATUS_N "Online"
       _ <- pure $ setValueToLocalNativeStore DRIVER_STATUS_N "Online"
@@ -1984,6 +1978,8 @@ homeScreenFlow = do
         "CANCELLED_PRODUCT" -> do
           _ <- pure $ setValueToLocalStore DRIVER_STATUS_N "Online"
           _ <- pure $ setValueToLocalNativeStore DRIVER_STATUS_N "Online"
+          void $ pure $ setValueToLocalStore WAITING_TIME_STATUS (show ST.NoStatus)
+          void $ pure $ EHC.clearTimer state.data.activeRide.waitTimerId
           (DriverActiveInactiveResp resp) <- Remote.driverActiveInactiveBT "true" $ toUpper $ show Online
           removeChatService ""
           _ <- updateStage $ HomeScreenStage HomeScreen
@@ -2009,12 +2005,17 @@ homeScreenFlow = do
       homeScreenFlow
     RELOAD state -> homeScreenFlow
     NOTIFY_CUSTOMER state -> do
-      resp <- Remote.driverArrivedBT (state.data.activeRide.id) (DriverArrivedReq {
+      driverArrived <- lift $ lift $ Remote.driverArrived (state.data.activeRide.id) (DriverArrivedReq {
         "lat" : state.data.currentDriverLat
       , "lon" : state.data.currentDriverLon
       })
-      liftFlowBT $ logEvent logField_ "ny_driver_i_have_arrived_clicked"
-      modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{activeRide{notifiedCustomer = true}}, props{currentStage = ChatWithCustomer}})
+      case driverArrived of
+        Right _ -> do
+          void $ pure $ setValueToLocalStore WAITING_TIME_STATUS (show ST.Triggered)
+          void $ pure $ setValueToLocalStore WAITING_TIME_VAL (getCurrentUTC "")
+          void $ pure $ JB.sendMessage $ if EHC.isPreviousVersion (getValueToLocalStore VERSION_NAME) (getPreviousVersion (getMerchant FunctionCall)) then (EHS.getMessageFromKey "dis1AP" "EN_US") else "dis1AP"
+          modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{activeRide{notifiedCustomer = true}}})
+        Left _ -> pure unit
       homeScreenFlow
     UPDATE_ROUTE state -> do
       let srcLat = if state.props.currentStage == RideAccepted then state.data.currentDriverLat else state.data.activeRide.src_lat
@@ -2565,6 +2566,7 @@ getDriverInfoDataFromCache (GlobalState globalState) = do
   else do
     driverInfoResp <- Remote.getDriverInfoBT (GetDriverInfoReq {})
     modifyScreenState $ GlobalPropsType $ \globalProps -> globalProps{driverInformation = Just $ driverInfoResp}
+    updateDriverDataToStates
     pure driverInfoResp
 
 getDriverStatesFromCache :: GlobalState -> FlowBT String DriverProfileStatsResp
@@ -2664,7 +2666,9 @@ updateDriverDataToStates = do
                                             
     props {
       statusOnline = if (isJust getDriverInfoResp.mode) then any ( _ == updateDriverStatus getDriverInfoResp.active) [Online, Silent] else getDriverInfoResp.active
-    , driverStatusSet = getDriverStatus ""
+    , driverStatusSet = case getDriverInfoResp.mode of
+                          Just mode -> getDriverStatusFromMode mode
+                          Nothing -> getDriverStatus ""
     , showGenderBanner = showGender
     }})
 
@@ -2782,37 +2786,61 @@ updateBannerAndPopupFlags = do
   globalstate <- getState
   (GetDriverInfoResp getDriverInfoResp) <- getDriverInfoDataFromCache globalstate
   appConfig <- getAppConfig Constants.appConfig
-  let autoPayNotActive = isNothing getDriverInfoResp.autoPayStatus || getDriverInfoResp.autoPayStatus /= Just "ACTIVE"
-      pendingTotalManualDues = fromMaybe 0.0 getDriverInfoResp.manualDues
-      subscriptionConfig = appConfig.subscriptionConfig
-      freeTrialDays = fromMaybe 0 getDriverInfoResp.freeTrialDaysLeft
-      shouldShowPopup = getValueToLocalStore APP_SESSION_TRACK_COUNT == "true" && getValueToLocalNativeStore IS_RIDE_ACTIVE == "false" && (isOnFreeTrial FunctionCall || (pendingTotalManualDues /= 0.0)) && getDriverInfoResp.subscribed && appConfig.subscriptionConfig.enableSubscriptionPopups
-      autoPayStatus = getAutopayStatus getDriverInfoResp.autoPayStatus
-      autopayBannerType = if subscriptionConfig.enableSubscriptionPopups then
-                            case autoPayNotActive, isOnFreeTrial FunctionCall, (pendingTotalManualDues /= 0.0) of
-                                true, true, _  -> FREE_TRIAL_BANNER
-                                _, false, true -> do
-                                            if pendingTotalManualDues < subscriptionConfig.lowDuesLimit then LOW_DUES_BANNER
-                                            else if pendingTotalManualDues >= subscriptionConfig.lowDuesLimit && pendingTotalManualDues < subscriptionConfig.highDueWarningLimit then CLEAR_DUES_BANNER
-                                            else if pendingTotalManualDues >= subscriptionConfig.highDueWarningLimit && pendingTotalManualDues < subscriptionConfig.maxDuesLimit then DUE_LIMIT_WARNING_BANNER
-                                            else NO_SUBSCRIPTION_BANNER
-                                true, _, _ -> if isNothing getDriverInfoResp.autoPayStatus then NO_SUBSCRIPTION_BANNER else SETUP_AUTOPAY_BANNER
-                                _, _, _        -> NO_SUBSCRIPTION_BANNER
-                          else NO_SUBSCRIPTION_BANNER
-      subscriptionPopupType = case isOnFreeTrial FunctionCall, autoPayNotActive, shouldShowPopup of
-                                  true, true, true -> case freeTrialDays of
-                                                      _ | freeTrialDays == 3 || freeTrialDays == 2 || freeTrialDays == 1 -> FREE_TRIAL_POPUP
-                                                      _ -> NO_SUBSCRIPTION_POPUP
-                                  false, _, true -> if pendingTotalManualDues >= subscriptionConfig.maxDuesLimit then NO_SUBSCRIPTION_POPUP else LOW_DUES_CLEAR_POPUP
-                                  _, _, _        -> NO_SUBSCRIPTION_POPUP
-      shouldMoveDriverOffline = (withinTimeRange "12:00:00" "23:59:59" (convertUTCtoISC(getCurrentUTC "") "HH:mm:ss"))
-      moveDriverToOffline = (getValueToLocalStore MOVED_TO_OFFLINE_DUE_TO_HIGH_DUE == "") 
-                              && shouldMoveDriverOffline 
-                                && appConfig.subscriptionConfig.moveDriverToOfflineInHighDueDaily  
-                                  && getValueToLocalNativeStore IS_RIDE_ACTIVE == "false"
-                                    && pendingTotalManualDues >= subscriptionConfig.highDueWarningLimit
-                                      && getDriverInfoResp.mode /= Just "OFFLINE"
+  let
+    autoPayNotActive = isNothing getDriverInfoResp.autoPayStatus || getDriverInfoResp.autoPayStatus /= Just "ACTIVE"
+    pendingTotalManualDues = fromMaybe 0.0 getDriverInfoResp.manualDues
+    subscriptionConfig = appConfig.subscriptionConfig
+    freeTrialDays = fromMaybe 0 getDriverInfoResp.freeTrialDaysLeft
+    shouldShowPopup = getValueToLocalStore APP_SESSION_TRACK_COUNT == "true" && getValueToLocalNativeStore IS_RIDE_ACTIVE == "false" && (isOnFreeTrial FunctionCall || (pendingTotalManualDues /= 0.0)) && getDriverInfoResp.subscribed && appConfig.subscriptionConfig.enableSubscriptionPopups
+    autoPayStatus = getAutopayStatus getDriverInfoResp.autoPayStatus
+    autopayBannerType =
+      if subscriptionConfig.enableSubscriptionPopups then case autoPayNotActive, isOnFreeTrial FunctionCall, (pendingTotalManualDues /= 0.0) of
+        true, true, _ -> FREE_TRIAL_BANNER
+        _, false, true -> do
+          if pendingTotalManualDues < subscriptionConfig.lowDuesLimit then LOW_DUES_BANNER
+          else if pendingTotalManualDues >= subscriptionConfig.lowDuesLimit && pendingTotalManualDues < subscriptionConfig.highDueWarningLimit then CLEAR_DUES_BANNER
+          else if pendingTotalManualDues >= subscriptionConfig.highDueWarningLimit && pendingTotalManualDues < subscriptionConfig.maxDuesLimit then DUE_LIMIT_WARNING_BANNER
+          else NO_SUBSCRIPTION_BANNER
+        true, _, _ -> if isNothing getDriverInfoResp.autoPayStatus then NO_SUBSCRIPTION_BANNER else SETUP_AUTOPAY_BANNER
+        _, _, _ -> NO_SUBSCRIPTION_BANNER
+      else NO_SUBSCRIPTION_BANNER
+
+    subscriptionPopupType = case isOnFreeTrial FunctionCall, autoPayNotActive, shouldShowPopup of
+      true, true , true -> case freeTrialDays of
+        _ | freeTrialDays == 3 || freeTrialDays == 2 || freeTrialDays == 1 -> FREE_TRIAL_POPUP
+        _ -> NO_SUBSCRIPTION_POPUP
+      false, _, true -> if pendingTotalManualDues >= subscriptionConfig.maxDuesLimit then NO_SUBSCRIPTION_POPUP else LOW_DUES_CLEAR_POPUP
+      _, _, _ -> NO_SUBSCRIPTION_POPUP
+
+    shouldMoveDriverOffline = (withinTimeRange "12:00:00" "23:59:59" (convertUTCtoISC (getCurrentUTC "") "HH:mm:ss"))
+
+    moveDriverToOffline =
+      (getValueToLocalStore MOVED_TO_OFFLINE_DUE_TO_HIGH_DUE == "")
+        && shouldMoveDriverOffline
+        && appConfig.subscriptionConfig.moveDriverToOfflineInHighDueDaily
+        && getValueToLocalNativeStore IS_RIDE_ACTIVE == "false"
+        && pendingTotalManualDues >= subscriptionConfig.highDueWarningLimit
+        && getDriverInfoResp.mode /= Just "OFFLINE"
   when moveDriverToOffline $ do
-    setValueToLocalStore MOVED_TO_OFFLINE_DUE_TO_HIGH_DUE (getCurrentUTC "")
-    changeDriverStatus Offline
-  modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data{paymentState{totalPendingManualDues = pendingTotalManualDues, autoPayStatus = autoPayStatus, showShimmer = false}, config = appConfig}, props{autoPayBanner = autopayBannerType, subscriptionPopupType = subscriptionPopupType}})
+      setValueToLocalStore MOVED_TO_OFFLINE_DUE_TO_HIGH_DUE (getCurrentUTC "")
+      changeDriverStatus Offline
+  modifyScreenState
+    $ HomeScreenStateType
+        ( \homeScreen ->
+            homeScreen
+              { data
+                { paymentState
+                  { totalPendingManualDues = pendingTotalManualDues
+                  , autoPayStatus = autoPayStatus
+                  , showShimmer = false
+                  }
+                , config = appConfig
+                }
+              , props
+                { autoPayBanner = autopayBannerType
+                , subscriptionPopupType = subscriptionPopupType
+                , waitTimeStatus = RC.waitTimeConstructor $ getValueToLocalStore WAITING_TIME_STATUS
+                }
+              }
+        )
+

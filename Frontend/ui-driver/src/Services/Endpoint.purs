@@ -261,3 +261,6 @@ deleteDriverHomeLocation homeLocationId = getBaseUrl "" <> "/driver/goHome/delet
 
 updateDriverHomeLocation :: String -> String
 updateDriverHomeLocation homeLocationId = getBaseUrl "" <> "/driver/goHome/update?homeLocationId=" <> homeLocationId
+
+rideRoute :: String -> String
+rideRoute rideId = (getBaseUrl "") <> "/" <> rideId <>"/route"

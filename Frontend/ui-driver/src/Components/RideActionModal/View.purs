@@ -40,6 +40,7 @@ import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(
 import PrestoDOM.Properties (cornerRadii, cornerRadius)
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Screens.Types (HomeScreenStage(..), TimerStatus(..), DisabilityType(..))
+import Screens.Types as ST
 import Storage (KeyStore(..), getValueToLocalStore, setValueToLocalStore)
 import Styles.Colors as Color
 import Types.App (defaultGlobalState)
@@ -458,7 +459,7 @@ customerNameView push config =
           , ellipsize true
           , singleLine false
           ] <> FontStyle.subHeading2 TypoGraphy
-        ] <> if config.isDriverArrived then [arrivedButtonView push config] else [dummyView push config]
+        ]
     ]
 
 estimatedFareView :: forall w . (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
@@ -494,7 +495,7 @@ waitTimeView push config =
      , gravity START
      , orientation VERTICAL
      , weight 1.0
-     , visibility if (config.waitTime /= "__") && (config.notifiedCustomer) && ((getValueToLocalStore IS_WAIT_TIMER_STOP) /= "NoView" ) && ((getValueToLocalStore IS_WAIT_TIMER_STOP) /= "Stop" ) then VISIBLE else GONE
+     , visibility if config.waitTime /= "__" && config.notifiedCustomer && config.waitTimeStatus == ST.PostTriggered then VISIBLE else GONE
      ]
      [ linearLayout
          [
@@ -543,7 +544,7 @@ rideInfoView push config =
     ][ estimatedFareView push config
      , separator true
      , totalDistanceView push config
-     , separator $ (config.waitTime /= "__") && (config.notifiedCustomer) && ((getValueToLocalStore IS_WAIT_TIMER_STOP) /= "NoView" ) && ((getValueToLocalStore IS_WAIT_TIMER_STOP) /= "Stop" )
+     , separator $ config.waitTime /= "__" && config.notifiedCustomer && config.waitTimeStatus == ST.PostTriggered
      , waitTimeView push config
      , linearLayout
        [ weight 1.0
@@ -618,43 +619,6 @@ sourceDestinationTextView push config =
       , destAddressTextView config push
       ]
 
-arrivedButtonView :: forall w . (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
-arrivedButtonView push config =
-  linearLayout
-  [ height WRAP_CONTENT
-  , width WRAP_CONTENT
-  , orientation HORIZONTAL
-  , cornerRadius 24.0
-  , gravity CENTER_VERTICAL
-  , stroke $ if config.notifiedCustomer then "0," <> Color.blackLessTrans  else "1," <> Color.blue900
-  , background if config.notifiedCustomer then Color.grey700 else Color.white900
-  , padding (Padding 10 7 12 7)
-  , margin (MarginTop 12)
-  , afterRender push $ const NoAction
-  , onClick (\action -> do
-      if config.notifiedCustomer then pure unit
-        else do
-          _ <- pure $ setValueToLocalStore IS_WAIT_TIMER_STOP (show Triggered)
-          _ <- pure $ setValueToLocalStore SET_WAITING_TIME (getCurrentUTC "")
-          _ <- waitingCountdownTimer 0 push TimerCallback
-          _ <- countDown config.buttonTimeOut config.id push ButtonTimer
-          push action) (const NotifyCustomer)
-  , visibility if config.isDriverArrived then VISIBLE else GONE
-  ][  imageView
-      [ width $ V 20
-      , height $ V 20
-      , imageWithFallback $ fetchImage FF_ASSET $ if config.notifiedCustomer then "ny_ic_tick_grey" else "ny_ic_hand_wave"
-      , margin $ MarginRight 4
-      ]
-    , textView $
-      [ height WRAP_CONTENT
-      , width WRAP_CONTENT
-      , text if config.notifiedCustomer then (getString CUSTOMER_NOTIFIED) else (getString I_HAVE_ARRIVED)
-      , color if config.notifiedCustomer then Color.black800 else Color.blue900
-      , gravity CENTER
-      ]<> FontStyle.body1 TypoGraphy
-    ]
-
 destinationView :: forall w . Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 destinationView config push =
   linearLayout
@@ -715,12 +679,10 @@ destAddressTextView config push=
       ]
   
 getTitle :: Config -> String
-getTitle config = case config.startRideActive of
-  false -> (getString YOU_ARE_ON_A_RIDE)
-  true  -> case config.isDriverArrived, config.notifiedCustomer of
-    false, false  -> (config.customerName <> " " <> (getString IS_WAITING_FOR_YOU) <> "...")
-    true, _       -> (getString YOU_ARE_AT_PICKUP)
-    false,true    -> case (getValueToLocalStore LANGUAGE_KEY) of
+getTitle config = case config.startRideActive,  config.notifiedCustomer of
+  false, _ -> (getString YOU_ARE_ON_A_RIDE)
+  true, false  ->  (config.customerName <> " " <> (getString IS_WAITING_FOR_YOU) <> "...")
+  true, true -> case (getValueToLocalStore LANGUAGE_KEY) of
       "TA_IN" -> config.customerName <> (getString WAITING_FOR_CUSTOMER)
       "HI_IN" -> "आप" <> config.customerName <> "की प्रतीक्षा कर रहे हैं"
       _       -> (getString WAITING_FOR_CUSTOMER) <> config.customerName

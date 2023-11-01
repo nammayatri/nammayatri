@@ -75,6 +75,10 @@ config =
   , profile : { 
     bookingOptionMenuForTaxi : false
   }
+  , waitTimeConfig : {
+    enableWaitTime : true,
+    thresholdDist : 0.05
+  }
   , bottomNavConfig : {
       home : 
         { isVisible : true,

@@ -17,7 +17,7 @@ module Screens.HomeScreen.Controller where
 
 import Helpers.Utils
 import Screens.SubscriptionScreen.Controller
-
+import Engineering.Helpers.BackTrack (getState, liftFlowBT)
 import Common.Styles.Colors as Color
 import Common.Types.App (OptionButtonList, APIPaymentStatus(..), PaymentStatus(..), LazyCheck(..)) as Common
 import Components.Banner as Banner
@@ -76,6 +76,17 @@ import Data.Function.Uncurried (runFn1)
 import Screens.HomeScreen.ComponentConfig (rideActionModalConfig)
 import MerchantConfig.Utils (getMerchant, Merchant(..))
 import Common.Resources.Constants (zoomLevel)
+import Control.Monad.Except (runExceptT)
+import Control.Transformers.Back.Trans (runBackT)
+import Effect.Aff (launchAff)
+import Engineering.Helpers.Commons (flowRunner)
+import Types.App (defaultGlobalState)
+import Services.API as API
+import Services.Backend as Remote
+import Engineering.Helpers.Commons (liftFlow)
+import PrestoDOM.Core (getPushFn)
+import Control.Monad.Except.Trans (lift)
+import Data.Either (Either(..))
 
 instance showAction :: Show Action where
   show _ = ""
@@ -102,8 +113,6 @@ instance loggableAction :: Loggable Action where
       -- RideActionModal.OnNavigate -> trackAppActionClick appId (getScreen HOME_SCREEN) "ride_action_modal" "on_navigate"
       -- RideActionModal.CallCustomer -> trackAppActionClick appId (getScreen HOME_SCREEN) "ride_action_modal" "call_customer"
       -- RideActionModal.LocationTracking -> trackAppActionClick appId (getScreen HOME_SCREEN) "ride_action_modal" "location_tracking"
-      -- RideActionModal.NotifyCustomer -> trackAppActionClick appId (getScreen HOME_SCREEN) "ride_action_modal" "notify_driver"
-      -- RideActionModal.ButtonTimer seconds id status timerID -> trackAppActionClick appId (getScreen HOME_SCREEN) "ride_action_modal" "button_timer"
       -- RideActionModal.MessageCustomer -> trackAppActionClick appId (getScreen HOME_SCREEN) "ride_action_modal" "message_customer"
       -- _ -> pure unit
     PopUpModalAccessibilityAction act -> pure unit
@@ -320,6 +329,10 @@ data Action = NoAction
             | UpdateGoHomeTimer String String Int
             | AddLocation PrimaryButtonController.Action
             | ConfirmDisableGoto PopUpModal.Action
+            | UpdateOriginDist String String
+            | UpdateAndNotify ST.Location Boolean
+            | UpdateWaitTime ST.TimerStatus
+            | NotifyAPI
             
 
 eval :: Action -> ST.HomeScreenState -> Eval Action ScreenOutput ST.HomeScreenState
@@ -412,11 +425,12 @@ eval (KeyboardCallback keyBoardState) state = do
 eval (Notification notificationType) state = do
   _ <- pure $ printLog "notificationType" notificationType
   if (checkNotificationType notificationType ST.DRIVER_REACHED && (state.props.currentStage == ST.RideAccepted || state.props.currentStage == ST.ChatWithCustomer) && (not state.data.activeRide.notifiedCustomer)) then do
-    _ <- pure $ setValueToLocalStore IS_DRIVER_AT_PICKUP "true"
-    continue state{data{activeRide{isDriverArrived = true}}, props{showAccessbilityPopup = isJust state.data.activeRide.disabilityTag}}
-    else if (Array.any ( _ == notificationType) [show ST.CANCELLED_PRODUCT, show ST.DRIVER_ASSIGNMENT, show ST.RIDE_REQUESTED, show ST.DRIVER_REACHED]) then do
+    let newState = state{props{showAccessbilityPopup = isJust state.data.activeRide.disabilityTag}}
+    void $ pure $ setValueToLocalStore IS_DRIVER_AT_PICKUP "true"
+    continueWithCmd newState [ pure if (not state.data.activeRide.notifiedCustomer) then NotifyAPI else AfterRender]
+  else if (Array.any ( _ == notificationType) [show ST.CANCELLED_PRODUCT, show ST.DRIVER_ASSIGNMENT, show ST.RIDE_REQUESTED, show ST.DRIVER_REACHED]) then do
       exit $ FcmNotification notificationType state
-      else continue state
+  else continue state
 
 eval CancelGoOffline state = do
   continue state { props = state.props { goOfflineModal = false } }
@@ -665,34 +679,14 @@ eval (RideActionModalAction (RideActionModal.LocationTracking)) state = do
   let newState = state {props {showDottedRoute = not state.props.showDottedRoute} }
   updateAndExit newState $ UpdateRoute newState
 
-eval (RideActionModalAction (RideActionModal.NotifyCustomer)) state =do
-  _ <- pure $ setValueToLocalStore LOCAL_STAGE (show ST.ChatWithCustomer)
-  let newState = state{props{currentStage = ST.ChatWithCustomer, sendMessageActive = false, unReadMessages = false}}
-  updateAndExit newState $ NotifyDriverArrived newState
-
-eval (RideActionModalAction (RideActionModal.ButtonTimer seconds id status timerID)) state = do
-  if status == "EXPIRED"
-    then do
-      _ <- pure $ clearTimer timerID
-      _ <- pure $ setValueToLocalStore IS_DRIVER_AT_PICKUP "false"
-      continue state{data{activeRide{isDriverArrived = false}}}
-    else
-      continue state
-
 eval (RideActionModalAction (RideActionModal.WaitingInfo)) state = do
   continue state {data{activeRide {waitTimeInfo = true }}}
 
 eval (RideActionModalAction (RideActionModal.TimerCallback timerID timeInMinutes seconds)) state = continueWithCmd state [do pure $ (WaitTimerCallback timerID timeInMinutes seconds)]
 
-eval (WaitTimerCallback timerID timeInMinutes seconds) state = do
-      if (getValueToLocalStore IS_WAIT_TIMER_STOP) == "Stop" || (getValueToLocalStore IS_WAIT_TIMER_STOP) == "NoView" then do
-        _ <- pure $ clearTimer timerID
-        _ <- pure $ setValueToLocalStore SET_WAITING_TIME timeInMinutes
-        pure unit
-      else do
-        _ <- pure $ setValueToLocalStore IS_WAIT_TIMER_STOP (show ST.Triggered)
-        pure unit
-      continue state { data {activeRide { waitingTime = timeInMinutes} } ,props {timerRefresh = false} }
+eval (UpdateWaitTime status) state = continue state { props { waitTimeStatus = status}}
+
+eval (WaitTimerCallback timerID timeInMinutes seconds) state = continue state { data {activeRide { waitingTime = timeInMinutes, waitTimerId = timerID}}}
 
 eval (PopUpModalAction (PopUpModal.OnButton1Click)) state = continue $ (state {props {endRidePopUp = false}})
 eval (PopUpModalAction (PopUpModal.OnButton2Click)) state = do
@@ -756,18 +750,45 @@ eval RetryTimeUpdate state = do
   (updateAndExit state { data = state.data { locationLastUpdatedTime = "" }, props = state.props {refreshAnimation = true}} $ Refresh state { data = state.data { locationLastUpdatedTime = "" }, props = state.props {refreshAnimation = true}})
 
 eval (TimeUpdate time lat lng) state = do
-  let isDriverNearBy = ((getDistanceBwCordinates (getLastKnownLocValue ST.LATITUDE lat) (getLastKnownLocValue ST.LONGITUDE lng)  state.data.activeRide.src_lat state.data.activeRide.src_lon) < 0.05)
-      newState = state { data = state.data { activeRide{isDriverArrived = if ((state.props.currentStage == ST.RideAccepted || state.props.currentStage == ST.ChatWithCustomer) && not state.data.activeRide.notifiedCustomer) then isDriverNearBy else state.data.activeRide.isDriverArrived},currentDriverLat= getLastKnownLocValue ST.LATITUDE lat,  currentDriverLon = getLastKnownLocValue ST.LONGITUDE lng, locationLastUpdatedTime = (convertUTCtoISC time "hh:mm a") }}
-  _ <- pure $ setValueToLocalStore IS_DRIVER_AT_PICKUP (show (newState.data.activeRide.isDriverArrived || newState.data.activeRide.notifiedCustomer))
-  _ <- pure $ setValueToLocalStore LOCATION_UPDATE_TIME (convertUTCtoISC time "hh:mm a")
+  let newState = state { data = state.data { currentDriverLat= getLastKnownLocValue ST.LATITUDE lat,  currentDriverLon = getLastKnownLocValue ST.LONGITUDE lng, locationLastUpdatedTime = (convertUTCtoISC time "hh:mm a") }}
+  void $ pure $ setValueToLocalStore IS_DRIVER_AT_PICKUP (show newState.data.activeRide.notifiedCustomer)
+  void $ pure $ setValueToLocalStore LOCATION_UPDATE_TIME (convertUTCtoISC time "hh:mm a")
   continueWithCmd newState [ do
-    _ <- if (getValueToLocalNativeStore IS_RIDE_ACTIVE == "false") then checkPermissionAndUpdateDriverMarker newState else pure unit
-    pure AfterRender
+    void $ if (getValueToLocalNativeStore IS_RIDE_ACTIVE == "false") then checkPermissionAndUpdateDriverMarker newState else pure unit
+    case state.data.config.waitTimeConfig.enableWaitTime, state.props.currentStage, state.data.activeRide.notifiedCustomer, state.data.snappedOrigin of
+      true, ST.RideAccepted, false, Nothing -> pure (UpdateOriginDist lat lng)
+      true, ST.RideAccepted, false, Just snapped -> do
+        let dist = (getDistanceBwCordinates (getLastKnownLocValue ST.LATITUDE lat) (getLastKnownLocValue ST.LONGITUDE lng)  snapped.lat snapped.lon)
+            isDriverNearBy = ( dist < state.data.config.waitTimeConfig.thresholdDist)
+        pure if isDriverNearBy then NotifyAPI else AfterRender
+      _, _, _, _ -> pure AfterRender
     ]
+
+eval (UpdateOriginDist lat lng) state =
+  continueWithCmd state [ do
+    void $ launchAff $ flowRunner defaultGlobalState $ do
+      push <- liftFlow $ getPushFn Nothing "HomeScreen"
+      rideRouteResp <- Remote.rideRoute state.data.activeRide.id
+      case rideRouteResp of
+        Left _ -> pure unit
+        Right (API.RideRouteResp resp) -> 
+          case Array.head resp.points of
+            Just (API.LatLong loc) -> do
+              let dist = getDistanceBwCordinates (getLastKnownLocValue ST.LATITUDE lat) (getLastKnownLocValue ST.LONGITUDE lng) loc.lat loc.lon
+              liftFlow $ push $ UpdateAndNotify {lat : loc.lat, lon : loc.lon, place : ""} $ dist < state.data.config.waitTimeConfig.thresholdDist
+              pure unit
+            _ -> pure unit
+      pure unit
+    pure NoAction]
+  
+eval (UpdateAndNotify snappedOrigin callNotify) state = do
+  continueWithCmd state{data{snappedOrigin = Just snappedOrigin}} [ pure if callNotify then NotifyAPI else NoAction]
+
+eval NotifyAPI state = updateAndExit state $ NotifyDriverArrived state 
 
 eval (RideActiveAction activeRide) state = do
   let currActiveRideDetails = activeRideDetail state activeRide
-      updatedState = state { data {activeRide = currActiveRideDetails}, props{showAccessbilityPopup = (isJust currActiveRideDetails.disabilityTag && currActiveRideDetails.isDriverArrived)}}
+      updatedState = state { data {activeRide = currActiveRideDetails}, props{showAccessbilityPopup = (isJust currActiveRideDetails.disabilityTag)}}
   updateAndExit updatedState $ UpdateStage ST.RideAccepted updatedState
 
 eval RecenterButtonAction state = continue state
@@ -980,13 +1001,13 @@ activeRideDetail state (RidesInfo ride) = {
   duration : state.data.activeRide.duration,
   riderName : fromMaybe "" ride.riderName,
   estimatedFare : ride.driverSelectedFare + ride.estimatedBaseFare,
-  isDriverArrived : state.data.activeRide.isDriverArrived,
-  notifiedCustomer : if (differenceBetweenTwoUTC ride.updatedAt ride.createdAt) == 0 then false else true,
+  notifiedCustomer : getValueToLocalStore WAITING_TIME_STATUS == (show ST.PostTriggered),
   exoPhone : ride.exoPhone,
-  waitingTime : if (getValueToLocalStore IS_WAIT_TIMER_STOP) == "Stop" && state.props.timerRefresh then (getValueToLocalStore SET_WAITING_TIME) else state.data.activeRide.waitingTime,
+  waitingTime : state.data.activeRide.waitingTime,
   rideCreatedAt : ride.createdAt,
   waitTimeInfo : state.data.activeRide.waitTimeInfo,
   requestedVehicleVariant : ride.requestedVehicleVariant,
+  waitTimerId : state.data.activeRide.waitTimerId,
   specialLocationTag :  if isJust ride.disabilityTag then Just "Accessibility"
                         else if isJust ride.driverGoHomeRequestId then Just "GOTO" 
                         else ride.specialLocationTag, --  "None_SureMetro_PriorityDrop",--"GOTO",
@@ -1082,11 +1103,11 @@ getPeekHeight state =
       density = (runFn1 HU.getDeviceDefaultDensity "")/  defaultDensity
       currentPeekHeight = headerLayout.height  + contentLayout.height + (if RideActionModal.isSpecialRide (rideActionModalConfig state) then (labelLayout.height + 6) else 0)
       requiredPeekHeight = ceil (((toNumber currentPeekHeight) /pixels) * density)
-    in if requiredPeekHeight == 0 then if state.data.activeRide.isDriverArrived then 518 else 470 else requiredPeekHeight
+    in if requiredPeekHeight == 0 then 470 else requiredPeekHeight
   
 getDriverSuggestions :: ST.HomeScreenState -> Array String-> Array String
 getDriverSuggestions state suggestions = case (Array.length suggestions == 0) of
-                                  true -> if (state.data.activeRide.isDriverArrived || state.data.activeRide.notifiedCustomer) then getSuggestionsfromKey "driverDefaultAP" else getSuggestionsfromKey "driverDefaultBP"
+                                  true -> if (state.data.activeRide.notifiedCustomer) then getSuggestionsfromKey "driverDefaultAP" else getSuggestionsfromKey "driverDefaultBP"
                                   false -> suggestions
 
 getPreviousVersion :: Merchant -> String

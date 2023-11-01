@@ -129,4 +129,8 @@ commonConfig =
                   showNew : false
                 }
             }
+        , waitTimeConfig : {
+          enableWaitTime : true,
+          thresholdDist : 0.05
+        }
         }

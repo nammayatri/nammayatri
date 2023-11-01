@@ -788,7 +788,8 @@ type HomeScreenData =  {
   config :: AppConfig,
   triggerPatchCounter :: Int,
   peekHeight :: Int,
-  driverGotoState :: DriverGoToState
+  driverGotoState :: DriverGoToState,
+  snappedOrigin :: Maybe Location
 }
 
 type DriverGoToState = {
@@ -905,7 +906,7 @@ type ActiveRide = {
   duration :: Int,
   riderName :: String,
   estimatedFare :: Int,
-  isDriverArrived :: Boolean,
+  waitTimerId :: String,
   notifiedCustomer :: Boolean,
   waitingTime :: String,
   waitTimeInfo :: Boolean,
@@ -946,7 +947,6 @@ type HomeScreenProps =  {
   showGenderBanner :: Boolean,
   notRemoveBanner :: Boolean,
   showBonusInfo :: Boolean,
-  timerRefresh :: Boolean,
   showlinkAadhaarPopup :: Boolean,
   isChatOpened :: Boolean,
   showAadharPopUp :: Boolean,
@@ -961,7 +961,8 @@ type HomeScreenProps =  {
   showRideRating :: Boolean,
   showContactSupportPopUp :: Boolean,
   showChatBlockerPopUp :: Boolean,
-  showGenericAccessibilityPopUp :: Boolean
+  showGenericAccessibilityPopUp :: Boolean,
+  waitTimeStatus :: TimerStatus
  }
 
 data SubscriptionBannerType = FREE_TRIAL_BANNER | SETUP_AUTOPAY_BANNER | CLEAR_DUES_BANNER | NO_SUBSCRIPTION_BANNER | DUE_LIMIT_WARNING_BANNER | LOW_DUES_BANNER
@@ -990,10 +991,13 @@ instance decodePwdType :: Decode DisabilityType where decode = defaultEnumDecode
 
 data DriverStatus = Online | Offline | Silent
 
-data TimerStatus = Triggered | PostTriggered | Stop | NoView
+data TimerStatus = Triggered | PostTriggered | NoStatus
 
 derive instance genericTimerStatus :: Generic TimerStatus _
+instance eqTimerStatus :: Eq TimerStatus where eq = genericEq
 instance showTimerStatus :: Show TimerStatus where show = genericShow
+instance encodeTimerStatus :: Encode TimerStatus where encode = defaultEnumEncode
+instance decodeTimerStatus :: Decode TimerStatus where decode = defaultEnumDecode
 
 type PillButtonState = {
   status :: DriverStatus,

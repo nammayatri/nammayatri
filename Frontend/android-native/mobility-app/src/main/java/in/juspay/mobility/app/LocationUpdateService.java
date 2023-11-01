@@ -384,7 +384,6 @@ public class LocationUpdateService extends Service {
                 Map<String, String> baseHeaders = mobilityApiHandler.getBaseHeaders(context);
                 MobilityAPIResponse apiResponse = mobilityApiHandler.callAPI(orderUrl, baseHeaders);
                 if (!status) {
-                    updateStorage("LOCATION_STATUS", "PAUSE"); // TO-ASK:: Can we remove it, don't think it's being used
                     updateStorage("DRIVER_STATUS", "__failed");//
                     showAlertNotification(); // To notify the driver that he is offline.
                     cancelTimer();

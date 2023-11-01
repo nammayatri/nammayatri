@@ -3196,3 +3196,33 @@ instance standardUpdateHomeLocationResp :: StandardEncode UpdateHomeLocationResp
 instance showUpdateHomeLocationResp :: Show UpdateHomeLocationResp where show = genericShow
 instance decodeUpdateHomeLocationResp :: Decode UpdateHomeLocationResp where decode = defaultDecode
 instance encodeUpdateHomeLocationResp  :: Encode UpdateHomeLocationResp where encode = defaultEncode
+
+
+newtype RideRouteReq = RideRouteReq String
+
+newtype RideRouteResp = RideRouteResp {
+  points :: (Array LatLong),
+  duration :: Maybe Int,
+  distance :: Maybe Int
+
+}
+
+instance makeRideRouteReq :: RestEndpoint RideRouteReq RideRouteResp where
+  makeRequest reqBody@(RideRouteReq id) headers = defaultMakeRequest POST (EP.rideRoute id) headers reqBody Nothing
+  decodeResponse = decodeJSON
+  encodeRequest req = standardEncode req
+
+
+derive instance genericRideRouteReq :: Generic RideRouteReq _
+derive instance newtypeRideRouteReq :: Newtype RideRouteReq _
+instance standardRideRouteReq :: StandardEncode RideRouteReq where standardEncode (RideRouteReq id) = standardEncode id
+instance showRideRouteReq :: Show RideRouteReq where show = genericShow
+instance decodeRideRouteReq :: Decode RideRouteReq where decode = defaultDecode
+instance encodeRideRouteReq :: Encode RideRouteReq where encode = defaultEncode
+
+derive instance genericRideRouteResp :: Generic RideRouteResp _
+derive instance newtypeRideRouteResp :: Newtype RideRouteResp _
+instance standardRideRouteResp :: StandardEncode RideRouteResp where standardEncode (RideRouteResp id) = standardEncode id
+instance showRideRouteResp :: Show RideRouteResp where show = genericShow
+instance decodeRideRouteResp :: Decode RideRouteResp where decode = defaultDecode
+instance encodeRideRouteResp :: Encode RideRouteResp where encode = defaultEncode

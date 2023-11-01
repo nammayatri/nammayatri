@@ -82,7 +82,6 @@ rideActionModalConfig state =
       detailText = state.data.activeRide.destination
     },
     estimatedRideFare = state.data.activeRide.estimatedFare,
-    isDriverArrived = state.data.activeRide.isDriverArrived,
     notifiedCustomer = state.data.activeRide.notifiedCustomer,
     currentStage = state.props.currentStage,
     unReadMessages = state.props.unReadMessages,
@@ -91,7 +90,8 @@ rideActionModalConfig state =
     isChatOpened = state.props.isChatOpened,
     requestedVehicleVariant = state.data.activeRide.requestedVehicleVariant,
     accessibilityTag = state.data.activeRide.disabilityTag,
-    appConfig = state.data.config
+    appConfig = state.data.config,
+    waitTimeStatus = state.props.waitTimeStatus
     }
     in rideActionModalConfig'
 
@@ -525,7 +525,7 @@ chatViewConfig state = let
     , messagesSize = state.data.messagesSize
     , sendMessageActive = state.props.sendMessageActive
     , vehicleNo = ""
-    , suggestionsList = if showSuggestions state then if (state.data.activeRide.isDriverArrived || state.data.activeRide.notifiedCustomer) then getSuggestionsfromKey "driverInitialAP" else getSuggestionsfromKey "driverInitialBP" else state.data.suggestionsList
+    , suggestionsList = if showSuggestions state then if (state.data.activeRide.notifiedCustomer) then getSuggestionsfromKey "driverInitialAP" else getSuggestionsfromKey "driverInitialBP" else state.data.suggestionsList
     , hint = (getString MESSAGE)
     , suggestionHeader = (getString START_YOUR_CHAT_USING_THESE_QUICK_CHAT_SUGGESTIONS)
     , emptyChatHeader = (getString START_YOUR_CHAT_WITH_THE_DRIVER)
@@ -843,7 +843,7 @@ accessibilityPopUpConfig :: ST.HomeScreenState -> PopUpModal.Config
 accessibilityPopUpConfig state = 
   let 
     config = PopUpModal.config
-    popupData = getAccessibilityPopupData state state.data.activeRide.disabilityTag (state.data.activeRide.isDriverArrived || state.data.activeRide.notifiedCustomer)
+    popupData = getAccessibilityPopupData state state.data.activeRide.disabilityTag state.data.activeRide.notifiedCustomer
     config' = config
       {
         gravity = CENTER,
@@ -1019,7 +1019,7 @@ getAccessibilityPopupData state pwdtype isDriverArrived =
 
 getAccessibilityHeaderText :: ST.HomeScreenState -> ContentConfig
 getAccessibilityHeaderText state = if state.data.activeRide.status == NEW then 
-                        case state.data.activeRide.disabilityTag, state.data.activeRide.isDriverArrived of   
+                        case state.data.activeRide.disabilityTag, state.data.activeRide.notifiedCustomer of   
                           Just ST.HEAR_IMPAIRMENT, false -> {primaryText : getString CUSTOMER_HAS_HEARING_IMPAIRMENT, secondaryText : getString PLEASE_CHAT_AND_AVOID_CALLS, imageUrl : fetchImage FF_ASSET "ny_ic_poor_hearing", videoUrl : "" , mediaType : "", videoId : ""}
                           Just ST.BLIND_AND_LOW_VISION, false -> {primaryText : getString CUSTOMER_HAS_LOW_VISION, secondaryText : getString PLEASE_CALL_AND_AVOID_CHATS, imageUrl : fetchImage FF_ASSET "ic_accessibility_vision", videoUrl : "", mediaType : "", videoId : ""}
                           Just ST.LOCOMOTOR_DISABILITY, false -> {primaryText : getString CUSTOMER_HAS_LOW_MOBILITY, secondaryText : getString PLEASE_GO_TO_EXACT_PICKUP,  imageUrl : fetchImage FF_ASSET "ny_ic_disability_purple", videoUrl : "", mediaType : "", videoId : ""}
