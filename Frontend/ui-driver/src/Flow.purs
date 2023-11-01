@@ -2166,11 +2166,6 @@ clearPendingDuesFlow showLoader = do
             _<- pure $ cleverTapEvent "ny_driver_clear_dues" $ [ {key : "due_amount", value : unsafeToForeign innerpayload.amount},
                                                                                          {key : "clearence_type", value : unsafeToForeign "manual"}
                                                                                         ]
-            getDriverInfoApiResp <- lift $ lift $ Remote.getDriverInfoApi (GetDriverInfoReq{})
-            case getDriverInfoApiResp of
-              Right resp -> modifyScreenState $ GlobalPropsType $ \globalProps -> globalProps{driverInformation = Just resp}
-              Left _ -> pure unit
-            updateDriverDataToStates
             pure unit
           let popUpState = if statusResp.status == PS.CHARGED then Just PaymentSuccessPopup
                             else if any ( _ == statusResp.status)[PS.AUTHORIZATION_FAILED, PS.AUTHENTICATION_FAILED, PS.JUSPAY_DECLINED] then Just FailedPopup
@@ -2180,6 +2175,11 @@ clearPendingDuesFlow showLoader = do
             Nothing -> pure unit
         Left err -> pure $ toast $ Remote.getCorrespondingErrorMessage err 
     Left errorPayload -> pure $ toast $ Remote.getCorrespondingErrorMessage errorPayload
+  getDriverInfoApiResp <- lift $ lift $ Remote.getDriverInfoApi (GetDriverInfoReq{})
+  case getDriverInfoApiResp of
+    Right resp -> modifyScreenState $ GlobalPropsType $ \globalProps -> globalProps{driverInformation = Just resp}
+    Left _ -> pure unit
+  updateDriverDataToStates
   void $ lift $ lift $ toggleLoader false
   pure $ toggleBtnLoader "" false
   subScriptionFlow
@@ -2218,11 +2218,6 @@ nyPaymentFlow planCardConfig fromJoinPlan = do
           case statusResp.status of
             PS.CHARGED -> do
                 setSubscriptionStatus Success statusResp.status planCardConfig
-                getDriverInfoApiResp <- lift $ lift $ Remote.getDriverInfoApi (GetDriverInfoReq{})
-                case getDriverInfoApiResp of
-                  Right resp -> modifyScreenState $ GlobalPropsType $ \globalProps -> globalProps{driverInformation = Just resp}
-                  Left _ -> pure unit
-                updateDriverDataToStates
             PS.AUTHORIZATION_FAILED -> setSubscriptionStatus Failed statusResp.status planCardConfig
             PS.AUTHENTICATION_FAILED -> setSubscriptionStatus Failed statusResp.status planCardConfig
             PS.JUSPAY_DECLINED -> setSubscriptionStatus Failed statusResp.status planCardConfig
@@ -2231,6 +2226,11 @@ nyPaymentFlow planCardConfig fromJoinPlan = do
             _ -> setSubscriptionStatus Pending statusResp.status planCardConfig
         Left err -> setSubscriptionStatus Pending PS.PENDING_VBV planCardConfig
     Left (errorPayload) -> pure $ toast $ Remote.getCorrespondingErrorMessage errorPayload
+  getDriverInfoApiResp <- lift $ lift $ Remote.getDriverInfoApi (GetDriverInfoReq{})
+  case getDriverInfoApiResp of
+    Right resp -> modifyScreenState $ GlobalPropsType $ \globalProps -> globalProps{driverInformation = Just resp}
+    Left _ -> pure unit
+  updateDriverDataToStates
   subScriptionFlow
 
 setSubscriptionStatus :: PaymentStatus -> PS.APIPaymentStatus -> PlanCardConfig -> FlowBT String Unit
@@ -2800,7 +2800,7 @@ updateBannerAndPopupFlags = do
                                 _, _, _        -> NO_SUBSCRIPTION_BANNER
                           else NO_SUBSCRIPTION_BANNER
       subscriptionPopupType = case isOnFreeTrial FunctionCall, autoPayNotActive, shouldShowPopup of
-                                  true, _, true -> case freeTrialDays of
+                                  true, true, true -> case freeTrialDays of
                                                       _ | freeTrialDays == 3 || freeTrialDays == 2 || freeTrialDays == 1 -> FREE_TRIAL_POPUP
                                                       _ -> NO_SUBSCRIPTION_POPUP
                                   false, _, true -> if pendingTotalManualDues >= subscriptionConfig.maxDuesLimit then NO_SUBSCRIPTION_POPUP else LOW_DUES_CLEAR_POPUP
