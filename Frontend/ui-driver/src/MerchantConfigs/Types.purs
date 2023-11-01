@@ -19,7 +19,8 @@ type AppConfig =
     profileVerification :: ProfileVerificationConfig,
     bottomNavConfig :: BottomNavConfig,
     purpleRideConfig :: PurpleRideConfig,
-    mapConfig :: MapConfig
+    mapConfig :: MapConfig,
+    waitTimeConfig :: WaitTimeConfig
   } 
 
 type PurpleRideConfig = {
@@ -119,4 +120,9 @@ type BottomNavItemConfig = {
 
 type MapConfig = {
   animationDuration :: Int
+}
+
+type WaitTimeConfig = {
+  enableWaitTime :: Boolean,
+  thresholdDist :: Number
 }

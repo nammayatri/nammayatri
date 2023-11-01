@@ -459,7 +459,10 @@ public class WidgetService extends Service {
                                 //click definition
                                 if (Math.abs(initialTouchX - motionEvent.getRawX()) < 5 && Math.abs(initialTouchY - motionEvent.getRawY()) < 5) {
                                     long ramBasedTime = getTimeBasedOnRamSize();
-                                    if (sharedPref.getString("MAPS_OPENED", "null").equals("true") || sharedPref.getString("IS_RIDE_ACTIVE", "null").equals("true")) {
+                                    boolean appNotKilled = !sharedPref.getString("ACTIVITY_STATUS", "null").equals("onDestroy");
+                                    boolean rideActive = sharedPref.getString("IS_RIDE_ACTIVE", "null").equals("true");
+                                    boolean mapOpenedFromApp = sharedPref.getString("MAPS_OPENED", "null").equals("true");
+                                    if ( appNotKilled && (mapOpenedFromApp || rideActive)) {
                                         Handler mainLooper = new Handler(Looper.getMainLooper());
                                         minimizeApp();
                                         View loaderView = getLoaderView();

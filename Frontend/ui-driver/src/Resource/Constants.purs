@@ -21,6 +21,7 @@ import Services.API (LocationInfo(..))
 import Data.Maybe (fromMaybe, Maybe(..))
 import Data.Array as DA
 import Data.String (Pattern(..), split, toLower)
+import Screens.Types as ST
 
 type Language =
     {
@@ -84,3 +85,10 @@ getPspIcon vpa = do
             "indus" -> "ny_ic_induspay"
             "upi" -> "ny_ic_bhim"
             _ -> "ny_ic_defaultpg"
+
+waitTimeConstructor :: String -> ST.TimerStatus
+waitTimeConstructor key = case key of
+  "NoStatus" -> ST.NoStatus
+  "Triggered" -> ST.Triggered
+  "PostTriggered" -> ST.PostTriggered
+  _ -> ST.NoStatus

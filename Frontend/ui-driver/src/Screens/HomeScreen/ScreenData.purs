@@ -26,6 +26,7 @@ import MerchantConfig.DefaultConfig as DC
 initData :: HomeScreenState
 initData = {
     data: {
+        snappedOrigin : Nothing,
         config : DC.config,
         driverName : "",
         vehicleType : "",
@@ -45,7 +46,7 @@ initData = {
           duration : 0,
           riderName : "",
           estimatedFare : 0,
-          isDriverArrived : false,
+          waitTimerId : "",
           notifiedCustomer : false,
           exoPhone : "",
           specialLocationTag : Nothing,
@@ -172,7 +173,6 @@ initData = {
         showGenderBanner : false,
         notRemoveBanner : true,
         showBonusInfo : false,
-        timerRefresh : true,
         showlinkAadhaarPopup : false,
         isChatOpened : false,
         showAadharPopUp : true,
@@ -187,7 +187,8 @@ initData = {
         showContactSupportPopUp : false,
         showChatBlockerPopUp : false,
         subscriptionPopupType : NO_SUBSCRIPTION_POPUP,
-        showGenericAccessibilityPopUp : false
+        showGenericAccessibilityPopUp : false,
+        waitTimeStatus : NoStatus
     }
 }
 

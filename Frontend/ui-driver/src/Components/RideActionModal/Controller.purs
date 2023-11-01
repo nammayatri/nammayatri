@@ -17,7 +17,7 @@ module Components.RideActionModal.Controller where
 import Data.Maybe as Mb
 import MerchantConfig.Types (AppConfig)
 import MerchantConfig.DefaultConfig as DC
-import Screens.Types (HomeScreenStage(..), DisabilityType(..))
+import Screens.Types as ST
 
 data Action = StartRide 
             | EndRide 
@@ -25,8 +25,6 @@ data Action = StartRide
             | OnNavigate 
             | CallCustomer 
             | LocationTracking
-            | ButtonTimer Int String String String
-            | NotifyCustomer
             | MessageCustomer
             | TimerCallback String String Int
             | WaitingInfo
@@ -41,20 +39,20 @@ type Config = {
   customerName :: String,
   sourceAddress :: AddressConfig,
   destinationAddress :: AddressConfig,
-  isDriverArrived :: Boolean,
   estimatedRideFare :: Int,
   notifiedCustomer :: Boolean,
   id :: String,
   buttonTimeOut :: Int,
-  currentStage :: HomeScreenStage,
+  currentStage :: ST.HomeScreenStage,
   unReadMessages :: Boolean,
   specialLocationTag :: Mb.Maybe String,
   waitTime :: String,
   isChatOpened :: Boolean,
   requestedVehicleVariant :: Mb.Maybe String,
-  accessibilityTag :: Mb.Maybe DisabilityType,
+  accessibilityTag :: Mb.Maybe ST.DisabilityType,
   appConfig :: AppConfig,
-  gotoTag :: Boolean
+  gotoTag :: Boolean,
+  waitTimeStatus :: ST.TimerStatus
   }
 
 type AddressConfig = {
@@ -75,18 +73,18 @@ config = {
   titleText : "",
   detailText : ""
   },
-  isDriverArrived : true,
   estimatedRideFare : 0,
   notifiedCustomer : true,
   buttonTimeOut : 10,
   waitTime : "__",
   id : "buttonTimer",
-  currentStage : RideAccepted,
+  currentStage : ST.RideAccepted,
   unReadMessages : false,
   specialLocationTag : Mb.Nothing,
   isChatOpened : false,
   requestedVehicleVariant : Mb.Nothing,
   accessibilityTag : Mb.Nothing,
   appConfig : DC.config,
-  gotoTag : false
+  gotoTag : false,
+  waitTimeStatus : ST.NoStatus
 }

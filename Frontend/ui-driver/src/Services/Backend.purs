@@ -639,8 +639,6 @@ makeReferDriverReq referralNumber = ReferDriverReq
       "value" : referralNumber
     }
 
---------------------------------- getDriverInfoBT  ---------------------------------------------------------------------------------------------------------------------------------
-
 getDriverProfileStatsBT :: DriverProfileStatsReq -> FlowBT String DriverProfileStatsResp
 getDriverProfileStatsBT payload = do
      headers <- getHeaders' "" false
@@ -649,14 +647,12 @@ getDriverProfileStatsBT payload = do
         errorHandler (ErrorPayload errorPayload) =  do
             BackT $ pure GoBack
 
---------------------------------- getDriverInfoBT  ---------------------------------------------------------------------------------------------------------------------------------getDriverProfileStatsBT :: DriverProfileStatsReq -> FlowBT String DriverProfileStatsResp
-driverArrivedBT :: String -> DriverArrivedReq -> FlowBT String DriverArrivedRes
-driverArrivedBT rideId payload = do
-     headers <- getHeaders' "" false
-     withAPIResultBT ((EP.driverArrived rideId)) (\x → x) errorHandler (lift $ lift $ callAPI headers (DriverArrivedRequest rideId payload))
+driverArrived :: String -> DriverArrivedReq -> Flow GlobalState (Either ErrorResponse DriverArrivedRes)
+driverArrived rideId payload = do
+     headers <- getHeaders "" false
+     withAPIResult (EP.driverArrived rideId) unwrapResponse $ callAPI headers $ DriverArrivedRequest rideId payload
     where
-        errorHandler (ErrorPayload errorPayload) =  do
-            BackT $ pure GoBack
+        unwrapResponse x = x
 
 flowStatusBT :: String -> FlowBT String FlowStatusRes
 flowStatusBT _ = do
@@ -1192,4 +1188,11 @@ updateDriverHomeLocation qParam lat lon address tag = do
             tag : tag
         }
     }
+    unwrapResponse x = x
+
+rideRoute :: String -> Flow GlobalState (Either ErrorResponse RideRouteResp)
+rideRoute rideId = do
+  headers <- getHeaders "" false
+  withAPIResult (EP.rideRoute rideId) unwrapResponse $ callAPI headers $ RideRouteReq rideId
+  where
     unwrapResponse x = x

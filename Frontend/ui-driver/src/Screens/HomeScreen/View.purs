@@ -57,7 +57,6 @@ import Effect.Uncurried (runEffectFn1, runEffectFn2, runEffectFn3)
 import Engineering.Helpers.Commons (flowRunner, getCurrentUTC)
 import Engineering.Helpers.Commons (getNewIDWithTag)
 import Engineering.Helpers.Commons as EHC
-import Engineering.Helpers.Suggestions (getMessageFromKey)
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Foreign (unsafeToForeign)
@@ -77,7 +76,7 @@ import PrestoDOM.Elements.Elements (coordinatorLayout)
 import PrestoDOM.Properties as PP
 import PrestoDOM.Types.DomAttributes as PTD
 import Screens as ScreenNames
-import Screens.HomeScreen.Controller (Action(..), RideRequestPollingData, ScreenOutput, ScreenOutput(GoToHelpAndSupportScreen), checkPermissionAndUpdateDriverMarker, eval, getPeekHeight, getPreviousVersion)
+import Screens.HomeScreen.Controller (Action(..), RideRequestPollingData, ScreenOutput, ScreenOutput(GoToHelpAndSupportScreen), checkPermissionAndUpdateDriverMarker, eval, getPeekHeight)
 import Screens.HomeScreen.ScreenData as HomeScreenData
 import Screens.Types (HomeScreenStage(..), HomeScreenState, KeyboardModalType(..),DriverStatus(..), DriverStatusResult(..), PillButtonState(..),TimerStatus(..), DisabilityType(..), SavedLocationScreenType(..), LocalStoreSubscriptionInfo, SubscriptionBannerType(..))
 import Screens.Types as ST
@@ -108,14 +107,19 @@ screen initialState =
                 Nothing -> do
                            setValueToLocalStore IS_RIDE_ACTIVE "false"
                            void $ pure $ JB.setCleverTapUserProp [{key : "Driver On-ride", value : unsafeToForeign "No"}]
-          let startingTime = (HU.differenceBetweenTwoUTC (HU.getCurrentUTC "") (getValueToLocalStore SET_WAITING_TIME))
-          if ((getValueToLocalStore IS_WAIT_TIMER_STOP) == "Triggered") && initialState.props.timerRefresh  then do
-            _ <- pure $ setValueToLocalStore IS_WAIT_TIMER_STOP (show (PostTriggered))
-            _ <- JB.waitingCountdownTimer startingTime push WaitTimerCallback
+          let localStage = getValueToLocalNativeStore LOCAL_STAGE
+          if (localStage /= "RideAccepted" && localStage /= "ChatWithCustomer" && initialState.data.activeRide.waitTimerId /= "") then do
+            void $ pure $ setValueToLocalStore WAITING_TIME_STATUS (show ST.NoStatus)
+            push $ UpdateWaitTime ST.NoStatus
+            void $ pure $ EHC.clearTimer initialState.data.activeRide.waitTimerId
             pure unit
           else pure unit
-          if (DA.any (_ /= (getValueToLocalNativeStore LOCAL_STAGE))["RideAccepted", "HomeScreen"]) then pure $ EHC.clearTimer initialState.data.driverGotoState.timerId else pure unit
-          case (getValueToLocalNativeStore LOCAL_STAGE) of
+          
+          void if (DA.any (_ == localStage)["RideRequested", "HomeScreen"]) && initialState.data.driverGotoState.isGotoEnabled then 
+            runEffectFn3 HU.countDownInMinutes (EHC.getExpiryTime (HU.istToUtcDate initialState.data.driverGotoState.gotoValidTill) false) push UpdateGoHomeTimer 
+            else if (initialState.data.driverGotoState.timerId /= "") then pure $ EHC.clearTimer initialState.data.driverGotoState.timerId
+            else pure unit
+          case localStage of
             "RideRequested"  -> do
                                 if (getValueToLocalStore RIDE_STATUS_POLLING) == "False" then do
                                   _ <- pure $ setValueToLocalStore RIDE_STATUS_POLLING_ID (HU.generateUniqueId unit)
@@ -129,6 +133,16 @@ screen initialState =
                                   pure unit
                                   else pure unit
             "RideAccepted"   -> do
+                                let startingTime = (HU.differenceBetweenTwoUTC (HU.getCurrentUTC "") (getValueToLocalStore WAITING_TIME_VAL))
+                                if (getValueToLocalStore WAITING_TIME_STATUS == show ST.Triggered) then do
+                                  void $ pure $ setValueToLocalStore WAITING_TIME_STATUS (show ST.PostTriggered)
+                                  void $ JB.waitingCountdownTimer startingTime push WaitTimerCallback
+                                  push $ UpdateWaitTime ST.PostTriggered
+                                  pure unit
+                                else if (getValueToLocalStore WAITING_TIME_STATUS == (show ST.PostTriggered) && initialState.data.activeRide.waitingTime == "__") then do
+                                  void $ JB.waitingCountdownTimer startingTime push WaitTimerCallback
+                                  pure unit
+                                else pure unit
                                 if (DA.elem initialState.data.peekHeight [518,470,0]) then void $ push $ RideActionModalAction (RideActionModal.NoAction) else pure unit
                                 _ <- pure $ setValueToLocalStore RIDE_G_FREQUENCY "2000"
                                 _ <- pure $ setValueToLocalStore DRIVER_MIN_DISPLACEMENT "5.0"
@@ -170,11 +184,6 @@ screen initialState =
                                   pure $ JB.removeMarker "ic_vehicle_side" -- TODO : remove if we dont require "ic_auto" icon on homescreen
                                   pure unit
                                   else pure unit
-            "ChatWithCustomer" -> do
-                                if (initialState.data.activeRide.notifiedCustomer && (not initialState.props.updatedArrivalInChat)) then do
-                                  _ <- pure $ JB.sendMessage $ if EHC.isPreviousVersion (getValueToLocalStore VERSION_NAME) (getPreviousVersion (MU.getMerchant FunctionCall)) then (getMessageFromKey "dis1AP" "EN_US") else "dis1AP"
-                                  push UpdateInChat
-                                  else pure unit
             _                -> do
                                 _ <- pure $ setValueToLocalStore RIDE_G_FREQUENCY "50000"
                                 _ <- pure $ JB.removeAllPolylines ""
@@ -182,8 +191,6 @@ screen initialState =
                                 _ <- pure $ setValueToLocalStore DRIVER_MIN_DISPLACEMENT "25.0"
                                 _ <- pure $ setValueToLocalStore SESSION_ID (JB.generateSessionId unit)
                                 _ <- checkPermissionAndUpdateDriverMarker initialState
-                                _ <- if initialState.data.driverGotoState.isGotoEnabled then runEffectFn3 HU.countDownInMinutes (EHC.getExpiryTime (HU.istToUtcDate initialState.data.driverGotoState.gotoValidTill) false) push UpdateGoHomeTimer
-                                      else pure $ EHC.clearTimer initialState.data.driverGotoState.timerId
                                 _ <- launchAff $ EHC.flowRunner defaultGlobalState $ checkCurrentRide push Notification
                                 _ <- launchAff $ EHC.flowRunner defaultGlobalState $ paymentStatusPooling initialState.data.paymentState.invoiceId 4 5000.0 initialState push PaymentStatusAction
                                 pure unit
