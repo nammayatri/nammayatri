@@ -32,7 +32,8 @@ buildCancelReq ::
 buildCancelReq res = do
   messageId <- generateGUID
   bapUrl <- asks (.nwAddress) <&> #baseUrlPath %~ (<> "/" <> T.unpack res.merchant.id.getId)
-  context <- buildTaxiContext Context.CANCEL messageId (Just res.transactionId) res.merchant.bapId bapUrl (Just res.bppId) (Just res.bppUrl) res.city res.merchant.country False
+  -- TODO :: Add request city, after multiple city support on gateway.
+  context <- buildTaxiContext Context.CANCEL messageId (Just res.transactionId) res.merchant.bapId bapUrl (Just res.bppId) (Just res.bppUrl) res.merchant.defaultCity res.merchant.country False
   pure $ BecknReq context $ mkCancelMessage res
 
 mkCancelMessage :: DCancel.CancelRes -> Cancel.CancelMessage
@@ -52,7 +53,8 @@ buildCancelSearchReq ::
 buildCancelSearchReq res = do
   let messageId = res.estimateId.getId
   bapUrl <- asks (.nwAddress) <&> #baseUrlPath %~ (<> "/" <> T.unpack res.merchant.id.getId)
-  context <- buildTaxiContext Context.CANCEL messageId (Just res.searchReqId.getId) res.merchant.bapId bapUrl (Just res.providerId) (Just res.providerUrl) res.city res.merchant.country False
+  -- TODO :: Add request city, after multiple city support on gateway.
+  context <- buildTaxiContext Context.CANCEL messageId (Just res.searchReqId.getId) res.merchant.bapId bapUrl (Just res.providerId) (Just res.providerUrl) res.merchant.defaultCity res.merchant.country False
   pure $ BecknReq context $ mkCancelSearchMessage res
 
 mkCancelSearchMessage :: DCancel.CancelSearch -> Cancel.CancelMessage

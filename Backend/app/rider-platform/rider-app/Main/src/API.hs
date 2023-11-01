@@ -51,7 +51,7 @@ type MainAPI =
     :<|> ( Capture "merchantId" (ShortId DM.Merchant)
              :> Juspay.JuspayWebhookAPI
          )
-    :<|> Dashboard.API
+    :<|> Dashboard.API -- TODO :: Needs to be deprecated
     :<|> Dashboard.APIV2
     :<|> Internal.API
 
