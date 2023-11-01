@@ -32,7 +32,8 @@ buildRatingReq ::
 buildRatingReq DFeedback.FeedbackRes {..} = do
   msgId <- generateGUID
   bapUrl <- asks (.nwAddress) <&> #baseUrlPath %~ (<> "/" <> T.unpack merchant.id.getId)
-  context <- buildTaxiContext Context.RATING msgId (Just transactionId) merchant.bapId bapUrl (Just providerId) (Just providerUrl) city merchant.country False
+  -- TODO :: Add request city, after multiple city support on gateway.
+  context <- buildTaxiContext Context.RATING msgId (Just transactionId) merchant.bapId bapUrl (Just providerId) (Just providerUrl) merchant.defaultCity merchant.country False
   let message =
         Rating.RatingMessage
           { id = bppBookingId.getId,
