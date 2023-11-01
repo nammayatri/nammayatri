@@ -44,6 +44,7 @@ module Domain.Action.Dashboard.Driver
     getDriverHomeLocation,
     updateDriverHomeLocation,
     incrementDriverGoToCount,
+    getDriverGoHomeInfo,
     getPaymentHistoryEntityDetails,
     getPaymentHistory,
     addVehicleForFleet,
@@ -80,6 +81,7 @@ import qualified Domain.Action.UI.DriverOnboarding.AadhaarVerification as AVD
 import Domain.Action.UI.DriverOnboarding.Status (ResponseStatus (..))
 import qualified Domain.Action.UI.DriverOnboarding.Status as St
 import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as DomainRC
+import Domain.Types.Driver.GoHomeFeature.DriverGoHomeRequest (CachedGoHomeRequest (..))
 import qualified Domain.Types.Driver.GoHomeFeature.DriverHomeLocation as DDHL
 import qualified Domain.Types.DriverBlockReason as DBR
 import Domain.Types.DriverFee
@@ -124,6 +126,7 @@ import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
+import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQGHC
 import Storage.CachedQueries.DriverBlockReason as DBR
 import qualified Storage.CachedQueries.Merchant.MerchantMessage as QMM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
@@ -1287,6 +1290,20 @@ incrementDriverGoToCount merchantShortId opCity driverId = do
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   CQDGR.increaseDriverGoHomeRequestCount merchantOpCityId (cast driverId)
   return Success
+
+getDriverGoHomeInfo :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Flow Common.CachedGoHomeRequestInfoRes
+getDriverGoHomeInfo merchantShortId opCity driverId = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  ghInfo <- CQGHC.getDriverGoHomeRequestInfo (cast driverId) merchantOpCityId Nothing
+  return (buildCachedGoHomeRequestInfoRes ghInfo)
+  where
+    buildCachedGoHomeRequestInfoRes CachedGoHomeRequest {..} =
+      Common.CachedGoHomeRequestInfoRes
+        { status = show <$> status,
+          driverGoHomeRequestId = cast <$> driverGoHomeRequestId,
+          ..
+        }
 
 ---------------------------------------------------------------------
 driverAadhaarInfoByPhone :: ShortId DM.Merchant -> Context.City -> Text -> Flow Common.DriverAadhaarInfoByPhoneReq

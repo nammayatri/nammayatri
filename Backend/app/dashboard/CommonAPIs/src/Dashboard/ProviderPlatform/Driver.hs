@@ -110,6 +110,22 @@ type GetHomeLocationsRes = [DriverHomeLocationAPIEntity]
 
 type UpdateDriverHomeLocationReq = DriverHomeLocationAPIEntity
 
+data CachedGoHomeRequestInfoRes = CachedGoHomeRequestInfoRes
+  { status :: Maybe String,
+    cnt :: Int,
+    validTill :: Maybe UTCTime,
+    driverGoHomeRequestId :: Maybe (Id DriverGoHomeRequest),
+    isOnRide :: Bool,
+    goHomeReferenceTime :: UTCTime
+  }
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+instance HideSecrets CachedGoHomeRequestInfoRes where
+  hideSecrets = identity
+
+------------------------------------------------------------------------
+
 data DriverListItem = DriverListItem
   { driverId :: Id Driver,
     firstName :: Text,
@@ -857,6 +873,7 @@ newtype ClearOnRideStuckDriversRes = ClearOnRideStuckDriversRes
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+----------------- Go To Home ----------------------------------
 type GetDriverHomeLocationAPI =
   Capture "driverId" (Id Driver)
     :> "getHomeLocation"
@@ -872,6 +889,11 @@ type IncrementDriverGoToCountAPI =
   Capture "driverId" (Id Driver)
     :> "incrementGoToCount"
     :> Post '[JSON] APISuccess
+
+type GetDriverGoHomeInfoAPI =
+  Capture "driverId" (Id Driver)
+    :> "getGoHomeInfo"
+    :> Get '[JSON] CachedGoHomeRequestInfoRes
 
 ---------------------------------------------------------
 -- Get Route driver ids ---------------------------------------
