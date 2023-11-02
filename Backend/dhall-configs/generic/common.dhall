@@ -34,6 +34,8 @@ let loggerConfig =
 
 let ConsumerType = < AVAILABILITY_TIME | BROADCAST_MESSAGE | PERSON_STATS >
 
+let ConsumerTypes = < AVAILABILITY_TIME | BROADCAST_MESSAGE | PERSON_STATS >
+
 let kafkaConfig = { topicName : Text, kafkaKey : Text }
 
 let eventStreamNameType =
@@ -79,6 +81,11 @@ in  { smsSessionConfig
     , S3Config
     , periodType = PeriodType
     , consumerType = ConsumerType
+    , consumerTypes =
+      [ ConsumerType.AVAILABILITY_TIME
+      , ConsumerType.BROADCAST_MESSAGE
+      , ConsumerType.PERSON_STATS
+      ]
     , kafkaCompression = KafkaCompression
     , kafkaConfig
     , streamConfig

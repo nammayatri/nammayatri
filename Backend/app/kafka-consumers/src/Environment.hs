@@ -95,7 +95,8 @@ data AppCfg = AppCfg
     httpClientOptions :: HttpClientOptions,
     enableRedisLatencyLogging :: Bool,
     enablePrometheusMetricLogging :: Bool,
-    tables :: Tables
+    tables :: Tables,
+    consumerTypes :: [ConsumerType]
   }
   deriving (Generic, FromDhall)
 

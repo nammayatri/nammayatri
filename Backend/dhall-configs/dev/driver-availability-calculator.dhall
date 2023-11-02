@@ -85,4 +85,5 @@ in  { hedisCfg
     , enableRedisLatencyLogging = True
     , enablePrometheusMetricLogging = True
     , tables
+    , consumerTypes = common.consumerTypes
     }

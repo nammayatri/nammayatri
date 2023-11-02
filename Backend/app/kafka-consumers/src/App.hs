@@ -45,14 +45,11 @@ startKafkaConsumers =
   bracketOnError
     ( do
         putStrLn ("Running consumers in thread" :: Text)
-        let consumerTypes = [BROADCAST_MESSAGE, AVAILABILITY_TIME, PERSON_STATS]
+        baseConfigFile <- CF.getConfigNameFromConsumertype AVAILABILITY_TIME
+        baseConfig :: AppCfg <- readDhallConfigDefault baseConfigFile
+        let consumerTypes = baseConfig.consumerTypes
         supervisors <- mapM (\_ -> newSupervisor OneForOne) consumerTypes
-        -- _ <- mapM_ (\(sup, consumerType) -> forkSupervised sup fibonacciRetryPolicy (runConsumer consumerType)) (zip supervisors consumerTypes)
-        mapM_
-            (\\ (sup, consumerType)
-               -> forkSupervised
-                    sup fibonacciRetryPolicy (runConsumer consumerType))
-            (zip supervisors consumerTypes)
+        mapM_ (\(sup, consumerType) -> forkSupervised sup fibonacciRetryPolicy (runConsumer consumerType)) (zip supervisors consumerTypes)
         _ <- forkIO (go (eventStream (head supervisors)))
         return (head supervisors)
     )
