@@ -112,6 +112,7 @@ data DriversAPIs = DriversAPIs
     getDriverHomeLocation :: Id Driver.Driver -> Euler.EulerClient Driver.GetHomeLocationsRes,
     updateDriverHomeLocation :: Id Driver.Driver -> Driver.UpdateDriverHomeLocationReq -> Euler.EulerClient APISuccess,
     incrementDriverGoToCount :: Id Driver.Driver -> Euler.EulerClient APISuccess,
+    getDriverGoHomeInfo :: Id Driver.Driver -> Euler.EulerClient Driver.CachedGoHomeRequestInfoRes,
     setRCStatus :: Id Driver.Driver -> Driver.RCStatusReq -> Euler.EulerClient APISuccess,
     deleteRC :: Id Driver.Driver -> Driver.DeleteRCReq -> Euler.EulerClient APISuccess,
     getPaymentHistory :: Id Driver.Driver -> Maybe INV.InvoicePaymentMode -> Maybe Int -> Maybe Int -> Euler.EulerClient ADriver.HistoryEntityV2,
@@ -308,6 +309,7 @@ mkDriverOfferAPIs merchantId city token = do
       :<|> getDriverHomeLocation
       :<|> updateDriverHomeLocation
       :<|> incrementDriverGoToCount
+      :<|> getDriverGoHomeInfo
       :<|> getPaymentHistory
       :<|> getPaymentHistoryEntityDetails
       :<|> updateSubscriptionDriverFeeAndInvoice

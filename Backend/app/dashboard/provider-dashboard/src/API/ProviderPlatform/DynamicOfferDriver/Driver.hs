@@ -86,6 +86,7 @@ type API =
            :<|> GetDriverHomeLocationAPI
            :<|> UpdateDriverHomeLocationAPI
            :<|> IncrementDriverGoToCountAPI
+           :<|> GetDriverGoHomeInfoAPI
            :<|> DriverPaymentHistoryAPI
            :<|> DriverPaymentHistoryEntityDetailsAPI
            :<|> DriverSubscriptionDriverFeeAndInvoiceUpdateAPI
@@ -256,6 +257,10 @@ type IncrementDriverGoToCountAPI =
   ApiAuth 'DRIVER_OFFER_BPP 'DRIVERS 'INCREMENT_DRIVER_GO_TO_COUNT
     :> Common.IncrementDriverGoToCountAPI
 
+type GetDriverGoHomeInfoAPI =
+  ApiAuth 'DRIVER_OFFER_BPP 'DRIVERS 'GET_DRIVER_GO_HOME_INFO
+    :> Common.GetDriverGoHomeInfoAPI
+
 type DriverPaymentHistoryAPI =
   ApiAuth 'DRIVER_OFFER_BPP 'DRIVERS 'PAYMENT_HISTORY
     :> ADDriver.DriverPaymentHistoryAPI
@@ -330,6 +335,7 @@ handler merchantId city =
     :<|> getDriverHomeLocation merchantId city
     :<|> updateDriverHomeLocation merchantId city
     :<|> incrementDriverGoToCount merchantId city
+    :<|> getDriverGoHomeInfo merchantId city
     :<|> getPaymentHistory merchantId city
     :<|> getPaymentHistoryEntityDetails merchantId city
     :<|> updateSubscriptionDriverFeeAndInvoice merchantId city
@@ -608,6 +614,11 @@ incrementDriverGoToCount merchantShortId opCity apiTokenInfo driverId = withFlow
   transaction <- buildTransaction Common.IncrementDriverGoToCountEndPoint apiTokenInfo driverId T.emptyRequest
   T.withTransactionStoring transaction $
     Client.callDriverOfferBPP checkedMerchantId opCity (.drivers.incrementDriverGoToCount) driverId
+
+getDriverGoHomeInfo :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> FlowHandler Common.CachedGoHomeRequestInfoRes
+getDriverGoHomeInfo merchantShortId opCity apiTokenInfo driverId = withFlowHandlerAPI $ do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  Client.callDriverOfferBPP checkedMerchantId opCity (.drivers.getDriverGoHomeInfo) driverId
 
 getPaymentHistory :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Maybe INV.InvoicePaymentMode -> Maybe Int -> Maybe Int -> FlowHandler Driver.HistoryEntityV2
 getPaymentHistory merchantShortId opCity apiTokenInfo driverId paymentMode limit offset = withFlowHandlerAPI $ do

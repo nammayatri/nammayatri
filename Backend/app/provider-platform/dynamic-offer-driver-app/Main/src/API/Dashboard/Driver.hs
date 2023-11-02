@@ -69,6 +69,7 @@ type API =
            :<|> Common.GetDriverHomeLocationAPI
            :<|> Common.UpdateDriverHomeLocationAPI
            :<|> Common.IncrementDriverGoToCountAPI
+           :<|> Common.GetDriverGoHomeInfoAPI
            :<|> DriverPaymentHistoryAPI
            :<|> DriverPaymentHistoryEntityDetailsAPI
            :<|> Common.UpdateSubscriptionDriverFeeAndInvoiceAPI
@@ -293,6 +294,7 @@ handler merchantId city =
     :<|> getDriverHomeLocation merchantId city
     :<|> updateDriverHomeLocation merchantId city
     :<|> incrementDriverGoToCount merchantId city
+    :<|> getDriverGoHomeInfo merchantId city
     :<|> getPaymentHistory merchantId city
     :<|> getPaymentHistoryEntityDetails merchantId city
     :<|> updateDriverSubscriptionDriverFeeAndInvoiceUpdate merchantId city
@@ -417,6 +419,9 @@ updateDriverHomeLocation merchantShortId opCity driverId = withFlowHandlerAPI . 
 
 incrementDriverGoToCount :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> FlowHandler APISuccess
 incrementDriverGoToCount merchantShortId opCity = withFlowHandlerAPI . DDriver.incrementDriverGoToCount merchantShortId opCity
+
+getDriverGoHomeInfo :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> FlowHandler Common.CachedGoHomeRequestInfoRes
+getDriverGoHomeInfo merchantShortId opCity = withFlowHandlerAPI . DDriver.getDriverGoHomeInfo merchantShortId opCity
 
 setRCStatus :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Common.RCStatusReq -> FlowHandler APISuccess
 setRCStatus merchantShortId opCity driverId = withFlowHandlerAPI . DDriver.setRCStatus merchantShortId opCity driverId
