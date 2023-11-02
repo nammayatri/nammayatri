@@ -2732,15 +2732,16 @@
         "prometheus-haskell": "prometheus-haskell_2"
       },
       "locked": {
-        "lastModified": 1698515850,
-        "narHash": "sha256-UgCb0LVU9sURfFbvxVUKPb0wm1kTRBWXyYi7VNSODRQ=",
+        "lastModified": 1698914395,
+        "narHash": "sha256-Ai9LkP2QBsKJb0AamGiR5Phq2/EyzVWayfuhc1MJwN4=",
         "owner": "nammayatri",
         "repo": "shared-kernel",
-        "rev": "7593451d47ceaf6a3d76971cb7abd8742dd7e900",
+        "rev": "094aef9303a3ffb86f0f0532be7ca5bc4e8d9bd5",
         "type": "github"
       },
       "original": {
         "owner": "nammayatri",
+        "ref": "Backend/test/redis-config",
         "repo": "shared-kernel",
         "type": "github"
       }
