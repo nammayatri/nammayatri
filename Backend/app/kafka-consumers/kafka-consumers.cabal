@@ -110,8 +110,6 @@ library
     , text
     , time
     , unordered-containers
-    , threads-supervisor
-    , stm
   default-language: Haskell2010
   if os(darwin)
     ghc-options: -fwhole-archive-hs-libs
@@ -195,8 +193,6 @@ executable kafka-consumers-exe
     , text
     , time
     , unordered-containers
-    , threads-supervisor
-    , stm
   default-language: Haskell2010
   if os(darwin)
     ghc-options: -fwhole-archive-hs-libs

@@ -45,7 +45,7 @@ startKafkaConsumers =
   bracketOnError
     ( do
         putStrLn ("Running consumers in thread" :: Text)
-        let consumerTypes  = [BROADCAST_MESSAGE, AVAILABILITY_TIME, PERSON_STATS]
+        let consumerTypes = [BROADCAST_MESSAGE, AVAILABILITY_TIME, PERSON_STATS]
         supervisors <- mapM (\_ -> newSupervisor OneForOne) consumerTypes
         _ <- mapM_ (\(sup, consumerType) -> forkSupervised sup fibonacciRetryPolicy (runConsumer consumerType)) (zip supervisors consumerTypes)
         _ <- forkIO (go (eventStream (head supervisors)))
