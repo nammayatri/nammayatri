@@ -103,7 +103,15 @@ getStatus (personId, merchantId, _) orderId = do
   if order.status == Payment.CHARGED -- Consider CHARGED status as terminal status
     then do
       invoice <- listToMaybe <$> QIN.findById (cast orderId)
-      return $ DPayment.PaymentStatus {status = order.status, bankErrorCode = invoice >>= (.bankErrorCode), bankErrorMessage = invoice >>= (.bankErrorMessage)}
+      return $
+        DPayment.PaymentStatus
+          { status = order.status,
+            bankErrorCode = invoice >>= (.bankErrorCode),
+            bankErrorMessage = invoice >>= (.bankErrorMessage),
+            isRetried = Just $ order.isRetried,
+            isRetargeted = Just $ order.isRetargeted,
+            retargetLink = order.retargetLink
+          }
     else do
       paymentStatus <- DPayment.orderStatusService commonPersonId orderId orderStatusCall
       case paymentStatus of
@@ -119,7 +127,7 @@ getStatus (personId, merchantId, _) orderId = do
           QIN.updateBankErrorsByInvoiceId bankErrorMessage bankErrorCode (cast order.id)
           notifyAndUpdateInvoiceStatusIfPaymentFailed personId order.id status Nothing Nothing False
         DPayment.PDNNotificationStatusResp {..} ->
-          processNotification notificationId notificationStatus
+          processNotification notificationId notificationStatus responseCode responseMessage
       return paymentStatus
 
 -- webhook ----------------------------------------------------------
@@ -162,7 +170,7 @@ juspayWebhookHandler merchantShortId authData value = do
               order <- QOrder.findByShortId (ShortId orderShortId) >>= fromMaybeM (PaymentOrderNotFound orderShortId)
               processMandate (cast order.personId) status mandateStartDate mandateEndDate (Id mandateId) mandateMaxAmount Nothing Nothing
             Payment.PDNNotificationStatusResp {..} ->
-              processNotification notificationId notificationStatus
+              processNotification notificationId notificationStatus responseCode responseMessage
             Payment.BadStatusResp -> pure ()
       pure Ack
     _ -> throwError $ InternalError "Unknown Service Config"
@@ -255,7 +263,8 @@ pdnNotificationStatus ::
 pdnNotificationStatus (_, merchantId, _) notificationId = do
   pdnNotification <- QNTF.findById notificationId >>= fromMaybeM (InternalError $ "No Notification Sent With Id" <> notificationId.getId)
   resp <- Payment.mandateNotificationStatus merchantId (mkNotificationRequest pdnNotification.shortId)
-  processNotification pdnNotification.shortId resp.status
+  let [responseCode, reponseMessage] = map (\func -> func =<< resp.providerResponse) [(.responseCode), (.responseMessage)]
+  processNotification pdnNotification.shortId resp.status responseCode reponseMessage
   return resp
   where
     mkNotificationRequest shortNotificationId =
@@ -263,8 +272,8 @@ pdnNotificationStatus (_, merchantId, _) notificationId = do
         { notificationId = shortNotificationId
         }
 
-processNotification :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r) => Text -> Payment.NotificationStatus -> m ()
-processNotification notificationId notificationStatus = do
+processNotification :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r) => Text -> Payment.NotificationStatus -> Maybe Text -> Maybe Text -> m ()
+processNotification notificationId notificationStatus respCode respMessage = do
   notification <- QNTF.findByShortId notificationId >>= fromMaybeM (InternalError "notification not found")
   let driverFeeId = notification.driverFeeId
   unless (notification.status == Juspay.SUCCESS) $ do
@@ -281,7 +290,7 @@ processNotification notificationId notificationStatus = do
           QDF.updateManualToAutoPay driverFeeId
         QDF.updateAutopayPaymentStageById (Just EXECUTION_SCHEDULED) driverFeeId
       _ -> pure ()
-    QNTF.updateNotificationStatusById notification.id notificationStatus
+    QNTF.updateNotificationStatusAndResponseInfoById notification.id notificationStatus respCode respMessage
 
 processMandate :: (MonadFlow m, CacheFlow m r, EsqDBReplicaFlow m r, EsqDBFlow m r) => Id DP.Person -> Payment.MandateStatus -> Maybe UTCTime -> Maybe UTCTime -> Id DM.Mandate -> HighPrecMoney -> Maybe Text -> Maybe Payment.Upi -> m ()
 processMandate driverId mandateStatus startDate endDate mandateId maxAmount payerVpa upiDetails = do

@@ -208,7 +208,7 @@ currentPlan (driverId, _merchantId, merchantOpCityId) = do
   (orderId, lastPaymentType) <-
     case mbInvoice of
       Just invoice -> do
-        mbOrder <- SOrder.findById (cast invoice.id)
+        mbOrder <- if invoice.invoiceStatus == INV.ACTIVE_INVOICE then SOrder.findById (cast invoice.id) else return Nothing
         maybe (pure (Nothing, Nothing)) orderBasedCheck mbOrder
       Nothing -> return (Nothing, Nothing)
 

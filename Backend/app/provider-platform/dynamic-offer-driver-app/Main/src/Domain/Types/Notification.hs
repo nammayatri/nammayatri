@@ -22,6 +22,8 @@ data Notification = Notification
     notificationType :: Maybe Text,
     description :: Text,
     status :: Payment.NotificationStatus,
+    responseCode :: Maybe Text,
+    responseMessage :: Maybe Text,
     dateCreated :: UTCTime,
     lastUpdated :: UTCTime,
     lastStatusCheckedAt :: Maybe UTCTime,

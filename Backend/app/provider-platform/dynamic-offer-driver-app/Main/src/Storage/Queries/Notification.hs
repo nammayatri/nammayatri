@@ -59,11 +59,13 @@ updatePendingToFailed = do
         ]
     ]
 
-updateNotificationStatusById :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Domain.Notification -> Payment.NotificationStatus -> m ()
-updateNotificationStatusById notificationId notificationStatus = do
+updateNotificationStatusAndResponseInfoById :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Domain.Notification -> Payment.NotificationStatus -> Maybe Text -> Maybe Text -> m ()
+updateNotificationStatusAndResponseInfoById notificationId notificationStatus responseCode responseMessage = do
   now <- getCurrentTime
   updateWithKV
     [ Se.Set BeamI.status notificationStatus,
+      Se.Set BeamI.responseCode responseCode,
+      Se.Set BeamI.responseMessage responseMessage,
       Se.Set BeamI.updatedAt now
     ]
     [Se.Is BeamI.id (Se.Eq $ getId notificationId)]
@@ -115,6 +117,8 @@ instance FromTType' BeamI.Notification Domain.Notification where
             dateCreated,
             lastUpdated,
             createdAt,
+            responseCode,
+            responseMessage,
             lastStatusCheckedAt,
             updatedAt
           }
@@ -136,6 +140,8 @@ instance ToTType' BeamI.Notification Domain.Notification where
         BeamI.dateCreated = dateCreated,
         BeamI.lastUpdated = lastUpdated,
         BeamI.createdAt = createdAt,
+        BeamI.responseCode = responseCode,
+        BeamI.responseMessage = responseMessage,
         BeamI.lastStatusCheckedAt = lastStatusCheckedAt,
         BeamI.updatedAt = updatedAt
       }
