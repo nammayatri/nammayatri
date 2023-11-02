@@ -21,6 +21,7 @@ where
 import AWS.S3
 import qualified Domain.Action.UI.Ride.EndRide as EndRide
 import Domain.Types.Merchant
+import IssueManagement.Storage.BeamFlow
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude

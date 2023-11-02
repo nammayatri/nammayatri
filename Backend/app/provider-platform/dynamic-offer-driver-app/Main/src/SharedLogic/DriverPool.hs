@@ -638,7 +638,7 @@ calculateDriverPoolWithActualDist ::
   Bool ->
   Maybe PoolRadiusStep ->
   m [DriverPoolWithActualDistResult]
-calculateDriverPoolWithActualDist poolCalculationStage driverPoolCfg mbVariant searchRequestTag pickup merchantId onlyNotOnRide mRadiusStep = do
+calculateDriverPoolWithActualDist poolCalculationStage driverPoolCfg mbVariant searchRequestTag pickup merchantId merchantOpCityId onlyNotOnRide mRadiusStep = do
   driverPool <- calculateDriverPool poolCalculationStage driverPoolCfg mbVariant searchRequestTag pickup merchantId onlyNotOnRide mRadiusStep
   case driverPool of
     [] -> return []
@@ -724,7 +724,7 @@ calculateDriverCurrentlyOnRideWithActualDist ::
   Id DMOC.MerchantOperatingCity ->
   Maybe PoolRadiusStep ->
   m [DriverPoolWithActualDistResult]
-calculateDriverCurrentlyOnRideWithActualDist poolCalculationStage driverPoolCfg mbVariant searchRequestTag pickup merchantId mRadiusStep = do
+calculateDriverCurrentlyOnRideWithActualDist poolCalculationStage driverPoolCfg mbVariant searchRequestTag pickup merchantId merchantOpCityId mRadiusStep = do
   driverPool <- calculateDriverPoolCurrentlyOnRide poolCalculationStage driverPoolCfg mbVariant searchRequestTag pickup merchantId mRadiusStep
   case driverPool of
     [] -> return []

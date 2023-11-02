@@ -119,11 +119,10 @@ data TransporterConfigD u = TransporterConfig
     refillVehicleModel :: Bool,
     rentalRequests :: Bool,
     ratingAsDecimal :: Bool,
-    refillVehicleModel :: Bool,
     driverFeeOverlaySendingTimeLimitInDays :: Int,
     overlayBatchSize :: Int,
     volunteerSmsSendingLimit :: Maybe DashboardMediaSendingLimit,
-    driverSmsReceivingLimit :: Maybe DashboardMediaSendingLimit
+    driverSmsReceivingLimit :: Maybe DashboardMediaSendingLimit,
     allocateRentalRideTimeDiff :: Seconds,
     createdAt :: UTCTime,
     updatedAt :: UTCTime

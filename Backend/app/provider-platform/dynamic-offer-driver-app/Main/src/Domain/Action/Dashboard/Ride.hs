@@ -44,6 +44,7 @@ import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.Vehicle as DVeh
 import Environment
+import IssueManagement.Storage.BeamFlow
 import Kernel.Beam.Functions
 import Kernel.External.Encryption (decrypt, getDbHash)
 import Kernel.External.Maps.HasCoordinates
@@ -459,7 +460,7 @@ bookingWithVehicleNumberAndPhone merchant merchantOpCityId req = do
       driverRCAssoc <- makeRCAssociation driverId rc.id (DomainRC.convertTextToUTC (Just "2099-12-12"))
       DAQuery.create driverRCAssoc
 
-endActiveRide :: Id DRide.Ride -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Flow ()
+endActiveRide :: (BeamFlow m r) => Id DRide.Ride -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Flow ()
 endActiveRide rideId merchantId merchantOpCityId = do
   let dashboardReq = EHandler.DashboardEndRideReq {point = Nothing, merchantId}
   shandle <- EHandler.buildEndRideHandle merchantId merchantOpCityId

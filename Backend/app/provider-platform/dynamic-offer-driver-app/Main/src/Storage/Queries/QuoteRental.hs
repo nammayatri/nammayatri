@@ -31,7 +31,7 @@ import qualified Storage.Beam.QuoteRental as BeamQR
 import Storage.Queries.FareParameters as BeamQFP
 import qualified Storage.Queries.FareParameters as SQFP
 
-create :: MonadFlow m => QuoteRental -> m ()
+create :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => QuoteRental -> m ()
 create quote = SQFP.create quote.fareParams >> createWithKV quote
 
 countAllByRequestId :: MonadFlow m => Id SearchRequest -> m Int
@@ -46,10 +46,10 @@ countAllByRequestId searchReqID = do
               B.all_ (BeamCommon.quoteRental BeamCommon.atlasDB)
   pure (either (const 0) (fromMaybe 0) resp)
 
-findById :: MonadFlow m => Id QuoteRental -> m (Maybe QuoteRental)
+findById :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id QuoteRental -> m (Maybe QuoteRental)
 findById (Id dQuoteId) = findOneWithKV [Se.Is BeamQR.id $ Se.Eq dQuoteId]
 
-createNewFareParamAndUpdateQuote :: MonadFlow m => Id QuoteRental -> QuoteRental -> m ()
+createNewFareParamAndUpdateQuote :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id QuoteRental -> QuoteRental -> m ()
 createNewFareParamAndUpdateQuote (Id id) quoteRental =
   SQFP.create quoteRental.fareParams
     >> updateOneWithKV

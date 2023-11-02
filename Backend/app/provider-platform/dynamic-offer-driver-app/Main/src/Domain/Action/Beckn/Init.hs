@@ -59,7 +59,6 @@ import qualified Storage.Queries.SearchRequest as QSR
 import qualified Storage.Queries.SearchRequestSpecialZone as QSRSpecialZone
 import qualified Storage.Queries.SearchTry as QST
 import Tools.Error
-import Tools.Event
 
 data ValidateInitResponse
   = DRIVER_QUOTE (DDQ.DriverQuote, DSR.SearchRequest, DST.SearchTry)
@@ -155,7 +154,7 @@ handler merchantId req initReq = do
       case initReq of
         DRIVER_QUOTE (driverQuote, searchRequest, searchTry) -> do
           booking <- buildNormalBooking searchRequest driverQuote driverQuote.id.getId searchTry.startTime DRB.NormalBooking now (mbPaymentMethod <&> (.id)) paymentUrl searchRequest.disabilityTag merchantOpCityId
-          triggerBookingCreatedEvent BookingEventData {booking = booking, personId = driverQuote.driverId, merchantId = transporter.id}
+          --triggerBookingCreatedEvent BookingEventData {booking = booking, personId = driverQuote.driverId, merchantId = transporter.id} --TODO:RENTAL
           QST.updateStatus searchTry.id DST.COMPLETED
           _ <- QRB.createBooking booking
           return (booking, Just driverQuote.driverName, Just driverQuote.driverId.getId)
@@ -221,8 +220,8 @@ handler merchantId req initReq = do
           let updateRentalQuote = rentalQuote{baseDistance = Meters distance, baseDuration = durationInSeconds, baseFare = estimatedFare, fareParams = fareParams, validTill = validTill, updatedAt = now, estimatedFinishTime = estimatedFinishTime}
           void $ QRQuote.createNewFareParamAndUpdateQuote rentalQuote.id updateRentalQuote
           updatedRentalQuotes <- QRQuote.findById (Id req.estimateId) >>= fromMaybeM (QuoteNotFound req.estimateId)
-          searchTry <- buildRentalSearchTry searchRequest.id req.startTime rentalQuote
-          booking <- buildRentalBooking updatedRentalQuotes searchRequest req.startTime DRB.RentalBooking now (mbPaymentMethod <&> (.id)) paymentUrl searchRequest.disabilityTag
+          searchTry <- buildRentalSearchTry searchRequest.id req.startTime rentalQuote merchantOpCityId
+          booking <- buildRentalBooking updatedRentalQuotes searchRequest req.startTime DRB.RentalBooking now (mbPaymentMethod <&> (.id)) paymentUrl searchRequest.disabilityTag merchantOpCityId
           _ <- QRB.createBooking booking
           QST.create searchTry
           return (booking, Nothing, Nothing)
@@ -271,7 +270,7 @@ handler merchantId req initReq = do
             pure (details, fromLocation)
           DSR.SearchReqDetailsRental DSR.SearchRequestDetailsRental {} -> do
             throwError $ InvalidRequest "Rental is not allowed here"
-      pure
+      pure $
         DRB.Booking
           { transactionId = searchRequest.transactionId,
             status = DRB.NEW,
@@ -312,8 +311,9 @@ handler merchantId req initReq = do
       Maybe (Id DMPM.MerchantPaymentMethod) ->
       Maybe Text ->
       Maybe Text ->
+      Id DMOC.MerchantOperatingCity ->
       m DRB.Booking
-    buildBookingSpecialzone specialZoneQuote searchRequestForSpecialZone quoteId startTime bookingType now mbPaymentMethodId paymentUrl disabilityTag = do
+    buildBookingSpecialzone specialZoneQuote searchRequestForSpecialZone quoteId startTime bookingType now mbPaymentMethodId paymentUrl disabilityTag merchantOpCityId = do
       id <- Id <$> generateGUID
       let bookingOnDemand =
             DRB.DetailsOnDemand
@@ -322,13 +322,14 @@ handler merchantId req initReq = do
                   specialLocationTag = Nothing,
                   toLocation = searchRequestForSpecialZone.toLocation
                 }
-      exophone <- findRandomExophone merchantId
-      pure
+      exophone <- findRandomExophone merchantId merchantOpCityId
+      pure $
         DRB.Booking
           { transactionId = searchRequestForSpecialZone.transactionId,
             status = DRB.NEW,
             providerId = merchantId,
             primaryExophone = exophone.primaryPhone,
+            merchantOperatingCityId = merchantOpCityId,
             bapId = req.bapId,
             bapUri = req.bapUri,
             bapCity = Just req.bapCity,
@@ -362,10 +363,11 @@ handler merchantId req initReq = do
       Maybe (Id DMPM.MerchantPaymentMethod) ->
       Maybe Text ->
       Maybe Text ->
+      Id DMOC.MerchantOperatingCity ->
       m DRB.Booking
-    buildRentalBooking rentalQuote searchRequest startTime bookingType now mbPaymentMethodId paymentUrl disabilityTag = do
+    buildRentalBooking rentalQuote searchRequest startTime bookingType now mbPaymentMethodId paymentUrl disabilityTag merchantOpCityId = do
       id <- Id <$> generateGUID
-      exophone <- findRandomExophone merchantId
+      exophone <- findRandomExophone merchantId merchantOpCityId
       (bookingDetails, fromLocation) <- do
         case searchRequest.searchRequestDetails of
           DSR.SearchReqDetailsOnDemand DSR.SearchRequestDetailsOnDemand {} -> do
@@ -382,6 +384,7 @@ handler merchantId req initReq = do
           { transactionId = searchRequest.transactionId,
             status = DRB.NEW,
             providerId = merchantId,
+            merchantOperatingCityId = merchantOpCityId,
             primaryExophone = exophone.primaryPhone,
             bapId = req.bapId,
             bapUri = req.bapUri,
@@ -413,8 +416,9 @@ handler merchantId req initReq = do
       Id DSR.SearchRequest ->
       UTCTime ->
       DQR.QuoteRental ->
+      Id DMOC.MerchantOperatingCity ->
       m DST.SearchTry
-    buildRentalSearchTry searchReqId startTime rentalQuote = do
+    buildRentalSearchTry searchReqId startTime rentalQuote merchantOpCityId = do
       now <- getCurrentTime
       id_ <- Id <$> generateGUID
       searchRequestExpirationSeconds <- asks (.searchRequestExpirationSeconds)
@@ -424,6 +428,7 @@ handler merchantId req initReq = do
         DST.SearchTry
           { id = id_,
             requestId = searchReqId,
+            merchantOperatingCityId = merchantOpCityId,
             tag = DSR.RENTAL,
             estimateId = Nothing,
             merchantId = Just merchantId,

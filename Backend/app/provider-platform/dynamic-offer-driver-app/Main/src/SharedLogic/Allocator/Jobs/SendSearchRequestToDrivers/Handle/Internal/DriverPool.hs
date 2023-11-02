@@ -28,7 +28,6 @@ import Domain.Types.Driver.GoHomeFeature.DriverGoHomeRequest as DDGR
 import qualified Domain.Types.DriverInformation as DriverInfo
 import Domain.Types.GoHomeConfig (GoHomeConfig)
 import qualified Domain.Types.Location as DL
-import Domain.Types.Merchant (Merchant)
 import Domain.Types.Merchant.DriverIntelligentPoolConfig
 import Domain.Types.Merchant.DriverPoolConfig
 import Domain.Types.Merchant.MerchantOperatingCity (MerchantOperatingCity)
@@ -87,7 +86,7 @@ prepareDriverPoolBatch driverPoolCfg searchReq pickupLoc searchTryId vehicleVari
   let merchantOpCityId = searchReq.merchantOperatingCityId
   logDebug $ "PreviousBatchesDrivers-" <> show previousBatchesDrivers
   poolBatchWithFlags <- prepareDriverPoolBatch' previousBatchesDrivers True merchantOpCityId
-  incrementDriverRequestCount (fst poolBatchWithFlags) searchTry.id
+  incrementDriverRequestCount (fst poolBatchWithFlags) searchTryId
   pure $ buildDriverPoolWithActualDistResultWithFlags poolBatchWithFlags previousBatchesDrivers
   where
     buildDriverPoolWithActualDistResultWithFlags poolBatchWithFlags prevBatchDrivers =
@@ -190,19 +189,21 @@ prepareDriverPoolBatch driverPoolCfg searchReq pickupLoc searchTryId vehicleVari
               ([], filledPoolBatch)
               driverPoolCfg.distanceBasedBatchSplit
 
-        calcGoHomeDriverPool = do
+        calcGoHomeDriverPool merchantOpCityId = do
           case searchReq.searchRequestDetails of
             DSR.SearchReqDetailsOnDemand details ->
-              calculateGoHomeDriverPool $
-                CalculateGoHomeDriverPoolReq
-                  { poolStage = DriverSelection,
-                    driverPoolCfg = driverPoolCfg,
-                    goHomeCfg = goHomeConfig,
-                    variant = Just vehicleVariant,
-                    fromLocation = details.fromLocation,
-                    toLocation = details.toLocation,
-                    merchantId = searchReq.providerId
-                  }
+              calculateGoHomeDriverPool
+                ( CalculateGoHomeDriverPoolReq
+                    { poolStage = DriverSelection,
+                      driverPoolCfg = driverPoolCfg,
+                      goHomeCfg = goHomeConfig,
+                      variant = Just vehicleVariant,
+                      fromLocation = details.fromLocation,
+                      toLocation = details.toLocation,
+                      merchantId = searchReq.providerId
+                    }
+                )
+                merchantOpCityId
             DSR.SearchReqDetailsRental _ -> pure [] -- RENTAL
         calcDriverPool radiusStep merchantOpCityId = do
           let merchantId = searchReq.providerId
@@ -215,13 +216,13 @@ prepareDriverPoolBatch driverPoolCfg searchReq pickupLoc searchTryId vehicleVari
             then do
               let pickupLatLong = LatLong pickupLoc.lat pickupLoc.lon
               let searchReqTag = DSR.getSearchRequestTag searchReq
-              calculateDriverCurrentlyOnRideWithActualDist DriverSelection driverPoolCfg (Just vehicleVariant) searchReqTag pickupLatLong merchantId (Just $ radiusStep - 1)
+              calculateDriverCurrentlyOnRideWithActualDist DriverSelection driverPoolCfg (Just vehicleVariant) searchReqTag pickupLatLong merchantId merchantOpCityId (Just $ radiusStep - 1)
             else pure []
         fillBatch merchantOpCityId allNearbyDrivers batch intelligentPoolConfig blockListedDrivers = do
           let batchDriverIds = batch <&> (.driverPoolResult.driverId)
           let driversNotInBatch = filter (\dpr -> dpr.driverPoolResult.driverId `notElem` batchDriverIds) allNearbyDrivers
           driversWithValidReqAmount <- filterM (\dpr -> checkRequestCount searchTryId dpr.driverPoolResult.driverId driverPoolCfg) driversNotInBatch
-          nonGoHomeDriversWithValidReqCount <- filterM (\dpr -> (CQDGR.getDriverGoHomeRequestInfo dpr.driverPoolResult.driverId searchReq.providerId (Just goHomeConfig)) <&> (/= Just DDGR.ACTIVE) . (.status)) driversWithValidReqAmount
+          nonGoHomeDriversWithValidReqCount <- filterM (\dpr -> (CQDGR.getDriverGoHomeRequestInfo dpr.driverPoolResult.driverId merchantOpCityId (Just goHomeConfig)) <&> (/= Just DDGR.ACTIVE) . (.status)) driversWithValidReqAmount
           let nonGoHomeNormalDriversWithValidReqCount = filter (\ngd -> ngd.driverPoolResult.driverId `notElem` blockListedDrivers) nonGoHomeDriversWithValidReqCount
           let fillSize = batchSize - length batch
           transporterConfig <- TC.findByMerchantOpCityId merchantOpCityId

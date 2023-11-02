@@ -15,7 +15,6 @@
 module Domain.Action.UI.Ride.StartRide.Internal (startRideTransaction) where
 
 import qualified Domain.Types.Booking as SRB
-import qualified Domain.Types.Driver.DriverFlowStatus as DDFS
 import qualified Domain.Types.Person as SP
 import qualified Domain.Types.Ride as SRide
 import Kernel.External.Maps.Types (LatLong)
@@ -42,4 +41,3 @@ startRideTransaction driverId ride booking firstPoint odometerStartReading mbEnd
   whenJust mbEndRideOtp (QRide.updateEndRideOtp ride.id)
   QRide.updateStartTimeAndLoc ride.id firstPoint
   QBE.logRideCommencedEvent (cast driverId) booking.id ride.id
-  QDFS.updateStatus driverId DDFS.ON_RIDE {rideId = ride.id} -- TODO:RENTAL check this

@@ -237,9 +237,9 @@ handler merchant sReq' =
                   allFarePoliciesProduct.specialLocationTag
             for_ listOfSpecialZoneQuotes QQuoteSpecialZone.create
             return (Just (mkQuoteInfo fromLocation toLocation now <$> listOfSpecialZoneQuotes), Nothing)
-          DFareProduct.NORMAL -> buildEstimates sReq farePolicies result fromLocation toLocation allFarePoliciesProduct.specialLocationTag allFarePoliciesProduct.area routeInfo
+          DFareProduct.NORMAL -> buildEstimates sReq farePolicies result fromLocation toLocation allFarePoliciesProduct.specialLocationTag allFarePoliciesProduct.area routeInfo merchantOpCityId
           DFareProduct.RENTAL -> throwError $ InvalidRequest "RentalRequest is not allowed in onDemand"
-      merchantPaymentMethods <- CQMPM.findAllByMerchantId merchantId
+      merchantPaymentMethods <- CQMPM.findAllByMerchantOpCityId merchantOpCityId
       let paymentMethodsInfo = DMPM.mkPaymentMethodInfo <$> merchantPaymentMethods
       buildSearchRes merchant fromLocationLatLong (Just toLocationLatLong) mbEstimateInfos quotes Nothing searchMetricsMVar paymentMethodsInfo
     DSearchReqRental sReq -> do
@@ -259,7 +259,7 @@ handler merchant sReq' =
           )
           fareProducts
       logDebug $ "rentalfarePolicies" <> show fullFarePolicies
-      rentalSearchReq <- buildRentalSearchRequest sReq merchantId fromLocation
+      rentalSearchReq <- buildRentalSearchRequest sReq merchantId merchantOpCityId fromLocation
       _ <- QSR.createDSReq rentalSearchReq
       triggerSearchEvent SearchEventData {searchRequest = Left rentalSearchReq, merchantId = merchantId}
       let vehiclesVariantRentalFarePolicy = listVehicleVariantHelper fullFarePolicies
@@ -295,7 +295,7 @@ handler merchant sReq' =
             pure (rentalQuote, rentalFarePolicy)
         for_ listOfRentalQuotes (QQuoteRental.create . fst)
         return (Just (mkRentalQuoteInfo fromLocation now <$> listOfRentalQuotes), Nothing)
-      merchantPaymentMethods <- CQMPM.findAllByMerchantId merchantId
+      merchantPaymentMethods <- CQMPM.findAllByMerchantOpCityId merchantOpCityId
       let paymentMethodsInfo = DMPM.mkPaymentMethodInfo <$> merchantPaymentMethods
       buildSearchRes merchant fromLocationLatLong Nothing mbEstimateInfos Nothing quotes searchMetricsMVar paymentMethodsInfo
   where
@@ -439,7 +439,6 @@ buildSearchRequest DSearchReqOnDemand' {..} providerId merchantOpCityId fromLoca
         area = Just area,
         bapCity = Just bapCity,
         bapCountry = Just bapCountry,
-        autoAssignEnabled = Nothing,
         merchantOperatingCityId = merchantOpCityId,
         searchRequestDetails = DSR.SearchReqDetailsOnDemand searchDetails,
         ..
@@ -467,7 +466,6 @@ buildRentalSearchRequest DSearchReqRental' {..} providerId merchantOpCityId from
         area = Nothing,
         bapCity = Just bapCity,
         bapCountry = Just bapCountry,
-        autoAssignEnabled = Nothing,
         merchantOperatingCityId = merchantOpCityId,
         searchRequestDetails = DSR.SearchReqDetailsRental searchDetails,
         ..

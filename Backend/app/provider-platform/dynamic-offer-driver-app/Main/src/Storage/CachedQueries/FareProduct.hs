@@ -47,7 +47,7 @@ findByMerchantVariantAreaFlow :: (CacheFlow m r, Esq.EsqDBFlow m r) => Id Mercha
 findByMerchantVariantAreaFlow merchantOpCityId vehicleVariant area flow =
   Hedis.withCrossAppRedis (Hedis.safeGet $ makeFareProductByMerchantVariantAreaFlowKey merchantOpCityId vehicleVariant area flow) >>= \case
     Just a -> pure a
-    Nothing -> flip whenJust (cacheFareProductByMerchantVariantAreaFlow merchantOpCityId vehicleVariant area flow) /=<< Queries.findByMerchantVariantAreaFlow merchantOpCityId vehicleVariant area flow
+    Nothing -> flip whenJust (cacheFareProductByMerchantVariantAreaFlow merchantOpCityId vehicleVariant area flow) /=<< Queries.findByMerchantOpCityIdVariantAreaFlow merchantOpCityId vehicleVariant area flow
 
 cacheFareProductByMerchantVariantAreaFlow :: (CacheFlow m r) => Id MerchantOperatingCity -> Variant -> Area -> FlowType -> FareProduct -> m ()
 cacheFareProductByMerchantVariantAreaFlow merchantOpCityId vehicleVariant area flow fareProduct = do

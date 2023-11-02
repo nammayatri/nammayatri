@@ -22,6 +22,7 @@ import qualified Data.Text as T
 import qualified Domain.Action.UI.ExotelEndRide as DExotelEndRide
 import qualified Domain.Action.UI.Ride.EndRide as EndRide
 import Environment
+import IssueManagement.Storage.BeamFlow
 import Kernel.External.Encryption (getDbHash)
 import Kernel.Prelude
 import Kernel.Utils.Common

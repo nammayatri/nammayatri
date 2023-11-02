@@ -147,8 +147,6 @@ instance FromTType' BeamB.Booking Booking where
     pUrl <- parseBaseUrl bapUri
     merchant <- CQM.findById (Id providerId) >>= fromMaybeM (MerchantNotFound providerId)
     merchantOpCityId <- CQMOC.getMerchantOpCityId (Id <$> merchantOperatingCityId) merchant bapCity
-    if isJust fp
-      then
     mappings <- QLM.findByEntityId id
     (fl, bookingDetails) <- case bookingType of
       RentalBooking -> do

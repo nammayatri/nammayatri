@@ -168,7 +168,6 @@ handler transporter req validateRes = do
 
       -- non-critical updates
       when isNewRider $ QRD.create riderDetails
-      QDFS.updateStatus driver.id DDFS.RIDE_ASSIGNED {rideId = ride.id}
       QRB.updateRiderId booking.id riderDetails.id
       QRideD.create rideDetails
       QL.updateAddress booking.fromLocation.id req.fromAddress
@@ -259,7 +258,7 @@ handler transporter req validateRes = do
 
       uBooking <- QRB.findById booking.id >>= fromMaybeM (BookingNotFound booking.id.getId)
       maxShards <- asks (.maxShards)
-      transporterConfig <- CQTC.findByMerchantId transporter.id >>= fromMaybeM (TransporterConfigNotFound transporter.id.getId)
+      transporterConfig <- CQTC.findByMerchantOpCityId uBooking.merchantOperatingCityId >>= fromMaybeM (TransporterConfigNotFound $ getId uBooking.merchantOperatingCityId)
       searchTry <- QST.findActiveTryByRequestId quote.searchRequestId >>= fromMaybeM (SearchTryNotFound quote.searchRequestId.getId)
       let allocateRentalRideTimeDiff = secondsToNominalDiffTime transporterConfig.allocateRentalRideTimeDiff
       let jobScheduledTime = max 0 $ diffUTCTime (addUTCTime (negate allocateRentalRideTimeDiff) booking.startTime) now

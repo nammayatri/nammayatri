@@ -91,7 +91,6 @@ import Data.Time.Format.ISO8601 (iso8601Show)
 import qualified Domain.Action.Beckn.Search as DSearch
 import Domain.Action.UI.DriverOnboarding.AadhaarVerification (fetchAndCacheAadhaarImage)
 import qualified Domain.Types.Booking as DB
-import qualified Domain.Types.Driver.DriverFlowStatus as DDFS
 import qualified Domain.Types.Driver.GoHomeFeature.DriverGoHomeRequest as DDGR
 import qualified Domain.Types.Driver.GoHomeFeature.DriverHomeLocation as DDHL
 import qualified Domain.Types.DriverFee as DDF
@@ -185,7 +184,6 @@ import qualified Storage.CachedQueries.Merchant.TransporterConfig as CQTC
 import qualified Storage.Queries.Booking as QB
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BusinessEvent as QBE
-import qualified Storage.Queries.Driver.DriverFlowStatus as QDFS
 import qualified Storage.Queries.Driver.GoHomeFeature.DriverGoHomeRequest as QDGR
 import qualified Storage.Queries.Driver.GoHomeFeature.DriverHomeLocation as QDHL
 import qualified Storage.Queries.DriverFee as QDF
@@ -685,7 +683,7 @@ setRental (personId, _) isRental = do
 
 activateGoHomeFeature :: (CacheFlow m r, EsqDBFlow m r) => (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Id DDHL.DriverHomeLocation -> LatLong -> m APISuccess.APISuccess
 activateGoHomeFeature (driverId, _merchantId, merchantOpCityId) driverHomeLocationId driverLocation = do
-  goHomeConfig <- CQGHC.findByMerchantId merchantOpCityId
+  goHomeConfig <- CQGHC.findByMerchantOpCityId merchantOpCityId
   unless (goHomeConfig.enableGoHome) $ throwError GoHomeFeaturePermanentlyDisabled
   driverInfo <- QDriverInformation.findById driverId >>= fromMaybeM DriverInfoNotFound
   unless driverInfo.enabled $ throwError DriverAccountDisabled
@@ -1160,7 +1158,7 @@ offerQuote ::
   DriverOfferReq ->
   m APISuccess
 offerQuote (driverId, merchantId, merchantOpCityId) DriverOfferReq {..} = do
-  let response = Accept
+  let response = DSRD.Accept
   respondQuote (driverId, merchantId, merchantOpCityId) DriverRespondReq {searchRequestId = Nothing, searchTryId = Just searchRequestId, ..}
 
 respondQuote ::
@@ -1247,7 +1245,6 @@ respondQuote (driverId, _, merchantOpCityId) req = do
               triggerQuoteEvent QuoteEventData {quote = driverQuote}
               _ <- QDrQt.create driverQuote
               _ <- QSRD.updateDriverResponse sReqFD.id req.response
-              QDFS.updateStatus sReqFD.driverId DDFS.OFFERED_QUOTE {quoteId = driverQuote.id, validTill = driverQuote.validTill}
               let shouldPullFCMForOthers = (quoteCount + 1) >= quoteLimit || (details.autoAssignEnabled == Just True)
               driverFCMPulledList <- if shouldPullFCMForOthers then QSRD.findAllActiveWithoutRespBySearchTryId searchTryId else pure []
               -- Adding +1 in quoteCount because one more quote added above (QDrQt.create driverQuote)
@@ -1361,7 +1358,7 @@ respondQuote (driverId, _, merchantOpCityId) req = do
           Just otp -> pure otp
 
         ride <- buildRide booking otpCode merchantId
-        triggerRideCreatedEvent RideEventData {ride = ride, personId = cast driver.id, merchantId}
+        --triggerRideCreatedEvent RideEventData {ride = ride, personId = cast driver.id, merchantId} --TODO:RENTAL
         void $ LF.rideDetails ride.id ride.status merchantId ride.driverId booking.fromLocation.lat booking.fromLocation.lon
         rideDetails <- buildRideDetails ride driver
         driverSearchReqs <- QSRD.findAllActiveBySTId searchTryId
@@ -1379,7 +1376,6 @@ respondQuote (driverId, _, merchantOpCityId) req = do
 
         -- non-critical updates
         QST.updateStatus searchTry.id DST.COMPLETED
-        QDFS.updateStatus driver.id DDFS.RIDE_ASSIGNED {rideId = ride.id}
         QRB.updateRiderId booking.id riderDetails.id
         QRideD.create rideDetails
         QSRD.setInactiveBySRId searchRequestId

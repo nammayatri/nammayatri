@@ -20,7 +20,6 @@ where
 import Control.Monad.Extra (anyM)
 import qualified Data.Map as M
 import qualified Domain.Types.Booking as DB
-import qualified Domain.Types.Driver.DriverFlowStatus as DDFS
 import qualified Domain.Types.FarePolicy as DFP
 import Domain.Types.GoHomeConfig (GoHomeConfig)
 import qualified Domain.Types.Location as DLoc
@@ -95,8 +94,8 @@ sendSearchRequestToDrivers searchReq searchDetails driverExtraFeeBounds driverPo
     QSRD.setInactiveBySTId searchTryId -- inactive previous request by drivers so that they can make new offers.
   _ <- QSRD.createMany searchRequestsForDrivers
 
-  forM_ searchRequestsForDrivers $ \sReqFD -> do
-    QDFS.updateStatus sReqFD.driverId DDFS.GOT_SEARCH_REQUEST {requestId = searchTryId, searchTryId = searchTryId, validTill = sReqFD.searchRequestValidTill}
+  -- forM_ searchRequestsForDrivers $ \sReqFD -> do  --TODO:RENTAL --Should this be removed ?
+  --   QDFS.updateStatus sReqFD.driverId DDFS.GOT_SEARCH_REQUEST {requestId = searchTryId, searchTryId = searchTryId, validTill = sReqFD.searchRequestValidTill}
 
   forM_ driverPoolZipSearchRequests $ \(dPoolRes, sReqFD) -> do
     let language = fromMaybe Maps.ENGLISH dPoolRes.driverPoolResult.language

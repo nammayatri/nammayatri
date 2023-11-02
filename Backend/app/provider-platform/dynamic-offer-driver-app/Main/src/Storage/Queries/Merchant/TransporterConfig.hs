@@ -208,7 +208,7 @@ instance ToTType' BeamTC.TransporterConfig TransporterConfig where
         BeamTC.driverFeeOverlaySendingTimeLimitInDays = driverFeeOverlaySendingTimeLimitInDays,
         BeamTC.overlayBatchSize = overlayBatchSize,
         BeamTC.volunteerSmsSendingLimit = toJSON <$> volunteerSmsSendingLimit,
-        BeamTC.driverSmsReceivingLimit = toJSON <$> driverSmsReceivingLimit
+        BeamTC.driverSmsReceivingLimit = toJSON <$> driverSmsReceivingLimit,
         BeamTC.rentalRequests = rentalRequests,
         BeamTC.allocateRentalRideTimeDiff = allocateRentalRideTimeDiff,
         BeamTC.createdAt = createdAt,

@@ -22,6 +22,7 @@ where
 
 import Domain.Types.FareProduct
 import qualified Domain.Types.FareProduct as Domain
+import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import Domain.Types.Vehicle.Variant (Variant (..))
 import Kernel.Beam.Functions
@@ -41,15 +42,15 @@ findAllFareProductForVariants ::
 findAllFareProductForVariants (Id merchantOpCityId) area flow =
   findAllWithKV
     [ Se.And
-        [ Se.Is BeamFP.merchantOpCityId $ Se.Eq merchantOpCityId,
+        [ Se.Is BeamFP.merchantOperatingCityId $ Se.Eq merchantOpCityId,
           Se.Is BeamFP.area $ Se.Eq area,
           Se.Is BeamFP.flow $ Se.Eq flow
         ]
     ]
 
 findAllFareProductForFlow ::
-  MonadFlow m =>
-  Id Merchant ->
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  Id DM.Merchant ->
   Domain.FlowType ->
   m [Domain.FareProduct]
 findAllFareProductForFlow (Id merchantId) flow = findAllWithKV [Se.And [Se.Is BeamFP.merchantId $ Se.Eq merchantId, Se.Is BeamFP.flow $ Se.Eq flow]]

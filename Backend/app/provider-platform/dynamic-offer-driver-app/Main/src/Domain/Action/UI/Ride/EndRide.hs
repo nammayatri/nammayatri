@@ -39,7 +39,6 @@ import Domain.Types.FareParameters as Fare
 import qualified Domain.Types.FarePolicy as DFP
 import qualified Domain.Types.FareProduct as DFareProduct
 import qualified Domain.Types.Location as DL
-import qualified Domain.Types.MediaFile as Domain
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
@@ -50,6 +49,9 @@ import qualified Domain.Types.RiderDetails as RD
 import qualified Domain.Types.Vehicle as DVeh
 import Environment (Flow)
 import EulerHS.Prelude hiding (id, pi)
+import qualified IssueManagement.Domain.Types.MediaFile as Domain
+import IssueManagement.Storage.BeamFlow
+import qualified IssueManagement.Storage.Queries.MediaFile as MFQuery
 import Kernel.External.Maps
 import qualified Kernel.External.Maps.Interface.Types as Maps
 import qualified Kernel.External.Maps.Types as Maps
@@ -75,8 +77,6 @@ import qualified Storage.CachedQueries.Merchant.TransporterConfig as CQTC
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as QTConf
 import qualified Storage.Queries.Booking as QRB
 import Storage.Queries.Driver.GoHomeFeature.DriverGoHomeRequest as QDGR
-import qualified Storage.Queries.MediaFile as MFQuery
-import qualified Storage.Queries.Person as Person
 import qualified Storage.Queries.Ride as QRide
 import Tools.Error
 import qualified Tools.SMS as Sms
@@ -163,7 +163,7 @@ buildEndRideHandle merchantId merchantOpCityId = do
 type EndRideFlow m r = (MonadFlow m, CoreMetrics m, MonadReader r m, HasField "enableAPILatencyLogging" r Bool, HasField "enableAPIPrometheusMetricLogging" r Bool, HasField "s3Env" r (S3Env m), LT.HasLocationService m r)
 
 driverEndRide ::
-  (EndRideFlow m r, CacheFlow m r, EsqDBFlow m r, EncFlow m r) =>
+  (EndRideFlow m r, BeamFlow m r, CacheFlow m r, EsqDBFlow m r, EncFlow m r) =>
   ServiceHandle m ->
   Id DRide.Ride ->
   DriverEndRideReq ->
@@ -174,7 +174,7 @@ driverEndRide handle rideId req = do
     $ DriverReq req
 
 callBasedEndRide ::
-  (EndRideFlow m r, CacheFlow m r, EsqDBFlow m r, EncFlow m r) =>
+  (EndRideFlow m r, BeamFlow m r, CacheFlow m r, EsqDBFlow m r, EncFlow m r) =>
   ServiceHandle m ->
   Id DRide.Ride ->
   CallBasedEndRideReq ->
@@ -182,7 +182,7 @@ callBasedEndRide ::
 callBasedEndRide handle rideId = endRide handle rideId . CallBasedReq
 
 dashboardEndRide ::
-  (EndRideFlow m r, CacheFlow m r, EsqDBFlow m r, EncFlow m r) =>
+  (EndRideFlow m r, BeamFlow m r, CacheFlow m r, EsqDBFlow m r, EncFlow m r) =>
   ServiceHandle m ->
   Id DRide.Ride ->
   DashboardEndRideReq ->
@@ -195,7 +195,7 @@ dashboardEndRide handle rideId req = do
   return APISuccess.Success
 
 cronJobEndRide ::
-  (EndRideFlow m r, CacheFlow m r, EsqDBFlow m r, EncFlow m r) =>
+  (EndRideFlow m r, BeamFlow m r, CacheFlow m r, EsqDBFlow m r, EncFlow m r) =>
   ServiceHandle m ->
   Id DRide.Ride ->
   CronJobEndRideReq ->
@@ -208,7 +208,7 @@ cronJobEndRide handle rideId req = do
   return APISuccess.Success
 
 endRide ::
-  (EndRideFlow m r, CacheFlow m r, EsqDBFlow m r, EncFlow m r) =>
+  (EndRideFlow m r, BeamFlow m r, CacheFlow m r, EsqDBFlow m r, EncFlow m r) =>
   ServiceHandle m ->
   Id DRide.Ride ->
   EndRideReq ->
@@ -269,9 +269,7 @@ endRide handle@ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.g
             case driverReq.odometerEndImage of
               Nothing -> pure ()
               Just image -> do
-                person <- Person.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
-                let merchantId = person.merchantId
-                transporterConfig <- CQTC.findByMerchantId merchantId >>= fromMaybeM (TransporterConfigNotFound (getId merchantId))
+                transporterConfig <- CQTC.findByMerchantOpCityId booking.merchantOperatingCityId >>= fromMaybeM (TransporterConfigNotFound (getId booking.merchantOperatingCityId))
                 imagePath <- createPath (getId rideId) driverReq.odometerEndImageExtension
                 let imageUrl =
                       transporterConfig.mediaFileUrlPattern
@@ -355,7 +353,7 @@ endRide handle@ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.g
             DRide.DetailsOnDemand _ -> throwError (InternalError "on demand ride is not allowed for rental booking")
             DRide.DetailsRental details -> pure details
           odometerEndReading <- mbOdometerEndReading & fromMaybeM (InvalidRequest "odometerEndReading is mandatory for rentals")
-          farePolicy <- getFarePolicy booking.providerId booking.vehicleVariant booking.area DFareProduct.RENTAL
+          farePolicy <- getFarePolicy booking.merchantOperatingCityId booking.vehicleVariant booking.area DFareProduct.RENTAL
           logInfo $ "farePolicia :" <> show farePolicy
           (recalcDistance, finalFare, mbUpdatedFareParams) <- do
             recalculateFareForDistance handle booking rideOld (Meters $ round (odometerEndReading - fromMaybe 0 rideDetails.odometerStartReading) * 1000) thresholdConfig
@@ -394,7 +392,7 @@ endRide handle@ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.g
   return $ EndRideResp {result = "Success", homeLocationReached = homeLocationReached'}
   where
     createPath ::
-      (MonadTime m, Log m, MonadThrow m, MonadReader r m, HasField "s3Env" r (S3.S3Env m)) =>
+      (EndRideFlow m r, BeamFlow m r) =>
       Text ->
       Maybe Text ->
       m Text

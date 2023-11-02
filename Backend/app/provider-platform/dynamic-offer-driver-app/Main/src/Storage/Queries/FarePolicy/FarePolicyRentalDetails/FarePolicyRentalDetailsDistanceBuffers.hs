@@ -23,11 +23,11 @@ import Kernel.Utils.Common
 import Sequelize as Se
 import qualified Storage.Beam.FarePolicy.FarePolicyRentalDetails.FarePolicyRentalDetailsDistanceBuffers as BeamFPRDDB
 
-findById' :: MonadFlow m => KTI.Id DFP.FarePolicy -> m (Maybe BeamFPRDDB.FullFarePolicyRentalDetailsDistanceBuffers)
+findById' :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => KTI.Id DFP.FarePolicy -> m (Maybe BeamFPRDDB.FullFarePolicyRentalDetailsDistanceBuffers)
 findById' farePolicyId' = findOneWithKV [Se.Is BeamFPRDDB.farePolicyId $ Se.Eq (getId farePolicyId')]
 
 findAll' ::
-  MonadFlow m =>
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
   Id DFP.FarePolicy ->
   m [BeamFPRDDB.FullFarePolicyRentalDetailsDistanceBuffers]
 findAll' farePolicyId = findAllWithOptionsKV [Se.Is BeamFPRDDB.farePolicyId $ Se.Eq (getId farePolicyId)] (Se.Asc BeamFPRDDB.rideDuration) Nothing Nothing

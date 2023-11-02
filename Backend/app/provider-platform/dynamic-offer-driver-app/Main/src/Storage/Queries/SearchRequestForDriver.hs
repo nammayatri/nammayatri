@@ -73,7 +73,7 @@ findAllActiveWithoutRespBySearchTryId (Id searchTryId) =
         )
     ]
 
-findAllActiveWithoutRespBySearchRequestId :: MonadFlow m => Id SearchRequest -> m [SearchRequestForDriver]
+findAllActiveWithoutRespBySearchRequestId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id SearchRequest -> m [SearchRequestForDriver]
 findAllActiveWithoutRespBySearchRequestId (Id searchRequestId) =
   findAllWithKV
     [ Se.And
@@ -93,7 +93,7 @@ findByDriverAndSearchTryId (Id driverId) (Id searchTryId) =
         )
     ]
 
-findByDriverAndSearchRequestId :: MonadFlow m => Id Person -> Id SearchRequest -> m (Maybe SearchRequestForDriver)
+findByDriverAndSearchRequestId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> Id SearchRequest -> m (Maybe SearchRequestForDriver)
 findByDriverAndSearchRequestId (Id driverId) (Id searchRequestId) =
   findOneWithKV
     [ Se.And

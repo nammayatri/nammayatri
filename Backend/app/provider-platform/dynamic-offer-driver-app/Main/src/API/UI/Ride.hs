@@ -36,6 +36,7 @@ import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as SP
 import qualified Domain.Types.Ride as Ride
 import Environment
+import IssueManagement.Storage.BeamFlow
 import Kernel.Beam.Functions
 import Kernel.External.Maps.Types
 import Kernel.Prelude
@@ -162,7 +163,7 @@ otpRideCreateAndStart (requestorId, merchantId, merchantOpCityId) req@DRide.OTPR
   void $ RideStart.driverStartRide shandle ride.id driverReq
   return ride
 
-endRide :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Id Ride.Ride -> EndRideReq -> FlowHandler RideEnd.EndRideResp
+endRide :: (BeamFlow m r) => (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Id Ride.Ride -> EndRideReq -> FlowHandler RideEnd.EndRideResp
 endRide (requestorId, merchantId, merchantOpCityId) rideId EndRideReq {point, uiDistanceCalculationWithAccuracy, uiDistanceCalculationWithoutAccuracy, odometerEndReading, odometerEndImage, odometerEndImageExtension, endRideOtp} = withFlowHandlerAPI $ do
   requestor <- findPerson requestorId
   let driverReq = RideEnd.DriverEndRideReq {point, requestor, uiDistanceCalculationWithAccuracy, uiDistanceCalculationWithoutAccuracy, odometerEndReading, odometerEndImage, odometerEndImageExtension, endRideOtp}

@@ -60,8 +60,8 @@ allocateRentalRide Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) $ do
   searchReq <- B.runInReplica $ QSR.findById searchTry.requestId >>= fromMaybeM (SearchRequestNotFound searchTry.requestId.getId)
   booking <- QB.findById jobData.bookingId >>= fromMaybeM (BookingNotFound jobData.bookingId.getId)
   merchant <- CQM.findById searchReq.providerId >>= fromMaybeM (MerchantNotFound (searchReq.providerId.getId))
-  driverPoolConfig <- getDriverPoolConfig merchant.id (Just booking.vehicleVariant) booking.estimatedDistance
-  goHomeCfg <- CQGHC.findByMerchantId merchant.id
+  driverPoolConfig <- getDriverPoolConfig booking.merchantOperatingCityId (Just booking.vehicleVariant) booking.estimatedDistance
+  goHomeCfg <- CQGHC.findByMerchantOpCityId booking.merchantOperatingCityId
   (res, _) <- sendSearchRequestToDrivers' driverPoolConfig searchTry searchReq booking merchant Nothing goHomeCfg
   return res
 

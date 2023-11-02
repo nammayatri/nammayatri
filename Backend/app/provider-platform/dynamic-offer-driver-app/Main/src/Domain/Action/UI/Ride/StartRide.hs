@@ -27,13 +27,15 @@ import AWS.S3 as S3
 import qualified Data.Text as T
 import qualified Domain.Action.UI.Ride.StartRide.Internal as SInternal
 import qualified Domain.Types.Booking as SRB
-import qualified Domain.Types.MediaFile as Domain
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
 import Environment (Flow)
 import EulerHS.Prelude
+import qualified IssueManagement.Domain.Types.MediaFile as Domain
+import IssueManagement.Storage.BeamFlow
+import qualified IssueManagement.Storage.Queries.MediaFile as MFQuery
 import Kernel.External.Maps.HasCoordinates
 import Kernel.External.Maps.Types
 import qualified Kernel.Storage.Hedis as Redis
@@ -53,8 +55,6 @@ import Storage.CachedQueries.Merchant.TransporterConfig as QTC
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as CQTC
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.DriverInformation as QDI
-import qualified Storage.Queries.MediaFile as MFQuery
-import qualified Storage.Queries.Person as Person
 import qualified Storage.Queries.Ride as QRide
 import Tools.Error
 
@@ -102,7 +102,7 @@ buildStartRideHandle merchantId merchantOpCityId = do
 type StartRideFlow m r = (MonadThrow m, Log m, CacheFlow m r, EsqDBFlow m r, MonadTime m, CoreMetrics m, MonadReader r m, HasField "enableAPILatencyLogging" r Bool, HasField "enableAPIPrometheusMetricLogging" r Bool, HasField "s3Env" r (S3.S3Env m), LT.HasLocationService m r)
 
 driverStartRide ::
-  (StartRideFlow m r) =>
+  (StartRideFlow m r, BeamFlow m r) =>
   ServiceHandle m ->
   Id DRide.Ride ->
   DriverStartRideReq ->
@@ -113,7 +113,7 @@ driverStartRide handle rideId req =
     $ DriverReq req
 
 dashboardStartRide ::
-  (StartRideFlow m r) =>
+  (StartRideFlow m r, BeamFlow m r) =>
   ServiceHandle m ->
   Id DRide.Ride ->
   DashboardStartRideReq ->
@@ -124,7 +124,7 @@ dashboardStartRide handle rideId req =
     $ DashboardReq req
 
 startRide ::
-  (StartRideFlow m r) =>
+  (StartRideFlow m r, BeamFlow m r) =>
   ServiceHandle m ->
   Id DRide.Ride ->
   StartRideReq ->
@@ -180,9 +180,7 @@ startRide ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.getId)
       case odometerStartImage of
         Nothing -> throwError $ InvalidRequest "No odometer start Image reading found"
         Just image -> do
-          person <- Person.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
-          -- let merchantId = person.merchantId
-          transporterConfig <- CQTC.findByMerchantId (person.merchantId) >>= fromMaybeM (TransporterConfigNotFound (getId (person.merchantId)))
+          transporterConfig <- CQTC.findByMerchantOpCityId (ride.merchantOperatingCityId) >>= fromMaybeM (TransporterConfigNotFound (getId (ride.merchantOperatingCityId)))
           imagePath <- createPath (getId ride.id) odometerStartImageExtension
           let imageUrl =
                 transporterConfig.mediaFileUrlPattern
