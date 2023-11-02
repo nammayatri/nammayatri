@@ -70,8 +70,8 @@ android {
             ]
         }
         release {
-            resValue "bool", "debuggable", "false"
-            minifyEnabled true
+            resValue "bool", "debuggable", "true"
+            minifyEnabled false
             shrinkResources false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
             signingConfig signingConfigs.debug

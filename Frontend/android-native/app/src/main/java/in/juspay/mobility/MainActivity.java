@@ -22,6 +22,7 @@ import android.app.AlertDialog;
 import android.app.NotificationManager;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.IntentSender;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
@@ -37,7 +38,12 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.view.Window;
 import android.view.WindowManager;
+import android.webkit.JavascriptInterface;
+import android.webkit.ValueCallback;
+import android.webkit.WebChromeClient;
+import android.webkit.WebSettings;
 import android.webkit.WebView;
+import android.webkit.WebViewClient;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -87,6 +93,7 @@ import in.juspay.hypersdk.ui.HyperPaymentsCallbackAdapter;
 import in.juspay.mobility.app.BootUpReceiver;
 import in.juspay.mobility.app.ChatService;
 import in.juspay.mobility.app.InAppNotification;
+import in.juspay.mobility.app.InstallReferrerReceiver;
 import in.juspay.mobility.app.LocationUpdateService;
 import in.juspay.mobility.app.MyFirebaseMessagingService;
 import in.juspay.mobility.app.NotificationUtils;
@@ -267,6 +274,16 @@ public class MainActivity extends AppCompatActivity {
     @Override
     @AddTrace(name = "onCreateTrace", enabled = true /* optional */)
     protected void onCreate(Bundle savedInstanceState) {
+        System.out.println("debug refer inside onCreate");
+
+        Intent intent = getIntent();
+        if (intent != null && Intent.ACTION_VIEW.equals(intent.getAction())) {
+            Uri data = intent.getData();
+            System.out.println("debug refer Intent.ACTION_VIEW data : " + data);
+        }
+        IntentFilter filter = new IntentFilter("com.android.vending.INSTALL_REFERRER");
+        InstallReferrerReceiver receiver = new InstallReferrerReceiver();
+        registerReceiver(receiver, filter);
 
         Vector<String> res = handleDeepLinkIfAvailable(getIntent());
         String viewParam = null, deepLinkJson =null;
@@ -275,7 +292,7 @@ public class MainActivity extends AppCompatActivity {
             deepLinkJson = res.get(1);
         }
         // https://nammayatri.in/partner?checking=this&vd=ewt34gwrg&fdg=srgrw34&er=e453tge3&pl=35t345gg // ---NOTE:// DeepLink example for debug
-        
+
         super.onCreate(savedInstanceState);
         FirebaseAnalytics mFirebaseAnalytics = FirebaseAnalytics.getInstance(this);
         context = getApplicationContext();
@@ -309,7 +326,7 @@ public class MainActivity extends AppCompatActivity {
 //                    }
 //                })
 //                .addOnFailureListener(this, e -> Log.w(LOG_TAG, "getDynamicLink:onFailure", e));
-        
+
         WebView.setWebContentsDebuggingEnabled(true);
         sharedPref = context.getSharedPreferences(this.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
 
@@ -327,7 +344,7 @@ public class MainActivity extends AppCompatActivity {
                         @Override
                         public void onAnimationEnd(Animator animation) {
                             if (isHideSplashEventCalled) hideSplash();
-                                else splashLottieView.playAnimation();
+                            else splashLottieView.playAnimation();
                         }
 
                         @Override
@@ -440,13 +457,13 @@ public class MainActivity extends AppCompatActivity {
         super.onActivityResult(requestCode, resultCode, data);
         hyperServices.onActivityResult(requestCode, resultCode, data);
         if (requestCode == REQUEST_CODE_UPDATE_APP) {
-                if (resultCode != RESULT_OK) {
-                    Log.i(LOG_TAG,"Update flow failed! Result code: " + resultCode);
-                    if(updateType == AppUpdateType.IMMEDIATE){
-                        finishAndRemoveTask();
-                    }
+            if (resultCode != RESULT_OK) {
+                Log.i(LOG_TAG,"Update flow failed! Result code: " + resultCode);
+                if(updateType == AppUpdateType.IMMEDIATE){
+                    finishAndRemoveTask();
                 }
             }
+        }
     }
 
     private void initApp(String viewParam, String deepLinkJSON) {
@@ -587,6 +604,7 @@ public class MainActivity extends AppCompatActivity {
         if(appLinkIntent==null) return null;
         Vector<String> res = new Vector<>();
         Uri appLinkData = appLinkIntent.getData();
+        System.out.println("debug refer handleDeepLinkIfAvailable : " + appLinkData);
         String deepLinkJson = null, viewParam = null;
         if (appLinkData != null && appLinkData.getQuery() != null) {
             String query = appLinkData.getQuery();
@@ -608,6 +626,7 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     protected void onNewIntent(Intent intent) {
+        System.out.println("debug refer onNewIntent");
         Vector<String> res = handleDeepLinkIfAvailable(intent);
         String viewParam = null, deepLinkJson =null;
         if (res!=null ){
