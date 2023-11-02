@@ -80,7 +80,7 @@ getLocation prediction = {
   , locationItemType : Just PREDICTION
   , distance : Just (fromMetersToKm (fromMaybe 0 (prediction ^._distance)))
   , showDistance : Just $ checkShowDistance (fromMaybe 0 (prediction ^._distance))
-  , actualDistance : fromMaybe 0 (prediction ^._distance)
+  , actualDistance : (prediction ^._distance)
 }
 
 checkShowDistance :: Int ->  Boolean

@@ -2102,7 +2102,7 @@ dummyListItem = {
   , locationItemType : Nothing
   , distance : Nothing
   , showDistance : Just false
-  , actualDistance : 0
+  , actualDistance : Nothing
 }
 
 tagClickEvent :: CardType -> (Maybe LocationListItemState) -> HomeScreenState -> Eval Action ScreenOutput HomeScreenState

@@ -117,7 +117,7 @@ searchResultsParentView state push =
   linearLayout
   [ width MATCH_PARENT
   , height MATCH_PARENT
-  , margin $ MarginHorizontal 16 16
+  , margin $ Margin 16 15 16 0
   , orientation VERTICAL
   , visibility if state.isSearchLocation == SearchLocation && state.isRideServiceable && not state.showLoader then VISIBLE else GONE
     ][  savedLocationBar state push
@@ -386,7 +386,6 @@ searchResultsView state push =
     [ height WRAP_CONTENT
     , width MATCH_PARENT
     , padding (PaddingBottom 60)
-    , margin $ MarginTop 15
     , background Color.white900
     , scrollBarY false
     , visibility if (length state.locationList == 0) then GONE else VISIBLE
@@ -445,7 +444,7 @@ savedLocationBar state push =
   linearLayout
   [ width MATCH_PARENT
   , height WRAP_CONTENT
-  , margin $ if os == "IOS" then MarginVertical 15 15 else MarginTop 15
+  , margin $ MarginBottom 15
   , accessibility DISABLE_DESCENDANT
   , visibility if (not state.isAutoComplete) then VISIBLE else GONE
   ][ linearLayout

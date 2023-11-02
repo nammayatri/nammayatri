@@ -368,7 +368,7 @@ getDistanceString distanceInMeters decimalPoint
   | otherwise = show distanceInMeters <> " m"
 
 recentDistance :: Array LocationListItemState -> Number -> Number -> Array LocationListItemState
-recentDistance arr currLat currLon = map (\item -> item{actualDistance = round ( ((getDistanceBwCordinates currLat currLon (fromMaybe 0.0 item.lat) (fromMaybe 0.0 item.lon) ))*1000.0), distance = Just $ getDistanceString (round ( ((getDistanceBwCordinates currLat currLon (fromMaybe 0.0 item.lat) (fromMaybe 0.0 item.lon) ))*1000.0) )1}) arr
+recentDistance arr currLat currLon = map (\item -> item{actualDistance = Just ( round ( ((getDistanceBwCordinates currLat currLon (fromMaybe 0.0 item.lat) (fromMaybe 0.0 item.lon) ))*1000.0)), distance = Just $ getDistanceString (round ( ((getDistanceBwCordinates currLat currLon (fromMaybe 0.0 item.lat) (fromMaybe 0.0 item.lon) ))*1000.0) )1}) arr
 
 getAssetLink :: LazyCheck -> String
 getAssetLink lazy = case (getMerchant lazy) of

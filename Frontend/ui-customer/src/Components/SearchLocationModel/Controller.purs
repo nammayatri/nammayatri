@@ -90,7 +90,7 @@ dummy_data = [
     , locationItemType : Nothing
     , distance : Nothing
     , showDistance : Just false
-    , actualDistance : 0
+    , actualDistance : Nothing
     }
   , { prefixImageUrl : fetchImage FF_ASSET "ny_ic_recent_search"
     , postfixImageUrl : fetchImage FF_ASSET "ny_ic_fav"
@@ -115,7 +115,7 @@ dummy_data = [
     , locationItemType : Nothing
     , distance : Nothing
     , showDistance : Just false
-    , actualDistance : 0
+    , actualDistance : Nothing
     }
   , { prefixImageUrl : fetchImage FF_ASSET "ny_ic_loc_grey"
     , postfixImageUrl : fetchImage FF_ASSET "ny_ic_fav"
@@ -140,6 +140,6 @@ dummy_data = [
     , locationItemType : Nothing
     , distance : Nothing
     , showDistance : Just false
-    , actualDistance : 0
+    , actualDistance : Nothing
     }
 ]
