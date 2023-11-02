@@ -77,10 +77,9 @@ public class NotificationUtils {
     public static String CANCELLED_PRODUCT = "CANCELLED_PRODUCT";
     public static String DRIVER_ASSIGNMENT = "DRIVER_ASSIGNMENT";
     public static String TRIP_FINISHED = "TRIP_FINISHED";
-    public static String RINGING_CHANNEL_ID = "RINGING_ALERT";
     public static String REALLOCATE_PRODUCT = "REALLOCATE_PRODUCT";
     public static String DRIVER_REACHED = "DRIVER_REACHED";
-    public static String TRIP_STARTED_TALKBACK = "TRIP_STARTED_TALKBACK";
+    public static String RIDE_STARTED = "RIDE_STARTED";
     public static String NO_VARIANT = "NO_VARIANT";
     public static Uri soundUri = null;
     public static OverlaySheetService.OverlayBinder binder;
@@ -318,15 +317,8 @@ public class NotificationUtils {
         String key = merchantType.contains("provider") ? "DRIVER" : "USER";
         System.out.println("key" + key);
         System.out.println("showNotification:- " + notificationType);
-        if (ALLOCATION_TYPE.equals(notificationType)) {
-            channelId = RINGING_CHANNEL_ID;
-        } else if(TRIP_STARTED.equals(notificationType))
-            {
-            if (disabilityName.equals("BLIND_LOW_VISION")){
-                channelId = TRIP_STARTED_TALKBACK;
-            }else {
-                channelId = notificationType;
-            }
+        if (TRIP_STARTED.equals(notificationType)) {
+            channelId = RIDE_STARTED;
         } else if (CANCELLED_PRODUCT.equals(notificationType) || DRIVER_HAS_REACHED.equals(notificationType)) {
             channelId = notificationType;
         } else if (TRIP_FINISHED.equals(notificationType) && disabilityName.equals("BLIND_LOW_VISION")){
@@ -364,7 +356,7 @@ public class NotificationUtils {
             if (notificationType.equals(ALLOCATION_TYPE)) {
                 notificationSound = Uri.parse("android.resource://" + context.getPackageName() + "/" + R.raw.allocation_request);
             } else if (notificationType.equals(TRIP_STARTED)) {
-                notificationSound = Uri.parse("android.resource://" + context.getPackageName() + "/" + R.raw.notify_otp_sound);
+                notificationSound = Uri.parse("android.resource://" + context.getPackageName() + "/" + R.raw.ride_started);
                 mBuilder.setSound(notificationSound);
             } else if (notificationType.equals(CANCELLED_PRODUCT) || notificationType.equals(REALLOCATE_PRODUCT)){
                 notificationSound = Uri.parse("android.resource://" + context.getPackageName() + "/" + R.raw.cancel_notification_sound);
@@ -387,8 +379,10 @@ public class NotificationUtils {
                 
         if (TRIP_STARTED.equals(notificationType)) {
             if (key.equals("USER")) {
-                startMediaPlayer(context,R.raw.notify_otp_sound, true);
                 Utils.logEvent ("ny_user_ride_started", context);
+                if (disabilityName.equals("BLIND_LOW_VISION")) {
+                    startMediaPlayer(context, R.raw.ride_started_talkback, false);
+                }
             }
             else
                 Utils.logEvent("ride_started", context);
@@ -430,16 +424,17 @@ public class NotificationUtils {
         }
         if (DRIVER_ASSIGNMENT.equals(notificationType)) {
             mFirebaseAnalytics = FirebaseAnalytics.getInstance(context);
-            startMediaPlayer(context, R.raw.ride_assigned, true);
+            int audio = R.raw.ride_assigned;
             if (key.equals("USER")) {
                 Utils.logEvent ("ny_user_ride_assigned", context);
             }
             if (key.equals("DRIVER")) {
                 Utils.logEvent("driver_assigned", context);
-            }   else{
-                    if(disabilityName.equals("BLIND_LOW_VISION"))
-                        startMediaPlayer(context, R.raw.ride_assigned_talkback, true);
             }
+            if(key.equals("USER") && disabilityName.equals("BLIND_LOW_VISION")) {
+                audio = R.raw.ride_assigned_talkback;
+            }
+            startMediaPlayer(context, audio, !key.equals("USER"));
         }
         notificationId++;
         if (DRIVER_ASSIGNMENT.equals(notificationType) || CANCELLED_PRODUCT.equals(notificationType) || DRIVER_REACHED.equals(notificationType) || REALLOCATE_PRODUCT.equals(notificationType)) {
@@ -490,18 +485,14 @@ public class NotificationUtils {
                 }
                 NotificationChannel channel = new NotificationChannel(channel_Id, channel_Id, importance);
                 channel.setDescription(description);
-                if (channel_Id.equals(RINGING_CHANNEL_ID)) {
-                    soundUri = Uri.parse("android.resource://" + context.getPackageName() + "/" + R.raw.allocation_request);
-                } else if (channel_Id.equals(TRIP_STARTED)) {
-                    soundUri = Uri.parse("android.resource://" + context.getPackageName() + "/" + R.raw.notify_otp_sound);
+                if (channel_Id.equals(RIDE_STARTED)) {
+                    soundUri = Uri.parse("android.resource://" + context.getPackageName() + "/" + R.raw.ride_started);
                 } else if (channel_Id.equals(CANCELLED_PRODUCT)) {
                     soundUri = Uri.parse("android.resource://" + context.getPackageName() + "/" + R.raw.cancel_notification_sound);
                 } else if (channel_Id.equals(DRIVER_HAS_REACHED)) {
                     soundUri = Uri.parse("android.resource://" + context.getPackageName() + "/" + R.raw.driver_arrived);
                 } else if (channel_Id.equals(TRIP_FINISHED)) {
                     soundUri = Uri.parse("android.resource://" + context.getPackageName() + "/" + R.raw.ride_completed_talkback);
-                } else if (channel_Id.equals(TRIP_STARTED_TALKBACK)){
-                    soundUri = Uri.parse("android.resource://" + context.getPackageName() + "/" + R.raw.ride_started_talkback);
                 } else {
                     soundUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
                 }
