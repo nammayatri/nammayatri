@@ -413,11 +413,19 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void initNotificationChannel() {
+        NotificationManager notificationManager = context.getSystemService(NotificationManager.class);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            try {
+                notificationManager.deleteNotificationChannel("RINGING_ALERT");
+                notificationManager.deleteNotificationChannel("TRIP_STARTED");
+            } catch(Exception e) {
+                System.out.println("Notification Channel doesn't exists");
+            }
+        }
+
         NotificationUtils.createNotificationChannel(this, NotificationUtils.CHANNEL_ID);
         NotificationUtils.createNotificationChannel(this, NotificationUtils.FLOATING_NOTIFICATION);
-        NotificationUtils.createNotificationChannel(this, NotificationUtils.RINGING_CHANNEL_ID);
-        NotificationUtils.createNotificationChannel(this, NotificationUtils.TRIP_STARTED);
-        NotificationUtils.createNotificationChannel(this, NotificationUtils.TRIP_STARTED_TALKBACK);
+        NotificationUtils.createNotificationChannel(this, NotificationUtils.RIDE_STARTED);
         NotificationUtils.createNotificationChannel(this, NotificationUtils.CANCELLED_PRODUCT);
         NotificationUtils.createNotificationChannel(this, NotificationUtils.DRIVER_HAS_REACHED);
         NotificationUtils.createNotificationChannel(this, NotificationUtils.TRIP_FINISHED);
