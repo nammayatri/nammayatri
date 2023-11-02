@@ -446,7 +446,7 @@ bottomBtnsData state =
     , locationItemType : Nothing
     , distance : Nothing
     , showDistance : Just false
-    , actualDistance : 0
+    , actualDistance : Nothing
     }
   , { prefixImageUrl : fetchImage FF_ASSET "ny_ic_current_location"
     , title :  (getString USE_CURRENT_LOCATION)
@@ -471,7 +471,7 @@ bottomBtnsData state =
     , locationItemType : Nothing
     , distance : Nothing
     , showDistance : Just false
-    , actualDistance : 0
+    , actualDistance : Nothing
     }
 
   ]

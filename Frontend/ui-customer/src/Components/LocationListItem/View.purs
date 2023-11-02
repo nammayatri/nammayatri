@@ -64,10 +64,10 @@ view push config flag =
                 [ height WRAP_CONTENT
                 , width WRAP_CONTENT
                 , text $ fromMaybe "" config.distance
-                , color if (flag && config.actualDistance >= 500) then Color.red else Color.black700
+                , color if (flag && (fromMaybe 0 config.actualDistance) >= 500) then Color.red else Color.black700
                 , textSize FontSize.a_11
                 , gravity CENTER
-                , visibility $ if config.actualDistance == 0 then GONE else VISIBLE
+                , visibility $ if (config.actualDistance == Just 0 || config.actualDistance == Nothing) then GONE else VISIBLE
                 ]
               ]
           , linearLayout
