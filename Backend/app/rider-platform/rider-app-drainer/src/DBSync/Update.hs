@@ -27,6 +27,7 @@ import qualified Kernel.Beam.Functions as BeamFunction
 import Kernel.Beam.Lib.Utils (getMappings, replaceMappings)
 import qualified Kernel.Beam.Types as KBT
 import Sequelize (Model, Set, Where)
+import System.Timeout (timeout)
 import Text.Casing
 import Types.DBSync
 import Types.Event as Event
@@ -160,21 +161,22 @@ runUpdateCommands (cmd, val) streamKey = do
                   newObject = replaceMappings (toJSON dataObj) mappings
               res'' <- EL.runIO $ streamRiderDrainerUpdates _kafkaConnection newObject dbStreamKey' model
               either
-                ( \_ -> do
+                ( \err -> do
                     void $ publishDBSyncMetric Event.KafkaPushFailure
-                    EL.logError ("ERROR:" :: Text) ("Kafka Rider Update Error " :: Text)
+                    EL.logError ("ERROR:" :: Text) $ ("Kafka Rider Update Error: " :: Text) <> show err
                     pure $ Left (UnexpectedError "Kafka Rider Update Error", id)
                 )
                 (\_ -> pure $ Right id)
                 res''
-            Left _ -> do
+            Left updErr -> do
+              EL.logDebug ("updErr:" :: Text) (show updErr)
               let updatedJSON = getDbUpdateDataJson model $ updValToJSON $ jsonKeyValueUpdates setClause <> getPKeyandValuesList tag
               Env {..} <- ask
               res'' <- EL.runIO $ streamRiderDrainerUpdates _kafkaConnection updatedJSON dbStreamKey' model
               either
-                ( \_ -> do
+                ( \err -> do
                     void $ publishDBSyncMetric Event.KafkaPushFailure
-                    EL.logError ("ERROR:" :: Text) ("Kafka Rider Update Error " :: Text)
+                    EL.logError ("ERROR:" :: Text) $ ("Kafka Rider Update Error: " :: Text) <> show err
                     pure $ Left (UnexpectedError "Kafka Rider Update Error", id)
                 )
                 (\_ -> pure $ Right id)
@@ -207,9 +209,13 @@ streamRiderDrainerUpdates :: ToJSON a => Producer.KafkaProducer -> a -> Text -> 
 streamRiderDrainerUpdates producer dbObject dbStreamKey model = do
   let topicName = "aap-sessionizer-" <> T.toLower model
   result' <- KafkaProd.produceMessage producer (message topicName dbObject)
-  case result' of
-    Just err -> pure $ Left $ T.pack ("Kafka Error: " <> show err)
-    _ -> pure $ Right ()
+  flushResult <- timeout (5 * 60 * 1000000) $ KafkaProd.flushProducer producer
+  case flushResult of
+    Just _ -> do
+      case result' of
+        Just err -> pure $ Left $ T.pack ("Kafka Error: " <> show err)
+        _ -> pure $ Right ()
+    Nothing -> pure $ Left "KafkaProd.flushProducer timed out after 5 minutes"
   where
     message topicName event =
       ProducerRecord

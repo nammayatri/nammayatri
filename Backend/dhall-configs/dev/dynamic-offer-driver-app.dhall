@@ -141,6 +141,7 @@ let tables =
           : List { nameOfTable : Text, percentEnable : Natural }
       , enableKVForRead = [ "beckn_request" ] : List Text
       , kafkaNonKVTables = [] : List Text
+      , kafkaS3Tables = [ "beckn_request" ] : List Text
       }
 
 let dontEnableForDb = [] : List Text

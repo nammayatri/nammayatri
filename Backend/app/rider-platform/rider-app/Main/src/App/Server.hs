@@ -16,7 +16,7 @@
 module App.Server where
 
 import API
--- import Beckn.Core (logBecknRequest)
+import Beckn.Core (logBecknRequest)
 import Environment
 import EulerHS.Prelude
 import Kernel.Tools.Metrics.Init
@@ -31,7 +31,7 @@ run :: Env -> Application
 run = withModifiedEnv $ \modifiedEnv ->
   BU.run appAPI API.handler context modifiedEnv
     & logRequestAndResponse modifiedEnv
-    -- & logBecknRequest modifiedEnv
+    & logBecknRequest modifiedEnv
     & addServantInfo modifiedEnv.appEnv.version appAPI
     & hashBodyForSignature
     & supportProxyAuthorization
