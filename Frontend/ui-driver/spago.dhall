@@ -22,6 +22,7 @@ to generate this file without the comments in this block.
   , "debug"
   , "effect"
   , "either"
+  , "enums"
   , "exceptions"
   , "foldable-traversable"
   , "foreign"
@@ -32,9 +33,11 @@ to generate this file without the comments in this block.
   , "halogen-vdom"
   , "integers"
   , "js-timers"
+  , "js-uri"
   , "lists"
   , "lite-decode"
   , "maybe"
+  , "monoid-extras"
   , "newtype"
   , "numbers"
   , "otp-reader"
@@ -46,8 +49,6 @@ to generate this file without the comments in this block.
   , "tracker"
   , "transformers"
   , "tuples"
-  , "js-uri"
-  , "monoid-extras"
   ]
 , packages = ../packages.dhall
 , sources = [ "src/**/*.purs" ]
