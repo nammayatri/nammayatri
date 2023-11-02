@@ -442,11 +442,11 @@ currentFlowStatus = do
         Nothing -> pure unit
       setValueToLocalStore REFERRAL_STATUS  $ if response.hasTakenRide then "HAS_TAKEN_RIDE" else if (response.referralCode /= Nothing && not response.hasTakenRide) then "REFERRED_NOT_TAKEN_RIDE" else "NOT_REFERRED_NOT_TAKEN_RIDE"
       setValueToLocalStore HAS_TAKEN_FIRST_RIDE if response.hasTakenRide then "true" else "false"
-      (PersonStatsRes resp) <- Remote.getPersonStatsBT ""
-      void $ pure $ setCleverTapUserProp $ personStatsData (PersonStatsRes resp) (GetProfileRes response)
-      case resp.latestSearchFrom of
-        Just value -> void $ pure $ setCleverTapUserProp [{key : "Latest Search From", value : unsafeToForeign("lat: " <> (show $ value ^._lat) <> " long: " <> (show $ value ^._lon))}]
-        Nothing -> pure unit
+      -- (PersonStatsRes resp) <- Remote.getPersonStatsBT ""
+      -- void $ pure $ setCleverTapUserProp $ personStatsData (PersonStatsRes resp) (GetProfileRes response)
+      -- case resp.latestSearchFrom of
+      --   Just value -> void $ pure $ setCleverTapUserProp [{key : "Latest Search From", value : unsafeToForeign("lat: " <> (show $ value ^._lat) <> " long: " <> (show $ value ^._lon))}]
+      --   Nothing -> pure unit
       
       if (((fromMaybe "" response.firstName) == "" ) && not (isJust response.firstName)) then do
         _ <- updateLocalStage HomeScreen
