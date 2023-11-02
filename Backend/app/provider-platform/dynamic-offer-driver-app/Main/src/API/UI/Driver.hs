@@ -191,6 +191,10 @@ type API =
                :> "entity"
                :> TokenAuth
                :> Get '[JSON] DDriver.HistoryEntryDetailsEntityV2
+             :<|> ( "city"
+                      :> ReqBody '[JSON] DDriver.GetCityReq
+                      :> Post '[JSON] DDriver.GetCityResp
+                  )
          )
 
 handler :: FlowServer API
@@ -227,6 +231,7 @@ handler =
              :<|> clearDriverDues
              :<|> getDriverPaymentsHistoryV2
              :<|> getDriverPaymentsHistoryEntityDetailsV2
+             :<|> getCity
          )
 
 createDriver :: SP.Person -> DDriver.OnboardDriverReq -> FlowHandler DDriver.OnboardDriverRes
@@ -320,3 +325,6 @@ getDriverPaymentsHistoryV2 pMode mbLimit mbOffset = withFlowHandlerAPI . DDriver
 
 getDriverPaymentsHistoryEntityDetailsV2 :: Text -> (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> FlowHandler DDriver.HistoryEntryDetailsEntityV2
 getDriverPaymentsHistoryEntityDetailsV2 invoiceId (driverId, merchantId, merchantOpCityId) = withFlowHandlerAPI $ DDriver.getHistoryEntryDetailsEntityV2 (driverId, merchantId, merchantOpCityId) invoiceId
+
+getCity :: DDriver.GetCityReq -> FlowHandler DDriver.GetCityResp
+getCity = withFlowHandlerAPI . DDriver.getCity

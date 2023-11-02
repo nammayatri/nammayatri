@@ -40,6 +40,8 @@ module Domain.Action.UI.Driver
     HistoryEntityV2 (..),
     HistoryEntryDetailsEntityV2 (..),
     ClearDuesRes (..),
+    GetCityReq (..),
+    GetCityResp (..),
     getInformation,
     activateGoHomeFeature,
     deactivateGoHomeFeature,
@@ -71,6 +73,7 @@ module Domain.Action.UI.Driver
     getHistoryEntryDetailsEntityV2,
     calcExecutionTime,
     fetchDriverPhoto,
+    getCity,
   )
 where
 
@@ -508,6 +511,17 @@ data MetaDataReq = MetaDataReq
 data ClearDuesRes = ClearDuesRes
   { orderId :: Id DOrder.PaymentOrder,
     orderResp :: Payment.CreateOrderResp
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema)
+
+data GetCityReq = GetCityReq
+  { lat :: Double,
+    lon :: Double
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema)
+
+newtype GetCityResp = GetCityResp
+  { city :: Maybe Text
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
@@ -1809,3 +1823,15 @@ calcExecutionTime transporterConfig' autopayPaymentStage scheduledAt = do
     Just DDF.NOTIFICATION_ATTEMPTING -> addUTCTime executionTimeDiff scheduledAt
     Just DDF.EXECUTION_SCHEDULED -> addUTCTime executionTimeDiff scheduledAt
     _ -> scheduledAt
+
+getCity :: (CacheFlow m r, EsqDBFlow m r) => GetCityReq -> m GetCityResp
+getCity req = do
+  let latlng = LatLong {lat = req.lat, lon = req.lon}
+  geometry <-
+    runInReplica $
+      QGeometry.findGeometriesContainingGps latlng >>= \case
+        [] -> do
+          pure Nothing
+        (g : _) -> pure $ Just g
+  let city = (.city) <$> geometry
+  pure $ GetCityResp {city = show <$> city}
