@@ -15,9 +15,15 @@
 
 module Beckn.Core where
 
+import Data.List (lookup)
+import qualified Data.Text.Encoding as T
+import EulerHS.Prelude
+import qualified Kernel.Storage.Queries.BecknRequest as QBR
 import Kernel.Tools.Metrics.CoreMetrics
+import Kernel.Types.Flow (runFlowR)
 import Kernel.Utils.Common
 import Kernel.Utils.IOLogging (LoggerEnv)
+import qualified Network.Wai.Internal as Wai
 import Servant
 import Storage.Beam.BecknRequest ()
 
@@ -28,15 +34,21 @@ logBecknRequest ::
   EnvR f ->
   Application ->
   Application
-logBecknRequest _ f req respF = do
-  -- req' <- case lookup "Authorization" requestHeaders of
-  --   Nothing -> return req
-  --   Just header -> do
-  --     body <- requestBody
-  --     bodyMvar <- newMVar body
-  --     void $ runFlowR flowRt appEnv $ QBR.logBecknRequest (T.decodeUtf8 body) (T.decodeUtf8 header)
-  --     return req {Wai.requestBody = mkRequestBody bodyMvar}
-  f req respF
-
--- where
---   mkRequestBody mvar = tryTakeMVar mvar <&> fromMaybe mempty
+logBecknRequest (EnvR flowRt appEnv) f req@Wai.Request {..} respF = do
+  req' <- case lookup "Authorization" requestHeaders of
+    Nothing -> do
+      void $
+        runFlowR flowRt appEnv $ do
+          logDebug "no logBecknRequest"
+      return req
+    Just header -> do
+      body <- requestBody
+      bodyMvar <- newMVar body
+      void $
+        runFlowR flowRt appEnv $ do
+          logDebug "logBecknRequest"
+          QBR.logBecknRequest (T.decodeUtf8 body) (T.decodeUtf8 header)
+      return req {Wai.requestBody = mkRequestBody bodyMvar}
+  f req' respF
+  where
+    mkRequestBody mvar = tryTakeMVar mvar <&> fromMaybe mempty

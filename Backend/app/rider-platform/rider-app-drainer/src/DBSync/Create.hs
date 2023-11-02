@@ -4,6 +4,7 @@ import Config.Env
 import Data.Aeson (encode)
 import qualified Data.ByteString.Lazy as LBS
 import Data.Maybe (fromJust)
+import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
 import qualified Data.Time.Clock.POSIX as Time
 import EulerHS.CachedSqlDBQuery as CDB
@@ -16,7 +17,10 @@ import Kafka.Producer as Producer
 import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude (UTCTime)
 import qualified Kernel.Streaming.Kafka.KafkaTable as Kafka
-import qualified "rider-app" Storage.Beam.BecknRequest as BR
+import Kernel.Types.Error
+import System.Timeout (timeout)
+import Text.Casing (quietSnake)
+import qualified "rider-app" Tools.Beam.UtilsTH as App
 import Types.DBSync
 import Types.Event as Event
 import Utils.Utils
@@ -71,20 +75,20 @@ runCreateCommands cmds streamKey = do
     |::| runCreateInKafkaAndDb dbConf streamKey ("Webengage" :: Text) [(obj, val, entryId, WebengageObject obj) | (CreateDBCommand entryId _ _ _ _ (WebengageObject obj), val) <- cmds]
     |::| runCreateInKafkaAndDb dbConf streamKey ("FeedbackForm" :: Text) [(obj, val, entryId, FeedbackFormObject obj) | (CreateDBCommand entryId _ _ _ _ (FeedbackFormObject obj), val) <- cmds]
     |::| runCreateInKafkaAndDb dbConf streamKey ("HotSpotConfig" :: Text) [(obj, val, entryId, HotSpotConfigObject obj) | (CreateDBCommand entryId _ _ _ _ (HotSpotConfigObject obj), val) <- cmds]
-    |::| runCreateInKafkaWithTopicNameAndDb dbConf streamKey ("BecknRequest" :: Text) [(obj, mkKafkaTableTopicName (mkTimeStamp entryId), val, entryId, Kafka.mkKafkaTable @BR.BecknRequestT obj (mkTimeStamp entryId)) | (CreateDBCommand entryId _ _ _ _ (BecknRequestObject obj), val) <- cmds] -- put KafkaTable to Kafka, not DBCreateObject
+    |::| runCreateInKafkaAndDb dbConf streamKey ("BecknRequest" :: Text) [(obj, val, entryId, BecknRequestObject obj) | (CreateDBCommand entryId _ _ _ _ (BecknRequestObject obj), val) <- cmds]
     |::| runCreateInKafkaAndDb dbConf streamKey ("Location" :: Text) [(obj, val, entryId, LocationObject obj) | (CreateDBCommand entryId _ _ _ _ (LocationObject obj), val) <- cmds]
     |::| runCreateInKafkaAndDb dbConf streamKey ("LocationMapping" :: Text) [(obj, val, entryId, LocationMappingObject obj) | (CreateDBCommand entryId _ _ _ _ (LocationMappingObject obj), val) <- cmds]
   where
     runCreate dbConf _ model object = do
-      let dbObjects = map (\(dbObject, _, _, _, _) -> dbObject) object
-          byteStream = map (\(_, _, bts, _, _) -> bts) object
-          entryIds = map (\(_, _, _, entryId, _) -> entryId) object
+      let dbObjects = map (\(dbObject, _, _, _) -> dbObject) object
+          byteStream = map (\(_, bts, _, _) -> bts) object
+          entryIds = map (\(_, _, entryId, _) -> entryId) object
           cmdsToErrorQueue = map ("command" :: String,) byteStream
       Env {..} <- ask
       maxRetries <- EL.runIO getMaxRetries
       if null object || model `elem` _dontEnableDbTables then pure [Right entryIds] else runCreateWithRecursion dbConf model dbObjects cmdsToErrorQueue entryIds 0 maxRetries False
     -- If KAFKA_PUSH is false then entry will be there in DB Else Create entry in Kafka only.
-    runCreateInKafkaWithTopicName dbConf streamKey' model object = do
+    runCreateInKafka dbConf streamKey' model object = do
       isPushToKafka' <- EL.runIO isPushToKafka
       if not isPushToKafka'
         then runCreate dbConf streamKey' model object
@@ -92,19 +96,25 @@ runCreateCommands cmds streamKey = do
           if null object
             then pure [Right []]
             else do
-              let kafkaObjects = map (\(_, topicName, _, _, kafkaObject) -> (kafkaObject, topicName)) object
-                  entryIds = map (\(_, _, _, entryId', _) -> entryId') object
+              let entryIds = map (\(_, _, entryId', _) -> entryId') object
               Env {..} <- ask
-              res <- EL.runIO $ streamRiderDrainerCreates _kafkaConnection kafkaObjects streamKey'
+              tables <- L.getOption KBT.Tables
+              let tableName = textToSnakeCaseText model
+              pushToS3 <- case tables of
+                Nothing -> L.throwException $ InternalError "Tables not found"
+                Just tables' -> do
+                  pure $ tableName `elem` tables'.kafkaS3Tables
+              res <- EL.runIO $ streamRiderDrainerCreates _kafkaConnection tableName pushToS3 object streamKey'
               either
-                ( \_ -> do
+                ( \err -> do
                     void $ publishDBSyncMetric Event.KafkaPushFailure
-                    EL.logError ("ERROR:" :: Text) ("Kafka Create Error " :: Text)
+                    EL.logError ("ERROR:" :: Text) $ ("Kafka Rider Create Error: " :: Text) <> show err
                     pure [Left entryIds]
                 )
                 (\_ -> pure [Right entryIds])
                 res
-    runCreateInKafkaWithTopicNameAndDb dbConf streamKey' model object = do
+    -- Create entry in DB if KAFKA_PUSH key is set to false. Else creates in both.
+    runCreateInKafkaAndDb dbConf streamKey' model object = do
       isPushToKafka' <- EL.runIO isPushToKafka
       if not isPushToKafka'
         then runCreate dbConf streamKey' model object
@@ -112,16 +122,11 @@ runCreateCommands cmds streamKey = do
           if null object
             then pure [Right []]
             else do
-              let entryIds = map (\(_, _, _, entryId, _) -> entryId) object
-              kResults <- runCreateInKafkaWithTopicName dbConf streamKey' model object
+              let entryIds = map (\(_, _, entryId, _) -> entryId) object
+              kResults <- runCreateInKafka dbConf streamKey' model object
               case kResults of
                 [Right _] -> runCreate dbConf streamKey' model object
                 _ -> pure [Left entryIds]
-    -- Create entry in DB if KAFKA_PUSH key is set to false. Else creates in both.
-    runCreateInKafkaAndDb dbConf streamKey' model objects =
-      runCreateInKafkaWithTopicNameAndDb dbConf streamKey' model $
-        objects <&> (\(obj, val, entryId, dbCreateObj) -> (obj, riderDrainerTopicName, val, entryId, dbCreateObj))
-
     runCreateWithRecursion dbConf model dbObjects cmdsToErrorQueue entryIds index maxRetries ignoreDuplicates = do
       res <- CDB.createMultiSqlWoReturning dbConf dbObjects ignoreDuplicates
       case (res, index) of
@@ -144,17 +149,44 @@ runCreateCommands cmds streamKey = do
           EL.logError ("Create failed: " :: Text) (show cmdsToErrorQueue <> "\n Error: " <> show x :: Text)
           pure [Left entryIds]
 
-streamRiderDrainerCreates :: ToJSON kafkaObject => Producer.KafkaProducer -> [(kafkaObject, TopicName)] -> Text -> IO (Either Text ())
-streamRiderDrainerCreates producer dbObject streamKey = do
-  result' <- mapM (KafkaProd.produceMessage producer . message) dbObject
-  if any isJust result' then pure $ Left ("Kafka Error: " <> show result') else pure $ Right ()
+streamRiderDrainerCreates ::
+  ( ToJSON (table Identity)
+  ) =>
+  Producer.KafkaProducer ->
+  Text ->
+  Bool ->
+  [(table Identity, b, EL.KVDBStreamEntryID, DBCreateObject)] ->
+  Text ->
+  IO (Either Text ())
+streamRiderDrainerCreates producer tableName pushToS3 dbObject streamKey = do
+  result' <- forM dbObject $ \obj -> do
+    result'' <- KafkaProd.produceMessage producer . message $ obj
+    flushResult <- timeout (5 * 60 * 1000000) $ KafkaProd.flushProducer producer
+    pure $ case flushResult of
+      Just _ -> maybe (Right ()) (Left . show @Text) result''
+      Nothing -> Left "KafkaProd.flushProducer timed out after 5 minutes"
+
+  if any isLeft result' then pure $ Left ("Kafka Error: " <> show result') else pure $ Right ()
   where
-    message (event, topicName) =
+    message (obj, _, entryId, dbCreateObject) = do
+      let (topicName, kafkaObject) =
+            if pushToS3
+              then do
+                let timestamp = mkTimeStamp entryId
+                let kafkaTable =
+                      Kafka.KafkaTable
+                        { schemaName = T.pack App.currentSchemaName,
+                          tableName,
+                          tableContent = toJSON obj,
+                          timestamp
+                        }
+                (mkS3TableTopicName timestamp, encode kafkaTable)
+              else (riderDrainerTopicName, encode dbCreateObject)
       ProducerRecord
         { prTopic = topicName,
           prPartition = UnassignedPartition,
           prKey = Just $ TE.encodeUtf8 streamKey,
-          prValue = Just . LBS.toStrict $ encode event
+          prValue = Just . LBS.toStrict $ kafkaObject
         }
 
 riderDrainerTopicName :: TopicName
@@ -163,6 +195,9 @@ riderDrainerTopicName = TopicName "rider-drainer"
 mkTimeStamp :: EL.KVDBStreamEntryID -> UTCTime
 mkTimeStamp (EL.KVDBStreamEntryID posixTime _) = Time.posixSecondsToUTCTime $ fromInteger (posixTime `div` 1000)
 
-mkKafkaTableTopicName :: UTCTime -> TopicName
-mkKafkaTableTopicName timestamp = do
+mkS3TableTopicName :: UTCTime -> TopicName
+mkS3TableTopicName timestamp = do
   TopicName $ "kafka-table" <> "_" <> show (Kafka.countTopicNumber timestamp)
+
+textToSnakeCaseText :: Text -> Text
+textToSnakeCaseText = T.pack . quietSnake . T.unpack

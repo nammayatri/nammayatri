@@ -149,7 +149,6 @@ kafkaTableConsumer flowRt appEnv kafkaConsumer = do
         <> T.unpack kafkaTable.tableName
         <> "/"
         <> Time.formatTime Time.defaultTimeLocale "%Y.%m.%d-%H" kafkaTable.timestamp
-        <> ".json"
 
 readKafkaTableMessages ::
   Consumer.KafkaConsumer ->

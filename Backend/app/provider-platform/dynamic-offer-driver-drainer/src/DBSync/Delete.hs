@@ -18,6 +18,7 @@ import qualified Kafka.Producer as KafkaProd
 import qualified Kafka.Producer as Producer
 import qualified Kernel.Beam.Types as KBT
 import Sequelize
+import System.Timeout (timeout)
 import Text.Casing
 import Types.DBSync
 import Types.Event as Event
@@ -124,9 +125,9 @@ runDeleteCommands (cmd, val) dbStreamKey = do
           Env {..} <- ask
           res <- EL.runIO $ streamDriverDrainerDeletes _kafkaConnection (getDbDeleteDataJson model whereClause) dbstremKey
           either
-            ( \_ -> do
+            ( \err -> do
                 void $ publishDBSyncMetric Event.KafkaPushFailure
-                EL.logError ("ERROR:" :: Text) ("Kafka Create Error " :: Text)
+                EL.logError ("ERROR:" :: Text) $ ("Kafka Driver Delete Error: " :: Text) <> show err
                 pure $ Left (UnexpectedError "Kafka Error", id)
             )
             (\_ -> pure $ Right id)
@@ -158,9 +159,13 @@ streamDriverDrainerDeletes :: ToJSON a => Producer.KafkaProducer -> a -> Text ->
 streamDriverDrainerDeletes producer dbObject dbStreamKey = do
   let topicName = "driver-drainer"
   result' <- KafkaProd.produceMessage producer (message topicName dbObject)
-  case result' of
-    Just err -> pure $ Left $ T.pack ("Kafka Error: " <> show err)
-    _ -> pure $ Right ()
+  flushResult <- timeout (5 * 60 * 1000000) $ KafkaProd.flushProducer producer
+  case flushResult of
+    Just _ -> do
+      case result' of
+        Just err -> pure $ Left $ T.pack ("Kafka Error: " <> show err)
+        _ -> pure $ Right ()
+    Nothing -> pure $ Left "KafkaProd.flushProducer timed out after 5 minutes"
   where
     message topicName event =
       ProducerRecord
