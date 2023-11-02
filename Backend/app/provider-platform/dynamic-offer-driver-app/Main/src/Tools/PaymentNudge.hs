@@ -62,6 +62,9 @@ mandatePausedKey = "MANDATE_PAUSED"
 mandateCancelledKey :: Text
 mandateCancelledKey = "MANDATE_CANCELLED"
 
+planActivatedKey :: Text
+planActivatedKey = "PLAN_ACTIVATED_FOR_DAY"
+
 roundToHalf :: HighPrecMoney -> HighPrecMoney
 roundToHalf x = fromInteger (round (x * 2)) / 2
 
@@ -180,7 +183,7 @@ notifyMandateCancelled driverId _merchantId deviceToken language = do
 
 notifyPlanActivatedForDay :: (CacheFlow m r, EsqDBFlow m r) => Id DP.Person -> Id DM.Merchant -> Maybe FCM.FCMRecipientToken -> Maybe Language -> m ()
 notifyPlanActivatedForDay driverId _merchantId deviceToken language = do
-  let pnKey = mandateCancelledKey
+  let pnKey = planActivatedKey
   driver <- B.runInReplica $ QDP.findById driverId >>= fromMaybeM (PersonDoesNotExist driverId.getId)
   mOverlay <- CMP.findByMerchantOpCityIdPNKeyLangaugeUdf driver.merchantOperatingCityId pnKey (fromMaybe ENGLISH language) Nothing
   whenJust mOverlay $ \overlay -> do
