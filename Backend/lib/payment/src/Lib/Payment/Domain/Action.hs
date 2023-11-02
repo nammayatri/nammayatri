@@ -29,6 +29,7 @@ import qualified Kernel.External.Payment.Interface as Payment
 import qualified Kernel.External.Payment.Juspay.Types as Juspay
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq hiding (Value)
+import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Error
 import Kernel.Types.Id
@@ -44,7 +45,10 @@ data PaymentStatusResp
   = PaymentStatus
       { status :: Payment.TransactionStatus,
         bankErrorMessage :: Maybe Text,
-        bankErrorCode :: Maybe Text
+        bankErrorCode :: Maybe Text,
+        isRetried :: Maybe Bool,
+        isRetargeted :: Maybe Bool,
+        retargetLink :: Maybe Text
       }
   | MandatePaymentStatus
       { status :: Payment.TransactionStatus,
@@ -65,6 +69,8 @@ data PaymentStatusResp
         sourceInfo :: Payment.SourceInfo,
         notificationType :: Maybe Text,
         juspayProviedId :: Text,
+        responseCode :: Maybe Text,
+        responseMessage :: Maybe Text,
         notificationId :: Text
       }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
@@ -200,6 +206,9 @@ buildPaymentOrder merchantId personId req resp = do
         mandateEndDate = posixSecondsToUTCTime . read . T.unpack <$> resp.sdk_payload.payload.mandateEndDate,
         bankErrorCode = Nothing,
         bankErrorMessage = Nothing,
+        isRetried = False,
+        isRetargeted = False,
+        retargetLink = Nothing,
         createdAt = now,
         updatedAt = now
       }
@@ -231,9 +240,17 @@ orderStatusService personId orderId orderStatusCall = do
                 mandateFrequency = Just mandateFrequency,
                 mandateMaxAmount = Just mandateMaxAmount,
                 mandateStatus = Just mandateStatus,
+                isRetried = Nothing,
+                isRetargeted = Nothing,
+                retargetLink = Nothing,
                 ..
               }
-      updateOrderTransaction order orderTxn Nothing
+      maybe
+        (updateOrderTransaction order orderTxn Nothing)
+        ( \transactionUUID' ->
+            Redis.whenWithLockRedis (txnProccessingKey transactionUUID') 60 $ updateOrderTransaction order orderTxn Nothing
+        )
+        transactionUUID -- should we put it in fork ?
       return $
         MandatePaymentStatus
           { status = orderStatusResp.transactionStatus,
@@ -251,10 +268,18 @@ orderStatusService personId orderId orderStatusCall = do
                 mandateFrequency = Nothing,
                 mandateMaxAmount = Nothing,
                 mandateStatus = Nothing,
+                isRetried = isRetriedOrder,
+                isRetargeted = isRetargetedOrder,
+                retargetLink = retargetPaymentLink,
                 ..
               }
-      updateOrderTransaction order orderTxn Nothing
-      return $ PaymentStatus {status = transactionStatus, bankErrorCode = orderTxn.bankErrorCode, bankErrorMessage = orderTxn.bankErrorMessage}
+      maybe
+        (updateOrderTransaction order orderTxn Nothing)
+        ( \transactionUUID' ->
+            Redis.whenWithLockRedis (txnProccessingKey transactionUUID') 60 $ updateOrderTransaction order orderTxn Nothing
+        )
+        transactionUUID
+      return $ PaymentStatus {status = transactionStatus, bankErrorCode = orderTxn.bankErrorCode, bankErrorMessage = orderTxn.bankErrorMessage, isRetried = isRetriedOrder, isRetargeted = isRetargetedOrder, retargetLink = retargetPaymentLink}
     _ -> throwError $ InternalError "Unexpected Order Status Response."
 
 data OrderTxn = OrderTxn
@@ -276,7 +301,10 @@ data OrderTxn = OrderTxn
     mandateEndDate :: Maybe UTCTime,
     mandateId :: Maybe Text,
     mandateFrequency :: Maybe Payment.MandateFrequency,
-    mandateMaxAmount :: Maybe HighPrecMoney
+    mandateMaxAmount :: Maybe HighPrecMoney,
+    isRetried :: Maybe Bool,
+    isRetargeted :: Maybe Bool,
+    retargetLink :: Maybe Text
   }
 
 updateOrderTransaction ::
@@ -294,7 +322,7 @@ updateOrderTransaction order resp respDump = do
       Just transactionUUID -> QTransaction.findByTxnUUID transactionUUID
       -- Nothing -> runInReplica $ QTransaction.findNewTransactionByOrderId order.id
       Nothing -> QTransaction.findNewTransactionByOrderId order.id
-  let updOrder = order{status = resp.transactionStatus}
+  let updOrder = order{status = resp.transactionStatus, isRetargeted = fromMaybe order.isRetargeted resp.isRetargeted, isRetried = fromMaybe order.isRetried resp.isRetried, retargetLink = resp.retargetLink}
   case mbTransaction of
     Nothing -> do
       transaction <- buildPaymentTransaction order resp respDump
@@ -365,9 +393,17 @@ juspayWebhookService resp respDump = do
                 mandateStatus = Just mandateStatus,
                 mandateFrequency = Just mandateFrequency,
                 mandateMaxAmount = Just mandateMaxAmount,
+                isRetried = Nothing,
+                isRetargeted = Nothing,
+                retargetLink = Nothing,
                 ..
               }
-      updateOrderTransaction order orderTxn $ Just respDump
+      maybe
+        (updateOrderTransaction order orderTxn Nothing)
+        ( \transactionUUID' ->
+            Redis.whenWithLockRedis (txnProccessingKey transactionUUID') 60 $ updateOrderTransaction order orderTxn $ Just respDump
+        )
+        transactionUUID
     Payment.OrderStatusResp {..} -> do
       order <- QOrder.findByShortId (ShortId orderShortId) >>= fromMaybeM (PaymentOrderNotFound orderShortId)
       let orderTxn =
@@ -378,9 +414,17 @@ juspayWebhookService resp respDump = do
                 mandateStatus = Nothing,
                 mandateFrequency = Nothing,
                 mandateMaxAmount = Nothing,
+                isRetried = isRetriedOrder,
+                isRetargeted = isRetargetedOrder,
+                retargetLink = retargetPaymentLink,
                 ..
               }
-      updateOrderTransaction order orderTxn $ Just respDump
+      maybe
+        (updateOrderTransaction order orderTxn Nothing)
+        ( \transactionUUID' ->
+            Redis.whenWithLockRedis (txnProccessingKey transactionUUID') 60 $ updateOrderTransaction order orderTxn $ Just respDump
+        )
+        transactionUUID
     _ -> return ()
   return Ack
 
@@ -444,6 +488,12 @@ createExecutionService (request, orderId) merchantId executionCall = do
             mandateEndDate = Nothing,
             bankErrorMessage = Nothing,
             bankErrorCode = Nothing,
+            isRetried = False,
+            isRetargeted = False,
+            retargetLink = Nothing,
             createdAt = now,
             updatedAt = now
           }
+
+txnProccessingKey :: Text -> Text
+txnProccessingKey txnUUid = "Txn:Processing:TxnUuid" <> txnUUid

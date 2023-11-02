@@ -48,11 +48,15 @@ updateStatusAndError :: BeamFlow m r => DOrder.PaymentOrder -> Maybe Text -> May
 updateStatusAndError order bankErrorMessage bankErrorCode = do
   now <- getCurrentTime
   updateWithKV
-    [ Se.Set BeamPO.status order.status,
-      Se.Set BeamPO.bankErrorMessage bankErrorMessage,
-      Se.Set BeamPO.bankErrorCode bankErrorCode,
-      Se.Set BeamPO.updatedAt now
-    ]
+    ( [ Se.Set BeamPO.status order.status,
+        Se.Set BeamPO.bankErrorMessage bankErrorMessage,
+        Se.Set BeamPO.isRetried order.isRetried,
+        Se.Set BeamPO.isRetargeted order.isRetargeted,
+        Se.Set BeamPO.bankErrorCode bankErrorCode,
+        Se.Set BeamPO.updatedAt now
+      ]
+        <> [Se.Set BeamPO.retargetLink order.retargetLink | isJust order.retargetLink]
+    )
     [Se.Is BeamPO.id $ Se.Eq $ getId order.id]
 
 updateStatusToExpired :: BeamFlow m r => Id DOrder.PaymentOrder -> m ()

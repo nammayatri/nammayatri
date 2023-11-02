@@ -166,7 +166,7 @@ sendAsyncNotification driverToNotify merchantId = do
     Left err -> do
       QINV.updateInvoiceStatusByDriverFeeIds INV.INACTIVE [driverToNotify.driverFeeId]
       QDF.updateAutoPayToManual driverToNotify.driverFeeId
-      QNTF.updateNotificationStatusById notificationId PaymentInterface.NOTIFICATION_FAILURE
+      QNTF.updateNotificationStatusAndResponseInfoById notificationId PaymentInterface.NOTIFICATION_FAILURE Nothing Nothing
       logError ("Notification failed for driverFeeId : " <> driverToNotify.driverFeeId.getId <> " error : " <> show err)
     Right res -> do
       QNTF.updateNotificationResponseById notificationId res
@@ -187,6 +187,8 @@ sendAsyncNotification driverToNotify merchantId = do
           dateCreated = now,
           lastUpdated = now,
           lastStatusCheckedAt = Nothing,
+          responseCode = Nothing,
+          responseMessage = Nothing,
           createdAt = now,
           updatedAt = now
         }
