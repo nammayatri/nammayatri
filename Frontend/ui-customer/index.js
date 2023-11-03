@@ -122,37 +122,22 @@ window.onMerchantEvent = function (_event, merchantPayload) {
   console.log(merchantPayload);
   const clientPaylod = JSON.parse(merchantPayload).payload;
   if (_event == "initiate") {
-    const payload = {
-      event: "initiate_result"
-      , service: "in.juspay.becknui"
-      , payload: { status: "SUCCESS" }
-      , error: false
-      , errorMessage: ""
-      , errorCode: ""
-    }
     let clientId = clientPaylod.clientId;
     if (clientId.includes("_ios"))
     {
       clientId = clientId.replace("_ios","");
     }
-    if (clientId == "open-kochi" || clientId == "yatriconsumer") {
-      window.merchantID = "YATRI"
-    } else if (clientId == "jatrisaathi" || clientId == "jatrisaathiconsumer"){
-      window.merchantID = "YATRISATHI"
-    } else if (clientId.includes("mobility")) {
-      let merchant = clientId.replace("mobility","")
-      merchant = merchant.replace("consumer","")
-      merchant = merchant.toUpperCase();
-      window.merchantID = "MOBILITY_" + merchant.charAt(0) + merchant.charAt(merchant.length - 1);
-    } else if (clientId.includes("consumer")) {
+    if (!clientId.startsWith("mobility") && clientId.includes("consumer")) {
       let merchant = clientId.replace("mobility","")
       merchant = merchant.replace("consumer","")
       window.merchantID = merchant.toUpperCase();
     } else {
-      window.merchantID = clientId.toUpperCase();
+      let merchant = clientId.replace("mobility","")
+      merchant = merchant.replace("consumer","")
+      merchant = merchant.toUpperCase();
+      window.merchantID = "MOBILITY_" + merchant.charAt(0) + merchant.charAt(merchant.length - 1);
     }
     console.log(window.merchantID);
-    // JBridge.runInJuspayBrowser("onEvent", JSON.stringify(payload), null)
     callInitiateResult();
   } else if (_event == "process") {
     console.warn("Process called");
