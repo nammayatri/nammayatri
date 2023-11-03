@@ -464,39 +464,6 @@ findAllByTimeMerchantAndStatus (Id merchantId) startTime endTime status = do
         ]
     ]
 
-findAllPendingInRange :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Merchant -> UTCTime -> UTCTime -> m [DriverFee]
-findAllPendingInRange (Id merchantId) startTime endTime = do
-  findAllWithKV
-    [ Se.And
-        [ Se.Is BeamDF.merchantId $ Se.Eq merchantId,
-          Se.Is BeamDF.endTime $ Se.GreaterThanOrEq startTime,
-          Se.Is BeamDF.endTime $ Se.LessThanOrEq endTime,
-          Se.Is BeamDF.status $ Se.Eq Domain.PAYMENT_PENDING
-        ]
-    ]
-
-findAllOverdueInRange :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Merchant -> UTCTime -> UTCTime -> m [DriverFee]
-findAllOverdueInRange (Id merchantId) startTime endTime = do
-  findAllWithKV
-    [ Se.And
-        [ Se.Is BeamDF.merchantId $ Se.Eq merchantId,
-          Se.Is BeamDF.payBy $ Se.GreaterThanOrEq startTime,
-          Se.Is BeamDF.payBy $ Se.LessThanOrEq endTime,
-          Se.Is BeamDF.status $ Se.Eq Domain.PAYMENT_OVERDUE
-        ]
-    ]
-
-findAllCollectionInRange :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Merchant -> UTCTime -> UTCTime -> m [DriverFee]
-findAllCollectionInRange (Id merchantId) startTime endTime = do
-  findAllWithKV
-    [ Se.And
-        [ Se.Is BeamDF.merchantId $ Se.Eq merchantId,
-          Se.Is BeamDF.collectedAt $ Se.GreaterThanOrEq (Just startTime),
-          Se.Is BeamDF.collectedAt $ Se.LessThanOrEq (Just endTime),
-          Se.Is BeamDF.status $ Se.In [CLEARED, COLLECTED_CASH, EXEMPTED]
-        ]
-    ]
-
 updateStatus :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => DriverFeeStatus -> Id DriverFee -> UTCTime -> m ()
 updateStatus status (Id driverFeeId) now = do
   updateOneWithKV

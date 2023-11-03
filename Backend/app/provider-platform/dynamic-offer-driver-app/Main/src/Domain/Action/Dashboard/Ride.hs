@@ -48,6 +48,7 @@ import Kernel.External.Encryption (decrypt, getDbHash)
 import Kernel.External.Maps.HasCoordinates
 import qualified Kernel.External.Ticket.Interface.Types as Ticket
 import Kernel.Prelude
+import Kernel.Storage.Clickhouse.Config
 import Kernel.Storage.Clickhouse.Operators
 import qualified Kernel.Storage.Clickhouse.Queries as CH
 import qualified Kernel.Storage.Clickhouse.Types as CH
@@ -209,7 +210,7 @@ rideRoute merchantShortId reqRideId = do
       driverQId = T.unpack ride.driverId.getId
   let rQFst = fetchDate $ show ride.createdAt
   let rQLst = fetchDate $ show (addUTCTime (intToNominalDiffTime 86400) ride.createdAt)
-  ckhTbl <- CH.findAll (Proxy @Common.DriverEdaKafka) ((("partition_date" =.= rQFst) |.| ("partition_date" =.= rQLst)) &.& ("driver_id" =.= driverQId) &.& ("rid" =.= rideQId)) Nothing Nothing (Just $ CH.Asc "ts")
+  ckhTbl <- CH.findAll ATLAS_KAFKA (Proxy @Common.DriverEdaKafka) [] Nothing ((("partition_date" =.= rQFst) |.| ("partition_date" =.= rQLst)) &.& ("driver_id" =.= driverQId) &.& ("rid" =.= rideQId)) Nothing Nothing (Just $ CH.Asc "ts")
   actualRoute <- case ckhTbl of
     Left err -> do
       logError $ "Clickhouse error: " <> show err

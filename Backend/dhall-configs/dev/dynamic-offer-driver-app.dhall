@@ -36,7 +36,16 @@ let esqLocationDBRepCfg =
       , connectionPoolCount = esqLocationDBCfg.connectionPoolCount
       }
 
-let clickhouseCfg =
+let kafkaClickhouseCfg =
+      { username = sec.clickHouseUsername
+      , host = "xxxxx"
+      , port = 1234
+      , password = sec.clickHousePassword
+      , database = "xxxx"
+      , tls = True
+      }
+
+let driverClickhouseCfg =
       { username = sec.clickHouseUsername
       , host = "xxxxx"
       , port = 1234
@@ -210,7 +219,8 @@ let modelNamesMap =
 
 in  { esqDBCfg
     , esqDBReplicaCfg
-    , clickhouseCfg
+    , kafkaClickhouseCfg
+    , driverClickhouseCfg
     , hedisCfg = rcfg
     , hedisClusterCfg = rccfg
     , hedisNonCriticalCfg = rcfg
