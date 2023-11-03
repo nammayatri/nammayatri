@@ -566,6 +566,8 @@ buildDriverInfoRes QPerson.DriverWithRidesCount {..} mbDriverLicense rcAssociati
         numberOfRides = fromMaybe 0 ridesCount,
         mobileNumber,
         mobileCountryCode = person.mobileCountryCode,
+        bundleVersion = person.bundleVersion,
+        clientVersion = person.clientVersion,
         enabled = info.enabled,
         blocked = info.blocked,
         blockedReason = info.blockedReason,

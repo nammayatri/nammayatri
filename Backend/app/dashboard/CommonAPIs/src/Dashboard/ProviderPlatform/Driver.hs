@@ -28,6 +28,7 @@ import Kernel.Types.APISuccess (APISuccess)
 import Kernel.Types.Common (Centesimal, HighPrecMoney, MandatoryQueryParam, Money)
 import Kernel.Types.Id
 import Kernel.Types.Predicate
+import Kernel.Types.Version
 import Kernel.Utils.GenericPretty
 import qualified Kernel.Utils.Predicates as P
 import Kernel.Utils.Validation
@@ -449,7 +450,9 @@ data DriverInfoRes = DriverInfoRes
     vehicleNumber :: Maybe Text,
     driverLicenseDetails :: Maybe DriverLicenseAPIEntity,
     vehicleRegistrationDetails :: [DriverRCAssociationAPIEntity],
-    onboardingDate :: Maybe UTCTime
+    onboardingDate :: Maybe UTCTime,
+    bundleVersion :: Maybe Version,
+    clientVersion :: Maybe Version
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
