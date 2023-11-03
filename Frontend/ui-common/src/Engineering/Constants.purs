@@ -31,3 +31,12 @@ dotJSON = ".json"
 
 defaultDensity :: Number
 defaultDensity = 160.0
+
+getSeparatorFactor :: Int
+getSeparatorFactor = 8
+
+defaultSeparatorCount :: Int
+defaultSeparatorCount = 4
+
+merchantPayload :: String
+merchantPayload = "__payload"

@@ -101,7 +101,7 @@ type Event = {
   , data :: String
 }
 
-newtype GlobalPayload = GlobalPayload
+newtype MerchantPayload = MerchantPayload
   { betaAssets :: Maybe Boolean
   , payload :: Payload
   , requestId :: Maybe String
@@ -111,10 +111,10 @@ newtype GlobalPayload = GlobalPayload
   , service_based :: Maybe Boolean
   }
 
-derive instance newGlobalPayload :: Newtype GlobalPayload _
-derive instance genericGlobalPayload :: Generic GlobalPayload _
-instance decodeGlobalPayload :: Decode GlobalPayload where decode = defaultDecode
-instance encodeGlobalPayload :: Encode GlobalPayload where encode = defaultEncode
+derive instance newGlobalPayload :: Newtype MerchantPayload _
+derive instance genericGlobalPayload :: Generic MerchantPayload _
+instance decodeGlobalPayload :: Decode MerchantPayload where decode = defaultDecode
+instance encodeGlobalPayload :: Encode MerchantPayload where encode = defaultEncode
 
 newtype Payload = Payload
   { service :: Maybe String

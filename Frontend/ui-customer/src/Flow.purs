@@ -18,7 +18,7 @@ module Flow where
 import Engineering.Helpers.LogEvent
 
 import Accessor (_computedPrice, _contents, _formattedAddress, _id, _lat, _lon, _status, _toLocation, _signatureAuthData)
-import Common.Types.App (GlobalPayload(..), SignatureAuthData(..), Payload(..), Version(..), LocationData(..), EventPayload(..), ClevertapEventParams, OTPChannel(..))
+import Common.Types.App (MerchantPayload(..), SignatureAuthData(..), Payload(..), Version(..), LocationData(..), EventPayload(..), ClevertapEventParams, OTPChannel(..))
 import Common.Types.App (LazyCheck(..), FCMBundleUpdate)
 import Components.LocationListItem.Controller (dummyLocationListState)
 import Components.SavedLocationCard.Controller (getCardType)
@@ -33,7 +33,6 @@ import Data.Function.Uncurried (runFn3)
 import Data.Int as INT
 import Data.Lens ((^.))
 import Data.Maybe (Maybe(..), fromMaybe, isJust, isNothing)
-import Data.Newtype (unwrap)
 import Data.Number (fromString)
 import Data.String (Pattern(..), drop, indexOf, split, toLower, trim, take)
 import Debug (spy)
@@ -44,17 +43,18 @@ import Engineering.Helpers.BackTrack (getState, liftFlowBT)
 import Engineering.Helpers.Commons (liftFlow, os, getNewIDWithTag, bundleVersion, getExpiryTime, stringToVersion, convertUTCtoISC, getCurrentUTC, getWindowVariable, flowRunner)
 import Engineering.Helpers.Commons as EHC
 import Engineering.Helpers.Suggestions (suggestionsDefinitions, getSuggestions)
-import Engineering.Helpers.Utils (loaderText, toggleLoader, getAppConfig, saveObject, reboot, showSplash)
+import Engineering.Helpers.Utils (loaderText, toggleLoader, getAppConfigFlowBT, saveObject, reboot, showSplash, getMerchantPayloadFlowBT)
 import Engineering.Helpers.Utils (loaderText, toggleLoader)
 import Foreign (MultipleErrors, unsafeToForeign)
 import Foreign.Class (class Encode, encode)
 import Foreign.Generic (decodeJSON, encodeJSON)
-import Helpers.Utils (decodeError, addToPrevCurrLoc, addToRecentSearches, adjustViewWithKeyboard, checkPrediction, clearWaitingTimer, differenceOfLocationLists, drawPolygon, filterRecentSearches, fetchImage, FetchImageFrom(..), getCurrentDate, getCurrentLocationMarker, getCurrentLocationsObjFromLocal, getDistanceBwCordinates, getGlobalPayload, getMobileNumber, getNewTrackingId, getObjFromLocal, getPrediction, getRecentSearches, getScreenFromStage, getSearchType, parseFloat, parseNewContacts, removeLabelFromMarker, requestKeyboardShow, saveCurrentLocations, seperateByWhiteSpaces, setText, showCarouselScreen, sortPredctionByDistance, toStringJSON, triggerRideStatusEvent, withinTimeRange, fetchDefaultPickupPoint, recentDistance)
+import Helpers.Utils (decodeError, addToPrevCurrLoc, addToRecentSearches, adjustViewWithKeyboard, checkPrediction, clearWaitingTimer, differenceOfLocationLists, drawPolygon, filterRecentSearches, fetchImage, FetchImageFrom(..), getCurrentDate, getCurrentLocationMarker, getCurrentLocationsObjFromLocal, getDistanceBwCordinates, getMobileNumber, getNewTrackingId, getObjFromLocal, getPrediction, getRecentSearches, getScreenFromStage, getSearchType, parseFloat, parseNewContacts, removeLabelFromMarker, requestKeyboardShow, saveCurrentLocations, seperateByWhiteSpaces, setText, showCarouselScreen, sortPredctionByDistance, toStringJSON, triggerRideStatusEvent, withinTimeRange, fetchDefaultPickupPoint, recentDistance)
 import JBridge (addMarker, cleverTapSetLocation, currentPosition, drawRoute, emitJOSEvent, enableMyLocation, factoryResetApp, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, firebaseUserID, generateSessionId, getLocationPermissionStatus, getVersionCode, getVersionName, hideKeyboardOnNavigation, hideLoader, initiateLocationServiceClient, isCoordOnPath, isInternetAvailable, isLocationEnabled, isLocationPermissionEnabled, launchInAppRatingPopup, locateOnMap, locateOnMapConfig, metaLogEvent, openNavigation, reallocateMapFragment, removeAllPolylines, saveSuggestionDefs, saveSuggestions, setCleverTapUserData, setCleverTapUserProp, setFCMTokenWithTimeOut, stopChatListenerService, toast, toggleBtnLoader, updateRoute, updateRouteMarker)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (printLog)
 import MerchantConfig.DefaultConfig as DC
+import MerchantConfig.Types (AppConfig(..))
 import MerchantConfig.Utils (Merchant(..), getMerchant, getValueFromConfig)
 import MerchantConfig.Utils as MU
 import ModifyScreenState (modifyScreenState, updateRideDetails)
@@ -98,8 +98,8 @@ import Constants.Configs
 import PrestoDOM (initUI)
 import Common.Resources.Constants (zoomLevel)
 
-baseAppFlow :: GlobalPayload -> Boolean-> FlowBT String Unit
-baseAppFlow (GlobalPayload gPayload) refreshFlow = do
+baseAppFlow :: MerchantPayload -> Boolean-> FlowBT String Unit
+baseAppFlow (MerchantPayload gPayload) refreshFlow = do
   logField_ <- lift $ lift $ getLogFields
   _ <- pure $ printLog "Global Payload" gPayload
   (GlobalState state) <- getState
@@ -259,6 +259,16 @@ getLatestAndroidVersion merchant =
     YATRISATHI -> 2
     _ -> 1
 
+getAppConfigFromCache :: FlowBT String AppConfig
+getAppConfigFromCache = do
+  (GlobalState state) <- getState
+  case state.appConfig of
+    Just appConfig -> pure appConfig
+    Nothing -> do
+      config <- getAppConfigFlowBT Constants.appConfig
+      modifyScreenState $ AppConfigType (\_ -> Just config)
+      pure config
+
 forceIOSupdate :: Int -> Int -> Int -> IosVersion -> Boolean
 forceIOSupdate c_maj c_min c_patch updatedIOSversion=
   c_maj < updatedIOSversion.majorUpdateIndex ||
@@ -268,7 +278,7 @@ forceIOSupdate c_maj c_min c_patch updatedIOSversion=
 currentRideFlow :: Boolean -> FlowBT String Unit
 currentRideFlow rideAssigned = do
   logField_ <- lift $ lift $ getLogFields
-  config <- getAppConfig Constants.appConfig
+  config <- getAppConfigFromCache
   modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data {config = config}})
   rideBookingListResponse <- lift $ lift $ Remote.rideBookingList "1" "0" "true"
   (GlobalState state') <- getState
@@ -562,7 +572,7 @@ enterMobileNumberScreenFlow = do
   liftFlowBT $ hideLoader -- Removed initial choose langauge screen
   if(getValueToLocalStore LANGUAGE_KEY == "__failed") then setValueToLocalStore LANGUAGE_KEY $ getValueFromConfig "defaultLanguage" else pure unit
   void $ lift $ lift $ toggleLoader false
-  config <- getAppConfig Constants.appConfig
+  config <- getAppConfigFromCache
   modifyScreenState $ EnterMobileNumberScreenType (\enterMobileNumberScreen → enterMobileNumberScreen {data {config =  config }})
   logField_ <- lift $ lift $ getLogFields
   _ <- lift $ lift $ liftFlow $ logEvent logField_ "ny_user_enter_mob_num_scn_view"
@@ -634,7 +644,7 @@ welcomeScreenFlow = do
 accountSetUpScreenFlow :: FlowBT String Unit
 accountSetUpScreenFlow = do
   logField_ <- lift $ lift $ getLogFields
-  config <- getAppConfig Constants.appConfig
+  config <- getAppConfigFromCache
   modifyScreenState $ AccountSetUpScreenStateType (\accountSetUpScreen -> accountSetUpScreen{data{config = config}})
   disabilityListT <- updateDisabilityList "Account_Set_Up_Screen"
   modifyScreenState $ AccountSetUpScreenStateType (\accountSetUpScreen -> accountSetUpScreen{data{disabilityOptions{disabilityOptionList = disabilityListT }}})
@@ -697,7 +707,7 @@ homeScreenFlow = do
   -- TODO: HANDLE LOCATION LIST INITIALLY
   _ <- pure $ firebaseUserID (getValueToLocalStore CUSTOMER_ID)
   void $ lift $ lift $ toggleLoader false
-  config <- getAppConfig Constants.appConfig
+  config <- getAppConfigFromCache
   modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{hasTakenRide = if (getValueToLocalStore REFERRAL_STATUS == "HAS_TAKEN_RIDE") then true else false, isReferred = if (getValueToLocalStore REFERRAL_STATUS == "REFERRED_NOT_TAKEN_RIDE") then true else false }, data {config = config}})
   flow <- UI.homeScreen
   case flow of
@@ -1572,7 +1582,7 @@ getFinalAmount (RideBookingRes resp) =
 tripDetailsScreenFlow :: TripDetailsGoBackType ->  FlowBT String Unit
 tripDetailsScreenFlow fromMyRides = do
   (GlobalState state) <- getState
-  config <- getAppConfig Constants.appConfig
+  config <- getAppConfigFromCache
   logField_ <- lift $ lift $ getLogFields
   expiryTime <- pure $ (getExpiryTime state.tripDetailsScreen.data.selectedItem.rideEndTimeUTC isForLostAndFound)
   modifyScreenState $ TripDetailsScreenStateType (\tripDetailsScreen -> tripDetailsScreen {props{fromMyRides = fromMyRides, canConnectWithDriver = (expiryTime <= 86400)}, data{config = config}}) -- expiryTime < 24hrs or 86400 seconds
@@ -1614,7 +1624,7 @@ tripDetailsScreenFlow fromMyRides = do
 
 invoiceScreenFlow :: FlowBT String Unit
 invoiceScreenFlow = do
-  config <- getAppConfig Constants.appConfig
+  config <- getAppConfigFromCache
   modifyScreenState $ InvoiceScreenStateType (\invoiceScreen -> invoiceScreen{data{config = config}})
   flow <- UI.invoiceScreen
   (GlobalState newState) <- getState
@@ -1635,7 +1645,7 @@ contactUsScreenFlow = do
 
 helpAndSupportScreenFlow :: FlowBT String Unit
 helpAndSupportScreenFlow = do
-  config <- getAppConfig Constants.appConfig
+  config <- getAppConfigFromCache
   modifyScreenState $ ContactUsScreenStateType (\contactUsScreen -> contactUsScreen{data{config = config}})
   modifyScreenState $ HelpAndSupportScreenStateType (\helpAndSupportScreen -> helpAndSupportScreen{data{config = config}})
   flow <- UI.helpAndSupportScreen
@@ -1660,7 +1670,7 @@ helpAndSupportScreenFlow = do
 
 myRidesScreenFlow :: Boolean ->  FlowBT String Unit
 myRidesScreenFlow fromNavBar = do
-  config <- getAppConfig Constants.appConfig
+  config <- getAppConfigFromCache
   logField_ <- lift $ lift $ getLogFields
   (GlobalState globalState) <- getState
   modifyScreenState $ MyRideScreenStateType (\myRidesScreen -> myRidesScreen {props{fromNavBar = fromNavBar}, data{config = config, isSrcServiceable = globalState.homeScreen.props.isSrcServiceable}})
@@ -1708,7 +1718,7 @@ myRidesScreenFlow fromNavBar = do
 
 selectLanguageScreenFlow :: FlowBT String Unit
 selectLanguageScreenFlow = do
-  appConfig <- getAppConfig Constants.appConfig
+  appConfig <- getAppConfigFromCache
   logField_ <- lift $ lift $ getLogFields
   modifyScreenState $ SelectLanguageScreenStateType (\selectLanguageScreen -> selectLanguageScreen{data{config = appConfig}})
   flow <- UI.selectLanguageScreen
@@ -1764,7 +1774,7 @@ emergencyScreenFlow = do
 
 aboutUsScreenFlow :: FlowBT String Unit
 aboutUsScreenFlow = do
-  config <- getAppConfig Constants.appConfig
+  config <- getAppConfigFromCache
   modifyScreenState $ AboutUsScreenStateType (\aboutUsScreen -> aboutUsScreen {appConfig = config})
   flow <- UI.aboutUsScreen
   case flow of
@@ -1773,7 +1783,7 @@ aboutUsScreenFlow = do
 permissionScreenFlow :: FlowBT String Unit
 permissionScreenFlow = do
   _ <- pure $ hideKeyboardOnNavigation true
-  config <- getAppConfig Constants.appConfig
+  config <- getAppConfigFromCache
   modifyScreenState $ PermissionScreenStateType (\permissionScreen -> permissionScreen{appConfig = config})
   flow <- UI.permissionScreen
   permissionConditionA <- lift $ lift $ liftFlow $ isLocationPermissionEnabled unit
@@ -1803,7 +1813,7 @@ permissionScreenFlow = do
 
 myProfileScreenFlow :: FlowBT String Unit
 myProfileScreenFlow = do
-  config <- getAppConfig Constants.appConfig
+  config <- getAppConfigFromCache
   disabilityListT <- updateDisabilityList "My_Profile_Screen"
   modifyScreenState $ MyProfileScreenStateType (\myProfileScreenState -> myProfileScreenState{data{config = config, disabilityOptions{disabilityOptionList = disabilityListT }, editedDisabilityOptions{disabilityOptionList = disabilityListT}}})
   flow <- UI.myProfileScreen
@@ -1863,7 +1873,7 @@ myProfileScreenFlow = do
 
 savedLocationFlow :: FlowBT String Unit
 savedLocationFlow = do
-  config <- getAppConfig Constants.appConfig
+  config <- getAppConfigFromCache
   modifyScreenState $ SavedLocationScreenStateType (\savedLocationScreen -> savedLocationScreen{data{config = config}})
   void $ lift $ lift $ loaderText (getString LOADING) (getString PLEASE_WAIT_WHILE_IN_PROGRESS)
   flow <- UI.savedLocationScreen
@@ -1935,7 +1945,7 @@ savedLocationFlow = do
 
 addNewAddressScreenFlow ::String -> FlowBT String Unit
 addNewAddressScreenFlow input = do
-  config <- getAppConfig Constants.appConfig
+  config <- getAppConfigFromCache
   logField_ <- lift $ lift $ getLogFields
   modifyScreenState $ AddNewAddressScreenStateType (\addNewAddressScreen -> addNewAddressScreen{data{config = config}})
   flow <- UI.addNewAddressScreen
@@ -2117,7 +2127,7 @@ addNewAddressScreenFlow input = do
 
 referralScreenFlow :: FlowBT String Unit
 referralScreenFlow = do
-  config <- getAppConfig Constants.appConfig
+  config <- getAppConfigFromCache
   modifyScreenState $ ReferralScreenStateType (\referralScreen -> referralScreen { config = config })
   flow <- UI.referralScreen
   case flow of
@@ -2380,38 +2390,41 @@ dummyLocationData = LocationData {
 
 checkAndUpdateLocations :: FlowBT String Unit
 checkAndUpdateLocations = do
-  payload <- liftFlowBT $ getGlobalPayload unit
-  case payload of
-    Just (GlobalPayload payload') -> do
-      _ <- pure $ spy "inside right" payload'
-      let (Payload innerPayload) = payload'.payload
-      case isNothing innerPayload.search_type of
-        true -> pure unit
-        false -> do
-          let searchType = fromMaybe "normal_search" $ innerPayload.search_type
-          if searchType /= "normal_search" then do
-            let (LocationData source) = fromMaybe dummyLocationData innerPayload.source
-            let (LocationData destination) = fromMaybe dummyLocationData innerPayload.destination
-            modifyScreenState $ HomeScreenStateType (\homescreen -> homescreen {
-              data {
-                source = (fromMaybe "" source.name)
-              , destination = (fromMaybe "" destination.name)
-              , sourceAddress = encodeAddress (fromMaybe "" source.name) [] Nothing
-              , destinationAddress = encodeAddress (fromMaybe "" destination.name) [] Nothing
-              }, props {
-                  sourceLat = source.lat
-                , sourceLong = source.lon
-                , destinationLat = destination.lat
-                , destinationLong = destination.lon
-                , isSource = Just false
-                , isSearchLocation = SearchLocation
-              }
-            })
-          else pure unit
-    Nothing ->do
-      _ <- pure $ spy "inside left" "err"
-      pure unit
-
+  (MerchantPayload payload) <- getMerchantPayloadFlowBT Constants.merchantPayload
+  let
+    (Payload innerPayload) = payload.payload
+  case isNothing innerPayload.search_type of
+    true -> pure unit
+    false -> do
+      let
+        searchType = fromMaybe "normal_search" $ innerPayload.search_type
+      if searchType /= "normal_search" then do
+        let
+          (LocationData source) = fromMaybe dummyLocationData innerPayload.source
+        let
+          (LocationData destination) = fromMaybe dummyLocationData innerPayload.destination
+        modifyScreenState
+          $ HomeScreenStateType
+              ( \homescreen ->
+                  homescreen
+                    { data
+                      { source = (fromMaybe "" source.name)
+                      , destination = (fromMaybe "" destination.name)
+                      , sourceAddress = encodeAddress (fromMaybe "" source.name) [] Nothing
+                      , destinationAddress = encodeAddress (fromMaybe "" destination.name) [] Nothing
+                      }
+                    , props
+                      { sourceLat = source.lat
+                      , sourceLong = source.lon
+                      , destinationLat = destination.lat
+                      , destinationLong = destination.lon
+                      , isSource = Just false
+                      , isSearchLocation = SearchLocation
+                      }
+                    }
+              )
+      else
+        pure unit
 rideCompletedDetails :: RideBookingRes -> Array ClevertapEventParams
 rideCompletedDetails (RideBookingRes resp) = do
   let (RideBookingAPIDetails bookingDetails) = resp.bookingDetails

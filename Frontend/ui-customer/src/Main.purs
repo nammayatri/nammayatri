@@ -14,7 +14,7 @@
 -}
 module Main where
 
-import Common.Types.App (GlobalPayload, FCMBundleUpdate)
+import Common.Types.App (MerchantPayload, FCMBundleUpdate)
 import Control.Monad.Except (runExcept)
 import Control.Monad.Except.Trans (runExceptT)
 import Control.Transformers.Back.Trans (runBackT)
@@ -42,7 +42,7 @@ import Screens.Types(PermissionScreenStage(..))
 main :: Event -> Effect Unit
 main event = do
   epassRef ← new defaultGlobalState
-  payload  ::  Either MultipleErrors GlobalPayload  <- runExcept <<< decode <<< fromMaybe (unsafeToForeign {}) <$> (liftEffect $ getWindowVariable "__payload" Just Nothing)
+  payload  ::  Either MultipleErrors MerchantPayload  <- runExcept <<< decode <<< fromMaybe (unsafeToForeign {}) <$> (liftEffect $ getWindowVariable "__payload" Just Nothing)
   case payload of
     Right payload'  -> do
        mainFiber <- launchAff $ flowRunner defaultGlobalState $ do
@@ -72,7 +72,7 @@ onEvent event = do
 onConnectivityEvent :: String -> Effect Unit
 onConnectivityEvent triggertype = do
   epassRef ← new defaultGlobalState
-  payload  ::  Either MultipleErrors GlobalPayload  <- runExcept <<< decode <<< fromMaybe (unsafeToForeign {}) <$> (liftEffect $ getWindowVariable "__payload" Just Nothing)
+  payload  ::  Either MultipleErrors MerchantPayload  <- runExcept <<< decode <<< fromMaybe (unsafeToForeign {}) <$> (liftEffect $ getWindowVariable "__payload" Just Nothing)
   case payload of
     Right payload'  -> do
         mainFiber <- launchAff $ flowRunner defaultGlobalState $ do

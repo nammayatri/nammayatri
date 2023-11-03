@@ -132,7 +132,7 @@ withAPIResultBT url f errorHandler flow = do
 ---------------------------------------------------------------TriggerOTPBT Function---------------------------------------------------------------------------------------------------
 triggerOTPBT :: TriggerOTPReq → FlowBT String TriggerOTPResp
 triggerOTPBT payload = do
-    config <- EHU.getAppConfig Constants.appConfig
+    config <- EHU.getAppConfigFlowBT Constants.appConfig
     when config.features.enableAutoReadOtp $ void $ lift $ lift $ doAff Readers.initiateSMSRetriever
     headers <- getHeaders' "" false
     withAPIResultBT (EP.triggerOTP "") (\x → x) errorHandler (lift $ lift $ callAPI headers payload)

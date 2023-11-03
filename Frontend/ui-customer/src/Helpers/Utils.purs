@@ -21,7 +21,7 @@ module Helpers.Utils
 
 import Accessor (_distance_meters)
 import Accessor (_distance_meters)
-import Common.Types.App (EventPayload(..), GlobalPayload(..), LazyCheck(..), Payload(..), InnerPayload)
+import Common.Types.App (EventPayload(..), MerchantPayload(..), LazyCheck(..), Payload(..), InnerPayload)
 import Components.LocationListItem.Controller (dummyLocationListState)
 import Control.Monad.Except (runExcept)
 import Control.Monad.Free (resume)
@@ -53,7 +53,7 @@ import Effect.Console (logShow)
 import Effect.Unsafe (unsafePerformEffect)
 import Engineering.Helpers.Commons (getWindowVariable, isPreviousVersion, liftFlow, os)
 import Engineering.Helpers.Commons (parseFloat, setText) as ReExport
-import Engineering.Helpers.Utils (class Serializable, serialize)
+import Engineering.Helpers.Utils (class Serializable, serialize, getMerchantPayload)
 import Foreign (MultipleErrors, unsafeToForeign)
 import Foreign.Class (class Decode, class Encode, encode)
 import Foreign.Generic (Foreign, decodeJSON, encodeJSON)
@@ -79,6 +79,7 @@ import Language.Strings (getString)
 import Language.Types (STR(..))
 import Data.Int (round, toNumber)
 import Data.Boolean (otherwise)
+import Constants as Constant
 
 -- shuffle' :: forall a. Array a -> Effect (Array a)
 -- shuffle' array = do
@@ -459,31 +460,21 @@ getScreenFromStage stage = case stage of
   ShortDistance -> "finding_driver_loader"
   TryAgain -> "finding_rides_screen"
 
-getGlobalPayload :: Unit -> Effect (Maybe GlobalPayload)
-getGlobalPayload _ = do
-  payload  ::  Either MultipleErrors GlobalPayload  <- runExcept <<< decode <<< fromMaybe (unsafeToForeign {}) <$> (getWindowVariable "__payload" Just Nothing)
-  pure $ hush payload
 
 getSearchType :: Unit -> String
 getSearchType _ = do 
-  let payload = unsafePerformEffect $ getGlobalPayload unit
-  case payload of
-    Just (GlobalPayload payload') -> do
-      let (Payload innerPayload) = payload'.payload
-      case innerPayload.search_type of
-        Just a -> a 
-        Nothing -> "normal_search"
+  let (MerchantPayload payload) = getMerchantPayload Constant.merchantPayload
+      (Payload innerPayload) = payload.payload
+  case innerPayload.search_type of
+    Just a -> a 
     Nothing -> "normal_search"
 
 getPaymentMethod :: Unit -> String
 getPaymentMethod _ = do 
-  let payload = unsafePerformEffect $ getGlobalPayload unit
-  case payload of
-    Just (GlobalPayload payload') -> do
-      let (Payload innerPayload) = payload'.payload
-      case innerPayload.payment_method of
-        Just a -> a 
-        Nothing -> "cash"
+  let (MerchantPayload payload) = getMerchantPayload Constant.merchantPayload
+      (Payload innerPayload) = payload.payload
+  case innerPayload.payment_method of
+    Just a -> a 
     Nothing -> "cash"
 
 

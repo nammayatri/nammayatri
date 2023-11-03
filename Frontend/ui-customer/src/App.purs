@@ -15,8 +15,6 @@
 
 module Types.App where
 
-import Prelude
-
 import Control.Monad.Except.Trans (ExceptT)
 import Control.Monad.Free (Free)
 import Control.Transformers.Back.Trans (BackT)
@@ -42,8 +40,8 @@ import Screens.CustomerUtils.AboutUsScreen.ScreenData as AboutUsScreenData
 import Screens.OnBoardingFlow.WelcomeScreen.ScreenData as WelcomeScreenData
 import Screens.Types (AboutUsScreenState, AccountSetUpScreenState, AddNewAddressScreenState, AppUpdatePopUpState, ChooseLanguageScreenState, ContactUsScreenState, EnterMobileNumberScreenState, HelpAndSupportScreenState, HomeScreenState, InvoiceScreenState, LocItemType, LocationListItemState, MyProfileScreenState, MyRidesScreenState, PermissionScreenState, SavedLocationScreenState, SelectLanguageScreenState, SplashScreenState, TripDetailsScreenState, ReferralScreenState, EmergencyContactsScreenState, CallType, WelcomeScreenState, PermissionScreenStage)
 import Screens.AppUpdatePopUp.ScreenData as AppUpdatePopUpScreenData
-import Foreign.Object ( Object(..), empty)
-import Foreign (Foreign)
+import MerchantConfig.Types (AppConfig)
+import Data.Maybe (Maybe(..))
 
 type FlowBT e a = BackT (ExceptT e (Free (FlowWrapper GlobalState))) a
 
@@ -69,6 +67,7 @@ newtype GlobalState = GlobalState {
   , emergencyContactsScreen :: EmergencyContactsScreenState
   , welcomeScreen :: WelcomeScreenState
   , loaderOverlay :: LoaderScreenScreenData.LoaderOverlayState
+  , appConfig :: Maybe AppConfig
   }
 
 defaultGlobalState :: GlobalState
@@ -94,6 +93,7 @@ defaultGlobalState = GlobalState {
   , emergencyContactsScreen : EmergencyContactsScreenData.initData
   , welcomeScreen : WelcomeScreenData.initData
   , loaderOverlay : LoaderScreenScreenData.initData
+  , appConfig : Nothing
   }
 data ACCOUNT_SET_UP_SCREEN_OUTPUT = GO_HOME AccountSetUpScreenState | GO_BACK
 
@@ -201,3 +201,4 @@ data ScreenType =
   | PermissionScreenStateType (PermissionScreenState -> PermissionScreenState)
   | AboutUsScreenStateType (AboutUsScreenState -> AboutUsScreenState)
   | AppUpdatePopUpScreenType (AppUpdatePopUpState -> AppUpdatePopUpState)
+  | AppConfigType (Maybe AppConfig -> Maybe AppConfig)

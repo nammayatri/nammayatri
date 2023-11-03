@@ -59,6 +59,7 @@ import Screens.AppUpdatePopUpScreen.ScreenData as AppUpdatePopUpScreenData
 import Screens (ScreenName(..)) as ScreenNames
 import Screens.DriverSavedLocationScreen.ScreenData as DriverSavedLocationScreenData
 import Data.Maybe (Maybe(..))
+import MerchantConfig.Types (AppConfig(..))
 
 type FlowBT e a = BackT (ExceptT e (Free (FlowWrapper GlobalState))) a
 
@@ -103,6 +104,7 @@ newtype GlobalState = GlobalState {
   , onBoardingSubscriptionScreen :: OnBoardingSubscriptionScreenState
   , paymentHistoryScreen :: PaymentHistoryScreenState
   , driverSavedLocationScreen :: DriverSavedLocationScreenState
+  , appConfig :: Maybe AppConfig
   }
 
 defaultGlobalState :: GlobalState
@@ -147,6 +149,7 @@ defaultGlobalState = GlobalState {
 , onBoardingSubscriptionScreen : OnBoardingSubscriptionScreenData.initData
 , paymentHistoryScreen : PaymentHistoryScreenData.initData
 , driverSavedLocationScreen : DriverSavedLocationScreenData.initData
+, appConfig : Nothing
 }
 
 defaultGlobalProps :: GlobalProps
@@ -197,6 +200,7 @@ data ScreenType =
   | OnBoardingSubscriptionScreenStateType (OnBoardingSubscriptionScreenState -> OnBoardingSubscriptionScreenState)
   | PaymentHistoryScreenStateType (PaymentHistoryScreenState -> PaymentHistoryScreenState)
   | DriverSavedLocationScreenStateType (DriverSavedLocationScreenState -> DriverSavedLocationScreenState)
+  | AppConfigType (Maybe AppConfig -> Maybe AppConfig)
 
 data ScreenStage = HomeScreenStage HomeScreenStage
 

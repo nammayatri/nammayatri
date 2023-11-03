@@ -46,6 +46,7 @@ modifyScreenState st =
     PermissionScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {permissionScreen = a state.permissionScreen})
     AboutUsScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {aboutUsScreen = a state.aboutUsScreen})
     AppUpdatePopUpScreenType a->  modifyState (\(GlobalState state) -> GlobalState $ state { appUpdatePopUpScreen = a state.appUpdatePopUpScreen })
+    AppConfigType a->  modifyState (\(GlobalState state) -> GlobalState $ state { appConfig = a state.appConfig })
 
 
 updateRideDetails :: MyRidesScreenState -> FlowBT String Unit

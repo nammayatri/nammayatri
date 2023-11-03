@@ -28,7 +28,7 @@ import Log
 import Presto.Core.Types.Language.Flow (throwErr)
 import Foreign (MultipleErrors, unsafeToForeign)
 import Foreign.Generic (decode)
-import Common.Types.App (GlobalPayload, Event, FCMBundleUpdate)
+import Common.Types.App (MerchantPayload, Event, FCMBundleUpdate)
 import Types.App (defaultGlobalState)
 import Effect.Class (liftEffect)
 import Control.Monad.Except (runExcept)
@@ -58,7 +58,7 @@ main event = do
 mainAllocationPop :: String -> AllocationData -> Effect Unit
 mainAllocationPop payload_type entityPayload = do
   _ <- pure $ printLog "entity_payload" entityPayload
-  payload  ::  Either MultipleErrors GlobalPayload  <- runExcept <<< decode <<< fromMaybe (unsafeToForeign {}) <$> (liftEffect $ getWindowVariable "__payload" Just Nothing)
+  payload  ::  Either MultipleErrors MerchantPayload  <- runExcept <<< decode <<< fromMaybe (unsafeToForeign {}) <$> (liftEffect $ getWindowVariable "__payload" Just Nothing)
   case payload of
     Right _ -> void $ launchAff $ flowRunner defaultGlobalState $ do
       if(payload_type == "NEW_RIDE_AVAILABLE") then

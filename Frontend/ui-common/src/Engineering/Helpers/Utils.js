@@ -1,15 +1,5 @@
 const JBridge = window.JBridge;
 
-export const toggleLoaderIOS = function(flag){
-  console.log("inside toggle loader")
-  return JBridge.toggleLoader(flag);
-}
-
-export const loaderTextIOS = function(mainTxt, subTxt){
-  console.log("inside loader Text IOS")
-  return JBridge.loaderText(mainTxt,subTxt);
-}
-
 export const getFromWindow = function (key) {
   if (typeof window[key] !== "undefined") {
     return window[key];
@@ -114,4 +104,17 @@ export const getCurrentDay = function (dummy) {
   const date = new Date();
   return { utcDate: date.toISOString(), date: date.getDate(), shortMonth: date.toLocaleString("default", { month: "short" }), year: date.getFullYear(), intMonth : date.getMonth(),
     isInRange : false, isStart: false , isEnd: false }
+}
+
+export const logTimeStampWithKey = function (key) {
+  window.logTimeStamps = window.logTimeStamps || {};
+  window.logTimeStamps[key] = new Date().getTime();
+}
+
+export const logTimeStampWithKeyValue = function (key,value) {
+  window.logTimeStamps = window.logTimeStamps || {};
+  window.logTimeStamps[key] = value;
+}
+export const getCurrentTime = function () {
+  return Date.now();
 }
