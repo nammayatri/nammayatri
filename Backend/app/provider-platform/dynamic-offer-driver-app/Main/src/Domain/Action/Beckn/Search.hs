@@ -242,7 +242,7 @@ handler merchant sReq = do
           driverPoolCurrentlyOnRide <-
             if null driverPoolNotOnRide
               then do
-                transporter <- CTC.findByMerchantOpCityId merchantOpCityId >>= fromMaybeM (TransporterConfigDoesNotExist merchantId.getId)
+                transporter <- CTC.findByMerchantOpCityId merchantOpCityId >>= fromMaybeM (TransporterConfigDoesNotExist merchantOpCityId.getId)
                 if transporter.includeDriverCurrentlyOnRide
                   then calculateDriverPoolCurrentlyOnRide Estimate driverPoolCfg Nothing fromLocation merchantId Nothing
                   else pure []

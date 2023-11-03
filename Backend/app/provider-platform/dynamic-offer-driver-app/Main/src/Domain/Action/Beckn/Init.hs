@@ -184,7 +184,7 @@ handler merchantId req eitherReq = do
       id <- Id <$> generateGUID
       let fromLocation = searchRequest.fromLocation
           toLocation = searchRequest.toLocation
-      exophone <- findRandomExophone merchantId merchantOpCityId
+      exophone <- findRandomExophone merchantOpCityId
       pure
         DRB.Booking
           { transactionId = searchRequest.transactionId,
@@ -225,12 +225,12 @@ handler merchantId req eitherReq = do
       let paymentUrl = DMPM.getPrepaidPaymentUrl =<< mbPaymentMethod
       pure (mbPaymentMethod, paymentUrl)
 
-findRandomExophone :: (CacheFlow m r, EsqDBFlow m r) => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> m DExophone.Exophone
-findRandomExophone merchantId merchantOpCityId = do
+findRandomExophone :: (CacheFlow m r, EsqDBFlow m r) => Id DMOC.MerchantOperatingCity -> m DExophone.Exophone
+findRandomExophone merchantOpCityId = do
   merchantServiceUsageConfig <- CMSUC.findByMerchantOpCityId merchantOpCityId >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
   exophones <- CQExophone.findByMerchantOpCityIdServiceAndExophoneType merchantOpCityId merchantServiceUsageConfig.getExophone DExophone.CALL_RIDE
   nonEmptyExophones <- case exophones of
-    [] -> throwError $ ExophoneNotFound merchantId.getId
+    [] -> throwError $ ExophoneNotFound merchantOpCityId.getId
     e : es -> pure $ e :| es
   getRandomElement nonEmptyExophones
 

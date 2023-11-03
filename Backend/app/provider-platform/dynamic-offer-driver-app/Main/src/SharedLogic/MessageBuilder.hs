@@ -52,10 +52,10 @@ data BuildSendPaymentLinkReq = BuildSendPaymentLinkReq
   deriving (Generic)
 
 buildSendPaymentLink :: (EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> BuildSendPaymentLinkReq -> m Text
-buildSendPaymentLink merchantId req = do
+buildSendPaymentLink merchantOpCityId req = do
   merchantMessage <-
-    QMM.findByMerchantOpCityIdAndMessageKey merchantId DMM.SEND_PAYMENT_LINK
-      >>= fromMaybeM (MerchantMessageNotFound merchantId.getId (show DMM.SEND_PAYMENT_LINK))
+    QMM.findByMerchantOpCityIdAndMessageKey merchantOpCityId DMM.SEND_PAYMENT_LINK
+      >>= fromMaybeM (MerchantMessageNotFound merchantOpCityId.getId (show DMM.SEND_PAYMENT_LINK))
   return $
     merchantMessage.message
       & T.replace (templateText "paymentLink") req.paymentLink
@@ -68,10 +68,10 @@ data BuildSendOTPMessageReq = BuildSendOTPMessageReq
   deriving (Generic)
 
 buildSendOTPMessage :: (EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> BuildSendOTPMessageReq -> m Text
-buildSendOTPMessage merchantId req = do
+buildSendOTPMessage merchantOpCityId req = do
   merchantMessage <-
-    QMM.findByMerchantOpCityIdAndMessageKey merchantId DMM.SEND_OTP
-      >>= fromMaybeM (MerchantMessageNotFound merchantId.getId (show DMM.SEND_OTP))
+    QMM.findByMerchantOpCityIdAndMessageKey merchantOpCityId DMM.SEND_OTP
+      >>= fromMaybeM (MerchantMessageNotFound merchantOpCityId.getId (show DMM.SEND_OTP))
   return $
     merchantMessage.message
       & T.replace (templateText "otp") req.otp

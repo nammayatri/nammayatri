@@ -477,7 +477,7 @@ calculateGoHomeDriverPool CalculateGoHomeDriverPoolReq {..} merchantOpCityId = d
           return (goHomeReq, driver)
       )
       randomDriverPool
-  merchant <- CTC.findByMerchantOpCityId merchantOpCityId >>= fromMaybeM (TransporterConfigDoesNotExist merchantId.getId)
+  transporterConfig <- CTC.findByMerchantOpCityId merchantOpCityId >>= fromMaybeM (TransporterConfigDoesNotExist merchantOpCityId.getId)
 
   let convertedDriverPoolRes = map (\(ghr, driver) -> (ghr,driver,) $ makeDriverPoolRes driver) goHomeRequests
   driverGoHomePoolWithActualDistance <-
@@ -502,7 +502,7 @@ calculateGoHomeDriverPool CalculateGoHomeDriverPoolReq {..} merchantOpCityId = d
           )
           driversRoutes
 
-  let goHomeDriverPoolWithActualDist = makeDriverPoolWithActualDistResult merchant <$> driversOnWayToHome
+  let goHomeDriverPoolWithActualDist = makeDriverPoolWithActualDistResult transporterConfig <$> driversOnWayToHome
   return $ take driverPoolCfg.driverBatchSize goHomeDriverPoolWithActualDist
   where
     filterFunc threshold estDist = getMeters estDist.actualDistanceToPickup <= fromIntegral threshold
@@ -543,12 +543,12 @@ calculateGoHomeDriverPool CalculateGoHomeDriverPoolReq {..} merchantOpCityId = d
           points = []
         }
 
-    makeDriverPoolWithActualDistResult merchant (driverPoolRes, _, ghrId, driverGoHomePoolWithActualDistance) = do
+    makeDriverPoolWithActualDistResult transporterConfig (driverPoolRes, _, ghrId, driverGoHomePoolWithActualDistance) = do
       DriverPoolWithActualDistResult
         { driverPoolResult = makeDriverPoolResult driverPoolRes,
           actualDistanceToPickup = driverGoHomePoolWithActualDistance.actualDistanceToPickup, --fromMaybe 0 driverRoute.distance,
           actualDurationToPickup = driverGoHomePoolWithActualDistance.actualDurationToPickup,
-          intelligentScores = IntelligentScores Nothing Nothing Nothing Nothing Nothing merchant.defaultPopupDelay,
+          intelligentScores = IntelligentScores Nothing Nothing Nothing Nothing Nothing transporterConfig.defaultPopupDelay,
           isPartOfIntelligentPool = False,
           keepHiddenForSeconds = Seconds 0,
           goHomeReqId = Just ghrId

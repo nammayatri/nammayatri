@@ -279,7 +279,7 @@ driverPoolConfigCreate merchantShortId opCity tripDistance variant req = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   mbConfig <- CQDPC.findByMerchantOpCityIdAndTripDistanceAndDVeh merchantOpCityId tripDistance (castVehicleVariant <$> variant)
-  whenJust mbConfig $ \_ -> throwError (DriverPoolConfigAlreadyExists merchant.id.getId tripDistance)
+  whenJust mbConfig $ \_ -> throwError (DriverPoolConfigAlreadyExists merchantOpCityId.getId tripDistance)
   newConfig <- buildDriverPoolConfig merchant.id merchantOpCityId tripDistance variant req
   _ <- CQDPC.create newConfig
   -- We should clear cache here, because cache contains list of all configs for current merchantId
@@ -419,7 +419,7 @@ onboardingDocumentConfigUpdate merchantShortId opCity reqDocumentType req = do
   merchant <- findMerchantByShortId merchantShortId
   let documentType = castDocumentType reqDocumentType
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
-  config <- CQODC.findByMerchantOpCityIdAndDocumentType merchantOpCityId documentType >>= fromMaybeM (OnboardingDocumentConfigDoesNotExist merchant.id.getId $ show documentType)
+  config <- CQODC.findByMerchantOpCityIdAndDocumentType merchantOpCityId documentType >>= fromMaybeM (OnboardingDocumentConfigDoesNotExist merchantOpCityId.getId $ show documentType)
   let updConfig =
         config{checkExtraction = maybe config.checkExtraction (.value) req.checkExtraction,
                checkExpiry = maybe config.checkExpiry (.value) req.checkExpiry,
@@ -479,7 +479,7 @@ onboardingDocumentConfigCreate merchantShortId opCity reqDocumentType req = do
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   let documentType = castDocumentType reqDocumentType
   mbConfig <- CQODC.findByMerchantOpCityIdAndDocumentType merchantOpCityId documentType
-  whenJust mbConfig $ \_ -> throwError (OnboardingDocumentConfigAlreadyExists merchant.id.getId $ show documentType)
+  whenJust mbConfig $ \_ -> throwError (OnboardingDocumentConfigAlreadyExists merchantOpCityId.getId $ show documentType)
   newConfig <- buildOnboardingDocumentConfig merchant.id merchantOpCityId documentType req
   _ <- CQODC.create newConfig
   -- We should clear cache here, because cache contains list of all configs for current merchantId
