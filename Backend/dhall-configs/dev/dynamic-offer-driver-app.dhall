@@ -171,6 +171,7 @@ let AllocatorJobType =
       | CalculateDriverFees
       | OrderAndNotificationStatusUpdate
       | SendOverlay
+      | AllocateRentalRide
       >
 
 let jobInfoMapx =

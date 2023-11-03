@@ -54,6 +54,7 @@ instance ToJSON Authorization where
 data FulfillmentType
   = RIDE
   | RIDE_OTP
+  | RENTAL
   deriving
     (Generic, ToSchema, Show, FromJSON, ToJSON, Read)
 
@@ -77,8 +78,9 @@ instance ToJSON FulfillmentInfo where
 instance ToSchema FulfillmentInfo where
   declareNamedSchema = genericDeclareUnNamedSchema $ fromAesonOptions stripPrefixUnderscoreAndRemoveNullFields
 
-newtype EndInfo = EndInfo
-  { location :: Location
+data EndInfo = EndInfo
+  { authorization :: Maybe Authorization,
+    location :: Maybe Location
   }
   deriving (Generic, Show, FromJSON, ToJSON)
 

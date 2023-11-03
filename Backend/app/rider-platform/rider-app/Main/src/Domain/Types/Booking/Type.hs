@@ -22,7 +22,7 @@ import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.Person as DPerson
 import qualified Domain.Types.Quote as DQuote
-import qualified Domain.Types.RentalSlab as DRentalSlab
+import qualified Domain.Types.RentalDetails as DRentalDetails
 import qualified Domain.Types.TripTerms as DTripTerms
 import Domain.Types.VehicleVariant (VehicleVariant)
 import Kernel.Prelude
@@ -31,8 +31,17 @@ import Kernel.Types.Id
 import Kernel.Utils.TH (mkHttpInstancesForEnum)
 import Tools.Beam.UtilsTH
 
-activeBookingStatus :: [BookingStatus]
-activeBookingStatus = [NEW, CONFIRMED, AWAITING_REASSIGNMENT, TRIP_ASSIGNED]
+data BookingStatusObj = BookingStatusObj
+  { normalBooking :: [BookingStatus],
+    rentalBooking :: [BookingStatus]
+  }
+
+activeBookingStatusObj :: BookingStatusObj
+activeBookingStatusObj =
+  BookingStatusObj
+    { normalBooking = [NEW, CONFIRMED, AWAITING_REASSIGNMENT, TRIP_ASSIGNED],
+      rentalBooking = [TRIP_ASSIGNED]
+    }
 
 data BookingStatus
   = NEW
@@ -85,9 +94,12 @@ data Booking = Booking
 
 data BookingDetails
   = OneWayDetails OneWayBookingDetails
-  | RentalDetails DRentalSlab.RentalSlab
+  | RentalDetails BaseDuration DRentalDetails.RentalDetails
   | DriverOfferDetails OneWayBookingDetails
   | OneWaySpecialZoneDetails OneWaySpecialZoneBookingDetails
+  deriving (Show)
+
+newtype BaseDuration = BaseDuration Hours
   deriving (Show)
 
 data OneWayBookingDetails = OneWayBookingDetails

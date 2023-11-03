@@ -21,6 +21,7 @@ import Data.Time (diffUTCTime, nominalDiffTimeToSeconds)
 import qualified Domain.Types.DriverQuote as DQuote
 import qualified Domain.Types.Merchant as DM
 import Domain.Types.SearchRequest (SearchRequest)
+import qualified Domain.Types.SearchRequest as DSR
 import Kernel.Prelude
 import Kernel.Types.Id (ShortId)
 import SharedLogic.FareCalculator (mkBreakupList)
@@ -70,18 +71,21 @@ mkOnSelectMessage req@DOnSelectReq {..} = do
 
 mkFulfillment :: DOnSelectReq -> DQuote.DriverQuote -> OS.FulfillmentInfo
 mkFulfillment dReq quote = do
-  let fromLocation = dReq.searchRequest.fromLocation
-  let toLocation = dReq.searchRequest.toLocation -- have to take last or all ?
+  let (fromLocation, mbToLocation) = case dReq.searchRequest.searchRequestDetails of
+        DSR.SearchReqDetailsOnDemand details -> (details.fromLocation, Just details.toLocation)
+        DSR.SearchReqDetailsRental details -> (details.rentalFromLocation, Nothing)
   OS.FulfillmentInfo
     { id = quote.estimateId.getId,
       start =
         OS.StartInfo
-          { location = makeLocation fromLocation
+          { location = makeLocation fromLocation,
+            time = OS.TimeTimestamp dReq.now
           },
       end =
-        OS.StopInfo
-          { location = makeLocation toLocation
-          },
+        mbToLocation <&> \toLocation -> do
+          OS.StopInfo
+            { location = makeLocation toLocation -- have to take last or all ?
+            },
       vehicle =
         OS.Vehicle
           { category = castVariant quote.vehicleVariant

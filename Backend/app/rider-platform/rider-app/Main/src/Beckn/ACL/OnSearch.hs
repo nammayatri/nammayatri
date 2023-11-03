@@ -125,6 +125,9 @@ buildEstimateOrQuoteInfo provider item = do
     OnSearch.RIDE_OTP -> do
       quoteDetails <- DOnSearch.OneWaySpecialZoneDetails <$> buildOneWaySpecialZoneQuoteDetails fulfillment
       pure $ Right DOnSearch.QuoteInfo {..}
+    OnSearch.RENTAL -> do
+      quoteDetails <- DOnSearch.RentalDetails <$> buildRentalQuoteDetails item
+      pure $ Right DOnSearch.QuoteInfo {..}
   where
     castVehicleVariant = \case
       OnSearch.SEDAN -> VehVar.SEDAN
@@ -162,10 +165,15 @@ buildRentalQuoteDetails ::
   (MonadThrow m, Log m) =>
   OnSearch.Item ->
   m DOnSearch.RentalQuoteDetails
-buildRentalQuoteDetails _ = do
-  baseDistance <- Nothing & fromMaybeM (InvalidRequest "Missing base_distance in rental search item")
-  baseDuration <- Nothing & fromMaybeM (InvalidRequest "Missing base_duration in rental search item")
-  pure DOnSearch.RentalQuoteDetails {..}
+buildRentalQuoteDetails item = do
+  let bppQuoteId = item.fulfillment_id
+  baseFare <- (getRentalBaseFare =<< item.tags) & fromMaybeM (InvalidRequest "Missing rental_base_fare in rental search item")
+  perHourCharge <- (getRentalPerHourCharge =<< item.tags) & fromMaybeM (InvalidRequest "Missing rental_per_hour_charge in rental search item")
+  perHourFreeKms <- (getRentalPerHourFreeKms =<< item.tags) & fromMaybeM (InvalidRequest "Missing rental_per_hour_free_kms in rental search item")
+  perExtraKmRate <- (getRentalPerExtraKmRate =<< item.tags) & fromMaybeM (InvalidRequest "Missing rental_per_extra_km_rate in rental search item")
+  let nightShiftInfo = buildNightShiftInfo =<< item.tags
+  logInfo $ "nightShiftCharge: " <> show ((.nightShiftCharge) <$> nightShiftInfo) <> " " <> show ((.nightShiftStart) <$> nightShiftInfo) <> " " <> show ((.nightShiftEnd) <$> nightShiftInfo)
+  pure DOnSearch.RentalQuoteDetails {id = bppQuoteId, ..}
 
 validateFareRange :: (MonadThrow m, Log m) => Money -> DEstimate.FareRange -> m ()
 validateFareRange totalFare DEstimate.FareRange {..} = do
@@ -203,13 +211,13 @@ buildNightShiftInfo ::
   OnSearch.TagGroups ->
   Maybe DOnSearch.NightShiftInfo
 buildNightShiftInfo itemTags = do
+  let oldNightShiftCharge = getOldNightShiftCharge itemTags
   nightShiftCharge <- getNightShiftCharge itemTags
-  oldNightShiftCharge <- getOldNightShiftCharge itemTags
   nightShiftStart <- getNightShiftStart itemTags
   nightShiftEnd <- getNightShiftEnd itemTags
   Just $
     DOnSearch.NightShiftInfo
-      { oldNightShiftCharge = realToFrac oldNightShiftCharge,
+      { oldNightShiftCharge = realToFrac <$> oldNightShiftCharge,
         ..
       }
 
@@ -227,6 +235,30 @@ buildWaitingChargeInfo tags = do
 
 buildSpecialLocationTag :: OnSearch.TagGroups -> Maybe Text
 buildSpecialLocationTag = getTag "general_info" "special_location_tag"
+
+getRentalBaseFare :: OnSearch.TagGroups -> Maybe Money
+getRentalBaseFare tagGroups = do
+  tagValue <- getTag "general_info" "rental_base_fare" tagGroups
+  baseFare <- readMaybe $ T.unpack tagValue
+  Just $ Money baseFare
+
+getRentalPerHourCharge :: OnSearch.TagGroups -> Maybe Money
+getRentalPerHourCharge tagGroups = do
+  tagValue <- getTag "rate_card" "rental_per_hour_charge" tagGroups
+  perHourCharge <- readMaybe $ T.unpack tagValue
+  Just $ Money perHourCharge
+
+getRentalPerHourFreeKms :: OnSearch.TagGroups -> Maybe Int
+getRentalPerHourFreeKms tagGroups = do
+  tagValue <- getTag "rate_card" "rental_per_hour_free_kms" tagGroups
+  perHourFreeKms <- readMaybe $ T.unpack tagValue
+  Just perHourFreeKms
+
+getRentalPerExtraKmRate :: OnSearch.TagGroups -> Maybe Money
+getRentalPerExtraKmRate tagGroups = do
+  tagValue <- getTag "rate_card" "rental_per_extra_km_rate" tagGroups
+  perExtraKmRate <- readMaybe $ T.unpack tagValue
+  Just $ Money perExtraKmRate
 
 getNightShiftCharge :: OnSearch.TagGroups -> Maybe Money
 getNightShiftCharge tagGroups = do

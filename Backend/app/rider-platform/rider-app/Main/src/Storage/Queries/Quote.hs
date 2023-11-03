@@ -15,6 +15,7 @@
 
 module Storage.Queries.Quote where
 
+import Data.Ratio
 import Domain.Types.DriverOffer as DDO
 import Domain.Types.Estimate
 import Domain.Types.FarePolicy.FareProductType as DFFP
@@ -31,14 +32,14 @@ import qualified Storage.Beam.DriverOffer as BeamDO
 import qualified Storage.Beam.Quote as BeamQ
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.Queries.DriverOffer as QueryDO
-import Storage.Queries.RentalSlab as QueryRS
+import Storage.Queries.RentalDetails as QueryRD
 import Storage.Queries.SpecialZoneQuote as QuerySZQ
 import qualified Storage.Queries.TripTerms as QTT
 
 createDetails :: MonadFlow m => QuoteDetails -> m ()
 createDetails = \case
   OneWayDetails _ -> pure ()
-  RentalDetails rentalSlab -> QueryRS.createRentalSlab rentalSlab
+  RentalDetails rentalDetails -> QueryRD.createRentalDetails rentalDetails
   DriverOfferDetails driverOffer -> QueryDO.createDriverOffer driverOffer
   OneWaySpecialZoneDetails specialZoneQuote -> QuerySZQ.createSpecialZoneQuote specialZoneQuote
 
@@ -53,6 +54,15 @@ create quote = do
 
 createMany :: MonadFlow m => [Quote] -> m ()
 createMany = traverse_ create
+
+updateQuoteEstimateFare :: MonadFlow m => Id Quote -> Money -> m ()
+updateQuoteEstimateFare quoteId estimatedFare = do
+  let highPrecMoney = HighPrecMoney $ fromIntegral (getMoney estimatedFare) % 1
+  updateOneWithKV
+    [ Se.Set BeamQ.estimatedFare highPrecMoney,
+      Se.Set BeamQ.estimatedTotalFare highPrecMoney
+    ]
+    [Se.Is BeamQ.id (Se.Eq $ getId quoteId)]
 
 findById :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Quote -> m (Maybe Quote)
 findById quoteId = findOneWithKV [Se.Is BeamQ.id $ Se.Eq (getId quoteId)]
@@ -102,7 +112,7 @@ instance FromTType' BeamQ.Quote Quote where
             { distanceToNearestDriver = distanceToNearestDriver'
             }
       DFFP.RENTAL -> do
-        qd <- getRentalDetails rentalSlabId
+        qd <- getRentalDetails rentalDetailsId
         maybe (throwError (InternalError "No rental details")) return qd
       DFFP.DRIVER_OFFER -> do
         qd <- getDriverOfferDetails driverOfferId
@@ -134,8 +144,8 @@ instance FromTType' BeamQ.Quote Quote where
             createdAt = createdAt
           }
     where
-      getRentalDetails rentalSlabId' = do
-        res <- maybe (pure Nothing) (QueryRS.findById . Id) rentalSlabId'
+      getRentalDetails rentalDetailsId' = do
+        res <- maybe (pure Nothing) (QueryRD.findById . Id) rentalDetailsId'
         maybe (pure Nothing) (pure . Just . DQ.RentalDetails) res
 
       getDriverOfferDetails driverOfferId' = do
@@ -152,9 +162,9 @@ instance FromTType' BeamQ.Quote Quote where
 
 instance ToTType' BeamQ.Quote Quote where
   toTType' Quote {..} =
-    let (fareProductType, distanceToNearestDriver, rentalSlabId, driverOfferId, specialZoneQuoteId) = case quoteDetails of
+    let (fareProductType, distanceToNearestDriver, rentalDetailsId, driverOfferId, specialZoneQuoteId) = case quoteDetails of
           DQ.OneWayDetails details -> (DFFP.ONE_WAY, Just $ details.distanceToNearestDriver, Nothing, Nothing, Nothing)
-          DQ.RentalDetails rentalSlab -> (DFFP.RENTAL, Nothing, Just $ getId rentalSlab.id, Nothing, Nothing)
+          DQ.RentalDetails rentalDetails -> (DFFP.RENTAL, Nothing, Just $ getId rentalDetails.id, Nothing, Nothing)
           DQ.DriverOfferDetails driverOffer -> (DFFP.DRIVER_OFFER, Nothing, Nothing, Just $ getId driverOffer.id, Nothing)
           DQ.OneWaySpecialZoneDetails specialZoneQuote -> (DFFP.ONE_WAY_SPECIAL_ZONE, Nothing, Nothing, Nothing, Just $ getId specialZoneQuote.id)
      in BeamQ.QuoteT
@@ -173,7 +183,7 @@ instance ToTType' BeamQ.Quote Quote where
             BeamQ.distanceToNearestDriver = distanceToNearestDriver,
             BeamQ.vehicleVariant = vehicleVariant,
             BeamQ.tripTermsId = getId <$> (tripTerms <&> (.id)),
-            BeamQ.rentalSlabId = rentalSlabId,
+            BeamQ.rentalDetailsId = rentalDetailsId,
             BeamQ.driverOfferId = driverOfferId,
             BeamQ.merchantId = getId merchantId,
             BeamQ.merchantOperatingCityId = Just $ getId merchantOperatingCityId,

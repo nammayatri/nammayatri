@@ -38,7 +38,7 @@ mkGetLocation _ rideId pickupLocationLat pickupLocationLon = do
   unless (ride.status == Ride.NEW || ride.status == Ride.INPROGRESS) $ throwError (RideInvalidStatus $ show ride.status)
   booking <- runInReplica $ QRB.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
   let mbToLocation = case booking.bookingDetails of
-        DRB.RentalDetails _ -> Nothing
+        DRB.RentalDetails _ _ -> Nothing
         DRB.OneWayDetails details -> Just details.toLocation
         DRB.DriverOfferDetails details -> Just details.toLocation
         DRB.OneWaySpecialZoneDetails details -> Just details.toLocation

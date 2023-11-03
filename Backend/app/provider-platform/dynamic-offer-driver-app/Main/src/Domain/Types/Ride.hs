@@ -11,6 +11,7 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# LANGUAGE DerivingStrategies #-}
 
 module Domain.Types.Ride where
 
@@ -42,6 +43,38 @@ $(mkBeamInstancesForEnum ''RideStatus)
 
 $(mkHttpInstancesForEnum ''RideStatus)
 
+data SpecificRideDetails
+  = DetailsOnDemand RideDetailsOnDemand
+  | DetailsRental RideDetailsRental
+  deriving (Generic, Show, Eq, ToJSON, FromJSON)
+
+data RideDetailsOnDemand = RideDetailsOnDemand
+  { toLocation :: DL.Location,
+    driverGoHomeRequestId :: Maybe (Id DriverGoHomeRequest),
+    driverDeviatedFromRoute :: Maybe Bool,
+    numberOfSnapToRoadCalls :: Maybe Int,
+    numberOfDeviation :: Maybe Bool,
+    uiDistanceCalculationWithAccuracy :: Maybe Int,
+    uiDistanceCalculationWithoutAccuracy :: Maybe Int
+  }
+  deriving (Generic, Show, Eq, ToJSON, FromJSON)
+
+data RideDetailsRental = RideDetailsRental
+  { rentalToLocation :: Maybe DL.Location,
+    odometerStartReadingImageId :: Maybe Text,
+    odometerStartReading :: Maybe Centesimal,
+    odometerEndReadingImageId :: Maybe Text,
+    odometerEndReading :: Maybe Centesimal,
+    endRideOtp :: Maybe Text
+  }
+  deriving (Generic, Show, Eq, ToJSON, FromJSON)
+
+data RideType = ON_DEMAND | RENTAL
+  deriving stock (Show, Eq, Read, Ord, Generic)
+  deriving anyclass (FromJSON, ToJSON)
+
+$(mkBeamInstancesForEnum ''RideType)
+
 data Ride = Ride
   { id :: Id Ride,
     bookingId :: Id DRB.Booking,
@@ -49,6 +82,7 @@ data Ride = Ride
     merchantId :: Maybe (Id DM.Merchant),
     merchantOperatingCityId :: Id DMOC.MerchantOperatingCity,
     status :: RideStatus,
+    rideDetails :: SpecificRideDetails,
     driverId :: Id DPers.Person,
     otp :: Text,
     trackingUrl :: BaseUrl,
@@ -61,17 +95,10 @@ data Ride = Ride
     tripStartPos :: Maybe LatLong,
     tripEndPos :: Maybe LatLong,
     fromLocation :: DL.Location,
-    toLocation :: DL.Location,
     fareParametersId :: Maybe (Id DFare.FareParameters),
     distanceCalculationFailed :: Maybe Bool,
     pickupDropOutsideOfThreshold :: Maybe Bool,
     createdAt :: UTCTime,
-    updatedAt :: UTCTime,
-    driverDeviatedFromRoute :: Maybe Bool,
-    numberOfSnapToRoadCalls :: Maybe Int,
-    numberOfDeviation :: Maybe Bool,
-    uiDistanceCalculationWithAccuracy :: Maybe Int,
-    uiDistanceCalculationWithoutAccuracy :: Maybe Int,
-    driverGoHomeRequestId :: Maybe (Id DriverGoHomeRequest)
+    updatedAt :: UTCTime
   }
   deriving (Generic, Show, Eq, ToJSON, FromJSON)

@@ -19,6 +19,7 @@ import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.GenericPretty (PrettyShow)
 
+-- TODO To be removed
 data RentalSlab = RentalSlab
   { id :: Id RentalSlab, --not used in domain layer
     baseDistance :: Kilometers,

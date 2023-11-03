@@ -11,6 +11,7 @@ import qualified IssueManagement.Storage.Beam.MediaFile as BeamMF
 import IssueManagement.Tools.UtilsTH
 import Kernel.Utils.Common
 
+-- | Only for using in Lib. In applications itself actual HasSchemaName instances should be used
 type BeamFlow m r =
   ( MonadFlow m,
     CacheFlow m r,

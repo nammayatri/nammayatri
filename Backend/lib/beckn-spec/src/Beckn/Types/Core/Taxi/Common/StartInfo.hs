@@ -16,6 +16,7 @@ module Beckn.Types.Core.Taxi.Common.StartInfo where
 
 import Beckn.Types.Core.Taxi.Common.Authorization
 import Beckn.Types.Core.Taxi.Common.Location (Location)
+import Beckn.Types.Core.Taxi.OnSearch (TimeTimestamp)
 import Data.OpenApi (ToSchema (..), defaultSchemaOptions)
 import EulerHS.Prelude hiding (id)
 import Kernel.Utils.JSON (removeNullFields)
@@ -23,7 +24,8 @@ import Kernel.Utils.Schema (genericDeclareUnNamedSchema)
 
 data StartInfo = StartInfo
   { location :: Location,
-    authorization :: Maybe Authorization
+    authorization :: Maybe Authorization,
+    time :: TimeTimestamp
   }
   deriving (Generic, Show)
 

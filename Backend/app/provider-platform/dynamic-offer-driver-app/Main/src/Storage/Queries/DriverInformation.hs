@@ -145,6 +145,15 @@ updateEnabledState (Id driverId) isEnabled = do
     )
     [Se.Is BeamDI.driverId (Se.Eq driverId)]
 
+updateRental :: MonadFlow m => Id Driver -> Bool -> m ()
+updateRental (Id driverId) isRental = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set BeamDI.optForRental isRental,
+      Se.Set BeamDI.updatedAt now
+    ]
+    [Se.Is BeamDI.driverId (Se.Eq driverId)]
+
 updateEnabledVerifiedState :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Driver -> Bool -> Bool -> m ()
 updateEnabledVerifiedState (Id driverId) isEnabled isVerified = do
   now <- getCurrentTime

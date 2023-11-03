@@ -24,7 +24,7 @@ import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Person.PersonFlowStatus as DPFS
 import qualified Domain.Types.Quote as DQuote
-import Domain.Types.RentalSlab
+import Domain.Types.RentalDetails
 import qualified Domain.Types.SearchRequest as DSReq
 import Domain.Types.VehicleVariant (VehicleVariant)
 import Kernel.External.Encryption (decrypt)
@@ -52,7 +52,9 @@ import Tools.Event
 data DConfirmReq = DConfirmReq
   { personId :: Id DP.Person,
     quoteId :: Id DQuote.Quote,
-    paymentMethodId :: Maybe (Id DMPM.MerchantPaymentMethod)
+    paymentMethodId :: Maybe (Id DMPM.MerchantPaymentMethod),
+    mbStartTime :: Maybe UTCTime,
+    mbRentalDuration :: Maybe Int
   }
 
 data DConfirmRes = DConfirmRes
@@ -70,13 +72,15 @@ data DConfirmRes = DConfirmRes
     merchant :: DM.Merchant,
     city :: Context.City,
     maxEstimatedDistance :: Maybe HighPrecMeters,
-    paymentMethodInfo :: Maybe DMPM.PaymentMethodInfo
+    paymentMethodInfo :: Maybe DMPM.PaymentMethodInfo,
+    mbStartTime :: Maybe UTCTime,
+    mbRentalDuration :: Maybe Int
   }
   deriving (Show, Generic)
 
 data ConfirmQuoteDetails
   = ConfirmOneWayDetails
-  | ConfirmRentalDetails RentalSlabAPIEntity
+  | ConfirmRentalDetails RentalDetailsAPIEntity
   | ConfirmAutoDetails Text (Maybe Text)
   | ConfirmOneWaySpecialZoneDetails Text
   deriving (Show, Generic)
@@ -95,7 +99,11 @@ confirm DConfirmReq {..} = do
   fulfillmentId <-
     case quote.quoteDetails of
       DQuote.OneWayDetails _ -> pure Nothing
-      DQuote.RentalDetails _ -> pure Nothing
+      DQuote.RentalDetails rentalDetails -> do
+        startTime <- mbStartTime & fromMaybeM (InvalidRequest "Rental confirm quote should have startTime param")
+        rentalDuration <- mbRentalDuration & fromMaybeM (InvalidRequest "Rental confirm quote should have rentalDuration param")
+        checkRentalBookingsOverlapping startTime rentalDuration
+        pure $ Just rentalDetails.id.getId
       DQuote.DriverOfferDetails driverOffer -> do
         estimate <- QEstimate.findById driverOffer.estimateId >>= fromMaybeM EstimateNotFound
         when (DEstimate.isCancelled estimate.status) $ throwError $ EstimateCancelled estimate.id.getId
@@ -104,7 +112,7 @@ confirm DConfirmReq {..} = do
         pure (Just estimate.bppEstimateId.getId)
       DQuote.OneWaySpecialZoneDetails details -> pure (Just details.quoteId)
   searchRequest <- QSReq.findById quote.requestId >>= fromMaybeM (SearchRequestNotFound quote.requestId.getId)
-  activeBooking <- QRideB.findByRiderIdAndStatus personId DRB.activeBookingStatus
+  activeBooking <- QRideB.findByRiderIdAndStatusObj personId DRB.activeBookingStatusObj
   unless (null activeBooking) $ throwError $ InvalidRequest "ACTIVE_BOOKING_PRESENT"
   when (searchRequest.validTill < now) $
     throwError SearchRequestExpired
@@ -115,7 +123,7 @@ confirm DConfirmReq {..} = do
   let merchantOperatingCityId = searchRequest.merchantOperatingCityId
   city <- CQMOC.findById merchantOperatingCityId >>= fmap (.city) . fromMaybeM (MerchantOperatingCityNotFound merchantOperatingCityId.getId)
   exophone <- findRandomExophone merchantOperatingCityId
-  booking <- buildBooking searchRequest fulfillmentId quote fromLocation mbToLocation exophone now Nothing paymentMethodId driverId
+  booking <- buildBooking searchRequest fulfillmentId quote fromLocation mbToLocation exophone now mbStartTime Nothing paymentMethodId driverId mbRentalDuration
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   riderPhone <- mapM decrypt person.mobileNumber
   let riderName = person.firstName
@@ -154,7 +162,9 @@ confirm DConfirmReq {..} = do
     mkConfirmQuoteDetails quoteDetails fulfillmentId = do
       case quoteDetails of
         DQuote.OneWayDetails _ -> pure ConfirmOneWayDetails
-        DQuote.RentalDetails RentalSlab {..} -> pure $ ConfirmRentalDetails $ RentalSlabAPIEntity {..}
+        DQuote.RentalDetails RentalDetails {..} -> do
+          baseDuration <- Just . Hours <$> mbRentalDuration & fromMaybeM (InvalidRequest "Rental confirm quote should have rentalDuration param")
+          pure $ ConfirmRentalDetails $ RentalDetailsAPIEntity {bppQuoteId = id.getId, ..}
         DQuote.DriverOfferDetails driverOffer -> do
           bppEstimateId <- fulfillmentId & fromMaybeM (InternalError "FulfillmentId not found in Init. this error should never come.")
           pure $ ConfirmAutoDetails bppEstimateId driverOffer.driverId
@@ -163,6 +173,27 @@ confirm DConfirmReq {..} = do
     getDriverId = \case
       DQuote.DriverOfferDetails driverOffer -> driverOffer.driverId
       _ -> Nothing
+
+    checkRentalBookingsOverlapping startTime rentalDuration = do
+      let statusObj =
+            DRB.BookingStatusObj
+              { normalBooking = [],
+                rentalBooking = [DRB.NEW, DRB.CONFIRMED, DRB.AWAITING_REASSIGNMENT, DRB.REALLOCATED, DRB.TRIP_ASSIGNED]
+              }
+      rentalBookings <- QRideB.findByRiderIdAndStatusObj personId statusObj
+      let durationDiffTime = secondsToNominalDiffTime $ Seconds (rentalDuration * 3600)
+      let finishTime = addUTCTime durationDiffTime startTime
+      overlappedBookings <- flip filterM rentalBookings $ \booking -> do
+        bookingRentalDuration <- case booking.bookingDetails of
+          DRB.RentalDetails (DRB.BaseDuration baseDuration) _ -> pure baseDuration
+          _ -> throwError (InternalError "Should be rental booking")
+        let bookingDurationDiffTime = secondsToNominalDiffTime $ Seconds (bookingRentalDuration.getHours * 3600)
+            bookingFinishTime = addUTCTime bookingDurationDiffTime booking.startTime
+            startTimeOverlap = booking.startTime >= startTime && booking.startTime <= finishTime
+            finishTimeOverlap = bookingFinishTime >= startTime && bookingFinishTime <= finishTime
+        pure $ startTimeOverlap || finishTimeOverlap
+
+      unless (null overlappedBookings) $ throwError (InvalidRequest $ "Overlapped rental bookings: " <> show (overlappedBookings <&> (.id)))
 
 buildBooking ::
   MonadFlow m =>
@@ -173,11 +204,13 @@ buildBooking ::
   Maybe DL.Location ->
   DExophone.Exophone ->
   UTCTime ->
+  Maybe UTCTime ->
   Maybe Text ->
   Maybe (Id DMPM.MerchantPaymentMethod) ->
   Maybe Text ->
+  Maybe Int ->
   m DRB.Booking
-buildBooking searchRequest mbFulfillmentId quote fromLoc mbToLoc exophone now otpCode paymentMethodId driverId = do
+buildBooking searchRequest mbFulfillmentId quote fromLoc mbToLoc exophone now startTime otpCode paymentMethodId driverId mbRentalDuration = do
   id <- generateGUID
   bookingDetails <- buildBookingDetails
   return $
@@ -197,7 +230,7 @@ buildBooking searchRequest mbFulfillmentId quote fromLoc mbToLoc exophone now ot
         providerName = quote.providerName,
         itemId = quote.itemId,
         providerMobileNumber = quote.providerMobileNumber,
-        startTime = searchRequest.startTime,
+        startTime = fromMaybe now startTime,
         riderId = searchRequest.riderId,
         fromLocation = fromLoc,
         estimatedFare = quote.estimatedFare,
@@ -215,7 +248,9 @@ buildBooking searchRequest mbFulfillmentId quote fromLoc mbToLoc exophone now ot
   where
     buildBookingDetails = case quote.quoteDetails of
       DQuote.OneWayDetails _ -> DRB.OneWayDetails <$> buildOneWayDetails
-      DQuote.RentalDetails rentalSlab -> pure $ DRB.RentalDetails rentalSlab
+      DQuote.RentalDetails rentalDetails -> do
+        rentalDuration <- mbRentalDuration & fromMaybeM (InvalidRequest "Rental confirm quote should have rentalDuration param")
+        pure $ DRB.RentalDetails (DRB.BaseDuration $ Hours rentalDuration) rentalDetails
       DQuote.DriverOfferDetails _ -> DRB.DriverOfferDetails <$> buildOneWayDetails
       DQuote.OneWaySpecialZoneDetails _ -> DRB.OneWaySpecialZoneDetails <$> buildOneWaySpecialZoneDetails
     buildOneWayDetails = do

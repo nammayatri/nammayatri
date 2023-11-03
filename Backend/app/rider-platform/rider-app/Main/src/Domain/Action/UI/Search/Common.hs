@@ -50,8 +50,9 @@ buildSearchRequest ::
   Maybe Text ->
   Maybe Text ->
   Maybe Seconds ->
+  DSearchReq.SearchRequestTag ->
   m SearchRequest.SearchRequest
-buildSearchRequest person pickup merchantOperatingCity mbDrop mbMaxDistance mbDistance now bundleVersion clientVersion device disabilityTag duration = do
+buildSearchRequest person pickup merchantOperatingCity mbDrop mbMaxDistance mbDistance now bundleVersion clientVersion device disabilityTag duration searchReqTag = do
   searchRequestId <- generateGUID
   validTill <- getSearchRequestExpiry now
   return
@@ -77,7 +78,8 @@ buildSearchRequest person pickup merchantOperatingCity mbDrop mbMaxDistance mbDi
         autoAssignEnabled = Nothing,
         autoAssignEnabledV2 = Nothing,
         availablePaymentMethods = [],
-        selectedPaymentMethodId = Nothing
+        selectedPaymentMethodId = Nothing,
+        tag = searchReqTag
       }
   where
     getSearchRequestExpiry :: (HasFlowEnv m r '["searchRequestExpiry" ::: Maybe Seconds]) => UTCTime -> m UTCTime

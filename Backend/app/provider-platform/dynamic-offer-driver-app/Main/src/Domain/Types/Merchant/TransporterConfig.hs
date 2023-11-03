@@ -105,8 +105,6 @@ data TransporterConfigD u = TransporterConfig
     canDowngradeToHatchback :: Bool,
     canDowngradeToTaxi :: Bool,
     canSuvDowngradeToTaxi :: Bool,
-    createdAt :: UTCTime,
-    updatedAt :: UTCTime,
     rcLimit :: Int,
     automaticRCActivationCutOff :: Seconds,
     isAvoidToll :: Bool,
@@ -118,12 +116,16 @@ data TransporterConfigD u = TransporterConfig
     openMarketUnBlocked :: Bool,
     cacheOfferListByDriverId :: Bool,
     useOfferListCache :: Bool,
-    ratingAsDecimal :: Bool,
     refillVehicleModel :: Bool,
+    rentalRequests :: Bool,
+    ratingAsDecimal :: Bool,
     driverFeeOverlaySendingTimeLimitInDays :: Int,
     overlayBatchSize :: Int,
     volunteerSmsSendingLimit :: Maybe DashboardMediaSendingLimit,
-    driverSmsReceivingLimit :: Maybe DashboardMediaSendingLimit
+    driverSmsReceivingLimit :: Maybe DashboardMediaSendingLimit,
+    allocateRentalRideTimeDiff :: Seconds,
+    createdAt :: UTCTime,
+    updatedAt :: UTCTime
   }
   deriving (Generic, Show)
 

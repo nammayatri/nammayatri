@@ -1,6 +1,6 @@
 let non_persistent_redis_cfg =
-      { redis_host = "0.0.0.0"
-      , redis_port = 6379
+      { redis_host = "localhost"
+      , redis_port = 30001
       , redis_pool_size = 10
       , redis_partition = 0
       , reconnect_max_attempts = 10
@@ -11,8 +11,8 @@ let non_persistent_redis_cfg =
       }
 
 let persistent_redis_cfg =
-      { redis_host = "0.0.0.0"
-      , redis_port = 6379
+      { redis_host = "localhost"
+      , redis_port = 30001
       , redis_pool_size = 10
       , redis_partition = 0
       , reconnect_max_attempts = 10

@@ -22,6 +22,7 @@ where
 
 import Domain.Types.FareProduct
 import qualified Domain.Types.FareProduct as Domain
+import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import Domain.Types.Vehicle.Variant (Variant (..))
 import Kernel.Beam.Functions
@@ -36,21 +37,38 @@ findAllFareProductForVariants ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
   Id DMOC.MerchantOperatingCity ->
   Domain.Area ->
+  Domain.FlowType ->
   m [Domain.FareProduct]
-findAllFareProductForVariants (Id merchantOpCityId) area = findAllWithKV [Se.And [Se.Is BeamFP.merchantOperatingCityId $ Se.Eq merchantOpCityId, Se.Is BeamFP.area $ Se.Eq area]]
+findAllFareProductForVariants (Id merchantOpCityId) area flow =
+  findAllWithKV
+    [ Se.And
+        [ Se.Is BeamFP.merchantOperatingCityId $ Se.Eq merchantOpCityId,
+          Se.Is BeamFP.area $ Se.Eq area,
+          Se.Is BeamFP.flow $ Se.Eq flow
+        ]
+    ]
 
-findByMerchantOpCityIdVariantArea ::
+findAllFareProductForFlow ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  Id DM.Merchant ->
+  Domain.FlowType ->
+  m [Domain.FareProduct]
+findAllFareProductForFlow (Id merchantId) flow = findAllWithKV [Se.And [Se.Is BeamFP.merchantId $ Se.Eq merchantId, Se.Is BeamFP.flow $ Se.Eq flow]]
+
+findByMerchantOpCityIdVariantAreaFlow ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
   Id DMOC.MerchantOperatingCity ->
   Variant ->
   Domain.Area ->
+  Domain.FlowType ->
   m (Maybe Domain.FareProduct)
-findByMerchantOpCityIdVariantArea (Id merchantOpCityId) vehicleVariant area =
+findByMerchantOpCityIdVariantAreaFlow (Id merchantOpCityId) vehicleVariant area flow =
   findOneWithKV
     [ Se.And
         [ Se.Is BeamFP.merchantOperatingCityId $ Se.Eq merchantOpCityId,
           Se.Is BeamFP.area $ Se.Eq area,
-          Se.Is BeamFP.vehicleVariant $ Se.Eq vehicleVariant
+          Se.Is BeamFP.vehicleVariant $ Se.Eq vehicleVariant,
+          Se.Is BeamFP.flow $ Se.Eq flow
         ]
     ]
 

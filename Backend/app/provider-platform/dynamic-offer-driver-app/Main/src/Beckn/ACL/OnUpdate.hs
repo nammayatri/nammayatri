@@ -140,32 +140,67 @@ mkFullfillment mbDriver ride booking mbVehicle mbImage tags = do
           { _type = "OTP",
             token = ride.otp
           }
-  pure $
-    RideAssignedOU.FulfillmentInfo
-      { id = ride.id.getId,
-        start =
-          RideAssignedOU.StartInfo
-            { authorization =
-                case booking.bookingType of
-                  DRB.SpecialZoneBooking -> Just authorization
-                  DRB.NormalBooking -> Just authorization, -- TODO :: Remove authorization for NormalBooking once Customer side code is decoupled.
-              location =
-                RideAssignedOU.Location
-                  { gps = RideAssignedOU.Gps {lat = booking.fromLocation.lat, lon = booking.fromLocation.lon}
-                  }
-            },
-        end =
-          RideAssignedOU.EndInfo
-            { location =
-                RideAssignedOU.Location
-                  { gps = RideAssignedOU.Gps {lat = booking.toLocation.lat, lon = booking.toLocation.lon} -- assuming locations will always be in correct order in list
-                  }
-            },
-        agent,
-        _type = if booking.bookingType == DRB.NormalBooking then RideAssignedOU.RIDE else RideAssignedOU.RIDE_OTP,
-        vehicle = veh,
-        ..
-      }
+  case booking.bookingDetails of
+    DRB.DetailsOnDemand DRB.BookingDetailsOnDemand {..} ->
+      pure $
+        RideAssignedOU.FulfillmentInfo
+          { id = ride.id.getId,
+            start =
+              RideAssignedOU.StartInfo
+                { authorization = Just authorization,
+                  location =
+                    RideAssignedOU.Location
+                      { gps = RideAssignedOU.Gps {lat = booking.fromLocation.lat, lon = booking.fromLocation.lon}
+                      }
+                },
+            end =
+              RideAssignedOU.EndInfo
+                { location =
+                    Just $
+                      RideAssignedOU.Location
+                        { gps = RideAssignedOU.Gps {lat = toLocation.lat, lon = toLocation.lon} -- assuming locations will always be in correct order in list
+                        },
+                  authorization = Nothing
+                },
+            agent,
+            _type = if booking.bookingType == DRB.NormalBooking then RideAssignedOU.RIDE else RideAssignedOU.RIDE_OTP,
+            vehicle = veh,
+            ..
+          }
+    DRB.DetailsRental DRB.BookingDetailsRental {..} -> do
+      rideDetails <- case ride.rideDetails of
+        DRide.DetailsOnDemand _ -> throwError (InternalError "ON_DEMAND not allowed here")
+        DRide.DetailsRental details -> pure details
+      pure $
+        RideAssignedOU.FulfillmentInfo
+          { id = ride.id.getId,
+            start =
+              RideAssignedOU.StartInfo
+                { authorization = Just authorization,
+                  location =
+                    RideAssignedOU.Location
+                      { gps = RideAssignedOU.Gps {lat = booking.fromLocation.lat, lon = booking.fromLocation.lon}
+                      }
+                },
+            end =
+              RideAssignedOU.EndInfo
+                { location =
+                    rentalToLocation <&> \toLoc ->
+                      RideAssignedOU.Location
+                        { gps = RideAssignedOU.Gps {lat = toLoc.lat, lon = toLoc.lon} -- assuming locations will always be in correct order in list
+                        },
+                  authorization =
+                    rideDetails.endRideOtp <&> \endRideOtp ->
+                      RideAssignedOU.Authorization
+                        { _type = "OTP",
+                          token = endRideOtp
+                        }
+                },
+            agent,
+            _type = RideAssignedOU.RENTAL,
+            vehicle = veh,
+            ..
+          }
 
 buildOnUpdateMessage ::
   (EsqDBFlow m r, EncFlow m r) =>
@@ -185,7 +220,20 @@ buildOnUpdateMessage RideAssignedBuildReq {..} = do
         update_target = "order.fufillment.state.code, order.fulfillment.agent, order.fulfillment.vehicle" <> ", order.fulfillment.start.authorization" -- TODO :: Remove authorization for NormalBooking once Customer side code is decoupled.
       }
 buildOnUpdateMessage RideStartedBuildReq {..} = do
-  fulfillment <- mkFullfillment (Just driver) ride booking (Just vehicle) Nothing Nothing
+  odometerStartReading :: Maybe Centesimal <- case ride.rideDetails of
+    DetailsOnDemand _ -> pure Nothing
+    DetailsRental det -> pure det.odometerStartReading
+  let tagGroups =
+        [ Tags.TagGroup
+            { display = False,
+              code = "ride_distance_details",
+              name = "Ride Distance Details",
+              list =
+                [ Tags.Tag (Just False) (Just "odometer_start_reading") (Just "Odometer Start Reading") (show <$> odometerStartReading)
+                ]
+            }
+        ]
+  fulfillment <- mkFullfillment (Just driver) ride booking (Just vehicle) Nothing (Just $ Tags.TG tagGroups)
   return $
     OnUpdate.OnUpdateMessage
       { order =
@@ -200,6 +248,9 @@ buildOnUpdateMessage req@RideCompletedBuildReq {} = do
   chargeableDistance :: HighPrecMeters <-
     realToFrac <$> req.ride.chargeableDistance
       & fromMaybeM (InternalError "Ride chargeable distance is not present.")
+  odometerEndReading :: Maybe Centesimal <- case req.ride.rideDetails of
+    DetailsOnDemand _ -> pure Nothing
+    DetailsRental det -> pure det.odometerEndReading
   let traveledDistance :: HighPrecMeters = req.ride.traveledDistance
   let tagGroups =
         [ Tags.TagGroup
@@ -208,7 +259,8 @@ buildOnUpdateMessage req@RideCompletedBuildReq {} = do
               name = "Ride Distance Details",
               list =
                 [ Tags.Tag (Just False) (Just "chargeable_distance") (Just "Chargeable Distance") (Just $ show chargeableDistance),
-                  Tags.Tag (Just False) (Just "traveled_distance") (Just "Traveled Distance") (Just $ show traveledDistance)
+                  Tags.Tag (Just False) (Just "traveled_distance") (Just "Traveled Distance") (Just $ show traveledDistance),
+                  Tags.Tag (Just False) (Just "odometer_end_reading") (Just "Odometer End Reading") (show <$> odometerEndReading)
                 ]
             }
         ]
@@ -277,6 +329,7 @@ buildOnUpdateMessage req@RideCompletedBuildReq {} = do
             || breakup.title == "CUSTOMER_SELECTED_FARE"
             || breakup.title == "NIGHT_SHIFT_CHARGE"
             || breakup.title == "EXTRA_TIME_FARE"
+        DFParams.Rental -> False
 buildOnUpdateMessage BookingCancelledBuildReq {..} = do
   return $
     OnUpdate.OnUpdateMessage

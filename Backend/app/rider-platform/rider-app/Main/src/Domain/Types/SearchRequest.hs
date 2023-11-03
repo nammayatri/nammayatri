@@ -11,6 +11,7 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# LANGUAGE TemplateHaskell #-}
 
 module Domain.Types.SearchRequest where
 
@@ -24,14 +25,20 @@ import Kernel.Prelude
 import Kernel.Types.Common (HighPrecMeters, Money, Seconds)
 import Kernel.Types.Id
 import Kernel.Types.Version
+import Tools.Beam.UtilsTH
 
 data SearchRequestStatus = NEW | INPROGRESS | CONFIRMED | COMPLETED | CLOSED
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
+data SearchRequestTag = ON_DEMAND | RENTAL
+  deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+
+$(mkBeamInstancesForEnum ''SearchRequestTag)
+
 data SearchRequest = SearchRequest
   { id :: Id SearchRequest,
     startTime :: UTCTime,
-    validTill :: UTCTime,
+    validTill :: UTCTime, --TODO: Need to make this equal to start time
     riderId :: Id DP.Person,
     fromLocation :: DLoc.Location,
     toLocation :: Maybe DLoc.Location,
@@ -50,6 +57,7 @@ data SearchRequest = SearchRequest
     autoAssignEnabledV2 :: Maybe Bool,
     availablePaymentMethods :: [Id DMPM.MerchantPaymentMethod],
     selectedPaymentMethodId :: Maybe (Id DMPM.MerchantPaymentMethod),
-    createdAt :: UTCTime
+    createdAt :: UTCTime,
+    tag :: SearchRequestTag
   }
   deriving (Generic, Show)

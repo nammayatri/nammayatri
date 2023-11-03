@@ -23,7 +23,6 @@ import Domain.Types.Common
 import Domain.Types.FarePolicy.Common as Reexport
 import Kernel.Prelude
 import Kernel.Types.Common
-import Tools.Beam.UtilsTH (mkBeamInstancesForJSON)
 
 data FPSlabsDetailsSlabD (s :: UsageSafety) = FPSlabsDetailsSlab
   { startDistance :: Meters,
@@ -39,17 +38,6 @@ type FPSlabsDetailsSlab = FPSlabsDetailsSlabD 'Safe
 instance FromJSON (FPSlabsDetailsSlabD 'Unsafe)
 
 instance ToJSON (FPSlabsDetailsSlabD 'Unsafe)
-
-data PlatformFeeCharge = ProgressivePlatformFee HighPrecMoney | ConstantPlatformFee Money
-  deriving stock (Show, Eq, Read, Ord, Generic)
-  deriving anyclass (FromJSON, ToJSON, ToSchema)
-
-data PlatformFeeInfo = PlatformFeeInfo
-  { platformFeeCharge :: PlatformFeeCharge,
-    cgst :: Double,
-    sgst :: Double
-  }
-  deriving (Generic, Eq, Show, ToJSON, FromJSON, ToSchema)
 
 -----------------------------------------------------------------------------------------------------------------------------------------
 ------------------------------------------------APIEntity--------------------------------------------------------------------------------
@@ -69,5 +57,3 @@ makeFPSlabsDetailsSlabAPIEntity FPSlabsDetailsSlab {..} =
   FPSlabsDetailsSlabAPIEntity
     { ..
     }
-
-$(mkBeamInstancesForJSON ''PlatformFeeCharge)

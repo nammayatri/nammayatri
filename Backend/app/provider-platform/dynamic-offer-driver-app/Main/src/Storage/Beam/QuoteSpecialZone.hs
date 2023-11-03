@@ -12,6 +12,7 @@
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE InstanceSigs #-}
 
 module Storage.Beam.QuoteSpecialZone where
 
@@ -42,6 +43,7 @@ instance B.Table QuoteSpecialZoneT where
   data PrimaryKey QuoteSpecialZoneT f
     = Id (B.C f Text)
     deriving (Generic, B.Beamable)
+  primaryKey :: QuoteSpecialZoneT column -> B.PrimaryKey QuoteSpecialZoneT column
   primaryKey = Id . id
 
 type QuoteSpecialZone = QuoteSpecialZoneT Identity
