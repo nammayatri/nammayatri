@@ -41,7 +41,7 @@ import Prelude (Unit, bind, const, pure, unit, ($), (<<<), (<>), (==), not, (>=)
 import PrestoDOM (BottomSheetState(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, alignParentBottom, alignParentRight, alpha, background, clickable, color, cornerRadius, editText, ellipsize, fontStyle, frameLayout, gravity, height, hint, id, imageUrl, imageView, imageWithFallback, inputTypeI, layoutGravity, linearLayout, margin, maxLines, onBackPressed, onChange, onClick, orientation, padding, pattern, relativeLayout, scrollView, stroke, text, textFromHtml, textSize, textView, visibility, weight, width)
 import PrestoDOM.Properties as PP
 import PrestoDOM.Types.DomAttributes as PTD
-import Screens.AddVehicleDetailsScreen.Controller (Action(..), eval, ScreenOutput)
+import Screens.AddVehicleDetailsScreen.Controller (Action(..), eval, ScreenOutput, validateRegistrationNumber)
 import Screens.Types (AddVehicleDetailsScreenState)
 import Styles.Colors as Color
 import Effect.Uncurried (runEffectFn1)
@@ -265,7 +265,7 @@ vehicleRegistrationNumber state push =
           [ width MATCH_PARENT
           , height WRAP_CONTENT
           , orientation HORIZONTAL
-          , stroke ("1," <> if ((DS.length state.data.vehicle_registration_number >= 2) && (DS.take 2 state.data.vehicle_registration_number /= (getValueFromConfig "RC_VALIDATION_TEXT"))) then Color.warningRed else Color.borderColorLight) 
+          , stroke ("1," <> if ((DS.length state.data.vehicle_registration_number >= 2) && not validateRegistrationNumber (DS.take 2 state.data.vehicle_registration_number)) then Color.warningRed else Color.borderColorLight) 
           , cornerRadius 4.0
           ][  textView
               [ width $ V 20
@@ -294,7 +294,7 @@ vehicleRegistrationNumber state push =
             , color Color.warningRed
             , fontStyle $ FontStyle.regular LanguageStyle
             , margin (MarginTop 10)
-            , visibility if ((DS.length state.data.vehicle_registration_number >= 2) && (DS.take 2 state.data.vehicle_registration_number /= (getValueFromConfig "RC_VALIDATION_TEXT"))) then VISIBLE else GONE
+            , visibility if ((DS.length state.data.vehicle_registration_number >= 2) && not validateRegistrationNumber (DS.take 2 state.data.vehicle_registration_number)) then VISIBLE else GONE
             ] <> FontStyle.paragraphText TypoGraphy
           , linearLayout
           [ width MATCH_PARENT
