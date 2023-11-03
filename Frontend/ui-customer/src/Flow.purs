@@ -92,7 +92,7 @@ import Services.Backend as Remote
 import Services.Config (getBaseUrl)
 import Storage (KeyStore(..), deleteValueFromLocalStore, getValueToLocalNativeStore, getValueToLocalStore, isLocalStageOn, setValueToLocalNativeStore, setValueToLocalStore, updateLocalStage)
 import Types.App (ABOUT_US_SCREEN_OUTPUT(..), ACCOUNT_SET_UP_SCREEN_OUTPUT(..), ADD_NEW_ADDRESS_SCREEN_OUTPUT(..), GlobalState(..), CONTACT_US_SCREEN_OUTPUT(..), FlowBT, HELP_AND_SUPPORT_SCREEN_OUTPUT(..), HOME_SCREEN_OUTPUT(..), MY_PROFILE_SCREEN_OUTPUT(..), MY_RIDES_SCREEN_OUTPUT(..), PERMISSION_SCREEN_OUTPUT(..), REFERRAL_SCREEN_OUPUT(..), SAVED_LOCATION_SCREEN_OUTPUT(..), SELECT_LANGUAGE_SCREEN_OUTPUT(..), ScreenType(..), TRIP_DETAILS_SCREEN_OUTPUT(..), EMERGECY_CONTACTS_SCREEN_OUTPUT(..), TICKET_BOOKING_SCREEN_OUTPUT(..), WELCOME_SCREEN_OUTPUT(..), APP_UPDATE_POPUP(..), TICKET_BOOKING_SCREEN_OUTPUT(..),TICKET_INFO_SCREEN_OUTPUT(..),defaultGlobalState)
-import Effect.Aff (makeAff, nonCanceler, launchAff)
+import Effect.Aff (Milliseconds(..), makeAff, nonCanceler, launchAff)
 import Control.Monad.Except (runExceptT)
 import Control.Transformers.Back.Trans (runBackT)
 import Screens.AccountSetUpScreen.Transformer (getDisabilityList)
@@ -104,9 +104,10 @@ import PaymentPage
 import Screens.TicketBookingScreen.Transformer
 import Screens.Types as ST
 import Common.Types.App as Common
+import PrestoDOM.Core (terminateUI)
 
 baseAppFlow :: GlobalPayload -> Boolean-> FlowBT String Unit
-baseAppFlow (GlobalPayload gPayload) refreshFlow = do
+baseAppFlow (GlobalPayload gPayload) callInitUI = do
   logField_ <- lift $ lift $ getLogFields
   _ <- pure $ printLog "Global Payload" gPayload
   (GlobalState state) <- getState
@@ -149,7 +150,10 @@ baseAppFlow (GlobalPayload gPayload) refreshFlow = do
   _ <- lift $ lift $ setLogField "bundle_version" $ encode (bundle)
   _ <- lift $ lift $ setLogField "platform" $ encode (os)
   _ <- lift $ lift $ liftFlow $ initiateLocationServiceClient
-  when (not refreshFlow) $ lift $ lift $ initUI
+  let Payload payload = gPayload.payload
+      showSplashScreen = fromMaybe false payload.show_splash
+  when callInitUI $ lift $ lift $ initUI
+  when showSplashScreen $ toggleSplash true
   _ <- lift $ lift $ liftFlow $ logEventWithParams logField_ "ny_user_app_version" "version" versionName
   _ <- lift $ lift $ liftFlow $ logEvent logField_ "ny_user_entered_app"
   if (getValueToLocalStore COUNTRY_CODE == "__failed") || (getValueToLocalStore COUNTRY_CODE == "(null)")
@@ -221,13 +225,28 @@ getIosVersion merchant =
           }
 
 
+hideLoaderFlow :: FlowBT String Unit
+hideLoaderFlow = do
+  toggleSplash false
+  liftFlowBT $ hideLoader
+
+toggleSplash :: Boolean -> FlowBT String Unit
+toggleSplash = 
+  if _ then UI.splashScreen
+  else do
+    state <- getState
+    void $ liftFlowBT $ launchAff $ flowRunner state $ runExceptT $ runBackT $ do
+      void $ lift $ lift $ delay $ Milliseconds 2000.0
+      liftFlowBT $ terminateUI $ Just "SplashScreen"
+
+
 checkVersion :: Int -> String -> FlowBT String Unit
 checkVersion versioncodeAndroid versionName= do
   void $ pure $ setCleverTapUserProp [ {key : "Platform", value : unsafeToForeign os}]
   logField_ <- lift $ lift $ getLogFields
   let updatedIOSversion = getIosVersion (getMerchant FunctionCall)
   if os /= "IOS" && versioncodeAndroid < (getLatestAndroidVersion (getMerchant FunctionCall)) then do
-    liftFlowBT $ hideLoader
+    hideLoaderFlow
     config <- getAppConfig Constants.appConfig
     modifyScreenState $ AppUpdatePopUpScreenType (\appUpdatePopUpScreenState → appUpdatePopUpScreenState {config = config, updatePopup = AppVersion})
     appUpdatedFlow <- UI.handleAppUpdatePopUp
@@ -245,7 +264,7 @@ checkVersion versioncodeAndroid versionName= do
 
       if any (_ == -1) [majorUpdateIndex, minorUpdateIndex, patchUpdateIndex] then pure unit
         else if forceIOSupdate majorUpdateIndex minorUpdateIndex patchUpdateIndex updatedIOSversion then do
-          liftFlowBT $ hideLoader
+          hideLoaderFlow
           _ <- UI.handleAppUpdatePopUp
           _ <- lift $ lift $ liftFlow $ logEvent logField_ "ny_user_app_update_pop_up_view"
           checkVersion versioncodeAndroid versionName
@@ -404,7 +423,7 @@ currentFlowStatus = do
     DRIVER_OFFERED_QUOTE currentStatus      -> goToFindingQuotesStage currentStatus.estimateId true
     RIDE_ASSIGNED _                         -> currentRideFlow true
     _                                       -> currentRideFlow false
-  liftFlowBT $ hideLoader
+  hideLoaderFlow
   _ <- pure $ hideKeyboardOnNavigation true
   -- zooTicketBookingFlow
   homeScreenFlow
@@ -462,7 +481,7 @@ currentFlowStatus = do
       
       if (((fromMaybe "" response.firstName) == "" ) && not (isJust response.firstName)) then do
         _ <- updateLocalStage HomeScreen
-        liftFlowBT $ hideLoader
+        hideLoaderFlow
         accountSetUpScreenFlow
       else do
         let tag = case (response.disability) of
@@ -526,7 +545,7 @@ currentFlowStatus = do
 chooseLanguageScreenFlow :: FlowBT String Unit
 chooseLanguageScreenFlow = do
   logField_ <- lift $ lift $ getLogFields
-  liftFlowBT $ hideLoader
+  hideLoaderFlow
   setValueToLocalStore LANGUAGE_KEY $ getValueFromConfig "defaultLanguage"
   _ <- lift $ lift $ liftFlow $ logEvent logField_ "ny_user_choose_lang_scn_view"
   flow <- UI.chooseLanguageScreen
@@ -571,7 +590,7 @@ updateCustomerVersion dbClientVersion dbBundleVersion = do
 
 enterMobileNumberScreenFlow :: FlowBT String Unit
 enterMobileNumberScreenFlow = do
-  liftFlowBT $ hideLoader -- Removed initial choose langauge screen
+  hideLoaderFlow -- Removed initial choose langauge screen
   if(getValueToLocalStore LANGUAGE_KEY == "__failed") then setValueToLocalStore LANGUAGE_KEY $ getValueFromConfig "defaultLanguage" else pure unit
   if ( any (_ == getValueToLocalStore REGISTERATION_TOKEN) ["__failed", "(null)"]) && ( any (_ == getValueToLocalStore REFERRER_URL) ["__failed", "(null)"]) then do
     _ <- pure $ extractReferrerUrl unit
@@ -642,7 +661,7 @@ enterMobileNumberScreenFlow = do
 
 welcomeScreenFlow :: FlowBT String Unit
 welcomeScreenFlow = do
-  liftFlowBT $ hideLoader
+  hideLoaderFlow
   flow <- UI.welcomeScreen
   case flow of
     GoToMobileNumberScreen -> enterMobileNumberScreenFlow

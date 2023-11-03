@@ -124,6 +124,7 @@ newtype Payload = Payload
   , source :: Maybe LocationData
   , destination :: Maybe LocationData
   , payment_method :: Maybe String
+  , show_splash :: Maybe Boolean
   }
 
 newtype LocationData = LocationData {

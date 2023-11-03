@@ -47,7 +47,7 @@ main event = do
     Right payload'  -> do
        mainFiber <- launchAff $ flowRunner defaultGlobalState $ do
           _ <- runExceptT $ runBackT $ updateEventData event
-          resp ← runExceptT $ runBackT $ Flow.baseAppFlow payload' false
+          resp ← runExceptT $ runBackT $ Flow.baseAppFlow payload' true
           case resp of
                 Right x → pure unit
                 Left err → do
@@ -87,8 +87,8 @@ onConnectivityEvent triggertype = do
                 "INTERNET_ACTION" -> do 
                   modifyScreenState $ PermissionScreenStateType (\permissionScreen -> permissionScreen {stage = INTERNET_ACTION})
                   Flow.permissionScreenFlow
-                "REFRESH" -> Flow.baseAppFlow payload' true
-                _ -> Flow.baseAppFlow payload' true
+                "REFRESH" -> Flow.baseAppFlow payload' false
+                _ -> Flow.baseAppFlow payload' false
           pure unit
         JBridge.storeMainFiberOb mainFiber
         pure unit
