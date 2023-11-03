@@ -112,10 +112,9 @@ confirm DConfirmReq {..} = do
   let fromLocation = searchRequest.fromLocation
       mbToLocation = searchRequest.toLocation
       driverId = getDriverId quote.quoteDetails
-  let merchantId = searchRequest.merchantId
   let merchantOperatingCityId = searchRequest.merchantOperatingCityId
   city <- CQMOC.findById merchantOperatingCityId >>= fmap (.city) . fromMaybeM (MerchantOperatingCityNotFound merchantOperatingCityId.getId)
-  exophone <- findRandomExophone merchantId merchantOperatingCityId
+  exophone <- findRandomExophone merchantOperatingCityId
   booking <- buildBooking searchRequest fulfillmentId quote fromLocation mbToLocation exophone now Nothing paymentMethodId driverId
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   riderPhone <- mapM decrypt person.mobileNumber
@@ -230,11 +229,11 @@ buildBooking searchRequest mbFulfillmentId quote fromLoc mbToLoc exophone now ot
       distance <- searchRequest.distance & fromMaybeM (InternalError "distance is null for one way search request")
       pure DRB.OneWaySpecialZoneBookingDetails {..}
 
-findRandomExophone :: (CacheFlow m r, EsqDBFlow m r) => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> m DExophone.Exophone
-findRandomExophone merchantId merchantOperatingCityId = do
+findRandomExophone :: (CacheFlow m r, EsqDBFlow m r) => Id DMOC.MerchantOperatingCity -> m DExophone.Exophone
+findRandomExophone merchantOperatingCityId = do
   merchantServiceUsageConfig <- CMSUC.findByMerchantOperatingCityId merchantOperatingCityId >>= fromMaybeM (MerchantServiceUsageConfigNotFound $ "merchantOperatingCityId:- " <> merchantOperatingCityId.getId)
   exophones <- CQExophone.findByMerchantOperatingCityIdAndService merchantOperatingCityId merchantServiceUsageConfig.getExophone
   nonEmptyExophones <- case exophones of
-    [] -> throwError $ ExophoneNotFound merchantId.getId
+    [] -> throwError $ ExophoneNotFound merchantOperatingCityId.getId
     e : es -> pure $ e :| es
   getRandomElement nonEmptyExophones

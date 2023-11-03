@@ -1520,7 +1520,7 @@ sendSmsToDriver merchantShortId opCity driverId volunteerId _req@SendSmsReq {..}
       WHATSAPP -> do
         merchantMessage <-
           QMM.findByMerchantOpCityIdAndMessageKey merchantOpCityId messageKey
-            >>= fromMaybeM (MerchantMessageNotFound driver.merchantId.getId (show messageKey))
+            >>= fromMaybeM (MerchantMessageNotFound merchantOpCityId.getId (show messageKey))
         let jsonData = merchantMessage.jsonData
         result <- Whatsapp.whatsAppSendMessageWithTemplateIdAPI driver.merchantId merchantOpCityId (Whatsapp.SendWhatsAppMessageWithTemplateIdApIReq phoneNumber merchantMessage.templateId jsonData.var1 jsonData.var2 jsonData.var3 (Just merchantMessage.containsUrlButton))
         when (result._response.status /= "success") $ throwError (InternalError "Unable to send Whatsapp message via dashboard")

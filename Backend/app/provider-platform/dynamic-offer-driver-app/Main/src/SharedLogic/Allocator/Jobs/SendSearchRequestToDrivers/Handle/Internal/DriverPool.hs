@@ -98,7 +98,7 @@ prepareDriverPoolBatch driverPoolCfg searchReq searchTry batchNum goHomeConfig =
 
     prepareDriverPoolBatch' previousBatchesDrivers doGoHomePooling merchantOpCityId_ = do
       radiusStep <- getPoolRadiusStep searchReq.id
-      transporterConfig <- TC.findByMerchantOpCityId merchantOpCityId_ >>= fromMaybeM (TransporterConfigDoesNotExist searchReq.providerId.getId)
+      transporterConfig <- TC.findByMerchantOpCityId merchantOpCityId_ >>= fromMaybeM (TransporterConfigDoesNotExist merchantOpCityId_.getId)
       intelligentPoolConfig <- DIP.findByMerchantOpCityId merchantOpCityId_ >>= fromMaybeM (InternalError "Intelligent Pool Config not found")
       blockListedDrivers <- Redis.withCrossAppRedis $ Redis.getList (mkBlockListedDriversKey searchReq.id)
       logDebug $ "Blocked Driver List-" <> show blockListedDrivers

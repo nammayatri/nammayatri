@@ -352,15 +352,15 @@ data OnboardingDocumentConfigError
 instanceExceptionWithParent 'HTTPException ''OnboardingDocumentConfigError
 
 instance IsBaseError OnboardingDocumentConfigError where
-  toMessage (OnboardingDocumentConfigNotFound merchantId doctype) =
+  toMessage (OnboardingDocumentConfigNotFound merchantOperatingCityId doctype) =
     Just $
-      "OnboardingDocumentConfig with merchantId \"" <> show merchantId <> "\" and docType \"" <> show doctype <> "\" not found."
-  toMessage (OnboardingDocumentConfigDoesNotExist merchantId doctype) =
+      "OnboardingDocumentConfig with merchantOperatingCityId \"" <> show merchantOperatingCityId <> "\" and docType \"" <> show doctype <> "\" not found."
+  toMessage (OnboardingDocumentConfigDoesNotExist merchantOperatingCityId doctype) =
     Just $
-      "OnboardingDocumentConfig with merchantId \"" <> show merchantId <> "\" and docType \"" <> show doctype <> "\" does not exist."
-  toMessage (OnboardingDocumentConfigAlreadyExists merchantId doctype) =
+      "OnboardingDocumentConfig with merchantOperatingCityId \"" <> show merchantOperatingCityId <> "\" and docType \"" <> show doctype <> "\" does not exist."
+  toMessage (OnboardingDocumentConfigAlreadyExists merchantOperatingCityId doctype) =
     Just $
-      "OnboardingDocumentConfig with merchantId \"" <> show merchantId <> "\" and docType \"" <> show doctype <> "\" already exists."
+      "OnboardingDocumentConfig with merchantOperatingCityId \"" <> show merchantOperatingCityId <> "\" and docType \"" <> show doctype <> "\" already exists."
 
 instance IsHTTPError OnboardingDocumentConfigError where
   toErrorCode = \case
@@ -472,9 +472,9 @@ newtype DriverIntelligentPoolConfigError
 instanceExceptionWithParent 'HTTPException ''DriverIntelligentPoolConfigError
 
 instance IsBaseError DriverIntelligentPoolConfigError where
-  toMessage (DriverIntelligentPoolConfigNotFound merchantId) =
+  toMessage (DriverIntelligentPoolConfigNotFound merchantOperatingCityId) =
     Just $
-      "DriverIntelligentPoolConfig with merchantId \"" <> show merchantId <> "\" not found."
+      "DriverIntelligentPoolConfig with merchantOperatingCityId \"" <> show merchantOperatingCityId <> "\" not found."
 
 instance IsHTTPError DriverIntelligentPoolConfigError where
   toErrorCode = \case
@@ -492,12 +492,12 @@ data DriverPoolConfigError
 instanceExceptionWithParent 'HTTPException ''DriverPoolConfigError
 
 instance IsBaseError DriverPoolConfigError where
-  toMessage (DriverPoolConfigDoesNotExist merchantId tripDistance) =
+  toMessage (DriverPoolConfigDoesNotExist merchantOperatingCityId tripDistance) =
     Just $
-      "DriverPoolConfig with merchantId \"" <> show merchantId <> "\" and tripDistance " <> show tripDistance <> " does not exist."
-  toMessage (DriverPoolConfigAlreadyExists merchantId tripDistance) =
+      "DriverPoolConfig with merchantOperatingCityId \"" <> show merchantOperatingCityId <> "\" and tripDistance " <> show tripDistance <> " does not exist."
+  toMessage (DriverPoolConfigAlreadyExists merchantOperatingCityId tripDistance) =
     Just $
-      "DriverPoolConfig with merchantId \"" <> show merchantId <> "\" and tripDistance " <> show tripDistance <> " already exists."
+      "DriverPoolConfig with merchantOperatingCityId \"" <> show merchantOperatingCityId <> "\" and tripDistance " <> show tripDistance <> " already exists."
 
 instance IsHTTPError DriverPoolConfigError where
   toErrorCode = \case
