@@ -59,6 +59,7 @@ import qualified Storage.Queries.SearchRequest as QSR
 import qualified Storage.Queries.SearchRequestSpecialZone as QSRSpecialZone
 import qualified Storage.Queries.SearchTry as QST
 import Tools.Error
+import Tools.Event
 
 data ValidateInitResponse
   = DRIVER_QUOTE (DDQ.DriverQuote, DSR.SearchRequest, DST.SearchTry)
@@ -148,7 +149,7 @@ handler merchantId req initReq = do
         DRIVER_QUOTE (driverQuote, searchRequest, searchTry) -> do
           (mbPaymentMethod, paymentUrl) <- fetchPaymentMethodAndUrl searchRequest.merchantOperatingCityId
           booking <- buildNormalBooking searchRequest driverQuote driverQuote.id.getId searchTry.startTime DRB.NormalBooking now (mbPaymentMethod <&> (.id)) paymentUrl searchRequest.disabilityTag searchRequest.merchantOperatingCityId
-          --triggerBookingCreatedEvent BookingEventData {booking = booking, personId = driverQuote.driverId, merchantId = transporter.id} --TODO:RENTAL
+          triggerBookingCreatedEvent BookingEventData {booking = booking, personId = driverQuote.driverId, merchantId = transporter.id}
           QST.updateStatus searchTry.id DST.COMPLETED
           _ <- QRB.createBooking booking
           return (booking, Just driverQuote.driverName, Just driverQuote.driverId.getId)
@@ -185,7 +186,7 @@ handler merchantId req initReq = do
                 _ -> (0, 0, Nothing)
           let fullFarePolicies = FarePolicyD.farePolicyToFullFarePolicy merchantId req.vehicleVariant farePolicy
               estimatedFinishTime = fromIntegral duration `addUTCTime` req.startTime
-          transporterConfig <- CMTC.findByMerchantId merchantId
+          transporterConfig <- CMTC.findByMerchantOpCityId searchRequest.merchantOperatingCityId
           fareParams <-
             calculateFareParameters
               CalculateFareParametersParams

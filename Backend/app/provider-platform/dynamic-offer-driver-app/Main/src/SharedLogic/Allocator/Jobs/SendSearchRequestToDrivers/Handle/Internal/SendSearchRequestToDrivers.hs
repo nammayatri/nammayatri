@@ -94,9 +94,6 @@ sendSearchRequestToDrivers searchReq searchDetails driverExtraFeeBounds driverPo
     QSRD.setInactiveBySTId searchTryId -- inactive previous request by drivers so that they can make new offers.
   _ <- QSRD.createMany searchRequestsForDrivers
 
-  -- forM_ searchRequestsForDrivers $ \sReqFD -> do  --TODO:RENTAL --Should this be removed ?
-  --   QDFS.updateStatus sReqFD.driverId DDFS.GOT_SEARCH_REQUEST {requestId = searchTryId, searchTryId = searchTryId, validTill = sReqFD.searchRequestValidTill}
-
   forM_ driverPoolZipSearchRequests $ \(dPoolRes, sReqFD) -> do
     let language = fromMaybe Maps.ENGLISH dPoolRes.driverPoolResult.language
     let translatedSearchReq = fromMaybe searchReq $ M.lookup language languageDictionary

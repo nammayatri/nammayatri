@@ -1358,7 +1358,7 @@ respondQuote (driverId, _, merchantOpCityId) req = do
           Just otp -> pure otp
 
         ride <- buildRide booking otpCode merchantId
-        --triggerRideCreatedEvent RideEventData {ride = ride, personId = cast driver.id, merchantId} --TODO:RENTAL
+        triggerRideCreatedEvent RideEventData {ride = ride, personId = cast driver.id, merchantId}
         void $ LF.rideDetails ride.id ride.status merchantId ride.driverId booking.fromLocation.lat booking.fromLocation.lon
         rideDetails <- buildRideDetails ride driver
         driverSearchReqs <- QSRD.findAllActiveBySTId searchTryId
