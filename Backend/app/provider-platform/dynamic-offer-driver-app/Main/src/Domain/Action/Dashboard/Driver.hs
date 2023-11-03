@@ -751,7 +751,11 @@ addVehicleForFleet merchantShortId opCity reqDriverPhoneNo mbMobileCountryCode f
   let merchantId = driver.merchantId
   unless (merchant.id == merchantId) $ throwError (PersonDoesNotExist driver.id.getId)
   vehicle <- RCQuery.findLastVehicleRCWrapper req.registrationNo
-  whenJust vehicle $ \veh -> when (isJust veh.fleetOwnerId && veh.fleetOwnerId /= Just fleetOwnerId) $ throwError VehicleBelongsToAnotherFleet
+  whenJust vehicle $ \veh -> do
+    when (isJust veh.fleetOwnerId && veh.fleetOwnerId /= Just fleetOwnerId) $ throwError VehicleBelongsToAnotherFleet
+    now <- getCurrentTime
+    assoc <- QRCAssociation.findLinkedByRCIdAndDriverId driver.id veh.id now
+    when (isJust assoc) $ throwError VehicleAlreadyLinkedToDriver
   Redis.set (DomainRC.makeFleetOwnerKey req.registrationNo) fleetOwnerId -- setting this value here , so while creation of creation of vehicle we can add fleet owner id
   void $ runVerifyRCFlow driver.id merchant merchantOpCityId req (Just True)
   logTagInfo "dashboard -> addVehicle : " (show driver.id)

@@ -39,15 +39,19 @@ import qualified Domain.Types.RegistrationToken as SR
 import Environment
 import Kernel.Beam.Functions
 import Kernel.External.AadhaarVerification.Interface.Types
+import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Types.APISuccess (APISuccess (Success))
 import Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
+import Kernel.Utils.Common
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import Storage.Queries.DriverOnboarding.Image as QImage
 import qualified Storage.Queries.FleetDriverAssociation as QFDV
+import qualified Storage.Queries.Person as QPerson
 import qualified Tools.AadhaarVerification as AadhaarVerification
+import Tools.Error
 
 documentsList :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Flow Common.DocumentsListResponse
 documentsList merchantShortId _ driverId = do
@@ -144,9 +148,17 @@ verifyAadhaarOtp merchantShortId opCity driverId_ req = do
         }
   pure (convertSubmitOtp res)
 
-auth :: ShortId DM.Merchant -> Context.City -> Common.AuthReq -> Flow Common.AuthRes
-auth merchantShortId opCity req = do
+auth :: ShortId DM.Merchant -> Context.City -> Bool -> Text -> Common.AuthReq -> Flow Common.AuthRes
+auth merchantShortId opCity mbFleet fleetOwnerId req = do
   merchant <- findMerchantByShortId merchantShortId
+  when mbFleet $ do
+    mobileNumberHash <- getDbHash req.mobileNumber
+    driver <- runInReplica $ QPerson.findByMobileNumberAndMerchant req.mobileCountryCode mobileNumberHash merchant.id
+    whenJust driver $ \d -> do
+      assoc <- QFDV.findByDriverIdAndFleetOwnerId d.id fleetOwnerId
+      whenJust assoc $ \a -> do
+        when a.isActive $ do
+          throwError DriverAlreadyAssociatedWithFleet
   res <-
     DReg.auth
       True

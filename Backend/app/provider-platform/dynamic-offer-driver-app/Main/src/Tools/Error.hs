@@ -758,6 +758,8 @@ instance IsAPIError SubscriptionError
 data FleetErrors
   = FleetOwnerVehicleMismatchError Text
   | VehicleBelongsToAnotherFleet
+  | DriverAlreadyAssociatedWithFleet
+  | VehicleAlreadyLinkedToDriver
   deriving (Eq, Show, IsBecknAPIError)
 
 instanceExceptionWithParent 'HTTPException ''FleetErrors
@@ -766,14 +768,20 @@ instance IsBaseError FleetErrors where
   toMessage = \case
     FleetOwnerVehicleMismatchError fleetOwnerId -> Just $ "Vehicle does not belong to fleet owner with id " <> show fleetOwnerId
     VehicleBelongsToAnotherFleet -> Just "Vehicle is already part of another fleet"
+    DriverAlreadyAssociatedWithFleet -> Just "Driver is already associated with a fleet"
+    VehicleAlreadyLinkedToDriver -> Just "Vehicle is already linked to a driver"
 
 instance IsHTTPError FleetErrors where
   toErrorCode = \case
     FleetOwnerVehicleMismatchError _ -> "FLEET_OWNER_AND_VEHICLE_MISMATCH"
     VehicleBelongsToAnotherFleet -> "FLEET_OWNER_AND_VEHICLE_MISMATCH"
+    DriverAlreadyAssociatedWithFleet -> "DRIVER_ALREADY_ASSOCIATED_WITH_FLEET"
+    VehicleAlreadyLinkedToDriver -> "VEHICLE_ALREADY_LINKED_TO_DRIVER"
   toHttpCode = \case
     FleetOwnerVehicleMismatchError _ -> E400
     VehicleBelongsToAnotherFleet -> E400
+    DriverAlreadyAssociatedWithFleet -> E400
+    VehicleAlreadyLinkedToDriver -> E400
 
 instance IsAPIError FleetErrors
 

@@ -149,7 +149,10 @@ auth :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.AuthReq -> Fl
 auth merchantShortId opCity apiTokenInfo req =
   withFlowHandlerAPI $ do
     checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-    Client.callDriverOfferBPP checkedMerchantId opCity (.driverRegistration.auth) req
+    encPerson <- QP.findById apiTokenInfo.personId >>= fromMaybeM (PersonNotFound apiTokenInfo.personId.getId)
+    role <- QRole.findById encPerson.roleId >>= fromMaybeM (RoleNotFound encPerson.roleId.getId)
+    let mbFleet = role.dashboardAccessType == DRole.FLEET_OWNER
+    Client.callDriverOfferBPP checkedMerchantId opCity (.driverRegistration.auth) mbFleet apiTokenInfo.personId.getId req
 
 verify :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Text -> Common.AuthVerifyReq -> FlowHandler APISuccess
 verify merchantShortId opCity apiTokenInfo authId req =

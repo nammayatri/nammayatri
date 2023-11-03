@@ -181,7 +181,7 @@ data DriverRegistrationAPIs = DriverRegistrationAPIs
     registerRC :: Id Driver.Driver -> Registration.RegisterRCReq -> Euler.EulerClient APISuccess,
     generateAadhaarOtp :: Id Driver.Driver -> Registration.GenerateAadhaarOtpReq -> Euler.EulerClient Registration.GenerateAadhaarOtpRes,
     verifyAadhaarOtp :: Id Driver.Driver -> Registration.VerifyAadhaarOtpReq -> Euler.EulerClient Registration.VerifyAadhaarOtpRes,
-    auth :: Registration.AuthReq -> Euler.EulerClient Registration.AuthRes,
+    auth :: Bool -> Text -> Registration.AuthReq -> Euler.EulerClient Registration.AuthRes,
     verify :: Text -> Bool -> Text -> Registration.AuthVerifyReq -> Euler.EulerClient APISuccess
   }
 

@@ -33,8 +33,15 @@ type API =
     :<|> Common.RegisterRCAPI
     :<|> Common.GenerateAadhaarOtpAPI
     :<|> Common.VerifyAadhaarOtpAPI
-    :<|> Common.AuthAPI
+    :<|> AuthAPI
     :<|> VerifyAPI
+
+type AuthAPI =
+  Capture "mbFleet" Bool
+    :> Capture "fleetOwnerId" Text
+    :> "auth"
+    :> ReqBody '[JSON] Common.AuthReq
+    :> Post '[JSON] Common.AuthRes
 
 type VerifyAPI =
   Capture "authId" Text
@@ -77,8 +84,8 @@ generateAadhaarOtp merchantShortId opCity driverId_ = withFlowHandlerAPI . DReg.
 verifyAadhaarOtp :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Common.VerifyAadhaarOtpReq -> FlowHandler Common.VerifyAadhaarOtpRes
 verifyAadhaarOtp merchantShortId opCity driverId_ = withFlowHandlerAPI . DReg.verifyAadhaarOtp merchantShortId opCity driverId_
 
-auth :: ShortId DM.Merchant -> Context.City -> Common.AuthReq -> FlowHandler Common.AuthRes
-auth merchantShortId opCity = withFlowHandlerAPI . DReg.auth merchantShortId opCity
+auth :: ShortId DM.Merchant -> Context.City -> Bool -> Text -> Common.AuthReq -> FlowHandler Common.AuthRes
+auth merchantShortId opCity mbFleet fleetOwnerId req = withFlowHandlerAPI $ DReg.auth merchantShortId opCity mbFleet fleetOwnerId req
 
 verify :: Text -> Bool -> Text -> Common.AuthVerifyReq -> FlowHandler APISuccess
 verify authId mbFleet fleetOwnerId req = withFlowHandlerAPI $ DReg.verify authId mbFleet fleetOwnerId req
