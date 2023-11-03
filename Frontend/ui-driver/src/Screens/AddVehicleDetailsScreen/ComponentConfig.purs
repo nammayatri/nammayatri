@@ -29,6 +29,7 @@ import Styles.Colors as Color
 import Components.ReferralMobileNumber as ReferralMobileNumber
 import MerchantConfig.Utils (getValueFromConfig)
 import Data.String as DS
+import Screens.AddVehicleDetailsScreen.Controller (validateRegistrationNumber)
 
 primaryButtonConfig :: ST.AddVehicleDetailsScreenState -> PrimaryButton.Config
 primaryButtonConfig state = let 
@@ -37,7 +38,7 @@ primaryButtonConfig state = let
     activate = ((toLower(state.data.vehicle_registration_number) == toLower(state.data.reEnterVehicleRegistrationNumber)) && 
                 (state.data.dateOfRegistration /= Just "") && 
                 state.data.vehicle_registration_number /= "" &&
-                ((DS.length state.data.vehicle_registration_number >= 2) && (DS.take 2 state.data.vehicle_registration_number == (getValueFromConfig "RC_VALIDATION_TEXT"))) &&
+                ((DS.length state.data.vehicle_registration_number >= 2) && validateRegistrationNumber (DS.take 2 state.data.vehicle_registration_number)) &&
                 imageUploadCondition)
     primaryButtonConfig' = config 
       { textConfig{ text = (getString NEXT)}

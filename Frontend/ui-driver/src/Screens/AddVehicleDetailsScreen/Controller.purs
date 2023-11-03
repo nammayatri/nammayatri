@@ -27,8 +27,8 @@ import Components.ReferralMobileNumber.Controller as ReferralMobileNumberControl
 import Components.RegistrationModal.Controller as RegistrationModalController
 import Components.SelectVehicleTypeModal.Controller as SelectVehicleTypeModal
 import Components.TutorialModal.Controller as TutorialModalController
-import Data.String (length)
-import Data.String (length)
+import Data.Array (elem)
+import Data.String (length, split, Pattern(..))
 import Data.String.CodeUnits (charAt)
 import Debug (spy)
 import Effect (Effect)
@@ -36,7 +36,7 @@ import Effect.Class (liftEffect)
 import Engineering.Helpers.Commons (getNewIDWithTag)
 import JBridge (disableActionEditText, hideKeyboardOnNavigation, openWhatsAppSupport, showDialer, uploadFile)
 import Log (printLog, trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppTextInput, trackAppScreenEvent)
-import MerchantConfig.Utils (Merchant(..), getMerchant)
+import MerchantConfig.Utils (Merchant(..), getMerchant, getValueFromConfig)
 import Prelude (Unit, bind, pure, ($), class Show, unit, (/=), discard, (==), (&&), (||), not, (<=), (>), (<>), (<), show, (+))
 import PrestoDOM (Eval, Props, continue, continueWithCmd, exit, updateAndExit)
 import PrestoDOM.Types.Core (class Loggable)
@@ -273,3 +273,8 @@ overrides _ push state = []
 
 dateFormat :: Int -> String
 dateFormat date = if date < 10 then "0" <> (show date) else (show date)
+
+validateRegistrationNumber :: String -> Boolean
+validateRegistrationNumber regNum =
+  let values = split (Pattern "|") $ getValueFromConfig ("RC_VALIDATION_TEXT")
+  in regNum `elem` values
