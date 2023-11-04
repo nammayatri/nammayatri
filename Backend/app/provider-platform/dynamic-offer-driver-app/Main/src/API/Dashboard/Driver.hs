@@ -158,7 +158,6 @@ type DriverInfoAPI =
 
 type FleetUnlinkVehicleAPI =
   Capture "fleetOwnerId" Text
-    :> Capture "vehicleNo" Text
     :> Capture "driverId" (Id Common.Driver)
     :> Capture "vehicleNo" Text
     :> "fleet"
@@ -368,7 +367,7 @@ getAllDriverForFleet :: ShortId DM.Merchant -> Text -> Maybe Int -> Maybe Int ->
 getAllDriverForFleet merchantId fleetOwnerId mbLimit mbOffset = withFlowHandlerAPI $ DDriver.getAllDriverForFleet merchantId fleetOwnerId mbLimit mbOffset
 
 fleetUnlinkVehicle :: ShortId DM.Merchant -> Text -> Id Common.Driver -> Text -> FlowHandler APISuccess
-fleetUnlinkVehicle merchantShortId fleetOwnerId vehicleNo = withFlowHandlerAPI . DDriver.fleetUnlinkVehicle merchantShortId fleetOwnerId vehicleNo
+fleetUnlinkVehicle merchantShortId fleetOwnerId driverId = withFlowHandlerAPI . DDriver.fleetUnlinkVehicle merchantShortId fleetOwnerId driverId
 
 fleetRemoveVehicle :: ShortId DM.Merchant -> Text -> Text -> FlowHandler APISuccess
 fleetRemoveVehicle merchantShortId fleetOwnerId = withFlowHandlerAPI . DDriver.fleetRemoveVehicle merchantShortId fleetOwnerId
