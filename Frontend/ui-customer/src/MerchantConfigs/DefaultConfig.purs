@@ -71,6 +71,7 @@ config =
     , numberPlateBackground : "#E9BE4D"
     , showCancelPrevention : false
     , showTrackingButton : true
+    , specialZoneQuoteExpirySeconds : 3600
     }
   , ratingConfig : 
     { secondaryButtonTextColor : "#FCC32C"

@@ -100,6 +100,7 @@ type DriverInfoConfig = {
   callWidth :: Int
 , numberPlateBackground :: String
 , showCancelPrevention :: Boolean
+, specialZoneQuoteExpirySeconds :: Int
 }
 
 type SearchLocationConfig = {
