@@ -614,7 +614,7 @@ waitTimeView push state =
       , afterRender
             ( \action -> do
                 if state.props.currentSearchResultType == QUOTES && (isLocalStageOn RideAccepted) then do
-                  _ <- zoneOtpExpiryTimer (getExpiryTime state.data.bookingCreatedAt true) 1800 push ZoneOTPExpiryAction
+                  _ <- zoneOtpExpiryTimer (getExpiryTime state.data.bookingCreatedAt true) state.data.config.driverInfoConfig.specialZoneQuoteExpirySeconds push ZoneOTPExpiryAction
                   pure unit
                   else pure unit
             )

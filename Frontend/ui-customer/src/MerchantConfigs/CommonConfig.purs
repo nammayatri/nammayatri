@@ -53,7 +53,8 @@ commonConfig =
         , autoVariantEnabled : true
         , showNearByDrivers : false
         , driverInfoConfig : {
-          showCancelPrevention : true
+          showCancelPrevention : true,
+          specialZoneQuoteExpirySeconds : 3600
         }
         , navigationAppConfig : {
             android : {  
