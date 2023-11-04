@@ -99,7 +99,8 @@ window.getMerchantConfig = function () {
       "showNumberPlateSuffix": false,
       "callHeight": 24,
       "callWidth": 24,
-      "showTrackingButton" : true
+      "showTrackingButton" : true,
+      "specialZoneQuoteExpirySeconds" : 3600
     },
     "quoteListModelBackground": "#2C2F3A",
     "confirmPickUpLocationBorder": "#E5E7EB",
