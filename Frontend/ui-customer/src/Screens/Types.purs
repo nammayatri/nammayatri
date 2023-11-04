@@ -568,7 +568,7 @@ type HomeScreenStateData =
   , recentSearchs :: RecentlySearchedObject
   , selectList :: Array QuoteAPIEntity
   , quoteListModelState :: Array QuoteListItemState
-  , driverInfoCardState :: DriverInfoCard
+  , driverInfoCardState :: Maybe DriverInfoCard
   , rideRatingState :: RatingCard
   , settingSideBar :: SettingSideBarState
   , sourceAddress :: Address

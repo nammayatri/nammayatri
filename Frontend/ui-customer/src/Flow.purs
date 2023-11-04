@@ -278,15 +278,21 @@ currentRideFlow rideAssigned = do
       if not (null listResp.list) then do
         when (not rideAssigned) $ lift $ lift $ liftFlow $ logEvent logField_ "ny_active_ride_with_idle_state"
         let (RideBookingRes resp) = (fromMaybe dummyRideBooking (listResp.list !! 0))
-            status = (fromMaybe dummyRideAPIEntity ((resp.rideList) !! 0))^._status
-            rideStatus = if status == "NEW" then RideAccepted else RideStarted
-            newState = state{data{driverInfoCardState = getDriverInfo state.data.specialZoneSelectedVariant (RideBookingRes resp) ((length resp.rideList) == 0 )
+            status = dummyRideBooking^._status --(fromMaybe dummyRideAPIEntity ((resp.rideList) !! 0))^._status
+            rideStatus = if status == "NEW" then RideAccepted else RideStarted 
+            (RideBookingAPIDetails bookingDetails) = resp.bookingDetails
+            fareProductType = bookingDetails.fareProductType
+            (RideBookingDetails contents) = bookingDetails.contents
+            otpCode = contents.otpCode
+            isSpecialZone = fareProductType == "OneWaySpecialZoneAPIDetails" || resp.status == "CONFIRMED" || isJust otpCode
+            newState = state{data{driverInfoCardState = getDriverInfo state.data.specialZoneSelectedVariant (RideBookingRes resp) isSpecialZone
                 , finalAmount = fromMaybe 0 ((fromMaybe dummyRideAPIEntity (resp.rideList !!0) )^. _computedPrice)
-                , currentSearchResultType = if (length resp.rideList) == 0 then QUOTES else ESTIMATES},
+                , currentSearchResultType = if isSpecialZone then QUOTES else ESTIMATES},
                   props{currentStage = rideStatus
                   , rideRequestFlow = true
                   , bookingId = resp.id
                   , isPopUp = NoPopUp
+                  , isSpecialZone = isSpecialZone
                   , zoneType = getSpecialTag resp.specialLocationTag
                   }}
         when (not rideAssigned) $ do
@@ -294,22 +300,7 @@ currentRideFlow rideAssigned = do
         _ <- pure $ spy "Active api" listResp
         modifyScreenState $ HomeScreenStateType (\homeScreen → newState)
         updateLocalStage rideStatus
-        let (RideBookingAPIDetails bookingDetails) = resp.bookingDetails
-        let (RideBookingDetails contents) = bookingDetails.contents
-        let otpCode = contents.otpCode
-        let rideList =  (resp.rideList !!0)
-        case rideList of
-          Nothing -> do
-            case otpCode of
-              Just otp' -> do
-                _ <- pure $ setValueToLocalStore TRACKING_ENABLED "True"
-                modifyScreenState $ HomeScreenStateType (\homeScreen → homeScreen{props{isSpecialZone = true, isInApp = true}, data{driverInfoCardState{otp = otp'}}})
-              Nothing -> pure unit
-          Just (RideAPIEntity _) ->
-            if otpCode /= Nothing then do
-              _ <- pure $ setValueToLocalStore TRACKING_ENABLED "True"
-              modifyScreenState $ HomeScreenStateType (\homeScreen → homeScreen{props{isSpecialZone = true,isInApp = true }}) else
-              pure unit
+        when isSpecialZone $ setValueToLocalStore TRACKING_ENABLED "True"
       else if ((getValueToLocalStore RATING_SKIPPED) == "false") then do
         updateLocalStage HomeScreen
         rideBookingListResponse <- lift $ lift $ Remote.rideBookingList "1" "0" "false"
@@ -334,45 +325,47 @@ currentRideFlow rideAssigned = do
               else pure unit
             when (isNothing currRideListItem.rideRating) $ do
               when (resp.status /= "CANCELLED" && length listResp.list > 0) $ do
-                modifyScreenState $ HomeScreenStateType (\homeScreen → homeScreen{
-                    props { currentStage = RideCompleted
-                          , estimatedDistance = contents.estimatedDistance
-                          , zoneType = getSpecialTag resp.specialLocationTag}
-                  , data { rideRatingState
-                          { driverName = currRideListItem.driverName
-                          , rideId = currRideListItem.id
-                          , finalAmount = (fromMaybe 0 currRideListItem.computedPrice)
-                          , source = decodeAddress (Booking resp.fromLocation)
-                          , destination = (decodeAddress (Booking (resp.bookingDetails ^._contents^._toLocation)))
-                          , vehicleNumber = (currRideListItem.vehicleNumber)
-                          , status = (currRideListItem.status)
-                          , shortRideId = currRideListItem.shortRideId
-                          , rideEndTimeUTC = ""
-                          , offeredFare = resp.estimatedTotalFare
-                          , distanceDifference = differenceOfDistance
-                          , bookingId = resp.id
-                          , feedback = ""
-                          , rideStartTime = case currRideListItem.rideStartTime of
-                                              Just startTime -> (convertUTCtoISC startTime "h:mm A")
+                modifyScreenState $ HomeScreenStateType (\homeScreen → do
+                  let driverInfo = fromMaybe HomeScreenData.dummyDriverInfo homeScreen.data.driverInfoCardState
+                  homeScreen{
+                      props { currentStage = RideCompleted
+                            , estimatedDistance = contents.estimatedDistance
+                            , zoneType = getSpecialTag resp.specialLocationTag}
+                    , data { rideRatingState
+                            { driverName = currRideListItem.driverName
+                            , rideId = currRideListItem.id
+                            , finalAmount = (fromMaybe 0 currRideListItem.computedPrice)
+                            , source = decodeAddress (Booking resp.fromLocation)
+                            , destination = (decodeAddress (Booking (resp.bookingDetails ^._contents^._toLocation)))
+                            , vehicleNumber = (currRideListItem.vehicleNumber)
+                            , status = (currRideListItem.status)
+                            , shortRideId = currRideListItem.shortRideId
+                            , rideEndTimeUTC = ""
+                            , offeredFare = resp.estimatedTotalFare
+                            , distanceDifference = differenceOfDistance
+                            , bookingId = resp.id
+                            , feedback = ""
+                            , rideStartTime = case currRideListItem.rideStartTime of
+                                                Just startTime -> (convertUTCtoISC startTime "h:mm A")
+                                                Nothing        -> ""
+                            , rideEndTime   = case currRideListItem.rideEndTime of
+                                                Just endTime   -> " " <>(convertUTCtoISC endTime "h:mm A")
+                                                Nothing        -> ""
+                            , rideStartDate = case currRideListItem.rideStartTime of
+                                                Just startTime ->( (fromMaybe "" ((split (Pattern ",") (convertUTCtoISC startTime "llll")) !!0 )) <> ", " <>  (convertUTCtoISC startTime "Do MMM") )
+                                                Nothing        -> ""
+                            , dateDDMMYY =  case currRideListItem.rideStartTime of
+                                              Just startTime -> (convertUTCtoISC startTime "DD/MM/YYYY")
                                               Nothing        -> ""
-                          , rideEndTime   = case currRideListItem.rideEndTime of
-                                              Just endTime   -> " " <>(convertUTCtoISC endTime "h:mm A")
-                                              Nothing        -> ""
-                          , rideStartDate = case currRideListItem.rideStartTime of
-                                              Just startTime ->( (fromMaybe "" ((split (Pattern ",") (convertUTCtoISC startTime "llll")) !!0 )) <> ", " <>  (convertUTCtoISC startTime "Do MMM") )
-                                              Nothing        -> ""
-                          , dateDDMMYY =  case currRideListItem.rideStartTime of
-                                            Just startTime -> (convertUTCtoISC startTime "DD/MM/YYYY")
-                                            Nothing        -> ""
-                          }
-                          , config = config
-                          , finalAmount = (fromMaybe 0 currRideListItem.computedPrice)
-                          , driverInfoCardState {
-                            price = resp.estimatedTotalFare,
-                            rideId = currRideListItem.id
-                          }
-                          , ratingViewState { rideBookingRes = (RideBookingRes resp)}
-                          }
+                            }
+                            , config = config
+                            , finalAmount = (fromMaybe 0 currRideListItem.computedPrice)
+                            , driverInfoCardState = Just $ driverInfo{
+                              price = resp.estimatedTotalFare,
+                              rideId = currRideListItem.id
+                            }
+                            , ratingViewState { rideBookingRes = (RideBookingRes resp)}
+                            }
                 })
                 updateLocalStage RideCompleted
           Left err -> updateLocalStage HomeScreen
@@ -954,17 +947,20 @@ homeScreenFlow = do
       _ <- pure $ setValueToLocalStore TRACKING_ENABLED "True"
       _ <- pure $ setValueToLocalStore TRACKING_DRIVER "False"
       _ <- pure $ setValueToLocalStore DRIVER_ARRIVAL_ACTION "TRIGGER_DRIVER_ARRIVAL"
-      let srcLat = state.data.driverInfoCardState.sourceLat
-          srcLon = state.data.driverInfoCardState.sourceLng
-          dstLat = state.data.driverInfoCardState.destinationLat
-          dstLon = state.data.driverInfoCardState.destinationLng
       updateLocalStage state.props.currentStage
       if spy "ONGOING_RIDEONGOING_RIDE CURRENT" state.props.currentStage == RideCompleted then
         do
-          let sourceSpecialTagIcon = specialLocationIcons state.props.zoneType.sourceTag
-              destSpecialTagIcon = specialLocationIcons state.props.zoneType.destinationTag
-          _ <- pure $ spy "INSIDE IF OF ONGOING" state.props.currentStage
-          _ <- Remote.drawMapRoute srcLat srcLon dstLat dstLon (Remote.normalRoute "") "DRIVER_LOCATION_UPDATE" "" "" Nothing "pickup" (specialLocationConfig sourceSpecialTagIcon destSpecialTagIcon true getPolylineAnimationConfig) 
+          case state.data.driverInfoCardState of
+            Just driverInfo -> do
+              let srcLat = driverInfo.sourceLat
+                  srcLon = driverInfo.sourceLng
+                  dstLat = driverInfo.destinationLat
+                  dstLon = driverInfo.destinationLng
+                  sourceSpecialTagIcon = specialLocationIcons state.props.zoneType.sourceTag
+                  destSpecialTagIcon = specialLocationIcons state.props.zoneType.destinationTag
+              _ <- pure $ spy "INSIDE IF OF ONGOING" state.props.currentStage
+              void $ Remote.drawMapRoute srcLat srcLon dstLat dstLon (Remote.normalRoute "") "DRIVER_LOCATION_UPDATE" "" "" Nothing "pickup" (specialLocationConfig sourceSpecialTagIcon destSpecialTagIcon true getPolylineAnimationConfig)
+            Nothing -> pure unit
           homeScreenFlow
         else if state.props.currentStage == HomeScreen then
           do
@@ -981,7 +977,7 @@ homeScreenFlow = do
       _ <- updateLocalStage HomeScreen
       liftFlowBT $ logEventWithMultipleParams logField_ "ny_user_rider_cancellation" $ [ {key : "Reason code", value : unsafeToForeign state.props.cancelReasonCode},
                                                                                                       {key : "Additional info", value : unsafeToForeign state.props.cancelDescription},
-                                                                                                      {key : "Pickup", value : unsafeToForeign state.data.driverInfoCardState.source},
+                                                                                                      {key : "Pickup", value : unsafeToForeign (fromMaybe HomeScreenData.dummyDriverInfo state.data.driverInfoCardState).source},
                                                                                                       {key : "Estimated Ride Distance" , value : unsafeToForeign state.data.rideDistance},
                                                                                                       {key : "Night Ride", value : unsafeToForeign state.data.rateCard.nightCharges}]
       _ <- Remote.cancelRideBT (Remote.makeCancelRequest state) (state.props.bookingId)
@@ -992,12 +988,7 @@ homeScreenFlow = do
       removeChatService ""
       updateUserInfoToState state
       homeScreenFlow
-    FCM_NOTIFICATION notification state-> do
-        let rideID = state.data.driverInfoCardState.rideId
-            srcLat = state.data.driverInfoCardState.sourceLat
-            srcLon = state.data.driverInfoCardState.sourceLng
-            dstLat = state.data.driverInfoCardState.destinationLat
-            dstLon = state.data.driverInfoCardState.destinationLng
+    FCM_NOTIFICATION notification state -> do
         _ <- pure $ setValueToLocalStore TRACKING_ID (getNewTrackingId unit)
         _ <- pure $ setValueToLocalStore FINDING_QUOTES_POLLING "false"
         _ <- pure $ setValueToLocalStore TRACKING_DRIVER "False"
@@ -1023,6 +1014,7 @@ homeScreenFlow = do
                                       when state.props.isSpecialZone $ currentRideFlow true
                                       homeScreenFlow
             "TRIP_FINISHED"       -> do -- TRIP FINISHED
+                                      let rideID = (fromMaybe HomeScreenData.dummyDriverInfo state.data.driverInfoCardState).rideId
                                       if (getValueToLocalStore HAS_TAKEN_FIRST_RIDE == "false") then do
                                         _ <- pure $ metaLogEvent "ny_user_first_ride_completed"
                                         (GetProfileRes response) <- Remote.getProfileBT ""
@@ -1031,7 +1023,7 @@ homeScreenFlow = do
                                       let sourceSpecialTagIcon = specialLocationIcons state.props.zoneType.sourceTag
                                           destSpecialTagIcon = specialLocationIcons state.props.zoneType.destinationTag
                                       _ <- pure $ metaLogEvent "ny_user_ride_completed"
-                                      _ <- Remote.drawMapRoute srcLat srcLon dstLat dstLon (Remote.normalRoute "") "NORMAL" "" "" Nothing "pickup" (specialLocationConfig sourceSpecialTagIcon destSpecialTagIcon false getPolylineAnimationConfig) 
+                                      -- _ <- Remote.drawMapRoute srcLat srcLon dstLat dstLon (Remote.normalRoute "") "NORMAL" "" "" Nothing "pickup" (specialLocationConfig sourceSpecialTagIcon destSpecialTagIcon false getPolylineAnimationConfig) -- NOTE removed as we don't have any map view in ride completed screen
                                       _ <- updateLocalStage HomeScreen
                                       if (state.props.bookingId /= "") then do
                                         (RideBookingRes resp) <- Remote.rideBookingBT (state.props.bookingId)
@@ -1043,7 +1035,7 @@ homeScreenFlow = do
                                         lift $ lift $ triggerRideStatusEvent notification (Just finalAmount) (Just state.props.bookingId) $ getScreenFromStage state.props.currentStage
                                         setValueToLocalStore PICKUP_DISTANCE "0"
                                         liftFlowBT $ logEventWithMultipleParams logField_ "ny_rider_ride_completed" (rideCompletedDetails (RideBookingRes resp))
-                                        modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{startedAt = convertUTCtoISC (fromMaybe "" resp.rideStartTime ) "h:mm A", startedAtUTC = fromMaybe "" resp.rideStartTime ,endedAt = convertUTCtoISC (fromMaybe "" resp.rideEndTime ) "h:mm A", finalAmount = finalAmount, rideRatingState {driverName = ride.driverName, rideId = ride.id , distanceDifference = differenceOfDistance} , ratingViewState { rideBookingRes = (RideBookingRes resp)}, driverInfoCardState {initDistance = Nothing}},props{currentStage = RideCompleted, estimatedDistance = contents.estimatedDistance}})
+                                        modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{startedAt = convertUTCtoISC (fromMaybe "" resp.rideStartTime ) "h:mm A", startedAtUTC = fromMaybe "" resp.rideStartTime ,endedAt = convertUTCtoISC (fromMaybe "" resp.rideEndTime ) "h:mm A", finalAmount = finalAmount, rideRatingState {driverName = ride.driverName, rideId = ride.id , distanceDifference = differenceOfDistance} , ratingViewState { rideBookingRes = (RideBookingRes resp)}, driverInfoCardState = Nothing},props{currentStage = RideCompleted, estimatedDistance = contents.estimatedDistance}})
                                         homeScreenFlow
                                         else homeScreenFlow
             "CANCELLED_PRODUCT"   -> do -- REMOVE POLYLINES
@@ -1291,13 +1283,16 @@ homeScreenFlow = do
         savedLocationFlow
     OPEN_GOOGLE_MAPS state -> do
       _ <- lift $ lift $ liftFlow $ logEvent logField_ "ny_user_ride_track_gmaps"
-      (GetDriverLocationResp resp) <- Remote.getDriverLocationBT (state.data.driverInfoCardState.rideId)
-      let sourceLat = (resp^._lat)
-          sourceLng = (resp^._lon)
-          destLat = if state.props.currentStage == RideAccepted then state.data.driverInfoCardState.sourceLat else state.data.driverInfoCardState.destinationLat
-          destLng = if state.props.currentStage == RideAccepted then state.data.driverInfoCardState.sourceLng else state.data.driverInfoCardState.destinationLng
-      _ <- lift $ lift $ fork $ liftFlow $ openNavigation sourceLat sourceLng destLat destLng "DRIVE"
-      homeScreenFlow
+      case state.data.driverInfoCardState of
+        Just driverInfo -> do
+          (GetDriverLocationResp resp) <- Remote.getDriverLocationBT (driverInfo.rideId)
+          let srcLat = (resp^._lat)
+              srcLon = (resp^._lon)
+              dstLat = if state.props.currentStage == RideAccepted then driverInfo.sourceLat else driverInfo.destinationLat
+              dstLon = if state.props.currentStage == RideAccepted then driverInfo.sourceLng else driverInfo.destinationLng
+          _ <- lift $ lift $ fork $ liftFlow $ openNavigation srcLat srcLon dstLat dstLon "DRIVE"
+          homeScreenFlow
+        Nothing -> homeScreenFlow
     IN_APP_TRACK_STATUS state -> do
       case state.props.currentStage of
           RideAccepted -> do
@@ -1398,17 +1393,26 @@ homeScreenFlow = do
                 _     ->   modifyScreenState $ HomeScreenStateType (\homeScreen -> state{data{ selectedLocationListItem = Just selectedLocationListItem{lat = Just (placeLatLong.lat), lon = Just (placeLatLong.lon) }}})
               getDistanceDiff  state{data{ saveFavouriteCard{selectedItem{lat = Just (placeLatLong.lat), lon =Just (placeLatLong.lon) }},selectedLocationListItem = Just selectedLocationListItem{lat = Just (placeLatLong.lat), lon = Just (placeLatLong.lon) }}} (placeLatLong.lat) (placeLatLong.lon)
     GO_TO_CALL_EMERGENCY_CONTACT state -> do
-        (UserSosRes res) <- Remote.userSosBT (Remote.makeUserSosReq (Remote.createUserSosFlow "EmergencyContact" state.props.emergencyHelpModelState.currentlySelectedContact.phoneNo) state.data.driverInfoCardState.rideId)
-        modifyScreenState $ HomeScreenStateType (\homeScreen -> state{props{emergencyHelpModelState{sosId = res.sosId}}})
-        homeScreenFlow
+      case state.data.driverInfoCardState of
+        Just driverInfo -> do
+          (UserSosRes res) <- Remote.userSosBT (Remote.makeUserSosReq (Remote.createUserSosFlow "EmergencyContact" state.props.emergencyHelpModelState.currentlySelectedContact.phoneNo) driverInfo.rideId)
+          modifyScreenState $ HomeScreenStateType (\homeScreen -> state{props{emergencyHelpModelState{sosId = res.sosId}}})
+          homeScreenFlow
+        Nothing -> homeScreenFlow
     GO_TO_CALL_POLICE state -> do
-        (UserSosRes res) <- Remote.userSosBT (Remote.makeUserSosReq (Remote.createUserSosFlow "Police" "") state.data.driverInfoCardState.rideId)
-        modifyScreenState $ HomeScreenStateType (\homeScreen -> state{props{emergencyHelpModelState{sosId = res.sosId}}})
-        homeScreenFlow
+      case state.data.driverInfoCardState of
+        Just driverInfo -> do
+          (UserSosRes res) <- Remote.userSosBT (Remote.makeUserSosReq (Remote.createUserSosFlow "Police" "") driverInfo.rideId)
+          modifyScreenState $ HomeScreenStateType (\homeScreen -> state{props{emergencyHelpModelState{sosId = res.sosId}}})
+          homeScreenFlow
+        Nothing -> homeScreenFlow
     GO_TO_CALL_SUPPORT state -> do
-        (UserSosRes res) <- Remote.userSosBT (Remote.makeUserSosReq (Remote.createUserSosFlow "CustomerCare" "") state.data.driverInfoCardState.rideId)
-        modifyScreenState $ HomeScreenStateType (\homeScreen -> state{props{emergencyHelpModelState{sosId = res.sosId}}})
-        homeScreenFlow
+      case state.data.driverInfoCardState of
+        Just driverInfo -> do
+          (UserSosRes res) <- Remote.userSosBT (Remote.makeUserSosReq (Remote.createUserSosFlow "CustomerCare" "") driverInfo.rideId)
+          modifyScreenState $ HomeScreenStateType (\homeScreen -> state{props{emergencyHelpModelState{sosId = res.sosId}}})
+          homeScreenFlow
+        Nothing -> homeScreenFlow
     GO_TO_SOS_STATUS state -> do
         res <- Remote.userSosStatusBT state.props.emergencyHelpModelState.sosId (Remote.makeSosStatus state.props.emergencyHelpModelState.sosStatus)
         homeScreenFlow
@@ -1447,7 +1451,9 @@ homeScreenFlow = do
         Left (err) -> homeScreenFlow
     GO_TO_REFERRAL -> referralScreenFlow
     ON_CALL state callType -> do
-      (OnCallRes res) <- Remote.onCallBT (Remote.makeOnCallReq state.data.driverInfoCardState.rideId (show callType))
+      case state.data.driverInfoCardState of
+        Just driverInfo -> void $  Remote.onCallBT (Remote.makeOnCallReq driverInfo.rideId (show callType))
+        Nothing -> pure unit
       homeScreenFlow
     TRIGGER_PERMISSION_FLOW flowType -> do 
       modifyScreenState $ PermissionScreenStateType (\permissionScreen -> permissionScreen{stage = flowType})
@@ -2145,13 +2151,16 @@ referralScreenFlow = do
 drawDottedRoute :: HomeScreenState -> FlowBT String Unit
 drawDottedRoute state = do
   _ <- pure $ removeAllPolylines ""
-  let destMarker = if state.props.currentStage == RideAccepted then "src_marker" else "dest_marker"
-      srcMarker = "ny_ic_auto_map"
-      srcLat = state.data.driverInfoCardState.driverLat
-      srcLng = state.data.driverInfoCardState.driverLng
-      destLat = if state.props.currentStage == RideAccepted then state.data.driverInfoCardState.sourceLat else state.data.driverInfoCardState.destinationLat
-      destLng = if state.props.currentStage == RideAccepted then state.data.driverInfoCardState.sourceLng else state.data.driverInfoCardState.destinationLng
-  lift $ lift $ liftFlow $ drawRoute (Remote.walkCoordinate srcLat srcLng destLat destLng) "DOT" "#323643" false srcMarker destMarker 8 "DRIVER_LOCATION_UPDATE" "" "" (specialLocationConfig "" "" false getPolylineAnimationConfig) 
+  case state.data.driverInfoCardState of
+    Just driverInfo -> do
+      let destMarker = if state.props.currentStage == RideAccepted then "src_marker" else "dest_marker"
+          srcMarker = "ny_ic_auto_map"
+          srcLat = driverInfo.driverLat
+          srcLng = driverInfo.driverLng
+          destLat = if state.props.currentStage == RideAccepted then driverInfo.sourceLat else driverInfo.destinationLat
+          destLng = if state.props.currentStage == RideAccepted then driverInfo.sourceLng else driverInfo.destinationLng
+      lift $ lift $ liftFlow $ drawRoute (Remote.walkCoordinate srcLat srcLng destLat destLng) "DOT" "#323643" false srcMarker destMarker 8 "DRIVER_LOCATION_UPDATE" "" "" (specialLocationConfig "" "" false getPolylineAnimationConfig) 
+    Nothing -> pure unit
 
 isForLostAndFound :: Boolean
 isForLostAndFound = true

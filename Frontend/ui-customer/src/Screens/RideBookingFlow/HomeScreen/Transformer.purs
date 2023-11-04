@@ -109,10 +109,14 @@ getQuote (QuoteAPIEntity quoteEntity) = do
     , appConfig : DC.config
     }
 
-getDriverInfo :: Maybe String -> RideBookingRes -> Boolean -> DriverInfoCard
+getDriverInfo :: Maybe String -> RideBookingRes -> Boolean -> Maybe DriverInfoCard
 getDriverInfo vehicleVariant (RideBookingRes resp) isQuote =
-  let (RideAPIEntity rideList) = fromMaybe  dummyRideAPIEntity ((resp.rideList) DA.!! 0)
-  in  {
+  case ((resp.rideList) DA.!! 0) of
+    Nothing -> if isQuote then Just $ getDriverInfoData vehicleVariant (RideBookingRes resp) dummyRideAPIEntity isQuote else Nothing
+    Just (RideAPIEntity rideList) -> Just $ getDriverInfoData vehicleVariant (RideBookingRes resp) dummyRideAPIEntity isQuote --getDriverInfoData vehicleVariant (RideBookingRes resp) (RideAPIEntity rideList) isQuote 
+
+getDriverInfoData :: Maybe String -> RideBookingRes -> RideAPIEntity -> Boolean -> DriverInfoCard
+getDriverInfoData vehicleVariant (RideBookingRes resp) (RideAPIEntity rideList) isQuote = {
         otp : if isQuote then fromMaybe "" ((resp.bookingDetails)^._contents ^._otpCode) else rideList.rideOtp
       , driverName : if length (fromMaybe "" ((split (Pattern " ") (rideList.driverName)) DA.!! 0)) < 4 then
                         (fromMaybe "" ((split (Pattern " ") (rideList.driverName)) DA.!! 0)) <> " " <> (fromMaybe "" ((split (Pattern " ") (rideList.driverName)) DA.!! 1)) else

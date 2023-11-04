@@ -16,19 +16,19 @@
 module Screens.HomeScreen.ScreenData where
 
 import Common.Types.App (RateCardType(..))
+import Components.ChooseVehicle.Controller (SearchType(..)) as CV
 import Components.LocationListItem.Controller (dummyLocationListState)
 import Components.SettingSideBar.Controller (SettingSideBarState, Status(..))
-import Components.ChooseVehicle.Controller (SearchType(..)) as CV
-import Data.Maybe (Maybe(..))
-import Screens.Types (Contact, DriverInfoCard, HomeScreenState, LocationListItemState, PopupType(..), RatingCard(..), SearchLocationModelType(..), Stage(..), Address, EmergencyHelpModelState,Location, ZoneType(..), SpecialTags, TipViewStage(..), SearchResultType(..))
-import Services.API (DriverOfferAPIEntity(..), QuoteAPIDetails(..), QuoteAPIEntity(..), PlaceName(..), LatLong(..), SpecialLocation(..), QuoteAPIContents(..), RideBookingRes(..), RideBookingAPIDetails(..), RideBookingDetails(..), FareRange(..), FareBreakupAPIEntity(..))
-import Prelude (($) ,negate)
 import Data.Array (head)
-import Prelude(negate)
+import Data.Maybe (Maybe(..))
 import Foreign.Object (empty)
 import MerchantConfig.DefaultConfig as DC
-import Screens.MyRidesScreen.ScreenData (dummyBookingDetails)
+import Prelude (($), negate)
+import Prelude (negate)
 import PrestoDOM (BottomSheetState(..))
+import Screens.MyRidesScreen.ScreenData (dummyBookingDetails)
+import Screens.Types (Contact, DriverInfoCard, HomeScreenState, LocationListItemState, PopupType(..), RatingCard(..), SearchLocationModelType(..), Stage(..), Address, EmergencyHelpModelState, Location, ZoneType(..), SpecialTags, TipViewStage(..), SearchResultType(..))
+import Services.API (DriverOfferAPIEntity(..), QuoteAPIDetails(..), QuoteAPIEntity(..), PlaceName(..), LatLong(..), SpecialLocation(..), QuoteAPIContents(..), RideBookingRes(..), RideBookingAPIDetails(..), RideBookingDetails(..), FareRange(..), FareBreakupAPIEntity(..))
 
 initData :: HomeScreenState
 initData = {
@@ -50,7 +50,7 @@ initData = {
     , previousCurrentLocations : {pastCurrentLocations:[]}
     , selectList : []
     , quoteListModelState : []
-    , driverInfoCardState : dummyDriverInfo
+    , driverInfoCardState : Nothing
     , rideRatingState : dummyPreviousRiderating
     , settingSideBar : dummySettingBar
     , sourceAddress : dummyAddress
