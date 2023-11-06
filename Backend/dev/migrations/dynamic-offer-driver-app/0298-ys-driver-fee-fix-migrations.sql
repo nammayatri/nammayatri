@@ -2,8 +2,9 @@
 ----- for master env -----
 
 update atlas_driver_offer_bpp.driver_fee
-set status = 'EXEMPTED'
-where govt_charges + platform_fee + cgst + sgst = 0 and fee_type = 'RECURRING_EXECUTION_INVOICE' and merchant_id = '96dd7f78-787e-4a0b-8675-e9e6fe93bb8f' ;
+set status = 'EXEMPTED',
+    fee_type = 'RECURRING_INVOICE'
+where govt_charges + platform_fee + cgst + sgst = 0 and merchant_id = '96dd7f78-787e-4a0b-8675-e9e6fe93bb8f' ;
 
 update atlas_driver_offer_bpp.driver_fee
 set fee_type = 'RECURRING_INVOICE',
@@ -23,8 +24,9 @@ where fee_type = 'RECURRING_EXECUTION_INVOICE' and merchant_id = '96dd7f78-787e-
 ---- for prod env ----
 
 update atlas_driver_offer_bpp.driver_fee
-set status = 'EXEMPTED'
-where govt_charges + platform_fee + cgst + sgst = 0 and fee_type = 'RECURRING_EXECUTION_INVOICE' and merchant_id = 'd2929b92-8b12-4e21-9efd-d6203940c4c5';
+set status = 'EXEMPTED',
+    fee_type = 'RECURRING_INVOICE'
+where govt_charges + platform_fee + cgst + sgst = 0 and merchant_id = 'd2929b92-8b12-4e21-9efd-d6203940c4c5';
 
 update atlas_driver_offer_bpp.driver_fee
 set fee_type = 'RECURRING_INVOICE',
