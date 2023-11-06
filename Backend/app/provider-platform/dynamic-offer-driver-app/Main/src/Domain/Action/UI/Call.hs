@@ -193,12 +193,16 @@ directCallStatusCallback callSid dialCallStatus recordingUrl_ callDuratioExotel 
   where
     updateCallStatus id callStatus url callDuration = QCallStatus.updateCallStatus id callStatus (fromMaybe 0 callDuration) url
 
-getCustomerMobileNumber :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r) => Text -> Text -> Text -> Maybe Text -> ExotelCallStatus -> m GetCustomerMobileNumberResp
-getCustomerMobileNumber callSid callFrom_ callTo_ dtmfNumber_ callStatus = do
+getCustomerMobileNumber :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r) => Text -> Text -> Text -> Maybe Text -> ExotelCallStatus -> Text -> m GetCustomerMobileNumberResp
+getCustomerMobileNumber callSid callFrom_ callTo_ dtmfNumber_ callStatus to_ = do
   let callFrom = dropFirstZero callFrom_
   let callTo = dropFirstZero callTo_
+  let to = dropFirstZero to_
   mobileNumberHash <- getDbHash callFrom
-  exophone <- CQExophone.findByPhone callTo >>= fromMaybeM (ExophoneDoesNotExist callTo)
+  exophone <-
+    CQExophone.findByPhone to >>= \case
+      Nothing -> CQExophone.findByPhone callTo >>= fromMaybeM (ExophoneDoesNotExist callTo)
+      Just phone -> return phone
   (driver, dtmfNumberUsed) <-
     runInReplica (QPerson.findByMobileNumberAndMerchant "+91" mobileNumberHash exophone.merchantId) >>= \case
       Nothing -> do

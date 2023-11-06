@@ -78,6 +78,7 @@ type FrontendBasedCallAPI =
            :> MandatoryQueryParam "CallTo" Text
            :> QueryParam "digits" Text
            :> MandatoryQueryParam "CallStatus" ExotelCallStatus
+           :> MandatoryQueryParam "To" Text
            :> Get '[JSON] DCall.GetCustomerMobileNumberResp
            :<|> "statusCallback"
            :> MandatoryQueryParam "CallSid" Text
@@ -119,8 +120,8 @@ getCallStatus callStatusId _ = withFlowHandlerAPI $ DCall.getCallStatus callStat
 directCallStatusCallback :: Text -> ExotelCallStatus -> Maybe Text -> Maybe Int -> Maybe Int -> FlowHandler DCall.CallCallbackRes
 directCallStatusCallback callSid dialCallStatus_ recordingUrl_ duration = withFlowHandlerAPI . DCall.directCallStatusCallback callSid dialCallStatus_ recordingUrl_ duration
 
-getCustomerMobileNumber :: Text -> Text -> Text -> Maybe Text -> ExotelCallStatus -> FlowHandler DCall.GetCustomerMobileNumberResp
-getCustomerMobileNumber callSid callFrom_ callTo_ dtmfNumber = withFlowHandlerAPI . DCall.getCustomerMobileNumber callSid callFrom_ callTo_ dtmfNumber
+getCustomerMobileNumber :: Text -> Text -> Text -> Maybe Text -> ExotelCallStatus -> Text -> FlowHandler DCall.GetCustomerMobileNumberResp
+getCustomerMobileNumber callSid callFrom_ callTo_ dtmfNumber exotelCallStatus = withFlowHandlerAPI . DCall.getCustomerMobileNumber callSid callFrom_ callTo_ dtmfNumber exotelCallStatus
 
 getDriverMobileNumber :: (Id Person.Person, Id DM.Merchant) -> Text -> FlowHandler DCall.CallRes
 getDriverMobileNumber (driverId, merchantId) = withFlowHandlerAPI . DCall.getDriverMobileNumber (driverId, merchantId)
