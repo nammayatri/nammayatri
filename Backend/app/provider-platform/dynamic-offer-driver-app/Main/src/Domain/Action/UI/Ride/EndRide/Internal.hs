@@ -411,6 +411,7 @@ mkDriverFee now merchantId driverId rideFare govtCharges platformFee cgst sgst t
       payBy = if isNothing transporterConfig.driverFeeCalculationTime then addUTCTime transporterConfig.driverPaymentCycleBuffer endTime else addUTCTime (transporterConfig.driverAutoPayNotificationTime + transporterConfig.driverAutoPayExecutionTime) endTime
       platformFee_ = if isNothing transporterConfig.driverFeeCalculationTime then DF.PlatformFee platformFee cgst sgst else DF.PlatformFee 0 0 0
       govtCharges_ = if isNothing transporterConfig.driverFeeCalculationTime then govtCharges else 0
+      isPlanMandatory = transporterConfig.isPlanMandatory
   mbDriverPlan <- findByDriverId (cast driverId) -- what if its changed? needed inside lock?
   plan <- getPlan mbDriverPlan merchantId
   return $
@@ -423,9 +424,10 @@ mkDriverFee now merchantId driverId rideFare govtCharges platformFee cgst sgst t
         updatedAt = now,
         platformFee = platformFee_,
         totalEarnings = fromMaybe 0 rideFare,
-        feeType = case plan of
-          Nothing -> DF.RECURRING_INVOICE
-          Just plan_ -> if plan_.paymentMode == MANUAL then DF.RECURRING_INVOICE else DF.RECURRING_EXECUTION_INVOICE,
+        feeType = case (plan, isPlanMandatory) of
+          (Nothing, _) -> DF.RECURRING_INVOICE
+          (Just plan_, True) -> if plan_.paymentMode == MANUAL then DF.RECURRING_INVOICE else DF.RECURRING_EXECUTION_INVOICE
+          (Just _, False) -> DF.RECURRING_INVOICE,
         govtCharges = govtCharges_,
         offerId = Nothing,
         planOfferTitle = Nothing,
