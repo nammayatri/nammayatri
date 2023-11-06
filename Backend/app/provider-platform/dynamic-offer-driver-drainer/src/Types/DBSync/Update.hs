@@ -33,7 +33,6 @@ import qualified "dynamic-offer-driver-app" Storage.Beam.DriverOnboarding.Driver
 import qualified "dynamic-offer-driver-app" Storage.Beam.DriverOnboarding.DriverRCAssociation as DriverRCAssociation
 import qualified "dynamic-offer-driver-app" Storage.Beam.DriverOnboarding.IdfyVerification as IdfyVerification
 import qualified "dynamic-offer-driver-app" Storage.Beam.DriverOnboarding.Image as Image
-import qualified "dynamic-offer-driver-app" Storage.Beam.DriverOnboarding.OperatingCity as OperatingCity
 import qualified "dynamic-offer-driver-app" Storage.Beam.DriverOnboarding.VehicleRegistrationCertificate as VehicleRegistrationCertificate
 import qualified "dynamic-offer-driver-app" Storage.Beam.DriverQuote as DriverQuote
 import qualified "dynamic-offer-driver-app" Storage.Beam.DriverReferral as DriverReferral
@@ -57,7 +56,6 @@ import qualified "dynamic-offer-driver-app" Storage.Beam.FleetDriverAssociation 
 import qualified "dynamic-offer-driver-app" Storage.Beam.Geometry as Geometry
 import qualified "dynamic-offer-driver-app" Storage.Beam.GoHomeConfig as GoHomeConfig
 import "dynamic-offer-driver-app" Storage.Beam.IssueManagement ()
-import qualified "dynamic-offer-driver-app" Storage.Beam.LeaderBoardConfig as LeaderBoardConfig
 import qualified "dynamic-offer-driver-app" Storage.Beam.Location as Location
 import qualified "dynamic-offer-driver-app" Storage.Beam.LocationMapping as LocationMapping
 import qualified "dynamic-offer-driver-app" Storage.Beam.Maps.PlaceNameCache as PlaceNameCache
@@ -75,7 +73,6 @@ import qualified "dynamic-offer-driver-app" Storage.Beam.Message.Message as Mess
 import qualified "dynamic-offer-driver-app" Storage.Beam.Message.MessageReport as MessageReport
 import qualified "dynamic-offer-driver-app" Storage.Beam.Message.MessageTranslation as MessageTranslation
 import qualified "dynamic-offer-driver-app" Storage.Beam.MetaData as MetaData
-import qualified "dynamic-offer-driver-app" Storage.Beam.OnboardingDocumentConfig as OnboardingDocumentConfig
 import "dynamic-offer-driver-app" Storage.Beam.Payment ()
 import qualified "dynamic-offer-driver-app" Storage.Beam.Person as Person
 import qualified "dynamic-offer-driver-app" Storage.Beam.QuoteSpecialZone as QuoteSpecialZone
@@ -113,7 +110,6 @@ data UpdateModel
   | DriverRcAssociationUpdate
   | IdfyVerificationUpdate
   | ImageUpdate
-  | OperatingCityUpdate
   | VehicleRegistrationCertificateUpdate
   | DriverQuoteUpdate
   | DriverReferralUpdate
@@ -136,7 +132,6 @@ data UpdateModel
   | IssueOptionUpdate
   | IssueReportUpdate
   | IssueTranslationUpdate
-  | LeaderBoardConfigUpdate
   | PlaceNameCacheUpdate
   | MediaFileUpdate
   | MerchantUpdate
@@ -153,7 +148,6 @@ data UpdateModel
   | MessageReportUpdate
   | MessageTranslationUpdate
   | MetaDataUpdate
-  | OnboardingDocumentConfigUpdate
   | PersonUpdate
   | QuoteSpecialZoneUpdate
   | RatingUpdate
@@ -199,7 +193,6 @@ getTagUpdate DriverLicenseUpdate = "DriverLicenseOptions"
 getTagUpdate DriverRcAssociationUpdate = "DriverRcAssociationOptions"
 getTagUpdate IdfyVerificationUpdate = "IdfyVerificationOptions"
 getTagUpdate ImageUpdate = "ImageOptions"
-getTagUpdate OperatingCityUpdate = "OperatingCityOptions"
 getTagUpdate VehicleRegistrationCertificateUpdate = "VehicleRegistrationCertificateOptions"
 getTagUpdate DriverQuoteUpdate = "DriverQuoteOptions"
 getTagUpdate DriverReferralUpdate = "DriverReferralOptions"
@@ -222,7 +215,6 @@ getTagUpdate IssueCategoryUpdate = "IssueCategoryOptions"
 getTagUpdate IssueOptionUpdate = "IssueOptionOptions"
 getTagUpdate IssueReportUpdate = "IssueReportOptions"
 getTagUpdate IssueTranslationUpdate = "IssueTranslationOptions"
-getTagUpdate LeaderBoardConfigUpdate = "LeaderBoardConfigOptions"
 getTagUpdate PlaceNameCacheUpdate = "PlaceNameCacheOptions"
 getTagUpdate MediaFileUpdate = "MediaFileOptions"
 getTagUpdate MerchantUpdate = "MerchantOptions"
@@ -239,7 +231,6 @@ getTagUpdate MessageUpdate = "MessageOptions"
 getTagUpdate MessageReportUpdate = "MessageReportOptions"
 getTagUpdate MessageTranslationUpdate = "MessageTranslationOptions"
 getTagUpdate MetaDataUpdate = "MetaDataOptions"
-getTagUpdate OnboardingDocumentConfigUpdate = "OnboardingDocumentConfigOptions"
 getTagUpdate PersonUpdate = "PersonOptions"
 getTagUpdate QuoteSpecialZoneUpdate = "QuoteSpecialZoneOptions"
 getTagUpdate RatingUpdate = "RatingOptions"
@@ -284,7 +275,6 @@ parseTagUpdate "DriverLicenseOptions" = return DriverLicenseUpdate
 parseTagUpdate "DriverRcAssociationOptions" = return DriverRcAssociationUpdate
 parseTagUpdate "IdfyVerificationOptions" = return IdfyVerificationUpdate
 parseTagUpdate "ImageOptions" = return ImageUpdate
-parseTagUpdate "OperatingCityOptions" = return OperatingCityUpdate
 parseTagUpdate "VehicleRegistrationCertificateOptions" = return VehicleRegistrationCertificateUpdate
 parseTagUpdate "DriverQuoteOptions" = return DriverQuoteUpdate
 parseTagUpdate "DriverReferralOptions" = return DriverReferralUpdate
@@ -307,7 +297,6 @@ parseTagUpdate "IssueCategoryOptions" = return IssueCategoryUpdate
 parseTagUpdate "IssueOptionOptions" = return IssueOptionUpdate
 parseTagUpdate "IssueReportOptions" = return IssueReportUpdate
 parseTagUpdate "IssueTranslationOptions" = return IssueTranslationUpdate
-parseTagUpdate "LeaderBoardConfigOptions" = return LeaderBoardConfigUpdate
 parseTagUpdate "PlaceNameCacheOptions" = return PlaceNameCacheUpdate
 parseTagUpdate "MediaFileOptions" = return MediaFileUpdate
 parseTagUpdate "MerchantOptions" = return MerchantUpdate
@@ -324,7 +313,6 @@ parseTagUpdate "MessageOptions" = return MessageUpdate
 parseTagUpdate "MessageReportOptions" = return MessageReportUpdate
 parseTagUpdate "MessageTranslationOptions" = return MessageTranslationUpdate
 parseTagUpdate "MetaDataOptions" = return MetaDataUpdate
-parseTagUpdate "OnboardingDocumentConfigOptions" = return OnboardingDocumentConfigUpdate
 parseTagUpdate "PersonOptions" = return PersonUpdate
 parseTagUpdate "QuoteSpecialZoneOptions" = return QuoteSpecialZoneUpdate
 parseTagUpdate "RatingOptions" = return RatingUpdate
@@ -370,7 +358,6 @@ data DBUpdateObject
   | DriverRcAssociationOptions UpdateModel [Set Postgres DriverRCAssociation.DriverRCAssociationT] (Where Postgres DriverRCAssociation.DriverRCAssociationT)
   | IdfyVerificationOptions UpdateModel [Set Postgres IdfyVerification.IdfyVerificationT] (Where Postgres IdfyVerification.IdfyVerificationT)
   | ImageOptions UpdateModel [Set Postgres Image.ImageT] (Where Postgres Image.ImageT)
-  | OperatingCityOptions UpdateModel [Set Postgres OperatingCity.OperatingCityT] (Where Postgres OperatingCity.OperatingCityT)
   | VehicleRegistrationCertificateOptions UpdateModel [Set Postgres VehicleRegistrationCertificate.VehicleRegistrationCertificateT] (Where Postgres VehicleRegistrationCertificate.VehicleRegistrationCertificateT)
   | DriverQuoteOptions UpdateModel [Set Postgres DriverQuote.DriverQuoteT] (Where Postgres DriverQuote.DriverQuoteT)
   | DriverReferralOptions UpdateModel [Set Postgres DriverReferral.DriverReferralT] (Where Postgres DriverReferral.DriverReferralT)
@@ -393,7 +380,6 @@ data DBUpdateObject
   | IssueOptionOptions UpdateModel [Set Postgres IssueOption.IssueOptionT] (Where Postgres IssueOption.IssueOptionT)
   | IssueReportOptions UpdateModel [Set Postgres IssueReport.IssueReportT] (Where Postgres IssueReport.IssueReportT)
   | IssueTranslationOptions UpdateModel [Set Postgres IssueTranslation.IssueTranslationT] (Where Postgres IssueTranslation.IssueTranslationT)
-  | LeaderBoardConfigOptions UpdateModel [Set Postgres LeaderBoardConfig.LeaderBoardConfigsT] (Where Postgres LeaderBoardConfig.LeaderBoardConfigsT)
   | PlaceNameCacheOptions UpdateModel [Set Postgres PlaceNameCache.PlaceNameCacheT] (Where Postgres PlaceNameCache.PlaceNameCacheT)
   | MediaFileOptions UpdateModel [Set Postgres MediaFile.MediaFileT] (Where Postgres MediaFile.MediaFileT)
   | MerchantOptions UpdateModel [Set Postgres Merchant.MerchantT] (Where Postgres Merchant.MerchantT)
@@ -410,7 +396,6 @@ data DBUpdateObject
   | MessageReportOptions UpdateModel [Set Postgres MessageReport.MessageReportT] (Where Postgres MessageReport.MessageReportT)
   | MessageTranslationOptions UpdateModel [Set Postgres MessageTranslation.MessageTranslationT] (Where Postgres MessageTranslation.MessageTranslationT)
   | MetaDataOptions UpdateModel [Set Postgres MetaData.MetaDataT] (Where Postgres MetaData.MetaDataT)
-  | OnboardingDocumentConfigOptions UpdateModel [Set Postgres OnboardingDocumentConfig.OnboardingDocumentConfigT] (Where Postgres OnboardingDocumentConfig.OnboardingDocumentConfigT)
   | PersonOptions UpdateModel [Set Postgres Person.PersonT] (Where Postgres Person.PersonT)
   | QuoteSpecialZoneOptions UpdateModel [Set Postgres QuoteSpecialZone.QuoteSpecialZoneT] (Where Postgres QuoteSpecialZone.QuoteSpecialZoneT)
   | RatingOptions UpdateModel [Set Postgres Rating.RatingT] (Where Postgres Rating.RatingT)
@@ -498,9 +483,6 @@ instance FromJSON DBUpdateObject where
       ImageUpdate -> do
         (updVals, whereClause) <- parseUpdateCommandValues contents
         return $ ImageOptions updateModel updVals whereClause
-      OperatingCityUpdate -> do
-        (updVals, whereClause) <- parseUpdateCommandValues contents
-        return $ OperatingCityOptions updateModel updVals whereClause
       VehicleRegistrationCertificateUpdate -> do
         (updVals, whereClause) <- parseUpdateCommandValues contents
         return $ VehicleRegistrationCertificateOptions updateModel updVals whereClause
@@ -567,9 +549,6 @@ instance FromJSON DBUpdateObject where
       IssueTranslationUpdate -> do
         (updVals, whereClause) <- parseUpdateCommandValues contents
         return $ IssueTranslationOptions updateModel updVals whereClause
-      LeaderBoardConfigUpdate -> do
-        (updVals, whereClause) <- parseUpdateCommandValues contents
-        return $ LeaderBoardConfigOptions updateModel updVals whereClause
       PlaceNameCacheUpdate -> do
         (updVals, whereClause) <- parseUpdateCommandValues contents
         return $ PlaceNameCacheOptions updateModel updVals whereClause
@@ -618,9 +597,6 @@ instance FromJSON DBUpdateObject where
       MetaDataUpdate -> do
         (updVals, whereClause) <- parseUpdateCommandValues contents
         return $ MetaDataOptions updateModel updVals whereClause
-      OnboardingDocumentConfigUpdate -> do
-        (updVals, whereClause) <- parseUpdateCommandValues contents
-        return $ OnboardingDocumentConfigOptions updateModel updVals whereClause
       PersonUpdate -> do
         (updVals, whereClause) <- parseUpdateCommandValues contents
         return $ PersonOptions updateModel updVals whereClause
