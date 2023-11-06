@@ -45,7 +45,10 @@ library
       API.ProviderPlatform.DynamicOfferDriver.Volunteer
       API.SpecialZone
       App
-      ProviderPlatformClient.DynamicOfferDriver
+      ProviderPlatformClient.DynamicOfferDriver.Exotel
+      ProviderPlatformClient.DynamicOfferDriver.Fleet
+      ProviderPlatformClient.DynamicOfferDriver.Operations
+      ProviderPlatformClient.DynamicOfferDriver.RideBooking
       ProviderPlatformClient.SpecialZone
       RiderPlatformClient.RiderApp
   other-modules:

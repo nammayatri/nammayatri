@@ -14,7 +14,7 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE UndecidableSuperClasses #-}
 
-module Tools.Client (DataServer (..), CallServerAPI (..), clientWithMerchant, clientWithMerchantAndCity) where
+module Tools.Client (CallServerAPI (..), clientWithMerchantAndCity) where
 
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.ServerName as DSN
@@ -23,24 +23,16 @@ import Kernel.Prelude
 import qualified Kernel.Types.Beckn.City as City
 import Kernel.Types.Error
 import Kernel.Utils.Common hiding (Error, callAPI)
-import Kernel.Utils.Dhall (FromDhall)
 import Servant hiding (throwError)
 import Servant.Client hiding (client)
 import Tools.Auth.Merchant
 import Tools.Error
 import Tools.Metrics
 
-data DataServer = DataServer
-  { name :: DSN.ServerName,
-    url :: BaseUrl,
-    token :: Text
-  }
-  deriving (Generic, FromDhall)
-
 getDataServer ::
-  HasFlowEnv m r '["dataServers" ::: [DataServer]] =>
+  HasFlowEnv m r '["dataServers" ::: [DSN.DataServer]] =>
   DSN.ServerName ->
-  m DataServer
+  m DSN.DataServer
 getDataServer serverName = do
   dataServers <- asks (.dataServers)
   case filter (\server -> server.name == serverName) dataServers of
@@ -50,7 +42,7 @@ getDataServer serverName = do
 
 class
   ( CoreMetrics m,
-    HasFlowEnv m r '["dataServers" ::: [DataServer]]
+    HasFlowEnv m r '["dataServers" ::: [DSN.DataServer]]
   ) =>
   CallServerAPI apis m r b c
     | m b -> c
@@ -59,7 +51,7 @@ class
 
 instance
   ( CoreMetrics m,
-    HasFlowEnv m r '["dataServers" ::: [DataServer]],
+    HasFlowEnv m r '["dataServers" ::: [DSN.DataServer]],
     ToJSON d,
     FromJSON d
   ) =>
@@ -72,7 +64,7 @@ instance
 
 instance
   ( CoreMetrics m,
-    HasFlowEnv m k '["dataServers" ::: [DataServer]],
+    HasFlowEnv m k '["dataServers" ::: [DSN.DataServer]],
     MonadFlow m,
     CallServerAPI apis m k d r1,
     r ~ (c -> r1)
@@ -82,23 +74,11 @@ instance
   callServerAPI serverName mkAPIs descr f c =
     callServerAPI @_ @m serverName mkAPIs descr (`f` c)
 
-type ApiWithMerchant api =
-  "dashboard"
-    :> Capture "merchantId" (CheckedShortId DM.Merchant)
-    :> api
-
 type ApiWithMerchantAndCity api =
   "dashboard"
     :> Capture "merchantId" (CheckedShortId DM.Merchant)
     :> Capture "city" City.City
     :> api
-
-clientWithMerchant ::
-  forall api.
-  HasClient Euler.EulerClient api =>
-  Proxy api ->
-  Client Euler.EulerClient (ApiWithMerchant api)
-clientWithMerchant _ = Euler.client (Proxy @(ApiWithMerchant api))
 
 clientWithMerchantAndCity ::
   forall api.

@@ -352,7 +352,7 @@ clearCachedMapsConfig = runARDUFlow "clear cached maps config" do
 rideSync :: ShortId TDM.Merchant -> Context.City -> Id TRide.Ride -> ClientsM ()
 rideSync merchantId city rideId = do
   let dashboardAPI = API.dashboard merchantId city Fixtures.dashboardToken
-  void . callBPP $ dashboardAPI.ride.rideSync (cast rideId)
+  void . callBPP $ dashboardAPI.management.ride.rideSync (cast rideId)
 
 withFakeBapUrl :: TRB.Booking -> ClientsM () -> ClientsM ()
 withFakeBapUrl booking action = do

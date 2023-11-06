@@ -34,11 +34,11 @@ import Kernel.Types.Error (PersonError (..))
 import Kernel.Types.Id
 import Kernel.Utils.Common (MonadFlow, withFlowHandlerAPI)
 import Kernel.Utils.Error (fromMaybeM)
-import qualified ProviderPlatformClient.DynamicOfferDriver as Client
+import qualified ProviderPlatformClient.DynamicOfferDriver.Operations as Client
 import Servant hiding (throwError)
 import qualified SharedLogic.Transaction as T
 import qualified "lib-dashboard" Storage.Queries.Person as QP
-import "lib-dashboard" Tools.Auth hiding (BECKN_TRANSPORT)
+import "lib-dashboard" Tools.Auth
 import "lib-dashboard" Tools.Auth.Merchant
 
 type API =
@@ -53,31 +53,31 @@ type API =
        )
 
 type IssueCategoryListAPI =
-  ApiAuth 'DRIVER_OFFER_BPP 'ISSUE 'ISSUE_CATEGORY_LIST
+  ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'ISSUE 'ISSUE_CATEGORY_LIST
     :> Common.IssueCategoryListAPI
 
 type IssueListAPI =
-  ApiAuth 'DRIVER_OFFER_BPP 'ISSUE 'ISSUE_LIST
+  ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'ISSUE 'ISSUE_LIST
     :> Common.IssueListAPI
 
 type IssueInfoAPI =
-  ApiAuth 'DRIVER_OFFER_BPP 'ISSUE 'ISSUE_INFO
+  ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'ISSUE 'ISSUE_INFO
     :> Common.IssueInfoAPI
 
 type IssueUpdateAPI =
-  ApiAuth 'DRIVER_OFFER_BPP 'ISSUE 'ISSUE_UPDATE
+  ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'ISSUE 'ISSUE_UPDATE
     :> Common.IssueUpdateAPI
 
 type IssueAddCommentAPI =
-  ApiAuth 'DRIVER_OFFER_BPP 'ISSUE 'ISSUE_ADD_COMMENT
+  ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'ISSUE 'ISSUE_ADD_COMMENT
     :> Common.IssueAddCommentAPI
 
 type IssueFetchMediaAPI =
-  ApiAuth 'DRIVER_OFFER_BPP 'ISSUE 'ISSUE_FETCH_MEDIA
+  ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'ISSUE 'ISSUE_FETCH_MEDIA
     :> Common.IssueFetchMediaAPI
 
 type TicketStatusCallBackAPI =
-  ApiAuth 'DRIVER_OFFER_BPP 'ISSUE 'TICKET_STATUS_CALL_BACK
+  ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'ISSUE 'TICKET_STATUS_CALL_BACK
     :> Common.TicketStatusCallBackAPI
 
 handler :: ShortId DM.Merchant -> City.City -> FlowServer API
@@ -98,22 +98,22 @@ buildTransaction ::
   ApiTokenInfo ->
   Maybe request ->
   m DT.Transaction
-buildTransaction endpoint apiTokenInfo = T.buildTransaction (DT.IssueAPI endpoint) (Just DRIVER_OFFER_BPP) (Just apiTokenInfo) Nothing Nothing
+buildTransaction endpoint apiTokenInfo = T.buildTransaction (DT.IssueAPI endpoint) (Just DRIVER_OFFER_BPP_MANAGEMENT) (Just apiTokenInfo) Nothing Nothing
 
 issueCategoryList :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> FlowHandler Common.IssueCategoryListRes
 issueCategoryList merchantShortId opCity apiTokenInfo = withFlowHandlerAPI $ do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  Client.callDriverOfferBPP checkedMerchantId opCity (.issue.issueCategoryList)
+  Client.callDriverOfferBPPOperations checkedMerchantId opCity (.issue.issueCategoryList)
 
 issueList :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Maybe Int -> Maybe Int -> Maybe DIssue.IssueStatus -> Maybe (Id IssueCategory) -> Maybe Text -> FlowHandler Common.IssueReportListResponse
 issueList merchantShortId opCity apiTokenInfo mbLimit mbOffset mbStatus mbCategoryId mbAssignee = withFlowHandlerAPI $ do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  Client.callDriverOfferBPP checkedMerchantId opCity (.issue.issueList) mbLimit mbOffset mbStatus mbCategoryId mbAssignee
+  Client.callDriverOfferBPPOperations checkedMerchantId opCity (.issue.issueList) mbLimit mbOffset mbStatus mbCategoryId mbAssignee
 
 issueInfo :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id IssueReport -> FlowHandler Common.IssueInfoRes
 issueInfo merchantShortId opCity apiTokenInfo issueReportId_ = withFlowHandlerAPI $ do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  addAuthorDetails =<< Client.callDriverOfferBPP checkedMerchantId opCity (.issue.issueInfo) issueReportId_
+  addAuthorDetails =<< Client.callDriverOfferBPPOperations checkedMerchantId opCity (.issue.issueInfo) issueReportId_
   where
     mkAuthorDetail :: Common.IssueReportCommentItem -> Flow Common.IssueReportCommentItem
     mkAuthorDetail Common.IssueReportCommentItem {..} = do
@@ -143,7 +143,7 @@ issueUpdate merchantShortId opCity apiTokenInfo issueReportId req = withFlowHand
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction Common.IssueUpdateEndpoint apiTokenInfo (Just req)
   T.withTransactionStoring transaction $
-    Client.callDriverOfferBPP checkedMerchantId opCity (.issue.issueUpdate) issueReportId (mkRequest req)
+    Client.callDriverOfferBPPOperations checkedMerchantId opCity (.issue.issueUpdate) issueReportId (mkRequest req)
   where
     mkRequest Common.IssueUpdateReq {..} =
       Common.IssueUpdateByUserReq
@@ -156,7 +156,7 @@ issueAddComment merchantShortId opCity apiTokenInfo issueReportId req = withFlow
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction Common.IssueAddCommentEndpoint apiTokenInfo (Just req)
   T.withTransactionStoring transaction $
-    Client.callDriverOfferBPP checkedMerchantId opCity (.issue.issueAddComment) issueReportId (mkRequest req)
+    Client.callDriverOfferBPPOperations checkedMerchantId opCity (.issue.issueAddComment) issueReportId (mkRequest req)
   where
     mkRequest Common.IssueAddCommentReq {..} =
       Common.IssueAddCommentByUserReq
@@ -167,10 +167,10 @@ issueAddComment merchantShortId opCity apiTokenInfo issueReportId req = withFlow
 issueFetchMedia :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Text -> FlowHandler Text
 issueFetchMedia merchantShortId opCity apiTokenInfo filePath = withFlowHandlerAPI $ do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  Client.callDriverOfferBPP checkedMerchantId opCity (.issue.issueFetchMedia) filePath
+  Client.callDriverOfferBPPOperations checkedMerchantId opCity (.issue.issueFetchMedia) filePath
 
 ticketStatusCallBack :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.TicketStatusCallBackReq -> FlowHandler APISuccess
 ticketStatusCallBack merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI $ do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction Common.TicketStatusCallBackEndpoint apiTokenInfo (Just req)
-  T.withTransactionStoring transaction $ Client.callDriverOfferBPP checkedMerchantId opCity (.issue.ticketStatusCallBack) req
+  T.withTransactionStoring transaction $ Client.callDriverOfferBPPOperations checkedMerchantId opCity (.issue.ticketStatusCallBack) req

@@ -13,16 +13,13 @@
 -}
 {-# LANGUAGE AllowAmbiguousTypes #-}
 
-module ProviderPlatformClient.DynamicOfferDriver
-  ( callDriverOfferBPP,
-    callDynamicOfferDriverAppExotelApi,
-    callDynamicOfferDriverAppFleetApi,
+module ProviderPlatformClient.DynamicOfferDriver.Operations
+  ( callDriverOfferBPPOperations,
   )
 where
 
-import "dynamic-offer-driver-app" API.Dashboard as BPP
+import "dynamic-offer-driver-app" API.Dashboard.Management as BPP
 import qualified Dashboard.Common.Booking as Booking
-import qualified Dashboard.Common.Exotel as Exotel
 import qualified Dashboard.ProviderPlatform.Driver as Driver
 import qualified Dashboard.ProviderPlatform.Driver.Registration as Registration
 import qualified Dashboard.ProviderPlatform.DriverReferral as DriverReferral
@@ -31,10 +28,8 @@ import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Merchant as C
 import qualified Dashboard.ProviderPlatform.Message as Message
 import qualified Dashboard.ProviderPlatform.Revenue as Revenue
 import qualified Dashboard.ProviderPlatform.Ride as Ride
-import qualified Dashboard.ProviderPlatform.Volunteer as Volunteer
 import qualified Data.ByteString.Lazy as LBS
 import qualified "dynamic-offer-driver-app" Domain.Action.Dashboard.Driver as DDriver
-import qualified "dynamic-offer-driver-app" Domain.Action.Dashboard.Fleet.Registration as Fleet
 import qualified "dynamic-offer-driver-app" Domain.Action.Dashboard.Overlay as Overlay
 import qualified "dynamic-offer-driver-app" Domain.Action.UI.Driver as ADriver
 import qualified "dynamic-offer-driver-app" Domain.Action.UI.Payment as APayment
@@ -58,86 +53,77 @@ import Tools.Auth.Merchant (CheckedShortId)
 import Tools.Client
 import "lib-dashboard" Tools.Metrics
 
-data DriverOfferAPIs = DriverOfferAPIs
-  { drivers :: DriversAPIs,
+data DriverOperationAPIs = DriverOperationAPIs
+  { subscription :: SubscriptionAPIs,
     rides :: RidesAPIs,
-    bookings :: BookingsAPIs,
-    merchant :: MerchantAPIs,
-    message :: MessageAPIs,
-    volunteer :: VolunteerAPIs,
-    overlay :: OverlayAPIs,
-    driverReferral :: DriverReferralAPIs,
-    driverRegistration :: DriverRegistrationAPIs,
-    issue :: IssueAPIs,
     revenue :: RevenueAPIs,
-    subscription :: SubscriptionAPIs
+    overlay :: OverlayAPIs,
+    message :: MessageAPIs,
+    merchant :: MerchantAPIs,
+    issue :: IssueAPIs,
+    drivers :: DriversAPIs,
+    bookings :: BookingsAPIs
   }
 
-data DriversAPIs = DriversAPIs
+data GoHomeAPIs = GoHomeAPIs
+  { getDriverHomeLocation :: Id Driver.Driver -> Euler.EulerClient Driver.GetHomeLocationsRes,
+    updateDriverHomeLocation :: Id Driver.Driver -> Driver.UpdateDriverHomeLocationReq -> Euler.EulerClient APISuccess,
+    incrementDriverGoToCount :: Id Driver.Driver -> Euler.EulerClient APISuccess,
+    getDriverGoHomeInfo :: Id Driver.Driver -> Euler.EulerClient Driver.CachedGoHomeRequestInfoRes
+  }
+
+data DriverReferralAPIs = DriverReferralAPIs
+  { updateReferralLinkPassword :: DriverReferral.ReferralLinkPasswordUpdateAPIReq -> Euler.EulerClient APISuccess,
+    linkDriverReferralCode :: (LBS.ByteString, DriverReferral.ReferralLinkReq) -> Euler.EulerClient DriverReferral.LinkReport
+  }
+
+data DriverCommonAPIs = DriverCommonAPIs
   { driverDocumentsInfo :: Euler.EulerClient Driver.DriverDocumentsInfoRes,
     driverAadhaarInfo :: Id Driver.Driver -> Euler.EulerClient Driver.DriverAadhaarInfoRes,
     driverAadhaarInfoByPhone :: Text -> Euler.EulerClient Driver.DriverAadhaarInfoByPhoneReq,
     listDrivers :: Maybe Int -> Maybe Int -> Maybe Bool -> Maybe Bool -> Maybe Bool -> Maybe Bool -> Maybe Text -> Maybe Text -> Euler.EulerClient Driver.DriverListRes,
-    getDriverDue :: Maybe Text -> Text -> Euler.EulerClient [Driver.DriverOutstandingBalanceResp],
     driverActivity :: Euler.EulerClient Driver.DriverActivityRes,
-    enableDriver :: Id Driver.Driver -> Euler.EulerClient APISuccess,
     disableDriver :: Id Driver.Driver -> Euler.EulerClient APISuccess,
     blockDriverWithReason :: Id Driver.Driver -> Driver.BlockDriverWithReasonReq -> Euler.EulerClient APISuccess,
     blockDriver :: Id Driver.Driver -> Euler.EulerClient APISuccess,
     blockReasonList :: Euler.EulerClient [Driver.BlockReason],
-    collectCash :: Id Driver.Driver -> Text -> Euler.EulerClient APISuccess,
-    exemptCash :: Id Driver.Driver -> Text -> Euler.EulerClient APISuccess,
     unblockDriver :: Id Driver.Driver -> Euler.EulerClient APISuccess,
     driverLocation :: Maybe Int -> Maybe Int -> Driver.DriverIds -> Euler.EulerClient Driver.DriverLocationRes,
-    driverInfo :: Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Text -> Bool -> Euler.EulerClient Driver.DriverInfoRes,
     deleteDriver :: Id Driver.Driver -> Euler.EulerClient APISuccess,
-    unlinkVehicle :: Id Driver.Driver -> Euler.EulerClient APISuccess,
     unlinkDL :: Id Driver.Driver -> Euler.EulerClient APISuccess,
     unlinkAadhaar :: Id Driver.Driver -> Euler.EulerClient APISuccess,
-    endRCAssociation :: Id Driver.Driver -> Euler.EulerClient APISuccess,
     updatePhoneNumber :: Id Driver.Driver -> Driver.UpdatePhoneNumberReq -> Euler.EulerClient APISuccess,
     updateByPhoneNumber :: Text -> Driver.UpdateDriverDataReq -> Euler.EulerClient APISuccess,
-    addVehicle :: Id Driver.Driver -> Driver.AddVehicleReq -> Euler.EulerClient APISuccess,
-    addVehicleForFleet :: Text -> Maybe Text -> Text -> Driver.AddVehicleReq -> Euler.EulerClient APISuccess,
-    getAllVehicleForFleet :: Text -> Maybe Int -> Maybe Int -> Euler.EulerClient Driver.ListVehicleRes,
-    getAllDriverForFleet :: Text -> Maybe Int -> Maybe Int -> Euler.EulerClient Driver.FleetListDriverRes,
-    fleetUnlinkVehicle :: Text -> Id Driver.Driver -> Text -> Euler.EulerClient APISuccess,
-    fleetRemoveVehicle :: Text -> Text -> Euler.EulerClient APISuccess,
-    fleetRemoveDriver :: Text -> Id Driver.Driver -> Euler.EulerClient APISuccess,
-    fleetTotalEarning :: Text -> Euler.EulerClient Driver.FleetTotalEarningResponse,
-    fleetVehicleEarning :: Text -> Text -> Maybe (Id Driver.Driver) -> Euler.EulerClient Driver.FleetEarningRes,
-    fleetDriverEarning :: Text -> Id Driver.Driver -> Euler.EulerClient Driver.FleetEarningRes,
     updateDriverName :: Id Driver.Driver -> Driver.UpdateDriverNameReq -> Euler.EulerClient APISuccess,
-    clearOnRideStuckDrivers :: Maybe Int -> Euler.EulerClient Driver.ClearOnRideStuckDriversRes,
-    getDriverHomeLocation :: Id Driver.Driver -> Euler.EulerClient Driver.GetHomeLocationsRes,
-    updateDriverHomeLocation :: Id Driver.Driver -> Driver.UpdateDriverHomeLocationReq -> Euler.EulerClient APISuccess,
-    incrementDriverGoToCount :: Id Driver.Driver -> Euler.EulerClient APISuccess,
-    getDriverGoHomeInfo :: Id Driver.Driver -> Euler.EulerClient Driver.CachedGoHomeRequestInfoRes,
-    setRCStatus :: Id Driver.Driver -> Driver.RCStatusReq -> Euler.EulerClient APISuccess,
     deleteRC :: Id Driver.Driver -> Driver.DeleteRCReq -> Euler.EulerClient APISuccess,
-    getPaymentHistory :: Id Driver.Driver -> Maybe INV.InvoicePaymentMode -> Maybe Int -> Maybe Int -> Euler.EulerClient ADriver.HistoryEntityV2,
-    getPaymentHistoryEntityDetails :: Id Driver.Driver -> Id INV.Invoice -> Euler.EulerClient ADriver.HistoryEntryDetailsEntityV2,
-    updateSubscriptionDriverFeeAndInvoice :: Id Driver.Driver -> Driver.SubscriptionDriverFeesAndInvoicesToUpdate -> Euler.EulerClient Driver.SubscriptionDriverFeesAndInvoicesToUpdate,
-    getFleetDriverVehicleAssociation :: Text -> Maybe Int -> Maybe Int -> Euler.EulerClient Driver.DrivertoVehicleAssociationRes,
-    getFleetDriverAssociation :: Text -> Maybe Int -> Maybe Int -> Euler.EulerClient Driver.DrivertoVehicleAssociationRes,
-    getFleetVehicleAssociation :: Text -> Maybe Int -> Maybe Int -> Euler.EulerClient Driver.DrivertoVehicleAssociationRes,
-    setVehicleDriverRcStatusForFleet :: Id Driver.Driver -> Text -> Driver.RCStatusReq -> Euler.EulerClient APISuccess,
-    sendMessageToDriverViaDashboard :: Id Driver.Driver -> Text -> DDriver.SendSmsReq -> Euler.EulerClient APISuccess
+    clearOnRideStuckDrivers :: Maybe Int -> Euler.EulerClient Driver.ClearOnRideStuckDriversRes
+  }
+
+data DriverRegistrationAPIs = DriverRegistrationAPIs
+  { documentsList :: Id Driver.Driver -> Euler.EulerClient Registration.DocumentsListResponse,
+    getDocument :: Id Driver.Image -> Euler.EulerClient Registration.GetDocumentResponse,
+    uploadDocument :: Id Driver.Driver -> Registration.UploadDocumentReq -> Euler.EulerClient Registration.UploadDocumentResp,
+    registerDL :: Id Driver.Driver -> Registration.RegisterDLReq -> Euler.EulerClient APISuccess,
+    registerRC :: Id Driver.Driver -> Registration.RegisterRCReq -> Euler.EulerClient APISuccess,
+    generateAadhaarOtp :: Id Driver.Driver -> Registration.GenerateAadhaarOtpReq -> Euler.EulerClient Registration.GenerateAadhaarOtpRes,
+    verifyAadhaarOtp :: Id Driver.Driver -> Registration.VerifyAadhaarOtpReq -> Euler.EulerClient Registration.VerifyAadhaarOtpRes
+  }
+
+data DriversAPIs = DriversAPIs
+  { goHome :: GoHomeAPIs,
+    driverReferral :: DriverReferralAPIs,
+    driverRegistration :: DriverRegistrationAPIs,
+    driverCommon :: DriverCommonAPIs
   }
 
 data RidesAPIs = RidesAPIs
   { rideList :: Maybe Int -> Maybe Int -> Maybe Ride.BookingStatus -> Maybe (ShortId Ride.Ride) -> Maybe Text -> Maybe Text -> Maybe Money -> Maybe UTCTime -> Maybe UTCTime -> Euler.EulerClient Ride.RideListRes,
-    rideStart :: Id Ride.Ride -> Ride.StartRideReq -> Euler.EulerClient APISuccess,
-    rideEnd :: Id Ride.Ride -> Ride.EndRideReq -> Euler.EulerClient APISuccess,
     multipleRideEnd :: Ride.MultipleRideEndReq -> Euler.EulerClient Ride.MultipleRideEndResp,
-    currentActiveRide :: Text -> Euler.EulerClient (Id Ride.Ride),
-    rideCancel :: Id Ride.Ride -> Ride.CancelRideReq -> Euler.EulerClient APISuccess,
     multipleRideCancel :: Ride.MultipleRideCancelReq -> Euler.EulerClient Ride.MultipleRideCancelResp,
     rideInfo :: Id Ride.Ride -> Euler.EulerClient Ride.RideInfoRes,
     rideSync :: Id Ride.Ride -> Euler.EulerClient Ride.RideSyncRes,
     multipleRideSync :: Ride.MultipleRideSyncReq -> Euler.EulerClient Ride.MultipleRideSyncRes,
     rideRoute :: Id Ride.Ride -> Euler.EulerClient Ride.RideRouteRes,
-    bookingWithVehicleNumberAndPhone :: Ride.BookingWithVehicleAndPhoneReq -> Euler.EulerClient Ride.BookingWithVehicleAndPhoneRes,
     ticketRideList :: Maybe (ShortId Ride.Ride) -> Maybe Text -> Maybe Text -> Maybe Text -> Euler.EulerClient Ride.TicketRideListRes
   }
 
@@ -168,23 +154,6 @@ data MerchantAPIs = MerchantAPIs
     updateFPDriverExtraFee :: Id Common.FarePolicy -> Meters -> Merchant.CreateFPDriverExtraFeeReq -> Euler.EulerClient APISuccess
   }
 
-data DriverReferralAPIs = DriverReferralAPIs
-  { updateReferralLinkPassword :: DriverReferral.ReferralLinkPasswordUpdateAPIReq -> Euler.EulerClient APISuccess,
-    linkDriverReferralCode :: (LBS.ByteString, DriverReferral.ReferralLinkReq) -> Euler.EulerClient DriverReferral.LinkReport
-  }
-
-data DriverRegistrationAPIs = DriverRegistrationAPIs
-  { documentsList :: Id Driver.Driver -> Euler.EulerClient Registration.DocumentsListResponse,
-    getDocument :: Id Driver.Image -> Euler.EulerClient Registration.GetDocumentResponse,
-    uploadDocument :: Id Driver.Driver -> Registration.UploadDocumentReq -> Euler.EulerClient Registration.UploadDocumentResp,
-    registerDL :: Id Driver.Driver -> Registration.RegisterDLReq -> Euler.EulerClient APISuccess,
-    registerRC :: Id Driver.Driver -> Registration.RegisterRCReq -> Euler.EulerClient APISuccess,
-    generateAadhaarOtp :: Id Driver.Driver -> Registration.GenerateAadhaarOtpReq -> Euler.EulerClient Registration.GenerateAadhaarOtpRes,
-    verifyAadhaarOtp :: Id Driver.Driver -> Registration.VerifyAadhaarOtpReq -> Euler.EulerClient Registration.VerifyAadhaarOtpRes,
-    auth :: Registration.AuthReq -> Euler.EulerClient Registration.AuthRes,
-    verify :: Text -> Bool -> Text -> Registration.AuthVerifyReq -> Euler.EulerClient APISuccess
-  }
-
 data MessageAPIs = MessageAPIs
   { uploadFile :: (LBS.ByteString, Message.UploadFileRequest) -> Euler.EulerClient Message.UploadFileResponse,
     addLinkAsMedia :: Message.AddLinkAsMedia -> Euler.EulerClient Message.UploadFileResponse,
@@ -194,11 +163,6 @@ data MessageAPIs = MessageAPIs
     messageInfo :: Id Message.Message -> Euler.EulerClient Message.MessageInfoResponse,
     messageDeliveryInfo :: Id Message.Message -> Euler.EulerClient Message.MessageDeliveryInfoResponse,
     messageReceiverList :: Id Message.Message -> Maybe Text -> Maybe Message.MessageDeliveryStatus -> Maybe Int -> Maybe Int -> Euler.EulerClient Message.MessageReceiverListResponse
-  }
-
-data VolunteerAPIs = VolunteerAPIs
-  { bookingInfo :: Text -> Euler.EulerClient Volunteer.BookingInfoResponse,
-    assignCreateAndStartOtpRide :: Volunteer.AssignCreateAndStartOtpRideAPIReq -> Euler.EulerClient APISuccess
   }
 
 data OverlayAPIs = OverlayAPIs
@@ -230,107 +194,99 @@ data SubscriptionAPIs = SubscriptionAPIs
     planSuspend :: Id Driver.Driver -> Euler.EulerClient APISuccess,
     planSubscribe :: Id Driver.Driver -> Id DPlan.Plan -> Euler.EulerClient Subscription.PlanSubscribeRes,
     currentPlan :: Id Driver.Driver -> Euler.EulerClient Subscription.CurrentPlanRes,
-    paymentStatus :: Id Driver.Driver -> Id INV.Invoice -> Euler.EulerClient APayment.PaymentStatusResp
+    paymentStatus :: Id Driver.Driver -> Id INV.Invoice -> Euler.EulerClient APayment.PaymentStatusResp,
+    getPaymentHistory :: Id Driver.Driver -> Maybe INV.InvoicePaymentMode -> Maybe Int -> Maybe Int -> Euler.EulerClient ADriver.HistoryEntityV2,
+    getPaymentHistoryEntityDetails :: Id Driver.Driver -> Id INV.Invoice -> Euler.EulerClient ADriver.HistoryEntryDetailsEntityV2,
+    updateSubscriptionDriverFeeAndInvoice :: Id Driver.Driver -> Driver.SubscriptionDriverFeesAndInvoicesToUpdate -> Euler.EulerClient Driver.SubscriptionDriverFeesAndInvoicesToUpdate,
+    sendMessageToDriverViaDashboard :: Id Driver.Driver -> Text -> DDriver.SendSmsReq -> Euler.EulerClient APISuccess
   }
 
-mkDriverOfferAPIs :: CheckedShortId DM.Merchant -> City.City -> Text -> DriverOfferAPIs
-mkDriverOfferAPIs merchantId city token = do
+mkDriverOperationAPIs :: CheckedShortId DM.Merchant -> City.City -> Text -> DriverOperationAPIs
+mkDriverOperationAPIs merchantId city token = do
+  let driverReferral = DriverReferralAPIs {..}
+  let driverRegistration = DriverRegistrationAPIs {..}
+  let driverCommon = DriverCommonAPIs {..}
+  let goHome = GoHomeAPIs {..}
   let drivers = DriversAPIs {..}
   let rides = RidesAPIs {..}
   let subscription = SubscriptionAPIs {..}
-  let driverReferral = DriverReferralAPIs {..}
-  let driverRegistration = DriverRegistrationAPIs {..}
   let bookings = BookingsAPIs {..}
   let merchant = MerchantAPIs {..}
   let message = MessageAPIs {..}
-  let volunteer = VolunteerAPIs {..}
   let issue = IssueAPIs {..}
   let revenue = RevenueAPIs {..}
   let overlay = OverlayAPIs {..}
-  DriverOfferAPIs {..}
+  DriverOperationAPIs {..}
   where
-    driversClient
+    subscriptionClient
       :<|> ridesClient
-      :<|> subscriptionClient
-      :<|> bookingsClient
-      :<|> merchantClient
-      :<|> messageClient
-      :<|> driverReferralClient
-      :<|> driverRegistrationClient
-      :<|> volunteerClient
-      :<|> issueClient
       :<|> revenueClient
-      :<|> overlayClient = clientWithMerchantAndCity (Proxy :: Proxy BPP.API') merchantId city token
+      :<|> overlayClient
+      :<|> messageClient
+      :<|> merchantClient
+      :<|> issueClient
+      :<|> driversClient
+      :<|> bookingsClient = clientWithMerchantAndCity (Proxy :: Proxy BPP.API) merchantId city token
 
     planList
       :<|> planSelect
       :<|> planSuspend
       :<|> planSubscribe
       :<|> currentPlan
-      :<|> paymentStatus = subscriptionClient
+      :<|> paymentStatus
+      :<|> getPaymentHistory
+      :<|> getPaymentHistoryEntityDetails
+      :<|> updateSubscriptionDriverFeeAndInvoice
+      :<|> sendMessageToDriverViaDashboard = subscriptionClient
+
+    goHomeClient
+      :<|> referralClient
+      :<|> driverRegistrationClient
+      :<|> driverCommonClient = driversClient
 
     driverDocumentsInfo
       :<|> driverAadhaarInfo
       :<|> driverAadhaarInfoByPhone
       :<|> listDrivers
-      :<|> getDriverDue
       :<|> driverActivity
-      :<|> enableDriver
       :<|> disableDriver
       :<|> blockDriverWithReason
       :<|> blockDriver
       :<|> blockReasonList
-      :<|> collectCash
-      :<|> exemptCash
       :<|> unblockDriver
       :<|> driverLocation
-      :<|> driverInfo
       :<|> deleteDriver
-      :<|> unlinkVehicle
       :<|> unlinkDL
       :<|> unlinkAadhaar
-      :<|> endRCAssociation
       :<|> updatePhoneNumber
       :<|> updateByPhoneNumber
-      :<|> addVehicle
-      :<|> addVehicleForFleet
-      :<|> getAllVehicleForFleet
-      :<|> getAllDriverForFleet
-      :<|> fleetUnlinkVehicle
-      :<|> fleetRemoveVehicle
-      :<|> fleetRemoveDriver
-      :<|> fleetTotalEarning
-      :<|> fleetVehicleEarning
-      :<|> fleetDriverEarning
       :<|> updateDriverName
-      :<|> setRCStatus
       :<|> deleteRC
-      :<|> clearOnRideStuckDrivers
-      :<|> getDriverHomeLocation
+      :<|> clearOnRideStuckDrivers = driverCommonClient
+
+    updateReferralLinkPassword
+      :<|> linkDriverReferralCode = referralClient
+
+    getDriverHomeLocation
       :<|> updateDriverHomeLocation
       :<|> incrementDriverGoToCount
-      :<|> getDriverGoHomeInfo
-      :<|> getPaymentHistory
-      :<|> getPaymentHistoryEntityDetails
-      :<|> updateSubscriptionDriverFeeAndInvoice
-      :<|> getFleetDriverVehicleAssociation
-      :<|> getFleetDriverAssociation
-      :<|> getFleetVehicleAssociation
-      :<|> setVehicleDriverRcStatusForFleet
-      :<|> sendMessageToDriverViaDashboard = driversClient
+      :<|> getDriverGoHomeInfo = goHomeClient
+
+    documentsList
+      :<|> getDocument
+      :<|> uploadDocument
+      :<|> registerDL
+      :<|> registerRC
+      :<|> generateAadhaarOtp
+      :<|> verifyAadhaarOtp = driverRegistrationClient
 
     rideList
-      :<|> rideStart
-      :<|> rideEnd
       :<|> multipleRideEnd
-      :<|> currentActiveRide
-      :<|> rideCancel
       :<|> multipleRideCancel
       :<|> rideInfo
       :<|> rideSync
       :<|> multipleRideSync
       :<|> rideRoute
-      :<|> bookingWithVehicleNumberAndPhone
       :<|> ticketRideList = ridesClient
 
     stuckBookingsCancel
@@ -356,19 +312,6 @@ mkDriverOfferAPIs merchantId city token = do
       :<|> createFPDriverExtraFee
       :<|> updateFPDriverExtraFee = merchantClient
 
-    updateReferralLinkPassword
-      :<|> linkDriverReferralCode = driverReferralClient
-
-    documentsList
-      :<|> getDocument
-      :<|> uploadDocument
-      :<|> registerDL
-      :<|> registerRC
-      :<|> generateAadhaarOtp
-      :<|> verifyAadhaarOtp
-      :<|> auth
-      :<|> verify = driverRegistrationClient
-
     uploadFile
       :<|> addLinkAsMedia
       :<|> addMessage
@@ -377,9 +320,6 @@ mkDriverOfferAPIs merchantId city token = do
       :<|> messageInfo
       :<|> messageDeliveryInfo
       :<|> messageReceiverList = messageClient
-
-    bookingInfo
-      :<|> assignCreateAndStartOtpRide = volunteerClient
 
     createOverlay
       :<|> deleteOverlay
@@ -398,56 +338,14 @@ mkDriverOfferAPIs merchantId city token = do
     getCollectionHistory
       :<|> getAllDriverFeeHistory = revenueClient
 
-callDriverOfferBPP ::
+callDriverOfferBPPOperations ::
   forall m r b c.
   ( CoreMetrics m,
     HasFlowEnv m r '["dataServers" ::: [DataServer]],
-    CallServerAPI DriverOfferAPIs m r b c
+    CallServerAPI DriverOperationAPIs m r b c
   ) =>
   CheckedShortId DM.Merchant ->
   City.City ->
-  (DriverOfferAPIs -> b) ->
+  (DriverOperationAPIs -> b) ->
   c
-callDriverOfferBPP merchantId city = callServerAPI @_ @m @r DRIVER_OFFER_BPP (mkDriverOfferAPIs merchantId city) "callDriverOfferBPP"
-
-newtype ExotelAPIs = ExotelAPIs
-  { exotelHeartbeat :: Exotel.ExotelHeartbeatReq -> Euler.EulerClient APISuccess
-  }
-
-mkDynamicOfferDriverAppExotelAPIs :: Text -> ExotelAPIs
-mkDynamicOfferDriverAppExotelAPIs token = do
-  ExotelAPIs {..}
-  where
-    exotelHeartbeat = Euler.client (Proxy :: Proxy BPP.ExotelAPI) token
-
-callDynamicOfferDriverAppExotelApi ::
-  forall m r b c.
-  ( CoreMetrics m,
-    HasFlowEnv m r '["dataServers" ::: [DataServer]],
-    CallServerAPI ExotelAPIs m r b c
-  ) =>
-  (ExotelAPIs -> b) ->
-  c
-callDynamicOfferDriverAppExotelApi = callServerAPI @_ @m @r DRIVER_OFFER_BPP mkDynamicOfferDriverAppExotelAPIs "callDynamicOfferDriverAppExotelApi"
-
-data FleetAPIs = FleetAPIs
-  { fleetOwnerLogin :: Fleet.FleetOwnerLoginReq -> Euler.EulerClient APISuccess,
-    fleetOwnerVerify :: Fleet.FleetOwnerLoginReq -> Euler.EulerClient APISuccess
-  }
-
-mkDynamicOfferDriverAppFleetAPIs :: Text -> FleetAPIs
-mkDynamicOfferDriverAppFleetAPIs token = do
-  FleetAPIs {..}
-  where
-    fleetOwnerLogin
-      :<|> fleetOwnerVerify = Euler.client (Proxy :: Proxy BPP.FleetAPI) token
-
-callDynamicOfferDriverAppFleetApi ::
-  forall m r b c.
-  ( CoreMetrics m,
-    HasFlowEnv m r '["dataServers" ::: [DataServer]],
-    CallServerAPI FleetAPIs m r b c
-  ) =>
-  (FleetAPIs -> b) ->
-  c
-callDynamicOfferDriverAppFleetApi = callServerAPI @_ @m @r DRIVER_OFFER_BPP mkDynamicOfferDriverAppFleetAPIs "callDynamicOfferDriverAppFleetApi"
+callDriverOfferBPPOperations merchantId city = callServerAPI @_ @m @r DRIVER_OFFER_BPP_MANAGEMENT (mkDriverOperationAPIs merchantId city) "callDriverOfferBPPOperations"

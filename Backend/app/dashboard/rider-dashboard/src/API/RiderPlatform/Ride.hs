@@ -34,10 +34,10 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.SlidingWindowLimiter
 import Kernel.Utils.Validation (runRequestValidation)
-import qualified RiderPlatformClient.RiderApp as Client
+import qualified RiderPlatformClient.RiderApp.Operations as Client
 import Servant
 import qualified SharedLogic.Transaction as T
-import "lib-dashboard" Tools.Auth hiding (BECKN_TRANSPORT, DRIVER_OFFER_BPP)
+import "lib-dashboard" Tools.Auth hiding (DRIVER_OFFER_BPP)
 import Tools.Auth.Merchant
 
 type API =
@@ -58,19 +58,19 @@ type ShareRideInfoAPI = Common.ShareRideInfoAPI
 type TripRouteAPI = Common.TripRouteAPI
 
 type RideInfoAPI =
-  ApiAuth 'APP_BACKEND 'CUSTOMERS 'RIDE_INFO_CUSTOMER
+  ApiAuth 'APP_BACKEND_MANAGEMENT 'CUSTOMERS 'RIDE_INFO_CUSTOMER
     :> Common.RideInfoAPI
 
 type MultipleRideCancelAPI =
-  ApiAuth 'APP_BACKEND 'RIDES 'MULTIPLE_RIDE_CANCEL
+  ApiAuth 'APP_BACKEND_MANAGEMENT 'RIDES 'MULTIPLE_RIDE_CANCEL
     :> BAP.MultipleRideCancelAPI
 
 type MultipleRideSyncAPI =
-  ApiAuth 'APP_BACKEND 'RIDES 'MULTIPLE_RIDE_SYNC
+  ApiAuth 'APP_BACKEND_MANAGEMENT 'RIDES 'MULTIPLE_RIDE_SYNC
     :> Common.MultipleRideSyncAPI
 
 type TicketRideListAPI =
-  ApiAuth 'APP_BACKEND 'RIDES 'TICKET_RIDE_LIST_API
+  ApiAuth 'APP_BACKEND_MANAGEMENT 'RIDES 'TICKET_RIDE_LIST_API
     :> Common.TicketRideListAPI
 
 handler :: ShortId DM.Merchant -> City.City -> FlowServer API
@@ -96,7 +96,7 @@ buildTransaction ::
   Maybe request ->
   m DT.Transaction
 buildTransaction endpoint apiTokenInfo =
-  T.buildTransaction (DT.RideAPI endpoint) (Just APP_BACKEND) (Just apiTokenInfo) Nothing Nothing
+  T.buildTransaction (DT.RideAPI endpoint) (Just APP_BACKEND_MANAGEMENT) (Just apiTokenInfo) Nothing Nothing
 
 shareRideInfo ::
   ShortId DM.Merchant ->
@@ -107,7 +107,7 @@ shareRideInfo merchantShortId opCity rideId = withFlowHandlerAPI $ do
   shareRideApiRateLimitOptions <- asks (.shareRideApiRateLimitOptions)
   checkSlidingWindowLimitWithOptions (rideInfoHitsCountKey rideId) shareRideApiRateLimitOptions
   checkedMerchantId <- merchantCityAccessCheck merchantShortId merchantShortId opCity opCity
-  Client.callRiderApp checkedMerchantId opCity (.rides.shareRideInfo) rideId
+  Client.callRiderAppOperations checkedMerchantId opCity (.rides.shareRideInfo) rideId
 
 rideList ::
   ShortId DM.Merchant ->
@@ -124,7 +124,7 @@ rideList ::
 rideList merchantShortId opCity mbLimit mbOffset mbBookingStatus mbShortRideId mbCustomerPhone mbDriverPhone mbFrom mbTo =
   withFlowHandlerAPI $ do
     checkedMerchantId <- merchantCityAccessCheck merchantShortId merchantShortId opCity opCity
-    Client.callRiderApp checkedMerchantId opCity (.rides.rideList) mbLimit mbOffset mbBookingStatus mbShortRideId mbCustomerPhone mbDriverPhone mbFrom mbTo
+    Client.callRiderAppOperations checkedMerchantId opCity (.rides.rideList) mbLimit mbOffset mbBookingStatus mbShortRideId mbCustomerPhone mbDriverPhone mbFrom mbTo
 
 tripRoute ::
   ShortId DM.Merchant ->
@@ -135,7 +135,7 @@ tripRoute ::
   FlowHandler Maps.GetRoutesResp
 tripRoute merchantShortId opCity rideId pickupLocationLat pickupLocationLon = withFlowHandlerAPI $ do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId merchantShortId opCity opCity
-  Client.callRiderApp checkedMerchantId opCity (.rides.tripRoute) rideId pickupLocationLat pickupLocationLon
+  Client.callRiderAppOperations checkedMerchantId opCity (.rides.tripRoute) rideId pickupLocationLat pickupLocationLon
 
 rideInfo ::
   ShortId DM.Merchant ->
@@ -145,14 +145,14 @@ rideInfo ::
   FlowHandler Common.RideInfoRes
 rideInfo merchantShortId opCity apiTokenInfo rideId = withFlowHandlerAPI $ do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity opCity
-  Client.callRiderApp checkedMerchantId opCity (.rides.rideInfo) rideId
+  Client.callRiderAppOperations checkedMerchantId opCity (.rides.rideInfo) rideId
 
 multipleRideCancel :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Domain.MultipleRideCancelReq -> FlowHandler APISuccess
 multipleRideCancel merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI $ do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity opCity
   transaction <- buildTransaction Common.MultipleRideCancelEndpoint apiTokenInfo (Just req)
   T.withTransactionStoring transaction $
-    Client.callRiderApp checkedMerchantId opCity (.rides.multipleRideCancel) req
+    Client.callRiderAppOperations checkedMerchantId opCity (.rides.multipleRideCancel) req
 
 multipleRideSync :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.MultipleRideSyncReq -> FlowHandler Common.MultipleRideSyncResp
 multipleRideSync merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI $ do
@@ -160,11 +160,11 @@ multipleRideSync merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI $ 
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity opCity
   transaction <- buildTransaction Common.MultipleRideSyncEndpoint apiTokenInfo (Just req)
   T.withResponseTransactionStoring transaction $
-    Client.callRiderApp checkedMerchantId opCity (.rides.multipleRideSync) req
+    Client.callRiderAppOperations checkedMerchantId opCity (.rides.multipleRideSync) req
 
 ticketRideList :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Maybe (ShortId Common.Ride) -> Maybe Text -> Maybe Text -> Maybe Text -> FlowHandler Common.TicketRideListRes
 ticketRideList merchantShortId opCity apiTokenInfo mbRideShortId mbCountryCode mbPhoneNumber mbSupportPhoneNumber = withFlowHandlerAPI $ do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity opCity
   transaction <- buildTransaction Common.TicketRideListEndpoint apiTokenInfo T.emptyRequest
   T.withTransactionStoring transaction $
-    Client.callRiderApp checkedMerchantId opCity (.rides.ticketRideList) mbRideShortId mbCountryCode mbPhoneNumber mbSupportPhoneNumber
+    Client.callRiderAppOperations checkedMerchantId opCity (.rides.ticketRideList) mbRideShortId mbCountryCode mbPhoneNumber mbSupportPhoneNumber

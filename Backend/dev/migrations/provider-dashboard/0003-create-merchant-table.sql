@@ -9,7 +9,7 @@ created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
 ALTER TABLE atlas_bpp_dashboard.merchant OWNER TO atlas_bpp_dashboard_user;
 
 INSERT INTO atlas_bpp_dashboard.merchant (id, short_id, server_name, created_at) VALUES
-    ('d92db186-39d3-48a4-ad1f-78a0c3f840fd', 'YATRI_PARTNER', 'BECKN_TRANSPORT', now ()),
+    ('d92db186-39d3-48a4-ad1f-78a0c3f840fd', 'YATRI_PARTNER', 'DRIVER_OFFER_BPP', now ()),
     ('94bbea0d-3c52-479b-81f5-eca4969ae797', 'NAMMA_YATRI_PARTNER', 'DRIVER_OFFER_BPP', now ());
 
 ALTER TABLE atlas_bpp_dashboard.server_access RENAME TO merchant_access;

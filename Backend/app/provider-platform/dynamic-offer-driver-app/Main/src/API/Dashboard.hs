@@ -14,83 +14,49 @@
 
 module API.Dashboard where
 
-import qualified API.Dashboard.Booking as Booking
-import qualified API.Dashboard.Driver as Driver
-import qualified API.Dashboard.Driver.Registration as DriverRegistration
-import qualified API.Dashboard.DriverReferral as DriverReferral
 import qualified API.Dashboard.Exotel as Exotel
-import qualified API.Dashboard.Fleet.Registration as Fleet
-import qualified API.Dashboard.Issue as Issue
-import qualified API.Dashboard.Merchant as Merchant
-import qualified API.Dashboard.Message as Message
-import qualified API.Dashboard.Overlay as Overlay
-import qualified API.Dashboard.Revenue as Revenue
-import qualified API.Dashboard.Ride as Ride
-import qualified API.Dashboard.Subscription as Subscription
-import qualified API.Dashboard.Volunteer as Volunteer
+import qualified API.Dashboard.Fleet as Fleet
+import qualified API.Dashboard.Management as Management
+import qualified API.Dashboard.RideBooking as RideBooking
 import qualified Domain.Types.Merchant as DM
 import Environment
 import Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import Servant hiding (throwError)
-import Tools.Auth
 
 -- TODO :: Deprecated, Remove after successful deployment
 type API =
   "dashboard"
-    :> ( Capture "merchantId" (ShortId DM.Merchant)
-           :> API'
+    :> Capture "merchantId" (ShortId DM.Merchant)
+    :> ( Management.API
+           :<|> RideBooking.API
+           :<|> Fleet.API
        )
-    :<|> ExotelAPI
-    :<|> FleetAPI
+    :<|> Exotel.API
 
 type APIV2 =
   "dashboard"
-    :> ( Capture "merchantId" (ShortId DM.Merchant)
-           :> Capture "city" Context.City
-           :> API'
+    :> Capture "merchantId" (ShortId DM.Merchant)
+    :> Capture "city" Context.City
+    :> ( Management.API
+           :<|> RideBooking.API
+           :<|> Fleet.API
        )
-    :<|> ExotelAPI
-    :<|> FleetAPI
-
-type API' =
-  DashboardTokenAuth
-    :> ( Driver.API
-           :<|> Ride.API
-           :<|> Subscription.API
-           :<|> Booking.API
-           :<|> Merchant.API
-           :<|> Message.API
-           :<|> DriverReferral.API
-           :<|> DriverRegistration.API
-           :<|> Volunteer.API
-           :<|> Issue.API
-           :<|> Revenue.API
-           :<|> Overlay.API
-       )
+    :<|> Exotel.API
 
 -- TODO :: Deprecated, Remove after successful deployment
 handler :: FlowServer API
 handler =
-  ( \merchantId _dashboard -> do
+  ( \merchantId -> do
       let city = getCity merchantId.getShortId
-      Driver.handler merchantId city
-        :<|> Ride.handler merchantId city
-        :<|> Subscription.handler merchantId city
-        :<|> Booking.handler merchantId city
-        :<|> Merchant.handler merchantId city
-        :<|> Message.handler merchantId city
-        :<|> DriverReferral.handler merchantId city
-        :<|> DriverRegistration.handler merchantId city
-        :<|> Volunteer.handler merchantId city
-        :<|> Issue.handler merchantId city
-        :<|> Revenue.handler merchantId city
-        :<|> Overlay.handler merchantId city
+      Management.handler merchantId city
+        :<|> RideBooking.handler merchantId city
+        :<|> Fleet.handler merchantId city
   )
-    :<|> exotelHandler
-    :<|> fleetHandler
+    :<|> Exotel.handler
   where
     getCity = \case
+      -- this is temporary, will be removed after successful deployment
       "NAMMA_YATRI_PARTNER" -> Context.Bangalore
       "YATRI_PARTNER" -> Context.Kochi
       "JATRI_SAATHI_PARTNER" -> Context.Kolkata
@@ -99,35 +65,9 @@ handler =
 
 handlerV2 :: FlowServer APIV2
 handlerV2 =
-  ( \merchantId city _dashboard ->
-      Driver.handler merchantId city
-        :<|> Ride.handler merchantId city
-        :<|> Subscription.handler merchantId city
-        :<|> Booking.handler merchantId city
-        :<|> Merchant.handler merchantId city
-        :<|> Message.handler merchantId city
-        :<|> DriverReferral.handler merchantId city
-        :<|> DriverRegistration.handler merchantId city
-        :<|> Volunteer.handler merchantId city
-        :<|> Issue.handler merchantId city
-        :<|> Revenue.handler merchantId city
-        :<|> Overlay.handler merchantId city
+  ( \merchantId city -> do
+      Management.handler merchantId city
+        :<|> RideBooking.handler merchantId city
+        :<|> Fleet.handler merchantId city
   )
-    :<|> exotelHandler
-    :<|> fleetHandler
-
-type ExotelAPI =
-  DashboardTokenAuth
-    :> Exotel.API
-
-type FleetAPI =
-  DashboardTokenAuth
-    :> Fleet.API
-
-exotelHandler :: FlowServer ExotelAPI
-exotelHandler _dashboard =
-  Exotel.handler
-
-fleetHandler :: FlowServer FleetAPI
-fleetHandler _dashboard =
-  Fleet.handler
+    :<|> Exotel.handler

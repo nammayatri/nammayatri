@@ -13,7 +13,7 @@
 -}
 {-# LANGUAGE AllowAmbiguousTypes #-}
 
-module RiderPlatformClient.RiderApp
+module RiderPlatformClient.RiderApp.RideBooking
   ( callRiderApp,
   )
 where
@@ -22,12 +22,6 @@ import qualified "rider-app" API.Dashboard as BAP
 import qualified "rider-app" API.Dashboard.RideBooking.Registration as CR
 import qualified "rider-app" API.UI.Confirm as UC
 import qualified "rider-app" API.UI.Search as SH
-import qualified Dashboard.Common.Booking as Booking
-import qualified Dashboard.RiderPlatform.Customer as Customer
-import qualified Dashboard.RiderPlatform.Merchant as Merchant
-import qualified Dashboard.RiderPlatform.Ride as Ride
-import qualified "rider-app" Domain.Action.Dashboard.IssueList as DI
-import qualified Domain.Action.Dashboard.Ride as DCM
 import qualified "rider-app" Domain.Action.UI.Booking as DBooking
 import qualified "rider-app" Domain.Action.UI.Cancel as DCancel
 import qualified "rider-app" Domain.Action.UI.Frontend as DFrontend
@@ -47,11 +41,6 @@ import qualified "rider-app" Domain.Types.RegistrationToken as DTR
 import qualified "rider-app" Domain.Types.SearchRequest as SSR
 import Domain.Types.ServerName
 import qualified EulerHS.Types as Euler
-import qualified IssueManagement.Common as DIssue
-import IssueManagement.Common.Dashboard.Issue as Issue
-import IssueManagement.Domain.Types.Issue.IssueCategory
-import IssueManagement.Domain.Types.Issue.IssueReport
-import qualified Kernel.External.Maps as Maps
 import Kernel.Prelude
 import Kernel.Tools.Metrics.CoreMetrics
 import Kernel.Types.APISuccess (APISuccess)
@@ -63,45 +52,7 @@ import Tools.Auth.Merchant (CheckedShortId)
 import Tools.Client
 
 data AppBackendAPIs = AppBackendAPIs
-  { customers :: CustomerAPIs,
-    bookings :: BookingsAPIs,
-    merchant :: MerchantAPIs,
-    rides :: RidesAPIs,
-    rideBooking :: RideBookingAPIs,
-    issues :: ListIssueAPIs,
-    issuesV2 :: IssueAPIs
-  }
-
-data CustomerAPIs = CustomerAPIs
-  { customerList :: Maybe Int -> Maybe Int -> Maybe Bool -> Maybe Bool -> Maybe Text -> Euler.EulerClient Customer.CustomerListRes,
-    customerDelete :: Id Customer.Customer -> Euler.EulerClient APISuccess,
-    customerBlock :: Id Customer.Customer -> Euler.EulerClient APISuccess,
-    customerUnblock :: Id Customer.Customer -> Euler.EulerClient APISuccess,
-    customerInfo :: Id Customer.Customer -> Euler.EulerClient Customer.CustomerInfoRes
-  }
-
-data BookingsAPIs = BookingsAPIs
-  { stuckBookingsCancel :: Booking.StuckBookingsCancelReq -> Euler.EulerClient Booking.StuckBookingsCancelRes,
-    multipleBookingSync :: Booking.MultipleBookingSyncReq -> Euler.EulerClient Booking.MultipleBookingSyncResp
-  }
-
-data MerchantAPIs = MerchantAPIs
-  { merchantUpdate :: Merchant.MerchantUpdateReq -> Euler.EulerClient APISuccess,
-    serviceUsageConfig :: Euler.EulerClient Merchant.ServiceUsageConfigRes,
-    mapsServiceConfigUpdate :: Merchant.MapsServiceConfigUpdateReq -> Euler.EulerClient APISuccess,
-    mapsServiceUsageConfigUpdate :: Merchant.MapsServiceUsageConfigUpdateReq -> Euler.EulerClient APISuccess,
-    smsServiceConfigUpdate :: Merchant.SmsServiceConfigUpdateReq -> Euler.EulerClient APISuccess,
-    smsServiceUsageConfigUpdate :: Merchant.SmsServiceUsageConfigUpdateReq -> Euler.EulerClient APISuccess
-  }
-
-data RidesAPIs = RidesAPIs
-  { shareRideInfo :: Id Ride.Ride -> Euler.EulerClient Ride.ShareRideInfoRes,
-    rideList :: Maybe Int -> Maybe Int -> Maybe Ride.BookingStatus -> Maybe (ShortId Ride.Ride) -> Maybe Text -> Maybe Text -> Maybe UTCTime -> Maybe UTCTime -> Euler.EulerClient Ride.RideListRes,
-    tripRoute :: Id Ride.Ride -> Double -> Double -> Euler.EulerClient Maps.GetRoutesResp,
-    rideInfo :: Id Ride.Ride -> Euler.EulerClient Ride.RideInfoRes,
-    multipleRideCancel :: DCM.MultipleRideCancelReq -> Euler.EulerClient APISuccess,
-    multipleRideSync :: Ride.MultipleRideSyncReq -> Euler.EulerClient Ride.MultipleRideSyncResp,
-    ticketRideList :: Maybe (ShortId Ride.Ride) -> Maybe Text -> Maybe Text -> Maybe Text -> Euler.EulerClient Ride.TicketRideListRes
+  { rideBooking :: RideBookingAPIs
   }
 
 data RideBookingAPIs = RideBookingAPIs
@@ -168,27 +119,8 @@ newtype CancelBookingAPIs = CancelBookingAPIs
   { cancelBooking :: Id SRB.Booking -> Id DP.Person -> DCancel.CancelReq -> Euler.EulerClient APISuccess
   }
 
-data ListIssueAPIs = ListIssueAPIs
-  { listIssue :: Maybe Int -> Maybe Int -> Maybe Text -> Maybe Text -> Maybe UTCTime -> Maybe UTCTime -> Euler.EulerClient DI.IssueListRes,
-    ticketStatusCallBack :: Issue.TicketStatusCallBackReq -> Euler.EulerClient APISuccess
-  }
-
-data IssueAPIs = IssueAPIs
-  { issueCategoryList :: Euler.EulerClient Issue.IssueCategoryListRes,
-    issueList :: Maybe Int -> Maybe Int -> Maybe DIssue.IssueStatus -> Maybe (Id IssueCategory) -> Maybe Text -> Euler.EulerClient Issue.IssueReportListResponse,
-    issueInfo :: Id IssueReport -> Euler.EulerClient Issue.IssueInfoRes,
-    issueUpdate :: Id IssueReport -> Issue.IssueUpdateByUserReq -> Euler.EulerClient APISuccess,
-    issueAddComment :: Id IssueReport -> Issue.IssueAddCommentByUserReq -> Euler.EulerClient APISuccess,
-    issueFetchMedia :: Text -> Euler.EulerClient Text,
-    ticketStatusCallBack_ :: Issue.TicketStatusCallBackReq -> Euler.EulerClient APISuccess
-  }
-
 mkAppBackendAPIs :: CheckedShortId DM.Merchant -> City.City -> Text -> AppBackendAPIs
 mkAppBackendAPIs merchantId city token = do
-  let customers = CustomerAPIs {..}
-  let bookings = BookingsAPIs {..}
-  let merchant = MerchantAPIs {..}
-  let rides = RidesAPIs {..}
   let registration = RegistrationAPIs {..}
   let profile = ProfileAPIs {..}
   let search = SearchAPIs {..}
@@ -200,34 +132,9 @@ mkAppBackendAPIs merchantId city token = do
   let flowStatus = FlowStatusAPIs {..}
   let cancel = CancelBookingAPIs {..}
   let rideBooking = RideBookingAPIs {..}
-  let issues = ListIssueAPIs {..}
-  let issuesV2 = IssueAPIs {..}
   AppBackendAPIs {..}
   where
-    customersClient
-      :<|> bookingsClient
-      :<|> merchantClient
-      :<|> ridesClient
-      :<|> rideBookingClient
-      :<|> issueClient
-      :<|> issueV2Client = clientWithMerchantAndCity (Proxy :: Proxy BAP.API') merchantId city token
-
-    customerList
-      :<|> customerDelete
-      :<|> customerBlock
-      :<|> customerUnblock
-      :<|> customerInfo = customersClient
-
-    stuckBookingsCancel
-      :<|> multipleBookingSync = bookingsClient
-
-    shareRideInfo
-      :<|> rideList
-      :<|> tripRoute
-      :<|> rideInfo
-      :<|> multipleRideCancel
-      :<|> multipleRideSync
-      :<|> ticketRideList = ridesClient
+    rideBookingClient = clientWithMerchantAndCity (Proxy :: Proxy BAP.RideBookingAPI) merchantId city token
 
     registrationClient
       :<|> profileClient
@@ -270,24 +177,6 @@ mkAppBackendAPIs merchantId city token = do
       :<|> notifyEvent = flowStatusClient
 
     cancelBooking = cancelBookingClient
-
-    merchantUpdate
-      :<|> serviceUsageConfig
-      :<|> mapsServiceConfigUpdate
-      :<|> mapsServiceUsageConfigUpdate
-      :<|> smsServiceConfigUpdate
-      :<|> smsServiceUsageConfigUpdate = merchantClient
-
-    listIssue
-      :<|> ticketStatusCallBack = issueClient
-
-    issueCategoryList
-      :<|> issueList
-      :<|> issueInfo
-      :<|> issueUpdate
-      :<|> issueAddComment
-      :<|> issueFetchMedia
-      :<|> ticketStatusCallBack_ = issueV2Client
 
 callRiderApp ::
   forall m r b c.

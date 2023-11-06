@@ -12,7 +12,7 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module API.Dashboard.Overlay where
+module API.Dashboard.Management.Overlay where
 
 import qualified Domain.Action.Dashboard.Overlay as DOverlay
 import qualified Domain.Types.Merchant as DM

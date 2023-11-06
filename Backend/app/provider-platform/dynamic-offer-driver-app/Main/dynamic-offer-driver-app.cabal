@@ -38,20 +38,28 @@ library
       API.Beckn.Track
       API.Beckn.Update
       API.Dashboard
-      API.Dashboard.Booking
-      API.Dashboard.Driver
-      API.Dashboard.Driver.Registration
-      API.Dashboard.DriverReferral
       API.Dashboard.Exotel
+      API.Dashboard.Fleet
+      API.Dashboard.Fleet.Operations
       API.Dashboard.Fleet.Registration
-      API.Dashboard.Issue
-      API.Dashboard.Merchant
-      API.Dashboard.Message
-      API.Dashboard.Overlay
-      API.Dashboard.Revenue
-      API.Dashboard.Ride
-      API.Dashboard.Subscription
-      API.Dashboard.Volunteer
+      API.Dashboard.Management
+      API.Dashboard.Management.Booking
+      API.Dashboard.Management.Driver
+      API.Dashboard.Management.Driver.Common
+      API.Dashboard.Management.Driver.GoHome
+      API.Dashboard.Management.Driver.Referral
+      API.Dashboard.Management.Driver.Registration
+      API.Dashboard.Management.Issue
+      API.Dashboard.Management.Merchant
+      API.Dashboard.Management.Message
+      API.Dashboard.Management.Overlay
+      API.Dashboard.Management.Revenue
+      API.Dashboard.Management.Ride
+      API.Dashboard.Management.Subscription
+      API.Dashboard.RideBooking
+      API.Dashboard.RideBooking.Driver
+      API.Dashboard.RideBooking.Ride
+      API.Dashboard.RideBooking.Volunteer
       API.Internal
       API.Internal.Auth
       API.Internal.BulkLocUpdate

@@ -1,4 +1,4 @@
-module API.Dashboard.Issue where
+module API.Dashboard.Management.Issue where
 
 import qualified Domain.Types.Merchant as DM
 import Environment

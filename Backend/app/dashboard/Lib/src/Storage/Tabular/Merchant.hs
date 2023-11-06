@@ -32,7 +32,7 @@ mkPersist
     MerchantT sql=merchant
       id Text
       shortId Text
-      serverName Domain.ServerName
+      serverNames [Domain.ServerName]
       is2faMandatory Bool
       defaultOperatingCity City
       supportedOperatingCities [City]

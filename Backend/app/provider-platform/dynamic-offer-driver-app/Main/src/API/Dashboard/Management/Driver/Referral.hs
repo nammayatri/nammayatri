@@ -12,7 +12,7 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module API.Dashboard.DriverReferral where
+module API.Dashboard.Management.Driver.Referral where
 
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.DriverReferral as Common
 import qualified Domain.Action.Dashboard.DriverReferral as DRe

@@ -24,6 +24,7 @@ import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Person.API as AP
 import qualified Domain.Types.Person.Type as SP
 import qualified Domain.Types.Role as DRole
+import qualified Domain.Types.ServerName as DTServer
 import Kernel.External.Encryption (decrypt, encrypt, getDbHash)
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
@@ -47,7 +48,7 @@ import qualified Storage.Queries.RegistrationToken as QReg
 import qualified Storage.Queries.Role as QRole
 import Tools.Auth
 import qualified Tools.Auth.Common as Auth
-import qualified Tools.Client as Client
+import Tools.Auth.Merchant
 import Tools.Error
 
 data ListPersonRes = ListPersonRes
@@ -170,7 +171,7 @@ assignRole _ personId roleId = do
 
 assignMerchantCityAccess ::
   ( EsqDBFlow m r,
-    HasFlowEnv m r '["dataServers" ::: [Client.DataServer]]
+    HasFlowEnv m r '["dataServers" ::: [DTServer.DataServer]]
   ) =>
   TokenInfo ->
   Id DP.Person ->
@@ -180,9 +181,7 @@ assignMerchantCityAccess _ personId req = do
   merchant <-
     QMerchant.findByShortId req.merchantId
       >>= fromMaybeM (MerchantDoesNotExist req.merchantId.getShortId)
-  availableServers <- asks (.dataServers)
-  unless (merchant.serverName `elem` (availableServers <&> (.name))) $
-    throwError $ InvalidRequest "Server for this merchant is not available"
+  merchantServerAccessCheck merchant
   let isSupportedCity = req.operatingCity `elem` (merchant.supportedOperatingCities)
   unless isSupportedCity $
     throwError $ InvalidRequest "Server does not support this city"
@@ -198,7 +197,7 @@ assignMerchantCityAccess _ personId req = do
 resetMerchantAccess ::
   ( EsqDBFlow m r,
     Redis.HedisFlow m r,
-    HasFlowEnv m r '["dataServers" ::: [Client.DataServer]],
+    HasFlowEnv m r '["dataServers" ::: [DTServer.DataServer]],
     HasFlowEnv m r '["authTokenCacheKeyPrefix" ::: Text]
   ) =>
   TokenInfo ->
@@ -209,9 +208,7 @@ resetMerchantAccess _ personId req = do
   merchant <-
     QMerchant.findByShortId req.merchantId
       >>= fromMaybeM (MerchantDoesNotExist req.merchantId.getShortId)
-  availableServers <- asks (.dataServers)
-  unless (merchant.serverName `elem` (availableServers <&> (.name))) $
-    throwError $ InvalidRequest "Server for this merchant is not available"
+  merchantServerAccessCheck merchant
   _person <- QP.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   merchantAccesses <- QAccess.findByPersonIdAndMerchantId personId merchant.id
   case merchantAccesses of
@@ -227,7 +224,7 @@ resetMerchantAccess _ personId req = do
 resetMerchantCityAccess ::
   ( EsqDBFlow m r,
     Redis.HedisFlow m r,
-    HasFlowEnv m r '["dataServers" ::: [Client.DataServer]],
+    HasFlowEnv m r '["dataServers" ::: [DTServer.DataServer]],
     HasFlowEnv m r '["authTokenCacheKeyPrefix" ::: Text]
   ) =>
   TokenInfo ->
@@ -238,9 +235,7 @@ resetMerchantCityAccess _ personId req = do
   merchant <-
     QMerchant.findByShortId req.merchantId
       >>= fromMaybeM (MerchantDoesNotExist req.merchantId.getShortId)
-  availableServers <- asks (.dataServers)
-  unless (merchant.serverName `elem` (availableServers <&> (.name))) $
-    throwError $ InvalidRequest "Server for this merchant is not available"
+  merchantServerAccessCheck merchant
   _person <- QP.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   mbMerchantAccess <- QAccess.findByPersonIdAndMerchantIdAndCity personId merchant.id req.operatingCity
   case mbMerchantAccess of
