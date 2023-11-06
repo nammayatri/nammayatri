@@ -514,6 +514,7 @@ data ScreenOutput = LogoutUser
                   | RetryFindingQuotes Boolean HomeScreenState
                   | ReportIssue HomeScreenState
                   | RideDetailsScreen HomeScreenState
+                  | SafetySupport HomeScreenState String
 
 data Action = NoAction
             | BackPressed
@@ -627,6 +628,8 @@ data Action = NoAction
             | NotifyDriverStatusCountDown Int String String String
             | UpdateProfileButtonAC PrimaryButtonController.Action 
             | SkipAccessibilityUpdateAC PrimaryButtonController.Action
+            | SafetyAlertAction PopUpModal.Action
+            | ReportUnsafe PopUpModal.Action
 
 
 eval :: Action -> HomeScreenState -> Eval Action ScreenOutput HomeScreenState
@@ -721,6 +724,16 @@ eval ( RideCompletedAC (RideCompletedCard.RateClick index)) state = do
           , ratingViewState { selectedRating = index }
         }
       }
+
+eval (SafetyAlertAction PopUpModal.OnButton1Click) state = exit $ SafetySupport state "safe"
+
+eval (SafetyAlertAction PopUpModal.OnButton2Click) state = do
+    _ <- pure $ setValueToLocalNativeStore SAFETY_ALERT_TYPE "false"
+    continue state {props {reportUnsafe = true}}
+
+eval (ReportUnsafe PopUpModal.OnButton1Click) state = exit $ SafetySupport state "unsafe"
+
+eval (ReportUnsafe PopUpModal.OnButton2Click) state = continue state{props {reportUnsafe = false}}
 
 eval ( RideCompletedAC (RideCompletedCard.IssueReportIndex index)) state =
   case index of

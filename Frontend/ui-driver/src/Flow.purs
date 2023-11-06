@@ -1841,6 +1841,8 @@ homeScreenFlow = do
           _ <- pure $ setValueToLocalStore TRIP_STATUS "started"
           void $ pure $ setValueToLocalStore WAITING_TIME_STATUS (show ST.NoStatus)
           void $ pure $ EHC.clearTimer updatedState.data.activeRide.waitTimerId
+          _ <- pure $ setValueToLocalStore TRIGGER_MAPS "true" 
+          _ <- pure $ setValueToLocalNativeStore SAFETY_ALERT "false"
           currentRideFlow Nothing
         Left errorPayload -> do
           let errResp = errorPayload.response
@@ -1864,6 +1866,7 @@ homeScreenFlow = do
           void $ lift $ lift $ toggleLoader false
           void $ updateStage $ HomeScreenStage RideStarted
           _ <- pure $ setValueToLocalStore TRIGGER_MAPS "true"
+          _ <- pure $ setValueToLocalNativeStore SAFETY_ALERT "false"
           currentRideFlow Nothing
         Left errorPayload -> do
           let errResp = errorPayload.response
@@ -1903,8 +1906,10 @@ homeScreenFlow = do
       void $ pure $ setCleverTapUserProp [{key : "Driver On-ride", value : unsafeToForeign "No"}]
       _ <- pure $ setValueToLocalStore DRIVER_STATUS_N "Online"
       _ <- pure $ setValueToLocalNativeStore DRIVER_STATUS_N "Online"
-      _ <- Remote.driverActiveInactiveBT "true" $ toUpper $ show Online
+      (DriverActiveInactiveResp resp) <- Remote.driverActiveInactiveBT "true" $ toUpper $ show Online
       _ <- pure $ setValueToLocalNativeStore TRIP_STATUS "ended"
+      _ <- pure $ setValueToLocalNativeStore SAFETY_ALERT "false"
+      _ <- pure $ setValueToLocalNativeStore DRIVER_LATLON_TIME "__failed"
       liftFlowBT $ logEvent logField_ "ny_driver_ride_completed"
       resp <- Remote.getDriverProfileStatsBT (DriverProfileStatsReq (getcurrentdate ""))
       modifyScreenState $ GlobalPropsType $ \globalProps -> globalProps{driverRideStats = Just resp}

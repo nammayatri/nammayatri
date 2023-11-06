@@ -497,7 +497,16 @@ const frenchStrings = {
   "RIDE_TYPE" : "Type de trajet",
   "ERNAKULAM_LIMIT_CHARGE" : "Le tarif sera de 1.5 x si la prise en charge ou la destination se situe en dehors des limites de la société Ernakulam",
   "SELECT_LOCATION_ON_MAP" : "sélectionner l'emplacement sur la carte",
-  "PLEASE_ENABLE_LOCATION_PERMISSION" : "Veuillez activer les autorisations de localisation depuis l'application des paramètres pour commencer à rechercher des courses."
+  "PLEASE_ENABLE_LOCATION_PERMISSION" : "Veuillez activer les autorisations de localisation depuis l'application des paramètres pour commencer à rechercher des courses.",
+  "WE_NOTICED_YOUR_RIDE_HASNT_MOVED" : "Nous avons remarqué que votre chauffeur n'a pas bougé depuis un moment. Vous sentez-vous en sécurité lors de votre voyage?",
+  "WE_NOTICED_YOUR_RIDE_IS_ON_DIFFERENT_ROUTE" : "Nous avons remarqué que votre chauffeur emprunte un itinéraire différent. Vous sentez-vous en sécurité lors de votre voyage?",
+  "WE_ARE_HERE_FOR_YOU" : "Nous sommes là pour vous`!",
+  "I_NEED_HELP" : "j'ai besoin d'aide",
+  "I_FEEL_SAFE" : "je me sens en sécurité",
+  "EVERYTHING_OKAY_Q" : "Tout va bien?",
+  "PLEASE_REMAIN_CALM_YOU_CAN_REQUEST_AN_IMMEDIATE_CALL" : "Veuillez rester calme, vous pouvez nous demander un appel immédiat si nécessaire.\n\nVous pouvez également utiliser les fonctionnalités SOS d'urgence en haut à droite pour plus de sécurité.",
+  "RECEIVE_CALL_FROM_SUPPORT" : "Recevoir un appel du support",
+  "DISMISS" : "Rejeter"
 }
 
 export function getStringValue(key) {

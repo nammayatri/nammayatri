@@ -44,6 +44,7 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.time.Instant;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Locale;
@@ -239,6 +240,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                             if (merchantType.equals("USER")) {
                                 sharedPref.edit().putInt("RIDE_COUNT", sharedPref.getInt("RIDE_COUNT", 0) + 1).apply();
                                 sharedPref.edit().putString("COMPLETED_RIDE_COUNT", String.valueOf(sharedPref.getInt("RIDE_COUNT", 0))).apply();
+                                sharedPref.edit().putString("SAFETY_ALERT_TYPE", "false").apply();
                             }
                             break;
 
@@ -354,6 +356,8 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                             jsonObject.put("heading", entity_payload.has("heading") && !entity_payload.isNull("heading")? entity_payload.getString("heading") : "");
                             sharedPref.edit().putString("SHOW_JOIN_NAMMAYATRI", jsonObject.toString()).apply();
                             NotificationUtils.showNotification(this, title, body, payload, imageUrl);
+                        case NotificationTypes.SAFETY_ALERT:
+                            showSafetyAlert(title, body, payload, imageUrl);
                             break;
                         case NotificationTypes.UPDATE_BUNDLE :
                             Intent bundle = new Intent(this,RemoteAssetsDownloader.class);
@@ -417,6 +421,27 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
             startWidgetService(null, payload, entity_payload);
         } else {
             NotificationUtils.showAllocationNotification(this, payload, entity_payload);
+        }
+    }
+
+    private void showSafetyAlert(String title, String body, JSONObject payload, String imageUrl){
+        try {
+            long seconds = 0;
+            String nBody = null;
+            String nTitle = "Everything Okay?";
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                seconds = Instant.now().getEpochSecond();
+            }
+            SharedPreferences sharedPref = this.getSharedPreferences(this.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
+            sharedPref.edit().putString("SAFETY_ALERT_TYPE", body).apply();
+            if(body.equals("Deviation"))
+                nBody = "We noticed your ride is on a different route. Are you feeling safe on your trip?";
+            else
+                nBody = "We noticed your ride hasn't moved for a while. Are you feeling safe on your trip?";
+            NotificationUtils.showNotification(this, nTitle, nBody, payload, imageUrl);
+        }
+        catch (Exception e) {
+            e.printStackTrace();
         }
     }
 
@@ -595,5 +620,6 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
         private static final String JOIN_NAMMAYATRI = "JOIN_NAMMAYATRI";
         private static final String UPDATE_BUNDLE = "UPDATE_BUNDLE";
         private static final String FCM_UPDATE_BUNDLE = "FCM_UPDATE_BUNDLE";
+        private static final String SAFETY_ALERT = "SAFETY_ALERT";
     }
 }

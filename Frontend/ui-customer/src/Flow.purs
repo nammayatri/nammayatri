@@ -58,7 +58,7 @@ import MerchantConfig.DefaultConfig as DC
 import MerchantConfig.Utils (Merchant(..), getMerchant, getValueFromConfig)
 import MerchantConfig.Utils as MU
 import ModifyScreenState (modifyScreenState, updateRideDetails)
-import Prelude (Unit, bind, discard, map, mod, negate, not, pure, show, unit, void, when, ($), (&&), (+), (-), (/), (/=), (<), (<=), (<>), (==), (>), (>=), (||), (<$>), (<<<), ($>))
+import Prelude (Unit, bind, discard, map, mod, negate, not, pure, show, unit, void, when, ($), (&&), (+), (-), (/), (/=), (<), (<=), (<>), (==), (>), (>=), (||), (<$>), (<<<), ($>), otherwise)
 import Presto.Core.Types.Language.Flow (doAff, fork, setLogField, delay)
 import Presto.Core.Types.Language.Flow (getLogFields)
 import Resources.Constants (DecodeAddress(..), decodeAddress, encodeAddress, getKeyByLanguage, getSearchRadius, getValueByComponent, getWard)
@@ -1465,7 +1465,23 @@ homeScreenFlow = do
         homeScreenFlow
     RIDE_DETAILS_SCREEN state -> do
       tripDetailsScreenFlow Home
+    SAFETY_SUPPORT state isSafe -> do
+      res <- lift $ lift $ Remote.sendSafetySupport $ Remote.makeAskSupportRequest state.props.bookingId isSafe $ getDesription $ getValueToLocalNativeStore SAFETY_ALERT_TYPE
+      case res of
+        Right resp -> do
+                        _ <- pure $ setValueToLocalNativeStore SAFETY_ALERT_TYPE "false"
+                        _ <- pure $ toast "Response received"
+                        modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen {props {reportUnsafe  = false}})
+        Left err   -> do
+                        _ <- pure $ toast $ getString SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN
+                        pure unit
+      homeScreenFlow
     _ -> homeScreenFlow
+
+getDesription :: String -> String
+getDesription alertType
+  | alertType == "Deviation" = "User need help - Ride on different route"
+  | otherwise                = "User need help - Ride hasnt moved"
 
 getDistanceDiff :: HomeScreenState -> Number -> Number -> FlowBT String Unit
 getDistanceDiff state lat lon = do

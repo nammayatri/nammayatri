@@ -160,6 +160,7 @@ data HOME_SCREEN_OUTPUT = LOGOUT
                         | TRIGGER_PERMISSION_FLOW PermissionScreenStage
                         | REPORT_ISSUE HomeScreenState
                         | RIDE_DETAILS_SCREEN HomeScreenState
+                        | SAFETY_SUPPORT HomeScreenState String
 
 data SELECT_LANGUAGE_SCREEN_OUTPUT = GO_TO_HOME_SCREEN | UPDATE_LANGUAGE SelectLanguageScreenState
 

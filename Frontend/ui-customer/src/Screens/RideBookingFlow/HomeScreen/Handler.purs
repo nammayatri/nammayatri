@@ -161,3 +161,6 @@ homeScreen = do
       modifyScreenState $ HomeScreenStateType (\homeScreenState -> updatedState)
       modifyScreenState $ TripDetailsScreenStateType (\_ -> getTripDetailsState updatedState.data.ratingViewState.rideBookingRes state.tripDetailsScreen)
       App.BackT $ App.BackPoint <$> (pure $ RIDE_DETAILS_SCREEN updatedState)
+    SafetySupport updatedState isSafe -> do
+      modifyScreenState $ HomeScreenStateType (\homeScreenState -> updatedState)
+      App.BackT $ App.BackPoint <$> (pure $ SAFETY_SUPPORT updatedState isSafe)

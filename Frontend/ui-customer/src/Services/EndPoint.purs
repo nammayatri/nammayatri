@@ -150,3 +150,6 @@ disabilityList dummy = (getBaseUrl "39") <> "/disability/list"
 
 personStats :: String -> String
 personStats dummy = (getBaseUrl "40") <> "/personStats"
+
+safetySupport :: String -> String
+safetySupport dummy = (getBaseUrl "40") <> "/support/safetyCheck"

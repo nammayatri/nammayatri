@@ -203,6 +203,7 @@ initData = {
     , cancelRideConfirmationPopup : false
     , searchAfterEstimate : false
     , isChatOpened : false
+    , reportUnsafe : false
     , tipViewProps : {
         stage : DEFAULT
       , isVisible : false

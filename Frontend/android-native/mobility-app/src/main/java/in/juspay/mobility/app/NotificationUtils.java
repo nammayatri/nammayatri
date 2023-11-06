@@ -75,6 +75,7 @@ public class NotificationUtils {
     public static String ALLOCATION_TYPE = "NEW_RIDE_AVAILABLE";
     public static String TRIP_STARTED = "TRIP_STARTED";
     public static String CANCELLED_PRODUCT = "CANCELLED_PRODUCT";
+    public static String SAFETY_ALERT = "SAFETY_ALERT";
     public static String DRIVER_ASSIGNMENT = "DRIVER_ASSIGNMENT";
     public static String TRIP_FINISHED = "TRIP_FINISHED";
     public static String REALLOCATE_PRODUCT = "REALLOCATE_PRODUCT";
@@ -442,7 +443,7 @@ public class NotificationUtils {
                 callBack.get(i).driverCallBack(notificationType);
             }
         }
-        if ((TRIP_FINISHED.equals(notificationType) || DRIVER_ASSIGNMENT.equals(notificationType) || REALLOCATE_PRODUCT.equals(notificationType) || CANCELLED_PRODUCT.equals(notificationType) || TRIP_STARTED.equals(notificationType)) && (key.equals("USER"))) {
+        if ((TRIP_FINISHED.equals(notificationType) || DRIVER_ASSIGNMENT.equals(notificationType) || REALLOCATE_PRODUCT.equals(notificationType) || CANCELLED_PRODUCT.equals(notificationType) || TRIP_STARTED.equals(notificationType) || SAFETY_ALERT.equals(notificationType)) && (key.equals("USER"))) {
             for (int i = 0; i < callBack.size(); i++) {
                 callBack.get(i).customerCallBack(notificationType);
             }

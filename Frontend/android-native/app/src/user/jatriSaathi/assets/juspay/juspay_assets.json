@@ -277,6 +277,7 @@
       "ny_ic_right_car" : true,
       "ny_ic_sedan_ac_side" : true,
       "ny_ic_sedan_concept" : true,
+      "ny_ic_safety_alert" : true,
       "ny_ic_select_offer" : true,
       "ny_ic_selected_icon" : true,
       "ny_ic_settings" : true,

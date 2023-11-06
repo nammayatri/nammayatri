@@ -110,6 +110,8 @@ data KeyStore = USER_NAME
                 | TRIP_STATUS
                 | TRIP_STARTED
                 | TIMES_OPENED_NEW_SUBSCRIPTION
+                | SAFETY_ALERT 
+                | DRIVER_LATLON_TIME
 
 derive instance genericKeyStore :: Generic KeyStore _
 instance showKeyStore :: Show KeyStore where
