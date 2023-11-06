@@ -22,7 +22,7 @@ import qualified Domain.Types.FarePolicy.FareBreakup as DFareBreakup
 import Domain.Types.Location (LocationAPIEntity)
 import qualified Domain.Types.Location as SLoc
 import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
-import qualified Domain.Types.RentalSlab as DRentalSlab
+import qualified Domain.Types.RentalDetails as DRentalDetails
 import Domain.Types.Ride (Ride, RideAPIEntity, makeRideAPIEntity)
 import qualified Domain.Types.Ride as DRide
 import EulerHS.Prelude hiding (id, null)
@@ -67,7 +67,7 @@ data BookingAPIEntity = BookingAPIEntity
 -- do not change constructor names without changing fareProductConstructorModifier
 data BookingAPIDetails
   = OneWayAPIDetails OneWayBookingAPIDetails
-  | RentalAPIDetails DRentalSlab.RentalSlabAPIEntity
+  | RentalAPIDetails DRentalDetails.RentalDetailsAPIEntity
   | DriverOfferAPIDetails OneWayBookingAPIDetails
   | OneWaySpecialZoneAPIDetails OneWaySpecialZoneBookingAPIDetails
   deriving (Show, Generic)
@@ -138,7 +138,8 @@ makeBookingAPIEntity booking activeRide allRides fareBreakups mbExophone mbPayme
     mkBookingAPIDetails :: BookingDetails -> BookingAPIDetails
     mkBookingAPIDetails = \case
       OneWayDetails details -> OneWayAPIDetails . mkOneWayAPIDetails $ details
-      RentalDetails DRentalSlab.RentalSlab {..} -> RentalAPIDetails DRentalSlab.RentalSlabAPIEntity {..}
+      RentalDetails (BaseDuration baseDuration) DRentalDetails.RentalDetails {..} -> do
+        RentalAPIDetails DRentalDetails.RentalDetailsAPIEntity {bppQuoteId = id.getId, baseDuration = Just baseDuration, ..}
       DriverOfferDetails details -> DriverOfferAPIDetails . mkOneWayAPIDetails $ details
       OneWaySpecialZoneDetails details -> OneWaySpecialZoneAPIDetails . mkOneWaySpecialZoneAPIDetails $ details
       where

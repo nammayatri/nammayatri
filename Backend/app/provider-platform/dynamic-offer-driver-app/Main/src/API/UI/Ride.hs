@@ -89,19 +89,35 @@ type API =
                     :> "cancel"
                     :> ReqBody '[JSON] CancelRideReq
                     :> Post '[JSON] RideCancel.CancelRideResp
+                    :<|> TokenAuth
+                    :> Capture "rideId" (Id Ride.Ride)
+                    :> "odometerReading"
+                    :> QueryParam "start" Bool
+                    :> Get '[JSON] DRide.OdometerReadingRes
+                    :<|> TokenAuth
+                    :> "odometerImage"
+                    :> MandatoryQueryParam "filePath" Text
+                    :> Get '[JSON] Text
                 )
          )
 
 data StartRideReq = StartRideReq
   { rideOtp :: Text,
-    point :: LatLong
+    point :: LatLong,
+    odometerStartReading :: Maybe Centesimal,
+    odometerStartImage :: Maybe Text,
+    odometerStartImageExtension :: Maybe Text
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
 data EndRideReq = EndRideReq
   { point :: LatLong,
     uiDistanceCalculationWithAccuracy :: Maybe Int,
-    uiDistanceCalculationWithoutAccuracy :: Maybe Int
+    uiDistanceCalculationWithoutAccuracy :: Maybe Int,
+    odometerEndReading :: Maybe Centesimal,
+    odometerEndImage :: Maybe Text,
+    odometerEndImageExtension :: Maybe Text,
+    endRideOtp :: Maybe Text
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -119,12 +135,14 @@ handler =
              :<|> startRide
              :<|> endRide
              :<|> cancelRide
+             :<|> getOdometerReading
+             :<|> getOdometerImage
          )
 
 startRide :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Id Ride.Ride -> StartRideReq -> FlowHandler APISuccess
-startRide (requestorId, merchantId, merchantOpCityId) rideId StartRideReq {rideOtp, point} = withFlowHandlerAPI $ do
+startRide (requestorId, merchantId, merchantOpCityId) rideId StartRideReq {rideOtp, point, odometerStartReading, odometerStartImage, odometerStartImageExtension} = withFlowHandlerAPI $ do
   requestor <- findPerson requestorId
-  let driverReq = RideStart.DriverStartRideReq {rideOtp, point, requestor}
+  let driverReq = RideStart.DriverStartRideReq {rideOtp, point, odometerStartReading, odometerStartImage, odometerStartImageExtension, requestor}
   shandle <- withTimeAPI "startRide" "buildStartRideHandle" $ RideStart.buildStartRideHandle merchantId merchantOpCityId
   withTimeAPI "startRide" "driverStartRide" $ RideStart.driverStartRide shandle rideId driverReq
 
@@ -139,15 +157,15 @@ otpRideCreateAndStart (requestorId, merchantId, merchantOpCityId) req@DRide.OTPR
   booking <- runInReplica $ QBooking.findBookingBySpecialZoneOTP requestor.merchantId rideOtp now transporterConfig.specialZoneBookingOtpExpiry >>= fromMaybeM (BookingNotFoundForSpecialZoneOtp rideOtp)
   -- booking <- QBooking.findBookingBySpecialZoneOTP requestor.merchantId rideOtp now >>= fromMaybeM (BookingNotFoundForSpecialZoneOtp rideOtp)
   ride <- DRide.otpRideCreate requestor rideOtp booking
-  let driverReq = RideStart.DriverStartRideReq {rideOtp, point, requestor}
+  let driverReq = RideStart.DriverStartRideReq rideOtp point Nothing Nothing Nothing requestor
   shandle <- RideStart.buildStartRideHandle merchantId merchantOpCityId
   void $ RideStart.driverStartRide shandle ride.id driverReq
   return ride
 
 endRide :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Id Ride.Ride -> EndRideReq -> FlowHandler RideEnd.EndRideResp
-endRide (requestorId, merchantId, merchantOpCityId) rideId EndRideReq {point, uiDistanceCalculationWithAccuracy, uiDistanceCalculationWithoutAccuracy} = withFlowHandlerAPI $ do
+endRide (requestorId, merchantId, merchantOpCityId) rideId EndRideReq {point, uiDistanceCalculationWithAccuracy, uiDistanceCalculationWithoutAccuracy, odometerEndReading, odometerEndImage, odometerEndImageExtension, endRideOtp} = withFlowHandlerAPI $ do
   requestor <- findPerson requestorId
-  let driverReq = RideEnd.DriverEndRideReq {point, requestor, uiDistanceCalculationWithAccuracy, uiDistanceCalculationWithoutAccuracy}
+  let driverReq = RideEnd.DriverEndRideReq {point, requestor, uiDistanceCalculationWithAccuracy, uiDistanceCalculationWithoutAccuracy, odometerEndReading, odometerEndImage, odometerEndImageExtension, endRideOtp}
   shandle <- withTimeAPI "endRide" "buildEndRideHandle" $ RideEnd.buildEndRideHandle merchantId merchantOpCityId
   withTimeAPI "endRide" "driverEndRide" $ RideEnd.driverEndRide shandle rideId driverReq
 
@@ -168,3 +186,9 @@ listDriverRides (driverId, _, _) mbLimit mbOffset mbRideStatus mbDay = withFlowH
 
 arrivedAtPickup :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Id Ride.Ride -> LatLong -> FlowHandler APISuccess
 arrivedAtPickup (_, _, _) rideId req = withFlowHandlerAPI $ DRide.arrivedAtPickup rideId req
+
+getOdometerReading :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Id Ride.Ride -> Maybe Bool -> FlowHandler DRide.OdometerReadingRes
+getOdometerReading (_, _, _) rideId isStartRide = withFlowHandlerAPI $ do DRide.getOdometerReading rideId isStartRide
+
+getOdometerImage :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Text -> FlowHandler Text
+getOdometerImage (_, _, _) filePath = withFlowHandlerAPI $ do DRide.getOdometerImage filePath

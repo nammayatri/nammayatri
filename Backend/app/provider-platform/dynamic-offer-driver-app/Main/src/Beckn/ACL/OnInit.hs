@@ -15,6 +15,7 @@
 module Beckn.ACL.OnInit where
 
 import qualified Beckn.ACL.Common as Common
+import Beckn.Types.Core.Taxi.Common.TimeTimestamp (TimeTimestamp (TimeTimestamp))
 import Beckn.Types.Core.Taxi.OnInit as OnInit
 import Domain.Action.Beckn.Init as DInit
 import qualified Domain.Types.Booking as DRB
@@ -27,6 +28,7 @@ import SharedLogic.FareCalculator
 mkOnInitMessage :: DInit.InitRes -> OnInit.OnInitMessage
 mkOnInitMessage res = do
   let rb = res.booking
+      startTime = res.startTime
       vehicleVariant = castVehicleVariant res.booking.vehicleVariant
       itemId = Common.mkItemId res.transporter.shortId.getShortId res.booking.vehicleVariant
       fareDecimalValue = fromIntegral rb.estimatedFare
@@ -69,21 +71,26 @@ mkOnInitMessage res = do
                                   },
                               address = castAddress res.booking.fromLocation.address
                             },
+                        time = TimeTimestamp startTime,
                         authorization = Nothing
                       },
                   end =
-                    Just
-                      OnInit.StopInfo
-                        { location =
-                            OnInit.Location
-                              { gps =
-                                  OnInit.Gps
-                                    { lat = res.booking.toLocation.lat,
-                                      lon = res.booking.toLocation.lon
-                                    },
-                                address = castAddress res.booking.toLocation.address
-                              }
-                        },
+                    case res.booking.bookingDetails of
+                      DRB.DetailsOnDemand DRB.BookingDetailsOnDemand {..} -> do
+                        Just
+                          OnInit.StopInfo
+                            { location =
+                                OnInit.Location
+                                  { gps =
+                                      OnInit.Gps
+                                        { lat = toLocation.lat,
+                                          lon = toLocation.lon
+                                        },
+                                    address = castAddress toLocation.address
+                                  }
+                            }
+                      DRB.DetailsRental DRB.BookingDetailsRental {} -> do
+                        Nothing,
                   vehicle =
                     OnInit.Vehicle
                       { category = vehicleVariant
@@ -140,8 +147,9 @@ mkOnInitMessage res = do
       VehVar.TAXI -> OnInit.TAXI
       VehVar.TAXI_PLUS -> OnInit.TAXI_PLUS
     buildFulfillmentType = \case
-      DRB.NormalBooking -> OnInit.RIDE
       DRB.SpecialZoneBooking -> OnInit.RIDE_OTP
+      DRB.RentalBooking -> OnInit.RENTAL
+      DRB.NormalBooking -> OnInit.RIDE
     filterRequiredBreakups fParamsType breakup = do
       case fParamsType of
         DFParams.Progressive ->
@@ -166,3 +174,4 @@ mkOnInitMessage res = do
             || breakup.title == "TOTAL_FARE"
             || breakup.title == "NIGHT_SHIFT_CHARGE"
             || breakup.title == "EXTRA_TIME_FARE"
+        DFParams.Rental -> False

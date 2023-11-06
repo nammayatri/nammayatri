@@ -85,6 +85,7 @@ buildQuoteInfo driverId fulfillment quote contextTime item = do
   quoteDetails <- case fulfillment._type of
     OnSelect.RIDE -> buildDriverOfferQuoteDetails item fulfillment quote contextTime driverId
     OnSelect.RIDE_OTP -> throwError $ InvalidRequest "select not supported for ride otp trip"
+    OnSelect.RENTAL -> throwError $ InvalidRequest "select not supported for ride otp trip"
   let vehicleVariant = fulfillment.vehicle.category
       estimatedFare = roundToIntegral item.price.value
       estimatedTotalFare = roundToIntegral item.price.value

@@ -20,6 +20,7 @@ import Kernel.Utils.Common
 import qualified Lib.Payment.Storage.Beam.PaymentOrder as BeamPO
 import qualified Lib.Payment.Storage.Beam.PaymentTransaction as BeamPT
 
+-- | Only for using in Lib. In applications itself actual HasSchemaName instances should be used
 type BeamFlow m r =
   ( MonadFlow m,
     EsqDBFlow m r,

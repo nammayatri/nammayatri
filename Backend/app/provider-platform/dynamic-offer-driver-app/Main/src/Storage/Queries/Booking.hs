@@ -47,15 +47,28 @@ createBooking' = createWithKV
 
 create :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Booking -> m ()
 create dBooking = do
-  _ <- whenNothingM_ (QL.findById dBooking.fromLocation.id) $ do QL.create dBooking.fromLocation
-  _ <- whenNothingM_ (QL.findById dBooking.toLocation.id) $ do QL.create dBooking.toLocation
+  case dBooking.bookingDetails of
+    DetailsOnDemand BookingDetailsOnDemand {..} -> do
+      _ <- whenNothingM_ (QL.findById dBooking.fromLocation.id) $ do QL.create dBooking.fromLocation
+      whenNothingM_ (QL.findById toLocation.id) $ do QL.create toLocation
+    DetailsRental BookingDetailsRental {..} -> do
+      whenNothingM_ (QL.findById dBooking.fromLocation.id) $ do QL.create dBooking.fromLocation
+      forM_ rentalToLocation \rentalToLocation' -> do
+        whenNothingM_ (QL.findById rentalToLocation'.id) $ do QL.create rentalToLocation'
   createBooking' dBooking
 
 createBooking :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Booking -> m ()
 createBooking booking = do
-  fromLocationMap <- SLM.buildPickUpLocationMapping booking.fromLocation.id booking.id.getId DLM.BOOKING
-  toLocationMaps <- SLM.buildDropLocationMapping booking.toLocation.id booking.id.getId DLM.BOOKING
-  QLM.create fromLocationMap >> QLM.create toLocationMaps >> create booking
+  case booking.bookingDetails of
+    DetailsOnDemand BookingDetailsOnDemand {..} -> do
+      fromLocationMap <- SLM.buildPickUpLocationMapping booking.fromLocation.id booking.id.getId DLM.BOOKING
+      toLocationMaps <- SLM.buildDropLocationMapping toLocation.id booking.id.getId DLM.BOOKING
+      QLM.create fromLocationMap >> QLM.create toLocationMaps >> create booking
+    DetailsRental BookingDetailsRental {..} -> do
+      fromLocationMap <- SLM.buildPickUpLocationMapping booking.fromLocation.id booking.id.getId DLM.BOOKING
+      toLocationMap <- forM rentalToLocation \rentalToLocation' -> do
+        SLM.buildDropLocationMapping rentalToLocation'.id booking.id.getId DLM.BOOKING
+      QLM.create fromLocationMap >> whenJust toLocationMap QLM.create >> create booking
 
 findById :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Booking -> m (Maybe Booking)
 findById (Id bookingId) = findOneWithKV [Se.Is BeamB.id $ Se.Eq bookingId]
@@ -100,6 +113,7 @@ findStuckBookings (Id merchantId) bookingIds now = do
           [ Se.Is BeamB.providerId (Se.Eq merchantId),
             Se.Is BeamB.id (Se.In (getId <$> bookingIds)),
             Se.Is BeamB.status (Se.In [NEW, TRIP_ASSIGNED]),
+            Se.Is BeamB.bookingType $ Se.Not $ Se.Eq RentalBooking,
             Se.Is BeamB.createdAt (Se.LessThanOrEq updatedTimestamp)
           ]
       ]
@@ -129,77 +143,93 @@ findFareForCancelledBookings bookingIds = findAllWithKV [Se.And [Se.Is BeamB.sta
 instance FromTType' BeamB.Booking Booking where
   fromTType' :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => BeamB.Booking -> m (Maybe Booking)
   fromTType' BeamB.BookingT {..} = do
-    mappings <- QLM.findByEntityId id
-    (fl, tl) <-
-      if null mappings -- HANDLING OLD DATA : TO BE REMOVED AFTER SOME TIME
-        then do
-          logInfo "Accessing Booking Location Table"
-          pickupLoc <- upsertLocationForOldData (Id <$> fromLocationId) id
-          pickupLocMapping <- SLM.buildPickUpLocationMapping pickupLoc.id id DLM.BOOKING
-          QLM.create pickupLocMapping
-
-          dropLoc <- upsertLocationForOldData (Id <$> toLocationId) id
-          dropLocMapping <- SLM.buildDropLocationMapping dropLoc.id id DLM.BOOKING
-          QLM.create dropLocMapping
-          return (pickupLoc, dropLoc)
-        else do
-          let fromLocationMapping = filter (\loc -> loc.order == 0) mappings
-              toLocationMappings = filter (\loc -> loc.order /= 0) mappings
-
-          fromLocMap <- listToMaybe fromLocationMapping & fromMaybeM (InternalError "Entity Mappings For FromLocation Not Found")
-          fl <- QL.findById fromLocMap.locationId >>= fromMaybeM (InternalError $ "FromLocation not found in booking for fromLocationId: " <> fromLocMap.locationId.getId)
-
-          when (null toLocationMappings) $ throwError (InternalError "Entity Mappings For ToLocation Not Found")
-          let toLocMap = maximumBy (comparing (.order)) toLocationMappings
-          tl <- QL.findById toLocMap.locationId >>= fromMaybeM (InternalError $ "ToLocation not found in booking for toLocationId: " <> toLocMap.locationId.getId)
-          return (fl, tl)
     fp <- QueriesFP.findById (Id fareParametersId)
     pUrl <- parseBaseUrl bapUri
     merchant <- CQM.findById (Id providerId) >>= fromMaybeM (MerchantNotFound providerId)
     merchantOpCityId <- CQMOC.getMerchantOpCityId (Id <$> merchantOperatingCityId) merchant bapCity
-    if isJust fp
-      then
+    mappings <- QLM.findByEntityId id
+    (fl, bookingDetails) <- case bookingType of
+      RentalBooking -> do
+        let fromLocationMapping = filter (\loc -> loc.order == 0) mappings
+        let toLocationMappings = filter (\loc -> loc.order /= 0) mappings
+
+        fromLocMap <- listToMaybe fromLocationMapping & fromMaybeM (InternalError "Entity Mappings For FromLocation Not Found")
+        fl <- QL.findById fromLocMap.locationId >>= fromMaybeM (InternalError $ "FromLocation not found in booking for fromLocationId: " <> fromLocMap.locationId.getId)
+        rentalToLocation <-
+          if null toLocationMappings
+            then pure Nothing
+            else do
+              let toLocMap = maximumBy (comparing (.order)) toLocationMappings
+              Just <$> (QL.findById toLocMap.locationId >>= fromMaybeM (InternalError $ "ToLocation not found in booking for toLocationId: " <> toLocMap.locationId.getId))
+
+        let bookingDetails = DetailsRental BookingDetailsRental {rentalToLocation}
+        return (fl, bookingDetails)
+      _ -> do
+        unless (isJust toLocationId) $ throwError (InternalError "OnDemand should have to location")
+        (fl, tl) <-
+          if null mappings -- HANDLING OLD DATA : TO BE REMOVED AFTER SOME TIME
+            then do
+              logInfo "Accessing Booking Location Table"
+              pickupLoc <- upsertLocationForOldData (Id <$> fromLocationId) id
+              pickupLocMapping <- SLM.buildPickUpLocationMapping pickupLoc.id id DLM.BOOKING
+              QLM.create pickupLocMapping
+
+              dropLoc <- upsertLocationForOldData (Id <$> toLocationId) id
+              dropLocMapping <- SLM.buildDropLocationMapping dropLoc.id id DLM.BOOKING
+              QLM.create dropLocMapping
+              return (pickupLoc, dropLoc)
+            else do
+              let fromLocationMapping = filter (\loc -> loc.order == 0) mappings
+                  toLocationMappings = filter (\loc -> loc.order /= 0) mappings
+
+              fromLocMap <- listToMaybe fromLocationMapping & fromMaybeM (InternalError "Entity Mappings For FromLocation Not Found")
+              fl <- QL.findById fromLocMap.locationId >>= fromMaybeM (InternalError $ "FromLocation not found in booking for fromLocationId: " <> fromLocMap.locationId.getId)
+
+              when (null toLocationMappings) $ throwError (InternalError "Entity Mappings For ToLocation Not Found")
+              let toLocMap = maximumBy (comparing (.order)) toLocationMappings
+              tl <- QL.findById toLocMap.locationId >>= fromMaybeM (InternalError $ "ToLocation not found in booking for toLocationId: " <> toLocMap.locationId.getId)
+              return (fl, tl)
+        let bookingDetails =
+              DetailsOnDemand
+                BookingDetailsOnDemand
+                  { specialLocationTag = specialLocationTag,
+                    specialZoneOtpCode = specialZoneOtpCode,
+                    toLocation = tl
+                  }
+        return (fl, bookingDetails)
+    case fp of
+      Just fareParams ->
         pure $
           Just
             Booking
               { id = Id id,
-                transactionId = transactionId,
-                quoteId = quoteId,
-                status = status,
-                bookingType = bookingType,
-                specialLocationTag = specialLocationTag,
-                specialZoneOtpCode = specialZoneOtpCode,
-                disabilityTag = disabilityTag,
-                area = area,
                 providerId = Id providerId,
                 merchantOperatingCityId = merchantOpCityId,
                 primaryExophone = primaryExophone,
                 bapId = bapId,
                 bapUri = pUrl,
-                bapCity = bapCity,
-                bapCountry = bapCountry,
-                startTime = startTime,
                 riderId = Id <$> riderId,
                 fromLocation = fl,
-                toLocation = tl,
-                vehicleVariant = vehicleVariant,
-                estimatedDistance = estimatedDistance,
-                maxEstimatedDistance = maxEstimatedDistance,
-                estimatedFare = estimatedFare,
-                estimatedDuration = estimatedDuration,
-                fareParams = fromJust fp, -- This fromJust is safe because of the check above.
                 paymentMethodId = Id <$> paymentMethodId,
-                riderName = riderName,
-                paymentUrl = paymentUrl,
-                createdAt = createdAt,
-                updatedAt = updatedAt
+                ..
               }
-      else do
+      Nothing -> do
         logError $ "FareParameters not found for booking: " <> show id
         pure Nothing
 
 instance ToTType' BeamB.Booking Booking where
-  toTType' Booking {..} =
+  toTType' Booking {..} = do
+    let (specialLocationTag, specialZoneOtpCode, toLocationId) = case bookingDetails of
+          DetailsOnDemand details -> do
+            let specialLocationTag' = details.specialLocationTag
+                specialZoneOtpCode' = details.specialZoneOtpCode
+                toLocationId' = Just $ details.toLocation.id.getId
+            (specialLocationTag', specialZoneOtpCode', toLocationId')
+          DetailsRental details -> do
+            let specialLocationTag' = Nothing
+                specialZoneOtpCode' = Nothing
+                toLocationId' = details.rentalToLocation <&> (.id.getId)
+            (specialLocationTag', specialZoneOtpCode', toLocationId')
     BeamB.BookingT
       { BeamB.id = getId id,
         BeamB.transactionId = transactionId,
@@ -215,23 +245,11 @@ instance ToTType' BeamB.Booking Booking where
         BeamB.primaryExophone = primaryExophone,
         BeamB.bapId = bapId,
         BeamB.bapUri = showBaseUrl bapUri,
-        BeamB.startTime = startTime,
         BeamB.riderId = getId <$> riderId,
-        BeamB.bapCity = bapCity,
-        BeamB.bapCountry = bapCountry,
-        BeamB.fromLocationId = Just $ getId fromLocation.id,
-        BeamB.toLocationId = Just $ getId toLocation.id,
-        BeamB.vehicleVariant = vehicleVariant,
-        BeamB.estimatedDistance = estimatedDistance,
-        BeamB.maxEstimatedDistance = maxEstimatedDistance,
-        BeamB.estimatedFare = estimatedFare,
-        BeamB.estimatedDuration = estimatedDuration,
-        BeamB.fareParametersId = getId fareParams.id,
+        BeamB.fromLocationId = Just fromLocation.id.getId,
+        BeamB.fareParametersId = fareParams.id.getId,
         BeamB.paymentMethodId = getId <$> paymentMethodId,
-        BeamB.paymentUrl = paymentUrl,
-        BeamB.riderName = riderName,
-        BeamB.createdAt = createdAt,
-        BeamB.updatedAt = updatedAt
+        ..
       }
 
 -- FUNCTIONS FOR HANDLING OLD DATA : TO BE REMOVED AFTER SOME TIME

@@ -42,8 +42,10 @@ confirm ::
   Id DP.Person ->
   Id DQuote.Quote ->
   Maybe (Id DMPM.MerchantPaymentMethod) ->
+  Maybe UTCTime ->
+  Maybe Int ->
   m SConfirm.DConfirmRes
-confirm personId quoteId paymentMethodId = SConfirm.confirm SConfirm.DConfirmReq {..}
+confirm personId quoteId paymentMethodId mbStartTime mbRentalDuration = SConfirm.confirm SConfirm.DConfirmReq {..}
 
 -- cancel booking when QUOTE_EXPIRED on bpp side, or other EXTERNAL_API_CALL_ERROR catched
 cancelBooking :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r) => DRB.Booking -> m ()

@@ -97,7 +97,9 @@ data RideInfoRes = RideInfoRes
     estimatedRideDuration :: Maybe Seconds,
     rideDuration :: Maybe Seconds,
     cancelledTime :: Maybe UTCTime,
-    cancelledBy :: Maybe CancellationSource
+    cancelledBy :: Maybe CancellationSource,
+    odometerStartReading :: Maybe Centesimal,
+    odometerEndReading :: Maybe Centesimal
   }
   deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
 

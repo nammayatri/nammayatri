@@ -16,6 +16,7 @@
 module Beckn.ACL.Init (buildInitReq) where
 
 import qualified Beckn.ACL.Common as Common
+import Beckn.Types.Core.Taxi.Common.TimeTimestamp
 import qualified Beckn.Types.Core.Taxi.Init as Init
 import Control.Lens ((%~))
 import qualified Data.Text as T
@@ -23,8 +24,6 @@ import qualified Domain.Types.Location as DL
 import qualified Domain.Types.LocationAddress as DLA
 import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.VehicleVariant as VehVar
--- import Environment
--- import Kernel.External.Maps.Types (LatLong)
 import Kernel.Prelude
 import Kernel.Types.App
 import qualified Kernel.Types.Beckn.Context as Context
@@ -45,14 +44,16 @@ buildInitReq res = do
   initMessage <- buildInitMessage res
   pure $ BecknReq context initMessage
 
-buildInitMessage :: (MonadThrow m, Log m) => SConfirm.DConfirmRes -> m Init.InitMessage
+buildInitMessage :: (MonadThrow m, Log m, MonadTime m) => SConfirm.DConfirmRes -> m Init.InitMessage
 buildInitMessage res = do
   let (fulfillmentType, mbBppFullfillmentId, mbDriverId) = case res.quoteDetails of
         SConfirm.ConfirmOneWayDetails -> (Init.RIDE, Nothing, Nothing)
-        SConfirm.ConfirmRentalDetails _ -> (Init.RIDE, Nothing, Nothing)
+        SConfirm.ConfirmRentalDetails quote -> (Init.RENTAL, Just quote.bppQuoteId, Nothing)
         SConfirm.ConfirmAutoDetails estimateId driverId -> (Init.RIDE, Just estimateId, driverId)
         SConfirm.ConfirmOneWaySpecialZoneDetails quoteId -> (Init.RIDE_OTP, Just quoteId, Nothing) --need to be  checked
   let vehicleVariant = castVehicleVariant res.vehicleVariant
+  now <- getCurrentTime
+  let st = fromMaybe now res.mbStartTime
   pure
     Init.InitMessage
       { order =
@@ -69,7 +70,7 @@ buildInitMessage res = do
                     breakup = Nothing
                   },
               billing = mkBilling res.riderPhone res.riderName,
-              fulfillment = mkFulfillmentInfo fulfillmentType mbBppFullfillmentId res.fromLoc res.toLoc res.maxEstimatedDistance vehicleVariant,
+              fulfillment = mkFulfillmentInfo fulfillmentType mbBppFullfillmentId res.fromLoc res.toLoc res.maxEstimatedDistance vehicleVariant st res.mbRentalDuration,
               payment = mkPayment res.paymentMethodInfo,
               provider = mkProvider mbDriverId
             }
@@ -101,31 +102,47 @@ mkOrderItem itemId mbBppFullfillmentId =
       fulfillment_id = mbBppFullfillmentId
     }
 
-mkFulfillmentInfo :: Init.FulfillmentType -> Maybe Text -> DL.Location -> Maybe DL.Location -> Maybe HighPrecMeters -> Init.VehicleVariant -> Init.FulfillmentInfo
-mkFulfillmentInfo fulfillmentType mbBppFullfillmentId fromLoc mbToLoc mbMaxDistance vehicleVariant =
+mkFulfillmentInfo :: Init.FulfillmentType -> Maybe Text -> DL.Location -> Maybe DL.Location -> Maybe HighPrecMeters -> Init.VehicleVariant -> UTCTime -> Maybe Int -> Init.FulfillmentInfo
+mkFulfillmentInfo fulfillmentType mbBppFullfillmentId fromLoc mbToLoc mbMaxDistance vehicleVariant startTime rentalDuration =
   Init.FulfillmentInfo
     { id = mbBppFullfillmentId,
       _type = fulfillmentType,
       tags =
-        if isJust mbMaxDistance
-          then
-            Just $
-              Init.TG
-                [ Init.TagGroup
-                    { display = True,
-                      code = "estimations",
-                      name = "Estimations",
-                      list =
-                        [ Init.Tag
-                            { display = (\_ -> Just True) =<< mbMaxDistance,
-                              code = (\_ -> Just "max_estimated_distance") =<< mbMaxDistance,
-                              name = (\_ -> Just "Max Estimated Distance") =<< mbMaxDistance,
-                              value = (Just . show) =<< mbMaxDistance
-                            }
-                        ]
-                    }
-                ]
-          else Nothing,
+        Just $
+          Init.TG
+            ( if isJust mbMaxDistance
+                then
+                  [ Init.TagGroup
+                      { display = True,
+                        code = "estimations",
+                        name = "Estimations",
+                        list =
+                          [ Init.Tag
+                              { display = (\_ -> Just True) =<< mbMaxDistance,
+                                code = (\_ -> Just "max_estimated_distance") =<< mbMaxDistance,
+                                name = (\_ -> Just "Max Estimated Distance") =<< mbMaxDistance,
+                                value = (Just . show) =<< mbMaxDistance
+                              }
+                          ]
+                      }
+                  ]
+                else
+                  []
+                    <> [ Init.TagGroup
+                           { display = True,
+                             code = "rental_info",
+                             name = "RentalInfo",
+                             list =
+                               [ Init.Tag
+                                   { display = (\_ -> Just True) =<< rentalDuration,
+                                     code = (\_ -> Just "rental_duration") =<< rentalDuration,
+                                     name = (\_ -> Just "Rental Duration") =<< rentalDuration,
+                                     value = (Just . show) =<< rentalDuration
+                                   }
+                               ]
+                           }
+                       ]
+            ),
       start =
         Init.StartInfo
           { location =
@@ -137,6 +154,7 @@ mkFulfillmentInfo fulfillmentType mbBppFullfillmentId fromLoc mbToLoc mbMaxDista
                       },
                   address = mkAddress fromLoc.address
                 },
+            time = TimeTimestamp startTime,
             authorization = Nothing
           },
       end =

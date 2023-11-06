@@ -5,10 +5,13 @@ module Storage.Queries.Person.GetNearestDriversCurrentlyOnRide
 where
 
 import qualified Data.HashMap.Strict as HashMap
+import Data.List (unzip7, zip7)
 import qualified Data.Maybe as Mb
+import qualified Domain.Types.Booking as DB
 import Domain.Types.DriverInformation as DriverInfo
 import Domain.Types.Merchant
 import Domain.Types.Person as Person
+import qualified Domain.Types.SearchRequest as DSR
 import Domain.Types.Vehicle as DV
 import Kernel.External.Maps as Maps
 import qualified Kernel.External.Notification.FCM.Types as FCM
@@ -46,21 +49,29 @@ data NearestDriversResultCurrentlyOnRide = NearestDriversResultCurrentlyOnRide
 getNearestDriversCurrentlyOnRide ::
   (MonadFlow m, MonadTime m, MonadReader r m, LT.HasLocationService m r, CoreMetrics m, CacheFlow m r, EsqDBFlow m r) =>
   Maybe Variant ->
+  DSR.SearchRequestTag ->
   LatLong ->
   Meters ->
   Id Merchant ->
   Maybe Seconds ->
   Meters ->
   m [NearestDriversResultCurrentlyOnRide]
-getNearestDriversCurrentlyOnRide mbVariant fromLocLatLong radiusMeters merchantId mbDriverPositionInfoExpiry reduceRadiusValue = do
+getNearestDriversCurrentlyOnRide mbVariant searchRequestTag fromLocLatLong radiusMeters merchantId mbDriverPositionInfoExpiry reduceRadiusValue = do
   let onRideRadius = radiusMeters - reduceRadiusValue
-  driverLocs <- Int.getDriverLocsWithCond merchantId mbDriverPositionInfoExpiry fromLocLatLong onRideRadius
-  driverInfos <- Int.getDriverInfosWithCond (driverLocs <&> (.driverId)) False True
-  vehicles <- Int.getVehicles driverInfos
-  drivers <- Int.getDrivers vehicles
-  driverQuote <- Int.getDriverQuote $ map ((.getId) . (.id)) drivers
-  bookingInfo <- Int.getBookingInfo driverQuote
-  bookingLocation <- QL.getBookingLocs (bookingInfo <&> (.toLocation.id))
+  driverLocs' <- Int.getDriverLocsWithCond merchantId mbDriverPositionInfoExpiry fromLocLatLong onRideRadius
+  driverInfos' <- Int.getDriverInfosWithCond (driverLocs' <&> (.driverId)) False True searchRequestTag
+  vehicles' <- Int.getVehicles driverInfos'
+  drivers' <- Int.getDrivers vehicles'
+  driverQuote' <- Int.getDriverQuote $ map ((.getId) . (.id)) drivers'
+  bookingInfo' <- Int.getBookingInfoExceptRentals driverQuote'
+  let bookingLocationIds' =
+        bookingInfo'
+          <&> ( \booking -> case booking.bookingDetails of
+                  DB.DetailsOnDemand DB.BookingDetailsOnDemand {toLocation} -> Just toLocation.id
+                  DB.DetailsRental DB.BookingDetailsRental {} -> Nothing -- should never happen
+              )
+  let (driverLocs, driverInfos, vehicles, drivers, driverQuote, bookingInfo, bookingLocationIds) = unzip7 $ map (\(a, b, c, d, e, f, g) -> (a, b, c, d, e, f, fromJust g)) $ filter (\(_, _, _, _, _, _, x) -> isJust x) $ zip7 driverLocs' driverInfos' vehicles' drivers' driverQuote' bookingInfo' bookingLocationIds'
+  bookingLocation <- QL.getBookingLocs bookingLocationIds
   logDebug $ "GetNearestDriversCurrentlyOnRide - DLoc:- " <> show (length driverLocs) <> " DInfo:- " <> show (length driverInfos) <> " Vehicle:- " <> show (length vehicles) <> " Drivers:- " <> show (length drivers) <> " Dquotes:- " <> show (length driverQuote) <> " BInfos:- " <> show (length bookingInfo) <> " BLocs:- " <> show (length bookingLocation)
   let res = linkArrayListForOnRide driverQuote bookingInfo bookingLocation driverLocs driverInfos vehicles drivers (fromIntegral onRideRadius :: Double)
   logDebug $ "GetNearestDriversCurrentlyOnRide Result:- " <> show (length res)
@@ -80,7 +91,9 @@ getNearestDriversCurrentlyOnRide mbVariant fromLocLatLong radiusMeters merchantI
       location <- HashMap.lookup driverId' locationHashMap
       quote <- HashMap.lookup driverId' quotesHashMap
       booking <- HashMap.lookup quote.id bookingHashMap
-      bookingLocation <- HashMap.lookup booking.toLocation.id bookingLocsHashMap
+      bookingLocation <- case booking.bookingDetails of
+        DB.DetailsOnDemand details -> HashMap.lookup details.toLocation.id bookingLocsHashMap
+        DB.DetailsRental _ -> Nothing -- should never happen
       info <- HashMap.lookup driverId' driverInfoHashMap
       person <- HashMap.lookup driverId' personHashMap
       let driverLocationPoint = LatLong {lat = location.lat, lon = location.lon}

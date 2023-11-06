@@ -29,7 +29,7 @@ import Kernel.Types.APISuccess (APISuccess (Success))
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common (Forkable (fork), MonadTime (getCurrentTime))
 import Kernel.Types.Id
-import Kernel.Utils.Common (fromMaybeM)
+import Kernel.Utils.Common (fromMaybeM, throwError)
 import SharedLogic.Merchant (findMerchantByShortId)
 import SharedLogic.Person (findPerson)
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
@@ -52,7 +52,10 @@ bookingInfo merchantShortId opCity otpCode = do
       Common.BookingInfoResponse
         { bookingId = cast id,
           fromLocation = buildBookingLocation fromLocation,
-          toLocation = buildBookingLocation toLocation,
+          toLocation =
+            buildBookingLocation <$> case bookingDetails of
+              Domain.DetailsOnDemand Domain.BookingDetailsOnDemand {..} -> Just toLocation
+              Domain.DetailsRental Domain.BookingDetailsRental {} -> Nothing,
           estimatedDistance,
           estimatedFare,
           estimatedDuration,
@@ -83,9 +86,11 @@ assignCreateAndStartOtpRide :: ShortId DM.Merchant -> Context.City -> Common.Ass
 assignCreateAndStartOtpRide _ _ Common.AssignCreateAndStartOtpRideAPIReq {..} = do
   requestor <- findPerson (cast driverId)
   booking <- runInReplica $ QBooking.findById (cast bookingId) >>= fromMaybeM (BookingNotFound bookingId.getId)
-  rideOtp <- booking.specialZoneOtpCode & fromMaybeM (InternalError "otpCode not found for special zone booking")
+  rideOtp <- case booking.bookingDetails of
+    Domain.DetailsOnDemand Domain.BookingDetailsOnDemand {specialZoneOtpCode} -> specialZoneOtpCode & fromMaybeM (InternalError "otpCode not found for special zone booking")
+    Domain.DetailsRental _ -> throwError $ InvalidRequest "Not Allowed for Rental" --TODO:RENTAL
   ride <- DRide.otpRideCreate requestor rideOtp booking
-  let driverReq = RideStart.DriverStartRideReq {rideOtp, point, requestor}
+  let driverReq = RideStart.DriverStartRideReq rideOtp point Nothing Nothing Nothing requestor
   fork "sending dashboard sms - start ride" $ do
     mride <- runInReplica $ QRide.findById ride.id >>= fromMaybeM (RideDoesNotExist ride.id.getId)
     Sms.sendDashboardSms booking.providerId booking.merchantOperatingCityId Sms.BOOKING (Just mride) mride.driverId (Just booking) 0

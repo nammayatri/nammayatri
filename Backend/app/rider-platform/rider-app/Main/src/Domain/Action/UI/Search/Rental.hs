@@ -84,7 +84,7 @@ rentalSearch personId bundleVersion clientVersion device req = do
         )
   fromLocation <- DSearch.buildSearchReqLoc req.origin
   now <- getCurrentTime
-  searchRequest <- DSearch.buildSearchRequest person fromLocation merchantOperatingCity Nothing Nothing Nothing now bundleVersion clientVersion device Nothing Nothing -- Handle disabilityTag if need for rentals
+  searchRequest <- DSearch.buildSearchRequest person fromLocation merchantOperatingCity Nothing Nothing Nothing now bundleVersion clientVersion device Nothing Nothing DSearchReq.RENTAL -- Handle disabilityTag if need for rentals
   Metrics.incrementSearchRequestCount merchant.name
   let txnId = getId (searchRequest.id)
   Metrics.startSearchMetrics merchant.name txnId

@@ -187,6 +187,7 @@ oneWaySearch personId req bundleVersion clientVersion device = do
       device
       tag
       shortestRouteDuration
+      DSearchReq.ON_DEMAND
   Metrics.incrementSearchRequestCount merchant.name
   let txnId = getId (searchRequest.id)
   Metrics.startSearchMetrics merchant.name txnId

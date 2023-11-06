@@ -171,6 +171,7 @@ let AllocatorJobType =
       | CalculateDriverFees
       | OrderAndNotificationStatusUpdate
       | SendOverlay
+      | AllocateRentalRide
       >
 
 let jobInfoMapx =
@@ -191,6 +192,7 @@ let jobInfoMapx =
         , mapValue = True
         }
       , { mapKey = AllocatorJobType.SendOverlay, mapValue = True }
+      , { mapKey = AllocatorJobType.AllocateRentalRide, mapValue = True }
       ]
 
 let LocationTrackingeServiceConfig = { url = "http://localhost:8081/" }

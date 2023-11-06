@@ -60,6 +60,7 @@ data GetQuotesRes = GetQuotesRes
 
 data OfferRes
   = OnDemandCab QuoteAPIEntity
+  | OnRentalCab QuoteAPIEntity
   | Metro MetroOffer
   | PublicTransport PublicTransportQuote
   deriving (Show, Generic)
@@ -76,7 +77,7 @@ instance ToSchema OfferRes where
 getQuotes :: (CacheFlow m r, EsqDBReplicaFlow m r, EsqDBFlow m r) => Id SSR.SearchRequest -> m GetQuotesRes
 getQuotes searchRequestId = do
   searchRequest <- runInReplica $ QSR.findById searchRequestId >>= fromMaybeM (SearchRequestDoesNotExist searchRequestId.getId)
-  activeBooking <- runInReplica $ QBooking.findLatestByRiderIdAndStatus searchRequest.riderId DRB.activeBookingStatus
+  activeBooking <- runInReplica $ QBooking.findLatestByRiderIdAndStatusObj searchRequest.riderId DRB.activeBookingStatusObj
   whenJust activeBooking $ \_ -> throwError (InvalidRequest "ACTIVE_BOOKING_ALREADY_PRESENT")
   logDebug $ "search Request is : " <> show searchRequest
   offers <- getOffers searchRequest
@@ -104,7 +105,7 @@ getOffers searchRequest = do
       return . sortBy (compare `on` creationTime) $ quotes <> metroOffers <> publicTransportOffers
     Nothing -> do
       quoteList <- runInReplica $ QRentalQuote.findAllBySRId searchRequest.id
-      let quotes = OnDemandCab . SQuote.makeQuoteAPIEntity <$> sortByEstimatedFare quoteList
+      let quotes = OnRentalCab . SQuote.makeQuoteAPIEntity <$> sortByEstimatedFare quoteList
       return . sortBy (compare `on` creationTime) $ quotes
   where
     sortByNearestDriverDistance quoteList = do
@@ -119,6 +120,7 @@ getOffers searchRequest = do
     creationTime :: OfferRes -> UTCTime
     creationTime (OnDemandCab SQuote.QuoteAPIEntity {createdAt}) = createdAt
     creationTime (Metro Metro.MetroOffer {createdAt}) = createdAt
+    creationTime (OnRentalCab SQuote.QuoteAPIEntity {createdAt}) = createdAt
     creationTime (PublicTransport PublicTransportQuote {createdAt}) = createdAt
 
 getEstimates :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id SSR.SearchRequest -> m [DEstimate.EstimateAPIEntity]

@@ -131,7 +131,7 @@ getRideStatus rideId personId = withLogTag ("personId-" <> personId.getId) do
       { fromLocation = makeLocationAPIEntity booking.fromLocation,
         toLocation = case booking.bookingDetails of
           DB.OneWayDetails details -> Just $ makeLocationAPIEntity details.toLocation
-          DB.RentalDetails _ -> Nothing
+          DB.RentalDetails _ _ -> Nothing
           DB.OneWaySpecialZoneDetails details -> Just $ makeLocationAPIEntity details.toLocation
           DB.DriverOfferDetails details -> Just $ makeLocationAPIEntity details.toLocation,
         ride = makeRideAPIEntity ride,

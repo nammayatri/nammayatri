@@ -22,6 +22,7 @@ import Database.Beam.Backend (autoSqlValueSyntax)
 import qualified Database.Beam.Backend as BeamBackend
 import Domain.Types.Booking.Type as Booking
 import qualified Domain.Types.Booking.Type as DRB
+import qualified Domain.Types.FarePolicy.FareProductType as DFP
 import qualified Domain.Types.LocationMapping as DLM
 import Domain.Types.Merchant
 import Domain.Types.Person
@@ -114,6 +115,9 @@ updateMultiple rideId ride = do
       Se.Set BeamR.chargeableDistance ride.chargeableDistance,
       Se.Set BeamR.rideStartTime ride.rideStartTime,
       Se.Set BeamR.rideEndTime ride.rideEndTime,
+      Se.Set BeamR.odometerStartReading ride.odometerStartReading,
+      Se.Set BeamR.odometerEndReading ride.odometerEndReading,
+      Se.Set BeamR.endRideOtp ride.endRideOtp,
       Se.Set BeamR.updatedAt now
     ]
     [Se.Is BeamR.id (Se.Eq $ getId rideId)]
@@ -151,6 +155,7 @@ findStuckRideItems (Id merchantId) bookingIds now = do
     findAllWithDb
       [ Se.And
           [ Se.Is BeamB.providerId $ Se.Eq merchantId,
+            Se.Is BeamB.fareProductType $ Se.Not $ Se.Eq DFP.RENTAL,
             Se.Is BeamB.id $ Se.In $ getId <$> bookingIds
           ]
       ]
@@ -384,6 +389,7 @@ instance FromTType' BeamR.Ride Ride where
             vehicleColor = vehicleColor,
             vehicleVariant = vehicleVariant,
             otp = otp,
+            endRideOtp = endRideOtp,
             trackingUrl = tUrl,
             fare = roundToIntegral <$> fare,
             totalFare = roundToIntegral <$> totalFare,
@@ -418,6 +424,7 @@ instance ToTType' BeamR.Ride Ride where
         BeamR.vehicleColor = vehicleColor,
         BeamR.vehicleVariant = vehicleVariant,
         BeamR.otp = otp,
+        BeamR.endRideOtp = endRideOtp,
         BeamR.trackingUrl = showBaseUrl <$> trackingUrl,
         BeamR.fare = realToFrac <$> fare,
         BeamR.totalFare = realToFrac <$> totalFare,
@@ -430,5 +437,7 @@ instance ToTType' BeamR.Ride Ride where
         BeamR.createdAt = createdAt,
         BeamR.updatedAt = updatedAt,
         BeamR.driverMobileCountryCode = driverMobileCountryCode,
-        BeamR.driverImage = driverImage
+        BeamR.driverImage = driverImage,
+        BeamR.odometerStartReading = odometerStartReading,
+        BeamR.odometerEndReading = odometerEndReading
       }

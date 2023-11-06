@@ -32,6 +32,7 @@ import qualified Data.Time as Time
 import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as DomainRC
 import qualified Domain.Action.UI.Ride.EndRide as EHandler
 import Domain.Action.UI.Ride.StartRide as SRide
+import qualified Domain.Types.Booking as DBooking
 import qualified Domain.Types.BookingCancellationReason as DBCReason
 import qualified Domain.Types.CancellationReason as DCReason
 import Domain.Types.DriverOnboarding.DriverRCAssociation
@@ -259,6 +260,10 @@ rideInfo merchantShortId reqRideId = do
   customerPhoneNo <- decrypt riderDetails.mobileNumber
   driverPhoneNo <- mapM decrypt rideDetails.driverNumber
   now <- getCurrentTime
+  let (odometerStartReading', odometerEndReading') = case ride.rideDetails of
+        DRide.DetailsRental DRide.RideDetailsRental {odometerStartReading, odometerEndReading} -> (odometerStartReading, odometerEndReading)
+        DRide.DetailsOnDemand _ -> (Nothing, Nothing)
+
   pure
     Common.RideInfoRes
       { rideId = cast @DRide.Ride @Common.Ride ride.id,
@@ -266,7 +271,9 @@ rideInfo merchantShortId reqRideId = do
         customerPhoneNo,
         rideOtp = ride.otp,
         customerPickupLocation = mkLocationAPIEntity booking.fromLocation,
-        customerDropLocation = Just $ mkLocationAPIEntity booking.toLocation,
+        customerDropLocation = case booking.bookingDetails of
+          DBooking.DetailsOnDemand DBooking.BookingDetailsOnDemand {toLocation} -> Just $ mkLocationAPIEntity toLocation
+          DBooking.DetailsRental DBooking.BookingDetailsRental {} -> Nothing,
         actualDropLocation = ride.tripEndPos,
         driverId = cast @DP.Person @Common.Driver driverId,
         driverName = rideDetails.driverName,
@@ -297,7 +304,9 @@ rideInfo merchantShortId reqRideId = do
         driverInitiatedCallCount,
         bookingToRideStartDuration = timeDiffInMinutes <$> ride.tripStartTime <*> (Just booking.createdAt),
         distanceCalculationFailed = ride.distanceCalculationFailed,
-        vehicleVariant = castDVehicleVariant <$> rideDetails.vehicleVariant
+        vehicleVariant = castDVehicleVariant <$> rideDetails.vehicleVariant,
+        odometerStartReading = odometerStartReading',
+        odometerEndReading = odometerEndReading'
       }
 
 mkLocationAPIEntity :: DLoc.Location -> Common.LocationAPIEntity
@@ -452,6 +461,6 @@ bookingWithVehicleNumberAndPhone merchant merchantOpCityId req = do
 
 endActiveRide :: Id DRide.Ride -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Flow ()
 endActiveRide rideId merchantId merchantOpCityId = do
-  let dashboardReq = EHandler.DashboardEndRideReq {point = Nothing, merchantId}
+  let dashboardReq = EHandler.DashboardEndRideReq {point = Nothing, odometerEndReading = Nothing, merchantId}
   shandle <- EHandler.buildEndRideHandle merchantId merchantOpCityId
   void $ EHandler.dashboardEndRide shandle rideId dashboardReq

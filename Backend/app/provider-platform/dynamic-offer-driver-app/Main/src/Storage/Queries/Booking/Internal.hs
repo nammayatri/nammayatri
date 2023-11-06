@@ -23,13 +23,17 @@ import qualified Sequelize as Se
 import Storage.Beam.Booking as BeamB
 import Storage.Queries.Instances.Person ()
 
-getBookingInfo ::
+getBookingInfoExceptRentals ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
   [DriverQuote] ->
   m [Booking.Booking]
-getBookingInfo driverQuote =
+getBookingInfoExceptRentals driverQuote =
   findAllWithKV
-    [ Se.And [Se.Is BeamB.quoteId $ Se.In personsKeys, Se.Is BeamB.status $ Se.Eq Booking.TRIP_ASSIGNED]
+    [ Se.And
+        [ Se.Is BeamB.quoteId $ Se.In personsKeys,
+          Se.Is BeamB.status $ Se.Eq Booking.TRIP_ASSIGNED,
+          Se.Is BeamB.bookingType $ Se.Not (Se.Eq Booking.RentalBooking)
+        ]
     ]
   where
     personsKeys = fetchDriverIDsTextFromQuote driverQuote

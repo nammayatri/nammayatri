@@ -1,6 +1,11 @@
 @token1 = {{driver-offer-bpp-auto-token1}}
 @token2 = {{driver-offer-bpp-auto-token2}}
+
+@driverId = favorit-auto1-0000000000000000000000
 @driver-offer-bpp-host = http://localhost:8016
+@location-tracking-service-host = http://localhost:8081
+@merchantId = favorit0-0000-0000-0000-00000favorit
+
 
 # @name healthcheck
 GET {{driver-offer-bpp-host}}/ui
@@ -12,9 +17,25 @@ GET {{app-host}}
 
 ###
 
+@adminToken = favorit-admin-0000000000000000-token
+
+# @name updateVehicle
+
+POST {{driver-offer-bpp-host}}/ui/org/vehicle/{{driverId}}
+content-type: application/json
+token: {{adminToken}}
+
+{
+    "variant" : "AUTO_RICKSHAW"
+}
+
+###
 # @name updateInitial
-POST {{driver-offer-bpp-host}}/ui/driver/location
+POST {{location-tracking-service-host}}/ui/driver/location
 token: {{token1}}
+mId: {{merchantId}}
+vt: AUTO_RICKSHAW
+dm: ONLINE
 content-type: application/json
 
 [
@@ -24,14 +45,15 @@ content-type: application/json
             "lon": 75.919028
 
         },
-        "ts": "{{$localDatetime iso8601}}"
+        "ts": "{{$localDatetime iso8601}}",
+        "acc": 0
     }
 ]
 
 ###
 
 # @name setActive
-POST {{driver-offer-bpp-host}}/ui/driver/setActivity?active=true
+POST {{driver-offer-bpp-host}}/ui/driver/setActivity?active=true&mode="ONLINE"
 content-type: application/json
 token: {{token1}}
 
@@ -226,8 +248,11 @@ content-type: application/json
 # location updates taken from karnatakaLocationUpdates, so mock-google could handle it
 
 # @name update1
-POST {{driver-offer-bpp-host}}/ui/driver/location
+POST {{location-tracking-service-host}}/ui/driver/location
 token: {{token1}}
+mId: {{merchantId}}
+vt: AUTO_RICKSHAW
+dm: ONLINE
 content-type: application/json
 
 [
@@ -269,8 +294,11 @@ content-type: application/json
 ###
 
 # @name update2
-POST {{driver-offer-bpp-host}}/ui/driver/location
+POST {{location-tracking-service-host}}/ui/driver/location
 token: {{token1}}
+mId: {{merchantId}}
+vt: AUTO_RICKSHAW
+dm: ONLINE
 content-type: application/json
 
 [

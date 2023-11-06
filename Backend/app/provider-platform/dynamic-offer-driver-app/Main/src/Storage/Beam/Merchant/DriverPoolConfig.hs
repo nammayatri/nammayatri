@@ -40,6 +40,7 @@ data DriverPoolConfigT f = DriverPoolConfigT
     maxNumberOfBatches :: B.C f Int,
     poolSortingType :: B.C f PoolSortingType,
     singleBatchProcessTime :: B.C f Seconds,
+    singleBatchProcessTimeRental :: B.C f Seconds,
     tripDistance :: B.C f Meters,
     radiusShrinkValueForDriversOnRide :: B.C f Meters,
     driverToDestinationDistanceThreshold :: B.C f Meters,
