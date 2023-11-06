@@ -12,16 +12,20 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module API.Dashboard.Subscription where
+module API.Dashboard.Management.Subscription where
 
 import qualified API.UI.Plan as DPlan
 import qualified "dashboard-helper-api" Dashboard.Common as DP
+import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Driver as Common
+import qualified Domain.Action.Dashboard.Driver as DDriver
+import qualified Domain.Action.UI.Driver as Driver
 import qualified Domain.Action.UI.Payment as APayment
 import qualified Domain.Action.UI.Plan as DTPlan
 import qualified Domain.Types.Invoice as INV
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Plan as DPlan
 import Environment
+import Kernel.Prelude
 import Kernel.Storage.Esqueleto (derivePersistField)
 import Kernel.Types.APISuccess
 import qualified Kernel.Types.Beckn.Context as Context
@@ -32,7 +36,6 @@ import Servant
 import SharedLogic.Merchant
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Queries.DriverInformation as DI
-import Prelude
 
 data SubscriptionEndpoint
   = SelectPlanEndpoint
@@ -50,6 +53,10 @@ type API =
            :<|> SubscribePlan
            :<|> CurrentPlan
            :<|> OrderStatus
+           :<|> DriverPaymentHistoryAPI
+           :<|> DriverPaymentHistoryEntityDetailsAPI
+           :<|> Common.UpdateSubscriptionDriverFeeAndInvoiceAPI
+           :<|> SendSmsToDriverAPI
        )
 
 type ListPlan =
@@ -84,6 +91,41 @@ type OrderStatus =
     :> "status"
     :> Get '[JSON] APayment.PaymentStatusResp
 
+----- payment history ----------
+type DriverPaymentHistoryAPI =
+  Capture "driverId" (Id Common.Driver)
+    :> "payments"
+    :> "history"
+    :> QueryParam "paymentMode" INV.InvoicePaymentMode
+    :> QueryParam "limit" Int
+    :> QueryParam "offset" Int
+    :> Get '[JSON] Driver.HistoryEntityV2
+
+----------- payment history entry  -------------
+type DriverPaymentHistoryEntityDetailsAPI =
+  Capture "driverId" (Id Common.Driver)
+    :> "payments"
+    :> "history"
+    :> Capture "invoiceId" (Id INV.Invoice)
+    :> "entity"
+    :> Get '[JSON] Driver.HistoryEntryDetailsEntityV2
+
+-------------------------------------------------------------------
+------- Send Sms to Driver ----------------------------------------
+
+type SendMessageToDriverViaDashboardAPI =
+  Capture "driverId" (Id Common.Driver)
+    :> "sendSms"
+    :> ReqBody '[JSON] DDriver.SendSmsReq
+    :> Post '[JSON] APISuccess
+
+type SendSmsToDriverAPI =
+  Capture "driverId" (Id Common.Driver)
+    :> Capture "volunteerId" Text
+    :> "sendSms"
+    :> ReqBody '[JSON] DDriver.SendSmsReq
+    :> Post '[JSON] APISuccess
+
 handler :: ShortId DM.Merchant -> Context.City -> FlowServer API
 handler merchantId city =
   planList merchantId city
@@ -92,6 +134,10 @@ handler merchantId city =
     :<|> planSubscribe merchantId city
     :<|> currentPlan merchantId city
     :<|> paymentStatus merchantId city
+    :<|> getPaymentHistory merchantId city
+    :<|> getPaymentHistoryEntityDetails merchantId city
+    :<|> updateDriverSubscriptionDriverFeeAndInvoiceUpdate merchantId city
+    :<|> sendSmsToDriver merchantId city
 
 planList :: ShortId DM.Merchant -> Context.City -> Id DP.Driver -> FlowHandler DTPlan.PlanListAPIRes
 planList merchantShortId opCity driverId = do
@@ -129,3 +175,16 @@ paymentStatus merchantShortId opCity driverId invoiceId = do
   m <- withFlowHandlerAPI $ findMerchantByShortId merchantShortId
   moCityId <- withFlowHandlerAPI $ CQMOC.getMerchantOpCityId Nothing m (Just opCity)
   withFlowHandlerAPI $ APayment.getStatus (cast driverId, m.id, moCityId) (cast invoiceId)
+
+getPaymentHistory :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Maybe INV.InvoicePaymentMode -> Maybe Int -> Maybe Int -> FlowHandler Driver.HistoryEntityV2
+getPaymentHistory merchantShortId opCity driverId invoicePaymentMode limit offset = withFlowHandlerAPI $ DDriver.getPaymentHistory merchantShortId opCity driverId invoicePaymentMode limit offset
+
+getPaymentHistoryEntityDetails :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Id INV.Invoice -> FlowHandler Driver.HistoryEntryDetailsEntityV2
+getPaymentHistoryEntityDetails merchantShortId opCity driverId invoiceId = do
+  withFlowHandlerAPI $ DDriver.getPaymentHistoryEntityDetails merchantShortId opCity driverId invoiceId
+
+updateDriverSubscriptionDriverFeeAndInvoiceUpdate :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Common.SubscriptionDriverFeesAndInvoicesToUpdate -> FlowHandler Common.SubscriptionDriverFeesAndInvoicesToUpdate
+updateDriverSubscriptionDriverFeeAndInvoiceUpdate merchantShortId opCity driverId req = withFlowHandlerAPI $ DDriver.updateSubscriptionDriverFeeAndInvoice merchantShortId opCity driverId req
+
+sendSmsToDriver :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Text -> DDriver.SendSmsReq -> FlowHandler APISuccess
+sendSmsToDriver merchantShortId opCity driverId volunteerId = withFlowHandlerAPI . DDriver.sendSmsToDriver merchantShortId opCity driverId volunteerId

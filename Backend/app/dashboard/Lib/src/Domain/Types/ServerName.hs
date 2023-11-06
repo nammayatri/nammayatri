@@ -20,7 +20,14 @@ import Kernel.Prelude
 import Kernel.Storage.Esqueleto
 import Kernel.Utils.Dhall
 
-data ServerName = APP_BACKEND | BECKN_TRANSPORT | DRIVER_OFFER_BPP | SPECIAL_ZONE
+data DataServer = DataServer
+  { name :: ServerName,
+    url :: BaseUrl,
+    token :: Text
+  }
+  deriving (Generic, FromDhall)
+
+data ServerName = APP_BACKEND | APP_BACKEND_MANAGEMENT | DRIVER_OFFER_BPP | DRIVER_OFFER_BPP_MANAGEMENT | SPECIAL_ZONE
   deriving (Generic, FromDhall, Eq, Show, Read, FromJSON, ToJSON, ToSchema)
 
 genSingletons [''ServerName]

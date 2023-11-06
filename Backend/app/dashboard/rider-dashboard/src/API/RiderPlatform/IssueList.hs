@@ -25,7 +25,7 @@ import Kernel.Types.APISuccess (APISuccess)
 import qualified Kernel.Types.Beckn.City as City
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import qualified RiderPlatformClient.RiderApp as Client
+import qualified RiderPlatformClient.RiderApp.Operations as Client
 import Servant
 import qualified SharedLogic.Transaction as T
 import "lib-dashboard" Tools.Auth
@@ -38,11 +38,11 @@ type API =
        )
 
 type IssueListAPI =
-  ApiAuth 'APP_BACKEND 'CUSTOMERS 'LIST_ISSUE
+  ApiAuth 'APP_BACKEND_MANAGEMENT 'CUSTOMERS 'LIST_ISSUE
     :> BAP.ListCustomerIssue
 
 type TicketStatusCallBackAPI =
-  ApiAuth 'APP_BACKEND 'ISSUE 'TICKET_STATUS_CALL_BACK
+  ApiAuth 'APP_BACKEND_MANAGEMENT 'ISSUE 'TICKET_STATUS_CALL_BACK
     :> BAP.TicketStatusCallBack
 
 handler :: ShortId DM.Merchant -> City.City -> FlowServer API
@@ -58,15 +58,15 @@ buildTransaction ::
   ApiTokenInfo ->
   Maybe request ->
   m DT.Transaction
-buildTransaction endpoint apiTokenInfo = T.buildTransaction (DT.IssueAPI endpoint) (Just APP_BACKEND) (Just apiTokenInfo) Nothing Nothing
+buildTransaction endpoint apiTokenInfo = T.buildTransaction (DT.IssueAPI endpoint) (Just APP_BACKEND_MANAGEMENT) (Just apiTokenInfo) Nothing Nothing
 
 listIssue :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Maybe Int -> Maybe Int -> Maybe Text -> Maybe Text -> Maybe UTCTime -> Maybe UTCTime -> FlowHandler DI.IssueListRes
 listIssue merchantShortId opCity apiTokenInfo mbLimit mbOffset mbMobileCountryCode mbMobileNumber mbFrom mbTo = withFlowHandlerAPI $ do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  Client.callRiderApp checkedMerchantId opCity (.issues.listIssue) mbLimit mbOffset mbMobileCountryCode mbMobileNumber mbFrom mbTo
+  Client.callRiderAppOperations checkedMerchantId opCity (.issues.listIssue) mbLimit mbOffset mbMobileCountryCode mbMobileNumber mbFrom mbTo
 
 ticketStatusCallBack :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.TicketStatusCallBackReq -> FlowHandler APISuccess
 ticketStatusCallBack merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI $ do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction Common.TicketStatusCallBackEndpoint apiTokenInfo (Just req)
-  T.withTransactionStoring transaction $ Client.callRiderApp checkedMerchantId opCity (.issues.ticketStatusCallBack) req
+  T.withTransactionStoring transaction $ Client.callRiderAppOperations checkedMerchantId opCity (.issues.ticketStatusCallBack) req

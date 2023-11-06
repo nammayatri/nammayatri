@@ -27,7 +27,7 @@ import Kernel.Prelude
 import qualified Kernel.Types.Beckn.City as City
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import qualified RiderPlatformClient.RiderApp as Client
+import qualified RiderPlatformClient.RiderApp.RideBooking as Client
 import Servant
 import qualified SharedLogic.Transaction as T
 import "lib-dashboard" Tools.Auth

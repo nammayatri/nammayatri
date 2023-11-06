@@ -22,7 +22,7 @@ import Kernel.Types.Id
 data Merchant = Merchant
   { id :: Id Merchant,
     shortId :: ShortId Merchant,
-    serverName :: DSN.ServerName,
+    serverNames :: [DSN.ServerName],
     is2faMandatory :: Bool,
     defaultOperatingCity :: City.City,
     supportedOperatingCities :: [City.City],

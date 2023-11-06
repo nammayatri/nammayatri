@@ -22,9 +22,12 @@ module API.Dashboard.Fleet.Registration
 where
 
 import qualified Domain.Action.Dashboard.Fleet.Registration as DFleet
+import qualified Domain.Types.Merchant as DM
 import Environment
 import Kernel.Prelude
 import Kernel.Types.APISuccess
+import Kernel.Types.Beckn.Context as Context
+import Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant hiding (throwError)
 
@@ -46,8 +49,8 @@ type FleetOwnerLoginAPI =
     :> ReqBody '[JSON] DFleet.FleetOwnerLoginReq
     :> Post '[JSON] APISuccess
 
-handler :: FlowServer API
-handler =
+handler :: ShortId DM.Merchant -> Context.City -> FlowServer API
+handler _ _ =
   fleetOwnerLogin
     :<|> fleetOwnerVerify
 

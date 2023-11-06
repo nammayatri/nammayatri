@@ -22,6 +22,7 @@ import Domain.Types.Person as DP
 import qualified Domain.Types.Person.Type as PT
 import qualified Domain.Types.RegistrationToken as DR
 import Domain.Types.Role as DRole
+import qualified Domain.Types.ServerName as DTServer
 import qualified EulerHS.Language as L
 import Kernel.External.Encryption (encrypt)
 import Kernel.Prelude
@@ -45,7 +46,7 @@ import qualified Storage.Queries.RegistrationToken as QR
 import qualified Storage.Queries.Role as QRole
 import Tools.Auth
 import qualified Tools.Auth.Common as Auth
-import qualified Tools.Client as Client
+import Tools.Auth.Merchant
 import Tools.Error
 import qualified Tools.Utils as Utils
 
@@ -109,17 +110,15 @@ login ::
   ( EsqDBFlow m r,
     Redis.HedisFlow m r,
     HasFlowEnv m r '["authTokenCacheKeyPrefix" ::: Text],
-    HasFlowEnv m r '["dataServers" ::: [Client.DataServer]],
+    HasFlowEnv m r '["dataServers" ::: [DTServer.DataServer]],
     EncFlow m r
   ) =>
   LoginReq ->
   m LoginRes
 login LoginReq {..} = do
-  availableServers <- asks (.dataServers)
   merchant <- QMerchant.findByShortId merchantId >>= fromMaybeM (MerchantDoesNotExist merchantId.getShortId)
   city' <- flip fromMaybe city <$> getCity merchantId
-  unless (merchant.serverName `elem` (availableServers <&> (.name))) $
-    throwError $ InvalidRequest "Server for this merchant is not available"
+  merchantServerAccessCheck merchant
   email_ <- email & fromMaybeM (InvalidRequest "Email cannot be empty when login type is email")
   person <- QP.findByEmailAndPassword email_ password >>= fromMaybeM (PersonDoesNotExist email_)
   generateLoginRes person merchant otp city'
@@ -128,17 +127,15 @@ switchMerchant ::
   ( EsqDBFlow m r,
     Redis.HedisFlow m r,
     HasFlowEnv m r '["authTokenCacheKeyPrefix" ::: Text],
-    HasFlowEnv m r '["dataServers" ::: [Client.DataServer]],
+    HasFlowEnv m r '["dataServers" ::: [DTServer.DataServer]],
     EncFlow m r
   ) =>
   TokenInfo ->
   SwitchMerchantReq ->
   m LoginRes
 switchMerchant authToken SwitchMerchantReq {..} = do
-  availableServers <- asks (.dataServers)
   merchant <- QMerchant.findByShortId merchantId >>= fromMaybeM (MerchantDoesNotExist merchantId.getShortId)
-  unless (merchant.serverName `elem` (availableServers <&> (.name))) $
-    throwError $ InvalidRequest "Server for this merchant is not available"
+  merchantServerAccessCheck merchant
   person <- QP.findById authToken.personId >>= fromMaybeM (PersonDoesNotExist authToken.personId.getId)
   generateLoginRes person merchant otp merchant.defaultOperatingCity
 
@@ -146,17 +143,15 @@ switchMerchantAndCity ::
   ( EsqDBFlow m r,
     Redis.HedisFlow m r,
     HasFlowEnv m r '["authTokenCacheKeyPrefix" ::: Text],
-    HasFlowEnv m r '["dataServers" ::: [Client.DataServer]],
+    HasFlowEnv m r '["dataServers" ::: [DTServer.DataServer]],
     EncFlow m r
   ) =>
   TokenInfo ->
   SwitchMerchantAndCityReq ->
   m LoginRes
 switchMerchantAndCity authToken SwitchMerchantAndCityReq {..} = do
-  availableServers <- asks (.dataServers)
   merchant <- QMerchant.findByShortId merchantId >>= fromMaybeM (MerchantDoesNotExist merchantId.getShortId)
-  unless (merchant.serverName `elem` (availableServers <&> (.name))) $
-    throwError $ InvalidRequest "Server for this merchant is not available"
+  merchantServerAccessCheck merchant
   person <- QP.findById authToken.personId >>= fromMaybeM (PersonDoesNotExist authToken.personId.getId)
   generateLoginRes person merchant otp city
 
@@ -206,7 +201,7 @@ enable2fa ::
   ( EsqDBFlow m r,
     Redis.HedisFlow m r,
     HasFlowEnv m r '["authTokenCacheKeyPrefix" ::: Text],
-    HasFlowEnv m r '["dataServers" ::: [Client.DataServer]],
+    HasFlowEnv m r '["dataServers" ::: [DTServer.DataServer]],
     EncFlow m r
   ) =>
   Enable2FAReq ->
@@ -292,7 +287,7 @@ buildRegistrationToken personId merchantId city = do
 registerFleetOwner ::
   ( EsqDBFlow m r,
     EncFlow m r,
-    HasFlowEnv m r '["dataServers" ::: [Client.DataServer]]
+    HasFlowEnv m r '["dataServers" ::: [DTServer.DataServer]]
   ) =>
   FleetRegisterReq ->
   m APISuccess
@@ -304,9 +299,7 @@ registerFleetOwner req = do
   merchant <-
     QMerchant.findByShortId req.merchantId
       >>= fromMaybeM (MerchantDoesNotExist req.merchantId.getShortId)
-  availableServers <- asks (.dataServers)
-  unless (merchant.serverName `elem` (availableServers <&> (.name))) $
-    throwError $ InvalidRequest "Server for this merchant is not available"
+  merchantServerAccessCheck merchant
   city' <- flip fromMaybe req.city <$> getCity req.merchantId
   merchantAccess <- DP.buildMerchantAccess fleetOwner.id merchant.id merchant.shortId city'
   Esq.runTransaction $ do

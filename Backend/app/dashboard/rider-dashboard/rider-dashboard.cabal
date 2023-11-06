@@ -46,7 +46,8 @@ library
       API.RiderPlatform.RideBooking.Search
       API.RiderPlatform.RideBooking.Select
       App
-      RiderPlatformClient.RiderApp
+      RiderPlatformClient.RiderApp.Operations
+      RiderPlatformClient.RiderApp.RideBooking
   other-modules:
       Paths_rider_dashboard
   hs-source-dirs:

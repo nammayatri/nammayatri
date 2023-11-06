@@ -46,4 +46,4 @@ callRiderAppExotelApi ::
   ) =>
   (ExotelAPIs -> b) ->
   c
-callRiderAppExotelApi = callServerAPI @_ @m @r APP_BACKEND mkRiderAppExotelAPIs "callRiderAppExotelApi"
+callRiderAppExotelApi = callServerAPI @_ @m @r APP_BACKEND_MANAGEMENT mkRiderAppExotelAPIs "callRiderAppExotelApi"

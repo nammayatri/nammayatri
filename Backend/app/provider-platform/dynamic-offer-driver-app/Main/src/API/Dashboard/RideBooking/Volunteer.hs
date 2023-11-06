@@ -12,7 +12,7 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module API.Dashboard.Volunteer where
+module API.Dashboard.RideBooking.Volunteer where
 
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Volunteer as Common
 import qualified Domain.Action.Dashboard.Volunteer as DVolunteer

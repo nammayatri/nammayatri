@@ -12,7 +12,7 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module API.Dashboard.Driver.Registration where
+module API.Dashboard.Management.Driver.Registration where
 
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Driver.Registration as Common
 import qualified Domain.Action.Dashboard.Driver.Registration as DReg
@@ -33,16 +33,6 @@ type API =
     :<|> Common.RegisterRCAPI
     :<|> Common.GenerateAadhaarOtpAPI
     :<|> Common.VerifyAadhaarOtpAPI
-    :<|> Common.AuthAPI
-    :<|> VerifyAPI
-
-type VerifyAPI =
-  Capture "authId" Text
-    :> Capture "mbFleet" Bool
-    :> Capture "fleetOwnerId" Text
-    :> "verify"
-    :> ReqBody '[JSON] Common.AuthVerifyReq
-    :> Post '[JSON] APISuccess
 
 handler :: ShortId DM.Merchant -> Context.City -> FlowServer API
 handler merchantId city =
@@ -53,8 +43,6 @@ handler merchantId city =
     :<|> registerRC merchantId city
     :<|> generateAadhaarOtp merchantId city
     :<|> verifyAadhaarOtp merchantId city
-    :<|> auth merchantId city
-    :<|> verify
 
 documentsList :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> FlowHandler Common.DocumentsListResponse
 documentsList merchantShortId opCity = withFlowHandlerAPI . DReg.documentsList merchantShortId opCity
@@ -76,9 +64,3 @@ generateAadhaarOtp merchantShortId opCity driverId_ = withFlowHandlerAPI . DReg.
 
 verifyAadhaarOtp :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Common.VerifyAadhaarOtpReq -> FlowHandler Common.VerifyAadhaarOtpRes
 verifyAadhaarOtp merchantShortId opCity driverId_ = withFlowHandlerAPI . DReg.verifyAadhaarOtp merchantShortId opCity driverId_
-
-auth :: ShortId DM.Merchant -> Context.City -> Common.AuthReq -> FlowHandler Common.AuthRes
-auth merchantShortId opCity = withFlowHandlerAPI . DReg.auth merchantShortId opCity
-
-verify :: Text -> Bool -> Text -> Common.AuthVerifyReq -> FlowHandler APISuccess
-verify authId mbFleet fleetOwnerId req = withFlowHandlerAPI $ DReg.verify authId mbFleet fleetOwnerId req

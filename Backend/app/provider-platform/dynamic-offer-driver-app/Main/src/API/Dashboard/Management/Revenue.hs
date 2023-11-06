@@ -13,7 +13,7 @@
 
 -}
 
-module API.Dashboard.Revenue where
+module API.Dashboard.Management.Revenue where
 
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Revenue as Common
 import Data.Maybe

@@ -62,7 +62,12 @@ let shortDurationRetryCfg = { maxRetries = +3, baseCoefficient = +2 }
 let longDurationRetryCfg = { maxRetries = +3, baseCoefficient = +4 }
 
 let ServerName =
-      < APP_BACKEND | BECKN_TRANSPORT | DRIVER_OFFER_BPP | SPECIAL_ZONE >
+      < APP_BACKEND
+      | APP_BACKEND_MANAGEMENT
+      | DRIVER_OFFER_BPP
+      | DRIVER_OFFER_BPP_MANAGEMENT
+      | SPECIAL_ZONE
+      >
 
 let SchedulerType = < RedisBased | DbBased >
 

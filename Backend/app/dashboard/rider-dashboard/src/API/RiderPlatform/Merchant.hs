@@ -29,7 +29,7 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common (MonadFlow, throwError, withFlowHandlerAPI)
 import Kernel.Utils.Validation (runRequestValidation)
-import qualified RiderPlatformClient.RiderApp as Client
+import qualified RiderPlatformClient.RiderApp.Operations as Client
 import Servant hiding (throwError)
 import qualified SharedLogic.Transaction as T
 import "lib-dashboard" Tools.Auth
@@ -46,27 +46,27 @@ type API =
        )
 
 type MerchantUpdateAPI =
-  ApiAuth 'APP_BACKEND 'MERCHANT 'MERCHANT_UPDATE
+  ApiAuth 'APP_BACKEND_MANAGEMENT 'MERCHANT 'MERCHANT_UPDATE
     :> Common.MerchantUpdateAPI
 
 type ServiceUsageConfigAPI =
-  ApiAuth 'APP_BACKEND 'MERCHANT 'SERVICE_USAGE_CONFIG
+  ApiAuth 'APP_BACKEND_MANAGEMENT 'MERCHANT 'SERVICE_USAGE_CONFIG
     :> Common.ServiceUsageConfigAPI
 
 type MapsServiceConfigUpdateAPI =
-  ApiAuth 'APP_BACKEND 'MERCHANT 'MAPS_SERVICE_CONFIG_UPDATE
+  ApiAuth 'APP_BACKEND_MANAGEMENT 'MERCHANT 'MAPS_SERVICE_CONFIG_UPDATE
     :> Common.MapsServiceConfigUpdateAPI
 
 type MapsServiceUsageConfigUpdateAPI =
-  ApiAuth 'APP_BACKEND 'MERCHANT 'MAPS_SERVICE_USAGE_CONFIG_UPDATE
+  ApiAuth 'APP_BACKEND_MANAGEMENT 'MERCHANT 'MAPS_SERVICE_USAGE_CONFIG_UPDATE
     :> Common.MapsServiceUsageConfigUpdateAPI
 
 type SmsServiceConfigUpdateAPI =
-  ApiAuth 'APP_BACKEND 'MERCHANT 'SMS_SERVICE_CONFIG_UPDATE
+  ApiAuth 'APP_BACKEND_MANAGEMENT 'MERCHANT 'SMS_SERVICE_CONFIG_UPDATE
     :> Common.SmsServiceConfigUpdateAPI
 
 type SmsServiceUsageConfigUpdateAPI =
-  ApiAuth 'APP_BACKEND 'MERCHANT 'SMS_SERVICE_USAGE_CONFIG_UPDATE
+  ApiAuth 'APP_BACKEND_MANAGEMENT 'MERCHANT 'SMS_SERVICE_USAGE_CONFIG_UPDATE
     :> Common.SmsServiceUsageConfigUpdateAPI
 
 handler :: ShortId DM.Merchant -> City.City -> FlowServer API
@@ -87,7 +87,7 @@ buildTransaction ::
   Maybe request ->
   m DT.Transaction
 buildTransaction endpoint apiTokenInfo =
-  T.buildTransaction (DT.MerchantAPI endpoint) (Just APP_BACKEND) (Just apiTokenInfo) Nothing Nothing
+  T.buildTransaction (DT.MerchantAPI endpoint) (Just APP_BACKEND_MANAGEMENT) (Just apiTokenInfo) Nothing Nothing
 
 merchantUpdate ::
   ShortId DM.Merchant ->
@@ -100,7 +100,7 @@ merchantUpdate merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI $ do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction Common.MerchantUpdateEndpoint apiTokenInfo (Just req)
   T.withTransactionStoring transaction $
-    Client.callRiderApp checkedMerchantId opCity (.merchant.merchantUpdate) req
+    Client.callRiderAppOperations checkedMerchantId opCity (.merchant.merchantUpdate) req
 
 serviceUsageConfig ::
   ShortId DM.Merchant ->
@@ -109,7 +109,7 @@ serviceUsageConfig ::
   FlowHandler Common.ServiceUsageConfigRes
 serviceUsageConfig merchantShortId opCity apiTokenInfo = withFlowHandlerAPI $ do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  Client.callRiderApp checkedMerchantId opCity (.merchant.serviceUsageConfig)
+  Client.callRiderAppOperations checkedMerchantId opCity (.merchant.serviceUsageConfig)
 
 mapsServiceConfigUpdate ::
   ShortId DM.Merchant ->
@@ -121,7 +121,7 @@ mapsServiceConfigUpdate merchantShortId opCity apiTokenInfo req = withFlowHandle
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction Common.MapsServiceConfigUpdateEndpoint apiTokenInfo (Just req)
   T.withTransactionStoring transaction $
-    Client.callRiderApp checkedMerchantId opCity (.merchant.mapsServiceConfigUpdate) req
+    Client.callRiderAppOperations checkedMerchantId opCity (.merchant.mapsServiceConfigUpdate) req
 
 mapsServiceUsageConfigUpdate ::
   ShortId DM.Merchant ->
@@ -136,7 +136,7 @@ mapsServiceUsageConfigUpdate merchantShortId opCity apiTokenInfo req = withFlowH
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction Common.MapsServiceConfigUsageUpdateEndpoint apiTokenInfo (Just req)
   T.withTransactionStoring transaction $
-    Client.callRiderApp checkedMerchantId opCity (.merchant.mapsServiceUsageConfigUpdate) req
+    Client.callRiderAppOperations checkedMerchantId opCity (.merchant.mapsServiceUsageConfigUpdate) req
 
 smsServiceConfigUpdate ::
   ShortId DM.Merchant ->
@@ -148,7 +148,7 @@ smsServiceConfigUpdate merchantShortId opCity apiTokenInfo req = withFlowHandler
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction Common.SmsServiceConfigUpdateEndpoint apiTokenInfo (Just req)
   T.withTransactionStoring transaction $
-    Client.callRiderApp checkedMerchantId opCity (.merchant.smsServiceConfigUpdate) req
+    Client.callRiderAppOperations checkedMerchantId opCity (.merchant.smsServiceConfigUpdate) req
 
 smsServiceUsageConfigUpdate ::
   ShortId DM.Merchant ->
@@ -161,4 +161,4 @@ smsServiceUsageConfigUpdate merchantShortId opCity apiTokenInfo req = withFlowHa
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction Common.SmsServiceConfigUsageUpdateEndpoint apiTokenInfo (Just req)
   T.withTransactionStoring transaction $
-    Client.callRiderApp checkedMerchantId opCity (.merchant.smsServiceUsageConfigUpdate) req
+    Client.callRiderAppOperations checkedMerchantId opCity (.merchant.smsServiceUsageConfigUpdate) req

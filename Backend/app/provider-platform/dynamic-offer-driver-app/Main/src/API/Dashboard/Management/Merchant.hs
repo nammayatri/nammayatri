@@ -12,7 +12,7 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module API.Dashboard.Merchant where
+module API.Dashboard.Management.Merchant where
 
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Merchant as Common
 import qualified Domain.Action.Dashboard.Merchant as DMerchant

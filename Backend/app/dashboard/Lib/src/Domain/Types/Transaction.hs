@@ -14,7 +14,8 @@
 
 module Domain.Types.Transaction where
 
-import qualified "dynamic-offer-driver-app" API.Dashboard.Overlay as BPP
+import qualified "dynamic-offer-driver-app" API.Dashboard.Management.Overlay as BPP
+import qualified "dynamic-offer-driver-app" API.Dashboard.Management.Subscription as BPP
 import qualified "rider-app" API.Dashboard.RideBooking.Booking as BAP
 import qualified "rider-app" API.Dashboard.RideBooking.Cancel as BAP
 import qualified "rider-app" API.Dashboard.RideBooking.Confirm as BAP
@@ -24,7 +25,6 @@ import qualified "rider-app" API.Dashboard.RideBooking.Profile as BAP
 import qualified "rider-app" API.Dashboard.RideBooking.Registration as BAP
 import qualified "rider-app" API.Dashboard.RideBooking.Search as BAP
 import qualified "rider-app" API.Dashboard.RideBooking.Select as BAP
-import qualified "dynamic-offer-driver-app" API.Dashboard.Subscription as BPP
 import qualified "dashboard-helper-api" Dashboard.Common.Booking as Common
 import qualified "dashboard-helper-api" Dashboard.Common.Exotel as Common
 import qualified "dashboard-helper-api" Dashboard.Common.Merchant as Common

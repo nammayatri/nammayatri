@@ -12,7 +12,7 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module API.Dashboard.Booking where
+module API.Dashboard.Management.Booking where
 
 import qualified "dashboard-helper-api" Dashboard.Common.Booking as Common
 import qualified Domain.Action.Dashboard.Booking as DBooking

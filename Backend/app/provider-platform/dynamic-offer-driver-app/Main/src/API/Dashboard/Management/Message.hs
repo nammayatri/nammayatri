@@ -12,7 +12,7 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module API.Dashboard.Message where
+module API.Dashboard.Management.Message where
 
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Message as Common
 import qualified Domain.Action.Dashboard.Message as DMessage

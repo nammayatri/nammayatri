@@ -14,6 +14,7 @@
 
 module Environment where
 
+import Domain.Types.ServerName
 import Kernel.External.Encryption (EncTools)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config
@@ -27,7 +28,6 @@ import Kernel.Utils.Dhall (FromDhall)
 import Kernel.Utils.IOLogging
 import Kernel.Utils.Servant.Client
 import Kernel.Utils.Shutdown
-import Tools.Client
 import Tools.Metrics
 
 data AppCfg = AppCfg

@@ -14,9 +14,10 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
-module Tools.Auth.Merchant (merchantCityAccessCheck, CheckedShortId) where
+module Tools.Auth.Merchant (merchantCityAccessCheck, merchantServerAccessCheck, CheckedShortId) where
 
 import qualified Domain.Types.Merchant as DMerchant
+import qualified Domain.Types.ServerName as DTServer
 import Kernel.Prelude
 import Kernel.Types.Beckn.City as City
 import Kernel.Types.Error
@@ -32,3 +33,14 @@ merchantCityAccessCheck (ShortId userMerchantId) (ShortId merchantId) userCity c
 -- CheckedShortId constructor should not be exported for type safety
 newtype CheckedShortId domain = CheckedShortId Text
   deriving newtype (ToHttpApiData, ToSchema)
+
+merchantServerAccessCheck ::
+  ( MonadFlow m,
+    HasFlowEnv m r '["dataServers" ::: [DTServer.DataServer]]
+  ) =>
+  DMerchant.Merchant ->
+  m ()
+merchantServerAccessCheck merchant = do
+  availableServers <- asks (.dataServers)
+  unless (all (`elem` (availableServers <&> (.name))) merchant.serverNames) $
+    throwError $ InvalidRequest "Server for this merchant is not available"

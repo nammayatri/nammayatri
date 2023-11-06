@@ -113,7 +113,7 @@ verifyServer ::
   m DM.Merchant
 verifyServer requiredServerAccess merchantId = do
   merchant <- QM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
-  unless (requiredServerAccess == merchant.serverName) $ throwError AccessDenied
+  unless (requiredServerAccess `elem` merchant.serverNames) $ throwError AccessDenied
   return merchant
 
 verifyCity :: MonadFlow m => DM.Merchant -> City.City -> m ()

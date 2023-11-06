@@ -33,7 +33,9 @@ import Tools.Auth (DashboardTokenAuth)
 type API =
   "dashboard"
     :> ( Capture "merchantId" (ShortId DM.Merchant)
-           :> API'
+           :> ( OperationsAPI
+                  :<|> RideBookingAPI
+              )
        )
     :<|> ExotelAPI
 
@@ -41,33 +43,33 @@ type APIV2 =
   "dashboard"
     :> ( Capture "merchantId" (ShortId DM.Merchant)
            :> Capture "city" Context.City
-           :> API'
+           :> ( OperationsAPI
+                  :<|> RideBookingAPI
+              )
        )
     :<|> ExotelAPI
 
-type API' =
+type OperationsAPI =
   DashboardTokenAuth
     :> ( Customer.API
            :<|> Booking.API
            :<|> Merchant.API
            :<|> Ride.API
-           :<|> RideBookings.API
            :<|> IssueList.API
            :<|> Issue.API
        )
 
+type RideBookingAPI =
+  DashboardTokenAuth
+    :> RideBookings.API
+
 -- TODO :: Deprecated, Remove after successful deployment
 handler :: FlowServer API
 handler =
-  ( \merchantId _dashboard -> do
+  ( \merchantId -> do
       let city = getCity merchantId.getShortId
-      Customer.handler merchantId
-        :<|> Booking.handler merchantId
-        :<|> Merchant.handler merchantId city
-        :<|> Ride.handler merchantId
-        :<|> RideBookings.handler merchantId
-        :<|> IssueList.handler merchantId
-        :<|> Issue.handler merchantId city
+      operationHandler merchantId city
+        :<|> rideBookingHandler merchantId city
   )
     :<|> exotelHandler
   where
@@ -79,16 +81,23 @@ handler =
 
 handlerV2 :: FlowServer APIV2
 handlerV2 =
-  ( \merchantId city _dashboard ->
-      Customer.handler merchantId
-        :<|> Booking.handler merchantId
-        :<|> Merchant.handler merchantId city
-        :<|> Ride.handler merchantId
-        :<|> RideBookings.handler merchantId
-        :<|> IssueList.handler merchantId
-        :<|> Issue.handler merchantId city
+  ( \merchantId city ->
+      operationHandler merchantId city
+        :<|> rideBookingHandler merchantId city
   )
     :<|> exotelHandler
+
+operationHandler :: ShortId DM.Merchant -> Context.City -> FlowServer OperationsAPI
+operationHandler merchantId city _ = do
+  Customer.handler merchantId
+    :<|> Booking.handler merchantId
+    :<|> Merchant.handler merchantId city
+    :<|> Ride.handler merchantId
+    :<|> IssueList.handler merchantId
+    :<|> Issue.handler merchantId city
+
+rideBookingHandler :: ShortId DM.Merchant -> Context.City -> FlowServer RideBookingAPI
+rideBookingHandler merchantId _ _ = RideBookings.handler merchantId
 
 type ExotelAPI =
   DashboardTokenAuth
