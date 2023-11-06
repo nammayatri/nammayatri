@@ -327,7 +327,6 @@ library
       Storage.Beam.DriverOnboarding.DriverRCAssociation
       Storage.Beam.DriverOnboarding.IdfyVerification
       Storage.Beam.DriverOnboarding.Image
-      Storage.Beam.DriverOnboarding.OperatingCity
       Storage.Beam.DriverOnboarding.VehicleRegistrationCertificate
       Storage.Beam.DriverPlan
       Storage.Beam.DriverQuote
@@ -355,7 +354,6 @@ library
       Storage.Beam.IssueManagement
       Storage.Beam.KioskLocation
       Storage.Beam.KioskLocationTranslation
-      Storage.Beam.LeaderBoardConfig
       Storage.Beam.Location
       Storage.Beam.LocationMapping
       Storage.Beam.Mandate
@@ -377,7 +375,6 @@ library
       Storage.Beam.Message.MessageTranslation
       Storage.Beam.MetaData
       Storage.Beam.Notification
-      Storage.Beam.OnboardingDocumentConfig
       Storage.Beam.Payment
       Storage.Beam.Person
       Storage.Beam.Plan
@@ -407,7 +404,6 @@ library
       Storage.CachedQueries.GoHomeConfig
       Storage.CachedQueries.KioskLocation
       Storage.CachedQueries.KioskLocationTranslation
-      Storage.CachedQueries.LeaderBoardConfig
       Storage.CachedQueries.Maps.PlaceNameCache
       Storage.CachedQueries.Merchant
       Storage.CachedQueries.Merchant.DriverIntelligentPoolConfig
@@ -446,7 +442,6 @@ library
       Storage.Queries.DriverOnboarding.DriverRCAssociation
       Storage.Queries.DriverOnboarding.IdfyVerification
       Storage.Queries.DriverOnboarding.Image
-      Storage.Queries.DriverOnboarding.OperatingCity
       Storage.Queries.DriverOnboarding.Status
       Storage.Queries.DriverOnboarding.VehicleRegistrationCertificate
       Storage.Queries.DriverPlan
@@ -476,7 +471,6 @@ library
       Storage.Queries.Invoice
       Storage.Queries.KioskLocation
       Storage.Queries.KioskLocationTranslation
-      Storage.Queries.LeaderBoardConfig
       Storage.Queries.Location
       Storage.Queries.LocationMapping
       Storage.Queries.Mandate

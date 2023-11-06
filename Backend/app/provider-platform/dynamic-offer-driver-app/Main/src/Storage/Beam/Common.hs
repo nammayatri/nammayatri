@@ -26,7 +26,6 @@ import Storage.Beam.DriverOnboarding.DriverLicense
 import Storage.Beam.DriverOnboarding.DriverRCAssociation
 import Storage.Beam.DriverOnboarding.IdfyVerification
 import Storage.Beam.DriverOnboarding.Image
-import Storage.Beam.DriverOnboarding.OperatingCity
 import Storage.Beam.DriverOnboarding.VehicleRegistrationCertificate
 import Storage.Beam.DriverReferral
 import Storage.Beam.Exophone
@@ -52,7 +51,6 @@ atlasDB =
       { exophone = exophoneTable,
         geometry = geometryTable,
         vehicle = vehicleTable,
-        operatingCity = operatingCityTable,
         image = imageTable,
         person = personTable,
         driverLicense = driverLicenseTable,
@@ -83,7 +81,6 @@ data AtlasDB f = AtlasDB
   { exophone :: f (B.TableEntity ExophoneT),
     geometry :: f (B.TableEntity GeometryT),
     vehicle :: f (B.TableEntity VehicleT),
-    operatingCity :: f (B.TableEntity OperatingCityT),
     image :: f (B.TableEntity ImageT),
     person :: f (B.TableEntity PersonT),
     driverLicense :: f (B.TableEntity DriverLicenseT),

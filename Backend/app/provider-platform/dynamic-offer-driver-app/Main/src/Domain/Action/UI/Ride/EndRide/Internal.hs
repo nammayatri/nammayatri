@@ -32,8 +32,6 @@ module Domain.Action.UI.Ride.EndRide.Internal
   )
 where
 
--- import Storage.CachedQueries.LeaderBoardConfig as QLeaderConfig
-
 import qualified Data.Map as M
 import Data.Time hiding (getCurrentTime, secondsToNominalDiffTime)
 import Data.Time.Calendar.OrdinalDate (sundayStartWeek)

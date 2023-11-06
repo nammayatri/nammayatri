@@ -33,7 +33,6 @@ import qualified "dynamic-offer-driver-app" Storage.Beam.DriverOnboarding.Driver
 import qualified "dynamic-offer-driver-app" Storage.Beam.DriverOnboarding.DriverRCAssociation as DriverRCAssociation
 import qualified "dynamic-offer-driver-app" Storage.Beam.DriverOnboarding.IdfyVerification as IdfyVerification
 import qualified "dynamic-offer-driver-app" Storage.Beam.DriverOnboarding.Image as Image
-import qualified "dynamic-offer-driver-app" Storage.Beam.DriverOnboarding.OperatingCity as OperatingCity
 import qualified "dynamic-offer-driver-app" Storage.Beam.DriverOnboarding.VehicleRegistrationCertificate as VehicleRegistrationCertificate
 import qualified "dynamic-offer-driver-app" Storage.Beam.DriverQuote as DriverQuote
 import qualified "dynamic-offer-driver-app" Storage.Beam.DriverReferral as DriverReferral
@@ -57,7 +56,6 @@ import qualified "dynamic-offer-driver-app" Storage.Beam.FleetDriverAssociation 
 import qualified "dynamic-offer-driver-app" Storage.Beam.Geometry as Geometry
 import qualified "dynamic-offer-driver-app" Storage.Beam.GoHomeConfig as GoHomeConfig
 import "dynamic-offer-driver-app" Storage.Beam.IssueManagement ()
-import qualified "dynamic-offer-driver-app" Storage.Beam.LeaderBoardConfig as LeaderBoardConfig
 import qualified "dynamic-offer-driver-app" Storage.Beam.Location as Location
 import qualified "dynamic-offer-driver-app" Storage.Beam.LocationMapping as LocationMapping
 import qualified "dynamic-offer-driver-app" Storage.Beam.Maps.PlaceNameCache as PlaceNameCache
@@ -75,7 +73,6 @@ import qualified "dynamic-offer-driver-app" Storage.Beam.Message.Message as Mess
 import qualified "dynamic-offer-driver-app" Storage.Beam.Message.MessageReport as MessageReport
 import qualified "dynamic-offer-driver-app" Storage.Beam.Message.MessageTranslation as MessageTranslation
 import qualified "dynamic-offer-driver-app" Storage.Beam.MetaData as MetaData
-import qualified "dynamic-offer-driver-app" Storage.Beam.OnboardingDocumentConfig as OnboardingDocumentConfig
 import "dynamic-offer-driver-app" Storage.Beam.Payment ()
 import qualified "dynamic-offer-driver-app" Storage.Beam.Person as Person
 import qualified "dynamic-offer-driver-app" Storage.Beam.QuoteSpecialZone as QuoteSpecialZone
@@ -112,7 +109,6 @@ data DeleteModel
   | DriverRcAssociationDelete
   | IdfyVerificationDelete
   | ImageDelete
-  | OperatingCityDelete
   | VehicleRegistrationCertificateDelete
   | DriverQuoteDelete
   | DriverReferralDelete
@@ -135,7 +131,6 @@ data DeleteModel
   | IssueOptionDelete
   | IssueReportDelete
   | IssueTranslationDelete
-  | LeaderBoardConfigDelete
   | PlaceNameCacheDelete
   | MediaFileDelete
   | MerchantDelete
@@ -152,7 +147,6 @@ data DeleteModel
   | MessageReportDelete
   | MessageTranslationDelete
   | MetaDataDelete
-  | OnboardingDocumentConfigDelete
   | PersonDelete
   | QuoteSpecialZoneDelete
   | RatingDelete
@@ -198,7 +192,6 @@ getTagDelete DriverLicenseDelete = "DriverLicenseOptions"
 getTagDelete DriverRcAssociationDelete = "DriverRcAssociationOptions"
 getTagDelete IdfyVerificationDelete = "IdfyVerificationOptions"
 getTagDelete ImageDelete = "ImageOptions"
-getTagDelete OperatingCityDelete = "OperatingCityOptions"
 getTagDelete VehicleRegistrationCertificateDelete = "VehicleRegistrationCertificateOptions"
 getTagDelete DriverQuoteDelete = "DriverQuoteOptions"
 getTagDelete DriverReferralDelete = "DriverReferralOptions"
@@ -221,7 +214,6 @@ getTagDelete IssueCategoryDelete = "IssueCategoryOptions"
 getTagDelete IssueOptionDelete = "IssueOptionOptions"
 getTagDelete IssueReportDelete = "IssueReportOptions"
 getTagDelete IssueTranslationDelete = "IssueTranslationOptions"
-getTagDelete LeaderBoardConfigDelete = "LeaderBoardConfigOptions"
 getTagDelete PlaceNameCacheDelete = "PlaceNameCacheOptions"
 getTagDelete MediaFileDelete = "MediaFileOptions"
 getTagDelete MerchantDelete = "MerchantOptions"
@@ -238,7 +230,6 @@ getTagDelete MessageDelete = "MessageOptions"
 getTagDelete MessageReportDelete = "MessageReportOptions"
 getTagDelete MessageTranslationDelete = "MessageTranslationOptions"
 getTagDelete MetaDataDelete = "MetaDataOptions"
-getTagDelete OnboardingDocumentConfigDelete = "OnboardingDocumentConfigOptions"
 getTagDelete PersonDelete = "PersonOptions"
 getTagDelete QuoteSpecialZoneDelete = "QuoteSpecialZoneOptions"
 getTagDelete RatingDelete = "RatingOptions"
@@ -280,7 +271,6 @@ parseTagDelete "DriverLicenseOptions" = return DriverLicenseDelete
 parseTagDelete "DriverRcAssociationOptions" = return DriverRcAssociationDelete
 parseTagDelete "IdfyVerificationOptions" = return IdfyVerificationDelete
 parseTagDelete "ImageOptions" = return ImageDelete
-parseTagDelete "OperatingCityOptions" = return OperatingCityDelete
 parseTagDelete "VehicleRegistrationCertificateOptions" = return VehicleRegistrationCertificateDelete
 parseTagDelete "DriverQuoteOptions" = return DriverQuoteDelete
 parseTagDelete "DriverReferralOptions" = return DriverReferralDelete
@@ -303,7 +293,6 @@ parseTagDelete "IssueCategoryOptions" = return IssueCategoryDelete
 parseTagDelete "IssueOptionOptions" = return IssueOptionDelete
 parseTagDelete "IssueReportOptions" = return IssueReportDelete
 parseTagDelete "IssueTranslationOptions" = return IssueTranslationDelete
-parseTagDelete "LeaderBoardConfigOptions" = return LeaderBoardConfigDelete
 parseTagDelete "PlaceNameCacheOptions" = return PlaceNameCacheDelete
 parseTagDelete "MediaFileOptions" = return MediaFileDelete
 parseTagDelete "MerchantOptions" = return MerchantDelete
@@ -319,7 +308,6 @@ parseTagDelete "TransporterConfigOptions" = return TransporterConfigDelete
 parseTagDelete "MessageOptions" = return MessageDelete
 parseTagDelete "MessageReportOptions" = return MessageReportDelete
 parseTagDelete "MessageTranslationOptions" = return MessageTranslationDelete
-parseTagDelete "OnboardingDocumentConfigOptions" = return OnboardingDocumentConfigDelete
 parseTagDelete "PersonOptions" = return PersonDelete
 parseTagDelete "QuoteSpecialZoneOptions" = return QuoteSpecialZoneDelete
 parseTagDelete "RatingOptions" = return RatingDelete
@@ -365,7 +353,6 @@ data DBDeleteObject
   | DriverRcAssociationDeleteOptions DeleteModel (Where Postgres DriverRCAssociation.DriverRCAssociationT)
   | IdfyVerificationDeleteOptions DeleteModel (Where Postgres IdfyVerification.IdfyVerificationT)
   | ImageDeleteOptions DeleteModel (Where Postgres Image.ImageT)
-  | OperatingCityDeleteOptions DeleteModel (Where Postgres OperatingCity.OperatingCityT)
   | VehicleRegistrationCertificateDeleteOptions DeleteModel (Where Postgres VehicleRegistrationCertificate.VehicleRegistrationCertificateT)
   | DriverQuoteDeleteOptions DeleteModel (Where Postgres DriverQuote.DriverQuoteT)
   | DriverReferralDeleteOptions DeleteModel (Where Postgres DriverReferral.DriverReferralT)
@@ -388,7 +375,6 @@ data DBDeleteObject
   | IssueOptionDeleteOptions DeleteModel (Where Postgres IssueOption.IssueOptionT)
   | IssueReportDeleteOptions DeleteModel (Where Postgres IssueReport.IssueReportT)
   | IssueTranslationDeleteOptions DeleteModel (Where Postgres IssueTranslation.IssueTranslationT)
-  | LeaderBoardConfigDeleteOptions DeleteModel (Where Postgres LeaderBoardConfig.LeaderBoardConfigsT)
   | PlaceNameCacheDeleteOptions DeleteModel (Where Postgres PlaceNameCache.PlaceNameCacheT)
   | MediaFileDeleteOptions DeleteModel (Where Postgres MediaFile.MediaFileT)
   | MerchantDeleteOptions DeleteModel (Where Postgres Merchant.MerchantT)
@@ -405,7 +391,6 @@ data DBDeleteObject
   | MessageReportDeleteOptions DeleteModel (Where Postgres MessageReport.MessageReportT)
   | MessageTranslationDeleteOptions DeleteModel (Where Postgres MessageTranslation.MessageTranslationT)
   | MetaDataDeleteOptions DeleteModel (Where Postgres MetaData.MetaDataT)
-  | OnboardingDocumentConfigDeleteOptions DeleteModel (Where Postgres OnboardingDocumentConfig.OnboardingDocumentConfigT)
   | PersonDeleteOptions DeleteModel (Where Postgres Person.PersonT)
   | QuoteSpecialZoneDeleteOptions DeleteModel (Where Postgres QuoteSpecialZone.QuoteSpecialZoneT)
   | RatingDeleteOptions DeleteModel (Where Postgres Rating.RatingT)
@@ -493,9 +478,6 @@ instance FromJSON DBDeleteObject where
       ImageDelete -> do
         whereClause <- parseDeleteCommandValues contents
         return $ ImageDeleteOptions deleteModel whereClause
-      OperatingCityDelete -> do
-        whereClause <- parseDeleteCommandValues contents
-        return $ OperatingCityDeleteOptions deleteModel whereClause
       VehicleRegistrationCertificateDelete -> do
         whereClause <- parseDeleteCommandValues contents
         return $ VehicleRegistrationCertificateDeleteOptions deleteModel whereClause
@@ -562,9 +544,6 @@ instance FromJSON DBDeleteObject where
       IssueTranslationDelete -> do
         whereClause <- parseDeleteCommandValues contents
         return $ IssueTranslationDeleteOptions deleteModel whereClause
-      LeaderBoardConfigDelete -> do
-        whereClause <- parseDeleteCommandValues contents
-        return $ LeaderBoardConfigDeleteOptions deleteModel whereClause
       PlaceNameCacheDelete -> do
         whereClause <- parseDeleteCommandValues contents
         return $ PlaceNameCacheDeleteOptions deleteModel whereClause
@@ -613,9 +592,6 @@ instance FromJSON DBDeleteObject where
       MetaDataDelete -> do
         whereClause <- parseDeleteCommandValues contents
         return $ MetaDataDeleteOptions deleteModel whereClause
-      OnboardingDocumentConfigDelete -> do
-        whereClause <- parseDeleteCommandValues contents
-        return $ OnboardingDocumentConfigDeleteOptions deleteModel whereClause
       PersonDelete -> do
         whereClause <- parseDeleteCommandValues contents
         return $ PersonDeleteOptions deleteModel whereClause

@@ -47,7 +47,6 @@ import Kernel.Types.Id
 import Kernel.Types.Predicate
 import Kernel.Types.Validation
 import Kernel.Utils.Common
-import Kernel.Utils.Predicates
 import Kernel.Utils.Validation
 import SharedLogic.DriverOnboarding
 import qualified Storage.CachedQueries.Merchant.OnboardingDocumentConfig as QODC
@@ -56,7 +55,6 @@ import qualified Storage.Queries.DriverInformation as DriverInfo
 import qualified Storage.Queries.DriverOnboarding.DriverLicense as Query
 import qualified Storage.Queries.DriverOnboarding.IdfyVerification as IVQuery
 import qualified Storage.Queries.DriverOnboarding.Image as ImageQuery
-import qualified Storage.Queries.DriverOnboarding.OperatingCity as QCity
 import qualified Storage.Queries.Person as Person
 import Tools.Error
 import qualified Tools.Verification as Verification
@@ -80,7 +78,7 @@ validateDriverDLReq now DriverDLReq {..} =
       validateField "driverDateOfBirth" driverDateOfBirth $ InRange @UTCTime t60YearsAgo t18YearsAgo
     ]
   where
-    licenseNum = MinLength 5 `And` star (latinUC \/ digit)
+    licenseNum = LengthInRange 5 20
     t18YearsAgo = yearsAgo 18
     t60YearsAgo = yearsAgo 80
     yearsAgo i = negate (nominalDay * 365 * i) `addUTCTime` now
@@ -98,13 +96,7 @@ verifyDL isDashboard mbMerchant (personId, _, merchantOpCityId) req@DriverDLReq 
   driverInfo <- DriverInfo.findById (cast personId) >>= fromMaybeM (PersonNotFound personId.getId)
   when driverInfo.blocked $ throwError DriverAccountBlocked
   whenJust mbMerchant $ \merchant -> do
-    -- merchant access checking
     unless (merchant.id == person.merchantId) $ throwError (PersonNotFound personId.getId)
-  operatingCity' <- case mbMerchant of
-    Just merchant -> QCity.findEnabledCityByMerchantIdAndName merchant.id $ T.toLower req.operatingCity
-    Nothing -> QCity.findEnabledCityByName $ T.toLower req.operatingCity
-  when (null operatingCity') $
-    throwError $ InvalidOperatingCity $ T.toLower req.operatingCity
   transporterConfig <- QTC.findByMerchantOpCityId merchantOpCityId >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   onboardingDocumentConfig <- QODC.findByMerchantOpCityIdAndDocumentType merchantOpCityId DTO.DL >>= fromMaybeM (OnboardingDocumentConfigNotFound merchantOpCityId.getId (show DTO.DL))
   when

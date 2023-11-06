@@ -30,7 +30,6 @@ import qualified "dynamic-offer-driver-app" Storage.Beam.DriverOnboarding.Driver
 import qualified "dynamic-offer-driver-app" Storage.Beam.DriverOnboarding.DriverRCAssociation as DriverRCAssociation
 import qualified "dynamic-offer-driver-app" Storage.Beam.DriverOnboarding.IdfyVerification as IdfyVerification
 import qualified "dynamic-offer-driver-app" Storage.Beam.DriverOnboarding.Image as Image
-import qualified "dynamic-offer-driver-app" Storage.Beam.DriverOnboarding.OperatingCity as OperatingCity
 import qualified "dynamic-offer-driver-app" Storage.Beam.DriverOnboarding.VehicleRegistrationCertificate as VehicleRegistrationCertificate
 import qualified "dynamic-offer-driver-app" Storage.Beam.DriverQuote as DriverQuote
 import qualified "dynamic-offer-driver-app" Storage.Beam.DriverReferral as DriverReferral
@@ -54,7 +53,6 @@ import qualified "dynamic-offer-driver-app" Storage.Beam.FleetDriverAssociation 
 import qualified "dynamic-offer-driver-app" Storage.Beam.Geometry as Geometry
 import qualified "dynamic-offer-driver-app" Storage.Beam.GoHomeConfig as GoHomeConfig
 import "dynamic-offer-driver-app" Storage.Beam.IssueManagement ()
-import qualified "dynamic-offer-driver-app" Storage.Beam.LeaderBoardConfig as LeaderBoardConfig
 import qualified "dynamic-offer-driver-app" Storage.Beam.Location as Location
 import qualified "dynamic-offer-driver-app" Storage.Beam.LocationMapping as LocationMapping
 import qualified "dynamic-offer-driver-app" Storage.Beam.Maps.PlaceNameCache as PlaceNameCache
@@ -72,7 +70,6 @@ import qualified "dynamic-offer-driver-app" Storage.Beam.Message.Message as Mess
 import qualified "dynamic-offer-driver-app" Storage.Beam.Message.MessageReport as MessageReport
 import qualified "dynamic-offer-driver-app" Storage.Beam.Message.MessageTranslation as MessageTranslation
 import qualified "dynamic-offer-driver-app" Storage.Beam.MetaData as MetaData
-import qualified "dynamic-offer-driver-app" Storage.Beam.OnboardingDocumentConfig as OnboardingDocumentConfig
 import "dynamic-offer-driver-app" Storage.Beam.Payment ()
 import qualified "dynamic-offer-driver-app" Storage.Beam.Person as Person
 import qualified "dynamic-offer-driver-app" Storage.Beam.QuoteSpecialZone as QuoteSpecialZone
@@ -107,7 +104,6 @@ data DBCreateObject
   | DriverRcAssociationObject DriverRCAssociation.DriverRCAssociation
   | IdfyVerificationObject IdfyVerification.IdfyVerification
   | ImageObject Image.Image
-  | OperatingCityObject OperatingCity.OperatingCity
   | VehicleRegistrationCertificateObject VehicleRegistrationCertificate.VehicleRegistrationCertificate
   | DriverQuoteObject DriverQuote.DriverQuote
   | DriverReferralObject DriverReferral.DriverReferral
@@ -130,7 +126,6 @@ data DBCreateObject
   | IssueOptionObject IssueOption.IssueOption
   | IssueReportObject IssueReport.IssueReport
   | IssueTranslationObject IssueTranslation.IssueTranslation
-  | LeaderBoardConfigObject LeaderBoardConfig.LeaderBoardConfigs
   | PlaceNameCacheObject PlaceNameCache.PlaceNameCache
   | MediaFileObject MediaFile.MediaFile
   | MerchantObject Merchant.Merchant
@@ -147,7 +142,6 @@ data DBCreateObject
   | MessageReportObject MessageReport.MessageReport
   | MessageTranslationObject MessageTranslation.MessageTranslation
   | MetaDataObject MetaData.MetaData
-  | OnboardingDocumentConfigObject OnboardingDocumentConfig.OnboardingDocumentConfig
   | PersonObject Person.Person
   | QuoteSpecialZoneObject QuoteSpecialZone.QuoteSpecialZone
   | RatingObject Rating.Rating
@@ -196,7 +190,6 @@ modelName (DriverLicenseObject _) = "DriverLicense"
 modelName (DriverRcAssociationObject _) = "DriverRcAssociation"
 modelName (IdfyVerificationObject _) = "IdfyVerification"
 modelName (ImageObject _) = "Image"
-modelName (OperatingCityObject _) = "OperatingCity"
 modelName (VehicleRegistrationCertificateObject _) = "VehicleRegistrationCertificate"
 modelName (DriverQuoteObject _) = "DriverQuote"
 modelName (DriverReferralObject _) = "DriverReferral"
@@ -219,7 +212,6 @@ modelName (IssueCategoryObject _) = "IssueCategory"
 modelName (IssueOptionObject _) = "IssueOption"
 modelName (IssueReportObject _) = "IssueReport"
 modelName (IssueTranslationObject _) = "IssueTranslation"
-modelName (LeaderBoardConfigObject _) = "LeaderBoardConfig"
 modelName (PlaceNameCacheObject _) = "PlaceNameCache"
 modelName (MediaFileObject _) = "MediaFile"
 modelName (MerchantObject _) = "Merchant"
@@ -236,7 +228,6 @@ modelName (MessageObject _) = "Message"
 modelName (MessageReportObject _) = "MessageReport"
 modelName (MessageTranslationObject _) = "MessageTranslation"
 modelName (MetaDataObject _) = "MetaData"
-modelName (OnboardingDocumentConfigObject _) = "OnboardingDocumentConfig"
 modelName (PersonObject _) = "Person"
 modelName (QuoteSpecialZoneObject _) = "QuoteSpecialZone"
 modelName (RatingObject _) = "Rating"
