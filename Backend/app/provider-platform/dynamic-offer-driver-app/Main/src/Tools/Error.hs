@@ -33,20 +33,6 @@ instance IsHTTPError RatingError where
 
 instance IsAPIError RatingError
 
-data RideError
-  = InvalidRideRequest
-  deriving (Eq, Show, IsBecknAPIError)
-
-instanceExceptionWithParent 'HTTPException ''RideError
-
-instance IsBaseError RideError
-
-instance IsHTTPError RideError where
-  toErrorCode InvalidRideRequest = "INVALID_RIDE_START_REQUEST"
-  toHttpCode InvalidRideRequest = E400 -- should we keep it 500?
-
-instance IsAPIError RideError
-
 data FarePolicyError
   = NoFarePolicy
   | NoPerExtraKmRate

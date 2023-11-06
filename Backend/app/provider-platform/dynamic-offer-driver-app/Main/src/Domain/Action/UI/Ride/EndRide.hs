@@ -102,6 +102,7 @@ data DriverEndRideReq = DriverEndRideReq
 
 data DashboardEndRideReq = DashboardEndRideReq
   { point :: Maybe LatLong,
+    odometerEndReading :: Maybe Centesimal,
     merchantId :: Id DM.Merchant
   }
 
@@ -230,7 +231,7 @@ endRide handle@ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.g
         DP.DRIVER -> unless (requestor.id == driverId) $ throwError NotAnExecutor
         _ -> throwError AccessDenied
     DashboardReq dashboardReq -> do
-      unless (booking.providerId == dashboardReq.merchantId) $ throwError (RideDoesNotExist rideOld.id.getId)
+      unless (booking.providerId == dashboardReq.merchantId) $ throwError (RideDoesNotExist rideOld.id.getId) -- assuming no otp needed from dashboard
     CronJobReq cronJobReq -> do
       unless (booking.providerId == cronJobReq.merchantId) $ throwError (RideDoesNotExist rideOld.id.getId)
     CallBasedReq callBasedEndRideReq -> do
@@ -253,7 +254,7 @@ endRide handle@ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.g
             case dashboardReq.point of
               Just point -> pure (point, Nothing)
               Nothing -> do
-                pure (getCoordinates details.toLocation, Nothing) -- FIXME dashboardReq.odometerEndReading
+                pure (getCoordinates details.toLocation, dashboardReq.odometerEndReading)
           CronJobReq cronJobReq -> do
             logTagInfo "cron job -> endRide : " ("DriverId " <> getId driverId <> ", RideId " <> getId rideOld.id)
             case cronJobReq.point of
@@ -281,7 +282,7 @@ endRide handle@ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.g
           DashboardReq dashboardReq -> do
             logTagInfo "dashboard -> endRide : " ("DriverId " <> getId driverId <> ", RideId " <> getId rideOld.id)
             case dashboardReq.point of
-              Just point -> pure (point, Nothing)
+              Just point -> pure (point, dashboardReq.odometerEndReading)
               Nothing -> do
                 throwError $ InvalidRequest "End point required"
           CronJobReq cronJobReq -> do

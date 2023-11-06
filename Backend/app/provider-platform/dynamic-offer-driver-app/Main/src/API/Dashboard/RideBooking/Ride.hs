@@ -61,11 +61,11 @@ rideStart merchantShortId opCity reqRideId Common.StartRideReq {point} = withFlo
   SHandler.dashboardStartRide shandle rideId dashboardReq
 
 rideEnd :: ShortId DM.Merchant -> Context.City -> Id Common.Ride -> Common.EndRideReq -> FlowHandler APISuccess
-rideEnd merchantShortId opCity reqRideId Common.EndRideReq {point} = withFlowHandlerAPI $ do
+rideEnd merchantShortId opCity reqRideId Common.EndRideReq {point, odometerEndReading} = withFlowHandlerAPI $ do
   merchant <- findMerchantByShortId merchantShortId
   let rideId = cast @Common.Ride @DRide.Ride reqRideId
   let merchantId = merchant.id
-  let dashboardReq = EHandler.DashboardEndRideReq {point, merchantId}
+  let dashboardReq = EHandler.DashboardEndRideReq {point, odometerEndReading, merchantId}
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   shandle <- EHandler.buildEndRideHandle merchantId merchantOpCityId
   EHandler.dashboardEndRide shandle rideId dashboardReq

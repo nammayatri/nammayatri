@@ -84,7 +84,7 @@ type API =
              :> Post '[JSON] APISuccess
              :<|> "enableRental"
                :> TokenAuth
-               :> MandatoryQueryParam "flag" Bool -- add it in rental search
+               :> MandatoryQueryParam "flag" Bool
                :> Post '[JSON] APISuccess
              :<|> "goHome"
                :> ( "activate" :> TokenAuth

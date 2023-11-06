@@ -65,7 +65,7 @@ data NightShiftBounds = NightShiftBounds
 
 data AllowedTripDistanceBounds = AllowedTripDistanceBounds
   { maxAllowedTripDistance :: Meters,
-    minAllowedTripDistance :: Meters -- search on basis of flow
+    minAllowedTripDistance :: Meters
   }
   deriving (Generic, Eq, Show, ToJSON, FromJSON, ToSchema)
 
