@@ -314,6 +314,8 @@ primaryButtonConfirmPickupConfig state =
         , margin = (MarginTop 8)
         , id = "ConfirmLocationButton"
         , background = state.data.config.primaryBackground
+        , isClickable = (state.props.currentStage == EditPickUpLocation && state.props.markerLabel == "" ) || state.props.currentStage == ConfirmingLocation
+        , alpha = if (state.props.currentStage == EditPickUpLocation && state.props.markerLabel == "" ) || state.props.currentStage == ConfirmingLocation then 1.0 else 0.5
         }
   in
     primaryButtonConfig'
@@ -912,7 +914,7 @@ getDefaultPeekHeight state = do
 metersToKm :: Int -> ST.HomeScreenState -> String
 metersToKm distance state =
   if (distance <= 10) then
-    (if (state.props.currentStage == ST.RideStarted) then (getString AT_DROP) else (getString AT_PICKUP))
+    (if (state.props.currentStage == ST.RideStarted) then (getString AT_DROP) else "")-- (getString AT_PICKUP))
   else if (distance < 1000) then (HU.toStringJSON distance <> " m " <> (getString AWAY_C)) else (HU.parseFloat ((INT.toNumber distance) / 1000.0)) 2 <> " km " <> (getString AWAY_C)
 
 
@@ -1187,13 +1189,15 @@ specialLocationIcons tag =
 
 
 
-specialLocationConfig :: String -> String -> Boolean -> PolylineAnimationConfig -> JB.MapRouteConfig
-specialLocationConfig srcIcon destIcon isAnim animConfig = {
+specialLocationConfig :: String -> String -> Boolean -> PolylineAnimationConfig -> Boolean -> Boolean -> JB.MapRouteConfig
+specialLocationConfig srcIcon destIcon isAnim animConfig isSrcEditable isDestEditable = {
     sourceSpecialTagIcon : srcIcon
   , destSpecialTagIcon : destIcon
   , vehicleSizeTagIcon : (HU.getVehicleSize unit)
   , isAnimation : isAnim
   , polylineAnimationConfig : animConfig
+  , pickUpLocationEditable : isSrcEditable
+  , dropLocationEditable : isDestEditable
 }
 
 updateRouteMarkerConfig :: JB.Locations -> String -> String -> String -> String -> JB.MapRouteConfig -> JB.UpdateRouteMarker

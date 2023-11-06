@@ -27,6 +27,7 @@ import Screens.HomeScreen.View as HomeScreen
 import Types.App (FlowBT, GlobalState(..), ScreenType(..), HOME_SCREEN_OUTPUT(..))
 import Screens.HomeScreen.Transformer(getTripDetailsState)
 import Presto.Core.Types.Language.Flow (getLogFields)
+import Debug
 
 homeScreen ::FlowBT String HOME_SCREEN_OUTPUT
 homeScreen = do
@@ -99,11 +100,17 @@ homeScreen = do
       modifyScreenState $ HomeScreenStateType (\homeScreenState → updatedState)
       App.BackT $ App.NoBack <$> (pure $ FCM_NOTIFICATION notification updatedState)
     Cancel updatedState -> do
-        modifyScreenState $ HomeScreenStateType (\homeScreenState → updatedState)
-        App.BackT $ App.NoBack <$> (pure $ CANCEL)
+      modifyScreenState $ HomeScreenStateType (\homeScreenState → updatedState)
+      App.BackT $ App.NoBack <$> (pure $ CANCEL)
+    RestartTracking updatedState -> do
+      modifyScreenState $ HomeScreenStateType (\homeScreenState → updatedState)
+      App.BackT $ App.NoBack <$> (pure $ RESTART_TRACKING)
     Retry updatedState -> do
+      modifyScreenState $ HomeScreenStateType (\homeScreenState → updatedState)
+      App.BackT $ App.NoBack <$> (pure $ RETRY)
+    EditLocationScreenOutput updatedState -> do
         modifyScreenState $ HomeScreenStateType (\homeScreenState → updatedState)
-        App.BackT $ App.NoBack <$> (pure $ RETRY)
+        App.BackT $ App.NoBack <$> (pure $ EDIT_LOCATION_FLOW updatedState)
     GoToHome -> App.BackT $ App.NoBack <$> (pure $ HOME_SCREEN)
     SubmitRating updatedState -> do
       modifyScreenState $ HomeScreenStateType (\homeScreenState → updatedState)
@@ -173,3 +180,6 @@ homeScreen = do
     ExitToTicketing updatedState -> do
       modifyScreenState $ HomeScreenStateType (\_ -> updatedState)
       App.BackT $ App.NoBack <$> (pure $ EXIT_TO_TICKETING updatedState)
+    EditTheLocation updatedState -> do
+      modifyScreenState $ HomeScreenStateType (\_ -> updatedState)
+      App.BackT $ App.NoBack <$> (pure $ EDIT_THE_LOCATION updatedState)

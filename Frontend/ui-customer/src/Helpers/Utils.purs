@@ -510,6 +510,7 @@ getScreenFromStage stage = case stage of
   TryAgain -> "finding_rides_screen"
   PickUpFarFromCurrentLocation -> "finding_driver_loader"
   LoadMap -> "map_loader"
+  EditPickUpLocation -> "edit_pickup_location_screen"
 
 getGlobalPayload :: String -> Maybe GlobalPayload
 getGlobalPayload key = do

@@ -129,6 +129,7 @@ data TICKET_INFO_SCREEN_OUTPUT = GO_TO_HOME_SCREEN_FROM_TICKET_INFO
 data HOME_SCREEN_OUTPUT = LOGOUT
                         | RELOAD Boolean
                         | CANCEL
+                        | RESTART_TRACKING
                         | RETRY
                         | NO_OUTPUT
                         | GO_TO_HELP
@@ -178,6 +179,8 @@ data HOME_SCREEN_OUTPUT = LOGOUT
                         | GO_TO_TICKET_BOOKING_FLOW HomeScreenState
                         | REPEAT_RIDE_FLOW_HOME Trip
                         | EXIT_TO_TICKETING HomeScreenState
+                        | EDIT_LOCATION_FLOW HomeScreenState
+                        | EDIT_THE_LOCATION HomeScreenState
 
 data SELECT_LANGUAGE_SCREEN_OUTPUT = GO_TO_HOME_SCREEN | UPDATE_LANGUAGE SelectLanguageScreenState
 

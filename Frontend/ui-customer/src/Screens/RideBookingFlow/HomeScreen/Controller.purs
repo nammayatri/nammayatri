@@ -683,8 +683,11 @@ instance loggableAction :: Loggable Action where
     StopAutoScrollTimer -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "stop_auto_scroll_timer" 
     UpdateRepeatTrips arg1 -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "update_repeat_trips"
     RemoveShimmer -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "remove_shimmer"
+    EditLocation _ -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "edit_location"
+    OnCamerMoveHandler _ -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "map_drag_action_triggered"
 
 data ScreenOutput = LogoutUser
+                  | RestartTracking HomeScreenState
                   | Cancel HomeScreenState
                   | GoToHelp HomeScreenState
                   | ConfirmRide HomeScreenState
@@ -733,6 +736,8 @@ data ScreenOutput = LogoutUser
                   | GoToMyTickets HomeScreenState
                   | RepeatTrip HomeScreenState Trip
                   | ExitToTicketing HomeScreenState
+                  | EditLocationScreenOutput HomeScreenState
+                  | EditTheLocation HomeScreenState
 
 data Action = NoAction
             | BackPressed
@@ -770,6 +775,7 @@ data Action = NoAction
             | ShowCallDialer CallType
             | CloseShowCallDialer
             | StartLocationTracking String
+            | OnCamerMoveHandler String 
             | ExitLocationSelected LocationListItemState Boolean
             | DistanceOutsideLimitsActionController PopUpModal.Action
             | ShortDistanceActionController PopUpModal.Action
@@ -874,6 +880,7 @@ data Action = NoAction
             | StopAutoScrollTimer 
             | UpdateRepeatTrips RideBookingListRes 
             | RemoveShimmer 
+            | EditLocation String
 
 eval :: Action -> HomeScreenState -> Eval Action ScreenOutput HomeScreenState
 
@@ -966,6 +973,10 @@ eval (IsMockLocation isMock) state = do
   let val = isMock == "true"
       _ = unsafePerformEffect $ if val then  logEvent (state.data.logField) "ny_fakeGPS_enabled" else pure unit -- we are using unsafePerformEffect becasue without it we are not getting logs in firebase, since we are passing a parameter from state i.e. logField then the output will be inline and it will not be able to precompute so it's safe to use it here.
   continue state{props{isMockLocation = val}}
+
+eval (EditLocation editLocation) state = do
+  _ <- pure $ updateLocalStage EditPickUpLocation
+  exit $ EditLocationScreenOutput state{props{currentStage = EditPickUpLocation}}
 
 eval (UpdateCurrentStage stage) state = do
   _ <- pure $ spy "updateCurrentStage" stage
@@ -1232,6 +1243,11 @@ eval BackPressed state = do
                       _ <- pure $ removeAllPolylines ""
                       _ <- pure $ updateLocalStage SearchLocationModel
                       continue state{props{defaultPickUpPoint = "", rideRequestFlow = false, currentStage = SearchLocationModel, searchId = "", isSource = Just false,isSearchLocation = SearchLocation},data{polygonCoordinates = "", nearByPickUpPoints = []}}
+    EditPickUpLocation -> do 
+                      _ <- pure $ exitLocateOnMap ""
+                      _ <- pure $ removeAllPolylines ""
+                      _ <- pure $ updateLocalStage RideAccepted
+                      updateAndExit state{props{currentStage = RideAccepted}} $ RestartTracking state{props{currentStage = RideAccepted}}
     FindingEstimate -> do
                       _ <- pure $ performHapticFeedback unit
                       _ <- pure $ updateLocalStage SearchLocationModel
@@ -1333,21 +1349,21 @@ eval (SourceUnserviceableActionController (ErrorModalController.PrimaryButtonAct
 
 eval (UpdateLocation key lat lon) state = case key of
   "LatLon" -> do
-    exit $ UpdateLocationName state{props{defaultPickUpPoint = ""}} (fromMaybe 0.0 (NUM.fromString lat)) (fromMaybe 0.0 (NUM.fromString lon))
+    exit $ UpdateLocationName state{props{defaultPickUpPoint = "", markerLabel = ""}} (fromMaybe 0.0 (NUM.fromString lat)) (fromMaybe 0.0 (NUM.fromString lon))
   _ ->  if length (filter( \ (item) -> (item.place == key)) state.data.nearByPickUpPoints) > 0 then do
-          exit $ UpdateLocationName state{props{defaultPickUpPoint = key}} (fromMaybe 0.0 (NUM.fromString lat)) (fromMaybe 0.0 (NUM.fromString lon))
+          exit $ UpdateLocationName state{props{defaultPickUpPoint = key , markerLabel = ""}} (fromMaybe 0.0 (NUM.fromString lat)) (fromMaybe 0.0 (NUM.fromString lon))
         else continue state
 
 eval (UpdatePickupLocation  key lat lon) state =
-  case key of
+  case (STR.replace (STR.Pattern "LocationIsFar") (STR.Replacement "") key) of
     "LatLon" -> do
-      exit $ UpdatePickupName state{props{defaultPickUpPoint = ""}} (fromMaybe 0.0 (NUM.fromString lat)) (fromMaybe 0.0 (NUM.fromString lon))
+      exit $ UpdatePickupName state{props{defaultPickUpPoint = "", markerLabel = if STR.contains (STR.Pattern "LocationIsFar") key then "Location is too far!" else ""}} (fromMaybe 0.0 (NUM.fromString lat)) (fromMaybe 0.0 (NUM.fromString lon))
     _ -> do
-      let focusedIndex = findIndex (\item -> item.place == key) state.data.nearByPickUpPoints
+      let focusedIndex = findIndex (\item -> item.place == STR.replace (STR.Pattern "LocationIsFar") (STR.Replacement "") key) state.data.nearByPickUpPoints
       case focusedIndex of
         Just index -> do
           _ <- pure $ scrollViewFocus (getNewIDWithTag "scrollViewParent") index
-          exit $ UpdatePickupName state{props{defaultPickUpPoint = key}} (fromMaybe 0.0 (NUM.fromString lat)) (fromMaybe 0.0 (NUM.fromString lon))
+          exit $ UpdatePickupName state{props{defaultPickUpPoint = key, markerLabel = if STR.contains (STR.Pattern "LocationIsFar") key then "Location is too far!" else ""}} (fromMaybe 0.0 (NUM.fromString lat)) (fromMaybe 0.0 (NUM.fromString lon))
         Nothing -> continue state
 
 eval (CheckBoxClick autoAssign) state = do
@@ -1478,6 +1494,13 @@ eval (PrimaryButtonActionController (PrimaryButtonController.OnClick)) state = d
         let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_confirm_pickup"
         let updatedState = state{props{currentStage = FindingEstimate, locateOnMap = false}}
         updateAndExit updatedState $  (UpdatedSource updatedState)
+      EditPickUpLocation -> do
+        _ <- pure $ performHapticFeedback unit
+        _ <- pure $ exitLocateOnMap ""
+        -- _ <- pure $ updateLocalStage RideAccepted
+        let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_confirm_pickup"
+        let updatedState = state{props{locateOnMap = false}}
+        updateAndExit updatedState $ (EditTheLocation updatedState)
       SettingPrice -> do
                         _ <- pure $ performHapticFeedback unit
                         _ <- pure $ updateLocalStage FindingQuotes
@@ -2268,6 +2291,7 @@ eval (UpdateETA currentETA currentDistance) state = do
 
 eval (RepeatRide index item) state = do 
   let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_repeat_trip"
+  pure $ removeMarker (getCurrentLocationMarker (getValueToLocalStore VERSION_NAME))
   void $ pure $ setValueToLocalStore FLOW_WITHOUT_OFFERS (show true)
   void $ pure $ setValueToLocalStore TEST_MINIMUM_POLLING_COUNT $ "4" 
   void $ pure $ setValueToLocalStore TEST_POLLING_INTERVAL $ "8000.0" 

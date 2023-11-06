@@ -21,7 +21,7 @@ import Components.SettingSideBar.Controller (SettingSideBarState, Status(..))
 import Components.ChooseVehicle.Controller (SearchType(..)) as CV
 import Data.Maybe (Maybe(..))
 import Screens.Types (Contact, DriverInfoCard, HomeScreenState, LocationListItemState, PopupType(..), RatingCard(..), SearchLocationModelType(..), Stage(..), Address, EmergencyHelpModelState,Location, ZoneType(..), SpecialTags, TipViewStage(..), SearchResultType(..), SheetState(..), Trip(..))
-import Services.API (DriverOfferAPIEntity(..), QuoteAPIDetails(..), QuoteAPIEntity(..), PlaceName(..), LatLong(..), SpecialLocation(..), QuoteAPIContents(..), RideBookingRes(..), RideBookingAPIDetails(..), RideBookingDetails(..), FareRange(..), FareBreakupAPIEntity(..))
+import Services.API (DriverOfferAPIEntity(..), QuoteAPIDetails(..), QuoteAPIEntity(..), PlaceName(..), LatLong(..), SpecialLocation(..), QuoteAPIContents(..), RideBookingRes(..), RideBookingAPIDetails(..), RideBookingDetails(..), FareRange(..), FareBreakupAPIEntity(..), LatLong(..))
 import Prelude (($) ,negate)
 import Data.Array (head)
 import Prelude(negate)
@@ -212,6 +212,7 @@ initData = {
     , isMockLocation: false
     , isSpecialZone : false
     , defaultPickUpPoint : ""
+    , markerLabel : ""
     , showChatNotification : false
     , cancelSearchCallDriver : false
     , zoneType : dummyZoneType
@@ -278,6 +279,24 @@ initData = {
     , autoScrollTimer : ""
     , autoScrollTimerId : ""
     , autoScroll : true
+    , editedPickUpLocation : {
+      gps : LatLong{
+        lat : 0.0 ,
+        lon : 0.0
+      },
+      address : {
+        area : Nothing,
+        state : Nothing,
+        country : Nothing,
+        building : Nothing, 
+        door : Nothing,
+        street : Nothing,
+        city : Nothing,
+        areaCode : Nothing,
+        ward : Nothing,
+        placeId : Nothing
+      }
+    }
     }
 }
 

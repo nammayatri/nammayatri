@@ -698,6 +698,15 @@ export const storeKeyBoardCallback = function (cb, action) {
   window.keyBoardCallback = keyBoardCallback;
 };
 
+export const storeCallBackOnCameraMove = function (cb, action){
+  const callback = callbackMapper.map(function (callbackk) {
+    cb(action(callbackk))();
+  });
+  if (window.JBridge.storeCallBackOnCameraMove)
+    return window.JBridge.storeCallBackOnCameraMove(callback);
+  
+};
+
 export const getChatMessages = function (string) {
   return [].concat(window.chatMessages !== undefined ? window.chatMessages : []);
 }
@@ -1644,6 +1653,18 @@ export const locateOnMap = (configObj) => {
     }
   }
 };
+
+export const storeCallBackEditLocation = function (cb, action ) {
+  try {
+    if(JBridge.storeCallBackEditLocation){
+      const callback = callbackMapper.map(function (editLocation) {
+        cb(action(editLocation))();
+      });
+      window.JBridge.storeCallBackEditLocation(callback);}
+  } catch (error) {
+    console.log("Error occurred in storeCallBackEditLocation ------", error);
+  }
+}
 
 export const exitLocateOnMap = function (str) {
   JBridge.exitLocateOnMap(str);

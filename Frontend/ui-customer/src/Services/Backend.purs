@@ -1025,3 +1025,31 @@ getTicketStatus shortId = do
   withAPIResult (EP.ticketStatus shortId) unwrapResponse $ callAPI headers (GetTicketStatusReq shortId)
   where
   unwrapResponse x = x
+
+----------------------------------------------------- Edit Location API -----------------------------------------------------
+
+editLocationBT :: String -> EditLocationReq -> FlowBT String EditLocationRes
+editLocationBT rideId payload = do 
+    headers <- getHeaders' "" false
+    withAPIResultBT (EP.editLocation rideId) (\x -> x) errorHandler (lift $ lift $ callAPI headers (EditLocationRequest payload rideId))
+    where
+    errorHandler errorPayload = do
+            BackT $ pure GoBack
+
+editLocation rideId payload = do 
+    headers <- getHeaders "" false
+    withAPIResult (EP.editLocation rideId) unwrapResponse $ callAPI headers (EditLocationRequest payload rideId)
+    where
+    unwrapResponse x = x
+
+mkEditLocationReq :: LatLong -> Address -> LatLong -> Address -> EditLocationReq
+mkEditLocationReq srcLatLong srcAddress destLatLong destAddress = EditLocationReq {
+    "origin" : EditLocation{   
+        "gps" : srcLatLong,
+        "address" : (LocationAddress srcAddress)
+        },
+    "destination" : EditLocation{
+        "gps" : destLatLong,
+        "address" : (LocationAddress destAddress)
+        }
+}

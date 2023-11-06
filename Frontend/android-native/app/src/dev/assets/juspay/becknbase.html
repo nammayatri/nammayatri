@@ -17,7 +17,7 @@
     var ip = DUIGatekeeper.getResourceByName("local_ip");
     var port = DUIGatekeeper.getResourceByName("dev_port");
     port = port ? port : "8080";
-    var url = "http://" + ip + ":" + port;
+    var url = "http://" + "192.168.0.104" + ":" + port;
     var headID = document.getElementsByTagName("head")[0];
     var newScript = document.createElement('script');
     newScript.type = 'text/javascript';

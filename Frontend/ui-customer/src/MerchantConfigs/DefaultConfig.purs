@@ -209,7 +209,9 @@ config =
               , color : "#323643"
               },
             apiTriggerRadius : 10.0,
-            pickUpToSourceThreshold : 1.0
+            pickUpToSourceThreshold : 1.0,
+            editPickUpThreshold : 100.0,
+            editPickUpRadius : 100.0 --in meters
           }
       , labelTextSize : 30
       , animationDuration : 500

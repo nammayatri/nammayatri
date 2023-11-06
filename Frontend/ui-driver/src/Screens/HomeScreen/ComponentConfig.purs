@@ -646,13 +646,15 @@ getCancelAlertText key = case key of
   "GO_TO_CANCELLATION_TITLE" -> GO_TO_CANCELLATION_TITLE
   _ -> FREQUENT_CANCELLATIONS_WILL_LEAD_TO_LESS_RIDES
 
-mapRouteConfig :: String -> String -> Boolean -> PolylineAnimationConfig -> JB.MapRouteConfig
-mapRouteConfig srcIcon destIcon isAnim animConfig= {
+mapRouteConfig :: String -> String -> Boolean -> PolylineAnimationConfig -> Boolean -> Boolean -> JB.MapRouteConfig
+mapRouteConfig srcIcon destIcon isAnim animConfig isSrcEditable isDestEditable = {
     sourceSpecialTagIcon : srcIcon
   , destSpecialTagIcon : destIcon
   , vehicleSizeTagIcon : (getMerchantVehicleSize unit)
   , isAnimation : isAnim 
   , polylineAnimationConfig : animConfig
+  , pickUpLocationEditable : isSrcEditable
+  , dropLocationEditable : isDestEditable
 }
 
 requestInfoCardConfig :: LazyCheck -> RequestInfoCard.Config

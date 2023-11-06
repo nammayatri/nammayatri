@@ -539,6 +539,7 @@ data Stage = HomeScreen
            | RetryFindingQuote
            | PickUpFarFromCurrentLocation
            | LoadMap
+           | EditPickUpLocation
 
 derive instance genericStage :: Generic Stage _
 instance eqStage :: Eq Stage where eq = genericEq
@@ -692,6 +693,7 @@ type HomeScreenStateProps =
   , isEstimateChanged :: Boolean
   , showRateCard :: Boolean
   , showRateCardIcon :: Boolean
+  , markerLabel :: String
   , emergencyHelpModal :: Boolean
   , sendMessageActive :: Boolean
   , chatcallbackInitiated :: Boolean
@@ -753,7 +755,13 @@ type HomeScreenStateProps =
   , autoScrollTimer :: String
   , autoScrollTimerId :: String
   , autoScroll :: Boolean
+  , editedPickUpLocation :: EditedLocation
   }
+
+type EditedLocation = {
+  gps :: LatLong ,
+  address :: Address
+}
 
 type SearchLocationModelProps = {
     isAutoComplete :: Boolean

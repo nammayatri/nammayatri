@@ -8,8 +8,11 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        android:padding="8dp"
         android:background="@drawable/ic_grey_border">
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:padding="8dp"
+            android:layout_height="wrap_content">
         <ImageView
             android:layout_width="25dp"
             android:layout_height="25dp"
@@ -29,6 +32,21 @@
             android:textFontWeight="400"
             android:gravity="center"
             android:id="@+id/marker_text"/>
+        </LinearLayout>
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:gravity="center_vertical"
+            android:id="@+id/edit_location_image"
+            android:paddingHorizontal="8dp"
+            android:clickable="true"
+            android:visibility="visible"
+            android:background="@drawable/ic_blue_bg">
+        <ImageView
+            android:layout_width="12dp"
+            android:layout_height= "12dp"
+            android:src="@drawable/ic_edit_pencil_white"
+            /></LinearLayout>
     </LinearLayout>
     <LinearLayout android:id="@+id/ll_marker_right"
         android:layout_width="match_parent"

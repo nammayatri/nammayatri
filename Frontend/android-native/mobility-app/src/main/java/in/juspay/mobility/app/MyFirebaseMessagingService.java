@@ -201,7 +201,25 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                                 }
                             }
                             break;
+                        case NotificationTypes.EDIT_LOCATION :
+                            try {
+                                JSONObject locationChanged = new JSONObject();
+                                locationChanged.put("okButtonText", "Update Navigation");
+                                locationChanged.put("buttonOkVisibility",true);
+                                locationChanged.put("imageVisibility",true);
+                                locationChanged.put("imageUrl","https://assets.juspay.in/beckn/jatrisaathi/driver/images/ic_accessibility_vision.png");
+                                locationChanged.put("buttonLayoutVisibility",true);
+                                locationChanged.put("titleVisibility",true);
+                                JSONArray arr = new JSONArray();
+                                arr.put("OPEN_SUBSCRIPTION");
+                                locationChanged.put("actions",arr);
+                                locationChanged.put("title","Pick up location has been Updated");
+                                showOverlayMessage(locationChanged);
 
+                            } catch (Exception e) {
+
+                            }
+                            break;
                         case NotificationTypes.TRIGGER_SERVICE:
                             if (merchantType.equals("DRIVER")) {
                                 FirebaseAnalytics.getInstance(this).logEvent("notification_trigger_service", new Bundle());
@@ -602,6 +620,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
         private static final String UPDATE_STORAGE = "UPDATE_STORAGE";
         private static final String CALL_API = "CALL_API";
         private static final String CHAT_MESSAGE = "CHAT_MESSAGE";
+        private static final String EDIT_LOCATION = "EDIT_LOCATION";
         private static final String DRIVER_NOTIFY = "DRIVER_NOTIFY";
         private static final String REALLOCATE_PRODUCT = "REALLOCATE_PRODUCT";
         private static final String PAYMENT_OVERDUE = "PAYMENT_OVERDUE";
