@@ -144,6 +144,8 @@ let tables =
 
 let dontEnableForDb = [] : List Text
 
+let dontEnableForKafka = [] : List Text
+
 let appBackendBapInternal =
       { name = "APP_BACKEND"
       , url = "http://localhost:8013/"
@@ -197,7 +199,7 @@ let LocationTrackingeServiceConfig = { url = "http://localhost:8081/" }
 
 let maxMessages
     : Text
-    = "1"
+    = "5000"
 
 let modelNamesMap =
       [ { mapKey = "MARUTI ALTO (Some random verioning)"
@@ -277,6 +279,7 @@ in  { esqDBCfg
     , schedulerType = common.schedulerType.RedisBased
     , ltsCfg = LocationTrackingeServiceConfig
     , dontEnableForDb
+    , dontEnableForKafka
     , maxMessages
     , modelNamesMap
     }
