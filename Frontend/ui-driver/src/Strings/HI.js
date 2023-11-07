@@ -1001,7 +1001,18 @@ const hindiStrings = {
   HUNDRED_PERCENT_FARE_GOES_TO_YOU : "100% किराया\nआपको जाता है!",
   FARE_SHOWN_IS_FARE_YOU_GET : "दिखाया गया किराया वही किराया है जो आपको मिलता है।\nकोई छिपा हुआ शुल्क नहीं।",
   BE_A_PART_OF_OPEN_MOBILITY_REVOLUTION : "ओपन\nमोबिलिटी क्रांति का हिस्सा बनें!",
-  OUR_DATA_AND_PRODUCT_ARE_TRANSPARENT : "हमारा डेटा और उत्पाद रोडमैप सभी के लिए पारदर्शी है।"
+  OUR_DATA_AND_PRODUCT_ARE_TRANSPARENT : "हमारा डेटा और उत्पाद रोडमैप सभी के लिए पारदर्शी है।",
+  ENABLE_LOCATION_PERMISSION : "स्थान अनुमति सक्षम करें",
+  PLEASE_ENABLE_LOCATION_PERMISSION_FOR : "कृपया इसके लिए स्थान अनुमति सक्षम करें",
+  ENABLE_LOCATION : "स्थान सक्षम करें",
+  YOUR_DETECTED_LOCATION_IS : "आपका पता लगाया गया स्थान है",
+  LANGUAGE_DETECTED : "भाषा का पता चला",
+  CHANGE_LANGUAGE_STR : "भाषा बदलें",
+  SELECT_LOCATION : "स्थान चुनें",
+  SELECT_LOCATION_DESC : "वह स्थान चुनें जहाँ आप सवारी करना चाहते हैं",
+  SELECT_LANGUAGE_DESC : "वह भाषा चुनें जिसे आप पढ़ सकते हैं",
+  CONFIRM_LANGUAGE : "भाषा की पुष्टि करें",
+  GET_STARTED : "शुरू करते हैं"
 }
 
 

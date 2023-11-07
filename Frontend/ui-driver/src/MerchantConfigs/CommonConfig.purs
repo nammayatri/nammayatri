@@ -140,15 +140,15 @@ commonConfig =
               },
               {
                 cityName : "Hyderabad",
-                mapImage : "ny_ic_bengalore_map,"
+                mapImage : "ny_ic_hyderabad_map,"
               },
               {
                 cityName : "Mysore",
-                mapImage : "ny_ic_bengalore_map,"
+                mapImage : "ny_ic_mysuru_map,"
               },
               {
                 cityName : "Delhi",
-                mapImage : "ny_ic_bengalore_map,"
+                mapImage : "ny_ic_delhi_map,"
               }
          ]
   }

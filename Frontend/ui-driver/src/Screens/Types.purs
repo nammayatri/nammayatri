@@ -1996,37 +1996,43 @@ type Tag = {
   textColor :: String
 }
 
----------------------------------------------DriverWelcomeScreen -------------------------------------
+---------------------------------------------ChooseCityScreen -------------------------------------
 
-type CarouselModel = {
-  image :: String,
-  title :: String,
-  description :: String
+type ChooseCityScreenState = {
+  data :: ChooseCityScreenData,
+  props :: ChooseCityScreenProps
 }
 
-type WelcomeScreenState = {
-  data :: WelcomeScreenData,
-  props :: WelcomeScreenProps
+type ChooseCityScreenData = {
+  config :: AppConfig,
+  locationSelected :: String
 }
 
-type WelcomeScreenData = {
-  carouselModel :: Array CarouselModel,
-  config :: AppConfig
-}
-
-type WelcomeScreenProps = {
+type ChooseCityScreenProps = {
   selectedLanguage :: String,
-  currentStage :: WelcomeScreenStage
+  currentStage :: ChooseCityScreenStage,
+  isLocationPermissionGiven :: Boolean
 }
 
-data WelcomeScreenStage = SELECT_LANG | SELECT_CITY | ENABLE_LOCATION | CAROUSEL | DETECT_LOCATION
+data ChooseCityScreenStage = SELECT_LANG | SELECT_CITY | ENABLE_PERMISSION | DETECT_LOCATION
 
-derive instance genericWelcomeScreenStage :: Generic WelcomeScreenStage _
-instance showWelcomeScreenStage :: Show WelcomeScreenStage where show = genericShow
-instance eqWelcomeScreenStage :: Eq WelcomeScreenStage where eq = genericEq
+derive instance genericChooseCityScreenStage :: Generic ChooseCityScreenStage _
+instance showChooseCityScreenStage :: Show ChooseCityScreenStage where show = genericShow
+instance eqChooseCityScreenStage :: Eq ChooseCityScreenStage where eq = genericEq
 
 type StepsHeaderModelState = {
   activeIndex :: Int,
   textArray :: Array String,
   backArrowVisibility :: Boolean
+}
+
+---------------------------------------------WelcomeScreen -------------------------------------
+
+type WelcomeScreenState = {
+  data :: WelcomeScreenData
+}
+
+type WelcomeScreenData = {
+  carouselModal :: Common.CarouselModal,
+  logField :: Object Foreign
 }

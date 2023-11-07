@@ -1378,6 +1378,7 @@ export const firebaseUserID = function (str) {
 export const storeCallBackDriverLocationPermission = function (cb) {
   return function (action) {
     return function () {
+      console.log ("in_js");
       try {
         const locationCallBack = function () {
           const isPermissionEnabled = isLocationPermissionEnabled()() && isLocationEnabled()()
@@ -2094,13 +2095,16 @@ export const addCarouselWithVideoExists = function () {
 }
 
 export const addCarousel = function (carouselModalJson, id) {
+  console.log("in_js_2");
   const carouselJson = JSON.stringify(carouselModalJson);
   const data = JSON.parse(carouselJson);
   const originalArray = data.carouselData;
   if(JBridge.addCarouselWithVideo){
+    console.log("in_js_3");
     return JBridge.addCarouselWithVideo(carouselJson, id);
   }
   else if(JBridge.addCarousel){
+    console.log("in_js_4");
     const modifiedArray = originalArray.map(item => ({ image : item.imageConfig.image , title : item.titleConfig.text , description : item.descriptionConfig.text }));
     return JBridge.addCarousel(JSON.stringify(modifiedArray), id);
   }

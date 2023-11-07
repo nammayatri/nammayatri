@@ -979,7 +979,18 @@ const bengaliStrings = {
 	HUNDRED_PERCENT_FARE_GOES_TO_YOU : "ভাড়ার 100%\nআপনার কাছে যাবে!",
 	FARE_SHOWN_IS_FARE_YOU_GET : "দেখানো ভাড়া হল আপনি যে ভাড়া পাবেন।\nকোন লুকানো চার্জ নেই।",
 	BE_A_PART_OF_OPEN_MOBILITY_REVOLUTION : "ওপেন মোবিলিটি রেভোলিউশনের অংশ হোন\n!",
-	OUR_DATA_AND_PRODUCT_ARE_TRANSPARENT : "আমাদের ডেটা এবং পণ্যের রোডম্যাপ\nসকলের জন্য স্বচ্ছ৷"
+	OUR_DATA_AND_PRODUCT_ARE_TRANSPARENT : "আমাদের ডেটা এবং পণ্যের রোডম্যাপ\nসকলের জন্য স্বচ্ছ৷",
+  ENABLE_LOCATION_PERMISSION : "অবস্থান অনুমতি সক্ষম করুন",
+  PLEASE_ENABLE_LOCATION_PERMISSION_FOR : "এর জন্য অবস্থান অনুমতি সক্ষম করুন",
+  ENABLE_LOCATION : "অবস্থান সক্ষম করুন৷",
+  YOUR_DETECTED_LOCATION_IS : "আপনার সনাক্ত করা অবস্থান হল",
+  LANGUAGE_DETECTED : "ভাষা শনাক্ত করা হয়েছে",
+  CHANGE_LANGUAGE_STR : "ভাষা পরিবর্তন করুন",
+  SELECT_LOCATION : "স্থান নির্বাচন করুন",
+  SELECT_LOCATION_DESC : "আপনি যেখানে রাইড করতে চান সেটি নির্বাচন করুন",
+  SELECT_LANGUAGE_DESC : "আপনি পড়তে পারেন ভাষা নির্বাচন করুন",
+  CONFIRM_LANGUAGE : "ভাষা নিশ্চিত করুন",
+  GET_STARTED : "এবার শুরু করা যাক"
 }
 
 export function getStringValue(key) {

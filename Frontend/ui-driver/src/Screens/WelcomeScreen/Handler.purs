@@ -15,6 +15,4 @@ welcomeScreen = do
   (GlobalState state) <- getState
   act <- lift $ lift $ runScreen $ WelcomeScreen.screen state.welcomeScreen
   case act of
-    SelectLanguageScreen -> App.BackT $ pure App.GoBack 
-    MobileNumberScreen -> App.BackT $ App.BackPoint <$> (pure GoToMobileNumberScreen)
-    
+    MobileNumberScreen -> App.BackT $ App.NoBack <$> (pure $ GoToMobileNumberScreen)

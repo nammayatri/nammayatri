@@ -973,7 +973,18 @@ const kannadaStrings = {
   HUNDRED_PERCENT_FARE_GOES_TO_YOU : "100% ದರವು ನಿಮಗೆ ಹೋಗುತ್ತದೆ!",
   FARE_SHOWN_IS_FARE_YOU_GET : "ತೋರಿಸಿರುವ ದರವು ನೀವು ಪಡೆಯುವ ದರವಾಗಿದೆ.\nಯಾವುದೇ ಗುಪ್ತ ಶುಲ್ಕಗಳಿಲ್ಲ.",
   BE_A_PART_OF_OPEN_MOBILITY_REVOLUTION : "ಮುಕ್ತ\nಮೊಬಿಲಿಟಿ ಕ್ರಾಂತಿಯ ಭಾಗವಾಗಿರಿ!",
-  OUR_DATA_AND_PRODUCT_ARE_TRANSPARENT : "ನಮ್ಮ ಡೇಟಾ ಮತ್ತು ಉತ್ಪನ್ನದ ಮಾರ್ಗಸೂಚಿ\nಎಲ್ಲರಿಗೂ ಪಾರದರ್ಶಕವಾಗಿದೆ."
+  OUR_DATA_AND_PRODUCT_ARE_TRANSPARENT : "ನಮ್ಮ ಡೇಟಾ ಮತ್ತು ಉತ್ಪನ್ನದ ಮಾರ್ಗಸೂಚಿ\nಎಲ್ಲರಿಗೂ ಪಾರದರ್ಶಕವಾಗಿದೆ.",
+  ENABLE_LOCATION_PERMISSION : "ಸ್ಥಳ ಅನುಮತಿಯನ್ನು ಸಕ್ರಿಯಗೊಳಿಸಿ",
+  PLEASE_ENABLE_LOCATION_PERMISSION_FOR : "ದಯವಿಟ್ಟು ಇದಕ್ಕಾಗಿ ಸರಿಯಾದ ಜಾಗವನ್ನು ಪಡೆಯಿರಿ",
+  ENABLE_LOCATION : "ಸ್ಥಳವನ್ನು ಸಕ್ರಿಯಗೊಳಿಸಿ",
+  YOUR_DETECTED_LOCATION_IS : "ನಿಮ್ಮ ಪತ್ತೆಯಾದ ಸ್ಥಳ",
+  LANGUAGE_DETECTED : "ಭಾಷೆ ಪತ್ತೆಯಾಗಿದೆ",
+  CHANGE_LANGUAGE_STR : "ಭಾಷೆ ಬದಲಾಯಿಸಿ",
+  SELECT_LOCATION : "ಸ್ಥಳವನ್ನು ಆಯ್ಕೆಮಾಡಿ",
+  SELECT_LOCATION_DESC : "ನೀವು ಸವಾರಿ ಮಾಡಲು ಬಯಸುವ ಸ್ಥ",
+  SELECT_LANGUAGE_DESC : "ನೀವು ಓದಬಹುದಾದ ಭಾಷೆಯನ್ನು ಆಯ್ಕೆಮಾಡಿ",
+  CONFIRM_LANGUAGE : "ಭಾಷೆಯನ್ನು ದೃಢೀಕರಿಸಿ",
+  GET_STARTED : "ಪ್ರಾರಂಭಿಸಿ"
 }
 
 

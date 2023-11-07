@@ -240,7 +240,7 @@ loginFlow = do
   runInternetCondition
   void $ pure $ setCleverTapUserProp [{key : "Preferred Language", value : unsafeToForeign $ getValueFromConfig "defaultLanguage"}]
   setValueToLocalStore LANGUAGE_KEY $ getValueFromConfig "defaultLanguage"
-  languageType <- UI.chooseLanguage
+  chooseCityScreen <- UI.chooseCityScreen
   welcomeScreen <- UI.welcomeScreen
   mobileNo <- UI.enterMobileNumber
   case mobileNo of
