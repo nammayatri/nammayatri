@@ -22,8 +22,7 @@ module Domain.Action.UI.Ride
     listDriverRides,
     arrivedAtPickup,
     otpRideCreate,
-    getOdometerReading,
-    getOdometerImage,
+    getOdometerReadingImage,
   )
 where
 
@@ -380,11 +379,11 @@ otpRideCreate driver otpCode booking = do
       (bookingVehicle == DVeh.TAXI_PLUS || bookingVehicle == DVeh.SEDAN || bookingVehicle == DVeh.SUV || bookingVehicle == DVeh.HATCHBACK)
         && driverVehicle == DVeh.TAXI
 
-getOdometerReading ::
+getOdometerReadingImage ::
   Id DRide.Ride ->
   Maybe Bool ->
   Flow OdometerReadingRes
-getOdometerReading rideId isStartRide = do
+getOdometerReadingImage rideId isStartRide = do
   ride <- QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
   imagePath <- case ride.rideDetails of
     DRide.DetailsRental _ ->
@@ -417,6 +416,3 @@ getOdometerReading rideId isStartRide = do
             <> fileName
             <> ".jpg"
         )
-
-getOdometerImage :: Text -> Flow Text
-getOdometerImage filePath = S3.get $ T.unpack filePath

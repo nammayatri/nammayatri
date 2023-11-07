@@ -91,13 +91,9 @@ type API =
                     :> Post '[JSON] RideCancel.CancelRideResp
                     :<|> TokenAuth
                     :> Capture "rideId" (Id Ride.Ride)
-                    :> "odometerReading"
+                    :> "odometerReadingImage"
                     :> QueryParam "start" Bool
                     :> Get '[JSON] DRide.OdometerReadingRes
-                    :<|> TokenAuth
-                    :> "odometerImage"
-                    :> MandatoryQueryParam "filePath" Text
-                    :> Get '[JSON] Text
                 )
          )
 
@@ -135,8 +131,7 @@ handler =
              :<|> startRide
              :<|> endRide
              :<|> cancelRide
-             :<|> getOdometerReading
-             :<|> getOdometerImage
+             :<|> getOdometerReadingImage
          )
 
 startRide :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Id Ride.Ride -> StartRideReq -> FlowHandler APISuccess
@@ -187,8 +182,5 @@ listDriverRides (driverId, _, _) mbLimit mbOffset mbRideStatus mbDay = withFlowH
 arrivedAtPickup :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Id Ride.Ride -> LatLong -> FlowHandler APISuccess
 arrivedAtPickup (_, _, _) rideId req = withFlowHandlerAPI $ DRide.arrivedAtPickup rideId req
 
-getOdometerReading :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Id Ride.Ride -> Maybe Bool -> FlowHandler DRide.OdometerReadingRes
-getOdometerReading (_, _, _) rideId isStartRide = withFlowHandlerAPI $ do DRide.getOdometerReading rideId isStartRide
-
-getOdometerImage :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Text -> FlowHandler Text
-getOdometerImage (_, _, _) filePath = withFlowHandlerAPI $ do DRide.getOdometerImage filePath
+getOdometerReadingImage :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Id Ride.Ride -> Maybe Bool -> FlowHandler DRide.OdometerReadingRes
+getOdometerReadingImage (_, _, _) rideId isStartRide = withFlowHandlerAPI $ do DRide.getOdometerReadingImage rideId isStartRide
