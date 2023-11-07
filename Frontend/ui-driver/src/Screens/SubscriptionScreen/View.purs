@@ -1765,8 +1765,7 @@ getAutoPayStatusPillData autoPayStatus =
     SUSPENDED -> {color: Color.red, status : getString CANCELLED_ }
     PAUSED_PSP -> {color: Color.orange900, status : getString PAUSED_STR }
     CANCELLED_PSP ->  {color: Color.red, status : getString CANCELLED_  }
-    PENDING -> {color: Color.orange900, status : getString PENDING_STR }
-    MANDATE_FAILED -> {color: Color.orange900, status : getString PENDING_STR }
+    _ | autoPayStatus `elem` [PENDING, MANDATE_FAILED, RESUME_PENDING] -> {color: Color.orange900, status : getString PENDING_STR }
     _ -> {color: Color.orange900, status : getString PENDING_STR }
 
 showOfferApplicable :: SubscriptionScreenState -> Boolean

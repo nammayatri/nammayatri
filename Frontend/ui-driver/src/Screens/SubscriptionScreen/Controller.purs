@@ -399,6 +399,7 @@ getAutopayStatus autoPayStatus =
       "CANCELLED_PSP" ->  CANCELLED_PSP -- call subscribe
       "PENDING" -> PENDING
       "MANDATE_FAILED" -> MANDATE_FAILED
+      "RESUME_PENDING" -> RESUME_PENDING
       _ -> NO_AUTOPAY
 
 parseKioskLocation :: String -> Array KioskLocationRes
