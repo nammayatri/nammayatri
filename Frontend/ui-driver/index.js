@@ -2,6 +2,8 @@ require("regenerator-runtime/runtime");
 // This will make sure init() is called. It will make available JBridge and Android variables
 require("presto-ui");
 require('core-js');
+
+Android.runInUI("android.webkit.WebView->setWebContentsDebuggingEnabled:b_true;","null");
 window.session_id = guid();
 window.version = __VERSION__;
 let previousDateObject = new Date();
@@ -292,11 +294,11 @@ if (typeof window.JOS != "undefined") {
 
 var sessionInfo = JSON.parse(JBridge.getDeviceInfo())
 
-if (sessionInfo.package_name.includes("debug")) {
-  logger.enableLogger();
-} else {
-  logger.disableLogger();
-}
+// if (sessionInfo.package_name.includes("debug")) {
+//   logger.enableLogger();
+// } else {
+//   logger.disableLogger();
+// }
 
 function makeEvent(_type, _data) {
   return { type : _type, data : _data };
