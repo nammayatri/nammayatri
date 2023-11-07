@@ -37,6 +37,8 @@ import Storage.Queries.Geometry
 import Tools.Error
 import qualified Tools.Maps as Maps
 
+data ACLSearchType = ONE_WAY | RENTAL deriving (Show, Read)
+
 buildSearchReq ::
   (HasFlowEnv m r '["coreVersion" ::: Text], CacheFlow m r, EsqDBFlow m r) =>
   Id Merchant.Merchant ->
@@ -66,6 +68,7 @@ buildSearchReq merchantId subscriber req = do
         pure $ fromMaybe merchant.city ((.city) <$> geometry)
   let distance = getDistance =<< intent.fulfillment.tags
   let duration = getDuration =<< intent.fulfillment.tags
+  searchType <- (getSearchType =<< intent.fulfillment.tags) & fromMaybeM (InvalidRequest "Search Type Required")
   let customerLanguage = buildCustomerLanguage =<< intent.fulfillment.customer
   unless (subscriber.subscriber_id == context.bap_id) $
     throwError (InvalidRequest "Invalid bap_id")
@@ -74,9 +77,10 @@ buildSearchReq merchantId subscriber req = do
   let disabilityTag = buildDisabilityTag =<< intent.fulfillment.customer
   let messageId = context.message_id
   transactionId <- context.transaction_id & fromMaybeM (InvalidRequest "Missing transaction_id")
-  pure $
-    case dropOff of
-      Just toLoc ->
+  case searchType of
+    ONE_WAY -> do
+      toLoc <- dropOff & fromMaybeM (InvalidRequest "Missing toLocation for one way")
+      pure $
         DSearchReqOnDemand
           DSearchReqOnDemand'
             { messageId = messageId,
@@ -97,7 +101,8 @@ buildSearchReq merchantId subscriber req = do
               customerLanguage = customerLanguage,
               disabilityTag = disabilityTag
             }
-      Nothing ->
+    RENTAL ->
+      pure $
         DSearchReqRental
           DSearchReqRental'
             { messageId = messageId,
@@ -131,6 +136,11 @@ getDuration tagGroups = do
   tagValue <- getTag "route_info" "duration_info_in_s" tagGroups
   durationValue <- readMaybe $ T.unpack tagValue
   Just $ Seconds durationValue
+
+getSearchType :: Search.TagGroups -> Maybe ACLSearchType
+getSearchType tagGroups = do
+  tagValue <- getTag "search_info" "search_type" tagGroups
+  readMaybe $ T.unpack tagValue
 
 buildCustomerLanguage :: Search.Customer -> Maybe Language
 buildCustomerLanguage Search.Customer {..} = do

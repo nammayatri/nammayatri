@@ -34,6 +34,8 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Tools.Maps as Maps
 
+data ACLSearchType = ONE_WAY | RENTAL deriving (Show)
+
 buildOneWaySearchReq ::
   (MonadFlow m, HasFlowEnv m r '["nwAddress" ::: BaseUrl]) =>
   DOneWaySearch.OneWaySearchRes ->
@@ -52,6 +54,7 @@ buildOneWaySearchReq DOneWaySearch.OneWaySearchRes {..} =
     merchant
     city
     (getPoints shortestRouteInfo)
+    ONE_WAY
   where
     getPoints val = val >>= (\routeInfo -> Just routeInfo.points)
 
@@ -73,6 +76,7 @@ buildRentalSearchReq DRentalSearch.RentalSearchRes {..} =
     merchant
     city
     Nothing
+    RENTAL
 
 buildSearchReq ::
   (MonadFlow m, HasFlowEnv m r '["nwAddress" ::: BaseUrl]) =>
@@ -88,13 +92,14 @@ buildSearchReq ::
   DM.Merchant ->
   Context.City ->
   Maybe [Maps.LatLong] ->
+  ACLSearchType ->
   m (BecknReq Search.SearchMessage)
-buildSearchReq origin destination searchId startTime _ distance duration customerLanguage disabilityTag merchant _city mbPoints = do
+buildSearchReq origin destination searchId startTime _ distance duration customerLanguage disabilityTag merchant _city mbPoints searchType = do
   let transactionId = getId searchId
       messageId = transactionId
   bapUrl <- asks (.nwAddress) <&> #baseUrlPath %~ (<> "/" <> T.unpack merchant.id.getId)
   context <- buildTaxiContext Context.SEARCH messageId (Just transactionId) merchant.bapId bapUrl Nothing Nothing merchant.defaultCity merchant.country False
-  let intent = mkIntent origin destination customerLanguage disabilityTag distance duration mbPoints startTime
+  let intent = mkIntent origin destination customerLanguage disabilityTag distance duration mbPoints startTime searchType
   let searchMessage = Search.SearchMessage intent
 
   pure $ BecknReq context searchMessage
@@ -108,8 +113,9 @@ mkIntent ::
   Maybe Seconds ->
   Maybe [Maps.LatLong] ->
   UTCTime ->
+  ACLSearchType ->
   Search.Intent
-mkIntent origin destination customerLanguage disabilityTag distance duration mbPoints startTime = do
+mkIntent origin destination customerLanguage disabilityTag distance duration mbPoints startTime searchType = do
   let startLocation =
         Search.StartInfo
           { location = mkLocation origin,
@@ -127,13 +133,15 @@ mkIntent origin destination customerLanguage disabilityTag distance duration mbP
           { start = startLocation,
             end = endLocation,
             tags =
-              if isJust distance || isJust duration
-                then
-                  Just $
-                    Search.TG
-                      [ mkRouteInfoTags
-                      ]
-                else Nothing,
+              Just $
+                Search.TG $
+                  [mkSearchInfoTag]
+                    <> ( if isJust distance || isJust duration
+                           then
+                             [ mkRouteInfoTags
+                             ]
+                           else []
+                       ),
             customer =
               if isJust customerLanguage || isJust disabilityTag
                 then
@@ -150,6 +158,20 @@ mkIntent origin destination customerLanguage disabilityTag distance duration mbP
     { ..
     }
   where
+    mkSearchInfoTag =
+      Search.TagGroup
+        { display = False,
+          code = "search_info",
+          name = "Search Info",
+          list =
+            [ Search.Tag
+                { display = Just False,
+                  code = Just "search_type",
+                  name = Just "Search Type",
+                  value = Just $ show searchType
+                }
+            ]
+        }
     mkRouteInfoTags =
       Search.TagGroup
         { display = False,
