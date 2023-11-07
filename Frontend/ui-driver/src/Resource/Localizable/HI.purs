@@ -1110,3 +1110,4 @@ getHI stringKey =
         DOWNLOAD_NAMMA_YATRI -> "नम्मा यात्री डाउनलोड करें"
         ENTER_CODE -> "कोड दर्ज करें"
         COMPLETE_REGISTRATION -> "पूरा पंजीकरण"
+        VERIFYING_OTP -> "सत्यापन ओटीपी"

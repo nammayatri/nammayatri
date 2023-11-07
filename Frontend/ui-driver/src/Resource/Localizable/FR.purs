@@ -822,4 +822,5 @@ getFR stringKey =
         DOWNLOAD_NAMMA_YATRI -> "Télécharger Namma Yatri"
         ENTER_CODE -> "Entrez le code"
         COMPLETE_REGISTRATION -> "Enregistrement complet"
+        VERIFYING_OTP -> "Vérification de l'OTP"
         _ -> ""

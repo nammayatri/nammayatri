@@ -1110,3 +1110,4 @@ getKN stringKey =
         DOWNLOAD_NAMMA_YATRI -> "ನಮ್ಮ ಯಾತ್ರಿ ಡೌನ್‌ಲೋಡ್ ಮಾಡಿ"
         ENTER_CODE -> "ಕೋಡ್ ನಮೂದಿಸಿ"
         COMPLETE_REGISTRATION -> "ಸಂಪೂರ್ಣ ನೋಂದಣಿ"
+        VERIFYING_OTP -> "ಒಟಿಪಿ ಪರಿಶೀಲಿಸಲಾಗುತ್ತಿದೆ"

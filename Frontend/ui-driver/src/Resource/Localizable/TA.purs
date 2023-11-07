@@ -1110,4 +1110,4 @@ getTA stringKey =
         DOWNLOAD_NAMMA_YATRI -> "நம்ம யாத்ரி பதிவிறக்கம்"
         ENTER_CODE -> "குறியீட்டை உள்ளிடவும்"
         COMPLETE_REGISTRATION -> "முழுமையான பதிவு"
-
+        VERIFYING_OTP -> "OTP ஐ சரிபார்க்கிறது"

@@ -122,14 +122,13 @@ public class MainActivity extends AppCompatActivity {
                 Utils.updateLocaleResource(sharedPreferences.getString(key,"__failed"),context);
             }
             if (key != null && key.equals("REGISTERATION_TOKEN")) {
-                String token = sharedPreferences.getString(key, "null");
+                String token = sharedPreferences.getString(key, "__failed");
                 if (token.equals("__failed")) {
                     final PackageManager pm = getApplicationContext().getPackageManager();
                     final Intent intent = pm.getLaunchIntentForPackage(getApplicationContext().getPackageName());
                     try {
                         if (activity != null) {
-                            activity.finishAffinity();// Finishes all activities.
-                            activity.startActivity(intent);
+                            rebootApp();
                         } else {
                             sharedPreferences.edit().clear().apply();
                         }
@@ -167,6 +166,26 @@ public class MainActivity extends AppCompatActivity {
             }
         }
     };
+
+    private void rebootApp(){
+        Log.i(LOG_TAG, "event reboot");
+        hyperServices.terminate();
+        hyperServices = null;
+        mFirebaseAnalytics.logEvent("ny_hyper_terminate",null);
+        Handler handler = new Handler(context.getMainLooper());
+        Runnable runnable = new Runnable() {
+            @Override
+            public void run() {
+                View v = findViewById(R.id.splash);
+                if (v != null) {
+                    findViewById(R.id.splash).setVisibility(View.VISIBLE);
+                }
+            }
+        };
+        handler.postDelayed(runnable,1000);
+        updateConfigURL();
+        initApp(null,null);
+    }
     private Intent widgetService;
     private AppUpdateManager appUpdateManager;
     private boolean isHideSplashEventCalled = false;

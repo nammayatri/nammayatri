@@ -1110,3 +1110,4 @@ getBN stringKey =
         DOWNLOAD_NAMMA_YATRI -> "নম্মা যাত্রী ডাউনলোড করুন"
         ENTER_CODE -> "কোড লিখুন"
         COMPLETE_REGISTRATION -> "সম্পূর্ণ নিবন্ধন"
+        VERIFYING_OTP -> "OTP যাচাই করা হচ্ছে"

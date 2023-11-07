@@ -1110,3 +1110,4 @@ getML stringKey =
         DOWNLOAD_NAMMA_YATRI -> "നമ്മ യാത്രി ഡൗൺലോഡ് ചെയ്യുക"
         ENTER_CODE -> "കോഡ് നൽകുക"
         COMPLETE_REGISTRATION -> "പൂർണ്ണമായ രജിസ്ട്രേഷൻ"
+        VERIFYING_OTP -> "OTP പരിശോധിക്കുന്നു"

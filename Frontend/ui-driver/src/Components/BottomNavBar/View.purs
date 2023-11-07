@@ -55,6 +55,7 @@ view push state =
           , height MATCH_PARENT
           , weight 1.0
           , gravity CENTER
+          , visibility if item.isVisible then VISIBLE else GONE
           , orientation VERTICAL
           , onClick push (const (OnNavigate item.text))
           ][ textView $

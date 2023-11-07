@@ -1555,7 +1555,9 @@ export const restartApp = function () {
 // Deprecated
 export const factoryResetApp = function (str) {
   console.log("HERE IN RESET ===--->>")
-  JBridge.factoryResetApp()
+  if (JBridge.factoryResetApp) {
+    JBridge.factoryResetApp();
+  }
 }
 
 export const uploadFile = function (unit) {

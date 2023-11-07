@@ -64,6 +64,7 @@ import Styles.Colors as Color
 import Components.ErrorModal as ErrorModal
 import MerchantConfig.Utils as MU
 import PrestoDOM.Types.DomAttributes (Corners(..))
+import Data.String.Common as DSC
 
 --------------------------------- rideActionModalConfig -------------------------------------
 rideActionModalConfig :: ST.HomeScreenState -> RideActionModal.Config
@@ -990,7 +991,7 @@ getAccessibilityPopupData state pwdtype isDriverArrived =
                                               { secondaryText = getString CUSTOMER_HAS_LOW_VISION_CALL_THEM_INSTEAD_OF_CHATTING,
                                                 imageUrl = fetchImage FF_ASSET "ny_ic_blind_pickup",
                                                 videoUrl = state.data.config.purpleRideConfig.visualImpairmentVideo,
-                                                mediaType = "VideoLink",
+                                                mediaType = if DSC.null state.data.config.purpleRideConfig.visualImpairmentVideo then "" else "VideoLink",
                                                 videoId = "BlindOrLowVisionCoverVideo"
                                               }
       Just ST.HEAR_IMPAIRMENT, true ->      accessibilityConfig'
@@ -1004,7 +1005,7 @@ getAccessibilityPopupData state pwdtype isDriverArrived =
                                               { secondaryText= getString CUSTOMER_HAS_POOR_HEARING_CHAT_WITH_THEM_INSTEAD_OF_CALLING ,
                                                 imageUrl = fetchImage FF_ASSET "ny_ic_deaf_pickup",
                                                 videoUrl = state.data.config.purpleRideConfig.hearingImpairmentVideo,
-                                                mediaType = "VideoLink",
+                                                mediaType = if DSC.null state.data.config.purpleRideConfig.hearingImpairmentVideo then "" else "VideoLink",
                                                 videoId = "HearingImpairmentCoverVideo"
                                               }
       Just ST.LOCOMOTOR_DISABILITY, true -> accessibilityConfig'
@@ -1018,7 +1019,7 @@ getAccessibilityPopupData state pwdtype isDriverArrived =
                                               { secondaryText = getString CUSTOMER_HAS_LOW_MOBILITY_GO_TO_EXACT_LOC, 
                                                 imageUrl = fetchImage FF_ASSET (getUpdatedAssets city),
                                                 videoUrl = state.data.config.purpleRideConfig.physicalImpairmentVideo, 
-                                                mediaType = "VideoLink",
+                                                mediaType = if DSC.null state.data.config.purpleRideConfig.physicalImpairmentVideo then "" else "VideoLink",
                                                 videoId = "LocomotorDisabilityCoverVideo"
                                               }
       Just ST.OTHER_DISABILITY, true ->      accessibilityConfig'   
