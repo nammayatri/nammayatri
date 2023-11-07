@@ -197,3 +197,18 @@ _middleName = lens (unwrap >>> _.middleName) (\oldRec newVal -> wrap ((unwrap ol
 
 _lastName :: forall a b c. Newtype a { lastName :: b | c } => Lens' a b
 _lastName = lens (unwrap >>> _.lastName) (\oldRec newVal -> wrap ((unwrap oldRec) { lastName = newVal }))
+_authData :: forall a b c. Newtype a { authData :: b | c } => Lens' a b
+_authData = lens (unwrap >>> _.authData) (\oldRec newVal -> wrap ((unwrap oldRec) { authData = newVal }))
+
+_maskedMobileNumber :: forall a b c. Newtype a { maskedMobileNumber :: b | c } => Lens' a b
+_maskedMobileNumber = lens (unwrap >>> _.maskedMobileNumber) (\oldRec newVal -> wrap ((unwrap oldRec) { maskedMobileNumber = newVal }))
+
+_major :: forall a b c. Newtype a { major :: b | c } => Lens' a b
+_major = lens (unwrap >>> _.major) (\oldRec newVal -> wrap ((unwrap oldRec) { major = newVal }))
+
+_minor :: forall a b c. Newtype a { minor :: b | c } => Lens' a b
+_minor = lens (unwrap >>> _.minor) (\oldRec newVal -> wrap ((unwrap oldRec) { minor = newVal }))
+
+_maintenance :: forall a b c. Newtype a { maintenance :: b | c } => Lens' a b
+_maintenance = lens (unwrap >>> _.maintenance) (\oldRec newVal -> wrap ((unwrap oldRec) { maintenance = newVal }))
+

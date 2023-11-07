@@ -25,8 +25,9 @@ import Foreign.Generic (decode, encode, Foreign, decodeJSON, encodeJSON)
 import Control.Monad.Except (runExcept)
 import Data.Either (Either(..), hush)
 import Data.Maybe (Maybe(..))
-import Data.String (length)
+import Data.String (length, trim)
 import Data.String.CodeUnits (charAt)
+import Data.Foldable (foldl)
 import Data.Time.Duration (Milliseconds(..))
 import Effect.Aff (launchAff)
 import Effect.Class (liftEffect)
@@ -253,3 +254,11 @@ infixl 1 ifelse as ?
 
 fromProp :: PropValue -> String
 fromProp = unsafeCoerce
+
+catMaybeStrings :: Array (Maybe String) -> String
+catMaybeStrings arr = 
+  trim $ foldl 
+    (\acc x -> 
+      case x of
+        Just a -> acc <> a <> " "
+        Nothing -> acc) "" arr

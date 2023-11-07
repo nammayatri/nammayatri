@@ -186,7 +186,7 @@ checkRideAndInitiate event = do
 checkVersion :: Int -> FlowBT String Unit
 checkVersion versioncode = do
   when (getValueToLocalNativeStore IS_RIDE_ACTIVE /= "true" && versioncode < (getLatestAndroidVersion (getMerchant FunctionCall))) $ do
-    lift $ lift $ doAff do liftEffect hideSplash
+    liftFlowBT hideSplash
     modifyScreenState $ AppUpdatePopUpScreenType (\appUpdatePopUpScreenState → appUpdatePopUpScreenState {updatePopup = AppVersion})
     fl <- UI.handleAppUpdatePopUp
     case fl of
@@ -195,13 +195,13 @@ checkVersion versioncode = do
 
 appUpdatedFlow :: FCMBundleUpdate -> FlowBT String Unit
 appUpdatedFlow payload = do
-  lift $ lift $ doAff do liftEffect hideSplash
+  liftFlowBT hideSplash
   modifyScreenState $ AppUpdatePopUpScreenType (\appUpdatePopUpScreenState → appUpdatePopUpScreenState {updatePopup = AppUpdated ,appUpdatedView{secondaryText=payload.description,primaryText=payload.title,coverImageUrl=payload.image}})
   fl <- UI.handleAppUpdatePopUp
   case fl of
     UpdateNow -> do 
-      lift $ lift $ doAff do liftEffect showSplash
-      lift $ lift $ doAff do liftEffect reboot
+      liftFlowBT showSplash
+      liftFlowBT reboot
     Later -> pure unit
 
 checkTimeSettings :: FlowBT String Unit
@@ -214,7 +214,7 @@ checkTimeSettings = do
   else do
     liftFlowBT $ logEvent logField_ "ny_network_time_disabled"
     modifyScreenState $ AppUpdatePopUpScreenType (\appUpdatePopUpScreenState -> appUpdatePopUpScreenState { updatePopup =DateAndTime })
-    lift $ lift $ doAff do liftEffect hideSplash
+    liftFlowBT hideSplash
     _ <- UI.handleAppUpdatePopUp
     checkTimeSettings
 
@@ -236,7 +236,7 @@ isTokenValid = (/=) "__failed"
 
 loginFlow :: FlowBT String Unit
 loginFlow = do
-  lift $ lift $ doAff do liftEffect hideSplash
+  liftFlowBT hideSplash
   logField_ <- lift $ lift $ getLogFields
   runInternetCondition
   void $ pure $ setCleverTapUserProp [{key : "Preferred Language", value : unsafeToForeign $ getValueFromConfig "defaultLanguage"}]
@@ -358,22 +358,22 @@ handleDeepLinksFlow event activeRideResp = do
         Just e -> 
           case e.data of
             "plans" | getValueToLocalNativeStore IS_RIDE_ACTIVE /= "true" && getValueToLocalNativeStore DISABLE_WIDGET /= "true" -> do
-              lift $ lift $ doAff do liftEffect hideSplash
+              liftFlowBT hideSplash
               updateAvailableAppsAndGoToSubs
             "lang" -> do
-              lift $ lift $ doAff do liftEffect hideSplash 
+              liftFlowBT hideSplash 
               selectLanguageFlow
             _ -> pure unit
         Nothing -> pure unit
   (GlobalState allState) <- getState
   case allState.notificationScreen.selectedNotification of
     Just _ -> do 
-      lift $ lift $ doAff do liftEffect hideSplash
+      liftFlowBT hideSplash
       notificationFlow
     Nothing -> pure unit
   case allState.globalProps.callScreen of
     ScreenNames.SUBSCRIPTION_SCREEN -> do 
-      lift $ lift $ doAff do liftEffect hideSplash
+      liftFlowBT hideSplash
       updateAvailableAppsAndGoToSubs
     _ -> pure unit
   checkPreRequisites activeRideResp
@@ -416,7 +416,7 @@ onBoardingFlow :: FlowBT String Unit
 onBoardingFlow = do
   _ <- pure $ hideKeyboardOnNavigation true
   (DriverRegistrationStatusResp resp ) <- driverRegistrationStatusBT (DriverRegistrationStatusReq { })
-  lift $ lift $ doAff do liftEffect hideSplash
+  liftFlowBT hideSplash
   GlobalState globalState <- getState
   if (resp.dlVerificationStatus == "NO_DOC_AVAILABLE" && resp.rcVerificationStatus == "NO_DOC_AVAILABLE") then do
     flow <- UI.registration
@@ -450,7 +450,7 @@ updateDriverVersion dbClientVersion dbBundleVersion = do
 
 aadhaarVerificationFlow :: FlowBT String Unit
 aadhaarVerificationFlow = do
-  lift $ lift $ doAff do liftEffect hideSplash
+  liftFlowBT hideSplash
   out <- UI.aadhaarVerificationScreen
   case out of
     ENTER_AADHAAR_OTP state -> do
@@ -725,7 +725,7 @@ addVehicleDetailsflow addRcFromProf = do
 
 applicationSubmittedFlow :: String -> FlowBT String Unit
 applicationSubmittedFlow screenType = do
-  lift $ lift $ doAff do liftEffect hideSplash
+  liftFlowBT hideSplash
   logField_ <- lift $ lift $ getLogFields
   action <- UI.applicationStatus screenType
   setValueToLocalStore TEST_FLOW_FOR_REGISTRATOION "COMPLETED"
@@ -1338,7 +1338,7 @@ writeToUsFlow = do
 permissionsScreenFlow :: Maybe Event -> Maybe GetRidesHistoryResp -> FlowBT String Unit
 permissionsScreenFlow event activeRideResp = do
   logField_ <- lift $ lift $ getLogFields
-  lift $ lift $ doAff do liftEffect hideSplash
+  liftFlowBT hideSplash
   _ <- pure $ hideKeyboardOnNavigation true
   action <- UI.permissions
   case action of
@@ -1765,7 +1765,7 @@ homeScreenFlow = do
   when appConfig.subscriptionConfig.enableBlocking $ do checkDriverBlockingStatus getDriverInfoResp
   when appConfig.subscriptionConfig.completePaymentPopup $ checkDriverPaymentStatus getDriverInfoResp
   updateBannerAndPopupFlags
-  lift $ lift $ doAff do liftEffect hideSplash
+  liftFlowBT hideSplash
   void $ lift $ lift $ toggleLoader false
   action <- UI.homeScreen
   case action of
@@ -2031,7 +2031,7 @@ homeScreenFlow = do
         let coors = (walkCoordinate srcLon srcLat destLon destLat)
         modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props { routeVisible = true } })
         _ <- pure $ removeAllPolylines ""
-        _ <- lift $ lift $ doAff do liftEffect $ drawRoute coors "DOT" "#323643" false "ny_ic_src_marker" "ny_ic_dest_marker" 9 "NORMAL" source destination (mapRouteConfig "" "" false getPolylineAnimationConfig) 
+        liftFlowBT $ drawRoute coors "DOT" "#323643" false "ny_ic_src_marker" "ny_ic_dest_marker" 9 "NORMAL" source destination (mapRouteConfig "" "" false getPolylineAnimationConfig) 
         homeScreenFlow
         else if not null state.data.route then do
           let shortRoute = (state.data.route !! 0)
@@ -2041,7 +2041,7 @@ homeScreenFlow = do
               modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props { routeVisible = true } })
               pure $ removeMarker "ic_vehicle_side"
               _ <- pure $ removeAllPolylines ""
-              _ <- lift $ lift $ doAff do liftEffect $ drawRoute coor "LineString" "#323643" true "ny_ic_src_marker" "ny_ic_dest_marker" 9 "NORMAL" source destination (mapRouteConfig "" "" false getPolylineAnimationConfig) 
+              liftFlowBT $ drawRoute coor "LineString" "#323643" true "ny_ic_src_marker" "ny_ic_dest_marker" 9 "NORMAL" source destination (mapRouteConfig "" "" false getPolylineAnimationConfig) 
               pure unit
             Nothing -> pure unit
           homeScreenFlow
@@ -2054,7 +2054,7 @@ homeScreenFlow = do
                 modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data { activeRide { actualRideDistance = if state.props.currentStage == RideStarted then (toNumber route.distance) else state.data.activeRide.actualRideDistance , duration = route.duration } , route = routeApiResponse}, props { routeVisible = true } })
                 pure $ removeMarker "ny_ic_auto"
                 _ <- pure $ removeAllPolylines ""
-                _ <- lift $ lift $ doAff do liftEffect $ drawRoute coor "ic_vehicle_side" "#323643" true "ny_ic_src_marker" "ny_ic_dest_marker" 9 "NORMAL" source destination (mapRouteConfig "" "" false getPolylineAnimationConfig) 
+                liftFlowBT $ drawRoute coor "ic_vehicle_side" "#323643" true "ny_ic_src_marker" "ny_ic_dest_marker" 9 "NORMAL" source destination (mapRouteConfig "" "" false getPolylineAnimationConfig) 
                 pure unit
               Nothing -> pure unit
             homeScreenFlow

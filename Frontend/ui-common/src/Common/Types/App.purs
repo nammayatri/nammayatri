@@ -172,6 +172,7 @@ instance standardEncodeVersion :: StandardEncode Version where standardEncode (V
 instance showVersion :: Show Version where show = genericShow
 instance decodeVersion :: Decode Version where decode = defaultDecode
 instance encodeVersion  :: Encode Version where encode = defaultEncode
+instance eqVersion :: Eq Version where eq = genericEq
 
 newtype EventPayload = EventPayload {
     event :: String
