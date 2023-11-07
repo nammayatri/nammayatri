@@ -11,7 +11,6 @@ import Screens.Types (WelcomeScreenState)
 import JBridge (addCarousel)
 import Engineering.Helpers.Commons (getNewIDWithTag)
 import Data.Function.Uncurried (runFn2)
-import Screens.WelcomeScreen.ComponentConfig
 
 screen :: WelcomeScreenState -> Screen Action WelcomeScreenState ScreenOutput
 screen initialState =

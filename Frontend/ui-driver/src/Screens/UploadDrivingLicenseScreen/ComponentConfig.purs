@@ -13,7 +13,8 @@
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Screens.UploadDrivingLicenseScreen.ComponentConfig where
+module Screens.UploadDrivingLicenseScreen.ComponentConfig
+  where
 
 import Language.Strings
 import Prelude

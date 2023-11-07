@@ -22,21 +22,17 @@ import Language.Strings
 import Prelude
 import PrestoDOM
 
-import Common.Types.App as Common
+import Resource.Constants as Constant
+import Screens.AddVehicleDetailsScreen.Controller (validateRegistrationNumber)
 import Components.PopUpModal as PopUpModal
 import Components.PrimaryButton as PrimaryButton
 import Components.ReferralMobileNumber as ReferralMobileNumber
-import Components.ReferralMobileNumber as ReferralMobileNumber
 import Components.StepsHeaderModal as StepsHeaderModel
-import Data.String as DS
 import Data.String as DS
 import Font.Size as FontSize
 import Language.Types (STR(..))
 import MerchantConfig.Utils (getValueFromConfig)
-import MerchantConfig.Utils (getValueFromConfig)
 import PrestoDOM.Types.DomAttributes (Corners(..))
-import Resource.Constants as Constant
-import Screens.AddVehicleDetailsScreen.Controller (validateRegistrationNumber)
 import Screens.Types as ST
 import Styles.Colors as Color
 

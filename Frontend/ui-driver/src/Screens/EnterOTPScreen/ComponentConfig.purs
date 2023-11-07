@@ -15,24 +15,24 @@
 
 module Screens.EnterOTPScreen.ComponentConfig where
 
+import Components.PrimaryButton as PrimaryButton
+import Styles.Colors as Color
 import Language.Strings
 import PrestoDOM
 
-import Common.Types.App as Common
-import Components.PrimaryButton as PrimaryButton
-import Components.StepsHeaderModal as StepsHeaderModel
-import Components.StepsHeaderModal as StepsHeaderModel
-import Data.Maybe (Maybe(..))
-import Engineering.Helpers.Commons as EHC
-import Font.Size as FontSize
-import Font.Style as FontStyle
-import JBridge as JB
+import Common.Types.App as Common.Types.App
 import Language.Types (STR(..))
-import Prelude ((<>))
 import Resource.Constants as Constant
+import Prelude ((<>))
+import Data.Maybe (Maybe(..))
+import Font.Style as FontStyle
+import Components.StepsHeaderModal as StepsHeaderModel
+import JBridge as JB
+import Common.Types.App
+import Font.Size as FontSize
+import Styles.Colors as Color
+import Engineering.Helpers.Commons as EHC
 import Screens.Types as ST
-import Styles.Colors as Color
-import Styles.Colors as Color
 
 primaryButtonViewConfig :: ST.EnterOTPScreenState -> PrimaryButton.Config
 primaryButtonViewConfig state = let

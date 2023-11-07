@@ -162,7 +162,7 @@ view push state =
                                       ST.IN_PROGRESS -> Color.yellow900
                                       ST.FAILED -> Color.red
                                       ST.NOT_STARTED -> Color.grey900
-                                  , margin $ MarginRight if index == length state.data.registerationSteps - 1 then 0 else 15
+                                  , margin $ MarginLeft if index == 0 then 0 else 15
                                   ]
                                   []
                             )
