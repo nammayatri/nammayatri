@@ -2,7 +2,7 @@
 
 module Storage.Queries.Invoice where
 
-import Data.Time (UTCTime (UTCTime, utctDay), secondsToDiffTime)
+import Data.Time (UTCTime (UTCTime, utctDay))
 import Domain.Types.DriverFee (DriverFee)
 import Domain.Types.Invoice as Domain
 import Domain.Types.Person (Person)

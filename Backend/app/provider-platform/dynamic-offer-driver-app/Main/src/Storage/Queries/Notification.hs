@@ -2,7 +2,7 @@
 
 module Storage.Queries.Notification where
 
-import Data.Time (UTCTime (UTCTime, utctDay), secondsToDiffTime)
+import Data.Time (UTCTime (UTCTime, utctDay))
 import qualified Domain.Types.DriverFee as DF
 import Domain.Types.Notification as Domain
 import Kernel.Beam.Functions (FromTType' (fromTType'), ToTType' (toTType'), createWithKV, findAllWithKV, findAllWithOptionsKV, findOneWithKV, updateWithKV)

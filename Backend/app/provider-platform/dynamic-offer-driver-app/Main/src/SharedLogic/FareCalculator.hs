@@ -29,15 +29,12 @@ where
 import qualified Data.List.NonEmpty as NE
 import Data.Time
   ( Day,
-    DiffTime,
     LocalTime (localTimeOfDay),
-    TimeOfDay (..),
     TimeZone,
     UTCTime (UTCTime, utctDay),
     addDays,
     midnight,
     minutesToTimeZone,
-    secondsToDiffTime,
     utcToLocalTime,
   )
 import Domain.Types.FareParameters
