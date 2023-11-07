@@ -1009,18 +1009,20 @@ homeScreenFlow = do
             pure unit
         case notification of
             "TRIP_STARTED"        -> do -- OTP ENTERED
-                                      let shareAppCount = getValueToLocalStore SHARE_APP_COUNT
-                                      if shareAppCount == "__failed" then do
-                                        setValueToLocalStore SHARE_APP_COUNT "1"
-                                      else if shareAppCount /= "-1" then do
-                                        setValueToLocalStore SHARE_APP_COUNT (show ((INT.round $ (fromMaybe 0.0 (fromString (shareAppCount))))+1))
-                                      else pure unit
-                                      _ <- pure $ clearWaitingTimer <$> state.props.waitingTimeTimerIds
-                                      let newState = state{data{route = Nothing},props{isCancelRide = false,waitingTimeTimerIds = [], currentStage = RideStarted, forFirst = true , showShareAppPopUp = (INT.round $ (fromMaybe 0.0 (fromString (getValueToLocalStore SHARE_APP_COUNT)))) `mod` 4 == 0, showChatNotification = false, cancelSearchCallDriver = false  }}
-                                      _ <- updateLocalStage RideStarted
-                                      modifyScreenState $ HomeScreenStateType (\homeScreen -> newState)
-                                      lift $ lift $ triggerRideStatusEvent notification Nothing (Just state.props.bookingId) $ getScreenFromStage state.props.currentStage
                                       currentRideFlow true
+                                      (GlobalState updatedState) <- getState
+                                      let homeScreenState = updatedState.homeScreen
+                                      when (homeScreenState.props.currentStage == RideStarted) $ do 
+                                        let shareAppCount = getValueToLocalStore SHARE_APP_COUNT
+                                        if shareAppCount == "__failed" then do
+                                          setValueToLocalStore SHARE_APP_COUNT "1"
+                                        else if shareAppCount /= "-1" then do
+                                          setValueToLocalStore SHARE_APP_COUNT (show ((INT.round $ (fromMaybe 0.0 (fromString (shareAppCount))))+1))
+                                        else pure unit
+                                        _ <- pure $ clearWaitingTimer <$> state.props.waitingTimeTimerIds
+                                        let newState = homeScreenState{data{route = Nothing},props{isCancelRide = false,waitingTimeTimerIds = [], showShareAppPopUp = (INT.round $ (fromMaybe 0.0 (fromString (getValueToLocalStore SHARE_APP_COUNT)))) `mod` 4 == 0, showChatNotification = false, cancelSearchCallDriver = false  }}
+                                        modifyScreenState $ HomeScreenStateType (\homeScreen -> newState)
+                                        lift $ lift $ triggerRideStatusEvent notification Nothing (Just state.props.bookingId) $ getScreenFromStage state.props.currentStage
                                       homeScreenFlow
             "TRIP_FINISHED"       -> do -- TRIP FINISHED
                                       if (getValueToLocalStore HAS_TAKEN_FIRST_RIDE == "false") then do
@@ -1031,7 +1033,6 @@ homeScreenFlow = do
                                       let sourceSpecialTagIcon = specialLocationIcons state.props.zoneType.sourceTag
                                           destSpecialTagIcon = specialLocationIcons state.props.zoneType.destinationTag
                                       _ <- pure $ metaLogEvent "ny_user_ride_completed"
-                                      _ <- Remote.drawMapRoute srcLat srcLon dstLat dstLon (Remote.normalRoute "") "NORMAL" "" "" Nothing "pickup" (specialLocationConfig sourceSpecialTagIcon destSpecialTagIcon false getPolylineAnimationConfig) 
                                       _ <- updateLocalStage HomeScreen
                                       if (state.props.bookingId /= "") then do
                                         (RideBookingRes resp) <- Remote.rideBookingBT (state.props.bookingId)
