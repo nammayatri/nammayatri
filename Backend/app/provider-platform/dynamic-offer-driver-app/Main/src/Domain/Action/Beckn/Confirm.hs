@@ -87,8 +87,6 @@ data DConfirmReq = DConfirmReq
 
 data DConfirmRes = DConfirmRes
   { booking :: DRB.Booking,
-    fromLocation :: DL.Location,
-    toLocation :: Maybe DL.Location, -- FIXME move to details
     riderDetails :: DRD.RiderDetails,
     riderMobileCountryCode :: Text,
     riderPhoneNumber :: Text,
@@ -199,8 +197,6 @@ handler transporter req validateRes = do
             riderPhoneNumber = req.customerPhoneNumber,
             riderName = req.mbRiderName,
             transporter,
-            fromLocation = uBooking.fromLocation,
-            toLocation = Just toLocation,
             vehicleVariant = req.vehicleVariant,
             bookingTypeDetails =
               DConfirmResNormalBooking
@@ -234,8 +230,6 @@ handler transporter req validateRes = do
             riderPhoneNumber = req.customerPhoneNumber,
             riderName = req.mbRiderName,
             transporter,
-            fromLocation = uBooking.fromLocation,
-            toLocation = Just toLocation,
             vehicleVariant = req.vehicleVariant,
             bookingTypeDetails = DConfirmResSpecialZoneBooking
           }
@@ -276,8 +270,6 @@ handler transporter req validateRes = do
             riderPhoneNumber = req.customerPhoneNumber,
             riderName = req.mbRiderName,
             transporter,
-            fromLocation = uBooking.fromLocation,
-            toLocation = Nothing,
             vehicleVariant = req.vehicleVariant,
             bookingTypeDetails = DConfirmResRentalBooking
           }
