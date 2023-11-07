@@ -15,14 +15,19 @@
 
 module Storage.Queries.DriverFee where
 
+import Data.Time (UTCTime (UTCTime, utctDay), addDays, fromGregorian, toGregorian)
 import Domain.Types.DriverFee
 import qualified Domain.Types.DriverFee as Domain
 import Domain.Types.Merchant
+import Domain.Types.Merchant.TransporterConfig (TransporterConfig)
 import Domain.Types.Person
 import Kernel.Beam.Functions
 import Kernel.Prelude
+import Kernel.Types.CacheFlow (CacheFlow)
+import Kernel.Types.Common (EsqDBFlow, HighPrecMoney, MonadFlow, Money)
 import Kernel.Types.Id
-import Kernel.Utils.Common
+import Kernel.Types.Time
+import Kernel.Utils.Common (addUTCTime, getLocalCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.DriverFee as BeamDF
 
@@ -329,7 +334,19 @@ updateStatusByIds status driverFeeIds now =
         [Se.Set BeamDF.status status, Se.Set BeamDF.updatedAt now]
         [Se.Is BeamDF.id $ Se.In (getId <$> driverFeeIds)]
 
-updateFeeTypeByIds :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => FeeType -> [Id DriverFee] -> UTCTime -> m ()
+updateClearedDriverFeesBadDebtRecoveryDate :: MonadFlow m => [Id DriverFee] -> m ()
+updateClearedDriverFeesBadDebtRecoveryDate driverFeeIds = do
+  now <- getCurrentTime
+  updateWithKV
+    [Se.Set BeamDF.badDebtRecoveryDate (Just now)]
+    [ Se.And
+        [ Se.Is BeamDF.id $ Se.In (getId <$> driverFeeIds),
+          Se.Is BeamDF.badDebtDeclarationDate $ Se.Not $ Se.Eq Nothing,
+          Se.Is BeamDF.badDebtDeclarationDate $ Se.Eq Nothing
+        ]
+    ]
+
+updateFeeTypeByIds :: MonadFlow m => FeeType -> [Id DriverFee] -> UTCTime -> m ()
 updateFeeTypeByIds feeType driverFeeIds now =
   updateWithKV
     [ Se.Set BeamDF.feeType feeType,
@@ -391,6 +408,33 @@ findAllOverdueDriverFeeByDriverId (Id driverId) =
 
 findAllPendingRegistrationDriverFeeByDriverId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> m [DriverFee]
 findAllPendingRegistrationDriverFeeByDriverId (Id driverId) = findAllWithKV [Se.And [Se.Is BeamDF.feeType $ Se.Eq MANDATE_REGISTRATION, Se.Is BeamDF.status $ Se.Eq PAYMENT_PENDING, Se.Is BeamDF.driverId $ Se.Eq driverId]]
+
+findAllDriverFeesRequiredToMovedIntoBadDebt :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Merchant -> TransporterConfig -> m [DriverFee]
+findAllDriverFeesRequiredToMovedIntoBadDebt merchantId transporterConfig = do
+  now <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
+  let badDebtTimeThreshold = transporterConfig.badDebtTimeThreshold
+      (year, month, _) = toGregorian (utctDay now)
+      lastDayOfLastMonth = addDays (-1) $ fromGregorian year month 1
+      range = addUTCTime (-1 * badDebtTimeThreshold) (UTCTime lastDayOfLastMonth (23 * 3600 + 59 * 60))
+      limit = transporterConfig.badDebtBatchSize
+  findAllWithOptionsKV
+    [ Se.Or
+        [ Se.And
+            [ Se.Is BeamDF.status $ Se.In [PAYMENT_OVERDUE, PAYMENT_PENDING],
+              Se.Is BeamDF.badDebtDeclarationDate $ Se.Eq Nothing,
+              Se.Is BeamDF.merchantId $ Se.Eq merchantId.getId,
+              Se.Is BeamDF.startTime $ Se.LessThanOrEq range
+            ],
+          Se.And
+            [ Se.Is BeamDF.status $ Se.In [EXEMPTED, INACTIVE],
+              Se.Is BeamDF.badDebtDeclarationDate $ Se.Eq Nothing,
+              Se.Is BeamDF.merchantId $ Se.Eq merchantId.getId
+            ]
+        ]
+    ]
+    (Se.Desc BeamDF.startTime)
+    (Just limit)
+    Nothing
 
 -- add fee collection time later if req'd
 findAllByVolunteerIds :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Merchant -> [Text] -> UTCTime -> UTCTime -> m [DriverFee]
@@ -551,6 +595,20 @@ updateAllExecutionPendingToManualOverdueByDriverId driverId = do
         ]
     ]
 
+updateBadDebtDateAllDriverFeeIds :: (MonadFlow m, CacheFlow m r) => Id Merchant -> [Id DriverFee] -> TransporterConfig -> m ()
+updateBadDebtDateAllDriverFeeIds merchantId driverFeeIds transporterConfig = do
+  now <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
+  let (year, month, _) = toGregorian (utctDay now)
+      lastDayOfLastMonth = addDays (-1) $ fromGregorian year month 1
+      dateMovedToBadDebt = UTCTime lastDayOfLastMonth (23 * 3600 + 59 * 60)
+  updateWithKV
+    [Se.Set BeamDF.badDebtDeclarationDate (Just dateMovedToBadDebt)]
+    [ Se.And
+        [ Se.Is BeamDF.id $ Se.In (getId <$> driverFeeIds),
+          Se.Is BeamDF.merchantId $ Se.Eq merchantId.getId
+        ]
+    ]
+
 instance FromTType' BeamDF.DriverFee DriverFee where
   fromTType' BeamDF.DriverFeeT {..} = do
     pure $
@@ -579,7 +637,9 @@ instance FromTType' BeamDF.DriverFee DriverFee where
             billNumber,
             stageUpdatedAt,
             feeWithoutDiscount,
-            overlaySent = overlaySent
+            overlaySent,
+            badDebtDeclarationDate,
+            badDebtRecoveryDate
           }
 
 instance ToTType' BeamDF.DriverFee DriverFee where
@@ -610,5 +670,7 @@ instance ToTType' BeamDF.DriverFee DriverFee where
         BeamDF.collectedAt = collectedAt,
         BeamDF.createdAt = createdAt,
         BeamDF.updatedAt = updatedAt,
-        BeamDF.overlaySent = overlaySent
+        BeamDF.overlaySent = overlaySent,
+        BeamDF.badDebtDeclarationDate = badDebtDeclarationDate,
+        BeamDF.badDebtRecoveryDate = badDebtRecoveryDate
       }

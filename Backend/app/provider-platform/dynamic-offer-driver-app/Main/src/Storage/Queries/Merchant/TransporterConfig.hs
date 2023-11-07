@@ -125,6 +125,9 @@ instance FromTType' BeamTC.TransporterConfig TransporterConfig where
             orderAndNotificationStatusCheckTimeLimit = secondsToNominalDiffTime orderAndNotificationStatusCheckTimeLimit,
             volunteerSmsSendingLimit = valueToMaybe =<< volunteerSmsSendingLimit,
             driverSmsReceivingLimit = valueToMaybe =<< driverSmsReceivingLimit,
+            badDebtRescheduleTime = secondsToNominalDiffTime badDebtRescheduleTime,
+            badDebtSechulerTime = secondsToNominalDiffTime badDebtSechulerTime,
+            badDebtTimeThreshold = secondsToNominalDiffTime badDebtTimeThreshold,
             ..
           }
     where
@@ -213,6 +216,10 @@ instance ToTType' BeamTC.TransporterConfig TransporterConfig where
         BeamTC.driverSmsReceivingLimit = toJSON <$> driverSmsReceivingLimit,
         BeamTC.snapToRoadConfidenceThreshold = snapToRoadConfidenceThreshold,
         BeamTC.useWithSnapToRoadFallback = useWithSnapToRoadFallback,
+        BeamTC.badDebtRescheduleTime = nominalDiffTimeToSeconds badDebtRescheduleTime,
+        BeamTC.badDebtSechulerTime = nominalDiffTimeToSeconds badDebtSechulerTime,
+        BeamTC.badDebtBatchSize = badDebtBatchSize,
+        BeamTC.badDebtTimeThreshold = nominalDiffTimeToSeconds badDebtTimeThreshold,
         BeamTC.createdAt = createdAt,
-        BeamTC.updatedAt = updatedAt
+        BeamTC.updatedAt = updatedAt   
       }

@@ -435,6 +435,8 @@ mkDriverFee now merchantId driverId rideFare govtCharges platformFee cgst sgst t
         schedulerTryCount = 0,
         feeWithoutDiscount = Nothing, -- Only for NY rn
         overlaySent = False,
+        badDebtDeclarationDate = Nothing,
+        badDebtRecoveryDate = Nothing,
         ..
       }
 

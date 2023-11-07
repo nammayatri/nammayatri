@@ -31,6 +31,7 @@ import Kernel.Utils.Servant.SignatureAuth
 import Lib.Scheduler
 import qualified Lib.Scheduler.JobStorageType.SchedulerType as QAllJ
 import SharedLogic.Allocator
+import SharedLogic.Allocator.Jobs.DriverFeeUpdates.BadDebtCalculationScheduler
 import SharedLogic.Allocator.Jobs.DriverFeeUpdates.DriverFee
 import SharedLogic.Allocator.Jobs.Mandate.Execution (startMandateExecutionForDriver)
 import SharedLogic.Allocator.Jobs.Mandate.Notification (sendPDNNotificationToDriver)
@@ -63,6 +64,7 @@ allocatorHandle flowRt env =
           & putJobHandlerInList (liftIO . runFlowR flowRt env . startMandateExecutionForDriver)
           & putJobHandlerInList (liftIO . runFlowR flowRt env . notificationAndOrderStatusUpdate)
           & putJobHandlerInList (liftIO . runFlowR flowRt env . sendOverlayToDriver)
+          & putJobHandlerInList (liftIO . runFlowR flowRt env . badDebtCalculation)
     }
 
 runDriverOfferAllocator ::
