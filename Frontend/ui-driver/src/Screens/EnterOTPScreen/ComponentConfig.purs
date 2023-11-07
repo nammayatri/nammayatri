@@ -16,9 +16,20 @@
 module Screens.EnterOTPScreen.ComponentConfig where
 
 import Components.PrimaryButton as PrimaryButton
+import Styles.Colors as Color
 import Language.Strings
 import Language.Types (STR(..))
 import PrestoDOM
+import Prelude ((<>))
+import Data.Maybe (Maybe(..))
+import Font.Style as FontStyle
+import Components.StepsHeaderModal as StepsHeaderModel
+import JBridge as JB
+import Common.Types.App
+import Font.Size as FontSize
+import Styles.Colors as Color
+import Engineering.Helpers.Commons as EHC
+import Components.StepsHeaderModal as StepsHeaderModel
 import Screens.Types as ST
 
 primaryButtonViewConfig :: ST.EnterOTPScreenState -> PrimaryButton.Config
@@ -34,3 +45,30 @@ primaryButtonViewConfig state = let
       , margin = (Margin 0 0 0 0)
       }
   in primaryButtonConfig'
+
+
+verifyOTPButtonConfig :: ST.EnterOTPScreenState -> PrimaryButton.Config
+verifyOTPButtonConfig state = let 
+    config = PrimaryButton.config
+    primaryButtonConfig' = config 
+      { textConfig{ text = (getString CONTINUE) }
+      , id = "PrimaryButtonOTP"
+      , isClickable = state.props.btnActive
+      , alpha = if state.props.btnActive then 1.0 else 0.4
+      , margin = (Margin 0 0 0 0 )
+      , enableLoader = (JB.getBtnLoader "PrimaryButtonOTP")
+      }
+  in primaryButtonConfig'
+
+stepsHeaderModelConfig :: ST.EnterOTPScreenState -> StepsHeaderModel.Config
+stepsHeaderModelConfig state = let
+    config = StepsHeaderModel.config 0
+    stepsHeaderConfig' = config 
+     {
+      stepsViewVisibility = false,
+      profileIconVisibility = false,
+      driverNumberVisibility = false,
+      logoutVisibility = false,
+      activeIndex = 1
+     }
+  in stepsHeaderConfig'

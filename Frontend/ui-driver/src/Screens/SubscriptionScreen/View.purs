@@ -56,7 +56,6 @@ import Helpers.Utils as HU
 import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import MerchantConfig.Utils (getValueFromConfig)
 import Prelude (Unit, bind, const, discard, map, not, pure, show, unit, void, when, ($), (&&), (*), (+), (-), (/), (/=), (<), (<<<), (<>), (==), (>), (||))
 import Presto.Core.Types.API (ErrorResponse)
 import Presto.Core.Types.Language.Flow (Flow, doAff, getState, delay)
@@ -203,7 +202,7 @@ view push state =
           , onClick push $ const $ if state.props.myPlanProps.isDueViewExpanded then ToggleDueDetailsView else NoAction
           , gravity BOTTOM
           ][ duesView push state
-           , if any (_ == state.props.subView) [MyPlan, JoinPlan, NoSubView] && not state.props.isEndRideModal then BottomNavBar.view (push <<< BottomNavBarAction) (navData ScreenNames.SUBSCRIPTION_SCREEN state.data.bottomNavConfig) else dummyView
+           , if any (_ == state.props.subView) [MyPlan, JoinPlan, NoSubView] && not state.props.isEndRideModal then BottomNavBar.view (push <<< BottomNavBarAction) (navData ScreenNames.SUBSCRIPTION_SCREEN state.data.config.bottomNavConfig) else dummyView
           ]
           , if state.props.optionsMenuState /= ALL_COLLAPSED then
               linearLayout
@@ -271,7 +270,7 @@ enjoyBenefitsView push state =
         [ width WRAP_CONTENT
         , height WRAP_CONTENT
         , orientation VERTICAL
-        ][  commonTV push (getString GET_READY_FOR_YS_SUBSCRIPTION) Color.black800 (FontStyle.h1 TypoGraphy) 0 LEFT state.data.config.enableIntroductoryView
+        ][  commonTV push (getString GET_READY_FOR_YS_SUBSCRIPTION) Color.black800 (FontStyle.h1 TypoGraphy) 0 LEFT state.data.config.subscriptionConfig.enableIntroductoryView
           , commonTV push (getString ENJOY_THESE_BENEFITS) Color.black800 (FontStyle.body4 TypoGraphy) 0 LEFT true
           , linearLayout
             [ width WRAP_CONTENT
@@ -299,7 +298,7 @@ enjoyBenefitsView push state =
                       ]
                 )
               ([(getString ZERO_COMMISION), (getString EARN_TODAY_PAY_TOMORROW)] 
-                  <> if state.data.config.enableIntroductoryView || not state.data.config.enableSubscriptionPopups
+                  <> if state.data.config.subscriptionConfig.enableIntroductoryView || not state.data.config.subscriptionConfig.enableSubscriptionPopups
                       then [(getString SIGNUP_EARLY_FOR_SPECIAL_OFFERS), getString GUARANTEED_FIXED_PRICE]
                       else [(getString PAY_ONLY_IF_YOU_TAKE_RIDES), getString GET_SPECIAL_OFFERS])
             ) 
@@ -307,7 +306,7 @@ enjoyBenefitsView push state =
                 text $ getString VALID_ONLY_IF_PAYMENT
                 , color Color.black700
                 , margin $ Margin 22 3 0 0
-                , visibility if state.data.config.enableIntroductoryView  || not state.data.config.enableSubscriptionPopups then GONE else VISIBLE
+                , visibility if state.data.config.subscriptionConfig.enableIntroductoryView  || not state.data.config.subscriptionConfig.enableSubscriptionPopups then GONE else VISIBLE
               ] <> FontStyle.body16 TypoGraphy
         ]
         
@@ -323,13 +322,13 @@ paymentPendingView push state = let isAutoPayPending = state.props.lastPaymentTy
   , background Color.yellow800
   , cornerRadii $ Corners 24.0 false false true true
   , padding $ Padding 16 12 16 12
-  , visibility if ((state.data.config.enableSubscriptionPopups && state.data.orderId /= Nothing) || state.props.lastPaymentType == Just "AUTOPAY_REGISTRATION") then VISIBLE else GONE -- Condition will be updated when dues are introduced to YS flow.
+  , visibility if ((state.data.config.subscriptionConfig.enableSubscriptionPopups && state.data.orderId /= Nothing) || state.props.lastPaymentType == Just "AUTOPAY_REGISTRATION") then VISIBLE else GONE -- Condition will be updated when dues are introduced to YS flow.
   ][  commonTV push (getString if isAutoPayPending then AUTOPAY_SETUP_PENDING_STR else PAYMENT_PENDING) Color.black800 (FontStyle.h2 TypoGraphy) 0 LEFT true
     , commonTV push (getString AUTOPAY_PENDING_DESC_STR) Color.black800 (FontStyle.tags TypoGraphy) 0 LEFT true
     , textView $
       [ text $ getString OFFERS_NOT_APPLICABLE
       , color Color.red
-      , visibility if isAutoPayPending && not HU.isDateGreaterThan state.props.offerBannerProps.offerBannerValidTill && (any (_ == state.data.myPlanData.planEntity.id) state.data.config.offerBannerConfig.offerBannerPlans) then VISIBLE else GONE
+      , visibility if isAutoPayPending && not HU.isDateGreaterThan state.props.offerBannerProps.offerBannerValidTill && (any (_ == state.data.myPlanData.planEntity.id) state.data.config.subscriptionConfig.offerBannerConfig.offerBannerPlans) then VISIBLE else GONE
       ] <> if state.props.isSelectedLangTamil then FontStyle.body16 TypoGraphy else FontStyle.tags TypoGraphy
     , linearLayout
       [ width MATCH_PARENT
@@ -396,7 +395,7 @@ plansBottomView push state =
           ][ textView $
               [ weight 1.0
               , height WRAP_CONTENT
-              , text if state.data.config.enableIntroductoryView then getString COMING_SOON else (getString CHOOSE_YOUR_PLAN)
+              , text if state.data.config.subscriptionConfig.enableIntroductoryView then getString COMING_SOON else (getString CHOOSE_YOUR_PLAN)
               , color Color.black800
               ] <> FontStyle.body8 TypoGraphy
           , linearLayout
@@ -436,7 +435,7 @@ plansBottomView push state =
                 , height $ V 16
                 , width $ V 16
                 , margin $ Margin 0 3 6 0
-                , visibility if state.data.config.myPlanYoutubeLink == "" then GONE else VISIBLE
+                , visibility if state.data.config.subscriptionConfig.myPlanYoutubeLink == "" then GONE else VISIBLE
             ]
             , textView $
               [ weight 1.0
@@ -463,8 +462,8 @@ plansBottomView push state =
                   (\item ->
                     let selectedPlan = state.props.joinPlanProps.selectedPlanItem
                     in case selectedPlan of
-                        Just plan -> planCardView push item (item.id == plan.id) true ChoosePlan state.props.isSelectedLangTamil false false false Nothing state.data.config.enableIntroductoryView []
-                        Nothing -> planCardView push item false true ChoosePlan state.props.isSelectedLangTamil false false false Nothing state.data.config.enableIntroductoryView []
+                        Just plan -> planCardView push item (item.id == plan.id) true ChoosePlan state.props.isSelectedLangTamil false false false Nothing state.data.config.subscriptionConfig.enableIntroductoryView []
+                        Nothing -> planCardView push item false true ChoosePlan state.props.isSelectedLangTamil false false false Nothing state.data.config.subscriptionConfig.enableIntroductoryView []
                   ) state.data.joinPlanData.allPlans)
           ]
         , PrimaryButton.view (push <<< JoinPlanAC) (joinPlanButtonConfig state)
@@ -591,7 +590,7 @@ headerView push state =
 
 myPlanBodyview :: forall w. (Action -> Effect Unit) -> SubscriptionScreenState -> PrestoDOM (Effect Unit) w 
 myPlanBodyview push state =
-  let isFreezed = ((state.data.config.enableSubscriptionPopups && state.data.orderId /= Nothing) || state.props.lastPaymentType == Just "AUTOPAY_REGISTRATION")
+  let isFreezed = ((state.data.config.subscriptionConfig.enableSubscriptionPopups && state.data.orderId /= Nothing) || state.props.lastPaymentType == Just "AUTOPAY_REGISTRATION")
       paddingBottom = case state.data.myPlanData.autoPayStatus /= ACTIVE_AUTOPAY , state.data.myPlanData.manualDueAmount > 0.0 of
                         true, true -> 270
                         _, _ -> 250
@@ -624,7 +623,7 @@ myPlanBodyview push state =
           , height $ V 38
           , margin (MarginLeft 4)
           , padding $ Padding 8 8 8 8
-          , visibility if state.data.config.myPlanYoutubeLink == "" then GONE else VISIBLE
+          , visibility if state.data.config.subscriptionConfig.myPlanYoutubeLink == "" then GONE else VISIBLE
           , imageWithFallback $ HU.fetchImage HU.FF_ASSET "ny_ic_youtube"
           , onClick (\action -> do
                       _<- push action
@@ -639,8 +638,8 @@ myPlanBodyview push state =
         , paymentMethodView push state.data.myPlanData
       ]
     , lottieView state "lottieSubscriptionScreen2" (Margin 16 0 16 16) (Padding 0 0 0 0)
-    , planCardView push state.data.myPlanData.planEntity (state.data.myPlanData.planEntity.isSelected || not state.data.config.enableSubscriptionPopups) (not isFreezed) TogglePlanDescription state.props.isSelectedLangTamil false true true Nothing false []
-    , offerCardBannerView push true (state.data.myPlanData.autoPayStatus /= ACTIVE_AUTOPAY && (any (_ == state.data.myPlanData.planEntity.id) state.data.config.offerBannerConfig.offerBannerPlans)) false state.props.offerBannerProps isFreezed
+    , planCardView push state.data.myPlanData.planEntity (state.data.myPlanData.planEntity.isSelected || not state.data.config.subscriptionConfig.enableSubscriptionPopups) (not isFreezed) TogglePlanDescription state.props.isSelectedLangTamil false true true Nothing false []
+    , offerCardBannerView push true (state.data.myPlanData.autoPayStatus /= ACTIVE_AUTOPAY && (any (_ == state.data.myPlanData.planEntity.id) state.data.config.subscriptionConfig.offerBannerConfig.offerBannerPlans)) false state.props.offerBannerProps isFreezed
     , alertView push (getImageURL "ny_ic_about") Color.black800 (getString PAYMENT_MODE_CHANGED_TO_MANUAL) (getString PAYMENT_MODE_CHANGED_TO_MANUAL_DESC) "" NoAction (state.data.myPlanData.autoPayStatus == PAUSED_PSP) state.props.isSelectedLangTamil true isFreezed
     , alertView push (getImageURL "ny_ic_about") Color.black800 (getString PAYMENT_MODE_CHANGED_TO_MANUAL) (getString PAYMENT_CANCELLED) "" NoAction (any (_ == state.data.myPlanData.autoPayStatus) [CANCELLED_PSP, SUSPENDED]) state.props.isSelectedLangTamil false isFreezed
     , alertView push (getImageURL "ny_ic_warning_red") Color.red (getString LOW_ACCOUNT_BALANCE) (DS.replace (DS.Pattern "<X>") (DS.Replacement $ HU.getFixedTwoDecimals $ fromMaybe 0.0 state.data.myPlanData.lowAccountBalance) (getString LOW_ACCOUNT_BALANCE_DESC)) "" NoAction (Mb.isJust state.data.myPlanData.lowAccountBalance) state.props.isSelectedLangTamil false isFreezed
@@ -999,7 +998,7 @@ managePlanBodyView push state =
         , color Color.black700
         , margin $ MarginBottom 12
         ] <> if state.props.isSelectedLangTamil then FontStyle.body17 TypoGraphy else FontStyle.body9 TypoGraphy
-      , planCardView push state.data.managePlanData.currentPlan (state.data.managePlanData.currentPlan.id == state.props.managePlanProps.selectedPlanItem.id) true SelectPlan state.props.isSelectedLangTamil (state.data.myPlanData.autoPayStatus /= ACTIVE_AUTOPAY) false true (Just state.props.offerBannerProps) false state.data.config.offerBannerConfig.offerBannerPlans
+      , planCardView push state.data.managePlanData.currentPlan (state.data.managePlanData.currentPlan.id == state.props.managePlanProps.selectedPlanItem.id) true SelectPlan state.props.isSelectedLangTamil (state.data.myPlanData.autoPayStatus /= ACTIVE_AUTOPAY) false true (Just state.props.offerBannerProps) false state.data.config.subscriptionConfig.offerBannerConfig.offerBannerPlans
       , textView $
         [ text (getString ALTERNATE_PLAN)
         , color Color.black700
@@ -1010,7 +1009,7 @@ managePlanBodyView push state =
         , width MATCH_PARENT
         , orientation VERTICAL
         ](map(
-             (\item -> planCardView push item (item.id == state.props.managePlanProps.selectedPlanItem.id) true SelectPlan state.props.isSelectedLangTamil (state.data.myPlanData.autoPayStatus /= ACTIVE_AUTOPAY) false false (Just state.props.offerBannerProps) false state.data.config.offerBannerConfig.offerBannerPlans)
+             (\item -> planCardView push item (item.id == state.props.managePlanProps.selectedPlanItem.id) true SelectPlan state.props.isSelectedLangTamil (state.data.myPlanData.autoPayStatus /= ACTIVE_AUTOPAY) false false (Just state.props.offerBannerProps) false state.data.config.subscriptionConfig.offerBannerConfig.offerBannerPlans)
              ) state.data.managePlanData.alternatePlans)
       , textView $ [
         text (getString OFFERS_APPLICABLE_ON_DAILY_UNLIMITED)
@@ -1793,7 +1792,7 @@ lottieView state viewId margin' padding'=
   , padding padding'
   , cornerRadius 4.0
   , background Color.blue600
-  , alpha if ((state.data.config.enableSubscriptionPopups && state.data.orderId /= Nothing) || state.props.lastPaymentType == Just "AUTOPAY_REGISTRATION") then 0.4 else 1.0
+  , alpha if ((state.data.config.subscriptionConfig.enableSubscriptionPopups && state.data.orderId /= Nothing) || state.props.lastPaymentType == Just "AUTOPAY_REGISTRATION") then 0.4 else 1.0
   ][
     lottieAnimationView
     [ id (getNewIDWithTag viewId)

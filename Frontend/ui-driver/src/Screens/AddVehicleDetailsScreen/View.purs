@@ -22,12 +22,20 @@ import Screens.AddVehicleDetailsScreen.ComponentConfig
 import Animation as Anim
 import Common.Types.App (LazyCheck(..))
 import Components.GenericMessageModal.View as GenericMessageModal
+import Components.PopUpModal as PopUpModal
 import Components.PrimaryButton as PrimaryButton
 import Components.ReferralMobileNumber.View as ReferralMobileNumber
+import Components.StepsHeaderModal as StepsHeaderModel
 import Components.TutorialModal.View as TutorialModal
+import Components.ValidateDocumentModal as ValidateDocumentModal
+import Control.Monad.Trans.Class (lift)
 import Data.String as DS
+import Debug (spy)
 import Effect (Effect)
+import Effect.Aff (Milliseconds(..), launchAff)
 import Effect.Class (liftEffect)
+import Effect.Uncurried (runEffectFn1)
+import Engineering.Helpers.Commons (flowRunner)
 import Engineering.Helpers.Commons as EHC
 import Font.Size as FontSize
 import Font.Style as FontStyle
@@ -36,15 +44,17 @@ import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import MerchantConfig.Utils (getValueFromConfig)
-import Prelude ((<>))
-import Prelude (Unit, bind, const, pure, unit, ($), (<<<), (<>), (==), not, (>=), (&&), (/=))
-import PrestoDOM (BottomSheetState(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, alignParentBottom, alignParentRight, alpha, background, clickable, color, cornerRadius, editText, ellipsize, fontStyle, frameLayout, gravity, height, hint, id, imageUrl, imageView, imageWithFallback, inputTypeI, layoutGravity, linearLayout, margin, maxLines, onBackPressed, onChange, onClick, orientation, padding, pattern, relativeLayout, scrollView, stroke, text, textFromHtml, textSize, textView, visibility, weight, width)
+import Prelude (Unit, bind, const, discard, not, pure, unit, void, ($), (&&), (/=), (<<<), (<>), (==), (>=), (||))
+import Presto.Core.Types.Language.Flow (Flow, doAff, delay)
+import PrestoDOM (BottomSheetState(..), Gravity(..), InputType(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, alignParentBottom, alignParentRight, alpha, background, clickable, color, cornerRadius, editText, ellipsize, fontStyle, frameLayout, gravity, height, hint, id, imageUrl, imageView, imageWithFallback, inputTypeI, layoutGravity, linearLayout, margin, maxLines, onBackPressed, onChange, onClick, orientation, padding, pattern, relativeLayout, scrollView, stroke, text, textFromHtml, textSize, textView, visibility, weight, width, inputType)
+import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Properties as PP
 import PrestoDOM.Types.DomAttributes as PTD
 import Screens.AddVehicleDetailsScreen.Controller (Action(..), eval, ScreenOutput, validateRegistrationNumber)
-import Screens.Types (AddVehicleDetailsScreenState)
+import Screens.RegistrationScreen.ComponentConfig (logoutPopUp)
+import Screens.Types (AddVehicleDetailsScreenState, ValidationStatus(..))
 import Styles.Colors as Color
-import Effect.Uncurried (runEffectFn1)
+import Types.App (GlobalState(..), defaultGlobalState)
 
 screen :: AddVehicleDetailsScreenState -> Screen Action AddVehicleDetailsScreenState ScreenOutput
 screen initialState =
@@ -54,9 +64,18 @@ screen initialState =
   , globalEvents : [(\push -> do
     _ <- JB.storeCallBackImageUpload push CallBackImageUpload
     _ <- runEffectFn1 consumeBP unit
+    if initialState.props.successfulValidation then do
+      _ <- launchAff $ flowRunner defaultGlobalState $ redirectScreen push RedirectScreen
+      pure unit
+    else pure unit
     pure $ pure unit
   )]
-  , eval
+  , eval:
+    ( \state action -> do
+        let _ = spy "AddVehicleDetailsScreen ----- state" state
+        let _ = spy "AddVehicleDetailsScreen --------action" action
+        eval state action
+    ) 
   }
 
 view
@@ -69,7 +88,7 @@ view push state =
   frameLayout
   [ height MATCH_PARENT
   , width MATCH_PARENT
-  ][  linearLayout
+  ]([  linearLayout
       [ height MATCH_PARENT
       , width MATCH_PARENT
       , orientation VERTICAL
@@ -78,7 +97,9 @@ view push state =
       , onBackPressed push (const BackPressed state.props.openRCManual)
       , onClick push (const ScreenClick)
       , afterRender push (const AfterRender)
-      ][  headerLayout state push
+      ][  PrestoAnim.animationSet
+          [ Anim.fadeIn true
+          ] $ StepsHeaderModel.view (push <<< StepsHeaderModelAC) (stepsHeaderModelConfig state)
         , linearLayout
           [ width MATCH_PARENT
           , weight 1.0
@@ -90,25 +111,20 @@ view push state =
                   [ height MATCH_PARENT
                   , width MATCH_PARENT
                   , orientation VERTICAL
-                  ][  textView
-                      ([ height $ V 40
-                      , width WRAP_CONTENT
-                      , text (getString ADD_VEHICLE_DETAILS)
+                  ][  textView $
+                      [ width MATCH_PARENT
+                      , height WRAP_CONTENT
+                      , text $ getString RC_VERIFICATION_FAILED
                       , color Color.black800
-                      , margin (Margin 16 27 0 0)
-                      ] <> FontStyle.h1 TypoGraphy )
-                    , textView
-                      ([ width WRAP_CONTENT
-                      , textFromHtml (getString PROVIDE_DATE_OF_REGISTRATION_TEXT)
-                      , color Color.black800
-                      , margin (Margin 16 20 16 20)
-                      , visibility if state.data.dateOfRegistration == Nothing then GONE else VISIBLE
-                      ] <> FontStyle.subHeading2 TypoGraphy)
+                      , background Color.redOpacity10
+                      , padding $ Padding 16 12 16 12
+                      , margin $ Margin 16 16 16 16
+                      , cornerRadius 8.0
+                      , visibility if state.data.dateOfRegistration == Nothing then GONE else VISIBLE            
+                      ] <> FontStyle.body3 TypoGraphy
                     , vehicleRegistrationNumber state push
+                    , howToUpload push state 
                     , dateOfRCRegistrationView push state
-                    , uploadRC state push 
-                    , referralAppliedView state push
-                    , applyReferralView state push
                     ]
                 ]
           ]
@@ -121,7 +137,7 @@ view push state =
            [ width MATCH_PARENT
            , height WRAP_CONTENT
            , text state.data.errorMessage
-           , visibility $ if state.props.errorVisibility then VISIBLE else GONE
+           , visibility $ GONE
            , color Color.red
            , padding( PaddingHorizontal 20 20)
            , margin (MarginBottom 10)
@@ -149,7 +165,10 @@ view push state =
         [ width MATCH_PARENT
         , height MATCH_PARENT] 
         [ReferralMobileNumber.view (push <<< ReferralMobileNumberAction) (referalNumberConfig state)] else linearLayout [][]
-    ] 
+    ] <> if state.props.logoutModalView then [logoutPopupModal push state] else []
+      <> if state.props.imageCaptureLayoutView then [imageCaptureLayout push state] else []
+      <> if state.props.validateProfilePicturePopUp then [validateProfilePicturePopUp push state] else []
+      <> if state.props.fileCameraPopupModal then [fileCameraLayout push state] else [] )
 
 applyReferralView :: AddVehicleDetailsScreenState -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w 
 applyReferralView state push = 
@@ -235,7 +254,7 @@ vehicleRegistrationNumber state push =
   [ width MATCH_PARENT
   , height WRAP_CONTENT
   , padding (Padding 20 32 20 0)
-  , visibility if state.data.dateOfRegistration /= Nothing then GONE else VISIBLE
+  , visibility if state.props.openHowToUploadManual then GONE else VISIBLE
   ][  linearLayout
       [ width MATCH_PARENT
       , height WRAP_CONTENT
@@ -305,6 +324,7 @@ vehicleRegistrationNumber state push =
               [ width MATCH_PARENT
               , height WRAP_CONTENT
               , orientation HORIZONTAL
+               , margin (MarginTop 25)
               ][  textView
                   ([ width WRAP_CONTENT
                   , height WRAP_CONTENT
@@ -341,6 +361,7 @@ vehicleRegistrationNumber state push =
                     , text state.props.input_data
                     , hint  (getString ENTER_VEHICLE_NO)
                     , weight 1.0
+                    , inputType Password
                     , cornerRadius 4.0
                     , pattern "[0-9A-Z]*,11"
                     , stroke ("1," <> Color.white900)
@@ -353,8 +374,8 @@ vehicleRegistrationNumber state push =
                 [ width MATCH_PARENT
                 , height WRAP_CONTENT
                 , text (getString SAME_REENTERED_RC_MESSAGE)
-                , visibility $ if (DS.toLower(state.data.vehicle_registration_number) /= DS.toLower(state.data.reEnterVehicleRegistrationNumber) && not (DS.null state.data.reEnterVehicleRegistrationNumber)) then VISIBLE else GONE
-                , color Color.warningRed
+                , visibility $ if (DS.toLower(state.data.vehicle_registration_number) /= DS.toLower(state.data.reEnterVehicleRegistrationNumber)) then VISIBLE else GONE
+                , color Color.darkGrey
                 ]
           ]
         ]
@@ -372,6 +393,7 @@ uploadRC state push =
   [ width MATCH_PARENT
   , height WRAP_CONTENT
   , padding (Padding 20 30 20 10)
+  , onClick push (const UploadFile)
   , clickable $ not state.props.rcAvailable
   , visibility if state.data.dateOfRegistration /= Nothing then GONE else VISIBLE
   ][  linearLayout
@@ -385,7 +407,7 @@ uploadRC state push =
           ][ textView
             ([ width WRAP_CONTENT
             , height WRAP_CONTENT
-            , text $ (getString UPLOAD_REGISTRATION_CERTIFICATE) <> if getValueFromConfig "imageUploadOptional" then (getString OPTIONAL) else ""
+            , text (getString UPLOAD_REGISTRATION_CERTIFICATE)
             , color Color.greyTextColor
             , margin (MarginBottom 10)
             ] <> FontStyle.body3 TypoGraphy)
@@ -400,8 +422,8 @@ uploadRC state push =
             ] <> FontStyle.h2 TypoGraphy
             ]
         , linearLayout
-          [ height WRAP_CONTENT
-          , width MATCH_PARENT
+          [ width MATCH_PARENT
+          , height WRAP_CONTENT
           , gravity CENTER
           , orientation VERTICAL
           , onClick push (const UploadFile)
@@ -451,16 +473,57 @@ uploadRC state push =
                     , previewIcon state push
                     ]
                 ]
-          ]
-        , textView $ -- (Error Indication)
-          [ width WRAP_CONTENT
-          , height WRAP_CONTENT
-          , text "some_text"
-          , color Color.warningRed
-          , margin (MarginTop 10)
-          , visibility GONE
-          ] <> FontStyle.paragraphText TypoGraphy
-        ]
+    --       , background Color.grey700
+    --       , PP.cornerRadii $ PTD.Corners 4.0 true true false false
+    --       ][ imageView
+    --         [ width ( V 328 )
+    --         , height ( V 166 )
+    --         , imageWithFallback $ "ny_ic_rc_demo," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_rc_demo.png"
+    --         ]
+    --       ]
+    --     , linearLayout
+    --       [ width MATCH_PARENT
+    --       , height WRAP_CONTENT
+    --       , orientation HORIZONTAL
+    --       , stroke ("1," <> Color.borderColorLight) 
+    --       , PP.cornerRadii $ PTD.Corners 4.0 false false true true
+    --       , gravity CENTER
+    --       ][  textView
+    --           [ width $ V 20
+    --           , height WRAP_CONTENT
+    --           ]
+    --         , textView
+    --           ([ width MATCH_PARENT
+    --           , height (V 60)
+    --           , padding (Padding 0 17 20 0)
+    --           , color if state.props.rcAvailable then Color.greyTextColor else Color.darkGrey
+    --           , fontStyle $ FontStyle.semiBold LanguageStyle
+    --           , text if state.props.rcAvailable then state.props.rc_name else (getString UPLOAD_RC)
+    --           , maxLines 1
+    --           , ellipsize true
+    --           , weight 1.0
+    --           , cornerRadius 4.0
+    --           , pattern "[a-z, 0-9, A-Z]"
+    --           , stroke ("1," <> Color.white900)
+    --           --, id "111127"
+    --           ] <> FontStyle.subHeading1 TypoGraphy) 
+    --         , linearLayout
+    --           [ height MATCH_PARENT
+    --           , width WRAP_CONTENT
+    --           , margin (Margin 0 10 20 10)
+    --           ][ uploadIcon state push
+    --             , previewIcon state push
+    --             ]
+    --          ]
+    --     , textView $ -- (Error Indication)
+    --       [ width WRAP_CONTENT
+    --       , height WRAP_CONTENT
+    --       , text "some_text"
+    --       , color Color.warningRed
+    --       , margin (MarginTop 10)
+    --       , visibility GONE
+    --       ] <> FontStyle.paragraphText TypoGraphy
+        ]]
      ]
 
 ---------------------------------------------------------- uploadIcon -------------------------------------------------------
@@ -632,3 +695,99 @@ headerLayout state push =
           ]
       ]
     ]
+
+howToUpload :: (Action -> Effect Unit) ->  AddVehicleDetailsScreenState -> forall w . PrestoDOM (Effect Unit) w
+howToUpload push state = 
+  linearLayout
+  [ width MATCH_PARENT
+  , height WRAP_CONTENT
+  , orientation VERTICAL
+  , margin (Margin 20 20 15 0) 
+  , visibility if state.props.openHowToUploadManual && state.data.dateOfRegistration == Nothing then VISIBLE else GONE 
+  ][ textView $ 
+    [ text $ getString HOW_TO_UPLOAD
+    , color Color.greyTextColor
+    ] <> FontStyle.h3 TypoGraphy
+  , linearLayout
+    [ width MATCH_PARENT
+    , height WRAP_CONTENT
+    , orientation VERTICAL
+    , margin $ MarginVertical 0 10
+    , padding $ Padding 0 16 0 16
+    ][ 
+      textView $ 
+    [ text $ getString TAKE_CLEAR_PICTURE_RC
+    , margin $ MarginBottom 18
+    , textSize FontSize.a_14
+    ] <> FontStyle.body3 TypoGraphy
+
+    , textView $ 
+    [ text $ getString ENSURE_ADEQUATE_LIGHT
+    , color Color.greyTextColor
+    , margin $ MarginBottom 18
+    , textSize FontSize.a_14
+    ] <> FontStyle.body3 TypoGraphy
+
+    , textView $ 
+    [ text $ getString FIT_RC_CORRECTLY
+    , color Color.greyTextColor
+    , textSize FontSize.a_14
+    ] <> FontStyle.body3 TypoGraphy
+
+    , imageView
+        [ 
+          margin (Margin 0 60 10 0)
+        , width MATCH_PARENT
+        , height MATCH_PARENT
+        , imageWithFallback "ny_ic_upload_document,https://assets.juspay.in/nammayatri/images/driver/ny_ic_back.png"
+        ]
+     ]
+  ]
+logoutPopupModal :: forall w . (Action -> Effect Unit) -> AddVehicleDetailsScreenState -> PrestoDOM (Effect Unit) w
+logoutPopupModal push state =
+       linearLayout
+        [ width MATCH_PARENT
+        , height MATCH_PARENT
+        , background Color.blackLessTrans
+        ][ PopUpModal.view (push <<<PopUpModalLogoutAction) (logoutPopUp Language) ] 
+
+validateProfilePicturePopUp :: forall w . (Action -> Effect Unit) -> AddVehicleDetailsScreenState -> PrestoDOM (Effect Unit) w
+validateProfilePicturePopUp push state =
+  ValidateDocumentModal.view (push <<< ValidateDocumentModalAction) (validateProfilePictureModalState state)
+
+validateProfilePictureModalState :: AddVehicleDetailsScreenState -> ValidateDocumentModal.ValidateDocumentModalState
+validateProfilePictureModalState state = let
+      config' = ValidateDocumentModal.config
+      inAppModalConfig' = config'{
+        background = Color.black,
+        profilePictureCapture = false,
+        verificationStatus = if state.props.validating then InProgress 
+                             else if state.data.errorMessage /= "" then Failure
+                             else if state.data.rcImageID /= "" then Success
+                             else None,
+        verificationType = "RC",
+        failureReason = state.data.errorMessage,
+        headerConfig {
+         imageConfig {
+         color = Color.white900
+        },
+          headTextConfig {
+            text = getString TAKE_PHOTO,--getString TAKE_PHOTO,--("CONFIRM_SEFIE"), --getString CONFIRM_SELFIE),
+            color = Color.white900
+          }
+        }
+      }
+      in inAppModalConfig'
+
+imageCaptureLayout :: forall w . (Action -> Effect Unit) -> AddVehicleDetailsScreenState -> PrestoDOM (Effect Unit) w
+imageCaptureLayout push state  =ValidateDocumentModal.view (push <<< ValidateDocumentModalAction) (ValidateDocumentModal.config{background = Color.black,profilePictureCapture =true ,headerConfig {headTextConfig {text = ("Take Photo")}}})
+
+fileCameraLayout :: forall w . (Action -> Effect Unit) -> AddVehicleDetailsScreenState -> PrestoDOM (Effect Unit) w
+fileCameraLayout push state =
+  PopUpModal.view (push <<< PopUpModalActions)  (fileCameraLayoutConfig state)
+
+redirectScreen :: forall action. (action -> Effect Unit) ->  action -> Flow GlobalState Unit
+redirectScreen push action = do
+  void $ delay $ Milliseconds 1000.0
+  doAff do liftEffect $ push $ action
+  pure unit

@@ -89,11 +89,14 @@ green900 = "#53BB6F"
 yellow100 :: Color
 yellow100 = "#FFFDF7"
 
-green100 :: Color
-green100 = "#F8FCF9"
+greenOpacity10 :: Color
+greenOpacity10 = "#1A53BB6F"
 
 green300 :: Color
 green300 = "#DDFFEB"
+
+green100 :: Color 
+green100 = "#1A53BB6F"
 
 dustyRed :: Color
 dustyRed = "#BF4A4E"
@@ -168,11 +171,17 @@ yellow800 = "#FEEBB9"
 yellowOpacity16 :: Color
 yellowOpacity16 = "#29FCC32C"
 
+yellowOpacity10 :: Color
+yellowOpacity10 = "#1AFCC32C"
+
 greenOpacity16 :: Color
 greenOpacity16 = "#2953BB6F"
 
 redOpacity16 :: Color
 redOpacity16 = "#29E55454"
+
+redOpacity10 :: Color
+redOpacity10 = "#1AE55454"
 
 fadedPurple :: Color 
 fadedPurple = "#339747FF"

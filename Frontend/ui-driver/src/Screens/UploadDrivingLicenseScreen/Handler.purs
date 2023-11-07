@@ -36,11 +36,12 @@ uploadDrivingLicense = do
       modifyScreenState $ UploadDrivingLicenseScreenStateType $ \uploadDrivingLicenseScreen -> updatedState
       modifyScreenState $ UploadDrivingLicenseScreenStateType $ \uploadDrivingLicenseScreen -> uploadDrivingLicenseScreen { props {errorVisibility = false}, data {errorMessage = ""}}
       App.BackT $ App.NoBack <$> (pure $ GOTO_ONBOARDING_FLOW)
-    GoToAddVehicleDetailsScreen updatedState -> do
+    ValidateDetails updatedState -> do
       modifyScreenState $ UploadDrivingLicenseScreenStateType (\uploadDrivingLicenseScreen -> updatedState)
-      App.BackT $ App.BackPoint <$> (pure $ ADD_VEHICLE_DETAILS_SCREEN updatedState)
-    ValidateImageAPICall updatedState -> do
+      App.BackT $ App.BackPoint <$> (pure $ VALIDATE_DL_DETAILS updatedState)
+    ValidateDataCall updatedState -> do
       modifyScreenState $ UploadDrivingLicenseScreenStateType (\uploadDrivingLicenseScreen → updatedState)
-      App.BackT $ App.BackPoint <$> (pure $ VALIDATE_IMAGE_API updatedState)
+      App.BackT $ App.BackPoint <$> (pure $ VALIDATE_DATA_API updatedState)
     AddVehicleDetailsScreen -> App.BackT $ App.BackPoint <$> (pure $ GOTO_VEHICLE_DETAILS_SCREEN)
     LogoutAccount -> App.BackT $ App.BackPoint <$> pure LOGOUT_ACCOUNT
+    GoToRegisteration -> App.BackT $ App.BackPoint <$> pure GOTO_ONBOARDING_FLOW

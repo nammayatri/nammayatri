@@ -16,7 +16,6 @@ import Engineering.Helpers.Commons (getNewIDWithTag, os)
 import Components.PrimaryButton as PrimaryButton
 import Data.Function.Uncurried (runFn2)
 
-
 screen :: WelcomeScreenState -> Screen Action WelcomeScreenState ScreenOutput
 screen initialState =
   { initialState
@@ -55,6 +54,7 @@ view push state =
             , carouselView state push
             , PrimaryButton.view (push <<< PrimaryButtonAC ) (primaryButtonConfig state)
         ]
+
 
 carouselView:: WelcomeScreenState -> (Action -> Effect Unit)  -> forall w . PrestoDOM (Effect Unit) w
 carouselView state push = 

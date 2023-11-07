@@ -110,10 +110,10 @@ enterMobileNumberTextView state =
  textView (
   [ height WRAP_CONTENT
   , width WRAP_CONTENT
-  , text (getString ENTER_MOBILE_NUMBER)
+  , text (getString ENTER_YOUR_MOBILE_NUMBER)
   , color Color.textPrimary
-  , margin (Margin 16 37 0 0)
-  ] <> FontStyle.h1 TypoGraphy
+  , margin (MarginVertical 37 8)
+  ] <> FontStyle.body3 TypoGraphy
   )
 
 ----------------------------- primaryEditTextView ---------------
@@ -145,6 +145,7 @@ primaryEditTextView state push =
       ]
   ]
 
+
 --------------------------------- underlinedTextView ----------------------
 underlinedTextView :: ST.EnterMobileNumberScreenState -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w
 underlinedTextView state push =
@@ -155,9 +156,10 @@ underlinedTextView state push =
  ][ textView (
     [ width WRAP_CONTENT
     , height WRAP_CONTENT
-    , text (getString CASE_TWO)
-    , alpha 0.5
+    , text "By clicking Continue, you agree to our "--(getString CASE_TWO)
+    , alpha 0.8
     , color Color.greyTextColor
+    -- , textSize FontSize.a_14
     ] <> FontStyle.body3 TypoGraphy),
     linearLayout
       [ width WRAP_CONTENT
@@ -171,7 +173,8 @@ underlinedTextView state push =
       ][ textView (
         [ width WRAP_CONTENT
         , height WRAP_CONTENT
-        , text (getString NON_DISCLOUSER_AGREEMENT)
+        -- , textSize FontSize.a_14
+        , text (" T&Cs")--getString NON_DISCLOUSER_AGREEMENT)
         , color Color.primaryBlue
         ] <> FontStyle.body3 TypoGraphy)
       ]
@@ -187,33 +190,25 @@ termsAndConditionsView state push =
   , orientation HORIZONTAL
   , margin (Margin 15 10 16 20)
   ][ linearLayout
-      [ width MATCH_PARENT
-      , height WRAP_CONTENT
-      , margin (MarginLeft 10)
-      , gravity CENTER
-      ][textView (
-        [ width WRAP_CONTENT
-        , height WRAP_CONTENT
-        , text $ (getString BY_CLICKING_CONTINUE_YOU_WILL_BE_AGREEING_TO_OUR) <> " "
-        , color Color.greyTextColor
-        , alpha 0.5
-        ] <> FontStyle.body3 TypoGraphy)
-      , linearLayout
       [ width WRAP_CONTENT
       , height WRAP_CONTENT
       , orientation VERTICAL
-      , onClick (\action -> do
-                  _<- push action
-                  _ <- JB.openUrlInApp $ getValueFromConfig "DOCUMENT_LINK" 
-                  pure unit
-                  ) (const NonDisclosureAgreementAction)
-      ][ textView (
+      , margin (MarginLeft 10)
+      ][textView (
         [ width WRAP_CONTENT
         , height WRAP_CONTENT
-        , text "T&Cs"
-        , color Color.primaryBlue
+        , text (getString BY_CLICKING_NEXT_YOU_WILL_BE_AGREEING_TO_OUR)
+        , color Color.greyTextColor
+        , alpha 0.5
         ] <> FontStyle.body3 TypoGraphy)
-      ]
+      , underlinedTextView state push
+      -- , textView (
+      --   [ width WRAP_CONTENT
+      --   , height WRAP_CONTENT
+      --   , text (getString DATA_COLLECTION_AUTHORITY)
+      --   , color Color.greyTextColor
+      --   , alpha 0.5
+      --   ] <> FontStyle.body3 TypoGraphy)
       ]
   ]
 
@@ -225,7 +220,8 @@ enterMobileNumberView  state push =
     , visibility  VISIBLE--if state.props.enterOTP then GONE else VISIBLE
     , alpha 1.0 --if state.props.enterOTP then 0.0 else 1.0
     , orientation VERTICAL
-    ][PrestoAnim.animationSet
+    ][  enterMobileNumberTextView state
+      , PrestoAnim.animationSet
       [ Anim.translateYAnimFromTopWithAlpha AnimConfig.translateYAnimConfig -- 300 10 0 0 true PrestoAnim.Linear
       ] $ PrimaryEditText.view (push <<< PrimaryEditTextAction) ({
           title: (getString MOBILE_NUMBER),

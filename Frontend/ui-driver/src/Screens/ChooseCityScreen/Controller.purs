@@ -3,17 +3,19 @@ module Screens.ChooseCityScreen.Controller where
 import Components.GenericHeader as GenericHeaderController
 import Components.PrimaryButton.Controller as PrimaryButtonController
 import Components.SelectMenuButton.Controller (Action(..)) as MenuButtonController
+import Data.Array as DA
+import Data.Maybe (Maybe(..))
+import Debug (spy)
+import Effect.Class (liftEffect)
+import Effect.Unsafe (unsafePerformEffect)
+import Engineering.Helpers.LogEvent (logEvent)
 import JBridge (minimizeApp, firebaseLogEvent, isLocationPermissionEnabled, requestLocation, minimizeApp)
 import Log (trackAppActionClick, trackAppBackPress, trackAppScreenRender)
-import Prelude (class Show, bind, pure, ($), (==), (||), unit, not)
+import Prelude (class Show, bind, pure, ($), (==), (||), unit, not, discard)
 import PrestoDOM (Eval, continue, exit, continueWithCmd)
 import PrestoDOM.Types.Core (class Loggable)
 import Screens (getScreen, ScreenName(..))
 import Screens.Types (ChooseCityScreenStage(..), ChooseCityScreenState)
-import Effect.Class (liftEffect)
-import Effect.Unsafe (unsafePerformEffect)
-import Engineering.Helpers.LogEvent (logEvent)
-import Debug (spy)
 import Storage (KeyStore(..), getValueToLocalStore, setValueToLocalStore)
 
 instance showAction :: Show Action where
@@ -74,7 +76,13 @@ eval (PrimaryButtonAC PrimaryButtonController.OnClick) state = do
     -- continue state{props{currentStage = DETECT_LOCATION}}
     -- else if state.props.currentStage == DETECT_LOCATION then continue state{props{currentStage = CAROUSEL}}
     else if state.props.currentStage == SELECT_CITY then do
-      _ <- pure $ setValueToLocalStore DRIVER_LOCATION state.props.selectedLanguage
+      _ <- pure $ setValueToLocalStore DRIVER_LOCATION state.data.locationSelected
+      let mbCity = DA.find (\city' -> city'.cityName == state.data.locationSelected) state.data.config.cityConfig
+      case mbCity of 
+        Just city -> do
+          _ <- pure $ setValueToLocalStore SHOW_SUBSCRIPTIONS if city.showSubscriptions then "true" else "false"
+          pure unit
+        Nothing -> pure unit
       continue state{props{currentStage = DETECT_LOCATION}}
     else if state.props.currentStage == SELECT_LANG then do
       _ <- pure $ setValueToLocalStore LANGUAGE_KEY state.props.selectedLanguage

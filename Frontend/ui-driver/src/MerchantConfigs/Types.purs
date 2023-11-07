@@ -126,8 +126,12 @@ type MapConfig = {
 
 type WaitTimeConfig = {
   enableWaitTime :: Boolean,
-  thresholdDist :: Number}
+  thresholdDist :: Number
+}
+
 type CityConfig = {
   cityName :: String,
-  mapImage :: String
+  mapImage :: String,
+  cityCode :: String,
+  showSubscriptions :: Boolean
 }

@@ -73,7 +73,7 @@ type Config = {
     optionWithHtml :: OptionWithHtmlConfig,
     topTitle :: TopTitle,
     listViewArray :: Array String,
-    coverVideoConfig :: CoverVideoConfig
+    coverVideoConfig :: CoverVideoConfig--,
 }
 
 type CoverVideoConfig = {
@@ -121,7 +121,8 @@ type ButtonConfig = {
   textStyle :: Style,
   height :: Length,
   image :: ImageConfig,
-  showShimmer :: Boolean
+  showShimmer :: Boolean,
+  gravity :: Gravity
 }
 
 type DismissPopupConfig =
@@ -241,6 +242,7 @@ config = {
     , isClickable : true
     , width : (V 100)
     , padding : (Padding 15 7 15 7)
+    , gravity : CENTER
     , timerValue : 5
     , enableTimer : false
     , timerID : ""
@@ -266,6 +268,7 @@ config = {
     , isClickable : true
     , width : (V 156)
     , padding : (Padding 0 0 0 0)
+    , gravity : CENTER
     , timerValue : 5
     , enableTimer : false
     , timerID : ""
@@ -288,6 +291,7 @@ config = {
     , color : Color.yellow900
     , visibility : true
     , margin : (Margin 12 0 0 16)
+    , gravity : CENTER
     , isClickable : true
     , width : (V 156)
     , padding : (Padding 0 0 0 0)
@@ -408,6 +412,7 @@ config = {
         mediaUrl : "",
         id : ""
     }
+    -- , onBoardingButtonVisibility : false
 }
 
 

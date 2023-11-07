@@ -17,6 +17,7 @@ module Screens.UploadDrivingLicenseScreen.ScreenData where
 import Data.Maybe
 import Screens.Types (UploadDrivingLicenseState)
 import Foreign.Object (empty)
+import Engineering.Helpers.Commons as EHC
 
 initData :: UploadDrivingLicenseState
 initData = {
@@ -37,6 +38,7 @@ initData = {
       , dateOfIssueView : ""
       , imageFrontUrl : ""
       , logField : empty
+      , mobileNumber : ""
       },
       props: {
         openRegistrationModal : false
@@ -47,5 +49,13 @@ initData = {
       , errorVisibility : false
       , openDateOfIssueManual: false
       , isDateClickable : true
+      , openHowToUploadManual : false
+      , logoutPopupModal : false
+      , validateProfilePicturePopUp : false
+      , imageCaptureLayoutView : false
+      , fileCameraPopupModal : false
+      , fileCameraOption : false
+      , validating : false
+      , successfulValidation : false
       }
     }

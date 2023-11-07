@@ -145,7 +145,7 @@ alternatePlansTransformer (UiPlansResp planResp) state =
     let planEntityArray = planResp.list
         alternatePlansArray = (DA.filter(\(PlanEntity item) -> item.id /= state.data.myPlanData.planEntity.id) planEntityArray)
         isLocalized = fromMaybe false planResp.isLocalized
-    in map (\ planEntity -> getPlanCardConfig planEntity isLocalized false state.data.config.gradientConfig) alternatePlansArray
+    in map (\ planEntity -> getPlanCardConfig planEntity isLocalized false state.data.config.subscriptionConfig.gradientConfig) alternatePlansArray
 
 
 getAutoPayDetailsList :: MandateData -> Array KeyValType

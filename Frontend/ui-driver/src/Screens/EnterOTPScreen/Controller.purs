@@ -14,18 +14,20 @@
 -}
 
 module Screens.EnterOTPScreen.Controller where
-import Prelude (class Show, not, pure, unit, (&&), (<=), (==), (||), ($), discard, bind, (>=))
-import PrestoDOM (Eval, continue, exit, updateAndExit)
-import Screens.Types (EnterOTPScreenState)
-import Components.PrimaryEditText.Controllers as PrimaryEditText
+
 import Components.PrimaryButton as PrimaryButton
-import PrestoDOM.Types.Core (class Loggable)
+import Components.PrimaryEditText.Controllers as PrimaryEditText
+import Components.StepsHeaderModal.Controller as StepsHeaderModalController
 import Data.String (length)
 import JBridge (hideKeyboardOnNavigation, firebaseLogEvent)
-import Storage (setValueToLocalNativeStore, setValueToLocalStore, KeyStore(..))
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppTextInput, trackAppScreenEvent)
-import Storage (setValueToLocalNativeStore, KeyStore(..))
+import Prelude (class Show, not, pure, unit, (&&), (<=), (==), (||), ($), discard, bind, (>=))
+import PrestoDOM (Eval, continue, continueWithCmd, exit, updateAndExit)
+import PrestoDOM.Types.Core (class Loggable)
 import Screens (ScreenName(..), getScreen)
+import Screens.Types (EnterOTPScreenState)
+import Storage (setValueToLocalNativeStore, KeyStore(..))
+import Storage (setValueToLocalNativeStore, setValueToLocalStore, KeyStore(..))
 
 instance showAction :: Show Action where
   show _ = ""
@@ -50,6 +52,7 @@ instance loggableAction :: Loggable Action where
     AutoFill otp-> trackAppScreenEvent appId (getScreen ENTER_OTP_NUMBER_SCREEN) "in_screen" "otp_autofill"
     SetToken id -> trackAppScreenEvent appId (getScreen ENTER_OTP_NUMBER_SCREEN) "in_screen" "set_token"
     NoAction -> trackAppScreenEvent appId (getScreen ENTER_OTP_NUMBER_SCREEN) "in_screen" "no_action"
+    _ -> trackAppScreenEvent appId (getScreen ENTER_OTP_NUMBER_SCREEN) "in_screen" "no_action"
     
 data ScreenOutput = GoBack  EnterOTPScreenState | GoToHome EnterOTPScreenState | Retry EnterOTPScreenState
 data Action = BackPressed 
@@ -61,6 +64,7 @@ data Action = BackPressed
             | SetToken String
             | TIMERACTION String
             | AfterRender
+            | StepsHeaderModelAC StepsHeaderModalController.Action
 
 eval :: Action -> EnterOTPScreenState -> Eval Action ScreenOutput EnterOTPScreenState
 eval AfterRender state = continue state
@@ -93,4 +97,7 @@ eval (SetToken id )state = do
   _ <-  pure $ setValueToLocalNativeStore FCM_TOKEN  id
   _ <-  pure $ setValueToLocalStore FCM_TOKEN  id
   continue state
+
+eval (StepsHeaderModelAC StepsHeaderModalController.OnArrowClick) state = continueWithCmd state [ do pure $ BackPressed]
+
 eval _ state = continue state

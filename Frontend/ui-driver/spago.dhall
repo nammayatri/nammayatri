@@ -45,10 +45,12 @@ to generate this file without the comments in this block.
   , "presto"
   , "presto-dom"
   , "profunctor-lenses"
+  , "st"
   , "strings"
   , "tracker"
   , "transformers"
   , "tuples"
+  , "web-html"
   ]
 , packages = ../packages.dhall
 , sources = [ "src/**/*.purs" ]
