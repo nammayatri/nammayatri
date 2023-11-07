@@ -18,3 +18,6 @@ ALTER TABLE atlas_app.booking ADD COLUMN rental_base_duration bigint;
 
 ALTER TABLE atlas_app.ride ADD COLUMN end_ride_otp char(4);
 ALTER TABLE atlas_app.search_request ADD COLUMN tag character varying(36) default 'ON_DEMAND';
+
+ALTER TABLE atlas_app.ride ADD COLUMN odometer_start_reading double precision;
+ALTER TABLE atlas_app.ride ADD COLUMN odometer_end_reading double precision;

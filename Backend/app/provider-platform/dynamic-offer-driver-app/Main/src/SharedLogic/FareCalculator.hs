@@ -409,6 +409,3 @@ isNightShiftOverlap rideEndDate nightShiftStartTime nightShiftEndTime tripStartT
       curMxStart = max curNightShiftStartTs tripStartTime
       curMnEnd = min curNightShiftEndTs now
   curMnEnd >= curMxStart
-
-timeOfDayToDiffTime :: TimeOfDay -> DiffTime -- TODO :  Move to Kernel
-timeOfDayToDiffTime (TimeOfDay h m s) = secondsToDiffTime $ fromIntegral (h * 3600 + m * 60 + floor s)

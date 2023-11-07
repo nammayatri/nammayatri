@@ -71,7 +71,7 @@ module Domain.Action.UI.Driver
     getHistoryEntryDetailsEntityV2,
     calcExecutionTime,
     fetchDriverPhoto,
-    setRental,
+    enableRental,
   )
 where
 
@@ -674,11 +674,10 @@ setActivity (personId, _merchantId, merchantOpCityId) isActive mode = do
   void $ QDriverInformation.updateActivity driverId isActive (mode <|> Just DriverInfo.OFFLINE)
   pure APISuccess.Success
 
-setRental :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Bool -> m APISuccess.APISuccess
-setRental (personId, _, _) isRental = do
+enableRental :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Bool -> m APISuccess.APISuccess
+enableRental (personId, _, _) isRental = do
   void $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  let driverId = cast personId
-  QDriverInformation.updateRental driverId isRental
+  QDriverInformation.updateRental (cast personId) isRental
   pure APISuccess.Success
 
 activateGoHomeFeature :: (CacheFlow m r, EsqDBFlow m r) => (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Id DDHL.DriverHomeLocation -> LatLong -> m APISuccess.APISuccess

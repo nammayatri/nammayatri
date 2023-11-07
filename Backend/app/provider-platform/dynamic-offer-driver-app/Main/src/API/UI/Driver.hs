@@ -205,7 +205,7 @@ handler =
       :<|> deleteDriver
   )
     :<|> ( setActivity
-             :<|> setRental
+             :<|> enableRental
              :<|> ( activateGoHomeFeature
                       :<|> deactivateGoHomeFeature
                       :<|> addHomeLocation
@@ -243,8 +243,8 @@ getInformation = withFlowHandlerAPI . DDriver.getInformation
 setActivity :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Bool -> Maybe DI.DriverMode -> FlowHandler APISuccess
 setActivity (personId, driverId, merchantOpCityId) isActive = withFlowHandlerAPI . DDriver.setActivity (personId, driverId, merchantOpCityId) isActive
 
-setRental :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Bool -> FlowHandler APISuccess
-setRental (personId, driverId, merchantOpCityId) = withFlowHandlerAPI . DDriver.setRental (personId, driverId, merchantOpCityId)
+enableRental :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Bool -> FlowHandler APISuccess
+enableRental (personId, driverId, merchantOpCityId) = withFlowHandlerAPI . DDriver.enableRental (personId, driverId, merchantOpCityId)
 
 activateGoHomeFeature :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Id DDHL.DriverHomeLocation -> LatLong -> FlowHandler APISuccess
 activateGoHomeFeature (personId, driverId, merchantOpCityId) homeLocationId = withFlowHandlerAPI . DDriver.activateGoHomeFeature (personId, driverId, merchantOpCityId) homeLocationId

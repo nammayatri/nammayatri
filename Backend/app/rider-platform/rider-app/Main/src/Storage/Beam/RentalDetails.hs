@@ -22,7 +22,6 @@ import Kernel.Prelude
 import Kernel.Types.Common hiding (id)
 import Tools.Beam.UtilsTH
 
--- TODO To be removed
 data RentalDetailsT f = RentalDetailsT
   { id :: B.C f Text,
     baseFare :: B.C f Money,

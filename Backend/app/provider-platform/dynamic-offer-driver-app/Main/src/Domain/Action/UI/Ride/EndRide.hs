@@ -224,8 +224,7 @@ endRide handle@ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.g
       case rideOld.rideDetails of
         DRide.DetailsOnDemand _ -> pure ()
         DRide.DetailsRental details -> do
-          when (isJust driverReq.odometerEndReading) $ do
-            when (driverReq.endRideOtp /= details.endRideOtp) $ throwError IncorrectOTP
+          when (driverReq.endRideOtp /= details.endRideOtp) $ throwError IncorrectOTP
       uiDistanceCalculation rideOld.id driverReq.uiDistanceCalculationWithAccuracy driverReq.uiDistanceCalculationWithoutAccuracy -- more checks?
       case requestor.role of
         DP.DRIVER -> unless (requestor.id == driverId) $ throwError NotAnExecutor
@@ -457,7 +456,7 @@ recalculateFareForDistance ServiceHandle {..} booking ride recalcDistance thresh
             nightShiftCharge = booking.fareParams.nightShiftCharge, -- TODO: Make below checks on bookingType
             rentalRideParams = Nothing
           }
-    DRide.DetailsRental DRide.RideDetailsRental {odometerStartReading} ->
+    DRide.DetailsRental DRide.RideDetailsRental {} ->
       calculateFareParameters
         Fare.CalculateFareParametersParams
           { farePolicy = farePolicy,
@@ -468,20 +467,17 @@ recalculateFareForDistance ServiceHandle {..} booking ride recalcDistance thresh
             avgSpeedOfVehicle = thresholdConfig.avgSpeedOfVehicle,
             driverSelectedFare = booking.fareParams.driverSelectedFare,
             customerExtraFee = booking.fareParams.customerExtraFee,
-            nightShiftCharge = booking.fareParams.nightShiftCharge, -- TODO: Make below checks on bookingType
+            nightShiftCharge = booking.fareParams.nightShiftCharge,
             rentalRideParams =
-              if isJust odometerStartReading
-                then
-                  Just $
-                    Fare.RentalRideParams
-                      { rideStartTime = ride.tripStartTime,
-                        rideEndTime = now,
-                        actualDistanceInKm = recalcDistance.getMeters `div` 1000,
-                        chargedDurationInHr = (max actualDuration booking.estimatedDuration.getSeconds) `div` 3600,
-                        nightShiftOverlapChecking = True,
-                        timeDiffFromUtc = thresholdConfig.timeDiffFromUtc
-                      }
-                else Nothing
+              Just
+                Fare.RentalRideParams
+                  { rideStartTime = ride.tripStartTime,
+                    rideEndTime = now,
+                    actualDistanceInKm = recalcDistance.getMeters `div` 1000,
+                    chargedDurationInHr = (max actualDuration booking.estimatedDuration.getSeconds) `div` 3600,
+                    nightShiftOverlapChecking = True,
+                    timeDiffFromUtc = thresholdConfig.timeDiffFromUtc
+                  }
           }
   let finalFare = Fare.fareSum fareParams
       distanceDiff = recalcDistance - oldDistance
