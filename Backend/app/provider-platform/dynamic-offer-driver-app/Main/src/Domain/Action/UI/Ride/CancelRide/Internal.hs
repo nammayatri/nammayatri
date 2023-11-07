@@ -18,6 +18,7 @@ module Domain.Action.UI.Ride.CancelRide.Internal (cancelRideImpl) where
 import qualified Data.Map as M
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.BookingCancellationReason as SBCR
+import qualified Domain.Types.Driver.GoHomeFeature.DriverGoHomeRequest as DDGR
 import qualified Domain.Types.FarePolicy as DFP
 import qualified Domain.Types.Merchant as DMerc
 import Domain.Types.Merchant.DriverPoolConfig (DriverPoolConfig)
@@ -44,6 +45,7 @@ import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.FareCalculator
 import SharedLogic.FarePolicy
 import SharedLogic.GoogleTranslate (TranslateFlow)
+import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
 import qualified Storage.CachedQueries.GoHomeConfig as CQGHC
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as QTC
@@ -146,6 +148,10 @@ cancelRideTransaction ::
   m ()
 cancelRideTransaction booking ride bookingCReason merchantId = do
   let driverId = cast ride.driverId
+  ghCfg <- CQGHC.findByMerchantOpCityId booking.merchantOperatingCityId
+  when (ghCfg.enableGoHome) $ do
+    dghInfo <- CQDGR.getDriverGoHomeRequestInfo ride.driverId booking.merchantOperatingCityId (Just ghCfg)
+    when (dghInfo.status == Just DDGR.ACTIVE) $ CQDGR.setDriverGoHomeIsOnRideStatus ride.driverId booking.merchantOperatingCityId False
   QDI.updateOnRide (cast ride.driverId) False
   void $ LF.rideDetails ride.id DRide.CANCELLED merchantId ride.driverId booking.fromLocation.lat booking.fromLocation.lon
   void $ QRide.updateStatus ride.id DRide.CANCELLED

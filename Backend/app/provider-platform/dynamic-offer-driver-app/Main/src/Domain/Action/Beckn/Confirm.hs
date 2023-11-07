@@ -19,6 +19,7 @@ import qualified Data.Text as T
 import Domain.Action.Beckn.Search
 import Domain.Types.Booking as DRB
 import qualified Domain.Types.BookingCancellationReason as DBCR
+import qualified Domain.Types.Driver.GoHomeFeature.DriverGoHomeRequest as DDGR
 import qualified Domain.Types.DriverQuote as DDQ
 import qualified Domain.Types.Location as DL
 import qualified Domain.Types.Merchant as DM
@@ -46,7 +47,7 @@ import qualified SharedLogic.CallBAP as BP
 import qualified SharedLogic.DriverPool as DP
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
-import qualified Storage.CachedQueries.Driver.GoHomeRequest as CGHR
+import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
 import Storage.CachedQueries.GoHomeConfig as QGHC
 import Storage.CachedQueries.Merchant as QM
 import Storage.Queries.Booking as QRB
@@ -121,7 +122,13 @@ handler transporter req quote = do
       case quote of
         Left (driver, driverQuote) -> do
           cfg <- QGHC.findByMerchantOpCityId booking.merchantOperatingCityId
-          ghrId <- if cfg.enableGoHome then CGHR.getDriverGoHomeRequestInfo driver.id booking.merchantOperatingCityId (Just cfg) <&> (.driverGoHomeRequestId) else return Nothing
+          ghrId <-
+            if cfg.enableGoHome
+              then do
+                dghInfo <- CQDGR.getDriverGoHomeRequestInfo driver.id booking.merchantOperatingCityId (Just cfg)
+                when (dghInfo.status == Just DDGR.ACTIVE) $ CQDGR.setDriverGoHomeIsOnRideStatus driver.id booking.merchantOperatingCityId True
+                return dghInfo.driverGoHomeRequestId
+              else return Nothing
 
           otpCode <- case riderDetails.otpCode of
             Nothing -> do
@@ -358,6 +365,8 @@ cancelBooking booking mbDriver transporter = do
   QRB.updateStatus booking.id DRB.CANCELLED
   QBCR.upsert bookingCancellationReason
   whenJust mbRide $ \ride -> do
+    dghInfo <- CQDGR.getDriverGoHomeRequestInfo ride.driverId booking.merchantOperatingCityId Nothing
+    when (dghInfo.status == Just DDGR.ACTIVE) $ CQDGR.setDriverGoHomeIsOnRideStatus ride.driverId booking.merchantOperatingCityId False
     QRide.updateStatus ride.id DRide.CANCELLED
     QDI.updateOnRide (cast ride.driverId) False
     void $ LF.rideDetails ride.id SRide.CANCELLED transporter.id ride.driverId booking.fromLocation.lat booking.fromLocation.lon

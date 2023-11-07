@@ -45,7 +45,6 @@ import qualified Lib.LocationUpdates as LocUpd
 import SharedLogic.CallBAP (sendRideStartedUpdateToBAP)
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
-import Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
 import Storage.CachedQueries.Merchant.TransporterConfig as QTC
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.DriverInformation as QDI
@@ -165,7 +164,7 @@ startRide ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.getId)
     withTimeAPI "startRide" "startRideAndUpdateLocation" $ startRideAndUpdateLocation driverId ride booking.id point booking.providerId
     withTimeAPI "startRide" "initializeDistanceCalculation" $ initializeDistanceCalculation ride.id driverId point
     withTimeAPI "startRide" "notifyBAPRideStarted" $ notifyBAPRideStarted booking ride
-  CQDGR.setDriverGoHomeIsOnRide driverId ride.merchantOperatingCityId
+
   pure APISuccess.Success
   where
     isValidRideStatus status = status == DRide.NEW
