@@ -88,12 +88,10 @@ runnerIterationRedis SchedulerHandle {..} runTask = do
   key <- asks (.streamName)
   groupName <- asks (.groupName)
   readyTasks <- getReadyTask
-  logTagDebug "All Tasks" . show $ map @_ @(Id AnyJob) (\(AnyJob Job {..}, _) -> parentJobId) readyTasks
   filteredTasks <- filterM (\(AnyJob Job {..}, _) -> attemptTaskLockAtomic parentJobId) readyTasks
-  let (filteredTasks', recordIds) = foldl (\(ftAcc, rIdAcc) (task, recordId) -> (task : ftAcc, recordId : rIdAcc)) ([], []) filteredTasks
   logTagDebug "Available tasks - Count" . show $ length filteredTasks
-  logTagDebug "Available tasks" . show $ map @_ @(Id AnyJob) (\(AnyJob Job {..}, _) -> parentJobId) filteredTasks
-  mapM_ runTask filteredTasks'
+  mapM_ (runTask . fst) filteredTasks
+  let recordIds = map snd filteredTasks
   unless (null recordIds) do
     void $ Hedis.withNonCriticalCrossAppRedis $ Hedis.xAck key groupName recordIds
     void $ Hedis.withNonCriticalCrossAppRedis $ Hedis.xDel key recordIds
