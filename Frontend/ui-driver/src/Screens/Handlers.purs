@@ -53,4 +53,5 @@ import Screens.SubscriptionScreen.Handler (subscriptionScreen) as UI
 import Screens.PaymentHistoryScreen.Handler (paymentHistory) as UI
 import Screens.OnBoardingSubscriptionScreen.Handler (onBoardingSubscriptionScreen) as UI
 import Screens.DriverSavedLocationScreen.Handler (driverSavedLocationScreen) as UI
+import Screens.ChooseCityScreen.Handler (chooseCityScreen) as UI
 import Screens.WelcomeScreen.Handler (welcomeScreen) as UI

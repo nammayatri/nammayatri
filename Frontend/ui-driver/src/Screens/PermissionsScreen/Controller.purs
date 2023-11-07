@@ -29,6 +29,7 @@ import Screens.PermissionsScreen.ScreenData (Permissions(..))
 import Screens.Types (PermissionsScreenState)
 import Engineering.Helpers.LogEvent (logEvent)
 import Effect.Unsafe (unsafePerformEffect)
+import Debug (spy)
 
 instance showAction :: Show Action where
     show _ = ""
@@ -70,7 +71,9 @@ data Action = BackPressed
             | UpdateAllChecks PermissionsScreenState
 
 eval :: Action -> PermissionsScreenState -> Eval Action ScreenOutput PermissionsScreenState
-eval AfterRender state = continueWithCmd state [ do 
+eval AfterRender state = do
+        _ <- pure $ spy "testing1 : " "AfterRender"
+        continueWithCmd state [ do 
                             isLocationPermission <- isLocationPermissionEnabled unit
                             isOverlayPermission <- isOverlayPermissionEnabled unit
                             isBatteryUsagePermission <- isBatteryPermissionEnabled unit
@@ -78,15 +81,20 @@ eval AfterRender state = continueWithCmd state [ do
                                                         isOverlayPermissionChecked = isOverlayPermission,
                                                         isBatteryOptimizationChecked = isBatteryUsagePermission}}]
 
-eval (UpdateAllChecks updatedState) state = continue updatedState
+eval (UpdateAllChecks updatedState) state = do
+    _ <- pure $ spy "testing10 : " state
+    continue updatedState
 eval BackPressed state = exit GoBack
 eval (PrimaryButtonActionController (PrimaryButtonController.OnClick)) state = exit $ GoToHome 
-eval UpdateLocationPermissionState state = continue state {props {isLocationPermissionChecked = true}}
+eval UpdateLocationPermissionState state = do
+    _ <- pure $ spy "testing2 : " "UpdateLocationPermissionState"
+    continue state {props {isLocationPermissionChecked = true}}
 eval UpdateOverlayPermissionState state = continue state {props {isOverlayPermissionChecked = true}}
 eval UpdateBatteryPermissionState state = continue state {props {isBatteryOptimizationChecked = true}}
 
 eval (LocationPermissionCallBack isLocationPermissionEnabled) state = do
 --   _ <- pure $ spy "location permission" isLocationPermissionEnabled
+  _ <- pure $ spy "testing3 : " "LocationPermissionCallBack"       
   if isLocationPermissionEnabled then do
     let _ = unsafePerformEffect $ logEvent state.data.logField  "permission_granted_location"
     continue state {props {isLocationPermissionChecked = isLocationPermissionEnabled}}
@@ -108,11 +116,15 @@ eval (ItemClick itemType) state =
     case itemType of 
     Location -> do
         let _ = unsafePerformEffect $ logEvent state.data.logField "permission_btn_click_location"
+        _ <- pure $ spy "testing4 : " "ItemClick"   
         if not(state.props.isLocationPermissionChecked) then do
             continueWithCmd state [do
                 isLocationPermission <- isLocationPermissionEnabled unit
-                if (isLocationPermission) then pure UpdateLocationPermissionState
+                if (isLocationPermission) then do
+                    _ <- pure $ spy "testing5 : " "abc"  
+                    pure UpdateLocationPermissionState
                     else do 
+                    _ <- pure $ spy "testing6 : " "abc" 
                     _ <- liftEffect $ requestLocation unit
                     pure NoAction
                 ]

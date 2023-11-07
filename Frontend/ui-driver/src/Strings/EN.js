@@ -1013,6 +1013,9 @@ const englishStrings = {
   SELECT_LANGUAGE_DESC : "Select the language you can read",
   CONFIRM_LANGUAGE : "Confirm Language",
   GET_STARTED : "Get Started",
+  ENABLE_LOCATION_PERMISSION : "Enable Location Permission",
+  PLEASE_ENABLE_LOCATION_PERMISSION_FOR : "Please enable location permission for ",
+  ENABLE_LOCATION : "Enable Location"
 }
 
 

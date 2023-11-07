@@ -10,7 +10,8 @@ import Styles.Colors as Color
 import Data.Array as Array
 import Data.Maybe as Maybe
 import Common.Types.App (LazyCheck(..))
-import Helpers.Utils (getAssetStoreLink)
+-- import Helpers.Utils (getAssetStoreLink)
+import Helpers.Utils (fetchImage, FetchImageFrom(..))
 
 view :: forall w . (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push state = 
@@ -29,7 +30,7 @@ view push state =
         ][  imageView
             [ height $ V 25
             , width $ V 25
-            , imageWithFallback $ "ny_ic_chevron_left_white," <> (getAssetStoreLink FunctionCall) <> "ny_ic_chevron_left_white.png"
+            , imageWithFallback $ fetchImage FF_ASSET "ny_ic_chevron_left_white"
             , onClick push $ const OnArrowClick
             , visibility case state.backArrowVisibility of 
                 true -> VISIBLE
@@ -43,7 +44,7 @@ view push state =
             , visibility case state.profileIconVisibility of
                 true -> VISIBLE
                 false -> GONE
-            , imageWithFallback "ic_profile_shadow,https://assets.juspay.in/beckn/nammayatri/driver/images/ic_profile_shadow.png"
+            , imageWithFallback $ fetchImage FF_ASSET "ic_profile_shadow"
             ]
             , textView $
             [ height WRAP_CONTENT

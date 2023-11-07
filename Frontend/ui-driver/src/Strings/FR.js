@@ -736,5 +736,16 @@ const frenchStrings = {
   NO : "Non",
   YES_CANCEL : "Oui, annuler",
   AUTOPAY_CANCELLED : "Paiement automatique annulé",
-  AND : " et "
+  AND : " et ",
+  ENABLE_LOCATION_PERMISSION : "Activer l'autorisation de localisation",
+  PLEASE_ENABLE_LOCATION_PERMISSION_FOR : "Veuillez activer l'autorisation de localisation pour",
+  ENABLE_LOCATION : "Location disponible",
+  YOUR_DETECTED_LOCATION_IS : "Votre emplacement détecté est",
+  LANGUAGE_DETECTED : "Langue détectée",
+  CHANGE_LANGUAGE_STR : "Changer de langue",
+  SELECT_LOCATION : "Sélectionnez l'emplacement",
+  SELECT_LOCATION_DESC : "Sélectionnez l'endroit où vous souhaitez faire des promenades",
+  SELECT_LANGUAGE_DESC : "Sélectionnez la langue que vous pouvez lire",
+  CONFIRM_LANGUAGE : "Confirmer la langue",
+  GET_STARTED : "Commencer"
 }

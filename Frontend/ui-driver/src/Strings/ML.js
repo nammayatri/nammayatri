@@ -947,8 +947,19 @@ const mlStrings = {
   HUNDRED_PERCENT_FARE_GOES_TO_YOU : "നിരക്കിന്റെ 100%\nനിങ്ങൾക്കായി!",
   FARE_SHOWN_IS_FARE_YOU_GET : "കാണിച്ചിരിക്കുന്ന നിരക്ക് നിങ്ങൾക്ക് ലഭിക്കുന്ന നിരക്കാണ്.\nമറഞ്ഞിരിക്കുന്ന നിരക്കുകളൊന്നുമില്ല.",
   BE_A_PART_OF_OPEN_MOBILITY_REVOLUTION : "ഓപ്പൺ\nമൊബിലിറ്റി വിപ്ലവത്തിന്റെ ഭാഗമാകൂ!",
-  OUR_DATA_AND_PRODUCT_ARE_TRANSPARENT : "ഞങ്ങളുടെ ഡാറ്റയും ഉൽപ്പന്ന റോഡ്‌മാപ്പും\nഎല്ലാവർക്കും സുതാര്യമാണ്."
-}
+  OUR_DATA_AND_PRODUCT_ARE_TRANSPARENT : "ഞങ്ങളുടെ ഡാറ്റയും ഉൽപ്പന്ന റോഡ്‌മാപ്പും\nഎല്ലാവർക്കും സുതാര്യമാണ്.",
+  ENABLE_LOCATION_PERMISSION : "ലൊക്കേഷൻ അനുമതി പ്രവർത്തനക്ഷമമാക്കുക",
+  PLEASE_ENABLE_LOCATION_PERMISSION_FOR : "ദയവായി ഇതിന് അനുയോജ്യമായ ഇടം നേടുക",
+  ENABLE_LOCATION : "ലൊക്കേഷൻ പ്രവർത്തനക്ഷമമാക്കുക",
+  YOUR_DETECTED_LOCATION_IS : "നിങ്ങളുടെ കണ്ടെത്തിയ ലൊക്കേഷൻ ഇതാണ്",
+  LANGUAGE_DETECTED : "ഭാഷ കണ്ടെത്തി",
+  CHANGE_LANGUAGE_STR : "ഭാഷ മാറ്റുക",
+  SELECT_LOCATION : "ലൊക്കേഷൻ തിരഞ്ഞെടുക്കുക",
+  SELECT_LOCATION_DESC : "നിങ്ങൾ സവാരി ചെയ്യാൻ ആഗ്രഹിക്കുന്ന സ്ഥലം തിരഞ്ഞെടുക്കുക",
+  SELECT_LANGUAGE_DESC : "നിങ്ങൾക്ക് വായിക്കാൻ കഴിയുന്ന ഭാഷ തിരഞ്ഞെടുക്കുക",
+  CONFIRM_LANGUAGE : "ഭാഷ സ്ഥിരീകരിക്കുക",
+  GET_STARTED : "തുടങ്ങി"
+} 
 
 export function getStringValue(key) {
   if (key in mlStrings) {

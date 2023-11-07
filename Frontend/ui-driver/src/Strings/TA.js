@@ -975,7 +975,18 @@ const tamilStrings = {
   HUNDRED_PERCENT_FARE_GOES_TO_YOU : "100% கட்டணம்\nஉங்களுக்குச் செல்லும்!",
   FARE_SHOWN_IS_FARE_YOU_GET : "காட்டப்படும் கட்டணம் நீங்கள் பெறும் கட்டணமாகும்.\nமறைக்கப்பட்ட கட்டணங்கள் இல்லை.",
   BE_A_PART_OF_OPEN_MOBILITY_REVOLUTION : "திறந்த\nமொபிலிட்டி புரட்சியின் ஒரு பகுதியாக இருங்கள்!",
-  OUR_DATA_AND_PRODUCT_ARE_TRANSPARENT : "எங்களின் தரவு மற்றும் தயாரிப்பு வரைபடமானது\nஅனைவருக்கும் வெளிப்படையானது."
+  OUR_DATA_AND_PRODUCT_ARE_TRANSPARENT : "எங்களின் தரவு மற்றும் தயாரிப்பு வரைபடமானது\nஅனைவருக்கும் வெளிப்படையானது.",
+  ENABLE_LOCATION_PERMISSION : "இருப்பிட அனுமதியை இயக்கு",
+  PLEASE_ENABLE_LOCATION_PERMISSION_FOR : "இதற்கு சரியான இடத்தைப் பெறவும்",
+  ENABLE_LOCATION : "இருப்பிடத்தை இயக்கு",
+  YOUR_DETECTED_LOCATION_IS : "உங்கள் கண்டறியப்பட்ட இடம்",
+  LANGUAGE_DETECTED : "மொழி கண்டறியப்பட்டது",
+  CHANGE_LANGUAGE_STR : "மொழியை மாற்றவும்",
+  SELECT_LOCATION : "இருப்பிடத்தைத் தேர்ந்தெடுக்கவும்",
+  SELECT_LOCATION_DESC : "நீங்கள் சவாரி செய்ய விரும்பும் இடத்தைத் தேர்ந்தெடுக்கவும்",
+  SELECT_LANGUAGE_DESC : "நீங்கள் படிக்கக்கூடிய மொழியைத் தேர்ந்தெடுக்கவும்",
+  CONFIRM_LANGUAGE : "மொழியை உறுதிப்படுத்தவும்",
+  GET_STARTED : "தொடங்குங்கள்"
 }
 
 export function getStringValue(key) {

@@ -106,21 +106,21 @@ config =
       { animationDuration : 500
       }
   , cityConfig : [
-    {
-      cityName : "Bengaluru",
-      mapImage : "ny_ic_bengalore_map,"
-    },
-    {
-      cityName : "Hyderabad",
-      mapImage : "ny_ic_bengalore_map,"
-    },
-    {
-      cityName : "Mysore",
-      mapImage : "ny_ic_bengalore_map,"
-    },
-    {
-      cityName : "Delhi",
-      mapImage : "ny_ic_bengalore_map,"
-    }
-  ]
+      {
+        cityName : "Bengaluru",
+        mapImage : "ny_ic_bengalore_map,"
+      },
+      {
+        cityName : "Hyderabad",
+        mapImage : "ny_ic_hyderabad_map,"
+      },
+      {
+        cityName : "Mysore",
+        mapImage : "ny_ic_mysuru_map,"
+      },
+      {
+        cityName : "Delhi",
+        mapImage : "ny_ic_delhi_map,"
+      }
+         ]
 }
