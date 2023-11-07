@@ -33,7 +33,7 @@ import Halogen.VDom.DOM.Prop (PropValue)
 import Prelude (class Eq, class Show)
 import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode, defaultDecode, defaultEncode)
 import PrestoDOM (LetterSpacing, BottomSheetState(..))
-import Services.API (AddressComponents, BookingLocationAPIEntity, EstimateAPIEntity(..), QuoteAPIEntity, RideBookingRes, Route)
+import Services.API (AddressComponents, BookingLocationAPIEntity, EstimateAPIEntity(..), QuoteAPIEntity, RideBookingRes, Route, BusTicketRes)
 
 type Contacts = {
   name :: String,
@@ -529,6 +529,7 @@ data Stage = HomeScreen
            | ChatWithDriver
            | FindEstimateAndSearch
            | RetryFindingQuote
+           | BusTicketConfirmed
 
 derive instance genericStage :: Generic Stage _
 instance eqStage :: Eq Stage where eq = genericEq
@@ -602,6 +603,7 @@ type HomeScreenStateData =
   , nearByDrivers :: Maybe Int
   , disability :: Maybe DisabilityT
   , searchLocationModelData :: SearchLocationModelData
+  , ticket :: BusTicketRes
   }
 
 type DisabilityT = 
@@ -623,6 +625,7 @@ type DisabilityData = {
 type HomeScreenStateProps =
   {
     currentStage :: Stage
+  , showRouteDetails :: Boolean
   , showCallPopUp :: Boolean
   , rideRequestFlow :: Boolean
   , isSearchLocation :: SearchLocationModelType
@@ -699,11 +702,16 @@ type HomeScreenStateProps =
   , canSendSuggestion :: Boolean
   , sheetState :: BottomSheetState
   , showDisabilityPopUp :: Boolean
+  , quantity :: Int
   , isChatNotificationDismissed :: Boolean
   , searchLocationModelProps :: SearchLocationModelProps
   , flowWithoutOffers :: Boolean
   , showEducationalCarousel :: Boolean
   , locateOnMapLocation :: LocateOnMapLocation
+  , selectedBusQuote :: Maybe String
+  , isBusQuoteSelected :: Boolean
+  , ticketId :: String
+  , showTicketQR :: Boolean
   }
 
 type SearchLocationModelProps = {

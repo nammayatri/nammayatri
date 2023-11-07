@@ -136,13 +136,13 @@ foreign import renewFile :: EffectFn3 String String (AffSuccess Boolean) Unit
 foreign import getDateAfterNDays :: Int -> String
 foreign import  downloadQR  :: String -> Effect Unit
 
-foreign import _generateQRCode :: EffectFn5 String String Int Int (AffSuccess String) Unit
+-- foreign import _generateQRCode :: EffectFn5 String String Int Int (AffSuccess String) Unit
 
-generateQR:: EffectFn4 String String Int Int Unit
-generateQR  = mkEffectFn4 \qrString viewId size margin ->  launchAff_  $ void $ makeAff $
-  \cb ->
-    (runEffectFn5 _generateQRCode qrString viewId size margin (Right >>> cb))
-    $> nonCanceler
+-- generateQR:: EffectFn4 String String Int Int Unit
+-- generateQR  = mkEffectFn4 \qrString viewId size margin ->  launchAff_  $ void $ makeAff $
+--   \cb ->
+--     (runEffectFn5 _generateQRCode qrString viewId size margin (Right >>> cb))
+--     $> nonCanceler
 
 getPopupObjectFromSharedPrefs :: KeyStore -> Maybe PromotionPopupConfig
 getPopupObjectFromSharedPrefs key = runFn3 getPopupObject Just Nothing (show key) 

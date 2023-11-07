@@ -21,6 +21,7 @@ import Animation.Config (Direction(..), translateFullYAnimWithDurationConfig, tr
 import Common.Types.App (LazyCheck(..), YoutubeData, CarouselData)
 import Components.Banner.Controller as BannerConfig
 import Components.Banner.View as Banner
+import Components.BusTicketInfoCard as BusTicketInfoCard
 import Components.ChatView as ChatView
 import Components.ChooseYourRide as ChooseYourRide
 import Components.DriverInfoCard as DriverInfoCard
@@ -35,6 +36,8 @@ import Components.RideCompletedCard as RideCompletedCard
 import Components.PricingTutorialModel as PricingTutorialModel
 import Components.PrimaryButton as PrimaryButton
 import Components.QuoteListModel.View as QuoteListModel
+import Components.RouteDetails.View as RouteDetails
+import Components.TicketDetails.View as BusTicketDetails
 import Components.RateCard as RateCard
 import Components.RatingCard as RatingCard
 import Components.RequestInfoCard as RequestInfoCard
@@ -84,8 +87,8 @@ import Screens.HomeScreen.ScreenData as HomeScreenData
 import Screens.HomeScreen.Transformer (transformSavedLocations)
 import Screens.RideBookingFlow.HomeScreen.Config
 import Screens.Types (HomeScreenState, LocationListItemState, PopupType(..), SearchLocationModelType(..), Stage(..), CallType(..), ZoneType(..), SearchResultType(..))
-import Services.API (GetDriverLocationResp(..), GetQuotesRes(..), GetRouteResp(..), LatLong(..), RideAPIEntity(..), RideBookingRes(..), Route(..), SavedLocationsListRes(..), SearchReqLocationAPIEntity(..), SelectListRes(..), Snapped(..), GetPlaceNameResp(..), PlaceName(..))
-import Services.Backend (getDriverLocation, getQuotes, getRoute, makeGetRouteReq, rideBooking, selectList, driverTracking, rideTracking, walkCoordinates, walkCoordinate, getSavedLocationList)
+import Services.API (GetDriverLocationResp(..), GetQuotesRes(..), GetRouteResp(..), LatLong(..), RideAPIEntity(..), RideBookingRes(..), Route(..), SavedLocationsListRes(..), SearchReqLocationAPIEntity(..), SelectListRes(..), Snapped(..), GetPlaceNameResp(..), PlaceName(..), BusTicketRes(..))
+import Services.Backend (getDriverLocation, getQuotes, getRoute, makeGetRouteReq, rideBooking, selectList, driverTracking, rideTracking, walkCoordinates, walkCoordinate, getSavedLocationList, busTicket)
 import Services.Backend as Remote
 import Storage (KeyStore(..), getValueToLocalStore, isLocalStageOn, setValueToLocalStore, updateLocalStage)
 import Styles.Colors as Color
@@ -142,7 +145,11 @@ screen initialState =
                   _ <- pure $ setValueToLocalStore TRACKING_ID (getNewTrackingId unit)
                   let pollingCount = ceil ((toNumber initialState.props.searchExpire)/((fromMaybe 0.0 (NUM.fromString (getValueToLocalStore TEST_POLLING_INTERVAL))) / 1000.0))
                   void $ launchAff $ flowRunner defaultGlobalState $ getQuotesPolling (getValueToLocalStore TRACKING_ID) GetQuotesList Restart pollingCount (fromMaybe 0.0 (NUM.fromString (getValueToLocalStore TEST_POLLING_INTERVAL))) push initialState
-              ConfirmingRide -> void $ launchAff $ flowRunner defaultGlobalState $ confirmRide GetRideConfirmation 5 3000.0 push initialState
+              ConfirmingRide -> do
+                if not initialState.props.isBusQuoteSelected then do
+                  void $ launchAff $ flowRunner defaultGlobalState $ confirmRide GetRideConfirmation 5 3000.0 push initialState
+                else do
+                  void $ launchAff $ flowRunner defaultGlobalState $ confirmBus GetBusConfirmation 5 3000.0 push initialState
               HomeScreen -> do
                 _ <- pure $ setValueToLocalStore SESSION_ID (generateSessionId unit)
                 _ <- pure $ removeAllPolylines ""
@@ -368,6 +375,8 @@ view push state =
             , if state.props.showMultipleRideInfo then (requestInfoCardView push state) else emptyTextView state
             , if state.props.showLiveDashboard then showLiveStatsDashboard push state else emptyTextView state
             , if state.props.showCallPopUp then (driverCallPopUp push state) else emptyTextView state
+            , if state.props.showTicketQR then (busTicketDetailsView push state) else emptyTextView state
+            , if state.props.showRouteDetails then (routeDetailsView push state) else emptyTextView state
             , if state.props.cancelSearchCallDriver then cancelSearchPopUp push state else emptyTextView state
             , if state.props.currentStage == RideCompleted || state.props.currentStage == RideRating then rideCompletedCardView push state else emptyTextView state
             , if state.props.currentStage == RideRating then rideRatingCardView state push else emptyTextView state
@@ -503,6 +512,21 @@ driverCallPopUp push state =
         ]
     ]
 
+routeDetailsView ::  forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+routeDetailsView push state = 
+  linearLayout
+  [ width MATCH_PARENT
+  , height MATCH_PARENT
+  , background Color.grey700
+  ][ RouteDetails.view (push <<< RouteDetailsViewAction) (routeDetailsViewConfig state)]
+
+busTicketDetailsView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+busTicketDetailsView push state = 
+  linearLayout
+  [ width MATCH_PARENT
+  , height MATCH_PARENT
+  , background Color.grey700  
+  ] [ BusTicketDetails.view (push <<< BusTicketDetailsViewAction) (busTicketDetailsViewConfig state)]
 
 driverCallPopUpData :: HomeScreenState -> Array { text :: String, imageWithFallback :: String, type :: CallType, data :: String }
 driverCallPopUpData state =
@@ -1739,7 +1763,7 @@ rideTrackingView push state =
     , accessibility if (state.data.settingSideBar.opened /= SettingSideBar.CLOSED) || state.props.currentStage == ChatWithDriver || state.props.cancelSearchCallDriver || state.props.showCallPopUp || state.props.isCancelRide || state.props.emergencyHelpModal || state.props.isLocationTracking || state.props.callSupportPopUp || (state.props.showShareAppPopUp && ((getValueFromConfig "isShareAppEnabled") == "true")) then DISABLE_DESCENDANT else DISABLE
     , alignParentBottom "true,-1" -- Check it in Android.
     , onBackPressed push (const $ BackPressed)
-    , visibility if (any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithDriver]) then VISIBLE else GONE
+    , visibility if (any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithDriver, BusTicketConfirmed]) then VISIBLE else GONE
     ]
     [ -- TODO Add Animations
       -- PrestoAnim.animationSet
@@ -1751,6 +1775,7 @@ rideTrackingView push state =
         , width MATCH_PARENT
         , background Color.transparent
         -- , gravity BOTTOM -- Check it in Android.
+        , visibility if (any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithDriver]) then VISIBLE else GONE
         ]
         [ -- TODO Add Animations
           -- PrestoAnim.animationSet
@@ -1783,6 +1808,38 @@ rideTrackingView push state =
                         emptyTextView state
                     ]
                 ]
+            ]
+        ]
+      , linearLayout
+        [ height WRAP_CONTENT
+        , width MATCH_PARENT
+        , background Color.transparent
+        , visibility if state.props.currentStage == BusTicketConfirmed then VISIBLE else GONE
+        ]
+        [ coordinatorLayout
+            [ height WRAP_CONTENT
+            , width MATCH_PARENT
+            ]
+            [ bottomSheetLayout
+              [ height WRAP_CONTENT
+              , width MATCH_PARENT
+              , background Color.transparent
+              , sheetState state.props.sheetState
+              , accessibility DISABLE
+              , peakHeight $ getHeightFromPercent 40
+              , visibility VISIBLE
+              , halfExpandedRatio 0.75
+              ]
+              [ linearLayout
+                [ height WRAP_CONTENT
+                , width MATCH_PARENT
+                ]
+                [ if state.props.currentStage == BusTicketConfirmed then
+                    BusTicketInfoCard.view (push <<< BusTicketInfoCardActionController) (busTicketInfoCardViewState state)
+                  else
+                    emptyTextView state
+                ]
+              ]
             ]
         ]
     ]
@@ -2064,6 +2121,28 @@ confirmRide action count duration push state = do
         _ <- pure $ printLog "api error " err
         void $ delay $ Milliseconds duration
         confirmRide action (count - 1) duration push state
+  else
+    pure unit
+
+
+confirmBus :: forall action. (BusTicketRes -> action) -> Int -> Number -> (action -> Effect Unit) -> HomeScreenState -> Flow GlobalState Unit
+confirmBus action count duration push state = do
+  if (count /= 0) && (isLocalStageOn ConfirmingRide) && (state.props.ticketId /= "") then do
+    resp <- busTicket (state.props.ticketId)
+    case resp of
+      Right response -> do
+        let (BusTicketRes resp) = response
+        let status = "CONFIRMED"
+        if status == resp.status then do
+          doAff do liftEffect $ push $ action response
+          pure unit
+        else do
+          void $ delay $ Milliseconds duration
+          confirmBus action (count - 1) duration push state
+      Left err -> do
+        _ <- pure $ printLog "api error " err
+        void $ delay $ Milliseconds duration
+        confirmBus action (count - 1) duration push state
   else
     pure unit
 

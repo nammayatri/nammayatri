@@ -23,7 +23,10 @@ import Components.ChatView.Controller as ChatView
 import Components.ChooseVehicle as ChooseVehicleController
 import Components.ChooseYourRide as ChooseYourRide
 import Components.ChooseYourRide.Controller as ChooseYourRideController
+import Components.RouteDetails.Controller as RouteDetailsController
+import Components.TicketDetails.Controller as BusTicketDetailsController
 import Components.DriverInfoCard.Controller as DriverInfoCardController
+import Components.BusTicketInfoCard.Controller as BusTicketInfoCardController
 import Components.EmergencyHelp as EmergencyHelpController
 import Components.ErrorModal.Controller as ErrorModalController
 import Components.FavouriteLocationModel as FavouriteLocationModelController
@@ -91,7 +94,7 @@ import Screens.HomeScreen.Transformer (dummyRideAPIEntity, getDriverInfo, getEst
 import Screens.RideBookingFlow.HomeScreen.Config (setTipViewData)
 import Screens.SuccessScreen.Handler as UI
 import Screens.Types (HomeScreenState, Location, SearchResultType(..), LocationListItemState, PopupType(..), SearchLocationModelType(..), Stage(..), CardType(..), RatingCard, CurrentLocationDetailsWithDistance(..), CurrentLocationDetails, LocationItemType(..), CallType(..), ZoneType(..), SpecialTags, TipViewStage(..))
-import Services.API (EstimateAPIEntity(..), FareRange, GetDriverLocationResp, GetQuotesRes(..), GetRouteResp, LatLong(..), OfferRes, PlaceName(..), QuoteAPIEntity(..), RideBookingRes(..), SelectListRes(..), SelectedQuotes(..), RideBookingAPIDetails(..), GetPlaceNameResp(..))
+import Services.API (EstimateAPIEntity(..), FareRange, GetDriverLocationResp, GetQuotesRes(..), GetRouteResp, LatLong(..), OfferRes, PlaceName(..), QuoteAPIEntity(..), RideBookingRes(..), SelectListRes(..), SelectedQuotes(..), RideBookingAPIDetails(..), GetPlaceNameResp(..), BusTicketRes(..))
 import Services.Backend as Remote
 import Services.Config (getDriverNumber, getSupportNumber)
 import Storage (KeyStore(..), isLocalStageOn, updateLocalStage, getValueToLocalStore, setValueToLocalStore, getValueToLocalNativeStore, setValueToLocalNativeStore)
@@ -109,6 +112,8 @@ import Data.Function (const)
 import Data.List ((:))
 import Common.Resources.Constants (zoomLevel, pickupZoomLevel)
 import Screens.RideBookingFlow.HomeScreen.Config
+import Effect.Uncurried(runEffectFn4)
+import Engineering.Helpers.Utils (generateQR)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -540,6 +545,7 @@ data Action = NoAction
             | SearchLocationModelActionController SearchLocationModelController.Action
             | QuoteListModelActionController QuoteListModelController.Action
             | DriverInfoCardActionController DriverInfoCardController.Action
+            | BusTicketInfoCardActionController BusTicketInfoCardController.Action
             | RatingCardAC RatingCard.Action
             | UpdateLocation String String String
             | CancelRidePopUpAction CancelRidePopUp.Action
@@ -622,11 +628,14 @@ data Action = NoAction
             | DisabilityBannerAC Banner.Action
             | DisabilityPopUpAC PopUpModal.Action
             | RideCompletedAC RideCompletedCard.Action
+            | RouteDetailsViewAction RouteDetailsController.Action
             | LoadMessages
             | KeyboardCallback String
             | NotifyDriverStatusCountDown Int String String String
             | UpdateProfileButtonAC PrimaryButtonController.Action 
             | SkipAccessibilityUpdateAC PrimaryButtonController.Action
+            | GetBusConfirmation BusTicketRes
+            | BusTicketDetailsViewAction BusTicketDetailsController.Action
 
 
 eval :: Action -> HomeScreenState -> Eval Action ScreenOutput HomeScreenState
@@ -1759,6 +1768,8 @@ eval (GetRideConfirmation resp) state = do
     false -> normalRideFlow resp state
     true -> specialZoneRideFlow resp state
 
+eval (GetBusConfirmation resp) state = normalBusFlow resp state
+
 eval (NotificationListener notificationType) state = do
   _ <- pure $ printLog "storeCallBackCustomer notificationType" notificationType
   case notificationType of
@@ -1897,11 +1908,16 @@ eval (ChooseYourRideAction (ChooseYourRideController.ChooseVehicleAC ChooseVehic
   continue state{ props{ defaultPickUpPoint = "" } }
 
 eval (ChooseYourRideAction (ChooseYourRideController.ChooseVehicleAC (ChooseVehicleController.OnSelect config))) state = do
-  let updatedQuotes = map (\item -> item{activeIndex = config.index}) state.data.specialZoneQuoteList
-      newState = state{data{specialZoneQuoteList = updatedQuotes}}
+  let newQuantity = if config.quantity == 0 then 1 else state.props.quantity
+      isBusQuoteSelected = config.vehicleVariant == "BUS"
+      selectedBusQuote = if isBusQuoteSelected then Just config.id else Nothing
+      updatedQuotes = map (\item -> item{activeIndex = config.index, quantity = newQuantity, isSelected = true}) state.data.specialZoneQuoteList
+      newState = state{data{specialZoneQuoteList = updatedQuotes}, props{quantity = newQuantity, selectedBusQuote = selectedBusQuote, isBusQuoteSelected = isBusQuoteSelected}}
   if state.data.currentSearchResultType == QUOTES then do
               _ <- pure $ setValueToLocalNativeStore SELECTED_VARIANT (config.vehicleVariant)
-              continue newState{data{specialZoneSelectedQuote = Just config.id ,specialZoneSelectedVariant = Just config.vehicleVariant }}
+              if not isBusQuoteSelected 
+                then continue newState{data{specialZoneSelectedQuote = Just config.id ,specialZoneSelectedVariant = Just config.vehicleVariant }}
+                else continue newState{data{specialZoneSelectedVariant = Just config.vehicleVariant}}
               else continue newState{props{estimateId = config.id }, data {selectedEstimatesObject = config}}
 
 eval (ChooseYourRideAction (ChooseYourRideController.ChooseVehicleAC (ChooseVehicleController.ShowRateCard vehicleVariant))) state =
@@ -1910,6 +1926,42 @@ eval (ChooseYourRideAction (ChooseYourRideController.ChooseVehicleAC (ChooseVehi
                                     , vehicleVariant = vehicleVariant
                                     , currentRateCardType = DefaultRateCard
                                     }}}
+
+eval (ChooseYourRideAction (ChooseYourRideController.ChooseVehicleAC (ChooseVehicleController.ChangeTicketQuantity ticketChange))) state = do
+  let initialQuantity = state.props.quantity
+      updatedQuantity = case initialQuantity of 
+        10 -> if ticketChange then initialQuantity else initialQuantity - 1
+        1 -> if ticketChange then initialQuantity + 1 else initialQuantity
+        _ -> if ticketChange then initialQuantity + 1 else initialQuantity - 1
+
+  let updatedQuotes = map (\item -> item{quantity = updatedQuantity}) state.data.specialZoneQuoteList
+  continue state{data{specialZoneQuoteList = updatedQuotes}, props{quantity = updatedQuantity}}
+
+eval (ChooseYourRideAction (ChooseYourRideController.ChooseVehicleAC ChooseVehicleController.ShowRouteInfo)) state = 
+  continue state{props{showRouteDetails = true}}
+
+eval(RouteDetailsViewAction (RouteDetailsController.CloseRouteDetailsView)) state = 
+  continue state{props{showRouteDetails = false}}
+
+eval(RouteDetailsViewAction (RouteDetailsController.NoAction)) state = continue state
+
+eval(BusTicketInfoCardActionController (BusTicketInfoCardController.ShowRouteInfo)) state = 
+  continue state{props{showRouteDetails = true}}
+
+eval(BusTicketInfoCardActionController (BusTicketInfoCardController.ShowTicketQR)) state = 
+  continue state{props{showTicketQR = true}}
+
+eval (BusTicketDetailsViewAction (BusTicketDetailsController.CloseTicketDetails)) state =
+  continue state{props{showTicketQR = false}}
+
+eval (BusTicketDetailsViewAction (BusTicketDetailsController.ShowRouteDetails)) state =
+  continue state{props{showRouteDetails = true}}
+
+eval (BusTicketDetailsViewAction (BusTicketDetailsController.TicketQrRendered qrCode id)) state = do
+  continueWithCmd state [ do
+                    runEffectFn4 generateQR qrCode id 218 0
+                    pure $ NoAction
+                ]
 
 eval (ChooseYourRideAction (ChooseYourRideController.PrimaryButtonActionController (PrimaryButtonController.OnClick))) state = do
   _ <- pure $ setValueToLocalStore FARE_ESTIMATE_DATA state.data.selectedEstimatesObject.price
@@ -2344,6 +2396,22 @@ normalRideFlow  (RideBookingRes response) state = do
           { driverInfoCardState = getDriverInfo state.data.specialZoneSelectedVariant (RideBookingRes response) (state.data.currentSearchResultType == QUOTES)
           }}
   exit $ RideConfirmed newState { props { isInApp = true } }
+
+normalBusFlow :: BusTicketRes -> HomeScreenState -> Eval Action ScreenOutput HomeScreenState
+normalBusFlow (BusTicketRes response) state = do
+  let rideStatus = response.status
+      newState = state{ 
+                        data 
+                        { ticket = response }
+                      , props 
+                        { isSearchLocation = NoView
+                        , currentStage = 
+                            case rideStatus of
+                              "CONFIRMED" -> RideAccepted
+                              _ -> HomeScreen
+                        }
+                      }
+  exit $ RideConfirmed state { props { isInApp = true } }
 
 specialZoneRideFlow :: RideBookingRes -> HomeScreenState -> Eval Action ScreenOutput HomeScreenState
 specialZoneRideFlow  (RideBookingRes response) state = do

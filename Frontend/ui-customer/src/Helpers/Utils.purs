@@ -46,11 +46,13 @@ import Data.String.CodeUnits (fromCharArray, toCharArray)
 import Data.Traversable (traverse)
 import Debug (spy)
 import Effect (Effect)
-import Effect.Aff (error, killFiber, launchAff, launchAff_)
+import Effect.Aff (error, killFiber, makeAff, launchAff, launchAff_, nonCanceler)
 import Effect.Aff.Compat (EffectFn1, EffectFnAff, fromEffectFnAff, runEffectFn1, runEffectFn2, runEffectFn3, EffectFn2)
 import Effect.Class (liftEffect)
 import Effect.Console (logShow)
 import Effect.Unsafe (unsafePerformEffect)
+import Effect.Uncurried (EffectFn1(..),EffectFn5(..), mkEffectFn1, mkEffectFn4, runEffectFn5)
+import Effect.Uncurried(EffectFn1, EffectFn4, EffectFn3, runEffectFn3)
 import Engineering.Helpers.Commons (getWindowVariable, isPreviousVersion, liftFlow, os)
 import Engineering.Helpers.Commons (parseFloat, setText) as ReExport
 import Engineering.Helpers.Utils (class Serializable, serialize)
@@ -63,7 +65,7 @@ import Juspay.OTP.Reader (initiateSMSRetriever)
 import Juspay.OTP.Reader as Readers
 import Juspay.OTP.Reader.Flow as Reader
 import MerchantConfig.Utils (Merchant(..), getMerchant, getValueFromConfig)
-import Prelude (class Eq, class Ord, class Show, Unit, bind, compare, comparing, discard, identity, map, not, pure, show, unit, void, ($), (*), (+), (-), (/), (/=), (<), (<#>), (<*>), (<<<), (<=), (<>), (=<<), (==), (>), (>>>), (||), (&&), (<$>), (>=))
+import Prelude (class Eq, class Ord, class Show, Unit, bind, compare, comparing, discard, identity, map, not, pure, show, unit, void, ($), (*), (+), (-), (/), (/=), (<), (<#>), (<*>), (<<<), (<=), (<>), (=<<), (==), (>), (>>>), (||), (&&), (<$>), (>=), ($>))
 import Presto.Core.Flow (Flow, doAff)
 import Presto.Core.Types.Language.Flow (FlowWrapper(..), getState, modifyState)
 import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode)
@@ -458,6 +460,7 @@ getScreenFromStage stage = case stage of
   DistanceOutsideLimits -> "finding_driver_loader"
   ShortDistance -> "finding_driver_loader"
   TryAgain -> "finding_rides_screen"
+  BusTicketConfirmed -> "trip_accepted_screen"
 
 getGlobalPayload :: Unit -> Effect (Maybe GlobalPayload)
 getGlobalPayload _ = do
@@ -532,4 +535,12 @@ getVariantRideType variant =
                     "TAXI" -> getString NON_AC_TAXI
                     "SUV"  -> getString AC_SUV
                     _      -> getString AC_CAB
-    _          -> getString AC_CAB
+    _          -> case variant of
+                    "AUTO_RICKSHAW" -> getString AUTO_RICKSHAW
+                    "TAXI"          -> getString NON_AC_TAXI
+                    "TAXI_PLUS"     -> getString AC_TAXI
+                    "SEDAN"         -> getString SEDAN
+                    "SUV"           -> getString AC_SUV
+                    "HATCHBACK"     -> getString HATCHBACK
+                    "BUS"           -> getString BUS
+                    _               -> getString NON_AC_TAXI

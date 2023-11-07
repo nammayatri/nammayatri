@@ -75,5 +75,6 @@ updateRideDetails state = do
     , rideRequestFlow = true
     , isSpecialZone = state.data.selectedItem.isSpecialZone
     , isBanner = globalState.homeScreen.props.isBanner
+    , isBusQuoteSelected = false
     }
     })

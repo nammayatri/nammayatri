@@ -18,6 +18,8 @@ type Config
     , quoteList :: Array ChooseVehicleController.Config
     , showTollExtraCharges :: Boolean
     , nearByDrivers :: Maybe Int
+    , isBusQuoteSelected :: Boolean
+    , quantity :: Int
     }
 
 config :: Config
@@ -28,4 +30,6 @@ config =
   , quoteList: []
   , showTollExtraCharges : DC.config.searchLocationConfig.showAdditionalChargesText
   , nearByDrivers : Nothing
+  , isBusQuoteSelected : true
+  , quantity : 1
   }

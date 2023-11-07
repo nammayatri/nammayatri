@@ -345,6 +345,13 @@ rideConfirm quoteId = do
     where
         unwrapResponse (x) = x
 
+------------------------------------------------------------------------ BusConfirm Function -----------------------------------------------------------------------------------------
+busConfirm quoteId quantity = do
+        headers <- getHeaders "" false
+        withAPIResult (EP.confirmBus quoteId quantity) unwrapResponse $ callAPI headers (BusConfirmRequest quoteId quantity)
+    where
+        unwrapResponse (x) = x
+
 ------------------------------------------------------------------------ SelectEstimateBT Function ------------------------------------------------------------------------------------
 
 selectEstimateBT :: DEstimateSelect -> String -> FlowBT String SelectEstimateRes
@@ -379,6 +386,13 @@ selectList estimateId = do
 rideBooking bookingId = do
         headers <- getHeaders "" true
         withAPIResult (EP.ridebooking bookingId) unwrapResponse $ callAPI headers (RideBookingReq bookingId)
+    where
+        unwrapResponse (x) = x
+
+------------------------------------------------------------------------ BusBooking Function ------------------------------------------------------------------------------------------
+busTicket ticketId = do
+        headers <- getHeaders "" true
+        withAPIResult (EP.busTicket ticketId) unwrapResponse $ callAPI headers (BusTicketReq ticketId)
     where
         unwrapResponse (x) = x
 

@@ -21,7 +21,7 @@ import Components.SettingSideBar.Controller (SettingSideBarState, Status(..))
 import Components.ChooseVehicle.Controller (SearchType(..)) as CV
 import Data.Maybe (Maybe(..))
 import Screens.Types (Contact, DriverInfoCard, HomeScreenState, LocationListItemState, PopupType(..), RatingCard(..), SearchLocationModelType(..), Stage(..), Address, EmergencyHelpModelState,Location, ZoneType(..), SpecialTags, TipViewStage(..), SearchResultType(..))
-import Services.API (DriverOfferAPIEntity(..), QuoteAPIDetails(..), QuoteAPIEntity(..), PlaceName(..), LatLong(..), SpecialLocation(..), QuoteAPIContents(..), RideBookingRes(..), RideBookingAPIDetails(..), RideBookingDetails(..), FareRange(..), FareBreakupAPIEntity(..))
+import Services.API (DriverOfferAPIEntity(..), QuoteAPIDetails(..), QuoteAPIEntity(..), PlaceName(..), LatLong(..), SpecialLocation(..), QuoteAPIContents(..), RideBookingRes(..), RideBookingAPIDetails(..), RideBookingDetails(..), FareRange(..), FareBreakupAPIEntity(..), BusTicketRes(..))
 import Prelude (($) ,negate)
 import Data.Array (head)
 import Prelude(negate)
@@ -107,6 +107,7 @@ initData = {
       , showInfo : true
       , searchResultType : CV.ESTIMATES
       , isBookingOption : false
+      , quantity : 0
       }
     , lastMessage : { message : "", sentBy : "", timeStamp : "", type : "", delay : 0 }
     , cancelRideConfirmationData : { delayInSeconds : 5, timerID : "", enableTimer : true, continueEnabled : false }
@@ -128,11 +129,14 @@ initData = {
     , nearByDrivers : Nothing
     , disability : Nothing
     , searchLocationModelData : dummySearchLocationModelData
+    , ticket : dummyBusTicket
     },
     props: {
       rideRequestFlow : false
     , isSearchLocation : NoView
-    , currentStage : HomeScreen
+    , currentStage : BusTicketConfirmed -- Change to BusTicketConfirmed to test BusInfo and Ticket Details view since BPP is not available yet
+    , showRouteDetails : false
+    , showTicketQR : false
     , showCallPopUp : false
     , sourceLat : 0.0
     , isSource : Nothing
@@ -223,6 +227,7 @@ initData = {
     , canSendSuggestion : true
     , sheetState : COLLAPSED
     , showDisabilityPopUp : false
+    , quantity : 0
     , isChatNotificationDismissed : false
     , searchLocationModelProps : dummySearchLocationModelProps
     , flowWithoutOffers : true
@@ -237,6 +242,9 @@ initData = {
       , destinationLng : 0.0
       , destinationAddress : dummyAddress
       }
+    , selectedBusQuote : Nothing
+    , isBusQuoteSelected : false
+    , ticketId : ""
     }
 }
 
@@ -457,4 +465,19 @@ dummyFareBreakUp :: FareBreakupAPIEntity
 dummyFareBreakUp = FareBreakupAPIEntity{
   amount : 0,
   description : "fare"
+}
+
+dummyBusTicket :: BusTicketRes
+dummyBusTicket = BusTicketRes{
+  id : "123456",
+  status : "CONFIRMED",
+  quoteId : Nothing,
+  paymentUrl : Nothing,
+  quantity : 2,
+  pricePerAdult : 20.0,
+  totalPrice : 40.0,
+  qrData : "nammayatri.in",
+  registrationNumber : "MH 14 YF 4921",
+  busRouteNo : "Dummy BUS - 342F",
+  busModel : "DummyBUS - Scania Higher a30"
 }

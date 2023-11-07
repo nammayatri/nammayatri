@@ -881,6 +881,32 @@ instance showConfirmRequest :: Show ConfirmRequest where show = genericShow
 instance decodeConfirmRequest :: Decode ConfirmRequest where decode = defaultDecode
 instance encodeConfirmRequest  :: Encode ConfirmRequest where encode = defaultEncode
 
+----- For rideSearch/quotes/{quoteId}/confirmbus?quantity=()
+
+data BusConfirmRequest = BusConfirmRequest String Int
+
+newtype BusConfirmRes = BusConfirmRes {
+  ticketId :: String
+}
+
+instance makeBusConfirmRequest :: RestEndpoint BusConfirmRequest BusConfirmRes where
+ makeRequest reqBody@(BusConfirmRequest quoteId quantity) headers = defaultMakeRequest POST (EP.confirmBus quoteId quantity) headers reqBody Nothing
+ decodeResponse = decodeJSON
+ encodeRequest req = standardEncode req
+
+derive instance genericBusConfirmRes :: Generic BusConfirmRes _
+derive instance newtypeBusConfirmRes :: Newtype BusConfirmRes _
+instance standardEncodeBusConfirmRes :: StandardEncode BusConfirmRes where standardEncode (BusConfirmRes body) = standardEncode body
+instance showBusConfirmRes :: Show BusConfirmRes where show = genericShow
+instance decodeBusConfirmRes :: Decode BusConfirmRes where decode = defaultDecode
+instance encodeBusConfirmRes  :: Encode BusConfirmRes where encode = defaultEncode
+
+derive instance genericBusConfirmRequest :: Generic BusConfirmRequest _
+instance standardEncodeBusConfirmRequest :: StandardEncode BusConfirmRequest where standardEncode (BusConfirmRequest quoteId quantity) = standardEncode quoteId
+instance showBusConfirmRequest :: Show BusConfirmRequest where show = genericShow
+instance decodeBusConfirmRequest :: Decode BusConfirmRequest where decode = defaultDecode
+instance encodeBusConfirmRequest  :: Encode BusConfirmRequest where encode = defaultEncode
+
 ------- rideBooking/{bookingId}
 
 data RideBookingReq = RideBookingReq String
@@ -1014,6 +1040,41 @@ instance standardEncodeBookingLocationAPIEntity :: StandardEncode BookingLocatio
 instance showBookingLocationAPIEntity :: Show BookingLocationAPIEntity where show = genericShow
 instance decodeBookingLocationAPIEntity :: Decode BookingLocationAPIEntity where decode = defaultDecode
 instance encodeBookingLocationAPIEntity  :: Encode BookingLocationAPIEntity where encode = defaultEncode
+
+------- busTicket/{ticketId}
+data BusTicketReq = BusTicketReq String
+
+newtype BusTicketRes = BusTicketRes {
+  id :: String,
+  status :: String,
+  quoteId :: Maybe String,
+  registrationNumber :: String,
+  paymentUrl :: Maybe String,
+  quantity :: Int,
+  pricePerAdult :: Number,
+  totalPrice :: Number,
+  busRouteNo :: String,
+  busModel :: String,
+  qrData :: String
+}
+
+instance makeBusTicketReq :: RestEndpoint BusTicketReq BusTicketRes where
+ makeRequest reqBody@(BusTicketReq ticketId) headers = defaultMakeRequest POST (EP.busTicket ticketId) headers reqBody Nothing
+ decodeResponse = decodeJSON
+ encodeRequest req = standardEncode req
+
+derive instance genericBusTicketReq :: Generic BusTicketReq _
+instance standardEncodeBusTicketReq :: StandardEncode BusTicketReq where standardEncode (BusTicketReq ticketId) = standardEncode ticketId
+instance showBusTicketReq :: Show BusTicketReq where show = genericShow
+instance decodeBusTicketReq :: Decode BusTicketReq where decode = defaultDecode
+instance encodeBusTicketReq  :: Encode BusTicketReq where encode = defaultEncode
+
+derive instance genericBusTicketRes :: Generic BusTicketRes _
+derive instance newtypeBusTicketRes :: Newtype BusTicketRes _
+instance standardEncodeBusTicketRes :: StandardEncode BusTicketRes where standardEncode (BusTicketRes body) = standardEncode body
+instance showBusTicketRes :: Show BusTicketRes where show = genericShow
+instance decodeBusTicketRes :: Decode BusTicketRes where decode = defaultDecode
+instance encodeBusTicketRes  :: Encode BusTicketRes where encode = defaultEncode
 
 -------------------------------------------------- Select Estimate Id  API Types -----------------------------------------------------------------
 
