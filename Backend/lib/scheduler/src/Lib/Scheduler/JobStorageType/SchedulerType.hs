@@ -135,6 +135,7 @@ getReadyTask ::
   ( FromTType'' BeamST.SchedulerJob (AnyJob t),
     JobExecutor r m,
     JobProcessor t,
+    HasField "consumerId" r Text,
     HasField "version" r DeploymentVersion,
     MonadThrow m,
     Log m,

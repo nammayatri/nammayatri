@@ -87,6 +87,7 @@ data SchedulerEnv = SchedulerEnv
     waitBeforeRetry :: Int,
     tasksPerIteration :: Int,
     graceTerminationPeriod :: Seconds,
+    consumerId :: Text,
     port :: Int,
     isShuttingDown :: Shutdown,
     version :: Metrics.DeploymentVersion,

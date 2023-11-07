@@ -24,6 +24,7 @@ import Kernel.Storage.Hedis (connectHedis, connectHedisCluster)
 import qualified Kernel.Tools.Metrics.CoreMetrics as Metrics
 import qualified Kernel.Tools.Metrics.Init as Metrics
 import Kernel.Types.Common (Seconds (..), Tables)
+import qualified Kernel.Types.MonadGuid as G
 import Kernel.Utils.App
 import Kernel.Utils.Common (threadDelaySec)
 import Kernel.Utils.IOLogging (prepareLoggerEnv)
@@ -62,6 +63,7 @@ runSchedulerService s@SchedulerConfig {..} jobInfoMap tables handle_ = do
       else connectHedisCluster hedisClusterCfg (\k -> hedisPrefix <> ":" <> k)
   metrics <- setupSchedulerMetrics
   isShuttingDown <- mkShutdown
+  consumerId <- G.generateGUIDTextIO
   let schedulerEnv = SchedulerEnv {..}
   when (tasksPerIteration <= 0) $ do
     hPutStrLn stderr ("tasksPerIteration should be greater than 0" :: Text)

@@ -17,6 +17,7 @@
 
 module Lib.Scheduler.JobStorageType.Redis.Queries where
 
+import Control.Concurrent (myThreadId)
 import qualified Data.Aeson as A
 import qualified Data.Aeson as DA
 import qualified Data.ByteString as BS
@@ -24,6 +25,7 @@ import qualified Data.ByteString.Lazy as BL
 import Data.HashMap.Strict as HM hiding (map)
 import qualified Data.Text as T
 import Data.Text.Encoding as DT
+import qualified EulerHS.Language as L
 import Kernel.Prelude
 import Kernel.Storage.Hedis
 import qualified Kernel.Storage.Hedis.Queries as Hedis
@@ -97,6 +99,7 @@ getReadyTask ::
   ( JobExecutor r m,
     JobProcessor t,
     HasField "version" r DeploymentVersion,
+    HasField "consumerId" r Text,
     HasField "block" r Integer,
     HasField "readCount" r Integer
   ) =>
@@ -104,9 +107,11 @@ getReadyTask ::
 getReadyTask = do
   key <- asks (.streamName)
   groupName <- asks (.groupName)
+  consumerId <- asks (.consumerId)
   let lastEntryId :: Text = "$"
   version <- asks (.version)
-  let consumerName = version.getDeploymentVersion
+  threadId <- L.runIO myThreadId
+  let consumerName = version.getDeploymentVersion <> consumerId <> show threadId
   let nextId :: Text = ">"
   block <- asks (.block)
   readCount <- asks (.readCount)
