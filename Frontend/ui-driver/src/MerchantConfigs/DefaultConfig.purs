@@ -106,20 +106,28 @@ config =
       }
   , cityConfig : [
       {
-        cityName : "Bengaluru",
-        mapImage : "ny_ic_bengalore_map,"
+        cityName : "Bangalore",
+        mapImage : "ny_ic_bengalore_map,",
+        cityCode : "std:080",
+        showSubscriptions : true
       },
       {
         cityName : "Hyderabad",
-        mapImage : "ny_ic_hyderabad_map,"
+        mapImage : "ny_ic_hyderabad_map,",
+        cityCode : "std:040",
+        showSubscriptions : false
       },
       {
         cityName : "Mysore",
-        mapImage : "ny_ic_mysuru_map,"
+        mapImage : "ny_ic_mysuru_map,",
+        cityCode : "*",
+        showSubscriptions : false
       },
       {
         cityName : "Delhi",
-        mapImage : "ny_ic_delhi_map,"
+        mapImage : "ny_ic_delhi_map,",
+        cityCode : "std:011",
+        showSubscriptions : false
       }
-         ]
+    ]
 }

@@ -64,7 +64,8 @@ instance decodeAPIResponse :: (Decode a, Decode b) => Decode (APIResponse a b) w
 newtype TriggerOTPReq = TriggerOTPReq {
   mobileNumber :: String,
   mobileCountryCode :: String,
-  merchantId :: String
+  merchantId :: String,
+  merchantOperatingCity :: Maybe String
 }
 
 newtype TriggerOTPResp = TriggerOTPResp {
@@ -419,9 +420,10 @@ newtype GetDriverInfoResp = GetDriverInfoResp
     , freeTrialDaysLeft     :: Maybe Int
     , payerVpa              :: Maybe String
     , currentDues           :: Maybe Number
-    , manualDues           :: Maybe Number
+    , manualDues            :: Maybe Number
     , driverGoHomeInfo      :: DriverGoHomeInfo
     , isGoHomeEnabled       :: Boolean
+    , operatingCity         :: Maybe String
     }
 
 

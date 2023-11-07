@@ -310,7 +310,7 @@ export const getKeyInSharedPrefKeys = function (key) {
   return JBridge.getFromSharedPrefs(key);
 };
 
-export const checkAndAskNotificationPermission = function (unit) {
+export const checkAndAskNotificationPermission = function (shouldAlwaysAsk) {
   const lastAppOpened = getKeyInSharedPrefKeys("LAST_APP_OPENED");
   const appOpenCount = getKeyInSharedPrefKeys("APP_OPEN_COUNT");
   let check = true;
@@ -330,8 +330,9 @@ export const checkAndAskNotificationPermission = function (unit) {
     JBridge.setKeysInSharedPrefs("LAST_APP_OPENED", new Date().toLocaleDateString());
     JBridge.setKeysInSharedPrefs("APP_OPEN_COUNT", "0");
   }
-
-  if (check && window.__OS == "ANDROID" && window.JBridge.checkAndAskNotificationPermission) {
+  
+  if ((check || shouldAlwaysAsk) && window.__OS == "ANDROID" && window.JBridge.checkAndAskNotificationPermission) {
+    console.log("checkAndAskNotificationPermission");
     return window.JBridge.checkAndAskNotificationPermission();
   }
 };
@@ -399,7 +400,9 @@ export const getAndroidVersion = function (unit) {
   if (window.__OS == "IOS") {
     return 0;
   } else {
-    return window.JBridge.getAndroidVersion();
+    const stringifiedData = window.JBridge.getSessionInfo();
+    const parsedSessionData = JSON.parse(stringifiedData);
+    return parsedSessionData["os_version"];
   }
 };
 
@@ -1469,6 +1472,28 @@ export const storeCallBackOverlayPermission = function (cb) {
   }
 }
 
+export const storeCallBackNotificationPermission = function (cb) {
+  return function (action) {
+    return function () {
+      try {
+        const callback = callbackMapper.map(function (isPermissionEnabled) {
+          cb(action(isPermissionEnabled))();
+        });
+        const notificationCallback = function () {
+          const isPermissionEnabled = JBridge.isNotificationPermissionEnabled()
+          cb(action(isPermissionEnabled))();
+        }
+        if (window.onResumeListeners) {
+          window.onResumeListeners.push(notificationCallback);
+        }
+        console.log("In storeCallBackNotificationPermission ---------- + " + action);
+      } catch (error) {
+        console.log("Error occurred in storeCallBackNotificationPermission ------", error);
+      }
+    }
+  }
+}
+
 export const storeCallBackBatteryUsagePermission = function (cb) {
   return function (action) {
     return function () {
@@ -2158,4 +2183,36 @@ export const isNetworkTimeEnabled = function () {
     return JBridge.isNetworkTimeEnabled();
   }
   return true;
+}
+
+export const onFocused = function(callback){
+  return function(elementId) {
+    console.log(elementId);
+    return function (){
+      const element = document.getElementById(elementId);
+      console.log (element);
+      if (element) {
+        element.addEventListener("focus", () => {
+          callback(element.value);
+        });
+      } else {
+        console.error(`Element with ID '${elementId}' not found.`);
+      }
+    }
+  }
+};
+
+export const renderCameraProfilePicture = function (id) {
+  return function () {
+    return JBridge.renderCameraProfilePicture(id);
+  };
+};
+
+export const isNotificationPermissionEnabled = function () {
+  return function() {
+    console.log("isNotificationPermissionEnabled");
+    if (window.JBridge.isNotificationPermissionEnabled) {
+      return window.JBridge.isNotificationPermissionEnabled();
+    }
+  }
 }

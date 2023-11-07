@@ -15,7 +15,6 @@
 
 module Components.BottomNavBar.Controller where
 
-import Common.Types.App (LazyCheck(..))
 import Data.Array as DA
 import Data.Int (fromString)
 import Data.Maybe as Maybe
@@ -32,6 +31,7 @@ data Action = OnNavigate String
 navData :: ScreenNames.ScreenName -> BottomNavConfig -> BottomNavBarState
 navData screenName bottomNavConfig = do
   let showNewBannerOnSubscription = (Maybe.fromMaybe 0 $ fromString $ getValueToLocalNativeStore TIMES_OPENED_NEW_SUBSCRIPTION) < 3
+      showSubscriptions = getValueToLocalNativeStore SHOW_SUBSCRIPTIONS
       navdata = [
         {
           activeIcon: fetchImage FF_ASSET "ny_ic_home_active",
@@ -52,7 +52,7 @@ navData screenName bottomNavConfig = do
         {
           activeIcon: fetchImage FF_ASSET "ny_ic_join_active",
           defaultIcon: fetchImage FF_ASSET "ny_ic_join_inactive",
-          isVisible : bottomNavConfig.subscription.isVisible,
+          isVisible : bottomNavConfig.subscription.isVisible && showSubscriptions == "true",
           showNewBanner : bottomNavConfig.subscription.showNew && showNewBannerOnSubscription ,
           text: "Join",
           screenName : ScreenNames.SUBSCRIPTION_SCREEN

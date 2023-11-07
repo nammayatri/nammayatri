@@ -30,6 +30,7 @@ import Language.Types(STR(..))
 import Engineering.Helpers.Commons as EHC
 import JBridge as JB
 import Helpers.Utils as HU
+import Components.StepsHeaderModal as StepsHeaderModal
 import Data.String as DS
 import PrestoDOM.Animation as PrestoAnim
 import Animation as Anim
@@ -69,14 +70,15 @@ view push state =
         pure unit
         ) (const AfterRender)
   , onBackPressed push (const BackPressed)
-  ][  linearLayout
+  ][    PrestoAnim.animationSet
+          [ Anim.fadeIn true
+          ] $ StepsHeaderModal.view (push <<< StepsHeaderModelAC) (stepsHeaderModelConfig state)
+    
+      , linearLayout
       [ width MATCH_PARENT
       , weight 1.0
       , orientation VERTICAL
       ][  PrestoAnim.animationSet
-          [ Anim.fadeIn true
-          ] $ backArrow state push
-        , PrestoAnim.animationSet
           [ Anim.translateYAnimFromTopWithAlpha AnimConfig.translateYAnimConfig
           ] $ enterOTPTextView state
         , primaryEditTextView state push

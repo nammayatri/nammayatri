@@ -9,9 +9,8 @@ import Components.StepsHeaderModal.Controller (Action(..),Config)
 import Styles.Colors as Color
 import Data.Array as Array
 import Data.Maybe as Maybe
+import Helpers.Utils as HU
 import Common.Types.App (LazyCheck(..))
--- import Helpers.Utils (getAssetStoreLink)
-import Helpers.Utils (fetchImage, FetchImageFrom(..))
 
 view :: forall w . (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push state = 
@@ -30,7 +29,7 @@ view push state =
         ][  imageView
             [ height $ V 25
             , width $ V 25
-            , imageWithFallback $ fetchImage FF_ASSET "ny_ic_chevron_left_white"
+            , imageWithFallback $ HU.fetchImage HU.FF_ASSET "ny_ic_chevron_left_white"
             , onClick push $ const OnArrowClick
             , visibility case state.backArrowVisibility of 
                 true -> VISIBLE
@@ -44,7 +43,7 @@ view push state =
             , visibility case state.profileIconVisibility of
                 true -> VISIBLE
                 false -> GONE
-            , imageWithFallback $ fetchImage FF_ASSET "ic_profile_shadow"
+            , imageWithFallback $ HU.fetchImage HU.FF_ASSET "ic_new_avatar"
             ]
             , textView $
             [ height WRAP_CONTENT
@@ -105,6 +104,7 @@ view push state =
              , visibility case state.logoutVisibility of
                           true -> VISIBLE
                           false -> GONE
+             , onClick push $ const Logout 
            ] [
             textView $
             [ height WRAP_CONTENT
@@ -112,7 +112,6 @@ view push state =
             , text $ "Logout" 
             , color Color.white900
             , margin $ MarginHorizontal 5 5
-            , onClick push $ const Logout 
             -- , visibility case state.stepsViewVisibility of
             --     true -> VISIBLE
             --     false -> GONE

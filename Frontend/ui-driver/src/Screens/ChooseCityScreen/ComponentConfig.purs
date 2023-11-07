@@ -3,15 +3,15 @@ module Screens.ChooseCityScreen.ComponentConfig where
 import Prelude
 
 import Common.Types.App (LazyCheck(..))
+import Common.Types.App (YoutubeData, CarouselModal)
 import Components.GenericHeader as GenericHeader
 import Components.PrimaryButton as PrimaryButton
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import PrestoDOM (Length(..), Margin(..), Padding(..), Visibility(..))
+import PrestoDOM (Length(..), Margin(..), Padding(..), Visibility(..), clickable)
 import Screens.Types (ChooseCityScreenStage(..), ChooseCityScreenState)
 import Styles.Colors as Color
-import Common.Types.App (YoutubeData, CarouselModal)
 
 ---------------- genericHeaderConfig ----------------
 genericHeaderConfig :: ChooseCityScreenState -> GenericHeader.Config
@@ -48,7 +48,8 @@ primaryButtonConfig state = let
                                         _ -> CONFIRM
 
         }
-      -- , alpha = 0.3
+      , alpha = if state.data.locationSelected == "--" && state.props.currentStage == DETECT_LOCATION then 0.5 else 1.0
+      , isClickable =  state.data.locationSelected /= "--" || state.props.currentStage /= DETECT_LOCATION
       , id = "PrimaryButtonChooseCityScreen"
       }
   in primaryButtonConfig'

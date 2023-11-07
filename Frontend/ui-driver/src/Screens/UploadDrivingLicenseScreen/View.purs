@@ -15,24 +15,26 @@
 
 module Screens.UploadDrivingLicenseScreen.View where
 
-import Prelude (Unit, bind, const, pure, unit, ($), (<<<), (<>), (/=), (==), (&&), (>), (<), not)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen,Visibility(..), afterRender, background, clickable, color, cornerRadius, editText, fontStyle, frameLayout, gravity, height, imageUrl, imageView, linearLayout, margin, onBackPressed, onChange, onClick, orientation, padding, scrollView, stroke, text, textSize, textView, weight, width, layoutGravity, alpha, singleLine, visibility, scrollBarY, textFromHtml, imageWithFallback)
-import PrestoDOM.Types.DomAttributes as PTD
-import PrestoDOM.Properties as PP
+import Common.Types.App
+import Data.Maybe
+import Debug
+import Screens.UploadDrivingLicenseScreen.ComponentConfig
+
 import Animation as Anim
-import Effect (Effect)
-import Language.Strings (getString)
-import Language.Types (STR(..))
-import Screens.UploadDrivingLicenseScreen.Controller (Action(..), eval, ScreenOutput)
-import Screens.Types as ST
-import Styles.Colors as Color
-import Font.Style as FontStyle
-import Components.RegistrationModal.View as RegistrationModal
+import Components.GenericMessageModal as GenericMessageModal
+import Components.PopUpModal as PopUpModal
 import Components.PrimaryButton as PrimaryButton
 import Components.PrimaryEditText as PrimaryEditText
+import Components.RegistrationModal.View as RegistrationModal
+import Components.StepsHeaderModal as StepsHeaderModel
 import Components.TutorialModal.View as TutorialModal
-import JBridge as JB
-import Components.GenericMessageModal as GenericMessageModal
+import Components.ValidateDocumentModal as ValidateDocumentModal
+import Control.Monad.Except (runExceptT)
+import Control.Monad.Trans.Class (lift)
+import Control.Transformers.Back.Trans (runBackT)
+import Data.String as DS
+import Effect (Effect)
+import Effect.Aff (launchAff)
 import Effect.Class (liftEffect)
 import Data.Maybe
 import Log (printLog)
@@ -43,6 +45,26 @@ import Helpers.Utils (fetchImage, FetchImageFrom(..), consumeBP)
 import Common.Types.App (LazyCheck(..))
 import MerchantConfig.Utils (getValueFromConfig)
 import Effect.Uncurried (runEffectFn1)
+import Engineering.Helpers.Commons (flowRunner)
+import Engineering.Helpers.Commons as EHC
+import Font.Size as FontSize
+import Font.Style as FontStyle
+import Helpers.Utils (consumeBP)
+import JBridge as JB
+import Language.Strings (getString)
+import Language.Types (STR(..))
+import Log (printLog)
+import Prelude (Unit, bind, const, pure, unit, ($), (<<<), (<>), (/=), (==), (&&), (>), (<), discard, void, not, (||))
+import Presto.Core.Types.Language.Flow (doAff)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, background, clickable, color, cornerRadius, editText, fontStyle, frameLayout, gravity, height, imageUrl, imageView, linearLayout, margin, onBackPressed, onChange, onClick, orientation, padding, scrollView, stroke, text, textSize, textView, weight, width, layoutGravity, alpha, singleLine, visibility, scrollBarY, textFromHtml, imageWithFallback)
+import PrestoDOM.Animation as PrestoAnim
+import PrestoDOM.Properties as PP
+import PrestoDOM.Types.DomAttributes as PTD
+import Screens.AddVehicleDetailsScreen.Views (redirectScreen)
+import Screens.Types as ST
+import Screens.UploadDrivingLicenseScreen.Controller (Action(..), eval, ScreenOutput)
+import Styles.Colors as Color
+import Types.App (defaultGlobalState)
 
 screen :: ST.UploadDrivingLicenseState -> Screen Action ST.UploadDrivingLicenseState ScreenOutput
 screen initialState =
@@ -52,9 +74,16 @@ screen initialState =
   , globalEvents : [(\push -> do
     _ <- JB.storeCallBackImageUpload push CallBackImageUpload
     _ <- runEffectFn1 consumeBP unit
+    if initialState.props.successfulValidation then do
+      _ <- launchAff $ flowRunner defaultGlobalState $ redirectScreen push RedirectScreen
+      pure unit
+    else pure unit
+    void $ launchAff $ EHC.flowRunner defaultGlobalState $ runExceptT $ runBackT $
+              if (initialState.props.validateProfilePicturePopUp == true)  then  lift $ lift $ doAff do liftEffect $ push $ AfterRender  else pure unit 
     pure $ pure unit)]
   , eval : \action state -> do
       let _ = printLog  "UploadDrivingLicenseScreen state -----" state
+          _ = spy "UploadDrivingLicenseScreen action -----" action
       eval action state
   }
 
@@ -68,7 +97,7 @@ view push state =
   frameLayout
   [ height MATCH_PARENT
   , width MATCH_PARENT
-  ][
+  ]([
 linearLayout
     [ height MATCH_PARENT
     , width MATCH_PARENT
@@ -79,7 +108,9 @@ linearLayout
                       _<- push action
                       pure unit
                       ) $ const (AfterRender)
-    ][ headerLayout state push
+    ][ PrestoAnim.animationSet
+       [ Anim.fadeIn true
+       ] $ StepsHeaderModel.view (push <<< StepsHeaderModelAC) (stepsHeaderModelConfig state (if state.props.openHowToUploadManual then 4 else 3))
       , linearLayout
         [ width MATCH_PARENT
         , weight 1.0
@@ -93,12 +124,22 @@ linearLayout
                 , width MATCH_PARENT
                 , orientation VERTICAL
                 , padding (PaddingHorizontal 20 20)
-                ][ enterLicenceNumber state push
+                ][ textView $
+                      [ width MATCH_PARENT
+                      , height WRAP_CONTENT
+                      , text $ getString DL_VERIFICATION_FAILED
+                      , color Color.black800
+                      , background Color.redOpacity10
+                      , padding $ Padding 16 12 16 12
+                      , margin $ Margin 16 16 16 16
+                      , cornerRadius 8.0
+                      , visibility if state.data.dateOfIssue == Nothing then GONE else VISIBLE            
+                      ] <> FontStyle.body3 TypoGraphy
+                , enterLicenceNumber state push
                 , reEnterLicenceNumber state push
                 , dateOfBirth push state
                 , dateOfIssue push state
-                , frontUploadSection state push
-                -- , backUploadSection state push
+                , howToUpload push state
                 ]
               ]
           ]
@@ -111,7 +152,7 @@ linearLayout
            [ width MATCH_PARENT
            , height WRAP_CONTENT
            , text state.data.errorMessage
-           , visibility $ if state.props.errorVisibility then VISIBLE else GONE
+           , visibility GONE
            , color Color.red
            , padding( PaddingHorizontal 20 20)
            , margin (MarginBottom 10)
@@ -139,7 +180,10 @@ linearLayout
       width MATCH_PARENT
     , height MATCH_PARENT
       ] [GenericMessageModal.view (push <<< GenericMessageModalAction) {text : (getString ISSUE_WITH_DL_IMAGE), openGenericMessageModal : state.props.openGenericMessageModal, buttonText : (getString NEXT) }] else linearLayout [][]
-  ] 
+  ] <> if state.props.logoutPopupModal then [logoutPopupModal push state] else []
+    <> if state.props.imageCaptureLayoutView then [imageCaptureLayout push state] else []
+    <> if state.props.validateProfilePicturePopUp then [validateProfilePictureModal push state] else []
+    <> if state.props.fileCameraPopupModal then [fileCameraLayout push state] else [] )
   
 registrationModalView :: ST.UploadDrivingLicenseState -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w
 registrationModalView state push = 
@@ -153,25 +197,12 @@ enterLicenceNumber state push =
   [ width MATCH_PARENT
   , height WRAP_CONTENT
   , orientation VERTICAL
-  , margin (MarginTop 10)
-  ][ textView
-      ([ width WRAP_CONTENT
-      , text (getString ADD_DRIVING_LICENSE)
-      , color Color.black800
-      , margin (MarginVertical 20 20)
-      ] <> FontStyle.h1 TypoGraphy)
-      , textView
-      ([ width WRAP_CONTENT
-      , textFromHtml (getString PROVIDE_DATE_OF_ISSUE_TEXT)
-      , color Color.black800
-      , margin (MarginVertical 20 20)
-      , visibility if state.data.dateOfIssue == Nothing then GONE else VISIBLE
-      ] <> FontStyle.subHeading2 TypoGraphy)
-      , linearLayout
+  , margin (MarginTop 30)
+  , visibility if state.props.openHowToUploadManual then GONE else VISIBLE
+  ][   linearLayout
         [ width MATCH_PARENT
         , height WRAP_CONTENT
         , orientation VERTICAL
-        , visibility if state.data.dateOfIssue /= Nothing then GONE else VISIBLE
         ][
           PrimaryEditText.view (push <<< PrimaryEditTextActionController) (primaryEditTextConfig state)
         ]
@@ -180,7 +211,7 @@ enterLicenceNumber state push =
         , height WRAP_CONTENT
         , gravity RIGHT
         , orientation VERTICAL
-        , margin (MarginBottom 20)
+        , margin (MarginBottom 10)
         ][ textView
             [ width WRAP_CONTENT
             , height WRAP_CONTENT
@@ -199,15 +230,16 @@ reEnterLicenceNumber state push =
   [ width MATCH_PARENT
   , height WRAP_CONTENT
   , orientation VERTICAL
-  , visibility if state.data.dateOfIssue /= Nothing then GONE else VISIBLE
+  , visibility if state.props.openHowToUploadManual then GONE else VISIBLE
+  , margin (MarginBottom 10)
   ][ PrimaryEditText.view (push <<< PrimaryEditTextActionControllerReEnter) (primaryEditTextConfigReEnterDl state)
    , textView
       [ width MATCH_PARENT
       , height WRAP_CONTENT
       , text (getString SAME_REENTERED_DL_MESSAGE)
-      , visibility $ if (DS.toLower(state.data.driver_license_number) /= DS.toLower(state.data.reEnterDriverLicenseNumber) && not (DS.null state.data.reEnterDriverLicenseNumber)) then VISIBLE else GONE
+      , visibility $ if (DS.toLower(state.data.driver_license_number) /= DS.toLower(state.data.reEnterDriverLicenseNumber)) then VISIBLE else GONE
       , color Color.red
-      , margin (MarginBottom 10)
+      
       ]
  ]
 
@@ -220,10 +252,10 @@ frontUploadSection state push =
     , margin (MarginTop 20)
     , onClick push (const( UploadFileAction "front"))
     , clickable $ state.data.imageFront == ""
-    , visibility if state.data.dateOfIssue /= Nothing then GONE else VISIBLE
+    , visibility if state.props.openHowToUploadManual then GONE else VISIBLE
   ][
     textView
-    ([ text $ (getString FRONT_SIDE) <> if getValueFromConfig "imageUploadOptional" then (getString OPTIONAL) else ""
+    ([ text (getString FRONT_SIDE)
     , color Color.greyTextColor
     ] <> FontStyle.body3 TypoGraphy)
   , linearLayout
@@ -273,6 +305,7 @@ backUploadSection state push =
   , orientation VERTICAL
   , onClick push (const (UploadFileAction "back"))
   , clickable $ state.data.imageBack == ""
+  , visibility if state.props.openHowToUploadManual then GONE else VISIBLE
   ][
     textView
     ([ text (getString BACK_SIDE)
@@ -383,7 +416,7 @@ dateOfBirth push state =
   [ width MATCH_PARENT
   , height WRAP_CONTENT
   , orientation VERTICAL
-  , visibility if state.data.dateOfIssue /= Nothing then GONE else VISIBLE
+  , visibility if state.props.openHowToUploadManual then GONE else VISIBLE
   ][ textView
     ([ text (getString DATE_OF_BIRTH)
     , color Color.greyTextColor
@@ -474,3 +507,96 @@ dateOfIssue push state =
         ] <> FontStyle.tags TypoGraphy
       ]
   ]
+
+howToUpload :: (Action -> Effect Unit) -> ST.UploadDrivingLicenseState -> forall w . PrestoDOM (Effect Unit) w
+howToUpload push state = 
+  linearLayout
+  [ width MATCH_PARENT
+  , height WRAP_CONTENT
+  , orientation VERTICAL
+  , margin (MarginTop 20) 
+  , visibility if state.props.openHowToUploadManual then VISIBLE else GONE 
+  ][ textView $ 
+    [ text $ getString HOW_TO_UPLOAD
+    , color Color.greyTextColor
+    ] <> FontStyle.h3 TypoGraphy
+  , linearLayout
+    [ width MATCH_PARENT
+    , height WRAP_CONTENT
+    , orientation VERTICAL
+    , margin $ MarginVertical 0 10
+    , padding $ Padding 0 16 0 16
+    ][ 
+      textView $ 
+    [ text $ getString TAKE_CLEAR_PICTURE_DL
+    , color Color.greyTextColor
+    , margin $ MarginBottom 18
+    , textSize FontSize.a_14
+    ] <> FontStyle.body3 TypoGraphy
+
+    , textView $ 
+    [ text $ getString ENSURE_ADEQUATE_LIGHT
+    , color Color.greyTextColor
+    , margin $ MarginBottom 18
+    , textSize FontSize.a_14
+    ] <> FontStyle.body3 TypoGraphy
+
+    , textView $ 
+    [ text $ getString FIT_DL_CORRECTLY
+    , color Color.greyTextColor
+    , margin $ MarginBottom 40
+    , textSize FontSize.a_14
+    ] <> FontStyle.body3 TypoGraphy
+
+    , imageView
+        [ width MATCH_PARENT
+        , height MATCH_PARENT
+        , imageWithFallback "ny_ic_upload_document,https://assets.juspay.in/nammayatri/images/driver/ny_ic_back.png"
+        , layoutGravity "center_vertical"
+        ]
+     ]
+  ]
+
+logoutPopupModal :: forall w . (Action -> Effect Unit) -> ST.UploadDrivingLicenseState -> PrestoDOM (Effect Unit) w
+logoutPopupModal push state =
+       linearLayout
+        [ width MATCH_PARENT
+        , height MATCH_PARENT
+        , background Color.blackLessTrans
+        ][ PopUpModal.view (push <<<PopUpModalLogoutAction) (logoutPopUp state) ]
+
+
+validateProfilePictureModal :: forall w . (Action -> Effect Unit) -> ST.UploadDrivingLicenseState -> PrestoDOM (Effect Unit) w
+validateProfilePictureModal push state =
+  ValidateDocumentModal.view (push <<< ValidateDocumentModalAction) (validateProfilePictureModalState state)
+
+validateProfilePictureModalState :: ST.UploadDrivingLicenseState -> ValidateDocumentModal.ValidateDocumentModalState
+validateProfilePictureModalState state = let
+      config' = ValidateDocumentModal.config
+      inAppModalConfig' = config'{
+        background = Color.black,
+        profilePictureCapture = false,
+        verificationStatus = if state.props.validating then ST.InProgress 
+                             else if state.data.errorMessage /= "" then ST.Failure
+                             else if state.data.imageIDFront /= "" || state.data.imageIDBack /= "" then ST.Success
+                             else ST.None,
+        verificationType = "DL",
+        failureReason = state.data.errorMessage,
+        headerConfig {
+         imageConfig {
+         color = Color.white900
+        },
+          headTextConfig {
+            text = getString TAKE_PHOTO,
+            color = Color.white900
+          }
+        }
+      }
+      in inAppModalConfig'
+
+imageCaptureLayout :: forall w . (Action -> Effect Unit) -> ST.UploadDrivingLicenseState -> PrestoDOM (Effect Unit) w
+imageCaptureLayout push state  =ValidateDocumentModal.view (push <<< ValidateDocumentModalAction) (ValidateDocumentModal.config{background = Color.black,profilePictureCapture =true ,headerConfig {headTextConfig {text = ("Take Photo")}}})
+
+fileCameraLayout :: forall w . (Action -> Effect Unit) -> ST.UploadDrivingLicenseState -> PrestoDOM (Effect Unit) w
+fileCameraLayout push state =
+  PopUpModal.view (push <<< PopUpModalActions)  (fileCameraLayoutConfig state)

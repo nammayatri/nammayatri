@@ -359,6 +359,11 @@ public class MobilityCommonBridge extends HyperBridge {
     }
 
     @JavascriptInterface
+    public boolean isNotificationPermissionEnabled() {
+        return (ActivityCompat.checkSelfPermission(bridgeComponents.getContext(), POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED);
+    }
+
+    @JavascriptInterface
     public void checkAndAskNotificationPermission(){
         if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && !(ActivityCompat.checkSelfPermission(bridgeComponents.getContext(), POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED)){
             try {

@@ -1,5 +1,4 @@
 module Screens.WelcomeScreen.Controller where
-
 import Components.PrimaryButton.Controller as PrimaryButtonController
 import JBridge (minimizeApp, firebaseLogEvent)
 import Log (trackAppActionClick, trackAppBackPress, trackAppScreenRender)
@@ -21,7 +20,6 @@ instance loggableAction :: Loggable Action where
       PrimaryButtonController.OnClick -> trackAppActionClick appId (getScreen WELCOME_SCREEN) "primary_button" "onclick"
       PrimaryButtonController.NoAction -> trackAppActionClick appId (getScreen WELCOME_SCREEN) "primary_button" "no_action"
 
-
 data Action = BackPressed
             | AfterRender
             | PrimaryButtonAC PrimaryButtonController.Action
@@ -32,9 +30,7 @@ eval :: Action -> WelcomeScreenState -> Eval Action ScreenOutput WelcomeScreenSt
 eval BackPressed state = do 
     _ <- pure $ minimizeApp ""
     continue state
-
 eval (PrimaryButtonAC PrimaryButtonController.OnClick) state = do
   let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_get_started"
   exit MobileNumberScreen
-
 eval _ state = continue state
