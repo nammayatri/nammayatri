@@ -103,9 +103,9 @@ runnerIteration SchedulerHandle {..} runTask = do
   readyJobs <- getReadyTasks
   let readyTasks = map fst readyJobs
   logTagDebug "All Tasks - Count" . show $ length readyTasks
-  logTagDebug "All Tasks" . show $ map @_ @(Id AnyJob) (\(AnyJob Job {..}) -> id) readyTasks
+  logTagDebug "All Tasks" . show $ map @_ @(Id AnyJob) (\(AnyJob Job {..}) -> parentJobId) readyTasks
   tasksPerIteration <- asks (.tasksPerIteration)
-  availableReadyTasksIds <- pickTasks tasksPerIteration $ map (\(AnyJob Job {..}) -> id) readyTasks
+  availableReadyTasksIds <- pickTasks tasksPerIteration $ map (\(AnyJob Job {..}) -> parentJobId) readyTasks
   logTagDebug "Available tasks - Count" . show $ length availableReadyTasksIds
   logTagDebug "Available tasks" . show $ availableReadyTasksIds
   takenTasksUpdatedInfo <- getTasksById availableReadyTasksIds
