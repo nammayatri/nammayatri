@@ -380,6 +380,21 @@ disabilityBannerConfig state =
       }
   in config'
 
+zooTicketBannerConfig :: ST.HomeScreenState -> Banner.Config
+zooTicketBannerConfig state =
+  let
+    config = Banner.config
+    config' = config
+      {
+        backgroundColor = Color.lightMintGreen
+      , title = "Unlock the Wonders of the Wild – Reserve Your Zoo Adventure Today!!"--"You have a upcoming zoo visit Today!"
+      , titleColor = Color.elfGreen
+      , actionText = "Book Tickets Now"
+      , actionTextColor = Color.elfGreen
+      , imageUrl = fetchImage FF_ASSET "ny_ic_zoo_banner_img"
+      }
+  in config'
+
 reportIssuePopUpConfig :: ST.HomeScreenState -> CancelRidePopUpConfig.Config
 reportIssuePopUpConfig state =
   let

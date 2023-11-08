@@ -620,6 +620,7 @@ data Action = NoAction
             | DirectSearch
             | ZoneTimerExpired PopUpModal.Action
             | DisabilityBannerAC Banner.Action
+            | ZooTicketBannerAC Banner.Action
             | DisabilityPopUpAC PopUpModal.Action
             | RideCompletedAC RideCompletedCard.Action
             | LoadMessages
@@ -1805,6 +1806,12 @@ eval (UpdateProfileButtonAC PrimaryButtonController.OnClick) state = do
   updateAndExit newState $ GoToMyProfile newState true
 
 eval (DisabilityBannerAC Banner.OnClick) state = if (addCarouselWithVideoExists unit ) then continue state{props{showEducationalCarousel = true}} else exit $ GoToMyProfile state true
+
+eval (ZooTicketBannerAC Banner.OnClick) state = do
+  continueWithCmd state [do
+        _ <- openUrlInApp "https://wbza.org/onlineticket/eticket/book_ticket"
+        pure NoAction
+      ]
 
 eval (SkipAccessibilityUpdateAC PrimaryButtonController.OnClick) state = do 
   _ <- pure $ pauseYoutubeVideo unit

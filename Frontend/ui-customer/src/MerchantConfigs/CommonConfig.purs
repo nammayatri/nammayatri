@@ -108,6 +108,7 @@ commonConfig =
             genericVideoUrl : ""
           }
         , showDisabilityBanner : false
+        , showZooTicketBanner : false
         , searchLocationConfig : {
           showAdditionalChargesText : false
         , editTextBackground : "#313440"

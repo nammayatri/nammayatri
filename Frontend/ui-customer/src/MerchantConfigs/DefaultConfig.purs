@@ -126,6 +126,7 @@ config =
   , callOptions : ["ANONYMOUS"]
   , autoVariantEnabled : true
   , showDisabilityBanner : true
+  , showZooTicketBanner : false
   , enableWhatsappOTP : ["BD"]
   , notifyRideConfirmationConfig : 
       { notify : false 

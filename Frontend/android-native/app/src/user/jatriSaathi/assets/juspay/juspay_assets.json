@@ -137,6 +137,7 @@
       "message_sheet_bg" : true,
       "notification_count_background" : true,
       "ny_ic_accessibility_banner_img" : true,
+      "ny_ic_zoo_banner_img" : true,
       "ny_ic_add_address" : true,
       "ny_ic_add_audio" : true,
       "ny_ic_add_image" : true,

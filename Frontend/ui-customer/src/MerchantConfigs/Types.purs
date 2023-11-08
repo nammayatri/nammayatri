@@ -52,6 +52,7 @@ type AppConfig =
   , callOptions :: Array String
   , autoVariantEnabled :: Boolean
   , showDisabilityBanner :: Boolean
+  , showZooTicketBanner :: Boolean
   , mapConfig :: MapConfig
   , enableWhatsappOTP :: Array String
   , notifyRideConfirmationConfig :: NotifyRideConfirmationConfig
