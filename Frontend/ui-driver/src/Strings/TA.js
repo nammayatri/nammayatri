@@ -968,7 +968,8 @@ const tamilStrings = {
   SIGNUP_EARLY_FOR_SPECIAL_OFFERS : "சிறப்புச் சலுகைகளுக்கு முன்கூட்டியே பதிவுசெய்க",
   GUARANTEED_FIXED_PRICE : "ஜனவரி 1, 2025 வரை நிலையான விலைக்கு உத்தரவாதம்",
   INTRODUCTORY_OFFER_TO_BE_ANNOUNCED_SOON : "அறிமுக சலுகை விரைவில் அறிவிக்கப்படும்!",
-  NO_CHARGES_TILL : "டிசம்பர் 31 வரை கட்டணம் இல்லை"
+  NO_CHARGES_TILL : "டிசம்பர் 31 வரை கட்டணம் இல்லை",
+  DRIVER_HAS_BEEN_UNSUBSCRIBED : "டிரைவர் பிளாட்ஃபார்மில் இருந்து குழுவிலகியுள்ளார். மீண்டும் குழுசேர நிலுவையில் உள்ள தொகையை செலுத்தவும்."
 }
 
 export function getStringValue(key) {

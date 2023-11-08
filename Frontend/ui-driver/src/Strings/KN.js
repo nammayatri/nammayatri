@@ -967,7 +967,8 @@ const kannadaStrings = {
   SIGNUP_EARLY_FOR_SPECIAL_OFFERS : "ವಿಶೇಷ ಕೊಡುಗೆಗಳಿಗಾಗಿ ಮುಂಚಿತವಾಗಿ ಸೈನ್ ಅಪ್ ಮಾಡಿ",
   GUARANTEED_FIXED_PRICE : "ಜನವರಿ 1, 2025 ರವರೆಗೆ ಖಾತರಿಪಡಿಸಿದ ಸ್ಥಿರ ಬೆಲೆ",
   INTRODUCTORY_OFFER_TO_BE_ANNOUNCED_SOON : "ಪರಿಚಯಾತ್ಮಕ ಕೊಡುಗೆಯನ್ನು ಶೀಘ್ರದಲ್ಲೇ ಪ್ರಕಟಿಸಲಾಗುವುದು!",
-  NO_CHARGES_TILL : "ಡಿಸೆಂಬರ್ 31 ರವರೆಗೆ ಯಾವುದೇ ಶುಲ್ಕಗಳಿಲ್ಲ"
+  NO_CHARGES_TILL : "ಡಿಸೆಂಬರ್ 31 ರವರೆಗೆ ಯಾವುದೇ ಶುಲ್ಕಗಳಿಲ್ಲ",
+  DRIVER_HAS_BEEN_UNSUBSCRIBED : "ಚಾಲಕನನ್ನು ಪ್ಲಾಟ್‌ಫಾರ್ಮ್‌ನಿಂದ ಅನ್‌ಸಬ್‌ಸ್ಕ್ರೈಬ್ ಮಾಡಲಾಗಿದೆ. ಮರಳಿ ಚಂದಾದಾರರಾಗಲು ಬಾಕಿಯಿರುವ ಮೊತ್ತವನ್ನು ಪಾವತಿಸಿ."
 }
 
 

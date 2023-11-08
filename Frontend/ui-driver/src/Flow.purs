@@ -1851,7 +1851,7 @@ homeScreenFlow = do
             else if ( errorPayload.code == 429 && codeMessage == "HITS_LIMIT_EXCEED") then do
               modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props {otpAttemptsExceeded = true, enterOtpModal = true, rideOtp = ""} })
               void $ lift $ lift $ toggleLoader false
-              else pure $ toast $ getString SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN
+              else pure $ toast $ getString if (errorPayload.code == 403 && codeMessage == "DRIVER_UNSUBSCRIBED") then DRIVER_HAS_BEEN_UNSUBSCRIBED else SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN
           homeScreenFlow
     GO_TO_START_ZONE_RIDE {otp, lat, lon} -> do
       void $ lift $ lift $ loaderText (getString PLEASE_WAIT) (getString PLEASE_WAIT_WHILE_IN_PROGRESS)
@@ -1875,7 +1875,7 @@ homeScreenFlow = do
               modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props {wrongVehicleVariant = false, otpAttemptsExceeded = true, enterOtpModal = true, rideOtp = ""} })
             else if ( errorPayload.code == 400 && (errorMessage == "Wrong Vehicle Variant")) then do
                 modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props {wrongVehicleVariant = true, otpIncorrect = true, enterOtpModal = true, otpAttemptsExceeded = false} })
-              else pure $ toast (getString SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN)
+              else pure $ toast $ getString if (errorPayload.code == 403 && codeMessage == "DRIVER_UNSUBSCRIBED") then DRIVER_HAS_BEEN_UNSUBSCRIBED else SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN
           void $ lift $ lift $ toggleLoader false
           homeScreenFlow
     GO_TO_END_RIDE {id, lat, lon} state -> do

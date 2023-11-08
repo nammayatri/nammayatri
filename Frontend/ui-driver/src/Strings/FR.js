@@ -735,5 +735,6 @@ const frenchStrings = {
   DO_YOU_WANT_TO_CANCEL_DESC : "Vous avez déjà un plan actif. Voulez-vous annuler le plan actif et rejoindre le nouveau plan ?",
   NO : "Non",
   YES_CANCEL : "Oui, annuler",
-  AUTOPAY_CANCELLED : "Paiement automatique annulé"
+  AUTOPAY_CANCELLED : "Paiement automatique annulé",
+  DRIVER_HAS_BEEN_UNSUBSCRIBED : "Le conducteur a été désabonné de la plateforme. Payez le montant en attente pour vous réabonner."
 }

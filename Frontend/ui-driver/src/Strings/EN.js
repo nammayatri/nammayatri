@@ -998,6 +998,7 @@ const englishStrings = {
   GUARANTEED_FIXED_PRICE : "Guaranteed fixed price until \nJan 1, 2025",
   INTRODUCTORY_OFFER_TO_BE_ANNOUNCED_SOON : "Introductory offer will be announced soon!",
   NO_CHARGES_TILL : "No charges till Dec 31",
+  DRIVER_HAS_BEEN_UNSUBSCRIBED : "Driver has been unsubscribed from platform. Pay pending amount to subscribe back."
 }
 
 
