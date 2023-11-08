@@ -1040,58 +1040,64 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
 
     @Override
     public boolean onRequestPermissionResult(int requestCode, String[] permissions, int[] grantResults) {
-        switch (requestCode) {
-            case IMAGE_PERMISSION_REQ_CODE:
-                Context context = bridgeComponents.getContext();
-                if ((ActivityCompat.checkSelfPermission(context, CAMERA) == PackageManager.PERMISSION_GRANTED)) {
-                    if (bridgeComponents.getActivity() != null) {
-                        Intent takePicture = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
-                        String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(new Date());
-                        setKeysInSharedPrefs(context.getResources().getString(in.juspay.mobility.app.R.string.TIME_STAMP_FILE_UPLOAD), timeStamp);
-                        Uri photoFile = FileProvider.getUriForFile(context, context.getPackageName() + ".provider", new File(context.getFilesDir(), "IMG_" + timeStamp + ".jpg"));
-                        takePicture.putExtra(MediaStore.EXTRA_OUTPUT, photoFile);
-                        Intent chooseFromFile = new Intent(Intent.ACTION_GET_CONTENT);
-                        chooseFromFile.setType("image/*");
-                        Intent chooser = Intent.createChooser(takePicture, context.getString(in.juspay.mobility.app.R.string.upload_image));
-                        chooser.putExtra(Intent.EXTRA_INITIAL_INTENTS, new Intent[]{chooseFromFile});
-                        bridgeComponents.getActivity().startActivityForResult(chooser, IMAGE_CAPTURE_REQ_CODE, null);
+        if (grantResults.length > 0){
+            PermissionUtils permissionUtils = new PermissionUtils();
+            switch (requestCode) {
+                case IMAGE_PERMISSION_REQ_CODE:
+                    Context context = bridgeComponents.getContext();
+                    if ((ActivityCompat.checkSelfPermission(context, CAMERA) == PackageManager.PERMISSION_GRANTED)) {
+                        if (bridgeComponents.getActivity() != null) {
+                            Intent takePicture = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
+                            String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(new Date());
+                            setKeysInSharedPrefs(context.getResources().getString(in.juspay.mobility.app.R.string.TIME_STAMP_FILE_UPLOAD), timeStamp);
+                            Uri photoFile = FileProvider.getUriForFile(context, context.getPackageName() + ".provider", new File(context.getFilesDir(), "IMG_" + timeStamp + ".jpg"));
+                            takePicture.putExtra(MediaStore.EXTRA_OUTPUT, photoFile);
+                            Intent chooseFromFile = new Intent(Intent.ACTION_GET_CONTENT);
+                            chooseFromFile.setType("image/*");
+                            Intent chooser = Intent.createChooser(takePicture, context.getString(in.juspay.mobility.app.R.string.upload_image));
+                            chooser.putExtra(Intent.EXTRA_INITIAL_INTENTS, new Intent[]{chooseFromFile});
+                            bridgeComponents.getActivity().startActivityForResult(chooser, IMAGE_CAPTURE_REQ_CODE, null);
+                        }
+                    } else {
+                        permissionUtils.checkPermissionRationale(permissions[0], bridgeComponents.getContext(), bridgeComponents.getActivity());
                     }
-                } else {
-                    Toast.makeText(context, context.getString(in.juspay.mobility.app.R.string.please_allow_permission_to_capture_the_image), Toast.LENGTH_SHORT).show();
-                }
-                break;
-            case REQUEST_CALL:
-                if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                    showDialer(phoneNumber, false);
-                } else {
-                    toast("Permission Denied");
-                }
-                break;
-            case LOCATION_PERMISSION_REQ_CODE:
-                if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                    Log.i(OVERRIDE, "Location Permission Granted");
-                } else {
-                    toast("Permission Denied");
-                }
-                break;
-            case STORAGE_PERMISSION:
-                if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED && downloadLayout != null) {
-                    try {
-                        JuspayLogger.d(OTHERS, "Storage Permission is granted. downloading  PDF");
-                        downloadLayoutAsImage(downloadLayout);
-                    } catch (Exception e) {
-                        e.printStackTrace();
+                    break;
+                case REQUEST_CALL:
+                    if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                        showDialer(phoneNumber, false);
+                    } else {
+                        permissionUtils.checkPermissionRationale(permissions[0], bridgeComponents.getContext(), bridgeComponents.getActivity());
                     }
-                } else {
-                    JuspayLogger.d(OTHERS, "Storage Permission is denied.");
-                    toast("Permission Denied");
-                }
-                break;
-            case AudioRecorder.REQUEST_RECORD_AUDIO_PERMISSION:
-                if (grantResults.length > 0 && grantResults[0] != PackageManager.PERMISSION_GRANTED) {
-                    Toast.makeText(bridgeComponents.getContext(), "Permission Denied", Toast.LENGTH_SHORT).show();
-                }
-                break;
+                    break;
+                case LOCATION_PERMISSION_REQ_CODE:
+                    if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                        Log.i(OVERRIDE, "Location Permission Granted");
+                    } else {
+                        permissionUtils.checkPermissionRationale(permissions[0], bridgeComponents.getContext(), bridgeComponents.getActivity());
+//                    toast("Permission Denied");
+                    }
+                    break;
+                case STORAGE_PERMISSION:
+                    if (grantResults[0] == PackageManager.PERMISSION_GRANTED && downloadLayout != null) {
+                        try {
+                            JuspayLogger.d(OTHERS, "Storage Permission is granted. downloading  PDF");
+                            downloadLayoutAsImage(downloadLayout);
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
+                    } else {
+                        JuspayLogger.d(OTHERS, "Storage Permission is denied.");
+                        permissionUtils.checkPermissionRationale(permissions[0], bridgeComponents.getContext(), bridgeComponents.getActivity());
+                    }
+                    break;
+                case AudioRecorder.REQUEST_RECORD_AUDIO_PERMISSION:
+                    if (grantResults[0] != PackageManager.PERMISSION_GRANTED) {
+                        Toast.makeText(bridgeComponents.getContext(), "Permission Denied", Toast.LENGTH_SHORT).show();
+                    }else {
+                        permissionUtils.checkPermissionRationale(permissions[0], bridgeComponents.getContext(), bridgeComponents.getActivity());
+                    }
+                    break;
+            }
         }
         return super.onRequestPermissionResult(requestCode, permissions, grantResults);
     }

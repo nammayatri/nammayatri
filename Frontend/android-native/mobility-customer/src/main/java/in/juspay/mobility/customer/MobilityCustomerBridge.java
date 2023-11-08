@@ -984,58 +984,62 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
 
     @Override
     public boolean onRequestPermissionResult(int requestCode, String[] permissions, int[] grantResults) {
-        switch (requestCode) {
-            case REQUEST_CALL:
-                if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                    showDialer(phoneNumber, false);
-                } else {
-                    toast("Permission Denied");
-                }
-                break;
-            case LOCATION_PERMISSION_REQ_CODE:
-                if (grantResults.length > 0 && grantResults[0] != PackageManager.PERMISSION_GRANTED) {
-                    toast("Permission Denied");
-                }
-                break;
-            case STORAGE_PERMISSION:
-                if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                    if (invoice != null){
-                        try {
-                            JuspayLogger.d(OTHERS, "Storage Permission is granted. downloading  PDF");
-                            downloadPDF(invoice, bridgeComponents.getContext());
-                        } catch (JSONException e) {
-                            e.printStackTrace();
-                        }
-                    } else if (downloadLayout != null) {
-                        try {
-                            JuspayLogger.d(OTHERS, "Storage Permission is granted. downloading  PDF");
-                            downloadLayoutAsImage(downloadLayout);
-                        } catch (Exception e) {
-                            e.printStackTrace();
-                        }
-                    }
-                } else {
-                    JuspayLogger.d(OTHERS, "Storage Permission is denied.");
-                    toast("Permission Denied");
-                }
-                break;
-            case REQUEST_CONTACTS:
-                boolean flag = ContextCompat.checkSelfPermission(bridgeComponents.getContext(), Manifest.permission.READ_CONTACTS) == PackageManager.PERMISSION_GRANTED;
-                String contacts;
-                try {
-                    if (flag) {
-                        contacts = getPhoneContacts();
+        if (grantResults.length > 0){
+            PermissionUtils permissionUtils = new PermissionUtils();
+            switch (requestCode) {
+                case REQUEST_CALL:
+                    if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                        showDialer(phoneNumber, false);
                     } else {
-                        JSONArray flagArray = new JSONArray();
-                        contacts = flagArray.toString();
+                        permissionUtils.checkPermissionRationale(permissions[0], bridgeComponents.getContext(), bridgeComponents.getActivity());
                     }
-                    contactsStoreCall(contacts);
-                } catch (JSONException e) {
-                    e.printStackTrace();
-                }
-                break;
-            default:
-                break;
+                    break;
+                case LOCATION_PERMISSION_REQ_CODE:
+                    if (grantResults[0] != PackageManager.PERMISSION_GRANTED) {
+                        permissionUtils.checkPermissionRationale(permissions[0], bridgeComponents.getContext(), bridgeComponents.getActivity());
+                    }
+                    break;
+                case STORAGE_PERMISSION:
+                    if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                        if (invoice != null){
+                            try {
+                                JuspayLogger.d(OTHERS, "Storage Permission is granted. downloading  PDF");
+                                downloadPDF(invoice, bridgeComponents.getContext());
+                            } catch (JSONException e) {
+                                e.printStackTrace();
+                            }
+                        } else if (downloadLayout != null) {
+                            try {
+                                JuspayLogger.d(OTHERS, "Storage Permission is granted. downloading  PDF");
+                                downloadLayoutAsImage(downloadLayout);
+                            } catch (Exception e) {
+                                e.printStackTrace();
+                            }
+                        }
+                    } else {
+                        JuspayLogger.d(OTHERS, "Storage Permission is denied.");
+                        permissionUtils.checkPermissionRationale(permissions[0], bridgeComponents.getContext(), bridgeComponents.getActivity());
+                    }
+                    break;
+                case REQUEST_CONTACTS:
+                    boolean flag = ContextCompat.checkSelfPermission(bridgeComponents.getContext(), Manifest.permission.READ_CONTACTS) == PackageManager.PERMISSION_GRANTED;
+                    String contacts;
+                    try {
+                        if (flag) {
+                            contacts = getPhoneContacts();
+                        } else {
+                            JSONArray flagArray = new JSONArray();
+                            contacts = flagArray.toString();
+                            permissionUtils.checkPermissionRationale(permissions[0], bridgeComponents.getContext(), bridgeComponents.getActivity());
+                        }
+                        contactsStoreCall(contacts);
+                    } catch (JSONException e) {
+                        e.printStackTrace();
+                    }
+                    break;
+                default:
+                    break;
+            }
         }
         return super.onRequestPermissionResult(requestCode, permissions, grantResults);
     }

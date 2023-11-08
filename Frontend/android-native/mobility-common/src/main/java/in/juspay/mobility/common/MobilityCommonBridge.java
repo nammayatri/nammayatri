@@ -59,6 +59,7 @@ import android.os.Looper;
 import android.os.VibrationEffect;
 import android.os.Vibrator;
 import android.provider.MediaStore;
+import android.provider.Settings;
 import android.util.Base64;
 import android.util.DisplayMetrics;
 import android.util.Log;
@@ -323,6 +324,48 @@ public class MobilityCommonBridge extends HyperBridge {
             }
         } catch (Exception e) {
             Log.e(LOCATION, "Exception in request permission", e);
+        }
+    }
+
+    private static void showAlertToManualPermission(String permission, Context context, Activity activity) {
+        if (activity == null || context == null) return;
+        AlertDialog.Builder builder = new AlertDialog.Builder(activity);
+        LinearLayout stepsLayout = (LinearLayout) activity.getLayoutInflater().inflate(in.juspay.mobility.app.R.layout.permission_steps_layout, null);
+        ViewGroup.LayoutParams layoutParams = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        stepsLayout.setLayoutParams(layoutParams);
+        builder.setView(stepsLayout);
+        builder.setPositiveButton("Go To Settings", (dialog, which) -> {
+            if (ActivityCompat.shouldShowRequestPermissionRationale(activity, permission)){
+//                ActivityCompat.requestPermissions(activity, new String[]{ACCESS_FINE_LOCATION}, LOCATION_PERMISSION_REQ_CODE);
+            }else {
+                Intent appSettingsIntent = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
+                appSettingsIntent.setData(Uri.fromParts("package", context.getPackageName(), null));
+                appSettingsIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                context.startActivity(appSettingsIntent);
+                dialog.cancel();
+            }
+        });
+        activity.runOnUiThread(() -> {
+            AlertDialog alertDialog = builder.create();
+            alertDialog.show();
+        });
+    }
+
+    public class PermissionUtils {
+        public PermissionUtils() {}
+        public void checkPermissionRationale(String permission, Context context, Activity activity) {
+            if (context == null || activity == null) return;
+            if (ContextCompat.checkSelfPermission(context, permission) == PackageManager.PERMISSION_DENIED) {
+                if (ActivityCompat.shouldShowRequestPermissionRationale(activity, permission)){
+                    // Provide a rationale or explanation to the user before requesting the permission again
+                    // You can show a dialog explaining why the permission is needed
+                    Toast.makeText(context,"Permission Denied", Toast.LENGTH_SHORT).show();
+                } else { // if (!backPressDismissed)
+                    showAlertToManualPermission(permission,context,activity);
+                    // The user denied the permission and selected "Don't ask again"
+                    // Handle this situation appropriately, e.g., show an alternative flow
+                }
+            }
         }
     }
 
