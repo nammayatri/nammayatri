@@ -93,7 +93,7 @@ library:
     - condition: flag(Local)
       then:
         ghc-options:
-          - -O0
+          - -O1
           - -funfolding-use-threshold20
           - -fno-cse
           - -fmax-simplifier-iterations1
@@ -118,7 +118,7 @@ executables:
     - condition: flag(Local)
       then:
         ghc-options:
-          - -O0
+          - -O1
           - -funfolding-use-threshold20
           - -fno-cse
           - -fmax-simplifier-iterations1
@@ -144,7 +144,7 @@ executables:
     - condition: flag(Local)
       then:
         ghc-options:
-          - -O0
+          - -O1
           - -funfolding-use-threshold20
           - -fno-cse
           - -fmax-simplifier-iterations1
