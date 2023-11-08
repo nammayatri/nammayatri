@@ -883,9 +883,9 @@ const bengaliStrings = {
   DAYS : "দিন",
   ACTIVE_PLAN : "সক্রিয় পরিকল্পনা",
   DOWNGRADE_AVAILABLE_ONLY_FOR_AC_VEHICLES : "ডাউনগ্রেড গাড়ি অপশন শুধুমাত্র এসি গাড়ির জন্য উপলব্ধ",
-  DOWNGRADING_VEHICLE_WILL_ALLOW_YOU_TO_TAKE_BOTH_1 : "আপনার যানবাহন ডাউনগ্রেড করলে আপনি",
+  DOWNGRADING_VEHICLE_WILL_ALLOW_YOU_TO_TAKE_BOTH_1 : "আপনার যানবাহন ডাউনগ্রেড করলে আপনি ",
   DOWNGRADING_VEHICLE_WILL_ALLOW_YOU_TO_TAKE_BOTH_2 : "এবং",
-  DOWNGRADING_VEHICLE_WILL_ALLOW_YOU_TO_TAKE_BOTH_3 : "রাইড উভয়ই নিতে পারবেন",
+  DOWNGRADING_VEHICLE_WILL_ALLOW_YOU_TO_TAKE_BOTH_3 : " রাইড উভয়ই নিতে পারবেন",
   AC_CAB : "এসি ক্যাব",
   AC_SUV : "এসি এসইউভি",
   DOWNGRADE_VEHICLE : "ডাউনগ্রেড যানবাহন",
@@ -973,7 +973,8 @@ const bengaliStrings = {
   NO : "না",
   YES_CANCEL : "হ্যাঁ, বাতিল",
   AUTOPAY_CANCELLED : "অটোপে বাতিল করা হয়েছে",
-  YOUR_DUES_DESCRIPTION_MANUAL : "নিরবচ্ছিন্ন রাইডগুলি চালিয়ে যেতে সীমাতে পৌঁছানোর আগে অনুগ্রহ করে আপনার বকেয়া পরিশোধ করুন৷ আপনি সহজে, ঝামেলামুক্ত অর্থপ্রদানের জন্য <b>একটি UPI অটোপে সেট আপ</b> করতে পারেন।"
+  YOUR_DUES_DESCRIPTION_MANUAL : "নিরবচ্ছিন্ন রাইডগুলি চালিয়ে যেতে সীমাতে পৌঁছানোর আগে অনুগ্রহ করে আপনার বকেয়া পরিশোধ করুন৷ আপনি সহজে, ঝামেলামুক্ত অর্থপ্রদানের জন্য <b>একটি UPI অটোপে সেট আপ</b> করতে পারেন।",
+  AND : " এবং "
 }
 
 export function getStringValue(key) {

@@ -851,9 +851,9 @@ const mlStrings = {
   ACTIVE_PLAN : "സജീവ പദ്ധതി",
   PAYMENT_PENDING : "പെയ്‌മെന്റ് പെൻഡിംഗ്",
   DOWNGRADE_AVAILABLE_ONLY_FOR_AC_VEHICLES : "ഡൌൺഗ്രേഡ് വാഹന ഓപ്ഷനുകൾ കേവലായത് ഏസി വാഹനങ്ങൾക്ക് മാത്രമേ ലഭ്യമാകുക",
-  DOWNGRADING_VEHICLE_WILL_ALLOW_YOU_TO_TAKE_BOTH_1 : "നിങ്ങളുടെ വാഹനം തരംതാഴ്ത്തുന്നത്",
+  DOWNGRADING_VEHICLE_WILL_ALLOW_YOU_TO_TAKE_BOTH_1 : "നിങ്ങളുടെ വാഹനം തരംതാഴ്ത്തുന്നത് ",
   DOWNGRADING_VEHICLE_WILL_ALLOW_YOU_TO_TAKE_BOTH_2 : "റൈഡുകളും",
-  DOWNGRADING_VEHICLE_WILL_ALLOW_YOU_TO_TAKE_BOTH_3 : "റൈഡുകളും എടുക്കാൻ നിങ്ങളെ അനുവദിക്കും",
+  DOWNGRADING_VEHICLE_WILL_ALLOW_YOU_TO_TAKE_BOTH_3 : " റൈഡുകളും എടുക്കാൻ നിങ്ങളെ അനുവദിക്കും",
   AC_CAB : "എസി ക്യാബ്",
   AC_SUV : "എസി എസ്‌യുവി",
   DOWNGRADE_VEHICLE : "വാഹനം തരംതാഴ്ത്തുക",
@@ -940,7 +940,8 @@ const mlStrings = {
   DO_YOU_WANT_TO_CANCEL_DESC : "നിങ്ങൾ ഓട്ടോപേ റദ്ദാക്കാൻ പോവുകയാണ്.\nയാന്ത്രിക പേയ്‌മെന്റുകൾ പുനരാരംഭിക്കുന്നതിന് നിങ്ങൾ വീണ്ടും ഓട്ടോപേ സജ്ജീകരിക്കേണ്ടതുണ്ട്.",
   NO : "ഇല്ല",
   YES_CANCEL : "അതെ, റദ്ദാക്കുക",
-  AUTOPAY_CANCELLED : "ഓട്ടോപേ റദ്ദാക്കി"
+  AUTOPAY_CANCELLED : "ഓട്ടോപേ റദ്ദാക്കി",
+  AND : " ഒപ്പം "
 }
 
 export function getStringValue(key) {

@@ -715,7 +715,7 @@ const frenchStrings = {
   ACTIVE_PLAN : "Plan actif",
   PAYMENT_PENDING : "Paiement en attente",
   DOWNGRADE_AVAILABLE_ONLY_FOR_AC_VEHICLES : "L'option de rétrogradation du véhicule n'est disponible que pour les véhicules avec climatisation",
-  DOWNGRADING_VEHICLE_WILL_ALLOW_YOU_TO_TAKE_BOTH_1 : "Le déclassement de votre véhicule vous permettra de prendre à la fois des trajets en",
+  DOWNGRADING_VEHICLE_WILL_ALLOW_YOU_TO_TAKE_BOTH_1 : "Le déclassement de votre véhicule vous permettra de prendre ",
   DOWNGRADING_VEHICLE_WILL_ALLOW_YOU_TO_TAKE_BOTH_2 : "et des trajets en",
   DOWNGRADING_VEHICLE_WILL_ALLOW_YOU_TO_TAKE_BOTH_3 : "",
   AC_CAB : "Cabine AC",
@@ -735,5 +735,6 @@ const frenchStrings = {
   DO_YOU_WANT_TO_CANCEL_DESC : "Vous avez déjà un plan actif. Voulez-vous annuler le plan actif et rejoindre le nouveau plan ?",
   NO : "Non",
   YES_CANCEL : "Oui, annuler",
-  AUTOPAY_CANCELLED : "Paiement automatique annulé"
+  AUTOPAY_CANCELLED : "Paiement automatique annulé",
+  AND : " et "
 }

@@ -1061,7 +1061,8 @@ profileOptionsLayout state push =
               , orientation VERTICAL
               , gravity CENTER_VERTICAL
               , onClick push $ const $ OptionClick optionItem.menuOptions
-              ] <>  if (optionItem.menuOptions == DRIVER_BOOKING_OPTIONS) && ((null state.data.downgradeOptions && not state.props.showBookingOptionForTaxi) || not state.data.activeRCData.rcStatus) then 
+              , visibility if (optionItem.menuOptions == DRIVER_BOOKING_OPTIONS && (MU.getMerchant FunctionCall) == MU.YATRI && null state.data.downgradeOptions) then GONE else VISIBLE
+              ] <>  if (optionItem.menuOptions == DRIVER_BOOKING_OPTIONS) && ((null state.data.downgradeOptions && not state.props.showBookingOptionForTaxi) || (not state.data.activeRCData.rcStatus && MU.getMerchant FunctionCall/= MU.YATRI)) then 
                       [ alpha 0.5
                       , clickable false] 
                     else [])
