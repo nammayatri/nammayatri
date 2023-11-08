@@ -65,7 +65,9 @@ callAppFeedback ratingValue rideId =
         AppFeedback.FeedbackReq
           { rideId = rideId,
             rating = ratingValue,
-            feedbackDetails = Just "driver was well behaved!"
+            feedbackDetails = Just "driver was well behaved!",
+            nightSafety = Nothing,
+            wasOfferedAssistance = Nothing
           }
    in appFeedback appRegistrationToken request
 

@@ -71,12 +71,13 @@ validateIssue Issue {..} =
       validateField "description" description $ LengthInRange 2 1000 `And` text
     ]
   where
-    text = star $ alphanum \/ " " \/ ","
+    text = star $ alphanum \/ " " \/ "," \/ "_"
 
 data SendIssueReq = SendIssueReq
   { contactEmail :: Maybe Text,
     issue :: Issue,
-    rideBookingId :: Maybe (Id Quote)
+    rideBookingId :: Maybe (Id Quote),
+    nightSafety :: Maybe Bool
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -169,6 +170,7 @@ buildDBIssue (Id customerId) SendIssueReq {..} = do
         description = issue.description,
         ticketId = Nothing, -- third party id
         status = Domain.OPEN,
+        nightSafety = fromMaybe False nightSafety,
         createdAt = time,
         updatedAt = time
       }

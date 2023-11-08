@@ -42,10 +42,10 @@ bookingStatus bookingId (personId, _) = do
   booking <- runInReplica (QRB.findById bookingId) >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
   unless (booking.riderId == personId) $ throwError AccessDenied
   logInfo $ "booking: test " <> show booking
-  SRB.buildBookingAPIEntity booking
+  SRB.buildBookingAPIEntity booking personId
 
 bookingList :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => (Id Person.Person, Id Merchant.Merchant) -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe SRB.BookingStatus -> m BookingListRes
 bookingList (personId, _) mbLimit mbOffset mbOnlyActive mbBookingStatus = do
   rbList <- runInReplica $ QR.findAllByRiderIdAndRide personId mbLimit mbOffset mbOnlyActive mbBookingStatus
   logInfo $ "rbList: test " <> show rbList
-  BookingListRes <$> traverse SRB.buildBookingAPIEntity rbList
+  BookingListRes <$> traverse (`SRB.buildBookingAPIEntity` personId) rbList

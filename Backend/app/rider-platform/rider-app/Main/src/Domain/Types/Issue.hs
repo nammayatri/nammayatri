@@ -28,6 +28,7 @@ data Issue = Issue
     description :: Text,
     ticketId :: Maybe Text,
     status :: IssueStatus,
+    nightSafety :: Bool,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }
