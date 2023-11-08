@@ -31,8 +31,6 @@ import qualified Kernel.Utils.Common as Utils
 import Kernel.Utils.Monitoring.Prometheus.Servant
 import Kernel.Utils.Servant.HeaderAuth
 import Servant hiding (throwError)
-import qualified Storage.CachedQueries.Merchant as CQM
-import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.RegistrationToken as QR
 import Tools.Error
@@ -100,24 +98,17 @@ verifyPerson :: (HasEsqEnv m r, Redis.HedisFlow m r, HasField "authTokenCacheExp
 verifyPerson token = do
   let key = authTokenCacheKey token
   authTokenCacheExpiry <- getSeconds <$> asks (.authTokenCacheExpiry)
-  resultOld <- Redis.safeGet key
-  case resultOld of
-    Just (personId, merchantId) -> do
-      merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
-      merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant Nothing
-      return (personId, merchantId, merchantOpCityId)
+  result <- Redis.safeGet key
+  case result of
+    Just (personId, merchantId, merchantOperatingCityId) -> return (personId, merchantId, merchantOperatingCityId)
     Nothing -> do
-      resultNew <- Redis.safeGet key
-      case resultNew of
-        Just (personId, merchantId, merchantOperatingCityId) -> return (personId, merchantId, merchantOperatingCityId)
-        Nothing -> do
-          sr <- verifyToken token
-          let expiryTime = min sr.tokenExpiry authTokenCacheExpiry
-          let personId = Id sr.entityId
-          let merchantId = Id sr.merchantId
-          let merchantOperatingCityId = Id sr.merchantOperatingCityId
-          Redis.setExp key (personId, merchantId, merchantOperatingCityId) expiryTime
-          return (personId, merchantId, merchantOperatingCityId)
+      sr <- verifyToken token
+      let expiryTime = min sr.tokenExpiry authTokenCacheExpiry
+      let personId = Id sr.entityId
+      let merchantId = Id sr.merchantId
+      let merchantOperatingCityId = Id sr.merchantOperatingCityId
+      Redis.setExp key (personId, merchantId, merchantOperatingCityId) expiryTime
+      return (personId, merchantId, merchantOperatingCityId)
 
 authTokenCacheKey :: RegToken -> Text
 authTokenCacheKey regToken =
