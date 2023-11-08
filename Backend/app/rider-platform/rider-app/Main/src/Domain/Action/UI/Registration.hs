@@ -138,7 +138,8 @@ data AuthRes = AuthRes
     attempts :: Int,
     authType :: SR.LoginType,
     token :: Maybe Text,
-    person :: Maybe PersonAPIEntity
+    person :: Maybe PersonAPIEntity,
+    isPersonBlocked :: Maybe Bool
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
@@ -208,7 +209,7 @@ auth req mbBundleVersion mbClientVersion = do
   let mkId = getId $ merchant.id
   regToken <- makeSession scfg entityId mkId (show <$> useFakeOtpM)
 
-  if person.enabled && not person.blocked
+  if not person.blocked
     then do
       void $ Person.updatePersonVersions person mbBundleVersion mbClientVersion
       _ <- RegistrationToken.create regToken
@@ -234,7 +235,7 @@ auth req mbBundleVersion mbClientVersion = do
               result <- Whatsapp.whatsAppOtpApi person.merchantId merchantOperatingCityId (Whatsapp.SendOtpApiReq phoneNumber otpCode)
               when (result._response.status /= "success") $ throwError (InternalError "Unable to send Whatsapp OTP message")
     else logInfo $ "Person " <> getId person.id <> " is not enabled. Skipping send OTP"
-  return $ AuthRes regToken.id regToken.attempts regToken.authType Nothing Nothing
+  return $ AuthRes regToken.id regToken.attempts regToken.authType Nothing Nothing (Just person.blocked)
 
 signatureAuth ::
   ( HasFlowEnv m r '["smsCfg" ::: SmsConfig],
@@ -266,7 +267,7 @@ signatureAuth req mbBundleVersion mbClientVersion = do
       scfg = sessionConfig smsCfg
   let mkId = getId $ merchant.id
   regToken <- makeSession scfg entityId mkId (show <$> useFakeOtpM)
-  if person.enabled && not person.blocked
+  if not person.blocked
     then do
       void $ Person.updatePersonVersions person mbBundleVersion mbClientVersion
       _ <- RegistrationToken.create regToken
@@ -274,8 +275,8 @@ signatureAuth req mbBundleVersion mbClientVersion = do
       _ <- RegistrationToken.setDirectAuth regToken.id
       _ <- Person.updatePersonalInfo person.id (req.firstName <|> person.firstName <|> Just "User") req.middleName req.lastName Nothing mbEncEmail deviceToken notificationToken (req.language <|> person.language <|> Just Language.ENGLISH) (req.gender <|> Just person.gender) (mbClientVersion <|> Nothing) (mbBundleVersion <|> Nothing)
       personAPIEntity <- verifyFlow person regToken req.whatsappNotificationEnroll deviceToken
-      return $ AuthRes regToken.id regToken.attempts SR.DIRECT (Just regToken.token) (Just personAPIEntity)
-    else return $ AuthRes regToken.id regToken.attempts regToken.authType Nothing Nothing
+      return $ AuthRes regToken.id regToken.attempts SR.DIRECT (Just regToken.token) (Just personAPIEntity) (Just person.blocked)
+    else return $ AuthRes regToken.id regToken.attempts regToken.authType Nothing Nothing (Just person.blocked)
 
 buildPerson :: (EncFlow m r, DB.EsqDBReplicaFlow m r, EsqDBFlow m r, Redis.HedisFlow m r, CacheFlow m r) => AuthReq -> Text -> Maybe Text -> Maybe Version -> Maybe Version -> Id DMerchant.Merchant -> Context.City -> Id DMOC.MerchantOperatingCity -> m SP.Person
 buildPerson req mobileNumber notificationToken bundleVersion clientVersion merchantId currentCity merchantOperatingCityId = do
@@ -528,7 +529,7 @@ resend tokenId = do
         when (result._response.status /= "success") $ throwError (InternalError "Unable to send Whatsapp OTP message")
 
   void $ RegistrationToken.updateAttempts (attempts - 1) id
-  return $ AuthRes tokenId (attempts - 1) authType Nothing Nothing
+  return $ AuthRes tokenId (attempts - 1) authType Nothing Nothing (Just person.blocked)
 
 cleanCachedTokens :: (CacheFlow m r, EsqDBFlow m r, Redis.HedisFlow m r) => Id SP.Person -> m ()
 cleanCachedTokens personId = do
