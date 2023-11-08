@@ -29,11 +29,11 @@ type ContentConfig =
    }
 
 
-accessibilityPopUpConfig :: Mb.Maybe ST.DisabilityT -> PopUpModal.Config
-accessibilityPopUpConfig selectedDisability = 
+accessibilityPopUpConfig :: Mb.Maybe ST.DisabilityT -> PurpleRideConfig -> PopUpModal.Config
+accessibilityPopUpConfig selectedDisability purpleRideConfig = 
    let 
      config = PopUpModal.config
-     popupData = getAccessibilityPopupData selectedDisability
+     popupData = getAccessibilityPopupData selectedDisability purpleRideConfig
      config' = config
        {
          gravity = CENTER,
@@ -79,28 +79,28 @@ accessibilityPopUpConfig selectedDisability =
    in config'
   
 
-getAccessibilityPopupData :: Mb.Maybe ST.DisabilityT -> ContentConfig
-getAccessibilityPopupData pwdtype  = 
+getAccessibilityPopupData :: Mb.Maybe ST.DisabilityT -> PurpleRideConfig -> ContentConfig
+getAccessibilityPopupData pwdtype purpleRideConfig = 
    let accessibilityConfig' = accessibilityConfig Common.Config
    in case pwdtype of 
         Mb.Just disability -> case (disability.tag) of 
           "BLIND_LOW_VISION" -> accessibilityConfig'
                                                   { imageUrl = fetchImage FF_ASSET "ny_ic_blind_pickup",
-                                                    videoUrl = "https://www.youtube.com/watch?v=GllvoYpOUpc",
+                                                    videoUrl = purpleRideConfig.visualImpairmentVideo,
                                                     mediaType = "VideoLink",
                                                     listViewArray = [(getString VI_POINTER_1) , (getString VI_POINTER_2) , (getString GENERAL_DISABILITY_DESCRIPTION)],
                                                     videoId = "VisualImpairmentCoverVideo"
                                                   } 
           "HEAR_IMPAIRMENT" ->     accessibilityConfig'
                                                   { imageUrl = fetchImage FF_ASSET "ny_ic_deaf_pickup",
-                                                    videoUrl = "https://www.youtube.com/watch?v=QcKeSF9uiJ4",
+                                                    videoUrl = purpleRideConfig.hearingImpairmentVideo,
                                                     mediaType = "PortraitVideoLink",
                                                     listViewArray = [(getString HI_POINTER_1) , (getString HI_POINTER_2) , (getString GENERAL_DISABILITY_DESCRIPTION)],
                                                     videoId = "HearingImpairmentCoverVideo"
                                                   }
           "LOCOMOTOR_DISABILITY" -> accessibilityConfig'
                                                   { imageUrl = fetchImage FF_ASSET "ny_ic_locomotor_arrival",
-                                                    videoUrl = "https://youtu.be/-ku9Gc8U5B8",
+                                                    videoUrl = purpleRideConfig.physicalImpairmentVideo,
                                                     mediaType = "PortraitVideoLink",
                                                     listViewArray = [(getString PI_POINTER_1) , (getString PI_POINTER_2) , (getString GENERAL_DISABILITY_DESCRIPTION)],
                                                     videoId = "PhysicalImpairmentCoverVideo"

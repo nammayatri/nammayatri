@@ -117,7 +117,7 @@ view push state =
               [ height MATCH_PARENT
               , width MATCH_PARENT
               , gravity BOTTOM
-              ][  PopUpModal.view (push <<< AccessibilityPopUpAC) (CommonComponentConfig.accessibilityPopUpConfig state.data.disabilityOptions.selectedDisability)] ]
+              ][  PopUpModal.view (push <<< AccessibilityPopUpAC) (CommonComponentConfig.accessibilityPopUpConfig state.data.disabilityOptions.selectedDisability state.data.config.purpleRideConfig)] ]
               else [])
 
 updateButtonView :: forall w. ST.MyProfileScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
