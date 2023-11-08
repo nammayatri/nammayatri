@@ -884,9 +884,9 @@ const tamilStrings = {
   ACTIVE_PLAN : "செயலில் உள்ள திட்டம்",
   PAYMENT_PENDING : "கொடுப்பனவு நிலுவை",
   DOWNGRADE_AVAILABLE_ONLY_FOR_AC_VEHICLES : "குறைவு வாகன விருப்பம் எஸிக் வாகன்களுக்கு மட்டும் கிடைக்கின்றது",
-  DOWNGRADING_VEHICLE_WILL_ALLOW_YOU_TO_TAKE_BOTH_1 : "உங்கள் வாகனத்தை தரமிறக்கினால்,",
+  DOWNGRADING_VEHICLE_WILL_ALLOW_YOU_TO_TAKE_BOTH_1 : "உங்கள் வாகனத்தை தரமிறக்கினால் ",
   DOWNGRADING_VEHICLE_WILL_ALLOW_YOU_TO_TAKE_BOTH_2 : "சவாரிகள் மற்றும்",
-  DOWNGRADING_VEHICLE_WILL_ALLOW_YOU_TO_TAKE_BOTH_3 : "சவாரிகள் இரண்டிலும் நீங்கள் செல்லலாம்",
+  DOWNGRADING_VEHICLE_WILL_ALLOW_YOU_TO_TAKE_BOTH_3 : " சவாரிகள் இரண்டிலும் நீங்கள் செல்லலாம்",
   AC_CAB : "ஏசி வண்டி",
   AC_SUV : "ஏசி எஸ்யூவி",
   DOWNGRADE_VEHICLE : "தரமிறக்கும் வாகனம்",
@@ -968,7 +968,8 @@ const tamilStrings = {
   SIGNUP_EARLY_FOR_SPECIAL_OFFERS : "சிறப்புச் சலுகைகளுக்கு முன்கூட்டியே பதிவுசெய்க",
   GUARANTEED_FIXED_PRICE : "ஜனவரி 1, 2025 வரை நிலையான விலைக்கு உத்தரவாதம்",
   INTRODUCTORY_OFFER_TO_BE_ANNOUNCED_SOON : "அறிமுக சலுகை விரைவில் அறிவிக்கப்படும்!",
-  NO_CHARGES_TILL : "டிசம்பர் 31 வரை கட்டணம் இல்லை"
+  NO_CHARGES_TILL : "டிசம்பர் 31 வரை கட்டணம் இல்லை",
+  AND : " மற்றும் "
 }
 
 export function getStringValue(key) {

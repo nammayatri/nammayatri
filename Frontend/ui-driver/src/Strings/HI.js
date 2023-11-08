@@ -911,9 +911,9 @@ const hindiStrings = {
   DAYS : "दिन",
   ACTIVE_PLAN : "सक्रिय योजना",
   DOWNGRADE_AVAILABLE_ONLY_FOR_AC_VEHICLES : "गाड़ी को डाउनग्रेड करने का विकल्प केवल एसी वाहनों के लिए है",
-  DOWNGRADING_VEHICLE_WILL_ALLOW_YOU_TO_TAKE_BOTH_1 : "अपने वाहन को अपग्रेड करने से आप",
+  DOWNGRADING_VEHICLE_WILL_ALLOW_YOU_TO_TAKE_BOTH_1 : "अपने वाहन को अपग्रेड करने से आप ",
   DOWNGRADING_VEHICLE_WILL_ALLOW_YOU_TO_TAKE_BOTH_2 : "की सवारी और",
-  DOWNGRADING_VEHICLE_WILL_ALLOW_YOU_TO_TAKE_BOTH_3 : "की सवारी दोनों ले सकेंगे",
+  DOWNGRADING_VEHICLE_WILL_ALLOW_YOU_TO_TAKE_BOTH_3 : " की सवारी दोनों ले सकेंगे",
   AC_CAB : "एसी कैब",
   AC_SUV : "एसी एसयूवी",
   DOWNGRADE_VEHICLE : "डाउनग्रेड वाहन",
@@ -995,7 +995,8 @@ const hindiStrings = {
   SIGNUP_EARLY_FOR_SPECIAL_OFFERS : "विशेष ऑफर के लिए जल्दी साइन अप करें",
   GUARANTEED_FIXED_PRICE : "1 जनवरी 2025 तक कीमत में कोई बदलाव नहीं।",
   INTRODUCTORY_OFFER_TO_BE_ANNOUNCED_SOON : "परिचयात्मक ऑफर की घोषणा जल्द ही की जाएगी!",
-  NO_CHARGES_TILL : "31 दिसंबर तक कोई शुल्क नहीं"
+  NO_CHARGES_TILL : "31 दिसंबर तक कोई शुल्क नहीं",
+  AND : " और "
 }
 
 

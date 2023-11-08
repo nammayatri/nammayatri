@@ -912,9 +912,9 @@ const englishStrings = {
   DAYS : "Days",
   ACTIVE_PLAN : "Active Plan",
   DOWNGRADE_AVAILABLE_ONLY_FOR_AC_VEHICLES : "Downgrade vehicle option is only available for AC vehicles",
-  DOWNGRADING_VEHICLE_WILL_ALLOW_YOU_TO_TAKE_BOTH_1 : "Downgrading your vehicle will allow you to take both",
+  DOWNGRADING_VEHICLE_WILL_ALLOW_YOU_TO_TAKE_BOTH_1 : "Downgrading your vehicle will allow you to take ",
   DOWNGRADING_VEHICLE_WILL_ALLOW_YOU_TO_TAKE_BOTH_2 : "rides and",
-  DOWNGRADING_VEHICLE_WILL_ALLOW_YOU_TO_TAKE_BOTH_3 : "rides",
+  DOWNGRADING_VEHICLE_WILL_ALLOW_YOU_TO_TAKE_BOTH_3 : " rides",
   AC_CAB : "AC Cab",
   AC_SUV : "AC SUV",
   DOWNGRADE_VEHICLE : "Downgrade Vehicle",
@@ -998,6 +998,7 @@ const englishStrings = {
   GUARANTEED_FIXED_PRICE : "Guaranteed fixed price until \nJan 1, 2025",
   INTRODUCTORY_OFFER_TO_BE_ANNOUNCED_SOON : "Introductory offer will be announced soon!",
   NO_CHARGES_TILL : "No charges till Dec 31",
+  AND : " and "
 }
 
 

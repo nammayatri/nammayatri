@@ -883,9 +883,9 @@ const kannadaStrings = {
   DAYS : "ದಿನಗಳು",
   ACTIVE_PLAN : "ಸಕ್ರಿಯ ಯೋಜನೆ",
   DOWNGRADE_AVAILABLE_ONLY_FOR_AC_VEHICLES : "ವಾಹನ ಅಪಗ್ರೇಡ್ ಆಯ್ಕೆ ಕೇವಲ ಏಸಿ ವಾಹನಗಳಿಗೆ ಮಾತ್ರ ಲಭ್ಯವಿದೆ",
-  DOWNGRADING_VEHICLE_WILL_ALLOW_YOU_TO_TAKE_BOTH_1 : "ನಿಮ್ಮ ವಾಹನವನ್ನು ಡೌನ್‌ಗ್ರೇಡ್ ಮಾಡುವುದರಿಂದ",
+  DOWNGRADING_VEHICLE_WILL_ALLOW_YOU_TO_TAKE_BOTH_1 : "ನಿಮ್ಮ ವಾಹನವನ್ನು ಡೌನ್‌ಗ್ರೇಡ್ ಮಾಡುವುದರಿಂದ ",
   DOWNGRADING_VEHICLE_WILL_ALLOW_YOU_TO_TAKE_BOTH_2 : "ಸವಾರಿಗಳು ಮತ್ತು",
-  DOWNGRADING_VEHICLE_WILL_ALLOW_YOU_TO_TAKE_BOTH_3 : "ರೈಡ್‌ಗಳನ್ನು ತೆಗೆದುಕೊಳ್ಳಲು ನಿಮಗೆ ಅನುಮತಿಸುತ್ತದೆ",
+  DOWNGRADING_VEHICLE_WILL_ALLOW_YOU_TO_TAKE_BOTH_3 : " ರೈಡ್‌ಗಳನ್ನು ತೆಗೆದುಕೊಳ್ಳಲು ನಿಮಗೆ ಅನುಮತಿಸುತ್ತದೆ",
   AC_CAB : "ಎಸಿ ಕ್ಯಾಬ್",
   AC_SUV : "ಎಸಿ ಎಸ್ಯುವಿ",
   DOWNGRADE_VEHICLE : "ಡೌನ್‌ಗ್ರೇಡ್ ವಾಹನ",
@@ -967,7 +967,8 @@ const kannadaStrings = {
   SIGNUP_EARLY_FOR_SPECIAL_OFFERS : "ವಿಶೇಷ ಕೊಡುಗೆಗಳಿಗಾಗಿ ಮುಂಚಿತವಾಗಿ ಸೈನ್ ಅಪ್ ಮಾಡಿ",
   GUARANTEED_FIXED_PRICE : "ಜನವರಿ 1, 2025 ರವರೆಗೆ ಖಾತರಿಪಡಿಸಿದ ಸ್ಥಿರ ಬೆಲೆ",
   INTRODUCTORY_OFFER_TO_BE_ANNOUNCED_SOON : "ಪರಿಚಯಾತ್ಮಕ ಕೊಡುಗೆಯನ್ನು ಶೀಘ್ರದಲ್ಲೇ ಪ್ರಕಟಿಸಲಾಗುವುದು!",
-  NO_CHARGES_TILL : "ಡಿಸೆಂಬರ್ 31 ರವರೆಗೆ ಯಾವುದೇ ಶುಲ್ಕಗಳಿಲ್ಲ"
+  NO_CHARGES_TILL : "ಡಿಸೆಂಬರ್ 31 ರವರೆಗೆ ಯಾವುದೇ ಶುಲ್ಕಗಳಿಲ್ಲ",
+  AND : " ಮತ್ತು "
 }
 
 

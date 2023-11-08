@@ -22,7 +22,7 @@ module Helpers.Utils
 import Screens.Types (AllocationData, DisabilityType(..))
 import Language.Strings (getString)
 import Language.Types(STR(..))
-import Data.Array ((!!), elemIndex) as DA
+import Data.Array ((!!), elemIndex, length, slice, last) as DA
 import Data.String (Pattern(..), split) as DS
 import Data.Number (pi, sin, cos, asin, sqrt)
 
@@ -239,12 +239,46 @@ capitalizeFirstChar inputStr =
     in DS.joinWith " " output
 
 getDowngradeOptions :: String -> Array String
-getDowngradeOptions variant = case variant of
-                                "TAXI"  -> []
-                                "SUV"   -> ["SEDAN", "HATCHBACK"]
-                                "SEDAN" -> ["TAXI", "HATCHBACK"] 
-                                _       -> ["TAXI"]
+getDowngradeOptions variant = case (getMerchant FunctionCall) of
+                                YATRISATHI -> case variant of
+                                                "TAXI"  -> []
+                                                "SUV"   -> ["SEDAN", "HATCHBACK"]
+                                                "SEDAN" -> ["TAXI", "HATCHBACK"] 
+                                                _       -> ["TAXI"]
+                                _ -> case variant of
+                                        "SUV"   -> ["SEDAN", "HATCHBACK"]
+                                        "SEDAN" -> ["HATCHBACK"]
+                                        _       -> []
 
+
+getDowngradeOptionsText :: String -> String
+getDowngradeOptionsText vehicleType = do
+  let
+    downgradeFrom = getVariantRideType vehicleType
+    downgradeOptions = getUIDowngradeOptions vehicleType
+    subsetArray = DA.slice 0 (DA.length downgradeOptions - 1) downgradeOptions
+    lastElement = DA.last downgradeOptions
+    modifiedArray = DS.joinWith ", " $  map (\item -> getVehicleType item) subsetArray
+    prefixString = if (DA.length downgradeOptions > 1) then ", " else " "
+    downgradedToString = ( prefixString
+                        <> modifiedArray 
+                        <> case lastElement of 
+                            Just lastElem -> (getString AND) <> " " <> (getVehicleType lastElem)
+                            _ -> "" )
+  getString DOWNGRADING_VEHICLE_WILL_ALLOW_YOU_TO_TAKE_BOTH_1 <> downgradeFrom <> downgradedToString <> getString DOWNGRADING_VEHICLE_WILL_ALLOW_YOU_TO_TAKE_BOTH_3
+
+getUIDowngradeOptions :: String -> Array String
+getUIDowngradeOptions variant = case (getMerchant FunctionCall) of
+                                YATRISATHI -> case variant of
+                                                "TAXI"  -> []
+                                                "SUV"   -> ["SEDAN"]
+                                                "SEDAN" -> ["TAXI"] 
+                                                _       -> ["TAXI"]
+                                _ -> case variant of
+                                        "SUV"   -> ["SEDAN", "HATCHBACK"]
+                                        "SEDAN" -> ["HATCHBACK"]
+                                        _       -> []
+  
 getVehicleType :: String -> String
 getVehicleType vehicleType =
   case vehicleType of
@@ -447,9 +481,9 @@ getVehicleVariantImage variant =
                         "SUV"  -> "ny_ic_suv_ac_side," <> commonUrl <> "ny_ic_suv_ac_side.png"
                         _      -> "ny_ic_sedan_ac_side," <> commonUrl <> "ny_ic_sedan_ac_side.png"
         _          -> case variant of
-                        "SEDAN"     -> "ic_sedan," <> url <> "ic_sedan.png"
-                        "SUV"       -> "ic_suv," <> url <> "ic_suv.png"
-                        "HATCHBACK" -> "ic_hatchback," <> url <> "ic_hatchback.png"
+                        "SEDAN"     -> "ny_ic_sedan_car_side," <> url <> "ny_ic_sedan_car_side.png"
+                        "SUV"       -> "ny_ic_suv_car_side," <> url <> "ny_ic_suv_car_side.png"
+                        "HATCHBACK" -> "ny_ic_hatchback_car_side," <> url <> "ny_ic_hatchback_car_side.png"
                         "TAXI"      -> "ic_sedan_non_ac," <> url <> "ic_sedan_non_ac.png"
                         "TAXI_PLUS" -> "ic_sedan_ac," <> url <> "ic_sedan_ac.png"
                         _           -> "ic_sedan_ac," <> url <> "ic_sedan_ac.png"
