@@ -136,10 +136,15 @@ increaseDriverGoHomeRequestCount merchantOpCityId driverId = do
   ghInfo <- getDriverGoHomeRequestInfo driverId merchantOpCityId Nothing
   withCrossAppRedis $ Hedis.setExp ghKey (templateGoHomeData ghInfo.status (ghInfo.cnt + 1) ghInfo.validTill ghInfo.driverGoHomeRequestId ghInfo.isOnRide (Just ghInfo.goHomeReferenceTime) currTime) expTime
 
-setDriverGoHomeIsOnRide :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id DP.Driver -> Id DMOC.MerchantOperatingCity -> m ()
-setDriverGoHomeIsOnRide driverId merchantOpCityId = do
-  currTime <- getLocalCurrentTime =<< ((CQTC.findByMerchantOpCityId merchantOpCityId >>= fromMaybeM (InternalError "Transporter config for timezone not found")) <&> (.timeDiffFromUtc))
-  let ghKey = makeGoHomeReqKey driverId
-  expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
-  ghInfo <- getDriverGoHomeRequestInfo driverId merchantOpCityId Nothing
-  withCrossAppRedis $ Hedis.setExp ghKey (templateGoHomeData ghInfo.status ghInfo.cnt ghInfo.validTill ghInfo.driverGoHomeRequestId True (Just ghInfo.goHomeReferenceTime) currTime) expTime
+setDriverGoHomeIsOnRideStatus :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id DP.Driver -> Id DMOC.MerchantOperatingCity -> Bool -> m (Maybe (Id DriverGoHomeRequest))
+setDriverGoHomeIsOnRideStatus driverId merchantOpCityId status = do
+  ghCfg <- CQGHC.findByMerchantOpCityId merchantOpCityId
+  if ghCfg.enableGoHome
+    then do
+      currTime <- getLocalCurrentTime =<< ((CQTC.findByMerchantOpCityId merchantOpCityId >>= fromMaybeM (InternalError "Transporter config for timezone not found")) <&> (.timeDiffFromUtc))
+      let ghKey = makeGoHomeReqKey driverId
+      expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
+      ghInfo <- getDriverGoHomeRequestInfo driverId merchantOpCityId (Just ghCfg)
+      when (ghInfo.status == Just DDGR.ACTIVE) $ withCrossAppRedis $ Hedis.setExp ghKey (templateGoHomeData ghInfo.status ghInfo.cnt ghInfo.validTill ghInfo.driverGoHomeRequestId status (Just ghInfo.goHomeReferenceTime) currTime) expTime
+      return ghInfo.driverGoHomeRequestId
+    else return Nothing

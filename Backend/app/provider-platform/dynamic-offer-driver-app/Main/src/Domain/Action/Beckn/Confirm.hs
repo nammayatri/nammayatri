@@ -46,8 +46,7 @@ import qualified SharedLogic.CallBAP as BP
 import qualified SharedLogic.DriverPool as DP
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
-import qualified Storage.CachedQueries.Driver.GoHomeRequest as CGHR
-import Storage.CachedQueries.GoHomeConfig as QGHC
+import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
 import Storage.CachedQueries.Merchant as QM
 import Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BookingCancellationReason as QBCR
@@ -120,9 +119,7 @@ handler transporter req quote = do
     DRB.NormalBooking -> do
       case quote of
         Left (driver, driverQuote) -> do
-          cfg <- QGHC.findByMerchantOpCityId booking.merchantOperatingCityId
-          ghrId <- if cfg.enableGoHome then CGHR.getDriverGoHomeRequestInfo driver.id booking.merchantOperatingCityId (Just cfg) <&> (.driverGoHomeRequestId) else return Nothing
-
+          ghrId <- CQDGR.setDriverGoHomeIsOnRideStatus driver.id booking.merchantOperatingCityId True
           otpCode <- case riderDetails.otpCode of
             Nothing -> do
               otpCode <- generateOTPCode
@@ -358,6 +355,7 @@ cancelBooking booking mbDriver transporter = do
   QRB.updateStatus booking.id DRB.CANCELLED
   QBCR.upsert bookingCancellationReason
   whenJust mbRide $ \ride -> do
+    void $ CQDGR.setDriverGoHomeIsOnRideStatus ride.driverId booking.merchantOperatingCityId False
     QRide.updateStatus ride.id DRide.CANCELLED
     QDI.updateOnRide (cast ride.driverId) False
     void $ LF.rideDetails ride.id SRide.CANCELLED transporter.id ride.driverId booking.fromLocation.lat booking.fromLocation.lon

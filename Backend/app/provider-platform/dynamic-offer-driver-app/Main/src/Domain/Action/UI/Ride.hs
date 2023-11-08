@@ -62,7 +62,7 @@ import qualified SharedLogic.CallBAP as BP
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import SharedLogic.FareCalculator (fareSum)
 import qualified Storage.CachedQueries.BapMetadata as CQSM
-import qualified Storage.CachedQueries.Driver.GoHomeRequest as CGHR
+import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
 import qualified Storage.CachedQueries.Exophone as CQExophone
 import Storage.CachedQueries.Merchant as QM
 import qualified Storage.Queries.Booking as QBooking
@@ -234,7 +234,7 @@ otpRideCreate driver otpCode booking = do
   unless (driverInfo.subscribed) $ throwError DriverUnsubscribed
   unless (driverInfo.enabled) $ throwError DriverAccountDisabled
   when driverInfo.onRide $ throwError DriverOnRide
-  ghrId <- (CGHR.getDriverGoHomeRequestInfo driver.id booking.merchantOperatingCityId) Nothing <&> (.driverGoHomeRequestId)
+  ghrId <- CQDGR.setDriverGoHomeIsOnRideStatus driver.id booking.merchantOperatingCityId True
   ride <- buildRide otpCode driver.id (Just transporter.id) booking.merchantOperatingCityId ghrId
   rideDetails <- buildRideDetails ride
 
