@@ -105,7 +105,10 @@ commonConfig =
             } 
           }
         , purpleRideConfig : {
-            genericVideoUrl : ""
+            genericVideoUrl : "" ,
+            visualImpairmentVideo : "" ,
+            physicalImpairmentVideo : "",
+            hearingImpairmentVideo : ""
           }
         , showDisabilityBanner : false
         , searchLocationConfig : {

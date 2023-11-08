@@ -162,6 +162,9 @@ config =
       , animationDuration : 500
       }
   , purpleRideConfig : {
-      genericVideoUrl : "" 
-  }
+      genericVideoUrl : "" ,
+      visualImpairmentVideo : "" ,
+      physicalImpairmentVideo : "",
+      hearingImpairmentVideo : ""
+    }
   }

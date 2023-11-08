@@ -202,5 +202,8 @@ type DottedLineConfig = {
 }
 
 type PurpleRideConfig = {
-  genericVideoUrl :: String
+  genericVideoUrl :: String,
+  visualImpairmentVideo :: String,
+  physicalImpairmentVideo :: String,
+  hearingImpairmentVideo :: String
 }

@@ -196,7 +196,10 @@ window.getMerchantConfig = function () {
     , "packageName" : "com.google.android.apps.maps"
   }
   , "purpleRideConfig" : {
-        "genericVideoUrl" : "https://www.youtube.com/watch?v=tzrf2Rdpkc4"  
+        "genericVideoUrl" : "https://www.youtube.com/watch?v=tzrf2Rdpkc4",
+        "visualImpairmentVideo" : "https://www.youtube.com/watch?v=GllvoYpOUpc" ,
+        "physicalImpairmentVideo" : "https://youtu.be/-ku9Gc8U5B8",
+        "hearingImpairmentVideo" : "https://www.youtube.com/watch?v=QcKeSF9uiJ4"
   }
   , "SUPPORT_EMAIL" : "nammayatri.support@juspay.in"
   , "OTP_MESSAGE_REGEX" : "is your OTP for login to [A-Za-z]+ [A-Za-z]+ [A-Za-z]+"

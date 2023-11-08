@@ -611,7 +611,7 @@ const kannadaStrings = {
   "FARE_INFO_TEXT" : "",
   "FASTER" : "ವೇಗವಾಗಿ",
   "PLEASE_ENABLE_LOCATION_PERMISSION" : "ಸವಾರಿಗಳಿಗಾಗಿ ಹುಡುಕುವುದನ್ನು ಪ್ರಾರಂಭಿಸಲು ದಯವಿಟ್ಟು ಸೆಟ್ಟಿಂಗ್‌ಗಳ ಅಪ್ಲಿಕೇಶನ್‌ನಿಂದ ನಮ್ಮ ಯಾತ್ರಿಗೆ ಸ್ಥಳ ಅನುಮತಿಗಳನ್ನು ಸಕ್ರಿಯಗೊಳಿಸಿ.",
-  "EDUCATIONAL_POP_UP_SLIDE_1_TITLE" : "ನಮ್ಮ ಎಲ್ಲಾ ಬಳಕೆದಾರರಿಗೆ ಸಮ ಮತ್ತು ಸಮಾನ ಅನುಭವವನ್ನು \n ಒದಗಿಸಲು ನಾವು ಪ್ರಯತ್ನಿಸುತ್ತೇವೆ",
+  "EDUCATIONAL_POP_UP_SLIDE_1_TITLE" : "ನಮ್ಮ ಎಲ್ಲಾ ಬಳಕೆದಾರರಿಗೆ ಸಮ ಮತ್ತು ಸಮಾನ ಅನುಭವವನ್ನು \n ಒದಗಿಸಲು ನಾವು ಪ್ರಯತ್ನಿಸುತ್ತೇವೆ.",
   "EDUCATIONAL_POP_UP_SLIDE_2_TITLE" : "ಕಳಪೆ ದೃಷ್ಟಿ ಹೊಂದಿರುವ ಬಳಕೆದಾರರಿಗೆ",
   "EDUCATIONAL_POP_UP_SLIDE_3_TITLE" : "ಕಳಪೆ ಶ್ರವಣ ಹೊಂದಿರುವ ಬಳಕೆದಾರರಿಗೆ",
   "EDUCATIONAL_POP_UP_SLIDE_4_TITLE" : "ಲೊಕೊಮೊಟರ್ ಅಸಾಮರ್ಥ್ಯ ಹೊಂದಿರುವ ಬಳಕೆದಾರರಿಗೆ",

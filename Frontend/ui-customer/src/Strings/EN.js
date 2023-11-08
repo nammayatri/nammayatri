@@ -617,7 +617,7 @@ const englishStrings = {
   "HELP" : "Help",
   "FARE_INFO_TEXT" : "",
   "PLEASE_ENABLE_LOCATION_PERMISSION" : "Please enable location permissions from the settings app to start looking for rides.",
-  "EDUCATIONAL_POP_UP_SLIDE_1_TITLE" : "We strive to provide all our users \nan even & equal experience",
+  "EDUCATIONAL_POP_UP_SLIDE_1_TITLE" : "We strive to provide all our users \nan even & equal experience.",
   "EDUCATIONAL_POP_UP_SLIDE_2_TITLE" : "For users with poor vision",
   "EDUCATIONAL_POP_UP_SLIDE_3_TITLE" : "For users with poor hearing",
   "EDUCATIONAL_POP_UP_SLIDE_4_TITLE" : "For users with locomotor disability",
@@ -626,7 +626,7 @@ const englishStrings = {
   "EDUCATIONAL_POP_UP_SLIDE_2_SUBTITLE" : "&#8226; Drivers will be prompted to call instead <br> &ensp; of texting. <br> &#8226; Drivers will be prompted to sound horn <br> &ensp;  once at the pickup. <br> &#8226; Drivers will be sensitised to help them with <br> &ensp;  their needs and requests.",
   "EDUCATIONAL_POP_UP_SLIDE_3_SUBTITLE" : "&#8226; Drivers will be prompted to text instead <br> &ensp;  of calling. <br> &#8226; Drivers will be prompted to message them <br> &ensp;  once at the pickup. <br> &#8226; Drivers will be sensitised to help them with <br> &ensp; their needs and requests.",
   "EDUCATIONAL_POP_UP_SLIDE_4_SUBTITLE" : "&#8226; Drivers will be prompted to come to their <br> &ensp;  exact location for pickup. <br> &#8226; Drivers will be prompted to help them <br> &ensp;  with their mobility aid. <br>&#8226; Drivers will be sensitised to help them with <br> &ensp; their needs and requests.",
-  "EDUCATIONAL_POP_UP_SLIDE_5_SUBTITLE" : "&#8226; We will be collecting other types of <br> &ensp; disabilities and shall be incorporating them <br> &ensp; among the list of disabilities available <br> &ensp; as needed",
+  "EDUCATIONAL_POP_UP_SLIDE_5_SUBTITLE" : "&#8226; We will be collecting other types of <br> &ensp; disabilities and shall be incorporating them <br> &ensp; among the list of disabilities available <br> &ensp; as needed.",
   "INCLUSIVE_AND_ACCESSIBLE" : "Inclusive and Accessible, for everyone!"
 }
 
