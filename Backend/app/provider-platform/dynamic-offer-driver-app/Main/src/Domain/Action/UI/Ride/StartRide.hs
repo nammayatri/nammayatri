@@ -189,7 +189,7 @@ startRide ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.getId)
           _ <- try @_ @SomeException $ S3.put (T.unpack imagePath) image
           createMediaFile imageUrl ride
       endRideOtp <- Just <$> generateOTPCode
-      pure (ride{rideDetails = DRide.DetailsRental details{endRideOtp = endRideOtp}}, endRideOtp)
+      pure (ride{rideDetails = DRide.DetailsRental details{odometerStartReading = odometerStartReading, endRideOtp = endRideOtp}}, endRideOtp)
 
   whenWithLocationUpdatesLock driverId $ do
     withTimeAPI "startRide" "startRideAndUpdateLocation" $ startRideAndUpdateLocation driverId ride booking point odometerStartReading mbRideEndOtp

@@ -75,7 +75,6 @@ import Storage.Queries.DriverOnboarding.VehicleRegistrationCertificate as QVRC
 import qualified Storage.Queries.Rating as QR
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RideDetails as QRD
-import qualified Storage.Queries.RideDetails as QRideD
 import Storage.Queries.Vehicle as QVeh
 import Tools.Error
 import Tools.Event
@@ -120,7 +119,9 @@ data DriverRideRes = DriverRideRes
     requestedVehicleVariant :: DVeh.Variant,
     driverGoHomeRequestId :: Maybe (Id DDGR.DriverGoHomeRequest),
     payerVpa :: Maybe Text,
-    autoPayStatus :: Maybe DI.DriverAutoPayStatus
+    autoPayStatus :: Maybe DI.DriverAutoPayStatus,
+    odometerStartReading :: Maybe Centesimal,
+    odometerEndReading :: Maybe Centesimal
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -182,6 +183,11 @@ mkDriverRideRes rideDetails driverNumber rideRating mbExophone (ride, booking) b
           (DRide.ON_DEMAND, Just toLocation)
         DRB.DetailsRental DRB.BookingDetailsRental {} ->
           (DRide.RENTAL, Nothing)
+  let (odometerStartReading', odometerEndReading') = case ride.rideDetails of
+        DRide.DetailsOnDemand DRide.RideDetailsOnDemand {} ->
+          (Nothing, Nothing)
+        DRide.DetailsRental DRide.RideDetailsRental {odometerStartReading, odometerEndReading} ->
+          (odometerStartReading, odometerEndReading)
   DriverRideRes
     { id = ride.id,
       shortRideId = ride.shortId,
@@ -216,7 +222,9 @@ mkDriverRideRes rideDetails driverNumber rideRating mbExophone (ride, booking) b
       requestedVehicleVariant = booking.vehicleVariant,
       driverGoHomeRequestId = goHomeReqId,
       payerVpa = driverInfo >>= (.payerVpa),
-      autoPayStatus = driverInfo >>= (.autoPayStatus)
+      autoPayStatus = driverInfo >>= (.autoPayStatus),
+      odometerStartReading = odometerStartReading',
+      odometerEndReading = odometerEndReading'
     }
 
 arrivedAtPickup :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, HasShortDurationRetryCfg r c, HasFlowEnv m r '["nwAddress" ::: BaseUrl], HasHttpClientOptions r c, HasFlowEnv m r '["driverReachedDistance" ::: HighPrecMeters]) => Id DRide.Ride -> LatLong -> m APISuccess
@@ -262,7 +270,7 @@ otpRideCreate driver otpCode booking = do
   QDI.updateOnRide (cast driver.id) True
   void $ LF.rideDetails ride.id DRide.NEW transporter.id ride.driverId booking.fromLocation.lat booking.fromLocation.lon
 
-  QRideD.create rideDetails
+  QRD.create rideDetails
 
   QBE.logDriverAssignedEvent (cast driver.id) booking.id ride.id
   triggerRideCreatedEvent RideEventData {ride = ride, personId = driver.id, merchantId = transporter.id}

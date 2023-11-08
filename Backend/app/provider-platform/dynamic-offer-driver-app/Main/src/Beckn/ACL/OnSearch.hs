@@ -299,7 +299,7 @@ mkQuoteEntitiesRental start provider it = do
                 { display = Just True,
                   code = Just "rental_per_extra_km_rate",
                   name = Just "Per Extra Km Rate",
-                  value = Just $ show info.perHourFreeKms
+                  value = Just $ show info.perExtraKmRate
                 },
               OS.Tag
                 { display = Just True,

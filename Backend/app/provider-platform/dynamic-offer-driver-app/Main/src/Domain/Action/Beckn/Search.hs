@@ -263,8 +263,6 @@ handler merchant sReq' =
       _ <- QSR.createDSReq rentalSearchReq
       triggerSearchEvent SearchEventData {searchRequest = Left rentalSearchReq, merchantId = merchantId}
       let vehiclesVariantRentalFarePolicy = listVehicleVariantHelper fullFarePolicies
-          initialDistance = 1000
-          initialDuration = Seconds 3600
       (quotes, mbEstimateInfos) <- do
         now <- getCurrentTime
         listOfRentalQuotes <- do
@@ -273,7 +271,7 @@ handler merchant sReq' =
               calculateFareParameters
                 CalculateFareParametersParams
                   { farePolicy = rentalFarePolicy,
-                    distance = initialDistance,
+                    distance = Meters 1000,
                     rideTime = sReq.pickupTime,
                     waitingTime = Nothing,
                     actualRideDuration = Nothing,
@@ -288,9 +286,9 @@ handler merchant sReq' =
                 rentalSearchReq
                 fareParams
                 merchant.id
-                initialDistance
+                (Meters 1000)
                 rentalFarePolicy.vehicleVariant
-                initialDuration
+                (Seconds 3600)
                 rentalFarePolicy.id
             pure (rentalQuote, rentalFarePolicy)
         for_ listOfRentalQuotes (QQuoteRental.create . fst)
