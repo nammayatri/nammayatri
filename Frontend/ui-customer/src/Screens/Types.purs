@@ -704,6 +704,7 @@ type HomeScreenStateProps =
   , flowWithoutOffers :: Boolean
   , showEducationalCarousel :: Boolean
   , locateOnMapLocation :: LocateOnMapLocation
+  , specialZoneType :: String
   }
 
 type SearchLocationModelProps = {

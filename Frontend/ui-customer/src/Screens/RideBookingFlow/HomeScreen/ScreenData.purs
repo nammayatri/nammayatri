@@ -227,6 +227,7 @@ initData = {
     , searchLocationModelProps : dummySearchLocationModelProps
     , flowWithoutOffers : true
     , showEducationalCarousel : false
+    , specialZoneType : ""
     , locateOnMapLocation : {
         source : ""
       , sourceLat : 0.0

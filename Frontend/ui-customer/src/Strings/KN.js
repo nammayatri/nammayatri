@@ -217,7 +217,7 @@ const kannadaStrings = {
   "MAX_CHAR_LIMIT_REACHED": "ಗರಿಷ್ಠ ಅಕ್ಷರ ಮಿತಿಯನ್ನು ತಲುಪಿದೆ,",
   "SHOW_ALL_OPTIONS": "ಎಲ್ಲಾ ಆಯ್ಕೆಗಳನ್ನು ತೋರಿಸಿ",
   "DRIVER_WAS_NOT_REACHABLE": "ಚಾಲಕನನ್ನು ಸಂಪರ್ಕಿಸಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ",
-  "EXPIRES_IN": "ಸೆಕೆಂಡುಗಳಲ್ಲಿ ಅವಧಿ ಮುಗಿಯುತ್ತದೆ",
+  "EXPIRES_IN": "ಅವಧಿ",
   "PAY_DIRECTLY_TO_YOUR_DRIVER_USING_CASH_UPI": "*ನಗದು/ಯುಪಿಐ ಬಳಸಿ ನಿಮ್ಮ ಡ್ರೈವರ್‌ಗೆ ನೇರವಾಗಿ ಪಾವತಿಸಿ",
   "UPDATE_REQUIRED": "ಅಪ್ಡೇಟ್ ಅಗತ್ಯವಿದೆ",
   "PLEASE_UPDATE_APP_TO_CONTINUE_SERVICE": "ಸೇವೆಯನ್ನು ಮುಂದುವರಿಸಲು ದಯವಿಟ್ಟು ಅಪ್ಲಿಕೇಶನ್ ಅನ್ನು ನವೀಕರಿಸಿ",
