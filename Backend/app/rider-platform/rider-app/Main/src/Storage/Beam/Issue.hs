@@ -30,6 +30,7 @@ data IssueT f = IssueT
     description :: B.C f Text,
     ticketId :: B.C f (Maybe Text),
     status :: B.C f Domain.IssueStatus,
+    nightSafety :: B.C f Bool,
     createdAt :: B.C f UTCTime,
     updatedAt :: B.C f UTCTime
   }

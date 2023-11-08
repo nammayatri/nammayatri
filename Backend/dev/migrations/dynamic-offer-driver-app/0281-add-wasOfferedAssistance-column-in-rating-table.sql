@@ -1,0 +1,1 @@
+ALTER TABLE atlas_driver_offer_bpp.rating ADD COLUMN was_offered_assistance boolean;

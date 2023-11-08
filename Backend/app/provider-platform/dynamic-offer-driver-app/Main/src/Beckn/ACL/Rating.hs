@@ -15,6 +15,7 @@
 module Beckn.ACL.Rating where
 
 import qualified Beckn.Types.Core.Taxi.API.Rating as Rating
+import Beckn.Types.Core.Taxi.Rating.FeedbackForm
 import qualified Domain.Action.Beckn.Rating as DRating
 import Kernel.Prelude
 import Kernel.Product.Validation.Context
@@ -24,6 +25,7 @@ import qualified Kernel.Types.Registry.Subscriber as Subscriber
 import Kernel.Utils.Common
 import Tools.Error
 
+-- TODO: Deprecated, Remove after successful deployment
 buildRatingReq ::
   (HasFlowEnv m r '["coreVersion" ::: Text]) =>
   Subscriber.Subscriber ->
@@ -40,5 +42,33 @@ buildRatingReq subscriber req = do
     DRating.DRatingReq
       { bookingId = Id $ req.message.id,
         ratingValue = req.message.value,
-        feedbackDetails = req.message.feedback_form.answer
+        feedbackDetails = [req.message.feedback_form.answer]
+      }
+
+buildRatingReqV2 ::
+  (HasFlowEnv m r '["coreVersion" ::: Text]) =>
+  Subscriber.Subscriber ->
+  Rating.RatingReqV2 ->
+  m DRating.DRatingReq
+buildRatingReqV2 subscriber req = do
+  let context = req.context
+  let feedbackFormParsedAsArray = readMaybe (show req.message.feedback_form) :: Maybe [FeedbackForm]
+  let feedbackFormList = fromMaybe [] feedbackFormParsedAsArray
+  let feedback_form = find (\form -> form.question == "Evaluate your ride experience.") feedbackFormList
+      wasOfferedAssistance = find (\form -> form.question == "Was Assistance Offered?") feedbackFormList
+      mbIssueId = find (\form -> form.question == "Get IssueId.") feedbackFormList
+  validateContext Context.RATING context
+  unless (subscriber.subscriber_id == context.bap_id) $
+    throwError (InvalidRequest "Invalid bap_id")
+  unless (subscriber.subscriber_url == context.bap_uri) $
+    throwError (InvalidRequest "Invalid bap_uri")
+  pure
+    DRating.DRatingReq
+      { bookingId = Id $ req.message.id,
+        ratingValue = req.message.value,
+        feedbackDetails =
+          [ feedback_form >>= (.answer),
+            wasOfferedAssistance >>= (.answer),
+            mbIssueId >>= (.answer)
+          ]
       }

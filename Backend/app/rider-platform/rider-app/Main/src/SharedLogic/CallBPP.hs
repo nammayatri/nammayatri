@@ -155,9 +155,9 @@ feedback ::
     CoreMetrics m
   ) =>
   BaseUrl ->
-  RatingReq ->
+  RatingReqV2 ->
   m RatingRes
-feedback providerUrl req = callBecknAPIWithSignature req.context.bap_id "feedback" API.ratingAPI providerUrl req
+feedback providerUrl req = callBecknAPIWithSignature req.context.bap_id "feedback" API.ratingAPIV2 providerUrl req
 
 callStatus ::
   ( MonadFlow m,
