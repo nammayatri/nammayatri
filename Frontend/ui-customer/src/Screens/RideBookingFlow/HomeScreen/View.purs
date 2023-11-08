@@ -819,7 +819,7 @@ zooTicketBanner state push =
     , width MATCH_PARENT
     , orientation VERTICAL
     , margin $ MarginVertical 10 10
-    ][  Banner.view (push <<< DisabilityBannerAC) (zooTicketBannerConfig state)]
+    ][  Banner.view (push <<< ZooTicketBannerAC) (zooTicketBannerConfig state)]
 
 genderBannerView :: forall w. HomeScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 genderBannerView state push =
