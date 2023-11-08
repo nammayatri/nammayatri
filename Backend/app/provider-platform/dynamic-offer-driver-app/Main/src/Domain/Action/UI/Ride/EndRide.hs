@@ -353,8 +353,6 @@ endRide handle@ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.g
             DRide.DetailsOnDemand _ -> throwError (InternalError "on demand ride is not allowed for rental booking")
             DRide.DetailsRental details -> pure details
           odometerEndReading <- mbOdometerEndReading & fromMaybeM (InvalidRequest "odometerEndReading is mandatory for rentals")
-          farePolicy <- getFarePolicy booking.merchantOperatingCityId booking.vehicleVariant booking.area DFareProduct.RENTAL
-          logInfo $ "farePolicia :" <> show farePolicy
           (recalcDistance, finalFare, mbUpdatedFareParams) <- do
             recalculateFareForDistance handle booking rideOld (Meters $ round (odometerEndReading - fromMaybe 0 rideDetails.odometerStartReading) * 1000) thresholdConfig
           pure (recalcDistance, finalFare, mbUpdatedFareParams, rideOld, Nothing, Nothing)

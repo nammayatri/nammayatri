@@ -172,7 +172,7 @@ handler merchantId req initReq = do
       case initReq of
         RENTAL_QUOTE (rentalQuote, searchRequest) -> do
           (duration :: Int) <- case req.rentalDuration of
-            Nothing -> throwError $ InvalidRequest "Request Invalid"
+            Nothing -> throwError $ InvalidRequest "Rental Quote should have rental duration"
             Just duration' -> pure duration'
 
           farePolicy <- QFP.findById rentalQuote.farePolicyId >>= fromMaybeM NoFarePolicy
@@ -185,13 +185,14 @@ handler merchantId req initReq = do
                   (duration * fPDetails.perHourFreeKms, Seconds totalDurationInSeconds, nightCharges)
                 _ -> (0, 0, Nothing)
           let fullFarePolicies = FarePolicyD.farePolicyToFullFarePolicy merchantId req.vehicleVariant farePolicy
-              estimatedFinishTime = fromIntegral duration `addUTCTime` req.startTime
+              distanceInMeters = Meters (distance * 1000)
+              estimatedFinishTime = fromIntegral durationInSeconds `addUTCTime` req.startTime
           transporterConfig <- CMTC.findByMerchantOpCityId searchRequest.merchantOperatingCityId
           fareParams <-
             calculateFareParameters
               CalculateFareParametersParams
                 { farePolicy = fullFarePolicies,
-                  distance = Meters distance,
+                  distance = distanceInMeters,
                   rideTime = req.startTime,
                   waitingTime = Nothing,
                   actualRideDuration = Nothing,
@@ -214,7 +215,7 @@ handler merchantId req initReq = do
 
           searchRequestExpirationSeconds <- asks (.searchRequestExpirationSeconds)
           let validTill = searchRequestExpirationSeconds `addUTCTime` now
-          let updateRentalQuote = rentalQuote{baseDistance = Meters distance, baseDuration = durationInSeconds, baseFare = estimatedFare, fareParams = fareParams, validTill = validTill, updatedAt = now, estimatedFinishTime = estimatedFinishTime}
+          let updateRentalQuote = rentalQuote{baseDistance = distanceInMeters, baseDuration = durationInSeconds, baseFare = estimatedFare, fareParams = fareParams, validTill = validTill, updatedAt = now, estimatedFinishTime = estimatedFinishTime}
           void $ QRQuote.createNewFareParamAndUpdateQuote rentalQuote.id updateRentalQuote
           updatedRentalQuotes <- QRQuote.findById (Id req.estimateId) >>= fromMaybeM (QuoteNotFound req.estimateId)
           searchTry <- buildRentalSearchTry searchRequest.id req.startTime rentalQuote searchRequest.merchantOperatingCityId
@@ -223,7 +224,7 @@ handler merchantId req initReq = do
           _ <- QRB.createBooking booking
           QST.create searchTry
           return (booking, Nothing, Nothing)
-        _ -> throwError $ InvalidRequest "Can't have driverQuote in specialZone booking"
+        _ -> throwError $ InvalidRequest "Can't have driverQuote in rental booking"
   let paymentMethodInfo = req.paymentMethodInfo
   let startTime = req.startTime
   pure InitRes {..}
@@ -317,7 +318,7 @@ handler merchantId req initReq = do
             DRB.DetailsOnDemand
               DRB.BookingDetailsOnDemand
                 { specialZoneOtpCode = Nothing,
-                  specialLocationTag = Nothing,
+                  specialLocationTag = specialZoneQuote.specialLocationTag,
                   toLocation = searchRequestForSpecialZone.toLocation
                 }
       exophone <- findRandomExophone merchantOpCityId

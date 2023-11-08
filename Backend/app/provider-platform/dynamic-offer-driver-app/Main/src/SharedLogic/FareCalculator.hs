@@ -11,8 +11,6 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-{-# OPTIONS_GHC -Wno-deprecations #-}
-{-# OPTIONS_GHC -Wno-type-defaults #-}
 
 module SharedLogic.FareCalculator
   ( mkBreakupList,
@@ -46,9 +44,6 @@ import Domain.Types.Vehicle.Variant
 import EulerHS.Prelude hiding (id, map)
 import Kernel.Prelude
 import Kernel.Utils.Common
-
--- import Kernel.Utils.Common (Kilometers(getKilometers), Meters (getMeters))
--- import Extra (intToFloat)
 
 mkBreakupList :: (Money -> breakupItemPrice) -> (Text -> breakupItemPrice -> breakupItem) -> FareParameters -> [breakupItem]
 mkBreakupList mkPrice mkBreakupItem fareParams = do

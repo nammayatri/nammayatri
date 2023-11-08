@@ -243,9 +243,9 @@ handler transporter req validateRes = do
       QRB.updateRiderId booking.id riderDetails.id
       case booking.bookingDetails of
         DRB.DetailsRental DRB.BookingDetailsRental {..} -> do
-          whenJust req.toAddress $ \toAddr -> case rentalToLocation of
-            Just rentalToLocation' -> QL.updateAddress rentalToLocation'.id toAddr
-            Nothing -> error "create toLocation"
+          whenJust req.toAddress $ \toAddr ->
+            whenJust rentalToLocation \rentalToLocation' ->
+              QL.updateAddress rentalToLocation'.id toAddr
         DRB.DetailsOnDemand _ -> do
           throwError $ InternalError "Expected rental booking details"
       whenJust req.mbRiderName $ QRB.updateRiderName booking.id
