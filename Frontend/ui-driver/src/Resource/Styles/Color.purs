@@ -415,9 +415,6 @@ transparentGrey = "#66888888"
 green200 :: Color
 green200 = "#2053BB6F"
 
-green600 :: Color
-green600 = "#269574"
-
 greenDull :: Color
 greenDull = "#5FAF9E"
 

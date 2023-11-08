@@ -1061,8 +1061,8 @@ rideRequestFlowView push state =
         ]
         [ PrestoAnim.animationSet [ fadeIn true ]
             $ if (state.props.currentStage == SettingPrice) then
-                if state.data.config.estimateAndQuoteConfig.enableOnlyAuto then suggestedPriceView push state
-                else ChooseYourRide.view (push <<< ChooseYourRideAction) (chooseYourRideConfig state)
+                if ( not state.data.config.estimateAndQuoteConfig.enableOnlyAuto || state.props.specialZoneType ==  "OneWaySpecialZoneAPIDetails") then ChooseYourRide.view (push <<< ChooseYourRideAction) (chooseYourRideConfig state) 
+                else suggestedPriceView push state
               else if (state.props.currentStage == ConfirmingLocation) then
                 confirmPickUpLocationView push state
               else

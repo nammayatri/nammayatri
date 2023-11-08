@@ -2252,7 +2252,7 @@ estimatesFlow estimatedQuotes state = do
                                   ,
                       selectedEstimatesObject = estimatesInfo.defaultQuote
                       }
-            , props { estimateId = estimatesInfo.estimateId, currentStage = SettingPrice, showRateCardIcon = estimatesInfo.showRateCardIcon, zoneType = estimatesInfo.zoneType}
+            , props { estimateId = estimatesInfo.estimateId, currentStage = SettingPrice, showRateCardIcon = estimatesInfo.showRateCardIcon, zoneType = estimatesInfo.zoneType, specialZoneType = ""}
             }
   else do
     _ <- pure $ hideKeyboardOnNavigation true
@@ -2282,7 +2282,7 @@ specialZoneFlow estimatedQuotes state = do
     let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_quote"
     _ <- pure $ updateLocalStage SettingPrice
     _ <- pure $ setValueToLocalStore SELECTED_VARIANT (defaultQuote.vehicleVariant)
-    continue state { data {specialZoneQuoteList = quoteList, currentSearchResultType = QUOTES, specialZoneSelectedQuote = Just defaultQuote.id, specialZoneSelectedVariant = Just defaultQuote.vehicleVariant}, props {currentStage = SettingPrice}}
+    continue state { data {specialZoneQuoteList = quoteList, currentSearchResultType = QUOTES, specialZoneSelectedQuote = Just defaultQuote.id, specialZoneSelectedVariant = Just defaultQuote.vehicleVariant}, props {currentStage = SettingPrice, specialZoneType = "OneWaySpecialZoneAPIDetails"}}
   else do
     _ <- pure $ hideKeyboardOnNavigation true
     _ <- pure $ updateLocalStage SearchLocationModel

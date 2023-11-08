@@ -189,6 +189,7 @@ getTitleConfig vehicleVariant =
   (case vehicleVariant of
         "TAXI_PLUS" -> { text : (getString AC) <> " " <> (getString TAXI), color : Color.blue800 }
         "TAXI" -> {text : (getString NON_AC )<> " " <> (getString TAXI) , color : CommonColor.orange900 }
+        "AUTO_RICKSHAW" -> {text : (getString AUTO_RICKSHAW) , color : Color.green600}
         _ -> {text : "" , color : ""})
 
 
