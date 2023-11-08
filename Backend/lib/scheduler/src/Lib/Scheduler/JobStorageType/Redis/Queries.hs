@@ -124,7 +124,7 @@ getReadyTask = do
   let result = maybe [] (concatMap (Hedis.extractKeyValuePairs . records)) result'
   let recordIds = maybe [] (concatMap (Hedis.extractRecordIds . records)) result'
   let textJob = map snd result
-  let parsedJobs = map (DA.eitherDecode . BL.fromStrict . DT.encodeUtf8) textJob
+  let parsedJobs = map (A.eitherDecode . BL.fromStrict . DT.encodeUtf8) textJob
   case sequence parsedJobs of
     Right jobs -> return $ zip jobs recordIds
     Left err -> do

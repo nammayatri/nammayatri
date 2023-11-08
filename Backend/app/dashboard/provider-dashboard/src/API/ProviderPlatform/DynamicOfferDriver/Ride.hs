@@ -32,7 +32,7 @@ import qualified ProviderPlatformClient.DynamicOfferDriver.Operations as Client
 import qualified ProviderPlatformClient.DynamicOfferDriver.RideBooking as Client
 import Servant hiding (throwError)
 import qualified SharedLogic.Transaction as T
-import "lib-dashboard" Tools.Auth hiding (city)
+import "lib-dashboard" Tools.Auth
 import "lib-dashboard" Tools.Auth.Merchant
 
 type API =
