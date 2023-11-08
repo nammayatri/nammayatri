@@ -45,6 +45,7 @@
           jailbreak = true;
         };
         base32.jailbreak = true;
+        amazonka-core.check = false;
       };
     };
 
