@@ -191,3 +191,6 @@ purple100 = "#1A9747FF"
 
 blue100 :: Color
 blue100 = "#1A2194FF"
+
+green600 :: Color
+green600 = "#269574"
