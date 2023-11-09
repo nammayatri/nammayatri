@@ -17,13 +17,13 @@ import Kernel.Types.Id
 findAllIssueTranslationWithSeCondition :: BeamFlow m r => [Clause Postgres BeamIT.IssueTranslationT] -> m [IssueTranslation]
 findAllIssueTranslationWithSeCondition = findAllWithKV
 
-findAllIssueCategoryWithSeCondition :: BeamFlow m r => [Clause Postgres BeamIC.IssueCategoryT] -> m [IssueCategory]
-findAllIssueCategoryWithSeCondition = findAllWithKV
+findAllIssueCategoryWithSeCondition :: BeamFlow m r => [Clause Postgres BeamIC.IssueCategoryT] -> OrderBy BeamIC.IssueCategoryT -> Maybe Int -> Maybe Int -> m [IssueCategory]
+findAllIssueCategoryWithSeCondition = findAllWithOptionsKV
 
 findAllByLanguage :: BeamFlow m r => Language -> m [(IssueCategory, Maybe IssueTranslation)]
 findAllByLanguage language = do
   iTranslations <- findAllIssueTranslationWithSeCondition [Is BeamIT.language $ Eq language]
-  iCategorys <- findAllIssueCategoryWithSeCondition [Is BeamIC.category $ In (DomainIT.sentence <$> iTranslations)]
+  iCategorys <- findAllIssueCategoryWithSeCondition [Is BeamIC.category $ In (DomainIT.sentence <$> iTranslations)] (Asc BeamIC.priority) Nothing Nothing
   pure $ foldl' (getIssueCategoryWithTranslations iTranslations) [] iCategorys
   where
     getIssueCategoryWithTranslations iTranslations dInfosWithTranslations iCategory =
@@ -35,7 +35,7 @@ findById (Id issueCategoryId) = findOneWithKV [Is BeamIC.id $ Eq issueCategoryId
 
 findByIdAndLanguage :: BeamFlow m r => Id IssueCategory -> Language -> m (Maybe (IssueCategory, Maybe IssueTranslation))
 findByIdAndLanguage (Id issueCategoryId) language = do
-  iCategory <- findAllIssueCategoryWithSeCondition [Is BeamIC.id $ Eq issueCategoryId]
+  iCategory <- findAllIssueCategoryWithSeCondition [Is BeamIC.id $ Eq issueCategoryId] (Asc BeamIC.priority) Nothing Nothing
   iTranslations <- findAllIssueTranslationWithSeCondition [And [Is BeamIT.language $ Eq language, Is BeamIT.sentence $ In (DomainIC.category <$> iCategory)]]
   let dInfosWithTranslations' = foldl' (getIssueOptionsWithTranslations iTranslations) [] iCategory
       dInfosWithTranslations = headMaybe dInfosWithTranslations'
@@ -54,7 +54,8 @@ instance FromTType' BeamIC.IssueCategory IssueCategory where
         IssueCategory
           { id = Id id,
             category = category,
-            logoUrl = logoUrl
+            logoUrl = logoUrl,
+            priority = priority
           }
 
 instance ToTType' BeamIC.IssueCategory IssueCategory where
@@ -62,5 +63,6 @@ instance ToTType' BeamIC.IssueCategory IssueCategory where
     BeamIC.IssueCategoryT
       { BeamIC.id = getId id,
         BeamIC.category = category,
-        BeamIC.logoUrl = logoUrl
+        BeamIC.logoUrl = logoUrl,
+        BeamIC.priority = priority
       }
