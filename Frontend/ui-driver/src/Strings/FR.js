@@ -513,7 +513,7 @@ const frenchStrings = {
   NO_MANUAL_PAYMENTS_DESC : "Votre historique de paiement pour la compensation des cotisations apparaîtra ici, le cas échéant.",
   PAYMENT_HISTORY : "Historique des paiements",
   TAP_A_PLAN_TO_VIEW_DETAILS : "Appuyez sur un plan pour afficher les détails",
-  HOW_IT_WORKS : "Comment fonctionne le paiement automatique ?",
+  HOW_IT_WORKS : "Comment ça marche",
   ZERO_COMMISION : "ZERO commission",
   EARN_TODAY_PAY_TOMORROW : "Gagnez aujourd'hui, payez demain",
   PAY_ONLY_IF_YOU_TAKE_RIDES : "Ne payez que si vous faites des trajets",

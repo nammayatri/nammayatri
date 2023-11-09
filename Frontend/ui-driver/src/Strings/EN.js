@@ -684,7 +684,7 @@ const englishStrings = {
   NO_MANUAL_PAYMENTS_DESC : "Your payment history for clearing dues will appear here, if any.",
   PAYMENT_HISTORY : "Payment History",
   TAP_A_PLAN_TO_VIEW_DETAILS : "Tap a plan to view details",
-  HOW_IT_WORKS : "How Autopay works?",
+  HOW_IT_WORKS : "How it works?",
   ZERO_COMMISION : "ZERO commission",
   EARN_TODAY_PAY_TOMORROW : "Earn Today, Pay Tomorrow",
   PAY_ONLY_IF_YOU_TAKE_RIDES : "Pay only if you take rides",

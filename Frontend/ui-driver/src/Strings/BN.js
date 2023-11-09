@@ -683,7 +683,7 @@ const bengaliStrings = {
   PLAN : "পরিকল্পনা",
   DAY : "দিন",
   TAP_A_PLAN_TO_VIEW_DETAILS: "বিস্তারিত দেখতে একটি পরিকল্পনা আলতো চাপুন",
-  HOW_IT_WORKS : "কিভাবে অটোপে কাজ করে?",
+  HOW_IT_WORKS : "কিভাবে এটা কাজ করে",
   ZERO_COMMISION : "জিরো কমিশন",
   EARN_TODAY_PAY_TOMORROW : "আজই উপার্জন করুন, আগামীকাল অর্থ প্রদান করুন",
   PAY_ONLY_IF_YOU_TAKE_RIDES : "শুধুমাত্র আপনি যদি রাইড করেন তবেই অর্থ প্রদান করুন",

@@ -53,7 +53,8 @@ config =
       kioskLocation : false,
       viewAutopayDetails : false
     },
-    gradientConfig : []
+    gradientConfig : [],
+    enableSubscriptionSupportPopup : false
   },
   showPaymentDetails : true,
   rideActionModelConfig : {

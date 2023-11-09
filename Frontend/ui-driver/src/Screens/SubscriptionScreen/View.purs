@@ -39,7 +39,7 @@ import Data.Bifunctor.Join (Join)
 import Data.Either (Either(..))
 import Data.Function.Uncurried (runFn1)
 import Data.Int (toNumber, pow, ceil)
-import Data.Maybe (Maybe(..), fromMaybe, isJust, isNothing)
+import Data.Maybe (Maybe(..), fromMaybe, isJust)
 import Data.Maybe as Mb
 import Data.Number (fromString) as Number
 import Data.String as DS
@@ -415,7 +415,7 @@ plansBottomView push state =
           , height WRAP_CONTENT
           , gravity CENTER_VERTICAL
           , onClick (\action -> do
-                        let url = if state.data.config.myPlanYoutubeLink == "" then state.data.config.faqLink else state.data.config.myPlanYoutubeLink
+                        let url = if state.data.config.myPlanYoutubeLink == "" then state.data.config.faqLink else splitBasedOnLanguage state.data.config.myPlanYoutubeLink
                         _ <- push action
                         _ <- pure $ JB.cleverTapCustomEvent "ny_driver_nyplans_watchvideo_clicked"
                         _ <- pure $ JB.metaLogEvent "ny_driver_nyplans_watchvideo_clicked"
@@ -631,7 +631,7 @@ myPlanBodyview push state =
                       _ <- pure $ JB.cleverTapCustomEvent "ny_driver_myplan_watchvideo_clicked"
                       _ <- pure $ JB.metaLogEvent "ny_driver_myplan_watchvideo_clicked"
                       _ <- pure $ JB.firebaseLogEvent "ny_driver_myplan_watchvideo_clicked"
-                      _ <- JB.openUrlInApp state.data.config.myPlanYoutubeLink
+                      _ <- JB.openUrlInApp $ splitBasedOnLanguage state.data.config.myPlanYoutubeLink
                       pure unit
                       ) (const NoAction)
           ]
@@ -1624,7 +1624,7 @@ dueOverViewCard push state isManual =
         , imageWithFallback $ HU.fetchImage HU.FF_ASSET "ny_ic_youtube"
         , onClick (\action -> do
             _<- push action
-            _ <- JB.openUrlInApp state.data.config.myPlanYoutubeLink
+            _ <- JB.openUrlInApp $ splitBasedOnLanguage state.data.config.myPlanYoutubeLink
             pure unit
           ) (const NoAction)
         ]
@@ -1764,8 +1764,8 @@ getAutoPayStatusPillData autoPayStatus =
     ACTIVE_AUTOPAY -> {color: Color.green900, status : getString ACTIVE_STR }
     SUSPENDED -> {color: Color.red, status : getString CANCELLED_ }
     PAUSED_PSP -> {color: Color.orange900, status : getString PAUSED_STR }
-    CANCELLED_PSP ->  {color: Color.red, status : getString CANCELLED_  }
-    _ | autoPayStatus `elem` [PENDING, MANDATE_FAILED, RESUME_PENDING] -> {color: Color.orange900, status : getString PENDING_STR }
+    _ | autoPayStatus `elem` [CANCELLED_PSP, RESUME_PENDING] ->  {color: Color.red, status : getString CANCELLED_  }
+    _ | autoPayStatus `elem` [PENDING, MANDATE_FAILED] -> {color: Color.orange900, status : getString PENDING_STR }
     _ -> {color: Color.orange900, status : getString PENDING_STR }
 
 showOfferApplicable :: SubscriptionScreenState -> Boolean
@@ -1830,3 +1830,19 @@ lottieJsonAccordingToLang isOnFreeTrial =
     "TA_IN" -> if isOnFreeTrial then "lottie/ny_ic_subscription_info_tamil_01.json" else "lottie/ny_ic_subscription_info_tamil_02.json"
     "BN_IN" -> if isOnFreeTrial then "lottie/ny_ic_subscription_info_bengali_01.json" else "lottie/ny_ic_subscription_info_bengali_02.json"
     _ -> if isOnFreeTrial then "lottie/ny_ic_subscription_info_01.json" else "lottie/ny_ic_subscription_info_02.json"
+
+
+splitBasedOnLanguage :: String -> String
+splitBasedOnLanguage str = 
+    let strArray = DS.split (DS.Pattern "-*$*-") str
+    in
+    fromMaybe "" (strArray !! (getLanguage (length strArray)))
+    where 
+        getLanguage len = do
+            case getValueToLocalStore LANGUAGE_KEY of
+                "KN_IN" | len > 1 -> 1
+                "HI_IN" | len > 2 -> 2
+                "BN_IN" | len > 3 -> 3
+                "ML_IN" | len > 4 -> 4
+                "TA_IN" | len > 5 -> 5
+                _ -> 0
