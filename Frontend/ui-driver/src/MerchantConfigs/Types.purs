@@ -133,5 +133,7 @@ type CityConfig = {
   cityName :: String,
   mapImage :: String,
   cityCode :: String,
-  showSubscriptions :: Boolean
+  showSubscriptions :: Boolean,
+  cityLat :: Number,
+  cityLong :: Number
 }

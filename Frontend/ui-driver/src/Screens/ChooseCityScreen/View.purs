@@ -80,9 +80,9 @@ view push state =
               --   , gravity CENTER
               --   , visibility if state.props.currentStage == CAROUSEL then VISIBLE else GONE
               --   ](if state.props.currentStage == CAROUSEL then [carouselView state push] else  [] )
-              -- , if DA.any (_ == state.props.currentStage) [SELECT_LANG, SELECT_CITY]  then radioButtonView state push else dummyView
-                , if state.props.currentStage == SELECT_LANG then radioButtonView state push (state.props.currentStage == SELECT_LANG) else dummyView
-                , if state.props.currentStage == SELECT_CITY then radioButtonView2 state push (state.props.currentStage == SELECT_CITY) else dummyView
+              , if DA.any (_ == state.props.currentStage) [SELECT_LANG, SELECT_CITY]  then radioButtonView state push true else dummyView
+                -- , if state.props.currentStage == SELECT_LANG then radioButtonView state push else dummyView
+                -- , if state.props.currentStage == SELECT_CITY then radioButtonView2 state push else dummyView
 
         -- imageView
         --     [ height $ V 50
@@ -221,6 +221,7 @@ currentLanguageView state push =
 radioButtonView :: ChooseCityScreenState -> (Action -> Effect Unit) -> Boolean -> forall w . PrestoDOM (Effect Unit) w
 radioButtonView state push visibility' =
   let items = if state.props.currentStage == SELECT_LANG then state.data.config.languageList else transformCityConfig state.data.config.cityConfig
+      selectedVal = if state.props.currentStage == SELECT_LANG then state.props.radioMenuFocusedLang else state.props.radioMenuFocusedCity
   in
   PrestoAnim.animationSet [ Anim.fadeIn visibility' ] $
   linearLayout
@@ -247,7 +248,7 @@ radioButtonView state push visibility' =
           ] $ MenuButton.view
               (push <<< (MenuButtonAction))
               { text: {name: language.name, value: language.value, subtitle: language.subtitle}, 
-                isSelected: (state.props.selectedLanguage == language.value), 
+                isSelected: (selectedVal == language.value), 
                 index : index, lineVisiblity : false, 
                 selectedStrokeColor : Color.blue900, 
                 selectedBackgroundColor : Color.blue600, 
@@ -255,42 +256,40 @@ radioButtonView state push visibility' =
       )
   ]
 
-radioButtonView2 :: ChooseCityScreenState -> (Action -> Effect Unit) -> Boolean -> forall w . PrestoDOM (Effect Unit) w
-radioButtonView2 state push visibility' =
-  let items = if state.props.currentStage == SELECT_LANG then state.data.config.languageList else transformCityConfig state.data.config.cityConfig
-  in
-  PrestoAnim.animationSet [ Anim.fadeIn visibility' ] $
-  linearLayout
-  [ height MATCH_PARENT
-  , width MATCH_PARENT
-  , orientation VERTICAL
-  , background Color.white900
-  ][  headerView state push
-    , textView $
-      [ text $ getString if state.props.currentStage == SELECT_LANG then SELECT_LANGUAGE_DESC else SELECT_LOCATION_DESC
-      , color Color.black800
-      , margin $ Margin 16 24 16 16
-      ] <> FontStyle.subHeading2 TypoGraphy
-    , linearLayout
-      [ height WRAP_CONTENT
-      , width MATCH_PARENT
-      , orientation VERTICAL
-      , margin $ Margin 16 16 16 5
-      , background Color.white900
-      ](DA.mapWithIndex
-          (\ index language ->  
-          PrestoAnim.animationSet
-          [ Anim.translateYAnimFromTopWithAlpha $ AnimConfig.translateYAnimMapConfig index
-          ] $ MenuButton.view
-              (push <<< (MenuButtonAction2))
-              { text: {name: language.name, value: language.value, subtitle: language.subtitle}, 
-                isSelected: (state.data.locationSelected == language.value), 
-                index : index, lineVisiblity : false, 
-                selectedStrokeColor : Color.blue900, 
-                selectedBackgroundColor : Color.blue600, 
-                notSelectedStrokeColor : Color.grey700 }) items
-      )
-  ]
+-- radioButtonView2 :: ChooseCityScreenState -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w
+-- radioButtonView2 state push =
+--   let items = if state.props.currentStage == SELECT_LANG then state.data.config.languageList else transformCityConfig state.data.config.cityConfig
+--   in
+--   linearLayout
+--   [ height MATCH_PARENT
+--   , width MATCH_PARENT
+--   , orientation VERTICAL
+--   , background Color.white900
+--   ][  textView $
+--       [ text $ getString if state.props.currentStage == SELECT_LANG then SELECT_LANGUAGE_DESC else SELECT_LOCATION_DESC
+--       , color Color.black800
+--       , margin $ Margin 16 24 16 16
+--       ] <> FontStyle.subHeading2 TypoGraphy
+--     , linearLayout
+--       [ height WRAP_CONTENT
+--       , width MATCH_PARENT
+--       , orientation VERTICAL
+--       , margin $ Margin 16 16 16 5
+--       , background Color.white900
+--       ](DA.mapWithIndex
+--           (\ index language ->  
+--           PrestoAnim.animationSet
+--           [ Anim.translateYAnimFromTopWithAlpha $ AnimConfig.translateYAnimMapConfig index
+--           ] $ MenuButton.view
+--               (push <<< (MenuButtonAction2))
+--               { text: {name: language.name, value: language.value, subtitle: language.subtitle}, 
+--                 isSelected: (state.data.locationSelected == language.value), 
+--                 index : index, lineVisiblity : false, 
+--                 selectedStrokeColor : Color.blue900, 
+--                 selectedBackgroundColor : Color.blue600, 
+--                 notSelectedStrokeColor : Color.grey700 }) items
+--       )
+--   ]
 
 enableLocationPermission :: ChooseCityScreenState -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w
 enableLocationPermission state push = 

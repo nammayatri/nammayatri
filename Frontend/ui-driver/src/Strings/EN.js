@@ -997,7 +997,7 @@ const englishStrings = {
   SIGNUP_EARLY_FOR_SPECIAL_OFFERS : "Signup early for special offers",
   GUARANTEED_FIXED_PRICE : "Guaranteed fixed price until \nJan 1, 2025",
   INTRODUCTORY_OFFER_TO_BE_ANNOUNCED_SOON : "Introductory offer will be announced soon!",
-  NO_CHARGES_TILL : "No charges till Dec 31",
+  NO_CHARGES_TILL : "No charges till April 1, 2024",
   AND : " and ",
   DIRECT_PAYMENT_NO_COMMISSIONS : "Direct payment.\nNo commissions",
   CUSTOMER_PAYS_DIRECTLY : "Customer pays to you directly via \ncash or UPI",
@@ -1055,6 +1055,13 @@ const englishStrings = {
   DRIVING_LICENSE_DETAILS : "Driving Licence Details",
   VEHICLE_REGISTRATION_DETAILS : "Vehicle Registration Details",
   UPLOAD_PHOTO : "Upload Photo",
+  CONFIRM_AND_UPLOAD : "Confirm and Upload",
+  RETAKE_PHOTO : "Retake Photo",
+  CLEAR_IMAGE : "Clear Image",
+  BLURRY_IMAGE : "Blurry Image",
+  CROPPED_CORRECTLY : "Cropped Correctly",
+  WRONG_CROPPING : "Wrong Cropping",
+  CHANGE_LOCATION : "Change Location",
 }
 
 

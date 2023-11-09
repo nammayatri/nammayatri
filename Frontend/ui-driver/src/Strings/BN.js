@@ -976,11 +976,11 @@ const bengaliStrings = {
   YOUR_DUES_DESCRIPTION_MANUAL : "নিরবচ্ছিন্ন রাইডগুলি চালিয়ে যেতে সীমাতে পৌঁছানোর আগে অনুগ্রহ করে আপনার বকেয়া পরিশোধ করুন৷ আপনি সহজে, ঝামেলামুক্ত অর্থপ্রদানের জন্য <b>একটি UPI অটোপে সেট আপ</b> করতে পারেন।",
   AND : " এবং ",
   DIRECT_PAYMENT_NO_COMMISSIONS : "সরাসরি অর্থপ্রদান।\nকোন কমিশন নেই",
-	CUSTOMER_PAYS_DIRECTLY : "গ্রাহক আপনাকে সরাসরি \nনগদ বা UPI এর মাধ্যমে অর্থ প্রদান করে",
-	HUNDRED_PERCENT_FARE_GOES_TO_YOU : "ভাড়ার 100%\nআপনার কাছে যাবে!",
-	FARE_SHOWN_IS_FARE_YOU_GET : "দেখানো ভাড়া হল আপনি যে ভাড়া পাবেন।\nকোন লুকানো চার্জ নেই।",
-	BE_A_PART_OF_OPEN_MOBILITY_REVOLUTION : "ওপেন মোবিলিটি রেভোলিউশনের অংশ হোন\n!",
-	OUR_DATA_AND_PRODUCT_ARE_TRANSPARENT : "আমাদের ডেটা এবং পণ্যের রোডম্যাপ\nসকলের জন্য স্বচ্ছ৷",
+  CUSTOMER_PAYS_DIRECTLY : "গ্রাহক আপনাকে সরাসরি \nনগদ বা UPI এর মাধ্যমে অর্থ প্রদান করে",
+  HUNDRED_PERCENT_FARE_GOES_TO_YOU : "ভাড়ার 100%\nআপনার কাছে যাবে!",
+  FARE_SHOWN_IS_FARE_YOU_GET : "দেখানো ভাড়া হল আপনি যে ভাড়া পাবেন।\nকোন লুকানো চার্জ নেই।",
+  BE_A_PART_OF_OPEN_MOBILITY_REVOLUTION : "ওপেন মোবিলিটি রেভোলিউশনের অংশ হোন\n!",
+  OUR_DATA_AND_PRODUCT_ARE_TRANSPARENT : "আমাদের ডেটা এবং পণ্যের রোডম্যাপ\nসকলের জন্য স্বচ্ছ৷",
   ENABLE_LOCATION_PERMISSION : "অবস্থান অনুমতি সক্ষম করুন",
   PLEASE_ENABLE_LOCATION_PERMISSION_FOR : "এর জন্য অবস্থান অনুমতি সক্ষম করুন",
   ENABLE_LOCATION : "অবস্থান সক্ষম করুন৷",
@@ -1030,7 +1030,12 @@ const bengaliStrings = {
   GOT_AN_OTP : "একটি OTP পেয়েছেন?",
   DRIVING_LICENSE_DETAILS : "ড্রাইভিং লাইসেন্সের বিশদ বিবরণ",
   VEHICLE_REGISTRATION_DETAILS : "গাড়ির রেজিস্ট্রেশনের বিবরণ",
-  UPLOAD_PHOTO : "ফটো আপলোড করুন"
+  UPLOAD_PHOTO : "ফটো আপলোড করুন",
+  CLEAR_IMAGE : "পরিষ্কার ছবি",
+  BLURRY_IMAGE : "অস্পষ্ট ছবি",
+  CROPPED_CORRECTLY : "সঠিকভাবে ক্রপ করা হয়েছে",
+  WRONG_CROPPING : "ভুল ক্রপিং",
+  CHANGE_LOCATION : "অবস্থান পরিবর্তন করুন",
 }
 
 export function getStringValue(key) {

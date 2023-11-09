@@ -46,7 +46,7 @@ import Language.Types (STR(..))
 import MerchantConfig.Utils (getValueFromConfig)
 import Prelude (Unit, bind, const, discard, not, pure, unit, void, ($), (&&), (/=), (<<<), (<>), (==), (>=), (||))
 import Presto.Core.Types.Language.Flow (Flow, doAff, delay)
-import PrestoDOM (BottomSheetState(..), Gravity(..), InputType(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, alignParentBottom, alignParentRight, alpha, background, clickable, color, cornerRadius, editText, ellipsize, fontStyle, frameLayout, gravity, height, hint, id, imageUrl, imageView, imageWithFallback, inputTypeI, layoutGravity, linearLayout, margin, maxLines, onBackPressed, onChange, onClick, orientation, padding, pattern, relativeLayout, scrollView, stroke, text, textFromHtml, textSize, textView, visibility, weight, width, inputType)
+import PrestoDOM (BottomSheetState(..), Gravity(..), InputType(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, alignParentBottom, alignParentRight, alpha, background, clickable, color, cornerRadius, editText, ellipsize, fontStyle, frameLayout, gravity, height, hint, id, imageUrl, imageView, imageWithFallback, inputType, inputTypeI, layoutGravity, linearLayout, margin, maxLines, onBackPressed, onChange, onClick, orientation, padding, pattern, relativeLayout, scrollView, stroke, text, textFromHtml, textSize, textView, visibility, weight, width)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Properties as PP
 import PrestoDOM.Types.DomAttributes as PTD
@@ -306,6 +306,14 @@ vehicleRegistrationNumber state push =
               , inputTypeI 4097
               ] <> FontStyle.subHeading1 TypoGraphy)
             ]
+          , textView $
+            [ width MATCH_PARENT
+            , height WRAP_CONTENT
+            , text (getString CHANGE_LOCATION)
+            , color Color.blue800
+            , onClick push $ const ChangeLocation
+            , margin $ MarginTop 8
+            ] <> FontStyle.body3 TypoGraphy
           , textView $ -- (Error Indication)
             [ width WRAP_CONTENT
             , height WRAP_CONTENT
@@ -374,7 +382,7 @@ vehicleRegistrationNumber state push =
                 [ width MATCH_PARENT
                 , height WRAP_CONTENT
                 , text (getString SAME_REENTERED_RC_MESSAGE)
-                , visibility $ if (DS.toLower(state.data.vehicle_registration_number) /= DS.toLower(state.data.reEnterVehicleRegistrationNumber)) then VISIBLE else GONE
+                , visibility $ if (DS.toLower(state.data.vehicle_registration_number) /= DS.toLower(state.data.reEnterVehicleRegistrationNumber) && state.data.reEnterVehicleRegistrationNumber /= "") then VISIBLE else GONE
                 , color Color.darkGrey
                 ]
           ]
@@ -716,33 +724,78 @@ howToUpload push state =
     , padding $ Padding 0 16 0 16
     ][ 
       textView $ 
-    [ text $ getString TAKE_CLEAR_PICTURE_RC
-    , margin $ MarginBottom 18
-    , textSize FontSize.a_14
-    ] <> FontStyle.body3 TypoGraphy
+      [ text $ getString TAKE_CLEAR_PICTURE_RC
+      , color Color.black800
+      , margin $ MarginBottom 18
+      ] <> FontStyle.body3 TypoGraphy
 
-    , textView $ 
-    [ text $ getString ENSURE_ADEQUATE_LIGHT
-    , color Color.greyTextColor
-    , margin $ MarginBottom 18
-    , textSize FontSize.a_14
-    ] <> FontStyle.body3 TypoGraphy
+      , textView $ 
+      [ text $ getString ENSURE_ADEQUATE_LIGHT
+      , color Color.black800
+      , margin $ MarginBottom 18
+      ] <> FontStyle.body3 TypoGraphy
 
-    , textView $ 
-    [ text $ getString FIT_RC_CORRECTLY
-    , color Color.greyTextColor
-    , textSize FontSize.a_14
-    ] <> FontStyle.body3 TypoGraphy
-
-    , imageView
-        [ 
-          margin (Margin 0 60 10 0)
-        , width MATCH_PARENT
-        , height MATCH_PARENT
-        , imageWithFallback "ny_ic_upload_document,https://assets.juspay.in/nammayatri/images/driver/ny_ic_back.png"
-        ]
-     ]
+      , textView $ 
+      [ text $ getString FIT_RC_CORRECTLY
+      , margin $ MarginBottom 40
+      , color Color.black800
+      ] <> FontStyle.body3 TypoGraphy
+      , linearLayout
+        [ width MATCH_PARENT
+        , height WRAP_CONTENT
+        , orientation VERTICAL
+        , cornerRadius 4.0
+        , margin $ MarginTop 20
+        , stroke $ "1," <> Color.borderGreyColor
+        , padding $ Padding 16 16 16 0
+        ][ rightWrongView true
+         , rightWrongView false
+         ]  
+    ]
   ]
+
+rightWrongView :: Boolean -> forall w . PrestoDOM (Effect Unit) w
+rightWrongView isRight = 
+  linearLayout
+  [ width MATCH_PARENT
+  , height WRAP_CONTENT
+  , gravity CENTER_VERTICAL
+    , margin $ MarginBottom 16
+  ][ imageView
+    [ width $ V 120
+    , height $ V if isRight then 80 else 100
+    , imageWithFallback $ fetchImage FF_ASSET if isRight then "ny_ic_upload_right" else "ny_ic_image_wrong"
+    ]
+  , linearLayout
+    [ width MATCH_PARENT
+    , height MATCH_PARENT
+    , orientation VERTICAL
+    , padding $ Padding 16 16 0 0
+    , gravity CENTER
+    ][ rightWrongItemView isRight $ if isRight then (getString CLEAR_IMAGE) else (getString BLURRY_IMAGE)
+     , rightWrongItemView isRight $ if isRight then (getString CROPPED_CORRECTLY) else (getString WRONG_CROPPING)
+    ]
+  ]
+
+rightWrongItemView :: Boolean -> String -> forall w . PrestoDOM (Effect Unit) w
+rightWrongItemView isRight text' = 
+  linearLayout
+  [ width MATCH_PARENT
+  , height WRAP_CONTENT
+  , margin $ MarginBottom 8
+  , gravity CENTER_VERTICAL
+  ][ imageView
+    [ width $ V 16
+    , height $ V 16
+    , imageWithFallback $ fetchImage FF_ASSET $ if isRight then "ny_ic_green_tick" else "ny_ic_payment_failed"
+    ]
+  , textView $
+    [ text text'
+    , color Color.black800
+    , margin $ MarginLeft 8
+    ] <> FontStyle.body1 TypoGraphy
+  ]
+
 logoutPopupModal :: forall w . (Action -> Effect Unit) -> AddVehicleDetailsScreenState -> PrestoDOM (Effect Unit) w
 logoutPopupModal push state =
        linearLayout

@@ -1025,7 +1025,12 @@ const tamilStrings = {
   GOT_AN_OTP : "OTP கிடைத்ததா?",
   DRIVING_LICENSE_DETAILS : "ஓட்டுநர் உரிம விவரங்கள்",
   VEHICLE_REGISTRATION_DETAILS : "வாகனப் பதிவு விவரங்கள்",
-  UPLOAD_PHOTO : "புகைப்படத்தைப் பதிவேற்று"
+  UPLOAD_PHOTO : "புகைப்படத்தைப் பதிவேற்று",
+  CLEAR_IMAGE : "புகைப்படத்தை தெளிவாக செய்யுங்கள்",
+  BLURRY_IMAGE : "புகைப்படம் தெளிவாக இல்லை",
+  CROPPED_CORRECTLY : "புகைப்படம் சரியாக கட்டப்பட்டது",
+  WRONG_CROPPING : "புகைப்படம் தவறாக கட்டப்பட்டது",
+  CHANGE_LOCATION : "இருப்பிடத்தை மாற்றவும்",
 }
 
 export function getStringValue(key) {

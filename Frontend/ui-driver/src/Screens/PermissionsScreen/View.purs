@@ -158,7 +158,7 @@ permissionsListView state push =
               , cornerRadii $ Corners 16.0 false false true true
               , color Color.blue900
               , background Color.blue600
-              , visibility if isPermissionEnabled then GONE else VISIBLE
+              , visibility GONE--if isPermissionEnabled then GONE else VISIBLE
               ] <> FontStyle.tags TypoGraphy
             ]) (permissionsList state))
     ]

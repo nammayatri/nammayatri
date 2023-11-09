@@ -138,6 +138,7 @@ instance loggableAction :: Loggable Action where
       PopUpModal.CountDown arg1 arg2 arg3 arg4 -> trackAppScreenEvent appId (getScreen ADD_VEHICLE_DETAILS_SCREEN) "popup_modal_action" "countdown_updated"
     RenderProfileImage image id -> trackAppActionClick appId (getScreen ADD_VEHICLE_DETAILS_SCREEN) "renderImage" "afterrender"
     RedirectScreen -> trackAppActionClick appId (getScreen ADD_VEHICLE_DETAILS_SCREEN) "redirect_screem" "no_action"
+    ChangeLocation -> trackAppActionClick appId (getScreen ADD_VEHICLE_DETAILS_SCREEN) "change_location" "on_click"
 
 
 data ScreenOutput = ValidateDetails AddVehicleDetailsScreenState
@@ -177,6 +178,7 @@ data Action =   WhatsAppSupport | BackPressed Boolean | PrimarySelectItemAction 
   | RenderProfileImage String String
   | PopUpModalActions PopUpModal.Action
   | RedirectScreen
+  | ChangeLocation
 
 
 eval :: Action -> AddVehicleDetailsScreenState -> Eval Action ScreenOutput AddVehicleDetailsScreenState
@@ -360,6 +362,8 @@ eval (PopUpModalActions (PopUpModal.OnButton1Click)) state = do
        continueWithCmd (state {props{ validateProfilePicturePopUp = false,imageCaptureLayoutView = true, fileCameraPopupModal = false, fileCameraOption = true, openHowToUploadManual = false}}) [ pure UploadFile]
 
 eval RedirectScreen state = exit GoToRegisteration
+
+eval ChangeLocation state = exit $ LogoutAccount
 
 eval _ state = continue state
 

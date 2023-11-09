@@ -4,12 +4,13 @@ import Components.GenericHeader as GenericHeaderController
 import Components.PrimaryButton.Controller as PrimaryButtonController
 import Components.SelectMenuButton.Controller (Action(..)) as MenuButtonController
 import Data.Array as DA
-import Data.Maybe (Maybe(..))
+import Data.Maybe (Maybe(..), fromMaybe)
+import Data.Number as Number
 import Debug (spy)
 import Effect.Class (liftEffect)
 import Effect.Unsafe (unsafePerformEffect)
 import Engineering.Helpers.LogEvent (logEvent)
-import JBridge (minimizeApp, firebaseLogEvent, isLocationPermissionEnabled, requestLocation, minimizeApp)
+import JBridge (firebaseLogEvent, getCurrentLatLong, isLocationPermissionEnabled, minimizeApp, requestLocation)
 import Log (trackAppActionClick, trackAppBackPress, trackAppScreenRender)
 import Prelude (class Show, bind, pure, ($), (==), (||), unit, not, discard)
 import PrestoDOM (Eval, continue, exit, continueWithCmd)
@@ -40,7 +41,7 @@ data Action = BackPressed
             | UpdatePermission ChooseCityScreenState
             | UpdateLocationPermissionState
             | NoAction
-            | MenuButtonAction2 MenuButtonController.Action
+            -- | MenuButtonAction2 MenuButtonController.Action
 
 data ScreenOutput = WelcomeScreen | SelectLanguageScreen 
 
@@ -76,6 +77,11 @@ eval (PrimaryButtonAC PrimaryButtonController.OnClick) state = do
     -- continue state{props{currentStage = DETECT_LOCATION}}
     -- else if state.props.currentStage == DETECT_LOCATION then continue state{props{currentStage = CAROUSEL}}
     else if state.props.currentStage == SELECT_CITY then do
+      continue state{props{currentStage = DETECT_LOCATION}, data{ locationSelected =  state.props.radioMenuFocusedCity}}
+    else if state.props.currentStage == SELECT_LANG then do
+      _ <- pure $ setValueToLocalStore LANGUAGE_KEY state.props.radioMenuFocusedLang
+      continue state {props{currentStage = DETECT_LOCATION, selectedLanguage =  state.props.radioMenuFocusedLang}}
+    else do
       _ <- pure $ setValueToLocalStore DRIVER_LOCATION state.data.locationSelected
       let mbCity = DA.find (\city' -> city'.cityName == state.data.locationSelected) state.data.config.cityConfig
       case mbCity of 
@@ -83,15 +89,15 @@ eval (PrimaryButtonAC PrimaryButtonController.OnClick) state = do
           _ <- pure $ setValueToLocalStore SHOW_SUBSCRIPTIONS if city.showSubscriptions then "true" else "false"
           pure unit
         Nothing -> pure unit
-      continue state{props{currentStage = DETECT_LOCATION}}
-    else if state.props.currentStage == SELECT_LANG then do
-      _ <- pure $ setValueToLocalStore LANGUAGE_KEY state.props.selectedLanguage
-      continue state {props{currentStage = DETECT_LOCATION}}
-    else exit WelcomeScreen
+      exit WelcomeScreen
 
-eval (MenuButtonAction (MenuButtonController.OnSelection btnState)) state = continue state { props { selectedLanguage = btnState.text.value }}
+eval (MenuButtonAction (MenuButtonController.OnSelection btnState)) state = 
+  if state.props.currentStage == SELECT_CITY then
+    continue state { props { radioMenuFocusedCity = btnState.text.value }}
+  else
+    continue state { props { radioMenuFocusedLang = btnState.text.value }}
 
-eval (MenuButtonAction2 (MenuButtonController.OnSelection btnState)) state = continue state { data { locationSelected = btnState.text.value }}
+-- eval (MenuButtonAction2 (MenuButtonController.OnSelection btnState)) state = continue state { data { locationSelected = btnState.text.value }}
 
 eval (ChangeStage newStage) state = continue state{props{currentStage = newStage}}
 
@@ -100,6 +106,10 @@ eval (GenericHeaderAC GenericHeaderController.PrefixImgOnClick) state = continue
 eval (LocationPermissionCallBack isLocationPermissionEnabled) state = do
 --   _ <- pure $ spy "location permission" isLocationPermissionEnabled
   if isLocationPermissionEnabled then do
+    let currentDriverLat = fromMaybe 0.0 $ Number.fromString $ getValueToLocalStore LAST_KNOWN_LAT
+        currentDriverLon = fromMaybe 0.0 $ Number.fromString $ getValueToLocalStore LAST_KNOWN_LON
+        _ = spy "currentDriverLat" currentDriverLat 
+        _ = spy "currentDriverLon" LAST_KNOWN_LON 
     _ <- pure $ spy "location permission" isLocationPermissionEnabled
     continue state { props {currentStage = DETECT_LOCATION }}
   else continue state

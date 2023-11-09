@@ -250,13 +250,13 @@ getPlanAmountConfig plan = case plan of
 introductoryPlanConfig :: LazyCheck -> PlanCardConfig
 introductoryPlanConfig lazy =  {
     id : "dummy",
-    title : getString DAILY_PER_RIDE,
+    title : getString DAILY_UNLIMITED,
     description : "",
     isSelected : true,
-    frequency : "PER_RIDE",
+    frequency : "PER_DAY",
     freeRideCount : 0,
     offers : [introductoryOfferConfig Language],
-    priceBreakup : [PaymentBreakUp{amount: 10.0, component: "FINAL_FEE"}],
+    priceBreakup : [PaymentBreakUp{amount: 25.0, component: "FINAL_FEE"}],
     showOffer : true
 } 
 

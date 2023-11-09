@@ -1024,7 +1024,12 @@ const kannadaStrings = {
   GOT_AN_OTP : "ಒಟಿಪಿ ಸಿಕ್ಕಿತೇ?",
   DRIVING_LICENSE_DETAILS : "ಚಾಲನಾ ಪರವಾನಗಿ ವಿವರಗಳು",
   VEHICLE_REGISTRATION_DETAILS : "ವಾಹನ ನೋಂದಣಿ ವಿವರಗಳು",
-  UPLOAD_PHOTO : "ಫೋಟೋ ಅಪ್‌ಲೋಡ್ ಮಾಡಿ"
+  UPLOAD_PHOTO : "ಫೋಟೋ ಅಪ್‌ಲೋಡ್ ಮಾಡಿ",
+  CLEAR_IMAGE : "ಸ್ಪಷ್ಟ ಚಿತ್ರ",
+  BLURRY_IMAGE : "ಕೆಂಪು ಚಿತ್ರ",
+  CROPPED_CORRECTLY : "ಸರಿಯಾಗಿ ಕ್ರಾಪ್ ಮಾಡಲಾಗಿದೆ",
+  WRONG_CROPPING : "ತಪ್ಪಾಗಿ ಕ್ರಾಪ್ ಮಾಡಲಾಗಿದೆ",
+  CHANGE_LOCATION : "ಸ್ಥಳ ಬದಲಾಯಿಸಿ",
 }
 
 

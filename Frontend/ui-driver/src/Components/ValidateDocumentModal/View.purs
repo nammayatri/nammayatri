@@ -34,7 +34,7 @@ import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit, bind, const, map, pure, unit, ($), (/), (==), (<>), (<<<), (&&), (||), (<), (/=))
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, alpha, background, clickable, color, cornerRadius, fontStyle, frameLayout, gravity, height, id, imageUrl, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, progressBar, relativeLayout, scrollView, stroke, text, textSize, textView, visibility, weight, width)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, alignParentBottom, alpha, background, clickable, color, cornerRadius, fontStyle, frameLayout, gravity, height, id, imageUrl, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, progressBar, relativeLayout, scrollView, stroke, text, textSize, textView, visibility, weight, width)
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Screens.Types (StageStatus(..), ValidationStatus(..))
 import Styles.Colors as Color
@@ -61,8 +61,49 @@ view push state =
         , id (EHC.getNewIDWithTag "ProfilePictureCaptureLayout")
         ][]
       , if (state.profilePictureCapture == false) then (profilePictureLayout state push) else textView[]
-      , if DA.any (_ == state.verificationStatus)[None, Failure] then PrimaryButton.view (push <<< PrimaryButtonActionController) (primaryButtonConfig state) else textView[]
-    ]]
+      , linearLayout
+        [ width MATCH_PARENT
+        , height MATCH_PARENT
+        , orientation VERTICAL
+        , alignParentBottom "true,-1"
+        , padding $ PaddingBottom 60
+        , gravity BOTTOM
+        ][ linearLayout
+          [ width MATCH_PARENT
+          , height WRAP_CONTENT
+          , gravity CENTER
+          ][
+            progressBar
+              [ width WRAP_CONTENT
+                , height WRAP_CONTENT
+                , stroke Color.grey900
+                , visibility if state.verificationStatus == InProgress then VISIBLE else GONE
+              ]
+          , textView
+            [
+              width WRAP_CONTENT
+            , height WRAP_CONTENT
+            , padding (PaddingHorizontal 20 20)
+            , text case state.verificationStatus of 
+                    Success -> (getString $ if state.verificationType == "DL" then DL_UPLOADED else RC_UPLOADED) <> "✅"
+                    Failure -> ((getString VERIFICATION_FAILED)<>"  -  "<>(state.failureReason)<>" \n"<>(getString if state.verificationType == "DL" then RETAKE_DL else RETAKE_RC))
+                    InProgress -> getString if state.verificationType == "DL" then DL_UPLOADING else RC_UPLOADING
+                    _ -> ""
+            , textSize FontSize.a_16
+            , fontStyle $ FontStyle.medium LanguageStyle
+            , color Color.white900
+            ]
+          ]
+      , if DA.any (_ == state.verificationStatus)[None, Failure] then 
+            linearLayout
+            [ width MATCH_PARENT
+            , height WRAP_CONTENT
+            , margin $ MarginTop 20
+            ][ PrimaryButton.view (push <<< PrimaryButtonActionController) (primaryButtonConfig state) ]
+        else textView[]
+      ]
+    ]
+    ]
   )
 
 headerLayout :: ValidateDocumentModalState -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w
@@ -140,34 +181,7 @@ profilePictureLayout state push =
                 , cornerRadius 4.0
                 , stroke $ (if state.verificationStatus /= Failure then ("4,"<> Color.darkGreen) else ("4,"<> Color.red))
                 ]
-            ],
-        linearLayout
-        [ width MATCH_PARENT
-        , height WRAP_CONTENT
-        , gravity CENTER
-        , margin (MarginVertical 50 60)
-        ][
-           progressBar
-            [ width WRAP_CONTENT
-              , height WRAP_CONTENT
-              , stroke Color.grey900
-              , visibility if state.verificationStatus == InProgress then VISIBLE else GONE
             ]
-        ,textView
-        [
-          width WRAP_CONTENT
-        , height WRAP_CONTENT
-        , padding (PaddingHorizontal 20 20)
-        , text case state.verificationStatus of 
-                Success -> (getString $ if state.verificationType == "DL" then DL_UPLOADED else RC_UPLOADED) <> "✅"
-                Failure -> ((getString VERIFICATION_FAILED)<>"  -  "<>(state.failureReason)<>" \n"<>(getString if state.verificationType == "DL" then RETAKE_DL else RETAKE_RC))
-                InProgress -> getString if state.verificationType == "DL" then DL_UPLOADING else RC_UPLOADING
-                _ -> ""
-        , textSize FontSize.a_16
-        , fontStyle $ FontStyle.medium LanguageStyle
-        , color Color.white900
-        ]
-        ]
         ]
     ]
 

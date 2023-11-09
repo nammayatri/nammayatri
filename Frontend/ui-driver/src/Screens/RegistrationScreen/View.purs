@@ -157,6 +157,7 @@ view push state =
                                   [ height $ V 5
                                   , weight 1.0
                                   , cornerRadius 2.0
+                                  , visibility if item.stage == ST.SUBSCRIPTION_PLAN && (getValueToLocalNativeStore SHOW_SUBSCRIPTIONS /= "true") then GONE else VISIBLE
                                   , background case getStatus item.stage state of
                                       ST.COMPLETED -> Color.green900
                                       ST.IN_PROGRESS -> Color.yellow900

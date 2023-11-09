@@ -65,15 +65,11 @@ primaryEditTextConfig state = let
       { editText
         { singleLine = true
           , pattern = Just "[A-Z0-9/-]*,25"
-          -- , fontStyle = FontStyle.bold LanguageStyle
-          -- , textSize = FontSize.a_16
           , placeholder = getString ENTER_DL_NUMBER
           , capsLock = true
         }
       , topLabel
         { 
-          --textSize = FontSize.a_12
-        --, 
         text = getString DRIVING_LICENSE_NUMBER
         , color = Color.greyTextColor
         }
@@ -98,7 +94,7 @@ primaryEditTextConfigReEnterDl state = let
           , capsLock = true
           , color = Color.black800
         }
-      , stroke = if (DS.toLower(state.data.driver_license_number) /= DS.toLower(state.data.reEnterDriverLicenseNumber)) then ("1," <> Color.red) else ("1," <> Color.borderColorLight)
+      , stroke = if (DS.toLower(state.data.driver_license_number) /= DS.toLower(state.data.reEnterDriverLicenseNumber) && state.data.reEnterDriverLicenseNumber /= "") then ("1," <> Color.red) else ("1," <> Color.borderColorLight)
       , topLabel
         { --textSize = FontSize.a_12
         -- , 

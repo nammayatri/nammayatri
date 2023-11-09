@@ -786,5 +786,10 @@ const frenchStrings = {
   GOT_AN_OTP : "Vous avez un OTP ?",
   DRIVING_LICENSE_DETAILS: "Détails du permis de conduire",
   VEHICLE_REGISTRATION_DETAILS: "Détails d'immatriculation du véhicule",
-  UPLOAD_PHOTO : "Télécharger une photo"
+  UPLOAD_PHOTO : "Télécharger une photo",
+  CLEAR_IMAGE : "Image claire",
+  BLURRY_IMAGE : "Image floue",
+  CROPPED_CORRECTLY : "Cadré correctement",
+  WRONG_CROPPING : "Mauvais recadrage",
+  CHANGE_LOCATION : "Changer d'emplacement",
 }

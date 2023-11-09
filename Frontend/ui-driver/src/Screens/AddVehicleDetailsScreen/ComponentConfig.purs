@@ -15,7 +15,7 @@
 
 module Screens.AddVehicleDetailsScreen.ComponentConfig where
 
-import Common.Types.App
+import Common.Types.App as Common
 import Data.Maybe
 import Data.String
 import Language.Strings
