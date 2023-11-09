@@ -705,8 +705,9 @@ addVehicleDetailsflow addRcFromProf = do
               setValueToLocalStore DOCUMENT_UPLOAD_TIME (getCurrentUTC "")
               (GlobalState state') <- getState
               let profileState = state'.driverProfileScreen
-              if (null profileState.data.rcDataArray) then 
+              if (null profileState.data.rcDataArray) then do
                 modifyScreenState $ AddVehicleDetailsScreenStateType $ \addVehicleDetailsScreen -> addVehicleDetailsScreen { props {validating = false}}
+                addVehicleDetailsflow addRcFromProf
               else do
                 modifyScreenState $ DriverProfileScreenStateType $ \driverProfileScreen -> driverProfileScreen { props { screenType = ST.VEHICLE_DETAILS}}
                 driverProfileFlow

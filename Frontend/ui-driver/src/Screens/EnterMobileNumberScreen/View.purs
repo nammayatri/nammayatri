@@ -50,6 +50,7 @@ screen initialState =
   , eval
   }
 
+view :: forall w . (Action -> Effect Unit) -> ST.EnterMobileNumberScreenState -> PrestoDOM (Effect Unit) w
 view push state =
    linearLayout
    [  height MATCH_PARENT
@@ -116,36 +117,6 @@ enterMobileNumberTextView state =
   ] <> FontStyle.body3 TypoGraphy
   )
 
------------------------------ primaryEditTextView ---------------
-primaryEditTextView :: ST.EnterMobileNumberScreenState -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w
-primaryEditTextView state push =
- linearLayout
-  [ height MATCH_PARENT
-  , width MATCH_PARENT
-  , orientation VERTICAL
-  , weight 1.0
-  ][ linearLayout
-      [ width MATCH_PARENT
-      , height WRAP_CONTENT
-      , padding (Padding 20 0 20 0)
-      , margin (MarginTop 20)
-      ][  PrimaryEditText.view(push <<< PrimaryEditTextAction) ({
-          title: (getString MOBILE_NUMBER),
-          type: "number",
-          hint: (getString ENTER_MOBILE_NUMBER),
-          valueId: "MOBILE_NUMBER",
-          isinValid: state.props.isValid ,
-          error: Just (getString INVALID_MOBILE_NUMBER),
-          pattern : Just "[0-9]*,10",
-          text: "",
-          letterSpacing: PX 0.0,
-          id: (EHC.getNewIDWithTag "EnterMobileNumberEditText"),
-          fontSize : FontSize.a_18
-        })
-      ]
-  ]
-
-
 --------------------------------- underlinedTextView ----------------------
 underlinedTextView :: ST.EnterMobileNumberScreenState -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w
 underlinedTextView state push =
@@ -156,7 +127,7 @@ underlinedTextView state push =
  ][ textView (
     [ width WRAP_CONTENT
     , height WRAP_CONTENT
-    , text "By clicking Continue, you agree to our "--(getString CASE_TWO)
+    , text $ getString BY_CLICKING_THIS_YOU_WILL_BE_AGREEING_TO_OUR_TC
     , alpha 0.8
     , color Color.greyTextColor
     -- , textSize FontSize.a_14
@@ -212,7 +183,7 @@ termsAndConditionsView state push =
       ]
   ]
 
-enterMobileNumberView:: ST.EnterMobileNumberScreenState -> (Action -> Effect Unit)  -> forall w . PrestoDOM (Effect Unit) w
+enterMobileNumberView :: ST.EnterMobileNumberScreenState -> (Action -> Effect Unit)  -> forall w . PrestoDOM (Effect Unit) w
 enterMobileNumberView  state push =
   linearLayout
     [ height MATCH_PARENT

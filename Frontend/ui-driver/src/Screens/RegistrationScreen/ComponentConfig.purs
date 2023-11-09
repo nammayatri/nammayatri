@@ -18,13 +18,14 @@ module Screens.RegistrationScreen.ComponentConfig where
 import Language.Strings
 import PrestoDOM
 
-import Common.Types.App (LazyCheck)
+import Common.Types.App as Common
 import Components.PopUpModal as PopUpModal
 import Components.PrimaryButton as PrimaryButton
 import Components.StepsHeaderModal as StepsHeaderModel
 import Data.Maybe (Maybe(..))
 import Font.Style as FontStyle
 import Language.Types (STR(..))
+import Resource.Constants as Constant
 import Screens.Types as ST
 import Styles.Colors as Color
 
@@ -50,11 +51,15 @@ stepsHeaderModelConfig state = let
       profileIconVisibility = true,
       driverNumberVisibility = true,
       driverMobileNumber = (Just state.data.phoneNumber),
-      logoutVisibility = true
+      customerTextArray = [],
+      driverTextArray = Constant.driverTextArray Common.FunctionCall,
+      rightButtonText = getString LOGOUT,
+      logoutVisibility = true,
+      backArrowVisibility = false
      }
   in stepsHeaderConfig'
 
-logoutPopUp :: LazyCheck -> PopUpModal.Config
+logoutPopUp :: Common.LazyCheck -> PopUpModal.Config
 logoutPopUp  dummy = let 
   config' = PopUpModal.config
   popUpConfig' = config' {

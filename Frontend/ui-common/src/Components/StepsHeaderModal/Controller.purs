@@ -18,7 +18,8 @@ type Config = {
   logoutVisibility :: Boolean,
   profileIconVisibility :: Boolean,
   driverNumberVisibility :: Boolean,
-  driverMobileNumber :: Maybe String
+  driverMobileNumber :: Maybe String,
+  rightButtonText :: String
 }
 
 config :: Int -> Config
@@ -32,5 +33,6 @@ config currentIndex = {
     logoutVisibility : false,
     profileIconVisibility : false,
     driverNumberVisibility : false,
-    driverMobileNumber : Just ""
+    driverMobileNumber : Just "",
+    rightButtonText : "logout"
 }

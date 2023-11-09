@@ -1050,6 +1050,11 @@ const englishStrings = {
   RETAKE_DL : "\nPlease retake photo with DL inside marked area",
   CONFIRM_AND_UPLOAD : "CONFIRM AND UPLOAD",
   RETAKE_PHOTO : "RETAKE PHOTO",
+  LETS_GET_YOUR_TRIP_READY : "Let's get your trip ready!",
+  GOT_AN_OTP : "Got an OTP?",
+  DRIVING_LICENSE_DETAILS : "Driving Licence Details",
+  VEHICLE_REGISTRATION_DETAILS : "Vehicle Registration Details",
+  UPLOAD_PHOTO : "Upload Photo",
 }
 
 

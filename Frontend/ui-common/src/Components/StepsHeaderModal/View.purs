@@ -109,7 +109,7 @@ view push state =
             textView $
             [ height WRAP_CONTENT
             , width WRAP_CONTENT
-            , text $ "Logout" 
+            , text state.rightButtonText
             , color Color.white900
             , margin $ MarginHorizontal 5 5
             -- , visibility case state.stepsViewVisibility of
@@ -123,7 +123,7 @@ view push state =
       , textView $
         [ height WRAP_CONTENT
         , width MATCH_PARENT
-        , text $ Maybe.fromMaybe "" ((if state.profileIconVisibility then (state.driverTextArray)  else  (state.customerTextArray)) Array.!! state.activeIndex )
+        , text $ Maybe.fromMaybe "" ((if (Array.null state.customerTextArray) then (state.driverTextArray)  else (state.customerTextArray)) Array.!! state.activeIndex )
         , color Color.white900
         , margin $ Margin 15 5 0 22
         ] <> FontStyle.h1 TypoGraphy

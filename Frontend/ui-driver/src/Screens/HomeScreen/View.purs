@@ -115,7 +115,7 @@ screen initialState =
             pure unit
           else pure unit
           
-          void if (DA.any (_ == localStage)["RideRequested", "HomeScreen"]) && initialState.data.driverGotoState.isGotoEnabled then 
+          void if (DA.any (_ == localStage)["RideRequested", "HomeScreen", "__failed"]) && initialState.data.driverGotoState.isGotoEnabled then 
             runEffectFn3 HU.countDownInMinutes (EHC.getExpiryTime (HU.istToUtcDate initialState.data.driverGotoState.gotoValidTill) false) push UpdateGoHomeTimer 
             else if (initialState.data.driverGotoState.timerId /= "") then pure $ EHC.clearTimer initialState.data.driverGotoState.timerId
             else pure unit
