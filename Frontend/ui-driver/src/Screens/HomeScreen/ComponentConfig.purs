@@ -1552,3 +1552,44 @@ sourceUnserviceableConfig state =
         }
   in
     errorModalConfig'
+
+accountBlockedPopup :: ST.HomeScreenState -> PopUpModal.Config
+accountBlockedPopup state = PopUpModal.config {
+    gravity = CENTER,
+    backgroundClickable = false,
+    optionButtonOrientation = "VERTICAL",
+    buttonLayoutMargin = Margin 16 0 16 20,
+    margin = MarginHorizontal 25 25, 
+    primaryText {
+      text = getString ACCOUNT_BLOCKED
+    , textStyle = Heading2
+    , margin = Margin 16 0 16 10},
+    secondaryText{
+      text = getString YOU_HAVE_BEEN_BLOCKED_FROM_TAKING_RIDES
+    , textStyle = Body5
+    , margin = Margin 16 0 16 15 },
+    option1 {
+      text = getString CALL_SUPPORT
+    , color = Color.yellow900
+    , background = Color.black900
+    , strokeColor = Color.transparent
+    , textStyle = FontStyle.SubHeading1
+    , width = MATCH_PARENT
+    },
+    option2 {
+    text = getString DISMISS,
+    margin = MarginHorizontal 16 16,
+    color = Color.black650,
+    background = Color.white900,
+    strokeColor = Color.white900,
+    width = MATCH_PARENT
+  },
+    cornerRadius = PTD.Corners 15.0 true true true true,
+    coverImageConfig {
+      imageUrl = fetchImage FF_ASSET "ny_failed"
+    , visibility = VISIBLE
+    , margin = Margin 16 20 16 24
+    , width = V 160
+    , height = V 118
+    }
+  }

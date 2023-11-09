@@ -805,4 +805,7 @@ getFR stringKey =
         LOCATION_CANNOT_BE_ADDED_WHILE_GOTO_ACTIVE -> "L'option est disponible uniquement lorsque Go-To n'est pas activé"
         LOCATION_CANNOT_BE_ADDED_WHILE_ON_RIDE -> "L'option n'est pas disponible lorsque le trajet est en cours"
         ADD_GOTO -> "Ajouter un Go-To"
+        ACCOUNT_BLOCKED -> "Compte bloqué !"
+        YOU_HAVE_BEEN_BLOCKED_FROM_TAKING_RIDES -> "Vous n'avez pas été autorisé à participer à des courses.\nVeuillez contacter l'assistance pour obtenir de l'aide."
+        DISMISS -> "Rejeter"
         _ -> ""

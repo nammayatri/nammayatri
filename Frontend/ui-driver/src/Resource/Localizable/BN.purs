@@ -1094,3 +1094,6 @@ getBN stringKey =
         LOCATION_CANNOT_BE_ADDED_WHILE_ON_RIDE -> "অপশন পাওয়া যায় না যখন রাইড চলছে"
         ADD_GOTO -> "এড গো-টু"
         NO_OPEN_MARKET_RIDES _ -> "রাইড নেই"
+        ACCOUNT_BLOCKED -> "অ্যাকাউন্ট অবরুদ্ধ!"
+        YOU_HAVE_BEEN_BLOCKED_FROM_TAKING_RIDES -> "আপনাকে রাইড করা থেকে ব্লক করা হয়েছে।\nদয়া করে সাহায্যের জন্য সহায়তার সাথে যোগাযোগ করুন।"
+        DISMISS -> "খারিজ"

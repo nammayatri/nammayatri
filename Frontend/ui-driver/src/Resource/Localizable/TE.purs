@@ -1094,3 +1094,6 @@ getTE stringKey =
         LOCATION_CANNOT_BE_ADDED_WHILE_ON_RIDE -> "రైడ్ పురోగతిలో ఉన్నప్పుడు ఎంపిక అందుబాటులో ఉండదు"
         ADD_GOTO -> "గో-టుకు జోడించు"
         NO_OPEN_MARKET_RIDES _ -> "సవారీలు లేవు"
+        ACCOUNT_BLOCKED -> "ఖాతా బ్లాక్ చేయబడింది!"
+        YOU_HAVE_BEEN_BLOCKED_FROM_TAKING_RIDES -> "మీరు రైడ్‌లు తీసుకోకుండా బ్లాక్ చేయబడ్డారు.\nదయచేసి సహాయం కోసం మద్దతును సంప్రదించండి."
+        DISMISS -> "తొలగించు"

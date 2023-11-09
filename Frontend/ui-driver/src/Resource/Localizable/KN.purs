@@ -1094,3 +1094,6 @@ getKN stringKey =
         LOCATION_CANNOT_BE_ADDED_WHILE_ON_RIDE -> "ರೈಡ್ ಪ್ರಗತಿಯಲ್ಲಿರುವಾಗ ಆಯ್ಕೆಯು ಲಭ್ಯವಿರುವುದಿಲ್ಲ"
         ADD_GOTO -> "ಹೋಗಿ-ಗೆ ಸೇರಿಸಿ"
         NO_OPEN_MARKET_RIDES _ -> "ಸವಾರಿ ಇಲ್ಲ"
+        ACCOUNT_BLOCKED -> "ಖಾತೆಯನ್ನು ನಿರ್ಬಂಧಿಸಲಾಗಿದೆ!"
+        YOU_HAVE_BEEN_BLOCKED_FROM_TAKING_RIDES -> "ನಿಮ್ಮನ್ನು ಸವಾರಿ ಮಾಡದಂತೆ ನಿರ್ಬಂಧಿಸಲಾಗಿದೆ.\nದಯವಿಟ್ಟು ಸಹಾಯಕ್ಕಾಗಿ ಬೆಂಬಲವನ್ನು ಸಂಪರ್ಕಿಸಿ."
+        DISMISS -> "ವಜಾಗೊಳಿಸಿ"

@@ -1094,3 +1094,6 @@ getTA stringKey =
         LOCATION_CANNOT_BE_ADDED_WHILE_ON_RIDE -> "சவாரி நடந்து கொண்டிருக்கும்போது விருப்பம் கிடைக்காது"
         ADD_GOTO -> "செல்-செல்"
         NO_OPEN_MARKET_RIDES _ -> "சவாரிகள் இல்லை"
+        ACCOUNT_BLOCKED -> "கணக்கு தடுக்கப்பட்டது!"
+        YOU_HAVE_BEEN_BLOCKED_FROM_TAKING_RIDES -> "நீங்கள் சவாரி செய்வதிலிருந்து தடுக்கப்பட்டுள்ளீர்கள்.\nஉதவிக்கு ஆதரவைத் தொடர்பு கொள்ளவும்."
+        DISMISS -> "நிராகரி"

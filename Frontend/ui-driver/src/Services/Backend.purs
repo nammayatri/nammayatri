@@ -38,7 +38,7 @@ import Juspay.OTP.Reader as Readers
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (printLog)
-import Prelude (bind, discard, pure, unit, identity, ($), ($>), (&&), (*>), (<<<), (=<<), (==), void, map, show, class Show, (<>), (||))
+import Prelude (bind, discard, pure, unit, identity, ($), ($>), (&&), (*>), (<<<), (=<<), (==), void, map, show, class Show, (<>), (||), not)
 import Presto.Core.Types.API (ErrorResponse(..), Header(..), Headers(..))
 import Presto.Core.Types.Language.Flow (Flow, callAPI, doAff, loadS)
 import Screens.Types (DriverStatus)
@@ -252,8 +252,11 @@ driverActiveInactiveBT status status_n = do
         withAPIResultBT (EP.driverActiveInactiveSilent status status_n) identity errorHandler (lift $ lift $ callAPI headers (DriverActiveInactiveReq status status_n))
     where
         errorHandler (ErrorPayload errorPayload) =  do
-            modifyScreenState $ HomeScreenStateType (\homeScreen → homeScreen { props { goOfflineModal = true }})
-            pure $ toast $ getString SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN
+            let codeMessage = decodeErrorCode errorPayload.response.errorMessage
+                accountBlocked = errorPayload.code == 403 && codeMessage == "DRIVER_ACCOUNT_BLOCKED"
+            if accountBlocked then modifyScreenState $ HomeScreenStateType (\homeScreen → homeScreen { props { accountBlockedPopup = true }})
+            else modifyScreenState $ HomeScreenStateType (\homeScreen → homeScreen { props { goOfflineModal = false }})
+            pure if not accountBlocked then toast $ getString SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN else unit
             void $ lift $ lift $ toggleLoader false
             BackT $ pure GoBack
 --------------------------------- startRide ---------------------------------------------------------------------------------------------------------------------------------
