@@ -63,7 +63,8 @@ type SubscriptionConfig =  {
   overlayYoutubeLink :: String,
   enableIntroductoryView :: Boolean,
   optionsMenuItems :: SubscriptionOptionsMenuItems,
-  gradientConfig :: Array GradientConfig
+  gradientConfig :: Array GradientConfig,
+  enableSubscriptionSupportPopup :: Boolean
  }
 
 type SubscriptionOfferBannerConfig = {

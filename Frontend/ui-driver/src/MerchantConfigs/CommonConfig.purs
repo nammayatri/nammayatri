@@ -73,7 +73,8 @@ commonConfig =
               kioskLocation : false,
               viewAutopayDetails : false
             },
-            gradientConfig : []
+            gradientConfig : [],
+            enableSubscriptionSupportPopup : false
         }
         , navigationAppConfig : {
             android : {  

@@ -651,7 +651,7 @@ const kannadaStrings = {
   NO_MANUAL_PAYMENTS_DESC : "ಬಾಕಿಗಳನ್ನು ತೆರವುಗೊಳಿಸಲು ನಿಮ್ಮ ಪಾವತಿ ಇತಿಹಾಸವು ಯಾವುದಾದರೂ ಇದ್ದರೆ ಇಲ್ಲಿ ಕಾಣಿಸುತ್ತದೆ.",
   PAYMENT_HISTORY : "ಪಾವತಿ ಇತಿಹಾಸ",
   TAP_A_PLAN_TO_VIEW_DETAILS : "ವಿವರಗಳನ್ನು ವೀಕ್ಷಿಸಲು ಯೋಜನೆಯನ್ನು ಟ್ಯಾಪ್ ಮಾಡಿ",
-  HOW_IT_WORKS : "ಸ್ವಯಂ ಪಾವತಿ ಹೇಗೆ ಕೆಲಸ ಮಾಡುತ್ತದೆ?",
+  HOW_IT_WORKS : "ಇದು ಹೇಗೆ ಕೆಲಸ ಮಾಡುತ್ತದೆ",
   ZERO_COMMISION : "ZERO ಕಮಿಷನ್",
   EARN_TODAY_PAY_TOMORROW : "ಇಂದು ಗಳಿಸಿ, ನಾಳೆ ಪಾವತಿಸಿ",
   PAY_ONLY_IF_YOU_TAKE_RIDES : "ನೀವು ಸವಾರಿ ಮಾಡಿದರೆ ಮಾತ್ರ ಪಾವತಿಸಿ",
