@@ -19,7 +19,7 @@ import Components.PrimaryButton as PrimaryButton
 import Components.PrimaryEditText.Controllers as PrimaryEditText
 import Components.StepsHeaderModal.Controller as StepsHeaderModalController
 import Data.String (length)
-import JBridge (hideKeyboardOnNavigation, firebaseLogEvent)
+import JBridge (hideKeyboardOnNavigation, firebaseLogEvent, toggleBtnLoader)
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppTextInput, trackAppScreenEvent)
 import Prelude (class Show, not, pure, unit, (&&), (<=), (==), (||), ($), discard, bind, (>=))
 import PrestoDOM (Eval, continue, continueWithCmd, exit, updateAndExit)
@@ -69,6 +69,7 @@ data Action = BackPressed
 eval :: Action -> EnterOTPScreenState -> Eval Action ScreenOutput EnterOTPScreenState
 eval AfterRender state = continue state
 eval BackPressed state = do 
+  _ <- pure $ toggleBtnLoader "" false
   exit $ GoBack state{props{isValid = false}} 
 eval (PrimaryEditTextAction PrimaryEditText.OnClick) state = continue state
 eval (PrimaryButtonActionController (PrimaryButton.OnClick)) state = do

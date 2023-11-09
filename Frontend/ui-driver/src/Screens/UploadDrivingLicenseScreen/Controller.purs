@@ -266,6 +266,8 @@ eval (PopUpModalLogoutAction (PopUpModal.OnButton2Click)) state = continue $ (st
 
 eval (PopUpModalLogoutAction (PopUpModal.OnButton1Click)) state = exit $ LogoutAccount
 
+eval (PopUpModalLogoutAction (PopUpModal.DismissPopup)) state = continue state {props {logoutPopupModal= false}}
+
 eval (StepsHeaderModelAC (StepsHeaderModelController.Logout)) state = do
     _ <- pure $ hideKeyboardOnNavigation true
     continue $ (state {props{logoutPopupModal = true}})

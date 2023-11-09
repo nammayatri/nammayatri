@@ -37,7 +37,7 @@ carouselData state =
         )
         [ { image: "ny_ic_welcome_screen_1", title: getString DIRECT_PAYMENT_NO_COMMISSIONS, description: getString CUSTOMER_PAYS_DIRECTLY, gravity: 17, imageHeight: 260 }
         , { image: "ny_ic_welcome_screen_2", title: getString HUNDRED_PERCENT_FARE_GOES_TO_YOU, description: getString FARE_SHOWN_IS_FARE_YOU_GET, gravity: 17, imageHeight: 260 }
-        , { image: "ny_ic_welcome_screen_3", title: getString BE_A_PART_OF_OPEN_MOBILITY_REVOLUTION, description: getString CUSTOMER_PAYS_DIRECTLY, gravity: 17, imageHeight: 260 }
+        , { image: "ny_ic_welcome_screen_3", title: getString BE_A_PART_OF_OPEN_MOBILITY_REVOLUTION, description: getString OUR_DATA_AND_PRODUCT_ARE_TRANSPARENT, gravity: 17, imageHeight: 260 }
         ]
   }
 

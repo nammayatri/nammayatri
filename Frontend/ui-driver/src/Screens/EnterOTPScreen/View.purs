@@ -173,25 +173,23 @@ underlinedTextView state push =
       , color Color.mainPrimary
       , visibility if state.props.resendEnabled then VISIBLE else GONE
       ] <> FontStyle.body6 LanguageStyle
-    , textView $
-      [ height WRAP_CONTENT
-      , width WRAP_CONTENT
-      , text $  (getString RESEND_OTP_IN) <> "  " <> state.data.timer
-      , visibility if state.props.resendEnabled then GONE else VISIBLE
-      , color if state.props.resendEnabled then Color.mainPrimary else Color.black700
-      ] <> FontStyle.body6 LanguageStyle
-    , textView
-      [ height $ V 1
+    , linearLayout[
+        height WRAP_CONTENT
       , width MATCH_PARENT
-      , background  Color.black700
-      , margin (Margin 1 0 2 0)
-      , visibility if state.props.resendEnabled then GONE else VISIBLE
-      ]
-    , textView
-      [ height $ V 1
-      , width MATCH_PARENT
-      , background Color.mainPrimary
-      , margin (Margin 1 0 2 0)
-      , visibility if state.props.resendEnabled then VISIBLE else GONE
-      ]
+      , orientation HORIZONTAL
+      ][textView $ 
+        [ height WRAP_CONTENT
+        , width WRAP_CONTENT
+        , text "Didn't receive OTP?"
+        , visibility if state.props.resendEnabled then GONE else VISIBLE
+        , margin $ (MarginRight 5)
+        ]
+      , textView $
+        [ height WRAP_CONTENT
+        , width WRAP_CONTENT
+        , text $  (getString RESEND_OTP_IN) <> "  " <> state.data.timer
+        , visibility if state.props.resendEnabled then GONE else VISIBLE
+        , color if state.props.resendEnabled then Color.mainPrimary else Color.black700
+        ] <> FontStyle.body6 LanguageStyle
+        ]
   ]
