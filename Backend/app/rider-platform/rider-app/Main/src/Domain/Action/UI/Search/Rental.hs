@@ -102,7 +102,7 @@ rentalSearch personId bundleVersion clientVersion device req = do
   return dSearchRes
   where
     validateServiceability origin person' = do
-      originServiceability <- Serviceability.checkServiceability (.origin) (person'.id, person'.merchantId) origin False
+      originServiceability <- Serviceability.checkServiceabilityAndGetCity (.origin) (person'.id, person'.merchantId) origin False
       if originServiceability.serviceable
         then pure originServiceability
         else throwError RideNotServiceable

@@ -217,8 +217,8 @@ oneWaySearch personId req bundleVersion clientVersion device = do
   return dSearchRes
   where
     validateServiceability origin destination person' = do
-      originServiceability <- Serviceability.checkServiceability (.origin) (person'.id, person'.merchantId) origin False
-      destinationServiceability <- Serviceability.checkServiceability (.destination) (person'.id, person'.merchantId) destination False
+      originServiceability <- Serviceability.checkServiceabilityAndGetCity (.origin) (person'.id, person'.merchantId) origin False
+      destinationServiceability <- Serviceability.checkServiceabilityAndGetCity (.destination) (person'.id, person'.merchantId) destination False
       if originServiceability.serviceable && destinationServiceability.serviceable && originServiceability.city == destinationServiceability.city
         then pure originServiceability
         else throwError RideNotServiceable

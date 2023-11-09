@@ -14,6 +14,7 @@
 
 module Domain.Action.UI.Serviceability
   ( checkServiceability,
+    checkServiceabilityAndGetCity,
     ServiceabilityRes (..),
   )
 where
@@ -86,6 +87,42 @@ checkServiceability settingAccessor (personId, merchantId) location shouldUpdate
           specialLocationBody <- QSpecialLocation.findSpecialLocationByLatLong location
           pure ServiceabilityRes {serviceable = serviceable, specialLocation = fst <$> specialLocationBody, geoJson = snd <$> specialLocationBody, ..}
         else pure ServiceabilityRes {serviceable = serviceable, specialLocation = Nothing, geoJson = Nothing, ..}
+
+data ServiceabilityCityRes = ServiceabilityCityRes
+  { serviceable :: Bool,
+    city :: Maybe Context.City
+  }
+  deriving (Generic, Show, Eq, FromJSON, ToJSON, ToSchema)
+
+checkServiceabilityAndGetCity ::
+  ( CacheFlow m r,
+    EsqDBReplicaFlow m r,
+    EsqDBFlow m r
+  ) =>
+  (GeofencingConfig -> GeoRestriction) ->
+  (Id Person.Person, Id Merchant.Merchant) ->
+  LatLong ->
+  Bool ->
+  m ServiceabilityCityRes
+checkServiceabilityAndGetCity settingAccessor (personId, merchantId) location shouldUpdatePerson = do
+  let merchId = merchantId
+  geoConfig <- fmap (.geofencingConfig) $ QMerchant.findById merchId >>= fromMaybeM (MerchantNotFound merchId.getId)
+  let geoRestriction = settingAccessor geoConfig
+  case geoRestriction of
+    Unrestricted -> pure ServiceabilityCityRes {serviceable = True, city = Nothing}
+    Regions regions -> do
+      geometry <-
+        runInReplica $
+          findGeometriesContaining location regions >>= \case
+            [] -> do
+              logError $ "No geometry found for location: " <> show location <> " for regions: " <> show regions <> " personId: " <> personId.getId
+              pure Nothing
+            (g : _) -> pure $ Just g
+
+      let serviceable = isJust geometry
+          city = (.city) <$> geometry
+      _ <- upsertPersonCityInformation personId merchantId shouldUpdatePerson city
+      pure ServiceabilityCityRes {..}
 
 upsertPersonCityInformation :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person.Person -> Id Merchant.Merchant -> Bool -> Maybe Context.City -> m ()
 upsertPersonCityInformation personId merchantId shouldUpdatePerson mbCity = when shouldUpdatePerson $
