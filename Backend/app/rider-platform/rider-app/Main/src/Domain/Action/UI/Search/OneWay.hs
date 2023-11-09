@@ -60,6 +60,7 @@ import qualified Tools.Maps as Maps
 import Tools.Metrics
 import qualified Tools.Metrics as Metrics
 import qualified Tools.Search as Search
+import qualified Data.List as List
 
 data OneWaySearchReq = OneWaySearchReq
   { origin :: DSearch.SearchReqLocation,
@@ -81,7 +82,8 @@ data OneWaySearchRes = OneWaySearchRes
     customerLanguage :: Maybe Maps.Language,
     disabilityTag :: Maybe Text,
     device :: Maybe Text,
-    shortestRouteInfo :: Maybe Maps.RouteInfo
+    shortestRouteInfo :: Maybe Maps.RouteInfo,
+    otherRoutes :: Maybe [Maps.RouteInfo]
   }
 
 hotSpotUpdate ::
@@ -169,6 +171,10 @@ oneWaySearch personId req bundleVersion clientVersion device = do
   let longestRouteDistance = (.distance) =<< getLongestRouteDistance routeResponse
   let shortestRouteDistance = (.distance) =<< shortestRouteInfo
   let shortestRouteDuration = (.duration) =<< shortestRouteInfo
+  let otherRoutes = List.delete (fromJust shortestRouteInfo) routeResponse
+  logDebug $ "otherRoutes at OneWay.hs rider-platform: " <> show otherRoutes
+  logDebug $ "shortestRouteInfo at OneWay.hs rider-platform: " <> show shortestRouteInfo
+  logDebug $ "routeResponse at OneWay.hs rider-platform: " <> show routeResponse
 
   fromLocation <- DSearch.buildSearchReqLoc req.origin
   toLocation <- DSearch.buildSearchReqLoc req.destination
@@ -207,6 +213,7 @@ oneWaySearch personId req bundleVersion clientVersion device = do
             disabilityTag = tag,
             device,
             shortestRouteInfo,
+            otherRoutes = Just otherRoutes,
             ..
           }
   fork "updating search counters" $ do

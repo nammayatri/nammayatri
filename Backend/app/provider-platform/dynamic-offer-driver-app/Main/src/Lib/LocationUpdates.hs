@@ -79,6 +79,39 @@ updateDeviation routeDeviationThreshold (Just rideId) batchWaypoints = do
       logWarning $ "Ride route points not found for rideId: " <> show rideId
       return False
 
+giveCorrectRoute :: [RI.RouteInfo] -> Meters -> [LatLong] -> Maybe RI.RouteInfo
+giveCorrectRoute [] _ _ = Nothing
+giveCorrectRoute (routeInfo : routes) routeDeviationThreshold batchWaypoints =
+  if checkForDeviation routeDeviationThreshold (fromJust routeInfo.points) batchWaypoints 0
+    then giveCorrectRoute routes routeDeviationThreshold batchWaypoints
+    else Just routeInfo
+
+checkOtherRoutesForDeviation :: (HedisFlow m r, CacheFlow m r, EsqDBReplicaFlow m r, EncFlow m r) => Meters -> Maybe (Id Ride) -> [LatLong] -> m (Maybe RouteInfo)
+checkOtherRoutesForDeviation _ Nothing _ = do
+  logInfo "No ride found to check other estimates"
+  return Nothing
+checkOtherRoutesForDeviation routeDeviationThreshold (Just rideId) batchWaypoints = do
+  routesInfo :: Maybe [RI.RouteInfo] <- Redis.get (otherRoutesKey $ show rideId)
+  case routesInfo of
+    Just routes ->
+      case giveCorrectRoute routes routeDeviationThreshold batchWaypoints of
+        Just travelledRoute -> do
+          QRide.updateDriverTravelledAnotherEstimatedRoute rideId True
+          logInfo $ "Driver travelled another estimated route for rideId: " <> show rideId
+          return $
+            Just
+              RouteInfo
+                { duration = travelledRoute.duration,
+                  distance = travelledRoute.distance,
+                  boundingBox = Nothing,
+                  snappedWaypoints = [],
+                  points = fromJust travelledRoute.points
+                }
+        Nothing -> return Nothing
+    Nothing -> do
+      logWarning $ "Ride route points not found for rideId: " <> show rideId
+      return Nothing
+
 buildRideInterpolationHandler :: Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Bool -> Flow (RideInterpolationHandler Person Flow)
 buildRideInterpolationHandler merchantId merchantOpCityId isEndRide = do
   transportConfig <- MTC.findByMerchantOpCityId merchantOpCityId >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
@@ -96,6 +129,10 @@ buildRideInterpolationHandler merchantId merchantOpCityId isEndRide = do
           ( \driverId batchWaypoints -> do
               mRide <- QRide.getInProgressOrNewRideIdAndStatusByDriverId driverId
               updateDeviation transportConfig.routeDeviationThreshold (mRide <&> fst) batchWaypoints
+          )
+          ( \driverId batchWaypoints -> do
+              mRide <- QRide.getInProgressOrNewRideIdAndStatusByDriverId driverId
+              checkOtherRoutesForDeviation transportConfig.routeDeviationThreshold (mRide <&> fst) batchWaypoints
           )
     _ -> throwError $ InternalError "Unknown Service Config"
 

@@ -139,6 +139,14 @@ handler transporter req quote = do
             Just route -> setExp (searchRequestKey $ getId ride.id) route 14400
             Nothing -> logDebug "Unable to get the key"
 
+          otherRoutes :: Maybe [RouteInfo] <- safeGet (otherRoutesKey $ getId driverQuote.requestId)
+          logDebug $ "otherRoutes in Confirm.hs: " <> show otherRoutes
+          case otherRoutes of
+            Just routes -> do
+              setExp (otherRoutesKey $ getId ride.id) routes 43200
+              logDebug $ "otherRoutes added in redis in Confirm.hs: " <> show routes
+            Nothing -> logInfo "Unable to get the key"
+
           -- critical updates
           QRB.updateStatus booking.id DRB.TRIP_ASSIGNED
           QRide.createRide ride
@@ -259,6 +267,7 @@ handler transporter req quote = do
             createdAt = now,
             updatedAt = now,
             driverDeviatedFromRoute = Just False,
+            driverTravelledAnotherEstimatedRoute = Just False,
             numberOfSnapToRoadCalls = Nothing,
             numberOfDeviation = Nothing,
             uiDistanceCalculationWithAccuracy = Nothing,

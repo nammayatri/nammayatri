@@ -72,6 +72,7 @@ buildSearchReq merchantId subscriber req = do
     throwError (InvalidRequest "Invalid bap_uri")
   let disabilityTag = buildDisabilityTag =<< intent.fulfillment.customer
   let messageId = context.message_id
+  let otherRoutes = buildOtherRoutes =<< intent.fulfillment.tags
   transactionId <- context.transaction_id & fromMaybeM (InvalidRequest "Missing transaction_id")
   pure
     DSearch.DSearchReq
@@ -91,7 +92,8 @@ buildSearchReq merchantId subscriber req = do
         device = Nothing,
         routePoints = buildRoutePoints =<< intent.fulfillment.tags, --------TODO------Take proper input---------
         customerLanguage = customerLanguage,
-        disabilityTag = disabilityTag
+        disabilityTag = disabilityTag,
+        otherRoutes = otherRoutes
       }
 
 getDistance :: Search.TagGroups -> Maybe Meters
@@ -119,4 +121,9 @@ buildDisabilityTag Search.Customer {..} = do
 buildRoutePoints :: Search.TagGroups -> Maybe [Maps.LatLong]
 buildRoutePoints tagGroups = do
   tagValue <- getTag "route_info" "route_points" tagGroups
+  decode $ encodeUtf8 tagValue
+
+buildOtherRoutes :: Search.TagGroups -> Maybe [Maps.RouteInfo]
+buildOtherRoutes tagGroups = do
+  tagValue <- getTag "route_info" "other_routes" tagGroups
   decode $ encodeUtf8 tagValue

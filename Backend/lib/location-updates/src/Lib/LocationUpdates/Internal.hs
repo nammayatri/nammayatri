@@ -34,6 +34,7 @@ module Lib.LocationUpdates.Internal
 where
 
 import qualified Control.Monad.Catch as C
+import Data.Maybe
 import EulerHS.Prelude hiding (id, state)
 import GHC.Records.Extra
 import Kernel.External.Maps as Maps
@@ -60,7 +61,8 @@ data RideInterpolationHandler person m = RideInterpolationHandler
     wrapDistanceCalculation :: Id person -> m () -> m (),
     isDistanceCalculationFailed :: Id person -> m Bool,
     updateDistance :: Id person -> HighPrecMeters -> Int -> m (),
-    updateRouteDeviation :: Id person -> [LatLong] -> m Bool
+    updateRouteDeviation :: Id person -> [LatLong] -> m Bool,
+    checkOtherEstimatedRoutesForDeviation :: Id person -> [LatLong] -> m (Maybe RouteInfo)
   }
 
 --------------------------------------------------------------------------------
@@ -109,11 +111,22 @@ recalcDistanceBatches ::
 recalcDistanceBatches h@RideInterpolationHandler {..} ending driverId estDist pickupDropOutsideThreshold = do
   waypoints <- getAllWaypoints driverId
   routeDeviation <- updateRouteDeviation driverId (toList waypoints)
-  if routeDeviation || pickupDropOutsideThreshold
-    then do
-      (distanceToUpdate, snapToRoadCalls) <- recalcDistanceBatches' 0 0
-      updateDistance driverId distanceToUpdate snapToRoadCalls
-    else updateDistance driverId (metersToHighPrecMeters estDist) 0
+  if pickupDropOutsideThreshold
+  then do
+    (distanceToUpdate, snapToRoadCalls) <- recalcDistanceBatches' 0 0
+    updateDistance driverId distanceToUpdate snapToRoadCalls
+  else
+    if routeDeviation
+      then do
+        anotherRoute <- checkOtherEstimatedRoutesForDeviation driverId (toList waypoints)
+        case anotherRoute of
+          Just route -> do
+            updateDistance driverId (metersToHighPrecMeters $ fromJust route.distance) 0
+          Nothing -> do
+            (distanceToUpdate, snapToRoadCalls) <- recalcDistanceBatches' 0 0
+            updateDistance driverId distanceToUpdate snapToRoadCalls
+      else do
+        updateDistance driverId (metersToHighPrecMeters estDist) 0
   where
     -- atLeastBatchPlusOne = (> batchSize) <$> getWaypointsNumber driverId
     pointsRemaining = (> 0) <$> getWaypointsNumber driverId
@@ -155,8 +168,9 @@ mkRideInterpolationHandler ::
   MapsServiceConfig ->
   (Id person -> HighPrecMeters -> Int -> m ()) ->
   (Id person -> [LatLong] -> m Bool) ->
+  (Id person -> [LatLong] -> m (Maybe RouteInfo)) ->
   RideInterpolationHandler person m
-mkRideInterpolationHandler isEndRide mapsCfg updateDistance updateRouteDeviation =
+mkRideInterpolationHandler isEndRide mapsCfg updateDistance updateRouteDeviation checkOtherEstimatedRoutesForDeviation=
   RideInterpolationHandler
     { batchSize = 98,
       addPoints = addPointsImplementation,
@@ -172,6 +186,7 @@ mkRideInterpolationHandler isEndRide mapsCfg updateDistance updateRouteDeviation
       interpolatePointsAndCalculateDistance = interpolatePointsAndCalculateDistanceImplementation isEndRide mapsCfg,
       updateDistance,
       updateRouteDeviation,
+      checkOtherEstimatedRoutesForDeviation,
       isDistanceCalculationFailed = isDistanceCalculationFailedImplementation,
       wrapDistanceCalculation = wrapDistanceCalculationImplementation
     }

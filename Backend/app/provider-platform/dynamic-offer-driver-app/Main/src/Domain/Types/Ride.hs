@@ -68,6 +68,7 @@ data Ride = Ride
     createdAt :: UTCTime,
     updatedAt :: UTCTime,
     driverDeviatedFromRoute :: Maybe Bool,
+    driverTravelledAnotherEstimatedRoute :: Maybe Bool,
     numberOfSnapToRoadCalls :: Maybe Int,
     numberOfDeviation :: Maybe Bool,
     uiDistanceCalculationWithAccuracy :: Maybe Int,

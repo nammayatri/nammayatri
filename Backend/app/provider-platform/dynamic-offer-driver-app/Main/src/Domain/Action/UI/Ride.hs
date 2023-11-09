@@ -312,6 +312,7 @@ otpRideCreate driver otpCode booking = do
             createdAt = now,
             updatedAt = now,
             driverDeviatedFromRoute = Just False,
+            driverTravelledAnotherEstimatedRoute = Just False,
             numberOfSnapToRoadCalls = Nothing,
             numberOfDeviation = Nothing,
             uiDistanceCalculationWithAccuracy = Nothing,

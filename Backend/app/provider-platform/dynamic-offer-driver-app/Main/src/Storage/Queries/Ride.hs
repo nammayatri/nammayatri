@@ -235,6 +235,15 @@ updateDriverDeviatedFromRoute rideId deviation = do
     ]
     [Se.Is BeamR.id (Se.Eq $ getId rideId)]
 
+updateDriverTravelledAnotherEstimatedRoute :: MonadFlow m => Id Ride -> Bool -> m ()
+updateDriverTravelledAnotherEstimatedRoute rideId value = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set BeamR.driverTravelledAnotherEstimatedRoute $ Just value,
+      Se.Set BeamR.updatedAt now
+    ]
+    [Se.Is BeamR.id (Se.Eq $ getId rideId)]
+
 updateStartTimeAndLoc :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Ride -> LatLong -> m ()
 updateStartTimeAndLoc rideId point = do
   now <- getCurrentTime
@@ -737,6 +746,7 @@ instance ToTType' BeamR.Ride Ride where
         BeamR.createdAt = createdAt,
         BeamR.updatedAt = updatedAt,
         BeamR.driverDeviatedFromRoute = driverDeviatedFromRoute,
+        BeamR.driverTravelledAnotherEstimatedRoute = driverTravelledAnotherEstimatedRoute,
         BeamR.numberOfSnapToRoadCalls = numberOfSnapToRoadCalls,
         BeamR.numberOfDeviation = numberOfDeviation,
         BeamR.uiDistanceCalculationWithAccuracy = uiDistanceCalculationWithAccuracy,
