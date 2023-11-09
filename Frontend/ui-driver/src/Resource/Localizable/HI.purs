@@ -1094,3 +1094,6 @@ getHI stringKey =
         LOCATION_CANNOT_BE_ADDED_WHILE_ON_RIDE -> "जब सवारी चल रही हो तो विकल्प उपलब्ध नहीं होता"
         ADD_GOTO -> "गो-टू जोड़ें"
         NO_OPEN_MARKET_RIDES _ -> "कोई सवारी नहीं"
+        ACCOUNT_BLOCKED -> "खाता अवरुद्ध!"
+        YOU_HAVE_BEEN_BLOCKED_FROM_TAKING_RIDES -> "आपको सवारी लेने से रोक दिया गया है।\nकृपया सहायता के लिए सहायता से संपर्क करें।"
+        DISMISS -> "खारिज करें"

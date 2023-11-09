@@ -259,14 +259,13 @@ view push state =
       , if state.props.showGenericAccessibilityPopUp then genericAccessibilityPopUpView push state else dummyTextView
       , if state.data.driverGotoState.showGoto then gotoListView push state else dummyTextView
       , if state.data.driverGotoState.goToPopUpType /= ST.NO_POPUP_VIEW then gotoRequestPopupView push state else dummyTextView
-      , if (DA.any (_ == true ) [state.data.driverGotoState.gotoLocInRange, state.data.driverGotoState.goToInfo, state.data.driverGotoState.confirmGotoCancel]) then knowMoreLocInRangeDisGotoPopups push state else dummyTextView
+      , if showPopups then popupModals push state else dummyTextView
       , if (state.props.showChatBlockerPopUp || state.data.paymentState.showBlockingPopup) then blockerPopUpView push state else dummyTextView
       , if state.props.currentStage == RideCompleted then RideCompletedCard.view (getRideCompletedConfig state) (push <<< RideCompletedAC) else dummyTextView -- 
       , if state.props.showRideRating then RatingCard.view (push <<< RatingCardAC) (getRatingCardConfig state) else dummyTextView
-  ] 
-  
-  -- <> if state.props.currentStage == RideCompleted then [RideCompletedCard.view (getRideCompletedConfig state) (push <<< RideCompletedAC)] else [] -- These two views should be at last
-    -- <> if state.props.showRideRating then [RatingCard.view (push <<< RatingCardAC) (getRatingCardConfig state)] else []
+  ]
+  where 
+    showPopups = (DA.any (_ == true ) [state.data.driverGotoState.gotoLocInRange, state.data.driverGotoState.goToInfo, state.data.driverGotoState.confirmGotoCancel, state.props.accountBlockedPopup])
 
 
 blockerPopUpView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
@@ -1579,8 +1578,8 @@ gotoRequestPopupView push state =
       , width MATCH_PARENT
       ][PopUpModal.view (push <<< GotoRequestPopupAction) (gotoRequestPopupConfig state)]
 
-knowMoreLocInRangeDisGotoPopups :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
-knowMoreLocInRangeDisGotoPopups push state = 
+popupModals :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+popupModals push state = 
   PrestoAnim.animationSet [ Anim.fadeIn true ]
     $ linearLayout
       [ height MATCH_PARENT
@@ -1590,18 +1589,21 @@ knowMoreLocInRangeDisGotoPopups push state =
           ST.LocInRange -> gotoLocInRangeConfig state
           ST.KnowMore -> gotoKnowMoreConfig state
           ST.DisableGotoPopup -> disableGotoConfig state
+          ST.AccountBlocked -> accountBlockedPopup state
       ]
   where 
   
     popupType = if state.data.driverGotoState.gotoLocInRange then ST.LocInRange
       else if state.data.driverGotoState.goToInfo then ST.KnowMore
       else if state.data.driverGotoState.confirmGotoCancel then ST.DisableGotoPopup
+      else if state.props.accountBlockedPopup then ST.AccountBlocked
       else ST.KnowMore
 
     clickAction popupType = case popupType of
           ST.LocInRange -> GotoLocInRangeAction
           ST.KnowMore -> GotoKnowMoreAction
           ST.DisableGotoPopup -> ConfirmDisableGoto
+          ST.AccountBlocked -> AccountBlockedAC
 
 enableCurrentLocation :: HomeScreenState -> Boolean
 enableCurrentLocation state = if (DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted]) then false else true

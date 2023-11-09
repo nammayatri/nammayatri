@@ -1031,7 +1031,8 @@ type HomeScreenProps =  {
   showChatBlockerPopUp :: Boolean,
   showGenericAccessibilityPopUp :: Boolean,
   waitTimeStatus :: TimerStatus,
-  isMockLocation :: Boolean
+  isMockLocation :: Boolean,
+  accountBlockedPopup :: Boolean
  }
 
 data SubscriptionBannerType = FREE_TRIAL_BANNER | SETUP_AUTOPAY_BANNER | CLEAR_DUES_BANNER | NO_SUBSCRIPTION_BANNER | DUE_LIMIT_WARNING_BANNER | LOW_DUES_BANNER
@@ -2038,14 +2039,14 @@ instance standardEncodeGoToPopUpType :: StandardEncode GoToPopUpType where stand
 instance decodeGoToPopUpType :: Decode GoToPopUpType where decode = defaultDecode
 instance encodeGoToPopUpType  :: Encode GoToPopUpType where encode = defaultEncode
 
-data GoToNoImgPopUpType = KnowMore | DisableGotoPopup | LocInRange
+data HomeScreenPopUpTypes = KnowMore | DisableGotoPopup | LocInRange | AccountBlocked
 
-derive instance genericGoToNoImgPopUpType :: Generic GoToNoImgPopUpType _
-instance showGoToNoImgPopUpType :: Show GoToNoImgPopUpType where show = genericShow
-instance eqGoToNoImgPopUpType :: Eq GoToNoImgPopUpType where eq = genericEq
-instance standardEncodeGoToNoImgPopUpType :: StandardEncode GoToNoImgPopUpType where standardEncode _ = standardEncode {}
-instance decodeGoToNoImgPopUpType :: Decode GoToNoImgPopUpType where decode = defaultDecode
-instance encodeGoToNoImgPopUpType  :: Encode GoToNoImgPopUpType where encode = defaultEncode
+derive instance genericHomeScreenPopUpTypes :: Generic HomeScreenPopUpTypes _
+instance showHomeScreenPopUpTypes :: Show HomeScreenPopUpTypes where show = genericShow
+instance eqHomeScreenPopUpTypes :: Eq HomeScreenPopUpTypes where eq = genericEq
+instance standardEncodeHomeScreenPopUpTypes :: StandardEncode HomeScreenPopUpTypes where standardEncode _ = standardEncode {}
+instance decodeHomeScreenPopUpTypes :: Decode HomeScreenPopUpTypes where decode = defaultDecode
+instance encodeHomeScreenPopUpTypes  :: Encode HomeScreenPopUpTypes where encode = defaultEncode
 
 data MenuOptions = DRIVER_PRESONAL_DETAILS |DRIVER_BANK_DETAILS | DRIVER_VEHICLE_DETAILS | ABOUT_APP | MULTI_LANGUAGE | HELP_AND_FAQS | DRIVER_LOGOUT | DRIVER_BOOKING_OPTIONS | REFER | APP_INFO_SETTINGS | LIVE_STATS_DASHBOARD | GO_TO_LOCATIONS
 derive instance genericMenuoptions :: Generic MenuOptions _

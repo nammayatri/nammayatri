@@ -1094,3 +1094,6 @@ getEN stringKey =
         LOCATION_CANNOT_BE_ADDED_WHILE_ON_RIDE -> "Option is not available when ride is in progress"
         ADD_GOTO -> "Add Go-To"
         NO_OPEN_MARKET_RIDES _ -> "No rides"
+        ACCOUNT_BLOCKED -> "Account blocked!"
+        YOU_HAVE_BEEN_BLOCKED_FROM_TAKING_RIDES -> "You have been blocked from taking rides.\nPlease contact support for help."
+        DISMISS -> "Dismiss"

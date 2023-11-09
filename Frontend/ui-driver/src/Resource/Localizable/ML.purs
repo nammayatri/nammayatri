@@ -1094,3 +1094,6 @@ getML stringKey =
         LOCATION_CANNOT_BE_ADDED_WHILE_ON_RIDE -> "റൈഡ് പുരോഗമിക്കുമ്പോൾ ഓപ്‌ഷൻ ലഭ്യമല്ല"
         ADD_GOTO -> "ഗോ-ടു ചേർക്കുക"
         NO_OPEN_MARKET_RIDES _ -> "റൈഡുകൾ ഇല്ല"
+        ACCOUNT_BLOCKED -> "അക്കൗണ്ട് തടഞ്ഞു!"
+        YOU_HAVE_BEEN_BLOCKED_FROM_TAKING_RIDES -> "നിങ്ങളെ സവാരി ചെയ്യുന്നതിൽ നിന്ന് തടഞ്ഞിരിക്കുന്നു.\nസഹായത്തിന് പിന്തുണയുമായി ബന്ധപ്പെടുക."
+        DISMISS -> "പിരിച്ചുവിടുക"
