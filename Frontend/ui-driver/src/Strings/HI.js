@@ -13,7 +13,7 @@ const hindiStrings = {
   ENTER_MOBILE_NUMBER: "मोबाइल नंबर दर्ज करें",
   BY_CLICKING_CONTINUE_YOU_WILL_BE_AGREEING_TO_OUR: "जारी रखें पर क्लिक करके, आप हमारी बात से सहमत हैं",
   ENTER_OTP: "ओटीपी दर्ज करें",
-  DIDNT_RECIEVE_OTP: "ओटीपी प्राप्त नहीं हुआ ?",
+  DIDNT_RECIEVE_OTP: "ओटीपी प्राप्त नहीं हुआ? ",
   RESEND_OTP: "ओटीपी पुनः भेजें",
   PLEASE_ENTER_VALID_OTP: "कृपया सही OTP दर्ज करें",
   INVALID_MOBILE_NUMBER: "गलत मोबाइल नंबर",
@@ -42,8 +42,8 @@ const hindiStrings = {
   UPLOAD_ADHAAR_CARD: "आधार कार्ड अपलोड करें",
   ADHAAR_INTRUCTION_PICTURE: "कृपया आधार कार्ड के दोनों पक्षों की स्पष्ट तस्वीरें अपलोड करें",
   ADD_VEHICLE_DETAILS: "वाहन विवरण जोड़ें",
-  VEHICLE_REGISTRATION_NUMBER: "वाहन पंजीकरण संख्या",
-  RE_ENTER_VEHICLE_REGISTRATION_NUMBER: "फिर से वाहन पंजीकरण संख्या",
+  VEHICLE_REGISTRATION_NUMBER: "वाहन पंजीकरण प्रमाणपत्र संख्या",
+  RE_ENTER_VEHICLE_REGISTRATION_NUMBER: "वाहन पंजीकरण प्रमाणपत्र संख्या पुनः दर्ज करें",
   ENTER_VEHICLE_NO: "वाहन संख्या दर्ज करें।",
   VEHICLE_TYPE: "वाहन का प्रकार",
   VEHICLE_MODEL_NAME: "वाहन मॉडल का नाम",
@@ -1057,6 +1057,10 @@ const hindiStrings = {
   CROPPED_CORRECTLY : "सही ढंग से क्रॉप किया गया",
   WRONG_CROPPING : "गलत क्रॉपिंग",
   CHANGE_LOCATION : "स्थान बदलें",
+  CHANGE_CITY: "शहर बदलें",
+  UPLOAD_REGISTRATION_CERTIFICATE_STR : "पंजीकरण प्रमाणपत्र अपलोड करें",
+  TAKE_A_PHOTO : "एक तस्वीर लें", 
+  GALLERY : "गैलरी"
 }
 
 

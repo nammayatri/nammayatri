@@ -99,7 +99,7 @@ eval (MenuButtonAction (MenuButtonController.OnSelection btnState)) state =
 
 -- eval (MenuButtonAction2 (MenuButtonController.OnSelection btnState)) state = continue state { data { locationSelected = btnState.text.value }}
 
-eval (ChangeStage newStage) state = continue state{props{currentStage = newStage}}
+eval (ChangeStage newStage) state = continue state{props{currentStage = newStage, selectedLanguage = state.props.updatedLanguage}, data {locationSelected = state.data.updatedDriverLocation}}
 
 eval (GenericHeaderAC GenericHeaderController.PrefixImgOnClick) state = continue state{props{currentStage = DETECT_LOCATION}}
 

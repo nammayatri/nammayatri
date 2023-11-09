@@ -48,8 +48,8 @@ primaryButtonConfig state = let
                                         _ -> CONFIRM
 
         }
-      , alpha = if state.data.locationSelected == "--" && state.props.currentStage == DETECT_LOCATION then 0.5 else 1.0
-      , isClickable =  state.data.locationSelected /= "--" || state.props.currentStage /= DETECT_LOCATION
+      -- , alpha = if state.data.locationSelected == "--" && state.props.currentStage == DETECT_LOCATION then 0.5 else 1.0
+      -- , isClickable =  state.data.locationSelected /= "--" || state.props.currentStage /= DETECT_LOCATION
       , id = "PrimaryButtonChooseCityScreen"
       }
   in primaryButtonConfig'
@@ -72,5 +72,14 @@ getLocationMapImage value =
     "Delhi" -> "ny_ic_delhi_map"
     "Hyderabad" -> "ny_ic_hyderabad_map"
     "Mysore" -> "ny_ic_mysuru_map"
-    "Bengaluru" -> "ny_ic_bangalore_map"
+    "Bangalore" -> "ny_ic_bangalore_map"
     _ -> "ny_ic_driver_location_undetectable"
+
+getChangeLanguageText :: String -> String
+getChangeLanguageText value =
+  case value of
+    "Delhi" -> "भाषा बदलें"
+    "Hyderabad" -> "భాష మార్చు"
+    "Mysore" -> "కన్నడ"
+    "Bangalore" -> "కన్నడ"
+    _ -> "Change Language"

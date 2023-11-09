@@ -40,13 +40,13 @@ primaryButtonConfig state = let
       { text = (getString CONTINUE)
       , color = Color.primaryButtonColor
       }
-      , margin = (Margin 0 0 0 0)
-      , cornerRadius = 0.0
       , background = Color.black900
-      , height = (V 60)
+      , height = (V 50)
       , alpha = if isEnabled then 1.0 else 0.7
       , isClickable = isEnabled
       , id = "PermissionsScreenPrimaryButton"
+      , margin = Margin 15 0 15 30
+      , cornerRadius = 6.0
       }
   in primaryButtonConfig'
 

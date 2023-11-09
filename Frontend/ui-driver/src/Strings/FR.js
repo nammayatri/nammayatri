@@ -10,7 +10,7 @@ const frenchStrings = {
   ENTER_MOBILE_NUMBER: "Entrez votre numéro de mobile",
   BY_CLICKING_CONTINUE_YOU_WILL_BE_AGREEING_TO_OUR: "En cliquant sur Continuer, vous acceptez nos",
   ENTER_OTP: "Entrez votre code à usage unique",
-  DIDNT_RECIEVE_OTP: "Vous n'avez pas reçu de code à usage unique?",
+  DIDNT_RECIEVE_OTP: "Vous n'avez pas reçu de code à usage unique? ",
   RESEND_OTP: "Renvoyer un code à usage unique",
   PLEASE_ENTER_VALID_OTP: "Veuillez saisir un code à usage unique valide",
   INVALID_MOBILE_NUMBER: "Numéro de portable invalide",
@@ -38,8 +38,8 @@ const frenchStrings = {
   UPLOAD_ADHAAR_CARD: "Télécharger la carte Aadhar",
   ADHAAR_INTRUCTION_PICTURE: "Veuillez télécharger des photos lisibles des deux faces de la carte Aadhar",
   ADD_VEHICLE_DETAILS: "Ajouter les informations du véhicule",
-  VEHICLE_REGISTRATION_NUMBER: "Numéro d'immatriculation du véhicule",
-  RE_ENTER_VEHICLE_REGISTRATION_NUMBER: "Entrez à nouveau le Numéro d'enregistrement du véhicule",
+  VEHICLE_REGISTRATION_NUMBER: "Numéro de certificat d'immatriculation du véhicule",
+  RE_ENTER_VEHICLE_REGISTRATION_NUMBER: "Entrez à nouveau le numéro du certificat d'immatriculation du véhicule",
   ENTER_VEHICLE_NO: "Entrez le n° de véhicule",
   VEHICLE_TYPE: "Type de véhicule",
   VEHICLE_MODEL_NAME: "Nom du modèle de véhicule",
@@ -791,4 +791,8 @@ const frenchStrings = {
   CROPPED_CORRECTLY : "Cadré correctement",
   WRONG_CROPPING : "Mauvais recadrage",
   CHANGE_LOCATION : "Changer d'emplacement",
+  CHANGE_CITY : "Changer de ville",
+  UPLOAD_REGISTRATION_CERTIFICATE_STR : "Télécharger le certificat d'enregistrement",
+  TAKE_A_PHOTO : "Prendre une photo", 
+  GALLERY : "Galerie"
 }

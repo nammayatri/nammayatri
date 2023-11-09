@@ -28,6 +28,7 @@ import PrestoDOM.Animation as PrestoAnim
 import Screens.ChooseCityScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.Types (ChooseCityScreenStage(..), ChooseCityScreenState)
 import Styles.Colors as Color
+import Storage (getValueToLocalStore, KeyStore(..))
 
 screen :: ChooseCityScreenState -> Screen Action ChooseCityScreenState ScreenOutput
 screen initialState =
@@ -156,23 +157,23 @@ currentLocationView state push =
   ][  imageView
       [ height $ V 220
       , width $ V 220
-      , imageWithFallback $ fetchImage FF_ASSET (getLocationMapImage state.data.locationSelected)
+      , imageWithFallback $ fetchImage FF_ASSET (getLocationMapImage state.data.updatedDriverLocation)
       
       ]
     , textView $
-      [ text "Can you please enter your location"
+      [ text $ getString YOUR_DETECTED_LOCATION_IS
       , gravity CENTER
       , color Color.black700
       , margin $ MarginTop 24
       ] <> FontStyle.paragraphText TypoGraphy
     , textView $
-      [ text state.data.locationSelected
+      [ text state.data.updatedDriverLocation
       , gravity CENTER
       , color Color.black800
       , margin $ MarginTop 4
       ] <> FontStyle.priceFont TypoGraphy
     , textView $
-      [ text "Change City"
+      [ text $ getString CHANGE_CITY
       , gravity CENTER
       , color Color.blue800
       , margin $ MarginTop 16
@@ -203,13 +204,13 @@ currentLanguageView state push =
           , margin $ MarginTop 2
         ] <> FontStyle.body3 TypoGraphy
       , textView $ [
-          text $ getLangFromVal state.props.selectedLanguage
+          text $ getLangFromVal state.props.updatedLanguage
           , gravity CENTER
           , color Color.black900
         ] <> FontStyle.subHeading1 TypoGraphy
       ]
     , textView $ [
-      text $ getString CHANGE_LANGUAGE_STR <> "(" <> ")"
+      text $ getString CHANGE_LANGUAGE_STR <> if getValueToLocalStore LANGUAGE_KEY == "EN_US" then " (" <> getChangeLanguageText state.data.updatedDriverLocation <> ")" else ""
       , gravity CENTER
       , color Color.blue800
       , onClick push $ const $ ChangeStage SELECT_LANG

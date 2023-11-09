@@ -1002,10 +1002,13 @@ export const showMapImpl = function (id) {
 
 export const getCurrentLatLong = function () {
   if (window.JBridge.getCurrentLatLong) {
+    console.log("coming_inside: ");
     const parsedData = JSON.parse(window.JBridge.getCurrentLatLong());
     if (parsedData.lat && parsedData.lng) {
+      console.log("coming_inside2: ", parsedData);
       return parsedData;
     } else { // fallBack for previous release
+      console.log("coming_inside3: ", parsedData);
       return {
         "lat": parsedData.lat,
         "lng": parsedData.long

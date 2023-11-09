@@ -403,6 +403,7 @@ mkUpdateDriverInfoReq dummy
           "ML_IN" -> "MALAYALAM"
           "BN_IN" -> "BENGALI"
           "TA_IN" -> "TAMIL"
+          "TE_IN" -> "TELUGU"
           _ -> "ENGLISH"
     , bundleVersion: Nothing
     , clientVersion: Nothing

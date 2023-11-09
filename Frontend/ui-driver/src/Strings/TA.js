@@ -14,7 +14,7 @@ const tamilStrings = {
   ENTER_MOBILE_NUMBER: "மொபைல் எண்ணை உள்ளிடவும்",
   BY_CLICKING_CONTINUE_YOU_WILL_BE_AGREEING_TO_OUR: "தொடரவும் என்பதைக் கிளிக் செய்வதன் மூலம், எங்களுடையதை ஒப்புக்கொள்கிறீர்கள்",
   ENTER_OTP: "OTP ஐ உள்ளிடவும்",
-  DIDNT_RECIEVE_OTP: "OTP ஐப் பெறவில்லையா?",
+  DIDNT_RECIEVE_OTP: "OTP ஐப் பெறவில்லையா? ",
   RESEND_OTP: "OTP ஐ மீண்டும் அனுப்பவும்",
   PLEASE_ENTER_VALID_OTP: "செல்லுபடியாகும் OTP ஐ உள்ளிடவும்",
   INVALID_MOBILE_NUMBER: "மொபைல் எண்ணை சரிபார்க்கவும்",
@@ -42,8 +42,8 @@ const tamilStrings = {
   UPLOAD_ADHAAR_CARD: "ஆதார் அட்டையைப் பதிவேற்றவும்",
   ADHAAR_INTRUCTION_PICTURE: "ஆதார் அட்டையின் இருபுறமும் தெளிவான படங்களை தயவுசெய்து பதிவேற்றவும்",
   ADD_VEHICLE_DETAILS: "வாகன விவரங்களைச் நிரப்பவும்",
-  VEHICLE_REGISTRATION_NUMBER: "வாகன பதிவு எண்",
-  RE_ENTER_VEHICLE_REGISTRATION_NUMBER: "வாகன பதிவு எண்ணை மீண்டும் உள்ளிடவும்",
+  VEHICLE_REGISTRATION_NUMBER: "வாகனப் பதிவுச் சான்றிதழ் எண்",
+  RE_ENTER_VEHICLE_REGISTRATION_NUMBER: "வாகனப் பதிவுச் சான்றிதழ் எண்ணை மீண்டும் உள்ளிடவும்",
   ENTER_VEHICLE_NO: "வாகனம் எண் உள்ளிடவும்.",
   VEHICLE_TYPE: "வாகனம் வகை",
   VEHICLE_MODEL_NAME: "வாகன மாடல் பெயர்",
@@ -1030,6 +1030,10 @@ const tamilStrings = {
   CROPPED_CORRECTLY : "புகைப்படம் சரியாக கட்டப்பட்டது",
   WRONG_CROPPING : "புகைப்படம் தவறாக கட்டப்பட்டது",
   CHANGE_LOCATION : "இருப்பிடத்தை மாற்றவும்",
+  CHANGE_CITY: "நகரத்தை மாற்றவும்",
+  UPLOAD_REGISTRATION_CERTIFICATE_STR : "பதிவுச் சான்றிதழைப் பதிவேற்றவும்",
+  TAKE_A_PHOTO : "புகைப்படம் எடு", 
+  GALLERY : "கேலரி"
 }
 
 export function getStringValue(key) {

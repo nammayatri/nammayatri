@@ -14,7 +14,7 @@ const bengaliStrings = {
   ENTER_MOBILE_NUMBER: "মোবাইল নম্বর লিখুন",
   BY_CLICKING_CONTINUE_YOU_WILL_BE_AGREEING_TO_OUR: "অবিরত ক্লিক করে, আপনি আমাদের সাথে সম্মত হন",
   ENTER_OTP: "ওটিপি লিখুন",
-  DIDNT_RECIEVE_OTP: "ওটিপি গ্রহণ করেনি?",
+  DIDNT_RECIEVE_OTP: "ওটিপি গ্রহণ করেনি? ",
   RESEND_OTP: "ওটিপি পুনরায় প্রেরণ করুন",
   PLEASE_ENTER_VALID_OTP: "বৈধ ওটিপি লিখুন দয়া করে",
   INVALID_MOBILE_NUMBER: "অকার্যকর মোবাইল নম্বর",
@@ -42,8 +42,8 @@ const bengaliStrings = {
   UPLOAD_ADHAAR_CARD: "আধার কার্ড আপলোড করুন",
   ADHAAR_INTRUCTION_PICTURE: "দয়া করে আধার কার্ডের উভয় পক্ষের পরিষ্কার ছবি আপলোড করুন",
   ADD_VEHICLE_DETAILS: "গাড়ির বিশদ যুক্ত করুন",
-  VEHICLE_REGISTRATION_NUMBER: "গাড়ির রেজিস্ট্রেশন নম্বর",
-  RE_ENTER_VEHICLE_REGISTRATION_NUMBER: "পুনরায় প্রবেশের যানবাহন নিবন্ধকরণ নম্বর",
+  VEHICLE_REGISTRATION_NUMBER: "যানবাহন রেজিস্ট্রেশন সার্টিফিকেট নম্বর",
+  RE_ENTER_VEHICLE_REGISTRATION_NUMBER: "যানবাহন রেজিস্ট্রেশন সার্টিফিকেট নম্বর পুনরায় লিখুন",
   ENTER_VEHICLE_NO: "যানবাহন নং প্রবেশ করান",
   VEHICLE_TYPE: "গাড়ির ধরন",
   VEHICLE_MODEL_NAME: "গাড়ির মডেল নাম",
@@ -1035,6 +1035,10 @@ const bengaliStrings = {
   CROPPED_CORRECTLY : "সঠিকভাবে ক্রপ করা হয়েছে",
   WRONG_CROPPING : "ভুল ক্রপিং",
   CHANGE_LOCATION : "অবস্থান পরিবর্তন করুন",
+  CHANGE_CITY : "শহর পরিবর্তন করুন",
+  UPLOAD_REGISTRATION_CERTIFICATE_STR : "রেজিস্ট্রেশন সার্টিফিকেট আপলোড করুন",
+  TAKE_A_PHOTO : "একটি ছবি তুলুন", 
+  GALLERY : "গ্যালারি"
 }
 
 export function getStringValue(key) {

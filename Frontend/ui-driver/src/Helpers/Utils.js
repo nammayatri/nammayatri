@@ -8,6 +8,7 @@ import * as bengaliStrings from "./../../src/Strings/BN.js";
 import * as malayalamStrings from "./../../src/Strings/ML.js";
 import * as tamilStrings from "./../../src/Strings/TA.js";
 import * as frenchStrings from "./../../src/Strings/FR.js";
+import * as teluguStrings from "./../../src/Strings/TE.js";
 
 const Android = window.Android;
 let timerIdForTimeout;
@@ -592,6 +593,8 @@ function getStringFromCommon(key) {
       return malayalamStrings.getStringValue(key);
     case "TA_IN":
       return tamilStrings.getStringValue(key);
+    case "TE_IN":
+      return teluguStrings.getStringValue(key);
     case "FR_FR":
       return frenchStrings.getStringValue(key);
     default:

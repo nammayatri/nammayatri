@@ -75,6 +75,7 @@ import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import MerchantConfig.Types (CityConfig)
+import MerchantConfig.DefaultConfig as DC
 import MerchantConfig.Utils (getMerchant, Merchant(..), getValueFromConfig)
 import Prelude (Unit, bind, discard, pure, unit, unless, negate, void, when, map, otherwise, ($), (==), (/=), (&&), (||), (/), when, (+), show, (>), not, (<), (*), (-), (<=), (<$>), (>=), ($>), (<<<))
 import Presto.Core.Types.Language.Flow (delay, setLogField)
@@ -251,6 +252,26 @@ loginFlow = do
   void $ pure $ setCleverTapUserProp [{key : "Preferred Language", value : unsafeToForeign $ getValueFromConfig "defaultLanguage"}]
   setValueToLocalStore LANGUAGE_KEY $ getValueFromConfig "defaultLanguage"
   if getValueToLocalStore DRIVER_LOCATION == "__failed" then do
+    appConfig <- getAppConfig Constants.appConfig
+    -- location <- getCurrentLatLong
+    location <- lift $ lift $ liftFlow $ getCurrentLatLong
+    let
+      currentDriverLat = location.lat
+      currentDriverLon = location.lng
+      array = getDistanceArray currentDriverLat currentDriverLon appConfig.cityConfig
+      minIndex = findMinimumIndex array
+    _ <- pure $ spy "testing40 : " currentDriverLat
+    _ <- pure $ spy "testing42 : " currentDriverLon
+    _ <- pure $ spy "testing41 : " minIndex
+    _ <- pure $ spy "testing41 : " appConfig.cityConfig
+    modifyScreenState $ ChooseCityScreenStateType (\chooseCityScreen → chooseCityScreen { data { updatedDriverLocation = ((fromMaybe {
+          cityName : "Bangalore",
+          mapImage : "ny_ic_bengalore_map,",
+          cityCode : "std:080",
+          showSubscriptions : true,
+          cityLat : 28.619570,
+          cityLong : 77.088104
+        } (appConfig.cityConfig !! minIndex)).cityName)}})
     chooseCityScreen <- UI.chooseCityScreen
     pure unit
   else do
@@ -868,6 +889,7 @@ driverProfileFlow = do
                          "HI_IN" -> "hi"
                          "KN_IN" -> "kn"
                          "TA_IN" -> "ta"
+                         "TE_IN" -> "te"
                          _       -> "en"
                      )
       let categoryOrder = ["LOST_AND_FOUND", "RIDE_RELATED", "APP_RELATED", "FARE"]
@@ -1311,6 +1333,7 @@ helpAndSupportFlow = do
                        "HI_IN" -> "hi"
                        "KN_IN" -> "kn"
                        "TA_IN" -> "ta"
+                       "TE_IN" -> "te"
                        _       -> "en"
                      )
       (GetOptionsRes getOptionsRes) <- Remote.getOptionsBT selectedCategory.categoryId language
@@ -1447,6 +1470,7 @@ rideSelectionScreenFlow = do
                          "HI_IN" -> "hi"
                          "KN_IN" -> "kn"
                          "TA_IN" -> "ta"
+                         "TE_IN" -> "te"
                          _       -> "en"
                      )
       (GetOptionsRes getOptionsRes) <- Remote.getOptionsBT state.selectedCategory.categoryId language
@@ -1479,6 +1503,7 @@ issueReportChatScreenFlow = do
                          "HI_IN" -> "hi"
                          "KN_IN" -> "kn"
                          "TA_IN" -> "ta"
+                         "TE_IN" -> "te"
                          _       -> "en"
                      )
       let categoryOrder = ["LOST_AND_FOUND", "RIDE_RELATED", "APP_RELATED", "FARE"]
@@ -1601,6 +1626,7 @@ tripDetailsScreenFlow = do
                          "HI_IN" -> "hi"
                          "KN_IN" -> "kn"
                          "TA_IN" -> "ta"
+                         "TE_IN" -> "te"
                          _       -> "en"
                      )
       let categoryOrder = ["LOST_AND_FOUND", "RIDE_RELATED", "APP_RELATED", "FARE"]
@@ -1829,6 +1855,7 @@ homeScreenFlow = do
                          "HI_IN" -> "hi"
                          "KN_IN" -> "kn"
                          "TA_IN" -> "ta"
+                         "TE_IN" -> "te"
                          _       -> "en"
                      )
       let categoryOrder = ["LOST_AND_FOUND", "RIDE_RELATED", "APP_RELATED", "FARE"]
@@ -2676,6 +2703,7 @@ getPaymentPageLangKey key = case key of
   "ML_IN" -> "malayalam"
   "BN_IN" -> "bengali"
   "TA_IN" -> "tamil"
+  "TE_IN" -> "telugu"
   _       -> "english"
 
 updateDriverDataToStates :: FlowBT String Unit
@@ -2925,3 +2953,21 @@ getCityConfig cityConfig cityCode = do
   case cityCode of
     Just cityCode -> fromMaybe dummyCityConfig $ find (\item -> item.cityCode == cityCode) cityConfig
     Nothing -> dummyCityConfig
+
+
+getDistanceArray :: Number -> Number -> Array CityConfig -> Array Number
+getDistanceArray lat long config = map (\index -> getDistanceBwCordinates lat long index.cityLat index.cityLong) config
+
+findMinimumIndex :: Array Number -> Int
+findMinimumIndex xs =
+  if null xs
+    then -1
+    else go 0 0 (xs !! 0)
+  where
+    go index minIndex minValue
+      | index >= length xs = minIndex
+      | xs !! index < minValue =
+          go (index + 1) index (xs !! index)
+      | otherwise =
+          go (index + 1) minIndex minValue
+

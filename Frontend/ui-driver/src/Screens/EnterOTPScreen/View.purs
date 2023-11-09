@@ -161,35 +161,100 @@ primaryEditTextView state push =
 underlinedTextView :: ST.EnterOTPScreenState -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w
 underlinedTextView state push =
  linearLayout
-  [ width WRAP_CONTENT
-  , height WRAP_CONTENT
-  , margin (MarginTop 18)
-  , orientation VERTICAL
-  , onClick push (const ResendOTP)
-  ][  textView $
-      [ height WRAP_CONTENT
-      , width WRAP_CONTENT
-      , text (getString RESEND_OTP)
-      , color Color.mainPrimary
-      , visibility if state.props.resendEnabled then VISIBLE else GONE
-      ] <> FontStyle.body6 LanguageStyle
-    , linearLayout[
-        height WRAP_CONTENT
-      , width MATCH_PARENT
-      , orientation HORIZONTAL
-      ][textView $ 
+ [ width WRAP_CONTENT
+ , height WRAP_CONTENT
+ , margin (MarginTop 18)
+ ][ textView $
         [ height WRAP_CONTENT
         , width WRAP_CONTENT
-        , text "Didn't receive OTP?"
-        , visibility if state.props.resendEnabled then GONE else VISIBLE
-        , margin $ (MarginRight 5)
-        ]
-      , textView $
-        [ height WRAP_CONTENT
-        , width WRAP_CONTENT
-        , text $  (getString RESEND_OTP_IN) <> "  " <> state.data.timer
-        , visibility if state.props.resendEnabled then GONE else VISIBLE
-        , color if state.props.resendEnabled then Color.mainPrimary else Color.black700
-        ] <> FontStyle.body6 LanguageStyle
-        ]
-  ]
+        , text $ getString DIDNT_RECIEVE_OTP
+        , orientation HORIZONTAL
+        , visibility if state.props.resendEnabled then VISIBLE else GONE
+        ]<> FontStyle.body6 LanguageStyle
+  ,linearLayout
+      [ width WRAP_CONTENT
+      , height WRAP_CONTENT
+      , orientation VERTICAL
+      , onClick push (const ResendOTP)
+      ][  textView $
+          [ height WRAP_CONTENT
+          , width WRAP_CONTENT
+          , text (getString RESEND_OTP)
+          , color Color.mainPrimary
+          , visibility if state.props.resendEnabled then VISIBLE else GONE
+          ] <> FontStyle.body6 LanguageStyle
+        , textView $
+          [ height WRAP_CONTENT
+          , width WRAP_CONTENT
+          , text $  (getString RESEND_OTP_IN) <> "  " <> state.data.timer
+          , visibility if state.props.resendEnabled then GONE else VISIBLE
+          , color if state.props.resendEnabled then Color.mainPrimary else Color.black700
+          ] <> FontStyle.body6 LanguageStyle
+        , textView
+          [ height $ V 1
+          , width MATCH_PARENT
+          , background  Color.black700
+          , margin (Margin 1 0 2 0)
+          , visibility if state.props.resendEnabled then GONE else VISIBLE
+          ]
+        , textView
+          [ height $ V 1
+          , width MATCH_PARENT
+          , background Color.mainPrimary
+          , margin (Margin 1 0 2 0)
+          , visibility if state.props.resendEnabled then VISIBLE else GONE
+          ]
+      ]
+ ]
+
+
+
+
+
+-- underlinedTextView :: ST.EnterOTPScreenState -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w
+-- underlinedTextView state push =
+--  linearLayout
+--   [ width WRAP_CONTENT
+--   , height WRAP_CONTENT
+--   , margin (MarginTop 18)
+--   ][ textView $
+--         [ height WRAP_CONTENT
+--         , width WRAP_CONTENT
+--         , text $ getString DIDNT_RECIEVE_OTP
+--         , orientation HORIZONTAL
+--         , visibility if state.props.resendEnabled then VISIBLE else GONE
+--         ]<> FontStyle.body6 LanguageStyle
+--     ,linearLayout
+--       [ width WRAP_CONTENT
+--       , height WRAP_CONTENT
+--       , orientation VERTICAL
+--       , onClick push (const ResendOTP)
+--       ][  textView $
+--           [ height WRAP_CONTENT
+--           , width WRAP_CONTENT
+--           , text (getString RESEND_OTP)
+--           , color Color.mainPrimary
+--           , visibility if state.props.resendEnabled then VISIBLE else GONE
+--           ] <> FontStyle.body6 LanguageStyle
+--         , linearLayout[
+--             height WRAP_CONTENT
+--           , width MATCH_PARENT
+--           , orientation HORIZONTAL
+--           ][textView $ 
+--             [ height WRAP_CONTENT
+--             , width WRAP_CONTENT
+--             , text "Didn't receive OTP?"
+--             , visibility if state.props.resendEnabled then GONE else VISIBLE
+--             , margin $ (MarginRight 5)
+--             ]
+--           , textView $
+--             [ height WRAP_CONTENT
+--             , width WRAP_CONTENT
+--             , text $  (getString RESEND_OTP_IN) <> "  " <> state.data.timer
+--             , visibility if state.props.resendEnabled then GONE else VISIBLE
+--             , color if state.props.resendEnabled then Color.mainPrimary else Color.black700
+--             ] <> FontStyle.body6 LanguageStyle
+--             ]
+--       ]
+--   ]
+
