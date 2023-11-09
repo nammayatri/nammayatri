@@ -152,6 +152,8 @@ screen initialState =
               SettingPrice -> do
                 _ <- pure $ removeMarker (getCurrentLocationMarker (getValueToLocalStore VERSION_NAME))
                 pure unit
+              PickUpFarFromCurrentLocation -> 
+                void $ pure $ removeMarker (getCurrentLocationMarker (getValueToLocalStore VERSION_NAME))
               RideAccepted -> do
                 if ( initialState.data.config.notifyRideConfirmationConfig.notify && any (_ == getValueToLocalStore NOTIFIED_CUSTOMER) ["false" , "__failed" , "(null)"] ) then 
                   if (os == "IOS") then liftEffect $ startTimerWithTime (show 5) "notifyCustomer" "1" push NotifyDriverStatusCountDown
@@ -365,6 +367,7 @@ view push state =
             , if (state.props.isPopUp /= NoPopUp) then (logOutPopUpView push state) else emptyTextView state
             , if (state.props.isLocationTracking) then (locationTrackingPopUp push state) else emptyTextView state
             , if (state.props.isEstimateChanged) then (estimateChangedPopUp push state) else emptyTextView state
+            , if state.props.currentStage == PickUpFarFromCurrentLocation then (pickUpFarFromCurrLocView push state) else emptyTextView state
             , if state.props.currentStage == DistanceOutsideLimits then (distanceOutsideLimitsView push state) else emptyTextView state
             , if state.props.currentStage == ShortDistance then (shortDistanceView push state) else emptyTextView state
             , if state.props.isSaveFavourite then saveFavouriteCardView push state else emptyTextView state
@@ -1811,6 +1814,16 @@ distanceOutsideLimitsView push state =
     , accessibility if state.props.currentStage == DistanceOutsideLimits then DISABLE else DISABLE_DESCENDANT
     ]
     [ PopUpModal.view (push <<< DistanceOutsideLimitsActionController) (distanceOusideLimitsConfig state) ]
+
+pickUpFarFromCurrLocView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+pickUpFarFromCurrLocView push state =
+  linearLayout
+    [ height MATCH_PARENT
+    , width MATCH_PARENT
+    , gravity BOTTOM
+    , accessibility if state.props.currentStage == PickUpFarFromCurrentLocation then DISABLE else DISABLE_DESCENDANT
+    ]
+    [ PopUpModal.view (push <<< PickUpFarFromCurrentLocAC) (pickUpFarFromCurrentLocationConfig state) ]
 
 shortDistanceView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 shortDistanceView push state =

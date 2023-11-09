@@ -529,6 +529,7 @@ data Stage = HomeScreen
            | ChatWithDriver
            | FindEstimateAndSearch
            | RetryFindingQuote
+           | PickUpFarFromCurrentLocation
 
 derive instance genericStage :: Generic Stage _
 instance eqStage :: Eq Stage where eq = genericEq
@@ -705,6 +706,8 @@ type HomeScreenStateProps =
   , showEducationalCarousel :: Boolean
   , locateOnMapLocation :: LocateOnMapLocation
   , specialZoneType :: String
+  , currentLocation :: Location
+  , isShorterTrip :: Boolean
   }
 
 type SearchLocationModelProps = {

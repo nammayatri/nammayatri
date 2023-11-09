@@ -228,15 +228,22 @@ initData = {
     , flowWithoutOffers : true
     , showEducationalCarousel : false
     , specialZoneType : ""
+    , currentLocation : {
+        lat : 0.0,
+        lng : 0.0,
+        place : "",
+        address : Nothing
+      }
+    , isShorterTrip : false
     , locateOnMapLocation : {
-        source : ""
-      , sourceLat : 0.0
-      , sourceLng : 0.0
-      , sourceAddress : dummyAddress
-      , destination : ""
-      , destinationLat : 0.0
-      , destinationLng : 0.0
-      , destinationAddress : dummyAddress
+          source : ""
+        , sourceLat : 0.0
+        , sourceLng : 0.0
+        , sourceAddress : dummyAddress
+        , destination : ""
+        , destinationLat : 0.0
+        , destinationLng : 0.0
+        , destinationAddress : dummyAddress
       }
     }
 }

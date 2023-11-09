@@ -79,7 +79,8 @@ commonConfig =
                     , range : 100
                     , color : "#323643"
                     },
-                  apiTriggerRadius: 20.0
+                  apiTriggerRadius: 20.0,
+                  pickUpToSourceThreshold : 1.0
                 }
             , labelTextSize : 30
             , animationDuration : 500

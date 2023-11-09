@@ -627,7 +627,9 @@ const englishStrings = {
   "EDUCATIONAL_POP_UP_SLIDE_3_SUBTITLE" : "&#8226; Drivers will be prompted to text instead <br> &ensp;  of calling. <br> &#8226; Drivers will be prompted to message them <br> &ensp;  once at the pickup. <br> &#8226; Drivers will be sensitised to help them with <br> &ensp; their needs and requests.",
   "EDUCATIONAL_POP_UP_SLIDE_4_SUBTITLE" : "&#8226; Drivers will be prompted to come to their <br> &ensp;  exact location for pickup. <br> &#8226; Drivers will be prompted to help them <br> &ensp;  with their mobility aid. <br>&#8226; Drivers will be sensitised to help them with <br> &ensp; their needs and requests.",
   "EDUCATIONAL_POP_UP_SLIDE_5_SUBTITLE" : "&#8226; We will be collecting other types of <br> &ensp; disabilities and shall be incorporating them <br> &ensp; among the list of disabilities available <br> &ensp; as needed.",
-  "INCLUSIVE_AND_ACCESSIBLE" : "Inclusive and Accessible, for everyone!"
+  "INCLUSIVE_AND_ACCESSIBLE" : "Inclusive and Accessible, for everyone!",
+  "YOU_SEEM_TO_BE_FAR_FROM_PICK_UP" : "You seem to be far from the pickup location!",
+  "ARE_YOU_SURE_YOU_WANT_TO_PROCEED_WITH_THE_BOOKING" : "Are you sure you want to proceed with the booking?"
 }
 
 export function getStringValue(key) {
