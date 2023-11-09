@@ -45,7 +45,7 @@ import Prelude (Unit, bind, pure, ($), class Show, unit, (/=), discard, (==), (&
 import PrestoDOM (Eval, Props, continue, continueWithCmd, exit, updateAndExit, toast)
 import PrestoDOM.Types.Core (class Loggable)
 import Screens (ScreenName(..), getScreen)
-import Screens.Types (AddVehicleDetailsScreenState, VehicalTypes(..))
+import Screens.Types (AddVehicleDetailsScreenState, VehicalTypes(..), StageStatus(..))
 import Services.Config (getSupportNumber, getWhatsAppSupportNo)
 
 instance showAction :: Show Action where
@@ -139,7 +139,10 @@ instance loggableAction :: Loggable Action where
     RenderProfileImage image id -> trackAppActionClick appId (getScreen ADD_VEHICLE_DETAILS_SCREEN) "renderImage" "afterrender"
     RedirectScreen -> trackAppActionClick appId (getScreen ADD_VEHICLE_DETAILS_SCREEN) "redirect_screem" "no_action"
     ChangeLocation -> trackAppActionClick appId (getScreen ADD_VEHICLE_DETAILS_SCREEN) "change_location" "on_click"
-
+    ActivateRCbtn act -> case act of
+      PrimaryButtonController.OnClick -> trackAppActionClick appId (getScreen ADD_VEHICLE_DETAILS_SCREEN) "activate_rc_btn" "on_click"
+      PrimaryButtonController.NoAction -> trackAppActionClick appId (getScreen ADD_VEHICLE_DETAILS_SCREEN) "activate_rc_btn" "no_action"
+    CancelButtonMultiRCPopup -> trackAppActionClick appId (getScreen ADD_VEHICLE_DETAILS_SCREEN) "cancel_button_multi_rc_popup" "on_click"
 
 data ScreenOutput = ValidateDetails AddVehicleDetailsScreenState
                     | GoBack AddVehicleDetailsScreenState
@@ -148,6 +151,8 @@ data ScreenOutput = ValidateDetails AddVehicleDetailsScreenState
                     | ApplicationSubmittedScreen
                     | LogoutAccount
                     | GoToRegisteration 
+                    | GoToDriverProfile
+                    | ActivateRC AddVehicleDetailsScreenState
 
 data Action =   WhatsAppSupport | BackPressed Boolean | PrimarySelectItemAction PrimarySelectItem.Action | NoAction
   | VehicleRegistrationNumber String
@@ -179,6 +184,8 @@ data Action =   WhatsAppSupport | BackPressed Boolean | PrimarySelectItemAction 
   | PopUpModalActions PopUpModal.Action
   | RedirectScreen
   | ChangeLocation
+  | ActivateRCbtn PrimaryButtonController.Action
+  | CancelButtonMultiRCPopup
 
 
 eval :: Action -> AddVehicleDetailsScreenState -> Eval Action ScreenOutput AddVehicleDetailsScreenState
@@ -364,6 +371,21 @@ eval (PopUpModalActions (PopUpModal.OnButton1Click)) state = do
 eval RedirectScreen state = exit GoToRegisteration
 
 eval ChangeLocation state = exit $ LogoutAccount
+
+eval (ActivateRCbtn (PrimaryButtonController.OnClick)) state = case state.props.multipleRCstatus of
+                                                                COMPLETED -> exit $ ActivateRC state
+                                                                _ -> exit $ GoToDriverProfile
+
+eval CancelButtonMultiRCPopup state = case state.props.multipleRCstatus of
+                                        COMPLETED -> exit $ GoToDriverProfile
+                                        _ -> continueWithCmd state [do
+                                          let merchant = getMerchant FunctionCall
+                                          _ <- case merchant of
+                                            NAMMAYATRI -> openWhatsAppSupport $ getWhatsAppSupportNo $ show merchant
+                                            YATRISATHI -> openWhatsAppSupport $ getWhatsAppSupportNo $ show merchant
+                                            _ -> pure $ showDialer (getSupportNumber "") false
+                                          pure NoAction
+                                          ]
 
 eval _ state = continue state
 

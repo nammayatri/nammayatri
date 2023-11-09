@@ -170,7 +170,8 @@ type AddVehicleDetailsScreenProps =  {
   fileCameraOption :: Boolean,
   fileCameraPopupModal :: Boolean,
   validating :: Boolean,
-  successfulValidation :: Boolean
+  successfulValidation :: Boolean,
+  multipleRCstatus :: StageStatus
  }
 
 data ValidationStatus  =  Success | Failure | InProgress | None

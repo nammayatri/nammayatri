@@ -45,3 +45,7 @@ addVehicleDetails = do
     ApplicationSubmittedScreen -> App.BackT $ App.BackPoint <$> (pure $ APPLICATION_STATUS_SCREEN)
     LogoutAccount -> App.BackT $ App.BackPoint <$> pure LOGOUT_USER
     GoToRegisteration  -> App.BackT $ App.BackPoint <$> pure ONBOARDING_FLOW
+    GoToDriverProfile -> App.BackT $ App.BackPoint <$> pure DRIVER_PROFILE_SCREEN
+    ActivateRC updatedState -> do
+      modifyScreenState $ AddVehicleDetailsScreenStateType (\addVehicleDetailsScreen -> updatedState)
+      App.BackT $ App.NoBack <$> (pure $ RC_ACTIVATION updatedState)

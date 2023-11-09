@@ -659,14 +659,17 @@ addVehicleDetailsflow addRcFromProf = do
               setValueToLocalStore DOCUMENT_UPLOAD_TIME (getCurrentUTC "")
               (GlobalState state') <- getState
               let profileState = state'.driverProfileScreen
-                  _ = spy "profilestate" profileState
-              if (null profileState.data.rcDataArray) then do
+              if (not addRcFromProf) then do
                 modifyScreenState $ AddVehicleDetailsScreenStateType $ \addVehicleDetailsScreen -> addVehicleDetailsScreen { props {validating = false, successfulValidation = true}}
                 modifyScreenState $ RegisterScreenStateType (\registerationScreen -> registerationScreen { data { vehicleDetailsStatus = ST.COMPLETED}})
                 addVehicleDetailsflow state.props.addRcFromProfile
               else do
-                modifyScreenState $ DriverProfileScreenStateType $ \driverProfileScreen -> driverProfileScreen { props { screenType = ST.VEHICLE_DETAILS}}
-                driverProfileFlow
+                (DriverRegistrationStatusResp resp ) <- driverRegistrationStatusBT (DriverRegistrationStatusReq { })
+                let multiRcStatus  = getStatusValue resp.rcVerificationStatus
+                modifyScreenState $ AddVehicleDetailsScreenStateType $ \addVehicleDetailsScreen -> addVehicleDetailsScreen { props {validating = false, multipleRCstatus = multiRcStatus, validateProfilePicturePopUp = false}}
+                addVehicleDetailsflow state.props.addRcFromProfile
+                -- modifyScreenState $ DriverProfileScreenStateType $ \driverProfileScreen -> driverProfileScreen { props { screenType = ST.VEHICLE_DETAILS}}
+                -- driverProfileFlow
             Left errorPayload -> do
               modifyScreenState $ AddVehicleDetailsScreenStateType $ \addVehicleDetailsScreen -> addVehicleDetailsScreen { data { dateOfRegistration = Just ""}, props{validating = false}}
               if errorPayload.code == 400 || (errorPayload.code == 500 && (decodeErrorCode errorPayload.response.errorMessage) == "UNPROCESSABLE_ENTITY") then do
@@ -679,7 +682,7 @@ addVehicleDetailsflow addRcFromProf = do
        Left errorPayload -> do
         void $ lift $ lift $ toggleLoader false
         if errorPayload.code == 429 && (decodeErrorCode errorPayload.response.errorMessage) == "IMAGE_VALIDATION_EXCEED_LIMIT" then do
-          modifyScreenState $ AddVehicleDetailsScreenStateType (\addVehicleDetailsScreen -> addVehicleDetailsScreen {props { validating = false}})
+          modifyScreenState $ AddVehicleDetailsScreenStateType (\addVehicleDetailsScreen -> addVehicleDetailsScreen {props { validateProfilePicturePopUp = false, validating = false, multipleRCstatus = FAILED}})
           modifyScreenState $ RegisterScreenStateType (\registerationScreen -> registerationScreen { props {limitReachedFor = Just "RC"}})
           if state.props.addRcFromProfile then addVehicleDetailsflow state.props.addRcFromProfile
           else onBoardingFlow
@@ -742,7 +745,34 @@ addVehicleDetailsflow addRcFromProf = do
     DRIVER_PROFILE_SCREEN -> do 
       modifyScreenState $ DriverProfileScreenStateType (\driverProfileScreen -> driverProfileScreen {props = driverProfileScreen.props { screenType = ST.VEHICLE_DETAILS, openSettings = false}})
       driverProfileFlow
-
+    RC_ACTIVATION state -> do
+      void $ lift $ lift $ loaderText (getString VALIDATING) (getString PLEASE_WAIT_WHILE_IN_PROGRESS)
+      void $ lift $ lift $ toggleLoader true
+      activateRCResp <- lift $ lift $ Remote.makeRcActiveOrInactive (Remote.makeRcActiveOrInactiveReq true (state.data.vehicle_registration_number))
+      case activateRCResp of
+        Right (MakeRcActiveOrInactiveResp resp) -> do
+          void $ lift $ lift $ toggleLoader false
+          pure $ toast $ "RC-"<>state.data.vehicle_registration_number<> (getString IS_ACTIVE_NOW)
+          refreshDriverProfile
+          driverProfileFlow
+        Left errorPayload -> do
+          void $ lift $ lift $ toggleLoader false
+          let codeMessage = decodeErrorCode errorPayload.response.errorMessage
+          -- if codeMessage == "RC_ACTIVE_ON_OTHER_ACCOUNT" || codeMessage == "RC_Vehicle_ON_RIDE" then do
+          --   modifyScreenState $ DriverProfileScreenStateType (\driverProfileScreen -> state {props = driverProfileScreen.props { openSettings = false, alreadyActive = true, screenType = ST.VEHICLE_DETAILS}})
+          -- else do
+          --    modifyScreenState $ DriverProfileScreenStateType (\driverProfileScreen -> state {props = driverProfileScreen.props { openSettings = false, screenType = ST.VEHICLE_DETAILS}})
+          --    pure $ toast $ (getString SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN)
+          refreshDriverProfile
+          driverProfileFlow
+        where 
+          refreshDriverProfile = do 
+            getDriverInfoApiResp <- lift $ lift $ Remote.getDriverInfoApi (GetDriverInfoReq{})
+            case getDriverInfoApiResp of
+              Right getDriverInfoResp -> do
+                modifyScreenState $ GlobalPropsType $ \globalProps -> globalProps{driverInformation = Just getDriverInfoResp}
+                updateDriverDataToStates
+              Left _ -> pure unit
 applicationSubmittedFlow :: String -> FlowBT String Unit
 applicationSubmittedFlow screenType = do
   lift $ lift $ doAff do liftEffect hideSplash
@@ -2878,7 +2908,6 @@ logoutFlow = do
   deleteValueFromLocalStore SET_ALTERNATE_TIME
   deleteValueFromLocalStore ONBOARDING_SUBSCRIPTION_SCREEN_COUNT
   deleteValueFromLocalStore FREE_TRIAL_DAYS
-  deleteValueFromLocalStore DRIVER_LOCATION
   pure $ factoryResetApp ""
   _ <- lift $ lift $ liftFlow $ logEvent logField_ "logout"
   loginFlow

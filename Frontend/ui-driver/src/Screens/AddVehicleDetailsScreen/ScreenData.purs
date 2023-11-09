@@ -63,6 +63,7 @@ initData = {
       fileCameraOption : false,
       fileCameraPopupModal : false,
       validating : false,
-      successfulValidation : false
+      successfulValidation : false,
+      multipleRCstatus : NOT_STARTED
     }
 }
