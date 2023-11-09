@@ -27,8 +27,12 @@ import Components.Banner as Banner
 import Components.ChatView as ChatView
 import Components.ChatView as ChatView
 import Components.ChooseYourRide as ChooseYourRide
+import Components.ChooseVehicle as ChooseVehicle
+import Components.RouteDetails.RouteDetails as RouteDetails
+import Components.TicketDetails as TicketDetails
 import Components.DriverInfoCard (DriverInfoCardData)
 import Components.DriverInfoCard as DriverInfoCard
+import Components.BusTicketInfoCard as BusTicketInfoCard
 import Components.EmergencyHelp as EmergencyHelp
 import Components.ErrorModal as ErrorModal
 import Components.MenuButton as MenuButton
@@ -80,6 +84,7 @@ import Engineering.Helpers.Suggestions (getSuggestionsfromKey)
 import Components.ChooseVehicle.Controller as ChooseVehicle
 import Foreign.Generic (decode, encode, Foreign, decodeJSON, encodeJSON, class Decode, class Encode)
 import Data.Either (Either(..))
+import Services.API (BusTicketRes(..))
 
 shareAppConfig :: ST.HomeScreenState -> PopUpModal.Config
 shareAppConfig state = let
@@ -756,6 +761,20 @@ driverInfoCardViewState state = { props:
                               , data: driverInfoTransformer state
                             }
 
+busTicketInfoCardViewState :: ST.HomeScreenState -> BusTicketInfoCard.BusTicketInfoCardState
+busTicketInfoCardViewState state = 
+  let (BusTicketRes resp) = state.data.ticket
+  in
+    { data :
+          { busId : resp.id
+          , quantity : resp.quantity
+          , registrationNumber : resp.registrationNumber
+          , routeNo : resp.busRouteNo
+          , busModel : resp.busModel
+          }
+    , props: {}
+    }
+
 chatViewConfig :: ST.HomeScreenState -> ChatView.Config
 chatViewConfig state = let
   config = ChatView.config
@@ -1053,11 +1072,17 @@ chooseYourRideConfig state = ChooseYourRide.config
   {
     rideDistance = state.data.rideDistance,
     rideDuration = state.data.rideDuration,
-    quoteList = state.data.specialZoneQuoteList,
+    -- quoteList = state.data.specialZoneQuoteList,
+    quoteList = [ChooseVehicle.dummyBusConfig], -- Toggle for testing FRFS Bus, since Bus BPP is not available right now
     showTollExtraCharges = state.data.config.searchLocationConfig.showAdditionalChargesText,
     nearByDrivers = state.data.nearByDrivers
   }
 
+routeDetailsViewConfig :: ST.HomeScreenState -> RouteDetails.Config
+routeDetailsViewConfig state = RouteDetails.config
+
+busTicketDetailsViewConfig :: ST.HomeScreenState -> TicketDetails.Config
+busTicketDetailsViewConfig state = TicketDetails.config
 
 specialLocationIcons :: ZoneType -> String
 specialLocationIcons tag =

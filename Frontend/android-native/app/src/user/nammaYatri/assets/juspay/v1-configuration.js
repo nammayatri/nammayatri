@@ -195,7 +195,7 @@ window.getMerchantConfig = function () {
   , "showDisabilityBanner" : true
   , "enableContactSupport" : false
   , "estimateAndQuoteConfig" :
-                { "enableOnlyAuto" : true
+                { "enableOnlyAuto" : true //toggle to test FRFS Bus 
                 }
   })
 }

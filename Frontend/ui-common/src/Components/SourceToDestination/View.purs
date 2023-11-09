@@ -172,7 +172,7 @@ distanceLayout config =
       , height MATCH_PARENT
       , gravity CENTER
       , text config.distanceConfig.distanceValue
-      , accessibility if config.distanceConfig.distanceVisibility == VISIBLE then ENABLE else DISABLE
+      , accessibility if config.distanceConfig.distanceVisibility == VISIBLE then DISABLE else ENABLE
       , accessibilityHint $ "Distance Between PickUp And Destination Location : " <> config.distanceConfig.distanceValue
       , color Color.black900
       , padding $ Padding 6 4 6 4

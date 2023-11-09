@@ -568,6 +568,7 @@ const malayalamStrings = {
   "MISC_WAITING_CHARGE" : "മറ്റ്. (വെയിറ്റിംഗ് ചാർജുകൾ ഉൾപ്പെടെ)",
   "AC_TAXI" : "AC ടാക്സി",
   "NON_AC_TAXI": "എസി ടാക്സി ഇല്ല",
+  "BUS": "ബസ്",
   "AUTO_RICKSHAW" : "ഓട്ടോ റിക്ഷ",
   "GET_OTP_VIA_WHATSAPP" : "വാട്ട്‌സ്ആപ്പ് വഴി OTP നേടുക",
   "OR" : "അഥവാ",

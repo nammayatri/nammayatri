@@ -1,3 +1,5 @@
+import { callbackMapper } from "presto-ui";
+
 const JBridge = window.JBridge;
 
 export const toggleLoaderIOS = function(flag){
@@ -114,4 +116,22 @@ export const getCurrentDay = function (dummy) {
   const date = new Date();
   return { utcDate: date.toISOString(), date: date.getDate(), shortMonth: date.toLocaleString("default", { month: "short" }), year: date.getFullYear(), intMonth : date.getMonth(),
     isInRange : false, isStart: false , isEnd: false }
+}
+
+export const _generateQRCode = function (data, id, size, margin, sc) {
+  if (typeof JBridge.generateQRCode === "function") {
+    try {
+      const cb = callbackMapper.map(function (_status) {
+        console.log("QR status:: ", _status);
+        sc(_status)();
+      });
+      JBridge.generateQRCode(data, id, size, margin, cb);
+    } catch (e) {
+      console.warn(e);
+      sc("FAILURE")();
+    }
+  }
+  else {
+    sc("FAILURE")();
+  }
 }

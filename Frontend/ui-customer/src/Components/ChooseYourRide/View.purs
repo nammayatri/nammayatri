@@ -129,7 +129,7 @@ quoteListView push config =
     , afterRender push (const NoAction)
     ]
     [ scrollView
-      [ height $ getQuoteListViewHeight config
+      [ height $ WRAP_CONTENT
       , width MATCH_PARENT
       ][  linearLayout
           [ height WRAP_CONTENT
@@ -154,7 +154,9 @@ getHeightOfEstimateItem config = (runFn1 getLayoutBounds $ EHC.getNewIDWithTag (
 primaryButtonRequestRideConfig :: Config -> PrimaryButton.Config
 primaryButtonRequestRideConfig config = PrimaryButton.config
   { textConfig
-    { text = (getString CONFIRM_AND_BOOK)
+    { text = case config.isBusQuoteSelected of
+        true -> (getString BOOK_BUS <> " " <> show config.quantity)
+        false -> (getString CONFIRM_AND_BOOK)
     , color = Color.yellow900
     }
   , id = "ConfirmAndBookButton"

@@ -28,9 +28,9 @@ import Data.Maybe (Maybe(..))
 import Data.String (length)
 import Data.String.CodeUnits (charAt)
 import Data.Time.Duration (Milliseconds(..))
-import Effect.Aff (launchAff)
+import Effect.Aff (launchAff, launchAff_, makeAff, nonCanceler)
 import Effect.Class (liftEffect)
-import Effect.Uncurried (EffectFn1, EffectFn2, mkEffectFn1, runEffectFn1, runEffectFn2)
+import Effect.Uncurried (EffectFn1, EffectFn2, mkEffectFn1, runEffectFn1, runEffectFn2, EffectFn5(..), runEffectFn5, EffectFn4, mkEffectFn4)
 import Engineering.Helpers.BackTrack (liftFlowBT)
 import Foreign (Foreign, unsafeToForeign)
 import Helpers.FileProvider.Utils (loadInWindow, mergeObjects)
@@ -61,6 +61,16 @@ foreign import getCurrentDay :: String -> CalendarModalDateObject
 foreign import decrementMonth :: Int -> Int -> CalendarModalDateObject
 
 foreign import incrementMonth :: Int -> Int -> CalendarModalDateObject
+
+foreign import _generateQRCode :: EffectFn5 String String Int Int (AffSuccess String) Unit
+
+generateQR:: EffectFn4 String String Int Int Unit
+generateQR  = mkEffectFn4 \qrString viewId size margin ->  launchAff_  $ void $ makeAff $
+  \cb ->
+    (runEffectFn5 _generateQRCode qrString viewId size margin (Right >>> cb))
+    $> nonCanceler
+
+type AffSuccess s = (s -> Effect Unit)
 
 saveToLocalStore' :: String -> String -> EffectFnAff Unit
 saveToLocalStore' = saveToLocalStoreImpl
