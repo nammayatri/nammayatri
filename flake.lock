@@ -44,17 +44,14 @@
         ]
       },
       "locked": {
-        "lastModified": 1693493802,
-        "narHash": "sha256-bV39eCOUOgCHHwfcWcBzBquHwg4stgBi1Sl288DDzkc=",
-        "owner": "nammayatri",
-        "repo": "beckn-gateway",
-        "rev": "f20006aabfee019c9a4b558a2d80c7c062864c50",
-        "type": "github"
+        "lastModified": 1701351321,
+        "narHash": "sha256-L92DZCM2UNDluHAiGmyqdVQoRQnqWSYjPm2OcwgIUtw=",
+        "path": "/home/akhilesh/Desktop/projects/beckn-gateway",
+        "type": "path"
       },
       "original": {
-        "owner": "nammayatri",
-        "repo": "beckn-gateway",
-        "type": "github"
+        "path": "/home/akhilesh/Desktop/projects/beckn-gateway",
+        "type": "path"
       }
     },
     "cachix": {
@@ -2732,17 +2729,14 @@
         "prometheus-haskell": "prometheus-haskell_2"
       },
       "locked": {
-        "lastModified": 1699019438,
-        "narHash": "sha256-6c2HzxUN9J38iSFuc4dwrr4bvB6fgU17YJJ4xB5a+OM=",
-        "owner": "nammayatri",
-        "repo": "shared-kernel",
-        "rev": "f889feaed2bf1b0f42739c660d70f1dc1bfc355b",
-        "type": "github"
+        "lastModified": 1701418985,
+        "narHash": "sha256-6/WqgkIaHvLTU/M4UjfF+Iix+mBCUCSGJFZsF4CbsuI=",
+        "path": "/home/akhilesh/Desktop/projects/shared-kernel",
+        "type": "path"
       },
       "original": {
-        "owner": "nammayatri",
-        "repo": "shared-kernel",
-        "type": "github"
+        "path": "/home/akhilesh/Desktop/projects/shared-kernel",
+        "type": "path"
       }
     },
     "systems": {

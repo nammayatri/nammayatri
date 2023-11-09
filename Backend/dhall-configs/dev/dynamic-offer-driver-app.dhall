@@ -197,7 +197,7 @@ let LocationTrackingeServiceConfig = { url = "http://localhost:8081/" }
 
 let maxMessages
     : Text
-    = "1"
+    = "10000"
 
 let modelNamesMap =
       [ { mapKey = "MARUTI ALTO (Some random verioning)"

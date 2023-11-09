@@ -1,5 +1,7 @@
 let common = ./common.dhall
 
+let globalCommon = ../generic/common.dhall
+
 let sec = ./secrets/provider-dashboard.dhall
 
 let esqDBCfg =

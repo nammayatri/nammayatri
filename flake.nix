@@ -3,8 +3,8 @@
     common.url = "github:nammayatri/common";
 
     # Backend inputs
-    shared-kernel.url = "github:nammayatri/shared-kernel";
-    beckn-gateway.url = "github:nammayatri/beckn-gateway";
+    shared-kernel.url = "path:/home/akhilesh/Desktop/projects/shared-kernel";
+    beckn-gateway.url = "path:/home/akhilesh/Desktop/projects/beckn-gateway";
     beckn-gateway.inputs.common.follows = "common";
     beckn-gateway.inputs.shared-kernel.follows = "shared-kernel";
     location-tracking-service.url = "github:nammayatri/location-tracking-service";

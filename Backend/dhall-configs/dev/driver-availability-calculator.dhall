@@ -1,5 +1,7 @@
 let common = ./common.dhall
 
+let commonGlobal = ../generic/common.dhall
+
 let sec = ./secrets/dynamic-offer-driver-app.dhall
 
 let esqDBCfg =

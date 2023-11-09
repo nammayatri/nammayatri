@@ -1,5 +1,7 @@
 let common = ./common.dhall
 
+let globalCommon = ../generic/common.dhall
+
 let sec = ./secrets/public-transport-rider-platform.dhall
 
 let esqDBCfg =

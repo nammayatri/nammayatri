@@ -2,6 +2,8 @@ let common = ./common.dhall
 
 let sec = ./secrets/dynamic-offer-driver-app.dhall
 
+let globalCommon = ../generic/common.dhall
+
 let esqDBCfg =
       { connectHost = "localhost"
       , connectPort = 5434

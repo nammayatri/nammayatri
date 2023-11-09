@@ -2,6 +2,8 @@ let common = ./common.dhall
 
 let sec = ./secrets/beckn-gateway.dhall
 
+let globalCommon = ../generic/common.dhall
+
 let rcfg =
       { connectHost = "localhost"
       , connectPort = 6379

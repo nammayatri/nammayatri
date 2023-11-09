@@ -1,5 +1,7 @@
 let common = ./common.dhall
 
+let globalCommon = ../generic/common.dhall
+
 let hcfg =
       { connectHost = "localhost"
       , connectPort = 6379

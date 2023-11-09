@@ -56,11 +56,6 @@ import Storage.CachedQueries.RegistryMapFallback as CRM
 import System.Environment (lookupEnv)
 import Tools.Metrics
 
--- data Tables = Tables {
---   kVTables :: [Text],
---   kVHardKilledTables :: [Text]
---   }
---   deriving (Generic, Show, ToJSON, FromJSON, FromDhall)
 data AppCfg = AppCfg
   { esqDBCfg :: EsqDBConfig,
     esqDBReplicaCfg :: EsqDBConfig,
