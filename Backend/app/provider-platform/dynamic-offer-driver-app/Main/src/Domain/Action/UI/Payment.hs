@@ -323,7 +323,10 @@ processMandate driverId mandateStatus startDate endDate mandateId maxAmount paye
         Nothing -> do
           driverInfo <- QDI.findById (cast driverId) >>= fromMaybeM DriverInfoNotFound
           mbDriverPlanByDriverId <- QDP.findByDriverId driverId
-          when (isNothing $ mbDriverPlanByDriverId >>= (.mandateId)) $ do QDI.updateAutoPayStatusAndPayerVpa (castAutoPayStatus mandateStatus) Nothing (cast driverId)
+          let currentMandateId = mbDriverPlanByDriverId >>= (.mandateId)
+              autoPayStatus = driverInfo.autoPayStatus
+          when (isNothing currentMandateId || (currentMandateId /= Just mandateId) && notElem autoPayStatus [Just DI.ACTIVE, Just DI.SUSPENDED]) $ do
+            QDI.updateAutoPayStatusAndPayerVpa (castAutoPayStatus mandateStatus) Nothing (cast driverId)
   where
     castAutoPayStatus = \case
       Payment.CREATED -> Just DI.PENDING
