@@ -20,6 +20,7 @@ import Prelude (Unit, const, ($), (<<<), (<>), bind, pure , unit, (==))
 import PrestoDOM (Gravity(..), Length(..), LetterSpacing(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), alpha, background, clickable, color, cornerRadius, frameLayout, gravity, height, imageUrl, imageView, linearLayout, margin, onBackPressed, onClick, orientation, padding, stroke, text, textView, visibility, weight, width, afterRender, imageWithFallback)
 import Components.PrimaryEditText.Views as PrimaryEditText
 import Components.PrimaryButton as PrimaryButton
+import Components.MobileNumberEditor as MobileNumberEditor
 import Effect (Effect)
 import Screens.EnterMobileNumberScreen.Controller (Action(..), eval, ScreenOutput)
 import Screens.Types as ST
@@ -40,6 +41,7 @@ import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Common.Types.App (LazyCheck(..))
 import Prelude ((<>))
 import Components.StepsHeaderModal as StepsHeaderModal
+import Debug(spy)
 
 screen :: ST.EnterMobileNumberScreenState -> Screen Action ST.EnterMobileNumberScreenState ScreenOutput
 screen initialState =
@@ -47,7 +49,10 @@ screen initialState =
   , view
   , name : "EnterMobileNumberScreen"
   , globalEvents : []
-  , eval
+  , eval: (\action state -> do
+      let _ = spy "EnterMobileNUmber state -----" state
+      let _ = spy "EnterMobileNUmber--------action" action
+      eval action state)
   }
 
 view :: forall w . (Action -> Effect Unit) -> ST.EnterMobileNumberScreenState -> PrestoDOM (Effect Unit) w
@@ -191,22 +196,11 @@ enterMobileNumberView  state push =
     , visibility  VISIBLE--if state.props.enterOTP then GONE else VISIBLE
     , alpha 1.0 --if state.props.enterOTP then 0.0 else 1.0
     , orientation VERTICAL
-    ][  enterMobileNumberTextView state
-      , PrestoAnim.animationSet
+    , margin $ MarginTop 37
+    ][   PrestoAnim.animationSet
       [ Anim.translateYAnimFromTopWithAlpha AnimConfig.translateYAnimConfig -- 300 10 0 0 true PrestoAnim.Linear
-      ] $ PrimaryEditText.view (push <<< PrimaryEditTextAction) ({
-          title: (getString MOBILE_NUMBER),
-          type: "number",
-          hint: (getString ENTER_MOBILE_NUMBER),
-          valueId: "MOBILE_NUMBER",
-          isinValid: state.props.isValid ,
-          error: Just (getString INVALID_MOBILE_NUMBER),
-          pattern : Just "[0-9]*,10",
-          text: "",
-          letterSpacing: PX 0.0,
-          id: (EHC.getNewIDWithTag "EnterMobileNumberEditText"),
-          fontSize : FontSize.a_18
-        })
+      ] $ MobileNumberEditor.view (push <<< PrimaryEditTextAction) (mobileNumberConfig state)  
+
     , linearLayout
       [ height WRAP_CONTENT
       , width MATCH_PARENT
