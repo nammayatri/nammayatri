@@ -602,7 +602,8 @@ mkIssueMessageList mbList = case mbList of
       ( \(issueMessage, issueTranslation) ->
           Common.Message
             { id = issueMessage.id,
-              message = fromMaybe issueMessage.message $ issueTranslation <&> (.translation)
+              message = fromMaybe issueMessage.message $ issueTranslation <&> (.translation),
+              label = fromMaybe "" issueMessage.label
             }
       )
       list

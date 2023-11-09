@@ -209,7 +209,8 @@ data IssueOptionRes = IssueOptionRes
 
 data Message = Message
   { id :: Id IssueMessage,
-    message :: Text
+    message :: Text,
+    label :: Text
   }
   deriving (Generic, Show, ToJSON, ToSchema, Eq, FromJSON)
 
