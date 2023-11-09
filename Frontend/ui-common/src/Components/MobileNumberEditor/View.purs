@@ -15,7 +15,7 @@
 
 module Components.MobileNumberEditor.View where
 
-import Prelude (Unit, ($), (<>), (==), (&&), not, negate, const, bind, pure, unit, map, (-), (+))
+import Prelude (Unit, ($), (<>), (==), (&&), not, negate, const, bind, pure, unit, map, (-), (+), (||))
 import Effect (Effect)
 import Data.Maybe (Maybe(..))
 import Engineering.Helpers.Commons (os)
@@ -184,49 +184,67 @@ countryCodeOptionView push config =
 
 
 editTextView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w 
-editTextView push config = 
-  (if( os == "IOS" && (not config.editText.singleLine )) then multiLineEditText else editText) 
-  $ [ height config.height
-  , width config.width
-  , id config.id
-  , weight 1.0
-  , color config.editText.color
-  , accessibility ENABLE
-  , accessibilityHint $ if config.editText.text == "" then (if config.editText.accessibilityHint == "" then config.editText.placeholder else config.editText.accessibilityHint ) else if (config.type == "number") then (DS.replaceAll (DS.Pattern "") (DS.Replacement "-") (config.editText.text)) else config.editText.text
-  , text config.editText.text
-  , hint config.editText.placeholder
-  , singleLine config.editText.singleLine
-  , hintColor config.editText.placeholderColor
-  , background config.background
-  , padding config.editText.padding
-  , onChange push $ TextChanged config.id
-  , gravity config.editText.gravity
-  , letterSpacing config.editText.letterSpacing
-  , alpha config.editText.alpha
-  , onFocus push $ FocusChanged
+editTextView push config = linearLayout
+  [ height WRAP_CONTENT
+  , width MATCH_PARENT
+  , orientation HORIZONTAL
   , cornerRadius 8.0
+  , padding $ PaddingRight 3
   , stroke if config.showErrorLabel then config.warningStroke else if config.editText.focused then config.focusedStroke else config.stroke
-  ] <> (FontStyle.getFontStyle config.editText.textStyle LanguageStyle)
-    <> (case config.editText.pattern of 
-        Just _pattern -> case config.type of 
-                          "text" -> [pattern _pattern
-                                    , inputType TypeText]
-                          "number" -> [ pattern _pattern
-                                      , inputType Numeric]
-                          "password" -> [ pattern _pattern
-                                      , inputType Password]
-                          _    -> [pattern _pattern]
-        Nothing -> case config.type of 
-                          "text" -> [inputType TypeText]
-                          "number" -> [inputType Numeric]
-                          "password" -> [inputType Password]
-                          _    -> []) 
-  <> (if config.editText.capsLock then [inputTypeI 4097] else [])
-  <> (if not config.editText.enabled then if os == "IOS" then [clickable false] else [inputTypeI 0] else[])
-  <> (if config.editText.separator == "" then [] else [
-    separator config.editText.separator
-  , separatorRepeat config.editText.separatorRepeat
-  ])
+  ][ textView
+      $ [ text "+91"
+        , padding $ PaddingHorizontal 16 8
+        , color config.editText.color
+        , margin $ Margin 4 1 0 0
+        , cornerRadius 8.0
+        , gravity CENTER_VERTICAL
+        , height MATCH_PARENT
+        , width WRAP_CONTENT
+        , clickable false
+        , visibility if config.showCountryCodeField then GONE else VISIBLE
+        ] <> (FontStyle.getFontStyle config.editText.textStyle LanguageStyle)
+    ,(if( os == "IOS" && (not config.editText.singleLine )) then multiLineEditText else editText) 
+    $ [ height config.height
+      , width config.width
+      , id config.id
+      , weight 1.0
+      , cornerRadius 8.0
+      , color config.editText.color
+      , accessibility ENABLE
+      , margin $ MarginLeft 2
+      , accessibilityHint $ if config.editText.text == "" then (if config.editText.accessibilityHint == "" then config.editText.placeholder else config.editText.accessibilityHint ) else if (config.type == "number") then (DS.replaceAll (DS.Pattern "") (DS.Replacement "-") (config.editText.text)) else config.editText.text
+      , text config.editText.text
+      , hint config.editText.placeholder
+      , singleLine config.editText.singleLine
+      , hintColor config.editText.placeholderColor
+      , background config.background
+      , padding config.editText.padding
+      , onChange push $ TextChanged config.id
+      , gravity config.editText.gravity
+      , letterSpacing config.editText.letterSpacing
+      , alpha config.editText.alpha
+      , onFocus push $ FocusChanged
+      ] <> (FontStyle.getFontStyle config.editText.textStyle LanguageStyle)
+        <> (case config.editText.pattern of 
+            Just _pattern -> case config.type of 
+                              "text" -> [pattern _pattern
+                                        , inputType TypeText]
+                              "number" -> [ pattern _pattern
+                                          , inputType Numeric]
+                              "password" -> [ pattern _pattern
+                                          , inputType Password]
+                              _    -> [pattern _pattern]
+            Nothing -> case config.type of 
+                              "text" -> [inputType TypeText]
+                              "number" -> [inputType Numeric]
+                              "password" -> [inputType Password]
+                              _    -> []) 
+    <> (if config.editText.capsLock then [inputTypeI 4097] else [])
+    <> (if not config.editText.enabled then if os == "IOS" then [clickable false] else [inputTypeI 0] else[])
+    <> (if config.editText.separator == "" then [] else [
+      separator config.editText.separator
+    , separatorRepeat config.editText.separatorRepeat
+    ])]
 
 errorLabelLayout :: forall w . Config -> PrestoDOM (Effect Unit) w
 errorLabelLayout config =

@@ -22,6 +22,7 @@ import Common.Types.App as Common
 import Components.PrimaryButton as PrimaryButton
 import Components.PrimaryEditText as PrimaryEditText
 import Components.StepsHeaderModal as StepsHeaderModal
+import Components.MobileNumberEditor as MobileNumberEditor
 import Data.Maybe (Maybe(..))
 import Engineering.Helpers.Commons as EHC
 import Font.Size as FontSize
@@ -116,3 +117,33 @@ mobileNumberEditTextConfig state = let
         }
       }
     in primaryEditTextConfig'
+
+mobileNumberConfig :: ST.EnterMobileNumberScreenState -> MobileNumberEditor.Config
+mobileNumberConfig state = let 
+  config = MobileNumberEditor.config 
+  mobileNumberEditor' = config 
+    { editText
+      { color = Color.black800
+      , singleLine = true 
+      , pattern = Just "[0-9]*,10"
+      , margin = MarginHorizontal 10 0
+      , text = ""
+      , placeholder = "9999999999"
+      , padding = Padding 0 16 16 16
+      }
+    , showCountryCodeField = false
+    , topLabel
+      { text = (getString ENTER_YOUR_MOBILE_NUMBER)
+      , color = Color.black800
+      , accessibility = DISABLE
+      , textStyle = FontStyle.SubHeading1
+      }
+    , type = "number"
+    , id = (EHC.getNewIDWithTag "EnterMobileNumberEditText")
+    , errorLabel
+        { text = (getString INVALID_MOBILE_NUMBER)
+        , margin = MarginBottom 1
+        }
+    , showErrorLabel = state.props.isValid
+    }
+  in mobileNumberEditor'
