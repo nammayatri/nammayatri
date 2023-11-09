@@ -551,6 +551,37 @@ distanceOusideLimitsConfig state =
   in
     popUpConfig'
 
+pickUpFarFromCurrentLocationConfig :: ST.HomeScreenState -> PopUpModal.Config
+pickUpFarFromCurrentLocationConfig state =
+  let
+    config' = PopUpModal.config
+    popUpConfig' =
+      config'
+        { backgroundClickable = false
+        , primaryText
+          { text = getString YOU_SEEM_TO_BE_FAR_FROM_PICK_UP
+          , margin = (Margin 16 20 16 0)
+          }
+        , secondaryText
+          { text = getString ARE_YOU_SURE_YOU_WANT_TO_PROCEED_WITH_THE_BOOKING
+          , margin = (Margin 0 16 0 20)
+          }
+        , option1 {
+            background = state.data.config.popupBackground
+          , strokeColor = state.data.config.primaryBackground
+          , color = state.data.config.primaryBackground
+          , text = (getString GO_BACK_)
+          }
+        , option2 {
+            color = state.data.config.primaryTextColor
+          , strokeColor = state.data.config.primaryBackground
+          , background = state.data.config.primaryBackground
+          , text = (getString BOOK_RIDE_)
+          }
+        }
+  in
+    popUpConfig'
+
 shortDistanceConfig :: ST.HomeScreenState -> PopUpModal.Config
 shortDistanceConfig state =
   let

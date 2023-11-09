@@ -193,6 +193,7 @@ type MapConfig = {
 type LocateOnMapConfigs = {
   dottedLineConfig :: DottedLineConfig
 , apiTriggerRadius :: Number
+, pickUpToSourceThreshold :: Number
 }
 
 type DottedLineConfig = {

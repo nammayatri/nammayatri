@@ -554,6 +554,7 @@ data Action = NoAction
             | ExitLocationSelected LocationListItemState Boolean
             | DistanceOutsideLimitsActionController PopUpModal.Action
             | ShortDistanceActionController PopUpModal.Action
+            | PickUpFarFromCurrentLocAC PopUpModal.Action
             | SourceUnserviceableActionController ErrorModalController.Action
             | UpdateCurrentLocation String String
             | UpdateCurrentStage String
@@ -1651,6 +1652,14 @@ eval (ShortDistanceActionController (PopUpModal.OnButton1Click)) state = do
   _ <- pure $ updateLocalStage SearchLocationModel
   continue state{props{isSource = Just false, isPopUp = NoPopUp, rideRequestFlow = false, currentStage = SearchLocationModel, searchId = "", isSearchLocation = SearchLocation}}
 
+eval (PickUpFarFromCurrentLocAC (PopUpModal.OnButton2Click)) state = do 
+  if (state.props.isShorterTrip)  then do 
+    void $ pure $ updateLocalStage ShortDistance
+    continue state {props{currentStage = ShortDistance}}
+    else continueWithCmd state [ do pure $ ShortDistanceActionController (PopUpModal.OnButton2Click) ]
+
+eval (PickUpFarFromCurrentLocAC (PopUpModal.OnButton1Click)) state = do 
+  continueWithCmd state [ do pure $ ShortDistanceActionController (PopUpModal.OnButton1Click) ]
 
 eval (EstimateChangedPopUpController (PopUpModal.OnButton1Click)) state = exit GoToHome
 
@@ -1879,7 +1888,7 @@ eval UpdateSourceFromPastLocations state = do
 eval (UpdateLocAndLatLong lat lng) state = do
   let slat = fromMaybe 0.0 (NUM.fromString lat)
       slng = fromMaybe 0.0 (NUM.fromString lng)
-  continueWithCmd state{props{sourceLat = slat, sourceLong = slng , locateOnMapLocation {sourceLat = slat, sourceLng = slng, source = state.data.source, sourceAddress = state.data.sourceAddress}}} [do
+  continueWithCmd state{props{currentLocation { lat = slat, lng = slng } , sourceLat = slat, sourceLong = slng , locateOnMapLocation {sourceLat = slat, sourceLng = slng, source = state.data.source, sourceAddress = state.data.sourceAddress}}} [do
     if os == "IOS" then do
       _ <- addMarker (getCurrentLocationMarker (getValueToLocalStore VERSION_NAME)) 9.9 9.9 160 (0.5) (0.9)
       pure unit
