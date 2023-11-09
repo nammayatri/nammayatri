@@ -597,7 +597,7 @@ validateProfilePictureModalState state = let
       in inAppModalConfig'
 
 imageCaptureLayout :: forall w . (Action -> Effect Unit) -> ST.UploadDrivingLicenseState -> PrestoDOM (Effect Unit) w
-imageCaptureLayout push state  =ValidateDocumentModal.view (push <<< ValidateDocumentModalAction) (ValidateDocumentModal.config{background = Color.black,profilePictureCapture =true ,headerConfig {headTextConfig {text = ("Take Photo")}}})
+imageCaptureLayout push state  =ValidateDocumentModal.view (push <<< ValidateDocumentModalAction) (ValidateDocumentModal.config{background = Color.black,profilePictureCapture =true ,headerConfig {headTextConfig {text = getString TAKE_PHOTO}}})
 
 fileCameraLayout :: forall w . (Action -> Effect Unit) -> ST.UploadDrivingLicenseState -> PrestoDOM (Effect Unit) w
 fileCameraLayout push state =

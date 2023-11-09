@@ -38,7 +38,8 @@ getLanguages =
         {name:"English",value:"EN_US"},
         {name:"ಕನ್ನಡ",value:"KN_IN"},
         {name:"हिन्दी",value :"HI_IN"},
-        {name:"தமிழ்",value :"TA_IN"}
+        {name:"தமிழ்",value :"TA_IN"},
+        {name:"తెలుగు", value : "TE_IN"}
     ]
 
 decodeAddress :: LocationInfo -> Boolean -> String

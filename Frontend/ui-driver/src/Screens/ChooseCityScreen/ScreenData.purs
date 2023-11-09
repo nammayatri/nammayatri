@@ -13,10 +13,12 @@ initData :: ChooseCityScreenState
 initData = {
   data : {
     config : DC.config,
-    locationSelected : "--"
+    locationSelected : "--",
+    updatedDriverLocation : "--"
   },
   props : {
     selectedLanguage: "EN_US",
+    updatedLanguage : "EN_US",
     currentStage : ENABLE_PERMISSION,
     isLocationPermissionGiven : false,
     radioMenuFocusedLang : "",

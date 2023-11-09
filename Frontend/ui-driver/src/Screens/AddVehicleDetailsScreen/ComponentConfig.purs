@@ -49,14 +49,14 @@ primaryButtonConfig state = let
     primaryButtonConfig' = config 
       { textConfig{ text = if isJust state.data.dateOfRegistration then getString CONFIRM 
                            else if state.props.openHowToUploadManual then getString UPLOAD_PHOTO
-                           else getString UPLOAD_RC}
+                           else getString UPLOAD_REGISTRATION_CERTIFICATE}
       , width = MATCH_PARENT
-      , cornerRadius = 0.0
-      , height = (V 60)
+      , height = (V 50)
       , background = Color.black900 
+      , margin = Margin 15 0 15 30
+      , cornerRadius = 6.0
       , alpha = if activate then 1.0 else 0.8
       , isClickable = activate
-      , margin = (Margin 0 0 0 0)
       , id = "AddVehiclePrimaryButton"
       }
   in primaryButtonConfig'
@@ -110,7 +110,7 @@ fileCameraLayoutConfig state = let
         visibility = GONE
       },
       option1 {
-        text = "Take a Photo"
+        text = getString TAKE_A_PHOTO
       , color = Color.black900
       , strokeColor = Color.white900
       , padding = Padding 15 10 15 10
@@ -121,7 +121,7 @@ fileCameraLayoutConfig state = let
       , gravity = LEFT
       },
       option2 {
-        text = "Gallery"
+        text = getString GALLERY
       , color = Color.black900
       , strokeColor = Color.white900
       , padding = Padding 15 10 15 10

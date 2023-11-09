@@ -14,7 +14,7 @@ const mlStrings = {
   ENTER_MOBILE_NUMBER: "മൊബൈൽ നമ്പർ നൽകുക",
   BY_CLICKING_CONTINUE_YOU_WILL_BE_AGREEING_TO_OUR: "തുടരുക ക്ലിക്ക് ചെയ്യുന്നതിലൂടെ, നിങ്ങൾ ഞങ്ങളുടെ ഉപാധികളും നിബന്ധനകളും അംഗീകരിക്കുന്നു:",
   ENTER_OTP: "OTP നൽകുക",
-  DIDNT_RECIEVE_OTP: "OTP കിട്ടിയില്ലേ?",
+  DIDNT_RECIEVE_OTP: "OTP കിട്ടിയില്ലേ? ",
   RESEND_OTP: "OTP വീണ്ടും അയക്കുക",
   PLEASE_ENTER_VALID_OTP: "സാധുവായ OTP നൽകുക",
   INVALID_MOBILE_NUMBER: "അസാധുവായ മൊബൈൽ നമ്പർ",
@@ -42,8 +42,8 @@ const mlStrings = {
   UPLOAD_ADHAAR_CARD: "ആധാർ കാർഡ് അപ്ലോഡുചെയ്യുക",
   ADHAAR_INTRUCTION_PICTURE: "ആധാർ കാർഡിന്റെ ഇരുവശത്തിന്റെയും ചിത്രങ്ങൾ ദയവായി അപ്ലോഡുചെയ്യുക",
   ADD_VEHICLE_DETAILS: "വാഹന വിശദാംശങ്ങൾ ചേർക്കുക",
-  VEHICLE_REGISTRATION_NUMBER: "വാഹന രജിസ്ട്രേഷൻ നമ്പർ",
-  RE_ENTER_VEHICLE_REGISTRATION_NUMBER: "വാഹന രജിസ്ട്രേഷൻ നമ്പർ വീണ്ടും നൽകുക",
+  VEHICLE_REGISTRATION_NUMBER: "ವಾಹನ ನೋಂದಣಿ ಪ್ರಮಾಣಪತ್ರ ಸಂಖ್ಯೆ",
+  RE_ENTER_VEHICLE_REGISTRATION_NUMBER: "ವಾಹನ ನೋಂದಣಿ ಪ್ರಮಾಣಪತ್ರ ಸಂಖ್ಯೆಯನ್ನು ಮರು-ನಮೂದಿಸಿ",
   ENTER_VEHICLE_NO: "വാഹന നമ്പർ നൽകുക.",
   VEHICLE_TYPE: "വാഹന തരം",
   VEHICLE_MODEL_NAME: "വാഹന മോഡലിന്റെ പേര്",
@@ -1003,6 +1003,10 @@ const mlStrings = {
   CROPPED_CORRECTLY : "ശുദ്ധമായി ക്രോപ്പ് ചെയ്തു",
   WRONG_CROPPING : "തെറ്റായ ക്രോപ്പിംഗ്",
   CHANGE_LOCATION : "ലൊക്കേഷൻ മാറ്റുക",
+  CHANGE_CITY: "നഗരം മാറ്റുക",
+  UPLOAD_REGISTRATION_CERTIFICATE_STR : "രജിസ്ട്രേഷൻ സർട്ടിഫിക്കറ്റ് അപ്ലോഡ് ചെയ്യുക",
+  TAKE_A_PHOTO : "ഒരു പടം എടുക്കു", 
+  GALLERY : "ഗാലറി"
 }
 
 export function getStringValue(key) {

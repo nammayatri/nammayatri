@@ -484,6 +484,7 @@ offerCardBannerConfig isPlanCard bannerProps=
             "TA_IN" | len > 3 -> 3
             "BN_IN" | len > 4 -> 4
             "ML_IN" | len > 5 -> 5
+            "TE_IN" | len > 6 -> 6
             _ -> 0
     date = Mb.fromMaybe "" (strArray DA.!! (getLanguage (DA.length strArray)))
     title' = getVarString OFFER_CARD_BANNER_TITLE [date]

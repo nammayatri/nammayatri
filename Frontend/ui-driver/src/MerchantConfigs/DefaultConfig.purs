@@ -12,6 +12,7 @@ config =
       , { name: "ಕನ್ನಡ", value: "KN_IN", subtitle: "Kannada" }
       , { name: "हिंदी", value: "HI_IN", subtitle: "Hindi" }
       , { name: "தமிழ்", value: "TA_IN", subtitle: "Tamil" }
+      , { name : "తెలుగు", value: "TE_IN", subtitle : "Telugu"}
       ]
   , popupBackground : "#FFFFFF"
   , defaultLanguage : "EN_US"

@@ -144,7 +144,7 @@ fileCameraLayoutConfig state = let
         visibility = GONE
       },
       option1 {
-        text = "Take a Photo"
+        text = getString TAKE_A_PHOTO
       , color = Color.black900
       , strokeColor = Color.white900
       , padding = Padding 15 10 15 10
@@ -155,7 +155,7 @@ fileCameraLayoutConfig state = let
       , gravity = LEFT
       },
       option2 {
-        text = "Gallery"
+        text = getString GALLERY
       , color = Color.black900
       , strokeColor = Color.white900
       , padding = Padding 15 10 15 10

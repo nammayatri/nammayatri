@@ -718,6 +718,7 @@ makePaymentState state =
                           "KN_IN" -> "ಈಗ ₹"<> payableAndGST <>" ಪಾವತಿಸಿ"
                           "TA_IN" -> "இப்போது ₹" <> payableAndGST <> " செலுத்துங்கள்"
                           "BN_IN" -> "এখন " <> payableAndGST <> " পে করুন"
+                          "TE_IN" -> "చెల్లించండి ₹" <> payableAndGST <> " ఇప్పుడు"
                           _       -> "Pay ₹" <> payableAndGST <> " now"
                       ),
     cancelButtonText : if useTimeRange || state.data.paymentState.laterButtonVisibility then Just $ getString LATER else Nothing,
@@ -742,6 +743,7 @@ getDescription state =  case getValueToLocalStore LANGUAGE_KEY of
                         "BN_IN" -> "আপনি" <> show state.data.paymentState.rideCount <> "টি রাইড সম্পূর্ণ করেছেন"
                         "TA_IN" -> "நீங்கள்  "<> (show state.data.paymentState.rideCount) <>" சவாரிகளை முடித்துவிட்டீர்கள்!"
                         "KN_IN" -> "ನೀವು ನಿನ್ನೆ "<> (show state.data.paymentState.rideCount) <>" ರೈಡ್‌ಗಳನ್ನು ಪೂರ್ಣಗೊಳಿಸಿದ್ದೀರಿ!"
+                        -- "TE_IN" -> ""
                         _       -> (("You have completed <b>"<> (show state.data.paymentState.rideCount)) <> (if state.data.paymentState.rideCount == 1 then " Ride</b>" else " Rides"))
 
 rateCardState :: ST.HomeScreenState -> RateCard.Config

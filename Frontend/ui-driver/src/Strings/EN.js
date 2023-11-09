@@ -14,14 +14,14 @@ const englishStrings = {
   ENTER_MOBILE_NUMBER: "Enter Mobile Number",
   BY_CLICKING_CONTINUE_YOU_WILL_BE_AGREEING_TO_OUR: "By clicking Continue, you agree to our",
   ENTER_OTP: "Enter OTP",
-  DIDNT_RECIEVE_OTP: "Didn't recieve OTP?",
+  DIDNT_RECIEVE_OTP: "Didn't recieve an OTP? ",
   RESEND_OTP: "Resend OTP",
   PLEASE_ENTER_VALID_OTP: "Please Enter Valid OTP",
   INVALID_MOBILE_NUMBER: "Invalid mobile number",
   REGISTER: "Register",
   MOBILE_NUMBER: "Mobile Number",
   AUTO_READING_OTP: "Auto Reading OTP...",
-  UPLOAD_DRIVING_LICENSE: "Upload Driving License",
+  UPLOAD_DRIVING_LICENSE: "Upload Driving Licence",
   UPLOAD_BACK_SIDE: "Upload Back Side",
   UPLOAD_FRONT_SIDE: "Upload Photo side of your DL",
   BACK_SIDE: "Back Side",
@@ -42,8 +42,8 @@ const englishStrings = {
   UPLOAD_ADHAAR_CARD: "Upload Aadhar Card",
   ADHAAR_INTRUCTION_PICTURE: "Kindly upload clear pictures of both sides of the Aadhar Card",
   ADD_VEHICLE_DETAILS: "Add Vehicle Details",
-  VEHICLE_REGISTRATION_NUMBER: "Vehicle Registration Number",
-  RE_ENTER_VEHICLE_REGISTRATION_NUMBER: "Re-enter Vehicle Registration Number",
+  VEHICLE_REGISTRATION_NUMBER: "Vehicle Registration Certificate Number",
+  RE_ENTER_VEHICLE_REGISTRATION_NUMBER: "Re-enter Vehicle Registration Certificate Number",
   ENTER_VEHICLE_NO: "Enter Vehicle No.",
   VEHICLE_TYPE: "Vehicle Type",
   VEHICLE_MODEL_NAME: "Vehicle Model Name",
@@ -1065,6 +1065,10 @@ const englishStrings = {
   RC_VERIFICATION_SUCCESS : "RC verification is successful!",
   RC_IN_PROGRESS_DESC : "RC will be added to your profile once verified",
   RC_FAILED_DESC : "Please try to add RC after some time",
+  CHANGE_CITY : "Change City",
+  UPLOAD_REGISTRATION_CERTIFICATE_STR : "Upload Registration Certificate",
+  TAKE_A_PHOTO : "Take a Photo", 
+  GALLERY : "Gallery"
 }
 
 

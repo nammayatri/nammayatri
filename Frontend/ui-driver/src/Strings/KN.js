@@ -14,7 +14,7 @@ const kannadaStrings = {
   ENTER_MOBILE_NUMBER: "ಮೊಬೈಲ್ ಸಂಖ್ಯೆಯನ್ನು ನಮೂದಿಸಿ",
   BY_CLICKING_CONTINUE_YOU_WILL_BE_AGREEING_TO_OUR: "ಮುಂದುವರಿಸು ಕ್ಲಿಕ್ ಮಾಡುವ ಮೂಲಕ, ನೀವು ನಮ್ಮ ಸಮ್ಮತಿಸುತ್ತೀರಿ",
   ENTER_OTP: "OTP ನಮೂದಿಸಿ",
-  DIDNT_RECIEVE_OTP: "OTP ಸ್ವೀಕರಿಸಲಿಲ್ಲವೇ?",
+  DIDNT_RECIEVE_OTP: "OTP ಸ್ವೀಕರಿಸಲಿಲ್ಲವೇ? ",
   RESEND_OTP: "OTP ಅನ್ನು ಮರುಕಳುಹಿಸಿ",
   PLEASE_ENTER_VALID_OTP: "ದಯವಿಟ್ಟು ಮಾನ್ಯ OTP ಅನ್ನು ನಮೂದಿಸಿ",
   INVALID_MOBILE_NUMBER: "ಅಮಾನ್ಯ ಮೊಬೈಲ್ ಸಂಖ್ಯೆ",
@@ -42,8 +42,8 @@ const kannadaStrings = {
   UPLOAD_ADHAAR_CARD: "ಆಧಾರ್ ಕಾರ್ಡ್ ಅನ್ನು ಅಪ್ಲೋಡ್ ಮಾಡಿ",
   ADHAAR_INTRUCTION_PICTURE: "ದಯವಿಟ್ಟು ಆಧಾರ್ ಕಾರ್ಡ್‌ನ ಎರಡೂ ಬದಿಗಳ ಸ್ಪಷ್ಟ ಚಿತ್ರಗಳನ್ನು ಅಪ್‌ಲೋಡ್ ಮಾಡಿ",
   ADD_VEHICLE_DETAILS: "ವಾಹನದ ವಿವರಗಳನ್ನು ಸೇರಿಸಿ",
-  VEHICLE_REGISTRATION_NUMBER: "ವಾಹನ ನೋಂದಣಿ ಸಂಖ್ಯೆ",
-  RE_ENTER_VEHICLE_REGISTRATION_NUMBER: "ಮತ್ತೆ ವಾಹನ ನೋಂದಣಿ ಸಂಖ್ಯೆ",
+  VEHICLE_REGISTRATION_NUMBER: "ವಾಹನ ನೋಂದಣಿ ಪ್ರಮಾಣಪತ್ರ ಸಂಖ್ಯೆ",
+  RE_ENTER_VEHICLE_REGISTRATION_NUMBER: "ವಾಹನ ನೋಂದಣಿ ಪ್ರಮಾಣಪತ್ರ ಸಂಖ್ಯೆಯನ್ನು ಮರು-ನಮೂದಿಸಿ",
   ENTER_VEHICLE_NO: "ವಾಹನದ ಸಂಖ್ಯೆಯನ್ನು ನಮೂದಿಸಿ.",
   VEHICLE_TYPE: "ವಾಹನದ ಪ್ರಕಾರ",
   VEHICLE_MODEL_NAME: "ವಾಹನದ ಮಾದರಿ ಹೆಸರು",
@@ -982,7 +982,7 @@ const kannadaStrings = {
   LANGUAGE_DETECTED : "ಭಾಷೆ ಪತ್ತೆಯಾಗಿದೆ",
   CHANGE_LANGUAGE_STR : "ಭಾಷೆ ಬದಲಾಯಿಸಿ",
   SELECT_LOCATION : "ಸ್ಥಳವನ್ನು ಆಯ್ಕೆಮಾಡಿ",
-  SELECT_LOCATION_DESC : "ನೀವು ಸವಾರಿ ಮಾಡಲು ಬಯಸುವ ಸ್ಥ",
+  SELECT_LOCATION_DESC : "ನೀವು ಸವಾರಿ ಮಾಡಲು ಬಯಸುವ ಸ್ಥಳ",
   SELECT_LANGUAGE_DESC : "ನೀವು ಓದಬಹುದಾದ ಭಾಷೆಯನ್ನು ಆಯ್ಕೆಮಾಡಿ",
   CONFIRM_LANGUAGE : "ಭಾಷೆಯನ್ನು ದೃಢೀಕರಿಸಿ",
   GET_STARTED : "ಪ್ರಾರಂಭಿಸಿ",
@@ -1030,6 +1030,10 @@ const kannadaStrings = {
   CROPPED_CORRECTLY : "ಸರಿಯಾಗಿ ಕ್ರಾಪ್ ಮಾಡಲಾಗಿದೆ",
   WRONG_CROPPING : "ತಪ್ಪಾಗಿ ಕ್ರಾಪ್ ಮಾಡಲಾಗಿದೆ",
   CHANGE_LOCATION : "ಸ್ಥಳ ಬದಲಾಯಿಸಿ",
+  CHANGE_CITY: "ನಗರವನ್ನು ಬದಲಾಯಿಸಿ",
+  UPLOAD_REGISTRATION_CERTIFICATE_STR : "ನೋಂದಣಿ ಪ್ರಮಾಣಪತ್ರವನ್ನು ಅಪ್ಲೋಡ್ ಮಾಡಿ",
+  TAKE_A_PHOTO : "ಫೋಟೋ ತೆಗೆಯಿರಿ", 
+  GALLERY : "ಗ್ಯಾಲರಿ"
 }
 
 
