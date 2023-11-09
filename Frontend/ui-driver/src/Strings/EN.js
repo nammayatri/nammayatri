@@ -1047,8 +1047,6 @@ const englishStrings = {
   RC_UPLOADING : "Uploading Registration Certificate",
   RETAKE_RC : "\nPlease retake photo with RC inside marked area",
   RETAKE_DL : "\nPlease retake photo with DL inside marked area",
-  CONFIRM_AND_UPLOAD : "CONFIRM AND UPLOAD",
-  RETAKE_PHOTO : "RETAKE PHOTO",
   LETS_GET_YOUR_TRIP_READY : "Let's get your trip ready!",
   GOT_AN_OTP : "Got an OTP?",
   DRIVING_LICENSE_DETAILS : "Driving Licence Details",
@@ -1061,6 +1059,11 @@ const englishStrings = {
   CROPPED_CORRECTLY : "Cropped Correctly",
   WRONG_CROPPING : "Wrong Cropping",
   CHANGE_LOCATION : "Change Location",
+  RC_VERIFICATION_IN_PROGRESS : "RC verification is in progress...",
+  RC_VERIFICATION_FAILED_STATUS : "RC verification failed!",
+  RC_VERIFICATION_SUCCESS : "RC verification is successful!",
+  RC_IN_PROGRESS_DESC : "RC will be added to your profile once verified",
+  RC_FAILED_DESC : "Please try to add RC after some time",
 }
 
 

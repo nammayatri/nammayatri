@@ -15,15 +15,13 @@
 
 module Screens.AddVehicleDetailsScreen.ComponentConfig where
 
-import Common.Types.App as Common
 import Data.Maybe
 import Data.String
 import Language.Strings
 import Prelude
 import PrestoDOM
 
-import Resource.Constants as Constant
-import Screens.AddVehicleDetailsScreen.Controller (validateRegistrationNumber)
+import Common.Types.App as Common
 import Components.PopUpModal as PopUpModal
 import Components.PrimaryButton as PrimaryButton
 import Components.ReferralMobileNumber as ReferralMobileNumber
@@ -33,6 +31,9 @@ import Font.Size as FontSize
 import Language.Types (STR(..))
 import MerchantConfig.Utils (getValueFromConfig)
 import PrestoDOM.Types.DomAttributes (Corners(..))
+import Resource.Constants as Constant
+import Screens.AddVehicleDetailsScreen.Controller (validateRegistrationNumber)
+import Screens.Types (StageStatus(..))
 import Screens.Types as ST
 import Styles.Colors as Color
 
@@ -131,3 +132,18 @@ fileCameraLayoutConfig state = let
       }
     }
   in popUpConf'
+
+activateRcButtonConfig :: ST.AddVehicleDetailsScreenState -> PrimaryButton.Config
+activateRcButtonConfig state = let 
+    config = PrimaryButton.config
+    primaryButtonConfig' = config 
+      { textConfig{ text = getString case state.props.multipleRCstatus of
+                                        COMPLETED -> ACTIVATE_RC
+                                        _ -> OKAY}
+      , width = MATCH_PARENT
+      , cornerRadius = 8.0
+      , height = V 48
+      , margin = MarginHorizontal 16 16 
+      , id = "AddRCPrimaryButton"
+      }
+  in primaryButtonConfig'

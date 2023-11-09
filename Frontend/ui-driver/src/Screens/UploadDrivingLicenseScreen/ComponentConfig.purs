@@ -73,7 +73,7 @@ primaryEditTextConfig state = let
         text = getString DRIVING_LICENSE_NUMBER
         , color = Color.greyTextColor
         }
-      , type = "password"
+      -- , type = "password"
       , margin = MarginBottom 15
       , background = Color.white900
       , id = EHC.getNewIDWithTag "EnterDrivingLicenseEditText"

@@ -48,11 +48,13 @@ import Prelude (Unit, bind, const, discard, not, pure, unit, void, ($), (&&), (/
 import Presto.Core.Types.Language.Flow (Flow, doAff, delay)
 import PrestoDOM (BottomSheetState(..), Gravity(..), InputType(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, alignParentBottom, alignParentRight, alpha, background, clickable, color, cornerRadius, editText, ellipsize, fontStyle, frameLayout, gravity, height, hint, id, imageUrl, imageView, imageWithFallback, inputType, inputTypeI, layoutGravity, linearLayout, margin, maxLines, onBackPressed, onChange, onClick, orientation, padding, pattern, relativeLayout, scrollView, stroke, text, textFromHtml, textSize, textView, visibility, weight, width)
 import PrestoDOM.Animation as PrestoAnim
+import PrestoDOM.Properties (cornerRadii)
 import PrestoDOM.Properties as PP
+import PrestoDOM.Types.DomAttributes (Corners(..))
 import PrestoDOM.Types.DomAttributes as PTD
 import Screens.AddVehicleDetailsScreen.Controller (Action(..), eval, ScreenOutput, validateRegistrationNumber)
 import Screens.RegistrationScreen.ComponentConfig (logoutPopUp)
-import Screens.Types (AddVehicleDetailsScreenState, ValidationStatus(..))
+import Screens.Types (AddVehicleDetailsScreenState, StageStatus(..), ValidationStatus(..))
 import Styles.Colors as Color
 import Types.App (GlobalState(..), defaultGlobalState)
 
@@ -137,8 +139,9 @@ view push state =
            [ width MATCH_PARENT
            , height WRAP_CONTENT
            , text state.data.errorMessage
-           , visibility $ GONE
+           , visibility if state.data.errorMessage /= "" then VISIBLE else GONE
            , color Color.red
+           , gravity CENTER
            , padding( PaddingHorizontal 20 20)
            , margin (MarginBottom 10)
            ]
@@ -168,7 +171,8 @@ view push state =
     ] <> if state.props.logoutModalView then [logoutPopupModal push state] else []
       <> if state.props.imageCaptureLayoutView then [imageCaptureLayout push state] else []
       <> if state.props.validateProfilePicturePopUp then [validateProfilePicturePopUp push state] else []
-      <> if state.props.fileCameraPopupModal then [fileCameraLayout push state] else [] )
+      <> if state.props.fileCameraPopupModal then [fileCameraLayout push state] else [] 
+      <> if state.props.multipleRCstatus /= NOT_STARTED then [addRCFromProfileStatusView state push] else [])
 
 applyReferralView :: AddVehicleDetailsScreenState -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w 
 applyReferralView state push = 
@@ -299,7 +303,7 @@ vehicleRegistrationNumber state push =
               , hint (getString ENTER_VEHICLE_NO)
               , weight 1.0
               , cornerRadius 4.0
-              , pattern "[0-9A-Z]*,11"
+              , pattern "[0-9A-Z]*,10"
               , stroke ("1," <> Color.white900)
               , id (EHC.getNewIDWithTag "VehicleRegistrationNumber")
               , onChange push (const VehicleRegistrationNumber state.props.input_data)
@@ -312,6 +316,7 @@ vehicleRegistrationNumber state push =
             , text (getString CHANGE_LOCATION)
             , color Color.blue800
             , onClick push $ const ChangeLocation
+            , visibility GONE
             , margin $ MarginTop 8
             ] <> FontStyle.body3 TypoGraphy
           , textView $ -- (Error Indication)
@@ -371,7 +376,7 @@ vehicleRegistrationNumber state push =
                     , weight 1.0
                     , inputType Password
                     , cornerRadius 4.0
-                    , pattern "[0-9A-Z]*,11"
+                    , pattern "[0-9A-Z]*,10"
                     , stroke ("1," <> Color.white900)
                     , id (EHC.getNewIDWithTag "VehicleRegistrationNumber")
                     , onChange push (const ReEnterVehicleRegistrationNumber state.props.input_data)
@@ -611,6 +616,7 @@ dateOfRCRegistrationView push state =
   , orientation VERTICAL
   , visibility if state.data.dateOfRegistration == Nothing then GONE else VISIBLE
   , padding (PaddingHorizontal 20 20)
+  , margin $ MarginTop 20
   ][ textView $
     [ text $ getString DATE_OF_REGISTRATION
     , color Color.greyTextColor
@@ -844,3 +850,73 @@ redirectScreen push action = do
   void $ delay $ Milliseconds 1000.0
   doAff do liftEffect $ push $ action
   pure unit
+
+addRCFromProfileStatusView :: AddVehicleDetailsScreenState -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w
+addRCFromProfileStatusView state push = 
+  relativeLayout
+  [ width MATCH_PARENT
+  , height MATCH_PARENT
+  , background Color.blue600
+  , orientation VERTICAL
+  ][ linearLayout
+     [ width MATCH_PARENT
+     , height MATCH_PARENT
+     , gravity CENTER
+     , orientation VERTICAL
+     , margin $ MarginBottom 60
+     ][ imageView
+        [ imageWithFallback $ fetchImage FF_ASSET case state.props.multipleRCstatus of
+                                                        COMPLETED -> "ny_ic_rc_success"
+                                                        FAILED -> "ny_ic_rc_failed"
+                                                        IN_PROGRESS -> "ny_ic_rc_pending"
+                                                        _ -> "ny_ic_rc_pending"
+        , height $ V 120
+        , width $ V 230
+        ]
+      , textView $
+        [ text $ getString case state.props.multipleRCstatus of
+                              COMPLETED -> RC_VERIFICATION_SUCCESS
+                              FAILED -> RC_VERIFICATION_FAILED_STATUS
+                              IN_PROGRESS -> RC_VERIFICATION_IN_PROGRESS
+                              _ -> RC_VERIFICATION_IN_PROGRESS
+        , color Color.black800
+        , margin $ MarginTop 27
+        ] <> FontStyle.h2 TypoGraphy
+     ]
+  , linearLayout
+    [ width MATCH_PARENT
+    , height WRAP_CONTENT
+    , orientation VERTICAL
+    , alignParentBottom "true,-1"
+    , cornerRadii $ Corners 24.0 true true false false
+    , stroke $ "1," <> Color.borderGreyColor
+    , background Color.white900
+    , gravity CENTER
+    ][ textView $
+      [ text $ getString ACTIVATE_RC
+      , color Color.black800
+      , margin $ MarginTop 27
+      ] <> FontStyle.h3 TypoGraphy
+    , textView $
+      [ text $ case state.props.multipleRCstatus of
+                              COMPLETED -> getString CONFIRMATION_FOR_ACTIVATING_RC <> state.data.vehicle_registration_number <> "? " <> getString THIS_WILL_DEACTIVATE_CURRENTLY_ACTIVE_RC
+                              FAILED -> getString RC_FAILED_DESC
+                              IN_PROGRESS -> getString RC_IN_PROGRESS_DESC
+                              _ -> getString RC_IN_PROGRESS_DESC
+      , color Color.black800
+      , margin $ Margin 16 16 16 32
+      ] <> FontStyle.paragraphText TypoGraphy
+    , PrimaryButton.view (push <<< ActivateRCbtn) (activateRcButtonConfig state)
+    , textView $
+      [ text $ getString case state.props.multipleRCstatus of
+                              COMPLETED -> SKIP
+                              FAILED -> CONTACT_SUPPORT
+                              IN_PROGRESS -> CONTACT_SUPPORT
+                              _ -> RC_VERIFICATION_IN_PROGRESS
+      , color Color.black650
+      , margin $ Margin 16 6 16 24
+      , padding $ PaddingVertical 8 8
+      , onClick push $ const CancelButtonMultiRCPopup
+      ] <> FontStyle.subHeading2 TypoGraphy
+    ]
+  ]
