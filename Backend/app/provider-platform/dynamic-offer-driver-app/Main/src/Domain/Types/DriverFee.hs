@@ -69,7 +69,7 @@ paymentProcessingLockKey :: Text -> Text
 paymentProcessingLockKey driverId = "Payment:Processing:DriverId" <> driverId
 
 mandateProcessingLockKey :: Text -> Text
-mandateProcessingLockKey mandateId = "Mandate:Processing:MandateId" <> mandateId
+mandateProcessingLockKey driverId = "Mandate:Processing:DriverId" <> driverId
 
 billNumberGenerationLockKey :: Text -> Text
 billNumberGenerationLockKey merchantId = "DriverFee:BillNumber:Processing:MerchantId" <> merchantId --- make lock on merchant Id
