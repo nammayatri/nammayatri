@@ -15,11 +15,11 @@
 
 module Screens.PermissionsScreen.ComponentConfig where
 
-import Common.Types.App
 import Language.Strings
 import Prelude
 import PrestoDOM
 
+import Common.Types.App as Common
 import Components.PopUpModal as PopUpModal
 import Components.PrimaryButton as PrimaryButton
 import Components.StepsHeaderModal as StepsHeaderModel
@@ -27,6 +27,7 @@ import Data.Maybe (Maybe(..))
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Language.Types (STR(..))
+import Resource.Constants as Constant
 import Screens.Types as ST
 import Styles.Colors as Color
 
@@ -58,6 +59,9 @@ stepsHeaderModelConfig state = let
       profileIconVisibility = true,
       driverNumberVisibility = true,
       logoutVisibility = true,
+      customerTextArray = [],
+      driverTextArray = Constant.driverTextArray Common.FunctionCall,
+      rightButtonText = getString LOGOUT,
       driverMobileNumber = Just state.data.driverMobileNumber
      }
   in stepsHeaderConfig'

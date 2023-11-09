@@ -65,6 +65,7 @@ import Screens.Types as ST
 import Screens.UploadDrivingLicenseScreen.Controller (Action(..), eval, ScreenOutput)
 import Styles.Colors as Color
 import Types.App (defaultGlobalState)
+import Screens.RegistrationScreen.ComponentConfig (logoutPopUp) as LP
 
 screen :: ST.UploadDrivingLicenseState -> Screen Action ST.UploadDrivingLicenseState ScreenOutput
 screen initialState =
@@ -563,7 +564,7 @@ logoutPopupModal push state =
         [ width MATCH_PARENT
         , height MATCH_PARENT
         , background Color.blackLessTrans
-        ][ PopUpModal.view (push <<<PopUpModalLogoutAction) (logoutPopUp state) ]
+        ][ PopUpModal.view (push <<<PopUpModalLogoutAction) (LP.logoutPopUp Language) ]
 
 
 validateProfilePictureModal :: forall w . (Action -> Effect Unit) -> ST.UploadDrivingLicenseState -> PrestoDOM (Effect Unit) w

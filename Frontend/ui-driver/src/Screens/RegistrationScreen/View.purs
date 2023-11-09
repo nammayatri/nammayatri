@@ -62,130 +62,149 @@ screen initialState =
       )
   }
 
-view
-  :: forall w
-  . (Action -> Effect Unit)
-  -> ST.RegistrationScreenState
-  -> PrestoDOM (Effect Unit) w
+view ::
+  forall w.
+  (Action -> Effect Unit) ->
+  ST.RegistrationScreenState ->
+  PrestoDOM (Effect Unit) w
 view push state =
   let isShowSubscriptions = getValueToLocalNativeStore SHOW_SUBSCRIPTIONS == "true"
-      completedStatusCount = length $ filter (\val -> val == COMPLETED) [state.data.drivingLicenseStatus, state.data.vehicleDetailsStatus, state.data.permissionsStatus]
-      progressPercent =
-        case isShowSubscriptions of
-          true -> completedStatusCount * 25 + if state.data.subscriptionStatus == IN_PROGRESS then 25 else 0
-          false ->
-            if completedStatusCount * 33 == 99
-              then 100
-            else completedStatusCount * 33
+      completedStatusCount = length $ filter (\val -> val == COMPLETED) [ state.data.drivingLicenseStatus, state.data.vehicleDetailsStatus, state.data.permissionsStatus ]
+      progressPercent = case isShowSubscriptions of
+        true -> completedStatusCount * 25 + if state.data.subscriptionStatus == IN_PROGRESS then 25 else 0
+        false -> if completedStatusCount * 33 == 99 then 100 else completedStatusCount * 33
   in
-  -- lottieLoaderView state push
-  Anim.screenAnimation $
-  linearLayout
-  [  height MATCH_PARENT
-    , width MATCH_PARENT
-    , orientation VERTICAL
-    , background Color.white900
-    , clickable true
-    , onBackPressed push (const BackPressed)
-    , afterRender  (\action -> do
-                      _<- push action
-                      pure unit
-                      ) $ const (AfterRender)
-    
-  ]([
-    linearLayout
-    [ height WRAP_CONTENT
-    , width MATCH_PARENT
-    , visibility if state.props.logoutModalView then GONE else VISIBLE
-    ][ PrestoAnim.animationSet
-        [ Anim.fadeIn true
-        ] $ StepsHeaderModel.view (push <<< StepsHeaderModelAC) (stepsHeaderModelConfig state) 
-    ]
-    , linearLayout
-    [ height WRAP_CONTENT
-    , width MATCH_PARENT
-    , orientation VERTICAL
-    , padding (Padding 16 16 16 0)
-    , visibility VISIBLE
-    , onClick push (const BackPressed)
-    , weight 1.0
-    ][ imageView
-        [ width ( V 20 )
-        , height ( V 20)
-        , imageWithFallback $ fetchImage FF_ASSET "ny_ic_back"
-        , visibility GONE
-        ]
-      , linearLayout
-        [ width MATCH_PARENT
-        , height WRAP_CONTENT
-        , orientation VERTICAL
-        ][ 
-           linearLayout
-            [ width MATCH_PARENT
-            , height WRAP_CONTENT
-            , margin $ MarginBottom 10
-            ][
-              textView $
-              [  width WRAP_CONTENT
-               , height WRAP_CONTENT
-               , text $ getVarString START_EARNING_IN_FOUR_STEPS [show $ length state.data.registerationSteps - if (getValueToLocalNativeStore SHOW_SUBSCRIPTIONS /= "true") then 1 else 0]
-               , weight 1.0
-              ] <> FontStyle.body2 TypoGraphy
-            , textView $
-              [  width WRAP_CONTENT
-               , height WRAP_CONTENT
-               , text $ show progressPercent <> "% " <> getString COMPLETE
-              ] <> FontStyle.body2 TypoGraphy
+    -- lottieLoaderView state push
+    Anim.screenAnimation
+      $ relativeLayout
+          [ height MATCH_PARENT
+          , width MATCH_PARENT
+          , orientation VERTICAL
+          , background Color.white900
+          , clickable true
+          , onBackPressed push (const BackPressed)
+          , afterRender
+              ( \action -> do
+                  _ <- push action
+                  pure unit
+              )
+              $ const (AfterRender)
+          ]
+      $ [ linearLayout
+            [ height MATCH_PARENT
+            , width MATCH_PARENT
+            , gravity CENTER
+            , orientation VERTICAL
             ]
-          , linearLayout
-            [ width MATCH_PARENT
-            , height WRAP_CONTENT
-            , margin $ MarginBottom 20
-            , weight 1.0
-            ](mapWithIndex (\index item -> 
-              linearLayout
-              [ height $ V 5
-              , weight 1.0
-              , cornerRadius 2.0
-              , background case getStatus item.stage state of
-                              ST.COMPLETED -> Color.green900
-                              ST.IN_PROGRESS -> Color.yellow900
-                              ST.FAILED -> Color.red
-                              ST.NOT_STARTED -> Color.grey900
-              , margin $ MarginRight if index == length state.data.registerationSteps - 1 then 0 else 15
-              ][]) (state.data.registerationSteps))
-          -- , registrationHeader state
-          -- , tutorialView state
-          , cardItemView push state
+            [ linearLayout
+                [ height WRAP_CONTENT
+                , width MATCH_PARENT
+                -- , visibility if state.props.logoutModalView then GONE else VISIBLE
+                ]
+                [ PrestoAnim.animationSet
+                    [ Anim.fadeIn true
+                    ]
+                    $ StepsHeaderModel.view (push <<< StepsHeaderModelAC) (stepsHeaderModelConfig state)
+                ]
+            , linearLayout
+                [ height WRAP_CONTENT
+                , width MATCH_PARENT
+                , orientation VERTICAL
+                , padding (Padding 16 16 16 0)
+                , visibility VISIBLE
+                , onClick push (const BackPressed)
+                , weight 1.0
+                ]
+                [ imageView
+                    [ width (V 20)
+                    , height (V 20)
+                    , imageWithFallback $ fetchImage FF_ASSET "ny_ic_back"
+                    , visibility GONE
+                    ]
+                , linearLayout
+                    [ width MATCH_PARENT
+                    , height WRAP_CONTENT
+                    , orientation VERTICAL
+                    ]
+                    [ linearLayout
+                        [ width MATCH_PARENT
+                        , height WRAP_CONTENT
+                        , margin $ MarginBottom 10
+                        ]
+                        [ textView
+                            $ [ width WRAP_CONTENT
+                              , height WRAP_CONTENT
+                              , text $ getVarString START_EARNING_IN_FOUR_STEPS [ show $ length state.data.registerationSteps - if (getValueToLocalNativeStore SHOW_SUBSCRIPTIONS /= "true") then 1 else 0 ]
+                              , weight 1.0
+                              ]
+                            <> FontStyle.body2 TypoGraphy
+                        , textView
+                            $ [ width WRAP_CONTENT
+                              , height WRAP_CONTENT
+                              , text $ show progressPercent <> "% " <> getString COMPLETE
+                              ]
+                            <> FontStyle.body2 TypoGraphy
+                        ]
+                    , linearLayout
+                        [ width MATCH_PARENT
+                        , height WRAP_CONTENT
+                        , margin $ MarginBottom 20
+                        , weight 1.0
+                        ]
+                        ( mapWithIndex
+                            ( \index item ->
+                                linearLayout
+                                  [ height $ V 5
+                                  , weight 1.0
+                                  , cornerRadius 2.0
+                                  , background case getStatus item.stage state of
+                                      ST.COMPLETED -> Color.green900
+                                      ST.IN_PROGRESS -> Color.yellow900
+                                      ST.FAILED -> Color.red
+                                      ST.NOT_STARTED -> Color.grey900
+                                  , margin $ MarginRight if index == length state.data.registerationSteps - 1 then 0 else 15
+                                  ]
+                                  []
+                            )
+                            (state.data.registerationSteps)
+                        )
+                    -- , registrationHeader state
+                    -- , tutorialView state
+                    , cardItemView push state
+                    ]
+                ]
+            , textView
+                $ [ width MATCH_PARENT
+                  , height WRAP_CONTENT
+                  , margin $ Margin 16 20 16 16
+                  , padding $ Padding 12 12 12 12
+                  , text $ getString COMPLETE_AUTOPAY_LATER
+                  , color Color.black700
+                  , background Color.yellowOpacity10
+                  , cornerRadius 8.0
+                  , visibility if state.data.subscriptionStatus == IN_PROGRESS && not state.props.logoutModalView then VISIBLE else GONE
+                  ]
+                <> FontStyle.body1 TypoGraphy
+            , messageView push state
+            , linearLayout
+                [ height $ V 1
+                , width MATCH_PARENT
+                , background Color.grey900
+                , margin $ MarginBottom 16
+                , visibility if all (_ == COMPLETED) [ state.data.vehicleDetailsStatus, state.data.drivingLicenseStatus, state.data.permissionsStatus ] then VISIBLE else GONE
+                ]
+                []
+            , linearLayout
+                [ height WRAP_CONTENT
+                , width MATCH_PARENT
+                , gravity CENTER
+                , margin $ Margin 16 0 16 16
+                , visibility if all (_ == COMPLETED) [ state.data.vehicleDetailsStatus, state.data.drivingLicenseStatus, state.data.permissionsStatus ] then VISIBLE else GONE
+                ]
+                [ PrimaryButton.view (push <<< PrimaryButtonAction) (primaryButtonConfig state) ]
+            ]
         ]
-    ]
-  , textView $
-    [ width MATCH_PARENT
-    , height WRAP_CONTENT
-    , margin $ Margin 16 20 16 16
-    , padding $ Padding 12 12 12 12
-    , text $ getString COMPLETE_AUTOPAY_LATER
-    , color Color.black700
-    , background Color.yellowOpacity10
-    , cornerRadius 8.0
-    , visibility if state.data.subscriptionStatus == IN_PROGRESS && not state.props.logoutModalView then VISIBLE else GONE
-    ] <> FontStyle.body1 TypoGraphy
-  , messageView push state
-  , linearLayout
-    [ height $ V 1
-    , width MATCH_PARENT
-    , background Color.grey900
-    , margin $ MarginBottom 16
-    , visibility if all (_ == COMPLETED)[state.data.vehicleDetailsStatus, state.data.drivingLicenseStatus, state.data.permissionsStatus] then  VISIBLE else GONE
-    ][]
-  , linearLayout
-    [ height WRAP_CONTENT
-    , width MATCH_PARENT
-    , gravity CENTER
-    , margin $ Margin 16 0 16 16
-    , visibility if all (_ == COMPLETED)[state.data.vehicleDetailsStatus, state.data.drivingLicenseStatus, state.data.permissionsStatus] then  VISIBLE else GONE
-    ][PrimaryButton.view (push <<< PrimaryButtonAction) (primaryButtonConfig state)]
-  ]<> if state.props.logoutModalView then [logoutPopupModal push state] else [])
+      <> if state.props.logoutModalView then [ logoutPopupModal push state ] else []
 
 registrationHeader :: ST.RegistrationScreenState -> forall w . PrestoDOM (Effect Unit) w
 registrationHeader state = 

@@ -991,7 +991,12 @@ const mlStrings = {
   RETAKE_RC: "\nRC യുടെ അംശം കൊണ്ട് ദയവായി ഫോട്ടോ പുനഃതെളിക്കുക",
   RETAKE_DL: "\nDL യുടെ അംശം കൊണ്ട് ദയവായി ഫോട്ടോ പുനഃതെളിക്കുക",
   CONFIRM_AND_UPLOAD: "സ്ഥിരീകരിക്കുക മറ്റും അപ്ലോഡ് ചെയ്യുക",
-  RETAKE_PHOTO: "ഫോട്ടോ പുനഃതെളിക്കുക"
+  RETAKE_PHOTO: "ഫോട്ടോ പുനഃതെളിക്കുക",
+  LETS_GET_YOUR_TRIP_READY : "നമുക്ക് നിങ്ങളുടെ യാത്ര തയ്യാറാക്കാം!",
+  GOT_AN_OTP : "ഒരു OTP കിട്ടിയോ?",
+  DRIVING_LICENSE_DETAILS : "ഡ്രൈവിംഗ് ലൈസൻസ് വിശദാംശങ്ങൾ",
+  VEHICLE_REGISTRATION_DETAILS : "വാഹന രജിസ്ട്രേഷൻ വിശദാംശങ്ങൾ",
+  UPLOAD_PHOTO : "ഫോട്ടോ അപ്‌ലോഡ് ചെയ്യുക"
 }
 
 export function getStringValue(key) {

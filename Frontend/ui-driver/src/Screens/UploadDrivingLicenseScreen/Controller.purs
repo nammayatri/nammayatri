@@ -180,6 +180,7 @@ eval (BackPressed flag) state = do
             else if(state.props.imageCaptureLayoutView) then continue state{props{imageCaptureLayoutView = false,openHowToUploadManual = true}} 
             else if(state.props.fileCameraPopupModal) then continue state{props{fileCameraPopupModal = false, validateProfilePicturePopUp = false, imageCaptureLayoutView = false}} 
             else if(state.props.openHowToUploadManual) then continue state{props{openHowToUploadManual = false}} 
+            else if state.props.logoutPopupModal then continue state{props{logoutPopupModal = false}} 
             else exit $ GoBack state
 eval (OnboardingHeaderAction (OnboardingHeaderController.TriggerRegModal)) state = continue state{props{openRegistrationModal = true}}
 eval (RegistrationModalAction (RegistrationModalController.OnCloseClick)) state = continue state{props{openRegistrationModal = false}}
