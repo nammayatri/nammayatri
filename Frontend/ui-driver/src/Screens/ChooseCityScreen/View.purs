@@ -60,8 +60,7 @@ view push state =
         -- , background if DA.any (_ == state.props.currentStage) [ENABLE_PERMISSION, CAROUSEL, DETECT_LOCATION] then "#FFFAED" else Color.white900
         , gradient (Linear 0.0 ["#F5F8FF", "#E2EAFF"])
         , padding $ PaddingBottom 24
-        ][ headerView state push
-          , relativeLayout
+        ][ relativeLayout
             [ height MATCH_PARENT
             , width MATCH_PARENT
             ][ enableLocationPermission state push
@@ -82,8 +81,8 @@ view push state =
               --   , visibility if state.props.currentStage == CAROUSEL then VISIBLE else GONE
               --   ](if state.props.currentStage == CAROUSEL then [carouselView state push] else  [] )
               -- , if DA.any (_ == state.props.currentStage) [SELECT_LANG, SELECT_CITY]  then radioButtonView state push else dummyView
-                , if state.props.currentStage == SELECT_LANG then radioButtonView state push else dummyView
-                , if state.props.currentStage == SELECT_CITY then radioButtonView2 state push else dummyView
+                , if state.props.currentStage == SELECT_LANG then radioButtonView state push (state.props.currentStage == SELECT_LANG) else dummyView
+                , if state.props.currentStage == SELECT_CITY then radioButtonView2 state push (state.props.currentStage == SELECT_CITY) else dummyView
 
         -- imageView
         --     [ height $ V 50
@@ -219,16 +218,18 @@ currentLanguageView state push =
   ]
 
 
-radioButtonView :: ChooseCityScreenState -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w
-radioButtonView state push =
+radioButtonView :: ChooseCityScreenState -> (Action -> Effect Unit) -> Boolean -> forall w . PrestoDOM (Effect Unit) w
+radioButtonView state push visibility' =
   let items = if state.props.currentStage == SELECT_LANG then state.data.config.languageList else transformCityConfig state.data.config.cityConfig
   in
+  PrestoAnim.animationSet [ Anim.fadeIn visibility' ] $
   linearLayout
   [ height MATCH_PARENT
   , width MATCH_PARENT
   , orientation VERTICAL
   , background Color.white900
-  ][  textView $
+  ][  headerView state push
+    , textView $
       [ text $ getString if state.props.currentStage == SELECT_LANG then SELECT_LANGUAGE_DESC else SELECT_LOCATION_DESC
       , color Color.black800
       , margin $ Margin 16 24 16 16
@@ -254,16 +255,18 @@ radioButtonView state push =
       )
   ]
 
-radioButtonView2 :: ChooseCityScreenState -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w
-radioButtonView2 state push =
+radioButtonView2 :: ChooseCityScreenState -> (Action -> Effect Unit) -> Boolean -> forall w . PrestoDOM (Effect Unit) w
+radioButtonView2 state push visibility' =
   let items = if state.props.currentStage == SELECT_LANG then state.data.config.languageList else transformCityConfig state.data.config.cityConfig
   in
+  PrestoAnim.animationSet [ Anim.fadeIn visibility' ] $
   linearLayout
   [ height MATCH_PARENT
   , width MATCH_PARENT
   , orientation VERTICAL
   , background Color.white900
-  ][  textView $
+  ][  headerView state push
+    , textView $
       [ text $ getString if state.props.currentStage == SELECT_LANG then SELECT_LANGUAGE_DESC else SELECT_LOCATION_DESC
       , color Color.black800
       , margin $ Margin 16 24 16 16
