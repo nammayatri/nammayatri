@@ -80,7 +80,7 @@ data DConfirmRes = DConfirmRes
 
 data ConfirmQuoteDetails
   = ConfirmOneWayDetails
-  | ConfirmRentalDetails RentalDetailsAPIEntity
+  | ConfirmRentalDetails Text
   | ConfirmAutoDetails Text (Maybe Text)
   | ConfirmOneWaySpecialZoneDetails Text
   deriving (Show, Generic)
@@ -163,9 +163,8 @@ confirm DConfirmReq {..} = do
     mkConfirmQuoteDetails quoteDetails fulfillmentId = do
       case quoteDetails of
         DQuote.OneWayDetails _ -> pure ConfirmOneWayDetails
-        DQuote.RentalDetails RentalDetails {..} -> do
-          baseDuration <- Just . Hours <$> mbRentalDuration & fromMaybeM (InvalidRequest "Rental confirm quote should have rentalDuration param")
-          pure $ ConfirmRentalDetails $ RentalDetailsAPIEntity {bppQuoteId = id.getId, ..}
+        DQuote.RentalDetails RentalDetails {id} -> do
+          pure $ ConfirmRentalDetails id.getId
         DQuote.DriverOfferDetails driverOffer -> do
           bppEstimateId <- fulfillmentId & fromMaybeM (InternalError "FulfillmentId not found in Init. this error should never come.")
           pure $ ConfirmAutoDetails bppEstimateId driverOffer.driverId

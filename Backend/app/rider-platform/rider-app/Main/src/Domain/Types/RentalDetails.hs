@@ -38,8 +38,7 @@ data NightShiftInfo = NightShiftInfo
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
 data RentalDetailsAPIEntity = RentalDetailsAPIEntity
-  { bppQuoteId :: Text,
-    baseDuration :: Maybe Hours, -- Nothing for quoteDetails, Just for bookingDetails
+  { baseDuration :: Maybe Hours, -- Nothing for quoteDetails, Just for bookingDetails
     baseFare :: Money,
     perHourCharge :: Money,
     perHourFreeKms :: Int,
