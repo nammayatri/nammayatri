@@ -13,14 +13,13 @@
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Screens.UploadDrivingLicenseScreen.ComponentConfig
-  where
+module Screens.UploadDrivingLicenseScreen.ComponentConfig where
 
-import Common.Types.App
 import Language.Strings
 import Prelude
 import PrestoDOM
 
+import Common.Types.App as Common
 import Components.PopUpModal as PopUpModal
 import Components.PopUpModal.Controller as PopUpModalConfig
 import Components.PrimaryButton as PrimaryButton
@@ -33,6 +32,7 @@ import Font.Size as FontSize
 import Font.Style as FontStyle
 import Language.Types (STR(..))
 import PrestoDOM.Types.DomAttributes (Corners(..))
+import Resource.Constants as Constant
 import Screens.Types as ST
 import Styles.Colors as Color
 
@@ -42,8 +42,8 @@ primaryButtonConfig state = let
     config = PrimaryButton.config
     primaryButtonConfig' = config 
       { textConfig{ text = if isJust state.data.dateOfIssue then getString CONFIRM 
-                           else if state.props.openHowToUploadManual then "Upload Photo"
-                           else "Upload Driving License"--getString NEXT)
+                           else if state.props.openHowToUploadManual then getString UPLOAD_PHOTO
+                           else getString UPLOAD_DRIVING_LICENSE
       -- , textSize = FontSize.a_16
       }
       , width = MATCH_PARENT
@@ -119,21 +119,12 @@ stepsHeaderModelConfig state headerValue = let
       profileIconVisibility = true,
       driverNumberVisibility = true,
       logoutVisibility = true,
+      driverTextArray = Constant.driverTextArray Common.FunctionCall,
+      rightButtonText = getString LOGOUT,
+      customerTextArray = [],
       driverMobileNumber = Just state.data.mobileNumber
      }
   in stepsHeaderConfig'
-
-logoutPopUp :: ST.UploadDrivingLicenseState -> PopUpModal.Config
-logoutPopUp  state = let 
-  config' = PopUpModal.config
-  popUpConfig' = config' {
-    primaryText {text = getString LOGOUT},
-    secondaryText {text = getString ARE_YOU_SURE_YOU_WANT_TO_LOGOUT},
-    option1 {text = getString LOGOUT},
-    option2 {text = getString CANCEL}--,
-    -- onBoardingButtonVisibility = true
-  }
-  in popUpConfig'
 
 fileCameraLayoutConfig:: ST.UploadDrivingLicenseState -> PopUpModalConfig.Config
 fileCameraLayoutConfig state = let
@@ -147,7 +138,7 @@ fileCameraLayoutConfig state = let
       buttonLayoutMargin = Margin 0 0 0 0,
 
      primaryText {
-          text = "Upload Photo"
+          text = getString UPLOAD_PHOTO
         , margin = Margin 16 0 16 0
         , visibility = VISIBLE
         , gravity = LEFT

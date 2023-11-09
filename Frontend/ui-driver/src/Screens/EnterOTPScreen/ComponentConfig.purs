@@ -15,22 +15,24 @@
 
 module Screens.EnterOTPScreen.ComponentConfig where
 
-import Components.PrimaryButton as PrimaryButton
-import Styles.Colors as Color
 import Language.Strings
-import Language.Types (STR(..))
 import PrestoDOM
-import Prelude ((<>))
+
+import Common.Types.App as Common
+import Components.PrimaryButton as PrimaryButton
+import Components.StepsHeaderModal as StepsHeaderModel
+import Components.StepsHeaderModal as StepsHeaderModel
 import Data.Maybe (Maybe(..))
-import Font.Style as FontStyle
-import Components.StepsHeaderModal as StepsHeaderModel
-import JBridge as JB
-import Common.Types.App
-import Font.Size as FontSize
-import Styles.Colors as Color
 import Engineering.Helpers.Commons as EHC
-import Components.StepsHeaderModal as StepsHeaderModel
+import Font.Size as FontSize
+import Font.Style as FontStyle
+import JBridge as JB
+import Language.Types (STR(..))
+import Prelude ((<>))
+import Resource.Constants as Constant
 import Screens.Types as ST
+import Styles.Colors as Color
+import Styles.Colors as Color
 
 primaryButtonViewConfig :: ST.EnterOTPScreenState -> PrimaryButton.Config
 primaryButtonViewConfig state = let
@@ -69,6 +71,9 @@ stepsHeaderModelConfig state = let
       profileIconVisibility = false,
       driverNumberVisibility = false,
       logoutVisibility = false,
+      customerTextArray = [],
+      driverTextArray = Constant.driverTextArray Common.FunctionCall,
+      rightButtonText = getString LOGOUT,
       activeIndex = 1
      }
   in stepsHeaderConfig'

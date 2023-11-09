@@ -1046,7 +1046,12 @@ const hindiStrings = {
   RETAKE_RC: "\nकृपया आरसी के साथ फोटो फिर से लें",
   RETAKE_DL: "\nकृपया डीएल के साथ फोटो फिर से लें",
   CONFIRM_AND_UPLOAD: "पुष्टि करें और अपलोड करें",
-  RETAKE_PHOTO: "फोटो फिर से लें"
+  RETAKE_PHOTO: "फोटो फिर से लें",
+  LETS_GET_YOUR_TRIP_READY : "आइए अपनी यात्रा तैयार करें!",
+  GOT_AN_OTP : "एक OTP मिला?",
+  DRIVING_LICENSE_DETAILS : "ड्राइविंग लाइसेंस विवरण",
+  VEHICLE_REGISTRATION_DETAILS : "वाहन पंजीकरण विवरण",
+  UPLOAD_PHOTO : "फोटो अपलोड करें"
 }
 
 

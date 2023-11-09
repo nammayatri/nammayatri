@@ -1002,7 +1002,7 @@ const kannadaStrings = {
   GRANT_PERMISSIONS: "ಅನುಮತಿಗಳನ್ನು ನೀಡಿ",
   SUBSCRIPTION_PLAN_STR: "ಚಂಚಲೀಕರಣ ಯೋಜನೆ",
   COMPLETE_AUTOPAY_LATER: "ನಂತರ 'ನನ್ನ ಯೋಜನೆ' ವಿಭಾಗದಿಂದ ಸ್ವಯಂಚಾಲಿತ ಪಾವತಿಯನ್ನು ಪೂರ್ಣಗೊಳಿಸಿ.",
-  START_EARNING_IN_FOUR_STEPS: "{} ಸರಳ ಹಂತಗಳಲ್ಲಿ ಗಳಿಸಿ ಪ್ರಾರಂಭಿಸಿ",
+  START_EARNING_IN_FOUR_STEPS: "{} ಸರಳ ಹಂತಗಳಿಂದ ಗಳಿಸಲು ಪ್ರಾರಂಭಿಸಿ",
   COMPLETE: "ಪೂರ್ಣಗೊಳಿಸಿ",
   HOW_TO_UPLOAD: "ಹೇಗೆ ಅಪ್ಲೋಡ್ ಮಾಡಬೇಕು",
   TAKE_CLEAR_PICTURE_DL: "ಸಮತಲ ಸಾಮಗ್ರಿಯ ಮೇಲೆ ನಿಮ್ಮ ಡ್ರೈವಿಂಗ್ ಲೈಸೆನ್ಸ್ ಯಾವಾಗಲೂ ಸ್ಪಷ್ಟ ಚಿತ್ರವನ್ನು ತೆಗೆದುಕೊಳ್ಳಿ.",
@@ -1018,7 +1018,12 @@ const kannadaStrings = {
   RETAKE_RC: "\nದಯವಿಟ್ಟು ನಿರ್ದಿಷ್ಟ ಪ್ರದೇಶದಲ್ಲಿ ರೆಜಿಸ್ಟ್ರೇಶನ್ ಸರ್ಟಿಫಿಕೇಟ್ ಜೊತೆ ಫೋಟೊವನ್ನು ಪುನಃ ತೆಗೆದುಕೊಳ್ಳಿ",
   RETAKE_DL: "\nದಯವಿಟ್ಟು ನಿರ್ದಿಷ್ಟ ಪ್ರದೇಶದಲ್ಲಿ ಡ್ರೈವಿಂಗ್ ಲೈಸೆನ್ಸ್ ಜೊತೆ ಫೋಟೊವನ್ನು ಪುನಃ ತೆಗೆದುಕೊಳ್ಳಿ",
   CONFIRM_AND_UPLOAD: "ದೃಢೀಕರಿಸಿ ಮತ್ತು ಅಪ್‌ಲೋಡ್ ಮಾಡಿ",
-  RETAKE_PHOTO: "ಫೋಟೊ ಪುನಃ ತೆಗೆದುಕೊಳ್ಳಿ"
+  RETAKE_PHOTO: "ಫೋಟೊ ಪುನಃ ತೆಗೆದುಕೊಳ್ಳಿ",
+  LETS_GET_YOUR_TRIP_READY : "ನಿಮ್ಮ ಪ್ರವಾಸವನ್ನು ಸಿದ್ಧಗೊಳಿಸೋಣ!",
+  GOT_AN_OTP : "ಒಟಿಪಿ ಸಿಕ್ಕಿತೇ?",
+  DRIVING_LICENSE_DETAILS : "ಚಾಲನಾ ಪರವಾನಗಿ ವಿವರಗಳು",
+  VEHICLE_REGISTRATION_DETAILS : "ವಾಹನ ನೋಂದಣಿ ವಿವರಗಳು",
+  UPLOAD_PHOTO : "ಫೋಟೋ ಅಪ್‌ಲೋಡ್ ಮಾಡಿ"
 }
 
 

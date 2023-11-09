@@ -15,13 +15,16 @@
 
 module Resource.Constants where
 
-import Prelude ((==), (&&), (<>))
-import Data.String (trim)
-import Services.API (LocationInfo(..))
-import Data.Maybe (fromMaybe, Maybe(..))
+import Common.Types.App as Common
 import Data.Array as DA
+import Data.Maybe (fromMaybe, Maybe(..))
 import Data.String (Pattern(..), split, toLower)
+import Data.String (trim)
+import Language.Strings (getString)
+import Language.Types (STR(..))
+import Prelude ((==), (&&), (<>))
 import Screens.Types as ST
+import Services.API (LocationInfo(..))
 
 type Language =
     {
@@ -92,3 +95,6 @@ waitTimeConstructor key = case key of
   "Triggered" -> ST.Triggered
   "PostTriggered" -> ST.PostTriggered
   _ -> ST.NoStatus
+
+driverTextArray :: Common.LazyCheck  -> Array String
+driverTextArray _ = [getString LETS_GET_YOUR_TRIP_READY, getString GOT_AN_OTP, getString REGISTRATION, getString DRIVING_LICENSE_DETAILS, getString UPLOAD_DRIVING_LICENSE, getString VEHICLE_REGISTRATION_DETAILS , getString UPLOAD_REGISTRATION_CERTIFICATE , getString GRANT_PERMISSIONS]

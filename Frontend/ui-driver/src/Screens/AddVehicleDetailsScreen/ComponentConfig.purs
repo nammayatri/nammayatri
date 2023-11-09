@@ -22,21 +22,23 @@ import Language.Strings
 import Prelude
 import PrestoDOM
 
+import Common.Types.App as Common
 import Components.PopUpModal as PopUpModal
 import Components.PrimaryButton as PrimaryButton
 import Components.ReferralMobileNumber as ReferralMobileNumber
+import Components.ReferralMobileNumber as ReferralMobileNumber
 import Components.StepsHeaderModal as StepsHeaderModel
+import Data.String as DS
 import Data.String as DS
 import Font.Size as FontSize
 import Language.Types (STR(..))
 import MerchantConfig.Utils (getValueFromConfig)
+import MerchantConfig.Utils (getValueFromConfig)
 import PrestoDOM.Types.DomAttributes (Corners(..))
+import Resource.Constants as Constant
+import Screens.AddVehicleDetailsScreen.Controller (validateRegistrationNumber)
 import Screens.Types as ST
 import Styles.Colors as Color
-import Components.ReferralMobileNumber as ReferralMobileNumber
-import MerchantConfig.Utils (getValueFromConfig)
-import Data.String as DS
-import Screens.AddVehicleDetailsScreen.Controller (validateRegistrationNumber)
 
 primaryButtonConfig :: ST.AddVehicleDetailsScreenState -> PrimaryButton.Config
 primaryButtonConfig state = let 
@@ -49,8 +51,8 @@ primaryButtonConfig state = let
                 imageUploadCondition)
     primaryButtonConfig' = config 
       { textConfig{ text = if isJust state.data.dateOfRegistration then getString CONFIRM 
-                           else if state.props.openHowToUploadManual then "Upload Photo"
-                           else "Upload RC"}
+                           else if state.props.openHowToUploadManual then getString UPLOAD_PHOTO
+                           else getString UPLOAD_RC}
       , width = MATCH_PARENT
       , cornerRadius = 0.0
       , height = (V 60)
@@ -82,7 +84,10 @@ stepsHeaderModelConfig state = let
       stepsViewVisibility = false,
       profileIconVisibility = true,
       driverNumberVisibility = true,
+      customerTextArray = [],
+      driverTextArray = Constant.driverTextArray Common.FunctionCall,
       driverMobileNumber = (Just state.data.driverMobileNumber),
+      rightButtonText = getString LOGOUT,
       logoutVisibility = true
      }
   in stepsHeaderConfig'
@@ -99,7 +104,7 @@ fileCameraLayoutConfig state = let
       buttonLayoutMargin = Margin 0 0 0 0,
 
      primaryText {
-          text = "Upload Photo"
+          text = getString UPLOAD_PHOTO
         , margin = Margin 16 0 16 0
         , visibility = VISIBLE
         , gravity = LEFT

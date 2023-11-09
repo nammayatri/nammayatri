@@ -1,5 +1,7 @@
 module Screens.ChooseCityScreen.View where
 
+import Screens.ChooseCityScreen.ComponentConfig
+
 import Animation as Anim
 import Animation.Config as AnimConfig
 import Common.Types.App (LazyCheck(..), CarouselData)
@@ -16,17 +18,16 @@ import Engineering.Helpers.Commons (getNewIDWithTag)
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
+import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import MerchantConfig.Types (CityConfig)
 import Prelude (Unit, const, map, ($), (<<<), (<>), bind, pure, unit, (==))
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Prop, Screen, Visibility(..),Gradient(..), Accessiblity(..), afterRender, alignParentBottom, alpha, background, color, cornerRadius, fontStyle, gravity, height, id, imageUrl, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, relativeLayout, stroke, text, textSize, textView, visibility, weight, width, gradient, accessibility)
+import PrestoDOM (Accessiblity(..), Gradient(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Prop, Screen, Visibility(..), accessibility, afterRender, alignParentBottom, alpha, background, color, cornerRadius, fontStyle, gradient, gravity, height, id, imageUrl, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, relativeLayout, stroke, text, textSize, textView, visibility, weight, width)
 import PrestoDOM.Animation as PrestoAnim
-import Screens.Types (ChooseCityScreenStage(..), ChooseCityScreenState)
-import Screens.ChooseCityScreen.ComponentConfig
 import Screens.ChooseCityScreen.Controller (Action(..), ScreenOutput, eval)
+import Screens.Types (ChooseCityScreenStage(..), ChooseCityScreenState)
 import Styles.Colors as Color
-import JBridge as JB
 
 screen :: ChooseCityScreenState -> Screen Action ChooseCityScreenState ScreenOutput
 screen initialState =
@@ -63,12 +64,7 @@ view push state =
           , relativeLayout
             [ height MATCH_PARENT
             , width MATCH_PARENT
-            ][ linearLayout
-                [ height MATCH_PARENT
-                , width MATCH_PARENT
-                , visibility if state.props.currentStage == ENABLE_PERMISSION then VISIBLE else GONE
-                , margin $ MarginTop 14
-                ][enableLocationPermission state push]
+            ][ enableLocationPermission state push
               , linearLayout
                 [ height WRAP_CONTENT
                 , width MATCH_PARENT
@@ -301,6 +297,8 @@ enableLocationPermission state push =
   , orientation VERTICAL
   , gravity CENTER
   , padding $ Padding 20 20 20 20
+  , margin $ MarginTop 14
+  , visibility if state.props.currentStage == ENABLE_PERMISSION then VISIBLE else GONE
   , margin $ Margin 16 16 16 16
   , cornerRadius 12.0
   , background Color.white900

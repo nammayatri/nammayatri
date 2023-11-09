@@ -2088,6 +2088,5 @@ type WelcomeScreenState = {
 }
 
 type WelcomeScreenData = {
-  carouselModal :: Common.CarouselModal,
   logField :: Object Foreign
 }

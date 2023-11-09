@@ -4,17 +4,14 @@ import Animation as Anim
 import Components.PrimaryButton as PrimaryButton
 import Debug (spy)
 import Effect (Effect)
-import Font.Size as FontSize
-import Font.Style as FontStyle
-import Prelude (Unit, const, map, ($), (<<<), (<>), bind, pure, unit, (==))
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), Accessiblity(..), PrestoDOM, Prop, Screen, afterRender, alpha, background, color, cornerRadius, fontStyle, gravity, height, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, stroke, text, textSize, textView, weight, width, id, imageUrl, accessibilityHint, accessibility)
+import Prelude (Unit, bind, const, pure, unit, ($), (<<<))
+import PrestoDOM (Accessiblity(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, accessibility, afterRender, background, gravity, height, id, imageView, imageWithFallback, linearLayout, margin, onBackPressed, orientation, padding, weight, width)
 import Screens.WelcomeScreen.Controller (Action(..), ScreenOutput, eval)
-import Styles.Colors as Color
 import Screens.Types (WelcomeScreenState)
 import JBridge (addCarousel)
-import Engineering.Helpers.Commons (getNewIDWithTag, os)
-import Components.PrimaryButton as PrimaryButton
+import Engineering.Helpers.Commons (getNewIDWithTag)
 import Data.Function.Uncurried (runFn2)
+import Screens.WelcomeScreen.ComponentConfig
 
 screen :: WelcomeScreenState -> Screen Action WelcomeScreenState ScreenOutput
 screen initialState =
@@ -47,8 +44,7 @@ view push state =
         ][  imageView
             [ height $ V 50
             , width $ V 147
-            , accessibilityHint "Namma Yatri"
-            , margin $ MarginTop if os == "IOS" then 80 else 50
+            , margin $ MarginTop 50
             , imageWithFallback "ic_namma_yatri_logo,https://assets.juspay.in/nammayatri/images/user/ic_namma_yatri_logo.png"   -- "ic_namma_yatri_logo"
             ]
             , carouselView state push
@@ -69,17 +65,7 @@ carouselView state push =
     , margin $ MarginBottom 20
     , afterRender (\action -> do
         _ <- push action
-        _ <- runFn2 addCarousel state.data.carouselModal (getNewIDWithTag "CarouselView")
+        _ <- runFn2 addCarousel (carouselData state) (getNewIDWithTag "CarouselView")
         pure unit
         ) (const AfterRender)
     ][]
-
-primaryButtonConfig :: WelcomeScreenState -> PrimaryButton.Config
-primaryButtonConfig state = let 
-    config = PrimaryButton.config
-    primaryButtonConfig' = config 
-      { textConfig { text = "Get Started"
-      , accessibilityHint = "Get Started : Button" }
-      , id = "PrimaryButtonWelcomeScreen"
-      }
-  in primaryButtonConfig'

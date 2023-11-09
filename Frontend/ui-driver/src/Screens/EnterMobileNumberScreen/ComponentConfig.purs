@@ -15,21 +15,23 @@
 
 module Screens.EnterMobileNumberScreen.ComponentConfig where
 
-import Components.PrimaryButton as PrimaryButton
 import Language.Strings
-import Language.Types (STR(..))
 import PrestoDOM
-import Screens.Types as ST
+
+import Common.Types.App as Common
+import Components.PrimaryButton as PrimaryButton
 import Components.PrimaryEditText as PrimaryEditText
 import Components.StepsHeaderModal as StepsHeaderModal
-import Styles.Colors as Color
-import Font.Style as FontStyle
 import Data.Maybe (Maybe(..))
-import JBridge as JB
-import Common.Types.App
-import Font.Size as FontSize
 import Engineering.Helpers.Commons as EHC
+import Font.Size as FontSize
+import Font.Style as FontStyle
+import JBridge as JB
+import Language.Types (STR(..))
 import Prelude (not)
+import Resource.Constants as Constant
+import Screens.Types as ST
+import Styles.Colors as Color
 
 primaryButtonViewConfig :: ST.EnterMobileNumberScreenState -> PrimaryButton.Config
 primaryButtonViewConfig state = let
@@ -54,6 +56,9 @@ stepsHeaderModalConfig state = let
       profileIconVisibility = false,
       driverNumberVisibility = false,
       logoutVisibility = false,
+      customerTextArray = [],
+      driverTextArray = Constant.driverTextArray Common.FunctionCall,
+      rightButtonText = getString LOGOUT,
       activeIndex = 0
      }
   in stepsHeaderConfig'
