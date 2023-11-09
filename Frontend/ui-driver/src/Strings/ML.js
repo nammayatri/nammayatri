@@ -996,7 +996,12 @@ const mlStrings = {
   GOT_AN_OTP : "ഒരു OTP കിട്ടിയോ?",
   DRIVING_LICENSE_DETAILS : "ഡ്രൈവിംഗ് ലൈസൻസ് വിശദാംശങ്ങൾ",
   VEHICLE_REGISTRATION_DETAILS : "വാഹന രജിസ്ട്രേഷൻ വിശദാംശങ്ങൾ",
-  UPLOAD_PHOTO : "ഫോട്ടോ അപ്‌ലോഡ് ചെയ്യുക"
+  UPLOAD_PHOTO : "ഫോട്ടോ അപ്‌ലോഡ് ചെയ്യുക",
+  CLEAR_IMAGE : "ശുദ്ധമായ ചിത്രം",
+  BLURRY_IMAGE : "കളിമണ്ണിന്റെ ചിത്രം",
+  CROPPED_CORRECTLY : "ശുദ്ധമായി ക്രോപ്പ് ചെയ്തു",
+  WRONG_CROPPING : "തെറ്റായ ക്രോപ്പിംഗ്",
+  CHANGE_LOCATION : "ലൊക്കേഷൻ മാറ്റുക",
 }
 
 export function getStringValue(key) {

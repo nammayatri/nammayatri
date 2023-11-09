@@ -995,7 +995,7 @@ const hindiStrings = {
   SIGNUP_EARLY_FOR_SPECIAL_OFFERS : "विशेष ऑफर के लिए जल्दी साइन अप करें",
   GUARANTEED_FIXED_PRICE : "1 जनवरी 2025 तक कीमत में कोई बदलाव नहीं।",
   INTRODUCTORY_OFFER_TO_BE_ANNOUNCED_SOON : "परिचयात्मक ऑफर की घोषणा जल्द ही की जाएगी!",
-  NO_CHARGES_TILL : "31 दिसंबर तक कोई शुल्क नहीं",
+  NO_CHARGES_TILL : "1 अप्रैल, 2024 तक कोई शुल्क नहीं",
   DIRECT_PAYMENT_NO_COMMISSIONS : "सीधा भुगतान.\nकोई कमीशन नहीं",
   CUSTOMER_PAYS_DIRECTLY : "ग्राहक आपको सीधे नकद या यूपीआई के माध्यम से भुगतान करता है",
   HUNDRED_PERCENT_FARE_GOES_TO_YOU : "100% किराया\nआपको जाता है!",
@@ -1051,7 +1051,12 @@ const hindiStrings = {
   GOT_AN_OTP : "एक OTP मिला?",
   DRIVING_LICENSE_DETAILS : "ड्राइविंग लाइसेंस विवरण",
   VEHICLE_REGISTRATION_DETAILS : "वाहन पंजीकरण विवरण",
-  UPLOAD_PHOTO : "फोटो अपलोड करें"
+  UPLOAD_PHOTO : "फोटो अपलोड करें",
+  CLEAR_IMAGE : "स्पष्ट चित्र",
+  BLURRY_IMAGE : "धुंधला चित्र",
+  CROPPED_CORRECTLY : "सही ढंग से क्रॉप किया गया",
+  WRONG_CROPPING : "गलत क्रॉपिंग",
+  CHANGE_LOCATION : "स्थान बदलें",
 }
 
 

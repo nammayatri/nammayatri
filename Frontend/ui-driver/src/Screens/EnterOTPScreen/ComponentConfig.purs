@@ -20,7 +20,7 @@ import Styles.Colors as Color
 import Language.Strings
 import PrestoDOM
 
-import Common.Types.App as Common.Types.App
+import Common.Types.App as Common
 import Language.Types (STR(..))
 import Resource.Constants as Constant
 import Prelude ((<>))

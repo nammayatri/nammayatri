@@ -48,7 +48,7 @@ import Debug (spy)
 import Effect (Effect)
 import Effect.Aff (Milliseconds(..), launchAff)
 import Effect.Class (liftEffect)
-import Engineering.Helpers.Commons (convertUTCtoISC, flowRunner, getNewIDWithTag, screenHeight, screenWidth, getImageUrl)
+import Engineering.Helpers.Commons (convertUTCtoISC, flowRunner, getImageUrl, getNewIDWithTag, liftFlow, screenHeight, screenWidth)
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Helpers.Utils (fetchImage, FetchImageFrom(..), getValueBtwRange, getAssetsBaseUrl)
@@ -66,6 +66,7 @@ import PrestoDOM.Properties (cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Screens (getScreen)
 import Screens as ScreenNames
+import Screens.DriverProfileScreen.ScreenData (dummyDriverInfo)
 import Screens.SubscriptionScreen.Controller (Action(..), ScreenOutput, eval, getAllFareFromArray, getPlanPrice)
 import Screens.Types (AutoPayStatus(..), DueItem, GlobalProps, KioskLocation(..), MyPlanData, OfferBanner, OptionsMenuState(..), PlanCardConfig, PromoConfig, SubscriptionScreenState, SubscriptionSubview(..))
 import Services.API (FeeType(..), GetCurrentPlanResp(..), GetDriverInfoResp(..), KioskLocationRes(..), KioskLocationResp(..), OrderStatusRes(..), PaymentBreakUp(..), UiPlansResp(..), GetDriverInfoReq(..))
@@ -73,7 +74,6 @@ import Services.Backend as Remote
 import Storage (KeyStore(..), getValueToLocalNativeStore, getValueToLocalStore, setValueToLocalStore, isOnFreeTrial)
 import Styles.Colors as Color
 import Types.App (GlobalState(..), defaultGlobalState)
-import Screens.DriverProfileScreen.ScreenData (dummyDriverInfo)
 
 screen :: SubscriptionScreenState -> GlobalState -> Screen Action SubscriptionScreenState ScreenOutput
 screen initialState globalState =
@@ -81,7 +81,12 @@ screen initialState globalState =
   , view
   , name: "SubscriptionScreen"
   , globalEvents: [(\push -> do
-      void $ launchAff $ flowRunner defaultGlobalState $ loadData push LoadPlans LoadAlternatePlans LoadMyPlans LoadHelpCentre ShowError initialState globalState
+      let showSubscriptions = getValueToLocalStore SHOW_SUBSCRIPTIONS == "true"
+      void $ launchAff $ flowRunner defaultGlobalState $ do
+        if showSubscriptions then
+          loadData push LoadPlans LoadAlternatePlans LoadMyPlans LoadHelpCentre ShowError initialState globalState
+        else 
+          liftFlow $ push $ EnableIntroductoryView
       case initialState.data.orderId of 
         Just id -> void $ launchAff $ flowRunner defaultGlobalState $ paymentStatusPooling id 7 2 1 initialState push PaymentStatusAction
         Mb.Nothing -> pure unit
@@ -270,7 +275,7 @@ enjoyBenefitsView push state =
         [ width WRAP_CONTENT
         , height WRAP_CONTENT
         , orientation VERTICAL
-        ][  commonTV push (getString GET_READY_FOR_YS_SUBSCRIPTION) Color.black800 (FontStyle.h1 TypoGraphy) 0 LEFT state.data.config.subscriptionConfig.enableIntroductoryView
+        ][  commonTV push (getString GET_READY_FOR_YS_SUBSCRIPTION) Color.black800 (FontStyle.h1 TypoGraphy) 0 LEFT state.props.joinPlanProps.isIntroductory
           , commonTV push (getString ENJOY_THESE_BENEFITS) Color.black800 (FontStyle.body4 TypoGraphy) 0 LEFT true
           , linearLayout
             [ width WRAP_CONTENT
@@ -298,7 +303,8 @@ enjoyBenefitsView push state =
                       ]
                 )
               ([(getString ZERO_COMMISION), (getString EARN_TODAY_PAY_TOMORROW)] 
-                  <> if state.data.config.subscriptionConfig.enableIntroductoryView || not state.data.config.subscriptionConfig.enableSubscriptionPopups
+                  <> if state.props.joinPlanProps.isIntroductory then [getString GUARANTEED_FIXED_PRICE]
+                     else if not state.data.config.subscriptionConfig.enableSubscriptionPopups
                       then [(getString SIGNUP_EARLY_FOR_SPECIAL_OFFERS), getString GUARANTEED_FIXED_PRICE]
                       else [(getString PAY_ONLY_IF_YOU_TAKE_RIDES), getString GET_SPECIAL_OFFERS])
             ) 
@@ -306,7 +312,7 @@ enjoyBenefitsView push state =
                 text $ getString VALID_ONLY_IF_PAYMENT
                 , color Color.black700
                 , margin $ Margin 22 3 0 0
-                , visibility if state.data.config.subscriptionConfig.enableIntroductoryView  || not state.data.config.subscriptionConfig.enableSubscriptionPopups then GONE else VISIBLE
+                , visibility if not state.data.config.subscriptionConfig.enableSubscriptionPopups || state.props.joinPlanProps.isIntroductory   then GONE else VISIBLE
               ] <> FontStyle.body16 TypoGraphy
         ]
         
@@ -395,13 +401,14 @@ plansBottomView push state =
           ][ textView $
               [ weight 1.0
               , height WRAP_CONTENT
-              , text if state.data.config.subscriptionConfig.enableIntroductoryView then getString COMING_SOON else (getString CHOOSE_YOUR_PLAN)
+              , text if state.props.joinPlanProps.isIntroductory then getString COMING_SOON else (getString CHOOSE_YOUR_PLAN)
               , color Color.black800
               ] <> FontStyle.body8 TypoGraphy
           , linearLayout
             [ weight 1.0
             , height WRAP_CONTENT
             , gravity RIGHT
+            , visibility if state.props.joinPlanProps.isIntroductory then GONE else VISIBLE
             ][ imageView
                 [ width $ V 85
                 , height $ V 20
@@ -462,8 +469,8 @@ plansBottomView push state =
                   (\item ->
                     let selectedPlan = state.props.joinPlanProps.selectedPlanItem
                     in case selectedPlan of
-                        Just plan -> planCardView push item (item.id == plan.id) true ChoosePlan state.props.isSelectedLangTamil false false false Nothing state.data.config.subscriptionConfig.enableIntroductoryView []
-                        Nothing -> planCardView push item false true ChoosePlan state.props.isSelectedLangTamil false false false Nothing state.data.config.subscriptionConfig.enableIntroductoryView []
+                        Just plan -> planCardView push item (item.id == plan.id) true ChoosePlan state.props.isSelectedLangTamil false false false Nothing state.props.joinPlanProps.isIntroductory []
+                        Nothing -> planCardView push item false true ChoosePlan state.props.isSelectedLangTamil false false false Nothing state.props.joinPlanProps.isIntroductory []
                   ) state.data.joinPlanData.allPlans)
           ]
         , PrimaryButton.view (push <<< JoinPlanAC) (joinPlanButtonConfig state)
@@ -554,7 +561,7 @@ headerView push state =
         height WRAP_CONTENT
         , padding $ Padding 10 10 10 10
         , gravity CENTER_VERTICAL
-        , visibility if any (_ == state.props.subView) [MyPlan, JoinPlan] then VISIBLE else GONE
+        , visibility if any (_ == state.props.subView) [MyPlan, JoinPlan] && not state.props.joinPlanProps.isIntroductory then VISIBLE else GONE
       ][
         imageView [
           imageWithFallback $ HU.fetchImage HU.FF_ASSET "ny_ic_phone_filled_blue"

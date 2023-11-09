@@ -16,11 +16,15 @@
 module Screens.UploadDrivingLicenseScreen.View where
 
 import Common.Types.App
+import Common.Types.App
+import Data.Maybe
 import Data.Maybe
 import Debug
 import Screens.UploadDrivingLicenseScreen.ComponentConfig
+import Screens.UploadDrivingLicenseScreen.ComponentConfig
 
 import Animation as Anim
+import Common.Types.App (LazyCheck(..))
 import Components.GenericMessageModal as GenericMessageModal
 import Components.PopUpModal as PopUpModal
 import Components.PrimaryButton as PrimaryButton
@@ -33,34 +37,30 @@ import Control.Monad.Except (runExceptT)
 import Control.Monad.Trans.Class (lift)
 import Control.Transformers.Back.Trans (runBackT)
 import Data.String as DS
+import Data.String as DS
 import Effect (Effect)
 import Effect.Aff (launchAff)
 import Effect.Class (liftEffect)
-import Data.Maybe
-import Log (printLog)
-import Data.String as DS 
-import Common.Types.App
-import Screens.UploadDrivingLicenseScreen.ComponentConfig
-import Helpers.Utils (fetchImage, FetchImageFrom(..), consumeBP)
-import Common.Types.App (LazyCheck(..))
-import MerchantConfig.Utils (getValueFromConfig)
 import Effect.Uncurried (runEffectFn1)
 import Engineering.Helpers.Commons (flowRunner)
 import Engineering.Helpers.Commons as EHC
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Helpers.Utils (consumeBP)
+import Helpers.Utils (fetchImage, FetchImageFrom(..), consumeBP)
 import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (printLog)
+import Log (printLog)
+import MerchantConfig.Utils (getValueFromConfig)
 import Prelude (Unit, bind, const, pure, unit, ($), (<<<), (<>), (/=), (==), (&&), (>), (<), discard, void, not, (||))
 import Presto.Core.Types.Language.Flow (doAff)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, background, clickable, color, cornerRadius, editText, fontStyle, frameLayout, gravity, height, imageUrl, imageView, linearLayout, margin, onBackPressed, onChange, onClick, orientation, padding, scrollView, stroke, text, textSize, textView, weight, width, layoutGravity, alpha, singleLine, visibility, scrollBarY, textFromHtml, imageWithFallback)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, alpha, background, clickable, color, cornerRadius, editText, fontStyle, frameLayout, gravity, height, imageUrl, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onChange, onClick, orientation, padding, scrollBarY, scrollView, singleLine, stroke, text, textFromHtml, textSize, textView, visibility, weight, width)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Properties as PP
 import PrestoDOM.Types.DomAttributes as PTD
-import Screens.AddVehicleDetailsScreen.Views (redirectScreen)
+import Screens.AddVehicleDetailsScreen.Views (redirectScreen, rightWrongView)
 import Screens.Types as ST
 import Screens.UploadDrivingLicenseScreen.Controller (Action(..), eval, ScreenOutput)
 import Styles.Colors as Color
@@ -238,7 +238,7 @@ reEnterLicenceNumber state push =
       [ width MATCH_PARENT
       , height WRAP_CONTENT
       , text (getString SAME_REENTERED_DL_MESSAGE)
-      , visibility $ if (DS.toLower(state.data.driver_license_number) /= DS.toLower(state.data.reEnterDriverLicenseNumber)) then VISIBLE else GONE
+      , visibility $ if (DS.toLower(state.data.driver_license_number) /= DS.toLower(state.data.reEnterDriverLicenseNumber) && state.data.reEnterDriverLicenseNumber /= "") then VISIBLE else GONE
       , color Color.red
       
       ]
@@ -529,33 +529,34 @@ howToUpload push state =
     , padding $ Padding 0 16 0 16
     ][ 
       textView $ 
-    [ text $ getString TAKE_CLEAR_PICTURE_DL
-    , color Color.greyTextColor
-    , margin $ MarginBottom 18
-    , textSize FontSize.a_14
-    ] <> FontStyle.body3 TypoGraphy
+      [ text $ getString TAKE_CLEAR_PICTURE_DL
+      , color Color.black800
+      , margin $ MarginBottom 18
+      ] <> FontStyle.body3 TypoGraphy
 
     , textView $ 
-    [ text $ getString ENSURE_ADEQUATE_LIGHT
-    , color Color.greyTextColor
-    , margin $ MarginBottom 18
-    , textSize FontSize.a_14
-    ] <> FontStyle.body3 TypoGraphy
+      [ text $ getString ENSURE_ADEQUATE_LIGHT
+      , color Color.black800
+      , margin $ MarginBottom 18
+      ] <> FontStyle.body3 TypoGraphy
 
     , textView $ 
-    [ text $ getString FIT_DL_CORRECTLY
-    , color Color.greyTextColor
-    , margin $ MarginBottom 40
-    , textSize FontSize.a_14
-    ] <> FontStyle.body3 TypoGraphy
-
-    , imageView
-        [ width MATCH_PARENT
-        , height MATCH_PARENT
-        , imageWithFallback "ny_ic_upload_document,https://assets.juspay.in/nammayatri/images/driver/ny_ic_back.png"
-        , layoutGravity "center_vertical"
-        ]
-     ]
+      [ text $ getString FIT_DL_CORRECTLY
+      , color Color.black800
+      , margin $ MarginBottom 40
+      ] <> FontStyle.body3 TypoGraphy
+    , linearLayout
+      [ width MATCH_PARENT
+      , height WRAP_CONTENT
+      , orientation VERTICAL
+      , cornerRadius 4.0
+      , margin $ MarginTop 20
+      , stroke $ "1," <> Color.borderGreyColor
+      , padding $ Padding 16 16 16 0
+      ][ rightWrongView true
+       , rightWrongView false
+      ]  
+    ]
   ]
 
 logoutPopupModal :: forall w . (Action -> Effect Unit) -> ST.UploadDrivingLicenseState -> PrestoDOM (Effect Unit) w

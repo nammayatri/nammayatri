@@ -2066,7 +2066,9 @@ type ChooseCityScreenData = {
 type ChooseCityScreenProps = {
   selectedLanguage :: String,
   currentStage :: ChooseCityScreenStage,
-  isLocationPermissionGiven :: Boolean
+  isLocationPermissionGiven :: Boolean,
+  radioMenuFocusedLang :: String,
+  radioMenuFocusedCity :: String
 }
 
 data ChooseCityScreenStage = SELECT_LANG | SELECT_CITY | ENABLE_PERMISSION | DETECT_LOCATION

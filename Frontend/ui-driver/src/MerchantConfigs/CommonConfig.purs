@@ -138,25 +138,33 @@ commonConfig =
                 cityName : "Bangalore",
                 mapImage : "ny_ic_bengalore_map,",
                 cityCode : "std:080",
-                showSubscriptions : true
+                showSubscriptions : true,
+                cityLat : 12.971599,
+                cityLong : 77.594566
               },
               {
                 cityName : "Hyderabad",
                 mapImage : "ny_ic_hyderabad_map,",
                 cityCode : "std:040",
-                showSubscriptions : false
+                showSubscriptions : false,
+                cityLat : 17.387140,
+                cityLong : 78.491684
               },
               {
                 cityName : "Mysore",
                 mapImage : "ny_ic_mysuru_map,",
                 cityCode : "*",
-                showSubscriptions : false
+                showSubscriptions : false,
+                cityLat : 12.295810,
+                cityLong : 76.639381
               },
               {
                 cityName : "Delhi",
                 mapImage : "ny_ic_delhi_map,",
                 cityCode : "std:011",
-                showSubscriptions : false
+                showSubscriptions : false,
+                cityLat : 28.644800,
+                cityLong : 77.216721
               }
          ]
   }

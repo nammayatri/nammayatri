@@ -16,10 +16,12 @@
 module Flow where
 
 import Constants.Configs
+import Constants.Configs
 import Debug
 import Log
 import Screens.SubscriptionScreen.Controller
 
+import Common.Resources.Constants (zoomLevel)
 import Common.Resources.Constants (zoomLevel)
 import Common.Styles.Colors as Color
 import Common.Types.App (APIPaymentStatus(..)) as PS
@@ -58,8 +60,10 @@ import Engineering.Helpers.BackTrack (getState, liftFlowBT)
 import Engineering.Helpers.Commons (flowRunner, getCurrentUTC)
 import Engineering.Helpers.Commons (liftFlow, getNewIDWithTag, bundleVersion, os, getExpiryTime, stringToVersion, setText, convertUTCtoISC, getCurrentUTC, getCurrentTimeStamp, clearTimer)
 import Engineering.Helpers.Commons as EHC
+import Engineering.Helpers.Commons as EHC
 import Engineering.Helpers.LogEvent (logEvent, logEventWithParams, logEventWithMultipleParams)
 import Engineering.Helpers.Suggestions (suggestionsDefinitions, getSuggestions)
+import Engineering.Helpers.Suggestions as EHS
 import Engineering.Helpers.Utils (loaderText, toggleLoader, getAppConfig, reboot, showSplash, (?))
 import Foreign (unsafeToForeign)
 import Foreign.Class (class Encode, encode, decode)
@@ -77,7 +81,9 @@ import Presto.Core.Types.Language.Flow (delay, setLogField)
 import Presto.Core.Types.Language.Flow (doAff, fork)
 import Presto.Core.Types.Language.Flow (getLogFields)
 import PrestoDOM (initUI)
+import PrestoDOM (initUI)
 import Resource.Constants (decodeAddress)
+import Resource.Constants as RC
 import Screens (ScreenName(..)) as ScreenNames
 import Screens.AddVehicleDetailsScreen.ScreenData (initData) as AddVehicleDetailsScreenData
 import Screens.BookingOptionsScreen.Controller (downgradeOptionsConfig)
@@ -91,8 +97,8 @@ import Screens.Handlers (homeScreen)
 import Screens.Handlers as UI
 import Screens.HomeScreen.ComponentConfig (mapRouteConfig)
 import Screens.HomeScreen.Controller (activeRideDetail, getPreviousVersion)
-import Screens.HomeScreen.ScreenData (initData) as HomeScreenData
 import Screens.HomeScreen.ScreenData (dummyDriverRideStats)
+import Screens.HomeScreen.ScreenData (initData) as HomeScreenData
 import Screens.HomeScreen.ScreenData (initData) as HomeScreenData
 import Screens.HomeScreen.Transformer (getDisabledLocById)
 import Screens.HomeScreen.View (rideRequestPollingData)
@@ -119,14 +125,8 @@ import Services.Config (getBaseUrl)
 import Storage (KeyStore(..), deleteValueFromLocalStore, getValueToLocalNativeStore, getValueToLocalStore, isLocalStageOn, isOnFreeTrial, setValueToLocalNativeStore, setValueToLocalStore)
 import Types.App (AADHAAR_VERIFICATION_SCREEN_OUTPUT(..), ABOUT_US_SCREEN_OUTPUT(..), ACKNOWLEDGEMENT_SCREEN_OUTPUT(..), ADD_VEHICLE_DETAILS_SCREENOUTPUT(..), APPLICATION_STATUS_SCREENOUTPUT(..), APP_UPDATE_POPUP(..), BANK_DETAILS_SCREENOUTPUT(..), BOOKING_OPTIONS_SCREEN_OUTPUT(..), DRIVER_DETAILS_SCREEN_OUTPUT(..), DRIVER_PROFILE_SCREEN_OUTPUT(..), DRIVER_RIDE_RATING_SCREEN_OUTPUT(..), ENTER_MOBILE_NUMBER_SCREEN_OUTPUT(..), ENTER_OTP_SCREEN_OUTPUT(..), FlowBT, GlobalState(..), HELP_AND_SUPPORT_SCREEN_OUTPUT(..), HOME_SCREENOUTPUT(..), MY_RIDES_SCREEN_OUTPUT(..), NAVIGATION_ACTIONS(..), NOTIFICATIONS_SCREEN_OUTPUT(..), NOTIFICATIONS_SCREEN_OUTPUT(..), NO_INTERNET_SCREEN_OUTPUT(..), PAYMENT_HISTORY_SCREEN_OUTPUT(..), PERMISSIONS_SCREEN_OUTPUT(..), POPUP_SCREEN_OUTPUT(..), REFERRAL_SCREEN_OUTPUT(..), REGISTRATION_SCREENOUTPUT(..), REPORT_ISSUE_CHAT_SCREEN_OUTPUT(..), RIDES_SELECTION_SCREEN_OUTPUT(..), RIDE_DETAIL_SCREENOUTPUT(..), SELECT_LANGUAGE_SCREEN_OUTPUT(..), SUBSCRIPTION_SCREEN_OUTPUT(..), ScreenStage(..), ScreenType(..), TRIP_DETAILS_SCREEN_OUTPUT(..), UPLOAD_ADHAAR_CARD_SCREENOUTPUT(..), UPLOAD_DRIVER_LICENSE_SCREENOUTPUT(..), VEHICLE_DETAILS_SCREEN_OUTPUT(..), WRITE_TO_US_SCREEN_OUTPUT(..), defaultGlobalState)
 import Types.App (REPORT_ISSUE_CHAT_SCREEN_OUTPUT(..), RIDES_SELECTION_SCREEN_OUTPUT(..), ABOUT_US_SCREEN_OUTPUT(..), BANK_DETAILS_SCREENOUTPUT(..), ADD_VEHICLE_DETAILS_SCREENOUTPUT(..), APPLICATION_STATUS_SCREENOUTPUT(..), DRIVER_DETAILS_SCREEN_OUTPUT(..), DRIVER_PROFILE_SCREEN_OUTPUT(..), DRIVER_RIDE_RATING_SCREEN_OUTPUT(..), ENTER_MOBILE_NUMBER_SCREEN_OUTPUT(..), ENTER_OTP_SCREEN_OUTPUT(..), FlowBT, GlobalState(..), HELP_AND_SUPPORT_SCREEN_OUTPUT(..), HOME_SCREENOUTPUT(..), MY_RIDES_SCREEN_OUTPUT(..), NOTIFICATIONS_SCREEN_OUTPUT(..), NO_INTERNET_SCREEN_OUTPUT(..), PERMISSIONS_SCREEN_OUTPUT(..), POPUP_SCREEN_OUTPUT(..), REGISTRATION_SCREENOUTPUT(..), RIDE_DETAIL_SCREENOUTPUT(..), SELECT_LANGUAGE_SCREEN_OUTPUT(..), ScreenStage(..), ScreenType(..), TRIP_DETAILS_SCREEN_OUTPUT(..), UPLOAD_ADHAAR_CARD_SCREENOUTPUT(..), UPLOAD_DRIVER_LICENSE_SCREENOUTPUT(..), VEHICLE_DETAILS_SCREEN_OUTPUT(..), WRITE_TO_US_SCREEN_OUTPUT(..), NOTIFICATIONS_SCREEN_OUTPUT(..), REFERRAL_SCREEN_OUTPUT(..), BOOKING_OPTIONS_SCREEN_OUTPUT(..), ACKNOWLEDGEMENT_SCREEN_OUTPUT(..), defaultGlobalState, SUBSCRIPTION_SCREEN_OUTPUT(..), NAVIGATION_ACTIONS(..), AADHAAR_VERIFICATION_SCREEN_OUTPUT(..), ONBOARDING_SUBSCRIPTION_SCREENOUTPUT(..), APP_UPDATE_POPUP(..), DRIVE_SAVED_LOCATION_OUTPUT(..), WELCOME_SCREEN_OUTPUT(..))
-import Types.ModifyScreenState (modifyScreenState, updateStage)
-import Constants.Configs
-import Engineering.Helpers.Commons as EHC
-import PrestoDOM (initUI)
-import Common.Resources.Constants (zoomLevel)
 import Types.App as TA
-import Engineering.Helpers.Suggestions as EHS
-import Resource.Constants as RC
+import Types.ModifyScreenState (modifyScreenState, updateStage)
 
 
 baseAppFlow :: Boolean -> Maybe Event -> FlowBT String Unit
@@ -250,8 +250,12 @@ loginFlow = do
   runInternetCondition
   void $ pure $ setCleverTapUserProp [{key : "Preferred Language", value : unsafeToForeign $ getValueFromConfig "defaultLanguage"}]
   setValueToLocalStore LANGUAGE_KEY $ getValueFromConfig "defaultLanguage"
-  chooseCityScreen <- UI.chooseCityScreen
-  welcomeScreen <- UI.welcomeScreen
+  if getValueToLocalStore DRIVER_LOCATION == "__failed" then do
+    chooseCityScreen <- UI.chooseCityScreen
+    pure unit
+  else do
+    welcomeScreen <- UI.welcomeScreen
+    pure unit
   mobileNo <- UI.enterMobileNumber
   case mobileNo of
     GO_TO_ENTER_OTP updateState -> do
@@ -304,8 +308,6 @@ getDriverInfoFlow event activeRideResp = do
     Right (GetDriverInfoResp getDriverInfoResp) -> do
       liftFlowBT $ updateCleverTapUserProps (GetDriverInfoResp getDriverInfoResp)
       appConfig <- getAppConfig Constants.appConfig
-      let cityConfig = getCityConfig appConfig.cityConfig getDriverInfoResp.operatingCity
-      setValueToLocalStore SHOW_SUBSCRIPTIONS if cityConfig.showSubscriptions then "true" else "false"
       if getDriverInfoResp.enabled then do
         if getValueToLocalStore IS_DRIVER_ENABLED == "false" then do
           void $ pure $ firebaseLogEvent "ny_driver_enabled"
@@ -707,7 +709,7 @@ addVehicleDetailsflow addRcFromProf = do
               let profileState = state'.driverProfileScreen
               if (null profileState.data.rcDataArray) then do
                 modifyScreenState $ AddVehicleDetailsScreenStateType $ \addVehicleDetailsScreen -> addVehicleDetailsScreen { props {validating = false}}
-                addVehicleDetailsflow addRcFromProf
+                onBoardingFlow
               else do
                 modifyScreenState $ DriverProfileScreenStateType $ \driverProfileScreen -> driverProfileScreen { props { screenType = ST.VEHICLE_DETAILS}}
                 driverProfileFlow
@@ -2797,17 +2799,16 @@ updateBannerAndPopupFlags = do
     autoPayNotActive = isNothing getDriverInfoResp.autoPayStatus || getDriverInfoResp.autoPayStatus /= Just "ACTIVE"
     pendingTotalManualDues = fromMaybe 0.0 getDriverInfoResp.manualDues
     subscriptionConfig = appConfig.subscriptionConfig
-    cityConfig = getCityConfig appConfig.cityConfig getDriverInfoResp.operatingCity
     freeTrialDays = fromMaybe 0 getDriverInfoResp.freeTrialDaysLeft
     shouldShowPopup = getValueToLocalStore APP_SESSION_TRACK_COUNT == "true" 
                       && getValueToLocalNativeStore IS_RIDE_ACTIVE == "false" 
                       && (isOnFreeTrial FunctionCall || (pendingTotalManualDues /= 0.0)) 
                       && getDriverInfoResp.subscribed 
                       && appConfig.subscriptionConfig.enableSubscriptionPopups
-                      && cityConfig.showSubscriptions
+                      && getValueToLocalStore SHOW_SUBSCRIPTIONS == "true"
     autoPayStatus = getAutopayStatus getDriverInfoResp.autoPayStatus
     autopayBannerType =
-      if subscriptionConfig.enableSubscriptionPopups && cityConfig.showSubscriptions then 
+      if subscriptionConfig.enableSubscriptionPopups && getValueToLocalStore SHOW_SUBSCRIPTIONS == "true" then 
         case autoPayNotActive, isOnFreeTrial FunctionCall, (pendingTotalManualDues /= 0.0) of
           true, true, _ -> FREE_TRIAL_BANNER
           _, false, true -> do
@@ -2877,6 +2878,7 @@ logoutFlow = do
   deleteValueFromLocalStore SET_ALTERNATE_TIME
   deleteValueFromLocalStore ONBOARDING_SUBSCRIPTION_SCREEN_COUNT
   deleteValueFromLocalStore FREE_TRIAL_DAYS
+  deleteValueFromLocalStore DRIVER_LOCATION
   pure $ factoryResetApp ""
   _ <- lift $ lift $ liftFlow $ logEvent logField_ "logout"
   loginFlow
@@ -2887,7 +2889,9 @@ getCityConfig cityConfig cityCode = do
                           cityName : "",
                           mapImage : "",
                           cityCode : "",
-                          showSubscriptions : false
+                          showSubscriptions : false,
+                          cityLat : 0.0,
+                          cityLong : 0.0
                         }
   case cityCode of
     Just cityCode -> fromMaybe dummyCityConfig $ find (\item -> item.cityCode == cityCode) cityConfig

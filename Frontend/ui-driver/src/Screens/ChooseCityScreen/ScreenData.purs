@@ -18,7 +18,9 @@ initData = {
   props : {
     selectedLanguage: "EN_US",
     currentStage : ENABLE_PERMISSION,
-    isLocationPermissionGiven : false
+    isLocationPermissionGiven : false,
+    radioMenuFocusedLang : "",
+    radioMenuFocusedCity : ""
   }
 }
 
