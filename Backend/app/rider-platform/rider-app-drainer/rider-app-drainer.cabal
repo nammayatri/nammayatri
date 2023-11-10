@@ -28,6 +28,8 @@ library
   exposed-modules:
       Config.Env
       Constants
+      DBQuery.Functions
+      DBQuery.Types
       DBSync.Create
       DBSync.DBSync
       DBSync.Delete
@@ -35,6 +37,7 @@ library
       Event.Event
       Types.DBSync
       Types.DBSync.Create
+      Types.DBSync.DBModel
       Types.DBSync.Delete
       Types.DBSync.Update
       Types.Event
@@ -108,9 +111,11 @@ library
     , mobility-core
     , payment
     , pcg-random
+    , postgresql-simple
     , record-dot-preprocessor
     , record-hasfield
     , rider-app
+    , scientific
     , sequelize
     , servant-server
     , shared-services
@@ -198,10 +203,12 @@ executable rider-app-drainer-exe
     , lens
     , mobility-core
     , pcg-random
+    , postgresql-simple
     , record-dot-preprocessor
     , record-hasfield
     , rider-app
     , rider-app-drainer
+    , scientific
     , sequelize
     , servant-server
     , shared-services
