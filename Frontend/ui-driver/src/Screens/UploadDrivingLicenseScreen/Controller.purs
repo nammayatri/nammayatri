@@ -43,6 +43,7 @@ import PrestoDOM.Types.Core (class Loggable)
 import Screens (ScreenName(..), getScreen)
 import Screens.Types (UploadDrivingLicenseState)
 import Services.Config (getSupportNumber, getWhatsAppSupportNo)
+import Storage (KeyStore(..), getValueToLocalStore)
 
 
 instance showAction :: Show Action where
@@ -219,7 +220,9 @@ eval (TutorialModalAction (TutorialModalController.OnCloseClick)) state = contin
 eval (TutorialModalAction (TutorialModalController.CallSupport)) state = continueWithCmd state [do
   let merchant = getMerchant FunctionCall
   _ <- case merchant of
-    NAMMAYATRI -> openWhatsAppSupport $ getWhatsAppSupportNo $ show merchant
+    NAMMAYATRI -> if state.data.cityConfig.supportNumber == "" 
+                    then openWhatsAppSupport $ getWhatsAppSupportNo $ show merchant
+                  else pure $ showDialer state.data.cityConfig.supportNumber false
     YATRISATHI -> openWhatsAppSupport $ getWhatsAppSupportNo $ show merchant
     _ -> pure $ showDialer (getSupportNumber "") false
   pure NoAction

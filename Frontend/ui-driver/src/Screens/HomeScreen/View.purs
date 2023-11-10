@@ -249,7 +249,7 @@ view push state =
       , case HU.getPopupObjectFromSharedPrefs SHOW_JOIN_NAMMAYATRI of
           Just configObject -> if (isLocalStageOn HomeScreen) then PopUpModal.view (push <<< OfferPopupAC) (offerPopupConfig true configObject) else linearLayout[visibility GONE][]
           Nothing -> linearLayout[visibility GONE][]
-      , if state.props.showOffer && (MU.getMerchant FunctionCall) == MU.NAMMAYATRI then PopUpModal.view (push <<< OfferPopupAC) (offerPopupConfig false (offerConfigParams state)) else dummyTextView
+      , if state.props.showOffer && (MU.getMerchant FunctionCall) == MU.NAMMAYATRI && getValueToLocalStore SHOW_SUBSCRIPTIONS == "true" then PopUpModal.view (push <<< OfferPopupAC) (offerPopupConfig false (offerConfigParams state)) else dummyTextView
       , if (DA.any (_ == state.props.subscriptionPopupType)[ST.SOFT_NUDGE_POPUP,  ST.LOW_DUES_CLEAR_POPUP, ST.GO_ONLINE_BLOCKER] && (MU.getMerchant FunctionCall) == MU.NAMMAYATRI )
           then PopUpModal.view (push <<< PaymentPendingPopupAC) (paymentPendingPopupConfig state) 
         else linearLayout[visibility GONE][]

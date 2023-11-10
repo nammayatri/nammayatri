@@ -303,7 +303,7 @@ enjoyBenefitsView push state =
                       ]
                 )
               ([(getString ZERO_COMMISION), (getString EARN_TODAY_PAY_TOMORROW)] 
-                  <> if state.props.joinPlanProps.isIntroductory then [getString GUARANTEED_FIXED_PRICE]
+                  <> if state.props.joinPlanProps.isIntroductory then [getString GET_FULL_PAYMENT, getString GUARANTEED_FIXED_PRICE]
                      else if not state.data.config.subscriptionConfig.enableSubscriptionPopups
                       then [(getString SIGNUP_EARLY_FOR_SPECIAL_OFFERS), getString GUARANTEED_FIXED_PRICE]
                       else [(getString PAY_ONLY_IF_YOU_TAKE_RIDES), getString GET_SPECIAL_OFFERS])
@@ -420,6 +420,7 @@ plansBottomView push state =
           [ width MATCH_PARENT
           , height WRAP_CONTENT
           , gravity CENTER_VERTICAL
+          , visibility if state.props.joinPlanProps.isIntroductory then GONE else VISIBLE
           , onClick (\action -> do
                         let url = if state.data.config.myPlanYoutubeLink == "" then state.data.config.faqLink else splitBasedOnLanguage state.data.config.myPlanYoutubeLink
                         _ <- push action
@@ -1443,11 +1444,12 @@ planPriceView fares frequency isSelectedLangTamil isIntroductory =
       , padding $ Padding 5 5 5 5
       , visibility if isIntroductory then VISIBLE else GONE
       , background Color.blue600
+      , margin $ MarginLeft 4
+      , cornerRadius 24.0
      ][ imageView 
          [ imageWithFallback $ HU.fetchImage HU.FF_ASSET "ny_ic_lock" 
          , height $ V 10  
          , width $ V 10
-         , margin $ MarginLeft 4
          ]
      ]
    ]

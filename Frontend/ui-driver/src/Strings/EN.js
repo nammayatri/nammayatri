@@ -14,7 +14,7 @@ const englishStrings = {
   ENTER_MOBILE_NUMBER: "Enter Mobile Number",
   BY_CLICKING_CONTINUE_YOU_WILL_BE_AGREEING_TO_OUR: "By clicking Continue, you agree to our",
   ENTER_OTP: "Enter OTP",
-  DIDNT_RECIEVE_OTP: "Didn't recieve an OTP? ",
+  DIDNT_RECIEVE_OTP: "Didn't receive an OTP? ",
   RESEND_OTP: "Resend OTP",
   PLEASE_ENTER_VALID_OTP: "Please Enter Valid OTP",
   INVALID_MOBILE_NUMBER: "Invalid mobile number",
@@ -1029,7 +1029,7 @@ const englishStrings = {
   RC_UPLOAD_LIMIT_REACHED : "RC upload limit exceeded.",
   DL_UPLOAD_LIMIT_REACHED : "DL upload limit exceeded.",
   RETRY_UPLOAD : "Retry Upload",
-  VEHICLE_REGISTERATON_CERTIFICATE : "Vehicle Registeration Certificate",
+  VEHICLE_REGISTERATON_CERTIFICATE : "Vehicle Registration Certificate",
   GRANT_PERMISSIONS : "Grant Permissions",
   SUBSCRIPTION_PLAN_STR : "Subscription Plan",
   COMPLETE_AUTOPAY_LATER : "Complete Autopay from ‘My Plan’ section later.",
@@ -1069,9 +1069,10 @@ const englishStrings = {
   UPLOAD_REGISTRATION_CERTIFICATE_STR : "Upload Registration Certificate",
   TAKE_A_PHOTO : "Take a Photo", 
   GALLERY : "Gallery",
-  GET_FULL_PAYMENT : "Get direct, full payment from customers",
+  GET_FULL_PAYMENT : "Get direct, full payment\n from customers",
   UNABLE_TO_DETECT_YOUR_LOCATION : "Unable to detect your location",
   DETECTING_LOCATION : "Detecting Location",
+  SELECT_CITY : "Select City",
 }
 
 

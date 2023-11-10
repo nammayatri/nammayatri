@@ -14,10 +14,13 @@
 -}
 
 module Screens.UploadDrivingLicenseScreen.ScreenData where
+
 import Data.Maybe
-import Screens.Types (UploadDrivingLicenseState)
-import Foreign.Object (empty)
+
 import Engineering.Helpers.Commons as EHC
+import Foreign.Object (empty)
+import Screens.RegistrationScreen.ScreenData (dummyCityConfig)
+import Screens.Types (UploadDrivingLicenseState)
 
 initData :: UploadDrivingLicenseState
 initData = {
@@ -39,6 +42,7 @@ initData = {
       , imageFrontUrl : ""
       , logField : empty
       , mobileNumber : ""
+      , cityConfig : dummyCityConfig
       },
       props: {
         openRegistrationModal : false

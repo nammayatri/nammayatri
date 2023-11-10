@@ -141,7 +141,8 @@ commonConfig =
                 cityCode : "std:080",
                 showSubscriptions : true,
                 cityLat : 12.971599,
-                cityLong : 77.594566
+                cityLong : 77.594566,
+                supportNumber : ""
               },
               {
                 cityName : "Hyderabad",
@@ -149,7 +150,8 @@ commonConfig =
                 cityCode : "std:040",
                 showSubscriptions : false,
                 cityLat : 17.387140,
-                cityLong : 78.491684
+                cityLong : 78.491684,
+                supportNumber : "+918069724900"
               },
               {
                 cityName : "Mysore",
@@ -157,7 +159,8 @@ commonConfig =
                 cityCode : "std:0821",
                 showSubscriptions : false,
                 cityLat : 12.295810,
-                cityLong : 76.639381
+                cityLong : 76.639381,
+                supportNumber : ""
               },
               {
                 cityName : "Delhi",
@@ -165,7 +168,8 @@ commonConfig =
                 cityCode : "std:011",
                 showSubscriptions : false,
                 cityLat : 28.644800,
-                cityLong : 77.216721
+                cityLong : 77.216721,
+                supportNumber : "+918069724848"
               },
               {
                 cityName : "Chennai",
@@ -173,7 +177,8 @@ commonConfig =
                 cityCode : "std:044",
                 showSubscriptions : false,
                 cityLat : 13.067439,
-                cityLong : 80.237617
+                cityLong : 80.237617,
+                supportNumber : ""
               },
               {
                 cityName : "Coimbatore",
@@ -181,7 +186,8 @@ commonConfig =
                 cityCode : "std:0422",
                 showSubscriptions : false,
                 cityLat : 11.004556,
-                cityLong : 76.961632
+                cityLong : 76.961632,
+                supportNumber : ""
               }
          ]
   }

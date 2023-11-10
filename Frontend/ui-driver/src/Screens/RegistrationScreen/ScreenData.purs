@@ -19,6 +19,7 @@ import Data.Eq.Generic (genericEq)
 import Data.Generic.Rep (class Generic)
 import Data.Maybe (Maybe(..))
 import Language.Strings (getString)
+import MerchantConfig.Types (CityConfig)
 import Prelude (class Eq)
 import Screens.Types (RegisterationStep(..), RegistrationScreenState, StageStatus(..))
 
@@ -49,10 +50,22 @@ initData = {
         permissionsStatus : NOT_STARTED,
         subscriptionStatus : NOT_STARTED,
         phoneNumber : "",
-        lastUpdateTime : ""
+        lastUpdateTime : "",
+        cityConfig : dummyCityConfig
       },
       props: {
         limitReachedFor : Nothing,
         logoutModalView : false
       }
   }
+
+dummyCityConfig :: CityConfig
+dummyCityConfig = {
+                    cityName : "",
+                    mapImage : "",
+                    cityCode : "",
+                    showSubscriptions : false,
+                    cityLat : 0.0,
+                    cityLong : 0.0,
+                    supportNumber : ""
+                  }
