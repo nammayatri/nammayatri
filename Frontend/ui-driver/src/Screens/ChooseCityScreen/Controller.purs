@@ -47,7 +47,7 @@ data Action = BackPressed
             | CurrentLocationCallBack String String
             -- | MenuButtonAction2 MenuButtonController.Action
 
-data ScreenOutput = WelcomeScreen | SelectLanguageScreen | GetLatLong ChooseCityScreenState 
+data ScreenOutput = WelcomeScreen | SelectLanguageScreen | GetLatLong ChooseCityScreenState | RefreshScreen ChooseCityScreenState
 
 eval :: Action -> ChooseCityScreenState -> Eval Action ScreenOutput ChooseCityScreenState
 
@@ -116,13 +116,16 @@ eval (LocationPermissionCallBack isLocationPermissionEnabled) state = do
   _ <- pure $ spy "location permission" isLocationPermissionEnabled
   if isLocationPermissionEnabled then do
     _ <- pure $ spy "location permission" isLocationPermissionEnabled
-    continue state { props {currentStage = DETECT_LOCATION }}
+    let newState =  state { props {isLocationPermissionGiven = true, currentStage = DETECT_LOCATION }}
+    updateAndExit newState $ RefreshScreen newState
   else continue state
     -- let _ = unsafePerformEffect $ logEvent state.data.logField  "permission_granted_location"
     -- continue state {props {isLocationPermissionGiven = isLocationPermissionEnabled, currentStage = if state.props.isLocationPermissionGiven then DETECT_LOCATION else state.props.currentStage}}
     -- else continue state {props {isLocationPermissionGiven = isLocationPermissionEnabled, currentStage = if state.props.isLocationPermissionGiven then DETECT_LOCATION else state.props.currentStage}}
 
-eval UpdateLocationPermissionState state = continue state {props {isLocationPermissionGiven = true, currentStage = DETECT_LOCATION}}
+eval UpdateLocationPermissionState state = do
+  let newState = state {props {isLocationPermissionGiven = true, currentStage = DETECT_LOCATION}}
+  updateAndExit newState $ RefreshScreen newState
 
 eval (UpdatePermission updatedState) state = do
   _ <- pure $ spy "testing " updatedState
