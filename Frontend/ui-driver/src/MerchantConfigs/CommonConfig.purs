@@ -154,7 +154,7 @@ commonConfig =
               {
                 cityName : "Mysore",
                 mapImage : "ny_ic_mysuru_map,",
-                cityCode : "*",
+                cityCode : "std:0821",
                 showSubscriptions : false,
                 cityLat : 12.295810,
                 cityLong : 76.639381
@@ -166,6 +166,22 @@ commonConfig =
                 showSubscriptions : false,
                 cityLat : 28.644800,
                 cityLong : 77.216721
+              },
+              {
+                cityName : "Chennai",
+                mapImage : "ny_ic_chennai_map,",
+                cityCode : "std:044",
+                showSubscriptions : false,
+                cityLat : 13.067439,
+                cityLong : 80.237617
+              },
+              {
+                cityName : "Coimbatore",
+                mapImage : "ny_ic_coimbatore_map,",
+                cityCode : "std:0422",
+                showSubscriptions : false,
+                cityLat : 11.004556,
+                cityLong : 76.961632
               }
          ]
   }
