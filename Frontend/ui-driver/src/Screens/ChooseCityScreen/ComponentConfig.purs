@@ -80,6 +80,8 @@ getLocationMapImage value =
                   "Hyderabad" -> "ny_ic_hyderabad_map"
                   "Mysore" -> "ny_ic_mysuru_map"
                   "Bangalore" -> "ny_ic_bangalore_map"
+                  "Chennai" -> "ny_ic_chennai_map"
+                  "Coimbatore" -> "ny_ic_coimbatore_map"
                   _ -> "ny_ic_driver_location_undetectable"
     Mb.Nothing -> "ny_ic_driver_location_undetectable"
 
@@ -91,5 +93,7 @@ getChangeLanguageText value =
                     "Hyderabad" -> "భాష మార్చు"
                     "Mysore" -> "కన్నడ"
                     "Bangalore" -> "కన్నడ"
+                    "Chennai" -> "மொழியை மாற்றவும்"
+                    "Coimbatore" -> "மொழியை மாற்றவும்"
                     _ -> "Change Language"
     Mb.Nothing -> "Change Language"

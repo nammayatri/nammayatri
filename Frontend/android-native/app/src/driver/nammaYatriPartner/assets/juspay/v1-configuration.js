@@ -1,6 +1,6 @@
 window.getMerchantConfig = function () {
   return JSON.stringify({
-    "RC_VALIDATION_TEXT": "KA|AP|TS|DL",
+    "RC_VALIDATION_TEXT": "KA|AP|TS|DL|TN",
     "DOCUMENT_LINK": "https://drive.google.com/file/d/1qYXbQUF4DVo2xNOawkHNTR_VVe46nggc",
     "APP_LINK": "https://play.google.com/store/apps/details?id=in.juspay.nammayatripartner",
     "USER_APP_LINK": "https://nammayatri.in/link/rider/mvnw",
