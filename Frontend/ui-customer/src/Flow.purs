@@ -184,7 +184,7 @@ checkVersion versioncodeAndroid versionName= do
 getLatestAndroidVersion :: Merchant -> Int
 getLatestAndroidVersion merchant =
   case merchant of
-    NAMMAYATRI -> 31
+    NAMMAYATRI -> 68
     YATRI -> 49
     JATRISAATHI -> 2
 
