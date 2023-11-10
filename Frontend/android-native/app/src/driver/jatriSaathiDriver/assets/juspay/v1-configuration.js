@@ -91,7 +91,7 @@ window.getMerchantConfig = function () {
     }
     , "subscriptionConfig" : {
       "completePaymentPopup" : true,
-      "supportNumber" : "033-44400030",
+      "supportNumber" : "08069724949",
       "maxDuesLimit" : 500.0,
       "faqLink" : "https://yatrisathi.in/plans/",
       "optionsMenuItems" : {
