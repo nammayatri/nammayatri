@@ -420,7 +420,7 @@ onBoardingFlow = do
   let limitReachedFor = if resp.rcVerificationStatus == "LIMIT_EXCEED" then Just "RC"
                         else if resp.dlVerificationStatus == "LIMIT_EXCEED" then Just "DL" 
                         else Nothing
-      cityConfig = getCityConfig config.cityConfig getDriverInfoResp.operatingCity
+      cityConfig = getCityConfig config.cityConfig (getValueToLocalStore DRIVER_LOCATION)--getDriverInfoResp.operatingCity
   modifyScreenState $ RegisterScreenStateType (\registerationScreen -> 
                   registerationScreen { data { 
                       vehicleDetailsStatus = getStatusValue resp.rcVerificationStatus,
@@ -431,7 +431,8 @@ onBoardingFlow = do
                         false -> ST.NOT_STARTED,
                       subscriptionStatus = case getDriverInfoResp.autoPayStatus of
                         Just status -> if status == "ACTIVE" then ST.COMPLETED else ST.IN_PROGRESS
-                        Nothing -> ST.NOT_STARTED
+                        Nothing -> ST.NOT_STARTED,
+                      cityConfig = cityConfig
                   }, props {limitReachedFor = limitReachedFor }})
   lift $ lift $ doAff do liftEffect hideSplash
   GlobalState globalState <- getState
@@ -439,11 +440,12 @@ onBoardingFlow = do
   case flow of
     UPLOAD_DRIVER_LICENSE state -> do
       modifyScreenState $ UploadDrivingLicenseScreenStateType $ \_ -> UploadDrivingLicenseScreenData.initData { data {
-        mobileNumber = state.data.phoneNumber
+        mobileNumber = state.data.phoneNumber,
+        cityConfig = state.data.cityConfig
         }}
       uploadDrivingLicenseFlow
     UPLOAD_VEHICLE_DETAILS state -> do
-      modifyScreenState $ AddVehicleDetailsScreenStateType $ \_ -> AddVehicleDetailsScreenData.initData { data {driverMobileNumber = state.data.phoneNumber}}
+      modifyScreenState $ AddVehicleDetailsScreenStateType $ \_ -> AddVehicleDetailsScreenData.initData { data {driverMobileNumber = state.data.phoneNumber, cityConfig = state.data.cityConfig}}
       addVehicleDetailsflow false
     PERMISSION_SCREEN state -> do
       modifyScreenState $ PermissionsScreenStateType $ \permissionsScreen -> permissionsScreen { data {driverMobileNumber = state.data.phoneNumber}}
@@ -571,7 +573,7 @@ uploadDrivingLicenseFlow = do
        Right (ValidateImageRes resp) -> do
         liftFlowBT $ logEvent logField_ "ny_driver_dl_photo_confirmed"
         modifyScreenState $ UploadDrivingLicenseScreenStateType (\uploadDrivingLicenseScreen -> uploadDrivingLicenseScreen { data {imageIDFront = resp.imageId}, props{errorVisibility = false}})
-        registerDriverDLResp <- lift $ lift $ Remote.registerDriverDL (makeDriverDLReq state.data.driver_license_number state.data.dob state.data.dateOfIssue "" "")--resp.imageId resp.imageId)
+        registerDriverDLResp <- lift $ lift $ Remote.registerDriverDL (makeDriverDLReq state.data.driver_license_number state.data.dob state.data.dateOfIssue resp.imageId resp.imageId)
         case registerDriverDLResp of
           Right (DriverDLResp resp) -> do
             liftFlowBT $ logEvent logField_ "ny_driver_submit_dl_details"
@@ -609,7 +611,7 @@ uploadDrivingLicenseFlow = do
     VALIDATE_DATA_API state -> do
       void $ lift $ lift $ loaderText (getString VALIDATING) (getString PLEASE_WAIT_WHILE_IN_PROGRESS)
       void $ lift $ lift $ toggleLoader true
-      registerDriverDLResp <- lift $ lift $ Remote.registerDriverDL (makeDriverDLReq state.data.driver_license_number state.data.dob state.data.dateOfIssue "" "")--resp.imageId resp.imageId)
+      registerDriverDLResp <- lift $ lift $ Remote.registerDriverDL (makeDriverDLReq state.data.driver_license_number state.data.dob state.data.dateOfIssue state.data.imageIDFront state.data.imageIDFront)
       case registerDriverDLResp of
         Right (DriverDLResp resp) -> do
           void $ lift $ lift $ toggleLoader false
@@ -948,6 +950,7 @@ driverProfileFlow = do
       modifyScreenState $ DriverProfileScreenStateType (\driverProfileScreen -> state {props = driverProfileScreen.props { alreadyActive = false}})
       let (GlobalState defaultEpassState) = defaultGlobalState
       pure $ setText (getNewIDWithTag "VehicleRegistrationNumber") ""
+      let cityConfig = getCityConfig config.cityConfig (getValueToLocalStore DRIVER_LOCATION)
       modifyScreenState $ AddVehicleDetailsScreenStateType (\_ -> defaultEpassState.addVehicleDetailsScreen)
       addVehicleDetailsflow true
     SUBCRIPTION -> updateAvailableAppsAndGoToSubs
@@ -2814,7 +2817,7 @@ getUpiApps = do
 checkDriverBlockingStatus :: GetDriverInfoResp -> FlowBT String Unit
 checkDriverBlockingStatus (GetDriverInfoResp getDriverInfoResp) = do
   if any ( _ == (getValueToLocalStore ENABLE_BLOCKING)) ["__failed", "disable"] 
-    && ((getDriverInfoResp.autoPayStatus == Nothing && not isOnFreeTrial FunctionCall)
+    && ((getDriverInfoResp.autoPayStatus == Nothing && not isOnFreeTrial FunctionCall && getValueToLocalStore SHOW_SUBSCRIPTIONS == "true")
     || not getDriverInfoResp.subscribed)
            then do
       modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data{ paymentState {driverBlocked = true, subscribed = getDriverInfoResp.subscribed, showShimmer = not getDriverInfoResp.subscribed }}})
@@ -2966,24 +2969,21 @@ welcomeScreenFlow = do
   logField_ <- lift $ lift $ getLogFields
   internetAvailable <- lift $ lift $ liftFlow $ isInternetAvailable unit
   unless internetAvailable $ noInternetScreenFlow "INTERNET_ACTION"
-  void $ pure $ setCleverTapUserProp [{key : "Preferred Language", value : unsafeToForeign $ getValueFromConfig "defaultLanguage"}]
-  setValueToLocalStore LANGUAGE_KEY $ getValueFromConfig "defaultLanguage"
   welcomeScreen <- UI.welcomeScreen
   case welcomeScreen of
     GoToMobileNumberScreen -> loginFlow
 
-getCityConfig :: Array CityConfig -> Maybe String -> CityConfig
-getCityConfig cityConfig cityCode = do
+getCityConfig :: Array CityConfig -> String -> CityConfig
+getCityConfig cityConfig cityName = do
   let dummyCityConfig = {
                           cityName : "",
                           mapImage : "",
                           cityCode : "",
                           showSubscriptions : false,
                           cityLat : 0.0,
-                          cityLong : 0.0
+                          cityLong : 0.0,
+                          supportNumber : ""
                         }
-  case cityCode of
-    Just cityCode -> fromMaybe dummyCityConfig $ find (\item -> item.cityCode == cityCode) cityConfig
-    Nothing -> dummyCityConfig
+  fromMaybe dummyCityConfig $ find (\item -> item.cityName == cityName) cityConfig
 
 

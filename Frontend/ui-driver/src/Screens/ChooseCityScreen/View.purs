@@ -24,7 +24,7 @@ import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import MerchantConfig.Types (CityConfig)
-import Prelude (Unit, bind, const, discard, map, not, pure, unit, ($), (<<<), (<>), (==))
+import Prelude (Unit, bind, const, discard, map, not, pure, unit, ($), (<<<), (<>), (==), (&&))
 import PrestoDOM (Accessiblity(..), Gradient(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Prop, Screen, Visibility(..), accessibility, afterRender, alignParentBottom, alpha, background, color, cornerRadius, fontStyle, gradient, gravity, height, id, imageUrl, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, relativeLayout, stroke, text, textSize, textView, visibility, weight, width)
 import PrestoDOM.Animation as PrestoAnim
 import Screens.ChooseCityScreen.Controller (Action(..), ScreenOutput, eval)
@@ -189,7 +189,7 @@ currentLocationView state push =
       , margin $ MarginTop 4
       ] <> FontStyle.priceFont TypoGraphy
     , textView $
-      [ text $ getString CHANGE_CITY
+      [ text $ getString if Mb.isJust state.data.locationSelected then CHANGE_CITY else SELECT_CITY_STR
       , gravity CENTER
       , color Color.blue800
       , margin $ MarginTop 16
@@ -226,7 +226,7 @@ currentLanguageView state push =
         ] <> FontStyle.subHeading1 TypoGraphy
       ]
     , textView $ [
-      text $ getString CHANGE_LANGUAGE_STR <> if getValueToLocalStore LANGUAGE_KEY == "EN_US" then " (" <> getChangeLanguageText state.data.locationSelected <> ")" else ""
+      text $ getString CHANGE_LANGUAGE_STR <> if getValueToLocalStore LANGUAGE_KEY == "EN_US" && Mb.isJust state.data.locationSelected then " (" <> getChangeLanguageText state.data.locationSelected <> ")" else ""
       , gravity CENTER
       , color Color.blue800
       , onClick push $ const $ ChangeStage SELECT_LANG

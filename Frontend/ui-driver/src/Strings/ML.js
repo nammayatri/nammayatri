@@ -1007,6 +1007,7 @@ const mlStrings = {
   TAKE_A_PHOTO : "ഒരു പടം എടുക്കു", 
   GALLERY : "ഗാലറി",
   GET_FULL_PAYMENT : "ക്ലയന്റിനൊപ്പം നിങ്ങൾക്ക് താഴെക്കാണുന്ന രീതിയിൽ പൂർത്തിയാക്കുക",
+  SELECT_CITY : "നഗരം തിരഞ്ഞെടുക്കുക",
 }
 
 export function getStringValue(key) {

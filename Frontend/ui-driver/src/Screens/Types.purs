@@ -31,7 +31,7 @@ import Foreign (Foreign)
 import Foreign.Class (class Decode, class Encode)
 import Foreign.Object (Object)
 import Halogen.VDom.DOM.Prop (PropValue)
-import MerchantConfig.Types (BottomNavConfig, GradientConfig, SubscriptionConfig, AppConfig)
+import MerchantConfig.Types (AppConfig, BottomNavConfig, GradientConfig, SubscriptionConfig, CityConfig)
 import Prelude (class Eq, class Show)
 import Presto.Core.Types.API (class StandardEncode, standardEncode)
 import Presto.Core.Utils.Encoding (defaultDecode, defaultEncode)
@@ -140,7 +140,8 @@ type AddVehicleDetailsScreenData =  {
   dateOfRegistration :: Maybe String,
   dateOfRegistrationView :: String,
   logField :: Object Foreign,
-  driverMobileNumber :: String
+  driverMobileNumber :: String,
+  cityConfig :: CityConfig
  }
 
 type AddVehicleDetailsScreenProps =  {
@@ -208,6 +209,7 @@ type UploadDrivingLicenseStateData = {
   , imageFrontUrl :: String
   , logField :: Object Foreign
   , mobileNumber :: String
+  , cityConfig :: CityConfig
 }
 
 type UploadDrivingLicenseStateProps = {
@@ -242,7 +244,8 @@ type RegistrationScreenData = {
   vehicleDetailsStatus :: StageStatus,
   permissionsStatus :: StageStatus,
   subscriptionStatus :: StageStatus,
-  lastUpdateTime :: String
+  lastUpdateTime :: String,
+  cityConfig :: CityConfig
 }
 
 type StepProgress = {

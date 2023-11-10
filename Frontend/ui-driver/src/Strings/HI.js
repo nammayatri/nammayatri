@@ -1062,6 +1062,7 @@ const hindiStrings = {
   TAKE_A_PHOTO : "एक तस्वीर लें", 
   GALLERY : "गैलरी",
   GET_FULL_PAYMENT : "ग्राहक से सीधा और पूरा भुगतान लिजिये",
+  SELECT_CITY : "शहर चुनें",
 }
 
 

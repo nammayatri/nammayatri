@@ -1040,6 +1040,7 @@ const bengaliStrings = {
   TAKE_A_PHOTO : "একটি ছবি তুলুন", 
   GALLERY : "গ্যালারি",
   GET_FULL_PAYMENT : "গ্রাহক থেকে সরাসরি এবং পূর্ণ পেমেন্ট গ্রহণ করুন",
+  SELECT_CITY : "শহর নির্বাচন করুন",
 }
 
 export function getStringValue(key) {
