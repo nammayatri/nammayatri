@@ -4,16 +4,19 @@ import Components.GenericHeader as GenericHeaderController
 import Components.PrimaryButton.Controller as PrimaryButtonController
 import Components.SelectMenuButton.Controller (Action(..)) as MenuButtonController
 import Data.Array as DA
-import Data.Maybe (Maybe(..), fromMaybe)
+import Data.Maybe (Maybe(..), fromMaybe, isNothing)
 import Data.Number as Number
+import Data.Tuple (Tuple(..), fst)
 import Debug (spy)
 import Effect.Class (liftEffect)
 import Effect.Unsafe (unsafePerformEffect)
 import Engineering.Helpers.LogEvent (logEvent)
+import Helpers.Utils (getDistanceBwCordinates)
 import JBridge (firebaseLogEvent, getCurrentLatLong, isLocationPermissionEnabled, minimizeApp, requestLocation)
 import Log (trackAppActionClick, trackAppBackPress, trackAppScreenRender)
-import Prelude (class Show, bind, pure, ($), (==), (||), unit, not, discard)
-import PrestoDOM (Eval, continue, exit, continueWithCmd)
+import MerchantConfig.Types (CityConfig)
+import Prelude (class Show, bind, pure, ($), (==), (||), unit, not, discard, (<), (&&))
+import PrestoDOM (Eval, continue, continueWithCmd, exit, updateAndExit)
 import PrestoDOM.Types.Core (class Loggable)
 import Screens (getScreen, ScreenName(..))
 import Screens.Types (ChooseCityScreenStage(..), ChooseCityScreenState)
@@ -41,9 +44,10 @@ data Action = BackPressed
             | UpdatePermission ChooseCityScreenState
             | UpdateLocationPermissionState
             | NoAction
+            | CurrentLocationCallBack String String
             -- | MenuButtonAction2 MenuButtonController.Action
 
-data ScreenOutput = WelcomeScreen | SelectLanguageScreen 
+data ScreenOutput = WelcomeScreen | SelectLanguageScreen | GetLatLong ChooseCityScreenState 
 
 eval :: Action -> ChooseCityScreenState -> Eval Action ScreenOutput ChooseCityScreenState
 
@@ -77,19 +81,24 @@ eval (PrimaryButtonAC PrimaryButtonController.OnClick) state = do
     -- continue state{props{currentStage = DETECT_LOCATION}}
     -- else if state.props.currentStage == DETECT_LOCATION then continue state{props{currentStage = CAROUSEL}}
     else if state.props.currentStage == SELECT_CITY then do
-      continue state{props{currentStage = DETECT_LOCATION}, data{ locationSelected =  state.props.radioMenuFocusedCity}}
+      continue state{props{currentStage = DETECT_LOCATION}, data{ locationSelected = Just state.props.radioMenuFocusedCity}}
     else if state.props.currentStage == SELECT_LANG then do
       _ <- pure $ setValueToLocalStore LANGUAGE_KEY state.props.radioMenuFocusedLang
       continue state {props{currentStage = DETECT_LOCATION, selectedLanguage =  state.props.radioMenuFocusedLang}}
     else do
-      _ <- pure $ setValueToLocalStore DRIVER_LOCATION state.data.locationSelected
-      let mbCity = DA.find (\city' -> city'.cityName == state.data.locationSelected) state.data.config.cityConfig
-      case mbCity of 
-        Just city -> do
-          _ <- pure $ setValueToLocalStore SHOW_SUBSCRIPTIONS if city.showSubscriptions then "true" else "false"
-          pure unit
-        Nothing -> pure unit
-      exit WelcomeScreen
+      case state.data.locationSelected of 
+        Just location -> do
+          _ <- pure $ setValueToLocalStore DRIVER_LOCATION location
+          let mbCity = DA.find (\city' -> city'.cityName == location) state.data.config.cityConfig
+          case mbCity of 
+            Just city -> do
+              _ <- pure $ setValueToLocalStore SHOW_SUBSCRIPTIONS if city.showSubscriptions then "true" else "false"
+              pure unit
+            Nothing -> pure unit
+          exit WelcomeScreen
+        Nothing -> continue state
+          
+      
 
 eval (MenuButtonAction (MenuButtonController.OnSelection btnState)) state = 
   if state.props.currentStage == SELECT_CITY then
@@ -99,17 +108,13 @@ eval (MenuButtonAction (MenuButtonController.OnSelection btnState)) state =
 
 -- eval (MenuButtonAction2 (MenuButtonController.OnSelection btnState)) state = continue state { data { locationSelected = btnState.text.value }}
 
-eval (ChangeStage newStage) state = continue state{props{currentStage = newStage, selectedLanguage = state.props.updatedLanguage}, data {locationSelected = state.data.updatedDriverLocation}}
+eval (ChangeStage newStage) state = continue state{props{currentStage = newStage}, data {locationSelected = state.data.locationSelected}}
 
 eval (GenericHeaderAC GenericHeaderController.PrefixImgOnClick) state = continue state{props{currentStage = DETECT_LOCATION}}
 
 eval (LocationPermissionCallBack isLocationPermissionEnabled) state = do
---   _ <- pure $ spy "location permission" isLocationPermissionEnabled
+  _ <- pure $ spy "location permission" isLocationPermissionEnabled
   if isLocationPermissionEnabled then do
-    let currentDriverLat = fromMaybe 0.0 $ Number.fromString $ getValueToLocalStore LAST_KNOWN_LAT
-        currentDriverLon = fromMaybe 0.0 $ Number.fromString $ getValueToLocalStore LAST_KNOWN_LON
-        _ = spy "currentDriverLat" currentDriverLat 
-        _ = spy "currentDriverLon" LAST_KNOWN_LON 
     _ <- pure $ spy "location permission" isLocationPermissionEnabled
     continue state { props {currentStage = DETECT_LOCATION }}
   else continue state
@@ -121,6 +126,29 @@ eval UpdateLocationPermissionState state = continue state {props {isLocationPerm
 
 eval (UpdatePermission updatedState) state = do
   _ <- pure $ spy "testing " updatedState
-  continue updatedState {props {currentStage = if updatedState.props.isLocationPermissionGiven then DETECT_LOCATION else updatedState.props.currentStage}}
+  let newState = updatedState {props {currentStage = if updatedState.props.isLocationPermissionGiven then DETECT_LOCATION else updatedState.props.currentStage}}
+  -- if isNothing state.data.locationSelected
+  --   then
+  --     updateAndExit newState $ GetLatLong newState
+  --   else 
+  continue newState
+
+eval (CurrentLocationCallBack lat long) state = do
+  _ <- pure $ spy "testing2 : " lat
+  _ <- pure $ spy "testing3 : " long
+  let driverLat = fromMaybe 0.0 $ Number.fromString lat
+      driverLon = fromMaybe 0.0 $ Number.fromString long
+  if driverLat == 0.0 && driverLon == 0.0 then do
+    continue state {data{ locationDetectionFailed = true}}
+  else do
+    let distanceFromBangalore = getDistanceBwCordinates (fromMaybe 0.0 $ Number.fromString  lat) (fromMaybe 0.0 $ Number.fromString long) 12.9716 77.5946
+        initialAccumulator = Tuple "Bangalore" distanceFromBangalore
+        result = DA.foldl (\acc city -> closestCity acc city driverLat driverLon) initialAccumulator state.data.config.cityConfig
+    continue state{ data {locationSelected = Just $ fst result}, props {radioMenuFocusedCity = fst result}}
 
 eval _ state = continue state
+
+closestCity :: (Tuple String Number) -> CityConfig -> Number -> Number -> (Tuple String Number)
+closestCity (Tuple cityName distance) city driverLat driverLon = do
+  let distanceFromCity = getDistanceBwCordinates driverLat driverLon city.cityLat city.cityLong
+  if distanceFromCity < distance then (Tuple city.cityName distanceFromCity) else (Tuple cityName distance)

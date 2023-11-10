@@ -682,7 +682,7 @@ const hindiStrings = {
   NO_MANUAL_PAYMENTS_DESC : "शेष राशि चुकाने के लिए आपका भुगतान इतिहास, यदि कोई हो, यहां दिखाई देगा।",
   PAYMENT_HISTORY : "भुगतान इतिहास",
   TAP_A_PLAN_TO_VIEW_DETAILS : "विवरण देखने के लिए किसी योजना पर टैप करें",
-  HOW_IT_WORKS : "ऑटोपे कैसे काम करता है?",
+  HOW_IT_WORKS : "जानिए यह कैसे काम करता है",
   ZERO_COMMISION : "शून्य कमीशन",
   EARN_TODAY_PAY_TOMORROW : "आज कमाएँ, कल भुगतान करें",
   PAY_ONLY_IF_YOU_TAKE_RIDES : "भुगतान केवल तभी करें जब आप सवारी लें",
@@ -1060,7 +1060,8 @@ const hindiStrings = {
   CHANGE_CITY: "शहर बदलें",
   UPLOAD_REGISTRATION_CERTIFICATE_STR : "पंजीकरण प्रमाणपत्र अपलोड करें",
   TAKE_A_PHOTO : "एक तस्वीर लें", 
-  GALLERY : "गैलरी"
+  GALLERY : "गैलरी",
+  GET_FULL_PAYMENT : "ग्राहक से सीधा और पूरा भुगतान लिजिये",
 }
 
 

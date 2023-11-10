@@ -647,7 +647,7 @@ const mlStrings = {
   NO_MANUAL_PAYMENTS_DESC : "കുടിശ്ശിക തീർക്കുന്നതിനുള്ള നിങ്ങളുടെ പേയ്‌മെന്റ് ചരിത്രം എന്തെങ്കിലും ഉണ്ടെങ്കിൽ ഇവിടെ ദൃശ്യമാകും.",
   PAYMENT_HISTORY : "പേയ്‌മെന്റ് ചരിത്രം",
   TAP_A_PLAN_TO_VIEW_DETAILS : "വിശദാംശങ്ങൾ കാണാൻ ഒരു പ്ലാൻ ടാപ്പ് ചെയ്യുക",
-  HOW_IT_WORKS : "എങ്ങനെയാണ് ഓട്ടോപേ പ്രവർത്തിക്കുന്നത്?",
+  HOW_IT_WORKS : "ഇത് എങ്ങനെ പ്രവർത്തിക്കുന്നു",
   ZERO_COMMISION : "ZERO കമ്മീഷൻ",
   EARN_TODAY_PAY_TOMORROW : "ഇന്ന് സമ്പാദിക്കുക, നാളെ പണമടയ്ക്കുക",
   PAY_ONLY_IF_YOU_TAKE_RIDES : "നിങ്ങൾ സവാരി നടത്തിയാൽ മാത്രം പണം നൽകുക",
@@ -1005,7 +1005,8 @@ const mlStrings = {
   CHANGE_CITY: "നഗരം മാറ്റുക",
   UPLOAD_REGISTRATION_CERTIFICATE_STR : "രജിസ്ട്രേഷൻ സർട്ടിഫിക്കറ്റ് അപ്ലോഡ് ചെയ്യുക",
   TAKE_A_PHOTO : "ഒരു പടം എടുക്കു", 
-  GALLERY : "ഗാലറി"
+  GALLERY : "ഗാലറി",
+  GET_FULL_PAYMENT : "ക്ലയന്റിനൊപ്പം നിങ്ങൾക്ക് താഴെക്കാണുന്ന രീതിയിൽ പൂർത്തിയാക്കുക",
 }
 
 export function getStringValue(key) {

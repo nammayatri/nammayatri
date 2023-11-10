@@ -303,6 +303,7 @@
       "ny_ic_loc_red" : true,
       "ny_ic_location_access" : true,
       "ny_ic_location_track" : true,
+      "ny_ic_lock" : true,
       "ny_ic_logout_grey" : true,
       "ny_ic_map_pin" : true,
       "ny_ic_media" : true,

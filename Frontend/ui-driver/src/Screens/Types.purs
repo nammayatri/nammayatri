@@ -2061,13 +2061,12 @@ type ChooseCityScreenState = {
 
 type ChooseCityScreenData = {
   config :: AppConfig,
-  locationSelected :: String,
-  updatedDriverLocation :: String
+  locationSelected :: Maybe String,
+  locationDetectionFailed :: Boolean
 }
 
 type ChooseCityScreenProps = {
   selectedLanguage :: String,
-  updatedLanguage :: String,
   currentStage :: ChooseCityScreenStage,
   isLocationPermissionGiven :: Boolean,
   radioMenuFocusedLang :: String,

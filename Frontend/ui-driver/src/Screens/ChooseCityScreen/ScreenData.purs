@@ -2,9 +2,10 @@ module Screens.ChooseCityScreen.ScreenData where
 
 import MerchantConfig.DefaultConfig as DC
 import Screens.Types (ChooseCityScreenStage(..), ChooseCityScreenState)
-import Prelude (map)
+import Prelude (map, (<>))
 import Common.Types.App (YoutubeData, CarouselData)
 import Foreign.Object (empty)
+import Data.Maybe as Mb
 import Common.Styles.Colors as Color
 import Language.Strings (getString)
 import Language.Types (STR(..))
@@ -13,12 +14,11 @@ initData :: ChooseCityScreenState
 initData = {
   data : {
     config : DC.config,
-    locationSelected : "--",
-    updatedDriverLocation : "--"
+    locationSelected : Mb.Nothing,
+    locationDetectionFailed : false
   },
   props : {
     selectedLanguage: "EN_US",
-    updatedLanguage : "EN_US",
     currentStage : ENABLE_PERMISSION,
     isLocationPermissionGiven : false,
     radioMenuFocusedLang : "",

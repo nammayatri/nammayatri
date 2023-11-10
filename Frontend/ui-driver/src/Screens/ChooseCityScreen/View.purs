@@ -12,31 +12,32 @@ import Components.SelectMenuButton as MenuButtonController
 import Components.SelectMenuButton.View as MenuButton
 import Data.Array as DA
 import Data.Function.Uncurried (runFn2)
+import Data.Maybe as Mb
 import Debug (spy)
 import Effect (Effect)
 import Engineering.Helpers.Commons (getNewIDWithTag)
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
+import JBridge (isLocationPermissionEnabled)
 import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import MerchantConfig.Types (CityConfig)
-import Prelude (Unit, const, map, ($), (<<<), (<>), bind, pure, unit, (==))
+import Prelude (Unit, const, map, ($), (<<<), (<>), bind, pure, unit, (==), discard)
 import PrestoDOM (Accessiblity(..), Gradient(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Prop, Screen, Visibility(..), accessibility, afterRender, alignParentBottom, alpha, background, color, cornerRadius, fontStyle, gradient, gravity, height, id, imageUrl, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, relativeLayout, stroke, text, textSize, textView, visibility, weight, width)
 import PrestoDOM.Animation as PrestoAnim
 import Screens.ChooseCityScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.Types (ChooseCityScreenStage(..), ChooseCityScreenState)
-import Styles.Colors as Color
 import Storage (getValueToLocalStore, KeyStore(..))
+import Styles.Colors as Color
 
 screen :: ChooseCityScreenState -> Screen Action ChooseCityScreenState ScreenOutput
 screen initialState =
   { initialState
   , view
   , name: "ChooseCity"
-  , globalEvents:  [(\ push -> do
-    _ <- pure $ spy "hello " "abc"
+  , globalEvents:  [(\ push -> do    
     _ <- JB.storeCallBackDriverLocationPermission push LocationPermissionCallBack
     pure $ pure unit)]
   , eval:
@@ -57,7 +58,14 @@ view push state =
         , orientation VERTICAL
         , gravity CENTER
         , onBackPressed push $ const BackPressed
-        , afterRender push $ const AfterRender
+        , afterRender (\action -> do
+          isLocationPermissionEnabled <- JB.isLocationPermissionEnabled unit
+          if isLocationPermissionEnabled then
+            JB.getCurrentPositionWithTimeout push CurrentLocationCallBack 2000 
+          else pure unit
+          _ <- push action
+          pure unit
+          ) (const AfterRender)
         -- , background if DA.any (_ == state.props.currentStage) [ENABLE_PERMISSION, CAROUSEL, DETECT_LOCATION] then "#FFFAED" else Color.white900
         , gradient (Linear 0.0 ["#F5F8FF", "#E2EAFF"])
         , padding $ PaddingBottom 24
@@ -157,17 +165,20 @@ currentLocationView state push =
   ][  imageView
       [ height $ V 220
       , width $ V 220
-      , imageWithFallback $ fetchImage FF_ASSET (getLocationMapImage state.data.updatedDriverLocation)
+      , imageWithFallback $ fetchImage FF_ASSET (getLocationMapImage state.data.locationSelected)
       
       ]
     , textView $
-      [ text $ getString YOUR_DETECTED_LOCATION_IS
+      [ text $ getString case state.data.locationDetectionFailed, Mb.isNothing state.data.locationSelected of
+                            false, true -> DETECTING_LOCATION
+                            true, true -> UNABLE_TO_DETECT_YOUR_LOCATION
+                            _, false -> YOUR_DETECTED_LOCATION_IS
       , gravity CENTER
       , color Color.black700
       , margin $ MarginTop 24
       ] <> FontStyle.paragraphText TypoGraphy
     , textView $
-      [ text state.data.updatedDriverLocation
+      [ text if Mb.isJust state.data.locationSelected then (Mb.fromMaybe "--" state.data.locationSelected) else "--"
       , gravity CENTER
       , color Color.black800
       , margin $ MarginTop 4
@@ -204,13 +215,13 @@ currentLanguageView state push =
           , margin $ MarginTop 2
         ] <> FontStyle.body3 TypoGraphy
       , textView $ [
-          text $ getLangFromVal state.props.updatedLanguage
+          text $ getLangFromVal state.props.selectedLanguage
           , gravity CENTER
           , color Color.black900
         ] <> FontStyle.subHeading1 TypoGraphy
       ]
     , textView $ [
-      text $ getString CHANGE_LANGUAGE_STR <> if getValueToLocalStore LANGUAGE_KEY == "EN_US" then " (" <> getChangeLanguageText state.data.updatedDriverLocation <> ")" else ""
+      text $ getString CHANGE_LANGUAGE_STR <> if getValueToLocalStore LANGUAGE_KEY == "EN_US" then " (" <> getChangeLanguageText state.data.locationSelected <> ")" else ""
       , gravity CENTER
       , color Color.blue800
       , onClick push $ const $ ChangeStage SELECT_LANG

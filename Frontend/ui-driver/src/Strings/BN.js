@@ -683,7 +683,7 @@ const bengaliStrings = {
   PLAN : "পরিকল্পনা",
   DAY : "দিন",
   TAP_A_PLAN_TO_VIEW_DETAILS: "বিস্তারিত দেখতে একটি পরিকল্পনা আলতো চাপুন",
-  HOW_IT_WORKS : "কিভাবে অটোপে কাজ করে?",
+  HOW_IT_WORKS : "এটি কিভাবে কাজ করে",
   ZERO_COMMISION : "জিরো কমিশন",
   EARN_TODAY_PAY_TOMORROW : "আজই উপার্জন করুন, আগামীকাল অর্থ প্রদান করুন",
   PAY_ONLY_IF_YOU_TAKE_RIDES : "শুধুমাত্র আপনি যদি রাইড করেন তবেই অর্থ প্রদান করুন",
@@ -1038,7 +1038,8 @@ const bengaliStrings = {
   CHANGE_CITY : "শহর পরিবর্তন করুন",
   UPLOAD_REGISTRATION_CERTIFICATE_STR : "রেজিস্ট্রেশন সার্টিফিকেট আপলোড করুন",
   TAKE_A_PHOTO : "একটি ছবি তুলুন", 
-  GALLERY : "গ্যালারি"
+  GALLERY : "গ্যালারি",
+  GET_FULL_PAYMENT : "গ্রাহক থেকে সরাসরি এবং পূর্ণ পেমেন্ট গ্রহণ করুন",
 }
 
 export function getStringValue(key) {

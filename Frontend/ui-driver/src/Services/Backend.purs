@@ -162,7 +162,7 @@ makeTriggerOTPReq    mobileNumber = TriggerOTPReq
       "mobileNumber"      : mobileNumber,
       "mobileCountryCode" : "+91",
       "merchantId" : if (SC.getMerchantId "") == "NA" then getValueToLocalNativeStore MERCHANT_ID else (SC.getMerchantId "" ),
-      "merchantOperatingCity" : if operatingCity == "__failed" then Nothing else Just operatingCity
+      "merchantOperatingCity" : if operatingCity == "__failed" || operatingCity == "--" then Nothing else Just operatingCity
     }
 
 

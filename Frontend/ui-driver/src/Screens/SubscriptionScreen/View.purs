@@ -1058,8 +1058,9 @@ planCardView push state isSelected clickable' action isSelectedLangTamil showBan
         [ height WRAP_CONTENT
         , width MATCH_PARENT
         , background if isSelected && not isMyPlan && not isIntroductory then Color.blue600 else Color.white900
-        , stroke $ "1," <> (if isSelected && isActivePlan then Color.transparent
-                            else if isSelected && not isMyPlan || isIntroductory then Color.blue800 
+        , stroke $ "1," <> (if isIntroductory then Color.grey900
+                            else if isSelected && isActivePlan then Color.transparent
+                            else if isSelected && not isMyPlan then Color.blue800 
                             else Color.grey900)
         , padding $ Padding 16 12 16 (if isMyPlan then 16 else 12)
         , cornerRadius 8.0
@@ -1436,12 +1437,18 @@ planPriceView fares frequency isSelectedLangTamil isIntroductory =
       , margin $ MarginLeft 3
       , color if isIntroductory then Color.black600 else Color.black800
       ] <> if isSelectedLangTamil then FontStyle.body4 TypoGraphy else FontStyle.body7 TypoGraphy
-   , imageView 
-     [ imageWithFallback $ HU.fetchImage HU.FF_ASSET "ny_ic_discount" 
-     , height $ V 16  
-     , width $ V 16
-     , margin $ MarginLeft 4
-     , visibility if isIntroductory then VISIBLE else GONE
+   , linearLayout
+     [ height WRAP_CONTENT
+      , width WRAP_CONTENT
+      , padding $ Padding 5 5 5 5
+      , visibility if isIntroductory then VISIBLE else GONE
+      , background Color.blue600
+     ][ imageView 
+         [ imageWithFallback $ HU.fetchImage HU.FF_ASSET "ny_ic_lock" 
+         , height $ V 10  
+         , width $ V 10
+         , margin $ MarginLeft 4
+         ]
      ]
    ]
 
@@ -1804,7 +1811,7 @@ lottieView state viewId margin' padding'=
     lottieAnimationView
     [ id (getNewIDWithTag viewId)
     , afterRender (\action-> do
-                  void $ pure $ JB.startLottieProcess JB.lottieAnimationConfig {rawJson = lottieJsonAccordingToLang (isOnFreeTrial FunctionCall), lottieId = (getNewIDWithTag viewId), scaleType = "CENTER_CROP", forceToUseRemote = true}
+                  void $ pure $ JB.startLottieProcess JB.lottieAnimationConfig {rawJson = lottieJsonAccordingToLang (isOnFreeTrial FunctionCall) state.props.joinPlanProps.isIntroductory, lottieId = (getNewIDWithTag viewId), scaleType = "CENTER_CROP", forceToUseRemote = false}
                   )(const NoAction)
     , height $ V 35
     , width MATCH_PARENT
@@ -1828,11 +1835,24 @@ offerCardBannerView push useMargin visibility' isPlanCard offerBannerProps isFre
         Banner.view (push <<< OfferCardBanner) (offerCardBannerConfig isPlanCard offerBannerProps)
     ]
 
-lottieJsonAccordingToLang :: Boolean -> String
-lottieJsonAccordingToLang isOnFreeTrial = 
+lottieJsonAccordingToLang :: Boolean -> Boolean -> String
+lottieJsonAccordingToLang isOnFreeTrial isIntroductory = 
   (HU.getAssetsBaseUrl FunctionCall) <> case getValueToLocalStore LANGUAGE_KEY of 
-    "HI_IN" -> if isOnFreeTrial then "lottie/ny_ic_subscription_info_hindi_01.json" else "lottie/ny_ic_subscription_info_hindi_02.json"
-    "KN_IN" -> if isOnFreeTrial then "lottie/ny_ic_subscription_info_kannada_01.json" else "lottie/ny_ic_subscription_info_kannada_02.json"
-    "TA_IN" -> if isOnFreeTrial then "lottie/ny_ic_subscription_info_tamil_01.json" else "lottie/ny_ic_subscription_info_tamil_02.json"
-    "BN_IN" -> if isOnFreeTrial then "lottie/ny_ic_subscription_info_bengali_01.json" else "lottie/ny_ic_subscription_info_bengali_02.json"
-    _ -> if isOnFreeTrial then "lottie/ny_ic_subscription_info_01.json" else "lottie/ny_ic_subscription_info_02.json"
+    "HI_IN" -> if isIntroductory then "lottie/ny_ic_subscription_info_hindi_03.json"
+               else if isOnFreeTrial then "lottie/ny_ic_subscription_info_hindi_01.json" 
+               else "lottie/ny_ic_subscription_info_hindi_02.json"
+    "KN_IN" -> if isIntroductory then "lottie/ny_ic_subscription_info_kannada_02.json"
+               else if isOnFreeTrial then "lottie/ny_ic_subscription_info_kannada_01.json" 
+               else "lottie/ny_ic_subscription_info_kannada_02.json"
+    "TA_IN" -> if isIntroductory then "lottie/ny_ic_subscription_info_tamil_02.json"
+               else if isOnFreeTrial then "lottie/ny_ic_subscription_info_tamil_01.json" 
+               else "lottie/ny_ic_subscription_info_tamil_02.json"
+    "BN_IN" -> if isIntroductory then "lottie/ny_ic_subscription_info_bengali_02.json"
+               else if isOnFreeTrial then "lottie/ny_ic_subscription_info_bengali_01.json" 
+               else "lottie/ny_ic_subscription_info_bengali_02.json"
+    "TE_IN" -> if isIntroductory then "lottie/ny_ic_subscription_info_telugu_03.json"
+               else if isOnFreeTrial then "lottie/ny_ic_subscription_info_01.json" 
+               else "lottie/ny_ic_subscription_info_02.json"
+    _       -> if isIntroductory then "lottie/ny_ic_subscription_info_03.json"
+               else if isOnFreeTrial then "lottie/ny_ic_subscription_info_01.json" 
+               else "lottie/ny_ic_subscription_info_02.json"
