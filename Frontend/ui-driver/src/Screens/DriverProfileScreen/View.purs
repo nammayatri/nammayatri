@@ -408,7 +408,7 @@ tabImageView state push =
           imageView[ 
             height $ V 88
           , width $ V 88
-          , imageWithFallback $ fetchImage FF_ASSET "ic_new_avatar"
+          , imageWithFallback $ fetchImage FF_ASSET "ny_ic_new_avatar_profile"
           ]
         else 
           linearLayout [

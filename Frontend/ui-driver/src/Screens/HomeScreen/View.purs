@@ -691,7 +691,7 @@ driverDetail push state =
         ][ imageView
            [ width $ V 42
            , height $ V 42
-           , imageWithFallback $ HU.fetchImage HU.FF_ASSET "ic_new_avatar"
+           , imageWithFallback $ HU.fetchImage HU.FF_ASSET "ny_ic_new_avatar_profile"
            ]
          ]
       ]
