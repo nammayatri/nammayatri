@@ -17,6 +17,8 @@ module Types.DBSync
   )
 where
 
+import Data.Aeson (Object)
+import Database.Beam.Postgres (Connection)
 import EulerHS.KVConnector.DBSync
 import EulerHS.Language as EL
 import EulerHS.Prelude
@@ -37,7 +39,9 @@ data Env = Env
   { _streamRedisInfo :: Text,
     _counterHandles :: Event.DBSyncCounterHandler,
     _kafkaConnection :: Producer.KafkaProducer,
-    _dontEnableDbTables :: [Text]
+    _pgConnection :: Connection,
+    _dontEnableDbTables :: [Text],
+    _dontEnableForKafka :: [Text]
   }
 
 type Flow = EL.ReaderFlow Env
@@ -50,16 +54,16 @@ data StateRef = StateRef
   }
 
 data DBCommand
-  = Create DBCommandVersion Tag Double DBName DBCreateObject
-  | Update DBCommandVersion Tag Double DBName DBUpdateObject
-  | Delete DBCommandVersion Tag Double DBName DBDeleteObject
-  deriving (Generic, ToJSON, FromJSON)
+  = Create DBCommandVersion Tag Double DBName Object
+  | Update DBCommandVersion Tag Double DBName Object
+  | Delete DBCommandVersion Tag Double DBName Object
+  deriving (Generic, FromJSON)
 
-data CreateDBCommand = CreateDBCommand EL.KVDBStreamEntryID DBCommandVersion Tag Double DBName DBCreateObject
+data CreateDBCommand = CreateDBCommand EL.KVDBStreamEntryID DBCommandVersion Tag Double DBName Object
 
-data UpdateDBCommand = UpdateDBCommand EL.KVDBStreamEntryID DBCommandVersion Tag Double DBName DBUpdateObject
+data UpdateDBCommand = UpdateDBCommand EL.KVDBStreamEntryID DBCommandVersion Tag Double DBName Object
 
-data DeleteDBCommand = DeleteDBCommand EL.KVDBStreamEntryID DBCommandVersion Tag Double DBName DBDeleteObject
+data DeleteDBCommand = DeleteDBCommand EL.KVDBStreamEntryID DBCommandVersion Tag Double DBName Object
 
 deriving stock instance Show EL.KVDBStreamEntryID
 
