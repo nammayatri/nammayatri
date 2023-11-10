@@ -82,6 +82,9 @@ mkBreakupList mkPrice mkBreakupItem fareParams = do
       mbFixedGovtRateCaption = "FIXED_GOVERNMENT_RATE"
       mbFixedGovtRateItem = mkBreakupItem mbFixedGovtRateCaption . mkPrice <$> fareParams.govtCharges
 
+      customerCancellationDuesCaption = "CUSTOMER_CANCELLATION_DUES"
+      customerCancellationDues = mkBreakupItem customerCancellationDuesCaption (mkPrice $ round fareParams.customerCancellationDues)
+
       detailsBreakups = processFareParamsDetails dayPartRate fareParams.fareParametersDetails
   catMaybes
     [ Just totalFareItem,
@@ -93,7 +96,8 @@ mkBreakupList mkPrice mkBreakupItem fareParams = do
       mbServiceChargeItem,
       mbSelectedFareItem,
       mkCustomerExtraFareItem,
-      mkExtraTimeFareCaption
+      mkExtraTimeFareCaption,
+      Just customerCancellationDues
     ]
     <> detailsBreakups
   where
@@ -128,6 +132,7 @@ fareSum fareParams = do
   pureFareSum fareParams
     + fromMaybe 0 fareParams.driverSelectedFare
     + fromMaybe 0 fareParams.customerExtraFee
+    + round fareParams.customerCancellationDues
 
 -- Pure fare without customerExtraFee and driverSelectedFare
 pureFareSum :: FareParameters -> Money
@@ -152,7 +157,8 @@ data CalculateFareParametersParams = CalculateFareParametersParams
     avgSpeedOfVehicle :: Maybe AvgSpeedOfVechilePerKm,
     driverSelectedFare :: Maybe Money,
     customerExtraFee :: Maybe Money,
-    nightShiftCharge :: Maybe Money
+    nightShiftCharge :: Maybe Money,
+    customerCancellationDues :: HighPrecMoney
   }
 
 calculateFareParameters ::
@@ -201,6 +207,7 @@ calculateFareParameters params = do
                   fullCompleteRideCost
                   (DFP.findFPSlabsDetailsSlabByDistance params.distance det.slabs & (.platformFeeInfo))
                   fareParametersDetails,
+            customerCancellationDues = params.customerCancellationDues,
             ..
           }
   logTagInfo "FareCalculator" $ "Fare parameters calculated: " +|| fareParams ||+ ""

@@ -47,7 +47,7 @@ cancelSearch :: RegToken -> Id AbeEstimate.Estimate -> ClientM AppSelect.CancelA
 selectQuote2 :<|> selectList :<|> selectResult :<|> cancelSearch = client (Proxy :: Proxy AppSelect.API)
 
 cancelRide :: Id BRB.Booking -> Text -> CancelAPI.CancelReq -> ClientM APISuccess
-cancelRide = client (Proxy :: Proxy CancelAPI.API)
+cancelRide = client (Proxy :: Proxy CancelAPI.CancelAPI)
 
 mkAppCancelReq :: AbeCRC.CancellationStage -> CancelAPI.CancelReq
 mkAppCancelReq stage =

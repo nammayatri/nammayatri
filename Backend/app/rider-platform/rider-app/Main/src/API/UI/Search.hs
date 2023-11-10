@@ -155,6 +155,7 @@ oneWaySearch personId bundleVersion clientVersion device req = do
 
 rentalSearch ::
   ( CacheFlow m r,
+    EncFlow m r,
     EsqDBFlow m r,
     EsqDBReplicaFlow m r,
     HasHttpClientOptions r c,

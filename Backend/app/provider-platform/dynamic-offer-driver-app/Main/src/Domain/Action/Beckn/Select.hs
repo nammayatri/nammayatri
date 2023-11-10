@@ -65,7 +65,7 @@ handler merchant sReq estimate = do
   QDQ.setInactiveAllDQByEstId sReq.estimateId now
   farePolicy <- getFarePolicy searchReq.merchantOperatingCityId estimate.vehicleVariant searchReq.area
 
-  searchTry <- createNewSearchTry farePolicy searchReq
+  searchTry <- createNewSearchTry farePolicy searchReq searchReq.customerCancellationDues
   driverPoolConfig <- getDriverPoolConfig searchReq.merchantOperatingCityId (Just searchTry.vehicleVariant) searchReq.estimatedDistance
   goHomeCfg <- CQGHC.findByMerchantOpCityId searchReq.merchantOperatingCityId
   let driverExtraFeeBounds = DFarePolicy.findDriverExtraFeeBoundsByDistance searchReq.estimatedDistance <$> farePolicy.driverExtraFeeBounds
@@ -83,8 +83,8 @@ handler merchant sReq estimate = do
           }
     _ -> return ()
   where
-    createNewSearchTry :: DFP.FullFarePolicy -> DSR.SearchRequest -> Flow DST.SearchTry
-    createNewSearchTry farePolicy searchReq = do
+    createNewSearchTry :: DFP.FullFarePolicy -> DSR.SearchRequest -> HighPrecMoney -> Flow DST.SearchTry
+    createNewSearchTry farePolicy searchReq customerCancellationDues = do
       mbLastSearchTry <- QST.findLastByRequestId searchReq.id
       fareParams <-
         calculateFareParameters
@@ -97,7 +97,8 @@ handler merchant sReq estimate = do
               avgSpeedOfVehicle = Nothing,
               driverSelectedFare = Nothing,
               customerExtraFee = sReq.customerExtraFee,
-              nightShiftCharge = Nothing
+              nightShiftCharge = Nothing,
+              ..
             }
       let estimatedFare = fareSum fareParams
           pureEstimatedFare = pureFareSum fareParams

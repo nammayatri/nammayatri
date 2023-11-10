@@ -64,6 +64,7 @@ library
       API.Internal
       API.Internal.Auth
       API.Internal.BulkLocUpdate
+      API.Internal.CustomerCancellationDues
       API.Internal.DriverReferee
       API.Internal.FeedbackForm
       API.UI
@@ -140,6 +141,7 @@ library
       Domain.Action.Dashboard.Volunteer
       Domain.Action.Internal.Auth
       Domain.Action.Internal.BulkLocUpdate
+      Domain.Action.Internal.CustomerCancellationDues
       Domain.Action.Internal.DriverReferee
       Domain.Action.Internal.FeedbackForm
       Domain.Action.UI.Call
@@ -188,6 +190,7 @@ library
       Domain.Types.BookingCancellationReason
       Domain.Types.BusinessEvent
       Domain.Types.CallStatus
+      Domain.Types.CancellationCharges
       Domain.Types.CancellationReason
       Domain.Types.City
       Domain.Types.Coins.CoinHistory
@@ -321,6 +324,7 @@ library
       SharedLogic.MessageBuilder
       SharedLogic.Payment
       SharedLogic.Person
+      SharedLogic.RiderDetails
       SharedLogic.SearchTryLocker
       SharedLogic.SyncRide
       Storage.Beam.BapMetadata
@@ -330,6 +334,7 @@ library
       Storage.Beam.BookingCancellationReason
       Storage.Beam.BusinessEvent
       Storage.Beam.CallStatus
+      Storage.Beam.CancellationCharges
       Storage.Beam.CancellationReason
       Storage.Beam.Coins.CoinHistory
       Storage.Beam.Coins.CoinsConfig
@@ -448,6 +453,7 @@ library
       Storage.Queries.BookingCancellationReason
       Storage.Queries.BusinessEvent
       Storage.Queries.CallStatus
+      Storage.Queries.CancellationCharges
       Storage.Queries.CancellationReason
       Storage.Queries.Coins.CoinHistory
       Storage.Queries.Coins.CoinsConfig

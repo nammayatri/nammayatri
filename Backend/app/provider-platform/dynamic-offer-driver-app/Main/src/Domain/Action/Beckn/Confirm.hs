@@ -46,6 +46,7 @@ import qualified SharedLogic.CallBAP as BP
 import qualified SharedLogic.DriverPool as DP
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
+import qualified SharedLogic.RiderDetails as SRD
 import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
 import Storage.CachedQueries.Merchant as QM
 import Storage.Queries.Booking as QRB
@@ -113,7 +114,7 @@ handler ::
 handler transporter req quote = do
   booking <- QRB.findById req.bookingId >>= fromMaybeM (BookingDoesNotExist req.bookingId.getId)
   now <- getCurrentTime
-  (riderDetails, isNewRider) <- getRiderDetails transporter.id req.customerMobileCountryCode req.customerPhoneNumber now req.nightSafetyCheck
+  (riderDetails, isNewRider) <- SRD.getRiderDetails transporter.id req.customerMobileCountryCode req.customerPhoneNumber now req.nightSafetyCheck
   unless isNewRider $ QRD.updateNightSafetyChecks riderDetails.id req.nightSafetyCheck
   unless (booking.status == DRB.NEW) $
     throwError (BookingInvalidStatus $ show booking.status)
@@ -274,32 +275,6 @@ handler transporter req quote = do
         bppUIUrl
           { --TODO: find a way to build it using existing types from Routes
             baseUrlPath = baseUrlPath bppUIUrl <> "/driver/location/" <> rideid
-          }
-
-getRiderDetails :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r) => Id DM.Merchant -> Text -> Text -> UTCTime -> Bool -> m (DRD.RiderDetails, Bool)
-getRiderDetails merchantId customerMobileCountryCode customerPhoneNumber now nightSafetyCheck =
-  QRD.findByMobileNumberAndMerchant customerPhoneNumber merchantId >>= \case
-    Nothing -> fmap (,True) . encrypt =<< buildRiderDetails
-    Just a -> return (a, False)
-  where
-    buildRiderDetails = do
-      id <- generateGUID
-      otp <- generateOTPCode
-      return $
-        DRD.RiderDetails
-          { id = id,
-            mobileCountryCode = customerMobileCountryCode,
-            merchantId,
-            mobileNumber = customerPhoneNumber,
-            createdAt = now,
-            updatedAt = now,
-            referralCode = Nothing,
-            referredByDriver = Nothing,
-            referredAt = Nothing,
-            hasTakenValidRide = False,
-            hasTakenValidRideAt = Nothing,
-            otpCode = Just otp,
-            nightSafetyChecks = nightSafetyCheck
           }
 
 buildRideDetails ::

@@ -91,7 +91,8 @@ buildSearchReq merchantId subscriber req = do
         device = Nothing,
         routePoints = buildRoutePoints =<< intent.fulfillment.tags, --------TODO------Take proper input---------
         customerLanguage = customerLanguage,
-        disabilityTag = disabilityTag
+        disabilityTag = disabilityTag,
+        customerPhoneNum = buildCustomerPhoneNumber =<< intent.fulfillment.customer
       }
 
 getDistance :: Search.TagGroups -> Maybe Meters
@@ -120,3 +121,8 @@ buildRoutePoints :: Search.TagGroups -> Maybe [Maps.LatLong]
 buildRoutePoints tagGroups = do
   tagValue <- getTag "route_info" "route_points" tagGroups
   decode $ encodeUtf8 tagValue
+
+buildCustomerPhoneNumber :: Search.Customer -> Maybe Text
+buildCustomerPhoneNumber Search.Customer {..} = do
+  tagValue <- getTag "customer_info" "customer_phone_number" person.tags
+  readMaybe $ T.unpack tagValue

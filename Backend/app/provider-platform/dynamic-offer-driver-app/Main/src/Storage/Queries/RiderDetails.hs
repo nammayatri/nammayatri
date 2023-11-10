@@ -79,6 +79,34 @@ updateNightSafetyChecks (Id riderId) nightSafetyChecks = do
     [Se.Set BeamRD.nightSafetyChecks nightSafetyChecks, Se.Set BeamRD.updatedAt now]
     [Se.Is BeamRD.id (Se.Eq riderId)]
 
+updateCancellationDues :: MonadFlow m => Id RiderDetails -> HighPrecMoney -> m ()
+updateCancellationDues riderId dues = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set BeamRD.cancellationDues dues,
+      Se.Set BeamRD.updatedAt now
+    ]
+    [Se.Is BeamRD.id (Se.Eq riderId.getId)]
+
+updateDisputeChancesUsed :: MonadFlow m => Id RiderDetails -> Int -> m ()
+updateDisputeChancesUsed riderId disputeChancesUsed = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set BeamRD.disputeChancesUsed disputeChancesUsed,
+      Se.Set BeamRD.updatedAt now
+    ]
+    [Se.Is BeamRD.id (Se.Eq riderId.getId)]
+
+updateDisputeChancesUsedAndCancellationDues :: MonadFlow m => Id RiderDetails -> Int -> HighPrecMoney -> m ()
+updateDisputeChancesUsedAndCancellationDues riderId disputeChancesUsed dues = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set BeamRD.disputeChancesUsed disputeChancesUsed,
+      Se.Set BeamRD.cancellationDues dues,
+      Se.Set BeamRD.updatedAt now
+    ]
+    [Se.Is BeamRD.id (Se.Eq riderId.getId)]
+
 instance FromTType' BeamRD.RiderDetails RiderDetails where
   fromTType' BeamRD.RiderDetailsT {..} = do
     pure $
@@ -96,7 +124,9 @@ instance FromTType' BeamRD.RiderDetails RiderDetails where
             hasTakenValidRideAt = hasTakenValidRideAt,
             merchantId = Id merchantId,
             otpCode = otpCode,
-            nightSafetyChecks = nightSafetyChecks
+            nightSafetyChecks = nightSafetyChecks,
+            cancellationDues = cancellationDues,
+            disputeChancesUsed = disputeChancesUsed
           }
 
 instance ToTType' BeamRD.RiderDetails RiderDetails where
@@ -115,5 +145,7 @@ instance ToTType' BeamRD.RiderDetails RiderDetails where
         BeamRD.hasTakenValidRideAt = hasTakenValidRideAt,
         BeamRD.merchantId = getId merchantId,
         BeamRD.nightSafetyChecks = nightSafetyChecks,
-        BeamRD.otpCode = otpCode
+        BeamRD.otpCode = otpCode,
+        BeamRD.cancellationDues = cancellationDues,
+        BeamRD.disputeChancesUsed = disputeChancesUsed
       }

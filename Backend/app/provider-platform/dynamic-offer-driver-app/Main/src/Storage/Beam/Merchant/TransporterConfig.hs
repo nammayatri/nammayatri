@@ -114,6 +114,13 @@ data TransporterConfigT f = TransporterConfigT
     nightSafetyRouteDeviationThreshold :: B.C f Meters,
     nightSafetyStartTime :: B.C f Seconds,
     nightSafetyEndTime :: B.C f Seconds,
+    cancellationFee :: B.C f HighPrecMoney,
+    driverDistanceTravelledOnPickupThresholdOnCancel :: B.C f Meters,
+    driverTimeSpentOnPickupThresholdOnCancel :: B.C f Seconds,
+    cancellationFeeDisputeLimit :: B.C f Int,
+    driverDistanceToPickupThresholdOnCancel :: B.C f Meters,
+    numOfCancellationsAllowed :: B.C f Int,
+    canAddCancellationFee :: B.C f Bool,
     createdAt :: B.C f UTCTime,
     updatedAt :: B.C f UTCTime
   }

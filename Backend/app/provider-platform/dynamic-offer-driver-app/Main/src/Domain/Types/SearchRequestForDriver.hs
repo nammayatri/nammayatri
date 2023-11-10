@@ -82,7 +82,8 @@ data SearchRequestForDriver = SearchRequestForDriver
     keepHiddenForSeconds :: Seconds,
     mode :: Maybe DI.DriverMode,
     goHomeRequestId :: Maybe (Id DriverGoHomeRequest),
-    rideFrequencyScore :: Maybe Double
+    rideFrequencyScore :: Maybe Double,
+    customerCancellationDues :: HighPrecMoney
   }
   deriving (Generic, Show, PrettyShow)
 
@@ -111,7 +112,8 @@ data SearchRequestForDriverAPIEntity = SearchRequestForDriverAPIEntity
     keepHiddenForSeconds :: Seconds,
     goHomeRequestId :: Maybe (Id DriverGoHomeRequest),
     requestedVehicleVariant :: Variant.Variant,
-    isTranslated :: Bool
+    isTranslated :: Bool,
+    customerCancellationDues :: HighPrecMoney
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show, PrettyShow)
 
@@ -145,6 +147,7 @@ makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadat
       disabilityTag = searchRequest.disabilityTag,
       keepHiddenForSeconds = keepHiddenForSeconds,
       goHomeRequestId = nearbyReq.goHomeRequestId,
+      customerCancellationDues = nearbyReq.customerCancellationDues,
       ..
     }
 

@@ -34,6 +34,7 @@ import qualified Domain.Types.Person.PersonFlowStatus as DPFS
 import Domain.Types.SavedReqLocation
 import qualified Domain.Types.SearchRequest as DSearchReq
 import qualified Kernel.Beam.Functions as B
+import Kernel.External.Encryption
 import Kernel.External.Maps
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
@@ -81,7 +82,8 @@ data OneWaySearchRes = OneWaySearchRes
     customerLanguage :: Maybe Maps.Language,
     disabilityTag :: Maybe Text,
     device :: Maybe Text,
-    shortestRouteInfo :: Maybe Maps.RouteInfo
+    shortestRouteInfo :: Maybe Maps.RouteInfo,
+    phoneNumber :: Maybe Text
   }
 
 hotSpotUpdate ::
@@ -135,6 +137,7 @@ oneWaySearch ::
   m OneWaySearchRes
 oneWaySearch personId req bundleVersion clientVersion device = do
   person <- QP.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+  phoneNumber <- mapM decrypt person.mobileNumber
   tag <- case person.hasDisability of
     Just True -> B.runInReplica $ fmap (.tag) <$> PD.findByPersonId personId
     _ -> return Nothing

@@ -112,7 +112,8 @@ data DriverRideRes = DriverRideRes
     requestedVehicleVariant :: DVeh.Variant,
     driverGoHomeRequestId :: Maybe (Id DDGR.DriverGoHomeRequest),
     payerVpa :: Maybe Text,
-    autoPayStatus :: Maybe DI.DriverAutoPayStatus
+    autoPayStatus :: Maybe DI.DriverAutoPayStatus,
+    customerCancellationDues :: HighPrecMoney
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -203,7 +204,8 @@ mkDriverRideRes rideDetails driverNumber rideRating mbExophone (ride, booking) b
       requestedVehicleVariant = booking.vehicleVariant,
       driverGoHomeRequestId = goHomeReqId,
       payerVpa = driverInfo >>= (.payerVpa),
-      autoPayStatus = driverInfo >>= (.autoPayStatus)
+      autoPayStatus = driverInfo >>= (.autoPayStatus),
+      customerCancellationDues = fareParams.customerCancellationDues
     }
 
 arrivedAtPickup :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, HasShortDurationRetryCfg r c, HasFlowEnv m r '["nwAddress" ::: BaseUrl], HasHttpClientOptions r c, HasFlowEnv m r '["driverReachedDistance" ::: HighPrecMeters]) => Id DRide.Ride -> LatLong -> m APISuccess

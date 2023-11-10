@@ -45,6 +45,10 @@ type API =
              :> Common.CustomerUnblockAPI
            :<|> ApiAuth 'APP_BACKEND_MANAGEMENT 'CUSTOMERS 'CUSTOMER_INFO
              :> Common.CustomerInfoAPI
+           :<|> ApiAuth 'APP_BACKEND_MANAGEMENT 'CUSTOMERS 'CUSTOMER_CANCELLATION_DUES_SYNC
+             :> Common.CustomerCancellationDuesSyncAPI
+           :<|> ApiAuth 'APP_BACKEND_MANAGEMENT 'CUSTOMERS 'CUSTOMER_CANCELLATION_DUES_DETAILS
+             :> Common.GetCancellationDuesDetailsAPI
        )
 
 handler :: ShortId DM.Merchant -> City.City -> FlowServer API
@@ -54,6 +58,8 @@ handler merchantId city =
     :<|> blockCustomer merchantId city
     :<|> unblockCustomer merchantId city
     :<|> customerInfo merchantId city
+    :<|> customerCancellationDuesSync merchantId city
+    :<|> getCancellationDuesDetails merchantId city
 
 buildTransaction ::
   ( MonadFlow m,
@@ -125,3 +131,15 @@ customerInfo ::
 customerInfo merchantShortId opCity apiTokenInfo customerId = withFlowHandlerAPI $ do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   Client.callRiderAppOperations checkedMerchantId opCity (.customers.customerInfo) customerId
+
+customerCancellationDuesSync :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Customer -> Common.CustomerCancellationDuesSyncReq -> FlowHandler APISuccess
+customerCancellationDuesSync merchantShortId opCity apiTokenInfo customerId req = withFlowHandlerAPI $ do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  transaction <- buildTransaction Common.CustomerCancellationDuesSyncEndpoint apiTokenInfo T.emptyRequest
+  T.withTransactionStoring transaction $
+    Client.callRiderAppOperations checkedMerchantId opCity (.customers.customerCancellationDuesSync) customerId req
+
+getCancellationDuesDetails :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Customer -> FlowHandler Common.CancellationDuesDetailsRes
+getCancellationDuesDetails merchantShortId opCity apiTokenInfo customerId = withFlowHandlerAPI $ do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  Client.callRiderAppOperations checkedMerchantId opCity (.customers.getCancellationDuesDetails) customerId

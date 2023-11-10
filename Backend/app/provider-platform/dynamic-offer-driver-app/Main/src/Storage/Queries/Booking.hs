@@ -150,6 +150,19 @@ cancelBookings bookingIds now =
 findFareForCancelledBookings :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Id Booking] -> m Money
 findFareForCancelledBookings bookingIds = findAllWithKV [Se.And [Se.Is BeamB.status $ Se.Eq CANCELLED, Se.Is BeamB.id $ Se.In $ getId <$> bookingIds]] <&> sum . map Domain.Types.Booking.estimatedFare
 
+findLastCancelledByRiderId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id RiderDetails -> m (Maybe Booking)
+findLastCancelledByRiderId riderDetailsId =
+  findAllWithOptionsKV
+    [ Se.And
+        [ Se.Is BeamB.riderId (Se.Eq (Just riderDetailsId.getId)),
+          Se.Is BeamB.status (Se.Eq CANCELLED)
+        ]
+    ]
+    (Se.Desc BeamB.createdAt)
+    (Just 1)
+    Nothing
+    <&> listToMaybe
+
 instance FromTType' BeamB.Booking Booking where
   fromTType' :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => BeamB.Booking -> m (Maybe Booking)
   fromTType' BeamB.BookingT {..} = do

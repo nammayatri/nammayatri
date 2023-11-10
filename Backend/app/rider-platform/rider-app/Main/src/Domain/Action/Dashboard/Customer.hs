@@ -18,10 +18,13 @@ module Domain.Action.Dashboard.Customer
     unblockCustomer,
     listCustomers,
     customerInfo,
+    customerCancellationDuesSync,
+    getCancellationDuesDetails,
   )
 where
 
 import qualified "dashboard-helper-api" Dashboard.RiderPlatform.Customer as Common
+import qualified Domain.Action.UI.Cancel as DCancel
 import qualified Domain.Types.Booking.Type as DRB
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
@@ -35,6 +38,7 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Kernel.Utils.SlidingWindowCounters as SWC
+import qualified SharedLogic.CallBPPInternal as CallBPPInternal
 import qualified SharedLogic.MerchantConfig as SMC
 import qualified Storage.CachedQueries.Merchant as QM
 import qualified Storage.CachedQueries.MerchantConfig as CMC
@@ -151,4 +155,31 @@ buildCustomerListItem person = do
         phoneNo,
         enabled = person.enabled,
         blocked = person.blocked
+      }
+
+---------------------------------------------------------------------
+customerCancellationDuesSync ::
+  ShortId DM.Merchant ->
+  Id Common.Customer ->
+  Common.CustomerCancellationDuesSyncReq ->
+  Flow APISuccess
+customerCancellationDuesSync merchantShortId customerId req = do
+  merchant <- QM.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
+  let personId = cast @Common.Customer @DP.Person customerId
+  person <- runInReplica $ QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  mobNum <- mapM decrypt person.mobileNumber >>= fromMaybeM (PersonFieldNotPresent "mobileNumber")
+  void $ CallBPPInternal.customerCancellationDuesSync merchant.driverOfferApiKey merchant.driverOfferBaseUrl merchant.driverOfferMerchantId mobNum (fromMaybe "+91" person.mobileCountryCode) req.cancellationCharges req.disputeChancesUsed req.paymentMadeToDriver person.currentCity
+  return Success
+
+getCancellationDuesDetails ::
+  ShortId DM.Merchant ->
+  Id Common.Customer ->
+  Flow Common.CancellationDuesDetailsRes
+getCancellationDuesDetails merchantShortId personId = do
+  merchant <- QM.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
+  res <- DCancel.getCancellationDuesDetails (cast personId, merchant.id)
+  return $
+    Common.CancellationDuesDetailsRes
+      { cancellationDues = res.cancellationDues,
+        disputeChancesUsed = res.disputeChancesUsed
       }

@@ -70,7 +70,8 @@ instance FromTType' BeamFP.FareParameters FareParameters where
                 waitingCharge = waitingCharge,
                 rideExtraTimeFare = rideExtraTimeFare,
                 nightShiftCharge = nightShiftCharge,
-                fareParametersDetails
+                fareParametersDetails,
+                customerCancellationDues = customerCancellationDues
               }
       Nothing -> return Nothing
 
@@ -87,7 +88,8 @@ instance ToTType' BeamFP.FareParameters FareParameters where
         BeamFP.waitingCharge = waitingCharge,
         BeamFP.rideExtraTimeFare = rideExtraTimeFare,
         BeamFP.nightShiftCharge = nightShiftCharge,
-        BeamFP.fareParametersType = getFareParametersType $ FareParameters {..}
+        BeamFP.fareParametersType = getFareParametersType $ FareParameters {..},
+        BeamFP.customerCancellationDues = customerCancellationDues
       }
 
 findAllLateNightRides :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Id FareParameters] -> m Int

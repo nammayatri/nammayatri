@@ -86,6 +86,7 @@ mkDummyNotificationEntityData now =
           disabilityTag = Nothing,
           goHomeRequestId = Nothing,
           isTranslated = False,
+          customerCancellationDues = 0,
           ..
         }
 

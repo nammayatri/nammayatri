@@ -82,5 +82,7 @@ linkReferee merchantId apiKey RefereeLinkInfoReq {..} = do
             hasTakenValidRide = False,
             hasTakenValidRideAt = Nothing,
             otpCode = Just otp,
-            nightSafetyChecks = True
+            nightSafetyChecks = True,
+            cancellationDues = 0,
+            disputeChancesUsed = 0
           }

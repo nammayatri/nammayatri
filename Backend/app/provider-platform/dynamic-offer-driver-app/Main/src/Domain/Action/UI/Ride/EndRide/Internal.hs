@@ -37,6 +37,7 @@ import Data.Time hiding (getCurrentTime, secondsToNominalDiffTime)
 import Data.Time.Calendar.OrdinalDate (sundayStartWeek)
 import qualified Domain.Action.UI.Plan as Plan
 import qualified Domain.Types.Booking as SRB
+import qualified Domain.Types.CancellationCharges as DCC
 import qualified Domain.Types.DriverFee as DF
 import qualified Domain.Types.DriverInformation as DI
 import Domain.Types.DriverPlan
@@ -76,6 +77,7 @@ import Storage.CachedQueries.Merchant.LeaderBoardConfig as QLeaderConfig
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as SCT
 import qualified Storage.CachedQueries.Plan as CQP
 import qualified Storage.Queries.Booking as QRB
+import qualified Storage.Queries.CancellationCharges as QCC
 import qualified Storage.Queries.DriverFee as QDF
 import qualified Storage.Queries.DriverInformation as QDI
 import Storage.Queries.DriverPlan (findByDriverId)
@@ -130,9 +132,31 @@ endRideTransaction driverId booking ride mbFareParams mbRiderDetailsId newFarePa
   triggerRideEndEvent RideEventData {ride = ride{status = Ride.COMPLETED}, personId = cast driverId, merchantId = booking.providerId}
   triggerBookingCompletedEvent BookingEventData {booking = booking{status = SRB.COMPLETED}, personId = cast driverId, merchantId = booking.providerId}
 
-  sendReferralFCM ride booking.providerId mbRiderDetailsId booking.merchantOperatingCityId
+  mbRiderDetails <- join <$> QRD.findById `mapM` mbRiderDetailsId
+
+  sendReferralFCM ride booking.providerId mbRiderDetails booking.merchantOperatingCityId
   updateLeaderboardZScore booking.providerId booking.merchantOperatingCityId ride
   DS.driverScoreEventHandler booking.merchantOperatingCityId DST.OnRideCompletion {merchantId = booking.providerId, driverId = cast driverId, ride = ride}
+
+  when (thresholdConfig.canAddCancellationFee && newFareParams.customerCancellationDues > 0) $ do
+    case mbRiderDetails of
+      Just riderDetails -> do
+        id <- generateGUID
+        let cancellationCharges =
+              DCC.CancellationCharges
+                { driverId = cast driverId,
+                  rideId = Just ride.id,
+                  cancellationCharges = newFareParams.customerCancellationDues,
+                  ..
+                }
+        calDisputeChances <-
+          if thresholdConfig.cancellationFee == 0
+            then do
+              logWarning "Unable to calculate dispute chances used"
+              return 0
+            else return $ round $ newFareParams.customerCancellationDues / thresholdConfig.cancellationFee
+        QRD.updateDisputeChancesUsedAndCancellationDues riderDetails.id (max 0 (riderDetails.disputeChancesUsed - calDisputeChances)) 0 >> QCC.create cancellationCharges
+      _ -> logWarning $ "Unable to update customer cancellation dues as RiderDetailsId is NULL with rideId " <> ride.id.getId
 
 sendReferralFCM ::
   ( CacheFlow m r,
@@ -142,11 +166,10 @@ sendReferralFCM ::
   ) =>
   Ride.Ride ->
   Id Merchant ->
-  Maybe (Id RD.RiderDetails) ->
+  Maybe RD.RiderDetails ->
   Id DMOC.MerchantOperatingCity ->
   m ()
-sendReferralFCM ride merchantId mbRiderDetailsId merchantOpCityId = do
-  mbRiderDetails <- join <$> QRD.findById `mapM` mbRiderDetailsId
+sendReferralFCM ride merchantId mbRiderDetails merchantOpCityId = do
   minTripDistanceForReferralCfg <- asks (.minTripDistanceForReferralCfg)
   let shouldUpdateRideComplete =
         case minTripDistanceForReferralCfg of

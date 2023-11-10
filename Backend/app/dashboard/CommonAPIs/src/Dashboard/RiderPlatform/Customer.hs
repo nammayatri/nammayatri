@@ -24,6 +24,7 @@ import Dashboard.Common as Reexport
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
 import Kernel.Types.APISuccess (APISuccess)
+import Kernel.Types.Common (HighPrecMoney)
 import Kernel.Types.Id
 import Servant hiding (Summary)
 
@@ -31,6 +32,7 @@ data CustomerEndpoint
   = DeleteCustomerEndpoint
   | BlockCustomerEndpoint
   | UnblockCustomerEndpoint
+  | CustomerCancellationDuesSyncEndpoint
   deriving (Show, Read)
 
 derivePersistField "CustomerEndpoint"
@@ -107,3 +109,37 @@ data CustomerListItem = CustomerListItem
   }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+---------------------------------------------------------------------------
+-- customer cancellation dues sync ----------------------------------------
+
+type CustomerCancellationDuesSyncAPI =
+  Capture "customerId" (Id Customer)
+    :> "cancellationDuesSync"
+    :> ReqBody '[JSON] CustomerCancellationDuesSyncReq
+    :> Post '[JSON] APISuccess
+
+instance HideSecrets CustomerCancellationDuesSyncReq where
+  hideSecrets = identity
+
+data CustomerCancellationDuesSyncReq = CustomerCancellationDuesSyncReq
+  { cancellationCharges :: Maybe HighPrecMoney,
+    disputeChancesUsed :: Maybe Int,
+    paymentMadeToDriver :: Bool
+  }
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+---------------------------------------------------------------------------
+-- get customer cancellation dues details ----------------------------------------
+
+type GetCancellationDuesDetailsAPI =
+  Capture "customerId" (Id Customer)
+    :> "getCancellationDuesDetails"
+    :> Get '[JSON] CancellationDuesDetailsRes
+
+data CancellationDuesDetailsRes = CancellationDuesDetailsRes
+  { cancellationDues :: HighPrecMoney,
+    disputeChancesUsed :: Int
+  }
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
