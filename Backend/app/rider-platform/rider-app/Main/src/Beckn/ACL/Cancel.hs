@@ -37,7 +37,7 @@ buildCancelReq res = do
   pure $ BecknReq context $ mkCancelMessage res
 
 mkCancelMessage :: DCancel.CancelRes -> Cancel.CancelMessage
-mkCancelMessage res = Cancel.CancelMessage res.bppBookingId.getId "" $ castCancellatonSource res.cancellationSource
+mkCancelMessage res = Cancel.CancelMessage res.bppBookingId.getId "" (castCancellatonSource res.cancellationSource)
   where
     castCancellatonSource = \case
       SBCR.ByUser -> Cancel.ByUser

@@ -12,44 +12,30 @@
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE TemplateHaskell #-}
 
-module Storage.Beam.RiderDetails where
+module Storage.Beam.CancellationCharges where
 
 import qualified Database.Beam as B
-import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Types.Common (HighPrecMoney)
 import Tools.Beam.UtilsTH
 
-data RiderDetailsT f = RiderDetailsT
+data CancellationChargesT f = CancellationChargesT
   { id :: B.C f Text,
-    mobileCountryCode :: B.C f Text,
-    mobileNumberEncrypted :: B.C f Text,
-    mobileNumberHash :: B.C f DbHash,
-    merchantId :: B.C f Text,
-    referralCode :: B.C f (Maybe Text),
-    referredByDriver :: B.C f (Maybe Text),
-    referredAt :: B.C f (Maybe UTCTime),
-    hasTakenValidRide :: B.C f Bool,
-    hasTakenValidRideAt :: B.C f (Maybe UTCTime),
-    otpCode :: B.C f (Maybe Text),
-    cancellationDues :: B.C f HighPrecMoney,
-    disputeChancesUsed :: B.C f Int,
-    createdAt :: B.C f UTCTime,
-    updatedAt :: B.C f UTCTime,
-    nightSafetyChecks :: B.C f Bool
+    driverId :: B.C f Text,
+    rideId :: B.C f (Maybe Text),
+    cancellationCharges :: B.C f HighPrecMoney
   }
   deriving (Generic, B.Beamable)
 
-instance B.Table RiderDetailsT where
-  data PrimaryKey RiderDetailsT f
+instance B.Table CancellationChargesT where
+  data PrimaryKey CancellationChargesT f
     = Id (B.C f Text)
     deriving (Generic, B.Beamable)
   primaryKey = Id . id
 
-type RiderDetails = RiderDetailsT Identity
+type CancellationCharges = CancellationChargesT Identity
 
-$(enableKVPG ''RiderDetailsT ['id] [['mobileNumberHash, 'merchantId]])
+$(enableKVPG ''CancellationChargesT ['id] [])
 
-$(mkTableInstances ''RiderDetailsT "rider_details")
+$(mkTableInstances ''CancellationChargesT "cancellation_charges")

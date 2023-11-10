@@ -16,6 +16,9 @@
 module Storage.Queries.CancellationReason where
 
 import Domain.Types.CancellationReason
+  ( CancellationReason (..),
+    CancellationReasonCode (CancellationReasonCode),
+  )
 import Kernel.Beam.Functions
 import Kernel.Prelude hiding (isNothing)
 import Kernel.Types.Common

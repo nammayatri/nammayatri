@@ -11,13 +11,17 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+
 module Domain.Action.UI.Cancel
   ( cancel,
+    disputeCancellationDues,
     CancelReq (..),
     CancelRes (..),
     CancelSearch (..),
+    CancellationDuesDetailsRes (..),
     mkDomainCancelSearch,
     cancelSearch,
+    getCancellationDuesDetails,
   )
 where
 
@@ -33,14 +37,18 @@ import qualified Domain.Types.Person as Person
 import qualified Domain.Types.Person.PersonFlowStatus as DPFS
 import qualified Domain.Types.Ride as Ride
 import Domain.Types.SearchRequest (SearchRequest)
+import Environment
 import qualified Kernel.Beam.Functions as B
+import Kernel.External.Encryption
 import Kernel.External.Maps
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
+import Kernel.Types.APISuccess (APISuccess)
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified SharedLogic.CallBPP as CallBPP
+import qualified SharedLogic.CallBPPInternal as CallBPPInternal
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
@@ -80,6 +88,12 @@ data CancelSearch = CancelSearch
     merchant :: DM.Merchant,
     city :: Context.City
   }
+
+data CancellationDuesDetailsRes = CancellationDuesDetailsRes
+  { cancellationDues :: HighPrecMoney,
+    disputeChancesUsed :: Int
+  }
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
 cancel :: (EncFlow m r, Esq.EsqDBReplicaFlow m r, EsqDBFlow m r, CacheFlow m r) => Id SRB.Booking -> (Id Person.Person, Id Merchant.Merchant) -> CancelReq -> m CancelRes
 cancel bookingId _ req = do
@@ -216,3 +230,22 @@ driverDistanceToPickup merchantId merchantOperatingCityId tripStartPos tripEndPo
           travelMode = Just Maps.CAR
         }
   return $ distRes.distance
+
+disputeCancellationDues :: (Id Person.Person, Id Merchant.Merchant) -> Flow APISuccess
+disputeCancellationDues (personId, merchantId) = do
+  person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId) >>= decrypt
+  merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
+  case (person.mobileNumber, person.mobileCountryCode) of
+    (Just mobileNumber, Just countryCode) -> do
+      CallBPPInternal.disputeCancellationDues merchant.driverOfferApiKey merchant.driverOfferBaseUrl merchant.driverOfferMerchantId mobileNumber countryCode person.currentCity
+    _ -> throwError (PersonMobileNumberIsNULL person.id.getId)
+
+getCancellationDuesDetails :: (Id Person.Person, Id Merchant.Merchant) -> Flow CancellationDuesDetailsRes
+getCancellationDuesDetails (personId, merchantId) = do
+  person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId) >>= decrypt
+  merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
+  case (person.mobileNumber, person.mobileCountryCode) of
+    (Just mobileNumber, Just countryCode) -> do
+      res <- CallBPPInternal.getCancellationDuesDetails merchant.driverOfferApiKey merchant.driverOfferBaseUrl merchant.driverOfferMerchantId mobileNumber countryCode person.currentCity
+      return $ CancellationDuesDetailsRes {cancellationDues = res.customerCancellationDues, disputeChancesUsed = res.disputeChancesUsed}
+    _ -> throwError (PersonMobileNumberIsNULL person.id.getId)

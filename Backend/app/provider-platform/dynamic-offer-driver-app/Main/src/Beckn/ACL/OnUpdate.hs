@@ -271,6 +271,7 @@ buildOnUpdateMessage req@RideCompletedBuildReq {} = do
             || breakup.title == "TOTAL_FARE"
             || breakup.title == "WAITING_OR_PICKUP_CHARGES"
             || breakup.title == "EXTRA_TIME_FARE"
+            || breakup.title == "CUSTOMER_CANCELLATION_DUES"
         DFParams.Slab ->
           breakup.title == "BASE_FARE"
             || breakup.title == "SERVICE_CHARGE"
@@ -283,6 +284,7 @@ buildOnUpdateMessage req@RideCompletedBuildReq {} = do
             || breakup.title == "CUSTOMER_SELECTED_FARE"
             || breakup.title == "NIGHT_SHIFT_CHARGE"
             || breakup.title == "EXTRA_TIME_FARE"
+            || breakup.title == "CUSTOMER_CANCELLATION_DUES"
 buildOnUpdateMessage BookingCancelledBuildReq {..} = do
   return $
     OnUpdate.OnUpdateMessage

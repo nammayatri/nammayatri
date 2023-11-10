@@ -877,3 +877,48 @@ instance IsHTTPError DriverReferralError where
     InvalidReferralCode _ -> E400
 
 instance IsAPIError DriverReferralError
+
+data RiderDetailsError
+  = RiderDetailsNotFound Text
+  | RiderDetailsDoNotExist Text Text
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''RiderDetailsError
+
+instance IsBaseError RiderDetailsError where
+  toMessage = \case
+    (RiderDetailsNotFound riderDetailId) -> Just $ "RideDetails with rideDetailsId \"" <> show riderDetailId <> "\" not found. "
+    (RiderDetailsDoNotExist entity entityData) -> Just $ "RiderDetails not found for " <> entity <> " " <> entityData
+
+instance IsHTTPError RiderDetailsError where
+  toErrorCode _ = "RIDER_DETAILS_NOT_FOUND"
+  toHttpCode _ = E500
+
+instance IsAPIError RiderDetailsError
+
+data CustomerCancellationDuesError
+  = DisputeChancesLimitNotMet Text Text Text
+  | CityRestrictionOnCustomerCancellationDuesAddition Text
+  | DisputeChancesOrCancellationDuesHasToBeNull
+  | CustomerCancellationDuesLimitNotMet Text
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''CustomerCancellationDuesError
+
+instance IsBaseError CustomerCancellationDuesError where
+  toMessage = \case
+    (DisputeChancesLimitNotMet riderDetailsId disputeChancesUsed disputeChanceThreshold) -> Just $ "Limits not met for dispute chances for riderDetailsId " <> riderDetailsId <> ". Dispute Chances Used are :" <> disputeChancesUsed <> "and DisputeChanceThreshold is: " <> disputeChanceThreshold
+    (CityRestrictionOnCustomerCancellationDuesAddition city) -> Just $ city <> " is restricted from addition of customer cancellation dues on ride cancellation"
+    DisputeChancesOrCancellationDuesHasToBeNull -> Just "Either of the two , Due Amount or Dispute Chances has to be Null"
+    (CustomerCancellationDuesLimitNotMet riderDetailsId) -> Just $ "Limits not met for cancellation dues for riderDetailsId :" <> riderDetailsId
+
+instance IsHTTPError CustomerCancellationDuesError where
+  toErrorCode = \case
+    DisputeChancesLimitNotMet {} -> "DISPUTE_CHANCES_LIMIT_NOT_MET"
+    CityRestrictionOnCustomerCancellationDuesAddition _ -> "CITY_RESTRICTION_ON_CUSTOMER_CANCELLATION_DUES_ADDITION"
+    DisputeChancesOrCancellationDuesHasToBeNull -> "DISPUTE_CHANCES_OR_CANCELLATION_DUES_HAS_TO_BE_NULL"
+    CustomerCancellationDuesLimitNotMet _ -> "CUSTOMER_CANCELLATION_DUES_LIMIT_NOT_MET"
+
+  toHttpCode _ = E400
+
+instance IsAPIError CustomerCancellationDuesError

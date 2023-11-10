@@ -31,6 +31,8 @@ type API =
            :<|> Common.CustomerBlockAPI
            :<|> Common.CustomerUnblockAPI
            :<|> Common.CustomerInfoAPI
+           :<|> Common.CustomerCancellationDuesSyncAPI
+           :<|> Common.GetCancellationDuesDetailsAPI
        )
 
 handler :: ShortId DM.Merchant -> FlowServer API
@@ -40,6 +42,8 @@ handler merchantId =
     :<|> blockCustomer merchantId
     :<|> unblockCustomer merchantId
     :<|> customerInfo merchantId
+    :<|> customerCancellationDuesSync merchantId
+    :<|> getCancellationDuesDetails merchantId
 
 listCustomers ::
   ShortId DM.Merchant ->
@@ -75,3 +79,9 @@ customerInfo ::
   Id Common.Customer ->
   FlowHandler Common.CustomerInfoRes
 customerInfo merchantShortId personId = withFlowHandlerAPI $ DCustomer.customerInfo merchantShortId personId
+
+customerCancellationDuesSync :: ShortId DM.Merchant -> Id Common.Customer -> Common.CustomerCancellationDuesSyncReq -> FlowHandler APISuccess
+customerCancellationDuesSync (ShortId merchantShortId) personId = withFlowHandlerAPI . DCustomer.customerCancellationDuesSync (ShortId merchantShortId) personId
+
+getCancellationDuesDetails :: ShortId DM.Merchant -> Id Common.Customer -> FlowHandler Common.CancellationDuesDetailsRes
+getCancellationDuesDetails (ShortId merchantShortId) personId = withFlowHandlerAPI $ DCustomer.getCancellationDuesDetails (ShortId merchantShortId) personId

@@ -105,7 +105,8 @@ getTripRoutes personId merchantId mbMOCId req = do
 
 snapToRoad ::
   ( ServiceFlow m r,
-    HasFlowEnv m r '["snapToRoadSnippetThreshold" ::: HighPrecMeters]
+    HasFlowEnv m r '["snapToRoadSnippetThreshold" ::: HighPrecMeters],
+    HasFlowEnv m r '["droppedPointsThreshold" ::: HighPrecMeters]
   ) =>
   Id Merchant ->
   Id MerchantOperatingCity ->

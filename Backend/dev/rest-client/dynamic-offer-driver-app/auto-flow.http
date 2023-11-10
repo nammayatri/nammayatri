@@ -1,6 +1,9 @@
-@token1 = {{driver-offer-bpp-auto-token1}}
-@token2 = {{driver-offer-bpp-auto-token2}}
+@token1 = 503d9b3b-18ef-4101-a68c-0bac45e3406e
+@token2 = 47f98c05-2859-484a-9f23-155af76d5f9b
 @driver-offer-bpp-host = http://localhost:8016
+
+@app-host = http://localhost:8013/v2
+@app-token = 851a466b-33cd-461d-87ab-0c4e081efbb4
 
 # @name healthcheck
 GET {{driver-offer-bpp-host}}/ui
@@ -13,9 +16,12 @@ GET {{app-host}}
 ###
 
 # @name updateInitial
-POST {{driver-offer-bpp-host}}/ui/driver/location
+POST http://localhost:8081/ui/driver/location
 token: {{token1}}
 content-type: application/json
+dm: ONLINE
+mid: favorit0-0000-0000-0000-00000favorit
+vt: SUV
 
 [
     {
@@ -24,7 +30,8 @@ content-type: application/json
             "lon": 75.919028
 
         },
-        "ts": "{{$localDatetime iso8601}}"
+        "ts": "2023-11-10T08:58:00+0000",
+        "acc": 0
     }
 ]
 
@@ -359,3 +366,17 @@ content-type: application/json
   "rating" : 5,
   "feedbackDetails": "The ride was good"
 }
+
+###
+
+# @name disputeCancellationDues
+POST {{app-host}}/dispute/cancellationDues
+content-type: application/json
+token: {{app-token}}
+
+###
+
+# @name getCancellationDuesDetails
+GET {{app-host}}/get/cancellationDuesDetails
+content-type: application/json
+token: {{app-token}}

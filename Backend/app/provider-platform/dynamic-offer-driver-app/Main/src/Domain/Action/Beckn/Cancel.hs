@@ -27,10 +27,12 @@ import Domain.Action.UI.Ride.CancelRide (driverDistanceToPickup)
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.BookingCancellationReason as DBCR
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.Merchant.TransporterConfig as DTC
 import qualified Domain.Types.Ride as SRide
 import qualified Domain.Types.SearchTry as ST
 import EulerHS.Prelude
 import Kernel.External.Maps
+import Kernel.Prelude (roundToIntegral)
 import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Common
 import Kernel.Types.Id
@@ -45,6 +47,7 @@ import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified SharedLogic.SearchTryLocker as CS
 import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
 import qualified Storage.CachedQueries.Merchant as QM
+import qualified Storage.CachedQueries.Merchant.TransporterConfig as SCT
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.DriverInformation as QDI
@@ -52,6 +55,7 @@ import qualified Storage.Queries.DriverQuote as QDQ
 import qualified Storage.Queries.Person as QPers
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QRide
+import qualified Storage.Queries.RiderDetails as QRD
 import qualified Storage.Queries.SearchRequest as QSR
 import qualified Storage.Queries.SearchRequestForDriver as QSRD
 import qualified Storage.Queries.SearchTry as QST
@@ -95,16 +99,24 @@ cancel req merchant booking = do
   QBCR.upsert bookingCR
   QRB.updateStatus booking.id SRB.CANCELLED
 
-  fork "DriverRideCancelledCoin Location trakking" $ do
+  fork "DriverRideCancelledCoin and CustomerCancellationDuesCalculation Location trakking" $ do
     whenJust mbRide $ \ride -> do
       mbLocation <- do
-        driverLocations <- LF.driversLocation [ride.driverId]
-        return $ listToMaybe driverLocations
+        driverLocations <- try @_ @SomeException $ LF.driversLocation [ride.driverId]
+        case driverLocations of
+          Left err -> do
+            logError ("Failed to fetch Driver Location with error : " <> show err)
+            return Nothing
+          Right locations -> return $ listToMaybe locations
       disToPickup <- forM mbLocation $ \location -> do
         driverDistanceToPickup booking.providerId booking.merchantOperatingCityId (getCoordinates location) (getCoordinates booking.fromLocation)
       logDebug $ "RideCancelled Coin Event by customer distance to pickup" <> show disToPickup
       logDebug "RideCancelled Coin Event by customer"
       DC.driverCoinsEvent ride.driverId merchant.id booking.merchantOperatingCityId (DCT.Cancellation ride.createdAt booking.distanceToPickup disToPickup)
+      transporterConfig <- SCT.findByMerchantOpCityId booking.merchantOperatingCityId >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
+
+      when transporterConfig.canAddCancellationFee do
+        customerCancellationChargesCalculation transporterConfig booking disToPickup
 
   whenJust mbRide $ \ride -> do
     triggerRideCancelledEvent RideEventData {ride = ride{status = SRide.CANCELLED}, personId = ride.driverId, merchantId = merchant.id}
@@ -133,6 +145,25 @@ cancel req merchant booking = do
             driverDistToPickup = Nothing,
             ..
           }
+
+customerCancellationChargesCalculation :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => DTC.TransporterConfig -> SRB.Booking -> Maybe Meters -> m ()
+customerCancellationChargesCalculation transporterConfig booking disToPickup = do
+  whenJust disToPickup $ \driverDistToPickup -> do
+    now <- getCurrentTime
+    let driverBookingDuration = roundToIntegral $ diffUTCTime now booking.createdAt
+    let condition = (driverBookingDuration > transporterConfig.driverTimeSpentOnPickupThresholdOnCancel) && (driverDistToPickup < transporterConfig.driverDistanceToPickupThresholdOnCancel)
+    isChargable <-
+      if not condition
+        then do
+          case booking.distanceToPickup of
+            Just acutalDistanceToPickup ->
+              return $ (acutalDistanceToPickup - driverDistToPickup) > transporterConfig.driverDistanceTravelledOnPickupThresholdOnCancel
+            Nothing -> return condition
+        else return condition
+    when isChargable $ do
+      riderId <- booking.riderId & fromMaybeM (RiderDetailsDoNotExist "BOOKING" booking.id.getId)
+      rider <- QRD.findById riderId >>= fromMaybeM (RiderDetailsNotFound riderId.getId)
+      QRD.updateCancellationDues riderId (rider.cancellationDues + transporterConfig.cancellationFee)
 
 cancelSearch ::
   ( CacheFlow m r,

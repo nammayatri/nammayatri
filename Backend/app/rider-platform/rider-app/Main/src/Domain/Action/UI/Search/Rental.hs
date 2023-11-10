@@ -25,6 +25,7 @@ import qualified Domain.Action.UI.Serviceability as Serviceability
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.SearchRequest as DSearchReq
+import Kernel.External.Encryption (decrypt)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Kernel.Types.Beckn.Context (City)
@@ -53,11 +54,13 @@ data RentalSearchRes = RentalSearchRes
     gatewayUrl :: BaseUrl,
     searchRequestExpiry :: UTCTime,
     merchant :: DM.Merchant,
-    city :: City
+    city :: City,
+    phoneNumber :: Maybe Text
   }
 
 rentalSearch ::
   ( CacheFlow m r,
+    EncFlow m r,
     EsqDBFlow m r,
     EsqDBReplicaFlow m r,
     HasFlowEnv m r '["searchRequestExpiry" ::: Maybe Seconds],
@@ -71,6 +74,7 @@ rentalSearch ::
   m RentalSearchRes
 rentalSearch personId bundleVersion clientVersion device req = do
   person <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+  phoneNumber <- mapM decrypt person.mobileNumber
   merchant <-
     QMerchant.findById person.merchantId
       >>= fromMaybeM (MerchantNotFound person.merchantId.getId)

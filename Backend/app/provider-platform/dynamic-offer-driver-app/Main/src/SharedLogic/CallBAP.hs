@@ -68,6 +68,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Kernel.Utils.Error.BaseError.HTTPError.BecknAPIError as Beckn
 import Kernel.Utils.Servant.SignatureAuth
+import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as CQTC
 import qualified Storage.Queries.DriverInformation as QDI
@@ -161,10 +162,7 @@ sendRideAssignedUpdateToBAP ::
     HasField "modelNamesHashMap" r (HM.Map Text Text),
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     HasField "s3Env" r (S3.S3Env m),
-    MonadReader r m,
-    MonadFlow m,
-    MonadTime m,
-    CacheFlow m r
+    LT.HasLocationService m r
   ) =>
   DRB.Booking ->
   SRide.Ride ->

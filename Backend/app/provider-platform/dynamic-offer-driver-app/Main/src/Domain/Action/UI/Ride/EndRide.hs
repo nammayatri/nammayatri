@@ -371,7 +371,8 @@ recalculateFareForDistance ServiceHandle {..} booking ride recalcDistance thresh
           avgSpeedOfVehicle = thresholdConfig.avgSpeedOfVehicle,
           driverSelectedFare = booking.fareParams.driverSelectedFare,
           customerExtraFee = booking.fareParams.customerExtraFee,
-          nightShiftCharge = booking.fareParams.nightShiftCharge
+          nightShiftCharge = booking.fareParams.nightShiftCharge,
+          customerCancellationDues = booking.fareParams.customerCancellationDues
         }
   let finalFare = Fare.fareSum fareParams
       distanceDiff = recalcDistance - oldDistance

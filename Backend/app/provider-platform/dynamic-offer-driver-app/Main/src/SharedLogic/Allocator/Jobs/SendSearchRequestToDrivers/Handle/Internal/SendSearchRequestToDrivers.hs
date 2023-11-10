@@ -31,7 +31,6 @@ import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Common
-import Kernel.Types.Error (TransporterError (..))
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.DriverScore as DS
@@ -43,6 +42,7 @@ import qualified Storage.CachedQueries.BapMetadata as CQSM
 import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as SCT
 import qualified Storage.Queries.SearchRequestForDriver as QSRD
+import Tools.Error
 import Tools.Maps as Maps
 import qualified Tools.Notifications as Notify
 
@@ -104,7 +104,9 @@ sendSearchRequestToDrivers searchReq searchTry driverExtraFeeBounds driverPoolCo
       return $ singleBatchProcessTime `addUTCTime` now
     buildSearchRequestForDriver ::
       ( MonadFlow m,
-        Redis.HedisFlow m r
+        Redis.HedisFlow m r,
+        EsqDBFlow m r,
+        CacheFlow m r
       ) =>
       Int ->
       UTCTime ->
@@ -146,6 +148,7 @@ sendSearchRequestToDrivers searchReq searchTry driverExtraFeeBounds driverPoolCo
                 mode = dpRes.mode,
                 goHomeRequestId = dpwRes.goHomeReqId,
                 rideFrequencyScore = dpwRes.intelligentScores.rideFrequency,
+                customerCancellationDues = searchReq.customerCancellationDues,
                 ..
               }
       pure searchRequestForDriver

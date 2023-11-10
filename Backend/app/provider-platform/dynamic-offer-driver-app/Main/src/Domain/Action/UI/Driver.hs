@@ -1207,7 +1207,7 @@ respondQuote (driverId, _, merchantOpCityId) req = do
             whenJust driverExtraFeeBounds $ \driverExtraFeeBounds' ->
               unless (isAllowedExtraFee driverExtraFeeBounds' off) $
                 throwError $ NotAllowedExtraFee $ show off
-          fareParams <-
+          fareParams <- do
             calculateFareParameters
               CalculateFareParametersParams
                 { farePolicy = farePolicy,
@@ -1218,7 +1218,9 @@ respondQuote (driverId, _, merchantOpCityId) req = do
                   avgSpeedOfVehicle = Nothing,
                   driverSelectedFare = mbOfferedFare,
                   customerExtraFee = searchTry.customerExtraFee,
-                  nightShiftCharge = Nothing
+                  nightShiftCharge = Nothing,
+                  customerCancellationDues = searchReq.customerCancellationDues,
+                  ..
                 }
           driverQuote <- buildDriverQuote driver searchReq sReqFD searchTry.estimateId fareParams
           triggerQuoteEvent QuoteEventData {quote = driverQuote}
