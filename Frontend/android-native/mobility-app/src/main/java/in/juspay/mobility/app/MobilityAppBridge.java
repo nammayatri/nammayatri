@@ -105,6 +105,7 @@ public class MobilityAppBridge extends HyperBridge {
 
     public static YouTubePlayerView youTubePlayerView;
     public static YouTubePlayer youtubePlayer;
+    public static String youtubeVideoStatus;
     public static float videoDuration = 0;
 
     protected HashMap<String, Trace> traceElements;
@@ -611,6 +612,7 @@ public class MobilityAppBridge extends HyperBridge {
     public void setYoutubePlayer(String rawJson, final String playerId, String videoStatus) {
         if (bridgeComponents.getActivity() != null) {
             videoDuration = 0;
+            this.youtubeVideoStatus = videoStatus;
             ExecutorManager.runOnMainThread(() -> {
                 try {
                     if (videoStatus.equals("PAUSE")) {
@@ -638,21 +640,27 @@ public class MobilityAppBridge extends HyperBridge {
                             public void onReady(@NonNull YouTubePlayer youTubePlayer) {
                                 try {
                                     youtubePlayer = youTubePlayer;
-                                    DefaultPlayerUiController playerUiController = new DefaultPlayerUiController(youTubePlayerView, youTubePlayer);
-                                    playerUiController.showMenuButton(showMenuButton);
-                                    playerUiController.showDuration(showDuration);
-                                    playerUiController.showSeekBar(showSeekBar);
-                                    playerUiController.showFullscreenButton(true);
-                                    if (setVideoTitle) {
-                                        playerUiController.setVideoTitle(videoTitle);
+                                    if (youTubePlayerView != null && youtubePlayer != null) {
+                                        DefaultPlayerUiController playerUiController = new DefaultPlayerUiController(youTubePlayerView, youTubePlayer);
+                                        playerUiController.showMenuButton(showMenuButton);
+                                        playerUiController.showDuration(showDuration);
+                                        playerUiController.showSeekBar(showSeekBar);
+                                        playerUiController.showFullscreenButton(true);
+                                        if (setVideoTitle) {
+                                            playerUiController.setVideoTitle(videoTitle);
+                                        }
+                                        playerUiController.showYouTubeButton(false);
+                                        youTubePlayerView.setCustomPlayerUi(playerUiController.getRootView());
+
+                                        youTubePlayer.seekTo(videoDuration);
+                                        youTubePlayer.loadVideo(videoId, 0);
+                                        if (youtubeVideoStatus.equals("PAUSE")){
+                                            youTubePlayer.pause();
+                                        } else{
+                                            youTubePlayer.play();
+                                        }
+
                                     }
-                                    playerUiController.showYouTubeButton(false);
-                                    youTubePlayerView.setCustomPlayerUi(playerUiController.getRootView());
-
-                                    youTubePlayer.seekTo(videoDuration);
-                                    youTubePlayer.loadVideo(videoId, 0);
-                                    youTubePlayer.play();
-
                                 } catch (Exception e) {
                                     Log.e("error inside setYoutubePlayer onReady", String.valueOf(e));
                                 }
@@ -753,6 +761,7 @@ public class MobilityAppBridge extends HyperBridge {
         if ( youtubePlayer != null) {
             youtubePlayer.pause();
         }
+        youtubeVideoStatus = "PAUSE";
         youTubePlayerView = null;
     }
 
