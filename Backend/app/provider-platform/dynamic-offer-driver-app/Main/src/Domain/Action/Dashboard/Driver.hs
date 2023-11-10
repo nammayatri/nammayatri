@@ -75,6 +75,7 @@ import Data.Coerce
 import Data.List.NonEmpty (nonEmpty)
 import qualified Data.Map as M
 import qualified Data.Text as T
+import Data.Time hiding (getCurrentTime, secondsToNominalDiffTime)
 import qualified Domain.Action.UI.Driver as DDriver
 import qualified Domain.Action.UI.Driver as Driver
 import qualified Domain.Action.UI.DriverOnboarding.AadhaarVerification as AVD
@@ -1525,9 +1526,12 @@ sendSmsToDriver merchantShortId opCity driverId volunteerId _req@SendSmsReq {..}
         result <- Whatsapp.whatsAppSendMessageWithTemplateIdAPI driver.merchantId merchantOpCityId (Whatsapp.SendWhatsAppMessageWithTemplateIdApIReq phoneNumber merchantMessage.templateId jsonData.var1 jsonData.var2 jsonData.var3 (Just merchantMessage.containsUrlButton))
         when (result._response.status /= "success") $ throwError (InternalError "Unable to send Whatsapp message via dashboard")
       OVERLAY -> whenJust overlayKey $ \oKey -> do
+        manualDues <- getManualDues personId transporterConfig.timeDiffFromUtc transporterConfig.driverFeeOverlaySendingTimeLimitInDays
         mOverlay <- CMP.findByMerchantOpCityIdPNKeyLangaugeUdf merchantOpCityId oKey (fromMaybe ENGLISH driver.language) Nothing
         whenJust mOverlay $ \overlay -> do
-          TN.sendOverlay merchantOpCityId driver.id driver.deviceToken overlay.title overlay.description overlay.imageUrl overlay.okButtonText overlay.cancelButtonText overlay.actions overlay.link overlay.endPoint overlay.method overlay.reqBody overlay.delay overlay.contactSupportNumber overlay.toastMessage overlay.secondaryActions overlay.socialMediaLinks
+          let okButtonText = T.replace (templateText "dueAmount") (show manualDues) <$> overlay.okButtonText
+          let description = T.replace (templateText "dueAmount") (show manualDues) <$> overlay.description
+          TN.sendOverlay merchantOpCityId driver.id driver.deviceToken overlay.title description overlay.imageUrl okButtonText overlay.cancelButtonText overlay.actions overlay.link overlay.endPoint overlay.method overlay.reqBody overlay.delay overlay.contactSupportNumber overlay.toastMessage overlay.secondaryActions overlay.socialMediaLinks
       ALERT -> whenJust messageId $ \_mId -> do
         topicName <- asks (.broadcastMessageTopic)
         message <- B.runInReplica $ MQuery.findById (Id _mId) >>= fromMaybeM (InvalidRequest "Message Not Found")
@@ -1545,6 +1549,18 @@ sendSmsToDriver merchantShortId opCity driverId volunteerId _req@SendSmsReq {..}
 
     addTranslation Domain.RawMessage {..} trans =
       (show trans.language, Domain.RawMessage {title = trans.title, description = trans.description, shortDescription = trans.shortDescription, label = trans.label, ..})
+
+    getManualDues personId timeDiffFromUtc driverFeeOverlaySendingTimeLimitInDays = do
+      windowEndTime <- getLocalCurrentTime timeDiffFromUtc
+      let windowStartTime = addUTCTime (-1 * fromIntegral driverFeeOverlaySendingTimeLimitInDays * 86400) (UTCTime (utctDay windowEndTime) (secondsToDiffTime 0))
+      pendingDriverFees <- QDF.findAllOverdueDriverFeeByDriverId personId
+      let filteredDriverFees = filter (\driverFee -> driverFee.startTime >= windowStartTime) pendingDriverFees
+      return $
+        if null filteredDriverFees
+          then 0
+          else sum $ map (\dueInvoice -> SLDriverFee.roundToHalf (fromIntegral dueInvoice.govtCharges + dueInvoice.platformFee.fee + dueInvoice.platformFee.cgst + dueInvoice.platformFee.sgst)) pendingDriverFees
+
+    templateText txt = "{#" <> txt <> "#}"
 
 windowLimit :: SWC.SlidingWindowOptions
 windowLimit = SWC.SlidingWindowOptions 24 SWC.Hours
