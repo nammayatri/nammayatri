@@ -99,6 +99,8 @@ dependencies:
   - warp
   - warp-tls
   - cereal
+  - postgresql-simple
+  - scientific
 
 ghc-options:
   - -fwrite-ide-info

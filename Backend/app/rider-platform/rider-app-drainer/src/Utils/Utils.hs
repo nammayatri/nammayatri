@@ -3,24 +3,30 @@ module Utils.Utils where
 import Config.Env
 import Constants as C
 import qualified Control.Concurrent as Control
-import Data.Aeson as A
+import DBQuery.Functions (textToSnakeCaseText)
+import DBQuery.Types
+import qualified Data.Aeson as A
 import qualified Data.ByteString.Char8 as C8
 import qualified Data.ByteString.Lazy as BSL
+import qualified Data.ByteString.Lazy as LBS
 import qualified Data.Text as T
 import Data.Text.Encoding as DTE
+import qualified Data.Text.Encoding as TE
 import qualified Data.Text.Encoding.Error as DTE
 import qualified Data.UUID as UUID (toASCIIBytes)
 import Data.UUID.V4 (nextRandom)
-import qualified EulerHS.Language as EL
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
 import GHC.Float (int2Double)
+import Kafka.Producer
+import qualified Kafka.Producer as KafkaProd
+import qualified Kafka.Producer as Producer
 import System.Posix.Signals (raiseSignal, sigKILL)
 import System.Random.PCG
+import Text.Casing (camel)
 import Types.DBSync
 import Types.Event
 import qualified Utils.Redis as RQ
-import Prelude (head)
 
 (!?) :: [a] -> Int -> Maybe a
 xs !? n
@@ -35,26 +41,17 @@ xs !? n
       xs
       n
 
-executeInSequence :: (L.MonadFlow f, Show a1) => (t -> Text -> f (Either (a1, a2) a3)) -> ([a3], [a2]) -> Text -> [t] -> f ([a3], [a2])
+executeInSequence :: (L.MonadFlow f, Show a1) => (t -> Text -> f (Either a1 a2)) -> ([a2], [a1]) -> Text -> [t] -> f ([a2], [a1])
 executeInSequence _ store _ [] = pure store
 executeInSequence func store dbStreamKey (command : commands) = do
   result <- func command dbStreamKey
   case result of
-    Left (err, id') -> do
-      let store' = second (id' :) store
-      L.logErrorT "EXECUTION_FAILURE" (show err) $> store'
+    Left id -> do
+      let store' = second (id :) store
+      L.logErrorT "EXECUTION_FAILURE" (show id) $> store'
     Right id' -> do
       let store' = first (id' :) store
       executeInSequence func store' dbStreamKey commands
-
-(|::|) :: (EL.MonadFlow m, Show a) => m [Either a b] -> m [Either a b] -> m [Either a b]
-(|::|) fa fb = do
-  result <- fa
-  case head result of
-    Left entryIds -> EL.logErrorT "EXECUTION_FAILURE" ("For ids: " <> show entryIds) $> result
-    Right _ -> do
-      result' <- fb
-      pure $ result <> result'
 
 stopDrainer :: Flow ()
 stopDrainer = RQ.setValueInRedis C.drainerStopKey True >> publishDBSyncMetric (DrainerStopStatus 1)
@@ -109,16 +106,16 @@ decodeToText = DTE.decodeUtf8With DTE.lenientDecode
 decodeFromText :: FromJSON a => Text -> Maybe a
 decodeFromText = A.decode . BSL.fromStrict . DTE.encodeUtf8
 
-filterCreateCommands :: (L.KVDBStreamEntryID, DBCommand, ByteString) -> Maybe (CreateDBCommand, ByteString)
-filterCreateCommands (id, Create a b c d e, val) = Just (CreateDBCommand id a b c d e, val)
+filterCreateCommands :: (L.KVDBStreamEntryID, DBCommand, ByteString) -> Maybe (L.KVDBStreamEntryID, ByteString)
+filterCreateCommands (id, Create {}, val) = Just (id, val)
 filterCreateCommands _ = Nothing
 
-filterUpdateCommands :: (L.KVDBStreamEntryID, DBCommand, ByteString) -> Maybe (UpdateDBCommand, ByteString)
-filterUpdateCommands (id, Update a b c d e, val) = Just (UpdateDBCommand id a b c d e, val)
+filterUpdateCommands :: (L.KVDBStreamEntryID, DBCommand, ByteString) -> Maybe (L.KVDBStreamEntryID, ByteString)
+filterUpdateCommands (id, Update {}, val) = Just (id, val)
 filterUpdateCommands _ = Nothing
 
-filterDeleteCommands :: (L.KVDBStreamEntryID, DBCommand, ByteString) -> Maybe (DeleteDBCommand, ByteString)
-filterDeleteCommands (id, Delete a b c d e, val) = Just (DeleteDBCommand id a b c d e, val)
+filterDeleteCommands :: (L.KVDBStreamEntryID, DBCommand, ByteString) -> Maybe (L.KVDBStreamEntryID, ByteString)
+filterDeleteCommands (id, Delete {}, val) = Just (id, val)
 filterDeleteCommands _ = Nothing
 
 getStreamName :: Text -> Flow (Maybe Text)
@@ -159,3 +156,25 @@ shutDownHandler = do
   putStrLn ("SHUTTING DOWN DRAINER in " ++ show ((fromIntegral shutDownPeriod :: Double) / 1000000) ++ " seconds" :: String)
   delay shutDownPeriod
   raiseSignal sigKILL
+
+createInKafka :: Producer.KafkaProducer -> A.Value -> Text -> DBModel -> IO (Either Text ())
+createInKafka producer dbObject dbStreamKey model = do
+  let topicName = "driver-drainer-" <> T.pack (camel (T.unpack model.getDBModel)) <> "BPP"
+  result' <- KafkaProd.produceMessage producer (message topicName dbObject)
+  case result' of
+    Just err -> pure $ Left $ T.pack ("Kafka Error: " <> show err)
+    _ -> pure $ Right ()
+  where
+    message topicName event =
+      ProducerRecord
+        { prTopic = TopicName topicName,
+          prPartition = UnassignedPartition,
+          prKey = Just $ TE.encodeUtf8 dbStreamKey,
+          prValue = Just . LBS.toStrict $ A.encode event
+        }
+
+shouldPushToKafkaOnly :: DBModel -> [Text] -> Bool
+shouldPushToKafkaOnly model _dontEnableDbTables = textToSnakeCaseText model.getDBModel `elem` _dontEnableDbTables || model.getDBModel `elem` _dontEnableDbTables
+
+shouldPushToDbOnly :: DBModel -> [Text] -> Bool
+shouldPushToDbOnly model _dontEnableDbTables = textToSnakeCaseText model.getDBModel `elem` _dontEnableDbTables || model.getDBModel `elem` _dontEnableDbTables
