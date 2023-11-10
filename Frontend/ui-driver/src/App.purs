@@ -19,32 +19,38 @@ import Control.Monad.Except.Trans (ExceptT)
 import Control.Monad.Free (Free)
 import Control.Transformers.Back.Trans (BackT)
 import Data.Maybe (Maybe(..))
+import Data.Maybe (Maybe(..))
 import LoaderOverlay.ScreenData as LoaderOverlayScreenData
 import Presto.Core.Types.Language.Flow (FlowWrapper)
-import Screens.Types (AadhaarVerificationScreenState, AboutUsScreenState, ActiveRide,BookingOptionsScreenState, AddVehicleDetailsScreenState, AppUpdatePopUpScreenState, ApplicationStatusScreenState, BankDetailScreenState, CategoryListType, ChooseLanguageScreenState, DriverDetailsScreenState, DriverProfileScreenState, DriverRideRatingScreenState, DriverStatus, EditAadhaarDetailsScreenState, EditBankDetailsScreenState, EnterMobileNumberScreenState, EnterOTPScreenState, HelpAndSupportScreenState, HomeScreenState, IndividualRideCardState, NoInternetScreenState, NotificationsScreenState, PermissionsScreenState, PopUpScreenState, ReferralScreenState, RegistrationScreenState, ReportIssueChatScreenState, RideDetailScreenState, RideHistoryScreenState, RideSelectionScreenState, SelectLanguageScreenState, SplashScreenState, TripDetailsScreenState, UploadAdhaarScreenState, UploadDrivingLicenseState, VehicleDetailsScreenState, WriteToUsScreenState, AcknowledgementScreenState, UpdatePopupType(..), SubscriptionScreenState, OnBoardingSubscriptionScreenState, PaymentHistoryScreenState, HomeScreenStage(..), GlobalProps, DriverSavedLocationScreenState, GoToPopUpType(..), ChooseCityScreenState, WelcomeScreenState, PermissionsScreenState)
-import Screens.ChooseLanguageScreen.ScreenData as ChooseLanguageScreenData
-import Screens.EnterMobileNumberScreen.ScreenData as EnterMobileNumberScreenData
+import Screens (ScreenName(..)) as ScreenNames
 import Screens.AadhaarVerificationScreen.ScreenData as EnterAadhaarNumberScreenData
 import Screens.AboutUsScreen.ScreenData as AboutUsScreenData
 import Screens.AcknowledgementScreen.ScreenData as AcknowledgementScreenData
 import Screens.AddVehicleDetailsScreen.ScreenData as AddVehicleDetailsScreenData
 import Screens.AppUpdatePopUpScreen.ScreenData as AppUpdatePopUpScreenData
+import Screens.AppUpdatePopUpScreen.ScreenData as AppUpdatePopUpScreenData
 import Screens.ApplicationStatusScreen.ScreenData as ApplicationStatusScreenData
 import Screens.BankDetailScreen.ScreenData as BankDetailScreenData
 import Screens.BookingOptionsScreen.ScreenData as BookingOptionsScreenData
+import Screens.ChooseCityScreen.ScreenData as ChooseCityScreenData
+import Screens.ChooseLanguageScreen.ScreenData as ChooseLanguageScreenData
 import Screens.ChooseLanguageScreen.ScreenData as ChooseLanguageScreenData
 import Screens.DriverDetailsScreen.ScreenData as DriverDetailsScreenData
 import Screens.DriverProfileScreen.ScreenData as DriverProfileScreenData
 import Screens.DriverRideRatingScreen.ScreenData as DriverRideRatingScreenData
 import Screens.DriverSavedLocationScreen.ScreenData as DriverSavedLocationScreenData
+import Screens.DriverSavedLocationScreen.ScreenData as DriverSavedLocationScreenData
 import Screens.EditAadhaarDetailsScreen.ScreenData as EditAadhaarDetailsScreenData
 import Screens.EditBankDetailsScreen.ScreenData as EditBankDetailsScreenData
+import Screens.EnterMobileNumberScreen.ScreenData as EnterMobileNumberScreenData
 import Screens.EnterMobileNumberScreen.ScreenData as EnterMobileNumberScreenData
 import Screens.EnterOTPScreen.ScreenData as EnterOTPScreenData
 import Screens.HelpAndSupportScreen.ScreenData as HelpAndSupportScreenData
 import Screens.HomeScreen.ScreenData as HomeScreenData
 import Screens.NotificationsScreen.ScreenData as NotificationsScreenData
 import Screens.OnBoardingSubscriptionScreen.ScreenData as OnBoardingSubscriptionScreenData
+import Screens.OnBoardingSubscriptionScreen.ScreenData as OnBoardingSubscriptionScreenData
+import Screens.PaymentHistoryScreen.ScreenData as PaymentHistoryScreenData
 import Screens.PaymentHistoryScreen.ScreenData as PaymentHistoryScreenData
 import Screens.PermissionsScreen.ScreenData as PermissionsScreenData
 import Screens.PopUpScreen.ScreenData as PopUpScreenData
@@ -55,14 +61,8 @@ import Screens.RideHistoryScreen.ScreenData as RideHistoryScreenData
 import Screens.RideSelectionScreen.ScreenData as RideSelectionScreenData
 import Screens.SelectLanguageScreen.ScreenData as SelectLanguageScreenData
 import Screens.SubscriptionScreen.ScreenData as SubscriptionScreenData
-import Screens.PaymentHistoryScreen.ScreenData as PaymentHistoryScreenData
-import Screens.OnBoardingSubscriptionScreen.ScreenData as OnBoardingSubscriptionScreenData
-import Screens.AppUpdatePopUpScreen.ScreenData as AppUpdatePopUpScreenData
-import Screens (ScreenName(..)) as ScreenNames
-import Screens.DriverSavedLocationScreen.ScreenData as DriverSavedLocationScreenData
-import Data.Maybe (Maybe(..))
-import Screens.ChooseCityScreen.ScreenData as ChooseCityScreenData
 import Screens.TripDetailsScreen.ScreenData as TripDetailsScreenData
+import Screens.Types (AadhaarVerificationScreenState, AboutUsScreenState, AcknowledgementScreenState, ActiveRide, AddVehicleDetailsScreenState, AppUpdatePopUpScreenState, ApplicationStatusScreenState, BankDetailScreenState, BookingOptionsScreenState, CategoryListType, ChooseLanguageScreenState, DriverDetailsScreenState, DriverProfileScreenState, DriverRideRatingScreenState, DriverSavedLocationScreenState, DriverStatus, EditAadhaarDetailsScreenState, EditBankDetailsScreenState, EnterMobileNumberScreenState, EnterOTPScreenState, GlobalProps, GoToPopUpType(..), HelpAndSupportScreenState, HomeScreenStage(..), HomeScreenState, IndividualRideCardState, NoInternetScreenState, NotificationsScreenState, OnBoardingSubscriptionScreenState, PaymentHistoryScreenState, PermissionsScreenState, PopUpScreenState, ReferralScreenState, RegistrationScreenState, ReportIssueChatScreenState, RideDetailScreenState, RideHistoryScreenState, RideSelectionScreenState, SelectLanguageScreenState, SplashScreenState, SubscriptionScreenState, TripDetailsScreenState, UpdatePopupType(..), UploadAdhaarScreenState, UploadDrivingLicenseState, VehicleDetailsScreenState, WelcomeScreenState, WriteToUsScreenState, ChooseCityScreenState)
 import Screens.UploadAdhaarScreen.ScreenData as UploadAdhaarScreenData
 import Screens.UploadDrivingLicenseScreen.ScreenData as UploadDrivingLicenseScreenData
 import Screens.VehicleDetailsScreen.ScreenData as VehicleDetailsScreenData
@@ -422,4 +422,4 @@ data DRIVE_SAVED_LOCATION_OUTPUT = EXIT_FROM_SCREEN
                       
 data WELCOME_SCREEN_OUTPUT = GoToMobileNumberScreen
 
-data CHOOSE_CITY_SCREEN_OUTPUT = GoToWelcomeScreen
+data CHOOSE_CITY_SCREEN_OUTPUT = GoToWelcomeScreen | GET_LAT_LONGS ChooseCityScreenState

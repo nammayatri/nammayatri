@@ -1006,7 +1006,8 @@ const mlStrings = {
   CHANGE_CITY: "നഗരം മാറ്റുക",
   UPLOAD_REGISTRATION_CERTIFICATE_STR : "രജിസ്ട്രേഷൻ സർട്ടിഫിക്കറ്റ് അപ്ലോഡ് ചെയ്യുക",
   TAKE_A_PHOTO : "ഒരു പടം എടുക്കു", 
-  GALLERY : "ഗാലറി"
+  GALLERY : "ഗാലറി",
+  GET_FULL_PAYMENT : "ക്ലയന്റിനൊപ്പം നിങ്ങൾക്ക് താഴെക്കാണുന്ന രീതിയിൽ പൂർത്തിയാക്കുക",
 }
 
 export function getStringValue(key) {

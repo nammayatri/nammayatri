@@ -6,6 +6,8 @@ import Common.Types.App (LazyCheck(..))
 import Common.Types.App (YoutubeData, CarouselModal)
 import Components.GenericHeader as GenericHeader
 import Components.PrimaryButton as PrimaryButton
+import Data.Maybe (Maybe(..))
+import Data.Maybe as Mb
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Language.Strings (getString)
 import Language.Types (STR(..))
@@ -39,6 +41,11 @@ genericHeaderConfig state =
 primaryButtonConfig :: ChooseCityScreenState -> PrimaryButton.Config
 primaryButtonConfig state = let 
     config = PrimaryButton.config
+    isEnabled = case state.props.currentStage of
+                  SELECT_LANG -> state.props.radioMenuFocusedLang /= ""
+                  SELECT_CITY -> state.props.radioMenuFocusedCity /= ""
+                  DETECT_LOCATION -> Mb.isJust state.data.locationSelected
+                  _ -> true
     primaryButtonConfig' = config 
       { textConfig { text = getString case state.props.currentStage of
                                         SELECT_LANG ->  CONFIRM_LANGUAGE
@@ -48,8 +55,8 @@ primaryButtonConfig state = let
                                         _ -> CONFIRM
 
         }
-      -- , alpha = if state.data.locationSelected == "--" && state.props.currentStage == DETECT_LOCATION then 0.5 else 1.0
-      -- , isClickable =  state.data.locationSelected /= "--" || state.props.currentStage /= DETECT_LOCATION
+      , alpha = if isEnabled then 1.0 else 0.5
+      , isClickable =  if isEnabled then true else false
       , id = "PrimaryButtonChooseCityScreen"
       }
   in primaryButtonConfig'
@@ -58,28 +65,31 @@ getLangFromVal :: String -> String
 getLangFromVal value =
   case value of
       "EN_US" -> "English"
-      "HI_IN" -> "Hindi"
-      "TA_IN" -> "Tamil"
-      "KN_IN" -> "Kannada"
-      "TE_IN" -> "Telugu"
-      "BN_IN" -> "Bengali"
-      "ML_IN" -> "Malayalam"
+      "HI_IN" -> "हिंदी"
+      "TA_IN" -> "தமிழ்"
+      "KN_IN" -> "ಕನ್ನಡ"
+      "TE_IN" -> "తెలుగు"
+      "BN_IN" -> "বাংলা"
+      "ML_IN" -> "മലയാളം"
       _ -> value
-
-getLocationMapImage :: String -> String
+getLocationMapImage :: Maybe String -> String
 getLocationMapImage value =
-  case value of
-    "Delhi" -> "ny_ic_delhi_map"
-    "Hyderabad" -> "ny_ic_hyderabad_map"
-    "Mysore" -> "ny_ic_mysuru_map"
-    "Bangalore" -> "ny_ic_bangalore_map"
-    _ -> "ny_ic_driver_location_undetectable"
+  case value of 
+    Mb.Just val -> case val of
+                  "Delhi" -> "ny_ic_delhi_map"
+                  "Hyderabad" -> "ny_ic_hyderabad_map"
+                  "Mysore" -> "ny_ic_mysuru_map"
+                  "Bangalore" -> "ny_ic_bangalore_map"
+                  _ -> "ny_ic_driver_location_undetectable"
+    Mb.Nothing -> "ny_ic_driver_location_undetectable"
 
-getChangeLanguageText :: String -> String
+getChangeLanguageText :: Maybe String -> String
 getChangeLanguageText value =
-  case value of
-    "Delhi" -> "भाषा बदलें"
-    "Hyderabad" -> "భాష మార్చు"
-    "Mysore" -> "కన్నడ"
-    "Bangalore" -> "కన్నడ"
-    _ -> "Change Language"
+  case value of 
+    Mb.Just val -> case val of
+                    "Delhi" -> "भाषा बदलें"
+                    "Hyderabad" -> "భాష మార్చు"
+                    "Mysore" -> "కన్నడ"
+                    "Bangalore" -> "కన్నడ"
+                    _ -> "Change Language"
+    Mb.Nothing -> "Change Language"

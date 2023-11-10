@@ -795,5 +795,6 @@ const frenchStrings = {
   CHANGE_CITY : "Changer de ville",
   UPLOAD_REGISTRATION_CERTIFICATE_STR : "Télécharger le certificat d'enregistrement",
   TAKE_A_PHOTO : "Prendre une photo", 
-  GALLERY : "Galerie"
+  GALLERY : "Galerie",
+  GET_FULL_PAYMENT : "Obtenez un paiement complet",
 }

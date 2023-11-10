@@ -1033,7 +1033,8 @@ const kannadaStrings = {
   CHANGE_CITY: "ನಗರವನ್ನು ಬದಲಾಯಿಸಿ",
   UPLOAD_REGISTRATION_CERTIFICATE_STR : "ನೋಂದಣಿ ಪ್ರಮಾಣಪತ್ರವನ್ನು ಅಪ್ಲೋಡ್ ಮಾಡಿ",
   TAKE_A_PHOTO : "ಫೋಟೋ ತೆಗೆಯಿರಿ", 
-  GALLERY : "ಗ್ಯಾಲರಿ"
+  GALLERY : "ಗ್ಯಾಲರಿ",
+  GET_FULL_PAYMENT : "ಗ್ರಾಹಕನಿಂದ ಸರಿಯಾಗಿ ಮತ್ತು ಪೂರ್ಣವಾಗಿ ಪಾವತಿ ಪಡೆಯಿರಿ",
 }
 
 

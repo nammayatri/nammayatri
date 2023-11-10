@@ -24,7 +24,8 @@ window.getMerchantConfig = function () {
       {"name":"English","value":"EN_US", "subtitle": "ಆಂಗ್ಲ"}, 
       {"name":"ಕನ್ನಡ","value":"KN_IN", "subtitle": "Kannada"},
       {"name":"हिंदी","value":"HI_IN", "subtitle": "Hindi"},
-      {"name":"தமிழ்","value":"TA_IN", "subtitle": "Tamil"}
+      {"name":"தமிழ்","value":"TA_IN", "subtitle": "Tamil"},
+      {"name":"తెలుగు","value":"TE_IN", "subtitle": "Telugu"}
     ],
     "engilshInNative" : "ಆಂಗ್ಲ",
     "englishStrings": {

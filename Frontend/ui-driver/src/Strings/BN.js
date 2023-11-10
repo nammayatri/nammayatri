@@ -1039,7 +1039,8 @@ const bengaliStrings = {
   CHANGE_CITY : "শহর পরিবর্তন করুন",
   UPLOAD_REGISTRATION_CERTIFICATE_STR : "রেজিস্ট্রেশন সার্টিফিকেট আপলোড করুন",
   TAKE_A_PHOTO : "একটি ছবি তুলুন", 
-  GALLERY : "গ্যালারি"
+  GALLERY : "গ্যালারি",
+  GET_FULL_PAYMENT : "গ্রাহক থেকে সরাসরি এবং পূর্ণ পেমেন্ট গ্রহণ করুন",
 }
 
 export function getStringValue(key) {

@@ -52,7 +52,7 @@ navData screenName bottomNavConfig = do
         {
           activeIcon: fetchImage FF_ASSET "ny_ic_join_active",
           defaultIcon: fetchImage FF_ASSET "ny_ic_join_inactive",
-          isVisible : bottomNavConfig.subscription.isVisible && showSubscriptions == "true",
+          isVisible : bottomNavConfig.subscription.isVisible,
           showNewBanner : bottomNavConfig.subscription.showNew && showNewBannerOnSubscription ,
           text: "Join",
           screenName : ScreenNames.SUBSCRIPTION_SCREEN
@@ -77,7 +77,7 @@ navData screenName bottomNavConfig = do
       processedNavOptions = DA.filter (_.isVisible) navdata
   {
    activeIndex : getActiveIndex screenName processedNavOptions,
-   navButton: navdata
+   navButton: processedNavOptions
   }
 
 getActiveIndex :: ScreenNames.ScreenName -> Array NavIcons -> Int

@@ -32,7 +32,7 @@ import Constants as Constants
 import Control.Monad.Except (runExceptT)
 import Control.Monad.Except.Trans (lift)
 import Control.Transformers.Back.Trans (runBackT)
-import Data.Array (concat, filter, cons, elemIndex, head, length, mapWithIndex, null, snoc, sortBy, (!!), any, last, elem, find)
+import Data.Array (any, concat, cons, elem, elemIndex, filter, find, foldl, head, last, length, mapWithIndex, null, snoc, sortBy, (!!))
 import Data.Either (Either(..))
 import Data.Function.Uncurried (runFn1)
 import Data.Functor (map)
@@ -44,6 +44,7 @@ import Data.Ord (compare)
 import Data.Ord (compare)
 import Data.Semigroup ((<>))
 import Data.Semigroup ((<>))
+import Data.Set (toggle)
 import Data.String (Pattern(..), split, toUpper, drop, indexOf)
 import Data.String (length) as STR
 import Data.String (length) as STR
@@ -52,6 +53,7 @@ import Data.String.CodeUnits (splitAt)
 import Data.String.Common (joinWith, split, toUpper, trim)
 import Data.String.Common (joinWith, split, toUpper, trim)
 import Data.Time.Duration (Milliseconds(..))
+import Data.Tuple (Tuple(..), fst)
 import Effect (Effect)
 import Effect.Aff (makeAff, nonCanceler, launchAff)
 import Effect.Class (liftEffect)
@@ -94,7 +96,7 @@ import Screens.DriverProfileScreen.Controller (getDowngradeOptionsSelected)
 import Screens.DriverProfileScreen.ScreenData (dummyDriverInfo)
 import Screens.DriverProfileScreen.Transformer (transformSelectedVehicles)
 import Screens.DriverSavedLocationScreen.Transformer (getLocationArray)
-import Screens.Handlers (homeScreen)
+import Screens.Handlers (chooseCityScreen, homeScreen)
 import Screens.Handlers as UI
 import Screens.HomeScreen.ComponentConfig (mapRouteConfig)
 import Screens.HomeScreen.Controller (activeRideDetail, getPreviousVersion)
@@ -124,7 +126,7 @@ import Services.Backend (driverRegistrationStatusBT, dummyVehicleObject, makeDri
 import Services.Backend as Remote
 import Services.Config (getBaseUrl)
 import Storage (KeyStore(..), deleteValueFromLocalStore, getValueToLocalNativeStore, getValueToLocalStore, isLocalStageOn, isOnFreeTrial, setValueToLocalNativeStore, setValueToLocalStore)
-import Types.App (AADHAAR_VERIFICATION_SCREEN_OUTPUT(..), ABOUT_US_SCREEN_OUTPUT(..), ACKNOWLEDGEMENT_SCREEN_OUTPUT(..), ADD_VEHICLE_DETAILS_SCREENOUTPUT(..), APPLICATION_STATUS_SCREENOUTPUT(..), APP_UPDATE_POPUP(..), BANK_DETAILS_SCREENOUTPUT(..), BOOKING_OPTIONS_SCREEN_OUTPUT(..), DRIVER_DETAILS_SCREEN_OUTPUT(..), DRIVER_PROFILE_SCREEN_OUTPUT(..), DRIVER_RIDE_RATING_SCREEN_OUTPUT(..), ENTER_MOBILE_NUMBER_SCREEN_OUTPUT(..), ENTER_OTP_SCREEN_OUTPUT(..), FlowBT, GlobalState(..), HELP_AND_SUPPORT_SCREEN_OUTPUT(..), HOME_SCREENOUTPUT(..), MY_RIDES_SCREEN_OUTPUT(..), NAVIGATION_ACTIONS(..), NOTIFICATIONS_SCREEN_OUTPUT(..), NOTIFICATIONS_SCREEN_OUTPUT(..), NO_INTERNET_SCREEN_OUTPUT(..), PAYMENT_HISTORY_SCREEN_OUTPUT(..), PERMISSIONS_SCREEN_OUTPUT(..), POPUP_SCREEN_OUTPUT(..), REFERRAL_SCREEN_OUTPUT(..), REGISTRATION_SCREENOUTPUT(..), REPORT_ISSUE_CHAT_SCREEN_OUTPUT(..), RIDES_SELECTION_SCREEN_OUTPUT(..), RIDE_DETAIL_SCREENOUTPUT(..), SELECT_LANGUAGE_SCREEN_OUTPUT(..), SUBSCRIPTION_SCREEN_OUTPUT(..), ScreenStage(..), ScreenType(..), TRIP_DETAILS_SCREEN_OUTPUT(..), UPLOAD_ADHAAR_CARD_SCREENOUTPUT(..), UPLOAD_DRIVER_LICENSE_SCREENOUTPUT(..), VEHICLE_DETAILS_SCREEN_OUTPUT(..), WRITE_TO_US_SCREEN_OUTPUT(..), defaultGlobalState)
+import Types.App (AADHAAR_VERIFICATION_SCREEN_OUTPUT(..), ABOUT_US_SCREEN_OUTPUT(..), ACKNOWLEDGEMENT_SCREEN_OUTPUT(..), ADD_VEHICLE_DETAILS_SCREENOUTPUT(..), APPLICATION_STATUS_SCREENOUTPUT(..), APP_UPDATE_POPUP(..), BANK_DETAILS_SCREENOUTPUT(..), BOOKING_OPTIONS_SCREEN_OUTPUT(..), CHOOSE_CITY_SCREEN_OUTPUT(..), DRIVER_DETAILS_SCREEN_OUTPUT(..), DRIVER_PROFILE_SCREEN_OUTPUT(..), DRIVER_RIDE_RATING_SCREEN_OUTPUT(..), ENTER_MOBILE_NUMBER_SCREEN_OUTPUT(..), ENTER_OTP_SCREEN_OUTPUT(..), FlowBT, GlobalState(..), HELP_AND_SUPPORT_SCREEN_OUTPUT(..), HOME_SCREENOUTPUT(..), MY_RIDES_SCREEN_OUTPUT(..), NAVIGATION_ACTIONS(..), NOTIFICATIONS_SCREEN_OUTPUT(..), NOTIFICATIONS_SCREEN_OUTPUT(..), NO_INTERNET_SCREEN_OUTPUT(..), PAYMENT_HISTORY_SCREEN_OUTPUT(..), PERMISSIONS_SCREEN_OUTPUT(..), POPUP_SCREEN_OUTPUT(..), REFERRAL_SCREEN_OUTPUT(..), REGISTRATION_SCREENOUTPUT(..), REPORT_ISSUE_CHAT_SCREEN_OUTPUT(..), RIDES_SELECTION_SCREEN_OUTPUT(..), RIDE_DETAIL_SCREENOUTPUT(..), SELECT_LANGUAGE_SCREEN_OUTPUT(..), SUBSCRIPTION_SCREEN_OUTPUT(..), ScreenStage(..), ScreenType(..), TRIP_DETAILS_SCREEN_OUTPUT(..), UPLOAD_ADHAAR_CARD_SCREENOUTPUT(..), UPLOAD_DRIVER_LICENSE_SCREENOUTPUT(..), VEHICLE_DETAILS_SCREEN_OUTPUT(..), WRITE_TO_US_SCREEN_OUTPUT(..), defaultGlobalState)
 import Types.App (REPORT_ISSUE_CHAT_SCREEN_OUTPUT(..), RIDES_SELECTION_SCREEN_OUTPUT(..), ABOUT_US_SCREEN_OUTPUT(..), BANK_DETAILS_SCREENOUTPUT(..), ADD_VEHICLE_DETAILS_SCREENOUTPUT(..), APPLICATION_STATUS_SCREENOUTPUT(..), DRIVER_DETAILS_SCREEN_OUTPUT(..), DRIVER_PROFILE_SCREEN_OUTPUT(..), DRIVER_RIDE_RATING_SCREEN_OUTPUT(..), ENTER_MOBILE_NUMBER_SCREEN_OUTPUT(..), ENTER_OTP_SCREEN_OUTPUT(..), FlowBT, GlobalState(..), HELP_AND_SUPPORT_SCREEN_OUTPUT(..), HOME_SCREENOUTPUT(..), MY_RIDES_SCREEN_OUTPUT(..), NOTIFICATIONS_SCREEN_OUTPUT(..), NO_INTERNET_SCREEN_OUTPUT(..), PERMISSIONS_SCREEN_OUTPUT(..), POPUP_SCREEN_OUTPUT(..), REGISTRATION_SCREENOUTPUT(..), RIDE_DETAIL_SCREENOUTPUT(..), SELECT_LANGUAGE_SCREEN_OUTPUT(..), ScreenStage(..), ScreenType(..), TRIP_DETAILS_SCREEN_OUTPUT(..), UPLOAD_ADHAAR_CARD_SCREENOUTPUT(..), UPLOAD_DRIVER_LICENSE_SCREENOUTPUT(..), VEHICLE_DETAILS_SCREEN_OUTPUT(..), WRITE_TO_US_SCREEN_OUTPUT(..), NOTIFICATIONS_SCREEN_OUTPUT(..), REFERRAL_SCREEN_OUTPUT(..), BOOKING_OPTIONS_SCREEN_OUTPUT(..), ACKNOWLEDGEMENT_SCREEN_OUTPUT(..), defaultGlobalState, SUBSCRIPTION_SCREEN_OUTPUT(..), NAVIGATION_ACTIONS(..), AADHAAR_VERIFICATION_SCREEN_OUTPUT(..), ONBOARDING_SUBSCRIPTION_SCREENOUTPUT(..), APP_UPDATE_POPUP(..), DRIVE_SAVED_LOCATION_OUTPUT(..), WELCOME_SCREEN_OUTPUT(..))
 import Types.App as TA
 import Types.ModifyScreenState (modifyScreenState, updateStage)
@@ -146,7 +148,10 @@ baseAppFlow baseFlow event = do
       then do
         setValueToLocalNativeStore REGISTERATION_TOKEN regToken
         checkRideAndInitiate event
-      else loginFlow
+      else if getValueToLocalStore DRIVER_LOCATION == "__failed" || getValueToLocalStore DRIVER_LOCATION == "--"  then do
+        chooseCityFlow
+      else do
+        welcomeScreenFlow
     where
     cacheAppParameters :: Int -> Boolean -> FlowBT String Unit
     cacheAppParameters versionCode baseFlow = do
@@ -246,37 +251,11 @@ isTokenValid = (/=) "__failed"
 
 loginFlow :: FlowBT String Unit
 loginFlow = do
-  lift $ lift $ doAff do liftEffect hideSplash
+  -- lift $ lift $ doAff do liftEffect hideSplash
   logField_ <- lift $ lift $ getLogFields
-  runInternetCondition
-  void $ pure $ setCleverTapUserProp [{key : "Preferred Language", value : unsafeToForeign $ getValueFromConfig "defaultLanguage"}]
-  setValueToLocalStore LANGUAGE_KEY $ getValueFromConfig "defaultLanguage"
-  if getValueToLocalStore DRIVER_LOCATION == "__failed" then do
-    appConfig <- getAppConfig Constants.appConfig
-    -- location <- getCurrentLatLong
-    location <- lift $ lift $ liftFlow $ getCurrentLatLong
-    let
-      currentDriverLat = location.lat
-      currentDriverLon = location.lng
-      array = getDistanceArray currentDriverLat currentDriverLon appConfig.cityConfig
-      minIndex = findMinimumIndex array
-    _ <- pure $ spy "testing40 : " currentDriverLat
-    _ <- pure $ spy "testing42 : " currentDriverLon
-    _ <- pure $ spy "testing41 : " minIndex
-    _ <- pure $ spy "testing41 : " appConfig.cityConfig
-    modifyScreenState $ ChooseCityScreenStateType (\chooseCityScreen → chooseCityScreen { data { updatedDriverLocation = ((fromMaybe {
-          cityName : "Bangalore",
-          mapImage : "ny_ic_bengalore_map,",
-          cityCode : "std:080",
-          showSubscriptions : true,
-          cityLat : 28.619570,
-          cityLong : 77.088104
-        } (appConfig.cityConfig !! minIndex)).cityName)}})
-    chooseCityScreen <- UI.chooseCityScreen
-    pure unit
-  else do
-    welcomeScreen <- UI.welcomeScreen
-    pure unit
+  -- runInternetCondition
+  -- void $ pure $ setCleverTapUserProp [{key : "Preferred Language", value : unsafeToForeign $ getValueFromConfig "defaultLanguage"}]
+  -- setValueToLocalStore LANGUAGE_KEY $ getValueFromConfig "defaultLanguage"
   mobileNo <- UI.enterMobileNumber
   case mobileNo of
     GO_TO_ENTER_OTP updateState -> do
@@ -284,10 +263,6 @@ loginFlow = do
       TriggerOTPResp triggerOtpResp <- Remote.triggerOTPBT (makeTriggerOTPReq updateState.data.mobileNumber)
       modifyScreenState $ EnterOTPScreenType (\enterOTPScreen → enterOTPScreen { data { tokenId = triggerOtpResp.authId}})
       enterOTPFlow
-  where
-    runInternetCondition = do
-      internetAvailable <- lift $ lift $ liftFlow $ isInternetAvailable unit
-      unless internetAvailable $ noInternetScreenFlow "INTERNET_ACTION"
 
 enterOTPFlow :: FlowBT String Unit
 enterOTPFlow = do
@@ -2938,7 +2913,61 @@ logoutFlow = do
   deleteValueFromLocalStore FREE_TRIAL_DAYS
   pure $ factoryResetApp ""
   _ <- lift $ lift $ liftFlow $ logEvent logField_ "logout"
-  loginFlow
+  if getValueToLocalStore DRIVER_LOCATION == "__failed" || getValueToLocalStore DRIVER_LOCATION == "--"  then do
+    chooseCityFlow
+  else do
+    welcomeScreenFlow
+runInternetCondition :: FlowBT String Unit
+runInternetCondition = do
+      internetAvailable <- lift $ lift $ liftFlow $ isInternetAvailable unit
+      unless internetAvailable $ noInternetScreenFlow "INTERNET_ACTION"
+
+chooseCityFlow :: FlowBT String Unit
+chooseCityFlow = do
+  lift $ lift $ doAff do liftEffect hideSplash
+  logField_ <- lift $ lift $ getLogFields
+  runInternetCondition
+  void $ pure $ setCleverTapUserProp [{key : "Preferred Language", value : unsafeToForeign $ getValueFromConfig "defaultLanguage"}]
+  setValueToLocalStore LANGUAGE_KEY $ getValueFromConfig "defaultLanguage"
+  chooseCityScreen <- UI.chooseCityScreen
+  case chooseCityScreen of
+    GET_LAT_LONGS state -> do
+      void $ lift $ lift $ loaderText (getString LOADING) (getString PLEASE_WAIT_WHILE_IN_PROGRESS)
+      void $ lift $ lift $ toggleLoader true
+      let currentDriverLat = fromMaybe 0.0 $ Number.fromString $ getValueToLocalNativeStore LAST_KNOWN_LAT
+      let currentDriverLon = fromMaybe 0.0 $ Number.fromString $ getValueToLocalNativeStore LAST_KNOWN_LON
+      (LatLon lat lon) <- getCurrentLocation currentDriverLat currentDriverLon currentDriverLat currentDriverLon 1000 false
+      let driverLat = fromMaybe 0.0 $ Number.fromString lat
+          driverLon = fromMaybe 0.0 $ Number.fromString lon
+          _ = spy "driver location" (show driverLat <> " " <> show driverLon)
+          distanceFromBangalore = getDistanceBwCordinates (fromMaybe 0.0 $ Number.fromString  lat) (fromMaybe 0.0 $ Number.fromString lon) 12.9716 77.5946
+          initialAccumulator = Tuple "Bangalore" distanceFromBangalore
+          result = foldl (\acc city -> closestCity acc city driverLat driverLon) initialAccumulator state.data.config.cityConfig      
+      void $ lift $ lift $ toggleLoader false
+      modifyScreenState $ ChooseCityScreenStateType (\chooseCityScreen -> chooseCityScreen { data {locationSelected = Just $ fst result}, props {radioMenuFocusedCity = fst result}})
+      chooseCityFlow
+    GoToWelcomeScreen -> do
+      welcomeScreenFlow
+    _ -> do
+      let _ = spy "log a" ""
+      pure unit
+    where 
+      closestCity :: (Tuple String Number) -> CityConfig -> Number -> Number -> (Tuple String Number)
+      closestCity (Tuple cityName distance) city driverLat driverLon = do
+        let distanceFromCity = getDistanceBwCordinates driverLat driverLon city.cityLat city.cityLong
+        if distanceFromCity < distance then (Tuple city.cityName distanceFromCity) else (Tuple cityName distance)
+
+welcomeScreenFlow :: FlowBT String Unit
+welcomeScreenFlow = do
+  lift $ lift $ doAff do liftEffect hideSplash
+  logField_ <- lift $ lift $ getLogFields
+  internetAvailable <- lift $ lift $ liftFlow $ isInternetAvailable unit
+  unless internetAvailable $ noInternetScreenFlow "INTERNET_ACTION"
+  void $ pure $ setCleverTapUserProp [{key : "Preferred Language", value : unsafeToForeign $ getValueFromConfig "defaultLanguage"}]
+  setValueToLocalStore LANGUAGE_KEY $ getValueFromConfig "defaultLanguage"
+  welcomeScreen <- UI.welcomeScreen
+  case welcomeScreen of
+    GoToMobileNumberScreen -> loginFlow
 
 getCityConfig :: Array CityConfig -> Maybe String -> CityConfig
 getCityConfig cityConfig cityCode = do
@@ -2954,20 +2983,4 @@ getCityConfig cityConfig cityCode = do
     Just cityCode -> fromMaybe dummyCityConfig $ find (\item -> item.cityCode == cityCode) cityConfig
     Nothing -> dummyCityConfig
 
-
-getDistanceArray :: Number -> Number -> Array CityConfig -> Array Number
-getDistanceArray lat long config = map (\index -> getDistanceBwCordinates lat long index.cityLat index.cityLong) config
-
-findMinimumIndex :: Array Number -> Int
-findMinimumIndex xs =
-  if null xs
-    then -1
-    else go 0 0 (xs !! 0)
-  where
-    go index minIndex minValue
-      | index >= length xs = minIndex
-      | xs !! index < minValue =
-          go (index + 1) index (xs !! index)
-      | otherwise =
-          go (index + 1) minIndex minValue
 

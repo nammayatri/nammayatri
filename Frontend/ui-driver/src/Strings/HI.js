@@ -1061,7 +1061,8 @@ const hindiStrings = {
   CHANGE_CITY: "शहर बदलें",
   UPLOAD_REGISTRATION_CERTIFICATE_STR : "पंजीकरण प्रमाणपत्र अपलोड करें",
   TAKE_A_PHOTO : "एक तस्वीर लें", 
-  GALLERY : "गैलरी"
+  GALLERY : "गैलरी",
+  GET_FULL_PAYMENT : "ग्राहक से सीधा और पूरा भुगतान लिजिये",
 }
 
 

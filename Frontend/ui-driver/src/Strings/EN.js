@@ -1068,7 +1068,10 @@ const englishStrings = {
   CHANGE_CITY : "Change City",
   UPLOAD_REGISTRATION_CERTIFICATE_STR : "Upload Registration Certificate",
   TAKE_A_PHOTO : "Take a Photo", 
-  GALLERY : "Gallery"
+  GALLERY : "Gallery",
+  GET_FULL_PAYMENT : "Get direct, full payment from customers",
+  UNABLE_TO_DETECT_YOUR_LOCATION : "Unable to detect your location",
+  DETECTING_LOCATION : "Detecting Location",
 }
 
 

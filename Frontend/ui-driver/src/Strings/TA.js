@@ -1034,7 +1034,8 @@ const tamilStrings = {
   CHANGE_CITY: "நகரத்தை மாற்றவும்",
   UPLOAD_REGISTRATION_CERTIFICATE_STR : "பதிவுச் சான்றிதழைப் பதிவேற்றவும்",
   TAKE_A_PHOTO : "புகைப்படம் எடு", 
-  GALLERY : "கேலரி"
+  GALLERY : "கேலரி",
+  GEt_FULL_PAYMENT : "வாடிக்கையாளரிடமிருந்து நேரடியாக கட்டணம் பெறுங்கள்",
 }
 
 export function getStringValue(key) {

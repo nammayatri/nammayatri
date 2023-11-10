@@ -123,7 +123,7 @@ introductoryOfferConfig lazy =
     isGradient : true,
     gradient : [Color.blue600, Color.blue600],
     hasImage : true,
-    imageURL : fetchImage FF_ASSET "ny_ic_discount",
+    imageURL : fetchImage FF_ASSET "ny_ic_lock",
     offerDescription : Just $ getString NO_CHARGES_TILL,
     addedFromUI : false
     }
