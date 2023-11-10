@@ -24,7 +24,7 @@ import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import MerchantConfig.Types (CityConfig)
-import Prelude (Unit, const, map, ($), (<<<), (<>), bind, pure, unit, (==), discard)
+import Prelude (Unit, bind, const, discard, map, not, pure, unit, ($), (<<<), (<>), (==))
 import PrestoDOM (Accessiblity(..), Gradient(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Prop, Screen, Visibility(..), accessibility, afterRender, alignParentBottom, alpha, background, color, cornerRadius, fontStyle, gradient, gravity, height, id, imageUrl, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, relativeLayout, stroke, text, textSize, textView, visibility, weight, width)
 import PrestoDOM.Animation as PrestoAnim
 import Screens.ChooseCityScreen.Controller (Action(..), ScreenOutput, eval)
@@ -38,7 +38,15 @@ screen initialState =
   , view
   , name: "ChooseCity"
   , globalEvents:  [(\ push -> do    
-    _ <- JB.storeCallBackDriverLocationPermission push LocationPermissionCallBack
+    if not initialState.props.isLocationPermissionGiven then do
+      _ <- JB.storeCallBackDriverLocationPermission push LocationPermissionCallBack
+      pure unit 
+    else pure unit
+    isLocationPermissionEnabled <- JB.isLocationPermissionEnabled unit
+    let _ = spy "zxc location permiziiosn" isLocationPermissionEnabled
+    if isLocationPermissionEnabled then
+      JB.getCurrentPositionWithTimeout push CurrentLocationCallBack 2000 
+    else pure unit
     pure $ pure unit)]
   , eval:
       ( \state action -> do
@@ -59,10 +67,7 @@ view push state =
         , gravity CENTER
         , onBackPressed push $ const BackPressed
         , afterRender (\action -> do
-          isLocationPermissionEnabled <- JB.isLocationPermissionEnabled unit
-          if isLocationPermissionEnabled then
-            JB.getCurrentPositionWithTimeout push CurrentLocationCallBack 2000 
-          else pure unit
+          
           _ <- push action
           pure unit
           ) (const AfterRender)

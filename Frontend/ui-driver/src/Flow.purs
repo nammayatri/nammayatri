@@ -76,8 +76,8 @@ import JBridge (cleverTapCustomEvent, cleverTapCustomEventWithParams, cleverTapE
 import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import MerchantConfig.Types (CityConfig)
 import MerchantConfig.DefaultConfig as DC
+import MerchantConfig.Types (CityConfig)
 import MerchantConfig.Utils (getMerchant, Merchant(..), getValueFromConfig)
 import Prelude (Unit, bind, discard, pure, unit, unless, negate, void, when, map, otherwise, ($), (==), (/=), (&&), (||), (/), when, (+), show, (>), not, (<), (*), (-), (<=), (<$>), (>=), ($>), (<<<))
 import Presto.Core.Types.Language.Flow (delay, setLogField)
@@ -144,11 +144,12 @@ baseAppFlow baseFlow event = do
     _ <- pure $ saveSuggestions "SUGGESTIONS" (getSuggestions "")
     _ <- pure $ saveSuggestionDefs "SUGGESTIONS_DEFINITIONS" (suggestionsDefinitions "")
     setValueToLocalStore CURRENCY (getValueFromConfig "currency")
+    isLocationPermission <- lift $ lift $ liftFlow $ isLocationPermissionEnabled unit
     if isTokenValid regToken
       then do
         setValueToLocalNativeStore REGISTERATION_TOKEN regToken
         checkRideAndInitiate event
-      else if getValueToLocalStore DRIVER_LOCATION == "__failed" || getValueToLocalStore DRIVER_LOCATION == "--"  then do
+      else if getValueToLocalStore DRIVER_LOCATION == "__failed" || getValueToLocalStore DRIVER_LOCATION == "--" || not isLocationPermission then do
         chooseCityFlow
       else do
         welcomeScreenFlow
@@ -2913,7 +2914,8 @@ logoutFlow = do
   deleteValueFromLocalStore FREE_TRIAL_DAYS
   pure $ factoryResetApp ""
   _ <- lift $ lift $ liftFlow $ logEvent logField_ "logout"
-  if getValueToLocalStore DRIVER_LOCATION == "__failed" || getValueToLocalStore DRIVER_LOCATION == "--"  then do
+  isLocationPermission <- lift $ lift $ liftFlow $ isLocationPermissionEnabled unit
+  if getValueToLocalStore DRIVER_LOCATION == "__failed" || getValueToLocalStore DRIVER_LOCATION == "--" || not isLocationPermission  then do
     chooseCityFlow
   else do
     welcomeScreenFlow
@@ -2948,6 +2950,7 @@ chooseCityFlow = do
       chooseCityFlow
     GoToWelcomeScreen -> do
       welcomeScreenFlow
+    REFRESH_SCREEN_CHOOSE_CITY state -> chooseCityFlow
     _ -> do
       let _ = spy "log a" ""
       pure unit
