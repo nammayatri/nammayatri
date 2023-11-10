@@ -84,6 +84,7 @@ import in.juspay.hypersdk.ui.HyperPaymentsCallbackAdapter;
 import in.juspay.mobility.app.ChatService;
 import in.juspay.mobility.app.InAppNotification;
 import in.juspay.mobility.app.LocationUpdateService;
+import in.juspay.mobility.app.MobilityAppBridge;
 import in.juspay.mobility.app.MyFirebaseMessagingService;
 import in.juspay.mobility.app.NotificationUtils;
 import in.juspay.mobility.app.RemoteConfigs.MobilityRemoteConfigs;
@@ -705,6 +706,7 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onPause() {
         super.onPause();
+        pauseYoutubePlayer();
         setCleverTapUserProp("Session Status" , "false" , context);
         if (sharedPref != null)
             sharedPref.edit().putString(getResources().getString(in.juspay.mobility.app.R.string.ACTIVITY_STATUS), "onPause").apply();
@@ -723,6 +725,7 @@ public class MainActivity extends AppCompatActivity {
         if (sharedPref != null) {
             sharedPref.edit().putString(getResources().getString(in.juspay.mobility.app.R.string.ACTIVITY_STATUS), "onDestroy").apply();
         }
+        pauseYoutubePlayer();
         if (hyperServices != null) {
             hyperServices.terminate();
         }
@@ -739,6 +742,15 @@ public class MainActivity extends AppCompatActivity {
         hyperServices.onRequestPermissionsResult(requestCode, permissions, grantResults);
     }
 
+    private void pauseYoutubePlayer(){
+        MobilityAppBridge.youtubeVideoStatus = "PAUSE";
+        if (MobilityAppBridge.youtubePlayer != null ) {
+            MobilityAppBridge.youtubePlayer.pause();
+        } else if (MobilityAppBridge.youTubePlayerView != null ) {
+            MobilityAppBridge.youTubePlayerView = null;
+        }
+    }
+    
     public void hideSplash() {
         View v = findViewById(in.juspay.mobility.app.R.id.cl_dui_container);
         if (v != null) {
