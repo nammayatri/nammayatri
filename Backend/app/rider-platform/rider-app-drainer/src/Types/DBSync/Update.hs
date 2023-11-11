@@ -7,6 +7,7 @@ module Types.DBSync.Update where
 
 import DBQuery.Types
 import qualified Data.Aeson as A
+import qualified Data.Map.Strict as M
 import qualified Data.Vector as V
 import EulerHS.Prelude
 import Types.DBSync.DBModel
@@ -32,7 +33,7 @@ instance FromJSON DBUpdateObject where
       contents <- obj A..: "contents"
       mbMappings <- o A..:? "mappings"
       updatedModel <- o A..:? "updatedModel"
-      let mappings = fromMaybe (Mapping []) mbMappings
+      let mappings = fromMaybe (Mapping M.empty) mbMappings
           dbModel = tagOptions.getDBModelOptions
       pure DBUpdateObject {..}
 
