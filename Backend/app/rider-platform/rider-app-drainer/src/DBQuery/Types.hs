@@ -4,6 +4,7 @@
 module DBQuery.Types where
 
 import qualified Data.Aeson as A
+import qualified Data.Map.Strict as M
 import Kernel.Prelude
 
 data InsertQuery = InsertQuery
@@ -33,7 +34,7 @@ newtype QueryError = QueryError Text
 
 instance Exception QueryError
 
-newtype Mapping = Mapping {getMapping :: [(Text, Text)]}
+newtype Mapping = Mapping {getMapping :: M.Map Text Text}
   deriving stock (Show)
   deriving newtype (FromJSON)
 

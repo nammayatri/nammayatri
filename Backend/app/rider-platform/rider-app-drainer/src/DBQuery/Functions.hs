@@ -3,17 +3,16 @@ module DBQuery.Functions where
 import Control.Exception (throwIO)
 import DBQuery.Types
 import qualified Data.Aeson as A
+import qualified Data.Map.Strict as M
 import qualified Data.Scientific as Sci
 import qualified Data.Text as T
 import qualified Data.Vector as V
 import qualified Database.PostgreSQL.Simple as Pg
 import EulerHS.Prelude hiding (id)
 import Text.Casing (quietSnake)
-import Prelude (lookup)
 
 generateInsertQuery :: InsertQuery -> Maybe Text
 generateInsertQuery InsertQuery {..} = do
-  let tableName = dbModel.getDBModel
   let schemaName = schema.getSchemaName
   if null termWarps
     then Nothing
@@ -24,18 +23,17 @@ generateInsertQuery InsertQuery {..} = do
                 let keyText = quote' $ replaceMappings column mappings
                 let valueText = valueToText value
                 (keyText, valueText)
-          table = schemaName <> "." <> quote' tableName
+          table = schemaName <> "." <> textToSnakeCaseText (quote' dbModel.getDBModel)
           inserts = T.intercalate ", " columnNames
           valuesList = T.intercalate ", " values
       Just $ "INSERT INTO " <> table <> " (" <> inserts <> ") VALUES (" <> valuesList <> ")" <> " ON CONFLICT DO NOTHING;"
 
 generateUpdateQuery :: UpdateQuery -> Maybe Text
 generateUpdateQuery UpdateQuery {..} = do
-  let tableName = dbModel.getDBModel
   let schemaName = schema.getSchemaName
   let correctWhereClauseText = makeWhereCondition whereClause mappings
       setQuery = makeSetConditions
-      table = schemaName <> "." <> quote' tableName
+      table = schemaName <> "." <> textToSnakeCaseText (quote' dbModel.getDBModel)
   if T.null correctWhereClauseText
     then Nothing -- why?
     else Just $ "UPDATE " <> table <> " SET " <> setQuery <> " WHERE " <> correctWhereClauseText <> ";"
@@ -47,10 +45,9 @@ generateUpdateQuery UpdateQuery {..} = do
 
 generateDeleteQuery :: DeleteQuery -> Maybe Text
 generateDeleteQuery DeleteQuery {..} = do
-  let tableName = dbModel.getDBModel
   let schemaName = schema.getSchemaName
       correctWhereClauseText = makeWhereCondition whereClause mappings
-      table = schemaName <> "." <> quote' tableName
+      table = schemaName <> "." <> textToSnakeCaseText (quote' dbModel.getDBModel)
   if T.null correctWhereClauseText
     then Nothing -- why?
     else Just $ "DELETE FROM " <> table <> " WHERE " <> correctWhereClauseText <> ";"
@@ -68,7 +65,7 @@ textToSnakeCaseText = T.pack . quietSnake . T.unpack
 -- | We are setting mappings in case of beamColumn name is different from the Db column name
 replaceMappings :: Column -> Mapping -> Text
 replaceMappings (Column element) (Mapping obj) =
-  case lookup element obj of
+  case M.lookup element obj of
     Just value -> value
     Nothing -> textToSnakeCaseText element
 
