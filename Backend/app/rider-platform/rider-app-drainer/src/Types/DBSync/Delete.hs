@@ -4,6 +4,7 @@ module Types.DBSync.Delete where
 
 import DBQuery.Types
 import qualified Data.Aeson as A
+import qualified Data.Map.Strict as M
 import qualified Data.Vector as V
 import EulerHS.Prelude
 import Types.DBSync.DBModel
@@ -27,7 +28,7 @@ instance FromJSON DBDeleteObject where
       tagOptions :: DBModelOptions <- obj' A..: "tag"
       whereObj <- obj A..: "value1"
       mbMappings <- o A..:? "mappings"
-      let mappings = fromMaybe (Mapping []) mbMappings
+      let mappings = fromMaybe (Mapping M.empty) mbMappings
           dbModel = tagOptions.getDBModelOptions
       pure DBDeleteObject {..}
 
