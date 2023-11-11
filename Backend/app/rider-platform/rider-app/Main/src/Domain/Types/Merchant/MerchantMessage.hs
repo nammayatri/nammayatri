@@ -16,6 +16,7 @@
 
 module Domain.Types.Merchant.MerchantMessage where
 
+import Data.Default.Class
 import Domain.Types.Common (UsageSafety (..))
 import Domain.Types.Merchant (Merchant)
 import Domain.Types.Merchant.MerchantOperatingCity (MerchantOperatingCity)
@@ -38,6 +39,9 @@ data MerchantMessageD (s :: UsageSafety) = MerchantMessage
     merchantOperatingCityId :: Id MerchantOperatingCity,
     messageKey :: MessageKey,
     message :: Text,
+    templateId :: Text,
+    jsonData :: MerchantMessageDefaultDataJSON,
+    containsUrlButton :: Bool,
     updatedAt :: UTCTime,
     createdAt :: UTCTime
   }
@@ -48,3 +52,18 @@ type MerchantMessage = MerchantMessageD 'Safe
 instance FromJSON (MerchantMessageD 'Unsafe)
 
 instance ToJSON (MerchantMessageD 'Unsafe)
+
+data MerchantMessageDefaultDataJSON = MerchantMessageDefaultDataJSON
+  { var1 :: Maybe Text,
+    var2 :: Maybe Text,
+    var3 :: Maybe Text
+  }
+  deriving (Generic, ToJSON, FromJSON, Show, ToSchema)
+
+instance Default MerchantMessageDefaultDataJSON where
+  def =
+    MerchantMessageDefaultDataJSON
+      { var1 = Nothing,
+        var2 = Nothing,
+        var3 = Nothing
+      }
