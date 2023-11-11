@@ -17,6 +17,8 @@ module SharedLogic.MessageBuilder
     buildSendOTPMessage,
     BuildSendBookingOTPMessageReq (..),
     buildSendBookingOTPMessage,
+    BuildGenericMessageReq (..),
+    buildGenericMessage,
   )
 where
 
@@ -63,3 +65,18 @@ buildSendBookingOTPMessage merchantOperatingCityId req = do
     merchantMessage.message
       & T.replace (templateText "otp") req.otp
       & T.replace (templateText "amount") req.amount
+
+data BuildGenericMessageReq = BuildGenericMessageReq {}
+  deriving (Generic)
+
+buildGenericMessage :: (EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> DMM.MessageKey -> BuildGenericMessageReq -> m Text
+buildGenericMessage merchantOpCityId messageKey _ = do
+  merchantMessage <-
+    QMM.findByMerchantOperatingCityIdAndMessageKey merchantOpCityId messageKey
+      >>= fromMaybeM (MerchantMessageNotFound merchantOpCityId.getId (show messageKey))
+  let jsonData = merchantMessage.jsonData
+  return $
+    merchantMessage.message
+      & T.replace (templateText "var1") (fromMaybe "" jsonData.var1)
+      & T.replace (templateText "var2") (fromMaybe "" jsonData.var2)
+      & T.replace (templateText "var3") (fromMaybe "" jsonData.var3)
