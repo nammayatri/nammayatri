@@ -82,6 +82,7 @@ data KeyStore
   | NOTIFIED_CUSTOMER
   | DISABILITY_NAME 
   | ESTIMATE_DATA
+  | REFERRER_URL
 
 derive instance genericKeyStore :: Generic KeyStore _
 

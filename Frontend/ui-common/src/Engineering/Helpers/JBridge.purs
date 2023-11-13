@@ -223,6 +223,7 @@ foreign import cleverTapSetLocation :: Unit -> Effect Unit
 foreign import cleverTapEvent :: String -> Array ClevertapEventParams -> Unit
 foreign import saveSuggestions :: String -> Suggestions -> Unit
 foreign import saveSuggestionDefs :: String -> SuggestionDefinitions -> Unit
+foreign import extractReferrerUrl :: Unit -> Effect Unit
 foreign import launchDateSettings :: String -> Unit
 foreign import startLottieProcess :: LottieAnimationConfig -> Unit
 foreign import methodArgumentCount :: String -> Int
