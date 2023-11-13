@@ -754,7 +754,7 @@ const hindiStrings = {
   PAYMENT_CANCELLED : "आपने अपना UPI ऑटोपे रद्द कर दिया है. आप अपनी शेष राशि मैन्युअल रूप से चुका सकते हैं",
   UPI_AUTOPAY_S : "UPI ऑटोपे",
   MANUAL_PAYMENT_STR : "मैन्युअल भुगतान",
-  DAILY_UNLIMITED : "दैनिक असीमित",
+  DAILY_UNLIMITED : "डेली अनलिमिटेड",
   DAILY_PER_RIDE : "दैनिक प्रति सवारी",
   DAILY_UNLIMITED_PLAN_DESC : "हर दिन असीमित सवारी का आनंद लें",
   DAILY_PER_RIDE_PLAN_DESC : "प्रति दिन अधिकतम ₹35 तक",
@@ -994,8 +994,8 @@ const hindiStrings = {
   GET_READY_FOR_YS_SUBSCRIPTION : "यात्री साथी योजनाओं के लिए तैयार हो जाएं!",
   SIGNUP_EARLY_FOR_SPECIAL_OFFERS : "विशेष ऑफर के लिए जल्दी साइन अप करें",
   GUARANTEED_FIXED_PRICE : "1 जनवरी 2025 तक कीमत में कोई बदलाव नहीं।",
-  INTRODUCTORY_OFFER_TO_BE_ANNOUNCED_SOON : "परिचयात्मक ऑफर की घोषणा जल्द ही की जाएगी!",
-  NO_CHARGES_TILL : "1 अप्रैल, 2024 तक कोई शुल्क नहीं",
+  INTRODUCTORY_OFFER_TO_BE_ANNOUNCED_SOON : "प्रारंभिक प्रस्ताव जल्द ही घोषित किया जाएगा!",
+  NO_CHARGES_TILL : "31 मार्च, 2024 तक कोई शुल्क नहीं",
   DIRECT_PAYMENT_NO_COMMISSIONS : "सीधा भुगतान.\nकोई कमीशन नहीं",
   CUSTOMER_PAYS_DIRECTLY : "ग्राहक आपको सीधे नकद या यूपीआई के माध्यम से भुगतान करता है",
   HUNDRED_PERCENT_FARE_GOES_TO_YOU : "100% किराया\nआपको जाता है!",
@@ -1062,7 +1062,7 @@ const hindiStrings = {
   TAKE_A_PHOTO : "एक तस्वीर लें", 
   GALLERY : "गैलरी",
   GET_FULL_PAYMENT : "ग्राहक से सीधा और पूरा भुगतान लिजिये",
-  SELECT_CITY : "शहर चुनें",
+  SELECT_CITY_STR : "शहर चुनें",
 }
 
 

@@ -1034,7 +1034,7 @@ const kannadaStrings = {
   TAKE_A_PHOTO : "ಫೋಟೋ ತೆಗೆಯಿರಿ", 
   GALLERY : "ಗ್ಯಾಲರಿ",
   GET_FULL_PAYMENT : "ಗ್ರಾಹಕನಿಂದ ಸರಿಯಾಗಿ ಮತ್ತು ಪೂರ್ಣವಾಗಿ ಪಾವತಿ ಪಡೆಯಿರಿ",
-  SELECT_CITY : "ನಗರವನ್ನು ಆಯ್ಕೆಮಾಡಿ",
+  SELECT_CITY_STR : "ನಗರವನ್ನು ಆಯ್ಕೆಮಾಡಿ",
 }
 
 

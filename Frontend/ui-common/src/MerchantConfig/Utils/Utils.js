@@ -56,6 +56,8 @@ export const getMerchantString = function(key) {
       return window.appConfig.malayalamStrings[key];
     case "TA_IN":
       return window.appConfig.tamilStrings[key];
+    case "TE_IN": 
+      return window.appConfig.teluguStrings[key];
     case "FR_FR":
       return window.appConfig.frenchStrings[key];
     default:
