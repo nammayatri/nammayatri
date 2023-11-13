@@ -68,8 +68,12 @@ getAlternateNumberAttempts (Id personId) = findOneWithKV [Se.Is BeamRT.entityId 
 
 instance FromTType' BeamRT.RegistrationToken RegistrationToken where
   fromTType' BeamRT.RegistrationTokenT {..} = do
-    merchant <- CQM.findById (Id merchantId) >>= fromMaybeM (MerchantNotFound merchantId)
-    merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant Nothing
+    merchantOpCityId <-
+      case merchantOperatingCityId of
+        Just opCityId -> return $ Id opCityId
+        Nothing -> do
+          merchant <- CQM.findById (Id merchantId) >>= fromMaybeM (MerchantNotFound merchantId)
+          CQMOC.getMerchantOpCityId Nothing merchant Nothing
     pure $
       Just
         RegistrationToken
