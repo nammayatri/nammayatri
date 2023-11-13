@@ -997,7 +997,7 @@ const englishStrings = {
   SIGNUP_EARLY_FOR_SPECIAL_OFFERS : "Signup early for special offers",
   GUARANTEED_FIXED_PRICE : "Guaranteed fixed price until \nJan 1, 2025",
   INTRODUCTORY_OFFER_TO_BE_ANNOUNCED_SOON : "Introductory offer will be announced soon!",
-  NO_CHARGES_TILL : "No charges till April 1, 2024",
+  NO_CHARGES_TILL : "No charges till March 31, 2024",
   AND : " and ",
   DIRECT_PAYMENT_NO_COMMISSIONS : "Direct payment.\nNo commissions",
   CUSTOMER_PAYS_DIRECTLY : "Customer pays to you directly via \ncash or UPI",
@@ -1072,7 +1072,7 @@ const englishStrings = {
   GET_FULL_PAYMENT : "Get direct, full payment\n from customers",
   UNABLE_TO_DETECT_YOUR_LOCATION : "Unable to detect your location",
   DETECTING_LOCATION : "Detecting Location",
-  SELECT_CITY : "Select City",
+  SELECT_CITY_STR : "Select City",
 }
 
 

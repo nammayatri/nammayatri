@@ -1059,7 +1059,7 @@ const teluguStrings = {
   TAKE_A_PHOTO : "ఒక ఫోటో తీసుకుని", 
   GALLERY : "గ్యాలరీ",
   GET_FULL_PAYMENT : "కస్టమర్ల నుండి డైరెక్టుగా, పూర్తి చెల్లింపు పొందండి",
-  SELECT_CITY : "నగరాన్ని ఎంచుకోండి",
+  SELECT_CITY_STR : "నగరాన్ని ఎంచుకోండి",
 }
   
   

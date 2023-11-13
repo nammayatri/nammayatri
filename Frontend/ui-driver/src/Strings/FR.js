@@ -797,5 +797,5 @@ const frenchStrings = {
   TAKE_A_PHOTO : "Prendre une photo", 
   GALLERY : "Galerie",
   GET_FULL_PAYMENT : "Obtenez un paiement complet",
-  SELECT_CITY : "Sélectionnez la ville",
+  SELECT_CITY_STR : "Sélectionnez la ville",
 }
