@@ -299,6 +299,8 @@ eval (PopUpModalActions (PopUpModal.OnButton2Click)) state = do
 eval (PopUpModalActions (PopUpModal.OnButton1Click)) state = do
        continueWithCmd (state {props{clickedButtonType = "front", validateProfilePicturePopUp = false,imageCaptureLayoutView = true, fileCameraPopupModal = false, fileCameraOption = true}}) [ pure UploadImage]
     
+eval RedirectScreen state = exit GoToRegisteration
+
 eval _ state = continue state
 
 dateFormat :: Int -> String
