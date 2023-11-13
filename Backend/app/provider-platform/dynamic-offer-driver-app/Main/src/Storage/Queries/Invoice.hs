@@ -166,7 +166,6 @@ findLatestNonAutopayActiveByDriverId driverId = do
   findAllWithOptionsKV
     [ Se.And
         [ Se.Is BeamI.driverId $ Se.Eq (getId driverId),
-          Se.Is BeamI.invoiceStatus $ Se.Eq Domain.ACTIVE_INVOICE,
           Se.Is BeamI.paymentMode $ Se.Not $ Se.Eq Domain.AUTOPAY_INVOICE
         ]
     ]
