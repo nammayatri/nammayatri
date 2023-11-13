@@ -45,7 +45,6 @@ buildOneWaySearchReq DOneWaySearch.OneWaySearchRes {..} =
     origin
     (Just destination)
     searchId
-    now
     device
     (shortestRouteInfo >>= (.distance))
     (shortestRouteInfo >>= (.duration))
@@ -67,7 +66,6 @@ buildRentalSearchReq DRentalSearch.RentalSearchRes {..} =
     origin
     Nothing
     searchId
-    startTime
     Nothing
     Nothing
     Nothing
@@ -83,7 +81,6 @@ buildSearchReq ::
   DSearchCommon.SearchReqLocation ->
   Maybe DSearchCommon.SearchReqLocation ->
   Id DSearchReq.SearchRequest ->
-  UTCTime ->
   Maybe Text ->
   Maybe Meters ->
   Maybe Seconds ->
@@ -94,12 +91,12 @@ buildSearchReq ::
   Maybe [Maps.LatLong] ->
   ACLSearchType ->
   m (BecknReq Search.SearchMessage)
-buildSearchReq origin destination searchId startTime _ distance duration customerLanguage disabilityTag merchant _city mbPoints searchType = do
+buildSearchReq origin destination searchId _ distance duration customerLanguage disabilityTag merchant _city mbPoints searchType = do
   let transactionId = getId searchId
       messageId = transactionId
   bapUrl <- asks (.nwAddress) <&> #baseUrlPath %~ (<> "/" <> T.unpack merchant.id.getId)
   context <- buildTaxiContext Context.SEARCH messageId (Just transactionId) merchant.bapId bapUrl Nothing Nothing merchant.defaultCity merchant.country False
-  let intent = mkIntent origin destination customerLanguage disabilityTag distance duration mbPoints startTime searchType
+  let intent = mkIntent origin destination customerLanguage disabilityTag distance duration mbPoints searchType
   let searchMessage = Search.SearchMessage intent
 
   pure $ BecknReq context searchMessage
@@ -112,14 +109,12 @@ mkIntent ::
   Maybe Meters ->
   Maybe Seconds ->
   Maybe [Maps.LatLong] ->
-  UTCTime ->
   ACLSearchType ->
   Search.Intent
-mkIntent origin destination customerLanguage disabilityTag distance duration mbPoints startTime searchType = do
+mkIntent origin destination customerLanguage disabilityTag distance duration mbPoints searchType = do
   let startLocation =
         Search.StartInfo
-          { location = mkLocation origin,
-            time = Search.TimeTimestamp startTime
+          { location = mkLocation origin
           }
       endLocation =
         destination

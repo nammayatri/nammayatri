@@ -31,6 +31,7 @@ import Kernel.Types.Beckn.ReqTypes
 import Kernel.Types.Logging
 import Kernel.Utils.Common
 import qualified SharedLogic.Confirm as SConfirm
+import Tools.Error
 
 buildInitReq ::
   (MonadFlow m, HasFlowEnv m r '["nwAddress" ::: BaseUrl]) =>
@@ -52,8 +53,7 @@ buildInitMessage res = do
         SConfirm.ConfirmAutoDetails estimateId driverId -> (Init.RIDE, Just estimateId, driverId)
         SConfirm.ConfirmOneWaySpecialZoneDetails quoteId -> (Init.RIDE_OTP, Just quoteId, Nothing) --need to be  checked
   let vehicleVariant = castVehicleVariant res.vehicleVariant
-  now <- getCurrentTime
-  let st = fromMaybe now res.mbStartTime
+  when (fulfillmentType == Init.RENTAL && res.mbStartTime == Nothing) $ throwError (InvalidRequest "Rental booking should have start time")
   pure
     Init.InitMessage
       { order =
@@ -70,7 +70,7 @@ buildInitMessage res = do
                     breakup = Nothing
                   },
               billing = mkBilling res.riderPhone res.riderName,
-              fulfillment = mkFulfillmentInfo fulfillmentType mbBppFullfillmentId res.fromLoc res.toLoc res.maxEstimatedDistance vehicleVariant st res.mbRentalDuration,
+              fulfillment = mkFulfillmentInfo fulfillmentType mbBppFullfillmentId res.fromLoc res.toLoc res.maxEstimatedDistance vehicleVariant res.mbStartTime res.mbRentalDuration,
               payment = mkPayment res.paymentMethodInfo,
               provider = mkProvider mbDriverId
             }
@@ -102,7 +102,7 @@ mkOrderItem itemId mbBppFullfillmentId =
       fulfillment_id = mbBppFullfillmentId
     }
 
-mkFulfillmentInfo :: Init.FulfillmentType -> Maybe Text -> DL.Location -> Maybe DL.Location -> Maybe HighPrecMeters -> Init.VehicleVariant -> UTCTime -> Maybe Int -> Init.FulfillmentInfo
+mkFulfillmentInfo :: Init.FulfillmentType -> Maybe Text -> DL.Location -> Maybe DL.Location -> Maybe HighPrecMeters -> Init.VehicleVariant -> Maybe UTCTime -> Maybe Int -> Init.FulfillmentInfo
 mkFulfillmentInfo fulfillmentType mbBppFullfillmentId fromLoc mbToLoc mbMaxDistance vehicleVariant startTime rentalDuration =
   Init.FulfillmentInfo
     { id = mbBppFullfillmentId,
@@ -154,7 +154,7 @@ mkFulfillmentInfo fulfillmentType mbBppFullfillmentId fromLoc mbToLoc mbMaxDista
                       },
                   address = mkAddress fromLoc.address
                 },
-            time = TimeTimestamp startTime,
+            time = TimeTimestamp <$> startTime,
             authorization = Nothing
           },
       end =

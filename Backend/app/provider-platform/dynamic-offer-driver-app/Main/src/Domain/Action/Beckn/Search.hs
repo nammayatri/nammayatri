@@ -110,7 +110,6 @@ data DSearchReqRental' = DSearchReqRental'
     bapCity :: Context.City,
     bapCountry :: Context.Country,
     pickupLocation :: LatLong,
-    pickupTime :: UTCTime,
     pickupAddress :: Maybe BA.Address,
     device :: Maybe Text,
     customerLanguage :: Maybe Maps.Language,
@@ -272,7 +271,7 @@ handler merchant sReq' =
                 CalculateFareParametersParams
                   { farePolicy = rentalFarePolicy,
                     distance = Meters 1000,
-                    rideTime = sReq.pickupTime,
+                    rideTime = now, -- This is because we give per hr charges to BAP to reduce api calls on hr/time change
                     waitingTime = Nothing,
                     actualRideDuration = Nothing,
                     avgSpeedOfVehicle = Nothing,

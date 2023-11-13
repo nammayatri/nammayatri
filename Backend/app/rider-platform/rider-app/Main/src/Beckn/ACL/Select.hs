@@ -43,7 +43,6 @@ buildSelectReq dSelectRes = do
 
 buildOrder :: (Monad m, Log m, MonadThrow m, MonadTime m) => DSelect.DSelectRes -> m Select.Order
 buildOrder res = do
-  currentTime <- getCurrentTime
   let start = mkLocation $ DSearchCommon.makeSearchReqLoc' res.searchRequest.fromLocation
   toLocation <- res.searchRequest.toLocation & fromMaybeM (InternalError "To location address not found")
   let end = mkLocation $ DSearchCommon.makeSearchReqLoc' toLocation
@@ -65,8 +64,7 @@ buildOrder res = do
           Select.FulfillmentInfo
             { start =
                 Select.StartInfo
-                  { location = start,
-                    time = Select.TimeTimestamp currentTime
+                  { location = start
                   },
               end =
                 Just $

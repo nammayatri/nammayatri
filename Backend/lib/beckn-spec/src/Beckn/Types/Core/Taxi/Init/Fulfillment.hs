@@ -18,10 +18,10 @@ module Beckn.Types.Core.Taxi.Init.Fulfillment
 where
 
 import Beckn.Types.Core.Taxi.Common.FulfillmentType
-import Beckn.Types.Core.Taxi.Common.StartInfo
 import Beckn.Types.Core.Taxi.Common.StopInfo
 import Beckn.Types.Core.Taxi.Common.Tags
 import Beckn.Types.Core.Taxi.Common.Vehicle
+import Beckn.Types.Core.Taxi.Init.StartInfo
 import Data.Aeson
 import Data.OpenApi (ToSchema (..), defaultSchemaOptions)
 import EulerHS.Prelude hiding (id)

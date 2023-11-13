@@ -111,6 +111,7 @@ library
       Beckn.Types.Core.Taxi.Init
       Beckn.Types.Core.Taxi.Init.Fulfillment
       Beckn.Types.Core.Taxi.Init.Order
+      Beckn.Types.Core.Taxi.Init.StartInfo
       Beckn.Types.Core.Taxi.OnConfirm
       Beckn.Types.Core.Taxi.OnConfirm.Fulfillment
       Beckn.Types.Core.Taxi.OnConfirm.Order

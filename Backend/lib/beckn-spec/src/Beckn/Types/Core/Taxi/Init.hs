@@ -26,12 +26,12 @@ import Beckn.Types.Core.Taxi.Common.Payment as Reexport
 import Beckn.Types.Core.Taxi.Common.Price as Reexport
 import Beckn.Types.Core.Taxi.Common.Provider as Reexport
 import Beckn.Types.Core.Taxi.Common.Quote as Reexport
-import Beckn.Types.Core.Taxi.Common.StartInfo as Reexport
 import Beckn.Types.Core.Taxi.Common.StopInfo as Reexport
 import Beckn.Types.Core.Taxi.Common.Tags as Reexport
 import Beckn.Types.Core.Taxi.Common.Vehicle as Reexport
 import Beckn.Types.Core.Taxi.Init.Fulfillment as Reexport
 import Beckn.Types.Core.Taxi.Init.Order as Reexport
+import Beckn.Types.Core.Taxi.Init.StartInfo as Reexport
 import Data.OpenApi (ToSchema)
 import EulerHS.Prelude
 

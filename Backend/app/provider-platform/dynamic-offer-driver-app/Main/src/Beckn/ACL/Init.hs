@@ -41,7 +41,8 @@ buildInitReq subscriber req = do
   let context = req.context
   Context.validateContext Context.INIT context
   let order = req.message.order
-  let startTime = order.fulfillment.start.time.timestamp
+  now <- getCurrentTime
+  let startTime = maybe now (.timestamp) order.fulfillment.start.time
   _ <- case order.items of
     [it] -> pure it
     _ -> throwError $ InvalidRequest "There must be exactly one item in init request"
@@ -51,7 +52,7 @@ buildInitReq subscriber req = do
   let initTypeReq = buildInitTypeReq order.fulfillment._type
   case initTypeReq of
     DInit.InitRentalReq ->
-      when (isNothing rentalDuration) $ throwError (InvalidRequest "No rental duration passed")
+      when (isNothing rentalDuration || isNothing order.fulfillment.start.time) $ throwError (InvalidRequest "No rental duration passed")
     _ -> pure ()
   -- should we check start time and other details?
   unless (subscriber.subscriber_id == context.bap_id) $

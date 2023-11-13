@@ -17,7 +17,7 @@ module Beckn.ACL.OnSearch where
 import qualified Beckn.ACL.Common as Common
 import qualified Beckn.Types.Core.Taxi.OnSearch as OS
 import Beckn.Types.Core.Taxi.OnSearch.Item (BreakupItem (..), BreakupPrice (..), ItemPrice (value))
-import Beckn.Types.Core.Taxi.OnSelect (TagGroup (display), TimeTimestamp (..))
+import Beckn.Types.Core.Taxi.OnSelect (TagGroup (display))
 import qualified Domain.Action.Beckn.Search as DSearch
 import qualified Domain.Types.Estimate as DEst
 import qualified Domain.Types.Merchant as DM
@@ -83,8 +83,7 @@ mkStartInfo dReq =
         OS.Location
           { gps = OS.Gps {lat = dReq.fromLocation.lat, lon = dReq.fromLocation.lon},
             address = Nothing
-          },
-      time = TimeTimestamp dReq.now
+          }
     }
 
 mkStopInfo :: DSearch.DSearchRes -> Maybe OS.StopInfo

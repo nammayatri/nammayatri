@@ -27,7 +27,6 @@ import qualified Data.Aeson as J
 import qualified Data.ByteString.Base64 as Base64
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.Text as T
-import Data.Time (localTimeToUTC, utc)
 import qualified Data.Time.Clock.POSIX as Time
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
@@ -84,7 +83,6 @@ runK6Script url filePath nmbOfReq = do
 
 generateSearchRequest :: L.Flow API.SearchReq
 generateSearchRequest = do
-  currentTime <- L.getCurrentTimeUTC
   txnId <- L.generateGUID
   let context = example @API.Context & #message_id .~ txnId
   let intent =
@@ -99,8 +97,7 @@ generateSearchRequest = do
                                 API.Location
                                   { gps = API.Gps {lat = 20.5937, lon = 78.9629},
                                     address = Nothing
-                                  },
-                              time = API.TimeTimestamp $ localTimeToUTC utc currentTime
+                                  }
                             },
                         end =
                           Just $

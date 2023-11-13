@@ -110,7 +110,6 @@ buildSearchReq merchantId subscriber req = do
               bapId = subscriber.subscriber_id,
               bapUri = subscriber.subscriber_url,
               bapCity = city,
-              pickupTime = pickup.time.timestamp,
               bapCountry = context.country,
               pickupLocation = LatLong {lat = pickup.location.gps.lat, lon = pickup.location.gps.lon},
               pickupAddress = pickup.location.address,
