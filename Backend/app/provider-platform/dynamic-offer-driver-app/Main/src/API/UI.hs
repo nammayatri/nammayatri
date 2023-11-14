@@ -77,6 +77,7 @@ type API =
            :<|> RideRoute.API
            :<|> Plan.API
            :<|> KioskLocation.API
+           :<|> City.API
        )
 
 handler :: FlowServer API
@@ -107,3 +108,4 @@ handler =
     :<|> RideRoute.handler
     :<|> Plan.handler
     :<|> KioskLocation.handler
+    :<|> City.handler

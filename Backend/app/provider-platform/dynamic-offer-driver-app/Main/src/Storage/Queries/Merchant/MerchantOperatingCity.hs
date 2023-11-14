@@ -29,6 +29,9 @@ import qualified Storage.Beam.Merchant.MerchantOperatingCity as BeamMOC
 findById :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id MerchantOperatingCity -> m (Maybe MerchantOperatingCity)
 findById (Id merchantOpCityId) = findOneWithKV [Se.Is BeamMOC.id $ Se.Eq merchantOpCityId]
 
+findAllByMerchantId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DM.Merchant -> m [MerchantOperatingCity]
+findAllByMerchantId (Id merchantId) = findOneWithKV [Se.And [Se.Is BeamMOC.merchantId $ Se.Eq merchantId]]
+
 findByMerchantIdAndCity :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DM.Merchant -> Context.City -> m (Maybe MerchantOperatingCity)
 findByMerchantIdAndCity (Id merchantId) city = findOneWithKV [Se.And [Se.Is BeamMOC.merchantId $ Se.Eq merchantId, Se.Is BeamMOC.city $ Se.Eq city]]
 
