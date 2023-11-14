@@ -16,24 +16,28 @@ module Domain.Types.CallStatus where
 
 import Domain.Types.Ride
 import qualified Kernel.External.Call.Interface.Types as CallTypes
+import Kernel.External.Call.Types (CallService)
 import Kernel.Prelude
 import Kernel.Types.Id
 
 data CallStatus = CallStatus
   { id :: Id CallStatus,
     callId :: Text,
-    rideId :: Id Ride,
+    rideId :: Maybe (Id Ride),
     dtmfNumberUsed :: Maybe Text,
     status :: CallTypes.CallStatus,
     recordingUrl :: Maybe Text,
     conversationDuration :: Int,
+    merchantId :: Maybe Text,
+    callService :: Maybe CallService,
+    callError :: Maybe Text,
     createdAt :: UTCTime
   }
   deriving (Generic)
 
 data CallStatusAPIEntity = CallStatusAPIEntity
   { callStatusId :: Id CallStatus,
-    rideId :: Id Ride,
+    rideId :: Maybe (Id Ride),
     status :: CallTypes.CallStatus
   }
   deriving (Generic, FromJSON, ToJSON, ToSchema)
