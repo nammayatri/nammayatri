@@ -127,7 +127,7 @@ eval BackPressed state =
   else if state.props.subView == PlanDetails then continue state{props { subView = if state.data.config.subscriptionConfig.optionsMenuItems.managePlan then ManagePlan else MyPlan}}
   else if state.props.subView == FindHelpCentre then continue state {props { subView = state.props.prevSubView, kioskLocation = [], noKioskLocation = false, showError = false}}
   else if state.props.myPlanProps.isDueViewExpanded then continue state{props { myPlanProps{isDueViewExpanded = false}}}
-  else if state.data.myPlanData.autoPayStatus == MANDATE_FAILED && not state.props.isEndRideModal && not state.data.config.enableIntroductoryView && state.data.config.enableSubscriptionSupportPopup then continue state{props { popUpState = Mb.Just SupportPopup}}
+  else if state.data.myPlanData.autoPayStatus == MANDATE_FAILED && not state.props.isEndRideModal && not state.data.config.subscriptionConfig.enableIntroductoryView && state.data.config.subscriptionConfig.enableSubscriptionSupportPopup then continue state{props { popUpState = Mb.Just SupportPopup}}
   else exit $ HomeScreen state
 
 eval ToggleDueDetails state = continue state {props {myPlanProps { isDuesExpanded = not state.props.myPlanProps.isDuesExpanded}}}
@@ -234,7 +234,7 @@ eval ViewAutopayDetails state = continue state{props {subView = PlanDetails }}
 eval (BottomNavBarAction (BottomNavBar.OnNavigate screen)) state = do
   let newState = state{props{optionsMenuState = ALL_COLLAPSED, myPlanProps{ isDueViewExpanded = false }}}
   if screen == "Join" then continue state
-  else if state.data.myPlanData.autoPayStatus == MANDATE_FAILED && state.data.config.enableSubscriptionSupportPopup then do 
+  else if state.data.myPlanData.autoPayStatus == MANDATE_FAILED && state.data.config.subscriptionConfig.enableSubscriptionSupportPopup then do 
     continue state{props {popUpState = Mb.Just SupportPopup, redirectToNav = screen, optionsMenuState = ALL_COLLAPSED, myPlanProps{ isDueViewExpanded = false }}}
   else do case screen of
             "Home" -> exit $ HomeScreen newState

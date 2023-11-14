@@ -422,7 +422,7 @@ plansBottomView push state =
           , gravity CENTER_VERTICAL
           , visibility if state.props.joinPlanProps.isIntroductory then GONE else VISIBLE
           , onClick (\action -> do
-                        let url = if state.data.config.myPlanYoutubeLink == "" then state.data.config.faqLink else splitBasedOnLanguage state.data.config.myPlanYoutubeLink
+                        let url = if state.data.config.subscriptionConfig.myPlanYoutubeLink == "" then state.data.config.subscriptionConfig.faqLink else splitBasedOnLanguage state.data.config.subscriptionConfig.myPlanYoutubeLink
                         _ <- push action
                         _ <- pure $ JB.cleverTapCustomEvent "ny_driver_nyplans_watchvideo_clicked"
                         _ <- pure $ JB.metaLogEvent "ny_driver_nyplans_watchvideo_clicked"
@@ -638,7 +638,7 @@ myPlanBodyview push state =
                       _ <- pure $ JB.cleverTapCustomEvent "ny_driver_myplan_watchvideo_clicked"
                       _ <- pure $ JB.metaLogEvent "ny_driver_myplan_watchvideo_clicked"
                       _ <- pure $ JB.firebaseLogEvent "ny_driver_myplan_watchvideo_clicked"
-                      _ <- JB.openUrlInApp $ splitBasedOnLanguage state.data.config.myPlanYoutubeLink
+                      _ <- JB.openUrlInApp $ splitBasedOnLanguage state.data.config.subscriptionConfig.myPlanYoutubeLink
                       pure unit
                       ) (const NoAction)
           ]
@@ -1639,7 +1639,7 @@ dueOverViewCard push state isManual =
         , imageWithFallback $ HU.fetchImage HU.FF_ASSET "ny_ic_youtube"
         , onClick (\action -> do
             _<- push action
-            _ <- JB.openUrlInApp $ splitBasedOnLanguage state.data.config.myPlanYoutubeLink
+            _ <- JB.openUrlInApp $ splitBasedOnLanguage state.data.config.subscriptionConfig.myPlanYoutubeLink
             pure unit
           ) (const NoAction)
         ]

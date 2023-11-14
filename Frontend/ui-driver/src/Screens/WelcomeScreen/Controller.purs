@@ -25,11 +25,10 @@ data Action = BackPressed
             | PrimaryButtonAC PrimaryButtonController.Action
 
 data ScreenOutput = MobileNumberScreen
+                  | GoToChooseCityScreen
 
 eval :: Action -> WelcomeScreenState -> Eval Action ScreenOutput WelcomeScreenState
-eval BackPressed state = do 
-    _ <- pure $ minimizeApp ""
-    continue state
+eval BackPressed state = exit GoToChooseCityScreen
 eval (PrimaryButtonAC PrimaryButtonController.OnClick) state = do
   let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_get_started"
   exit MobileNumberScreen
