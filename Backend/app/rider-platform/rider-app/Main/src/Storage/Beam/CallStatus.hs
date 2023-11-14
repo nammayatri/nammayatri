@@ -18,17 +18,21 @@ module Storage.Beam.CallStatus where
 
 import qualified Database.Beam as B
 import qualified Kernel.External.Call.Interface as CallTypes
+import Kernel.External.Call.Types (CallService)
 import Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data CallStatusT f = CallStatusT
   { id :: B.C f Text,
     callId :: B.C f Text,
-    rideId :: B.C f Text,
+    rideId :: B.C f (Maybe Text),
     dtmfNumberUsed :: B.C f (Maybe Text),
     status :: B.C f CallTypes.CallStatus,
     recordingUrl :: B.C f (Maybe Text),
     conversationDuration :: B.C f Int,
+    merchantId :: B.C f (Maybe Text),
+    callService :: B.C f (Maybe CallService),
+    callError :: B.C f (Maybe Text),
     createdAt :: B.C f UTCTime
   }
   deriving (Generic, B.Beamable)

@@ -21,6 +21,7 @@ import Domain.Types.Ride
 import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
 import qualified Kernel.External.Call.Interface.Types as Call
+import Kernel.External.Call.Types (CallService)
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
@@ -51,6 +52,25 @@ updateCallStatus (Id callId) status conversationDuration recordingUrl =
     ]
     [Is BeamCT.id (Se.Eq callId)]
 
+updateCallError :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> Maybe Text -> Maybe Text -> Maybe CallService -> m ()
+updateCallError callSid callError merchantId callService =
+  updateWithKV
+    [ Set BeamCT.callError callError,
+      Set BeamCT.callService callService,
+      Set BeamCT.merchantId merchantId
+    ]
+    [Is BeamCT.callId (Se.Eq callSid)]
+
+updateCallStatusWithRideId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id CallStatus -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe CallService -> m ()
+updateCallStatusWithRideId (Id callId) rideId dtmfNumberUsed merchantId callService =
+  updateWithKV
+    [ Set BeamCT.entityId rideId,
+      Set BeamCT.dtmfNumberUsed dtmfNumberUsed,
+      Set BeamCT.merchantId merchantId,
+      Set BeamCT.callService callService
+    ]
+    [Is BeamCT.id (Se.Eq callId)]
+
 countCallsByEntityId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Ride -> m Int
 countCallsByEntityId entityID = do
   dbConf <- getMasterBeamConfig
@@ -59,7 +79,7 @@ countCallsByEntityId entityID = do
       L.findRow $
         B.select $
           B.aggregate_ (\ride -> (B.group_ (BeamCT.entityId ride), B.as_ @Int B.countAll_)) $
-            B.filter_' (\(BeamCT.CallStatusT {..}) -> entityId B.==?. B.val_ (getId entityID)) $
+            B.filter_' (\(BeamCT.CallStatusT {..}) -> B.fromMaybe_ (B.val_ "") entityId B.==?. B.val_ (getId entityID)) $
               B.all_ (BeamCommon.callStatus BeamCommon.atlasDB)
   pure $ either (const 0) (maybe 0 snd) resp
 
@@ -75,6 +95,9 @@ instance FromTType' BeamCT.CallStatus CallStatus where
             status = status,
             recordingUrl = recordingUrl,
             conversationDuration = conversationDuration,
+            merchantId = merchantId,
+            callService = callService,
+            callError = callError,
             createdAt = createdAt
           }
 
@@ -88,5 +111,8 @@ instance ToTType' BeamCT.CallStatus CallStatus where
         BeamCT.status = status,
         BeamCT.recordingUrl = recordingUrl,
         BeamCT.conversationDuration = conversationDuration,
+        BeamCT.merchantId = merchantId,
+        BeamCT.callService = callService,
+        BeamCT.callError = callError,
         BeamCT.createdAt = createdAt
       }
