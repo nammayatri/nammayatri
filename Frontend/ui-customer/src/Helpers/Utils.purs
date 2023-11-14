@@ -142,8 +142,6 @@ foreign import decodeError :: String -> String -> String
 
 foreign import toStringJSON :: forall a. a -> String
 
-foreign import zoneOtpExpiryTimer :: forall action. Int -> Int -> (action -> Effect Unit) -> (String -> String -> Int -> action) -> Effect Unit
-
 foreign import setRefreshing :: String -> Boolean -> Unit
 
 foreign import setEnabled :: String -> Boolean -> Unit

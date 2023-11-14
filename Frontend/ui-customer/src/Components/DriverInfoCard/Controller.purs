@@ -31,7 +31,6 @@ data Action = NoAction
             | OpenEmergencyHelp
             | MessageDriver
             | ShareRide
-            | ZoneOTPExpiryAction String String Int
             | OnNavigate
             | RemoveNotification
             | CallDriver

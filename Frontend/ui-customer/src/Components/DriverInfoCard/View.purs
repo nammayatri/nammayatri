@@ -32,7 +32,7 @@ import Effect.Class (liftEffect)
 import Engineering.Helpers.Commons (flowRunner, os, safeMarginBottom, screenWidth, getExpiryTime)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (fetchImage, FetchImageFrom(..), getAssetsBaseUrl, getPaymentMethod, secondsToHms, zoneOtpExpiryTimer, makeNumber, getVariantRideType)
+import Helpers.Utils (fetchImage, FetchImageFrom(..), getAssetsBaseUrl, getPaymentMethod, secondsToHms, makeNumber, getVariantRideType)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import MerchantConfig.Utils (Merchant(..), getMerchant, getValueFromConfig)
@@ -596,9 +596,7 @@ waitTimeView push state =
   , padding $ Padding 14 2 14 2
   , accessibilityHint $ "Wait Timer : " <> state.data.waitingTime
   , accessibility ENABLE
-  , visibility case state.props.currentSearchResultType == QUOTES of
-      true -> VISIBLE
-      false -> if state.data.driverArrived then VISIBLE else GONE
+  , visibility $ if state.props.currentSearchResultType == QUOTES || state.data.driverArrived then VISIBLE else GONE
   ][ textView (
       [ width MATCH_PARENT
       , height WRAP_CONTENT
@@ -612,14 +610,6 @@ waitTimeView push state =
       , lineHeight "24"
       , gravity CENTER
       , color Color.black800
-      , afterRender
-            ( \action -> do
-                if state.props.currentSearchResultType == QUOTES && (isLocalStageOn RideAccepted) then do
-                  _ <- zoneOtpExpiryTimer (getExpiryTime state.data.bookingCreatedAt true) state.data.config.driverInfoConfig.specialZoneQuoteExpirySeconds push ZoneOTPExpiryAction
-                  pure unit
-                  else pure unit
-            )
-            (const NoAction)
       ] <> FontStyle.h2 TypoGraphy)
   ]
 

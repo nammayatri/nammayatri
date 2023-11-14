@@ -1,7 +1,6 @@
 import { callbackMapper } from "presto-ui";
 
 const JBridge = window.JBridge;
-let zoneOtpExpiryTimerId = null;
 let tracking_id = 0;
 export const getNewTrackingId = function (unit) {
   tracking_id += 1;
@@ -61,12 +60,10 @@ export const secondsToHms = function (d) {
   d = Number(d);
   const h = Math.floor(d / 3600);
   const m = Math.floor(d % 3600 / 60);
-  // var s = Math.floor(d % 3600 % 60);
 
   const hDisplay = h > 0 ? h + (h == 1 ? " hr, " : " hrs, ") : "";
   const mDisplay = m > 0 ? m + (m == 1 ? " min " : " mins ") : "";
-  // var sDisplay = s > 0 ? s + (s == 1 ? " second" : " seconds") : "";
-  return hDisplay + mDisplay; //+ sDisplay;
+  return hDisplay + mDisplay;
 }
 
 export const getUTCDay = function (date){
@@ -160,41 +157,6 @@ export const decodeError = function (er) {
 
 export const toStringJSON = function (attr) {
   return JSON.stringify(attr);
-};
-
-function getTwoDigitsNumber(number) {
-  return number >= 10 ? number : "0"+number.toString();
-}
-
-export const zoneOtpExpiryTimer = function (startingTime) {
-  return function(endingTime) {
-    return function (cb) {
-      return function (action) {
-        return function () {
-          if (startingTime >= endingTime){
-            cb(action(zoneOtpExpiryTimerId)("")(0))();
-          } else {
-            const callback = callbackMapper.map(function () {
-              let sec = endingTime - startingTime;
-              function convertInMinutesFromat() {
-                sec--;
-                const minutes = getTwoDigitsNumber(Math.floor(sec / 60));
-                const seconds = getTwoDigitsNumber(sec - minutes * 60);
-                const timeInMinutesFormat = minutes + " : " + seconds;
-                cb(action(zoneOtpExpiryTimerId)(timeInMinutesFormat)(sec))();
-              }
-              if (zoneOtpExpiryTimerId) clearInterval(zoneOtpExpiryTimerId);
-              zoneOtpExpiryTimerId = setInterval(
-                convertInMinutesFromat,
-                1000
-              );
-            });
-            window.callUICallback(callback);
-          }
-        };
-      };
-    };
-  }
 };
 
 export const clearWaitingTimer = function (id){
@@ -296,17 +258,6 @@ export const seperateByWhiteSpaces = function(string) {
   return string.replace(/\s+/g, " ").trim();
 };
 
-// function uuidv4() {
-//   return ([1e7]+-1e3+-4e3+-8e3+-1e11).replace(/[018]/g, c =>
-//     (c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c / 4).toString(16)
-//   );
-// }
-
-// exports["generateSessionToken"] = function (str){
-//     var token = uuidv4();
-//     return token;
-// }
-
 export const shuffle = function (array) {
   const shuffled = array
     .map(value => ({ value, sort: Math.random() }))
@@ -348,7 +299,7 @@ export const fetchAndUpdateCurrentLocation = function (cb) {
             cb(action(lat)(lng))();
           });
           return window.JBridge.fetchAndUpdateCurrentLocation(callback);
-        } else {  // fallback for previous release
+        } else {
           const fallBackCallback = callbackMapper.map(function(){
             cb(fallbackAction)();
           });

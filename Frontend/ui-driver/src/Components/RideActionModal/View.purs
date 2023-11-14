@@ -27,9 +27,9 @@ import Effect.Unsafe (unsafePerformEffect)
 import Engineering.Helpers.Commons (screenWidth, getNewIDWithTag)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (countDown, getRideLabelData, getRequiredTag, clearTimer, getCurrentUTC, fetchImage, FetchImageFrom(..))
+import Helpers.Utils (getRideLabelData, getRequiredTag, clearTimer, getCurrentUTC, fetchImage, FetchImageFrom(..))
 import Helpers.Utils (getRideTypeColor, getCategorizedVariant)
-import JBridge (getVersionCode, waitingCountdownTimer, toast)
+import JBridge (getVersionCode)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import MerchantConfig.Utils (Merchant(..), getMerchant)
