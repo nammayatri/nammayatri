@@ -206,6 +206,7 @@ window.getMerchantConfig = function () {
   , "callOptions" : ["ANONYMOUS", "DIRECT"]
   , "showDisabilityBanner" : true
   , "enableContactSupport" : false
+  , "enableGeocoder" : true
   , "estimateAndQuoteConfig" :
                 { "enableOnlyAuto" : true
                 }

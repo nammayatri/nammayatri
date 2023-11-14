@@ -29,7 +29,7 @@ import Control.Monad.Except.Trans (lift)
 import Data.Array (catMaybes, filter, length, null, snoc, (!!), any, sortBy, head, uncons, last)
 import Data.Array as Arr
 import Data.Either (Either(..))
-import Data.Function.Uncurried (runFn3)
+import Data.Function.Uncurried (runFn3, runFn2)
 import Data.Int as INT
 import Data.Lens ((^.))
 import Data.Maybe (Maybe(..), fromMaybe, isJust, isNothing)
@@ -50,7 +50,7 @@ import Foreign (MultipleErrors, unsafeToForeign)
 import Foreign.Class (class Encode, encode)
 import Foreign.Generic (decodeJSON, encodeJSON)
 import Helpers.Utils (decodeError, addToPrevCurrLoc, addToRecentSearches, adjustViewWithKeyboard, checkPrediction, clearWaitingTimer, differenceOfLocationLists, drawPolygon, filterRecentSearches, fetchImage, FetchImageFrom(..), getCurrentDate, getCurrentLocationMarker, getCurrentLocationsObjFromLocal, getDistanceBwCordinates, getGlobalPayload, getMobileNumber, getNewTrackingId, getObjFromLocal, getPrediction, getRecentSearches, getScreenFromStage, getSearchType, parseFloat, parseNewContacts, removeLabelFromMarker, requestKeyboardShow, saveCurrentLocations, seperateByWhiteSpaces, setText, showCarouselScreen, sortPredctionByDistance, toStringJSON, triggerRideStatusEvent, withinTimeRange, fetchDefaultPickupPoint, recentDistance)
-import JBridge (addMarker, cleverTapSetLocation, currentPosition, drawRoute, emitJOSEvent, enableMyLocation, factoryResetApp, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, firebaseUserID, generateSessionId, getLocationPermissionStatus, getVersionCode, getVersionName, hideKeyboardOnNavigation, hideLoader, initiateLocationServiceClient, isCoordOnPath, isInternetAvailable, isLocationEnabled, isLocationPermissionEnabled, launchInAppRatingPopup, locateOnMap, locateOnMapConfig, metaLogEvent, openNavigation, reallocateMapFragment, removeAllPolylines, saveSuggestionDefs, saveSuggestions, setCleverTapUserData, setCleverTapUserProp, setFCMTokenWithTimeOut, stopChatListenerService, toast, toggleBtnLoader, updateRoute, updateRouteMarker, extractReferrerUrl)
+import JBridge (addMarker, cleverTapSetLocation, currentPosition, drawRoute, emitJOSEvent, enableMyLocation, factoryResetApp, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, firebaseUserID, generateSessionId, getLocationPermissionStatus, getVersionCode, getVersionName, hideKeyboardOnNavigation, hideLoader, initiateLocationServiceClient, isCoordOnPath, isInternetAvailable, isLocationEnabled, isLocationPermissionEnabled, launchInAppRatingPopup, locateOnMap, locateOnMapConfig, metaLogEvent, openNavigation, reallocateMapFragment, removeAllPolylines, saveSuggestionDefs, saveSuggestions, setCleverTapUserData, setCleverTapUserProp, setFCMTokenWithTimeOut, stopChatListenerService, toast, toggleBtnLoader, updateRoute, updateRouteMarker, extractReferrerUrl, getLocationNameV2)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (printLog)
@@ -2361,23 +2361,34 @@ getPlaceName :: Number -> Number -> Location -> FlowBT String PlaceName
 getPlaceName lat long location = do
   case location.address of
     Just address -> do
-      let addressComponent = AddressComponents {
-                                longName : location.place
-                              , shortName : location.place
-                              , types : ["sublocality"]
-                            }
-      pure (PlaceName {
-                formattedAddress : address
-              , location : LatLong { lat : location.lat, lon : location.lng }
-              , plusCode : Nothing
-              , addressComponents : [addressComponent]
-            })
+      let addressComponent = mkAddressComponent location "sublocality"
+      pure $ mkPlaceName lat long address (Just addressComponent)
     Nothing -> do
-      (GetPlaceNameResp locationName) <- Remote.placeNameBT (Remote.makePlaceNameReq lat long $ EHC.getMapsLanguageFormat $ getValueToLocalStore LANGUAGE_KEY)
-
-      let (PlaceName address) = (fromMaybe HomeScreenData.dummyLocationName (locationName !! 0))
-      pure (PlaceName address)
-
+      let address = runFn2 getLocationNameV2 lat long
+      config <- getAppConfig Constants.appConfig
+      if address /= "NO_LOCATION_FOUND" && config.enableGeocoder then do
+        void $ pure $ firebaseLogEvent "ny_geocode_ll_address_found"
+        pure $ mkPlaceName lat long address Nothing
+      else do
+        (GetPlaceNameResp locationName) <- Remote.placeNameBT (Remote.makePlaceNameReq lat long $ EHC.getMapsLanguageFormat $ getValueToLocalStore LANGUAGE_KEY)
+        void $ pure $ firebaseLogEvent "ny_geocode_ll_address_not_used"
+        pure $ (fromMaybe HomeScreenData.dummyLocationName (locationName !! 0))
+  where 
+    mkPlaceName :: Number -> Number -> String -> Maybe AddressComponents -> PlaceName
+    mkPlaceName lat long address addressComponent = 
+      PlaceName {
+        formattedAddress : address
+      , location : LatLong { lat : lat, lon : long }
+      , plusCode : Nothing
+      , addressComponents : [] <> catMaybes [addressComponent]
+      }
+    mkAddressComponent :: Location -> String -> AddressComponents
+    mkAddressComponent location addressType =
+      AddressComponents {
+          longName : location.place
+        , shortName : location.place
+        , types : [addressType]
+      }
 
 dummyLocationData :: LocationData
 dummyLocationData = LocationData {

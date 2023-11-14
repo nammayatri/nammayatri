@@ -126,6 +126,7 @@ config =
   , callOptions : ["ANONYMOUS"]
   , autoVariantEnabled : true
   , showDisabilityBanner : true
+  , enableGeocoder : true
   , enableWhatsappOTP : ["BD"]
   , notifyRideConfirmationConfig : 
       { notify : false 
@@ -156,7 +157,7 @@ config =
               , range : 100
               , color : "#323643"
               },
-            apiTriggerRadius : 20.0,
+            apiTriggerRadius : 10.0,
             pickUpToSourceThreshold : 1.0
           }
       , labelTextSize : 30

@@ -61,6 +61,7 @@ type AppConfig =
   , features :: Features
   , rideCompletedCardConfig :: RideCompletedCardConfig
   , purpleRideConfig :: PurpleRideConfig
+  , enableGeocoder :: Boolean
   } 
 
 type NotifyRideConfirmationConfig = {

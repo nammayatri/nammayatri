@@ -1994,6 +1994,18 @@ export const emitJOSEvent = function (mapp, eventType, payload) {
   JOS.emitEvent(mapp)(eventType)(JSON.stringify(payload))()()
 };
 
+export const getLocationNameV2 = function (lat, lon) { 
+  try {
+    if (JBridge.getLocationNameSDK) {
+      return JBridge.getLocationNameSDK(lat, lon);
+    }else{
+      return "NO_LOCATION_FOUND";
+    }
+  } catch (error) {
+    return "NO_LOCATION_FOUND";
+  }
+}
+
 export const hideLoader = function () {
   JOS.emitEvent("java")("onEvent")(JSON.stringify({
     event: "hide_loader"
@@ -2122,7 +2134,7 @@ export const storeCallBackLocateOnMap = function (cb) {
           }
           timerIdDebounce = setTimeout(() => {
             cb(action(key)(lat)(lon))();
-          }, 200);
+          }, 100);
         });
         window.JBridge.storeCallBackLocateOnMap(callback);
       } catch (error) {
