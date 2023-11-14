@@ -298,25 +298,25 @@ processMandate driverId mandateStatus startDate endDate mandateId maxAmount paye
       payerAppName = upiDetails >>= (.payerAppName)
       mandatePaymentFlow = upiDetails >>= (.txnFlowType)
   mbExistingMandate <- QM.findById mandateId
-  driverInfo <- QDI.findById (cast driverId) >>= fromMaybeM DriverInfoNotFound
   when (isNothing mbExistingMandate) $ QM.create =<< mkMandate payerApp payerAppName mandatePaymentFlow
   when (mandateStatus == Payment.ACTIVE) $ do
-    QDP.updateMandateIdByDriverId driverId mandateId
-    driverPlan <- QDP.findByMandateId mandateId >>= fromMaybeM (NoDriverPlanForMandate mandateId.getId)
-    Redis.whenWithLockRedis (mandateProcessingLockKey driverId.getId) 60 $ do
+    Redis.withWaitOnLockRedisWithExpiry (mandateProcessingLockKey driverId.getId) 60 60 $ do
       --- do not update payer vpa from euler for older active mandates also we update only when autopayStatus not suspended because on suspend we make the mandate inactive in table
+      driverInfo <- QDI.findById (cast driverId) >>= fromMaybeM DriverInfoNotFound
       let toUpdatePayerVpa = checkToUpdatePayerVpa mbExistingMandate (driverInfo.autoPayStatus)
       let payerVpa' = if toUpdatePayerVpa then payerVpa else Nothing
+      QDP.updateMandateIdByDriverId driverId mandateId
       QM.updateMandateDetails mandateId DM.ACTIVE payerVpa' payerApp payerAppName mandatePaymentFlow
+      driverPlan <- QDP.findByMandateId mandateId >>= fromMaybeM (NoDriverPlanForMandate mandateId.getId)
       QDP.updatePaymentModeByDriverId (cast driverPlan.driverId) DP.AUTOPAY
       QDP.updateMandateSetupDateByDriverId (cast driverPlan.driverId)
       QDI.updateSubscription True (cast driverPlan.driverId)
       QDI.updateAutoPayStatusAndPayerVpa (castAutoPayStatus mandateStatus) payerVpa' (cast driverPlan.driverId)
   when (mandateStatus `elem` [Payment.REVOKED, Payment.FAILURE, Payment.EXPIRED, Payment.PAUSED]) $ do
-    mbDriverPlan <- QDP.findByMandateId mandateId
     driver <- B.runInReplica $ QP.findById driverId >>= fromMaybeM (PersonDoesNotExist driverId.getId)
-    Redis.whenWithLockRedis (mandateProcessingLockKey driverId.getId) 60 $ do
+    Redis.withWaitOnLockRedisWithExpiry (mandateProcessingLockKey driverId.getId) 60 60 $ do
       QM.updateMandateDetails mandateId DM.INACTIVE Nothing payerApp Nothing mandatePaymentFlow --- should we store driver Id in mandate table ?
+      mbDriverPlan <- QDP.findByMandateId mandateId
       case mbDriverPlan of
         Just driverPlan -> do
           QDI.updateAutoPayStatusAndPayerVpa (castAutoPayStatus mandateStatus) Nothing (cast driverId)
@@ -330,6 +330,7 @@ processMandate driverId mandateStatus startDate endDate mandateId maxAmount paye
             QIN.inActivateAllAutopayActiveInvoices (cast driver.id)
             PaymentNudge.notifyMandateCancelled driver.id driver.merchantId driver.deviceToken driver.language
         Nothing -> do
+          driverInfo <- QDI.findById (cast driverId) >>= fromMaybeM DriverInfoNotFound
           mbDriverPlanByDriverId <- QDP.findByDriverId driverId
           let currentMandateId = mbDriverPlanByDriverId >>= (.mandateId)
               autoPayStatus = driverInfo.autoPayStatus
