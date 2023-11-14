@@ -627,6 +627,7 @@ data Action = NoAction
             | NotifyDriverStatusCountDown Int String String String
             | UpdateProfileButtonAC PrimaryButtonController.Action 
             | SkipAccessibilityUpdateAC PrimaryButtonController.Action
+            | SpecialZoneOTPExpiryAction Int String String String
 
 
 eval :: Action -> HomeScreenState -> Eval Action ScreenOutput HomeScreenState
@@ -702,6 +703,7 @@ eval OnResumeCallback state =
         let findingQuotesProgress = 1.0 - 30.0/(toNumber (getSearchExpiryTime "LazyCheck"))
         void $ pure $ startLottieProcess lottieAnimationConfig {rawJson = "progress_loader_line", lottieId = (getNewIDWithTag "lottieLoaderAnimProgress"), minProgress = findingQuotesProgress, scaleType="CENTER_CROP"}
         continue state
+      "RideAccepted" | state.data.currentSearchResultType == QUOTES -> exit $ Retry state
       _ -> continue state
 
 eval (UpdateSavedLoc savedLoc) state = continue state{data{savedLocations = savedLoc}}
@@ -1192,13 +1194,18 @@ eval (WaitingTimeAction timerID timeInMinutes seconds) state = do
                 else pure unit
   continue state { data { driverInfoCardState { waitingTime = timeInMinutes} }, props { waitingTimeTimerIds = union state.props.waitingTimeTimerIds [timerID] } }
 
-eval (DriverInfoCardActionController (DriverInfoCardController.ZoneOTPExpiryAction timerID timeInMinutes seconds)) state = do
-  if seconds <= 0 then do
+eval (SpecialZoneOTPExpiryAction seconds id status timerID) state = do
+  if status == "EXPIRED" then do
     _ <- pure $ toast $ getString OTP_FOR_THE_JATRI_SATHI_ZONE_HAS_BEEN_EXPIRED_PLEASE_TRY_LOOKING_AGAIN
     _ <- pure $ clearTimer timerID
     exit $ NotificationHandler "CANCELLED_PRODUCT" state
-    else
-    continue state { data { driverInfoCardState { waitingTime = timeInMinutes } }, props { waitingTimeTimerIds = union state.props.waitingTimeTimerIds [timerID] } }
+  else do
+    let timeInMinutes = formatDigits $ seconds/60
+        timeInSeconds = formatDigits $ seconds - (seconds/60) * 60
+    continue state { data { driverInfoCardState { waitingTime = timeInMinutes <> " : " <> timeInSeconds } }, props { waitingTimeTimerIds = union state.props.waitingTimeTimerIds [timerID] } }
+  where
+    formatDigits :: Int -> String
+    formatDigits time = (if time >= 10 then "" else "0") <> show time
 
 eval (DriverInfoCardActionController (DriverInfoCardController.OnNavigate)) state = do
   void $ pure $ openNavigation 0.0 0.0 state.data.driverInfoCardState.destinationLat state.data.driverInfoCardState.destinationLng "DRIVE"

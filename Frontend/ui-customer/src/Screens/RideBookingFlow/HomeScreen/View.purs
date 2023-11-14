@@ -58,7 +58,7 @@ import Effect (Effect)
 import Effect.Aff (launchAff)
 import Effect.Class (liftEffect)
 import Effect.Uncurried (runEffectFn1, runEffectFn2)
-import Engineering.Helpers.Commons (countDown, flowRunner, getNewIDWithTag, liftFlow, os, safeMarginBottom, safeMarginTop, screenHeight, isPreviousVersion, screenWidth, camelCaseToSentenceCase)
+import Engineering.Helpers.Commons (countDown, flowRunner, getNewIDWithTag, liftFlow, os, safeMarginBottom, safeMarginTop, screenHeight, isPreviousVersion, screenWidth, camelCaseToSentenceCase, getExpiryTime)
 import Engineering.Helpers.Utils (showAndHideLoader)
 import Engineering.Helpers.LogEvent (logEvent)
 import Engineering.Helpers.Utils (showAndHideLoader)
@@ -158,7 +158,12 @@ screen initialState =
                     else liftEffect $ countDown 5 "notifyCustomer" push NotifyDriverStatusCountDown
                   else pure unit
                 _ <- pure $ enableMyLocation true
-                if ((getValueToLocalStore DRIVER_ARRIVAL_ACTION) == "TRIGGER_WAITING_ACTION") then waitingCountdownTimer initialState.data.driverInfoCardState.driverArrivalTime push WaitingTimeAction else pure unit
+                if ((getValueToLocalStore DRIVER_ARRIVAL_ACTION) == "TRIGGER_WAITING_ACTION") then 
+                  waitingCountdownTimer initialState.data.driverInfoCardState.driverArrivalTime push WaitingTimeAction
+                else if initialState.data.currentSearchResultType == QUOTES then do
+                  let secondsLeft = initialState.data.config.driverInfoConfig.specialZoneQuoteExpirySeconds - (getExpiryTime initialState.data.driverInfoCardState.createdAt true)
+                  liftEffect $ countDown secondsLeft "SpecialZoneOTPExpiry" push SpecialZoneOTPExpiryAction
+                else pure unit
                 if ((getValueToLocalStore TRACKING_DRIVER) == "False") then do
                   _ <- pure $ removeMarker (getCurrentLocationMarker (getValueToLocalStore VERSION_NAME))
                   _ <- pure $ setValueToLocalStore TRACKING_ID (getNewTrackingId unit)
