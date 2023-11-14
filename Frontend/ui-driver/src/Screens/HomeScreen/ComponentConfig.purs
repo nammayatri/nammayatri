@@ -491,6 +491,7 @@ driverRCPopUpConfig state = let
       color = Color.yellow900, 
       margin = MarginTop 24,
       width = MATCH_PARENT, 
+      padding = Padding 16 6 16 6,
       height = WRAP_CONTENT 
     } , 
     option2 {

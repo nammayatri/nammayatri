@@ -377,7 +377,7 @@ logoutPopupModal push state =
 
 messageView :: forall w . (Action -> Effect Unit) -> ST.RegistrationScreenState -> PrestoDOM (Effect Unit) w
 messageView push state =
-    let isHidden = all (_ == NOT_STARTED)[state.data.vehicleDetailsStatus, state.data.drivingLicenseStatus] && isNothing state.props.limitReachedFor
+    let isHidden = all (\x -> x `elem ` [NOT_STARTED, COMPLETED]) [state.data.vehicleDetailsStatus, state.data.drivingLicenseStatus] && isNothing state.props.limitReachedFor
     in
     linearLayout
       [ width MATCH_PARENT

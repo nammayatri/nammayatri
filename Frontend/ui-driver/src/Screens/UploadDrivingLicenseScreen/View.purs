@@ -153,7 +153,7 @@ linearLayout
            [ width MATCH_PARENT
            , height WRAP_CONTENT
            , text state.data.errorMessage
-           , visibility GONE
+           , visibility if state.data.errorMessage /= "" then VISIBLE else GONE
            , color Color.red
            , padding( PaddingHorizontal 20 20)
            , margin (MarginBottom 10)
