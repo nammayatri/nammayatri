@@ -253,6 +253,7 @@ window.getMerchantConfig = function () {
   , "autoSelectBackground" : "#53BB6F"
   , "enableMockLocation" : false
   , "defaultLanguage" : "EN_US"
+  , "enableGeocoder" : false
   , "specialLocationView" : true
   , "navigationAppConfig" : {
       "query" : "google.navigation:q=%f,%f"

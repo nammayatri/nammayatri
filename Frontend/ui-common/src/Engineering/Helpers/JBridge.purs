@@ -245,6 +245,7 @@ foreign import supportsInbuildYoutubePlayer :: Unit -> Boolean
 foreign import addCarouselWithVideoExists :: Unit -> Boolean
 foreign import isNetworkTimeEnabled :: EffectFn1 Unit Boolean
 foreign import storeOnResumeCallback :: forall action. Fn2 (action -> Effect Unit) action Unit
+foreign import getLocationNameV2 :: Fn2 Number Number String
 
 type LottieAnimationConfig = {
     rawJson :: String

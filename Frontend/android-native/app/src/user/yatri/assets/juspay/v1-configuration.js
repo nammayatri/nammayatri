@@ -210,6 +210,7 @@ window.getMerchantConfig = function () {
   , "enableMockLocation" : false
   , "defaultLanguage" : "EN_US"
   , "isEmergencyContacts": "true"
+  , "enableGeocoder" : false
   , "specialLocationView" : true
   , "navigationAppConfig" : {
     "query" : "google.navigation:q=%f,%f"
