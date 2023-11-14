@@ -149,12 +149,23 @@ listPerson ::
 listPerson _ mbSearchString mbLimit mbOffset mbPersonId = do
   mbSearchStrDBHash <- getDbHash `traverse` mbSearchString
   personAndRoleList <- runInReplica $ QP.findAllWithLimitOffset mbSearchString mbSearchStrDBHash mbLimit mbOffset mbPersonId
-  res <- forM personAndRoleList $ \(encPerson, role, merchantAccessList) -> do
+  res <- forM personAndRoleList $ \(encPerson, role, merchantAccessList, merchantCityAccessList) -> do
     decPerson <- decrypt encPerson
-    pure $ DP.makePersonAPIEntity decPerson role merchantAccessList Nothing -- TODO: add available cities here
+    let availableCitiesForMerchant = makeAvailableCitiesForMerchant merchantAccessList merchantCityAccessList
+    pure $ DP.makePersonAPIEntity decPerson role merchantAccessList (Just availableCitiesForMerchant)
   let count = length res
   let summary = Summary {totalCount = 10000, count}
   pure $ ListPersonRes {list = res, summary = summary}
+
+makeAvailableCitiesForMerchant :: [ShortId DMerchant.Merchant] -> [City.City] -> [DP.AvailableCitiesForMerchant]
+makeAvailableCitiesForMerchant merchantAccessList merchantCityAccessList = do
+  let merchantCityList = zip merchantAccessList merchantCityAccessList
+  let groupedByMerchant = groupBy ((==) `on` fst) merchantCityList
+  if null groupedByMerchant
+    then []
+    else do
+      let merchantAccesslistWithCity = map (\group -> DP.AvailableCitiesForMerchant (fst (head group)) (map snd group)) groupedByMerchant
+      merchantAccesslistWithCity
 
 assignRole ::
   EsqDBFlow m r =>
