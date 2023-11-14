@@ -53,7 +53,7 @@ buildInitMessage res = do
         SConfirm.ConfirmAutoDetails estimateId driverId -> (Init.RIDE, Just estimateId, driverId)
         SConfirm.ConfirmOneWaySpecialZoneDetails quoteId -> (Init.RIDE_OTP, Just quoteId, Nothing) --need to be  checked
   let vehicleVariant = castVehicleVariant res.vehicleVariant
-  when (fulfillmentType == Init.RENTAL && res.mbStartTime == Nothing) $ throwError (InvalidRequest "Rental booking should have start time")
+  when (fulfillmentType == Init.RENTAL && isNothing res.mbStartTime) $ throwError (InvalidRequest "Rental booking should have start time")
   pure
     Init.InitMessage
       { order =

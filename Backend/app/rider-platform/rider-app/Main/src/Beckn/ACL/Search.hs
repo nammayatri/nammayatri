@@ -131,12 +131,7 @@ mkIntent origin destination customerLanguage disabilityTag distance duration mbP
               Just $
                 Search.TG $
                   [mkSearchInfoTag]
-                    <> ( if isJust distance || isJust duration
-                           then
-                             [ mkRouteInfoTags
-                             ]
-                           else []
-                       ),
+                    <> [mkRouteInfoTags | isJust distance || isJust duration],
             customer =
               if isJust customerLanguage || isJust disabilityTag
                 then
