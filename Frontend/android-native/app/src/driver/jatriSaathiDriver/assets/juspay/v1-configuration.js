@@ -49,7 +49,7 @@ window.getMerchantConfig = function () {
       "REPORT_ISSUE_CHAT_PLACEHOLDER" : "Describe your issue. Yatri Sathi will try to resolve it in under 24 hours.",
       "MY_PLAN_TITLE" : "Yatri Sathi Plans",
       "CHOOSE_YOUR_PLAN" : "Start your Plan Now!",
-      "OFFER_CARD_BANNER_TITLE" : "Setup Autopay and pay only ₹1/ride from Jan 1-31"
+      "OFFER_CARD_BANNER_TITLE" : "Setup Autopay and pay only ₹3/ride from Jan 1-31"
     },
     "hindiStrings": {
       "WELCOME_TEXT": "Welcome to Yatri Sathi Driver App",
@@ -63,7 +63,7 @@ window.getMerchantConfig = function () {
       "REPORT_ISSUE_CHAT_PLACEHOLDER" : "अपनी समस्या बताएं। यात्री साथी 24 घंटे के अंदर इसका समाधान करने का प्रयास करेगा।",
       "MY_PLAN_TITLE" : "यात्री साथी प्लान्स",
       "CHOOSE_YOUR_PLAN" : "अपना प्लान शुरू करें!",
-      "OFFER_CARD_BANNER_TITLE" : "ऑटोपे सेटअप करें और 1-31 जनवरी तक केवल ₹1/सवारी का पेमेंट करें"
+      "OFFER_CARD_BANNER_TITLE" : "ऑटोपे सेटअप करें और 1-31 जनवरी तक केवल ₹3/सवारी का पेमेंट करें"
     },
     "bengaliStrings": {
       "WELCOME_TEXT": "Welcome to Yatri Sathi Driver App",
@@ -77,7 +77,7 @@ window.getMerchantConfig = function () {
       "REPORT_ISSUE_CHAT_PLACEHOLDER" : "আপনার সমস্যাটি বর্ণনা করুন। যাত্রী সাথী 24 ঘন্টার মধ্যে এটি সমাধান করার চেষ্টা করবেন।",
       "MY_PLAN_TITLE" : "যাত্রী সাথী পরিকল্পনা",
       "CHOOSE_YOUR_PLAN" : "এখন প্ল্যান শুরু করুন!",
-      "OFFER_CARD_BANNER_TITLE" : "অটোপে সেটআপ করুন এবং জানুয়ারী 1-31 এর মধ্যে শুধুমাত্র ₹1/রাইড প্রদান করুন"
+      "OFFER_CARD_BANNER_TITLE" : "অটোপে সেটআপ করুন এবং জানুয়ারী 1-31 এর মধ্যে শুধুমাত্র ₹3/রাইড প্রদান করুন"
     },
     "logs": ["JUSPAY","FIREBASE","CLEVERTAP"]
     , "fontName" : "PlusJakartaSans"
@@ -100,7 +100,7 @@ window.getMerchantConfig = function () {
       },
       "offerBannerConfig" : {
         "showDUOfferBanner" : true,
-        "offerBannerValidTill" : "2023-11-16T00:00:00",
+        "offerBannerValidTill" : "2023-12-01T00:00:00",
         "offerBannerDeadline" : "Jan 1-31-*$*-ಜನವರಿ 1-31-*$*-1-31 जनवरी-*$*-ஜனவரி 1-31-*$*-জানুয়ারী 1-31",
         "offerBannerPlans" : ["25ade579-fd9c-4288-a015-337af085e66c"],
       },
