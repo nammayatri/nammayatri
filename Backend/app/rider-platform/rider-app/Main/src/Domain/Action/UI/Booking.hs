@@ -47,5 +47,6 @@ bookingStatus bookingId (personId, _) = do
 bookingList :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => (Id Person.Person, Id Merchant.Merchant) -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe SRB.BookingStatus -> m BookingListRes
 bookingList (personId, _) mbLimit mbOffset mbOnlyActive mbBookingStatus = do
   rbList <- runInReplica $ QR.findAllByRiderIdAndRide personId mbLimit mbOffset mbOnlyActive mbBookingStatus
+  rentalScheduledBookingList <- runInReplica $ QRB.findScheduledRentalBookings personId
   logInfo $ "rbList: test " <> show rbList
-  BookingListRes <$> traverse SRB.buildBookingAPIEntity rbList
+  BookingListRes <$> traverse SRB.buildBookingAPIEntity (rbList <> rentalScheduledBookingList)

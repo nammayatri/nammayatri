@@ -117,7 +117,7 @@ makeBookingAPIEntity booking activeRide allRides fareBreakups mbExophone mbPayme
       tripTerms = fromMaybe [] $ booking.tripTerms <&> (.descriptions),
       fareBreakup = DFareBreakup.mkFareBreakupAPIEntity <$> fareBreakups,
       bookingDetails,
-      rideStartTime = activeRide >>= (.rideStartTime),
+      rideStartTime = bool (activeRide >>= (.rideStartTime)) (maybe (Just booking.startTime) (.rideStartTime) activeRide) (isRentalBooking booking),
       rideEndTime = activeRide >>= (.rideEndTime),
       duration = getRideDuration activeRide,
       merchantExoPhone = maybe booking.primaryExophone (\exophone -> if not exophone.isPrimaryDown then exophone.primaryPhone else exophone.backupPhone) mbExophone,
@@ -128,6 +128,10 @@ makeBookingAPIEntity booking activeRide allRides fareBreakups mbExophone mbPayme
       updatedAt = booking.updatedAt
     }
   where
+    isRentalBooking :: Booking -> Bool
+    isRentalBooking bk = case bk.bookingDetails of
+      RentalDetails _ _ -> True
+      _ -> False
     getRideDuration :: Maybe DRide.Ride -> Maybe Seconds
     getRideDuration mbRide = do
       ride <- mbRide

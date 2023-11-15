@@ -224,6 +224,16 @@ findStuckBookings (Id merchantId) bookingIds now =
       ]
     <&> (Domain.id <$>)
 
+findScheduledRentalBookings :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> m [Booking]
+findScheduledRentalBookings (Id personId) =
+  findAllWithKV
+    [ Se.And
+        [ Se.Is BeamB.riderId $ Se.Eq personId,
+          Se.Is BeamB.fareProductType $ Se.Eq DFP.RENTAL,
+          Se.Is BeamB.status $ Se.Eq CONFIRMED
+        ]
+    ]
+
 findAllCancelledBookingIdsByRider :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> m [Id Booking]
 findAllCancelledBookingIdsByRider (Id riderId) =
   findAllWithDb

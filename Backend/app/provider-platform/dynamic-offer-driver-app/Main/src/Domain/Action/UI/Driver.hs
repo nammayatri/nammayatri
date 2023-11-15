@@ -1356,7 +1356,7 @@ respondQuote (driverId, _, merchantOpCityId) req = do
             pure otpCode
           Just otp -> pure otp
 
-        ride <- buildRide booking otpCode merchantId
+        ride <- buildRentalRide booking otpCode merchantId
         triggerRideCreatedEvent RideEventData {ride = ride, personId = cast driver.id, merchantId}
         void $ LF.rideDetails ride.id ride.status merchantId ride.driverId booking.fromLocation.lat booking.fromLocation.lon
         rideDetails <- buildRideDetails ride driver
@@ -1403,9 +1403,7 @@ respondQuote (driverId, _, merchantOpCityId) req = do
                   ]
         Notify.notifyDriver merchantOpCityId notificationType notificationTitle message driver.id driver.deviceToken
         void $ CallBAP.sendRideAssignedUpdateToBAP uBooking ride -- FIX ME RENTAL
-
-    -- TODO remove duplication
-    buildRide booking otp merchantId = do
+    buildRentalRide booking otp merchantId = do
       guid <- Id <$> generateGUID
       shortId <- generateShortId
       now <- getCurrentTime
@@ -1426,7 +1424,7 @@ respondQuote (driverId, _, merchantOpCityId) req = do
             traveledDistance = 0,
             chargeableDistance = Nothing,
             driverArrivalTime = Nothing,
-            tripStartTime = Nothing,
+            tripStartTime = Just booking.startTime,
             tripEndTime = Nothing,
             tripStartPos = Nothing,
             tripEndPos = Nothing,
