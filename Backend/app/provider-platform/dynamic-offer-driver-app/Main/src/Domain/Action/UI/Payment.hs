@@ -291,7 +291,6 @@ processMandate driverId mandateStatus startDate endDate mandateId maxAmount paye
   mbExistingMandate <- QM.findById mandateId
   when (isNothing mbExistingMandate) $ QM.create =<< mkMandate payerApp payerAppName mandatePaymentFlow
   when (mandateStatus == Payment.ACTIVE) $ do
-    driverPlan <- QDP.findByMandateId mandateId >>= fromMaybeM (NoDriverPlanForMandate mandateId.getId)
     Redis.withWaitOnLockRedisWithExpiry (mandateProcessingLockKey driverId.getId) 60 60 $ do
       --- do not update payer vpa from euler for older active mandates also we update only when autopayStatus not suspended because on suspend we make the mandate inactive in table
       driverInfo <- QDI.findById (cast driverId) >>= fromMaybeM DriverInfoNotFound
@@ -299,6 +298,7 @@ processMandate driverId mandateStatus startDate endDate mandateId maxAmount paye
       let payerVpa' = if toUpdatePayerVpa then payerVpa else Nothing
       QDP.updateMandateIdByDriverId driverId mandateId
       QM.updateMandateDetails mandateId DM.ACTIVE payerVpa' payerApp payerAppName mandatePaymentFlow
+      driverPlan <- QDP.findByMandateId mandateId >>= fromMaybeM (NoDriverPlanForMandate mandateId.getId)
       QDP.updatePaymentModeByDriverId (cast driverPlan.driverId) DP.AUTOPAY
       QDP.updateMandateSetupDateByDriverId (cast driverPlan.driverId)
       QDI.updateSubscription True (cast driverPlan.driverId)
