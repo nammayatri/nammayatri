@@ -219,4 +219,5 @@ in  { esqDBCfg
     , tables
     , dontEnableForDb
     , maxMessages
+    , incomingAPIResponseTimeout = +15
     }

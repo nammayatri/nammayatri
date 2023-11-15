@@ -116,7 +116,8 @@ data AppCfg = AppCfg
     eventStreamMap :: [EventStreamMap],
     tables :: Tables,
     dontEnableForDb :: [Text],
-    maxMessages :: Text
+    maxMessages :: Text,
+    incomingAPIResponseTimeout :: Int
   }
   deriving (Generic, FromDhall)
 
@@ -179,7 +180,8 @@ data AppEnv = AppEnv
     eventStreamMap :: [EventStreamMap],
     eventRequestCounter :: EventCounterMetric,
     dontEnableForDb :: [Text],
-    maxMessages :: Text
+    maxMessages :: Text,
+    incomingAPIResponseTimeout :: Int
   }
   deriving (Generic)
 

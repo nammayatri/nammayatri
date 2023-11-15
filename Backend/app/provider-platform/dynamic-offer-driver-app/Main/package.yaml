@@ -77,6 +77,8 @@ dependencies:
   - servant-multipart
   - text
   - wai
+  - wai-extra
+  - http-types
   - warp
   - time
   - stm
@@ -152,6 +154,7 @@ library:
     - special-zone-a
     - payment
     - sessionizer-metrics
+    - utils
 
 executables:
   dynamic-offer-driver-app-exe:
