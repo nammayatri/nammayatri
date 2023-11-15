@@ -234,7 +234,7 @@ popupModalConfig state = let
       option1 {
         text = case state.props.popUpState of
                   Mb.Just SuccessPopup -> getString GOT_IT
-                  Mb.Just FailedPopup -> getString RETRY_PAYMENT_STR
+                  Mb.Just FailedPopup -> getString GOT_IT
                   Mb.Just DuesClearedPopup -> getString GOT_IT
                   Mb.Just SwitchedPlan -> getString GOT_IT
                   Mb.Just CancelAutoPay -> getString PAUSE_AUTOPAY_STR
