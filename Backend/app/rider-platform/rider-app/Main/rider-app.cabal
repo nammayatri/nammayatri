@@ -477,8 +477,11 @@ library
     , time
     , unliftio-core
     , unordered-containers
+    , utils
+    , uuid
     , vector
     , wai
+    , wai-extra
     , wai-middleware-prometheus
     , warp
     , x509
@@ -577,8 +580,10 @@ executable rider-app-exe
     , time
     , unliftio-core
     , unordered-containers
+    , uuid
     , vector
     , wai
+    , wai-extra
     , wai-middleware-prometheus
     , warp
     , x509

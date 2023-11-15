@@ -41,6 +41,8 @@ import Kernel.Utils.Dhall
 import qualified Kernel.Utils.FlowLogging as L
 import Kernel.Utils.Servant.SignatureAuth (addAuthManagersToFlowRt, prepareAuthManagers)
 import Network.HTTP.Client as Http
+import Network.HTTP.Types (status503)
+import Network.Wai
 import Network.Wai.Handler.Warp
   ( defaultSettings,
     runSettings,
@@ -50,6 +52,7 @@ import Network.Wai.Handler.Warp
   )
 import qualified Storage.CachedQueries.Merchant as Storage
 import System.Environment (lookupEnv)
+import "utils" Utils.Common.Events as UE
 
 runDynamicOfferDriverApp :: (AppCfg -> AppCfg) -> IO ()
 runDynamicOfferDriverApp configModifier = do
@@ -105,7 +108,8 @@ runDynamicOfferDriverApp' appCfg = do
 
         logInfo ("Runtime created. Starting server at port " <> show (appCfg.port))
         pure flowRt'
-    runSettings settings $ App.run (App.EnvR flowRt' appEnv)
+    let timeoutMiddleware = UE.timeoutEvent flowRt appEnv (responseLBS status503 [] "") appCfg.incomingAPIResponseTimeout
+    runSettings settings $ timeoutMiddleware (App.run (App.EnvR flowRt' appEnv))
 
 convertToHashMap :: Map.Map String Http.ManagerSettings -> HashMap.HashMap Text Http.ManagerSettings
 convertToHashMap = HashMap.fromList . map convert . Map.toList

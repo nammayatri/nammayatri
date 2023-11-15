@@ -606,6 +606,7 @@ library
     , hashmap
     , hspec
     , http-client
+    , http-types
     , lens
     , location-updates
     , mobility-core
@@ -638,9 +639,11 @@ library
     , text-conversions
     , time
     , unordered-containers
+    , utils
     , uuid
     , vector
     , wai
+    , wai-extra
     , warp
   default-language: Haskell2010
   if flag(Local)
@@ -718,6 +721,7 @@ executable dynamic-offer-driver-app-exe
     , hashmap
     , hspec
     , http-client
+    , http-types
     , lens
     , mobility-core
     , openapi3
@@ -749,6 +753,7 @@ executable dynamic-offer-driver-app-exe
     , uuid
     , vector
     , wai
+    , wai-extra
     , warp
   default-language: Haskell2010
   if flag(Local)

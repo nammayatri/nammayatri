@@ -35,6 +35,7 @@ packages:
   lib/sessionizer-metrics
   test
   lib/producer
+  lib/utils
 
 -- ## 6 parallel jobs by default.
 --
