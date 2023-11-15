@@ -35,6 +35,8 @@ import Kernel.Utils.Common
 import Kernel.Utils.Dhall (readDhallConfigDefault)
 import qualified Kernel.Utils.FlowLogging as L
 import Kernel.Utils.Servant.SignatureAuth
+import Network.HTTP.Types (status503)
+import Network.Wai
 import Network.Wai.Handler.Warp
   ( defaultSettings,
     runSettings,
@@ -44,6 +46,7 @@ import Network.Wai.Handler.Warp
   )
 import qualified Storage.CachedQueries.Merchant as QMerchant
 import System.Environment (lookupEnv)
+import "utils" Utils.Common.Events as UE
 
 runRiderApp :: (AppCfg -> AppCfg) -> IO ()
 runRiderApp configModifier = do
@@ -95,4 +98,5 @@ runRiderApp' appCfg = do
               ]
         logInfo ("Runtime created. Starting server at port " <> show (appCfg.port))
         pure flowRt'
-    runSettings settings $ App.run (App.EnvR flowRt' appEnv)
+    let timeoutMiddleware = UE.timeoutEvent flowRt appEnv (responseLBS status503 [] "") appCfg.incomingAPIResponseTimeout
+    runSettings settings $ timeoutMiddleware (App.run (App.EnvR flowRt' appEnv))
