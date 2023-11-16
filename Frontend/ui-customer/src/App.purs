@@ -40,7 +40,8 @@ import Screens.EmergencyContactsScreen.ScreenData as EmergencyContactsScreenData
 import Screens.OnBoardingFlow.PermissionScreen.ScreenData as PermissionScreenData
 import Screens.CustomerUtils.AboutUsScreen.ScreenData as AboutUsScreenData
 import Screens.OnBoardingFlow.WelcomeScreen.ScreenData as WelcomeScreenData
-import Screens.Types (AboutUsScreenState, AccountSetUpScreenState, AddNewAddressScreenState, AppUpdatePopUpState, ChooseLanguageScreenState, ContactUsScreenState, EnterMobileNumberScreenState, HelpAndSupportScreenState, HomeScreenState, InvoiceScreenState, LocItemType, LocationListItemState, MyProfileScreenState, MyRidesScreenState, PermissionScreenState, SavedLocationScreenState, SelectLanguageScreenState, SplashScreenState, TripDetailsScreenState, ReferralScreenState, EmergencyContactsScreenState, CallType, WelcomeScreenState, PermissionScreenStage)
+import Screens.TicketBookingScreen.ScreenData as TicketBookingScreenData
+import Screens.Types (AboutUsScreenState, AccountSetUpScreenState, AddNewAddressScreenState, AppUpdatePopUpState, ChooseLanguageScreenState, ContactUsScreenState, EnterMobileNumberScreenState, HelpAndSupportScreenState, HomeScreenState, InvoiceScreenState, LocItemType, LocationListItemState, MyProfileScreenState, MyRidesScreenState, PermissionScreenState, SavedLocationScreenState, SelectLanguageScreenState, SplashScreenState, TripDetailsScreenState, ReferralScreenState, EmergencyContactsScreenState, CallType, WelcomeScreenState, PermissionScreenStage, TicketBookingScreenState)
 import Screens.AppUpdatePopUp.ScreenData as AppUpdatePopUpScreenData
 import Foreign.Object ( Object(..), empty)
 import Foreign (Foreign)
@@ -69,6 +70,7 @@ newtype GlobalState = GlobalState {
   , emergencyContactsScreen :: EmergencyContactsScreenState
   , welcomeScreen :: WelcomeScreenState
   , loaderOverlay :: LoaderScreenScreenData.LoaderOverlayState
+  , ticketBookingScreen :: TicketBookingScreenState
   }
 
 defaultGlobalState :: GlobalState
@@ -94,7 +96,9 @@ defaultGlobalState = GlobalState {
   , emergencyContactsScreen : EmergencyContactsScreenData.initData
   , welcomeScreen : WelcomeScreenData.initData
   , loaderOverlay : LoaderScreenScreenData.initData
+  , ticketBookingScreen : TicketBookingScreenData.initData
   }
+
 data ACCOUNT_SET_UP_SCREEN_OUTPUT = GO_HOME AccountSetUpScreenState | GO_BACK
 
 data TRIP_DETAILS_SCREEN_OUTPUT = ON_SUBMIT TripDetailsScreenState | GO_TO_INVOICE TripDetailsScreenState | GO_TO_HOME TripDetailsScreenState | GO_TO_RIDES | GO_TO_HELPSCREEN | CONNECT_WITH_DRIVER TripDetailsScreenState

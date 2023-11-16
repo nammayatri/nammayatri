@@ -1329,3 +1329,7 @@ data TicketBookingScreenStage = DescriptionStage
                               | BookingConfirmationStage
                               | ViewTicketStage
                               | MyTicketsStage
+
+derive instance genericTicketBookingScreenStage :: Generic TicketBookingScreenStage _
+instance showTicketBookingScreenStage :: Show TicketBookingScreenStage where show = genericShow
+instance eqTicketBookingScreenStage :: Eq TicketBookingScreenStage where eq = genericEq
