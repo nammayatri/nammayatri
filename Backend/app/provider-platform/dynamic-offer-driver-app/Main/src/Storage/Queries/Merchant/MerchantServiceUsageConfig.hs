@@ -44,6 +44,7 @@ updateMerchantServiceUsageConfig MerchantServiceUsageConfig {..} = do
       Se.Set BeamMSUC.getPlaceDetails getPlaceDetails,
       Se.Set BeamMSUC.autoComplete autoComplete,
       Se.Set BeamMSUC.smsProvidersPriorityList smsProvidersPriorityList,
+      Se.Set BeamMSUC.snapToRoadProvidersList snapToRoadProvidersList,
       Se.Set BeamMSUC.updatedAt now
     ]
     [Se.Is BeamMSUC.merchantOperatingCityId (Se.Eq $ getId merchantOperatingCityId)]
@@ -55,26 +56,7 @@ instance FromTType' BeamMSUC.MerchantServiceUsageConfig MerchantServiceUsageConf
         MerchantServiceUsageConfig
           { merchantId = Id merchantId,
             merchantOperatingCityId = Id merchantOperatingCityId,
-            initiateCall = initiateCall,
-            getDistances = getDistances,
-            getEstimatedPickupDistances = getEstimatedPickupDistances,
-            getRoutes = getRoutes,
-            getPickupRoutes = getPickupRoutes,
-            getTripRoutes = getTripRoutes,
-            snapToRoad = snapToRoad,
-            getPlaceName = getPlaceName,
-            getPlaceDetails = getPlaceDetails,
-            autoComplete = autoComplete,
-            getDistancesForCancelRide = getDistancesForCancelRide,
-            smsProvidersPriorityList = smsProvidersPriorityList,
-            whatsappProvidersPriorityList = whatsappProvidersPriorityList,
-            verificationService = verificationService,
-            faceVerificationService = faceVerificationService,
-            aadhaarVerificationService = aadhaarVerificationService,
-            issueTicketService = issueTicketService,
-            getExophone = getExophone,
-            updatedAt = updatedAt,
-            createdAt = createdAt
+            ..
           }
 
 instance ToTType' BeamMSUC.MerchantServiceUsageConfig MerchantServiceUsageConfig where
@@ -94,6 +76,7 @@ instance ToTType' BeamMSUC.MerchantServiceUsageConfig MerchantServiceUsageConfig
         BeamMSUC.autoComplete = autoComplete,
         BeamMSUC.getDistancesForCancelRide = getDistancesForCancelRide,
         BeamMSUC.smsProvidersPriorityList = smsProvidersPriorityList,
+        BeamMSUC.snapToRoadProvidersList = snapToRoadProvidersList,
         BeamMSUC.whatsappProvidersPriorityList = whatsappProvidersPriorityList,
         BeamMSUC.verificationService = verificationService,
         BeamMSUC.faceVerificationService = faceVerificationService,

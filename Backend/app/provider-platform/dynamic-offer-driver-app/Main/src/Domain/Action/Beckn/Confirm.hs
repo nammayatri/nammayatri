@@ -257,6 +257,7 @@ handler transporter req quote = do
             updatedAt = now,
             driverDeviatedFromRoute = Just False,
             numberOfSnapToRoadCalls = Nothing,
+            numberOfOsrmSnapToRoadCalls = Nothing,
             numberOfDeviation = Nothing,
             uiDistanceCalculationWithAccuracy = Nothing,
             uiDistanceCalculationWithoutAccuracy = Nothing,

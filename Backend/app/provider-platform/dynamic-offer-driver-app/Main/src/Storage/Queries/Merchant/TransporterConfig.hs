@@ -86,6 +86,8 @@ update config = do
       Se.Set BeamTC.driverFeeCalculatorBatchGap (nominalDiffTimeToSeconds <$> config.driverFeeCalculatorBatchGap),
       Se.Set BeamTC.orderAndNotificationStatusCheckTime (nominalDiffTimeToSeconds config.orderAndNotificationStatusCheckTime),
       Se.Set BeamTC.orderAndNotificationStatusCheckTimeLimit (nominalDiffTimeToSeconds config.orderAndNotificationStatusCheckTimeLimit),
+      Se.Set BeamTC.snapToRoadConfidenceThreshold config.snapToRoadConfidenceThreshold,
+      Se.Set BeamTC.useWithSnapToRoadFallback config.useWithSnapToRoadFallback,
       Se.Set BeamTC.updatedAt now
     ]
     [Se.Is BeamTC.merchantOperatingCityId (Se.Eq $ getId config.merchantOperatingCityId)]
@@ -182,8 +184,6 @@ instance ToTType' BeamTC.TransporterConfig TransporterConfig where
         BeamTC.enableDashboardSms = enableDashboardSms,
         BeamTC.subscriptionStartTime = subscriptionStartTime,
         BeamTC.bankErrorExpiry = nominalDiffTimeToSeconds bankErrorExpiry,
-        BeamTC.createdAt = createdAt,
-        BeamTC.updatedAt = updatedAt,
         BeamTC.rcLimit = rcLimit,
         BeamTC.mandateValidity = mandateValidity,
         BeamTC.driverLocationAccuracyBuffer = driverLocationAccuracyBuffer,
@@ -210,5 +210,9 @@ instance ToTType' BeamTC.TransporterConfig TransporterConfig where
         BeamTC.driverFeeOverlaySendingTimeLimitInDays = driverFeeOverlaySendingTimeLimitInDays,
         BeamTC.overlayBatchSize = overlayBatchSize,
         BeamTC.volunteerSmsSendingLimit = toJSON <$> volunteerSmsSendingLimit,
-        BeamTC.driverSmsReceivingLimit = toJSON <$> driverSmsReceivingLimit
+        BeamTC.driverSmsReceivingLimit = toJSON <$> driverSmsReceivingLimit,
+        BeamTC.snapToRoadConfidenceThreshold = snapToRoadConfidenceThreshold,
+        BeamTC.useWithSnapToRoadFallback = useWithSnapToRoadFallback,
+        BeamTC.createdAt = createdAt,
+        BeamTC.updatedAt = updatedAt
       }

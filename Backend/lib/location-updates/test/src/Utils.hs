@@ -95,8 +95,8 @@ wrapTests func = do
 incrDistance :: Id Person -> Double -> TestM Double
 incrDistance driverId = Hedis.incrByFloat driverId.getId
 
-updateDistanceTest :: Id Person -> HighPrecMeters -> Int -> TestM ()
-updateDistanceTest driverId dist _ = void $ incrDistance driverId (realToFrac dist)
+updateDistanceTest :: Id Person -> HighPrecMeters -> Int -> Int -> TestM ()
+updateDistanceTest driverId dist _ _ = void $ incrDistance driverId (realToFrac dist)
 
 checkTraveledDistance :: Id Person -> TestM Double
 checkTraveledDistance driverId = incrDistance driverId 0
