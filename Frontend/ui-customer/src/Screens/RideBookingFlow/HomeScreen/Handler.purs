@@ -70,6 +70,9 @@ homeScreen = do
     GetQuotes updatedState -> do
           modifyScreenState $ HomeScreenStateType (\homeScreenState -> updatedState)
           App.BackT $ App.NoBack <$> (pure $ GET_QUOTES updatedState)
+    GoToTicketBookingFlow updatedState -> do 
+          modifyScreenState $ HomeScreenStateType (\homeScreenState -> updatedState)
+          App.BackT $ App.BackPoint <$> (pure $ GO_TO_TICKET_BOOKING_FLOW updatedState)
     LogoutUser -> App.BackT $ App.NoBack <$> (pure $ LOGOUT)
     SelectEstimate updatedState -> do
           modifyScreenState $ HomeScreenStateType (\homeScreenState -> updatedState)

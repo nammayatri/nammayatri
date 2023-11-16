@@ -41,11 +41,16 @@ primaryButtonConfig state = let
     config = PrimaryButton.config
     primaryButtonConfig' = config
       { textConfig
-        { text = "Book Tickets"
-        , color = Color.yellow800
+        { text = (case state.props.currentStage of 
+                    ST.DescriptionStage -> "Book Tickets"
+                    ST.ChooseTicketStage -> ("Pay ₹" <> (show state.data.totalAmount))
+                    _ -> "")
+        , color = Color.yellow900
         }
       , cornerRadius = 8.0
       , background = Color.black900 
+      , isClickable = (state.props.currentStage == ST.DescriptionStage) || (state.props.termsAndConditionsSelected && state.data.totalAmount > 0)
+      , alpha = if (state.props.currentStage == ST.DescriptionStage) || (state.props.termsAndConditionsSelected && state.data.totalAmount > 0) then 1.0 else 0.5
       , id = "BookTicketsButton"
       , margin = (MarginHorizontal 20 20)
       }

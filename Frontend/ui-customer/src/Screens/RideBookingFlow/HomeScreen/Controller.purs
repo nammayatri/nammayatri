@@ -514,6 +514,7 @@ data ScreenOutput = LogoutUser
                   | RetryFindingQuotes Boolean HomeScreenState
                   | ReportIssue HomeScreenState
                   | RideDetailsScreen HomeScreenState
+                  | GoToTicketBookingFlow HomeScreenState
 
 data Action = NoAction
             | BackPressed
@@ -629,6 +630,7 @@ data Action = NoAction
             | UpdateProfileButtonAC PrimaryButtonController.Action 
             | SkipAccessibilityUpdateAC PrimaryButtonController.Action
             | SpecialZoneOTPExpiryAction Int String String String
+            | TicketBookingFlowBannerAC Banner.Action
 
 
 eval :: Action -> HomeScreenState -> Eval Action ScreenOutput HomeScreenState
@@ -1821,6 +1823,8 @@ eval (UpdateProfileButtonAC PrimaryButtonController.OnClick) state = do
   updateAndExit newState $ GoToMyProfile newState true
 
 eval (DisabilityBannerAC Banner.OnClick) state = if (addCarouselWithVideoExists unit ) then continue state{props{showEducationalCarousel = true}} else exit $ GoToMyProfile state true
+
+eval (TicketBookingFlowBannerAC Banner.OnClick) state = exit $ GoToTicketBookingFlow state
 
 eval (SkipAccessibilityUpdateAC PrimaryButtonController.OnClick) state = do 
   _ <- pure $ pauseYoutubeVideo unit

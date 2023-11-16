@@ -8,11 +8,11 @@ import Control.Transformers.Back.Trans as App
 import PrestoDOM.Core.Types.Language.Flow (runScreen)
 import ModifyScreenState (modifyScreenState)
 import Screens.TicketBookingScreen.View as TicketBookingScreen
-import Types.App (FlowBT, GlobalState(..), ScreenType(..))
+import Types.App (FlowBT, GlobalState(..), ScreenType(..), TICKET_BOOKING_SCREEN_OUTPUT(..))
 
-ticketBookingScreen :: FlowBT String ScreenOutput
+ticketBookingScreen :: FlowBT String TICKET_BOOKING_SCREEN_OUTPUT
 ticketBookingScreen = do
   (GlobalState state) <- getState
   action <- lift $ lift $ runScreen $ TicketBookingScreen.screen state.ticketBookingScreen
   case action of
-    NextScreen language -> App.BackT $ App.NoBack <$> (pure action)
+    GoToHomeScreen -> App.BackT $ App.NoBack <$> (pure GO_TO_HOME_SCREEN_FROM_TICKET_BOOKING)

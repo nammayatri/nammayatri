@@ -113,6 +113,8 @@ foreign import storeCallBackCustomer :: forall action. (action -> Effect Unit) -
 foreign import getLocationName :: forall action. (action -> Effect Unit) -> Number -> Number -> String -> (Number -> Number -> String -> action) -> Effect Unit
 
 foreign import getCurrentDate :: String -> String
+foreign import getNextDate :: String -> String
+foreign import compareDate :: EffectFn2 String String Boolean
 foreign import storeCallBackContacts :: forall action. (action -> Effect Unit) -> ((Array Contacts) -> action) -> Effect Unit
 foreign import parseNewContacts :: String -> (Array NewContacts)
 
