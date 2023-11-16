@@ -684,7 +684,9 @@ eval (RideActionModalAction (RideActionModal.WaitingInfo)) state = do
 
 eval (RideActionModalAction (RideActionModal.TimerCallback timerID timeInMinutes seconds)) state = continueWithCmd state [do pure $ (WaitTimerCallback timerID timeInMinutes seconds)]
 
-eval (UpdateWaitTime status) state = continue state { props { waitTimeStatus = status}}
+eval (UpdateWaitTime status) state = do
+  void $ pure $ setValueToLocalNativeStore WAITING_TIME_STATUS (show status)
+  continue state { props { waitTimeStatus = status}, data {activeRide {notifiedCustomer = status /= ST.NoStatus}}}
 
 eval (WaitTimerCallback timerID timeInMinutes seconds) state = continue state { data {activeRide { waitingTime = timeInMinutes, waitTimerId = timerID}}}
 
