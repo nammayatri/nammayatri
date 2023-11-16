@@ -3228,3 +3228,37 @@ instance standardRideRouteResp :: StandardEncode RideRouteResp where standardEnc
 instance showRideRouteResp :: Show RideRouteResp where show = genericShow
 instance decodeRideRouteResp :: Decode RideRouteResp where decode = defaultDecode
 instance encodeRideRouteResp :: Encode RideRouteResp where encode = defaultEncode
+
+----------------------------- Merchant Operating City -----------------------------------------------------
+newtype GetCityRes = GetCityRes (Array CityRes)
+
+newtype CityRes = CityRes {
+  name :: String ,
+  code :: String
+}
+
+data GetCityReq = GetCityReq String
+
+instance makeGetCityReq :: RestEndpoint GetCityReq GetCityRes where
+  makeRequest reqBody@(GetCityReq id) headers = defaultMakeRequest GET (EP.getMerchantIdList id) headers reqBody Nothing
+  decodeResponse = decodeJSON
+  encodeRequest req = standardEncode req
+
+derive instance genericGetCityReq :: Generic GetCityReq _
+instance showGetCityReq :: Show GetCityReq where show = genericShow
+instance decodeGetCityReq :: Decode GetCityReq where decode = defaultDecode
+instance encodeGetCityReq :: StandardEncode GetCityReq where standardEncode req = standardEncode {}
+
+derive instance genericCityRes :: Generic CityRes _
+derive instance newtypeCityRes :: Newtype CityRes _
+instance standardCityRes :: StandardEncode CityRes where standardEncode (CityRes id) = standardEncode id
+instance showCityRes :: Show CityRes where show = genericShow
+instance decodeCityRes :: Decode CityRes where decode = defaultDecode
+instance encodeCityRes :: Encode CityRes where encode = defaultEncode
+
+derive instance genericGetCityRes :: Generic GetCityRes _
+derive instance newtypeGetCityRes :: Newtype GetCityRes _
+instance standardGetCityRes :: StandardEncode GetCityRes where standardEncode (GetCityRes id) = standardEncode id
+instance showGetCityRes :: Show GetCityRes where show = genericShow
+instance decodeGetCityRes :: Decode GetCityRes where decode = defaultDecode
+instance encodeGetCityRes :: Encode GetCityRes where encode = defaultEncode

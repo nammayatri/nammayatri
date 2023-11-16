@@ -2065,7 +2065,8 @@ type ChooseCityScreenState = {
 type ChooseCityScreenData = {
   config :: AppConfig,
   locationSelected :: Maybe String,
-  locationDetectionFailed :: Boolean
+  locationDetectionFailed :: Boolean,
+  merchantOperatingCityConfig :: Array CityConfig
 }
 
 type ChooseCityScreenProps = {
