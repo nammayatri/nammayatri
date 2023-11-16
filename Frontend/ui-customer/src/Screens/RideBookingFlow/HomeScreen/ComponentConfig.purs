@@ -386,12 +386,12 @@ ticketBannerConfig state =
     config = Banner.config
     config' = config
       {
-        backgroundColor = Color.black900
-      , title = "Now buy tickets to zoo and science world with Yatri Sathi"
-      , titleColor = "1,##FFEBB7"
+        backgroundColor = "#FFF6DE"
+      , title = "Now buy tickets to zoo with Yatri Sathi"
+      , titleColor = Color.black800
       , actionText = "Book Now"
       , actionTextColor = Color.black900
-      , imageUrl = fetchImage FF_ASSET "ny_ic_accessibility_banner_img"
+      , imageUrl = fetchImage FF_ASSET "ny_ic_zoo_banner"
       , stroke = "1,"<> "#FFDE88"
       }
   in config'

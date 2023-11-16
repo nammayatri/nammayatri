@@ -3,7 +3,7 @@ module Screens.TicketBookingScreen.View where
 import Animation as Anim 
 import Animation.Config (translateYAnimConfig, translateYAnimMapConfig, removeYAnimFromTopConfig)
 import JBridge as JB 
-import Prelude (Unit, bind, const, pure, unit, ($), (&&), (/=), (<<<),(<>), (==), map)
+import Prelude (Unit, bind, const, pure, unit, ($), (&&), (/=), (<<<),(<>), (==), map, show, (||))
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), Visibility(..), PrestoDOM, Screen, afterRender, background, color, fontStyle, gravity, height, imageUrl, imageView, linearLayout, margin, onBackPressed, orientation, padding, scrollView, text, textSize, textView, weight, width, imageWithFallback, cornerRadius, relativeLayout, alignParentBottom, layoutGravity, stroke, visibility, textFromHtml, onClick)
 import PrestoDOM.Animation as PrestoAnim
 import Screens.TicketBookingScreen.Controller (Action(..), ScreenOutput, eval)
@@ -30,33 +30,38 @@ screen initialState =
 
 view :: forall w . (Action -> Effect Unit) -> ST.TicketBookingScreenState -> PrestoDOM (Effect Unit) w
 view push state =
-  relativeLayout
+  Anim.screenAnimation $ relativeLayout
   [ height MATCH_PARENT
   , width MATCH_PARENT
+  , background Color.white900
    ][
     linearLayout 
     [ height WRAP_CONTENT
     , width MATCH_PARENT
     , background Color.white900
     , orientation VERTICAL
-    , margin $ MarginBottom 90
+    , margin $ MarginBottom 84
     ][GenericHeader.view (push <<< GenericHeaderAC) (genericHeaderConfig state)
+    , linearLayout
+      [ height $ V 1 
+      , width MATCH_PARENT
+      , background Color.grey900][]
     , scrollView[
         height WRAP_CONTENT
       , width MATCH_PARENT
+      , background Color.white900
       ][  linearLayout
           [height MATCH_PARENT
           , width MATCH_PARENT
           , gravity CENTER
-          , margin $ MarginHorizontal 16 16 
-          , orientation VERTICAL]
+          , orientation VERTICAL
+          , padding $ PaddingBottom 20]
           ( if state.props.currentStage == ST.DescriptionStage then 
           [ imageView
             [ height $ V 370
-            , width $ V 400
+            , width MATCH_PARENT
             , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_animal_1" 
             , margin $ MarginBottom 15
-            , background Color.red
             ]
           , descriptionView state push ]
         else if state.props.currentStage == ST.ChooseTicketStage then [ chooseTicketsView state push ]
@@ -86,6 +91,7 @@ descriptionView state push =
     height MATCH_PARENT
   , width MATCH_PARENT
   , orientation VERTICAL
+  , margin $ MarginHorizontal 16 16 
   ][  textView $ 
       [ text "Zoological Garden, Alipore"
       , color Color.black900
@@ -110,10 +116,10 @@ locationView state push =
       [ text "Location"
       , color Color.black800
       , margin $ MarginBottom 8
-      ] <> FontStyle.subHeading2 TypoGraphy
+      ] <> FontStyle.subHeading1 TypoGraphy
     , imageView
-      [ height $ V 180
-      , width $ V 328
+      [ height $ V 200
+      , width MATCH_PARENT
       , cornerRadius 8.0 
       , layoutGravity "center_horizontal"
       , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_zoo_alipore_map" 
@@ -133,7 +139,7 @@ feeBreakUpView state push =
   ][  textView $
       [ text "Fee & Zoo Hours"
       , color Color.black800
-      ] <> FontStyle.subHeading2 TypoGraphy
+      ] <> FontStyle.subHeading1 TypoGraphy
     , linearLayout
       [ height WRAP_CONTENT
       , width MATCH_PARENT
@@ -156,17 +162,20 @@ feeBreakUpView state push =
                   ][  textView $
                       [ text item.headingText 
                       , color Color.black800
-                      ] <> FontStyle.subHeading2 TypoGraphy
-                    , linearLayout[height WRAP_CONTENT
-                    , width MATCH_PARENT
-                    , orientation VERTICAL](map ( \subTextItem -> 
-                      textView $ 
-                      [ text subTextItem 
-                      , color Color.black700 
-                      , margin $ MarginTop 6
-                      ] <> FontStyle.body1 TypoGraphy ) item.subtext)
-                  ]                             
-              ]
+                      ] <> FontStyle.body6 TypoGraphy
+                    , linearLayout
+                      [ height WRAP_CONTENT
+                      , width MATCH_PARENT
+                      , orientation VERTICAL
+                      ](map ( \subTextItem -> 
+                                  textView $ 
+                                  [ text subTextItem 
+                                  , color Color.black700 
+                                  , margin $ MarginTop 6
+                                  ] <> FontStyle.body1 TypoGraphy ) item.subtext
+                        )
+                    ]                             
+                  ]
       ) (feeBreakUpArray)
     )
 
@@ -202,35 +211,47 @@ chooseTicketsView state push =
   linearLayout[
     height MATCH_PARENT
   , width MATCH_PARENT
+  , background Color.white900
+  , margin $ MarginHorizontal 16 16
   , orientation VERTICAL
   ][  textView $ 
       [ text "Date of Visit"
       , color Color.black900
       , margin $ MarginBottom 9
-      ] <> FontStyle.subHeading2 TypoGraphy 
+      ] <> FontStyle.subHeading1 TypoGraphy 
     , linearLayout
       [ height WRAP_CONTENT
       , width MATCH_PARENT
       , cornerRadius 8.0 
       , background Color.white900
-      , stroke $ "1," <> Color.grey900
+      , stroke $ "1," <> if state.props.validDate || (state.data.dateOfVisit == "") then Color.grey900 else Color.red
       , padding $ Padding 20 15 20 15
-      , margin $ MarginBottom 20
       ][  imageView
-          [ height $ V 24 
-          , width $ V 24
+          [ height $ V 22 
+          , width $ V 22
           , margin $ MarginRight 8
+          , layoutGravity "bottom"
+          , onClick (\action -> do
+                _ <- push action
+                JB.datePicker "" push $ DatePicker "DATE_OF_VISIT"
+          ) (const NoAction)
           , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_calendar" 
           ]
         , textView $ 
-          [ text "10/11/23"
+          [ text if state.data.dateOfVisit == "" then "Select Date Of Visit" else state.data.dateOfVisit
           , color Color.black800
-          ] <> FontStyle.body1 TypoGraphy
+          ] <> FontStyle.h3 TypoGraphy
       ]
+    , textView $
+      [ text "Tickets are available next day onwards" -- Tickets are available for upto 90 days in advance
+      , visibility if state.props.validDate || state.data.dateOfVisit == "" then GONE else VISIBLE
+      , color Color.red 
+      ] <> FontStyle.tags TypoGraphy
     , linearLayout
       [ height WRAP_CONTENT
       , width MATCH_PARENT
       , orientation VERTICAL
+      , margin $ MarginTop 20
       ](map (\item -> ticketInputView { ticketType : item.title , ticketID : item.ticketID, ticketOption : item.ticketOption , isExpanded : item.isExpanded } push ) 
         [ {title : "Zoo Entry", ticketID : "ZOO_ENTRY" , ticketOption : zooEntryTicketOption state, isExpanded : state.data.zooEntry.availed}
         , {title : "Aquarium Entry", ticketID : "AQUARIUM_ENTRY" , ticketOption : aquariumEntryTicketOption state , isExpanded : state.data.aquariumEntry.availed}
@@ -245,7 +266,8 @@ chooseTicketsView state push =
           , width $ V 16 
           , layoutGravity "center_vertical"
           , margin $ MarginRight 8
-          , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_checked" -- "ny_ic_unchecked
+          , onClick push $ const ToggleTermsAndConditions
+          , imageWithFallback $ fetchImage FF_COMMON_ASSET (if state.props.termsAndConditionsSelected then "ny_ic_checked" else "ny_ic_unchecked")
           ]
         , textView $ 
           [ text "I agree to the"
@@ -254,6 +276,11 @@ chooseTicketsView state push =
         , textView $ 
           [ text " Terms & Conditions"
           , color Color.blue900
+          , onClick (\action -> do
+                  _<- push action
+                  _ <- JB.openUrlInApp $ "https://wbza.org/onlineticket/eticket/tnconlineticket"
+                  pure unit
+                  ) (const NoAction)
           ] <> FontStyle.body1 TypoGraphy
       ]
     , textView $ 
@@ -293,38 +320,44 @@ ticketInputView config push =
         , width MATCH_PARENT
         , visibility if config.isExpanded then VISIBLE else GONE
         , orientation VERTICAL
-        ](map (\item  -> incrementDecrementView item push) (config.ticketOption))
+        ](map (\item  -> incrementDecrementView item config.ticketID push) (config.ticketOption))
       
   ]
 
-zooEntryTicketOption :: forall w. ST.TicketBookingScreenState -> Array  {title :: String, currentValue :: String}
+zooEntryTicketOption :: forall w. ST.TicketBookingScreenState -> Array  {title :: String, currentValue :: Int, subcategory :: String}
 zooEntryTicketOption state = [{
   title : "Adult Ticket (₹200 per person)",
-  currentValue : "2" 
+  currentValue : state.data.zooEntry.adult ,
+  subcategory : "ADULT"
   },
   {
   title : "Child Ticket (₹50 per person)",
-  currentValue : "2" 
+  currentValue : state.data.zooEntry.child ,
+  subcategory : "CHILD"
   }]
 
-aquariumEntryTicketOption :: forall w. ST.TicketBookingScreenState -> Array  {title :: String, currentValue :: String}
+aquariumEntryTicketOption :: forall w. ST.TicketBookingScreenState -> Array  {title :: String, currentValue :: Int, subcategory :: String}
 aquariumEntryTicketOption state = [{
   title : "Adult Ticket (20 per person)",
-  currentValue : "2" 
+  currentValue : state.data.aquariumEntry.adult ,
+  subcategory : "ADULT"
   },
   {
   title : "Child Ticket (₹10 per person)",
-  currentValue : "2" 
+  currentValue : state.data.aquariumEntry.child ,
+  subcategory : "CHILD"
   }]
 
-photoVideographyTicketOption :: forall w. ST.TicketBookingScreenState -> Array  {title :: String, currentValue :: String}
+photoVideographyTicketOption :: forall w. ST.TicketBookingScreenState -> Array  {title :: String, currentValue :: Int , subcategory :: String}
 photoVideographyTicketOption state = [{
   title : "Devices (₹250 per person)",
-  currentValue : "2" 
+  currentValue : state.data.photoOrVideoGraphy.noOfDevices ,
+  subcategory : "DEVICES"
   }]
 
-incrementDecrementView :: forall w. {title :: String, currentValue :: String} -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
-incrementDecrementView config push = 
+
+incrementDecrementView :: forall w. {title :: String, currentValue :: Int, subcategory :: String} -> String -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+incrementDecrementView config ticketID push  = 
   linearLayout
   [ height WRAP_CONTENT
   , width MATCH_PARENT
@@ -349,27 +382,29 @@ incrementDecrementView config push =
           , gravity CENTER
           , cornerRadius 4.0
           , width WRAP_CONTENT
-          , padding $ Padding 28 5 28 10
+          , padding $ Padding 28 1 28 7
+          , onClick push $ const (DecrementTicket ticketID config.subcategory)
           , height WRAP_CONTENT
-          ] <> FontStyle.subHeading1 TypoGraphy
+          ] <> FontStyle.body10 TypoGraphy
         , textView $
           [ background Color.white900
-          , text config.currentValue
+          , text $ show config.currentValue
           , height WRAP_CONTENT
           , color Color.black800
           , weight 1.0
           , gravity CENTER
-          ] <> FontStyle.subHeading1 TypoGraphy
+          ] <> FontStyle.body13 TypoGraphy
         , textView $
           [ background Color.black900
           , text "+"
           , color Color.yellow900
-          , padding $ Padding 28 5 28 10
+          , padding $ Padding 28 1 28 7
           , cornerRadius 4.0
+          , onClick push $ const (IncrementTicket ticketID config.subcategory)
           , width WRAP_CONTENT
           , height WRAP_CONTENT
           , gravity CENTER
-          ] <> FontStyle.subHeading1 TypoGraphy
+          ] <> FontStyle.body10 TypoGraphy
 
       ]
 

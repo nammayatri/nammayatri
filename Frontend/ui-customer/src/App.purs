@@ -164,6 +164,7 @@ data HOME_SCREEN_OUTPUT = LOGOUT
                         | TRIGGER_PERMISSION_FLOW PermissionScreenStage
                         | REPORT_ISSUE HomeScreenState
                         | RIDE_DETAILS_SCREEN HomeScreenState
+                        | GO_TO_TICKET_BOOKING_FLOW HomeScreenState
 
 data SELECT_LANGUAGE_SCREEN_OUTPUT = GO_TO_HOME_SCREEN | UPDATE_LANGUAGE SelectLanguageScreenState
 
@@ -186,6 +187,8 @@ data WELCOME_SCREEN_OUTPUT = GoToMobileNumberScreen
 
 data APP_UPDATE_POPUP = Later | UpdateNow
 
+data TICKET_BOOKING_SCREEN_OUTPUT = GO_TO_HOME_SCREEN_FROM_TICKET_BOOKING
+
 data ScreenType =
     EnterMobileNumberScreenType (EnterMobileNumberScreenState -> EnterMobileNumberScreenState)
   | HomeScreenStateType (HomeScreenState -> HomeScreenState)
@@ -205,3 +208,4 @@ data ScreenType =
   | PermissionScreenStateType (PermissionScreenState -> PermissionScreenState)
   | AboutUsScreenStateType (AboutUsScreenState -> AboutUsScreenState)
   | AppUpdatePopUpScreenType (AppUpdatePopUpState -> AppUpdatePopUpState)
+  | TicketBookingScreenStateType (TicketBookingScreenState -> TicketBookingScreenState)

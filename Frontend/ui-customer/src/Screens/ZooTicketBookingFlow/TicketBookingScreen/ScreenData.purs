@@ -25,19 +25,27 @@ initData =
       zooEntry : {
         availed : true,
         adult : 0,
-        child : 0 
+        child : 0,
+        ticketPerAdult : 200,
+        ticketPerChild : 50 
       },
       aquariumEntry : {
         availed : false,
         adult : 0,
-        child : 0 
+        child : 0,
+        ticketPerAdult : 20,
+        ticketPerChild : 10  
       },
       photoOrVideoGraphy : {
         availed : false,
-        noOfDevices : 0
-      }
+        noOfDevices : 0,
+        ticketPerDevice : 250
+      },
+      totalAmount : 0
   }
   , props : {
-      currentStage : ChooseTicketStage
+      currentStage : DescriptionStage,
+      termsAndConditionsSelected : false,
+      validDate : true
     }
   }

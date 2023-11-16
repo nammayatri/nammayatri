@@ -1324,18 +1324,24 @@ type TicketBookingScreenData = {
   aquariumEntry :: EntryFeeConfig ,
   photoOrVideoGraphy :: {
     availed :: Boolean ,
-    noOfDevices :: Int
-  }
+    noOfDevices :: Int ,
+    ticketPerDevice :: Int
+  },
+  totalAmount :: Int
 }
 
 type EntryFeeConfig = {
   availed :: Boolean,
   adult :: Int,
-  child :: Int 
+  child :: Int,
+  ticketPerAdult :: Int,
+  ticketPerChild :: Int
 }
 
 type TicketBookingScreenProps = {
-  currentStage :: TicketBookingScreenStage
+  currentStage :: TicketBookingScreenStage,
+  termsAndConditionsSelected :: Boolean,
+  validDate :: Boolean 
 }
 
 data TicketBookingScreenStage = DescriptionStage 
