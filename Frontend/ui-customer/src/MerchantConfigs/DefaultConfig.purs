@@ -143,8 +143,10 @@ config =
     }
   , enableContactSupport : true
   , features : {
-    enableAutoReadOtp : true
+    enableAutoReadOtp : true,
+    enableZooTicketBookingFlow : false
   }
+
   , rideCompletedCardConfig : {
       topCard : {
         gradient : "#29334A"

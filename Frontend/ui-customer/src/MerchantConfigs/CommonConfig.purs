@@ -99,6 +99,7 @@ commonConfig =
         , enableContactSupport : true
         , features : {
             enableAutoReadOtp : true
+          , enableZooTicketBookingFlow : false
           }
         , rideCompletedCardConfig : {
             topCard : {

@@ -174,7 +174,8 @@ type CustomerTip = {
 }
 
 type Features = {
-  enableAutoReadOtp :: Boolean
+  enableAutoReadOtp :: Boolean ,
+  enableZooTicketBookingFlow :: Boolean
   }
 
 type RideCompletedCardConfig = {

@@ -380,6 +380,22 @@ disabilityBannerConfig state =
       }
   in config'
 
+ticketBannerConfig :: ST.HomeScreenState -> Banner.Config
+ticketBannerConfig state =
+  let
+    config = Banner.config
+    config' = config
+      {
+        backgroundColor = Color.black900
+      , title = "Now buy tickets to zoo and science world with Yatri Sathi"
+      , titleColor = "1,##FFEBB7"
+      , actionText = "Book Now"
+      , actionTextColor = Color.black900
+      , imageUrl = fetchImage FF_ASSET "ny_ic_accessibility_banner_img"
+      , stroke = "1,"<> "#FFDE88"
+      }
+  in config'
+
 reportIssuePopUpConfig :: ST.HomeScreenState -> CancelRidePopUpConfig.Config
 reportIssuePopUpConfig state =
   let
