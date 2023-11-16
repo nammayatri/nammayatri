@@ -26,7 +26,8 @@ import Effect (Effect)
 import Effect.Uncurried (runEffectFn1)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (consumeBP, fetchImage, FetchImageFrom(..))
+import Helpers.Utils (fetchImage, FetchImageFrom(..))
+import PaymentPage (consumeBP)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit, const, pure, unit, discard, ($), (<<<), (==), (<>))

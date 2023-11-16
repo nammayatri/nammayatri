@@ -63,23 +63,24 @@ import Data.Function.Uncurried (Fn4(..), Fn3(..), runFn4, runFn3, Fn2, runFn1, r
 import Effect.Uncurried (EffectFn1(..),EffectFn5(..), mkEffectFn1, mkEffectFn4, runEffectFn5)
 import Common.Types.App (OptionButtonList)
 import Engineering.Helpers.Commons (parseFloat, setText, convertUTCtoISC, getCurrentUTC) as ReExport
-import Services.API(PaymentPagePayload)
+import PaymentPage(PaymentPagePayload, UpiApps(..))
 import Presto.Core.Types.Language.Flow (Flow, doAff, loadS)
 import Control.Monad.Except.Trans (lift)
 import Foreign.Generic (Foreign, decodeJSON, encodeJSON)
 import Data.Newtype (class Newtype)
 import Presto.Core.Types.API (class StandardEncode, standardEncode)
-import Services.API (PaymentPagePayload, PromotionPopupConfig)
+import Services.API (PromotionPopupConfig)
 import Storage (KeyStore) 
 import JBridge (getCurrentPositionWithTimeout, firebaseLogEventWithParams, translateStringWithTimeout)
 import Effect.Uncurried(EffectFn1, EffectFn4, EffectFn3,runEffectFn3)
 import Storage (KeyStore(..), isOnFreeTrial, getValueToLocalNativeStore)
 import Styles.Colors as Color
-import Screens.Types (UpiApps(..), LocalStoreSubscriptionInfo)
+import Screens.Types (LocalStoreSubscriptionInfo)
 import Data.Int (fromString, even, fromNumber)
 import Data.Number.Format (fixed, toStringWith)
 import Data.Function.Uncurried (Fn1)
 
+type AffSuccess s = (s -> Effect Unit)
 
 foreign import shuffle :: forall a. Array a -> Array a
 foreign import generateUniqueId :: Unit -> String
@@ -372,24 +373,7 @@ instance showFetchImageFrom :: Show FetchImageFrom where show = genericShow
 instance encodeFetchImageFrom :: Encode FetchImageFrom where encode = defaultEnumEncode
 instance decodeFetchImageFrom :: Decode FetchImageFrom where decode = defaultEnumDecode
 
-type AffSuccess s = (s -> Effect Unit)
-type MicroAPPInvokeSignature = String -> (AffSuccess String) ->  Effect Unit
-
-
-foreign import startPP :: MicroAPPInvokeSignature
-
-foreign import initiatePP :: EffectFn1 Unit Unit
-
-foreign import getAvailableUpiApps :: EffectFn1 ((Array UpiApps) -> Effect Unit) Unit
-
-foreign import checkPPInitiateStatus :: EffectFn1 (Unit -> Effect Unit) Unit
-
-foreign import consumeBP :: EffectFn1 Unit Unit
-
 foreign import isDateGreaterThan :: String -> Boolean
-
-paymentPageUI :: PaymentPagePayload -> FlowBT String String
-paymentPageUI payload = lift $ lift $ doAff $ makeAff (\cb -> (startPP (encodeJSON payload) (Right >>> cb) ) *> pure nonCanceler)
 
 getNegotiationUnit :: String -> String
 getNegotiationUnit varient = case varient of

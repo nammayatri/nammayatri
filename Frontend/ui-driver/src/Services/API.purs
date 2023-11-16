@@ -37,6 +37,7 @@ import Foreign.Index (readProp)
 import Prelude (class Eq, class Show, bind, show, ($), (<$>), (>>=))
 import Presto.Core.Types.API (class RestEndpoint, class StandardEncode, ErrorResponse, Method(..), defaultMakeRequest, standardEncode, defaultDecodeResponse)
 import Presto.Core.Utils.Encoding (defaultDecode, defaultEncode, defaultEnumDecode, defaultEnumEncode)
+import PaymentPage
 import Services.EndPoints as EP
 
 newtype ErrorPayloadWrapper = ErrorPayload ErrorResponse
@@ -2168,38 +2169,6 @@ newtype CreateOrderRes = CreateOrderRes
     payment_links :: PaymentLinks
   }
 
-newtype PaymentPagePayload = PaymentPagePayload
-  {
-    requestId :: Maybe String,
-    service :: Maybe String,
-    payload :: PayPayload
-  }
-
-newtype PayPayload = PayPayload
-  {
-    action :: Maybe String,
-    amount :: String,
-    clientAuthToken :: String,
-    clientAuthTokenExpiry :: String,
-    clientId :: Maybe String,
-    currency :: String,
-    customerEmail :: Maybe String,
-    customerId :: Maybe String,
-    customerPhone :: Maybe String,
-    description :: Maybe String,
-    environment :: Maybe String,
-    firstName :: Maybe String,
-    lastName :: Maybe String,
-    merchantId :: Maybe String,
-    options_getUpiDeepLinks :: Maybe Boolean,
-    orderId :: Maybe String,
-    returnUrl :: Maybe String,
-    "options.createMandate" :: Maybe String,
-    "mandate.maxAmount" :: Maybe String,
-    "mandate.endDate" :: Maybe String,
-    "mandate.startDate" :: Maybe String,
-    language :: Maybe String
-  }
 
 newtype PaymentLinks = PaymentLinks
   {
@@ -2232,21 +2201,6 @@ instance standardEncodeCreateOrderRes :: StandardEncode CreateOrderRes where sta
 instance showCreateOrderRes :: Show CreateOrderRes where show = genericShow
 instance decodeCreateOrderRes :: Decode CreateOrderRes where decode = defaultDecode
 instance encodeCreateOrderRes :: Encode CreateOrderRes where encode = defaultEncode
-
-derive instance genericPayPayload :: Generic PayPayload _
-derive instance newtypePayPayload :: Newtype PayPayload _
-instance standardEncodePayPayload :: StandardEncode PayPayload where standardEncode (PayPayload id) = standardEncode id
-instance showPayPayload :: Show PayPayload where show = genericShow
-instance decodePayPayload :: Decode PayPayload where decode = defaultDecode
-instance encodePayPayload :: Encode PayPayload where encode = defaultEncode
-
-derive instance genericPaymentPagePayload :: Generic PaymentPagePayload _
-derive instance newtypePaymentPagePayload :: Newtype PaymentPagePayload _
-instance standardEncodePaymentPagePayload :: StandardEncode PaymentPagePayload where standardEncode (PaymentPagePayload id) = standardEncode id
-instance showPaymentPagePayload :: Show PaymentPagePayload where show = genericShow
-instance decodePaymentPagePayload :: Decode PaymentPagePayload where decode = defaultDecode
-instance encodePaymentPagePayload :: Encode PaymentPagePayload where encode = defaultEncode
-
 
 -- order status
 

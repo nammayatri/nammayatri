@@ -97,6 +97,7 @@ import Screens.AccountSetUpScreen.Transformer (getDisabilityList)
 import Constants.Configs
 import PrestoDOM (initUI)
 import Common.Resources.Constants (zoomLevel)
+import PaymentPage
 
 baseAppFlow :: GlobalPayload -> Boolean-> FlowBT String Unit
 baseAppFlow (GlobalPayload gPayload) refreshFlow = do
@@ -634,6 +635,46 @@ welcomeScreenFlow = do
   flow <- UI.welcomeScreen
   case flow of
     GoToMobileNumberScreen -> enterMobileNumberScreenFlow
+
+dPP :: PaymentPagePayload
+dPP = PaymentPagePayload {
+      requestId: Just "4ab25be383814958adc62374325f6364",
+      service: Just "in.juspay.hyperpay",
+      payload: PayPayload {
+        merchantId: Just "nammayatri",
+        customerId: Just "df66b4fe-70d9-4c9d-9282-ffcc47a8ed40",
+        environment: Just "production",
+        clientId: Just "nammayatri",
+        firstName: Just "Nagarjuna",
+        "options.createMandate": Nothing,
+        customerPhone: Just "9343922922",
+        customerEmail: Just "test@juspay.in",
+        description: Just "Completeyourpayment",
+        "mandate.maxAmount": Nothing,
+        lastName: Just "asf",
+        orderId: Just "Fu1x0lv5oS",
+        "mandate.endDate": Nothing,
+        currency: "INR",
+        action: Just "paymentPage",
+        clientAuthTokenExpiry: "2023-11-18T18: 32: 32Z",
+        -- "options.getUpiDeepLinks": Just false, TODO:: NEED TO ADD BACK
+        returnUrl: Just "www.google.com",
+        "mandate.startDate": Nothing,
+        amount: "25.0",
+        language: Nothing,
+        clientAuthToken: "tkn_4da2e1613df54d1c9126a42db2e5ef42"
+      }
+}
+
+paymentFlow :: FlowBT String Unit
+paymentFlow = do
+  liftFlowBT $ runEffectFn1 initiatePP unit
+  let sdkPayload = dPP
+  lift $ lift $ doAff $ makeAff \cb -> runEffectFn1 checkPPInitiateStatus (cb <<< Right) $> nonCanceler
+  _ <- paymentPageUI sdkPayload
+  pure $ toggleBtnLoader "" false
+  liftFlowBT $ runEffectFn1 consumeBP unit
+  enterMobileNumberScreenFlow
 
 accountSetUpScreenFlow :: FlowBT String Unit
 accountSetUpScreenFlow = do

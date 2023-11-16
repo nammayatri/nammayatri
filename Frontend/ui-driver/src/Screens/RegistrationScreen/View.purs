@@ -30,7 +30,8 @@ import Font.Size as FontSize
 import Font.Style as FontStyle
 import Common.Types.App
 import Screens.RegistrationScreen.ComponentConfig
-import Helpers.Utils (fetchImage, FetchImageFrom(..), consumeBP)
+import Helpers.Utils (fetchImage, FetchImageFrom(..))
+import PaymentPage (consumeBP)
 import Effect.Uncurried (runEffectFn1)
 
 screen :: ST.RegistrationScreenState -> Screen Action ST.RegistrationScreenState ScreenOutput

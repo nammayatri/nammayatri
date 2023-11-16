@@ -44,7 +44,8 @@ import PrestoDOM.Types.DomAttributes (Corners(..))
 import Data.Maybe
 import Data.String (length)
 import Screens.ApplicationStatusScreen.ComponentConfig
-import Helpers.Utils (fetchImage, FetchImageFrom(..), consumeBP)
+import Helpers.Utils (fetchImage, FetchImageFrom(..))
+import PaymentPage (consumeBP)
 import Common.Types.App (LazyCheck(..))
 import Prelude ((<>))
 import Effect.Uncurried (runEffectFn1)

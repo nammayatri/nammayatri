@@ -19,7 +19,6 @@ import Screens.HomeScreen.ComponentConfig
 
 import Animation as Anim
 import Animation.Config as AnimConfig
-import Common.Types.App (LazyCheck(..))
 import Common.Types.App (LazyCheck(..), APIPaymentStatus(..))
 import Components.Banner.Controller as BannerConfig
 import Components.Banner.View as Banner
@@ -37,6 +36,7 @@ import Components.RequestInfoCard as RequestInfoCard
 import Components.RideActionModal as RideActionModal
 import Components.RideCompletedCard as RideCompletedCard
 import Components.SelectListModal as SelectListModal
+import PaymentPage (consumeBP)
 import Components.StatsModel as StatsModel
 import Control.Monad.Except (runExceptT)
 import Control.Monad.Except.Trans (lift)
@@ -45,7 +45,6 @@ import Data.Array as DA
 import Data.Either (Either(..))
 import Data.Function.Uncurried (runFn1, runFn2)
 import Data.Int (ceil, toNumber, fromString)
-import Data.Int (toNumber, ceil)
 import Data.Maybe (Maybe(..), fromMaybe, isJust)
 import Data.String as DS
 import Data.Time.Duration (Milliseconds(..))
@@ -54,8 +53,7 @@ import Effect (Effect)
 import Effect.Aff (launchAff)
 import Effect.Class (liftEffect)
 import Effect.Uncurried (runEffectFn1, runEffectFn2, runEffectFn3)
-import Engineering.Helpers.Commons (flowRunner, getCurrentUTC)
-import Engineering.Helpers.Commons (getNewIDWithTag)
+import Engineering.Helpers.Commons (flowRunner, getCurrentUTC, getNewIDWithTag)
 import Engineering.Helpers.Commons as EHC
 import Font.Size as FontSize
 import Font.Style as FontStyle
@@ -194,7 +192,7 @@ screen initialState =
                                 _ <- launchAff $ EHC.flowRunner defaultGlobalState $ checkCurrentRide push Notification
                                 _ <- launchAff $ EHC.flowRunner defaultGlobalState $ paymentStatusPooling initialState.data.paymentState.invoiceId 4 5000.0 initialState push PaymentStatusAction
                                 pure unit
-          runEffectFn1 HU.consumeBP unit
+          runEffectFn1 consumeBP unit
           pure $ pure unit
         )
   ]

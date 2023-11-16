@@ -31,7 +31,8 @@ import Effect.Class (liftEffect)
 import Engineering.Helpers.Commons as EHC
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (fetchImage, FetchImageFrom(..), consumeBP)
+import Helpers.Utils (fetchImage, FetchImageFrom(..))
+import PaymentPage (consumeBP)
 import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
