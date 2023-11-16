@@ -23,7 +23,9 @@ import qualified Dashboard.ProviderPlatform.Driver as Driver
 import qualified Dashboard.ProviderPlatform.Driver.Registration as Registration
 import qualified Dashboard.ProviderPlatform.Ride as Ride
 import qualified Dashboard.ProviderPlatform.Volunteer as Volunteer
+import qualified "dynamic-offer-driver-app" Domain.Action.UI.Maps as DMaps
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
+import qualified "dynamic-offer-driver-app" Domain.Types.Person as DP
 import Domain.Types.ServerName
 import qualified EulerHS.Types as Euler
 import Kernel.Prelude
@@ -40,7 +42,8 @@ data DriverRideBookingAPIs = DriverRideBookingAPIs
   { driverRegistration :: DriverRegistrationAPIs,
     rides :: RidesAPIs,
     drivers :: DriversAPIs,
-    volunteer :: VolunteerAPIs
+    volunteer :: VolunteerAPIs,
+    maps :: MapsAPIs
   }
 
 data DriversAPIs = DriversAPIs
@@ -73,18 +76,25 @@ data VolunteerAPIs = VolunteerAPIs
     assignCreateAndStartOtpRide :: Volunteer.AssignCreateAndStartOtpRideAPIReq -> Euler.EulerClient APISuccess
   }
 
+data MapsAPIs = MapsAPIs
+  { autoComplete :: Id DP.Person -> DMaps.AutoCompleteReq -> Euler.EulerClient DMaps.AutoCompleteResp,
+    getPlaceName :: Id DP.Person -> DMaps.GetPlaceNameReq -> Euler.EulerClient DMaps.GetPlaceNameResp
+  }
+
 mkDriverRideBookingAPIs :: CheckedShortId DM.Merchant -> City.City -> Text -> DriverRideBookingAPIs
 mkDriverRideBookingAPIs merchantId city token = do
   let drivers = DriversAPIs {..}
   let rides = RidesAPIs {..}
   let driverRegistration = DriverRegistrationAPIs {..}
   let volunteer = VolunteerAPIs {..}
+  let maps = MapsAPIs {..}
   DriverRideBookingAPIs {..}
   where
     driverRegistrationClient
       :<|> ridesClient
       :<|> driversClient
-      :<|> volunteerClient = clientWithMerchantAndCity (Proxy :: Proxy BPP.API) merchantId city token
+      :<|> volunteerClient
+      :<|> mapsClient = clientWithMerchantAndCity (Proxy :: Proxy BPP.API) merchantId city token
 
     getDriverDue
       :<|> enableDriver
@@ -107,6 +117,9 @@ mkDriverRideBookingAPIs merchantId city token = do
 
     bookingInfo
       :<|> assignCreateAndStartOtpRide = volunteerClient
+
+    autoComplete
+      :<|> getPlaceName = mapsClient
 
 callDriverOfferBPP ::
   forall m r b c.

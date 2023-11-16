@@ -36,6 +36,7 @@ library
       API.ProviderPlatform.DynamicOfferDriver.Driver.Registration
       API.ProviderPlatform.DynamicOfferDriver.DriverReferral
       API.ProviderPlatform.DynamicOfferDriver.Issue
+      API.ProviderPlatform.DynamicOfferDriver.Maps
       API.ProviderPlatform.DynamicOfferDriver.Merchant
       API.ProviderPlatform.DynamicOfferDriver.Message
       API.ProviderPlatform.DynamicOfferDriver.Overlay

@@ -25,6 +25,7 @@ import qualified API.ProviderPlatform.DynamicOfferDriver.Driver as Driver
 import qualified API.ProviderPlatform.DynamicOfferDriver.Driver.Registration as DriverRegistration
 import qualified API.ProviderPlatform.DynamicOfferDriver.DriverReferral as DriverReferral
 import qualified API.ProviderPlatform.DynamicOfferDriver.Issue as Issue
+import qualified API.ProviderPlatform.DynamicOfferDriver.Maps as Maps
 import qualified API.ProviderPlatform.DynamicOfferDriver.Merchant as Merchant
 import qualified API.ProviderPlatform.DynamicOfferDriver.Message as Message
 import qualified API.ProviderPlatform.DynamicOfferDriver.Overlay as Overlay
@@ -63,6 +64,7 @@ type API' =
     :<|> Volunteer.API
     :<|> Revenue.API
     :<|> Overlay.API
+    :<|> Maps.API
 
 -- TODO: Deprecated, Remove after successful deployment
 handler :: FlowServer API
@@ -80,6 +82,7 @@ handler merchantId = do
     :<|> Volunteer.handler merchantId city
     :<|> Revenue.handler merchantId city
     :<|> Overlay.handler merchantId city
+    :<|> Maps.handler merchantId city
   where
     getCity = \case
       "NAMMA_YATRI_PARTNER" -> City.Bangalore
@@ -101,3 +104,4 @@ handlerV2 merchantId city =
     :<|> Volunteer.handler merchantId city
     :<|> Revenue.handler merchantId city
     :<|> Overlay.handler merchantId city
+    :<|> Maps.handler merchantId city

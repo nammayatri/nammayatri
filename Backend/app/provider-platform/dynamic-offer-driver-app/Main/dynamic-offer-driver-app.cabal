@@ -58,6 +58,7 @@ library
       API.Dashboard.Management.Subscription
       API.Dashboard.RideBooking
       API.Dashboard.RideBooking.Driver
+      API.Dashboard.RideBooking.Maps
       API.Dashboard.RideBooking.Ride
       API.Dashboard.RideBooking.Volunteer
       API.Internal
