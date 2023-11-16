@@ -1318,7 +1318,21 @@ type TicketBookingScreenState =
     props :: TicketBookingScreenProps
   }
 
-type TicketBookingScreenData = {}
+type TicketBookingScreenData = {
+  dateOfVisit :: String ,
+  zooEntry :: EntryFeeConfig ,
+  aquariumEntry :: EntryFeeConfig ,
+  photoOrVideoGraphy :: {
+    availed :: Boolean ,
+    noOfDevices :: Int
+  }
+}
+
+type EntryFeeConfig = {
+  availed :: Boolean,
+  adult :: Int,
+  child :: Int 
+}
 
 type TicketBookingScreenProps = {
   currentStage :: TicketBookingScreenStage

@@ -2,6 +2,7 @@ module Screens.TicketBookingScreen.ComponentConfig where
 
 import Prelude
 import Components.GenericHeader as GenericHeader
+import Components.PrimaryButton as PrimaryButton
 import Screens.Types as ST
 import PrestoDOM (Length(..), Margin(..), Padding(..), Visibility(..), visibility)
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
@@ -34,3 +35,18 @@ genericHeaderConfig state = let
       }
     }
   in genericHeaderConfig'
+
+primaryButtonConfig :: ST.TicketBookingScreenState -> PrimaryButton.Config
+primaryButtonConfig state = let
+    config = PrimaryButton.config
+    primaryButtonConfig' = config
+      { textConfig
+        { text = "Book Tickets"
+        , color = Color.yellow800
+        }
+      , cornerRadius = 8.0
+      , background = Color.black900 
+      , id = "BookTicketsButton"
+      , margin = (MarginHorizontal 20 20)
+      }
+  in primaryButtonConfig'
