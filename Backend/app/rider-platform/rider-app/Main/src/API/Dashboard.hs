@@ -22,6 +22,7 @@ import qualified API.Dashboard.IssueList as IssueList
 import qualified API.Dashboard.Merchant as Merchant
 import qualified API.Dashboard.Ride as Ride
 import qualified API.Dashboard.RideBooking as RideBookings
+import qualified API.Dashboard.Tickets as Tickets
 import qualified Domain.Types.Merchant as DM
 import Environment
 import qualified Kernel.Types.Beckn.Context as Context
@@ -57,6 +58,7 @@ type OperationsAPI =
            :<|> Ride.API
            :<|> IssueList.API
            :<|> Issue.API
+           :<|> Tickets.API
        )
 
 type RideBookingAPI =
@@ -95,6 +97,7 @@ operationHandler merchantId city _ = do
     :<|> Ride.handler merchantId
     :<|> IssueList.handler merchantId
     :<|> Issue.handler merchantId city
+    :<|> Tickets.handler merchantId
 
 rideBookingHandler :: ShortId DM.Merchant -> Context.City -> FlowServer RideBookingAPI
 rideBookingHandler merchantId _ _ = RideBookings.handler merchantId

@@ -177,3 +177,32 @@ instance IsHTTPError AadhaarError where
     GenerateAadhaarOtpExceedLimit _ -> E429
 
 instance IsAPIError AadhaarError
+
+data TicketBookingError
+  = TicketServiceNotFound Text
+  | TicketBookingNotFound Text
+  | TicketBookingServiceNotFound Text
+  | TicketPlaceNotFound Text
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''TicketBookingError
+
+instance IsBaseError TicketBookingError where
+  toMessage (TicketServiceNotFound serviceId) = Just $ "Ticker service not found: " <> show serviceId
+  toMessage (TicketBookingNotFound bookingId) = Just $ "Ticket booking not found: " <> show bookingId
+  toMessage (TicketBookingServiceNotFound bookingServiceId) = Just $ "Ticket booking service not found: " <> show bookingServiceId
+  toMessage (TicketPlaceNotFound placeId) = Just $ "Ticket place not found: " <> show placeId
+
+instance IsHTTPError TicketBookingError where
+  toErrorCode = \case
+    TicketServiceNotFound _ -> "TICKET_SERVICE_NOT_FOUND"
+    TicketBookingNotFound _ -> "TICKET_BOOKING_NOT_FOUND"
+    TicketBookingServiceNotFound _ -> "TICKET_BOOKING_SERVICE_NOT_FOUND"
+    TicketPlaceNotFound _ -> "TICKET_PLACE_NOT_FOUND"
+  toHttpCode = \case
+    TicketServiceNotFound _ -> E500
+    TicketBookingNotFound _ -> E500
+    TicketBookingServiceNotFound _ -> E400
+    TicketPlaceNotFound _ -> E500
+
+instance IsAPIError TicketBookingError

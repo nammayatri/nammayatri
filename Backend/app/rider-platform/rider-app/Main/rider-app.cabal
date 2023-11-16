@@ -55,6 +55,7 @@ library
       API.Dashboard.RideBooking.Registration
       API.Dashboard.RideBooking.Search
       API.Dashboard.RideBooking.Select
+      API.Dashboard.Tickets
       API.Internal
       API.Internal.Rating
       API.MetroBeckn
@@ -89,6 +90,7 @@ library
       API.UI.Serviceability
       API.UI.Sos
       API.UI.Support
+      API.UI.Tickets
       API.UI.Webengage.InfoBIPWebhook
       API.UI.Webengage.Webengage
       API.UI.Whatsapp
@@ -158,6 +160,7 @@ library
       Domain.Action.UI.Serviceability
       Domain.Action.UI.Sos
       Domain.Action.UI.Support
+      Domain.Action.UI.Tickets
       Domain.Action.UI.Webengage.InfoBIPWebhook
       Domain.Action.UI.Webengage.Webengage
       Domain.Action.UI.Whatsapp
@@ -211,6 +214,11 @@ library
       Domain.Types.SearchRequest.SearchReqLocation
       Domain.Types.Sos
       Domain.Types.SpecialZoneQuote
+      Domain.Types.Tickets
+      Domain.Types.Tickets.TicketBooking
+      Domain.Types.Tickets.TicketBookingService
+      Domain.Types.Tickets.TicketPlace
+      Domain.Types.Tickets.TicketService
       Domain.Types.TripTerms
       Domain.Types.VehicleVariant
       Domain.Types.Webengage
@@ -279,6 +287,12 @@ library
       Storage.Beam.SearchRequest.SearchReqLocation
       Storage.Beam.Sos
       Storage.Beam.SpecialZoneQuote
+      Storage.Beam.Tickets.TicketBooking
+      Storage.Beam.Tickets.TicketBookingService
+      Storage.Beam.Tickets.TicketBookingServicePriceBreakup
+      Storage.Beam.Tickets.TicketPlace
+      Storage.Beam.Tickets.TicketService
+      Storage.Beam.Tickets.TicketServicePrice
       Storage.Beam.TripTerms
       Storage.Beam.Webengage
       Storage.CachedQueries.BlackListOrg
@@ -343,6 +357,12 @@ library
       Storage.Queries.SearchRequest.SearchReqLocation
       Storage.Queries.Sos
       Storage.Queries.SpecialZoneQuote
+      Storage.Queries.Tickets.TicketBooking
+      Storage.Queries.Tickets.TicketBookingService
+      Storage.Queries.Tickets.TicketBookingServicePriceBreakup
+      Storage.Queries.Tickets.TicketPlace
+      Storage.Queries.Tickets.TicketService
+      Storage.Queries.Tickets.TicketServicePrice
       Storage.Queries.TripTerms
       Storage.Queries.Webengage
       Tools.AadhaarVerification
