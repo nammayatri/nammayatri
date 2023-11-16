@@ -20,6 +20,7 @@ import qualified "rider-app" API.Dashboard.RideBooking.Booking as BAP
 import qualified "rider-app" API.Dashboard.RideBooking.Cancel as BAP
 import qualified "rider-app" API.Dashboard.RideBooking.Confirm as BAP
 import qualified "rider-app" API.Dashboard.RideBooking.Frontend as BAP
+import qualified "dynamic-offer-driver-app" API.Dashboard.RideBooking.Maps as BPP
 import qualified "rider-app" API.Dashboard.RideBooking.Maps as BAP
 import qualified "rider-app" API.Dashboard.RideBooking.Profile as BAP
 import qualified "rider-app" API.Dashboard.RideBooking.Registration as BAP
@@ -84,4 +85,5 @@ data Endpoint
   | SubscriptionAPI BPP.SubscriptionEndpoint
   | OverlayAPI BPP.OverlayEndpoint
   | TicketsAPI ADT.TicketBookingEndpoint
+  | MapAPI BPP.MapEndPoint
   deriving (Show, Read)
