@@ -298,11 +298,10 @@ processMandate driverId mandateStatus startDate endDate mandateId maxAmount paye
       let payerVpa' = if toUpdatePayerVpa then payerVpa else Nothing
       QDP.updateMandateIdByDriverId driverId mandateId
       QM.updateMandateDetails mandateId DM.ACTIVE payerVpa' payerApp payerAppName mandatePaymentFlow
-      driverPlan <- QDP.findByMandateId mandateId >>= fromMaybeM (NoDriverPlanForMandate mandateId.getId)
-      QDP.updatePaymentModeByDriverId (cast driverPlan.driverId) DP.AUTOPAY
-      QDP.updateMandateSetupDateByDriverId (cast driverPlan.driverId)
-      QDI.updateSubscription True (cast driverPlan.driverId)
-      QDI.updateAutoPayStatusAndPayerVpa (castAutoPayStatus mandateStatus) payerVpa' (cast driverPlan.driverId)
+      QDP.updatePaymentModeByDriverId (cast driverId) DP.AUTOPAY
+      QDP.updateMandateSetupDateByDriverId (cast driverId)
+      QDI.updateSubscription True (cast driverId)
+      QDI.updateAutoPayStatusAndPayerVpa (castAutoPayStatus mandateStatus) payerVpa' (cast driverId)
   when (mandateStatus `elem` [Payment.REVOKED, Payment.FAILURE, Payment.EXPIRED, Payment.PAUSED]) $ do
     driver <- B.runInReplica $ QP.findById driverId >>= fromMaybeM (PersonDoesNotExist driverId.getId)
     Redis.withWaitOnLockRedisWithExpiry (mandateProcessingLockKey driverId.getId) 60 60 $ do
