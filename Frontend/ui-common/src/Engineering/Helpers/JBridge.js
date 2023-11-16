@@ -2222,6 +2222,8 @@ export const isNotificationPermissionEnabled = function () {
     console.log("isNotificationPermissionEnabled");
     if (window.JBridge.isNotificationPermissionEnabled) {
       return window.JBridge.isNotificationPermissionEnabled();
+    } else {
+      return false;
     }
   }
 }

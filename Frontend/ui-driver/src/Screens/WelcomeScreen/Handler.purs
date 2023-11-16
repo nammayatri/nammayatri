@@ -16,4 +16,3 @@ welcomeScreen = do
   act <- lift $ lift $ runScreen $ WelcomeScreen.screen state.welcomeScreen
   case act of
     MobileNumberScreen -> App.BackT $ App.BackPoint <$> (pure $ GoToMobileNumberScreen)
-    GoToChooseCityScreen -> App.BackT $ App.NoBack <$> (pure $ GoToSelectCityScreen)

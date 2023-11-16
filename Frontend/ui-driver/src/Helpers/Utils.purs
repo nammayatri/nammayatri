@@ -469,7 +469,8 @@ onBoardingSubscriptionScreenCheck onBoardingSubscriptionViewCount isEnabled = is
                                                                               getValueToLocalNativeStore DRIVER_SUBSCRIBED == "false" && 
                                                                               even onBoardingSubscriptionViewCount && 
                                                                               onBoardingSubscriptionViewCount <5 && 
-                                                                              isOnFreeTrial FunctionCall
+                                                                              isOnFreeTrial FunctionCall && 
+                                                                              getValueToLocalNativeStore SHOW_SUBSCRIPTIONS == "true"
 
 getVehicleVariantImage :: String -> String
 getVehicleVariantImage variant =

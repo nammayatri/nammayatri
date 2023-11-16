@@ -149,7 +149,10 @@ baseAppFlow baseFlow event = do
       then do
         setValueToLocalNativeStore REGISTERATION_TOKEN regToken
         checkRideAndInitiate event
-      else chooseCityFlow
+      else if getValueToLocalStore DRIVER_LOCATION == "__failed" || getValueToLocalStore DRIVER_LOCATION == "--" || not isLocationPermission  then do
+        chooseCityFlow
+      else do
+        welcomeScreenFlow
     where
     cacheAppParameters :: Int -> Boolean -> FlowBT String Unit
     cacheAppParameters versionCode baseFlow = do
@@ -1853,9 +1856,7 @@ homeScreenFlow = do
       let categories' = sortBy compareByOrder temp
       modifyScreenState $ HelpAndSupportScreenStateType (\helpAndSupportScreen -> helpAndSupportScreen { data { categories = categories' } } )
       helpAndSupportFlow
-    GO_TO_EDIT_GENDER_SCREEN -> do
-      modifyScreenState $ DriverDetailsScreenStateType (\driverDetailsScreen -> driverDetailsScreen { data {driverGender = Nothing,genderSelectionModal{selectionOptions = genders FunctionCall,activeIndex = Nothing,isSelectButtonActive = false}}, props  { genderSelectionModalShow = true}})
-      driverDetailsFlow
+    GO_TO_EDIT_GENDER_SCREEN -> driverProfileFlow
     GO_TO_START_RIDE {id, otp , lat, lon} updatedState -> do
       void $ lift $ lift $ loaderText (getString START_RIDE) ""
       void $ lift $ lift $ toggleLoader true
@@ -2553,11 +2554,12 @@ noInternetScreenFlow triggertype = do
 
 checkAll3Permissions :: Boolean -> FlowBT String Boolean
 checkAll3Permissions checkBattery = do
-  androidVersion <- lift $ lift $ liftFlow $ getAndroidVersion
-  isNotificationPermission <- lift $ lift $ liftFlow $ isNotificationPermissionEnabled unit
+  -- androidVersion <- lift $ lift $ liftFlow $ getAndroidVersion
+  -- isNotificationPermission <- lift $ lift $ liftFlow $ isNotificationPermissionEnabled unit
   isOverlayPermission <- lift $ lift $ liftFlow $ isOverlayPermissionEnabled unit
   isBatteryUsagePermission <- lift $ lift $ liftFlow $ isBatteryPermissionEnabled unit
-  pure $ (androidVersion < 13 || isNotificationPermission) && isOverlayPermission && (not checkBattery || isBatteryUsagePermission)
+  -- pure $ (androidVersion < 13 || isNotificationPermission) && isOverlayPermission && (not checkBattery || isBatteryUsagePermission)
+  pure $ isOverlayPermission && (not checkBattery || isBatteryUsagePermission)
 
 popUpScreenFlow :: AllocationData -> FlowBT String Unit
 popUpScreenFlow entityPayload = do
@@ -2915,7 +2917,10 @@ logoutFlow = do
   pure $ factoryResetApp ""
   _ <- lift $ lift $ liftFlow $ logEvent logField_ "logout"
   isLocationPermission <- lift $ lift $ liftFlow $ isLocationPermissionEnabled unit
-  chooseCityFlow
+  if getValueToLocalStore DRIVER_LOCATION == "__failed" || getValueToLocalStore DRIVER_LOCATION == "--" || not isLocationPermission  then do
+    chooseCityFlow
+  else do
+    welcomeScreenFlow
 runInternetCondition :: FlowBT String Unit
 runInternetCondition = do
       internetAvailable <- lift $ lift $ liftFlow $ isInternetAvailable unit
@@ -2966,9 +2971,6 @@ welcomeScreenFlow = do
   welcomeScreen <- UI.welcomeScreen
   case welcomeScreen of
     GoToMobileNumberScreen -> loginFlow
-    GoToSelectCityScreen -> do 
-      modifyScreenState $ ChooseCityScreenStateType (\chooseCityScreen -> chooseCityScreen { props {currentStage = DETECT_LOCATION}})
-      chooseCityFlow
 
 getCityConfig :: Array CityConfig -> String -> CityConfig
 getCityConfig cityConfig cityName = do
