@@ -39,7 +39,8 @@ import Log (printLog)
 import Data.String as DS 
 import Common.Types.App
 import Screens.UploadDrivingLicenseScreen.ComponentConfig
-import Helpers.Utils (fetchImage, FetchImageFrom(..), consumeBP)
+import Helpers.Utils (fetchImage, FetchImageFrom(..))
+import PaymentPage (consumeBP)
 import Common.Types.App (LazyCheck(..))
 import MerchantConfig.Utils (getValueFromConfig)
 import Effect.Uncurried (runEffectFn1)

@@ -1894,12 +1894,6 @@ instance eqPaymentHistorySubview :: Eq PaymentHistorySubview where eq = genericE
 instance decodePaymentHistorySubview :: Decode PaymentHistorySubview where decode = defaultEnumDecode
 instance encodePaymentHistorySubview :: Encode PaymentHistorySubview where encode = defaultEnumEncode
 
-type UpiApps
-  = { supportsPay :: Boolean
-    , supportsMandate :: Boolean
-    , packageName :: String
-    , appName :: String
-    }
 
 type DriverSavedLocationScreenState = {
   data :: DriverSavedLocationScreenData,

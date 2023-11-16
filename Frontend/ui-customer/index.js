@@ -33,11 +33,6 @@ const eventObject = {
   , data : ""
 }
 
-const jpConsumingBackpress = {
-  event: "jp_consuming_backpress",
-  payload: { jp_consuming_backpress: true }
-}
-JBridge.runInJuspayBrowser("onEvent", JSON.stringify(jpConsumingBackpress), "");
 
 window.isObject = function (object) {
   return (typeof object == "object");
@@ -106,6 +101,23 @@ const purescript = require("./output/Main");
 //   purescript.main();
 // }
 
+function callInitiateResult () {
+  const payload = {
+    event: "initiate_result"
+    , service: "in.juspay.becknui"
+    , payload: { status: "SUCCESS" }
+    , error: false
+    , errorMessage: ""
+    , errorCode: ""
+  }
+  const jpConsumingBackpress = {
+    event: "jp_consuming_backpress",
+    payload: { jp_consuming_backpress: true }
+  }
+  JBridge.runInJuspayBrowser("onEvent", JSON.stringify(jpConsumingBackpress), "");
+  JBridge.runInJuspayBrowser("onEvent", JSON.stringify(payload), null)
+}
+
 window.onMerchantEvent = function (_event, merchantPayload) {
   console.log(merchantPayload);
   const clientPaylod = JSON.parse(merchantPayload).payload;
@@ -140,7 +152,8 @@ window.onMerchantEvent = function (_event, merchantPayload) {
       window.merchantID = clientId.toUpperCase();
     }
     console.log(window.merchantID);
-    JBridge.runInJuspayBrowser("onEvent", JSON.stringify(payload), null)
+    // JBridge.runInJuspayBrowser("onEvent", JSON.stringify(payload), null)
+    callInitiateResult();
   } else if (_event == "process") {
     console.warn("Process called");
     window.__payload.sdkVersion = "2.0.1"
@@ -259,6 +272,12 @@ window["onEvent'"] = function (_event, args) {
   purescript.onEvent(_event)();
 }
 
+window["onEvent"] = function (jsonPayload, args, callback) { // onEvent from hyperPay
+  console.log("onEvent Payload", jsonPayload);
+  if ((JSON.parse(jsonPayload)).event == "initiate_result"){
+    window.isPPInitiated = true;
+  }
+}
 
 if (typeof window.JOS != "undefined") {
   window.JOS.addEventListener("onEvent'")();

@@ -5,5 +5,5 @@ echo " ---------- cleaning done --------------"
 
 echo " ---------- started installing --------------"
 npm install
-npm start:android:master
+npm run start
 echo " ---------- cleaning done --------------"
