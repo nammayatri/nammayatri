@@ -20,8 +20,24 @@ import Screens.Types (TicketBookingScreenState(..), TicketBookingScreenStage(..)
 
 initData :: TicketBookingScreenState
 initData = 
-  { data : {}
+  { data : {
+      dateOfVisit : "",
+      zooEntry : {
+        availed : true,
+        adult : 0,
+        child : 0 
+      },
+      aquariumEntry : {
+        availed : false,
+        adult : 0,
+        child : 0 
+      },
+      photoOrVideoGraphy : {
+        availed : false,
+        noOfDevices : 0
+      }
+  }
   , props : {
-      currentStage : DescriptionStage
+      currentStage : ChooseTicketStage
     }
   }

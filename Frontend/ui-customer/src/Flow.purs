@@ -395,6 +395,7 @@ currentFlowStatus = do
     _                                       -> currentRideFlow false
   liftFlowBT $ hideLoader
   _ <- pure $ hideKeyboardOnNavigation true
+  zooTicketBookingFlow
   homeScreenFlow
   where
     verifyProfile :: String -> FlowBT String Unit
@@ -2490,3 +2491,11 @@ updateSourceLocation _ = do
 updateUserInfoToState :: HomeScreenState -> FlowBT String Unit
 updateUserInfoToState state =
   modifyScreenState $ HomeScreenStateType (\homeScreen -> HomeScreenData.initData{data{disability = state.data.disability, settingSideBar{gender = state.data.settingSideBar.gender , email = state.data.settingSideBar.email}},props { isBanner = state.props.isBanner}})             
+
+zooTicketBookingFlow :: FlowBT String Unit
+zooTicketBookingFlow = do
+  logField_ <- lift $ lift $ getLogFields
+  liftFlowBT $ hideLoader
+  flow <- UI.ticketBookingScreen
+  case flow of
+    _ -> pure unit
