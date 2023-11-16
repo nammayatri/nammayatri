@@ -60,10 +60,10 @@ findByShortId shortId_ =
 
 findBySubscriberId :: (CacheFlow m r, EsqDBFlow m r) => ShortId Subscriber -> m (Maybe Merchant)
 findBySubscriberId subscriberId =
-  Hedis.get (makeSubscriberIdKey subscriberId) >>= \case
+  Hedis.safeGet (makeSubscriberIdKey subscriberId) >>= \case
     Nothing -> findAndCache
     Just id ->
-      Hedis.get (makeIdKey id) >>= \case
+      Hedis.safeGet (makeIdKey id) >>= \case
         Just a -> return . Just $ coerce @(MerchantD 'Unsafe) @Merchant a
         Nothing -> findAndCache
   where

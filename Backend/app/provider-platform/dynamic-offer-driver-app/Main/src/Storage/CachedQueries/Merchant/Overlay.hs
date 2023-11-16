@@ -32,7 +32,7 @@ import qualified Storage.Queries.Merchant.Overlay as Queries
 
 findByMerchantOpCityIdPNKeyLangaugeUdf :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Text -> Language -> Maybe Text -> m (Maybe Overlay)
 findByMerchantOpCityIdPNKeyLangaugeUdf id pnKey language udf1 =
-  Hedis.get (makeMerchantIdPNKeyLangaugeUdf id pnKey language udf1) >>= \case
+  Hedis.safeGet (makeMerchantIdPNKeyLangaugeUdf id pnKey language udf1) >>= \case
     Just a -> return . Just $ coerce @(OverlayD 'Unsafe) @Overlay a
     Nothing -> flip whenJust cacheOverlay /=<< Queries.findByMerchantOpCityIdPNKeyLangaugeUdf id pnKey language udf1
 

@@ -31,7 +31,7 @@ import qualified Storage.Queries.Merchant.MerchantMessage as Queries
 
 findByMerchantOpCityIdAndMessageKey :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> MessageKey -> m (Maybe MerchantMessage)
 findByMerchantOpCityIdAndMessageKey id messageKey =
-  Hedis.get (makeMerchantOpCityIdAndMessageKey id messageKey) >>= \case
+  Hedis.safeGet (makeMerchantOpCityIdAndMessageKey id messageKey) >>= \case
     Just a -> return . Just $ coerce @(MerchantMessageD 'Unsafe) @MerchantMessage a
     Nothing -> flip whenJust cacheMerchantMessage /=<< Queries.findByMerchantOpCityIdAndMessageKey id messageKey
 
