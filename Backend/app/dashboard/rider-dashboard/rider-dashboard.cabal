@@ -45,6 +45,7 @@ library
       API.RiderPlatform.RideBooking.Registration
       API.RiderPlatform.RideBooking.Search
       API.RiderPlatform.RideBooking.Select
+      API.RiderPlatform.Tickets
       App
       RiderPlatformClient.RiderApp.Operations
       RiderPlatformClient.RiderApp.RideBooking

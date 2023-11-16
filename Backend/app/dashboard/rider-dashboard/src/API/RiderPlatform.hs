@@ -27,6 +27,7 @@ import qualified API.RiderPlatform.IssueList as IssueList
 import qualified API.RiderPlatform.Merchant as Merchant
 import qualified API.RiderPlatform.Ride as Ride
 import qualified API.RiderPlatform.RideBooking as RideBooking
+import qualified API.RiderPlatform.Tickets as Tickets
 import qualified "lib-dashboard" Domain.Types.Merchant as DMerchant
 import "lib-dashboard" Environment
 import qualified Kernel.Types.Beckn.City as City
@@ -53,6 +54,7 @@ type API' =
     :<|> RideBooking.API
     :<|> IssueList.API
     :<|> Issue.API
+    :<|> Tickets.API
 
 -- TODO: Deprecated, Remove after successful deployment
 handler :: FlowServer API
@@ -65,6 +67,7 @@ handler merchantId = do
     :<|> RideBooking.handler merchantId city
     :<|> IssueList.handler merchantId city
     :<|> Issue.handler merchantId city
+    :<|> Tickets.handler merchantId city
   where
     getCity = \case
       "NAMMA_YATRI" -> City.Bangalore
@@ -81,3 +84,4 @@ handlerV2 merchantId city =
     :<|> RideBooking.handler merchantId city
     :<|> IssueList.handler merchantId city
     :<|> Issue.handler merchantId city
+    :<|> Tickets.handler merchantId city

@@ -25,8 +25,10 @@ import qualified Dashboard.RiderPlatform.Merchant as Merchant
 import qualified Dashboard.RiderPlatform.Ride as Ride
 import qualified "rider-app" Domain.Action.Dashboard.IssueList as DI
 import qualified Domain.Action.Dashboard.Ride as DCM
+import qualified "rider-app" Domain.Action.UI.Tickets as DTB
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
 import Domain.Types.ServerName
+import qualified "rider-app" Domain.Types.Tickets as DTB
 import qualified EulerHS.Types as Euler
 import qualified IssueManagement.Common as DIssue
 import IssueManagement.Common.Dashboard.Issue as Issue
@@ -49,7 +51,8 @@ data AppBackendAPIs = AppBackendAPIs
     merchant :: MerchantAPIs,
     rides :: RidesAPIs,
     issues :: ListIssueAPIs,
-    issuesV2 :: IssueAPIs
+    issuesV2 :: IssueAPIs,
+    tickets :: TicketAPIs
   }
 
 data CustomerAPIs = CustomerAPIs
@@ -99,6 +102,10 @@ data IssueAPIs = IssueAPIs
     ticketStatusCallBack_ :: Issue.TicketStatusCallBackReq -> Euler.EulerClient APISuccess
   }
 
+newtype TicketAPIs = TicketAPIs
+  { verifyBookingDetails :: Id DTB.TicketService -> ShortId DTB.TicketBookingService -> Euler.EulerClient DTB.TicketServiceVerificationResp
+  }
+
 mkAppBackendAPIs :: CheckedShortId DM.Merchant -> City.City -> Text -> AppBackendAPIs
 mkAppBackendAPIs merchantId city token = do
   let customers = CustomerAPIs {..}
@@ -107,6 +114,7 @@ mkAppBackendAPIs merchantId city token = do
   let rides = RidesAPIs {..}
   let issues = ListIssueAPIs {..}
   let issuesV2 = IssueAPIs {..}
+  let tickets = TicketAPIs {..}
   AppBackendAPIs {..}
   where
     customersClient
@@ -114,7 +122,8 @@ mkAppBackendAPIs merchantId city token = do
       :<|> merchantClient
       :<|> ridesClient
       :<|> issueClient
-      :<|> issueV2Client = clientWithMerchantAndCity (Proxy :: Proxy BAP.OperationsAPI) merchantId city token
+      :<|> issueV2Client
+      :<|> ticketsClient = clientWithMerchantAndCity (Proxy :: Proxy BAP.OperationsAPI) merchantId city token
 
     customerList
       :<|> customerDelete
@@ -150,6 +159,8 @@ mkAppBackendAPIs merchantId city token = do
       :<|> issueAddComment
       :<|> issueFetchMedia
       :<|> ticketStatusCallBack_ = issueV2Client
+
+    verifyBookingDetails = ticketsClient
 
 callRiderAppOperations ::
   forall m r b c.
