@@ -1309,3 +1309,23 @@ derive instance genericTipViewData :: Generic TipViewData _
 instance showTipViewData :: Show TipViewData where show = genericShow
 instance encodeTipViewData :: Encode TipViewData where encode = defaultEncode
 instance decodeTipViewData :: Decode TipViewData where decode = defaultDecode
+
+
+-- ######################################  TicketBookingScreen   ######################################
+
+type TicketBookingScreenState =
+  { data :: TicketBookingScreenData,
+    props :: TicketBookingScreenProps
+  }
+
+type TicketBookingScreenData = {}
+
+type TicketBookingScreenProps = {
+  currentStage :: TicketBookingScreenStage
+}
+
+data TicketBookingScreenStage = DescriptionStage 
+                              | ChooseTicketStage
+                              | BookingConfirmationStage
+                              | ViewTicketStage
+                              | MyTicketsStage

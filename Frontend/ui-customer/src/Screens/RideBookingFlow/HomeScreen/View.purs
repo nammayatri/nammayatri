@@ -808,7 +808,9 @@ recentSearchesAndFavourites state push =
   , cornerRadii $ Corners (4.0) true true false false
   ]([ savedLocationsView state push
    , recentSearchesView state push]
-   <> if (getValueToLocalStore DISABILITY_UPDATED == "false" && state.data.config.showDisabilityBanner) then [updateDisabilityBanner state push] else [])
+   <> if (getValueToLocalStore DISABILITY_UPDATED == "false" && state.data.config.showDisabilityBanner) 
+        then [updateDisabilityBanner state push] 
+        else if (state.data.config.features.enableZooTicketBookingFlow) then [zooTicketBookingBanner state push] else [])
   --  <> if(state.props.isBanner) then [genderBannerView state push] else [])
 
 updateDisabilityBanner :: forall w. HomeScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
@@ -819,6 +821,15 @@ updateDisabilityBanner state push =
     , orientation VERTICAL
     , margin $ MarginVertical 10 10
     ][  Banner.view (push <<< DisabilityBannerAC) (disabilityBannerConfig state)]
+
+zooTicketBookingBanner :: forall w. HomeScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+zooTicketBookingBanner state push = 
+  linearLayout
+    [ height MATCH_PARENT
+    , width MATCH_PARENT
+    , orientation VERTICAL
+    , margin $ MarginVertical 10 10
+    ][  Banner.view (push <<< DisabilityBannerAC) (ticketBannerConfig state)]
 
 genderBannerView :: forall w. HomeScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 genderBannerView state push =
