@@ -22,6 +22,7 @@ module Tools.Maps
     getPlaceName,
     getRoutes,
     snapToRoad,
+    snapToRoadWithFallback,
     getPickupRoutes,
     getTripRoutes,
     getDistanceForCancelRide,
@@ -40,6 +41,7 @@ import Kernel.External.Maps as Reexport hiding
     getPlaceName,
     getRoutes,
     snapToRoad,
+    snapToRoadWithFallback,
   )
 import qualified Kernel.External.Maps as Maps
 import Kernel.External.Types (ServiceFlow)
@@ -128,6 +130,36 @@ getPlaceName = runWithServiceConfig Maps.getPlaceName (.getPlaceName)
 
 getPlaceDetails :: ServiceFlow m r => Id Merchant -> Id MerchantOperatingCity -> GetPlaceDetailsReq -> m GetPlaceDetailsResp
 getPlaceDetails = runWithServiceConfig Maps.getPlaceDetails (.getPlaceDetails)
+
+snapToRoadWithFallback ::
+  ( ServiceFlow m r,
+    HasFlowEnv m r '["snapToRoadSnippetThreshold" ::: HighPrecMeters]
+  ) =>
+  Id Merchant ->
+  Id MerchantOperatingCity ->
+  SnapToRoadReq ->
+  m (Maps.MapsService, SnapToRoadResp)
+snapToRoadWithFallback merchantId merchantOperatingCityId = Maps.snapToRoadWithFallback handler
+  where
+    handler = Maps.SnapToRaodHandler {..}
+
+    getConfidenceThreshold = do
+      transporterConfig <- TConfig.findByMerchantOpCityId merchantOperatingCityId >>= fromMaybeM (MerchantNotFound merchantOperatingCityId.getId)
+      pure $ transporterConfig.snapToRoadConfidenceThreshold
+
+    getProvidersList = do
+      merchantConfig <- QOMC.findByMerchantOpCityId merchantOperatingCityId >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOperatingCityId.getId)
+      let snapToRoadProvidersList = merchantConfig.snapToRoadProvidersList
+      when (null snapToRoadProvidersList) $ throwError $ InternalError ("No snap to road service provider configured for the merchant, merchantOperatingCityId:" <> merchantOperatingCityId.getId)
+      pure snapToRoadProvidersList
+
+    getProviderConfig provider = do
+      merchantMapsServiceConfig <-
+        QOMSC.findByMerchantIdAndService merchantId (DOSC.MapsService provider)
+          >>= fromMaybeM (MerchantServiceConfigNotFound merchantOperatingCityId.getId "Maps" (show provider))
+      case merchantMapsServiceConfig.serviceConfig of
+        DOSC.MapsServiceConfig msc -> pure msc
+        _ -> throwError $ InternalError "Unknown Service Config"
 
 runWithServiceConfig ::
   ServiceFlow m r =>

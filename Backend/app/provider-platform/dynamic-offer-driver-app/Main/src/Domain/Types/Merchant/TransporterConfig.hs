@@ -105,8 +105,6 @@ data TransporterConfigD u = TransporterConfig
     canDowngradeToHatchback :: Bool,
     canDowngradeToTaxi :: Bool,
     canSuvDowngradeToTaxi :: Bool,
-    createdAt :: UTCTime,
-    updatedAt :: UTCTime,
     rcLimit :: Int,
     automaticRCActivationCutOff :: Seconds,
     isAvoidToll :: Bool,
@@ -122,8 +120,12 @@ data TransporterConfigD u = TransporterConfig
     refillVehicleModel :: Bool,
     driverFeeOverlaySendingTimeLimitInDays :: Int,
     overlayBatchSize :: Int,
+    snapToRoadConfidenceThreshold :: Double,
+    useWithSnapToRoadFallback :: Bool,
     volunteerSmsSendingLimit :: Maybe DashboardMediaSendingLimit,
-    driverSmsReceivingLimit :: Maybe DashboardMediaSendingLimit
+    driverSmsReceivingLimit :: Maybe DashboardMediaSendingLimit,
+    createdAt :: UTCTime,
+    updatedAt :: UTCTime
   }
   deriving (Generic, Show)
 

@@ -539,6 +539,7 @@ data ServiceUsageConfigRes = ServiceUsageConfigRes
     getPlaceDetails :: Maps.MapsService,
     autoComplete :: Maps.MapsService,
     smsProvidersPriorityList :: [SMS.SmsService],
+    snapToRoadProvidersList :: [Maps.MapsService],
     updatedAt :: UTCTime,
     createdAt :: UTCTime
   }

@@ -56,10 +56,10 @@ data RideInterpolationHandler person m = RideInterpolationHandler
     clearInterpolatedPoints :: Id person -> m (),
     expireInterpolatedPoints :: Id person -> m (),
     getInterpolatedPoints :: Id person -> m [LatLong],
-    interpolatePointsAndCalculateDistance :: [LatLong] -> m (HighPrecMeters, [LatLong]),
+    interpolatePointsAndCalculateDistance :: [LatLong] -> m (HighPrecMeters, [LatLong], MapsService),
     wrapDistanceCalculation :: Id person -> m () -> m (),
     isDistanceCalculationFailed :: Id person -> m Bool,
-    updateDistance :: Id person -> HighPrecMeters -> Int -> m (),
+    updateDistance :: Id person -> HighPrecMeters -> Int -> Int -> m (),
     updateRouteDeviation :: Id person -> [LatLong] -> m Bool
   }
 
@@ -111,36 +111,39 @@ recalcDistanceBatches h@RideInterpolationHandler {..} ending driverId estDist pi
   routeDeviation <- updateRouteDeviation driverId (toList waypoints)
   if routeDeviation || pickupDropOutsideThreshold
     then do
-      (distanceToUpdate, snapToRoadCalls) <- recalcDistanceBatches' 0 0
-      updateDistance driverId distanceToUpdate snapToRoadCalls
-    else updateDistance driverId (metersToHighPrecMeters estDist) 0
+      (distanceToUpdate, googleSnapToRoadCalls, osrmSnapToRoadCalls) <- recalcDistanceBatches' 0 0 0
+      updateDistance driverId distanceToUpdate googleSnapToRoadCalls osrmSnapToRoadCalls
+    else updateDistance driverId (metersToHighPrecMeters estDist) 0 0
   where
     -- atLeastBatchPlusOne = (> batchSize) <$> getWaypointsNumber driverId
     pointsRemaining = (> 0) <$> getWaypointsNumber driverId
     continueCondition = if ending then pointsRemaining else return False
 
-    recalcDistanceBatches' acc numberOfCalls = do
+    recalcDistanceBatches' acc googleSnapToRoadCalls osrmSnapToRoadCalls = do
       batchLeft <- continueCondition
       if batchLeft
         then do
-          dist <- recalcDistanceBatchStep h driverId
-          recalcDistanceBatches' (acc + dist) (numberOfCalls + 1)
-        else pure (acc, numberOfCalls)
+          (dist, serviceProvider) <- recalcDistanceBatchStep h driverId
+          case serviceProvider of
+            Google -> recalcDistanceBatches' (acc + dist) (googleSnapToRoadCalls + 1) osrmSnapToRoadCalls
+            OSRM -> recalcDistanceBatches' (acc + dist) googleSnapToRoadCalls (osrmSnapToRoadCalls + 1)
+            _ -> recalcDistanceBatches' (acc + dist) googleSnapToRoadCalls osrmSnapToRoadCalls
+        else pure (acc, googleSnapToRoadCalls, osrmSnapToRoadCalls)
 
 recalcDistanceBatchStep ::
   (Monad m, Log m) =>
   RideInterpolationHandler person m ->
   Id person ->
-  m HighPrecMeters
+  m (HighPrecMeters, MapsService)
 recalcDistanceBatchStep RideInterpolationHandler {..} driverId = do
   batchWaypoints <- getFirstNwaypoints driverId (batchSize + 1)
-  (distance, interpolatedWps) <- interpolatePointsAndCalculateDistance batchWaypoints
+  (distance, interpolatedWps, serviceProvider) <- interpolatePointsAndCalculateDistance batchWaypoints
   whenJust (nonEmpty interpolatedWps) $ \nonEmptyInterpolatedWps -> do
     addInterpolatedPoints driverId nonEmptyInterpolatedWps
   logInfo $ mconcat ["points interpolation: input=", show batchWaypoints, "; output=", show interpolatedWps]
   logInfo $ mconcat ["calculated distance for ", show (length interpolatedWps), " points, ", "distance is ", show distance]
   deleteFirstNwaypoints driverId batchSize
-  pure distance
+  pure (distance, serviceProvider)
 
 -------------------------------------------------------------------------
 mkRideInterpolationHandler ::
@@ -152,11 +155,11 @@ mkRideInterpolationHandler ::
     HasFlowEnv m r '["snapToRoadSnippetThreshold" ::: HighPrecMeters]
   ) =>
   Bool ->
-  MapsServiceConfig ->
-  (Id person -> HighPrecMeters -> Int -> m ()) ->
+  (Id person -> HighPrecMeters -> Int -> Int -> m ()) ->
   (Id person -> [LatLong] -> m Bool) ->
+  (Maps.SnapToRoadReq -> m (Maps.MapsService, Maps.SnapToRoadResp)) ->
   RideInterpolationHandler person m
-mkRideInterpolationHandler isEndRide mapsCfg updateDistance updateRouteDeviation =
+mkRideInterpolationHandler isEndRide updateDistance updateRouteDeviation snapToRoadCall =
   RideInterpolationHandler
     { batchSize = 98,
       addPoints = addPointsImplementation,
@@ -169,7 +172,7 @@ mkRideInterpolationHandler isEndRide mapsCfg updateDistance updateRouteDeviation
       clearInterpolatedPoints = clearInterpolatedPointsImplementation,
       getInterpolatedPoints = getInterpolatedPointsImplementation,
       expireInterpolatedPoints = expireInterpolatedPointsImplementation,
-      interpolatePointsAndCalculateDistance = interpolatePointsAndCalculateDistanceImplementation isEndRide mapsCfg,
+      interpolatePointsAndCalculateDistance = interpolatePointsAndCalculateDistanceImplementation isEndRide snapToRoadCall,
       updateDistance,
       updateRouteDeviation,
       isDistanceCalculationFailed = isDistanceCalculationFailedImplementation,
@@ -236,15 +239,15 @@ interpolatePointsAndCalculateDistanceImplementation ::
     HasFlowEnv m r '["snapToRoadSnippetThreshold" ::: HighPrecMeters]
   ) =>
   Bool ->
-  MapsServiceConfig ->
+  (Maps.SnapToRoadReq -> m (Maps.MapsService, Maps.SnapToRoadResp)) ->
   [LatLong] ->
-  m (HighPrecMeters, [LatLong])
-interpolatePointsAndCalculateDistanceImplementation isEndRide mapsCfg wps = do
+  m (HighPrecMeters, [LatLong], Maps.MapsService)
+interpolatePointsAndCalculateDistanceImplementation isEndRide snapToRoadCall wps = do
   if isEndRide && isAllPointsEqual wps
-    then pure (0, take 1 wps)
+    then pure (0, take 1 wps, Maps.Google)
     else do
-      res <- Maps.snapToRoad mapsCfg $ Maps.SnapToRoadReq {points = wps}
-      pure (res.distance, res.snappedPoints)
+      (service, res) <- snapToRoadCall $ Maps.SnapToRoadReq {points = wps}
+      pure (res.distance, res.snappedPoints, service)
 
 isAllPointsEqual :: [LatLong] -> Bool
 isAllPointsEqual [] = True

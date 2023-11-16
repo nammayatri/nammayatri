@@ -48,6 +48,7 @@ data RideT f = RideT
     updatedAt :: B.C f UTCTime,
     driverDeviatedFromRoute :: B.C f (Maybe Bool),
     numberOfSnapToRoadCalls :: B.C f (Maybe Int),
+    numberOfOsrmSnapToRoadCalls :: B.C f (Maybe Int),
     numberOfDeviation :: B.C f (Maybe Bool),
     uiDistanceCalculationWithAccuracy :: B.C f (Maybe Int),
     uiDistanceCalculationWithoutAccuracy :: B.C f (Maybe Int),

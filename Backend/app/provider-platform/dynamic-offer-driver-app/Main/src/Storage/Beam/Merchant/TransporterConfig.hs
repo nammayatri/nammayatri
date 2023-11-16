@@ -95,10 +95,12 @@ data TransporterConfigT f = TransporterConfigT
     orderAndNotificationStatusCheckTimeLimit :: B.C f Seconds,
     ratingAsDecimal :: B.C f Bool,
     refillVehicleModel :: B.C f Bool,
-    createdAt :: B.C f UTCTime,
-    updatedAt :: B.C f UTCTime,
+    snapToRoadConfidenceThreshold :: B.C f Double,
+    useWithSnapToRoadFallback :: B.C f Bool,
     volunteerSmsSendingLimit :: B.C f (Maybe A.Value),
-    driverSmsReceivingLimit :: B.C f (Maybe A.Value)
+    driverSmsReceivingLimit :: B.C f (Maybe A.Value),
+    createdAt :: B.C f UTCTime,
+    updatedAt :: B.C f UTCTime
   }
   deriving (Generic, B.Beamable)
 

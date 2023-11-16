@@ -13,7 +13,7 @@
     # over time.  NOTE: This file is not permanent, find the available one at
     # https://download.geofabrik.de/asia/india/
     # NOTE: If you change this, also change `openStreetDataFileName` in osrm.nix
-    osrm-pbf.url = "http://download.geofabrik.de/asia/india/southern-zone-230801.osm.pbf";
+    osrm-pbf.url = "http://download.geofabrik.de/asia/india/southern-zone-231115.osm.pbf";
     osrm-pbf.flake = false;
 
     easy-purescript-nix.url = "github:justinwoo/easy-purescript-nix/a90bd941297497c83205f0a64f30c5188a2a4fda";

@@ -22,7 +22,6 @@ where
 import Domain.Action.Beckn.Search
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
-import qualified Domain.Types.Merchant.MerchantServiceConfig as DOSC
 import Domain.Types.Person
 import Domain.Types.Ride
 import qualified Domain.Types.RideRoute as RI
@@ -35,11 +34,10 @@ import Kernel.Types.Id
 import Kernel.Utils.CalculateDistance
 import Kernel.Utils.Common
 import "location-updates" Lib.LocationUpdates as Reexport
-import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as QOMSC
-import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as QOMC
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as MTC
 import qualified Storage.Queries.Ride as QRide
 import Tools.Error
+import qualified Tools.Maps as TMaps
 
 isWithinTolerance :: LatLong -> [LatLong] -> Meters -> Bool
 isWithinTolerance pt estimatedRoute routeDeviationThreshold = do
@@ -82,22 +80,23 @@ updateDeviation routeDeviationThreshold (Just rideId) batchWaypoints = do
 buildRideInterpolationHandler :: Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Bool -> Flow (RideInterpolationHandler Person Flow)
 buildRideInterpolationHandler merchantId merchantOpCityId isEndRide = do
   transportConfig <- MTC.findByMerchantOpCityId merchantOpCityId >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-  orgMapsConfig <- QOMC.findByMerchantOpCityId merchantOpCityId >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
-  orgMapsServiceConfig <-
-    QOMSC.findByMerchantIdAndService merchantId (DOSC.MapsService orgMapsConfig.snapToRoad)
-      >>= fromMaybeM (MerchantServiceConfigNotFound merchantOpCityId.getId "Maps" (show orgMapsConfig.snapToRoad))
-  case orgMapsServiceConfig.serviceConfig of
-    DOSC.MapsServiceConfig cfg ->
-      return $
-        mkRideInterpolationHandler
-          isEndRide
-          cfg
-          (\driverId dist snapCalls -> void (QRide.updateDistance driverId dist snapCalls))
-          ( \driverId batchWaypoints -> do
-              mRide <- QRide.getInProgressOrNewRideIdAndStatusByDriverId driverId
-              updateDeviation transportConfig.routeDeviationThreshold (mRide <&> fst) batchWaypoints
-          )
-    _ -> throwError $ InternalError "Unknown Service Config"
+  let snapToRoad' =
+        if transportConfig.useWithSnapToRoadFallback
+          then TMaps.snapToRoadWithFallback merchantId merchantOpCityId
+          else snapToRoadWithService
+  return $
+    mkRideInterpolationHandler
+      isEndRide
+      (\driverId dist googleSnapCalls osrmSnapCalls -> void (QRide.updateDistance driverId dist googleSnapCalls osrmSnapCalls))
+      ( \driverId batchWaypoints -> do
+          mRide <- QRide.getInProgressOrNewRideIdAndStatusByDriverId driverId
+          updateDeviation transportConfig.routeDeviationThreshold (mRide <&> fst) batchWaypoints
+      )
+      snapToRoad'
+  where
+    snapToRoadWithService req = do
+      resp <- TMaps.snapToRoad merchantId merchantOpCityId req
+      return (Google, resp)
 
 whenWithLocationUpdatesLock :: (HedisFlow m r, MonadMask m) => Id Person -> m () -> m ()
 whenWithLocationUpdatesLock driverId f = do
