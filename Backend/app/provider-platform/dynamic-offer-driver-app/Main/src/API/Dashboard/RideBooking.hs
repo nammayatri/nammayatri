@@ -15,6 +15,7 @@
 module API.Dashboard.RideBooking where
 
 import qualified API.Dashboard.RideBooking.Driver as Driver
+import qualified API.Dashboard.RideBooking.Maps as Maps
 import qualified API.Dashboard.RideBooking.Ride as Ride
 import qualified API.Dashboard.RideBooking.Volunteer as Volunteer
 import qualified Domain.Types.Merchant as DM
@@ -30,6 +31,7 @@ type API =
            :<|> Ride.API
            :<|> Driver.ActivateAPI
            :<|> Volunteer.API
+           :<|> Maps.API
        )
 
 handler :: ShortId DM.Merchant -> Context.City -> FlowServer API
@@ -38,3 +40,4 @@ handler merchantId city _ = do
     :<|> Ride.handler merchantId city
     :<|> Driver.activateHandler merchantId city
     :<|> Volunteer.handler merchantId city
+    :<|> Maps.handler merchantId city
