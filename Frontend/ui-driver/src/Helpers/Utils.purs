@@ -60,7 +60,7 @@ import Prelude (class Eq, class Show, (<<<))
 import Prelude (map, (*), (-), (/), (==))
 import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode)
 import Data.Function.Uncurried (Fn4(..), Fn3(..), runFn4, runFn3, Fn2, runFn1, runFn2)
-import Effect.Uncurried (EffectFn1(..),EffectFn5(..), mkEffectFn1, mkEffectFn4, runEffectFn5)
+import Effect.Uncurried (EffectFn1(..),EffectFn5(..),EffectFn2(..), mkEffectFn1, mkEffectFn4, runEffectFn5, runEffectFn2)
 import Common.Types.App (OptionButtonList)
 import Engineering.Helpers.Commons (parseFloat, setText, convertUTCtoISC, getCurrentUTC) as ReExport
 import Services.API(PaymentPagePayload)
@@ -136,12 +136,21 @@ foreign import renewFile :: EffectFn3 String String (AffSuccess Boolean) Unit
 foreign import getDateAfterNDays :: Int -> String
 foreign import  downloadQR  :: String -> Effect Unit
 
-foreign import _generateQRCode :: EffectFn5 String String Int Int (AffSuccess String) Unit
+foreign import _generateQRCode :: EffectFn5 String String Int Int (AffSuccess String) Unit 
+
+
+foreign import  _startQRScanner :: EffectFn2 String (AffSuccess String) Unit
 
 generateQR:: EffectFn4 String String Int Int Unit
 generateQR  = mkEffectFn4 \qrString viewId size margin ->  launchAff_  $ void $ makeAff $
   \cb ->
     (runEffectFn5 _generateQRCode qrString viewId size margin (Right >>> cb))
+    $> nonCanceler
+
+scanQR:: EffectFn1 String Unit
+scanQR  = mkEffectFn1 \viewId ->  launchAff_  $ void $ makeAff $
+  \cb ->
+    (runEffectFn2 _startQRScanner viewId (Right >>> cb))
     $> nonCanceler
 
 getPopupObjectFromSharedPrefs :: KeyStore -> Maybe PromotionPopupConfig

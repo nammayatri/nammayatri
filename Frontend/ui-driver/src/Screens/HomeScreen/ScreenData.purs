@@ -161,7 +161,7 @@ initData = {
         otpAttemptsExceeded : false,
         refreshAnimation : false,
         showDottedRoute : false,
-        currentStage : HomeScreen,
+        currentStage : RideCompleted,
         mapRendered : false,
         cancelConfirmationPopup : false,
         chatcallbackInitiated : false,

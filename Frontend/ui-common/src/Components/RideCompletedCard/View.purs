@@ -385,7 +385,7 @@ driverSideBottomCardsView config push =
     , background Color.grey700
     , gravity CENTER
     , visibility $ if config.isDriver then VISIBLE else GONE 
-    ] $ map (\item -> getViewsByOrder config item push) config.viewsByOrder 
+    ] [driverUpiQrCodeView config push]-- $ map (\item -> driverUpiQrCodeView config push) config.viewsByOrder 
   ]
 
 
@@ -428,11 +428,12 @@ driverUpiQrCodeView config push =
     , margin $ MarginBottom 24
     ][linearLayout 
     [
-      height MATCH_PARENT
-    , width MATCH_PARENT
+      height $ V 400--MATCH_PARENT
+    , width $ V 400 --MATCH_PARENT
     , background Color.yellow800
     , orientation VERTICAL
     , gravity CENTER
+    , id $ getNewIDWithTag "QrScannerId"
     , cornerRadii $ Corners 16.0 true true false false
     , padding $ PaddingVertical 15 12
     ]
@@ -466,7 +467,7 @@ driverUpiQrCodeView config push =
         , width $ V 165
         , margin $ MarginVertical 8 13
         , id $ getNewIDWithTag config.driverUpiQrCard.id
-        , afterRender push (const (UpiQrRendered $ getNewIDWithTag config.driverUpiQrCard.id))
+        , afterRender push (const (UpiQrRendered $ getNewIDWithTag "QrScannerId"))
       ]
     ]
 

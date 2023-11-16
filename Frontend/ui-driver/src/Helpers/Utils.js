@@ -973,6 +973,27 @@ export const _generateQRCode = function (data, id, size, margin, sc) {
   }
 }
 
+export const _startQRScanner = function (id, sc) {
+  if (typeof JBridge.startQRScanner === "function") {
+    try {
+      const cb = callbackMapper.map(function (_status) {
+        console.log("QR status:: ", _status);
+        console.log("QR cb:: ", cb);
+        console.log("QR id:: ", id);
+        sc(_status)();
+      });
+      JBridge.startQRScanner(id, cb);
+      console.log("QR callback:: ", id);
+    } catch (e) {
+      console.warn(e);
+      sc("FAILURE")();
+    }
+  }
+  else {
+    sc("FAILURE")();
+  }
+}
+
 export const downloadQR = function (id){
   if (window.JBridge.downloadLayoutAsImage)
     return window.JBridge.downloadLayoutAsImage(id);

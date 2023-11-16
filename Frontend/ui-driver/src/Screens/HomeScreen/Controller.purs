@@ -70,7 +70,7 @@ import Types.ModifyScreenState (modifyScreenState)
 import Services.Config (getSupportNumber)
 import Helpers.Utils as HU
 import JBridge as JB
-import Effect.Uncurried (runEffectFn4)
+import Effect.Uncurried (runEffectFn4,runEffectFn1)
 import Constants 
 import Data.Function.Uncurried (runFn1)
 import Screens.HomeScreen.ComponentConfig (rideActionModalConfig)
@@ -908,7 +908,8 @@ eval (PaymentStatusAction status) state =
   
 eval (RideCompletedAC (RideCompletedCard.UpiQrRendered id)) state = do
   continueWithCmd state [ do
-                    runEffectFn4 generateQR ("upi://pay?pa=" <> state.data.endRideData.payerVpa) id 200 0
+                    -- runEffectFn4 generateQR ("upi://pay?pa=" <> state.data.endRideData.payerVpa) id 200 0
+                    runEffectFn1 scanQR id
                     pure $ NoAction
                 ]
 
