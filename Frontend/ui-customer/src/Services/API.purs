@@ -2223,6 +2223,15 @@ newtype TicketServicePrice = TicketServicePrice
     pricePerUnit :: Number
   }
 
+data GetTicketStatusReq = GetTicketStatusReq String
+
+data GetTicketStatusResp = GetTicketStatusResp String
+
+instance makeGetTicketStatusReq :: RestEndpoint GetTicketStatusReq GetTicketStatusResp where
+  makeRequest reqBody@(GetTicketStatusReq placeId) headers = defaultMakeRequest GET (EP.ticketStatus placeId) headers reqBody Nothing
+  decodeResponse = decodeJSON
+  encodeRequest req = standardEncode req
+
 instance makeTicketServiceReq :: RestEndpoint TicketServiceReq TicketServiceResp where
  makeRequest reqBody@(TicketServiceReq placeId) headers = defaultMakeRequest GET (EP.ticketPlaceServices placeId) headers reqBody Nothing
  decodeResponse = decodeJSON
@@ -2237,6 +2246,18 @@ instance makeTicketBookingRequest :: RestEndpoint TicketBookingRequest CreateOrd
   makeRequest reqBody@(TicketBookingRequest placeId (TicketBookingReq rqBody)) headers = defaultMakeRequest POST (EP.ticketPlaceBook placeId) headers reqBody Nothing
   decodeResponse = decodeJSON
   encodeRequest req = standardEncode req
+
+derive instance genericGetTicketStatusReq :: Generic GetTicketStatusReq _
+instance standardEncodeGetTicketStatusReq :: StandardEncode GetTicketStatusReq where standardEncode (GetTicketStatusReq id) = standardEncode id
+instance showGetTicketStatusReq :: Show GetTicketStatusReq where show = genericShow
+instance decodeGetTicketStatusReq :: Decode GetTicketStatusReq where decode = defaultDecode
+instance encodeGetTicketStatusReq  :: Encode GetTicketStatusReq where encode = defaultEncode
+
+derive instance genericGetTicketStatusResp :: Generic GetTicketStatusResp _
+instance standardEncodeGetTicketStatusResp :: StandardEncode GetTicketStatusResp where standardEncode (GetTicketStatusResp res) = standardEncode res
+instance showGetTicketStatusResp :: Show GetTicketStatusResp where show = genericShow
+instance decodeGetTicketStatusResp :: Decode GetTicketStatusResp where decode = defaultDecode
+instance encodeGetTicketStatusResp  :: Encode GetTicketStatusResp where encode = defaultEncode
 
 derive instance genericTicketService:: Generic TicketService _
 derive instance newtypeTicketService :: Newtype TicketService _

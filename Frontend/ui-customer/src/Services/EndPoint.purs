@@ -164,4 +164,7 @@ getAllBookings :: String -> String -> String -> String
 getAllBookings status limit offset = (getBaseUrl "41") <> "/ticket/bookings?status=" <> "\"" <> status <> "\"" <> "&limit=" <> limit <> "&offset=" <> offset
 
 ticketBookingDetails :: String -> String -> String
-ticketBookingDetails shortid status = (getBaseUrl "41") <> "/ticket/bookings/" <> shortid <> "/details/" <> "?status=" <> status
+ticketBookingDetails shortId status = (getBaseUrl "41") <> "/ticket/bookings/" <> shortId <> "/details"
+
+ticketStatus :: String -> String
+ticketStatus shortId = (getBaseUrl "41") <> "/ticket/bookings/" <> shortId <> "/status"
