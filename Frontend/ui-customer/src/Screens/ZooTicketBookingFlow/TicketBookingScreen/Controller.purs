@@ -19,7 +19,7 @@ import Data.Array (length, head, (!!))
 import Data.Maybe (Maybe(..))
 import Engineering.Helpers.Commons(getNewIDWithTag)
 import Resources.Constants
-import Services.API (TicketPlaceResponse(..))
+import Services.API (TicketPlaceResp(..), TicketServicesResponse(..))
 
 instance showAction :: Show Action where
   show _ = ""
@@ -30,7 +30,7 @@ instance loggableAction :: Loggable Action where
     _ -> pure unit
     
 data Action = AfterRender
-            | UpdatePlacesData (Maybe TicketPlaceResponse)
+            | UpdatePlacesData (Maybe TicketPlaceResp) (Maybe TicketServicesResponse)
             | GenericHeaderAC GenericHeader.Action 
             | PrimaryButtonAC PrimaryButton.Action
             | ShareTicketAC PrimaryButton.Action
@@ -139,13 +139,10 @@ eval (PrimaryButtonAC (PrimaryButton.OnClick)) state = do
 
 eval (GenericHeaderAC (GenericHeader.PrefixImgOnClick)) state = continueWithCmd state [do pure BackPressed]
 
-eval (UpdatePlacesData Nothing) state = do
-  let newState = state { data { placeInfo = Nothing }, props { showShimmer = false } }
+eval (UpdatePlacesData placeData serviceData) state = do
+  let newState = state { data { placeInfo = placeData,  servicesInfo = serviceData}, props { showShimmer = false } }
   continue newState
 
-eval (UpdatePlacesData (Just (TicketPlaceResponse placesData))) state = do
-  let newState = state { data { placeInfo = head placesData }, props { showShimmer = false } }
-  continue newState
 
 eval BackPressed state = 
   case state.props.currentStage of 

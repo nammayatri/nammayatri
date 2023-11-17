@@ -2559,9 +2559,6 @@ zooTicketBookingFlow = do
   flow <- UI.ticketBookingScreen
   case flow of
     GO_TO_TICKET_PAYMENT state -> ticketPaymentFlow state.data
-      -- (TicketPlaceResponse ticketPlaceResponse) <- Remote.getTicketPlacesBT "" --TODO:: WILL BE USED LATER ONCE WE HAVE THE FULL PRODUCT READY
-      -- let placeId = (fromMaybe dummyTicketPlaceResp (head ticketPlaceResponse)) ^. _id
-      -- (TicketServiceResp ticketServiceResp) <- Remote.getTicketPlaceServicesBT placeId
     GET_BOOKING_INFO_SCREEN state -> do
       (GetBookingInfoRes resp) <- Remote.getTicketBookingDetailsBT state.props.selectedBookingId--state.props.selectedBookingInfo.shortId (show state.props.selectedBookingInfo.status)
       _ <- pure $ spy "Response" resp
