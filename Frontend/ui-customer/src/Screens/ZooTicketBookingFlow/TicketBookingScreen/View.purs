@@ -24,7 +24,7 @@ import Styles.Colors as Color
 import Screens.TicketBookingScreen.ComponentConfig 
 import Resources.Constants -- TODO:: Replace these constants with API response
 import Engineering.Helpers.Commons (screenWidth, convertUTCtoISC, getNewIDWithTag)
-import Services.API (BookingStatus(..), TicketPlaceResponse(..), TicketPlaceResp(..), TicketServicesResponse(..), TicketServiceResp(..), TicketServicePrice(..))
+import Services.API (BookingStatus(..), TicketPlaceResponse(..), TicketPlaceResp(..))
 import Animation (fadeInWithDelay, translateInXBackwardAnim, translateInXBackwardFadeAnimWithDelay, translateInXForwardAnim, translateInXForwardFadeAnimWithDelay)
 import Halogen.VDom.DOM.Prop (Prop)
 import Data.Array (catMaybes, head, (..))
@@ -252,8 +252,7 @@ descriptionView state push (TicketPlaceResp placeInfo) =
       , color Color.black800 
       ] <> FontStyle.body1 TypoGraphy 
     , locationView state push 
-    , if isJust state.data.servicesInfo then feeBreakUpView state push state.data.servicesInfo
-      else noDataView state push "No services available"
+    , feeBreakUpView state push state.data.servicesInfo
   ]
 
 locationView :: forall w. ST.TicketBookingScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
@@ -277,9 +276,8 @@ locationView state push =
       ]
   ]
 
-feeBreakUpView :: forall w. ST.TicketBookingScreenState -> (Action -> Effect Unit) -> Maybe TicketServicesResponse -> PrestoDOM (Effect Unit) w
-feeBreakUpView _ _ Nothing = linearLayout [ visibility GONE ] []
-feeBreakUpView state push (Just services) = 
+feeBreakUpView :: forall w. ST.TicketBookingScreenState -> (Action -> Effect Unit) -> Array ST.TicketServiceData -> PrestoDOM (Effect Unit) w
+feeBreakUpView state push services = 
   linearLayout
   [ height WRAP_CONTENT
   , width MATCH_PARENT
@@ -288,7 +286,7 @@ feeBreakUpView state push (Just services) =
   , orientation VERTICAL 
   , padding $ Padding 20 20 20 20
   , margin $ MarginTop 24
-  ][  textView $
+  ][ textView $
       [ text "Fee & Timings"
       , color Color.black800
       ] <> FontStyle.subHeading1 TypoGraphy
@@ -332,8 +330,8 @@ feeBreakUpView state push (Just services) =
     )
   ]
 
-convertServicesDataToViewData :: TicketServicesResponse -> Array {headingText :: String , subtext :: Array String, image :: String}
-convertServicesDataToViewData (TicketServicesResponse services) = do
+convertServicesDataToViewData :: Array ST.TicketServiceData -> Array {headingText :: String , subtext :: Array String, image :: String}
+convertServicesDataToViewData services = do
   let timingsObject = 
         { headingText : "Zoo Timings"
         , image : "ny_ic_timing"
@@ -341,21 +339,21 @@ convertServicesDataToViewData (TicketServicesResponse services) = do
         }
   [timingsObject] <> (map createFeeObject services)
   where
-  createTimingsSubtext :: TicketServiceResp -> Maybe String
-  createTimingsSubtext (TicketServiceResp service) = do
+  createTimingsSubtext :: ST.TicketServiceData -> Maybe String
+  createTimingsSubtext service = do
     openingTime <-  service.openTimings >>= convertUTCToISTAnd12HourFormat
     closingTime <- service.closeTimings >>= convertUTCToISTAnd12HourFormat
     pure $ service.service <> " Time: " <> openingTime <> " to " <> closingTime
 
-  createFeeObject :: TicketServiceResp -> {headingText :: String , subtext :: Array String, image :: String}
-  createFeeObject (TicketServiceResp service) = do
+  createFeeObject :: ST.TicketServiceData -> {headingText :: String , subtext :: Array String, image :: String}
+  createFeeObject service = do
     { headingText : service.service <> " Fee"
     , image : iconMap service.service
     , subtext : map createFeeSubtext service.prices
     }
 
-  createFeeSubtext :: TicketServicePrice -> String
-  createFeeSubtext (TicketServicePrice price) =
+  createFeeSubtext :: ST.TicketServicePriceData -> String
+  createFeeSubtext price =
     (priceInfoMap price.attendeeType) <> ": ₹" <> (show price.pricePerUnit)
 
   -- need to add this data at backend
@@ -415,11 +413,7 @@ chooseTicketsView state push =
       , width MATCH_PARENT
       , orientation VERTICAL
       , margin $ MarginTop 20
-      ](map (\item -> ticketInputView { ticketType : item.title , ticketID : item.ticketID, ticketOption : item.ticketOption , isExpanded : item.isExpanded } push ) 
-        [ {title : "Zoo Entry", ticketID : ticketEntryId , ticketOption : zooEntryTicketOption state, isExpanded : state.data.zooEntry.availed}
-        , {title : "Aquarium Entry", ticketID : ticketAquariumId , ticketOption : aquariumEntryTicketOption state , isExpanded : state.data.aquariumEntry.availed}
-        , {title : "Photo / Videography", ticketID : ticketCamId , ticketOption : photoVideographyTicketOption state , isExpanded : state.data.photoOrVideoGraphy.availed}
-          ])
+      ](map (ticketInputView push) (convertServicesDataToTicketsData state.data.servicesInfo))
     , linearLayout
       [ height WRAP_CONTENT
       , width MATCH_PARENT
@@ -453,7 +447,37 @@ chooseTicketsView state push =
       ] <> FontStyle.tags TypoGraphy
   ]
 
-ticketInputView config push = 
+convertServicesDataToTicketsData :: Array ST.TicketServiceData -> Array ST.Ticket
+convertServicesDataToTicketsData services = do
+  map createServiceTicket services
+  where
+  createServiceTicket :: ST.TicketServiceData -> ST.Ticket
+  createServiceTicket service = do
+    { title : service.service <> " Fee"
+    , ticketID : service.id
+    , ticketOption : map (convertServiceTicketOption service.id) service.prices
+    , isExpanded : service.isExpanded
+    }
+  
+  convertServiceTicketOption :: String -> ST.TicketServicePriceData -> ST.TicketOption
+  convertServiceTicketOption ticketId price =
+    { ticketID : ticketId
+    , title : (ticketInfoMap price.attendeeType) <> " (₹" <> (show price.pricePerUnit) <> " per " <> (unitInfoMap price.attendeeType) <> ")"
+    , currentValue : price.currentValue
+    , subcategory : price.attendeeType
+    }
+
+  -- need to add this data at backend
+  ticketInfoMap "CameraUnit" = "Devices"
+  ticketInfoMap attendeeType = attendeeType <> " Ticket"
+
+  unitInfoMap "Adult" = "person"
+  unitInfoMap "Kid" = "person"
+  unitInfoMap "CameraUnit" = "device"
+  unitInfoMap _ = "unit"
+
+ticketInputView :: forall w. (Action -> Effect Unit) -> ST.Ticket -> PrestoDOM (Effect Unit) w
+ticketInputView push ticket = 
   linearLayout
   [ height WRAP_CONTENT
   , width MATCH_PARENT
@@ -465,9 +489,9 @@ ticketInputView config push =
   ][ linearLayout[
       height WRAP_CONTENT
     , width MATCH_PARENT
-    , onClick push $ const (ToggleTicketOption config.ticketID)
+    , onClick push $ const (ToggleTicketOption ticket.ticketID)
     ][ textView $
-        [ text config.ticketType --"Zoo Entry"
+        [ text ticket.title
         , color Color.black800
         ] <> FontStyle.h2 TypoGraphy
       , linearLayout
@@ -475,59 +499,26 @@ ticketInputView config push =
       , imageView 
         [ height $ V 20 
         , width $ V 20 
-        , imageWithFallback $ fetchImage FF_COMMON_ASSET if config.isExpanded then "ny_ic_checked" else "ny_ic_unchecked" 
+        , imageWithFallback $ fetchImage FF_COMMON_ASSET if ticket.isExpanded then "ny_ic_checked" else "ny_ic_unchecked" 
         ]
       ]
       , linearLayout
         [ height WRAP_CONTENT
         , width MATCH_PARENT
-        , visibility if config.isExpanded then VISIBLE else GONE
+        , visibility if ticket.isExpanded then VISIBLE else GONE
         , orientation VERTICAL
-        ](map (\item  -> incrementDecrementView item config.ticketID push) (config.ticketOption))
-      
+        ](map (incrementDecrementView push) ticket.ticketOption)
   ]
 
-zooEntryTicketOption :: forall w. ST.TicketBookingScreenState -> Array  {title :: String, currentValue :: Int, subcategory :: String}
-zooEntryTicketOption state = [{
-  title : "Adult Ticket (₹200 per person)",
-  currentValue : state.data.zooEntry.adult ,
-  subcategory : "ADULT"
-  },
-  {
-  title : "Child Ticket (₹50 per person)",
-  currentValue : state.data.zooEntry.child ,
-  subcategory : "CHILD"
-  }]
-
-aquariumEntryTicketOption :: forall w. ST.TicketBookingScreenState -> Array  {title :: String, currentValue :: Int, subcategory :: String}
-aquariumEntryTicketOption state = [{
-  title : "Adult Ticket (20 per person)",
-  currentValue : state.data.aquariumEntry.adult ,
-  subcategory : "ADULT"
-  },
-  {
-  title : "Child Ticket (₹10 per person)",
-  currentValue : state.data.aquariumEntry.child ,
-  subcategory : "CHILD"
-  }]
-
-photoVideographyTicketOption :: forall w. ST.TicketBookingScreenState -> Array  {title :: String, currentValue :: Int , subcategory :: String}
-photoVideographyTicketOption state = [{
-  title : "Devices (₹250 per device)",
-  currentValue : state.data.photoOrVideoGraphy.noOfDevices ,
-  subcategory : "DEVICES"
-  }]
-
-
-incrementDecrementView :: forall w. {title :: String, currentValue :: Int, subcategory :: String} -> String -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
-incrementDecrementView config ticketID push  = 
+incrementDecrementView :: forall w. (Action -> Effect Unit) -> ST.TicketOption -> PrestoDOM (Effect Unit) w
+incrementDecrementView push ticketOption = 
   linearLayout
   [ height WRAP_CONTENT
   , width MATCH_PARENT
   , orientation VERTICAL
   , margin $ MarginTop 24
   ][  textView $
-      [ text config.title 
+      [ text ticketOption.title 
       , color Color.black800
       , margin $ MarginBottom 8
       ] <> FontStyle.subHeading1 TypoGraphy
@@ -546,12 +537,12 @@ incrementDecrementView config ticketID push  =
           , cornerRadius 4.0
           , width WRAP_CONTENT
           , padding $ Padding 28 1 28 7
-          , onClick push $ const (DecrementTicket ticketID config.subcategory)
+          , onClick push $ const (DecrementTicket ticketOption)
           , height WRAP_CONTENT
           ] <> FontStyle.body10 TypoGraphy
         , textView $
           [ background Color.white900
-          , text $ show config.currentValue
+          , text $ show ticketOption.currentValue
           , height WRAP_CONTENT
           , color Color.black800
           , weight 1.0
@@ -563,14 +554,12 @@ incrementDecrementView config ticketID push  =
           , color Color.yellow900
           , padding $ Padding 28 1 28 7
           , cornerRadius 4.0
-          , onClick push $ const (IncrementTicket ticketID config.subcategory)
+          , onClick push $ const (IncrementTicket ticketOption)
           , width WRAP_CONTENT
           , height WRAP_CONTENT
           , gravity CENTER
           ] <> FontStyle.body10 TypoGraphy
-
       ]
-
   ]
 
 ticketsListView :: forall w. ST.TicketBookingScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w

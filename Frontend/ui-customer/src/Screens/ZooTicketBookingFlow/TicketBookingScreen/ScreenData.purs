@@ -25,7 +25,7 @@ initData :: TicketBookingScreenState
 initData = 
   { data : {
       placeInfo : Nothing,
-      servicesInfo : Nothing,
+      servicesInfo : [],
       servicesAvailing : [],
       shortOrderId: "",
       dateOfVisit : "",
@@ -33,28 +33,6 @@ initData =
       bookedForArray : [],
       zooName : "",
       transactionId : "",
-      zooEntry : {
-        id : "b73378dc-427f-4efa-9b55-8efe7e3352c2",
-        availed : true,
-        adult : 0,
-        child : 0,
-        ticketPerAdult : 200,
-        ticketPerChild : 50 
-      },
-      aquariumEntry : {
-        id : "a7eba6ed-99f7-442f-a9d8-00c8b380657b",
-        availed : false,
-        adult : 0,
-        child : 0,
-        ticketPerAdult : 20,
-        ticketPerChild : 10  
-      },
-      photoOrVideoGraphy : {
-        id : "d8f47b42-50a5-4a97-8dda-e80a3633d7ab",
-        availed : false,
-        noOfDevices : 0,
-        ticketPerDevice : 250
-      },
       totalAmount : 0
   }
   , props : {

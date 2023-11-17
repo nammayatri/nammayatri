@@ -1,7 +1,7 @@
 module Screens.TicketBookingScreen.Controller where
 
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppScreenEvent)
-import Prelude (class Show, discard, pure, unit, bind, ($), not, (+), (-), (==), (*), (<>), show, void, (+), (==), (-), show)
+import Prelude (class Show, discard, pure, map, unit, min, max, bind, ($), not, (+), (-), (==), (*), (<>), show, void, (+), (==), (-), show)
 import PrestoDOM (Eval, continue, exit, updateAndExit, continueWithCmd, continueWithCmd)
 import Screens (ScreenName(..), getScreen)
 import PrestoDOM.Types.Core (class Loggable)
@@ -9,17 +9,18 @@ import Screens.Types (TicketBookingScreenState, TicketBookingScreenStage(..), Ti
 import Helpers.Utils (compareDate, getCurrentDate)
 import Effect.Uncurried (runEffectFn2)
 import Effect.Unsafe (unsafePerformEffect)
-import Screens.Types (TicketBookingScreenState, TicketBookingItem(..), HomeScreenState)
+import Screens.Types (TicketBookingScreenState, TicketBookingItem(..), HomeScreenState, TicketServiceData, TicketServicePriceData, TicketOption)
 import Components.GenericHeader as GenericHeader
 import Components.PrimaryButton as PrimaryButton
 import Effect.Uncurried(runEffectFn4)
 import Debug (spy)
 import Helpers.Utils (generateQR)
-import Data.Array (length, head, (!!))
+import Data.Array (length, (:), foldl, mapWithIndex, head, (!!))
 import Data.Maybe (Maybe(..))
 import Engineering.Helpers.Commons(getNewIDWithTag)
 import Resources.Constants
-import Services.API (TicketPlaceResp(..), TicketServicesResponse(..), TicketPlaceResponse(..))
+import Services.API (TicketPlaceResp(..), TicketServicesResponse(..), TicketServiceResp(..), TicketServicePrice(..))
+import Data.Int (ceil)
 import Common.Types.App as Common
 
 instance showAction :: Show Action where
@@ -37,8 +38,8 @@ data Action = AfterRender
             | ShareTicketAC PrimaryButton.Action
             | ViewTicketAC PrimaryButton.Action
             | ToggleTicketOption String 
-            | IncrementTicket String String 
-            | DecrementTicket String String
+            | IncrementTicket TicketOption
+            | DecrementTicket TicketOption
             | DatePicker String String Int Int Int
             | ToggleTermsAndConditions
             | OpenCalendar 
@@ -57,74 +58,18 @@ data ScreenOutput = GoToHomeScreen TicketBookingScreenState
                   | GoToGetBookingInfo TicketBookingScreenState
                   | TryAgain TicketBookingScreenState
 
--- updateTicketService :: String -> Int -> Array TicketServiceI -> Array TicketServiceI -- TODO:: Use similar helper function here
--- updateTicketService serviceId deltaUnits services =
---   let
---     updateFunc :: Maybe TicketServiceI -> Maybe TicketServiceI
---     updateFunc service =
---       case service of
---         Just s -> Just { id: s.id, attendeeType: s.attendeeType, numberOfUnits: s.numberOfUnits + deltaUnits }
---         Nothing -> Nothing
---   in
---     fromMaybe services $ updateAt updateFunc serviceId services
-
 eval :: Action -> TicketBookingScreenState -> Eval Action ScreenOutput TicketBookingScreenState
-eval (ToggleTicketOption ticketID) state =
-  case ticketID of 
-    "b73378dc-427f-4efa-9b55-8efe7e3352c2" -> continue state{data{zooEntry {availed = not (state.data.zooEntry.availed)}}}
-    "a7eba6ed-99f7-442f-a9d8-00c8b380657b" -> continue state{data{aquariumEntry {availed = not (state.data.aquariumEntry.availed)}}}
-    "d8f47b42-50a5-4a97-8dda-e80a3633d7ab" -> continue state{data{photoOrVideoGraphy {availed = not (state.data.photoOrVideoGraphy.availed)}}}
-    _ -> continue state
+eval (ToggleTicketOption ticketID) state = do
+  let updatedServicesInfo = map (updateExpandService ticketID) state.data.servicesInfo
+  continue state { data { servicesInfo = updatedServicesInfo } }
 
-eval (IncrementTicket ticketID subcategory) state =  -- TODO:: Refactor this function with generic one
-  case ticketID of 
-    "b73378dc-427f-4efa-9b55-8efe7e3352c2" -> case subcategory of 
-                      "ADULT" -> do 
-                        let newState = state{data{zooEntry{adult = state.data.zooEntry.adult + 1}}}
-                        continue newState{data{totalAmount = calculateTicketAmount newState}}
-                      "CHILD" -> do 
-                        let newState = state{data{zooEntry{child = state.data.zooEntry.child + 1}}}
-                        continue newState{data{totalAmount = calculateTicketAmount newState}}
-                      _ -> continue state 
-    "a7eba6ed-99f7-442f-a9d8-00c8b380657b" -> case subcategory of 
-                      "ADULT" -> do 
-                        let newState = state{data{aquariumEntry{adult = state.data.aquariumEntry.adult + 1}}}
-                        continue newState{data{totalAmount = calculateTicketAmount newState}}
-                      "CHILD" -> do 
-                        let newState = state{data{aquariumEntry{child = state.data.aquariumEntry.child + 1}}}
-                        continue newState{data{totalAmount = calculateTicketAmount newState}}
-                      _ -> continue state 
-    "d8f47b42-50a5-4a97-8dda-e80a3633d7ab" -> case subcategory of 
-                      "DEVICES" -> do 
-                        let newState = state{data{photoOrVideoGraphy{noOfDevices = state.data.photoOrVideoGraphy.noOfDevices + 1}}}
-                        continue newState{data{totalAmount = calculateTicketAmount newState}}
-                      _ -> continue state 
-    _ -> continue state
+eval (IncrementTicket ticketOption) state = do
+  let {finalAmount, updateServicesInfo} = calculateTicketAmount ticketOption true state.data.servicesInfo
+  continue state { data { totalAmount = finalAmount, servicesInfo = updateServicesInfo } }
 
-eval (DecrementTicket ticketID subcategory) state = 
-  case ticketID of 
-    "b73378dc-427f-4efa-9b55-8efe7e3352c2" -> case subcategory of 
-                      "ADULT" -> do 
-                        let newState = state{data{zooEntry{adult = if state.data.zooEntry.adult == 0 then 0 else state.data.zooEntry.adult - 1}}}
-                        continue newState{data{totalAmount = calculateTicketAmount newState}}
-                      "CHILD" -> do 
-                        let newState = state{data{zooEntry{child = if state.data.zooEntry.child == 0 then 0 else state.data.zooEntry.child - 1}}}
-                        continue newState{data{totalAmount = calculateTicketAmount newState}}
-                      _ -> continue state 
-    "a7eba6ed-99f7-442f-a9d8-00c8b380657b" -> case subcategory of 
-                      "ADULT" -> do 
-                        let newState = state{data{aquariumEntry{adult = if state.data.aquariumEntry.adult == 0 then 0 else state.data.aquariumEntry.adult - 1}}}
-                        continue newState{data{totalAmount = calculateTicketAmount newState}}
-                      "CHILD" -> do 
-                        let newState = state{data{aquariumEntry{child = if state.data.aquariumEntry.child == 0 then 0 else state.data.aquariumEntry.child - 1}}}
-                        continue newState{data{totalAmount = calculateTicketAmount newState}}
-                      _ -> continue state 
-    "d8f47b42-50a5-4a97-8dda-e80a3633d7ab" -> case subcategory of 
-                      "DEVICES" -> do 
-                        let newState = state{data{photoOrVideoGraphy{noOfDevices = if state.data.photoOrVideoGraphy.noOfDevices == 0 then 0 else state.data.photoOrVideoGraphy.noOfDevices - 1}}}
-                        continue newState{data{totalAmount = calculateTicketAmount newState}}
-                      _ -> continue state 
-    _ -> continue state
+eval (DecrementTicket ticketOption) state = do
+  let {finalAmount, updateServicesInfo} = calculateTicketAmount ticketOption false state.data.servicesInfo
+  continue state { data { totalAmount = finalAmount, servicesInfo = updateServicesInfo } }
 
 eval  (DatePicker _ resp year month date ) state = do
   case resp of 
@@ -144,10 +89,13 @@ eval (PrimaryButtonAC (PrimaryButton.OnClick)) state = do
 
 eval (GenericHeaderAC (GenericHeader.PrefixImgOnClick)) state = continueWithCmd state [do pure BackPressed]
 
-eval (UpdatePlacesData placeData serviceData) state = do
-  let newState = state { data { placeInfo = placeData,  servicesInfo = serviceData}, props { showShimmer = false } }
+eval (UpdatePlacesData placeData Nothing) state = do
+  let newState = state { data { placeInfo = placeData }, props { showShimmer = false } }
   continue newState
-
+eval (UpdatePlacesData placeData (Just (TicketServicesResponse serviceData))) state = do
+  let servicesInfo = mapWithIndex (\i it -> transformRespToStateData (i==0) it) serviceData
+  let newState = state { data { placeInfo = placeData, servicesInfo = servicesInfo}, props { showShimmer = false } }
+  continue newState
 
 eval BackPressed state = 
   case state.props.currentStage of 
@@ -177,10 +125,53 @@ eval (PaymentStatusAction status) state =
 
 eval _ state = continue state
 
+transformRespToStateData :: Boolean -> TicketServiceResp -> TicketServiceData
+transformRespToStateData isFirstElement (TicketServiceResp service) = do
+  { id : service.id,
+    service : service.service,
+    openTimings : service.openTimings,
+    closeTimings : service.closeTimings,
+    isExpanded : isFirstElement,
+    prices : map convertServicePriceRespToStateData service.prices
+  }
+  where
+  convertServicePriceRespToStateData :: TicketServicePrice -> TicketServicePriceData
+  convertServicePriceRespToStateData (TicketServicePrice price) = do
+    { attendeeType : price.attendeeType,
+      pricePerUnit : ceil price.pricePerUnit,
+      currentValue : 0
+    }
 
-calculateTicketAmount :: TicketBookingScreenState -> Int
-calculateTicketAmount state = 
-  let zooEntryAmount = (state.data.zooEntry.adult * state.data.zooEntry.ticketPerAdult) + (state.data.zooEntry.child * state.data.zooEntry.ticketPerChild)
-      aquariumEntryAmount = (state.data.aquariumEntry.adult * state.data.aquariumEntry.ticketPerAdult) + (state.data.aquariumEntry.child * state.data.aquariumEntry.ticketPerChild)
-      photoOrVideoGraphyAmount = state.data.photoOrVideoGraphy.noOfDevices * state.data.photoOrVideoGraphy.ticketPerDevice
-  in zooEntryAmount + aquariumEntryAmount + photoOrVideoGraphyAmount
+updateExpandService ticketID service =
+  if service.id == ticketID then do
+    service {isExpanded = not service.isExpanded}
+  else service
+
+calculateTicketAmount :: TicketOption -> Boolean -> Array TicketServiceData -> {finalAmount :: Int, updateServicesInfo :: Array TicketServiceData }
+calculateTicketAmount ticketOption isIncrement servicesInfo = do
+  let updatedServices = map (updateService ticketOption) servicesInfo
+      finalAmount = sum (map calculateAmountService updatedServices)
+  
+  {finalAmount: finalAmount, updateServicesInfo: updatedServices}
+  where
+  updateService :: TicketOption -> TicketServiceData -> TicketServiceData
+  updateService ticketOption service =
+    if service.id == ticketOption.ticketID then do
+      service {prices = map (updatePricePerUnit ticketOption) service.prices}
+    else service
+  
+  updatePricePerUnit :: TicketOption -> TicketServicePriceData -> TicketServicePriceData
+  updatePricePerUnit ticketOption price =
+    if price.attendeeType == ticketOption.subcategory then do
+      price { currentValue = min 99 (max 0 (if isIncrement then price.currentValue + 1 else price.currentValue - 1)) }
+    else price
+
+  calculateAmountService :: TicketServiceData -> Int
+  calculateAmountService service =
+    sum (map calculateAmountPrice service.prices)
+  
+  sum :: Array Int -> Int
+  sum = foldl (\acc x -> acc + x) 0
+  
+  calculateAmountPrice :: TicketServicePriceData -> Int
+  calculateAmountPrice price = price.currentValue * price.pricePerUnit

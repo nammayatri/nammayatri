@@ -34,7 +34,7 @@ import Halogen.VDom.DOM.Prop (PropValue)
 import Prelude (class Eq, class Show)
 import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode, defaultDecode, defaultEncode)
 import PrestoDOM (LetterSpacing, BottomSheetState(..))
-import Services.API (AddressComponents, BookingLocationAPIEntity, TicketServicesResponse, EstimateAPIEntity(..), QuoteAPIEntity, TicketPlaceResp, RideBookingRes, Route, BookingStatus(..))
+import Services.API (AddressComponents, BookingLocationAPIEntity, EstimateAPIEntity(..), QuoteAPIEntity, TicketPlaceResp, RideBookingRes, Route, BookingStatus(..))
 
 type Contacts = {
   name :: String,
@@ -1337,24 +1337,45 @@ type TicketBookingScreenState =
     props :: TicketBookingScreenProps
   }
 
+type Ticket = 
+  { title :: String
+  , ticketID :: String
+  , ticketOption :: Array TicketOption
+  , isExpanded :: Boolean
+  }
+
+type TicketOption = 
+  { ticketID :: String
+  , title :: String
+  , currentValue :: Int
+  , subcategory :: String
+  }
+
+type TicketServiceData =
+  { id :: String,
+    service :: String,
+    openTimings :: Maybe String,
+    closeTimings :: Maybe String,
+    isExpanded :: Boolean,
+    prices :: Array TicketServicePriceData
+  }
+
+type TicketServicePriceData =
+  { attendeeType :: String,
+    pricePerUnit :: Int,
+    currentValue :: Int
+  }
+
 type TicketBookingScreenData = {
   servicesAvailing :: Array TicketServiceI, -- TODO:: Use this for generic handling
-  dateOfVisit :: String ,
-  zooEntry :: EntryFeeConfig ,
-  aquariumEntry :: EntryFeeConfig ,
+  dateOfVisit :: String,
   keyValArray :: Array KeyVal,
   transactionId :: String,
   bookedForArray :: Array String,
   zooName :: String,
-  photoOrVideoGraphy :: {
-    id :: String,
-    availed :: Boolean ,
-    noOfDevices :: Int ,
-    ticketPerDevice :: Int
-  },
   totalAmount :: Int,
   placeInfo :: Maybe TicketPlaceResp,
-  servicesInfo :: Maybe TicketServicesResponse,
+  servicesInfo :: Array TicketServiceData,
   shortOrderId :: String
 }
 
@@ -1367,15 +1388,6 @@ type TicketServiceI = {
 type KeyVal = {
   key :: String,
   val :: String
-}
-
-type EntryFeeConfig = {
-  id :: String,
-  availed :: Boolean,
-  adult :: Int,
-  child :: Int,
-  ticketPerAdult :: Int,
-  ticketPerChild :: Int
 }
 
 type TicketBookingItem = 
