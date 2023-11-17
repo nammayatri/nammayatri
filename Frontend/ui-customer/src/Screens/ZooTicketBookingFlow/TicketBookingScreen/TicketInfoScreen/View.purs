@@ -148,7 +148,7 @@ zooTicketView state push =
   ][ ticketHeaderView state push (getPlaceColor activeItem.ticketServiceName) (getInfoColor activeItem.ticketServiceName)
   ,  ticketImageView state push
   ,  bookingInfoView state push
-  ,  shareTicketView state push
+  -- ,  shareTicketView state push -- TODO :: add share ticket functionality
   ]
 
 
@@ -340,7 +340,7 @@ pillView state push backgroudColor textColor =
       , orientation HORIZONTAL
             , gravity CENTER_VERTICAL
       ]([  tvView (show item.numberOfUnits <> " " <> item.attendeeType) textColor (MarginBottom 0) (FontStyle.subHeading1 TypoGraphy)
-      ] <> if index == itemLength then [] else [dotView (getPillInfoColor activeItem.ticketServiceName) (MarginHorizontal 6 6) 5] )
+      ] <> if index == itemLength then [] else [dotView (getPillInfoColor activeItem.ticketServiceName) (Margin 6 3 6 0) 5] )
     ) activeItem.prices )
 
 dotView :: forall w. String -> Margin -> Int -> PrestoDOM (Effect Unit) w
@@ -372,12 +372,13 @@ bookingInfoView state push =
   [ height WRAP_CONTENT
   , width MATCH_PARENT
   , orientation VERTICAL
-  ][  bookingInfoListItemView state "Service ID" activeItem.ticketServiceShortId
+  ]([  bookingInfoListItemView state "Service ID" activeItem.ticketServiceShortId
     , separatorView (getSeparatorColor activeItem.ticketServiceName)
-    , bookingInfoListItemView state "Zoo Entry" (show activeItem.amount)
-    , separatorView (getSeparatorColor activeItem.ticketServiceName)
-    , bookingInfoListItemView state "Valid Until" (convertUTCtoISC (fromMaybe "" activeItem.expiryDate) "Do MMM, YYYY")
-  ]
+    , bookingInfoListItemView state "Zoo Entry" ("₹" <> show activeItem.amount)
+  ] <> case activeItem.expiryDate of 
+          Just expiryDate ->  [ separatorView (getSeparatorColor activeItem.ticketServiceName)
+                              , bookingInfoListItemView state "Valid Until" (convertUTCtoISC (expiryDate) "Do MMM, YYYY")]
+          _ -> [])
 
 getSeparatorColor :: String -> String
 getSeparatorColor ticketServiceName = case ticketServiceName of
@@ -400,14 +401,14 @@ bookingInfoListItemView state key value =
       , height WRAP_CONTENT
       , text key
       , color $ getPlaceColor activeItem.ticketServiceName
-      ] <> FontStyle.body3 TypoGraphy)
+      ] <> FontStyle.body1 TypoGraphy)
     , textView
       ([ weight 1.0
       , height WRAP_CONTENT
       , text value
       , color $ getPlaceColor activeItem.ticketServiceName
       , gravity RIGHT
-      ] <> FontStyle.body3 TypoGraphy)
+      ] <> FontStyle.body1 TypoGraphy)
   ]
 
 shareTicketView :: forall w. ST.TicketInfoScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
