@@ -24,6 +24,7 @@ import Services.API (BookingStatus(..))
 initData :: TicketBookingScreenState
 initData = 
   { data : {
+      placeInfo : Nothing,
       servicesAvailing : [],
       shortOrderId: "",
       dateOfVisit : "",
@@ -59,6 +60,7 @@ initData =
       currentStage : DescriptionStage,
       termsAndConditionsSelected : true,
       validDate : true,
+      showShimmer : true,
       paymentStatus : Common.Success
       , ticketBookingList : dummyData
       , selectedBookingId : "adfadf"

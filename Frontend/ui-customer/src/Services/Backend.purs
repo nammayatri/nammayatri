@@ -897,7 +897,7 @@ getTicketPlacesBT _ = do
     withAPIResultBT (EP.ticketPlaces "") (\x -> x) errorHandler (lift $ lift $ callAPI headers TicketPlaceReq)
     where
     errorHandler errorPayload = do
-            BackT $ pure GoBack 
+      BackT $ pure GoBack 
 
 bookTicketsBT :: TicketBookingReq -> String -> FlowBT String CreateOrderRes
 bookTicketsBT payload placeId = do

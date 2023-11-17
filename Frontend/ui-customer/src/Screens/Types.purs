@@ -34,7 +34,7 @@ import Halogen.VDom.DOM.Prop (PropValue)
 import Prelude (class Eq, class Show)
 import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode, defaultDecode, defaultEncode)
 import PrestoDOM (LetterSpacing, BottomSheetState(..))
-import Services.API (AddressComponents, BookingLocationAPIEntity, EstimateAPIEntity(..), QuoteAPIEntity, RideBookingRes, Route, BookingStatus(..))
+import Services.API (AddressComponents, BookingLocationAPIEntity, EstimateAPIEntity(..), QuoteAPIEntity, TicketPlaceResp, RideBookingRes, Route, BookingStatus(..))
 
 type Contacts = {
   name :: String,
@@ -1335,6 +1335,7 @@ type TicketBookingScreenData = {
     ticketPerDevice :: Int
   },
   totalAmount :: Int,
+  placeInfo :: Maybe TicketPlaceResp,
   shortOrderId :: String
 }
 
@@ -1377,6 +1378,7 @@ type TicketBookingScreenProps = {
   currentStage :: TicketBookingScreenStage,
   termsAndConditionsSelected :: Boolean,
   validDate :: Boolean,
+  showShimmer :: Boolean,
   paymentStatus :: Common.PaymentStatus,
   ticketBookingList :: TicketBookings,
   selectedBookingId :: String,

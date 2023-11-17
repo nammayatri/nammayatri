@@ -2553,7 +2553,6 @@ updateUserInfoToState state =
 
 zooTicketBookingFlow :: FlowBT String Unit
 zooTicketBookingFlow = do
-  logField_ <- lift $ lift $ getLogFields
   liftFlowBT $ hideLoader
   modifyScreenState $ TicketBookingScreenStateType (\ticketBookingScreen -> ticketBookingScreen{data{dateOfVisit = (getNextDateV2 "")}})             
   flow <- UI.ticketBookingScreen
