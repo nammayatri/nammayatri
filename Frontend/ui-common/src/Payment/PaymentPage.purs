@@ -81,5 +81,15 @@ instance showPaymentPagePayload :: Show PaymentPagePayload where show = genericS
 instance decodePaymentPagePayload :: Decode PaymentPagePayload where decode = defaultDecode
 instance encodePaymentPagePayload :: Encode PaymentPagePayload where encode = defaultEncode
 
+getPaymentPageLangKey :: String -> String 
+getPaymentPageLangKey key = case key of 
+  "EN_US" -> "english"
+  "KN_IN" -> "kannada"
+  "HI_IN" -> "hindi"
+  "ML_IN" -> "malayalam"
+  "BN_IN" -> "bengali"
+  "TA_IN" -> "tamil"
+  _       -> "english"
+
 paymentPageUI :: forall st. PaymentPagePayload -> FlowBT String st String-- FlowBT String String
 paymentPageUI payload = lift $ lift $ doAff $ makeAff (\cb -> (startPP (encodeJSON payload) (Right >>> cb) ) *> pure nonCanceler)

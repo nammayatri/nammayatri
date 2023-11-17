@@ -57,7 +57,6 @@ data ScreenName = SPLASH_SCREEN
                 | SUBSCRIPTION_SCREEN
                 | ONBOARDING_SUBSCRIPTION_SCREEN
                 | DRIVER_SAVED_LOCATION_SCREEN
-                | TICKET_BOOKING_SCREEN
 
 derive instance genericScreenName :: Generic ScreenName _
 instance eqScreenName :: Eq ScreenName where eq = genericEq

@@ -21,7 +21,7 @@ import Accessor (_deviceToken)
 import Common.Types.App (Version(..), SignatureAuthData(..), LazyCheck(..))
 import Control.Monad.Except.Trans (lift)
 import Control.Transformers.Back.Trans (BackT(..), FailBack(..))
-import Data.Array ((!!), take, any)
+import Data.Array ((!!), take, any, singleton)
 import Common.Types.App (Version(..), SignatureAuthData(..), LazyCheck (..), FeedbackAnswer)
 import Data.Either (Either(..), either)
 import Data.Lens ((^.))
@@ -41,14 +41,13 @@ import ModifyScreenState (modifyScreenState)
 import Prelude (Unit, bind, discard, map, pure, unit, void, ($), ($>), (&&), (*>), (<<<), (=<<), (==), (<=), (||), show, (<>), (/=), when)
 import Presto.Core.Types.API (Header(..), Headers(..), ErrorResponse)
 import Presto.Core.Types.Language.Flow (Flow, APIResult, callAPI, doAff, loadS)
-import Screens.Types (AccountSetUpScreenState(..), HomeScreenState(..), NewContacts, DisabilityT(..), Address, Stage(..))
+import Screens.Types (AccountSetUpScreenState(..), HomeScreenState(..), NewContacts, DisabilityT(..), Address, Stage(..), TicketBookingScreenData(..))
 import Services.Config as SC
 import Storage (getValueToLocalStore, deleteValueFromLocalStore, getValueToLocalNativeStore, KeyStore(..), setValueToLocalStore)
 import Tracker (trackApiCallFlow, trackExceptionFlow)
 import Tracker.Labels (Label(..))
 import Tracker.Types as Tracker
 import Types.App (GlobalState(..), FlowBT, ScreenType(..))
-import Types.App (GlobalState, FlowBT, ScreenType(..))
 import Types.EndPoint as EP
 import Constants as Constants
 
@@ -883,3 +882,82 @@ getPersonStatsBT _ = do
     where
     errorHandler errorPayload = do
             BackT $ pure GoBack 
+
+getTicketPlaceServicesBT :: String -> FlowBT String TicketServiceResp
+getTicketPlaceServicesBT placeId = do
+    headers <- getHeaders' "" false
+    withAPIResultBT (EP.ticketPlaceServices placeId) (\x -> x) errorHandler (lift $ lift $ callAPI headers (TicketServiceReq placeId))
+    where
+    errorHandler errorPayload = do
+            BackT $ pure GoBack 
+
+getTicketPlacesBT :: String -> FlowBT String TicketPlaceResponse
+getTicketPlacesBT _ = do
+    headers <- getHeaders' "" false
+    withAPIResultBT (EP.ticketPlaces "") (\x -> x) errorHandler (lift $ lift $ callAPI headers TicketPlaceReq)
+    where
+    errorHandler errorPayload = do
+            BackT $ pure GoBack 
+
+bookTicketsBT :: TicketBookingReq -> String -> FlowBT String CreateOrderRes
+bookTicketsBT payload placeId = do
+    headers <- getHeaders' "" false
+    withAPIResultBT (EP.ticketPlaceBook placeId) (\x -> x) errorHandler (lift $ lift $ callAPI headers (TicketBookingRequest placeId payload))
+    where
+    errorHandler errorPayload = do
+            BackT $ pure GoBack
+
+mkBookingTicketReq :: TicketBookingScreenData -> TicketBookingReq -- TODO:: Refactor and make it generic without having state for serviceType
+mkBookingTicketReq ticketBookingScreenData = 
+  let 
+    zooTickets = zooEntryToTicketServices ticketBookingScreenData.zooEntry
+    aquariumTickets = aquariumEntryToTicketServices ticketBookingScreenData.aquariumEntry
+    photoOrVideoGraphyTickets = photoOrVideoGraphyToTicketServices ticketBookingScreenData.photoOrVideoGraphy
+  in
+    TicketBookingReq {
+      "services" : zooTickets <> aquariumTickets <> photoOrVideoGraphyTickets,
+      "visitDate" : ticketBookingScreenData.dateOfVisit
+    }
+  where
+    zooEntryToTicketServices zooEntry = 
+      let
+        adultService = 
+          TicketService {
+            "serviceId" : zooEntry.id,
+            "attendeeType" : "Adult",
+            "numberOfUnits" : zooEntry.adult
+          } 
+        childService =
+          TicketService {
+            "serviceId" : zooEntry.id,
+            "attendeeType" : "Kid",
+            "numberOfUnits" : zooEntry.child
+          }
+      in
+        singleton adultService <> singleton childService
+    aquariumEntryToTicketServices aquariumEntry =
+      let
+        adultService = 
+          TicketService {
+            "serviceId" : aquariumEntry.id,
+            "attendeeType" : "Adult",
+            "numberOfUnits" : aquariumEntry.adult
+          } 
+        childService =
+          TicketService {
+            "serviceId" : aquariumEntry.id,
+            "attendeeType" : "Kid",
+            "numberOfUnits" : aquariumEntry.child
+          }
+      in
+        singleton adultService <> singleton childService
+    photoOrVideoGraphyToTicketServices photoOrVideoGraphy =
+      let
+        photoOrVideoGraphyService = 
+          TicketService {
+            "serviceId" : photoOrVideoGraphy.id,
+            "attendeeType" : "CameraUnit",
+            "numberOfUnits" : photoOrVideoGraphy.noOfDevices
+          } 
+      in
+        singleton photoOrVideoGraphyService

@@ -50,7 +50,7 @@ import Foreign (MultipleErrors, unsafeToForeign)
 import Foreign.Class (class Encode, encode)
 import Foreign.Generic (decodeJSON, encodeJSON)
 import JBridge (addMarker, cleverTapSetLocation, currentPosition, drawRoute, emitJOSEvent, enableMyLocation, factoryResetApp, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, firebaseUserID, generateSessionId, getLocationPermissionStatus, getVersionCode, getVersionName, hideKeyboardOnNavigation, hideLoader, initiateLocationServiceClient, isCoordOnPath, isInternetAvailable, isLocationEnabled, isLocationPermissionEnabled, launchInAppRatingPopup, locateOnMap, locateOnMapConfig, metaLogEvent, openNavigation, reallocateMapFragment, removeAllPolylines, saveSuggestionDefs, saveSuggestions, setCleverTapUserData, setCleverTapUserProp, setFCMTokenWithTimeOut, stopChatListenerService, toast, toggleBtnLoader, updateRoute, updateRouteMarker, extractReferrerUrl, getLocationNameV2)
-import Helpers.Utils (decodeError, addToPrevCurrLoc, addToRecentSearches, adjustViewWithKeyboard, checkPrediction, clearWaitingTimer, differenceOfLocationLists, drawPolygon, filterRecentSearches, fetchImage, FetchImageFrom(..), getCurrentDate, getNextDate, getCurrentLocationMarker, getCurrentLocationsObjFromLocal, getDistanceBwCordinates, getGlobalPayload, getMobileNumber, getNewTrackingId, getObjFromLocal, getPrediction, getRecentSearches, getScreenFromStage, getSearchType, parseFloat, parseNewContacts, removeLabelFromMarker, requestKeyboardShow, saveCurrentLocations, seperateByWhiteSpaces, setText, showCarouselScreen, sortPredctionByDistance, toStringJSON, triggerRideStatusEvent, withinTimeRange, fetchDefaultPickupPoint, recentDistance)
+import Helpers.Utils (decodeError, addToPrevCurrLoc, addToRecentSearches, adjustViewWithKeyboard, checkPrediction, clearWaitingTimer, differenceOfLocationLists, drawPolygon, filterRecentSearches, fetchImage, FetchImageFrom(..), getCurrentDate, getNextDateV2, getCurrentLocationMarker, getCurrentLocationsObjFromLocal, getDistanceBwCordinates, getGlobalPayload, getMobileNumber, getNewTrackingId, getObjFromLocal, getPrediction, getRecentSearches, getScreenFromStage, getSearchType, parseFloat, parseNewContacts, removeLabelFromMarker, requestKeyboardShow, saveCurrentLocations, seperateByWhiteSpaces, setText, showCarouselScreen, sortPredctionByDistance, toStringJSON, triggerRideStatusEvent, withinTimeRange, fetchDefaultPickupPoint, recentDistance)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (printLog)
@@ -61,7 +61,7 @@ import ModifyScreenState (modifyScreenState, updateRideDetails)
 import Prelude (Unit, bind, discard, map, mod, negate, not, pure, show, unit, void, when, ($), (&&), (+), (-), (/), (/=), (<), (<=), (<>), (==), (>), (>=), (||), (<$>), (<<<), ($>))
 import Presto.Core.Types.Language.Flow (doAff, fork, setLogField, delay)
 import Presto.Core.Types.Language.Flow (getLogFields)
-import Resources.Constants (DecodeAddress(..), decodeAddress, encodeAddress, getKeyByLanguage, getSearchRadius, getValueByComponent, getWard)
+import Resources.Constants (DecodeAddress(..), decodeAddress, encodeAddress, getKeyByLanguage, getSearchRadius, getValueByComponent, getWard, ticketPlaceId)
 import Screens.AccountSetUpScreen.ScreenData as AccountSetUpScreenData
 import Screens.AddNewAddressScreen.Controller (encodeAddressDescription, getSavedLocations, getSavedTags, getLocationList, calculateDistance, getSavedTagsFromHome, validTag, isValidLocation, getLocTag) as AddNewAddress
 import Screens.AddNewAddressScreen.ScreenData (dummyLocation) as AddNewAddressScreenData
@@ -83,10 +83,10 @@ import Screens.RideBookingFlow.HomeScreen.Config (getTipViewData, setTipViewData
 import Screens.RideBookingFlow.HomeScreen.Config (specialLocationIcons, specialLocationConfig, updateRouteMarkerConfig)
 import Screens.SavedLocationScreen.Controller (getSavedLocationForAddNewAddressScreen)
 import Screens.SelectLanguageScreen.ScreenData as SelectLanguageScreenData
-import Screens.Types (CardType(..), AddNewAddressScreenState(..), SearchResultType(..), CurrentLocationDetails(..), CurrentLocationDetailsWithDistance(..), DeleteStatus(..), HomeScreenState, LocItemType(..), PopupType(..), SearchLocationModelType(..), Stage(..), LocationListItemState, LocationItemType(..), NewContacts, NotifyFlowEventType(..), FlowStatusData(..), ErrorType(..), ZoneType(..), TipViewData(..),TripDetailsGoBackType(..), Location, DisabilityT(..), UpdatePopupType(..) , PermissionScreenStage(..))
+import Screens.Types (CardType(..), AddNewAddressScreenState(..), SearchResultType(..), CurrentLocationDetails(..), CurrentLocationDetailsWithDistance(..), DeleteStatus(..), HomeScreenState, LocItemType(..), PopupType(..), SearchLocationModelType(..), Stage(..), LocationListItemState, LocationItemType(..), NewContacts, NotifyFlowEventType(..), FlowStatusData(..), ErrorType(..), ZoneType(..), TipViewData(..),TripDetailsGoBackType(..), Location, DisabilityT(..), UpdatePopupType(..) , PermissionScreenStage(..), TicketBookingScreenData(..))
 import Screens.Types (Gender(..)) as Gender
-import Services.API (AddressGeometry(..), BookingLocationAPIEntity(..), CancelEstimateRes(..), ConfirmRes(..), ContactDetails(..), DeleteSavedLocationReq(..), FlowStatus(..), FlowStatusRes(..), GatesInfo(..), Geometry(..), GetDriverLocationResp(..), GetEmergContactsReq(..), GetEmergContactsResp(..), GetPlaceNameResp(..), GetProfileRes(..), LatLong(..), LocationS(..), LogOutReq(..), LogOutRes(..), PlaceName(..), ResendOTPResp(..), RideAPIEntity(..), RideBookingAPIDetails(..), RideBookingDetails(..), RideBookingListRes(..), RideBookingRes(..), Route(..), SavedLocationReq(..), SavedLocationsListRes(..), SearchLocationResp(..), SearchRes(..), ServiceabilityRes(..), SpecialLocation(..), TriggerOTPResp(..), UserSosRes(..), VerifyTokenResp(..), ServiceabilityResDestination(..), SelectEstimateRes(..), UpdateProfileReq(..), OnCallRes(..), Snapped(..), AddressComponents(..), FareBreakupAPIEntity(..), GetDisabilityListResp(..), Disability(..), PersonStatsRes(..))
-import Services.API (AuthType(..), AddressGeometry(..), BookingLocationAPIEntity(..), CancelEstimateRes(..), ConfirmRes(..), ContactDetails(..), DeleteSavedLocationReq(..), FlowStatus(..), FlowStatusRes(..), GatesInfo(..), Geometry(..), GetDriverLocationResp(..), GetEmergContactsReq(..), GetEmergContactsResp(..), GetPlaceNameResp(..), GetProfileRes(..), LatLong(..), LocationS(..), LogOutReq(..), LogOutRes(..), PlaceName(..), ResendOTPResp(..), RideAPIEntity(..), RideBookingAPIDetails(..), RideBookingDetails(..), RideBookingListRes(..), RideBookingRes(..), Route(..), SavedLocationReq(..), SavedLocationsListRes(..), SearchLocationResp(..), SearchRes(..), ServiceabilityRes(..), SpecialLocation(..), TriggerOTPResp(..), UserSosRes(..), VerifyTokenResp(..), ServiceabilityResDestination(..), TriggerSignatureOTPResp(..), User(..), OnCallRes(..))
+import Services.API --(AddressGeometry(..), BookingLocationAPIEntity(..), CancelEstimateRes(..), ConfirmRes(..), ContactDetails(..), DeleteSavedLocationReq(..), FlowStatus(..), FlowStatusRes(..), GatesInfo(..), Geometry(..), GetDriverLocationResp(..), GetEmergContactsReq(..), GetEmergContactsResp(..), GetPlaceNameResp(..), GetProfileRes(..), LatLong(..), LocationS(..), LogOutReq(..), LogOutRes(..), PlaceName(..), ResendOTPResp(..), RideAPIEntity(..), RideBookingAPIDetails(..), RideBookingDetails(..), RideBookingListRes(..), RideBookingRes(..), Route(..), SavedLocationReq(..), SavedLocationsListRes(..), SearchLocationResp(..), SearchRes(..), ServiceabilityRes(..), SpecialLocation(..), TriggerOTPResp(..), UserSosRes(..), VerifyTokenResp(..), ServiceabilityResDestination(..), SelectEstimateRes(..), UpdateProfileReq(..), OnCallRes(..), Snapped(..), AddressComponents(..), FareBreakupAPIEntity(..), GetDisabilityListResp(..), Disability(..), PersonStatsRes(..))
+import Services.API --(AuthType(..), AddressGeometry(..), BookingLocationAPIEntity(..), CancelEstimateRes(..), ConfirmRes(..), ContactDetails(..), DeleteSavedLocationReq(..), FlowStatus(..), FlowStatusRes(..), GatesInfo(..), Geometry(..), GetDriverLocationResp(..), GetEmergContactsReq(..), GetEmergContactsResp(..), GetPlaceNameResp(..), GetProfileRes(..), LatLong(..), LocationS(..), LogOutReq(..), LogOutRes(..), PlaceName(..), ResendOTPResp(..), RideAPIEntity(..), RideBookingAPIDetails(..), RideBookingDetails(..), RideBookingListRes(..), RideBookingRes(..), Route(..), SavedLocationReq(..), SavedLocationsListRes(..), SearchLocationResp(..), SearchRes(..), ServiceabilityRes(..), SpecialLocation(..), TriggerOTPResp(..), UserSosRes(..), VerifyTokenResp(..), ServiceabilityResDestination(..), TriggerSignatureOTPResp(..), User(..), OnCallRes(..)) --TODO:: Need to fix duplicate imports
 import Services.Backend as Remote
 import Services.Config (getBaseUrl)
 import Storage (KeyStore(..), deleteValueFromLocalStore, getValueToLocalNativeStore, getValueToLocalStore, isLocalStageOn, setValueToLocalNativeStore, setValueToLocalStore, updateLocalStage)
@@ -2539,8 +2539,41 @@ zooTicketBookingFlow :: FlowBT String Unit
 zooTicketBookingFlow = do
   logField_ <- lift $ lift $ getLogFields
   liftFlowBT $ hideLoader
-  modifyScreenState $ TicketBookingScreenStateType (\ticketBookingScreen -> TicketBookingScreenData.initData{data{dateOfVisit = (getNextDate "")}})             
+  modifyScreenState $ TicketBookingScreenStateType (\ticketBookingScreen -> TicketBookingScreenData.initData{data{dateOfVisit = (getNextDateV2 "")}})             
   flow <- UI.ticketBookingScreen
   case flow of
+    GO_TO_TICKET_PAYMENT state -> ticketPaymentFlow state.data
+      -- (TicketPlaceResponse ticketPlaceResponse) <- Remote.getTicketPlacesBT "" --TODO:: WILL BE USED LATER ONCE WE HAVE THE FULL PRODUCT READY
+      -- let placeId = (fromMaybe dummyTicketPlaceResp (head ticketPlaceResponse)) ^. _id
+      -- (TicketServiceResp ticketServiceResp) <- Remote.getTicketPlaceServicesBT placeId
+      
     GO_TO_HOME_SCREEN_FROM_TICKET_BOOKING -> homeScreenFlow
     _ -> pure unit
+
+ticketPaymentFlow :: TicketBookingScreenData -> FlowBT String Unit
+ticketPaymentFlow screenData = do
+  liftFlowBT $ runEffectFn1 initiatePP unit
+  (CreateOrderRes orderResp) <- Remote.bookTicketsBT (Remote.mkBookingTicketReq screenData) ticketPlaceId
+  let (PaymentPagePayload sdk_payload) = orderResp.sdk_payload
+      (PayPayload innerpayload) = sdk_payload.payload
+      finalPayload = PayPayload $ innerpayload{ language = Just (getPaymentPageLangKey (getValueToLocalStore LANGUAGE_KEY)) }
+      sdkPayload = PaymentPagePayload $ sdk_payload{payload = finalPayload}
+      shortOrderID = orderResp.order_id
+  modifyScreenState $ TicketBookingScreenStateType (\ticketBookingScreen -> ticketBookingScreen{data{shortOrderId = shortOrderID}})
+  lift $ lift $ doAff $ makeAff \cb -> runEffectFn1 checkPPInitiateStatus (cb <<< Right) $> nonCanceler
+  _ <- paymentPageUI sdkPayload
+  pure unit
+
+dummyTicketPlaceResp :: TicketPlaceResp -- TODO:: Temp done for testing, remove after the release
+dummyTicketPlaceResp = TicketPlaceResp
+  { id : "",
+    merchantOperatingCityId : "",
+    name : "",
+    description : Nothing,
+    lat : Nothing,
+    lon : Nothing,
+    gallery : [],
+    openTimings : Nothing,
+    closeTimings : Nothing
+  }
+

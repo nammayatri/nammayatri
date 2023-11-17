@@ -294,3 +294,15 @@ dummyDisabilityList ={
 
 areaCodeRegex :: String 
 areaCodeRegex = "\\b\\d{6}\\b"
+
+ticketPlaceId :: String
+ticketPlaceId = "1ef78db2-90de-4ed7-a38a-fcbb7ce28135"
+
+ticketEntryId :: String
+ticketEntryId = "b73378dc-427f-4efa-9b55-8efe7e3352c2"
+
+ticketAquariumId :: String
+ticketAquariumId = "a7eba6ed-99f7-442f-a9d8-00c8b380657b"
+
+ticketCamId :: String
+ticketCamId = "d8f47b42-50a5-4a97-8dda-e80a3633d7ab"

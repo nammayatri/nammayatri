@@ -146,7 +146,16 @@ bookingFeedback :: String -> String
 bookingFeedback dummy = (getBaseUrl "39") <> "/feedback/submit"
 
 disabilityList :: String -> String
-disabilityList dummy = (getBaseUrl "39") <> "/disability/list"
+disabilityList dummy = (getBaseUrl "40") <> "/disability/list"
 
 personStats :: String -> String
-personStats dummy = (getBaseUrl "40") <> "/personStats"
+personStats dummy = (getBaseUrl "41") <> "/personStats"
+
+ticketPlaces :: String -> String
+ticketPlaces dummy = (getBaseUrl "42") <> "/ticket/places"
+
+ticketPlaceServices :: String -> String
+ticketPlaceServices placeId = (getBaseUrl "43") <> "/ticket/places/" <> placeId <> "/services"
+
+ticketPlaceBook :: String -> String
+ticketPlaceBook placeId = (getBaseUrl "43") <> "/ticket/places/" <> placeId <> "/book"

@@ -16,6 +16,7 @@ import Components.GenericHeader as GenericHeader
 import Components.PrimaryButton as PrimaryButton
 import Font.Style as FontStyle
 import Engineering.Helpers.Commons (screenWidth)
+import Resources.Constants -- TODO:: Replace these constants with API response
 import Helpers.Utils (fetchImage, FetchImageFrom(..), decodeError, fetchAndUpdateCurrentLocation, getAssetsBaseUrl, getCurrentLocationMarker, getLocationName, getNewTrackingId, getPreviousVersion, getSearchType, parseFloat, storeCallBackCustomer)
 
 
@@ -253,9 +254,9 @@ chooseTicketsView state push =
       , orientation VERTICAL
       , margin $ MarginTop 20
       ](map (\item -> ticketInputView { ticketType : item.title , ticketID : item.ticketID, ticketOption : item.ticketOption , isExpanded : item.isExpanded } push ) 
-        [ {title : "Zoo Entry", ticketID : "ZOO_ENTRY" , ticketOption : zooEntryTicketOption state, isExpanded : state.data.zooEntry.availed}
-        , {title : "Aquarium Entry", ticketID : "AQUARIUM_ENTRY" , ticketOption : aquariumEntryTicketOption state , isExpanded : state.data.aquariumEntry.availed}
-        , {title : "Photo / Videography", ticketID : "PHOTO_OR_VIDEOGRAPHY" , ticketOption : photoVideographyTicketOption state , isExpanded : state.data.photoOrVideoGraphy.availed}
+        [ {title : "Zoo Entry", ticketID : ticketEntryId , ticketOption : zooEntryTicketOption state, isExpanded : state.data.zooEntry.availed}
+        , {title : "Aquarium Entry", ticketID : ticketAquariumId , ticketOption : aquariumEntryTicketOption state , isExpanded : state.data.aquariumEntry.availed}
+        , {title : "Photo / Videography", ticketID : ticketCamId , ticketOption : photoVideographyTicketOption state , isExpanded : state.data.photoOrVideoGraphy.availed}
           ])
     , linearLayout
       [ height WRAP_CONTENT
