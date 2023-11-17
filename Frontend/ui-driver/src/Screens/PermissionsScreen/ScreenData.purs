@@ -52,4 +52,4 @@ permissionsList state =
       {permission: Overlay , icon:"" },
       {permission: AutoStart , icon:""},
       {permission: Battery , icon:""}
-    ] <> if state.props.androidVersion >= 13 then [{permission: Notifications , icon:""}] else []
+    ]

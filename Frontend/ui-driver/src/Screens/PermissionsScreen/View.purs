@@ -50,7 +50,7 @@ screen initialState =
   , name : "PermissionsScreen"
   , globalEvents : [ (\ push -> do
     _ <- JB.storeCallBackBatteryUsagePermission push BatteryUsagePermissionCallBack
-    _ <- JB.storeCallBackNotificationPermission push NotificationPermissionCallBack
+    -- _ <- JB.storeCallBackNotificationPermission push NotificationPermissionCallBack //removing notification permission for now
     _ <- JB.storeCallBackOverlayPermission push OverlayPermissionSwitchCallBack
     pure $ pure unit)]
   , eval:

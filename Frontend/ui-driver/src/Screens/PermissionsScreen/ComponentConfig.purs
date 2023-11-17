@@ -34,7 +34,7 @@ import Styles.Colors as Color
 primaryButtonConfig :: ST.PermissionsScreenState -> PrimaryButton.Config
 primaryButtonConfig state = let 
     config = PrimaryButton.config
-    isEnabled = ((state.props.androidVersion < 13 || state.props.isNotificationPermissionChecked) && state.props.isOverlayPermissionChecked && state.props.isAutoStartPermissionChecked)
+    isEnabled = (state.props.isOverlayPermissionChecked && state.props.isAutoStartPermissionChecked)
     primaryButtonConfig' = config 
       { textConfig
       { text = (getString CONTINUE)
