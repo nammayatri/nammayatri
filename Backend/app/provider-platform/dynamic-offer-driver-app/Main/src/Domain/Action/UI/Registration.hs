@@ -69,7 +69,9 @@ data AuthReq = AuthReq
   { mobileNumber :: Text,
     mobileCountryCode :: Text,
     merchantId :: Text,
-    merchantOperatingCity :: Maybe Context.City
+    merchantOperatingCity :: Maybe Context.City,
+    registrationLat :: Maybe Double,
+    registrationLon :: Maybe Double
   }
   deriving (Generic, FromJSON, ToSchema)
 
@@ -239,7 +241,9 @@ makePerson req mbBundleVersion mbClientVersion merchantId merchantOperatingCityI
         whatsappNotificationEnrollStatus = Nothing,
         unencryptedAlternateMobileNumber = Nothing,
         alternateMobileNumber = Nothing,
-        faceImageId = Nothing
+        faceImageId = Nothing,
+        registrationLat = req.registrationLat,
+        registrationLon = req.registrationLon
       }
 
 makeSession ::

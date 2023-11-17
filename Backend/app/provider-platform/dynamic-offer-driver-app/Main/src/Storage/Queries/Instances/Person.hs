@@ -66,7 +66,9 @@ instance FromTType' BeamP.Person Person where
             clientVersion = clientVersion',
             unencryptedAlternateMobileNumber = unencryptedAlternateMobileNumber,
             faceImageId = Id <$> faceImageId,
-            alternateMobileNumber = EncryptedHashed <$> (Encrypted <$> alternateMobileNumberEncrypted) <*> alternateMobileNumberHash
+            alternateMobileNumber = EncryptedHashed <$> (Encrypted <$> alternateMobileNumberEncrypted) <*> alternateMobileNumberHash,
+            registrationLat = registrationLat,
+            registrationLon = registrationLon
           }
 
 instance ToTType' BeamP.Person Person where
@@ -104,5 +106,7 @@ instance ToTType' BeamP.Person Person where
         BeamP.unencryptedAlternateMobileNumber = unencryptedAlternateMobileNumber,
         BeamP.alternateMobileNumberHash = alternateMobileNumber <&> (.hash),
         BeamP.faceImageId = getId <$> faceImageId,
-        BeamP.alternateMobileNumberEncrypted = alternateMobileNumber <&> unEncrypted . (.encrypted)
+        BeamP.alternateMobileNumberEncrypted = alternateMobileNumber <&> unEncrypted . (.encrypted),
+        BeamP.registrationLat = registrationLat,
+        BeamP.registrationLon = registrationLon
       }
