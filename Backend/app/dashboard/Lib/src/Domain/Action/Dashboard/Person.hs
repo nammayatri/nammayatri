@@ -107,16 +107,16 @@ newtype ReleaseRegisterReq = ReleaseRegisterReq
   deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
 
 data ReleaseRegisterRes = ReleaseRegisterRes
-  { _username :: Text,
-    _token :: Text,
-    _otpEnabled :: Bool,
-    _merchantId :: Maybe Text,
-    _email :: Text,
-    _context :: Text,
-    _acl :: Maybe Text,
-    _merchantTrack :: Maybe Text,
-    _clientConfig :: Maybe Text,
-    _resellerId :: Maybe Text
+  { username :: Text,
+    token :: Text,
+    otpEnabled :: Bool,
+    merchantId :: Maybe Text,
+    email :: Text,
+    context :: Text,
+    acl :: Maybe Text,
+    merchantTrack :: Maybe Text,
+    clientConfig :: Maybe Text,
+    resellerId :: Maybe Text
   }
   deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
 
@@ -124,21 +124,22 @@ registerRelease ::
   ( EsqDBFlow m r,
     EncFlow m r
   ) =>
+  TokenInfo ->
   ReleaseRegisterReq ->
   m ReleaseRegisterRes
-registerRelease ReleaseRegisterReq {..} = do
+registerRelease _ ReleaseRegisterReq {..} = do
   return
     ReleaseRegisterRes
-      { _username = "Sidharth",
-        _token = token,
-        _otpEnabled = False,
-        _merchantId = Just "tokenData.merchantId",
-        _email = "sidharth.sethu@juspay.in",
-        _context = "JUSPAY",
-        _acl = Just "{\"mjos_manager\":\"RW\"}",
-        _merchantTrack = Nothing,
-        _clientConfig = Nothing,
-        _resellerId = Nothing
+      { username = "Sidharth",
+        token = token,
+        otpEnabled = False,
+        merchantId = Just "merchantId",
+        email = "sidharth.sethu@juspay.in",
+        context = "JUSPAY",
+        acl = Just "{\"mjos_manager\":\"RW\"}",
+        merchantTrack = Nothing,
+        clientConfig = Nothing,
+        resellerId = Nothing
       }
 
 validateCreatePerson :: Validate CreatePersonReq

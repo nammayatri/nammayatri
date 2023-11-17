@@ -104,6 +104,7 @@ type API =
                :> Get '[JSON] DMatrix.AccessMatrixRowAPIEntity
          )
     :<|> "release"
+      :> DashboardAuth 'DASHBOARD_RELEASE_ADMIN
       :> ReqBody '[JSON] DPerson.ReleaseRegisterReq
       :> Post '[JSON] DPerson.ReleaseRegisterRes
 
@@ -184,5 +185,5 @@ changeMobileByAdmin :: TokenInfo -> Id DP.Person -> DPerson.ChangeMobileNumberBy
 changeMobileByAdmin tokenInfo personId req =
   withFlowHandlerAPI $ DPerson.changeMobileNumberByAdmin tokenInfo personId req
 
-registerRelease :: DPerson.ReleaseRegisterReq -> FlowHandler DPerson.ReleaseRegisterRes
-registerRelease = withFlowHandlerAPI . DPerson.registerRelease
+registerRelease :: TokenInfo -> DPerson.ReleaseRegisterReq -> FlowHandler DPerson.ReleaseRegisterRes
+registerRelease tokenInfo = withFlowHandlerAPI . DPerson.registerRelease tokenInfo
