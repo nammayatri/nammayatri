@@ -908,7 +908,6 @@ type ActiveRide = {
   estimatedFare :: Int,
   waitTimerId :: String,
   notifiedCustomer :: Boolean,
-  waitingTime :: String,
   waitTimeInfo :: Boolean,
   rideCreatedAt :: String,
   specialLocationTag :: Maybe String,

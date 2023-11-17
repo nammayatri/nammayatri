@@ -88,7 +88,6 @@ rideActionModalConfig state =
     currentStage = state.props.currentStage,
     unReadMessages = state.props.unReadMessages,
     specialLocationTag = state.data.activeRide.specialLocationTag,
-    waitTime = state.data.activeRide.waitingTime,
     isChatOpened = state.props.isChatOpened,
     requestedVehicleVariant = state.data.activeRide.requestedVehicleVariant,
     accessibilityTag = state.data.activeRide.disabilityTag,

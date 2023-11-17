@@ -55,7 +55,7 @@ import Engineering.Helpers.Utils (saveObject)
 import Language.Strings (getString, getEN)
 import Language.Types (STR(..))
 import Log (printLog, trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppTextInput, trackAppScreenEvent)
-import Prelude (class Show, Unit, bind, discard, map, not, pure, show, unit, void, ($), (&&), (*), (+), (-), (/), (/=), (<), (<>), (==), (>), (||), (<=), (>=), when)
+import Prelude (class Show, Unit, bind, discard, map, not, pure, show, unit, void, ($), (&&), (*), (+), (-), (/), (/=), (<), (<>), (==), (>), (||), (<=), (>=), when, negate)
 import PrestoDOM (Eval, continue, continueWithCmd, exit, updateAndExit, updateWithCmdAndExit)
 import PrestoDOM.Types.Core (class Loggable)
 import Resource.Constants (decodeAddress)
@@ -689,8 +689,8 @@ eval (UpdateWaitTime status) state = do
   void $ pure $ setValueToLocalNativeStore WAITING_TIME_STATUS (show status)
   continue state { props { waitTimeStatus = status}, data {activeRide {notifiedCustomer = status /= ST.NoStatus}}}
 
-eval (WaitTimerCallback timerID timeInMinutes seconds) state = 
-  continue state { data {activeRide { waitingTime = timeInMinutes, waitTimerId = timerID, waitTimeSeconds = seconds}}}
+eval (WaitTimerCallback timerID _ seconds) state = 
+  continue state { data {activeRide {waitTimerId = timerID, waitTimeSeconds = seconds}}}
 
 eval (PopUpModalAction (PopUpModal.OnButton1Click)) state = continue $ (state {props {endRidePopUp = false}})
 eval (PopUpModalAction (PopUpModal.OnButton2Click)) state = do
@@ -1007,8 +1007,7 @@ activeRideDetail state (RidesInfo ride) = {
   estimatedFare : ride.driverSelectedFare + ride.estimatedBaseFare,
   notifiedCustomer : getValueToLocalStore WAITING_TIME_STATUS == (show ST.PostTriggered),
   exoPhone : ride.exoPhone,
-  waitingTime : state.data.activeRide.waitingTime,
-  waitTimeSeconds :if ride.status == "INPROGRESS" then fromMaybe 0 (Int.fromString (getValueToLocalStore WAITING_CHARGES)) else 0,
+  waitTimeSeconds :if ride.status == "INPROGRESS" then fromMaybe 0 (Int.fromString (getValueToLocalStore WAITING_CHARGES)) else -1,
   rideCreatedAt : ride.createdAt,
   waitTimeInfo : state.data.activeRide.waitTimeInfo,
   requestedVehicleVariant : ride.requestedVehicleVariant,
