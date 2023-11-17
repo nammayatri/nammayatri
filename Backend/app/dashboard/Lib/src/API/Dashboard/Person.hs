@@ -103,6 +103,9 @@ type API =
                :> DashboardAuth 'DASHBOARD_USER
                :> Get '[JSON] DMatrix.AccessMatrixRowAPIEntity
          )
+    :<|> "release"
+      :> ReqBody '[JSON] DPerson.ReleaseRegisterReq
+      :> Post '[JSON] DPerson.ReleaseRegisterRes
 
 handler :: FlowServer API
 handler =
@@ -122,6 +125,7 @@ handler =
              :<|> changePassword
              :<|> getAccessMatrix
          )
+    :<|> registerRelease
 
 listPerson :: TokenInfo -> Maybe Text -> Maybe Integer -> Maybe Integer -> Maybe (Id DP.Person) -> FlowHandler DPerson.ListPersonRes
 listPerson tokenInfo mbSearchString mbLimit mbPersonId =
@@ -179,3 +183,6 @@ changePasswordByAdmin tokenInfo personId req =
 changeMobileByAdmin :: TokenInfo -> Id DP.Person -> DPerson.ChangeMobileNumberByAdminReq -> FlowHandler APISuccess
 changeMobileByAdmin tokenInfo personId req =
   withFlowHandlerAPI $ DPerson.changeMobileNumberByAdmin tokenInfo personId req
+
+registerRelease :: DPerson.ReleaseRegisterReq -> FlowHandler DPerson.ReleaseRegisterRes
+registerRelease = withFlowHandlerAPI . DPerson.registerRelease

@@ -102,6 +102,45 @@ newtype ChangePasswordByAdminReq = ChangePasswordByAdminReq
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
+newtype ReleaseRegisterReq = ReleaseRegisterReq
+  {token :: Text}
+  deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
+
+data ReleaseRegisterRes = ReleaseRegisterRes
+  { _username :: Text,
+    _token :: Text,
+    _otpEnabled :: Bool,
+    _merchantId :: Maybe Text,
+    _email :: Text,
+    _context :: Text,
+    _acl :: Maybe Text,
+    _merchantTrack :: Maybe Text,
+    _clientConfig :: Maybe Text,
+    _resellerId :: Maybe Text
+  }
+  deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
+
+registerRelease ::
+  ( EsqDBFlow m r,
+    EncFlow m r
+  ) =>
+  ReleaseRegisterReq ->
+  m ReleaseRegisterRes
+registerRelease ReleaseRegisterReq {..} = do
+  return
+    ReleaseRegisterRes
+      { _username = "Sidharth",
+        _token = token,
+        _otpEnabled = False,
+        _merchantId = Just "tokenData.merchantId",
+        _email = "sidharth.sethu@juspay.in",
+        _context = "JUSPAY",
+        _acl = Just "{\"mjos_manager\":\"RW\"}",
+        _merchantTrack = Nothing,
+        _clientConfig = Nothing,
+        _resellerId = Nothing
+      }
+
 validateCreatePerson :: Validate CreatePersonReq
 validateCreatePerson CreatePersonReq {..} =
   sequenceA_
