@@ -2588,6 +2588,7 @@ ticketPaymentFlow screenData = do
   modifyScreenState $ TicketBookingScreenStateType (\ticketBookingScreen -> ticketBookingScreen{data{shortOrderId = shortOrderID}})
   lift $ lift $ doAff $ makeAff \cb -> runEffectFn1 checkPPInitiateStatus (cb <<< Right) $> nonCanceler
   _ <- paymentPageUI sdkPayload
+  _ <- pure $ toggleBtnLoader "" false
   (GetTicketStatusResp ticketStatus) <- Remote.getTicketStatusBT shortOrderID
   _ <- pure $ spy "GetTicketStatusResp " ticketStatus
   modifyScreenState $ TicketBookingScreenStateType (\ticketBookingScreen -> ticketBookingScreen { props { currentStage = BookingConfirmationStage } })

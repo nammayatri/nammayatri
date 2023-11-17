@@ -11,6 +11,7 @@ import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Padding(..), Visibility(..), visibility)
 import Screens.Types as ST
 import Data.Array as DA
+import JBridge as JB
 
 genericHeaderConfig :: ST.TicketBookingScreenState -> GenericHeader.Config
 genericHeaderConfig state = let
@@ -60,6 +61,25 @@ primaryButtonConfig state = let
       , id = "BookTicketsButton"
       , margin = (MarginHorizontal 20 20)
       }
+  in primaryButtonConfig'
+
+primaryButtonConfig1 :: ST.TicketBookingScreenState -> PrimaryButton.Config
+primaryButtonConfig1 state = 
+  let config = PrimaryButton.config
+      primaryButtonConfig' = config
+        { textConfig
+          { text = (case state.props.currentStage of 
+                      ST.ChooseTicketStage -> ("Pay ₹" <> (show state.data.totalAmount))
+                      _ -> "")
+          , color = Color.yellow900
+          }
+        , cornerRadius = 8.0
+        , background = Color.black900 
+        , isClickable = (state.props.termsAndConditionsSelected && state.data.totalAmount > 0)
+        , alpha = if (state.props.termsAndConditionsSelected && state.data.totalAmount > 0) then 1.0 else 0.5
+        , id =  "PayTicketsButton"
+        , enableLoader = JB.getBtnLoader "PayTicketsButton"
+        }
   in primaryButtonConfig'
 
 shareTicketButtonConfig :: Boolean -> PrimaryButton.Config
