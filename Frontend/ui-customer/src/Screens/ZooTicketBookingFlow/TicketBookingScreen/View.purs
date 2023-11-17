@@ -559,18 +559,18 @@ ticketsCardListView state push list title =
      , height WRAP_CONTENT
      , orientation VERTICAL
      , margin $ MarginBottom 12
-     ](map (\item -> ticketInfoCardView state push item) list)
+     ] (map (\item -> ticketInfoCardView state push item) list)
   ]
 
 ticketInfoCardView :: forall w. ST.TicketBookingScreenState -> (Action -> Effect Unit) -> ST.TicketBookingItem -> PrestoDOM (Effect Unit) w
 ticketInfoCardView state push booking = 
   linearLayout
   [ width $ MATCH_PARENT
-  , height $ WRAP_CONTENT
+  , height $ V 120 -- $ WRAP_CONTENT
   , padding $ Padding 16 16 16 16
   , orientation HORIZONTAL
   , cornerRadius 8.0
-  , stroke $ "1," <> Color.grey700
+  , stroke $ "1," <>  Color.grey700
   , margin $ MarginBottom 12
   ][  imageView
       [ imageWithFallback $ getTicketStatusImage booking.status
