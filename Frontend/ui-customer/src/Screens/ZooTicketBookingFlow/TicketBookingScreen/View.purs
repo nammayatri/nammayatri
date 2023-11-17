@@ -95,6 +95,7 @@ view push state =
     [ height MATCH_PARENT
     , width MATCH_PARENT
     , background Color.white900
+    , onBackPressed push $ const BackPressed
     ]
     [ shimmerView state
     , linearLayout 
