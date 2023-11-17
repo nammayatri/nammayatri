@@ -195,14 +195,16 @@ generalActionButtons state push =
     , orientation VERTICAL
     , background Color.white900
     ]
-    [ linearLayout  
+    $ [ linearLayout  
         [ height $ V 1
         , width MATCH_PARENT
         , margin $ MarginBottom 16
         , background Color.grey900
         ][]
-    , PrimaryButton.view (push <<< PrimaryButtonAC) (primaryButtonConfig state)
-    ]
+      ] <> 
+      if state.props.currentStage == ST.ChooseTicketStage then 
+        [PrimaryButton.view (push <<< PrimaryButtonAC) (primaryButtonConfig1 state) ]
+        else  [PrimaryButton.view (push <<< PrimaryButtonAC) (primaryButtonConfig state) ]
 
 descriptionView :: forall w. ST.TicketBookingScreenState -> (Action -> Effect Unit) -> TicketPlaceResp -> PrestoDOM (Effect Unit) w
 descriptionView state push (TicketPlaceResp placeInfo) = 

@@ -133,7 +133,7 @@ eval ToggleTermsAndConditions state = continue state{props{termsAndConditionsSel
 eval (PrimaryButtonAC (PrimaryButton.OnClick)) state = do 
   case state.props.currentStage of 
     DescriptionStage -> continue state{props{currentStage = ChooseTicketStage}}
-    ChooseTicketStage -> exit $ GoToTicketPayment state
+    ChooseTicketStage -> updateAndExit state $ GoToTicketPayment state
     ViewTicketStage -> continue state{props{currentStage = ChooseTicketStage}}
     _ -> continue state
 

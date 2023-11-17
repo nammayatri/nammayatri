@@ -2098,7 +2098,8 @@ newtype TicketBookingServiceDetails = TicketBookingServiceDetails
     status :: String,
     verificationCount :: Int,
     expiryDate :: Maybe String,
-    prices :: (Array TicketBookingServicePriceBreakup)
+    prices :: (Array TicketBookingServicePriceBreakup),
+    ticketServiceName :: String
   }
 
 newtype TicketBookingServicePriceBreakup = TicketBookingServicePriceBreakup

@@ -2558,7 +2558,9 @@ zooTicketBookingFlow = do
   modifyScreenState $ TicketBookingScreenStateType (\ticketBookingScreen -> ticketBookingScreen{data{dateOfVisit = (getNextDateV2 "")}})             
   flow <- UI.ticketBookingScreen
   case flow of
-    GO_TO_TICKET_PAYMENT state -> ticketPaymentFlow state.data
+    GO_TO_TICKET_PAYMENT state -> do 
+      -- _ <- pure $ toggleBtnLoader "PayTicketsButton" true
+      ticketPaymentFlow state.data
       -- (TicketPlaceResponse ticketPlaceResponse) <- Remote.getTicketPlacesBT "" --TODO:: WILL BE USED LATER ONCE WE HAVE THE FULL PRODUCT READY
       -- let placeId = (fromMaybe dummyTicketPlaceResp (head ticketPlaceResponse)) ^. _id
       -- (TicketServiceResp ticketServiceResp) <- Remote.getTicketPlaceServicesBT placeId
@@ -2582,6 +2584,7 @@ ticketPaymentFlow screenData = do
   modifyScreenState $ TicketBookingScreenStateType (\ticketBookingScreen -> ticketBookingScreen{data{shortOrderId = shortOrderID}})
   lift $ lift $ doAff $ makeAff \cb -> runEffectFn1 checkPPInitiateStatus (cb <<< Right) $> nonCanceler
   _ <- paymentPageUI sdkPayload
+  _ <- pure $ toggleBtnLoader "" false
   (GetTicketStatusResp ticketStatus) <- Remote.getTicketStatusBT shortOrderID
   _ <- pure $ spy "GetTicketStatusResp " ticketStatus
   -- (GetBookingInfoRes infoRes) <- Remote.getTicketBookingDetailsBT shortOrderID ""

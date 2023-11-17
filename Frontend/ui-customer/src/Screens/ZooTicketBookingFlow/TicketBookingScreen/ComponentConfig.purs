@@ -10,6 +10,7 @@ import Font.Style (Style(..))
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Padding(..), Visibility(..), visibility)
 import Screens.Types as ST
+import JBridge as JB
 
 genericHeaderConfig :: ST.TicketBookingScreenState -> GenericHeader.Config
 genericHeaderConfig state = let
@@ -56,7 +57,30 @@ primaryButtonConfig state = let
       , background = Color.black900 
       , isClickable = (state.props.currentStage == ST.DescriptionStage) || (state.props.currentStage == ST.ViewTicketStage) || (state.props.termsAndConditionsSelected && state.data.totalAmount > 0)
       , alpha = if (state.props.currentStage == ST.DescriptionStage) || (state.props.currentStage == ST.ViewTicketStage) || (state.props.termsAndConditionsSelected && state.data.totalAmount > 0) then 1.0 else 0.5
-      , id = "BookTicketsButton"
+      , id =  "BookTicketsButton"
+      , margin = (MarginHorizontal 20 20)
+      }
+  in primaryButtonConfig'
+
+
+primaryButtonConfig1 :: ST.TicketBookingScreenState -> PrimaryButton.Config
+primaryButtonConfig1 state = let
+    config = PrimaryButton.config
+    primaryButtonConfig' = config
+      { textConfig
+        { text = (case state.props.currentStage of 
+                    ST.DescriptionStage -> "Book Tickets"
+                    ST.ChooseTicketStage -> ("Pay ₹" <> (show state.data.totalAmount))
+                    ST.ViewTicketStage -> "Book Tickets"
+                    _ -> "")
+        , color = Color.yellow900
+        }
+      , cornerRadius = 8.0
+      , background = Color.black900 
+      , isClickable = (state.props.currentStage == ST.DescriptionStage) || (state.props.currentStage == ST.ViewTicketStage) || (state.props.termsAndConditionsSelected && state.data.totalAmount > 0)
+      , alpha = if (state.props.currentStage == ST.DescriptionStage) || (state.props.currentStage == ST.ViewTicketStage) || (state.props.termsAndConditionsSelected && state.data.totalAmount > 0) then 1.0 else 0.5
+      , id =  "PayTicketsButton"
+      , enableLoader = JB.getBtnLoader "PayTicketsButton"
       , margin = (MarginHorizontal 20 20)
       }
   in primaryButtonConfig'

@@ -59,7 +59,7 @@ ticketServicesTransformer services =
   map (\(API.TicketBookingServiceDetails item) -> do
       {
         ticketServiceShortId : item.ticketServiceShortId,
-        ticketServiceName : item.ticketServiceShortId,
+        ticketServiceName : item.ticketServiceName,
         amount : item.amount,
         status : item.status,
         verificationCount : item.verificationCount,
