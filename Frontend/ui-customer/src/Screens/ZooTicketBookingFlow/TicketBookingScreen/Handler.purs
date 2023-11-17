@@ -19,4 +19,4 @@ ticketBookingScreen = do
     GoToTicketPayment state -> App.BackT $ App.NoBack <$> (pure (GO_TO_TICKET_PAYMENT state))
     GoToGetBookingInfo updatedState -> do
       modifyScreenState $ TicketBookingScreenStateType (\ticketBookingScreenState -> updatedState)
-      App.BackT $ App.BackPoint <$> (pure $ GET_BOOKING_INFO_SCREEN)
+      App.BackT $ App.BackPoint <$> (pure $ GET_BOOKING_INFO_SCREEN updatedState)

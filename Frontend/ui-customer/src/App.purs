@@ -188,7 +188,7 @@ data WELCOME_SCREEN_OUTPUT = GoToMobileNumberScreen
 
 data APP_UPDATE_POPUP = Later | UpdateNow
 
-data TICKET_BOOKING_SCREEN_OUTPUT =  GET_BOOKING_INFO_SCREEN | GO_TO_HOME_SCREEN_FROM_TICKET_BOOKING | GO_TO_TICKET_PAYMENT TicketBookingScreenState
+data TICKET_BOOKING_SCREEN_OUTPUT =  GET_BOOKING_INFO_SCREEN TicketBookingScreenState | GO_TO_HOME_SCREEN_FROM_TICKET_BOOKING | GO_TO_TICKET_PAYMENT TicketBookingScreenState
 
 data ScreenType =
     EnterMobileNumberScreenType (EnterMobileNumberScreenState -> EnterMobileNumberScreenState)
