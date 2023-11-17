@@ -56,6 +56,7 @@ view push state =
       , width MATCH_PARENT
       , background Color.grey900][]
     , separatorView Color.greySmoke
+    -- , individualBookingInfoView state push
     , scrollView[
         height WRAP_CONTENT
       , width MATCH_PARENT
@@ -74,10 +75,11 @@ view push state =
             , margin $ MarginBottom 15
             ]
           , descriptionView state push ]
+        -- else if state.props.currentStage == ST.TicketInfoStage then [ individualBookingInfoView state push]
         else if state.props.currentStage == ST.ChooseTicketStage then [ chooseTicketsView state push ]
         else if state.props.currentStage == ST.BookingConfirmationStage then [ bookingConfirmationView state push ]
         else if state.props.currentStage == ST.ViewTicketStage then [ ticketsListView state push ]
-        else if state.props.currentStage == ST.TicketInfoStage then [ individualBookingInfoView state push]
+        -- else if state.props.currentStage == ST.TicketInfoStage then [ individualBookingInfoView state push]
         else [])]
     ]
     , linearLayout
@@ -387,7 +389,7 @@ incrementDecrementView config ticketID push  =
       , padding $ Padding 4 4 4 4
       , cornerRadius 8.0
       , background Color.white900
-      , stroke $ "1," <> Color.grey900
+      , stroke $ "1," <> Color.blueTextColor
       ][  textView $
           [ background Color.grey700
           , text "-"
@@ -434,8 +436,8 @@ ticketsListView state push =
   , orientation VERTICAL
   , margin $ MarginTop 12
   , padding $ PaddingHorizontal 16 16
-  ][ ticketsCardListView state push state.props.ticketBookingList.booked "Booked Trips"
-  ,  ticketsCardListView state push state.props.ticketBookingList.pendingBooking "Pending Payment"
+  ][ ticketsCardListView state push state.props.ticketBookingList.pendingBooking "Pending Payment"
+  -- ,  ticketsCardListView state push state.props.ticketBookingList.pendingBooking "Pending Payment"
   ]
 
 ticketsCardListView :: forall w. ST.TicketBookingScreenState -> (Action -> Effect Unit) -> Array ST.TicketBookingItem -> String -> PrestoDOM (Effect Unit) w
@@ -456,18 +458,18 @@ ticketsCardListView state push list title =
      , height WRAP_CONTENT
      , orientation VERTICAL
      , margin $ MarginBottom 12
-     ](map (\item -> ticketInfoCardView state push item) list)
+     ] (map (\item -> ticketInfoCardView state push item) list)
   ]
 
 ticketInfoCardView :: forall w. ST.TicketBookingScreenState -> (Action -> Effect Unit) -> ST.TicketBookingItem -> PrestoDOM (Effect Unit) w
 ticketInfoCardView state push booking = 
   linearLayout
   [ width $ MATCH_PARENT
-  , height $ WRAP_CONTENT
+  , height $ V 120 -- $ WRAP_CONTENT
   , padding $ Padding 16 16 16 16
   , orientation HORIZONTAL
   , cornerRadius 8.0
-  , stroke $ "1," <> Color.grey700
+  , stroke $ "1," <> Color.textDanger
   , margin $ MarginBottom 12
   ][  imageView
       [ imageWithFallback $ getTicketStatusImage booking.status

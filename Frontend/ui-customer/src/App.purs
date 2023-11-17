@@ -41,7 +41,8 @@ import Screens.OnBoardingFlow.PermissionScreen.ScreenData as PermissionScreenDat
 import Screens.CustomerUtils.AboutUsScreen.ScreenData as AboutUsScreenData
 import Screens.OnBoardingFlow.WelcomeScreen.ScreenData as WelcomeScreenData
 import Screens.TicketBookingScreen.ScreenData as TicketBookingScreenData
-import Screens.Types (AboutUsScreenState, AccountSetUpScreenState, AddNewAddressScreenState, AppUpdatePopUpState, ChooseLanguageScreenState, ContactUsScreenState, EnterMobileNumberScreenState, HelpAndSupportScreenState, HomeScreenState, InvoiceScreenState, LocItemType, LocationListItemState, MyProfileScreenState, MyRidesScreenState, PermissionScreenState, SavedLocationScreenState, SelectLanguageScreenState, SplashScreenState, TripDetailsScreenState, ReferralScreenState, EmergencyContactsScreenState, CallType, WelcomeScreenState, PermissionScreenStage, TicketBookingScreenState)
+import Screens.TicketInfoScreen.ScreenData as TicketInfoScreenData
+import Screens.Types (AboutUsScreenState, AccountSetUpScreenState, AddNewAddressScreenState, AppUpdatePopUpState, ChooseLanguageScreenState, ContactUsScreenState, EnterMobileNumberScreenState, HelpAndSupportScreenState, HomeScreenState, InvoiceScreenState, LocItemType, LocationListItemState, MyProfileScreenState, MyRidesScreenState, PermissionScreenState, SavedLocationScreenState, SelectLanguageScreenState, SplashScreenState, TripDetailsScreenState, ReferralScreenState, EmergencyContactsScreenState, CallType, WelcomeScreenState, PermissionScreenStage, TicketBookingScreenState, TicketInfoScreenState)
 import Screens.AppUpdatePopUp.ScreenData as AppUpdatePopUpScreenData
 import Foreign.Object ( Object(..), empty)
 import Foreign (Foreign)
@@ -71,6 +72,7 @@ newtype GlobalState = GlobalState {
   , welcomeScreen :: WelcomeScreenState
   , loaderOverlay :: LoaderScreenScreenData.LoaderOverlayState
   , ticketBookingScreen :: TicketBookingScreenState
+  , ticketInfoScreen :: TicketInfoScreenState
   }
 
 defaultGlobalState :: GlobalState
@@ -97,6 +99,7 @@ defaultGlobalState = GlobalState {
   , welcomeScreen : WelcomeScreenData.initData
   , loaderOverlay : LoaderScreenScreenData.initData
   , ticketBookingScreen : TicketBookingScreenData.initData
+  , ticketInfoScreen : TicketInfoScreenData.initData
   }
 
 data ACCOUNT_SET_UP_SCREEN_OUTPUT = GO_HOME AccountSetUpScreenState | GO_BACK
@@ -117,6 +120,8 @@ data EMERGECY_CONTACTS_SCREEN_OUTPUT = GO_TO_HOME_FROM_EMERGENCY_CONTACTS
                                       | REFRESH_EMERGECY_CONTACTS_SCREEN EmergencyContactsScreenState
 
 data TICKET_BOOKING_SCREEN_OUTPUT = GET_BOOKING_INFO_SCREEN | GO_TO_HOME_SCREEN_FROM_TICKET_BOOKING
+
+data TICKET_INFO_SCREEN_OUTPUT = GO_TO_HOME_SCREEN_FROM_TICKET_INFO
 
 data HOME_SCREEN_OUTPUT = LOGOUT
                         | RELOAD Boolean
@@ -208,6 +213,7 @@ data ScreenType =
   | ReferralScreenStateType (ReferralScreenState -> ReferralScreenState)
   | EmergencyContactsScreenStateType (EmergencyContactsScreenState -> EmergencyContactsScreenState)
   | TicketBookingScreenStateType (TicketBookingScreenState -> TicketBookingScreenState)
+  | TicketInfoScreenStateType (TicketInfoScreenState -> TicketInfoScreenState)
   | PermissionScreenStateType (PermissionScreenState -> PermissionScreenState)
   | AboutUsScreenStateType (AboutUsScreenState -> AboutUsScreenState)
   | AppUpdatePopUpScreenType (AppUpdatePopUpState -> AppUpdatePopUpState)

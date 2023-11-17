@@ -134,8 +134,8 @@ eval BackPressed state =
 
 eval (GetBookingInfo bookingShortId) state = do
   let newState = state { props { selectedBookingId = bookingShortId , currentStage = TicketInfoStage} }
-  continue newState
-  -- updateAndExit newState $ GoToGetBookingInfo newState
+  -- continue newState
+  updateAndExit newState $ GoToGetBookingInfo newState
 
 eval (TicketQRRendered id text) state  = 
   continueWithCmd state [ do
