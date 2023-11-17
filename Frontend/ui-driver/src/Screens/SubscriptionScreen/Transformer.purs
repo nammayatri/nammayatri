@@ -39,7 +39,6 @@ import Screens.Types (KeyValType, PlanCardConfig, PromoConfig, SubscriptionScree
 import Services.API (DriverDuesEntity(..), FeeType(..), GetCurrentPlanResp(..), MandateData(..), OfferEntity(..), PaymentBreakUp(..), PlanEntity(..), UiPlansResp(..))
 import Storage (getValueToLocalStore, KeyStore(..))
 
-
 type PlanData = {
     title :: String,
     description :: String
@@ -65,7 +64,8 @@ getPromoConfig offerEntityArr gradientConfig =
             hasImage : true ,
             imageURL : fetchImage FF_ASSET "ny_ic_discount" ,
             offerDescription : Just $ decodeOfferDescription (fromMaybe "" item.description),
-            addedFromUI : false
+            addedFromUI : false,
+            isPaidByYatriCoins : false
         }
     ) offerEntityArr)
 
@@ -113,7 +113,8 @@ freeRideOfferConfig lazy =
     hasImage : false,
     imageURL : "",
     offerDescription : Nothing,
-    addedFromUI : false
+    addedFromUI : false,
+    isPaidByYatriCoins : false
     }
 
 introductoryOfferConfig :: LazyCheck -> PromoConfig
@@ -125,7 +126,8 @@ introductoryOfferConfig lazy =
     hasImage : true,
     imageURL : fetchImage FF_ASSET "ny_ic_lock",
     offerDescription : Just $ getString NO_CHARGES_TILL,
-    addedFromUI : false
+    addedFromUI : false,
+    isPaidByYatriCoins : false
     }
 
 noChargesOfferConfig :: LazyCheck -> PromoConfig
@@ -137,7 +139,8 @@ noChargesOfferConfig lazy=
     hasImage : false,
     imageURL : "",
     offerDescription : Just $ "<b>" <> getString DAILY_PER_RIDE_DESC <> "</b>",
-    addedFromUI : true
+    addedFromUI : true,
+    isPaidByYatriCoins : false
     }
 
 alternatePlansTransformer :: UiPlansResp -> SubscriptionScreenState -> Array PlanCardConfig
@@ -226,7 +229,10 @@ constructDues duesArr showFeeBreakup = (mapWithIndex (\ ind (DriverDuesEntity it
     randomId : (getCurrentUTC "") <> show ind,
     isSplit : item.isSplit,
     specialZoneRideCount : item.specialZoneRideCount,
-    specialZoneAmount : item.specialZoneAmount
+    specialZoneAmount : item.specialZoneAmount,
+    amountPaidByYatriCoins : case item.isCoinCleared of
+                                true -> Just item.driverFeeAmount
+                                false -> item.coinDiscountAmount
   }) duesArr)
 
 getFeeBreakup :: String -> Int -> String

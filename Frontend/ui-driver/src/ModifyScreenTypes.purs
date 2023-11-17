@@ -68,7 +68,7 @@ modifyScreenState st =
     DriverSavedLocationScreenStateType a-> modifyState (\(GlobalState state) -> GlobalState $ state {driverSavedLocationScreen = a state.driverSavedLocationScreen})
     ChooseCityScreenStateType a-> modifyState (\(GlobalState state) -> GlobalState $ state {chooseCityScreen = a state.chooseCityScreen})
     WelcomeScreenStateType a-> modifyState (\(GlobalState state) -> GlobalState $ state {welcomeScreen = a state.welcomeScreen})
-
+    DriverEarningsScreenStateType a->  modifyState (\(GlobalState state) -> GlobalState $ state { driverEarningsScreen = a state.driverEarningsScreen })
 
 updateStage :: ScreenStage -> FlowBT String Unit
 updateStage stage = do

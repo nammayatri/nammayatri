@@ -39,10 +39,9 @@ import Data.Eq.Generic (genericEq)
 import Data.Generic.Rep (class Generic)
 import Data.Show.Generic (genericShow)
 import Data.Maybe (Maybe(..), fromMaybe, isJust)
-import Data.Maybe (Maybe(..))
 import Data.Number (pi, sin, cos, asin, sqrt)
 import Data.Show.Generic (genericShow)
-import Data.String (Pattern(..), split) as DS
+import Data.String (Pattern(..), split, take) as DS
 import Data.String as DS
 import Data.Traversable (traverse)
 import Effect (Effect)
@@ -74,7 +73,7 @@ import Presto.Core.Types.API (class StandardEncode, standardEncode)
 import Services.API (PromotionPopupConfig)
 import Storage (KeyStore) 
 import JBridge (getCurrentPositionWithTimeout, firebaseLogEventWithParams, translateStringWithTimeout, openWhatsAppSupport, showDialer)
-import Effect.Uncurried(EffectFn1, EffectFn4, EffectFn3,runEffectFn3)
+import Effect.Uncurried(EffectFn1, EffectFn4, EffectFn3, EffectFn7, runEffectFn3)
 import Storage (KeyStore(..), isOnFreeTrial, getValueToLocalNativeStore)
 import Styles.Colors as Color
 import Screens.Types (LocalStoreSubscriptionInfo)
@@ -142,6 +141,8 @@ foreign import renewFile :: EffectFn3 String String (AffSuccess Boolean) Unit
 
 foreign import getDateAfterNDays :: Int -> String
 foreign import downloadQR  :: String -> Effect Unit
+
+foreign import renderSlider :: forall action. EffectFn7 String  (action -> Effect Unit)  (Int -> action)  Number  Int  Int Int Unit
 
 foreign import _generateQRCode :: EffectFn5 String String Int Int (AffSuccess String) Unit
 
@@ -494,7 +495,13 @@ fetchFiles = do
   DA.fold $ map (\item -> launchAff_ $ do 
     result <- download item.filePath item.location
     if result then pure unit else liftEffect $ firebaseLogEventWithParams "download_failed" "file_name" item.filePath) files
-  
+
+getDayOfWeek :: String -> Int
+getDayOfWeek dayName =
+  let
+    weekDays = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+  in
+    fromMaybe 0 $ DA.elemIndex (DS.take 3 dayName) weekDays
 
 download :: String -> String -> Aff Boolean
 download filepath location = makeAff \cb -> runEffectFn3 renewFile filepath location (cb <<< Right) $> nonCanceler

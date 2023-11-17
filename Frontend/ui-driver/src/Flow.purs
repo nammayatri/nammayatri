@@ -29,7 +29,7 @@ import Control.Monad.Except (runExceptT)
 import Control.Monad.Except.Trans (lift)
 import Control.Transformers.Back.Trans (runBackT)
 import Data.Array (any, concat, cons, elem, elemIndex, filter, find, foldl, head, last, length, mapWithIndex, null, snoc, sortBy, (!!))
-import Data.Either (Either(..))
+import Data.Either (Either(..), either, isRight)
 import Data.Function.Uncurried (runFn1)
 import Data.Functor (map)
 import Data.Int (ceil, fromString, round, toNumber)
@@ -104,7 +104,7 @@ import Screens.RideSelectionScreen.View (getCategoryName)
 import Screens.SubscriptionScreen.Transformer (alternatePlansTransformer)
 import Screens.Types (AadhaarStage(..), ActiveRide, AllocationData, AutoPayStatus(..), DriverStatus(..), HomeScreenStage(..), HomeScreenState, KeyboardModalType(..), Location, PlanCardConfig, PromoConfig, ReferralType(..), StageStatus(..), SubscribePopupType(..), SubscriptionBannerType(..), SubscriptionPopupType(..), SubscriptionSubview(..), UpdatePopupType(..), ChooseCityScreenStage(..))
 import Screens.Types as ST
-import Services.API (AlternateNumberResendOTPResp(..), Category(Category), CreateOrderRes(..), CurrentDateAndTimeRes(..), DriverActiveInactiveResp(..), DriverAlternateNumberOtpResp(..), DriverAlternateNumberResp(..), DriverArrivedReq(..), DriverDLResp(..), DriverProfileStatsReq(..), DriverProfileStatsResp(..), DriverRCResp(..), DriverRegistrationStatusReq(..), DriverRegistrationStatusResp(..), GenerateAadhaarOTPResp(..), GetCategoriesRes(GetCategoriesRes), GetDriverInfoReq(..), GetDriverInfoResp(..), GetOptionsRes(GetOptionsRes), GetPaymentHistoryResp(..), GetPaymentHistoryResp(..), GetPerformanceReq(..), GetPerformanceRes(..), GetRidesHistoryResp(..), GetRouteResp(..), IssueInfoRes(IssueInfoRes), LogOutReq(..), LogOutRes(..), MakeRcActiveOrInactiveResp(..), OfferRideResp(..), OnCallRes(..), Option(Option), OrderStatusRes(..), OrganizationInfo(..), PaymentDetailsEntity(..), PostIssueReq(PostIssueReq), PostIssueRes(PostIssueRes), ReferDriverResp(..), RemoveAlternateNumberRequest(..), RemoveAlternateNumberResp(..), ResendOTPResp(..), RidesInfo(..), Route(..), StartRideResponse(..), Status(..), SubscribePlanResp(..), TriggerOTPResp(..), UpdateDriverInfoReq(..), UpdateDriverInfoResp(..), ValidateImageReq(..), ValidateImageRes(..), Vehicle(..), VerifyAadhaarOTPResp(..), VerifyTokenResp(..), GenerateReferralCodeReq(..), GenerateReferralCodeRes(..), FeeType(..), ClearDuesResp(..), HistoryEntryDetailsEntityV2Resp(..))
+import Services.API (AlternateNumberResendOTPResp(..), Category(Category), CreateOrderRes(..), CurrentDateAndTimeRes(..), DriverActiveInactiveResp(..), DriverAlternateNumberOtpResp(..), DriverAlternateNumberResp(..), DriverArrivedReq(..), DriverDLResp(..), DriverProfileStatsReq(..), DriverProfileStatsResp(..), DriverRCResp(..), DriverRegistrationStatusReq(..), DriverRegistrationStatusResp(..), GenerateAadhaarOTPResp(..), GetCategoriesRes(GetCategoriesRes), GetDriverInfoReq(..), GetDriverInfoResp(..), GetOptionsRes(GetOptionsRes), GetPaymentHistoryResp(..), GetPaymentHistoryResp(..), GetPerformanceReq(..), GetPerformanceRes(..), GetRidesHistoryResp(..), GetRouteResp(..), IssueInfoRes(IssueInfoRes), LogOutReq(..), LogOutRes(..), MakeRcActiveOrInactiveResp(..), OfferRideResp(..), OnCallRes(..), Option(Option), OrderStatusRes(..), OrganizationInfo(..), PaymentDetailsEntity(..), PostIssueReq(PostIssueReq), PostIssueRes(PostIssueRes), ReferDriverResp(..), RemoveAlternateNumberRequest(..), RemoveAlternateNumberResp(..), ResendOTPResp(..), RidesInfo(..), Route(..), StartRideResponse(..), Status(..), SubscribePlanResp(..), TriggerOTPResp(..), UpdateDriverInfoReq(..), UpdateDriverInfoResp(..), ValidateImageReq(..), ValidateImageRes(..), Vehicle(..), VerifyAadhaarOTPResp(..), VerifyTokenResp(..), GenerateReferralCodeReq(..), GenerateReferralCodeRes(..), FeeType(..), ClearDuesResp(..), HistoryEntryDetailsEntityV2Resp(..), DriverProfileSummaryRes(..))
 import Screens.UploadDrivingLicenseScreen.ScreenData (initData) as UploadDrivingLicenseScreenData
 import Services.API as API
 import Services.Accessor (_lat, _lon, _id, _orderId)
@@ -112,7 +112,7 @@ import Services.Backend (driverRegistrationStatusBT, dummyVehicleObject, makeDri
 import Services.Backend as Remote
 import Services.Config (getBaseUrl)
 import Storage (KeyStore(..), deleteValueFromLocalStore, getValueToLocalNativeStore, getValueToLocalStore, isLocalStageOn, isOnFreeTrial, setValueToLocalNativeStore, setValueToLocalStore)
-import Types.App (REPORT_ISSUE_CHAT_SCREEN_OUTPUT(..), RIDES_SELECTION_SCREEN_OUTPUT(..), ABOUT_US_SCREEN_OUTPUT(..), BANK_DETAILS_SCREENOUTPUT(..), ADD_VEHICLE_DETAILS_SCREENOUTPUT(..), APPLICATION_STATUS_SCREENOUTPUT(..), DRIVER_DETAILS_SCREEN_OUTPUT(..), DRIVER_PROFILE_SCREEN_OUTPUT(..), CHOOSE_CITY_SCREEN_OUTPUT(..), DRIVER_RIDE_RATING_SCREEN_OUTPUT(..), ENTER_MOBILE_NUMBER_SCREEN_OUTPUT(..), ENTER_OTP_SCREEN_OUTPUT(..), FlowBT, GlobalState(..), HELP_AND_SUPPORT_SCREEN_OUTPUT(..), HOME_SCREENOUTPUT(..), MY_RIDES_SCREEN_OUTPUT(..), NOTIFICATIONS_SCREEN_OUTPUT(..), NO_INTERNET_SCREEN_OUTPUT(..), PERMISSIONS_SCREEN_OUTPUT(..), POPUP_SCREEN_OUTPUT(..), REGISTRATION_SCREEN_OUTPUT(..), RIDE_DETAIL_SCREENOUTPUT(..), PAYMENT_HISTORY_SCREEN_OUTPUT(..), SELECT_LANGUAGE_SCREEN_OUTPUT(..), ScreenStage(..), ScreenType(..), TRIP_DETAILS_SCREEN_OUTPUT(..), UPLOAD_ADHAAR_CARD_SCREENOUTPUT(..), UPLOAD_DRIVER_LICENSE_SCREENOUTPUT(..), VEHICLE_DETAILS_SCREEN_OUTPUT(..), WRITE_TO_US_SCREEN_OUTPUT(..), NOTIFICATIONS_SCREEN_OUTPUT(..), REFERRAL_SCREEN_OUTPUT(..), BOOKING_OPTIONS_SCREEN_OUTPUT(..), ACKNOWLEDGEMENT_SCREEN_OUTPUT(..), defaultGlobalState, SUBSCRIPTION_SCREEN_OUTPUT(..), NAVIGATION_ACTIONS(..), AADHAAR_VERIFICATION_SCREEN_OUTPUT(..), ONBOARDING_SUBSCRIPTION_SCREENOUTPUT(..), APP_UPDATE_POPUP(..), DRIVE_SAVED_LOCATION_OUTPUT(..), WELCOME_SCREEN_OUTPUT(..))
+import Types.App (REPORT_ISSUE_CHAT_SCREEN_OUTPUT(..), RIDES_SELECTION_SCREEN_OUTPUT(..), ABOUT_US_SCREEN_OUTPUT(..), BANK_DETAILS_SCREENOUTPUT(..), ADD_VEHICLE_DETAILS_SCREENOUTPUT(..), APPLICATION_STATUS_SCREENOUTPUT(..), DRIVER_DETAILS_SCREEN_OUTPUT(..), DRIVER_PROFILE_SCREEN_OUTPUT(..), CHOOSE_CITY_SCREEN_OUTPUT(..), DRIVER_RIDE_RATING_SCREEN_OUTPUT(..), ENTER_MOBILE_NUMBER_SCREEN_OUTPUT(..), ENTER_OTP_SCREEN_OUTPUT(..), FlowBT, GlobalState(..), HELP_AND_SUPPORT_SCREEN_OUTPUT(..), HOME_SCREENOUTPUT(..), MY_RIDES_SCREEN_OUTPUT(..), NOTIFICATIONS_SCREEN_OUTPUT(..), NO_INTERNET_SCREEN_OUTPUT(..), PERMISSIONS_SCREEN_OUTPUT(..), POPUP_SCREEN_OUTPUT(..), REGISTRATION_SCREEN_OUTPUT(..), RIDE_DETAIL_SCREENOUTPUT(..), PAYMENT_HISTORY_SCREEN_OUTPUT(..), SELECT_LANGUAGE_SCREEN_OUTPUT(..), ScreenStage(..), ScreenType(..), TRIP_DETAILS_SCREEN_OUTPUT(..), UPLOAD_ADHAAR_CARD_SCREENOUTPUT(..), UPLOAD_DRIVER_LICENSE_SCREENOUTPUT(..), VEHICLE_DETAILS_SCREEN_OUTPUT(..), WRITE_TO_US_SCREEN_OUTPUT(..), NOTIFICATIONS_SCREEN_OUTPUT(..), REFERRAL_SCREEN_OUTPUT(..), BOOKING_OPTIONS_SCREEN_OUTPUT(..), ACKNOWLEDGEMENT_SCREEN_OUTPUT(..), defaultGlobalState, SUBSCRIPTION_SCREEN_OUTPUT(..), NAVIGATION_ACTIONS(..), AADHAAR_VERIFICATION_SCREEN_OUTPUT(..), ONBOARDING_SUBSCRIPTION_SCREENOUTPUT(..), APP_UPDATE_POPUP(..), DRIVE_SAVED_LOCATION_OUTPUT(..), WELCOME_SCREEN_OUTPUT(..), DRIVER_EARNINGS_SCREEN_OUTPUT(..))
 import Types.App as TA
 import Engineering.Helpers.Suggestions as EHS
 import Resource.Constants as RC
@@ -1621,6 +1621,7 @@ referralScreenFlow = do
       referralScreenFlow
     REFRESH_LEADERBOARD -> referralScreenFlow
     REFERRAL_SCREEN_NAV GoToSubscription -> updateAvailableAppsAndGoToSubs
+    REFERRAL_SCREEN_NAV (GoToEarningsScreen _) -> driverEarningsFlow
     REFERRAL_SCREEN_NAV _ -> referralScreenFlow
     _ -> referralScreenFlow
 
@@ -2138,6 +2139,9 @@ homeScreenFlow = do
     HOMESCREEN_NAV GoToSubscription -> do
       let (GlobalState defGlobalState) = defaultGlobalState
       updateAvailableAppsAndGoToSubs
+    HOMESCREEN_NAV (GoToEarningsScreen showCoinsView) -> do
+      modifyScreenState $ DriverEarningsScreenStateType (\driverEarningsScreen -> driverEarningsScreen { props { subView = if showCoinsView then ST.YATRI_COINS_VIEW else ST.EARNINGS_VIEW }})
+      driverEarningsFlow
     HOMESCREEN_NAV _ -> homeScreenFlow
     GO_TO_AADHAAR_VERIFICATION -> do
       modifyScreenState $ AadhaarVerificationScreenType (\aadhaarScreen -> aadhaarScreen { props { fromHomeScreen = true, currentStage = EnterAadhaar}})
@@ -2159,6 +2163,7 @@ homeScreenFlow = do
       updateDriverDataToStates
       modifyScreenState $ GlobalPropsType (\globalProps -> globalProps { gotoPopupType = ST.NO_POPUP_VIEW })
       homeScreenFlow
+    GO_TO_EARNINGS_SCREEN -> driverEarningsFlow
     CLEAR_PENDING_DUES -> clearPendingDuesFlow true
     ENABLE_GOTO_API state id currentLocation -> do
       activateResp <- lift $ lift $ Remote.activateDriverGoTo id currentLocation
@@ -2474,6 +2479,7 @@ subScriptionFlow = do
     NAV GoToContest -> referralScreenFlow
     NAV GoToAlerts -> notificationFlow
     GOTO_HOMESCREEN -> homeScreenFlow
+    NAV (GoToEarningsScreen _) -> driverEarningsFlow
     MAKE_PAYMENT state -> do
       case state.props.joinPlanProps.selectedPlanItem of 
         Just selectedPlan -> do
@@ -2714,6 +2720,7 @@ notificationFlow = do
       notificationFlow
     GO_HOME_SCREEN -> homeScreenFlow
     GO_REFERRAL_SCREEN -> referralScreenFlow
+    GO_EARNINGS_SCREEN -> driverEarningsFlow
     GO_RIDE_HISTORY_SCREEN -> myRidesScreenFlow
     GO_PROFILE_SCREEN -> driverProfileFlow
     CHECK_RIDE_FLOW_STATUS -> currentRideFlow Nothing
@@ -2748,6 +2755,7 @@ updateDriverDataToStates = do
         , driverAlternateMobile =getDriverInfoResp.alternateNumber
         , totalRidesOfDay = resp.totalRidesOfDay
         , totalEarningsOfDay = resp.totalEarningsOfDay
+        , coinBalance = resp.coinBalance
         , bonusEarned = resp.bonusEarning
         , profileImg = getDriverInfoResp.aadhaarCardPhoto
         , gender = fromMaybe "UNKNOWN" getDriverInfoResp.gender
@@ -2939,6 +2947,7 @@ updateBannerAndPopupFlags = do
                 { autoPayBanner = autopayBannerType
                 , subscriptionPopupType = subscriptionPopupType
                 , waitTimeStatus = RC.waitTimeConstructor $ getValueToLocalStore WAITING_TIME_STATUS
+                , showCoinsPopup = fromMaybe 0 (fromString $ getValueToLocalStore VISITED_DRIVER_COINS_PAGE) == 0 && appConfig.coinsConfig.enableYatriCoins
                 }
               }
         )
@@ -3004,3 +3013,29 @@ welcomeScreenFlow = do
 
 
 
+
+driverEarningsFlow :: FlowBT String Unit
+driverEarningsFlow = do 
+  (GlobalState globalState) <- getState
+  appConfig <- getAppConfig Constants.appConfig
+  let earningScreenSate = globalState.driverEarningsScreen
+  modifyScreenState $ DriverEarningsScreenStateType (\driverEarningsScreen -> driverEarningsScreen{data{hasActivePlan = globalState.homeScreen.data.paymentState.autoPayStatus /= NO_AUTOPAY, config = appConfig}, props{showShimmer = true}})
+  uiAction <- UI.driverEarningsScreen
+  case uiAction of
+    EARNINGS_NAV HomeScreenNav  -> homeScreenFlow
+    EARNINGS_NAV GoToSubscription -> updateAvailableAppsAndGoToSubs
+    EARNINGS_NAV GoToContest -> referralScreenFlow
+    EARNINGS_NAV GoToAlerts -> notificationFlow
+    EARNINGS_NAV _ -> driverEarningsFlow
+    CHANGE_SUB_VIEW subView state -> do
+      modifyScreenState $ DriverEarningsScreenStateType (\state -> state{props{subView = subView, date = getCurrentUTC ""}})
+      driverEarningsFlow
+    CONVERT_COIN_TO_CASH state -> do
+      resp <- lift $ lift $ Remote.convertCoinToCash state.data.coinsToUse
+      let lottieFile = if isRight resp then "ny_ic_coins_redeemed_success.json" else "ny_ic_coins_redeemed_failure.json"
+      modifyScreenState $ DriverEarningsScreenStateType (\driverEarningsScreen -> driverEarningsScreen{props{showCoinsRedeemedAnim = lottieFile}})
+      driverEarningsFlow
+    REFRESH_EARNINGS_SCREEN state -> driverEarningsFlow
+    EARNINGS_HISTORY _ -> driverEarningsFlow
+    GOTO_PAYMENT_HISTORY_FROM_COINS -> paymentHistoryFlow
+  pure unit 

@@ -121,7 +121,8 @@ getAutoPayInvoice (AutoPayInvoiceHistory autoPayInvoice) = {
   description : (getString RIDES_TAKEN_ON) <> " ",
   feeType : AUTOPAY_PAYMENT,
   transactionDate : autoPayInvoice.executionAt,
-  ridesTakenDate : (convertUTCtoISC autoPayInvoice.rideTakenOn "Do MMM YYYY")
+  ridesTakenDate : (convertUTCtoISC autoPayInvoice.rideTakenOn "Do MMM YYYY"),
+  isPaidByYatriCoins : true
 }
 
 getManualPayInvoice :: ManualInvoiceHistory -> PaymentListItem
@@ -134,7 +135,8 @@ getManualPayInvoice (ManualInvoiceHistory manualPayInvoice) = do
     description : manualInvoiceItemConfig.description,
     feeType : manualPayInvoice.feeType,
     transactionDate : manualPayInvoice.createdAt,
-    ridesTakenDate : manualInvoiceItemConfig.rideDays
+    ridesTakenDate : manualInvoiceItemConfig.rideDays,
+    isPaidByYatriCoins : true
   }
     where 
       getManualDesc :: String -> {description :: String, rideDays :: String}

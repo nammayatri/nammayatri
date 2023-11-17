@@ -166,6 +166,7 @@ data ScreenOutput = GoToHomeScreen ReferralScreenState
                   | LinkReferralApi ReferralScreenState
                   | Refresh ReferralScreenState
                   | SubscriptionScreen ReferralScreenState
+                  | EarningsScreen
 
 eval :: Action -> ReferralScreenState -> Eval Action ScreenOutput ReferralScreenState
 
@@ -293,6 +294,7 @@ eval (BottomNavBarAction (BottomNavBar.OnNavigate item)) state = do
     "Home" -> exit $ GoToHomeScreen state
     "Rides" -> exit $ GoToRidesScreen state
     "Profile" -> exit $ GoToProfileScreen state
+    "Earnings" -> exit $ EarningsScreen
     "Alert" -> do
       _ <- pure $ setValueToLocalNativeStore ALERT_RECEIVED "false"
       let _ = unsafePerformEffect $ logEvent state.data.logField "ny_driver_alert_click"

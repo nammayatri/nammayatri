@@ -29,6 +29,7 @@ import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit, bind, const, pure, show, unit, void, ($), (&&), (/=), (<>), (==), (||), (<), not)
 import PrestoDOM (Gradient(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Prop, Visibility(..), afterRender, alignParentBottom, background, color, cornerRadius, fontStyle, gradient, gravity, height, id, imageUrl, imageView, imageWithFallback, linearLayout, lottieAnimationView, margin, onClick, orientation, padding, scrollView, stroke, text, textSize, textView, visibility, weight, width)
+import Screens.PaymentHistoryScreen.Transformer (coinsOfferConfig)
 import Screens.Types (PromoConfig)
 import Services.API (FeeType(..))
 import Styles.Colors as Color
@@ -144,6 +145,20 @@ view push state =
                                             _ -> promoCodeView push offerConfig
                       Nothing -> linearLayout[visibility GONE][]
                 ]
+                , case item.amountPaidByYatriCoins of
+                      Just amount -> linearLayout 
+                                     [ height WRAP_CONTENT
+                                     , width MATCH_PARENT
+                                     , margin $ MarginBottom 16
+                                     , gravity CENTER_VERTICAL
+                                     ][ textView $ 
+                                        [ text $ getString DISCOUNT
+                                        , margin $ MarginRight 8
+                                        , color Color.black700
+                                        ] <> FontStyle.body3 TypoGraphy
+                                      , promoCodeView push (coinsOfferConfig $ getFixedTwoDecimals amount) 
+                                     ]
+                      Nothing -> linearLayout[visibility GONE][]
                 , textView $ [
                     text $ getString SWITCHED_TO_MANUAL
                     , width MATCH_PARENT
@@ -234,4 +249,11 @@ promoCodeView push state =
      ] <> case state.title of
           Mb.Nothing -> [visibility GONE]
           Mb.Just txt -> [text txt]
+   , imageView 
+     [ width $ V 12
+     , height $ V 12
+     , margin $ MarginLeft 3
+     , imageWithFallback $ fetchImage FF_ASSET "ny_ic_yatri_coin"
+     , visibility if state.isPaidByYatriCoins then VISIBLE else GONE
+     ]
   ]

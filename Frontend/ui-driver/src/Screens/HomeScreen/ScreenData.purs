@@ -141,7 +141,8 @@ initData = {
           goToPopUpType : NO_POPUP_VIEW,
           gotoEnabledForMerchant : false,
           confirmGotoCancel : false
-        }
+        },
+        coinBalance : 0
     },
     props: {
         statusOnline : true,
@@ -190,7 +191,9 @@ initData = {
         subscriptionPopupType : NO_SUBSCRIPTION_POPUP,
         showGenericAccessibilityPopUp : false,
         waitTimeStatus : NoStatus,
-        isMockLocation : false
+        isMockLocation : false,
+        showCoinsPopup : false,
+        isStatsModelExpanded : false
     }
 }
 
@@ -200,4 +203,5 @@ dummyDriverRideStats = DriverProfileStatsResp
       totalRidesOfDay : 0
     , totalEarningsOfDay : 0
     , bonusEarning : 0
+    , coinBalance : 0
     }

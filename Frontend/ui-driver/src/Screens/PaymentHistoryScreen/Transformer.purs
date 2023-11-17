@@ -31,6 +31,7 @@ import Screens.Types as ST
 import Services.API (FeeType(..), OfferEntity(..))
 import Services.API as API
 import Data.Int as INT
+import Styles.Colors as Color
 
 buildTransactionDetails :: API.HistoryEntryDetailsEntityV2Resp -> Array GradientConfig -> Boolean -> ST.TransactionInfo
 buildTransactionDetails (API.HistoryEntryDetailsEntityV2Resp resp) gradientConfig showFeeBreakup =
@@ -82,6 +83,13 @@ buildTransactionDetails (API.HistoryEntryDetailsEntityV2Resp resp) gradientConfi
                     key : "OFFER",
                     title : getString OFFER,
                     val : planOfferData.offer
+                  },
+                  {
+                    key : "COIN_DISCOUNT",
+                    title : "Discount",
+                    val : getFixedTwoDecimals $ case driverFee'.isCoinCleared of
+                                                true -> driverFee'.driverFeeAmount
+                                                false -> fromMaybe 0.0 driverFee'.coinDiscountAmount
                   }
                 ]
               false -> []
@@ -137,7 +145,10 @@ buildTransactionDetails (API.HistoryEntryDetailsEntityV2Resp resp) gradientConfi
                                 boothCharges : case driverFee.specialZoneRideCount, driverFee.specialZoneAmount of
                                                 Just 0, Just 0.0 -> Nothing
                                                 Just count, Just charges -> Just $ show count <> " " <> getString RIDES <> " x ₹" <> getFixedTwoDecimals (charges / INT.toNumber count) <> " " <> getString GST_INCLUDE
-                                                _, _ -> Nothing
+                                                _, _ -> Nothing,
+                                amountPaidByYatriCoins : case driverFee.isCoinCleared of
+                                                            true -> Just driverFee.driverFeeAmount
+                                                            false -> driverFee.coinDiscountAmount
                             }
                             ) filteredDriverFees
                         false -> []          
@@ -193,6 +204,20 @@ dummyDriverFee =
       driverFeeAmount : 0.0,
       specialZoneRideCount : Nothing,
       specialZoneAmount : Nothing,
-      maxRidesEligibleForCharge : Nothing
+      maxRidesEligibleForCharge : Nothing,
+      isCoinCleared : false,
+      coinDiscountAmount : Nothing
   }
 
+coinsOfferConfig :: String -> PromoConfig
+coinsOfferConfig amount = 
+    {  
+    title : Just $ "₹ " <> amount <> " " <> getString PAID_BY_YATRI_COINS,
+    isGradient : true,
+    gradient : [Color.yellowCoinGradient1, Color.yellowCoinGradient2],
+    hasImage : false,
+    imageURL : "",
+    offerDescription : Nothing,
+    addedFromUI : true,
+    isPaidByYatriCoins : true
+    }

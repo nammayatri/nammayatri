@@ -53,7 +53,7 @@ foreign import fetchFromLocalStoreImpl :: String -> (String -> Maybe String) -> 
 
 foreign import getWeeksInMonth :: Int -> Int -> Array CalendarModalWeekObject
 
-foreign import getCurrentDay :: String -> CalendarModalDateObject
+foreign import getCurrentDay :: Boolean -> CalendarModalDateObject
 
 foreign import decrementMonth :: Int -> Int -> CalendarModalDateObject
 
@@ -156,6 +156,18 @@ saveObject objName obj =
   doAff do
     (fromEffectFnAff <<< saveToLocalStore' objName $ (serialize obj))
 
+initializeCalendar :: Boolean -> ModifiedCalendarObject
+initializeCalendar selectTodaysDate =
+  let currentDay = getCurrentDay true
+      weeks = getWeeksInMonth currentDay.year currentDay.intMonth
+  in if selectTodaysDate 
+       then selectSingleCalendarDate currentDay Nothing Nothing weeks
+       else 
+         { selectedTimeSpan : currentDay, 
+           weeks : weeks, 
+           startDate : Nothing,
+           endDate : Nothing 
+         }
 
 decrementCalendarMonth :: CalendarModalDateObject ->  Maybe CalendarModalDateObject ->  Maybe CalendarModalDateObject -> ModifiedCalendarObject
 decrementCalendarMonth selectedTimeSpan startDate endDate  = do

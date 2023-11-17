@@ -42,6 +42,14 @@ navData screenName bottomNavConfig = do
           screenName : ScreenNames.HOME_SCREEN
         },
         {
+          activeIcon: fetchImage FF_ASSET "ny_ic_earnings_active",
+          defaultIcon: fetchImage FF_ASSET "ny_ic_earnings_inactive",
+          text: "Earnings",
+          isVisible : bottomNavConfig.driverEarnings.isVisible,
+          showNewBanner : bottomNavConfig.driverEarnings.showNew,
+          screenName : ScreenNames.DRIVER_EARNINGS_SCREEN
+        },
+        {
           activeIcon: fetchImage FF_ASSET "ny_ic_rides_tab_active",
           defaultIcon: fetchImage FF_ASSET "ny_ic_rides_tab_inactive",
           isVisible : bottomNavConfig.rideHistory.isVisible,

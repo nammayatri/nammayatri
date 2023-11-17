@@ -53,8 +53,11 @@ getDriverInfo dummyString = (getBaseUrl "") <> "/driver/profile"
 getRideHistory :: String -> String -> String -> String -> String -> String
 getRideHistory limit offset isActive status day= do
   case status of
-    "null" -> (getBaseUrl "") <> "/driver/ride/list?limit="<>limit<>"&offset="<>offset<>"&onlyActive="<>isActive
+    "null" -> (getBaseUrl "") <> "/driver/ride/list?limit="<>limit<>"&offset="<>offset<>"&onlyActive="<>isActive <> if day == "null" then "" else "&day=" <> day
     _ -> (getBaseUrl "") <> "/driver/ride/list?onlyActive="<>isActive<>"&status="<> (show status) <> if day == "null" then "" else "&day=" <> day
+
+getRidesSummaryList :: Array String -> String
+getRidesSummaryList dateList = (getBaseUrl "") <> "/rideSummary/list"
 
 offerRide :: String -> String
 offerRide dummyString = (getBaseUrl "") <> "/driver/searchRequest/quote/offer"
@@ -267,3 +270,12 @@ rideRoute rideId = (getBaseUrl "") <> "/" <> rideId <>"/route"
 
 getMerchantIdList :: String -> String 
 getMerchantIdList merchantId = getBaseUrl "" <> "/city/" <> merchantId <> "/list"
+
+getCoinTransactions :: String -> String
+getCoinTransactions date =  (getBaseUrl "") <> "/coins/transactions" <> "?date=" <> date
+
+getCoinUsageHistory :: String -> String
+getCoinUsageHistory _ =  (getBaseUrl "") <> "/coins/usageHistory"
+
+convertCoinToCash :: String -> String
+convertCoinToCash _ =  (getBaseUrl "") <> "/coins/convertCoinToCash"

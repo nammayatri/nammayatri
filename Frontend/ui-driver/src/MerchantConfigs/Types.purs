@@ -29,7 +29,8 @@ type AppConfig =
     features :: Features,
     flowConfig :: FlowConfig,
     permissions :: PermissionsConfig,
-    homeScreen :: HomeScreenConfig
+    homeScreen :: HomeScreenConfig,
+    coinsConfig :: CoinsConfig
   } 
 
 type PurpleRideConfig = {
@@ -126,7 +127,8 @@ type BottomNavConfig = {
   rideHistory :: BottomNavItemConfig,
   subscription :: BottomNavItemConfig,
   referral :: BottomNavItemConfig,
-  notifications :: BottomNavItemConfig
+  notifications :: BottomNavItemConfig,
+  driverEarnings :: BottomNavItemConfig
 }
 
 type BottomNavItemConfig = {
@@ -161,4 +163,10 @@ type PermissionsConfig = {
 type HomeScreenConfig = {
   specialRideOtpView :: Boolean,
   showGenderBanner :: Boolean
+}
+
+type CoinsConfig = {
+  enableYatriCoins :: Boolean,
+  minCoinSliderValue :: Int,
+  maxCoinSliderValue :: Int
 }
