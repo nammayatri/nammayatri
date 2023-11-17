@@ -2565,7 +2565,7 @@ zooTicketBookingFlow = do
     GET_BOOKING_INFO_SCREEN state -> do
       (GetBookingInfoRes resp) <- Remote.getTicketBookingDetailsBT state.props.selectedBookingId--state.props.selectedBookingInfo.shortId (show state.props.selectedBookingInfo.status)
       _ <- pure $ spy "Response" resp
-      modifyScreenState $ TicketBookingScreenStateType (\ticketBookingScreenState ->  TicketBookingScreenData.initData{props{currentStage = TicketInfoStage }}) --, selectedBookingInfo = (ticketDetailsTransformer resp) }})
+      modifyScreenState $ TicketBookingScreenStateType (\ticketBookingScreenState ->  TicketBookingScreenData.initData{props{currentStage = TicketInfoStage , selectedBookingInfo = (ticketDetailsTransformer (GetBookingInfoRes resp)) }})
       zooTicketBookingFlow
     GO_TO_HOME_SCREEN_FROM_TICKET_BOOKING -> homeScreenFlow
     _ -> pure unit

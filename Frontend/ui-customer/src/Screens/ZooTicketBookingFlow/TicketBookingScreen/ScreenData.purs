@@ -64,7 +64,7 @@ initData =
       paymentStatus : Common.Success
       , ticketBookingList : dummyData
       , selectedBookingId : "adfadf"
-      , selectedBookingInfo : {shortId : "afda", ticketPlaceId : Just "aksdfjl;a", ticketPlaceName : "aksdfj;la", personId : Nothing, amount : 500.0, visitDate : "2023-10-23", status : Booked, services : [{ ticketServiceShortId : "afdjasdf ;a", ticketServiceName : "VideoPhotography", amount : 100.0, status : "Pending", verificationCount : 0, expiryDate : Nothing,  prices : []}, { ticketServiceShortId : "afdj;jkja", ticketServiceName : "Entrance", amount : 100.0, status : "Confirmed", verificationCount : 0, expiryDate : Nothing,  prices : []}] }
+      , selectedBookingInfo : {shortId : "afda", ticketPlaceId : "aksdfjl;a", ticketPlaceName : "aksdfj;la", personId : "" , amount : 500.0, visitDate : "2023-10-23", status : Booked, services : [{ ticketServiceShortId : "afdjasdf ;a", ticketServiceName : "VideoPhotography", amount : 100.0, status : "Pending", verificationCount : 0, expiryDate : Nothing,  prices : []}, { ticketServiceShortId : "afdj;jkja", ticketServiceName : "Entrance", amount : 100.0, status : "Confirmed", verificationCount : 0, expiryDate : Nothing,  prices : []}] }
       , activeListItem : { ticketServiceShortId : "afdjasdf ;a", ticketServiceName : "VideoPhotography", amount : 100.0, status : "Pending", verificationCount : 0, expiryDate : Nothing,  prices : []}
       , activeIndex : 0
       , rightButtonDisable : false
