@@ -2098,6 +2098,7 @@ newtype TicketBookingServiceDetails = TicketBookingServiceDetails
     status :: String,
     verificationCount :: Int,
     expiryDate :: Maybe String,
+    ticketServiceName :: String,
     prices :: (Array TicketBookingServicePriceBreakup)
   }
 

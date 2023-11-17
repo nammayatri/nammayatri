@@ -539,6 +539,36 @@ ticketsListView state push =
   , padding $ PaddingHorizontal 16 16
   ][ if DA.null state.props.ticketBookingList.booked then linearLayout[][] else ticketsCardListView state push state.props.ticketBookingList.booked "Booked Trips"
   ,  if DA.null state.props.ticketBookingList.pendingBooking then linearLayout[][] else ticketsCardListView state push state.props.ticketBookingList.pendingBooking "Pending Payment"
+  , emptyTicketsView state push
+  ]
+
+emptyTicketsView :: forall w. ST.TicketBookingScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+emptyTicketsView state push = 
+  linearLayout
+  [ height $ WRAP_CONTENT
+  , width $ MATCH_PARENT
+  , background Color.blue600
+  , orientation VERTICAL
+  , visibility if DA.null state.props.ticketBookingList.booked && DA.null state.props.ticketBookingList.pendingBooking then VISIBLE else GONE
+  , padding $ Padding 16 16 16 16
+  , gravity CENTER
+  , cornerRadius 8.0
+  ][linearLayout
+    [ height $ WRAP_CONTENT
+    , width MATCH_PARENT
+    , gravity CENTER
+    , margin $ MarginBottom 12
+    ][imageView
+      [ height $ V 96
+      , width $ V 96
+      , imageWithFallback $ fetchImage FF_ASSET "ny_ic_deer"
+      ]
+    ]
+  , textView $ 
+    [ text $ "You can book tickets to the Alipore Zoo by clicking the button."
+    , color Color.black900
+    , gravity CENTER
+    ] <> FontStyle.paragraphText LanguageStyle
   ]
 
 ticketsCardListView :: forall w. ST.TicketBookingScreenState -> (Action -> Effect Unit) -> Array ST.TicketBookingItem -> String -> PrestoDOM (Effect Unit) w
@@ -678,33 +708,33 @@ zooTicketView state push =
 
 getTicketBackgroundColor :: String -> String
 getTicketBackgroundColor ticketServiceName = case ticketServiceName of
-  "Entrance" -> Color.black900
-  "VideoPhotography" -> Color.yellow800
-  "Aquarium" -> Color.blue600
+  "Entrance Fee" -> Color.black900
+  "Videography Fee" -> Color.yellow800
+  "Aquarium Fee" -> "#DFE8FF"
   _ -> Color.grey900
 
 getShareButtonIcon :: String -> String
 getShareButtonIcon ticketServiceName = case ticketServiceName of
-  "Entrance" -> "ny_ic_share_unfilled_white"
+  "Entrance Fee" -> "ny_ic_share_unfilled_white"
   _ -> "ny_ic_share_unfilled_black"
 
 getShareButtonColor :: String -> String
 getShareButtonColor ticketServiceName = case ticketServiceName of
-  "Entrance" -> Color.white900
+  "Entrance Fee" -> Color.white900
   _ -> Color.black900
 
 getPlaceColor :: String -> String
 getPlaceColor ticketServiceName = case ticketServiceName of
-  "Entrance" -> Color.white900
-  "VideoPhotography" -> Color.black800
-  "Aquarium" -> Color.black800
+  "Entrance Fee" -> Color.white900
+  "Videography Fee" -> Color.black800
+  "Aquarium Fee" -> Color.black800
   _ -> Color.grey900
 
 getInfoColor :: String -> String
 getInfoColor ticketServiceName = case ticketServiceName of
-  "Entrance" -> Color.white900
-  "VideoPhotography" -> Color.black900
-  "Aquarium" -> Color.black900
+  "Entrance Fee" -> Color.white900
+  "Videography Fee" -> Color.black900
+  "Aquarium Fee" -> Color.black900
   _ -> Color.grey900
 
 ticketHeaderView :: forall w. ST.TicketBookingScreenState -> (Action -> Effect Unit) -> String -> String -> PrestoDOM (Effect Unit) w
@@ -741,7 +771,7 @@ ticketHeaderView state push placeColor infoColor  =
 
 getTicketImage :: String -> String
 getTicketImage ticketServiceName = case ticketServiceName of
-  "Entrance" -> fetchImage FF_ASSET "ny_ic_ticket"
+  "Entrance Fee" -> fetchImage FF_ASSET "ny_ic_ticket"
   _ -> fetchImage FF_ASSET "ny_ic_ticket_black"
 
 carouselDotView :: forall w. ST.TicketBookingScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
@@ -763,15 +793,14 @@ ticketImageView state push =
   , height WRAP_CONTENT
   , orientation VERTICAL
   , gravity CENTER
-  , margin $ MarginVertical 24 24
+  , margin $ MarginVertical 16 16
   ][  linearLayout
       [ width MATCH_PARENT
       , height WRAP_CONTENT
       , orientation HORIZONTAL
       , gravity CENTER
       ][  linearLayout
-          [ weight 1.0
-          , height WRAP_CONTENT
+          [ height WRAP_CONTENT
           , gravity CENTER
           ][ imageView
               [ width $ V 24
@@ -787,16 +816,15 @@ ticketImageView state push =
           , height WRAP_CONTENT
           , gravity CENTER
           ][ imageView
-            [ width $ V 192
-            , height $ V 192
+            [ width $ V 194
+            , height $ V 194
             , id $ getNewIDWithTag "ticketQRView"
             , imageWithFallback $ fetchImage FF_ASSET "ny_ic_chevron_left_white"
             , afterRender push (const (TicketQRRendered (getNewIDWithTag "ticketQRView") activeItem.ticketServiceShortId ))
             ]
           ]
         , linearLayout
-          [ weight 1.0
-          , height WRAP_CONTENT
+          [ height WRAP_CONTENT
           , gravity CENTER
           ][ imageView
             [ width $ V 24
@@ -814,33 +842,33 @@ ticketImageView state push =
 
 getTextForQRType :: String -> String
 getTextForQRType ticketServiceName = case ticketServiceName of
-  "Entrance" -> "Zoo Entry QR"
-  "VideoPhotography" -> "Photo / VideoGraphy Entry QR"
-  "Aquarium" -> "Aquarium Entry QR"
-  _ -> ""
+  "Entrance Fee" -> "Zoo Entry QR"
+  "Videography Fee" -> "Photo / VideoGraphy Entry QR"
+  "Aquarium Fee" -> "Aquarium Fee Entry QR"
+  _ -> Color.white900
  
 getPillBackgroundColor :: String -> String
 getPillBackgroundColor ticketServiceName = case ticketServiceName of
-  "Entrance" -> Color.black6000
-  "VideoPhotography" -> Color.yellow900
-  "Aquarium" ->  Color.blue900
-  _ -> ""
+  "Entrance Fee" -> Color.black6000
+  "Videography Fee" -> Color.yellow900
+  "Aquarium Fee" ->  Color.blue800
+  _ -> Color.white900
 
 getPillInfoColor :: String -> String
 getPillInfoColor ticketServiceName = case ticketServiceName of
-  "Entrance" -> Color.grey900
-  "VideoPhotography" -> Color.black800
-  "Aquarium" ->  Color.white900
-  _ -> ""
+  "Entrance Fee" -> Color.grey900
+  "Videography Fee" -> Color.black800
+  "Aquarium Fee" ->  Color.white900
+  _ -> Color.white900
   
 getLeftButtonForSlider :: String -> Boolean -> String
 getLeftButtonForSlider ticketServiceName buttonDisabled = case ticketServiceName of
-  "Entrance" -> if buttonDisabled then fetchImage FF_ASSET "ny_ic_chevron" else fetchImage FF_ASSET "ny_ic_chevron_left_white"
+  "Entrance Fee" -> if buttonDisabled then fetchImage FF_ASSET "ny_ic_chevron" else fetchImage FF_ASSET "ny_ic_chevron_left_white"
   _ -> if buttonDisabled then fetchImage FF_ASSET "ny_ic_chevron" else fetchImage FF_ASSET "ny_ic_chevron_left"
 
 getRightButtonForSlider :: String -> Boolean -> String
 getRightButtonForSlider ticketServiceName buttonDisabled = case ticketServiceName of
-  "Entrance" -> if buttonDisabled then fetchImage FF_ASSET "ny_ic_chevron" else fetchImage FF_ASSET "ny_ic_chevron_right_white"
+  "Entrance Fee" -> if buttonDisabled then fetchImage FF_ASSET "ny_ic_chevron" else fetchImage FF_ASSET "ny_ic_chevron_right_white"
   _ -> if buttonDisabled then fetchImage FF_ASSET "ny_ic_chevron" else fetchImage FF_ASSET "ny_ic_chevron_right"
 
 pillView :: forall w. ST.TicketBookingScreenState -> (Action -> Effect Unit) -> String -> String -> PrestoDOM (Effect Unit) w
@@ -860,8 +888,9 @@ pillView state push backgroudColor textColor =
       [ width $ WRAP_CONTENT
       , height WRAP_CONTENT
       , orientation HORIZONTAL
-      ]([  tvView (show item.numberOfUnits <> " " <> show item.attendeeType) textColor (MarginBottom 0) (FontStyle.subHeading1 TypoGraphy)
-      ] <> if index == itemLength then [] else [dotView (getPillInfoColor activeItem.ticketServiceName) (Margin 2 2 2 2) 5] )
+      , gravity CENTER_VERTICAL
+      ]([  tvView (show item.numberOfUnits <> " " <> item.attendeeType) textColor (MarginBottom 0) (FontStyle.subHeading1 TypoGraphy)
+      ] <> if index == itemLength then [] else [dotView (getPillInfoColor activeItem.ticketServiceName) (MarginHorizontal 6 6) 5] )
    ) activeItem.prices )
 
 dotView :: forall w. String -> Margin -> Int -> PrestoDOM (Effect Unit) w
@@ -902,8 +931,10 @@ bookingInfoView state push =
 
 getSeparatorColor :: String -> String
 getSeparatorColor ticketServiceName = case ticketServiceName of
-  "Entrance" -> Color.black6000
-  _ -> Color.grey900
+  "Entrance Fee" -> Color.black700
+  "Videography Fee" -> Color.white900
+  "Aquarium Fee" -> Color.white900
+  _ -> Color.white900
 
 bookingInfoListItemView :: forall w.  ST.TicketBookingScreenState -> String -> String -> PrestoDOM (Effect Unit ) w
 bookingInfoListItemView state key value =
@@ -936,6 +967,7 @@ shareTicketView state push =
   , height $ WRAP_CONTENT
   , orientation HORIZONTAL
   , gravity CENTER
+  , margin $ MarginTop 16
   ][imageView
     [ height $ V 16
     , width $ V 16
@@ -945,9 +977,10 @@ shareTicketView state push =
   , textView $ 
     [ height $ WRAP_CONTENT
     , width $ WRAP_CONTENT
-    , text $ "Share"
+    , padding $ PaddingBottom 5
+    , textFromHtml $ "<u>" <> "Share" <> "</u>"
     , color $ getShareButtonColor state.props.activeListItem.ticketServiceName
-    ] <> FontStyle.tags TypoGraphy
+    ] <> FontStyle.body1 TypoGraphy
   ]
 
 bookingStatusView :: forall w. ST.TicketBookingScreenState -> (Action -> Effect Unit) -> Common.PaymentStatus -> PrestoDOM (Effect Unit) w
@@ -1042,11 +1075,10 @@ bookingConfirmationActions state push paymentStatus =
       [ width MATCH_PARENT
       , height $ V 1
       , background Color.grey900
-      , margin $ MarginBottom 10
       , visibility GONE
       ][]
    , if paymentStatus /= Common.Pending then PrimaryButton.view (push <<< ViewTicketAC) (viewTicketButtonConfig primaryButtonText) else linearLayout[visibility GONE][]
-   , commonTV push secondaryButtonText Color.black900 (FontStyle.subHeading1 TypoGraphy) 5 CENTER NoAction
+   , commonTV push secondaryButtonText Color.black900 (FontStyle.subHeading1 TypoGraphy) 0 CENTER NoAction
   ]
   where primaryButtonText = case paymentStatus of
                               Common.Success -> "View Ticket"
@@ -1065,11 +1097,27 @@ paymentStatusHeader state push paymentStatus =
     , height WRAP_CONTENT
     , orientation VERTICAL
     , gravity CENTER
-    ][ imageView
-        [ width $ V 65
-        , height $ V 65
-        , imageWithFallback transcationConfig.image
+    ][ relativeLayout
+      [ width $ MATCH_PARENT
+      , height $ WRAP_CONTENT
+      , gravity CENTER
+      ][imageView
+        [ width $ MATCH_PARENT
+        , height $ V 100
+        , imageWithFallback $ fetchImage FF_ASSET "ny_ic_confetti"
+        ] 
+      , linearLayout
+        [ width $ MATCH_PARENT
+        , height $ WRAP_CONTENT
+        , gravity CENTER
+        , margin $ MarginTop 50
+        ][ imageView
+          [ width $ V 65
+          , height $ V 65
+          , imageWithFallback transcationConfig.image
+          ]
         ]
+      ]
       , commonTV push transcationConfig.title Color.black900 (FontStyle.h2 TypoGraphy) 14 CENTER NoAction
       , commonTV push transcationConfig.statusTimeDesc Color.black700 (FontStyle.body3 TypoGraphy) 5 CENTER NoAction
       , if paymentStatus == Common.Failed then copyTransactionIdView state push else linearLayout[visibility GONE][]
