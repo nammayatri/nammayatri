@@ -25,10 +25,18 @@ initData :: TicketBookingScreenState
 initData = 
   { data : {
       placeInfo : Nothing,
+      servicesInfo : Nothing,
       servicesAvailing : [],
       shortOrderId: "",
       dateOfVisit : "",
-      keyValArray : [{key : "Date", val : "10th Nov, 23"}, {key : "Booking for", val : "dvkm"}, {key : "Total Paid", val : "₹300"}, {key : "BookingId", val : "1234345356"}, {key : "Transaction ID", val : "OR8192BY29213292149824UI"}, {key : "Valid until", val : "5 PM, 10th Nov 2023"}],
+      keyValArray : 
+        [ {key : "Date", val : "10th Nov, 23"}
+        , {key : "Booking for", val : "dvkm"}
+        , {key : "Total Paid", val : "₹300"}
+        , {key : "BookingId", val : "1234345356"}
+        , {key : "Transaction ID", val : "OR8192BY29213292149824UI"}
+        , {key : "Valid until", val : "5 PM, 10th Nov 2023"}
+        ],
       bookedForArray : ["Zoo", "Aquarium", "Video"],
       zooName : "Zoological Garden, Alipore",
       transactionId : "",

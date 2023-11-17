@@ -2161,6 +2161,8 @@ data TicketPlaceReq = TicketPlaceReq
 
 newtype TicketPlaceResponse = TicketPlaceResponse (Array TicketPlaceResp)
 
+newtype TicketServicesResponse = TicketServicesResponse (Array TicketServiceResp)
+
 newtype TicketService = TicketService
   { serviceId :: String,
     attendeeType :: String,
@@ -2226,7 +2228,7 @@ instance makeGetTicketStatusReq :: RestEndpoint GetTicketStatusReq GetTicketStat
   decodeResponse = decodeJSON
   encodeRequest req = standardEncode req
 
-instance makeTicketServiceReq :: RestEndpoint TicketServiceReq TicketServiceResp where
+instance makeTicketServiceReq :: RestEndpoint TicketServiceReq TicketServicesResponse where
  makeRequest reqBody@(TicketServiceReq placeId) headers = defaultMakeRequest GET (EP.ticketPlaceServices placeId) headers reqBody Nothing
  decodeResponse = decodeJSON
  encodeRequest req = standardEncode req
@@ -2287,6 +2289,13 @@ instance standardEncodeTicketServiceResp :: StandardEncode TicketServiceResp whe
 instance showTicketServiceResp :: Show TicketServiceResp where show = genericShow
 instance decodeTicketServiceResp :: Decode TicketServiceResp where decode = defaultDecode
 instance encodeTicketServiceResp :: Encode TicketServiceResp where encode = defaultEncode
+
+derive instance genericTicketServicesResponse :: Generic TicketServicesResponse _
+derive instance newtypeTicketServicesResponse :: Newtype TicketServicesResponse _
+instance standardEncodeTicketServicesResponse :: StandardEncode TicketServicesResponse where standardEncode (TicketServicesResponse id) = standardEncode id
+instance showTicketServicesResponse :: Show TicketServicesResponse where show = genericShow
+instance decodeTicketServicesResponse :: Decode TicketServicesResponse where decode = defaultDecode
+instance encodeTicketServicesResponse :: Encode TicketServicesResponse where encode = defaultEncode
 
 derive instance genericTicketServicePrice :: Generic TicketServicePrice _
 derive instance newtypeTicketServicePrice :: Newtype TicketServicePrice _

@@ -883,7 +883,7 @@ getPersonStatsBT _ = do
     errorHandler errorPayload = do
             BackT $ pure GoBack 
 
-getTicketPlaceServicesBT :: String -> FlowBT String TicketServiceResp
+getTicketPlaceServicesBT :: String -> FlowBT String TicketServicesResponse
 getTicketPlaceServicesBT placeId = do
     headers <- getHeaders' "" false
     withAPIResultBT (EP.ticketPlaceServices placeId) (\x -> x) errorHandler (lift $ lift $ callAPI headers (TicketServiceReq placeId))

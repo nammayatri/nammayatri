@@ -37,7 +37,7 @@ import Data.Generic.Rep (class Generic)
 import Data.Lens ((^.))
 import Data.Lens ((^.))
 import Data.Maybe (Maybe(..), fromMaybe)
-import Data.Number (fromString, pi, sin, cos, sqrt, asin, abs)
+import Data.Number (pi, sin, cos, sqrt, asin, abs)
 import Data.Ord (comparing)
 import Data.Profunctor.Strong (first)
 import Data.Show.Generic (genericShow)
@@ -63,7 +63,7 @@ import Juspay.OTP.Reader (initiateSMSRetriever)
 import Juspay.OTP.Reader as Readers
 import Juspay.OTP.Reader.Flow as Reader
 import MerchantConfig.Utils (Merchant(..), getMerchant, getValueFromConfig)
-import Prelude (class Eq, class Ord, class Show, Unit, bind, compare, comparing, discard, identity, map, not, pure, show, unit, void, ($), (*), (+), (-), (/), (/=), (<), (<#>), (<*>), (<<<), (<=), (<>), (=<<), (==), (>), (>>>), (||), (&&), (<$>), (>=))
+import Prelude (class Eq, class Ord, class Show, Unit, bind, compare, comparing, mod, discard, identity, map, not, pure, show, unit, void, ($), (*), (+), (-), (/), (/=), (<), (<#>), (<*>), (<<<), (<=), (<>), (=<<), (==), (>), (>>>), (||), (&&), (<$>), (>=))
 import Presto.Core.Flow (Flow, doAff)
 import Presto.Core.Types.Language.Flow (FlowWrapper(..), getState, modifyState)
 import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode)
@@ -77,35 +77,14 @@ import Types.App (GlobalState(..))
 import Unsafe.Coerce (unsafeCoerce)
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Data.Int (round, toNumber)
+import Data.Int (round, toNumber, fromString)
 import Data.Boolean (otherwise)
 import Effect.Uncurried (EffectFn1(..),EffectFn5(..), mkEffectFn1, mkEffectFn4, runEffectFn5)
 import Effect.Uncurried(EffectFn1, EffectFn4, EffectFn3,runEffectFn3)
 import Effect.Aff (Aff (..), error, killFiber, launchAff, launchAff_, makeAff, nonCanceler, Fiber)
 import Prelude (class EuclideanRing, Unit, bind, discard, identity, pure, unit, void, ($), (+), (<#>), (<*>), (<>), (*>), (>>>), ($>), (/=), (&&), (<=), show, (>=), (>),(<))
+import Data.String (replace, split, Pattern(..), Replacement(..))
 
--- shuffle' :: forall a. Array a -> Effect (Array a)
--- shuffle' array = do
---   arrayWithRandom <- addRandom array
---   let sortWithRandom = sortWith (\b -> b.randomNum) arrayWithRandom
---   arrayWithoutRandom <- removeRandom sortWithRandom
---   pure arrayWithoutRandom
---   where
---     addRandom :: Array a -> Effect (Array {randomNum :: Number, value :: a})
---     addRandom arr = do
---       randomValue <- random
---       case head arr of
---         Just x -> do
---           future <- (addRandom (drop 1 arr))
---           pure $ [{randomNum : randomValue, value : x}] <> future
---         Nothing -> pure []
---     removeRandom :: Array {randomNum :: Number, value :: a} -> Effect (Array a)
---     removeRandom arr = do
---       case head arr of
---         Just x -> do
---           future <- (removeRandom (drop 1 arr))
---           pure $ [x.value] <> future
---         Nothing -> pure []
 foreign import shuffle :: forall a. Array a -> Array a
 
 foreign import withinTimeRange :: String -> String -> String -> Boolean
@@ -193,6 +172,32 @@ data TimeUnit
   | MINUTE
   | SECOND
 
+convertUTCToISTAnd12HourFormat :: String -> Maybe String
+convertUTCToISTAnd12HourFormat inputTime = do
+  -- Convert the input time to a 24-hour format if it's in 12-hour format (AM/PM)
+  let adjustedInputTime = replace (Pattern "PM") (Replacement "") $ replace (Pattern "AM") (Replacement "") inputTime
+
+  case split (Pattern ":") adjustedInputTime of
+    [h, m, _] -> do
+      hours <- fromString h
+      minutes <- fromString m
+      
+      -- Add 5 hours and 30 minutes
+      let adjustedHours24 = (hours + 5) `mod` 24
+      let adjustedMinutes = (minutes + 30) `mod` 60
+      
+      -- Convert to 12-hour format with AM/PM
+      let {adjustedHours, period} = if adjustedHours24 < 12 then {adjustedHours: adjustedHours24, period: "AM"} else {adjustedHours: adjustedHours24 - 12, period: "PM"}
+      
+      let paddingHours = if adjustedHours < 10 then "0" else ""
+      let paddingMinutes = if adjustedMinutes < 10 then "0" else ""
+
+      -- Format the adjusted time
+      let adjustedTime = paddingHours <> show adjustedHours <> ":" <> paddingMinutes <> show adjustedMinutes <> " " <> period
+  
+      pure adjustedTime
+    _ -> Nothing
+  
 otpRule :: Reader.OtpRule
 otpRule =
   Reader.OtpRule

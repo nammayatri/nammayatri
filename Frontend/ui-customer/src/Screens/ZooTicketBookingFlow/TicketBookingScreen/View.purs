@@ -13,9 +13,9 @@ import Data.Foldable (or)
 import Effect (Effect)
 import Engineering.Helpers.Commons (screenWidth, flowRunner)
 import Font.Style as FontStyle
-import Helpers.Utils (fetchImage, FetchImageFrom(..), decodeError, fetchAndUpdateCurrentLocation, getAssetsBaseUrl, getCurrentLocationMarker, getLocationName, getNewTrackingId, getPreviousVersion, getSearchType, parseFloat, storeCallBackCustomer)
+import Helpers.Utils (fetchImage, FetchImageFrom(..), decodeError, convertUTCToISTAnd12HourFormat, fetchAndUpdateCurrentLocation, getAssetsBaseUrl, getCurrentLocationMarker, getLocationName, getNewTrackingId, getPreviousVersion, getSearchType, parseFloat, storeCallBackCustomer)
 import JBridge as JB
-import Prelude (Unit, discard, void, bind, const, pure, unit, ($), (&&), (/=), (<<<), (<>), (==), map, show, (||), show, (-))
+import Prelude (Unit, discard, void, bind, const, pure, unit, ($), (&&), (/=), (<<<), (>>=), (<>), (==), map, show, (||), show, (-))
 import PrestoDOM (FlexWrap(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Prop, Screen, Visibility(..), shimmerFrameLayout, afterRender, alignParentBottom, background, color, cornerRadius, fontStyle, gravity, height, imageUrl, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, relativeLayout, scrollView, stroke, text, textFromHtml, textSize, textView, visibility, weight, width, clickable, id)
 import PrestoDOM.Animation as PrestoAnim
 import Screens.TicketBookingScreen.Controller (Action(..), ScreenOutput, eval)
@@ -24,11 +24,11 @@ import Styles.Colors as Color
 import Screens.TicketBookingScreen.ComponentConfig 
 import Resources.Constants -- TODO:: Replace these constants with API response
 import Engineering.Helpers.Commons (screenWidth, convertUTCtoISC, getNewIDWithTag)
-import Services.API (BookingStatus(..), TicketPlaceResp(..))
+import Services.API (BookingStatus(..), TicketPlaceResponse(..), TicketPlaceResp(..), TicketServicesResponse(..), TicketServiceResp(..), TicketServicePrice(..))
 import Animation (fadeInWithDelay, translateInXBackwardAnim, translateInXBackwardFadeAnimWithDelay, translateInXForwardAnim, translateInXForwardFadeAnimWithDelay)
 import Halogen.VDom.DOM.Prop (Prop)
-import Data.Array ((..))
-import Data.Maybe (fromMaybe, Maybe(..))
+import Data.Array (catMaybes, head, (..))
+import Data.Maybe (fromMaybe, isJust, Maybe(..))
 import Debug
 import Effect.Aff (launchAff)
 import Types.App (defaultGlobalState)
@@ -58,9 +58,14 @@ screen initialState =
 
   getPlaceDataEvent' push = do
     if initialState.props.currentStage == ST.DescriptionStage then do
-      placesResp <- Remote.getTicketPlacesBT ""
-      lift $ lift $ doAff do liftEffect $ push $ UpdatePlacesData (Just placesResp)
-    else lift $ lift $ doAff do liftEffect $ push $ UpdatePlacesData Nothing
+      (TicketPlaceResponse placesResp) <- Remote.getTicketPlacesBT ""
+      let mFirstPlace = head placesResp -- TODO:: Remove this once Screen for choosing place is ready
+      case mFirstPlace of
+        Just (TicketPlaceResp firstPlace) -> do
+          servicesResp <- Remote.getTicketPlaceServicesBT firstPlace.id
+          lift $ lift $ doAff do liftEffect $ push $ UpdatePlacesData (Just $ TicketPlaceResp firstPlace) (Just servicesResp)
+        Nothing -> lift $ lift $ doAff do liftEffect $ push $ UpdatePlacesData Nothing Nothing
+    else lift $ lift $ doAff do liftEffect $ push $ UpdatePlacesData Nothing Nothing
 
 view :: forall w . (Action -> Effect Unit) -> ST.TicketBookingScreenState -> PrestoDOM (Effect Unit) w
 view push state =
@@ -120,7 +125,7 @@ view push state =
       then
         case state.data.placeInfo of
           Just placeInfo -> descriptionStateMainView state push placeInfo
-          Nothing -> [ noDataView state push ]
+          Nothing -> [ noDataView state push "No ticketing zones in this area" ]
     else if (state.props.currentStage == ST.ChooseTicketStage) then [ chooseTicketsView state push ]
     else if (state.props.currentStage == ST.BookingConfirmationStage) then [ bookingStatusView state push state.props.paymentStatus ]
     else if (state.props.currentStage == ST.ViewTicketStage) then [ ticketsListView state push ]
@@ -137,19 +142,20 @@ view push state =
       , descriptionView state push placeInfo
       ]
   
-  noDataView state push =
-    linearLayout
-      [ height MATCH_PARENT
-      , width MATCH_PARENT
-      , orientation VERTICAL
-      , gravity CENTER
-      , margin $ MarginHorizontal 16 16
-      ]
-      [ textView $
-        [ text "No ticketing zones in this area"
-        , color Color.black900
-        ] <> FontStyle.h3 TypoGraphy 
-      ]
+noDataView :: forall w. ST.TicketBookingScreenState -> (Action -> Effect Unit) -> String -> PrestoDOM (Effect Unit) w
+noDataView state push msg =
+  linearLayout
+    [ height MATCH_PARENT
+    , width MATCH_PARENT
+    , orientation VERTICAL
+    , gravity CENTER
+    , margin $ MarginHorizontal 16 16
+    ]
+    [ textView $
+      [ text msg
+      , color Color.black900
+      ] <> FontStyle.h3 TypoGraphy 
+    ]
 
 shimmerView :: forall w . ST.TicketBookingScreenState -> PrestoDOM (Effect Unit) w
 shimmerView state =
@@ -220,9 +226,9 @@ descriptionView state push (TicketPlaceResp placeInfo) =
       , color Color.black800 
       ] <> FontStyle.body1 TypoGraphy 
     , locationView state push 
-    , feeBreakUpView state push  
+    , if isJust state.data.servicesInfo then feeBreakUpView state push state.data.servicesInfo
+      else noDataView state push "No services available"
   ]
-
 
 locationView :: forall w. ST.TicketBookingScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 locationView state push =
@@ -245,8 +251,9 @@ locationView state push =
       ]
   ]
 
-feeBreakUpView :: forall w. ST.TicketBookingScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
-feeBreakUpView state push = 
+feeBreakUpView :: forall w. ST.TicketBookingScreenState -> (Action -> Effect Unit) -> Maybe TicketServicesResponse -> PrestoDOM (Effect Unit) w
+feeBreakUpView _ _ Nothing = linearLayout [ visibility GONE ] []
+feeBreakUpView state push (Just services) = 
   linearLayout
   [ height WRAP_CONTENT
   , width MATCH_PARENT
@@ -256,7 +263,7 @@ feeBreakUpView state push =
   , padding $ Padding 20 20 20 20
   , margin $ MarginTop 24
   ][  textView $
-      [ text "Fee & Zoo Hours"
+      [ text "Fee & Timings"
       , color Color.black800
       ] <> FontStyle.subHeading1 TypoGraphy
     , linearLayout
@@ -295,35 +302,46 @@ feeBreakUpView state push =
                         )
                     ]                             
                   ]
-      ) (feeBreakUpArray)
+      ) (convertServicesDataToViewData services)
     )
-
   ]
 
-feeBreakUpArray :: Array {headingText :: String , subtext :: Array String, image :: String}
-feeBreakUpArray = [{
-  headingText : "Zoo Timings",
-  subtext : ["Garden Time: 9:00 AM to 5:30 PM","Aquarium Time: 10:00 AM to 5:30 PM" ],
-  image : "ny_ic_timing"
-  },
-  {
-  headingText : "Entrance Fee",
-  subtext : ["Up to the age of 5 years: ₹20" , "Visitors above the age of 5 years - ₹50"],
-  image : "ny_ic_entry"
+convertServicesDataToViewData :: TicketServicesResponse -> Array {headingText :: String , subtext :: Array String, image :: String}
+convertServicesDataToViewData (TicketServicesResponse services) = do
+  let timingsObject = 
+        { headingText : "Zoo Timings"
+        , image : "ny_ic_timing"
+        , subtext : catMaybes $ map createTimingsSubtext services
+        }
+  [timingsObject] <> (map createFeeObject services)
+  where
+  createTimingsSubtext :: TicketServiceResp -> Maybe String
+  createTimingsSubtext (TicketServiceResp service) = do
+    openingTime <-  service.openTimings >>= convertUTCToISTAnd12HourFormat
+    closingTime <- service.closeTimings >>= convertUTCToISTAnd12HourFormat
+    pure $ service.service <> " Time: " <> openingTime <> " to " <> closingTime
 
-  },
-  {
-  headingText : "Aquarium Fee",
-  subtext : ["Up to the age of 5 years - ₹10" , "Visitors above the age of 5 years - ₹20"],
-  image : "ny_ic_aquarium"
+  createFeeObject :: TicketServiceResp -> {headingText :: String , subtext :: Array String, image :: String}
+  createFeeObject (TicketServiceResp service) = do
+    { headingText : service.service <> " Fee"
+    , image : iconMap service.service
+    , subtext : map createFeeSubtext service.prices
+    }
 
-  },
-  {
-  headingText : "Zoo Timings",
-  subtext : ["You’ll be charged ₹250"],
-  image : "ny_ic_videography"
-  }
-  ]
+  createFeeSubtext :: TicketServicePrice -> String
+  createFeeSubtext (TicketServicePrice price) =
+    (priceInfoMap price.attendeeType) <> ": ₹" <> (show price.pricePerUnit)
+
+  -- need to add this data at backend
+  iconMap "Entrance" = "ny_ic_entry"
+  iconMap "Aquarium" = "ny_ic_aquarium"
+  iconMap "Videography" = "ny_ic_videography"
+  iconMap _ = "ny_ic_entry"
+  
+  priceInfoMap "Adult" = "Visitors above the age of 5 years"
+  priceInfoMap "Kid" = "Up to the age of 5 years"
+  priceInfoMap "CameraUnit" = "Price per unit"
+  priceInfoMap _ = "Price per unit"
 
 chooseTicketsView :: forall w. ST.TicketBookingScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 chooseTicketsView state push = 
@@ -674,18 +692,6 @@ individualBookingInfoView state push =
   ][ zooTicketView state push
   ,  carouselDotView state push
   ]
-
-noDataView :: forall w. ST.TicketBookingScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
-noDataView state push =
-  linearLayout
-  [ width $ MATCH_PARENT
-  , height WRAP_CONTENT
-  , orientation VERTICAL
-  , background $ Color.blue600
-  , gravity CENTER
-  ][ 
-  ]
-
 
 zooTicketView :: forall w. ST.TicketBookingScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 zooTicketView state push =
