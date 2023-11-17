@@ -66,6 +66,7 @@ data ScreenOutput
   | GoToProfileScreen
   | GoToCurrentRideFlow
   | SubscriptionScreen NotificationsScreenState
+  | EarningsScreen
 
 data Action
   = OnFadeComplete String
@@ -240,6 +241,9 @@ eval (BottomNavBarAction (BottomNavBar.OnNavigate item)) state =
     "Rides" -> do
       _ <- pure $ setValueToLocalNativeStore ALERT_RECEIVED "false"
       exit GoToRidesScreen
+    "Earnings" -> do
+      _ <- pure $ setValueToLocalNativeStore ALERT_RECEIVED "false"
+      exit EarningsScreen
     "Profile" -> do
       _ <- pure $ setValueToLocalNativeStore ALERT_RECEIVED "false"
       exit GoToProfileScreen

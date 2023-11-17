@@ -197,3 +197,9 @@ blue100 = "#1A2194FF"
 
 green600 :: Color
 green600 = "#269574"
+
+yellowOpacity40 :: Color
+yellowOpacity40 = "#66FEEBB9"
+
+yellowOpacity50 :: Color
+yellowOpacity50 = "#80FCC32C"

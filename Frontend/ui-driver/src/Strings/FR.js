@@ -736,5 +736,7 @@ const frenchStrings = {
   NO : "Non",
   YES_CANCEL : "Oui, annuler",
   AUTOPAY_CANCELLED : "Paiement automatique annulé",
-  AND : " et "
+  AND : " et ",
+  EARNINGS : "Gains",
+  YATRI_COINS : "Coins yatri"
 }

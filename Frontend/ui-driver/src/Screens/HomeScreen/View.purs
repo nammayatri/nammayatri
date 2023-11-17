@@ -252,6 +252,7 @@ view push state =
           then PopUpModal.view (push <<< PaymentPendingPopupAC) (paymentPendingPopupConfig state) 
         else linearLayout[visibility GONE][]
       , if state.props.showGenericAccessibilityPopUp then genericAccessibilityPopUpView push state else dummyTextView
+      , if state.props.showCoinsPopup then PopUpModal.view (push <<< CoinsPopupAC) (introducingCoinsPopup state) else dummyTextView
       , if state.data.driverGotoState.showGoto then gotoListView push state else dummyTextView
       , if state.data.driverGotoState.goToPopUpType /= ST.NO_POPUP_VIEW then gotoRequestPopupView push state else dummyTextView
       , if (DA.any (_ == true ) [state.data.driverGotoState.gotoLocInRange, state.data.driverGotoState.goToInfo, state.data.driverGotoState.confirmGotoCancel]) then knowMoreLocInRangeDisGotoPopups push state else dummyTextView

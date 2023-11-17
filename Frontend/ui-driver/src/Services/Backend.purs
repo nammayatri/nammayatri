@@ -1196,3 +1196,31 @@ rideRoute rideId = do
   withAPIResult (EP.rideRoute rideId) unwrapResponse $ callAPI headers $ RideRouteReq rideId
   where
     unwrapResponse x = x
+        
+getCoinTransactionsReqBT :: String -> FlowBT String CoinTransactionRes
+getCoinTransactionsReqBT date = do
+        headers <- lift $ lift $ getHeaders "" true
+        withAPIResultBT (EP.getCoinTransactions date) (\x → x) errorHandler (lift $ lift $ callAPI headers (CoinTransactionReq date))
+    where
+    errorHandler (ErrorPayload errorPayload) =  do
+        BackT $ pure GoBack
+
+getCoinUsageHistoryReqBT :: String -> FlowBT String CoinsUsageRes
+getCoinUsageHistoryReqBT _ = do
+        headers <- lift $ lift $ getHeaders "" true
+        withAPIResultBT (EP.getCoinUsageHistory "") (\x → x) errorHandler (lift $ lift $ callAPI headers (CoinsUsageReq ""))
+    where
+    errorHandler (ErrorPayload errorPayload) =  do
+        BackT $ pure GoBack
+
+convertCoinToCash :: Number -> Int -> Flow GlobalState (Either ErrorResponse ConvertCoinToCashRes)
+convertCoinToCash cashAmount coins = do 
+    headers <- getHeaders "" false 
+    withAPIResult (EP.convertCoinToCash "") unwrapResponse $ callAPI headers $ makeReq cashAmount coins
+    where
+        makeReq :: Number -> Int -> ConvertCoinToCashReq
+        makeReq cashAmount coins = ConvertCoinToCashReq {
+            cashAmount : cashAmount,
+            coins : coins
+        }
+        unwrapResponse (x) = x 

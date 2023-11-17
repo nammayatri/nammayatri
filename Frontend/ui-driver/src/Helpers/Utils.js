@@ -863,3 +863,11 @@ export const setValueToLocalStore = function (key,value){
   JBridge.setInSharedPrefs(key, value);
 }
 
+export const renderSlider = function (id, cb, action, conversionRate, min, max, defaultValue) {
+  console.log("renderSlider1");
+  const callback = callbackMapper.map(function (val) {
+    cb(action(parseInt(val)))();
+  });
+  console.log("renderSlider");
+  window.JBridge.renderSlider(id, callback, conversionRate, min, max, defaultValue);
+}

@@ -264,3 +264,12 @@ updateDriverHomeLocation homeLocationId = getBaseUrl "" <> "/driver/goHome/updat
 
 rideRoute :: String -> String
 rideRoute rideId = (getBaseUrl "") <> "/" <> rideId <>"/route"
+
+getCoinTransactions :: String -> String
+getCoinTransactions date =  (getBaseUrl "") <> "/coins/transactions" <> "?date=" <> date
+
+getCoinUsageHistory :: String -> String
+getCoinUsageHistory _ =  (getBaseUrl "") <> "/coins/usageHistory"
+
+convertCoinToCash :: String -> String
+convertCoinToCash _ =  (getBaseUrl "") <> "/coins/convertCoinToCash"

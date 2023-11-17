@@ -26,6 +26,7 @@ import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
+import android.graphics.drawable.GradientDrawable;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Handler;
@@ -37,6 +38,7 @@ import android.util.Base64;
 import android.util.DisplayMetrics;
 import android.util.Log;
 import android.view.ActionMode;
+import android.view.Gravity;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -46,6 +48,9 @@ import android.webkit.JavascriptInterface;
 import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
+import android.widget.PopupWindow;
+import android.widget.SeekBar;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
@@ -1103,6 +1108,123 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
                 break;
         }
         return super.onRequestPermissionResult(requestCode, permissions, grantResults);
+    }
+
+    private int dpToPx(Context context, int dp) {
+        float density = context.getResources().getDisplayMetrics().density;
+        return Math.round((float) dp * density);
+    }
+
+    @JavascriptInterface
+    public void renderSlider(String id, String callback, float conversionRate, int minLimit, int maxLimit, int defaultValue) {
+        Activity activity = bridgeComponents.getActivity();
+        Context context = bridgeComponents.getContext();
+        ExecutorManager.runOnMainThread(() -> {
+            if (activity != null) {
+                LinearLayout layout = activity.findViewById(Integer.parseInt(id));
+                if(layout == null)
+                    return;
+                // Create a new SeekBar
+                SeekBar seekBar = new SeekBar(context);
+                seekBar.setMax(maxLimit);  // Set the maximum value
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    seekBar.setMin(minLimit);
+                }
+                seekBar.setProgress(defaultValue);  // Set the current progress
+
+                // Set Layout Params for SeekBar
+                LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.MATCH_PARENT,
+                        LinearLayout.LayoutParams.WRAP_CONTENT
+                );
+                seekBar.setLayoutParams(params);
+
+                // Add SeekBar to LinearLayout
+                layout.addView(seekBar);
+                LinearLayout tooltipLayout = new LinearLayout(context);
+                GradientDrawable roundedBg = new GradientDrawable();
+                roundedBg.setShape(GradientDrawable.RECTANGLE);
+                roundedBg.setColor(Color.BLACK); // Background color for the LinearLayout
+                roundedBg.setCornerRadius(dpToPx(context, 20)); // 10dp corner radius
+
+                // Set the background to the LinearLayout
+                tooltipLayout.setBackground(roundedBg);
+                tooltipLayout.setLayoutParams(new LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.WRAP_CONTENT,
+                        LinearLayout.LayoutParams.WRAP_CONTENT));
+                tooltipLayout.setPadding(22, 16, 22, 16);
+                tooltipLayout.setGravity(Gravity.CENTER);
+
+                // Create a TextView for the tooltip text
+                TextView prefTextView = new TextView(context);
+                prefTextView.setLayoutParams(new LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.WRAP_CONTENT,
+                        LinearLayout.LayoutParams.WRAP_CONTENT));
+                prefTextView.setTextColor(Color.WHITE);
+
+                TextView suffTextView = new TextView(context);
+                suffTextView.setLayoutParams(new LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.WRAP_CONTENT,
+                        LinearLayout.LayoutParams.WRAP_CONTENT));
+                suffTextView.setTextColor(Color.WHITE);
+
+                ImageView imageView = new ImageView(context);
+
+                LinearLayout.LayoutParams imageParams = new LinearLayout.LayoutParams(30, 30);
+
+// Set margins (left, top, right, bottom)
+                params.setMargins(10, 0, 0, 0);
+
+// Apply the modified LayoutParams to the ImageView
+                imageView.setLayoutParams(imageParams);
+                imageView.setImageResource(R.drawable.ny_ic_yatri_coin);
+
+
+                tooltipLayout.addView(prefTextView);
+                tooltipLayout.addView(imageView);
+                tooltipLayout.addView(suffTextView);
+
+                // Create a PopupWindow for the tooltip
+                PopupWindow tooltipPopup = new PopupWindow(tooltipLayout,
+                        LinearLayout.LayoutParams.WRAP_CONTENT,
+                        LinearLayout.LayoutParams.WRAP_CONTENT);
+                tooltipPopup.setOutsideTouchable(true);
+                tooltipPopup.setFocusable(false); // So it doesn't block the SeekBar interaction
+                int seekBarPosition = seekBar.getThumb().getBounds().centerX();
+                tooltipPopup.update(seekBar, seekBarPosition - tooltipPopup.getWidth() / 2, -150, -1, -1);
+                // Show the PopupWindow above the SeekBar thumb
+                seekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+                    @Override
+                    public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                        // Update the position of the tooltip based on the thumb position
+                        int seekBarPosition = seekBar.getThumb().getBounds().centerX();
+                        float newVal = (progress / conversionRate);
+                        System.out.println("newVal " + newVal);
+                        String valueToShow = Math.ceil(newVal) == Math.floor(newVal) ? String.valueOf((int)newVal) : String.valueOf(newVal);
+                        tooltipPopup.update(seekBar, seekBarPosition - tooltipPopup.getWidth() / 2, -150, -1, -1);
+                        prefTextView.setText(String.valueOf(progress));
+                        System.out.println("valueToShow " + valueToShow);
+                        suffTextView.setText(" = ₹" + valueToShow);
+                    }
+
+                    @Override
+                    public void onStartTrackingTouch(SeekBar seekBar) {
+                        // Show the tooltip when the user starts touching the SeekBar
+                        tooltipPopup.showAsDropDown(seekBar, 0, -seekBar.getHeight());
+                    }
+
+                    @Override
+                    public void onStopTrackingTouch(SeekBar seekBar) {
+                        int nearestMultipleOf25 = Math.round(seekBar.getProgress() / 25f) * 25;
+                        seekBar.setProgress(nearestMultipleOf25);
+                        String javascript = String.format(Locale.ENGLISH, "window.callUICallback('%s','%s');",
+                                callback, nearestMultipleOf25);
+                        bridgeComponents.getJsCallback().addJsToWebView(javascript);
+                    }
+                });
+
+            }
+        });
     }
     //endregion
 }

@@ -53,7 +53,7 @@ import PrestoDOM.Properties (cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Screens.PaymentHistoryScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.PaymentHistoryScreen.ScreenData (dummyPromoConfig)
-import Screens.PaymentHistoryScreen.Transformer (getAutoPayPaymentStatus, getAutoPayStageData)
+import Screens.PaymentHistoryScreen.Transformer (coinsOfferConfig, getAutoPayPaymentStatus, getAutoPayStageData)
 import Screens.SubscriptionScreen.Transformer (getPromoConfig)
 import Screens.Types (PaymentHistoryScreenState, PaymentHistorySubview(..), PromoConfig)
 import Services.API (FeeType(..), GetPaymentHistoryResp(..), PaymentDetailsEntity(..), HistoryEntityV2Resp(..)) as SA
@@ -181,15 +181,21 @@ paymentList push state =
                       [ height WRAP_CONTENT
                       , weight 1.0
                       ][]
-                  , commonTV push ("₹" <> getFixedTwoDecimals item.amount) itemConfig.color (FontStyle.h2 TypoGraphy) 0 RIGHT true
+                  , commonTV push "Paid By" Color.black700 (FontStyle.body3 TypoGraphy) 0 RIGHT item.isPaidByYatriCoins
                   , linearLayout
-                      [ height WRAP_CONTENT
-                      , width WRAP_CONTENT
-                      , cornerRadius 24.0
-                      , padding $ Padding 8 4 8 4
-                      , background itemConfig.backgroundColor
-                      , margin $ MarginLeft 4
-                      ] [textView' push Nothing itemConfig.name itemConfig.color Body16 (Just $ PaddingTop 1) Nothing]
+                    [ height WRAP_CONTENT
+                    , width WRAP_CONTENT
+                    , visibility if item.isPaidByYatriCoins then GONE else VISIBLE
+                    ][ commonTV push ("₹" <> getFixedTwoDecimals item.amount) itemConfig.color (FontStyle.h2 TypoGraphy) 0 RIGHT true
+                      , linearLayout
+                        [ height WRAP_CONTENT
+                        , width WRAP_CONTENT
+                        , cornerRadius 24.0
+                        , padding $ Padding 8 4 8 4
+                        , background itemConfig.backgroundColor
+                        , margin $ MarginLeft 4
+                        ] [textView' push Nothing itemConfig.name itemConfig.color Body16 (Just $ PaddingTop 1) Nothing]
+                     ]
                   ]
                 , linearLayout
                   [ height WRAP_CONTENT
@@ -211,12 +217,13 @@ paymentList push state =
                             [ width $ V 12
                             , height $ V 12
                             , margin (MarginRight 4)
-                            , imageWithFallback $ fetchImage FF_ASSET "ny_ic_upi_logo"
+                            , imageWithFallback $ fetchImage FF_ASSET if item.isPaidByYatriCoins then "ny_ic_yatri_coin" else "ny_ic_upi_logo"
                             ]
+                          , commonTV push "Yatri Coins" Color.black900 (FontStyle.body3 TypoGraphy) 0 RIGHT item.isPaidByYatriCoins
                           , commonTV push (case item.feeType of 
                                             AUTOPAY_PAYMENT -> (getString UPI_AUTOPAY_S)
                                             AUTOPAY_REGISTRATION -> (getString UPI_AUTOPAY_SETUP)
-                                            _ -> "UPI") Color.black700 (FontStyle.tags TypoGraphy) 0 CENTER true
+                                            _ -> "UPI") Color.black700 (FontStyle.tags TypoGraphy) 0 CENTER (not item.isPaidByYatriCoins)
                           ]
                   ]
               ]
@@ -391,6 +398,7 @@ transactionDetails push state visibility' =
                 ](DA.mapWithIndex (\ index item ->
                   transactionHistoryRow push item.title index (DA.length state.data.transactionDetails.details) (item.val /= "") $ case item.key of
                     "OFFER" -> if item.val /= "" then promoCodeView push (fromMaybe dummyPromoConfig ((getPromoConfig [OfferEntity {title : Just item.val, description : Nothing, tnc : Nothing, offerId : "", gradient : Nothing}] state.data.gradientConfig) DA.!! 0)) else rightItem push "N/A" false false
+                    "COIN_DISCOUNT" -> if item.val /= "" then promoCodeView push (coinsOfferConfig item.val) else rightItem push "N/A" false false
                     "TXN_ID" -> rightItem push item.val false true
                     "PAYMENT_MODE" -> rightItem push item.val true false
                     _ -> commonTV push item.val Color.black900 (FontStyle.body6 TypoGraphy) 0 RIGHT (item.val /= "")
@@ -493,6 +501,13 @@ promoCodeView push config =
      ] <> case config.title of
           Nothing -> [visibility GONE]
           Just txt -> [text txt]
+   , imageView 
+     [ width $ V 12
+     , height $ V 12
+     , margin $ MarginLeft 3
+     , imageWithFallback $ fetchImage FF_ASSET "ny_ic_yatri_coin"
+     , visibility if config.isPaidByYatriCoins then VISIBLE else GONE
+     ]
   ]
 
 rightItem :: forall w. (Action -> Effect Unit) -> String -> Boolean -> Boolean -> PrestoDOM (Effect Unit) w 

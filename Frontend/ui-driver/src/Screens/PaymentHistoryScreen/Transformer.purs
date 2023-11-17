@@ -73,6 +73,11 @@ buildTransactionDetails (API.HistoryEntryDetailsEntityV2Resp resp) gradientConfi
                     key : "OFFER",
                     title : getString OFFER,
                     val : planOfferData.offer
+                  },
+                  {
+                    key : "COIN_DISCOUNT",
+                    title : "Discount",
+                    val : getFixedTwoDecimals 1.0--fromMaybe 0.0 driverFee'.coinDiscountAmount
                   }
                 ]
               false -> []
@@ -123,7 +128,8 @@ buildTransactionDetails (API.HistoryEntryDetailsEntityV2Resp resp) gradientConfi
                                 id : show ind,
                                 scheduledAt : if (resp.feeType == AUTOPAY_REGISTRATION && isJust  resp.executionAt) then Just (convertUTCtoISC (fromMaybe "" resp.executionAt) "Do MMM YYYY, h:mm A") else Nothing,
                                 paymentMode : resp.feeType,
-                                paymentStatus :  if resp.feeType == AUTOPAY_REGISTRATION then Just (autoPayStageData.stage) else Nothing
+                                paymentStatus :  if resp.feeType == AUTOPAY_REGISTRATION then Just (autoPayStageData.stage) else Nothing,
+                                amountPaidByYatriCoins : Just 1.0--driverFee.coinDiscountAmount,
                             }
                             ) filteredDriverFees
                         false -> []          
@@ -176,6 +182,20 @@ dummyDriverFee =
       isSplit : false,
       offerAndPlanDetails : Just "",
       rideTakenOn : "",
-      driverFeeAmount : 0.0
+      driverFeeAmount : 0.0,
+      isCoinCleared : false,
+      coinDiscountAmount : Nothing
   }
 
+coinsOfferConfig :: String -> PromoConfig
+coinsOfferConfig amount = 
+    {  
+    title : Just $ "₹" <> amount <> " paid by Yatri Coins",
+    isGradient : true,
+    gradient : ["#FFF8EE", "#FFEBCC"],
+    hasImage : false,
+    imageURL : "",
+    offerDescription : Nothing,
+    addedFromUI : true,
+    isPaidByYatriCoins : true
+    }

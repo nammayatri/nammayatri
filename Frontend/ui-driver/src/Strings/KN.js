@@ -968,7 +968,9 @@ const kannadaStrings = {
   GUARANTEED_FIXED_PRICE : "ಜನವರಿ 1, 2025 ರವರೆಗೆ ಖಾತರಿಪಡಿಸಿದ ಸ್ಥಿರ ಬೆಲೆ",
   INTRODUCTORY_OFFER_TO_BE_ANNOUNCED_SOON : "ಪರಿಚಯಾತ್ಮಕ ಕೊಡುಗೆಯನ್ನು ಶೀಘ್ರದಲ್ಲೇ ಪ್ರಕಟಿಸಲಾಗುವುದು!",
   NO_CHARGES_TILL : "ಡಿಸೆಂಬರ್ 31 ರವರೆಗೆ ಯಾವುದೇ ಶುಲ್ಕಗಳಿಲ್ಲ",
-  AND : " ಮತ್ತು "
+  AND : " ಮತ್ತು ",
+  EARNINGS : "ಗಳಿಕೆ",
+  YATRI_COINS : "ಯಾತ್ರಿ ನಾಣ್ಯಗಳು"
 }
 
 

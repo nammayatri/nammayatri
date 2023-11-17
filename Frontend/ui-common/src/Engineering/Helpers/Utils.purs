@@ -159,6 +159,12 @@ saveObject objName obj =
   doAff do
     (fromEffectFnAff <<< saveToLocalStore' objName $ (serialize obj))
 
+initializeCalendar :: Boolean -> ModifiedCalendarObject
+initializeCalendar selectTodaysDate = do
+  let currentDay = getCurrentDay ""
+  let weeks = getWeeksInMonth currentDay.year currentDay.intMonth
+  if selectTodaysDate then (selectSingleCalendarDate currentDay Nothing Nothing weeks)
+  else { selectedTimeSpan : currentDay, weeks : weeks, startDate : Nothing, endDate : Nothing }
 
 decrementCalendarMonth :: CalendarModalDateObject ->  Maybe CalendarModalDateObject ->  Maybe CalendarModalDateObject -> ModifiedCalendarObject
 decrementCalendarMonth selectedTimeSpan startDate endDate  = do
