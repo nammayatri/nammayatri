@@ -503,7 +503,12 @@ updateAutoPayToManual driverFeeId = do
       Se.Set BeamDF.status PAYMENT_OVERDUE,
       Se.Set BeamDF.updatedAt now
     ]
-    [Se.Is BeamDF.id (Se.Eq driverFeeId.getId)]
+    [ Se.And
+        [ Se.Is BeamDF.id (Se.Eq driverFeeId.getId),
+          Se.Is BeamDF.status $ Se.Eq PAYMENT_PENDING,
+          Se.Is BeamDF.feeType $ Se.Eq RECURRING_EXECUTION_INVOICE
+        ]
+    ]
 
 updateManualToAutoPay :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DriverFee -> m ()
 updateManualToAutoPay driverFeeId = do
@@ -538,7 +543,13 @@ updateAllExecutionPendingToManualOverdueByDriverId :: (MonadFlow m, EsqDBFlow m 
 updateAllExecutionPendingToManualOverdueByDriverId driverId = do
   updateWithKV
     [Se.Set BeamDF.feeType RECURRING_INVOICE, Se.Set BeamDF.status PAYMENT_OVERDUE]
-    [Se.And [Se.Is BeamDF.driverId (Se.Eq driverId.getId), Se.Is BeamDF.status $ Se.Eq PAYMENT_PENDING, Se.Is BeamDF.feeType $ Se.Eq RECURRING_EXECUTION_INVOICE]]
+    [ Se.And
+        [ Se.Is BeamDF.driverId (Se.Eq driverId.getId),
+          Se.Is BeamDF.status $ Se.Eq PAYMENT_PENDING,
+          Se.Is BeamDF.feeType $ Se.Eq RECURRING_EXECUTION_INVOICE,
+          Se.Is BeamDF.autopayPaymentStage $ Se.Not $ Se.Eq (Just EXECUTION_ATTEMPTING)
+        ]
+    ]
 
 instance FromTType' BeamDF.DriverFee DriverFee where
   fromTType' BeamDF.DriverFeeT {..} = do
