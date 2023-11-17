@@ -1,7 +1,7 @@
 module Screens.TicketBookingScreen.Controller where
 
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppScreenEvent)
-import Prelude (class Show, discard, pure, unit, bind, ($), not, (+), (-), (==), (*), (<>), show, (+), (==), (-), show)
+import Prelude (class Show, discard, pure, unit, bind, ($), not, (+), (-), (==), (*), (<>), show, void, (+), (==), (-), show)
 import PrestoDOM (Eval, continue, exit, updateAndExit, continueWithCmd, continueWithCmd)
 import Screens (ScreenName(..), getScreen)
 import PrestoDOM.Types.Core (class Loggable)
@@ -15,10 +15,11 @@ import Components.PrimaryButton as PrimaryButton
 import Effect.Uncurried(runEffectFn4)
 import Debug (spy)
 import Helpers.Utils (generateQR)
-import Data.Array (length, (!!))
+import Data.Array (length, head, (!!))
 import Data.Maybe (Maybe(..))
 import Engineering.Helpers.Commons(getNewIDWithTag)
 import Resources.Constants
+import Services.API (TicketPlaceResponse(..))
 
 instance showAction :: Show Action where
   show _ = ""
@@ -29,6 +30,7 @@ instance loggableAction :: Loggable Action where
     _ -> pure unit
     
 data Action = AfterRender
+            | UpdatePlacesData (Maybe TicketPlaceResponse)
             | GenericHeaderAC GenericHeader.Action 
             | PrimaryButtonAC PrimaryButton.Action
             | ShareTicketAC PrimaryButton.Action
@@ -137,6 +139,14 @@ eval (PrimaryButtonAC (PrimaryButton.OnClick)) state = do
 
 eval (GenericHeaderAC (GenericHeader.PrefixImgOnClick)) state = continueWithCmd state [do pure BackPressed]
 
+eval (UpdatePlacesData Nothing) state = do
+  let newState = state { data { placeInfo = Nothing }, props { showShimmer = false } }
+  continue newState
+
+eval (UpdatePlacesData (Just (TicketPlaceResponse placesData))) state = do
+  let newState = state { data { placeInfo = head placesData }, props { showShimmer = false } }
+  continue newState
+
 eval BackPressed state = 
   case state.props.currentStage of 
     DescriptionStage -> exit GoToHomeScreen 
@@ -166,7 +176,7 @@ eval IncrementSliderIndex state = do
     Nothing -> continue state
 
 eval DecrementSliderIndex state = do
-  let len = length state.props.selectedBookingInfo.services
+  let _ = length state.props.selectedBookingInfo.services
       activeItem = state.props.selectedBookingInfo.services !! (state.props.activeIndex - 1)
   case activeItem of
     Just item -> continueWithCmd state{props{rightButtonDisable = false, leftButtonDisable = (state.props.activeIndex - 1) == 0, activeListItem = item, activeIndex = state.props.activeIndex - 1}} [ do

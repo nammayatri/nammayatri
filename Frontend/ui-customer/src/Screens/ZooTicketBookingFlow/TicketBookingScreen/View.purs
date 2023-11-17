@@ -11,12 +11,12 @@ import Components.PrimaryButton as PrimaryButton
 import Data.Array as DA
 import Data.Foldable (or)
 import Effect (Effect)
-import Engineering.Helpers.Commons (screenWidth)
+import Engineering.Helpers.Commons (screenWidth, flowRunner)
 import Font.Style as FontStyle
 import Helpers.Utils (fetchImage, FetchImageFrom(..), decodeError, fetchAndUpdateCurrentLocation, getAssetsBaseUrl, getCurrentLocationMarker, getLocationName, getNewTrackingId, getPreviousVersion, getSearchType, parseFloat, storeCallBackCustomer)
 import JBridge as JB
-import Prelude (Unit, bind, const, pure, unit, ($), (&&), (/=), (<<<), (<>), (==), map, show, (||), show, (-))
-import PrestoDOM (FlexWrap(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Prop, Screen, Visibility(..), afterRender, alignParentBottom, background, color, cornerRadius, fontStyle, gravity, height, imageUrl, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, relativeLayout, scrollView, stroke, text, textFromHtml, textSize, textView, visibility, weight, width, clickable, id)
+import Prelude (Unit, discard, void, bind, const, pure, unit, ($), (&&), (/=), (<<<), (<>), (==), map, show, (||), show, (-))
+import PrestoDOM (FlexWrap(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Prop, Screen, Visibility(..), shimmerFrameLayout, afterRender, alignParentBottom, background, color, cornerRadius, fontStyle, gravity, height, imageUrl, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, relativeLayout, scrollView, stroke, text, textFromHtml, textSize, textView, visibility, weight, width, clickable, id)
 import PrestoDOM.Animation as PrestoAnim
 import Screens.TicketBookingScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.Types as ST
@@ -24,101 +24,199 @@ import Styles.Colors as Color
 import Screens.TicketBookingScreen.ComponentConfig 
 import Resources.Constants -- TODO:: Replace these constants with API response
 import Engineering.Helpers.Commons (screenWidth, convertUTCtoISC, getNewIDWithTag)
-import Services.API (BookingStatus(..))
+import Services.API (BookingStatus(..), TicketPlaceResp(..))
 import Animation (fadeInWithDelay, translateInXBackwardAnim, translateInXBackwardFadeAnimWithDelay, translateInXForwardAnim, translateInXForwardFadeAnimWithDelay)
 import Halogen.VDom.DOM.Prop (Prop)
-import Data.Array as DA
+import Data.Array ((..))
 import Data.Maybe (fromMaybe, Maybe(..))
 import Debug
+import Effect.Aff (launchAff)
+import Types.App (defaultGlobalState)
+import Control.Monad.Except.Trans (runExceptT , lift)
+import Control.Transformers.Back.Trans (runBackT)
+import Services.Backend as Remote
+import Data.Either (Either(..))
+import Presto.Core.Types.Language.Flow (doAff)
+import Effect.Class (liftEffect)
 
 screen :: ST.TicketBookingScreenState -> Screen Action ST.TicketBookingScreenState ScreenOutput
 screen initialState =
   { initialState
   , view
   , name : "TicketBookingScreen"
-  , globalEvents : []
+  , globalEvents : [getPlaceDataEvent]
   , eval :
     \action state -> do
         let _ = spy "ZooTicketBookingFlow action " action
         let _ = spy "ZooTicketBookingFlow state " state
         eval action state
   }
+  where
+  getPlaceDataEvent push = do
+    void $ launchAff $ flowRunner defaultGlobalState $ runExceptT $ runBackT $ getPlaceDataEvent' push
+    pure (pure unit)
+
+  getPlaceDataEvent' push = do
+    if initialState.props.currentStage == ST.DescriptionStage then do
+      placesResp <- Remote.getTicketPlacesBT ""
+      lift $ lift $ doAff do liftEffect $ push $ UpdatePlacesData (Just placesResp)
+    else lift $ lift $ doAff do liftEffect $ push $ UpdatePlacesData Nothing
 
 view :: forall w . (Action -> Effect Unit) -> ST.TicketBookingScreenState -> PrestoDOM (Effect Unit) w
 view push state =
   Anim.screenAnimation $ relativeLayout
-  [ height MATCH_PARENT
-  , width MATCH_PARENT
-  , background Color.white900
-   ][
-    linearLayout 
-    [ height WRAP_CONTENT
+    [ height MATCH_PARENT
     , width MATCH_PARENT
     , background Color.white900
-    , orientation VERTICAL
-    , margin $ MarginBottom if bookingStatus then 0 else 84
-    ][ if bookingStatus then linearLayout[visibility GONE][] else GenericHeader.view (push <<< GenericHeaderAC) (genericHeaderConfig state)
-    , linearLayout
-      [ height $ V 1 
-      , width MATCH_PARENT
-      , background Color.grey900][]
-    , separatorView Color.greySmoke
-    , scrollView[
-        height WRAP_CONTENT
-      , width MATCH_PARENT
-      , background Color.white900
-      ][  linearLayout
-          [height MATCH_PARENT
-          , width MATCH_PARENT
-          , gravity CENTER
-          , orientation VERTICAL
-          , padding $ PaddingBottom 20]
-          ( if state.props.currentStage == ST.DescriptionStage then 
-          [ imageView
-            [ height $ V 370
-            , width MATCH_PARENT
-            , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_animal_1" 
-            , margin $ MarginBottom 15
-            ]
-          , descriptionView state push ]
-        else if state.props.currentStage == ST.ChooseTicketStage then [ chooseTicketsView state push ]
-        else if state.props.currentStage == ST.BookingConfirmationStage then [ bookingStatusView state push state.props.paymentStatus ]
-        else if state.props.currentStage == ST.ViewTicketStage then [ ticketsListView state push ]
-        else if state.props.currentStage == ST.TicketInfoStage then [ individualBookingInfoView state push]
-        else [])]
     ]
-    , if bookingStatus then actionButtons state push state.props.paymentStatus else 
-    linearLayout
-      [ height WRAP_CONTENT
-      , width MATCH_PARENT
-      , alignParentBottom "true,-1"
-      , margin $ MarginBottom 16
-      , orientation VERTICAL
-      , background Color.white900
-      , visibility $ if state.props.currentStage == ST.TicketInfoStage then GONE else VISIBLE
-      ][  linearLayout  
-          [height $ V 1
+    [ shimmerView state
+    , linearLayout 
+        [ height WRAP_CONTENT
+        , width MATCH_PARENT
+        , background Color.white900
+        , orientation VERTICAL
+        , visibility if (state.props.currentStage == ST.DescriptionStage && state.props.showShimmer) then GONE else VISIBLE
+        , margin $ MarginBottom if state.props.currentStage == ST.BookingConfirmationStage then 0 else 84
+        ]
+        [ headerView state push
+        , linearLayout
+          [ height $ V 1 
           , width MATCH_PARENT
-          , margin $ MarginBottom 16
-          , background Color.grey900][]
-        , PrimaryButton.view (push <<< PrimaryButtonAC) (primaryButtonConfig state)
-      ]
-  ]
-  where bookingStatus = state.props.currentStage == ST.BookingConfirmationStage
+          , background Color.grey900
+          ] []
+        , separatorView Color.greySmoke
+        , scrollView
+            [ height WRAP_CONTENT
+            , width MATCH_PARENT
+            , background Color.white900
+            ]
+            [ linearLayout
+                [ height WRAP_CONTENT
+                , width MATCH_PARENT
+                , gravity CENTER
+                , orientation VERTICAL
+                , padding $ PaddingBottom 20
+                ]
+                (mainView state push)
+            ]
+        ]
+    , actionsView state push
+    ]
+  where
+  actionsView state push =
+    case state.props.currentStage of
+      ST.BookingConfirmationStage -> bookingConfirmationActions state push state.props.paymentStatus
+      ST.TicketInfoStage -> linearLayout [ visibility GONE ] []
+      ST.DescriptionStage -> generalActionButtons state push
+      _ -> generalActionButtons state push
 
-descriptionView :: forall w. ST.TicketBookingScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
-descriptionView state push = 
+  headerView state push =
+    case state.props.currentStage of
+      ST.BookingConfirmationStage -> linearLayout [ visibility GONE ][]
+      _ -> GenericHeader.view (push <<< GenericHeaderAC) (genericHeaderConfig state)
+
+  mainView state push =
+    if (state.props.currentStage == ST.DescriptionStage) 
+      then
+        case state.data.placeInfo of
+          Just placeInfo -> descriptionStateMainView state push placeInfo
+          Nothing -> [ noDataView state push ]
+    else if (state.props.currentStage == ST.ChooseTicketStage) then [ chooseTicketsView state push ]
+    else if (state.props.currentStage == ST.BookingConfirmationStage) then [ bookingStatusView state push state.props.paymentStatus ]
+    else if (state.props.currentStage == ST.ViewTicketStage) then [ ticketsListView state push ]
+    else if (state.props.currentStage == ST.TicketInfoStage) then [ individualBookingInfoView state push ]
+    else []
+
+  descriptionStateMainView state push placeInfo =
+      [ imageView
+          [ height $ V 370
+          , width MATCH_PARENT
+          , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_animal_1" 
+          , margin $ MarginBottom 15
+          ]
+      , descriptionView state push placeInfo
+      ]
+  
+  noDataView state push =
+    linearLayout
+      [ height MATCH_PARENT
+      , width MATCH_PARENT
+      , orientation VERTICAL
+      , gravity CENTER
+      , margin $ MarginHorizontal 16 16
+      ]
+      [ textView $
+        [ text "No ticketing zones in this area"
+        , color Color.black900
+        ] <> FontStyle.h3 TypoGraphy 
+      ]
+
+shimmerView :: forall w . ST.TicketBookingScreenState -> PrestoDOM (Effect Unit) w
+shimmerView state =
+  shimmerFrameLayout
+    [ width MATCH_PARENT
+    , height MATCH_PARENT
+    , orientation VERTICAL
+    , background Color.white900
+    , visibility if state.props.showShimmer then VISIBLE else GONE
+    ]
+    [ linearLayout
+        [ width MATCH_PARENT
+        , height (V 235)
+        , margin (Margin 16 15 16 0)
+        , background Color.greyDark
+        , cornerRadius 16.0
+        ] []
+    , linearLayout
+        [ width MATCH_PARENT
+        , height WRAP_CONTENT
+        , orientation VERTICAL
+        , margin (MarginTop 258)
+        ] (DA.mapWithIndex 
+            (\index item ->
+                linearLayout
+                  [ width MATCH_PARENT
+                  , height (V 60)
+                  , margin (Margin 16 16 16 0)
+                  , cornerRadius 12.0
+                  , background Color.greyDark
+                  ][]
+            ) (1 .. 7)
+          )
+    ]
+
+generalActionButtons :: forall w. ST.TicketBookingScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+generalActionButtons state push =
+  linearLayout
+    [ height WRAP_CONTENT
+    , width MATCH_PARENT
+    , alignParentBottom "true,-1"
+    , margin $ MarginBottom 16
+    , orientation VERTICAL
+    , background Color.white900
+    ]
+    [ linearLayout  
+        [ height $ V 1
+        , width MATCH_PARENT
+        , margin $ MarginBottom 16
+        , background Color.grey900
+        ][]
+    , PrimaryButton.view (push <<< PrimaryButtonAC) (primaryButtonConfig state)
+    ]
+
+descriptionView :: forall w. ST.TicketBookingScreenState -> (Action -> Effect Unit) -> TicketPlaceResp -> PrestoDOM (Effect Unit) w
+descriptionView state push (TicketPlaceResp placeInfo) = 
   linearLayout[
     height MATCH_PARENT
   , width MATCH_PARENT
   , orientation VERTICAL
   , margin $ MarginHorizontal 16 16 
   ][  textView $ 
-      [ text "Zoological Garden, Alipore"
+      [ text placeInfo.name
       , color Color.black900
       ] <> FontStyle.h3 TypoGraphy 
     , textView $ 
-      [ text "The Zoological Garden, Alipore is India's oldest formally stated zoological park (as opposed to royal and British menageries) and a big tourist attraction in Kolkata, West Bengal."
+      [ text (fromMaybe placeInfo.name placeInfo.description)
       , color Color.black800 
       ] <> FontStyle.body1 TypoGraphy 
     , locationView state push 
@@ -931,8 +1029,8 @@ bookingStatusBody state push paymentStatus =
       ]
   ]
 
-actionButtons :: forall w. ST.TicketBookingScreenState -> (Action -> Effect Unit) -> Common.PaymentStatus -> PrestoDOM (Effect Unit) w
-actionButtons state push paymentStatus = 
+bookingConfirmationActions :: forall w. ST.TicketBookingScreenState -> (Action -> Effect Unit) -> Common.PaymentStatus -> PrestoDOM (Effect Unit) w
+bookingConfirmationActions state push paymentStatus = 
   linearLayout
   [ width MATCH_PARENT
   , gravity CENTER
