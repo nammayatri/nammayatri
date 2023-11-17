@@ -111,7 +111,8 @@ type BottomNavConfig = {
   rideHistory :: BottomNavItemConfig,
   subscription :: BottomNavItemConfig,
   referral :: BottomNavItemConfig,
-  notifications :: BottomNavItemConfig
+  notifications :: BottomNavItemConfig,
+  driverEarnings :: BottomNavItemConfig
 }
 
 type BottomNavItemConfig = {

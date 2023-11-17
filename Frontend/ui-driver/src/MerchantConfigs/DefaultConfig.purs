@@ -86,6 +86,10 @@ config =
           showNew : false
         },
       rideHistory : 
+        { isVisible : false,
+          showNew : false
+        },
+      driverEarnings : 
         { isVisible : true,
           showNew : false
         },

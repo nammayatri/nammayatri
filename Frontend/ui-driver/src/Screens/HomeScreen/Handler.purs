@@ -138,3 +138,11 @@ homeScreen = do
     RefreshGoTo updatedState -> do
       modifyScreenState $ HomeScreenStateType (\_ → updatedState)
       App.BackT $ App.BackPoint <$> (pure $ REFRESH_GOTO updatedState)
+    EarningsScreen updatedState -> do 
+      modifyScreenState $ HomeScreenStateType (\_ -> updatedState)
+      App.BackT $ App.BackPoint <$> (pure $ HOMESCREEN_NAV GoToEarningsScreen)
+-- DTHS.GoToStart screenState -> do
+--       (Location startRideCurrentLat startRideCurrentLiong) <- spy "george2" <$> (lift $ lift $ doAff $ makeAff \cb -> getCurrentPosition (cb <<< Right) Location $> nonCanceler)
+--       _ <- pure $ spy "lat handler" startRideCurrentLat
+--       _ <- pure $ spy "lon handler" startRideCurrentLong
+--       App.BackT $ App.BackPoint <$> (pure $ ReachedPickUp screenState startRideCurrentLat startRideCurrentLong)

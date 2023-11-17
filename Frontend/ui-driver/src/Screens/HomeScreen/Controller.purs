@@ -248,6 +248,7 @@ data ScreenOutput =   Refresh ST.HomeScreenState
                     | DisableGoto ST.HomeScreenState
                     | ExitGotoLocation ST.HomeScreenState
                     | RefreshGoTo ST.HomeScreenState
+                    | EarningsScreen ST.HomeScreenState
 
 data Action = NoAction
             | BackPressed
@@ -333,6 +334,7 @@ data Action = NoAction
             | UpdateAndNotify ST.Location Boolean
             | UpdateWaitTime ST.TimerStatus
             | NotifyAPI
+            | CoinsPopupAC PopUpModal.Action 
             
 
 eval :: Action -> ST.HomeScreenState -> Eval Action ScreenOutput ST.HomeScreenState
@@ -445,6 +447,7 @@ eval (BottomNavBarAction (BottomNavBar.OnNavigate item)) state = do
   case item of
     "Rides" -> exit $ GoToRidesScreen state
     "Profile" -> exit $ GoToProfileScreen state
+    "Earnings" ->  exit $ EarningsScreen state
     "Alert" -> do
       _ <- pure $ setValueToLocalNativeStore ALERT_RECEIVED "false"
       let _ = unsafePerformEffect $ logEvent state.data.logField "ny_driver_alert_click"
@@ -932,6 +935,10 @@ eval (RatingCardAC (RatingCard.PrimaryButtonAC PrimaryButtonController.OnClick))
 eval (RCDeactivatedAC PopUpModal.OnButton1Click) state = exit $ GoToVehicleDetailScreen state 
 
 eval (RCDeactivatedAC PopUpModal.OnButton2Click) state = continue state {props {rcDeactivePopup = false}}
+
+eval (CoinsPopupAC PopUpModal.OnButton1Click) state = exit $ EarningsScreen state
+
+eval (CoinsPopupAC PopUpModal.OnButton2Click) state = continue state {props {showCoinsPopup = false}}
 
 eval (AccessibilityBannerAction (Banner.OnClick)) state = continue state{props{showGenericAccessibilityPopUp = true}}
 

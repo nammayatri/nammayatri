@@ -974,7 +974,9 @@ const bengaliStrings = {
   YES_CANCEL : "হ্যাঁ, বাতিল",
   AUTOPAY_CANCELLED : "অটোপে বাতিল করা হয়েছে",
   YOUR_DUES_DESCRIPTION_MANUAL : "নিরবচ্ছিন্ন রাইডগুলি চালিয়ে যেতে সীমাতে পৌঁছানোর আগে অনুগ্রহ করে আপনার বকেয়া পরিশোধ করুন৷ আপনি সহজে, ঝামেলামুক্ত অর্থপ্রদানের জন্য <b>একটি UPI অটোপে সেট আপ</b> করতে পারেন।",
-  AND : " এবং "
+  AND : " এবং ",
+  EARNINGS : "উপার্জন",
+  YATRI_COINS : "ইয়াত্রি কয়েন"
 }
 
 export function getStringValue(key) {

@@ -996,7 +996,9 @@ const hindiStrings = {
   GUARANTEED_FIXED_PRICE : "1 जनवरी 2025 तक कीमत में कोई बदलाव नहीं।",
   INTRODUCTORY_OFFER_TO_BE_ANNOUNCED_SOON : "परिचयात्मक ऑफर की घोषणा जल्द ही की जाएगी!",
   NO_CHARGES_TILL : "31 दिसंबर तक कोई शुल्क नहीं",
-  AND : " और "
+  AND : " और ",
+  EARNINGS : "आय",
+  YATRI_COINS : "यात्री सिक्के"
 }
 
 

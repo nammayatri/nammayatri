@@ -969,7 +969,9 @@ const tamilStrings = {
   GUARANTEED_FIXED_PRICE : "ஜனவரி 1, 2025 வரை நிலையான விலைக்கு உத்தரவாதம்",
   INTRODUCTORY_OFFER_TO_BE_ANNOUNCED_SOON : "அறிமுக சலுகை விரைவில் அறிவிக்கப்படும்!",
   NO_CHARGES_TILL : "டிசம்பர் 31 வரை கட்டணம் இல்லை",
-  AND : " மற்றும் "
+  AND : " மற்றும் ",
+  EARNINGS : "வருவாய்",
+  YATRI_COINS : "யாத்திரி நாணயங்கள்"
 }
 
 export function getStringValue(key) {

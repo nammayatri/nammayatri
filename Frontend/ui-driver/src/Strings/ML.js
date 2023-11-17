@@ -941,7 +941,9 @@ const mlStrings = {
   NO : "ഇല്ല",
   YES_CANCEL : "അതെ, റദ്ദാക്കുക",
   AUTOPAY_CANCELLED : "ഓട്ടോപേ റദ്ദാക്കി",
-  AND : " ഒപ്പം "
+  AND : " ഒപ്പം ",
+  EARNINGS : "വരുമാനം",
+  YATRI_COINS : "യാത്രി നാണയങ്ങൾ"
 }
 
 export function getStringValue(key) {

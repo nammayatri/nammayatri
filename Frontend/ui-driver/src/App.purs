@@ -19,7 +19,7 @@ import Control.Transformers.Back.Trans (BackT)
 import Control.Monad.Except.Trans (ExceptT)
 import Control.Monad.Free (Free)
 import Presto.Core.Types.Language.Flow (FlowWrapper)
-import Screens.Types (AadhaarVerificationScreenState, AboutUsScreenState, ActiveRide,BookingOptionsScreenState, AddVehicleDetailsScreenState, AppUpdatePopUpScreenState, ApplicationStatusScreenState, BankDetailScreenState, CategoryListType, ChooseLanguageScreenState, DriverDetailsScreenState, DriverProfileScreenState, DriverRideRatingScreenState, DriverStatus, EditAadhaarDetailsScreenState, EditBankDetailsScreenState, EnterMobileNumberScreenState, EnterOTPScreenState, HelpAndSupportScreenState, HomeScreenState, IndividualRideCardState, NoInternetScreenState, NotificationsScreenState, PermissionsScreenState, PopUpScreenState, ReferralScreenState, RegistrationScreenState, ReportIssueChatScreenState, RideDetailScreenState, RideHistoryScreenState, RideSelectionScreenState, SelectLanguageScreenState, SplashScreenState, TripDetailsScreenState, UploadAdhaarScreenState, UploadDrivingLicenseState, VehicleDetailsScreenState, WriteToUsScreenState, AcknowledgementScreenState, UpdatePopupType(..), SubscriptionScreenState, OnBoardingSubscriptionScreenState, PaymentHistoryScreenState, HomeScreenStage(..), GlobalProps, DriverSavedLocationScreenState, GoToPopUpType(..))
+import Screens.Types (AadhaarVerificationScreenState, AboutUsScreenState, ActiveRide,BookingOptionsScreenState, AddVehicleDetailsScreenState, AppUpdatePopUpScreenState, ApplicationStatusScreenState, BankDetailScreenState, CategoryListType, ChooseLanguageScreenState, DriverDetailsScreenState, DriverProfileScreenState, DriverRideRatingScreenState, DriverStatus, EditAadhaarDetailsScreenState, EditBankDetailsScreenState, EnterMobileNumberScreenState, EnterOTPScreenState, HelpAndSupportScreenState, HomeScreenState, IndividualRideCardState, NoInternetScreenState, NotificationsScreenState, PermissionsScreenState, PopUpScreenState, ReferralScreenState, RegistrationScreenState, ReportIssueChatScreenState, RideDetailScreenState, RideHistoryScreenState, RideSelectionScreenState, SelectLanguageScreenState, SplashScreenState, TripDetailsScreenState, UploadAdhaarScreenState, UploadDrivingLicenseState, VehicleDetailsScreenState, WriteToUsScreenState, AcknowledgementScreenState, UpdatePopupType(..), SubscriptionScreenState, OnBoardingSubscriptionScreenState, PaymentHistoryScreenState, HomeScreenStage(..), GlobalProps, DriverSavedLocationScreenState, GoToPopUpType(..), DriverEarningsSubView(..), DriverEarningsScreenState(..))
 import Screens.ChooseLanguageScreen.ScreenData as ChooseLanguageScreenData
 import Screens.EnterMobileNumberScreen.ScreenData as EnterMobileNumberScreenData
 import Screens.AadhaarVerificationScreen.ScreenData as EnterAadhaarNumberScreenData
@@ -31,6 +31,7 @@ import Screens.UploadAdhaarScreen.ScreenData as UploadAdhaarScreenData
 import Screens.ApplicationStatusScreen.ScreenData as ApplicationStatusScreenData
 import Screens.TripDetailsScreen.ScreenData as TripDetailsScreenData
 import Screens.RideHistoryScreen.ScreenData as RideHistoryScreenData
+import Screens.DriverEarningsScreen.ScreenData as DriverEarningsScreenData
 import Screens.RideSelectionScreen.ScreenData as RideSelectionScreenData
 import Screens.BankDetailScreen.ScreenData as BankDetailScreenData
 import Screens.DriverProfileScreen.ScreenData as DriverProfileScreenData
@@ -103,6 +104,7 @@ newtype GlobalState = GlobalState {
   , onBoardingSubscriptionScreen :: OnBoardingSubscriptionScreenState
   , paymentHistoryScreen :: PaymentHistoryScreenState
   , driverSavedLocationScreen :: DriverSavedLocationScreenState
+  , driverEarningsScreen :: DriverEarningsScreenState
   }
 
 defaultGlobalState :: GlobalState
@@ -147,6 +149,7 @@ defaultGlobalState = GlobalState {
 , onBoardingSubscriptionScreen : OnBoardingSubscriptionScreenData.initData
 , paymentHistoryScreen : PaymentHistoryScreenData.initData
 , driverSavedLocationScreen : DriverSavedLocationScreenData.initData
+, driverEarningsScreen : DriverEarningsScreenData.initData
 }
 
 defaultGlobalProps :: GlobalProps
@@ -197,6 +200,7 @@ data ScreenType =
   | OnBoardingSubscriptionScreenStateType (OnBoardingSubscriptionScreenState -> OnBoardingSubscriptionScreenState)
   | PaymentHistoryScreenStateType (PaymentHistoryScreenState -> PaymentHistoryScreenState)
   | DriverSavedLocationScreenStateType (DriverSavedLocationScreenState -> DriverSavedLocationScreenState)
+  | DriverEarningsScreenStateType (DriverEarningsScreenState -> DriverEarningsScreenState)
 
 data ScreenStage = HomeScreenStage HomeScreenStage
 
@@ -211,6 +215,10 @@ data MY_RIDES_SCREEN_OUTPUT = HOME_SCREEN
                             | SELECTED_TAB RideHistoryScreenState
                             | OPEN_PAYMENT_HISTORY RideHistoryScreenState
                             | RIDE_HISTORY_NAV NAVIGATION_ACTIONS
+
+data DRIVER_EARNINGS_SCREEN_OUTPUT = EARNINGS_NAV NAVIGATION_ACTIONS
+                                   | CHANGE_SUB_VIEW DriverEarningsSubView
+                                   | CONVERT_COIN_TO_CASH DriverEarningsScreenState
 
 data REFERRAL_SCREEN_OUTPUT = GO_TO_HOME_SCREEN_FROM_REFERRAL_SCREEN
                             | GO_TO_RIDES_SCREEN_FROM_REFERRAL_SCREEN
@@ -344,6 +352,7 @@ data NOTIFICATIONS_SCREEN_OUTPUT = REFRESH_SCREEN NotificationsScreenState
                                     | GO_REFERRAL_SCREEN
                                     | GO_RIDE_HISTORY_SCREEN
                                     | GO_PROFILE_SCREEN
+                                    | GO_EARNINGS_SCREEN
                                     | CHECK_RIDE_FLOW_STATUS
                                     | NOTIFICATION_SCREEN_NAV NAVIGATION_ACTIONS
 
@@ -381,6 +390,7 @@ data NAVIGATION_ACTIONS = HomeScreenNav
                           | GoToSubscription
                           | GoToContest
                           | GoToAlerts
+                          | GoToEarningsScreen
 
 data PAYMENT_HISTORY_SCREEN_OUTPUT = GoToSetupAutoPay PaymentHistoryScreenState
                                     | EntityDetailsAPI PaymentHistoryScreenState String

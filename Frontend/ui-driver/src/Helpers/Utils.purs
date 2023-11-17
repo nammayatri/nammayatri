@@ -72,7 +72,7 @@ import Presto.Core.Types.API (class StandardEncode, standardEncode)
 import Services.API (PromotionPopupConfig)
 import Storage (KeyStore) 
 import JBridge (getCurrentPositionWithTimeout, firebaseLogEventWithParams, translateStringWithTimeout)
-import Effect.Uncurried(EffectFn1, EffectFn4, EffectFn3,runEffectFn3)
+import Effect.Uncurried(EffectFn1, EffectFn4, EffectFn3, EffectFn7, runEffectFn3)
 import Storage (KeyStore(..), isOnFreeTrial, getValueToLocalNativeStore)
 import Styles.Colors as Color
 import Screens.Types (LocalStoreSubscriptionInfo)
@@ -136,6 +136,8 @@ foreign import renewFile :: EffectFn3 String String (AffSuccess Boolean) Unit
 
 foreign import getDateAfterNDays :: Int -> String
 foreign import  downloadQR  :: String -> Effect Unit
+
+foreign import renderSlider :: forall action. EffectFn7 String  (action -> Effect Unit)  (Int -> action)  Number  Int  Int Int Unit
 
 foreign import _generateQRCode :: EffectFn5 String String Int Int (AffSuccess String) Unit
 

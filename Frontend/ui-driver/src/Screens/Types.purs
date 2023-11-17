@@ -962,7 +962,8 @@ type HomeScreenProps =  {
   showContactSupportPopUp :: Boolean,
   showChatBlockerPopUp :: Boolean,
   showGenericAccessibilityPopUp :: Boolean,
-  waitTimeStatus :: TimerStatus
+  waitTimeStatus :: TimerStatus,
+  showCoinsPopup :: Boolean
  }
 
 data SubscriptionBannerType = FREE_TRIAL_BANNER | SETUP_AUTOPAY_BANNER | CLEAR_DUES_BANNER | NO_SUBSCRIPTION_BANNER | DUE_LIMIT_WARNING_BANNER | LOW_DUES_BANNER
@@ -1744,7 +1745,8 @@ type DueItem = {
   plan :: String,
   mode :: FeeType,
   autoPayStage :: Maybe AutopayPaymentStage,
-  isSplit :: Boolean
+  isSplit :: Boolean,
+  amountPaidByYatriCoins :: Maybe Number 
 }
 
 type KioskLocation = {
@@ -1776,6 +1778,7 @@ type PromoConfig = {
   , imageURL :: String
   , offerDescription :: Maybe String
   , addedFromUI :: Boolean
+  , isPaidByYatriCoins :: Boolean
 }
 
 data SubscribePopupType = SuccessPopup | FailedPopup | DuesClearedPopup | CancelAutoPay | SwitchedPlan | SupportPopup | PaymentSuccessPopup
@@ -1846,7 +1849,8 @@ type PaymentListItem = {
   amount :: Number,
   feeType :: FeeType,
   description :: String,
-  ridesTakenDate :: String
+  ridesTakenDate :: String,
+  isPaidByYatriCoins :: Boolean
 }
 
 type ChargeBreakupItem = {
@@ -1874,7 +1878,8 @@ type DueCard = {
   id :: String,
   scheduledAt :: Maybe String,
   paymentMode :: FeeType,
-  paymentStatus :: Maybe String
+  paymentStatus :: Maybe String,
+  amountPaidByYatriCoins :: Maybe Number
 }
 
 type PaymentHistoryScreenProps = {
@@ -1988,3 +1993,68 @@ type Tag = {
   text :: String, 
   textColor :: String
 }
+
+---------------------------------------------------- DriverEarningsScreen ----------------------------------
+
+type DriverEarningsScreenState = {
+  data :: DriverEarningsScreenData,
+  props :: DriverEarningsScreenProps
+}
+
+type DriverEarningsScreenData = {
+  coinsEarned :: Int,
+  coinsUsed :: Int,
+  coinBalance :: Int,
+  coinsEarnedPreviousDay :: Int,
+  coinHistoryItems :: Array CoinHistoryItem,
+  usageHistoryItems :: Array CoinHistoryItem,
+  coinsEarnedToday :: Int,
+  expiringCoins :: Int,
+  expiringDays :: Int,
+  isAutopayActive :: Boolean,
+  timerID :: String,
+  timer :: Int,
+  totalCoinConvertedToCash :: Number,
+  coinConvertedToCashUsedForLatestDues :: Maybe Int,
+  coinConvertedTocashLeft :: Number,
+  coinConversionRate :: Number,
+  coinsToUse :: Int,
+  config :: AppConfig
+}
+type DriverEarningsScreenProps = {
+  subView :: DriverEarningsSubView,
+  date :: String,
+  popupType :: DriverEarningsPopupType,
+  showCoinsRedeemedAnim :: String,
+  calendarState :: CalendarState,
+  showCoinsUsagePopup :: Boolean
+}
+
+type CalendarState = { 
+  calendarPopup :: Boolean,
+  endDate :: Maybe Common.CalendarModalDateObject,
+  selectedTimeSpan :: Common.CalendarModalDateObject,
+  startDate :: Maybe Common.CalendarModalDateObject,
+  weeks  :: Array Common.CalendarModalWeekObject
+}
+
+data DriverEarningsSubView = EARNINGS_VIEW | YATRI_COINS_VIEW | USE_COINS_VIEW
+
+derive instance genericDriverEarningsSubView :: Generic DriverEarningsSubView _
+instance showDriverEarningsSubView :: Show DriverEarningsSubView where show = genericShow
+instance eqDriverEarningsSubView :: Eq DriverEarningsSubView where eq = genericEq
+instance decodeDriverEarningsSubView :: Decode DriverEarningsSubView where decode = defaultEnumDecode
+instance encodeDriverEarningsSubView :: Encode DriverEarningsSubView where encode = defaultEnumEncode
+
+type CoinHistoryItem = {
+  event :: String,
+  timestamp :: String,
+  coins :: Int,
+  cash :: Number
+}
+
+data DriverEarningsPopupType = PLAN_PAID_POPUP | SETUP_AUTOPAY_POPUP | NO_COINS_POPUP | COINS_EXPIRING_POPUP | NO_POPUP
+
+derive instance genericDriverEarningsPopupType :: Generic DriverEarningsPopupType _
+instance showDriverEarningsPopupType :: Show DriverEarningsPopupType where show = genericShow
+instance eqDriverEarningsPopupType :: Eq DriverEarningsPopupType where eq = genericEq

@@ -58,6 +58,7 @@ data ScreenName = SPLASH_SCREEN
                 | ONBOARDING_SUBSCRIPTION_SCREEN
                 | DRIVER_SAVED_LOCATION_SCREEN
                 | TICKET_BOOKING_SCREEN
+                | DRIVER_EARNINGS_SCREEN
 
 derive instance genericScreenName :: Generic ScreenName _
 instance eqScreenName :: Eq ScreenName where eq = genericEq
@@ -84,7 +85,7 @@ getScreen str = case str of
     SELECT_LANGUAGE_SCREEN          -> "select_langauge_screen"
     HELP_AND_SUPPORT_SCREEN         -> "help_and_support_screen"
     VEHICLE_DETAILS_SCREEN          -> "vehicle_details_screen"
-    RIDE_DETAILS_SCREEN              -> "ride_details_screen"
+    RIDE_DETAILS_SCREEN             -> "ride_details_screen"
     EDIT_BANK_DETAILS_SCREEN        -> "edit_bank_details_screen"
     EDIT_AADHAR_DETAILS_SCREEN      -> "edit_aadhar_details_screen"
     TRIP_DETAILS_SCREEN             -> "trip_details_screen"
@@ -94,10 +95,17 @@ getScreen str = case str of
     REFERRAL_SCREEN                 -> "referral_screen"
     APP_UPDATE_POPUP_SCREEN         -> "app_update_popup_screen"
     NO_INTERNET_SCREEN              -> "no_internet_screen"
-    POPUP_SCREEEN                  -> "popup_screen"
-    ALERTS_SCREEN                  -> "alerts_screen"
-    ACKNOWLEDGEMENT_SCREEN         -> "acknowledgement_screen"
-    AADHAAR_VERIFICATION_SCREEN    -> "aadhaar_verification_screen"
-    SUBSCRIPTION_SCREEN            -> "subscription_screen"
-    ONBOARDING_SUBSCRIPTION_SCREEN -> "onboarding_subscription_screen"
-    DRIVER_SAVED_LOCATION_SCREEN   -> "driver_saved_location_screen"
+    POPUP_SCREEEN                   -> "popup_screen"
+    ALERTS_SCREEN                   -> "alerts_screen"
+    ACKNOWLEDGEMENT_SCREEN          -> "acknowledgement_screen"
+    AADHAAR_VERIFICATION_SCREEN     -> "aadhaar_verification_screen"
+    SUBSCRIPTION_SCREEN             -> "subscription_screen"
+    ONBOARDING_SUBSCRIPTION_SCREEN  -> "onboarding_subscription_screen"
+    DRIVER_SAVED_LOCATION_SCREEN    -> "driver_saved_location_screen"
+    POPUP_SCREEEN                   -> "popup_screen"
+    ALERTS_SCREEN                   -> "alerts_screen"
+    ACKNOWLEDGEMENT_SCREEN          -> "acknowledgement_screen"
+    AADHAAR_VERIFICATION_SCREEN     -> "aadhaar_verification_screen"
+    SUBSCRIPTION_SCREEN             -> "subscription_screen"
+    ONBOARDING_SUBSCRIPTION_SCREEN  -> "onboarding_subscription_screen"
+    DRIVER_EARNINGS_SCREEN          -> "driver_earnings_screen"
