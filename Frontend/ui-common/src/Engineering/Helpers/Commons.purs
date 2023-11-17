@@ -93,6 +93,8 @@ foreign import getVideoID :: String -> String
 foreign import getImageUrl :: String -> String
 foreign import getPastDays :: Int -> Array CalendarDate
 foreign import getPastWeeks :: Int -> Array CalendarWeek
+foreign import getDayName :: String -> String
+foreign import getFutureDate :: String -> Int -> String
 foreign import setEventTimestamp :: String -> Effect Unit
 foreign import getTimeStampObject :: Unit -> Effect (Array ClevertapEventParams)
 foreign import updateIdMap :: EffectFn1 String CarouselHolderData

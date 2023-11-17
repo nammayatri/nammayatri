@@ -53,7 +53,7 @@ import PrestoDOM.Properties (cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Screens.PaymentHistoryScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.PaymentHistoryScreen.ScreenData (dummyPromoConfig)
-import Screens.PaymentHistoryScreen.Transformer (getAutoPayPaymentStatus, getAutoPayStageData)
+import Screens.PaymentHistoryScreen.Transformer (coinsOfferConfig, getAutoPayPaymentStatus, getAutoPayStageData)
 import Screens.SubscriptionScreen.Transformer (getPromoConfig)
 import Screens.Types (PaymentHistoryScreenState, PaymentHistorySubview(..), PromoConfig)
 import Services.API (FeeType(..), GetPaymentHistoryResp(..), PaymentDetailsEntity(..), HistoryEntityV2Resp(..)) as SA
@@ -61,6 +61,7 @@ import Services.API (FeeType(..), OfferEntity(..))
 import Services.Backend as Remote
 import Styles.Colors as Color
 import Types.App (defaultGlobalState)
+import Mobility.Prelude
 
 screen :: PaymentHistoryScreenState -> Screen Action PaymentHistoryScreenState ScreenOutput
 screen initialState =
@@ -159,7 +160,7 @@ paymentList push state =
           , orientation VERTICAL
           , visibility if DA.length transactionItems > 0 then VISIBLE else GONE
           ] (DA.mapWithIndex (\index item -> 
-            let itemConfig = getStatusConfig item.paymentStatus
+            let itemConfig = getStatusConfig item.paymentStatus item.isPaidByYatriCoins
             in
             linearLayout
               [ height WRAP_CONTENT
@@ -181,15 +182,21 @@ paymentList push state =
                       [ height WRAP_CONTENT
                       , weight 1.0
                       ][]
-                  , commonTV push ("₹" <> getFixedTwoDecimals item.amount) itemConfig.color (FontStyle.h2 TypoGraphy) 0 RIGHT true
+                  , commonTV push (getString PAID_BY) Color.black700 (FontStyle.body3 TypoGraphy) 0 RIGHT item.isPaidByYatriCoins
                   , linearLayout
-                      [ height WRAP_CONTENT
-                      , width WRAP_CONTENT
-                      , cornerRadius 24.0
-                      , padding $ Padding 8 4 8 4
-                      , background itemConfig.backgroundColor
-                      , margin $ MarginLeft 4
-                      ] [textView' push Nothing itemConfig.name itemConfig.color Body16 (Just $ PaddingTop 1) Nothing]
+                    [ height WRAP_CONTENT
+                    , width WRAP_CONTENT
+                    , visibility if item.isPaidByYatriCoins then GONE else VISIBLE
+                    ][ commonTV push ("₹" <> getFixedTwoDecimals item.amount) itemConfig.color (FontStyle.h2 TypoGraphy) 0 RIGHT true
+                      , linearLayout
+                        [ height WRAP_CONTENT
+                        , width WRAP_CONTENT
+                        , cornerRadius 24.0
+                        , padding $ Padding 8 4 8 4
+                        , background itemConfig.backgroundColor
+                        , margin $ MarginLeft 4
+                        ] [textView' push Nothing itemConfig.name itemConfig.color Body16 (Just $ PaddingTop 1) Nothing]
+                     ]
                   ]
                 , linearLayout
                   [ height WRAP_CONTENT
@@ -206,17 +213,18 @@ paymentList push state =
                         , gravity CENTER_VERTICAL
                         , cornerRadius 20.0
                         , background Color.white900
-                        , padding $ Padding 8 5 8 5
+                        , padding $ Padding 8 5 0 5
                         ][ imageView
                             [ width $ V 12
                             , height $ V 12
                             , margin (MarginRight 4)
-                            , imageWithFallback $ fetchImage FF_ASSET "ny_ic_upi_logo"
+                            , imageWithFallback $ fetchImage FF_ASSET if item.isPaidByYatriCoins then "ny_ic_yatri_coin" else "ny_ic_upi_logo"
                             ]
+                          , commonTV push (getString YATRI_COINS) Color.black900 (FontStyle.body3 TypoGraphy) 0 RIGHT item.isPaidByYatriCoins
                           , commonTV push (case item.feeType of 
                                             AUTOPAY_PAYMENT -> (getString UPI_AUTOPAY_S)
                                             AUTOPAY_REGISTRATION -> (getString UPI_AUTOPAY_SETUP)
-                                            _ -> "UPI") Color.black700 (FontStyle.tags TypoGraphy) 0 CENTER true
+                                            _ -> "UPI") Color.black700 (FontStyle.tags TypoGraphy) 0 CENTER (not item.isPaidByYatriCoins)
                           ]
                   ]
               ]
@@ -345,7 +353,7 @@ tabView state push =
 transactionDetails :: forall w. (Action -> Effect Unit) -> PaymentHistoryScreenState -> Boolean -> PrestoDOM (Effect Unit) w
 transactionDetails push state visibility' = 
   let config = getTransactionConfig state.data.transactionDetails
-      autopayStageData = getAutoPayStageData state.data.transactionDetails.notificationStatus
+      autopayStageData = getAutoPayStageData state.data.transactionDetails.notificationStatus state.data.transactionDetails.isCoinCleared
       title = if state.data.transactionDetails.feeType /= AUTOPAY_PAYMENT then config.title else autopayStageData.stage
       statusTimeDesc = if state.data.transactionDetails.feeType /= AUTOPAY_PAYMENT then config.statusTimeDesc else autopayStageData.statusTimeDesc
   in
@@ -354,7 +362,7 @@ transactionDetails push state visibility' =
     [ width MATCH_PARENT
     , height MATCH_PARENT
     , scrollBarY false
-    , visibility if visibility' then VISIBLE else GONE
+    , visibility $ boolToVisibility visibility'
     , background Color.white900
     ][  linearLayout
         [ width MATCH_PARENT
@@ -391,6 +399,7 @@ transactionDetails push state visibility' =
                 ](DA.mapWithIndex (\ index item ->
                   transactionHistoryRow push item.title index (DA.length state.data.transactionDetails.details) (item.val /= "") $ case item.key of
                     "OFFER" -> if item.val /= "" then promoCodeView push (fromMaybe dummyPromoConfig ((getPromoConfig [OfferEntity {title : Just item.val, description : Nothing, tnc : Nothing, offerId : "", gradient : Nothing}] state.data.gradientConfig) DA.!! 0)) else rightItem push "N/A" false false
+                    "COIN_DISCOUNT" -> if item.val /= "0" then promoCodeView push (coinsOfferConfig item.val) else rightItem push "N/A" false false
                     "TXN_ID" -> rightItem push item.val false true
                     "PAYMENT_MODE" -> rightItem push item.val true false
                     _ -> commonTV push item.val Color.black900 (FontStyle.body6 TypoGraphy) 0 RIGHT (item.val /= "")
@@ -410,7 +419,7 @@ transactionDetails push state visibility' =
                         , width MATCH_PARENT
                         , margin $ MarginRight 8
                         , color Color.black600
-                        , visibility if state.data.transactionDetails.isAutoPayFailed then VISIBLE else GONE
+                        , visibility $ boolToVisibility state.data.transactionDetails.isAutoPayFailed 
                         , padding $ Padding 8 8 8 8
                       ] <> FontStyle.tags TypoGraphy
                     , linearLayout
@@ -419,7 +428,7 @@ transactionDetails push state visibility' =
                         , width MATCH_PARENT
                         , background Color.grey900
                         , margin $ MarginHorizontal 8 16
-                        , visibility if state.data.transactionDetails.isAutoPayFailed && state.data.transactionDetails.isSplit then VISIBLE else GONE
+                        , visibility $ boolToVisibility (state.data.transactionDetails.isAutoPayFailed && state.data.transactionDetails.isSplit) 
                       ][]
                     , textView $ [
                         text $ getString SPLIT_PAYMENT
@@ -482,7 +491,7 @@ promoCodeView push config =
      [ width $ V 12
      , height $ V 12
      , margin (MarginRight 4)
-     , visibility if config.hasImage then VISIBLE else GONE
+     , visibility $ boolToVisibility config.hasImage 
      , imageWithFallback config.imageURL
      ] 
    , textView $
@@ -493,6 +502,13 @@ promoCodeView push config =
      ] <> case config.title of
           Nothing -> [visibility GONE]
           Just txt -> [text txt]
+   , imageView 
+     [ width $ V 12
+     , height $ V 12
+     , margin $ MarginLeft 3
+     , imageWithFallback $ fetchImage FF_ASSET "ny_ic_yatri_coin"
+     , visibility $ boolToVisibility config.isPaidByYatriCoins 
+     ]
   ]
 
 rightItem :: forall w. (Action -> Effect Unit) -> String -> Boolean -> Boolean -> PrestoDOM (Effect Unit) w 
@@ -506,7 +522,7 @@ rightItem push val prefixImage postfixImage =
      [ width $ V 12
      , height $ V 12
      , margin (MarginRight 4)
-     , visibility if prefixImage then VISIBLE else GONE
+     , visibility $ boolToVisibility prefixImage
      , imageWithFallback $ fetchImage FF_ASSET "ny_ic_upi_logo"
      ] 
    , textView $

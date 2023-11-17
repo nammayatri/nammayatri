@@ -201,6 +201,7 @@ separatorConfig config =
   , width : V 2
   , layoutWidth : config.destinationImageConfig.width
   , layoutHeight : config.destinationImageConfig.height
+  , color : Color.black500
   }
 
 getDistanceLayoutHeight :: Config -> Length

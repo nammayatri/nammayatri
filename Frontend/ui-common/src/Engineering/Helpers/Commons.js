@@ -279,6 +279,25 @@ export const getPastWeeks = function (count) {
   }
 };
 
+export const getDayName = function (dateString) {
+  const date = new Date(dateString);
+  const daysOfWeek = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+  const dayOfWeek = date.getDay();
+  return daysOfWeek[dayOfWeek];
+}
+
+export const getFutureDate = function (startDate) {
+  return function (noOfDays) {
+    const date = new Date(startDate);
+    date.setDate(date.getDate() + noOfDays);
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+
+    return `${year}-${month}-${day}`;
+  };
+};
+
 // ---------------------------------- moment ---------------------------------------------
 
 function formatDates(date, format, language) {

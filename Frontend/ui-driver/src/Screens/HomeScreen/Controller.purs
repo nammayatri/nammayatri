@@ -260,6 +260,7 @@ data ScreenOutput =   Refresh ST.HomeScreenState
                     | DisableGoto ST.HomeScreenState
                     | ExitGotoLocation ST.HomeScreenState Boolean
                     | RefreshGoTo ST.HomeScreenState
+                    | EarningsScreen ST.HomeScreenState Boolean
 
 data Action = NoAction
             | BackPressed
@@ -356,6 +357,10 @@ data Action = NoAction
             | UpdateBanner
             | BannerChanged String
             | BannerStateChanged String
+            | CoinsPopupAC PopUpModal.Action 
+            | ToggleStatsModel
+            | ToggleBonusPopup
+            | GoToEarningsScreen Boolean
             
 
 eval :: Action -> ST.HomeScreenState -> Eval Action ScreenOutput ST.HomeScreenState
@@ -511,6 +516,7 @@ eval (BottomNavBarAction (BottomNavBar.OnNavigate item)) state = do
   case item of
     "Rides" -> exit $ GoToRidesScreen state
     "Profile" -> exit $ GoToProfileScreen state
+    "Earnings" ->  exit $ EarningsScreen state false
     "Alert" -> do
       _ <- pure $ setValueToLocalNativeStore ALERT_RECEIVED "false"
       let _ = unsafePerformEffect $ logEvent state.data.logField "ny_driver_alert_click"
@@ -956,7 +962,9 @@ eval (AutoPayBanner (Banner.OnClick)) state = do
 
 eval (AccessibilityBannerAction (Banner.OnClick)) state = continue state{props{showGenericAccessibilityPopUp = true}}
 
-eval (StatsModelAction StatsModelController.OnIconClick) state = continue state { data {activeRide {waitTimeInfo =false}}, props { showBonusInfo = not state.props.showBonusInfo } }
+eval (ToggleBonusPopup) state = continue state { data {activeRide {waitTimeInfo =false}}, props { showBonusInfo = not state.props.showBonusInfo } }
+
+eval (StatsModelAction StatsModelController.OnIconClick) state = continueWithCmd state [ pure $ ToggleBonusPopup]
 
 eval (RequestInfoCardAction RequestInfoCard.Close) state = continue state { data {activeRide {waitTimeInfo =false}}, props { showBonusInfo = false } }
 
@@ -1035,6 +1043,10 @@ eval (RCDeactivatedAC PopUpModal.OnButton1Click) state = exit $ GoToVehicleDetai
 
 eval (RCDeactivatedAC PopUpModal.OnButton2Click) state = continue state {props {rcDeactivePopup = false}}
 
+eval (CoinsPopupAC PopUpModal.OnButton1Click) state = exit $ EarningsScreen state true
+
+eval (CoinsPopupAC PopUpModal.OptionWithHtmlClick) state = continue state {props {showCoinsPopup = false}}
+
 eval (AccessibilityBannerAction (Banner.OnClick)) state = continue state{props{showGenericAccessibilityPopUp = true}}
 
 eval (PaymentBannerAC (Banner.OnClick)) state = do
@@ -1042,6 +1054,10 @@ eval (PaymentBannerAC (Banner.OnClick)) state = do
   continue state
 
 eval (SetBannerItem bannerItem) state = continue state{data{bannerData{bannerItem = Just bannerItem}}}
+
+eval ToggleStatsModel state = continue state { props { isStatsModelExpanded = not state.props.isStatsModelExpanded } }
+
+eval (GoToEarningsScreen showCoinsView) state = exit $ EarningsScreen state showCoinsView
 
 eval _ state = continue state
 

@@ -169,6 +169,7 @@ window.getMerchantConfig = function () {
       , "enableImageUpload" : false
       , "enableGender" : true
       , "enableOtpRide" : false
+      , "enableYatriCoins" : true
     }
     , "appData" : {
       "link" : "https://play.google.com/store/apps/details?id=in.juspay.nammayatripartner"
@@ -186,7 +187,8 @@ window.getMerchantConfig = function () {
         "supportNumber" : "",
         "languageKey" : "KN_IN",
         "showDriverReferral" : false,
-        "uploadRCandDL" : true
+        "uploadRCandDL" : true,
+        "enableYatriCoins" : true
       },
       {
         "cityName" : "Hyderabad",
@@ -198,7 +200,8 @@ window.getMerchantConfig = function () {
         "supportNumber" : "+918069724900",
         "languageKey" : "TE_IN",
         "showDriverReferral" : true,
-        "uploadRCandDL" : true
+        "uploadRCandDL" : true,
+        "enableYatriCoins" : false
       },
       {
         "cityName" : "Mysore",
@@ -210,7 +213,8 @@ window.getMerchantConfig = function () {
         "supportNumber" : "",
         "languageKey" : "KN_IN",
         "showDriverReferral" : true,
-        "uploadRCandDL" : true
+        "uploadRCandDL" : true,
+        "enableYatriCoins" : false
       },
       {
         "cityName" : "Delhi",
@@ -222,7 +226,8 @@ window.getMerchantConfig = function () {
         "supportNumber" : "+918069724848",
         "languageKey" : "HI_IN",
         "showDriverReferral" : true,
-        "uploadRCandDL" : true
+        "uploadRCandDL" : true,
+        "enableYatriCoins" : false
       },
       {
         "cityName" : "Chennai",
@@ -234,7 +239,8 @@ window.getMerchantConfig = function () {
         "supportNumber" : "08069724899",
         "languageKey" : "TA_IN",
         "showDriverReferral" : true,
-        "uploadRCandDL" : false
+        "uploadRCandDL" : false,
+        "enableYatriCoins" : false
       },
       {
         "cityName" : "Coimbatore",
@@ -246,7 +252,8 @@ window.getMerchantConfig = function () {
         "supportNumber" : "",
         "languageKey" : "TA_IN",
         "showDriverReferral" : true,
-        "uploadRCandDL" : true
+        "uploadRCandDL" : true,
+        "enableYatriCoins" : false
       },
       {
         "cityName" : "Puducherry",
@@ -258,7 +265,8 @@ window.getMerchantConfig = function () {
         "supportNumber" : "08069724899",
         "languageKey" : "TA_IN",
         "showDriverReferral" : true,
-        "uploadRCandDL" : true
+        "uploadRCandDL" : true,
+        "enableYatriCoins" : false
       },
       {
         "cityName" : "Tumakuru",
@@ -270,7 +278,8 @@ window.getMerchantConfig = function () {
         "supportNumber" : "",
         "languageKey" : "KN_IN",
         "showDriverReferral" : false,
-        "uploadRCandDL" : true
+        "uploadRCandDL" : true,
+        "enableYatriCoins" : false
       }
   ]
   , "dashboard" : {

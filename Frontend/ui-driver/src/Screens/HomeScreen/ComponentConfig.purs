@@ -1628,3 +1628,60 @@ accountBlockedPopup state = PopUpModal.config {
     , height = V 118
     }
   }
+  
+    
+introducingCoinsPopup :: ST.HomeScreenState -> PopUpModal.Config
+introducingCoinsPopup state = PopUpModal.config {
+    cornerRadius = PTD.Corners 15.0 true true true true
+    , buttonLayoutMargin = MarginTop 0
+    , margin = MarginHorizontal 16 16
+    , padding = Padding 16 16 16 16
+    , gravity = CENTER
+    , backgroundColor =  Color.black9000
+    , backgroundClickable = false
+    , optionButtonOrientation = "HORIZONTAL"
+  ,primaryText {
+      text = getString INTRODUCING_YATRI_COINS <> " 🎉"
+    , margin = MarginHorizontal 16 16
+    , color = Color.black800
+    , textStyle = Heading2
+    },
+    option1 {
+      text = getString CHECK_NOW
+    , color = Color.yellow900
+    , background = Color.black900
+    , visibility = true
+    , margin = MarginTop 16
+    , width = MATCH_PARENT
+
+    },
+    coverImageConfig {
+      imageUrl = fetchImage FF_ASSET "ny_ic_coin_balance"
+    , visibility = VISIBLE
+    , width = V 280
+    , height = V 250
+    },
+  secondaryText {
+    text = getString NOW_EARN_COINS_FOR_EVERY_RIDE_AND_REFERRAL_AND_USE_THEM_TO_GET_REWARDS
+    , margin = Margin 16 4 16 0
+    , color = Color.black700
+    , textStyle = SubHeading2
+  },
+  option2 { 
+    visibility = false
+  },
+  optionWithHtml {
+    textOpt1 {
+      color = Color.black650
+      , text = getString MAYBE_LATER
+      , textStyle = SubHeading2
+      , visibility = VISIBLE
+    }
+    , strokeColor = Color.white900
+    , margin = MarginHorizontal 16 16
+    , background = Color.white900
+    , visibility = true
+    , isClickable = true
+    },
+  dismissPopup = false
+    }

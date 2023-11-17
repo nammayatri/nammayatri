@@ -29,7 +29,7 @@ tripDetailsScreen = do
     (GlobalState state) <- getState
     act <- lift $ lift $ runScreen $ TripDetailsScreen.screen state.tripDetailsScreen
     case act of
-        GoBack -> App.BackT $ pure App.GoBack 
+        GoBack -> App.BackT $ App.BackPoint <$> (pure $ GO_TO_HOME_SCREEN)
         OnSubmit -> App.BackT $ App.BackPoint <$> (pure $ ON_SUBMIT)
         GoHome  -> App.BackT $ App.BackPoint <$> (pure $ GO_TO_HOME_SCREEN)
         GoToHelpAndSupport -> App.BackT $ App.BackPoint <$> (pure $ OPEN_HELP_AND_SUPPORT)

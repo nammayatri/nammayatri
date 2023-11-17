@@ -31,6 +31,7 @@ import Screens.Types as ST
 import Services.API (FeeType(..), OfferEntity(..))
 import Services.API as API
 import Data.Int as INT
+import Styles.Colors as Color
 
 buildTransactionDetails :: API.HistoryEntryDetailsEntityV2Resp -> Array GradientConfig -> Boolean -> ST.TransactionInfo
 buildTransactionDetails (API.HistoryEntryDetailsEntityV2Resp resp) gradientConfig showFeeBreakup =
@@ -83,6 +84,13 @@ buildTransactionDetails (API.HistoryEntryDetailsEntityV2Resp resp) gradientConfi
                     key : "OFFER",
                     title : getString OFFER,
                     val : planOfferData.offer
+                  },
+                  {
+                    key : "COIN_DISCOUNT",
+                    title : "Discount",
+                    val : getFixedTwoDecimals $ case driverFee'.isCoinCleared of
+                                                true -> driverFee'.driverFeeAmount
+                                                false -> fromMaybe 0.0 driverFee'.coinDiscountAmount
                   }
                 ]
               false -> []
@@ -97,6 +105,7 @@ buildTransactionDetails (API.HistoryEntryDetailsEntityV2Resp resp) gradientConfi
             isAutoPayFailed : (length filteredDriverFees == 1) && isJust driverFee'.autoPayStage && resp.feeType == MANUAL_PAYMENT,
             feeType : resp.feeType,
             numOfDriverFee : length filteredDriverFees,
+            isCoinCleared : driverFee'.isCoinCleared,
             details : [
               {
                 key : "TXN_ID",
@@ -118,7 +127,7 @@ buildTransactionDetails (API.HistoryEntryDetailsEntityV2Resp resp) gradientConfi
                         true -> mapWithIndex (\ ind (API.DriverFeeInfoEntity driverFee) ->  do
                             let offerAndPlanDetails = fromMaybe "" driverFee.offerAndPlanDetails
                                 planOfferData = decodeOfferPlan offerAndPlanDetails
-                                autoPayStageData = getAutoPayStageData driverFee.autoPayStage
+                                autoPayStageData = getAutoPayStageData driverFee.autoPayStage driverFee.isCoinCleared
                                 noOfRides = driverFee.totalRides + fromMaybe 0 driverFee.specialZoneRideCount
                             {
                                 date : convertUTCtoISC driverFee.rideTakenOn "Do MMM YYYY",
@@ -136,7 +145,10 @@ buildTransactionDetails (API.HistoryEntryDetailsEntityV2Resp resp) gradientConfi
                                 scheduledAt : if (resp.feeType == AUTOPAY_REGISTRATION && isJust  resp.executionAt) then Just (convertUTCtoISC (fromMaybe "" resp.executionAt) "Do MMM YYYY, h:mm A") else Nothing,
                                 paymentMode : resp.feeType,
                                 paymentStatus :  if resp.feeType == AUTOPAY_REGISTRATION then Just (autoPayStageData.stage) else Nothing,
-                                boothCharges : boothCharges driverFee.specialZoneRideCount driverFee.totalSpecialZoneCharges
+                                boothCharges : boothCharges driverFee.specialZoneRideCount driverFee.totalSpecialZoneCharges,
+                                amountPaidByYatriCoins : case driverFee.isCoinCleared of
+                                                            true -> Just driverFee.driverFeeAmount
+                                                            false -> driverFee.coinDiscountAmount
                             }
                             ) filteredDriverFees
                         false -> []          
@@ -154,19 +166,20 @@ getAutoPayPaymentStatus status' = do
     API.EXECUTION_SUCCESS -> Success
     _ -> Failed
 
-getAutoPayStageData :: Maybe API.AutopayPaymentStage -> {stage :: String, statusTimeDesc :: String}
-getAutoPayStageData stage = 
+getAutoPayStageData :: Maybe API.AutopayPaymentStage -> Boolean -> {stage :: String, statusTimeDesc :: String}
+getAutoPayStageData stage isCoinCleared = 
   let status = fromMaybe API.NOTIFICATION_SCHEDULED stage
   in
-  case status of 
-    API.NOTIFICATION_SCHEDULED -> { stage : getString NOTIFICATION_SCHEDULED, statusTimeDesc : getString SCHEDULED_AT }
-    API.NOTIFICATION_ATTEMPTING -> { stage : getString NOTIFICATION_ATTEMPTING, statusTimeDesc : getString SCHEDULED_AT }
-    API.EXECUTION_SCHEDULED -> { stage : getString EXECUTION_SCHEDULED, statusTimeDesc : getString SCHEDULED_AT }
-    API.EXECUTION_ATTEMPTING -> { stage : getString EXECUTION_ATTEMPTING, statusTimeDesc : getString SCHEDULED_AT }
-    API.EXECUTION_SUCCESS -> { stage : getString EXECUTION_SUCCESS, statusTimeDesc : getString TRANSACTION_DEBITED_ON }
-    API.NOTIFICATION_FAILED -> { stage : getString NOTIFICATION_FAILED, statusTimeDesc : getString TRANSACTION_ATTEMPTED_ON }
-    API.EXECUTION_FAILED -> { stage : getString EXECUTION_FAILED, statusTimeDesc : getString TRANSACTION_ATTEMPTED_ON }
-    _ -> { stage : getString EXECUTION_ATTEMPTING, statusTimeDesc : getString TRANSACTION_ATTEMPTED_ON }
+  case status, isCoinCleared of 
+    _ , true -> { stage : getString PAYMENT_SUCCESSFUL, statusTimeDesc : getString TRANSACTION_DEBITED_ON }
+    API.NOTIFICATION_SCHEDULED, _ -> { stage : getString NOTIFICATION_SCHEDULED, statusTimeDesc : getString SCHEDULED_AT }
+    API.NOTIFICATION_ATTEMPTING, _ -> { stage : getString NOTIFICATION_ATTEMPTING, statusTimeDesc : getString SCHEDULED_AT }
+    API.EXECUTION_SCHEDULED, _ -> { stage : getString EXECUTION_SCHEDULED, statusTimeDesc : getString SCHEDULED_AT }
+    API.EXECUTION_ATTEMPTING, _ -> { stage : getString EXECUTION_ATTEMPTING, statusTimeDesc : getString SCHEDULED_AT }
+    API.EXECUTION_SUCCESS, _ -> { stage : getString EXECUTION_SUCCESS, statusTimeDesc : getString TRANSACTION_DEBITED_ON }
+    API.NOTIFICATION_FAILED, _ -> { stage : getString NOTIFICATION_FAILED, statusTimeDesc : getString TRANSACTION_ATTEMPTED_ON }
+    API.EXECUTION_FAILED, _ -> { stage : getString EXECUTION_FAILED, statusTimeDesc : getString TRANSACTION_ATTEMPTED_ON }
+    _, _ -> { stage : getString EXECUTION_ATTEMPTING, statusTimeDesc : getString TRANSACTION_ATTEMPTED_ON }
 
 getInvoiceStatus :: Maybe API.InvoiceStatus -> PaymentStatus
 getInvoiceStatus status' = do
@@ -177,12 +190,13 @@ getInvoiceStatus status' = do
     API.FAILED -> Failed
     API.EXPIRED -> Failed
     API.INACTIVE -> Failed
+    API.CLEARED_BY_YATRI_COINS -> Success
 
 dummyDriverFee :: API.DriverFeeInfoEntity
 dummyDriverFee = 
   API.DriverFeeInfoEntity {
       autoPayStage : Just API.NOTIFICATION_SCHEDULED, -- AutopayPaymentStage NOTIFICATION_SCHEDULED | NOTIFICATION_ATTEMPTING | EXECUTION_SCHEDULED | EXECUTION_ATTEMPTING | EXECUTION_SUCCESS
-      paymentStatus : Just API.ACTIVE_INVOICE, --InvoiceStatus ACTIVE_INVOICE (Pending) | SUCCESS | FAILED | EXPIRED | INACTIVE
+      paymentStatus : Just API.ACTIVE_INVOICE, --InvoiceStatus ACTIVE_INVOICE (Pending) | SUCCESS | FAILED | EXPIRED | INACTIVE | CLEARED_BY_YATRI_COINS
       totalEarnings : 0.0,
       totalRides : 0,
       planAmount : 0.0,
@@ -192,6 +206,20 @@ dummyDriverFee =
       driverFeeAmount : 0.0,
       specialZoneRideCount : Nothing,
       totalSpecialZoneCharges : Nothing,
-      maxRidesEligibleForCharge : Nothing
+      maxRidesEligibleForCharge : Nothing,
+      isCoinCleared : false,
+      coinDiscountAmount : Nothing
   }
 
+coinsOfferConfig :: String -> PromoConfig
+coinsOfferConfig amount = 
+    {  
+    title : Just $ "₹ " <> amount <> " " <> getString PAID_BY_YATRI_COINS,
+    isGradient : true,
+    gradient : [Color.yellowCoinGradient1, Color.yellowCoinGradient2],
+    hasImage : false,
+    imageURL : "",
+    offerDescription : Nothing,
+    addedFromUI : true,
+    isPaidByYatriCoins : true
+    }

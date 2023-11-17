@@ -92,6 +92,10 @@ config =
           showNew : false
         },
       rideHistory : 
+        { isVisible : false,
+          showNew : false
+        },
+      driverEarnings : 
         { isVisible : true,
           showNew : false
         },
@@ -123,7 +127,8 @@ config =
               supportNumber : "",
               languageKey : "KN_IN",
               showDriverReferral : false,
-              uploadRCandDL : true
+              uploadRCandDL : true,
+              enableYatriCoins : true
             },
             {
               cityName : "Hyderabad",
@@ -135,7 +140,8 @@ config =
               supportNumber : "+918069724900",
               languageKey : "TE_IN",
               showDriverReferral : true,
-              uploadRCandDL : true
+              uploadRCandDL : true,
+              enableYatriCoins : false
             },
             {
               cityName : "Mysore",
@@ -147,7 +153,8 @@ config =
               supportNumber : "",
               languageKey : "KN_IN",
               showDriverReferral : true,
-              uploadRCandDL : true
+              uploadRCandDL : true,
+              enableYatriCoins : false
             },
             {
               cityName : "Delhi",
@@ -159,7 +166,8 @@ config =
               supportNumber : "+918069724848",
               languageKey : "HI_IN",
               showDriverReferral : true,
-              uploadRCandDL : true
+              uploadRCandDL : true,
+              enableYatriCoins : false
             },
             {
               cityName : "Chennai",
@@ -171,7 +179,8 @@ config =
               supportNumber : "08069724899",
               languageKey : "TA_IN",
               showDriverReferral : true,
-              uploadRCandDL : false
+              uploadRCandDL : false,
+              enableYatriCoins : false
             },
             {
               cityName : "Coimbatore",
@@ -183,7 +192,8 @@ config =
               supportNumber : "",
               languageKey : "TA_IN",
               showDriverReferral : true,
-              uploadRCandDL : true
+              uploadRCandDL : true,
+              enableYatriCoins : false
             },
             {
               cityName : "Puducherry",
@@ -195,7 +205,8 @@ config =
               supportNumber : "08069724899",
               languageKey : "TA_IN",
               showDriverReferral : true,
-              uploadRCandDL : true
+              uploadRCandDL : true,
+              enableYatriCoins : false
             }--, For future use
             -- {
             --   cityName : "Madurai",
@@ -205,7 +216,8 @@ config =
             --   cityLat : 9.93069,
             --   cityLong : 78.11956,
             --   supportNumber : "",
-            --   languageKey : "TA_IN"
+            --   languageKey : "TA_IN",
+            --   enableYatriCoins : false
             -- }
         ]
   , enableMockLocation : false
@@ -240,6 +252,7 @@ config =
   , enableGender: false
   , enableOtpRide: false
   , enableSuggestions : true
+  , enableYatriCoins : false
   }
   , showCorporateAddress : false
   , engilshInNative: "English"
@@ -265,6 +278,19 @@ config =
         cab : "20",
         auto : "10"
       }
+    }
+  , coinsConfig : {
+      minCoinSliderValue : 250,
+      maxCoinSliderValue : 2500,
+      numOfRideThresholdForCoins : "8+",
+      leaderBoardThresholdForCoins : "+500",
+      customerReferralCoins : "+200",
+      eightPlusRidesCoins : "+25",
+      purpleRideCoins : "+5",
+      rideCompletedCoins : "+1",
+      fiveStarRatingCoins : "+1",
+      oneOrTwoStarRatingCoins : "-1",
+      rideCancellationCoins : "-5"
   }
   , inAppKeyboardModalConfig : {
       enableDeviceKeyboard : true
