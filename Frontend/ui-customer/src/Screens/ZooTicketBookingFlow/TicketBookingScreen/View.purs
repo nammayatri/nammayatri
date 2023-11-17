@@ -27,7 +27,7 @@ import Engineering.Helpers.Commons (screenWidth, convertUTCtoISC, getNewIDWithTa
 import Services.API (BookingStatus(..), TicketPlaceResponse(..), TicketPlaceResp(..))
 import Animation (fadeInWithDelay, translateInXBackwardAnim, translateInXBackwardFadeAnimWithDelay, translateInXForwardAnim, translateInXForwardFadeAnimWithDelay)
 import Halogen.VDom.DOM.Prop (Prop)
-import Data.Array (catMaybes, head, (..))
+import Data.Array (catMaybes, head, (..), any)
 import Data.Maybe (fromMaybe, isJust, Maybe(..))
 import Debug
 import Effect.Aff (launchAff)
@@ -62,7 +62,7 @@ screen initialState =
     pure $ pure unit
 
   getPlaceDataEvent' push = do
-    if initialState.props.currentStage == ST.DescriptionStage then do
+    if (any (_ == initialState.props.currentStage) [ST.DescriptionStage , ST.ViewTicketStage]) then do
       (TicketPlaceResponse placesResp) <- Remote.getTicketPlacesBT ""
       let mFirstPlace = head placesResp -- TODO:: Remove this once Screen for choosing place is ready
       case mFirstPlace of
@@ -1127,6 +1127,7 @@ paymentStatusHeader state push paymentStatus =
       ][imageView
         [ width $ MATCH_PARENT
         , height $ V 100
+        , visibility if paymentStatus == Common.Success then VISIBLE else GONE
         , imageWithFallback $ fetchImage FF_ASSET "ny_ic_confetti"
         ] 
       , linearLayout
