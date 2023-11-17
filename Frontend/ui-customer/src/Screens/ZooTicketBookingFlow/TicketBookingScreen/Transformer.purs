@@ -40,43 +40,43 @@ buildBookingDetails res =
       }
   ) (res)
 
--- ticketDetailsTransformer :: API.GetBookingInfoRes -> IndividualBookingItem
--- ticketDetailsTransformer resp = 
---   { 
---     shortId : resp ^. _ticketShortId,
---     ticketPlaceId : resp ^. _ticketPlaceId ,
---     ticketPlaceName : resp ^. _ticketPlaceName,
---     personId : resp ^. _personId,
---     amount : resp ^. _amount,
---     visitDate : resp ^. _visitDate,
---     status : (getBookingStatus (resp ^. _status)),
---     services : (ticketServicesTransformer (resp ^. _services) )
+ticketDetailsTransformer :: API.GetBookingInfoRes -> IndividualBookingItem
+ticketDetailsTransformer resp = 
+  { 
+    shortId : (resp ^. _ticketShortId),
+    ticketPlaceId : (resp ^. _ticketPlaceId) ,
+    ticketPlaceName :( resp ^. _ticketPlaceName),
+    personId : (resp ^. _personId),
+    amount : (resp ^. _amount),
+    visitDate : (resp ^. _visitDate),
+    status : (getBookingStatus (resp ^. _status)),
+    services : (ticketServicesTransformer (resp ^. _services) )
 
---   }
+  }
 
--- ticketServicesTransformer :: (Array API.TicketBookingServiceDetails) -> (Array TicketBookingServiceDetails)
--- ticketServicesTransformer services = 
---   map (\(API.TicketBookingServiceDetails item) -> do
---       {
---         ticketServiceShortId : item.ticketServiceShortId,
---         ticketServiceName : item.ticketServiceShortId,
---         amount : item.amount,
---         status : item.status,
---         verificationCount : item.verificationCount,
---         expiryDate : item.expiryDate,
---         prices : (ticketServicePricesTransformer item.prices)
---       }
---   ) (services)
+ticketServicesTransformer :: (Array API.TicketBookingServiceDetails) -> (Array TicketBookingServiceDetails)
+ticketServicesTransformer services = 
+  map (\(API.TicketBookingServiceDetails item) -> do
+      {
+        ticketServiceShortId : item.ticketServiceShortId,
+        ticketServiceName : item.ticketServiceShortId,
+        amount : item.amount,
+        status : item.status,
+        verificationCount : item.verificationCount,
+        expiryDate : item.expiryDate,
+        prices : (ticketServicePricesTransformer item.prices)
+      }
+  ) (services)
 
--- ticketServicePricesTransformer :: (Array API.TicketBookingServicePriceBreakup) -> (Array TicketBookingServicePriceBreakup)
--- ticketServicePricesTransformer prices = 
---   map (\(API.TicketBookingServicePriceBreakup item) -> do
---       {
---         pricePerUnit : item.pricePerUnit,
---         numberOfUnits : item.numberOfUnits,
---         attendeeType : item.attendeeType
---       }
---   ) (prices)
+ticketServicePricesTransformer :: (Array API.TicketBookingServicePriceBreakup) -> (Array TicketBookingServicePriceBreakup)
+ticketServicePricesTransformer prices = 
+  map (\(API.TicketBookingServicePriceBreakup item) -> do
+      {
+        pricePerUnit : item.pricePerUnit,
+        numberOfUnits : item.numberOfUnits,
+        attendeeType : item.attendeeType
+      }
+  ) (prices)
 
 dummyTicketBookingApiEntity :: API.TicketBookingAPIEntity
 dummyTicketBookingApiEntity = API.TicketBookingAPIEntity {
