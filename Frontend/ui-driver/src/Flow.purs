@@ -1835,12 +1835,13 @@ homeScreenFlow = do
         Right startRideResp -> do
           _ <- pure $ setValueToLocalNativeStore RIDE_ID id
           liftFlowBT $ logEvent logField_ "ny_driver_ride_start"
-          modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{ props {enterOtpModal = false}, data{ route = [], activeRide{status = INPROGRESS}}})
+          modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{ props {enterOtpModal = false}, data{ route = [], activeRide{status = INPROGRESS }}}) -- ,waitTimeSeconds = 0
           void $ lift $ lift $ toggleLoader false
           _ <- updateStage $ HomeScreenStage RideStarted
           _ <- pure $ setValueToLocalStore TRIGGER_MAPS "true"
           _ <- pure $ setValueToLocalStore TRIP_STATUS "started"
           void $ pure $ setValueToLocalStore WAITING_TIME_STATUS (show ST.NoStatus)
+          void $ pure $ setValueToLocalStore WAITING_CHARGES if updatedState.data.activeRide.waitTimeSeconds > updatedState.data.config.waitTimeConfig.thresholdTime then show updatedState.data.activeRide.waitTimeSeconds else "-1"
           void $ pure $ EHC.clearTimer updatedState.data.activeRide.waitTimerId
           currentRideFlow Nothing
         Left errorPayload -> do

@@ -492,7 +492,7 @@ const kannadaStrings = {
   WAIT_TIME : "ಕಾಯುವ ಸಮಯ",
   WAIT_TIMER : "ಟೈಮರ್ ನಿರೀಕ್ಷಿಸಿ",
   HOW_LONG_WAITED_FOR_PICKUP : "ಪಿಕಪ್‌ನಲ್ಲಿ ನೀವು ಎಷ್ಟು ಸಮಯ ಕಾಯುತ್ತಿದ್ದೀರಿ ಎಂಬುದನ್ನು ತೋರಿಸುತ್ತದೆ.",
-  CUSTOMER_WILL_PAY_FOR_EVERY_MINUTE : "ಗ್ರಾಹಕರು \nಮೊದಲ 3 ನಿಮಿಷಗಳ ನಂತರ ಪ್ರತಿ ನಿಮಿಷ ಕಾಯುವ ಸಮಯಕ್ಕೆ ₹1.5\n ಪಾವತಿಸುತ್ತಾರೆ.",
+  CUSTOMER_WILL_PAY_FOR_EVERY_MINUTE : "ಗ್ರಾಹಕರು \nಮೊದಲ {} ನಿಮಿಷಗಳ ನಂತರ ಪ್ರತಿ ನಿಮಿಷ ಕಾಯುವ ಸಮಯಕ್ಕೆ ₹1.5\n ಪಾವತಿಸುತ್ತಾರೆ.",
   OTHERS : "ಇತರರು",
   ENTER_SECOND_SIM_NUMBER : "ಎರಡನೇ ಸಿಮ್ ಸಂಖ್ಯೆಯನ್ನು ನಮೂದಿಸಿ",
   ALTERNATE_NUMBER : "ಪರ್ಯಾಯ ಸಂಖ್ಯೆ",
@@ -968,7 +968,8 @@ const kannadaStrings = {
   GUARANTEED_FIXED_PRICE : "ಜನವರಿ 1, 2025 ರವರೆಗೆ ಖಾತರಿಪಡಿಸಿದ ಸ್ಥಿರ ಬೆಲೆ",
   INTRODUCTORY_OFFER_TO_BE_ANNOUNCED_SOON : "ಪರಿಚಯಾತ್ಮಕ ಕೊಡುಗೆಯನ್ನು ಶೀಘ್ರದಲ್ಲೇ ಪ್ರಕಟಿಸಲಾಗುವುದು!",
   NO_CHARGES_TILL : "ಡಿಸೆಂಬರ್ 31 ರವರೆಗೆ ಯಾವುದೇ ಶುಲ್ಕಗಳಿಲ್ಲ",
-  AND : " ಮತ್ತು "
+  AND : " ಮತ್ತು ",
+  THIS_EXTRA_AMOUNT_THE_CUSTOMER_WILL_PAY : "ಇದು ಗ್ರಾಹಕರು ನಿಮಗೆ ಪಾವತಿಸುವ ಹೆಚ್ಚುವರಿ ಮೊತ್ತವಾಗಿದೆ ಏಕೆಂದರೆ ನೀವು {} ನಿಮಿಷಗಳಿಗಿಂತ ಹೆಚ್ಚು ಕಾಯುತ್ತಿದ್ದೀರಿ"
 }
 
 

@@ -496,7 +496,7 @@ const bengaliStrings = {
   WAIT_TIME : "অপেক্ষার সময়",
   WAIT_TIMER : "টাইমার অপেক্ষা করুন",
   HOW_LONG_WAITED_FOR_PICKUP : "আপনি পিকআপে কতক্ষণ অপেক্ষা করেছেন তা দেখায়।",
-  CUSTOMER_WILL_PAY_FOR_EVERY_MINUTE : "গ্রাহক ₹1.5\nপ্রথম 3 মিনিটের পর প্রতি মিনিট অপেক্ষার জন্য প্রদান করবেন",
+  CUSTOMER_WILL_PAY_FOR_EVERY_MINUTE : "গ্রাহক ₹1.5\nপ্রথম {} মিনিটের পর প্রতি মিনিট অপেক্ষার জন্য প্রদান করবেন",
   OTHERS : "অন্যান্য",
   ENTER_SECOND_SIM_NUMBER : "দ্বিতীয় সিম নম্বর লিখুন",
   ALTERNATE_NUMBER : "বিকল্প নম্বর",
@@ -974,7 +974,8 @@ const bengaliStrings = {
   YES_CANCEL : "হ্যাঁ, বাতিল",
   AUTOPAY_CANCELLED : "অটোপে বাতিল করা হয়েছে",
   YOUR_DUES_DESCRIPTION_MANUAL : "নিরবচ্ছিন্ন রাইডগুলি চালিয়ে যেতে সীমাতে পৌঁছানোর আগে অনুগ্রহ করে আপনার বকেয়া পরিশোধ করুন৷ আপনি সহজে, ঝামেলামুক্ত অর্থপ্রদানের জন্য <b>একটি UPI অটোপে সেট আপ</b> করতে পারেন।",
-  AND : " এবং "
+  AND : " এবং ",
+  THIS_EXTRA_AMOUNT_THE_CUSTOMER_WILL_PAY : "এই অতিরিক্ত পরিমাণ গ্রাহক আপনাকে প্রদান করবে কারণ আপনি {} মিনিটের বেশি অপেক্ষা করেছেন"
 }
 
 export function getStringValue(key) {

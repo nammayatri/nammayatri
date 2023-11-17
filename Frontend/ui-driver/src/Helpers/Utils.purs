@@ -57,7 +57,7 @@ import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (class EuclideanRing, Unit, bind, discard, identity, pure, unit, void, ($), (+), (<#>), (<*>), (<>), (*>), (>>>), ($>), (/=), (&&), (<=), show, (>=), (>),(<))
 import Prelude (class Eq, class Show, (<<<))
-import Prelude (map, (*), (-), (/), (==))
+import Prelude -- (map, (*), (-), (/), (==))
 import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode)
 import Data.Function.Uncurried (Fn4(..), Fn3(..), runFn4, runFn3, Fn2, runFn1, runFn2)
 import Effect.Uncurried (EffectFn1(..),EffectFn5(..), mkEffectFn1, mkEffectFn4, runEffectFn5)
@@ -77,6 +77,7 @@ import Storage (KeyStore(..), isOnFreeTrial, getValueToLocalNativeStore)
 import Styles.Colors as Color
 import Screens.Types (LocalStoreSubscriptionInfo)
 import Data.Int (fromString, even, fromNumber)
+import Data.Int as Int
 import Data.Number.Format (fixed, toStringWith)
 import Data.Function.Uncurried (Fn1)
 
@@ -511,3 +512,19 @@ incrementValueOfLocalStoreKey key = do
     Nothing -> do
       let _ = runFn2 setValueToLocalStore (show key) "1"  
       pure unit
+
+formatSecIntoMinSecs :: Int -> String
+formatSecIntoMinSecs seconds = 
+  let
+    mins = seconds `div` 60
+    secs = seconds `mod` 60
+  in 
+    show mins <> ":" <> (if secs < 10 then "0" else "") <> show secs
+
+calculateCharges :: Int -> String
+calculateCharges sec =
+  let min = Int.floor $ Int.toNumber sec / 60.0
+      charges = 1.5 * Int.toNumber min
+      currency = getValueFromConfig "currency"
+      pillText = "+" <> currency <> " " <> show charges
+  in pillText

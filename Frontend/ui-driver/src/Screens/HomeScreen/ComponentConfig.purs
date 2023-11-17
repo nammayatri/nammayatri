@@ -37,6 +37,7 @@ import Components.SelectListModal as SelectListModal
 import Components.StatsModel as StatsModel
 import Data.Array as DA
 import Data.Int (fromString)
+import Data.Int as Int
 import Data.Maybe (Maybe(..), fromMaybe, isJust)
 import Data.String as DS
 import Debug (spy)
@@ -56,6 +57,7 @@ import PrestoDOM.Types.DomAttributes as PTD
 import Resource.Constants as Const
 import Screens.Types (AutoPayStatus(..), SubscriptionBannerType(..), SubscriptionPopupType(..), GoToPopUpType(..))
 import Screens.Types as ST
+import Services.API as SA
 import Services.API (PaymentBreakUp(..), PromotionPopupConfig(..), Status(..))
 import Storage (KeyStore(..), getValueToLocalNativeStore, getValueToLocalStore)
 import Styles.Colors as Color
@@ -91,7 +93,9 @@ rideActionModalConfig state =
     requestedVehicleVariant = state.data.activeRide.requestedVehicleVariant,
     accessibilityTag = state.data.activeRide.disabilityTag,
     appConfig = state.data.config,
-    waitTimeStatus = state.props.waitTimeStatus
+    waitTimeStatus = state.props.waitTimeStatus,
+    waitTimeSeconds = state.data.activeRide.waitTimeSeconds,
+    thresholdTime = state.data.config.waitTimeConfig.thresholdTime
     }
     in rideActionModalConfig'
 
@@ -673,20 +677,19 @@ requestInfoCardConfig _ = let
   }
   in requestInfoCardConfig'
 
-waitTimeInfoCardConfig :: LazyCheck -> RequestInfoCard.Config
-waitTimeInfoCardConfig _ = let
-  config = RequestInfoCard.config
-  requestInfoCardConfig' = config{
+waitTimeInfoCardConfig :: ST.HomeScreenState -> RequestInfoCard.Config
+waitTimeInfoCardConfig state = RequestInfoCard.config {
     title {
       text = getString WAIT_TIMER
     }
   , primaryText {
-      text = getString HOW_LONG_WAITED_FOR_PICKUP,
+      text = if rideInProgress then 
+              getVarString THIS_EXTRA_AMOUNT_THE_CUSTOMER_WILL_PAY [show maxWaitTimeInMinutes] else getString HOW_LONG_WAITED_FOR_PICKUP,
       padding = Padding 16 16 0 0
     }
   , secondaryText {
-      text = getString CUSTOMER_WILL_PAY_FOR_EVERY_MINUTE,
-      visibility = VISIBLE,
+      text = getVarString CUSTOMER_WILL_PAY_FOR_EVERY_MINUTE [show maxWaitTimeInMinutes],
+      visibility = if rideInProgress then GONE else VISIBLE,
       padding = PaddingLeft 16
     }
   , imageConfig {
@@ -700,7 +703,8 @@ waitTimeInfoCardConfig _ = let
       padding = PaddingVertical 16 20
     }
   }
-  in requestInfoCardConfig'
+  where rideInProgress = state.data.activeRide.status == SA.INPROGRESS
+        maxWaitTimeInMinutes = Int.floor $ Int.toNumber state.data.config.waitTimeConfig.thresholdTime / 60.0
 
 
 makePaymentState :: ST.HomeScreenState -> MakePaymentModal.MakePaymentModalState

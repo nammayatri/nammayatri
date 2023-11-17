@@ -87,6 +87,7 @@ import Engineering.Helpers.Commons (liftFlow)
 import PrestoDOM.Core (getPushFn)
 import Control.Monad.Except.Trans (lift)
 import Data.Either (Either(..))
+import Data.Int as Int
 
 instance showAction :: Show Action where
   show _ = ""
@@ -688,7 +689,8 @@ eval (UpdateWaitTime status) state = do
   void $ pure $ setValueToLocalNativeStore WAITING_TIME_STATUS (show status)
   continue state { props { waitTimeStatus = status}, data {activeRide {notifiedCustomer = status /= ST.NoStatus}}}
 
-eval (WaitTimerCallback timerID timeInMinutes seconds) state = continue state { data {activeRide { waitingTime = timeInMinutes, waitTimerId = timerID}}}
+eval (WaitTimerCallback timerID timeInMinutes seconds) state = 
+  continue state { data {activeRide { waitingTime = timeInMinutes, waitTimerId = timerID, waitTimeSeconds = seconds}}}
 
 eval (PopUpModalAction (PopUpModal.OnButton1Click)) state = continue $ (state {props {endRidePopUp = false}})
 eval (PopUpModalAction (PopUpModal.OnButton2Click)) state = do
@@ -1006,6 +1008,7 @@ activeRideDetail state (RidesInfo ride) = {
   notifiedCustomer : getValueToLocalStore WAITING_TIME_STATUS == (show ST.PostTriggered),
   exoPhone : ride.exoPhone,
   waitingTime : state.data.activeRide.waitingTime,
+  waitTimeSeconds :if ride.status == "INPROGRESS" then fromMaybe 0 (Int.fromString (getValueToLocalStore WAITING_CHARGES)) else 0,
   rideCreatedAt : ride.createdAt,
   waitTimeInfo : state.data.activeRide.waitTimeInfo,
   requestedVehicleVariant : ride.requestedVehicleVariant,

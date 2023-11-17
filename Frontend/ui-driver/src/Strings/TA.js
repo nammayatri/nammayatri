@@ -494,7 +494,7 @@ const tamilStrings = {
   WAIT_TIME : "காத்திருக்கும் நேரம்",
   WAIT_TIMER : "காத்திரு டைமர்",
   HOW_LONG_WAITED_FOR_PICKUP : "பிக்அப்பில்\nஎவ்வளவு நேரம் காத்திருந்தீர்கள் என்பதைக் காட்டுகிறது.",
-  CUSTOMER_WILL_PAY_FOR_EVERY_MINUTE : "முதல் 3 நிமிடங்களுக்குப் பிறகு ஒவ்வொரு நிமிட காத்திருப்பு நேரத்திற்கும் வாடிக்கையாளர் ₹1.5 செலுத்துவார்.",
+  CUSTOMER_WILL_PAY_FOR_EVERY_MINUTE : "முதல் {} நிமிடங்களுக்குப் பிறகு ஒவ்வொரு நிமிட காத்திருப்பு நேரத்திற்கும் வாடிக்கையாளர் ₹1.5 செலுத்துவார்.",
   OTHERS : "மற்றவைகள்",
   ENTER_SECOND_SIM_NUMBER : "இரண்டாவது சிம் எண்ணை உள்ளிடவும்",
   ALTERNATE_NUMBER : "மாற்று எண்",
@@ -969,7 +969,8 @@ const tamilStrings = {
   GUARANTEED_FIXED_PRICE : "ஜனவரி 1, 2025 வரை நிலையான விலைக்கு உத்தரவாதம்",
   INTRODUCTORY_OFFER_TO_BE_ANNOUNCED_SOON : "அறிமுக சலுகை விரைவில் அறிவிக்கப்படும்!",
   NO_CHARGES_TILL : "டிசம்பர் 31 வரை கட்டணம் இல்லை",
-  AND : " மற்றும் "
+  AND : " மற்றும் ",
+  THIS_EXTRA_AMOUNT_THE_CUSTOMER_WILL_PAY : "நீங்கள் {} நிமிடங்களுக்கு மேல் காத்திருந்ததால் வாடிக்கையாளர் உங்களுக்குச் செலுத்தும் கூடுதல் தொகை இது"
 }
 
 export function getStringValue(key) {

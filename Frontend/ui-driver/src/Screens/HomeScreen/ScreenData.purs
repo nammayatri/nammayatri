@@ -51,6 +51,7 @@ initData = {
           exoPhone : "",
           specialLocationTag : Nothing,
           waitingTime : "__",
+          waitTimeSeconds : 0,
           waitTimeInfo : false,
           rideCreatedAt : "",
           requestedVehicleVariant : Nothing,

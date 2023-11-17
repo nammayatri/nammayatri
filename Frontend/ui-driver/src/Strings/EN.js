@@ -495,7 +495,7 @@ const englishStrings = {
   WAIT_TIME : "Wait Time",
   WAIT_TIMER : "Wait Timer",
   HOW_LONG_WAITED_FOR_PICKUP : "Shows you how long you\nhave waited at pickup.",
-  CUSTOMER_WILL_PAY_FOR_EVERY_MINUTE : "The customer will pay ₹1.5\nfor every minute of wait time after \nfirst 3 minutes",
+  CUSTOMER_WILL_PAY_FOR_EVERY_MINUTE : "The customer will pay ₹1.5\nfor every minute of wait time after \nfirst {} minutes",
   OTHERS : "Others",
   ENTER_SECOND_SIM_NUMBER : "Enter Second SIM Number",
   ALTERNATE_NUMBER : "Alternate Number",
@@ -998,7 +998,8 @@ const englishStrings = {
   GUARANTEED_FIXED_PRICE : "Guaranteed fixed price until \nJan 1, 2025",
   INTRODUCTORY_OFFER_TO_BE_ANNOUNCED_SOON : "Introductory offer will be announced soon!",
   NO_CHARGES_TILL : "No charges till Dec 31",
-  AND : " and "
+  AND : " and ",
+  THIS_EXTRA_AMOUNT_THE_CUSTOMER_WILL_PAY : "This is the extra amount the customer will pay you because you have waited more than {} minutes"
 }
 
 

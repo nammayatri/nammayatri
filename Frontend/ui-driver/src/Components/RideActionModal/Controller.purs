@@ -52,7 +52,9 @@ type Config = {
   accessibilityTag :: Mb.Maybe ST.DisabilityType,
   appConfig :: AppConfig,
   gotoTag :: Boolean,
-  waitTimeStatus :: ST.TimerStatus
+  waitTimeStatus :: ST.TimerStatus,
+  waitTimeSeconds :: Int,
+  thresholdTime :: Int
   }
 
 type AddressConfig = {
@@ -86,5 +88,7 @@ config = {
   accessibilityTag : Mb.Nothing,
   appConfig : DC.config,
   gotoTag : false,
-  waitTimeStatus : ST.NoStatus
+  waitTimeStatus : ST.NoStatus,
+  waitTimeSeconds : 0,
+  thresholdTime : 0
 }

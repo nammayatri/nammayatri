@@ -497,7 +497,7 @@ const hindiStrings = {
   WAIT_TIME : "प्रतीक्षा समय",
   WAIT_TIMER : "प्रतीक्षा टाइमर",
   HOW_LONG_WAITED_FOR_PICKUP : "आपको दिखाता है कि आपने पिकअप पर कितनी देर तक इंतजार किया है।",
-  CUSTOMER_WILL_PAY_FOR_EVERY_MINUTE : "ग्राहक को पहले 3 मिनट के बाद प्रत्येक मिनट के इंतजार के लिए ₹1.5 का भुगतान करना होगा।",
+  CUSTOMER_WILL_PAY_FOR_EVERY_MINUTE : "ग्राहक को पहले {} मिनट के बाद प्रत्येक मिनट के इंतजार के लिए ₹1.5 का भुगतान करना होगा।",
   OTHERS : "अन्य",
   ENTER_SECOND_SIM_NUMBER : "दूसरा सिम नंबर दर्ज करें",
   ALTERNATE_NUMBER : "वैकल्पिक नंबर",
@@ -996,7 +996,8 @@ const hindiStrings = {
   GUARANTEED_FIXED_PRICE : "1 जनवरी 2025 तक कीमत में कोई बदलाव नहीं।",
   INTRODUCTORY_OFFER_TO_BE_ANNOUNCED_SOON : "परिचयात्मक ऑफर की घोषणा जल्द ही की जाएगी!",
   NO_CHARGES_TILL : "31 दिसंबर तक कोई शुल्क नहीं",
-  AND : " और "
+  AND : " और ",
+  THIS_EXTRA_AMOUNT_THE_CUSTOMER_WILL_PAY : "यह वह अतिरिक्त राशि है जो ग्राहक आपको भुगतान करेगा क्योंकि आपने {} मिनट से अधिक प्रतीक्षा की है"
 }
 
 

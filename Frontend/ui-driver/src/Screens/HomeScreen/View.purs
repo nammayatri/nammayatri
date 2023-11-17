@@ -1381,7 +1381,7 @@ waitTimeInfoPopUp push state =
          [ height MATCH_PARENT
          , width MATCH_PARENT
          ]
-         [ RequestInfoCard.view (push <<< RequestInfoCardAction) (waitTimeInfoCardConfig FunctionCall) ]
+         [ RequestInfoCard.view (push <<< RequestInfoCardAction) (waitTimeInfoCardConfig state) ]
 
 
 
