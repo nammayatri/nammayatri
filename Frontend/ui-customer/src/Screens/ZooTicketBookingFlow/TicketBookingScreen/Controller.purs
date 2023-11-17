@@ -139,7 +139,7 @@ eval (PrimaryButtonAC (PrimaryButton.OnClick)) state = do
   case state.props.currentStage of 
     DescriptionStage -> continue state{props{currentStage = ChooseTicketStage}}
     ChooseTicketStage -> updateAndExit state $ GoToTicketPayment state
-    ViewTicketStage -> continue state{props{currentStage = ChooseTicketStage}}
+    ViewTicketStage -> continue state{props{currentStage = ChooseTicketStage, showShimmer = false}}
     _ -> continue state
 
 eval (GenericHeaderAC (GenericHeader.PrefixImgOnClick)) state = continueWithCmd state [do pure BackPressed]
@@ -153,7 +153,7 @@ eval BackPressed state =
   case state.props.currentStage of 
     DescriptionStage -> exit $ GoToHomeScreen state {props {currentStage = DescriptionStage}}
     ChooseTicketStage -> continue state{props{currentStage = state.props.previousStage}}
-    ViewTicketStage -> exit $ GoToHomeScreen state{props{currentStage = DescriptionStage}}
+    ViewTicketStage -> exit $ GoToHomeScreen state{props{currentStage = DescriptionStage, showShimmer = true}}
     TicketInfoStage -> continue state{props{currentStage = ViewTicketStage}}
     _ -> continue state
 

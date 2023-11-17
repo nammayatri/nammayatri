@@ -874,9 +874,9 @@ ticketImageView state push =
 
 getTextForQRType :: String -> String
 getTextForQRType ticketServiceName = case ticketServiceName of
-  "Entrance Fee" -> "Zoo Entry QR"
-  "Videography Fee" -> "Photo / VideoGraphy Entry QR"
-  "Aquarium Fee" -> "Aquarium Fee Entry QR"
+  "Entrance Fee" -> "Zoo Entry"
+  "Videography Fee" -> "Photo/VideoGraphy"
+  "Aquarium Fee" -> "Aquarium Entry"
   _ -> Color.white900
  
 getPillBackgroundColor :: String -> String
