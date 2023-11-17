@@ -96,6 +96,7 @@ import Effect.Aff (makeAff, nonCanceler, launchAff)
 import Control.Monad.Except (runExceptT)
 import Control.Transformers.Back.Trans (runBackT)
 import Screens.AccountSetUpScreen.Transformer (getDisabilityList)
+-- import Screens.TicketBookingScreen.Transformer (ticketDetailsTransformer)
 import Constants.Configs
 import PrestoDOM (initUI)
 import Common.Resources.Constants (zoomLevel)
@@ -2561,8 +2562,10 @@ zooTicketBookingFlow = do
       -- (TicketPlaceResponse ticketPlaceResponse) <- Remote.getTicketPlacesBT "" --TODO:: WILL BE USED LATER ONCE WE HAVE THE FULL PRODUCT READY
       -- let placeId = (fromMaybe dummyTicketPlaceResp (head ticketPlaceResponse)) ^. _id
       -- (TicketServiceResp ticketServiceResp) <- Remote.getTicketPlaceServicesBT placeId
-    GET_BOOKING_INFO_SCREEN -> do
-      modifyScreenState $ TicketBookingScreenStateType (\ticketBookingScreenState ->  TicketBookingScreenData.initData{props{currentStage = TicketInfoStage}})
+    GET_BOOKING_INFO_SCREEN state -> do
+      (GetBookingInfoRes resp) <- Remote.getTicketBookingDetailsBT state.props.selectedBookingId--state.props.selectedBookingInfo.shortId (show state.props.selectedBookingInfo.status)
+      _ <- pure $ spy "Response" resp
+      modifyScreenState $ TicketBookingScreenStateType (\ticketBookingScreenState ->  TicketBookingScreenData.initData{props{currentStage = TicketInfoStage }}) --, selectedBookingInfo = (ticketDetailsTransformer resp) }})
       zooTicketBookingFlow
     GO_TO_HOME_SCREEN_FROM_TICKET_BOOKING -> homeScreenFlow
     _ -> pure unit

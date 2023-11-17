@@ -2051,28 +2051,28 @@ instance decodeBookingStatus :: Decode BookingStatus where decode = defaultDecod
 instance encodeBookingStatus  :: Encode BookingStatus where encode = defaultEncode
 instance eqBookingStatus :: Eq BookingStatus where eq = genericEq
 
-data GetAllBookingsReq = GetAllBookingsReq
+data GetAllBookingsReq = GetAllBookingsReq String
 
 newtype GetAllBookingsRes = GetAllBookingsRes (Array TicketBookingAPIEntity)
 
 newtype TicketBookingAPIEntity = TicketBookingAPIEntity
-  { shortId :: String,
-    ticketPlaceId :: Maybe String,
+  { ticketShortId :: String,
+    ticketPlaceId ::  String,
     ticketPlaceName :: String,
-    personId :: Maybe String,
+    personId ::  String,
     amount :: Number,
     visitDate :: String,
-    status :: BookingStatus
+    status :: String
   }
 
 instance getAllBookingsReq :: RestEndpoint GetAllBookingsReq GetAllBookingsRes where
- makeRequest reqBody headers = defaultMakeRequest GET (EP.getAllBookings (show Booked) "1" "1") headers reqBody Nothing
+ makeRequest reqBody@(GetAllBookingsReq status) headers = defaultMakeRequest GET (EP.getAllBookings (show status)) headers reqBody Nothing
  decodeResponse = decodeJSON
  encodeRequest req = standardEncode req
 
 
 derive instance genericGetAllBookingsReq :: Generic GetAllBookingsReq _
-instance standardEncodeGetAllBookingsReq :: StandardEncode GetAllBookingsReq where standardEncode (GetAllBookingsReq) = standardEncode {}
+instance standardEncodeGetAllBookingsReq :: StandardEncode GetAllBookingsReq where standardEncode (GetAllBookingsReq _) = standardEncode {}
 instance decodeGetAllBookingsReq :: Decode GetAllBookingsReq where decode = defaultDecode
 instance encodeGetAllBookingsReq :: Encode GetAllBookingsReq where encode = defaultEncode
 instance showGetAllBookingsReq:: Show GetAllBookingsReq where show = genericShow
@@ -2092,25 +2092,13 @@ instance showTicketBookingAPIEntity:: Show TicketBookingAPIEntity where show = g
 instance decodeTicketBookingAPIEntity :: Decode TicketBookingAPIEntity where decode = defaultDecode
 instance encodeTicketBookingAPIEntity :: Encode TicketBookingAPIEntity where encode = defaultEncode
 
-newtype TicketBookingDetails = TicketBookingDetails
-  { shortId :: String,
-    ticketPlaceId :: Maybe String,
-    ticketPlaceName :: String,
-    personId :: Maybe String,
-    amount :: Number,
-    visitDate :: String,
-    status :: BookingStatus,
-    services :: Array TicketBookingServiceDetails
-  }
-
 newtype TicketBookingServiceDetails = TicketBookingServiceDetails
   { ticketServiceShortId :: String,
-    ticketServiceName :: String,
     amount :: Number,
     status :: String,
     verificationCount :: Int,
     expiryDate :: Maybe String,
-    prices :: Array TicketBookingServicePriceBreakup
+    prices :: (Array TicketBookingServicePriceBreakup)
   }
 
 newtype TicketBookingServicePriceBreakup = TicketBookingServicePriceBreakup
@@ -2119,35 +2107,40 @@ newtype TicketBookingServicePriceBreakup = TicketBookingServicePriceBreakup
     pricePerUnit :: Number
   }
 
-derive instance genericTicketBookingDetails :: Generic TicketBookingDetails _
-instance standardEncodeTicketBookingDetails :: StandardEncode TicketBookingDetails where standardEncode _ = standardEncode {}
-instance showTicketBookingDetails :: Show TicketBookingDetails where show = genericShow
-instance decodeTicketBookingDetails :: Decode TicketBookingDetails where decode = defaultDecode
-instance encodeTicketBookingDetails  :: Encode TicketBookingDetails where encode = defaultEncode
-
 derive instance genericTicketBookingServiceDetails :: Generic TicketBookingServiceDetails _
+derive instance newtypeTicketBookingServiceDetails  :: Newtype TicketBookingServiceDetails  _
 instance standardEncodeTicketBookingServiceDetails :: StandardEncode TicketBookingServiceDetails where standardEncode _ = standardEncode {}
 instance decodeTicketBookingServiceDetails :: Decode TicketBookingServiceDetails where decode = defaultDecode
 instance encodeTicketBookingServiceDetails :: Encode TicketBookingServiceDetails where encode = defaultEncode
 instance showTicketBookingServiceDetails :: Show TicketBookingServiceDetails where show = genericShow
 
 derive instance genericTicketBookingServicePriceBreakup :: Generic TicketBookingServicePriceBreakup _
+derive instance newtypeTicketBookingServicePriceBreakup :: Newtype TicketBookingServicePriceBreakup _
 instance standardEncodeTicketBookingServicePriceBreakup :: StandardEncode TicketBookingServicePriceBreakup where standardEncode _ = standardEncode {}
 instance decodeTicketBookingServicePriceBreakup :: Decode TicketBookingServicePriceBreakup where decode = defaultDecode
 instance encodeTicketBookingServicePriceBreakup :: Encode TicketBookingServicePriceBreakup where encode = defaultEncode
 instance showTicketBookingServicePriceBreakup :: Show TicketBookingServicePriceBreakup where show = genericShow
 
-data GetBookingInfoReq = GetBookingInfoReq
+data GetBookingInfoReq = GetBookingInfoReq String 
 
-newtype GetBookingInfoRes = GetBookingInfoRes TicketBookingDetails
+newtype GetBookingInfoRes = GetBookingInfoRes
+  { ticketShortId :: String,
+    ticketPlaceId :: String,
+    ticketPlaceName :: String,
+    personId :: String,
+    amount :: Number,
+    visitDate :: String,
+    status :: String,
+    services :: Array TicketBookingServiceDetails
+  }
 
 instance getBookingInfoReq :: RestEndpoint GetBookingInfoReq GetBookingInfoRes where
- makeRequest reqBody headers = defaultMakeRequest GET (EP.ticketBookingDetails "" "") headers reqBody Nothing
+ makeRequest reqBody@(GetBookingInfoReq shortId) headers = defaultMakeRequest GET (EP.ticketBookingDetails shortId) headers reqBody Nothing
  decodeResponse = decodeJSON
  encodeRequest req = standardEncode req
 
 derive instance genericGetBookingInfoReq :: Generic GetBookingInfoReq _
-instance standardEncodeGetBookingInfoReq :: StandardEncode GetBookingInfoReq where standardEncode (GetBookingInfoReq) = standardEncode {}
+instance standardEncodeGetBookingInfoReq :: StandardEncode GetBookingInfoReq where standardEncode (GetBookingInfoReq shortId) = standardEncode {shortId}
 instance decodeGetBookingInfoReq :: Decode GetBookingInfoReq where decode = defaultDecode
 instance encodeGetBookingInfoReq :: Encode GetBookingInfoReq where encode = defaultEncode
 instance showGetBookingInfoReq:: Show GetBookingInfoReq where show = genericShow
