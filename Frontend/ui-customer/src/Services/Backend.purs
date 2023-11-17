@@ -986,3 +986,9 @@ getTicketStatusBT shortId = do
     where
     errorHandler errorPayload = do
             BackT $ pure GoBack
+
+getTicketStatus shortId = do
+  headers <- getHeaders "" false
+  withAPIResult (EP.ticketStatus shortId) unwrapResponse $ callAPI headers (GetTicketStatusReq shortId)
+  where
+  unwrapResponse x = x

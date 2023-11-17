@@ -19,7 +19,8 @@ import Data.Array (length, head, (!!))
 import Data.Maybe (Maybe(..))
 import Engineering.Helpers.Commons(getNewIDWithTag)
 import Resources.Constants
-import Services.API (TicketPlaceResp(..), TicketServicesResponse(..))
+import Services.API (TicketPlaceResp(..), TicketServicesResponse(..), TicketPlaceResponse(..))
+import Common.Types.App as Common
 
 instance showAction :: Show Action where
   show _ = ""
@@ -47,9 +48,13 @@ data Action = AfterRender
             | TicketQRRendered String String
             | IncrementSliderIndex
             | DecrementSliderIndex
+            | PaymentStatusAction String
             | Copy
 
-data ScreenOutput = GoToHomeScreen TicketBookingScreenState | GoToTicketPayment TicketBookingScreenState
+data ScreenOutput = GoToHomeScreen TicketBookingScreenState
+                  | GoToTicketPayment TicketBookingScreenState
+                  | GoToGetBookingInfo TicketBookingScreenState
+                  | TryAgain TicketBookingScreenState
 
 -- updateTicketService :: String -> Int -> Array TicketServiceI -> Array TicketServiceI -- TODO:: Use similar helper function here
 -- updateTicketService serviceId deltaUnits services =
@@ -61,7 +66,6 @@ data ScreenOutput = GoToHomeScreen TicketBookingScreenState | GoToTicketPayment 
 --         Nothing -> Nothing
 --   in
 --     fromMaybe services $ updateAt updateFunc serviceId services
-                  | GoToGetBookingInfo TicketBookingScreenState
 
 eval :: Action -> TicketBookingScreenState -> Eval Action ScreenOutput TicketBookingScreenState
 eval (ToggleTicketOption ticketID) state =
@@ -156,6 +160,18 @@ eval BackPressed state =
 eval (GetBookingInfo bookingShortId) state = do
   let newState = state { props { selectedBookingId = bookingShortId } }
   updateAndExit newState $ GoToGetBookingInfo newState
+
+eval (ViewTicketAC (PrimaryButton.OnClick)) state = 
+  case state.props.paymentStatus of
+   Common.Success -> continue state 
+   Common.Failed -> exit $ TryAgain state
+   _ -> continue state
+
+eval (PaymentStatusAction status) state =
+  case status of 
+    "Booked" -> continue state{props{paymentStatus = Common.Success}}
+    "Failed" -> continue state{props{paymentStatus = Common.Failed}}
+    _ -> continue state
 
 eval _ state = continue state
 

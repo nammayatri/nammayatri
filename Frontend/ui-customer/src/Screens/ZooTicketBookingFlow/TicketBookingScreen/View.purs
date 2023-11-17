@@ -15,7 +15,7 @@ import Engineering.Helpers.Commons (screenWidth, flowRunner)
 import Font.Style as FontStyle
 import Helpers.Utils (fetchImage, FetchImageFrom(..), decodeError, convertUTCToISTAnd12HourFormat, fetchAndUpdateCurrentLocation, getAssetsBaseUrl, getCurrentLocationMarker, getLocationName, getNewTrackingId, getPreviousVersion, getSearchType, parseFloat, storeCallBackCustomer)
 import JBridge as JB
-import Prelude (Unit, discard, void, bind, const, pure, unit, ($), (&&), (/=), (<<<), (>>=), (<>), (==), map, show, (||), show, (-))
+import Prelude (Unit, discard, void, bind, const, pure, unit, ($), (&&), (/=), (<<<), (<>), (==), map, show, (||), show, (-), (>), (>>=))
 import PrestoDOM (FlexWrap(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Prop, Screen, Visibility(..), shimmerFrameLayout, afterRender, alignParentBottom, background, color, cornerRadius, fontStyle, gravity, height, imageUrl, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, relativeLayout, scrollView, stroke, text, textFromHtml, textSize, textView, visibility, weight, width, clickable, id)
 import PrestoDOM.Animation as PrestoAnim
 import Screens.TicketBookingScreen.Controller (Action(..), ScreenOutput, eval)
@@ -36,8 +36,12 @@ import Control.Monad.Except.Trans (runExceptT , lift)
 import Control.Transformers.Back.Trans (runBackT)
 import Services.Backend as Remote
 import Data.Either (Either(..))
-import Presto.Core.Types.Language.Flow (doAff)
+import Presto.Core.Types.Language.Flow (doAff, Flow, delay)
 import Effect.Class (liftEffect)
+import Types.App (GlobalState, defaultGlobalState)
+import Data.Time.Duration (Milliseconds(..))
+import Services.API as API
+import Storage (KeyStore(..), setValueToLocalStore, getValueToLocalStore)
 
 screen :: ST.TicketBookingScreenState -> Screen Action ST.TicketBookingScreenState ScreenOutput
 screen initialState =
@@ -54,7 +58,8 @@ screen initialState =
   where
   getPlaceDataEvent push = do
     void $ launchAff $ flowRunner defaultGlobalState $ runExceptT $ runBackT $ getPlaceDataEvent' push
-    pure (pure unit)
+    void $ launchAff $ flowRunner defaultGlobalState $ paymentStatusPooling initialState.data.shortOrderId  5 3000.0 initialState push PaymentStatusAction
+    pure $ pure unit
 
   getPlaceDataEvent' push = do
     if initialState.props.currentStage == ST.DescriptionStage then do
@@ -66,6 +71,23 @@ screen initialState =
           lift $ lift $ doAff do liftEffect $ push $ UpdatePlacesData (Just $ TicketPlaceResp firstPlace) (Just servicesResp)
         Nothing -> lift $ lift $ doAff do liftEffect $ push $ UpdatePlacesData Nothing Nothing
     else lift $ lift $ doAff do liftEffect $ push $ UpdatePlacesData Nothing Nothing
+
+paymentStatusPooling :: forall action. String -> Int -> Number -> ST.TicketBookingScreenState -> (action -> Effect Unit) -> (String -> action) -> Flow GlobalState Unit
+paymentStatusPooling shortOrderId count delayDuration state push action = 
+  if (getValueToLocalStore PAYMENT_STATUS_POOLING) == "true" && state.props.currentStage == ST.BookingConfirmationStage  && count > 0 && shortOrderId /= "" then do
+    ticketStatus <- Remote.getTicketStatus shortOrderId
+    _ <- pure $ spy "ticketStatus" ticketStatus
+    case ticketStatus of
+      Right (API.GetTicketStatusResp resp) -> do
+        if (DA.any (_ == resp) ["Booked", "Failed"]) then do
+            _ <- pure $ setValueToLocalStore PAYMENT_STATUS_POOLING "false"
+            doAff do liftEffect $ push $ action resp
+        else do
+            void $ delay $ Milliseconds delayDuration
+            paymentStatusPooling shortOrderId (count - 1) delayDuration state push action
+      Left _ -> pure unit
+    else pure unit
+    
 
 view :: forall w . (Action -> Effect Unit) -> ST.TicketBookingScreenState -> PrestoDOM (Effect Unit) w
 view push state =
@@ -106,11 +128,12 @@ view push state =
             ]
         ]
     , actionsView state push
+    , bookingConfirmationActions state push state.props.paymentStatus
     ]
   where
   actionsView state push =
     case state.props.currentStage of
-      ST.BookingConfirmationStage -> bookingConfirmationActions state push state.props.paymentStatus
+      ST.BookingConfirmationStage -> linearLayout [ visibility GONE ] []
       ST.TicketInfoStage -> linearLayout [ visibility GONE ] []
       ST.DescriptionStage -> generalActionButtons state push
       _ -> generalActionButtons state push
@@ -1002,20 +1025,21 @@ bookingStatusView state push paymentStatus =
       , orientation VERTICAL
       , gravity CENTER
       ][  paymentStatusHeader state push paymentStatus
-        , if paymentStatus == Common.Failed then linearLayout[visibility GONE][] else bookingStatusBody state push paymentStatus
+        , bookingStatusBody state push paymentStatus
       ]
   ]
 
-copyTransactionIdView :: forall w. ST.TicketBookingScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
-copyTransactionIdView state push = 
+copyTransactionIdView :: forall w. ST.TicketBookingScreenState -> (Action -> Effect Unit) -> Boolean -> PrestoDOM (Effect Unit) w
+copyTransactionIdView state push visibility' = 
   linearLayout
   [ height WRAP_CONTENT
   , width WRAP_CONTENT
   , gravity CENTER
+  , visibility if visibility' then VISIBLE else GONE
   , onClick push $ const Copy
   ][  commonTV push "TransactionID" Color.black700 (FontStyle.body3 TypoGraphy) 0 CENTER NoAction
     , textView $ 
-      [ text state.data.transactionId
+      [ text state.data.shortOrderId
       , margin $ MarginLeft 3
       , color Color.black700
       , padding $ PaddingBottom 1
@@ -1036,6 +1060,7 @@ bookingStatusBody state push paymentStatus =
   , weight 1.0
   , orientation VERTICAL
   , margin $ Margin 16 16 16 16
+  , visibility if paymentStatus == Common.Failed then GONE else VISIBLE
   ][ scrollView
       [ width MATCH_PARENT
       , height MATCH_PARENT
@@ -1063,7 +1088,7 @@ bookingStatusBody state push paymentStatus =
           , width MATCH_PARENT
           , orientation VERTICAL
           ](DA.mapWithIndex ( \index item ->  keyValueView state item.key item.val index) state.data.keyValArray)
-          , if paymentStatus == Common.Success then PrimaryButton.view (push <<< ShareTicketAC) (shareTicketButtonConfig state) else linearLayout[visibility GONE][]
+          , PrimaryButton.view (push <<< ShareTicketAC) (shareTicketButtonConfig $ paymentStatus == Common.Success)
           ]
       ]
   ]
@@ -1075,16 +1100,16 @@ bookingConfirmationActions state push paymentStatus =
   , gravity CENTER
   , orientation VERTICAL
   , padding $ PaddingBottom 20
-  , background Color.white900
   , alignParentBottom "true,-1"
+  , visibility if (state.props.currentStage == ST.BookingConfirmationStage) then VISIBLE else GONE
   ][ linearLayout
       [ width MATCH_PARENT
       , height $ V 1
       , background Color.grey900
       , visibility GONE
       ][]
-   , if paymentStatus /= Common.Pending then PrimaryButton.view (push <<< ViewTicketAC) (viewTicketButtonConfig primaryButtonText) else linearLayout[visibility GONE][]
-   , commonTV push secondaryButtonText Color.black900 (FontStyle.subHeading1 TypoGraphy) 0 CENTER NoAction
+   , PrimaryButton.view (push <<< ViewTicketAC) (viewTicketButtonConfig primaryButtonText $ paymentStatus /= Common.Pending)
+   , commonTV push secondaryButtonText Color.black900 (FontStyle.subHeading1 TypoGraphy) 5 CENTER NoAction
   ]
   where primaryButtonText = case paymentStatus of
                               Common.Success -> "View Ticket"
@@ -1126,7 +1151,7 @@ paymentStatusHeader state push paymentStatus =
       ]
       , commonTV push transcationConfig.title Color.black900 (FontStyle.h2 TypoGraphy) 14 CENTER NoAction
       , commonTV push transcationConfig.statusTimeDesc Color.black700 (FontStyle.body3 TypoGraphy) 5 CENTER NoAction
-      , if paymentStatus == Common.Failed then copyTransactionIdView state push else linearLayout[visibility GONE][]
+      , copyTransactionIdView state push $ paymentStatus == Common.Failed
     ]
 
 commonTV :: forall w. (Action -> Effect Unit) -> String -> String -> (forall properties. (Array (Prop properties))) -> Int -> Gravity -> Action -> PrestoDOM (Effect Unit) w
