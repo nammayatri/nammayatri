@@ -95,7 +95,9 @@ data PersonE e = Person
     unencryptedAlternateMobileNumber :: Maybe Text,
     alternateMobileNumber :: Maybe (EncryptedHashedField e Text),
     faceImageId :: Maybe (Id M.MediaFile),
-    merchantOperatingCityId :: Id DMOC.MerchantOperatingCity
+    merchantOperatingCityId :: Id DMOC.MerchantOperatingCity,
+    registrationLat :: Maybe Double,
+    registrationLon :: Maybe Double
   }
   deriving (Generic)
 

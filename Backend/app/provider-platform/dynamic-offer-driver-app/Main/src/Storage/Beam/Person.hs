@@ -60,7 +60,9 @@ data PersonT f = PersonT
     updatedAt :: B.C f UTCTime,
     bundleVersion :: B.C f (Maybe Text),
     clientVersion :: B.C f (Maybe Text),
-    faceImageId :: B.C f (Maybe Text)
+    faceImageId :: B.C f (Maybe Text),
+    registrationLat :: B.C f (Maybe Double),
+    registrationLon :: B.C f (Maybe Double)
   }
   deriving (Generic, B.Beamable)
 

@@ -154,7 +154,9 @@ auth merchantShortId opCity req = do
         { mobileNumber = req.mobileNumber,
           mobileCountryCode = req.mobileCountryCode,
           merchantId = merchant.id.getId,
-          merchantOperatingCity = Just opCity
+          merchantOperatingCity = Just opCity,
+          registrationLat = Nothing,
+          registrationLon = Nothing
         }
       Nothing
       Nothing
