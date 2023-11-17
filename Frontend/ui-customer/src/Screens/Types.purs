@@ -1319,18 +1319,28 @@ type TicketBookingScreenState =
   }
 
 type TicketBookingScreenData = {
+  servicesAvailing :: Array TicketServiceI, -- TODO:: Use this for generic handling
   dateOfVisit :: String ,
   zooEntry :: EntryFeeConfig ,
   aquariumEntry :: EntryFeeConfig ,
   photoOrVideoGraphy :: {
+    id :: String,
     availed :: Boolean ,
     noOfDevices :: Int ,
     ticketPerDevice :: Int
   },
-  totalAmount :: Int
+  totalAmount :: Int,
+  shortOrderId :: String
+}
+
+type TicketServiceI = {
+  id :: String,
+  attendeeType :: String,
+  numberOfUnits :: Int
 }
 
 type EntryFeeConfig = {
+  id :: String,
   availed :: Boolean,
   adult :: Int,
   child :: Int,

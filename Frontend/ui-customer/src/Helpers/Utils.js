@@ -66,6 +66,21 @@ export const getNextDate = function (unit) {
   return dd + "/" + mm + "/" + yyyy;
 }
 
+export const getNextDateV2 = function (unit) {
+  const currentDate = new Date();
+  const isLastDayOfMonth = (currentDate.getDate() === new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0).getDate());
+  if (isLastDayOfMonth) {
+    currentDate.setDate(1);
+    currentDate.setMonth(currentDate.getMonth() + 1); 
+  } else {
+    currentDate.setDate(currentDate.getDate() + 1);
+  }
+  const dd = String(currentDate.getDate()).padStart(2, "0");
+  const mm = String(currentDate.getMonth() + 1).padStart(2, "0"); //January is 0!
+  const yyyy = currentDate.getFullYear();
+  return yyyy + "-" + mm + "-" + dd;
+}
+
 export const validateEmail = function (email){
   const re = /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
   return re.test(String(email).toLowerCase());

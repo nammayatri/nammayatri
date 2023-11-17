@@ -60,7 +60,7 @@ import Engineering.Helpers.Utils (loaderText, toggleLoader, getAppConfig, reboot
 import Foreign (unsafeToForeign)
 import Foreign.Class (class Encode, encode, decode)
 import Helpers.FileProvider.Utils (stringifyJSON)
-import PaymentPage (checkPPInitiateStatus, consumeBP, initiatePP, paymentPageUI, PayPayload(..), PaymentPagePayload(..), getAvailableUpiApps)
+import PaymentPage (checkPPInitiateStatus, consumeBP, initiatePP, paymentPageUI, PayPayload(..), PaymentPagePayload(..), getAvailableUpiApps, getPaymentPageLangKey)
 import Helpers.Utils (LatLon(..), decodeErrorCode, decodeErrorMessage, getCurrentLocation, getDatebyCount, getDowngradeOptions, getGenderIndex, getNegotiationUnit, getPastDays, getPastWeeks, getTime, getcurrentdate, hideSplash, isDateGreaterThan, isYesterday, onBoardingSubscriptionScreenCheck, parseFloat, secondsLeft, toStringJSON, translateString, getDistanceBwCordinates)
 import JBridge (cleverTapCustomEvent, cleverTapCustomEventWithParams, cleverTapEvent, cleverTapSetLocation, drawRoute, factoryResetApp, firebaseLogEvent, firebaseLogEventWithTwoParams, firebaseUserID, generateSessionId, getCurrentLatLong, getCurrentPosition, getVersionCode, getVersionName, hideKeyboardOnNavigation, initiateLocationServiceClient, isBatteryPermissionEnabled, isInternetAvailable, isLocationEnabled, isLocationPermissionEnabled, isOverlayPermissionEnabled, metaLogEvent, metaLogEventWithTwoParams, openNavigation, removeAllPolylines, removeMarker, saveSuggestionDefs, saveSuggestions, setCleverTapUserData, setCleverTapUserProp, showMarker, startLocationPollingAPI, stopChatListenerService, stopLocationPollingAPI, toast, toggleBtnLoader, unregisterDateAndTime, withinTimeRange)
 import JBridge as JB
@@ -2631,16 +2631,6 @@ setDriverStatusInLocal status mode = do
   setValueToLocalNativeStore DRIVER_STATUS status
   setValueToLocalStore DRIVER_STATUS_N mode
   setValueToLocalNativeStore DRIVER_STATUS_N mode
-
-getPaymentPageLangKey :: String -> String 
-getPaymentPageLangKey key = case key of 
-  "EN_US" -> "english"
-  "KN_IN" -> "kannada"
-  "HI_IN" -> "hindi"
-  "ML_IN" -> "malayalam"
-  "BN_IN" -> "bengali"
-  "TA_IN" -> "tamil"
-  _       -> "english"
 
 updateDriverDataToStates :: FlowBT String Unit
 updateDriverDataToStates = do
