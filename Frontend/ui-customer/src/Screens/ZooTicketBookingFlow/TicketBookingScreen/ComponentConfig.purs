@@ -62,8 +62,8 @@ primaryButtonConfig state = let
       }
   in primaryButtonConfig'
 
-shareTicketButtonConfig :: ST.TicketBookingScreenState -> PrimaryButton.Config
-shareTicketButtonConfig state = PrimaryButton.config
+shareTicketButtonConfig :: Boolean -> PrimaryButton.Config
+shareTicketButtonConfig visibility' = PrimaryButton.config
   { textConfig 
     { text = "Share Tickets"
     , textStyle = Tags
@@ -73,6 +73,7 @@ shareTicketButtonConfig state = PrimaryButton.config
     }
   , height = WRAP_CONTENT
   , gravity = CENTER
+  , visibility = if visibility' then VISIBLE else GONE
   , cornerRadius = 22.0
   , width = MATCH_PARENT
   , padding = Padding 16 11 16 11 
@@ -89,8 +90,8 @@ shareTicketButtonConfig state = PrimaryButton.config
   , id = "ShareButton"
   }
 
-viewTicketButtonConfig :: String -> PrimaryButton.Config
-viewTicketButtonConfig text = 
+viewTicketButtonConfig :: String -> Boolean -> PrimaryButton.Config
+viewTicketButtonConfig text visibility' = 
   PrimaryButton.config { 
   textConfig
       { text = text
@@ -98,6 +99,7 @@ viewTicketButtonConfig text =
       }
     , cornerRadius = 8.0
     , background = Color.black900 
+    , visibility = if visibility' then VISIBLE else GONE
     , id = "ViewTicketsButton"
     , margin = (Margin 16 16 16 16)
     }

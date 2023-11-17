@@ -22,3 +22,6 @@ ticketBookingScreen = do
     GoToGetBookingInfo updatedState -> do
       modifyScreenState $ TicketBookingScreenStateType (\ticketBookingScreenState -> updatedState)
       App.BackT $ App.BackPoint <$> (pure $ GET_BOOKING_INFO_SCREEN updatedState)
+    TryAgain updatedState -> do
+      modifyScreenState $ TicketBookingScreenStateType (\_ -> updatedState)
+      App.BackT $ App.NoBack <$> (pure $ RESET_SCREEN_STATE)

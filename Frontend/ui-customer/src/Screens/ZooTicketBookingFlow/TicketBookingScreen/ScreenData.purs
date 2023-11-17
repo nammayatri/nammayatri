@@ -16,9 +16,9 @@
 module Screens.TicketBookingScreen.ScreenData where
 
 import Common.Types.App as Common
+import Data.Maybe (Maybe(..))
 import MerchantConfig.DefaultConfig as DC
 import Screens.Types (TicketBookingScreenState(..), TicketBookingScreenStage(..), TicketBookings(..), TicketItem(..))
-import Data.Maybe (Maybe(..))
 import Services.API (BookingStatus(..))
 
 initData :: TicketBookingScreenState
@@ -29,16 +29,9 @@ initData =
       servicesAvailing : [],
       shortOrderId: "",
       dateOfVisit : "",
-      keyValArray : 
-        [ {key : "Date", val : "10th Nov, 23"}
-        , {key : "Booking for", val : "dvkm"}
-        , {key : "Total Paid", val : "₹300"}
-        , {key : "BookingId", val : "1234345356"}
-        , {key : "Transaction ID", val : "OR8192BY29213292149824UI"}
-        , {key : "Valid until", val : "5 PM, 10th Nov 2023"}
-        ],
-      bookedForArray : ["Zoo", "Aquarium", "Video"],
-      zooName : "Zoological Garden, Alipore",
+      keyValArray : [],
+      bookedForArray : [],
+      zooName : "",
       transactionId : "",
       zooEntry : {
         id : "b73378dc-427f-4efa-9b55-8efe7e3352c2",
@@ -69,7 +62,7 @@ initData =
       termsAndConditionsSelected : true,
       validDate : true,
       showShimmer : true,
-      paymentStatus : Common.Success
+      paymentStatus : Common.Scheduled
       , ticketBookingList : dummyData
       , selectedBookingId : "adfadf"
       , selectedBookingInfo : {shortId : "afda", ticketPlaceId : "aksdfjl;a", ticketPlaceName : "aksdfj;la", personId : "" , amount : 500.0, visitDate : "2023-10-23", status : Booked, services : [{ ticketServiceShortId : "afdjasdf ;a", ticketServiceName : "VideoPhotography", amount : 100.0, status : "Pending", verificationCount : 0, expiryDate : Nothing,  prices : [{pricePerUnit: 2.0,numberOfUnits: 3,attendeeType: "Adults"}, {pricePerUnit: 2.0,numberOfUnits: 2,attendeeType: "Mobile"}]}, { ticketServiceShortId : "afdj;jkja", ticketServiceName : "Entrance", amount : 100.0, status : "Confirmed", verificationCount : 0, expiryDate : Nothing,  prices : [{pricePerUnit: 2.0,numberOfUnits: 3,attendeeType: "Adults"}, {pricePerUnit: 2.0,numberOfUnits: 2,attendeeType: "Mobile"}]}, { ticketServiceShortId : "afdjasdf ;a", ticketServiceName : "Aquarium", amount : 100.0, status : "Pending", verificationCount : 0, expiryDate : Nothing,  prices : [{pricePerUnit: 2.0,numberOfUnits: 3,attendeeType: "Adults"}, {pricePerUnit: 2.0,numberOfUnits: 2,attendeeType: "Mobile"}]}] }

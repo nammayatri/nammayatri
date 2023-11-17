@@ -83,6 +83,7 @@ data KeyStore
   | DISABILITY_NAME 
   | ESTIMATE_DATA
   | REFERRER_URL
+  | PAYMENT_STATUS_POOLING
 
 derive instance genericKeyStore :: Generic KeyStore _
 
