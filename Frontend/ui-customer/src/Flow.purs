@@ -2569,7 +2569,7 @@ zooTicketBookingFlow = do
       _ <- pure $ spy "Response" resp
       let ticketBookingDetails = (ticketDetailsTransformer (GetBookingInfoRes resp))
       let dummyListItem = { ticketServiceShortId : "afdjasdf ;a", ticketServiceName : "VideoPhotography", amount : 100.0, status : "Pending", verificationCount : 0, expiryDate : Nothing,  prices : [{pricePerUnit: 2.0,numberOfUnits: 3,attendeeType: "Adults"}, {pricePerUnit: 2.0,numberOfUnits: 2,attendeeType: "Mobile"}]}
-      modifyScreenState $ TicketInfoScreenStateType (\ticketInfoScreen ->  ticketInfoScreen{data{selectedBookingInfo = ticketBookingDetails}, props {activeListItem = fromMaybe dummyListItem (ticketBookingDetails.services !! 0)}})
+      modifyScreenState $ TicketInfoScreenStateType (\ticketInfoScreen ->  ticketInfoScreen{data{selectedBookingInfo = ticketBookingDetails}, props {activeListItem = fromMaybe dummyListItem (ticketBookingDetails.services !! 0), rightButtonDisable = (length ticketBookingDetails.services < 2)}})
       zooTicketInfoFlow
     GO_TO_HOME_SCREEN_FROM_TICKET_BOOKING -> homeScreenFlow
     RESET_SCREEN_STATE -> do
