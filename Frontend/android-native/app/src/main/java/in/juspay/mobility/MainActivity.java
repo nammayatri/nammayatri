@@ -70,6 +70,8 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.IOException;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
@@ -270,10 +272,15 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
 
         Vector<String> res = handleDeepLinkIfAvailable(getIntent());
+        Vector<String> notificationDeepLinkVector = notificationTypeHasDL(getIntent());
         String viewParam = null, deepLinkJson =null;
         if (res!=null ){
             viewParam = res.get(0);
             deepLinkJson = res.get(1);
+        }
+        else if (notificationDeepLinkVector != null) {
+            viewParam = notificationDeepLinkVector.get(0);
+            deepLinkJson = notificationDeepLinkVector.get(1);
         }
 
         super.onCreate(savedInstanceState);
@@ -624,32 +631,58 @@ public class MainActivity extends AppCompatActivity {
         return res;
     }
 
-    @Override
-    protected void onNewIntent(Intent intent) {
-        Vector<String> res = handleDeepLinkIfAvailable(intent);
-        String viewParam = null, deepLinkJson =null;
-        if (res!=null ){
-            viewParam = res.get(0);
-            deepLinkJson = res.get(1);
-        }
-        JSONObject proccessPayloadDL = new JSONObject();
+    private void processDeeplink(String viewParam, String deepLinkJson){
         try {
+            JSONObject processPayloadDL = new JSONObject();
             JSONObject innerPayloadDL = getInnerPayload("process");
             if (viewParam != null && deepLinkJson != null) {
                 innerPayloadDL.put("view_param", viewParam)
                         .put("deepLinkJSON", deepLinkJson)
                         .put("viewParamNewIntent", viewParam)
                         .put("onNewIntent", true);
-                proccessPayloadDL.put("service", getService())
+                processPayloadDL.put("service", getService())
                         .put("merchantId", getResources().getString(R.string.merchant_id))
                         .put("requestId", UUID.randomUUID())
                         .put(PaymentConstants.PAYLOAD, innerPayloadDL);
                 mFirebaseAnalytics.logEvent("ny_hyper_process",null);
-                hyperServices.process(proccessPayloadDL);
+                hyperServices.process(processPayloadDL);
             }
         }catch (Exception e){
             // Need to handle exception
         }
+    }
+
+    private Vector<String> notificationTypeHasDL(Intent intent) {
+        try {
+            if (intent != null && intent.hasExtra("NOTIFICATION_DATA")) {
+                String data = intent.getExtras().getString("NOTIFICATION_DATA");
+                JSONObject jsonData = new JSONObject(data);
+                if (jsonData.has("notification_type")){
+                    String type = jsonData.getString("notification_type");
+                    if (type.equals("COINS_SUCCESS")){
+                        return new Vector<>(Arrays.asList("coins", "{\"vp\":\"coins\"}"));
+                    }
+                }
+            }
+        }catch (Exception e){
+
+        }
+        return null;
+    }
+
+    @Override
+    protected void onNewIntent(Intent intent) {
+        Vector<String> res = handleDeepLinkIfAvailable(intent);
+        Vector<String> notificationDeepLinkVector = notificationTypeHasDL(intent);
+        String viewParam = null, deepLinkJson =null;
+        if (res!=null ){
+            viewParam = res.get(0);
+            deepLinkJson = res.get(1);
+        } else if (notificationDeepLinkVector != null) {
+            viewParam = notificationDeepLinkVector.get(0);
+            deepLinkJson = notificationDeepLinkVector.get(1);
+        }
+        processDeeplink(viewParam, deepLinkJson);
         if (intent != null && intent.hasExtra("NOTIFICATION_DATA")) {
             try {
                 String data = intent.getExtras().getString("NOTIFICATION_DATA");
@@ -670,6 +703,8 @@ public class MainActivity extends AppCompatActivity {
                         innerPayload = getInnerPayload("callDriverAlert");
                         innerPayload.put("id", id)
                                 .put("popType", type);
+                    }else if (type.equals("COINS_SUCCESS")){
+                        return;
                     }
                 }
                 proccessPayload.put(PaymentConstants.PAYLOAD, innerPayload);

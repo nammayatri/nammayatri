@@ -51,7 +51,7 @@ import Effect (Effect)
 import Effect.Aff (launchAff)
 import Effect.Class (liftEffect)
 import Effect.Uncurried (runEffectFn1, runEffectFn2, runEffectFn3)
-import Engineering.Helpers.Commons (flowRunner, getCurrentUTC, getNewIDWithTag)
+import Engineering.Helpers.Commons (flowRunner, getCurrentUTC, getNewIDWithTag, formatCurrencyWithCommas)
 import Engineering.Helpers.Commons as EHC
 import Font.Size as FontSize
 import Font.Style as FontStyle
@@ -65,7 +65,7 @@ import MerchantConfig.Utils as MU
 import Prelude (Unit, bind, const, discard, not, pure, unit, void, ($), (&&), (*), (-), (/), (<), (<<<), (<>), (==), (>), (>=), (||), (<=), show, void, (/=), when, map, otherwise, (+), negate)
 import Presto.Core.Types.Language.Flow (Flow, delay, doAff)
 import PrestoDOM (BottomSheetState(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), adjustViewWithKeyboard, afterRender, alignParentBottom, alpha, background, bottomSheetLayout, clickable, color, cornerRadius, ellipsize, fontStyle, frameLayout, gravity, halfExpandedRatio, height, id, imageUrl, imageView, imageWithFallback, layoutGravity, lineHeight, linearLayout, lottieAnimationView, margin, onBackPressed, onClick, orientation, padding, peakHeight, relativeLayout, singleLine, stroke, text, textSize, textView, visibility, weight, width, topShift, onAnimationEnd, horizontalScrollView, scrollBarX)
-import PrestoDOM (BottomSheetState(..), alignParentBottom, layoutGravity, Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, alpha, background, bottomSheetLayout, clickable, color, cornerRadius, fontStyle, frameLayout, gravity, halfExpandedRatio, height, id, imageUrl, imageView, lineHeight, linearLayout, margin, onBackPressed, onClick, orientation, padding, peakHeight, stroke, text, textSize, textView, visibility, weight, width, imageWithFallback, adjustViewWithKeyboard, lottieAnimationView, relativeLayout, ellipsize, singleLine, scrollView, scrollBarY)
+import PrestoDOM (BottomSheetState(..), alignParentBottom, layoutGravity, Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), Prop, afterRender, alpha, background, bottomSheetLayout, clickable, color, cornerRadius, fontStyle, frameLayout, gravity, halfExpandedRatio, height, id, imageUrl, imageView, lineHeight, linearLayout, margin, onBackPressed, onClick, orientation, padding, peakHeight, stroke, text, textSize, textView, visibility, weight, width, imageWithFallback, adjustViewWithKeyboard, lottieAnimationView, relativeLayout, ellipsize, singleLine, scrollView, scrollBarY)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Elements.Elements (coordinatorLayout)
 import PrestoDOM.Properties as PP
@@ -86,6 +86,7 @@ import Timers
 import Components.BannerCarousel as BannerCarousel
 import CarouselHolder as CarouselHolder
 import PrestoDOM.List
+import Mobility.Prelude
 
 screen :: HomeScreenState -> Screen Action HomeScreenState ScreenOutput
 screen initialState =
@@ -261,6 +262,7 @@ view push state =
           then PopUpModal.view (push <<< PaymentPendingPopupAC) (paymentPendingPopupConfig state) 
         else linearLayout[visibility GONE][]
       , if state.props.showGenericAccessibilityPopUp then genericAccessibilityPopUpView push state else dummyTextView
+      , if state.props.showCoinsPopup then PopUpModal.view (push <<< CoinsPopupAC) (introducingCoinsPopup state) else dummyTextView
       , if state.data.driverGotoState.showGoto then gotoListView push state else dummyTextView
       , if state.data.driverGotoState.goToPopUpType /= ST.NO_POPUP_VIEW then gotoRequestPopupView push state else dummyTextView
       , if showPopups then popupModals push state else dummyTextView
@@ -324,10 +326,17 @@ driverMapsHeaderView push state =
                   , orientation VERTICAL
                   , PP.cornerRadii $ PTD.Corners 24.0  false false true true
                   , background $ Color.white900
+                  , padding $ PaddingBottom 12
                   , stroke $ (if (DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithCustomer]) then "0," else "1,") <> "#E5E7EB"
                   ][  driverDetail push state
-                    , statsModel push state
-                    , if not state.props.rideActionModal && (state.props.driverStatusSet == Online || state.props.driverStatusSet == Silent)  then updateLocationAndLastUpdatedView state push else dummyTextView
+                    , relativeLayout 
+                      [ width MATCH_PARENT
+                      , height WRAP_CONTENT
+                      , visibility if (DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithCustomer]) then GONE else VISIBLE
+                      ][ statsModel push state
+                       , expandedStatsModel push state
+                      ]
+                      , if not state.props.rideActionModal && (state.props.driverStatusSet == Online || state.props.driverStatusSet == Silent)  then updateLocationAndLastUpdatedView state push else dummyTextView
                   ]
                 , offlineNavigationLinks push state
               ] <> getCarouselView (DA.any (_ == state.props.driverStatusSet) [ST.Online, ST.Silent]) false  --maybe ([]) (\item -> if DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithCustomer] && DA.any (_ == state.props.driverStatusSet) [ST.Online, ST.Silent] then [] else [bannersCarousal item state push]) state.data.bannerData.bannerItem
@@ -793,16 +802,184 @@ updateLocationAndLastUpdatedView state push =
 
 statsModel :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 statsModel push state =
-    linearLayout
+  let cityConfig = HU.getCityConfig state.data.config.cityConfig (getValueToLocalStore DRIVER_LOCATION)
+  in
+    frameLayout
     [ width MATCH_PARENT
     , height WRAP_CONTENT
-    , orientation HORIZONTAL
-    , visibility if (DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithCustomer]) then GONE else VISIBLE
+    , orientation VERTICAL
+    , visibility $ boolToVisibility showStatsModel
     , gravity CENTER
     , padding $ Padding 16 10 16 10
-    ][  StatsModel.view (push <<< StatsModelAction) (statsModelConfig state)
-
+    ][  if not (state.data.config.feature.enableYatriCoins && cityConfig.enableYatriCoins) then
+          StatsModel.view (push <<< StatsModelAction) (statsModelConfig state)
+        else linearLayout
+        [ width MATCH_PARENT
+        , height WRAP_CONTENT
+        , gravity CENTER_VERTICAL
+        , background Color.blue600
+        , cornerRadius 12.0
+        , padding $ Padding 16 8 8 8
+        ][ textView $
+           [ width WRAP_CONTENT
+           , height WRAP_CONTENT
+           , text $ getString TODAYS_EARNINGS_STR
+           , color Color.black700
+           , weight 1.0
+           , onClick push $ const $ ToggleStatsModel
+           ] <> FontStyle.tags TypoGraphy
+         , linearLayout
+           [ width WRAP_CONTENT
+           , height WRAP_CONTENT
+           , gravity CENTER_VERTICAL
+           , onClick push $ const $ ToggleStatsModel
+           ][ textView $
+              [ width WRAP_CONTENT
+              , height WRAP_CONTENT
+              , text $ "₹" <> formatCurrencyWithCommas (show state.data.totalEarningsOfDay)
+              , color Color.black800
+              ] <> FontStyle.h2 TypoGraphy
+            , imageView 
+              [ width $ V 12
+              , height $ V 12
+              , margin $ MarginLeft 5
+              , imageWithFallback $ HU.fetchImage HU.FF_ASSET "ny_ic_chevron_down"
+              ]
+            ]
+         , frameLayout
+           [ width WRAP_CONTENT
+           , height WRAP_CONTENT
+           , gravity CENTER_VERTICAL
+           , margin $ MarginLeft 15
+           ][ linearLayout
+              [ width WRAP_CONTENT
+              , height WRAP_CONTENT
+              , padding $ Padding 12 8 12 8
+              , stroke $ "1,"<> Color.blue400
+              , gravity CENTER_VERTICAL
+              , onClick push $ const $ GoToEarningsScreen true
+              , cornerRadius 6.0
+              ][ imageView 
+                  [ width $ V 20
+                  , height $ V 20
+                  , margin $ MarginRight 5
+                  , imageWithFallback $ HU.fetchImage HU.FF_ASSET "ny_ic_yatri_coin"
+                  ]
+                , textView $
+                  [ width WRAP_CONTENT
+                  , height WRAP_CONTENT
+                  , text $ case state.data.coinBalance == 0 of
+                              true -> getString COINS
+                              false -> show state.data.coinBalance
+                  , color Color.black700
+                  ] <> FontStyle.tags TypoGraphy
+              ]
+            , imageView 
+              [ width $ V 24
+              , height $ V 24
+              , imageWithFallback $ HU.fetchImage HU.FF_ASSET "ny_ic_new_red_banner"
+              , visibility if (fromMaybe 0 $ fromString (getValueToLocalStore VISITED_DRIVER_COINS_PAGE)) >= 3 then GONE else VISIBLE
+              ]
+           ]
+        ]
     ]
+    where 
+      showStatsModel = not ((DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithCustomer]) && not state.props.isStatsModelExpanded)
+
+expandedStatsModel :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+expandedStatsModel push state =
+  let cityConfig = HU.getCityConfig state.data.config.cityConfig (getValueToLocalStore DRIVER_LOCATION)
+  in
+  linearLayout
+  [ width MATCH_PARENT
+  , height WRAP_CONTENT
+  , orientation VERTICAL
+  , cornerRadius 12.0
+  , padding $ Padding 16 16 16 16
+  , margin $ MarginHorizontal 16 16
+  , background Color.white900
+  , stroke $ "1,"<> Color.grey900
+  , visibility $ boolToVisibility (state.props.isStatsModelExpanded && state.data.config.feature.enableYatriCoins && cityConfig.enableYatriCoins) 
+  , clickable true
+  ][ linearLayout
+      [ width MATCH_PARENT
+      , height WRAP_CONTENT
+      , gravity CENTER_VERTICAL
+      ][ commonTV push (getString TODAYS_EARNINGS_STR) Color.black700 FontStyle.tags LEFT 0 ToggleStatsModel true
+      , commonTV push ("₹" <> formatCurrencyWithCommas (show state.data.totalEarningsOfDay)) Color.black800 FontStyle.h2 RIGHT 0 ToggleStatsModel false
+      , imageView 
+        [ width $ V 12
+        , height $ V 12
+        , margin $ MarginLeft 5
+        , onClick push $ const $ ToggleStatsModel
+        , imageWithFallback $ HU.fetchImage HU.FF_ASSET "ny_ic_chevron_up"
+        ]    
+      ]
+    , dashLine
+    , linearLayout
+      [ width MATCH_PARENT
+      , height WRAP_CONTENT
+      , margin $ MarginTop 10
+      , gravity CENTER_VERTICAL
+      ][ commonTV push (getString TRIP_EARNINGS) Color.black700 FontStyle.body3 LEFT 0 NoAction true
+        , commonTV push ("₹" <> formatCurrencyWithCommas (show (state.data.totalEarningsOfDay - state.data.bonusEarned))) Color.black800 FontStyle.subHeading1 RIGHT 0 NoAction false 
+      ]
+    , linearLayout
+      [ width MATCH_PARENT
+      , height WRAP_CONTENT
+      , gravity CENTER_VERTICAL
+      , margin $ MarginTop 10
+      ][ commonTV push (getString BONUS_EARNED) Color.black700 FontStyle.body3 LEFT 0 NoAction false
+        , imageView 
+          [ width $ V 12
+          , height $ V 12
+          , margin $ MarginLeft 5
+          , imageWithFallback $ HU.fetchImage HU.FF_COMMON_ASSET "ny_ic_info_grey"
+          , onClick push $ const $ ToggleBonusPopup
+          ]
+        , commonTV push ("₹" <> formatCurrencyWithCommas (show state.data.bonusEarned)) Color.green900 FontStyle.subHeading1 RIGHT 0 NoAction true 
+      ]
+    , separatorView 10
+    , linearLayout
+      [ width MATCH_PARENT
+      , height WRAP_CONTENT
+      , margin $ MarginTop 10
+      , gravity CENTER_VERTICAL
+      ][ commonTV push (show state.data.totalRidesOfDay <> " " <> getString TRIPS) Color.black700 FontStyle.tags LEFT 0 NoAction true
+        , commonTV push (getString VIEW_MORE) Color.blue900 FontStyle.body3 RIGHT 0 (GoToEarningsScreen false) false
+      ]
+  ]
+
+commonTV :: forall w .  (Action -> Effect Unit) -> String -> String -> (LazyCheck -> forall properties. (Array (Prop properties))) -> Gravity -> Int -> Action -> Boolean -> PrestoDOM (Effect Unit) w
+commonTV push text' color' theme gravity' marginTop action useWeight = 
+  textView $
+  [ width WRAP_CONTENT
+  , height WRAP_CONTENT
+  , text text'
+  , color color'
+  , gravity gravity'
+  , margin $ MarginTop marginTop
+  , onClick push $ const action
+  ] <> theme TypoGraphy
+    <> if useWeight then [weight 1.0] else []
+
+separatorView :: forall w . Int -> PrestoDOM (Effect Unit) w
+separatorView marginTop =
+  linearLayout
+  [ width MATCH_PARENT
+  , height $ V 1
+  , background Color.grey900
+  , margin $ MarginTop marginTop
+  ][]
+
+dashLine :: forall w . PrestoDOM (Effect Unit) w
+dashLine =
+  imageView
+  [ width MATCH_PARENT
+  , height $ V 2 
+  , margin $ MarginTop 10
+  , imageWithFallback $ HU.fetchImage HU.FF_COMMON_ASSET  "ny_ic_horizontal_dash"
+  ]
 
 profileDemoView :: forall w . HomeScreenState -> (Action -> Effect Unit) ->  PrestoDOM (Effect Unit) w
 profileDemoView state push =

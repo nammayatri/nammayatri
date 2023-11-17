@@ -36,6 +36,7 @@ type AppConfigDriver a =
     referral :: ReferralConfig,
     enableDriverReferral :: Boolean,
     rideRequest :: RideRequestConfig,
+    coinsConfig :: CoinsConfig,
     inAppKeyboardModalConfig :: InAppKeyboardModalConfig,
     chooseCity :: ChooseCityScreenConfig
     | a
@@ -133,7 +134,8 @@ type BottomNavConfig = {
   rideHistory :: BottomNavItemConfig,
   subscription :: BottomNavItemConfig,
   referral :: BottomNavItemConfig,
-  notifications :: BottomNavItemConfig
+  notifications :: BottomNavItemConfig,
+  driverEarnings :: BottomNavItemConfig
 }
 
 type BottomNavItemConfig = {
@@ -176,6 +178,7 @@ type Features = {
 , enableGender ::Boolean
 , enableOtpRide :: Boolean
 , enableSuggestions :: Boolean
+, enableYatriCoins :: Boolean
 }
  
  -- VV - VechileVerfication
@@ -199,6 +202,20 @@ type RideRequestConfig = {
 type NegotiationUnit = {
   auto :: String,
   cab :: String
+}
+
+type CoinsConfig = {
+  minCoinSliderValue :: Int,
+  maxCoinSliderValue :: Int,
+  numOfRideThresholdForCoins :: String,
+  leaderBoardThresholdForCoins :: String,
+  customerReferralCoins :: String,
+  eightPlusRidesCoins :: String,
+  purpleRideCoins :: String,
+  rideCompletedCoins :: String,
+  fiveStarRatingCoins :: String,
+  oneOrTwoStarRatingCoins :: String,
+  rideCancellationCoins :: String
 }
 
 type InAppKeyboardModalConfig = {

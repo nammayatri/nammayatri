@@ -26,7 +26,7 @@ import JBridge (copyToClipboard, toast)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (trackAppActionClick, trackAppBackPress, trackAppScreenRender)
-import Prelude (class Show, bind, compare, map, not, pure, show, unit, ($), (/=), (<>), (==), (-), (<), (&&))
+import Prelude (class Show, bind, compare, map, not, pure, show, unit, ($), (/=), (<>), (==), (-), (<), (&&), (<$>))
 import PrestoDOM (Eval, continue, continueWithCmd, exit, updateAndExit)
 import PrestoDOM.Types.Core (class Loggable)
 import Screens.PaymentHistoryScreen.Transformer (getAutoPayPaymentStatus, getInvoiceStatus)
@@ -101,13 +101,13 @@ eval _ state = continue state
 
 getAllTransactions :: SA.HistoryEntityV2Resp -> PaymentHistoryScreenState -> Eval Action ScreenOutput PaymentHistoryScreenState
 getAllTransactions (SA.HistoryEntityV2Resp response) state = do
-  let autoPayInvoices = response.autoPayInvoices
-      manualPayInvoices = nubByEq (\(ManualInvoiceHistory a) (ManualInvoiceHistory b) -> a.invoiceId == b.invoiceId) response.manualPayInvoices
+  let autoPayInvoices = getAutoPayInvoice <$> response.autoPayInvoices
+      manualPayInvoices = getManualPayInvoice <$>  response.manualPayInvoices
       responseLength = if state.props.autoPayHistory then length autoPayInvoices else length response.manualPayInvoices
   continue state {
     data {
-      autoPayList = union state.data.autoPayList (map (\ invoice -> getAutoPayInvoice invoice) autoPayInvoices),
-      manualPayList = union state.data.manualPayList (map (\ invoice -> getManualPayInvoice invoice) manualPayInvoices)
+      autoPayList = nubByEq (\a b -> a.invoiceId == b.invoiceId) $ union state.data.autoPayList autoPayInvoices,
+      manualPayList = nubByEq (\a b -> a.invoiceId == b.invoiceId) $ union state.data.manualPayList manualPayInvoices
     },
     props {
       enableLoadMore = responseLength == 15
@@ -121,7 +121,8 @@ getAutoPayInvoice (AutoPayInvoiceHistory autoPayInvoice) = {
   description : (getString RIDES_TAKEN_ON) <> " ",
   feeType : AUTOPAY_PAYMENT,
   transactionDate : autoPayInvoice.executionAt,
-  ridesTakenDate : (convertUTCtoISC autoPayInvoice.rideTakenOn "Do MMM YYYY")
+  ridesTakenDate : (convertUTCtoISC autoPayInvoice.rideTakenOn "Do MMM YYYY"),
+  isPaidByYatriCoins : autoPayInvoice.isCoinCleared
 }
 
 getManualPayInvoice :: ManualInvoiceHistory -> PaymentListItem
@@ -134,7 +135,8 @@ getManualPayInvoice (ManualInvoiceHistory manualPayInvoice) = do
     description : manualInvoiceItemConfig.description,
     feeType : manualPayInvoice.feeType,
     transactionDate : manualPayInvoice.createdAt,
-    ridesTakenDate : manualInvoiceItemConfig.rideDays
+    ridesTakenDate : manualInvoiceItemConfig.rideDays,
+    isPaidByYatriCoins : manualPayInvoice.isCoinCleared
   }
     where 
       getManualDesc :: String -> {description :: String, rideDays :: String}

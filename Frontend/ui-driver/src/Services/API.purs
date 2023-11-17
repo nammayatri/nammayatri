@@ -617,6 +617,47 @@ instance standardEncodeStatus :: StandardEncode Status
  standardEncode (COMPLETED) = standardEncode {}
  standardEncode (CANCELLED) = standardEncode {}
  standardEncode (NOTHING) = standardEncode {}
+---------------------------------GET RIDES HISTORY WITHIN DATES---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+data GetRidesSummaryListReq = GetRidesSummaryListReq (Array String)
+
+newtype GetRidesSummaryListResp = GetRidesSummaryListResp
+    {
+      list :: Array RidesSummary
+    }
+
+newtype RidesSummary = RidesSummary
+  {
+    earnings :: Int,
+    rideDistance :: Int,
+    rideDate :: String,
+    noOfRides :: Int
+  }
+
+instance makeGetRidesSummarListReq :: RestEndpoint GetRidesSummaryListReq GetRidesSummaryListResp where
+    makeRequest reqBody@(GetRidesSummaryListReq dateList) headers = defaultMakeRequest POST (EP.getRidesSummaryList dateList) headers reqBody Nothing
+    decodeResponse = decodeJSON
+    encodeRequest req = defaultEncode req
+
+derive instance genericGetRidesSummaryListReq :: Generic GetRidesSummaryListReq _
+instance showGetRidesSummaryListReq :: Show GetRidesSummaryListReq where show = genericShow
+instance standardEncodeGetRidesSummaryListReq :: StandardEncode GetRidesSummaryListReq where standardEncode _ = standardEncode {}
+instance decodeGetRidesSummaryListReq :: Decode GetRidesSummaryListReq where decode = defaultDecode
+instance encodeGetRidesSummaryListReq :: Encode GetRidesSummaryListReq where encode = defaultEncode
+
+derive instance genericGetRidesSummaryListResp :: Generic GetRidesSummaryListResp _
+derive instance newtypeGetRidesSummaryListResp :: Newtype GetRidesSummaryListResp _
+instance standardEncodeGetRidesSummaryListResp :: StandardEncode GetRidesSummaryListResp where standardEncode (GetRidesSummaryListResp req) = standardEncode req
+instance showGetRidesSummaryListResp :: Show GetRidesSummaryListResp where show = genericShow
+instance decodeGetRidesSummaryListResp :: Decode GetRidesSummaryListResp where decode = defaultDecode
+instance encodeGetRidesSummaryListResp :: Encode GetRidesSummaryListResp where encode = defaultEncode
+
+derive instance genericRidesSummary :: Generic RidesSummary _
+derive instance newtypeRidesSummary :: Newtype RidesSummary _
+instance standardEncodeRidesSummary :: StandardEncode RidesSummary where standardEncode (RidesSummary req) = standardEncode req
+instance showRidesSummary :: Show RidesSummary where show = genericShow
+instance decodeRidesSummary :: Decode RidesSummary where decode = defaultDecode
+instance encodeRidesSummary :: Encode RidesSummary where encode = defaultEncode
 --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 -- Request/Offer Ride API request, response types
 
@@ -963,6 +1004,7 @@ newtype DriverProfileStatsResp = DriverProfileStatsResp
       totalRidesOfDay :: Int
     , totalEarningsOfDay :: Int
     , bonusEarning :: Int
+    , coinBalance :: Int
     }
 
 instance makeGetDriverProfileStatsReq :: RestEndpoint DriverProfileStatsReq DriverProfileStatsResp where
@@ -2466,7 +2508,9 @@ newtype DriverDuesEntity = DriverDuesEntity {
     driverFeeAmount :: Number,
     specialZoneRideCount :: Maybe Int,
     totalSpecialZoneCharges :: Maybe Number,
-    maxRidesEligibleForCharge :: Maybe Int
+    maxRidesEligibleForCharge :: Maybe Int,
+    isCoinCleared :: Boolean,
+    coinDiscountAmount :: Maybe Number
 }
 
 newtype OfferEntity = OfferEntity {
@@ -2877,7 +2921,9 @@ newtype AutoPayInvoiceHistory = AutoPayInvoiceHistory {
   amount :: Number,
   executionAt :: String,
   autoPayStage :: Maybe AutopayPaymentStage, 
-  rideTakenOn :: String
+  rideTakenOn :: String,
+  isCoinCleared :: Boolean,
+  coinDiscountAmount :: Maybe Number
 }
 
 newtype ManualInvoiceHistory = ManualInvoiceHistory {
@@ -2887,7 +2933,9 @@ newtype ManualInvoiceHistory = ManualInvoiceHistory {
   amount :: Number,
   feeType :: FeeType,
   paymentStatus :: InvoiceStatus,
-  rideTakenOn :: Maybe String
+  rideTakenOn :: Maybe String,
+  isCoinCleared :: Boolean,
+  coinDiscountAmount :: Maybe Number
 }
 
 instance makeHistoryEntityV2Req :: RestEndpoint HistoryEntityV2Req HistoryEntityV2Resp where
@@ -2948,7 +2996,9 @@ newtype DriverFeeInfoEntity = DriverFeeInfoEntity {
     driverFeeAmount :: Number,
     specialZoneRideCount :: Maybe Int,
     totalSpecialZoneCharges :: Maybe Number,
-    maxRidesEligibleForCharge :: Maybe Int
+    maxRidesEligibleForCharge :: Maybe Int,
+    isCoinCleared :: Boolean,
+    coinDiscountAmount :: Maybe Number
 }
 
 instance makeHistoryEntryDetailsEntityV2Req :: RestEndpoint HistoryEntryDetailsEntityV2Req HistoryEntryDetailsEntityV2Resp where
@@ -2978,7 +3028,7 @@ instance decodeDriverFeeInfoEntity :: Decode DriverFeeInfoEntity where decode = 
 instance encodeDriverFeeInfoEntity :: Encode DriverFeeInfoEntity where encode = defaultEncode
 
 data AutopayPaymentStage =  NOTIFICATION_SCHEDULED | NOTIFICATION_ATTEMPTING | EXECUTION_SCHEDULED | EXECUTION_ATTEMPTING | EXECUTION_SUCCESS | EXECUTION_FAILED | NOTIFICATION_FAILED
-data InvoiceStatus =  ACTIVE_INVOICE | SUCCESS | FAILED | EXPIRED | INACTIVE
+data InvoiceStatus =  ACTIVE_INVOICE | SUCCESS | FAILED | EXPIRED | INACTIVE | CLEARED_BY_YATRI_COINS
 
 derive instance genericAutopayPaymentStage :: Generic AutopayPaymentStage _
 instance showAutopayPaymentStage :: Show AutopayPaymentStage where show = genericShow
@@ -3260,6 +3310,166 @@ instance standardGetCityRes :: StandardEncode GetCityRes where standardEncode (G
 instance showGetCityRes :: Show GetCityRes where show = genericShow
 instance decodeGetCityRes :: Decode GetCityRes where decode = defaultDecode
 instance encodeGetCityRes :: Encode GetCityRes where encode = defaultEncode
+
+---------------------------------------------- DriverCoins ---------------------------------------------------
+  
+data CoinTransactionReq = CoinTransactionReq String
+
+newtype CoinTransactionRes = CoinTransactionRes
+  {
+    coinBalance :: Int,
+    coinEarned :: Int,
+    coinUsed :: Int,
+    coinExpired :: Int,
+    todayCoinSummary :: Int,
+    coinsEarnedPreviousDay :: Int,
+    expiringCoins :: Int,
+    expiringDays :: Int,
+    coinTransactionHistory :: Array CoinTransactionHistoryItem
+  }
+
+newtype CoinTransactionHistoryItem = CoinTransactionHistoryItem
+  {
+    coins :: Int,
+    eventFunction :: DriverCoinsFunctionType,
+    createdAt :: String,
+    bulkUploadTitle :: Maybe BulkCoinTitleTranslations
+  }
+
+newtype BulkCoinTitleTranslations = BulkCoinTitleTranslations
+  { en :: String,
+    bn :: String,
+    hi :: String,
+    ml :: String,
+    ta :: String,
+    te :: String,
+    kn :: String,
+    fr :: String
+  }
+
+data DriverCoinsFunctionType
+  = OneOrTwoStarRating
+  | RideCompleted
+  | FiveStarRating
+  | BookingCancellation
+  | CustomerReferral
+  | DriverReferral
+  | EightPlusRidesInOneDay
+  | PurpleRideCompleted
+  | LeaderBoardTopFiveHundred
+  | TrainingCompleted
+  | BulkUploadFunction
+
+instance makeCoinTransactionReq :: RestEndpoint CoinTransactionReq CoinTransactionRes where
+    makeRequest reqBody@(CoinTransactionReq date) headers = defaultMakeRequest GET (EP.getCoinTransactions date) headers reqBody Nothing
+    decodeResponse = decodeJSON
+    encodeRequest req = defaultEncode req
+
+derive instance genericCoinTransactionReq :: Generic CoinTransactionReq _
+instance showCoinTransactionReq :: Show CoinTransactionReq where show = genericShow
+instance standardEncodeCoinTransactionReq :: StandardEncode CoinTransactionReq where standardEncode (CoinTransactionReq req) = standardEncode req
+instance decodeCoinTransactionReq :: Decode CoinTransactionReq where decode = defaultDecode
+instance encodeCoinTransactionReq :: Encode CoinTransactionReq where encode = defaultEncode
+
+derive instance genericCoinTransactionRes :: Generic CoinTransactionRes _
+derive instance newtypeCoinTransactionRes :: Newtype CoinTransactionRes _
+instance standardEncodeCoinTransactionRes :: StandardEncode CoinTransactionRes where standardEncode (CoinTransactionRes resp) = standardEncode resp
+instance showCoinTransactionRes :: Show CoinTransactionRes where show = genericShow
+instance decodeCoinTransactionRes :: Decode CoinTransactionRes where decode = defaultDecode
+instance encodeCoinTransactionRes :: Encode CoinTransactionRes where encode = defaultEncode
+
+derive instance genericDriverCoinsFunctionType :: Generic DriverCoinsFunctionType _
+instance showDriverCoinsFunctionType :: Show DriverCoinsFunctionType where show = genericShow
+instance decodeDriverCoinsFunctionType :: Decode DriverCoinsFunctionType where decode = defaultEnumDecode
+instance encodeDriverCoinsFunctionType :: Encode DriverCoinsFunctionType where encode = defaultEnumEncode
+instance eqDriverCoinsFunctionType :: Eq DriverCoinsFunctionType where eq = genericEq
+instance standardEncodeDriverCoinsFunctionType :: StandardEncode DriverCoinsFunctionType where standardEncode _ = standardEncode {}
+
+derive instance genericCoinTransactionHistoryItem :: Generic CoinTransactionHistoryItem _
+derive instance newtypeCoinTransactionHistoryItem :: Newtype CoinTransactionHistoryItem _
+instance standardEncodeCoinTransactionHistoryItem :: StandardEncode CoinTransactionHistoryItem where standardEncode (CoinTransactionHistoryItem resp) = standardEncode resp
+instance showCoinTransactionHistoryItem :: Show CoinTransactionHistoryItem where show = genericShow
+instance decodeCoinTransactionHistoryItem :: Decode CoinTransactionHistoryItem where decode = defaultDecode
+instance encodeCoinTransactionHistoryItem :: Encode CoinTransactionHistoryItem where encode = defaultEncode
+
+derive instance genericBulkCoinTitleTranslations :: Generic BulkCoinTitleTranslations _
+derive instance newtypeBulkCoinTitleTranslations :: Newtype BulkCoinTitleTranslations _
+instance standardEncodeBulkCoinTitleTranslations :: StandardEncode BulkCoinTitleTranslations where standardEncode (BulkCoinTitleTranslations resp) = standardEncode resp
+instance showBulkCoinTitleTranslations :: Show BulkCoinTitleTranslations where show = genericShow
+instance decodeBulkCoinTitleTranslations :: Decode BulkCoinTitleTranslations where decode = defaultDecode
+instance encodeBulkCoinTitleTranslations :: Encode BulkCoinTitleTranslations where encode = defaultEncode
+
+data CoinsUsageReq = CoinsUsageReq String String
+
+newtype CoinsUsageRes = CoinsUsageRes
+  {
+    coinBalance :: Int,
+    totalCoinConvertedToCash :: Number,
+    coinConvertedToCashUsedForLatestDues :: Maybe Int,
+    coinConvertedTocashLeft :: Number,
+    coinConversionRate :: Number,
+    coinUsageHistory :: Array CoinUsageHistoryItem
+  }
+
+newtype CoinUsageHistoryItem = CoinUsageHistoryItem
+  {
+    numCoins :: Int,
+    title :: String,
+    createdAt :: String,
+    cash :: Number
+  }
+
+instance makeCoinsUsageReq :: RestEndpoint CoinsUsageReq CoinsUsageRes where
+    makeRequest reqBody@(CoinsUsageReq limit offset) headers = defaultMakeRequest GET (EP.getCoinUsageHistory limit offset) headers reqBody Nothing
+    decodeResponse = decodeJSON
+    encodeRequest req = defaultEncode req
+
+derive instance genericCoinsUsageReq :: Generic CoinsUsageReq _
+instance showCoinsUsageReq :: Show CoinsUsageReq where show = genericShow
+instance standardEncodeCoinsUsageReq :: StandardEncode CoinsUsageReq where standardEncode _ = standardEncode {}
+instance decodeCoinsUsageReq :: Decode CoinsUsageReq where decode = defaultDecode
+instance encodeCoinsUsageReq :: Encode CoinsUsageReq where encode = defaultEncode
+
+derive instance genericCoinsUsageRes :: Generic CoinsUsageRes _
+derive instance newtypeCoinsUsageRes :: Newtype CoinsUsageRes _
+instance standardEncodeCoinsUsageRes :: StandardEncode CoinsUsageRes where standardEncode (CoinsUsageRes resp) = standardEncode resp
+instance showCoinsUsageRes :: Show CoinsUsageRes where show = genericShow
+instance decodeCoinsUsageRes :: Decode CoinsUsageRes where decode = defaultDecode
+instance encodeCoinsUsageRes :: Encode CoinsUsageRes where encode = defaultEncode
+
+derive instance genericCoinUsageHistoryItem :: Generic CoinUsageHistoryItem _
+derive instance newtypeCoinUsageHistoryItem :: Newtype CoinUsageHistoryItem _
+instance standardEncodeCoinUsageHistoryItem :: StandardEncode CoinUsageHistoryItem where standardEncode (CoinUsageHistoryItem resp) = standardEncode resp
+instance showCoinUsageHistoryItem :: Show CoinUsageHistoryItem where show = genericShow
+instance decodeCoinUsageHistoryItem :: Decode CoinUsageHistoryItem where decode = defaultDecode
+instance encodeCoinUsageHistoryItem :: Encode CoinUsageHistoryItem where encode = defaultEncode
+
+newtype ConvertCoinToCashReq = ConvertCoinToCashReq
+  {
+    coins :: Int
+  }
+
+newtype ConvertCoinToCashRes = ConvertCoinToCashRes ApiSuccessResult
+
+instance makeConvertCoinToCashReq :: RestEndpoint ConvertCoinToCashReq ConvertCoinToCashRes where
+ makeRequest reqBody headers = defaultMakeRequest POST (EP.convertCoinToCash "") headers reqBody Nothing
+ decodeResponse = decodeJSON
+ encodeRequest req = standardEncode req
+
+derive instance genericConvertCoinToCashReq :: Generic ConvertCoinToCashReq _
+derive instance newtypeConvertCoinToCashReq :: Newtype ConvertCoinToCashReq _
+instance standardEncodeConvertCoinToCashReq :: StandardEncode ConvertCoinToCashReq where standardEncode (ConvertCoinToCashReq reqBody) = standardEncode reqBody
+instance showConvertCoinToCashReq :: Show ConvertCoinToCashReq where show = genericShow
+instance decodeConvertCoinToCashReq :: Decode ConvertCoinToCashReq where decode = defaultDecode
+instance encodeConvertCoinToCashReq :: Encode ConvertCoinToCashReq where encode = defaultEncode
+
+derive instance genericConvertCoinToCashRes :: Generic ConvertCoinToCashRes _
+derive instance newtypeConvertCoinToCashRes :: Newtype ConvertCoinToCashRes _
+instance standardEncodeConvertCoinToCashRes :: StandardEncode ConvertCoinToCashRes where standardEncode (ConvertCoinToCashRes resp) = standardEncode resp
+instance showConvertCoinToCashRes :: Show ConvertCoinToCashRes where show = genericShow
+instance decodeConvertCoinToCashRes :: Decode ConvertCoinToCashRes where decode = defaultDecode
+instance encodeConvertCoinToCashRes :: Encode ConvertCoinToCashRes where encode = defaultEncode
+
 
 
 ----------------------------- Referred Drivers -----------------------------------------------------

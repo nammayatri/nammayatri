@@ -420,6 +420,23 @@ getRideHistoryReqBT limit offset onlyActive status day= do
     where
     errorHandler (ErrorPayload errorPayload) =  do
         BackT $ pure GoBack
+
+--------------------------------- GetRidesSummaryListResp --------------------------------------------------------------------------------------------------
+getRideSummaryListReq dateList = do
+        headers <- getHeaders "" true
+        withAPIResult (EP.getRidesSummaryList dateList) unwrapResponse $ callAPI headers (GetRidesSummaryListReq dateList)
+    where
+        unwrapResponse (x) = x
+
+
+getRideSummaryListReqBT :: Array String -> FlowBT String GetRidesSummaryListResp
+getRideSummaryListReqBT dateList = do
+        headers <- lift $ lift $ getHeaders "" true
+        withAPIResultBT (EP.getRidesSummaryList dateList) (\x → x) errorHandler (lift $ lift $ callAPI headers (GetRidesSummaryListReq dateList))
+    where
+    errorHandler (ErrorPayload errorPayload) =  do
+        BackT $ pure GoBack
+
 --------------------------------- updateDriverInfoBT ---------------------------------------------------------------------------------------------------------------------------------
 updateDriverInfoBT :: UpdateDriverInfoReq -> FlowBT String UpdateDriverInfoResp
 updateDriverInfoBT payload = do
@@ -1257,7 +1274,34 @@ getMerchantOperatingCityListBT _ = do
     withAPIResultBT (EP.getMerchantIdList id) (\x -> x) errorHandler (lift $ lift $ callAPI headers (GetCityReq id))
     where
     errorHandler errorPayload = do 
-            BackT $ pure GoBack
+            BackT $ pure GoBack        
+
+getCoinTransactionsReqBT :: String -> FlowBT String CoinTransactionRes
+getCoinTransactionsReqBT date = do
+        headers <- lift $ lift $ getHeaders "" true
+        withAPIResultBT (EP.getCoinTransactions date) (\x → x) errorHandler (lift $ lift $ callAPI headers (CoinTransactionReq date))
+    where
+    errorHandler (ErrorPayload errorPayload) =  do
+        BackT $ pure GoBack
+
+getCoinUsageHistoryReqBT :: String -> String -> FlowBT String CoinsUsageRes
+getCoinUsageHistoryReqBT limit offset = do
+        headers <- lift $ lift $ getHeaders "" true
+        withAPIResultBT (EP.getCoinUsageHistory limit offset) (\x → x) errorHandler (lift $ lift $ callAPI headers (CoinsUsageReq limit offset))
+    where
+    errorHandler (ErrorPayload errorPayload) =  do
+        BackT $ pure GoBack
+
+convertCoinToCash :: Int -> Flow GlobalState (Either ErrorResponse ConvertCoinToCashRes)
+convertCoinToCash coins = do 
+    headers <- getHeaders "" false 
+    withAPIResult (EP.convertCoinToCash "") unwrapResponse $ callAPI headers $ makeReq coins
+    where
+        makeReq :: Int -> ConvertCoinToCashReq
+        makeReq coins = ConvertCoinToCashReq {
+            coins : coins
+        }
+        unwrapResponse (x) = x 
 
 ------------------------------------------------------------------------- Referred Drivers -----------------------------------------------------------------------------
 

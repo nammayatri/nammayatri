@@ -94,8 +94,10 @@ export const getWeeksInMonth = function (year) {
   }
 };
 
-export const getCurrentDay = function (dummy) {
+export const getCurrentDay = function (useMidnightTime) {
   const date = new Date();
+  if(useMidnightTime)
+    date.setHours(0,0,0,0);
   return { utcDate: date.toISOString(), date: date.getDate(), shortMonth: date.toLocaleString("default", { month: "short" }), year: date.getFullYear(), intMonth : date.getMonth(),
     isInRange : false, isStart: false , isEnd: false }
 }

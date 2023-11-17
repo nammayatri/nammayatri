@@ -144,7 +144,8 @@ initData = {
           gotoEnabledForMerchant : false,
           confirmGotoCancel : false,
           savedLocationCount : 0
-        }
+        },
+        coinBalance : 0
       , bannerData : {
           bannerItem : Nothing
         , currentBanner : 0
@@ -201,6 +202,8 @@ initData = {
         waitTimeStatus : NoStatus,
         isMockLocation : false,
         accountBlockedPopup : false,
+        showCoinsPopup : false,
+        isStatsModelExpanded : false,
         tobeLogged : false
     }
 }
@@ -211,4 +214,5 @@ dummyDriverRideStats = DriverProfileStatsResp
       totalRidesOfDay : 0
     , totalEarningsOfDay : 0
     , bonusEarning : 0
+    , coinBalance : 0
     }

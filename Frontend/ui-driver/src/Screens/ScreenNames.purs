@@ -59,6 +59,7 @@ data ScreenName = SPLASH_SCREEN
                 | DRIVER_SAVED_LOCATION_SCREEN
                 | WELCOME_SCREEN
                 | CHOOSE_CITY_SCREEN
+                | DRIVER_EARNINGS_SCREEN
 
 derive instance genericScreenName :: Generic ScreenName _
 instance eqScreenName :: Eq ScreenName where eq = genericEq
@@ -85,7 +86,7 @@ getScreen str = case str of
     SELECT_LANGUAGE_SCREEN          -> "select_langauge_screen"
     HELP_AND_SUPPORT_SCREEN         -> "help_and_support_screen"
     VEHICLE_DETAILS_SCREEN          -> "vehicle_details_screen"
-    RIDE_DETAILS_SCREEN              -> "ride_details_screen"
+    RIDE_DETAILS_SCREEN             -> "ride_details_screen"
     EDIT_BANK_DETAILS_SCREEN        -> "edit_bank_details_screen"
     EDIT_AADHAR_DETAILS_SCREEN      -> "edit_aadhar_details_screen"
     TRIP_DETAILS_SCREEN             -> "trip_details_screen"
@@ -104,3 +105,4 @@ getScreen str = case str of
     DRIVER_SAVED_LOCATION_SCREEN   -> "driver_saved_location_screen"
     WELCOME_SCREEN                 -> "welcome_screen"
     CHOOSE_CITY_SCREEN             -> "choose_city_screen"
+    DRIVER_EARNINGS_SCREEN          -> "driver_earnings_screen"
