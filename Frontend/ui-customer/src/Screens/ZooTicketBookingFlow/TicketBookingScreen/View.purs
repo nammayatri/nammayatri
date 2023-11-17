@@ -1,23 +1,28 @@
 module Screens.TicketBookingScreen.View where
 
-import Animation as Anim 
+import Common.Types.App
+import Screens.TicketBookingScreen.ComponentConfig
+
+import Animation as Anim
 import Animation.Config (translateYAnimConfig, translateYAnimMapConfig, removeYAnimFromTopConfig)
-import JBridge as JB 
-import Prelude (Unit, bind, const, pure, unit, ($), (&&), (/=), (<<<),(<>), (==), map, show, (||))
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), Visibility(..), PrestoDOM, Screen, afterRender, background, color, fontStyle, gravity, height, imageUrl, imageView, linearLayout, margin, onBackPressed, orientation, padding, scrollView, text, textSize, textView, weight, width, imageWithFallback, cornerRadius, relativeLayout, alignParentBottom, layoutGravity, stroke, visibility, textFromHtml, onClick)
+import Common.Types.App as Common
+import Components.GenericHeader as GenericHeader
+import Components.PrimaryButton as PrimaryButton
+import Data.Array as DA
+import Data.Foldable (or)
+import Effect (Effect)
+import Engineering.Helpers.Commons (screenWidth)
+import Font.Style as FontStyle
+import Helpers.Utils (fetchImage, FetchImageFrom(..), decodeError, fetchAndUpdateCurrentLocation, getAssetsBaseUrl, getCurrentLocationMarker, getLocationName, getNewTrackingId, getPreviousVersion, getSearchType, parseFloat, storeCallBackCustomer)
+import JBridge as JB
+import Prelude (Unit, bind, const, pure, unit, ($), (&&), (/=), (<<<), (<>), (==), map, show, (||))
+import PrestoDOM (FlexWrap(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Prop, Screen, Visibility(..), afterRender, alignParentBottom, background, color, cornerRadius, fontStyle, gravity, height, imageUrl, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, relativeLayout, scrollView, stroke, text, textFromHtml, textSize, textView, visibility, weight, width)
 import PrestoDOM.Animation as PrestoAnim
 import Screens.TicketBookingScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.Types as ST
 import Styles.Colors as Color
-import Common.Types.App
 import Screens.TicketBookingScreen.ComponentConfig 
-import Effect (Effect)
-import Components.GenericHeader as GenericHeader
-import Components.PrimaryButton as PrimaryButton
-import Font.Style as FontStyle
-import Engineering.Helpers.Commons (screenWidth)
 import Resources.Constants -- TODO:: Replace these constants with API response
-import Helpers.Utils (fetchImage, FetchImageFrom(..), decodeError, fetchAndUpdateCurrentLocation, getAssetsBaseUrl, getCurrentLocationMarker, getLocationName, getNewTrackingId, getPreviousVersion, getSearchType, parseFloat, storeCallBackCustomer)
 
 
 screen :: ST.TicketBookingScreenState -> Screen Action ST.TicketBookingScreenState ScreenOutput
@@ -41,8 +46,8 @@ view push state =
     , width MATCH_PARENT
     , background Color.white900
     , orientation VERTICAL
-    , margin $ MarginBottom 84
-    ][GenericHeader.view (push <<< GenericHeaderAC) (genericHeaderConfig state)
+    , margin $ MarginBottom if bookingStatus then 0 else 84
+    ][ if bookingStatus then linearLayout[visibility GONE][] else GenericHeader.view (push <<< GenericHeaderAC) (genericHeaderConfig state)
     , linearLayout
       [ height $ V 1 
       , width MATCH_PARENT
@@ -66,11 +71,12 @@ view push state =
             ]
           , descriptionView state push ]
         else if state.props.currentStage == ST.ChooseTicketStage then [ chooseTicketsView state push ]
-        else if state.props.currentStage == ST.BookingConfirmationStage then [ bookingConfirmationView state push ]
+        else if state.props.currentStage == ST.BookingConfirmationStage then [ bookingStatusView state push state.props.paymentStatus ]
         else if state.props.currentStage == ST.ViewTicketStage then [ ticketInfoView state push ]
         else [])]
     ]
-    , linearLayout
+    , if bookingStatus then actionButtons state push state.props.paymentStatus else 
+    linearLayout
       [ height WRAP_CONTENT
       , width MATCH_PARENT
       , alignParentBottom "true,-1"
@@ -85,6 +91,7 @@ view push state =
         , PrimaryButton.view (push <<< PrimaryButtonAC) (primaryButtonConfig state)
       ]
   ]
+  where bookingStatus = state.props.currentStage == ST.BookingConfirmationStage
 
 descriptionView :: forall w. ST.TicketBookingScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 descriptionView state push = 
@@ -411,10 +418,200 @@ incrementDecrementView config ticketID push  =
 
   ]
 
-bookingConfirmationView :: forall w. ST.TicketBookingScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
-bookingConfirmationView state push = 
-  linearLayout[][]
-
 ticketInfoView :: forall w. ST.TicketBookingScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 ticketInfoView state push = 
   linearLayout[][]
+
+bookingStatusView :: forall w. ST.TicketBookingScreenState -> (Action -> Effect Unit) -> Common.PaymentStatus -> PrestoDOM (Effect Unit) w
+bookingStatusView state push paymentStatus = 
+  relativeLayout
+  [ width MATCH_PARENT
+  , height MATCH_PARENT
+  , padding $ PaddingTop 20
+  , background "#E2EAFF"
+  ][ linearLayout
+      [ width MATCH_PARENT
+      , height MATCH_PARENT
+      , orientation VERTICAL
+      , gravity CENTER
+      ][  paymentStatusHeader state push paymentStatus
+        , if paymentStatus == Common.Failed then linearLayout[visibility GONE][] else bookingStatusBody state push paymentStatus
+      ]
+  ]
+
+copyTransactionIdView :: forall w. ST.TicketBookingScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+copyTransactionIdView state push = 
+  linearLayout
+  [ height WRAP_CONTENT
+  , width WRAP_CONTENT
+  , gravity CENTER
+  , onClick push $ const Copy
+  ][  commonTV push "TransactionID" Color.black700 (FontStyle.body3 TypoGraphy) 0 CENTER NoAction
+    , textView $ 
+      [ text state.data.transactionId
+      , margin $ MarginLeft 3
+      , color Color.black700
+      , padding $ PaddingBottom 1
+      ] <> FontStyle.h3 TypoGraphy
+  , imageView
+     [ width $ V 16
+     , height $ V 16
+     , margin $ MarginLeft 3
+     , imageWithFallback $ fetchImage FF_ASSET "ny_ic_copy"
+     ] 
+  ]
+
+bookingStatusBody :: forall w. ST.TicketBookingScreenState -> (Action -> Effect Unit) -> Common.PaymentStatus ->  PrestoDOM (Effect Unit) w
+bookingStatusBody state push paymentStatus = 
+  linearLayout
+  [ width MATCH_PARENT
+  , height WRAP_CONTENT
+  , weight 1.0
+  , orientation VERTICAL
+  , margin $ Margin 16 16 16 16
+  ][ scrollView
+      [ width MATCH_PARENT
+      , height MATCH_PARENT
+      ][ linearLayout
+          [ width MATCH_PARENT
+          , height MATCH_PARENT
+          , gravity CENTER
+          , orientation VERTICAL
+          , padding $ Padding 10 10 10 10
+          , cornerRadius 8.0
+          , background Color.white900
+          ][ linearLayout
+              [ width MATCH_PARENT
+              , height WRAP_CONTENT
+              ][ imageView
+                  [ width $ V 24
+                  , height $ V 24
+                  , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_ticket" 
+                  , margin $ MarginRight 4
+                  ]
+                , commonTV push state.data.zooName Color.black900 (FontStyle.subHeading1 TypoGraphy) 0 LEFT NoAction
+              ]
+        , linearLayout
+          [ height WRAP_CONTENT
+          , width MATCH_PARENT
+          , orientation VERTICAL
+          ](DA.mapWithIndex ( \index item ->  keyValueView state item.key item.val index) state.data.keyValArray)
+          , if paymentStatus == Common.Success then PrimaryButton.view (push <<< ShareTicketAC) (shareTicketButtonConfig state) else linearLayout[visibility GONE][]
+          ]
+      ]
+  ]
+
+actionButtons :: forall w. ST.TicketBookingScreenState -> (Action -> Effect Unit) -> Common.PaymentStatus -> PrestoDOM (Effect Unit) w
+actionButtons state push paymentStatus = 
+  linearLayout
+  [ width MATCH_PARENT
+  , gravity CENTER
+  , orientation VERTICAL
+  , padding $ PaddingBottom 20
+  , background Color.white900
+  , alignParentBottom "true,-1"
+  ][ linearLayout
+      [ width MATCH_PARENT
+      , height $ V 1
+      , background Color.grey900
+      , margin $ MarginBottom 10
+      , visibility GONE
+      ][]
+   , if paymentStatus /= Common.Pending then PrimaryButton.view (push <<< ViewTicketAC) (viewTicketButtonConfig primaryButtonText) else linearLayout[visibility GONE][]
+   , commonTV push secondaryButtonText Color.black900 (FontStyle.subHeading1 TypoGraphy) 5 CENTER NoAction
+  ]
+  where primaryButtonText = case paymentStatus of
+                              Common.Success -> "View Ticket"
+                              Common.Failed -> "Try Again"
+                              _ -> ""
+        secondaryButtonText = case paymentStatus of
+                              Common.Success -> "Go Home"
+                              _ -> "Go Back"
+
+paymentStatusHeader :: forall w. ST.TicketBookingScreenState -> (Action -> Effect Unit) -> Common.PaymentStatus -> PrestoDOM (Effect Unit) w
+paymentStatusHeader state push paymentStatus = 
+  let transcationConfig = getTransactionConfig paymentStatus
+  in
+    linearLayout
+    [ width MATCH_PARENT
+    , height WRAP_CONTENT
+    , orientation VERTICAL
+    , gravity CENTER
+    ][ imageView
+        [ width $ V 65
+        , height $ V 65
+        , imageWithFallback transcationConfig.image
+        ]
+      , commonTV push transcationConfig.title Color.black900 (FontStyle.h2 TypoGraphy) 14 CENTER NoAction
+      , commonTV push transcationConfig.statusTimeDesc Color.black700 (FontStyle.body3 TypoGraphy) 5 CENTER NoAction
+      , if paymentStatus == Common.Failed then copyTransactionIdView state push else linearLayout[visibility GONE][]
+    ]
+
+commonTV :: forall w. (Action -> Effect Unit) -> String -> String -> (forall properties. (Array (Prop properties))) -> Int -> Gravity -> Action -> PrestoDOM (Effect Unit) w
+commonTV push text' color' fontStyle marginTop gravity' action =
+  textView $
+  [ width WRAP_CONTENT
+  , height WRAP_CONTENT
+  , text text'
+  , color color'
+  , gravity gravity'
+  , onClick push $ const action
+  , margin $ MarginTop marginTop
+  ] <> fontStyle
+
+keyValueView :: ST.TicketBookingScreenState -> String -> String -> Int -> forall w . PrestoDOM (Effect Unit) w
+keyValueView state key value index = 
+  linearLayout 
+  [ height WRAP_CONTENT
+  , width MATCH_PARENT
+  , gravity CENTER_VERTICAL
+  , orientation VERTICAL
+  ][ linearLayout
+      [ width MATCH_PARENT
+      , margin $ Margin 5 12 5 12
+      , height $ V 1
+      , background Color.grey700
+      ][]
+    , linearLayout
+      [ width MATCH_PARENT
+      , height WRAP_CONTENT
+      , margin $ MarginHorizontal 5 5
+      ][ textView $ 
+        [ text key
+        , margin $ MarginRight 8
+        , color Color.black700
+        ] <> FontStyle.body3 TypoGraphy
+      , linearLayout
+        [ width MATCH_PARENT
+        , gravity RIGHT
+        ][ if index == 1 then bookingForView state else 
+           textView $ 
+            [ text value
+            , color Color.black800
+            ] <> FontStyle.body6 TypoGraphy
+          ]
+      ]
+  ]
+
+bookingForView :: forall w. ST.TicketBookingScreenState -> PrestoDOM (Effect Unit) w
+bookingForView state = 
+  linearLayout
+    [ width WRAP_CONTENT
+    , height WRAP_CONTENT
+    ](map ( \item -> 
+      textView $
+      [ text item
+      , padding $ Padding 6 4 6 4
+      , cornerRadius 20.0
+      , margin $ MarginLeft 5
+      , background Color.blue600
+      ] <> FontStyle.tags TypoGraphy
+    ) state.data.bookedForArray)
+
+getTransactionConfig :: Common.PaymentStatus -> {image :: String, title :: String, statusTimeDesc :: String}
+getTransactionConfig status = 
+  case status of
+    Common.Success -> {image : fetchImage FF_COMMON_ASSET "ny_ic_green_tick", statusTimeDesc : "Your ticket has been generated below", title : "Your booking is Confirmed!"}
+    Common.Pending -> {image : fetchImage FF_COMMON_ASSET "ny_ic_transaction_pending", statusTimeDesc : "Please check back in a few minutes.", title : "Your booking is Pending!"}
+    Common.Failed  -> {image : fetchImage FF_COMMON_ASSET "ny_ic_payment_failed", statusTimeDesc : "Please retry booking.", title : "Booking Failed!"}
+    Common.Scheduled  -> {image : fetchImage FF_COMMON_ASSET "ny_ic_pending", statusTimeDesc : "", title : ""}

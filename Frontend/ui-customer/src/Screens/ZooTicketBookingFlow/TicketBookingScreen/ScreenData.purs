@@ -15,6 +15,7 @@
 
 module Screens.TicketBookingScreen.ScreenData where
 
+import Common.Types.App as Common
 import MerchantConfig.DefaultConfig as DC
 import Screens.Types (TicketBookingScreenState(..), TicketBookingScreenStage(..))
 
@@ -24,6 +25,10 @@ initData =
       servicesAvailing : [],
       shortOrderId: "",
       dateOfVisit : "",
+      keyValArray : [{key : "Date", val : "10th Nov, 23"}, {key : "Booking for", val : "dvkm"}, {key : "Total Paid", val : "₹300"}, {key : "BookingId", val : "1234345356"}, {key : "Transaction ID", val : "OR8192BY29213292149824UI"}, {key : "Valid until", val : "5 PM, 10th Nov 2023"}],
+      bookedForArray : ["Zoo", "Aquarium", "Video"],
+      zooName : "Zoological Garden, Alipore",
+      transactionId : "",
       zooEntry : {
         id : "b73378dc-427f-4efa-9b55-8efe7e3352c2",
         availed : true,
@@ -51,6 +56,7 @@ initData =
   , props : {
       currentStage : DescriptionStage,
       termsAndConditionsSelected : false,
-      validDate : true
+      validDate : true,
+      paymentStatus : Common.Success
     }
   }

@@ -18,6 +18,7 @@ module Screens.Types where
 import MerchantConfig.Types
 
 import Common.Types.App (CountryCodeObj, OTPChannel, OptionButtonList, RateCardType, FeedbackAnswer, CarouselModal)
+import Common.Types.App as Common
 import Components.ChatView.Controller (ChatComponent)
 import Components.ChooseVehicle.Controller as ChooseVehicle
 import Components.QuoteListItem.Controller (QuoteListItemState)
@@ -1323,6 +1324,10 @@ type TicketBookingScreenData = {
   dateOfVisit :: String ,
   zooEntry :: EntryFeeConfig ,
   aquariumEntry :: EntryFeeConfig ,
+  keyValArray :: Array KeyVal,
+  transactionId :: String,
+  bookedForArray :: Array String,
+  zooName :: String,
   photoOrVideoGraphy :: {
     id :: String,
     availed :: Boolean ,
@@ -1339,6 +1344,11 @@ type TicketServiceI = {
   numberOfUnits :: Int
 }
 
+type KeyVal = {
+  key :: String,
+  val :: String
+}
+
 type EntryFeeConfig = {
   id :: String,
   availed :: Boolean,
@@ -1351,7 +1361,8 @@ type EntryFeeConfig = {
 type TicketBookingScreenProps = {
   currentStage :: TicketBookingScreenStage,
   termsAndConditionsSelected :: Boolean,
-  validDate :: Boolean 
+  validDate :: Boolean,
+  paymentStatus :: Common.PaymentStatus
 }
 
 data TicketBookingScreenStage = DescriptionStage 
