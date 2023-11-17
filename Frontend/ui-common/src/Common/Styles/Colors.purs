@@ -141,6 +141,9 @@ black800 = getValueFromConfig "black800"
 black900 :: Color
 black900 = getValueFromConfig "black900"
 
+black6000 :: Color
+black6000 = "#565961"
+
 red :: Color
 red = getValueFromConfig "red"
 

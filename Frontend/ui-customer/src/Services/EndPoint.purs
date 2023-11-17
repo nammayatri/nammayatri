@@ -150,3 +150,9 @@ disabilityList dummy = (getBaseUrl "39") <> "/disability/list"
 
 personStats :: String -> String
 personStats dummy = (getBaseUrl "40") <> "/personStats"
+
+getAllBookings :: String -> String
+getAllBookings dummy = (getBaseUrl "41") <> "/bookings"
+
+ticketBookingDetails :: String -> String -> String
+ticketBookingDetails shortid status = (getBaseUrl "41") <> "/ticket/bookings/" <> shortid <> "/details/" <> "?status=" <> status

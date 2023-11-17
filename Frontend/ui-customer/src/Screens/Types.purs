@@ -33,7 +33,7 @@ import Halogen.VDom.DOM.Prop (PropValue)
 import Prelude (class Eq, class Show)
 import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode, defaultDecode, defaultEncode)
 import PrestoDOM (LetterSpacing, BottomSheetState(..))
-import Services.API (AddressComponents, BookingLocationAPIEntity, EstimateAPIEntity(..), QuoteAPIEntity, RideBookingRes, Route)
+import Services.API (AddressComponents, BookingLocationAPIEntity, EstimateAPIEntity(..), QuoteAPIEntity, RideBookingRes, Route, BookingStatus(..))
 
 type Contacts = {
   name :: String,
@@ -1338,17 +1338,73 @@ type EntryFeeConfig = {
   ticketPerChild :: Int
 }
 
+type TicketBookingItem = 
+  { shortId :: String,
+    ticketPlaceName :: String,
+    amount :: Number,
+    visitDate :: String,
+    status :: BookingStatus
+  }
+
+type TicketBookings = 
+  { pendingBooking :: Array TicketBookingItem,
+    booked :: Array TicketBookingItem
+  }
+
 type TicketBookingScreenProps = {
   currentStage :: TicketBookingScreenStage,
   termsAndConditionsSelected :: Boolean,
-  validDate :: Boolean 
+  validDate :: Boolean ,
+  ticketBookingList :: TicketBookings,
+  selectedBookingId :: String,
+  selectedBookingInfo :: IndividualBookingItem,
+  activeListItem :: TicketBookingServiceDetails,
+  activeIndex :: Int,
+  rightButtonDisable :: Boolean,
+  leftButtonDisable :: Boolean
 }
+
+type TicketItem = {
+  ticketType :: String,
+  fare :: Int,
+  time :: String,
+  serviceId :: String,
+  validTill :: String
+  }
+
+type IndividualBookingItem =
+  { shortId :: String,
+    ticketPlaceId :: Maybe String,
+    ticketPlaceName :: String,
+    personId :: Maybe String,
+    amount :: Number,
+    visitDate :: String,
+    status :: BookingStatus,
+    services :: Array TicketBookingServiceDetails
+  }
+
+type TicketBookingServiceDetails =
+  { ticketServiceShortId :: String,
+    ticketServiceName :: String,
+    amount :: Number,
+    status :: String,
+    verificationCount :: Int,
+    expiryDate :: Maybe String,
+    prices :: Array TicketBookingServicePriceBreakup
+  }
+
+type TicketBookingServicePriceBreakup =
+  { attendeeType :: String,
+    numberOfUnits :: Int,
+    pricePerUnit :: Number
+  }
 
 data TicketBookingScreenStage = DescriptionStage 
                               | ChooseTicketStage
                               | BookingConfirmationStage
                               | ViewTicketStage
                               | MyTicketsStage
+                              | TicketInfoStage
 
 derive instance genericTicketBookingScreenStage :: Generic TicketBookingScreenStage _
 instance showTicketBookingScreenStage :: Show TicketBookingScreenStage where show = genericShow

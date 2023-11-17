@@ -388,3 +388,21 @@ export const extractKeyByRegex = (regex, text) => {
   const matches = text.match(regex);
   return matches ? matches[0] : "";
 }
+
+export const _generateQRCode = function (data, id, size, margin, sc) {
+  if (typeof JBridge.generateQRCode === "function") {
+    try {
+      const cb = callbackMapper.map(function (_status) {
+        console.log("QR status:: ", _status);
+        sc(_status)();
+      });
+      JBridge.generateQRCode(data, id, size, margin, cb);
+    } catch (e) {
+      console.warn(e);
+      sc("FAILURE")();
+    }
+  }
+  else {
+    sc("FAILURE")();
+  }
+}

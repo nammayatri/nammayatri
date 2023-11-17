@@ -26,7 +26,8 @@ genericHeaderConfig state = let
         text = case state.props.currentStage of
                   ST.DescriptionStage -> "Zoological Garden, Alipore"
                   ST.ChooseTicketStage -> "Choose Tickets"
-                  ST.ViewTicketStage -> "Zoological Garden, Alipore"
+                  ST.ViewTicketStage -> "Choose Tickets"
+                  ST.TicketInfoStage -> state.props.selectedBookingInfo.ticketPlaceName
                   _ -> ""
       , color = Color.darkCharcoal
       }
@@ -44,13 +45,14 @@ primaryButtonConfig state = let
         { text = (case state.props.currentStage of 
                     ST.DescriptionStage -> "Book Tickets"
                     ST.ChooseTicketStage -> ("Pay ₹" <> (show state.data.totalAmount))
+                    ST.ViewTicketStage -> "Book Tickets"
                     _ -> "")
         , color = Color.yellow900
         }
       , cornerRadius = 8.0
       , background = Color.black900 
-      , isClickable = (state.props.currentStage == ST.DescriptionStage) || (state.props.termsAndConditionsSelected && state.data.totalAmount > 0)
-      , alpha = if (state.props.currentStage == ST.DescriptionStage) || (state.props.termsAndConditionsSelected && state.data.totalAmount > 0) then 1.0 else 0.5
+      , isClickable = (state.props.currentStage == ST.DescriptionStage) || (state.props.currentStage == ST.ViewTicketStage) || (state.props.termsAndConditionsSelected && state.data.totalAmount > 0)
+      , alpha = if (state.props.currentStage == ST.DescriptionStage) || (state.props.currentStage == ST.ViewTicketStage) || (state.props.termsAndConditionsSelected && state.data.totalAmount > 0) then 1.0 else 0.5
       , id = "BookTicketsButton"
       , margin = (MarginHorizontal 20 20)
       }

@@ -629,7 +629,9 @@ const englishStrings = {
   "EDUCATIONAL_POP_UP_SLIDE_5_SUBTITLE" : "&#8226; We will be collecting other types of <br> &ensp; disabilities and shall be incorporating them <br> &ensp; among the list of disabilities available <br> &ensp; as needed.",
   "INCLUSIVE_AND_ACCESSIBLE" : "Inclusive and Accessible, for everyone!",
   "YOU_SEEM_TO_BE_FAR_FROM_PICK_UP" : "You seem to be far from the pickup location!",
-  "ARE_YOU_SURE_YOU_WANT_TO_PROCEED_WITH_THE_BOOKING" : "Are you sure you want to proceed with the booking?"
+  "ARE_YOU_SURE_YOU_WANT_TO_PROCEED_WITH_THE_BOOKING" : "Are you sure you want to proceed with the booking?",
+  "MY_TICKETS" : "My Tickets",
+  "YOU_CAN_BOOK_TICKETS_TO_THE_ZOO_BY_CLICKING_THE_BUTTON" : "You can book tickets to the Zoo by clicking the button."
 }
 
 export function getStringValue(key) {

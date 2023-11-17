@@ -883,3 +883,12 @@ getPersonStatsBT _ = do
     where
     errorHandler errorPayload = do
             BackT $ pure GoBack 
+
+------------------------------------------------------------------------ ZoneTicketBookingFlow --------------------------------------------------------------------------------
+getAllBookingsBT :: GetAllBookingsReq ->  FlowBT String GetAllBookingsRes
+getAllBookingsBT req = do
+    headers <- getHeaders' "" false
+    withAPIResultBT (EP.getAllBookings "") (\x -> x) errorHandler (lift $ lift $ callAPI headers GetAllBookingsReq)
+    where 
+    errorHandler errorPayload = do
+            BackT $ pure GoBack

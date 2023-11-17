@@ -3,8 +3,8 @@ module Screens.TicketBookingScreen.View where
 import Animation as Anim 
 import Animation.Config (translateYAnimConfig, translateYAnimMapConfig, removeYAnimFromTopConfig)
 import JBridge as JB 
-import Prelude (Unit, bind, const, pure, unit, ($), (&&), (/=), (<<<),(<>), (==), map, show, (||))
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), Visibility(..), PrestoDOM, Screen, afterRender, background, color, fontStyle, gravity, height, imageUrl, imageView, linearLayout, margin, onBackPressed, orientation, padding, scrollView, text, textSize, textView, weight, width, imageWithFallback, cornerRadius, relativeLayout, alignParentBottom, layoutGravity, stroke, visibility, textFromHtml, onClick)
+import Prelude (Unit, bind, const, pure, unit, ($), (&&), (/=), (<<<),(<>), (==), map, show, (||), show, (-))
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), Visibility(..), PrestoDOM, Screen, afterRender, background, color, fontStyle, gravity, height, imageUrl, imageView, linearLayout, margin, onBackPressed, orientation, padding, scrollView, text, textSize, textView, weight, width, imageWithFallback, cornerRadius, relativeLayout, alignParentBottom, layoutGravity, stroke, visibility, textFromHtml, onClick, clickable, id)
 import PrestoDOM.Animation as PrestoAnim
 import Screens.TicketBookingScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.Types as ST
@@ -15,17 +15,26 @@ import Effect (Effect)
 import Components.GenericHeader as GenericHeader
 import Components.PrimaryButton as PrimaryButton
 import Font.Style as FontStyle
-import Engineering.Helpers.Commons (screenWidth)
+import Engineering.Helpers.Commons (screenWidth, convertUTCtoISC, getNewIDWithTag)
 import Helpers.Utils (fetchImage, FetchImageFrom(..), decodeError, fetchAndUpdateCurrentLocation, getAssetsBaseUrl, getCurrentLocationMarker, getLocationName, getNewTrackingId, getPreviousVersion, getSearchType, parseFloat, storeCallBackCustomer)
-
+import Services.API (BookingStatus(..))
+import Animation (fadeInWithDelay, translateInXBackwardAnim, translateInXBackwardFadeAnimWithDelay, translateInXForwardAnim, translateInXForwardFadeAnimWithDelay)
+import Halogen.VDom.DOM.Prop (Prop)
+import Data.Array as DA
+import Data.Maybe (fromMaybe, Maybe(..))
+import Debug
 
 screen :: ST.TicketBookingScreenState -> Screen Action ST.TicketBookingScreenState ScreenOutput
 screen initialState =
   { initialState
   , view
-  , name : "ChooseLanguageScreen"
+  , name : "TicketBookingScreen"
   , globalEvents : []
-  , eval
+  , eval :
+    \action state -> do
+        let _ = spy "ZooTicketBookingFlow action " action
+        let _ = spy "ZooTicketBookingFlow state " state
+        eval action state
   }
 
 view :: forall w . (Action -> Effect Unit) -> ST.TicketBookingScreenState -> PrestoDOM (Effect Unit) w
@@ -46,6 +55,7 @@ view push state =
       [ height $ V 1 
       , width MATCH_PARENT
       , background Color.grey900][]
+    , separatorView Color.greySmoke
     , scrollView[
         height WRAP_CONTENT
       , width MATCH_PARENT
@@ -66,7 +76,8 @@ view push state =
           , descriptionView state push ]
         else if state.props.currentStage == ST.ChooseTicketStage then [ chooseTicketsView state push ]
         else if state.props.currentStage == ST.BookingConfirmationStage then [ bookingConfirmationView state push ]
-        else if state.props.currentStage == ST.ViewTicketStage then [ ticketInfoView state push ]
+        else if state.props.currentStage == ST.ViewTicketStage then [ ticketsListView state push ]
+        else if state.props.currentStage == ST.TicketInfoStage then [ individualBookingInfoView state push]
         else [])]
     ]
     , linearLayout
@@ -76,6 +87,7 @@ view push state =
       , margin $ MarginBottom 16
       , orientation VERTICAL
       , background Color.white900
+      , visibility $ if state.props.currentStage == ST.TicketInfoStage then GONE else VISIBLE
       ][  linearLayout  
           [height $ V 1
           , width MATCH_PARENT
@@ -252,9 +264,9 @@ chooseTicketsView state push =
       , width MATCH_PARENT
       , orientation VERTICAL
       , margin $ MarginTop 20
-      ](map (\item -> ticketInputView { ticketType : item.title , ticketID : item.ticketID, ticketOption : item.ticketOption , isExpanded : item.isExpanded } push ) 
-        [ {title : "Zoo Entry", ticketID : "ZOO_ENTRY" , ticketOption : zooEntryTicketOption state, isExpanded : state.data.zooEntry.availed}
-        , {title : "Aquarium Entry", ticketID : "AQUARIUM_ENTRY" , ticketOption : aquariumEntryTicketOption state , isExpanded : state.data.aquariumEntry.availed}
+      ](map (\item -> ticketInputView { ticketServiceName : item.title , ticketID : item.ticketID, ticketOption : item.ticketOption , isExpanded : item.isExpanded } push ) 
+        [ {title : "Zoo Entry", ticketID : "Entrance" , ticketOption : zooEntryTicketOption state, isExpanded : state.data.zooEntry.availed}
+        , {title : "Aquarium Entry", ticketID : "Aquarium" , ticketOption : aquariumEntryTicketOption state , isExpanded : state.data.aquariumEntry.availed}
         , {title : "Photo / Videography", ticketID : "PHOTO_OR_VIDEOGRAPHY" , ticketOption : photoVideographyTicketOption state , isExpanded : state.data.photoOrVideoGraphy.availed}
           ])
     , linearLayout
@@ -304,7 +316,7 @@ ticketInputView config push =
     , width MATCH_PARENT
     , onClick push $ const (ToggleTicketOption config.ticketID)
     ][ textView $
-        [ text config.ticketType --"Zoo Entry"
+        [ text config.ticketServiceName --"Zoo Entry"
         , color Color.black800
         ] <> FontStyle.h2 TypoGraphy
       , linearLayout
@@ -414,6 +426,424 @@ bookingConfirmationView :: forall w. ST.TicketBookingScreenState -> (Action -> E
 bookingConfirmationView state push = 
   linearLayout[][]
 
-ticketInfoView :: forall w. ST.TicketBookingScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
-ticketInfoView state push = 
-  linearLayout[][]
+ticketsListView :: forall w. ST.TicketBookingScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+ticketsListView state push = 
+  linearLayout
+  [ width $ MATCH_PARENT
+  , height $ MATCH_PARENT
+  , orientation VERTICAL
+  , margin $ MarginTop 12
+  , padding $ PaddingHorizontal 16 16
+  ][ ticketsCardListView state push state.props.ticketBookingList.booked "Booked Trips"
+  ,  ticketsCardListView state push state.props.ticketBookingList.pendingBooking "Pending Payment"
+  ]
+
+ticketsCardListView :: forall w. ST.TicketBookingScreenState -> (Action -> Effect Unit) -> Array ST.TicketBookingItem -> String -> PrestoDOM (Effect Unit) w
+ticketsCardListView state push list title =
+  linearLayout
+  [ width MATCH_PARENT
+  , height WRAP_CONTENT
+  , orientation VERTICAL
+  ][ textView $
+     [ text title
+     , width $ WRAP_CONTENT
+     , height $ WRAP_CONTENT
+     , margin $ MarginBottom 12
+     , color Color.black900
+     ] <> FontStyle.subHeading1 TypoGraphy
+  ,  linearLayout
+     [ width MATCH_PARENT
+     , height WRAP_CONTENT
+     , orientation VERTICAL
+     , margin $ MarginBottom 12
+     ](map (\item -> ticketInfoCardView state push item) list)
+  ]
+
+ticketInfoCardView :: forall w. ST.TicketBookingScreenState -> (Action -> Effect Unit) -> ST.TicketBookingItem -> PrestoDOM (Effect Unit) w
+ticketInfoCardView state push booking = 
+  linearLayout
+  [ width $ MATCH_PARENT
+  , height $ WRAP_CONTENT
+  , padding $ Padding 16 16 16 16
+  , orientation HORIZONTAL
+  , cornerRadius 8.0
+  , stroke $ "1," <> Color.grey700
+  , margin $ MarginBottom 12
+  ][  imageView
+      [ imageWithFallback $ getTicketStatusImage booking.status
+      , width $ V 20
+      , height $ V 20
+      , margin $ Margin 0 4 12 0
+      ]
+    , linearLayout
+      [ width $ MATCH_PARENT
+      , height $ WRAP_CONTENT
+      , orientation VERTICAL
+      ][ textView $ 
+         [ text booking.ticketPlaceName
+         , width MATCH_PARENT
+         , height WRAP_CONTENT
+         , margin $ MarginBottom 8
+         , color Color.black900
+         ] <> FontStyle.subHeading1 TypoGraphy
+      ,  textView
+         [ text (convertUTCtoISC booking.visitDate "Do MMM, YYYY")
+         , width MATCH_PARENT
+         , height WRAP_CONTENT
+         , margin $ MarginBottom 12
+         ]
+      ,  linearLayout
+         [ width WRAP_CONTENT
+         , height WRAP_CONTENT
+         , orientation HORIZONTAL
+         , gravity CENTER_VERTICAL
+         , onClick push $ const $ GetBookingInfo booking.shortId
+         , clickable true
+         ][ textView 
+            [ text "View"
+            , color Color.blue900
+            , margin $ MarginRight 8]
+          , imageView
+            [ width $ V 10
+            , height $ V 8
+            , imageWithFallback $ fetchImage FF_ASSET "ny_ic_blue_arrow"
+            ]
+         ]
+      ]
+  ]
+
+separatorView :: forall w. String -> PrestoDOM (Effect Unit) w
+separatorView color =
+  linearLayout
+  [ height $ V 1
+  , width MATCH_PARENT
+  , background color
+  ][]
+
+getTicketStatusImage :: BookingStatus -> String
+getTicketStatusImage status = fetchImage FF_ASSET $ case status of 
+  Pending -> "ny_ic_pending"
+  Booked -> "ny_ic_success"
+  Failed -> "ny_ic_failed"
+
+
+individualBookingInfoView :: forall w. ST.TicketBookingScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+individualBookingInfoView state push =
+  PrestoAnim.animationSet
+  [ translateInXForwardAnim true , translateInXForwardAnim true] $ linearLayout
+  [ height WRAP_CONTENT
+  , width $ MATCH_PARENT
+  , background Color.white900
+  , orientation VERTICAL
+  , padding $ Padding 16 20 16 20
+  , onBackPressed push $ const BackPressed
+  , afterRender push (const AfterRender)
+  ][ zooTicketView state push
+  ,  carouselDotView state push
+  ]
+
+noDataView :: forall w. ST.TicketBookingScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+noDataView state push =
+  linearLayout
+  [ width $ MATCH_PARENT
+  , height WRAP_CONTENT
+  , orientation VERTICAL
+  , background $ Color.blue600
+  , gravity CENTER
+  ][ 
+  ]
+
+
+zooTicketView :: forall w. ST.TicketBookingScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+zooTicketView state push =
+  let activeItem = state.props.activeListItem
+  in
+  PrestoAnim.animationSet
+  [ translateInXForwardAnim true , translateInXForwardAnim true] $
+  linearLayout
+  [ height $ WRAP_CONTENT
+  , width $ MATCH_PARENT
+  , background $ getTicketBackgroundColor activeItem.ticketServiceName
+  , orientation VERTICAL
+  , padding $ Padding 16 24 16 24
+  , cornerRadius 8.0
+  ][ ticketHeaderView state push (getPlaceColor activeItem.ticketServiceName) (getInfoColor activeItem.ticketServiceName)
+  ,  ticketImageView state push
+  ,  bookingInfoView state push
+  ,  shareTicketView state push
+  ]
+
+getTicketBackgroundColor :: String -> String
+getTicketBackgroundColor ticketServiceName = case ticketServiceName of
+  "Entrance" -> Color.black900
+  "VideoPhotography" -> Color.yellow800
+  "Aquarium" -> Color.blue600
+  _ -> Color.grey900
+
+getShareButtonIcon :: String -> String
+getShareButtonIcon ticketServiceName = case ticketServiceName of
+  "Entrance" -> "ny_ic_share_unfilled_white"
+  _ -> "ny_ic_share_unfilled_black"
+
+getShareButtonColor :: String -> String
+getShareButtonColor ticketServiceName = case ticketServiceName of
+  "Entrance" -> Color.white900
+  _ -> Color.black900
+
+getPlaceColor :: String -> String
+getPlaceColor ticketServiceName = case ticketServiceName of
+  "Entrance" -> Color.white900
+  "VideoPhotography" -> Color.black800
+  "Aquarium" -> Color.black800
+  _ -> Color.grey900
+
+getInfoColor :: String -> String
+getInfoColor ticketServiceName = case ticketServiceName of
+  "Entrance" -> Color.white900
+  "VideoPhotography" -> Color.black900
+  "Aquarium" -> Color.black900
+  _ -> Color.grey900
+
+ticketHeaderView :: forall w. ST.TicketBookingScreenState -> (Action -> Effect Unit) -> String -> String -> PrestoDOM (Effect Unit) w
+ticketHeaderView state push placeColor infoColor  =
+  let activeItem = state.props.activeListItem
+  in
+  linearLayout
+  [ width $ MATCH_PARENT
+  , height WRAP_CONTENT
+  , orientation HORIZONTAL
+  , gravity CENTER
+  ][ imageView
+     [ margin $ Margin 0 0 10 0
+     , width $ V 24
+     , height $ V 24
+     , imageWithFallback $ getTicketImage activeItem.ticketServiceName 
+     ]
+  ,  linearLayout
+     [ width $ MATCH_PARENT
+     , height WRAP_CONTENT
+     , orientation VERTICAL
+     ][ tvView state.props.selectedBookingInfo.ticketPlaceName placeColor (MarginBottom 0) (FontStyle.body3 TypoGraphy)
+      , linearLayout
+        [ width WRAP_CONTENT
+        , height WRAP_CONTENT
+        , orientation HORIZONTAL
+        ][ tvView (convertUTCtoISC state.props.selectedBookingInfo.visitDate "Do MMM, YYYY") infoColor (MarginBottom 0) (FontStyle.subHeading1 TypoGraphy)
+        ,  dotView placeColor (Margin 10 10 10 10) 5
+        ,  tvView ("Total : ₹ " <>  show state.props.selectedBookingInfo.amount) infoColor (MarginBottom 0) (FontStyle.subHeading1 TypoGraphy)
+        ]
+     ]
+  
+  ]
+
+getTicketImage :: String -> String
+getTicketImage ticketServiceName = case ticketServiceName of
+  "Entrance" -> fetchImage FF_ASSET "ny_ic_ticket"
+  _ -> fetchImage FF_ASSET "ny_ic_ticket_black"
+
+carouselDotView :: forall w. ST.TicketBookingScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+carouselDotView state push =
+  linearLayout
+  [ width MATCH_PARENT
+  , height WRAP_CONTENT
+  , orientation HORIZONTAL
+  , gravity CENTER
+  , margin $ MarginTop 12
+  ] (DA.mapWithIndex (\index item -> if index == state.props.activeIndex then (dotView Color.black900 (Margin 2 2 2 2) 6) else (dotView Color.grey900 (Margin 2 2 2 2) 6) ) state.props.selectedBookingInfo.services)
+
+ticketImageView :: forall w. ST.TicketBookingScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+ticketImageView state push =
+  let activeItem = state.props.activeListItem
+  in
+  linearLayout
+  [ width MATCH_PARENT
+  , height WRAP_CONTENT
+  , orientation VERTICAL
+  , gravity CENTER
+  , margin $ MarginVertical 24 24
+  ][  linearLayout
+      [ width MATCH_PARENT
+      , height WRAP_CONTENT
+      , orientation HORIZONTAL
+      , gravity CENTER
+      ][  linearLayout
+          [ weight 1.0
+          , height WRAP_CONTENT
+          , gravity CENTER
+          ][ imageView
+              [ width $ V 24
+              , height $ V 24
+              , imageWithFallback $ getLeftButtonForSlider state.props.activeListItem.ticketServiceName state.props.leftButtonDisable
+              , onClick push $ const DecrementSliderIndex
+              , visibility $ if state.props.leftButtonDisable then INVISIBLE else VISIBLE
+              , clickable $ if state.props.leftButtonDisable then false else true
+              ]
+          ]
+        , if state.props.currentStage == ST.TicketInfoStage then (linearLayout
+          [ weight 1.0
+          , height WRAP_CONTENT
+          , gravity CENTER
+          ][ imageView
+            [ width $ V 192
+            , height $ V 192
+            , id $ spy "QRID" (getNewIDWithTag "ticketQRView")
+            , background Color.black900
+            -- , imageWithFallback $ fetchImage FF_ASSET "ny_ic_chevron_left_white"
+            -- , afterRender push (const (TicketQRRendered (getNewIDWithTag "ticketQRView") activeItem.ticketServiceShortId ))
+            ]
+          ]) else linearLayout[id $ spy "DummyID" getNewIDWithTag "dummy"][]
+        , linearLayout
+          [ weight 1.0
+          , height WRAP_CONTENT
+          , gravity CENTER
+          ][ imageView
+            [ width $ V 24
+            , height $ V 24
+            , imageWithFallback $ getRightButtonForSlider state.props.activeListItem.ticketServiceName state.props.rightButtonDisable
+            , onClick push $ const IncrementSliderIndex
+            , visibility $ if state.props.rightButtonDisable then INVISIBLE else VISIBLE
+            , clickable $ if state.props.rightButtonDisable then false else true
+            ]
+          ]
+      ]
+    , tvView (getTextForQRType activeItem.ticketServiceName) (getInfoColor activeItem.ticketServiceName) (MarginVertical 10 10) (FontStyle.subHeading1 TypoGraphy)
+    , pillView state push (getPillBackgroundColor activeItem.ticketServiceName) (getPillInfoColor activeItem.ticketServiceName)
+  ]
+
+getTextForQRType :: String -> String
+getTextForQRType ticketServiceName = case ticketServiceName of
+  "Entrance" -> "Zoo Entry QR"
+  "VideoPhotography" -> "Photo / VideoGraphy Entry QR"
+  "Aquarium" -> "Aquarium Entry QR"
+  _ -> ""
+ 
+getPillBackgroundColor :: String -> String
+getPillBackgroundColor ticketServiceName = case ticketServiceName of
+  "Entrance" -> Color.black6000
+  "VideoPhotography" -> Color.yellow900
+  "Aquarium" ->  Color.blue900
+  _ -> ""
+
+getPillInfoColor :: String -> String
+getPillInfoColor ticketServiceName = case ticketServiceName of
+  "Entrance" -> Color.grey900
+  "VideoPhotography" -> Color.black800
+  "Aquarium" ->  Color.white900
+  _ -> ""
+  
+getLeftButtonForSlider :: String -> Boolean -> String
+getLeftButtonForSlider ticketServiceName buttonDisabled = case ticketServiceName of
+  "Entrance" -> if buttonDisabled then fetchImage FF_ASSET "ny_ic_chevron" else fetchImage FF_ASSET "ny_ic_chevron_left_white"
+  _ -> if buttonDisabled then fetchImage FF_ASSET "ny_ic_chevron" else fetchImage FF_ASSET "ny_ic_chevron_left"
+
+getRightButtonForSlider :: String -> Boolean -> String
+getRightButtonForSlider ticketServiceName buttonDisabled = case ticketServiceName of
+  "Entrance" -> if buttonDisabled then fetchImage FF_ASSET "ny_ic_chevron" else fetchImage FF_ASSET "ny_ic_chevron_right_white"
+  _ -> if buttonDisabled then fetchImage FF_ASSET "ny_ic_chevron" else fetchImage FF_ASSET "ny_ic_chevron_right"
+
+pillView :: forall w. ST.TicketBookingScreenState -> (Action -> Effect Unit) -> String -> String -> PrestoDOM (Effect Unit) w
+pillView state push backgroudColor textColor =
+  let activeItem = state.props.activeListItem
+      itemLength = (DA.length activeItem.prices) - 1
+  in
+  linearLayout
+  [ width $ WRAP_CONTENT
+  , height $ WRAP_CONTENT
+  , orientation HORIZONTAL
+  , background backgroudColor
+  , cornerRadius 30.0
+  , padding $ Padding 16 6 16 6
+  ] (DA.mapWithIndex (\index item ->
+      linearLayout
+      [ width $ WRAP_CONTENT
+      , height WRAP_CONTENT
+      , orientation HORIZONTAL
+      ]([  tvView (show item.numberOfUnits <> " " <> show item.attendeeType) textColor (MarginBottom 0) (FontStyle.subHeading1 TypoGraphy)
+      ] <> if index == itemLength then [] else [dotView (getPillInfoColor activeItem.ticketServiceName) (Margin 2 2 2 2) 5] )
+   ) activeItem.prices )
+
+dotView :: forall w. String -> Margin -> Int -> PrestoDOM (Effect Unit) w
+dotView color layMargin size =
+  linearLayout
+  [ width $ V size
+  , height $ V size
+  , background color
+  , cornerRadius 30.0
+  , margin $ layMargin
+  ][]
+
+tvView :: forall w. String -> String -> Margin -> (forall properties. (Array (Prop properties))) -> PrestoDOM (Effect Unit) w
+tvView textString textColor textMargin fontSt = 
+  textView
+  ([ width WRAP_CONTENT
+  , height WRAP_CONTENT
+  , text textString
+  , color textColor
+  , margin textMargin
+  , gravity CENTER
+  ] <>  fontSt )
+
+bookingInfoView :: forall w. ST.TicketBookingScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+bookingInfoView state push =
+  let activeItem = state.props.activeListItem
+  in
+  linearLayout
+  [ height WRAP_CONTENT
+  , width MATCH_PARENT
+  , orientation VERTICAL
+  ][  bookingInfoListItemView state "Service ID" activeItem.ticketServiceShortId
+    , separatorView (getSeparatorColor activeItem.ticketServiceName)
+    , bookingInfoListItemView state "Zoo Entry" (show activeItem.amount)
+    , separatorView (getSeparatorColor activeItem.ticketServiceName)
+    , bookingInfoListItemView state "Valid Until" (convertUTCtoISC (fromMaybe "" activeItem.expiryDate) "Do MMM, YYYY")
+  ]
+
+getSeparatorColor :: String -> String
+getSeparatorColor ticketServiceName = case ticketServiceName of
+  "Entrance" -> Color.black6000
+  _ -> Color.grey900
+
+bookingInfoListItemView :: forall w.  ST.TicketBookingScreenState -> String -> String -> PrestoDOM (Effect Unit ) w
+bookingInfoListItemView state key value =
+  let activeItem = state.props.activeListItem
+  in
+  linearLayout
+  [ width MATCH_PARENT
+  , height WRAP_CONTENT
+  , orientation HORIZONTAL
+  , margin $ MarginVertical 12 12
+  ][  textView
+      ([ weight 1.0
+      , height WRAP_CONTENT
+      , text key
+      , color $ getPlaceColor activeItem.ticketServiceName
+      ] <> FontStyle.body3 TypoGraphy)
+    , textView
+      ([ weight 1.0
+      , height WRAP_CONTENT
+      , text value
+      , color $ getPlaceColor activeItem.ticketServiceName
+      , gravity RIGHT
+      ] <> FontStyle.body3 TypoGraphy)
+  ]
+
+shareTicketView :: forall w. ST.TicketBookingScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+shareTicketView state push =
+  linearLayout
+  [ width $ MATCH_PARENT
+  , height $ WRAP_CONTENT
+  , orientation HORIZONTAL
+  , gravity CENTER
+  ][imageView
+    [ height $ V 16
+    , width $ V 16
+    , imageWithFallback $ fetchImage FF_ASSET $ getShareButtonIcon state.props.activeListItem.ticketServiceName
+    , margin $ MarginRight 8
+    ]
+  , textView $ 
+    [ height $ WRAP_CONTENT
+    , width $ WRAP_CONTENT
+    , text $ "Share"
+    , color $ getShareButtonColor state.props.activeListItem.ticketServiceName
+    ] <> FontStyle.tags TypoGraphy
+  ]

@@ -16,7 +16,9 @@
 module Screens.TicketBookingScreen.ScreenData where
 
 import MerchantConfig.DefaultConfig as DC
-import Screens.Types (TicketBookingScreenState(..), TicketBookingScreenStage(..))
+import Screens.Types (TicketBookingScreenState(..), TicketBookingScreenStage(..), TicketBookings(..), TicketItem(..))
+import Data.Maybe (Maybe(..))
+import Services.API (BookingStatus(..))
 
 initData :: TicketBookingScreenState
 initData = 
@@ -44,8 +46,20 @@ initData =
       totalAmount : 0
   }
   , props : {
-      currentStage : DescriptionStage,
+        currentStage : DescriptionStage,
       termsAndConditionsSelected : false,
       validDate : true
+      , ticketBookingList : dummyData
+      , selectedBookingId : "adfadf"
+      , selectedBookingInfo : {shortId : "afda", ticketPlaceId : Just "aksdfjl;a", ticketPlaceName : "aksdfj;la", personId : Nothing, amount : 500.0, visitDate : "2023-10-23", status : Booked, services : [{ ticketServiceShortId : "afdjasdf ;a", ticketServiceName : "VideoPhotography", amount : 100.0, status : "Pending", verificationCount : 0, expiryDate : Nothing,  prices : []}, { ticketServiceShortId : "afdj;jkja", ticketServiceName : "Entrance", amount : 100.0, status : "Confirmed", verificationCount : 0, expiryDate : Nothing,  prices : []}] }
+      , activeListItem : { ticketServiceShortId : "afdjasdf ;a", ticketServiceName : "VideoPhotography", amount : 100.0, status : "Pending", verificationCount : 0, expiryDate : Nothing,  prices : []}
+      , activeIndex : 0
+      , rightButtonDisable : false
+      , leftButtonDisable : true
     }
   }
+
+dummyData :: TicketBookings
+dummyData = { booked : [{shortId : "kjdfk;a", ticketPlaceName : "Zoological Garden, AliPore", amount : 500.0, visitDate : "10-10-2023", status : Booked}],
+              pendingBooking : [{shortId : "kjdfadfk;a", ticketPlaceName : "Zoological Garden, AliPore", amount : 500.0, visitDate : "10-10-2023", status : Pending}]
+            }
