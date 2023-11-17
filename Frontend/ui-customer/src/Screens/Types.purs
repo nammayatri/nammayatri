@@ -1395,6 +1395,7 @@ type TicketBookings =
 
 type TicketBookingScreenProps = {
   currentStage :: TicketBookingScreenStage,
+  previousStage :: TicketBookingScreenStage,
   termsAndConditionsSelected :: Boolean,
   validDate :: Boolean,
   showShimmer :: Boolean,

@@ -64,6 +64,26 @@ view push state =
       , background Color.white900
       ][ individualBookingInfoView state push]
     ]
+  , linearLayout
+    [ height WRAP_CONTENT
+    , width MATCH_PARENT
+    , alignParentBottom "true,-1"
+    , background Color.white900
+    , orientation VERTICAL
+    ][  linearLayout
+        [ height $ V 1
+        , width MATCH_PARENT
+        , background Color.grey900][]
+      , textView $
+        [ text "Go Home"
+        , width MATCH_PARENT
+        , height WRAP_CONTENT
+        , onClick push $ const GoHome
+        , gravity CENTER
+        , padding $ PaddingVertical 16 16
+        , color Color.black900
+        ] <> (FontStyle.subHeading1 TypoGraphy)
+    ]
   ]
 
 genericHeaderConfig :: ST.TicketInfoScreenState -> GenericHeader.Config

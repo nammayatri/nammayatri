@@ -34,6 +34,7 @@ data Action = AfterRender
             | IncrementSliderIndex
             | GenericHeaderAC GenericHeader.Action 
             | GoBack
+            | GoHome
 
 
 data ScreenOutput = GoToHomeScreen
@@ -67,5 +68,7 @@ eval (TicketQRRendered id text) state  =
     runEffectFn4 generateQR text id 200 0
     pure $ NoAction
   ]
+
+eval GoHome state = exit GoToHomeScreen
 
 eval _ state = continue state

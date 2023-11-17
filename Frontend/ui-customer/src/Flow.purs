@@ -772,7 +772,7 @@ homeScreenFlow = do
       (GetAllBookingsRes pendingRes) <- Remote.getAllBookingsBT Pending
       void $ pure $ spy "bookedRes" bookedRes
       void $ pure $ spy "pendingRes" pendingRes
-      modifyScreenState $ TicketBookingScreenStateType (\_ -> TicketBookingScreenData.initData{props{currentStage = ViewTicketStage, ticketBookingList = getTicketBookings (buildBookingDetails bookedRes) (buildBookingDetails pendingRes)}})            
+      modifyScreenState $ TicketBookingScreenStateType (\_ -> TicketBookingScreenData.initData{props{currentStage = ViewTicketStage, previousStage = ViewTicketStage, ticketBookingList = getTicketBookings (buildBookingDetails bookedRes) (buildBookingDetails pendingRes)}})            
       zooTicketBookingFlow
     GO_TO_MY_PROFILE  updateProfile -> do
         _ <- lift $ lift $ liftFlow $ logEvent logField_ (if updateProfile then "safety_banner_clicked" else "ny_user_profile_click")
@@ -1529,7 +1529,9 @@ homeScreenFlow = do
         homeScreenFlow
     RIDE_DETAILS_SCREEN state -> do
       tripDetailsScreenFlow Home
-    GO_TO_TICKET_BOOKING_FLOW state -> zooTicketBookingFlow
+    GO_TO_TICKET_BOOKING_FLOW state -> do 
+      modifyScreenState $ TicketBookingScreenStateType (\ticketBookingScreen -> ticketBookingScreen{props{previousStage = DescriptionStage}})
+      zooTicketBookingFlow
     _ -> homeScreenFlow
 
 getDistanceDiff :: HomeScreenState -> Number -> Number -> FlowBT String Unit

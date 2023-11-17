@@ -1109,7 +1109,7 @@ bookingConfirmationActions state push paymentStatus =
       , visibility GONE
       ][]
    , PrimaryButton.view (push <<< ViewTicketAC) (viewTicketButtonConfig primaryButtonText $ paymentStatus /= Common.Pending)
-   , commonTV push secondaryButtonText Color.black900 (FontStyle.subHeading1 TypoGraphy) 5 CENTER NoAction
+   , commonTV push secondaryButtonText Color.black900 (FontStyle.subHeading1 TypoGraphy) 5 CENTER GoHome
   ]
   where primaryButtonText = case paymentStatus of
                               Common.Success -> "View Ticket"
