@@ -1,16 +1,23 @@
 module Screens.TicketBookingScreen.Controller where
 
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppScreenEvent)
-import Prelude (class Show, discard, pure, unit, bind, ($), not, (+), (-), (==), (*), (<>), show)
-import PrestoDOM (Eval, continue, exit, updateAndExit, continueWithCmd)
+import Prelude (class Show, discard, pure, unit, bind, ($), not, (+), (-), (==), (*), (<>), show, (+), (==), (-), show)
+import PrestoDOM (Eval, continue, exit, updateAndExit, continueWithCmd, continueWithCmd)
 import Screens (ScreenName(..), getScreen)
 import PrestoDOM.Types.Core (class Loggable)
 import Screens.Types (TicketBookingScreenState, TicketBookingScreenStage(..), TicketServiceI(..))
 import Helpers.Utils (compareDate, getCurrentDate)
 import Effect.Uncurried (runEffectFn2)
 import Effect.Unsafe (unsafePerformEffect)
+import Screens.Types (TicketBookingScreenState, TicketBookingItem(..), HomeScreenState)
 import Components.GenericHeader as GenericHeader
 import Components.PrimaryButton as PrimaryButton
+import Effect.Uncurried(runEffectFn4)
+import Debug (spy)
+import Helpers.Utils (generateQR)
+import Data.Array (length, (!!))
+import Data.Maybe (Maybe(..))
+import Engineering.Helpers.Commons(getNewIDWithTag)
 import Resources.Constants
 
 instance showAction :: Show Action where
@@ -34,6 +41,10 @@ data Action = AfterRender
             | OpenCalendar 
             | NoAction
             | BackPressed
+            | GetBookingInfo String
+            | TicketQRRendered String String
+            | IncrementSliderIndex
+            | DecrementSliderIndex
             | Copy
 
 data ScreenOutput = GoToHomeScreen | GoToTicketPayment TicketBookingScreenState
@@ -48,6 +59,7 @@ data ScreenOutput = GoToHomeScreen | GoToTicketPayment TicketBookingScreenState
 --         Nothing -> Nothing
 --   in
 --     fromMaybe services $ updateAt updateFunc serviceId services
+                  | GoToGetBookingInfo TicketBookingScreenState
 
 eval :: Action -> TicketBookingScreenState -> Eval Action ScreenOutput TicketBookingScreenState
 eval (ToggleTicketOption ticketID) state =
@@ -120,6 +132,7 @@ eval (PrimaryButtonAC (PrimaryButton.OnClick)) state = do
   case state.props.currentStage of 
     DescriptionStage -> continue state{props{currentStage = ChooseTicketStage}}
     ChooseTicketStage -> exit $ GoToTicketPayment state
+    ViewTicketStage -> continue state{props{currentStage = ChooseTicketStage}}
     _ -> continue state
 
 eval (GenericHeaderAC (GenericHeader.PrefixImgOnClick)) state = continueWithCmd state [do pure BackPressed]
@@ -128,7 +141,38 @@ eval BackPressed state =
   case state.props.currentStage of 
     DescriptionStage -> exit GoToHomeScreen 
     ChooseTicketStage -> continue state{props{currentStage = DescriptionStage}}
+    ViewTicketStage -> exit $ GoToHomeScreen 
+    TicketInfoStage -> continue state{props{currentStage = ViewTicketStage}}
     _ -> continue state
+
+
+eval (GetBookingInfo bookingShortId) state = do
+  let newState = state { props { selectedBookingId = bookingShortId } }
+  updateAndExit newState $ GoToGetBookingInfo newState
+
+eval (TicketQRRendered id text) state  = 
+  continueWithCmd state [ do
+    runEffectFn4 generateQR text id 200 0
+    pure $ NoAction
+  ]
+
+eval IncrementSliderIndex state = do
+  let len = length state.props.selectedBookingInfo.services
+      activeItem = state.props.selectedBookingInfo.services !! (state.props.activeIndex + 1)
+  case activeItem of
+    Just item -> continueWithCmd state {props{leftButtonDisable = false, rightButtonDisable = (state.props.activeIndex + 1) == (len-1), activeListItem = item, activeIndex = state.props.activeIndex + 1}} [ do
+      pure $ (TicketQRRendered (getNewIDWithTag "ticketQRView") item.ticketServiceShortId )
+    ]
+    Nothing -> continue state
+
+eval DecrementSliderIndex state = do
+  let len = length state.props.selectedBookingInfo.services
+      activeItem = state.props.selectedBookingInfo.services !! (state.props.activeIndex - 1)
+  case activeItem of
+    Just item -> continueWithCmd state{props{rightButtonDisable = false, leftButtonDisable = (state.props.activeIndex - 1) == 0, activeListItem = item, activeIndex = state.props.activeIndex - 1}} [ do
+      pure $ (TicketQRRendered (getNewIDWithTag "ticketQRView") item.ticketServiceShortId )     
+    ]
+    Nothing -> continue state
 
 eval _ state = continue state
 

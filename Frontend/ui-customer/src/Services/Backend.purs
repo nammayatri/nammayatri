@@ -961,3 +961,11 @@ mkBookingTicketReq ticketBookingScreenData =
           } 
       in
         singleton photoOrVideoGraphyService
+------------------------------------------------------------------------ ZoneTicketBookingFlow --------------------------------------------------------------------------------
+getAllBookingsBT :: BookingStatus ->  FlowBT String GetAllBookingsRes
+getAllBookingsBT status = do
+    headers <- getHeaders' "" false
+    withAPIResultBT (EP.getAllBookings (show status) "10" "1") (\x -> x) errorHandler (lift $ lift $ callAPI headers GetAllBookingsReq)
+    where 
+    errorHandler errorPayload = do
+            BackT $ pure GoBack
