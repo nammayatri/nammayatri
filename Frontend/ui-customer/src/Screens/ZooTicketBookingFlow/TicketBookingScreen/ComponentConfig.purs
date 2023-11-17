@@ -10,6 +10,7 @@ import Font.Style (Style(..))
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Padding(..), Visibility(..), visibility)
 import Screens.Types as ST
+import Data.Array as DA
 
 genericHeaderConfig :: ST.TicketBookingScreenState -> GenericHeader.Config
 genericHeaderConfig state = let
@@ -29,7 +30,7 @@ genericHeaderConfig state = let
         text = case state.props.currentStage of
                   ST.DescriptionStage -> "Zoological Garden, Alipore"
                   ST.ChooseTicketStage -> "Choose Tickets"
-                  ST.ViewTicketStage -> "Choose Tickets"
+                  ST.ViewTicketStage -> if DA.null state.props.ticketBookingList.booked && DA.null state.props.ticketBookingList.pendingBooking then "My Tickets" else "Choose Tickets"
                   ST.TicketInfoStage -> state.props.selectedBookingInfo.ticketPlaceName
                   _ -> ""
       , color = Color.darkCharcoal
@@ -98,5 +99,5 @@ viewTicketButtonConfig text =
     , cornerRadius = 8.0
     , background = Color.black900 
     , id = "ViewTicketsButton"
-    , margin = (MarginHorizontal 20 20)
+    , margin = (Margin 16 16 16 16)
     }

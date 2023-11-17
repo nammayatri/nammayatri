@@ -131,11 +131,12 @@ zooTicketView state push =
   ,  shareTicketView state push
   ]
 
+
 getTicketBackgroundColor :: String -> String
 getTicketBackgroundColor ticketServiceName = case ticketServiceName of
   "Entrance" -> Color.black900
-  "VideoPhotography" -> Color.yellow800
-  "Aquarium" -> Color.blue600
+  "Videography" -> Color.yellow800
+  "Aquarium" -> "#DFE8FF"
   _ -> Color.grey900
 
 getShareButtonIcon :: String -> String
@@ -151,14 +152,14 @@ getShareButtonColor ticketServiceName = case ticketServiceName of
 getPlaceColor :: String -> String
 getPlaceColor ticketServiceName = case ticketServiceName of
   "Entrance" -> Color.white900
-  "VideoPhotography" -> Color.black800
+  "Videography" -> Color.black800
   "Aquarium" -> Color.black800
   _ -> Color.grey900
 
 getInfoColor :: String -> String
 getInfoColor ticketServiceName = case ticketServiceName of
   "Entrance" -> Color.white900
-  "VideoPhotography" -> Color.black900
+  "Videography" -> Color.black900
   "Aquarium" -> Color.black900
   _ -> Color.grey900
 
@@ -218,7 +219,7 @@ ticketImageView state push =
   , height WRAP_CONTENT
   , orientation VERTICAL
   , gravity CENTER
-  , margin $ MarginVertical 24 24
+  , margin $ MarginVertical 16 16
   ][  linearLayout
       [ width MATCH_PARENT
       , height WRAP_CONTENT
@@ -243,8 +244,8 @@ ticketImageView state push =
           , height $ V 192
           , gravity CENTER
           ][ imageView
-            [ width $ V 192
-            , height $ V 192
+            [ width $ V 194
+            , height $ V 194
             , id $ spy "QRID" (getNewIDWithTag "ticketQRView")
             , background Color.black900
             , imageWithFallback $ fetchImage FF_ASSET "ny_ic_chevron_left_white"
@@ -272,23 +273,23 @@ ticketImageView state push =
 getTextForQRType :: String -> String
 getTextForQRType ticketServiceName = case ticketServiceName of
   "Entrance" -> "Zoo Entry QR"
-  "VideoPhotography" -> "Photo / VideoGraphy Entry QR"
+  "Videography" -> "Photo / VideoGraphy Entry QR"
   "Aquarium" -> "Aquarium Entry QR"
-  _ -> ""
+  _ -> Color.white900
  
 getPillBackgroundColor :: String -> String
 getPillBackgroundColor ticketServiceName = case ticketServiceName of
   "Entrance" -> Color.black6000
-  "VideoPhotography" -> Color.yellow900
-  "Aquarium" ->  Color.blue900
-  _ -> ""
+  "Videography" -> Color.yellow900
+  "Aquarium" ->  Color.blue800
+  _ -> Color.white900
 
 getPillInfoColor :: String -> String
 getPillInfoColor ticketServiceName = case ticketServiceName of
   "Entrance" -> Color.grey900
-  "VideoPhotography" -> Color.black800
+  "Videography" -> Color.black800
   "Aquarium" ->  Color.white900
-  _ -> ""
+  _ -> Color.white900
   
 getLeftButtonForSlider :: String -> Boolean -> String
 getLeftButtonForSlider ticketServiceName buttonDisabled = case ticketServiceName of
@@ -317,9 +318,10 @@ pillView state push backgroudColor textColor =
       [ width $ WRAP_CONTENT
       , height WRAP_CONTENT
       , orientation HORIZONTAL
-      ]([  tvView (show item.numberOfUnits <> " " <> show item.attendeeType) textColor (MarginBottom 0) (FontStyle.subHeading1 TypoGraphy)
-      ] <> if index == itemLength then [] else [dotView (getPillInfoColor activeItem.ticketServiceName) (Margin 2 2 2 2) 5] )
-   ) activeItem.prices )
+            , gravity CENTER_VERTICAL
+      ]([  tvView (show item.numberOfUnits <> " " <> item.attendeeType) textColor (MarginBottom 0) (FontStyle.subHeading1 TypoGraphy)
+      ] <> if index == itemLength then [] else [dotView (getPillInfoColor activeItem.ticketServiceName) (MarginHorizontal 6 6) 5] )
+    ) activeItem.prices )
 
 dotView :: forall w. String -> Margin -> Int -> PrestoDOM (Effect Unit) w
 dotView color layMargin size =
@@ -359,8 +361,10 @@ bookingInfoView state push =
 
 getSeparatorColor :: String -> String
 getSeparatorColor ticketServiceName = case ticketServiceName of
-  "Entrance" -> Color.black6000
-  _ -> Color.grey900
+  "Entrance" -> Color.black700
+  "Videography" -> Color.white900
+  "Aquarium" -> Color.white900
+  _ -> Color.white900
 
 bookingInfoListItemView :: forall w.  ST.TicketInfoScreenState -> String -> String -> PrestoDOM (Effect Unit ) w
 bookingInfoListItemView state key value =
@@ -393,6 +397,7 @@ shareTicketView state push =
   , height $ WRAP_CONTENT
   , orientation HORIZONTAL
   , gravity CENTER
+  , margin $ MarginTop 16
   ][imageView
     [ height $ V 16
     , width $ V 16
@@ -402,7 +407,8 @@ shareTicketView state push =
   , textView $ 
     [ height $ WRAP_CONTENT
     , width $ WRAP_CONTENT
-    , text $ "Share"
+    , padding $ PaddingBottom 5
+    , textFromHtml $ "<u>" <> "Share" <> "</u>"
     , color $ getShareButtonColor state.props.activeListItem.ticketServiceName
-    ] <> FontStyle.tags TypoGraphy
+    ] <> FontStyle.body1 TypoGraphy
   ]

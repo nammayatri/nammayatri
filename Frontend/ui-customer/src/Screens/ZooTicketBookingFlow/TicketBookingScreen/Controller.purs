@@ -49,7 +49,7 @@ data Action = AfterRender
             | DecrementSliderIndex
             | Copy
 
-data ScreenOutput = GoToHomeScreen | GoToTicketPayment TicketBookingScreenState
+data ScreenOutput = GoToHomeScreen TicketBookingScreenState | GoToTicketPayment TicketBookingScreenState
 
 -- updateTicketService :: String -> Int -> Array TicketServiceI -> Array TicketServiceI -- TODO:: Use similar helper function here
 -- updateTicketService serviceId deltaUnits services =
@@ -149,9 +149,9 @@ eval (UpdatePlacesData (Just (TicketPlaceResponse placesData))) state = do
 
 eval BackPressed state = 
   case state.props.currentStage of 
-    DescriptionStage -> exit GoToHomeScreen 
+    DescriptionStage -> exit $ GoToHomeScreen state {props {currentStage = DescriptionStage}}
     ChooseTicketStage -> continue state{props{currentStage = DescriptionStage}}
-    ViewTicketStage -> exit $ GoToHomeScreen 
+    ViewTicketStage -> exit $ GoToHomeScreen state{props{currentStage = DescriptionStage}}
     TicketInfoStage -> continue state{props{currentStage = ViewTicketStage}}
     _ -> continue state
 
@@ -159,30 +159,6 @@ eval BackPressed state =
 eval (GetBookingInfo bookingShortId) state = do
   let newState = state { props { selectedBookingId = bookingShortId } }
   updateAndExit newState $ GoToGetBookingInfo newState
-
-eval (TicketQRRendered id text) state  = 
-  continueWithCmd state [ do
-    runEffectFn4 generateQR text id 200 0
-    pure $ NoAction
-  ]
-
-eval IncrementSliderIndex state = do
-  let len = length state.props.selectedBookingInfo.services
-      activeItem = state.props.selectedBookingInfo.services !! (state.props.activeIndex + 1)
-  case activeItem of
-    Just item -> continueWithCmd state {props{leftButtonDisable = false, rightButtonDisable = (state.props.activeIndex + 1) == (len-1), activeListItem = item, activeIndex = state.props.activeIndex + 1}} [ do
-      pure $ (TicketQRRendered (getNewIDWithTag "ticketQRView") item.ticketServiceShortId )
-    ]
-    Nothing -> continue state
-
-eval DecrementSliderIndex state = do
-  let _ = length state.props.selectedBookingInfo.services
-      activeItem = state.props.selectedBookingInfo.services !! (state.props.activeIndex - 1)
-  case activeItem of
-    Just item -> continueWithCmd state{props{rightButtonDisable = false, leftButtonDisable = (state.props.activeIndex - 1) == 0, activeListItem = item, activeIndex = state.props.activeIndex - 1}} [ do
-      pure $ (TicketQRRendered (getNewIDWithTag "ticketQRView") item.ticketServiceShortId )     
-    ]
-    Nothing -> continue state
 
 eval _ state = continue state
 
