@@ -1311,6 +1311,24 @@ instance showTipViewData :: Show TipViewData where show = genericShow
 instance encodeTipViewData :: Encode TipViewData where encode = defaultEncode
 instance decodeTipViewData :: Decode TipViewData where decode = defaultDecode
 
+-- ###################################### TicketInfoScreen ######################################
+
+type TicketInfoScreenState =
+  { data :: TicketInfoScreenData,
+    props :: TicketInfoScreenProps
+  }
+
+type TicketInfoScreenData = {
+  selectedBookingInfo :: IndividualBookingItem
+}
+
+type TicketInfoScreenProps = {
+  activeListItem :: TicketBookingServiceDetails,
+  activeIndex :: Int,
+  leftButtonDisable :: Boolean,
+  rightButtonDisable :: Boolean
+}
+
 
 -- ######################################  TicketBookingScreen   ######################################
 
