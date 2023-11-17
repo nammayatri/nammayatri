@@ -24,6 +24,8 @@ instance loggableAction :: Loggable Action where
 data Action = AfterRender
             | GenericHeaderAC GenericHeader.Action 
             | PrimaryButtonAC PrimaryButton.Action
+            | ShareTicketAC PrimaryButton.Action
+            | ViewTicketAC PrimaryButton.Action
             | ToggleTicketOption String 
             | IncrementTicket String String 
             | DecrementTicket String String
@@ -32,6 +34,7 @@ data Action = AfterRender
             | OpenCalendar 
             | NoAction
             | BackPressed
+            | Copy
 
 data ScreenOutput = GoToHomeScreen | GoToTicketPayment TicketBookingScreenState
 
