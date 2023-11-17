@@ -2601,7 +2601,9 @@ ticketPaymentFlow screenData = do
       fillBookingDetails infoRes shortOrderID ticketStatus
     "Failed" -> do
       modifyScreenState $ TicketBookingScreenStateType (\ticketBookingScreen -> ticketBookingScreen { props { paymentStatus = Common.Failed } })
-    _ -> pure unit
+    _ -> do
+      modifyScreenState $ TicketBookingScreenStateType (\ticketBookingScreen -> ticketBookingScreen { props { currentStage = ChooseTicketStage } }) -- temporary fix - will remove once 500 INTERNAL_SERVER_ERROR is solved.
+      pure unit
   zooTicketBookingFlow
 
 
