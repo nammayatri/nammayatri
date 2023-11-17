@@ -323,7 +323,8 @@ updateAutopayPaymentStageByIds autopayPaymentStage driverFeeIds = do
     [Se.Is BeamDF.id $ Se.In (getId <$> driverFeeIds)]
 
 updateStatusByIds :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => DriverFeeStatus -> [Id DriverFee] -> UTCTime -> m ()
-updateStatusByIds status driverFeeIds now =
+updateStatusByIds status driverFeeIds now = do
+  utcNow <- getCurrentTime
   case status of
     CLEARED -> do
       updateWithKV
@@ -331,8 +332,17 @@ updateStatusByIds status driverFeeIds now =
         [Se.Is BeamDF.id $ Se.In (getId <$> driverFeeIds)]
     _ -> do
       updateWithKV
-        [Se.Set BeamDF.status status, Se.Set BeamDF.updatedAt now]
+        ([Se.Set BeamDF.status status, Se.Set BeamDF.updatedAt now] <> [Se.Set BeamDF.badDebtDeclarationDate $ Just now | status `elem` [EXEMPTED, INACTIVE]])
         [Se.Is BeamDF.id $ Se.In (getId <$> driverFeeIds)]
+  updateWithKV
+    [Se.Set BeamDF.badDebtRecoveryDate $ Just utcNow]
+    [ Se.And
+        [ Se.Is BeamDF.id $ Se.In (getId <$> driverFeeIds),
+          Se.Is BeamDF.status $ Se.In [COLLECTED_CASH, CLEARED],
+          Se.Is BeamDF.badDebtDeclarationDate $ Se.Not (Se.Eq Nothing),
+          Se.Is BeamDF.badDebtRecoveryDate $ Se.Eq Nothing
+        ]
+    ]
 
 updateClearedDriverFeesBadDebtRecoveryDate :: MonadFlow m => [Id DriverFee] -> m ()
 updateClearedDriverFeesBadDebtRecoveryDate driverFeeIds = do
@@ -414,8 +424,8 @@ findAllDriverFeesRequiredToMovedIntoBadDebt merchantId transporterConfig = do
   now <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
   let badDebtTimeThreshold = transporterConfig.badDebtTimeThreshold
       (year, month, _) = toGregorian (utctDay now)
-      lastDayOfLastMonth = addDays (-1) $ fromGregorian year month 1
-      range = addUTCTime (-1 * badDebtTimeThreshold) (UTCTime lastDayOfLastMonth (23 * 3600 + 59 * 60))
+      lastDayOfPreviousMonth = addDays (-1) $ fromGregorian year month 1
+      range = addUTCTime (-1 * badDebtTimeThreshold) (UTCTime lastDayOfPreviousMonth (23 * 3600 + 59 * 60))
       limit = transporterConfig.badDebtBatchSize
   findAllWithOptionsKV
     [ Se.Or
@@ -529,9 +539,19 @@ findAllCollectionInRange (Id merchantId) startTime endTime = do
 
 updateStatus :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => DriverFeeStatus -> Id DriverFee -> UTCTime -> m ()
 updateStatus status (Id driverFeeId) now = do
+  utcNow <- getCurrentTime
   updateOneWithKV
-    [Se.Set BeamDF.status status, Se.Set BeamDF.updatedAt now]
+    ([Se.Set BeamDF.status status, Se.Set BeamDF.updatedAt now] <> [Se.Set BeamDF.badDebtDeclarationDate $ Just now | status == EXEMPTED])
     [Se.Is BeamDF.id (Se.Eq driverFeeId)]
+  updateOneWithKV
+    [Se.Set BeamDF.badDebtRecoveryDate $ Just utcNow]
+    [ Se.And
+        [ Se.Is BeamDF.id (Se.Eq driverFeeId),
+          Se.Is BeamDF.status $ Se.In [COLLECTED_CASH, CLEARED],
+          Se.Is BeamDF.badDebtDeclarationDate $ Se.Not (Se.Eq Nothing),
+          Se.Is BeamDF.badDebtRecoveryDate $ Se.Eq Nothing
+        ]
+    ]
 
 updateFeeType :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => FeeType -> UTCTime -> Id DriverFee -> m ()
 updateFeeType feeType now (Id driverFeeId) = do
@@ -574,14 +594,28 @@ updateRegisterationFeeStatusByDriverId :: (MonadFlow m, EsqDBFlow m r, CacheFlow
 updateRegisterationFeeStatusByDriverId status (Id driverId) = do
   now <- getCurrentTime
   updateOneWithKV
-    [Se.Set BeamDF.status status, Se.Set BeamDF.updatedAt now]
+    ( [Se.Set BeamDF.status status, Se.Set BeamDF.updatedAt now]
+        <> [Se.Set BeamDF.badDebtDeclarationDate $ Just now | status `elem` [EXEMPTED, INACTIVE]]
+    )
     [Se.And [Se.Is BeamDF.driverId (Se.Eq driverId), Se.Is BeamDF.feeType (Se.Eq MANDATE_REGISTRATION), Se.Is BeamDF.status (Se.Eq PAYMENT_PENDING)]]
 
 updateCollectedPaymentStatus :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => DriverFeeStatus -> Maybe Text -> UTCTime -> Id DriverFee -> m ()
 updateCollectedPaymentStatus status volunteerId now (Id driverFeeId) = do
+  utcNow <- getCurrentTime
   updateOneWithKV
-    [Se.Set BeamDF.status status, Se.Set BeamDF.updatedAt now, Se.Set BeamDF.collectedBy volunteerId, Se.Set BeamDF.collectedAt (Just now)]
+    ( [Se.Set BeamDF.status status, Se.Set BeamDF.updatedAt now, Se.Set BeamDF.collectedBy volunteerId, Se.Set BeamDF.collectedAt (Just now)]
+        <> [Se.Set BeamDF.badDebtDeclarationDate $ Just now | status `elem` [EXEMPTED, INACTIVE]]
+    )
     [Se.Is BeamDF.id (Se.Eq driverFeeId)]
+  updateOneWithKV
+    [Se.Set BeamDF.badDebtRecoveryDate $ Just utcNow]
+    [ Se.And
+        [ Se.Is BeamDF.id (Se.Eq driverFeeId),
+          Se.Is BeamDF.status $ Se.In [COLLECTED_CASH, CLEARED],
+          Se.Is BeamDF.badDebtDeclarationDate $ Se.Not (Se.Eq Nothing),
+          Se.Is BeamDF.badDebtRecoveryDate $ Se.Eq Nothing
+        ]
+    ]
 
 updateAllExecutionPendingToManualOverdueByDriverId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> m ()
 updateAllExecutionPendingToManualOverdueByDriverId driverId = do
@@ -599,8 +633,8 @@ updateBadDebtDateAllDriverFeeIds :: (MonadFlow m, CacheFlow m r) => Id Merchant 
 updateBadDebtDateAllDriverFeeIds merchantId driverFeeIds transporterConfig = do
   now <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
   let (year, month, _) = toGregorian (utctDay now)
-      lastDayOfLastMonth = addDays (-1) $ fromGregorian year month 1
-      dateMovedToBadDebt = UTCTime lastDayOfLastMonth (23 * 3600 + 59 * 60)
+      lastDayOfPreviousMonth = addDays (-1) $ fromGregorian year month 1
+      dateMovedToBadDebt = UTCTime lastDayOfPreviousMonth (23 * 3600 + 59 * 60)
   updateWithKV
     [Se.Set BeamDF.badDebtDeclarationDate (Just dateMovedToBadDebt)]
     [ Se.And

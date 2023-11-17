@@ -55,6 +55,7 @@ type API =
            :<|> VerificationServiceConfigUpdateAPI
            :<|> CreateFPDriverExtraFee
            :<|> UpdateFPDriverExtraFee
+           :<|> SchedulerTriggerAPI
        )
 
 type MerchantUpdateAPI =
@@ -133,6 +134,10 @@ type UpdateFPDriverExtraFee =
   ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'MERCHANT 'UPDATE_FP_DRIVER_EXTRA_FEE
     :> Common.UpdateFPDriverExtraFee
 
+type SchedulerTriggerAPI =
+  ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'MERCHANT 'SCHEDULER_TRIGGER
+    :> Common.SchedulerTriggerAPI
+
 handler :: ShortId DM.Merchant -> City.City -> FlowServer API
 handler merchantId city =
   merchantUpdate merchantId city
@@ -154,6 +159,7 @@ handler merchantId city =
     :<|> verificationServiceConfigUpdate merchantId city
     :<|> createFPDriverExtraFee merchantId city
     :<|> updateFPDriverExtraFee merchantId city
+    :<|> schedulerTrigger merchantId city
 
 buildTransaction ::
   ( MonadFlow m,
@@ -200,6 +206,19 @@ merchantCommonConfigUpdate merchantShortId opCity apiTokenInfo req = withFlowHan
   transaction <- buildTransaction Common.MerchantCommonConfigUpdateEndpoint apiTokenInfo (Just req)
   T.withTransactionStoring transaction $
     Client.callDriverOfferBPPOperations checkedMerchantId opCity (.merchant.merchantCommonConfigUpdate) req
+
+schedulerTrigger ::
+  ShortId DM.Merchant ->
+  City.City ->
+  ApiTokenInfo ->
+  Common.SchedulerTriggerReq ->
+  FlowHandler APISuccess
+schedulerTrigger merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI $ do
+  runRequestValidation Common.validateMerchantCommonConfigUpdateReq req
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  transaction <- buildTransaction Common.MerchantCommonConfigUpdateEndpoint apiTokenInfo (Just req)
+  T.withTransactionStoring transaction $
+    Client.callDriverOfferBPPOperations checkedMerchantId opCity (.merchant.schedulerTrigger) req
 
 driverPoolConfig ::
   ShortId DM.Merchant ->

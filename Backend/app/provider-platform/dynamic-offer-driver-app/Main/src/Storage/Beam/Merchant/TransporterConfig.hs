@@ -100,7 +100,7 @@ data TransporterConfigT f = TransporterConfigT
     useWithSnapToRoadFallback :: B.C f Bool,
     badDebtBatchSize :: B.C f Int,
     badDebtRescheduleTime :: B.C f Seconds,
-    badDebtSechulerTime :: B.C f Seconds,
+    badDebtSchedulerTime :: B.C f Seconds,
     badDebtTimeThreshold :: B.C f Seconds,
     volunteerSmsSendingLimit :: B.C f (Maybe A.Value),
     driverSmsReceivingLimit :: B.C f (Maybe A.Value),

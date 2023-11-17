@@ -92,7 +92,7 @@ data TransporterConfigD u = TransporterConfig
     orderAndNotificationStatusCheckTimeLimit :: NominalDiffTime,
     badDebtBatchSize :: Int,
     badDebtRescheduleTime :: NominalDiffTime,
-    badDebtSechulerTime :: NominalDiffTime,
+    badDebtSchedulerTime :: NominalDiffTime,
     badDebtTimeThreshold :: NominalDiffTime,
     timeDiffFromUtc :: Seconds,
     subscription :: Bool,

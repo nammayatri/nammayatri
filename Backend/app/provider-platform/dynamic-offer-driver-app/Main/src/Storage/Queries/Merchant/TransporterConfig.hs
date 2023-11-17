@@ -126,7 +126,7 @@ instance FromTType' BeamTC.TransporterConfig TransporterConfig where
             volunteerSmsSendingLimit = valueToMaybe =<< volunteerSmsSendingLimit,
             driverSmsReceivingLimit = valueToMaybe =<< driverSmsReceivingLimit,
             badDebtRescheduleTime = secondsToNominalDiffTime badDebtRescheduleTime,
-            badDebtSechulerTime = secondsToNominalDiffTime badDebtSechulerTime,
+            badDebtSchedulerTime = secondsToNominalDiffTime badDebtSchedulerTime,
             badDebtTimeThreshold = secondsToNominalDiffTime badDebtTimeThreshold,
             ..
           }
@@ -217,7 +217,7 @@ instance ToTType' BeamTC.TransporterConfig TransporterConfig where
         BeamTC.snapToRoadConfidenceThreshold = snapToRoadConfidenceThreshold,
         BeamTC.useWithSnapToRoadFallback = useWithSnapToRoadFallback,
         BeamTC.badDebtRescheduleTime = nominalDiffTimeToSeconds badDebtRescheduleTime,
-        BeamTC.badDebtSechulerTime = nominalDiffTimeToSeconds badDebtSechulerTime,
+        BeamTC.badDebtSchedulerTime = nominalDiffTimeToSeconds badDebtSchedulerTime,
         BeamTC.badDebtBatchSize = badDebtBatchSize,
         BeamTC.badDebtTimeThreshold = nominalDiffTimeToSeconds badDebtTimeThreshold,
         BeamTC.createdAt = createdAt,

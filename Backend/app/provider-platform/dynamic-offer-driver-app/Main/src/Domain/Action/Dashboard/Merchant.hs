@@ -32,11 +32,13 @@ module Domain.Action.Dashboard.Merchant
     verificationServiceConfigUpdate,
     createFPDriverExtraFee,
     updateFPDriverExtraFee,
+    schedulerTrigger,
   )
 where
 
 import Control.Applicative
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Merchant as Common
+import qualified Data.Text as T
 import qualified Domain.Types.Exophone as DExophone
 import qualified Domain.Types.FarePolicy as FarePolicy
 import qualified Domain.Types.FarePolicy.DriverExtraFeeBounds as DFPEFB
@@ -58,6 +60,8 @@ import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Validation
+import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
+import SharedLogic.Allocator (AllocatorJobType (BadDebtCalculation), BadDebtCalculationJobData)
 import qualified SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool.Config as DriverPool
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified Storage.CachedQueries.Exophone as CQExophone
@@ -202,6 +206,35 @@ merchantCommonConfigUpdate merchantShortId opCity req = do
   CQTC.clearCache merchantOpCityId
   logTagInfo "dashboard -> merchantCommonConfigUpdate : " (show merchant.id)
   pure Success
+
+schedulerTrigger :: ShortId DM.Merchant -> Context.City -> Common.SchedulerTriggerReq -> Flow APISuccess
+schedulerTrigger merchantShortId opCity req = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  maxShards <- asks (.maxShards)
+  let jobName = T.unpack <$> req.jobName
+  case (req.scheduledAt >>= (.value), getJobHelpersByJobName jobName maxShards) of
+    (Just diffTimeS, Just (createEntryFunc, jobDataDecode, toCheckMerchantOpCity)) -> do
+      let jobData' = jobDataDecode req.jobData
+      case jobData' of
+        Just jobData -> do
+          if not toCheckMerchantOpCity || (toCheckMerchantOpCity && merchantOpCityId == jobData.merchantOperatingCityId && merchant.id == jobData.merchantId)
+            then do
+              createEntryFunc diffTimeS jobData
+              pure Success
+            else throwError $ InternalError "invalid job data"
+        Nothing -> throwError $ InternalError "invalid job data"
+    _ -> throwError $ InternalError "invalid scheduled at time or job data"
+  where
+    getJobHelpersByJobName jobName maxShards = do
+      case jobName of
+        Just "BadDebtCalculation" ->
+          Just
+            ( \diffTimeS -> createJobIn @_ @'BadDebtCalculation diffTimeS maxShards,
+              \jobData -> decodeFromText jobData :: Maybe BadDebtCalculationJobData,
+              True
+            )
+        _ -> Nothing
 
 ---------------------------------------------------------------------
 driverPoolConfig :: ShortId DM.Merchant -> Context.City -> Maybe Meters -> Flow Common.DriverPoolConfigRes

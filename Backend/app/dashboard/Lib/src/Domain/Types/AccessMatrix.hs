@@ -188,6 +188,7 @@ data UserActionType
   | GET_VEHICLE_ASSOCIATION
   | SEND_DASHBOARD_MESSAGE
   | VERIFY_BOOKING_DETAILS
+  | SCHEDULER_TRIGGER
   deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 genSingletons [''UserActionType]
