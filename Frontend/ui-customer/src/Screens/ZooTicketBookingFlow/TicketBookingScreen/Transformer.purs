@@ -17,32 +17,81 @@ module Screens.TicketBookingScreen.Transformer where
 
 import Prelude
 
+import Accessor (_ticketShortId, _ticketPlaceId, _ticketPlaceName, _personId, _amount, _visitDate, _status, _services)
 import Data.Array (length, mapWithIndex, (!!), filter)
+import Data.String (toUpper)
 import Data.Maybe (Maybe(..), fromMaybe, isJust)
 import Services.API as API
-import Screens.Types(TicketBookingItem(..))
+import Data.Lens((^.))
+
+import Screens.Types(TicketBookingItem(..),IndividualBookingItem(..), TicketBookingServicePriceBreakup(..), TicketBookingServiceDetails(..))
 
 buildBookingDetails :: (Array API.TicketBookingAPIEntity) -> Array TicketBookingItem
 buildBookingDetails res =
   map (\(API.TicketBookingAPIEntity item) -> do
       {
-        shortId : item.shortId,
+        shortId : item.ticketShortId,
         ticketPlaceId : item.ticketPlaceId ,
         ticketPlaceName : item.ticketPlaceName,
         personId : item.personId,
         amount : item.amount,
         visitDate : item.visitDate,
-        status : item.status
+        status : (getBookingStatus item.status)
       }
   ) (res)
 
+-- ticketDetailsTransformer :: API.GetBookingInfoRes -> IndividualBookingItem
+-- ticketDetailsTransformer resp = 
+--   { 
+--     shortId : resp ^. _ticketShortId,
+--     ticketPlaceId : resp ^. _ticketPlaceId ,
+--     ticketPlaceName : resp ^. _ticketPlaceName,
+--     personId : resp ^. _personId,
+--     amount : resp ^. _amount,
+--     visitDate : resp ^. _visitDate,
+--     status : (getBookingStatus (resp ^. _status)),
+--     services : (ticketServicesTransformer (resp ^. _services) )
+
+--   }
+
+-- ticketServicesTransformer :: (Array API.TicketBookingServiceDetails) -> (Array TicketBookingServiceDetails)
+-- ticketServicesTransformer services = 
+--   map (\(API.TicketBookingServiceDetails item) -> do
+--       {
+--         ticketServiceShortId : item.ticketServiceShortId,
+--         ticketServiceName : item.ticketServiceShortId,
+--         amount : item.amount,
+--         status : item.status,
+--         verificationCount : item.verificationCount,
+--         expiryDate : item.expiryDate,
+--         prices : (ticketServicePricesTransformer item.prices)
+--       }
+--   ) (services)
+
+-- ticketServicePricesTransformer :: (Array API.TicketBookingServicePriceBreakup) -> (Array TicketBookingServicePriceBreakup)
+-- ticketServicePricesTransformer prices = 
+--   map (\(API.TicketBookingServicePriceBreakup item) -> do
+--       {
+--         pricePerUnit : item.pricePerUnit,
+--         numberOfUnits : item.numberOfUnits,
+--         attendeeType : item.attendeeType
+--       }
+--   ) (prices)
+
 dummyTicketBookingApiEntity :: API.TicketBookingAPIEntity
 dummyTicketBookingApiEntity = API.TicketBookingAPIEntity {
-  shortId : "",
-  ticketPlaceId : Nothing ,
+  ticketShortId : "",
+  ticketPlaceId : "" ,
   ticketPlaceName : "",
-  personId : Nothing ,
+  personId : "" ,
   amount : 0.0,
   visitDate : "2016-07-22",
-  status : API.Pending
+  status : (show API.Pending)
 }
+
+getBookingStatus status = 
+  case (toUpper status )of 
+    "PENDING" -> (API.Pending)
+    "FAILED" -> API.Failed
+    "BOOKED" -> API.Booked 
+    _ -> API.Pending

@@ -1365,8 +1365,8 @@ type TicketBookingItem =
     amount :: Number,
     visitDate :: String,
     status :: BookingStatus,
-    ticketPlaceId :: Maybe String,
-    personId :: Maybe String
+    ticketPlaceId ::  String,
+    personId :: String
   }
 
 type TicketBookings = 

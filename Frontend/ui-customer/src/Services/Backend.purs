@@ -965,16 +965,16 @@ mkBookingTicketReq ticketBookingScreenData =
 getAllBookingsBT :: BookingStatus ->  FlowBT String GetAllBookingsRes
 getAllBookingsBT status = do
     headers <- getHeaders' "" false
-    withAPIResultBT (EP.getAllBookings (show status) "10" "0") (\x -> x) errorHandler (lift $ lift $ callAPI headers GetAllBookingsReq)
+    withAPIResultBT (EP.getAllBookings (show status)) (\x -> x) errorHandler (lift $ lift $ callAPI headers (GetAllBookingsReq (show status)))
     where 
     errorHandler errorPayload = do
             BackT $ pure GoBack
 
 
-getTicketBookingDetailsBT :: String -> String -> FlowBT String GetBookingInfoRes 
-getTicketBookingDetailsBT shortId status = do
+getTicketBookingDetailsBT :: String -> FlowBT String GetBookingInfoRes 
+getTicketBookingDetailsBT shortId = do
     headers <- getHeaders' "" false 
-    withAPIResultBT (EP.ticketBookingDetails shortId status ) (\x -> x) errorHandler (lift $ lift $ callAPI headers GetBookingInfoReq)
+    withAPIResultBT (EP.ticketBookingDetails shortId) (\x -> x) errorHandler (lift $ lift $ callAPI headers (GetBookingInfoReq shortId))
     where
     errorHandler errorPayload = do 
             BackT $ pure GoBack

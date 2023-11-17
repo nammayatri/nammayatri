@@ -160,11 +160,12 @@ ticketPlaceServices placeId = (getBaseUrl "43") <> "/ticket/places/" <> placeId 
 ticketPlaceBook :: String -> String
 ticketPlaceBook placeId = (getBaseUrl "43") <> "/ticket/places/" <> placeId <> "/book"
 
-getAllBookings :: String -> String -> String -> String
-getAllBookings status limit offset = (getBaseUrl "41") <> "/ticket/bookings?status=" <> "\"" <> status <> "\"" <> "&limit=" <> limit <> "&offset=" <> offset
+getAllBookings :: String -> String
+getAllBookings status = (getBaseUrl "41") <> "/ticket/bookings?status=" <> status -- <> "&limit=10&offset=1"
 
-ticketBookingDetails :: String -> String -> String
-ticketBookingDetails shortId status = (getBaseUrl "41") <> "/ticket/bookings/" <> shortId <> "/details"
 
 ticketStatus :: String -> String
 ticketStatus shortId = (getBaseUrl "41") <> "/ticket/bookings/" <> shortId <> "/status"
+
+ticketBookingDetails :: String -> String
+ticketBookingDetails shortid = (getBaseUrl "41") <> "/ticket/bookings/" <> shortid <> "/details"

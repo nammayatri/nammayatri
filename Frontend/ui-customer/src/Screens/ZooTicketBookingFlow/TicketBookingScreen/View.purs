@@ -469,7 +469,7 @@ aquariumEntryTicketOption state = [{
 
 photoVideographyTicketOption :: forall w. ST.TicketBookingScreenState -> Array  {title :: String, currentValue :: Int , subcategory :: String}
 photoVideographyTicketOption state = [{
-  title : "Devices (₹250 per person)",
+  title : "Devices (₹250 per device)",
   currentValue : state.data.photoOrVideoGraphy.noOfDevices ,
   subcategory : "DEVICES"
   }]
