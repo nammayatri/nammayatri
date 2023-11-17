@@ -286,16 +286,16 @@ ticketImageView state push =
             ]
           ]
       ]
-    , tvView (getTextForQRType activeItem.ticketServiceName) (getInfoColor activeItem.ticketServiceName) (MarginVertical 10 10) (FontStyle.subHeading1 TypoGraphy)
+    , tvView ((getTextForQRType activeItem.ticketServiceName) <> "QR") (getInfoColor activeItem.ticketServiceName) (MarginVertical 10 10) (FontStyle.subHeading1 TypoGraphy)
     , pillView state push (getPillBackgroundColor activeItem.ticketServiceName) (getPillInfoColor activeItem.ticketServiceName)
   ]
 
 getTextForQRType :: String -> String
 getTextForQRType ticketServiceName = case ticketServiceName of
-  "Entrance" -> "Zoo Entry QR"
-  "Videography" -> "Photo / VideoGraphy Entry QR"
-  "Aquarium" -> "Aquarium Entry QR"
-  _ -> Color.white900
+  "Entrance" -> "Zoo Entry "
+  "Videography" -> "Photo / VideoGraphy "
+  "Aquarium" -> "Aquarium Entry "
+  _ -> ""
  
 getPillBackgroundColor :: String -> String
 getPillBackgroundColor ticketServiceName = case ticketServiceName of
@@ -374,7 +374,7 @@ bookingInfoView state push =
   , orientation VERTICAL
   ]([  bookingInfoListItemView state "Service ID" activeItem.ticketServiceShortId
     , separatorView (getSeparatorColor activeItem.ticketServiceName)
-    , bookingInfoListItemView state "Zoo Entry" ("₹" <> show activeItem.amount)
+    , bookingInfoListItemView state (getTextForQRType activeItem.ticketServiceName) ("₹" <> show activeItem.amount)
   ] <> case activeItem.expiryDate of 
           Just expiryDate ->  [ separatorView (getSeparatorColor activeItem.ticketServiceName)
                               , bookingInfoListItemView state "Valid Until" (convertUTCtoISC (expiryDate) "Do MMM, YYYY")]
