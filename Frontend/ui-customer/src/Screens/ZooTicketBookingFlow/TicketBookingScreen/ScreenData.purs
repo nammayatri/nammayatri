@@ -62,7 +62,8 @@ initData =
       termsAndConditionsSelected : true,
       validDate : true,
       showShimmer : true,
-      paymentStatus : Common.Scheduled
+      paymentStatus : Common.Scheduled,
+      previousStage : DescriptionStage,
       , ticketBookingList : dummyData
       , selectedBookingId : "adfadf"
       , selectedBookingInfo : {shortId : "afda", ticketPlaceId : "aksdfjl;a", ticketPlaceName : "aksdfj;la", personId : "" , amount : 500.0, visitDate : "2023-10-23", status : Booked, services : [{ ticketServiceShortId : "afdjasdf ;a", ticketServiceName : "VideoPhotography", amount : 100.0, status : "Pending", verificationCount : 0, expiryDate : Nothing,  prices : [{pricePerUnit: 2.0,numberOfUnits: 3,attendeeType: "Adults"}, {pricePerUnit: 2.0,numberOfUnits: 2,attendeeType: "Mobile"}]}, { ticketServiceShortId : "afdj;jkja", ticketServiceName : "Entrance", amount : 100.0, status : "Confirmed", verificationCount : 0, expiryDate : Nothing,  prices : [{pricePerUnit: 2.0,numberOfUnits: 3,attendeeType: "Adults"}, {pricePerUnit: 2.0,numberOfUnits: 2,attendeeType: "Mobile"}]}, { ticketServiceShortId : "afdjasdf ;a", ticketServiceName : "Aquarium", amount : 100.0, status : "Pending", verificationCount : 0, expiryDate : Nothing,  prices : [{pricePerUnit: 2.0,numberOfUnits: 3,attendeeType: "Adults"}, {pricePerUnit: 2.0,numberOfUnits: 2,attendeeType: "Mobile"}]}] }

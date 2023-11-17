@@ -50,6 +50,7 @@ data Action = AfterRender
             | DecrementSliderIndex
             | PaymentStatusAction String
             | Copy
+            | GoHome
 
 data ScreenOutput = GoToHomeScreen TicketBookingScreenState
                   | GoToTicketPayment TicketBookingScreenState
@@ -151,11 +152,12 @@ eval (UpdatePlacesData placeData serviceData) state = do
 eval BackPressed state = 
   case state.props.currentStage of 
     DescriptionStage -> exit $ GoToHomeScreen state {props {currentStage = DescriptionStage}}
-    ChooseTicketStage -> continue state{props{currentStage = DescriptionStage}}
+    ChooseTicketStage -> continue state{props{currentStage = state.props.previousStage}}
     ViewTicketStage -> exit $ GoToHomeScreen state{props{currentStage = DescriptionStage}}
     TicketInfoStage -> continue state{props{currentStage = ViewTicketStage}}
     _ -> continue state
 
+eval GoHome state = exit $ GoToHomeScreen state
 
 eval (GetBookingInfo bookingShortId) state = do
   let newState = state { props { selectedBookingId = bookingShortId } }
@@ -163,7 +165,7 @@ eval (GetBookingInfo bookingShortId) state = do
 
 eval (ViewTicketAC (PrimaryButton.OnClick)) state = 
   case state.props.paymentStatus of
-   Common.Success -> continue state 
+   Common.Success -> continueWithCmd state [do pure (GetBookingInfo state.props.selectedBookingId)]
    Common.Failed -> exit $ TryAgain state
    _ -> continue state
 
