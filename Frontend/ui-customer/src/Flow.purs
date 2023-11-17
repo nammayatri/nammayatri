@@ -2580,7 +2580,13 @@ ticketPaymentFlow screenData = do
   modifyScreenState $ TicketBookingScreenStateType (\ticketBookingScreen -> ticketBookingScreen{data{shortOrderId = shortOrderID}})
   lift $ lift $ doAff $ makeAff \cb -> runEffectFn1 checkPPInitiateStatus (cb <<< Right) $> nonCanceler
   _ <- paymentPageUI sdkPayload
-  pure unit
+  (GetTicketStatusResp ticketStatus) <- Remote.getTicketStatusBT shortOrderID
+  _ <- pure $ spy "GetTicketStatusResp " ticketStatus
+  -- (GetBookingInfoRes infoRes) <- Remote.getTicketBookingDetailsBT shortOrderID ""
+  -- if(ticketStatus /= "Booked") -- TODO:: Handle flow based on this response
+  
+  -- modifyScreenState $ TicketBookingScreenStateType (\ticketBookingScreen -> ticketBookingScreen{props{currentStage = BookingConfirmationStage}})
+  zooTicketBookingFlow
 
 dummyTicketPlaceResp :: TicketPlaceResp -- TODO:: Temp done for testing, remove after the release
 dummyTicketPlaceResp = TicketPlaceResp

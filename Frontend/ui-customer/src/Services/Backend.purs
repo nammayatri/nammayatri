@@ -978,3 +978,11 @@ getTicketBookingDetailsBT shortId status = do
     where
     errorHandler errorPayload = do 
             BackT $ pure GoBack
+
+getTicketStatusBT :: String -> FlowBT String GetTicketStatusResp
+getTicketStatusBT shortId = do
+    headers <- getHeaders' "" false
+    withAPIResultBT (EP.ticketStatus shortId) (\x -> x) errorHandler (lift $ lift $ callAPI headers (GetTicketStatusReq shortId))
+    where
+    errorHandler errorPayload = do
+            BackT $ pure GoBack

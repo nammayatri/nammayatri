@@ -57,7 +57,7 @@ initData =
   }
   , props : {
       currentStage : DescriptionStage,
-      termsAndConditionsSelected : false,
+      termsAndConditionsSelected : true,
       validDate : true,
       paymentStatus : Common.Success
       , ticketBookingList : dummyData
