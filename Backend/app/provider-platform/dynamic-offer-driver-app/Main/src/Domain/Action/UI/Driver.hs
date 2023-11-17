@@ -1024,7 +1024,9 @@ buildDriver req merchantId merchantOpCityId = do
         SP.bundleVersion = Nothing,
         SP.alternateMobileNumber = Nothing,
         SP.unencryptedAlternateMobileNumber = Nothing,
-        SP.faceImageId = Nothing
+        SP.faceImageId = Nothing,
+        SP.registrationLat = Nothing,
+        SP.registrationLon = Nothing
       }
 
 buildVehicle :: MonadFlow m => CreateVehicle -> Id SP.Person -> Id DM.Merchant -> m SV.Vehicle
