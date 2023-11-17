@@ -52,6 +52,9 @@ homeScreen = do
     GoToEmergencyContacts updatedState -> do
       modifyScreenState $ HomeScreenStateType (\homeScreenState -> updatedState)
       App.BackT $ App.BackPoint <$> (pure GO_TO_EMERGENCY_CONTACTS)
+    GoToMyTickets updatedState -> do
+      modifyScreenState $ HomeScreenStateType (\homeScreenState -> updatedState)
+      App.BackT $ App.BackPoint <$> (pure GO_TO_MY_TICKETS)
     GoToAbout updatedState -> do
       modifyScreenState $ HomeScreenStateType (\homeScreenState -> updatedState)
       App.BackT $ App.BackPoint <$> (pure GO_TO_ABOUT)

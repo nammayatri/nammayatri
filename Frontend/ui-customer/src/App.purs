@@ -126,6 +126,7 @@ data HOME_SCREEN_OUTPUT = LOGOUT
                         | GO_TO_MY_RIDES
                         | CHANGE_LANGUAGE
                         | GO_TO_EMERGENCY_CONTACTS
+                        | GO_TO_MY_TICKETS
                         | GO_TO_MY_PROFILE Boolean
                         | LOCATION_SELECTED LocationListItemState Boolean
                         | HOME_SCREEN
@@ -187,7 +188,7 @@ data WELCOME_SCREEN_OUTPUT = GoToMobileNumberScreen
 
 data APP_UPDATE_POPUP = Later | UpdateNow
 
-data TICKET_BOOKING_SCREEN_OUTPUT = GO_TO_HOME_SCREEN_FROM_TICKET_BOOKING | GO_TO_TICKET_PAYMENT TicketBookingScreenState
+data TICKET_BOOKING_SCREEN_OUTPUT =  GET_BOOKING_INFO_SCREEN | GO_TO_HOME_SCREEN_FROM_TICKET_BOOKING | GO_TO_TICKET_PAYMENT TicketBookingScreenState
 
 data ScreenType =
     EnterMobileNumberScreenType (EnterMobileNumberScreenState -> EnterMobileNumberScreenState)
@@ -205,7 +206,7 @@ data ScreenType =
   | SavedLocationScreenStateType (SavedLocationScreenState -> SavedLocationScreenState)
   | ReferralScreenStateType (ReferralScreenState -> ReferralScreenState)
   | EmergencyContactsScreenStateType (EmergencyContactsScreenState -> EmergencyContactsScreenState)
+  | TicketBookingScreenStateType (TicketBookingScreenState -> TicketBookingScreenState)
   | PermissionScreenStateType (PermissionScreenState -> PermissionScreenState)
   | AboutUsScreenStateType (AboutUsScreenState -> AboutUsScreenState)
   | AppUpdatePopUpScreenType (AppUpdatePopUpState -> AppUpdatePopUpState)
-  | TicketBookingScreenStateType (TicketBookingScreenState -> TicketBookingScreenState)

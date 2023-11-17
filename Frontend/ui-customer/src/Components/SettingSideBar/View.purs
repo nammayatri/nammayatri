@@ -94,6 +94,7 @@ settingsView state push =
   ](map (\item -> 
         case item of
         "MyRides" -> settingsMenuView {imageUrl : fetchImage FF_ASSET "ic_past_rides", text : (getString MY_RIDES), accessibilityHint : "My Rides " ,tag : SETTINGS_RIDES, iconUrl : ""} push
+        "Tickets" -> settingsMenuView {imageUrl : fetchImage FF_ASSET "ny_ic_ticket_grey", text : getString MY_TICKETS, accessibilityHint : "Tickets", tag : SETTINGS_TICKETS, iconUrl : ""} push
         "Favorites" -> if DA.any (\stage -> isLocalStageOn stage)  [RideStarted, RideAccepted, RideCompleted] then emptyLayout else settingsMenuView {imageUrl : fetchImage FF_ASSET "ic_fav", text : (getString FAVOURITES) , accessibilityHint : "Favourites " , tag : SETTINGS_FAVOURITES, iconUrl : ""} push
         "EmergencyContacts" ->  settingsMenuView {imageUrl : fetchImage FF_COMMON_ASSET "ny_ic_emergency_contacts" , text : (getString EMERGENCY_CONTACTS) , accessibilityHint : "Emergency Contacts " , tag : SETTINGS_EMERGENCY_CONTACTS, iconUrl : ""} push
         "HelpAndSupport" -> settingsMenuView (helpAndSupportConfig state.appConfig.enableContactSupport) push
@@ -257,6 +258,7 @@ settingsMenuView item push  =
   , accessibilityHint $ item.accessibilityHint <> " : Button"
   , onClick push $ ( const case item.tag of
                               SETTINGS_RIDES          -> PastRides
+                              SETTINGS_TICKETS        -> GoToMyTickets
                               SETTINGS_FAVOURITES     -> GoToFavourites
                               SETTINGS_HELP           -> OnHelp
                               SETTINGS_LANGUAGE       -> ChangeLanguage
@@ -267,6 +269,7 @@ settingsMenuView item push  =
                               SETTINGS_LIVE_DASHBOARD -> LiveStatsDashboard)
   , accessibility case item.tag of
                               SETTINGS_RIDES          -> ENABLE
+                              SETTINGS_TICKETS        -> ENABLE
                               SETTINGS_FAVOURITES     -> ENABLE
                               SETTINGS_HELP           -> ENABLE
                               SETTINGS_LANGUAGE       -> ENABLE

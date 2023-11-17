@@ -79,6 +79,10 @@ import Language.Strings (getString)
 import Language.Types (STR(..))
 import Data.Int (round, toNumber)
 import Data.Boolean (otherwise)
+import Effect.Uncurried (EffectFn1(..),EffectFn5(..), mkEffectFn1, mkEffectFn4, runEffectFn5)
+import Effect.Uncurried(EffectFn1, EffectFn4, EffectFn3,runEffectFn3)
+import Effect.Aff (Aff (..), error, killFiber, launchAff, launchAff_, makeAff, nonCanceler, Fiber)
+import Prelude (class EuclideanRing, Unit, bind, discard, identity, pure, unit, void, ($), (+), (<#>), (<*>), (<>), (*>), (>>>), ($>), (/=), (&&), (<=), show, (>=), (>),(<))
 
 -- shuffle' :: forall a. Array a -> Effect (Array a)
 -- shuffle' array = do
@@ -148,6 +152,14 @@ foreign import toStringJSON :: forall a. a -> String
 foreign import setRefreshing :: String -> Boolean -> Unit
 
 foreign import setEnabled :: String -> Boolean -> Unit
+
+foreign import _generateQRCode :: EffectFn5 String String Int Int (AffSuccess String) Unit
+
+generateQR:: EffectFn4 String String Int Int Unit
+generateQR  = mkEffectFn4 \qrString viewId size margin ->  launchAff_  $ void $ makeAff $
+  \cb ->
+    (runEffectFn5 _generateQRCode qrString viewId size margin (Right >>> cb))
+    $> nonCanceler
 
 foreign import saveToLocalStoreImpl :: String -> String -> EffectFnAff Unit
 saveToLocalStore' :: String -> String -> EffectFnAff Unit
@@ -355,6 +367,8 @@ rotateArray arr times =
     Nothing -> arr
   else
     arr
+
+type AffSuccess s = (s -> Effect Unit)
 
 isHaveFare :: String -> Array FareComponent -> Boolean
 isHaveFare fare = not null <<< filter (\item -> item.fareType == fare)

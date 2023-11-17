@@ -354,7 +354,7 @@ dummySettingBar = {
   , email : Nothing
   , gender : Nothing
   , appConfig : DC.config
-  , sideBarList : ["MyRides", "Favorites", "EmergencyContacts", "HelpAndSupport", "Language", "ShareApp", "LiveStatsDashboard", "About", "Logout"]
+  , sideBarList : ["MyRides", "Tickets", "Favorites", "EmergencyContacts", "HelpAndSupport", "Language", "ShareApp", "LiveStatsDashboard", "About", "Logout"]
 }
 
 dummyAddress :: Address

@@ -515,6 +515,7 @@ data ScreenOutput = LogoutUser
                   | ReportIssue HomeScreenState
                   | RideDetailsScreen HomeScreenState
                   | GoToTicketBookingFlow HomeScreenState
+                  | GoToMyTickets HomeScreenState
 
 data Action = NoAction
             | BackPressed
@@ -1039,6 +1040,10 @@ eval (SettingSideBarActionController (SettingSideBarController.GoToAbout)) state
 eval (SettingSideBarActionController (SettingSideBarController.GoToEmergencyContacts)) state = do
   let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_emergency_contacts"
   exit $ GoToEmergencyContacts state { data{settingSideBar{opened = SettingSideBarController.OPEN}}}
+
+eval (SettingSideBarActionController (SettingSideBarController.GoToMyTickets)) state = do
+  let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_zoo_tickets"
+  exit $ GoToMyTickets state { data{settingSideBar{opened = SettingSideBarController.OPEN}}}
 
 eval (SettingSideBarActionController (SettingSideBarController.ShareAppLink)) state =
   do

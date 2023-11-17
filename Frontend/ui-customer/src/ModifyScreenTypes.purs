@@ -43,10 +43,10 @@ modifyScreenState st =
     SavedLocationScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {savedLocationScreen = a state.savedLocationScreen})
     ReferralScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {referralScreen = a state.referralScreen})
     EmergencyContactsScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {emergencyContactsScreen = a state.emergencyContactsScreen})
+    TicketBookingScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {ticketBookingScreen = a state.ticketBookingScreen})
     PermissionScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {permissionScreen = a state.permissionScreen})
     AboutUsScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {aboutUsScreen = a state.aboutUsScreen})
     AppUpdatePopUpScreenType a->  modifyState (\(GlobalState state) -> GlobalState $ state { appUpdatePopUpScreen = a state.appUpdatePopUpScreen })
-    TicketBookingScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {ticketBookingScreen = a state.ticketBookingScreen})
 
 
 updateRideDetails :: MyRidesScreenState -> FlowBT String Unit

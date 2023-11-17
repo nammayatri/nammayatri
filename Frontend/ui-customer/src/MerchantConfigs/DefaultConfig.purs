@@ -89,7 +89,7 @@ config =
   , profileName: "#FFFFFF"
   , profileImage: "#012A72"
   , feedbackBackground: "#2C2F3A"
-  , sideBarList: [ "MyRides", "Favorites", "EmergencyContacts", "HelpAndSupport", "Language", "Separator", "ShareApp", "LiveStatsDashboard", "Logout" ]
+  , sideBarList: [ "MyRides", "Tickets", "Favorites", "EmergencyContacts", "HelpAndSupport", "Language", "Separator", "ShareApp", "LiveStatsDashboard", "Logout" ]
   , rateCardColor: "#2C2F3A"
   , nyBrandingVisibility: false
   , fontType: "Assets"
