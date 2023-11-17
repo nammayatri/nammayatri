@@ -70,7 +70,7 @@ screen initialState =
           servicesResp <- Remote.getTicketPlaceServicesBT firstPlace.id
           lift $ lift $ doAff do liftEffect $ push $ UpdatePlacesData (Just $ TicketPlaceResp firstPlace) (Just servicesResp)
         Nothing -> lift $ lift $ doAff do liftEffect $ push $ UpdatePlacesData Nothing Nothing
-    else lift $ lift $ doAff do liftEffect $ push $ UpdatePlacesData Nothing Nothing
+    else pure unit
 
 paymentStatusPooling :: forall action. String -> Int -> Number -> ST.TicketBookingScreenState -> (action -> Effect Unit) -> (String -> action) -> Flow GlobalState Unit
 paymentStatusPooling shortOrderId count delayDuration state push action = 
@@ -225,14 +225,16 @@ generalActionButtons state push =
     , orientation VERTICAL
     , background Color.white900
     ]
-    [ linearLayout  
+    $ [ linearLayout  
         [ height $ V 1
         , width MATCH_PARENT
         , margin $ MarginBottom 16
         , background Color.grey900
         ][]
-    , PrimaryButton.view (push <<< PrimaryButtonAC) (primaryButtonConfig state)
-    ]
+    ] <>
+      if state.props.currentStage == ST.ChooseTicketStage then 
+        [PrimaryButton.view (push <<< PrimaryButtonAC) (primaryButtonConfig1 state) ]
+        else  [PrimaryButton.view (push <<< PrimaryButtonAC) (primaryButtonConfig state) ]
 
 descriptionView :: forall w. ST.TicketBookingScreenState -> (Action -> Effect Unit) -> TicketPlaceResp -> PrestoDOM (Effect Unit) w
 descriptionView state push (TicketPlaceResp placeInfo) = 
