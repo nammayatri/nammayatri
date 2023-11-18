@@ -290,6 +290,10 @@ feeBreakUpView state push services =
       [ text "Fee & Timings"
       , color Color.black800
       ] <> FontStyle.subHeading1 TypoGraphy
+    ,textView $
+    [ text "(Zoo is closed on Thursdays)"
+    , color Color.black700
+    ] <> FontStyle.body1 TypoGraphy
     , linearLayout
       [ height WRAP_CONTENT
       , width MATCH_PARENT
@@ -387,15 +391,15 @@ chooseTicketsView state push =
       , background Color.white900
       , stroke $ "1," <> if state.props.validDate || (state.data.dateOfVisit == "") then Color.grey900 else Color.red
       , padding $ Padding 20 15 20 15
+      , onClick (\action -> do
+                _ <- push action
+                JB.datePicker "" push $ DatePicker "DATE_OF_VISIT"
+          ) (const NoAction)
       ][  imageView
           [ height $ V 22 
           , width $ V 22
           , margin $ MarginRight 8
           , layoutGravity "bottom"
-          , onClick (\action -> do
-                _ <- push action
-                JB.datePicker "" push $ DatePicker "DATE_OF_VISIT"
-          ) (const NoAction)
           , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_calendar" 
           ]
         , textView $ 
@@ -724,7 +728,7 @@ zooTicketView state push =
   ][ ticketHeaderView state push (getPlaceColor activeItem.ticketServiceName) (getInfoColor activeItem.ticketServiceName)
   ,  ticketImageView state push
   ,  bookingInfoView state push
-  ,  shareTicketView state push
+  -- ,  shareTicketView state push --TODO:: Need to remove this from this screen
   ]
 
 getTicketBackgroundColor :: String -> String
@@ -1070,7 +1074,7 @@ bookingStatusBody state push paymentStatus =
               ][ imageView
                   [ width $ V 24
                   , height $ V 24
-                  , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_ticket" 
+                  , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_ticket_black" 
                   , margin $ MarginRight 4
                   ]
                 , commonTV push state.data.zooName Color.black900 (FontStyle.subHeading1 TypoGraphy) 0 LEFT NoAction

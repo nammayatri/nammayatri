@@ -144,11 +144,12 @@ zooTicketView state push =
   , background $ getTicketBackgroundColor activeItem.ticketServiceName
   , orientation VERTICAL
   , padding $ Padding 16 24 16 24
+  , id (getNewIDWithTag "QR_TICKET")
   , cornerRadius 8.0
   ][ ticketHeaderView state push (getPlaceColor activeItem.ticketServiceName) (getInfoColor activeItem.ticketServiceName)
   ,  ticketImageView state push
   ,  bookingInfoView state push
-  -- ,  shareTicketView state push -- TODO :: add share ticket functionality
+  ,  shareTicketView state push
   ]
 
 
@@ -247,13 +248,13 @@ ticketImageView state push =
       , gravity CENTER
       ][  linearLayout
           [ weight 1.0
-          , height WRAP_CONTENT
+          , height $ V 150
           , gravity CENTER
+          , onClick push $ const DecrementSliderIndex
           ][ imageView
               [ width $ V 24
               , height $ V 24
               , imageWithFallback $ getLeftButtonForSlider state.props.activeListItem.ticketServiceName state.props.leftButtonDisable
-              , onClick push $ const DecrementSliderIndex
               , visibility $ if state.props.leftButtonDisable then INVISIBLE else VISIBLE
               , clickable $ if state.props.leftButtonDisable then false else true
               ]
@@ -274,13 +275,13 @@ ticketImageView state push =
           ]
         , linearLayout
           [ weight 1.0
-          , height WRAP_CONTENT
+          , height $ V 150
           , gravity CENTER
+          , onClick push $ const IncrementSliderIndex
           ][ imageView
             [ width $ V 24
             , height $ V 24
             , imageWithFallback $ getRightButtonForSlider state.props.activeListItem.ticketServiceName state.props.rightButtonDisable
-            , onClick push $ const IncrementSliderIndex
             , visibility $ if state.props.rightButtonDisable then INVISIBLE else VISIBLE
             , clickable $ if state.props.rightButtonDisable then false else true
             ]
@@ -419,6 +420,7 @@ shareTicketView state push =
   , orientation HORIZONTAL
   , gravity CENTER
   , margin $ MarginTop 16
+  , onClick push $ const $ ShareTicketQR state.props.activeListItem.ticketServiceName
   ][imageView
     [ height $ V 16
     , width $ V 16

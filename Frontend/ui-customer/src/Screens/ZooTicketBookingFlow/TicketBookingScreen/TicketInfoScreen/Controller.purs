@@ -18,6 +18,8 @@ import Data.Array (length, (!!))
 import Data.Maybe (Maybe(..))
 import Engineering.Helpers.Commons(getNewIDWithTag)
 import Components.GenericHeader as GenericHeader
+import JBridge (shareImageMessage)
+import Common.Types.App as Common
 
 instance showAction :: Show Action where
   show _ = ""
@@ -34,6 +36,7 @@ data Action = AfterRender
             | IncrementSliderIndex
             | GenericHeaderAC GenericHeader.Action 
             | GoHome
+            | ShareTicketQR String
 
 
 data ScreenOutput = GoToHomeScreen | GoBack
@@ -67,6 +70,18 @@ eval (TicketQRRendered id text) state  =
     pure $ NoAction
   ]
 
+eval (ShareTicketQR serviceName) state = do
+  _ <- pure $ shareImageMessage "Embark on a wild adventure at Alipore Zoo! 🐅🌿 Your tickets are ready to unlock a day of fun and discovery. See you soon! 🎟️👀 #AliporeZooAdventures" (shareImageMessageConfig serviceName)
+  continue state
+
 eval GoHome state = exit GoToHomeScreen
 
 eval _ state = continue state
+
+shareImageMessageConfig :: String -> Common.ShareImageConfig
+shareImageMessageConfig serviceName = {
+  code : "",
+  viewId : getNewIDWithTag "QR_TICKET",
+  logoId : getNewIDWithTag "ticketQRView",
+  isReferral : false
+  }

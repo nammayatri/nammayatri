@@ -2554,6 +2554,7 @@ ticketPaymentFlow screenData = do
   modifyScreenState $ TicketBookingScreenStateType (\ticketBookingScreen -> ticketBookingScreen{data{shortOrderId = shortOrderID}, props{selectedBookingId = shortOrderID}})
   lift $ lift $ doAff $ makeAff \cb -> runEffectFn1 checkPPInitiateStatus (cb <<< Right) $> nonCanceler
   _ <- paymentPageUI sdkPayload
+  void $ lift $ lift $ toggleLoader true
   _ <- pure $ toggleBtnLoader "" false
   (GetTicketStatusResp ticketStatus) <- Remote.getTicketStatusBT shortOrderID
   modifyScreenState $ TicketBookingScreenStateType (\ticketBookingScreen -> ticketBookingScreen { props { currentStage = BookingConfirmationStage } })
@@ -2570,6 +2571,7 @@ ticketPaymentFlow screenData = do
     _ -> do
       modifyScreenState $ TicketBookingScreenStateType (\ticketBookingScreen -> ticketBookingScreen { props { currentStage = ChooseTicketStage } }) -- temporary fix - will remove once 500 INTERNAL_SERVER_ERROR is solved.
       pure unit
+  void $ lift $ lift $ toggleLoader false
   zooTicketBookingFlow
 
 
