@@ -15,11 +15,11 @@ import Components.PrimaryButton as PrimaryButton
 import Effect.Uncurried(runEffectFn4)
 import Debug (spy)
 import Helpers.Utils (generateQR)
-import Data.Array (length, (:), foldl, mapWithIndex, head, (!!))
+import Data.Array (length, (:), foldl, mapWithIndex, head, (!!), filter)
 import Data.Maybe (Maybe(..))
 import Engineering.Helpers.Commons(getNewIDWithTag)
 import Resources.Constants
-import Services.API (TicketPlaceResp(..), TicketServicesResponse(..), TicketServiceResp(..), TicketServicePrice(..))
+import Services.API (TicketPlaceResp(..), TicketServicesResponse(..), TicketServiceResp(..), TicketServicePrice(..), BookingStatus(..))
 import Data.Int (ceil)
 import Common.Types.App as Common
 
@@ -45,7 +45,7 @@ data Action = AfterRender
             | OpenCalendar 
             | NoAction
             | BackPressed
-            | GetBookingInfo String
+            | GetBookingInfo String BookingStatus
             | TicketQRRendered String String
             | IncrementSliderIndex
             | DecrementSliderIndex
@@ -55,13 +55,14 @@ data Action = AfterRender
 
 data ScreenOutput = GoToHomeScreen TicketBookingScreenState
                   | GoToTicketPayment TicketBookingScreenState
-                  | GoToGetBookingInfo TicketBookingScreenState
+                  | GoToGetBookingInfo TicketBookingScreenState BookingStatus
                   | TryAgain TicketBookingScreenState
 
 eval :: Action -> TicketBookingScreenState -> Eval Action ScreenOutput TicketBookingScreenState
 eval (ToggleTicketOption ticketID) state = do
   let updatedServicesInfo = map (updateExpandService ticketID) state.data.servicesInfo
-  continue state { data { servicesInfo = updatedServicesInfo } }
+      updatedAmount = updateTicketAmount ticketID updatedServicesInfo state.data.totalAmount
+  continue state { data { servicesInfo = updatedServicesInfo, totalAmount = updatedAmount } }
 
 eval (IncrementTicket ticketOption) state = do
   let {finalAmount, updateServicesInfo} = calculateTicketAmount ticketOption true state.data.servicesInfo
@@ -107,13 +108,13 @@ eval BackPressed state =
 
 eval GoHome state = exit $ GoToHomeScreen state
 
-eval (GetBookingInfo bookingShortId) state = do
+eval (GetBookingInfo bookingShortId bookingStatus) state = do
   let newState = state { props { selectedBookingId = bookingShortId } }
-  updateAndExit newState $ GoToGetBookingInfo newState
+  updateAndExit newState $ GoToGetBookingInfo newState bookingStatus
 
 eval (ViewTicketAC (PrimaryButton.OnClick)) state = 
   case state.props.paymentStatus of
-   Common.Success -> continueWithCmd state [do pure (GetBookingInfo state.props.selectedBookingId)]
+   Common.Success -> continueWithCmd state [do pure (GetBookingInfo state.props.selectedBookingId Booked)]
    Common.Failed -> exit $ TryAgain state
    _ -> continue state
 
@@ -147,6 +148,19 @@ updateExpandService ticketID service =
     service {isExpanded = not service.isExpanded}
   else service
 
+updateTicketAmount :: String -> Array TicketServiceData -> Int -> Int
+updateTicketAmount ticketID servicesInfo actualAmount = do
+  let mbService = head (filter (\service -> service.id == ticketID) servicesInfo)
+  case mbService of
+    Just service -> 
+      if service.isExpanded 
+        then actualAmount + sum (map calculateAmountPrice service.prices)
+        else actualAmount - sum (map calculateAmountPrice service.prices)
+    Nothing -> actualAmount
+  where
+  calculateAmountPrice :: TicketServicePriceData -> Int
+  calculateAmountPrice price = price.currentValue * price.pricePerUnit
+
 calculateTicketAmount :: TicketOption -> Boolean -> Array TicketServiceData -> {finalAmount :: Int, updateServicesInfo :: Array TicketServiceData }
 calculateTicketAmount ticketOption isIncrement servicesInfo = do
   let updatedServices = map (updateService ticketOption) servicesInfo
@@ -168,10 +182,10 @@ calculateTicketAmount ticketOption isIncrement servicesInfo = do
 
   calculateAmountService :: TicketServiceData -> Int
   calculateAmountService service =
-    sum (map calculateAmountPrice service.prices)
+    sum (map (calculateAmountPrice service.isExpanded) service.prices)
   
-  sum :: Array Int -> Int
-  sum = foldl (\acc x -> acc + x) 0
-  
-  calculateAmountPrice :: TicketServicePriceData -> Int
-  calculateAmountPrice price = price.currentValue * price.pricePerUnit
+  calculateAmountPrice :: Boolean -> TicketServicePriceData -> Int
+  calculateAmountPrice include price = if include then price.currentValue * price.pricePerUnit else 0
+
+sum :: Array Int -> Int
+sum = foldl (\acc x -> acc + x) 0

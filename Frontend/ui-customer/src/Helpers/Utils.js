@@ -48,7 +48,7 @@ export const getCurrentDate = function (string) {
 
 
 export const compareDate = function (date1, date2){
-  return date1 > date2 ;
+  return date1 >= date2 ;
 }
 
 export const getNextDate = function (unit) {
@@ -68,13 +68,6 @@ export const getNextDate = function (unit) {
 
 export const getNextDateV2 = function (unit) {
   const currentDate = new Date();
-  const isLastDayOfMonth = (currentDate.getDate() === new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0).getDate());
-  if (isLastDayOfMonth) {
-    currentDate.setDate(1);
-    currentDate.setMonth(currentDate.getMonth() + 1); 
-  } else {
-    currentDate.setDate(currentDate.getDate() + 1);
-  }
   const dd = String(currentDate.getDate()).padStart(2, "0");
   const mm = String(currentDate.getMonth() + 1).padStart(2, "0"); //January is 0!
   const yyyy = currentDate.getFullYear();

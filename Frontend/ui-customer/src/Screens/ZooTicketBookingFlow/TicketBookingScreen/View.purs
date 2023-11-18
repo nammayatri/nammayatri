@@ -435,7 +435,7 @@ chooseTicketsView state push =
           , color Color.blue900
           , onClick (\action -> do
                   _<- push action
-                  _ <- JB.openUrlInApp $ "https://wbza.org/onlineticket/eticket/tnconlineticket"
+                  _ <- JB.openUrlInApp $ "https://docs.google.com/document/d/1Aa5PRGaTTZM4HDdmvU_7_59B58wCQ0-bRezbsu-Inqw"
                   pure unit
                   ) (const NoAction)
           ] <> FontStyle.body1 TypoGraphy
@@ -570,7 +570,7 @@ ticketsListView state push =
   , orientation VERTICAL
   , margin $ MarginTop 12
   , padding $ PaddingHorizontal 16 16
-  ][ if DA.null state.props.ticketBookingList.booked then linearLayout[][] else ticketsCardListView state push state.props.ticketBookingList.booked "Booked Trips"
+  ][ if DA.null state.props.ticketBookingList.booked then linearLayout[][] else ticketsCardListView state push state.props.ticketBookingList.booked "Booked Tickets"
   ,  if DA.null state.props.ticketBookingList.pendingBooking then linearLayout[][] else ticketsCardListView state push state.props.ticketBookingList.pendingBooking "Pending Payment"
   , emptyTicketsView state push
   ]
@@ -663,7 +663,7 @@ ticketInfoCardView state push booking =
          , height WRAP_CONTENT
          , orientation HORIZONTAL
          , gravity CENTER_VERTICAL
-         , onClick push $ const $ GetBookingInfo booking.shortId
+         , onClick push $ const $ GetBookingInfo booking.shortId booking.status
          , clickable true
          ][ textView 
             [ text "View"
