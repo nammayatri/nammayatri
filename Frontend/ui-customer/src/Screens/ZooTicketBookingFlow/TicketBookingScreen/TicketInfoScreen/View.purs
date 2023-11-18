@@ -314,13 +314,13 @@ getPillInfoColor ticketServiceName = case ticketServiceName of
   
 getLeftButtonForSlider :: String -> Boolean -> String
 getLeftButtonForSlider ticketServiceName buttonDisabled = case ticketServiceName of
-  "Entrance" -> if buttonDisabled then fetchImage FF_ASSET "ny_ic_chevron" else fetchImage FF_ASSET "ny_ic_chevron_left_white"
-  _ -> if buttonDisabled then fetchImage FF_ASSET "ny_ic_chevron" else fetchImage FF_ASSET "ny_ic_chevron_left"
+  "Entrance" -> if buttonDisabled then "" else fetchImage FF_ASSET "ny_ic_chevron_left_white"
+  _ -> if buttonDisabled then "" else fetchImage FF_ASSET "ny_ic_chevron_left"
 
 getRightButtonForSlider :: String -> Boolean -> String
 getRightButtonForSlider ticketServiceName buttonDisabled = case ticketServiceName of
-  "Entrance" -> if buttonDisabled then fetchImage FF_ASSET "ny_ic_chevron" else fetchImage FF_ASSET "ny_ic_chevron_right_white"
-  _ -> if buttonDisabled then fetchImage FF_ASSET "ny_ic_chevron" else fetchImage FF_ASSET "ny_ic_chevron_right"
+  "Entrance" -> if buttonDisabled then "" else fetchImage FF_ASSET "ny_ic_chevron_right_white"
+  _ -> if buttonDisabled then "" else fetchImage FF_ASSET "ny_ic_chevron_right"
 
 pillView :: forall w. ST.TicketInfoScreenState -> (Action -> Effect Unit) -> String -> String -> PrestoDOM (Effect Unit) w
 pillView state push backgroudColor textColor =
