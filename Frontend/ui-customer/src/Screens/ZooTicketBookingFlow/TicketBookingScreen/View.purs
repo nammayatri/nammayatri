@@ -691,10 +691,10 @@ separatorView color =
   ][]
 
 getTicketStatusImage :: BookingStatus -> String
-getTicketStatusImage status = fetchImage FF_ASSET $ case status of 
-  Pending -> "ny_ic_pending"
-  Booked -> "ny_ic_success"
-  Failed -> "ny_ic_failed"
+getTicketStatusImage status = fetchImage FF_COMMON_ASSET $ case status of 
+  Pending -> "ny_ic_transaction_pending"
+  Booked -> "ny_ic_green_tick"
+  Failed -> "ny_ic_payment_failed"
 
 
 individualBookingInfoView :: forall w. ST.TicketBookingScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
@@ -888,13 +888,13 @@ getPillInfoColor ticketServiceName = case ticketServiceName of
   
 getLeftButtonForSlider :: String -> Boolean -> String
 getLeftButtonForSlider ticketServiceName buttonDisabled = case ticketServiceName of
-  "Entrance Fee" -> if buttonDisabled then fetchImage FF_ASSET "ny_ic_chevron" else fetchImage FF_ASSET "ny_ic_chevron_left_white"
-  _ -> if buttonDisabled then fetchImage FF_ASSET "ny_ic_chevron" else fetchImage FF_ASSET "ny_ic_chevron_left"
+  "Entrance Fee" -> if buttonDisabled then "" else fetchImage FF_ASSET "ny_ic_chevron_left_white"
+  _ -> if buttonDisabled then "" else fetchImage FF_ASSET "ny_ic_chevron_left"
 
 getRightButtonForSlider :: String -> Boolean -> String
 getRightButtonForSlider ticketServiceName buttonDisabled = case ticketServiceName of
-  "Entrance Fee" -> if buttonDisabled then fetchImage FF_ASSET "ny_ic_chevron" else fetchImage FF_ASSET "ny_ic_chevron_right_white"
-  _ -> if buttonDisabled then fetchImage FF_ASSET "ny_ic_chevron" else fetchImage FF_ASSET "ny_ic_chevron_right"
+  "Entrance Fee" -> if buttonDisabled then "" else fetchImage FF_ASSET "ny_ic_chevron_right_white"
+  _ -> if buttonDisabled then "" else fetchImage FF_ASSET "ny_ic_chevron_right"
 
 pillView :: forall w. ST.TicketBookingScreenState -> (Action -> Effect Unit) -> String -> String -> PrestoDOM (Effect Unit) w
 pillView state push backgroudColor textColor =
@@ -1074,7 +1074,7 @@ bookingStatusBody state push paymentStatus =
               ][ imageView
                   [ width $ V 24
                   , height $ V 24
-                  , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_ticket_black" 
+                  , imageWithFallback $ fetchImage FF_ASSET "ny_ic_ticket_black" 
                   , margin $ MarginRight 4
                   ]
                 , commonTV push state.data.zooName Color.black900 (FontStyle.subHeading1 TypoGraphy) 0 LEFT NoAction
