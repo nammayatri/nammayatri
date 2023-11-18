@@ -21,6 +21,7 @@ data TicketService = TicketService
     maxVerification :: Int,
     openTimings :: Maybe TimeOfDay,
     closeTimings :: Maybe TimeOfDay,
+    validityTimings :: Maybe TimeOfDay,
     prices :: [TicketServicePrice]
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)

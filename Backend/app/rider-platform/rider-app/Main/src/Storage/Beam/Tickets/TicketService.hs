@@ -13,7 +13,8 @@ data TicketServiceT f = TicketServiceT
     service :: B.C f Text,
     maxVerification :: B.C f Int,
     openTimings :: B.C f (Maybe TimeOfDay),
-    closeTimings :: B.C f (Maybe TimeOfDay)
+    closeTimings :: B.C f (Maybe TimeOfDay),
+    validityTimings :: B.C f (Maybe TimeOfDay)
   }
   deriving (Generic, B.Beamable)
 
