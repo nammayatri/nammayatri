@@ -2006,6 +2006,32 @@ export const getLocationNameV2 = function (lat, lon) {
   }
 }
 
+function isJSONString(str) {
+  try {
+    JSON.parse(str);
+    return true;
+  } catch (error) {
+    return false;
+  }
+}
+
+export const getLatLonFromAddress = function (address) {
+  const defaultCoordinate = {
+    "latitude": 0.0,
+    "longitude": 0.0
+  }
+  try {
+    if (JBridge.getCoordinateFromAddress) {
+      const result = (JBridge.getCoordinateFromAddress(address));
+      return result != "NO_COORDINATE_FOUND" && isJSONString(result) ? JSON.parse(result) : defaultCoordinate;
+    }else{
+      return defaultCoordinate;
+    }
+  } catch (error) {
+    return defaultCoordinate;
+  }
+};
+
 export const hideLoader = function () {
   JOS.emitEvent("java")("onEvent")(JSON.stringify({
     event: "hide_loader"

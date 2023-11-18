@@ -759,19 +759,25 @@ public class MobilityCommonBridge extends HyperBridge {
 
     @JavascriptInterface
     public String getLocationNameSDK(double latitude, double longitude) {
-        Geocoder geocoder = new Geocoder(bridgeComponents.getContext(), Locale.getDefault());
-        try {
-            List<Address> addresses = geocoder.getFromLocation(latitude, longitude, 1);
-            if ( geocoder.isPresent() && addresses != null && addresses.size() > 0) {
-                Address address = addresses.get(0);
-                return address.getAddressLine(0);
-            } else {
-                return "NO_LOCATION_FOUND";
+        GeoCoderHelper geoCoderHelper = new GeoCoderHelper(bridgeComponents.getContext());
+        return geoCoderHelper.getLocName(latitude, longitude);
+    }
+
+    @JavascriptInterface
+    public String getCoordinateFromAddress(String address) {
+        GeoCoderHelper geoCoderHelper = new GeoCoderHelper(bridgeComponents.getContext());
+        GeoCoderHelper.GeoCoordinate coordinate = geoCoderHelper.getGeoCoordinateFromAddress(address);
+        if(coordinate != null) {
+            JSONObject jsonObject = new JSONObject();
+            try {
+                jsonObject.put("latitude", coordinate.getLatitude());
+                jsonObject.put("longitude", coordinate.getLongitude());
+            } catch (JSONException e) {
+                e.printStackTrace();
             }
-        } catch (Exception e) {
-            Log.e("COMMON_BRIDGE", "Error getting location name", e);
-            return "NO_LOCATION_FOUND";
+            return jsonObject.toString();
         }
+        return "NO_COORDINATE_FOUND";
     }
 
     private MarkerOptions makeMarkerObject(final String title, final double lat, final double lng, final int markerSize, final float anchorV, final float anchorV1) {
