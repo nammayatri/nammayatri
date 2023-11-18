@@ -283,7 +283,7 @@ verifyBookingDetails = processBookingService
 
     processValidBooking :: DTB.TicketBookingService -> DTB.TicketService -> DTTB.TicketBooking -> Id DTB.TicketService -> Flow TicketServiceVerificationResp
     processValidBooking bookingService ticketServiceConfig booking personServiceId
-      | bookingService.ticketServiceId /= personServiceId = return $ createVerificationResp DifferentService Nothing Nothing Nothing
+      | bookingService.ticketServiceId /= personServiceId = return $ createVerificationResp DifferentService Nothing (Just ticketServiceConfig) Nothing
       | otherwise = case bookingService.status of
         DTB.Pending -> return $ createVerificationResp PaymentPending (Just bookingService) (Just ticketServiceConfig) (Just booking)
         DTB.Failed -> return $ createVerificationResp InvalidBooking (Just bookingService) (Just ticketServiceConfig) (Just booking)
