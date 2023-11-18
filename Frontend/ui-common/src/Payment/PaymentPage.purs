@@ -57,7 +57,7 @@ newtype PayPayload = PayPayload
     firstName :: Maybe String,
     lastName :: Maybe String,
     merchantId :: Maybe String,
-    -- options_getUpiDeepLinks :: Maybe Boolean,
+    options_getUpiDeepLinks :: Maybe Boolean,
     orderId :: Maybe String,
     returnUrl :: Maybe String,
     "options.createMandate" :: Maybe String,

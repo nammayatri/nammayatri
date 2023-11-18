@@ -33,15 +33,13 @@ data Action = AfterRender
             | DecrementSliderIndex
             | IncrementSliderIndex
             | GenericHeaderAC GenericHeader.Action 
-            | GoBack
             | GoHome
 
 
-data ScreenOutput = GoToHomeScreen
-                  | GoToGetBookingInfo TicketInfoScreenState
+data ScreenOutput = GoToHomeScreen | GoBack
 
 eval :: Action -> TicketInfoScreenState -> Eval Action ScreenOutput TicketInfoScreenState
-eval BackPressed state = exit GoToHomeScreen
+eval BackPressed state = exit GoBack
 
 eval IncrementSliderIndex state = do
   let len = length state.data.selectedBookingInfo.services

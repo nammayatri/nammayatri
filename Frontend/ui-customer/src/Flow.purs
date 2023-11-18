@@ -644,46 +644,6 @@ welcomeScreenFlow = do
   case flow of
     GoToMobileNumberScreen -> enterMobileNumberScreenFlow
 
-dPP :: PaymentPagePayload
-dPP = PaymentPagePayload {
-      requestId: Just "4ab25be383814958adc62374325f6364",
-      service: Just "in.juspay.hyperpay",
-      payload: PayPayload {
-        merchantId: Just "nammayatri",
-        customerId: Just "df66b4fe-70d9-4c9d-9282-ffcc47a8ed40",
-        environment: Just "production",
-        clientId: Just "nammayatri",
-        firstName: Just "Nagarjuna",
-        "options.createMandate": Nothing,
-        customerPhone: Just "9343922922",
-        customerEmail: Just "test@juspay.in",
-        description: Just "Completeyourpayment",
-        "mandate.maxAmount": Nothing,
-        lastName: Just "asf",
-        orderId: Just "Fu1x0lv5oS",
-        "mandate.endDate": Nothing,
-        currency: "INR",
-        action: Just "paymentPage",
-        clientAuthTokenExpiry: "2023-11-18T18: 32: 32Z",
-        -- "options.getUpiDeepLinks": Just false, TODO:: NEED TO ADD BACK
-        returnUrl: Just "www.google.com",
-        "mandate.startDate": Nothing,
-        amount: "25.0",
-        language: Nothing,
-        clientAuthToken: "tkn_4da2e1613df54d1c9126a42db2e5ef42"
-      }
-}
-
-paymentFlow :: FlowBT String Unit
-paymentFlow = do
-  liftFlowBT $ runEffectFn1 initiatePP unit
-  let sdkPayload = dPP
-  lift $ lift $ doAff $ makeAff \cb -> runEffectFn1 checkPPInitiateStatus (cb <<< Right) $> nonCanceler
-  _ <- paymentPageUI sdkPayload
-  pure $ toggleBtnLoader "" false
-  liftFlowBT $ runEffectFn1 consumeBP unit
-  enterMobileNumberScreenFlow
-
 accountSetUpScreenFlow :: FlowBT String Unit
 accountSetUpScreenFlow = do
   logField_ <- lift $ lift $ getLogFields
@@ -2564,13 +2524,19 @@ zooTicketBookingFlow = do
   flow <- UI.ticketBookingScreen
   case flow of
     GO_TO_TICKET_PAYMENT state -> ticketPaymentFlow state.data
-    GET_BOOKING_INFO_SCREEN state -> do
+    GET_BOOKING_INFO_SCREEN state bookingStatus -> do
       (GetBookingInfoRes resp) <- Remote.getTicketBookingDetailsBT state.props.selectedBookingId--state.props.selectedBookingInfo.shortId (show state.props.selectedBookingInfo.status)
-      _ <- pure $ spy "Response" resp
-      let ticketBookingDetails = (ticketDetailsTransformer (GetBookingInfoRes resp))
-      let dummyListItem = { ticketServiceShortId : "afdjasdf ;a", ticketServiceName : "VideoPhotography", amount : 100.0, status : "Pending", verificationCount : 0, expiryDate : Nothing,  prices : [{pricePerUnit: 2.0,numberOfUnits: 3,attendeeType: "Adults"}, {pricePerUnit: 2.0,numberOfUnits: 2,attendeeType: "Mobile"}]}
-      modifyScreenState $ TicketInfoScreenStateType (\ticketInfoScreen ->  ticketInfoScreen{data{selectedBookingInfo = ticketBookingDetails}, props {activeListItem = fromMaybe dummyListItem (ticketBookingDetails.services !! 0), rightButtonDisable = (length ticketBookingDetails.services < 2)}})
-      zooTicketInfoFlow
+      if (bookingStatus == Pending)
+        then do
+          modifyScreenState $ TicketBookingScreenStateType (\ticketBookingScreen -> ticketBookingScreen { props { currentStage = BookingConfirmationStage } })
+          setValueToLocalStore PAYMENT_STATUS_POOLING "true"
+          fillBookingDetails (GetBookingInfoRes resp) state.props.selectedBookingId "Pending"
+          zooTicketBookingFlow
+        else do
+          let ticketBookingDetails = (ticketDetailsTransformer (GetBookingInfoRes resp))
+          let dummyListItem = { ticketServiceShortId : "", ticketServiceName : "VideoPhotography", amount : 100.0, status : "Pending", verificationCount : 0, expiryDate : Nothing,  prices : [{pricePerUnit: 2.0,numberOfUnits: 3,attendeeType: "Adults"}, {pricePerUnit: 2.0,numberOfUnits: 2,attendeeType: "Mobile"}]}
+          modifyScreenState $ TicketInfoScreenStateType (\ticketInfoScreen ->  ticketInfoScreen{data{selectedBookingInfo = ticketBookingDetails}, props {activeListItem = fromMaybe dummyListItem (ticketBookingDetails.services !! 0), rightButtonDisable = (length ticketBookingDetails.services < 2)}})
+          zooTicketInfoFlow
     GO_TO_HOME_SCREEN_FROM_TICKET_BOOKING -> homeScreenFlow
     RESET_SCREEN_STATE -> do
       modifyScreenState $ TicketBookingScreenStateType (\_ ->  TicketBookingScreenData.initData)
@@ -2585,12 +2551,11 @@ ticketPaymentFlow screenData = do
       finalPayload = PayPayload $ innerpayload{ language = Just (getPaymentPageLangKey (getValueToLocalStore LANGUAGE_KEY)) }
       sdkPayload = PaymentPagePayload $ sdk_payload{payload = finalPayload}
       shortOrderID = orderResp.order_id
-  modifyScreenState $ TicketBookingScreenStateType (\ticketBookingScreen -> ticketBookingScreen{data{shortOrderId = shortOrderID}})
+  modifyScreenState $ TicketBookingScreenStateType (\ticketBookingScreen -> ticketBookingScreen{data{shortOrderId = shortOrderID}, props{selectedBookingId = shortOrderID}})
   lift $ lift $ doAff $ makeAff \cb -> runEffectFn1 checkPPInitiateStatus (cb <<< Right) $> nonCanceler
   _ <- paymentPageUI sdkPayload
   _ <- pure $ toggleBtnLoader "" false
   (GetTicketStatusResp ticketStatus) <- Remote.getTicketStatusBT shortOrderID
-  _ <- pure $ spy "GetTicketStatusResp " ticketStatus
   modifyScreenState $ TicketBookingScreenStateType (\ticketBookingScreen -> ticketBookingScreen { props { currentStage = BookingConfirmationStage } })
   case ticketStatus of
     "Booked" -> do
@@ -2614,7 +2579,7 @@ zooTicketInfoFlow = do
   flow <- UI.ticketInfoScreen
   modifyScreenState $ TicketBookingScreenStateType (\ticketBookingScreenState ->  ticketBookingScreenState{props{currentStage = MyTicketsStage}})
   case flow of
-    GO_TO_HOME_SCREEN_FROM_TICKET_INFO -> zooTicketBookingFlow
+    GO_TO_HOME_SCREEN_FROM_TICKET_INFO -> currentFlowStatus
     _ -> pure unit
 
 fillBookingDetails :: GetBookingInfoRes -> String -> String -> FlowBT String Unit

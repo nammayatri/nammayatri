@@ -15,7 +15,5 @@ ticketInfoScreen = do
   (GlobalState state) <- getState
   action <- lift $ lift $ runScreen $ TicketInfoScreen.screen state.ticketInfoScreen
   case action of
-    GoToHomeScreen -> App.BackT $ pure App.GoBack
-    GoToGetBookingInfo updatedState -> do
-      modifyScreenState $ TicketInfoScreenStateType (\ticketInfoScreen -> updatedState)
-      App.BackT $ App.NoBack <$> (pure GO_TO_HOME_SCREEN_FROM_TICKET_INFO)
+    GoToHomeScreen -> App.BackT $ App.NoBack <$> (pure GO_TO_HOME_SCREEN_FROM_TICKET_INFO)
+    GoBack -> App.BackT $ pure App.GoBack
