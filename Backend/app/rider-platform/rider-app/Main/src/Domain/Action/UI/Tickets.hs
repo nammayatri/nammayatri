@@ -91,11 +91,26 @@ data TicketBookingServiceDetails = TicketBookingServiceDetails
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
+data TicketVerificationStatus
+  = BookingSuccess
+  | BookingExpired
+  | BookingFuture
+  | BookingAlreadyVerified
+  | DifferentService
+  | PaymentPending
+  | InvalidBooking
+  deriving (Generic, ToJSON, FromJSON, ToSchema)
+
 data TicketServiceVerificationResp = TicketServiceVerificationResp
-  { ticketServiceName :: Text,
-    visitDate :: Day,
-    ticketServiceShortId :: Text,
-    units :: [DTB.TicketBookingServicePriceBreakup]
+  { ticketServiceName :: Maybe Text,
+    visitDate :: Maybe Day,
+    validTill :: Maybe UTCTime,
+    ticketServiceShortId :: Maybe Text,
+    message :: Text,
+    status :: TicketVerificationStatus,
+    amount :: Maybe HighPrecMoney,
+    verificationCount :: Maybe Int,
+    units :: Maybe [DTB.TicketBookingServicePriceBreakup]
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
@@ -186,7 +201,7 @@ bookTicket (personId, merchantId) placeId req = do
             amount,
             status = DTB.Pending,
             verificationCount = 0,
-            expiryDate = (\time -> UTCTime req.visitDate (timeOfDayToTime time)) <$> ticketServiceConfig.closeTimings,
+            expiryDate = (\time -> UTCTime req.visitDate (timeOfDayToTime time)) <$> ticketServiceConfig.validityTimings,
             merchantOperatingCityId,
             prices,
             createdAt = now,
@@ -253,34 +268,76 @@ getBookingDetail _ shortId_ = do
           }
 
 verifyBookingDetails :: Id DTB.TicketService -> ShortId DTB.TicketBookingService -> Flow TicketServiceVerificationResp
-verifyBookingDetails personServiceId serviceShortId = do
-  bookingService <- QTBS.findByShortId serviceShortId >>= fromMaybeM (TicketBookingServiceNotFound serviceShortId.getShortId)
-  ticketServiceConfig <- QTS.findById bookingService.ticketServiceId >>= fromMaybeM (TicketServiceNotFound bookingService.ticketServiceId.getId)
-
-  unless (bookingService.ticketServiceId == personServiceId) $ throwError $ InvalidRequest ("This QR belong to a different service: " <> show ticketServiceConfig.service)
-  now <- getCurrentTime
-
-  bookingStatusChecks ticketServiceConfig bookingService.verificationCount bookingService.status
-  whenJust bookingService.expiryDate $ \expiry -> when (expiry < now) $ throwError $ InvalidRequest ("Booking expired on" <> show expiry)
-
-  booking <- QTB.findById bookingService.ticketBookingId >>= fromMaybeM (TicketBookingNotFound bookingService.ticketBookingId.getId)
-  when (booking.visitDate > utctDay now) $ throwError $ InvalidRequest ("Booking is for a future date " <> show booking.visitDate)
-
-  QTBS.updateVerification bookingService.id (bookingService.verificationCount + 1) now
-
-  return $
-    TicketServiceVerificationResp
-      { ticketServiceName = ticketServiceConfig.service,
-        visitDate = booking.visitDate,
-        ticketServiceShortId = serviceShortId.getShortId,
-        units = bookingService.prices
-      }
+verifyBookingDetails = processBookingService
   where
-    bookingStatusChecks _ _ DTB.Pending = throwError $ InvalidRequest "Booking payment is still pending"
-    bookingStatusChecks _ _ DTB.Failed = throwError $ InvalidRequest "Invalid Booking"
-    bookingStatusChecks ticketServiceConfig count DTB.Verified = do
-      when (count >= ticketServiceConfig.maxVerification) $ throwError $ InvalidRequest "Booking already verified"
-    bookingStatusChecks _ _ DTB.Confirmed = return ()
+    processBookingService :: Id DTB.TicketService -> ShortId DTB.TicketBookingService -> Flow TicketServiceVerificationResp
+    processBookingService personServiceId serviceShortId = do
+      mBookingService <- QTBS.findByShortId serviceShortId
+      case mBookingService of
+        Just bookingService -> do
+          (mTicketServiceConfig, mBooking) <- liftM2 (,) (QTS.findById bookingService.ticketServiceId) (QTB.findById bookingService.ticketBookingId)
+          case (mTicketServiceConfig, mBooking) of
+            (Just ticketServiceConfig, Just booking) -> processValidBooking bookingService ticketServiceConfig booking personServiceId
+            _ -> return $ createVerificationResp InvalidBooking Nothing Nothing Nothing
+        Nothing -> return $ createVerificationResp InvalidBooking Nothing Nothing Nothing
+
+    processValidBooking :: DTB.TicketBookingService -> DTB.TicketService -> DTTB.TicketBooking -> Id DTB.TicketService -> Flow TicketServiceVerificationResp
+    processValidBooking bookingService ticketServiceConfig booking personServiceId
+      | bookingService.ticketServiceId /= personServiceId = return $ createVerificationResp DifferentService Nothing Nothing Nothing
+      | otherwise = case bookingService.status of
+        DTB.Pending -> return $ createVerificationResp PaymentPending (Just bookingService) (Just ticketServiceConfig) (Just booking)
+        DTB.Failed -> return $ createVerificationResp InvalidBooking (Just bookingService) (Just ticketServiceConfig) (Just booking)
+        DTB.Verified -> handleVerifiedBooking bookingService ticketServiceConfig booking
+        DTB.Confirmed -> handleConfirmedBooking bookingService ticketServiceConfig booking
+
+    -- Additional function for verified booking
+    handleVerifiedBooking :: DTB.TicketBookingService -> DTB.TicketService -> DTTB.TicketBooking -> Flow TicketServiceVerificationResp
+    handleVerifiedBooking bookingService ticketServiceConfig booking
+      | bookingService.verificationCount >= ticketServiceConfig.maxVerification =
+        return $ createVerificationResp BookingAlreadyVerified (Just bookingService) (Just ticketServiceConfig) (Just booking)
+      | otherwise = handleConfirmedBooking bookingService ticketServiceConfig booking
+
+    handleConfirmedBooking :: DTB.TicketBookingService -> DTB.TicketService -> DTTB.TicketBooking -> Flow TicketServiceVerificationResp
+    handleConfirmedBooking bookingService ticketServiceConfig booking = do
+      now <- getCurrentTime
+      case bookingService.expiryDate of
+        Just expiry ->
+          if expiry < now
+            then return $ createVerificationResp BookingExpired (Just bookingService) (Just ticketServiceConfig) (Just booking)
+            else handleConfirmedNonExpiredBooking bookingService ticketServiceConfig booking
+        Nothing -> handleConfirmedNonExpiredBooking bookingService ticketServiceConfig booking
+
+    handleConfirmedNonExpiredBooking :: DTB.TicketBookingService -> DTB.TicketService -> DTTB.TicketBooking -> Flow TicketServiceVerificationResp
+    handleConfirmedNonExpiredBooking bookingService ticketServiceConfig booking = do
+      now <- getCurrentTime
+      if booking.visitDate > utctDay now
+        then do return $ createVerificationResp BookingFuture (Just bookingService) (Just ticketServiceConfig) (Just booking)
+        else do
+          QTBS.updateVerification bookingService.id (bookingService.verificationCount + 1) now
+          return $ createVerificationResp BookingSuccess (Just bookingService) (Just ticketServiceConfig) (Just booking)
+
+    createVerificationResp :: TicketVerificationStatus -> Maybe DTB.TicketBookingService -> Maybe DTB.TicketService -> Maybe DTTB.TicketBooking -> TicketServiceVerificationResp
+    createVerificationResp status mBookingService mTicketServiceConfig mBooking = do
+      TicketServiceVerificationResp
+        { ticketServiceName = mTicketServiceConfig <&> (.service),
+          visitDate = mBooking <&> (.visitDate),
+          validTill = mBookingService >>= (.expiryDate) >>= (Just . addUTCTime (secondsToNominalDiffTime 19800)), -- 19800 for +5:30 timezone
+          ticketServiceShortId = mBookingService <&> (.shortId) <&> (.getShortId),
+          message = verificationMsg status,
+          status,
+          amount = mBookingService <&> (.amount),
+          verificationCount = mBookingService <&> (.verificationCount),
+          units = mBookingService <&> (.prices)
+        }
+
+    verificationMsg :: TicketVerificationStatus -> Text
+    verificationMsg BookingSuccess = "Validated successfully!"
+    verificationMsg BookingExpired = "Booking Expired!"
+    verificationMsg BookingFuture = "Booking for Later Date!"
+    verificationMsg BookingAlreadyVerified = "Already Validated!"
+    verificationMsg DifferentService = "Different Service!"
+    verificationMsg PaymentPending = "Payment Pending!"
+    verificationMsg InvalidBooking = "Not a valid QR"
 
 getBookingStatus :: (Id DP.Person, Id Merchant.Merchant) -> ShortId DTTB.TicketBooking -> Flow DTTB.BookingStatus
 getBookingStatus (personId, merchantId) (ShortId shortId) = do

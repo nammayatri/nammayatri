@@ -76,3 +76,6 @@ INSERT INTO atlas_app.ticket_service_price (ticket_service_id, attendee_type, pr
 INSERT INTO atlas_app.ticket_service_price (ticket_service_id, attendee_type, price_per_unit) VALUES ('a7eba6ed-99f7-442f-a9d8-00c8b380657b', 'Adult', 20.00);
 INSERT INTO atlas_app.ticket_service_price (ticket_service_id, attendee_type, price_per_unit) VALUES ('a7eba6ed-99f7-442f-a9d8-00c8b380657b', 'Child', 10.00);
 INSERT INTO atlas_app.ticket_service_price (ticket_service_id, attendee_type, price_per_unit) VALUES ('d8f47b42-50a5-4a97-8dda-e80a3633d7ab', 'Camera Unit', 250.00);
+
+ALTER TABLE atlas_app.ticket_booking_service ADD COLUMN validity_timings time without time zone;
+UPDATE atlas_app.ticket_booking_service SET validity_timings = open_timings;

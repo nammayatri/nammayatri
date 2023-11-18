@@ -36,5 +36,6 @@ instance ToTType' BeamTS.TicketService DTB.TicketService where
         BeamTS.service = service,
         BeamTS.maxVerification = maxVerification,
         BeamTS.openTimings = openTimings,
-        BeamTS.closeTimings = closeTimings
+        BeamTS.closeTimings = closeTimings,
+        BeamTS.validityTimings = validityTimings
       }
