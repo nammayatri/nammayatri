@@ -1084,7 +1084,6 @@ bookingStatusBody state push paymentStatus =
           , width MATCH_PARENT
           , orientation VERTICAL
           ](DA.mapWithIndex ( \index item ->  keyValueView state item.key item.val index) state.data.keyValArray)
-          , PrimaryButton.view (push <<< ShareTicketAC) (shareTicketButtonConfig $ paymentStatus == Common.Success)
           ]
       ]
   ]

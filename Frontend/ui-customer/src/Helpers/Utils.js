@@ -11,20 +11,20 @@ export const getKeyInSharedPrefKeysConfigEff = function (key) {
   return JBridge.getFromSharedPrefs(key);
 };
 
-export const validateInputPattern = function (input, pattern){
-  const reg = new RegExp(pattern,"g");
+export const validateInputPattern = function (input, pattern) {
+  const reg = new RegExp(pattern, "g");
   const result = reg.test(input);
   console.log("validateInputPattern " + result + " Values :- " + input + " Pattern :- " + pattern);
   return (result);
 }
 
-export const getLocationName = function(cb){
+export const getLocationName = function (cb) {
   return function (lat) {
-    return function (lng){
+    return function (lng) {
       return function (defaultText) {
         return function (action) {
-          return function(){
-            const callback = callbackMapper.map(function (resultLat,resultLon,result){
+          return function () {
+            const callback = callbackMapper.map(function (resultLat, resultLon, result) {
               const decodedString = decodeURIComponent(result).replace(/\+/g, " ");
               cb(action(parseFloat(resultLat))(parseFloat(resultLon))(decodedString))();
             });
@@ -47,8 +47,8 @@ export const getCurrentDate = function (string) {
 }
 
 
-export const compareDate = function (date1, date2){
-  return date1 >= date2 ;
+export const compareDate = function (date1, date2) {
+  return date1 >= date2;
 }
 
 export const getNextDate = function (unit) {
@@ -56,7 +56,7 @@ export const getNextDate = function (unit) {
   const isLastDayOfMonth = (currentDate.getDate() === new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0).getDate());
   if (isLastDayOfMonth) {
     currentDate.setDate(1);
-    currentDate.setMonth(currentDate.getMonth() + 1); 
+    currentDate.setMonth(currentDate.getMonth() + 1);
   } else {
     currentDate.setDate(currentDate.getDate() + 1);
   }
@@ -74,7 +74,7 @@ export const getNextDateV2 = function (unit) {
   return yyyy + "-" + mm + "-" + dd;
 }
 
-export const validateEmail = function (email){
+export const validateEmail = function (email) {
   const re = /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
   return re.test(String(email).toLowerCase());
 }
@@ -94,18 +94,18 @@ export const secondsToHms = function (d) {
   return hDisplay + mDisplay;
 }
 
-export const getUTCDay = function (date){
+export const getUTCDay = function (date) {
   return date.getUTCDay();
 }
 
-export const getTime = function (unit){
+export const getTime = function (unit) {
   return Date.now();
 }
 
-export const requestKeyboardShow = function(id) {
-  return function() {
+export const requestKeyboardShow = function (id) {
+  return function () {
     const delayInMilliseconds = 100;
-    setTimeout(function() {
+    setTimeout(function () {
       window.JBridge.requestKeyboardShow(id);
     }, delayInMilliseconds);
   }
@@ -117,19 +117,20 @@ export const storeCallBackCustomer = function (cb) {
     return function () {
       try {
         const callback = callbackMapper.map(function (notificationType) {
-          cb(action (notificationType))();
+          cb(action(notificationType))();
         });
         const notificationCallBack = function (notificationType) {
-          cb(action (notificationType))();
+          cb(action(notificationType))();
         };
         window.callNotificationCallBack = notificationCallBack;
         console.log("In storeCallBackCustomer ---------- + " + action);
         JBridge.storeCallBackCustomer(callback);
       }
-      catch (error){
+      catch (error) {
         console.log("Error occurred in storeCallBackCustomer ------", error);
       }
-    }}
+    }
+  }
 
 }
 
@@ -157,12 +158,12 @@ export const parseNewContacts = function (contact) {
 }
 
 
-export const makePascalCase = function (str){
+export const makePascalCase = function (str) {
   let changeToUpperCase = str[0].toUpperCase();
-  for(let i = 1; i < str.length; i++){
-    if(str[i-1] == " " || str[i-1] == ","){
+  for (let i = 1; i < str.length; i++) {
+    if (str[i - 1] == " " || str[i - 1] == ",") {
       changeToUpperCase += str[i].toUpperCase();
-    }else{
+    } else {
       changeToUpperCase += str[i].toLowerCase();
     }
   }
@@ -170,12 +171,12 @@ export const makePascalCase = function (str){
 }
 
 export const decodeError = function (er) {
-  return function (key){
+  return function (key) {
     try {
       const errorPayload = JSON.parse(er)[key];
-      if(errorPayload === null)
+      if (errorPayload === null)
         return "";
-      return  errorPayload.toString();
+      return errorPayload.toString();
     } catch (e) {
       console.log(e);
       return "";
@@ -187,9 +188,9 @@ export const toStringJSON = function (attr) {
   return JSON.stringify(attr);
 };
 
-export const clearWaitingTimer = function (id){
+export const clearWaitingTimer = function (id) {
   console.log("clearWaitingTimer" + id);
-  if(window.__OS == "IOS" && id=="countUpTimerId") {
+  if (window.__OS == "IOS" && id == "countUpTimerId") {
     if (window.JBridge.clearCountUpTimer) {
       window.JBridge.clearCountUpTimer();
     }
@@ -198,8 +199,8 @@ export const clearWaitingTimer = function (id){
   }
 }
 
-export const clearCountDownTimer = function (id){
-  if(window.__OS == "IOS"){
+export const clearCountDownTimer = function (id) {
+  if (window.__OS == "IOS") {
     if (window.JBridge.clearCountDownTimer) {
       window.JBridge.clearCountDownTimer();
     }
@@ -209,25 +210,25 @@ export const clearCountDownTimer = function (id){
   }
 }
 
-export const setRefreshing = function (id){
-  return function (bool){
+export const setRefreshing = function (id) {
+  return function (bool) {
     if (window.__OS == "ANDROID") {
       const cmd = "set_v=ctx->findViewById:i_" + id + ";get_v->setRefreshing:b_" + bool + ";"
-      window.Android.runInUI(cmd,null)
+      window.Android.runInUI(cmd, null)
     }
   }
 }
 
-export const setEnabled = function (id){
-  return function (bool){
+export const setEnabled = function (id) {
+  return function (bool) {
     if (window.__OS == "ANDROID") {
       const cmd = "set_v=ctx->findViewById:i_" + id + ";get_v->setEnabled:b_" + bool + ";"
-      window.Android.runInUI(cmd,null)
+      window.Android.runInUI(cmd, null)
     }
   }
 }
 
-export const fetchFromLocalStoreImpl = function(key) {
+export const fetchFromLocalStoreImpl = function (key) {
   return function (just) {
     return function (nothing) {
       return function () {
@@ -241,7 +242,7 @@ export const fetchFromLocalStoreImpl = function(key) {
   };
 }
 
-export const fetchFromLocalStoreTempImpl = function(key) {
+export const fetchFromLocalStoreTempImpl = function (key) {
   return function (just) {
     return function (nothing) {
       return function () {
@@ -249,14 +250,13 @@ export const fetchFromLocalStoreTempImpl = function(key) {
         const newState = JSON.parse(state);
         const predictionArray = newState.predictionArray;
         try {
-          for(let i = 0; i < predictionArray.length; i++) {
-            if (!Object.prototype.hasOwnProperty.call(predictionArray[i],"fullAddress"))
-            {
+          for (let i = 0; i < predictionArray.length; i++) {
+            if (!Object.prototype.hasOwnProperty.call(predictionArray[i], "fullAddress")) {
               predictionArray[i].fullAddress = {};
             }
           }
         }
-        catch(e) {
+        catch (e) {
           console.log(e);
         }
 
@@ -270,7 +270,7 @@ export const fetchFromLocalStoreTempImpl = function(key) {
   };
 }
 
-export const saveToLocalStoreImpl = function(key) {
+export const saveToLocalStoreImpl = function (key) {
   return function (state) {
     console.log("==------>>>>>> SAVE SCREEN");
     console.log(key);
@@ -282,7 +282,7 @@ export const saveToLocalStoreImpl = function(key) {
   };
 }
 
-export const seperateByWhiteSpaces = function(string) {
+export const seperateByWhiteSpaces = function (string) {
   return string.replace(/\s+/g, " ").trim();
 };
 
@@ -300,18 +300,18 @@ function between(x, min, max) {
 
 export const withinTimeRange = function (startTime) {
   return function (endTime) {
-    return function(timeStr){
+    return function (timeStr) {
       try {
         return startTime < endTime ? between(timeStr, startTime, endTime) : between(timeStr, startTime, "23:59:59") || between(timeStr, "00:00:01", endTime);
-      }catch (err){
+      } catch (err) {
         return false;
       }
     }
   }
 }
 
-export const adjustViewWithKeyboard = function(flag) {
-  return function() {
+export const adjustViewWithKeyboard = function (flag) {
+  return function () {
     if (window.JBridge.adjustViewWithKeyboard) {
       window.JBridge.adjustViewWithKeyboard(flag)
     }
@@ -328,7 +328,7 @@ export const fetchAndUpdateCurrentLocation = function (cb) {
           });
           return window.JBridge.fetchAndUpdateCurrentLocation(callback);
         } else {
-          const fallBackCallback = callbackMapper.map(function(){
+          const fallBackCallback = callbackMapper.map(function () {
             cb(fallbackAction)();
           });
           window.callUICallback(fallBackCallback);
@@ -338,21 +338,21 @@ export const fetchAndUpdateCurrentLocation = function (cb) {
   };
 };
 export const contactPermission = function () {
-  if(window.JBridge.contactPermission){
+  if (window.JBridge.contactPermission) {
     return window.JBridge.contactPermission();
   }
 }
 
 export const performHapticFeedback = function () {
-  if(window.JBridge.performHapticFeedback ){
+  if (window.JBridge.performHapticFeedback) {
     return window.JBridge.performHapticFeedback();
   }
 }
 
 
-export const drawPolygon = function(geoJson) {
+export const drawPolygon = function (geoJson) {
   return function (locationName) {
-    return function() {
+    return function () {
       if (JBridge.drawPolygon) {
         JBridge.drawPolygon(geoJson, locationName);
       }
@@ -361,17 +361,17 @@ export const drawPolygon = function(geoJson) {
 }
 
 export const removeLabelFromMarker = (zoomLevel) => {
-  if (JBridge.removeLabelFromMarker){
-    try{
+  if (JBridge.removeLabelFromMarker) {
+    try {
       return JBridge.removeLabelFromMarker(zoomLevel);
-    } catch (err){
+    } catch (err) {
       return JBridge.removeLabelFromMarker();
     }
   }
 }
 
-export const strLenWithSpecificCharacters = function(input) {
-  return function(pattern){
+export const strLenWithSpecificCharacters = function (input) {
+  return function (pattern) {
     const regex = new RegExp(pattern, "g");
     const matches = input.match(regex);
     return matches ? matches.length : 0;
