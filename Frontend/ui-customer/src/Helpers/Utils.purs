@@ -179,7 +179,7 @@ convertUTCToISTAnd12HourFormat inputTime = do
       minutes <- fromString m
       
       -- Add 5 hours and 30 minutes
-      let adjustRemainder = if minutes == 30 then 1 else 0
+      let adjustRemainder = if minutes >= 30 then 1 else 0
           adjustedHours24 = (hours + 5 + adjustRemainder) `mod` 24
           adjustedMinutes = (minutes + 30) `mod` 60
       
