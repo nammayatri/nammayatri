@@ -81,7 +81,8 @@ data SearchRequestForDriver = SearchRequestForDriver
     driverSpeed :: Maybe Double,
     keepHiddenForSeconds :: Seconds,
     mode :: Maybe DI.DriverMode,
-    goHomeRequestId :: Maybe (Id DriverGoHomeRequest)
+    goHomeRequestId :: Maybe (Id DriverGoHomeRequest),
+    rideFrequencyScore :: Maybe Double
   }
   deriving (Generic, Show, PrettyShow)
 
