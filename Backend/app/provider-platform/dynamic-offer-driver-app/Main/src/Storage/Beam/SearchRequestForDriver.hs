@@ -63,6 +63,7 @@ data SearchRequestForDriverT f = SearchRequestForDriverT
     keepHiddenForSeconds :: B.C f Seconds,
     mode :: B.C f (Maybe D.DriverMode),
     goHomeRequestId :: B.C f (Maybe Text),
+    rideFrequencyScore :: B.C f (Maybe Double),
     createdAt :: B.C f LocalTime
   }
   deriving (Generic, B.Beamable)

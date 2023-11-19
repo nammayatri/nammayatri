@@ -160,7 +160,8 @@ instance FromTType' BeamSRFD.SearchRequestForDriver SearchRequestForDriver where
             keepHiddenForSeconds = keepHiddenForSeconds,
             driverSpeed = driverSpeed,
             mode = mode,
-            goHomeRequestId = Id <$> goHomeRequestId
+            goHomeRequestId = Id <$> goHomeRequestId,
+            rideFrequencyScore = rideFrequencyScore
           }
 
 instance ToTType' BeamSRFD.SearchRequestForDriver SearchRequestForDriver where
@@ -195,5 +196,6 @@ instance ToTType' BeamSRFD.SearchRequestForDriver SearchRequestForDriver where
         BeamSRFD.keepHiddenForSeconds = keepHiddenForSeconds,
         BeamSRFD.driverSpeed = driverSpeed,
         BeamSRFD.mode = mode,
-        BeamSRFD.goHomeRequestId = getId <$> goHomeRequestId
+        BeamSRFD.goHomeRequestId = getId <$> goHomeRequestId,
+        BeamSRFD.rideFrequencyScore = rideFrequencyScore
       }

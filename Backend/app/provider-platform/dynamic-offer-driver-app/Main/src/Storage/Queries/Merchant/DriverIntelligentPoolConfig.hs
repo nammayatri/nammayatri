@@ -41,7 +41,7 @@ update config = do
       Se.Set BeamDIPC.acceptanceRatioWeightage config.acceptanceRatioWeightage,
       Se.Set BeamDIPC.acceptanceRatioWindowOption config.acceptanceRatioWindowOption,
       Se.Set BeamDIPC.cancellationRatioWeightage config.cancellationRatioWeightage,
-      Se.Set BeamDIPC.cancellationRatioWindowOption config.cancellationRatioWindowOption,
+      Se.Set BeamDIPC.cancellationAndRideFrequencyRatioWindowOption config.cancellationAndRideFrequencyRatioWindowOption,
       Se.Set BeamDIPC.minQuotesToQualifyForIntelligentPool config.minQuotesToQualifyForIntelligentPool,
       Se.Set BeamDIPC.minQuotesToQualifyForIntelligentPoolWindowOption config.minQuotesToQualifyForIntelligentPoolWindowOption,
       Se.Set BeamDIPC.intelligentPoolPercentage config.intelligentPoolPercentage,
@@ -67,7 +67,7 @@ instance FromTType' BeamDIPC.DriverIntelligentPoolConfig DriverIntelligentPoolCo
             acceptanceRatioWeightage = acceptanceRatioWeightage,
             acceptanceRatioWindowOption = acceptanceRatioWindowOption,
             cancellationRatioWeightage = cancellationRatioWeightage,
-            cancellationRatioWindowOption = cancellationRatioWindowOption,
+            cancellationAndRideFrequencyRatioWindowOption = cancellationAndRideFrequencyRatioWindowOption,
             minQuotesToQualifyForIntelligentPool = minQuotesToQualifyForIntelligentPool,
             minQuotesToQualifyForIntelligentPoolWindowOption = minQuotesToQualifyForIntelligentPoolWindowOption,
             intelligentPoolPercentage = intelligentPoolPercentage,
@@ -76,6 +76,8 @@ instance FromTType' BeamDIPC.DriverIntelligentPoolConfig DriverIntelligentPoolCo
             minLocationUpdates = minLocationUpdates,
             locationUpdateSampleTime = locationUpdateSampleTime,
             defaultDriverSpeed = defaultDriverSpeed,
+            maxNumRides = maxNumRides,
+            numRidesWeightage = numRidesWeightage,
             createdAt = createdAt,
             updatedAt = updatedAt
           }
@@ -91,7 +93,7 @@ instance ToTType' BeamDIPC.DriverIntelligentPoolConfig DriverIntelligentPoolConf
         BeamDIPC.acceptanceRatioWeightage = acceptanceRatioWeightage,
         BeamDIPC.acceptanceRatioWindowOption = acceptanceRatioWindowOption,
         BeamDIPC.cancellationRatioWeightage = cancellationRatioWeightage,
-        BeamDIPC.cancellationRatioWindowOption = cancellationRatioWindowOption,
+        BeamDIPC.cancellationAndRideFrequencyRatioWindowOption = cancellationAndRideFrequencyRatioWindowOption,
         BeamDIPC.minQuotesToQualifyForIntelligentPool = minQuotesToQualifyForIntelligentPool,
         BeamDIPC.minQuotesToQualifyForIntelligentPoolWindowOption = minQuotesToQualifyForIntelligentPoolWindowOption,
         BeamDIPC.intelligentPoolPercentage = intelligentPoolPercentage,
@@ -100,6 +102,8 @@ instance ToTType' BeamDIPC.DriverIntelligentPoolConfig DriverIntelligentPoolConf
         BeamDIPC.minLocationUpdates = minLocationUpdates,
         BeamDIPC.locationUpdateSampleTime = locationUpdateSampleTime,
         BeamDIPC.defaultDriverSpeed = defaultDriverSpeed,
+        BeamDIPC.maxNumRides = maxNumRides,
+        BeamDIPC.numRidesWeightage = numRidesWeightage,
         BeamDIPC.createdAt = createdAt,
         BeamDIPC.updatedAt = updatedAt
       }

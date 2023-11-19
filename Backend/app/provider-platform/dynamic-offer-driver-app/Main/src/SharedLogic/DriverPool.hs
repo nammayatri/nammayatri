@@ -31,6 +31,7 @@ module SharedLogic.DriverPool
     getCurrentWindowAvailability,
     getQuotesCount,
     getPopupDelay,
+    getTotalRidesCount,
     getValidSearchRequestCount,
     removeSearchReqIdFromMap,
     updateDriverSpeedInRedis,
@@ -121,7 +122,7 @@ withAcceptanceRatioWindowOption ::
   m a
 withAcceptanceRatioWindowOption merchantOpCityId fn = windowFromIntelligentPoolConfig merchantOpCityId (.acceptanceRatioWindowOption) >>= fn
 
-withCancellationRatioWindowOption ::
+withCancellationAndRideFrequencyRatioWindowOption ::
   ( Redis.HedisFlow m r,
     EsqDBFlow m r,
     CacheFlow m r
@@ -129,7 +130,7 @@ withCancellationRatioWindowOption ::
   Id DMOC.MerchantOperatingCity ->
   (SWC.SlidingWindowOptions -> m a) ->
   m a
-withCancellationRatioWindowOption merchantOpCityId fn = windowFromIntelligentPoolConfig merchantOpCityId (.cancellationRatioWindowOption) >>= fn
+withCancellationAndRideFrequencyRatioWindowOption merchantOpCityId fn = windowFromIntelligentPoolConfig merchantOpCityId (.cancellationAndRideFrequencyRatioWindowOption) >>= fn
 
 withAvailabilityTimeWindowOption ::
   ( Redis.HedisFlow m r,
@@ -272,7 +273,7 @@ incrementTotalRidesCount ::
   Id DMOC.MerchantOperatingCity ->
   Id DP.Person ->
   m ()
-incrementTotalRidesCount merchantOpCityId driverId = Redis.withCrossAppRedis . withCancellationRatioWindowOption merchantOpCityId $ SWC.incrementWindowCount (mkTotalRidesKey driverId.getId)
+incrementTotalRidesCount merchantOpCityId driverId = Redis.withCrossAppRedis . withCancellationAndRideFrequencyRatioWindowOption merchantOpCityId $ SWC.incrementWindowCount (mkTotalRidesKey driverId.getId)
 
 getTotalRidesCount ::
   ( Redis.HedisFlow m r,
@@ -282,7 +283,7 @@ getTotalRidesCount ::
   Id DMOC.MerchantOperatingCity ->
   Id DP.Driver ->
   m Int
-getTotalRidesCount merchantOpCityId driverId = sum . catMaybes <$> (Redis.withCrossAppRedis . withCancellationRatioWindowOption merchantOpCityId $ SWC.getCurrentWindowValues (mkTotalRidesKey driverId.getId))
+getTotalRidesCount merchantOpCityId driverId = sum . catMaybes <$> (Redis.withCrossAppRedis . withCancellationAndRideFrequencyRatioWindowOption merchantOpCityId $ SWC.getCurrentWindowValues (mkTotalRidesKey driverId.getId))
 
 incrementCancellationCount ::
   ( Redis.HedisFlow m r,
@@ -292,7 +293,7 @@ incrementCancellationCount ::
   Id DMOC.MerchantOperatingCity ->
   Id DP.Person ->
   m ()
-incrementCancellationCount merchantOpCityId driverId = Redis.withCrossAppRedis . withCancellationRatioWindowOption merchantOpCityId $ SWC.incrementWindowCount (mkRideCancelledKey driverId.getId)
+incrementCancellationCount merchantOpCityId driverId = Redis.withCrossAppRedis . withCancellationAndRideFrequencyRatioWindowOption merchantOpCityId $ SWC.incrementWindowCount (mkRideCancelledKey driverId.getId)
 
 getLatestCancellationRatio' ::
   ( EsqDBFlow m r,
@@ -302,7 +303,7 @@ getLatestCancellationRatio' ::
   Id DMOC.MerchantOperatingCity ->
   Id DP.Driver ->
   m Double
-getLatestCancellationRatio' merchantOpCityId driverId = Redis.withCrossAppRedis . withCancellationRatioWindowOption merchantOpCityId $ SWC.getLatestRatio driverId.getId mkRideCancelledKey mkTotalRidesKey (mkOldRatioKey "CancellationRatio")
+getLatestCancellationRatio' merchantOpCityId driverId = Redis.withCrossAppRedis . withCancellationAndRideFrequencyRatioWindowOption merchantOpCityId $ SWC.getLatestRatio driverId.getId mkRideCancelledKey mkTotalRidesKey (mkOldRatioKey "CancellationRatio")
 
 getLatestCancellationRatio ::
   ( EsqDBFlow m r,
@@ -548,7 +549,7 @@ calculateGoHomeDriverPool CalculateGoHomeDriverPoolReq {..} merchantOpCityId = d
         { driverPoolResult = makeDriverPoolResult driverPoolRes,
           actualDistanceToPickup = driverGoHomePoolWithActualDistance.actualDistanceToPickup, --fromMaybe 0 driverRoute.distance,
           actualDurationToPickup = driverGoHomePoolWithActualDistance.actualDurationToPickup,
-          intelligentScores = IntelligentScores Nothing Nothing Nothing Nothing Nothing transporterConfig.defaultPopupDelay,
+          intelligentScores = IntelligentScores Nothing Nothing Nothing Nothing Nothing Nothing transporterConfig.defaultPopupDelay,
           isPartOfIntelligentPool = False,
           keepHiddenForSeconds = Seconds 0,
           goHomeReqId = Just ghrId
@@ -757,7 +758,7 @@ calculateDriverCurrentlyOnRideWithActualDist poolCalculationStage driverPoolCfg 
               { driverPoolResult = temp,
                 actualDistanceToPickup = distanceFromDriverToDestination,
                 actualDurationToPickup = time,
-                intelligentScores = IntelligentScores Nothing Nothing Nothing Nothing Nothing defaultPopupDelay,
+                intelligentScores = IntelligentScores Nothing Nothing Nothing Nothing Nothing Nothing defaultPopupDelay,
                 isPartOfIntelligentPool = False,
                 keepHiddenForSeconds = Seconds 0,
                 goHomeReqId = Nothing
@@ -814,7 +815,7 @@ computeActualDistance orgId merchantOpCityId pickup driverPoolResults = do
         { driverPoolResult = distDur.origin,
           actualDistanceToPickup = distDur.distance,
           actualDurationToPickup = distDur.duration,
-          intelligentScores = IntelligentScores Nothing Nothing Nothing Nothing Nothing defaultPopupDelay,
+          intelligentScores = IntelligentScores Nothing Nothing Nothing Nothing Nothing Nothing defaultPopupDelay,
           isPartOfIntelligentPool = False,
           keepHiddenForSeconds = Seconds 0,
           goHomeReqId = Nothing

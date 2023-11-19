@@ -32,7 +32,7 @@ data DriverIntelligentPoolConfigD u = DriverIntelligentPoolConfig
     acceptanceRatioWeightage :: Int,
     acceptanceRatioWindowOption :: SWC.SlidingWindowOptions,
     cancellationRatioWeightage :: Int,
-    cancellationRatioWindowOption :: SWC.SlidingWindowOptions,
+    cancellationAndRideFrequencyRatioWindowOption :: SWC.SlidingWindowOptions,
     minQuotesToQualifyForIntelligentPool :: Int,
     minQuotesToQualifyForIntelligentPoolWindowOption :: SWC.SlidingWindowOptions,
     intelligentPoolPercentage :: Maybe Int,
@@ -41,6 +41,8 @@ data DriverIntelligentPoolConfigD u = DriverIntelligentPoolConfig
     minLocationUpdates :: Int,
     locationUpdateSampleTime :: Minutes,
     defaultDriverSpeed :: Double,
+    maxNumRides :: Int,
+    numRidesWeightage :: Int,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }
@@ -52,7 +54,7 @@ instance FromJSON (DriverIntelligentPoolConfigD 'Unsafe)
 
 instance ToJSON (DriverIntelligentPoolConfigD 'Unsafe)
 
-data IntelligentFactors = AcceptanceRatio | CancellationRatio | AvailableTime | DriverSpeed | ActualPickupDistance
+data IntelligentFactors = AcceptanceRatio | CancellationRatio | AvailableTime | DriverSpeed | ActualPickupDistance | RideFrequency
 
 data IntelligentScores = IntelligentScores
   { acceptanceRatio :: Maybe Double,
@@ -60,6 +62,7 @@ data IntelligentScores = IntelligentScores
     availableTime :: Maybe Double,
     driverSpeed :: Maybe Double,
     actualPickupDistanceScore :: Maybe Double,
+    rideFrequency :: Maybe Double,
     rideRequestPopupDelayDuration :: Seconds
   }
   deriving (Generic, Show, ToJSON, FromJSON)

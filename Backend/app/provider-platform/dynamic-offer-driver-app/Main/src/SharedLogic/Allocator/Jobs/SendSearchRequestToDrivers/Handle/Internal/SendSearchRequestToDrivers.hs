@@ -145,6 +145,7 @@ sendSearchRequestToDrivers searchReq searchTry driverExtraFeeBounds driverPoolCo
                 keepHiddenForSeconds = dpwRes.keepHiddenForSeconds,
                 mode = dpRes.mode,
                 goHomeRequestId = dpwRes.goHomeReqId,
+                rideFrequencyScore = dpwRes.intelligentScores.rideFrequency,
                 ..
               }
       pure searchRequestForDriver
