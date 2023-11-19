@@ -218,23 +218,27 @@ shimmerView state =
 generalActionButtons :: forall w. ST.TicketBookingScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 generalActionButtons state push =
   linearLayout
-    [ height WRAP_CONTENT
+    [ height MATCH_PARENT
     , width MATCH_PARENT
-    , alignParentBottom "true,-1"
-    , margin $ MarginBottom 16
-    , orientation VERTICAL
-    , background Color.white900
-    ]
-    $ [ linearLayout  
-        [ height $ V 1
+    , gravity BOTTOM
+    ][  linearLayout
+        [ height WRAP_CONTENT
         , width MATCH_PARENT
         , margin $ MarginBottom 16
-        , background Color.grey900
-        ][]
-    ] <>
-      if state.props.currentStage == ST.ChooseTicketStage then 
-        [PrimaryButton.view (push <<< PrimaryButtonAC) (primaryButtonConfig1 state) ]
-        else  [PrimaryButton.view (push <<< PrimaryButtonAC) (primaryButtonConfig state) ]
+        , orientation VERTICAL
+        , background Color.white900
+        ]
+        $ [ linearLayout  
+            [ height $ V 1
+            , width MATCH_PARENT
+            , margin $ MarginBottom 16
+            , background Color.grey900
+            ][]
+        ] <>
+          if state.props.currentStage == ST.ChooseTicketStage then 
+            [PrimaryButton.view (push <<< PrimaryButtonAC) (primaryButtonConfig1 state) ]
+            else  [PrimaryButton.view (push <<< PrimaryButtonAC) (primaryButtonConfig state) ]
+      ]
 
 descriptionView :: forall w. ST.TicketBookingScreenState -> (Action -> Effect Unit) -> TicketPlaceResp -> PrestoDOM (Effect Unit) w
 descriptionView state push (TicketPlaceResp placeInfo) = 
