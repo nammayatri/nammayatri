@@ -56,8 +56,8 @@ primaryButtonConfig state = let
         }
       , cornerRadius = 8.0
       , background = Color.black900 
-      , isClickable = (state.props.currentStage == ST.DescriptionStage) || (state.props.currentStage == ST.ViewTicketStage) || (state.props.termsAndConditionsSelected && state.data.totalAmount > 0)
-      , alpha = if (state.props.currentStage == ST.DescriptionStage) || (state.props.currentStage == ST.ViewTicketStage) || (state.props.termsAndConditionsSelected && state.data.totalAmount > 0) then 1.0 else 0.5
+      , isClickable = (state.props.currentStage == ST.DescriptionStage) || (state.props.currentStage == ST.ViewTicketStage) || (state.props.termsAndConditionsSelected && state.data.totalAmount > 0 && state.props.validDate )
+      , alpha = if (state.props.currentStage == ST.DescriptionStage) || (state.props.currentStage == ST.ViewTicketStage) || (state.props.termsAndConditionsSelected && state.data.totalAmount > 0 && state.props.validDate ) then 1.0 else 0.5
       , id = "BookTicketsButton"
       , margin = (MarginHorizontal 20 20)
       }
@@ -75,8 +75,8 @@ primaryButtonConfig1 state =
           }
         , cornerRadius = 8.0
         , background = Color.black900 
-        , isClickable = (state.props.termsAndConditionsSelected && state.data.totalAmount > 0)
-        , alpha = if (state.props.termsAndConditionsSelected && state.data.totalAmount > 0) then 1.0 else 0.5
+        , isClickable = (state.props.termsAndConditionsSelected && state.data.totalAmount > 0 && state.props.validDate)
+        , alpha = if (state.props.termsAndConditionsSelected && state.data.totalAmount > 0 && state.props.validDate) then 1.0 else 0.5
         , id =  "PayTicketsButton"
         , enableLoader = JB.getBtnLoader "PayTicketsButton"
         }
