@@ -287,15 +287,8 @@ verifyBookingDetails = processBookingService
       | otherwise = case bookingService.status of
         DTB.Pending -> return $ createVerificationResp PaymentPending (Just bookingService) (Just ticketServiceConfig) (Just booking)
         DTB.Failed -> return $ createVerificationResp InvalidBooking (Just bookingService) (Just ticketServiceConfig) (Just booking)
-        DTB.Verified -> handleVerifiedBooking bookingService ticketServiceConfig booking
+        DTB.Verified -> handleConfirmedBooking bookingService ticketServiceConfig booking
         DTB.Confirmed -> handleConfirmedBooking bookingService ticketServiceConfig booking
-
-    -- Additional function for verified booking
-    handleVerifiedBooking :: DTB.TicketBookingService -> DTB.TicketService -> DTTB.TicketBooking -> Flow TicketServiceVerificationResp
-    handleVerifiedBooking bookingService ticketServiceConfig booking
-      | bookingService.verificationCount >= ticketServiceConfig.maxVerification =
-        return $ createVerificationResp BookingAlreadyVerified (Just bookingService) (Just ticketServiceConfig) (Just booking)
-      | otherwise = handleConfirmedBooking bookingService ticketServiceConfig booking
 
     handleConfirmedBooking :: DTB.TicketBookingService -> DTB.TicketService -> DTTB.TicketBooking -> Flow TicketServiceVerificationResp
     handleConfirmedBooking bookingService ticketServiceConfig booking = do
@@ -312,9 +305,16 @@ verifyBookingDetails = processBookingService
       now <- getCurrentTime
       if booking.visitDate > utctDay now
         then do return $ createVerificationResp BookingFuture (Just bookingService) (Just ticketServiceConfig) (Just booking)
-        else do
-          QTBS.updateVerification bookingService.id (bookingService.verificationCount + 1) now
-          return $ createVerificationResp BookingSuccess (Just bookingService) (Just ticketServiceConfig) (Just booking)
+        else do handleVerifiedBooking bookingService ticketServiceConfig booking
+
+    handleVerifiedBooking :: DTB.TicketBookingService -> DTB.TicketService -> DTTB.TicketBooking -> Flow TicketServiceVerificationResp
+    handleVerifiedBooking bookingService ticketServiceConfig booking
+      | bookingService.verificationCount >= ticketServiceConfig.maxVerification =
+        return $ createVerificationResp BookingAlreadyVerified (Just bookingService) (Just ticketServiceConfig) (Just booking)
+      | otherwise = do
+        now <- getCurrentTime
+        QTBS.updateVerification bookingService.id (bookingService.verificationCount + 1) now
+        return $ createVerificationResp BookingSuccess (Just bookingService) (Just ticketServiceConfig) (Just booking)
 
     createVerificationResp :: TicketVerificationStatus -> Maybe DTB.TicketBookingService -> Maybe DTB.TicketService -> Maybe DTTB.TicketBooking -> TicketServiceVerificationResp
     createVerificationResp status mBookingService mTicketServiceConfig mBooking = do
