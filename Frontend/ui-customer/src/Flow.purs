@@ -2610,7 +2610,7 @@ fillBookingDetails (GetBookingInfoRes resp) shortOrderID ticketStatus = do
                   ]
                     <> case serv of
                         Nothing -> []
-                        Just (TicketBookingServiceDetails serviceDetails) -> if isJust serviceDetails.expiryDate then [ { key: "Valid until", val: (convertUTCtoISC (fromMaybe "" serviceDetails.expiryDate) "hh:mm A") <> ", " <> (convertUTCtoISC (fromMaybe "" serviceDetails.expiryDate) "DD/MM/YYYY") } ] else []
+                        Just (TicketBookingServiceDetails serviceDetails) -> if isJust serviceDetails.expiryDate then [ { key: "Valid until", val: (convertUTCtoISC (fromMaybe "" serviceDetails.expiryDate) "hh:mm A") <> ", " <> (convertUTCtoISC (fromMaybe "" serviceDetails.expiryDate) "Do MMM YYYY") } ] else []
                 , bookedForArray = (map (\(TicketBookingServiceDetails item) -> item.ticketServiceName) resp.services)
                 }
               }

@@ -179,14 +179,15 @@ convertUTCToISTAnd12HourFormat inputTime = do
       minutes <- fromString m
       
       -- Add 5 hours and 30 minutes
-      let adjustedHours24 = (hours + 5) `mod` 24
-      let adjustedMinutes = (minutes + 30) `mod` 60
+      let adjustRemainder = if minutes == 30 then 1 else 0
+          adjustedHours24 = (hours + 5 + adjustRemainder) `mod` 24
+          adjustedMinutes = (minutes + 30) `mod` 60
       
       -- Convert to 12-hour format with AM/PM
       let {adjustedHours, period} = if adjustedHours24 < 12 then {adjustedHours: adjustedHours24, period: "AM"} else {adjustedHours: adjustedHours24 - 12, period: "PM"}
       
       let paddingHours = if adjustedHours < 10 then "0" else ""
-      let paddingMinutes = if adjustedMinutes < 10 then "0" else ""
+          paddingMinutes = if adjustedMinutes < 10 then "0" else ""
 
       -- Format the adjusted time
       let adjustedTime = paddingHours <> show adjustedHours <> ":" <> paddingMinutes <> show adjustedMinutes <> " " <> period

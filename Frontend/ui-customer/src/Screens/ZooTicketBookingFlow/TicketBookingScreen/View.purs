@@ -408,7 +408,7 @@ chooseTicketsView state push =
           ] <> FontStyle.h3 TypoGraphy
       ]
     , textView $
-      [ text "Tickets are available next day onwards" -- Tickets are available for upto 90 days in advance
+      [ text "Tickets are available current day onwards" -- Tickets are available for upto 90 days in advance
       , visibility if state.props.validDate || state.data.dateOfVisit == "" then GONE else VISIBLE
       , color Color.red 
       ] <> FontStyle.tags TypoGraphy
@@ -942,6 +942,8 @@ tvView textString textColor textMargin fontSt =
 bookingInfoView :: forall w. ST.TicketBookingScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 bookingInfoView state push =
   let activeItem = state.props.activeListItem
+      validityTime = (fromMaybe "" activeItem.expiryDate)
+      validUntil = (convertUTCtoISC validityTime "hh:mm A") <> ", " <> (convertUTCtoISC validityTime "Do MMM YYYY")
   in
   linearLayout
   [ height WRAP_CONTENT
@@ -951,7 +953,7 @@ bookingInfoView state push =
     , separatorView (getSeparatorColor activeItem.ticketServiceName)
     , bookingInfoListItemView state "Zoo Entry" (show activeItem.amount)
     , separatorView (getSeparatorColor activeItem.ticketServiceName)
-    , bookingInfoListItemView state "Valid Until" (convertUTCtoISC (fromMaybe "" activeItem.expiryDate) "Do MMM, YYYY")
+    , bookingInfoListItemView state "Valid Until" validUntil
   ]
 
 getSeparatorColor :: String -> String
