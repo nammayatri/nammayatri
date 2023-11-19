@@ -383,7 +383,7 @@ data DriverIntelligentPoolConfigRes = DriverIntelligentPoolConfigRes
     acceptanceRatioWeightage :: Int,
     acceptanceRatioWindowOption :: SWC.SlidingWindowOptions,
     cancellationRatioWeightage :: Int,
-    cancellationRatioWindowOption :: SWC.SlidingWindowOptions,
+    cancellationAndRideFrequencyRatioWindowOption :: SWC.SlidingWindowOptions,
     minQuotesToQualifyForIntelligentPool :: Int,
     minQuotesToQualifyForIntelligentPoolWindowOption :: SWC.SlidingWindowOptions,
     intelligentPoolPercentage :: Maybe Int,
@@ -414,7 +414,7 @@ data DriverIntelligentPoolConfigUpdateReq = DriverIntelligentPoolConfigUpdateReq
     acceptanceRatioWeightage :: Maybe (MandatoryValue Int),
     acceptanceRatioWindowOption :: Maybe SWC.SlidingWindowOptions,
     cancellationRatioWeightage :: Maybe (MandatoryValue Int),
-    cancellationRatioWindowOption :: Maybe SWC.SlidingWindowOptions,
+    cancellationAndRideFrequencyRatioWindowOption :: Maybe SWC.SlidingWindowOptions,
     minQuotesToQualifyForIntelligentPool :: Maybe (MandatoryValue Int),
     minQuotesToQualifyForIntelligentPoolWindowOption :: Maybe SWC.SlidingWindowOptions,
     intelligentPoolPercentage :: Maybe (OptionalValue Int),
@@ -440,8 +440,8 @@ validateDriverIntelligentPoolConfigUpdateReq DriverIntelligentPoolConfigUpdateRe
       whenJust acceptanceRatioWindowOption $ \obj ->
         validateObject "acceptanceRatioWindowOption" obj validateSlidingWindowOptions,
       validateField "cancellationRatioWeightage" cancellationRatioWeightage $ InMaybe $ InValue $ InRange @Int (-100) 100,
-      whenJust cancellationRatioWindowOption $ \obj ->
-        validateObject "cancellationRatioWindowOption" obj validateSlidingWindowOptions,
+      whenJust cancellationAndRideFrequencyRatioWindowOption $ \obj ->
+        validateObject "cancellationAndRideFrequencyRatioWindowOption" obj validateSlidingWindowOptions,
       validateField "minQuotesToQualifyForIntelligentPool" minQuotesToQualifyForIntelligentPool $ InMaybe $ InValue $ Min @Int 1,
       whenJust minQuotesToQualifyForIntelligentPoolWindowOption $ \obj ->
         validateObject "minQuotesToQualifyForIntelligentPoolWindowOption" obj validateSlidingWindowOptions,

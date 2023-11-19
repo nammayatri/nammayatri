@@ -153,7 +153,7 @@ prepareDriverPoolBatch driverPoolCfg searchReq searchTry batchNum goHomeConfig =
         makeIntelligentDriverPool mOCityId onlyNewDrivers intelligentPoolConfig transporterConfig = do
           let sortWithDriverScore' = sortWithDriverScore mOCityId (Just transporterConfig) intelligentPoolConfig driverPoolCfg
           (sortedDriverPool, randomizedDriverPool) <-
-            bimapM (sortWithDriverScore' [AcceptanceRatio, CancellationRatio, AvailableTime, DriverSpeed, ActualPickupDistance] True) (sortWithDriverScore' [AvailableTime, DriverSpeed, ActualPickupDistance] False)
+            bimapM (sortWithDriverScore' [AcceptanceRatio, CancellationRatio, AvailableTime, DriverSpeed, ActualPickupDistance, RideFrequency] True) (sortWithDriverScore' [AvailableTime, DriverSpeed, ActualPickupDistance] False)
               =<< splitDriverPoolForSorting mOCityId intelligentPoolConfig.minQuotesToQualifyForIntelligentPool onlyNewDrivers
           let sortedDriverPoolWithSilentSort = splitSilentDriversAndSortWithDistance sortedDriverPool
           let randomizedDriverPoolWithSilentSort = splitSilentDriversAndSortWithDistance randomizedDriverPool
@@ -226,7 +226,7 @@ prepareDriverPoolBatch driverPoolCfg searchReq searchTry batchNum goHomeConfig =
               Intelligent -> do
                 let sortWithDriverScore' = sortWithDriverScore merchantOpCityId transporterConfig intelligentPoolConfig driverPoolCfg
                 (sortedDriverPool, randomizedDriverPool) <-
-                  bimapM (sortWithDriverScore' [AcceptanceRatio, CancellationRatio, AvailableTime, DriverSpeed, ActualPickupDistance] True) (sortWithDriverScore' [AvailableTime, DriverSpeed, ActualPickupDistance] False)
+                  bimapM (sortWithDriverScore' [AcceptanceRatio, CancellationRatio, AvailableTime, DriverSpeed, ActualPickupDistance, RideFrequency] True) (sortWithDriverScore' [AvailableTime, DriverSpeed, ActualPickupDistance] False)
                     =<< splitDriverPoolForSorting merchantOpCityId intelligentPoolConfig.minQuotesToQualifyForIntelligentPool nonGoHomeNormalDriversWithValidReqCount -- snd means taking drivers who recieved less then X(config- minQuotesToQualifyForIntelligentPool) quotes
                 let sortedDriverPoolWithSilentSort = splitSilentDriversAndSortWithDistance sortedDriverPool
                 let randomizedDriverPoolWithSilentSort = splitSilentDriversAndSortWithDistance randomizedDriverPool
@@ -321,8 +321,9 @@ sortWithDriverScore merchantOpCityId (Just transporterConfig) intelligentPoolCon
                     CancellationRatio -> accIntelligentScores {cancellationRatio = res} :: IntelligentScores
                     AvailableTime -> accIntelligentScores {availableTime = res} :: IntelligentScores
                     DriverSpeed -> accIntelligentScores {driverSpeed = res} :: IntelligentScores
+                    RideFrequency -> accIntelligentScores {rideFrequency = res} :: IntelligentScores
               )
-              (IntelligentScores Nothing Nothing Nothing Nothing Nothing 0)
+              (IntelligentScores Nothing Nothing Nothing Nothing Nothing Nothing 0)
               factorOverallScore
       addIntelligentPoolInfo cancellationScoreRelatedConfig dObj intelligentScores
     addIntelligentPoolInfo cancellationScoreRelatedConfig dObj is@IntelligentScores {..} = do
@@ -393,6 +394,10 @@ fetchScore merchantOpCityId driverActualDistanceList driverIds intelligentPoolCo
       getSpeedScore (intelligentPoolConfig.driverSpeedWeightage) averageSpeeds
     ActualPickupDistance | intelligentPoolConfig.actualPickupDistanceWeightage /= 0 -> do
       pure $ map (bimap (.getId) ((* (fromIntegral intelligentPoolConfig.actualPickupDistanceWeightage)) . fromIntegral . flip div (fromMaybe (Meters 1) (driverPoolCfg.actualDistanceThreshold)))) driverActualDistanceList
+    RideFrequency | intelligentPoolConfig.numRidesWeightage /= 0 -> do
+      driverIdAndNumRides <- mapM (getTotalRidesCount merchantOpCityId) driverIds <&> zip (getId <$> driverIds)
+      logDebug $ "Intelligent pool :- [(DriverId, numRides)] - " <> show driverIdAndNumRides
+      return $ second (\numRides -> fromIntegral intelligentPoolConfig.numRidesWeightage * fromIntegral numRides / fromIntegral intelligentPoolConfig.maxNumRides) <$> driverIdAndNumRides
     _ -> pure []
   where
     getSpeedScore weight driverSpeeds = pure $ map (\(driverId, driverSpeed) -> (driverId, (1 - driverSpeed / intelligentPoolConfig.speedNormalizer) * fromIntegral weight)) driverSpeeds

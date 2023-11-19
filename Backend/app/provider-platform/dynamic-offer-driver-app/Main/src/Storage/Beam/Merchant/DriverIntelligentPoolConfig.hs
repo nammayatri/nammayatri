@@ -31,7 +31,7 @@ data DriverIntelligentPoolConfigT f = DriverIntelligentPoolConfigT
     acceptanceRatioWeightage :: B.C f Int,
     acceptanceRatioWindowOption :: B.C f SWC.SlidingWindowOptions,
     cancellationRatioWeightage :: B.C f Int,
-    cancellationRatioWindowOption :: B.C f SWC.SlidingWindowOptions,
+    cancellationAndRideFrequencyRatioWindowOption :: B.C f SWC.SlidingWindowOptions,
     minQuotesToQualifyForIntelligentPool :: B.C f Int,
     minQuotesToQualifyForIntelligentPoolWindowOption :: B.C f SWC.SlidingWindowOptions,
     intelligentPoolPercentage :: B.C f (Maybe Int),
@@ -40,6 +40,8 @@ data DriverIntelligentPoolConfigT f = DriverIntelligentPoolConfigT
     locationUpdateSampleTime :: B.C f Minutes,
     minLocationUpdates :: B.C f Int,
     defaultDriverSpeed :: B.C f Double,
+    maxNumRides :: B.C f Int,
+    numRidesWeightage :: B.C f Int,
     createdAt :: B.C f UTCTime,
     updatedAt :: B.C f UTCTime
   }
