@@ -794,24 +794,28 @@ buttonLayout state push =
             , padding (PaddingTop 16)
             ]
             [ PrimaryButton.view (push <<< PrimaryButtonActionController) (whereToButtonConfig state)
-            , if (((state.data.savedLocations == []) && state.data.recentSearchs.predictionArray == [] && not state.props.isBanner && (getValueToLocalStore DISABILITY_UPDATED == "true" && (not state.data.config.showDisabilityBanner ) ) ) || state.props.isSearchLocation == LocateOnMap) then emptyLayout state else recentSearchesAndFavourites state push
+            , if state.props.isSearchLocation == LocateOnMap
+                then emptyLayout state 
+                else recentSearchesAndFavourites state push (null state.data.savedLocations) (null state.data.recentSearchs.predictionArray)
             ]
         ]
 
-recentSearchesAndFavourites :: forall w. HomeScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
-recentSearchesAndFavourites state push =
+recentSearchesAndFavourites :: forall w. HomeScreenState -> (Action -> Effect Unit) -> Boolean -> Boolean -> PrestoDOM (Effect Unit) w
+recentSearchesAndFavourites state push hideSavedLocsView hideRecentSearches =
   linearLayout
   [ width MATCH_PARENT
   , height WRAP_CONTENT
   , orientation VERTICAL
   , padding $ Padding 16 0 16 (16+safeMarginBottom)
   , cornerRadii $ Corners (4.0) true true false false
-  ]([ savedLocationsView state push
-   , recentSearchesView state push]
-   <> if (getValueToLocalStore DISABILITY_UPDATED == "false" && state.data.config.showDisabilityBanner) 
-        then [updateDisabilityBanner state push] 
-        else if (state.data.config.features.enableZooTicketBookingFlow) then [zooTicketBookingBanner state push] else [])
-  --  <> if(state.props.isBanner) then [genderBannerView state push] else [])
+  ]([ if (not hideSavedLocsView) then savedLocationsView state push else linearLayout[visibility GONE][]
+    , if (not hideRecentSearches) then recentSearchesView state push else linearLayout[visibility GONE][]
+    , if (getValueToLocalStore DISABILITY_UPDATED == "false" && state.data.config.showDisabilityBanner) 
+        then updateDisabilityBanner state push
+        else 
+          if (state.data.config.features.enableZooTicketBookingFlow) 
+            then zooTicketBookingBanner state push 
+            else linearLayout[visibility GONE][]])
 
 updateDisabilityBanner :: forall w. HomeScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 updateDisabilityBanner state push = 
