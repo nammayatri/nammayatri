@@ -21,7 +21,8 @@ function loadConfig() {
 
 
 window.session_id = guid();
-window.version = __VERSION__;
+window.version = window.version || {};
+window.version["app"] = __VERSION__;
 let previousDateObject = new Date();
 const refreshThreshold = 300;
 console.warn("Hello World");

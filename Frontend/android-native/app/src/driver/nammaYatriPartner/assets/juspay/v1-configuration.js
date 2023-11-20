@@ -1,3 +1,9 @@
+window.version = window.version || {};
+let version = "1.0.0";
+if (typeof __VERSION__ !== 'undefined') {
+  version = __VERSION__
+}
+window.version["configuration"]= version;
 window.getMerchantConfig = function () {
   return JSON.stringify({
     "RC_VALIDATION_TEXT": "KA|AP|TS|DL",

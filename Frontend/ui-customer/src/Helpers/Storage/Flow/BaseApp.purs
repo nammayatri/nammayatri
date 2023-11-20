@@ -16,7 +16,7 @@
 module Helpers.Storage.Flow.BaseApp where
 
 import Prelude
-import Engineering.Helpers.Commons (liftFlow, bundleVersion)
+import Engineering.Helpers.Commons (liftFlow, getVersionByKey)
 import Control.Monad.Except.Trans (lift)
 import JBridge (getVersionCode, getVersionName, generateSessionId, saveSuggestions, saveSuggestionDefs)
 import Storage (setValueToLocalStore, setValueToLocalNativeStore, KeyStore(..), getValueToLocalStore)
@@ -31,7 +31,8 @@ import Types.App (FlowBT)
 
 baseAppStorage :: FlowBT String Unit
 baseAppStorage = do
-    let bundle = bundleVersion unit
+    let bundle = getVersionByKey "app"
+        config = getVersionByKey "configuration"
         sessionId = getValueToLocalStore SESSION_ID
         countryCode = getValueToLocalStore COUNTRY_CODE
     void $ pure $ saveSuggestions "SUGGESTIONS" (getSuggestions "")
@@ -40,6 +41,7 @@ baseAppStorage = do
     versionName <- lift $ lift $ liftFlow $ getVersionName
     setValueToLocalStore VERSION_NAME $ joinWith "." $ take 3 $ split (Pattern ".") versionName
     setValueToLocalStore BUNDLE_VERSION bundle
+    setValueToLocalStore CONFIG_VERSION config
     setValueToLocalNativeStore BUNDLE_VERSION bundle
     setValueToLocalStore TRACKING_ENABLED "True"
     setValueToLocalStore RELOAD_SAVED_LOCATION "true"

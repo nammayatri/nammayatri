@@ -19,7 +19,8 @@ function loadConfig() {
 }
 
 window.session_id = guid();
-window.version = __VERSION__;
+window.version = window.version || {};
+window.version["app"] = __VERSION__;
 // JBridge.setSessionId(window.session_id);
 console.warn("Hello World MASTER ONE");
 let previousDateObject = new Date();

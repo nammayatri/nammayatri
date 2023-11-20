@@ -26,8 +26,8 @@ import Common.Types.App (Version(..), SignatureAuthData(..), LazyCheck (..), Fee
 import Data.Either (Either(..), either)
 import Data.Lens ((^.))
 import Data.Maybe (Maybe(..), maybe, fromMaybe, isJust)
-import Engineering.Helpers.Commons (liftFlow, os, bundleVersion)
-import Engineering.Helpers.Commons (liftFlow, os, bundleVersion, isPreviousVersion)
+import Engineering.Helpers.Commons (liftFlow, os)
+import Engineering.Helpers.Commons (liftFlow, os, isPreviousVersion)
 import Engineering.Helpers.Utils as EHU
 import Foreign.Generic (encode)
 import Helpers.Utils (decodeError, getTime, getPreviousVersion)

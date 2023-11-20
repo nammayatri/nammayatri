@@ -1,3 +1,9 @@
+window.version = window.version || {};
+let version = "1.0.0";
+if (typeof __VERSION__ !== 'undefined') {
+  version = __VERSION__
+}
+window.version["configuration"]= version;
 window.getMerchantConfig = function () {
   return JSON.stringify({
       "StringKeys": ["YOUR_LOCATION_HELPS_OUR_SYSTEM", "ABOUT_APP_DESCRIPTION", "CORPORATE_ADDRESS_DESCRIPTION_ADDITIONAL", "YOUR_FEEDBACK_HELPS_US", "LOCATION_PERMISSION_SUBTITLE_NEW_USER"],
