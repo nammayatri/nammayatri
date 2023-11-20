@@ -135,7 +135,7 @@ screen initialState =
                                 let waitTime = DS.split (DS.Pattern "<$>") (getValueToLocalStore WAITING_TIME_VAL)
                                     id = fromMaybe "" (waitTime DA.!! 0)
                                     isTimerValid = id == initialState.data.activeRide.id
-                                    startingTime = (HU.differenceBetweenTwoUTC (HU.getCurrentUTC "") (fromMaybe "" (waitTime DA.!! 1)))
+                                    startingTime = (runFn2 JB.differenceBetweenTwoUTC (HU.getCurrentUTC "") (fromMaybe "" (waitTime DA.!! 1)))
                                 if (getValueToLocalStore WAITING_TIME_STATUS == show ST.Triggered) then do
                                   void $ pure $ setValueToLocalStore WAITING_TIME_STATUS (show ST.PostTriggered)
                                   void $ waitingCountdownTimerV2 startingTime "1" "countUpTimerId" push WaitTimerCallback

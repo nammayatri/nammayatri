@@ -32,11 +32,12 @@ initData =
       , receivedResponse: false
       , apiFailure: false
       , fromNavBar: true
+      , optionsVisibility: true
       }
   , data:
       { selectedItem: dummyIndividualCard
       , offsetValue: 0
-      , loadMoreText: "LoadMore"
+      , loadMoreText: true
       , config: getAppConfig appConfig
       , logField : empty
       , isSrcServiceable: true
@@ -105,4 +106,6 @@ dummyIndividualCard = {
   , zoneType : NOZONE
   , vehicleVariant : Nothing
   , isSrcServiceable : true
+  , optionsVisibility : true
+  , merchantExoPhone : ""
 }

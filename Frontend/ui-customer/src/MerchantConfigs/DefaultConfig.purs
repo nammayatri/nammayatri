@@ -213,7 +213,8 @@ config =
     enableReferral: true,
     enableSupport: true,
     enableShareApp: false,
-    enableReAllocation : true
+    enableReAllocation : true,
+    enableSelfServe : true
   }
 
   , rideCompletedCardConfig : {

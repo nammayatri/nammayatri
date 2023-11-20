@@ -1426,7 +1426,8 @@ rideCompletedCardConfig state =
           visible = not state.data.ratingViewState.issueFacedView
         },
         primaryButtonConfig = skipButtonConfig state,
-        enableContactSupport = state.data.config.feature.enableSupport
+        enableContactSupport = state.data.config.feature.enableSupport,
+        needHelpText = getString NEED_HELP
       }
   where 
     mkHeaderConfig :: Boolean -> Boolean -> {title :: String, subTitle :: String}

@@ -27,6 +27,8 @@ import Screens.EnterMobileNumberScreen.ScreenData as EnterMobileNumberScreenData
 import Screens.HelpAndSupportScreen.ScreenData as HelpAndSupportScreenData
 import Screens.HomeScreen.ScreenData as HomeScreenData
 import Screens.InvoiceScreen.ScreenData as InvoiceScreenData
+import Screens.RideSelectionScreen.ScreenData as RideSelectionScreenData
+import Screens.ReportIssueChatScreen.ScreenData as ReportIssueChatScreenData
 import LoaderOverlay.ScreenData as LoaderScreenScreenData
 import Screens.MyProfileScreen.ScreenData as MyProfileScreenData
 import Screens.MyRidesScreen.ScreenData as MyRideScreenData
@@ -41,13 +43,14 @@ import Screens.OnBoardingFlow.WelcomeScreen.ScreenData as WelcomeScreenData
 import Screens.TicketBookingFlow.TicketBooking.ScreenData as TicketBookingScreenData
 import Screens.TicketInfoScreen.ScreenData as TicketInfoScreenData
 import Screens.TicketBookingFlow.PlaceList.ScreenData as TicketingScreenData
-import Screens.Types (AboutUsScreenState, AccountSetUpScreenState, AddNewAddressScreenState, AppUpdatePopUpState, ChooseLanguageScreenState, ContactUsScreenState, EnterMobileNumberScreenState, HelpAndSupportScreenState, HomeScreenState, InvoiceScreenState, LocItemType, LocationListItemState, MyProfileScreenState, MyRidesScreenState, PermissionScreenState, SavedLocationScreenState, SelectLanguageScreenState, SplashScreenState, TripDetailsScreenState, ReferralScreenState, EmergencyContactsScreenState, CallType, WelcomeScreenState, PermissionScreenStage, TicketBookingScreenState, TicketInfoScreenState, Trip(..), TicketingScreenState ) 
+import Screens.Types (AboutUsScreenState, AccountSetUpScreenState, AddNewAddressScreenState, AppUpdatePopUpState, ChooseLanguageScreenState, ContactUsScreenState, EnterMobileNumberScreenState, HelpAndSupportScreenState, HomeScreenState, InvoiceScreenState, LocItemType, LocationListItemState, MyProfileScreenState, MyRidesScreenState, PermissionScreenState, SavedLocationScreenState, SelectLanguageScreenState, SplashScreenState, TripDetailsScreenState, ReferralScreenState, EmergencyContactsScreenState, CallType, WelcomeScreenState, PermissionScreenStage, TicketBookingScreenState, TicketInfoScreenState, Trip(..), TicketingScreenState, RideSelectionScreenState, ReportIssueChatScreenState, IssueInfo)
 import Screens.AppUpdatePopUp.ScreenData as AppUpdatePopUpScreenData
 import Foreign.Object ( Object(..), empty)
 import Services.API (BookingStatus(..))
 import Foreign (Foreign)
 import MerchantConfig.Types (AppConfig)
 import Data.Maybe (Maybe(..))
+import Common.Types.App (CategoryListType)
 
 type FlowBT e a = BackT (ExceptT e (Free (FlowWrapper GlobalState))) a
 
@@ -77,6 +80,8 @@ newtype GlobalState = GlobalState {
   , ticketBookingScreen :: TicketBookingScreenState
   , ticketInfoScreen :: TicketInfoScreenState
   , appConfig :: Maybe AppConfig
+  , rideSelectionScreen :: RideSelectionScreenState
+  , reportIssueChatScreen :: ReportIssueChatScreenState
   }
 
 defaultGlobalState :: GlobalState
@@ -106,17 +111,21 @@ defaultGlobalState = GlobalState {
   , ticketBookingScreen : TicketBookingScreenData.initData
   , ticketInfoScreen : TicketInfoScreenData.initData
   , appConfig : Nothing
+  , rideSelectionScreen : RideSelectionScreenData.initData
+  , reportIssueChatScreen : ReportIssueChatScreenData.initData
   }
 
 data ACCOUNT_SET_UP_SCREEN_OUTPUT = GO_HOME AccountSetUpScreenState | GO_BACK
 
-data TRIP_DETAILS_SCREEN_OUTPUT = ON_SUBMIT TripDetailsScreenState | GO_TO_INVOICE TripDetailsScreenState | GO_TO_HOME TripDetailsScreenState | GO_TO_RIDES | GO_TO_HELPSCREEN | CONNECT_WITH_DRIVER TripDetailsScreenState
+data TRIP_DETAILS_SCREEN_OUTPUT = ON_SUBMIT TripDetailsScreenState | GO_TO_INVOICE TripDetailsScreenState | GO_TO_HOME TripDetailsScreenState | GO_TO_RIDES | GO_TO_HELPSCREEN | CONNECT_WITH_DRIVER TripDetailsScreenState | GET_CATEGORIES_LIST TripDetailsScreenState | GO_TO_ISSUE_CHAT_SCREEN TripDetailsScreenState CategoryListType
 
 data CONTACT_US_SCREEN_OUTPUT = GO_TO_HOME_FROM_CONTACT ContactUsScreenState
 
 data MY_RIDES_SCREEN_OUTPUT = REFRESH MyRidesScreenState | TRIP_DETAILS MyRidesScreenState | LOADER_OUTPUT MyRidesScreenState | BOOK_RIDE | GO_TO_HELP_SCREEN | GO_TO_NAV_BAR | REPEAT_RIDE_FLOW MyRidesScreenState
 
-data HELP_AND_SUPPORT_SCREEN_OUTPUT = GO_TO_SUPPORT_SCREEN String | GO_TO_TRIP_DETAILS HelpAndSupportScreenState | VIEW_RIDES | UPDATE_STATE HelpAndSupportScreenState | GO_TO_HOME_FROM_HELP | DELETE_USER_ACCOUNT HelpAndSupportScreenState
+data RIDE_SELECTION_SCREEN_OUTPUT = LOADER_RIDES_OUTPUT RideSelectionScreenState | SELECT_RIDE RideSelectionScreenState | REFRESH_RIDES RideSelectionScreenState | GOTO_HELP_AND_SUPPORT_SCREEN 
+
+data HELP_AND_SUPPORT_SCREEN_OUTPUT = GO_TO_SUPPORT_SCREEN String | GO_TO_TRIP_DETAILS HelpAndSupportScreenState | VIEW_RIDES | UPDATE_STATE HelpAndSupportScreenState | GO_TO_HOME_FROM_HELP | DELETE_USER_ACCOUNT HelpAndSupportScreenState | RIDE_SELECTION_SCREEN CategoryListType | ISSUE_CHAT_SCREEN CategoryListType | OPEN_OLD_ISSUE_CHAT_SCREEN IssueInfo
 
 data ABOUT_US_SCREEN_OUTPUT = GO_TO_HOME_FROM_ABOUT
 
@@ -126,6 +135,8 @@ data EMERGECY_CONTACTS_SCREEN_OUTPUT = GO_TO_HOME_FROM_EMERGENCY_CONTACTS
                                       | REFRESH_EMERGECY_CONTACTS_SCREEN EmergencyContactsScreenState
 
 data TICKET_INFO_SCREEN_OUTPUT = GO_TO_HOME_SCREEN_FROM_TICKET_INFO
+data REPORT_ISSUE_CHAT_SCREEN_OUTPUT = GO_TO_HELP_AND_SUPPORT_SCREEN ReportIssueChatScreenState | SUBMIT_ISSUE ReportIssueChatScreenState | CALL_DRIVER_MODAL ReportIssueChatScreenState | CALL_SUPPORT_MODAL ReportIssueChatScreenState | SELECT_ISSUE_OPTION ReportIssueChatScreenState | REOPEN_ISSUE ReportIssueChatScreenState | GO_TO_TRIP_DETAILS_SCREEN ReportIssueChatScreenState | GO_TO_RIDE_SELECTION_SCREEN ReportIssueChatScreenState
+
 data HOME_SCREEN_OUTPUT = LOGOUT
                         | RELOAD Boolean
                         | CANCEL
@@ -178,6 +189,7 @@ data HOME_SCREEN_OUTPUT = LOGOUT
                         | GO_TO_TICKET_BOOKING_FLOW HomeScreenState
                         | REPEAT_RIDE_FLOW_HOME Trip
                         | EXIT_TO_TICKETING HomeScreenState
+                        | GO_TO_HELP_AND_SUPPORT 
 
 data SELECT_LANGUAGE_SCREEN_OUTPUT = GO_TO_HOME_SCREEN | UPDATE_LANGUAGE SelectLanguageScreenState
 
@@ -235,3 +247,5 @@ data ScreenType =
   | AppUpdatePopUpScreenType (AppUpdatePopUpState -> AppUpdatePopUpState)
   | AppConfigType (Maybe AppConfig -> Maybe AppConfig)
   | TicketingScreenStateType (TicketingScreenState -> TicketingScreenState)
+  | RideSelectionScreenStateType (RideSelectionScreenState -> RideSelectionScreenState)
+  | ReportIssueChatScreenStateType (ReportIssueChatScreenState -> ReportIssueChatScreenState)

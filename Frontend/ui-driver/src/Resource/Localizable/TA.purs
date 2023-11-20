@@ -1110,4 +1110,4 @@ getTA stringKey =
         DOWNLOAD_NAMMA_YATRI _-> "நம்ம யாத்ரி பதிவிறக்கம்"
         ENTER_CODE -> "குறியீட்டை உள்ளிடவும்"
         COMPLETE_REGISTRATION -> "முழுமையான பதிவு"
-
+        CANT_FIND_OPTION -> "விருப்பத்தைக் கண்டுபிடிக்க முடியவில்லை"

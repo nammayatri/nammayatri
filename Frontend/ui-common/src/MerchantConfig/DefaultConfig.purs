@@ -14,6 +14,7 @@ defaultAppData =  {
     link : ""
   , supportMail :"nammayatri.support@juspay.in"
   , name : ""
+  , website : "https://nammayatri.in"
   }
 
 defaultPrimaryButtonConfig :: PrimaryButtonConfig

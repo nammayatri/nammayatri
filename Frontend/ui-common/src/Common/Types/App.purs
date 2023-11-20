@@ -411,3 +411,18 @@ type MarginConfig = {
   bottom :: Int,
   left :: Int
 }
+
+
+type CategoryListType = {
+    categoryName :: String
+  , categoryImageUrl :: String
+  , categoryAction :: String
+  , categoryId :: String
+  }
+
+type DisplayBase64ImageConig = {
+    source :: String
+  , id :: String
+  , scaleType :: String
+  , inSampleSize :: Int -- reduce image qulaity by this factor (highValue = low quality)
+}

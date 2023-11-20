@@ -47,6 +47,7 @@ import MerchantConfig.Utils (getMerchant, Merchant(..))
 import Effect.Unsafe (unsafePerformEffect)
 import Engineering.Helpers.LogEvent (logEvent)
 import ConfigProvider
+import JBridge (toast)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -69,6 +70,7 @@ instance loggableAction :: Loggable Action where
       IndividualRideCardController.OnClick index -> trackAppActionClick appId (getScreen MY_RIDES_SCREEN) "individual_ride_card" "individual_ride"
       IndividualRideCardController.RepeatRide index -> trackAppActionClick appId (getScreen MY_RIDES_SCREEN) "individual_ride_card" "repeat_ride"
       IndividualRideCardController.NoAction int -> trackAppActionClick appId (getScreen MY_RIDES_SCREEN) "individual_ride_card" "no_action"
+      IndividualRideCardController.OnRideToastAC -> trackAppActionClick appId (getScreen MY_RIDES_SCREEN) "individual_ride_card" "on_ride_toast"
     ErrorModalActionController act -> case act of
       ErrorModal.PrimaryButtonActionController act -> case act of
         PrimaryButton.OnClick -> do
@@ -123,6 +125,10 @@ eval (ScrollStateChanged scrollState) state = do
   continue state
 eval (GenericHeaderActionController (GenericHeader.PrefixImgOnClick )) state = continueWithCmd state [do pure BackPressed]
 
+eval (IndividualRideCardActionController (IndividualRideCardController.OnRideToastAC)) state = do 
+  void $ pure $ toast $ getString ALREADY_HAVE_AN_ACTIVE_RIDE
+  continue state
+
 eval (OnFadeComplete _ ) state = do
                       if not state.props.receivedResponse then continue state
                       else continue state {
@@ -169,7 +175,7 @@ eval (RideBookingListAPIResponseAction rideList status) state = do
                   _ <- pure $ setRefreshing "2000031" false
                   let loaderBtnDisabled = if(length (rideList ^. _list )== 0) then true else false
                   continue $ state {shimmerLoader = AnimatedOut ,prestoListArrayItems = union (state.prestoListArrayItems) (bufferCardDataPrestoList), itemsRides = unionBy matchRidebyId (state.itemsRides) (bufferCardData),props{loadMoreDisabled = loaderBtnDisabled, receivedResponse = true}}
-    "listCompleted" -> continue state {data{loadMoreText = "Completed"}}
+    "listCompleted" -> continue state {data{loadMoreText = false}}
     _ -> continue state{props{receivedResponse = true, apiFailure = true, loadMoreDisabled = true}}
 
 eval Refresh state = updateAndExit state{props{ receivedResponse = false, loaderButtonVisibility = false }} $  MyRidesScreen state
@@ -258,6 +264,8 @@ myRideListTransformer state listRes = filter (\item -> (item.status == "COMPLETE
   , zoneType : specialTags.priorityTag
   , vehicleVariant : fetchVehicleVariant rideDetails.vehicleVariant
   , isSrcServiceable: state.data.isSrcServiceable
+  , optionsVisibility : true
+  , merchantExoPhone : ride.merchantExoPhone
 }) ( reverse $ sortWith (\(RideBookingRes ride) -> ride.createdAt ) listRes ))
 
 dummyFareBreakUp :: FareBreakupAPIEntity

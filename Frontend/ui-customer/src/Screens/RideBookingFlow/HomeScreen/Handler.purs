@@ -175,3 +175,6 @@ homeScreen = do
     ExitToTicketing updatedState -> do
       modifyScreenState $ HomeScreenStateType (\_ -> updatedState)
       App.BackT $ App.NoBack <$> (pure $ EXIT_TO_TICKETING updatedState)
+    GoToHelpAndSupport updatedState -> do
+      modifyScreenState $ HomeScreenStateType (\_ -> updatedState)
+      App.BackT $ App.BackPoint <$> (pure $ GO_TO_HELP_AND_SUPPORT)
