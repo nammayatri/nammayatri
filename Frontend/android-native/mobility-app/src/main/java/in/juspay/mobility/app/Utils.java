@@ -4,11 +4,9 @@ import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.content.res.Configuration;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.net.Uri;
-import android.os.Build;
 import android.os.Bundle;
 import android.util.Base64;
 import android.util.Log;
@@ -18,6 +16,7 @@ import androidx.annotation.Nullable;
 import androidx.core.content.FileProvider;
 
 import com.clevertap.android.sdk.CleverTapAPI;
+import com.facebook.appevents.AppEventsLogger;
 import com.google.firebase.analytics.FirebaseAnalytics;
 import com.theartofdev.edmodo.cropper.CropImage;
 
@@ -30,13 +29,12 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
-import com.facebook.appevents.AppEventsLogger;
+
 import in.juspay.mobility.app.callbacks.CallBack;
 
 public class Utils {
 
     private static final String UTILS = "UTILS";
-    private static FirebaseAnalytics mFirebaseAnalytics;
 
     private static final ArrayList<CallBack> callBack = new ArrayList<>();
 
@@ -136,7 +134,7 @@ public class Utils {
     public static void logEvent(String event, Context context) {
         CleverTapAPI clevertapDefaultInstance = CleverTapAPI.getDefaultInstance(context);
         Bundle params = new Bundle();
-        mFirebaseAnalytics = FirebaseAnalytics.getInstance(context);
+        FirebaseAnalytics mFirebaseAnalytics = FirebaseAnalytics.getInstance(context);
         mFirebaseAnalytics.logEvent(event, params);
         if (clevertapDefaultInstance != null){
             clevertapDefaultInstance.pushEvent(event);
@@ -146,7 +144,7 @@ public class Utils {
         try {
             CleverTapAPI clevertapDefaultInstance = CleverTapAPI.getDefaultInstance(context);
             AppEventsLogger logger = AppEventsLogger.newLogger(context);
-            mFirebaseAnalytics = FirebaseAnalytics.getInstance(context);
+            FirebaseAnalytics mFirebaseAnalytics = FirebaseAnalytics.getInstance(context);
             Bundle bundleParams = new Bundle();
             for(Map.Entry<String, String> entry : params.entrySet()) {
                 bundleParams.putString(entry.getKey(),entry.getValue());
@@ -182,7 +180,7 @@ public class Utils {
         return VariantType.AC;
     }
 
-    public static enum VariantType { AC, NON_AC }
+    public enum VariantType { AC, NON_AC }
 
     public static int getGravity(String gravity){
         switch (gravity){
@@ -192,4 +190,5 @@ public class Utils {
             case "BOTTOM" : return Gravity.BOTTOM;
             default: return Gravity.CENTER;}
     }
+
 }

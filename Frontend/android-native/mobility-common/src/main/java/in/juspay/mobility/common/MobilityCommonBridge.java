@@ -231,6 +231,7 @@ public class MobilityCommonBridge extends HyperBridge {
     protected ValueAnimator polylineColorFadingAnimator = null;
     protected ValueAnimator polylineDrawingAnimator = null;
     protected boolean isAnimationNeeded = false;
+    private PaymentPage paymentPage;
 
     protected  Receivers receivers;
     private ViewTreeObserver.OnGlobalLayoutListener onGlobalLayoutListener;
@@ -286,6 +287,8 @@ public class MobilityCommonBridge extends HyperBridge {
                 }
             }
         }
+
+        terminatePP();
 
         // CallBacks
         storeLocateOnMapCallBack = null;
@@ -2427,6 +2430,47 @@ public class MobilityCommonBridge extends HyperBridge {
         }
         return false;
     }
+    // endregion
+
+    // region PP - Utils
+
+    @JavascriptInterface
+    public void initiatePP (String bootData) {
+        paymentPage = new PaymentPage(bridgeComponents);
+        paymentPage.initiate(bootData);
+    }
+
+    @JavascriptInterface
+    public void processPP (String payload) {
+        if (paymentPage != null) {
+            try {
+                paymentPage.process(payload);
+            } catch (Exception e) {
+                Log.e(LOG_TAG,e.toString());
+            }
+        }
+    }
+    @JavascriptInterface
+    public boolean onBackPressedPP () {
+        return paymentPage != null && paymentPage.onBackPressed();
+    }
+
+    @JavascriptInterface
+    public void terminatePP () {
+        if (paymentPage != null) {
+            paymentPage.terminate();
+            paymentPage = null;
+        }
+    }
+
+    @JavascriptInterface
+    public boolean ppInitiateStatus() {
+        if (paymentPage != null) {
+            return paymentPage.initiateStatus();
+        }
+        return false;
+    }
+
     // endregion
 
     protected static class Receivers {

@@ -45,7 +45,6 @@ import androidx.viewpager2.widget.ViewPager2;
 import com.android.installreferrer.api.InstallReferrerClient;
 import com.android.installreferrer.api.InstallReferrerStateListener;
 import com.android.installreferrer.api.ReferrerDetails;
-
 import com.clevertap.android.sdk.CleverTapAPI;
 import com.facebook.appevents.AppEventsLogger;
 import com.google.android.gms.auth.api.credentials.Credential;
@@ -73,7 +72,6 @@ import org.json.JSONObject;
 
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
@@ -876,7 +874,7 @@ public class MobilityAppBridge extends HyperBridge {
         bridgeComponents.getContext().startActivity(intent);
     }
 
-
+    // region Override functions
     @Override
     public boolean onActivityResult(int requestCode, int resultCode, Intent data) {
         if (requestCode == CREDENTIAL_PICKER_REQUEST) {
@@ -896,4 +894,5 @@ public class MobilityAppBridge extends HyperBridge {
         return super.onRequestPermissionResult(requestCode, permissions, grantResults);
     }
 
+    // endregion
 }
