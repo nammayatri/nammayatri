@@ -90,7 +90,7 @@ if (!window.__OS) {
   window.__OS = getOS();
 }
 
-let purescript = require("./output/Main");
+const purescript = require("./output/Main");
 
 
 function callInitiateResult () {
@@ -174,6 +174,10 @@ window.onMerchantEvent = function (_event, payload) {
         purescript.main(makeEvent("PAYMENT_MODE_MANUAL", ""))();
       } else if (parsedPayload.payload.viewParam){
         purescript.onNewIntent(makeEvent("DEEP_VIEW", parsedPayload.payload.viewParam))();
+      } else if (parsedPayload.payload.view_param){
+        const deepLinkType = parsedPayload.payload.onNewIntent ? "DEEP_VIEW_NEW_INTENT" : "DEEP_VIEW";
+        const param = parsedPayload.payload.viewParam ? parsedPayload.payload.viewParam : parsedPayload.payload.view_param;
+        purescript.onNewIntent(makeEvent(deepLinkType, param))();
       } else if (parsedPayload.payload.viewParamNewIntent){
         purescript.onNewIntent(makeEvent("DEEP_VIEW_NEW_INTENT", parsedPayload.payload.viewParamNewIntent))();
       } else{

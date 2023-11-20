@@ -274,7 +274,7 @@ public class MainActivity extends AppCompatActivity {
             viewParam = res.get(0);
             deepLinkJson = res.get(1);
         }
-        // https://nammayatri.in/partner?checking=this&vd=ewt34gwrg&fdg=srgrw34&er=e453tge3&pl=35t345gg // ---NOTE:// DeepLink example for debug
+        // https://nammayatri.in/u?vp=rides // ---NOTE:// DeepLink example for debug
         
         super.onCreate(savedInstanceState);
         FirebaseAnalytics mFirebaseAnalytics = FirebaseAnalytics.getInstance(this);
@@ -470,6 +470,7 @@ public class MainActivity extends AppCompatActivity {
             json.put("betaAssets", false);
             payload = getInnerPayload("initiate");
             if (viewParam != null) payload.put("viewParam", viewParam);
+            if (viewParam != null) payload.put("view_param", viewParam);
             if (deepLinkJSON != null) payload.put("deepLinkJSON", deepLinkJSON);
             json.put(PaymentConstants.PAYLOAD, payload);
         } catch (JSONException e) {
@@ -626,8 +627,10 @@ public class MainActivity extends AppCompatActivity {
         try {
             JSONObject innerPayloadDL = getInnerPayload("process");
             if (viewParam != null && deepLinkJson != null) {
-                innerPayloadDL.put("viewParamNewIntent", viewParam)
-                        .put("deepLinkJSON", deepLinkJson);
+                innerPayloadDL.put("view_param", viewParam)
+                        .put("deepLinkJSON", deepLinkJson)
+                        .put("viewParamNewIntent", viewParam)
+                        .put("onNewIntent", true);
                 proccessPayloadDL.put("service", getService())
                         .put("merchantId", getResources().getString(R.string.merchant_id))
                         .put("requestId", UUID.randomUUID())
