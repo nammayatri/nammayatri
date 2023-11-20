@@ -1157,7 +1157,8 @@ type AppUpdatePopUpState =
  { version :: Int ,
    logField :: Object Foreign,
    updatePopup :: UpdatePopupType,
-   appUpdatedView :: AppUpdatedViewState
+   appUpdatedView :: AppUpdatedViewState,
+   config :: AppConfig
  }
 
 type AppUpdatedViewState = {
