@@ -53,7 +53,7 @@ import Effect.Class (liftEffect)
 import Effect.Uncurried (runEffectFn1, runEffectFn5)
 import Engineering.Helpers.BackTrack (getState, liftFlowBT)
 import Engineering.Helpers.Commons (flowRunner, getCurrentUTC)
-import Engineering.Helpers.Commons (liftFlow, getNewIDWithTag, bundleVersion, os, getExpiryTime, stringToVersion, setText, convertUTCtoISC, getCurrentUTC, getCurrentTimeStamp, clearTimer)
+import Engineering.Helpers.Commons (liftFlow, getNewIDWithTag, getVersionByKey, os, getExpiryTime, stringToVersion, setText, convertUTCtoISC, getCurrentUTC, getCurrentTimeStamp, clearTimer)
 import Engineering.Helpers.LogEvent (logEvent, logEventWithParams, logEventWithMultipleParams)
 import Engineering.Helpers.Suggestions (suggestionsDefinitions, getSuggestions)
 import Engineering.Helpers.Utils (loaderText, toggleLoader, getAppConfig, reboot, showSplash, (?))
@@ -140,7 +140,8 @@ baseAppFlow baseFlow event = do
     where
     cacheAppParameters :: Int -> Boolean -> FlowBT String Unit
     cacheAppParameters versionCode baseFlow = do
-      let bundle = bundleVersion unit
+      let bundle = getVersionByKey "app"
+          config = getVersionByKey "configuration"
           driverId = (getValueToLocalStore DRIVER_ID)
           appSessionCount = getValueToLocalStore APP_SESSION_TRACK_COUNT
           movedToOfflineDate = getValueToLocalStore MOVED_TO_OFFLINE_DUE_TO_HIGH_DUE
@@ -150,6 +151,7 @@ baseAppFlow baseFlow event = do
                                           {key : "Platform", value : unsafeToForeign os}]
       setValueToLocalStore VERSION_NAME versionName
       setValueToLocalStore BUNDLE_VERSION bundle
+      setValueToLocalStore CONFIG_VERSION config
       setValueToLocalStore BASE_URL (getBaseUrl "dummy")
       setValueToLocalStore RIDE_REQUEST_BUFFER "0"
       setValueToLocalStore IS_BANNER_ACTIVE "True"
@@ -173,6 +175,7 @@ baseAppFlow baseFlow event = do
           void $ lift $ lift $ setLogField "driver_id" $ encode (driverId)
       void $ lift $ lift $ setLogField "app_version" $ encode (show versionCode)
       void $ lift $ lift $ setLogField "bundle_version" $ encode (bundle)
+      void $ lift $ lift $ setLogField "config_version" $ encode config
       void $ lift $ lift $ setLogField "platform" $ encode (os)
 
 checkRideAndInitiate :: Maybe Event -> FlowBT String Unit

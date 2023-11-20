@@ -70,7 +70,7 @@ foreign import getWindowVariable :: forall a. String -> (a -> (Maybe a)) -> (May
 foreign import setWindowVariableImpl :: forall a. String -> a -> Effect Unit
 foreign import screenWidth :: Unit -> Int
 foreign import screenHeight :: Unit -> Int
-foreign import bundleVersion :: Unit -> String
+foreign import getVersionByKey :: String -> String
 foreign import callSahay ::  String  -> EffectFnAff String
 foreign import safeMarginTopImpl :: Unit -> Int
 foreign import safeMarginBottomImpl :: Unit -> Int

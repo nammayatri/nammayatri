@@ -19,11 +19,10 @@ import Prelude
 import Control.Monad.Except.Trans (lift)
 import JBridge (setCleverTapUserProp, getVersionCode, getVersionName)
 import Foreign (unsafeToForeign)
-import Presto.Core.Types.Language.Flow (delay, setLogField)
+import Presto.Core.Types.Language.Flow (getLogFields, setLogField)
 import Engineering.Helpers.LogEvent (logEvent, logEventWithParams)
 import Engineering.Helpers.BackTrack (liftFlowBT)
-import Engineering.Helpers.Commons (bundleVersion, os)
-import Presto.Core.Types.Language.Flow (getLogFields)
+import Engineering.Helpers.Commons (getVersionByKey, os)
 import Foreign.Class (encode)
 import Storage (getValueToLocalStore, KeyStore(..))
 import Types.App (FlowBT)
@@ -31,7 +30,8 @@ import Types.App (FlowBT)
 baseAppLogs :: FlowBT String Unit
 baseAppLogs = do
   let
-    bundle = bundleVersion unit
+    bundle = getVersionByKey "app"
+    config = getVersionByKey "configuration"
     customerId = getValueToLocalStore CUSTOMER_ID
 
   versionCode <- liftFlowBT $ getVersionCode
@@ -43,9 +43,10 @@ baseAppLogs = do
   void $ pure $ setCleverTapUserProp [ { key: "Bundle version", value: unsafeToForeign bundle } ]
   void $ pure $ setCleverTapUserProp [ { key: "Platform", value: unsafeToForeign os } ]
 
-  void $ lift $ lift $ setLogField "app_version" $ encode (show versionCode)
-  void $ lift $ lift $ setLogField "bundle_version" $ encode (bundle)
-  void $ lift $ lift $ setLogField "platform" $ encode (os)
+  void $ lift $ lift $ setLogField "app_version" $ encode $ show versionCode
+  void $ lift $ lift $ setLogField "bundle_version" $ encode bundle
+  void $ lift $ lift $ setLogField "config_version" $ encode config
+  void $ lift $ lift $ setLogField "platform" $ encode os
   void $ lift $ lift $ setLogField "customer_id" $ encode customerId
 
   void $ liftFlowBT $ logEventWithParams logField_ "ny_user_app_version" "version" versionName

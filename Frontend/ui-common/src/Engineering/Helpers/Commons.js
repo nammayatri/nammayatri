@@ -136,8 +136,8 @@ export const safeMarginBottomImpl = function () {
   } 
 }
 
-export const bundleVersion = function(){
-  return window.version;
+export const getVersionByKey = function(key){
+  return window.version[key] || "";
 }
 
 function setTextImpl(id, text, pos) {

@@ -84,6 +84,7 @@ data KeyStore
   | ESTIMATE_DATA
   | REFERRER_URL
   | PAYMENT_STATUS_POOLING
+  | CONFIG_VERSION
 
 derive instance genericKeyStore :: Generic KeyStore _
 

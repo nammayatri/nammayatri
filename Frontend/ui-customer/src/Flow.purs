@@ -41,7 +41,7 @@ import Effect (Effect)
 import Effect.Class (liftEffect)
 import Effect.Uncurried (runEffectFn1, runEffectFn2)
 import Engineering.Helpers.BackTrack (getState, liftFlowBT)
-import Engineering.Helpers.Commons (liftFlow, os, getNewIDWithTag, bundleVersion, getExpiryTime, convertUTCtoISC, getCurrentUTC, getWindowVariable, flowRunner)
+import Engineering.Helpers.Commons (liftFlow, os, getNewIDWithTag, getExpiryTime, convertUTCtoISC, getCurrentUTC, getWindowVariable, flowRunner)
 import Engineering.Helpers.Commons as EHC
 import Engineering.Helpers.Suggestions (suggestionsDefinitions, getSuggestions)
 import Engineering.Helpers.Utils (loaderText, toggleLoader, getAppConfig, saveObject, reboot, showSplash, catMaybeStrings)
@@ -133,7 +133,7 @@ baseAppFlow gPayload callInitUI = do
           validationStatus <- validateSignaturePayload signatureAuth response
           when validationStatus $ handleDeepLinks (Just gPayload) false
         Nothing -> 
-          if showCarouselScreen FunctionCall -- TODO:: @vicky I think don't have to check for deeplinks here
+          if showCarouselScreen FunctionCall
             then welcomeScreenFlow
             else enterMobileNumberScreenFlow
 
