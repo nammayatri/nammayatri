@@ -83,9 +83,9 @@ import Screens.TicketInfoScreen.ScreenData as TicketInfoScreenData
 import Screens.Types (TicketBookingScreenStage(..), CardType(..), AddNewAddressScreenState(..), SearchResultType(..), CurrentLocationDetails(..), CurrentLocationDetailsWithDistance(..), DeleteStatus(..), HomeScreenState, LocItemType(..), PopupType(..), SearchLocationModelType(..), Stage(..), LocationListItemState, LocationItemType(..), NewContacts, NotifyFlowEventType(..), FlowStatusData(..), ErrorType(..), ZoneType(..), TipViewData(..),TripDetailsGoBackType(..), Location, DisabilityT(..), UpdatePopupType(..) , PermissionScreenStage(..), TicketBookingItem(..), TicketBookings(..), TicketBookingScreenData(..),TicketInfoScreenData(..),IndividualBookingItem(..), SuggestionsMap(..), Suggestions(..))
 import Screens.RideBookingFlow.HomeScreen.Config (specialLocationIcons, specialLocationConfig, updateRouteMarkerConfig, getTipViewData, setTipViewData)
 import Screens.SavedLocationScreen.Controller (getSavedLocationForAddNewAddressScreen)
+import Screens.SelectLanguageScreen.ScreenData as SelectLanguageScreenData
 import Screens.Types (Gender(..)) as Gender
 import Services.API --(AddressGeometry(..), BookingLocationAPIEntity(..), CancelEstimateRes(..), ConfirmRes(..), ContactDetails(..), DeleteSavedLocationReq(..), FlowStatus(..), FlowStatusRes(..), GatesInfo(..), Geometry(..), GetDriverLocationResp(..), GetEmergContactsReq(..), GetEmergContactsResp(..), GetPlaceNameResp(..), GetProfileRes(..), LatLong(..), LocationS(..), LogOutReq(..), LogOutRes(..), PlaceName(..), ResendOTPResp(..), RideAPIEntity(..), RideBookingAPIDetails(..), RideBookingDetails(..), RideBookingListRes(..), RideBookingRes(..), Route(..), SavedLocationReq(..), SavedLocationsListRes(..), SearchLocationResp(..), SearchRes(..), ServiceabilityRes(..), SpecialLocation(..), TriggerOTPResp(..), UserSosRes(..), VerifyTokenResp(..), ServiceabilityResDestination(..), SelectEstimateRes(..), UpdateProfileReq(..), OnCallRes(..), Snapped(..), AddressComponents(..), FareBreakupAPIEntity(..), GetDisabilityListResp(..), Disability(..), PersonStatsRes(..))
-import Services.API --(AuthType(..), AddressGeometry(..), BookingLocationAPIEntity(..), CancelEstimateRes(..), ConfirmRes(..), ContactDetails(..), DeleteSavedLocationReq(..), FlowStatus(..), FlowStatusRes(..), GatesInfo(..), Geometry(..), GetDriverLocationResp(..), GetEmergContactsReq(..), GetEmergContactsResp(..), GetPlaceNameResp(..), GetProfileRes(..), LatLong(..), LocationS(..), LogOutReq(..), LogOutRes(..), PlaceName(..), ResendOTPResp(..), RideAPIEntity(..), RideBookingAPIDetails(..), RideBookingDetails(..), RideBookingListRes(..), RideBookingRes(..), Route(..), SavedLocationReq(..), SavedLocationsListRes(..), SearchLocationResp(..), SearchRes(..), ServiceabilityRes(..), SpecialLocation(..), TriggerOTPResp(..), UserSosRes(..), VerifyTokenResp(..), ServiceabilityResDestination(..), TriggerSignatureOTPResp(..), User(..), OnCallRes(..)) --TODO:: Need to fix duplicate imports
 import Services.Backend as Remote
 import Services.Config (getBaseUrl)
 import Storage (KeyStore(..), deleteValueFromLocalStore, getValueToLocalNativeStore, getValueToLocalStore, isLocalStageOn, setValueToLocalNativeStore, setValueToLocalStore, updateLocalStage)
@@ -799,25 +799,25 @@ homeScreenFlow = do
                                         else pure unit
                                         _ <- pure $ clearWaitingTimer <$> state.props.waitingTimeTimerIds
                                         let newState = homeScreenState{data{route = Nothing},props{isCancelRide = false,waitingTimeTimerIds = [], showShareAppPopUp = (INT.round $ (fromMaybe 0.0 (fromString (getValueToLocalStore SHARE_APP_COUNT)))) `mod` 4 == 0, showChatNotification = false, cancelSearchCallDriver = false  }}
-                                        lift $ lift $ triggerRideStatusEvent notification Nothing (Just state.props.bookingId) $ getScreenFromStage state.props.currentStage
-                                        let currTrip = {sourceLat : srcLat, 
-                                                      sourceLong : srcLon, 
-                                                      destLat : dstLat, 
-                                                      destLong : dstLon, 
-                                                      source : state.data.driverInfoCardState.source,
-                                                      destination  : state.data.driverInfoCardState.destination,
-                                                      sourceAddress : state.data.sourceAddress,
-                                                      destinationAddress : state.data.destinationAddress,
-                                                      locationScore: Just 1.0,
-                                                      recencyDate : Nothing,
-                                                      frequencyCount : Just 1,
-                                                      isSpecialZone : state.props.isSpecialZone
-                                                      }
+                                            currTrip = {sourceLat : srcLat, 
+                                                        sourceLong : srcLon, 
+                                                        destLat : dstLat, 
+                                                        destLong : dstLon, 
+                                                        source : state.data.driverInfoCardState.source,
+                                                        destination  : state.data.driverInfoCardState.destination,
+                                                        sourceAddress : state.data.sourceAddress,
+                                                        destinationAddress : state.data.destinationAddress,
+                                                        locationScore: Just 1.0,
+                                                        recencyDate : Nothing,
+                                                        frequencyCount : Just 1,
+                                                        isSpecialZone : state.props.isSpecialZone
+                                                        }
                                             currentSourceGeohash = runFn3 encodeGeohash srcLat srcLon state.data.config.suggestedTripsAndLocationConfig.geohashPrecision
                                             currentMap = currentState.homeScreen.data.suggestionsData.suggestionsMap
                                             updatedMap = (addOrUpdateSuggestedTrips currentSourceGeohash currTrip currentMap state.data.config.suggestedTripsAndLocationConfig)
                                         _ <- pure $ setSuggestionsMap updatedMap
                                         modifyScreenState $ HomeScreenStateType (\homeScreen -> newState{data{suggestionsData{suggestionsMap =updatedMap }}})
+                                        lift $ lift $ triggerRideStatusEvent notification Nothing (Just state.props.bookingId) $ getScreenFromStage state.props.currentStage
                                       homeScreenFlow
             "TRIP_FINISHED"       -> do -- TRIP FINISHED
                                       if (getValueToLocalStore HAS_TAKEN_FIRST_RIDE == "false") then do
