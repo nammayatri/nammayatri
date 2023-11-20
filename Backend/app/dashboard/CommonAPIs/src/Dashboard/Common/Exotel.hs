@@ -79,10 +79,10 @@ instance FromJSON ExotelHeartbeatReq where
     outgoingAffectedSids <- fromMaybe [] <$> (obj .:? "outgoing_affected")
     dataObj <- obj .: "data"
     incomingAffected <- for incomingAffectedSids $ \phoneNumberSid -> do
-      phoneNumber <- (dataObj .: (AesonKey.fromText phoneNumberSid)) >>= (.: "phone_number")
+      phoneNumber <- (dataObj .: AesonKey.fromText phoneNumberSid) >>= (.: "phone_number")
       pure PhoneNumber {..}
     outgoingAffected <- for outgoingAffectedSids $ \phoneNumberSid -> do
-      phoneNumber <- (dataObj .: (AesonKey.fromText phoneNumberSid)) >>= (.: "phone_number")
+      phoneNumber <- (dataObj .: AesonKey.fromText phoneNumberSid) >>= (.: "phone_number")
       pure PhoneNumber {..}
     pure ExotelHeartbeatReq {..}
   parseJSON wrongVal = typeMismatch "Object ExotelHeartbeatReq" wrongVal
@@ -100,7 +100,7 @@ instance ToJSON ExotelHeartbeatReq where
         "data" .= object (mkDataListItem <$> affectedPhones)
       ]
     where
-      mkDataListItem PhoneNumber {..} = (AesonKey.fromText phoneNumberSid) .= object ["phone_number" .= phoneNumber]
+      mkDataListItem PhoneNumber {..} = AesonKey.fromText phoneNumberSid .= object ["phone_number" .= phoneNumber]
 
 instance HideSecrets ExotelHeartbeatReq where
   hideSecrets = identity

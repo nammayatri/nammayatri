@@ -29,8 +29,7 @@ type API =
     :> Common.ExotelHeartbeatAPI
 
 handler :: FlowServer API
-handler = \_ -> do
-  exotelHeartbeat
+handler _ = do exotelHeartbeat
 
 exotelHeartbeat :: Common.ExotelHeartbeatReq -> FlowHandler APISuccess
 exotelHeartbeat = withFlowHandlerAPI . DExotel.exotelHeartbeat

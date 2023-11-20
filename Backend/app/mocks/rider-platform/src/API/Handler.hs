@@ -48,7 +48,7 @@ callBAP ::
 callBAP uri body = do
   selfId <- asks (.selfId)
   let authKey = getHttpManagerKey selfId
-  Beckn.callBecknAPI (Just $ ET.ManagerSelector $ authKey) Nothing "Some action" fakeAPI uri body
+  Beckn.callBecknAPI (Just $ ET.ManagerSelector authKey) Nothing "Some action" fakeAPI uri body
   where
     fakeAPI :: Proxy (ReqBody '[JSONBS] BS.ByteString :> Post '[JSON] AckResponse)
     fakeAPI = Proxy

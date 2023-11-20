@@ -6,6 +6,7 @@ import Data.Aeson as A
 import qualified Data.Aeson.Key as AesonKey
 import qualified Data.Aeson.KeyMap as AKM
 import Data.Aeson.Types (Parser, emptyArray)
+import qualified Data.Bifunctor as Bifunctor
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
 import qualified Data.Text.Encoding.Error as TE
@@ -28,7 +29,7 @@ parseStreamEntryId bs =
           $ bs
    in EL.KVDBStreamEntryID ms sq
   where
-    splitOn dilim = (\tup -> (fst tup, T.drop 1 $ snd tup)) . T.breakOn dilim
+    splitOn dilim = Bifunctor.second (T.drop 1) . T.breakOn dilim
 
 parseUpdateValue :: A.Value -> Parser (Text, A.Value)
 parseUpdateValue = A.withObject "update key value pair" $ \o ->
@@ -138,7 +139,7 @@ decodeTerm = \case
           ("$ne", Just value) -> do
             (EKT.TermWrap column fieldValue) <- (parseFieldAndGetClause @be @table) value keyCamel
             return $ Is column (Not $ Eq fieldValue)
-          ("$not", Just value) -> (\(Is col term) -> Is col (Not term)) <$> decodeTerm (A.object [(AesonKey.fromText keyCamel) A..= value])
+          ("$not", Just value) -> (\(Is col term) -> Is col (Not term)) <$> decodeTerm (A.object [AesonKey.fromText keyCamel A..= value])
           _ -> fail "Expecting term constructor - Error decoding term"
       Just value -> do
         (EKT.TermWrap column fieldValue) <- (parseFieldAndGetClause @be @table) value keyCamel
