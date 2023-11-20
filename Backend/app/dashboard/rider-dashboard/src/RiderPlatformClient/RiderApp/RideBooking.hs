@@ -51,7 +51,7 @@ import Servant hiding (route)
 import Tools.Auth.Merchant (CheckedShortId)
 import Tools.Client
 
-data AppBackendAPIs = AppBackendAPIs
+newtype AppBackendAPIs = AppBackendAPIs
   { rideBooking :: RideBookingAPIs
   }
 

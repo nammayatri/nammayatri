@@ -14,6 +14,7 @@
 
 module Storage.Queries.DriverInformation where
 
+import qualified Data.Either as Either
 import qualified Database.Beam as B
 import qualified Database.Beam.Query ()
 import Domain.Types.DriverInformation as DriverInfo
@@ -34,7 +35,6 @@ import qualified Storage.Beam.DriverInformation as BeamDI
 import qualified Storage.Beam.Person as BeamP
 import Storage.Queries.Instances.DriverInformation ()
 import Storage.Queries.Person (findAllPersonWithDriverInfos)
-import qualified Prelude
 
 create :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => DriverInfo.DriverInformation -> m ()
 create = createWithKV
@@ -308,7 +308,7 @@ countDrivers merchantID =
                 driverInformation <- B.all_ (BeamCommon.driverInformation BeamCommon.atlasDB)
                 person <- B.join_' (BeamCommon.person BeamCommon.atlasDB) (\person -> BeamP.id person B.==?. BeamDI.driverId driverInformation)
                 pure (driverInformation, person)
-    pure (either (const []) Prelude.id res)
+    pure (Either.fromRight [] res)
   where
     getResults :: [(Bool, Int)] -> (Int, Int)
     getResults = foldl func (0, 0)

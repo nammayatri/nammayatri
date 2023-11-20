@@ -103,7 +103,7 @@ extractTagGroups obj =
    in TG $ map (extractTagGroup obj) groupIndices
 
 getGroupIndices :: Object -> [Int]
-getGroupIndices = nub . mapMaybe extractInteger . map AesonKey.toText . AKM.keys
+getGroupIndices = nub . mapMaybe (extractInteger . AesonKey.toText) . AKM.keys
   where
     extractInteger :: T.Text -> Maybe Int
     extractInteger key =
@@ -134,7 +134,7 @@ extractTagList obj groupIndex =
 getTagListIndices :: Object -> Int -> [Int]
 getTagListIndices obj groupIndex =
   let listKey = "groups/" ++ show groupIndex ++ "/list"
-      indices = mapMaybe extractInteger . map AesonKey.toText . AKM.keys $ obj
+      indices = (mapMaybe (extractInteger . AesonKey.toText) . AKM.keys) obj
    in filter (isTagListIndex obj (T.pack listKey)) indices
   where
     extractInteger :: T.Text -> Maybe Int

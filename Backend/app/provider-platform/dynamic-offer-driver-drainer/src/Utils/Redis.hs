@@ -2,6 +2,7 @@ module Utils.Redis where
 
 import Config.Env as Env
 import Data.Aeson
+import qualified Data.Bifunctor as Bifunctor
 import Data.Either
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as DTE
@@ -23,7 +24,7 @@ addValueToRedisStream ::
   Flow (Either ET.KVDBReply L.KVDBStreamEntryID)
 addValueToRedisStream streamKey streamEntryInfo value = do
   redisToUse <- getRedisName
-  L.runKVDB redisToUse $ L.xadd (DTE.encodeUtf8 streamKey) streamEntryInfo ((\(a, b) -> (DTE.encodeUtf8 a, DTE.encodeUtf8 b)) <$> value)
+  L.runKVDB redisToUse $ L.xadd (DTE.encodeUtf8 streamKey) streamEntryInfo (Bifunctor.bimap DTE.encodeUtf8 DTE.encodeUtf8 <$> value)
 
 addValueToErrorQueue :: ConvertUtf8 a L.KVDBStream => a -> [L.KVDBStreamItem] -> ReaderT Env L.Flow (Either ET.KVDBReply ())
 addValueToErrorQueue streamKey values = do

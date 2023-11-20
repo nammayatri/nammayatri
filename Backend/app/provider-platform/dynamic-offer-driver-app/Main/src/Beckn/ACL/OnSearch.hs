@@ -54,7 +54,7 @@ mkOnSearchMessage res@DSearch.DSearchRes {..} = do
   let (quoteEntitiesList :: [QuoteEntities]) = case (estimateList, specialQuoteList) of
         (Just estimates, _) -> map (mkQuoteEntities startInfo stopInfo provider) estimates
         (Nothing, Just quotes) -> map (mkQuoteEntitiesSpecialZone startInfo stopInfo provider) quotes
-        (_, _) -> map (mkQuoteEntities startInfo stopInfo provider) [] --this won't happen
+        (_, _) -> [] --this won't happen
   let items = map (.item) quoteEntitiesList
       fulfillments = map (.fulfillment) quoteEntitiesList
   let providerSpec =
