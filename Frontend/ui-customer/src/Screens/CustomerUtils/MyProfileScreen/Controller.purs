@@ -86,7 +86,7 @@ data Action = GenericHeaderActionController GenericHeader.Action
             | AccessibilityPopUpAC PopUpModal.Action
             | MoreInfo FieldType
 
-data ScreenOutput = GoToHomeScreen | UpdateProfile MyProfileScreenState | GoToHome
+data ScreenOutput = UpdateProfile MyProfileScreenState | GoToHome MyProfileScreenState
 eval :: Action -> MyProfileScreenState -> Eval Action ScreenOutput MyProfileScreenState
 eval (GenericHeaderActionController (GenericHeader.PrefixImgOnClick)) state = continueWithCmd state [do pure $ BackPressed state]
 
@@ -94,11 +94,11 @@ eval (BackPressed backpressState) state = do
   if state.props.isSpecialAssistList then continue state {props{isSpecialAssistList = false}}
     else if state.props.updateProfile && state.props.fromHomeScreen then do
       _ <- pure $ hideKeyboardOnNavigation true
-      exit $ GoToHomeScreen
+      exit $ GoToHome state
     else if state.props.updateProfile then do
       _ <- pure $ hideKeyboardOnNavigation true
       continue state { props { updateProfile = false, genderOptionExpanded = false , expandEnabled = false, isEmailValid = true} }
-        else exit $ GoToHomeScreen
+        else exit $ GoToHome state
 
 eval (EditProfile fieldType) state = do
   case fieldType of

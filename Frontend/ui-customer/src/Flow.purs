@@ -17,7 +17,7 @@ module Flow where
 
 import Engineering.Helpers.LogEvent
 
-import Accessor (_computedPrice, _contents, _formattedAddress, _id, _lat, _lon, _status, _toLocation, _signatureAuthData)
+import Accessor (_computedPrice, _contents, _formattedAddress, _id, _lat, _lon, _status, _toLocation, _signatureAuthData, _payload, _view_param, _show_splash)
 import Common.Types.App (GlobalPayload(..), SignatureAuthData(..), Payload(..), Version(..), LocationData(..), EventPayload(..), ClevertapEventParams, OTPChannel(..))
 import Common.Types.App (LazyCheck(..), FCMBundleUpdate)
 import Components.LocationListItem.Controller (dummyLocationListState)
@@ -57,7 +57,7 @@ import MerchantConfig.DefaultConfig as DC
 import MerchantConfig.Utils (Merchant(..), getMerchant, getValueFromConfig)
 import MerchantConfig.Utils as MU
 import ModifyScreenState (modifyScreenState, updateRideDetails)
-import Prelude (Unit, bind, discard, map, mod, negate, not, pure, show, unit, void, when, ($), (&&), (+), (-), (/), (/=), (<), (<=), (<>), (==), (>), (>=), (||), (<$>), (<<<), ($>))
+import Prelude (Unit, bind, discard, map, mod, negate, not, pure, show, unit, void, when, otherwise, ($), (&&), (+), (-), (/), (/=), (<), (<=), (<>), (==), (>), (>=), (||), (<$>), (<<<), ($>), (>>=))
 import Presto.Core.Types.Language.Flow (doAff, fork, setLogField, delay)
 import Presto.Core.Types.Language.Flow (getLogFields)
 import Resources.Constants (DecodeAddress(..), decodeAddress, encodeAddress, getKeyByLanguage, getSearchRadius, getValueByComponent, getWard, ticketPlaceId)
@@ -107,7 +107,7 @@ import Common.Types.App as Common
 import PrestoDOM.Core (terminateUI)
 
 baseAppFlow :: GlobalPayload -> Boolean-> FlowBT String Unit
-baseAppFlow (GlobalPayload gPayload) callInitUI = do
+baseAppFlow gPayload callInitUI = do
   logField_ <- lift $ lift $ getLogFields
   _ <- pure $ printLog "Global Payload" gPayload
   (GlobalState state) <- getState
@@ -150,8 +150,7 @@ baseAppFlow (GlobalPayload gPayload) callInitUI = do
   _ <- lift $ lift $ setLogField "bundle_version" $ encode (bundle)
   _ <- lift $ lift $ setLogField "platform" $ encode (os)
   _ <- lift $ lift $ liftFlow $ initiateLocationServiceClient
-  let Payload payload = gPayload.payload
-      showSplashScreen = fromMaybe false payload.show_splash
+  let showSplashScreen = fromMaybe false $ gPayload ^. _payload ^. _show_splash
   when callInitUI $ lift $ lift $ initUI
   when showSplashScreen $ toggleSplash true
   _ <- lift $ lift $ liftFlow $ logEventWithParams logField_ "ny_user_app_version" "version" versionName
@@ -162,15 +161,16 @@ baseAppFlow (GlobalPayload gPayload) callInitUI = do
   else pure unit
   if (getMerchant FunctionCall) == PASSCULTURE then setValueToLocalStore LANGUAGE_KEY $ getValueFromConfig "defaultLanguage"
     else pure unit
-  if getValueToLocalStore REGISTERATION_TOKEN /= "__failed" && getValueToLocalStore REGISTERATION_TOKEN /= "(null)" &&  (isNothing $ (gPayload.payload)^._signatureAuthData)
-    then currentFlowStatus
-    else do
-      let (Payload payload) = gPayload.payload
-      case payload.signatureAuthData of
-        Just (SignatureAuthData signatureAuth) -> do
-          response <- lift $ lift $ Remote.triggerSignatureBasedOTP (SignatureAuthData signatureAuth)
-          case response of
-            Right (TriggerSignatureOTPResp triggerSignatureOtpResp) -> do
+  verifyPerson gPayload
+
+
+verifyPerson :: GlobalPayload -> FlowBT String Unit
+verifyPerson globalPayload = do
+  case globalPayload ^. _payload ^. _signatureAuthData of
+    Just (SignatureAuthData signatureAuth) -> do
+      response <- lift $ lift $ Remote.triggerSignatureBasedOTP (SignatureAuthData signatureAuth)
+      case response of
+        Right (TriggerSignatureOTPResp triggerSignatureOtpResp) -> do
               case triggerSignatureOtpResp.person of
                 Just (User person) -> do
                   lift $ lift $ setLogField "customer_id" $ encode (person.id)
@@ -181,11 +181,38 @@ baseAppFlow (GlobalPayload gPayload) callInitUI = do
               case triggerSignatureOtpResp.token of
                 Just token -> setValueToLocalStore REGISTERATION_TOKEN token
                 Nothing -> pure unit
-              currentFlowStatus
-            Left err -> do
-              liftFlowBT $ pure $ runFn3 emitJOSEvent "java" "onEvent" $ encode $  EventPayload { event : "signature_auth_failed", payload : Nothing}
-              pure unit
-        Nothing -> if (showCarouselScreen FunctionCall) then welcomeScreenFlow else enterMobileNumberScreenFlow
+              handleDeepLinks (Just globalPayload) false
+        Left err -> do
+          liftFlowBT $ pure $ runFn3 emitJOSEvent "java" "onEvent" $ encode $  EventPayload { event : "signature_auth_failed", payload : Nothing}
+          pure unit
+    Nothing -> if getValueToLocalStore REGISTERATION_TOKEN /= "__failed" && getValueToLocalStore REGISTERATION_TOKEN /= "(null)"
+                then handleDeepLinks (Just globalPayload) false
+                else if (showCarouselScreen FunctionCall) then welcomeScreenFlow else enterMobileNumberScreenFlow
+
+handleDeepLinks :: Maybe GlobalPayload -> Boolean -> FlowBT String Unit
+handleDeepLinks globalPayload skipDefaultCase = do
+  case globalPayload of 
+    Just globalPayload ->
+      case globalPayload ^. _payload ^._view_param of
+        Just screen -> case screen of
+          "rides" -> hideSplashAndCallFlow $ myRidesScreenFlow true
+          "abt" -> hideSplashAndCallFlow aboutUsScreenFlow
+          "fvrts" -> hideSplashAndCallFlow savedLocationFlow
+          "help" -> hideSplashAndCallFlow helpAndSupportScreenFlow
+          "prof" -> hideSplashAndCallFlow myProfileScreenFlow
+          "lang" -> hideSplashAndCallFlow selectLanguageScreenFlow
+          "tkts" -> hideSplashAndCallFlow zooTicketBookingFlow
+          _ -> if skipDefaultCase then pure unit else currentFlowStatus
+        Nothing -> currentFlowStatus
+    Nothing -> do
+      mBPayload <- liftFlowBT $ getGlobalPayload unit
+      case mBPayload of
+        Just payload -> handleDeepLinks mBPayload skipDefaultCase
+        Nothing -> pure unit
+  
+
+hideSplashAndCallFlow :: FlowBT String Unit -> FlowBT String Unit
+hideSplashAndCallFlow flow = (liftFlowBT hideLoader) >>= \_ -> flow
 
 concatString :: Array String -> String
 concatString arr = case uncons arr of
@@ -483,6 +510,7 @@ currentFlowStatus = do
         _ <- updateLocalStage HomeScreen
         hideLoaderFlow
         accountSetUpScreenFlow
+        handleDeepLinks Nothing true
       else do
         let tag = case (response.disability) of
                       Just value -> value
@@ -623,6 +651,7 @@ enterMobileNumberScreenFlow = do
                     setValueToLocalStore CUSTOMER_ID customerId
                     void $ pure $ setCleverTapUserData "Identity" (getValueToLocalStore CUSTOMER_ID)
                     setValueToLocalStore REGISTERATION_TOKEN response.token
+                    handleDeepLinks Nothing true
                     currentFlowStatus
               Left err -> do
                 pure $ setText (getNewIDWithTag "EnterOTPNumberEditText") ""

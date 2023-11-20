@@ -179,3 +179,12 @@ _visitDate = lens (unwrap >>> _.visitDate) (\oldRec newVal -> wrap ((unwrap oldR
 
 _services :: forall a b c. Newtype a { services :: b | c } => Lens' a b
 _services = lens (unwrap >>> _.services) (\oldRec newVal -> wrap ((unwrap oldRec) { services = newVal }))
+
+_payload :: forall a b c. Newtype a { payload :: b | c } => Lens' a b
+_payload = lens (unwrap >>> _.payload) (\oldRec newVal -> wrap ((unwrap oldRec) { payload = newVal }))
+
+_view_param :: forall a b c. Newtype a { view_param :: b | c } => Lens' a b
+_view_param = lens (unwrap >>> _.view_param) (\oldRec newVal -> wrap ((unwrap oldRec) { view_param = newVal }))
+
+_show_splash :: forall a b c. Newtype a { show_splash :: b | c } => Lens' a b
+_show_splash = lens (unwrap >>> _.show_splash) (\oldRec newVal -> wrap ((unwrap oldRec) { show_splash = newVal }))
