@@ -37,6 +37,7 @@ import Kernel.Utils.Common
 import Kernel.Utils.Validation (runRequestValidation)
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified SharedLogic.SyncRide as SyncRide
+import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.DriverInformation as QDrInfo
@@ -53,13 +54,15 @@ stuckBookingsCancel ::
   Context.City ->
   Common.StuckBookingsCancelReq ->
   Flow Common.StuckBookingsCancelRes
-stuckBookingsCancel merchantShortId _ req = do
+stuckBookingsCancel merchantShortId opCity req = do
   merchant <- findMerchantByShortId merchantShortId
+  -- merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchant.id.getId <> "-city-" <> show opCity)
   let reqBookingIds = cast @Common.Booking @DBooking.Booking <$> req.bookingIds
 
   now <- getCurrentTime
-  stuckBookingIds <- B.runInReplica $ QBooking.findStuckBookings merchant.id reqBookingIds now
-  stuckRideItems <- B.runInReplica $ QRide.findStuckRideItems merchant.id reqBookingIds now
+  stuckBookingIds <- B.runInReplica $ QBooking.findStuckBookings merchant merchantOpCity reqBookingIds now
+  stuckRideItems <- B.runInReplica $ QRide.findStuckRideItems merchant merchantOpCity reqBookingIds now
   let bcReasons = mkBookingCancellationReason (merchant.id) Common.bookingStuckCode Nothing <$> stuckBookingIds
   let bcReasonsWithRides = (\item -> mkBookingCancellationReason merchant.id Common.rideStuckCode (Just item.rideId) item.bookingId) <$> stuckRideItems
   let allStuckBookingIds = stuckBookingIds <> (stuckRideItems <&> (.bookingId))

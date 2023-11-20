@@ -164,10 +164,10 @@ driverDocumentsInfo :: ShortId DM.Merchant -> Context.City -> Flow Common.Driver
 driverDocumentsInfo merchantShortId opCity = do
   merchant <- findMerchantByShortId merchantShortId
   now <- getCurrentTime
-  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
-  transporterConfig <- SCT.findByMerchantOpCityId merchantOpCityId >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchant.id.getId <> "-city-" <> show opCity)
+  transporterConfig <- SCT.findByMerchantOpCityId merchantOpCity.id >>= fromMaybeM (TransporterConfigNotFound merchantOpCity.id.getId)
   let onboardingTryLimit = transporterConfig.onboardingTryLimit
-  drivers <- B.runInReplica $ QDocStatus.fetchDriverDocsInfo merchant.id Nothing
+  drivers <- B.runInReplica $ QDocStatus.fetchDriverDocsInfo merchant merchantOpCity Nothing
   pure $ foldl' (func onboardingTryLimit now) Common.emptyInfo drivers
   where
     oneMonth :: NominalDiffTime
@@ -312,12 +312,13 @@ getDriverDue merchantShortId _ mbMobileCountryCode phone = do
 
 ---------------------------------------------------------------------
 driverAadhaarInfo :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Flow Common.DriverAadhaarInfoRes
-driverAadhaarInfo merchantShortId _ driverId = do
+driverAadhaarInfo merchantShortId opCity driverId = do
   merchant <- findMerchantByShortId merchantShortId
   let personId = cast @Common.Driver @DP.Person driverId
   driver <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+  merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
   -- merchant access checking
-  unless (merchant.id == driver.merchantId) $ throwError (PersonDoesNotExist personId.getId)
+  unless (merchant.id == driver.merchantId && driver.merchantOperatingCityId == merchantOpCity.id) $ throwError (PersonDoesNotExist personId.getId)
   driverInf <- QDriverInfo.findById (cast driverId) >>= fromMaybeM DriverInfoNotFound
   unless (driverInf.aadhaarVerified) $ throwError $ InvalidRequest "Person aadhaar verification is pending"
   res <- AV.findByDriverId personId
@@ -350,7 +351,7 @@ enableDriver merchantShortId opCity reqDriverId = do
       >>= fromMaybeM (PersonDoesNotExist personId.getId)
 
   -- merchant access checking
-  unless (merchant.id == driver.merchantId) $ throwError (PersonDoesNotExist personId.getId)
+  unless (merchant.id == driver.merchantId && merchantOpCityId == driver.merchantOperatingCityId) $ throwError (PersonDoesNotExist personId.getId)
 
   mVehicle <- QVehicle.findById personId
   linkedRCs <- QRCAssociation.findAllLinkedByDriverId personId
@@ -366,9 +367,9 @@ enableDriver merchantShortId opCity reqDriverId = do
 
 ---------------------------------------------------------------------
 disableDriver :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Flow APISuccess
-disableDriver merchantShortId _ reqDriverId = do
+disableDriver merchantShortId opCity reqDriverId = do
   merchant <- findMerchantByShortId merchantShortId
-
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   let driverId = cast @Common.Driver @DP.Driver reqDriverId
   let personId = cast @Common.Driver @DP.Person reqDriverId
   driver <-
@@ -376,7 +377,7 @@ disableDriver merchantShortId _ reqDriverId = do
       >>= fromMaybeM (PersonDoesNotExist personId.getId)
 
   -- merchant access checking
-  unless (merchant.id == driver.merchantId) $ throwError (PersonDoesNotExist personId.getId)
+  unless (merchant.id == driver.merchantId && merchantOpCityId == driver.merchantOperatingCityId) $ throwError (PersonDoesNotExist personId.getId)
 
   QDriverInfo.updateEnabledState driverId False
   logTagInfo "dashboard -> disableDriver : " (show personId)
@@ -385,8 +386,9 @@ disableDriver merchantShortId _ reqDriverId = do
 ---------------------------------------------------------------------
 
 blockDriverWithReason :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Text -> Common.BlockDriverWithReasonReq -> Flow APISuccess
-blockDriverWithReason merchantShortId _ reqDriverId dashboardUserName req = do
+blockDriverWithReason merchantShortId opCity reqDriverId dashboardUserName req = do
   merchant <- findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
 
   let driverId = cast @Common.Driver @DP.Driver reqDriverId
   let personId = cast @Common.Driver @DP.Person reqDriverId
@@ -396,7 +398,7 @@ blockDriverWithReason merchantShortId _ reqDriverId dashboardUserName req = do
 
   -- merchant access checking
   let merchantId = driver.merchantId
-  unless (merchant.id == merchantId) $ throwError (PersonDoesNotExist personId.getId)
+  unless (merchant.id == merchantId && merchantOpCityId == driver.merchantOperatingCityId) $ throwError (PersonDoesNotExist personId.getId)
   driverInf <- QDriverInfo.findById driverId >>= fromMaybeM DriverInfoNotFound
   when (driverInf.blocked) $ throwError DriverAccountAlreadyBlocked
   QDriverInfo.updateDynamicBlockedState driverId req.blockReason req.blockTimeInHours dashboardUserName True
@@ -490,8 +492,9 @@ recordPayment isExempted merchantShortId opCity reqDriverId requestorId = do
 
 ---------------------------------------------------------------------
 unblockDriver :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Text -> Flow APISuccess
-unblockDriver merchantShortId _ reqDriverId dashboardUserName = do
+unblockDriver merchantShortId opCity reqDriverId dashboardUserName = do
   merchant <- findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
 
   let driverId = cast @Common.Driver @DP.Driver reqDriverId
   let personId = cast @Common.Driver @DP.Person reqDriverId
@@ -499,7 +502,7 @@ unblockDriver merchantShortId _ reqDriverId dashboardUserName = do
 
   -- merchant access checking
   let merchantId = driver.merchantId
-  unless (merchant.id == merchantId) $ throwError (PersonDoesNotExist personId.getId)
+  unless (merchant.id == merchantId && merchantOpCityId == driver.merchantOperatingCityId) $ throwError (PersonDoesNotExist personId.getId)
 
   driverInf <- QDriverInfo.findById driverId >>= fromMaybeM DriverInfoNotFound
   when driverInf.blocked (void $ QDriverInfo.updateBlockedState driverId False (Just dashboardUserName))
@@ -669,7 +672,7 @@ deleteDriver merchantShortId _ = DeleteDriver.deleteDriver merchantShortId . cas
 
 ---------------------------------------------------------------------
 unlinkVehicle :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Flow APISuccess
-unlinkVehicle merchantShortId _ reqDriverId = do
+unlinkVehicle merchantShortId opCity reqDriverId = do
   merchant <- findMerchantByShortId merchantShortId
 
   let driverId = cast @Common.Driver @DP.Driver reqDriverId
@@ -677,9 +680,9 @@ unlinkVehicle merchantShortId _ reqDriverId = do
   driver <-
     QPerson.findById personId
       >>= fromMaybeM (PersonDoesNotExist personId.getId)
-
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   -- merchant access checking
-  unless (merchant.id == driver.merchantId) $ throwError (PersonDoesNotExist personId.getId)
+  unless (merchant.id == driver.merchantId && merchantOpCityId == driver.merchantOperatingCityId) $ throwError (PersonDoesNotExist personId.getId)
 
   DomainRC.deactivateCurrentRC personId
   QVehicle.deleteById personId
@@ -689,17 +692,17 @@ unlinkVehicle merchantShortId _ reqDriverId = do
 
 ---------------------------------------------------------------------
 updatePhoneNumber :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Common.UpdatePhoneNumberReq -> Flow APISuccess
-updatePhoneNumber merchantShortId _ reqDriverId req = do
+updatePhoneNumber merchantShortId opCity reqDriverId req = do
   runRequestValidation Common.validateUpdatePhoneNumberReq req
   merchant <- findMerchantByShortId merchantShortId
-
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   let personId = cast @Common.Driver @DP.Person reqDriverId
   driver <-
     QPerson.findById personId
       >>= fromMaybeM (PersonDoesNotExist personId.getId)
 
   -- merchant access checking
-  unless (merchant.id == driver.merchantId) $ throwError (PersonDoesNotExist personId.getId)
+  unless (merchant.id == driver.merchantId && merchantOpCityId == driver.merchantOperatingCityId) $ throwError (PersonDoesNotExist personId.getId)
   phoneNumberHash <- getDbHash req.newPhoneNumber
   mbLinkedPerson <- QPerson.findByMobileNumberAndMerchant req.newCountryCode phoneNumberHash merchant.id
   whenJust mbLinkedPerson $ \linkedPerson -> do
@@ -734,7 +737,7 @@ addVehicle merchantShortId opCity reqDriverId req = do
 
   -- merchant access checking
   let merchantId = driver.merchantId
-  unless (merchant.id == merchantId) $ throwError (PersonDoesNotExist personId.getId)
+  unless (merchant.id == merchantId && merchantOpCityId == driver.merchantOperatingCityId) $ throwError (PersonDoesNotExist personId.getId)
 
   mbLinkedVehicle <- QVehicle.findById personId
   whenJust mbLinkedVehicle $ \_ -> throwError VehicleAlreadyLinked
@@ -764,7 +767,7 @@ addVehicleForFleet merchantShortId opCity reqDriverPhoneNo mbMobileCountryCode f
   driver <- QPerson.findByMobileNumberAndMerchant mobileCountryCode phoneNumberHash merchant.id >>= fromMaybeM (DriverNotFound reqDriverPhoneNo)
   -- merchant access checking
   let merchantId = driver.merchantId
-  unless (merchant.id == merchantId) $ throwError (PersonDoesNotExist driver.id.getId)
+  unless (merchant.id == merchantId && merchantOpCityId == driver.merchantOperatingCityId) $ throwError (PersonDoesNotExist driver.id.getId)
   vehicle <- RCQuery.findLastVehicleRCWrapper req.registrationNo
   whenJust vehicle $ \veh -> when (isJust veh.fleetOwnerId && veh.fleetOwnerId /= Just fleetOwnerId) $ throwError VehicleBelongsToAnotherFleet
   Redis.set (DomainRC.makeFleetOwnerKey req.registrationNo) fleetOwnerId -- setting this value here , so while creation of creation of vehicle we can add fleet owner id
@@ -784,7 +787,7 @@ setVehicleDriverRcStatusForFleet merchantShortId opCity reqDriverId fleetOwnerId
   when (isNothing isFleetDriver) $ throwError (InvalidRequest "Driver is not the  part of this fleet")
   -- merchant access checking
   let merchantId = driver.merchantId
-  unless (merchant.id == merchantId) $ throwError (PersonDoesNotExist personId.getId)
+  unless (merchant.id == merchantId && merchantOpCityId == driver.merchantOperatingCityId) $ throwError (PersonDoesNotExist personId.getId)
   vehicle <- RCQuery.findLastVehicleRCWrapper req.rcNo >>= fromMaybeM (VehicleDoesNotExist req.rcNo)
   unless (isJust vehicle.fleetOwnerId && vehicle.fleetOwnerId == Just fleetOwnerId) $ throwError (FleetOwnerVehicleMismatchError fleetOwnerId)
   Redis.set (DomainRC.makeFleetOwnerKey req.rcNo) fleetOwnerId
@@ -1057,15 +1060,15 @@ convertToDriverAPIEntity DP.Person {..} =
 
 ---------------------------------------------------------------------
 updateDriverName :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Common.UpdateDriverNameReq -> Flow APISuccess
-updateDriverName merchantShortId _ reqDriverId req = do
+updateDriverName merchantShortId opCity reqDriverId req = do
   runRequestValidation Common.validateUpdateDriverNameReq req
   merchant <- findMerchantByShortId merchantShortId
-
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   let personId = cast @Common.Driver @DP.Person reqDriverId
   driver <- B.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
 
   -- merchant access checking
-  unless (merchant.id == driver.merchantId) $ throwError (PersonDoesNotExist personId.getId)
+  unless (merchant.id == driver.merchantId && merchantOpCityId == driver.merchantOperatingCityId) $ throwError (PersonDoesNotExist personId.getId)
   -- empty string in request condsidered as Nothing in db, Nothing in request is not affect db value
   let updDriver =
         driver{firstName = req.firstName,
@@ -1080,15 +1083,15 @@ updateDriverName merchantShortId _ reqDriverId req = do
 
 ---------------------------------------------------------------------
 unlinkDL :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Flow APISuccess
-unlinkDL merchantShortId _ driverId = do
+unlinkDL merchantShortId opCity driverId = do
   merchant <- findMerchantByShortId merchantShortId
-
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   let driverId_ = cast @Common.Driver @DP.Driver driverId
   let personId = cast @Common.Driver @DP.Person driverId
 
   driver <- B.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   -- merchant access checking
-  unless (merchant.id == driver.merchantId) $ throwError (PersonDoesNotExist personId.getId)
+  unless (merchant.id == driver.merchantId && merchantOpCityId == driver.merchantOperatingCityId) $ throwError (PersonDoesNotExist personId.getId)
 
   QDriverLicense.deleteByDriverId personId
   QDriverInfo.updateEnabledVerifiedState driverId_ False False
@@ -1123,7 +1126,7 @@ endRCAssociation merchantShortId opCity reqDriverId = do
 
   driver <- B.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   -- merchant access checking
-  unless (merchant.id == driver.merchantId) $ throwError (PersonDoesNotExist personId.getId)
+  unless (merchant.id == driver.merchantId && merchantOpCityId == driver.merchantOperatingCityId) $ throwError (PersonDoesNotExist personId.getId)
 
   associations <- QRCAssociation.findAllLinkedByDriverId personId
   mVehicleRCs <- RCQuery.findById `mapM` ((.rcId) <$> associations)
@@ -1146,7 +1149,7 @@ setRCStatus merchantShortId opCity reqDriverId Common.RCStatusReq {..} = do
   let personId = cast @Common.Driver @DP.Person reqDriverId
   driver <- B.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   -- merchant access checking
-  unless (merchant.id == driver.merchantId) $ throwError (PersonDoesNotExist personId.getId)
+  unless (merchant.id == driver.merchantId && merchantOpCityId == driver.merchantOperatingCityId) $ throwError (PersonDoesNotExist personId.getId)
   DomainRC.linkRCStatus (personId, merchant.id, merchantOpCityId) (DomainRC.RCStatusReq {..})
 
 deleteRC :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Common.DeleteRCReq -> Flow APISuccess
@@ -1156,7 +1159,7 @@ deleteRC merchantShortId opCity reqDriverId Common.DeleteRCReq {..} = do
   let personId = cast @Common.Driver @DP.Person reqDriverId
   driver <- B.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   -- merchant access checking
-  unless (merchant.id == driver.merchantId) $ throwError (PersonDoesNotExist personId.getId)
+  unless (merchant.id == driver.merchantId && merchantOpCityId == driver.merchantOperatingCityId) $ throwError (PersonDoesNotExist personId.getId)
 
   DomainRC.deleteRC (personId, merchant.id, merchantOpCityId) (DomainRC.DeleteRCReq {..}) False
 
@@ -1166,7 +1169,7 @@ getPaymentHistory merchantShortId opCity driverId invoicePaymentMode limit offse
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   let personId = cast @Common.Driver @DP.Person driverId
   driver <- B.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
-  unless (merchant.id == driver.merchantId) $ throwError (PersonDoesNotExist personId.getId)
+  unless (merchant.id == driver.merchantId && merchantOpCityId == driver.merchantOperatingCityId) $ throwError (PersonDoesNotExist personId.getId)
   Driver.getDriverPaymentsHistoryV2 (personId, merchant.id, merchantOpCityId) invoicePaymentMode limit offset
 
 getPaymentHistoryEntityDetails :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Id INV.Invoice -> Flow Driver.HistoryEntryDetailsEntityV2
@@ -1175,16 +1178,17 @@ getPaymentHistoryEntityDetails merchantShortId opCity driverId invoiceId = do
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   let personId = cast @Common.Driver @DP.Person driverId
   driver <- B.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
-  unless (merchant.id == driver.merchantId) $ throwError (PersonDoesNotExist personId.getId)
+  unless (merchant.id == driver.merchantId && merchantOpCityId == driver.merchantOperatingCityId) $ throwError (PersonDoesNotExist personId.getId)
   Driver.getHistoryEntryDetailsEntityV2 (personId, merchant.id, merchantOpCityId) invoiceId.getId
 
 updateSubscriptionDriverFeeAndInvoice :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Common.SubscriptionDriverFeesAndInvoicesToUpdate -> Flow Common.SubscriptionDriverFeesAndInvoicesToUpdate
-updateSubscriptionDriverFeeAndInvoice merchantShortId _ driverId Common.SubscriptionDriverFeesAndInvoicesToUpdate {..} = do
+updateSubscriptionDriverFeeAndInvoice merchantShortId opCity driverId Common.SubscriptionDriverFeesAndInvoicesToUpdate {..} = do
   merchant <- findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   now <- getCurrentTime
   let personId = cast @Common.Driver @DP.Person driverId
   driver <- B.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
-  unless (merchant.id == driver.merchantId) $ throwError (PersonDoesNotExist personId.getId)
+  unless (merchant.id == driver.merchantId && merchantOpCityId == driver.merchantOperatingCityId) $ throwError (PersonDoesNotExist personId.getId)
   maybe (pure ()) (`QDriverInfo.updateSubscription` personId) subscribed
   dueDriverFee <- QDF.findAllPendingAndDueDriverFeeByDriverId personId
   let invoicesDataToUpdate =
@@ -1520,7 +1524,7 @@ sendSmsToDriver merchantShortId opCity driverId volunteerId _req@SendSmsReq {..}
   let personId = cast @Common.Driver @DP.Person driverId
   driver <- B.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   -- merchant access check
-  unless (merchant.id == driver.merchantId) $ throwError (PersonDoesNotExist personId.getId)
+  unless (merchant.id == driver.merchantId && merchantOpCityId == driver.merchantOperatingCityId) $ throwError (PersonDoesNotExist personId.getId)
   smsCfg <- asks (.smsCfg)
   mobileNumber <- mapM decrypt driver.mobileNumber >>= fromMaybeM (PersonFieldNotPresent "mobileNumber")
   countryCode <- driver.mobileCountryCode & fromMaybeM (PersonFieldNotPresent "mobileCountryCode")

@@ -35,7 +35,7 @@ import qualified Domain.Types.Driver.GoHomeFeature.DriverGoHomeRequest as DDGR
 import Domain.Types.DriverInformation
 import qualified Domain.Types.LocationMapping as DLM
 import Domain.Types.Merchant
-import Domain.Types.Merchant.MerchantOperatingCity
+import Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import Domain.Types.Person
 import Domain.Types.Ride as DDR
 import Domain.Types.Ride as DR
@@ -345,7 +345,8 @@ instance BeamBackend.HasSqlValueSyntax be String => BeamBackend.HasSqlValueSynta
 
 findAllRideItems ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
-  Id Merchant ->
+  Merchant ->
+  DMOC.MerchantOperatingCity ->
   Int ->
   Int ->
   Maybe Common.BookingStatus ->
@@ -357,7 +358,7 @@ findAllRideItems ::
   Maybe UTCTime ->
   Maybe UTCTime ->
   m [RideItem]
-findAllRideItems merchantId limitVal offsetVal mbBookingStatus mbRideShortId mbCustomerPhoneDBHash mbDriverPhoneDBHash mbFareDiff now mbFrom mbTo = do
+findAllRideItems merchant opCity limitVal offsetVal mbBookingStatus mbRideShortId mbCustomerPhoneDBHash mbDriverPhoneDBHash mbFareDiff now mbFrom mbTo = do
   dbConf <- getMasterBeamConfig
   res <- L.runDB dbConf $
     L.findRows $
@@ -366,7 +367,8 @@ findAllRideItems merchantId limitVal offsetVal mbBookingStatus mbRideShortId mbC
           B.offset_ (fromIntegral offsetVal) $
             B.filter_'
               ( \(booking, ride, rideDetails, riderDetails) ->
-                  booking.providerId B.==?. B.val_ (getId merchantId)
+                  booking.providerId B.==?. B.val_ (getId merchant.id)
+                    B.&&?. (booking.merchantOperatingCityId B.==?. B.val_ (Just $ getId opCity.id) B.||?. ((booking.merchantOperatingCityId B.==?. B.val_ Nothing) B.&&?. B.sqlBool_ (B.val_ (merchant.city == opCity.city))))
                     B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\rideShortId -> ride.shortId B.==?. B.val_ (getShortId rideShortId)) mbRideShortId
                     B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\hash -> riderDetails.mobileNumberHash B.==?. B.val_ hash) mbCustomerPhoneDBHash
                     B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\hash -> rideDetails.driverNumberHash B.==?. B.val_ (Just hash)) mbDriverPhoneDBHash
@@ -424,16 +426,25 @@ data StuckRideItem = StuckRideItem
     driverActive :: Bool
   }
 
-findStuckRideItems :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Merchant -> [Id Booking] -> UTCTime -> m [StuckRideItem]
-findStuckRideItems (Id merchantId) bookingIds now = do
+findStuckRideItems :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Merchant -> DMOC.MerchantOperatingCity -> [Id Booking] -> UTCTime -> m [StuckRideItem]
+findStuckRideItems merchant opCity bookingIds now = do
   let now6HrBefore = addUTCTime (- (6 * 60 * 60) :: NominalDiffTime) now
-      bookingSeCondition =
+      bookingSeConditionWithCity =
         [ Se.And
-            [ Se.Is BeamB.providerId $ Se.Eq merchantId,
+            [ Se.Is BeamB.providerId $ Se.Eq merchant.id.getId,
+              Se.Is BeamB.merchantOperatingCityId (Se.Eq $ Just opCity.id.getId),
               Se.Is BeamB.id $ Se.In $ getId <$> bookingIds
             ]
         ]
-  bookings <- findAllBookingsWithSeConditions bookingSeCondition
+      bookingSeConditionWithoutCity =
+        [ Se.And
+            [ Se.Is BeamB.providerId $ Se.Eq merchant.id.getId,
+              Se.Is BeamB.merchantOperatingCityId (Se.Eq Nothing),
+              Se.Is BeamB.id $ Se.In $ getId <$> bookingIds
+            ]
+          | merchant.city == opCity.city
+        ]
+  bookings <- findAllBookingsWithSeConditions (bookingSeConditionWithCity <> bookingSeConditionWithoutCity)
   rides <-
     findAllWithKV
       [ Se.And
