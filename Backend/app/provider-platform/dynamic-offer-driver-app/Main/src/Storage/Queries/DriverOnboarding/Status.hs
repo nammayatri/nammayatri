@@ -23,6 +23,7 @@ import qualified Domain.Types.DriverOnboarding.IdfyVerification as IV
 import qualified Domain.Types.DriverOnboarding.Image as Image
 import Domain.Types.DriverOnboarding.VehicleRegistrationCertificate (VehicleRegistrationCertificate)
 import Domain.Types.Merchant (Merchant)
+import qualified Domain.Types.Merchant.MerchantOperatingCity as CQMOC
 import Domain.Types.Person
 import qualified EulerHS.Language as L
 import qualified EulerHS.Prelude as Prelude
@@ -68,8 +69,8 @@ imagesAggTableCTEbyDoctype imageType' = do
               B.all_ (BeamCommon.image BeamCommon.atlasDB)
   pure (Prelude.fromRight [] resp)
 
-fetchDriverDocsInfo :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Merchant -> Maybe (NonEmpty (Id Driver)) -> m [DriverDocsInfo]
-fetchDriverDocsInfo merchantId' mbDriverIds = do
+fetchDriverDocsInfo :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Merchant -> CQMOC.MerchantOperatingCity -> Maybe (NonEmpty (Id Driver)) -> m [DriverDocsInfo]
+fetchDriverDocsInfo merchantId' opCity mbDriverIds = do
   dbConf <- getMasterBeamConfig
   res <- L.runDB dbConf $
     L.findRows $
@@ -98,7 +99,7 @@ fetchDriverDocsInfo merchantId' mbDriverIds = do
   imagesCountVehReg <- imagesAggTableCTEbyDoctype Image.VehicleRegistrationCertificate
   let resAndImageCount = foldl' (joinResAndLic imagesCountLic) [] resDom
       resImageAndVehCount = foldl' (joinResAndVeh imagesCountVehReg) [] resAndImageCount
-      driverDocs' = filter (\(p, _, _, _, _, _, _, _, _) -> p.merchantId == merchantId' && maybe True (\dIds -> (getId p.id) `elem` (getId <$> toList dIds)) mbDriverIds) resImageAndVehCount
+      driverDocs' = filter (\(p, _, _, _, _, _, _, _, _) -> p.merchantId == merchantId'.id && (p.merchantOperatingCityId == opCity.id || opCity.city == merchantId'.city) && maybe True (\dIds -> (getId p.id) `elem` (getId <$> toList dIds)) mbDriverIds) resImageAndVehCount
       driverDocs = map (\(p, dl, idfy, drc, vc, idfy_, di, lic, veh) -> (p, dl, idfy, drc, vc, idfy_, di, snd <$> lic, snd <$> veh)) driverDocs'
   pure $ map mkDriverDocsInfo driverDocs
   where

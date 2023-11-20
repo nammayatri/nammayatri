@@ -117,7 +117,7 @@ login ::
   m LoginRes
 login LoginReq {..} = do
   merchant <- QMerchant.findByShortId merchantId >>= fromMaybeM (MerchantDoesNotExist merchantId.getShortId)
-  city' <- flip fromMaybe city <$> getCity merchantId
+  let city' = fromMaybe merchant.defaultOperatingCity city
   merchantServerAccessCheck merchant
   email_ <- email & fromMaybeM (InvalidRequest "Email cannot be empty when login type is email")
   person <- QP.findByEmailAndPassword email_ password >>= fromMaybeM (PersonDoesNotExist email_)
@@ -209,7 +209,7 @@ enable2fa ::
 enable2fa Enable2FAReq {..} = do
   person <- QP.findByEmailAndPassword email password >>= fromMaybeM (PersonDoesNotExist email)
   merchant <- QMerchant.findByShortId merchantId >>= fromMaybeM (MerchantDoesNotExist merchantId.getShortId)
-  city' <- flip fromMaybe city <$> getCity merchantId
+  let city' = fromMaybe merchant.defaultOperatingCity city
   _merchantAccess <- QAccess.findByPersonIdAndMerchantIdAndCity person.id merchant.id city' >>= fromMaybeM AccessDenied
   key <- L.runIO Utils.generateSecretKey
   Esq.runTransaction $
@@ -300,7 +300,7 @@ registerFleetOwner req = do
     QMerchant.findByShortId req.merchantId
       >>= fromMaybeM (MerchantDoesNotExist req.merchantId.getShortId)
   merchantServerAccessCheck merchant
-  city' <- flip fromMaybe req.city <$> getCity req.merchantId
+  let city' = fromMaybe merchant.defaultOperatingCity req.city
   merchantAccess <- DP.buildMerchantAccess fleetOwner.id merchant.id merchant.shortId city'
   Esq.runTransaction $ do
     QP.create fleetOwner
@@ -334,6 +334,3 @@ validateFleetOwner FleetRegisterReq {..} =
       validateField "mobileNumber" mobileNumber P.mobileNumber,
       validateField "mobileCountryCode" mobileCountryCode P.mobileCountryCode
     ]
-
-getCity :: (EsqDBFlow m r) => ShortId DMerchant.Merchant -> m City.City
-getCity merchantId = QMerchant.findByShortId merchantId >>= fmap (.defaultOperatingCity) . fromMaybeM (MerchantNotFound merchantId.getShortId)

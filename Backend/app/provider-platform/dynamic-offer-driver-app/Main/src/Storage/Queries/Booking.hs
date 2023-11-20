@@ -23,6 +23,7 @@ import Domain.Types.DriverQuote as DDQ
 import qualified Domain.Types.Location as DL
 import qualified Domain.Types.LocationMapping as DLM
 import Domain.Types.Merchant
+import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import Domain.Types.RiderDetails (RiderDetails)
 import qualified Domain.Types.SearchTry as DST
 import EulerHS.Prelude (whenNothingM_)
@@ -91,18 +92,41 @@ updateSpecialZoneOtpCode bookingId specialZoneOtpCode = do
     [Se.Set BeamB.specialZoneOtpCode $ Just specialZoneOtpCode, Se.Set BeamB.updatedAt now]
     [Se.Is BeamB.id (Se.Eq $ getId bookingId)]
 
-findStuckBookings :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Merchant -> [Id Booking] -> UTCTime -> m [Id Booking]
-findStuckBookings (Id merchantId) bookingIds now = do
+findStuckBookings ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  Merchant ->
+  DMOC.MerchantOperatingCity ->
+  [Id Booking] ->
+  UTCTime ->
+  m [Id Booking]
+findStuckBookings merchant opCity bookingIds now = do
   let updatedTimestamp = addUTCTime (- (6 * 60 * 60)) now
-  (Domain.Types.Booking.id <$>)
-    <$> findAllWithDb
-      [ Se.And
-          [ Se.Is BeamB.providerId (Se.Eq merchantId),
-            Se.Is BeamB.id (Se.In (getId <$> bookingIds)),
-            Se.Is BeamB.status (Se.In [NEW, TRIP_ASSIGNED]),
-            Se.Is BeamB.createdAt (Se.LessThanOrEq updatedTimestamp)
-          ]
-      ]
+  bookingWithCity <-
+    (Domain.Types.Booking.id <$>)
+      <$> findAllWithDb
+        [ Se.And
+            [ Se.Is BeamB.providerId (Se.Eq merchant.id.getId),
+              Se.Is BeamB.merchantOperatingCityId (Se.Eq $ Just opCity.id.getId),
+              Se.Is BeamB.id (Se.In (getId <$> bookingIds)),
+              Se.Is BeamB.status (Se.In [NEW, TRIP_ASSIGNED]),
+              Se.Is BeamB.createdAt (Se.LessThanOrEq updatedTimestamp)
+            ]
+        ]
+  bookingWithoutCity <-
+    if merchant.city == opCity.city
+      then
+        (Domain.Types.Booking.id <$>)
+          <$> findAllWithDb
+            [ Se.And
+                [ Se.Is BeamB.providerId (Se.Eq merchant.id.getId),
+                  Se.Is BeamB.merchantOperatingCityId (Se.Eq Nothing),
+                  Se.Is BeamB.id (Se.In (getId <$> bookingIds)),
+                  Se.Is BeamB.status (Se.In [NEW, TRIP_ASSIGNED]),
+                  Se.Is BeamB.createdAt (Se.LessThanOrEq updatedTimestamp)
+                ]
+            ]
+      else pure []
+  pure (bookingWithCity <> bookingWithoutCity)
 
 findBookingBySpecialZoneOTP :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Merchant -> Text -> UTCTime -> Int -> m (Maybe Booking)
 findBookingBySpecialZoneOTP merchantId otpCode now specialZoneBookingOtpExpiry = do
