@@ -1110,3 +1110,4 @@ getEN stringKey =
         DOWNLOAD_NAMMA_YATRI _-> "Download Namma Yatri"
         ENTER_CODE -> "Enter Code"
         COMPLETE_REGISTRATION -> "Complete Registration"
+        CANT_FIND_OPTION -> "Can't find option"

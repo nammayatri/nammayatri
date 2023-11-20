@@ -9,6 +9,9 @@
 
 package in.juspay.mobility.app;
 
+import static android.Manifest.permission.CAMERA;
+import static android.Manifest.permission.READ_EXTERNAL_STORAGE;
+import static android.Manifest.permission.WRITE_EXTERNAL_STORAGE;
 import static android.app.Activity.RESULT_OK;
 import static androidx.core.app.ActivityCompat.startIntentSenderForResult;
 
@@ -28,6 +31,7 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.RemoteException;
+import android.provider.MediaStore;
 import android.text.Html;
 import android.util.Log;
 import android.view.Gravity;
@@ -37,9 +41,12 @@ import android.webkit.JavascriptInterface;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
+import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
+import androidx.core.content.FileProvider;
 import androidx.viewpager2.widget.ViewPager2;
 
 import com.android.installreferrer.api.InstallReferrerClient;
@@ -66,15 +73,29 @@ import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.listeners.You
 import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.options.IFramePlayerOptions;
 import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.views.YouTubePlayerView;
 import com.pierfrancescosoffritti.androidyoutubeplayer.core.ui.DefaultPlayerUiController;
+import com.theartofdev.edmodo.cropper.CropImage;
 
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.io.BufferedInputStream;
+import java.io.BufferedReader;
+import java.io.DataOutputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
+import java.util.UUID;
 
 import in.juspay.hyper.bridge.HyperBridge;
 import in.juspay.hyper.core.BridgeComponents;
@@ -85,13 +106,16 @@ import in.juspay.mobility.app.callbacks.CallBack;
 import in.juspay.mobility.app.carousel.VPAdapter;
 import in.juspay.mobility.app.carousel.ViewPagerItem;
 
+
 public class MobilityAppBridge extends HyperBridge {
 
     // Log Tags
+    private static final String LOG_TAG = "MobilityAppBridge";
     private static final String CHATS = "CHATS";
     private static final String META_LOG = "META_LOG";
     private static final String CALLBACK = "CALLBACK";
     private static final String UTILS = "UTILS";
+    private static final String OVERRIDE = "OVERRIDE";
 
     private static final String REFERRER = "REFERRER";
     private final ArrayList<ViewPagerItem> viewPagerItemArrayList = new ArrayList<>();
@@ -102,10 +126,13 @@ public class MobilityAppBridge extends HyperBridge {
     protected static String storeChatMessageCallBack = null;
     public static String storeCallBackOpenChatScreen = null;
     public static String storeDetectPhoneNumbersCallBack = null;
+    private String storeImageUploadCallBack = null;
+    private String storeUploadMultiPartCallBack = null;
 
 
     // Permission request Code
     private static final int CREDENTIAL_PICKER_REQUEST = 74;
+
 
     public static YouTubePlayerView youTubePlayerView;
     public static YouTubePlayer youtubePlayer;
@@ -128,7 +155,7 @@ public class MobilityAppBridge extends HyperBridge {
 
         @Override
         public void imageUploadCallBack(String encImage, String filename, String filePath) {
-            Log.i(CALLBACK, "Not required");
+            callImageUploadCallBack(encImage, filename, filePath);
         }
 
         @Override
@@ -156,6 +183,7 @@ public class MobilityAppBridge extends HyperBridge {
         InAppNotification.registerCallback(callBack);
         RemoteAssetsDownloader.registerCallback(callBack);
         traceElements = new HashMap<>();
+        Utils.registerCallback(callBack);
         clevertapDefaultInstance = CleverTapAPI.getDefaultInstance(bridgeComponents.getContext());
     }
 
@@ -185,6 +213,8 @@ public class MobilityAppBridge extends HyperBridge {
         ChatService.deRegisterCallback(callBack);
         InAppNotification.deRegisterCallBack(callBack);
         RemoteAssetsDownloader.deRegisterCallback(callBack);
+        Utils.deRegisterCallback(callBack);
+        storeImageUploadCallBack = null;
     }
 
     // region Store And Trigger CallBack
@@ -252,6 +282,28 @@ public class MobilityAppBridge extends HyperBridge {
 
     public void callInAppNotificationCallBack(String onTapAction) {
         String javascript = String.format(Locale.ENGLISH, "window.callUICallback(\"%s\");", onTapAction);
+        bridgeComponents.getJsCallback().addJsToWebView(javascript);
+    }
+
+    @JavascriptInterface
+    public void storeCallBackImageUpload(String callback) {
+        storeImageUploadCallBack = callback;
+    }
+
+    public void callImageUploadCallBack(String stringImage, String imageName, String imagePath) {
+        String javascript = String.format(Locale.ENGLISH, "window.callUICallback('%s','%s','%s','%s');",
+                storeImageUploadCallBack, stringImage, imageName, imagePath);
+        bridgeComponents.getJsCallback().addJsToWebView(javascript);
+    }
+
+    @JavascriptInterface
+    public void storeCallBackUploadMultiPartData(String callback){
+        storeUploadMultiPartCallBack = callback;
+    }
+
+    public void callUploadMultiPartCallBack(String fileType, String fileId) {
+        String javascript = String.format(Locale.ENGLISH, "window.callUICallback('%s','%s','%s');",
+                storeUploadMultiPartCallBack, fileType, fileId);
         bridgeComponents.getJsCallback().addJsToWebView(javascript);
     }
     // endregion
@@ -933,24 +985,102 @@ public class MobilityAppBridge extends HyperBridge {
         bridgeComponents.getContext().startActivity(intent);
     }
 
-    // region Override functions
-    @Override
-    public boolean onActivityResult(int requestCode, int resultCode, Intent data) {
-        if (requestCode == CREDENTIAL_PICKER_REQUEST) {
-            if (resultCode == RESULT_OK) {
-                Credential credentials = data.getParcelableExtra(Credential.EXTRA_KEY);
-                String selectedNumber = credentials.getId().substring(3);
-                String javascript = String.format(Locale.ENGLISH, "window.callUICallback('%s','%s');",
-                        storeDetectPhoneNumbersCallBack, selectedNumber); //mobile_number
-                bridgeComponents.getJsCallback().addJsToWebView(javascript);
-            }
+    @JavascriptInterface
+    public void clearFocus(String id) {
+        if (bridgeComponents.getActivity() != null) {
+            ExecutorManager.runOnMainThread(() -> bridgeComponents.getActivity().findViewById(Integer.parseInt(id)).clearFocus());
         }
-        return super.onActivityResult(requestCode, resultCode, data);
+    }
+
+    @JavascriptInterface
+    public void uploadMultiPartData(String filePath, String uploadUrl, String fileType) {
+        try {
+            String boundary = UUID.randomUUID().toString();
+
+            URL url = new URL(uploadUrl);
+            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+            connection.setRequestMethod("POST");
+            connection.setDoOutput(true);
+            connection.setUseCaches(false);
+            connection.setRequestProperty("Content-Type", "multipart/form-data; boundary=" + boundary);
+            String token = KeyValueStore.read(bridgeComponents.getContext(), bridgeComponents.getSdkName(),"REGISTERATION_TOKEN", "__failed" );
+            connection.setRequestProperty("token", token);
+
+            File file = new File(filePath);
+            String fileName = file.getName();
+            DataOutputStream outputStream = new DataOutputStream(connection.getOutputStream());
+
+            outputStream.writeBytes("--" + boundary + "\r\n");
+            outputStream.writeBytes(("Content-Disposition: form-data; name=\"file\"; filename=\"" + fileName + "\"" + "\r\n"));
+            if (fileType.equals("Image"))
+                outputStream.writeBytes("Content-Type: image/jpeg\r\n");
+            else if (fileType.equals("Audio"))
+                outputStream.writeBytes("Content-Type: audio/mpeg\r\n");
+            outputStream.writeBytes("\r\n");
+
+            FileInputStream fileInputStream = new FileInputStream(file);
+            int bytesAvailable = fileInputStream.available();
+            int maxBufferSize = 1024 * 1024;
+            int bufferSize = Math.min(bytesAvailable, maxBufferSize);
+
+            byte[] buffer = new byte[bufferSize];
+            int bytesRead = fileInputStream.read(buffer, 0, bufferSize);
+            while (bytesRead > 0) {
+                outputStream.write(buffer, 0, bufferSize);
+                bytesAvailable = fileInputStream.available();
+                bufferSize = Math.min(bytesAvailable, maxBufferSize);
+                bytesRead = fileInputStream.read(buffer, 0, bufferSize);
+            }
+            outputStream.writeBytes("\r\n");
+            outputStream.writeBytes("--" + boundary + "\r\n");
+
+            outputStream.writeBytes("Content-Disposition: form-data; name=\"fileType\"" + "\r\n");
+            outputStream.writeBytes("Content-Type: application/json" + "\r\n");
+            outputStream.writeBytes("\r\n");
+            outputStream.writeBytes(fileType);
+            outputStream.writeBytes("\r\n");
+            outputStream.writeBytes("--" + boundary + "\r\n" + "--");
+
+            int responseCode = connection.getResponseCode();
+            String res = "";
+            if (responseCode == 200) {
+                StringBuilder s_buffer = new StringBuilder();
+                InputStream is = new BufferedInputStream(connection.getInputStream());
+                BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(is));
+                String inputLine;
+                while ((inputLine = bufferedReader.readLine()) != null) {
+                    s_buffer.append(inputLine);
+                }
+                res = s_buffer.toString();
+                JSONObject jsonObject;
+                try {
+                    jsonObject = new JSONObject(res);
+                    res = jsonObject.getString("fileId");
+                } catch (JSONException e) {
+                    throw new RuntimeException(e);
+                }
+            } else {
+                Toast.makeText(bridgeComponents.getContext(), "Unable to upload image", Toast.LENGTH_SHORT).show();
+            }
+            callUploadMultiPartCallBack(fileType, res);
+        }catch(Exception e){
+            Log.e("UPLOAD_MULTI_PART_DATA" , "error in Upload file: "+e);
+        }
     }
 
     @Override
-    public boolean onRequestPermissionResult(int requestCode, String[] permissions, int[] grantResults) {
-        return super.onRequestPermissionResult(requestCode, permissions, grantResults);
+    public boolean onActivityResult(int requestCode, int resultCode, Intent data) {
+        switch (requestCode) {
+            case CREDENTIAL_PICKER_REQUEST:
+                if (resultCode == RESULT_OK) {
+                    Credential credentials = data.getParcelableExtra(Credential.EXTRA_KEY);
+                    String selectedNumber = credentials.getId().substring(3);
+                    String javascript = String.format(Locale.ENGLISH, "window.callUICallback('%s','%s');",
+                            storeDetectPhoneNumbersCallBack, selectedNumber); //mobile_number
+                    bridgeComponents.getJsCallback().addJsToWebView(javascript);
+                }
+                break;
+        }
+        return super.onActivityResult(requestCode, resultCode, data);
     }
-    // endregion
 }

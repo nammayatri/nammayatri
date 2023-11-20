@@ -10,11 +10,16 @@
 package in.juspay.mobility.common;
 
 import static android.Manifest.permission.ACCESS_FINE_LOCATION;
+import static android.Manifest.permission.CAMERA;
 import static android.Manifest.permission.POST_NOTIFICATIONS;
 import static android.Manifest.permission.READ_EXTERNAL_STORAGE;
 import static android.Manifest.permission.WRITE_EXTERNAL_STORAGE;
+import static android.app.Activity.RESULT_OK;
 import static android.content.Context.MODE_PRIVATE;
 import static android.graphics.Color.rgb;
+
+import static in.juspay.mobility.app.Utils.captureImage;
+import static in.juspay.mobility.app.Utils.encodeImageToBase64;
 
 import android.Manifest;
 import android.animation.Animator;
@@ -142,6 +147,7 @@ import com.google.android.gms.tasks.CancellationTokenSource;
 import com.google.android.gms.tasks.Task;
 import com.google.maps.android.SphericalUtil;
 import com.google.maps.android.data.geojson.GeoJsonLayer;
+import com.theartofdev.edmodo.cropper.CropImage;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -178,6 +184,8 @@ import in.juspay.hyper.core.BridgeComponents;
 import in.juspay.hyper.core.ExecutorManager;
 import in.juspay.hyper.core.JsCallback;
 import in.juspay.hyper.core.JuspayLogger;
+import in.juspay.hypersdk.data.KeyValueStore;
+import in.juspay.mobility.app.services.MobilityCallAPI;
 
 public class MobilityCommonBridge extends HyperBridge {
 
@@ -243,7 +251,11 @@ public class MobilityCommonBridge extends HyperBridge {
     protected String downloadLayout;
     protected int labelTextSize = 30;
 
+    private static final int IMAGE_CAPTURE_REQ_CODE = 101;
 
+    private static final int CREDENTIAL_PICKER_REQUEST = 74;
+    private static final int IMAGE_PERMISSION_REQ_CODE = 4997;
+    private  MediaPlayer mediaPlayer = null;
 
     public MobilityCommonBridge(BridgeComponents bridgeComponents) {
         super(bridgeComponents);
@@ -281,6 +293,8 @@ public class MobilityCommonBridge extends HyperBridge {
         markers = new JSONObject();
         zoneMarkers = new HashMap<>();
         layer = null;
+        if(mediaPlayer != null) mediaPlayer.audioRecorder = null;
+
         if(onGlobalLayoutListener != null && bridgeComponents.getActivity() != null) {
             View parentView = bridgeComponents.getActivity().findViewById(android.R.id.content);
             if(parentView != null) {
@@ -297,6 +311,7 @@ public class MobilityCommonBridge extends HyperBridge {
         storeLocateOnMapCallBack = null;
         storeDashboardCallBack = null;
         userPositionMarker = null;
+        if(mediaPlayer != null) mediaPlayer.audioPlayers = new ArrayList<>();
     }
 
     // region Store and Trigger CallBack
@@ -1274,7 +1289,7 @@ public class MobilityCommonBridge extends HyperBridge {
         });
     }
 
-    @SuppressLint({"UseCompatLoadingForDrawables", "SetTextI18n"})
+    @SuppressLint({"UseCompatLoadingForDrawables", "SetTextI18n", "LongLogTag"})
     protected Bitmap getMarkerBitmapFromView(String locationName, String imageName, String specialLocationTagIcon, MarkerType markerType) {
         Context context = bridgeComponents.getContext();
         @SuppressLint("InflateParams")
@@ -2624,4 +2639,200 @@ public class MobilityCommonBridge extends HyperBridge {
             }
         }
     }
+
+    //region Image Rendering
+    // Deprecated on 5-Jan-2024
+    // Remove once it is not used
+    // Use displayBase64Image instead
+    @JavascriptInterface
+    public void renderBase64Image(String url, String id, boolean fitCenter, String imgScaleType) {
+        renderBase64ImageFile(url.contains("http") ? MobilityCallAPI.callAPI(url, MobilityCallAPI.getBaseHeaders(bridgeComponents.getContext()), null, "GET", false).getResponseBody() : url, id, fitCenter, imgScaleType);
+    }
+
+    // Deprecated on 5-Jan-2024
+    // Remove once it is not used
+    // Use displayBase64Image instead
+    @JavascriptInterface
+    public void renderBase64ImageFile(String base64Image, String id, boolean fitCenter, String imgScaleType) {
+        ExecutorManager.runOnMainThread(() -> {
+            try {
+                if (!base64Image.equals("") && id != null && bridgeComponents.getActivity() != null) {
+                    LinearLayout layout = bridgeComponents.getActivity().findViewById(Integer.parseInt(id));
+                    if (layout != null){
+                        byte[] decodedString = Base64.decode(base64Image, Base64.DEFAULT);
+                        Bitmap decodedByte = BitmapFactory.decodeByteArray(decodedString, 0, decodedString.length);
+                        ImageView imageView = new ImageView(bridgeComponents.getContext());
+                        ViewGroup.LayoutParams layoutParams = new ViewGroup.LayoutParams(layout.getWidth(),layout.getHeight());
+                        imageView.setLayoutParams(layoutParams);
+                        imageView.setImageBitmap(decodedByte);
+                        imageView.setScaleType(getScaleTypes(imgScaleType));
+                        imageView.setAdjustViewBounds(true);
+                        imageView.setClipToOutline(true);
+                        layout.removeAllViews();
+                        layout.addView(imageView);
+                    }
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        });
+    }
+
+    @JavascriptInterface
+    public void displayBase64Image(String configJSONString){
+        try {
+            JSONObject configObj = new JSONObject(configJSONString);
+
+            // parse params
+            String source = configObj.optString("source", "");
+            String id = configObj.optString("id", "");
+            String scaleType = configObj.optString("scaleType", "CENTER_CROP");
+            int inSampleSize = configObj.optInt("inSampleSize", 1);
+
+            // call api to get base64image
+            String base64Image = source.startsWith("http") ? MobilityCallAPI.callAPI(source, MobilityCallAPI.getBaseHeaders(bridgeComponents.getContext()), null, "GET", false).getResponseBody() : source;
+
+            // convert base64Image to imageView
+            ExecutorManager.runOnMainThread(() -> {
+                try {
+                    if (!base64Image.equals("") && id != null && bridgeComponents.getActivity() != null) {
+                        LinearLayout layout = bridgeComponents.getActivity().findViewById(Integer.parseInt(id));
+                        if (layout != null){
+                            byte[] decodedString = Base64.decode(base64Image, Base64.DEFAULT);
+                            BitmapFactory.Options options = new BitmapFactory.Options();
+                            options.inSampleSize = inSampleSize;
+                            Bitmap decodedByte = BitmapFactory.decodeByteArray(decodedString, 0, decodedString.length, options);
+
+                            ImageView imageView = new ImageView(bridgeComponents.getContext());
+                            ViewGroup.LayoutParams layoutParams = new ViewGroup.LayoutParams(layout.getWidth(),layout.getHeight());
+                            imageView.setLayoutParams(layoutParams);
+                            imageView.setImageBitmap(decodedByte);
+                            imageView.setScaleType(getScaleTypes(scaleType));
+                            imageView.setAdjustViewBounds(true);
+                            imageView.setClipToOutline(true);
+
+                            layout.removeAllViews();
+                            layout.addView(imageView);
+                        }
+                    }
+                }catch (Exception e){
+                    e.printStackTrace();
+                }
+            });
+        }catch (Exception e){
+            e.printStackTrace();
+        }
+
+    }
+
+    //region Audio Recorder
+    @JavascriptInterface
+    public void addMediaFile(String viewID, String source, String actionPlayerID, String playIcon, String pauseIcon, String timerID) {
+        if(mediaPlayer == null) mediaPlayer = new MediaPlayer(bridgeComponents);
+        mediaPlayer.addMediaFile(viewID, source, actionPlayerID, playIcon, pauseIcon, timerID);
+    }
+
+    @JavascriptInterface
+    public void addMediaPlayer(String viewID, String source) {
+        if(mediaPlayer == null) mediaPlayer = new MediaPlayer(bridgeComponents);
+        mediaPlayer.addMediaPlayer(viewID, source);
+    }
+
+    @JavascriptInterface
+    public void pauseMediaPlayer() {
+        if(mediaPlayer == null) mediaPlayer = new MediaPlayer(bridgeComponents);
+        mediaPlayer.pauseMediaPlayer();
+    }
+
+    @JavascriptInterface
+    public void removeMediaPlayer() {
+        if(mediaPlayer == null) mediaPlayer = new MediaPlayer(bridgeComponents);
+        mediaPlayer.removeMediaPlayer();
+    }
+
+    @JavascriptInterface
+    public boolean startAudioRecording() {
+        if(mediaPlayer == null) mediaPlayer = new MediaPlayer(bridgeComponents);
+        return mediaPlayer.startAudioRecording();
+    }
+
+    @JavascriptInterface
+    public String stopAudioRecording() {
+        if(mediaPlayer == null) mediaPlayer = new MediaPlayer(bridgeComponents);
+        return mediaPlayer.stopAudioRecording();
+    }
+
+    @JavascriptInterface
+    public String saveAudioFile(String source) throws IOException {
+        if(mediaPlayer == null) mediaPlayer = new MediaPlayer(bridgeComponents);
+        return mediaPlayer.saveAudioFile(source);
+    }
+
+    @JavascriptInterface
+    public void uploadFile() { 
+        if(mediaPlayer == null) mediaPlayer = new MediaPlayer(bridgeComponents);
+        mediaPlayer.uploadFile();
+    }
+
+    
+
+    @Override
+    public boolean onActivityResult(int requestCode, int resultCode, Intent data) {
+        switch (requestCode) {
+            case IMAGE_CAPTURE_REQ_CODE:
+                if (resultCode == RESULT_OK) {
+                    if (bridgeComponents.getActivity() != null) {
+                        if(mediaPlayer != null) mediaPlayer.isUploadPopupOpen = false;
+                        captureImage(data, bridgeComponents.getActivity(), bridgeComponents.getContext());
+                    }
+                } else {
+                    if(mediaPlayer != null) mediaPlayer.isUploadPopupOpen = false;
+                }
+                break;
+            case CropImage.CROP_IMAGE_ACTIVITY_REQUEST_CODE:
+                if (resultCode == RESULT_OK) {
+                    new Thread(() -> encodeImageToBase64(data, bridgeComponents.getContext(), null)).start();
+                } else if (resultCode == CropImage.CROP_IMAGE_ACTIVITY_RESULT_ERROR_CODE) {
+                    CropImage.ActivityResult result = CropImage.getActivityResult(data);
+                    Log.e(OVERRIDE, result.getError().toString());
+                }
+                break;
+        }
+        return super.onActivityResult(requestCode, resultCode, data);
+    }
+
+    @Override
+    public boolean onRequestPermissionResult(int requestCode, String[] permissions, int[] grantResults) {
+        switch (requestCode) {
+            case IMAGE_PERMISSION_REQ_CODE:
+                Context context = bridgeComponents.getContext();
+                if ((ActivityCompat.checkSelfPermission(context, CAMERA) == PackageManager.PERMISSION_GRANTED)) {
+                    if (bridgeComponents.getActivity() != null) {
+                        Intent takePicture = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
+                        String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(new Date());
+                        KeyValueStore.write(context, bridgeComponents.getSdkName(), context.getResources().getString(in.juspay.mobility.app.R.string.TIME_STAMP_FILE_UPLOAD), timeStamp);
+                        Uri photoFile = FileProvider.getUriForFile(context, context.getPackageName() + ".provider", new File(context.getFilesDir(), "IMG_" + timeStamp + ".jpg"));
+                        takePicture.putExtra(MediaStore.EXTRA_OUTPUT, photoFile);
+                        Intent chooseFromFile = new Intent(Intent.ACTION_GET_CONTENT);
+                        chooseFromFile.setType("image/*");
+                        Intent chooser = Intent.createChooser(takePicture, context.getString(R.string.upload_image));
+                        chooser.putExtra(Intent.EXTRA_INITIAL_INTENTS, new Intent[]{chooseFromFile});
+                        bridgeComponents.getActivity().startActivityForResult(chooser, IMAGE_CAPTURE_REQ_CODE, null);
+                    }
+                } else {
+                    Toast.makeText(context, context.getString(R.string.please_allow_permission_to_capture_the_image), Toast.LENGTH_SHORT).show();
+                }
+                break;
+            case MediaPlayerView.AudioRecorder.REQUEST_RECORD_AUDIO_PERMISSION:
+                if (grantResults.length > 0 && grantResults[0] != PackageManager.PERMISSION_GRANTED) {
+                    Toast.makeText(bridgeComponents.getContext(), "Permission Denied", Toast.LENGTH_SHORT).show();
+                }
+                break;
+            default:
+                break;
+        }
+        return super.onRequestPermissionResult(requestCode, permissions, grantResults);
+    }
+
+
 }

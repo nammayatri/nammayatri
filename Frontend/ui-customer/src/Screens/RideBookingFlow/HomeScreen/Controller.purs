@@ -608,6 +608,7 @@ instance loggableAction :: Loggable Action where
       RideCompletedCard.BannerAction act -> case act of 
         Banner.OnClick -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "ride_completed_banner" "banner_on_click"
         Banner.NoAction -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "ride_completed_banner" "banner_no_action"
+      RideCompletedCard.HelpAndSupportAC -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "ride_completed_help_and_support" "help_and_support"
     LoadMessages -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "load_messages"
     KeyboardCallback val -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "key_board_callback"
     NotifyDriverStatusCountDown arg1 arg2 arg3 -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "notify_driver_status_countdown"
@@ -742,6 +743,7 @@ data ScreenOutput = LogoutUser
                   | GoToMyTickets HomeScreenState
                   | RepeatTrip HomeScreenState Trip
                   | ExitToTicketing HomeScreenState
+                  | GoToHelpAndSupport HomeScreenState
 
 data Action = NoAction
             | BackPressed
@@ -1065,6 +1067,8 @@ eval (RideCompletedAC (RideCompletedCard.Support)) state = continue state {props
 
 eval (RideCompletedAC (RideCompletedCard.RideDetails)) state = exit $ RideDetailsScreen state -- TODO needs to fill the data
 
+eval (RideCompletedAC (RideCompletedCard.HelpAndSupportAC)) state = exit $ GoToHelpAndSupport state
+
 ------------------------------- ChatService - Start --------------------------
 
 eval (UpdateMessages message sender timeStamp size) state = do
@@ -1158,7 +1162,7 @@ eval (DriverInfoCardActionController (DriverInfoCardController.MessageDriver)) s
       _ <- pure $ updateLocalStage ChatWithDriver
       _ <- pure $ setValueToLocalNativeStore READ_MESSAGES (show (length state.data.messages))
       let allMessages = getChatMessages FunctionCall
-      continueWithCmd state {data{messages = allMessages}, props {currentStage = ChatWithDriver, sendMessageActive = false, unReadMessages = false, showChatNotification = false, isChatNotificationDismissed = false}} [ do
+      continueWithCmd state {data{messages = allMessages}, props {currentStage = ChatWithDriver, sendMessageActive = false, unReadMessages = false, showChatNotification = false, isChatNotificationDismissed = null allMessages}} [ do
         pure $ (DriverInfoCardActionController (DriverInfoCardController.CollapseBottomSheet))
       ]
   else continueWithCmd state[ do
@@ -1174,7 +1178,7 @@ eval NotificationAnimationEnd state = do
   let isExpanded = state.props.showChatNotification && state.props.chatcallbackInitiated
       areMessagesEmpty = (length (getChatMessages FunctionCall) == 0)
       showNotification = (areMessagesEmpty || state.props.showChatNotification) && state.props.currentStage == RideAccepted && not state.props.isChatNotificationDismissed
-  continue state {props { isNotificationExpanded = isExpanded, showChatNotification = showNotification , removeNotification = not showNotification, enableChatWidget = isExpanded || areMessagesEmpty}}
+  continue state {props { isNotificationExpanded = isExpanded, showChatNotification = showNotification , removeNotification = not showNotification, enableChatWidget = (isExpanded || areMessagesEmpty) && not state.props.isChatNotificationDismissed}}
 
 eval MessageViewAnimationEnd state = do
   continue state {props { removeNotification = not state.props.showChatNotification}}
