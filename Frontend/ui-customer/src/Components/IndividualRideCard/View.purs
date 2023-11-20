@@ -34,11 +34,10 @@ import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(
 import PrestoDOM.List as PrestoList
 import PrestoDOM.Properties (cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
-import Screens.MyRidesScreen.Controller (Action(..)) as Screen
 import Screens.Types (IndividualRideCardState, Stage(..), ZoneType(..))
 import Styles.Colors as Color
 
-view :: forall w .  (Screen.Action  -> Effect Unit) -> IndividualRideCardState -> PrestoDOM (Effect Unit) w
+view :: forall w .  (Action  -> Effect Unit) -> IndividualRideCardState -> PrestoDOM (Effect Unit) w
 view push state =
   relativeLayout
   [ width MATCH_PARENT
@@ -48,7 +47,7 @@ view push state =
   ]
 
 
-shimmerView  :: forall w. (Screen.Action  -> Effect Unit) -> IndividualRideCardState -> PrestoDOM (Effect Unit) w
+shimmerView  :: forall w. (Action  -> Effect Unit) -> IndividualRideCardState -> PrestoDOM (Effect Unit) w
 shimmerView push state =
   linearLayout
   [ height WRAP_CONTENT
@@ -66,7 +65,7 @@ shimmerView push state =
     , viewDetailsAndRepeatRideShimmer state
    ]
 
-cardView :: forall w. (Screen.Action -> Effect Unit) -> IndividualRideCardState -> PrestoDOM (Effect Unit) w
+cardView :: forall w. (Action -> Effect Unit) -> IndividualRideCardState -> PrestoDOM (Effect Unit) w
 cardView push state =
   linearLayout
   [ height WRAP_CONTENT
@@ -85,12 +84,10 @@ cardView push state =
       , cornerRadius 8.0
       , orientation VERTICAL
       , background Color.white900
-      ][  rideDetails push state
+      ]([  rideDetails push state
         , separator
         , sourceAndDestination push
-        , separator
-        , viewDetailsAndRepeatRide push state
-      ]
+      ] <> (if state.optionsVisibility then [separator, viewDetailsAndRepeatRide push state] else []))
    ]
 
 zoneView :: forall w. IndividualRideCardState ->  PrestoDOM (Effect Unit) w
@@ -119,7 +116,7 @@ zoneView state =
      ]
    ]
 
-rideDetails :: forall w. (Screen.Action -> Effect Unit) -> IndividualRideCardState ->  PrestoDOM (Effect Unit) w
+rideDetails :: forall w. (Action -> Effect Unit) -> IndividualRideCardState ->  PrestoDOM (Effect Unit) w
 rideDetails push state =
   linearLayout
   [ height WRAP_CONTENT
@@ -127,7 +124,7 @@ rideDetails push state =
   , orientation HORIZONTAL
   , gravity CENTER_VERTICAL
   , padding $ PaddingHorizontal 16 16
-  , PrestoList.onClickHolder push $ Screen.IndividualRideCardActionController <<< OnClick
+  , PrestoList.onClickHolder push OnClick
   , margin (MarginBottom 20)
   ][  textView
       ([ PrestoList.textHolder "date"
@@ -183,14 +180,14 @@ rideDetails push state =
         ]
     ]
 
-sourceAndDestination :: forall w . (Screen.Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+sourceAndDestination :: forall w . (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 sourceAndDestination push =
   linearLayout
   [ height WRAP_CONTENT
   , width MATCH_PARENT
   , gravity LEFT
   , PrestoList.visibilityHolder "cardVisibility"
-  , PrestoList.onClickHolder push $ Screen.IndividualRideCardActionController <<< OnClick
+  , PrestoList.onClickHolder push OnClick
   , margin $ MarginVertical 20 20
   , padding $ PaddingHorizontal 16 16
   , orientation VERTICAL
@@ -360,7 +357,7 @@ sourceAndDestinationShimmerView state =
     ]
 
 
-viewDetailsAndRepeatRide :: forall w. (Screen.Action  -> Effect Unit) -> IndividualRideCardState -> PrestoDOM (Effect Unit) w
+viewDetailsAndRepeatRide :: forall w. (Action  -> Effect Unit) -> IndividualRideCardState -> PrestoDOM (Effect Unit) w
 viewDetailsAndRepeatRide push state =
   linearLayout
   [ width MATCH_PARENT
@@ -374,7 +371,7 @@ viewDetailsAndRepeatRide push state =
       , accessibility ENABLE
       , color Color.blue900
       , padding $ Padding 26 18 (if state.isSrcServiceable then 50 else 26) 3
-      , PrestoList.onClickHolder push $ Screen.IndividualRideCardActionController <<< OnClick
+      , PrestoList.onClickHolder push OnClick
       ] <> FontStyle.body1 LanguageStyle
     , linearLayout 
       [ width $ V 1
@@ -392,7 +389,7 @@ viewDetailsAndRepeatRide push state =
       , color Color.blue900
       , PrestoList.alphaHolder "alpha"
       , alpha $ if (isLocalStageOn HomeScreen) then 1.0 else 0.5
-      , PrestoList.onClickHolder push $ (if (isLocalStageOn HomeScreen) then Screen.IndividualRideCardActionController <<< RepeatRide else Screen.IndividualRideCardActionController <<< NoAction)
+      , PrestoList.onClickHolder push $ (if (isLocalStageOn HomeScreen) then RepeatRide else NoAction)
       , padding $ PaddingVertical 18 3
       , weight 1.0
       , gravity CENTER

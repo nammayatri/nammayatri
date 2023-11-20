@@ -1,3 +1,12 @@
+/*
+ *  Copyright 2022-23, Juspay India Pvt Ltd
+ *  This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License
+ *  as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program
+ *  is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+ *  or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
+ *  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
+ */
+
 package in.juspay.mobility.app.services;
 
 import android.content.Context;
@@ -6,7 +15,6 @@ import android.content.SharedPreferences;
 import androidx.appcompat.app.AppCompatActivity;
 
 import java.io.BufferedReader;
-import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
@@ -27,18 +35,21 @@ public class MobilityCallAPI {
 
 
     public static MobilityAPIResponse callAPI(String endpoint) {
-        return callAPI(endpoint, null, null, DEFAULT_API_METHOD);
+        return callAPI(endpoint, null, null, DEFAULT_API_METHOD, true);
     }
 
     public static MobilityAPIResponse callAPI(String endpoint, Map<String, String> headers) {
-        return callAPI(endpoint, headers, null, DEFAULT_API_METHOD);
+        return callAPI(endpoint, headers, null, DEFAULT_API_METHOD, true);
     }
 
     public static MobilityAPIResponse callAPI(String endpoint, Map<String, String> headers, String requestBody) {
-        return callAPI(endpoint, headers, requestBody, DEFAULT_API_METHOD);
+        return callAPI(endpoint, headers, requestBody, DEFAULT_API_METHOD, true);
+    }
+    public static MobilityAPIResponse callAPI(String endpoint, Map<String, String> headers, String requestBody, String apiMethod){
+        return callAPI(endpoint, headers, requestBody, apiMethod, true);
     }
 
-    public static MobilityAPIResponse callAPI(String endpoint, Map<String, String> headers, String requestBody, String apiMethod) {
+    public static MobilityAPIResponse callAPI(String endpoint, Map<String, String> headers, String requestBody, String apiMethod, Boolean doOutput) {
         MobilityAPIResponse defaultResp = new MobilityAPIResponse();
         defaultResp.setResponseBody("");
         defaultResp.setStatusCode(-1);
@@ -60,7 +71,7 @@ public class MobilityCallAPI {
                 }
             }
 
-            connection.setDoOutput(true);
+            connection.setDoOutput(doOutput);
 
             if (requestBody != null) {
 

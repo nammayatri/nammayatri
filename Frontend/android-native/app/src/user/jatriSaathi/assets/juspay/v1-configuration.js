@@ -36,7 +36,10 @@ window.getMerchantConfig = function () {
       "PLEASE_ENABLE_LOCATION_PERMISSION",
       "TAXI_FROM_ZONE",
       "GO_TO_ZONE",
-      "MOST_LOVED_APP"
+      "MOST_LOVED_APP",
+      "REPORT_ISSUE_CHAT_PLACEHOLDER",
+      "CALL_SUPPORT_DESCRIPTION",
+      "WE_HOPE_THE_ISSUE_IS_RESOLVED"
     ],
     "isReferralEnabled": "true",
     "showBookingPreference": "false",
@@ -61,6 +64,7 @@ window.getMerchantConfig = function () {
       "link" : getAppLink(window.__OS)
       , "supportMail" :"yatrisathi.support@wb.gov.in"
       , "name" : "Yatri Sathi"
+      , "website" : "https://yatrisathi.in/"
     },
     "customerTip" : {
       "auto" : false,
@@ -140,7 +144,10 @@ window.getMerchantConfig = function () {
       "TO_CATER_YOUR_SPECIFIC_NEEDS" : "To cater to your specific needs, we have customised certain features of Yatri Sathi.",
       "PLEASE_ENABLE_LOCATION_PERMISSION" : "Please enable location permissions for Yatri Sathi from the settings app to start looking for rides.",
       "TAXI_FROM_ZONE" : "from Yatri Sathi Zone",
-      "GO_TO_ZONE" : "Go to Yatri Sathi Zone"
+      "GO_TO_ZONE" : "Go to Yatri Sathi Zone",
+      "REPORT_ISSUE_CHAT_PLACEHOLDER" : "Describe your issue. Yatri Sathi will try to resolve it in under 24 hours.",
+      "CALL_SUPPORT_DESCRIPTION" : "You are about to place a call to Yatri Sathi Support. Do you want to proceed?",
+      "WE_HOPE_THE_ISSUE_IS_RESOLVED" : "ಸಮಸ್ಯೆಯನ್ನು ಪರಿಹರಿಸಲಾಗಿದೆ ಎಂದು ನಾವು ಭಾವಿಸುತ್ತೇವೆ, ಯಾವುದೇ ಪ್ರಶ್ನೆಗಳಿಗೆ yatrisathi.support@wb.gov.in ನಲ್ಲಿ ನಮಗೆ ಬರೆಯಲು ಮುಕ್ತವಾಗಿರಿ."
     },
     "hindiStrings": {
       "ABOUT_APP_DESCRIPTION": "यात्री साथी सवारियों को चालकों से जोड़ने का एक खुला मंच है। ऐप राइडर्स के लिए मीटर रेट के साथ राइड बुक करना सुविधाजनक बनाता है इसलिए न्यूनतम किराया।",
@@ -168,7 +175,10 @@ window.getMerchantConfig = function () {
       "TO_CATER_YOUR_SPECIFIC_NEEDS" : "आपकी विशिष्ट आवश्यकताओं को पूरा करने के लिए, हमने यात्री साथी की कुछ विशेषताओं को अनुकूलित किया है",
       "PLEASE_ENABLE_LOCATION_PERMISSION" : "सवारी की तलाश शुरू करने के लिए कृपया सेटिंग ऐप से यात्री साथी के लिए स्थान अनुमतियां सक्षम करें।",
       "TAXI_FROM_ZONE" : "टैक्सी में सवार हों",
-      "GO_TO_ZONE" : "यात्री साथी जोन पर जाएं" 
+      "GO_TO_ZONE" : "यात्री साथी जोन पर जाएं" ,
+      "REPORT_ISSUE_CHAT_PLACEHOLDER" : "अपने मामले का वर्णन करें। यात्री साथी 24 घंटे के अंदर इसका समाधान करने का प्रयास करेंगे।",
+      "CALL_SUPPORT_DESCRIPTION" : "आप यात्री साथी सहायता को कॉल करने वाले हैं। क्या आपकी आगे बढ़ने की इच्छा है?",
+      "WE_HOPE_THE_ISSUE_IS_RESOLVED" : "हमें उम्मीद है कि समस्या हल हो गई है, किसी भी प्रश्न के लिए बेझिझक हमें yatrisATHi.support@wb.gov.in पर लिखें।"
     },
     "bengaliStrings": {
       "ABOUT_APP_DESCRIPTION": "যাত্রী সাথী হল চালকদের সাথে রাইডারদের সংযোগ করার জন্য একটি উন্মুক্ত প্ল্যাটফর্ম। অ্যাপটি রাইডারদের জন্য মিটার রেট সহ একটি রাইড বুক করা সুবিধাজনক করে তোলে তাই ন্যূনতম ভাড়া।",
@@ -196,7 +206,10 @@ window.getMerchantConfig = function () {
       "TO_CATER_YOUR_SPECIFIC_NEEDS" : "আপনার নির্দিষ্ট চাহিদা মেটাতে আমরা যাত্রী সাথীর কিছু বৈশিষ্ট্য কাস্টমাইজ করেছি",
       "PLEASE_ENABLE_LOCATION_PERMISSION" : "অনুগ্রহ করে সেটিংস অ্যাপ থেকে যাত্রী সাথীর জন্য অবস্থানের অনুমতি সক্ষম করুন যাতে রাইডের খোঁজ শুরু করা যায়।",
       "TAXI_FROM_ZONE" : "চড়ুন",
-      "GO_TO_ZONE" : "যাত্রী সাথী জোনে যান"
+      "GO_TO_ZONE" : "যাত্রী সাথী জোনে যান",
+      "REPORT_ISSUE_CHAT_PLACEHOLDER" : "আপনার সমস্যাটি বর্ণনা. যাত্রী সাথী 24 ঘন্টার মধ্যে এটি সমাধান করার চেষ্টা করবে।",
+      "CALL_SUPPORT_DESCRIPTION" : "আপনি যাত্রী সাথী সমর্থনে একটি কল করতে চলেছেন৷ আপনি কি এগিয়ে যেতে চান?",
+      "WE_HOPE_THE_ISSUE_IS_RESOLVED" : "আমরা আশা করি সমস্যাটি সমাধান হয়ে গেছে, যেকোনো প্রশ্নের জন্য yatrisathi.support@wb.gov.in-এ আমাদের কাছে নির্দ্বিধায় লিখুন।"
     },
     "languageList": [{
       "name": "English",

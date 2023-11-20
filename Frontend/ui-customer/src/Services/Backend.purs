@@ -1025,3 +1025,56 @@ getTicketStatus shortId = do
   withAPIResult (EP.ticketStatus shortId) unwrapResponse $ callAPI headers (GetTicketStatusReq shortId)
   where
   unwrapResponse x = x
+ 
+
+----------------------------------- fetchIssueList ----------------------------------------
+
+fetchIssueListBT :: String -> FlowBT String FetchIssueListResp
+fetchIssueListBT language = do
+    headers <- getHeaders' "" false
+    withAPIResultBT (EP.fetchIssueList language) (\x → x) errorHandler (lift $ lift $ callAPI headers (FetchIssueListReq language))
+    where
+        errorHandler _ =  do
+            BackT $ pure GoBack
+
+--------------------------------------------- Driver Report Issue ---------------------------------------------
+getCategoriesBT :: String -> FlowBT String GetCategoriesRes
+getCategoriesBT language = do
+      headers <- getHeaders' "" false
+      withAPIResultBT (EP.getCategories language) (\x → x) errorHandler (lift $ lift $ callAPI headers (GetCategoriesReq language))
+      where
+        errorHandler _ = do
+            BackT $ pure GoBack
+
+getOptionsBT :: String -> String -> String -> String -> FlowBT String GetOptionsRes
+getOptionsBT language categoryId optionId issueReportId = do
+      headers <- getHeaders' "" false
+      withAPIResultBT (EP.getOptions categoryId optionId issueReportId language) (\x → x) errorHandler (lift $ lift $ callAPI headers (GetOptionsReq categoryId optionId issueReportId language))
+        where
+          errorHandler _ = do
+            BackT $ pure GoBack
+
+postIssueBT :: String -> PostIssueReqBody -> FlowBT String PostIssueRes
+postIssueBT language payload = do
+    headers <- getHeaders' "" false
+    withAPIResultBT (EP.postIssue language) (\x -> x) errorHandler (lift $ lift $ callAPI headers (PostIssueReq language payload))
+    where
+        errorHandler _ = do
+            BackT $ pure GoBack
+
+issueInfoBT :: String -> String -> FlowBT String IssueInfoRes
+issueInfoBT language issueId = do
+      headers <- getHeaders' "" false
+      withAPIResultBT (EP.issueInfo issueId language) (\x -> x) errorHandler (lift $ lift $ callAPI headers (IssueInfoReq issueId language))
+        where
+          errorHandler _ = do
+                BackT $ pure GoBack
+
+updateIssue :: String -> String -> UpdateIssueReqBody -> FlowBT String UpdateIssueRes
+updateIssue language issueId req = do
+        headers <- getHeaders' "" false
+        withAPIResultBT (EP.updateIssue issueId language) (\x → x) errorHandler (lift $ lift $ callAPI headers (UpdateIssueReq issueId language req))
+        where
+          errorHandler _ = do
+                BackT $ pure GoBack
+

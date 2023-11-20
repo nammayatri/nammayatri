@@ -95,7 +95,7 @@ view screenType push state =
       , text (getString LOGOUT)
       , onClick push (const Logout)
       , alignParentRight "true,-1"
-      , color Color.blueBtn
+      , color Color.brightBlue
       ] <> FontStyle.body1 TypoGraphy
       )
     , if screenType == "ApprovedScreen" then applicationApprovedView state push else applicationStatusView state push

@@ -14,3 +14,41 @@
 -}
 
 module Screens.HelpAndSupportScreen.ComponentConfig where
+
+
+
+import Components.IssueList as IssueList
+import Data.Array (length)
+import Helpers.Utils (toStringJSON)
+import Language.Strings (getString)
+import Language.Types (STR(..))
+import Mobility.Prelude (boolToVisibility)
+import Prelude ((==), (<>), ($))
+import Screens.Types as ST
+
+issueListState :: ST.HelpAndSupportScreenState -> IssueList.IssueListFlowState
+issueListState state = let
+      config' = IssueList.config
+      inAppModalConfig' = config'{
+        issues = if state.data.issueListType == ST.ONGOING_ISSUES_MODAL then state.data.ongoingIssueList else state.data.resolvedIssueList,
+        issueListTypeModal = state.data.issueListType ,
+        headerConfig {
+          headTextConfig {
+            text = if state.data.issueListType == ST.ONGOING_ISSUES_MODAL then ( getString ONGOING_ISSUE) <>(" : ") <> (toStringJSON (length state.data.ongoingIssueList)) else getString RESOLVED_ISSUE
+          }
+        },
+        issueViewConfig {
+          thirdTextConfig {
+            text = getString ISSUE_NO
+          },
+          fourthTextConfig {
+            visibility = boolToVisibility $ state.data.issueListType == ST.ONGOING_ISSUES_MODAL ,
+            text = getString REMOVE_ISSUE
+          },
+          fifthTextConfig {
+            visibility = boolToVisibility $ state.data.issueListType == ST.ONGOING_ISSUES_MODAL ,
+            text = getString CALL_SUPPORT_NUMBER
+          }
+        }
+      }
+      in inAppModalConfig'

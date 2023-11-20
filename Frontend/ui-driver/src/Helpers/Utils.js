@@ -291,65 +291,11 @@ export const getTimeStampString = function (utcTime){
   else            return s + (s == 1 ? " second" : " seconds")
 }
 
-export const clearFocus = function (id) {
-  return JBridge.clearFocus(id)
-}
-
 export const addMediaPlayer = function (id) {
   return function(source) {
     return function () {
       JBridge.addMediaPlayer(id,source);
     }
-  };
-};
-
-export const saveAudioFile = function (source) {
-  return function() {
-    return JBridge.saveAudioFile(source);
-  }
-}
-
-export const uploadMultiPartData = function (path) {
-  return function (url) {
-    return function(fileType) {
-      return function() {
-        return JBridge.uploadMultiPartData(path, url, fileType);
-      }
-    }
-  }
-}
-
-export const startAudioRecording = function (id) {
-  return function() {
-    return JBridge.startAudioRecording();
-  }
-};
-
-export const stopAudioRecording = function (id) {
-  return function() {
-    return JBridge.stopAudioRecording();
-  }
-}
-
-export const renderBase64ImageFile = function (base64Image) {
-  return function(id) {
-    return function (fitCenter) {
-      return function (imgScaleType){
-        return function () {
-          try{
-            return JBridge.renderBase64ImageFile(base64Image, id, fitCenter, imgScaleType);
-          }catch (err){
-            return JBridge.renderBase64ImageFile(base64Image, id, fitCenter);
-          }
-        }
-      }  
-    }
-  }
-}
-
-export const removeMediaPlayer = function (id) {
-  return function () {
-    JBridge.removeMediaPlayer();
   };
 };
 
