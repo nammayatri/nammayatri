@@ -25,7 +25,7 @@ import Data.Number (pow)
 import Data.Number as Num
 import Data.String as STR
 import Effect (Effect)
-import Engineering.Helpers.Commons (safeMarginBottom, getNewIDWithTag, screenWidth, screenHeight, os, safeMarginTop, isPreviousVersion)
+import Engineering.Helpers.Commons (safeMarginBottom, getNewIDWithTag, screenWidth, screenHeight, os, safeMarginTop, isPreviousVersion, convertUTCtoISC)
 import Engineering.Helpers.Suggestions (getMessageFromKey)
 import Font.Size as FontSize
 import Font.Style as FontStyle
@@ -451,7 +451,7 @@ chatComponent state push config isLastItem userType index =
       , color chatConfig.textColor
       ] <> FontStyle.body20 TypoGraphy
     , textView $ 
-      [ text config.timeStamp
+      [ text $ convertUTCtoISC config.timeStamp "hh:mm A"
       , height $ MATCH_PARENT
       , visibility $ boolToVisibility enableFlexBox
       , color chatConfig.timeStampColor
@@ -459,7 +459,7 @@ chatComponent state push config isLastItem userType index =
       ] <> FontStyle.body21 TypoGraphy
     ]
     , textView $ 
-      [ text config.timeStamp
+      [ text $ convertUTCtoISC config.timeStamp "hh:mm A"
       , height $ MATCH_PARENT
       , visibility $ boolToVisibility $ not enableFlexBox
       , color Color.black800

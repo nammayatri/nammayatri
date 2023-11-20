@@ -20,7 +20,7 @@ import Components.PrimaryButton as PrimaryButton
 import Language.Types (STR(..))
 import Language.Strings (getString)
 import PrestoDOM (Length(..), Margin(..), Padding(..), Visibility(..))
-import Prelude (Unit, const, map, ($), (&&), (/=), (<<<), (<=), (<>), (==), (||))
+import Prelude (Unit, const, map, ($), (&&), (/=), (<<<), (<=), (<>), (==), (||), negate, (-))
 import Screens.Types as ST
 import Font.Size as FontSize
 import Font.Style as FontStyle
@@ -31,6 +31,11 @@ import Common.Types.App
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Prelude ((<>))
 import Data.Maybe (Maybe(..))
+import ConfigProvider 
+import Constants as Const
+import Data.Array (filter, elem)
+import Common.Animation.Config
+import PrestoDOM.Animation as PrestoAnim
 
 genericHeaderConfig :: ST.TripDetailsScreenState -> GenericHeader.Config 
 genericHeaderConfig state= let 
@@ -110,38 +115,50 @@ sourceToDestinationConfig state = let
     }
   in sourceToDestinationConfig'
 
-primaryButtonConfig :: ST.TripDetailsScreenState -> PrimaryButton.Config
-primaryButtonConfig state = let 
-    config = PrimaryButton.config
-    primaryButtonConfig' = config 
-      { textConfig { 
-          text = if state.props.issueReported then (getString GO_HOME_) else (getString SUBMIT)
-        , accessibilityHint = if state.props.issueReported then (getString GO_HOME_) <> ": Button" else if state.props.activateSubmit then "Submit : Button" else "Submit Button Is Disabled : Please Enter A Description To Enable"
-        , color = state.data.config.primaryTextColor
-        }
-      , height = V 48
-      , width = MATCH_PARENT
-      , background = state.data.config.primaryBackground
-      , alpha = if (state.props.activateSubmit || state.props.issueReported)  then 1.0 else 0.5 
-      , isClickable = (state.props.activateSubmit || state.props.issueReported) 
-      , margin = (Margin 16 0 16 16 ) 
-      , id =  "SubmitButton"
-      }
-  in primaryButtonConfig'
+topicsList :: ST.TripDetailsScreenState -> Array CategoryListType
+topicsList state =  
+  let appConfig = getAppConfig Const.appConfig 
+      neededCategories = ["LOST_AND_FOUND", "PAYMENT_RELATED", "FARE_DISCREPANCY", "SAFETY"]
+  in 
+  if appConfig.feature.enableSelfServe then 
+    filter (\obj -> elem obj.categoryAction neededCategories) state.data.categories 
+  else 
+      [{ categoryAction : "CONTACT_US"
+      , categoryName : getString FOR_OTHER_ISSUES_WRITE_TO_US
+      , categoryImageUrl : fetchImage FF_COMMON_ASSET "ny_ic_clip_board"
+      , categoryId : "5"
+      },
+      { categoryAction : "CALL_SUPPORT"
+      , categoryName : getString CONTACT_SUPPORT
+      , categoryImageUrl : fetchImage FF_COMMON_ASSET "ny_ic_help"
+      , categoryId : "6"
+      }]
 
-goHomeButtonConfig :: ST.TripDetailsScreenState -> PrimaryButton.Config
-goHomeButtonConfig state = let 
-    config = PrimaryButton.config
-    primaryButtonConfig' = config 
-      { textConfig { 
-          text = (getString GO_HOME_) 
-        , accessibilityHint = (getString GO_HOME_) <> ": Button"
-        , color = state.data.config.primaryTextColor
-        }
-      , height = V 48
-      , width = MATCH_PARENT
-      , background = state.data.config.primaryBackground
-      , margin = (Margin 16 0 16 16 ) 
-      , id = "GoToHomeButton"
-      }
-  in primaryButtonConfig'
+listExpandingAnimationConfig :: Boolean -> AnimConfig
+listExpandingAnimationConfig isExpanded = let 
+  config = getConfig isExpanded 
+  animConfig' = animConfig 
+          { fromScaleY = config.fromScaleY
+          , toScaleY = config.toScaleY
+          , fromY = config.fromY
+          , toY = config.toY
+          , repeatCount = PrestoAnim.Repeat 0
+          , ifAnim = isExpanded
+          , duration = 150
+          } 
+  in animConfig'
+
+getConfig :: Boolean -> {fromScaleY :: Number , toScaleY :: Number, fromY :: Int, toY :: Int}
+getConfig  isExpanded = 
+  if isExpanded then 
+    { fromScaleY : 0.0
+    , toScaleY : 1.0
+    , fromY : -100
+    , toY : 0
+    } 
+  else  
+    { fromScaleY : 1.0
+    , toScaleY : 0.0
+    , fromY : 0
+    , toY : -100
+    }

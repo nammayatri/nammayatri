@@ -358,9 +358,6 @@ inactiveButtonTextPrimary = "#FEF2BD"
 hintText :: Color
 hintText =  "#E5E7E8"
 
-transparentGrey :: Color
-transparentGrey = "#66888888"
-
 golden :: Color
 golden = "#E9BE4D"
 
@@ -384,9 +381,6 @@ grey = "#D0D5DD"
 
 orange800 :: Color
 orange800 = "#FFA666"
-
-green200 :: Color
-green200 = "#2053BB6F"
 
 linearGradient :: Array (Array Color)
 linearGradient = [
@@ -419,3 +413,5 @@ purple = "#9747FF"
 darkGreyishBlue :: Color
 darkGreyishBlue = "#313440"
 
+lightGreyBlue :: Color
+lightGreyBlue = "#E9EEF2F6"

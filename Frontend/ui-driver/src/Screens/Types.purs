@@ -38,6 +38,11 @@ import Presto.Core.Utils.Encoding (defaultDecode, defaultEncode)
 import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode)
 import PrestoDOM (LetterSpacing, Visibility, visibility)
 import PrestoDOM.List (ListItem)
+import Services.API (GetDriverInfoResp(..), Route, Status, MediaType, PaymentBreakUp)
+import Styles.Types (FontSize)
+import Components.ChatView.Controller as ChatView
+import Foreign.Object (Object)
+import Foreign (Foreign)
 import Screens (ScreenName)
 import Services.API (AutopayPaymentStage, BankError(..), FeeType, GetDriverInfoResp(..), MediaType, PaymentBreakUp, Route, Status, DriverProfileStatsResp(..), LastPaymentType(..))
 import Styles.Types (FontSize)
@@ -610,7 +615,7 @@ type RideSelectionScreenState =
     loaderButtonVisibility :: Boolean,
     loadMoreDisabled :: Boolean,
     recievedResponse :: Boolean,
-    selectedCategory :: CategoryListType
+    selectedCategory :: Common.CategoryListType
   }
 
 type VehicleDetails = { rcStatus :: Boolean
@@ -852,7 +857,7 @@ type HomeScreenData =  {
   bonusEarned :: Int ,
   route :: Array Route,
   cancelRideConfirmationPopUp :: CancelRidePopUpData,
-  messages :: Array ChatView.ChatComponent,
+  messages :: Array ChatView.ChatComponentConfig,
   messagesSize :: String,
   chatSuggestionsList :: Array String,
   messageToBeSent :: String,
@@ -1185,19 +1190,12 @@ type HelpAndSupportScreenState = {
 }
 
 type HelpAndSupportScreenData = {
-  categories :: Array CategoryListType,
+  categories :: Array Common.CategoryListType,
   issueList :: Array IssueInfo,
   ongoingIssueList :: Array IssueInfo,
   resolvedIssueList :: Array IssueInfo,
   issueListType :: IssueModalType
 }
-
-type CategoryListType = {
-    categoryName :: String
-  , categoryImageUrl :: String
-  , categoryAction :: String
-  , categoryId :: String
-  }
 
 type HelpAndSupportScreenProps = {
   isNoRides :: Boolean
@@ -1219,11 +1217,29 @@ type ReportIssueChatScreenData = {
   categoryAction :: String,
   addedImages :: Array { image :: String, imageName :: String },
   categoryId :: String,
-  recordAudioState :: RecordAudioModel.RecordAudioModelState,
-  addImagesState :: { images :: Array { image :: String, imageName :: String }, stateChanged :: Boolean, isLoading :: Boolean, imageMediaIds :: Array String },
-  viewImageState :: { image :: String, imageName :: Maybe String },
+  recordAudioState :: {
+    timer         :: String,
+    isRecording   :: Boolean,
+    isUploading   :: Boolean,
+    recordedFile  :: Maybe String,
+    recordingDone :: Boolean,
+    openAddAudioModel :: Boolean
+  },
+  addImagesState :: {
+    images :: Array Image,
+    stateChanged :: Boolean,
+    isLoading :: Boolean,
+    imageMediaIds :: Array String
+  },
+  viewImageState :: {
+    image :: String,
+    imageName :: Maybe String
+  },
   recordedAudioUrl :: Maybe String,
-  addAudioState :: { audioFile :: Maybe String, stateChanged :: Boolean },
+  addAudioState :: {
+    audioFile :: Maybe String,
+    stateChanged :: Boolean
+  },
   uploadedImagesIds :: Array String,
   uploadedAudioId :: Maybe String,
   options :: Array
@@ -1231,6 +1247,10 @@ type ReportIssueChatScreenData = {
              , option :: String
              , label :: String
              }
+}
+type Image = {
+  image :: String, 
+  imageName :: String
 }
 
 type ReportIssueChatScreenProps = {
@@ -1242,7 +1262,8 @@ type ReportIssueChatScreenProps = {
   isReversedFlow :: Boolean,
   showViewImageModel :: Boolean,
   isPopupModelOpen :: Boolean,
-  submitIsInProgress :: Boolean
+  submitIsInProgress :: Boolean,
+  timerId :: String
 }
 
 type IssueInfo = {
@@ -1251,7 +1272,6 @@ type IssueInfo = {
     status :: String,
     category :: String,
     createdAt :: String
-
 }
 
 data IssueModalType = HELP_AND_SUPPORT_SCREEN_MODAL | ONGOING_ISSUES_MODAL | RESOLVED_ISSUES_MODAL | BACKPRESSED_MODAL

@@ -55,7 +55,7 @@ import Screens.RideSelectionScreen.ScreenData as RideSelectionScreenData
 import Screens.SelectLanguageScreen.ScreenData as SelectLanguageScreenData
 import Screens.SubscriptionScreen.ScreenData as SubscriptionScreenData
 import Screens.TripDetailsScreen.ScreenData as TripDetailsScreenData
-import Screens.Types (AadhaarVerificationScreenState, AboutUsScreenState, AcknowledgementScreenState, ActiveRide, AddVehicleDetailsScreenState, AppUpdatePopUpScreenState, ApplicationStatusScreenState, BankDetailScreenState, BookingOptionsScreenState, CategoryListType, ChooseLanguageScreenState, DriverDetailsScreenState, DriverProfileScreenState, DriverRideRatingScreenState, DriverSavedLocationScreenState, DriverStatus, EditAadhaarDetailsScreenState, EditBankDetailsScreenState, EnterMobileNumberScreenState, EnterOTPScreenState, GlobalProps, GoToPopUpType(..), HelpAndSupportScreenState, HomeScreenStage(..), HomeScreenState, IndividualRideCardState, NoInternetScreenState, NotificationsScreenState, OnBoardingSubscriptionScreenState, PaymentHistoryScreenState, PermissionsScreenState, PopUpScreenState, ReferralScreenState, RegistrationScreenState, ReportIssueChatScreenState, RideDetailScreenState, RideHistoryScreenState, RideSelectionScreenState, SelectLanguageScreenState, SplashScreenState, SubscriptionScreenState, TripDetailsScreenState, UpdatePopupType(..), UploadAdhaarScreenState, UploadDrivingLicenseState, VehicleDetailsScreenState, WelcomeScreenState, WriteToUsScreenState, ChooseCityScreenState, DriverReferralScreenState)
+import Screens.Types (AadhaarVerificationScreenState, AboutUsScreenState, AcknowledgementScreenState, ActiveRide, AddVehicleDetailsScreenState, AppUpdatePopUpScreenState, ApplicationStatusScreenState, BankDetailScreenState, BookingOptionsScreenState, ChooseLanguageScreenState, DriverDetailsScreenState, DriverProfileScreenState, DriverRideRatingScreenState, DriverSavedLocationScreenState, DriverStatus, EditAadhaarDetailsScreenState, EditBankDetailsScreenState, EnterMobileNumberScreenState, EnterOTPScreenState, GlobalProps, GoToPopUpType(..), HelpAndSupportScreenState, HomeScreenStage(..), HomeScreenState, IndividualRideCardState, NoInternetScreenState, NotificationsScreenState, OnBoardingSubscriptionScreenState, PaymentHistoryScreenState, PermissionsScreenState, PopUpScreenState, ReferralScreenState, RegistrationScreenState, ReportIssueChatScreenState, RideDetailScreenState, RideHistoryScreenState, RideSelectionScreenState, SelectLanguageScreenState, SplashScreenState, SubscriptionScreenState, TripDetailsScreenState, UpdatePopupType(..), UploadAdhaarScreenState, UploadDrivingLicenseState, VehicleDetailsScreenState, WelcomeScreenState, WriteToUsScreenState, ChooseCityScreenState, DriverReferralScreenState)
 import Screens.UploadAdhaarScreen.ScreenData as UploadAdhaarScreenData
 import Screens.UploadDrivingLicenseScreen.ScreenData as UploadDrivingLicenseScreenData
 import Screens.VehicleDetailsScreen.ScreenData as VehicleDetailsScreenData
@@ -64,6 +64,7 @@ import Screens.WriteToUsScreen.ScreenData as WriteToUsScreenData
 import Data.Maybe (Maybe(..))
 import MerchantConfig.Types (AppConfig(..))
 import Screens.DriverReferralScreen.ScreenData as DriverReferralScreenData
+import Common.Types.App (CategoryListType)
 
 type FlowBT e a = BackT (ExceptT e (Free (FlowWrapper GlobalState))) a
 
