@@ -69,8 +69,8 @@ rideList ::
   Maybe UTCTime ->
   Maybe UTCTime ->
   FlowHandler Common.RideListRes
-rideList merchantShortId _ mbLimit mbOffset mbBookingStatus mbShortRideId mbCustomerPhone mbFareDiff mbfrom mbto =
-  withFlowHandlerAPI . DRide.rideList merchantShortId mbLimit mbOffset mbBookingStatus mbShortRideId mbCustomerPhone mbFareDiff mbfrom mbto
+rideList merchantShortId opCity mbLimit mbOffset mbBookingStatus mbShortRideId mbCustomerPhone mbFareDiff mbfrom mbto =
+  withFlowHandlerAPI . DRide.rideList merchantShortId opCity mbLimit mbOffset mbBookingStatus mbShortRideId mbCustomerPhone mbFareDiff mbfrom mbto
 
 multipleRideEnd :: ShortId DM.Merchant -> Context.City -> Common.MultipleRideEndReq -> FlowHandler Common.MultipleRideEndResp
 multipleRideEnd merchantShortId opCity req = withFlowHandlerAPI $ do
