@@ -1,3 +1,17 @@
+{-
+ 
+  Copyright 2022-23, Juspay India Pvt Ltd
+ 
+  This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License
+ 
+  as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program
+ 
+  is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+ 
+  or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
+ 
+  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
+-}
 module PaymentPage where
 
 import Prelude
@@ -16,7 +30,8 @@ import Data.Newtype (class Newtype)
 import Presto.Core.Types.API (class StandardEncode, standardEncode)
 import Foreign.Class (class Decode, class Encode)
 import Data.Generic.Rep (class Generic)
-import Presto.Core.Utils.Encoding (defaultDecode,defaultEncode) 
+import Presto.Core.Utils.Encoding (defaultDecode,defaultEncode)
+import Effect.Uncurried (runEffectFn1)
 
 type AffSuccess s = (s -> Effect Unit)
 type MicroAPPInvokeSignature = String -> (AffSuccess String) ->  Effect Unit
@@ -26,6 +41,7 @@ foreign import consumeBP :: EffectFn1 Unit Unit
 foreign import startPP :: MicroAPPInvokeSignature
 foreign import initiatePP :: EffectFn1 Unit Unit
 foreign import getAvailableUpiApps :: EffectFn1 ((Array UpiApps) -> Effect Unit) Unit
+foreign import initiatePPSingleInstance :: EffectFn1 Unit Unit
 
 type UpiApps
   = { supportsPay :: Boolean
@@ -93,3 +109,8 @@ getPaymentPageLangKey key = case key of
 
 paymentPageUI :: forall st. PaymentPagePayload -> FlowBT String st String-- FlowBT String String
 paymentPageUI payload = lift $ lift $ doAff $ makeAff (\cb -> (startPP (encodeJSON payload) (Right >>> cb) ) *> pure nonCanceler)
+
+initiatePaymentPage :: Effect Unit
+initiatePaymentPage = do
+  runEffectFn1 initiatePP unit
+  runEffectFn1 initiatePPSingleInstance unit

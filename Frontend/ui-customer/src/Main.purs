@@ -33,18 +33,19 @@ import Foreign.Generic (decode)
 import JBridge as JBridge
 import Log (printLog)
 import ModifyScreenState (modifyScreenState)
-import Prelude (Unit, bind, pure, show, unit, ($), (<$>), (<<<), discard)
+import Prelude (Unit, bind, pure, show, unit, void, ($), (<$>), (<<<), discard)
 import Presto.Core.Types.Language.Flow (throwErr)
 import PrestoDOM.Core (processEvent) as PrestoDom
 import Types.App (defaultGlobalState, FlowBT, ScreenType(..))
 import Screens.Types(PermissionScreenStage(..))
+import AssetsProvider (fetchAssets)
 
 main :: Event -> Effect Unit
 main event = do
   payload  ::  Either MultipleErrors GlobalPayload  <- runExcept <<< decode <<< fromMaybe (unsafeToForeign {}) <$> (liftEffect $ getWindowVariable "__payload" Just Nothing)
   case payload of
     Right payload'  -> do
-       mainFiber <- launchAff $ flowRunner defaultGlobalState $ do
+      mainFiber <- launchAff $ flowRunner defaultGlobalState $ do
           _ <- runExceptT $ runBackT $ updateEventData event
           resp ← runExceptT $ runBackT $ Flow.baseAppFlow payload' true
           case resp of
@@ -53,8 +54,9 @@ main event = do
                   _ <- pure $ printLog "printLog error in main is : " err
                   _ <- liftFlow $ main event
                   pure unit
-       JBridge.storeMainFiberOb mainFiber
-       pure unit
+      _ <- launchAff $ flowRunner defaultGlobalState $ do liftFlow $ fetchAssets
+      JBridge.storeMainFiberOb mainFiber
+      pure unit
     Left e -> do
         _ <- launchAff $ flowRunner defaultGlobalState $ do
             throwErr $ show e

@@ -2315,7 +2315,7 @@ zooTicketBookingFlow = do
 
 ticketPaymentFlow :: TicketBookingScreenData -> FlowBT String Unit
 ticketPaymentFlow screenData = do
-  liftFlowBT $ runEffectFn1 initiatePP unit
+  liftFlowBT $ initiatePaymentPage
   (CreateOrderRes orderResp) <- Remote.bookTicketsBT (Remote.mkBookingTicketReq screenData) ticketPlaceId
   let (PaymentPagePayload sdk_payload) = orderResp.sdk_payload
       (PayPayload innerpayload) = sdk_payload.payload

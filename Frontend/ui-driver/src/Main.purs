@@ -20,6 +20,7 @@ import Data.Either (Either(..))
 import Effect (Effect)
 import Effect.Aff (killFiber, launchAff, launchAff_)
 import Engineering.Helpers.Commons (flowRunner, liftFlow, getWindowVariable)
+import AssetsProvider (fetchAssets)
 import Flow as Flow
 import Control.Monad.Except.Trans (runExceptT)
 import Control.Transformers.Back.Trans (runBackT)
@@ -52,7 +53,7 @@ main event = do
     case resp of
       Right _ -> pure $ printLog "printLog " "Success in main"
       Left error -> liftFlow $ main event
-  _ <- launchAff $ flowRunner defaultGlobalState $ do liftFlow $ Utils.fetchFiles
+  _ <- launchAff $ flowRunner defaultGlobalState $ do liftFlow $ fetchAssets
   pure unit
 
 mainAllocationPop :: String -> AllocationData -> Effect Unit
@@ -119,7 +120,7 @@ onNewIntent event = do
       "DEEP_VIEW" -> Flow.baseAppFlow true (Just event)
       _ -> Flow.baseAppFlow false Nothing
     pure unit
-  _ <- launchAff $ flowRunner defaultGlobalState $ do liftFlow $ Utils.fetchFiles
+  _ <- launchAff $ flowRunner defaultGlobalState $ do liftFlow fetchAssets
   JBridge.storeMainFiberOb mainFiber
   pure unit
 

@@ -12,30 +12,29 @@
  
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
-module Helpers.FileProvider.Utils where
+module ConfigProvider where
 
 import Prelude
+import Constants as Constants
+import Data.Function.Uncurried (Fn1)
 import Effect (Effect)
 import Effect.Exception (throw)
 import Effect.Uncurried (EffectFn1, EffectFn2, mkEffectFn1, runEffectFn1, runEffectFn2)
-import Data.Function.Uncurried (Fn1)
 import Foreign (Foreign)
 import Foreign.Generic (encode)
 import MerchantConfigs.CommonConfig (commonConfig)
-import Constants as Constants
 
 foreign import mergeforegin :: EffectFn1 (Array Foreign) Foreign
 
 foreign import appendConfigToDocument :: EffectFn1 String String
+
+foreign import isDebugBuild :: EffectFn1 Unit Boolean
 
 foreign import loadInWindow :: forall a. EffectFn2 String a Unit
 
 foreign import loadFileInDUI :: EffectFn1 String String
 
 foreign import stringifyJSON :: forall a. Fn1 a String
-
-
 
 loadAppConfig :: EffectFn1 String Unit
 loadAppConfig =
@@ -49,7 +48,8 @@ getConfigFromFile :: EffectFn1 String Foreign
 getConfigFromFile =
   mkEffectFn1 \fileName -> do
     config <- runEffectFn1 loadFileInDUI $ fileName <> Constants.dotJSA
-    if isFilePresent config then do
+    isDebug <- runEffectFn1 isDebugBuild unit
+    if isFilePresent config  && not isDebug then do
       merchantConfig <- runEffectFn1 appendConfigToDocument config
       pure $ encode merchantConfig
     else do

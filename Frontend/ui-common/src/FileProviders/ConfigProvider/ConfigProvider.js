@@ -3,12 +3,21 @@ function isObject(item) {
   return (item && typeof item === "object" && !Array.isArray(item));
 }
 
+export const isDebugBuild = function () {
+  if (JBridge.getDeviceInfo) {
+    const sessionInfo = JSON.parse(JBridge.getDeviceInfo())
+    return sessionInfo.package_name.includes(".debug") || sessionInfo.package_name.includes(".staging") ; 
+  } else {
+    return false;
+  }
+}
+
 export const appendConfigToDocument = function (data) {
   const headID = document.getElementsByTagName("head")[0];
   console.log(headID)
   const newScript = document.createElement("script");
   newScript.type = "text/javascript";
-  newScript.id = "ny-customer-configuration";
+  newScript.id = "ny-configuration";
   newScript.innerHTML = data;
   headID.appendChild(newScript);
   return window.getMerchantConfig();
@@ -66,6 +75,7 @@ export const loadFileInDUI = function (fileName) {
   }
 }
 
+// JSON UTILS
 export const stringifyJSON = function (obj) {
   let result;
   try{

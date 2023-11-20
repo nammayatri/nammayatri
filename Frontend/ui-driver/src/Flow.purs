@@ -59,8 +59,8 @@ import Engineering.Helpers.Suggestions (suggestionsDefinitions, getSuggestions)
 import Engineering.Helpers.Utils (loaderText, toggleLoader, getAppConfig, reboot, showSplash, (?))
 import Foreign (unsafeToForeign)
 import Foreign.Class (class Encode, encode, decode)
-import Helpers.FileProvider.Utils (stringifyJSON)
-import PaymentPage (checkPPInitiateStatus, consumeBP, initiatePP, paymentPageUI, PayPayload(..), PaymentPagePayload(..), getAvailableUpiApps, getPaymentPageLangKey)
+import ConfigProvider (stringifyJSON)
+import PaymentPage (checkPPInitiateStatus, consumeBP, initiatePP, paymentPageUI, PayPayload(..), PaymentPagePayload(..), getAvailableUpiApps, getPaymentPageLangKey, initiatePaymentPage)
 import Helpers.Utils (LatLon(..), decodeErrorCode, decodeErrorMessage, getCurrentLocation, getDatebyCount, getDowngradeOptions, getGenderIndex, getNegotiationUnit, getPastDays, getPastWeeks, getTime, getcurrentdate, hideSplash, isDateGreaterThan, isYesterday, onBoardingSubscriptionScreenCheck, parseFloat, secondsLeft, toStringJSON, translateString, getDistanceBwCordinates)
 import JBridge (cleverTapCustomEvent, cleverTapCustomEventWithParams, cleverTapEvent, cleverTapSetLocation, drawRoute, factoryResetApp, firebaseLogEvent, firebaseLogEventWithTwoParams, firebaseUserID, generateSessionId, getCurrentLatLong, getCurrentPosition, getVersionCode, getVersionName, hideKeyboardOnNavigation, initiateLocationServiceClient, isBatteryPermissionEnabled, isInternetAvailable, isLocationEnabled, isLocationPermissionEnabled, isOverlayPermissionEnabled, metaLogEvent, metaLogEventWithTwoParams, openNavigation, removeAllPolylines, removeMarker, saveSuggestionDefs, saveSuggestions, setCleverTapUserData, setCleverTapUserProp, showMarker, startLocationPollingAPI, stopChatListenerService, stopLocationPollingAPI, toast, toggleBtnLoader, unregisterDateAndTime, withinTimeRange)
 import JBridge as JB
@@ -2153,7 +2153,7 @@ homeScreenFlow = do
 clearPendingDuesFlow :: Boolean -> FlowBT String Unit
 clearPendingDuesFlow showLoader = do
   void $ lift $ lift $ toggleLoader showLoader
-  liftFlowBT $ runEffectFn1 initiatePP unit
+  liftFlowBT $ initiatePaymentPage
   clearduesResp' <- lift $ lift $ Remote.cleardues ""
   case clearduesResp' of
     Right (ClearDuesResp clearduesResp) -> do
@@ -2199,7 +2199,7 @@ clearPendingDuesFlow showLoader = do
 
 nyPaymentFlow :: PlanCardConfig -> Boolean -> FlowBT String Unit
 nyPaymentFlow planCardConfig fromJoinPlan = do
-  liftFlowBT $ runEffectFn1 initiatePP unit
+  liftFlowBT $ initiatePaymentPage
   response <- lift $ lift $ Remote.subscribePlan planCardConfig.id
   case response of
     Right (SubscribePlanResp listResp) -> do
@@ -2290,7 +2290,7 @@ paymentHistoryFlow = do
 
 ysPaymentFlow :: FlowBT String Unit
 ysPaymentFlow = do
-  liftFlowBT $ runEffectFn1 initiatePP unit
+  liftFlowBT $ initiatePaymentPage
   (GlobalState state) <- getState
   let homeScreenState = state.homeScreen
   response <- lift $ lift $ Remote.createPaymentOrder homeScreenState.data.paymentState.invoiceId
@@ -2384,6 +2384,7 @@ ackScreenFlow = do
 subScriptionFlow :: FlowBT String Unit
 subScriptionFlow = do
   appConfig <- getAppConfig Constants.appConfig 
+  liftFlowBT $ runEffectFn1 initiatePP unit
   modifyScreenState $ SubscriptionScreenStateType (\subscriptionScreen -> subscriptionScreen{data{config = appConfig.subscriptionConfig, bottomNavConfig = appConfig.bottomNavConfig},props{isSelectedLangTamil = (getValueToLocalNativeStore LANGUAGE_KEY) == "TA_IN", offerBannerProps {showOfferBanner = appConfig.subscriptionConfig.offerBannerConfig.showDUOfferBanner, offerBannerValidTill = appConfig.subscriptionConfig.offerBannerConfig.offerBannerValidTill, offerBannerDeadline = appConfig.subscriptionConfig.offerBannerConfig.offerBannerDeadline}}})
   void $ lift $ lift $ loaderText (getString LOADING) (getString PLEASE_WAIT_WHILE_IN_PROGRESS)
   uiAction <- UI.subscriptionScreen
@@ -2757,7 +2758,7 @@ updateAvailableAppsAndGoToSubs = do
   (GlobalState state) <- getState
   let isEndRideScreen = state.homeScreen.props.currentStage == ST.RideCompleted
   modifyScreenState $ SubscriptionScreenStateType (\subscriptionScreen -> subscriptionScreen{props{subView = NoSubView, showShimmer = true, isEndRideModal = isEndRideScreen}})
-  -- void $ liftFlowBT $ launchAff $ flowRunner state $ void $ runExceptT $ runBackT $ getUpiApps --TODO Handle Properly
+  void $ liftFlowBT $ launchAff $ flowRunner (GlobalState state) $ void $ runExceptT $ runBackT $ getUpiApps
   subScriptionFlow
 
 getUpiApps :: FlowBT String Unit
