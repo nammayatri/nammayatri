@@ -62,7 +62,6 @@ import Engineering.Helpers.BackTrack (getState, liftFlowBT)
 import Engineering.Helpers.Commons (flowRunner, getCurrentUTC)
 import Engineering.Helpers.Commons (liftFlow, getNewIDWithTag, bundleVersion, os, getExpiryTime, stringToVersion, setText, convertUTCtoISC, getCurrentUTC, getCurrentTimeStamp, clearTimer)
 import Engineering.Helpers.Commons as EHC
-import Engineering.Helpers.Commons as EHC
 import Engineering.Helpers.LogEvent (logEvent, logEventWithParams, logEventWithMultipleParams)
 import Engineering.Helpers.Suggestions (suggestionsDefinitions, getSuggestions)
 import Engineering.Helpers.Suggestions as EHS
@@ -151,8 +150,7 @@ baseAppFlow baseFlow event = do
         checkRideAndInitiate event
       else if getValueToLocalStore DRIVER_LOCATION == "__failed" || getValueToLocalStore DRIVER_LOCATION == "--" || not isLocationPermission  then do
         chooseCityFlow
-      else do
-        welcomeScreenFlow
+      else authenticationFlow ""
     where
     cacheAppParameters :: Int -> Boolean -> FlowBT String Unit
     cacheAppParameters versionCode baseFlow = do
@@ -190,6 +188,14 @@ baseAppFlow baseFlow event = do
       void $ lift $ lift $ setLogField "app_version" $ encode (show versionCode)
       void $ lift $ lift $ setLogField "bundle_version" $ encode (bundle)
       void $ lift $ lift $ setLogField "platform" $ encode (os)
+
+authenticationFlow :: String -> FlowBT String Unit
+authenticationFlow _ = 
+  if EHC.isPreviousVersion (getValueToLocalStore VERSION_NAME) (getPreviousVersion (getMerchant FunctionCall)) 
+    then do 
+      lift $ lift $ doAff do liftEffect hideSplash
+      loginFlow
+    else welcomeScreenFlow
 
 checkRideAndInitiate :: Maybe Event -> FlowBT String Unit
 checkRideAndInitiate event = do
@@ -2919,8 +2925,8 @@ logoutFlow = do
   isLocationPermission <- lift $ lift $ liftFlow $ isLocationPermissionEnabled unit
   if getValueToLocalStore DRIVER_LOCATION == "__failed" || getValueToLocalStore DRIVER_LOCATION == "--" || not isLocationPermission  then do
     chooseCityFlow
-  else do
-    welcomeScreenFlow
+  else authenticationFlow ""
+
 runInternetCondition :: FlowBT String Unit
 runInternetCondition = do
       internetAvailable <- lift $ lift $ liftFlow $ isInternetAvailable unit
@@ -2955,8 +2961,7 @@ chooseCityFlow = do
       void $ lift $ lift $ toggleLoader false
       modifyScreenState $ ChooseCityScreenStateType (\chooseCityScreen -> chooseCityScreen { data {locationSelected = Just $ fst result}, props {radioMenuFocusedCity = fst result}})
       chooseCityFlow
-    GoToWelcomeScreen -> do
-      welcomeScreenFlow
+    GoToWelcomeScreen -> authenticationFlow ""
     REFRESH_SCREEN_CHOOSE_CITY state -> chooseCityFlow
     _ -> do
       let _ = spy "log a" ""
