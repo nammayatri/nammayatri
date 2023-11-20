@@ -575,7 +575,7 @@ library
       StandaloneDeriving
       PackageImports
       TemplateHaskell
-  ghc-options: -fwrite-ide-info -hiedir=.hie -fplugin=RecordDotPreprocessor -Wall -Wcompat -Widentities -fhide-source-paths -Werror
+  ghc-options: -fwrite-ide-info -hiedir=.hie -fplugin=RecordDotPreprocessor -Wall -Wcompat -Widentities -fhide-source-paths -Werror -Wwarn=ambiguous-fields
   build-depends:
       JuicyPixels
     , JuicyPixels-extra
@@ -628,6 +628,7 @@ library
     , sessionizer-metrics
     , shared-services
     , singletons
+    , singletons-th
     , special-zone-a
     , stm
     , string-conversions
@@ -641,8 +642,6 @@ library
     , wai
     , warp
   default-language: Haskell2010
-  if os(darwin)
-    ghc-options: -fwhole-archive-hs-libs
   if flag(Local)
     ghc-options: -O0 -funfolding-use-threshold20 -fno-cse -fmax-simplifier-iterations1 -fno-specialise-aggressively -j4
   else
@@ -738,6 +737,7 @@ executable dynamic-offer-driver-app-exe
     , servant-server
     , shared-services
     , singletons
+    , singletons-th
     , stm
     , string-conversions
     , template-haskell
@@ -750,8 +750,6 @@ executable dynamic-offer-driver-app-exe
     , wai
     , warp
   default-language: Haskell2010
-  if os(darwin)
-    ghc-options: -fwhole-archive-hs-libs
   if flag(Local)
     ghc-options: -O0 -funfolding-use-threshold20 -fno-cse -fmax-simplifier-iterations1 -fno-specialise-aggressively -j4
   else

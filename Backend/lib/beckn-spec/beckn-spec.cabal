@@ -223,7 +223,7 @@ library
       BlockArguments
       TypeSynonymInstances
       UndecidableInstances
-  ghc-options: -fwrite-ide-info -hiedir=.hie -Wall -Wcompat -Widentities -fhide-source-paths -Werror -fplugin=RecordDotPreprocessor
+  ghc-options: -fwrite-ide-info -hiedir=.hie -Wall -Wcompat -Widentities -fhide-source-paths -Werror -fplugin=RecordDotPreprocessor -Wwarn=ambiguous-fields
   build-depends:
       aeson
     , aeson-casing
@@ -292,7 +292,7 @@ library
     , time
     , time-units
     , transformers
-    , universum <1.8
+    , universum
     , unix
     , unliftio
     , unordered-containers
@@ -303,8 +303,6 @@ library
     , wai-middleware-prometheus
     , warp
   default-language: Haskell2010
-  if os(darwin)
-    ghc-options: -fwhole-archive-hs-libs
   if flag(Local)
     ghc-options: -O0 -funfolding-use-threshold20 -fno-cse -fmax-simplifier-iterations1 -fno-specialise-aggressively -j4
   else

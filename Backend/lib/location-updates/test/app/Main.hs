@@ -17,7 +17,8 @@ module Main where
 
 import API
 import qualified "mock-google" App as MockGoogle
-import EulerHS.Prelude
+import Control.Lens ((.~))
+import EulerHS.Prelude hiding ((.~))
 import Kernel.Utils.Common
 import qualified "mock-google" Lib.IntegrationTests.Environment as Environment
 import RedisAlgorithm

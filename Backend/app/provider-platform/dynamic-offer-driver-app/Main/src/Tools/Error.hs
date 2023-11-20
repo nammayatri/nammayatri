@@ -11,6 +11,7 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# LANGUAGE TemplateHaskell #-}
 
 module Tools.Error (module Tools.Error) where
 
@@ -23,8 +24,6 @@ data RatingError
   = InvalidRatingValue
   deriving (Eq, Show, IsBecknAPIError)
 
-instanceExceptionWithParent 'HTTPException ''RatingError
-
 instance IsBaseError RatingError
 
 instance IsHTTPError RatingError where
@@ -32,6 +31,8 @@ instance IsHTTPError RatingError where
   toHttpCode InvalidRatingValue = E400
 
 instance IsAPIError RatingError
+
+instanceExceptionWithParent 'HTTPException ''RatingError
 
 data FarePolicyError
   = NoFarePolicy

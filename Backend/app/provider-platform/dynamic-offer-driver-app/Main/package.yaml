@@ -100,6 +100,7 @@ dependencies:
   - extra
   - scheduler
   - singletons
+  - singletons-th
   - cassava
   - vector
   - geohash == 1.0.1
@@ -129,6 +130,7 @@ library:
     - -Widentities
     - -fhide-source-paths
     - -Werror
+    - -Wwarn=ambiguous-fields
   when:
     - condition: flag(Local)
       then:

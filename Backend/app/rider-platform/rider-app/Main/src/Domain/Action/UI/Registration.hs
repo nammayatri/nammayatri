@@ -29,6 +29,7 @@ where
 
 import qualified Data.Aeson as A
 import Data.Aeson.Types ((.:), (.:?))
+import Data.Maybe (listToMaybe)
 import Data.OpenApi hiding (email, info)
 import qualified Data.Text.Encoding as TE
 import Domain.Types.Merchant (Merchant)

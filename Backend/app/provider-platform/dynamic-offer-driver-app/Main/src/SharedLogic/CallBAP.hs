@@ -59,7 +59,7 @@ import qualified Domain.Types.Vehicle as V
 import qualified EulerHS.Types as ET
 import qualified Kernel.External.Verification.Interface.Idfy as Idfy
 import Kernel.Prelude
-import qualified Kernel.Storage.Hedis as Redis
+import Kernel.Storage.Hedis as Redis
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Beckn.ReqTypes
 import Kernel.Types.Common

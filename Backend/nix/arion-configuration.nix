@@ -3,7 +3,14 @@ _:
 let
   arionProjectConfiguration = { pkgs, ... }: {
     project.name = "nammayatri-svc";
+    # Note: This attr-set might be not needed now
+    #       after latest arion version update.
+    #       see docker-compose.volumes attr-set.
     docker-compose.raw.volumes = {
+      prometheus-volume = null;
+      pgadmin-data = null;
+    };
+    docker-compose.volumes = {
       prometheus-volume = null;
       pgadmin-data = null;
     };

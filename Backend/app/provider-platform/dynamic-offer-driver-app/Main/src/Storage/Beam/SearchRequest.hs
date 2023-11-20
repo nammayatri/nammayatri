@@ -12,6 +12,8 @@
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wwarn=orphans #-}
 
 module Storage.Beam.SearchRequest where
 

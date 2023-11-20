@@ -11,6 +11,8 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# OPTIONS_GHC -Wwarn=incomplete-record-updates #-}
+{-# OPTIONS_GHC -Wwarn=incomplete-uni-patterns #-}
 
 module Beckn.Types.Core.Taxi.Update.UpdateEvent.PaymentCompletedEvent
   ( module Beckn.Types.Core.Taxi.Update.UpdateEvent.PaymentCompletedEvent,
@@ -24,7 +26,7 @@ import Beckn.Types.Core.Taxi.Update.UpdateEvent.UpdateEventType (UpdateEventType
 import qualified Control.Lens as L
 import Data.Aeson as A
 import Data.OpenApi hiding (Example, example, title, value)
-import EulerHS.Prelude hiding (id)
+import EulerHS.Prelude hiding (fromList, id)
 import GHC.Exts (fromList)
 import Kernel.Utils.Schema
 

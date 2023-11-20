@@ -5,13 +5,15 @@ module DBSync.Update where
 
 import Config.Env
 import Data.Aeson as A
+import qualified Data.Aeson.Key as AesonKey
+import qualified Data.Aeson.KeyMap as AKM
+import qualified Data.Bifunctor as BiFunctor
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.ByteString.Lazy as LBS
 import Data.Either.Extra (mapLeft)
-import qualified Data.HashMap.Strict as HM
 import Data.Maybe (fromJust)
 import qualified Data.Serialize as Serialize
-import Data.Text as T
+import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
 import Database.Beam as B hiding (runUpdate)
 import EulerHS.CachedSqlDBQuery as CDB
@@ -252,13 +254,13 @@ getDbUpdateDataJson model a =
     ]
 
 updValToJSON :: [(Text, A.Value)] -> A.Value
-updValToJSON keyValuePairs = A.Object $ HM.fromList keyValuePairs
+updValToJSON keyValuePairs = A.Object $ AKM.fromList . map (BiFunctor.first AesonKey.fromText) $ keyValuePairs
 
 getPKeyandValuesList :: Text -> [(Text, A.Value)]
-getPKeyandValuesList pKeyAndValue = go (splitOn "_" pKeyTrimmed) []
+getPKeyandValuesList pKeyAndValue = go (T.splitOn "_" pKeyTrimmed) []
   where
     go (tName : k : v : rest) acc = go (tName : rest) ((k, A.String v) : acc)
     go _ acc = acc
-    pKeyTrimmed = case splitOn "{" pKeyAndValue of
+    pKeyTrimmed = case T.splitOn "{" pKeyAndValue of
       [] -> ""
       (x : _) -> x

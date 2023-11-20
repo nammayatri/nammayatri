@@ -74,6 +74,7 @@ dependencies:
   - template-haskell
   - euler-hs
   - containers
+  - unordered-containers
   - openapi3
   - servant-openapi3
   - dashboard-helper-api

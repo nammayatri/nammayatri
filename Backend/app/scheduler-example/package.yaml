@@ -73,6 +73,7 @@ dependencies:
   - template-haskell
   - exceptions
   - singletons
+  - singletons-base
   - containers
 
 ghc-options:
@@ -89,6 +90,7 @@ library:
   source-dirs: src
   ghc-options:
     - -Wincomplete-uni-patterns
+    - -Wwarn=ambiguous-fields
   when:
     - condition: flag(Local)
       then:

@@ -22,8 +22,8 @@ where
 
 import Beckn.Types.Core.Metro.Search.Time (Time)
 import Data.Aeson (Value (..), object, withObject, (.:), (.=))
+import qualified Data.Aeson.KeyMap as AKM (delete, fromHashMapText, toHashMapText)
 import Data.Aeson.Types (typeMismatch)
-import Data.HashMap.Strict (delete)
 import Data.OpenApi (ToSchema)
 import EulerHS.Prelude hiding (State)
 import Kernel.Types.App (BaseUrl)
@@ -69,18 +69,18 @@ instance FromJSON Params where
       <*> o .: "transaction_status"
       <*> o .: "amount"
       <*> o .: "currency"
-      <*> mapM f (additional o)
+      <*> mapM f (AKM.toHashMapText $ additional o)
     where
       f (String val) = pure val
       f e = typeMismatch "additional property of Params" e
       additional =
-        delete "transaction_id"
-          . delete "transaction_status"
-          . delete "amount"
-          . delete "currency"
+        AKM.delete "transaction_id"
+          . AKM.delete "transaction_status"
+          . AKM.delete "amount"
+          . AKM.delete "currency"
 
 instance ToJSON Params where
-  toJSON Params {..} = uniteObjects [object knownParams, Object (String <$> additional)]
+  toJSON Params {..} = uniteObjects [object knownParams, Object $ AKM.fromHashMapText (String <$> additional)]
     where
       knownParams =
         [ "transaction_id" .= transaction_id,

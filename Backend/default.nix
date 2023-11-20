@@ -23,11 +23,29 @@
           arion;
       };
       packages = {
-        cryptostore.source = "0.2.3.0";
+        amazonka.source = inputs.amazonka-git + /lib/amazonka;
+        amazonka-core.source = inputs.amazonka-git + /lib/amazonka-core;
+        amazonka-test.source = inputs.amazonka-git + /lib/amazonka-test;
+        amazonka-sso.source = inputs.amazonka-git + /lib/services/amazonka-sso;
+        amazonka-sts.source = inputs.amazonka-git + /lib/services/amazonka-sts;
+        amazonka-ses.source = inputs.amazonka-git + /lib/services/amazonka-ses;
+        streamly.source = "0.8.3";
+        unicode-data.source = "0.3.1";
       };
       settings = {
         location-updates.check = false;
         beckn-test.check = false;
+        singletons-th.jailbreak = true;
+        singletons-base = {
+          jailbreak = true;
+          check = false;
+        };
+        streamly = {
+          extraBuildDepends = lib.optional pkgs.stdenv.isDarwin pkgs.darwin.apple_sdk.frameworks.Cocoa;
+          jailbreak = true;
+        };
+        base32.jailbreak = true;
+        amazonka-core.check = false;
       };
     };
 

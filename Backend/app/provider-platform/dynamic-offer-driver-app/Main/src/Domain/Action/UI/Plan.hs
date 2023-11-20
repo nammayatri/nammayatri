@@ -14,8 +14,10 @@
 
 module Domain.Action.UI.Plan where
 
-import Data.List (groupBy, intersect)
+import Data.List (intersect)
+import qualified Data.List as DL
 import qualified Data.Map as M
+import Data.Maybe (listToMaybe)
 import Data.OpenApi (ToSchema (..))
 import qualified Data.Text as T
 import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
@@ -523,7 +525,7 @@ convertPlanToPlanEntity driverId merchantOpCityId applicationDate isCurrentPlanE
             if null offers
               then (0.0, baseAmount)
               else do
-                let bestOffer = minimumBy (comparing (.finalOrderAmount)) offers
+                let bestOffer = DL.minimumBy (comparing (.finalOrderAmount)) offers
                 (bestOffer.discountAmount, bestOffer.finalOrderAmount)
       [ PlanFareBreakup {component = "INITIAL_BASE_FEE", amount = baseAmount},
         PlanFareBreakup {component = "REGISTRATION_FEE", amount = plan.registrationAmount},

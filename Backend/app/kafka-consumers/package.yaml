@@ -105,6 +105,7 @@ library:
   source-dirs: src
   ghc-options:
     - -Wincomplete-uni-patterns
+    - -Wwarn=ambiguous-fields
   when:
     - condition: flag(Local)
       then:
