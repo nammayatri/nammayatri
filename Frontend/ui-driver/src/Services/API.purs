@@ -1517,6 +1517,16 @@ newtype PostIssueReq = PostIssueReq
   , categoryId :: String
   , mediaFiles :: Array String
   , description :: String
+  , chats :: Array ChatDetail
+  }
+
+newtype ChatDetail = ChatDetail
+  { timestamp :: String,
+    content :: Maybe String,
+    id :: String,
+    label :: Maybe String,
+    chatType :: String,
+    sender :: String
   }
 
 newtype PostIssueRes = PostIssueRes { issueReportId :: String }
@@ -1537,6 +1547,12 @@ instance showGetPostIssueRes        :: Show PostIssueRes where show     = generi
 instance standardEncodePostIssueRes :: StandardEncode PostIssueRes where standardEncode (PostIssueRes res) = standardEncode res
 instance decodePostIssueRes         :: Decode PostIssueRes where decode = defaultDecode
 instance encodePostIssueRes         :: Encode PostIssueRes where encode = defaultEncode
+
+derive instance genericChatDetail :: Generic ChatDetail _
+instance showChatDetail     :: Show ChatDetail where show     = genericShow
+instance standardChatDetail :: StandardEncode ChatDetail where standardEncode (ChatDetail chtDetail) = standardEncode chtDetail
+instance decodeChatDetail   :: Decode ChatDetail where decode = defaultDecode
+instance encodeChatDetail   :: Encode ChatDetail where encode = defaultEncode
 
 --------------------------------------------------- IssueInfo ----------------------------------------------------
 newtype IssueInfoReq = IssueInfoReq String

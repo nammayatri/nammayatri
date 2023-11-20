@@ -52,7 +52,8 @@ initData = {
       showRecordModel: false,
       showViewImageModel: false,
       isPopupModelOpen: false,
-      submitIsInProgress: false
+      submitIsInProgress: false,
+      timerId : ""
     }
 }
 

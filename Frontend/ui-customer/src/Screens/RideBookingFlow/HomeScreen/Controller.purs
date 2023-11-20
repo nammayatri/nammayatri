@@ -744,6 +744,7 @@ data ScreenOutput = LogoutUser
                   | GoToMyTickets HomeScreenState
                   | RepeatTrip HomeScreenState Trip
                   | ExitToTicketing HomeScreenState
+                  | GoToHelpAndSupport HomeScreenState
 
 data Action = NoAction
             | BackPressed
@@ -1067,6 +1068,8 @@ eval (RideCompletedAC (RideCompletedCard.Support)) state = continue state {props
 
 eval (RideCompletedAC (RideCompletedCard.RideDetails)) state = exit $ RideDetailsScreen state -- TODO needs to fill the data
 
+eval (RideCompletedAC (RideCompletedCard.HelpAndSupportAC)) state = exit $ GoToHelpAndSupport state
+
 ------------------------------- ChatService - Start --------------------------
 
 eval (UpdateMessages message sender timeStamp size) state = do
@@ -1177,7 +1180,7 @@ eval NotificationAnimationEnd state = do
   let isExpanded = state.props.showChatNotification && state.props.chatcallbackInitiated
       areMessagesEmpty = (length (getChatMessages FunctionCall) == 0)
       showNotification = (areMessagesEmpty || state.props.showChatNotification) && state.props.currentStage == RideAccepted && not state.props.isChatNotificationDismissed
-  continue state {props { isNotificationExpanded = isExpanded, showChatNotification = showNotification , removeNotification = not showNotification, enableChatWidget = isExpanded || areMessagesEmpty}}
+  continue state {props { isNotificationExpanded = isExpanded, showChatNotification = showNotification , removeNotification = not showNotification, enableChatWidget = (isExpanded || areMessagesEmpty) && not state.props.isChatNotificationDismissed}}
 
 eval MessageViewAnimationEnd state = do
   continue state {props { removeNotification = not state.props.showChatNotification}}

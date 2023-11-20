@@ -215,9 +215,7 @@ export const getCurrentTimeStamp = function () {
 };
 
 export const getCurrentUTC = function (str) {
-  const result = new Date().toISOString();
-  console.log(result);
-  return result;
+  return new Date().toISOString();
 };
 
 export const getDateFromObj = function (obj){

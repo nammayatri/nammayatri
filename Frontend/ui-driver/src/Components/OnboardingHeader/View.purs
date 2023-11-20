@@ -91,11 +91,11 @@ navigationView state push =
         , orientation HORIZONTAL
         , background Color.blue600
         , cornerRadius 5.0
-        , stroke ("1," <> Color.blueBtn)
+        , stroke ("1," <> Color.brightBlue)
         , onClick push (const TriggerRegModal)
         ][ textView $
             [ text ((getString STEP) <>state.stepNumber <> "/4" )
-            , color Color.blueBtn
+            , color Color.brightBlue
             ] <> FontStyle.paragraphText TypoGraphy
         , imageView
             [ imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_drop_down"

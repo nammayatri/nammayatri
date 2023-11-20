@@ -53,6 +53,7 @@ type Config =
     , lottieConfig :: LottieConfig
     , weight :: Maybe Number
     , enableButtonLayoutId :: Boolean
+    , underlineConfig :: UnderLineConfig 
   }
 
 type TextConfig =
@@ -66,6 +67,7 @@ type TextConfig =
   , accessibilityHint :: String
   , weight :: Maybe Number
   , textFromHtml :: Maybe String
+  , id :: String
   }
 
 
@@ -86,6 +88,14 @@ type LottieConfig =
   , autoDisableLoader :: Boolean
   }
 
+type UnderLineConfig = 
+  { color :: String
+  , margin :: Margin
+  , padding :: Padding
+  , visibility :: Visibility
+  , height :: Length
+  }
+
 config :: Config
 config = 
   let 
@@ -102,6 +112,7 @@ config =
     , accessibilityHint : ""
     , weight : Nothing
     , textFromHtml : Nothing
+    , id : ""
     }
   , width: MATCH_PARENT
   , height: V 50
@@ -147,4 +158,11 @@ config =
   , lottieURL : btnConfig.loaderUrl
   , autoDisableLoader : true
   }
+  , underlineConfig : {
+    color : Color.grey900
+  , margin : Margin 0 0 0 0
+  , padding : Padding 0 0 0 0
+  , visibility : GONE
+  , height : V 0
   }
+}

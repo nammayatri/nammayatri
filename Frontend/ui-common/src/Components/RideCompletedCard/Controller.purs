@@ -26,7 +26,8 @@ data Action = Support
             | SkipButtonActionController PB.Action
             | ContactSupportPopUpAC PopUpModal.Action
             | UpiQrRendered String
-            | BannerAction Banner.Action
+            | BannerAction Banner.Action 
+            | HelpAndSupportAC
             
 type Config = {
   isDriver :: Boolean,
@@ -47,7 +48,8 @@ type Config = {
   viewsByOrder :: Array RideCompletedElements,
   enableContactSupport :: Boolean,
   isFreeRide :: Boolean,
-  lottieQRAnim :: Boolean
+  lottieQRAnim :: Boolean,
+  needHelpText :: String
 }
 
 data Theme = DARK | LIGHT
@@ -154,7 +156,8 @@ config = {
   bannerConfig : Banner.config,
   viewsByOrder : [],
   enableContactSupport : true,
-  lottieQRAnim : false
+  lottieQRAnim : false,
+  needHelpText : ""
 }
 
 type CustomerIssueCard = {

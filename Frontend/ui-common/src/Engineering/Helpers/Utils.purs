@@ -22,6 +22,9 @@ import Data.Either (Either(..), hush)
 import Data.Function.Uncurried (Fn2, runFn2, Fn3, Fn1)
 import Data.Maybe (Maybe(..), maybe)
 import Data.String (length, trim, toLower)
+import Data.Maybe (Maybe(..))
+import Effect.Uncurried (EffectFn2(..), runEffectFn2, EffectFn1(..), runEffectFn1)
+import Data.String (length, trim, Pattern(..), split, toUpper, toLower, joinWith, take, drop)
 import Data.String.CodeUnits (charAt)
 import Data.Foldable (foldl)
 import Data.Time.Duration (Milliseconds(..))
@@ -48,7 +51,6 @@ import Data.Array (find)
 import Data.Tuple (Tuple(..), fst, snd)
 
 -- Common Utils
-
 foreign import reboot :: Effect Unit
 
 foreign import showSplash :: Effect Unit
@@ -304,3 +306,17 @@ getCodeFromCity city =
   let 
     cityCodeTuple = find (\tuple -> (snd tuple) == (toLower city)) cityCodeMap
   in maybe "" (\tuple -> fst tuple) cityCodeTuple
+  
+capitalizeFirstChar :: String -> String
+capitalizeFirstChar inputStr =
+  let splitedArray = split (Pattern " ") (inputStr)
+      output = map (\item -> (toUpper (take 1 item)) <> (toLower (drop 1 item))) splitedArray
+    in joinWith " " output
+
+fetchLanguage :: String -> String
+fetchLanguage currLang = case currLang of
+                  "HI_IN" -> "hi"
+                  "KN_IN" -> "kn"
+                  "TA_IN" -> "ta"
+                  _       -> "en"
+                  

@@ -80,6 +80,7 @@ type AppDatas = {
     link :: String
   , supportMail :: String
   , name :: String
+  , website :: String
 }
 
 type CityConfig = {
