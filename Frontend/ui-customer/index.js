@@ -14,7 +14,7 @@ function guid() {
 }
 
 function loadConfig() {
-  const config = require("./output/Helpers.FileProvider.Utils/index.js");
+  const config = require("./output/ConfigProvider/index.js");
   config.loadAppConfig("");
 }
 
@@ -240,7 +240,13 @@ function refreshFlow(){
 
 window["onEvent'"] = function (_event, args) {
   console.log(_event, args);
-  if (_event == "onPause") {
+  if (_event == "onBackPressed") {
+    if (JBridge.onBackPressedPP && JBridge.onBackPressedPP()) {
+      console.log("Backpress Consumed by PP")
+    } else {
+      purescript.onEvent(_event)();
+    }
+  } else if (_event == "onPause") {
     previousDateObject = new Date();
     window.onPause();
   } else if (_event == "onResume") {
@@ -260,13 +266,26 @@ window["onEvent'"] = function (_event, args) {
 
 window["onEvent"] = function (jsonPayload, args, callback) { // onEvent from hyperPay
   console.log("onEvent Payload", jsonPayload);
-  if ((JSON.parse(jsonPayload)).event == "initiate_result"){
-    window.isPPInitiated = true;
+  const payload = JSON.parse(jsonPayload)
+  switch (payload.event) {
+    case "initiate_result":
+      window.isPPInitiated = true;
+      break;
+    case "process_result":
+      if (window.processCallBack) window.processCallBack(0)(jsonPayload)();
+      break;
+    case "log_stream":
+      const logs = require("./output/Engineering.Helpers.LogEvent/index.js");
+      logs.handleLogStream(payload.payload);
+      break;
+    default:
+      console.log("Unknown Event");
   }
 }
 
 if (typeof window.JOS != "undefined") {
   window.JOS.addEventListener("onEvent'")();
+  window.JOS.addEventListener("onEvent")();
   window.JOS.addEventListener("onMerchantEvent")();
   window.JOS.addEventListener("onActivityResult")();
   console.error("Calling action DUI_READY");
