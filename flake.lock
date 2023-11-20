@@ -97,20 +97,18 @@
         ],
         "shared-kernel": [
           "shared-kernel"
-        ],
-        "systems": "systems"
+        ]
       },
       "locked": {
-        "lastModified": 1698917997,
-        "narHash": "sha256-K0m29ojyZ4QXq/KHb00Mm8K/OUlBX74GWzSUSNRy7Tk=",
-        "owner": "arjunkathuria",
+        "lastModified": 1700470711,
+        "narHash": "sha256-d4oIDzr7E8trgeszZ7rhs695jxCqAMY24zp4FeEAd38=",
+        "owner": "nammayatri",
         "repo": "beckn-gateway",
-        "rev": "1eaf5af47aea99d2113de54e9bcd9cb57fd1b695",
+        "rev": "53af8b5ec18b8ffbd1874a2396dc200a3d209e4c",
         "type": "github"
       },
       "original": {
-        "owner": "arjunkathuria",
-        "ref": "Mobility-GHC927-rebased-04",
+        "owner": "nammayatri",
         "repo": "beckn-gateway",
         "type": "github"
       }
@@ -278,16 +276,15 @@
         ]
       },
       "locked": {
-        "lastModified": 1686306664,
-        "narHash": "sha256-qTQKX5tUUo6FCnhsDiW1QbWJkFaNnPpLX9ztgY4vjWk=",
-        "owner": "arjunkathuria",
+        "lastModified": 1699959073,
+        "narHash": "sha256-0Ovbd1CzgI4tSCTBe6z/7p8DpbajKyFlyS39hu4xpNY=",
+        "owner": "nammayatri",
         "repo": "clickhouse-haskell",
-        "rev": "f64d861934dcba0928a907605ab2c60d0a91aa4b",
+        "rev": "5314118b2635724b87f7993da9dc8446602bcd65",
         "type": "github"
       },
       "original": {
-        "owner": "arjunkathuria",
-        "ref": "Mobility/GHC-927-rebased",
+        "owner": "nammayatri",
         "repo": "clickhouse-haskell",
         "type": "github"
       }
@@ -304,20 +301,19 @@
         "nixpkgs-21_11": "nixpkgs-21_11",
         "pre-commit-hooks-nix": "pre-commit-hooks-nix",
         "process-compose-flake": "process-compose-flake",
-        "systems": "systems_2",
+        "systems": "systems",
         "treefmt-nix": "treefmt-nix"
       },
       "locked": {
-        "lastModified": 1698621849,
-        "narHash": "sha256-/pd2eJNUUcEP6iKXyyrBJaqhQ79D4a+D98HJ3mNqjQ8=",
-        "owner": "arjunkathuria",
+        "lastModified": 1700137322,
+        "narHash": "sha256-QHWoOy48nH/V3uqPhIjQnCWqiIQVWuDOQlAe1KSjR84=",
+        "owner": "nammayatri",
         "repo": "common",
-        "rev": "20580e2aa81b9adc45e6006472a8d73d062d8ff6",
+        "rev": "d5e3ed3f389cc5f5d3272912aa5207afba9436a0",
         "type": "github"
       },
       "original": {
-        "owner": "arjunkathuria",
-        "ref": "Mobility-GHC927-rebased-04",
+        "owner": "nammayatri",
         "repo": "common",
         "type": "github"
       }
@@ -334,20 +330,19 @@
         "nixpkgs-21_11": "nixpkgs-21_11_2",
         "pre-commit-hooks-nix": "pre-commit-hooks-nix_3",
         "process-compose-flake": "process-compose-flake_3",
-        "systems": "systems_7",
+        "systems": "systems_6",
         "treefmt-nix": "treefmt-nix_3"
       },
       "locked": {
-        "lastModified": 1698621849,
-        "narHash": "sha256-/pd2eJNUUcEP6iKXyyrBJaqhQ79D4a+D98HJ3mNqjQ8=",
-        "owner": "arjunkathuria",
+        "lastModified": 1700137322,
+        "narHash": "sha256-QHWoOy48nH/V3uqPhIjQnCWqiIQVWuDOQlAe1KSjR84=",
+        "owner": "nammayatri",
         "repo": "common",
-        "rev": "20580e2aa81b9adc45e6006472a8d73d062d8ff6",
+        "rev": "d5e3ed3f389cc5f5d3272912aa5207afba9436a0",
         "type": "github"
       },
       "original": {
-        "owner": "arjunkathuria",
-        "ref": "Mobility-GHC927-rebased-04",
+        "owner": "nammayatri",
         "repo": "common",
         "type": "github"
       }
@@ -364,20 +359,19 @@
         "nixpkgs-21_11": "nixpkgs-21_11_3",
         "pre-commit-hooks-nix": "pre-commit-hooks-nix_4",
         "process-compose-flake": "process-compose-flake_4",
-        "systems": "systems_8",
+        "systems": "systems_7",
         "treefmt-nix": "treefmt-nix_4"
       },
       "locked": {
-        "lastModified": 1696580690,
-        "narHash": "sha256-6NsQIqnyYcOL1UVnNbptgssiQkU5ASVR4M0M4+MO7Jo=",
-        "owner": "arjunkathuria",
+        "lastModified": 1699950488,
+        "narHash": "sha256-llyrSKHNFL1FptFykCelRjitl3x0b4JsSkQQyCKVZhU=",
+        "owner": "nammayatri",
         "repo": "common",
-        "rev": "fb68c68fcbc6d87c346786befc203b4b71521f64",
+        "rev": "0ae95ce0df4a0c6be221fdbd946f35e54e97ccf5",
         "type": "github"
       },
       "original": {
-        "owner": "arjunkathuria",
-        "ref": "Mobility-GHC927-rebased-03",
+        "owner": "nammayatri",
         "repo": "common",
         "type": "github"
       }
@@ -604,16 +598,16 @@
         "tinylog": "tinylog"
       },
       "locked": {
-        "lastModified": 1699260708,
-        "narHash": "sha256-Rs434MZgNDQ+NPjty+bhv/yqCKu0AbRGZmw77uE1hIo=",
-        "owner": "arjunkathuria",
+        "lastModified": 1699954198,
+        "narHash": "sha256-o7t0pQtXBo+pEXk7lJ7J2Z07HEWFvlTwy7ZPoPn4Ptw=",
+        "owner": "juspay",
         "repo": "euler-hs",
-        "rev": "1835e721b2bbaf866e218375f88991d0dd232536",
+        "rev": "9492f18e5a36e163c3c55965254fe97f4524f7ac",
         "type": "github"
       },
       "original": {
-        "owner": "arjunkathuria",
-        "ref": "Mobility-GHC927-rebased-04",
+        "owner": "juspay",
+        "ref": "ag/open-source",
         "repo": "euler-hs",
         "type": "github"
       }
@@ -1021,7 +1015,7 @@
     },
     "flake-utils_3": {
       "inputs": {
-        "systems": "systems_3"
+        "systems": "systems_2"
       },
       "locked": {
         "lastModified": 1687709756,
@@ -1039,7 +1033,7 @@
     },
     "flake-utils_4": {
       "inputs": {
-        "systems": "systems_4"
+        "systems": "systems_3"
       },
       "locked": {
         "lastModified": 1685518550,
@@ -1057,7 +1051,7 @@
     },
     "flake-utils_5": {
       "inputs": {
-        "systems": "systems_5"
+        "systems": "systems_4"
       },
       "locked": {
         "lastModified": 1681202837,
@@ -1447,7 +1441,7 @@
         "process-compose-flake": "process-compose-flake_2",
         "rust-overlay": "rust-overlay_2",
         "services-flake": "services-flake",
-        "systems": "systems_6",
+        "systems": "systems_5",
         "treefmt-nix": "treefmt-nix_2"
       },
       "locked": {
@@ -2979,16 +2973,15 @@
         "prometheus-haskell": "prometheus-haskell_2"
       },
       "locked": {
-        "lastModified": 1699275376,
-        "narHash": "sha256-XozU1LhZHX0JVLvwxm87nAdfwHnJGQ0HoYMx8UrxHcU=",
-        "owner": "arjunkathuria",
+        "lastModified": 1700464217,
+        "narHash": "sha256-60v79mntoT/FXBgbl8Z39yH7xtPC2MOIcMGz+kJNVac=",
+        "owner": "nammayatri",
         "repo": "shared-kernel",
-        "rev": "1f62f4a094af85b49b55a885b67bd042ec9d57a3",
+        "rev": "d5bef3a22afff708fdf06cc063ef73c9be721be1",
         "type": "github"
       },
       "original": {
-        "owner": "arjunkathuria",
-        "ref": "Mobility-GHC927-rebased-04",
+        "owner": "nammayatri",
         "repo": "shared-kernel",
         "type": "github"
       }
@@ -3084,21 +3077,6 @@
       }
     },
     "systems_7": {
-      "locked": {
-        "lastModified": 1681028828,
-        "narHash": "sha256-Vy1rq5AaRuLzOxct8nz4T6wlgyUR7zLU309k9mBC768=",
-        "owner": "nix-systems",
-        "repo": "default",
-        "rev": "da67096a3b9bf56a91d16901293e51ba5b49a27e",
-        "type": "github"
-      },
-      "original": {
-        "owner": "nix-systems",
-        "repo": "default",
-        "type": "github"
-      }
-    },
-    "systems_8": {
       "locked": {
         "lastModified": 1681028828,
         "narHash": "sha256-Vy1rq5AaRuLzOxct8nz4T6wlgyUR7zLU309k9mBC768=",

@@ -1,23 +1,17 @@
 {
   inputs = {
-    # Note: replace with upstream when GHC 9.2 changes get merged there
-    # common.url = "github:nammayatri/common";
-    common.url = "github:arjunkathuria/common/Mobility-GHC927-rebased-04";
+    common.url = "github:nammayatri/common";
     nixpkgs.follows = "common/nixpkgs";
     haskell-flake.follows = "common/haskell-flake";
 
     # Backend inputs
-    # Note: replace with upstream when GHC 9.2 changes get merged there
-    # shared-kernel.url = "github:nammayatri/shared-kernel";
     shared-kernel = {
-      url = "github:arjunkathuria/shared-kernel/Mobility-GHC927-rebased-04";
+      url = "github:nammayatri/shared-kernel";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
-    # Note: replace with upstream when GHC 9.2 changes get merged there
-    # beckn-gateway.url = "github:nammayatri/beckn-gateway";
     beckn-gateway = {
-      url = "github:arjunkathuria/beckn-gateway/Mobility-GHC927-rebased-04";
+      url = "github:nammayatri/beckn-gateway";
       inputs = {
         common.follows = "common";
         haskell-flake.follows = "haskell-flake";
