@@ -1060,6 +1060,18 @@ const teluguStrings = {
   GALLERY : "గ్యాలరీ",
   GET_FULL_PAYMENT : "కస్టమర్ల నుండి డైరెక్టుగా, పూర్తి చెల్లింపు పొందండి",
   SELECT_CITY_STR : "నగరాన్ని ఎంచుకోండి",
+  DETECTING_LOCATION : "స్థానాన్ని గుర్తించడం",
+  UNABLE_TO_DETECT_YOUR_LOCATION : "మీ స్థానాన్ని గుర్తించడం సాధ్యం కాలేదు",
+  RC_FAILED_DESC : "దయచేసి కొంత సమయం తర్వాత RCని జోడించడానికి ప్రయత్నించండి",
+  RC_IN_PROGRESS_DESC : "ధృవీకరించబడిన తర్వాత మీ ప్రొఫైల్‌కు RC జోడించబడుతుంది",
+  RC_VERIFICATION_SUCCESS : "RC ధృవీకరణ విజయవంతమైంది!",
+  RC_VERIFICATION_FAILED_STATUS : "RC ధృవీకరణ విఫలమైంది!",
+  RC_VERIFICATION_IN_PROGRESS : "RC ధృవీకరణ ప్రోగ్రెస్‌లో ఉంది...",
+  CHANGE_LOCATION : "స్థానాన్ని మార్చండి",
+  WRONG_CROPPING : "తప్పు క్రాపింగ్",
+  CROPPED_CORRECTLY : "సరిగ్గా కత్తిరించబడింది",
+  BLURRY_IMAGE : "అస్పష్టమైన చిత్రం",
+  CLEAR_IMAGE : "చిత్రాన్ని క్లియర్ చేయండి"
 }
   
   

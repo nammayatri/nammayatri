@@ -1064,6 +1064,13 @@ const hindiStrings = {
   GALLERY : "गैलरी",
   GET_FULL_PAYMENT : "ग्राहक से सीधा और पूरा भुगतान लिजिये",
   SELECT_CITY_STR : "शहर चुनें",
+  DETECTING_LOCATION : "स्थान का पता लगाया जा रहा है",
+  UNABLE_TO_DETECT_YOUR_LOCATION : "आपके स्थान का पता लगाने में असमर्थ",
+  RC_FAILED_DESC : "कृपया कुछ समय बाद आरसी जोड़ने का प्रयास करें",
+  RC_IN_PROGRESS_DESC : "सत्यापित होते ही आरसी आपकी प्रोफ़ाइल में जोड़ दी जाएगी",
+  RC_VERIFICATION_SUCCESS : "आरसी सत्यापन सफल!",
+  RC_VERIFICATION_FAILED_STATUS : "आरसी सत्यापन विफल!",
+  RC_VERIFICATION_IN_PROGRESS : "आरसी सत्यापन जारी है...",
 }
 
 

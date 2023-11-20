@@ -1009,6 +1009,13 @@ const mlStrings = {
   GALLERY : "ഗാലറി",
   GET_FULL_PAYMENT : "ക്ലയന്റിനൊപ്പം നിങ്ങൾക്ക് താഴെക്കാണുന്ന രീതിയിൽ പൂർത്തിയാക്കുക",
   SELECT_CITY_STR : "നഗരം തിരഞ്ഞെടുക്കുക",
+  DETECTING_LOCATION : "ലൊക്കേഷൻ കണ്ടെത്തുന്നു",
+  UNABLE_TO_DETECT_YOUR_LOCATION : "നിങ്ങളുടെ സ്ഥാനം കണ്ടെത്താനായില്ല",
+  RC_FAILED_DESC : "കുറച്ച് സമയത്തിന് ശേഷം RC ചേർക്കാൻ ശ്രമിക്കുക",
+  RC_IN_PROGRESS_DESC : "പരിശോധിച്ചുറപ്പിച്ചുകഴിഞ്ഞാൽ RC നിങ്ങളുടെ പ്രൊഫൈലിലേക്ക് ചേർക്കും",
+  RC_VERIFICATION_SUCCESS : "ആർസി പരിശോധിച്ചുറപ്പിക്കൽ വിജയിച്ചു!",
+  RC_VERIFICATION_FAILED_STATUS : "ആർസി പരിശോധന പരാജയപ്പെട്ടു!",
+  RC_VERIFICATION_IN_PROGRESS : "ആർസി വെരിഫിക്കേഷൻ പുരോഗമിക്കുകയാണ്...",
 }
 
 export function getStringValue(key) {

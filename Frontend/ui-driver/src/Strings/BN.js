@@ -1042,6 +1042,14 @@ const bengaliStrings = {
   GALLERY : "গ্যালারি",
   GET_FULL_PAYMENT : "গ্রাহক থেকে সরাসরি এবং পূর্ণ পেমেন্ট গ্রহণ করুন",
   SELECT_CITY_STR : "শহর নির্বাচন করুন",
+  DETECTING_LOCATION : "অবস্থান সনাক্ত করা হচ্ছে",
+  UNABLE_TO_DETECT_YOUR_LOCATION : "আপনার অবস্থান সনাক্ত করতে অক্ষম",
+  RC_FAILED_DESC : "কিছু সময় পরে RC যোগ করার চেষ্টা করুন",
+  RC_IN_PROGRESS_DESC : "যাচাই হয়ে গেলে RC আপনার প্রোফাইলে যোগ করা হবে",
+  RC_VERIFICATION_SUCCESS : "আরসি যাচাই সফল!",
+  RC_VERIFICATION_FAILED_STATUS : "আরসি যাচাই ব্যর্থ!",
+  RC_VERIFICATION_IN_PROGRESS : "RC যাচাইকরণ চলছে...",
+  CHANGE_LOCATION : "অবস্থান পরিবর্তন করুন"
 }
 
 export function getStringValue(key) {

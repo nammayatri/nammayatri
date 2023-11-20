@@ -1036,6 +1036,13 @@ const kannadaStrings = {
   GALLERY : "ಗ್ಯಾಲರಿ",
   GET_FULL_PAYMENT : "ಗ್ರಾಹಕನಿಂದ ಸರಿಯಾಗಿ ಮತ್ತು ಪೂರ್ಣವಾಗಿ ಪಾವತಿ ಪಡೆಯಿರಿ",
   SELECT_CITY_STR : "ನಗರವನ್ನು ಆಯ್ಕೆಮಾಡಿ",
+  DETECTING_LOCATION : "ಸ್ಥಳವನ್ನು ಪತ್ತೆ ಮಾಡಲಾಗುತ್ತಿದೆ",
+  UNABLE_TO_DETECT_YOUR_LOCATION : "ನಿಮ್ಮ ಸ್ಥಳವನ್ನು ಪತ್ತೆಹಚ್ಚಲು ಸಾಧ್ಯವಾಗುತ್ತಿಲ್ಲ",
+  RC_FAILED_DESC : "ದಯವಿಟ್ಟು ಸ್ವಲ್ಪ ಸಮಯದ ನಂತರ RC ಸೇರಿಸಲು ಪ್ರಯತ್ನಿಸಿ",
+  RC_IN_PROGRESS_DESC : "ಒಮ್ಮೆ ಪರಿಶೀಲಿಸಿದ ನಂತರ ನಿಮ್ಮ ಪ್ರೊಫೈಲ್‌ಗೆ RC ಅನ್ನು ಸೇರಿಸಲಾಗುತ್ತದೆ",
+  RC_VERIFICATION_SUCCESS : "ಆರ್‌ಸಿ ಪರಿಶೀಲನೆ ಯಶಸ್ವಿಯಾಗಿದೆ!",
+  RC_VERIFICATION_FAILED_STATUS : "RC ಪರಿಶೀಲನೆ ವಿಫಲವಾಗಿದೆ!",
+  RC_VERIFICATION_IN_PROGRESS : "ಆರ್‌ಸಿ ಪರಿಶೀಲನೆ ಪ್ರಗತಿಯಲ್ಲಿದೆ..."
 }
 
 

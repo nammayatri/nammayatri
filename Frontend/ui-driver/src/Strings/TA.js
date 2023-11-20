@@ -1037,6 +1037,13 @@ const tamilStrings = {
   GALLERY : "கேலரி",
   GET_FULL_PAYMENT : "வாடிக்கையாளரிடமிருந்து நேரடியாக கட்டணம் பெறுங்கள்",
   SELECT_CITY_STR : "நகரத்தைத் தேர்ந்தெடுக்கவும்",
+  DETECTING_LOCATION : "இருப்பிடத்தைக் கண்டறிதல்",
+  UNABLE_TO_DETECT_YOUR_LOCATION : "உங்கள் இருப்பிடத்தைக் கண்டறிய முடியவில்லை",
+  RC_FAILED_DESC : "சிறிது நேரம் கழித்து RC ஐச் சேர்க்க முயற்சிக்கவும்",
+  RC_IN_PROGRESS_DESC : "சரிபார்க்கப்பட்டதும் உங்கள் சுயவிவரத்தில் RC சேர்க்கப்படும்",
+  RC_VERIFICATION_SUCCESS : "RC சரிபார்ப்பு வெற்றிகரமாக உள்ளது!",
+  RC_VERIFICATION_FAILED_STATUS : "RC சரிபார்ப்பு தோல்வியடைந்தது!",
+  RC_VERIFICATION_IN_PROGRESS : "ஆர்சி சரிபார்ப்பு நடந்து கொண்டிருக்கிறது..."
 }
 
 export function getStringValue(key) {
