@@ -24,6 +24,10 @@ commonConfig =
     $ unsafeToForeign
         { showHamMenu: true
         , showQuoteFindingText: false
+        , geoCoder: {
+          enableLLtoAddress : true
+        , enableAddressToLL : true 
+        }
         , showCorporateAddress: true
         , primaryTextColor: "#FFFFFF"
         , isGradient: "false"

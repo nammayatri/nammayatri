@@ -30,6 +30,7 @@ import Data.Ord
 import Data.Eq
 import Data.Maybe (Maybe(..), fromMaybe, isJust)
 import Data.String (Pattern(..), drop, indexOf, length, split, trim)
+import Data.Function.Uncurried (runFn1)
 import Helpers.Utils (parseFloat, withinTimeRange,isHaveFare, getVehicleVariantImage)
 import Engineering.Helpers.Commons (convertUTCtoISC, getExpiryTime, getCurrentUTC, getMapsLanguageFormat)
 import Language.Strings (getString)
@@ -42,7 +43,9 @@ import Services.API (AddressComponents(..), BookingLocationAPIEntity, DeleteSave
 import Services.Backend as Remote
 import Types.App(FlowBT,  GlobalState(..), ScreenType(..))
 import Storage ( setValueToLocalStore, getValueToLocalStore, KeyStore(..))
-import JBridge (fromMetersToKm, Paths)
+import JBridge (fromMetersToKm, Paths, getLatLonFromAddress)
+import Engineering.Helpers.Utils (getAppConfig)
+import Constants as Constants
 import MerchantConfig.DefaultConfig as DC
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Screens.MyRidesScreen.ScreenData (dummyIndividualCard)
@@ -204,23 +207,35 @@ dummyRideAPIEntity = RideAPIEntity{
 isForLostAndFound :: Boolean
 isForLostAndFound = false
 
-getPlaceNameResp :: Maybe String -> Number -> Number -> LocationListItemState -> FlowBT String GetPlaceNameResp
-getPlaceNameResp placeId lat lon item = do
-    case item.locationItemType of
-      Just PREDICTION ->
-          case placeId of
-            Just placeID  -> Remote.placeNameBT (Remote.makePlaceNameReqByPlaceId placeID $ getMapsLanguageFormat $ getValueToLocalStore LANGUAGE_KEY)
-            Nothing       ->  pure $ makePlaceNameResp lat lon
-      _ ->  do
-        case item.lat, item.lon of
-          Nothing, Nothing -> case placeId of
-            Just placeID  -> Remote.placeNameBT (Remote.makePlaceNameReqByPlaceId placeID $ getMapsLanguageFormat $ getValueToLocalStore LANGUAGE_KEY)
-            Nothing       ->  pure $ makePlaceNameResp lat lon
-          Just 0.0, Just 0.0 -> case placeId of
-            Just placeID  -> Remote.placeNameBT (Remote.makePlaceNameReqByPlaceId placeID $ getMapsLanguageFormat $ getValueToLocalStore LANGUAGE_KEY)
-            Nothing       ->  pure $ makePlaceNameResp lat lon
-          _ , _ -> pure $ makePlaceNameResp lat lon
 
+
+getPlaceNameResp :: String -> Maybe String -> Number -> Number -> LocationListItemState -> FlowBT String GetPlaceNameResp
+getPlaceNameResp address placeId lat lon item = do
+  case item.locationItemType of
+    Just PREDICTION -> getPlaceNameRes
+    _ -> checkLatLon
+  where
+    getPlaceNameRes :: FlowBT String GetPlaceNameResp
+    getPlaceNameRes =
+      case placeId of
+        Just placeID  -> checkLatLonFromAddress placeID
+        Nothing       ->  pure $ makePlaceNameResp lat lon
+    
+    checkLatLonFromAddress :: String -> FlowBT String GetPlaceNameResp
+    checkLatLonFromAddress placeID = do
+      let {latitude, longitude} = runFn1 getLatLonFromAddress address
+      config <- getAppConfig Constants.appConfig
+      if latitude /= 0.0 && longitude /= 0.0 && config.geoCoder.enableAddressToLL then
+        pure $ makePlaceNameResp latitude longitude
+      else
+        Remote.placeNameBT (Remote.makePlaceNameReqByPlaceId placeID $ getMapsLanguageFormat $ getValueToLocalStore LANGUAGE_KEY)
+    
+    checkLatLon :: FlowBT String GetPlaceNameResp
+    checkLatLon = 
+      case item.lat, item.lon of
+        Nothing, Nothing -> getPlaceNameRes
+        Just 0.0, Just 0.0 -> getPlaceNameRes
+        _ , _ -> pure $ makePlaceNameResp lat lon
 
 makePlaceNameResp :: Number ->  Number -> GetPlaceNameResp
 makePlaceNameResp lat lon =
@@ -264,7 +279,7 @@ updateSavedLocation item lat lon = do
       address = item.description
       tag = item.tag
   resp <- Remote.deleteSavedLocationBT (DeleteSavedLocationReq (trim item.tag))
-  (GetPlaceNameResp placeNameResp) <- getPlaceNameResp item.placeId lat lon item
+  (GetPlaceNameResp placeNameResp) <- getPlaceNameResp item.address item.placeId lat lon item
   let (PlaceName placeName) = (fromMaybe dummyLocationName (placeNameResp DA.!! 0))
   let (LatLong placeLatLong) = (placeName.location)
   _ <- Remote.addSavedLocationBT (encodeAddressDescription address tag (item.placeId) (Just placeLatLong.lat) (Just placeLatLong.lon) placeName.addressComponents)
