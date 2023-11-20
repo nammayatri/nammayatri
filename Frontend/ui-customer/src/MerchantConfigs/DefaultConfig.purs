@@ -126,7 +126,11 @@ config =
   , callOptions : ["ANONYMOUS"]
   , autoVariantEnabled : true
   , showDisabilityBanner : true
-  , enableGeocoder : true
+  , enableGeocoder : true --TODO:: Deprecated
+  , geoCoder: {
+      enableLLtoAddress : true
+    , enableAddressToLL : true 
+    }
   , enableWhatsappOTP : ["BD"]
   , notifyRideConfirmationConfig : 
       { notify : false 
