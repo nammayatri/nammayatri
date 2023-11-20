@@ -429,12 +429,12 @@ export const _generateQRCode = function (data, id, size, margin, sc) {
   else {
     sc("FAILURE")();
   }
-  
+}
 export const getDifferenceBetweenDates = function (date1, date2) {
-    const diffInSeconds = Math.floor((new Date(date1) - new Date(date2)) / 1000);
-    return diffInSeconds;
+  const diffInSeconds = Math.floor((new Date(date1) - new Date(date2)) / 1000);
+  return diffInSeconds;
 }
 
-export const parseSourceHashArray = function (String) {
-  return JSON.parse(String);
+export const parseSourceHashArray = function (str) {
+  return JSON.parse(str);
 }
