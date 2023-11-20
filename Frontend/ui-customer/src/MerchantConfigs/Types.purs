@@ -61,9 +61,15 @@ type AppConfig =
   , features :: Features
   , rideCompletedCardConfig :: RideCompletedCardConfig
   , purpleRideConfig :: PurpleRideConfig
-  , enableGeocoder :: Boolean
+  , enableGeocoder :: Boolean -- TODO:: Deprecated 21st Nov 2023
+  , geoCoder :: GeoCoderConfig
   , appLink :: String
   } 
+
+type GeoCoderConfig = {
+  enableLLtoAddress :: Boolean,
+  enableAddressToLL :: Boolean
+}
 
 type NotifyRideConfirmationConfig = {
   notify :: Boolean,
