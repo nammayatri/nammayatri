@@ -21,7 +21,7 @@ module Helpers.Utils
 
 import Accessor (_distance_meters, _payload, _deeplinkOptions)
 import Common.Types.App (EventPayload(..), GlobalPayload(..), LazyCheck(..), Payload(..), InnerPayload, CarouselModal, DeeplinkOptions(..))
-import Components.LocationListItem.Controller (locationListStateObj, dummyLocationListState)
+import Components.LocationListItem.Controller (locationListStateObj)
 import Control.Monad.Except (runExcept)
 import Control.Monad.Free (resume)
 import Data.Array (cons, deleteAt, drop, filter, head, length, null, sortBy, sortWith, tail, (!!), reverse)
