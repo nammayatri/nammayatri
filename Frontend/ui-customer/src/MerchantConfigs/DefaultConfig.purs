@@ -171,4 +171,5 @@ config =
       physicalImpairmentVideo : "",
       hearingImpairmentVideo : ""
     }
+  , appLink : ""
   }

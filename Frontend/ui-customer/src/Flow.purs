@@ -228,10 +228,14 @@ checkVersion versioncodeAndroid versionName= do
   let updatedIOSversion = getIosVersion (getMerchant FunctionCall)
   if os /= "IOS" && versioncodeAndroid < (getLatestAndroidVersion (getMerchant FunctionCall)) then do
     liftFlowBT $ hideLoader
-    modifyScreenState $ AppUpdatePopUpScreenType (\appUpdatePopUpScreenState → appUpdatePopUpScreenState {updatePopup = AppVersion})
-    _ <- UI.handleAppUpdatePopUp
-    _ <- lift $ lift $ liftFlow $ logEvent logField_ "ny_user_app_update_pop_up_view"
-    checkVersion versioncodeAndroid versionName
+    config <- getAppConfig Constants.appConfig
+    modifyScreenState $ AppUpdatePopUpScreenType (\appUpdatePopUpScreenState → appUpdatePopUpScreenState {config = config, updatePopup = AppVersion})
+    appUpdatedFlow <- UI.handleAppUpdatePopUp
+    case appUpdatedFlow of 
+      Later -> pure unit
+      _ -> do 
+        _ <- lift $ lift $ liftFlow $ logEvent logField_ "ny_user_app_update_pop_up_view"
+        checkVersion versioncodeAndroid versionName
     else if os == "IOS" && versionName /= "" && updatedIOSversion.enableForceUpdateIOS then do
 
       let versionArray = (split (Pattern ".") versionName)
@@ -263,7 +267,7 @@ getLatestAndroidVersion merchant =
   case merchant of
     NAMMAYATRI -> 31
     YATRI -> 49
-    YATRISATHI -> 2
+    YATRISATHI -> 105
     _ -> 1
 
 forceIOSupdate :: Int -> Int -> Int -> IosVersion -> Boolean

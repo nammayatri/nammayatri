@@ -118,4 +118,5 @@ commonConfig =
         , editTextBackground : "#313440"
         , editTextDefaultColor : "#A7A7A7"
         }
+        , appLink : ""
         }

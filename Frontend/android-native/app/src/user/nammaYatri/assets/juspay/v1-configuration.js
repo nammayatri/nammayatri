@@ -10,7 +10,7 @@ window.getMerchantConfig = function () {
     "shareAppTitle": "Share Namma Yatri!",
     "shareAppContent": "Hey there!\n\nCheck India's first Zero Commission auto booking app.\n100% Open source | 100% Open Data\n\nDownload Namma Yatri now! \nhttps://nammayatri.in/link/rider/SJ8D \n\n #beOpen #chooseOpen",
     "DOCUMENT_LINK": "https://docs.google.com/document/d/1-oRR_oI8ncZRPZvFZEJZeCVQjTmXTmHA",
-    "APP_LINK": getAppLink(window.__OS),
+    "appLink": getAppLink(window.__OS),
     "PRIVACY_POLICY_LINK": "https://docs.google.com/document/d/128VU80K5E1iz-x6QnP1R127m_lwmDO3F",
     "showChargeDesc" : false,
     "isShareAppEnabled": "true",
