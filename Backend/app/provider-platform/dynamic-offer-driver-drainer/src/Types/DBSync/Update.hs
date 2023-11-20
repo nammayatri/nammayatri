@@ -34,6 +34,7 @@ import qualified "dynamic-offer-driver-app" Storage.Beam.DriverOnboarding.Driver
 import qualified "dynamic-offer-driver-app" Storage.Beam.DriverOnboarding.IdfyVerification as IdfyVerification
 import qualified "dynamic-offer-driver-app" Storage.Beam.DriverOnboarding.Image as Image
 import qualified "dynamic-offer-driver-app" Storage.Beam.DriverOnboarding.VehicleRegistrationCertificate as VehicleRegistrationCertificate
+import qualified "dynamic-offer-driver-app" Storage.Beam.DriverPlan as DriverPlan
 import qualified "dynamic-offer-driver-app" Storage.Beam.DriverQuote as DriverQuote
 import qualified "dynamic-offer-driver-app" Storage.Beam.DriverReferral as DriverReferral
 import qualified "dynamic-offer-driver-app" Storage.Beam.DriverStats as DriverStats
@@ -58,6 +59,7 @@ import qualified "dynamic-offer-driver-app" Storage.Beam.GoHomeConfig as GoHomeC
 import "dynamic-offer-driver-app" Storage.Beam.IssueManagement ()
 import qualified "dynamic-offer-driver-app" Storage.Beam.Location as Location
 import qualified "dynamic-offer-driver-app" Storage.Beam.LocationMapping as LocationMapping
+import qualified "dynamic-offer-driver-app" Storage.Beam.Mandate as Mandate
 import qualified "dynamic-offer-driver-app" Storage.Beam.Maps.PlaceNameCache as PlaceNameCache
 import qualified "dynamic-offer-driver-app" Storage.Beam.Merchant as Merchant
 import qualified "dynamic-offer-driver-app" Storage.Beam.Merchant.DriverIntelligentPoolConfig as DriverIntelligentPoolConfig
@@ -108,6 +110,7 @@ data UpdateModel
   | AadhaarVerificationUpdate
   | DriverLicenseUpdate
   | DriverRcAssociationUpdate
+  | DriverPlanUpdate
   | IdfyVerificationUpdate
   | ImageUpdate
   | VehicleRegistrationCertificateUpdate
@@ -138,6 +141,7 @@ data UpdateModel
   | DriverIntelligentPoolConfigUpdate
   | DriverPoolConfigUpdate
   | MerchantLeaderBoardConfigUpdate
+  | MandateUpdate
   | MerchantMessageUpdate
   | MerchantPaymentMethodUpdate
   | MerchantServiceConfigUpdate
@@ -186,6 +190,7 @@ getTagUpdate DriverBlockReasonUpdate = "DriverBlockReasonOptions"
 getTagUpdate FleetDriverAssociationUpdate = "FleetDriverAssociationOptions"
 getTagUpdate DriverFeeUpdate = "DriverFeeOptions"
 getTagUpdate DriverInformationUpdate = "DriverInformationOptions"
+getTagUpdate DriverPlanUpdate = "DriverPlanOptions"
 getTagUpdate AadhaarOtpReqUpdate = "AadhaarOtpReqOptions"
 getTagUpdate AadhaarOtpVerifyUpdate = "AadhaarOtpVerifyOptions"
 getTagUpdate AadhaarVerificationUpdate = "AadhaarVerificationOptions"
@@ -216,6 +221,7 @@ getTagUpdate IssueOptionUpdate = "IssueOptionOptions"
 getTagUpdate IssueReportUpdate = "IssueReportOptions"
 getTagUpdate IssueTranslationUpdate = "IssueTranslationOptions"
 getTagUpdate PlaceNameCacheUpdate = "PlaceNameCacheOptions"
+getTagUpdate MandateUpdate = "MandateOptions"
 getTagUpdate MediaFileUpdate = "MediaFileOptions"
 getTagUpdate MerchantUpdate = "MerchantOptions"
 getTagUpdate DriverIntelligentPoolConfigUpdate = "DriverIntelligentPoolConfigOptions"
@@ -265,6 +271,7 @@ parseTagUpdate "BusinessEventOptions" = return BusinessEventUpdate
 parseTagUpdate "CallStatusOptions" = return CallStatusUpdate
 parseTagUpdate "CancellationReasonOptions" = return CancellationReasonUpdate
 parseTagUpdate "DriverBlockReasonOptions" = return DriverBlockReasonUpdate
+parseTagUpdate "DriverPlanOptions" = return DriverPlanUpdate
 parseTagUpdate "FleetDriverAssociationOptions" = return FleetDriverAssociationUpdate
 parseTagUpdate "DriverFeeOptions" = return DriverFeeUpdate
 parseTagUpdate "DriverInformationOptions" = return DriverInformationUpdate
@@ -298,6 +305,7 @@ parseTagUpdate "IssueOptionOptions" = return IssueOptionUpdate
 parseTagUpdate "IssueReportOptions" = return IssueReportUpdate
 parseTagUpdate "IssueTranslationOptions" = return IssueTranslationUpdate
 parseTagUpdate "PlaceNameCacheOptions" = return PlaceNameCacheUpdate
+parseTagUpdate "MandateOptions" = return MandateUpdate
 parseTagUpdate "MediaFileOptions" = return MediaFileUpdate
 parseTagUpdate "MerchantOptions" = return MerchantUpdate
 parseTagUpdate "DriverIntelligentPoolConfigOptions" = return DriverIntelligentPoolConfigUpdate
@@ -351,6 +359,7 @@ data DBUpdateObject
   | FleetDriverAssociationOptions UpdateModel [Set Postgres FleetDriverAssociation.FleetDriverAssociationT] (Where Postgres FleetDriverAssociation.FleetDriverAssociationT)
   | DriverFeeOptions UpdateModel [Set Postgres DriverFee.DriverFeeT] (Where Postgres DriverFee.DriverFeeT)
   | DriverInformationOptions UpdateModel [Set Postgres DriverInformation.DriverInformationT] (Where Postgres DriverInformation.DriverInformationT)
+  | DriverPlanOptions UpdateModel [Set Postgres DriverPlan.DriverPlanT] (Where Postgres DriverPlan.DriverPlanT)
   | AadhaarOtpReqOptions UpdateModel [Set Postgres AadhaarOtpReq.AadhaarOtpReqT] (Where Postgres AadhaarOtpReq.AadhaarOtpReqT)
   | AadhaarOtpVerifyOptions UpdateModel [Set Postgres AadhaarOtpVerify.AadhaarOtpVerifyT] (Where Postgres AadhaarOtpVerify.AadhaarOtpVerifyT)
   | AadhaarVerificationOptions UpdateModel [Set Postgres AadhaarVerification.AadhaarVerificationT] (Where Postgres AadhaarVerification.AadhaarVerificationT)
@@ -381,6 +390,7 @@ data DBUpdateObject
   | IssueReportOptions UpdateModel [Set Postgres IssueReport.IssueReportT] (Where Postgres IssueReport.IssueReportT)
   | IssueTranslationOptions UpdateModel [Set Postgres IssueTranslation.IssueTranslationT] (Where Postgres IssueTranslation.IssueTranslationT)
   | PlaceNameCacheOptions UpdateModel [Set Postgres PlaceNameCache.PlaceNameCacheT] (Where Postgres PlaceNameCache.PlaceNameCacheT)
+  | MandateOptions UpdateModel [Set Postgres Mandate.MandateT] (Where Postgres Mandate.MandateT)
   | MediaFileOptions UpdateModel [Set Postgres MediaFile.MediaFileT] (Where Postgres MediaFile.MediaFileT)
   | MerchantOptions UpdateModel [Set Postgres Merchant.MerchantT] (Where Postgres Merchant.MerchantT)
   | DriverIntelligentPoolConfigOptions UpdateModel [Set Postgres DriverIntelligentPoolConfig.DriverIntelligentPoolConfigT] (Where Postgres DriverIntelligentPoolConfig.DriverIntelligentPoolConfigT)
@@ -453,6 +463,9 @@ instance FromJSON DBUpdateObject where
       DriverBlockReasonUpdate -> do
         (updVals, whereClause) <- parseUpdateCommandValues contents
         return $ DriverBlockReasonOptions updateModel updVals whereClause
+      DriverPlanUpdate -> do
+        (updVals, whereClause) <- parseUpdateCommandValues contents
+        return $ DriverPlanOptions updateModel updVals whereClause
       FleetDriverAssociationUpdate -> do
         (updVals, whereClause) <- parseUpdateCommandValues contents
         return $ FleetDriverAssociationOptions updateModel updVals whereClause
@@ -552,6 +565,9 @@ instance FromJSON DBUpdateObject where
       PlaceNameCacheUpdate -> do
         (updVals, whereClause) <- parseUpdateCommandValues contents
         return $ PlaceNameCacheOptions updateModel updVals whereClause
+      MandateUpdate -> do
+        (updVals, whereClause) <- parseUpdateCommandValues contents
+        return $ MandateOptions updateModel updVals whereClause
       MediaFileUpdate -> do
         (updVals, whereClause) <- parseUpdateCommandValues contents
         return $ MediaFileOptions updateModel updVals whereClause

@@ -31,6 +31,7 @@ import qualified "dynamic-offer-driver-app" Storage.Beam.DriverOnboarding.Driver
 import qualified "dynamic-offer-driver-app" Storage.Beam.DriverOnboarding.IdfyVerification as IdfyVerification
 import qualified "dynamic-offer-driver-app" Storage.Beam.DriverOnboarding.Image as Image
 import qualified "dynamic-offer-driver-app" Storage.Beam.DriverOnboarding.VehicleRegistrationCertificate as VehicleRegistrationCertificate
+import qualified "dynamic-offer-driver-app" Storage.Beam.DriverPlan as DriverPlan
 import qualified "dynamic-offer-driver-app" Storage.Beam.DriverQuote as DriverQuote
 import qualified "dynamic-offer-driver-app" Storage.Beam.DriverReferral as DriverReferral
 import qualified "dynamic-offer-driver-app" Storage.Beam.DriverStats as DriverStats
@@ -55,6 +56,7 @@ import qualified "dynamic-offer-driver-app" Storage.Beam.GoHomeConfig as GoHomeC
 import "dynamic-offer-driver-app" Storage.Beam.IssueManagement ()
 import qualified "dynamic-offer-driver-app" Storage.Beam.Location as Location
 import qualified "dynamic-offer-driver-app" Storage.Beam.LocationMapping as LocationMapping
+import qualified "dynamic-offer-driver-app" Storage.Beam.Mandate as Mandate
 import qualified "dynamic-offer-driver-app" Storage.Beam.Maps.PlaceNameCache as PlaceNameCache
 import qualified "dynamic-offer-driver-app" Storage.Beam.Merchant as Merchant
 import qualified "dynamic-offer-driver-app" Storage.Beam.Merchant.DriverIntelligentPoolConfig as DriverIntelligentPoolConfig
@@ -94,6 +96,7 @@ data DBCreateObject
   | CallStatusObject CallStatus.CallStatus
   | CancellationReasonObject CancellationReason.CancellationReason
   | DriverBlockReasonObject DriverBlockReason.DriverBlockReason
+  | DriverPlanObject DriverPlan.DriverPlan
   | FleetDriverAssociationObject FleetDriverAssociation.FleetDriverAssociation
   | DriverFeeObject DriverFee.DriverFee
   | DriverInformationObject DriverInformation.DriverInformation
@@ -127,6 +130,7 @@ data DBCreateObject
   | IssueReportObject IssueReport.IssueReport
   | IssueTranslationObject IssueTranslation.IssueTranslation
   | PlaceNameCacheObject PlaceNameCache.PlaceNameCache
+  | MandateObject Mandate.Mandate
   | MediaFileObject MediaFile.MediaFile
   | MerchantObject Merchant.Merchant
   | DriverIntelligentPoolConfigObject DriverIntelligentPoolConfig.DriverIntelligentPoolConfig
@@ -180,6 +184,7 @@ modelName (BusinessEventObject _) = "BusinessEvent"
 modelName (CallStatusObject _) = "CallStatus"
 modelName (CancellationReasonObject _) = "CancellationReason"
 modelName (DriverBlockReasonObject _) = "DriverBlockReason"
+modelName (DriverPlanObject _) = "DriverPlan"
 modelName (FleetDriverAssociationObject _) = "FleetDriverAssociation"
 modelName (DriverFeeObject _) = "DriverFee"
 modelName (DriverInformationObject _) = "DriverInformation"
@@ -213,6 +218,7 @@ modelName (IssueOptionObject _) = "IssueOption"
 modelName (IssueReportObject _) = "IssueReport"
 modelName (IssueTranslationObject _) = "IssueTranslation"
 modelName (PlaceNameCacheObject _) = "PlaceNameCache"
+modelName (MandateObject _) = "Mandate"
 modelName (MediaFileObject _) = "MediaFile"
 modelName (MerchantObject _) = "Merchant"
 modelName (DriverIntelligentPoolConfigObject _) = "DriverIntelligentPoolConfig"
