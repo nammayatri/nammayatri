@@ -184,7 +184,8 @@ config =
     enableEmergencyContacts: true,
     enableReferral: true,
     enableSupport: true,
-    enableShareApp: true
+    enableShareApp: true,
+    enableSelfServe : true
   }
 
   , rideCompletedCardConfig : {

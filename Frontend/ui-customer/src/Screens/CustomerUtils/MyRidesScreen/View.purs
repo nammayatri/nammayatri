@@ -34,7 +34,7 @@ import Font.Style as FontStyle
 import JBridge (getArray)
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Prelude (Unit, ($), (<$>), (<>), (&&), (<<<), (==), (||), const, show, discard, bind, not, pure, unit, when)
+import Prelude (Unit, ($), (<$>), (<>), (&&), (<<<), (==), (||), const, show, discard, bind, not, pure, unit, when, void)
 import Presto.Core.Types.Language.Flow (Flow, doAff)
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, alignParentBottom, background, clickable, color, gravity, height, id, linearLayout, margin, onAnimationEnd, onBackPressed, onClick, onRefresh, onScroll, onScrollStateChange, orientation, padding, scrollBarY, swipeRefreshLayout, text, textView, visibility, weight, width, textSize, fontStyle, lineHeight)
 import PrestoDOM.Animation as PrestoAnim
@@ -49,6 +49,7 @@ import Services.Backend as Remote
 import Styles.Colors as Color
 import Types.App (GlobalState, defaultGlobalState)
 import Helpers.Utils as HU
+import Mobility.Prelude (boolToVisibility)
 
 screen :: ST.MyRidesScreenState -> PrestoList.ListItem -> Screen Action ST.MyRidesScreenState ScreenOutput
 screen initialState listItemm =
@@ -61,7 +62,7 @@ screen initialState listItemm =
   , globalEvents : [
        globalOnScroll "MyRidesScreen",
         ( \push -> do
-                    _ <- launchAff $ EHC.flowRunner defaultGlobalState $ getPastRides RideBookingListAPIResponseAction push initialState
+                    void $ launchAff $ EHC.flowRunner defaultGlobalState $ getPastRides RideBookingListAPIResponseAction push initialState
                     pure $ pure unit
         )
   ]
@@ -119,7 +120,7 @@ loadButtonView state push =
   , orientation VERTICAL
   , background Color.white900
   , onClick push (const Loader)
-  , clickable if state.data.loadMoreText == "LoadMore" then true else false
+  , clickable state.data.loadMoreText 
   , gravity CENTER
   , alignParentBottom "true,-1"
   , padding (Padding 0 0 0 5)
@@ -138,7 +139,7 @@ loadButtonView state push =
     [ textView $
       [ width WRAP_CONTENT
       , height WRAP_CONTENT
-      , text $ if state.data.loadMoreText == "LoadMore" then (getString LOAD_MORE) else (getString NO_MORE_RIDES)
+      , text $ if state.data.loadMoreText then getString LOAD_MORE else getString NO_MORE_RIDES
       , padding (Padding 10 5 10 5)
       , color Color.blue900
       ] <> FontStyle.body1 LanguageStyle
@@ -174,7 +175,7 @@ ridesView listItemm push state =
           [ height MATCH_PARENT
           , width MATCH_PARENT
           , background Color.white900
-          , visibility $ if (DA.length state.itemsRides) == 0  then VISIBLE else GONE
+          , visibility $ boolToVisibility $ DA.null state.itemsRides
           ][  ErrorModal.view (push <<< ErrorModalActionController) (errorModalConfig state)]
       , Tuple "APIFailure"
         $ linearLayout
@@ -190,16 +191,14 @@ ridesView listItemm push state =
             [ PrestoAnim.duration 1000
             , PrestoAnim.toAlpha $
                 case state.shimmerLoader of
-                    ST.AnimatingIn -> 1.0
-                    ST.AnimatedIn -> 1.0
-                    ST.AnimatingOut -> 0.0
-                    ST.AnimatedOut -> 0.0
+                  loader | loader `DA.elem` [ST.AnimatingIn, ST.AnimatedIn] -> 1.0
+                  loader | loader `DA.elem` [ST.AnimatingOut, ST.AnimatedOut] -> 0.0
+                  _ -> 0.0
             , PrestoAnim.fromAlpha $
                 case state.shimmerLoader of
-                    ST.AnimatingIn -> 0.0
-                    ST.AnimatedIn -> 1.0
-                    ST.AnimatingOut -> 1.0
-                    ST.AnimatedOut -> 0.0
+                  loader | loader `DA.elem` [ST.AnimatingIn, ST.AnimatedOut] -> 0.0
+                  loader | loader `DA.elem` [ST.AnimatingOut, ST.AnimatedIn] -> 1.0
+                  _ -> 0.0
             , PrestoAnim.tag "Shimmer"
             ] true
           ] $ PrestoList.list
@@ -257,10 +256,7 @@ getPastRides action push state = do
           doAff do liftEffect $ push $ action (RideBookingListRes listResp) "success"
           pure unit
       Left (err) -> do
-        if err.code == 500 then
-          doAff do liftEffect $ push $ action (RideBookingListRes dummyListResp ) "listCompleted"
-          else
-            doAff do liftEffect $ push $ action (RideBookingListRes dummyListResp ) "failure"
+        doAff do liftEffect $ push $ action (RideBookingListRes dummyListResp ) if err.code == 500 then "listCompleted" else "failure"
         pure unit
 
 dummyListResp :: forall a.  { list :: Array a}

@@ -39,3 +39,5 @@ import Screens.OnBoardingFlow.WelcomeScreen.Handler (welcomeScreen) as UI
 import Screens.TicketBookingScreen.Handler (ticketBookingScreen) as UI
 import Screens.TicketInfoScreen.Handler (ticketInfoScreen) as UI
 import Screens.TicketingScreen.Handler (ticketingScreen) as UI
+import Screens.RideSelectionScreen.Handler (rideSelection) as UI
+import Screens.ReportIssueChatScreen.Handler (reportIssueChatScreen) as UI

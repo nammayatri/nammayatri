@@ -33,7 +33,9 @@ window.getMerchantConfig = function () {
       "ACCESSIBILITY_TEXT",
       "TO_CATER_YOUR_SPECIFIC_NEEDS",
       "PLEASE_ENABLE_LOCATION_PERMISSION",
-      "MOST_LOVED_APP"
+      "MOST_LOVED_APP",
+      "REPORT_ISSUE_CHAT_PLACEHOLDER",
+      "CALL_SUPPORT_DESCRIPTION"
     ],
     "isReferralEnabled": "true",
     "showBookingPreference": "false",
@@ -124,7 +126,9 @@ window.getMerchantConfig = function () {
       "DRIVER_ADDITIONS_ARE_CALCULATED_AT_RATE": "Driver addition limits are in increments of ₹10",
       "ACCESSIBILITY_TEXT" : "Yatri, now customised for you!",
       "TO_CATER_YOUR_SPECIFIC_NEEDS" : "To cater to your specific needs, we have customised certain features of Yatri.",
-      "PLEASE_ENABLE_LOCATION_PERMISSION" : "Please enable location permissions for Yatri from the settings app to start looking for rides."
+      "PLEASE_ENABLE_LOCATION_PERMISSION" : "Please enable location permissions for Yatri from the settings app to start looking for rides.",
+      "REPORT_ISSUE_CHAT_PLACEHOLDER" : "Describe your issue. Yatri will try to resolve it in under 24 hours.",
+      "CALL_SUPPORT_DESCRIPTION" : "You are about to place a call to Yatri Support. Do you want to proceed?"
     },
     "malayalamStrings": {
       "WELCOME_TEXT" : "യാത്രയിലേക്ക് സ്വാഗതം",
@@ -147,7 +151,9 @@ window.getMerchantConfig = function () {
       "DRIVER_ADDITIONS_ARE_CALCULATED_AT_RATE": "ഡ്രൈവർ കൂട്ടിച്ചേർക്കൽ പരിധികൾ ₹10 ഇൻക്രിമെന്റിലാണ്",
       "ACCESSIBILITY_TEXT" : "യാത്രി, ഇപ്പോൾ നിങ്ങൾക്കായി ഇഷ്‌ടാനുസൃതമാക്കി!",
       "TO_CATER_YOUR_SPECIFIC_NEEDS" : "നിങ്ങളുടെ പ്രത്യേക ആവശ്യങ്ങൾ നിറവേറ്റുന്നതിനായി, ഞങ്ങൾ യാത്രിയുടെ ചില സവിശേഷതകൾ ഇഷ്‌ടാനുസൃതമാക്കിയിട്ടുണ്ട്.",
-      "PLEASE_ENABLE_LOCATION_PERMISSION" : "റൈഡുകൾക്കായി തിരയാൻ ക്രമീകരണ ആപ്പിൽ നിന്ന് യാത്രയ്‌ക്ക് ലൊക്കേഷൻ അനുമതികൾ പ്രവർത്തനക്ഷമമാക്കുക."
+      "PLEASE_ENABLE_LOCATION_PERMISSION" : "റൈഡുകൾക്കായി തിരയാൻ ക്രമീകരണ ആപ്പിൽ നിന്ന് യാത്രയ്‌ക്ക് ലൊക്കേഷൻ അനുമതികൾ പ്രവർത്തനക്ഷമമാക്കുക.",
+      "REPORT_ISSUE_CHAT_PLACEHOLDER" : "നിങ്ങളുടെ പ്രശ്നം വിവരിക്കുക. 24 മണിക്കൂറിനുള്ളിൽ അത് പരിഹരിക്കാൻ യാത്രി ശ്രമിക്കും.",
+      "CALL_SUPPORT_DESCRIPTION" : "നിങ്ങൾ യാത്രി സപ്പോർട്ടിലേക്ക് ഒരു കോൾ ചെയ്യാൻ പോകുകയാണ്. നിങ്ങൾക്ക് തുടരണോ?"
     },
     "languageList": [{
       "name": "English",
@@ -202,6 +208,7 @@ window.getMerchantConfig = function () {
       "link" : getAppLink(window.__OS)
       , "supportMail" :"nammayatri.support@juspay.in"
       , "name" : "Yatri"
+      , "website" : "https://www.getyatri.com"
     },
   })
 }

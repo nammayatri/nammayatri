@@ -2452,3 +2452,261 @@ instance standardEncodeBusinessHoursResp :: StandardEncode BusinessHoursResp whe
 instance showBusinessHoursResp :: Show BusinessHoursResp where show = genericShow
 instance decodeBusinessHoursResp :: Decode BusinessHoursResp where decode = defaultDecode
 instance encodeBusinessHoursResp :: Encode BusinessHoursResp where encode = defaultEncode
+-------------------------------------------- FetchIssueList -------------------------------------------
+
+
+data FetchIssueListReq = FetchIssueListReq String
+
+newtype FetchIssueListResp = FetchIssueListResp
+ {
+   issues :: Array IssueReportCustomerListItem
+ }
+
+newtype IssueReportCustomerListItem = IssueReportCustomerListItem
+  {
+    issueReportId :: String,
+    status :: String,
+    category :: String,
+    createdAt :: String
+  }
+
+instance makeFetchIssueListReq :: RestEndpoint FetchIssueListReq FetchIssueListResp where
+    makeRequest reqBody@(FetchIssueListReq language) headers = defaultMakeRequest GET (EP.fetchIssueList language) headers reqBody Nothing
+    decodeResponse = decodeJSON
+    encodeRequest = standardEncode
+
+derive instance genericFetchIssueListReq :: Generic FetchIssueListReq _
+instance showFetchIssueListReq     :: Show FetchIssueListReq where show     = genericShow
+instance standardEncodeFetchIssueReq :: StandardEncode FetchIssueListReq where standardEncode req = standardEncode {}
+instance decodeFetchIssueListReq :: Decode FetchIssueListReq where decode = defaultDecode
+instance encodeFetchIssueListReq :: Encode FetchIssueListReq where encode = defaultEncode
+
+derive instance genericIssueReportCustomerListItem :: Generic IssueReportCustomerListItem _
+instance showIssueReportCustomerListItem :: Show IssueReportCustomerListItem where show = genericShow
+instance standardEncodeIssueReportCustomerListItem :: StandardEncode IssueReportCustomerListItem where standardEncode (IssueReportCustomerListItem req) = standardEncode req
+instance decodeIssueReportCustomerListItem :: Decode IssueReportCustomerListItem where decode = defaultDecode
+instance encodeIssueReportCustomerListItem :: Encode IssueReportCustomerListItem where encode = defaultEncode
+
+derive instance genericFetchIssueListResp :: Generic FetchIssueListResp _
+instance showFetchIssueListResp :: Show FetchIssueListResp where show = genericShow
+instance standardEncodeFetchIssueListResp :: StandardEncode FetchIssueListResp where standardEncode (FetchIssueListResp res) = standardEncode res
+instance decodeFetchIssueListResp :: Decode FetchIssueListResp where decode = defaultDecode
+instance encodeFetchIssueListResp :: Encode FetchIssueListResp where encode = defaultEncode
+
+--------------------------------------------------- getCategories ----------------------------------------------------
+data GetCategoriesReq = GetCategoriesReq String
+
+newtype GetCategoriesRes = GetCategoriesRes { categories :: Array Category }
+
+newtype Category = Category
+  { label    :: String
+  , logoUrl  :: String
+  , category :: String
+  , issueCategoryId :: String
+  }
+
+instance makeGetCategoriesReq :: RestEndpoint GetCategoriesReq GetCategoriesRes where
+    makeRequest reqBody@(GetCategoriesReq language) headers = defaultMakeRequest GET (EP.getCategories language) headers reqBody Nothing
+    decodeResponse    = decodeJSON
+    encodeRequest = standardEncode
+
+derive instance genericGetCategoriesReq :: Generic GetCategoriesReq _
+instance showGetCategoriesReq     :: Show GetCategoriesReq where show     = genericShow
+instance standardGetCategoriesReq :: StandardEncode GetCategoriesReq where standardEncode (GetCategoriesReq req) = standardEncode {}
+instance decodeGetCategoriesReq   :: Decode GetCategoriesReq where decode = defaultDecode
+instance encodeGetCategoriesReq   :: Encode GetCategoriesReq where encode = defaultEncode
+
+derive instance genericCategory :: Generic Category _
+instance showCategory     :: Show Category where show     = genericShow
+instance standardCategory :: StandardEncode Category where standardEncode (Category req) = standardEncode req
+instance decodeCategory   :: Decode Category where decode = defaultDecode
+instance encodeCategory   :: Encode Category where encode = defaultEncode
+
+derive instance genericGetCategoriesRes :: Generic GetCategoriesRes _
+instance showGetGetCategoriesRes        :: Show GetCategoriesRes where show     = genericShow
+instance standardEncodeGetCategoriesRes :: StandardEncode GetCategoriesRes where standardEncode (GetCategoriesRes res) = standardEncode res
+instance decodeGetCategoriesRes         :: Decode GetCategoriesRes where decode = defaultDecode
+instance encodeGetCategoriesRes         :: Encode GetCategoriesRes where encode = defaultEncode
+
+--------------------------------------------------- getOptions ----------------------------------------------------
+data GetOptionsReq = GetOptionsReq String String String String
+
+newtype GetOptionsRes = GetOptionsRes { 
+  options :: Array Option, 
+  messages :: Array Message
+}
+
+newtype Option = Option
+  { label  :: String
+  , option :: String
+  , issueOptionId :: String
+  }
+
+newtype Message = Message
+  { id  :: String
+  , message :: String
+  , label :: Maybe String 
+  }
+
+instance makeGetOptionsReq :: RestEndpoint GetOptionsReq GetOptionsRes where
+    makeRequest reqBody@(GetOptionsReq categoryId optionId issueReportId language) headers = defaultMakeRequest GET (EP.getOptions categoryId optionId issueReportId language) headers reqBody Nothing
+    decodeResponse    = decodeJSON
+    encodeRequest = standardEncode
+
+derive instance genericGetOptionsReq :: Generic GetOptionsReq _
+instance showGetOptionsReq     :: Show GetOptionsReq where show     = genericShow
+instance standardGetOptionsReq :: StandardEncode GetOptionsReq where standardEncode (GetOptionsReq _ _ _ _) = standardEncode {}
+instance decodeGetOptionsReq   :: Decode GetOptionsReq where decode = defaultDecode
+instance encodeGetOptionsReq   :: Encode GetOptionsReq where encode = defaultEncode
+
+derive instance genericOption :: Generic Option _
+instance showOption     :: Show Option where show     = genericShow
+instance standardOption :: StandardEncode Option where standardEncode (Option opt) = standardEncode opt
+instance decodeOption   :: Decode Option where decode = defaultDecode
+instance encodeOption   :: Encode Option where encode = defaultEncode
+
+derive instance genericMessage :: Generic Message _
+instance showMessage     :: Show Message where show     = genericShow
+instance standardMessage :: StandardEncode Message where standardEncode (Message msg) = standardEncode msg
+instance decodeMessage   :: Decode Message where decode = defaultDecode
+instance encodeMessage   :: Encode Message where encode = defaultEncode
+
+derive instance genericGetOptionsRes :: Generic GetOptionsRes _
+instance showGetGetOptionsRes        :: Show GetOptionsRes where show     = genericShow
+instance standardEncodeGetOptionsRes :: StandardEncode GetOptionsRes where standardEncode (GetOptionsRes res) = standardEncode res
+instance decodeGetOptionsRes         :: Decode GetOptionsRes where decode = defaultDecode
+instance encodeGetOptionsRes         :: Encode GetOptionsRes where encode = defaultEncode
+
+--------------------------------------------------- IssueReport ----------------------------------------------------
+data PostIssueReq = PostIssueReq String PostIssueReqBody
+
+newtype PostIssueReqBody = PostIssueReqBody
+  { optionId :: Maybe String
+  , rideId :: Maybe String
+  , categoryId :: String
+  , mediaFiles :: Array String
+  , description :: String
+  , chats :: Array Chat
+  }
+
+newtype Chat = Chat
+  { chatId  :: String
+  , chatType :: String
+  , timestamp :: String
+  }
+
+newtype PostIssueRes = PostIssueRes { 
+  issueReportId :: String, 
+  messages :: Array Message
+}
+
+instance makePostIssueReq :: RestEndpoint PostIssueReq PostIssueRes where
+    makeRequest reqBody@(PostIssueReq language issueDetails) headers = defaultMakeRequest POST (EP.postIssue language) headers reqBody Nothing
+    decodeResponse    = decodeJSON
+    encodeRequest = standardEncode
+
+derive instance genericChat :: Generic Chat _
+instance showChat     :: Show Chat where show     = genericShow
+instance standardChat :: StandardEncode Chat where standardEncode (Chat cht) = standardEncode cht
+instance decodeChat   :: Decode Chat where decode = defaultDecode
+instance encodeChat   :: Encode Chat where encode = defaultEncode
+
+derive instance genericPostIssueReqBody :: Generic PostIssueReqBody _
+derive instance newtypePostIssueReqBody :: Newtype PostIssueReqBody _
+instance standardEncodePostIssueReqBody :: StandardEncode PostIssueReqBody where standardEncode (PostIssueReqBody reqBody) = standardEncode reqBody
+instance showPostIssueReqBody :: Show PostIssueReqBody where show = genericShow
+instance decodePostIssueReqBody :: Decode PostIssueReqBody where decode = defaultDecode
+instance encodePostIssueReqBody :: Encode PostIssueReqBody where encode = defaultEncode
+
+derive instance genericPostIssueReq :: Generic PostIssueReq _
+instance showPostIssueReq     :: Show PostIssueReq where show     = genericShow
+instance standardPostIssueReq :: StandardEncode PostIssueReq where standardEncode (PostIssueReq language (PostIssueReqBody req)) = standardEncode req
+instance decodePostIssueReq   :: Decode PostIssueReq where decode = defaultDecode
+instance encodePostIssueReq   :: Encode PostIssueReq where encode = defaultEncode
+
+derive instance genericPostIssueRes :: Generic PostIssueRes _
+instance showGetPostIssueRes        :: Show PostIssueRes where show     = genericShow
+instance standardEncodePostIssueRes :: StandardEncode PostIssueRes where standardEncode (PostIssueRes res) = standardEncode res
+instance decodePostIssueRes         :: Decode PostIssueRes where decode = defaultDecode
+instance encodePostIssueRes         :: Encode PostIssueRes where encode = defaultEncode
+
+--------------------------------------------------- IssueInfo ----------------------------------------------------
+data IssueInfoReq = IssueInfoReq String String
+
+newtype IssueInfoRes = IssueInfoRes
+  { mediaFiles    :: Array { url :: String, _type :: String }
+  , description   :: String
+  , issueReportId :: String
+  , categoryId    :: String
+  , categoryLabel :: String
+  , chats :: Array ChatDetail
+  , options :: Array Option
+  }
+
+newtype ChatDetail = ChatDetail
+  { timestamp :: String,
+    content :: Maybe String,
+    id :: String,
+    label :: Maybe String,
+    chatType :: String,
+    sender :: String
+  }
+
+instance makeIssueInfoReq :: RestEndpoint IssueInfoReq IssueInfoRes where
+    makeRequest reqBody@(IssueInfoReq issueId language) headers = defaultMakeRequest GET (EP.issueInfo issueId language) headers reqBody Nothing
+    decodeResponse    = decodeJSON
+    encodeRequest = standardEncode
+
+derive instance genericIssueInfoReq :: Generic IssueInfoReq _
+instance showIssueInfoReq     :: Show IssueInfoReq where show     = genericShow
+instance standardIssueInfoReq :: StandardEncode IssueInfoReq where standardEncode (IssueInfoReq _ _) = standardEncode {}
+instance decodeIssueInfoReq   :: Decode IssueInfoReq where decode = defaultDecode
+instance encodeIssueInfoReq   :: Encode IssueInfoReq where encode = defaultEncode
+
+derive instance genericIssueInfoRes :: Generic IssueInfoRes _
+instance showGetIssueInfoRes        :: Show IssueInfoRes where show     = genericShow
+instance standardEncodeIssueInfoRes :: StandardEncode IssueInfoRes where standardEncode (IssueInfoRes res) = standardEncode res
+instance decodeIssueInfoRes         :: Decode IssueInfoRes where decode = defaultDecode
+instance encodeIssueInfoRes         :: Encode IssueInfoRes where encode = defaultEncode
+
+derive instance genericChatDetail :: Generic ChatDetail _
+instance showChatDetail     :: Show ChatDetail where show     = genericShow
+instance standardChatDetail :: StandardEncode ChatDetail where standardEncode (ChatDetail chtDetail) = standardEncode chtDetail
+instance decodeChatDetail   :: Decode ChatDetail where decode = defaultDecode
+instance encodeChatDetail   :: Encode ChatDetail where encode = defaultEncode
+
+--------------------------------------------------- updateIssue ----------------------------------------------------
+data UpdateIssueReq = UpdateIssueReq String String UpdateIssueReqBody
+
+newtype UpdateIssueReqBody = UpdateIssueReqBody { 
+  status :: String
+}
+
+newtype UpdateIssueRes = UpdateIssueRes { 
+  messages :: Array Message
+}
+
+instance makeUpdateIssueReq :: RestEndpoint UpdateIssueReq UpdateIssueRes where
+    makeRequest reqBody@(UpdateIssueReq issueId language req) headers = defaultMakeRequest PUT (EP.updateIssue language issueId) headers reqBody Nothing
+    decodeResponse    = decodeJSON
+    encodeRequest = standardEncode
+  
+derive instance genericUpdateIssueReqBody :: Generic UpdateIssueReqBody _
+derive instance newtypeUpdateIssueReqBody :: Newtype UpdateIssueReqBody _
+instance standardEncodeUpdateIssueReqBody :: StandardEncode UpdateIssueReqBody where standardEncode (UpdateIssueReqBody reqBody) = standardEncode reqBody
+instance showUpdateIssueReqBody :: Show UpdateIssueReqBody where show = genericShow
+instance decodeUpdateIssueReqBody :: Decode UpdateIssueReqBody where decode = defaultDecode
+instance encodeUpdateIssueReqBody :: Encode UpdateIssueReqBody where encode = defaultEncode
+
+derive instance genericUpdateIssueReq :: Generic UpdateIssueReq _
+instance showUpdateIssueReq     :: Show UpdateIssueReq where show     = genericShow
+instance standardUpdateIssueReq :: StandardEncode UpdateIssueReq where standardEncode (UpdateIssueReq _ _ req) = standardEncode req
+instance decodeUpdateIssueReq   :: Decode UpdateIssueReq where decode = defaultDecode
+instance encodeUpdateIssueReq   :: Encode UpdateIssueReq where encode = defaultEncode
+
+derive instance genericUpdateIssueRes :: Generic UpdateIssueRes _
+instance showUpdateIssueRes        :: Show UpdateIssueRes where show     = genericShow
+instance standardEncodeUpdateIssueRes :: StandardEncode UpdateIssueRes where standardEncode (UpdateIssueRes res) = standardEncode res
+instance decodeUpdateIssueRes         :: Decode UpdateIssueRes where decode = defaultDecode
+instance encodeUpdateIssueRes         :: Encode UpdateIssueRes where encode = defaultEncode
+

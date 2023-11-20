@@ -1110,4 +1110,5 @@ getTE stringKey =
         DOWNLOAD_NAMMA_YATRI -> "నమ్మ యాత్రి డౌన్లోడ్"
         ENTER_CODE -> "కోడ్ వ్రాయండి"
         COMPLETE_REGISTRATION -> "నమోదును పూర్తి చెయ్యండి"
-    
+        CANT_FIND_OPTION -> "ఎంపికను కనుగొనలేకపోయాము"
+        

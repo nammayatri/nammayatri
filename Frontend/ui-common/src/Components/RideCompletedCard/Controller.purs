@@ -26,7 +26,8 @@ data Action = Support
             | SkipButtonActionController PB.Action
             | ContactSupportPopUpAC PopUpModal.Action
             | UpiQrRendered String
-            | BannerAction Banner.Action
+            | BannerAction Banner.Action 
+            | HelpAndSupportAC
             
 type Config = {
   isDriver :: Boolean,
@@ -45,7 +46,8 @@ type Config = {
   isPrimaryButtonSticky :: Boolean,
   bannerConfig :: Banner.Config,
   viewsByOrder :: Array RideCompletedElements,
-  enableContactSupport :: Boolean
+  enableContactSupport :: Boolean,
+  needHelpText :: String
 }
 
 data Theme = DARK | LIGHT
@@ -150,7 +152,8 @@ config = {
   isPrimaryButtonSticky : false,
   bannerConfig : Banner.config,
   viewsByOrder : [],
-  enableContactSupport : true
+  enableContactSupport : true,
+  needHelpText : ""
 }
 
 type CustomerIssueCard = {

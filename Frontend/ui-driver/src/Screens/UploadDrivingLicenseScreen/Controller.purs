@@ -34,8 +34,8 @@ import Effect.Class (liftEffect)
 import Effect.Unsafe (unsafePerformEffect)
 import Engineering.Helpers.Commons (getNewIDWithTag, setText)
 import Engineering.Helpers.LogEvent (logEvent)
-import Helpers.Utils (renderBase64ImageFile, contactSupportNumber)
-import JBridge (disableActionEditText, hideKeyboardOnNavigation, openWhatsAppSupport, renderBase64Image, renderCameraProfilePicture, showDialer, uploadFile)
+import Helpers.Utils (contactSupportNumber)
+import JBridge (disableActionEditText, hideKeyboardOnNavigation, openWhatsAppSupport, renderBase64Image, renderCameraProfilePicture, showDialer, uploadFile, renderBase64ImageFile)
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppTextInput, trackAppScreenEvent)
 import MerchantConfig.Utils (Merchant(..), getMerchant)
 import Prelude (pure, (==), unit, void,  ($), class Show, bind, discard, (<), (<>), show, (+), (/=), (/), (&&), not)
@@ -45,6 +45,7 @@ import Screens (ScreenName(..), getScreen)
 import Screens.Types (UploadDrivingLicenseState)
 import Services.Config (getSupportNumber, getWhatsAppSupportNo)
 import Storage (KeyStore(..), getValueToLocalStore)
+import Effect.Uncurried (runEffectFn4)
 
 
 instance showAction :: Show Action where
@@ -174,7 +175,7 @@ eval AfterRender state =
 
 eval (RenderProfileImage image id) state = do
   continueWithCmd state [do 
-    _ <- liftEffect $ renderBase64ImageFile image id false "CENTER_CROP"
+    void $ liftEffect $ runEffectFn4 renderBase64ImageFile image id false "CENTER_CROP"
     pure NoAction]
 
 eval (BackPressed flag) state = do

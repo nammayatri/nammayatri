@@ -34,14 +34,37 @@ helpAndSupportScreen = do
   (GlobalState state) <- getState
   act <- lift $ lift $ runScreen $ HelpAndSupportScreen.screen state.helpAndSupportScreen
   case act of
-    GoBack -> App.BackT $ App.BackPoint <$> (pure $ GO_TO_HOME_FROM_HELP)
-    GoHome -> do 
+    GoBack updatedState -> do 
+      modifyScreenState $ HelpAndSupportScreenStateType (\_ -> updatedState)
+      App.BackT $ App.BackPoint <$> (pure $ GO_TO_HOME_FROM_HELP)
+    GoHome updatedState -> do 
       modifyScreenState $ HomeScreenStateType (\homeScreenState -> homeScreenState{data{settingSideBar{opened = SettingSideBar.CLOSED}}}) 
       App.BackT $ App.BackPoint <$> (pure $ GO_TO_HOME_FROM_HELP)
-    GoToSupportScreen bookingId-> App.BackT $ App.BackPoint <$> (pure $ GO_TO_SUPPORT_SCREEN bookingId)
-    GoToTripDetails updatedState-> App.BackT $ App.BackPoint <$> (pure $ GO_TO_TRIP_DETAILS updatedState)
-    GoToMyRides -> App.BackT $ App.BackPoint <$> (pure $ VIEW_RIDES)
+    GoToSupportScreen bookingId updatedState-> do
+      modifyScreenState $ HelpAndSupportScreenStateType (\_ -> updatedState)
+      App.BackT $ App.BackPoint <$> (pure $ GO_TO_SUPPORT_SCREEN bookingId)
+    GoToTripDetails updatedState-> do 
+      modifyScreenState $ HelpAndSupportScreenStateType (\_ -> updatedState)
+      App.BackT $ App.BackPoint <$> (pure $ GO_TO_TRIP_DETAILS updatedState)
+    GoToMyRides updatedState -> do 
+      modifyScreenState $ HelpAndSupportScreenStateType (\_ -> updatedState)
+      App.BackT $ App.BackPoint <$> (pure $ VIEW_RIDES)
     UpdateState updatedState -> do
+      modifyScreenState $ HelpAndSupportScreenStateType (\_ -> updatedState)
       let email = if isEmailPresent FunctionCall then getValueToLocalStore USER_EMAIL else "" 
       App.BackT $ App.BackPoint <$> (pure $ UPDATE_STATE updatedState{data{email=email}})
-    ConfirmDeleteAccount updatedState -> App.BackT $ App.NoBack <$> (pure $ DELETE_USER_ACCOUNT updatedState)
+    ConfirmDeleteAccount updatedState -> do
+      modifyScreenState $ HelpAndSupportScreenStateType (\_ -> updatedState)
+      App.BackT $ App.NoBack <$> (pure $ DELETE_USER_ACCOUNT updatedState)
+    GoToHelpAndSupportScreen updatedState -> do 
+      modifyScreenState $ HelpAndSupportScreenStateType (\_ -> updatedState)
+      App.BackT $ App.BackPoint <$> (pure $ UPDATE_STATE updatedState)
+    GoToRideSelectionScreen selectedCategory updatedState -> do 
+      modifyScreenState $ HelpAndSupportScreenStateType (\_ -> updatedState)
+      App.BackT $ App.BackPoint <$> (pure $ RIDE_SELECTION_SCREEN selectedCategory)
+    GoToChatScreen selectedCategory updatedState -> do
+      modifyScreenState $ HelpAndSupportScreenStateType (\_ -> updatedState) 
+      App.BackT $ App.BackPoint <$> (pure $ ISSUE_CHAT_SCREEN selectedCategory)
+    GoToOldChatScreen selectedIssue updatedState-> do 
+      modifyScreenState $ HelpAndSupportScreenStateType (\_ -> updatedState)
+      App.BackT $ App.BackPoint <$> (pure $ OPEN_OLD_ISSUE_CHAT_SCREEN selectedIssue)

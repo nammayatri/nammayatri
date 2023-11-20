@@ -411,3 +411,11 @@ type MarginConfig = {
   bottom :: Int,
   left :: Int
 }
+
+
+type CategoryListType = {
+    categoryName :: String
+  , categoryImageUrl :: String
+  , categoryAction :: String
+  , categoryId :: String
+  }

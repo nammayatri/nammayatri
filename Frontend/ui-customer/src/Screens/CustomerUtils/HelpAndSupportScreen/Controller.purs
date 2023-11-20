@@ -15,6 +15,9 @@
 
 module Screens.HelpAndSupportScreen.Controller where
 
+import Components.IssueList as IssueListController
+import Components.IssueView as IssueViewController
+import Data.Array (length) as DA
 import Accessor (_driverRatings, _contents, _toLocation, _amount, _driverName, _list, _vehicleNumber, _id, _computedPrice, _shortRideId, _rideRating, _vehicleVariant)
 import Components.ErrorModal as ErrorModal
 import Components.GenericHeader as GenericHeader
@@ -22,33 +25,37 @@ import Components.IndividualRideCard as IndividualRideCard
 import Components.PopUpModal as PopUpModal
 import Components.PrimaryButton as PrimaryButton
 import Components.SourceToDestination as SourceToDestination
-import Data.Array ((!!), null, filter)
+import Data.Array ((!!), null, filter, reverse, elem)
+import Language.Types (STR(..))
 import Data.Lens ((^.))
 import Data.Maybe (Maybe(..), fromMaybe)
-import Helpers.Utils (validateEmail,strLenWithSpecificCharacters, isParentView, emitTerminateApp)
-import JBridge (showDialer, hideKeyboardOnNavigation,toast)
-import Engineering.Helpers.Commons (convertUTCtoISC)
+import Helpers.Utils (validateEmail,strLenWithSpecificCharacters, isParentView, emitTerminateApp, getTime,toStringJSON, fetchImage, FetchImageFrom(..))
+import JBridge (showDialer, hideKeyboardOnNavigation,toast, differenceBetweenTwoUTC)
+import Engineering.Helpers.Commons (convertUTCtoISC, getCurrentUTC)
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppTextInput, trackAppScreenEvent)
-import Prelude (class Show, pure, bind, discard, show, unit, map, ($), (<>), (==), void, (&&), (>), (||), not)
+import Prelude (class Show, pure, bind, discard, show, unit, map, ($), (<>), (==), void, (&&), (>), (||),(/), not)
 import PrestoDOM (Eval, continue, continueWithCmd, exit, updateAndExit)
 import PrestoDOM.Types.Core (class Loggable)
 import Resources.Constants (DecodeAddress(..), decodeAddress, getFaresList, getKmMeter, fetchVehicleVariant)
 import Screens (ScreenName(..), getScreen)
 import Screens.HomeScreen.Transformer (dummyRideAPIEntity)
-import Screens.Types (HelpAndSupportScreenState, DeleteStatus(..))
-import Services.API (RideBookingRes(..), FareBreakupAPIEntity(..), RideAPIEntity(..), BookingLocationAPIEntity(..), RideBookingAPIDetails(..), RideBookingListRes(..))
+import Screens.Types (HelpAndSupportScreenState, DeleteStatus(..), IssueInfo, IssueModalType(..))
+import Services.API (IssueReportCustomerListItem(..), RideBookingRes(..), FareBreakupAPIEntity(..), RideAPIEntity(..), BookingLocationAPIEntity(..), RideBookingAPIDetails(..), RideBookingListRes(..))
 import Services.Config (getSupportNumber)
 import Screens.MyRidesScreen.ScreenData (dummyIndividualCard)
 import Components.PrimaryEditText as PrimaryEditText
 import Components.PrimaryButton as PrimaryButton
-import Data.String (length, trim)
+import Data.String (length, trim, joinWith, splitAt, toUpper, split, Pattern(..))
 import Storage (getValueToLocalStore, KeyStore(..))
-import Common.Types.App (LazyCheck(..))
+import Common.Types.App (LazyCheck(..), CategoryListType)
 import Screens.HelpAndSupportScreen.ScreenData (initData)
 import Effect.Unsafe (unsafePerformEffect)
 import Engineering.Helpers.LogEvent (logEvent)
 import Foreign.Object (empty)
 import ConfigProvider
+import Language.Strings( getString)
+import Components.IssueList as IssueList
+import Data.Function.Uncurried (runFn2)
 
 instance showAction :: Show Action where
     show _ = ""
@@ -144,7 +151,20 @@ instance loggableAction :: Loggable Action where
         PopUpModal.Tipbtnclick arg1 arg2 -> trackAppScreenEvent appId (getScreen HELP_AND_SUPPORT_SCREEN) "delete_account_popup_modal_action" "tip_clicked"
         PopUpModal.OptionWithHtmlClick -> trackAppScreenEvent appId (getScreen HELP_AND_SUPPORT_SCREEN) "popup_modal_action" "option_with_html_clicked"
         PopUpModal.DismissPopup -> trackAppScreenEvent appId (getScreen HELP_AND_SUPPORT_SCREEN) "delete_account_popup_modal_action" "popup_dismissed"
+      FetchIssueListApiCall issueList -> trackAppScreenEvent appId (getScreen HELP_AND_SUPPORT_SCREEN) "in_screen" "fetch_issue_list_api_call"
+      ReportedIssue -> trackAppScreenEvent appId (getScreen HELP_AND_SUPPORT_SCREEN) "in_screen" "reported_issue"
+      ResolvedIssue -> trackAppScreenEvent appId (getScreen HELP_AND_SUPPORT_SCREEN) "in_screen" "resolved_issue"
+      SelectRide _ -> trackAppScreenEvent appId (getScreen HELP_AND_SUPPORT_SCREEN) "in_screen" "select_ride"
+      OpenChat _ -> trackAppScreenEvent appId (getScreen HELP_AND_SUPPORT_SCREEN) "in_screen" "open_chat"
+      IssueScreenModal act -> case act of
+        IssueListController.IssueViewAction act -> case act of
+          IssueViewController.IssueClick selectedIssue -> trackAppScreenEvent appId (getScreen HELP_AND_SUPPORT_SCREEN) "in_screen" "issue_click"
+          IssueViewController.Remove _ -> trackAppScreenEvent appId (getScreen HELP_AND_SUPPORT_SCREEN) "in_screen" "issue_remove"
+          IssueViewController.CallSupportCenter -> trackAppScreenEvent appId (getScreen HELP_AND_SUPPORT_SCREEN) "in_screen" "CallSupportCenter"
+        IssueListController.BackPressed -> trackAppScreenEvent appId (getScreen HELP_AND_SUPPORT_SCREEN) "in_screen" "back_press"
+        IssueListController.AfterRender -> trackAppScreenEvent appId (getScreen HELP_AND_SUPPORT_SCREEN) "screen" "after_render"
 
+      -- _ -> trackAppActionClick appId (getScreen HELP_AND_SUPPORT_SCREEN) "in_screen" "on_click_done"
 
 data Action = BackPressed Boolean
             | SourceToDestinationActionController SourceToDestination.Action
@@ -166,32 +186,54 @@ data Action = BackPressed Boolean
             | PrimaryButtonAC PrimaryButton.Action
             | PopUpModalAction PopUpModal.Action
             | AccountDeletedModalAction PopUpModal.Action
+            | FetchIssueListApiCall (Array IssueReportCustomerListItem)
+            | ReportedIssue
+            | ResolvedIssue
+            | SelectRide CategoryListType
+            | OpenChat CategoryListType
+            | IssueScreenModal IssueList.Action
 
-data ScreenOutput = GoBack
-                  | GoToSupportScreen String
+data ScreenOutput = GoBack HelpAndSupportScreenState
+                  | GoToSupportScreen String HelpAndSupportScreenState
                   | GoToTripDetails HelpAndSupportScreenState
-                  | GoToMyRides
-                  | GoHome
+                  | GoToMyRides HelpAndSupportScreenState
+                  | GoHome HelpAndSupportScreenState
                   | UpdateState HelpAndSupportScreenState
-                  | ConfirmDeleteAccount HelpAndSupportScreenState
+                  | GoToRideSelectionScreen CategoryListType HelpAndSupportScreenState
+                  | GoToChatScreen CategoryListType HelpAndSupportScreenState
+                  | GoToHelpAndSupportScreen HelpAndSupportScreenState 
+                  | ConfirmDeleteAccount HelpAndSupportScreenState 
+                  | GoToOldChatScreen IssueInfo HelpAndSupportScreenState
 
 eval :: Action -> HelpAndSupportScreenState -> Eval Action ScreenOutput HelpAndSupportScreenState
 
-eval (BackPressed flag ) state = if state.props.isCallConfirmation
-  then continue state{props{isCallConfirmation = false}}
+eval (BackPressed _ ) state = 
+  if state.data.issueListType == REPORTED_ISSUES_MODAL || state.data.issueListType == RESOLVED_ISSUES_MODAL then continue state {data {issueListType = HELP_AND_SUPPORT_SCREEN_MODAL}}
+  else if state.props.isCallConfirmation then continue state{props{isCallConfirmation = false}}
   else if state.data.accountStatus == CONFIRM_REQ then continue state{data{accountStatus = ACTIVE}}
-  else if state.data.accountStatus == DEL_REQUESTED then updateAndExit (state {data{accountStatus = ACTIVE}} ) $ GoHome
+  else if state.data.accountStatus == DEL_REQUESTED then updateAndExit (state {data{accountStatus = ACTIVE}} ) $ GoHome state
   else if state.props.showDeleteAccountView then continue state{props {showDeleteAccountView = false}}
   else 
     if isParentView FunctionCall 
       then do 
         void $ pure $ emitTerminateApp Nothing true
         continue state
-      else exit GoBack
+      else exit $ GoBack state
 
 eval ContactUs state = do
   let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_help_and_support_email"
-  exit $ GoToSupportScreen state.data.bookingId
+  exit $ GoToSupportScreen state.data.bookingId state
+
+eval (IssueScreenModal (IssueListController.IssueViewAction (IssueViewController.IssueClick selectedIssue))) state = exit $ GoToOldChatScreen selectedIssue state
+eval (IssueScreenModal (IssueListController.BackPressed)) state = exit $ GoToHelpAndSupportScreen state {data {issueListType = HELP_AND_SUPPORT_SCREEN_MODAL}}
+
+eval (SelectRide selectedCategory) state = exit $ GoToRideSelectionScreen selectedCategory state
+
+eval (OpenChat selectedCategory) state = exit $ GoToChatScreen selectedCategory state
+
+eval ReportedIssue state = continue state {data {issueListType = REPORTED_ISSUES_MODAL}}
+
+eval ResolvedIssue state = continue state {data {issueListType = RESOLVED_ISSUES_MODAL}}
 
 eval ReportIssue state = exit $ GoToTripDetails state
 
@@ -201,7 +243,7 @@ eval CallSupport state = do
 
 eval (GenericHeaderActionController (GenericHeader.PrefixImgOnClick )) state = continueWithCmd state [do pure $ BackPressed state.props.isCallConfirmation]
 
-eval ViewRides state = exit $ GoToMyRides
+eval ViewRides state = exit $ GoToMyRides state
 
 eval (RideBookingListAPIResponseAction rideList status) state = do
   let email = if isEmailPresent FunctionCall then getValueToLocalStore USER_EMAIL else ""
@@ -210,11 +252,11 @@ eval (RideBookingListAPIResponseAction rideList status) state = do
       "success" -> do
                     if (null (rideList^._list)) then continue updatedState {data{isNull = true}, props{apiFailure = false}}
                       else do
-                        let list = myRideListTransform (rideList ^._list)
+                        let list = myRideListTransform state (rideList ^._list)
                         case (null (list)) of
                           true -> continue updatedState {data{isNull = true }, props{apiFailure=false}}
                           _    -> do
-                                    let newState = (myRideListTransform (rideList ^._list))!!0
+                                    let newState = (myRideListTransform state (rideList ^._list))!!0
                                     updateAndExit (fromMaybe initData newState) (UpdateState (fromMaybe initData newState))
       "failure"   -> continue updatedState{props{apiFailure = true}}
       _           -> continue updatedState
@@ -226,11 +268,11 @@ eval (PopupModelActionController (PopUpModal.OnButton2Click)) state = do
   void $ pure $ showDialer (getSupportNumber "") false -- TODO: FIX_DIALER
   continue state{props{isCallConfirmation = false}}
 
-eval (APIFailureActionController (ErrorModal.PrimaryButtonActionController PrimaryButton.OnClick)) state = exit GoBack   
+eval (APIFailureActionController (ErrorModal.PrimaryButtonActionController PrimaryButton.OnClick)) state = exit $ GoBack state
 
-eval (NoRidesActionController (ErrorModal.PrimaryButtonActionController PrimaryButton.OnClick)) state = exit GoHome
+eval (NoRidesActionController (ErrorModal.PrimaryButtonActionController PrimaryButton.OnClick)) state = exit $ GoHome state
 
-eval (EmailEditTextAC (PrimaryEditText.TextChanged id a)) state = continue state{data {email = trim(a)},props{btnActive = length (trim a) > 0  && (strLenWithSpecificCharacters (trim state.data.description) "[a-zA-Z]") > 9 && validateEmail a}}
+eval (EmailEditTextAC (PrimaryEditText.TextChanged _ a)) state = continue state{data {email = trim(a)},props{btnActive = length (trim a) > 0  && (strLenWithSpecificCharacters (trim state.data.description) "[a-zA-Z]") > 9 && validateEmail a}}
 
 eval (DescriptionEditTextAC (PrimaryEditText.TextChanged id a)) state = do 
   let email= if isEmailPresent FunctionCall then getValueToLocalStore USER_EMAIL else state.data.email
@@ -249,13 +291,18 @@ eval (PopUpModalAction (PopUpModal.OnButton1Click)) state = continue state {data
 eval (PopUpModalAction (PopUpModal.OnButton2Click)) state = do 
   let email = if isEmailPresent FunctionCall then getValueToLocalStore USER_EMAIL else state.data.email
   exit $ ConfirmDeleteAccount state{data{email=email}}
-eval (AccountDeletedModalAction (PopUpModal.OnButton1Click)) state =  updateAndExit (state {data{accountStatus = ACTIVE}} ) $ GoHome
-eval (AccountDeletedModalAction (PopUpModal.OnButton2Click)) state =  updateAndExit (state {data{accountStatus = ACTIVE}} ) $ GoHome
+eval (AccountDeletedModalAction (PopUpModal.OnButton1Click)) state =  updateAndExit (state {data{accountStatus = ACTIVE}} ) $ GoHome state
+eval (AccountDeletedModalAction (PopUpModal.OnButton2Click)) state =  updateAndExit (state {data{accountStatus = ACTIVE}} ) $ GoHome state
 
+eval (FetchIssueListApiCall issueList) state = do
+     let apiIssueList = getApiIssueList issueList
+         updatedResolvedIssueList = reverse (getUpdatedIssueList ["CLOSED"] apiIssueList)
+         updatedOngoingIssueList = reverse (getUpdatedIssueList ["OPEN", "PENDING", "RESOLVED", "REOPENED"] apiIssueList)
+     continue state {data {issueList =apiIssueList, resolvedIssueList =  updatedResolvedIssueList , ongoingIssueList =  updatedOngoingIssueList}}
 eval _ state = continue state
 
-myRideListTransform :: Array RideBookingRes -> Array HelpAndSupportScreenState
-myRideListTransform listRes = filter (\item -> (item.data.status == "COMPLETED")) (map(\(RideBookingRes ride) ->
+myRideListTransform :: HelpAndSupportScreenState -> Array RideBookingRes -> Array HelpAndSupportScreenState
+myRideListTransform state listRes = filter (\item -> (item.data.status == "COMPLETED")) (map(\(RideBookingRes ride) ->
     let
     (RideAPIEntity rideDetails) = (fromMaybe dummyRideAPIEntity (ride.rideList !!0))
     baseDistanceVal = (getKmMeter (fromMaybe 0 (rideDetails.chargeableRideDistance)))
@@ -284,7 +331,13 @@ myRideListTransform listRes = filter (\item -> (item.data.status == "COMPLETED")
           description : "",
           accountStatus : ACTIVE,
           vehicleVariant : fetchVehicleVariant ((fromMaybe dummyRideAPIEntity (ride.rideList !!0) )^._vehicleVariant),
-          logField : empty
+          logField : empty,
+          issueList : [],
+          resolvedIssueList : [],
+          ongoingIssueList : [],
+          issueListType : HELP_AND_SUPPORT_SCREEN_MODAL,
+          categories : state.data.categories,
+          merchantExoPhone : ride.merchantExoPhone
           },
       props : {
         apiFailure : false
@@ -299,4 +352,71 @@ dummyFareBreakUp :: FareBreakupAPIEntity
 dummyFareBreakUp = FareBreakupAPIEntity{amount: 0,description: ""}
 
 isEmailPresent :: LazyCheck -> Boolean
-isEmailPresent dummy = not ( getValueToLocalStore USER_EMAIL == "__failed" || getValueToLocalStore USER_EMAIL == "(null)" )
+isEmailPresent _ = not ( getValueToLocalStore USER_EMAIL == "__failed" || getValueToLocalStore USER_EMAIL == "(null)" )
+
+getApiIssueList :: Array IssueReportCustomerListItem -> Array IssueInfo
+getApiIssueList issueList = (map (\(IssueReportCustomerListItem issue) -> {
+   issueReportId : issue.issueReportId,
+   status : issue.status,
+   category : if (getValueToLocalStore LANGUAGE_KEY == "EN_US")
+                then
+                  joinWith " " (map (\catName ->
+                    let { before, after } = splitAt 1 catName
+                    in (toUpper before <> after)
+                  ) (split (Pattern " ") issue.category))
+                else issue.category,
+   createdAt : (getExactTime (runFn2 differenceBetweenTwoUTC (getCurrentUTC "") (issue.createdAt)))
+}) issueList)
+
+getExactTime :: Int -> String
+getExactTime sec = 
+   let {base , suffix}=  if sec > 31536000 then { base : sec / 31536000, suffix : getString YEARS_AGO}
+                          else if sec > 2592000 then {base : sec / 2592000, suffix : getString MONTHS_AGO}
+                          else if sec > 86400 then {base : sec / 86400, suffix : getString DAYS_AGO}
+                          else if sec > 3600 then {base : sec / 3600, suffix : getString HOURS_AGO}
+                          else if sec > 60 then {base : sec / 60,  suffix : getString MIN_AGO}
+                          else {base: sec , suffix: getString SEC_AGO}
+   in toStringJSON (base) <> " " <> suffix
+
+getUpdatedIssueList :: Array String -> Array IssueInfo -> Array IssueInfo
+getUpdatedIssueList statusList list = filter (\(issue) -> elem issue.status statusList ) list 
+
+topicsList :: HelpAndSupportScreenState -> Array CategoryListType
+topicsList state =  (if state.data.config.feature.enableSelfServe 
+  then 
+    state.data.categories 
+  else 
+    [{ categoryAction : "CONTACT_US"
+    , categoryName : getString FOR_OTHER_ISSUES_WRITE_TO_US
+    , categoryImageUrl : fetchImage FF_COMMON_ASSET "ny_ic_clip_board"
+    , categoryId : "5"
+    },
+    { categoryAction : "CALL_SUPPORT"
+    , categoryName : getString CONTACT_SUPPORT
+    , categoryImageUrl : fetchImage FF_COMMON_ASSET "ny_ic_help"
+    , categoryId : "6"
+    }]
+  ) <> if state.data.config.showDeleteAccount 
+          then 
+            [{ categoryAction : "DELETE_ACCOUNT"
+            , categoryName : getString REQUEST_TO_DELETE_ACCOUNT
+            , categoryImageUrl : fetchImage FF_COMMON_ASSET "ny_ic_delete_account"
+            , categoryId : "7"
+            }] 
+          else 
+            []
+
+reportsList :: HelpAndSupportScreenState -> Array CategoryListType
+reportsList state = []
+  <> if null state.data.ongoingIssueList then [] else [
+        { categoryAction : "REPORTED"
+        , categoryName : getString REPORTED <> " : " <> (toStringJSON (DA.length (state.data.ongoingIssueList)))
+        , categoryImageUrl : fetchImage FF_COMMON_ASSET "ny_ic_reported"
+        , categoryId : "1"
+        }]
+  <> if null state.data.resolvedIssueList then [] else [
+        { categoryAction : "CLOSED"
+        , categoryName : getString RESOLVED <> " : " <> (toStringJSON (DA.length (state.data.resolvedIssueList)))
+        , categoryImageUrl : fetchImage FF_COMMON_ASSET "ny_ic_resolved"
+        , categoryId : "2"
+        }]

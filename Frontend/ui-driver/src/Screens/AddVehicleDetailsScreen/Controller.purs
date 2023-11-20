@@ -37,12 +37,12 @@ import Data.String.CodeUnits (charAt)
 import Debug (spy)
 import Effect (Effect)
 import Effect.Class (liftEffect)
-import Engineering.Helpers.Commons (getNewIDWithTag, setText)
-import Helpers.Utils (renderBase64ImageFile, contactSupportNumber)
-import JBridge (disableActionEditText, hideKeyboardOnNavigation, openWhatsAppSupport, renderCameraProfilePicture, showDialer, uploadFile)
+import Engineering.Helpers.Commons (getNewIDWithTag)
+import Helpers.Utils (contactSupportNumber)
+import JBridge (disableActionEditText, hideKeyboardOnNavigation, openWhatsAppSupport, renderCameraProfilePicture, showDialer, uploadFile, renderBase64ImageFile)
 import Log (printLog, trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppTextInput, trackAppScreenEvent)
 import MerchantConfig.Utils (Merchant(..), getMerchant)
-import Prelude (Unit, bind, pure, ($), class Show, unit, void, (/=), discard, (==), (&&), (||), not, (<=), (>), (<>), (<), show, (+))
+import Prelude (Unit, bind, pure, ($), class Show, unit, (/=), discard, (==), (&&), (||), not, (<=), (>), (<>), (<), show, (+), void)
 import PrestoDOM (Eval, Props, continue, continueWithCmd, exit, updateAndExit, toast)
 import PrestoDOM.Types.Core (class Loggable)
 import Screens (ScreenName(..), getScreen)
@@ -50,6 +50,7 @@ import Screens.Types (AddVehicleDetailsScreenState, VehicalTypes(..), StageStatu
 import Services.Config (getSupportNumber, getWhatsAppSupportNo)
 import Effect.Unsafe (unsafePerformEffect)
 import ConfigProvider
+import Effect.Uncurried (runEffectFn4)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -204,7 +205,7 @@ eval AfterRender state =
 
 eval (RenderProfileImage image id) state = do
   continueWithCmd state [do 
-    _ <- liftEffect $ renderBase64ImageFile image id true "CENTER_CROP"
+    void $ liftEffect $ runEffectFn4 renderBase64ImageFile image id true "CENTER_CROP"
     pure NoAction]
 
 eval (BackPressed flag) state = do

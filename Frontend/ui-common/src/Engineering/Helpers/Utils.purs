@@ -21,7 +21,8 @@ import Control.Monad.Except.Trans (lift)
 import Data.Either (Either(..), hush)
 import Data.Function.Uncurried (Fn2, runFn2, Fn3, Fn1)
 import Data.Maybe (Maybe(..))
-import Data.String (length, trim)
+import Effect.Uncurried (EffectFn2(..), runEffectFn2, EffectFn1(..), runEffectFn1)
+import Data.String (length, trim, Pattern(..), split, toUpper, toLower, joinWith, take, drop)
 import Data.String.CodeUnits (charAt)
 import Data.Foldable (foldl)
 import Data.Time.Duration (Milliseconds(..))
@@ -46,7 +47,6 @@ import Types.App (FlowBT, GlobalState(..))
 import Unsafe.Coerce (unsafeCoerce)
 
 -- Common Utils
-
 foreign import reboot :: Effect Unit
 
 foreign import showSplash :: Effect Unit
@@ -272,3 +272,17 @@ selectSingleCalendarDate date mbStartDate mbEndDate weeks = do
       _ -> do
         let modifiedDates = map (updateWeeks date true dummyDateItem) weeks
         { startDate : Just date, endDate : Nothing, weeks : modifiedDates, selectedTimeSpan : date }
+  
+capitalizeFirstChar :: String -> String
+capitalizeFirstChar inputStr =
+  let splitedArray = split (Pattern " ") (inputStr)
+      output = map (\item -> (toUpper (take 1 item)) <> (toLower (drop 1 item))) splitedArray
+    in joinWith " " output
+
+fetchLanguage :: String -> String
+fetchLanguage currLang = case currLang of
+                  "HI_IN" -> "hi"
+                  "KN_IN" -> "kn"
+                  "TA_IN" -> "ta"
+                  _       -> "en"
+                  

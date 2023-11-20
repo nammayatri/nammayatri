@@ -33,11 +33,10 @@ import Data.String as DS
 import Data.String.CodeUnits (charAt)
 import Debug (spy)
 import Effect.Unsafe (unsafePerformEffect)
-import Engineering.Helpers.Commons (getNewIDWithTag,setText)
-import Engineering.Helpers.Commons (getNewIDWithTag)
+import Engineering.Helpers.Commons (getNewIDWithTag,setText, getNewIDWithTag)
 import Engineering.Helpers.LogEvent (logEvent)
-import Helpers.Utils (getTime, getCurrentUTC, differenceBetweenTwoUTC, launchAppSettings, generateQR, downloadQR)
-import JBridge (firebaseLogEvent, goBackPrevWebPage, toast, showDialer, hideKeyboardOnNavigation, shareImageMessage)
+import Helpers.Utils (getTime, getCurrentUTC, launchAppSettings, generateQR, downloadQR)
+import JBridge (firebaseLogEvent, goBackPrevWebPage,differenceBetweenTwoUTC, toast, showDialer, hideKeyboardOnNavigation, shareImageMessage)
 import Language.Strings (getString)
 import Language.Types as STR
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppTextInput, trackAppScreenEvent)
@@ -60,6 +59,7 @@ import Effect.Aff (launchAff_)
 import Effect.Uncurried(runEffectFn4)
 import Storage (isLocalStageOn)
 import Helpers.Utils(fetchImage, FetchImageFrom(..))
+import Data.Function.Uncurried (runFn2)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -413,7 +413,7 @@ eval SelectGender state = do
 eval UpdateAlternateNumber state = do
   let curr_time = getCurrentUTC ""
   let last_attempt_time = getValueToLocalStore SET_ALTERNATE_TIME
-  let time_diff = differenceBetweenTwoUTC curr_time last_attempt_time
+  let time_diff = runFn2 differenceBetweenTwoUTC curr_time last_attempt_time
   if(time_diff <= 600) then do
     pure $ toast (getString STR.LIMIT_EXCEEDED_FOR_ALTERNATE_NUMBER)
     continue state
@@ -438,7 +438,7 @@ eval (PrimaryEditTextActionController (PrimaryEditTextController.FocusChanged bo
 eval EditNumberText state = do
   let curr_time = getCurrentUTC ""
   let last_attempt_time = getValueToLocalStore SET_ALTERNATE_TIME
-  let time_diff = differenceBetweenTwoUTC curr_time last_attempt_time
+  let time_diff = runFn2 differenceBetweenTwoUTC curr_time last_attempt_time
   if(time_diff <= 600) then do
    pure $ toast (getString STR.LIMIT_EXCEEDED_FOR_ALTERNATE_NUMBER)
    continue state
