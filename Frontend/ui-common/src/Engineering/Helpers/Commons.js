@@ -112,6 +112,28 @@ export const screenHeight = function(){
   return screen.height;
 }
 
+export const getDeviceHeight = function(){
+  try{
+    if(window.__OS == "IOS" && JBridge.getDeviceHeight) return parseInt(JBridge.getDeviceHeight());
+    return JSON.parse(JBridge.getSessionInfo()).screen_height
+  }
+  catch(e){
+    console.log("error in getDeviceHeight", e);
+    return -1;
+  }
+}
+
+export const getScreenPpi = function(){
+  try{
+    return Math.round(JSON.parse(JBridge.getSessionInfo()).screen_ppi);
+  }
+  catch(e){
+    console.log("error in getScreenPpi", e);
+    return -1;
+  }
+}
+
+
 export const safeMarginTopImpl = function () {
   try {
     if (parent.__DEVICE_DETAILS && parent.__DEVICE_DETAILS.safe_area_frame) {

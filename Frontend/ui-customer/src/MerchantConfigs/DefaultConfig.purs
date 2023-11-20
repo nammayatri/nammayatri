@@ -17,6 +17,10 @@ config =
   , alertDialogPrimaryColor: "#2194FF"
   , cancelSearchTextColor: "#E55454"
   , showHamMenu : true
+  , showRateCard : true
+  , showDashboard : true
+  , showBookingPreference : true
+  , isReferralEnabled : true
   , showQuoteFindingText : false
   , quoteListItemConfig: 
     { primaryButtonCorner: 8.0
@@ -123,7 +127,8 @@ config =
         tripsToBeShown : 5,
         locationsToBeStored : 30,
         tripsToBeStored : 30,
-        frequencyWeight : 0.7
+        frequencyWeight : 0.7,
+        tripDistanceThreshold : 0.021
       }
   , showDeleteAccount : false
   , autoSelectBackground : "#53BB6F"

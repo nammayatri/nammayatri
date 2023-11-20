@@ -20,6 +20,10 @@ type AppConfig =
     sideBarList :: Array String,
     rateCardColor :: String,
     showHamMenu :: Boolean,
+    showRateCard :: Boolean,
+    showDashboard :: Boolean,
+    showBookingPreference :: Boolean,
+    isReferralEnabled :: Boolean,
     showQuoteFindingText :: Boolean,
     nyBrandingVisibility :: Boolean,
     fontType :: String,
@@ -157,7 +161,8 @@ type SuggestedDestinationAndTripsConfig = {
   tripsToBeShown :: Int,
   locationsToBeStored :: Int,
   tripsToBeStored :: Int,
-  frequencyWeight :: Number
+  frequencyWeight :: Number,
+  tripDistanceThreshold :: Number
 }
 
 type Language =  {

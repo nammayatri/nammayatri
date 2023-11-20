@@ -1,10 +1,10 @@
 window.getMerchantConfig = function () {
   return JSON.stringify({
     "StringKeys": ["YOUR_LOCATION_HELPS_OUR_SYSTEM","LOCATION_PERMISSION_SUBTITLE_NEW_USER","CORPORATE_ADDRESS_DESCRIPTION_ADDITIONAL", "YOUR_FEEDBACK_HELPS_US", "LEARN_HOW_TEXT", "FARE_INFO_TEXT", "DRIVER_ADDITIONS_ARE_CALCULATED_AT_RATE", "PLEASE_ENABLE_LOCATION_PERMISSION", "TAXI_FROM_ZONE", "GO_TO_ZONE", "OTP_FOR_THE_JATRI_SATHI_ZONE_HAS_BEEN_EXPIRED_PLEASE_TRY_LOOKING_AGAIN"],
-    "isReferralEnabled": "true",
-    "showBookingPreference": "true",
-    "showRateCard": "true",
-    "showDashboard": "true",
+    "isReferralEnabled": true,
+    "showBookingPreference": true,
+    "showRateCard": true,
+    "showDashboard": true,
     "enableShareRide": "true",
     "autoVariantEnabled": true,
     "shareAppTitle": "Share Namma Yatri!",

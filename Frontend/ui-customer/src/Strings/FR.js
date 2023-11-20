@@ -499,7 +499,26 @@ const frenchStrings = {
   "SELECT_LOCATION_ON_MAP" : "sélectionner l'emplacement sur la carte",
   "PLEASE_ENABLE_LOCATION_PERMISSION" : "Veuillez activer les autorisations de localisation depuis l'application des paramètres pour commencer à rechercher des courses.",
   "YOU_SEEM_TO_BE_FAR_FROM_PICK_UP" : "Vous semblez être loin du lieu de prise en charge !",
-  "ARE_YOU_SURE_YOU_WANT_TO_PROCEED_WITH_THE_BOOKING" : "Êtes-vous sûr de vouloir procéder à la réservation ?"
+  "ARE_YOU_SURE_YOU_WANT_TO_PROCEED_WITH_THE_BOOKING" : "Êtes-vous sûr de vouloir procéder à la réservation ?",
+  "PLACES_YOU_MIGHT_LIKE_TO_GO_TO": "Les endroits que vous pourriez aimer visiter",
+  "SUGGESTED_DESTINATION": "Destinations suggérées",
+  "RECENT_RIDES": "Trajets récents",
+  "ONE_CLICK_BOOKING_FOR_YOUR_FAVOURITE_JOURNEYS": "Réservation en un clic pour vos voyages préférés",
+  "VIEW_MORE": "Voir plus",
+  "VIEW_LESS": "Voir moins",
+  "HAVE_A_REFFERAL": "Vous avez un code de référence?",
+  "YOUR_SUGGESTED_DESTINATIONS_AND_RECENT_RIDES_WILL_APPEAR_HERE" : "Vos destinations suggérées et vos trajets récents apparaîtront ici",
+  "WELCOME_TO_NAMMA_YATRI_" : "Bienvenue à Namma Yatri!",
+  "BOOK_AND_MOVE" : "Réservez et déplacez-vous",
+  "ANYWHERE_IN_THE_CITY" : "Partout dans la ville",
+  "CHECKOUT_OUR_LIVE_STATS" : "Découvrez nos statistiques en direct",
+  "BENGALURU_MOST_LOVED_APP" : "L'application automobile la plus ❤️ de Bengaluru",
+  "PICKUP_" : "Ramasser: ",
+  "PAST_SEARCHES" : "Recherches passées",
+  "SEARCH_RESULTS" : "Résultats de la recherche",
+  "REQUESTING_RIDE_IN" : "Demande de trajet dans",
+  "REQUESTING_RIDE" : "Demande de trajet",
+  "TAP_HERE_TO_STOP_AUTO_REQUESTING" : "Appuyez ici pour arrêter la demande automatique",
 }
 
 export function getStringValue(key) {

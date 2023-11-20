@@ -624,7 +624,26 @@ const malayalamStrings = {
   "EDUCATIONAL_POP_UP_SLIDE_5_SUBTITLE" : "&#8226; ഞങ്ങൾ മറ്റ് തരത്തിലുള്ള വൈകല്യങ്ങൾ <br> &ensp; ശേഖരിക്കുകയും ആവശ്യാനുസരണം ലഭ്യമായ <br> &ensp; വൈകല്യങ്ങളുടെ പട്ടികയിൽ അവയെ <br> &ensp; ഉൾപ്പെടുത്തുകയും ചെയ്യും",
   "INCLUSIVE_AND_ACCESSIBLE" : "എല്ലാവർക്കുമായി ഉൾക്കൊള്ളുന്നതും ആക്സസ് ചെയ്യാവുന്നതും!",
   "YOU_SEEM_TO_BE_FAR_FROM_PICK_UP" : "നിങ്ങൾ പിക്കപ്പ് ലൊക്കേഷനിൽ നിന്ന് വളരെ അകലെയാണെന്ന് തോന്നുന്നു!",
-  "ARE_YOU_SURE_YOU_WANT_TO_PROCEED_WITH_THE_BOOKING" : "ബുക്കിംഗുമായി മുന്നോട്ട് പോകണമെന്ന് തീർച്ചയാണോ?"
+  "ARE_YOU_SURE_YOU_WANT_TO_PROCEED_WITH_THE_BOOKING" : "ബുക്കിംഗുമായി മുന്നോട്ട് പോകണമെന്ന് തീർച്ചയാണോ?",
+  "PLACES_YOU_MIGHT_LIKE_TO_GO_TO": "നിനക്ക് ഇഷ്ടപ്പെടുകയായ സ്ഥലങ്ങൾ",
+  "SUGGESTED_DESTINATION": "സൂചിപ്പിച്ച ഗോളാഭ്യന്തരങ്ങൾ",
+  "RECENT_RIDES": "ഏറ്റവും പുതിയ സൈക്കിൾകൾ",
+  "ONE_CLICK_BOOKING_FOR_YOUR_FAVOURITE_JOURNEYS": "നിനക്ക് ഇഷ്ടപ്പെട്ട യാത്രകളിനോട് ഒരു ക്ലിക്ക് ബുക്കിംഗ്!",
+  "VIEW_MORE": "കൂടുതൽ കാണുക",
+  "VIEW_LESS": "കുറഞ്ഞ കാണുക",
+  "HAVE_A_REFFERAL": "ഒരു റഫറൽ കോഡ് ഉണ്ടോ?",
+  "YOUR_SUGGESTED_DESTINATIONS_AND_RECENT_RIDES_WILL_APPEAR_HERE" : "നിങ്ങളുടെ സൂചിപ്പിച്ച ഗോളാഭ്യന്തരങ്ങൾ അവിടെ കാണാൻ കഴിയും",
+  "WELCOME_TO_NAMMA_YATRI_" : "നമ്മ യാത്രിയിലേക്ക് സ്വാഗതം!",
+  "BOOK_AND_MOVE" : "ബുക്ക് ചെയ്യുക മാറുക",
+  "ANYWHERE_IN_THE_CITY" : "നഗരത്തിലെത്തിയാൽ എല്ലാവർക്കും സൗകര്യമായി",
+  "CHECKOUT_OUR_LIVE_STATS" : "ഞങ്ങളുടെ ലൈവ് സ്റ്റാറ്റിസ്റ്റികൾ ചെക്കൗട്ട് ചെയ്യുക",
+  "BENGALURU_MOST_LOVED_APP" : "ബെംഗളൂരുവിലെ ഏറ്റവും ❤️ ഓട്ടോ ആപ്പ്",
+  "PICKUP_" : "പുരോഗമിക്കുക: ",
+  "PAST_SEARCHES" : "പഴയ തിരയലുകൾ",
+  "SEARCH_RESULTS" : "തിരയൽ ഫലങ്ങൾ",
+  "REQUESTING_RIDE_IN" : "യാത്ര അഭ്യർത്ഥിക്കുന്നു",
+  "REQUESTING_RIDE" : "യാത്ര അഭ്യർത്ഥിക്കുന്നു",
+  "TAP_HERE_TO_STOP_AUTO_REQUESTING" : "ഓട്ടോ അഭ്യർത്ഥന നിർത്താൻ ഇവിടെ ടാപ്പ് ചെയ്യുക",
 }
 
 export function getStringValue(key) {

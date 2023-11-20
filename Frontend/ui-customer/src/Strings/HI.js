@@ -627,7 +627,26 @@ const hindiStrings = {
   "EDUCATIONAL_POP_UP_SLIDE_5_SUBTITLE" : "&#8226; हम अन्य प्रकार की विकलांगताओं को <br> &ensp; एकत्रित करेंगे और आवश्यकतानुसार उन्हें उपलब्ध <br> &ensp; विकलांगताओं की सूची में शामिल करेंगे।",
   "INCLUSIVE_AND_ACCESSIBLE" : "सभी के लिए समावेशी और सुलभ!",
   "YOU_SEEM_TO_BE_FAR_FROM_PICK_UP" : "आप पिकअप स्थान से बहुत दूर हैं!",
-  "ARE_YOU_SURE_YOU_WANT_TO_PROCEED_WITH_THE_BOOKING" : "क्या आप वाकई बुकिंग जारी रखना चाहते हैं?"
+  "ARE_YOU_SURE_YOU_WANT_TO_PROCEED_WITH_THE_BOOKING" : "क्या आप वाकई बुकिंग जारी रखना चाहते हैं?",
+  "PLACES_YOU_MIGHT_LIKE_TO_GO_TO" : "वे स्थान जहाँ आप जाना पसंद कर सकते हैं।",
+  "SUGGESTED_DESTINATION" : "सुझाए गए गंतव्य",
+  "RECENT_RIDES" : "हाल की सवारी",
+  "ONE_CLICK_BOOKING_FOR_YOUR_FAVOURITE_JOURNEYS" : "आपकी पसंदीदा यात्राओं के लिए एक क्लिक बुकिंग!",
+  "VIEW_MORE" : "और देखें",
+  "VIEW_LESS" : "कम देखें",
+  "HAVE_A_REFFERAL" : "क्या आपके पास रेफरल है?",
+  "YOUR_SUGGESTED_DESTINATIONS_AND_RECENT_RIDES_WILL_APPEAR_HERE" : "आपके सुझाए गए गंतव्य और हाल की सवारियां यहां दिखाई देंगी",
+  "WELCOME_TO_NAMMA_YATRI_" : "नम्मा यात्री में आपका स्वागत है!",
+  "BOOK_AND_MOVE" : "बुक करें और चलें",
+  "ANYWHERE_IN_THE_CITY" : "शहर में कहीं भी",
+  "CHECKOUT_OUR_LIVE_STATS" : "हमारे लाइव आँकड़े देखें",
+  "BENGALURU_MOST_LOVED_APP" : "बेंगलुरु का सबसे ❤️ ऑटो ऐप",
+  "PICKUP_" : "पिक अप: ",
+  "PAST_SEARCHES" : "पिछली खोजें",
+  "SEARCH_RESULTS" : "खोज परिणाम",
+  "REQUESTING_RIDE_IN" : "सवारी का अनुरोध",
+  "REQUESTING_RIDE" : "सवारी का अनुरोध",
+  "TAP_HERE_TO_STOP_AUTO_REQUESTING" : "ऑटो अनुरोध करना बंद करने के लिए यहां टैप करें",
 }
 
 export function getStringValue(key) {

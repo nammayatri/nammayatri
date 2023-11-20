@@ -30,7 +30,7 @@ import Data.Date (Date)
 import Data.Either (Either(..), hush)
 import Data.Eq.Generic (genericEq)
 import Data.Foldable (or)
-import Data.Function.Uncurried (Fn2, runFn3, Fn3)
+import Data.Function.Uncurried (Fn2, runFn3, Fn1, Fn3)
 import Data.Generic.Rep (class Generic)
 import Data.Lens ((^.))
 import Data.Maybe (Maybe(..), fromMaybe)
@@ -161,6 +161,10 @@ foreign import clearCountDownTimer :: String -> Unit
 foreign import contactPermission :: Unit -> Effect Unit
 foreign import performHapticFeedback :: Unit -> Effect Unit
 foreign import adjustViewWithKeyboard :: String -> Effect Unit
+
+foreign import getPixels :: Fn1 String Number
+foreign import getDefaultPixels :: Fn1 String Number
+foreign import getDeviceDefaultDensity ::Fn1 String Number
 
 foreign import getMobileNumber :: EffectFn2 String String String
 
@@ -479,6 +483,7 @@ getScreenFromStage stage = case stage of
   ShortDistance -> "finding_driver_loader"
   TryAgain -> "finding_rides_screen"
   PickUpFarFromCurrentLocation -> "finding_driver_loader"
+  LoadMap -> "map_loader"
 
 getGlobalPayload :: Unit -> Effect (Maybe GlobalPayload)
 getGlobalPayload _ = do

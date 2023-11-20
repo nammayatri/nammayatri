@@ -1,10 +1,10 @@
 window.getMerchantConfig = function () {
   return JSON.stringify({
       "StringKeys": ["YOUR_LOCATION_HELPS_OUR_SYSTEM", "ABOUT_APP_DESCRIPTION", "CORPORATE_ADDRESS_DESCRIPTION_ADDITIONAL", "YOUR_FEEDBACK_HELPS_US", "LOCATION_PERMISSION_SUBTITLE_NEW_USER"],
-      "isReferralEnabled": "false",
-      "showBookingPreference": "true",
-      "showRateCard": "true",
-      "showDashboard": "false",
+      "isReferralEnabled": false,
+      "showBookingPreference": true,
+      "showRateCard": true,
+      "showDashboard": false,
       "enableShareRide": "false",
       "shareAppTitle": "Share App!",
       "shareAppContent": "Hey there!\n\nCheck India's first Zero Commission auto booking app.\n100% Open source | 100% Open Data\n\nDownload Namma Yatri now! \nhttps://nammayatri.in/link/rider/SJ8D \n\n #beOpen #chooseOpen",

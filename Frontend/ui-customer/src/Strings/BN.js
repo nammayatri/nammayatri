@@ -624,7 +624,26 @@ const bengaliStrings = {
   "EDUCATIONAL_POP_UP_SLIDE_5_SUBTITLE" : "&#8226; আমরা অন্যান্য ধরণের প্রতিবন্ধী সংগ্রহ <br> &ensp; করব এবং প্রয়োজন অনুসারে উপলব্ধ প্রতিবন্ধীদের <br> &ensp; তালিকার মধ্যে তাদের অন্তর্ভুক্ত করব",
   "INCLUSIVE_AND_ACCESSIBLE" : "সকলের জন্য অন্তর্ভুক্ত এবং অ্যাক্সেসযোগ্য!",
   "YOU_SEEM_TO_BE_FAR_FROM_PICK_UP" : "আপনি পিকআপ অবস্থান থেকে অনেক দূরে বলে মনে হচ্ছে!",
-  "ARE_YOU_SURE_YOU_WANT_TO_PROCEED_WITH_THE_BOOKING" : "আপনি কি নিশ্চিত যে আপনি বুকিং নিয়ে এগিয়ে যেতে চান?"
+  "ARE_YOU_SURE_YOU_WANT_TO_PROCEED_WITH_THE_BOOKING" : "আপনি কি নিশ্চিত যে আপনি বুকিং নিয়ে এগিয়ে যেতে চান?",
+  "PLACES_YOU_MIGHT_LIKE_TO_GO_TO": "সেই জায়গা যেগুলি আপনি পছন্দ করতে পারেন",
+  "SUGGESTED_DESTINATION": "প্রস্তুতির গন্তব্য",
+  "RECENT_RIDES": "সাম্প্রতিক যাত্রা",
+  "ONE_CLICK_BOOKING_FOR_YOUR_FAVOURITE_JOURNEYS": "আপনার পছন্দের যাত্রার জন্য এক ক্লিক বুকিং!",
+  "VIEW_MORE": "আরও দেখুন",
+  "VIEW_LESS": "কম দেখুন",
+  "HAVE_A_REFFERAL" : "আপনার কাছে কোন রেফারেল আছে?",
+  "YOUR_SUGGESTED_DESTINATIONS_AND_RECENT_RIDES_WILL_APPEAR_HERE" : "আপনার প্রস্তাবিত গন্তব্য এবং সাম্প্রতিক রাইড এখানে দেখানো হবে",
+  "WELCOME_TO_NAMMA_YATRI_" : "নম্মা যাত্রীতে আপনাকে স্বাগতম!",
+  "BOOK_AND_MOVE" : "বুক করুন এবং চলুন",
+  "ANYWHERE_IN_THE_CITY" : "শহরের যেকোন জায়গায়",
+  "CHECKOUT_OUR_LIVE_STATS" : "আমাদের লাইভ পরিসংখ্যান চেক করুন",
+  "BENGALURU_MOST_LOVED_APP" : "বেঙ্গালুরুর সবচেয়ে ❤️ অটো অ্যাপ",
+  "PICKUP_" : "পিকআপ: ",
+  "PAST_SEARCHES" : "গত অনুসন্ধান",
+  "SEARCH_RESULTS" : "অনুসন্ধানের ফলাফল",
+  "REQUESTING_RIDE_IN" : "অশ্বারোহণ অনুরোধ",
+  "REQUESTING_RIDE" : "যাত্রার অনুরোধ",
+  "TAP_HERE_TO_STOP_AUTO_REQUESTING" : "অটো অনুরোধ বন্ধ করতে এখানে ট্যাপ করুন",
 }
 
 export function getStringValue(key) {
