@@ -34,7 +34,7 @@ import Effect.Class (liftEffect)
 import Effect.Uncurried (EffectFn1, EffectFn2, mkEffectFn1, runEffectFn1, runEffectFn2)
 import Engineering.Helpers.BackTrack (liftFlowBT)
 import Foreign (Foreign, unsafeToForeign)
-import Helpers.FileProvider.Utils (loadInWindow, mergeObjects)
+import ConfigProvider (loadInWindow, mergeObjects)
 import LoaderOverlay.Handler as UI
 import Log (printLog)
 import MerchantConfig.DefaultConfig as DefaultConfig
@@ -44,10 +44,6 @@ import PrestoDOM.Core (terminateUI)
 import Types.App (FlowBT, GlobalState(..))
 import Unsafe.Coerce (unsafeCoerce)
 import Halogen.VDom.DOM.Prop (PropValue)
-
-foreign import toggleLoaderIOS :: EffectFn1 Boolean Unit
-
-foreign import loaderTextIOS :: EffectFn2 String String Unit
 
 foreign import getFromWindow :: EffectFn1 String Foreign
 
