@@ -34,6 +34,7 @@ import qualified "dynamic-offer-driver-app" Storage.Beam.DriverOnboarding.Driver
 import qualified "dynamic-offer-driver-app" Storage.Beam.DriverOnboarding.IdfyVerification as IdfyVerification
 import qualified "dynamic-offer-driver-app" Storage.Beam.DriverOnboarding.Image as Image
 import qualified "dynamic-offer-driver-app" Storage.Beam.DriverOnboarding.VehicleRegistrationCertificate as VehicleRegistrationCertificate
+import qualified "dynamic-offer-driver-app" Storage.Beam.DriverPlan as DriverPlan
 import qualified "dynamic-offer-driver-app" Storage.Beam.DriverQuote as DriverQuote
 import qualified "dynamic-offer-driver-app" Storage.Beam.DriverReferral as DriverReferral
 import qualified "dynamic-offer-driver-app" Storage.Beam.DriverStats as DriverStats
@@ -58,6 +59,7 @@ import qualified "dynamic-offer-driver-app" Storage.Beam.GoHomeConfig as GoHomeC
 import "dynamic-offer-driver-app" Storage.Beam.IssueManagement ()
 import qualified "dynamic-offer-driver-app" Storage.Beam.Location as Location
 import qualified "dynamic-offer-driver-app" Storage.Beam.LocationMapping as LocationMapping
+import qualified "dynamic-offer-driver-app" Storage.Beam.Mandate as Mandate
 import qualified "dynamic-offer-driver-app" Storage.Beam.Maps.PlaceNameCache as PlaceNameCache
 import qualified "dynamic-offer-driver-app" Storage.Beam.Merchant as Merchant
 import qualified "dynamic-offer-driver-app" Storage.Beam.Merchant.DriverIntelligentPoolConfig as DriverIntelligentPoolConfig
@@ -110,6 +112,7 @@ data DeleteModel
   | IdfyVerificationDelete
   | ImageDelete
   | VehicleRegistrationCertificateDelete
+  | DriverPlanDelete
   | DriverQuoteDelete
   | DriverReferralDelete
   | DriverStatsDelete
@@ -132,6 +135,7 @@ data DeleteModel
   | IssueReportDelete
   | IssueTranslationDelete
   | PlaceNameCacheDelete
+  | MandateDelete
   | MediaFileDelete
   | MerchantDelete
   | DriverIntelligentPoolConfigDelete
@@ -181,6 +185,7 @@ getTagDelete BookingCancellationReasonDelete = "BookingCancellationReasonOptions
 getTagDelete BusinessEventDelete = "BusinessEventOptions"
 getTagDelete CallStatusDelete = "CallStatusOptions"
 getTagDelete CancellationReasonDelete = "CancellationReasonOptions"
+getTagDelete DriverPlanDelete = "DriverPlanOptions"
 getTagDelete DriverBlockReasonDelete = "DriverBlockReasonOptions"
 getTagDelete FleetDriverAssociationDelete = "FleetDriverAssociationOptions"
 getTagDelete DriverFeeDelete = "DriverFeeOptions"
@@ -219,6 +224,7 @@ getTagDelete MediaFileDelete = "MediaFileOptions"
 getTagDelete MerchantDelete = "MerchantOptions"
 getTagDelete DriverIntelligentPoolConfigDelete = "DriverIntelligentPoolConfigOptions"
 getTagDelete DriverPoolConfigDelete = "DriverPoolConfigOptions"
+getTagDelete MandateDelete = "MandateOptions"
 getTagDelete MerchantLeaderBoardConfigDelete = "MerchantLeaderBoardConfigOptions"
 getTagDelete MerchantMessageDelete = "MerchantMessageOptions"
 getTagDelete MerchantPaymentMethodDelete = "MerchantPaymentMethodOptions"
@@ -262,6 +268,7 @@ parseTagDelete "BookingCancellationReasonOptions" = return BookingCancellationRe
 parseTagDelete "BusinessEventOptions" = return BusinessEventDelete
 parseTagDelete "CallStatusOptions" = return CallStatusDelete
 parseTagDelete "CancellationReasonOptions" = return CancellationReasonDelete
+parseTagDelete "DriverPlanOptions" = return DriverPlanDelete
 parseTagDelete "DriverFeeOptions" = return DriverFeeDelete
 parseTagDelete "DriverInformationOptions" = return DriverInformationDelete
 parseTagDelete "AadhaarOtpReqOptions" = return AadhaarOtpReqDelete
@@ -294,6 +301,7 @@ parseTagDelete "IssueOptionOptions" = return IssueOptionDelete
 parseTagDelete "IssueReportOptions" = return IssueReportDelete
 parseTagDelete "IssueTranslationOptions" = return IssueTranslationDelete
 parseTagDelete "PlaceNameCacheOptions" = return PlaceNameCacheDelete
+parseTagDelete "MandateOptions" = return MandateDelete
 parseTagDelete "MediaFileOptions" = return MediaFileDelete
 parseTagDelete "MerchantOptions" = return MerchantDelete
 parseTagDelete "DriverIntelligentPoolConfigOptions" = return DriverIntelligentPoolConfigDelete
@@ -346,6 +354,7 @@ data DBDeleteObject
   | FleetDriverAssociationDeleteOptions DeleteModel (Where Postgres FleetDriverAssociation.FleetDriverAssociationT)
   | DriverFeeDeleteOptions DeleteModel (Where Postgres DriverFee.DriverFeeT)
   | DriverInformationDeleteOptions DeleteModel (Where Postgres DriverInformation.DriverInformationT)
+  | DriverPlanDeleteOptions DeleteModel (Where Postgres DriverPlan.DriverPlanT)
   | AadhaarOtpReqDeleteOptions DeleteModel (Where Postgres AadhaarOtpReq.AadhaarOtpReqT)
   | AadhaarOtpVerifyDeleteOptions DeleteModel (Where Postgres AadhaarOtpVerify.AadhaarOtpVerifyT)
   | AadhaarVerificationDeleteOptions DeleteModel (Where Postgres AadhaarVerification.AadhaarVerificationT)
@@ -377,6 +386,7 @@ data DBDeleteObject
   | IssueTranslationDeleteOptions DeleteModel (Where Postgres IssueTranslation.IssueTranslationT)
   | PlaceNameCacheDeleteOptions DeleteModel (Where Postgres PlaceNameCache.PlaceNameCacheT)
   | MediaFileDeleteOptions DeleteModel (Where Postgres MediaFile.MediaFileT)
+  | MandateDeleteOptions DeleteModel (Where Postgres Mandate.MandateT)
   | MerchantDeleteOptions DeleteModel (Where Postgres Merchant.MerchantT)
   | DriverIntelligentPoolConfigDeleteOptions DeleteModel (Where Postgres DriverIntelligentPoolConfig.DriverIntelligentPoolConfigT)
   | DriverPoolConfigDeleteOptions DeleteModel (Where Postgres DriverPoolConfig.DriverPoolConfigT)
@@ -448,6 +458,9 @@ instance FromJSON DBDeleteObject where
       DriverBlockReasonDelete -> do
         whereClause <- parseDeleteCommandValues contents
         return $ DriverBlockReasonDeleteOptions deleteModel whereClause
+      DriverPlanDelete -> do
+        whereClause <- parseDeleteCommandValues contents
+        return $ DriverPlanDeleteOptions deleteModel whereClause
       FleetDriverAssociationDelete -> do
         whereClause <- parseDeleteCommandValues contents
         return $ FleetDriverAssociationDeleteOptions deleteModel whereClause
@@ -550,6 +563,9 @@ instance FromJSON DBDeleteObject where
       MediaFileDelete -> do
         whereClause <- parseDeleteCommandValues contents
         return $ MediaFileDeleteOptions deleteModel whereClause
+      MandateDelete -> do
+        whereClause <- parseDeleteCommandValues contents
+        return $ MandateDeleteOptions deleteModel whereClause
       MerchantDelete -> do
         whereClause <- parseDeleteCommandValues contents
         return $ MerchantDeleteOptions deleteModel whereClause
