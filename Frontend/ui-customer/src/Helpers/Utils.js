@@ -222,7 +222,6 @@ export const didDriverMessage = function() {
   }
 }
 export const clearWaitingTimer = function (id) {
-  console.log("clearWaitingTimer" + id);
   if (window.__OS == "IOS" && id == "countUpTimerId") {
     if (window.JBridge.clearCountUpTimer) {
       window.JBridge.clearCountUpTimer();

@@ -169,7 +169,7 @@ eval (RideBookingListAPIResponseAction rideList status) state = do
                   _ <- pure $ setRefreshing "2000031" false
                   let loaderBtnDisabled = if(length (rideList ^. _list )== 0) then true else false
                   continue $ state {shimmerLoader = AnimatedOut ,prestoListArrayItems = union (state.prestoListArrayItems) (bufferCardDataPrestoList), itemsRides = unionBy matchRidebyId (state.itemsRides) (bufferCardData),props{loadMoreDisabled = loaderBtnDisabled, receivedResponse = true}}
-    "listCompleted" -> continue state {data{loadMoreText = "Completed"}}
+    "listCompleted" -> continue state {data{loadMoreText = false}}
     _ -> continue state{props{receivedResponse = true, apiFailure = true, loadMoreDisabled = true}}
 
 eval Refresh state = updateAndExit state{props{ receivedResponse = false, loaderButtonVisibility = false }} $  MyRidesScreen state
@@ -258,6 +258,8 @@ myRideListTransformer state listRes = filter (\item -> (item.status == "COMPLETE
   , zoneType : specialTags.priorityTag
   , vehicleVariant : fetchVehicleVariant rideDetails.vehicleVariant
   , isSrcServiceable: state.data.isSrcServiceable
+  , optionsVisibility : true
+  , merchantExoPhone : ride.merchantExoPhone
 }) ( reverse $ sortWith (\(RideBookingRes ride) -> ride.createdAt ) listRes ))
 
 dummyFareBreakUp :: FareBreakupAPIEntity

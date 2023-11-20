@@ -110,6 +110,7 @@ foreign import uploadFile :: Boolean -> Effect Unit
 foreign import previewImage :: String -> Effect Unit
 foreign import storeCallBackImageUpload :: forall action. (action -> Effect Unit) -> (String -> String -> String -> action) -> Effect Unit
 foreign import renderBase64Image :: String -> String -> Boolean -> String -> Effect Unit
+foreign import storeCallBackUploadMultiPartData :: forall action. EffectFn2 (action -> Effect Unit)  (String -> String -> action) Unit
 foreign import setScaleType :: String -> String -> String -> Effect Unit
 foreign import copyToClipboard :: String -> Unit
 foreign import drawRoute :: Locations -> String -> String -> Boolean -> String -> String -> Int -> String -> String -> String -> MapRouteConfig -> Effect Unit
@@ -125,6 +126,7 @@ foreign import requestLocation  :: Unit -> Effect Unit
 
 foreign import initiateLocationServiceClient :: Effect Unit
 foreign import waitingCountdownTimer :: forall action. Int -> (action -> Effect Unit) -> (String -> String -> Int -> action) -> Effect Unit
+foreign import clearWaitingTimer :: String -> Unit
 foreign import checkOverlayPermission  :: Unit -> Effect Unit
 foreign import requestAutoStartPermission  :: Unit -> Effect Unit
 foreign import requestBatteryPermission :: Unit -> Effect Unit
@@ -209,6 +211,14 @@ foreign import storeCallBackInternetAction :: forall action. (action -> Effect U
 foreign import openWhatsAppSupport :: String -> Effect Unit
 foreign import generateSessionToken :: String -> String
 foreign import addMediaFile :: String -> String -> String -> String -> String -> String -> Effect Unit
+foreign import clearFocus :: EffectFn1 String Unit
+foreign import removeMediaPlayer :: EffectFn1 String Unit
+foreign import renderBase64ImageFile :: EffectFn4 String String Boolean String Unit
+foreign import saveAudioFile :: EffectFn1 String String
+foreign import uploadMultiPartData :: EffectFn3 String String String Unit
+foreign import startAudioRecording :: EffectFn1 String Boolean
+foreign import stopAudioRecording :: EffectFn1 String String
+foreign import differenceBetweenTwoUTC :: Fn2 String String Int
 
 foreign import toggleBtnLoader :: String -> Boolean -> Unit
 foreign import getBtnLoader :: String -> Boolean

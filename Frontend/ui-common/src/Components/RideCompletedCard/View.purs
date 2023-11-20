@@ -241,6 +241,7 @@ customerSideBottomCardsView config push =
     ][
       customerIssueView config push
     , customerRatingDriverView config push
+    , needHelpPillView config push
     ]
   ]
 
@@ -381,6 +382,31 @@ customerRatingDriverView config push =
               ]
           ]) [1,2,3,4,5])
   ]
+
+needHelpPillView :: forall w. Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+needHelpPillView config push = 
+  linearLayout
+    [ width WRAP_CONTENT
+    , height WRAP_CONTENT
+    , background Color.blue600
+    , gravity CENTER
+    , padding $ Padding 10 12 10 12
+    , cornerRadius 24.0
+    , onClick push $ const $ HelpAndSupportAC
+    ][imageView [
+        width $ V 16
+      , height $ V 16
+      , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_headphone_black"
+      , margin $ MarginRight 8
+      ]
+     , textView $ [
+        text config.needHelpText
+      , color Color.black700
+      ] <> FontStyle.tags TypoGraphy
+    ]
+
+
+
 ------------------------------------- Driver Side Bottom Cards View --------------------------------------------------------------------------------------------------------------------------------------------------------------
 driverSideBottomCardsView :: forall w. Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 driverSideBottomCardsView config push = 
@@ -629,7 +655,7 @@ contactSupportPopUpView config push =
   linearLayout [
     width MATCH_PARENT,
     height MATCH_PARENT
-  ][PopUpModal.view (push <<< ContactSupportPopUpAC) config.contactSupportPopUpConfig]
+  ][PopUpModal.view (push <<< ContactSupportPopUpAC) config.contactSupportPopUpConfig] 
 
 --------------------------------- Helpers ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 commonTextView :: forall w. Config -> (Action -> Effect Unit) -> String -> String -> (forall properties. (Array (Prop properties))) -> Int -> PrestoDOM (Effect Unit) w

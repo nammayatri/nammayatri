@@ -96,7 +96,7 @@ settingsView state push =
         "Tickets" -> settingsMenuView {imageUrl : fetchImage FF_ASSET "ny_ic_ticket_grey", text : getString MY_TICKETS, accessibilityHint : "Tickets", tag : SETTINGS_TICKETS, iconUrl : ""} push
         "Favorites" -> if DA.any (\stage -> isLocalStageOn stage)  [RideStarted, RideAccepted, RideCompleted] then emptyLayout else settingsMenuView {imageUrl : fetchImage FF_ASSET "ic_fav", text : (getString FAVOURITES) , accessibilityHint : "Favourites " , tag : SETTINGS_FAVOURITES, iconUrl : ""} push
         "EmergencyContacts" ->  settingsMenuView {imageUrl : fetchImage FF_COMMON_ASSET "ny_ic_emergency_contacts" , text : (getString EMERGENCY_CONTACTS) , accessibilityHint : "Emergency Contacts " , tag : SETTINGS_EMERGENCY_CONTACTS, iconUrl : ""} push
-        "HelpAndSupport" -> settingsMenuView (helpAndSupportConfig state.appConfig.feature.enableSupport) push
+        "HelpAndSupport" -> settingsMenuView {imageUrl : fetchImage FF_ASSET  "ny_ic_help", text :  getString HELP_AND_SUPPORT , accessibilityHint :  "Help And Support", tag : SETTINGS_HELP, iconUrl : ""} push
         "Language" -> settingsMenuView {imageUrl : fetchImage FF_ASSET "ic_change_language", text : (getString LANGUAGE), accessibilityHint : "Language ", tag : SETTINGS_LANGUAGE, iconUrl : ""} push
         "ShareApp" -> settingsMenuView {imageUrl : fetchImage FF_ASSET "ic_share", text : (getString SHARE_APP), accessibilityHint : "Share App ", tag : SETTINGS_SHARE_APP, iconUrl : ""} push
         "LiveStatsDashboard" -> settingsMenuView {imageUrl : fetchImage FF_ASSET "ic_graph_black", accessibilityHint : "Live Stats Dashboard ",text : (getString LIVE_STATS_DASHBOARD), tag : SETTINGS_LIVE_DASHBOARD, iconUrl : fetchImage FF_ASSET  "ic_red_icon"} push
@@ -106,16 +106,6 @@ settingsView state push =
         _ -> emptyLayout
       ) state.appConfig.sideBarList
     )
-
-helpAndSupportConfig :: Boolean -> Item
-helpAndSupportConfig enableContactSupport = {
-  imageUrl : fetchImage FF_ASSET $  if enableContactSupport then "ny_ic_help" else  "ny_ic_help_menu" ,
-  text : if enableContactSupport then (getString HELP_AND_SUPPORT) else  (getString HELP) ,
-  accessibilityHint : if enableContactSupport then "Help And Support" else "Help",
-  tag : SETTINGS_HELP, 
-  iconUrl : ""
-}
-
 
 separator :: forall w. PrestoDOM (Effect Unit) w
 separator = linearLayout

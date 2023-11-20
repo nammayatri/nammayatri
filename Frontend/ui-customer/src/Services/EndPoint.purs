@@ -169,3 +169,29 @@ ticketStatus shortId = (getBaseUrl "41") <> "/ticket/bookings/" <> shortId <> "/
 
 ticketBookingDetails :: String -> String
 ticketBookingDetails shortid = (getBaseUrl "41") <> "/ticket/bookings/" <> shortid <> "/details"
+
+getCategories :: String -> String
+getCategories language = (getBaseUrl "40") <> "/issue/category?language=" <> language
+
+postIssue :: String -> String
+postIssue language = (getBaseUrl "41") <> "/issue?language=" <> language
+
+uploadFile :: String -> String
+uploadFile dummy = (getBaseUrl "42") <> "/issue/upload"
+
+getOptions :: String -> String -> String -> String -> String
+getOptions categoryId optionId issueReportId language = 
+  if (optionId == "") 
+    then (getBaseUrl "43") <> "/issue/option?categoryId=" <> categoryId <> "&language=" <> language
+    else if (issueReportId == "")
+      then (getBaseUrl "43") <> "/issue/option?categoryId=" <> categoryId <> "&optionId=" <> optionId <> "&language=" <> language
+      else (getBaseUrl "43") <> "/issue/option?categoryId=" <> categoryId <> "&optionId=" <> optionId <> "&issueReportId=" <> issueReportId <> "&language=" <> language
+
+issueInfo :: String -> String -> String
+issueInfo issueId language = (getBaseUrl "44") <> "/issue/" <> issueId <> "/info?language=" <> language
+
+updateIssue :: String -> String -> String
+updateIssue issueId language = (getBaseUrl "45") <> "/issue/" <> issueId <> "/updateStatus" <> "?language=" <> language
+
+fetchIssueList :: String -> String
+fetchIssueList language = (getBaseUrl "46") <> "/issue/list?language=" <> language

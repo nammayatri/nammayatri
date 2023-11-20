@@ -23,7 +23,7 @@ import Common.Resources.Constants (zoomLevel)
 import Common.Styles.Colors as Color
 import Common.Types.App (APIPaymentStatus(..)) as PS
 import Common.Types.Config
-import Common.Types.App (Version(..), LazyCheck(..), PaymentStatus(..), Event, FCMBundleUpdate)
+import Common.Types.App (Version(..), LazyCheck(..), PaymentStatus(..), Event, FCMBundleUpdate, CategoryListType)
 import Components.ChatView.Controller (makeChatComponent')
 import Constants as Constants
 import Control.Monad.Except (runExceptT)
@@ -57,7 +57,7 @@ import Engineering.Helpers.Commons as EHC
 import Engineering.Helpers.LogEvent (logEvent, logEventWithParams, logEventWithMultipleParams)
 import Engineering.Helpers.Suggestions (suggestionsDefinitions, getSuggestions)
 import Engineering.Helpers.Suggestions as EHS
-import Engineering.Helpers.Utils (loaderText, toggleLoader, reboot, showSplash, (?))
+import Engineering.Helpers.Utils (loaderText, toggleLoader, reboot, showSplash, (?), fetchLanguage, capitalizeFirstChar)
 import Foreign (unsafeToForeign)
 import Foreign.Class (class Encode, encode, decode)
 import DecodeUtil (stringifyJSON)
@@ -939,19 +939,7 @@ driverProfileFlow = do
       let categoryOrder = ["LOST_AND_FOUND", "RIDE_RELATED", "APP_RELATED", "FARE"]
       let compareByOrder a b = compare (fromMaybe (length categoryOrder) $ elemIndex a.categoryAction categoryOrder) (fromMaybe (length categoryOrder) $ elemIndex b.categoryAction categoryOrder)
       (GetCategoriesRes response) <- Remote.getCategoriesBT language
-      let temp = (map (\(Category x) ->
-                          { categoryName :
-                              if (language == "en")
-                              then
-                                joinWith " " (map (\catName ->
-                                  let { before, after } = splitAt 1 catName
-                                  in (toUpper before <> after)
-                                ) (split (Pattern " ") x.category))
-                              else x.category
-                          , categoryId       : x.issueCategoryId
-                          , categoryAction   : x.label
-                          , categoryImageUrl : x.logoUrl
-                          }) response.categories)
+      let temp = categoryTransformer response.categories language
       let categories' = sortBy compareByOrder temp
       modifyScreenState $ HelpAndSupportScreenStateType (\helpAndSupportScreen -> helpAndSupportScreen { data { categories = categories' } } )
       helpAndSupportFlow
@@ -1382,14 +1370,7 @@ helpAndSupportFlow = do
                      )
       (GetOptionsRes getOptionsRes) <- Remote.getOptionsBT selectedCategory.categoryId language
       let getOptionsRes' = (mapWithIndex (\index (Option x) ->
-        { option : (show (index + 1)) <> ". " <>
-                   if (language == "en")
-                   then
-                     joinWith " " (map (\optName ->
-                       let {before, after} = splitAt 1 optName
-                       in (toUpper before <> after)
-                     ) (split (Pattern " ") x.option))
-                   else x.option
+        { option : (show (index + 1)) <> ". " <> x.option
         , issueOptionId : x.issueOptionId
         , label : x.label
         }
@@ -1523,14 +1504,7 @@ rideSelectionScreenFlow = do
                      )
       (GetOptionsRes getOptionsRes) <- Remote.getOptionsBT state.selectedCategory.categoryId language
       let getOptionsRes' = (mapWithIndex (\index (Option x) ->
-        { option : (show (index + 1)) <> ". " <>
-                   if (language == "en")
-                   then
-                     joinWith " " (map (\optName ->
-                       let {before, after} = splitAt 1 optName
-                       in (toUpper before <> after)
-                     ) (split (Pattern " ") x.option))
-                   else x.option
+        { option : (show (index + 1)) <> ". " <> x.option
           , issueOptionId : x.issueOptionId
           , label : x.label
         }
@@ -1557,19 +1531,7 @@ issueReportChatScreenFlow = do
       let categoryOrder = ["LOST_AND_FOUND", "RIDE_RELATED", "APP_RELATED", "FARE"]
       let compareByOrder a b = compare (fromMaybe (length categoryOrder) $ elemIndex a.categoryAction categoryOrder) (fromMaybe (length categoryOrder) $ elemIndex b.categoryAction categoryOrder)
       (GetCategoriesRes response) <- Remote.getCategoriesBT language
-      let temp = (map (\(Category x) ->
-                          { categoryName :
-                              if (language == "en")
-                              then
-                                joinWith " " (map (\catName ->
-                                  let { before, after } = splitAt 1 catName
-                                  in (toUpper before <> after)
-                                ) (split (Pattern " ") x.category))
-                              else x.category
-                          , categoryId       : x.issueCategoryId
-                          , categoryAction   : x.label
-                          , categoryImageUrl : x.logoUrl
-                          }) response.categories)
+      let temp = categoryTransformer response.categories language 
       let categories' = sortBy compareByOrder temp
       modifyScreenState $ HelpAndSupportScreenStateType (\helpAndSupportScreen -> helpAndSupportScreen { data { categories = categories' } } )
       helpAndSupportFlow
@@ -1582,16 +1544,17 @@ issueReportChatScreenFlow = do
                                        , optionId    : state.data.selectedOptionId
                                        , description : trim state.data.messageToBeSent
                                        , rideId      : state.data.tripId
+                                       , chats       : []
                                        })
       (PostIssueRes postIssueRes) <- Remote.postIssueBT postIssueReq
       (IssueInfoRes issueInfoRes) <- Remote.issueInfoBT postIssueRes.issueReportId
       _ <- pure $ hideKeyboardOnNavigation true
       let showDescription = STR.length (trim issueInfoRes.description) > 0
-      let descMessages = if showDescription then snoc state.data.chatConfig.messages (makeChatComponent' issueInfoRes.description "Driver" (if (length issueInfoRes.mediaFiles) == 0 then (convertUTCtoISC (getCurrentUTC "") "hh:mm A") else "") "Text" 500) else state.data.chatConfig.messages
+      let descMessages = if showDescription then snoc state.data.chatConfig.messages (makeChatComponent' issueInfoRes.description "Driver" (if null issueInfoRes.mediaFiles then (getCurrentUTC "") else "") "Text" 500) else state.data.chatConfig.messages
       let mediaMessages' = mapWithIndex (\index media -> do
                         if index == length issueInfoRes.mediaFiles - 1
                         then
-                          makeChatComponent' media.url "Driver" (convertUTCtoISC (getCurrentUTC "") "hh:mm A") media._type ((index + if showDescription then 2 else 1) * 500)
+                          makeChatComponent' media.url "Driver" (getCurrentUTC "") media._type ((index + if showDescription then 2 else 1) * 500)
                         else
                           makeChatComponent' media.url "Driver" "" media._type ((index + if showDescription then 2 else 1) * 500)
                     ) (issueInfoRes.mediaFiles)
@@ -1600,11 +1563,11 @@ issueReportChatScreenFlow = do
         let options'  = map (\x -> x.option) state.data.options
         let message = (getString SELECT_OPTION_REVERSED) <> "\n"
                       <> joinWith "\n" options'
-        let messages' = concat [ descMessages, mediaMessages', [ (makeChatComponent' message "Bot" (convertUTCtoISC (getCurrentUTC "") "hh:mm A") "Text" (500 * (length mediaMessages' + 2))) ] ]
+        let messages' = concat [ descMessages, mediaMessages', [ (makeChatComponent' message "Bot" (getCurrentUTC "") "Text" (500 * (length mediaMessages' + 2))) ] ]
         modifyScreenState $ ReportIssueChatScreenStateType (\reportIssueScreen -> state { data { issueId = Just postIssueRes.issueReportId, chatConfig { enableSuggestionClick = false, messages = messages', chatSuggestionsList = options', suggestionDelay = 500 * (length mediaMessages' + 3) } }, props { showSubmitComp = false } })
         issueReportChatScreenFlow
       else do
-        let message = makeChatComponent' (getString ISSUE_SUBMITTED_MESSAGE) "Bot" (convertUTCtoISC (getCurrentUTC "") "hh:mm A") "Text" (500 * (length mediaMessages' + 2))
+        let message = makeChatComponent' (getString ISSUE_SUBMITTED_MESSAGE) "Bot" (getCurrentUTC "") "Text" (500 * (length mediaMessages' + 2))
         let messages' = concat [descMessages, mediaMessages', [message]]
         modifyScreenState $ ReportIssueChatScreenStateType (\reportIssueScreen -> state { data { issueId = Just postIssueRes.issueReportId, chatConfig { messages = messages' } }, props { showSubmitComp = false } })
         issueReportChatScreenFlow
@@ -1615,7 +1578,7 @@ issueReportChatScreenFlow = do
                        void $ lift $ lift $ toggleLoader true
                        resp <- Remote.callCustomerBT tripId
                        void $ lift $ lift $ toggleLoader false
-                       let message = makeChatComponent' (getString ISSUE_SUBMITTED_MESSAGE) "Bot" (convertUTCtoISC (getCurrentUTC "") "hh:mm A") "Text" 500
+                       let message = makeChatComponent' (getString ISSUE_SUBMITTED_MESSAGE) "Bot" (getCurrentUTC "") "Text" 500
                        let messages' = snoc state.data.chatConfig.messages message
                        modifyScreenState $ ReportIssueChatScreenStateType (\reportIssueScreen -> state { data  { chatConfig { messages = messages' } } })
                        issueReportChatScreenFlow
@@ -1680,19 +1643,7 @@ tripDetailsScreenFlow = do
       let categoryOrder = ["LOST_AND_FOUND", "RIDE_RELATED", "APP_RELATED", "FARE"]
       let compareByOrder a b = compare (fromMaybe (length categoryOrder) $ elemIndex a.categoryAction categoryOrder) (fromMaybe (length categoryOrder) $ elemIndex b.categoryAction categoryOrder)
       (GetCategoriesRes response) <- Remote.getCategoriesBT language
-      let temp = (map (\(Category x) ->
-                          { categoryName :
-                              if (language == "en")
-                              then
-                                joinWith " " (map (\catName ->
-                                  let { before, after } = splitAt 1 catName
-                                  in (toUpper before <> after)
-                                ) (split (Pattern " ") x.category))
-                              else x.category
-                          , categoryId       : x.issueCategoryId
-                          , categoryAction   : x.label
-                          , categoryImageUrl : x.logoUrl
-                          }) response.categories)
+      let temp = categoryTransformer response.categories language
       let categories' = sortBy compareByOrder temp
       modifyScreenState $ HelpAndSupportScreenStateType (\helpAndSupportScreen -> helpAndSupportScreen { data { categories = categories' } } )
       helpAndSupportFlow
@@ -1909,19 +1860,7 @@ homeScreenFlow = do
       let categoryOrder = ["LOST_AND_FOUND", "RIDE_RELATED", "APP_RELATED", "FARE"]
       let compareByOrder a b = compare (fromMaybe (length categoryOrder) $ elemIndex a.categoryAction categoryOrder) (fromMaybe (length categoryOrder) $ elemIndex b.categoryAction categoryOrder)
       (GetCategoriesRes response) <- Remote.getCategoriesBT language
-      let temp = (map (\(Category x) ->
-                          { categoryName :
-                              if (language == "en")
-                              then
-                                joinWith " " (map (\catName ->
-                                  let { before, after } = splitAt 1 catName
-                                  in (toUpper before <> after)
-                                ) (split (Pattern " ") x.category))
-                              else x.category
-                          , categoryId       : x.issueCategoryId
-                          , categoryAction   : x.label
-                          , categoryImageUrl : x.logoUrl
-                          }) response.categories)
+      let temp = categoryTransformer response.categories language
       let categories' = sortBy compareByOrder temp
       modifyScreenState $ HelpAndSupportScreenStateType (\helpAndSupportScreen -> helpAndSupportScreen { data { categories = categories' } } )
       helpAndSupportFlow
@@ -2244,6 +2183,17 @@ homeScreenFlow = do
       updateDriverDataToStates
       homeScreenFlow
   homeScreenFlow
+
+categoryTransformer :: Array Category -> String -> Array CategoryListType 
+categoryTransformer categories language = map (\(Category catObj) ->
+                                          { categoryName :
+                                              if (language == "en")
+                                              then capitalizeFirstChar catObj.category
+                                              else catObj.category
+                                          , categoryId       : catObj.issueCategoryId
+                                          , categoryAction   : catObj.label
+                                          , categoryImageUrl : catObj.logoUrl
+                                          }) categories
 
 clearPendingDuesFlow :: Boolean -> FlowBT String Unit
 clearPendingDuesFlow showLoader = do
