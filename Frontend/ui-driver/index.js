@@ -12,6 +12,7 @@ function guid() {
   return s4() + s4() + "-" + s4() + "-" + s4() + "-" +
     s4() + "-" + s4() + s4() + s4();
 }
+Android.runInUI("android.webkit.WebView->setWebContentsDebuggingEnabled:b_true;","null");
 
 
 function loadConfig() {
@@ -301,12 +302,4 @@ if (typeof window.JOS != "undefined") {
   JOS.emitEvent("java")("onEvent")(JSON.stringify({ action: "DUI_READY", event: "initiate",service : JOS.self }))()();
 } else {
   console.error("JOS not present")
-}
-
-const sessionInfo = JSON.parse(JBridge.getDeviceInfo())
-
-if (sessionInfo.package_name.includes("debug")) {
-  logger.enableLogger();
-} else {
-  logger.disableLogger();
 }
