@@ -89,20 +89,19 @@ sendSwitchPlanNudge ::
 sendSwitchPlanNudge transporterConfig driverInfo mbCurrPlan mbDriverPlan numRides = do
   whenJust mbCurrPlan $ \currPlan -> do
     driver <- QDP.findById (cast driverInfo.driverId) >>= fromMaybeM (PersonNotFound driverInfo.driverId.getId)
-    case currPlan.planBaseAmount of
-      PERRIDE_BASE amount -> do
-        when (numRides == 1) $ notifyPlanActivatedForDay driver.id driver.merchantId driver.deviceToken driver.language
-        let currentTotal = fromIntegral numRides * amount
-        availablePlans <- filterM (checkPlanEligible currPlan) =<< (CQP.findByMerchantIdAndPaymentMode transporterConfig.merchantId currPlan.paymentMode)
-        offeredAmountsEntity <- getOfferedAmount currentTotal driver `mapM` availablePlans
+    if numRides == currPlan.freeRideCount + 1
+      then notifyPlanActivatedForDay driver.id driver.merchantId driver.deviceToken driver.language
+      else case currPlan.planBaseAmount of
+        PERRIDE_BASE amount -> do
+          let currentTotal = fromIntegral numRides * amount
+          availablePlans <- filterM (checkPlanEligible currPlan) =<< (CQP.findByMerchantIdAndPaymentMode transporterConfig.merchantId currPlan.paymentMode)
+          offeredAmountsEntity <- getOfferedAmount currentTotal driver `mapM` availablePlans
 
-        unless (null offeredAmountsEntity) do
-          let bestAmountEntity = minimumBy (comparing (.finalAmount)) offeredAmountsEntity
-          when (currentTotal > bestAmountEntity.finalAmount) $
-            switchPlanNudge driver numRides (currPlan.maxAmount - bestAmountEntity.finalAmount) bestAmountEntity.planId
-      DAILY_BASE _ -> do
-        when (numRides == 2) $ notifyPlanActivatedForDay driver.id driver.merchantId driver.deviceToken driver.language
-      _ -> return ()
+          unless (null offeredAmountsEntity) do
+            let bestAmountEntity = minimumBy (comparing (.finalAmount)) offeredAmountsEntity
+            when (currentTotal > bestAmountEntity.finalAmount) $
+              switchPlanNudge driver numRides (currPlan.maxAmount - bestAmountEntity.finalAmount) bestAmountEntity.planId
+        _ -> return ()
   where
     checkPlanEligible currPlan ePlan = return (ePlan.paymentMode == currPlan.paymentMode && ePlan.planBaseAmount /= currPlan.planBaseAmount)
 
