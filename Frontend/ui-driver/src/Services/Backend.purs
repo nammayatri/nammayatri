@@ -28,7 +28,7 @@ import Data.Number as Number
 import Data.String as DS
 import Debug (spy)
 import Effect.Class (liftEffect)
-import Engineering.Helpers.Commons (liftFlow, bundleVersion)
+import Engineering.Helpers.Commons (liftFlow)
 import Engineering.Helpers.Utils (toggleLoader)
 import Foreign.Generic (encode)
 import Foreign.NullOrUndefined (undefined)
