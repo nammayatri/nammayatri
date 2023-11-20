@@ -47,6 +47,7 @@ import Screens.Types (RegisterationStep(..), StageStatus(..), ValidationStatus(.
 import Screens.Types as ST
 import Storage (KeyStore(..), getValueToLocalNativeStore)
 import Styles.Colors as Color
+import Storage(getValueToLocalStore , KeyStore(..))
 
 screen :: ST.RegistrationScreenState -> Screen Action ST.RegistrationScreenState ScreenOutput
 screen initialState =
@@ -183,7 +184,7 @@ view push state =
                   , color Color.black700
                   , background Color.yellowOpacity10
                   , cornerRadius 8.0
-                  , visibility if state.data.subscriptionStatus == IN_PROGRESS && not state.props.logoutModalView then VISIBLE else GONE
+                  , visibility if state.data.subscriptionStatus == IN_PROGRESS && not state.props.logoutModalView && (getValueToLocalStore SHOW_SUBSCRIPTIONS == "true") then VISIBLE else GONE
                   ]
                 <> FontStyle.body1 TypoGraphy
             , messageView push state

@@ -1321,8 +1321,8 @@ addAlternateNumber push state =
 locationLastUpdatedTextAndTimeView :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 locationLastUpdatedTextAndTimeView push state =
   linearLayout
-  [ height MATCH_PARENT
-    , width WRAP_CONTENT
+  [ height WRAP_CONTENT
+    , weight 1.0
     , gravity CENTER_VERTICAL
   ][
     textView $
@@ -1345,7 +1345,7 @@ locationLastUpdatedTextAndTimeView push state =
 updateButtonIconAndText :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 updateButtonIconAndText push state =
   linearLayout
-  [ width MATCH_PARENT
+  [ width WRAP_CONTENT
   , height MATCH_PARENT
   , orientation HORIZONTAL
   , visibility if not state.props.rideActionModal && state.props.statusOnline then VISIBLE else GONE

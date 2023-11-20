@@ -239,7 +239,7 @@ const teluguStrings = {
   PICKUP: "పికప్",
   TRIP: "పర్యటన",
   CURRENTLY_WE_ALLOW_ONLY_KARNATAKA_REGISTERED_NUMBER: "ప్రస్తుతం, మేము కర్ణాటక రిజిస్టర్డ్ నంబర్‌ను మాత్రమే అనుమతిస్తున్నాము",
-  UPDATED_AT: "మ్యాప్ ఇక్కడ అప్‌డేట్ చేయబడింది",
+  UPDATED_AT: "మ్యాప్ అప్‌డేట్ చేయబడిన సమయం",
   TRIP_COUNT: "ట్రిప్ కౌంట్",
   TODAYS_EARNINGS: "సంపాదన",
   BONUS_EARNED : "సంపాదించిన బోనస్",
