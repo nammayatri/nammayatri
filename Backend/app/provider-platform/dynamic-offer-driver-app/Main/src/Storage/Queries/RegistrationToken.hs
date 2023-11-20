@@ -15,6 +15,7 @@
 
 module Storage.Queries.RegistrationToken where
 
+import Domain.Types.Merchant.MerchantOperatingCity
 import Domain.Types.Person
 import Domain.Types.RegistrationToken as DRT
 import Kernel.Beam.Functions
@@ -62,6 +63,18 @@ deleteByPersonIdExceptNew (Id personId) (Id newRT) = deleteWithKV [Se.And [Se.Is
 
 findAllByPersonId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> m [RegistrationToken]
 findAllByPersonId personId = findAllWithKV [Se.Is BeamRT.entityId $ Se.Eq $ getId personId]
+
+findLatestByPersonId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> m (Maybe RegistrationToken)
+findLatestByPersonId personId = findOneWithKV [Se.And [Se.Is BeamRT.entityId $ Se.Eq $ getId personId, Se.Is BeamRT.verified $ Se.Eq True]]
+
+updateCityInfoById :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id RegistrationToken -> Id MerchantOperatingCity -> m ()
+updateCityInfoById (Id registrationToken) (Id merchantOperatingCityId) = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set BeamRT.merchantOperatingCityId (Just merchantOperatingCityId),
+      Se.Set BeamRT.updatedAt now
+    ]
+    [Se.Is BeamRT.id (Se.Eq registrationToken)]
 
 getAlternateNumberAttempts :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> m Int
 getAlternateNumberAttempts (Id personId) = findOneWithKV [Se.Is BeamRT.entityId $ Se.Eq personId] <&> maybe 5 DRT.attempts

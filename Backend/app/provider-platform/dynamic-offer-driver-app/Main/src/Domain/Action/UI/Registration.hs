@@ -142,7 +142,8 @@ auth isDashboard req mbBundleVersion mbClientVersion = do
       useFakeOtpM = useFakeSms smsCfg
       scfg = sessionConfig smsCfg
   let mkId = getId merchantId
-  token <- makeSession scfg entityId mkId SR.USER (show <$> useFakeOtpM) merchantOpCityId.getId
+  let personOperatingCityId = person.merchantOperatingCityId
+  token <- makeSession scfg entityId mkId SR.USER (show <$> useFakeOtpM) personOperatingCityId.getId
   _ <- QR.create token
   QP.updatePersonVersions person mbBundleVersion mbClientVersion
   whenNothing_ useFakeOtpM $ do
@@ -152,12 +153,12 @@ auth isDashboard req mbBundleVersion mbClientVersion = do
         sender = smsCfg.sender
     withLogTag ("personId_" <> getId person.id) $ do
       message <-
-        MessageBuilder.buildSendOTPMessage merchantOpCityId $
+        MessageBuilder.buildSendOTPMessage personOperatingCityId $
           MessageBuilder.BuildSendOTPMessageReq
             { otp = otpCode,
               hash = otpHash
             }
-      Sms.sendSMS person.merchantId merchantOpCityId (Sms.SendSMSReq message phoneNumber sender)
+      Sms.sendSMS person.merchantId personOperatingCityId (Sms.SendSMSReq message phoneNumber sender)
         >>= Sms.checkSmsResult
   let attempts = SR.attempts token
       authId = SR.id token

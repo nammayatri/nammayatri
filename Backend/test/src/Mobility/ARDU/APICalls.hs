@@ -100,7 +100,8 @@ ui = do
                         :<|> remove
                       )
                :<|> _
-             ) = driverClient
+             )
+      :<|> _ = driverClient
 
 newtype DashboardAPIs = DashboardAPIs
   { management :: DashboardManagementAPIs

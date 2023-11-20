@@ -30,6 +30,7 @@ import Domain.Types.DriverLocation as DriverLocation
 import qualified Domain.Types.DriverLocation as DDL
 import Domain.Types.DriverQuote as DriverQuote
 import Domain.Types.Merchant
+import Domain.Types.Merchant.MerchantOperatingCity
 import Domain.Types.Person as Person
 import qualified Domain.Types.Ride as Ride
 import Domain.Types.Vehicle as DV
@@ -502,3 +503,12 @@ findAllPersonWithDriverInfos dInfos merchantId = findAllWithKV [Se.And [Se.Is Be
 
 updateMediaId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> Maybe (Id MediaFile) -> m ()
 updateMediaId (Id driverId) faceImageId = updateWithKV [Se.Set BeamP.faceImageId (getId <$> faceImageId)] [Se.Is BeamP.id $ Se.Eq driverId]
+
+updateCityInfoById :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> Id MerchantOperatingCity -> m ()
+updateCityInfoById (Id personId) (Id merchantOperatingCityId) = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set BeamP.merchantOperatingCityId (Just merchantOperatingCityId),
+      Se.Set BeamP.updatedAt now
+    ]
+    [Se.Is BeamP.id (Se.Eq personId)]

@@ -71,6 +71,7 @@ module Domain.Action.UI.Driver
     getHistoryEntryDetailsEntityV2,
     calcExecutionTime,
     fetchDriverPhoto,
+    updateOperatingCity,
   )
 where
 
@@ -184,7 +185,6 @@ import qualified Storage.Queries.Invoice as QINV
 import qualified Storage.Queries.MetaData as QMeta
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.RegistrationToken as QR
-import qualified Storage.Queries.RegistrationToken as QRegister
 import Storage.Queries.Ride as Ride
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.SearchRequest as QSR
@@ -1423,7 +1423,7 @@ validate ::
   m DriverAlternateNumberRes
 validate (personId, _, merchantOpCityId) phoneNumber = do
   person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  altNoAttempt <- runInReplica $ QRegister.getAlternateNumberAttempts personId
+  altNoAttempt <- runInReplica $ QR.getAlternateNumberAttempts personId
   runRequestValidation validationCheck phoneNumber
   mobileNumberHash <- getDbHash phoneNumber.alternateNumber
   merchant <- CQM.findById person.merchantId >>= fromMaybeM (MerchantNotFound person.merchantId.getId)
@@ -1810,3 +1810,12 @@ calcExecutionTime transporterConfig' autopayPaymentStage scheduledAt = do
     Just DDF.NOTIFICATION_ATTEMPTING -> addUTCTime executionTimeDiff scheduledAt
     Just DDF.EXECUTION_SCHEDULED -> addUTCTime executionTimeDiff scheduledAt
     _ -> scheduledAt
+
+updateOperatingCity :: (EsqDBFlow m r, EsqDBReplicaFlow m r, CacheFlow m r, MonadFlow m) => (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Context.City -> m APISuccess
+updateOperatingCity (personId, merchantId, _) city = do
+  merchant <- runInReplica $ CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
+  cityId <- runInReplica $ CQMOC.getMerchantOpCityId Nothing merchant (Just city)
+  registrationToken <- runInReplica $ QR.findLatestByPersonId personId >>= fromMaybeM (TokenNotFound personId.getId)
+  void $ QPerson.updateCityInfoById personId cityId
+  void $ QR.updateCityInfoById registrationToken.id cityId
+  pure APISuccess.Success

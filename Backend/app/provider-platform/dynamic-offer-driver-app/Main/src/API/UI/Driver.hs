@@ -52,6 +52,7 @@ import Environment
 import EulerHS.Prelude hiding (id, state)
 import Kernel.External.Maps (LatLong)
 import Kernel.Types.APISuccess (APISuccess)
+import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
@@ -192,6 +193,12 @@ type API =
                :> TokenAuth
                :> Get '[JSON] DDriver.HistoryEntryDetailsEntityV2
          )
+    :<|> "driver"
+      :> "operatingcity"
+      :> "update"
+      :> TokenAuth
+      :> MandatoryQueryParam "city" Context.City
+      :> Post '[JSON] APISuccess
 
 handler :: FlowServer API
 handler =
@@ -228,6 +235,7 @@ handler =
              :<|> getDriverPaymentsHistoryV2
              :<|> getDriverPaymentsHistoryEntityDetailsV2
          )
+    :<|> updateOperatingCity
 
 createDriver :: SP.Person -> DDriver.OnboardDriverReq -> FlowHandler DDriver.OnboardDriverRes
 createDriver admin = withFlowHandlerAPI . DDriver.createDriver admin
@@ -320,3 +328,6 @@ getDriverPaymentsHistoryV2 pMode mbLimit mbOffset = withFlowHandlerAPI . DDriver
 
 getDriverPaymentsHistoryEntityDetailsV2 :: Text -> (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> FlowHandler DDriver.HistoryEntryDetailsEntityV2
 getDriverPaymentsHistoryEntityDetailsV2 invoiceId (driverId, merchantId, merchantOpCityId) = withFlowHandlerAPI $ DDriver.getHistoryEntryDetailsEntityV2 (driverId, merchantId, merchantOpCityId) invoiceId
+
+updateOperatingCity :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Context.City -> FlowHandler APISuccess
+updateOperatingCity (personId, driverId, merchantOpCityId) = withFlowHandlerAPI . DDriver.updateOperatingCity (personId, driverId, merchantOpCityId)
