@@ -2600,6 +2600,11 @@ zooTicketBookingFlow = do
     RESET_SCREEN_STATE -> do
       modifyScreenState $ TicketBookingScreenStateType (\_ ->  TicketBookingScreenData.initData)
       zooTicketBookingFlow
+    REFRESH_PAYMENT_STATUS state -> do
+      (GetTicketStatusResp ticketStatus) <- Remote.getTicketStatusBT state.props.selectedBookingId
+      updatePaymentStatusData ticketStatus state.props.selectedBookingId
+      setValueToLocalStore PAYMENT_STATUS_POOLING "false"
+      zooTicketBookingFlow
 
 ticketPaymentFlow :: TicketBookingScreenData -> FlowBT String Unit
 ticketPaymentFlow screenData = do
@@ -2617,6 +2622,12 @@ ticketPaymentFlow screenData = do
   _ <- pure $ toggleBtnLoader "" false
   (GetTicketStatusResp ticketStatus) <- Remote.getTicketStatusBT shortOrderID
   modifyScreenState $ TicketBookingScreenStateType (\ticketBookingScreen -> ticketBookingScreen { props { currentStage = BookingConfirmationStage } })
+  updatePaymentStatusData ticketStatus shortOrderID
+  void $ lift $ lift $ toggleLoader false
+  zooTicketBookingFlow
+
+updatePaymentStatusData :: String -> String -> FlowBT String Unit
+updatePaymentStatusData ticketStatus shortOrderID =
   case ticketStatus of
     "Booked" -> do
       infoRes <- Remote.getTicketBookingDetailsBT shortOrderID
@@ -2630,9 +2641,6 @@ ticketPaymentFlow screenData = do
     _ -> do
       modifyScreenState $ TicketBookingScreenStateType (\ticketBookingScreen -> ticketBookingScreen { props { currentStage = ChooseTicketStage } }) -- temporary fix - will remove once 500 INTERNAL_SERVER_ERROR is solved.
       pure unit
-  void $ lift $ lift $ toggleLoader false
-  zooTicketBookingFlow
-
 
 zooTicketInfoFlow :: FlowBT String Unit
 zooTicketInfoFlow = do
