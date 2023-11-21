@@ -50,7 +50,7 @@ initData = {
           notifiedCustomer : false,
           exoPhone : "",
           specialLocationTag : Nothing,
-          waitingTime : "__",
+          waitTimeSeconds : -1,
           waitTimeInfo : false,
           rideCreatedAt : "",
           requestedVehicleVariant : Nothing,

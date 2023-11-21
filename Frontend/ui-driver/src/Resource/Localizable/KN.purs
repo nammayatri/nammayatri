@@ -495,7 +495,7 @@ getKN stringKey =
         WAIT_TIME ->  "ಕಾಯುವ ಸಮಯ"
         WAIT_TIMER ->  "ಟೈಮರ್ ನಿರೀಕ್ಷಿಸಿ"
         HOW_LONG_WAITED_FOR_PICKUP ->  "ಪಿಕಪ್‌ನಲ್ಲಿ ನೀವು ಎಷ್ಟು ಸಮಯ ಕಾಯುತ್ತಿದ್ದೀರಿ ಎಂಬುದನ್ನು ತೋರಿಸುತ್ತದೆ."
-        CUSTOMER_WILL_PAY_FOR_EVERY_MINUTE ->  "ಗ್ರಾಹಕರು \nಮೊದಲ 3 ನಿಮಿಷಗಳ ನಂತರ ಪ್ರತಿ ನಿಮಿಷ ಕಾಯುವ ಸಮಯಕ್ಕೆ ₹1.5\n ಪಾವತಿಸುತ್ತಾರೆ."
+        CUSTOMER_WILL_PAY_FOR_EVERY_MINUTE ->  "ಗ್ರಾಹಕರು \nಮೊದಲ {} ನಿಮಿಷಗಳ ನಂತರ ಪ್ರತಿ ನಿಮಿಷ ಕಾಯುವ ಸಮಯಕ್ಕೆ ₹1.5\n ಪಾವತಿಸುತ್ತಾರೆ."
         OTHERS ->  "ಇತರರು"
         ENTER_SECOND_SIM_NUMBER ->  "ಎರಡನೇ ಸಿಮ್ ಸಂಖ್ಯೆಯನ್ನು ನಮೂದಿಸಿ"
         ALTERNATE_NUMBER ->  "ಪರ್ಯಾಯ ಸಂಖ್ಯೆ"
@@ -1084,3 +1084,4 @@ getKN stringKey =
         ENTER_AADHAAR_OTP_ -> ""
         CALL_REQUEST_HAS_BEEN_PLACED -> ""
         BY_CLICKING_NEXT_YOU_WILL_BE_AGREEING_TO_OUR -> ""
+        THIS_EXTRA_AMOUNT_THE_CUSTOMER_WILL_PAY -> "ಇದು ಗ್ರಾಹಕರು ನಿಮಗೆ ಪಾವತಿಸುವ ಹೆಚ್ಚುವರಿ ಮೊತ್ತವಾಗಿದೆ ಏಕೆಂದರೆ ನೀವು {} ನಿಮಿಷಗಳಿಗಿಂತ ಹೆಚ್ಚು ಕಾಯುತ್ತಿದ್ದೀರಿ"

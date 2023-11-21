@@ -132,7 +132,8 @@ commonConfig =
             }
         , waitTimeConfig : {
           enableWaitTime : true,
-          thresholdDist : 0.05
+          thresholdDist : 0.05,
+          thresholdTime : 180
         }
         , unserviceableThreshold : 250.0
         , cityConfig : [

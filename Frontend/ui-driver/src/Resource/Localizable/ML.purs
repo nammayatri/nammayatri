@@ -496,7 +496,7 @@ getML stringKey =
         WAIT_TIME ->  "കാത്തിരിപ്പ് സമയം"
         WAIT_TIMER ->  "ടൈമർ കാത്തിരിക്കുക"
         HOW_LONG_WAITED_FOR_PICKUP ->  "പിക്കപ്പിൽ നിങ്ങൾ\nഎത്ര നേരം കാത്തിരുന്നുവെന്ന് കാണിക്കുന്നു."
-        CUSTOMER_WILL_PAY_FOR_EVERY_MINUTE ->  "ഉപഭോക്താവ് \nആദ്യ 3 മിനിറ്റിന് ശേഷം ഓരോ മിനിറ്റിലും കാത്തിരിപ്പ് സമയത്തിന് ₹1.5\nനൽകും."
+        CUSTOMER_WILL_PAY_FOR_EVERY_MINUTE ->  "ഉപഭോക്താവ് \nആദ്യ {} മിനിറ്റിന് ശേഷം ഓരോ മിനിറ്റിലും കാത്തിരിപ്പ് സമയത്തിന് ₹1.5\n നൽകും."
         OTHERS ->  "മറ്റുള്ളവ"
         ENTER_SECOND_SIM_NUMBER ->  "രണ്ടാമത്തെ സിം നമ്പർ നൽകുക"
         ALTERNATE_NUMBER ->  "ഇതര നമ്പർ"
@@ -1084,3 +1084,4 @@ getML stringKey =
         YOUR_DUES_DESCRIPTION_MANUAL -> ""
         COMPLETE_PAYMENT_TO_CONTINUE -> ""
         BY_CLICKING_NEXT_YOU_WILL_BE_AGREEING_TO_OUR -> ""
+        THIS_EXTRA_AMOUNT_THE_CUSTOMER_WILL_PAY -> "നിങ്ങൾ {} മിനിറ്റിലധികം കാത്തിരുന്നതിനാൽ ഉപഭോക്താവ് നിങ്ങൾക്ക് നൽകുന്ന അധിക തുകയാണിത്"

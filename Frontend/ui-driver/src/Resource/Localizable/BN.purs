@@ -494,7 +494,7 @@ getBN stringKey =
         WAIT_TIME ->  "অপেক্ষার সময়"
         WAIT_TIMER ->  "টাইমার অপেক্ষা করুন"
         HOW_LONG_WAITED_FOR_PICKUP ->  "আপনি পিকআপে কতক্ষণ অপেক্ষা করেছেন তা দেখায়।"
-        CUSTOMER_WILL_PAY_FOR_EVERY_MINUTE ->  "গ্রাহক ₹1.5\nপ্রথম 3 মিনিটের পর প্রতি মিনিট অপেক্ষার জন্য প্রদান করবেন"
+        CUSTOMER_WILL_PAY_FOR_EVERY_MINUTE ->  "গ্রাহক ₹1.5\nপ্রথম {} মিনিটের পর প্রতি মিনিট অপেক্ষার জন্য প্রদান করবেন"
         OTHERS ->  "অন্যান্য"
         ENTER_SECOND_SIM_NUMBER ->  "দ্বিতীয় সিম নম্বর লিখুন"
         ALTERNATE_NUMBER ->  "বিকল্প নম্বর"
@@ -1084,3 +1084,4 @@ getBN stringKey =
         VALIDITY_EXPIRED_STR -> ""
         DRIVER_GO_HOME_REQUEST_NOT_PRESENT -> ""
         BY_CLICKING_NEXT_YOU_WILL_BE_AGREEING_TO_OUR -> ""
+        THIS_EXTRA_AMOUNT_THE_CUSTOMER_WILL_PAY -> "এই অতিরিক্ত পরিমাণ গ্রাহক আপনাকে প্রদান করবে কারণ আপনি {} মিনিটের বেশি অপেক্ষা করেছেন"
