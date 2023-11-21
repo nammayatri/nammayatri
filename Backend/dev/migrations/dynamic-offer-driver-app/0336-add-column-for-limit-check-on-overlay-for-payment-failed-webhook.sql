@@ -1,0 +1,3 @@
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN limit_on_sending_number_of_overlay_on_mandate_failure int NOT NULL DEFAULT 0;
+
+UPDATE atlas_driver_offer_bpp.transporter_config SET limit_on_sending_number_of_overlay_on_mandate_failure = 2;

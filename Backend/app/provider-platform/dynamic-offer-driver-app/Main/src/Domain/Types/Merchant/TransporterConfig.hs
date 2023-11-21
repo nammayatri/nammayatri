@@ -150,6 +150,7 @@ data TransporterConfigD u = TransporterConfig
     numOfCancellationsAllowed :: Int,
     canAddCancellationFee :: Bool,
     allowDefaultPlanAllocation :: Bool,
+    limitOnSendingNumberOfOverlayOnMandateFailure :: Int,
     createdAt :: UTCTime,
     updatedAt :: UTCTime,
     notificationRetryEligibleErrorCodes :: [Text],

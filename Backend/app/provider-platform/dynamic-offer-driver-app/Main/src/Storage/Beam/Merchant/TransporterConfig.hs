@@ -126,6 +126,7 @@ data TransporterConfigT f = TransporterConfigT
     numOfCancellationsAllowed :: B.C f Int,
     canAddCancellationFee :: B.C f Bool,
     allowDefaultPlanAllocation :: B.C f Bool,
+    limitOnSendingNumberOfOverlayOnMandateFailure :: B.C f Int,
     createdAt :: B.C f UTCTime,
     updatedAt :: B.C f UTCTime,
     notificationRetryEligibleErrorCodes :: B.C f [Text],
