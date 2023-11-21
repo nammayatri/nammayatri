@@ -46,8 +46,8 @@ create srsz = do
 
 createSearchRequestSpecialZone :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => SearchRequestSpecialZone -> m ()
 createSearchRequestSpecialZone searchRequest = do
-  fromLocationMap <- SLM.buildPickUpLocationMapping searchRequest.fromLocation.id searchRequest.id.getId DLM.SEARCH_REQUEST
-  toLocationMaps <- SLM.buildDropLocationMapping searchRequest.toLocation.id searchRequest.id.getId DLM.SEARCH_REQUEST
+  fromLocationMap <- SLM.buildPickUpLocationMapping searchRequest.fromLocation.id searchRequest.id.getId DLM.SEARCH_REQUEST (Just searchRequest.providerId) (Just searchRequest.merchantOperatingCityId)
+  toLocationMaps <- SLM.buildDropLocationMapping searchRequest.toLocation.id searchRequest.id.getId DLM.SEARCH_REQUEST (Just searchRequest.providerId) (Just searchRequest.merchantOperatingCityId)
   QLM.create fromLocationMap >> QLM.create toLocationMaps >> create searchRequest
 
 findById :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id SearchRequestSpecialZone -> m (Maybe SearchRequestSpecialZone)
@@ -77,11 +77,11 @@ instance FromTType' BeamSRSZ.SearchRequestSpecialZone SearchRequestSpecialZone w
         then do
           logInfo "Accessing Search Request Location Table"
           pickupLoc <- QSL.upsertLocationForOldData (Id <$> fromLocationId) id
-          pickupLocMapping <- SLM.buildPickUpLocationMapping pickupLoc.id id DLM.SEARCH_REQUEST
+          pickupLocMapping <- SLM.buildPickUpLocationMapping pickupLoc.id id DLM.SEARCH_REQUEST (Just $ Id providerId) (Id <$> merchantOperatingCityId)
           QLM.create pickupLocMapping
 
           dropLoc <- QSL.upsertLocationForOldData (Id <$> toLocationId) id
-          dropLocMapping <- SLM.buildDropLocationMapping dropLoc.id id DLM.SEARCH_REQUEST
+          dropLocMapping <- SLM.buildDropLocationMapping dropLoc.id id DLM.SEARCH_REQUEST (Just $ Id providerId) (Id <$> merchantOperatingCityId)
           QLM.create dropLocMapping
           return (pickupLoc, dropLoc)
         else do

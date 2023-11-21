@@ -16,25 +16,33 @@ module SharedLogic.LocationMapping where
 
 import qualified Domain.Types.Location as DL
 import qualified Domain.Types.LocationMapping as DLM
+import Domain.Types.Merchant (Merchant)
+import Domain.Types.Merchant.MerchantOperatingCity
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.Queries.LocationMapping as QLM
 
-buildPickUpLocationMapping :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id DL.Location -> Text -> DLM.LocationMappingTags -> m DLM.LocationMapping
-buildPickUpLocationMapping locationId entityId tag = do
+buildPickUpLocationMapping :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id DL.Location -> Text -> DLM.LocationMappingTags -> Maybe (Id Merchant) -> Maybe (Id MerchantOperatingCity) -> m DLM.LocationMapping
+buildPickUpLocationMapping locationId entityId tag merchantId merchantOperatingCityId = do
   id <- generateGUID
   let order = 0
-  QLM.updatePastMappingVersions entityId order
+  now <- getCurrentTime
   let version = "LATEST"
+      createdAt = now
+      updatedAt = now
+  QLM.updatePastMappingVersions entityId order
   return DLM.LocationMapping {..}
 
-buildDropLocationMapping :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id DL.Location -> Text -> DLM.LocationMappingTags -> m DLM.LocationMapping
-buildDropLocationMapping locationId entityId tag = do
+buildDropLocationMapping :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id DL.Location -> Text -> DLM.LocationMappingTags -> Maybe (Id Merchant) -> Maybe (Id MerchantOperatingCity) -> m DLM.LocationMapping
+buildDropLocationMapping locationId entityId tag merchantId merchantOperatingCityId = do
   id <- generateGUID
   noOfEntries <- QLM.countOrders entityId
   let order = if noOfEntries == 0 then 1 else noOfEntries
-  QLM.updatePastMappingVersions entityId order
+  now <- getCurrentTime
   let version = "LATEST"
+      createdAt = now
+      updatedAt = now
+  QLM.updatePastMappingVersions entityId order
   return DLM.LocationMapping {..}

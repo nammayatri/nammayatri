@@ -53,8 +53,8 @@ create dBooking = do
 
 createBooking :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Booking -> m ()
 createBooking booking = do
-  fromLocationMap <- SLM.buildPickUpLocationMapping booking.fromLocation.id booking.id.getId DLM.BOOKING
-  toLocationMaps <- SLM.buildDropLocationMapping booking.toLocation.id booking.id.getId DLM.BOOKING
+  fromLocationMap <- SLM.buildPickUpLocationMapping booking.fromLocation.id booking.id.getId DLM.BOOKING (Just booking.providerId) (Just booking.merchantOperatingCityId)
+  toLocationMaps <- SLM.buildDropLocationMapping booking.toLocation.id booking.id.getId DLM.BOOKING (Just booking.providerId) (Just booking.merchantOperatingCityId)
   QLM.create fromLocationMap >> QLM.create toLocationMaps >> create booking
 
 findById :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Booking -> m (Maybe Booking)
@@ -135,11 +135,11 @@ instance FromTType' BeamB.Booking Booking where
         then do
           logInfo "Accessing Booking Location Table"
           pickupLoc <- upsertLocationForOldData (Id <$> fromLocationId) id
-          pickupLocMapping <- SLM.buildPickUpLocationMapping pickupLoc.id id DLM.BOOKING
+          pickupLocMapping <- SLM.buildPickUpLocationMapping pickupLoc.id id DLM.BOOKING (Just $ Id providerId) (Id <$> merchantOperatingCityId)
           QLM.create pickupLocMapping
 
           dropLoc <- upsertLocationForOldData (Id <$> toLocationId) id
-          dropLocMapping <- SLM.buildDropLocationMapping dropLoc.id id DLM.BOOKING
+          dropLocMapping <- SLM.buildDropLocationMapping dropLoc.id id DLM.BOOKING (Just $ Id providerId) (Id <$> merchantOperatingCityId)
           QLM.create dropLocMapping
           return (pickupLoc, dropLoc)
         else do

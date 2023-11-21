@@ -29,7 +29,11 @@ data LocationMappingT f = LocationMappingT
     locationId :: B.C f Text,
     entityId :: B.C f Text,
     order :: B.C f Int,
-    version :: B.C f Text
+    version :: B.C f Text,
+    createdAt :: B.C f UTCTime,
+    updatedAt :: B.C f UTCTime,
+    merchantId :: B.C f (Maybe Text),
+    merchantOperatingCityId :: B.C f (Maybe Text)
   }
   deriving (Generic, B.Beamable)
 
