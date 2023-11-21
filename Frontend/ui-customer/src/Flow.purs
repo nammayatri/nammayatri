@@ -17,7 +17,7 @@ module Flow where
 
 import Engineering.Helpers.LogEvent
 
-import Accessor (_computedPrice, _contents, _formattedAddress, _id, _lat, _lon, _status, _toLocation, _signatureAuthData, _payload, _view_param, _show_splash)
+import Accessor (_computedPrice, _contents, _formattedAddress, _id, _lat, _lon, _status, _toLocation, _signatureAuthData, _payload, _view_param, _show_splash, _middleName, _firstName, _lastName)
 import Common.Types.App (GlobalPayload(..), SignatureAuthData(..), Payload(..), Version(..), LocationData(..), EventPayload(..), ClevertapEventParams, OTPChannel(..))
 import Common.Types.App (LazyCheck(..), FCMBundleUpdate)
 import Components.LocationListItem.Controller (dummyLocationListState)
@@ -190,8 +190,8 @@ verifyPerson globalPayload = do
                 else if (showCarouselScreen FunctionCall) then welcomeScreenFlow else enterMobileNumberScreenFlow
 
 handleDeepLinks :: Maybe GlobalPayload -> Boolean -> FlowBT String Unit
-handleDeepLinks globalPayload skipDefaultCase = do
-  case globalPayload of 
+handleDeepLinks mBGlobalPayload skipDefaultCase = do
+  case mBGlobalPayload of 
     Just globalPayload ->
       case globalPayload ^. _payload ^._view_param of
         Just screen -> case screen of
@@ -207,12 +207,14 @@ handleDeepLinks globalPayload skipDefaultCase = do
     Nothing -> do
       mBPayload <- liftFlowBT $ getGlobalPayload unit
       case mBPayload of
-        Just payload -> handleDeepLinks mBPayload skipDefaultCase
+        Just _ -> handleDeepLinks mBPayload skipDefaultCase
         Nothing -> pure unit
   
 
 hideSplashAndCallFlow :: FlowBT String Unit -> FlowBT String Unit
-hideSplashAndCallFlow flow = (liftFlowBT hideLoader) >>= \_ -> flow
+hideSplashAndCallFlow flow = do 
+  hideLoaderFlow
+  flow
 
 concatString :: Array String -> String
 concatString arr = case uncons arr of
@@ -255,6 +257,7 @@ getIosVersion merchant =
 hideLoaderFlow :: FlowBT String Unit
 hideLoaderFlow = do
   toggleSplash false
+  void $ lift $ lift $ toggleLoader false
   liftFlowBT $ hideLoader
 
 toggleSplash :: Boolean -> FlowBT String Unit
@@ -651,8 +654,8 @@ enterMobileNumberScreenFlow = do
                     setValueToLocalStore CUSTOMER_ID customerId
                     void $ pure $ setCleverTapUserData "Identity" (getValueToLocalStore CUSTOMER_ID)
                     setValueToLocalStore REGISTERATION_TOKEN response.token
-                    handleDeepLinks Nothing true
-                    currentFlowStatus
+                    setValueToLocalStore USER_NAME $ (fromMaybe "" $ response.person ^. _firstName) <> " " <> (fromMaybe "" $ response.person ^. _middleName) <> " " <> (fromMaybe "" $ response.person ^. _lastName)
+                    handleDeepLinks Nothing false
               Left err -> do
                 pure $ setText (getNewIDWithTag "EnterOTPNumberEditText") ""
                 let errResp = err.response
