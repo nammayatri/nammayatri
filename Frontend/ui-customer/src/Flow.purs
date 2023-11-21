@@ -655,7 +655,7 @@ enterMobileNumberScreenFlow = do
                     void $ pure $ setCleverTapUserData "Identity" (getValueToLocalStore CUSTOMER_ID)
                     setValueToLocalStore REGISTERATION_TOKEN response.token
                     setValueToLocalStore USER_NAME $ (fromMaybe "" $ response.person ^. _firstName) <> " " <> (fromMaybe "" $ response.person ^. _middleName) <> " " <> (fromMaybe "" $ response.person ^. _lastName)
-                    handleDeepLinks Nothing false
+                    if isNothing (response.person ^. _firstName) then currentFlowStatus else handleDeepLinks Nothing false
               Left err -> do
                 pure $ setText (getNewIDWithTag "EnterOTPNumberEditText") ""
                 let errResp = err.response
