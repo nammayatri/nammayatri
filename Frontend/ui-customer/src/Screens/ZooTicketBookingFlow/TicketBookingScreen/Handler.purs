@@ -29,3 +29,6 @@ ticketBookingScreen = do
     TryAgain updatedState -> do
       modifyScreenState $ TicketBookingScreenStateType (\_ -> updatedState)
       App.BackT $ App.NoBack <$> (pure $ RESET_SCREEN_STATE)
+    RefreshPaymentStatus updatedState -> do
+      modifyScreenState $ TicketBookingScreenStateType (\_ -> updatedState)
+      App.BackT $ App.NoBack <$> (pure $ REFRESH_PAYMENT_STATUS updatedState)

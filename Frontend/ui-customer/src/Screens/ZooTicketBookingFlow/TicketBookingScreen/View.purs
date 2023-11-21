@@ -1154,6 +1154,8 @@ paymentStatusHeader state push paymentStatus =
       , commonTV push transcationConfig.title Color.black900 (FontStyle.h2 TypoGraphy) 14 CENTER NoAction
       , commonTV push transcationConfig.statusTimeDesc Color.black700 (FontStyle.body3 TypoGraphy) 5 CENTER NoAction
       , copyTransactionIdView state push $ paymentStatus == Common.Failed
+      , PrimaryButton.view (push <<< RefreshStatusAC) (refreshStatusButtonConfig state)
+
     ]
 
 commonTV :: forall w. (Action -> Effect Unit) -> String -> String -> (forall properties. (Array (Prop properties))) -> Int -> Gravity -> Action -> PrestoDOM (Effect Unit) w
