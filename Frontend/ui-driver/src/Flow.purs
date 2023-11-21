@@ -144,6 +144,9 @@ baseAppFlow baseFlow event = do
     _ <- pure $ saveSuggestionDefs "SUGGESTIONS_DEFINITIONS" (suggestionsDefinitions "")
     setValueToLocalStore CURRENCY (getValueFromConfig "currency")
     isLocationPermission <- lift $ lift $ liftFlow $ isLocationPermissionEnabled unit
+    if getValueToLocalStore SHOW_SUBSCRIPTIONS == "__failed" then 
+      setValueToLocalStore SHOW_SUBSCRIPTIONS "true"
+      else pure unit
     if isTokenValid regToken
       then do
         setValueToLocalNativeStore REGISTERATION_TOKEN regToken
