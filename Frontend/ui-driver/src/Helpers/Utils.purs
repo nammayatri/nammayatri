@@ -58,7 +58,7 @@ import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (class EuclideanRing, Unit, bind, discard, identity, pure, unit, void, ($), (+), (<#>), (<*>), (<>), (*>), (>>>), ($>), (/=), (&&), (<=), show, (>=), (>),(<))
 import Prelude (class Eq, class Show, (<<<))
-import Prelude (map, (*), (-), (/), (==))
+import Prelude (map, (*), (-), (/), (==), div, mod)
 import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode)
 import Data.Function.Uncurried (Fn4(..), Fn3(..), runFn4, runFn3, Fn2, runFn1, runFn2)
 import Effect.Uncurried (EffectFn1(..),EffectFn5(..), mkEffectFn1, mkEffectFn4, runEffectFn5)
@@ -79,6 +79,7 @@ import Storage (KeyStore(..), isOnFreeTrial, getValueToLocalNativeStore)
 import Styles.Colors as Color
 import Screens.Types (LocalStoreSubscriptionInfo)
 import Data.Int (fromString, even, fromNumber)
+import Data.Int as Int
 import Data.Number.Format (fixed, toStringWith)
 import Data.Function.Uncurried (Fn1)
 import MerchantConfig.Types (CityConfig(..))
@@ -105,6 +106,7 @@ foreign import toStringJSON :: forall a. a-> String
 foreign import toInt :: forall a. a -> String
 foreign import setRefreshing :: String -> Boolean -> Unit
 foreign import setEnabled :: String -> Boolean -> Unit
+foreign import fillViewPort :: Fn2 String Boolean Unit
 foreign import decodeErrorCode :: String -> String
 foreign import decodeErrorMessage :: String -> String
 foreign import storeCallBackForNotification :: forall action. (action -> Effect Unit) -> (String -> action) -> Effect Unit
@@ -588,3 +590,11 @@ getCityConfig cityConfig cityName = do
                           supportNumber : ""
                         }
   fromMaybe dummyCityConfig $ DA.find (\item -> item.cityName == cityName) cityConfig
+  
+formatSecIntoMinSecs :: Int -> String
+formatSecIntoMinSecs seconds = 
+  let
+    mins = seconds `div` 60
+    secs = seconds `mod` 60
+  in 
+    show mins <> ":" <> (if secs < 10 then "0" else "") <> show secs

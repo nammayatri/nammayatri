@@ -55,7 +55,7 @@ import Engineering.Helpers.Utils (saveObject)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (printLog, trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppTextInput, trackAppScreenEvent)
-import Prelude (class Show, Unit, bind, discard, map, not, pure, show, unit, void, ($), (&&), (*), (+), (-), (/), (/=), (<), (<>), (==), (>), (||), (<=), (>=), when)
+import Prelude (class Show, Unit, bind, discard, map, not, pure, show, unit, void, ($), (&&), (*), (+), (-), (/), (/=), (<), (<>), (==), (>), (||), (<=), (>=), when, negate)
 import PrestoDOM (Eval, continue, continueWithCmd, exit, updateAndExit, updateWithCmdAndExit)
 import PrestoDOM.Types.Core (class Loggable)
 import Resource.Constants (decodeAddress)
@@ -87,6 +87,9 @@ import PrestoDOM.Core (getPushFn)
 import Control.Monad.Except.Trans (lift)
 import Data.Either (Either(..))
 import Components.ErrorModal.Controller as ErrorModalController
+import Data.Int as Int
+import Data.Function.Uncurried as Uncurried
+import Engineering.Helpers.Commons as EHC
 
 instance showAction :: Show Action where
   show _ = ""
@@ -553,7 +556,9 @@ eval (InAppKeyboardModalAction (InAppKeyboardModal.BackPressed)) state = do
 eval (InAppKeyboardModalAction (InAppKeyboardModal.OnClickDone text)) state = do
     let exitState = if state.props.zoneRideBooking then StartZoneRide state else StartRide state
     exit exitState
-eval (RideActionModalAction (RideActionModal.NoAction)) state = continue state {data{triggerPatchCounter = state.data.triggerPatchCounter + 1,peekHeight = getPeekHeight state}}
+eval (RideActionModalAction (RideActionModal.NoAction)) state = do
+  void $ pure $ Uncurried.runFn2 HU.fillViewPort (EHC.getNewIDWithTag "RideInfoScrollView") true
+  continue state {data{triggerPatchCounter = state.data.triggerPatchCounter + 1,peekHeight = getPeekHeight state}}
 eval (RideActionModalAction (RideActionModal.StartRide)) state = do
   continue state { props = state.props { enterOtpModal = true, rideOtp = "", enterOtpFocusIndex = 0, otpIncorrect = false, zoneRideBooking = false } }
 eval (RideActionModalAction (RideActionModal.EndRide)) state = do
@@ -688,9 +693,12 @@ eval (RideActionModalAction (RideActionModal.WaitingInfo)) state = do
 
 eval (RideActionModalAction (RideActionModal.TimerCallback timerID timeInMinutes seconds)) state = continueWithCmd state [do pure $ (WaitTimerCallback timerID timeInMinutes seconds)]
 
-eval (UpdateWaitTime status) state = continue state { props { waitTimeStatus = status}}
+eval (UpdateWaitTime status) state = do
+  void $ pure $ setValueToLocalNativeStore WAITING_TIME_STATUS (show status)
+  continue state { props { waitTimeStatus = status}, data {activeRide {notifiedCustomer = status /= ST.NoStatus}}}
 
-eval (WaitTimerCallback timerID timeInMinutes seconds) state = continue state { data {activeRide { waitingTime = timeInMinutes, waitTimerId = timerID}}}
+eval (WaitTimerCallback timerID _ seconds) state = 
+  continue state { data {activeRide {waitTimerId = timerID, waitTimeSeconds = seconds}}}
 
 eval (PopUpModalAction (PopUpModal.OnButton1Click)) state = continue $ (state {props {endRidePopUp = false}})
 eval (PopUpModalAction (PopUpModal.OnButton2Click)) state = do
@@ -1017,7 +1025,7 @@ activeRideDetail state (RidesInfo ride) = {
   estimatedFare : ride.driverSelectedFare + ride.estimatedBaseFare,
   notifiedCustomer : getValueToLocalStore WAITING_TIME_STATUS == (show ST.PostTriggered),
   exoPhone : ride.exoPhone,
-  waitingTime : state.data.activeRide.waitingTime,
+  waitTimeSeconds :if ride.status == "INPROGRESS" then fromMaybe 0 (Int.fromString (getValueToLocalStore TOTAL_WAITED)) else -1,
   rideCreatedAt : ride.createdAt,
   waitTimeInfo : state.data.activeRide.waitTimeInfo,
   requestedVehicleVariant : ride.requestedVehicleVariant,

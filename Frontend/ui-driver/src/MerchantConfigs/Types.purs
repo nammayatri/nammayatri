@@ -128,7 +128,8 @@ type MapConfig = {
 
 type WaitTimeConfig = {
   enableWaitTime :: Boolean,
-  thresholdDist :: Number
+  thresholdDist :: Number,
+  thresholdTime :: Int
 }
 
 type CityConfig = {

@@ -499,7 +499,7 @@ getEN stringKey =
         WAIT_TIME -> "Wait Time"
         WAIT_TIMER -> "Wait Timer"
         HOW_LONG_WAITED_FOR_PICKUP -> "Shows you how long you\nhave waited at pickup."
-        CUSTOMER_WILL_PAY_FOR_EVERY_MINUTE -> "The customer will pay ₹1.5\nfor every minute of wait time after \nfirst 3 minutes"
+        CUSTOMER_WILL_PAY_FOR_EVERY_MINUTE -> "The customer will pay ₹1.5\nfor every minute of wait time after \nfirst {} minutes"
         OTHERS -> "Others"
         ENTER_SECOND_SIM_NUMBER -> "Enter Second SIM Number"
         ALTERNATE_NUMBER -> "Alternate Number"
@@ -1084,3 +1084,4 @@ getEN stringKey =
         RESUMED_AUTOPAY -> ""
         DRIVER_GO_HOME_REQUEST_NOT_PRESENT -> ""
         BY_CLICKING_NEXT_YOU_WILL_BE_AGREEING_TO_OUR -> ""
+        THIS_EXTRA_AMOUNT_THE_CUSTOMER_WILL_PAY -> "This is the extra amount the customer will pay you because you have waited more than {} minutes"

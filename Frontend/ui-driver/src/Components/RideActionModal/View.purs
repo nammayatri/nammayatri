@@ -35,8 +35,8 @@ import Language.Types (STR(..))
 import MerchantConfig.Utils (Merchant(..), getMerchant)
 import MerchantConfig.Utils (getMerchant, getValueFromConfig, Merchant(..))
 import Prelude ((<>))
-import Prelude (Unit, bind, const, not, discard, pure, show, unit, ($), (/=), (<>), (&&), (==), (-), (>), (||))
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), afterRender, alpha, background, clickable, color, ellipsize, fontSize, fontStyle, gravity, height, imageUrl, imageView, imageWithFallback, lineHeight, linearLayout, margin, maxLines, onClick, orientation, padding, relativeLayout, scrollView, singleLine, stroke, text, textSize, textView, visibility, weight, width, id, pivotY, onAnimationEnd, id)
+import Prelude (Unit, bind, const, not, discard, pure, show, unit, ($), (/=), (<>), (&&), (==), (-), (>), (||), (/), (*), (+), negate)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), afterRender, alpha, background, clickable, color, ellipsize, fontSize, fontStyle, gravity, height, imageUrl, imageView, imageWithFallback, lineHeight, linearLayout, margin, maxLines, onClick, orientation, padding, relativeLayout, scrollView, singleLine, stroke, text, textSize, textView, visibility, weight, width, id, pivotY, onAnimationEnd, id, layoutGravity, horizontalScrollView)
 import PrestoDOM.Properties (cornerRadii, cornerRadius)
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Screens.Types (HomeScreenStage(..), TimerStatus(..), DisabilityType(..))
@@ -45,7 +45,10 @@ import Storage (KeyStore(..), getValueToLocalStore, setValueToLocalStore)
 import Styles.Colors as Color
 import Types.App (defaultGlobalState)
 import Helpers.Utils(getRideTypeColor, getVariantRideType)
+import Helpers.Utils as HU
 import JBridge as JB
+import Data.Int as Int
+import Animation as Anim
 
 view :: forall w . (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push config =
@@ -480,15 +483,28 @@ estimatedFareView push config =
         , ellipsize true
         , singleLine true
         ] <> FontStyle.body1 TypoGraphy
-      , textView $
-        [ height WRAP_CONTENT
-        , width WRAP_CONTENT
-        , text ((getValueFromConfig "currency") <> (show config.estimatedRideFare))
-        , color Color.black900
-        , ellipsize true
-        , singleLine true
-        ] <> FontStyle.body10 TypoGraphy
+      , linearLayout
+        [ width WRAP_CONTENT
+        , height WRAP_CONTENT
+        , gravity CENTER_VERTICAL
+        ][  textView $
+            [ height WRAP_CONTENT
+            , width WRAP_CONTENT
+            , text $ currency <> (show config.estimatedRideFare)
+            , color Color.black900
+            , ellipsize true
+            , singleLine true
+            ] <> FontStyle.body10 TypoGraphy
+          , if config.waitTimeSeconds > (config.thresholdTime + 60) then yellowPill push pillText (not config.startRideActive) else linearLayout[visibility GONE][]
+        ]
     ]
+    where currency = getValueFromConfig "currency"
+          pillText = "+" <> currency <> " " <> show (calculateCharges (config.waitTimeSeconds - config.thresholdTime))
+
+          calculateCharges :: Int -> Number
+          calculateCharges sec =
+            let min = Int.floor $ Int.toNumber sec / 60.0
+            in 1.5 * Int.toNumber min
 
 waitTimeView :: forall w . (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 waitTimeView push config =
@@ -497,7 +513,7 @@ waitTimeView push config =
      , gravity START
      , orientation VERTICAL
      , weight 1.0
-     , visibility if config.waitTime /= "__" && config.notifiedCustomer && config.waitTimeStatus == ST.PostTriggered then VISIBLE else GONE
+     , visibility if config.waitTimeSeconds /= -1 && config.notifiedCustomer && config.waitTimeStatus == ST.PostTriggered then VISIBLE else GONE
      ]
      [ linearLayout
          [
@@ -521,37 +537,82 @@ waitTimeView push config =
             , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_info_blue"
           ]
          ]
-        , textView $
-         [ height WRAP_CONTENT
-         , width WRAP_CONTENT
-         , text (config.waitTime)
-         , color Color.black900
-         , ellipsize true
-         , textSize FontSize.a_20
-         , singleLine true
-         , fontStyle (FontStyle.semiBold TypoGraphy)
-         ]
+       , linearLayout
+        [ width WRAP_CONTENT
+        , height WRAP_CONTENT
+        , gravity CENTER_VERTICAL
+        ][ textView $
+            [ height WRAP_CONTENT
+            , width WRAP_CONTENT
+            , text if config.waitTimeSeconds > config.thresholdTime then HU.formatSecIntoMinSecs config.thresholdTime else HU.formatSecIntoMinSecs config.waitTimeSeconds
+            , color Color.black900
+            , ellipsize true
+            , textSize FontSize.a_20
+            , singleLine true
+            , fontStyle $ FontStyle.semiBold TypoGraphy
+            ]
+            , if config.waitTimeSeconds > config.thresholdTime then 
+                yellowPill push ("+ " <> HU.formatSecIntoMinSecs (config.waitTimeSeconds - config.thresholdTime)) false 
+              else linearLayout[visibility GONE][]
+        ]
      ]
 
+yellowPill :: forall w. (Action -> Effect Unit) -> String -> Boolean -> PrestoDOM (Effect Unit) w
+yellowPill push text' showInfo = 
+  PrestoAnim.animationSet [Anim.fadeIn true] $
+    linearLayout
+    [ width WRAP_CONTENT
+    , height WRAP_CONTENT
+    , background Color.yellow800
+    , padding $ Padding 3 2 3 2
+    , gravity CENTER_VERTICAL
+    , margin $ Margin 2 2 0 0
+    , cornerRadius 10.0
+    ][ textView $
+        [ height WRAP_CONTENT
+        , width WRAP_CONTENT
+        , text text'
+        , color Color.black800
+        , ellipsize true
+        , singleLine true
+        ] <> FontStyle.body9 TypoGraphy
+      , imageView
+        [ height $ V 12
+        , width  $ V 12
+        , margin $ Margin 1 1 0 0
+        , visibility if showInfo then VISIBLE else GONE
+        , onClick push $ const WaitingInfo
+        , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_info_blue"
+        ]
+    ]
 
 rideInfoView :: forall w . (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 rideInfoView push config =
   linearLayout
     [ height WRAP_CONTENT
     , width MATCH_PARENT
-    , stroke ("1," <> Color.grey900)
+    , stroke $ "1," <> Color.grey900
     , cornerRadius 8.0
-    , padding (Padding 16 16 5 16)
+    , padding $ Padding 14 14 5 14
     , afterRender push $ const NoAction
-    ][ estimatedFareView push config
-     , separator true
-     , totalDistanceView push config
-     , separator $ config.waitTime /= "__" && config.notifiedCustomer && config.waitTimeStatus == ST.PostTriggered
-     , waitTimeView push config
-     , linearLayout
-       [ weight 1.0
-       , height MATCH_PARENT
-       ][]
+    ][  horizontalScrollView
+        [ width MATCH_PARENT
+        , height WRAP_CONTENT
+        , id $ getNewIDWithTag "RideInfoScrollView"
+        ][ linearLayout
+            [ height WRAP_CONTENT
+            , width MATCH_PARENT
+            ][ estimatedFareView push config
+            , separator true
+            , totalDistanceView push config
+            , separator $ config.waitTimeSeconds /= -1 && config.notifiedCustomer && config.waitTimeStatus == ST.PostTriggered
+            , waitTimeView push config
+            , linearLayout
+              [ weight 1.0
+              , height MATCH_PARENT
+              ][]
+            ]
+          ]
     ]
 
 separator :: forall w . Boolean -> PrestoDOM (Effect Unit) w
