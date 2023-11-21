@@ -120,6 +120,13 @@ data ReleaseRegisterRes = ReleaseRegisterRes
   }
   deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
 
+data GetProductSpecInfoResp = GetProductSpecInfoResp
+  { merchant_id :: Text,
+    client_id :: Text,
+    platform :: Text
+  }
+  deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
+
 registerRelease ::
   ( EsqDBFlow m r,
     EncFlow m r
@@ -140,6 +147,18 @@ registerRelease _ ReleaseRegisterReq {..} = do
         merchantTrack = Nothing,
         clientConfig = Nothing,
         resellerId = Nothing
+      }
+
+getProductSpecInfo ::
+  EsqDBReplicaFlow m r =>
+  Maybe Text ->
+  m GetProductSpecInfoResp
+getProductSpecInfo _ = do
+  return
+    GetProductSpecInfoResp
+      { merchant_id = "nammayatriconsumer",
+        client_id = "nammayatriconsumer",
+        platform = "android"
       }
 
 validateCreatePerson :: Validate CreatePersonReq
