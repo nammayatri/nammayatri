@@ -20,7 +20,7 @@ window.getMerchantConfig = function () {
       "isShareAppEnabled": "false",
       "showPickUpandDrop": true,
       "loaderColor": "",
-      "apiLoaderLottie": "Payments-Loader.json.json",
+      "apiLoaderLottie": "Payments-Loader.json",
       "isEmergencyContacts": "false",
       "isChatEnabled": "false",
       "showHamMenu": true,

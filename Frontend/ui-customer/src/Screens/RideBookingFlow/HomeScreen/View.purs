@@ -1790,9 +1790,7 @@ rideTrackingView push state =
                 , background Color.transparent
                 , sheetState state.props.sheetState 
                 , accessibility DISABLE
-                , peakHeight if state.props.currentStage == RideAccepted && state.data.config.nyBrandingVisibility then getHeightFromPercent 66
-                             else if state.props.currentStage == RideStarted && state.data.config.nyBrandingVisibility then getHeightFromPercent 52
-                             else getPeakHeight state.props.currentStage
+                , peakHeight $ getPeakHeight state.props.currentStage
                 , visibility VISIBLE
                 , halfExpandedRatio 0.75
                 ]
@@ -2019,54 +2017,56 @@ driverLocationTracking push action driverArrivedAction updateState duration trac
                                       specialLocationConfig destSpecialTagIcon sourceSpecialTagIcon true getPolylineAnimationConfig
                                     else
                                       specialLocationConfig sourceSpecialTagIcon destSpecialTagIcon false getPolylineAnimationConfig
-            if (getValueToLocalStore TRACKING_ENABLED) == "False" then do
-              _ <- pure $ setValueToLocalStore TRACKING_DRIVER "True"
-              _ <- pure $ removeAllPolylines ""
-              _ <- liftFlow $ drawRoute (walkCoordinate srcLat srcLon dstLat dstLon) "DOT" "#323643" false markers.srcMarker markers.destMarker 8 "DRIVER_LOCATION_UPDATE" "" "" specialLocationTag
-              void $ delay $ Milliseconds duration
-              driverLocationTracking push action driverArrivedAction updateState duration trackingId state routeState
-              pure unit
-            else if ((getValueToLocalStore TRACKING_DRIVER) == "False" || not (isJust state.data.route)) then do
-              _ <- pure $ setValueToLocalStore TRACKING_DRIVER "True"
-              routeResponse <- getRoute routeState $ makeGetRouteReq srcLat srcLon dstLat dstLon
-              case routeResponse of
-                Right (GetRouteResp routeResp) -> do
-                  case ((routeResp) !! 0) of
-                    Just (Route routes) -> do
-                      _ <- pure $ removeAllPolylines ""
-                      let (Snapped routePoints) = routes.points
-                          newPoints = if length routePoints > 1 then
-                                        getExtendedPath (walkCoordinates routes.points)
-                                      else
-                                        walkCoordinate srcLat srcLon dstLat dstLon
-                          newRoute = routes { points = Snapped (map (\item -> LatLong { lat: item.lat, lon: item.lng }) newPoints.points) }
-                      liftFlow $ drawRoute newPoints "LineString" "#323643" true markers.srcMarker markers.destMarker 8 "DRIVER_LOCATION_UPDATE" "" (metersToKm routes.distance state) specialLocationTag
-                      _ <- doAff do liftEffect $ push $ updateState routes.duration routes.distance
-                      void $ delay $ Milliseconds duration
-                      driverLocationTracking push action driverArrivedAction updateState duration trackingId state { data { route = Just (Route newRoute), speed = routes.distance / routes.duration } } routeState
-                    Nothing -> do
-                      _ <- pure $ spy "Nothing" "1"
-                      pure unit
-                Left err -> do
-                  _ <- pure $ spy "Nothing" "2"
-                  pure unit
-            else do
-              case state.data.route of
-                Just (Route route) -> do
-                      locationResp <- liftFlow $ isCoordOnPath (walkCoordinates route.points) (resp ^. _lat) (resp ^. _lon) (state.data.speed)
-                      if locationResp.isInPath then do
-                        let newPoints = { points : locationResp.points}
-                        let specialLocationTag =  if (any (\stage -> isLocalStageOn stage) [ RideAccepted, ChatWithDriver]) then
-                                                    specialLocationConfig "" sourceSpecialTagIcon true getPolylineAnimationConfig
-                                                  else
-                                                    specialLocationConfig "" destSpecialTagIcon false getPolylineAnimationConfig
-                        liftFlow $ runEffectFn1 updateRoute updateRouteConfig { json = newPoints, destMarker =  markers.destMarker, eta =  (metersToKm locationResp.distance state), srcMarker =  markers.srcMarker, specialLocation = specialLocationTag, zoomLevel = zoomLevel}
-                        _ <- doAff do liftEffect $ push $ updateState locationResp.eta locationResp.distance
+            if ((getValueToLocalStore TRACKING_ID) == trackingId) then do
+              if (getValueToLocalStore TRACKING_ENABLED) == "False" then do
+                _ <- pure $ setValueToLocalStore TRACKING_DRIVER "True"
+                _ <- pure $ removeAllPolylines ""
+                _ <- liftFlow $ drawRoute (walkCoordinate srcLat srcLon dstLat dstLon) "DOT" "#323643" false markers.srcMarker markers.destMarker 8 "DRIVER_LOCATION_UPDATE" "" "" specialLocationTag
+                void $ delay $ Milliseconds duration
+                driverLocationTracking push action driverArrivedAction updateState duration trackingId state routeState
+                pure unit
+              else if ((getValueToLocalStore TRACKING_DRIVER) == "False" || not (isJust state.data.route)) then do
+                _ <- pure $ setValueToLocalStore TRACKING_DRIVER "True"
+                routeResponse <- getRoute routeState $ makeGetRouteReq srcLat srcLon dstLat dstLon
+                case routeResponse of
+                  Right (GetRouteResp routeResp) -> do
+                    case ((routeResp) !! 0) of
+                      Just (Route routes) -> do
+                        _ <- pure $ removeAllPolylines ""
+                        let (Snapped routePoints) = routes.points
+                            newPoints = if length routePoints > 1 then
+                                          getExtendedPath (walkCoordinates routes.points)
+                                        else
+                                          walkCoordinate srcLat srcLon dstLat dstLon
+                            newRoute = routes { points = Snapped (map (\item -> LatLong { lat: item.lat, lon: item.lng }) newPoints.points) }
+                        liftFlow $ drawRoute newPoints "LineString" "#323643" true markers.srcMarker markers.destMarker 8 "DRIVER_LOCATION_UPDATE" "" (metersToKm routes.distance state) specialLocationTag
+                        _ <- doAff do liftEffect $ push $ updateState routes.duration routes.distance
                         void $ delay $ Milliseconds duration
-                        driverLocationTracking push action driverArrivedAction updateState duration trackingId state routeState
-                      else do
-                        driverLocationTracking push action driverArrivedAction updateState duration trackingId state { data { route = Nothing } } routeState
-                Nothing -> driverLocationTracking push action driverArrivedAction updateState duration trackingId state { data { route = Nothing } } routeState
+                        driverLocationTracking push action driverArrivedAction updateState duration trackingId state { data { route = Just (Route newRoute), speed = routes.distance / routes.duration } } routeState
+                      Nothing -> do
+                        _ <- pure $ spy "Nothing" "1"
+                        pure unit
+                  Left err -> do
+                    _ <- pure $ spy "Nothing" "2"
+                    pure unit
+              else do
+                case state.data.route of
+                  Just (Route route) -> do
+                        locationResp <- liftFlow $ isCoordOnPath (walkCoordinates route.points) (resp ^. _lat) (resp ^. _lon) (state.data.speed)
+                        if locationResp.isInPath then do
+                          let newPoints = { points : locationResp.points}
+                          let specialLocationTag =  if (any (\stage -> isLocalStageOn stage) [ RideAccepted, ChatWithDriver]) then
+                                                      specialLocationConfig "" sourceSpecialTagIcon true getPolylineAnimationConfig
+                                                    else
+                                                      specialLocationConfig "" destSpecialTagIcon false getPolylineAnimationConfig
+                          liftFlow $ runEffectFn1 updateRoute updateRouteConfig { json = newPoints, destMarker =  markers.destMarker, eta =  (metersToKm locationResp.distance state), srcMarker =  markers.srcMarker, specialLocation = specialLocationTag, zoomLevel = zoomLevel}
+                          _ <- doAff do liftEffect $ push $ updateState locationResp.eta locationResp.distance
+                          void $ delay $ Milliseconds duration
+                          driverLocationTracking push action driverArrivedAction updateState duration trackingId state routeState
+                        else do
+                          driverLocationTracking push action driverArrivedAction updateState duration trackingId state { data { route = Nothing } } routeState
+                  Nothing -> driverLocationTracking push action driverArrivedAction updateState duration trackingId state { data { route = Nothing } } routeState
+            else pure unit
           Left err -> do
             void $ delay $ Milliseconds duration
             driverLocationTracking push action driverArrivedAction updateState duration trackingId state { data { route = Nothing } } routeState
