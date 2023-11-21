@@ -15,7 +15,7 @@ window.getMerchantConfig = function () {
       "isShareAppEnabled": "false",
       "addFavouriteScreenBackArrow": "ny_ic_chevron_left_white,https://assets.juspay.in/nammayatri/images/user/ny_ic_chevron_left_white.png",
       "showPickUpandDrop": false,
-        "apiLoaderLottie": "primary_button_loader.json",
+      "apiLoaderLottie": "https://assets.juspay.in/beckn/mobilityredbus/user/lottie/primary_button_loader.json",
       "isEmergencyContacts": "false",
       "showCorporateAddress": false,
       "isChatEnabled": "false",
