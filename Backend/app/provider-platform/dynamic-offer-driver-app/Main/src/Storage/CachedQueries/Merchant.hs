@@ -20,6 +20,7 @@ module Storage.CachedQueries.Merchant
     update,
     loadAllProviders,
     clearCache,
+    findAllShortIdById,
   )
 where
 
@@ -92,3 +93,6 @@ update = Queries.update
 
 loadAllProviders :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => m [Merchant]
 loadAllProviders = Queries.loadAllProviders
+
+findAllShortIdById :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Id Merchant] -> m [ShortId Merchant]
+findAllShortIdById = Queries.findAllShortIdById

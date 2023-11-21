@@ -58,6 +58,12 @@ update org = do
     ]
     [Se.Is BeamM.id (Se.Eq (getId org.id))]
 
+findAllShortIdById :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Id Merchant] -> m [ShortId Merchant]
+findAllShortIdById merchantIds =
+  (DM.shortId <$>)
+    <$> findAllWithKV
+      [Se.Is BeamM.id $ Se.In (getId <$> merchantIds)]
+
 instance FromTType' BeamM.Merchant Merchant where
   fromTType' BeamM.MerchantT {..} = do
     regUrl <- parseBaseUrl registryUrl
