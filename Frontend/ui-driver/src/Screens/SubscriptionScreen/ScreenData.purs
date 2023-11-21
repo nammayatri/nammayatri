@@ -72,7 +72,7 @@ initData = {
         joinPlanProps : {
             paymentMode : "",
             selectedPlanItem : Mb.Nothing,
-            isIntroductory : true
+            isIntroductory : false
         },
         myPlanProps : {
             isDuesExpanded : false,
