@@ -16,6 +16,8 @@
 module Domain.Types.LocationMapping where
 
 import Domain.Types.Location
+import Domain.Types.Merchant
+import Domain.Types.Merchant.MerchantOperatingCity
 import Kernel.Prelude
 import Kernel.Types.Id
 import Tools.Beam.UtilsTH
@@ -31,6 +33,10 @@ data LocationMapping = LocationMapping
     locationId :: Id Location,
     entityId :: Text,
     order :: Int,
-    version :: Text
+    version :: Text,
+    createdAt :: UTCTime,
+    updatedAt :: UTCTime,
+    merchantId :: Maybe (Id Merchant),
+    merchantOperatingCityId :: Maybe (Id MerchantOperatingCity)
   }
   deriving (Show, Eq, Generic)

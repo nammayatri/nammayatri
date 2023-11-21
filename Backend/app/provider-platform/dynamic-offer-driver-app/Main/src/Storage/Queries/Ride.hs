@@ -35,6 +35,7 @@ import qualified Domain.Types.Driver.GoHomeFeature.DriverGoHomeRequest as DDGR
 import Domain.Types.DriverInformation
 import qualified Domain.Types.LocationMapping as DLM
 import Domain.Types.Merchant
+import Domain.Types.Merchant.MerchantOperatingCity
 import Domain.Types.Person
 import Domain.Types.Ride as DDR
 import Domain.Types.Ride as DR
@@ -62,7 +63,6 @@ import qualified Storage.Beam.RideDetails as BeamRD
 import qualified Storage.Beam.RiderDetails as BeamRDR
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
-import qualified Storage.Queries.Booking as QB
 import qualified Storage.Queries.Booking as QBooking
 import Storage.Queries.Instances.DriverInformation ()
 import qualified Storage.Queries.Location as QL
@@ -95,8 +95,8 @@ create ride = do
 
 createRide :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Ride -> m ()
 createRide ride = do
-  fromLocationMap <- SLM.buildPickUpLocationMapping ride.fromLocation.id ride.id.getId DLM.RIDE
-  toLocationMaps <- SLM.buildDropLocationMapping ride.toLocation.id ride.id.getId DLM.RIDE
+  fromLocationMap <- SLM.buildPickUpLocationMapping ride.fromLocation.id ride.id.getId DLM.RIDE ride.merchantId (Just ride.merchantOperatingCityId)
+  toLocationMaps <- SLM.buildDropLocationMapping ride.toLocation.id ride.id.getId DLM.RIDE ride.merchantId (Just ride.merchantOperatingCityId)
   QLM.create fromLocationMap >> QLM.create toLocationMaps >> create ride
 
 findById :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Ride -> m (Maybe Ride)
@@ -479,8 +479,8 @@ findCancelledBookingId (Id driverId) = findAllWithKV [Se.And [Se.Is BeamR.driver
 findRideByRideShortId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => ShortId Ride -> m (Maybe Ride)
 findRideByRideShortId (ShortId shortId) = findOneWithKV [Se.Is BeamR.shortId $ Se.Eq shortId]
 
-createMapping :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> Text -> m [DLM.LocationMapping]
-createMapping bookingId rideId = do
+createMapping :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> Text -> Maybe (Id Merchant) -> Maybe (Id MerchantOperatingCity) -> m [DLM.LocationMapping]
+createMapping bookingId rideId merchantId merchantOperatingCityId = do
   mappings <- QLM.findByEntityId bookingId
   when (null mappings) $ throwError (InternalError "Entity Mappings for Booking Not Found") -- this case should never occur
   let fromLocationMapping = filter (\loc -> loc.order == 0) mappings
@@ -490,9 +490,8 @@ createMapping bookingId rideId = do
 
   when (null toLocationMappings) $ throwError (InternalError "Entity Mappings For ToLocation Not Found")
   let toLocMap = DL.maximumBy (comparing (.order)) toLocationMappings
-
-  fromLocationRideMapping <- SLM.buildPickUpLocationMapping fromLocMap.locationId rideId DLM.RIDE
-  toLocationRideMappings <- SLM.buildDropLocationMapping toLocMap.locationId rideId DLM.RIDE
+  fromLocationRideMapping <- SLM.buildPickUpLocationMapping fromLocMap.locationId rideId DLM.RIDE merchantId merchantOperatingCityId
+  toLocationRideMappings <- SLM.buildDropLocationMapping toLocMap.locationId rideId DLM.RIDE merchantId merchantOperatingCityId
 
   void $ QLM.create fromLocationRideMapping >> QLM.create toLocationRideMappings
   return [fromLocationRideMapping, toLocationRideMappings]
@@ -676,7 +675,7 @@ instance FromTType' BeamR.Ride Ride where
       if null mappings
         then do
           void $ QBooking.findById (Id bookingId)
-          createMapping bookingId id
+          createMapping bookingId id (Id <$> merchantId) (Id <$> merchantOperatingCityId)
         else return mappings
     let fromLocationMapping = filter (\loc -> loc.order == 0) rideMappings
         toLocationMappings = filter (\loc -> loc.order /= 0) rideMappings
@@ -690,7 +689,7 @@ instance FromTType' BeamR.Ride Ride where
     tUrl <- parseBaseUrl trackingUrl
     merchant <- case merchantId of
       Nothing -> do
-        booking <- QB.findById (Id bookingId) >>= fromMaybeM (BookingNotFound bookingId)
+        booking <- QBooking.findById (Id bookingId) >>= fromMaybeM (BookingNotFound bookingId)
         CQM.findById booking.providerId >>= fromMaybeM (MerchantNotFound booking.providerId.getId)
       Just mId -> CQM.findById (Id mId) >>= fromMaybeM (MerchantNotFound mId)
     merchantOpCityId <- CQMOC.getMerchantOpCityId (Id <$> merchantOperatingCityId) merchant Nothing
