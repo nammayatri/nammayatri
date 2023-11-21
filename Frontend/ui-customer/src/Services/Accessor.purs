@@ -188,3 +188,12 @@ _view_param = lens (unwrap >>> _.view_param) (\oldRec newVal -> wrap ((unwrap ol
 
 _show_splash :: forall a b c. Newtype a { show_splash :: b | c } => Lens' a b
 _show_splash = lens (unwrap >>> _.show_splash) (\oldRec newVal -> wrap ((unwrap oldRec) { show_splash = newVal }))
+
+_firstName :: forall a b c. Newtype a { firstName :: b | c } => Lens' a b
+_firstName = lens (unwrap >>> _.firstName) (\oldRec newVal -> wrap ((unwrap oldRec) { firstName = newVal }))
+
+_middleName :: forall a b c. Newtype a { middleName :: b | c } => Lens' a b
+_middleName = lens (unwrap >>> _.middleName) (\oldRec newVal -> wrap ((unwrap oldRec) { middleName = newVal }))
+
+_lastName :: forall a b c. Newtype a { lastName :: b | c } => Lens' a b
+_lastName = lens (unwrap >>> _.lastName) (\oldRec newVal -> wrap ((unwrap oldRec) { lastName = newVal }))

@@ -104,7 +104,7 @@ window.getMerchantConfig = function () {
         "feedbackBackground": "#D63941",
         "profileCompletion": "#FFFFFF",
         "cancelRideColor": "#BD5500",
-        "merchantLogo": "ic_launcher,https://assets.juspay.in/nammayatri/images/user/ny_ic_launcher.png",
+        "merchantLogo": "ic_launcher,https://assets.juspay.in/beckn/mobilityredbus/user/images/ny_ic_launcher.png",
         "infoIconUrl": "ny_ic_info,https://assets.juspay.in/nammayatri/images/user/ny_ic_information_grey.png",
         "sideBarList": ["MyRides", "Favorites", "HelpAndSupport", "Language", "About"],
         "rateCardColor": "#D84E55",
