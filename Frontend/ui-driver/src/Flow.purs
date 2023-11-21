@@ -1875,6 +1875,7 @@ homeScreenFlow = do
           _ <- pure $ setValueToLocalStore TRIGGER_MAPS "true"
           _ <- pure $ setValueToLocalStore TRIP_STATUS "started"
           void $ pure $ setValueToLocalStore WAITING_TIME_STATUS (show ST.NoStatus)
+          void $ pure $ setValueToLocalStore TOTAL_WAITED if updatedState.data.activeRide.waitTimeSeconds > updatedState.data.config.waitTimeConfig.thresholdTime then show updatedState.data.activeRide.waitTimeSeconds else "-1"
           void $ pure $ EHC.clearTimer updatedState.data.activeRide.waitTimerId
           currentRideFlow Nothing
         Left errorPayload -> do
@@ -2049,7 +2050,7 @@ homeScreenFlow = do
       case driverArrived of
         Right _ -> do
           void $ pure $ setValueToLocalStore WAITING_TIME_STATUS (show ST.Triggered)
-          void $ pure $ setValueToLocalStore WAITING_TIME_VAL (getCurrentUTC "")
+          void $ pure $ setValueToLocalStore WAITING_TIME_VAL $ state.data.activeRide.id <> "<$>" <> getCurrentUTC ""
           void $ pure $ JB.sendMessage $ if EHC.isPreviousVersion (getValueToLocalStore VERSION_NAME) (getPreviousVersion (getMerchant FunctionCall)) then (EHS.getMessageFromKey "dis1AP" "EN_US") else "dis1AP"
           modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{activeRide{notifiedCustomer = true}}})
         Left _ -> pure unit

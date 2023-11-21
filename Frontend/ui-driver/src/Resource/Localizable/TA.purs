@@ -496,7 +496,7 @@ getTA stringKey =
         WAIT_TIME ->  "காத்திருக்கும் நேரம்"
         WAIT_TIMER ->  "காத்திரு டைமர்"
         HOW_LONG_WAITED_FOR_PICKUP ->  "பிக்அப்பில்\nஎவ்வளவு நேரம் காத்திருந்தீர்கள் என்பதைக் காட்டுகிறது."
-        CUSTOMER_WILL_PAY_FOR_EVERY_MINUTE ->  "முதல் 3 நிமிடங்களுக்குப் பிறகு ஒவ்வொரு நிமிட காத்திருப்பு நேரத்திற்கும் வாடிக்கையாளர் ₹1.5 செலுத்துவார்."
+        CUSTOMER_WILL_PAY_FOR_EVERY_MINUTE ->  "முதல் {} நிமிடங்களுக்குப் பிறகு ஒவ்வொரு நிமிட காத்திருப்பு நேரத்திற்கும் வாடிக்கையாளர் ₹1.5 செலுத்துவார்."
         OTHERS ->  "மற்றவைகள்"
         ENTER_SECOND_SIM_NUMBER ->  "இரண்டாவது சிம் எண்ணை உள்ளிடவும்"
         ALTERNATE_NUMBER ->  "மாற்று எண்"
@@ -1084,3 +1084,4 @@ getTA stringKey =
         GOTO_YOUR_NEAREST_BOOTH -> ""
         NO_GOTO_LOCS_ADDED_YET_DESC -> ""
         BY_CLICKING_NEXT_YOU_WILL_BE_AGREEING_TO_OUR -> ""
+        THIS_EXTRA_AMOUNT_THE_CUSTOMER_WILL_PAY -> "நீங்கள் {} நிமிடங்களுக்கு மேல் காத்திருந்ததால் வாடிக்கையாளர் உங்களுக்குச் செலுத்தும் கூடுதல் தொகை இது"

@@ -113,6 +113,7 @@ data KeyStore = USER_NAME
                 | CONFIG_VERSION
                 | DRIVER_LOCATION
                 | SHOW_SUBSCRIPTIONS
+                | TOTAL_WAITED
 
 derive instance genericKeyStore :: Generic KeyStore _
 instance showKeyStore :: Show KeyStore where

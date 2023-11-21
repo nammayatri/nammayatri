@@ -65,7 +65,7 @@ import Language.Types (STR(..))
 import Log (printLog)
 import MerchantConfig.Utils (getValueFromConfig)
 import MerchantConfig.Utils as MU
-import Prelude (Unit, bind, const, discard, not, pure, unit, void, ($), (&&), (*), (-), (/), (<), (<<<), (<>), (==), (>), (>=), (||), (<=), show, void, (/=), when, map, otherwise, (+))
+import Prelude (Unit, bind, const, discard, not, pure, unit, void, ($), (&&), (*), (-), (/), (<), (<<<), (<>), (==), (>), (>=), (||), (<=), show, void, (/=), when, map, otherwise, (+), negate)
 import Presto.Core.Types.Language.Flow (Flow, delay, doAff)
 import PrestoDOM (BottomSheetState(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), adjustViewWithKeyboard, afterRender, alignParentBottom, alpha, background, bottomSheetLayout, clickable, color, cornerRadius, ellipsize, fontStyle, frameLayout, gravity, halfExpandedRatio, height, id, imageUrl, imageView, imageWithFallback, layoutGravity, lineHeight, linearLayout, lottieAnimationView, margin, onBackPressed, onClick, orientation, padding, peakHeight, relativeLayout, singleLine, stroke, text, textSize, textView, visibility, weight, width, topShift, onAnimationEnd  )
 import PrestoDOM (BottomSheetState(..), alignParentBottom, layoutGravity, Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, alpha, background, bottomSheetLayout, clickable, color, cornerRadius, fontStyle, frameLayout, gravity, halfExpandedRatio, height, id, imageUrl, imageView, lineHeight, linearLayout, margin, onBackPressed, onClick, orientation, padding, peakHeight, stroke, text, textSize, textView, visibility, weight, width, imageWithFallback, adjustViewWithKeyboard, lottieAnimationView, relativeLayout, ellipsize, singleLine, scrollView, scrollBarY)
@@ -132,14 +132,18 @@ screen initialState =
                                   pure unit
                                   else pure unit
             "RideAccepted"   -> do
-                                let startingTime = (HU.differenceBetweenTwoUTC (HU.getCurrentUTC "") (getValueToLocalStore WAITING_TIME_VAL))
+                                let waitTime = DS.split (DS.Pattern "<$>") (getValueToLocalStore WAITING_TIME_VAL)
+                                    id = fromMaybe "" (waitTime DA.!! 0)
+                                    isTimerValid = id == initialState.data.activeRide.id
+                                    startingTime = (HU.differenceBetweenTwoUTC (HU.getCurrentUTC "") (fromMaybe "" (waitTime DA.!! 1)))
                                 if (getValueToLocalStore WAITING_TIME_STATUS == show ST.Triggered) then do
                                   void $ pure $ setValueToLocalStore WAITING_TIME_STATUS (show ST.PostTriggered)
                                   void $ JB.waitingCountdownTimer startingTime push WaitTimerCallback
                                   push $ UpdateWaitTime ST.PostTriggered
                                   pure unit
-                                else if (getValueToLocalStore WAITING_TIME_STATUS == (show ST.PostTriggered) && initialState.data.activeRide.waitingTime == "__") then do
-                                  void $ JB.waitingCountdownTimer startingTime push WaitTimerCallback
+                                else if (getValueToLocalStore WAITING_TIME_STATUS == (show ST.PostTriggered) && initialState.data.activeRide.waitTimeSeconds == -1) then do
+                                  if isTimerValid then void $ JB.waitingCountdownTimer startingTime push WaitTimerCallback
+                                  else push $ UpdateWaitTime ST.NoStatus
                                   pure unit
                                 else pure unit
                                 if (DA.elem initialState.data.peekHeight [518,470,0]) then void $ push $ RideActionModalAction (RideActionModal.NoAction) else pure unit
@@ -1394,7 +1398,7 @@ waitTimeInfoPopUp push state =
          [ height MATCH_PARENT
          , width MATCH_PARENT
          ]
-         [ RequestInfoCard.view (push <<< RequestInfoCardAction) (waitTimeInfoCardConfig FunctionCall) ]
+         [ RequestInfoCard.view (push <<< RequestInfoCardAction) (waitTimeInfoCardConfig state) ]
 
 
 
