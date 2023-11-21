@@ -104,9 +104,13 @@ type API =
                :> Get '[JSON] DMatrix.AccessMatrixRowAPIEntity
          )
     :<|> "release"
-      :> DashboardAuth 'DASHBOARD_RELEASE_ADMIN
-      :> ReqBody '[JSON] DPerson.ReleaseRegisterReq
-      :> Post '[JSON] DPerson.ReleaseRegisterRes
+      :> ( DashboardAuth 'DASHBOARD_RELEASE_ADMIN
+             :> ReqBody '[JSON] DPerson.ReleaseRegisterReq
+             :> Post '[JSON] DPerson.ReleaseRegisterRes
+             :<|> "getProductSpecInfo" -- :> DashboardAuth 'DASHBOARD_ADMIN
+               :> QueryParam "releaseId" Text
+               :> Get '[JSON] DPerson.GetProductSpecInfoResp
+         )
 
 handler :: FlowServer API
 handler =
@@ -127,6 +131,7 @@ handler =
              :<|> getAccessMatrix
          )
     :<|> registerRelease
+    :<|> getProductSpecInfo
 
 listPerson :: TokenInfo -> Maybe Text -> Maybe Integer -> Maybe Integer -> Maybe (Id DP.Person) -> FlowHandler DPerson.ListPersonRes
 listPerson tokenInfo mbSearchString mbLimit mbPersonId =
@@ -187,3 +192,7 @@ changeMobileByAdmin tokenInfo personId req =
 
 registerRelease :: TokenInfo -> DPerson.ReleaseRegisterReq -> FlowHandler DPerson.ReleaseRegisterRes
 registerRelease tokenInfo = withFlowHandlerAPI . DPerson.registerRelease tokenInfo
+
+getProductSpecInfo :: Maybe Text -> FlowHandler DPerson.GetProductSpecInfoResp
+getProductSpecInfo releaseId =
+  withFlowHandlerAPI $ DPerson.getProductSpecInfo releaseId
