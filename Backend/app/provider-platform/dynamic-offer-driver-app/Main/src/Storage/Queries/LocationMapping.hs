@@ -57,9 +57,12 @@ getNewVersion oldVersion =
     _ -> "v-1"
 
 updateVersion :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> Int -> Text -> m ()
-updateVersion entityId order version =
+updateVersion entityId order version = do
+  now <- getCurrentTime
   updateOneWithKV
-    [Se.Set BeamLM.version version]
+    [ Se.Set BeamLM.version version,
+      Se.Set BeamLM.updatedAt now
+    ]
     [Se.Is BeamLM.entityId $ Se.Eq entityId, Se.Is BeamLM.order $ Se.Eq order]
 
 instance FromTType' BeamLM.LocationMapping LocationMapping where
@@ -72,7 +75,11 @@ instance FromTType' BeamLM.LocationMapping LocationMapping where
             locationId = Id locationId,
             entityId = entityId,
             order = order,
-            version = version
+            version = version,
+            createdAt = createdAt,
+            updatedAt = updatedAt,
+            merchantId = Id <$> merchantId,
+            merchantOperatingCityId = Id <$> merchantOperatingCityId
           }
 
 instance ToTType' BeamLM.LocationMapping LocationMapping where
@@ -83,5 +90,9 @@ instance ToTType' BeamLM.LocationMapping LocationMapping where
         BeamLM.locationId = getId locationId,
         BeamLM.entityId = entityId,
         BeamLM.order = order,
-        BeamLM.version = version
+        BeamLM.version = version,
+        BeamLM.createdAt = createdAt,
+        BeamLM.updatedAt = updatedAt,
+        BeamLM.merchantId = getId <$> merchantId,
+        BeamLM.merchantOperatingCityId = getId <$> merchantOperatingCityId
       }

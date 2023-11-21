@@ -58,8 +58,8 @@ create ride = do
 
 createRide :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Ride -> m ()
 createRide ride = do
-  fromLocationMap <- SLM.buildPickUpLocationMapping ride.fromLocation.id ride.id.getId DLM.RIDE
-  mbToLocationMap <- maybe (pure Nothing) (\detail -> Just <$> SLM.buildDropLocationMapping detail.id ride.id.getId DLM.RIDE) ride.toLocation
+  fromLocationMap <- SLM.buildPickUpLocationMapping ride.fromLocation.id ride.id.getId DLM.RIDE ride.merchantId ride.merchantOperatingCityId
+  mbToLocationMap <- maybe (pure Nothing) (\detail -> Just <$> SLM.buildDropLocationMapping detail.id ride.id.getId DLM.RIDE ride.merchantId ride.merchantOperatingCityId) ride.toLocation
   void $ QLM.create fromLocationMap
   void $ whenJust mbToLocationMap $ \toLocMap -> QLM.create toLocMap
   create ride
@@ -318,8 +318,8 @@ countRidesFromDateToNowByRiderId riderId date = do
 findRideByRideShortId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => ShortId Ride -> m (Maybe Ride)
 findRideByRideShortId (ShortId shortId) = findOneWithKV [Se.Is BeamR.shortId $ Se.Eq shortId]
 
-createMapping :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Text -> Text -> m [DLM.LocationMapping]
-createMapping bookingId rideId = do
+createMapping :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Text -> Text -> Maybe Text -> Maybe Text -> m [DLM.LocationMapping]
+createMapping bookingId rideId merchantId merchantOperatingCityId = do
   mappings <- QLM.findByEntityId bookingId
   when (null mappings) $ throwError (InternalError "Entity Mappings for Booking Not Found") -- this case should never occur
   let fromLocationMapping = filter (\loc -> loc.order == 0) mappings
@@ -327,14 +327,14 @@ createMapping bookingId rideId = do
 
   fromLocMap <- listToMaybe fromLocationMapping & fromMaybeM (InternalError "Entity Mappings For FromLocation Not Found")
 
-  fromLocationRideMapping <- SLM.buildPickUpLocationMapping fromLocMap.locationId rideId DLM.RIDE
+  fromLocationRideMapping <- SLM.buildPickUpLocationMapping fromLocMap.locationId rideId DLM.RIDE (Id <$> merchantId) (Id <$> merchantOperatingCityId)
   QLM.create fromLocationRideMapping
 
   toLocationRideMappings <-
     if not (null toLocationMappings)
       then do
         let toLocMap = maximumBy (comparing (.order)) toLocationMappings
-        toLocationRideMapping <- SLM.buildDropLocationMapping toLocMap.locationId rideId DLM.RIDE
+        toLocationRideMapping <- SLM.buildDropLocationMapping toLocMap.locationId rideId DLM.RIDE (Id <$> merchantId) (Id <$> merchantOperatingCityId)
         QLM.create toLocationRideMapping
         return [toLocationRideMapping]
       else return []
@@ -348,7 +348,7 @@ instance FromTType' BeamR.Ride Ride where
       if null mappings
         then do
           void $ QBooking.findById (Id bookingId)
-          createMapping bookingId id
+          createMapping bookingId id merchantId merchantOperatingCityId
         else return mappings
 
     let fromLocationMapping = filter (\loc -> loc.order == 0) rideMappings
