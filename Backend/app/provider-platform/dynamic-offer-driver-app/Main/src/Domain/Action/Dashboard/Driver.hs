@@ -129,6 +129,7 @@ import qualified SharedLogic.MessageBuilder as MessageBuilder
 import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
 import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQGHC
 import Storage.CachedQueries.DriverBlockReason as DBR
+import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantMessage as QMM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.Overlay as CMP
@@ -576,7 +577,7 @@ driverInfo merchantShortId _ mbMobileNumber mbMobileCountryCode mbVehicleNumber 
   buildDriverInfoRes driverWithRidesCount mbDriverLicense rcAssociationHistory
 
 buildDriverInfoRes ::
-  EncFlow m r =>
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r, EncFlow m r) =>
   QPerson.DriverWithRidesCount ->
   Maybe DriverLicense ->
   [(DriverRCAssociation, VehicleRegistrationCertificate)] ->
@@ -585,6 +586,15 @@ buildDriverInfoRes QPerson.DriverWithRidesCount {..} mbDriverLicense rcAssociati
   mobileNumber <- traverse decrypt person.mobileNumber
   driverLicenseDetails <- traverse buildDriverLicenseAPIEntity mbDriverLicense
   vehicleRegistrationDetails <- traverse buildRCAssociationAPIEntity rcAssociationHistory
+  availableMerchants <- case person.unencryptedMobileNumber of
+    Just mbNumber -> do
+      let mobileCountryCode = fromMaybe "+91" person.mobileCountryCode
+      mobileNumberHash <- getDbHash mbNumber
+      availablePersonWithNumber <- QPerson.findAllMerchantIdByPhoneNo mobileCountryCode mobileNumberHash
+      let availableMerchantsId = map (.merchantId) availablePersonWithNumber
+      availableMerchantsShortId <- CQM.findAllShortIdById availableMerchantsId
+      pure $ map getShortId availableMerchantsShortId
+    Nothing -> pure []
   pure
     Common.DriverInfoRes
       { driverId = cast @DP.Person @Common.Driver person.id,
@@ -607,7 +617,10 @@ buildDriverInfoRes QPerson.DriverWithRidesCount {..} mbDriverLicense rcAssociati
         canDowngradeToTaxi = info.canDowngradeToTaxi,
         vehicleNumber = vehicle <&> (.registrationNo),
         driverLicenseDetails,
-        vehicleRegistrationDetails
+        vehicleRegistrationDetails,
+        rating = person.rating,
+        alternateNumber = person.unencryptedAlternateMobileNumber,
+        availableMerchants = availableMerchants
       }
 
 buildDriverLicenseAPIEntity :: EncFlow m r => DriverLicense -> m Common.DriverLicenseAPIEntity

@@ -469,7 +469,10 @@ data DriverInfoRes = DriverInfoRes
     vehicleRegistrationDetails :: [DriverRCAssociationAPIEntity],
     onboardingDate :: Maybe UTCTime,
     bundleVersion :: Maybe Version,
-    clientVersion :: Maybe Version
+    clientVersion :: Maybe Version,
+    alternateNumber :: Maybe Text,
+    rating :: Maybe Centesimal,
+    availableMerchants :: [Text]
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
