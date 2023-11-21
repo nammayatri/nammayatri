@@ -40,6 +40,7 @@ import Common.Types.App (LazyCheck(..))
 import Data.Array as DA
 import Screens.Types (Stage(..))
 import Data.String as DS
+import Engineering.Helpers.Utils(isEmpty)
 
 view :: forall w .  (Action  -> Effect Unit) -> SettingSideBarState -> PrestoDOM (Effect Unit) w
 view push state =
@@ -192,7 +193,7 @@ profileView state push =
           , padding (PaddingRight 15)
           ][ textView
               ([ height WRAP_CONTENT
-              , text if ((getValueToLocalStore USER_NAME) == "__failed" || (getValueToLocalStore USER_NAME) == "") then (getString USER) else (getValueToLocalStore USER_NAME)
+              , text if ((getValueToLocalStore USER_NAME) == "__failed" || isEmpty (getValueToLocalStore USER_NAME) ) then (getString USER) else (getValueToLocalStore USER_NAME)
               , color state.appConfig.profileName
               , margin (MarginRight 5)
               , ellipsize true

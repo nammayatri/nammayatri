@@ -17,7 +17,7 @@ import Language.Types (STR(..))
 import Common.Styles.Colors as Color
 import MerchantConfig.Types 
 import JBridge as JB
-
+import Engineering.Helpers.Utils
 type ContentConfig = 
    { primaryText :: String,
      secondaryText :: String,
@@ -60,7 +60,7 @@ accessibilityPopUpConfig selectedDisability purpleRideConfig =
          cornerRadius = (PTD.Corners 15.0 true true true true),
          coverImageConfig {
            imageUrl = popupData.imageUrl
-         , visibility = if popupData.videoUrl == "" || (not (JB.supportsInbuildYoutubePlayer unit)) then VISIBLE else GONE
+         , visibility = if (isEmpty popupData.videoUrl) || (not (JB.supportsInbuildYoutubePlayer unit)) then VISIBLE else GONE
          , height = V 160
          , width = MATCH_PARENT
          , margin = Margin 16 20 16 0
@@ -144,7 +144,7 @@ accessibilityListConfig disabilityData otherDisability config =
           , padding = (PaddingHorizontal 24 24)
           , text = (getString SELECT_THE_CONDITION_THAT_IS_APPLICABLE)
           }
-          , hint = if disabilityData.editedDisabilityReason == "" then "Enter nature of condition" else ""
+          , hint = if isEmpty disabilityData.editedDisabilityReason then "Enter nature of condition" else ""
           , config = config
           , hideOthers = false
           , topLeftIcon = true

@@ -42,6 +42,7 @@ import Types.App (GlobalState, defaultGlobalState)
 import Data.Time.Duration (Milliseconds(..))
 import Services.API as API
 import Storage (KeyStore(..), setValueToLocalStore, getValueToLocalStore)
+import Engineering.Helpers.Utils (isEmpty)
 
 screen :: ST.TicketBookingScreenState -> Screen Action ST.TicketBookingScreenState ScreenOutput
 screen initialState =
@@ -393,7 +394,7 @@ chooseTicketsView state push =
       , width MATCH_PARENT
       , cornerRadius 8.0 
       , background Color.white900
-      , stroke $ "1," <> if state.props.validDate || (state.data.dateOfVisit == "") then Color.grey900 else Color.red
+      , stroke $ "1," <> if state.props.validDate || (isEmpty state.data.dateOfVisit ) then Color.grey900 else Color.red
       , padding $ Padding 20 15 20 15
       , onClick (\action -> do
                 _ <- push action
@@ -407,13 +408,13 @@ chooseTicketsView state push =
           , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_calendar" 
           ]
         , textView $ 
-          [ text if state.data.dateOfVisit == "" then "Select Date Of Visit" else state.data.dateOfVisit
+          [ text if isEmpty state.data.dateOfVisit  then "Select Date Of Visit" else state.data.dateOfVisit
           , color Color.black800
           ] <> FontStyle.h3 TypoGraphy
       ]
     , textView $
       [ text "Tickets are available current day onwards" -- Tickets are available for upto 90 days in advance
-      , visibility if state.props.validDate || state.data.dateOfVisit == "" then GONE else VISIBLE
+      , visibility if state.props.validDate || isEmpty state.data.dateOfVisit  then GONE else VISIBLE
       , color Color.red 
       ] <> FontStyle.tags TypoGraphy
     , linearLayout

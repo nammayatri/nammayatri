@@ -25,7 +25,7 @@ import Foreign.Generic (decode, encode, Foreign, decodeJSON, encodeJSON)
 import Control.Monad.Except (runExcept)
 import Data.Either (Either(..), hush)
 import Data.Maybe (Maybe(..))
-import Data.String (length)
+import Data.String (length, null)
 import Data.String.CodeUnits (charAt)
 import Data.Time.Duration (Milliseconds(..))
 import Effect.Aff (launchAff)
@@ -62,10 +62,14 @@ foreign import decrementMonth :: Int -> Int -> CalendarModalDateObject
 
 foreign import incrementMonth :: Int -> Int -> CalendarModalDateObject
 
-saveToLocalStore' :: String -> String -> EffectFnAff Unit
-saveToLocalStore' = saveToLocalStoreImpl
 foreign import reboot :: Effect Unit
 foreign import showSplash :: Effect Unit
+
+saveToLocalStore' :: String -> String -> EffectFnAff Unit
+saveToLocalStore' = saveToLocalStoreImpl
+
+isEmpty :: String -> Boolean
+isEmpty = null
 
 toggleLoader :: Boolean -> Flow GlobalState Unit
 toggleLoader = 
@@ -190,7 +194,7 @@ updateWeeks selDate isStart startDate week =
     let modifiedData = map (\date -> if date.date == selDate.date && date.intMonth == selDate.intMonth then date {isStart = true} else date) week.week
     in {week : modifiedData}
   else
-    let modifiedData = map (\day -> if day.utcDate == "" then day
+    let modifiedData = map (\day -> if isEmpty day.utcDate then day
                                     else if day.utcDate == startDate.utcDate then day {isStart = true, isInRange = false}
                                     else if day.utcDate == selDate.utcDate then day {isEnd = true, isInRange = false}
                                     else if day.utcDate > startDate.utcDate && day.utcDate < selDate.utcDate then day {isInRange = true, isStart = false, isEnd = false}

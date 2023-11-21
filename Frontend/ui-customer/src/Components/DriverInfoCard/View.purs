@@ -48,7 +48,7 @@ import Styles.Colors as Color
 import Common.Styles.Colors as CommonColor
 import Storage (KeyStore(..))
 import Data.Maybe (Maybe(..))
-import Engineering.Helpers.Utils (showAndHideLoader)
+import Engineering.Helpers.Utils (showAndHideLoader, isEmpty)
 import Types.App (defaultGlobalState)
 import JBridge(fromMetersToKm)
 import Engineering.Helpers.Suggestions (getMessageFromKey)
@@ -128,7 +128,7 @@ titleAndETA push state =
   , width MATCH_PARENT
   , gravity CENTER_VERTICAL
   , padding $ Padding 16 20 16 16
-  , visibility $ if ((state.props.currentStage /= RideAccepted && (secondsToHms state.data.eta) == "") || (state.props.currentStage == RideStarted && (state.props.estimatedTime == "--"))) then GONE else VISIBLE
+  , visibility $ if ((state.props.currentStage /= RideAccepted && isEmpty (secondsToHms state.data.eta) ) || (state.props.currentStage == RideStarted && (state.props.estimatedTime == "--"))) then GONE else VISIBLE
   ][ if state.props.currentStage == RideAccepted then specialZoneHeader (getValueToLocalStore SELECTED_VARIANT)
       else
       textView $

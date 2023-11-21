@@ -31,7 +31,7 @@ import Data.String.CodeUnits (charAt)
 import Debug (spy)
 import Engineering.Helpers.Commons (getNewIDWithTag, os, clearTimer)
 import Engineering.Helpers.LogEvent (logEvent)
-import Engineering.Helpers.Utils (mobileNumberValidator, mobileNumberMaxLength)
+import Engineering.Helpers.Utils (mobileNumberValidator, mobileNumberMaxLength, isEmpty)
 import Helpers.Utils (setText, clearCountDownTimer, showCarouselScreen)
 import JBridge (firebaseLogEvent, hideKeyboardOnNavigation, minimizeApp, toast, toggleBtnLoader)
 import Language.Strings (getString)
@@ -179,7 +179,7 @@ eval (MobileNumberEditTextAction MobileNumberEditorController.CloseOptions) stat
 eval (OTPEditTextAction (PrimaryEditTextController.FocusChanged boolean)) state = continue state { props{ otpEdtFocused = boolean}}
 
 eval (OTPEditTextAction (PrimaryEditTextController.TextChanged id value)) state = do
-    let newState = state { props = state.props { btnActiveOTP = if length value == 4 then true else false, letterSpacing = PX if value == "" then 1.0 else 6.0, wrongOTP = if state.props.wrongOTP && value == "" then true else false}
+    let newState = state { props = state.props { btnActiveOTP = if length value == 4 then true else false, letterSpacing = PX if isEmpty value then 1.0 else 6.0, wrongOTP = if state.props.wrongOTP && isEmpty value  then true else false}
                   , data = state.data { otp = if length value <= 4 then value else state.data.otp }}
     if length value == 4 then do
         pure $ hideKeyboardOnNavigation true

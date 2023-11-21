@@ -28,6 +28,7 @@ import Common.Types.App
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Common.Types.App (LazyCheck(..))
 import Prelude ((<>))
+import Engineering.Helpers.Utils (isEmpty)
 
 view :: forall w .  (Action  -> Effect Unit) -> PrimarySelectItemState -> PrestoDOM (Effect Unit) w
 view push state =
@@ -60,7 +61,7 @@ view push state =
             [ width MATCH_PARENT
             , height WRAP_CONTENT
             , weight 1.0
-            , text if state.selectedItem == "" then state.placeholder else state.selectedItem
+            , text if isEmpty state.selectedItem then state.placeholder else state.selectedItem
             , alpha if state.selectedItem /= "" then 1.0 else 0.33
             , color Color.greyTextColor
             ] <> FontStyle.h2 TypoGraphy

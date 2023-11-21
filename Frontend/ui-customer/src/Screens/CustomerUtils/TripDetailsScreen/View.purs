@@ -40,6 +40,7 @@ import Prelude ((<>), show)
 import Data.Maybe(fromMaybe, isJust, Maybe(..))
 import Data.String as DS
 import MerchantConfig.Utils (Merchant(..), getMerchant)
+import Engineering.Helpers.Utils (isEmpty)
 
 screen :: ST.TripDetailsScreenState -> Screen Action ST.TripDetailsScreenState ScreenOutput
 screen initialState =
@@ -180,7 +181,7 @@ tripIdView push state =
       [ orientation VERTICAL
       , height WRAP_CONTENT
       , width WRAP_CONTENT
-      , visibility if state.data.tripId == "" then GONE else VISIBLE
+      , visibility if isEmpty state.data.tripId then GONE else VISIBLE
       , weight 1.0
       ][  textView $
           [ text (getString RIDE_ID)

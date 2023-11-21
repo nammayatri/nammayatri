@@ -51,7 +51,7 @@ import Engineering.Helpers.Commons (clearTimer, getCurrentUTC, getNewIDWithTag, 
 import JBridge (animateCamera, enableMyLocation, firebaseLogEvent, getCurrentPosition, getHeightFromPercent, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, minimizeApp, openNavigation, removeAllPolylines, requestLocation, showDialer, showMarker, toast, firebaseLogEventWithTwoParams,sendMessage, stopChatListenerService, getSuggestionfromKey, scrollToEnd, waitingCountdownTimer, getChatMessages, cleverTapCustomEvent, metaLogEvent, toggleBtnLoader, openUrlInApp)
 import Engineering.Helpers.LogEvent (logEvent, logEventWithTwoParams)
 import Engineering.Helpers.Suggestions (getMessageFromKey, getSuggestionsfromKey)
-import Engineering.Helpers.Utils (saveObject)
+import Engineering.Helpers.Utils (saveObject, isEmpty)
 import Language.Strings (getString, getEN)
 import Language.Types (STR(..))
 import Log (printLog, trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppTextInput, trackAppScreenEvent)
@@ -621,7 +621,7 @@ eval (UpdateMessages message sender timeStamp size) state = do
 eval (RideActionModalAction (RideActionModal.LoadMessages)) state = do
   let allMessages = getChatMessages ""
   case (Array.last allMessages) of
-      Just value -> if value.message == "" then continue state {data { messagesSize = show (fromMaybe 0 (fromString state.data.messagesSize) + 1)}, props {canSendSuggestion = true}} else
+      Just value -> if isEmpty value.message then continue state {data { messagesSize = show (fromMaybe 0 (fromString state.data.messagesSize) + 1)}, props {canSendSuggestion = true}} else
                       if value.sentBy == "Driver" then updateMessagesWithCmd state {data {messages = allMessages, suggestionsList = []}, props {canSendSuggestion = true}}
                       else do
                         let readMessages = fromMaybe 0 (fromString (getValueToLocalNativeStore READ_MESSAGES))

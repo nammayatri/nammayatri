@@ -48,6 +48,7 @@ import Types.App (defaultGlobalState)
 import Effect.Unsafe (unsafePerformEffect)
 import Data.Function.Uncurried (runFn3)
 import Common.Types.App(YoutubeData)
+import Engineering.Helpers.Utils (isEmpty)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -265,7 +266,7 @@ notifisDetailStateTransformer selectedItem =
   , timeLabel: selectedItem.timeLabel
   , description: splitUrlsAndText selectedItem.description
   , actionText: selectedItem.action2Text
-  , actionVisibility: if selectedItem.action2Text == "" then GONE else VISIBLE
+  , actionVisibility: if isEmpty selectedItem.action2Text then GONE else VISIBLE
   , addCommentModelVisibility: GONE
   , comment: selectedItem.comment
   , commentBtnActive: false

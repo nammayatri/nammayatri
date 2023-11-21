@@ -31,6 +31,7 @@ import Effect.Unsafe
 import Engineering.Helpers.LogEvent (logEvent)
 import Data.Array as DA
 import Data.Lens ((^.))
+import Engineering.Helpers.Utils(isEmpty)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -136,7 +137,7 @@ eval (EmailIDEditTextAction (PrimaryEditText.TextChanged id value)) state = do
   if value == fromMaybe "" state.data.emailId then continue state 
     else if (state.data.emailId == Nothing) then  continue state {  data { editedEmailId = Just value, emailErrorMessage = checkError "email" state.data.emailId value}
                     , props { isEmailValid = checkValid state.data.emailId value, isBtnEnabled = isButtonActive}}
-    else if (value == "" && state.data.emailErrorMessage == Just EMAIL_EXISTS) then 
+    else if (isEmpty value && state.data.emailErrorMessage == Just EMAIL_EXISTS) then 
       continue state{props  { isEmailValid = false, isBtnEnabled = isNothing state.data.disabilityOptions.selectedDisability, genderOptionExpanded = state.props.fromHomeScreen, expandEnabled = state.props.fromHomeScreen}}
     else continue state { data {editedEmailId = Just value , emailErrorMessage = checkError "email" state.data.emailId value }
                         , props{isEmailValid = checkValid state.data.emailId value, 

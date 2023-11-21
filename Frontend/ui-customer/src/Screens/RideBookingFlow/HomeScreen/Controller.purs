@@ -109,6 +109,7 @@ import Data.Function (const)
 import Data.List ((:))
 import Common.Resources.Constants (zoomLevel, pickupZoomLevel)
 import Screens.RideBookingFlow.HomeScreen.Config
+import Engineering.Helpers.Utils (isEmpty)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -754,7 +755,7 @@ eval LoadMessages state = do
 eval (DriverInfoCardActionController (DriverInfoCardController.LoadMessages)) state = do
   let allMessages = getChatMessages ""
   case (last allMessages) of
-      Just value -> if value.message == "" then continue state {data { messagesSize = show (fromMaybe 0 (fromString state.data.messagesSize) + 1)}, props {canSendSuggestion = true, isChatNotificationDismissed = false}} else
+      Just value -> if isEmpty value.message then continue state {data { messagesSize = show (fromMaybe 0 (fromString state.data.messagesSize) + 1)}, props {canSendSuggestion = true, isChatNotificationDismissed = false}} else
                       if value.sentBy == "Customer" then updateMessagesWithCmd state {data {messages = allMessages, suggestionsList = []}, props {canSendSuggestion = true,  isChatNotificationDismissed = false}}
                       else do
                         let readMessages = fromMaybe 0 (fromString (getValueToLocalNativeStore READ_MESSAGES))
@@ -966,7 +967,7 @@ eval (MAPREADY key latitude longitude) state =
 
 eval OpenSearchLocation state = do
   _ <- pure $ performHapticFeedback unit
-  let srcValue = if state.data.source == "" then (getString CURRENT_LOCATION) else state.data.source
+  let srcValue = if isEmpty state.data.source  then (getString CURRENT_LOCATION) else state.data.source
   exit $ UpdateSavedLocation state { props { isSource = Just true, currentStage = SearchLocationModel, isSearchLocation = SearchLocation, searchLocationModelProps{crossBtnSrcVisibility = (STR.length srcValue) > 2}}, data {source=srcValue} }
 
 eval (SourceUnserviceableActionController (ErrorModalController.PrimaryButtonActionController PrimaryButtonController.OnClick)) state = continueWithCmd state [ do pure $ OpenSearchLocation ]
@@ -1322,7 +1323,7 @@ eval (CancelRidePopUpAction (CancelRidePopUp.Button2 PrimaryButtonController.OnC
     _ <- pure $ performHapticFeedback unit
     let newState = state{props{isCancelRide = false,currentStage = HomeScreen, rideRequestFlow = false, isSearchLocation = NoView }}
     case state.props.cancelRideActiveIndex of
-      Just index -> if ( (fromMaybe dummyCancelReason (state.props.cancellationReasons !! index)).reasonCode == "OTHER" || (fromMaybe dummyCancelReason (state.props.cancellationReasons !! index)).reasonCode == "TECHNICAL_GLITCH" ) then exit $ CancelRide newState{props{cancelDescription = if (newState.props.cancelDescription == "") then (fromMaybe dummyCancelReason (state.props.cancellationReasons !!index)).description else newState.props.cancelDescription }}
+      Just index -> if ( (fromMaybe dummyCancelReason (state.props.cancellationReasons !! index)).reasonCode == "OTHER" || (fromMaybe dummyCancelReason (state.props.cancellationReasons !! index)).reasonCode == "TECHNICAL_GLITCH" ) then exit $ CancelRide newState{props{cancelDescription = if (isEmpty newState.props.cancelDescription ) then (fromMaybe dummyCancelReason (state.props.cancellationReasons !!index)).description else newState.props.cancelDescription }}
                       else exit $ CancelRide newState{props{cancelDescription = (fromMaybe dummyCancelReason (state.props.cancellationReasons !!index)).description , cancelReasonCode = (fromMaybe dummyCancelReason (state.props.cancellationReasons !! index)).reasonCode }}
       Nothing    -> continue state
 
@@ -1395,7 +1396,7 @@ eval (SearchLocationModelActionController (SearchLocationModelController.Debounc
     continue state{data{ locationList = state.data.recentSearchs.predictionArray }}
 
 eval (SearchLocationModelActionController (SearchLocationModelController.SourceChanged input)) state = do
-  let srcValue = if (state.data.source == "" || state.data.source == "Current Location") then true else false
+  let srcValue = if (isEmpty state.data.source  || state.data.source == "Current Location") then true else false
   let
     newState = state {props{sourceSelectedOnMap = if (state.props.locateOnMap) then true else state.props.sourceSelectedOnMap}}
   if (input /= state.data.source) then do 
@@ -1428,7 +1429,7 @@ eval (SearchLocationModelActionController (SearchLocationModelController.Destina
 eval (SearchLocationModelActionController (SearchLocationModelController.EditTextFocusChanged textType)) state = do
   _ <- pure $ spy "searchLocationModal" textType
   if textType == "D" then
-    continue state { props { isSource = Just false, searchLocationModelProps{crossBtnDestVisibility = (STR.length state.data.destination) > 2}}, data {source = if state.data.source == "" then state.data.searchLocationModelData.prevLocation else state.data.source} }
+    continue state { props { isSource = Just false, searchLocationModelProps{crossBtnDestVisibility = (STR.length state.data.destination) > 2}}, data {source = if isEmpty state.data.source  then state.data.searchLocationModelData.prevLocation else state.data.source} }
   else
     continue state { props { isSource = Just true, searchLocationModelProps{crossBtnSrcVisibility = (STR.length state.data.source) > 2}} }
 
@@ -1480,7 +1481,7 @@ eval (SearchLocationModelActionController (SearchLocationModelController.SetLoca
   _ <- pure $ removeAllPolylines ""
   _ <- pure $ unsafePerformEffect $ runEffectFn1 locateOnMap locateOnMapConfig { goToCurrentLocation = false, lat = lat, lon = lon, geoJson = state.data.polygonCoordinates, points = state.data.nearByPickUpPoints, zoomLevel = pickupZoomLevel, labelId = getNewIDWithTag "LocateOnMapPin"}
   pure $ unsafePerformEffect $ logEvent state.data.logField if state.props.isSource == Just true  then "ny_user_src_set_location_on_map" else "ny_user_dest_set_location_on_map"
-  let srcValue = if state.data.source == "" then getString CURRENT_LOCATION else state.data.source
+  let srcValue = if isEmpty state.data.source  then getString CURRENT_LOCATION else state.data.source
   let newState = state
                   { data {source = srcValue}
                   , props { isSearchLocation = LocateOnMap

@@ -44,6 +44,7 @@ import PaymentPage (consumeBP)
 import Common.Types.App (LazyCheck(..))
 import MerchantConfig.Utils (getValueFromConfig)
 import Effect.Uncurried (runEffectFn1)
+import Engineering.Helpers.Utils (isEmpty)
 
 screen :: ST.UploadDrivingLicenseState -> Screen Action ST.UploadDrivingLicenseState ScreenOutput
 screen initialState =
@@ -220,7 +221,7 @@ frontUploadSection state push =
     , orientation VERTICAL
     , margin (MarginTop 20)
     , onClick push (const( UploadFileAction "front"))
-    , clickable $ state.data.imageFront == ""
+    , clickable $ isEmpty  state.data.imageFront
     , visibility if state.data.dateOfIssue /= Nothing then GONE else VISIBLE
   ][
     textView
@@ -250,8 +251,8 @@ frontUploadSection state push =
     , stroke ("1," <> Color.borderGreyColor)
     ][ 
       textView
-      ([ text if (state.data.imageFront == "") then (getString UPLOAD_FRONT_SIDE) else state.data.imageNameFront
-      , color if (state.data.imageFront == "") then Color.darkGrey else Color.greyTextColor
+      ([ text if (isEmpty  state.data.imageFront) then (getString UPLOAD_FRONT_SIDE) else state.data.imageNameFront
+      , color if (isEmpty  state.data.imageFront) then Color.darkGrey else Color.greyTextColor
       , weight 1.0
       , singleLine true
       , padding (PaddingRight 15)
@@ -273,7 +274,7 @@ backUploadSection state push =
   , margin (MarginTop 20)
   , orientation VERTICAL
   , onClick push (const (UploadFileAction "back"))
-  , clickable $ state.data.imageBack == ""
+  , clickable $ isEmpty state.data.imageBack
   ][
     textView
     ([ text (getString BACK_SIDE)
@@ -289,8 +290,8 @@ backUploadSection state push =
     , stroke ("1," <> Color.borderGreyColor)
     ][
       textView
-      ([ text if (state.data.imageBack == "") then (getString UPLOAD_BACK_SIDE) else state.data.imageNameBack
-      , color if (state.data.imageBack == "") then Color.darkGrey else Color.greyTextColor
+      ([ text if (isEmpty state.data.imageBack) then (getString UPLOAD_BACK_SIDE) else state.data.imageNameBack
+      , color if (isEmpty state.data.imageBack) then Color.darkGrey else Color.greyTextColor
       , weight 1.0
       , padding (PaddingRight 15)
       , singleLine true
@@ -407,8 +408,8 @@ dateOfBirth push state =
                       ) (const SelectDateOfBirthAction)
         , clickable state.props.isDateClickable 
       ][ textView
-        ([ text if state.data.dob == "" then (getString SELECT_DATE_OF_BIRTH) else state.data.dobView
-        , color if (state.data.dob == "") then Color.darkGrey else Color.greyTextColor
+        ([ text if (isEmpty state.data.dob) then (getString SELECT_DATE_OF_BIRTH) else state.data.dobView
+        , color if (isEmpty state.data.dob) then Color.darkGrey else Color.greyTextColor
         , weight 1.0
         , padding (PaddingRight 15)
         ] <> FontStyle.subHeading1 TypoGraphy)

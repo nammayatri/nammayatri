@@ -61,6 +61,7 @@ import Data.Either (Either(..))
 import MerchantConfig.Utils (getMerchant, Merchant(..))
 import Common.Types.App (LazyCheck(..))
 import Debug (spy)
+import Engineering.Helpers.Utils (isEmpty)
 
 screen :: ST.ReferralScreenState -> Screen Action ST.ReferralScreenState ScreenOutput
 screen initialState =
@@ -74,7 +75,7 @@ screen initialState =
                     ST.LeaderBoard -> do
                         case initialState.props.leaderBoardType of
                           ST.Daily  -> do
-                            let selectedDay =  if initialState.props.selectedDay.utcDate == "" then
+                            let selectedDay =  if isEmpty initialState.props.selectedDay.utcDate then
                                                   case last (getPastDays 1) of
                                                     Just day -> day
                                                     Nothing -> initialState.props.selectedDay

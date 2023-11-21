@@ -66,7 +66,7 @@ screen initialState =
   , name : "HelpAndSupportScreen"
   , globalEvents : [
       (\push -> do
-              if (initialState.data.source == "") then
+              if (EHU.isEmpty initialState.data.source) then
                 launchAff_ $ void $ EHC.flowRunner defaultGlobalState $ getPastRides RideBookingListAPIResponseAction push initialState
               else
                 pure unit

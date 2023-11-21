@@ -75,6 +75,7 @@ import Storage (KeyStore(..), getValueToLocalNativeStore, getValueToLocalStore, 
 import Styles.Colors as Color
 import Types.App (GlobalState(..), defaultGlobalState)
 import Screens.DriverProfileScreen.ScreenData (dummyDriverInfo)
+import Engineering.Helpers.Utils (isEmpty)
 
 screen :: SubscriptionScreenState -> GlobalState -> Screen Action SubscriptionScreenState ScreenOutput
 screen initialState globalState =
@@ -415,7 +416,7 @@ plansBottomView push state =
           , height WRAP_CONTENT
           , gravity CENTER_VERTICAL
           , onClick (\action -> do
-                        let url = if state.data.config.myPlanYoutubeLink == "" then state.data.config.faqLink else splitBasedOnLanguage state.data.config.myPlanYoutubeLink
+                        let url = if isEmpty state.data.config.myPlanYoutubeLink  then state.data.config.faqLink else splitBasedOnLanguage state.data.config.myPlanYoutubeLink
                         _ <- push action
                         _ <- pure $ JB.cleverTapCustomEvent "ny_driver_nyplans_watchvideo_clicked"
                         _ <- pure $ JB.metaLogEvent "ny_driver_nyplans_watchvideo_clicked"
@@ -436,7 +437,7 @@ plansBottomView push state =
                 , height $ V 16
                 , width $ V 16
                 , margin $ Margin 0 3 6 0
-                , visibility if state.data.config.myPlanYoutubeLink == "" then GONE else VISIBLE
+                , visibility if isEmpty state.data.config.myPlanYoutubeLink  then GONE else VISIBLE
             ]
             , textView $
               [ weight 1.0
@@ -624,7 +625,7 @@ myPlanBodyview push state =
           , height $ V 38
           , margin (MarginLeft 4)
           , padding $ Padding 8 8 8 8
-          , visibility if state.data.config.myPlanYoutubeLink == "" then GONE else VISIBLE
+          , visibility if isEmpty state.data.config.myPlanYoutubeLink  then GONE else VISIBLE
           , imageWithFallback $ HU.fetchImage HU.FF_ASSET "ny_ic_youtube"
           , onClick (\action -> do
                       _<- push action

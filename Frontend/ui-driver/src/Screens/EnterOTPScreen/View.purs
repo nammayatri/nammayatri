@@ -38,6 +38,7 @@ import Common.Types.App
 import Screens.EnterOTPScreen.ComponentConfig
 import Data.Ring ((-))
 import Storage (getValueToLocalStore, KeyStore(..))
+import Engineering.Helpers.Utils (isEmpty)
 
 screen :: ST.EnterOTPScreenState -> Screen Action ST.EnterOTPScreenState ScreenOutput
 screen initialState =
@@ -147,7 +148,7 @@ primaryEditTextView state push =
         valueId: "EditTextOtp",
         pattern : Just "[0-9]*,4",
         fontSize : FontSize.a_18,
-        letterSpacing : PX if state.data.otp == "" then 0.0 else 5.0,
+        letterSpacing : PX if isEmpty state.data.otp then 0.0 else 5.0,
         id : (EHC.getNewIDWithTag "EnterOTPScreenEditText")
       })
     , PrestoAnim.animationSet

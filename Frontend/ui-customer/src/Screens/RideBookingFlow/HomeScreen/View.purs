@@ -59,9 +59,8 @@ import Effect.Aff (launchAff)
 import Effect.Class (liftEffect)
 import Effect.Uncurried (runEffectFn1, runEffectFn2)
 import Engineering.Helpers.Commons (countDown, flowRunner, getNewIDWithTag, liftFlow, os, safeMarginBottom, safeMarginTop, screenHeight, isPreviousVersion, screenWidth, camelCaseToSentenceCase, getExpiryTime)
-import Engineering.Helpers.Utils (showAndHideLoader)
+import Engineering.Helpers.Utils (showAndHideLoader, isEmpty)
 import Engineering.Helpers.LogEvent (logEvent)
-import Engineering.Helpers.Utils (showAndHideLoader)
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Helpers.Utils (fetchImage, FetchImageFrom(..), decodeError, fetchAndUpdateCurrentLocation, getAssetsBaseUrl, getCurrentLocationMarker, getLocationName, getNewTrackingId, getPreviousVersion, getSearchType, parseFloat, storeCallBackCustomer)
@@ -252,7 +251,7 @@ isCurrentLocationEnabled = if (isLocalStageOn HomeScreen) then enableCurrentLoca
 
 view :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 view push state =
-  let showLabel = if state.props.defaultPickUpPoint == "" then false else true
+  let showLabel = if isEmpty state.props.defaultPickUpPoint then false else true
   in
   frameLayout
     [ height MATCH_PARENT

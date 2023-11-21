@@ -37,6 +37,7 @@ import Engineering.Helpers.Commons (flowRunner, getWindowVariable, liftFlow)
 import Types.App (defaultGlobalState, FlowBT, ScreenType(..))
 import MerchantConfig.Utils (getMerchant, Merchant(..), getValueFromConfig)
 import Common.Animation.Config (listExpandingAnimationConfig)
+import Engineering.Helpers.Utils(isEmpty)
 
 view :: forall w .  (Action  -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push config = 
@@ -192,7 +193,7 @@ editTextView push config =
   , weight 1.0
   , color config.editText.color
   , accessibility ENABLE
-  , accessibilityHint $ if config.editText.text == "" then (if config.editText.accessibilityHint == "" then config.editText.placeholder else config.editText.accessibilityHint ) else if (config.type == "number") then (DS.replaceAll (DS.Pattern "") (DS.Replacement "-") (config.editText.text)) else config.editText.text
+  , accessibilityHint $ if isEmpty config.editText.text then (if isEmpty config.editText.accessibilityHint then config.editText.placeholder else config.editText.accessibilityHint ) else if (config.type == "number") then (DS.replaceAll (DS.Pattern "") (DS.Replacement "-") (config.editText.text)) else config.editText.text
   , text config.editText.text
   , hint config.editText.placeholder
   , singleLine config.editText.singleLine
@@ -223,7 +224,7 @@ editTextView push config =
                           _    -> []) 
   <> (if config.editText.capsLock then [inputTypeI 4097] else [])
   <> (if not config.editText.enabled then if os == "IOS" then [clickable false] else [inputTypeI 0] else[])
-  <> (if config.editText.separator == "" then [] else [
+  <> (if isEmpty config.editText.separator then [] else [
     separator config.editText.separator
   , separatorRepeat config.editText.separatorRepeat
   ])

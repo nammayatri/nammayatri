@@ -841,7 +841,7 @@ payment push state =
   , width MATCH_PARENT
   , margin $ Margin 16 40 16 0
   , orientation VERTICAL
-  , visibility if state.data.payerVpa == "" && state.data.autoPayStatus == ACTIVE_AUTOPAY then GONE else VISIBLE
+  , visibility if EHU.isEmpty state.data.payerVpa && state.data.autoPayStatus == ACTIVE_AUTOPAY then GONE else VISIBLE
   ]([  textView $
       [ text $ getString PAYMENT
       , margin $ MarginBottom 12

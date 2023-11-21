@@ -84,6 +84,7 @@ import Storage (getValueToLocalStore, KeyStore(..), setValueToLocalStore, getVal
 import Styles.Colors as Color
 import Types.App (GlobalState, defaultGlobalState)
 import Constants (defaultDensity)
+import Engineering.Helpers.Utils (isEmpty)
 
 screen :: HomeScreenState -> Screen Action HomeScreenState ScreenOutput
 screen initialState =
@@ -1336,7 +1337,7 @@ locationLastUpdatedTextAndTimeView push state =
         , ellipsize true
         , singleLine true
         , gravity CENTER_VERTICAL
-        , text if state.data.locationLastUpdatedTime == "" then (if (getValueToLocalStore LOCATION_UPDATE_TIME) == "__failed" then getString(NO_LOCATION_UPDATE) else (getValueToLocalStore LOCATION_UPDATE_TIME) ) else state.data.locationLastUpdatedTime
+        , text if isEmpty state.data.locationLastUpdatedTime then (if (getValueToLocalStore LOCATION_UPDATE_TIME) == "__failed" then getString(NO_LOCATION_UPDATE) else (getValueToLocalStore LOCATION_UPDATE_TIME) ) else state.data.locationLastUpdatedTime
       ] <> FontStyle.body4 TypoGraphy
   ]
 
