@@ -52,11 +52,13 @@ data Action = AfterRender
             | PaymentStatusAction String
             | Copy
             | GoHome
+            | RefreshStatusAC PrimaryButton.Action
 
 data ScreenOutput = GoToHomeScreen TicketBookingScreenState
                   | GoToTicketPayment TicketBookingScreenState
                   | GoToGetBookingInfo TicketBookingScreenState BookingStatus
                   | TryAgain TicketBookingScreenState
+                  | RefreshPaymentStatus TicketBookingScreenState
 
 eval :: Action -> TicketBookingScreenState -> Eval Action ScreenOutput TicketBookingScreenState
 eval (ToggleTicketOption ticketID) state = do
@@ -93,6 +95,7 @@ eval (GenericHeaderAC (GenericHeader.PrefixImgOnClick)) state = continueWithCmd 
 eval (UpdatePlacesData placeData Nothing) state = do
   let newState = state { data { placeInfo = placeData }, props { showShimmer = false } }
   continue newState
+
 eval (UpdatePlacesData placeData (Just (TicketServicesResponse serviceData))) state = do
   let servicesInfo = mapWithIndex (\i it -> transformRespToStateData (i==0) it) serviceData
   let newState = state { data { placeInfo = placeData, servicesInfo = servicesInfo}, props { showShimmer = false } }
@@ -123,6 +126,8 @@ eval (PaymentStatusAction status) state =
     "Booked" -> continue state{props{paymentStatus = Common.Success}}
     "Failed" -> continue state{props{paymentStatus = Common.Failed}}
     _ -> continue state
+
+eval (RefreshStatusAC (PrimaryButton.OnClick)) state = exit $ RefreshPaymentStatus state
 
 eval _ state = continue state
 

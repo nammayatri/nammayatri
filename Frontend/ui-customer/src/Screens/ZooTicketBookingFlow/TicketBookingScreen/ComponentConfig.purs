@@ -110,6 +110,32 @@ shareTicketButtonConfig visibility' = PrimaryButton.config
   , id = "ShareButton"
   }
 
+refreshStatusButtonConfig :: ST.TicketBookingScreenState -> PrimaryButton.Config
+refreshStatusButtonConfig state = PrimaryButton.config
+    { textConfig 
+      { text = "Refresh Status"
+      , textStyle = Tags
+      , weight = Just 1.0
+      , gravity = CENTER
+      , color = Color.black800
+      }
+      , height = WRAP_CONTENT
+      , gravity = CENTER
+      , cornerRadius = 32.0
+      , width = MATCH_PARENT
+      , padding =  Padding 0 13 0 13
+      , margin = Margin 16 16 16 0
+      , isPrefixImage = true
+      , background = Color.white900
+      , prefixImageConfig
+        { imageUrl = fetchImage FF_COMMON_ASSET "ny_ic_history_unfilled"
+        , height = V 15
+        , width = V 15
+        , margin = MarginRight 5
+        }
+      , id = "RefershPaymentStatusButton"
+    }
+
 viewTicketButtonConfig :: String -> Boolean -> PrimaryButton.Config
 viewTicketButtonConfig text visibility' = 
   PrimaryButton.config { 
