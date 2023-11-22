@@ -59,9 +59,11 @@ view push state =
                     _           -> Color.transparent --"#FFFFFF"
       , margin $ MarginBottom (if state.isSearchLocation == LocateOnMap then bottomSpacing else 0)
       , onBackPressed push (const $ GoBack)
-      ][PrestoAnim.animationSet
-        (if os == "IOS" then [] else [ translateYAnimFromTop $ translateFullYAnimWithDurationConfig 500 ])
-        $ linearLayout
+      ][ 
+        PrestoAnim.animationSet
+    ([ translateYAnimFromTop $ translateFullYAnimWithDurationConfig 500 ])
+    $
+        linearLayout
          -- Temporary fix for iOS.
             [ height WRAP_CONTENT
             , width MATCH_PARENT
@@ -393,7 +395,14 @@ searchResultsView state push =
         [ height MATCH_PARENT
         , width MATCH_PARENT
         , orientation VERTICAL
-        ][  linearLayout
+        ][  textView $
+              [ text $ if state.isAutoComplete then getString SEARCH_RESULTS
+                       else if state.isSource == Just false then (getString SUGGESTED_DESTINATION) 
+                       else getString PAST_SEARCHES
+              , color Color.black700
+              , margin $ MarginVertical 16 8
+              ] <> FontStyle.body3 TypoGraphy
+          , linearLayout
             [ height WRAP_CONTENT
             , width MATCH_PARENT
             , cornerRadius state.appConfig.primaryButtonCornerRadius
@@ -444,7 +453,7 @@ savedLocationBar state push =
   linearLayout
   [ width MATCH_PARENT
   , height WRAP_CONTENT
-  , margin $ MarginBottom 15
+  , margin $ MarginVertical 15 15
   , accessibility DISABLE_DESCENDANT
   , visibility if (not state.isAutoComplete) then VISIBLE else GONE
   ][ linearLayout
@@ -579,5 +588,3 @@ srcBtnData state =
 destBtnData :: SearchLocationModelState -> Array { text :: String, imageUrl :: String, action :: Action, buttonType :: String }
 destBtnData state =
   [ { text: (getString SELECT_LOCATION_ON_MAP), imageUrl: "ny_ic_locate_on_map,https://assets.juspay.in/nammayatri/images/user/ny_ic_locate_on_map.png", action: SetLocationOnMap, buttonType: "LocateOnMap" }]
-
-

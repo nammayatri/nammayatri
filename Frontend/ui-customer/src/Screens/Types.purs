@@ -536,6 +536,7 @@ data Stage = HomeScreen
            | FindEstimateAndSearch
            | RetryFindingQuote
            | PickUpFarFromCurrentLocation
+           | LoadMap
 
 derive instance genericStage :: Generic Stage _
 instance eqStage :: Eq Stage where eq = genericEq
@@ -612,6 +613,8 @@ type HomeScreenStateData =
   , disability :: Maybe DisabilityT
   , searchLocationModelData :: SearchLocationModelData
   , suggestionsData :: SuggestionsData
+  , peekHeight :: Int
+  , rideHistoryTrip :: Maybe Trip
   }
 
 type DisabilityT = 
@@ -717,6 +720,13 @@ type HomeScreenStateProps =
   , specialZoneType :: String
   , currentLocation :: Location
   , isShorterTrip :: Boolean
+  , isHomescreenExpanded :: Boolean
+  , isRepeatRide :: Boolean
+  , currSlideIndex :: Number
+  , suggestionsListExpanded :: Boolean
+  , repeatRideTimer :: String
+  , repeatRideTimerId :: String
+  , showShimmer :: Boolean
   }
 
 type SearchLocationModelProps = {

@@ -82,8 +82,7 @@ confirmLostAndFoundConfig state = let
 
 sourceToDestinationConfig :: ST.TripDetailsScreenState -> SourceToDestination.Config
 sourceToDestinationConfig state = let 
-  config = SourceToDestination.config
-  sourceToDestinationConfig' = config
+  sourceToDestinationConfig' = SourceToDestination.config
     { id = Just $ "TripDetailsSTDC_" <> state.data.tripId
     , sourceImageConfig {
         imageUrl = fetchImage FF_COMMON_ASSET "ny_ic_green_circle"
@@ -92,7 +91,7 @@ sourceToDestinationConfig state = let
     , sourceTextConfig {
         text = state.data.source
       , padding = (Padding 2 0 2 2)
-      , margin = (Margin 12 0 15 0)
+      , margin = (MarginHorizontal 12 15)
       , color = Color.greyDavy
       , ellipsize = false
       }

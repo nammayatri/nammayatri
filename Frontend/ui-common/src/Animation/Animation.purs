@@ -211,6 +211,7 @@ translateOutXForwardAnim =
     -- , PrestoAnim.interpolator $ PrestoAnim.EaseOut
     , PrestoAnim.repeatCount PrestoAnim.NoRepeat
     ]
+
 translateOutXBackwardAnim :: Boolean -> PrestoAnim.Animation
 translateOutXBackwardAnim =
   PrestoAnim.Animation
@@ -220,6 +221,16 @@ translateOutXBackwardAnim =
     -- , PrestoAnim.interpolator PrestoAnim.EaseOut
     , PrestoAnim.repeatCount PrestoAnim.NoRepeat
     ]
+
+translateOutXBackwardAnimY :: AnimConfig -> PrestoAnim.Animation
+translateOutXBackwardAnimY config =
+  PrestoAnim.Animation
+    [ PrestoAnim.duration config.duration
+    , PrestoAnim.fromX config.fromX
+    , PrestoAnim.toX config.toX
+    , PrestoAnim.repeatCount PrestoAnim.NoRepeat
+    ] config.ifAnim
+
 fadeInWithDelay :: Int -> Boolean -> PrestoAnim.Animation
 fadeInWithDelay delay = 
   PrestoAnim.Animation

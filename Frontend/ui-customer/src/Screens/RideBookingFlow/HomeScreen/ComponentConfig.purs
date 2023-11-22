@@ -80,6 +80,7 @@ import Engineering.Helpers.Suggestions (getSuggestionsfromKey)
 import Components.ChooseVehicle.Controller as ChooseVehicle
 import Foreign.Generic (decode, encode, Foreign, decodeJSON, encodeJSON, class Decode, class Encode)
 import Data.Either (Either(..))
+import Font.Style (Style(..))
 
 shareAppConfig :: ST.HomeScreenState -> PopUpModal.Config
 shareAppConfig state = let
@@ -277,7 +278,10 @@ primaryButtonRequestRideConfig state =
     primaryButtonConfig' =
       config
         { textConfig
-          { text = (getString REQUEST_RIDE)
+          { text = if state.props.repeatRideTimer /= "0" && state.props.repeatRideTimerId /= "" 
+                    then ((getString REQUESTING_RIDE_IN) <> state.props.repeatRideTimer <> "s") 
+                    else if state.props.repeatRideTimer == "0" then (getString REQUESTING_RIDE) <> "..." 
+                    else (getString REQUEST_RIDE)
           , color = state.data.config.primaryTextColor
           , accessibilityHint = "Request Ride : Button"
           }
@@ -1214,6 +1218,67 @@ reportIssueOptions state =
     }
   ]
 
+sourceToDestinationConfig :: ST.HomeScreenState -> SourceToDestination.Config
+sourceToDestinationConfig state = let 
+  config = SourceToDestination.config
+  sourceToDestinationConfig' = config
+    { sourceImageConfig {
+        imageUrl = fetchImage FF_COMMON_ASSET "ny_ic_source_dot"
+      , margin = (MarginTop 3)
+      , width = V 20
+      , height = V 20
+      }
+    , sourceTextConfig {
+        text = state.data.source
+      , padding = (Padding 2 0 2 2)
+      , margin = (Margin 12 0 15 0)
+      , color = Color.black800
+      , ellipsize = true
+      , maxLines = 1
+      , textStyle = Body1
+      }
+    , rideStartedAtConfig {
+        text = ""
+      , color = Color.black700
+      , visibility = GONE
+      , padding = (Padding 2 0 2 2)
+      , margin = (Margin 12 0 15 0)
+      , maxLines = 1
+      , ellipsize = true
+    }
+    , destinationImageConfig {
+        imageUrl = fetchImage FF_COMMON_ASSET "ny_ic_destination"
+      , margin = (MarginTop 3)
+      , width = V 20
+      , height = V 20
+      }
+    , destinationBackground = Color.blue600
+    , destinationTextConfig {
+        text = state.data.destination
+      , padding = (Padding 2 0 2 2)
+      , margin = (Margin 12 0 15 0)
+      , color = Color.greyDavy
+      , ellipsize = true
+      , maxLines = 1
+      , textStyle = Body1
+      }
+    , rideEndedAtConfig {
+        text = ""
+      , color = Color.black700
+      , visibility = GONE
+      , padding = (Padding 2 0 2 2)
+      , margin = (MarginHorizontal 12 15)
+      , maxLines = 1
+      , ellipsize = true
+    },
+    horizontalSeperatorConfig {
+      visibility = VISIBLE
+    , background = Color.grey900
+    , padding = (Padding 2 0 2 2)
+    , margin = (Margin 12 18 15 0)
+    }
+    }
+  in sourceToDestinationConfig'
 
 rideCompletedCardConfig :: ST.HomeScreenState -> RideCompletedCard.Config 
 rideCompletedCardConfig state = let
