@@ -959,7 +959,6 @@ driverProfileFlow = do
       modifyScreenState $ DriverProfileScreenStateType (\driverProfileScreen -> state {props = driverProfileScreen.props { alreadyActive = false}})
       let (GlobalState defaultEpassState) = defaultGlobalState
       pure $ setText (getNewIDWithTag "VehicleRegistrationNumber") ""
-      let cityConfig = getCityConfig config.cityConfig (getValueToLocalStore DRIVER_LOCATION)
       modifyScreenState $ AddVehicleDetailsScreenStateType (\_ -> defaultEpassState.addVehicleDetailsScreen)
       addVehicleDetailsflow true
     SUBCRIPTION -> updateAvailableAppsAndGoToSubs
@@ -2949,31 +2948,8 @@ chooseCityFlow = do
   modifyScreenState $ ChooseCityScreenStateType (\chooseCityScreen -> chooseCityScreen { data {merchantOperatingCityConfig = filteredArray }})
   chooseCityScreen <- UI.chooseCityScreen
   case chooseCityScreen of
-    GET_LAT_LONGS state -> do
-      void $ lift $ lift $ loaderText (getString LOADING) (getString PLEASE_WAIT_WHILE_IN_PROGRESS)
-      void $ lift $ lift $ toggleLoader true
-      let currentDriverLat = fromMaybe 0.0 $ Number.fromString $ getValueToLocalNativeStore LAST_KNOWN_LAT
-      let currentDriverLon = fromMaybe 0.0 $ Number.fromString $ getValueToLocalNativeStore LAST_KNOWN_LON
-      (LatLon lat lon) <- getCurrentLocation currentDriverLat currentDriverLon currentDriverLat currentDriverLon 1000 false
-      let driverLat = fromMaybe 0.0 $ Number.fromString lat
-          driverLon = fromMaybe 0.0 $ Number.fromString lon
-          _ = spy "driver location" (show driverLat <> " " <> show driverLon)
-          distanceFromBangalore = getDistanceBwCordinates (fromMaybe 0.0 $ Number.fromString  lat) (fromMaybe 0.0 $ Number.fromString lon) 12.9716 77.5946
-          initialAccumulator = Tuple "Bangalore" distanceFromBangalore
-          result = foldl (\acc city -> closestCity acc city driverLat driverLon) initialAccumulator state.data.config.cityConfig      
-      void $ lift $ lift $ toggleLoader false
-      modifyScreenState $ ChooseCityScreenStateType (\chooseCityScreen -> chooseCityScreen { data {locationSelected = Just $ fst result}, props {radioMenuFocusedCity = fst result}})
-      chooseCityFlow
     GoToWelcomeScreen -> authenticationFlow ""
-    REFRESH_SCREEN_CHOOSE_CITY state -> chooseCityFlow
-    _ -> do
-      let _ = spy "log a" ""
-      pure unit
-    where 
-      closestCity :: (Tuple String Number) -> CityConfig -> Number -> Number -> (Tuple String Number)
-      closestCity (Tuple cityName distance) city driverLat driverLon = do
-        let distanceFromCity = getDistanceBwCordinates driverLat driverLon city.cityLat city.cityLong
-        if distanceFromCity < distance then (Tuple city.cityName distanceFromCity) else (Tuple cityName distance)
+    REFRESH_SCREEN_CHOOSE_CITY _ -> chooseCityFlow
 
 welcomeScreenFlow :: FlowBT String Unit
 welcomeScreenFlow = do

@@ -1071,7 +1071,9 @@ const teluguStrings = {
   WRONG_CROPPING : "తప్పు క్రాపింగ్",
   CROPPED_CORRECTLY : "సరిగ్గా కత్తిరించబడింది",
   BLURRY_IMAGE : "అస్పష్టమైన చిత్రం",
-  CLEAR_IMAGE : "చిత్రాన్ని క్లియర్ చేయండి"
+  CLEAR_IMAGE : "చిత్రాన్ని క్లియర్ చేయండి",
+  WE_ARE_NOT_LIVE_IN_YOUR_AREA : "మేము ఇంకా మీ ప్రాంతంలో నివసించడం లేదు!\nమీ నగరానికి త్వరలో వస్తాము!",
+  LOCATION_UNSERVICEABLE : "స్థానం పనికిరానిది"
 }
   
   
