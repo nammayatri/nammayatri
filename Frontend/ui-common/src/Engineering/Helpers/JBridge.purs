@@ -145,6 +145,8 @@ foreign import animateCamera :: Number -> Number -> Number -> String -> Effect U
 -- foreign import moveCamera :: Number -> Number -> Number -> Number -> Effect Unit
 foreign import minimizeApp    :: String -> Unit
 foreign import toast          :: String -> Unit
+foreign import restartApp :: Unit -> Effect Unit
+-- Deprecated
 foreign import factoryResetApp :: String -> Unit
 foreign import startTimerWithTime :: forall action. String -> String -> String -> (action -> Effect Unit) -> (Int -> String -> String -> String-> action)  -> Effect Unit
 foreign import hideKeyboardOnNavigation :: Boolean -> Unit

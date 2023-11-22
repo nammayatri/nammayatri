@@ -205,7 +205,7 @@ authenticationFlow :: String -> FlowBT String Unit
 authenticationFlow _ = 
   if EHC.isPreviousVersion (getValueToLocalStore VERSION_NAME) (getPreviousVersion (getMerchant FunctionCall)) 
     then do 
-      lift $ lift $ doAff do liftEffect hideSplash
+      liftFlowBT hideSplash
       loginFlow
     else welcomeScreenFlow
 
@@ -2941,7 +2941,7 @@ runInternetCondition = do
 
 chooseCityFlow :: FlowBT String Unit
 chooseCityFlow = do
-  lift $ lift $ doAff do liftEffect hideSplash
+  liftFlowBT hideSplash
   logField_ <- lift $ lift $ getLogFields
   (GlobalState globalstate) <- getState
   runInternetCondition
@@ -2981,7 +2981,7 @@ chooseCityFlow = do
 
 welcomeScreenFlow :: FlowBT String Unit
 welcomeScreenFlow = do
-  lift $ lift $ doAff do liftEffect hideSplash
+  liftFlowBT hideSplash
   logField_ <- lift $ lift $ getLogFields
   internetAvailable <- lift $ lift $ liftFlow $ isInternetAvailable unit
   unless internetAvailable $ noInternetScreenFlow "INTERNET_ACTION"

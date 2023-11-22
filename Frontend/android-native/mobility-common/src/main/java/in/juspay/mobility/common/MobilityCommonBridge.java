@@ -1944,7 +1944,7 @@ public class MobilityCommonBridge extends HyperBridge {
                         public void onAnimationRepeat(@NonNull Animator animator) {
                         }
                     });
-                    if ( rawJson.contains("https") || rawJson.contains("http")) {
+                    if (rawJson.contains("http")) {
                             animationView.setAnimationFromUrl(rawJson);
                     }else {
                             animationView.setAnimationFromJson(getJsonFromResources(rawJson), null);
