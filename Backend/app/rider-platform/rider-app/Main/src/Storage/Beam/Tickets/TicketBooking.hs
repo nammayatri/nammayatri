@@ -35,6 +35,6 @@ instance B.Table TicketBookingT where
 
 type TicketBooking = TicketBookingT Identity
 
-$(enableKVPG ''TicketBookingT ['id] [])
+$(enableKVPG ''TicketBookingT ['id] [['shortId], ['personId]])
 
 $(mkTableInstances ''TicketBookingT "ticket_booking")

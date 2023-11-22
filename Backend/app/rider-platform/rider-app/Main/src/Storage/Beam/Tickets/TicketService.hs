@@ -25,6 +25,6 @@ instance B.Table TicketServiceT where
 
 type TicketService = TicketServiceT Identity
 
-$(enableKVPG ''TicketServiceT ['id] [])
+$(enableKVPG ''TicketServiceT ['id] [['placesId]])
 
 $(mkTableInstances ''TicketServiceT "ticket_service")
