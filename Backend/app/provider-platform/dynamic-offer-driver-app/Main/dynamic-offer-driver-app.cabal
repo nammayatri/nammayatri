@@ -89,6 +89,7 @@ library
       API.UI.Registration
       API.UI.Ride
       API.UI.RideRoute
+      API.UI.RideSummary
       API.UI.Route
       API.UI.Transporter
       API.UI.Vehicle
@@ -171,6 +172,7 @@ library
       Domain.Action.UI.Ride.StartRide
       Domain.Action.UI.Ride.StartRide.Internal
       Domain.Action.UI.RideRoute
+      Domain.Action.UI.RideSummary
       Domain.Action.UI.Route
       Domain.Action.UI.Transporter
       Domain.Action.UI.Vehicle
@@ -184,6 +186,7 @@ library
       Domain.Types.CancellationReason
       Domain.Types.City
       Domain.Types.Common
+      Domain.Types.DailyStats
       Domain.Types.Driver.GoHomeFeature.DriverGoHomeRequest
       Domain.Types.Driver.GoHomeFeature.DriverHomeLocation
       Domain.Types.DriverBlockReason
@@ -319,6 +322,7 @@ library
       Storage.Beam.CallStatus
       Storage.Beam.CancellationReason
       Storage.Beam.Common
+      Storage.Beam.DailyStats
       Storage.Beam.Driver.GoHomeFeature.DriverGoHomeRequest
       Storage.Beam.Driver.GoHomeFeature.DriverHomeLocation
       Storage.Beam.DriverBlockReason
@@ -432,6 +436,7 @@ library
       Storage.Queries.BusinessEvent
       Storage.Queries.CallStatus
       Storage.Queries.CancellationReason
+      Storage.Queries.DailyStats
       Storage.Queries.Driver.GoHomeFeature.DriverGoHomeRequest
       Storage.Queries.Driver.GoHomeFeature.DriverGoHomeRequest.Internal
       Storage.Queries.Driver.GoHomeFeature.DriverHomeLocation
