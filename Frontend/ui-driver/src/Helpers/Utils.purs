@@ -41,7 +41,7 @@ import Data.Maybe (Maybe(..), fromMaybe, isJust)
 import Data.Maybe (Maybe(..))
 import Data.Number (pi, sin, cos, asin, sqrt)
 import Data.Show.Generic (genericShow)
-import Data.String (Pattern(..), split) as DS
+import Data.String (Pattern(..), split, take) as DS
 import Data.String as DS
 import Data.Traversable (traverse)
 import Effect (Effect)
@@ -446,6 +446,15 @@ fetchFiles = do
     result <- download item.filePath item.location
     if result then pure unit else liftEffect $ firebaseLogEventWithParams "download_failed" "file_name" item.filePath) files
   
+getDayOfWeek :: String -> Int
+getDayOfWeek dayName = do
+  let weekDays = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+  case findIndex (DS.take 3 dayName) weekDays of
+                                                  Just index -> index
+                                                  Nothing -> 0
+
+findIndex :: forall a. Eq a => a -> Array a -> Maybe Int
+findIndex element arr = DA.elemIndex element arr
 
 download :: String -> String -> Aff Boolean
 download filepath location = makeAff \cb -> runEffectFn3 renewFile filepath location (cb <<< Right) $> nonCanceler

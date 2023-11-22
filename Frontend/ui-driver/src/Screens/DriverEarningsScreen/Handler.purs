@@ -49,7 +49,6 @@ driverEarningsScreen = do
       modifyScreenState $ DriverEarningsScreenStateType (\_ -> updatedState)
       App.BackT $ App.BackPoint <$> (pure $ EARNINGS_NAV GoToAlerts)
     ChangeDriverEarningsTab subView -> do 
-      -- modifyScreenState $ DriverEarningsScreenStateType (\_ -> updatedState)
       App.BackT $ App.BackPoint <$> (pure $ CHANGE_SUB_VIEW subView)
     PurchasePlan updatedState -> do 
       modifyScreenState $ DriverEarningsScreenStateType (\_ -> updatedState)

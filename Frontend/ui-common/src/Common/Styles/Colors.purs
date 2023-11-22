@@ -203,3 +203,6 @@ yellowOpacity40 = "#66FEEBB9"
 
 yellowOpacity50 :: Color
 yellowOpacity50 = "#80FCC32C"
+
+red600 :: Color
+red600 = "#FFDDDD"

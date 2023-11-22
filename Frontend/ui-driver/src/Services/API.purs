@@ -610,6 +610,47 @@ instance standardEncodeStatus :: StandardEncode Status
  standardEncode (COMPLETED) = standardEncode {}
  standardEncode (CANCELLED) = standardEncode {}
  standardEncode (NOTHING) = standardEncode {}
+---------------------------------GET RIDES HISTORY WITHIN DATES---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+data GetRidesSummaryListReq = GetRidesSummaryListReq (Array String)
+
+newtype GetRidesSummaryListResp = GetRidesSummaryListResp
+    {
+      list :: Array RidesSummary
+    }
+
+newtype RidesSummary = RidesSummary
+  {
+    earnings :: Int,
+    rideDistance :: Int,
+    rideDate :: String,
+    noOfRides :: Int
+  }
+
+instance makeGetRidesSummarListReq :: RestEndpoint GetRidesSummaryListReq GetRidesSummaryListResp where
+    makeRequest reqBody@(GetRidesSummaryListReq dateList) headers = defaultMakeRequest POST (EP.getRidesSummaryList dateList) headers reqBody Nothing
+    decodeResponse = decodeJSON
+    encodeRequest req = defaultEncode req
+
+derive instance genericGetRidesSummaryListReq :: Generic GetRidesSummaryListReq _
+instance showGetRidesSummaryListReq :: Show GetRidesSummaryListReq where show = genericShow
+instance standardEncodeGetRidesSummaryListReq :: StandardEncode GetRidesSummaryListReq where standardEncode _ = standardEncode {}
+instance decodeGetRidesSummaryListReq :: Decode GetRidesSummaryListReq where decode = defaultDecode
+instance encodeGetRidesSummaryListReq :: Encode GetRidesSummaryListReq where encode = defaultEncode
+
+derive instance genericGetRidesSummaryListResp :: Generic GetRidesSummaryListResp _
+derive instance newtypeGetRidesSummaryListResp :: Newtype GetRidesSummaryListResp _
+instance standardEncodeGetRidesSummaryListResp :: StandardEncode GetRidesSummaryListResp where standardEncode (GetRidesSummaryListResp req) = standardEncode req
+instance showGetRidesSummaryListResp :: Show GetRidesSummaryListResp where show = genericShow
+instance decodeGetRidesSummaryListResp :: Decode GetRidesSummaryListResp where decode = defaultDecode
+instance encodeGetRidesSummaryListResp :: Encode GetRidesSummaryListResp where encode = defaultEncode
+
+derive instance genericRidesSummary :: Generic RidesSummary _
+derive instance newtypeRidesSummary :: Newtype RidesSummary _
+instance standardEncodeRidesSummary :: StandardEncode RidesSummary where standardEncode (RidesSummary req) = standardEncode req
+instance showRidesSummary :: Show RidesSummary where show = genericShow
+instance decodeRidesSummary :: Decode RidesSummary where decode = defaultDecode
+instance encodeRidesSummary :: Encode RidesSummary where encode = defaultEncode
 --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 -- Request/Offer Ride API request, response types
 

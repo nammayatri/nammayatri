@@ -35,8 +35,14 @@ import Prelude (class Eq, class Show)
 import Presto.Core.Utils.Encoding (defaultDecode, defaultEncode)
 import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode)
 import PrestoDOM (LetterSpacing, Visibility, visibility)
+import Styles.Types (FontSize)
+import Components.ChatView.Controller as ChatView
+import Components.RecordAudioModel.Controller as RecordAudioModel
+import MerchantConfig.Types (AppConfig)
+import Foreign.Object (Object)
+import Foreign (Foreign)
 import Screens (ScreenName)
-import Services.API (AutopayPaymentStage, BankError(..), FeeType, GetDriverInfoResp(..), MediaType, PaymentBreakUp, Route, Status, DriverProfileStatsResp(..))
+import Services.API (AutopayPaymentStage, BankError(..), FeeType, GetDriverInfoResp(..), MediaType, PaymentBreakUp, Route, Status, DriverProfileStatsResp(..), RidesSummary)
 import Styles.Types (FontSize)
 import Presto.Core.Types.API (class StandardEncode, standardEncode)
 import Components.GoToLocationModal.Controller as GoToModal
@@ -2019,8 +2025,13 @@ type DriverEarningsScreenData = {
   coinConvertedTocashLeft :: Number,
   coinConversionRate :: Number,
   coinsToUse :: Int,
-  config :: AppConfig
+  config :: AppConfig,
+  earningHistoryItems :: Array CoinHistoryItem,
+  weeklyEarningData :: Array WeeklyEarning,
+  tagImages :: Array String,
+  anyRidesAssignedEver :: Boolean
 }
+
 type DriverEarningsScreenProps = {
   subView :: DriverEarningsSubView,
   date :: String,
@@ -2028,6 +2039,16 @@ type DriverEarningsScreenProps = {
   showCoinsRedeemedAnim :: String,
   calendarState :: CalendarState,
   showCoinsUsagePopup :: Boolean,
+  selectedBarIndex :: Int,
+  weekIndex :: Int,
+  totalEarningsData :: TotalEarningsData,
+  currWeekData :: Array WeeklyEarning,
+  weekDay :: Array String,
+  currentWeekMaxEarning :: Int,
+  showShimmer :: Boolean,
+  startDate :: String,
+  endDate :: String,
+  gotDataforWeek :: Array Boolean,
   coinConvertedSuccess :: Boolean
 }
 
@@ -2037,6 +2058,22 @@ type CalendarState = {
   selectedTimeSpan :: Common.CalendarModalDateObject,
   startDate :: Maybe Common.CalendarModalDateObject,
   weeks  :: Array Common.CalendarModalWeekObject
+}
+
+type WeeklyEarning = {
+  earnings :: Int,
+  rideDistance :: Int,
+  rideDate :: String,
+  noOfRides :: Int,
+  percentLength :: Number
+}
+
+type TotalEarningsData = {
+  fromDate :: String,
+  toDate :: String,
+  totalEarnings :: Int,
+  totalRides :: Int,
+  totalDistanceTravelled :: Int
 }
 
 data DriverEarningsSubView = EARNINGS_VIEW | YATRI_COINS_VIEW | USE_COINS_VIEW
@@ -2049,8 +2086,12 @@ instance encodeDriverEarningsSubView :: Encode DriverEarningsSubView where encod
 
 type CoinHistoryItem = {
   event :: String,
+  destination :: Maybe String,
   timestamp :: String,
   coins :: Int,
+  earnings ::  Maybe Int,
+  status :: Maybe String,
+  tagImages :: Array String,
   cash :: Number
 }
 

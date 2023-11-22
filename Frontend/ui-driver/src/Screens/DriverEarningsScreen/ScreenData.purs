@@ -37,11 +37,15 @@ initData = {
     coinConversionRate : 0.0,
     coinHistoryItems : [],
     usageHistoryItems : [],
+    earningHistoryItems : [],
     hasActivePlan : false,
     timerID : "",
     timer : 3,
     coinsToUse : 0,
-    config : DC.config
+    config : DC.config,
+    weeklyEarningData : [],
+    tagImages : ["ny_ic_tip_ride_tag", "ny_ic_goto_home_tag",  "ny_ic_disability_tag", "ny_ic_special_location_tag"],
+    anyRidesAssignedEver : false
   }
   , props : {
     subView : YATRI_COINS_VIEW,
@@ -55,6 +59,22 @@ initData = {
                     , weeks : []
                     },
     showCoinsUsagePopup : false,
+    selectedBarIndex : -1,
+    weekIndex : 3,
+    totalEarningsData : {
+      fromDate : "",
+      toDate : "",
+      totalEarnings : 0,
+      totalRides : 0,
+      totalDistanceTravelled : 0
+    },
+    currWeekData : [],
+    startDate : "",
+    endDate : "",
+    gotDataforWeek : [false, false, false, false],
+    weekDay : ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
+    currentWeekMaxEarning : 0,
+    showShimmer: true,
     coinConvertedSuccess : false
   }
 }

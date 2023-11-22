@@ -115,6 +115,32 @@ const hindiStrings = {
   GO_ONLINE_POPUP: "<u>गो ऑनलाइन</u>",
   REPORT_AN_ISSUE: "मामले की रिपोर्ट करें",
   DISTANCE: "दूरी",
+  COIN_BALANCE: "सिक्के शेष",
+  TOTAL_EARNED: "कुल कमाई",
+  RIDE_HISTORY: "सवारी इतिहास",
+  TRANSACTION_HISTORY: "लेनदेन का इतिहास",
+  COINS_EARNED: "सिक्के कमाए",
+  NO_RIDES: "कोई सवारी नहीं",
+  COINS_USED: "सिक्कों का इस्तेमाल",
+  USE_COINS: "सिक्कों का प्रयोग करें",
+  INSIGHTS: "अंतर्दृष्टि",
+  USAGE_HISTORY: "उपयोग इतिहास",
+  NO_COINS_EARNED: "कोई सिक्का नहीं कमाया",
+  NO_COINS_USED: "कोई सिक्के प्रयोग नहीं किये गये",
+  EARN_COINS_BY_TAKING_RIDES_AND_REFERRING_THE_APP_TO_OTHERS: "राइड लेकर और ऐप को दूसरों को रेफर करके सिक्के कमाएँ",
+  USE_THEM_BEFORE_THEY_EXPIRE: "समाप्त होने से पहले उनका उपयोग करें",
+  NO_RIDE_HISTORY_AVAILABLE: "कोई सवारी इतिहास उपलब्ध नहीं है",
+  YOU_HAVE_NOT_COMPLETED_A_RIDE_YET: "आपने अभी तक एक सवारी पूरी नहीं की है",
+  COMPLETE_FIRST_RIDE_TO_UNLOCK_COINS: "सिक्के अनलॉक करने के लिए पहली यात्रा पूरी करें",
+  DESTINATION: "मंज़िल",
+  YOU_DID_NOT_TAKE_ANY_RIDES_ON_THE_SELECTED_DATE: "आपने चयनित तिथि पर कोई सवारी नहीं ली",
+  CONVERT_COINS: "सिक्के परिवर्तित करें",
+  CASH_CONVERTED: "नकद परिवर्तित",
+  WILL_BE_ADJUSTED_IN_YOUR_FUTURE_SUBSCRIPTION_DUES: "आपके भविष्य के सदस्यता शुल्क में समायोजित किया जाएगा",
+  HAS_BEEN_ADJUSTED_IN_YOUR_SUBSCRIPTION_DUES: "आपकी सदस्यता देय राशि में समायोजित कर दिया गया है",
+  USING_COINS_REQUIRES_AN_ACTIVE_PLAN: "सिक्कों का उपयोग करने के लिए एक सक्रिय योजना की आवश्यकता होती है।",
+  CHOOSE_A_PLAN_TO_GET_STARTED: "शुरू करने के लिए एक योजना चुनें!",
+  CONVERTED_FROM_COINS: "सिक्कों से परिवर्तित।",
   TIME_TAKEN: "समय लिया",
   OPEN_GOOGLE_MAPS: "गूगल मैप्स खोलें",
   CALL: "कॉल",
@@ -1000,7 +1026,6 @@ const hindiStrings = {
   EARNINGS : "आय",
   YATRI_COINS : "यात्री सिक्के"
 }
-
 
 export function getStringValue(key) {
   if (key in hindiStrings) {
