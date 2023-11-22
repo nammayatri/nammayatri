@@ -35,7 +35,7 @@ import Kernel.Utils.Common
 import qualified SharedLogic.Confirm as SConfirm
 
 buildInitReq ::
-  (MonadFlow m, HasFlowEnv m r '["nwAddress" ::: BaseUrl]) =>
+  (MonadFlow m, CacheFlow m r, EsqDBFlow m r, HasFlowEnv m r '["nwAddress" ::: BaseUrl]) =>
   SConfirm.DConfirmRes ->
   m (BecknReq Init.InitMessage)
 buildInitReq res = do
@@ -47,13 +47,14 @@ buildInitReq res = do
   pure $ BecknReq context initMessage
 
 buildInitBusReq ::
-  (MonadFlow m, HasFlowEnv m r '["nwAddress" ::: BaseUrl]) =>
+  (MonadFlow m, CacheFlow m r, EsqDBFlow m r, HasFlowEnv m r '["nwAddress" ::: BaseUrl]) =>
   SConfirm.DConfirmBusRes ->
   m (BecknReq Init.InitMessage)
 buildInitBusReq res = do
   let transactionId = res.searchRequestId.getId
   bapUrl <- asks (.nwAddress) <&> #baseUrlPath %~ (<> "/" <> T.unpack res.merchant.id.getId)
-  context <- buildContext Context.PUBLIC_TRANSPORT Context.INIT res.ticket.id.getId (Just transactionId) res.merchant.bapId bapUrl (Just res.providerId) (Just res.providerUrl) res.merchant.city res.merchant.country False
+  -- TODO :: Add request city, after multiple city support on gateway.
+  context <- buildContext Context.PUBLIC_TRANSPORT Context.INIT res.ticket.id.getId (Just transactionId) res.merchant.bapId bapUrl (Just res.providerId) (Just res.providerUrl) res.merchant.defaultCity res.merchant.country False
   initMessage <- buildInitBusMessage res
   pure $ BecknReq context initMessage
 

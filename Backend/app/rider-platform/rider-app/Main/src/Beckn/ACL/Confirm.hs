@@ -32,7 +32,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 
 buildConfirmReq ::
-  (MonadFlow m, HasFlowEnv m r '["nwAddress" ::: BaseUrl]) =>
+  (MonadFlow m, CacheFlow m r, EsqDBFlow m r, HasFlowEnv m r '["nwAddress" ::: BaseUrl]) =>
   DOnInit.OnInitRes ->
   m (BecknReq Confirm.ConfirmMessage)
 buildConfirmReq res = do
@@ -44,13 +44,14 @@ buildConfirmReq res = do
   pure $ BecknReq context message
 
 buildConfirmBusReq ::
-  (MonadFlow m, HasFlowEnv m r '["nwAddress" ::: BaseUrl]) =>
+  (MonadFlow m, CacheFlow m r, EsqDBFlow m r, HasFlowEnv m r '["nwAddress" ::: BaseUrl]) =>
   DOnInit.OnInitRes ->
   m (BecknReq Confirm.ConfirmMessage)
 buildConfirmBusReq res = do
   messageId <- generateGUID
   bapUrl <- asks (.nwAddress) <&> #baseUrlPath %~ (<> "/" <> T.unpack res.merchant.id.getId)
-  context <- buildContext Context.PUBLIC_TRANSPORT Context.CONFIRM messageId (Just res.transactionId) res.merchant.bapId bapUrl (Just res.bppId) (Just res.bppUrl) res.merchant.city res.merchant.country False
+  -- TODO :: Add request city, after multiple city support on gateway.
+  context <- buildContext Context.PUBLIC_TRANSPORT Context.CONFIRM messageId (Just res.transactionId) res.merchant.bapId bapUrl (Just res.bppId) (Just res.bppUrl) res.merchant.defaultCity res.merchant.country False
   message <- mkConfirmBusMessage res
   pure $ BecknReq context message
 

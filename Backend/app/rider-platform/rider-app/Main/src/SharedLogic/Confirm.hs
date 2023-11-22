@@ -141,10 +141,11 @@ confirmBus DConfirmReq {..} = do
   riderPhone <- mapM decrypt person.mobileNumber
   riderEmail <- mapM decrypt person.email
   let riderName = person.firstName
-  merchant <- CQM.findById ticket.merchantId >>= fromMaybeM (MerchantNotFound ticket.merchantId.getId)
+  moc <- CQMOC.findById ticket.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityDoesNotExist ticket.merchantOperatingCityId.getId)
+  merchant <- CQM.findById moc.merchantId >>= fromMaybeM (MerchantNotFound moc.merchantId.getId)
   paymentMethod <- forM paymentMethodId $ \paymentMethodId' -> do
     paymentMethod <-
-      CQMPM.findByIdAndMerchantId paymentMethodId' searchRequest.merchantId
+      CQMPM.findByIdAndMerchantOperatingCityId paymentMethodId' ticket.merchantOperatingCityId
         >>= fromMaybeM (MerchantPaymentMethodDoesNotExist paymentMethodId'.getId)
     unless (paymentMethodId' `elem` searchRequest.availablePaymentMethods) $
       throwError (InvalidRequest "Payment method not allowed")
@@ -165,6 +166,7 @@ confirmBus DConfirmReq {..} = do
         searchRequestId = searchRequest.id,
         paymentMethodInfo = DMPM.mkPaymentMethodInfo <$> paymentMethod,
         maxEstimatedDistance = Nothing,
+        city = moc.city,
         ..
       }
   where
@@ -211,7 +213,6 @@ confirm DConfirmReq {..} = do
       mbToLocation = searchRequest.toLocation
       driverId = getDriverId quote.quoteDetails
   let merchantOperatingCityId = searchRequest.merchantOperatingCityId
-  city <- CQMOC.findById merchantOperatingCityId >>= fmap (.city) . fromMaybeM (MerchantOperatingCityNotFound merchantOperatingCityId.getId)
   exophone <- findRandomExophone merchantOperatingCityId
   booking <- buildBooking searchRequest fulfillmentId quote fromLocation mbToLocation exophone now Nothing paymentMethodId driverId
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
@@ -295,7 +296,7 @@ buildTicket searchRequest mbFulfillmentId quote fromLoc _ now mbQuantity = do
         qrData = Nothing,
         createdAt = now,
         updatedAt = now,
-        merchantId = searchRequest.merchantId,
+        merchantOperatingCityId = searchRequest.merchantOperatingCityId,
         fromLocation = fromLoc,
         ..
       }
