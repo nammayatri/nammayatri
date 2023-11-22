@@ -311,7 +311,7 @@ sourceDestinationEditTextView state push =
         , orientation HORIZONTAL
         , margin $ MarginTop 12
         , background state.appConfig.searchLocationConfig.editTextBackground
-        , stroke if state.isSource == Just false && state.isSearchLocation == LocateOnMap then "1," <> Color.yellowText else "0," <> Color.yellowText
+        , stroke if isJustFalse state.isSource && state.isSearchLocation == LocateOnMap then "1," <> Color.yellowText else "0," <> Color.yellowText
         ]
         [ editText
             ( [ height $ V 37
@@ -354,9 +354,9 @@ sourceDestinationEditTextView state push =
             , width $ V 30
             , gravity CENTER
             , margin $ MarginTop 2
-            , visibility if state.crossBtnDestVisibility && state.isSource == Just false && state.isSearchLocation /= LocateOnMap then VISIBLE else GONE
+            , visibility if state.crossBtnDestVisibility && isJustFalse state.isSource && state.isSearchLocation /= LocateOnMap then VISIBLE else GONE
             , onClick (\action -> do
-                        _ <- if state.isSource == Just false then pure $ setText (getNewIDWithTag  "DestinationEditText") "" else pure unit
+                        _ <- if isJustFalse state.isSource then pure $ setText (getNewIDWithTag  "DestinationEditText") "" else pure unit
                         _ <- push action
                         pure unit
                       )(const $ DestinationClear)
@@ -375,7 +375,7 @@ sourceDestinationEditTextView state push =
         , width MATCH_PARENT
         , margin (MarginBottom 5)
         , background if state.isDestServiceable then Color.grey900 else Color.textDanger
-        , visibility if state.isSource == Just false && state.isSearchLocation /= LocateOnMap then VISIBLE else GONE
+        , visibility if isJustFalse state.isSource && state.isSearchLocation /= LocateOnMap then VISIBLE else GONE
         ]
         []
     ]

@@ -597,7 +597,7 @@ homeScreenFlow = do
           _ -> 
             case state.props.isSource of
               Just true -> do
-                (GetPlaceNameResp sourceDetailResp) <- getPlaceNameResp state.data.source state.props.sourcePlaceId state.props.sourceLat state.props.sourceLong (if state.props.isSource == Just false then dummyLocationListItemState else item)
+                (GetPlaceNameResp sourceDetailResp) <- getPlaceNameResp state.data.source state.props.sourcePlaceId state.props.sourceLat state.props.sourceLong (if isJustFalse state.props.isSource then dummyLocationListItemState else item)
                 let (PlaceName sourceDetailResponse) = (fromMaybe HomeScreenData.dummyLocationName (sourceDetailResp !! 0))
                     (LatLong sourceLocation) = sourceDetailResponse.location
                 modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{ props{sourceLat = sourceLocation.lat, sourceLong = sourceLocation.lon} })
@@ -974,9 +974,9 @@ homeScreenFlow = do
             homeScreen { 
               props {
                 sourcePlaceId = if isJustTrue state.props.isSource then Nothing else homeScreen.props.sourcePlaceId,
-                destinationPlaceId = if state.props.isSource == Just false then Nothing else homeScreen.props.destinationPlaceId,
-                destinationLat = if state.props.isSource == Just false && state.props.currentStage /= ConfirmingLocation then lat else state.props.destinationLat,
-                destinationLong = if state.props.isSource == Just false && state.props.currentStage /= ConfirmingLocation then lon else state.props.destinationLong,
+                destinationPlaceId = if isJustFalse state.props.isSource then Nothing else homeScreen.props.destinationPlaceId,
+                destinationLat = if isJustFalse state.props.isSource && state.props.currentStage /= ConfirmingLocation then lat else state.props.destinationLat,
+                destinationLong = if isJustFalse state.props.isSource && state.props.currentStage /= ConfirmingLocation then lon else state.props.destinationLong,
                 sourceLat = if isJustTrue state.props.isSource then lat else state.props.sourceLat,
                 sourceLong = if isJustTrue state.props.isSource then lon else state.props.sourceLong,
                 confirmLocationCategory = srcSpecialLocation.category
@@ -988,7 +988,7 @@ homeScreenFlow = do
           modifyScreenState $ HomeScreenStateType (\homeScreen ->
           homeScreen {
             data {
-              destination = if state.props.isSource == Just false && state.props.currentStage /= ConfirmingLocation then placeDetails.formattedAddress else homeScreen.data.destination,
+              destination = if isJustFalse state.props.isSource && state.props.currentStage /= ConfirmingLocation then placeDetails.formattedAddress else homeScreen.data.destination,
               source = if isJustTrue state.props.isSource then placeDetails.formattedAddress else homeScreen.data.source,
               sourceAddress = case state.props.isSource , (state.props.currentStage /= ConfirmingLocation) of
                 Just true, true -> encodeAddress placeDetails.formattedAddress placeDetails.addressComponents Nothing
@@ -1003,7 +1003,7 @@ homeScreenFlow = do
           modifyScreenState $ HomeScreenStateType (\homeScreen ->
             homeScreen {
               data {
-                destination = if state.props.isSource == Just false && state.props.currentStage /= ConfirmingLocation then state.props.locateOnMapLocation.destination else homeScreen.data.destination,
+                destination = if isJustFalse state.props.isSource && state.props.currentStage /= ConfirmingLocation then state.props.locateOnMapLocation.destination else homeScreen.data.destination,
                 source = if isJustTrue state.props.isSource then state.props.locateOnMapLocation.source else homeScreen.data.source,
                 sourceAddress = case state.props.isSource , (state.props.currentStage /= ConfirmingLocation) of
                   Just true, true -> state.props.locateOnMapLocation.sourceAddress 
@@ -1972,11 +1972,11 @@ checkAndUpdateSavedLocations state = do
 
 addLocationToRecents :: LocationListItemState -> HomeScreenState -> Boolean -> Boolean -> FlowBT String Unit
 addLocationToRecents item state srcServiceable destServiceable = do
-  let serviceable = if (state.props.isSource == Just false) then destServiceable else srcServiceable
+  let serviceable = if (isJustFalse state.props.isSource) then destServiceable else srcServiceable
   case item.locationItemType of
     Just PREDICTION -> do
-        let lat = if (state.props.isSource == Just false) then state.props.destinationLat else state.props.sourceLat
-        let lon = if (state.props.isSource == Just false) then state.props.destinationLong else state.props.sourceLong
+        let lat = if (isJustFalse state.props.isSource) then state.props.destinationLat else state.props.sourceLat
+        let lon = if (isJustFalse state.props.isSource) then state.props.destinationLong else state.props.sourceLong
         saveToRecents item lat lon serviceable
     _ -> saveToRecents item (fromMaybe 0.0 item.lat) (fromMaybe 0.0 item.lon) serviceable
   pure unit

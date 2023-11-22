@@ -43,6 +43,10 @@ isJustTrue :: Maybe Boolean -> Boolean
 isJustTrue (Just true) = true
 isJustTrue _ = false
 
+isJustFalse :: Maybe Boolean -> Boolean
+isJustFalse (Just false) = true
+isJustFalse _ = true
+
 boolToVisibility :: Boolean -> PD.Visibility
 boolToVisibility true = PD.VISIBLE
 boolToVisibility false = PD.GONE
