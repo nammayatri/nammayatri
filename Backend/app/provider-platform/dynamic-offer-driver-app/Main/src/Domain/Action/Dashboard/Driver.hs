@@ -384,8 +384,8 @@ disableDriver merchantShortId _ reqDriverId = do
 
 ---------------------------------------------------------------------
 
-blockDriverWithReason :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Common.BlockDriverWithReasonReq -> Flow APISuccess
-blockDriverWithReason merchantShortId _ reqDriverId req = do
+blockDriverWithReason :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Text -> Common.BlockDriverWithReasonReq -> Flow APISuccess
+blockDriverWithReason merchantShortId _ reqDriverId dashboardUserName req = do
   merchant <- findMerchantByShortId merchantShortId
 
   let driverId = cast @Common.Driver @DP.Driver reqDriverId
@@ -399,7 +399,7 @@ blockDriverWithReason merchantShortId _ reqDriverId req = do
   unless (merchant.id == merchantId) $ throwError (PersonDoesNotExist personId.getId)
   driverInf <- QDriverInfo.findById driverId >>= fromMaybeM DriverInfoNotFound
   when (driverInf.blocked) $ throwError DriverAccountAlreadyBlocked
-  QDriverInfo.updateDynamicBlockedState driverId req.blockReason req.blockTimeInHours True
+  QDriverInfo.updateDynamicBlockedState driverId req.blockReason req.blockTimeInHours dashboardUserName True
   maxShards <- asks (.maxShards)
   case req.blockTimeInHours of
     Just hrs -> do
@@ -427,7 +427,7 @@ blockDriver merchantShortId _ reqDriverId = do
   let merchantId = driver.merchantId
   unless (merchant.id == merchantId) $ throwError (PersonDoesNotExist personId.getId)
   driverInf <- QDriverInfo.findById driverId >>= fromMaybeM DriverInfoNotFound
-  when (not driverInf.blocked) (void $ QDriverInfo.updateBlockedState driverId True)
+  when (not driverInf.blocked) (void $ QDriverInfo.updateBlockedState driverId True Nothing)
   logTagInfo "dashboard -> blockDriver : " (show personId)
   pure Success
 
@@ -489,8 +489,8 @@ recordPayment isExempted merchantShortId opCity reqDriverId requestorId = do
   pure Success
 
 ---------------------------------------------------------------------
-unblockDriver :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Flow APISuccess
-unblockDriver merchantShortId _ reqDriverId = do
+unblockDriver :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Text -> Flow APISuccess
+unblockDriver merchantShortId _ reqDriverId dashboardUserName = do
   merchant <- findMerchantByShortId merchantShortId
 
   let driverId = cast @Common.Driver @DP.Driver reqDriverId
@@ -502,7 +502,7 @@ unblockDriver merchantShortId _ reqDriverId = do
   unless (merchant.id == merchantId) $ throwError (PersonDoesNotExist personId.getId)
 
   driverInf <- QDriverInfo.findById driverId >>= fromMaybeM DriverInfoNotFound
-  when driverInf.blocked (void $ QDriverInfo.updateBlockedState driverId False)
+  when driverInf.blocked (void $ QDriverInfo.updateBlockedState driverId False (Just dashboardUserName))
   logTagInfo "dashboard -> unblockDriver : " (show personId)
   pure Success
 
@@ -620,7 +620,8 @@ buildDriverInfoRes QPerson.DriverWithRidesCount {..} mbDriverLicense rcAssociati
         vehicleRegistrationDetails,
         rating = person.rating,
         alternateNumber = person.unencryptedAlternateMobileNumber,
-        availableMerchants = availableMerchants
+        availableMerchants = availableMerchants,
+        blockStateModifier = info.blockStateModifier
       }
 
 buildDriverLicenseAPIEntity :: EncFlow m r => DriverLicense -> m Common.DriverLicenseAPIEntity

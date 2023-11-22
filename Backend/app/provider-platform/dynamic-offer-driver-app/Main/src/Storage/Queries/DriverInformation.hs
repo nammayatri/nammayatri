@@ -159,8 +159,8 @@ updateEnabledVerifiedState (Id driverId) isEnabled isVerified = do
     )
     [Se.Is BeamDI.driverId (Se.Eq driverId)]
 
-updateDynamicBlockedState :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person.Driver -> Maybe Text -> Maybe Int -> Bool -> m ()
-updateDynamicBlockedState driverId blockedReason blockedExpiryTime isBlocked = do
+updateDynamicBlockedState :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person.Driver -> Maybe Text -> Maybe Int -> Text -> Bool -> m ()
+updateDynamicBlockedState driverId blockedReason blockedExpiryTime dashboardUserName isBlocked = do
   now <- getCurrentTime
   driverInfo <- findById driverId
   let expiryTime = (\secs -> addUTCTime (fromIntegral secs * 3600) now) <$> blockedExpiryTime
@@ -171,14 +171,15 @@ updateDynamicBlockedState driverId blockedReason blockedExpiryTime isBlocked = d
     ( [ Se.Set BeamDI.blocked isBlocked,
         Se.Set BeamDI.blockedReason blockedReason,
         Se.Set BeamDI.blockExpiryTime expiryTime,
+        Se.Set BeamDI.blockStateModifier (Just dashboardUserName),
         Se.Set BeamDI.updatedAt now
       ]
         <> ([Se.Set BeamDI.numOfLocks (numOfLocks' + 1) | isBlocked])
     )
     [Se.Is BeamDI.driverId (Se.Eq (getId driverId))]
 
-updateBlockedState :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person.Driver -> Bool -> m ()
-updateBlockedState driverId isBlocked = do
+updateBlockedState :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person.Driver -> Bool -> Maybe Text -> m ()
+updateBlockedState driverId isBlocked blockStateModifier = do
   now <- getCurrentTime
   driverInfo <- findById driverId
   let numOfLocks' = case driverInfo of
@@ -186,6 +187,7 @@ updateBlockedState driverId isBlocked = do
         Nothing -> 0
   updateOneWithKV
     ( [ Se.Set BeamDI.blocked isBlocked,
+        Se.Set BeamDI.blockStateModifier blockStateModifier,
         Se.Set BeamDI.updatedAt now
       ]
         <> ([Se.Set BeamDI.numOfLocks (numOfLocks' + 1) | isBlocked])
