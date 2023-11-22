@@ -42,7 +42,7 @@ screen initialState =
 
 view :: forall w . (Action -> Effect Unit) -> ST.TicketInfoScreenState -> PrestoDOM (Effect Unit) w
 view push state =
-  Anim.screenAnimation $ relativeLayout
+  PrestoAnim.animationSet [Anim.fadeIn true] $ relativeLayout
   [ height MATCH_PARENT
   , width MATCH_PARENT
   , background Color.white900
