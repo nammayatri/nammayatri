@@ -13,7 +13,6 @@ import static in.juspay.mobility.BuildConfig.MERCHANT_TYPE;
 import static in.juspay.mobility.app.Utils.minimizeApp;
 import static in.juspay.mobility.app.Utils.setCleverTapUserProp;
 
-import android.Manifest;
 import android.animation.Animator;
 import android.annotation.SuppressLint;
 import android.app.Activity;
@@ -44,8 +43,6 @@ import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.cardview.widget.CardView;
 import androidx.constraintlayout.widget.ConstraintLayout;
-import androidx.core.app.ActivityCompat;
-import androidx.lifecycle.Observer;
 import androidx.work.WorkManager;
 
 import com.airbnb.lottie.LottieAnimationView;
@@ -84,7 +81,6 @@ import in.juspay.hypersdk.core.PaymentConstants;
 import in.juspay.hypersdk.data.JuspayResponseHandler;
 import in.juspay.hypersdk.data.KeyValueStore;
 import in.juspay.hypersdk.ui.HyperPaymentsCallbackAdapter;
-import in.juspay.mobility.app.BootUpReceiver;
 import in.juspay.mobility.app.ChatService;
 import in.juspay.mobility.app.InAppNotification;
 import in.juspay.mobility.app.LocationUpdateService;
@@ -282,18 +278,10 @@ public class MainActivity extends AppCompatActivity {
         boolean isMigrated = migrateLocalStore(context);
         String clientId = context.getResources().getString(R.string.client_id);
         activity = this;
-        try {
-            setContentView(R.layout.activity_main);
-        } catch (Exception e){
-            Bundle bundle = new Bundle();
-            bundle.putString("Exception",e.toString());
-            mFirebaseAnalytics.logEvent("splash_screen_inflate_exception",bundle);
-            setContentView(R.layout.activity_main_without_bg);
-        }
-
+        sharedPref = context.getSharedPreferences(this.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
+        handleSplashScreen();
 
         WebView.setWebContentsDebuggingEnabled(true);
-        sharedPref = context.getSharedPreferences(this.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
 
         if (MERCHANT_TYPE.equals("DRIVER")) {
             widgetService = new Intent(this, WidgetService.class);
@@ -359,6 +347,58 @@ public class MainActivity extends AppCompatActivity {
         window.clearFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS);
         window.setStatusBarColor(this.getResources().getColor(R.color.colorPrimaryDark, getTheme()));
         countAppUsageDays();
+    }
+
+    private void handleSplashScreen() {
+        try {
+            setContentView(R.layout.activity_main);
+            String city = sharedPref != null ? sharedPref.getString("DRIVER_LOCATION", "__failed") : "_failed";
+            if (!city.equals("__failed")) {
+                View splash = findViewById(R.id.splash);
+                LottieAnimationView splashLottie = splash.findViewById(R.id.splash_lottie);
+                setSplashAnimAndStart(splashLottie,city);
+            }
+        } catch (Exception e){
+            Bundle bundle = new Bundle();
+            bundle.putString("Exception",e.toString());
+            FirebaseAnalytics mFirebaseAnalytics = FirebaseAnalytics.getInstance(this);
+            mFirebaseAnalytics.logEvent("splash_screen_inflate_exception",bundle);
+            setContentView(R.layout.activity_main_without_bg);
+        }
+    }
+
+    private void setSplashAnimAndStart (LottieAnimationView view ,String city) {
+        ResourceHandler resourceHandler = new ResourceHandler(this);
+        String splashConfig = resourceHandler.getFromAssets("splash_config.json");
+        @Nullable
+        String animationFile = null;
+        try {
+            JSONObject config = new JSONObject(splashConfig);
+            if (config.has(city)) {
+                JSONObject cityConfig = config.getJSONObject(city);
+                String file = cityConfig.optString("file_name","");
+                if  (resourceHandler.isResourcePresent("raw",file) && !cityConfig.optBoolean("forceToRemote",false)) {
+                    animationFile = resourceHandler.getRawResource(file);
+                } else {
+                    animationFile = cityConfig.optString("url");
+                }
+            }
+        } catch (Exception e) {
+            Bundle bundle = new Bundle();
+            bundle.putString("Exception",e.toString());
+            FirebaseAnalytics mFirebaseAnalytics = FirebaseAnalytics.getInstance(this);
+            mFirebaseAnalytics.logEvent("exception_while_reading_splash_config",bundle);
+        }
+        resourceHandler.close();
+        if (animationFile != null) {
+            if (animationFile.startsWith("http")) {
+                view.setAnimationFromUrl(animationFile);
+            } else {
+                view.setAnimationFromJson(animationFile,null);
+            }
+            view.setVisibility(View.VISIBLE);
+            view.playAnimation();
+        }
     }
 
     private void registerCallBack() {
