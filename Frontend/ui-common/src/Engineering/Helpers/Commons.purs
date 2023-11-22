@@ -27,7 +27,7 @@ import Data.Function.Uncurried (Fn2)
 import Data.Int as INT
 import Data.Maybe (fromMaybe, Maybe(..))
 import Data.String (Pattern(..),split)
-import Data.Int (fromString)
+import Data.Int (fromString, toNumber)
 import Data.Number.Format (toStringWith, fixed) as Number
 import Data.String as DS
 import Effect (Effect)
@@ -53,7 +53,6 @@ import Presto.Core.Utils.Encoding (defaultDecodeJSON, defaultEncodeJSON)
 import Common.Types.App (FlowBT)
 import Effect.Aff.AVar (new)
 import Data.String as DS
-import Data.Int as INT
 import Data.Array ((!!))
 import Data.Number.Format as Number
 import Engineering.OS.Permission (checkIfPermissionsGranted, requestPermissions)
@@ -61,6 +60,7 @@ import Data.Function.Uncurried (Fn1(..), runFn2)
 import Data.Either (Either(..), either, hush)
 import Data.Foldable (foldl)
 import Log (printLog)
+import Data.Number (pow, round)
 
 foreign import callAPI :: EffectFn7 String String String String Boolean Boolean String Unit
 foreign import callAPIWithOptions :: EffectFn8 String String String String Boolean Boolean String String Unit
@@ -69,6 +69,8 @@ foreign import atobImpl :: String -> String
 foreign import getWindowVariable :: forall a. String -> (a -> (Maybe a)) -> (Maybe a) -> Effect a
 foreign import setWindowVariableImpl :: forall a. String -> a -> Effect Unit
 foreign import screenWidth :: Unit -> Int
+foreign import getDeviceHeight :: Unit -> Int
+foreign import getScreenPpi :: Unit -> Int
 foreign import screenHeight :: Unit -> Int
 foreign import getVersionByKey :: String -> String
 foreign import callSahay ::  String  -> EffectFnAff String
@@ -199,6 +201,9 @@ strToBool value = case (DS.toLower value) of
                     "true"  -> Just true
                     "false" -> Just false
                     _       -> Nothing
+
+truncate :: Int -> Number -> Number
+truncate precision num = (round (num * (10.0 `pow` (toNumber  precision)))) / (10.0 `pow` (toNumber precision))
 
 isPreviousVersion :: String -> String -> Boolean
 isPreviousVersion currentVersion previousVersion = numericVersion currentVersion <= numericVersion previousVersion

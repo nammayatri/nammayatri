@@ -37,6 +37,7 @@ view push state =
  [ width MATCH_PARENT
  , height WRAP_CONTENT
  , orientation VERTICAL
+ , gravity CENTER 
  ][ linearLayout
     [ width $ V (screenWidth unit - 32)
     , height WRAP_CONTENT 

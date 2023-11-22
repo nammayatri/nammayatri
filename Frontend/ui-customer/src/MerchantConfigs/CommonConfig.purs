@@ -23,11 +23,15 @@ commonConfig =
   pure
     $ unsafeToForeign
         { showHamMenu: true
+        , showRateCard : true
+        , showDashboard : true
         , showQuoteFindingText: false
         , geoCoder: {
           enableLLtoAddress : true
         , enableAddressToLL : true 
         }
+        , showBookingPreference : true
+        , isReferralEnabled : true
         , showCorporateAddress: true
         , primaryTextColor: "#FFFFFF"
         , isGradient: "false"
@@ -83,7 +87,8 @@ commonConfig =
             tripsToBeShown : 5,
             locationsToBeStored : 30,
             tripsToBeStored : 30,
-            frequencyWeight : 0.7
+            frequencyWeight : 0.7,
+            tripDistanceThreshold : 0.021
           }
         , mapConfig : 
             { locateOnMapConfig : 

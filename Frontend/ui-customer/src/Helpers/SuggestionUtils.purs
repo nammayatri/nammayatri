@@ -8,7 +8,7 @@ import Prelude
 import Data.Array(singleton,catMaybes, any, sortWith, reverse, take, filter, (:), length, (!!), fromFoldable, toUnfoldable, snoc)
 import Data.Ord (comparing)
 import Screens.Types (LocationListItemState(..),SourceGeoHash, DestinationGeoHash,SuggestionsMap(..), Suggestions(..), Trip(..), LocationItemType(..))
-import Helpers.Utils(getDistanceBwCordinates, getDifferenceBetweenDates, parseSourceHashArray, toStringJSON)
+import Helpers.Utils(getDistanceBwCordinates, getDifferenceBetweenDates, parseSourceHashArray, toStringJSON, fetchImage, FetchImageFrom(..))
 import Data.Int(toNumber)
 import Storage (getValueToLocalStore, setValueToLocalStore, KeyStore(..))
 import MerchantConfig.Types (SuggestedDestinationAndTripsConfig)
@@ -40,7 +40,7 @@ addOrUpdateSuggestedDestination sourceGeohash destination suggestionsMap config 
     else insertSuggestionInMap sourceGeohash {destinationSuggestions:(singleton destination{recencyDate = (Just $ (getCurrentUTC "")),
                                                      frequencyCount = Just 1,
                                                      locationScore = Just $ calculateScore (toNumber 1) (getCurrentUTC "") config.frequencyWeight,
-                                                     prefixImageUrl = "ic_fav,https://assets.juspay.in/nammayatri/images/user/ic_fav.png",
+                                                     prefixImageUrl = fetchImage FF_ASSET "ny_ic_recent_search",
                                                      locationItemType = Just SUGGESTED_DESTINATIONS
                                                      }),
                                                      tripSuggestions : []} suggestionsMap config.geohashLimitForMap
@@ -74,7 +74,7 @@ addOrUpdateSuggestedDestination sourceGeohash destination suggestionsMap config 
           else  (take (config.locationsToBeStored - 1) sortedDestinations) <> ( singleton destination{recencyDate = (Just $ (getCurrentUTC "")),
                                                       frequencyCount = Just 1,
                                                       locationScore = Just $ calculateScore (toNumber 1) (getCurrentUTC "") config.frequencyWeight,
-                                                      prefixImageUrl = "ic_fav,https://assets.juspay.in/nammayatri/images/user/ic_fav.png", 
+                                                      prefixImageUrl = fetchImage FF_ASSET "ny_ic_recent_search", 
                                                       locationItemType = Just SUGGESTED_DESTINATIONS
                                                       })
 
@@ -103,21 +103,21 @@ addOrUpdateSuggestedTrips sourceGeohash trip suggestionsMap config =
       updateTrip trips =
         let
           updateExisting :: Trip -> Trip
-          updateExisting existingDestination =
-            if (getDistanceBwCordinates trip.sourceLat trip.sourceLong existingDestination.sourceLat existingDestination.sourceLong) < 0.011
-            && (getDistanceBwCordinates trip.destLat trip.destLong existingDestination.destLat existingDestination.destLong) < 0.011
-            then existingDestination
-                  { frequencyCount = Just $ (fromMaybe 0 existingDestination.frequencyCount) +  1
+          updateExisting existingTrip =
+            if (getDistanceBwCordinates trip.sourceLat trip.sourceLong existingTrip.sourceLat existingTrip.sourceLong) < config.tripDistanceThreshold
+            && (getDistanceBwCordinates trip.destLat trip.destLong existingTrip.destLat existingTrip.destLong) < config.tripDistanceThreshold
+            then existingTrip
+                  { frequencyCount = Just $ (fromMaybe 0 existingTrip.frequencyCount) +  1
                   , recencyDate = Just $ (getCurrentUTC "")
-                  , locationScore = Just $ calculateScore (toNumber ((fromMaybe 0 existingDestination.frequencyCount) +  1)) (getCurrentUTC "") config.frequencyWeight
+                  , locationScore = Just $ calculateScore (toNumber ((fromMaybe 0 existingTrip.frequencyCount) +  1)) (getCurrentUTC "") config.frequencyWeight
                   }
-            else existingDestination
-                  { locationScore = Just $ calculateScore (toNumber (fromMaybe 0 existingDestination.frequencyCount)) (fromMaybe (getCurrentUTC "") existingDestination.recencyDate) config.frequencyWeight }
+            else existingTrip
+                  { locationScore = Just $ calculateScore (toNumber (fromMaybe 0 existingTrip.frequencyCount)) (fromMaybe (getCurrentUTC "") existingTrip.recencyDate) config.frequencyWeight }
 
-          updatedDestinations = map updateExisting trips
-          tripExists = any (\d -> (getDistanceBwCordinates trip.sourceLat trip.sourceLong d.sourceLat d.sourceLong) < 0.011
-            && (getDistanceBwCordinates trip.destLat trip.destLong d.destLat d.destLong) < 0.011) trips
-          sortedTrips = sortTripsByScore updatedDestinations
+          updatedTrips = map updateExisting trips
+          tripExists = any (\d -> (getDistanceBwCordinates trip.sourceLat trip.sourceLong d.sourceLat d.sourceLong) < config.tripDistanceThreshold
+            && (getDistanceBwCordinates trip.destLat trip.destLong d.destLat d.destLong) < config.tripDistanceThreshold) trips
+          sortedTrips = sortTripsByScore updatedTrips
         in
           if tripExists
           then sortedTrips
@@ -174,9 +174,5 @@ sortDestinationsByScore destinations = reverse (sortWith (\d -> fromMaybe 0.0 d.
 sortTripsByScore :: Array Trip -> Array Trip
 sortTripsByScore trips = reverse (sortWith (\d -> fromMaybe 0.0 d.locationScore) trips)
 
-fetchKeys :: forall k v. Map k v -> Array k
-fetchKeys = fromFoldable <<< keys
 
-addKeys :: SuggestionsMap -> Array SourceGeoHash
-addKeys = fetchKeys
 

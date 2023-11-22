@@ -7,10 +7,10 @@ window.version["configuration"]= version;
 window.getMerchantConfig = function () {
   return JSON.stringify({
       "StringKeys": ["YOUR_LOCATION_HELPS_OUR_SYSTEM", "ABOUT_APP_DESCRIPTION", "ACCESSIBILITY_TEXT"],
-      "isReferralEnabled": "true",
-      "showBookingPreference": "true",
-      "showRateCard": "true",
-      "showDashboard": "false",
+      "isReferralEnabled": true,
+      "showBookingPreference": true,
+      "showRateCard": true,
+      "showDashboard": false,
       "enableShareRide": "false",
       "autoVariantEnabled": true,
       "shareAppTitle": "Share Namma Yatri!",
