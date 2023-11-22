@@ -17,12 +17,13 @@ module Beckn.ACL.Bus.Search (buildBusSearchReq) where
 
 import Beckn.ACL.Common (mkLocation)
 import qualified Beckn.Types.Core.Taxi.Search as Search
+import Control.Lens ((%~))
 import qualified Data.Text as T
 import qualified Domain.Action.UI.Search.Common as DSearchCommon
 import qualified Domain.Action.UI.Search.OneWay as DOneWaySearch
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.SearchRequest as DSearchReq
-import EulerHS.Prelude hiding (state)
+import EulerHS.Prelude hiding (state, (%~))
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Beckn.ReqTypes
 import Kernel.Types.Common
@@ -31,7 +32,7 @@ import Kernel.Utils.Common
 import qualified Tools.Maps as Maps
 
 buildBusSearchReq ::
-  (MonadFlow m, HasFlowEnv m r '["nwAddress" ::: BaseUrl]) =>
+  (MonadFlow m, CacheFlow m r, EsqDBFlow m r, HasFlowEnv m r '["nwAddress" ::: BaseUrl]) =>
   DOneWaySearch.OneWaySearchRes ->
   m (BecknReq Search.SearchMessage)
 buildBusSearchReq DOneWaySearch.OneWaySearchRes {..} =
@@ -50,7 +51,7 @@ buildBusSearchReq DOneWaySearch.OneWaySearchRes {..} =
     getPoints val = val >>= (\routeInfo -> Just routeInfo.points)
 
 buildSearchReq ::
-  (MonadFlow m, HasFlowEnv m r '["nwAddress" ::: BaseUrl]) =>
+  (MonadFlow m, CacheFlow m r, EsqDBFlow m r, HasFlowEnv m r '["nwAddress" ::: BaseUrl]) =>
   DSearchCommon.SearchReqLocation ->
   DSearchCommon.SearchReqLocation ->
   Id DSearchReq.SearchRequest ->
@@ -66,7 +67,8 @@ buildSearchReq origin destination searchId _ distance duration customerLanguage 
   let transactionId = getId searchId
       messageId = transactionId
   bapUrl <- asks (.nwAddress) <&> #baseUrlPath %~ (<> "/" <> T.unpack merchant.id.getId)
-  context <- buildContext Context.PUBLIC_TRANSPORT Context.SEARCH messageId (Just transactionId) merchant.bapId bapUrl Nothing Nothing merchant.city merchant.country False
+  -- TODO :: Add request city, after multiple city support on gateway.
+  context <- buildContext Context.PUBLIC_TRANSPORT Context.SEARCH messageId (Just transactionId) merchant.bapId bapUrl Nothing Nothing merchant.defaultCity merchant.country False
   let intent = mkIntent origin destination customerLanguage disabilityTag distance duration mbPoints
   let searchMessage = Search.SearchMessage intent
 

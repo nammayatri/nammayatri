@@ -7,7 +7,7 @@ import Data.Aeson
 import Data.OpenApi
 import Data.Time
 import qualified Domain.Types.Location as DLoc
-import qualified Domain.Types.Merchant as DMerchant
+import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Quote as DQuote
 import Kernel.Prelude
 import Kernel.Types.Common
@@ -41,7 +41,7 @@ data Ticket = Ticket
     pricePerAdult :: Money,
     totalPrice :: Money,
     fromLocation :: DLoc.Location,
-    merchantId :: Id DMerchant.Merchant,
+    merchantOperatingCityId :: Id DMOC.MerchantOperatingCity,
     qrData :: Maybe Text,
     createdAt :: UTCTime,
     updatedAt :: UTCTime

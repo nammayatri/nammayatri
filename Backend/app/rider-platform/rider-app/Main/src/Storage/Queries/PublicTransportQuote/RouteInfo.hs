@@ -18,15 +18,15 @@ module Storage.Queries.PublicTransportQuote.RouteInfo where
 import Domain.Types.PublicTransportQuote.RouteInfo
 import Kernel.Beam.Functions
 import Kernel.Prelude
-import Kernel.Types.Common
 import Kernel.Types.Id
+import Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified Storage.Beam.PublicTransportQuote.RouteInfo as BeamRI
 
 create :: MonadFlow m => RouteInfo -> m ()
 create = createWithKV
 
-findById :: MonadFlow m => Id RouteInfo -> m (Maybe RouteInfo)
+findById :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id RouteInfo -> m (Maybe RouteInfo)
 findById routeInfoId = findOneWithKV [Se.Is BeamRI.id $ Se.Eq (getId routeInfoId)]
 
 instance FromTType' BeamRI.RouteInfo RouteInfo where

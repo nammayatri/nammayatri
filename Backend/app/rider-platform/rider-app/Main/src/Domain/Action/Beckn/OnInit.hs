@@ -16,8 +16,8 @@ module Domain.Action.Beckn.OnInit where
 
 import Domain.Types.Booking (BPPBooking, Booking)
 import qualified Domain.Types.Booking as DRB
-import qualified Domain.Types.Location as DL
 import qualified Domain.Types.FarePolicy.FareBreakup as DFareBreakup
+import qualified Domain.Types.Location as DL
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Ticket as DTT
 import qualified Domain.Types.VehicleVariant as Veh
@@ -143,7 +143,8 @@ onInitRide req bookingId = do
 
 onInitBus :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r, HedisFlow m r) => OnInitReq -> DTT.Ticket -> m OnInitRes
 onInitBus req ticket = do
-  merchant <- CQM.findById ticket.merchantId >>= fromMaybeM (MerchantNotFound ticket.merchantId.getId)
+  moc <- CQMOC.findById ticket.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityDoesNotExist ticket.merchantOperatingCityId.getId)
+  merchant <- CQM.findById moc.merchantId >>= fromMaybeM (MerchantNotFound moc.merchantId.getId)
   let fromLocation = ticket.fromLocation
       riderPhoneCountryCode = Nothing
       riderPhoneNumber = Nothing
@@ -170,6 +171,7 @@ onInitBus req ticket = do
         driverId = Nothing,
         paymentUrl = Nothing,
         mbRiderName = Nothing,
+        city = moc.city,
         ..
       }
   where

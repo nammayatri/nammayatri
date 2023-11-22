@@ -15,9 +15,9 @@ import Tools.Beam.UtilsTH (enableKVPG, mkTableInstances)
 data TicketT f = TicketT
   { id :: B.C f Text,
     status :: B.C f Domain.TicketStatus,
-    quote_id :: B.C f (Maybe Text),
-    search_request_id :: B.C f Text,
-    bpp_order_id :: B.C f (Maybe Text),
+    quoteId :: B.C f (Maybe Text),
+    searchRequestId :: B.C f Text,
+    bppOrderId :: B.C f (Maybe Text),
     itemId :: B.C f Text,
     bppTicketId :: B.C f (Maybe Text),
     fulfillmentId :: B.C f (Maybe Text),
@@ -26,10 +26,10 @@ data TicketT f = TicketT
     providerUrl :: B.C f Text,
     quantity :: B.C f Integer,
     fromLocationId :: B.C f Text,
-    price_per_adult :: B.C f Money,
-    total_price :: B.C f Money,
-    qr_data :: B.C f (Maybe Text),
-    merchantId :: B.C f Text,
+    pricePerAdult :: B.C f Money,
+    totalPrice :: B.C f Money,
+    qrData :: B.C f (Maybe Text),
+    merchantOperatingCityId :: B.C f Text,
     createdAt :: B.C f Time.UTCTime,
     updatedAt :: B.C f Time.UTCTime
   }

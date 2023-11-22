@@ -58,7 +58,7 @@ onConfirm ValidatedOnConfirmReq {..} = do
     whenJust specialZoneOtp $ \otp -> do
       void $ QRB.updateOtpCodeBookingId booking.id otp
       fork "sending Booking confirmed dasboard sms" $ do
-      let merchantOperatingCityId = booking.merchantOperatingCityId
+        let merchantOperatingCityId = booking.merchantOperatingCityId
         merchantConfig <- QMSUC.findByMerchantOperatingCityId merchantOperatingCityId >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOperatingCityId.getId)
         if merchantConfig.enableDashboardSms
           then do
