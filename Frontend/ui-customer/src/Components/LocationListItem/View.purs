@@ -30,6 +30,7 @@ import Styles.Colors as Color
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Data.Array(any)
 import Common.Types.App (LazyCheck(..))
+import Engineering.Helpers.MobilityPrelude
 
 view :: forall w . (Action  -> Effect Unit) -> LocationListItemState -> Boolean -> PrestoDOM (Effect Unit) w
 view push config flag =
@@ -63,7 +64,7 @@ view push config flag =
               , textView
                 [ height WRAP_CONTENT
                 , width WRAP_CONTENT
-                , text $ fromMaybe "" config.distance
+                , text $ fromMaybeString config.distance
                 , color if (flag && (fromMaybe 0 config.actualDistance) >= 500) then Color.red else Color.black700
                 , textSize FontSize.a_11
                 , gravity CENTER

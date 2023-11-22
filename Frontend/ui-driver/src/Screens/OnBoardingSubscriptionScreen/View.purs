@@ -35,7 +35,7 @@ import JBridge as JB
 import Helpers.Utils (fetchImage, FetchImageFrom(..), getDateAfterNDays)
 import Screens.SubscriptionScreen.ScreenData (dummyPlanConfig)
 import Screens.OnBoardingSubscriptionScreen.ComponentConfig (joinPlanButtonConfig)
-
+import Engineering.Helpers.MobilityPrelude
 
 screen :: ST.OnBoardingSubscriptionScreenState -> Screen Action ST.OnBoardingSubscriptionScreenState ScreenOutput
 screen initialState =
@@ -509,7 +509,7 @@ planCardView push state isSelected isExpanded clickable' action isSelectedLangTa
                   Nothing -> [visibility GONE])
             [ textView
               [ textSize if isSelectedLangTamil then FontSize.a_10 else FontSize.a_12
-              , textFromHtml $ fromMaybe "" item.offerDescription
+              , textFromHtml $ fromMaybeString item.offerDescription
               , fontStyle $ FontStyle.regular LanguageStyle
               , color Color.black600
               , lineHeight "20"

@@ -64,7 +64,7 @@ getLocation prediction = {
     prefixImageUrl : fetchImage FF_ASSET "ny_ic_loc_grey"
   , postfixImageUrl : fetchImage FF_ASSET "ny_ic_fav"
   , postfixImageVisibility : true
-  , title : (fromMaybe "" ((split (Pattern ",") (prediction ^. _description)) DA.!! 0))
+  , title : (fromMaybeString ((split (Pattern ",") (prediction ^. _description)) DA.!! 0))
   , subTitle : (drop ((fromMaybe 0 (indexOf (Pattern ",") (prediction ^. _description))) + 2) (prediction ^. _description))
   , placeId : prediction ^._place_id
   , lat : Nothing
@@ -117,10 +117,10 @@ getDriverInfo :: Maybe String -> RideBookingRes -> Boolean -> DriverInfoCard
 getDriverInfo vehicleVariant (RideBookingRes resp) isQuote =
   let (RideAPIEntity rideList) = fromMaybe  dummyRideAPIEntity ((resp.rideList) DA.!! 0)
   in  {
-        otp : if isQuote then fromMaybe "" ((resp.bookingDetails)^._contents ^._otpCode) else rideList.rideOtp
-      , driverName : if length (fromMaybe "" ((split (Pattern " ") (rideList.driverName)) DA.!! 0)) < 4 then
-                        (fromMaybe "" ((split (Pattern " ") (rideList.driverName)) DA.!! 0)) <> " " <> (fromMaybe "" ((split (Pattern " ") (rideList.driverName)) DA.!! 1)) else
-                          (fromMaybe "" ((split (Pattern " ") (rideList.driverName)) DA.!! 0))
+        otp : if isQuote then fromMaybeString ((resp.bookingDetails)^._contents ^._otpCode) else rideList.rideOtp
+      , driverName : if length (fromMaybeString ((split (Pattern " ") (rideList.driverName)) DA.!! 0)) < 4 then
+                        (fromMaybeString ((split (Pattern " ") (rideList.driverName)) DA.!! 0)) <> " " <> (fromMaybeString ((split (Pattern " ") (rideList.driverName)) DA.!! 1)) else
+                          (fromMaybeString ((split (Pattern " ") (rideList.driverName)) DA.!! 0))
       , eta : 0
       , currentSearchResultType : if isQuote then QUOTES else ESTIMATES
       , vehicleDetails : rideList.vehicleModel
@@ -152,7 +152,7 @@ getDriverInfo vehicleVariant (RideBookingRes resp) isQuote =
       , vehicleVariant : if rideList.vehicleVariant /= "" 
                             then rideList.vehicleVariant 
                          else
-                            fromMaybe "" vehicleVariant
+                            fromMaybeString vehicleVariant
         }
 
 encodeAddressDescription :: String -> String -> Maybe String -> Maybe Number -> Maybe Number -> Array AddressComponents -> SavedReqLocationAPIEntity
@@ -439,8 +439,8 @@ getTripDetailsState (RideBookingRes ride) state = do
         destination= (decodeAddress (Booking (ride.bookingDetails ^._contents^._toLocation))),
         rating= (fromMaybe 0 ((fromMaybe dummyRideAPIEntity (ride.rideList DA.!!0) )^. _rideRating)),
         driverName =((fromMaybe dummyRideAPIEntity (ride.rideList DA.!!0) )^. _driverName),
-        rideStartTime = (convertUTCtoISC (fromMaybe "" rideDetails.rideStartTime ) "h:mm A"),
-        rideEndTime = (convertUTCtoISC (fromMaybe "" rideDetails.rideEndTime) "h:mm A"),
+        rideStartTime = (convertUTCtoISC (fromMaybeString rideDetails.rideStartTime ) "h:mm A"),
+        rideEndTime = (convertUTCtoISC (fromMaybeString rideDetails.rideEndTime) "h:mm A"),
         vehicleNumber = rideDetails.vehicleNumber,
         totalAmount = ("₹ " <> show (fromMaybe (0) ((fromMaybe dummyRideAPIEntity (ride.rideList DA.!!0) )^. _computedPrice))),
         shortRideId = rideDetails.shortRideId,
@@ -499,10 +499,10 @@ getEstimatesInfo estimates vehicleVariant state =
           20
       nightShiftRate = if isJust (estimates DA.!! 0) then (fromMaybe dummyEstimateEntity (estimates DA.!! 0)) ^. _nightShiftRate else Nothing
       nightShiftStart = case nightShiftRate of
-        Just nsRate -> fromMaybe "" (nsRate ^. _nightShiftStart)
+        Just nsRate -> fromMaybeString (nsRate ^. _nightShiftStart)
         Nothing -> ""
       nightShiftEnd = case nightShiftRate of
-        Just nsRate -> fromMaybe "" (nsRate ^. _nightShiftEnd)
+        Just nsRate -> fromMaybeString (nsRate ^. _nightShiftEnd)
         Nothing -> ""
       nightShiftMultiplier = case nightShiftRate of
         Just nSMultiplier -> fromMaybe 0.0 (nSMultiplier ^. _nightShiftMultiplier)

@@ -30,6 +30,7 @@ import Screens.Types (PromoConfig)
 import Screens.Types as ST
 import Services.API (FeeType(..), OfferEntity(..))
 import Services.API as API
+import Engineering.Helpers.MobilityPrelude
 
 buildTransactionDetails :: API.HistoryEntryDetailsEntityV2Resp -> Array GradientConfig -> ST.TransactionInfo
 buildTransactionDetails (API.HistoryEntryDetailsEntityV2Resp resp) gradientConfig =
@@ -39,7 +40,7 @@ buildTransactionDetails (API.HistoryEntryDetailsEntityV2Resp resp) gradientConfi
                                                   Nothing -> dummyDriverFee
         statusTime = if resp.feeType == AUTOPAY_PAYMENT then resp.executionAt else resp.createdAt
         autoPaySpecificKeys = do
-          let offerAndPlanDetails = fromMaybe "" driverFee'.offerAndPlanDetails
+          let offerAndPlanDetails = fromMaybeString driverFee'.offerAndPlanDetails
               planOfferData = decodeOfferPlan $ offerAndPlanDetails
               rideNumberPrefix = if driverFee'.totalRides < 10 then "0" else ""
           case (length filteredDriverFees == 1) of
@@ -106,7 +107,7 @@ buildTransactionDetails (API.HistoryEntryDetailsEntityV2Resp resp) gradientConfi
             manualSpecificDetails : do
                     case (length filteredDriverFees /= 1) of
                         true -> mapWithIndex (\ ind (API.DriverFeeInfoEntity driverFee) ->  do
-                            let offerAndPlanDetails = fromMaybe "" driverFee.offerAndPlanDetails
+                            let offerAndPlanDetails = fromMaybeString driverFee.offerAndPlanDetails
                                 planOfferData = decodeOfferPlan offerAndPlanDetails
                                 autoPayStageData = getAutoPayStageData driverFee.autoPayStage
                             {
@@ -121,7 +122,7 @@ buildTransactionDetails (API.HistoryEntryDetailsEntityV2Resp resp) gradientConfi
                                 isAutoPayFailed : isJust driverFee.autoPayStage && resp.feeType == MANUAL_PAYMENT,
                                 isSplitPayment : driverFee.isSplit,
                                 id : show ind,
-                                scheduledAt : if (resp.feeType == AUTOPAY_REGISTRATION && isJust  resp.executionAt) then Just (convertUTCtoISC (fromMaybe "" resp.executionAt) "Do MMM YYYY, h:mm A") else Nothing,
+                                scheduledAt : if (resp.feeType == AUTOPAY_REGISTRATION && isJust  resp.executionAt) then Just (convertUTCtoISC (fromMaybeString resp.executionAt) "Do MMM YYYY, h:mm A") else Nothing,
                                 paymentMode : resp.feeType,
                                 paymentStatus :  if resp.feeType == AUTOPAY_REGISTRATION then Just (autoPayStageData.stage) else Nothing
                             }

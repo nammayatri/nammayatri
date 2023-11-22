@@ -415,7 +415,7 @@ tabImageView state push =
           linearLayout [
             height $ V 88
           , width $ V 88
-          , afterRender (\action -> do JB.renderBase64Image (fromMaybe "" state.data.profileImg) (getNewIDWithTag "driver_prof_img") false "CENTER_CROP") (const NoAction)
+          , afterRender (\action -> do JB.renderBase64Image (fromMaybeString state.data.profileImg) (getNewIDWithTag "driver_prof_img") false "CENTER_CROP") (const NoAction)
           , id (getNewIDWithTag "driver_prof_img")][]
         )
       ]      
@@ -959,7 +959,7 @@ alternateNumberLayoutView state push =
         textView[
           height WRAP_CONTENT
         , width WRAP_CONTENT
-        , text $ "+91 " <> fromMaybe "" state.data.driverAlternateNumber
+        , text $ "+91 " <> fromMaybeString state.data.driverAlternateNumber
         , color Color.black800
         ],
         linearLayout[

@@ -22,6 +22,7 @@ import Data.Maybe (fromMaybe, Maybe(..))
 import Data.Array as DA
 import Data.String (Pattern(..), split, toLower)
 import Screens.Types as ST
+import Engineering.Helpers.MobilityPrelude
 
 type Language =
     {
@@ -41,27 +42,27 @@ getLanguages =
 decodeAddress :: LocationInfo -> Boolean -> String
 decodeAddress ( LocationInfo address) fullAddress =
         if fullAddress then 
-             if ( trim (fromMaybe "" address.city) == "" && trim (fromMaybe "" address.area) == "" && trim (fromMaybe "" address.street) == "" && trim (fromMaybe "" address.door) == "" && trim (fromMaybe "" address.building) == "" ) then
-                    ((fromMaybe "" address.state) <> ", " <> (fromMaybe "" address.country))
-            else if ( trim (fromMaybe "" address.area) == "" && trim (fromMaybe "" address.street) == "" && trim (fromMaybe "" address.door) == "" && trim (fromMaybe "" address.building) == "" ) then
-                    ((fromMaybe "" address.city) <> ", " <> (fromMaybe "" address.state) <> ", " <> (fromMaybe "" address.country))
-            else if ( trim (fromMaybe "" address.street) == "" && trim (fromMaybe "" address.door) == "" && trim (fromMaybe "" address.building) == "" ) then
-                    ((fromMaybe "" address.area) <> ", " <> (fromMaybe "" address.city) <> ", " <> (fromMaybe "" address.state) <> ", " <> (fromMaybe "" address.country))
-            else if ( trim (fromMaybe "" address.door) == "" && trim (fromMaybe "" address.building) == "") then
-                    ((fromMaybe "" address.street) <> ", " <> (fromMaybe "" address.area) <> ", " <> (fromMaybe "" address.city) <> ", " <> (fromMaybe "" address.state) <> ", " <> (fromMaybe "" address.country))
-            else if ( trim (fromMaybe "" address.door) == "") then
-                    ((fromMaybe "" address.building) <> ", " <> (fromMaybe "" address.street) <> ", " <> (fromMaybe "" address.area) <> ", " <> (fromMaybe "" address.city) <> ", " <> (fromMaybe "" address.state) <> ", " <> (fromMaybe "" address.country))
+             if ( trim (fromMaybeString address.city) == "" && trim (fromMaybeString address.area) == "" && trim (fromMaybeString address.street) == "" && trim (fromMaybeString address.door) == "" && trim (fromMaybeString address.building) == "" ) then
+                    ((fromMaybeString address.state) <> ", " <> (fromMaybeString address.country))
+            else if ( trim (fromMaybeString address.area) == "" && trim (fromMaybeString address.street) == "" && trim (fromMaybeString address.door) == "" && trim (fromMaybeString address.building) == "" ) then
+                    ((fromMaybeString address.city) <> ", " <> (fromMaybeString address.state) <> ", " <> (fromMaybeString address.country))
+            else if ( trim (fromMaybeString address.street) == "" && trim (fromMaybeString address.door) == "" && trim (fromMaybeString address.building) == "" ) then
+                    ((fromMaybeString address.area) <> ", " <> (fromMaybeString address.city) <> ", " <> (fromMaybeString address.state) <> ", " <> (fromMaybeString address.country))
+            else if ( trim (fromMaybeString address.door) == "" && trim (fromMaybeString address.building) == "") then
+                    ((fromMaybeString address.street) <> ", " <> (fromMaybeString address.area) <> ", " <> (fromMaybeString address.city) <> ", " <> (fromMaybeString address.state) <> ", " <> (fromMaybeString address.country))
+            else if ( trim (fromMaybeString address.door) == "") then
+                    ((fromMaybeString address.building) <> ", " <> (fromMaybeString address.street) <> ", " <> (fromMaybeString address.area) <> ", " <> (fromMaybeString address.city) <> ", " <> (fromMaybeString address.state) <> ", " <> (fromMaybeString address.country))
                     else
-                    ((fromMaybe "" address.door) <> ", " <> (fromMaybe "" address.building) <> ", " <> (fromMaybe "" address.street) <> ", " <> (fromMaybe "" address.area) <> ", " <> (fromMaybe "" address.city) <> ", " <> (fromMaybe "" address.state) <> ", " <> (fromMaybe "" address.country))
+                    ((fromMaybeString address.door) <> ", " <> (fromMaybeString address.building) <> ", " <> (fromMaybeString address.street) <> ", " <> (fromMaybeString address.area) <> ", " <> (fromMaybeString address.city) <> ", " <> (fromMaybeString address.state) <> ", " <> (fromMaybeString address.country))
         else 
-            if ( trim (fromMaybe "" address.city) == "" && trim (fromMaybe "" address.area) == "" && trim (fromMaybe "" address.street) == ""  ) then
-                    (trim (fromMaybe "" address.state) <> ", " <> (fromMaybe "" address.country))
-            else if ( trim (fromMaybe "" address.area) == "" && trim (fromMaybe "" address.street) == "" ) then
-                    (trim (fromMaybe "" address.city) <> ", " <> (fromMaybe "" address.state) <> ", " <> (fromMaybe "" address.country))
-            else if ( trim (fromMaybe "" address.street) == "") then
-                    (trim (fromMaybe "" address.area) <> ", " <> (fromMaybe "" address.city) <> ", " <> (fromMaybe "" address.state) <> ", " <> (fromMaybe "" address.country))
+            if ( trim (fromMaybeString address.city) == "" && trim (fromMaybeString address.area) == "" && trim (fromMaybeString address.street) == ""  ) then
+                    (trim (fromMaybeString address.state) <> ", " <> (fromMaybeString address.country))
+            else if ( trim (fromMaybeString address.area) == "" && trim (fromMaybeString address.street) == "" ) then
+                    (trim (fromMaybeString address.city) <> ", " <> (fromMaybeString address.state) <> ", " <> (fromMaybeString address.country))
+            else if ( trim (fromMaybeString address.street) == "") then
+                    (trim (fromMaybeString address.area) <> ", " <> (fromMaybeString address.city) <> ", " <> (fromMaybeString address.state) <> ", " <> (fromMaybeString address.country))
                     else
-                    (trim (fromMaybe "" address.street)) <> ", " <> (fromMaybe "" address.area) <> ", " <> (fromMaybe "" address.city) <> ", " <> (fromMaybe "" address.state) <> ", " <> (fromMaybe "" address.country)
+                    (trim (fromMaybeString address.street)) <> ", " <> (fromMaybeString address.area) <> ", " <> (fromMaybeString address.city) <> ", " <> (fromMaybeString address.state) <> ", " <> (fromMaybeString address.country)
 
 tripDatesCount :: Int
 tripDatesCount = 15

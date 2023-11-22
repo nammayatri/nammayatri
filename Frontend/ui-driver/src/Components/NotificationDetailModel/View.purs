@@ -44,6 +44,7 @@ import Services.Backend as Remote
 import Styles.Colors as Color
 import Styles.Types (FontStyle)
 import Data.Function.Uncurried (runFn3)
+import Engineering.Helpers.MobilityPrelude
 
 view :: forall w. (Action -> Effect Unit) -> NotificationDetailModelState -> PrestoDOM (Effect Unit) w
 view push state =
@@ -189,8 +190,8 @@ descriptionText push state =
                     then
                       let
                       titleAndUrl = fetchTitleAndUrl desLength item
-                      linkTitle = trim $ fromMaybe "" (titleAndUrl Array.!! 0)
-                      linkUrl = trim $ fromMaybe "" (titleAndUrl Array.!! 1)
+                      linkTitle = trim $ fromMaybeString (titleAndUrl Array.!! 0)
+                      linkUrl = trim $ fromMaybeString (titleAndUrl Array.!! 1)
                       in
                       textView $
                         [ width WRAP_CONTENT
@@ -240,7 +241,7 @@ descriptionAndComment state push =
         , onClick push $ const AddCommentClick
         , clickable if isJust state.comment then false else true
         ]
-        [ customTextView (if state.comment == Nothing then (getString ADD_A_COMMENT) else fromMaybe "" state.comment) FontSize.a_14 (if state.comment == Nothing then Color.black600 else Color.black800) (Margin 0 0 0 0) $ FontStyle.medium LanguageStyle ]
+        [ customTextView (if state.comment == Nothing then (getString ADD_A_COMMENT) else fromMaybeString state.comment) FontSize.a_14 (if state.comment == Nothing then Color.black600 else Color.black800) (Margin 0 0 0 0) $ FontStyle.medium LanguageStyle ]
     ]
 
 headerLayout :: NotificationDetailModelState -> (Action -> Effect Unit) -> forall w. PrestoDOM (Effect Unit) w

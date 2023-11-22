@@ -1987,7 +1987,7 @@ driverLocationTracking push action driverArrivedAction updateState duration trac
               Just (RideAPIEntity res) -> do
                 let rideStatus = res.status
                 doAff do liftEffect $ push $ action rideStatus
-                if (os /= "IOS" && res.driverArrivalTime /= Nothing  && (getValueToLocalStore DRIVER_ARRIVAL_ACTION) == "TRIGGER_DRIVER_ARRIVAL" ) then doAff do liftEffect $ push $ driverArrivedAction (fromMaybe "" res.driverArrivalTime)
+                if (os /= "IOS" && res.driverArrivalTime /= Nothing  && (getValueToLocalStore DRIVER_ARRIVAL_ACTION) == "TRIGGER_DRIVER_ARRIVAL" ) then doAff do liftEffect $ push $ driverArrivedAction (fromMaybeString res.driverArrivalTime)
                   else pure unit
               Nothing -> pure unit
           else

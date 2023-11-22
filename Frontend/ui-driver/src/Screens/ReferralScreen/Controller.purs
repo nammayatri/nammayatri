@@ -47,6 +47,7 @@ import Effect.Aff (launchAff_)
 import Common.Types.App
 import Effect.Uncurried(runEffectFn4)
 import Storage(KeyStore(..), getValueToLocalStore)
+import Engineering.Helpers.MobilityPrelude
 
 instance showAction :: Show Action where
   show _ = ""
@@ -336,14 +337,14 @@ getReferralStage merchant =
 getMessage :: Merchant -> Maybe String -> String
 getMessage merchant referralCode=
   case merchant of
-    NAMMAYATRI -> "👋 Hey,\n\nMy Namma Yatri Referral Code is " <> ( fromMaybe "" referralCode)  <> ".\n\nScan the QR code and download Namma Yatri app. You can help me out by entering my referral code on the Home screen.\n\nThanks!"
-    YATRI -> "👋 Hey,\n\nMy Yatri Referral Code is " <> ( fromMaybe "" referralCode)  <> ".\n\nScan the QR code and download Yatri app. You can help me out by entering my referral code on the Home screen.\n\nThanks!"
-    YATRISATHI -> "👋 Hey,\n\nMy Yatri Sathi Referral Code is " <> ( fromMaybe "" referralCode)  <> ".\n\nScan the QR code and download Yatri Sathi app. You can help me out by entering my referral code on the Home screen.\n\nThanks!"
+    NAMMAYATRI -> "👋 Hey,\n\nMy Namma Yatri Referral Code is " <> ( fromMaybeString referralCode)  <> ".\n\nScan the QR code and download Namma Yatri app. You can help me out by entering my referral code on the Home screen.\n\nThanks!"
+    YATRI -> "👋 Hey,\n\nMy Yatri Referral Code is " <> ( fromMaybeString referralCode)  <> ".\n\nScan the QR code and download Yatri app. You can help me out by entering my referral code on the Home screen.\n\nThanks!"
+    YATRISATHI -> "👋 Hey,\n\nMy Yatri Sathi Referral Code is " <> ( fromMaybeString referralCode)  <> ".\n\nScan the QR code and download Yatri Sathi app. You can help me out by entering my referral code on the Home screen.\n\nThanks!"
     _ -> ""
 
 shareImageMessageConfig :: ReferralScreenState -> ShareImageConfig
 shareImageMessageConfig state = {
-  code : fromMaybe "" state.data.driverInfo.referralCode,
+  code : fromMaybeString state.data.driverInfo.referralCode,
   viewId : getNewIDWithTag "ReferralQRScreen",
   logoId : getNewIDWithTag "ReferralScreenLogo",
   isReferral : true

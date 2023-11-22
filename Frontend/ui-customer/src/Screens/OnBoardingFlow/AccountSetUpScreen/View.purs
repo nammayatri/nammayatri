@@ -59,6 +59,7 @@ import PrestoDOM.Types.DomAttributes (Corners(..))
 import PrestoDOM.Properties (cornerRadii)
 import Data.String as DS
 import Components.CommonComponentConfig as CommonComponentConfig
+import Engineering.Helpers.MobilityPrelude
 
 screen :: ST.AccountSetUpScreenState -> Screen Action ST.AccountSetUpScreenState ScreenOutput
 screen initialState =
@@ -355,7 +356,7 @@ disabilityOptionView state push =
 
 specialAssistanceView :: forall w. ST.AccountSetUpScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 specialAssistanceView state push = do 
-  SelectListModal.view (push <<< SpecialAssistanceListAC) (CommonComponentConfig.accessibilityListConfig state.data.disabilityOptions (fromMaybe "" state.data.disabilityOptions.otherDisabilityReason) state.data.config)
+  SelectListModal.view (push <<< SpecialAssistanceListAC) (CommonComponentConfig.accessibilityListConfig state.data.disabilityOptions (fromMaybeString state.data.disabilityOptions.otherDisabilityReason) state.data.config)
 
 claimerView :: forall w. ST.AccountSetUpScreenState  -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 claimerView state push = 

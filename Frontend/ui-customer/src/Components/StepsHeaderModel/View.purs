@@ -12,6 +12,7 @@ import Data.Array as Array
 import Data.Maybe as Maybe
 import Common.Types.App (LazyCheck(..))
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
+import Engineering.Helpers.MobilityPrelude
 
 view :: forall w . (Action -> Effect Unit) -> StepsHeaderModelState -> PrestoDOM (Effect Unit) w
 view push state = 
@@ -65,8 +66,8 @@ view push state =
         [ height WRAP_CONTENT
         , width MATCH_PARENT
         , accessibility ENABLE
-        , accessibilityHint $ Maybe.fromMaybe "" (state.textArray Array.!! state.activeIndex)
-        , text $ Maybe.fromMaybe "" (state.textArray Array.!! state.activeIndex)
+        , accessibilityHint $ fromMaybeString (state.textArray Array.!! state.activeIndex)
+        , text $ fromMaybeString (state.textArray Array.!! state.activeIndex)
         , color Color.white900
         , margin $ Margin 15 5 0 22
         ] <> FontStyle.h1 TypoGraphy

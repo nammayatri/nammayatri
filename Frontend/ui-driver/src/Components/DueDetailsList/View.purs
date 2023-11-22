@@ -32,7 +32,7 @@ import PrestoDOM (Gradient(..), Gravity(..), Length(..), Margin(..), Orientation
 import Screens.Types (PromoConfig)
 import Services.API (FeeType(..))
 import Styles.Colors as Color
-
+import Engineering.Helpers.MobilityPrelude
 
 view :: forall w . (Action -> Effect Unit) -> DueDetailsListState -> PrestoDOM (Effect Unit) w
 view push state =
@@ -119,8 +119,8 @@ view push state =
                 ][]
                 , keyValueView (getString NUMBER_OF_RIDES) (rideNumberPrefix <> show item.noOfRides) true false
                 , keyValueView (getString PAYMENT_MODE) (if item.paymentMode == AUTOPAY_PAYMENT then getString UPI_AUTOPAY_S else "UPI") true true
-                , keyValueView (getString SCHEDULED_AT) (fromMaybe "" item.scheduledAt) (isJust item.scheduledAt) false
-                , keyValueView (getString PAYMENT_STATUS) (fromMaybe "" item.paymentStatus) (isJust item.paymentStatus) false
+                , keyValueView (getString SCHEDULED_AT) (fromMaybeString item.scheduledAt) (isJust item.scheduledAt) false
+                , keyValueView (getString PAYMENT_STATUS) (fromMaybeString item.paymentStatus) (isJust item.paymentStatus) false
                 , keyValueView (getString YOUR_EARNINGS) ("₹" <> getFixedTwoDecimals item.totalEarningsOfDay) true false
                 , keyValueView (getString FARE_BREAKUP) (item.fareBreakup <>" "<> getString GST_INCLUDE) true false
                 , linearLayout [
@@ -135,7 +135,7 @@ view push state =
                     , color Color.black700
                   ] <> FontStyle.body3 TypoGraphy
                   , case item.offerApplied of
-                      Just offerConfig -> case fromMaybe "" offerConfig.title of 
+                      Just offerConfig -> case fromMaybeString offerConfig.title of 
                                             "" -> textView $
                                                   [ text "N/A"
                                                   , color Color.black900

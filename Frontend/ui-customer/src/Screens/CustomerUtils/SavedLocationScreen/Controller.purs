@@ -117,7 +117,7 @@ eval (SavedLocationCardAction (SavedLocationCardController.DeleteLocation tagNam
   continue state{props{showDeleteLocationModel = true}, data{deleteTag = (Just tagName)}}
 
 eval (PopUpModalAction (PopUpModal.OnButton1Click)) state = continue state{props{showDeleteLocationModel = false}, data{deleteTag = Nothing}}
-eval (PopUpModalAction (PopUpModal.OnButton2Click)) state = exit $ DeleteLocation (fromMaybe "" state.data.deleteTag)
+eval (PopUpModalAction (PopUpModal.OnButton2Click)) state = exit $ DeleteLocation (fromMaybeString state.data.deleteTag)
 eval (GenericHeaderAC (GenericHeaderController.PrefixImgOnClick)) state = exit $ GoBack
 
 eval (SavedLocationListAPIResponseAction respList) state = do 
@@ -178,7 +178,7 @@ getSavedLocationForAddNewAddressScreen (savedLocation) = (map (\ (item) ->
   { prefixImageUrl : fetchImage FF_ASSET "ny_ic_loc_grey"
   , postfixImageUrl : ""
   , postfixImageVisibility : false
-  , title : (fromMaybe "" ((split (Pattern ",") (item.address)) !! 0))
+  , title : (fromMaybeString ((split (Pattern ",") (item.address)) !! 0))
   , subTitle : ""
   , placeId : item.placeId 
   , lat : item.lat
@@ -204,15 +204,15 @@ getSavedLocationForAddNewAddressScreen (savedLocation) = (map (\ (item) ->
 
 decodePlace :: SavedReqLocationAPIEntity -> String 
 decodePlace (SavedReqLocationAPIEntity address )= 
-  if ((isStrEmpty $ trim (fromMaybe "" address.area)) &&(isStrEmpty $ trim (fromMaybe "" address.street)) &&(isStrEmpty $ trim (fromMaybe "" address.door)) &&(isStrEmpty $ trim (fromMaybe "" address.building)) ) then
-                (fromMaybe "" address.city) 
-        else if ((isStrEmpty $ trim (fromMaybe "" address.street)) && (isStrEmpty $ trim (fromMaybe "" address.door)) &&(isStrEmpty $ trim (fromMaybe "" address.building)) ) then
-                (fromMaybe "" address.area)
-        else if ((isStrEmpty $ trim (fromMaybe "" address.door)) && (isStrEmpty $ trim (fromMaybe "" address.building))) then
-                (fromMaybe "" address.street) 
-        else if ((isStrEmpty $trim (fromMaybe "" address.door))) then
-                (fromMaybe "" address.building) 
+  if ((isStrEmpty $ trim (fromMaybeString address.area)) &&(isStrEmpty $ trim (fromMaybeString address.street)) &&(isStrEmpty $ trim (fromMaybeString address.door)) &&(isStrEmpty $ trim (fromMaybeString address.building)) ) then
+                (fromMaybeString address.city) 
+        else if ((isStrEmpty $ trim (fromMaybeString address.street)) && (isStrEmpty $ trim (fromMaybeString address.door)) &&(isStrEmpty $ trim (fromMaybeString address.building)) ) then
+                (fromMaybeString address.area)
+        else if ((isStrEmpty $ trim (fromMaybeString address.door)) && (isStrEmpty $ trim (fromMaybeString address.building))) then
+                (fromMaybeString address.street) 
+        else if ((isStrEmpty $trim (fromMaybeString address.door))) then
+                (fromMaybeString address.building) 
         else
-                (fromMaybe "" address.door) 
+                (fromMaybeString address.door) 
 
 

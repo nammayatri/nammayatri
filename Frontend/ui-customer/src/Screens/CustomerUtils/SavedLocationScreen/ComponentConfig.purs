@@ -33,13 +33,14 @@ import Engineering.Helpers.Commons as EHC
 import Data.Maybe 
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Prelude ((<>))
+import Engineering.Helpers.MobilityPrelude
 
 requestDeletePopUp :: ST.SavedLocationScreenState -> PopUpModal.Config 
 requestDeletePopUp state = let 
     config = PopUpModal.config
     popUpConfig' = config {
       primaryText { 
-        text = (getString REMOVE_FAVOURITE) <> " '"<>(fromMaybe "" state.data.deleteTag )<> "' ? "
+        text = (getString REMOVE_FAVOURITE) <> " '"<>(fromMaybeString state.data.deleteTag )<> "' ? "
       , margin = (Margin 16 24 16 0)
       },
       secondaryText { 

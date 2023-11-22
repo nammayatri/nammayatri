@@ -61,7 +61,7 @@ import Data.Either (Either(..))
 import MerchantConfig.Utils (getMerchant, Merchant(..))
 import Common.Types.App (LazyCheck(..))
 import Debug (spy)
-import Engineering.Helpers.MobilityPrelude(isStrEmpty)
+import Engineering.Helpers.MobilityPrelude(isStrEmpty, fromMaybeString)
 
 screen :: ST.ReferralScreenState -> Screen Action ST.ReferralScreenState ScreenOutput
 screen initialState =
@@ -847,7 +847,7 @@ referralEnrolmentFlow push state =
           , textView (
             [ height WRAP_CONTENT
             , width MATCH_PARENT
-            , text $ "+91 "<> (fromMaybe "" state.data.driverInfo.driverMobile)
+            , text $ "+91 "<> (fromMaybeString state.data.driverInfo.driverMobile)
             , color Color.black800
             , textSize $ FontSize.a_16
             , margin (MarginVertical 8 8)
@@ -1043,7 +1043,7 @@ qrScreen push state =
         [ height WRAP_CONTENT
         , width MATCH_PARENT
         , gravity CENTER
-        , text (fromMaybe "" state.data.driverInfo.referralCode)
+        , text (fromMaybeString state.data.driverInfo.referralCode)
         , color Color.black900
         , margin $ MarginTop 4
         ] <> FontStyle.h4 TypoGraphy 

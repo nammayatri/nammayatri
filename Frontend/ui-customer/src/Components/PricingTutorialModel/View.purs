@@ -28,6 +28,7 @@ import Styles.Colors as Color
 import Debug (spy)
 import Common.Types.App
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
+import Engineering.Helpers.MobilityPrelude
 
 view :: forall w .  (Action  -> Effect Unit) -> PrestoDOM (Effect Unit) w
 view push =
@@ -114,7 +115,7 @@ listComponentView dummy =
                 , textView (
                   [ height WRAP_CONTENT
                   , width WRAP_CONTENT
-                  , text (fromMaybe "" item.note)
+                  , text (fromMaybeString item.note)
                   , color Color.black700
                   , lineHeight "13"
                   , margin (MarginTop 6)

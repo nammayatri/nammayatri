@@ -33,6 +33,7 @@ import Data.Function.Uncurried (runFn3)
 import JBridge (emitJOSEvent)
 import Accessor (_authData, _maskedMobileNumber, _id)
 import Data.Lens ((^.))
+import Engineering.Helpers.MobilityPrelude
 
 validateSignaturePayload :: SignatureAuthData -> (Either ErrorResponse TriggerSignatureOTPResp) -> FlowBT String Boolean
 validateSignaturePayload signatureAuth resp = 
@@ -40,7 +41,7 @@ validateSignaturePayload signatureAuth resp =
     Right (TriggerSignatureOTPResp triggerSignatureOtpResp) -> do
       case triggerSignatureOtpResp.person of
         Just person -> do
-          mobileNumber <- liftFlowBT $ runEffectFn2 getMobileNumber (signatureAuth ^._authData) $ fromMaybe "" (person ^._maskedMobileNumber)
+          mobileNumber <- liftFlowBT $ runEffectFn2 getMobileNumber (signatureAuth ^._authData) $ fromMaybeString (person ^._maskedMobileNumber)
           updateCustomerDetails person mobileNumber
         _ -> pure unit
       case triggerSignatureOtpResp.token of

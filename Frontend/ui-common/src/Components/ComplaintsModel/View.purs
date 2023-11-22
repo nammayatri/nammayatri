@@ -14,6 +14,7 @@ import JBridge as JB
 import Prelude (Unit, bind, const, map, pure, unit, ($), (+), (<>))
 import PrestoDOM (Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Accessiblity(..), background, color, cornerRadius, height, horizontalScrollView, linearLayout, margin, onClick, orientation, padding, scrollBarX, stroke, text, textFromHtml, textView, width, accessibilityHint, accessibility)
 import Styles.Colors as Color
+import Engineering.Helpers.MobilityPrelude
 
 view :: forall w. Config -> PrestoDOM (Effect Unit) w
 view config =
@@ -78,14 +79,14 @@ infoComponentView item =
                 $ [ height WRAP_CONTENT
                   , width MATCH_PARENT
                   , accessibility DISABLE
-                  , textFromHtml $ fromMaybe "" item.addtionalData
+                  , textFromHtml $ fromMaybeString item.addtionalData
                   , color Color.black650
                   ]
                 <> (FontStyle.body3 TypoGraphy)
-                <> ( if contains (Pattern "<u>") (fromMaybe "" item.addtionalData) then
+                <> ( if contains (Pattern "<u>") (fromMaybeString item.addtionalData) then
                       [ onClick
                           ( \_ -> do
-                              _ <- JB.openUrlInApp $ (slice ((fromMaybe 0 $ indexOf (Pattern (">")) (fromMaybe "" item.addtionalData)) + 1) (fromMaybe 0 $ lastIndexOf (Pattern ("<")) (fromMaybe "" item.addtionalData)) (fromMaybe "" item.addtionalData))
+                              _ <- JB.openUrlInApp $ (slice ((fromMaybe 0 $ indexOf (Pattern (">")) (fromMaybeString item.addtionalData)) + 1) (fromMaybe 0 $ lastIndexOf (Pattern ("<")) (fromMaybeString item.addtionalData)) (fromMaybeString item.addtionalData))
                               pure unit
                           )
                           (const unit)
