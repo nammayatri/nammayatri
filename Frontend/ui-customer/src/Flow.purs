@@ -78,7 +78,6 @@ import Screens.InvoiceScreen.Controller (ScreenOutput(..)) as InvoiceScreenOutpu
 import Screens.MyProfileScreen.ScreenData as MyProfileScreenData
 import Screens.TicketBookingScreen.ScreenData as TicketBookingScreenData
 import Screens.ReferralScreen.ScreenData as ReferralScreen
-import Screens.TicketBookingScreen.ScreenData as TicketBookingScreenData
 import Screens.RideBookingFlow.HomeScreen.Config (getTipViewData, setTipViewData)
 import Screens.RideBookingFlow.HomeScreen.Config (specialLocationIcons, specialLocationConfig, updateRouteMarkerConfig)
 import Screens.SavedLocationScreen.Controller (getSavedLocationForAddNewAddressScreen)
@@ -1242,7 +1241,7 @@ homeScreenFlow = do
     RIDE_DETAILS_SCREEN state -> do
       tripDetailsScreenFlow Home
     GO_TO_TICKET_BOOKING_FLOW state -> do 
-      modifyScreenState $ TicketBookingScreenStateType (\ticketBookingScreen -> ticketBookingScreen{props{previousStage = DescriptionStage}})
+      modifyScreenState $ TicketBookingScreenStateType (\ticketBookingScreen -> ticketBookingScreen{props{currentStage = DescriptionStage, previousStage = DescriptionStage}})
       zooTicketBookingFlow
     _ -> homeScreenFlow
 
@@ -2294,7 +2293,9 @@ zooTicketBookingFlow = do
           let dummyListItem = { ticketServiceShortId : "", ticketServiceName : "VideoPhotography", amount : 100.0, status : "Pending", verificationCount : 0, expiryDate : Nothing,  prices : [{pricePerUnit: 2.0,numberOfUnits: 3,attendeeType: "Adults"}, {pricePerUnit: 2.0,numberOfUnits: 2,attendeeType: "Mobile"}]}
           modifyScreenState $ TicketInfoScreenStateType (\ticketInfoScreen ->  ticketInfoScreen{data{selectedBookingInfo = ticketBookingDetails}, props {activeListItem = fromMaybe dummyListItem (ticketBookingDetails.services !! 0), rightButtonDisable = (length ticketBookingDetails.services < 2)}})
           zooTicketInfoFlow
-    GO_TO_HOME_SCREEN_FROM_TICKET_BOOKING -> homeScreenFlow
+    GO_TO_HOME_SCREEN_FROM_TICKET_BOOKING -> do
+      modifyScreenState $ TicketBookingScreenStateType (\_ ->  TicketBookingScreenData.initData)
+      homeScreenFlow
     RESET_SCREEN_STATE -> do
       modifyScreenState $ TicketBookingScreenStateType (\_ ->  TicketBookingScreenData.initData)
       zooTicketBookingFlow
@@ -2331,13 +2332,15 @@ updatePaymentStatusData ticketStatus shortOrderID =
       infoRes <- Remote.getTicketBookingDetailsBT shortOrderID
       fillBookingDetails infoRes shortOrderID ticketStatus
     "Pending" -> do
+      _ <- pure $ toast $ "Fetching the status"
       infoRes <- Remote.getTicketBookingDetailsBT shortOrderID
       setValueToLocalStore PAYMENT_STATUS_POOLING "true"
       fillBookingDetails infoRes shortOrderID ticketStatus
     "Failed" -> do
       modifyScreenState $ TicketBookingScreenStateType (\ticketBookingScreen -> ticketBookingScreen { props { paymentStatus = Common.Failed } })
     _ -> do
-      modifyScreenState $ TicketBookingScreenStateType (\ticketBookingScreen -> ticketBookingScreen { props { currentStage = ChooseTicketStage } }) -- temporary fix - will remove once 500 INTERNAL_SERVER_ERROR is solved.
+      _ <- pure $ toast $ getString SOMETHING_WENT_WRONG_TRY_AGAIN_LATER
+      modifyScreenState $ TicketBookingScreenStateType (\ticketBookingScreen -> ticketBookingScreen { props { currentStage = ticketBookingScreen.props.previousStage} }) -- temporary fix - will remove once 500 INTERNAL_SERVER_ERROR is solved.
       pure unit
 
 zooTicketInfoFlow :: FlowBT String Unit

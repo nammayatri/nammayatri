@@ -627,7 +627,8 @@ const hindiStrings = {
   "EDUCATIONAL_POP_UP_SLIDE_5_SUBTITLE" : "&#8226; हम अन्य प्रकार की विकलांगताओं को <br> &ensp; एकत्रित करेंगे और आवश्यकतानुसार उन्हें उपलब्ध <br> &ensp; विकलांगताओं की सूची में शामिल करेंगे।",
   "INCLUSIVE_AND_ACCESSIBLE" : "सभी के लिए समावेशी और सुलभ!",
   "YOU_SEEM_TO_BE_FAR_FROM_PICK_UP" : "आप पिकअप स्थान से बहुत दूर हैं!",
-  "ARE_YOU_SURE_YOU_WANT_TO_PROCEED_WITH_THE_BOOKING" : "क्या आप वाकई बुकिंग जारी रखना चाहते हैं?"
+  "ARE_YOU_SURE_YOU_WANT_TO_PROCEED_WITH_THE_BOOKING" : "क्या आप वाकई बुकिंग जारी रखना चाहते हैं?",
+  "SOMETHING_WENT_WRONG_TRY_AGAIN_LATER": "कुछ तकनीकी समस्या हुई है, कृपया बाद में दोबारा प्रयास करें",
 }
 
 export function getStringValue(key) {
