@@ -472,7 +472,8 @@ data DriverInfoRes = DriverInfoRes
     clientVersion :: Maybe Version,
     alternateNumber :: Maybe Text,
     rating :: Maybe Centesimal,
-    availableMerchants :: [Text]
+    availableMerchants :: [Text],
+    blockStateModifier :: Maybe Text
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

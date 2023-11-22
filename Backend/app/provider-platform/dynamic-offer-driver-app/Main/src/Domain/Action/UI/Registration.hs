@@ -192,6 +192,7 @@ createDriverDetails personId merchantId merchantOpCityId = do
             blockExpiryTime = Nothing,
             mode = Just DriverInfo.OFFLINE,
             payerVpa = Nothing,
+            blockStateModifier = Nothing,
             enabledAt = Nothing,
             createdAt = now,
             updatedAt = now,

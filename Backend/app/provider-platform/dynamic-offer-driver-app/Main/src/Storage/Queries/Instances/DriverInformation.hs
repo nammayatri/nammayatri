@@ -61,6 +61,7 @@ instance ToTType' BeamDI.DriverInformation DriverInformation where
         BeamDI.mode = mode,
         BeamDI.autoPayStatus = autoPayStatus,
         BeamDI.payerVpa = payerVpa,
+        BeamDI.blockStateModifier = blockStateModifier,
         BeamDI.enabledAt = enabledAt,
         BeamDI.createdAt = createdAt,
         BeamDI.updatedAt = updatedAt,

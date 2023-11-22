@@ -240,7 +240,8 @@ data DriverInformationRes = DriverInformationRes
     freeTrialDaysLeft :: Int,
     maskedDeviceToken :: Maybe Text,
     currentDues :: Maybe HighPrecMoney,
-    manualDues :: Maybe HighPrecMoney
+    manualDues :: Maybe HighPrecMoney,
+    blockStateModifier :: Maybe Text
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
 
@@ -278,7 +279,8 @@ data DriverEntityRes = DriverEntityRes
     mediaUrl :: Maybe Text,
     aadhaarCardPhoto :: Maybe Text,
     freeTrialDaysLeft :: Int,
-    maskedDeviceToken :: Maybe Text
+    maskedDeviceToken :: Maybe Text,
+    blockStateModifier :: Maybe Text
   }
   deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
 
@@ -613,6 +615,7 @@ createDriverDetails personId admin merchantId = do
             compAadhaarImagePath = Nothing,
             availableUpiApps = Nothing,
             payerVpa = Nothing,
+            blockStateModifier = Nothing,
             lastEnabledOn = Just now,
             enabledAt = Just now,
             createdAt = now,
@@ -827,6 +830,7 @@ buildDriverEntityRes (person, driverInfo) = do
         canDowngradeToTaxi = driverInfo.canDowngradeToTaxi,
         mode = driverInfo.mode,
         payerVpa = driverInfo.payerVpa,
+        blockStateModifier = driverInfo.blockStateModifier,
         autoPayStatus = driverInfo.autoPayStatus,
         clientVersion = person.clientVersion,
         bundleVersion = person.bundleVersion,

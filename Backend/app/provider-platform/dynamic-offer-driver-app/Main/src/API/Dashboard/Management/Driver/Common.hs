@@ -33,10 +33,10 @@ type API =
            :<|> Common.DriverListAPI
            :<|> Common.DriverActivityAPI
            :<|> Common.DisableDriverAPI
-           :<|> Common.BlockDriverWithReasonAPI
+           :<|> BlockDriverWithReasonAPI
            :<|> Common.BlockDriverAPI
            :<|> Common.DriverBlockReasonListAPI
-           :<|> Common.UnblockDriverAPI
+           :<|> UnblockDriverAPI
            :<|> Common.DriverLocationAPI
            :<|> Common.DeleteDriverAPI
            :<|> Common.UnlinkDLAPI
@@ -47,6 +47,19 @@ type API =
            :<|> Common.DeleteRCAPI
            :<|> Common.ClearOnRideStuckDriversAPI
        )
+
+type BlockDriverWithReasonAPI =
+  Capture "driverId" (Id Common.Driver)
+    :> "blockWithReason"
+    :> Capture "dashboardUserName" Text
+    :> ReqBody '[JSON] Common.BlockDriverWithReasonReq
+    :> Post '[JSON] APISuccess
+
+type UnblockDriverAPI =
+  Capture "driverId" (Id Common.Driver)
+    :> "unblock"
+    :> Capture "dashboardUserName" Text
+    :> Post '[JSON] APISuccess
 
 handler :: ShortId DM.Merchant -> Context.City -> FlowServer API
 handler merchantId city =
@@ -89,8 +102,8 @@ driverActivity merchantShortId = withFlowHandlerAPI . DDriver.driverActivity mer
 disableDriver :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> FlowHandler APISuccess
 disableDriver merchantShortId opCity = withFlowHandlerAPI . DDriver.disableDriver merchantShortId opCity
 
-blockDriverWithReason :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Common.BlockDriverWithReasonReq -> FlowHandler APISuccess
-blockDriverWithReason merchantShortId opCity driverId = withFlowHandlerAPI . DDriver.blockDriverWithReason merchantShortId opCity driverId
+blockDriverWithReason :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Text -> Common.BlockDriverWithReasonReq -> FlowHandler APISuccess
+blockDriverWithReason merchantShortId opCity driverId dashboardUserName = withFlowHandlerAPI . DDriver.blockDriverWithReason merchantShortId opCity driverId dashboardUserName
 
 blockDriver :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> FlowHandler APISuccess
 blockDriver merchantShortId opCity = withFlowHandlerAPI . DDriver.blockDriver merchantShortId opCity
@@ -98,8 +111,8 @@ blockDriver merchantShortId opCity = withFlowHandlerAPI . DDriver.blockDriver me
 blockReasonList :: ShortId DM.Merchant -> Context.City -> FlowHandler [Common.BlockReason]
 blockReasonList _ _ = withFlowHandlerAPI DDriver.blockReasonList
 
-unblockDriver :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> FlowHandler APISuccess
-unblockDriver merchantShortId opCity = withFlowHandlerAPI . DDriver.unblockDriver merchantShortId opCity
+unblockDriver :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Text -> FlowHandler APISuccess
+unblockDriver merchantShortId opCity driverId = withFlowHandlerAPI . DDriver.unblockDriver merchantShortId opCity driverId
 
 driverLocation :: ShortId DM.Merchant -> Context.City -> Maybe Int -> Maybe Int -> Common.DriverIds -> FlowHandler Common.DriverLocationRes
 driverLocation merchantShortId opCity mbLimit mbOffset = withFlowHandlerAPI . DDriver.driverLocation merchantShortId opCity mbLimit mbOffset
