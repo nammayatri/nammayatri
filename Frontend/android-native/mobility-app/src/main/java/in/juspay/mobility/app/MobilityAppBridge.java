@@ -154,6 +154,17 @@ public class MobilityAppBridge extends HyperBridge {
     }
 
     @JavascriptInterface
+    public void restartApp() {
+        if (bridgeComponents.getActivity() != null) {
+            final PackageManager pm = bridgeComponents.getActivity().getPackageManager();
+            final Intent intent = pm.getLaunchIntentForPackage(bridgeComponents.getActivity().getPackageName());
+            bridgeComponents.getActivity().finishAffinity(); // Finishes all activities.
+            bridgeComponents.getContext().startActivity(intent);    // Start the launch activity
+        }
+    }
+
+    @Deprecated
+    @JavascriptInterface
     public void factoryResetApp() {
         if (bridgeComponents.getActivity() != null) {
             final PackageManager pm = bridgeComponents.getActivity().getPackageManager();
