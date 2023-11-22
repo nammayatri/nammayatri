@@ -590,7 +590,7 @@ eval (RideActionModalAction (RideActionModal.MessageCustomer)) state = do
   if not state.props.chatcallbackInitiated then continue state else do
     _ <- pure $ setValueToLocalStore LOCAL_STAGE (show ST.ChatWithCustomer)
     _ <- pure $ setValueToLocalNativeStore READ_MESSAGES (show (Array.length state.data.messages))
-    continueWithCmd state{props{currentStage = ST.ChatWithCustomer, sendMessageActive = false, unReadMessages = false, isChatOpened = true}} [do
+    continueWithCmd state{props{currentStage = ST.ChatWithCustomer, sendMessageActive = false, unReadMessages = false}} [do
       pure $ (RideActionModalAction (RideActionModal.LoadMessages))
     ]
 
@@ -619,7 +619,7 @@ eval (UpdateMessages message sender timeStamp size) state = do
     ]
     
 eval (RideActionModalAction (RideActionModal.LoadMessages)) state = do
-  let allMessages = getChatMessages ""
+  let allMessages = getChatMessages Common.FunctionCall
   case (Array.last allMessages) of
       Just value -> if value.message == "" then continue state {data { messagesSize = show (fromMaybe 0 (fromString state.data.messagesSize) + 1)}, props {canSendSuggestion = true}} else
                       if value.sentBy == "Driver" then updateMessagesWithCmd state {data {messages = allMessages, suggestionsList = []}, props {canSendSuggestion = true}}
@@ -655,8 +655,7 @@ eval (ChatViewActionController (ChatView.SendMessage)) state = do
 
 eval (ChatViewActionController (ChatView.SendSuggestion chatSuggestion)) state = do
   if state.props.canSendSuggestion then do
-    let message = if isPreviousVersion (getValueToLocalStore VERSION_NAME) (getPreviousVersion (getMerchant Common.FunctionCall)) then (getMessageFromKey chatSuggestion "EN_US") else chatSuggestion
-    _ <- pure $ sendMessage message
+    _ <- pure $ sendMessage chatSuggestion
     let _ = unsafePerformEffect $ logEvent state.data.logField $ toLower $ (replaceAll (Pattern "'") (Replacement "") (replaceAll (Pattern ",") (Replacement "") (replaceAll (Pattern " ") (Replacement "_") chatSuggestion)))
     continue state{data {suggestionsList = []}, props {canSendSuggestion = false}}
   else continue state

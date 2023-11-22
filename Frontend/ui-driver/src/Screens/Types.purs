@@ -948,7 +948,6 @@ type HomeScreenProps =  {
   notRemoveBanner :: Boolean,
   showBonusInfo :: Boolean,
   showlinkAadhaarPopup :: Boolean,
-  isChatOpened :: Boolean,
   showAadharPopUp :: Boolean,
   canSendSuggestion :: Boolean,
   showOffer :: Boolean,

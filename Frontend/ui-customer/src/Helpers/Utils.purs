@@ -80,6 +80,9 @@ import Effect.Uncurried(EffectFn1, EffectFn4, EffectFn3,runEffectFn3)
 import Effect.Aff (Aff (..), error, killFiber, launchAff, launchAff_, makeAff, nonCanceler, Fiber)
 import Prelude (class EuclideanRing, Unit, bind, discard, identity, pure, unit, void, ($), (+), (<#>), (<*>), (<>), (*>), (>>>), ($>), (/=), (&&), (<=), show, (>=), (>),(<))
 import Data.String (replace, split, Pattern(..), Replacement(..))
+import Data.Function.Uncurried (Fn1)
+import Styles.Colors as Color
+import Common.Styles.Colors as CommonColor
 
 foreign import shuffle :: forall a. Array a -> Array a
 
@@ -162,6 +165,9 @@ foreign import adjustViewWithKeyboard :: String -> Effect Unit
 foreign import getMobileNumber :: EffectFn2 String String String
 
 foreign import extractKeyByRegex :: Fn2 String String String
+foreign import getPixels :: Fn1 LazyCheck Number
+foreign import getDeviceDefaultDensity ::Fn1 LazyCheck Number
+foreign import didDriverMessage :: Fn1 LazyCheck Boolean
 
 data TimeUnit
   = HOUR
@@ -551,3 +557,11 @@ getVariantRideType variant =
                     "SUV"  -> getString AC_SUV
                     _      -> getString AC_CAB
     _          -> getString AC_CAB
+
+getTitleConfig :: forall w. String -> {text :: String , color :: String}
+getTitleConfig vehicleVariant =
+  (case vehicleVariant of
+        "TAXI" -> {text : (getString NON_AC )<> " " <> (getString TAXI) , color : CommonColor.orange900 }
+        "SUV" -> {text : (getString AC_SUV )<> " " <> (getString TAXI) , color : Color.blue800 }
+        "AUTO_RICKSHAW" -> {text : (getString AUTO_RICKSHAW) , color : Color.green600}
+        _ -> { text : (getString AC) <> " " <> (getString TAXI), color : Color.blue800 })

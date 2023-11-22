@@ -87,7 +87,6 @@ rideActionModalConfig state =
     unReadMessages = state.props.unReadMessages,
     specialLocationTag = state.data.activeRide.specialLocationTag,
     waitTime = state.data.activeRide.waitingTime,
-    isChatOpened = state.props.isChatOpened,
     requestedVehicleVariant = state.data.activeRide.requestedVehicleVariant,
     accessibilityTag = state.data.activeRide.disabilityTag,
     appConfig = state.data.config,
@@ -552,7 +551,7 @@ showSuggestions state = do
   let canShowSuggestions = case (DA.last state.data.messages) of 
                             Just value -> not $ value.sentBy == "Driver"
                             Nothing -> true
-  DA.null state.data.suggestionsList && canShowSuggestions && ((show $ DA.length $ JB.getChatMessages "") == state.data.messagesSize || state.data.messagesSize == "-1")
+  DA.null state.data.suggestionsList && canShowSuggestions && ((show $ DA.length $ JB.getChatMessages FunctionCall) == state.data.messagesSize || state.data.messagesSize == "-1")
 
 silentModeConfig :: ST.HomeScreenState -> PopUpModal.Config
 silentModeConfig state = let
