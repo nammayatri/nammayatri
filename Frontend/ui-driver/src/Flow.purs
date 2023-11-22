@@ -406,7 +406,7 @@ checkStatusAndStartLocationUpdates = do
   globalstate <- getState 
   (GetDriverInfoResp getDriverInfoResp) <- getDriverInfoDataFromCache globalstate
   let isNoDriverMode = isNothing getDriverInfoResp.mode
-      driverMode = fromMaybe "" getDriverInfoResp.mode
+      driverMode = fromMaybeString getDriverInfoResp.mode
       isOffline = if isNoDriverMode  then getDriverInfoResp.active else driverMode == "OFFLINE"
       currentMode = if isNoDriverMode then show $ updateDriverStatus (getDriverInfoResp.active) else driverMode
   if isNoDriverMode then pure unit else void $ pure $ setCleverTapUserProp [{key : "Mode", value : unsafeToForeign driverMode}]
@@ -894,7 +894,7 @@ driverProfileFlow = do
           if state.data.isRCActive then do
             globalstate <- getState
             (GetDriverInfoResp getDriverInfoResp) <- getDriverInfoDataFromCache globalstate
-            let status = getDriverStatus $ fromMaybe "" getDriverInfoResp.mode
+            let status = getDriverStatus $ fromMaybeString getDriverInfoResp.mode
             when (status /= Offline) $ changeDriverStatus Offline
             modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props {rcActive = false, rcDeactivePopup = true}})
           else modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props {rcActive = true, rcDeactivePopup = false}}) 
@@ -945,7 +945,7 @@ driverProfileFlow = do
 
     DRIVER_ALTERNATE_CALL_API1 updatedState -> do
       let number =  updatedState.data.driverEditAlternateMobile
-      getAlternateMobileResp <- lift $ lift $ Remote.validateAlternateNumber (makeValidateAlternateNumberRequest (fromMaybe "" (number)))
+      getAlternateMobileResp <- lift $ lift $ Remote.validateAlternateNumber (makeValidateAlternateNumberRequest (fromMaybeString (number)))
       case  getAlternateMobileResp of
             Right (DriverAlternateNumberResp resp) -> do
                   modifyScreenState $ DriverProfileScreenStateType (\driverProfileScreen -> updatedState {props {enterOtpModal = true}})
@@ -961,7 +961,7 @@ driverProfileFlow = do
 
     RESEND_ALTERNATE_OTP1 updatedState -> do
       let number = updatedState.data.driverEditAlternateMobile
-      getAlternateMobileResendOtpResp <- lift $ lift $ Remote.resendAlternateNumberOTP (makeResendAlternateNumberOtpRequest (fromMaybe "" (number)))
+      getAlternateMobileResendOtpResp <- lift $ lift $ Remote.resendAlternateNumberOTP (makeResendAlternateNumberOtpRequest (fromMaybeString (number)))
       case getAlternateMobileResendOtpResp of
             Right (AlternateNumberResendOTPResp resp) -> do
                 pure $ toast (getString OTP_RESENT)
@@ -1049,7 +1049,7 @@ driverDetailsFlow = do
   case action of
     DRIVER_ALTERNATE_CALL_API updatedState -> do
       let number =  if (updatedState.props.isEditAlternateMobile) then updatedState.data.driverEditAlternateMobile else updatedState.data.driverAlternateMobile
-      getAlternateMobileResp <- lift $ lift $ Remote.validateAlternateNumber (makeValidateAlternateNumberRequest (fromMaybe "" (number)))
+      getAlternateMobileResp <- lift $ lift $ Remote.validateAlternateNumber (makeValidateAlternateNumberRequest (fromMaybeString (number)))
       case  getAlternateMobileResp of
             Right (DriverAlternateNumberResp resp) -> do
                   modifyScreenState $ DriverDetailsScreenStateType (\driverDetailsScreen ->updatedState)
@@ -1069,7 +1069,7 @@ driverDetailsFlow = do
 
     RESEND_ALTERNATE_OTP updatedState -> do
       let number =  if (updatedState.props.isEditAlternateMobile) then updatedState.data.driverEditAlternateMobile else updatedState.data.driverAlternateMobile
-      getAlternateMobileResendOtpResp <- lift $ lift $ Remote.resendAlternateNumberOTP (makeResendAlternateNumberOtpRequest (fromMaybe "" (number)))
+      getAlternateMobileResendOtpResp <- lift $ lift $ Remote.resendAlternateNumberOTP (makeResendAlternateNumberOtpRequest (fromMaybeString (number)))
       case getAlternateMobileResendOtpResp of
             Right (AlternateNumberResendOTPResp resp) -> do
                 pure $ toast $ getString OTP_HAS_BEEN_RESENT
@@ -1178,7 +1178,7 @@ goToLocationFlow = do
         Right (API.AutoCompleteResp autoCompleteResp) -> 
           modifyScreenState $ DriverSavedLocationScreenStateType (\_ -> updatedState { data { predictions = 
             map (\(API.Prediction pred) -> {
-            title : (fromMaybe "" ((split (Pattern ",") (pred.description)) !! 0)),
+            title : (fromMaybeString ((split (Pattern ",") (pred.description)) !! 0)),
             description : drop ((fromMaybe 0 (indexOf (Pattern ",") (pred.description))) + 2) (pred.description),
             placeId : pred.placeId,
             distance : pred.distance
@@ -1935,7 +1935,7 @@ homeScreenFlow = do
               totalAmount = fromMaybe response.estimatedBaseFare response.computedFare,
               distance = parseFloat (toNumber (fromMaybe 0 response.chargeableDistance) / 1000.0) 2,
               status = response.status,
-              rider = (fromMaybe "" response.riderName),
+              rider = (fromMaybeString response.riderName),
               customerExtraFee = response.customerExtraFee,
               purpleTagVisibility = isJust response.disabilityTag,
               gotoTagVisibility = isJust response.driverGoHomeRequestId,
@@ -1944,9 +1944,9 @@ homeScreenFlow = do
               specialZoneImage = HU.getRideLabelData "imageUrl" response.specialLocationTag,
               specialZoneText = HU.getRideLabelData "text" response.specialLocationTag            
             }})
-          let payerVpa = fromMaybe "" response.payerVpa
+          let payerVpa = fromMaybeString response.payerVpa
           modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen {data { 
-            endRideData { finalAmount = fromMaybe response.estimatedBaseFare response.computedFare, riderName = fromMaybe "" response.riderName, rideId = response.id, tip = response.customerExtraFee, disability = response.disabilityTag, payerVpa = payerVpa }}})
+            endRideData { finalAmount = fromMaybe response.estimatedBaseFare response.computedFare, riderName = fromMaybeString response.riderName, rideId = response.id, tip = response.customerExtraFee, disability = response.disabilityTag, payerVpa = payerVpa }}})
         
       modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen {props { showRideCompleted = true}})
       _ <- updateStage $ HomeScreenStage RideCompleted
@@ -2670,7 +2670,7 @@ updateDriverDataToStates = do
   setValueToLocalStore VEHICLE_VARIANT linkedVehicle.variant
   setValueToLocalStore NEGOTIATION_UNIT $ getNegotiationUnit linkedVehicle.variant
   setValueToLocalStore USER_NAME getDriverInfoResp.firstName
-  setValueToLocalStore REFERRAL_CODE (fromMaybe "" getDriverInfoResp.referralCode)
+  setValueToLocalStore REFERRAL_CODE (fromMaybeString getDriverInfoResp.referralCode)
   setValueToLocalStore FREE_TRIAL_DAYS (show (fromMaybe 0 getDriverInfoResp.freeTrialDaysLeft))
   modifyScreenState $ DriverProfileScreenStateType (\driverProfileScreen -> driverProfileScreen { data {  driverName = getDriverInfoResp.firstName
     , driverVehicleType = linkedVehicle.variant
@@ -2730,7 +2730,7 @@ updateCleverTapUserProps (GetDriverInfoResp getDriverInfoResp)= do
   let (Vehicle linkedVehicle) = (fromMaybe dummyVehicleObject getDriverInfoResp.linkedVehicle)
   void $ pure $ setCleverTapUserProp [{key : "Vehicle Variant", value : unsafeToForeign linkedVehicle.variant},
                                       {key : "Blocked", value : (unsafeToForeign $ fromMaybe false getDriverInfoResp.blocked)},
-                                      {key : "Mode", value : unsafeToForeign $ fromMaybe "" getDriverInfoResp.mode},
+                                      {key : "Mode", value : unsafeToForeign $ fromMaybeString getDriverInfoResp.mode},
                                       {key : "First ride taken", value : unsafeToForeign $ if fromMaybe 0 getDriverInfoResp.numberOfRides > 0 then true else false},
                                       {key : "Plan Subscription Status", value : unsafeToForeign $ if isNothing getDriverInfoResp.autoPayStatus then false else true},
                                       {key : "Subscribed", value : unsafeToForeign $ getDriverInfoResp.subscribed},

@@ -50,6 +50,7 @@ import Screens.Types as ST
 import Services.API (FeeType(..), OfferEntity(..))
 import Storage (KeyStore(..), getValueToLocalStore)
 import Styles.Colors as Color
+import Engineering.Helpers.MobilityPrelude
 
 clearDueButtonConfig :: ST.SubscriptionScreenState -> PrimaryButton.Config
 clearDueButtonConfig state = let
@@ -485,7 +486,7 @@ offerCardBannerConfig isPlanCard bannerProps=
             "BN_IN" | len > 4 -> 4
             "ML_IN" | len > 5 -> 5
             _ -> 0
-    date = Mb.fromMaybe "" (strArray DA.!! (getLanguage (DA.length strArray)))
+    date = fromMaybeString (strArray DA.!! (getLanguage (DA.length strArray)))
     title' = getVarString OFFER_CARD_BANNER_TITLE [date]
     config = Banner.config
     config' = config  

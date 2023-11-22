@@ -37,6 +37,7 @@ import Components.ErrorModal as ErrorModalController
 import Components.IndividualRideCard.Controller as IndividualRideCardController
 import Components.PrimaryButton as PrimaryButton
 import Helpers.Utils as HU
+import Engineering.Helpers.MobilityPrelude
 
 instance showAction :: Show Action where
   show _ = ""
@@ -185,7 +186,7 @@ rideHistoryListTransformer list categoryAction =
     , card_visibility    : toPropValue "visible"
     , shimmer_visibility : toPropValue "gone"
     , driverSelectedFare : toPropValue ride.driverSelectedFare
-    , riderName : toPropValue $ fromMaybe "" ride.riderName
+    , riderName : toPropValue $ fromMaybeString ride.riderName
     , spLocTagVisibility : toPropValue if (isJust ride.specialLocationTag && (HU.getRequiredTag "text" ride.specialLocationTag) /= Nothing) then "visible" else "gone"
     , specialZoneText : toPropValue $ HU.getRideLabelData "text" ride.specialLocationTag
     , specialZoneImage : toPropValue $ HU.getRideLabelData "imageUrl" ride.specialLocationTag
@@ -224,7 +225,7 @@ rideListResponseTransformer list categoryAction =
     , shimmer_visibility : "gone"
     , driverSelectedFare : ride.driverSelectedFare
     , vehicleType : ride.vehicleVariant
-    , riderName : fromMaybe "" ride.riderName
+    , riderName : fromMaybeString ride.riderName
     , customerExtraFee : Nothing
     , purpleTagVisibility : false
     , gotoTagVisibility : false

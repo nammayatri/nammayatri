@@ -33,6 +33,7 @@ import Screens.PaymentHistoryScreen.Transformer (getAutoPayPaymentStatus, getInv
 import Screens.Types (PaymentHistoryScreenState, PaymentHistorySubview(..), PaymentListItem)
 import Services.API (AutoPayInvoiceHistory(..), FeeType(..), ManualInvoiceHistory(..))
 import Services.API (FeeType(..), GetPaymentHistoryResp(..), PaymentDetailsEntity(..), HistoryEntityV2Resp(..)) as SA
+import Engineering.Helpers.MobilityPrelude
 
 instance showAction :: Show Action where
   show _ = ""
@@ -139,7 +140,7 @@ getManualPayInvoice (ManualInvoiceHistory manualPayInvoice) = do
     where 
       getManualDesc :: String -> {description :: String, rideDays :: String}
       getManualDesc _ = do
-        let rideDate = Mb.fromMaybe "" manualPayInvoice.rideTakenOn
+        let rideDate = fromMaybeString manualPayInvoice.rideTakenOn
             rideDays = if manualPayInvoice.rideDays == 1 && rideDate /= "" then convertUTCtoISC rideDate "Do MMM YYYY" else show manualPayInvoice.rideDays <> " " <> getString DAYS
         case manualPayInvoice.feeType, manualPayInvoice.rideDays - 1 of
           AUTOPAY_REGISTRATION, 0 -> {description : getString ONE_TIME_REGISTERATION, rideDays : ""}

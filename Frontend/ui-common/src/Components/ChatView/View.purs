@@ -34,6 +34,7 @@ import PrestoDOM.Events (afterRender)
 import Engineering.Helpers.Commons (screenHeight, safeMarginTop)
 import Engineering.Helpers.Suggestions(getMessageFromKey)
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
+import Engineering.Helpers.MobilityPrelude
 
 view :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push config =
@@ -252,7 +253,7 @@ chatFooterView config push =
          , id (getNewIDWithTag "ChatInputEditText")
          , background config.grey800
          , cornerRadius 24.0
-         , hint $ config.hint <> " " <> fromMaybe "" ((STR.split (STR.Pattern " ") config.userConfig.userName) !! 0) <> "..."
+         , hint $ config.hint <> " " <> fromMaybeString ((STR.split (STR.Pattern " ") config.userConfig.userName) !! 0) <> "..."
          , singleLine true
          , hintColor config.black700
          , ellipsize true

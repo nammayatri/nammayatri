@@ -45,6 +45,7 @@ import Common.Types.App (LazyCheck(..))
 import MerchantConfig.Utils (getValueFromConfig, getMerchant, Merchant(..))
 import Effect.Unsafe (unsafePerformEffect)
 import Engineering.Helpers.LogEvent (logEvent)
+import Engineering.Helpers.MobilityPrelude
 
 instance showAction :: Show Action where
   show _ = ""
@@ -176,7 +177,7 @@ eval _ state = continue state
 
 myRideListTransformerProp :: Array RideBookingRes  -> Array ItemState
 myRideListTransformerProp listRes =  filter (\item -> (item.status == (toPropValue "COMPLETED") || item.status == (toPropValue "CANCELLED"))) (map (\(RideBookingRes ride) -> {
-    date : toPropValue (( (fromMaybe "" ((split (Pattern ",") (convertUTCtoISC (fromMaybe ride.createdAt ride.rideStartTime) "llll")) !!0 )) <> ", " <>  (convertUTCtoISC (fromMaybe ride.createdAt ride.rideStartTime) "Do MMM") )),
+    date : toPropValue (( (fromMaybeString ((split (Pattern ",") (convertUTCtoISC (fromMaybe ride.createdAt ride.rideStartTime) "llll")) !!0 )) <> ", " <>  (convertUTCtoISC (fromMaybe ride.createdAt ride.rideStartTime) "Do MMM") )),
     time : toPropValue (convertUTCtoISC (fromMaybe ride.createdAt ride.rideStartTime) "h:mm A"),
     source : toPropValue (decodeAddress (Booking ride.fromLocation)),
     destination : toPropValue (decodeAddress (Booking (ride.bookingDetails ^._contents^._toLocation))),
@@ -188,8 +189,8 @@ myRideListTransformerProp listRes =  filter (\item -> (item.status == (toPropVal
     isSuccessfull : toPropValue (if ride.status == "COMPLETED" then "visible" else "gone"),
     rating : toPropValue (fromMaybe 0 ((fromMaybe dummyRideAPIEntity (ride.rideList !!0) )^. _rideRating)),
     driverName : toPropValue ((fromMaybe dummyRideAPIEntity (ride.rideList !!0) )^. _driverName),
-    rideStartTime : toPropValue (convertUTCtoISC (fromMaybe "" ride.rideStartTime) "h:mm A"),
-    rideEndTime : toPropValue (convertUTCtoISC (fromMaybe "" ride.rideEndTime) "h:mm A"),
+    rideStartTime : toPropValue (convertUTCtoISC (fromMaybeString ride.rideStartTime) "h:mm A"),
+    rideEndTime : toPropValue (convertUTCtoISC (fromMaybeString ride.rideEndTime) "h:mm A"),
     vehicleNumber : toPropValue ((fromMaybe dummyRideAPIEntity (ride.rideList !!0) )^._vehicleNumber),
     rideId : toPropValue ((fromMaybe dummyRideAPIEntity (ride.rideList !!0) )^._id),
     status : toPropValue (ride.status),
@@ -210,7 +211,7 @@ myRideListTransformer state listRes = filter (\item -> (item.status == "COMPLETE
     updatedFareList = getFaresList ride.fareBreakup baseDistanceVal
     specialTags = getSpecialTag ride.specialLocationTag
      in {
-    date : (( (fromMaybe "" ((split (Pattern ",") (convertUTCtoISC (fromMaybe ride.createdAt ride.rideStartTime) "llll")) !!0 )) <> ", " <>  (convertUTCtoISC (fromMaybe ride.createdAt ride.rideStartTime) "Do MMM") )),
+    date : (( (fromMaybeString ((split (Pattern ",") (convertUTCtoISC (fromMaybe ride.createdAt ride.rideStartTime) "llll")) !!0 )) <> ", " <>  (convertUTCtoISC (fromMaybe ride.createdAt ride.rideStartTime) "Do MMM") )),
     time :  (convertUTCtoISC (fromMaybe ride.createdAt ride.rideStartTime) "h:mm A"),
     source :  decodeAddress (Booking ride.fromLocation),
     destination : decodeAddress (Booking (ride.bookingDetails ^._contents^._toLocation)),
@@ -222,14 +223,14 @@ myRideListTransformer state listRes = filter (\item -> (item.status == "COMPLETE
     isSuccessfull :  (if ride.status == "COMPLETED" then "visible" else "gone"),
     rating : (fromMaybe 0 rideDetails.rideRating),
     driverName : (rideDetails.driverName),
-    rideStartTime : (convertUTCtoISC (fromMaybe "" ride.rideStartTime) "h:mm A"),
-    rideEndTime : (convertUTCtoISC (fromMaybe "" ride.rideEndTime) "h:mm A"),
+    rideStartTime : (convertUTCtoISC (fromMaybeString ride.rideStartTime) "h:mm A"),
+    rideEndTime : (convertUTCtoISC (fromMaybeString ride.rideEndTime) "h:mm A"),
     vehicleNumber : (rideDetails.vehicleNumber),
     rideId : (rideDetails.id),
     status : ride.status,
     shortRideId : (rideDetails.shortRideId),
     bookingId : ride.id,
-    rideEndTimeUTC : fromMaybe "" (ride.rideEndTime),
+    rideEndTimeUTC : fromMaybeString (ride.rideEndTime),
     sourceLocation : ride.fromLocation,
     destinationLocation : ((ride.bookingDetails)^._contents)^._toLocation,
     alpha : if isLocalStageOn HomeScreen then "1.0" else "0.5"

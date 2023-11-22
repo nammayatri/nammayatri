@@ -13,7 +13,10 @@
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Components.SelectListModal.View where
+module Components.SelectListModal.View
+  ( view
+  )
+  where
 
 import Prelude
 import PrestoDOM (Length(..), Margin(..), Orientation(..), Padding(..), Visibility(..), Length(..), Accessiblity(..), PrestoDOM, background, clickable, color, cornerRadius, fontStyle, gravity, height, imageUrl, imageView, linearLayout, margin, orientation, text, textSize, textView, weight, width, padding, visibility, frameLayout, stroke, scrollView, afterRender, editText, onClick, id, onChange, pattern, relativeLayout, alignParentBottom, adjustViewWithKeyboard, singleLine, hint, hintColor, multiLineEditText, disableClickFeedback, imageWithFallback,onBackPressed, accessibility, accessibilityHint)
@@ -46,6 +49,7 @@ import Common.Types.App (LazyCheck(..))
 import Prelude ((<>))
 import MerchantConfig.Utils(getValueFromConfig)
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
+import Engineering.Helpers.MobilityPrelude
 
 view :: forall w .  (Action  -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push config =
@@ -416,8 +420,8 @@ radioButton config push index item =
           , color Color.black900
           ] <> font config.activeIndex
         , textView $
-          [ text $ fromMaybe "" item.subtext
-          , accessibilityHint $ fromMaybe "" item.subtext <> " : Selected"
+          [ text $ fromMaybeString item.subtext
+          , accessibilityHint $ fromMaybeString item.subtext <> " : Selected"
           , accessibility ENABLE
           , width if os == "IOS" then V $ (screenWidth unit) - 80 else WRAP_CONTENT
           , color Color.black650

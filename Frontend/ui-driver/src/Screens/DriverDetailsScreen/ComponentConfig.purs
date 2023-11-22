@@ -38,6 +38,7 @@ import Components.PopUpModal.View as PopUpModal
 import Components.PopUpModal.Controller as PopUpModalConfig
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import MerchantConfig.Utils (getValueFromConfig)
+import Engineering.Helpers.MobilityPrelude
 
 removeAlternateNumberConfig :: ST.DriverDetailsScreenState -> PopUpModalConfig.Config
 removeAlternateNumberConfig state = let
@@ -150,7 +151,7 @@ enterOtpState state = let
       margin = (Margin 0 0 0 8)
       },
       subHeadingConfig {
-        text = if((getValueToLocalStore LANGUAGE_KEY) == "EN_US") then (getString (OTP_SENT_TO) <> (if (state.props.isEditAlternateMobile) then (fromMaybe "" state.data.driverEditAlternateMobile) else (fromMaybe "" state.data.driverAlternateMobile))) else ( (if (state.props.isEditAlternateMobile) then (fromMaybe "" state.data.driverEditAlternateMobile) else (fromMaybe "" state.data.driverAlternateMobile)) <> (getString OTP_SENT_TO)),
+        text = if((getValueToLocalStore LANGUAGE_KEY) == "EN_US") then (getString (OTP_SENT_TO) <> (if (state.props.isEditAlternateMobile) then (fromMaybeString state.data.driverEditAlternateMobile) else (fromMaybeString state.data.driverAlternateMobile))) else ( (if (state.props.isEditAlternateMobile) then (fromMaybeString state.data.driverEditAlternateMobile) else (fromMaybeString state.data.driverAlternateMobile)) <> (getString OTP_SENT_TO)),
         color = Color.black800,
         margin = (Margin 0 0 0 8),
         visibility = (if not state.props.otpIncorrect then VISIBLE else GONE)
@@ -177,7 +178,7 @@ enterMobileNumberState state = let
           visibility = GONE
         },
         inputTextConfig {
-          text = if(state.props.isEditAlternateMobile) then (if (state.data.driverEditAlternateMobile  == Nothing) then (getString ENTER_MOBILE_NUMBER) else fromMaybe "" (state.data.driverEditAlternateMobile)) else (if (state.data.driverAlternateMobile == Nothing) then (getString ENTER_MOBILE_NUMBER) else fromMaybe "" (state.data.driverAlternateMobile))
+          text = if(state.props.isEditAlternateMobile) then (if (state.data.driverEditAlternateMobile  == Nothing) then (getString ENTER_MOBILE_NUMBER) else fromMaybeString (state.data.driverEditAlternateMobile)) else (if (state.data.driverAlternateMobile == Nothing) then (getString ENTER_MOBILE_NUMBER) else fromMaybeString (state.data.driverAlternateMobile))
         , color = if(state.props.isEditAlternateMobile) then (if( state.data.driverEditAlternateMobile == Nothing ) then Color.black500 else Color.black800) else (if( state.data.driverAlternateMobile == Nothing ) then Color.black500 else Color.black800)
         , focusIndex = 0
         , gravity = LEFT
@@ -185,7 +186,7 @@ enterMobileNumberState state = let
         imageConfig {
           alpha = case state.data.driverAlternateMobile of
                 Nothing -> 0.3
-                Just _ -> if (length (fromMaybe "" state.data.driverAlternateMobile) < 10 || not state.props.checkAlternateNumber || (state.props.isEditAlternateMobile &&  length (fromMaybe "" state.data.driverEditAlternateMobile) < 10)|| state.props.numberExistError)
+                Just _ -> if (length (fromMaybeString state.data.driverAlternateMobile) < 10 || not state.props.checkAlternateNumber || (state.props.isEditAlternateMobile &&  length (fromMaybeString state.data.driverEditAlternateMobile) < 10)|| state.props.numberExistError)
                 then 0.3 else 1.0
         },
        modalType = (if state.props.otpAttemptsExceeded then ST.NONE else ST.MOBILE__NUMBER),

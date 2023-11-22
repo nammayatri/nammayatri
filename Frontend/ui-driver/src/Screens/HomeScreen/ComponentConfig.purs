@@ -60,6 +60,7 @@ import Services.API (PaymentBreakUp(..), PromotionPopupConfig(..), Status(..))
 import Storage (KeyStore(..), getValueToLocalNativeStore, getValueToLocalStore)
 import Styles.Colors as Color
 import Font.Style (Style (..))
+import Engineering.Helpers.MobilityPrelude
 
 --------------------------------- rideActionModalConfig -------------------------------------
 rideActionModalConfig :: ST.HomeScreenState -> RideActionModal.Config
@@ -69,16 +70,16 @@ rideActionModalConfig state =
   rideActionModalConfig' = config {
     startRideActive = (state.props.currentStage == ST.RideAccepted || state.props.currentStage == ST.ChatWithCustomer),
     totalDistance = if state.data.activeRide.distance <= 0.0 then "0.0" else if(state.data.activeRide.distance < 1000.0) then HU.parseFloat (state.data.activeRide.distance) 2 <> " m" else HU.parseFloat((state.data.activeRide.distance / 1000.0)) 2 <> " km",
-    customerName = if DS.length (fromMaybe "" ((DS.split (DS.Pattern " ") (state.data.activeRide.riderName)) DA.!! 0)) < 4
-                      then (fromMaybe "" ((DS.split (DS.Pattern " ") (state.data.activeRide.riderName)) DA.!! 0)) <> " " <> (fromMaybe "" ((DS.split (DS.Pattern " ") (state.data.activeRide.riderName)) DA.!! 1))
+    customerName = if DS.length (fromMaybeString ((DS.split (DS.Pattern " ") (state.data.activeRide.riderName)) DA.!! 0)) < 4
+                      then (fromMaybeString ((DS.split (DS.Pattern " ") (state.data.activeRide.riderName)) DA.!! 0)) <> " " <> (fromMaybeString ((DS.split (DS.Pattern " ") (state.data.activeRide.riderName)) DA.!! 1))
                       else
-                        (fromMaybe "" ((DS.split (DS.Pattern " ") (state.data.activeRide.riderName)) DA.!! 0)),
+                        (fromMaybeString ((DS.split (DS.Pattern " ") (state.data.activeRide.riderName)) DA.!! 0)),
     sourceAddress  {
-      titleText = fromMaybe "" ((DS.split (DS.Pattern ",") (state.data.activeRide.source)) DA.!! 0),
+      titleText = fromMaybeString ((DS.split (DS.Pattern ",") (state.data.activeRide.source)) DA.!! 0),
       detailText = state.data.activeRide.source
     },
     destinationAddress {
-      titleText = fromMaybe "" ((DS.split (DS.Pattern ",") (state.data.activeRide.destination)) DA.!! 0),
+      titleText = fromMaybeString ((DS.split (DS.Pattern ",") (state.data.activeRide.destination)) DA.!! 0),
       detailText = state.data.activeRide.destination
     },
     estimatedRideFare = state.data.activeRide.estimatedFare,

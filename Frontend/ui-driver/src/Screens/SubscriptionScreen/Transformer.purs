@@ -38,7 +38,7 @@ import MerchantConfig.Types (SubscriptionConfig, GradientConfig)
 import Screens.Types (KeyValType, PlanCardConfig, PromoConfig, SubscriptionScreenState, DueItem)
 import Services.API (DriverDuesEntity(..), FeeType(..), GetCurrentPlanResp(..), MandateData(..), OfferEntity(..), PaymentBreakUp(..), PlanEntity(..), UiPlansResp(..))
 import Storage (getValueToLocalStore, KeyStore(..))
-
+import Engineering.Helpers.MobilityPrelude
 
 type PlanData = {
     title :: String,
@@ -59,12 +59,12 @@ getPromoConfig offerEntityArr gradientConfig =
     (map (\ (OfferEntity item) ->  do
         let gradient' = DA.find (\( item') -> item'.id == item.offerId) gradientConfig
         {     
-            title : Just $ decodeOfferDescription (fromMaybe "" item.title) ,
+            title : Just $ decodeOfferDescription (fromMaybeString item.title) ,
             isGradient : isJust gradient' || item.title == Just "Freedom Offer: 96% off APPLIED-*$*-ಫ್ರೀಡಮ್ ಆಫರ್: 96% ರಷ್ಟು ರಿಯಾಯಿತಿ",
             gradient : if item.title == Just "Freedom Offer: 96% off APPLIED-*$*-ಫ್ರೀಡಮ್ ಆಫರ್: 96% ರಷ್ಟು ರಿಯಾಯಿತಿ" then [Color.orange200, Color.white900, Color.green300] else (fromMaybe {id : "", colors : []} gradient').colors,
             hasImage : true ,
             imageURL : fetchImage FF_ASSET "ny_ic_discount" ,
-            offerDescription : Just $ decodeOfferDescription (fromMaybe "" item.description),
+            offerDescription : Just $ decodeOfferDescription (fromMaybeString item.description),
             addedFromUI : false
         }
     ) offerEntityArr)
@@ -88,7 +88,7 @@ planListTransformer (UiPlansResp planResp) isIntroductory gradientConfig =
 decodeOfferDescription :: String -> String
 decodeOfferDescription str = do
     let strArray = split (Pattern "-*$*-") str
-    fromMaybe "" (strArray !! (getLanguage (length strArray)))
+    fromMaybeString (strArray !! (getLanguage (length strArray)))
     where 
         getLanguage len = do
             case getValueToLocalStore LANGUAGE_KEY of
@@ -102,7 +102,7 @@ decodeOfferDescription str = do
 decodeOfferPlan :: String -> {plan :: String, offer :: String}
 decodeOfferPlan str = do
     let strArray = split (Pattern "-*@*-") str
-    {plan : (decodeOfferDescription $ fromMaybe "" (strArray !! 0)), offer : (decodeOfferDescription $ fromMaybe "" (strArray !! 1))}
+    {plan : (decodeOfferDescription $ fromMaybeString (strArray !! 0)), offer : (decodeOfferDescription $ fromMaybeString (strArray !! 1))}
 
 freeRideOfferConfig :: LazyCheck -> PromoConfig
 freeRideOfferConfig lazy = 
@@ -210,14 +210,14 @@ getPlanCardConfig (PlanEntity planEntity) isLocalized isIntroductory gradientCon
 
 constructDues :: Array DriverDuesEntity -> Array DueItem
 constructDues duesArr = (mapWithIndex (\ ind (DriverDuesEntity item) ->  
-  let offerAndPlanDetails = fromMaybe "" item.offerAndPlanDetails
+  let offerAndPlanDetails = fromMaybeString item.offerAndPlanDetails
   in
   {    
     tripDate: item.rideTakenOn,
     amount: item.driverFeeAmount,
     earnings: item.totalEarnings,
     noOfRides: item.totalRides,
-    scheduledAt: convertUTCtoISC (fromMaybe "" item.executionAt) "Do MMM YYYY, h:mm A",
+    scheduledAt: convertUTCtoISC (fromMaybeString item.executionAt) "Do MMM YYYY, h:mm A",
     paymentStatus: "",
     feeBreakup: getFeeBreakup offerAndPlanDetails item.totalRides ,
     plan: offerAndPlanDetails,
@@ -229,8 +229,8 @@ constructDues duesArr = (mapWithIndex (\ ind (DriverDuesEntity item) ->
 
 getFeeBreakup :: String -> Int -> String
 getFeeBreakup plan rides = 
-    let planWithTranslations = fromMaybe "" ((split (Pattern "-*@*-") plan) !! 0)
-        planInEng = fromMaybe "" ((split (Pattern "-*$*-") planWithTranslations) !! 0)
+    let planWithTranslations = fromMaybeString ((split (Pattern "-*@*-") plan) !! 0)
+        planInEng = fromMaybeString ((split (Pattern "-*$*-") planWithTranslations) !! 0)
         planConfig = getPlanAmountConfig planInEng
     in
     case planConfig.isFixed of

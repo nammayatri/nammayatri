@@ -44,7 +44,7 @@ import Services.API as API
 import Storage (KeyStore(..), setValueToLocalStore, getValueToLocalStore)
 import Effect.Uncurried  (runEffectFn1)
 import PaymentPage (consumeBP)
-import Engineering.Helpers.MobilityPrelude(isStrEmpty)
+import Engineering.Helpers.MobilityPrelude(isStrEmpty, fromMaybeString)
 
 screen :: ST.TicketBookingScreenState -> Screen Action ST.TicketBookingScreenState ScreenOutput
 screen initialState =
@@ -951,7 +951,7 @@ tvView textString textColor textMargin fontSt =
 bookingInfoView :: forall w. ST.TicketBookingScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 bookingInfoView state push =
   let activeItem = state.props.activeListItem
-      validityTime = (fromMaybe "" activeItem.expiryDate)
+      validityTime = (fromMaybeString activeItem.expiryDate)
       validUntil = (convertUTCtoISC validityTime "hh:mm A") <> ", " <> (convertUTCtoISC validityTime "Do MMM YYYY")
   in
   linearLayout

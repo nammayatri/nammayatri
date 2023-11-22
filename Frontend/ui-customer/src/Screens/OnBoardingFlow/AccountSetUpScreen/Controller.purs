@@ -35,6 +35,7 @@ import PrestoDOM.Types.Core (class Loggable)
 import Screens (ScreenName(..), getScreen)
 import Screens.Types (AccountSetUpScreenState, Gender(..), ActiveFieldAccountSetup(..), ErrorType(..))
 import Data.Array as DA
+import Engineering.Helpers.MobilityPrelude
 
 instance showAction :: Show Action where
   show _ = ""
@@ -108,7 +109,7 @@ eval :: Action -> AccountSetUpScreenState -> Eval Action ScreenOutput AccountSet
 eval (PrimaryButtonActionController PrimaryButtonController.OnClick) state = do
   _ <- pure $ hideKeyboardOnNavigation true
   if state.data.disabilityOptions.activeIndex == 1 then 
-    continue state{props{isSpecialAssistList = true},data{disabilityOptions{editedDisabilityReason = fromMaybe "" state.data.disabilityOptions.otherDisabilityReason}}}
+    continue state{props{isSpecialAssistList = true},data{disabilityOptions{editedDisabilityReason = fromMaybeString state.data.disabilityOptions.otherDisabilityReason}}}
     else do 
       let newState = state{data{disabilityOptions{editedDisabilityReason = "" , selectedDisability = Nothing, otherDisabilityReason = Nothing}}}
       updateAndExit newState $ GoHome newState
@@ -160,7 +161,7 @@ eval (GenericRadioButtonAC (GenericRadioButton.OnSelect idx)) state = do
 
 eval (SpecialAssistanceListAC action) state = case action of
   SelectListModal.OnGoBack -> continue state{props{isSpecialAssistList = false}}
-  SelectListModal.UpdateIndex idx -> continue state{data{disabilityOptions{specialAssistActiveIndex = idx, editedDisabilityReason = fromMaybe "" state.data.disabilityOptions.otherDisabilityReason}}}
+  SelectListModal.UpdateIndex idx -> continue state{data{disabilityOptions{specialAssistActiveIndex = idx, editedDisabilityReason = fromMaybeString state.data.disabilityOptions.otherDisabilityReason}}}
   SelectListModal.TextChanged id input -> continue state {data{disabilityOptions{ otherDisabilityReason = Just input}}}
   SelectListModal.Button2 (PrimaryButtonController.OnClick) -> do 
     _ <- pure $ hideKeyboardOnNavigation true

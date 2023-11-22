@@ -43,9 +43,7 @@ import Components.PrimaryButton as PrimaryButtonController
 import Common.Types.App (OptionButtonList)
 import Data.Array as Array
 import Components.PopUpModal as PopUpModal
-
-
-
+import Engineering.Helpers.MobilityPrelude
 
 instance showAction :: Show Action where
   show _ = ""
@@ -170,7 +168,7 @@ eval (InAppKeyboardModalMobile (InAppKeyboardModal.OnClickTextCross)) state = do
   continue state {data {driverEditAlternateMobile = Nothing, driverAlternateMobile = (if not state.props.isEditAlternateMobile then (Nothing) else state.data.driverAlternateMobile)},props {numberExistError= false, checkAlternateNumber = true}}
 
 eval (InAppKeyboardModalMobile (InAppKeyboardModal.OnSelection key index)) state = do
-  let newVal = if not state.props.isEditAlternateMobile then ((fromMaybe "" state.data.driverAlternateMobile) <> key) else ((fromMaybe "" state.data.driverEditAlternateMobile) <> key)
+  let newVal = if not state.props.isEditAlternateMobile then ((fromMaybeString state.data.driverAlternateMobile) <> key) else ((fromMaybeString state.data.driverEditAlternateMobile) <> key)
   if(length newVal == 0) then
   continue state {data = state.data {driverAlternateMobile = (if (state.props.isEditAlternateMobile) then (state.data.driverAlternateMobile) else Nothing), driverEditAlternateMobile = Nothing }, props = state.props {checkAlternateNumber = not state.props.isEditAlternateMobile, numberExistError = false}}
   else if length newVal <= 10 then (do
@@ -278,9 +276,9 @@ getValue :: ListOptions -> DriverDetailsScreenState -> String
 getValue listOptions state =
   case listOptions of
     DRIVER_NAME_INFO -> state.data.driverName
-    DRIVER_MOBILE_INFO -> (fromMaybe "" (state.data.driverMobile))
+    DRIVER_MOBILE_INFO -> (fromMaybeString (state.data.driverMobile))
     DRIVER_LICENCE_INFO -> state.data.drivingLicenseNo
-    DRIVER_ALTERNATE_MOBILE_INFO -> (fromMaybe "" state.data.driverAlternateMobile)
+    DRIVER_ALTERNATE_MOBILE_INFO -> (fromMaybeString state.data.driverAlternateMobile)
     GENDER_INFO -> (fromMaybe (getString SET_NOW) (getGenderValue state.data.driverGender))
 
 dummyOptions :: OptionButtonList

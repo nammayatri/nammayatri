@@ -60,6 +60,7 @@ import Screens.SubscriptionScreen.Controller
 import Effect.Aff (launchAff_)
 import Effect.Uncurried(runEffectFn4)
 import Storage (isLocalStageOn)
+import Engineering.Helpers.MobilityPrelude
 
 instance showAction :: Show Action where
   show _ = ""
@@ -355,7 +356,7 @@ eval (GetDriverInfoResponse (SA.GetDriverInfoResp driverProfileResp)) state = do
                                       vehicleSelected = getDowngradeOptionsSelected  (SA.GetDriverInfoResp driverProfileResp),
                                       driverAlternateNumber = driverProfileResp.alternateNumber ,
                                       driverGender = driverProfileResp.gender,
-                                      payerVpa = fromMaybe "" driverProfileResp.payerVpa,
+                                      payerVpa = fromMaybeString driverProfileResp.payerVpa,
                                       autoPayStatus = getAutopayStatus driverProfileResp.autoPayStatus
                                       },
                     props { enableGoto = driverProfileResp.isGoHomeEnabled && driverGoHomeInfo.status /= Just "ACTIVE" && state.data.config.gotoConfig.enableGoto }}
@@ -407,7 +408,7 @@ eval (PrimaryButtonActionController (PrimaryButton.OnClick)) state = do
   else exit (UpdateGender state{data{driverGender = state.data.genderTypeSelect},props{showGenderView = false}})
 
 eval SelectGender state = do
-  continue state{props{showGenderView = true}, data{genderTypeSelect = if (fromMaybe "" state.data.driverGender) == "UNKNOWN" then Nothing else state.data.driverGender}}
+  continue state{props{showGenderView = true}, data{genderTypeSelect = if (fromMaybeString state.data.driverGender) == "UNKNOWN" then Nothing else state.data.driverGender}}
 
 eval UpdateAlternateNumber state = do
   let curr_time = getCurrentUTC ""
@@ -443,7 +444,7 @@ eval EditNumberText state = do
    continue state
   else
     continueWithCmd state {data{alterNumberEditableText=false}, props{numberExistError=false, isEditAlternateMobile = true, checkAlternateNumber = true, mNumberEdtFocused = false}}[do
-        _ <- pure $ setText (getNewIDWithTag "alternateMobileNumber") (fromMaybe "" state.data.driverAlternateNumber)
+        _ <- pure $ setText (getNewIDWithTag "alternateMobileNumber") (fromMaybeString state.data.driverAlternateNumber)
         pure NoAction
     ]
 
@@ -590,7 +591,7 @@ checkGenderSelect :: Maybe String -> ST.Gender -> Boolean
 checkGenderSelect genderTypeSelect genderType =
   if not (isJust genderTypeSelect) then false
   else do
-    let gender = fromMaybe "" genderTypeSelect
+    let gender = fromMaybeString genderTypeSelect
     case genderType of
       ST.MALE -> gender == "MALE"
       ST.FEMALE -> gender == "FEMALE"

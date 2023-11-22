@@ -75,7 +75,7 @@ import Storage (KeyStore(..), getValueToLocalNativeStore, getValueToLocalStore, 
 import Styles.Colors as Color
 import Types.App (GlobalState(..), defaultGlobalState)
 import Screens.DriverProfileScreen.ScreenData (dummyDriverInfo)
-import Engineering.Helpers.MobilityPrelude(isStrEmpty)
+import Engineering.Helpers.MobilityPrelude(isStrEmpty, fromMaybeString)
 
 screen :: SubscriptionScreenState -> GlobalState -> Screen Action SubscriptionScreenState ScreenOutput
 screen initialState globalState =
@@ -1115,7 +1115,7 @@ planCardView push state isSelected clickable' action isSelectedLangTamil showBan
                         Mb.Just desc -> [text desc, visibility if isSelected || isIntroductory then VISIBLE else GONE]
                         Mb.Nothing -> [visibility GONE])
                   [ textView $
-                    [ textFromHtml $ Mb.fromMaybe "" item.offerDescription
+                    [ textFromHtml $ fromMaybeString item.offerDescription
                     , color Color.black600
                     ] <> if isSelectedLangTamil then FontStyle.captions TypoGraphy else FontStyle.body3 TypoGraphy
                   ]
@@ -1281,7 +1281,7 @@ autoPayPGView push state =
                   , width $ V 14
                   ]
               ]
-          ] <> if (isJust state.data.autoPayDetails.payerUpiId) then [commonTV push (fromMaybe "" state.data.autoPayDetails.payerUpiId) Color.black800 (FontStyle.paragraphText TypoGraphy) 0 LEFT true] else [])
+          ] <> if (isJust state.data.autoPayDetails.payerUpiId) then [commonTV push (fromMaybeString state.data.autoPayDetails.payerUpiId) Color.black800 (FontStyle.paragraphText TypoGraphy) 0 LEFT true] else [])
           
         , linearLayout
           [ height WRAP_CONTENT
@@ -1558,7 +1558,7 @@ helpCentreCardView push state =
       , orientation $ HORIZONTAL
       , padding $ PaddingVertical 15 15
       , gravity CENTER_VERTICAL
-      , onClick push $ const $ CallHelpCenter (fromMaybe "" state.contact)
+      , onClick push $ const $ CallHelpCenter (fromMaybeString state.contact)
       , visibility $ case state.contact of 
                       Just _ -> VISIBLE
                       Nothing -> GONE
@@ -1837,7 +1837,7 @@ splitBasedOnLanguage :: String -> String
 splitBasedOnLanguage str = 
     let strArray = DS.split (DS.Pattern "-*$*-") str
     in
-    fromMaybe "" (strArray !! (getLanguage (length strArray)))
+    fromMaybeString (strArray !! (getLanguage (length strArray)))
     where 
         getLanguage len = do
             case getValueToLocalStore LANGUAGE_KEY of

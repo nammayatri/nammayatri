@@ -49,6 +49,7 @@ import Screens.Types (RideHistoryScreenState, AnimationState(..), ItemState(..),
 import Services.API (RidesInfo(..), Status(..))
 import Storage (KeyStore(..), getValueToLocalNativeStore, setValueToLocalNativeStore)
 import Styles.Colors as Color
+import Engineering.Helpers.MobilityPrelude
 
 instance showAction :: Show Action where
   show _ = ""
@@ -232,7 +233,7 @@ rideHistoryListTransformer list = (map (\(RidesInfo ride) ->
                     "COMPLETED" -> Color.black800
                     "CANCELLED" -> Color.red
                     _ -> Color.black800),
-      riderName : toPropValue $ fromMaybe "" ride.riderName,
+      riderName : toPropValue $ fromMaybeString ride.riderName,
       spLocTagVisibility : toPropValue if (isJust ride.specialLocationTag && (getRequiredTag "text" ride.specialLocationTag) /= Nothing) then "visible" else "gone",
       specialZoneText : toPropValue $ getRideLabelData "text" ride.specialLocationTag,
       specialZoneImage : toPropValue $ getRideLabelData "imageUrl" ride.specialLocationTag,
@@ -274,7 +275,7 @@ rideListResponseTransformer list =  map (\(RidesInfo ride) -> {
     source : (decodeAddress (ride.fromLocation) false),
     destination : (decodeAddress (ride.toLocation) false),
     vehicleType : ride.vehicleVariant,
-    riderName : fromMaybe "" ride.riderName,
+    riderName : fromMaybeString ride.riderName,
     customerExtraFee : ride.customerExtraFee,
     purpleTagVisibility : isJust ride.disabilityTag,
     gotoTagVisibility : isJust ride.driverGoHomeRequestId,

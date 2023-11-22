@@ -1000,7 +1000,7 @@ activeRideDetail state (RidesInfo ride) = {
               _ -> COMPLETED,
   distance : (toNumber ride.estimatedDistance),
   duration : state.data.activeRide.duration,
-  riderName : fromMaybe "" ride.riderName,
+  riderName : fromMaybeString ride.riderName,
   estimatedFare : ride.driverSelectedFare + ride.estimatedBaseFare,
   notifiedCustomer : getValueToLocalStore WAITING_TIME_STATUS == (show ST.PostTriggered),
   exoPhone : ride.exoPhone,

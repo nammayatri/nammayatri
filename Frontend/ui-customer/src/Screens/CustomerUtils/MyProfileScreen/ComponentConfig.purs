@@ -41,6 +41,7 @@ import PrestoDOM.Animation as PrestoAnim
 import Screens.Types as ST
 import Styles.Colors as Color
 import Data.Array as DA
+import Engineering.Helpers.MobilityPrelude
 
 genericHeaderConfig :: ST.MyProfileScreenState -> GenericHeader.Config 
 genericHeaderConfig state = let 
@@ -103,7 +104,7 @@ emailEditTextConfig state = let
                 color = Color.black900
             },
             editText {
-                text = fromMaybe "" state.data.emailId,
+                text = fromMaybeString state.data.emailId,
                 placeholder = "example@xyz.com",
                 placeholderColor = Color.black600
             },
