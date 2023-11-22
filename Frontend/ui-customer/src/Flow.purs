@@ -593,7 +593,7 @@ homeScreenFlow = do
         let state = newState.homeScreen
 
         case state.props.sourceSelectedOnMap of
-          true | state.props.isSource == Just true -> pure unit
+          true | isJustTrue state.props.isSource -> pure unit
           _ -> 
             case state.props.isSource of
               Just true -> do
@@ -602,7 +602,7 @@ homeScreenFlow = do
                     (LatLong sourceLocation) = sourceDetailResponse.location
                 modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{ props{sourceLat = sourceLocation.lat, sourceLong = sourceLocation.lon} })
               Just false  -> do
-                (GetPlaceNameResp destinationDetailResp) <- getPlaceNameResp state.data.destination state.props.destinationPlaceId state.props.destinationLat state.props.destinationLong (if state.props.isSource == Just true then dummyLocationListItemState else item)
+                (GetPlaceNameResp destinationDetailResp) <- getPlaceNameResp state.data.destination state.props.destinationPlaceId state.props.destinationLat state.props.destinationLong (if isJustTrue state.props.isSource then dummyLocationListItemState else item)
                 let (PlaceName destinationDetailResponse) = (fromMaybe HomeScreenData.dummyLocationName (destinationDetailResp!!0))
                     (LatLong destinationLocation) = (destinationDetailResponse.location)
                 modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{ props{destinationLat = destinationLocation.lat, destinationLong = destinationLocation.lon} })
@@ -965,20 +965,20 @@ homeScreenFlow = do
         liftFlowBT $ runEffectFn1 locateOnMap locateOnMapConfig { goToCurrentLocation = false, lat = lat, lon = lon, geoJson = (fromMaybeString sourceServiceabilityResp.geoJson), points = pickUpPoints, zoomLevel = zoomLevel, labelId = getNewIDWithTag "LocateOnMapPin"}
         homeScreenFlow
       else do
-        let cachedLat = (if state.props.isSource == Just true then state.props.locateOnMapLocation.sourceLat else state.props.locateOnMapLocation.destinationLat)
-            cachedLon = (if state.props.isSource == Just true then state.props.locateOnMapLocation.sourceLng else state.props.locateOnMapLocation.destinationLng)
-            cachedLocation = (if state.props.isSource == Just true then state.props.locateOnMapLocation.source else state.props.locateOnMapLocation.destination)
+        let cachedLat = (if isJustTrue state.props.isSource then state.props.locateOnMapLocation.sourceLat else state.props.locateOnMapLocation.destinationLat)
+            cachedLon = (if isJustTrue state.props.isSource then state.props.locateOnMapLocation.sourceLng else state.props.locateOnMapLocation.destinationLng)
+            cachedLocation = (if isJustTrue state.props.isSource then state.props.locateOnMapLocation.source else state.props.locateOnMapLocation.destination)
             distanceBetweenLatLong = getDistanceBwCordinates lat lon cachedLat cachedLon
             isMoreThan20Meters = distanceBetweenLatLong > (state.data.config.mapConfig.locateOnMapConfig.apiTriggerRadius/1000.0) 
         modifyScreenState $ HomeScreenStateType (\homeScreen ->
             homeScreen { 
               props {
-                sourcePlaceId = if state.props.isSource == Just true then Nothing else homeScreen.props.sourcePlaceId,
+                sourcePlaceId = if isJustTrue state.props.isSource then Nothing else homeScreen.props.sourcePlaceId,
                 destinationPlaceId = if state.props.isSource == Just false then Nothing else homeScreen.props.destinationPlaceId,
                 destinationLat = if state.props.isSource == Just false && state.props.currentStage /= ConfirmingLocation then lat else state.props.destinationLat,
                 destinationLong = if state.props.isSource == Just false && state.props.currentStage /= ConfirmingLocation then lon else state.props.destinationLong,
-                sourceLat = if state.props.isSource == Just true then lat else state.props.sourceLat,
-                sourceLong = if state.props.isSource == Just true then lon else state.props.sourceLong,
+                sourceLat = if isJustTrue state.props.isSource then lat else state.props.sourceLat,
+                sourceLong = if isJustTrue state.props.isSource then lon else state.props.sourceLong,
                 confirmLocationCategory = srcSpecialLocation.category
                 }
               })
@@ -989,7 +989,7 @@ homeScreenFlow = do
           homeScreen {
             data {
               destination = if state.props.isSource == Just false && state.props.currentStage /= ConfirmingLocation then placeDetails.formattedAddress else homeScreen.data.destination,
-              source = if state.props.isSource == Just true then placeDetails.formattedAddress else homeScreen.data.source,
+              source = if isJustTrue state.props.isSource then placeDetails.formattedAddress else homeScreen.data.source,
               sourceAddress = case state.props.isSource , (state.props.currentStage /= ConfirmingLocation) of
                 Just true, true -> encodeAddress placeDetails.formattedAddress placeDetails.addressComponents Nothing
                 _ , _-> encodeAddress homeScreen.data.source [] state.props.sourcePlaceId,
@@ -1004,7 +1004,7 @@ homeScreenFlow = do
             homeScreen {
               data {
                 destination = if state.props.isSource == Just false && state.props.currentStage /= ConfirmingLocation then state.props.locateOnMapLocation.destination else homeScreen.data.destination,
-                source = if state.props.isSource == Just true then state.props.locateOnMapLocation.source else homeScreen.data.source,
+                source = if isJustTrue state.props.isSource then state.props.locateOnMapLocation.source else homeScreen.data.source,
                 sourceAddress = case state.props.isSource , (state.props.currentStage /= ConfirmingLocation) of
                   Just true, true -> state.props.locateOnMapLocation.sourceAddress 
                   _ , _-> state.data.sourceAddress, 

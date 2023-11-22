@@ -47,6 +47,7 @@ import Screens.Types (SearchLocationModelType(..), LocationListItemState)
 import Storage (KeyStore(..), getValueToLocalStore)
 import Styles.Colors as Color
 import Data.String as DS
+import Engineering.Helpers.MobilityPrelude
 
 view :: forall w. (Action -> Effect Unit) -> SearchLocationModelState -> PrestoDOM (Effect Unit) w
 view push state =
@@ -238,12 +239,12 @@ sourceDestinationEditTextView state push =
       , orientation HORIZONTAL
       , background state.appConfig.searchLocationConfig.editTextBackground
       , cornerRadius 4.0 
-      , stroke $ if state.isSource == Just true && state.isSearchLocation == LocateOnMap then "1," <> Color.yellowText else "0," <> Color.yellowText
+      , stroke $ if isJustTrue state.isSource && state.isSearchLocation == LocateOnMap then "1," <> Color.yellowText else "0," <> Color.yellowText
       ][ editText $
             [ height $ V 37
             , weight 1.0
             , text state.source
-            , color if not(state.isSource == Just true) then state.appConfig.searchLocationConfig.editTextDefaultColor else Color.white900
+            , color if not(isJustTrue state.isSource) then state.appConfig.searchLocationConfig.editTextDefaultColor else Color.white900
             , singleLine true
             , ellipsize true
             , cornerRadius 4.0
@@ -280,13 +281,13 @@ sourceDestinationEditTextView state push =
             , gravity CENTER
             , padding $ PaddingVertical 10 2
             , onClick (\action -> do
-                        _ <- if state.isSource == Just true then pure $ setText (getNewIDWithTag "SourceEditText") "" else pure unit
+                        _ <- if isJustTrue state.isSource then pure $ setText (getNewIDWithTag "SourceEditText") "" else pure unit
                         _ <- push action
                         pure unit
                       )(const $ SourceClear)
             , accessibilityHint "Clear Source Text : Button"
             , accessibility ENABLE
-            , visibility if state.crossBtnSrcVisibility && state.isSource == Just true && state.isSearchLocation /= LocateOnMap then VISIBLE else GONE
+            , visibility if state.crossBtnSrcVisibility && isJustTrue state.isSource && state.isSearchLocation /= LocateOnMap then VISIBLE else GONE
             ]
             [ imageView
                 [ height $ V 19
@@ -300,7 +301,7 @@ sourceDestinationEditTextView state push =
         , width MATCH_PARENT
         , background Color.grey900
         , background if state.isSrcServiceable then Color.grey900 else Color.textDanger
-        , visibility if state.isSource == Just true && state.isSearchLocation /= LocateOnMap then VISIBLE else GONE
+        , visibility if isJustTrue state.isSource && state.isSearchLocation /= LocateOnMap then VISIBLE else GONE
         ]
         []
     , linearLayout
@@ -316,7 +317,7 @@ sourceDestinationEditTextView state push =
             ( [ height $ V 37
               , weight 1.0
               , text state.destination
-              , color if (state.isSource == Just true) then state.appConfig.searchLocationConfig.editTextDefaultColor else Color.white900
+              , color if (isJustTrue state.isSource) then state.appConfig.searchLocationConfig.editTextDefaultColor else Color.white900
               , stroke $ "0," <> Color.black
               , padding (Padding 8 7 4 7)
               , hint (getString WHERE_TO)
@@ -404,7 +405,7 @@ searchResultsView state push =
                   [ width MATCH_PARENT
                   , height WRAP_CONTENT
                   , orientation VERTICAL
-                  ][ LocationListItem.view (push <<< LocationListItemActionController) item (if (state.isSource == Just true && state.isSearchLocation /= LocateOnMap && state.isAutoComplete) then true else false) 
+                  ][ LocationListItem.view (push <<< LocationListItemActionController) item (if (isJustTrue state.isSource && state.isSearchLocation /= LocateOnMap && state.isAutoComplete) then true else false) 
                   , linearLayout
                     [ height $ V 1
                     , width MATCH_PARENT
@@ -425,7 +426,7 @@ primaryButtonConfig state =
     config = PrimaryButton.config
     primaryButtonConfig' = config
       { textConfig
-        { text = if state.isSearchLocation == LocateOnMap then if state.isSource == Just true then (getString CONFIRM_PICKUP_LOCATION) else (getString CONFIRM_DROP_LOCATION) else ""
+        { text = if state.isSearchLocation == LocateOnMap then if isJustTrue state.isSource then (getString CONFIRM_PICKUP_LOCATION) else (getString CONFIRM_DROP_LOCATION) else ""
         , color = state.appConfig.primaryTextColor
         , height = V 40
         }
@@ -519,7 +520,7 @@ bottomBtnsView state push =
             ( \idx item ->
                 linearLayout
                   [ height MATCH_PARENT
-                  , width if (state.isSource == Just true && state.isSearchLocation /= LocateOnMap) then (V 190) else MATCH_PARENT
+                  , width if (isJustTrue state.isSource && state.isSearchLocation /= LocateOnMap) then (V 190) else MATCH_PARENT
                   , orientation HORIZONTAL
                   , gravity CENTER
                   ]
@@ -541,7 +542,7 @@ bottomBtnsView state push =
                             , text item.text
                             , layoutGravity "center"
                             , color Color.black800
-                            , padding if (state.isSource == Just true && state.isSearchLocation /= LocateOnMap) then (Padding 5 16 0 16) else (Padding 5 16 0 16)
+                            , padding if (isJustTrue state.isSource && state.isSearchLocation /= LocateOnMap) then (Padding 5 16 0 16) else (Padding 5 16 0 16)
                             , onClick
                                 ( \action ->
                                     if item.buttonType == "CurrentLocation" then do
@@ -562,12 +563,12 @@ bottomBtnsView state push =
                       , alpha 0.25
                       , layoutGravity "center"
                       , margin $ MarginTop if os == "IOS" then 15 else 0
-                      , visibility if length (if (state.isSource == Just true && state.isSearchLocation /= LocateOnMap) then srcBtnData state else destBtnData state) - 1 == idx then GONE else VISIBLE
+                      , visibility if length (if (isJustTrue state.isSource && state.isSearchLocation /= LocateOnMap) then srcBtnData state else destBtnData state) - 1 == idx then GONE else VISIBLE
                       ]
                       []
                   ]
             )
-            $ if (state.isSource == Just true && state.isSearchLocation /= LocateOnMap) then srcBtnData state else destBtnData state
+            $ if (isJustTrue state.isSource && state.isSearchLocation /= LocateOnMap) then srcBtnData state else destBtnData state
         )]
 
 srcBtnData :: SearchLocationModelState -> Array { text :: String, imageUrl :: String, action :: Action, buttonType :: String }

@@ -31,7 +31,7 @@ import Effect.Unsafe
 import Engineering.Helpers.LogEvent (logEvent)
 import Data.Array as DA
 import Data.Lens ((^.))
-import Engineering.Helpers.MobilityPrelude(isStrEmpty, fromMaybeString)
+import Engineering.Helpers.MobilityPrelude(isStrEmpty, fromMaybeString, isJustTrue)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -236,7 +236,7 @@ updateProfile (GetProfileRes profile) state = do
       disability = case profile.disability of 
         Just disabilityT -> Just (Constants.getDisabilityType disabilityT state.data.disabilityOptions.disabilityOptionList)
         _ -> Nothing
-      disabilityOptions = state.data.disabilityOptions{ activeIndex = if hasDisability == Just true then 1 else 0 
+      disabilityOptions = state.data.disabilityOptions{ activeIndex = if isJustTrue hasDisability then 1 else 0 
                                               , selectedDisability = disability
                                               , specialAssistActiveIndex = getActiveIndex disability state.data.disabilityOptions.disabilityOptionList}
   _ <- pure $ setValueToLocalStore DISABILITY_UPDATED if (isJust hasDisability) then  "true" else "false"
