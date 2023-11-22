@@ -37,5 +37,5 @@ unblockDriver ::
 unblockDriver Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
   let jobData = jobInfo.jobData
   let driverId = jobData.driverId
-  QDriverInfo.updateBlockedState (cast driverId) False
+  QDriverInfo.updateBlockedState (cast driverId) False (Just "AUTOMATICALLY_UNBLOCKED")
   return Complete
