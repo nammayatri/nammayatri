@@ -246,7 +246,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
             }
             sharedPref = getApplication().getSharedPreferences(getApplicationContext().getString(R.string.preference_file_key), Context.MODE_PRIVATE);
             String useMLKit = sharedPref.getString("USE_ML_TRANSLATE", "false");
-            if (useMLKit.equals("true")) updateViewFromMlTranslation(holder, model);
+            if (useMLKit.equals("false") && !model.isTranslated()) updateViewFromMlTranslation(holder, model);
 
             if (key.equals("yatrisathiprovider") || key.equals("yatriprovider")) {
                 holder.textIncludesCharges.setVisibility(View.GONE);
@@ -394,12 +394,21 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
 
         String lang = sharedPref.getString( "LANGUAGE_KEY", "ENGLISH");
         TranslatorMLKit translate = new TranslatorMLKit("en", lang, this);
-
-        translate.translateStringInTextView(model.getSourceArea(), holder.sourceArea);
+        translate.translateStringInTextView(removeCommas(model.getSourceArea()), holder.sourceArea);
         translate.translateStringInTextView(model.getSourceAddress(),  holder.sourceAddress);
-        translate.translateStringInTextView(model.getDestinationArea(), holder.destinationArea);
+        translate.translateStringInTextView(removeCommas(model.getDestinationArea()), holder.destinationArea);
         translate.translateStringInTextView(model.getDestinationAddress(),  holder.destinationAddress);
 
+    }
+
+    public static String removeCommas(String input) {
+        String str = input;
+        input = input.trim();
+        input = input.replaceAll(",+\\s*$", "");
+        if (str.trim().endsWith(",")) {
+            input += " ,";
+        }
+        return input;
     }
 
     private void removeCard(int position) {
@@ -533,6 +542,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                     DecimalFormat df = new DecimalFormat("###.##", new DecimalFormatSymbols(new Locale("en", "us")));
                     String requestedVehicleVariant = rideRequestBundle.getString("requestedVehicleVariant");
                     Boolean disabilityTag = rideRequestBundle.getBoolean("disabilityTag");
+                    Boolean isTranslated = rideRequestBundle.getBoolean("isTranslated");
                     df.setMaximumFractionDigits(2);
                     final SimpleDateFormat f = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", new Locale("en", "us"));
                     f.setTimeZone(TimeZone.getTimeZone("UTC"));
@@ -570,6 +580,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                             destinationPinCode,
                             requestedVehicleVariant,
                             disabilityTag,
+                            isTranslated,
                             gotoTag);
 
                     if (floatyView == null) {

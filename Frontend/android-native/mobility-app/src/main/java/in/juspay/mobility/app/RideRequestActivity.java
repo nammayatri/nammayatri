@@ -125,6 +125,7 @@ public class RideRequestActivity extends AppCompatActivity {
                     rideRequestBundle.getString("destinationPinCode"),
                     rideRequestBundle.getString("requestedVehicleVariant"),
                     rideRequestBundle.getBoolean("disabilityTag"),
+                    rideRequestBundle.getBoolean("isTranslated"),
                     rideRequestBundle.getBoolean("gotoTag")
             );
 
