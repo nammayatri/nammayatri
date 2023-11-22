@@ -24,6 +24,7 @@ import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Merchant.LeaderBoardConfig as LConfig
 import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import Domain.Types.Person
+import Domain.Types.Person as SP
 import qualified Kernel.Beam.Functions as B
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
@@ -41,7 +42,8 @@ data DriversInfo = DriversInfo
     name :: Text,
     totalRides :: Int,
     totalDistance :: Meters,
-    isCurrentDriver :: Bool
+    isCurrentDriver :: Bool,
+    gender :: Maybe SP.Gender
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
@@ -67,11 +69,11 @@ getDailyDriverLeaderBoard (personId, merchantId, merchantOpCityId) day = do
     throwError $ InvalidRequest "Date outside Range"
   driversWithScoresMap :: [(Text, Double)] <- concat <$> Redis.withNonCriticalRedis (Redis.get $ RideEndInt.makeCachedDailyDriverLeaderBoardKey merchantId day)
   let driverIds = map (Id . fst) driversWithScoresMap
-  driverNamesMap :: HM.Map Text (Maybe Text) <- HM.fromList . map (\driver -> (driver.id.getId, getPersonFullName driver)) <$> QPerson.getDriversByIdIn driverIds
+  driverDetailsMap :: HM.Map Text (Text, Gender) <- HM.fromList . map (\driver -> (driver.id.getId, (fromMaybe "Driver" $ getPersonFullName driver, driver.gender))) <$> B.runInReplica (QPerson.getDriversByIdIn driverIds)
   (drivers', isCurrentDriverInTop) <-
     foldlM
       ( \(acc, isCurrentDriverInTop) ((driverId, score), index) -> do
-          fullName <- join (HM.lookup driverId driverNamesMap) & fromMaybeM (PersonFieldNotPresent "firstName")
+          (fullName, gender) <- HM.lookup driverId driverDetailsMap & fromMaybeM (PersonFieldNotPresent "DriverDetails")
           let (totalRides, totalDistance) = RideEndInt.getRidesAndDistancefromZscore score dailyLeaderBoardConfig.zScoreBase
           let isCurrentDriver = personId.getId == driverId
           pure
@@ -79,6 +81,7 @@ getDailyDriverLeaderBoard (personId, merchantId, merchantOpCityId) day = do
                 <> [ DriversInfo
                        { rank = index,
                          name = fullName,
+                         gender = Just gender,
                          ..
                        }
                    ],
@@ -99,7 +102,7 @@ getDailyDriverLeaderBoard (personId, merchantId, merchantOpCityId) day = do
           Just rank -> pure rank
       let (currPersonTotalRides, currPersonTotalDistance) = RideEndInt.getRidesAndDistancefromZscore currentDriverScore dailyLeaderBoardConfig.zScoreBase
       currPersonFullName <- getPersonFullName person & fromMaybeM (PersonFieldNotPresent "firstName")
-      let currDriverInfo = DriversInfo (currPersonRank + 1) currPersonFullName currPersonTotalRides currPersonTotalDistance True
+      let currDriverInfo = DriversInfo (currPersonRank + 1) currPersonFullName currPersonTotalRides currPersonTotalDistance True (Just person.gender)
       return $ LeaderBoardRes (currDriverInfo : drivers') (Just now)
     else return $ LeaderBoardRes drivers' (Just now)
 
@@ -124,11 +127,11 @@ getWeeklyDriverLeaderBoard (personId, merchantId, merchantOpCityId) fromDate toD
     throwError $ InvalidRequest "Invalid Input"
   driversWithScoresMap :: [(Text, Double)] <- concat <$> Redis.withNonCriticalRedis (Redis.get $ RideEndInt.makeCachedWeeklyDriverLeaderBoardKey merchantId fromDate toDate)
   let driverIds = map (Id . fst) driversWithScoresMap
-  driverNamesMap <- HM.fromList . map (\driver -> (driver.id.getId, getPersonFullName driver)) <$> QPerson.getDriversByIdIn driverIds
+  driverDetailsMap <- HM.fromList . map (\driver -> (driver.id.getId, (fromMaybe "Driver" $ getPersonFullName driver, driver.gender))) <$> B.runInReplica (QPerson.getDriversByIdIn driverIds)
   (drivers', isCurrentDriverInTop) <-
     foldlM
       ( \(acc, isCurrentDriverInTop) ((driverId, score), index) -> do
-          fullName <- join (HM.lookup driverId driverNamesMap) & fromMaybeM (PersonFieldNotPresent "firstName")
+          (fullName, gender) <- HM.lookup driverId driverDetailsMap & fromMaybeM (PersonFieldNotPresent "DriverDetails")
           let (totalRides, totalDistance) = RideEndInt.getRidesAndDistancefromZscore score weeklyLeaderBoardConfig.zScoreBase
           let isCurrentDriver = personId.getId == driverId
           pure
@@ -136,6 +139,7 @@ getWeeklyDriverLeaderBoard (personId, merchantId, merchantOpCityId) fromDate toD
                 <> [ DriversInfo
                        { rank = index,
                          name = fullName,
+                         gender = Just gender,
                          ..
                        }
                    ],
@@ -156,6 +160,6 @@ getWeeklyDriverLeaderBoard (personId, merchantId, merchantOpCityId) fromDate toD
           Just rank -> pure rank
       let (currPersonTotalRides, currPersonTotalDistance) = RideEndInt.getRidesAndDistancefromZscore currDriverZscore weeklyLeaderBoardConfig.zScoreBase
       currPersonFullName <- getPersonFullName person & fromMaybeM (PersonFieldNotPresent "firstName")
-      let currDriverInfo = DriversInfo (currPersonRank + 1) currPersonFullName currPersonTotalRides currPersonTotalDistance True
+      let currDriverInfo = DriversInfo (currPersonRank + 1) currPersonFullName currPersonTotalRides currPersonTotalDistance True (Just person.gender)
       return $ LeaderBoardRes (currDriverInfo : drivers') (Just now)
     else return $ LeaderBoardRes drivers' (Just now)
