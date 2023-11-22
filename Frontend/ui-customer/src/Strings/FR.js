@@ -499,7 +499,8 @@ const frenchStrings = {
   "SELECT_LOCATION_ON_MAP" : "sélectionner l'emplacement sur la carte",
   "PLEASE_ENABLE_LOCATION_PERMISSION" : "Veuillez activer les autorisations de localisation depuis l'application des paramètres pour commencer à rechercher des courses.",
   "YOU_SEEM_TO_BE_FAR_FROM_PICK_UP" : "Vous semblez être loin du lieu de prise en charge !",
-  "ARE_YOU_SURE_YOU_WANT_TO_PROCEED_WITH_THE_BOOKING" : "Êtes-vous sûr de vouloir procéder à la réservation ?"
+  "ARE_YOU_SURE_YOU_WANT_TO_PROCEED_WITH_THE_BOOKING" : "Êtes-vous sûr de vouloir procéder à la réservation ?",
+  "SOMETHING_WENT_WRONG_TRY_AGAIN_LATER" : "Quelque chose c'est mal passé. Merci d'essayer plus tard",
 }
 
 export function getStringValue(key) {

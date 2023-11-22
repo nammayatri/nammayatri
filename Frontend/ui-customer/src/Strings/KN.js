@@ -623,7 +623,9 @@ const kannadaStrings = {
   "EDUCATIONAL_POP_UP_SLIDE_5_SUBTITLE" : "&#8226; ನಾವು ಇತರ ರೀತಿಯ ಅಸಾಮರ್ಥ್ಯಗಳನ್ನು <br> &ensp; ಸಂಗ್ರಹಿಸುತ್ತೇವೆ ಮತ್ತು ಅಗತ್ಯವಿದ್ದಾಗ ಲಭ್ಯವಿರುವ <br> &ensp; ಅಸಾಮರ್ಥ್ಯಗಳ ಪಟ್ಟಿಯಲ್ಲಿ ಅವುಗಳನ್ನು ಸೇರಿಸುತ್ತೇವೆ",
   "INCLUSIVE_AND_ACCESSIBLE" : "ಎಲ್ಲರಿಗೂ ಒಳಗೊಳ್ಳುವ ಮತ್ತು ಪ್ರವೇಶಿಸಬಹುದಾದ!",
   "YOU_SEEM_TO_BE_FAR_FROM_PICK_UP" : "ನೀವು ಪಿಕಪ್ ಸ್ಥಳದಿಂದ ದೂರದಲ್ಲಿರುವಂತೆ ತೋರುತ್ತಿದೆ!",
-  "ARE_YOU_SURE_YOU_WANT_TO_PROCEED_WITH_THE_BOOKING" : "ನೀವು ಬುಕಿಂಗ್‌ನೊಂದಿಗೆ ಮುಂದುವರಿಯಲು ಖಚಿತವಾಗಿ ಬಯಸುವಿರಾ?"
+  "ARE_YOU_SURE_YOU_WANT_TO_PROCEED_WITH_THE_BOOKING" : "ನೀವು ಬುಕಿಂಗ್‌ನೊಂದಿಗೆ ಮುಂದುವರಿಯಲು ಖಚಿತವಾಗಿ ಬಯಸುವಿರಾ?",
+  "SOMETHING_WENT_WRONG_TRY_AGAIN_LATER" : "ಕೆಲವು ತಾಂತ್ರಿಕ ಸಮಸ್ಯೆ ಸಂಭವಿಸಿದೆ, ದಯವಿಟ್ಟು ನಂತರ ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ",
+
 }
 
 export function getStringValue(key) {

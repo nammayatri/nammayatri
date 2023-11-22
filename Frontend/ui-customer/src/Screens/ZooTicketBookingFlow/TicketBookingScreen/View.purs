@@ -42,6 +42,8 @@ import Types.App (GlobalState, defaultGlobalState)
 import Data.Time.Duration (Milliseconds(..))
 import Services.API as API
 import Storage (KeyStore(..), setValueToLocalStore, getValueToLocalStore)
+import Effect.Uncurried  (runEffectFn1)
+import PaymentPage (consumeBP)
 
 screen :: ST.TicketBookingScreenState -> Screen Action ST.TicketBookingScreenState ScreenOutput
 screen initialState =
@@ -57,6 +59,7 @@ screen initialState =
   }
   where
   getPlaceDataEvent push = do
+    void $ runEffectFn1 consumeBP unit
     void $ launchAff $ flowRunner defaultGlobalState $ runExceptT $ runBackT $ getPlaceDataEvent' push
     void $ launchAff $ flowRunner defaultGlobalState $ paymentStatusPooling initialState.data.shortOrderId  5 3000.0 initialState push PaymentStatusAction
     pure $ pure unit
