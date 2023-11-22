@@ -372,6 +372,23 @@ getRideHistoryReqBT limit offset onlyActive status day= do
     where
     errorHandler (ErrorPayload errorPayload) =  do
         BackT $ pure GoBack
+
+--------------------------------- GetRidesSummaryListResp --------------------------------------------------------------------------------------------------
+getRideSummaryListReq dateList = do
+        headers <- getHeaders "" true
+        withAPIResult (EP.getRidesSummaryList dateList) unwrapResponse $ callAPI headers (GetRidesSummaryListReq dateList)
+    where
+        unwrapResponse (x) = x
+
+
+getRideSummaryListReqBT :: Array String -> FlowBT String GetRidesSummaryListResp
+getRideSummaryListReqBT dateList = do
+        headers <- lift $ lift $ getHeaders "" true
+        withAPIResultBT (EP.getRidesSummaryList dateList) (\x → x) errorHandler (lift $ lift $ callAPI headers (GetRidesSummaryListReq dateList))
+    where
+    errorHandler (ErrorPayload errorPayload) =  do
+        BackT $ pure GoBack
+
 --------------------------------- updateDriverInfoBT ---------------------------------------------------------------------------------------------------------------------------------
 updateDriverInfoBT :: UpdateDriverInfoReq -> FlowBT String UpdateDriverInfoResp
 updateDriverInfoBT payload = do

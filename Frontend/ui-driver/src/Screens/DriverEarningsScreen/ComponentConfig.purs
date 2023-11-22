@@ -29,10 +29,10 @@ import Data.Maybe (isJust)
 import Engineering.Helpers.Utils (getCurrentDay)
 import Font.Style (Style(..))
 import Helpers.Utils as HU
-import Data.Int (toNumber)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude ((<>), (==), (*), show, not)
+import Data.Int (toNumber)
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Padding(..), Visibility(..), background)
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Screens.Types as ST
@@ -232,3 +232,30 @@ waitTimeInfoCardConfig _ = let
     }
   }
   in requestInfoCardConfig'
+
+
+errorModalConfig :: ST.DriverEarningsScreenState -> ErrorModal.Config 
+errorModalConfig state = let 
+  config = ErrorModal.config 
+  errorModalConfig' = config 
+    { imageConfig {
+        imageUrl = if state.props.subView == ST.EARNINGS_VIEW then "ny_ic_no_rides_history,"
+                   else  "ny_ic_no_coins_history,"
+      , height = V 110
+      , width = V 124
+      , margin = (MarginBottom 61)
+      }
+    , errorConfig {
+        text = if state.props.subView == ST.EARNINGS_VIEW then getString NO_RIDE_HISTORY_AVAILABLE else getString COMPLETE_FIRST_RIDE_TO_UNLOCK_COINS
+      , margin = (MarginBottom 7)  
+      , color = Color.black900
+      }
+    , errorDescriptionConfig {
+        text = if state.props.subView == ST.EARNINGS_VIEW then getString YOU_HAVE_NOT_COMPLETED_A_RIDE_YET else getString EARN_COINS_BY_TAKING_RIDES_AND_REFERRING_THE_APP_TO_OTHERS
+      , color = Color.black700
+      }
+    , buttonConfig {
+      visibility  = GONE
+      }
+    }
+    in errorModalConfig' 

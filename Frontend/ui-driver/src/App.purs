@@ -220,7 +220,7 @@ data DRIVER_EARNINGS_SCREEN_OUTPUT = EARNINGS_NAV NAVIGATION_ACTIONS
                                    | CHANGE_SUB_VIEW DriverEarningsSubView
                                    | CONVERT_COIN_TO_CASH DriverEarningsScreenState
                                    | REFRESH_EARNINGS_SCREEN DriverEarningsScreenState
-
+                                   | EARNINGS_HISTORY DriverEarningsScreenState
 data REFERRAL_SCREEN_OUTPUT = GO_TO_HOME_SCREEN_FROM_REFERRAL_SCREEN
                             | GO_TO_RIDES_SCREEN_FROM_REFERRAL_SCREEN
                             | GO_TO_PROFILE_SCREEN_FROM_REFERRAL_SCREEN
@@ -329,6 +329,7 @@ data HOME_SCREENOUTPUT = GO_TO_PROFILE_SCREEN
                           | DISABLE_GOTO HomeScreenState
                           | GOTO_LOCATION_FLOW HomeScreenState
                           | REFRESH_GOTO HomeScreenState
+                          | GO_TO_EARNINGS_SCREEN
 
 data REPORT_ISSUE_CHAT_SCREEN_OUTPUT = GO_TO_HELP_AND_SUPPORT | SUBMIT_ISSUE ReportIssueChatScreenState | CALL_CUSTOMER ReportIssueChatScreenState
 
