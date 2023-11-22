@@ -94,7 +94,7 @@ paymentStatusPooling shortOrderId count delayDuration state push action =
 
 view :: forall w . (Action -> Effect Unit) -> ST.TicketBookingScreenState -> PrestoDOM (Effect Unit) w
 view push state =
-  Anim.screenAnimation $ relativeLayout
+    PrestoAnim.animationSet [Anim.fadeIn true]  $ relativeLayout
     [ height MATCH_PARENT
     , width MATCH_PARENT
     , background Color.white900
@@ -380,6 +380,7 @@ convertServicesDataToViewData services = do
 
 chooseTicketsView :: forall w. ST.TicketBookingScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 chooseTicketsView state push = 
+  PrestoAnim.animationSet [Anim.fadeIn true]  $  
   linearLayout[
     height MATCH_PARENT
   , width MATCH_PARENT
@@ -429,12 +430,12 @@ chooseTicketsView state push =
       [ height WRAP_CONTENT
       , width MATCH_PARENT
       , gravity BOTTOM
+      , onClick push $ const ToggleTermsAndConditions
       ][  imageView
           [ height $ V 16
           , width $ V 16 
           , layoutGravity "center_vertical"
           , margin $ MarginRight 8
-          , onClick push $ const ToggleTermsAndConditions
           , imageWithFallback $ fetchImage FF_COMMON_ASSET (if state.props.termsAndConditionsSelected then "ny_ic_checked" else "ny_ic_unchecked")
           ]
         , textView $ 
@@ -646,6 +647,8 @@ ticketInfoCardView state push booking =
   , cornerRadius 8.0
   , stroke $ "1," <>  Color.grey700
   , margin $ MarginBottom 12
+  , onClick push $ const $ GetBookingInfo booking.shortId booking.status
+  , clickable true
   ][  imageView
       [ imageWithFallback $ getTicketStatusImage booking.status
       , width $ V 20
@@ -674,8 +677,6 @@ ticketInfoCardView state push booking =
          , height WRAP_CONTENT
          , orientation HORIZONTAL
          , gravity CENTER_VERTICAL
-         , onClick push $ const $ GetBookingInfo booking.shortId booking.status
-         , clickable true
          ][ textView 
             [ text "View"
             , color Color.blue900
@@ -1113,7 +1114,12 @@ bookingConfirmationActions state push paymentStatus =
       , visibility GONE
       ][]
    , PrimaryButton.view (push <<< ViewTicketAC) (viewTicketButtonConfig primaryButtonText $ paymentStatus /= Common.Pending)
-   , commonTV push secondaryButtonText Color.black900 (FontStyle.subHeading1 TypoGraphy) 5 CENTER GoHome
+   , linearLayout
+     [ width $ MATCH_PARENT
+     , height WRAP_CONTENT
+     , onClick push $ const GoHome
+     , gravity CENTER
+     ][commonTV push secondaryButtonText Color.black900 (FontStyle.subHeading1 TypoGraphy) 5 CENTER GoHome]
   ]
   where primaryButtonText = case paymentStatus of
                               Common.Success -> "View Ticket"
