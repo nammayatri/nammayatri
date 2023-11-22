@@ -24,13 +24,15 @@ import Data.Array as DA
 import Data.Maybe (fromMaybe, Maybe(..))
 import Debug
 import Data.List ((:))
+import Effect.Uncurried  (runEffectFn1)
+import PaymentPage (consumeBP)
 
 screen :: ST.TicketInfoScreenState -> Screen Action ST.TicketInfoScreenState ScreenOutput
 screen initialState =
   { initialState
   , view
   , name : "TicketInfoScreen"
-  , globalEvents : []
+  , globalEvents : [(\_ -> pure $ runEffectFn1 consumeBP unit)]
   , eval :
     \action state -> do
         let _ = spy "TicketInfoScreen action " action

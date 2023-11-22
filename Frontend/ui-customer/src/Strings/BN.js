@@ -624,7 +624,8 @@ const bengaliStrings = {
   "EDUCATIONAL_POP_UP_SLIDE_5_SUBTITLE" : "&#8226; আমরা অন্যান্য ধরণের প্রতিবন্ধী সংগ্রহ <br> &ensp; করব এবং প্রয়োজন অনুসারে উপলব্ধ প্রতিবন্ধীদের <br> &ensp; তালিকার মধ্যে তাদের অন্তর্ভুক্ত করব",
   "INCLUSIVE_AND_ACCESSIBLE" : "সকলের জন্য অন্তর্ভুক্ত এবং অ্যাক্সেসযোগ্য!",
   "YOU_SEEM_TO_BE_FAR_FROM_PICK_UP" : "আপনি পিকআপ অবস্থান থেকে অনেক দূরে বলে মনে হচ্ছে!",
-  "ARE_YOU_SURE_YOU_WANT_TO_PROCEED_WITH_THE_BOOKING" : "আপনি কি নিশ্চিত যে আপনি বুকিং নিয়ে এগিয়ে যেতে চান?"
+  "ARE_YOU_SURE_YOU_WANT_TO_PROCEED_WITH_THE_BOOKING" : "আপনি কি নিশ্চিত যে আপনি বুকিং নিয়ে এগিয়ে যেতে চান?",
+  "SOMETHING_WENT_WRONG_TRY_AGAIN_LATER" : "কিছু প্রযুক্তিগত সমস্যা হয়েছে, অনুগ্রহ করে পরে আবার চেষ্টা করুন",
 }
 
 export function getStringValue(key) {

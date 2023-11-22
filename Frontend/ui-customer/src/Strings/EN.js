@@ -631,7 +631,8 @@ const englishStrings = {
   "YOU_SEEM_TO_BE_FAR_FROM_PICK_UP" : "You seem to be far from the pickup location!",
   "ARE_YOU_SURE_YOU_WANT_TO_PROCEED_WITH_THE_BOOKING" : "Are you sure you want to proceed with the booking?",
   "MY_TICKETS" : "My Tickets",
-  "YOU_CAN_BOOK_TICKETS_TO_THE_ZOO_BY_CLICKING_THE_BUTTON" : "You can book tickets to the Zoo by clicking the button."
+  "YOU_CAN_BOOK_TICKETS_TO_THE_ZOO_BY_CLICKING_THE_BUTTON" : "You can book tickets to the Zoo by clicking the button.",
+  "SOMETHING_WENT_WRONG_TRY_AGAIN_LATER" : "Something went wrong, please try again later",
 }
 
 export function getStringValue(key) {

@@ -22,6 +22,7 @@ import Resources.Constants
 import Services.API (TicketPlaceResp(..), TicketServicesResponse(..), TicketServiceResp(..), TicketServicePrice(..), BookingStatus(..))
 import Data.Int (ceil)
 import Common.Types.App as Common
+import Screens.TicketBookingScreen.ScreenData as TicketBookingScreenData
 
 instance showAction :: Show Action where
   show _ = ""
@@ -86,7 +87,7 @@ eval ToggleTermsAndConditions state = continue state{props{termsAndConditionsSel
 eval (PrimaryButtonAC (PrimaryButton.OnClick)) state = do 
   case state.props.currentStage of 
     DescriptionStage -> continue state{props{currentStage = ChooseTicketStage}}
-    ChooseTicketStage -> updateAndExit state $ GoToTicketPayment state
+    ChooseTicketStage -> updateAndExit state{props{previousStage = ChooseTicketStage}} $ GoToTicketPayment state{props{previousStage = ChooseTicketStage}}
     ViewTicketStage -> continue state{props{currentStage = ChooseTicketStage, showShimmer = false}}
     _ -> continue state
 
@@ -101,15 +102,18 @@ eval (UpdatePlacesData placeData (Just (TicketServicesResponse serviceData))) st
   let newState = state { data { placeInfo = placeData, servicesInfo = servicesInfo}, props { showShimmer = false } }
   continue newState
 
-eval BackPressed state = 
+eval BackPressed state = do
   case state.props.currentStage of 
     DescriptionStage -> exit $ GoToHomeScreen state {props {currentStage = DescriptionStage}}
-    ChooseTicketStage -> continue state{props{currentStage = state.props.previousStage}}
+    ChooseTicketStage -> continue state{props{currentStage = if state.props.previousStage == ChooseTicketStage then DescriptionStage else state.props.previousStage}}
     ViewTicketStage -> exit $ GoToHomeScreen state{props{currentStage = DescriptionStage, showShimmer = true}}
     TicketInfoStage -> continue state{props{currentStage = ViewTicketStage}}
+    BookingConfirmationStage -> if state.props.previousStage == ViewTicketStage then continue state {props{currentStage = state.props.previousStage}}
+                                else exit $ GoToHomeScreen state{props{currentStage = DescriptionStage, showShimmer = true}}
     _ -> continue state
 
-eval GoHome state = exit $ GoToHomeScreen state
+eval GoHome state = if state.props.previousStage == ViewTicketStage then continue state {props{currentStage = state.props.previousStage}}
+                    else exit $ GoToHomeScreen state{props{currentStage = DescriptionStage, showShimmer = true}}
 
 eval (GetBookingInfo bookingShortId bookingStatus) state = do
   let newState = state { props { selectedBookingId = bookingShortId } }

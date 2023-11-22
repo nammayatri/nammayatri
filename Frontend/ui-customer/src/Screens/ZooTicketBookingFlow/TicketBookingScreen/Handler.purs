@@ -18,7 +18,7 @@ ticketBookingScreen = do
   action <- lift $ lift $ runScreen $ TicketBookingScreen.screen state.ticketBookingScreen
   case action of
     GoToHomeScreen updatedState -> do
-      modifyScreenState $ TicketBookingScreenStateType (\ticketBookingScreenState -> TicketBookingScreenData.initData {props {currentStage = ST.DescriptionStage}})
+      modifyScreenState $ TicketBookingScreenStateType (\ticketBookingScreenState -> TicketBookingScreenData.initData)
       App.BackT $ App.NoBack <$> (pure GO_TO_HOME_SCREEN_FROM_TICKET_BOOKING)
     GoToTicketPayment state -> do
       modifyScreenState $ TicketBookingScreenStateType (\ticketBookingScreenState -> state)
