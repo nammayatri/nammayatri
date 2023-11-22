@@ -155,6 +155,12 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
     }
 
     @JavascriptInterface
+    public void deleteTranslatorModel(String model) {
+        TranslatorMLKit translator = new TranslatorMLKit(bridgeComponents.getContext());
+        translator.deleteDownloadedModel(model);
+    }
+
+    @JavascriptInterface
     public void translateString(String callback, String toTranslate)
     {
         String lang = getKeysInSharedPref("LANGUAGE_KEY");
