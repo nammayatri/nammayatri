@@ -20,6 +20,7 @@ module Beckn.Types.Core.Taxi.OnSearch.Fulfillment
 where
 
 import Beckn.Types.Core.Taxi.Common.FulfillmentInfo as Reexport (FulfillmentType (..), stripPrefixUnderscoreAndRemoveNullFields)
+import Beckn.Types.Core.Taxi.Common.Tags
 import Beckn.Types.Core.Taxi.Common.Vehicle as Reexport
 import Beckn.Types.Core.Taxi.OnSearch.StartInfo as Reexport
 import Beckn.Types.Core.Taxi.OnSearch.StopInfo as Reexport
@@ -32,9 +33,11 @@ import Kernel.Utils.Schema (genericDeclareUnNamedSchema)
 data FulfillmentInfo = FulfillmentInfo
   { id :: Text,
     start :: StartInfo,
-    _type :: FulfillmentType,
+    _type :: Maybe FulfillmentType,
     end :: StopInfo,
-    vehicle :: Vehicle
+    vehicle :: Vehicle,
+    tags :: Maybe TagGroups,
+    tracking :: Maybe Bool
   }
   deriving (Generic, Show)
 

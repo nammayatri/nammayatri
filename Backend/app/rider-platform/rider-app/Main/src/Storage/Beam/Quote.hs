@@ -44,6 +44,7 @@ data QuoteT f = QuoteT
     merchantId :: B.C f Text,
     merchantOperatingCityId :: B.C f (Maybe Text),
     specialZoneQuoteId :: B.C f (Maybe Text),
+    publicTransportQuoteId :: B.C f (Maybe Text),
     specialLocationTag :: B.C f (Maybe Text),
     createdAt :: B.C f UTCTime
   }

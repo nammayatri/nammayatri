@@ -17,13 +17,16 @@
 module Storage.Beam.FarePolicy.FareBreakup where
 
 import qualified Database.Beam as B
+import qualified Domain.Types.FarePolicy.FareBreakup as Domain
 import Kernel.Prelude
 import Kernel.Types.Common hiding (id)
 import Tools.Beam.UtilsTH
 
 data FareBreakupT f = FareBreakupT
   { id :: B.C f Text,
+    entityType :: B.C f Domain.EntityType,
     bookingId :: B.C f Text,
+    entityId :: B.C f (Maybe Text),
     description :: B.C f Text,
     amount :: B.C f HighPrecMoney
   }

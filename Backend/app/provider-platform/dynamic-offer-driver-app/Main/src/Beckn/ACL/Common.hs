@@ -33,6 +33,7 @@ castVariant Variant.SUV = Common.SUV
 castVariant Variant.AUTO_RICKSHAW = Common.AUTO_RICKSHAW
 castVariant Variant.TAXI = Common.TAXI
 castVariant Variant.TAXI_PLUS = Common.TAXI_PLUS
+castVariant Variant.BUS = Common.BUS
 
 castDPaymentCollector :: DMPM.PaymentCollector -> Payment.PaymentCollector
 castDPaymentCollector DMPM.BAP = Payment.BAP
@@ -68,6 +69,7 @@ makeLocation :: DLoc.Location -> Search.Location
 makeLocation DLoc.Location {..} =
   Search.Location
     { gps = Search.Gps {..},
+      descriptor = Nothing,
       address =
         Just
           Search.Address

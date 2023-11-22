@@ -338,6 +338,7 @@ castDVehicleVariant = \case
   DVeh.AUTO_RICKSHAW -> Common.AUTO_RICKSHAW
   DVeh.TAXI -> Common.TAXI
   DVeh.TAXI_PLUS -> Common.TAXI_PLUS
+  DVeh.BUS -> Common.BUS
 
 ---------------------------------------------------------------------
 rideSync :: ShortId DM.Merchant -> Id Common.Ride -> Flow Common.RideSyncRes

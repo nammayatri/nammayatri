@@ -21,20 +21,27 @@ module Domain.Action.Beckn.OnSearch
     QuoteDetails (..),
     OneWayQuoteDetails (..),
     OneWaySpecialZoneQuoteDetails (..),
+    PublicTransportQuoteDetails (..),
     RentalQuoteDetails (..),
     EstimateBreakupInfo (..),
     BreakupPriceInfo (..),
     NightShiftInfo (..),
     WaitingChargesInfo (..),
+    RouteInfo (..),
+    Stop (..),
     onSearch,
     validateRequest,
   )
 where
 
+import Beckn.Types.Core.Taxi.OnSearch.StartInfo (Location)
 import qualified Domain.Types.Estimate as DEstimate
 import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.Person.PersonFlowStatus as DPFS
+import qualified Domain.Types.PublicTransportQuote as DPublicTransportQuote
+import qualified Domain.Types.PublicTransportQuote.RouteInfo as DPTQRouteInfo
+import qualified Domain.Types.PublicTransportQuote.Stop as DPTQStop
 import qualified Domain.Types.Quote as DQuote
 import qualified Domain.Types.RentalSlab as DRentalSlab
 import Domain.Types.SearchRequest
@@ -44,7 +51,7 @@ import qualified Domain.Types.TripTerms as DTripTerms
 import Domain.Types.VehicleVariant
 import Environment
 import Kernel.Beam.Functions
-import Kernel.External.Maps
+import Kernel.External.Maps hiding (RouteInfo)
 import Kernel.Prelude
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
@@ -133,10 +140,23 @@ data QuoteInfo = QuoteInfo
     specialLocationTag :: Maybe Text
   }
 
+data RouteInfo = RouteInfo
+  { routeId :: Text,
+    tripId :: Text,
+    routeNo :: Text,
+    routeName :: Text
+  }
+
+data Stop = Stop
+  { location :: Location,
+    scheduledTime :: Text
+  }
+
 data QuoteDetails
   = OneWayDetails OneWayQuoteDetails
   | RentalDetails RentalQuoteDetails
   | OneWaySpecialZoneDetails OneWaySpecialZoneQuoteDetails
+  | PublicTransportDetails PublicTransportQuoteDetails
 
 newtype OneWayQuoteDetails = OneWayQuoteDetails
   { distanceToNearestDriver :: HighPrecMeters
@@ -149,6 +169,17 @@ newtype OneWaySpecialZoneQuoteDetails = OneWaySpecialZoneQuoteDetails
 data RentalQuoteDetails = RentalQuoteDetails
   { baseDistance :: Kilometers,
     baseDuration :: Hours
+  }
+
+data PublicTransportQuoteDetails = PublicTransportQuoteDetails
+  { quoteId :: Text,
+    start :: Stop,
+    end :: Stop,
+    routeInfo :: RouteInfo,
+    totalEstimatedDistance :: Text,
+    totalDuration :: Text,
+    vehicleServiceType :: Text,
+    stops :: [Stop]
   }
 
 validateRequest :: DOnSearchReq -> Flow ValidatedOnSearchReq
@@ -241,6 +272,8 @@ buildQuote requestId providerInfo now _searchRequest QuoteInfo {..} = do
       DQuote.RentalDetails <$> buildRentalSlab rentalSlab
     OneWaySpecialZoneDetails details -> do
       DQuote.OneWaySpecialZoneDetails <$> buildOneWaySpecialZoneQuoteDetails details
+    PublicTransportDetails details -> do
+      DQuote.PublicTransportQuoteDetails <$> buildPublicTransportQuoteDetails now details
   pure
     DQuote.Quote
       { id = uid,
@@ -268,6 +301,40 @@ buildRentalSlab :: MonadFlow m => RentalQuoteDetails -> m DRentalSlab.RentalSlab
 buildRentalSlab RentalQuoteDetails {..} = do
   id <- generateGUID
   pure DRentalSlab.RentalSlab {..}
+
+buildPublicTransportQuoteDetails :: MonadFlow m => UTCTime -> PublicTransportQuoteDetails -> m DPublicTransportQuote.PublicTransportQuote
+buildPublicTransportQuoteDetails now PublicTransportQuoteDetails {..} = do
+  id <- generateGUID
+  start' <- buildStop' now start
+  end' <- buildStop' now end
+  routeInfo' <- buildRouteInfo' now routeInfo
+  pure
+    DPublicTransportQuote.PublicTransportQuote
+      { start = start',
+        end = end',
+        routeInfo = routeInfo',
+        stops = [], -- FIXME : use `stops` from parameter to build this field.
+        createdAt = now,
+        ..
+      }
+
+buildStop' :: MonadFlow m => UTCTime -> Stop -> m DPTQStop.Stop
+buildStop' now Stop {..} = do
+  id <- generateGUID
+  pure
+    DPTQStop.Stop
+      { createdAt = now,
+        ..
+      }
+
+buildRouteInfo' :: MonadFlow m => UTCTime -> RouteInfo -> m DPTQRouteInfo.RouteInfo
+buildRouteInfo' now RouteInfo {..} = do
+  id <- generateGUID
+  pure
+    DPTQRouteInfo.RouteInfo
+      { createdAt = now,
+        ..
+      }
 
 buildTripTerms ::
   MonadFlow m =>

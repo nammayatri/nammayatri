@@ -25,7 +25,7 @@ import qualified ExternalAPI.Flow as ExternalAPI
 import Kernel.Prelude
 import Kernel.Types.Beckn.ReqTypes (BecknReq (BecknReq))
 import Kernel.Types.Id
-import Kernel.Utils.Common
+import Kernel.Utils.Common hiding (buildContext)
 import Tools.Auth (PersonId)
 
 handler :: PersonId -> Id D.Quote -> QConfirmReq -> FlowHandler QConfirmRes

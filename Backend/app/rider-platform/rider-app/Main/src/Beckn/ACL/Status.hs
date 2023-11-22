@@ -43,7 +43,8 @@ buildStatusReq DStatusReq {..} = do
   bapUrl <- asks (.nwAddress) <&> #baseUrlPath %~ (<> "/" <> T.unpack merchant.id.getId)
   -- TODO :: Add request city, after multiple city support on gateway.
   context <-
-    buildTaxiContext
+    buildContext
+      Context.MOBILITY
       Context.STATUS
       messageId
       (Just booking.transactionId)

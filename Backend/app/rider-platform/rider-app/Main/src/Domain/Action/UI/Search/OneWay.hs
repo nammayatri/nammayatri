@@ -64,6 +64,7 @@ import qualified Tools.Search as Search
 data OneWaySearchReq = OneWaySearchReq
   { origin :: DSearch.SearchReqLocation,
     destination :: DSearch.SearchReqLocation,
+    searchTypes :: [DSearchReq.SearchType],
     isSourceManuallyMoved :: Maybe Bool,
     isSpecialLocation :: Maybe Bool
   }
@@ -187,6 +188,7 @@ oneWaySearch personId req bundleVersion clientVersion device = do
       device
       tag
       shortestRouteDuration
+      req.searchTypes
   Metrics.incrementSearchRequestCount merchant.name
   let txnId = getId (searchRequest.id)
   Metrics.startSearchMetrics merchant.name txnId

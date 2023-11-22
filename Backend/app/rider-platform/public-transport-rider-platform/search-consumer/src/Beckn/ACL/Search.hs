@@ -23,7 +23,7 @@ import Kernel.External.Maps.Types (LatLong (..))
 import Kernel.Prelude
 import Kernel.Types.Beckn.ReqTypes
 import Kernel.Types.Id
-import Kernel.Utils.Common
+import Kernel.Utils.Common hiding (buildContext)
 
 buildSearchReq ::
   ( MonadFlow m,

@@ -52,14 +52,18 @@ mkOnSelectMessage req@DOnSelectReq {..} = do
       payment =
         OS.Payment
           { params =
-              OS.PaymentParams
-                { collected_by = OS.BPP,
-                  instrument = Nothing,
-                  currency = "INR",
-                  amount = Nothing
-                },
+              Just
+                OS.PaymentParams
+                  { collected_by = OS.BPP,
+                    instrument = Nothing,
+                    currency = "INR",
+                    amount = Nothing,
+                    transaction_id = Nothing
+                  },
             _type = OS.ON_FULFILLMENT,
-            uri = Nothing
+            uri = Nothing,
+            tl_method = Nothing,
+            status = Nothing
           }
   let provider =
         OS.Provider

@@ -22,7 +22,9 @@ import Kernel.Utils.Schema (genericDeclareUnNamedSchema)
 
 data Descriptor = Descriptor
   { short_desc :: Maybe Text,
-    code :: Maybe Text
+    code :: Maybe Text,
+    name :: Maybe Text,
+    images :: Maybe Text
   }
   deriving (Generic, Show)
 

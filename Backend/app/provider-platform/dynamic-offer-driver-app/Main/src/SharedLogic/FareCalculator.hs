@@ -294,6 +294,7 @@ calculateFareParameters params = do
             AUTO_RICKSHAW -> avgSpeedOfVehicle.autorickshaw.getKilometers
             TAXI -> avgSpeedOfVehicle.taxi.getKilometers
             TAXI_PLUS -> avgSpeedOfVehicle.taxiplus.getKilometers
+            _ -> 0 -- Not possible (only remaining case is BUS which should never be called)
       if avgSpeedOfVehicle' > 0
         then do
           let distanceInKilometer = realToFrac @_ @Double distance.getMeters / 1000

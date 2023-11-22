@@ -68,6 +68,7 @@ library
       API.UI.Cancel
       API.UI.CancellationReason
       API.UI.Confirm
+      API.UI.ConfirmBus
       API.UI.CustomerSupport
       API.UI.Disability
       API.UI.FeedbackForm
@@ -90,12 +91,16 @@ library
       API.UI.Serviceability
       API.UI.Sos
       API.UI.Support
+      API.UI.Ticket
       API.UI.Tickets
       API.UI.Webengage.InfoBIPWebhook
       API.UI.Webengage.Webengage
       API.UI.Whatsapp
       App
       App.Server
+      Beckn.ACL.Bus.OnInit
+      Beckn.ACL.Bus.OnSearch
+      Beckn.ACL.Bus.Search
       Beckn.ACL.Cancel
       Beckn.ACL.Common
       Beckn.ACL.Confirm
@@ -138,6 +143,7 @@ library
       Domain.Action.UI.Cancel
       Domain.Action.UI.CancellationReason
       Domain.Action.UI.Confirm
+      Domain.Action.UI.ConfirmBus
       Domain.Action.UI.CustomerSupport
       Domain.Action.UI.Disability
       Domain.Action.UI.Feedback
@@ -160,6 +166,7 @@ library
       Domain.Action.UI.Serviceability
       Domain.Action.UI.Sos
       Domain.Action.UI.Support
+      Domain.Action.UI.Ticket
       Domain.Action.UI.Tickets
       Domain.Action.UI.Webengage.InfoBIPWebhook
       Domain.Action.UI.Webengage.Webengage
@@ -204,6 +211,9 @@ library
       Domain.Types.Person.PersonDisability
       Domain.Types.Person.PersonFlowStatus
       Domain.Types.Person.PersonStats
+      Domain.Types.PublicTransportQuote
+      Domain.Types.PublicTransportQuote.RouteInfo
+      Domain.Types.PublicTransportQuote.Stop
       Domain.Types.Quote
       Domain.Types.Rating
       Domain.Types.RegistrationToken
@@ -212,8 +222,10 @@ library
       Domain.Types.SavedReqLocation
       Domain.Types.SearchRequest
       Domain.Types.SearchRequest.SearchReqLocation
+      Domain.Types.SearchRequest.SearchType
       Domain.Types.Sos
       Domain.Types.SpecialZoneQuote
+      Domain.Types.Ticket
       Domain.Types.Tickets
       Domain.Types.Tickets.TicketBooking
       Domain.Types.Tickets.TicketBookingService
@@ -277,6 +289,9 @@ library
       Storage.Beam.Person.PersonDisability
       Storage.Beam.Person.PersonFlowStatus
       Storage.Beam.Person.PersonStats
+      Storage.Beam.PublicTransportQuote
+      Storage.Beam.PublicTransportQuote.RouteInfo
+      Storage.Beam.PublicTransportQuote.Stop
       Storage.Beam.Quote
       Storage.Beam.Rating
       Storage.Beam.RegistrationToken
@@ -287,6 +302,7 @@ library
       Storage.Beam.SearchRequest.SearchReqLocation
       Storage.Beam.Sos
       Storage.Beam.SpecialZoneQuote
+      Storage.Beam.Ticket
       Storage.Beam.Tickets.TicketBooking
       Storage.Beam.Tickets.TicketBookingService
       Storage.Beam.Tickets.TicketBookingServicePriceBreakup
@@ -347,6 +363,9 @@ library
       Storage.Queries.Person.PersonDisability
       Storage.Queries.Person.PersonFlowStatus
       Storage.Queries.Person.PersonStats
+      Storage.Queries.PublicTransportQuote
+      Storage.Queries.PublicTransportQuote.RouteInfo
+      Storage.Queries.PublicTransportQuote.Stop
       Storage.Queries.Quote
       Storage.Queries.Rating
       Storage.Queries.RegistrationToken
@@ -357,6 +376,7 @@ library
       Storage.Queries.SearchRequest.SearchReqLocation
       Storage.Queries.Sos
       Storage.Queries.SpecialZoneQuote
+      Storage.Queries.Ticket
       Storage.Queries.Tickets.TicketBooking
       Storage.Queries.Tickets.TicketBookingService
       Storage.Queries.Tickets.TicketBookingServicePriceBreakup

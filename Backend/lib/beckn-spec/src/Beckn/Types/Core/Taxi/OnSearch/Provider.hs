@@ -35,7 +35,7 @@ import Kernel.Utils.Schema (genericDeclareUnNamedSchema)
 data Provider = Provider
   { id :: Text,
     descriptor :: Descriptor,
-    locations :: [LatLong],
+    locations :: Maybe [LatLong],
     -- categories :: [Category],
     items :: [Item], --FIXME this should be list of only RENTAL or only ONE_WAY items
     -- offers :: [Offer],

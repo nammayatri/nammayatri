@@ -17,6 +17,7 @@ module Beckn.Types.Core.Taxi.Confirm.Order
   )
 where
 
+import Beckn.Types.Core.Taxi.Common.Billing
 import Beckn.Types.Core.Taxi.Common.Payment
 import Beckn.Types.Core.Taxi.Common.Price
 import Beckn.Types.Core.Taxi.Common.Provider
@@ -34,7 +35,8 @@ data Order = Order
     fulfillment :: FulfillmentInfo,
     quote :: Quote,
     payment :: Payment,
-    provider :: Maybe Provider
+    provider :: Maybe Provider,
+    billing :: Maybe Billing
   }
   deriving (Generic, Show)
 

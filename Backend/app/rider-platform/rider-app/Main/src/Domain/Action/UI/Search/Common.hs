@@ -14,6 +14,7 @@
 
 module Domain.Action.UI.Search.Common
   ( SearchReqLocation (..),
+    SearchType (..),
     buildSearchReqLoc,
     buildSearchRequest,
     makeSearchReqLoc',
@@ -26,6 +27,7 @@ import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DPerson
 import qualified Domain.Types.SearchRequest as DSearchReq
 import qualified Domain.Types.SearchRequest as SearchRequest
+import Domain.Types.SearchRequest.SearchType (SearchType (..))
 import Kernel.External.Maps.Types
 import Kernel.Prelude
 import Kernel.Types.Version
@@ -50,8 +52,9 @@ buildSearchRequest ::
   Maybe Text ->
   Maybe Text ->
   Maybe Seconds ->
+  [SearchType] ->
   m SearchRequest.SearchRequest
-buildSearchRequest person pickup merchantOperatingCity mbDrop mbMaxDistance mbDistance now bundleVersion clientVersion device disabilityTag duration = do
+buildSearchRequest person pickup merchantOperatingCity mbDrop mbMaxDistance mbDistance now bundleVersion clientVersion device disabilityTag duration searchTypes = do
   searchRequestId <- generateGUID
   validTill <- getSearchRequestExpiry now
   return
@@ -62,6 +65,7 @@ buildSearchRequest person pickup merchantOperatingCity mbDrop mbMaxDistance mbDi
         riderId = person.id,
         fromLocation = pickup,
         toLocation = mbDrop,
+        searchTypes = searchTypes,
         distance = mbDistance,
         maxDistance = mbMaxDistance,
         merchantId = person.merchantId,

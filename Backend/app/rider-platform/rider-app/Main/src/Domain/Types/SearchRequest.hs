@@ -12,13 +12,18 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Domain.Types.SearchRequest where
+module Domain.Types.SearchRequest
+  ( module Domain.Types.SearchRequest,
+    module Reexport,
+  )
+where
 
 import qualified Domain.Types.Location as DLoc
 import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.Person as DP
+import Domain.Types.SearchRequest.SearchType as Reexport
 import qualified Kernel.External.Maps as Maps
 import Kernel.Prelude
 import Kernel.Types.Common (HighPrecMeters, Money, Seconds)
@@ -35,6 +40,7 @@ data SearchRequest = SearchRequest
     riderId :: Id DP.Person,
     fromLocation :: DLoc.Location,
     toLocation :: Maybe DLoc.Location,
+    searchTypes :: [SearchType],
     distance :: Maybe HighPrecMeters,
     maxDistance :: Maybe HighPrecMeters,
     estimatedRideDuration :: Maybe Seconds,

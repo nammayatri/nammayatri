@@ -40,7 +40,7 @@ instance ToJSON Quote where
 data QuotePrice = QuotePrice
   { currency :: Text,
     value :: DecimalValue,
-    offered_value :: DecimalValue
+    offered_value :: Maybe DecimalValue -- Nothing in case of FRFS
   }
   deriving (Generic, FromJSON, ToJSON, Show)
 

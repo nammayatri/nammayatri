@@ -106,6 +106,7 @@ buildQuoteInfo driverId fulfillment quote contextTime item = do
       OnSelect.AUTO_RICKSHAW -> AUTO_RICKSHAW
       OnSelect.TAXI -> TAXI
       OnSelect.TAXI_PLUS -> TAXI_PLUS
+      OnSelect.BUS -> BUS
 
 buildDriverOfferQuoteDetails ::
   (MonadThrow m, Log m, MonadTime m) =>

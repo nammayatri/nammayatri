@@ -14,10 +14,12 @@
 
 module Beckn.Types.Core.Taxi.Common.Provider where
 
+import Beckn.Types.Core.Taxi.Common.Descriptor
 import Data.OpenApi (ToSchema)
 import EulerHS.Prelude hiding (State, id)
 
-newtype Provider = Provider
-  { id :: Text
+data Provider = Provider
+  { id :: Text,
+    descriptor :: Maybe Descriptor
   }
   deriving (Generic, Show, ToSchema, ToJSON, FromJSON)

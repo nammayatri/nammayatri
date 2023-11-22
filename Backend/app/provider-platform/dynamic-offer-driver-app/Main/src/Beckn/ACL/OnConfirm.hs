@@ -53,7 +53,7 @@ buildOnConfirmMessage res = do
                       OnConfirm.QuotePrice
                         { currency,
                           value = totalFareDecimal,
-                          offered_value = totalFareDecimal
+                          offered_value = Just totalFareDecimal
                         },
                     breakup =
                       Just $
@@ -66,19 +66,24 @@ buildOnConfirmMessage res = do
                 res.driverId >>= \dId ->
                   Just $
                     OnConfirm.Provider
-                      { id = dId
+                      { id = dId,
+                        descriptor = Nothing
                       },
               payment =
                 OnConfirm.Payment
                   { params =
-                      OnConfirm.PaymentParams
-                        { collected_by = OnConfirm.BPP,
-                          instrument = Nothing,
-                          currency = currency,
-                          amount = Just totalFareDecimal
-                        },
+                      Just
+                        OnConfirm.PaymentParams
+                          { collected_by = OnConfirm.BPP,
+                            instrument = Nothing,
+                            currency = currency,
+                            amount = Just totalFareDecimal,
+                            transaction_id = Nothing
+                          },
                     _type = OnConfirm.ON_FULFILLMENT,
-                    uri = booking.paymentUrl
+                    uri = booking.paymentUrl,
+                    tl_method = Nothing,
+                    status = Nothing
                   }
             }
       }
@@ -96,7 +101,9 @@ mkOrderItem itemId fulfillmentId currency totalFareDecimal =
       descriptor =
         OnConfirm.Descriptor
           { short_desc = Just itemId,
-            code = Nothing
+            code = Nothing,
+            name = Nothing,
+            images = Nothing
           }
     }
 
@@ -108,7 +115,8 @@ mklocation loc =
           { lat = loc.lat,
             lon = loc.lon
           },
-      address = castAddress loc.address
+      address = Just $ castAddress loc.address,
+      descriptor = Nothing
     }
   where
     castAddress DL.LocationAddress {..} = OnConfirm.Address {area_code = areaCode, locality = area, ward = Nothing, ..}
@@ -123,7 +131,9 @@ mkFulfillmentInfo fromLoc toLoc fulfillmentId fulfillmentType driverName riderPh
           { descriptor =
               OnConfirm.Descriptor
                 { short_desc = Nothing,
-                  code = Just "TRIP_ASSIGNED"
+                  code = Just "TRIP_ASSIGNED",
+                  name = Nothing,
+                  images = Nothing
                 }
           },
       start =
@@ -165,7 +175,9 @@ mkFulfillmentInfo fromLoc toLoc fulfillmentId fulfillmentType driverName riderPh
                 tags = Nothing,
                 phone = Nothing,
                 image = Nothing
-              }
+              },
+      tags = Nothing,
+      tracking = Nothing
     }
 
 mkSpecialZoneFulfillmentInfo :: DL.Location -> DL.Location -> Text -> Text -> OnConfirm.FulfillmentType -> Text -> Text -> Maybe Text -> OnConfirm.VehicleVariant -> OnConfirm.FulfillmentInfo
@@ -184,7 +196,9 @@ mkSpecialZoneFulfillmentInfo fromLoc toLoc otp fulfillmentId fulfillmentType rid
           { descriptor =
               OnConfirm.Descriptor
                 { code = Just "NEW",
-                  short_desc = Nothing
+                  short_desc = Nothing,
+                  name = Nothing,
+                  images = Nothing
                 }
           },
       start =
@@ -217,5 +231,7 @@ mkSpecialZoneFulfillmentInfo fromLoc toLoc otp fulfillmentId fulfillmentType rid
                   { name = riderName
                   }
           },
-      agent = Nothing
+      agent = Nothing,
+      tags = Nothing,
+      tracking = Nothing
     }

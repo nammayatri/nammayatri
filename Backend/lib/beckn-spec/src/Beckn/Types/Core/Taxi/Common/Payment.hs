@@ -30,9 +30,11 @@ import Kernel.Utils.JSON
 import Kernel.Utils.Schema (genericDeclareUnNamedSchema)
 
 data Payment = Payment
-  { params :: PaymentParams,
+  { params :: Maybe PaymentParams,
     _type :: PaymentType,
-    uri :: Maybe Text
+    uri :: Maybe Text,
+    tl_method :: Maybe Text,
+    status :: Maybe Text
   }
   deriving (Generic, Show, ToSchema)
 
@@ -46,7 +48,8 @@ data PaymentParams = PaymentParams
   { collected_by :: PaymentCollector,
     currency :: Text,
     instrument :: Maybe PaymentInstrument,
-    amount :: Maybe DecimalValue
+    amount :: Maybe DecimalValue,
+    transaction_id :: Maybe Text
   }
   deriving (Generic, Show)
 
