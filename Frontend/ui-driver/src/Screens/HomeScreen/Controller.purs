@@ -329,7 +329,7 @@ data Action = NoAction
             | UpdateGoHomeTimer String String Int
             | AddLocation PrimaryButtonController.Action
             | ConfirmDisableGoto PopUpModal.Action
-            | UpdateOriginDist String String
+            | UpdateOriginDist Number Number
             | UpdateAndNotify ST.Location Boolean
             | UpdateWaitTime ST.TimerStatus
             | NotifyAPI
@@ -750,15 +750,18 @@ eval RetryTimeUpdate state = do
   (updateAndExit state { data = state.data { locationLastUpdatedTime = "" }, props = state.props {refreshAnimation = true}} $ Refresh state { data = state.data { locationLastUpdatedTime = "" }, props = state.props {refreshAnimation = true}})
 
 eval (TimeUpdate time lat lng) state = do
-  let newState = state { data = state.data { currentDriverLat= getLastKnownLocValue ST.LATITUDE lat,  currentDriverLon = getLastKnownLocValue ST.LONGITUDE lng, locationLastUpdatedTime = (convertUTCtoISC time "hh:mm a") }}
+  let driverLat = getLastKnownLocValue ST.LATITUDE lat
+      driverLong = getLastKnownLocValue ST.LONGITUDE lng
+      newState = state { data = state.data { currentDriverLat= driverLat,  currentDriverLon = driverLong, locationLastUpdatedTime = (convertUTCtoISC time "hh:mm a") }}
   void $ pure $ setValueToLocalStore IS_DRIVER_AT_PICKUP (show newState.data.activeRide.notifiedCustomer)
   void $ pure $ setValueToLocalStore LOCATION_UPDATE_TIME (convertUTCtoISC time "hh:mm a")
   continueWithCmd newState [ do
     void $ if (getValueToLocalNativeStore IS_RIDE_ACTIVE == "false") then checkPermissionAndUpdateDriverMarker newState else pure unit
     case state.data.config.waitTimeConfig.enableWaitTime, state.props.currentStage, state.data.activeRide.notifiedCustomer, state.data.snappedOrigin of
-      true, ST.RideAccepted, false, Nothing -> pure (UpdateOriginDist lat lng)
+      true, ST.RideAccepted, false, Nothing -> pure (UpdateOriginDist driverLat driverLong)
       true, ST.RideAccepted, false, Just snapped -> do
-        let dist = (getDistanceBwCordinates (getLastKnownLocValue ST.LATITUDE lat) (getLastKnownLocValue ST.LONGITUDE lng)  snapped.lat snapped.lon)
+
+        let dist = (getDistanceBwCordinates driverLat driverLong snapped.lat snapped.lon)
             isDriverNearBy = ( dist < state.data.config.waitTimeConfig.thresholdDist)
         pure if isDriverNearBy then NotifyAPI else AfterRender
       _, _, _, _ -> pure AfterRender
@@ -774,7 +777,7 @@ eval (UpdateOriginDist lat lng) state =
         Right (API.RideRouteResp resp) -> 
           case Array.head resp.points of
             Just (API.LatLong loc) -> do
-              let dist = getDistanceBwCordinates (getLastKnownLocValue ST.LATITUDE lat) (getLastKnownLocValue ST.LONGITUDE lng) loc.lat loc.lon
+              let dist = getDistanceBwCordinates lat lng loc.lat loc.lon
               liftFlow $ push $ UpdateAndNotify {lat : loc.lat, lon : loc.lon, place : ""} $ dist < state.data.config.waitTimeConfig.thresholdDist
               pure unit
             _ -> pure unit
