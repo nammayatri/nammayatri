@@ -19,6 +19,7 @@ import Data.Array (filter, head, concatMap)
 import Prelude ((==))
 import Data.Maybe (Maybe(..), fromMaybe)
 import JBridge (getSuggestionfromKey, getSuggestionsfromLocal)
+import Engineering.Helpers.MobilityPrelude(isStrEmpty)
 
 suggestionsDefinitions ∷ String -> SuggestionDefinitions
 suggestionsDefinitions dummy = [
@@ -251,7 +252,7 @@ type SuggestionDefinitions = Array
 getMessageFromKey :: String -> String -> String
 getMessageFromKey key language = do
   let decodedMessage = (getSuggestionfromKey key language)
-  if decodedMessage == "" then do
+  if isStrEmpty decodedMessage then do
     let suggestions = (suggestionsDefinitions "")
     let message = filter(\item -> item.key == key) suggestions
     case head message of

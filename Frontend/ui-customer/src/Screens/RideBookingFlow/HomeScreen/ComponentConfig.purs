@@ -80,6 +80,7 @@ import Engineering.Helpers.Suggestions (getSuggestionsfromKey)
 import Components.ChooseVehicle.Controller as ChooseVehicle
 import Foreign.Generic (decode, encode, Foreign, decodeJSON, encodeJSON, class Decode, class Encode)
 import Data.Either (Either(..))
+import Engineering.Helpers.MobilityPrelude(isStrEmpty)
 
 shareAppConfig :: ST.HomeScreenState -> PopUpModal.Config
 shareAppConfig state = let
@@ -1332,7 +1333,7 @@ getCarouselData state =
   map (\item -> 
     { imageConfig : { image : item.image , height : item.imageHeight , width : 200, bgColor : item.imageBgColor, cornerRadius : 8.0 },
       youtubeConfig : (EHC.getYoutubeData item.videoLink "PORTRAIT_VIDEO" item.videoHeight),
-      contentType : if item.videoLink == "" then "IMAGE" else "VIDEO" ,
+      contentType : if isStrEmpty item.videoLink then "IMAGE" else "VIDEO" ,
       gravity : item.gravity ,
       backgroundColor : item.carouselBgColor,
       titleConfig : {

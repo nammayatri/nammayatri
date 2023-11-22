@@ -32,6 +32,7 @@ import Prelude (not, (/=), (==))
 import Screens.Types (AadhaarStage(..))
 import Screens.Types as ST
 import Styles.Colors as Color
+import Engineering.Helpers.MobilityPrelude(isStrEmpty)
 
 primaryButtonViewConfig :: ST.AadhaarVerificationScreenState -> PrimaryButton.Config
 primaryButtonViewConfig state =PrimaryButton.config { textConfig{ text = if state.props.currentStage == AadhaarDetails then (getString SUBMIT) else (getString NEXT) }
@@ -117,7 +118,7 @@ aadhaarOTPEditText state = PrimaryEditText.config {
         , gravity = CENTER_VERTICAL
         , pattern = Just "[0-9]*,6"
         , textStyle = FontStyle.SubHeading1
-        , letterSpacing = if state.data.otp == "" then PX 0.0 else PX 4.0
+        , letterSpacing = if isStrEmpty state.data.otp then PX 0.0 else PX 4.0
         }
       , topLabel{
         visibility = VISIBLE

@@ -45,6 +45,7 @@ import Types.App(FlowBT,  GlobalState(..), ScreenType(..))
 import Storage ( setValueToLocalStore, getValueToLocalStore, KeyStore(..))
 import JBridge (fromMetersToKm, Paths, getLatLonFromAddress)
 import Engineering.Helpers.Utils (getAppConfig)
+import Engineering.Helpers.MobilityPrelude
 import Constants as Constants
 import MerchantConfig.DefaultConfig as DC
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
@@ -476,7 +477,7 @@ getNearByDrivers estimates = DA.nub (getCoordinatesFromEstimates [] estimates)
 
 getEstimatesInfo :: Array EstimateAPIEntity -> String -> HomeScreenState -> EstimateInfo
 getEstimatesInfo estimates vehicleVariant state =
-  let estimatedVarient = if vehicleVariant == "" then estimates else filter (\x -> x ^. _vehicleVariant == vehicleVariant) estimates
+  let estimatedVarient = if isStrEmpty vehicleVariant  then estimates else filter (\x -> x ^. _vehicleVariant == vehicleVariant) estimates
       estimatedPrice = if (isJust (estimatedVarient DA.!! 0)) then (fromMaybe dummyEstimateEntity (estimatedVarient DA.!! 0)) ^. _estimatedFare else 0
       quoteList = getEstimateList estimates state.data.config.estimateAndQuoteConfig
       defaultQuote = fromMaybe ChooseVehicle.config (quoteList DA.!! 0)

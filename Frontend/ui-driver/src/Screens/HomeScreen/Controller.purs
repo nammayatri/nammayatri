@@ -87,6 +87,7 @@ import Engineering.Helpers.Commons (liftFlow)
 import PrestoDOM.Core (getPushFn)
 import Control.Monad.Except.Trans (lift)
 import Data.Either (Either(..))
+import Engineering.Helpers.MobilityPrelude
 
 instance showAction :: Show Action where
   show _ = ""
@@ -621,7 +622,7 @@ eval (UpdateMessages message sender timeStamp size) state = do
 eval (RideActionModalAction (RideActionModal.LoadMessages)) state = do
   let allMessages = getChatMessages ""
   case (Array.last allMessages) of
-      Just value -> if value.message == "" then continue state {data { messagesSize = show (fromMaybe 0 (fromString state.data.messagesSize) + 1)}, props {canSendSuggestion = true}} else
+      Just value -> if isStrEmpty value.message then continue state {data { messagesSize = show (fromMaybe 0 (fromString state.data.messagesSize) + 1)}, props {canSendSuggestion = true}} else
                       if value.sentBy == "Driver" then updateMessagesWithCmd state {data {messages = allMessages, suggestionsList = []}, props {canSendSuggestion = true}}
                       else do
                         let readMessages = fromMaybe 0 (fromString (getValueToLocalNativeStore READ_MESSAGES))

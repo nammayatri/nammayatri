@@ -109,6 +109,7 @@ import Helpers.Auth
 import Helpers.Version
 import Helpers.Ride
 import Helpers.Firebase
+import Engineering.Helpers.MobilityPrelude
 
 baseAppFlow :: GlobalPayload -> Boolean-> FlowBT String Unit
 baseAppFlow gPayload callInitUI = do
@@ -232,7 +233,7 @@ currentFlowStatus = do
       setValueToLocalStore REFERRAL_STATUS  $ if response.hasTakenRide then "HAS_TAKEN_RIDE" else if (response.referralCode /= Nothing && not response.hasTakenRide) then "REFERRED_NOT_TAKEN_RIDE" else "NOT_REFERRED_NOT_TAKEN_RIDE"
       setValueToLocalStore HAS_TAKEN_FIRST_RIDE if response.hasTakenRide then "true" else "false"
       -- (PersonStatsRes resp) <- Remote.getPersonStatsBT "" -- TODO:: Make this function async in non critical flow @ashkriti
-      if DS.null (fromMaybe "" response.firstName) && isNothing response.firstName then do
+      if isStrEmpty (fromMaybe "" response.firstName) && isNothing response.firstName then do
         void $ updateLocalStage HomeScreen
         hideLoaderFlow
         accountSetUpScreenFlow
@@ -620,7 +621,7 @@ homeScreenFlow = do
                                               }) srcSpecialLocation.gates
         (ServiceabilityResDestination destServiceabilityResp) <- Remote.destServiceabilityBT (Remote.makeServiceabilityReqForDest bothLocationChangedState.props.destinationLat bothLocationChangedState.props.destinationLong)
         let destServiceable = destServiceabilityResp.serviceable
-        let pickUpLoc = if length pickUpPoints > 0 then (if state.props.defaultPickUpPoint == "" then fetchDefaultPickupPoint pickUpPoints state.props.sourceLat state.props.sourceLong else state.props.defaultPickUpPoint) else (fromMaybe HomeScreenData.dummyLocation (state.data.nearByPickUpPoints!!0)).place
+        let pickUpLoc = if length pickUpPoints > 0 then (if isStrEmpty state.props.defaultPickUpPoint  then fetchDefaultPickupPoint pickUpPoints state.props.sourceLat state.props.sourceLong else state.props.defaultPickUpPoint) else (fromMaybe HomeScreenData.dummyLocation (state.data.nearByPickUpPoints!!0)).place
         modifyScreenState $ HomeScreenStateType (\homeScreen -> bothLocationChangedState{data{polygonCoordinates = fromMaybe "" sourceServiceabilityResp.geoJson,nearByPickUpPoints=pickUpPoints},props{isSpecialZone =  (sourceServiceabilityResp.geoJson) /= Nothing, confirmLocationCategory = if length pickUpPoints > 0 then state.props.confirmLocationCategory else "", findingQuotesProgress = 0.0 }})
         if (addToRecents) then
           addLocationToRecents item bothLocationChangedState sourceServiceabilityResp.serviceable destServiceabilityResp.serviceable
@@ -864,7 +865,7 @@ homeScreenFlow = do
       _ <- Remote.rideFeedbackBT (Remote.makeFeedBackReq (state.data.rideRatingState.rating) (state.data.rideRatingState.rideId) (state.data.rideRatingState.feedback))
       _ <- updateLocalStage HomeScreen
       let finalAmount = if state.data.finalAmount == 0 then state.data.rideRatingState.finalAmount else state.data.finalAmount
-      let bookingId = if state.props.bookingId == "" then state.data.rideRatingState.bookingId else state.props.bookingId
+      let bookingId = if isStrEmpty state.props.bookingId  then state.data.rideRatingState.bookingId else state.props.bookingId
       pure $ runFn3 emitJOSEvent "java" "onEvent" $ encode $ EventPayload {
                                           event : "process_result"
                                         , payload : Just {
@@ -981,7 +982,7 @@ homeScreenFlow = do
                 confirmLocationCategory = srcSpecialLocation.category
                 }
               })
-        if isMoreThan20Meters || cachedLocation == "" then do
+        if isMoreThan20Meters || isStrEmpty cachedLocation  then do
           PlaceName placeDetails <- getPlaceName lat lon gateAddress
           _ <- liftFlowBT $ logEvent logField_ "ny_user_placename_api_lom_onDrag"
           modifyScreenState $ HomeScreenStateType (\homeScreen ->
@@ -2085,7 +2086,7 @@ cancelEstimate :: String -> FlowBT String Unit
 cancelEstimate bookingId = do
   logField_ <- lift $ lift $ getLogFields
   res <- lift $ lift $ Remote.cancelEstimate bookingId
-  if bookingId == ""
+  if isStrEmpty bookingId 
     then do
       modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{currentStage = HomeScreen}})
     else do

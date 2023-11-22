@@ -21,6 +21,7 @@ import Prelude (Unit, const, ($), (==), (<>))
 import Font.Style as FontStyle
 import Common.Types.App (LazyCheck(..))
 import PrestoDOM (Gravity(..), Length(..), Orientation(..), Visibility(..), Accessiblity(..), PrestoDOM, background, clickable, color, disableClickFeedback, fontStyle, gravity, height, imageView, linearLayout, margin, onClick, orientation, padding, text, textSize, textView, visibility, width, imageWithFallback, accessibilityHint, accessibility)
+import Engineering.Helpers.MobilityPrelude(isStrEmpty)
 
 view :: forall w . (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w 
 view push config = 
@@ -60,7 +61,7 @@ view push config =
       , margin config.textConfig.margin
       , clickable false
       , accessibility ENABLE
-      , accessibilityHint if config.textConfig.accessibilityHint == "" then config.textConfig.text else config.textConfig.accessibilityHint
+      , accessibilityHint if isStrEmpty config.textConfig.accessibilityHint then config.textConfig.text else config.textConfig.accessibilityHint
       , color config.textConfig.color
       ] <> (FontStyle.getFontStyle config.textConfig.textStyle LanguageStyle)
     , suffixImageLayout config push

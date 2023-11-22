@@ -57,6 +57,7 @@ import Screens.CustomerUtils.HelpAndSupportScreen.ComponentConfig
 import Components.PrimaryEditText as PrimaryEditText
 import Components.PrimaryButton as PrimaryButton
 import Data.String as DS
+import Engineering.Helpers.MobilityPrelude
 
 screen :: ST.HelpAndSupportScreenState -> Screen Action ST.HelpAndSupportScreenState ScreenOutput
 screen initialState =
@@ -66,7 +67,7 @@ screen initialState =
   , name : "HelpAndSupportScreen"
   , globalEvents : [
       (\push -> do
-              if (initialState.data.source == "") then
+              if (isStrEmpty initialState.data.source) then
                 launchAff_ $ void $ EHC.flowRunner defaultGlobalState $ getPastRides RideBookingListAPIResponseAction push initialState
               else
                 pure unit

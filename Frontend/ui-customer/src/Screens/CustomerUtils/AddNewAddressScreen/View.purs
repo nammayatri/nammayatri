@@ -50,6 +50,7 @@ import Debug (spy)
 import Data.String as DS
 import Styles.Colors as Color
 import Common.Resources.Constants (pickupZoomLevel)
+import Engineering.Helpers.MobilityPrelude(isStrEmpty)
 
 screen :: ST.AddNewAddressScreenState -> Screen Action ST.AddNewAddressScreenState ScreenOutput
 screen initialState =
@@ -70,7 +71,7 @@ screen initialState =
 
 view :: forall w . (Action  -> Effect Unit) -> ST.AddNewAddressScreenState -> PrestoDOM (Effect Unit) w
 view push state =
-  let showLabel = if state.props.defaultPickUpPoint == "" then false else true
+  let showLabel = if isStrEmpty state.props.defaultPickUpPoint then false else true
   in
   Anim.screenAnimation $
   relativeLayout[

@@ -53,6 +53,7 @@ import Services.API (AddressComponents, Prediction, SavedReqLocationAPIEntity(..
 import Storage (KeyStore(..), getValueToLocalStore)
 import JBridge (fromMetersToKm)
 import Common.Resources.Constants (pickupZoomLevel)
+import Engineering.Helpers.MobilityPrelude(isStrEmpty)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -245,7 +246,7 @@ eval (TagSelected index) state = do
                     0 -> "Home"
                     1 -> "Work"
                     _ -> state.data.addressSavedAs
-  if (activeTag == "") then  continue state{props{isBtnActive = false}, data {activeIndex = Just index,  selectedTag = getTag index }}
+  if (isStrEmpty activeTag) then  continue state{props{isBtnActive = false}, data {activeIndex = Just index,  selectedTag = getTag index }}
     else
       if (validTag state.data.savedTags activeTag state.data.placeName) then
         continue state{ data  { activeIndex = Just index
@@ -439,7 +440,7 @@ calculateDistance savedLocations excludeTag lat lon = do
 isValidLocation :: Array LocationListItemState -> String -> String -> Array DistInfo
 isValidLocation savedLocations excludeTag placeId = do
  map (\item -> do
-    {locationName : item.tag, distanceDiff : 100.0}) (DA.filter (\x -> (if placeId == "" then false else (fromMaybe "" x.placeId) == placeId)) (DA.filter (\x -> (toLower x.tag) /= (toLower excludeTag)) savedLocations))
+    {locationName : item.tag, distanceDiff : 100.0}) (DA.filter (\x -> (if isStrEmpty placeId then false else (fromMaybe "" x.placeId) == placeId)) (DA.filter (\x -> (toLower x.tag) /= (toLower excludeTag)) savedLocations))
 
 compareByDistance :: DistInfo -> DistInfo -> Ordering
 compareByDistance ( a) ( b) = compare (a.distanceDiff ) (b.distanceDiff)

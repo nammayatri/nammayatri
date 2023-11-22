@@ -57,6 +57,7 @@ import Engineering.Helpers.Commons (liftFlow, getNewIDWithTag, bundleVersion, os
 import Engineering.Helpers.LogEvent (logEvent, logEventWithParams, logEventWithMultipleParams)
 import Engineering.Helpers.Suggestions (suggestionsDefinitions, getSuggestions)
 import Engineering.Helpers.Utils (loaderText, toggleLoader, getAppConfig, reboot, showSplash, (?))
+import Engineering.Helpers.MobilityPrelude
 import Foreign (unsafeToForeign)
 import Foreign.Class (class Encode, encode, decode)
 import Helpers.FileProvider.Utils (stringifyJSON)
@@ -1954,7 +1955,7 @@ homeScreenFlow = do
       homeScreenFlow
     GO_TO_CANCEL_RIDE {id, info , reason} state -> do
       liftFlowBT $ logEventWithMultipleParams logField_ "ny_driver_ride_cancelled" $ [{key : "Reason code", value : unsafeToForeign reason},
-                                                                                        {key : "Additional info", value : unsafeToForeign $ if info == "" then "null" else info},
+                                                                                        {key : "Additional info", value : unsafeToForeign $ if isStrEmpty info then "null" else info},
                                                                                         {key : "Pickup", value : unsafeToForeign state.data.activeRide.source},
                                                                                         {key : "Estimated Ride Distance (meters)" , value : unsafeToForeign state.data.activeRide.distance}]
       API.DriverCancelRideResponse cancelRideResp <- Remote.cancelRide id (Remote.makeCancelRideReq info reason)
@@ -2808,7 +2809,7 @@ updateBannerAndPopupFlags = do
     shouldMoveDriverOffline = (withinTimeRange "12:00:00" "23:59:59" (convertUTCtoISC (getCurrentUTC "") "HH:mm:ss"))
 
     moveDriverToOffline =
-      (getValueToLocalStore MOVED_TO_OFFLINE_DUE_TO_HIGH_DUE == "")
+      isStrEmpty (getValueToLocalStore MOVED_TO_OFFLINE_DUE_TO_HIGH_DUE )
         && shouldMoveDriverOffline
         && appConfig.subscriptionConfig.moveDriverToOfflineInHighDueDaily
         && getValueToLocalNativeStore IS_RIDE_ACTIVE == "false"

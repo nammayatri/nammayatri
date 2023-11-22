@@ -25,6 +25,7 @@ import Data.Maybe (Maybe(..), fromMaybe, isJust)
 import Data.String (Pattern(..), Replacement(..), contains, joinWith, replaceAll, split, trim)
 import Helpers.Utils (parseFloat, toStringJSON, extractKeyByRegex)
 import Engineering.Helpers.Commons (os)
+import Engineering.Helpers.MobilityPrelude(isStrEmpty)
 import Language.Strings (getString, getEN)
 import Language.Types (STR(..))
 import MerchantConfig.Utils (getMerchant, Merchant(..))
@@ -64,15 +65,15 @@ decodeAddress addressWithCons =
       Booking bookingLocation -> bookingLocation
       SavedLoc savedLocation -> getBookingEntity savedLocation
   in
-    if (trim (fromMaybe "" address.city) == "" && trim (fromMaybe "" address.area) == "" && trim (fromMaybe "" address.street) == "" && trim (fromMaybe "" address.door) == "" && trim (fromMaybe "" address.building) == "") then
+    if ((isStrEmpty $ trim (fromMaybe "" address.city)) && (isStrEmpty $ trim (fromMaybe "" address.area)) && (isStrEmpty $ trim (fromMaybe "" address.street)) && (isStrEmpty $ trim (fromMaybe "" address.door)) && (isStrEmpty $ trim (fromMaybe "" address.building))) then
       ((fromMaybe "" address.state) <> ", " <> (fromMaybe "" address.country))
-    else if (trim (fromMaybe "" address.area) == "" && trim (fromMaybe "" address.street) == "" && trim (fromMaybe "" address.door) == "" && trim (fromMaybe "" address.building) == "") then
+    else if ((isStrEmpty $ trim (fromMaybe "" address.area)) && (isStrEmpty $ trim (fromMaybe "" address.street)) && (isStrEmpty $ trim (fromMaybe "" address.door)) && (isStrEmpty $ trim (fromMaybe "" address.building))) then
       ((fromMaybe "" address.city) <> ", " <> (fromMaybe "" address.state) <> ", " <> (fromMaybe "" address.country))
-    else if (trim (fromMaybe "" address.street) == "" && trim (fromMaybe "" address.door) == "" && trim (fromMaybe "" address.building) == "") then
+    else if ((isStrEmpty $ trim (fromMaybe "" address.street)) && (isStrEmpty $ trim (fromMaybe "" address.door)) && (isStrEmpty $ trim (fromMaybe "" address.building))) then
       ((fromMaybe "" address.area) <> ", " <> (fromMaybe "" address.city) <> ", " <> (fromMaybe "" address.state) <> ", " <> (fromMaybe "" address.country))
-    else if (trim (fromMaybe "" address.door) == "" && trim (fromMaybe "" address.building) == "") then
+    else if ((isStrEmpty $ trim (fromMaybe "" address.door)) && (isStrEmpty $ trim (fromMaybe "" address.building))) then
       ((fromMaybe "" address.street) <> ", " <> (fromMaybe "" address.area) <> ", " <> (fromMaybe "" address.city) <> ", " <> (fromMaybe "" address.state) <> ", " <> (fromMaybe "" address.country))
-    else if (trim (fromMaybe "" address.door) == "") then
+    else if ((isStrEmpty $ trim (fromMaybe "" address.door))) then
       ((fromMaybe "" address.building) <> ", " <> (fromMaybe "" address.street) <> ", " <> (fromMaybe "" address.area) <> ", " <> (fromMaybe "" address.city) <> ", " <> (fromMaybe "" address.state) <> ", " <> (fromMaybe "" address.country))
     else
       ((fromMaybe "" address.door) <> ", " <> (fromMaybe "" address.building) <> ", " <> (fromMaybe "" address.street) <> ", " <> (fromMaybe "" address.area) <> ", " <> (fromMaybe "" address.city) <> ", " <> (fromMaybe "" address.state) <> ", " <> (fromMaybe "" address.country))
@@ -165,13 +166,13 @@ getAddressFromBooking (BookingLocationAPIEntity address) =
 getWard :: Maybe String -> Maybe String -> Maybe String -> Maybe String -> Maybe String
 getWard ward area street building =
   let
-    actualWard = if (trim (replaceAll (Pattern ",") (Replacement "") (fromMaybe "" ward))) == "" then Nothing else ward
+    actualWard = if (isStrEmpty $ trim (replaceAll (Pattern ",") (Replacement "") (fromMaybe "" ward))) then Nothing else ward
 
-    actualArea = if (trim (fromMaybe "" area)) == "" then Nothing else (area <> Just ", ")
+    actualArea = if (isStrEmpty $ trim (fromMaybe "" area)) then Nothing else (area <> Just ", ")
 
-    actualStreet = if (trim (fromMaybe "" street)) == "" then Nothing else (street <> Just ", ")
+    actualStreet = if (isStrEmpty $ trim (fromMaybe "" street)) then Nothing else (street <> Just ", ")
 
-    actualBuilding = if (trim (fromMaybe "" building)) == "" then Nothing else building
+    actualBuilding = if (isStrEmpty $ trim (fromMaybe "" building)) then Nothing else building
   in
     if isJust actualWard then actualWard else (actualArea <> actualStreet <> actualBuilding)
 
