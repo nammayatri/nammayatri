@@ -1532,6 +1532,18 @@ export const isInternetAvailable = function (unit) {
   };
 };
 
+export const restartApp = function () {
+  return function() {
+    console.log("HERE IN RESET ===--->>")
+    if (JBridge.restartApp){
+      JBridge.restartApp();
+    } else {
+      JBridge.factoryResetApp();
+    }
+  }
+}
+
+// Deprecated
 export const factoryResetApp = function (str) {
   console.log("HERE IN RESET ===--->>")
   JBridge.factoryResetApp()
