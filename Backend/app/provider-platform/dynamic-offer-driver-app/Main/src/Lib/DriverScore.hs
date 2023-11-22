@@ -17,6 +17,8 @@ module Lib.DriverScore
   )
 where
 
+import Data.Time (utctDay)
+import qualified Domain.Types.DailyStats as DDS
 import qualified Domain.Types.DriverStats as DS
 import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
@@ -26,12 +28,13 @@ import qualified Kernel.Beam.Functions as B
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id (Id, cast)
-import Kernel.Utils.Common (CacheFlow, Forkable (fork), Money (Money), fromMaybeM, getCurrentTime, getMoney, highPrecMetersToMeters, logDebug)
+import Kernel.Utils.Common (CacheFlow, Forkable (fork), MonadGuid (generateGUIDText), Money (Money), fromMaybeM, getCurrentTime, getLocalCurrentTime, getMoney, highPrecMetersToMeters, logDebug)
 import qualified Lib.DriverScore.Types as DST
 import qualified SharedLogic.DriverPool as DP
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as CTCQ
 import qualified Storage.Queries.Booking as BQ
 import qualified Storage.Queries.BookingCancellationReason as BCRQ
+import qualified Storage.Queries.DailyStats as SQDS
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.DriverStats as DSQ
 import qualified Storage.Queries.FareParameters as FPQ
@@ -83,9 +86,10 @@ eventPayloadHandler merchantOpCityId DST.OnDriverCancellation {..} = do
     nonZero (Just a)
       | a <= 0 = 1
       | otherwise = a
-eventPayloadHandler _ DST.OnRideCompletion {..} = do
+eventPayloadHandler merchantOpCityId DST.OnRideCompletion {..} = do
   mbDriverStats <- B.runInReplica $ DSQ.findById (cast driverId) -- always be just because stats will be created at OnNewRideAssigned
   -- mbDriverStats <- DSQ.findById (cast driverId) -- always be just because stats will be created at OnNewRideAssigned
+  updateDailyStats driverId merchantOpCityId ride
   whenJust mbDriverStats $ \driverStats -> do
     (incrementTotaEarningsBy, incrementBonusEarningsBy, incrementLateNightTripsCountBy, overallPickupCharges) <-
       if isNotBackFilled driverStats
@@ -123,6 +127,31 @@ eventPayloadHandler _ DST.OnRideCompletion {..} = do
           -- mbFareParam <- FPQ.findById fareParamId
           pure . maybe 0 (const 1) $ (.nightShiftCharge) =<< mbFareParam
         Nothing -> pure 0
+
+updateDailyStats :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id DP.Person -> Id DMOC.MerchantOperatingCity -> DR.Ride -> m ()
+updateDailyStats driverId merchantOpCityId ride = do
+  transporterConfig <- CTCQ.findByMerchantOpCityId merchantOpCityId >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  localTime <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
+  ds <- SQDS.findByDriverIdAndDate driverId (utctDay localTime)
+  case ds of
+    Nothing -> do
+      id <- generateGUIDText
+      let dailyStatsOfDriver' =
+            DDS.DailyStats
+              { id = id,
+                driverId = driverId,
+                totalEarnings = fromMaybe 0 ride.fare,
+                numRides = 1,
+                totalDistance = fromMaybe 0 ride.chargeableDistance,
+                merchantLocalDate = utctDay localTime
+              }
+      SQDS.create dailyStatsOfDriver'
+    Just dailyStats -> do
+      let totalEarnings = dailyStats.totalEarnings + fromMaybe 0 ride.fare
+          numRides = dailyStats.numRides + 1
+          totalDistance = dailyStats.totalDistance + fromMaybe 0 ride.chargeableDistance
+          merchantLocalDate = utctDay localTime
+      SQDS.updateByDriverId driverId totalEarnings numRides totalDistance merchantLocalDate
 
 createDriverStat :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id DP.Person -> m DS.DriverStats
 createDriverStat driverId = do
