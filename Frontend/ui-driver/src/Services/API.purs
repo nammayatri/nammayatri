@@ -423,6 +423,7 @@ newtype GetDriverInfoResp = GetDriverInfoResp
     , manualDues           :: Maybe Number
     , driverGoHomeInfo      :: DriverGoHomeInfo
     , isGoHomeEnabled       :: Boolean
+    , maskedDeviceToken     :: Maybe String
     }
 
 

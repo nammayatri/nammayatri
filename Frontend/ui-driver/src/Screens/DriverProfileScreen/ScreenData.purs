@@ -198,6 +198,7 @@ dummyDriverInfo = GetDriverInfoResp {
     , manualDues           : Nothing
     , driverGoHomeInfo      : dummyDriverGoHomeInfo
     , isGoHomeEnabled       : false
+    , maskedDeviceToken     : Nothing
 }
 
 organizationInfo :: OrganizationInfo

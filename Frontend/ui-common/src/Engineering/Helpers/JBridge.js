@@ -472,26 +472,19 @@ export const setFCMToken = function (cb) {
   // JBridge.setFCMToken();
 };
 
-export const setFCMTokenWithTimeOut = function (timeOut) {
-  return function (cb) {
-    return function (action) {
-      return function () {
-        if (window.JBridge.setFCMToken) {
-          const timeOutCallBack = function () {
-            cb(action("NOT_FOUND"))();
-          };
-          const fcmTimer = setTimeout(timeOutCallBack, timeOut);
-          const callback = callbackMapper.map(function (id) {
-            clearTimeout(fcmTimer);
-            cb(action(id))();
-          });
-          return window.JBridge.setFCMToken(callback);
-        }
-      };
+export const setFCMTokenWithTimeOut = function (timeOut, cb) {
+  if (window.JBridge.setFCMToken) {
+    const timeOutCallBack = function () {
+      cb("NOT_FOUND")();
     };
-    // JBridge.setFCMToken();
-  };
-};
+    const fcmTimer = setTimeout(timeOutCallBack, timeOut);
+    const callback = callbackMapper.map(function (token) {
+      clearTimeout(fcmTimer);
+      cb(token)();
+    });
+    return window.JBridge.setFCMToken(callback);
+  }
+}
 
 export const dateTimePicker = function (cb) {
   return function (action) {
