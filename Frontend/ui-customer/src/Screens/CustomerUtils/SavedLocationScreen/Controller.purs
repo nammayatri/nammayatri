@@ -16,7 +16,7 @@
 module Screens.SavedLocationScreen.Controller where
 
 
-import Prelude( class Show, pure, unit, bind, map, discard, show, not, ($),(==), (&&), (+), (/=), (<>), (||), (>=))
+import Prelude( class Show, pure, unit, bind, map, discard, show, not, void, ($),(==), (&&), (+), (/=), (<>), (||), (>=))
 import PrestoDOM.Types.Core (class Loggable, toPropValue)
 import PrestoDOM (Eval, Visibility(..), continue, exit, continueWithCmd, updateAndExit)
 import Screens.Types(SavedLocationScreenState, SavedLocationData, LocationListItemState, LocationItemType(..))
@@ -37,7 +37,7 @@ import Accessor (_list)
 import Data.Lens ((^.))
 import Log (trackAppActionClick, trackAppEndScreen, trackAppBackPress, trackAppScreenRender, trackAppScreenEvent, trackAppTextInput)
 import Screens (ScreenName(..), getScreen)
-import Helpers.Utils (fetchImage, FetchImageFrom(..))
+import Helpers.Utils (fetchImage, FetchImageFrom(..), isParentView, emitTerminateApp)
 import Engineering.Helpers.Utils as EHU
 import Common.Types.App (LazyCheck(..))
 import Engineering.Helpers.LogEvent (logEvent)
@@ -110,7 +110,12 @@ eval (SavedLocationCardAction (SavedLocationCardController.EditLocation cardStat
 
 eval (BackPressed flag) state = do 
   if state.props.showDeleteLocationModel then continue state{props{showDeleteLocationModel = false}, data{deleteTag = Nothing}}
-    else exit $ GoBack
+    else
+      if isParentView FunctionCall 
+        then do 
+          void $ pure $ emitTerminateApp Nothing true
+          continue state
+        else exit $ GoBack
 
 eval (SavedLocationCardAction (SavedLocationCardController.DeleteLocation tagName)) state = do 
   continue state{props{showDeleteLocationModel = true}, data{deleteTag = (Just tagName)}}

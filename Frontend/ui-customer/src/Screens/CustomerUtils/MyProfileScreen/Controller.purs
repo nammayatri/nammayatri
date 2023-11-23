@@ -17,13 +17,13 @@ import Resources.Constants as Constants
 import Data.Maybe (Maybe(..), fromMaybe, isJust, isNothing)
 import JBridge (hideKeyboardOnNavigation, requestKeyboardShow ,firebaseLogEvent, pauseYoutubeVideo)
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppTextInput, trackAppScreenEvent)
-import Prelude (class Show, pure, unit, ($), discard, bind, not, (<>), (<), (==), (&&), (/=), (||), (>=))
+import Prelude (class Show, pure, unit, ($), discard, bind, not, void, (<>), (<), (==), (&&), (/=), (||), (>=))
 import PrestoDOM (Eval, continue, continueWithCmd, exit, updateAndExit)
 import PrestoDOM.Types.Core (class Loggable)
 import Screens (ScreenName(..), getScreen)
 import Screens.Types (MyProfileScreenState, DeleteStatus(..), FieldType(..), ErrorType(..), Gender(..), DisabilityT(..), DisabilityData(..))
 import Services.API (GetProfileRes(..))
-import Helpers.Utils (validateEmail)
+import Helpers.Utils (validateEmail, emitTerminateApp, isParentView)
 import Data.String(length,trim)
 import Storage(KeyStore(..), getValueToLocalStore, setValueToLocalStore)
 import Engineering.Helpers.Commons(getNewIDWithTag, setText)
@@ -31,6 +31,7 @@ import Effect.Unsafe
 import Engineering.Helpers.LogEvent (logEvent)
 import Data.Array as DA
 import Data.Lens ((^.))
+import Common.Types.App (LazyCheck(..))
 
 instance showAction :: Show Action where
   show _ = ""
@@ -98,7 +99,12 @@ eval (BackPressed backpressState) state = do
     else if state.props.updateProfile then do
       _ <- pure $ hideKeyboardOnNavigation true
       continue state { props { updateProfile = false, genderOptionExpanded = false , expandEnabled = false, isEmailValid = true} }
-        else exit $ GoToHome state
+        else 
+          if isParentView FunctionCall 
+            then do 
+              void $ pure $ emitTerminateApp Nothing true
+              continue state
+            else exit $ GoToHome state
 
 eval (EditProfile fieldType) state = do
   case fieldType of

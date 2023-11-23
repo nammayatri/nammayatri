@@ -48,6 +48,7 @@ import Services.API (RideBookingListRes(..))
 import Services.Backend as Remote
 import Styles.Colors as Color
 import Types.App (GlobalState, defaultGlobalState)
+import Helpers.Utils as HU
 
 screen :: ST.MyRidesScreenState -> PrestoList.ListItem -> Screen Action ST.MyRidesScreenState ScreenOutput
 screen initialState listItemm =
@@ -87,7 +88,7 @@ view listItemm push state =
             separatorView
           else
             linearLayout[][]
-        , if state.data.config.nyBrandingVisibility then do
+        , if state.data.config.nyBrandingVisibility && HU.showTitle FunctionCall then do
             textView $ 
               [ text (getString SELECT_A_RIDE)
               , color Color.black700

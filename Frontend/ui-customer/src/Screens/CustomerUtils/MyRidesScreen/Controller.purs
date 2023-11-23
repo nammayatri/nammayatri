@@ -26,11 +26,11 @@ import Data.Lens ((^.))
 import Data.Maybe (Maybe(..), fromMaybe, isJust)
 import Data.String (Pattern(..), split)
 import Engineering.Helpers.Commons (strToBool)
-import Helpers.Utils (parseFloat, rotateArray, setEnabled, setRefreshing, isHaveFare, withinTimeRange, fetchImage, FetchImageFrom(..))
+import Helpers.Utils (parseFloat, rotateArray, setEnabled, setRefreshing, isHaveFare, withinTimeRange, fetchImage, FetchImageFrom(..), isParentView, emitTerminateApp)
 import Engineering.Helpers.Commons (convertUTCtoISC)
 import JBridge (firebaseLogEvent)
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppScreenEvent)
-import Prelude (class Show, pure, unit, bind, map, discard, show, ($), (==), (&&), (+), (/=), (<>), (||), (-), (<), (/), (*), negate, (<<<), not)
+import Prelude (class Show, pure, unit, bind, map, discard, show, ($), (==), (&&), (+), (/=), (<>), (||), (-), (<), (/), (*), negate, (<<<), not, void)
 import PrestoDOM (Eval, ScrollState(..), continue, continueWithCmd, exit, updateAndExit)
 import PrestoDOM.Types.Core (class Loggable, toPropValue)
 import Screens (ScreenName(..), getScreen)
@@ -107,7 +107,12 @@ data Action = NoAction
 
 eval :: Action -> MyRidesScreenState -> Eval Action ScreenOutput MyRidesScreenState
 
-eval BackPressed state = exit $ GoBack state
+eval BackPressed state = 
+  if isParentView FunctionCall 
+    then do 
+      void $ pure $ emitTerminateApp Nothing true
+      continue state
+    else exit $ GoBack state
 
 eval (ScrollStateChanged scrollState) state = do
   _ <- case scrollState of
