@@ -77,6 +77,8 @@ dependencies:
   - split
   - unordered-containers
   - lens
+  - casing
+  - directory
 
 ghc-options:
   - -Wall

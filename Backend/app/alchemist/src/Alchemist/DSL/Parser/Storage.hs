@@ -79,7 +79,7 @@ findMatchingSqlType haskellType =
 
 defaultSQLTypes :: [(String, String)]
 defaultSQLTypes =
-  [ ("Text", "CHARACTER(36)"),
-    ("Id ", "Varchar(50)"),
-    ("TimeOfDay", "UTCTime")
+  [ ("Text", "text"),
+    ("Id ", "character varying(36)"),
+    ("TimeOfDay", "time without time zone")
   ]

@@ -3,6 +3,7 @@ module Alchemist.Generator.SQL.Table where
 import Alchemist.DSL.Syntax.Storage
 import Data.List (intercalate)
 import Kernel.Prelude
+import Text.Casing (quietSnake)
 
 -- Generates SQL for creating a table and altering it to add columns
 generateSQL :: TableDef -> String
@@ -22,16 +23,14 @@ alterTableSQL tableDef =
 -- SQL for adding a single column with constraints
 addColumnSQL :: String -> FieldDef -> String
 addColumnSQL tableName fieldDef =
-  "ALTER TABLE " ++ tableName ++ " ADD COLUMN " ++ fieldName fieldDef ++ " "
+  "ALTER TABLE " ++ tableName ++ " ADD COLUMN " ++ quietSnake (fieldName fieldDef) ++ " "
     ++ sqlType fieldDef
     ++ " "
-    ++ intercalate " " (map constraintToSQL (constraints fieldDef))
+    ++ intercalate " " (catMaybes $ map constraintToSQL (constraints fieldDef))
     ++ ";"
 
 -- Converts a FieldConstraint to SQL
-constraintToSQL :: FieldConstraint -> String
-constraintToSQL PrimaryKey = "PRIMARY KEY"
-constraintToSQL SecondaryKey = "UNIQUE"
-constraintToSQL NotNull = "NOT NULL"
-constraintToSQL (Default value) = "DEFAULT " ++ value
-constraintToSQL (CustomConstraint value) = value
+constraintToSQL :: FieldConstraint -> Maybe String
+constraintToSQL NotNull = Just "NOT NULL"
+constraintToSQL (Default value) = Just ("DEFAULT " ++ value)
+constraintToSQL _ = Nothing
