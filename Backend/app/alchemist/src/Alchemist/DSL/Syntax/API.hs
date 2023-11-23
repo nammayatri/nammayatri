@@ -1,21 +1,38 @@
+{-# LANGUAGE TemplateHaskell #-}
+
 module Alchemist.DSL.Syntax.API where
 
+import Control.Lens hiding (noneOf)
 import Kernel.Prelude
 
-data APIEndpoint = APIEndpoint
-  { method :: HttpMethod,
-    path :: String,
-    auth :: Maybe AuthType,
-    headers :: [Header],
-    requestType :: Maybe DataType,
-    responseType :: DataType
+data UrlParts
+  = UnitPath Text
+  | Capture Text Text
+  | QueryParam Text Text Bool
+  deriving (Show)
+
+data ApiType = GET | POST | PUT | DELETE deriving (Show)
+
+data AuthType = AdminTokenAuth | TokenAuth deriving (Show)
+
+data HeaderType = Header Text Text deriving (Show)
+
+data ApiReq = ApiReq Text Text deriving (Show)
+
+data ApiRes = ApiRes Text Text deriving (Show)
+
+type Apis = [ApiTT]
+
+data ApiTT = ApiTT
+  { _urlParts :: [UrlParts],
+    _apiType :: ApiType,
+    _authType :: Maybe AuthType,
+    _header :: [HeaderType],
+    _apiReqType :: Maybe ApiReq,
+    _apiResType :: ApiRes
   }
-  deriving (Show, Eq)
+  deriving (Show)
 
-data HttpMethod = GET | POST deriving (Show, Eq)
+$(makeLenses ''ApiTT)
 
-data AuthType = TokenAuth deriving (Show, Eq)
-
-data Header = Header String DataType deriving (Show, Eq)
-
-newtype DataType = DataType String deriving (Show, Eq)
+data ApiParts = ApiTU ApiType [UrlParts] | HeaderT HeaderType | Auth (Maybe AuthType) | Req Text Text | Res Text Text deriving (Show)
