@@ -1,10 +1,11 @@
 module Alchemist.DSL.Parser.Storage (parseStorageDSL) where
 
 import Alchemist.DSL.Syntax.Storage
-import Alchemist.Utils (figureOutImports, findMatchingSqlType, makeTypeQualified)
+import Alchemist.Utils (figureOutImports, makeTypeQualified)
 import Kernel.Prelude hiding (try)
 import Text.Parsec hiding (spaces)
 import Text.Parsec.String (Parser)
+import Text.Regex.TDFA ((=~))
 
 parseConstraint :: Parser FieldConstraint
 parseConstraint =
@@ -63,3 +64,16 @@ parseStorageDSL = do
 
 spaces :: Parser ()
 spaces = skipMany (char ' ' <|> char '\n' <|> char '\t')
+
+findMatchingSqlType :: String -> Maybe String
+findMatchingSqlType haskellType =
+  case filter ((haskellType =~) . fst) defaultSQLTypes of
+    [] -> Nothing
+    ((_, sqlType) : _) -> Just sqlType
+
+defaultSQLTypes :: [(String, String)]
+defaultSQLTypes =
+  [ ("Text", "CHARACTER(36)"),
+    ("Id ", "Varchar(50)"),
+    ("TimeOfDay", "UTCTime")
+  ]
