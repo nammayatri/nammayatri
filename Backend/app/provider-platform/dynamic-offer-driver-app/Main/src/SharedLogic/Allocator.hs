@@ -107,7 +107,8 @@ data SendPDNNotificationToDriverJobData = SendPDNNotificationToDriverJobData
   { startTime :: UTCTime,
     endTime :: UTCTime,
     merchantId :: Id DM.Merchant,
-    merchantOperatingCityId :: Maybe (Id DMOC.MerchantOperatingCity)
+    merchantOperatingCityId :: Maybe (Id DMOC.MerchantOperatingCity),
+    retryCount :: Maybe Int
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON)
 

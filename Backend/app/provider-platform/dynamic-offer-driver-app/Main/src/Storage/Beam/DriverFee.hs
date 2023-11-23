@@ -47,6 +47,7 @@ data DriverFeeT f = DriverFeeT
     billNumber :: B.C f (Maybe Int),
     autopayPaymentStage :: B.C f (Maybe Domain.AutopayPaymentStage),
     schedulerTryCount :: B.C f Int,
+    notificationRetryCount :: B.C f Int,
     feeWithoutDiscount :: B.C f (Maybe HighPrecMoney),
     amountPaidByCoin :: B.C f (Maybe HighPrecMoney),
     overlaySent :: B.C f Bool,

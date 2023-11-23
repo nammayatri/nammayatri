@@ -154,7 +154,7 @@ changeAutoPayFeesAndInvoicesForDriverFeesToManual :: (MonadFlow m, EsqDBFlow m r
 changeAutoPayFeesAndInvoicesForDriverFeesToManual alldriverFeeIdsInBatch validDriverFeeIds = do
   let driverFeeIdsToBeShiftedToManual = alldriverFeeIdsInBatch \\ validDriverFeeIds
   QDF.updateToManualFeeByDriverFeeIds driverFeeIdsToBeShiftedToManual
-  QINV.updateInvoiceStatusByDriverFeeIds INV.INACTIVE driverFeeIdsToBeShiftedToManual
+  QINV.updateInvoiceStatusByDriverFeeIdsAndMbPaymentMode INV.INACTIVE driverFeeIdsToBeShiftedToManual Nothing
 
 roundToHalf :: HighPrecMoney -> HighPrecMoney
 roundToHalf x = fromInteger (round (x * 2)) / 2

@@ -503,6 +503,7 @@ mkDriverFee now merchantId driverId rideFare govtCharges platformFee cgst sgst t
         amountPaidByCoin = Nothing,
         planId = Nothing,
         planMode = Nothing,
+        notificationRetryCount = 0,
         ..
       }
   where

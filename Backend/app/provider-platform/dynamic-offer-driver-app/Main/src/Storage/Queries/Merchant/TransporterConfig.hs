@@ -133,6 +133,7 @@ instance FromTType' BeamTC.TransporterConfig TransporterConfig where
             coinExpireTime = secondsToNominalDiffTime coinExpireTime,
             stepFunctionToConvertCoins = stepFunctionToConvertCoins,
             cancellationDistDiff = cancellationDistDiff,
+            notificationRetryTimeGap = secondsToNominalDiffTime notificationRetryTimeGap,
             ..
           }
     where
@@ -244,5 +245,8 @@ instance ToTType' BeamTC.TransporterConfig TransporterConfig where
         BeamTC.cancellationFeeDisputeLimit = cancellationFeeDisputeLimit,
         BeamTC.numOfCancellationsAllowed = numOfCancellationsAllowed,
         BeamTC.canAddCancellationFee = canAddCancellationFee,
-        BeamTC.allowDefaultPlanAllocation = allowDefaultPlanAllocation
+        BeamTC.allowDefaultPlanAllocation = allowDefaultPlanAllocation,
+        BeamTC.notificationRetryEligibleErrorCodes = notificationRetryEligibleErrorCodes,
+        BeamTC.notificationRetryCountThreshold = notificationRetryCountThreshold,
+        BeamTC.notificationRetryTimeGap = nominalDiffTimeToSeconds notificationRetryTimeGap
       }
