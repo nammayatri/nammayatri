@@ -1,8 +1,22 @@
 module Alchemist.Generator.Haskell.BeamQueries where
 
 import Alchemist.DSL.Syntax.Storage
+import Data.Char (toUpper)
 import Data.List (intercalate)
 import Kernel.Prelude
+
+generateImports :: TableDef -> String
+generateImports tableDef =
+  "{-# OPTIONS_GHC -Wno-orphans #-}\n\n"
+    ++ "module Storage.Queries."
+    ++ (capitalize $ tableNameHaskell tableDef)
+    ++ " where\n\n"
+    ++ "import Kernel.Beam.Functions\n"
+    ++ "import qualified Storage.Beam."
+    ++ (capitalize $ tableNameHaskell tableDef)
+    ++ " as Beam"
+    ++ (intercalate "\n" $ map (\i -> "import qualified " ++ i ++ " as " ++ i) $ imports tableDef)
+    ++ "\n\n"
 
 -- Determines the conversion function based on the Haskell type
 toTTypeConversionFunction :: String -> String -> String
@@ -22,8 +36,8 @@ fromTTypeConversionFunction haskellType fieldName =
 -- Generates the FromTType' instance
 fromTTypeInstance :: TableDef -> String
 fromTTypeInstance tableDef =
-  "instance FromTType' BeamCS." ++ tableNameHaskell tableDef ++ " " ++ tableNameHaskell tableDef ++ " where\n"
-    ++ "  fromTType' BeamCS."
+  "instance FromTType' Beam." ++ tableNameHaskell tableDef ++ " " ++ tableNameHaskell tableDef ++ " where\n"
+    ++ "  fromTType' Beam."
     ++ tableNameHaskell tableDef
     ++ "T {..} = do\n"
     ++ "    pure $\n"
@@ -40,20 +54,24 @@ fromTTypeInstance tableDef =
 -- Generates the ToTType' instance
 toTTypeInstance :: TableDef -> String
 toTTypeInstance tableDef =
-  "instance ToTType' BeamCS." ++ tableNameHaskell tableDef ++ " " ++ tableNameHaskell tableDef ++ " where\n"
+  "instance ToTType' Beam." ++ tableNameHaskell tableDef ++ " " ++ tableNameHaskell tableDef ++ " where\n"
     ++ "  toTType' "
     ++ tableNameHaskell tableDef
     ++ " {..} = do\n"
-    ++ "    BeamCS."
+    ++ "    Beam."
     ++ tableNameHaskell tableDef
     ++ "T\n"
     ++ "      { "
     ++ intercalate ",\n        " (map toField (fields tableDef))
     ++ "\n      }\n\n"
   where
-    toField field = "BeamCS." ++ fieldName field ++ " = " ++ toTTypeConversionFunction (haskellType field) (fieldName field)
+    toField field = "Beam." ++ fieldName field ++ " = " ++ toTTypeConversionFunction (haskellType field) (fieldName field)
+
+capitalize :: String -> String
+capitalize "" = ""
+capitalize (x : xs) = toUpper x : xs
 
 -- Generates both FromTType' and ToTType' instances
 generateTTypeInstances :: TableDef -> String
 generateTTypeInstances tableDef =
-  fromTTypeInstance tableDef ++ toTTypeInstance tableDef
+  generateImports tableDef ++ fromTTypeInstance tableDef ++ toTTypeInstance tableDef
