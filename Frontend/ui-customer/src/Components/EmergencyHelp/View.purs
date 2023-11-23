@@ -41,6 +41,7 @@ import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Common.Types.App (LazyCheck(..))
 import MerchantConfig.Utils (getValueFromConfig)
 import JBridge as JB
+import Engineering.Helpers.MobilityPrelude
 
 view :: forall w .  (Action  -> Effect Unit) -> EmergencyHelpModelState  -> PrestoDOM (Effect Unit) w
 view push state =
@@ -408,13 +409,13 @@ allContactsView state push =
         ][  linearLayout
             [ height $ V 24
             , width $ V 24
-            , background (fromMaybe "" (fromMaybe [] (contactColorsList !! index) !! 0))
+            , background (fromMaybeString (fromMaybe [] (contactColorsList !! index) !! 0))
             , cornerRadius 12.0
             , accessibility DISABLE_DESCENDANT
             , gravity CENTER
             ][  textView
                 [ text (DS.toUpper((<>) (getFirstChar item.name) (getLastChar item.name) ))
-                , color (fromMaybe "" (fromMaybe [] (contactColorsList !! index) !! 1))
+                , color (fromMaybeString (fromMaybe [] (contactColorsList !! index) !! 1))
                 , textSize FontSize.a_12
                 ]
               ]
@@ -475,10 +476,10 @@ getNameInitials :: String -> (Array String)
 getNameInitials fullName =  (take 2 (split (Pattern " ") (fullName)))
 
 getFirstChar :: String ->  String
-getFirstChar name =  DS.take 1 (fromMaybe "" ( (getNameInitials name) !! 0))
+getFirstChar name =  DS.take 1 (fromMaybeString ( (getNameInitials name) !! 0))
 
 getLastChar :: String -> String
-getLastChar name =  DS.take 1 ( fromMaybe "" ( (getNameInitials name) !! 1) )
+getLastChar name =  DS.take 1 ( fromMaybeString ( (getNameInitials name) !! 1) )
 
 type CardData =  { action :: Action
   , title :: String

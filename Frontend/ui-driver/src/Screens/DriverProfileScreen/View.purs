@@ -79,6 +79,7 @@ import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Resource.Constants as Const
 import Data.Either (Either (..))
 import Data.Enum (enumFromThenTo)
+import Engineering.Helpers.MobilityPrelude 
 
 screen :: ST.DriverProfileScreenState -> Screen Action ST.DriverProfileScreenState ScreenOutput
 screen initialState =
@@ -414,7 +415,7 @@ tabImageView state push =
           linearLayout [
             height $ V 88
           , width $ V 88
-          , afterRender (\action -> do JB.renderBase64Image (fromMaybe "" state.data.profileImg) (getNewIDWithTag "driver_prof_img") false "CENTER_CROP") (const NoAction)
+          , afterRender (\action -> do JB.renderBase64Image (fromMaybeString state.data.profileImg) (getNewIDWithTag "driver_prof_img") false "CENTER_CROP") (const NoAction)
           , id (getNewIDWithTag "driver_prof_img")][]
         )
       ]      
@@ -841,7 +842,7 @@ payment push state =
   , width MATCH_PARENT
   , margin $ Margin 16 40 16 0
   , orientation VERTICAL
-  , visibility if state.data.payerVpa == "" && state.data.autoPayStatus == ACTIVE_AUTOPAY then GONE else VISIBLE
+  , visibility if isStrEmpty state.data.payerVpa && state.data.autoPayStatus == ACTIVE_AUTOPAY then GONE else VISIBLE
   ]([  textView $
       [ text $ getString PAYMENT
       , margin $ MarginBottom 12
@@ -958,7 +959,7 @@ alternateNumberLayoutView state push =
         textView[
           height WRAP_CONTENT
         , width WRAP_CONTENT
-        , text $ "+91 " <> fromMaybe "" state.data.driverAlternateNumber
+        , text $ "+91 " <> fromMaybeString state.data.driverAlternateNumber
         , color Color.black800
         ],
         linearLayout[

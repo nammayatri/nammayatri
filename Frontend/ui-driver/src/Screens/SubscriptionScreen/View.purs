@@ -75,6 +75,7 @@ import Storage (KeyStore(..), getValueToLocalNativeStore, getValueToLocalStore, 
 import Styles.Colors as Color
 import Types.App (GlobalState(..), defaultGlobalState)
 import Screens.DriverProfileScreen.ScreenData (dummyDriverInfo)
+import Engineering.Helpers.MobilityPrelude(isStrEmpty, fromMaybeString)
 
 screen :: SubscriptionScreenState -> GlobalState -> Screen Action SubscriptionScreenState ScreenOutput
 screen initialState globalState =
@@ -415,7 +416,7 @@ plansBottomView push state =
           , height WRAP_CONTENT
           , gravity CENTER_VERTICAL
           , onClick (\action -> do
-                        let url = if state.data.config.myPlanYoutubeLink == "" then state.data.config.faqLink else splitBasedOnLanguage state.data.config.myPlanYoutubeLink
+                        let url = if isStrEmpty state.data.config.myPlanYoutubeLink  then state.data.config.faqLink else splitBasedOnLanguage state.data.config.myPlanYoutubeLink
                         _ <- push action
                         _ <- pure $ JB.cleverTapCustomEvent "ny_driver_nyplans_watchvideo_clicked"
                         _ <- pure $ JB.metaLogEvent "ny_driver_nyplans_watchvideo_clicked"
@@ -436,7 +437,7 @@ plansBottomView push state =
                 , height $ V 16
                 , width $ V 16
                 , margin $ Margin 0 3 6 0
-                , visibility if state.data.config.myPlanYoutubeLink == "" then GONE else VISIBLE
+                , visibility if isStrEmpty state.data.config.myPlanYoutubeLink  then GONE else VISIBLE
             ]
             , textView $
               [ weight 1.0
@@ -624,7 +625,7 @@ myPlanBodyview push state =
           , height $ V 38
           , margin (MarginLeft 4)
           , padding $ Padding 8 8 8 8
-          , visibility if state.data.config.myPlanYoutubeLink == "" then GONE else VISIBLE
+          , visibility if isStrEmpty state.data.config.myPlanYoutubeLink  then GONE else VISIBLE
           , imageWithFallback $ HU.fetchImage HU.FF_ASSET "ny_ic_youtube"
           , onClick (\action -> do
                       _<- push action
@@ -1114,7 +1115,7 @@ planCardView push state isSelected clickable' action isSelectedLangTamil showBan
                         Mb.Just desc -> [text desc, visibility if isSelected || isIntroductory then VISIBLE else GONE]
                         Mb.Nothing -> [visibility GONE])
                   [ textView $
-                    [ textFromHtml $ Mb.fromMaybe "" item.offerDescription
+                    [ textFromHtml $ fromMaybeString item.offerDescription
                     , color Color.black600
                     ] <> if isSelectedLangTamil then FontStyle.captions TypoGraphy else FontStyle.body3 TypoGraphy
                   ]
@@ -1280,7 +1281,7 @@ autoPayPGView push state =
                   , width $ V 14
                   ]
               ]
-          ] <> if (isJust state.data.autoPayDetails.payerUpiId) then [commonTV push (fromMaybe "" state.data.autoPayDetails.payerUpiId) Color.black800 (FontStyle.paragraphText TypoGraphy) 0 LEFT true] else [])
+          ] <> if (isJust state.data.autoPayDetails.payerUpiId) then [commonTV push (fromMaybeString state.data.autoPayDetails.payerUpiId) Color.black800 (FontStyle.paragraphText TypoGraphy) 0 LEFT true] else [])
           
         , linearLayout
           [ height WRAP_CONTENT
@@ -1557,7 +1558,7 @@ helpCentreCardView push state =
       , orientation $ HORIZONTAL
       , padding $ PaddingVertical 15 15
       , gravity CENTER_VERTICAL
-      , onClick push $ const $ CallHelpCenter (fromMaybe "" state.contact)
+      , onClick push $ const $ CallHelpCenter (fromMaybeString state.contact)
       , visibility $ case state.contact of 
                       Just _ -> VISIBLE
                       Nothing -> GONE
@@ -1836,7 +1837,7 @@ splitBasedOnLanguage :: String -> String
 splitBasedOnLanguage str = 
     let strArray = DS.split (DS.Pattern "-*$*-") str
     in
-    fromMaybe "" (strArray !! (getLanguage (length strArray)))
+    fromMaybeString (strArray !! (getLanguage (length strArray)))
     where 
         getLanguage len = do
             case getValueToLocalStore LANGUAGE_KEY of

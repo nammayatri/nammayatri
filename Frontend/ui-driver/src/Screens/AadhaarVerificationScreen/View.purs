@@ -42,6 +42,7 @@ import Screens.AadhaarVerificationScreen.Controller (Action(..), ScreenOutput, e
 import Screens.Types (AadhaarStage(..))
 import Screens.Types as ST
 import Styles.Colors as Color
+import Engineering.Helpers.MobilityPrelude(isStrEmpty)
 
 screen :: ST.AadhaarVerificationScreenState -> Screen Action ST.AadhaarVerificationScreenState ScreenOutput
 screen initialState =
@@ -258,8 +259,8 @@ dateOfBirth push state =
         , height MATCH_PARENT
         , orientation HORIZONTAL
       ][ textView
-        ([ text if state.data.driverDob == "" then (getString SELECT_DATE_OF_BIRTH) else state.data.driverDob
-        , color if state.data.driverDob == "" then Color.darkGrey else Color.greyTextColor
+        ([ text if isStrEmpty state.data.driverDob then (getString SELECT_DATE_OF_BIRTH) else state.data.driverDob
+        , color if isStrEmpty state.data.driverDob then Color.darkGrey else Color.greyTextColor
         , weight 1.0
         , padding (PaddingRight 15)
         ] <> FontStyle.subHeading1 TypoGraphy)

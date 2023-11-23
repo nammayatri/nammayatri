@@ -25,6 +25,7 @@ import Data.Maybe (Maybe(..), fromMaybe, isJust)
 import Data.String (Pattern(..), Replacement(..), contains, joinWith, replaceAll, split, trim)
 import Helpers.Utils (parseFloat, toStringJSON, extractKeyByRegex)
 import Engineering.Helpers.Commons (os)
+import Engineering.Helpers.MobilityPrelude(isStrEmpty, fromMaybeString)
 import Language.Strings (getString, getEN)
 import Language.Types (STR(..))
 import MerchantConfig.Utils (getMerchant, Merchant(..))
@@ -64,18 +65,18 @@ decodeAddress addressWithCons =
       Booking bookingLocation -> bookingLocation
       SavedLoc savedLocation -> getBookingEntity savedLocation
   in
-    if (trim (fromMaybe "" address.city) == "" && trim (fromMaybe "" address.area) == "" && trim (fromMaybe "" address.street) == "" && trim (fromMaybe "" address.door) == "" && trim (fromMaybe "" address.building) == "") then
-      ((fromMaybe "" address.state) <> ", " <> (fromMaybe "" address.country))
-    else if (trim (fromMaybe "" address.area) == "" && trim (fromMaybe "" address.street) == "" && trim (fromMaybe "" address.door) == "" && trim (fromMaybe "" address.building) == "") then
-      ((fromMaybe "" address.city) <> ", " <> (fromMaybe "" address.state) <> ", " <> (fromMaybe "" address.country))
-    else if (trim (fromMaybe "" address.street) == "" && trim (fromMaybe "" address.door) == "" && trim (fromMaybe "" address.building) == "") then
-      ((fromMaybe "" address.area) <> ", " <> (fromMaybe "" address.city) <> ", " <> (fromMaybe "" address.state) <> ", " <> (fromMaybe "" address.country))
-    else if (trim (fromMaybe "" address.door) == "" && trim (fromMaybe "" address.building) == "") then
-      ((fromMaybe "" address.street) <> ", " <> (fromMaybe "" address.area) <> ", " <> (fromMaybe "" address.city) <> ", " <> (fromMaybe "" address.state) <> ", " <> (fromMaybe "" address.country))
-    else if (trim (fromMaybe "" address.door) == "") then
-      ((fromMaybe "" address.building) <> ", " <> (fromMaybe "" address.street) <> ", " <> (fromMaybe "" address.area) <> ", " <> (fromMaybe "" address.city) <> ", " <> (fromMaybe "" address.state) <> ", " <> (fromMaybe "" address.country))
+    if ((isStrEmpty $ trim (fromMaybeString address.city)) && (isStrEmpty $ trim (fromMaybeString address.area)) && (isStrEmpty $ trim (fromMaybeString address.street)) && (isStrEmpty $ trim (fromMaybeString address.door)) && (isStrEmpty $ trim (fromMaybeString address.building))) then
+      ((fromMaybeString address.state) <> ", " <> (fromMaybeString address.country))
+    else if ((isStrEmpty $ trim (fromMaybeString address.area)) && (isStrEmpty $ trim (fromMaybeString address.street)) && (isStrEmpty $ trim (fromMaybeString address.door)) && (isStrEmpty $ trim (fromMaybeString address.building))) then
+      ((fromMaybeString address.city) <> ", " <> (fromMaybeString address.state) <> ", " <> (fromMaybeString address.country))
+    else if ((isStrEmpty $ trim (fromMaybeString address.street)) && (isStrEmpty $ trim (fromMaybeString address.door)) && (isStrEmpty $ trim (fromMaybeString address.building))) then
+      ((fromMaybeString address.area) <> ", " <> (fromMaybeString address.city) <> ", " <> (fromMaybeString address.state) <> ", " <> (fromMaybeString address.country))
+    else if ((isStrEmpty $ trim (fromMaybeString address.door)) && (isStrEmpty $ trim (fromMaybeString address.building))) then
+      ((fromMaybeString address.street) <> ", " <> (fromMaybeString address.area) <> ", " <> (fromMaybeString address.city) <> ", " <> (fromMaybeString address.state) <> ", " <> (fromMaybeString address.country))
+    else if ((isStrEmpty $ trim (fromMaybeString address.door))) then
+      ((fromMaybeString address.building) <> ", " <> (fromMaybeString address.street) <> ", " <> (fromMaybeString address.area) <> ", " <> (fromMaybeString address.city) <> ", " <> (fromMaybeString address.state) <> ", " <> (fromMaybeString address.country))
     else
-      ((fromMaybe "" address.door) <> ", " <> (fromMaybe "" address.building) <> ", " <> (fromMaybe "" address.street) <> ", " <> (fromMaybe "" address.area) <> ", " <> (fromMaybe "" address.city) <> ", " <> (fromMaybe "" address.state) <> ", " <> (fromMaybe "" address.country))
+      ((fromMaybeString address.door) <> ", " <> (fromMaybeString address.building) <> ", " <> (fromMaybeString address.street) <> ", " <> (fromMaybeString address.area) <> ", " <> (fromMaybeString address.city) <> ", " <> (fromMaybeString address.state) <> ", " <> (fromMaybeString address.country))
 
 encodeAddress :: String -> Array AddressComponents -> Maybe String -> ST.Address
 encodeAddress fullAddress addressComponents placeId =
@@ -165,13 +166,13 @@ getAddressFromBooking (BookingLocationAPIEntity address) =
 getWard :: Maybe String -> Maybe String -> Maybe String -> Maybe String -> Maybe String
 getWard ward area street building =
   let
-    actualWard = if (trim (replaceAll (Pattern ",") (Replacement "") (fromMaybe "" ward))) == "" then Nothing else ward
+    actualWard = if (isStrEmpty $ trim (replaceAll (Pattern ",") (Replacement "") (fromMaybeString ward))) then Nothing else ward
 
-    actualArea = if (trim (fromMaybe "" area)) == "" then Nothing else (area <> Just ", ")
+    actualArea = if (isStrEmpty $ trim (fromMaybeString area)) then Nothing else (area <> Just ", ")
 
-    actualStreet = if (trim (fromMaybe "" street)) == "" then Nothing else (street <> Just ", ")
+    actualStreet = if (isStrEmpty $ trim (fromMaybeString street)) then Nothing else (street <> Just ", ")
 
-    actualBuilding = if (trim (fromMaybe "" building)) == "" then Nothing else building
+    actualBuilding = if (isStrEmpty $ trim (fromMaybeString building)) then Nothing else building
   in
     if isJust actualWard then actualWard else (actualArea <> actualStreet <> actualBuilding)
 

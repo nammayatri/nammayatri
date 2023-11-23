@@ -80,6 +80,7 @@ import Effect.Uncurried(EffectFn1, EffectFn4, EffectFn3,runEffectFn3)
 import Effect.Aff (Aff (..), error, killFiber, launchAff, launchAff_, makeAff, nonCanceler, Fiber)
 import Prelude (class EuclideanRing, Unit, bind, discard, identity, pure, unit, void, ($), (+), (<#>), (<*>), (<>), (*>), (>>>), ($>), (/=), (&&), (<=), show, (>=), (>),(<))
 import Data.String (replace, split, Pattern(..), Replacement(..))
+import Engineering.Helpers.MobilityPrelude
 
 foreign import shuffle :: forall a. Array a -> Array a
 

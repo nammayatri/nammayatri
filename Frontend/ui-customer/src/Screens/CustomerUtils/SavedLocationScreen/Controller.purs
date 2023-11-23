@@ -38,7 +38,8 @@ import Data.Lens ((^.))
 import Log (trackAppActionClick, trackAppEndScreen, trackAppBackPress, trackAppScreenRender, trackAppScreenEvent, trackAppTextInput)
 import Screens (ScreenName(..), getScreen)
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
-import Engineering.Helpers.Utils as EHU
+import Engineering.Helpers.Utils (toggleLoader)
+import Engineering.Helpers.MobilityPrelude
 import Common.Types.App (LazyCheck(..))
 import Engineering.Helpers.LogEvent (logEvent)
 import Foreign.Object (empty)
@@ -116,11 +117,11 @@ eval (SavedLocationCardAction (SavedLocationCardController.DeleteLocation tagNam
   continue state{props{showDeleteLocationModel = true}, data{deleteTag = (Just tagName)}}
 
 eval (PopUpModalAction (PopUpModal.OnButton1Click)) state = continue state{props{showDeleteLocationModel = false}, data{deleteTag = Nothing}}
-eval (PopUpModalAction (PopUpModal.OnButton2Click)) state = exit $ DeleteLocation (fromMaybe "" state.data.deleteTag)
+eval (PopUpModalAction (PopUpModal.OnButton2Click)) state = exit $ DeleteLocation (fromMaybeString state.data.deleteTag)
 eval (GenericHeaderAC (GenericHeaderController.PrefixImgOnClick)) state = exit $ GoBack
 
 eval (SavedLocationListAPIResponseAction respList) state = do 
-  _ <- pure $ EHU.toggleLoader false
+  _ <- pure $ toggleLoader false
   let home = (filter (\x -> (toLower x.tag) == "home") (getSavedLocation (respList ^. _list)))
   let work = (filter (\x -> (toLower x.tag) == "work") (getSavedLocation (respList ^. _list)))
   let otherLocation = (filter (\x -> not  ((toLower x.tag) == "home" || (toLower x.tag) == "work")) (getSavedLocation (respList ^. _list)))
@@ -177,7 +178,7 @@ getSavedLocationForAddNewAddressScreen (savedLocation) = (map (\ (item) ->
   { prefixImageUrl : fetchImage FF_ASSET "ny_ic_loc_grey"
   , postfixImageUrl : ""
   , postfixImageVisibility : false
-  , title : (fromMaybe "" ((split (Pattern ",") (item.address)) !! 0))
+  , title : (fromMaybeString ((split (Pattern ",") (item.address)) !! 0))
   , subTitle : ""
   , placeId : item.placeId 
   , lat : item.lat
@@ -203,15 +204,15 @@ getSavedLocationForAddNewAddressScreen (savedLocation) = (map (\ (item) ->
 
 decodePlace :: SavedReqLocationAPIEntity -> String 
 decodePlace (SavedReqLocationAPIEntity address )= 
-  if ( trim (fromMaybe "" address.area) == "" && trim (fromMaybe "" address.street) == "" && trim (fromMaybe "" address.door) == "" && trim (fromMaybe "" address.building) == "" ) then
-                (fromMaybe "" address.city) 
-        else if ( trim (fromMaybe "" address.street) == "" && trim (fromMaybe "" address.door) == "" && trim (fromMaybe "" address.building) == "" ) then
-                (fromMaybe "" address.area)
-        else if ( trim (fromMaybe "" address.door) == "" && trim (fromMaybe "" address.building) == "") then
-                (fromMaybe "" address.street) 
-        else if ( trim (fromMaybe "" address.door) == "") then
-                (fromMaybe "" address.building) 
+  if ((isStrEmpty $ trim (fromMaybeString address.area)) &&(isStrEmpty $ trim (fromMaybeString address.street)) &&(isStrEmpty $ trim (fromMaybeString address.door)) &&(isStrEmpty $ trim (fromMaybeString address.building)) ) then
+                (fromMaybeString address.city) 
+        else if ((isStrEmpty $ trim (fromMaybeString address.street)) && (isStrEmpty $ trim (fromMaybeString address.door)) &&(isStrEmpty $ trim (fromMaybeString address.building)) ) then
+                (fromMaybeString address.area)
+        else if ((isStrEmpty $ trim (fromMaybeString address.door)) && (isStrEmpty $ trim (fromMaybeString address.building))) then
+                (fromMaybeString address.street) 
+        else if ((isStrEmpty $trim (fromMaybeString address.door))) then
+                (fromMaybeString address.building) 
         else
-                (fromMaybe "" address.door) 
+                (fromMaybeString address.door) 
 
 

@@ -47,6 +47,7 @@ import Components.PrimaryEditText as PrimaryEditText
 import Components.RecordAudioModel.View (view) as RecordAudioModel
 import Data.String (length, trim) as STR
 import Components.ViewImageModel.View (view) as ViewImageModel
+import Engineering.Helpers.MobilityPrelude
 
 screen :: ReportIssueChatScreenState -> Screen Action ReportIssueChatScreenState ScreenOutput
 screen initialState =
@@ -155,7 +156,7 @@ issueIdHeader state push =
   ][ textView
      [ width WRAP_CONTENT
      , height MATCH_PARENT
-     , text ((getString ISSUE_NO) <> ": " <> fromMaybe "" state.data.issueId)
+     , text ((getString ISSUE_NO) <> ": " <> fromMaybeString state.data.issueId)
      , gravity CENTER_VERTICAL
      , textSize FontSize.a_14
      , color Color.black800

@@ -34,6 +34,7 @@ import PrestoDOM.Types.Core (toPropValue)
 import Data.String.Regex (match)
 import Halogen.VDom.DOM.Prop (PropValue)
 import Helpers.Utils (fetchImage, FetchImageFrom(..), setRefreshing)
+import Engineering.Helpers.MobilityPrelude
 
 screen :: EmergencyContactsScreenState -> PrestoList.ListItem -> Screen Action EmergencyContactsScreenState ScreenOutput
 screen initialState listItemm =
@@ -330,14 +331,14 @@ contactCardView push state contact index =
     [ linearLayout
         [ height $ V 24
         , width $ V 24
-        , background (fromMaybe "" (fromMaybe [] (contactColorsList !! index) !! 0))
+        , background (fromMaybeString (fromMaybe [] (contactColorsList !! index) !! 0))
         , cornerRadius 12.0
         , gravity CENTER
         , margin (MarginRight 10)
         ]
         [ textView $
             [ text (DS.toUpper ((<>) (getFirstChar contact.name) (getLastChar contact.name)))
-            , color (fromMaybe "" (fromMaybe [] (contactColorsList !! index) !! 1))
+            , color (fromMaybeString (fromMaybe [] (contactColorsList !! index) !! 1))
             , accessibility DISABLE
             ] <> FontStyle.body3 TypoGraphy
         ]
@@ -364,10 +365,10 @@ getNameInitials :: String -> (Array String)
 getNameInitials fullName = (take 2 (split (Pattern " ") (fullName)))
 
 getFirstChar :: String -> String
-getFirstChar name = DS.take 1 (fromMaybe "" ((getNameInitials name) !! 0))
+getFirstChar name = DS.take 1 (fromMaybeString ((getNameInitials name) !! 0))
 
 getLastChar :: String -> String
-getLastChar name = DS.take 1 (fromMaybe "" ((getNameInitials name) !! 1))
+getLastChar name = DS.take 1 (fromMaybeString ((getNameInitials name) !! 1))
 
 removeContactPopUpView :: forall w. (Action -> Effect Unit) -> EmergencyContactsScreenState -> PrestoDOM (Effect Unit) w
 removeContactPopUpView push state =

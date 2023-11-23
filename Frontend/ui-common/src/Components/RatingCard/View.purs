@@ -39,6 +39,7 @@ import Styles.Colors as Color
 import Common.Types.App (FeedbackAnswer, LazyCheck(..))
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Data.Maybe (Maybe(..))
+import Engineering.Helpers.MobilityPrelude
 
 view :: forall w. (Action -> Effect Unit) -> RatingCardConfig -> PrestoDOM ( Effect Unit ) w
 view push state =
@@ -258,7 +259,7 @@ feedbackBasedOnRatingView state push =
         [ height WRAP_CONTENT
         , width $ V (screenWidth unit - 64)
         , textSize FontSize.a_16
-        , text $ fromMaybe "" $ state.overallFeedbackArray !! (state.data.rating-1)
+        , text $ fromMaybeString $ state.overallFeedbackArray !! (state.data.rating-1)
         , color Color.black800
         , maxLines 2
         , fontStyle $ FontStyle.semiBold LanguageStyle

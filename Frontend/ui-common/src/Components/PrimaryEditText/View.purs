@@ -24,6 +24,7 @@ import PrestoDOM (InputType(..),Gravity(..), Length(..), Orientation(..), Presto
 import Font.Style as FontStyle
 import Common.Types.App
 import Data.String as DS
+import Engineering.Helpers.MobilityPrelude(isStrEmpty)
 
 view :: forall w .  (Action  -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push config = 
@@ -96,7 +97,7 @@ editTextView push config =
   , singleLine config.editText.singleLine
   , hintColor config.editText.placeholderColor
   , accessibility ENABLE
-  , accessibilityHint if config.editText.text == "" then (if config.editText.accessibilityHint == "" then config.editText.placeholder else config.editText.accessibilityHint ) else if (config.type == "number") then (DS.replaceAll (DS.Pattern "") (DS.Replacement "-") (config.editText.text)) else config.editText.text
+  , accessibilityHint if isStrEmpty config.editText.text  then (if isStrEmpty config.editText.accessibilityHint  then config.editText.placeholder else config.editText.accessibilityHint ) else if (config.type == "number") then (DS.replaceAll (DS.Pattern "") (DS.Replacement "-") (config.editText.text)) else config.editText.text
   , margin config.editText.margin
   , background config.background
   , padding config.editText.padding
@@ -122,7 +123,7 @@ editTextView push config =
                           _    -> []) 
   <> (if config.editText.capsLock then [inputTypeI 4097] else [])
   <> (if not config.editText.enabled then if os == "IOS" then [clickable false] else [inputTypeI 0] else[])
-  <> (if config.editText.separator == "" then [] else [
+  <> (if isStrEmpty config.editText.separator  then [] else [
     separator config.editText.separator
   , separatorRepeat config.editText.separatorRepeat
   ])

@@ -42,6 +42,7 @@ import Services.API (BankError(..), FeeType, GetCurrentPlanResp(..), KioskLocati
 import Services.Backend (getCorrespondingErrorMessage)
 import Services.Config (getSupportNumber, getWhatsAppSupportNo)
 import Storage (KeyStore(..), setValueToLocalNativeStore, setValueToLocalStore, getValueToLocalStore)
+import Engineering.Helpers.MobilityPrelude
 
 instance showAction :: Show Action where
   show _ = ""
@@ -319,7 +320,7 @@ eval (LoadMyPlans plans) state = do
       case currentPlanResp.mandateDetails of 
         Mb.Nothing -> continue newState
         Mb.Just (MandateData mandateDetails) -> do
-          let pspLogo = Const.getPspIcon $ (Mb.fromMaybe "" mandateDetails.payerVpa)
+          let pspLogo = Const.getPspIcon $ (fromMaybeString mandateDetails.payerVpa)
           _ <- pure $ setCleverTapUserProp [{key : "Mandate status", value : unsafeToForeign mandateDetails.status},
                                             {key : "Autopay Max Amount Register", value : unsafeToForeign mandateDetails.maxAmount},
                                             {key : "Payment method" , value : unsafeToForeign $ if mandateDetails.status == "ACTIVE" then "Autopay" else "Manual"},

@@ -79,6 +79,7 @@ import Screens.Types (LocalStoreSubscriptionInfo)
 import Data.Int (fromString, even, fromNumber)
 import Data.Number.Format (fixed, toStringWith)
 import Data.Function.Uncurried (Fn1)
+import Engineering.Helpers.MobilityPrelude
 
 type AffSuccess s = (s -> Effect Unit)
 
@@ -309,9 +310,9 @@ getRequiredTag prop tag = do
                                 Just val -> Just val
     Just tag' -> do
         let arr = DS.split (DS.Pattern "_") tag'
-        let pickup = fromMaybe "" (arr DA.!! 0)
-        let drop = fromMaybe "" (arr DA.!! 1)
-        let priority = fromMaybe "" (arr DA.!! 2)
+        let pickup = fromMaybeString (arr DA.!! 0)
+        let drop = fromMaybeString (arr DA.!! 1)
+        let priority = fromMaybeString (arr DA.!! 2)
         case priority of
           "PriorityPickup" -> case (runFn4 getRideLabelConfig Just Nothing prop (pickup <> "_Pickup")) of
                                 Nothing -> Nothing

@@ -50,6 +50,7 @@ import MerchantConfig.Utils (getValueFromConfig)
 import Effect.Unsafe (unsafePerformEffect)
 import Engineering.Helpers.LogEvent (logEvent)
 import Foreign.Object (empty)
+import Engineering.Helpers.MobilityPrelude
 
 instance showAction :: Show Action where
     show _ = ""
@@ -267,8 +268,8 @@ myRideListTransform listRes = filter (\item -> (item.data.status == "COMPLETED")
           totalAmount : ((getValueFromConfig "currency") <> " " <> show (fromMaybe (0) ((fromMaybe dummyRideAPIEntity (ride.rideList !!0) )^. _computedPrice))),
           status : (ride.status),
           isNull : false,
-          rideStartTime : (convertUTCtoISC (fromMaybe "" ride.rideStartTime )"h:mm A"),
-          rideEndTime : (convertUTCtoISC (fromMaybe "" ride.rideEndTime )"h:mm A"),
+          rideStartTime : (convertUTCtoISC (fromMaybeString ride.rideStartTime )"h:mm A"),
+          rideEndTime : (convertUTCtoISC (fromMaybeString ride.rideEndTime )"h:mm A"),
           vehicleNumber : ((fromMaybe dummyRideAPIEntity (ride.rideList !!0) )^._vehicleNumber),
           rideId : ((fromMaybe dummyRideAPIEntity (ride.rideList !!0) )^._id),
           tripId : ((fromMaybe dummyRideAPIEntity (ride.rideList !!0) )^._shortRideId),

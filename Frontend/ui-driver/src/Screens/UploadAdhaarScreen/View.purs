@@ -34,6 +34,7 @@ import Common.Types.App
 import Screens.UploadAdhaarScreen.ComponentConfig
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Common.Types.App (LazyCheck(..))
+import Engineering.Helpers.MobilityPrelude(isStrEmpty)
 
 screen :: ST.UploadAdhaarScreenState -> Screen Action ST.UploadAdhaarScreenState ScreenOutput
 screen initialState =
@@ -141,8 +142,8 @@ frontUploadSection state push =
     , stroke ("1," <> Color.borderGreyColor)
     ][ 
       textView
-      ([ text if (state.data.imageFront == "") then (getString UPLOAD_FRONT_SIDE) else state.data.imageName
-      , color if (state.data.imageFront == "") then Color.darkGrey else Color.greyTextColor
+      ([ text if (isStrEmpty state.data.imageFront ) then (getString UPLOAD_FRONT_SIDE) else state.data.imageName
+      , color if (isStrEmpty state.data.imageFront ) then Color.darkGrey else Color.greyTextColor
       , weight 1.0
       ]<> FontStyle.subHeading1 TypoGraphy)
     , if (state.data.imageFront /= "") then previewIcon state push "front" else
@@ -177,8 +178,8 @@ backUploadSection state push =
     , stroke ("1," <> Color.borderGreyColor)
     ][
       textView
-      ([ text if (state.data.imageBack == "") then (getString UPLOAD_BACK_SIDE) else state.data.imageName
-      , color if (state.data.imageBack == "") then Color.darkGrey else Color.greyTextColor
+      ([ text if (isStrEmpty state.data.imageBack) then (getString UPLOAD_BACK_SIDE) else state.data.imageName
+      , color if (isStrEmpty state.data.imageBack) then Color.darkGrey else Color.greyTextColor
       , weight 1.0
       ]<>FontStyle.subHeading1 TypoGraphy)
     , if (state.data.imageBack /= "") then previewIcon state push "back" else

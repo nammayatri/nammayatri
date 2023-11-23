@@ -51,6 +51,7 @@ import PrestoDOM.Utils (continue, continueWithCmd, exit, updateAndExit)
 import Screens (ScreenName(REPORT_ISSUE_CHAT_SCREEN), getScreen)
 import Screens.Types (ReportIssueChatScreenState)
 import Services.EndPoints (uploadFile) as EndPoint
+import Engineering.Helpers.MobilityPrelude
 
 instance loggableAction :: Loggable Action where
   performLog action appId = case action of
@@ -270,7 +271,7 @@ eval (AddImagesModelAction ImageModel.BackPressed) state = do
 
 ---------------------------------------------------- Timer Callback ----------------------------------------------------
 eval (RecordAudioModelAction (RecordAudioModel.TimerCallback timer)) state = do
-  case fromString (fromMaybe "" (stripSuffix (Pattern "s ") timer)) of
+  case fromString (fromMaybeString (stripSuffix (Pattern "s ") timer)) of
     Just time -> do
       let minutes' = if time `div` 60 > 9 then (show (time `div` 60)) else ("0" <> (show (time `div` 60)))
       let seconds' = if time `mod` 60 > 9 then (show (time `mod` 60)) else ("0" <> (show (time `mod` 60)))

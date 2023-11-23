@@ -48,6 +48,7 @@ import Types.App (defaultGlobalState)
 import Effect.Unsafe (unsafePerformEffect)
 import Data.Function.Uncurried (runFn3)
 import Common.Types.App(YoutubeData)
+import Engineering.Helpers.MobilityPrelude(isStrEmpty, fromMaybeString)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -265,7 +266,7 @@ notifisDetailStateTransformer selectedItem =
   , timeLabel: selectedItem.timeLabel
   , description: splitUrlsAndText selectedItem.description
   , actionText: selectedItem.action2Text
-  , actionVisibility: if selectedItem.action2Text == "" then GONE else VISIBLE
+  , actionVisibility: if isStrEmpty selectedItem.action2Text then GONE else VISIBLE
   , addCommentModelVisibility: GONE
   , comment: selectedItem.comment
   , commentBtnActive: false
@@ -393,7 +394,7 @@ notificationCardDesc text =
         if charAt 0 word == Just '*' && charAt (wordLength - 1) word == Just '*'
           then let
           titleAndUrl = fetchTitleAndUrl wordLength word
-          linkTitle = trim $ fromMaybe "" (titleAndUrl Array.!! 0)
+          linkTitle = trim $ fromMaybeString (titleAndUrl Array.!! 0)
           in
             linkTitle
           else

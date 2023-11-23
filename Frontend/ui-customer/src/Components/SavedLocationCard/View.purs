@@ -32,6 +32,7 @@ import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Common.Types.App (LazyCheck(..))
 import Prelude ((<>))
 import Data.String as DS
+import Engineering.Helpers.MobilityPrelude
 
 view :: forall w. (Action -> Effect Unit) -> LocationListItemState -> PrestoDOM (Effect Unit) w
 view push state =
@@ -49,7 +50,7 @@ view push state =
       , width MATCH_PARENT
       , gravity CENTER_HORIZONTAL
       ][  imageView
-          [ imageWithFallback $ fetchImage FF_ASSET $ case (getCardType (fromMaybe "" state.cardType)) of
+          [ imageWithFallback $ fetchImage FF_ASSET $ case (getCardType (fromMaybeString state.cardType)) of
                 Just card -> case card of 
                   HOME_TAG -> "ny_ic_home"
                   WORK_TAG -> "ny_ic_work"
@@ -86,7 +87,7 @@ savedLocationView state push =
                 )
           ) $ 
           [ textView $
-              [ text case (getCardType (fromMaybe "" state.cardType)) of 
+              [ text case (getCardType (fromMaybeString state.cardType)) of 
                     Just tag -> case tag of 
                       HOME_TAG -> (getString HOME)
                       WORK_TAG -> (getString WORK)
@@ -97,7 +98,7 @@ savedLocationView state push =
               , maxLines 2
               , color Color.black800
               , accessibility ENABLE
-              , accessibilityHint ( (DS.replaceAll (DS.Pattern " : ") (DS.Replacement ",") state.savedLocation )<> " is Saved as" <> (case (getCardType (fromMaybe "" state.cardType)) of 
+              , accessibilityHint ( (DS.replaceAll (DS.Pattern " : ") (DS.Replacement ",") state.savedLocation )<> " is Saved as" <> (case (getCardType (fromMaybeString state.cardType)) of 
                     Just tag -> case tag of 
                       HOME_TAG -> (getString HOME)
                       WORK_TAG -> (getString WORK)

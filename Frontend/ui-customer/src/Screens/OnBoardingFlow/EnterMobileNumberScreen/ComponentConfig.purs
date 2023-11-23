@@ -25,6 +25,7 @@ import Components.PrimaryEditText as PrimaryEditText
 import Data.Maybe (Maybe(..))
 import Engineering.Helpers.Commons as EHC
 import Engineering.Helpers.Utils (mobileNumberMaxLength)
+import Engineering.Helpers.MobilityPrelude
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
@@ -167,7 +168,7 @@ otpEditTextConfig state = let
       , type = "number"
       , height = V 54
       , errorLabel {
-            text = if state.props.attemptLeft == "" then getString WRONG_OTP else getString INCORRECT_OTP_PLEASE_TRY_AGAIN <> state.props.attemptLeft <> getString N_MORE_ATTEMPTS_LEFT,
+            text = if isStrEmpty state.props.attemptLeft then getString WRONG_OTP else getString INCORRECT_OTP_PLEASE_TRY_AGAIN <> state.props.attemptLeft <> getString N_MORE_ATTEMPTS_LEFT,
             visibility = VISIBLE,
             alpha = 0.8
       },

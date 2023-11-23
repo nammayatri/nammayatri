@@ -31,6 +31,7 @@ import Effect.Unsafe
 import Engineering.Helpers.LogEvent (logEvent)
 import Data.Array as DA
 import Data.Lens ((^.))
+import Engineering.Helpers.MobilityPrelude(isStrEmpty, fromMaybeString, isJustTrue)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -104,7 +105,7 @@ eval (EditProfile fieldType) state = do
   case fieldType of
     Just EMAILID_ -> do
       _ <- pure $ requestKeyboardShow (getNewIDWithTag "EmailEditText")
-      _ <- pure $ setText (getNewIDWithTag "EmailEditText") (fromMaybe "" state.data.emailId)
+      _ <- pure $ setText (getNewIDWithTag "EmailEditText") (fromMaybeString state.data.emailId)
       pure unit
     _ -> pure unit
   let disability = case state.data.disabilityType of 
@@ -133,10 +134,10 @@ eval (NameEditTextAction (PrimaryEditText.TextChanged id value)) state = do
 
 eval (EmailIDEditTextAction (PrimaryEditText.TextChanged id value)) state = do
   let isButtonActive = (state.data.nameErrorMessage == Nothing && checkValid state.data.emailId value && (state.data.emailId /= Just value || state.data.name /= state.data.editedName))
-  if value == fromMaybe "" state.data.emailId then continue state 
+  if value == fromMaybeString state.data.emailId then continue state 
     else if (state.data.emailId == Nothing) then  continue state {  data { editedEmailId = Just value, emailErrorMessage = checkError "email" state.data.emailId value}
                     , props { isEmailValid = checkValid state.data.emailId value, isBtnEnabled = isButtonActive}}
-    else if (value == "" && state.data.emailErrorMessage == Just EMAIL_EXISTS) then 
+    else if (isStrEmpty value && state.data.emailErrorMessage == Just EMAIL_EXISTS) then 
       continue state{props  { isEmailValid = false, isBtnEnabled = isNothing state.data.disabilityOptions.selectedDisability, genderOptionExpanded = state.props.fromHomeScreen, expandEnabled = state.props.fromHomeScreen}}
     else continue state { data {editedEmailId = Just value , emailErrorMessage = checkError "email" state.data.emailId value }
                         , props{isEmailValid = checkValid state.data.emailId value, 
@@ -149,7 +150,7 @@ eval (UpdateButtonAction (PrimaryButton.OnClick)) state = do
       pure unit
     else pure unit
   if state.data.editedDisabilityOptions.activeIndex == 1 && state.props.changeAccessibility then 
-    continue state{props{isSpecialAssistList = true}, data{editedDisabilityOptions{editedDisabilityReason = fromMaybe "" state.data.editedDisabilityOptions.otherDisabilityReason}}}
+    continue state{props{isSpecialAssistList = true}, data{editedDisabilityOptions{editedDisabilityReason = fromMaybeString state.data.editedDisabilityOptions.otherDisabilityReason}}}
     else do 
       let newState = state{data{editedDisabilityOptions{editedDisabilityReason = "" , selectedDisability = Nothing, otherDisabilityReason = Nothing}}}
       updateAndExit state $ UpdateProfile state
@@ -167,7 +168,7 @@ eval (SpecialAssistanceListAC action) state = do
   let editedDisabilityOptions = state.data.editedDisabilityOptions
   case action of
     SelectListModal.OnGoBack -> continue state{props{isSpecialAssistList = false}}
-    SelectListModal.UpdateIndex idx -> continue state { data{editedDisabilityOptions{specialAssistActiveIndex = idx , editedDisabilityReason = fromMaybe "" editedDisabilityOptions.otherDisabilityReason } }}
+    SelectListModal.UpdateIndex idx -> continue state { data{editedDisabilityOptions{specialAssistActiveIndex = idx , editedDisabilityReason = fromMaybeString editedDisabilityOptions.otherDisabilityReason } }}
     SelectListModal.TextChanged id input -> continue state {data{editedDisabilityOptions{otherDisabilityReason = Just input}}}
     SelectListModal.Button2 (PrimaryButton.OnClick) -> do 
       _ <- pure $ hideKeyboardOnNavigation true
@@ -224,7 +225,7 @@ updateProfile (GetProfileRes profile) state = do
                     Just "" -> ""
                     Just name -> (" " <> name)
                     Nothing -> ""
-      name = (fromMaybe "" profile.firstName) <> middleName <> lastName
+      name = (fromMaybeString profile.firstName) <> middleName <> lastName
       gender = case (profile.gender) of
         Just "MALE" -> Just MALE
         Just "FEMALE" -> Just FEMALE
@@ -235,11 +236,11 @@ updateProfile (GetProfileRes profile) state = do
       disability = case profile.disability of 
         Just disabilityT -> Just (Constants.getDisabilityType disabilityT state.data.disabilityOptions.disabilityOptionList)
         _ -> Nothing
-      disabilityOptions = state.data.disabilityOptions{ activeIndex = if hasDisability == Just true then 1 else 0 
+      disabilityOptions = state.data.disabilityOptions{ activeIndex = if isJustTrue hasDisability then 1 else 0 
                                               , selectedDisability = disability
                                               , specialAssistActiveIndex = getActiveIndex disability state.data.disabilityOptions.disabilityOptionList}
   _ <- pure $ setValueToLocalStore DISABILITY_UPDATED if (isJust hasDisability) then  "true" else "false"
-  _ <- pure $ setValueToLocalStore DISABILITY_NAME if (isJust disability) then  (fromMaybe "" profile.disability) else ""
+  _ <- pure $ setValueToLocalStore DISABILITY_NAME if (isJust disability) then  (fromMaybeString profile.disability) else ""
   continue state { data { name = name, editedName = name, gender = gender,editedGender = gender, emailId = profile.email
                         , hasDisability = hasDisability
                         , disabilityType = disability

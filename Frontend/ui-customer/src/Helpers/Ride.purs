@@ -42,7 +42,7 @@ import Storage
 import Helpers.Utils (getCurrentDate)
 import Resources.Constants (DecodeAddress(..), decodeAddress)
 import Data.String (split, Pattern(..))
-
+import Engineering.Helpers.MobilityPrelude
 
 checkRideStatus :: Boolean -> FlowBT String Unit --TODO:: Need to refactor this function
 checkRideStatus rideAssigned = do
@@ -142,7 +142,7 @@ checkRideStatus rideAssigned = do
                                               Just endTime   -> " " <>(convertUTCtoISC endTime "h:mm A")
                                               Nothing        -> ""
                           , rideStartDate = case currRideListItem.rideStartTime of
-                                              Just startTime ->( (fromMaybe "" (head (split (Pattern ",") (convertUTCtoISC startTime "llll")) )) <> ", " <>  (convertUTCtoISC startTime "Do MMM") )
+                                              Just startTime ->( (fromMaybeString (head (split (Pattern ",") (convertUTCtoISC startTime "llll")) )) <> ", " <>  (convertUTCtoISC startTime "Do MMM") )
                                               Nothing        -> ""
                           , dateDDMMYY =  case currRideListItem.rideStartTime of
                                             Just startTime -> (convertUTCtoISC startTime "DD/MM/YYYY")

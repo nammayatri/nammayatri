@@ -53,6 +53,7 @@ import Services.API (AddressComponents, Prediction, SavedReqLocationAPIEntity(..
 import Storage (KeyStore(..), getValueToLocalStore)
 import JBridge (fromMetersToKm)
 import Common.Resources.Constants (pickupZoomLevel)
+import Engineering.Helpers.MobilityPrelude(isStrEmpty, fromMaybeString)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -141,7 +142,7 @@ eval :: Action -> AddNewAddressScreenState -> Eval Action ScreenOutput AddNewAdd
 
 eval (AddressChanged input) state = do
   if input /= state.data.address then do
-    if (getLocTag (fromMaybe "" state.data.selectedItem.tagType)) ==  (Just CURR_LOC) then continue state{data{selectedItem{tag = ""}}, props{isLocationServiceable = if( not state.props.isLocationServiceable) then  (input /= state.data.address) else true}}
+    if (getLocTag (fromMaybeString state.data.selectedItem.tagType)) ==  (Just CURR_LOC) then continue state{data{selectedItem{tag = ""}}, props{isLocationServiceable = if( not state.props.isLocationServiceable) then  (input /= state.data.address) else true}}
       else do
         if (length input > 2) then do
           validateSearchInput state input
@@ -180,7 +181,7 @@ eval (UpdateCurrLocName lat lon name) state = do
 
 eval (SelectedCurrentLocation lat lon name) state = do
   void $ pure $ hideKeyboardOnNavigation true
-  exit $ CheckLocServiceability (state{data{address = name, locationList = [] , selectedItem{tag = "Current_Location",lat = Just lat, lon = Just lon, placeId = Nothing, locationItemType = Nothing, description = name,title =(fromMaybe "" ((split (Pattern "," ) name) DA.!! 0) ), subTitle = (drop ((fromMaybe 0 (indexOf (Pattern ",") (name))) + 2) (name))  }}}) (CURR_LOC)
+  exit $ CheckLocServiceability (state{data{address = name, locationList = [] , selectedItem{tag = "Current_Location",lat = Just lat, lon = Just lon, placeId = Nothing, locationItemType = Nothing, description = name,title =(fromMaybeString ((split (Pattern "," ) name) DA.!! 0) ), subTitle = (drop ((fromMaybe 0 (indexOf (Pattern ",") (name))) + 2) (name))  }}}) (CURR_LOC)
 
 eval (UpdateCurrentLocation lat lng) state = continue state{data{ lat = (fromMaybe 0.0 (Number.fromString lat) ), lon = (fromMaybe 0.0 (Number.fromString lng))}}
 
@@ -215,7 +216,7 @@ eval (LocationListItemAC (LocationListItemController.OnClick item))  state = do
     case (state.data.activeIndex ) of
       Just 2 -> void $ pure $ requestKeyboardShow (getNewIDWithTag "SaveAsEditText")
       _      -> void $ pure $ hideKeyboardOnNavigation true
-    case (getLocTag (fromMaybe "" item.tagType)) of
+    case (getLocTag (fromMaybeString item.tagType)) of
       Just tagType  -> case tagType of
             LOCATE_ON_MAP -> continueWithCmd state [pure $ SetLocationOnMap]
             LOC_LIST      -> exit $ CheckLocServiceability state{data{selectedItem = item, address = item.description}} (LOC_LIST)
@@ -230,7 +231,7 @@ eval (PrimaryButtonConfirmLocAC (PrimaryButton.OnClick)) state = do
   exit $ CheckLocServiceability (state{data { address = state.data.locSelectedFromMap
                                             , selectedItem{placeId = Nothing
                                             , description = state.data.locSelectedFromMap
-                                            , title = (fromMaybe "" ((split (Pattern "," ) state.data.locSelectedFromMap)DA.!! 0) )
+                                            , title = (fromMaybeString ((split (Pattern "," ) state.data.locSelectedFromMap)DA.!! 0) )
                                             , subTitle = (drop ((fromMaybe 0 (indexOf (Pattern ",") (state.data.locSelectedFromMap))) + 2) (state.data.locSelectedFromMap))
                                             , lat = Just state.data.latSelectedFromMap
                                             , lon = Just state.data.lonSelectedFromMap 
@@ -245,7 +246,7 @@ eval (TagSelected index) state = do
                     0 -> "Home"
                     1 -> "Work"
                     _ -> state.data.addressSavedAs
-  if (activeTag == "") then  continue state{props{isBtnActive = false}, data {activeIndex = Just index,  selectedTag = getTag index }}
+  if (isStrEmpty activeTag) then  continue state{props{isBtnActive = false}, data {activeIndex = Just index,  selectedTag = getTag index }}
     else
       if (validTag state.data.savedTags activeTag state.data.placeName) then
         continue state{ data  { activeIndex = Just index
@@ -298,7 +299,7 @@ getLocation prediction = {
     postfixImageUrl : " "
   , prefixImageUrl : fetchImage FF_ASSET "ny_ic_loc_grey"
   , postfixImageVisibility : false
-  , title : (fromMaybe "" ((split (Pattern ",") (prediction ^. _description)) DA.!! 0))
+  , title : (fromMaybeString ((split (Pattern ",") (prediction ^. _description)) DA.!! 0))
   , subTitle : (drop ((fromMaybe 0 (indexOf (Pattern ",") (prediction ^. _description))) + 2) (prediction ^. _description))
   , placeId : prediction ^._place_id
   , lat : Nothing
@@ -358,11 +359,11 @@ getSavedLocations savedLocation =  (map (\ (SavedReqLocationAPIEntity item) ->
                 _      -> "ny_ic_fav_red"
 , postfixImageUrl : ""
 , postfixImageVisibility : false
-, title : (fromMaybe "" ((split (Pattern ",") (decodeAddress(SavedLoc (SavedReqLocationAPIEntity item)))) DA.!! 0))
+, title : (fromMaybeString ((split (Pattern ",") (decodeAddress(SavedLoc (SavedReqLocationAPIEntity item)))) DA.!! 0))
 , subTitle : (drop ((fromMaybe 0 (indexOf (Pattern ",") (decodeAddress (SavedLoc (SavedReqLocationAPIEntity item))))) + 2) (decodeAddress (SavedLoc (SavedReqLocationAPIEntity item))))
 , lat : (Just item.lat)
 , lon : (Just item.lon)
-, description : (fromMaybe "" ((split (Pattern ":") (decodeAddress (SavedLoc (SavedReqLocationAPIEntity item)))) DA.!! 0))
+, description : (fromMaybeString ((split (Pattern ":") (decodeAddress (SavedLoc (SavedReqLocationAPIEntity item)))) DA.!! 0))
 , placeId : item.placeId
 , tag : item.tag
 , tagType : Just (show LOC_LIST)
@@ -439,7 +440,7 @@ calculateDistance savedLocations excludeTag lat lon = do
 isValidLocation :: Array LocationListItemState -> String -> String -> Array DistInfo
 isValidLocation savedLocations excludeTag placeId = do
  map (\item -> do
-    {locationName : item.tag, distanceDiff : 100.0}) (DA.filter (\x -> (if placeId == "" then false else (fromMaybe "" x.placeId) == placeId)) (DA.filter (\x -> (toLower x.tag) /= (toLower excludeTag)) savedLocations))
+    {locationName : item.tag, distanceDiff : 100.0}) (DA.filter (\x -> (if isStrEmpty placeId then false else (fromMaybeString x.placeId) == placeId)) (DA.filter (\x -> (toLower x.tag) /= (toLower excludeTag)) savedLocations))
 
 compareByDistance :: DistInfo -> DistInfo -> Ordering
 compareByDistance ( a) ( b) = compare (a.distanceDiff ) (b.distanceDiff)

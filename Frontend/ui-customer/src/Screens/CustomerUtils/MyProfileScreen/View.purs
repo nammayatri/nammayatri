@@ -55,7 +55,7 @@ import Data.String as DS
 import PrestoDOM.Types.DomAttributes as PTD
 import Debug(spy)
 import Components.CommonComponentConfig as CommonComponentConfig
-
+import Engineering.Helpers.MobilityPrelude
 
 screen :: ST.MyProfileScreenState -> Screen Action ST.MyProfileScreenState ScreenOutput
 screen initialState =
@@ -216,7 +216,7 @@ personalDetails state push =
                         , textView
                           ([ height WRAP_CONTENT
                           , width MATCH_PARENT
-                          , text $ fromMaybe "" item.supportText
+                          , text $ fromMaybeString item.supportText
                           , margin $ MarginTop 4
                           , visibility if (isNothing item.supportText ) then GONE else VISIBLE
                           , color Color.blue900 
@@ -240,7 +240,7 @@ personalDetailsArray state =
                                                                         Just false -> (getString NO_DISABILITY)
                                                                         _ -> case state.data.disabilityType of 
                                                                                 Just disabilityType -> disabilityType.description
-                                                                                _ ->  (getString SET_NOW) , fieldType : ST.DISABILITY_TYPE, supportText :  if (state.data.hasDisability == Just false || isNothing state.data.disabilityType ) then Nothing else  Just (getString LEARN_HOW_TEXT)}
+                                                                                _ ->  (getString SET_NOW) , fieldType : ST.DISABILITY_TYPE, supportText :  if (isJustFalse state.data.hasDisability || isNothing state.data.disabilityType ) then Nothing else  Just (getString LEARN_HOW_TEXT)}
   ]
 
 horizontalLineView :: forall w. ST.MyProfileScreenState -> Boolean -> PrestoDOM (Effect Unit) w
@@ -528,7 +528,7 @@ specialAssistanceView state push =
   , width MATCH_PARENT
   , orientation VERTICAL
   , background Color.transparent
-  ][ SelectListModal.view (push <<< SpecialAssistanceListAC) (CommonComponentConfig.accessibilityListConfig state.data.editedDisabilityOptions (fromMaybe "" state.data.editedDisabilityOptions.otherDisabilityReason) state.data.config)]
+  ][ SelectListModal.view (push <<< SpecialAssistanceListAC) (CommonComponentConfig.accessibilityListConfig state.data.editedDisabilityOptions (fromMaybeString state.data.editedDisabilityOptions.otherDisabilityReason) state.data.config)]
 
 claimerView :: forall w. ST.MyProfileScreenState  -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 claimerView state push = 

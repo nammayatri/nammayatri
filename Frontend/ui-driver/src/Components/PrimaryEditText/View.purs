@@ -30,6 +30,7 @@ import Language.Types(STR(..))
 import PrestoDOM.Properties(cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Common.Types.App
+import Engineering.Helpers.MobilityPrelude
 
 view :: forall w .  (Action  -> Effect Unit) -> PrimaryEditTextState -> PrestoDOM (Effect Unit) w
 view push state =
@@ -104,7 +105,7 @@ view push state =
           $ textView $
           [ width WRAP_CONTENT
           , height WRAP_CONTENT
-          , text (fromMaybe "" state.error)
+          , text (fromMaybeString state.error)
           , visibility if state.isinValid then VISIBLE else GONE
           , color Color.lightMaroon
           , margin (MarginTop 10)
