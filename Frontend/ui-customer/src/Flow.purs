@@ -209,7 +209,7 @@ currentFlowStatus = do
     verifyProfile dummy = do
       (GetProfileRes response) <- Remote.getProfileBT ""
       updateVersion response.bundleVersion response.clientVersion
-      updateFirebaseToken response.maskedDeviceToken
+      updateFirebaseToken response.maskedDeviceToken getUpdateToken
       updateUserLanguage response.language
       let name = catMaybeStrings [response.firstName, response.middleName, response.lastName]
       void $ pure $ setCleverTapUserData "Name" name
@@ -253,6 +253,14 @@ currentFlowStatus = do
             Nothing -> pure unit
         modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{settingSideBar{email = Just (fromMaybe "" response.email)}}})
         else pure unit
+    
+    getUpdateToken :: String -> FlowBT String Unit
+    getUpdateToken token =
+      let
+        UpdateProfileReq initialData = Remote.mkUpdateProfileRequest FunctionCall
+        requiredData = initialData { deviceToken = Just token }
+      in
+        void $ lift $ lift $ Remote.updateProfile (UpdateProfileReq requiredData)
     
     updateUserLanguage :: Maybe String -> FlowBT String Unit
     updateUserLanguage language = 

@@ -27,26 +27,19 @@ import Presto.Core.Types.Language.Flow (doAff)
 import Control.Transformers.Back.Trans (runBackT)
 import JBridge (setFCMTokenWithTimeOut)
 import Data.Either (Either(..))
-import Services.Backend as Remote
-import Common.Types.App (LazyCheck(..))
-import Services.API (UpdateProfileReq(..))
+import Effect.Uncurried (runEffectFn2)
 
-data FCMToken
-  = FCMToken String
-
-updateFirebaseToken :: Maybe String -> FlowBT String Unit
-updateFirebaseToken deviceToken = do
+updateFirebaseToken :: Maybe String -> (String -> FlowBT String Unit) -> FlowBT String Unit
+updateFirebaseToken deviceToken updateToken = do
   when (any (_ == deviceToken) [ Just "__f...led", Just "..." ]) $ do
     void $ liftFlowBT $ launchAff $ flowRunner defaultGlobalState
-      $ do void $ runExceptT $ runBackT $ checkAndUpdateToken 5
+      $ do void $ runExceptT $ runBackT $ checkAndUpdateToken 5 updateToken
 
-checkAndUpdateToken :: Int -> FlowBT String Unit
-checkAndUpdateToken retry =
+checkAndUpdateToken :: Int -> (String -> FlowBT String Unit) -> FlowBT String Unit
+checkAndUpdateToken retry updateToken =
   when (retry > 0) $ do
-    (FCMToken newToken) <- lift $ lift $ doAff $ makeAff \cb -> setFCMTokenWithTimeOut 5000 (cb <<< Right) FCMToken $> nonCanceler
+    newToken <- lift $ lift $ doAff $ makeAff \cb -> runEffectFn2 setFCMTokenWithTimeOut 5000 (cb <<< Right) $> nonCanceler
     if newToken == "NOT_FOUND" 
-      then checkAndUpdateToken (retry - 1)
+      then checkAndUpdateToken (retry - 1) updateToken
       else
-        let (UpdateProfileReq initialData) = Remote.mkUpdateProfileRequest FunctionCall
-            requiredData = initialData { deviceToken = Just newToken }
-        in void $ lift $ lift $ Remote.updateProfile (UpdateProfileReq requiredData)
+        updateToken newToken

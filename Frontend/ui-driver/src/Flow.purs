@@ -118,6 +118,7 @@ import Common.Resources.Constants (zoomLevel)
 import Types.App as TA
 import Engineering.Helpers.Suggestions as EHS
 import Resource.Constants as RC
+import Helpers.Firebase 
 
 
 baseAppFlow :: Boolean -> Maybe Event -> FlowBT String Unit
@@ -309,6 +310,7 @@ getDriverInfoFlow event activeRideResp = do
   getDriverInfoApiResp <- lift $ lift $ Remote.getDriverInfoApi (GetDriverInfoReq{})
   case getDriverInfoApiResp of
     Right (GetDriverInfoResp getDriverInfoResp) -> do
+      updateFirebaseToken getDriverInfoResp.maskedDeviceToken getUpdateToken
       liftFlowBT $ updateCleverTapUserProps (GetDriverInfoResp getDriverInfoResp)
       if getDriverInfoResp.enabled then do
         if getValueToLocalStore IS_DRIVER_ENABLED == "false" then do
@@ -318,8 +320,7 @@ getDriverInfoFlow event activeRideResp = do
           pure unit
         setValueToLocalStore IS_DRIVER_ENABLED "true"
         (GlobalState allState) <- getState -- TODO:: Temp fix - need to work on improving caching more using SQLite
-        resp <- getDriverStatesFromCache (GlobalState allState) -- Remote.getDriverProfileStatsBT (DriverProfileStatsReq (getcurrentdate ""))
-        -- modifyScreenState $ GlobalPropsType $ \globalProps -> globalProps{driverInformation = Just (GetDriverInfoResp getDriverInfoResp), driverRideStats = Just resp}
+        modifyScreenState $ GlobalPropsType $ \globalProps -> globalProps{driverInformation = Just (GetDriverInfoResp getDriverInfoResp)}
         updateDriverDataToStates
         _ <- liftFlowBT $ runEffectFn1 consumeBP unit
         if (isJust getDriverInfoResp.autoPayStatus) then 
@@ -353,7 +354,12 @@ getDriverInfoFlow event activeRideResp = do
                 applicationSubmittedFlow "ApprovedScreen"
                 else do
                 onBoardingFlow
-
+  where
+    getUpdateToken :: String -> FlowBT String Unit
+    getUpdateToken token = 
+      let UpdateDriverInfoReq initialData = Remote.mkUpdateDriverInfoReq ""
+          requiredData = initialData{deviceToken = Just token}
+      in void $ Remote.updateDriverInfoBT (UpdateDriverInfoReq requiredData)
 
 handleDeepLinksFlow :: Maybe Event -> Maybe GetRidesHistoryResp -> FlowBT String Unit
 handleDeepLinksFlow event activeRideResp = do
