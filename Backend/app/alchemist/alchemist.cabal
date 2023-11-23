@@ -38,6 +38,7 @@ library
       Alchemist.Generator.Haskell.DomainType
       Alchemist.Generator.Haskell.Servant
       Alchemist.Generator.SQL
+      Alchemist.Generator.SQL.Table
       Alchemist.Utils
   other-modules:
       Paths_alchemist
