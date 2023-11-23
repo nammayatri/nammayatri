@@ -22,7 +22,7 @@ import Components.PrimaryEditText as PrimaryEditText
 import Effect (Effect)
 import Engineering.Helpers.Commons  as EHC
 import Font.Style as FontStyle
-import Helpers.Utils (adjustViewWithKeyboard, FetchImageFrom(..), getPreviousVersion, fetchImage)
+import Helpers.Utils (adjustViewWithKeyboard, FetchImageFrom(..), fetchImage)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit, bind, const, ($), (<<<), (<>), (==))

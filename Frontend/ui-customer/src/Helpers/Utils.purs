@@ -341,18 +341,7 @@ toRad :: Number -> Number
 toRad n = (n * pi) / 180.0
 
 getCurrentLocationMarker :: String -> String
-getCurrentLocationMarker currentVersion = if isPreviousVersion currentVersion (getPreviousVersion "") then "ic_customer_current_location" else "ny_ic_customer_current_location"
-
-getPreviousVersion :: String -> String
-getPreviousVersion _ =
-  if os == "IOS" then
-    case getMerchant FunctionCall of
-      NAMMAYATRI -> "1.2.5"
-      YATRISATHI -> "0.0.0"
-      _ -> "1.0.0"
-    else case getMerchant FunctionCall of
-        YATRISATHI -> "0.0.0"
-        _ -> "0.0.0"
+getCurrentLocationMarker currentVersion = "ny_ic_customer_current_location"
 
 rotateArray :: forall a. Array a -> Int -> Array a
 rotateArray arr times =

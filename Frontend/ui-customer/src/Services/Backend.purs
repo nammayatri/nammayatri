@@ -30,7 +30,7 @@ import Engineering.Helpers.Commons (liftFlow, os)
 import Engineering.Helpers.Commons (liftFlow, os, isPreviousVersion)
 import Engineering.Helpers.Utils as EHU
 import Foreign.Generic (encode)
-import Helpers.Utils (decodeError, getTime, getPreviousVersion)
+import Helpers.Utils (decodeError, getTime)
 import JBridge (Locations, factoryResetApp, setKeyInSharedPrefKeys, toast, drawRoute, toggleBtnLoader)
 import JBridge (factoryResetApp, setKeyInSharedPrefKeys, toast, removeAllPolylines, stopChatListenerService, MapRouteConfig)
 import Juspay.OTP.Reader as Readers
@@ -703,26 +703,44 @@ type Markers = {
     destMarker :: String
 }
 
-driverTracking :: String -> Markers
-driverTracking variant = {
-    srcMarker : if isPreviousVersion (getValueToLocalStore VERSION_NAME) (getPreviousVersion "") then "ny_ic_auto_map" 
-                else if variant == "AUTO_RICKSHAW" then "ic_auto_nav_on_map"
-                else "ny_ic_vehicle_nav_on_map",
-    destMarker : if isPreviousVersion (getValueToLocalStore VERSION_NAME) (getPreviousVersion "") then "src_marker" else "ny_ic_src_marker"
-}
+data TrackingType = RIDE_TRACKING | DRIVER_TRACKING
 
-rideTracking :: String -> Markers
-rideTracking variant = {
-    srcMarker : if isPreviousVersion (getValueToLocalStore VERSION_NAME) (getPreviousVersion "") then "ny_ic_auto_map" 
-                else if variant == "AUTO_RICKSHAW" then "ic_auto_nav_on_map"
-                else "ny_ic_vehicle_nav_on_map",
-    destMarker : if isPreviousVersion (getValueToLocalStore VERSION_NAME) (getPreviousVersion "") then "dest_marker" else "ny_ic_dest_marker"
-}
+
+getRouteMarkers :: String -> Maybe String -> TrackingType -> Markers
+getRouteMarkers variant city trackingType = 
+  { srcMarker : mkSrcMarker ,
+    destMarker : mkDestMarker 
+  }
+  where 
+    mkSrcMarker :: String 
+    mkSrcMarker =
+        maybe (getMarker variant) (getCitySpecificMarker ) city
+    
+    getCitySpecificMarker :: String -> String 
+    getCitySpecificMarker cityCode = 
+        if cityCode == "std:040" 
+            then "ny_ic_black_yellow_auto" 
+            else getMarker variant
+
+    getMarker :: String -> String
+    getMarker variant = 
+        if variant == "AUTO_RICKSHAW" 
+            then "ic_auto_nav_on_map" 
+            else "ny_ic_vehicle_nav_on_map"
+    
+    mkDestMarker :: String
+    mkDestMarker = 
+        case trackingType of 
+            RIDE_TRACKING -> "ny_ic_dest_marker"
+            DRIVER_TRACKING -> "ny_ic_src_marker"
+      
+
+
 
 normalRoute ::String -> Markers
 normalRoute _ = {
-    srcMarker : if isPreviousVersion (getValueToLocalStore VERSION_NAME) (getPreviousVersion "") then "src_marker" else "ny_ic_src_marker",
-    destMarker : if isPreviousVersion (getValueToLocalStore VERSION_NAME) (getPreviousVersion "") then "dest_marker" else "ny_ic_dest_marker"
+    srcMarker : "ny_ic_src_marker",
+    destMarker : "ny_ic_dest_marker"
 }
 
 

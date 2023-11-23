@@ -33,7 +33,7 @@ import Engineering.Helpers.Commons (getNewIDWithTag, isPreviousVersion, os, safe
 import Engineering.Helpers.LogEvent (logEvent)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (getLocationName, getPreviousVersion, getSearchType, getAssetsBaseUrl, fetchImage, FetchImageFrom(..))
+import Helpers.Utils (getLocationName, getSearchType, getAssetsBaseUrl, fetchImage, FetchImageFrom(..))
 import JBridge (getBtnLoader, showKeyboard, getCurrentPosition, firebaseLogEvent, startLottieProcess, lottieAnimationConfig, debounceFunction)
 import Language.Strings (getString)
 import Language.Types (STR(..))
@@ -207,7 +207,7 @@ sourceDestinationImageView state =
         [ height $ V 40
         , width $ V 20
         , gravity CENTER
-        , imageUrl if os == "IOS" then ( if isPreviousVersion (getValueToLocalStore VERSION_NAME) (getPreviousVersion "") then  "ic_line_img" else "ny_ic_line_img") else "ic_line"
+        , imageUrl if os == "IOS" then "ny_ic_line_img" else "ic_line"
         , margin if os == "IOS" then (Margin 7 35 0 0) else (Margin 16 30 0 0)
         ]
     , linearLayout
