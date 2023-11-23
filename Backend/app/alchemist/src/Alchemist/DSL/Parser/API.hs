@@ -1,56 +1,153 @@
+{-# OPTIONS_GHC -Wno-missing-fields #-}
+
 module Alchemist.DSL.Parser.API where
 
 import Alchemist.DSL.Syntax.API
-import Kernel.Prelude
+import Control.Lens hiding (noneOf)
+import Data.Bool
+import Data.Text (Text)
+import qualified Data.Text as T
 import Text.Parsec
-import Text.Parsec.String (Parser)
+import Text.Parsec.Text
+import Prelude
 
--- Parses an HTTP method
-httpMethodParser :: Parser HttpMethod
-httpMethodParser =
-  (string "GET" >> return GET)
-    <|> (string "POST" >> return POST)
+apiParser :: String -> Either ParseError Apis
+apiParser input = do
+  let singleApis = filter (/= T.empty) $ T.splitOn "---" (T.pack input)
+  mapM singleApiParser singleApis
 
--- Add other HTTP methods as needed
+singleApiParser :: Text -> Either ParseError ApiTT -- Either ParseError ApiTT
+singleApiParser input = do
+  api <- mapM (parse lineParserAPI "" . T.strip) (filter (/= T.empty) $ T.split (== '\n') (T.dropAround (\x -> x == ' ' || x == '\n') input))
+  return $
+    foldl
+      ( \acc z ->
+          case z of
+            HeaderT y -> over header (\x -> x <> [y]) acc
+            ApiTU apitype urlparts -> acc & (apiType .~ apitype) . (urlParts .~ urlparts)
+            Auth authtype -> acc & authType .~ authtype
+            Req name tp -> acc & apiReqType ?~ ApiReq name tp
+            Res name tp -> acc & apiResType .~ ApiRes name tp
+      )
+      (ApiTT {_apiReqType = Nothing, _authType = Nothing, _header = []})
+      api
 
-pathParser :: Parser String
-pathParser = many1 (noneOf " \n")
+lineParserAPI :: Parser ApiParts
+lineParserAPI = try apiTypeAndURLParser <|> try authParser <|> try headerParser <|> reqParser <|> resParser
 
-authParser :: Parser AuthType
+apiTypeAndURLParser :: Parser ApiParts
+apiTypeAndURLParser = do
+  apiTyp <- apiTypeParser
+  spaces
+  rawUrl <- T.pack <$> many1 (noneOf "")
+  url <- either (const (fail "Url Parsing Error")) pure $ urlParser rawUrl
+  return $ ApiTU apiTyp url
+
+apiTypeParser :: Parser ApiType
+apiTypeParser =
+  choice
+    [ GET <$ string "GET",
+      POST <$ string "POST",
+      PUT <$ string "PUT",
+      DELETE <$ string "DELETE"
+    ]
+
+urlParser :: Text -> Either ParseError [UrlParts]
+urlParser input = do
+  let (url, queryparam) = T.breakOn "?" input
+  (<>) <$> mapM (parse partParser "") (filter (/= T.empty) $ T.split (== '/') url)
+    <*> mapM (parse queryParamParser "") (filter (/= T.empty) $ T.split (== '&') queryparam)
+  where
+    partParser :: Parser UrlParts
+    partParser = captureParser <|> unitPathParser
+
+    unitPathParser :: Parser UrlParts
+    unitPathParser =
+      UnitPath . T.pack <$> many1 (noneOf "/")
+
+    captureParser :: Parser UrlParts
+    captureParser = do
+      _ <- char '{'
+      name <- many1 (noneOf ":")
+      _ <- char ':'
+      captureType <- many1 (noneOf "}")
+      _ <- char '}'
+      return (Capture (T.pack name) (T.pack captureType))
+
+    queryParamParser :: Parser UrlParts
+    queryParamParser = do
+      _ <- option False (char '?' >> return True)
+      mandatory <- option False (char '*' >> return True)
+      name <- many1 (noneOf ":")
+      _ <- char ':'
+      paramType <- many1 (noneOf "&")
+      return (QueryParam (T.pack name) (T.pack paramType) mandatory)
+
+authParser :: Parser ApiParts
 authParser = do
   _ <- string "AUTH"
   spaces
-  string "TokenAuth" >> return TokenAuth
+  authTyp <- Just <$> authTypeParser
+  return $ Auth authTyp
+  where
+    authTypeParser :: Parser AuthType
+    authTypeParser =
+      choice
+        [ AdminTokenAuth <$ string "AdminTokenAuth",
+          TokenAuth <$ string "TokenAuth"
+        ]
 
-headerParser :: Parser Header
+headerParser :: Parser ApiParts
 headerParser = do
-  _ <- string "H"
+  _ <- string "Header"
   spaces
-  headerName <- many1 alphaNum
-  spaces
-  headerType <- many1 alphaNum
-  return $ Header headerName (DataType headerType)
+  HeaderT <$> parseHeaderItem
+  where
+    parseHeaderItem :: Parser HeaderType
+    parseHeaderItem = do
+      key <- T.pack <$> many1 (noneOf " ")
+      spaces
+      _ <- char '{'
+      value <- T.pack <$> many1 (noneOf "}")
+      return $ Header key value
 
-reqRespParser :: String -> Parser String
-reqRespParser prefix = do
-  _ <- string prefix
-  spaces
-  many1 alphaNum
+reqParser :: Parser ApiParts
+reqParser = do
+  reqFormat <-
+    T.pack
+      <$> try
+        ( do
+            _ <- string "REQJ"
+            spaces
+            return "JSON"
+        )
+      <|> try
+        ( do
+            _ <- string "REQ"
+            spaces
+            reqFormat <- T.pack <$> (char '[' *> many1 (noneOf "]") <* char ']')
+            spaces
+            return reqFormat
+        )
+  reqType <- T.pack <$> (char '{' *> many1 (noneOf "}") <* char '}')
+  return $ Req reqFormat reqType
 
-apiEndpointParser :: Parser APIEndpoint
-apiEndpointParser = do
-  method <- httpMethodParser
-  spaces
-  pth <- pathParser
-  spaces
-  auth <- optionMaybe authParser
-  spaces
-  hdrs <- many headerParser
-  spaces
-  reqType <- optionMaybe (reqRespParser "REQ")
-  spaces
-  respType <- reqRespParser "RESP"
-  return $ APIEndpoint method pth auth hdrs (DataType <$> reqType) (DataType respType)
-
-apiParser :: Parser [APIEndpoint]
-apiParser = apiEndpointParser `sepBy` string "---"
+resParser :: Parser ApiParts
+resParser = do
+  resFormat <-
+    T.pack
+      <$> try
+        ( do
+            _ <- string "RESPJ"
+            spaces
+            return "JSON"
+        )
+      <|> ( do
+              _ <- string "RESP"
+              spaces
+              resFormat <- T.pack <$> (char '[' *> many1 (noneOf "]") <* char ']')
+              spaces
+              return resFormat
+          )
+  resType <- T.pack <$> (char '{' *> many1 (noneOf "}") <* char '}')
+  return $ Res resFormat resType

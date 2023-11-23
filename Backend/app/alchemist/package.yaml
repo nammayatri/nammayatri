@@ -76,6 +76,7 @@ dependencies:
   - regex-tdfa
   - split
   - unordered-containers
+  - lens
 
 ghc-options:
   - -Wall
