@@ -929,7 +929,7 @@ eval BackPressed state = do
                             _ <- pure $ pauseYoutubeVideo unit
                             continue state{props{showEducationalCarousel = false}}
                           else do
-                              pure $ terminateApp state.props.currentStage false
+                              pure $ terminateApp state.props.currentStage true
                               continue state
 
 eval GoBackToSearchLocationModal state = do

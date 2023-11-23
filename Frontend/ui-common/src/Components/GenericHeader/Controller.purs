@@ -38,6 +38,7 @@ type Config =
   , prefixImageConfig :: ImageConfig
   , textConfig :: TextConfig
   , suffixImageConfig :: ImageConfig
+  , visibility :: Visibility
   }
 
 type ImageConfig =
@@ -98,7 +99,7 @@ config = {
     , accessibility : DISABLE 
     , accessibilityHint : ""
     }
-
+  , visibility : VISIBLE
 }
 
 merchantConfig :: Config
@@ -138,5 +139,5 @@ merchantConfig = {
     , accessibility : DISABLE 
     , accessibilityHint : ""
     }
-
+  , visibility : VISIBLE
 }

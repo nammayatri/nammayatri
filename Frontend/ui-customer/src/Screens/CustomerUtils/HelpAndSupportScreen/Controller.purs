@@ -25,7 +25,7 @@ import Components.SourceToDestination as SourceToDestination
 import Data.Array ((!!), null, filter)
 import Data.Lens ((^.))
 import Data.Maybe (Maybe(..), fromMaybe)
-import Helpers.Utils (validateEmail,strLenWithSpecificCharacters)
+import Helpers.Utils (validateEmail,strLenWithSpecificCharacters, isParentView, emitTerminateApp)
 import JBridge (showDialer, hideKeyboardOnNavigation,toast)
 import Engineering.Helpers.Commons (convertUTCtoISC)
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppTextInput, trackAppScreenEvent)
@@ -183,7 +183,12 @@ eval (BackPressed flag ) state = if state.props.isCallConfirmation
   else if state.data.accountStatus == CONFIRM_REQ then continue state{data{accountStatus = ACTIVE}}
   else if state.data.accountStatus == DEL_REQUESTED then updateAndExit (state {data{accountStatus = ACTIVE}} ) $ GoHome
   else if state.props.showDeleteAccountView then continue state{props {showDeleteAccountView = false}}
-  else exit GoBack
+  else 
+    if isParentView FunctionCall 
+      then do 
+        void $ pure $ emitTerminateApp Nothing true
+        continue state
+      else exit GoBack
 
 eval ContactUs state = do
   let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_help_and_support_email"

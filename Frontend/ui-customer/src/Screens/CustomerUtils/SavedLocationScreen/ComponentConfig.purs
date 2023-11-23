@@ -31,7 +31,7 @@ import Styles.Colors as Color
 import Common.Types.App
 import Engineering.Helpers.Commons as EHC
 import Data.Maybe 
-import Helpers.Utils (fetchImage, FetchImageFrom(..))
+import Helpers.Utils (fetchImage, FetchImageFrom(..), isParentView, showTitle)
 import Prelude ((<>))
 
 requestDeletePopUp :: ST.SavedLocationScreenState -> PopUpModal.Config 
@@ -83,6 +83,8 @@ primaryButtonConfig state = let
 genericHeaderConfig :: ST.SavedLocationScreenState -> GenericHeader.Config 
 genericHeaderConfig state = let 
   config = if state.data.config.nyBrandingVisibility then GenericHeader.merchantConfig else GenericHeader.config
+  btnVisibility =  if isParentView FunctionCall then GONE else config.prefixImageConfig.visibility
+  titleVisibility = if showTitle FunctionCall then config.visibility else GONE
   genericHeaderConfig' = config 
     {
       height = WRAP_CONTENT
@@ -92,6 +94,7 @@ genericHeaderConfig state = let
         height = V 25
       , width = V 25
       , imageUrl = fetchImage FF_COMMON_ASSET "ny_ic_chevron_left"
+      , visibility = btnVisibility
       } 
     , textConfig {
         text = (getString FAVOURITES)
@@ -99,6 +102,7 @@ genericHeaderConfig state = let
     , suffixImageConfig {
         visibility = GONE
       }
+    , visibility = titleVisibility
     }
   in genericHeaderConfig'
 

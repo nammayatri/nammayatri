@@ -37,7 +37,7 @@ import Components.PrimaryButton as PrimaryButton
 import Storage (getValueToLocalStore, KeyStore(..))
 import Helpers.Utils (validateEmail)
 import Screens.HelpAndSupportScreen.Controller (isEmailPresent)
-import Helpers.Utils (fetchImage, FetchImageFrom(..))
+import Helpers.Utils (fetchImage, FetchImageFrom(..), isParentView, showTitle)
 
 sourceToDestinationConfig :: ST.HelpAndSupportScreenState -> SourceToDestination.Config
 sourceToDestinationConfig state = let
@@ -138,6 +138,8 @@ callConfirmationPopup state = let
 genericHeaderConfig :: ST.HelpAndSupportScreenState -> GenericHeader.Config 
 genericHeaderConfig state = let 
   config = if state.data.config.nyBrandingVisibility then GenericHeader.merchantConfig else GenericHeader.config
+  btnVisibility = if isParentView FunctionCall then GONE else config.prefixImageConfig.visibility
+  titleVisibility = if showTitle FunctionCall then config.visibility else GONE
   genericHeaderConfig' = config 
     {
       height = WRAP_CONTENT
@@ -145,6 +147,7 @@ genericHeaderConfig state = let
         height = V 25
       , width = V 25
       , imageUrl = fetchImage FF_COMMON_ASSET "ny_ic_chevron_left"
+      , visibility =  btnVisibility
       } 
     , textConfig {
         text = (getString HELP_AND_SUPPORT)
@@ -153,6 +156,7 @@ genericHeaderConfig state = let
     , suffixImageConfig {
         visibility = GONE
       }
+    , visibility = titleVisibility
     }
   in genericHeaderConfig'
 

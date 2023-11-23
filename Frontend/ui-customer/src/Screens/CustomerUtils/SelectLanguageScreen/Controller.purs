@@ -20,13 +20,16 @@ import Components.MenuButton.Controller (Action(..)) as MenuButtonController
 import Components.PrimaryButton.Controller as PrimaryButtonController
 import Log (printLog)
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppScreenEvent)
-import Prelude (class Show, pure, unit, bind, discard, ($), (/=), discard, (==))
+import Prelude (class Show, pure, unit, bind, discard, void, ($), (/=), (==))
 import PrestoDOM (Eval, continue, continueWithCmd, exit, updateAndExit)
 import PrestoDOM.Types.Core (class Loggable)
 import Screens (ScreenName(..), getScreen)
 import Screens.Types (SelectLanguageScreenState)
 import Storage (KeyStore(..), getValueToLocalStore, setValueToLocalStore)
 import Data.Array as DA
+import Data.Maybe (Maybe (..))
+import Helpers.Utils (isParentView, emitTerminateApp)
+import Common.Types.App (LazyCheck(..))
 
 instance showAction :: Show Action where
   show _ = ""
@@ -71,6 +74,11 @@ eval (PrimaryButtonActionController PrimaryButtonController.OnClick) state = upd
 
 eval (GenericHeaderActionController (GenericHeaderController.PrefixImgOnClick )) state = continueWithCmd state [do pure BackPressed]
 
-eval BackPressed state = exit $ GoToHomeScreen
+eval BackPressed state = 
+  if isParentView FunctionCall 
+    then do 
+      void $ pure $ emitTerminateApp Nothing true
+      continue state
+    else exit $ GoToHomeScreen
 
 eval _ state = continue state

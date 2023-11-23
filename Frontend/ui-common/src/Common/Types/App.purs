@@ -126,7 +126,13 @@ newtype Payload = Payload
   , payment_method :: Maybe String
   , show_splash :: Maybe Boolean
   , view_param :: Maybe String
+  , deeplinkOptions :: Maybe DeeplinkOptions
   }
+
+newtype DeeplinkOptions = DeeplinkOptions {
+    parent_view :: Maybe Boolean
+  , show_title :: Maybe Boolean
+}
 
 newtype LocationData = LocationData {
     lat :: Number
@@ -143,6 +149,11 @@ derive instance newLocationData :: Newtype LocationData _
 derive instance genericLocationData :: Generic LocationData _
 instance decodeLocationData :: Decode LocationData where decode = defaultDecode
 instance encodeLocationData :: Encode LocationData where encode = defaultEncode
+
+derive instance newDeeplinkOptions :: Newtype DeeplinkOptions _
+derive instance genericDeeplinkOptions :: Generic DeeplinkOptions _
+instance decodeDeeplinkOptions :: Decode DeeplinkOptions where decode = defaultDecode
+instance encodeDeeplinkOptions :: Encode DeeplinkOptions where encode = defaultEncode
 
 type OptionButtonList = {
     reasonCode :: String,

@@ -15,13 +15,16 @@
 
 module Screens.AboutUsScreen.Controller where
 
-import Prelude (class Show, pure, unit, ($), discard)
+import Prelude (class Show, pure, unit, bind, void, ($), discard)
 import Screens.Types (AboutUsScreenState)
 import PrestoDOM (Eval, continue, exit, continueWithCmd)
 import PrestoDOM.Types.Core (class Loggable)
 import Components.GenericHeader.Controller (Action(..)) as GenericHeaderController
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppScreenEvent)
 import Screens (ScreenName(..), getScreen)
+import Helpers.Utils (emitTerminateApp, isParentView)
+import Common.Types.App (LazyCheck (..))
+import Data.Maybe (Maybe(..))
 
 instance showAction :: Show Action where
   show _ = ""
@@ -51,6 +54,11 @@ eval :: Action -> AboutUsScreenState -> Eval Action ScreenOutput AboutUsScreenSt
 
 eval (GenericHeaderActionController (GenericHeaderController.PrefixImgOnClick)) state = continueWithCmd state [do pure BackPressed]
 
-eval BackPressed state = exit $ GoToHomeScreen
+eval BackPressed state = 
+  if isParentView FunctionCall 
+    then do 
+      void $ pure $ emitTerminateApp Nothing true
+      continue state
+    else exit $ GoToHomeScreen
 
 eval _ state = continue state

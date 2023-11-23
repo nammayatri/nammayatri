@@ -19,34 +19,40 @@ module Helpers.Utils
     )
     where
 
-import Accessor (_distance_meters)
-import Common.Types.App (EventPayload(..), GlobalPayload(..), LazyCheck(..), Payload(..), InnerPayload)
+import Accessor (_distance_meters, _payload, _deeplinkOptions)
+import Common.Types.App (EventPayload(..), GlobalPayload(..), LazyCheck(..), Payload(..), InnerPayload, DeeplinkOptions(..))
 import Components.LocationListItem.Controller (dummyLocationListState)
 import Control.Monad.Except (runExcept)
 import Control.Monad.Free (resume)
 import Data.Array (cons, deleteAt, drop, filter, head, length, null, sortBy, sortWith, tail, (!!), reverse)
 import Data.Array.NonEmpty (fromArray)
+import Data.Boolean (otherwise)
 import Data.Date (Date)
 import Data.Either (Either(..), hush)
 import Data.Eq.Generic (genericEq)
 import Data.Foldable (or)
 import Data.Function.Uncurried (Fn2, runFn3)
 import Data.Generic.Rep (class Generic)
+import Data.Int (round, toNumber, fromString)
 import Data.Lens ((^.))
-import Data.Maybe (Maybe(..), fromMaybe)
+import Data.Maybe (Maybe(..), fromMaybe, maybe)
 import Data.Number (pi, sin, cos, sqrt, asin, abs)
 import Data.Ord (comparing)
 import Data.Profunctor.Strong (first)
 import Data.Show.Generic (genericShow)
+import Data.String (replace, split, Pattern(..), Replacement(..))
 import Data.String as DS
 import Data.String.CodeUnits (fromCharArray, toCharArray)
 import Data.Traversable (traverse)
 import Debug (spy)
 import Effect (Effect)
+import Effect.Aff (Aff(..), error, killFiber, launchAff, launchAff_, makeAff, nonCanceler, Fiber)
 import Effect.Aff (error, killFiber, launchAff, launchAff_)
 import Effect.Aff.Compat (EffectFn1, EffectFnAff, fromEffectFnAff, runEffectFn1, runEffectFn2, runEffectFn3, EffectFn2)
 import Effect.Class (liftEffect)
 import Effect.Console (logShow)
+import Effect.Uncurried (EffectFn1(..), EffectFn5(..), mkEffectFn1, mkEffectFn4, runEffectFn5)
+import Effect.Uncurried (EffectFn1, EffectFn4, EffectFn3, runEffectFn3)
 import Effect.Unsafe (unsafePerformEffect)
 import Engineering.Helpers.Commons (getWindowVariable, isPreviousVersion, liftFlow, os)
 import Engineering.Helpers.Commons (parseFloat, setText) as ReExport
@@ -59,8 +65,11 @@ import JBridge (emitJOSEvent)
 import Juspay.OTP.Reader (initiateSMSRetriever)
 import Juspay.OTP.Reader as Readers
 import Juspay.OTP.Reader.Flow as Reader
+import Language.Strings (getString)
+import Language.Types (STR(..))
 import MerchantConfig.Utils (Merchant(..), getMerchant, getValueFromConfig)
-import Prelude (class Eq, class Ord, class Show, Unit, bind, compare, comparing, mod, discard, identity, map, not, pure, show, unit, void, ($), (*), (+), (-), (/), (/=), (<), (<#>), (<*>), (<<<), (<=), (<>), (=<<), (==), (>), (>>>), (||), (&&), (<$>), (>=))
+import Prelude (class Eq, class Ord, class Show, Unit, bind, compare, comparing, discard, identity, map, mod, not, pure, show, unit, void, ($), (&&), (*), (+), (-), (/), (/=), (<), (<#>), (<$>), (<*>), (<<<), (<=), (<>), (=<<), (==), (>), (>=), (>>>), (||))
+import Prelude (class EuclideanRing, Unit, bind, discard, identity, pure, unit, void, ($), (+), (<#>), (<*>), (<>), (*>), (>>>), ($>), (/=), (&&), (<=), show, (>=), (>), (<))
 import Presto.Core.Flow (Flow, doAff)
 import Presto.Core.Types.Language.Flow (FlowWrapper(..), getState, modifyState)
 import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode)
@@ -71,15 +80,6 @@ import Services.API (Prediction)
 import Storage (KeyStore(..), getValueToLocalStore)
 import Types.App (GlobalState(..))
 import Unsafe.Coerce (unsafeCoerce)
-import Language.Strings (getString)
-import Language.Types (STR(..))
-import Data.Int (round, toNumber, fromString)
-import Data.Boolean (otherwise)
-import Effect.Uncurried (EffectFn1(..),EffectFn5(..), mkEffectFn1, mkEffectFn4, runEffectFn5)
-import Effect.Uncurried(EffectFn1, EffectFn4, EffectFn3,runEffectFn3)
-import Effect.Aff (Aff (..), error, killFiber, launchAff, launchAff_, makeAff, nonCanceler, Fiber)
-import Prelude (class EuclideanRing, Unit, bind, discard, identity, pure, unit, void, ($), (+), (<#>), (<*>), (<>), (*>), (>>>), ($>), (/=), (&&), (<=), show, (>=), (>),(<))
-import Data.String (replace, split, Pattern(..), Replacement(..))
 
 foreign import shuffle :: forall a. Array a -> Array a
 
@@ -431,14 +431,17 @@ showCarouselScreen :: LazyCheck -> Boolean
 showCarouselScreen a = if os == "IOS" then not ( isPreviousVersion (getValueToLocalStore VERSION_NAME) "1.3.1" ) && getMerchant FunctionCall == NAMMAYATRI else getMerchant FunctionCall == NAMMAYATRI
 
 terminateApp :: Stage -> Boolean -> Unit
-terminateApp stage exitApp = runFn3 emitJOSEvent "java" "onEvent" $ encode $  EventPayload {
+terminateApp stage exitApp = emitTerminateApp (Just $ getScreenFromStage stage) exitApp
+
+emitTerminateApp :: Maybe String -> Boolean -> Unit
+emitTerminateApp screen exitApp = runFn3 emitJOSEvent "java" "onEvent" $ encode $  EventPayload {
     event : "process_result"
   , payload : Just {
     action : "terminate"
   , trip_amount : Nothing
   , ride_status : Nothing
   , trip_id : Nothing
-  , screen : Just (getScreenFromStage stage)
+  , screen : screen
   , exit_app : exitApp
   }
 }
@@ -492,6 +495,17 @@ getSearchType _ = do
         Just a -> a 
         Nothing -> "normal_search"
     Nothing -> "normal_search"
+
+getDeepLinkOptions :: LazyCheck -> Maybe DeeplinkOptions
+getDeepLinkOptions _ = do 
+  let mBPayload = unsafePerformEffect $ getGlobalPayload unit
+  maybe Nothing (\payload -> payload ^. _payload ^. _deeplinkOptions) mBPayload
+
+isParentView :: LazyCheck -> Boolean
+isParentView lazy = maybe false (\(DeeplinkOptions options) -> fromMaybe false options.parent_view) $ getDeepLinkOptions lazy
+
+showTitle :: LazyCheck -> Boolean
+showTitle lazy = maybe true (\(DeeplinkOptions options) -> fromMaybe false options.show_title) $ getDeepLinkOptions lazy 
 
 getPaymentMethod :: Unit -> String
 getPaymentMethod _ = do 

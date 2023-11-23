@@ -28,7 +28,7 @@ import PrestoDOM (Length(..), Margin(..), Padding(..), Visibility(..))
 import Screens.Types as ST 
 import Styles.Colors as Color
 import Common.Types.App
-import Helpers.Utils (fetchImage, FetchImageFrom(..))
+import Helpers.Utils (fetchImage, FetchImageFrom(..), isParentView, showTitle)
 import Prelude ((<>))
 import MerchantConfig.Types (Language)
 
@@ -73,13 +73,16 @@ menuButtonConfig state language = MenuButton.config {
 genericHeaderConfig :: ST.SelectLanguageScreenState -> GenericHeader.Config 
 genericHeaderConfig state = let 
   config = if state.data.config.nyBrandingVisibility then GenericHeader.merchantConfig else GenericHeader.config
-  genericHeaderConfig' = config 
+  btnVisibility = if isParentView FunctionCall then GONE else config.prefixImageConfig.visibility
+  titleVisibility = if showTitle FunctionCall then config.visibility else GONE
+  in config 
     {
       height = WRAP_CONTENT
     , prefixImageConfig {
         height = V 25
       , width = V 25
       , imageUrl = fetchImage FF_COMMON_ASSET "ny_ic_chevron_left"
+      , visibility = btnVisibility
       } 
     , textConfig {
         text = (getString LANGUAGE)
@@ -87,5 +90,5 @@ genericHeaderConfig state = let
     , suffixImageConfig {
         visibility = GONE
       }
+    , visibility = titleVisibility
     }
-  in genericHeaderConfig'
