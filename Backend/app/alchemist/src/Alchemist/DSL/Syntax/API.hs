@@ -24,7 +24,8 @@ data ApiRes = ApiRes Text Text deriving (Show)
 type Apis = [ApiTT]
 
 data ApiTT = ApiTT
-  { _urlParts :: [UrlParts],
+  { _moduleName :: Text,
+    _urlParts :: [UrlParts],
     _apiType :: ApiType,
     _authType :: Maybe AuthType,
     _header :: [HeaderType],
@@ -35,4 +36,4 @@ data ApiTT = ApiTT
 
 $(makeLenses ''ApiTT)
 
-data ApiParts = ApiTU ApiType [UrlParts] | HeaderT HeaderType | Auth (Maybe AuthType) | Req Text Text | Res Text Text deriving (Show)
+data ApiParts = ApiTU ApiType [UrlParts] | HeaderT HeaderType | Auth (Maybe AuthType) | Req Text Text | Res Text Text | ModuleName Text deriving (Show)
