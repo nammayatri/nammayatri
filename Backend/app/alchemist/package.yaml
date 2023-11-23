@@ -73,6 +73,9 @@ dependencies:
   - template-haskell
   - parsec
   - raw-strings-qq
+  - regex-tdfa
+  - split
+  - unordered-containers
 
 ghc-options:
   - -Wall
