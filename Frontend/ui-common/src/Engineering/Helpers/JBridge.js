@@ -1359,6 +1359,12 @@ export const removeAllPolylines = function (str) {
   window.JBridge.removeAllPolylines(str);
 }
 
+export const removeAllPolylinesAndMarkers = function (array, unit) {
+  const stringifiedArray = JSON.stringify(array)
+  window.JBridge.removeAllPolylines(stringifiedArray);
+  return unit;
+}
+
 export const currentPosition = function (str) {
   window.JBridge.currentPosition(str);
 }

@@ -89,11 +89,11 @@ getLocation prediction = {
 checkShowDistance :: Int ->  Boolean
 checkShowDistance distance = (distance > 0 && distance <= 50000)
 
-getQuoteList :: Array QuoteAPIEntity -> Array QLI.QuoteListItemState
-getQuoteList quotesEntity = (map (\x -> (getQuote x)) quotesEntity)
+getQuoteList :: Array QuoteAPIEntity -> Maybe String -> Array QLI.QuoteListItemState
+getQuoteList quotesEntity city = (map (\x -> (getQuote x city)) quotesEntity)
 
-getQuote :: QuoteAPIEntity -> QLI.QuoteListItemState
-getQuote (QuoteAPIEntity quoteEntity) = do
+getQuote :: QuoteAPIEntity -> Maybe String -> QLI.QuoteListItemState
+getQuote (QuoteAPIEntity quoteEntity) city = do
   case (quoteEntity.quoteDetails)^._contents of
     (ONE_WAY contents) -> QLI.config
     (SPECIAL_ZONE contents) -> QLI.config
@@ -110,6 +110,7 @@ getQuote (QuoteAPIEntity quoteEntity) = do
     , driverName : quoteDetails.driverName
     , selectedQuote : Nothing
     , appConfig : DC.config
+    , city : city
     }
 
 getDriverInfo :: Maybe String -> RideBookingRes -> Boolean -> DriverInfoCard

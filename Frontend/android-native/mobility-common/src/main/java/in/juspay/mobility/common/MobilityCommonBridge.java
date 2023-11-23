@@ -1289,12 +1289,26 @@ public class MobilityCommonBridge extends HyperBridge {
     }
 
     @JavascriptInterface
-    public void removeAllPolylines(String str) {
+    public void removeAllPolylines(String stringifyArray) {
         ExecutorManager.runOnMainThread(() -> {
-            removeMarker("ic_auto_nav_on_map");
-            removeMarker("ny_ic_vehicle_nav_on_map");
-            removeMarker("ny_ic_src_marker");
-            removeMarker("ny_ic_dest_marker");
+            if (stringifyArray.equals("")) {
+                // TODO:: TO BE DEPRECATED AS THIS BLOCK OF CODE IS NOT IN USE
+                removeMarker("ic_auto_nav_on_map");
+                removeMarker("ny_ic_vehicle_nav_on_map");
+                removeMarker("ny_ic_black_yellow_auto");
+                removeMarker("ny_ic_src_marker");
+                removeMarker("ny_ic_dest_marker");
+            } else{
+                try {
+                    JSONArray jsonArray = null;
+                    jsonArray = new JSONArray(stringifyArray);
+                    for (int i = 0; i < jsonArray.length(); i++) {
+                        removeMarker(jsonArray.getString(i));
+                    }
+                } catch (JSONException e) {
+                    e.printStackTrace();
+                } 
+            }
             isAnimationNeeded = false;
             if (polylineAnimatorSet != null) {
                 polylineAnimatorSet.cancel();

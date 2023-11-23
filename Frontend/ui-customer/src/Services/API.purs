@@ -1603,7 +1603,8 @@ newtype ServiceabilityReq = ServiceabilityReq
 newtype ServiceabilityRes = ServiceabilityRes
   { serviceable :: Boolean,
     geoJson :: Maybe String,
-    specialLocation :: Maybe SpecialLocation
+    specialLocation :: Maybe SpecialLocation,
+    city :: Maybe String 
   }
 
 newtype ServiceabilityResDestination = ServiceabilityResDestination
