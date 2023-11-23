@@ -49,7 +49,7 @@ import Presto.Core.Flow (doAff)
 import Effect.Aff.Compat (EffectFnAff, fromEffectFnAff)
 import Foreign.Generic (encodeJSON)
 import Data.Either (Either(..), hush)
-import Data.Function.Uncurried (Fn3, runFn3, Fn1)
+import Data.Function.Uncurried (Fn3, runFn3, Fn1, runFn2)
 import Foreign.Class (encode)
 -- -- import Control.Monad.Except.Trans (lift)
 -- -- foreign import _keyStoreEntryPresent :: String -> Effect Boolean
@@ -166,7 +166,8 @@ foreign import showKeyboard :: String -> Effect Unit
 foreign import showDialer :: String -> Boolean -> Unit
 foreign import getAAID :: String -> String
 -- -- foreign import removePolyLineById :: Int -> Effect Unit
-foreign import removeAllPolylines :: String -> Unit
+foreign import removeAllPolylinesAndMarkers :: Fn2 (Array String) Unit Unit
+-- foreign import removeAllPolylines :: String -> Unit
 foreign import currentPosition  :: String -> Unit
 foreign import openNavigation  :: Number -> Number -> Number -> Number -> String -> Effect Unit
 foreign import stopLocationPollingAPI :: Effect Unit
@@ -370,6 +371,15 @@ showMap = showMapImpl --liftFlow (showMapImpl id mapType)
 showMarker :: String -> Number -> Number -> Int -> Number -> Number -> Effect Boolean
 showMarker title lat lng markerSize anchorV anchorV1 = addMarker title lat lng markerSize anchorV anchorV1
 
+removeAllPolylines :: String -> Unit 
+removeAllPolylines str = removeAllPolylinesImpl markersToRemove
+  where 
+    removeAllPolylinesImpl :: Array String -> Unit
+    removeAllPolylinesImpl mrkrToRemove = runFn2 removeAllPolylinesAndMarkers mrkrToRemove unit
+    
+    markersToRemove :: Array String   
+    markersToRemove = ["ic_auto_nav_on_map" , "ny_ic_vehicle_nav_on_map" , "ny_ic_black_yellow_auto" , "ny_ic_src_marker", "ny_ic_dest_marker"]
+
 
 setKeyInSharedPrefKeys :: forall st. String -> String -> Flow st Unit
 setKeyInSharedPrefKeys key val = liftFlow (setKeyInSharedPrefKeysImpl key val)
@@ -435,7 +445,8 @@ type Location = {
   lat :: Number,
   lng :: Number,
   place :: String,
-  address :: Maybe String
+  address :: Maybe String,
+  city :: Maybe String
 }
 
 type UpdateRouteMarker = {

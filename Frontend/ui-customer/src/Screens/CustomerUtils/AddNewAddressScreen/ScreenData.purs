@@ -99,5 +99,6 @@ dummyLocation = {
    place : "",
    lat : 0.0,
    lng : 0.0,
-   address : Nothing
+   address : Nothing,
+   city : Nothing
  }

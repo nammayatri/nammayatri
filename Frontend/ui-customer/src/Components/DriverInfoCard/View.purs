@@ -22,7 +22,7 @@ import Components.DriverInfoCard.Controller (Action(..), DriverInfoCardState)
 import Components.PrimaryButton as PrimaryButton
 import Components.SourceToDestination as SourceToDestination
 import Data.Array as Array
-import Data.Maybe (fromMaybe)
+import Data.Maybe (fromMaybe, maybe)
 import Data.String (Pattern(..), split, length, take, drop, replaceAll, Replacement(..), contains, toLower)
 import Data.String.CodeUnits (fromCharArray, toCharArray)
 import Debug (spy)
@@ -864,7 +864,7 @@ driverDetailsView push state =
           , width $ V 172
           , gravity BOTTOM
           ][  imageView
-              [ imageWithFallback (getVehicleImage state.data.vehicleVariant state.data.vehicleDetails)
+              [ imageWithFallback (getVehicleImage state.data.vehicleVariant state.data.vehicleDetails state.props.merchantCity)
               , height $ V 100
               , gravity RIGHT
               , width MATCH_PARENT
@@ -1212,11 +1212,11 @@ configurations =
               , paddingOTP : Padding 11 0 11 7
               }
 
-getVehicleImage :: String -> String -> String
-getVehicleImage variant vehicleDetail = do
+getVehicleImage :: String -> String -> Maybe String -> String
+getVehicleImage variant vehicleDetail city = do
   let details = (toLower vehicleDetail)
   fetchImage FF_ASSET $ 
-    if (variant == "AUTO_RICKSHAW") then "ic_auto_rickshaw"
+    if variant == "AUTO_RICKSHAW" then maybe "ic_auto_rickshaw" mkVehicleImage city
     else
       if contains (Pattern "ambassador") details then "ic_yellow_ambassador"
       else 
@@ -1225,3 +1225,8 @@ getVehicleImage variant vehicleDetail = do
                           "SUV" -> "ny_ic_suv_concept"
                           _     -> "ny_ic_sedan_concept"
           _          -> "ic_white_taxi"
+    where 
+      mkVehicleImage :: String -> String
+      mkVehicleImage cityCode = 
+        if cityCode == "std:040" then "ic_auto_rickshaw_black_yellow"
+          else "ic_auto_rickshaw"
