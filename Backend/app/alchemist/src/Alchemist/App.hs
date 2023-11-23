@@ -4,7 +4,11 @@ module Alchemist.App where
 
 import Alchemist.DSL.Parser.API (apiParser)
 import Alchemist.DSL.Parser.Storage
+import Alchemist.Generator.Haskell.BeamQueries (generateTTypeInstances)
+import Alchemist.Generator.Haskell.BeamTable (generateBeamTable)
+import Alchemist.Generator.Haskell.DomainType (generateHaskellModule)
 import Alchemist.Generator.Haskell.Servant (apisToText)
+import Alchemist.Generator.SQL.Table (generateSQL)
 import Alchemist.Utils
 import Kernel.Prelude
 import Text.Parsec
@@ -21,6 +25,15 @@ dslStorageInput =
   Field "closeTimings" "Maybe TimeOfDay"
   Field "validityTimings" "Maybe TimeOfDay"
 |]
+
+generateStorage :: IO ()
+generateStorage = do
+  let tableDef = case parse parseStorageDSL "" dslStorageInput of
+        Left err -> error (show err)
+        Right tp -> tp
+  writeToFile "GeneratedBeamTable.hs" (generateBeamTable tableDef ++ generateTTypeInstances tableDef)
+  writeToFile "GenerateHaskellModule.hs" (generateHaskellModule tableDef)
+  writeToFile "GenerateSQLTables.hs" (generateSQL tableDef)
 
 parseStorage :: IO ()
 parseStorage = do
