@@ -27,7 +27,6 @@ flag Local
 library
   exposed-modules:
       Alchemist.App
-      Alchemist.AST.API
       Alchemist.DSL.Parser.API
       Alchemist.DSL.Parser.Storage
       Alchemist.DSL.Syntax.API
@@ -85,6 +84,7 @@ library
     , beckn-spec
     , bytestring
     , esqueleto
+    , lens
     , mobility-core
     , parsec
     , persistent
