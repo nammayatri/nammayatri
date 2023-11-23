@@ -411,3 +411,13 @@ type MarginConfig = {
   bottom :: Int,
   left :: Int
 }
+
+type CityConfig = {
+  cityName :: String,
+  mapImage :: String,
+  cityCode :: String,
+  showSubscriptions :: Boolean,
+  cityLat :: Number,
+  cityLong :: Number,
+  supportNumber :: String
+}

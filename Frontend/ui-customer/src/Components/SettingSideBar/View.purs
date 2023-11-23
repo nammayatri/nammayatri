@@ -117,18 +117,6 @@ helpAndSupportConfig enableContactSupport = {
   iconUrl : ""
 }
 
-getPreviousVersion :: String -> String 
-getPreviousVersion _ = 
-  if os == "IOS" then 
-    case getMerchant FunctionCall of 
-      NAMMAYATRI -> "1.2.5"
-      YATRISATHI -> "0.0.0"
-      _ -> "0.0.0"
-    else do 
-      case getMerchant FunctionCall of 
-        NAMMAYATRI -> "1.2.1"
-        YATRISATHI -> "0.0.0"
-        _ -> "0.0.0"
 
 separator :: forall w. PrestoDOM (Effect Unit) w
 separator = linearLayout

@@ -125,7 +125,7 @@ driverImageView state =
         [ height $ V state.appConfig.quoteListItemConfig.vehicleHeight
         , width $ V state.appConfig.quoteListItemConfig.vehicleWidth
         , cornerRadius 20.0
-        , imageWithFallback $ fetchImage FF_ASSET $ if state.vehicleType == "auto" then "ny_ic_auto_quote_list" else "ny_ic_auto_quote_list"
+        , imageWithFallback $ fetchImage FF_ASSET $ if state.city == Just "std:040" then "ny_ic_black_yellow_auto_quote_list" else "ny_ic_auto_quote_list"
         , weight 1.0
         ]
       ]

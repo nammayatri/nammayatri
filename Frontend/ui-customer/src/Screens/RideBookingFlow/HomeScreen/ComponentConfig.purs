@@ -799,6 +799,7 @@ driverInfoCardViewState state = { props:
                                   , currentSearchResultType : state.data.currentSearchResultType
                                   , isChatOpened : state.props.isChatOpened
                                   , chatcallbackInitiated : state.props.chatcallbackInitiated
+                                  , merchantCity : state.props.city
                                   }
                               , data: driverInfoTransformer state
                             }
