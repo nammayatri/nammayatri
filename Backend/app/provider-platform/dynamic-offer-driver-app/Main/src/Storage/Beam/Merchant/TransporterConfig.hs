@@ -123,7 +123,10 @@ data TransporterConfigT f = TransporterConfigT
     canAddCancellationFee :: B.C f Bool,
     allowDefaultPlanAllocation :: B.C f Bool,
     createdAt :: B.C f UTCTime,
-    updatedAt :: B.C f UTCTime
+    updatedAt :: B.C f UTCTime,
+    notificationRetryEligibleErrorCodes :: B.C f [Text],
+    notificationRetryCountThreshold :: B.C f Int,
+    notificationRetryTimeGap :: B.C f Seconds
   }
   deriving (Generic, B.Beamable)
 

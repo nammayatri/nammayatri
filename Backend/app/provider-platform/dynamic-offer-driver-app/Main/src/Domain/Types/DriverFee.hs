@@ -48,6 +48,7 @@ data DriverFee = DriverFee
     billNumber :: Maybe Int,
     autopayPaymentStage :: Maybe AutopayPaymentStage,
     schedulerTryCount :: Int,
+    notificationRetryCount :: Int,
     stageUpdatedAt :: Maybe UTCTime,
     amountPaidByCoin :: Maybe HighPrecMoney,
     feeWithoutDiscount :: Maybe HighPrecMoney,

@@ -128,7 +128,7 @@ getStatus (personId, merchantId, _) orderId = do
           QIN.updateBankErrorsByInvoiceId bankErrorMessage bankErrorCode (cast order.id)
           notifyAndUpdateInvoiceStatusIfPaymentFailed personId order.id status Nothing Nothing False
         DPayment.PDNNotificationStatusResp {..} ->
-          processNotification notificationId notificationStatus responseCode responseMessage
+          processNotification notificationId notificationStatus responseCode responseMessage False
       return paymentStatus
 
 -- webhook ----------------------------------------------------------
@@ -171,7 +171,7 @@ juspayWebhookHandler merchantShortId authData value = do
               order <- QOrder.findByShortId (ShortId orderShortId) >>= fromMaybeM (PaymentOrderNotFound orderShortId)
               processMandate (cast order.personId) status mandateStartDate mandateEndDate (Id mandateId) mandateMaxAmount Nothing Nothing
             Payment.PDNNotificationStatusResp {..} ->
-              processNotification notificationId notificationStatus responseCode responseMessage
+              processNotification notificationId notificationStatus responseCode responseMessage True
             Payment.BadStatusResp -> pure ()
       pure Ack
     _ -> throwError $ InternalError "Unknown Service Config"
@@ -265,7 +265,7 @@ pdnNotificationStatus (_, merchantId, _) notificationId = do
   pdnNotification <- QNTF.findById notificationId >>= fromMaybeM (InternalError $ "No Notification Sent With Id" <> notificationId.getId)
   resp <- Payment.mandateNotificationStatus merchantId (mkNotificationRequest pdnNotification.shortId)
   let [responseCode, reponseMessage] = map (\func -> func =<< resp.providerResponse) [(.responseCode), (.responseMessage)]
-  processNotification pdnNotification.shortId resp.status responseCode reponseMessage
+  processNotification pdnNotification.shortId resp.status responseCode reponseMessage False
   return resp
   where
     mkNotificationRequest shortNotificationId =
@@ -273,21 +273,32 @@ pdnNotificationStatus (_, merchantId, _) notificationId = do
         { notificationId = shortNotificationId
         }
 
-processNotification :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r) => Text -> Payment.NotificationStatus -> Maybe Text -> Maybe Text -> m ()
-processNotification notificationId notificationStatus respCode respMessage = do
+processNotification :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r) => Text -> Payment.NotificationStatus -> Maybe Text -> Maybe Text -> Bool -> m ()
+processNotification notificationId notificationStatus respCode respMessage fromWebhook = do
   notification <- QNTF.findByShortId notificationId >>= fromMaybeM (InternalError "notification not found")
   let driverFeeId = notification.driverFeeId
   unless (notification.status == Juspay.SUCCESS) $ do
-    driverFee <- QDF.findById driverFeeId
+    driverFee <- QDF.findById driverFeeId >>= fromMaybeM (DriverFeeNotFound driverFeeId.getId)
+    driver <- B.runInReplica $ QP.findById driverFee.driverId >>= fromMaybeM (PersonDoesNotExist driverFee.driverId.getId)
+    transporterConfig <- SCT.findByMerchantOpCityId driver.merchantOperatingCityId >>= fromMaybeM (TransporterConfigNotFound driver.merchantOperatingCityId.getId)
     case notificationStatus of
       Juspay.NOTIFICATION_FAILURE -> do
         --- here based on notification status failed update driver fee to payment_overdue and reccuring invoice----
-        QDF.updateAutoPayToManual driverFeeId
-        QIN.updateInvoiceStatusByDriverFeeIds INV.INACTIVE [driverFeeId]
+        let isRetryEligibleError = maybe False (`elem` transporterConfig.notificationRetryEligibleErrorCodes) respCode
+        unless (driverFee.status == CLEARED) $ do
+          if driverFee.notificationRetryCount < transporterConfig.notificationRetryCountThreshold && fromWebhook && isRetryEligibleError
+            then do
+              QIN.updateInvoiceStatusByDriverFeeIdsAndMbPaymentMode INV.ACTIVE_INVOICE [driverFeeId] (Just INV.AUTOPAY_INVOICE)
+              QDF.updateManualToAutoPay driverFeeId
+              QDF.updateAutopayPaymentStageById (Just NOTIFICATION_SCHEDULED) driverFeeId
+              QDF.updateNotificationRetryCountById (driverFee.notificationRetryCount + 1) driverFeeId
+            else do
+              QDF.updateAutoPayToManual driverFeeId
+              QIN.updateInvoiceStatusByDriverFeeIdsAndMbPaymentMode INV.INACTIVE [driverFeeId] (Just INV.AUTOPAY_INVOICE)
       Juspay.SUCCESS -> do
         --- based on notification status Success udpate driver fee autoPayPaymentStage to Execution scheduled -----
-        unless ((driverFee <&> (.status)) == Just CLEARED) $ do
-          QIN.updateInvoiceStatusByDriverFeeIds INV.ACTIVE_INVOICE [driverFeeId]
+        unless (driverFee.status == CLEARED) $ do
+          QIN.updateInvoiceStatusByDriverFeeIdsAndMbPaymentMode INV.ACTIVE_INVOICE [driverFeeId] (Just INV.AUTOPAY_INVOICE)
           QDF.updateManualToAutoPay driverFeeId
         QDF.updateAutopayPaymentStageById (Just EXECUTION_SCHEDULED) driverFeeId
       _ -> pure ()

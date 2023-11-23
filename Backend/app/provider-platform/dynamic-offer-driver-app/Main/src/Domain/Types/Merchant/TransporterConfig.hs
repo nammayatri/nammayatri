@@ -147,7 +147,10 @@ data TransporterConfigD u = TransporterConfig
     canAddCancellationFee :: Bool,
     allowDefaultPlanAllocation :: Bool,
     createdAt :: UTCTime,
-    updatedAt :: UTCTime
+    updatedAt :: UTCTime,
+    notificationRetryEligibleErrorCodes :: [Text],
+    notificationRetryCountThreshold :: Int,
+    notificationRetryTimeGap :: NominalDiffTime
   }
   deriving (Generic, Show)
 

@@ -424,7 +424,8 @@ scheduleJobs transporterConfig startTime endTime merchantId merchantOpCityId max
       { merchantId = merchantId,
         merchantOperatingCityId = Just merchantOpCityId,
         startTime = startTime,
-        endTime = endTime
+        endTime = endTime,
+        retryCount = Just 0
       }
   createJobIn @_ @'SendOverlay (dfCalculationJobTs + 5400) maxShards $
     SendOverlayJobData

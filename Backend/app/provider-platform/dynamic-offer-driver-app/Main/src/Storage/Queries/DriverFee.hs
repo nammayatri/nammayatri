@@ -203,8 +203,8 @@ findOngoingAfterEndTime (Id driverId) now =
         ]
     ]
 
-findDriverFeeInRangeWithNotifcationNotSentAndStatus :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Merchant -> Int -> UTCTime -> UTCTime -> Domain.DriverFeeStatus -> m [DriverFee]
-findDriverFeeInRangeWithNotifcationNotSentAndStatus merchantId limit startTime endTime status = do
+findDriverFeeInRangeWithNotifcationNotSentAndStatus :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Merchant -> Int -> UTCTime -> UTCTime -> Int -> Domain.DriverFeeStatus -> m [DriverFee]
+findDriverFeeInRangeWithNotifcationNotSentAndStatus merchantId limit startTime endTime retryCount status = do
   findAllWithOptionsKV
     [ Se.And
         [ Se.Is BeamDF.startTime $ Se.GreaterThanOrEq startTime,
@@ -212,6 +212,7 @@ findDriverFeeInRangeWithNotifcationNotSentAndStatus merchantId limit startTime e
           Se.Is BeamDF.feeType $ Se.Eq RECURRING_EXECUTION_INVOICE,
           Se.Is BeamDF.autopayPaymentStage $ Se.Eq (Just NOTIFICATION_SCHEDULED),
           Se.Is BeamDF.status $ Se.Eq status,
+          Se.Is BeamDF.notificationRetryCount $ Se.Eq retryCount,
           Se.Is BeamDF.merchantId $ Se.Eq merchantId.getId
         ]
     ]
@@ -329,6 +330,13 @@ updateAutopayPaymentStageById autopayPaymentStage driverFeeId = do
   now <- getCurrentTime
   updateOneWithKV
     [Se.Set BeamDF.autopayPaymentStage autopayPaymentStage, Se.Set BeamDF.stageUpdatedAt (Just now)]
+    [Se.Is BeamDF.id (Se.Eq driverFeeId.getId)]
+
+updateNotificationRetryCountById :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Int -> Id DriverFee -> m ()
+updateNotificationRetryCountById retryCount driverFeeId = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [Se.Set BeamDF.notificationRetryCount retryCount, Se.Set BeamDF.updatedAt now]
     [Se.Is BeamDF.id (Se.Eq driverFeeId.getId)]
 
 updateAutopayPaymentStageByIds :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Maybe Domain.AutopayPaymentStage -> [Id DriverFee] -> m ()
@@ -586,6 +594,7 @@ instance FromTType' BeamDF.DriverFee DriverFee where
             createdAt = createdAt,
             updatedAt = updatedAt,
             schedulerTryCount,
+            notificationRetryCount,
             billNumber,
             stageUpdatedAt,
             feeWithoutDiscount,
@@ -622,6 +631,7 @@ instance ToTType' BeamDF.DriverFee DriverFee where
         BeamDF.stageUpdatedAt = stageUpdatedAt,
         BeamDF.feeWithoutDiscount = feeWithoutDiscount,
         BeamDF.schedulerTryCount = schedulerTryCount,
+        BeamDF.notificationRetryCount = notificationRetryCount,
         BeamDF.collectedAt = collectedAt,
         BeamDF.createdAt = createdAt,
         BeamDF.updatedAt = updatedAt,
