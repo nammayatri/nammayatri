@@ -24,19 +24,19 @@ import Components.PrimaryEditText as PrimaryEditText
 import Components.GenericRadioButton as GenericRadioButton
 import Components.SelectListModal as SelectListModal
 import Data.Maybe (Maybe(..), fromMaybe)
-import Prelude (not, negate, map, unit, (&&),(>=), (==), (-))
+import Prelude (not, negate, map, unit, (&&),(>=), (==), (-), (||))
 import Data.String as DS
 import Engineering.Helpers.Commons as EHC 
 import Font.Size as FontSize
 import Font.Style (Style(..))
 import Font.Style as FontStyle
-import Helpers.Utils (fetchImage, FetchImageFrom(..))
+import Helpers.Utils (fetchImage, FetchImageFrom(..),isParentView, showTitle)
 import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude ((<>))
 import Prelude (not, negate)
-import PrestoDOM (Length(..), Margin(..), Padding(..), Gravity(..))
+import PrestoDOM (Length(..), Margin(..), Padding(..), Gravity(..), Visibility(..))
 import PrestoDOM.Animation as PrestoAnim
 import Screens.Types as ST
 import Styles.Colors as Color
@@ -45,6 +45,8 @@ import Data.Array as DA
 genericHeaderConfig :: ST.MyProfileScreenState -> GenericHeader.Config 
 genericHeaderConfig state = let 
   config = if state.data.config.nyBrandingVisibility then GenericHeader.merchantConfig else GenericHeader.config
+  btnVisibility = if isParentView FunctionCall then GONE else config.prefixImageConfig.visibility
+  titleVisibility = if state.props.updateProfile || showTitle FunctionCall then config.visibility else GONE
   genericHeaderConfig' = config 
     {
       height = WRAP_CONTENT
@@ -55,11 +57,13 @@ genericHeaderConfig state = let
       , margin = (Margin 10 17 16 15)
       , imageUrl = fetchImage FF_COMMON_ASSET "ny_ic_chevron_left"
       , padding = (Padding 5 5 5 5 )
+      , visibility =  btnVisibility
       }
     , textConfig {
         text = if state.props.updateProfile then (getString UPDATE_PERSONAL_DETAILS) else (getString PERSONAL_DETAILS)
       , color = Color.black
       }
+    , visibility = titleVisibility
     }
   in genericHeaderConfig'
   

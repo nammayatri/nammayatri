@@ -212,3 +212,5 @@ _minor = lens (unwrap >>> _.minor) (\oldRec newVal -> wrap ((unwrap oldRec) { mi
 _maintenance :: forall a b c. Newtype a { maintenance :: b | c } => Lens' a b
 _maintenance = lens (unwrap >>> _.maintenance) (\oldRec newVal -> wrap ((unwrap oldRec) { maintenance = newVal }))
 
+_deeplinkOptions :: forall a b c. Newtype a { deeplinkOptions :: b | c } => Lens' a b
+_deeplinkOptions = lens (unwrap >>> _.deeplinkOptions) (\oldRec newVal -> wrap ((unwrap oldRec) { deeplinkOptions = newVal }))

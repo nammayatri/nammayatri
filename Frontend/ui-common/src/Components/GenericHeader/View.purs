@@ -34,6 +34,7 @@ view push config =
   , background config.background
   , accessibility DISABLE
   , clickable config.isClickable
+  , visibility config.visibility
   ][  linearLayout
       [ height WRAP_CONTENT
       , width WRAP_CONTENT

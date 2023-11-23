@@ -187,7 +187,7 @@ window.getMerchantConfig = function () {
         "query": "google.navigation:q=%f,%f"
         }
     , "features" : {
-        "enableAutoReadOtp" : true
+        "enableAutoReadOtp" : false
     }
     , "estimateAndQuoteConfig" : { "enableOnlyAuto" : true
     }
