@@ -232,7 +232,8 @@ initData = {
         lat : 0.0,
         lng : 0.0,
         place : "",
-        address : Nothing
+        address : Nothing,
+        city : Nothing
       }
     , isShorterTrip : false
     , locateOnMapLocation : {
@@ -245,6 +246,7 @@ initData = {
         , destinationLng : 0.0
         , destinationAddress : dummyAddress
       }
+    , city : Nothing
     }
 }
 
@@ -420,7 +422,8 @@ dummyLocation = {
    place : "",
    lat : 0.0,
    lng : 0.0,
-   address : Nothing
+   address : Nothing,
+   city : Nothing
  }
 
 

@@ -38,6 +38,7 @@ type QuoteListItemState =
   , driverName :: String
   , selectedQuote :: Maybe String
   , appConfig :: AppConfig
+  , city :: Maybe String
   }
 
 config :: QuoteListItemState
@@ -53,4 +54,5 @@ config = {
   , driverName : "Drive_Name"
   , selectedQuote : Nothing
   , appConfig : DC.config
+  , city : Nothing
   }
