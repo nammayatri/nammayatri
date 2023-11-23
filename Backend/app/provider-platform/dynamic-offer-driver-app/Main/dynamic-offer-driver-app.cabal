@@ -231,6 +231,7 @@ library
       Domain.Types.Mandate
       Domain.Types.Maps.PlaceNameCache
       Domain.Types.Merchant
+      Domain.Types.Merchant.ConfigMapping
       Domain.Types.Merchant.DriverIntelligentPoolConfig
       Domain.Types.Merchant.DriverPoolConfig
       Domain.Types.Merchant.LeaderBoardConfig
@@ -367,6 +368,7 @@ library
       Storage.Beam.Mandate
       Storage.Beam.Maps.PlaceNameCache
       Storage.Beam.Merchant
+      Storage.Beam.Merchant.ConfigMapping
       Storage.Beam.Merchant.DriverIntelligentPoolConfig
       Storage.Beam.Merchant.DriverPoolConfig
       Storage.Beam.Merchant.LeaderBoardConfig
@@ -414,6 +416,7 @@ library
       Storage.CachedQueries.KioskLocationTranslation
       Storage.CachedQueries.Maps.PlaceNameCache
       Storage.CachedQueries.Merchant
+      Storage.CachedQueries.Merchant.ConfigMapping
       Storage.CachedQueries.Merchant.DriverIntelligentPoolConfig
       Storage.CachedQueries.Merchant.DriverPoolConfig
       Storage.CachedQueries.Merchant.LeaderBoardConfig
@@ -485,6 +488,7 @@ library
       Storage.Queries.Mandate
       Storage.Queries.Maps.PlaceNameCache
       Storage.Queries.Merchant
+      Storage.Queries.Merchant.ConfigMapping
       Storage.Queries.Merchant.DriverIntelligentPoolConfig
       Storage.Queries.Merchant.DriverPoolConfig
       Storage.Queries.Merchant.LeaderBoardConfig
