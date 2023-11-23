@@ -86,6 +86,7 @@ library
     , casing
     , directory
     , esqueleto
+    , extra
     , lens
     , mobility-core
     , parsec

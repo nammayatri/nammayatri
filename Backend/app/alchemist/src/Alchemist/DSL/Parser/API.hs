@@ -23,6 +23,7 @@ singleApiParser input = do
     foldl
       ( \acc z ->
           case z of
+            ModuleName y -> acc & moduleName .~ y
             HeaderT y -> over header (\x -> x <> [y]) acc
             ApiTU apitype urlparts -> acc & (apiType .~ apitype) . (urlParts .~ urlparts)
             Auth authtype -> acc & authType .~ authtype
@@ -33,7 +34,14 @@ singleApiParser input = do
       api
 
 lineParserAPI :: Parser ApiParts
-lineParserAPI = try apiTypeAndURLParser <|> try authParser <|> try headerParser <|> reqParser <|> resParser
+lineParserAPI = try moduleNameParser <|> try apiTypeAndURLParser <|> try authParser <|> try headerParser <|> try reqParser <|> resParser
+
+moduleNameParser :: Parser ApiParts
+moduleNameParser = do
+  _ <- string "Module"
+  spaces
+  modelName <- T.pack <$> many1 (noneOf "")
+  return $ ModuleName modelName
 
 apiTypeAndURLParser :: Parser ApiParts
 apiTypeAndURLParser = do
