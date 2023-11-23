@@ -21,19 +21,10 @@ dslStorageInput =
   Field "placesId" "Text" PrimaryKey NotNull
   Field "service" "Text"  SecondaryKey NotNull
   Field "maxVerification" "Int" "INT" NotNull Default "1"
-  Field "openTimings" "Maybe TimeOfDay" "UTCTime" CustomConstraint "time without time zone" Default "CURRENT TIMESTAMP"
-  Field "closeTimings" "Maybe TimeOfDay"
-  Field "validityTimings" "Maybe TimeOfDay"
+  Field "openTimings" "Maybe TimeOfDay" "time without time zone" Default "CURRENT_TIMESTAMP"
+  Field "closeTimings" "Maybe TimeOfDay" "time without time zone"
+  Field "validityTimings" "Maybe TimeOfDay" "time without time zone"
 |]
-
-generateStorage :: IO ()
-generateStorage = do
-  let tableDef = case parse parseStorageDSL "" dslStorageInput of
-        Left err -> error (show err)
-        Right tp -> tp
-  writeToFile "GeneratedBeamTable.hs" (generateBeamTable tableDef ++ generateTTypeInstances tableDef)
-  writeToFile "GenerateHaskellModule.hs" (generateHaskellModule tableDef)
-  writeToFile "GenerateSQLTables.hs" (generateSQL tableDef)
 
 parseStorage :: IO ()
 parseStorage = do
@@ -60,7 +51,22 @@ dslInput =
   RESPJ {DTB.TicketPlace}
 |]
 
+generateStorage :: IO ()
+generateStorage = do
+  let tableDef = case parse parseStorageDSL "" dslStorageInput of
+        Left err -> error (show err)
+        Right tp -> tp
+  writeToFile "./output/GeneratedBeamTable.hs" (generateBeamTable tableDef)
+  writeToFile "./output/GeneratedBeamQueries.hs" (generateTTypeInstances tableDef)
+  writeToFile "./output/GenerateHaskellModule.hs" (generateHaskellModule tableDef)
+  writeToFile "./output/GenerateSQLTables.sql" (generateSQL tableDef)
+
 generateAPI :: IO ()
 generateAPI = do
   let generatedCode = processAPIDSL dslInput
-  writeToFile "GeneratedServantAPI.hs" generatedCode
+  writeToFile "./output/GeneratedServantAPI.hs" generatedCode
+
+generateAll :: IO ()
+generateAll = do
+  generateStorage
+  generateAPI
