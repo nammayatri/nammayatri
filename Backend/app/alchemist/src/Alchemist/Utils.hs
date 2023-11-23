@@ -12,7 +12,7 @@ writeToFile filename content = do
     hPutStr handle_ content
 
 typeDelimiter :: String
-typeDelimiter = "() "
+typeDelimiter = "() []"
 
 makeTypeQualified :: String -> String
 makeTypeQualified str = concatMap replaceOrKeep (split (whenElt (`elem` typeDelimiter)) str)
@@ -21,7 +21,7 @@ makeTypeQualified str = concatMap replaceOrKeep (split (whenElt (`elem` typeDeli
     replaceOrKeep word =
       if '.' `elem` word
         then word
-        else maybe (if word `elem` ["", ")", "(", " "] then word else error "Type not determined") (\x -> x <> "." <> word) (getQualifiedImport word)
+        else maybe (if word `elem` ["", ")", "(", " ", "[", "]"] then word else error "Type not determined") (\x -> x <> "." <> word) (getQualifiedImport word)
 
 figureOutImports :: [String] -> [String]
 figureOutImports fieldTypes =
