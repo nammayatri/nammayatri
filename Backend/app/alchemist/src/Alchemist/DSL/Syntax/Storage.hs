@@ -2,7 +2,6 @@ module Alchemist.DSL.Syntax.Storage where
 
 import Kernel.Prelude
 
--- Define the data types
 data TableDef = TableDef
   { tableNameHaskell :: String,
     tableNameSql :: String,
