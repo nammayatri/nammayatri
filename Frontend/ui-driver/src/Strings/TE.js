@@ -263,7 +263,7 @@ const teluguStrings = {
   INVALID_TOKEN: "చెల్లని టోకేను",
   SOME_ERROR_OCCURED_IN_OFFERRIDE: "ఆఫర్‌రైడ్‌లో కొంత లోపం సంభవించింది",
   SELECT_VEHICLE_TYPE: "వాహనం రకాన్ని ఎంచుకోండి",
-  రైడ్: "రైడ్",
+  RIDE : "రైడ్",
   NO_LOCATION_UPDATE: "లొకేషన్ అప్డేట్ లేదు",
   GOT_IT_TELL_US_MORE: "అర్థమైంది, మాకు మరింత చెప్పండి?",
   WRITE_A_COMMENT: "వ్యాఖ్య రాయండి",
@@ -688,7 +688,7 @@ const teluguStrings = {
   ZERO_COMMISION : "జీరో కమీషన్",
   EARN_TODAY_PAY_TOMORROW : "ఈ రోజు సంపాదించండి, రేపు చెల్లించండి",
   PAY_ONLY_IF_YOU_TAKE_RIDES : "మీరు రైడ్ చేస్తేనే చెల్లించండి",
-  ప్రణాళిక: "ప్రణాళిక",
+  PLAN : "ప్రణాళిక",
   DAY : "రోజు",
   PLANS : "ప్రణాళికలు",
   MANAGE_PLAN : "ప్రణాళికను నిర్వహించండి",
@@ -1071,7 +1071,10 @@ const teluguStrings = {
   WRONG_CROPPING : "తప్పు క్రాపింగ్",
   CROPPED_CORRECTLY : "సరిగ్గా కత్తిరించబడింది",
   BLURRY_IMAGE : "అస్పష్టమైన చిత్రం",
-  CLEAR_IMAGE : "చిత్రాన్ని క్లియర్ చేయండి"
+  CLEAR_IMAGE : "చిత్రాన్ని క్లియర్ చేయండి",
+  WE_ARE_NOT_LIVE_IN_YOUR_AREA : "మేము ఇంకా మీ ప్రాంతంలో నివసించడం లేదు!\nమీ నగరానికి త్వరలో వస్తాము!",
+  LOCATION_UNSERVICEABLE : "స్థానం పనికిరానిది",
+  AND : " మరియు "
 }
   
   

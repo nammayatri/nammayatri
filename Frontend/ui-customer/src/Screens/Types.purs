@@ -709,6 +709,7 @@ type HomeScreenStateProps =
   , specialZoneType :: String
   , currentLocation :: Location
   , isShorterTrip :: Boolean
+  , city :: Maybe String
   }
 
 type SearchLocationModelProps = {
@@ -976,7 +977,8 @@ type Location = {
   place :: String,
   lat :: Number,
   lng :: Number,
-  address :: Maybe String
+  address :: Maybe String,
+  city :: Maybe String
 }
 
 type DriverInfoCard =

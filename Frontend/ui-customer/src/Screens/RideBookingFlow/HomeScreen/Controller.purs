@@ -1738,7 +1738,7 @@ eval (GetQuotesList (SelectListRes resp)) state = do
     true  -> do
       continueWithCmd state [pure $ ContinueWithoutOffers (SelectListRes resp)]
     false -> do
-              let selectedQuotes = getQuoteList ((fromMaybe dummySelectedQuotes resp.selectedQuotes)^._selectedQuotes)
+              let selectedQuotes = getQuoteList ((fromMaybe dummySelectedQuotes resp.selectedQuotes)^._selectedQuotes) state.props.city
               _ <- pure $ printLog "vehicle Varient " selectedQuotes
               let filteredQuoteList = filter (\a -> length (filter (\b -> a.id == b.id )state.data.quoteListModelState) == 0 ) selectedQuotes
               let removeExpired = filter (\a -> a.seconds > 0) filteredQuoteList
@@ -1984,6 +1984,7 @@ constructLatLong lat lng _ =
   , lng: lng
   , place: ""
   , address: Nothing
+  , city : Nothing
   }
 
 addItemToFeedbackList :: Array String -> String -> Array String

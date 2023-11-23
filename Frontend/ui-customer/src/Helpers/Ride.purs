@@ -17,6 +17,7 @@ module Helpers.Ride where
 
 import Prelude
 import Types.App (FlowBT, ScreenType(..))
+import Control.Monad.Except (runExcept)
 import JBridge
 import Presto.Core.Types.Language.Flow (getLogFields)
 import Engineering.Helpers.Utils (getAppConfig)
@@ -29,12 +30,12 @@ import Types.App (GlobalState(..))
 import Data.Either (Either(..))
 import Services.API
 import Data.Array (null, head, length)
-import Data.Maybe (Maybe(..), fromMaybe, isNothing, isJust)
+import Data.Maybe (Maybe(..), fromMaybe, isNothing, isJust, maybe')
 import Screens.HomeScreen.ScreenData (dummyRideBooking)
 import Screens.HomeScreen.Transformer (dummyRideAPIEntity)
 import Data.Lens ((^.))
 import Accessor
-import Screens.Types (Stage(..), SearchResultType(..), PopupType(..))
+import Screens.Types (Stage(..), SearchResultType(..), PopupType(..), FlowStatusData(..))
 import Screens.HomeScreen.Transformer (getDriverInfo, getSpecialTag)
 import Engineering.Helpers.Commons (liftFlow, convertUTCtoISC)
 import Engineering.Helpers.LogEvent (logEvent, logEventWithTwoParams)
@@ -42,7 +43,7 @@ import Storage
 import Helpers.Utils (getCurrentDate)
 import Resources.Constants (DecodeAddress(..), decodeAddress)
 import Data.String (split, Pattern(..))
-
+import Foreign.Generic (decodeJSON)
 
 checkRideStatus :: Boolean -> FlowBT String Unit --TODO:: Need to refactor this function
 checkRideStatus rideAssigned = do
@@ -75,9 +76,9 @@ checkRideStatus rideAssigned = do
         when (not rideAssigned) $ do
           lift $ lift $ liftFlow $ logEvent logField_ "ny_active_ride_with_idle_state"
           void $ pure $ logEventWithTwoParams logField_ "ny_active_ride_with_idle_state" "status" status "bookingId" resp.id
-
         modifyScreenState $ HomeScreenStateType (\homeScreen → newState)
         updateLocalStage rideStatus
+        maybe' (\_ -> pure unit) updateCity (getFlowStatusData "LazyCheck")
         let (RideBookingAPIDetails bookingDetails) = resp.bookingDetails
             (RideBookingDetails contents) = bookingDetails.contents
             otpCode = contents.otpCode
@@ -163,9 +164,19 @@ checkRideStatus rideAssigned = do
         updateLocalStage HomeScreen
     Left err -> updateLocalStage HomeScreen
   if not (isLocalStageOn RideAccepted) then removeChatService "" else pure unit
+  where 
+    updateCity :: FlowStatusData -> FlowBT String Unit
+    updateCity (FlowStatusData flowStatusData) = modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{city = flowStatusData.source.city}})
+        
 
 removeChatService :: String -> FlowBT String Unit
 removeChatService _ = do
   void $ lift $ lift $ liftFlow $ stopChatListenerService
   setValueToLocalNativeStore READ_MESSAGES "0"
   pure unit
+
+getFlowStatusData :: String -> Maybe FlowStatusData
+getFlowStatusData dummy =
+  case runExcept (decodeJSON (getValueToLocalStore FLOW_STATUS_DATA) :: _ FlowStatusData) of
+    Right res -> Just res
+    Left err -> Nothing
