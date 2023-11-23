@@ -1,10 +1,9 @@
 module Alchemist.Utils where
 
-import Data.List (nub)
-import Data.List.Split (split, splitWhen, whenElt)
+import Data.List (intercalate, nub)
+import Data.List.Split (split, splitOn, splitWhen, whenElt)
 import Kernel.Prelude hiding (hPutStr)
 import System.IO
-import Text.Regex.TDFA ((=~))
 
 writeToFile :: FilePath -> String -> IO ()
 writeToFile filename content = do
@@ -18,31 +17,27 @@ makeTypeQualified :: String -> String
 makeTypeQualified str = concatMap replaceOrKeep (split (whenElt (`elem` typeDelimiter)) str)
   where
     replaceOrKeep :: String -> String
-    replaceOrKeep word = fromMaybe (if '.' `elem` word || word `elem` ["", ")", "(", " "] then word else error "Type not determined") (getQualifiedImport word)
+    replaceOrKeep word =
+      if '.' `elem` word
+        then word
+        else maybe (if word `elem` ["", ")", "(", " "] then word else error "Type not determined") (\x -> x <> "." <> word) (getQualifiedImport word)
 
 figureOutImports :: [String] -> [String]
 figureOutImports fieldTypes =
-  let extractWords = splitWhen (`elem` typeDelimiter) <$> fieldTypes
-   in filter (not . null) $ concatMap (map makeTypeQualified) (nub extractWords)
-
-findMatchingSqlType :: String -> Maybe String
-findMatchingSqlType haskellType =
-  case filter ((haskellType =~) . fst) defaultSQLTypes of
-    [] -> Nothing
-    ((_, sqlType) : _) -> Just sqlType
-
-defaultSQLTypes :: [(String, String)]
-defaultSQLTypes =
-  [ ("Text", "CHARACTER(36)"),
-    ("Id ", "Varchar(50)"),
-    ("TimeOfDay", "UTCTime")
-  ]
+  nub $ filter (not . null) $ concatMap (map (extractUptoLastDot . makeTypeQualified)) extractWords
+  where
+    extractWords = splitWhen (`elem` typeDelimiter) <$> fieldTypes
+    extractUptoLastDot str =
+      let parts = splitOn "." str
+       in if length parts > 1
+            then intercalate "." (init parts)
+            else str
 
 getQualifiedImport :: String -> Maybe String
 getQualifiedImport = \case
-  "Text" -> Just "Data.Text.Text"
-  "Maybe" -> Just "Data.Maybe.Maybe"
-  "Id" -> Just "Beckn.Types.Id"
-  "TimeOfDay" -> Just "Beckn.Types.TimeOfDay"
-  "Int" -> Just "Int"
+  "Text" -> Just "Data.Text"
+  "Maybe" -> Just "Data.Maybe"
+  "Id" -> Just "Beckn.Types"
+  "TimeOfDay" -> Just "Beckn.Types"
+  "Int" -> Just "Data.Int"
   _ -> Nothing
