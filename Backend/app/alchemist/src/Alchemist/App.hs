@@ -40,15 +40,24 @@ processAPIDSL dsl = case apiParser dsl of
 dslInput :: String
 dslInput =
   [r|
-  GET /ticket/places/{placeId:Id DTB.TicketPlace}
+  Module Ticket.Service
+  GET /ticket/places/{placeId:Id DTB.TicketPlace}/services?*status:Data.Types.BookingStatus&limit:Int&offset:Int
   AUTH TokenAuth
-  Header vt {DTB.Vehicle}
-  REQJ {Id DTB.Driver}
-  RESPJ {DTB.TicketPlace}
+  Header vt {Domain.Action.UI.Tickets.Vehicle}
+  REQJ {Id Domain.Action.UI.Ticketsadfasdkfj.Driverjksadhfshlfki}
+  RESPJ {Domain.Action.UI.Tickets.TicketPlace}
   ---
   GET /ticket/places1/{placeId:Id DTB.TicketPlace}
   AUTH TokenAuth
-  RESPJ {DTB.TicketPlace}
+  RESPJ {Domain.Action.UI.Tickets.TicketPlace}
+  ---
+  GET /ticket/places2/{placeId:Id DTB.TicketPlace}
+  AUTH TokenAuth
+  RESPJ {Domain.Action.UI.Tickets.TicketPlace}
+  ---
+  GET /ticket/places3/{placeId:Id DTB.TicketPlace}
+  AUTH TokenAuth
+  RESPJ {Domain.Action.UI.Tickets.TicketPlace}
 |]
 
 generateStorage :: IO ()

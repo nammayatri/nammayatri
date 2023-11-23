@@ -79,6 +79,7 @@ dependencies:
   - lens
   - casing
   - directory
+  - extra
 
 ghc-options:
   - -Wall
