@@ -7,16 +7,22 @@ import Text.Parsec hiding (spaces)
 import Text.Parsec.String (Parser)
 import Text.Regex.TDFA ((=~))
 
+betweenQuote :: Parser a -> Parser a
+betweenQuote = between (char '"') (char '"')
+
+takeTillQuotes :: Parser String
+takeTillQuotes = many (noneOf "\"")
+
 parseConstraint :: Parser FieldConstraint
 parseConstraint =
   try (string "PrimaryKey" *> return PrimaryKey)
     <|> try (string "SecondaryKey" *> return SecondaryKey)
     <|> try (string "NotNull" *> return NotNull)
-    <|> try (Default <$> (string "Default" *> spaces *> between (char '"') (char '"') (many (noneOf "\""))))
+    <|> try (Default <$> (string "Default" *> spaces *> betweenQuote takeTillQuotes))
     <|> ( do
             _ <- string "CustomConstraint"
             spaces
-            value <- between (char '"') (char '"') (many (noneOf "\""))
+            value <- betweenQuote takeTillQuotes
             return $ CustomConstraint value
         )
 
@@ -24,9 +30,9 @@ parseFieldDef :: Parser FieldDef
 parseFieldDef = do
   _ <- string "Field"
   spaces
-  fieldName <- between (char '"') (char '"') (many (noneOf "\""))
+  fieldName <- betweenQuote takeTillQuotes
   spaces
-  haskellType <- between (char '"') (char '"') (many (noneOf "\""))
+  haskellType <- betweenQuote takeTillQuotes
   spaces
   sqlType <-
     option
@@ -34,7 +40,7 @@ parseFieldDef = do
           Just tp -> tp
           Nothing -> error "SQL type not found in map"
       )
-      (between (char '"') (char '"') (many (noneOf "\"")))
+      (betweenQuote takeTillQuotes)
   spaces
   constraints <- many (try (spaces *> parseConstraint))
   return $ FieldDef fieldName haskellType sqlType constraints
@@ -43,9 +49,9 @@ parseStorageDSL :: Parser TableDef
 parseStorageDSL = do
   _ <- string "Table"
   spaces
-  tableNameHaskell <- between (char '"') (char '"') (many (noneOf "\""))
+  tableNameHaskell <- betweenQuote takeTillQuotes
   spaces
-  tableNameSql <- between (char '"') (char '"') (many (noneOf "\""))
+  tableNameSql <- betweenQuote takeTillQuotes
   spaces
   fields <- many (try (spaces *> parseFieldDef))
   let (primaryKey, secondaryKey) = extractKeys fields
