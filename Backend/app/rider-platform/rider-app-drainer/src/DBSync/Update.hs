@@ -135,6 +135,12 @@ runUpdateCommands (cmd, val) streamKey = do
     UpdateDBCommand id _ _ _ _ (BecknRequestOptions _ setClauses whereClause) -> runUpdate id val streamKey setClauses whereClause ("BecknRequest" :: Text) =<< dbConf
     UpdateDBCommand id _ tag _ _ (LocationOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val streamKey setClauses tag whereClause ("Location" :: Text) =<< dbConf
     UpdateDBCommand id _ tag _ _ (LocationMappingOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val streamKey setClauses tag whereClause ("LocationMapping" :: Text) =<< dbConf
+    UpdateDBCommand id _ tag _ _ (TicketBookingOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val streamKey setClauses tag whereClause ("TicketBooking" :: Text) =<< dbConf
+    UpdateDBCommand id _ tag _ _ (TicketBookingServiceOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val streamKey setClauses tag whereClause ("TicketBookingService" :: Text) =<< dbConf
+    UpdateDBCommand id _ tag _ _ (TicketServiceOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val streamKey setClauses tag whereClause ("TicketService" :: Text) =<< dbConf
+    UpdateDBCommand id _ tag _ _ (TicketServicePriceOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val streamKey setClauses tag whereClause ("TicketServicePrice" :: Text) =<< dbConf
+    UpdateDBCommand id _ tag _ _ (TicketBookingServicePriceBreakupOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val streamKey setClauses tag whereClause ("TicketBookingServicePriceBreakup" :: Text) =<< dbConf
+    UpdateDBCommand id _ tag _ _ (TicketPlaceOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val streamKey setClauses tag whereClause ("TicketPlace" :: Text) =<< dbConf
   where
     runUpdate id value _ setClause whereClause model dbConf = do
       maxRetries <- EL.runIO getMaxRetries

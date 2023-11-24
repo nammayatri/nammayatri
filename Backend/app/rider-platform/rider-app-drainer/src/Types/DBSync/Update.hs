@@ -54,6 +54,12 @@ import qualified "rider-app" Storage.Beam.SavedReqLocation as SavedReqLocation
 import qualified "rider-app" Storage.Beam.SearchRequest as SearchRequest
 import qualified "rider-app" Storage.Beam.Sos as Sos
 import qualified "rider-app" Storage.Beam.SpecialZoneQuote as SpecialZoneQuote
+import qualified "rider-app" Storage.Beam.Tickets.TicketBooking as TicketBooking
+import qualified "rider-app" Storage.Beam.Tickets.TicketBookingService as TicketBookingService
+import qualified "rider-app" Storage.Beam.Tickets.TicketBookingServicePriceBreakup as TicketBookingServicePriceBreakup
+import qualified "rider-app" Storage.Beam.Tickets.TicketPlace as TicketPlace
+import qualified "rider-app" Storage.Beam.Tickets.TicketService as TicketService
+import qualified "rider-app" Storage.Beam.Tickets.TicketServicePrice as TicketServicePrice
 import qualified "rider-app" Storage.Beam.TripTerms as TripTerms
 import qualified "rider-app" Storage.Beam.Webengage as Webengage
 import Utils.Parse
@@ -110,6 +116,12 @@ data UpdateModel
   | BecknRequestUpdate
   | LocationUpdate
   | LocationMappingUpdate
+  | TicketBookingUpdate
+  | TicketBookingServiceUpdate
+  | TicketServiceUpdate
+  | TicketServicePriceUpdate
+  | TicketBookingServicePriceBreakupUpdate
+  | TicketPlaceUpdate
   deriving (Generic, Show)
 
 getTagUpdate :: UpdateModel -> Text
@@ -161,6 +173,12 @@ getTagUpdate HotSpotConfigUpdate = "HotSpotConfigOptions"
 getTagUpdate BecknRequestUpdate = "BecknRequestOptions"
 getTagUpdate LocationUpdate = "LocationOptions"
 getTagUpdate LocationMappingUpdate = "LocationMappingOptions"
+getTagUpdate TicketBookingUpdate = "TicketBookingOptions"
+getTagUpdate TicketBookingServiceUpdate = "TicketBookingServiceOptions"
+getTagUpdate TicketServiceUpdate = "TicketServiceOptions"
+getTagUpdate TicketServicePriceUpdate = "TicketServicePriceOptions"
+getTagUpdate TicketBookingServicePriceBreakupUpdate = "TicketBookingServicePriceBreakupOptions"
+getTagUpdate TicketPlaceUpdate = "TicketPlaceOptions"
 
 parseTagUpdate :: Text -> Parser UpdateModel
 parseTagUpdate "AppInstallsOptions" = return AppInstallsUpdate
@@ -211,6 +229,12 @@ parseTagUpdate "HotSpotConfigOptions" = return HotSpotConfigUpdate
 parseTagUpdate "BecknRequestOptions" = return BecknRequestUpdate
 parseTagUpdate "LocationOptions" = return LocationUpdate
 parseTagUpdate "LocationMappingOptions" = return LocationMappingUpdate
+parseTagUpdate "TicketBookingOptions" = return TicketBookingUpdate
+parseTagUpdate "TicketBookingServiceOptions" = return TicketBookingServiceUpdate
+parseTagUpdate "TicketServiceOptions" = return TicketServiceUpdate
+parseTagUpdate "TicketServicePriceOptions" = return TicketServicePriceUpdate
+parseTagUpdate "TicketBookingServicePriceBreakupOptions" = return TicketBookingServicePriceBreakupUpdate
+parseTagUpdate "TicketPlaceOptions" = return TicketPlaceUpdate
 parseTagUpdate t = fail $ T.unpack ("Expected a UpdateModel but got '" <> t <> "'")
 
 data DBUpdateObject
@@ -262,6 +286,12 @@ data DBUpdateObject
   | BecknRequestOptions UpdateModel [Set Postgres BecknRequest.BecknRequestT] (Where Postgres BecknRequest.BecknRequestT)
   | LocationOptions UpdateModel [Set Postgres Location.LocationT] (Where Postgres Location.LocationT)
   | LocationMappingOptions UpdateModel [Set Postgres LocationMapping.LocationMappingT] (Where Postgres LocationMapping.LocationMappingT)
+  | TicketBookingOptions UpdateModel [Set Postgres TicketBooking.TicketBookingT] (Where Postgres TicketBooking.TicketBookingT)
+  | TicketBookingServiceOptions UpdateModel [Set Postgres TicketBookingService.TicketBookingServiceT] (Where Postgres TicketBookingService.TicketBookingServiceT)
+  | TicketServiceOptions UpdateModel [Set Postgres TicketService.TicketServiceT] (Where Postgres TicketService.TicketServiceT)
+  | TicketServicePriceOptions UpdateModel [Set Postgres TicketServicePrice.TicketServicePriceT] (Where Postgres TicketServicePrice.TicketServicePriceT)
+  | TicketBookingServicePriceBreakupOptions UpdateModel [Set Postgres TicketBookingServicePriceBreakup.TicketBookingServicePriceBreakupT] (Where Postgres TicketBookingServicePriceBreakup.TicketBookingServicePriceBreakupT)
+  | TicketPlaceOptions UpdateModel [Set Postgres TicketPlace.TicketPlaceT] (Where Postgres TicketPlace.TicketPlaceT)
 
 -------------------------------- ToJSON DBUpdateObject -------------------------------------
 instance ToJSON DBUpdateObject where
@@ -417,3 +447,21 @@ instance FromJSON DBUpdateObject where
       LocationMappingUpdate -> do
         (updVals, whereClause) <- parseUpdateCommandValues contents
         return $ LocationMappingOptions updateModel updVals whereClause
+      TicketBookingUpdate -> do
+        (updVals, whereClause) <- parseUpdateCommandValues contents
+        return $ TicketBookingOptions updateModel updVals whereClause
+      TicketBookingServiceUpdate -> do
+        (updVals, whereClause) <- parseUpdateCommandValues contents
+        return $ TicketBookingServiceOptions updateModel updVals whereClause
+      TicketServiceUpdate -> do
+        (updVals, whereClause) <- parseUpdateCommandValues contents
+        return $ TicketServiceOptions updateModel updVals whereClause
+      TicketServicePriceUpdate -> do
+        (updVals, whereClause) <- parseUpdateCommandValues contents
+        return $ TicketServicePriceOptions updateModel updVals whereClause
+      TicketBookingServicePriceBreakupUpdate -> do
+        (updVals, whereClause) <- parseUpdateCommandValues contents
+        return $ TicketBookingServicePriceBreakupOptions updateModel updVals whereClause
+      TicketPlaceUpdate -> do
+        (updVals, whereClause) <- parseUpdateCommandValues contents
+        return $ TicketPlaceOptions updateModel updVals whereClause

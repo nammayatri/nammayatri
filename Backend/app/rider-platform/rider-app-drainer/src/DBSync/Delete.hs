@@ -75,6 +75,12 @@ runDeleteCommands (cmd, val) dbStreamKey = do
     DeleteDBCommand id _ _ _ _ (BecknRequestDeleteOptions _ whereClause) -> runDeleteInKafkaAndDb id val dbStreamKey whereClause ("BecknRequest" :: Text) =<< dbConf
     DeleteDBCommand id _ _ _ _ (LocationDeleteOptions _ whereClause) -> runDeleteInKafkaAndDb id val dbStreamKey whereClause ("Location" :: Text) =<< dbConf
     DeleteDBCommand id _ _ _ _ (LocationMappingDeleteOptions _ whereClause) -> runDeleteInKafkaAndDb id val dbStreamKey whereClause ("LocationMapping" :: Text) =<< dbConf
+    DeleteDBCommand id _ _ _ _ (TicketBookingDeleteOptions _ whereClause) -> runDeleteInKafkaAndDb id val dbStreamKey whereClause ("TicketBooking" :: Text) =<< dbConf
+    DeleteDBCommand id _ _ _ _ (TicketBookingServiceDeleteOptions _ whereClause) -> runDeleteInKafkaAndDb id val dbStreamKey whereClause ("TicketBookingService" :: Text) =<< dbConf
+    DeleteDBCommand id _ _ _ _ (TicketServiceDeleteOptions _ whereClause) -> runDeleteInKafkaAndDb id val dbStreamKey whereClause ("TicketService" :: Text) =<< dbConf
+    DeleteDBCommand id _ _ _ _ (TicketServicePriceDeleteOptions _ whereClause) -> runDeleteInKafkaAndDb id val dbStreamKey whereClause ("TicketServicePrice" :: Text) =<< dbConf
+    DeleteDBCommand id _ _ _ _ (TicketBookingServicePriceBreakupDeleteOptions _ whereClause) -> runDeleteInKafkaAndDb id val dbStreamKey whereClause ("TicketBookingServicePriceBreakup" :: Text) =<< dbConf
+    DeleteDBCommand id _ _ _ _ (TicketPlaceDeleteOptions _ whereClause) -> runDeleteInKafkaAndDb id val dbStreamKey whereClause ("TicketPlace" :: Text) =<< dbConf
   where
     runDelete id value _ whereClause model dbConf = do
       maxRetries <- EL.runIO getMaxRetries

@@ -76,6 +76,12 @@ runCreateCommands cmds streamKey = do
     |::| runCreateInKafkaAndDb dbConf streamKey ("BecknRequest" :: Text) [(obj, val, entryId, BecknRequestObject obj) | (CreateDBCommand entryId _ _ _ _ (BecknRequestObject obj), val) <- cmds]
     |::| runCreateInKafkaAndDb dbConf streamKey ("Location" :: Text) [(obj, val, entryId, LocationObject obj) | (CreateDBCommand entryId _ _ _ _ (LocationObject obj), val) <- cmds]
     |::| runCreateInKafkaAndDb dbConf streamKey ("LocationMapping" :: Text) [(obj, val, entryId, LocationMappingObject obj) | (CreateDBCommand entryId _ _ _ _ (LocationMappingObject obj), val) <- cmds]
+    |::| runCreateInKafkaAndDb dbConf streamKey ("TicketBooking" :: Text) [(obj, val, entryId, TicketBookingObject obj) | (CreateDBCommand entryId _ _ _ _ (TicketBookingObject obj), val) <- cmds]
+    |::| runCreateInKafkaAndDb dbConf streamKey ("TicketBookingService" :: Text) [(obj, val, entryId, TicketBookingServiceObject obj) | (CreateDBCommand entryId _ _ _ _ (TicketBookingServiceObject obj), val) <- cmds]
+    |::| runCreateInKafkaAndDb dbConf streamKey ("TicketService" :: Text) [(obj, val, entryId, TicketServiceObject obj) | (CreateDBCommand entryId _ _ _ _ (TicketServiceObject obj), val) <- cmds]
+    |::| runCreateInKafkaAndDb dbConf streamKey ("TicketServicePrice" :: Text) [(obj, val, entryId, TicketServicePriceObject obj) | (CreateDBCommand entryId _ _ _ _ (TicketServicePriceObject obj), val) <- cmds]
+    |::| runCreateInKafkaAndDb dbConf streamKey ("TicketBookingServicePriceBreakup" :: Text) [(obj, val, entryId, TicketBookingServicePriceBreakupObject obj) | (CreateDBCommand entryId _ _ _ _ (TicketBookingServicePriceBreakupObject obj), val) <- cmds]
+    |::| runCreateInKafkaAndDb dbConf streamKey ("TicketPlace" :: Text) [(obj, val, entryId, TicketPlaceObject obj) | (CreateDBCommand entryId _ _ _ _ (TicketPlaceObject obj), val) <- cmds]
   where
     runCreate dbConf _ model object = do
       let dbObjects = map (\(dbObject, _, _, _) -> dbObject) object
