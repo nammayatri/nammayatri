@@ -9,9 +9,9 @@ import Text.RawString.QQ
 dslStorageInput :: String
 dslStorageInput =
   [r|Table "TicketService" "ticket_service"
-  Field "id" "Maybe (Id Domain.Types.TicketService.TicketService)" PrimaryKey NotNull
+  Field "id" "Id Domain.Types.Tickets.TicketService" PrimaryKey NotNull
   Field "placesId" "Text" PrimaryKey NotNull
-  Field "service" "Text"  SecondaryKey NotNull
+  Field "service" "Text" SecondaryKey NotNull
   Field "maxVerification" "Int" "INT" NotNull Default "1"
   Field "openTimings" "Maybe TimeOfDay" "time without time zone" Default "CURRENT_TIMESTAMP"
   Field "closeTimings" "Maybe TimeOfDay" "time without time zone"
