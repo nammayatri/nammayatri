@@ -35,6 +35,7 @@ import Prelude (class Eq, class Show)
 import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode, defaultDecode, defaultEncode)
 import PrestoDOM (LetterSpacing, BottomSheetState(..))
 import Services.API (AddressComponents, BookingLocationAPIEntity, EstimateAPIEntity(..), QuoteAPIEntity, TicketPlaceResp, RideBookingRes, Route, BookingStatus(..))
+import Components.SettingSideBar.Controller as SideBar
 
 type Contacts = {
   name :: String,
@@ -1469,3 +1470,17 @@ data TicketBookingScreenStage = DescriptionStage
 derive instance genericTicketBookingScreenStage :: Generic TicketBookingScreenStage _
 instance showTicketBookingScreenStage :: Show TicketBookingScreenStage where show = genericShow
 instance eqTicketBookingScreenStage :: Eq TicketBookingScreenStage where eq = genericEq
+
+
+-- ######################################### TicketingScreenState ####################################################
+
+type TicketingScreenState = {
+  data :: TicketingScreenData ,
+  props :: TicketingScreenProps
+}
+
+type TicketingScreenData = {
+  sideBarStatus :: SideBar.Status
+} 
+
+type TicketingScreenProps = {} 

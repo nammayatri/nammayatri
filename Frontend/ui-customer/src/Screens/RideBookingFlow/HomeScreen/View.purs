@@ -96,6 +96,7 @@ import Data.Function.Uncurried (runFn1, runFn2)
 import Components.CommonComponentConfig as CommonComponentConfig
 import Constants.Configs 
 import Common.Resources.Constants (zoomLevel)
+import Components.NavBar as NavBar
 
 screen :: HomeScreenState -> Screen Action HomeScreenState ScreenOutput
 screen initialState =
@@ -393,6 +394,7 @@ view push state =
                       ][ PrestoAnim.animationSet [ fadeIn state.props.showEducationalCarousel] $ carouselView state push ]] 
                     else [])
         ]
+      , navigationView push state
     ] 
 
 rideCompletedCardView ::  forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
@@ -2355,3 +2357,14 @@ carouselView state push =
         ]
     , PrimaryButton.view (push <<< UpdateProfileButtonAC) (updateProfileConfig state)
     , PrimaryButton.view (push <<< SkipAccessibilityUpdateAC) (maybeLaterButtonConfig state)]
+
+navigationView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+navigationView push state = 
+  relativeLayout
+  [ height MATCH_PARENT
+  , width MATCH_PARENT
+  ][ linearLayout
+      [ width MATCH_PARENT
+      , height WRAP_CONTENT
+      , alignParentBottom "true,-1"
+      ][NavBar.view (push <<< NavBarAC) 0]]

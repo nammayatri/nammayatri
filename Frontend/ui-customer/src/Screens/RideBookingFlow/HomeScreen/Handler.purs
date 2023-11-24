@@ -167,3 +167,6 @@ homeScreen = do
       modifyScreenState $ HomeScreenStateType (\homeScreenState -> updatedState)
       modifyScreenState $ TripDetailsScreenStateType (\_ -> getTripDetailsState updatedState.data.ratingViewState.rideBookingRes state.tripDetailsScreen)
       App.BackT $ App.BackPoint <$> (pure $ RIDE_DETAILS_SCREEN updatedState)
+    ExitToTicketing updatedState -> do
+      modifyScreenState $ HomeScreenStateType (\_ -> updatedState)
+      App.BackT $ App.NoBack <$> (pure $ EXIT_TO_TICKETING updatedState)

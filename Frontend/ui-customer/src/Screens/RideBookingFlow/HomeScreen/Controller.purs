@@ -109,6 +109,7 @@ import Data.Function (const)
 import Data.List ((:))
 import Common.Resources.Constants (zoomLevel, pickupZoomLevel)
 import Screens.RideBookingFlow.HomeScreen.Config
+import Components.NavBar as NavBar
 
 instance showAction :: Show Action where
   show _ = ""
@@ -516,6 +517,7 @@ data ScreenOutput = LogoutUser
                   | RideDetailsScreen HomeScreenState
                   | GoToTicketBookingFlow HomeScreenState
                   | GoToMyTickets HomeScreenState
+                  | ExitToTicketing HomeScreenState
 
 data Action = NoAction
             | BackPressed
@@ -632,9 +634,15 @@ data Action = NoAction
             | SkipAccessibilityUpdateAC PrimaryButtonController.Action
             | SpecialZoneOTPExpiryAction Int String String String
             | TicketBookingFlowBannerAC Banner.Action
+            | NavBarAC NavBar.Action
 
 
 eval :: Action -> HomeScreenState -> Eval Action ScreenOutput HomeScreenState
+
+eval (NavBarAC (NavBar.NavigateTo index)) state = 
+  case index of 
+    1 -> exit $ ExitToTicketing state
+    _ -> continue state
 
 eval SearchForSelectedLocation state = do
   let currentStage = if state.props.searchAfterEstimate then TryAgain else FindingEstimate
