@@ -15,9 +15,14 @@
 
 module Flow where
 
+import Constants.Configs
+import Constants.Configs
+import Debug
 import Log
 import Screens.SubscriptionScreen.Controller
 
+import Common.Resources.Constants (zoomLevel)
+import Common.Resources.Constants (zoomLevel)
 import Common.Styles.Colors as Color
 import Common.Types.App (APIPaymentStatus(..)) as PS
 import Common.Types.App (Version(..), LazyCheck(..), PaymentStatus(..), Event, FCMBundleUpdate)
@@ -27,7 +32,7 @@ import Constants as Constants
 import Control.Monad.Except (runExceptT)
 import Control.Monad.Except.Trans (lift)
 import Control.Transformers.Back.Trans (runBackT)
-import Data.Array (concat, filter, cons, elemIndex, head, length, mapWithIndex, null, snoc, sortBy, (!!), any, last, elem)
+import Data.Array (any, concat, cons, elem, elemIndex, filter, find, foldl, head, last, length, mapWithIndex, null, snoc, sortBy, (!!))
 import Data.Either (Either(..))
 import Data.Function.Uncurried (runFn1)
 import Data.Functor (map)
@@ -39,6 +44,7 @@ import Data.Ord (compare)
 import Data.Ord (compare)
 import Data.Semigroup ((<>))
 import Data.Semigroup ((<>))
+import Data.Set (toggle)
 import Data.String (Pattern(..), split, toUpper, drop, indexOf)
 import Data.String (length) as STR
 import Data.String (length) as STR
@@ -47,6 +53,7 @@ import Data.String.CodeUnits (splitAt)
 import Data.String.Common (joinWith, split, toUpper, trim)
 import Data.String.Common (joinWith, split, toUpper, trim)
 import Data.Time.Duration (Milliseconds(..))
+import Data.Tuple (Tuple(..), fst)
 import Effect (Effect)
 import Effect.Aff (makeAff, nonCanceler, launchAff)
 import Effect.Class (liftEffect)
@@ -54,8 +61,10 @@ import Effect.Uncurried (runEffectFn1, runEffectFn5)
 import Engineering.Helpers.BackTrack (getState, liftFlowBT)
 import Engineering.Helpers.Commons (flowRunner, getCurrentUTC)
 import Engineering.Helpers.Commons (liftFlow, getNewIDWithTag, getVersionByKey, os, getExpiryTime, stringToVersion, setText, convertUTCtoISC, getCurrentUTC, getCurrentTimeStamp, clearTimer)
+import Engineering.Helpers.Commons as EHC
 import Engineering.Helpers.LogEvent (logEvent, logEventWithParams, logEventWithMultipleParams)
 import Engineering.Helpers.Suggestions (suggestionsDefinitions, getSuggestions)
+import Engineering.Helpers.Suggestions as EHS
 import Engineering.Helpers.Utils (loaderText, toggleLoader, getAppConfig, reboot, showSplash, (?))
 import Foreign (unsafeToForeign)
 import Foreign.Class (class Encode, encode, decode)
@@ -65,33 +74,43 @@ import Helpers.Utils (LatLon(..), decodeErrorCode, decodeErrorMessage, getCurren
 import JBridge (cleverTapCustomEvent, cleverTapCustomEventWithParams, cleverTapEvent, cleverTapSetLocation, drawRoute, factoryResetApp, firebaseLogEvent, firebaseLogEventWithTwoParams, firebaseUserID, generateSessionId, getCurrentLatLong, getCurrentPosition, getVersionCode, getVersionName, hideKeyboardOnNavigation, initiateLocationServiceClient, isBatteryPermissionEnabled, isInternetAvailable, isLocationEnabled, isLocationPermissionEnabled, isOverlayPermissionEnabled, metaLogEvent, metaLogEventWithTwoParams, openNavigation, removeAllPolylines, removeMarker, saveSuggestionDefs, saveSuggestions, setCleverTapUserData, setCleverTapUserProp, showMarker, startLocationPollingAPI, stopChatListenerService, stopLocationPollingAPI, toast, toggleBtnLoader, unregisterDateAndTime, withinTimeRange)
 import JBridge as JB
 import Helpers.Utils as HU
+import JBridge (cleverTapCustomEvent, cleverTapCustomEventWithParams, cleverTapEvent, cleverTapSetLocation, drawRoute, factoryResetApp, firebaseLogEvent, firebaseLogEventWithTwoParams, firebaseUserID, generateSessionId, getAndroidVersion, getCurrentLatLong, getCurrentPosition, getVersionCode, getVersionName, hideKeyboardOnNavigation, initiateLocationServiceClient, isBatteryPermissionEnabled, isInternetAvailable, isLocationEnabled, isLocationPermissionEnabled, isNotificationPermissionEnabled, isOverlayPermissionEnabled, metaLogEvent, metaLogEventWithTwoParams, openNavigation, removeAllPolylines, removeMarker, saveSuggestionDefs, saveSuggestions, setCleverTapUserData, setCleverTapUserProp, showMarker, startLocationPollingAPI, stopChatListenerService, stopLocationPollingAPI, toast, toggleBtnLoader, unregisterDateAndTime, withinTimeRange)
+import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
+import MerchantConfig.DefaultConfig as DC
+import MerchantConfig.Types (CityConfig)
 import MerchantConfig.Utils (getMerchant, Merchant(..), getValueFromConfig)
 import Prelude (Unit, bind, discard, pure, unit, unless, negate, void, when, map, otherwise, ($), (==), (/=), (&&), (||), (/), when, (+), show, (>), not, (<), (*), (-), (<=), (<$>), (>=), ($>), (<<<))
 import Presto.Core.Types.Language.Flow (delay, setLogField)
 import Presto.Core.Types.Language.Flow (doAff, fork)
 import Presto.Core.Types.Language.Flow (getLogFields)
+import PrestoDOM (initUI)
+import PrestoDOM (initUI)
 import Resource.Constants (decodeAddress)
+import Resource.Constants as RC
 import Screens (ScreenName(..)) as ScreenNames
+import Screens.AddVehicleDetailsScreen.ScreenData (initData) as AddVehicleDetailsScreenData
 import Screens.BookingOptionsScreen.Controller (downgradeOptionsConfig)
 import Screens.BookingOptionsScreen.ScreenData as BookingOptionsScreenData
 import Screens.DriverDetailsScreen.Controller (getGenderValue, genders, getGenderState)
 import Screens.DriverProfileScreen.Controller (getDowngradeOptionsSelected)
 import Screens.DriverProfileScreen.ScreenData (dummyDriverInfo)
 import Screens.DriverProfileScreen.Transformer (transformSelectedVehicles)
-import Screens.Handlers (homeScreen)
 import Screens.DriverSavedLocationScreen.Transformer (getLocationArray)
+import Screens.Handlers (chooseCityScreen, homeScreen)
 import Screens.Handlers as UI
 import Screens.HomeScreen.ComponentConfig (mapRouteConfig)
 import Screens.HomeScreen.Controller (activeRideDetail, getPreviousVersion)
-import Screens.HomeScreen.ScreenData (initData) as HomeScreenData
 import Screens.HomeScreen.ScreenData (dummyDriverRideStats)
+import Screens.HomeScreen.ScreenData (initData) as HomeScreenData
+import Screens.HomeScreen.ScreenData (initData) as HomeScreenData
 import Screens.HomeScreen.Transformer (getDisabledLocById)
 import Screens.HomeScreen.View (rideRequestPollingData)
 import Screens.PaymentHistoryScreen.Controller (ScreenOutput(..))
 import Screens.PaymentHistoryScreen.Transformer (buildTransactionDetails)
 import Screens.PopUpScreen.Controller (transformAllocationData)
+import Screens.RegistrationScreen.Controller (getStatusValue)
 import Screens.ReportIssueChatScreen.Handler (reportIssueChatScreen) as UI
 import Screens.ReportIssueChatScreen.ScreenData (initData) as ReportIssueScreenData
 import Screens.RideHistoryScreen.Transformer (getPaymentHistoryItemList)
@@ -99,26 +118,23 @@ import Screens.RideSelectionScreen.Handler (rideSelection) as UI
 import Screens.RideSelectionScreen.View (getCategoryName)
 import Screens.RideSelectionScreen.View (getCategoryName)
 import Screens.SubscriptionScreen.Transformer (alternatePlansTransformer)
-import Screens.Types (AadhaarStage(..), ActiveRide, AllocationData, AutoPayStatus(..), DriverStatus(..), HomeScreenStage(..), HomeScreenState, KeyboardModalType(..), Location, PlanCardConfig, PromoConfig, ReferralType(..), SubscribePopupType(..), SubscriptionBannerType(..), SubscriptionPopupType(..), SubscriptionSubview(..), UpdatePopupType(..))
+import Screens.Types (AadhaarStage(..), ActiveRide, AllocationData, AutoPayStatus(..), DriverStatus(..), HomeScreenStage(..), HomeScreenState, KeyboardModalType(..), Location, PlanCardConfig, PromoConfig, ReferralType(..), StageStatus(..), SubscribePopupType(..), SubscriptionBannerType(..), SubscriptionPopupType(..), SubscriptionSubview(..), UpdatePopupType(..), ChooseCityScreenStage(..))
 import Screens.Types as ST
 import Services.API (AlternateNumberResendOTPResp(..), Category(Category), CreateOrderRes(..), CurrentDateAndTimeRes(..), DriverActiveInactiveResp(..), DriverAlternateNumberOtpResp(..), DriverAlternateNumberResp(..), DriverArrivedReq(..), DriverDLResp(..), DriverProfileStatsReq(..), DriverProfileStatsResp(..), DriverRCResp(..), DriverRegistrationStatusReq(..), DriverRegistrationStatusResp(..), GenerateAadhaarOTPResp(..), GetCategoriesRes(GetCategoriesRes), GetDriverInfoReq(..), GetDriverInfoResp(..), GetOptionsRes(GetOptionsRes), GetPaymentHistoryResp(..), GetPaymentHistoryResp(..), GetPerformanceReq(..), GetPerformanceRes(..), GetRidesHistoryResp(..), GetRouteResp(..), IssueInfoRes(IssueInfoRes), LogOutReq(..), LogOutRes(..), MakeRcActiveOrInactiveResp(..), OfferRideResp(..), OnCallRes(..), Option(Option), OrderStatusRes(..), OrganizationInfo(..), PaymentDetailsEntity(..), PostIssueReq(PostIssueReq), PostIssueRes(PostIssueRes), ReferDriverResp(..), RemoveAlternateNumberRequest(..), RemoveAlternateNumberResp(..), ResendOTPResp(..), RidesInfo(..), Route(..), StartRideResponse(..), Status(..), SubscribePlanResp(..), TriggerOTPResp(..), UpdateDriverInfoReq(..), UpdateDriverInfoResp(..), ValidateImageReq(..), ValidateImageRes(..), Vehicle(..), VerifyAadhaarOTPResp(..), VerifyTokenResp(..), GenerateReferralCodeReq(..), GenerateReferralCodeRes(..), FeeType(..), ClearDuesResp(..), HistoryEntryDetailsEntityV2Resp(..))
+import Screens.UploadDrivingLicenseScreen.ScreenData (initData) as UploadDrivingLicenseScreenData
 import Services.API as API
-import Services.Accessor (_lat, _lon, _id,_orderId)
+import Services.Accessor (_lat, _lon, _id, _orderId)
 import Services.Backend (driverRegistrationStatusBT, dummyVehicleObject, makeDriverDLReq, makeDriverRCReq, makeGetRouteReq, makeLinkReferralCodeReq, makeOfferRideReq, makeReferDriverReq, makeResendAlternateNumberOtpRequest, makeTriggerOTPReq, makeValidateAlternateNumberRequest, makeValidateImageReq, makeVerifyAlternateNumberOtpRequest, makeVerifyOTPReq, mkUpdateDriverInfoReq, walkCoordinate, walkCoordinates)
 import Services.Backend as Remote
 import Services.Config (getBaseUrl)
 import Storage (KeyStore(..), deleteValueFromLocalStore, getValueToLocalNativeStore, getValueToLocalStore, isLocalStageOn, isOnFreeTrial, setValueToLocalNativeStore, setValueToLocalStore)
-import Types.App (AADHAAR_VERIFICATION_SCREEN_OUTPUT(..), ABOUT_US_SCREEN_OUTPUT(..), ACKNOWLEDGEMENT_SCREEN_OUTPUT(..), ADD_VEHICLE_DETAILS_SCREENOUTPUT(..), APPLICATION_STATUS_SCREENOUTPUT(..), APP_UPDATE_POPUP(..), BANK_DETAILS_SCREENOUTPUT(..), BOOKING_OPTIONS_SCREEN_OUTPUT(..), DRIVER_DETAILS_SCREEN_OUTPUT(..), DRIVER_PROFILE_SCREEN_OUTPUT(..), DRIVER_RIDE_RATING_SCREEN_OUTPUT(..), ENTER_MOBILE_NUMBER_SCREEN_OUTPUT(..), ENTER_OTP_SCREEN_OUTPUT(..), FlowBT, GlobalState(..), HELP_AND_SUPPORT_SCREEN_OUTPUT(..), HOME_SCREENOUTPUT(..), MY_RIDES_SCREEN_OUTPUT(..), NAVIGATION_ACTIONS(..), NOTIFICATIONS_SCREEN_OUTPUT(..), NOTIFICATIONS_SCREEN_OUTPUT(..), NO_INTERNET_SCREEN_OUTPUT(..), PAYMENT_HISTORY_SCREEN_OUTPUT(..), PERMISSIONS_SCREEN_OUTPUT(..), POPUP_SCREEN_OUTPUT(..), REFERRAL_SCREEN_OUTPUT(..), REGISTRATION_SCREENOUTPUT(..), REPORT_ISSUE_CHAT_SCREEN_OUTPUT(..), RIDES_SELECTION_SCREEN_OUTPUT(..), RIDE_DETAIL_SCREENOUTPUT(..), SELECT_LANGUAGE_SCREEN_OUTPUT(..), SUBSCRIPTION_SCREEN_OUTPUT(..), ScreenStage(..), ScreenType(..), TRIP_DETAILS_SCREEN_OUTPUT(..), UPLOAD_ADHAAR_CARD_SCREENOUTPUT(..), UPLOAD_DRIVER_LICENSE_SCREENOUTPUT(..), VEHICLE_DETAILS_SCREEN_OUTPUT(..), WRITE_TO_US_SCREEN_OUTPUT(..), defaultGlobalState)
-import Types.App (REPORT_ISSUE_CHAT_SCREEN_OUTPUT(..), RIDES_SELECTION_SCREEN_OUTPUT(..), ABOUT_US_SCREEN_OUTPUT(..), BANK_DETAILS_SCREENOUTPUT(..), ADD_VEHICLE_DETAILS_SCREENOUTPUT(..), APPLICATION_STATUS_SCREENOUTPUT(..), DRIVER_DETAILS_SCREEN_OUTPUT(..), DRIVER_PROFILE_SCREEN_OUTPUT(..), DRIVER_RIDE_RATING_SCREEN_OUTPUT(..), ENTER_MOBILE_NUMBER_SCREEN_OUTPUT(..), ENTER_OTP_SCREEN_OUTPUT(..), FlowBT, GlobalState(..), HELP_AND_SUPPORT_SCREEN_OUTPUT(..), HOME_SCREENOUTPUT(..), MY_RIDES_SCREEN_OUTPUT(..), NOTIFICATIONS_SCREEN_OUTPUT(..), NO_INTERNET_SCREEN_OUTPUT(..), PERMISSIONS_SCREEN_OUTPUT(..), POPUP_SCREEN_OUTPUT(..), REGISTRATION_SCREENOUTPUT(..), RIDE_DETAIL_SCREENOUTPUT(..), SELECT_LANGUAGE_SCREEN_OUTPUT(..), ScreenStage(..), ScreenType(..), TRIP_DETAILS_SCREEN_OUTPUT(..), UPLOAD_ADHAAR_CARD_SCREENOUTPUT(..), UPLOAD_DRIVER_LICENSE_SCREENOUTPUT(..), VEHICLE_DETAILS_SCREEN_OUTPUT(..), WRITE_TO_US_SCREEN_OUTPUT(..), NOTIFICATIONS_SCREEN_OUTPUT(..), REFERRAL_SCREEN_OUTPUT(..), BOOKING_OPTIONS_SCREEN_OUTPUT(..), ACKNOWLEDGEMENT_SCREEN_OUTPUT(..), defaultGlobalState, SUBSCRIPTION_SCREEN_OUTPUT(..), NAVIGATION_ACTIONS(..), AADHAAR_VERIFICATION_SCREEN_OUTPUT(..), ONBOARDING_SUBSCRIPTION_SCREENOUTPUT(..), APP_UPDATE_POPUP(..), DRIVE_SAVED_LOCATION_OUTPUT(..))
-import Types.ModifyScreenState (modifyScreenState, updateStage)
-import Constants.Configs
-import Engineering.Helpers.Commons as EHC
-import PrestoDOM (initUI)
-import Common.Resources.Constants (zoomLevel)
+import Types.App (AADHAAR_VERIFICATION_SCREEN_OUTPUT(..), ABOUT_US_SCREEN_OUTPUT(..), ACKNOWLEDGEMENT_SCREEN_OUTPUT(..), ADD_VEHICLE_DETAILS_SCREENOUTPUT(..), APPLICATION_STATUS_SCREENOUTPUT(..), APP_UPDATE_POPUP(..), BANK_DETAILS_SCREENOUTPUT(..), BOOKING_OPTIONS_SCREEN_OUTPUT(..), CHOOSE_CITY_SCREEN_OUTPUT(..), DRIVER_DETAILS_SCREEN_OUTPUT(..), DRIVER_PROFILE_SCREEN_OUTPUT(..), DRIVER_RIDE_RATING_SCREEN_OUTPUT(..), ENTER_MOBILE_NUMBER_SCREEN_OUTPUT(..), ENTER_OTP_SCREEN_OUTPUT(..), FlowBT, GlobalState(..), HELP_AND_SUPPORT_SCREEN_OUTPUT(..), HOME_SCREENOUTPUT(..), MY_RIDES_SCREEN_OUTPUT(..), NAVIGATION_ACTIONS(..), NOTIFICATIONS_SCREEN_OUTPUT(..), NOTIFICATIONS_SCREEN_OUTPUT(..), NO_INTERNET_SCREEN_OUTPUT(..), PAYMENT_HISTORY_SCREEN_OUTPUT(..), PERMISSIONS_SCREEN_OUTPUT(..), POPUP_SCREEN_OUTPUT(..), REFERRAL_SCREEN_OUTPUT(..), REGISTRATION_SCREENOUTPUT(..), REPORT_ISSUE_CHAT_SCREEN_OUTPUT(..), RIDES_SELECTION_SCREEN_OUTPUT(..), RIDE_DETAIL_SCREENOUTPUT(..), SELECT_LANGUAGE_SCREEN_OUTPUT(..), SUBSCRIPTION_SCREEN_OUTPUT(..), ScreenStage(..), ScreenType(..), TRIP_DETAILS_SCREEN_OUTPUT(..), UPLOAD_ADHAAR_CARD_SCREENOUTPUT(..), UPLOAD_DRIVER_LICENSE_SCREENOUTPUT(..), VEHICLE_DETAILS_SCREEN_OUTPUT(..), WRITE_TO_US_SCREEN_OUTPUT(..), defaultGlobalState)
+import Types.App (REPORT_ISSUE_CHAT_SCREEN_OUTPUT(..), RIDES_SELECTION_SCREEN_OUTPUT(..), ABOUT_US_SCREEN_OUTPUT(..), BANK_DETAILS_SCREENOUTPUT(..), ADD_VEHICLE_DETAILS_SCREENOUTPUT(..), APPLICATION_STATUS_SCREENOUTPUT(..), DRIVER_DETAILS_SCREEN_OUTPUT(..), DRIVER_PROFILE_SCREEN_OUTPUT(..), DRIVER_RIDE_RATING_SCREEN_OUTPUT(..), ENTER_MOBILE_NUMBER_SCREEN_OUTPUT(..), ENTER_OTP_SCREEN_OUTPUT(..), FlowBT, GlobalState(..), HELP_AND_SUPPORT_SCREEN_OUTPUT(..), HOME_SCREENOUTPUT(..), MY_RIDES_SCREEN_OUTPUT(..), NOTIFICATIONS_SCREEN_OUTPUT(..), NO_INTERNET_SCREEN_OUTPUT(..), PERMISSIONS_SCREEN_OUTPUT(..), POPUP_SCREEN_OUTPUT(..), REGISTRATION_SCREENOUTPUT(..), RIDE_DETAIL_SCREENOUTPUT(..), SELECT_LANGUAGE_SCREEN_OUTPUT(..), ScreenStage(..), ScreenType(..), TRIP_DETAILS_SCREEN_OUTPUT(..), UPLOAD_ADHAAR_CARD_SCREENOUTPUT(..), UPLOAD_DRIVER_LICENSE_SCREENOUTPUT(..), VEHICLE_DETAILS_SCREEN_OUTPUT(..), WRITE_TO_US_SCREEN_OUTPUT(..), NOTIFICATIONS_SCREEN_OUTPUT(..), REFERRAL_SCREEN_OUTPUT(..), BOOKING_OPTIONS_SCREEN_OUTPUT(..), ACKNOWLEDGEMENT_SCREEN_OUTPUT(..), defaultGlobalState, SUBSCRIPTION_SCREEN_OUTPUT(..), NAVIGATION_ACTIONS(..), AADHAAR_VERIFICATION_SCREEN_OUTPUT(..), ONBOARDING_SUBSCRIPTION_SCREENOUTPUT(..), APP_UPDATE_POPUP(..), DRIVE_SAVED_LOCATION_OUTPUT(..), WELCOME_SCREEN_OUTPUT(..))
 import Types.App as TA
 import Engineering.Helpers.Suggestions as EHS
 import Resource.Constants as RC
 import Helpers.Firebase 
+import Types.ModifyScreenState (modifyScreenState, updateStage)
 
 
 baseAppFlow :: Boolean -> Maybe Event -> FlowBT String Unit
@@ -133,11 +149,17 @@ baseAppFlow baseFlow event = do
     _ <- pure $ saveSuggestions "SUGGESTIONS" (getSuggestions "")
     _ <- pure $ saveSuggestionDefs "SUGGESTIONS_DEFINITIONS" (suggestionsDefinitions "")
     setValueToLocalStore CURRENCY (getValueFromConfig "currency")
+    isLocationPermission <- lift $ lift $ liftFlow $ isLocationPermissionEnabled unit
+    if getValueToLocalStore SHOW_SUBSCRIPTIONS == "__failed" then 
+      setValueToLocalStore SHOW_SUBSCRIPTIONS "true"
+      else pure unit
     if isTokenValid regToken
       then do
         setValueToLocalNativeStore REGISTERATION_TOKEN regToken
         checkRideAndInitiate event
-      else loginFlow
+      else if getValueToLocalStore DRIVER_LOCATION == "__failed" || getValueToLocalStore DRIVER_LOCATION == "--" || not isLocationPermission  then do
+        chooseCityFlow
+      else authenticationFlow ""
     where
     cacheAppParameters :: Int -> Boolean -> FlowBT String Unit
     cacheAppParameters versionCode baseFlow = do
@@ -178,6 +200,14 @@ baseAppFlow baseFlow event = do
       void $ lift $ lift $ setLogField "bundle_version" $ encode (bundle)
       void $ lift $ lift $ setLogField "config_version" $ encode config
       void $ lift $ lift $ setLogField "platform" $ encode (os)
+
+authenticationFlow :: String -> FlowBT String Unit
+authenticationFlow _ = 
+  if EHC.isPreviousVersion (getValueToLocalStore VERSION_NAME) (getPreviousVersion (getMerchant FunctionCall)) 
+    then do 
+      lift $ lift $ doAff do liftEffect hideSplash
+      loginFlow
+    else welcomeScreenFlow
 
 checkRideAndInitiate :: Maybe Event -> FlowBT String Unit
 checkRideAndInitiate event = do
@@ -240,12 +270,11 @@ isTokenValid = (/=) "__failed"
 
 loginFlow :: FlowBT String Unit
 loginFlow = do
-  liftFlowBT hideSplash
+  -- liftFlowBT hideSplash
   logField_ <- lift $ lift $ getLogFields
-  runInternetCondition
-  void $ pure $ setCleverTapUserProp [{key : "Preferred Language", value : unsafeToForeign $ getValueFromConfig "defaultLanguage"}]
-  setValueToLocalStore LANGUAGE_KEY $ getValueFromConfig "defaultLanguage"
-  languageType <- UI.chooseLanguage
+  -- runInternetCondition
+  -- void $ pure $ setCleverTapUserProp [{key : "Preferred Language", value : unsafeToForeign $ getValueFromConfig "defaultLanguage"}]
+  -- setValueToLocalStore LANGUAGE_KEY $ getValueFromConfig "defaultLanguage"
   mobileNo <- UI.enterMobileNumber
   case mobileNo of
     GO_TO_ENTER_OTP updateState -> do
@@ -253,10 +282,6 @@ loginFlow = do
       TriggerOTPResp triggerOtpResp <- Remote.triggerOTPBT (makeTriggerOTPReq updateState.data.mobileNumber)
       modifyScreenState $ EnterOTPScreenType (\enterOTPScreen → enterOTPScreen { data { tokenId = triggerOtpResp.authId}})
       enterOTPFlow
-  where
-    runInternetCondition = do
-      internetAvailable <- lift $ lift $ liftFlow $ isInternetAvailable unit
-      unless internetAvailable $ noInternetScreenFlow "INTERNET_ACTION"
 
 enterOTPFlow :: FlowBT String Unit
 enterOTPFlow = do
@@ -289,20 +314,6 @@ enterOTPFlow = do
       modifyScreenState $ EnterOTPScreenType (\enterOTPScreen → enterOTPScreen { data { tokenId = resp_resend.authId, attemptCount = resp_resend.attempts}})
       enterOTPFlow
 
--- TODO :: As per the api response check the floe for driver registration
-registrationStatusFlow :: FlowBT String Unit
-registrationStatusFlow = do
-  let startTime = getTime unit
-  -- resp <- Remote.driverRegistrationStatus (DriverResgistrationStatusReq {})
-  let endTime = getTime unit
-  let registrationStatus = driverRegistrationStatus
-  if registrationStatus then currentRideFlow Nothing else permissionsScreenFlow Nothing Nothing
-
--- TODO :: modify this function as per the response. Currently DEFINED for testing purpose only
-driverRegistrationStatus :: Boolean
-driverRegistrationStatus = do
-  (getValueToLocalStore TEST_FLOW_FOR_REGISTRATOION) == "COMPLETED"
-
 getDriverInfoFlow :: Maybe Event -> Maybe GetRidesHistoryResp -> FlowBT String Unit
 getDriverInfoFlow event activeRideResp = do
   _ <- pure $ delay $ Milliseconds 1.0
@@ -312,6 +323,7 @@ getDriverInfoFlow event activeRideResp = do
     Right (GetDriverInfoResp getDriverInfoResp) -> do
       updateFirebaseToken getDriverInfoResp.maskedDeviceToken getUpdateToken
       liftFlowBT $ updateCleverTapUserProps (GetDriverInfoResp getDriverInfoResp)
+      appConfig <- getAppConfig Constants.appConfig
       if getDriverInfoResp.enabled then do
         if getValueToLocalStore IS_DRIVER_ENABLED == "false" then do
           void $ pure $ firebaseLogEvent "ny_driver_enabled"
@@ -326,33 +338,32 @@ getDriverInfoFlow event activeRideResp = do
         if (isJust getDriverInfoResp.autoPayStatus) then 
           setValueToLocalStore TIMES_OPENED_NEW_SUBSCRIPTION "5"
         else pure unit
-        permissionsGiven <- checkAll3Permissions
+        permissionsGiven <- checkAll3Permissions true
         if permissionsGiven
           then handleDeepLinksFlow event activeRideResp
-          else permissionsScreenFlow event activeRideResp
+          else do
+            modifyScreenState $ PermissionsScreenStateType (\permissionScreen -> permissionScreen{props{isDriverEnabled = true}})
+            permissionsScreenFlow event activeRideResp
         else do
-          modifyScreenState $ ApplicationStatusScreenType (\applicationStatusScreen -> applicationStatusScreen {props{alternateNumberAdded = isJust getDriverInfoResp.alternateNumber}})
+          -- modifyScreenState $ ApplicationStatusScreenType (\applicationStatusScreen -> applicationStatusScreen {props{alternateNumberAdded = isJust getDriverInfoResp.alternateNumber}})
           setValueToLocalStore IS_DRIVER_ENABLED "false"
           if getDriverInfoResp.verified then do
             setValueToLocalStore IS_DRIVER_VERIFIED "true"
-            applicationSubmittedFlow "ApprovedScreen"
-            else do
-              setValueToLocalStore IS_DRIVER_VERIFIED "false"
-              onBoardingFlow
+          else do
+            setValueToLocalStore IS_DRIVER_VERIFIED "false"
+            modifyScreenState $ RegisterScreenStateType (\registerationScreen -> registerationScreen{data{phoneNumber = fromMaybe "" getDriverInfoResp.mobileNumber}} )
+          onBoardingFlow
     Left errorPayload -> do
       if ((decodeErrorCode errorPayload.response.errorMessage) == "VEHICLE_NOT_FOUND" || (decodeErrorCode errorPayload.response.errorMessage) == "DRIVER_INFORMATON_NOT_FOUND")
         then onBoardingFlow
         else do
           _ <- pure $ toast $ getString SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN
           if getValueToLocalStore IS_DRIVER_ENABLED == "true" then do
-            permissionsGiven <- checkAll3Permissions
+            permissionsGiven <- checkAll3Permissions true
             if permissionsGiven then
               handleDeepLinksFlow event activeRideResp
               else permissionsScreenFlow event activeRideResp
             else do
-              if getValueToLocalStore IS_DRIVER_VERIFIED == "true" then do
-                applicationSubmittedFlow "ApprovedScreen"
-                else do
                 onBoardingFlow
   where
     getUpdateToken :: String -> FlowBT String Unit
@@ -424,20 +435,50 @@ checkStatusAndStartLocationUpdates = do
 onBoardingFlow :: FlowBT String Unit
 onBoardingFlow = do
   _ <- pure $ hideKeyboardOnNavigation true
+  config <- getAppConfig Constants.appConfig
+  globalstate <- getState 
+  permissions <- checkAll3Permissions false
+  (GetDriverInfoResp getDriverInfoResp) <- getDriverInfoDataFromCache globalstate
   (DriverRegistrationStatusResp resp ) <- driverRegistrationStatusBT (DriverRegistrationStatusReq { })
+  let limitReachedFor = if resp.rcVerificationStatus == "LIMIT_EXCEED" then Just "RC"
+                        else if resp.dlVerificationStatus == "LIMIT_EXCEED" then Just "DL" 
+                        else Nothing
+      cityConfig = getCityConfig config.cityConfig (getValueToLocalStore DRIVER_LOCATION)--getDriverInfoResp.operatingCity
+  modifyScreenState $ RegisterScreenStateType (\registerationScreen -> 
+                  registerationScreen { data { 
+                      vehicleDetailsStatus = getStatusValue resp.rcVerificationStatus,
+                      drivingLicenseStatus = getStatusValue resp.dlVerificationStatus, 
+                      lastUpdateTime = convertUTCtoISC (getCurrentUTC "") "hh:mm A",
+                      permissionsStatus = case permissions of
+                        true -> ST.COMPLETED
+                        false -> ST.NOT_STARTED,
+                      subscriptionStatus = case getDriverInfoResp.autoPayStatus of
+                        Just status -> if status == "ACTIVE" then ST.COMPLETED else ST.IN_PROGRESS
+                        Nothing -> ST.NOT_STARTED,
+                      cityConfig = cityConfig
+                  }, props {limitReachedFor = limitReachedFor }})
   liftFlowBT hideSplash
   GlobalState globalState <- getState
-  if (resp.dlVerificationStatus == "NO_DOC_AVAILABLE" && resp.rcVerificationStatus == "NO_DOC_AVAILABLE") then do
-    flow <- UI.registration
-    case flow of
-      UPLOAD_DRIVER_LICENSE -> do
-        modifyScreenState $ UploadDrivingLicenseScreenStateType $ \uploadDrivingLicenseScreen -> uploadDrivingLicenseScreen { data {rcVerificationStatus = resp.rcVerificationStatus}}
-        uploadDrivingLicenseFlow
-    else if(resp.dlVerificationStatus == "NO_DOC_AVAILABLE") then do
-      modifyScreenState $ UploadDrivingLicenseScreenStateType (\uploadDrivingLicenseScreen -> uploadDrivingLicenseScreen { data {rcVerificationStatus = resp.rcVerificationStatus}})
+  flow <- UI.registration
+  case flow of
+    UPLOAD_DRIVER_LICENSE state -> do
+      modifyScreenState $ UploadDrivingLicenseScreenStateType $ \_ -> UploadDrivingLicenseScreenData.initData { data {
+        mobileNumber = state.data.phoneNumber,
+        cityConfig = state.data.cityConfig
+        }}
       uploadDrivingLicenseFlow
-      else if (resp.rcVerificationStatus == "NO_DOC_AVAILABLE") then addVehicleDetailsflow false
-        else applicationSubmittedFlow "StatusScreen"
+    UPLOAD_VEHICLE_DETAILS state -> do
+      modifyScreenState $ AddVehicleDetailsScreenStateType $ \_ -> AddVehicleDetailsScreenData.initData { data {driverMobileNumber = state.data.phoneNumber, cityConfig = state.data.cityConfig}}
+      addVehicleDetailsflow false
+    PERMISSION_SCREEN state -> do
+      modifyScreenState $ PermissionsScreenStateType $ \permissionsScreen -> permissionsScreen { data {driverMobileNumber = state.data.phoneNumber}}
+      permissionsScreenFlow Nothing Nothing
+    LOGOUT_FROM_REGISTERATION_SCREEN -> logoutFlow
+    GO_TO_HOME_SCREEN_FROM_REGISTERATION_SCREEN -> homeScreenFlow
+    REFRESH_REGISTERATION_SCREEN -> onBoardingFlow
+    GO_TO_ONBOARD_SUBSCRIPTION -> do
+      let onBoardingSubscriptionViewCount =  fromMaybe 0 (fromString (getValueToLocalNativeStore ONBOARDING_SUBSCRIPTION_SCREEN_COUNT))
+      onBoardingSubscriptionScreenFlow onBoardingSubscriptionViewCount
 
 updateDriverVersion :: Maybe Version -> Maybe Version -> FlowBT String Unit
 updateDriverVersion dbClientVersion dbBundleVersion = do
@@ -529,20 +570,7 @@ aadhaarVerificationFlow = do
       (GlobalState state) <- getState
       modifyScreenState $ AadhaarVerificationScreenType (\_ -> state.aadhaarVerificationScreen)
       getDriverInfoFlow Nothing Nothing
-    LOGOUT_FROM_AADHAAR -> do
-      (LogOutRes resp) <- Remote.logOutBT LogOutReq
-      deleteValueFromLocalStore REGISTERATION_TOKEN
-      deleteValueFromLocalStore LANGUAGE_KEY
-      deleteValueFromLocalStore VERSION_NAME
-      deleteValueFromLocalStore BASE_URL
-      deleteValueFromLocalStore TEST_FLOW_FOR_REGISTRATOION
-      deleteValueFromLocalStore IS_DRIVER_ENABLED
-      deleteValueFromLocalStore BUNDLE_VERSION
-      deleteValueFromLocalStore DRIVER_ID
-      deleteValueFromLocalStore SET_ALTERNATE_TIME
-      _ <- pure $ firebaseLogEvent "logout"
-      pure $ factoryResetApp ""
-      loginFlow
+    LOGOUT_FROM_AADHAAR -> logoutFlow
     SEND_UNVERIFIED_AADHAAR_DATA state -> do
       void $ lift $ lift $ toggleLoader true
       unVerifiedAadhaarDataResp <- lift $ lift $ Remote.unVerifiedAadhaarData state.data.driverName state.data.driverGender state.data.driverDob
@@ -562,73 +590,67 @@ uploadDrivingLicenseFlow = do
   logField_ <- lift $ lift $ getLogFields
   flow <- UI.uploadDrivingLicense
   case flow of
-    ADD_VEHICLE_DETAILS_SCREEN state -> do
-      if (state.data.imageFront == "IMAGE_NOT_VALIDATED") then do
-        modifyScreenState $ UploadDrivingLicenseScreenStateType $ \uploadDrivingLicenseScreen -> uploadDrivingLicenseScreen { data {dateOfIssue = Just ""}}
-        uploadDrivingLicenseFlow
-        else do
-          void $ lift $ lift $ loaderText (getString VALIDATING) (getString PLEASE_WAIT_WHILE_IN_PROGRESS)
-          void $ lift $ lift $ toggleLoader true
-          registerDriverDLResp <- lift $ lift $ Remote.registerDriverDL (makeDriverDLReq state.data.driver_license_number state.data.dob state.data.dateOfIssue state.data.imageIDFront state.data.imageIDFront)
-          case registerDriverDLResp of
-            Right (DriverDLResp resp) -> do
-              void $ lift $ lift $ toggleLoader false
-              liftFlowBT $ logEvent logField_ "ny_driver_submit_dl_details"
-              setValueToLocalStore DOCUMENT_UPLOAD_TIME (getCurrentUTC "")
-              if state.data.rcVerificationStatus /= "NO_DOC_AVAILABLE" then applicationSubmittedFlow "StatusScreen" else addVehicleDetailsflow false
-            Left errorPayload -> do
-              void $ lift $ lift $ toggleLoader false
-              modifyScreenState $ UploadDrivingLicenseScreenStateType $ \uploadDrivingLicenseScreen -> uploadDrivingLicenseScreen { data {dateOfIssue = Just ""}}
-              if errorPayload.code == 400 || (errorPayload.code == 500 && (decodeErrorCode errorPayload.response.errorMessage) == "UNPROCESSABLE_ENTITY") then do
-                let correspondingErrorMessage =  Remote.getCorrespondingErrorMessage errorPayload
-                modifyScreenState $ UploadDrivingLicenseScreenStateType $ \uploadDrivingLicenseScreen -> uploadDrivingLicenseScreen { props {errorVisibility = true}, data {errorMessage = correspondingErrorMessage}}
-                uploadDrivingLicenseFlow
-                else do
-                  _ <- pure $ toast $ getString SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN
-                  uploadDrivingLicenseFlow
-
-    LOGOUT_ACCOUNT -> do
-      (LogOutRes resp) <- Remote.logOutBT LogOutReq
-      deleteValueFromLocalStore REGISTERATION_TOKEN
-      deleteValueFromLocalStore VERSION_NAME
-      deleteValueFromLocalStore BASE_URL
-      deleteValueFromLocalStore TEST_FLOW_FOR_REGISTRATOION
-      deleteValueFromLocalStore IS_DRIVER_ENABLED
-      deleteValueFromLocalStore BUNDLE_VERSION
-      deleteValueFromLocalStore DRIVER_ID
-      deleteValueFromLocalStore SET_ALTERNATE_TIME
-      deleteValueFromLocalStore ONBOARDING_SUBSCRIPTION_SCREEN_COUNT
-      deleteValueFromLocalStore FREE_TRIAL_DAYS
-      pure $ factoryResetApp ""
-      _ <- lift $ lift $ liftFlow $ logEvent logField_ "logout"
-      loginFlow
-
-    VALIDATE_IMAGE_API state -> do
-      void $ lift $ lift $ loaderText (getString VALIDATING) (getString PLEASE_WAIT_WHILE_VALIDATING_THE_IMAGE)
-      void $ lift $ lift $ toggleLoader true
-      validateImageResp <- lift $ lift $ Remote.validateImage (makeValidateImageReq (if state.props.clickedButtonType == "front" then state.data.imageFront else state.data.imageBack) "DriverLicense")
+    VALIDATE_DL_DETAILS state -> do
+      validateImageResp <- lift $ lift $ Remote.validateImage (makeValidateImageReq state.data.imageFront "DriverLicense")
       case validateImageResp of
        Right (ValidateImageRes resp) -> do
-        void $ lift $ lift $ toggleLoader false
         liftFlowBT $ logEvent logField_ "ny_driver_dl_photo_confirmed"
-        modifyScreenState $ UploadDrivingLicenseScreenStateType (\uploadDrivingLicenseScreen -> state{props{errorVisibility = false}})
-        if state.props.clickedButtonType == "front" then
-          modifyScreenState $ UploadDrivingLicenseScreenStateType (\uploadDrivingLicenseScreen -> uploadDrivingLicenseScreen { data {imageIDFront = resp.imageId}})
-          else
-            modifyScreenState $ UploadDrivingLicenseScreenStateType (\uploadDrivingLicenseScreen -> uploadDrivingLicenseScreen { data {imageIDBack = resp.imageId}})
-        uploadDrivingLicenseFlow
+        modifyScreenState $ UploadDrivingLicenseScreenStateType (\uploadDrivingLicenseScreen -> uploadDrivingLicenseScreen { data {imageIDFront = resp.imageId}, props{errorVisibility = false}})
+        registerDriverDLResp <- lift $ lift $ Remote.registerDriverDL (makeDriverDLReq state.data.driver_license_number state.data.dob state.data.dateOfIssue resp.imageId resp.imageId)
+        case registerDriverDLResp of
+          Right (DriverDLResp resp) -> do
+            liftFlowBT $ logEvent logField_ "ny_driver_submit_dl_details"
+            setValueToLocalStore DOCUMENT_UPLOAD_TIME (getCurrentUTC "")
+            modifyScreenState $ UploadDrivingLicenseScreenStateType $ \uploadDrivingLicenseScreen -> uploadDrivingLicenseScreen { props {validating = false, successfulValidation = true}}
+            modifyScreenState $ RegisterScreenStateType (\registerationScreen -> registerationScreen { data { vehicleDetailsStatus = ST.COMPLETED}})
+            uploadDrivingLicenseFlow
+          Left errorPayload -> do
+            modifyScreenState $ UploadDrivingLicenseScreenStateType $ \uploadDrivingLicenseScreen -> uploadDrivingLicenseScreen { data {dateOfIssue = Just ""}}
+            if errorPayload.code == 400 || (errorPayload.code == 500 && (decodeErrorCode errorPayload.response.errorMessage) == "UNPROCESSABLE_ENTITY") then do
+              let correspondingErrorMessage =  Remote.getCorrespondingErrorMessage errorPayload
+              modifyScreenState $ UploadDrivingLicenseScreenStateType $ \uploadDrivingLicenseScreen -> uploadDrivingLicenseScreen { props {errorVisibility = true, validating = false, validateProfilePicturePopUp = false, openHowToUploadManual = false}, data {errorMessage = correspondingErrorMessage}}
+              uploadDrivingLicenseFlow
+              else do
+                _ <- pure $ toast $ getString SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN
+                uploadDrivingLicenseFlow
+        onBoardingFlow
        Left errorPayload -> do
-        void $ lift $ lift $ toggleLoader false
         if errorPayload.code == 429 && (decodeErrorCode errorPayload.response.errorMessage) == "IMAGE_VALIDATION_EXCEED_LIMIT" then do
-          modifyScreenState $ UploadDrivingLicenseScreenStateType $ \uploadDrivingLicenseScreen -> uploadDrivingLicenseScreen { props { openGenericMessageModal = true}}
-          uploadDrivingLicenseFlow
+          modifyScreenState $ UploadDrivingLicenseScreenStateType $ \uploadDrivingLicenseScreen -> uploadDrivingLicenseScreen {props { validating = false}}
+          modifyScreenState $ RegisterScreenStateType (\registerationScreen -> registerationScreen { props {limitReachedFor = Just "DL"}})
+          onBoardingFlow
           else if errorPayload.code == 400 || (errorPayload.code == 500 && (decodeErrorCode errorPayload.response.errorMessage) == "UNPROCESSABLE_ENTITY") then do
             let correspondingErrorMessage =  Remote.getCorrespondingErrorMessage errorPayload
-            modifyScreenState $ UploadDrivingLicenseScreenStateType $ \uploadDrivingLicenseScreen -> uploadDrivingLicenseScreen { props {errorVisibility = true}, data {errorMessage = correspondingErrorMessage, imageFrontUrl = state.data.imageFront, imageFront = "IMAGE_NOT_VALIDATED"}}
+            modifyScreenState $ UploadDrivingLicenseScreenStateType $ \uploadDrivingLicenseScreen -> uploadDrivingLicenseScreen { props {errorVisibility = true, validating = false}, data {errorMessage = correspondingErrorMessage, imageFrontUrl = state.data.imageFront, imageFront = "IMAGE_NOT_VALIDATED"}}
             uploadDrivingLicenseFlow
             else do
               _ <- pure $ toast $ getString SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN
-              modifyScreenState $ UploadDrivingLicenseScreenStateType $ \uploadDrivingLicenseScreen -> uploadDrivingLicenseScreen { data {imageFrontUrl = state.data.imageFront, imageFront = "IMAGE_NOT_VALIDATED"}}
+              modifyScreenState $ UploadDrivingLicenseScreenStateType $ \uploadDrivingLicenseScreen -> uploadDrivingLicenseScreen { data {imageFrontUrl = state.data.imageFront, imageFront = "IMAGE_NOT_VALIDATED"}, props{validating = false}}
+              uploadDrivingLicenseFlow
+      
+
+    LOGOUT_ACCOUNT -> logoutFlow
+
+    VALIDATE_DATA_API state -> do
+      void $ lift $ lift $ loaderText (getString VALIDATING) (getString PLEASE_WAIT_WHILE_IN_PROGRESS)
+      void $ lift $ lift $ toggleLoader true
+      registerDriverDLResp <- lift $ lift $ Remote.registerDriverDL (makeDriverDLReq state.data.driver_license_number state.data.dob state.data.dateOfIssue state.data.imageIDFront state.data.imageIDFront)
+      case registerDriverDLResp of
+        Right (DriverDLResp resp) -> do
+          void $ lift $ lift $ toggleLoader false
+          liftFlowBT $ logEvent logField_ "ny_driver_submit_dl_details"
+          setValueToLocalStore DOCUMENT_UPLOAD_TIME (getCurrentUTC "")
+          modifyScreenState $ UploadDrivingLicenseScreenStateType $ \uploadDrivingLicenseScreen -> uploadDrivingLicenseScreen { props {validating = false}}
+          onBoardingFlow
+        Left errorPayload -> do
+          void $ lift $ lift $ toggleLoader false
+          modifyScreenState $ UploadDrivingLicenseScreenStateType $ \uploadDrivingLicenseScreen -> uploadDrivingLicenseScreen { data {dateOfIssue = Just ""}}
+          if errorPayload.code == 400 || (errorPayload.code == 500 && (decodeErrorCode errorPayload.response.errorMessage) == "UNPROCESSABLE_ENTITY") then do
+            let correspondingErrorMessage =  Remote.getCorrespondingErrorMessage errorPayload
+            modifyScreenState $ UploadDrivingLicenseScreenStateType $ \uploadDrivingLicenseScreen -> uploadDrivingLicenseScreen { props {errorVisibility = true, validating = false, validateProfilePicturePopUp = false, openHowToUploadManual = false}, data {errorMessage = correspondingErrorMessage}}
+            uploadDrivingLicenseFlow
+            else do
+              _ <- pure $ toast $ getString SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN
               uploadDrivingLicenseFlow
 
     GOTO_VEHICLE_DETAILS_SCREEN -> addVehicleDetailsflow false
@@ -641,78 +663,92 @@ addVehicleDetailsflow addRcFromProf = do
   modifyScreenState $ AddVehicleDetailsScreenStateType (\addVehicleDetailsScreen  -> addVehicleDetailsScreen{props{addRcFromProfile = addRcFromProf }})
   flow <- UI.addVehicleDetails
   case flow of
-    GO_TO_APPLICATION_SCREEN state -> do
-      if (state.data.rcImageID == "IMAGE_NOT_VALIDATED") then do
-        modifyScreenState $ AddVehicleDetailsScreenStateType $ \addVehicleDetailsScreen -> addVehicleDetailsScreen { data { dateOfRegistration = Just ""},props{ addRcFromProfile = addRcFromProf}}
-        addVehicleDetailsflow state.props.addRcFromProfile
+    VALIDATE_DETAILS state -> do
+      validateImageResp <- lift $ lift $ Remote.validateImage (makeValidateImageReq state.data.rc_base64 "VehicleRegistrationCertificate")
+      case validateImageResp of
+       Right (ValidateImageRes resp) -> do
+        liftFlowBT $ logEvent logField_ "ny_driver_rc_photo_confirmed"
+        modifyScreenState $ AddVehicleDetailsScreenStateType (\addVehicleDetailsScreen -> addVehicleDetailsScreen {data { rcImageID = resp.imageId}})
+        if (state.data.rcImageID == "IMAGE_NOT_VALIDATED") then do
+          modifyScreenState $ AddVehicleDetailsScreenStateType $ \addVehicleDetailsScreen -> addVehicleDetailsScreen { data { dateOfRegistration = Just ""},props{ addRcFromProfile = addRcFromProf}}
+          addVehicleDetailsflow state.props.addRcFromProfile
         else do
-          void $ lift $ lift $ loaderText (getString VALIDATING) (getString PLEASE_WAIT_WHILE_IN_PROGRESS)
-          void $ lift $ lift $ toggleLoader true
-          registerDriverRCResp <- lift $ lift $ Remote.registerDriverRC (makeDriverRCReq state.data.vehicle_registration_number state.data.rcImageID state.data.dateOfRegistration true)
+          registerDriverRCResp <- lift $ lift $ Remote.registerDriverRC (makeDriverRCReq state.data.vehicle_registration_number resp.imageId state.data.dateOfRegistration true)
           case registerDriverRCResp of
             Right (DriverRCResp resp) -> do
-              void $ lift $ lift $ toggleLoader false
               _ <- pure $ toast $ getString RC_ADDED_SUCCESSFULLY
               liftFlowBT $ logEvent logField_ "ny_driver_submit_rc_details"
               setValueToLocalStore DOCUMENT_UPLOAD_TIME (getCurrentUTC "")
               (GlobalState state') <- getState
               let profileState = state'.driverProfileScreen
-              if (null profileState.data.rcDataArray) then applicationSubmittedFlow "StatusScreen"
+              if (not addRcFromProf) then do
+                modifyScreenState $ AddVehicleDetailsScreenStateType $ \addVehicleDetailsScreen -> addVehicleDetailsScreen { props {validating = false, successfulValidation = true}}
+                modifyScreenState $ RegisterScreenStateType (\registerationScreen -> registerationScreen { data { vehicleDetailsStatus = ST.COMPLETED}})
+                addVehicleDetailsflow state.props.addRcFromProfile
+              else do
+                (DriverRegistrationStatusResp resp ) <- driverRegistrationStatusBT (DriverRegistrationStatusReq { })
+                let multiRcStatus  = getStatusValue resp.rcVerificationStatus
+                modifyScreenState $ AddVehicleDetailsScreenStateType $ \addVehicleDetailsScreen -> addVehicleDetailsScreen { props {validating = false, multipleRCstatus = multiRcStatus, validateProfilePicturePopUp = false}}
+                addVehicleDetailsflow state.props.addRcFromProfile
+                -- modifyScreenState $ DriverProfileScreenStateType $ \driverProfileScreen -> driverProfileScreen { props { screenType = ST.VEHICLE_DETAILS}}
+                -- driverProfileFlow
+            Left errorPayload -> do
+              modifyScreenState $ AddVehicleDetailsScreenStateType $ \addVehicleDetailsScreen -> addVehicleDetailsScreen { data { dateOfRegistration = Just ""}, props{validating = false}}
+              if errorPayload.code == 400 || (errorPayload.code == 500 && (decodeErrorCode errorPayload.response.errorMessage) == "UNPROCESSABLE_ENTITY") then do
+                let correspondingErrorMessage =  Remote.getCorrespondingErrorMessage errorPayload
+                modifyScreenState $ AddVehicleDetailsScreenStateType $ \addVehicleDetailsScreen -> addVehicleDetailsScreen { props {errorVisibility = true, validating = false, validateProfilePicturePopUp = false, openHowToUploadManual = false}, data {errorMessage = correspondingErrorMessage}}
+                addVehicleDetailsflow state.props.addRcFromProfile
+                else do
+                  _ <- pure $ toast $ getString SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN
+                  addVehicleDetailsflow state.props.addRcFromProfile
+       Left errorPayload -> do
+        void $ lift $ lift $ toggleLoader false
+        if errorPayload.code == 429 && (decodeErrorCode errorPayload.response.errorMessage) == "IMAGE_VALIDATION_EXCEED_LIMIT" then do
+          modifyScreenState $ AddVehicleDetailsScreenStateType (\addVehicleDetailsScreen -> addVehicleDetailsScreen {props { validateProfilePicturePopUp = false, validating = false, multipleRCstatus = FAILED}})
+          modifyScreenState $ RegisterScreenStateType (\registerationScreen -> registerationScreen { props {limitReachedFor = Just "RC"}})
+          if state.props.addRcFromProfile then addVehicleDetailsflow state.props.addRcFromProfile
+          else onBoardingFlow
+          else if errorPayload.code == 400 || (errorPayload.code == 500 && (decodeErrorCode errorPayload.response.errorMessage) == "UNPROCESSABLE_ENTITY") then do
+            let correspondingErrorMessage =  Remote.getCorrespondingErrorMessage errorPayload
+            modifyScreenState $ AddVehicleDetailsScreenStateType $ \addVehicleDetailsScreen -> addVehicleDetailsScreen { props {errorVisibility = true, validating = false}, data {errorMessage = correspondingErrorMessage , rcImageID = "IMAGE_NOT_VALIDATED" }}
+            addVehicleDetailsflow state.props.addRcFromProfile 
+            else do
+              _ <- pure $ toast $ getString SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN
+              modifyScreenState $ AddVehicleDetailsScreenStateType $ \addVehicleDetailsScreen -> addVehicleDetailsScreen { data {rcImageID = "IMAGE_NOT_VALIDATED" }, props{validating = false}}
+              addVehicleDetailsflow state.props.addRcFromProfile
+    VALIDATE_RC_DATA_API_CALL state -> do
+        let _ = spy "VALIDATE_RC_DATA_API_CALL state" state
+        liftFlowBT $ logEvent logField_ "ny_driver_rc_photo_confirmed"
+        modifyScreenState $ AddVehicleDetailsScreenStateType (\addVehicleDetailsScreen -> addVehicleDetailsScreen {data { rcImageID = state.data.rcImageID}})
+        if (state.data.rcImageID == "IMAGE_NOT_VALIDATED") then do
+          modifyScreenState $ AddVehicleDetailsScreenStateType $ \addVehicleDetailsScreen -> addVehicleDetailsScreen { data { dateOfRegistration = Just ""},props{ addRcFromProfile = addRcFromProf}}
+          addVehicleDetailsflow state.props.addRcFromProfile
+        else do
+          registerDriverRCResp <- lift $ lift $ Remote.registerDriverRC (makeDriverRCReq state.data.vehicle_registration_number state.data.rcImageID state.data.dateOfRegistration true)
+          case registerDriverRCResp of
+            Right (DriverRCResp resp) -> do
+              _ <- pure $ toast $ getString RC_ADDED_SUCCESSFULLY
+              liftFlowBT $ logEvent logField_ "ny_driver_submit_rc_details"
+              setValueToLocalStore DOCUMENT_UPLOAD_TIME (getCurrentUTC "")
+              (GlobalState state') <- getState
+              let profileState = state'.driverProfileScreen
+              if (null profileState.data.rcDataArray) then do
+                modifyScreenState $ AddVehicleDetailsScreenStateType $ \addVehicleDetailsScreen -> addVehicleDetailsScreen { props {validating = false}}
+                onBoardingFlow
               else do
                 modifyScreenState $ DriverProfileScreenStateType $ \driverProfileScreen -> driverProfileScreen { props { screenType = ST.VEHICLE_DETAILS}}
                 driverProfileFlow
             Left errorPayload -> do
-              void $ lift $ lift $ toggleLoader false
-              modifyScreenState $ AddVehicleDetailsScreenStateType $ \addVehicleDetailsScreen -> addVehicleDetailsScreen { data { dateOfRegistration = Just ""}}
+              modifyScreenState $ AddVehicleDetailsScreenStateType $ \addVehicleDetailsScreen -> addVehicleDetailsScreen { data { dateOfRegistration = Just ""}, props{validating = false}}
               if errorPayload.code == 400 || (errorPayload.code == 500 && (decodeErrorCode errorPayload.response.errorMessage) == "UNPROCESSABLE_ENTITY") then do
                 let correspondingErrorMessage =  Remote.getCorrespondingErrorMessage errorPayload
-                modifyScreenState $ AddVehicleDetailsScreenStateType $ \addVehicleDetailsScreen -> addVehicleDetailsScreen { props {errorVisibility = true}, data {errorMessage = correspondingErrorMessage}}
+                modifyScreenState $ AddVehicleDetailsScreenStateType $ \addVehicleDetailsScreen -> addVehicleDetailsScreen { props {errorVisibility = true, validating = false, validateProfilePicturePopUp = false, openHowToUploadManual = false}, data {errorMessage = correspondingErrorMessage}}
                 addVehicleDetailsflow state.props.addRcFromProfile
                 else do
                   _ <- pure $ toast $ getString SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN
                   addVehicleDetailsflow state.props.addRcFromProfile
 
-    VALIDATE_IMAGE_API_CALL state -> do
-      void $ lift $ lift $ loaderText (getString VALIDATING) (getString PLEASE_WAIT_WHILE_VALIDATING_THE_IMAGE)
-      void $ lift $ lift $ toggleLoader true
-      validateImageResp <- lift $ lift $ Remote.validateImage (makeValidateImageReq state.data.rc_base64 "VehicleRegistrationCertificate")
-      case validateImageResp of
-       Right (ValidateImageRes resp) -> do
-        void $ lift $ lift $ toggleLoader false
-        liftFlowBT $ logEvent logField_ "ny_driver_rc_photo_confirmed"
-        modifyScreenState $ AddVehicleDetailsScreenStateType (\addVehicleDetailsScreen -> state)
-        modifyScreenState $ AddVehicleDetailsScreenStateType (\addVehicleDetailsScreen -> addVehicleDetailsScreen {data { rcImageID = resp.imageId}})
-        addVehicleDetailsflow state.props.addRcFromProfile
-       Left errorPayload -> do
-        void $ lift $ lift $ toggleLoader false
-        if errorPayload.code == 429 && (decodeErrorCode errorPayload.response.errorMessage) == "IMAGE_VALIDATION_EXCEED_LIMIT" then do
-          modifyScreenState $ AddVehicleDetailsScreenStateType (\addVehicleDetailsScreen -> addVehicleDetailsScreen {props { limitExceedModal = true}})
-          addVehicleDetailsflow state.props.addRcFromProfile
-          else if errorPayload.code == 400 || (errorPayload.code == 500 && (decodeErrorCode errorPayload.response.errorMessage) == "UNPROCESSABLE_ENTITY") then do
-            let correspondingErrorMessage =  Remote.getCorrespondingErrorMessage errorPayload
-            modifyScreenState $ AddVehicleDetailsScreenStateType $ \addVehicleDetailsScreen -> addVehicleDetailsScreen { props {errorVisibility = true}, data {errorMessage = correspondingErrorMessage , rcImageID = "IMAGE_NOT_VALIDATED" }}
-            addVehicleDetailsflow state.props.addRcFromProfile 
-            else do
-              _ <- pure $ toast $ getString SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN
-              modifyScreenState $ AddVehicleDetailsScreenStateType $ \addVehicleDetailsScreen -> addVehicleDetailsScreen { data {rcImageID = "IMAGE_NOT_VALIDATED" }}
-              addVehicleDetailsflow state.props.addRcFromProfile
-
-    LOGOUT_USER -> do
-      (LogOutRes resp) <- Remote.logOutBT LogOutReq
-      deleteValueFromLocalStore REGISTERATION_TOKEN
-      deleteValueFromLocalStore VERSION_NAME
-      deleteValueFromLocalStore BASE_URL
-      deleteValueFromLocalStore TEST_FLOW_FOR_REGISTRATOION
-      deleteValueFromLocalStore IS_DRIVER_ENABLED
-      deleteValueFromLocalStore BUNDLE_VERSION
-      deleteValueFromLocalStore DRIVER_ID
-      deleteValueFromLocalStore SET_ALTERNATE_TIME
-      deleteValueFromLocalStore ONBOARDING_SUBSCRIPTION_SCREEN_COUNT
-      deleteValueFromLocalStore FREE_TRIAL_DAYS
-      pure $ factoryResetApp ""
-      _ <- lift $ lift $ liftFlow $ logEvent logField_  "logout"
-      loginFlow
-
+    LOGOUT_USER -> logoutFlow
     REFER_API_CALL state -> do
       void $ lift $ lift $ loaderText (getString VALIDATING) (getString PLEASE_WAIT_WHILE_IN_PROGRESS)
       void $ lift $ lift $ toggleLoader true
@@ -731,7 +767,34 @@ addVehicleDetailsflow addRcFromProf = do
     DRIVER_PROFILE_SCREEN -> do 
       modifyScreenState $ DriverProfileScreenStateType (\driverProfileScreen -> driverProfileScreen {props = driverProfileScreen.props { screenType = ST.VEHICLE_DETAILS, openSettings = false}})
       driverProfileFlow
-
+    RC_ACTIVATION state -> do
+      void $ lift $ lift $ loaderText (getString VALIDATING) (getString PLEASE_WAIT_WHILE_IN_PROGRESS)
+      void $ lift $ lift $ toggleLoader true
+      activateRCResp <- lift $ lift $ Remote.makeRcActiveOrInactive (Remote.makeRcActiveOrInactiveReq true (state.data.vehicle_registration_number))
+      case activateRCResp of
+        Right (MakeRcActiveOrInactiveResp resp) -> do
+          void $ lift $ lift $ toggleLoader false
+          pure $ toast $ "RC-"<>state.data.vehicle_registration_number<> (getString IS_ACTIVE_NOW)
+          refreshDriverProfile
+          driverProfileFlow
+        Left errorPayload -> do
+          void $ lift $ lift $ toggleLoader false
+          let codeMessage = decodeErrorCode errorPayload.response.errorMessage
+          -- if codeMessage == "RC_ACTIVE_ON_OTHER_ACCOUNT" || codeMessage == "RC_Vehicle_ON_RIDE" then do
+          --   modifyScreenState $ DriverProfileScreenStateType (\driverProfileScreen -> state {props = driverProfileScreen.props { openSettings = false, alreadyActive = true, screenType = ST.VEHICLE_DETAILS}})
+          -- else do
+          --    modifyScreenState $ DriverProfileScreenStateType (\driverProfileScreen -> state {props = driverProfileScreen.props { openSettings = false, screenType = ST.VEHICLE_DETAILS}})
+          --    pure $ toast $ (getString SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN)
+          refreshDriverProfile
+          driverProfileFlow
+        where 
+          refreshDriverProfile = do 
+            getDriverInfoApiResp <- lift $ lift $ Remote.getDriverInfoApi (GetDriverInfoReq{})
+            case getDriverInfoApiResp of
+              Right getDriverInfoResp -> do
+                modifyScreenState $ GlobalPropsType $ \globalProps -> globalProps{driverInformation = Just getDriverInfoResp}
+                updateDriverDataToStates
+              Left _ -> pure unit
 applicationSubmittedFlow :: String -> FlowBT String Unit
 applicationSubmittedFlow screenType = do
   liftFlowBT hideSplash
@@ -799,21 +862,7 @@ applicationSubmittedFlow screenType = do
               else do
                   pure $ toast $ getString SOMETHING_WENT_WRONG
                   applicationSubmittedFlow screenType
-    LOGOUT_ACCOUT -> do
-      (LogOutRes resp) <- Remote.logOutBT LogOutReq
-      deleteValueFromLocalStore REGISTERATION_TOKEN
-      deleteValueFromLocalStore VERSION_NAME
-      deleteValueFromLocalStore BASE_URL
-      deleteValueFromLocalStore TEST_FLOW_FOR_REGISTRATOION
-      deleteValueFromLocalStore IS_DRIVER_ENABLED
-      deleteValueFromLocalStore BUNDLE_VERSION
-      deleteValueFromLocalStore DRIVER_ID
-      deleteValueFromLocalStore SET_ALTERNATE_TIME
-      deleteValueFromLocalStore ONBOARDING_SUBSCRIPTION_SCREEN_COUNT
-      deleteValueFromLocalStore FREE_TRIAL_DAYS
-      pure $ factoryResetApp ""
-      _ <- lift $ lift $ liftFlow $ logEvent logField_ "logout"
-      loginFlow
+    LOGOUT_ACCOUT -> logoutFlow
 
 driverProfileFlow :: FlowBT String Unit
 driverProfileFlow = do
@@ -833,31 +882,15 @@ driverProfileFlow = do
       liftFlowBT $ logEvent logField_ "ny_driver_language_select" 
       selectLanguageFlow
     ON_BOARDING_FLOW -> onBoardingFlow
-    GO_TO_LOGOUT -> do
-      liftFlowBT $ logEvent logField_ "ny_driver_logout"
-      (LogOutRes resp) <- Remote.logOutBT LogOutReq
-      removeChatService ""
-      lift $ lift $ liftFlow $ stopLocationPollingAPI
-      deleteValueFromLocalStore REGISTERATION_TOKEN
-      deleteValueFromLocalStore VERSION_NAME
-      deleteValueFromLocalStore BASE_URL
-      deleteValueFromLocalStore TEST_FLOW_FOR_REGISTRATOION
-      deleteValueFromLocalStore IS_DRIVER_ENABLED
-      deleteValueFromLocalStore DRIVER_STATUS
-      deleteValueFromLocalStore BUNDLE_VERSION
-      deleteValueFromLocalStore DRIVER_ID
-      deleteValueFromLocalStore SET_ALTERNATE_TIME
-      deleteValueFromLocalStore ONBOARDING_SUBSCRIPTION_SCREEN_COUNT
-      deleteValueFromLocalStore FREE_TRIAL_DAYS
-      pure $ factoryResetApp ""
-      _ <- lift $ lift $ liftFlow $ logEvent logField_ "logout"
-      loginFlow
+    GO_TO_LOGOUT -> logoutFlow
+      
     HELP_AND_SUPPORT_SCREEN -> do
       liftFlowBT $ logEvent logField_ "ny_driver_help"
       let language = ( case getValueToLocalStore LANGUAGE_KEY of
                          "HI_IN" -> "hi"
                          "KN_IN" -> "kn"
                          "TA_IN" -> "ta"
+                         "TE_IN" -> "te"
                          _       -> "en"
                      )
       let categoryOrder = ["LOST_AND_FOUND", "RIDE_RELATED", "APP_RELATED", "FARE"]
@@ -940,6 +973,7 @@ driverProfileFlow = do
       modifyScreenState $ DriverProfileScreenStateType (\driverProfileScreen -> state {props = driverProfileScreen.props { alreadyActive = false}})
       let (GlobalState defaultEpassState) = defaultGlobalState
       pure $ setText (getNewIDWithTag "VehicleRegistrationNumber") ""
+      let cityConfig = getCityConfig config.cityConfig (getValueToLocalStore DRIVER_LOCATION)
       modifyScreenState $ AddVehicleDetailsScreenStateType (\_ -> defaultEpassState.addVehicleDetailsScreen)
       addVehicleDetailsflow true
     SUBCRIPTION -> updateAvailableAppsAndGoToSubs
@@ -1301,6 +1335,7 @@ helpAndSupportFlow = do
                        "HI_IN" -> "hi"
                        "KN_IN" -> "kn"
                        "TA_IN" -> "ta"
+                       "TE_IN" -> "te"
                        _       -> "en"
                      )
       (GetOptionsRes getOptionsRes) <- Remote.getOptionsBT selectedCategory.categoryId language
@@ -1353,9 +1388,16 @@ permissionsScreenFlow event activeRideResp = do
   case action of
     DRIVER_HOME_SCREEN -> do
       liftFlowBT $ logEvent logField_ "ny_driver_submit_permissions"
-      setValueToLocalStore TEST_FLOW_FOR_REGISTRATOION "COMPLETED"
-      setValueToLocalStore TEST_FLOW_FOR_PERMISSIONS "COMPLETED"
       handleDeepLinksFlow event activeRideResp
+    LOGOUT_FROM_PERMISSIONS_SCREEN -> logoutFlow
+    GO_TO_REGISTERATION_SCREEN state -> do
+      let allChecked = state.props.isNotificationPermissionChecked && state.props.isOverlayPermissionChecked && state.props.isAutoStartPermissionChecked
+          partialChecked = state.props.isNotificationPermissionChecked || state.props.isOverlayPermissionChecked || state.props.isAutoStartPermissionChecked
+      modifyScreenState $ RegisterScreenStateType (\registerationScreen -> registerationScreen { data { permissionsStatus = case allChecked, partialChecked of
+                                                                                                                                true, _ -> ST.COMPLETED
+                                                                                                                                false, true -> ST.IN_PROGRESS
+                                                                                                                                _, _ -> ST.NOT_STARTED } })
+      onBoardingFlow
 
 myRidesScreenFlow :: FlowBT String Unit
 myRidesScreenFlow = do
@@ -1430,6 +1472,7 @@ rideSelectionScreenFlow = do
                          "HI_IN" -> "hi"
                          "KN_IN" -> "kn"
                          "TA_IN" -> "ta"
+                         "TE_IN" -> "te"
                          _       -> "en"
                      )
       (GetOptionsRes getOptionsRes) <- Remote.getOptionsBT state.selectedCategory.categoryId language
@@ -1462,6 +1505,7 @@ issueReportChatScreenFlow = do
                          "HI_IN" -> "hi"
                          "KN_IN" -> "kn"
                          "TA_IN" -> "ta"
+                         "TE_IN" -> "te"
                          _       -> "en"
                      )
       let categoryOrder = ["LOST_AND_FOUND", "RIDE_RELATED", "APP_RELATED", "FARE"]
@@ -1584,6 +1628,7 @@ tripDetailsScreenFlow = do
                          "HI_IN" -> "hi"
                          "KN_IN" -> "kn"
                          "TA_IN" -> "ta"
+                         "TE_IN" -> "te"
                          _       -> "en"
                      )
       let categoryOrder = ["LOST_AND_FOUND", "RIDE_RELATED", "APP_RELATED", "FARE"]
@@ -1749,14 +1794,14 @@ onBoardingSubscriptionScreenFlow onBoardingSubscriptionViewCount = do
   modifyScreenState $ OnBoardingSubscriptionScreenStateType (\onBoardingSubscriptionScreen -> onBoardingSubscriptionScreen{props{isSelectedLangTamil = (getValueToLocalNativeStore LANGUAGE_KEY) == "TA_IN", screenCount = onBoardingSubscriptionViewCount+1}, data{subscriptionConfig = config.subscriptionConfig}})
   action <- UI.onBoardingSubscriptionScreen
   case action of 
-    GOTO_HOME_SCREEN_FROM_ONBOARDING_SUBSCRIPTION_SCREEN -> do
+    REGISTERATION_ONBOARDING state -> do
       setValueToLocalStore ONBOARDING_SUBSCRIPTION_SCREEN_COUNT "100"
-      homeScreenFlow
+      onBoardingFlow
     MAKE_PAYMENT_FROM_ONBOARDING state -> do
       case state.data.selectedPlanItem of 
         Just selectedPlan -> do
           setValueToLocalStore ONBOARDING_SUBSCRIPTION_SCREEN_COUNT "100"
-          nyPaymentFlow selectedPlan true
+          nyPaymentFlow selectedPlan "ONBOARDING"
         Nothing -> onBoardingSubscriptionScreenFlow (state.props.screenCount-1)
   pure unit
 
@@ -1812,6 +1857,7 @@ homeScreenFlow = do
                          "HI_IN" -> "hi"
                          "KN_IN" -> "kn"
                          "TA_IN" -> "ta"
+                         "TE_IN" -> "te"
                          _       -> "en"
                      )
       let categoryOrder = ["LOST_AND_FOUND", "RIDE_RELATED", "APP_RELATED", "FARE"]
@@ -1833,9 +1879,7 @@ homeScreenFlow = do
       let categories' = sortBy compareByOrder temp
       modifyScreenState $ HelpAndSupportScreenStateType (\helpAndSupportScreen -> helpAndSupportScreen { data { categories = categories' } } )
       helpAndSupportFlow
-    GO_TO_EDIT_GENDER_SCREEN -> do
-      modifyScreenState $ DriverDetailsScreenStateType (\driverDetailsScreen -> driverDetailsScreen { data {driverGender = Nothing,genderSelectionModal{selectionOptions = genders FunctionCall,activeIndex = Nothing,isSelectButtonActive = false}}, props  { genderSelectionModalShow = true}})
-      driverDetailsFlow
+    GO_TO_EDIT_GENDER_SCREEN -> driverProfileFlow
     GO_TO_START_RIDE {id, otp , lat, lon} updatedState -> do
       void $ lift $ lift $ loaderText (getString START_RIDE) ""
       void $ lift $ lift $ toggleLoader true
@@ -2197,13 +2241,13 @@ clearPendingDuesFlow showLoader = do
   pure $ toggleBtnLoader "" false
   subScriptionFlow
 
-nyPaymentFlow :: PlanCardConfig -> Boolean -> FlowBT String Unit
-nyPaymentFlow planCardConfig fromJoinPlan = do
+nyPaymentFlow :: PlanCardConfig -> String -> FlowBT String Unit
+nyPaymentFlow planCardConfig fromScreen = do
   liftFlowBT $ initiatePaymentPage
   response <- lift $ lift $ Remote.subscribePlan planCardConfig.id
   case response of
     Right (SubscribePlanResp listResp) -> do
-      if fromJoinPlan then do
+      if fromScreen /= "MYPLAN" then do
         _ <- pure $ cleverTapCustomEventWithParams "ny_driver_selected_plan" "selected_plan" planCardConfig.title
         _ <- pure $ cleverTapCustomEventWithParams "ny_driver_selected_plan" "offer" $ show $ map (\offer -> offer.title) planCardConfig.offers
         liftFlowBT $ metaLogEventWithTwoParams "ny_driver_selected_plan" "selected_plan" planCardConfig.title "offer" $ show $ map (\offer -> offer.title) planCardConfig.offers
@@ -2227,7 +2271,6 @@ nyPaymentFlow planCardConfig fromJoinPlan = do
       orderStatus <- lift $ lift $ Remote.paymentOrderStatus listResp.orderId
       case orderStatus of
         Right (OrderStatusRes statusResp) ->
-
           case statusResp.status of
             PS.CHARGED -> do
                 setSubscriptionStatus Success statusResp.status planCardConfig
@@ -2241,10 +2284,20 @@ nyPaymentFlow planCardConfig fromJoinPlan = do
     Left (errorPayload) -> pure $ toast $ Remote.getCorrespondingErrorMessage errorPayload
   getDriverInfoApiResp <- lift $ lift $ Remote.getDriverInfoApi (GetDriverInfoReq{})
   case getDriverInfoApiResp of
-    Right resp -> modifyScreenState $ GlobalPropsType $ \globalProps -> globalProps{driverInformation = Just resp}
+    Right resp -> do
+      modifyScreenState $ GlobalPropsType $ \globalProps -> globalProps{driverInformation = Just resp}
+      let (GetDriverInfoResp getDriverInfoResp) = resp
+      if fromScreen == "ONBOARDING" then
+        modifyScreenState $ RegisterScreenStateType (\registerScreen -> registerScreen { data {subscriptionStatus = case getDriverInfoResp.autoPayStatus of
+                                                                                                                  Nothing -> ST.NOT_STARTED
+                                                                                                                  Just status -> if status == "ACTIVE" then ST.COMPLETED else ST.IN_PROGRESS }})
+      else pure unit
     Left _ -> pure unit
   updateDriverDataToStates
-  subScriptionFlow
+  if fromScreen == "ONBOARDING" then
+    onBoardingFlow
+  else
+    subScriptionFlow
 
 setSubscriptionStatus :: PaymentStatus -> PS.APIPaymentStatus -> PlanCardConfig -> FlowBT String Unit
 setSubscriptionStatus paymentStatus apiPaymentStatus planCardConfig = do
@@ -2272,7 +2325,7 @@ paymentHistoryFlow :: FlowBT String Unit
 paymentHistoryFlow = do 
   action <- UI.paymentHistory
   case action of 
-    GoToSetupAutoPay state -> nyPaymentFlow state.data.planData false
+    GoToSetupAutoPay state -> nyPaymentFlow state.data.planData "MYPLAN"
     EntityDetailsAPI state id -> do
       paymentEntityDetails <- lift $ lift $ Remote.paymentEntityDetails id
       case paymentEntityDetails of
@@ -2385,7 +2438,7 @@ subScriptionFlow :: FlowBT String Unit
 subScriptionFlow = do
   appConfig <- getAppConfig Constants.appConfig 
   liftFlowBT $ runEffectFn1 initiatePP unit
-  modifyScreenState $ SubscriptionScreenStateType (\subscriptionScreen -> subscriptionScreen{data{config = appConfig.subscriptionConfig, bottomNavConfig = appConfig.bottomNavConfig},props{isSelectedLangTamil = (getValueToLocalNativeStore LANGUAGE_KEY) == "TA_IN", offerBannerProps {showOfferBanner = appConfig.subscriptionConfig.offerBannerConfig.showDUOfferBanner, offerBannerValidTill = appConfig.subscriptionConfig.offerBannerConfig.offerBannerValidTill, offerBannerDeadline = appConfig.subscriptionConfig.offerBannerConfig.offerBannerDeadline}}})
+  modifyScreenState $ SubscriptionScreenStateType (\subscriptionScreen -> subscriptionScreen{data{config = appConfig},props{isSelectedLangTamil = (getValueToLocalNativeStore LANGUAGE_KEY) == "TA_IN", offerBannerProps {showOfferBanner = appConfig.subscriptionConfig.offerBannerConfig.showDUOfferBanner, offerBannerValidTill = appConfig.subscriptionConfig.offerBannerConfig.offerBannerValidTill, offerBannerDeadline = appConfig.subscriptionConfig.offerBannerConfig.offerBannerDeadline}}})
   void $ lift $ lift $ loaderText (getString LOADING) (getString PLEASE_WAIT_WHILE_IN_PROGRESS)
   uiAction <- UI.subscriptionScreen
   case uiAction of
@@ -2398,11 +2451,11 @@ subScriptionFlow = do
       case state.props.joinPlanProps.selectedPlanItem of 
         Just selectedPlan -> do
           setValueToLocalStore DISABLE_WIDGET "true"
-          nyPaymentFlow selectedPlan true
+          nyPaymentFlow selectedPlan "JOINPLAN"
         Nothing -> subScriptionFlow
     GOTO_PAYMENT_HISTORY state -> do
       let (GlobalState defGlobalState) = defaultGlobalState
-      modifyScreenState $ PaymentHistoryScreenStateType(\_ -> defGlobalState.paymentHistoryScreen{props{autoPaySetup = state.data.myPlanData.autoPayStatus == ACTIVE_AUTOPAY, subView = ST.PaymentHistory}, data{planData = state.data.myPlanData.planEntity, gradientConfig = state.data.config.gradientConfig}})
+      modifyScreenState $ PaymentHistoryScreenStateType(\_ -> defGlobalState.paymentHistoryScreen{props{autoPaySetup = state.data.myPlanData.autoPayStatus == ACTIVE_AUTOPAY, subView = ST.PaymentHistory}, data{planData = state.data.myPlanData.planEntity, gradientConfig = state.data.config.subscriptionConfig.gradientConfig}})
       paymentHistoryFlow
     CANCEL_AUTOPAY state -> do
       suspendMandate <- lift $ lift $ Remote.suspendMandate state.data.driverId
@@ -2444,7 +2497,7 @@ subScriptionFlow = do
           pure $ toast $ getString RESUMED_AUTOPAY
         Left errorPayload -> pure $ toast $ Remote.getCorrespondingErrorMessage errorPayload
       subScriptionFlow
-    RETRY_PAYMENT_AC state planId -> nyPaymentFlow state.data.myPlanData.planEntity false
+    RETRY_PAYMENT_AC state planId -> nyPaymentFlow state.data.myPlanData.planEntity "MYPLAN"
     CHECK_ORDER_STATUS state orderId-> do
       orderStatus <- lift $ lift $ Remote.paymentOrderStatus orderId
       case orderStatus of
@@ -2479,7 +2532,7 @@ subScriptionFlow = do
     GO_TO_OPEN_GOOGLE_MAPS state -> do
       _ <- lift $ lift $ fork $ liftFlow $ openNavigation state.props.currentLat state.props.currentLon state.props.destLat state.props.destLon "DRIVE"
       subScriptionFlow
-    SUBSCRIBE_API state -> nyPaymentFlow state.data.myPlanData.planEntity false
+    SUBSCRIBE_API state -> nyPaymentFlow state.data.myPlanData.planEntity "MYPLAN"
     CLEAR_DUES_ACT -> clearPendingDuesFlow false
     _ -> subScriptionFlow
 
@@ -2518,17 +2571,19 @@ noInternetScreenFlow triggertype = do
     CHECK_INTERNET -> case ((ifNotRegistered unit) || (getValueToLocalStore IS_DRIVER_ENABLED == "false")) of
                       true  -> pure unit
                       false -> do
-                        permissionsGiven <- checkAll3Permissions
+                        permissionsGiven <- checkAll3Permissions true
                         if permissionsGiven
                           then baseAppFlow false Nothing
                           else permissionsScreenFlow Nothing Nothing
 
-checkAll3Permissions :: FlowBT String Boolean
-checkAll3Permissions = do
-  isLocationPermission <- lift $ lift $ liftFlow $ isLocationPermissionEnabled unit
+checkAll3Permissions :: Boolean -> FlowBT String Boolean
+checkAll3Permissions checkBattery = do
+  -- androidVersion <- lift $ lift $ liftFlow $ getAndroidVersion
+  -- isNotificationPermission <- lift $ lift $ liftFlow $ isNotificationPermissionEnabled unit
   isOverlayPermission <- lift $ lift $ liftFlow $ isOverlayPermissionEnabled unit
   isBatteryUsagePermission <- lift $ lift $ liftFlow $ isBatteryPermissionEnabled unit
-  pure $ isLocationPermission && isOverlayPermission && isBatteryUsagePermission && getValueToLocalStore TEST_FLOW_FOR_PERMISSIONS == "COMPLETED"
+  -- pure $ (androidVersion < 13 || isNotificationPermission) && isOverlayPermission && (not checkBattery || isBatteryUsagePermission)
+  pure $ isOverlayPermission && (not checkBattery || isBatteryUsagePermission)
 
 popUpScreenFlow :: AllocationData -> FlowBT String Unit
 popUpScreenFlow entityPayload = do
@@ -2774,7 +2829,7 @@ getUpiApps = do
 checkDriverBlockingStatus :: GetDriverInfoResp -> FlowBT String Unit
 checkDriverBlockingStatus (GetDriverInfoResp getDriverInfoResp) = do
   if any ( _ == (getValueToLocalStore ENABLE_BLOCKING)) ["__failed", "disable"] 
-    && ((getDriverInfoResp.autoPayStatus == Nothing && not isOnFreeTrial FunctionCall)
+    && ((getDriverInfoResp.autoPayStatus == Nothing && not isOnFreeTrial FunctionCall && getValueToLocalStore SHOW_SUBSCRIPTIONS == "true")
     || not getDriverInfoResp.subscribed)
            then do
       modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data{ paymentState {driverBlocked = true, subscribed = getDriverInfoResp.subscribed, showShimmer = not getDriverInfoResp.subscribed }}})
@@ -2794,18 +2849,24 @@ updateBannerAndPopupFlags = do
     pendingTotalManualDues = fromMaybe 0.0 getDriverInfoResp.manualDues
     subscriptionConfig = appConfig.subscriptionConfig
     freeTrialDays = fromMaybe 0 getDriverInfoResp.freeTrialDaysLeft
-    shouldShowPopup = getValueToLocalStore APP_SESSION_TRACK_COUNT == "true" && getValueToLocalNativeStore IS_RIDE_ACTIVE == "false" && (isOnFreeTrial FunctionCall || (pendingTotalManualDues /= 0.0)) && getDriverInfoResp.subscribed && appConfig.subscriptionConfig.enableSubscriptionPopups
+    shouldShowPopup = getValueToLocalStore APP_SESSION_TRACK_COUNT == "true" 
+                      && getValueToLocalNativeStore IS_RIDE_ACTIVE == "false" 
+                      && (isOnFreeTrial FunctionCall || (pendingTotalManualDues /= 0.0)) 
+                      && getDriverInfoResp.subscribed 
+                      && appConfig.subscriptionConfig.enableSubscriptionPopups
+                      && getValueToLocalStore SHOW_SUBSCRIPTIONS == "true"
     autoPayStatus = getAutopayStatus getDriverInfoResp.autoPayStatus
     autopayBannerType =
-      if subscriptionConfig.enableSubscriptionPopups then case autoPayNotActive, isOnFreeTrial FunctionCall, (pendingTotalManualDues /= 0.0) of
-        true, true, _ -> FREE_TRIAL_BANNER
-        _, false, true -> do
-          if pendingTotalManualDues < subscriptionConfig.lowDuesLimit then LOW_DUES_BANNER
-          else if pendingTotalManualDues >= subscriptionConfig.lowDuesLimit && pendingTotalManualDues < subscriptionConfig.highDueWarningLimit then CLEAR_DUES_BANNER
-          else if pendingTotalManualDues >= subscriptionConfig.highDueWarningLimit && pendingTotalManualDues < subscriptionConfig.maxDuesLimit then DUE_LIMIT_WARNING_BANNER
-          else NO_SUBSCRIPTION_BANNER
-        true, _, _ -> if isNothing getDriverInfoResp.autoPayStatus then NO_SUBSCRIPTION_BANNER else SETUP_AUTOPAY_BANNER
-        _, _, _ -> NO_SUBSCRIPTION_BANNER
+      if subscriptionConfig.enableSubscriptionPopups && getValueToLocalStore SHOW_SUBSCRIPTIONS == "true" then 
+        case autoPayNotActive, isOnFreeTrial FunctionCall, (pendingTotalManualDues /= 0.0) of
+          true, true, _ -> FREE_TRIAL_BANNER
+          _, false, true -> do
+            if pendingTotalManualDues < subscriptionConfig.lowDuesLimit then LOW_DUES_BANNER
+            else if pendingTotalManualDues >= subscriptionConfig.lowDuesLimit && pendingTotalManualDues < subscriptionConfig.highDueWarningLimit then CLEAR_DUES_BANNER
+            else if pendingTotalManualDues >= subscriptionConfig.highDueWarningLimit && pendingTotalManualDues < subscriptionConfig.maxDuesLimit then DUE_LIMIT_WARNING_BANNER
+            else NO_SUBSCRIPTION_BANNER
+          true, _, _ -> if isNothing getDriverInfoResp.autoPayStatus then NO_SUBSCRIPTION_BANNER else SETUP_AUTOPAY_BANNER
+          _, _, _ -> NO_SUBSCRIPTION_BANNER
       else NO_SUBSCRIPTION_BANNER
 
     subscriptionPopupType = case isOnFreeTrial FunctionCall, autoPayNotActive, shouldShowPopup of
@@ -2846,4 +2907,99 @@ updateBannerAndPopupFlags = do
                 }
               }
         )
+
+
+logoutFlow :: FlowBT String Unit
+logoutFlow = do
+  logField_ <- lift $ lift $ getLogFields
+  liftFlowBT $ logEvent logField_ "ny_driver_logout"
+  (LogOutRes resp) <- Remote.logOutBT LogOutReq
+  removeChatService ""
+  lift $ lift $ liftFlow $ stopLocationPollingAPI
+  deleteValueFromLocalStore REGISTERATION_TOKEN
+  deleteValueFromLocalStore VERSION_NAME
+  deleteValueFromLocalStore BASE_URL
+  deleteValueFromLocalStore TEST_FLOW_FOR_REGISTRATOION
+  deleteValueFromLocalStore IS_DRIVER_ENABLED
+  deleteValueFromLocalStore DRIVER_STATUS
+  deleteValueFromLocalStore BUNDLE_VERSION
+  deleteValueFromLocalStore DRIVER_ID
+  deleteValueFromLocalStore SET_ALTERNATE_TIME
+  deleteValueFromLocalStore ONBOARDING_SUBSCRIPTION_SCREEN_COUNT
+  deleteValueFromLocalStore FREE_TRIAL_DAYS
+  pure $ factoryResetApp ""
+  _ <- lift $ lift $ liftFlow $ logEvent logField_ "logout"
+  isLocationPermission <- lift $ lift $ liftFlow $ isLocationPermissionEnabled unit
+  if getValueToLocalStore DRIVER_LOCATION == "__failed" || getValueToLocalStore DRIVER_LOCATION == "--" || not isLocationPermission  then do
+    chooseCityFlow
+  else authenticationFlow ""
+
+runInternetCondition :: FlowBT String Unit
+runInternetCondition = do
+      internetAvailable <- lift $ lift $ liftFlow $ isInternetAvailable unit
+      unless internetAvailable $ noInternetScreenFlow "INTERNET_ACTION"
+
+chooseCityFlow :: FlowBT String Unit
+chooseCityFlow = do
+  lift $ lift $ doAff do liftEffect hideSplash
+  logField_ <- lift $ lift $ getLogFields
+  (GlobalState globalstate) <- getState
+  runInternetCondition
+  (API.GetCityRes resp) <- Remote.getMerchantOperatingCityListBT ""
+  let cityArray = map (\(API.CityRes item) -> (toUpper item.name)) (resp)
+      filteredArray = filter (\item -> (any (_ == (toUpper item.cityName)) cityArray)) globalstate.chooseCityScreen.data.config.cityConfig
+  void $ pure $ setCleverTapUserProp [{key : "Preferred Language", value : unsafeToForeign $ getValueFromConfig "defaultLanguage"}]
+  setValueToLocalStore LANGUAGE_KEY $ getValueFromConfig "defaultLanguage"
+  modifyScreenState $ ChooseCityScreenStateType (\chooseCityScreen -> chooseCityScreen { data {merchantOperatingCityConfig = filteredArray }})
+  chooseCityScreen <- UI.chooseCityScreen
+  case chooseCityScreen of
+    GET_LAT_LONGS state -> do
+      void $ lift $ lift $ loaderText (getString LOADING) (getString PLEASE_WAIT_WHILE_IN_PROGRESS)
+      void $ lift $ lift $ toggleLoader true
+      let currentDriverLat = fromMaybe 0.0 $ Number.fromString $ getValueToLocalNativeStore LAST_KNOWN_LAT
+      let currentDriverLon = fromMaybe 0.0 $ Number.fromString $ getValueToLocalNativeStore LAST_KNOWN_LON
+      (LatLon lat lon) <- getCurrentLocation currentDriverLat currentDriverLon currentDriverLat currentDriverLon 1000 false
+      let driverLat = fromMaybe 0.0 $ Number.fromString lat
+          driverLon = fromMaybe 0.0 $ Number.fromString lon
+          _ = spy "driver location" (show driverLat <> " " <> show driverLon)
+          distanceFromBangalore = getDistanceBwCordinates (fromMaybe 0.0 $ Number.fromString  lat) (fromMaybe 0.0 $ Number.fromString lon) 12.9716 77.5946
+          initialAccumulator = Tuple "Bangalore" distanceFromBangalore
+          result = foldl (\acc city -> closestCity acc city driverLat driverLon) initialAccumulator state.data.config.cityConfig      
+      void $ lift $ lift $ toggleLoader false
+      modifyScreenState $ ChooseCityScreenStateType (\chooseCityScreen -> chooseCityScreen { data {locationSelected = Just $ fst result}, props {radioMenuFocusedCity = fst result}})
+      chooseCityFlow
+    GoToWelcomeScreen -> authenticationFlow ""
+    REFRESH_SCREEN_CHOOSE_CITY state -> chooseCityFlow
+    _ -> do
+      let _ = spy "log a" ""
+      pure unit
+    where 
+      closestCity :: (Tuple String Number) -> CityConfig -> Number -> Number -> (Tuple String Number)
+      closestCity (Tuple cityName distance) city driverLat driverLon = do
+        let distanceFromCity = getDistanceBwCordinates driverLat driverLon city.cityLat city.cityLong
+        if distanceFromCity < distance then (Tuple city.cityName distanceFromCity) else (Tuple cityName distance)
+
+welcomeScreenFlow :: FlowBT String Unit
+welcomeScreenFlow = do
+  lift $ lift $ doAff do liftEffect hideSplash
+  logField_ <- lift $ lift $ getLogFields
+  internetAvailable <- lift $ lift $ liftFlow $ isInternetAvailable unit
+  unless internetAvailable $ noInternetScreenFlow "INTERNET_ACTION"
+  welcomeScreen <- UI.welcomeScreen
+  case welcomeScreen of
+    GoToMobileNumberScreen -> loginFlow
+
+getCityConfig :: Array CityConfig -> String -> CityConfig
+getCityConfig cityConfig cityName = do
+  let dummyCityConfig = {
+                          cityName : "",
+                          mapImage : "",
+                          cityCode : "",
+                          showSubscriptions : false,
+                          cityLat : 0.0,
+                          cityLong : 0.0,
+                          supportNumber : ""
+                        }
+  fromMaybe dummyCityConfig $ find (\item -> item.cityName == cityName) cityConfig
+
 

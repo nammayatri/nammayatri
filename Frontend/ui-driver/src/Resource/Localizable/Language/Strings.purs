@@ -20,7 +20,7 @@ import Language.Types (STR, getStringFromEnum)
 import MerchantConfig.Utils (getENStrings, getStringFromConfig, getStringWithVar)
 import Prelude (($))
 
-data Language = EN_US | KN_IN | HI_IN | TA_IN 
+data Language = EN_US | KN_IN | HI_IN | TA_IN | TE_IN
 
 getString :: STR -> String
 getString key = getStringFromConfig $ trim $ getStringFromEnum key

@@ -15,14 +15,14 @@
 
 module Screens.AddVehicleDetailsScreen.Handler where
 
-import Engineering.Helpers.BackTrack (getState)
-import Prelude (bind, pure, ($), (<$>), discard)
-import Screens.AddVehicleDetailsScreen.Controller (ScreenOutput(..))
 import Control.Monad.Except.Trans (lift)
 import Control.Transformers.Back.Trans (BackT(..), FailBack(..)) as App
+import Engineering.Helpers.BackTrack (getState)
+import Prelude (bind, pure, ($), (<$>), discard)
 import PrestoDOM.Core.Types.Language.Flow (runScreen)
+import Screens.AddVehicleDetailsScreen.Controller (ScreenOutput(..))
 import Screens.AddVehicleDetailsScreen.Views as AddVehicleDetailsScreen
-import Types.App (FlowBT, GlobalState(..),ADD_VEHICLE_DETAILS_SCREENOUTPUT(..), ScreenType(..))
+import Types.App (FlowBT, GlobalState(..), ADD_VEHICLE_DETAILS_SCREENOUTPUT(..), ScreenType(..))
 import Types.ModifyScreenState (modifyScreenState)
 
 
@@ -35,10 +35,17 @@ addVehicleDetails = do
       modifyScreenState $ AddVehicleDetailsScreenStateType $ \addVehicleDetailsScreen -> updatedState
       modifyScreenState $ AddVehicleDetailsScreenStateType $ \addVehicleDetailsScreen -> addVehicleDetailsScreen { props {errorVisibility = false}, data {errorMessage = ""}}
       App.BackT $ App.NoBack <$> (pure $ if updatedState.props.addRcFromProfile then DRIVER_PROFILE_SCREEN else ONBOARDING_FLOW)
-    GoToApplicationSubmitted updatedState -> do
+    ValidateDetails updatedState -> do
       modifyScreenState $ AddVehicleDetailsScreenStateType (\addVehicleDetailsScreen -> updatedState)
-      App.BackT $ App.NoBack <$> (pure $ GO_TO_APPLICATION_SCREEN updatedState)
-    ValidateImageAPICall updatedState -> App.BackT $ App.NoBack <$> (pure $ VALIDATE_IMAGE_API_CALL updatedState)
+      App.BackT $ App.NoBack <$> (pure $ VALIDATE_DETAILS updatedState)
+    ValidateDataAPICall updatedState -> do
+      modifyScreenState $ AddVehicleDetailsScreenStateType (\addVehicleDetailsScreen -> updatedState)
+      App.BackT $ App.NoBack <$> (pure $ VALIDATE_RC_DATA_API_CALL updatedState)
     ReferApiCall updatedState -> App.BackT $ App.BackPoint <$> (pure $ REFER_API_CALL updatedState)
     ApplicationSubmittedScreen -> App.BackT $ App.BackPoint <$> (pure $ APPLICATION_STATUS_SCREEN)
     LogoutAccount -> App.BackT $ App.BackPoint <$> pure LOGOUT_USER
+    GoToRegisteration  -> App.BackT $ App.BackPoint <$> pure ONBOARDING_FLOW
+    GoToDriverProfile -> App.BackT $ App.BackPoint <$> pure DRIVER_PROFILE_SCREEN
+    ActivateRC updatedState -> do
+      modifyScreenState $ AddVehicleDetailsScreenStateType (\addVehicleDetailsScreen -> updatedState)
+      App.BackT $ App.NoBack <$> (pure $ RC_ACTIVATION updatedState)

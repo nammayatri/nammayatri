@@ -15,17 +15,30 @@
 
 module Screens.EnterMobileNumberScreen.ComponentConfig where
 
-import Components.PrimaryButton as PrimaryButton
 import Language.Strings
-import Language.Types (STR(..))
 import PrestoDOM
+
+import Common.Types.App as Common
+import Components.PrimaryButton as PrimaryButton
+import Components.PrimaryEditText as PrimaryEditText
+import Components.StepsHeaderModal as StepsHeaderModal
+import Components.MobileNumberEditor as MobileNumberEditor
+import Data.Maybe (Maybe(..))
+import Engineering.Helpers.Commons as EHC
+import Font.Size as FontSize
+import Font.Style as FontStyle
+import JBridge as JB
+import Language.Types (STR(..))
+import Prelude (not)
+import Resource.Constants as Constant
 import Screens.Types as ST
+import Styles.Colors as Color
 
 primaryButtonViewConfig :: ST.EnterMobileNumberScreenState -> PrimaryButton.Config
 primaryButtonViewConfig state = let
     config = PrimaryButton.config
     primaryButtonConfig' = config 
-      { textConfig{ text = (getString NEXT) }
+      { textConfig{ text = (getString CONTINUE) }
       , id = "PrimaryButtonMobileNumber"
       , isClickable = state.props.btnActive
       , alpha = if state.props.btnActive then 1.0 else 0.6
@@ -34,3 +47,103 @@ primaryButtonViewConfig state = let
       , margin = (Margin 0 0 0 0)
       }
   in primaryButtonConfig'
+
+stepsHeaderModalConfig :: ST.EnterMobileNumberScreenState -> StepsHeaderModal.Config
+stepsHeaderModalConfig state = let
+    config = StepsHeaderModal.config 0
+    stepsHeaderConfig' = config 
+     {
+      stepsViewVisibility = false,
+      profileIconVisibility = false,
+      driverNumberVisibility = false,
+      logoutVisibility = false,
+      customerTextArray = [],
+      driverTextArray = Constant.driverTextArray Common.FunctionCall,
+      rightButtonText = getString LOGOUT,
+      activeIndex = 0
+     }
+  in stepsHeaderConfig'
+
+mobileNumberButtonConfig :: ST.EnterMobileNumberScreenState -> PrimaryButton.Config
+mobileNumberButtonConfig state = let 
+    config = PrimaryButton.config
+    primaryButtonConfig' = config 
+      { textConfig{ text = (getString CONTINUE) }
+      , id = "PrimaryButtonMobileNumber"
+      , isClickable = state.props.btnActive
+      , alpha = if state.props.btnActive then 1.0 else 0.4
+      , margin = (Margin 0 0 0 0 )
+      , enableLoader = (JB.getBtnLoader "PrimaryButtonMobileNumber")
+      }
+  in primaryButtonConfig'
+
+mobileNumberEditTextConfig :: ST.EnterMobileNumberScreenState -> PrimaryEditText.Config
+mobileNumberEditTextConfig state = let 
+    config = PrimaryEditText.config
+    primaryEditTextConfig' = config
+      { editText
+        {
+            color = Color.black800
+          , singleLine = true
+          , pattern = Just "[0-9]*,10"
+          -- , fontStyle = FontStyle.bold LanguageStyle
+          -- , textSize = FontSize.a_16
+          , margin = MarginHorizontal 10 10
+          , focused = state.props.mobileNumberEditFocused
+          --, text = state.data.mobileNumber
+        }
+      , background = Color.white900
+      , topLabel
+        { 
+          -- textSize = FontSize.a_14
+          text = "Enter your Mobile number"
+        , color = Color.black800
+        -- , fontStyle = FontStyle.semiBold LanguageStyle
+        , alpha = 0.8
+        }
+      , id = (EHC.getNewIDWithTag "EnterMobileNumberEditText")
+      , type = "number"
+      , height = V 54
+      , margin = MarginTop 30
+      , showErrorLabel = (not state.props.isValid)
+      , errorLabel
+        { text = (getString INVALID_MOBILE_NUMBER)
+        }
+      , showConstantField = true
+      , constantField { 
+          --color = if state.props.mNumberEdtFocused then Color.black800 else Color.grey900 
+        --  textSize = FontSize.a_16
+         padding = PaddingBottom 1
+        }
+      }
+    in primaryEditTextConfig'
+
+mobileNumberConfig :: ST.EnterMobileNumberScreenState -> MobileNumberEditor.Config
+mobileNumberConfig state = let 
+  config = MobileNumberEditor.config 
+  mobileNumberEditor' = config 
+    { editText
+      { color = Color.black800
+      , singleLine = true 
+      , pattern = Just "[0-9]*,10"
+      , margin = MarginHorizontal 10 0
+      , text = ""
+      , placeholder = "9999999999"
+      , padding = Padding 0 16 16 16
+      }
+    , showCountryCodeField = false
+    , topLabel
+      { text = (getString ENTER_YOUR_MOBILE_NUMBER)
+      , color = Color.black800
+      , accessibility = DISABLE
+      , textStyle = FontStyle.SubHeading1
+      }
+    , type = "number"
+    , id = (EHC.getNewIDWithTag "EnterMobileNumberEditText")
+    , errorLabel
+        { text = (getString INVALID_MOBILE_NUMBER)
+        , margin = MarginBottom 1
+        }
+    , showErrorLabel = state.props.isValid
+    }
+  in mobileNumberEditor'

@@ -135,7 +135,7 @@ foreign import preFetch :: Effect (Array RenewFile)
 foreign import renewFile :: EffectFn3 String String (AffSuccess Boolean) Unit
 
 foreign import getDateAfterNDays :: Int -> String
-foreign import  downloadQR  :: String -> Effect Unit
+foreign import downloadQR  :: String -> Effect Unit
 
 foreign import _generateQRCode :: EffectFn5 String String Int Int (AffSuccess String) Unit
 
@@ -453,7 +453,8 @@ onBoardingSubscriptionScreenCheck onBoardingSubscriptionViewCount isEnabled = is
                                                                               getValueToLocalNativeStore DRIVER_SUBSCRIBED == "false" && 
                                                                               even onBoardingSubscriptionViewCount && 
                                                                               onBoardingSubscriptionViewCount <5 && 
-                                                                              isOnFreeTrial FunctionCall
+                                                                              isOnFreeTrial FunctionCall && 
+                                                                              getValueToLocalNativeStore SHOW_SUBSCRIPTIONS == "true"
 
 getVehicleVariantImage :: String -> String
 getVehicleVariantImage variant =

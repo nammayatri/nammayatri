@@ -6,13 +6,13 @@ if (typeof __VERSION__ !== 'undefined') {
 window.version["configuration"]= version;
 window.getMerchantConfig = function () {
   return JSON.stringify({
-    "RC_VALIDATION_TEXT": "KA|AP|TS|DL",
+    "RC_VALIDATION_TEXT": "KA|AP|TS|DL|TN",
     "DOCUMENT_LINK": "https://drive.google.com/file/d/1qYXbQUF4DVo2xNOawkHNTR_VVe46nggc",
     "APP_LINK": "https://play.google.com/store/apps/details?id=in.juspay.nammayatripartner",
     "USER_APP_LINK": "https://nammayatri.in/link/rider/mvnw",
     "PRIVACY_POLICY_LINK": "https://docs.google.com/document/d/1tF96MwtaEiq70y_P40E29Sy3X61moTc9",
     "SPECIAL_ZONE_OTP_VIEW": "false",
-    "StringKeys": ["WELCOME_TEXT", "ABOUT_TEXT", "NEED_IT_TO_ENABLE_LOCATION", "CURRENTLY_WE_ALLOW_ONLY_KARNATAKA_REGISTERED_NUMBER", "YOU_ARE_ABOUT_TO_CALL_NAMMA_YATRI_SUPPORT", "YOUR_LOCATION_HELPS_OUR_SYSTEM", "WHAT_IS_NAMMA_YATRI_BONUS", "EARNED_ON_APP", "TRAVELLED_ON_APP"],
+    "StringKeys": ["WELCOME_TEXT", "ABOUT_TEXT", "NEED_IT_TO_ENABLE_LOCATION", "CURRENTLY_WE_ALLOW_ONLY_KARNATAKA_REGISTERED_NUMBER", "YOU_ARE_ABOUT_TO_CALL_NAMMA_YATRI_SUPPORT", "YOUR_LOCATION_HELPS_OUR_SYSTEM", "WHAT_IS_NAMMA_YATRI_BONUS", "EARNED_ON_APP", "TRAVELLED_ON_APP", "GUARANTEED_FIXED_PRICE", "GET_READY_FOR_YS_SUBSCRIPTION"],
     "fontType": "Assets",
     "currency": "₹",
     "isGradient" : "false",
@@ -30,7 +30,8 @@ window.getMerchantConfig = function () {
       {"name":"English","value":"EN_US", "subtitle": "ಆಂಗ್ಲ"}, 
       {"name":"ಕನ್ನಡ","value":"KN_IN", "subtitle": "Kannada"},
       {"name":"हिंदी","value":"HI_IN", "subtitle": "Hindi"},
-      {"name":"தமிழ்","value":"TA_IN", "subtitle": "Tamil"}
+      {"name":"தமிழ்","value":"TA_IN", "subtitle": "Tamil"},
+      {"name":"తెలుగు","value":"TE_IN", "subtitle": "Telugu"}
     ],
     "engilshInNative" : "ಆಂಗ್ಲ",
     "englishStrings": {
@@ -41,8 +42,10 @@ window.getMerchantConfig = function () {
       "YOU_ARE_ABOUT_TO_CALL_NAMMA_YATRI_SUPPORT": "You are about to place a call to the Namma Yatri Support Team. Do you want to proceed?",
       "YOUR_LOCATION_HELPS_OUR_SYSTEM": "Your location helps our system to map down all the near by autos and get you the quickest ride possible.",
       "WHAT_IS_NAMMA_YATRI_BONUS" : "What is Namma Yatri Bonus?",
-      EARNED_ON_APP : "Earned on NY",
-      TRAVELLED_ON_APP : "Travelled On Namma Yatri"
+      "EARNED_ON_APP" : "Earned on NY",
+      "TRAVELLED_ON_APP" : "Travelled On Namma Yatri",
+      "GUARANTEED_FIXED_PRICE" : "Guaranteed fixed price until \nApr 1, 2025",
+      "GET_READY_FOR_YS_SUBSCRIPTION" : "Get ready for\nNamma Yatri Plans!"
     },
     "hindiStrings": {
       "WELCOME_TEXT": "Welcome to the Namma Yatri Driver",
@@ -53,7 +56,9 @@ window.getMerchantConfig = function () {
       "YOUR_LOCATION_HELPS_OUR_SYSTEM": "आपका स्थान हमारे सिस्टम को आस पास के सभी ऑटो को मैप करने में सहायता कर्ता है और आपको सबसे तेज सवारी प्रदान करता है",
       "WHAT_IS_NAMMA_YATRI_BONUS" : "नम्मा यात्री बोनस क्या है?",
       "EARNED_ON_APP" : "NY पर अर्जित मूल्य",
-      "TRAVELLED_ON_APP" : "नम्मा यात्री पर तय की गई दूरी"
+      "TRAVELLED_ON_APP" : "नम्मा यात्री पर तय की गई दूरी",
+      "GUARANTEED_FIXED_PRICE" : "अप्रैल 1, 2025 तक निश्चित मूल्य गारंटी",
+      "GET_READY_FOR_YS_SUBSCRIPTION" : "नम्मा यात्री योजनाओं के लिए के लिए तैयार हो जाइए!"
     },
     "kannadaStrings": {
       "WELCOME_TEXT": "Welcome to the Namma Yatri Driver",
@@ -64,7 +69,9 @@ window.getMerchantConfig = function () {
       "YOUR_LOCATION_HELPS_OUR_SYSTEM": "ನಿಮ್ಮ ಸ್ಥಳವು ನಮ್ಮ ಸಿಸ್ಟಂ ಅನ್ನು ಆಟೋಗಳ ಮೂಲಕ ನಕ್ಷೆ ಮಾಡಲು ಸಹಾಯ ಮಾಡುತ್ತದೆ ಮತ್ತು ನಿಮಗೆ ಸಾಧ್ಯವಿರುವ ವೇಗದ ಸವಾರಿಯನ್ನು ನೀಡುತ್ತದೆ.",
       "WHAT_IS_NAMMA_YATRI_BONUS" : "ನಮ್ಮ ಯಾತ್ರಿ ಬೋನಸ್ ಎಂದರೇನು?",
       "EARNED_ON_APP" : "NY ನಲ್ಲಿ ಗಳಿಸಿದ ಬೆಲೆ",
-      "TRAVELLED_ON_APP" : "ನಮ್ಮ ಯಾತ್ರಿಯಲ್ಲಿ ಪ್ರಯಾಣಿಸಿದೆ"
+      "TRAVELLED_ON_APP" : "ನಮ್ಮ ಯಾತ್ರಿಯಲ್ಲಿ ಪ್ರಯಾಣಿಸಿದೆ",
+      "GUARANTEED_FIXED_PRICE" : "ಅಪ್ರೈಲ್ 1, 2025 ವರೆಗೆ ಖಚಿತ ಬೆಲೆಯ ಗ್ಯಾರಂಟಿ",
+      "GET_READY_FOR_YS_SUBSCRIPTION" : "ನಮ್ಮ ಯಾತ್ರಿ ಯೋಜನೆಗಳಿಗೆ ಸಿದ್ಧತೆ ಪಡೆಯಲು ಸಿದ್ಧವಾಗಿರಿ!"
     },
     "tamilStrings": {
       "WELCOME_TEXT": "Welcome to the Namma Yatri Driver",
@@ -75,7 +82,22 @@ window.getMerchantConfig = function () {
       "YOUR_LOCATION_HELPS_OUR_SYSTEM": "உங்கள் இருப்பிடம் எங்கள் கணினியை ஆட்டோக்கள் மூலம் அருகிலுள்ள அனைத்து வரைபடத்தையும், விரைவாக சவாரி செய்ய உதவுகிறது.",
       "WHAT_IS_NAMMA_YATRI_BONUS" : "நம்ம யாத்ரி போனஸ் என்றால் என்ன?",
       "EARNED_ON_APP" : "NY இல் பெறப்பட்ட விலை",
-      "TRAVELLED_ON_APP" : "நம்ம யாத்ரியில் நடந்த தூரம்"
+      "TRAVELLED_ON_APP" : "நம்ம யாத்ரியில் நடந்த தூரம்",
+      "GUARANTEED_FIXED_PRICE" : "2025 ஆம் ஆண்டு ஏப்ரல் 1 வரை உறுதியான விலை",
+      "GET_READY_FOR_YS_SUBSCRIPTION" : "நம்ம யாத்ரி திட்டங்களுக்கு தயாராக இருங்கள்!"
+    },
+    "teluguStrings": {
+      "WELCOME_TEXT": "నమ్మ యాత్రి డ్రైవర్‌కు స్వాగతం",
+      "ABOUT_TEXT": "నమ్మ యాత్రి పార్ట్‌నెర్ ఒక డ్రైవర్లను రైడర్లతో కనెక్ట్ చేయడానికి ప్రారంభించిన ఒక మౌఖిక దర్పణం. యాప్‌ని డ్రైవర్లకు సూచించిన కొనుగోలుతో రైడర్లను కనుగొలుచేస్తుంది. రైడు ఆధారిత కమిషన్ లేదా వారికి చెల్లించిన డేయిలీ సబ్‌స్క్రిప్షన్ రూపంలో చిన్నమైన మొత్తం చెల్లించండి",
+      "NEED_IT_TO_ENABLE_LOCATION": "నమ్మ యాత్రి పార్ట్‌నెర్ లొకేషన్ డేటాను కలెక్ట్ చేస్తుంది, డ్రైవర్ ప్రస్తుత స్థానాన్ని మానిటర్ చేసేందుకు, ఆప్ మూసివేయబడినా లేదా అనావరణలో ఉండకుండా.",
+      "CURRENTLY_WE_ALLOW_ONLY_KARNATAKA_REGISTERED_NUMBER": "ప్రస్తుతం, ఈ వాహన నమ్బర్‌తో మాకు పనిచేయడం లేదు",
+      "YOU_ARE_ABOUT_TO_CALL_NAMMA_YATRI_SUPPORT": "మీరు నమ్మ యాత్రి సపోర్ట్ టీమ్‌కు ఫోన్ చేయాలనుకుంటున్నారు. మీరు కొనసాగాలా?",
+      "YOUR_LOCATION_HELPS_OUR_SYSTEM": "మీ స్థానం మా సిస్టమ్‌ను అన్వయించడంతో అన్ని చికిత్సాలను నక్షారూపం చేసుకోవడం సాధారణం.",
+      "WHAT_IS_NAMMA_YATRI_BONUS" : "నమ్మ యాత్రి బోనస్ అంటే ఏమిటి?",
+      "EARNED_ON_APP" : "యొక్క ఆర్జి",
+      "TRAVELLED_ON_APP" : "నమ్మ యాత్రిలో పయణించినది",
+      "GUARANTEED_FIXED_PRICE" : "ఏప్రిల్ 1, 2025 వరకు స్థిర ధరకు హామీ ఇవ్వబడుతుంది",
+      "GET_READY_FOR_YS_SUBSCRIPTION" : "నమ్మ యాత్రి ప్రణాళికల కోసం సిద్ధంగా ఉండండి!"
     },
     "logs": ["JUSPAY","FIREBASE","CLEVERTAP"]
     , "fontName" : "PlusJakartaSans"

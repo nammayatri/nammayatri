@@ -30,18 +30,18 @@ instance loggableAction :: Loggable Action where
                 trackAppBackPress appId (getScreen ONBOARDING_SUBSCRIPTION_SCREEN)
                 trackAppEndScreen appId (getScreen ONBOARDING_SUBSCRIPTION_SCREEN)
         NoAction -> trackAppScreenEvent appId (getScreen ONBOARDING_SUBSCRIPTION_SCREEN) "in_screen" "no_action"
-        GoToHomeScreen -> do
+        GoToRegisteration -> do
                 trackAppEndScreen appId (getScreen ONBOARDING_SUBSCRIPTION_SCREEN)
         CallSupport -> trackAppScreenEvent appId (getScreen ONBOARDING_SUBSCRIPTION_SCREEN) "in_screen" "call_support"
         SelectPlan config -> trackAppScreenEvent appId (getScreen ONBOARDING_SUBSCRIPTION_SCREEN) "in_screen" "select_plan"
         JoinPlanAC act -> trackAppScreenEvent appId (getScreen ONBOARDING_SUBSCRIPTION_SCREEN) "in_screen" "join_plan"
         _ -> pure unit
 
-data ScreenOutput =  GoBack | GoToHome | StartFreeTrialExit OnBoardingSubscriptionScreenState
+data ScreenOutput =  GoBack | GoToRegisterationScreen OnBoardingSubscriptionScreenState | StartFreeTrialExit OnBoardingSubscriptionScreenState
 
 data Action = BackPressed
             | NoAction
-            | GoToHomeScreen
+            | GoToRegisteration
             | LoadPlans UiPlansResp
             | SelectPlan PlanCardConfig
             | JoinPlanAC PrimaryButton.Action
@@ -50,7 +50,7 @@ data Action = BackPressed
 eval :: Action -> OnBoardingSubscriptionScreenState -> Eval Action ScreenOutput OnBoardingSubscriptionScreenState
 eval BackPressed state = exit GoBack
 eval NoAction state = continue state
-eval GoToHomeScreen state = exit GoToHome
+eval GoToRegisteration state = exit $ GoToRegisterationScreen state
 eval (LoadPlans plans) state = do
     let (UiPlansResp planResp) = plans
         config = state.data.subscriptionConfig

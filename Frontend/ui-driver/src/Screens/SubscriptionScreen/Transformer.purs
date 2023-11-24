@@ -123,7 +123,7 @@ introductoryOfferConfig lazy =
     isGradient : true,
     gradient : [Color.blue600, Color.blue600],
     hasImage : true,
-    imageURL : fetchImage FF_ASSET "ny_ic_discount",
+    imageURL : fetchImage FF_ASSET "ny_ic_lock",
     offerDescription : Just $ getString NO_CHARGES_TILL,
     addedFromUI : false
     }
@@ -145,7 +145,7 @@ alternatePlansTransformer (UiPlansResp planResp) state =
     let planEntityArray = planResp.list
         alternatePlansArray = (DA.filter(\(PlanEntity item) -> item.id /= state.data.myPlanData.planEntity.id) planEntityArray)
         isLocalized = fromMaybe false planResp.isLocalized
-    in map (\ planEntity -> getPlanCardConfig planEntity isLocalized false state.data.config.gradientConfig) alternatePlansArray
+    in map (\ planEntity -> getPlanCardConfig planEntity isLocalized false state.data.config.subscriptionConfig.gradientConfig) alternatePlansArray
 
 
 getAutoPayDetailsList :: MandateData -> Array KeyValType
@@ -250,13 +250,13 @@ getPlanAmountConfig plan = case plan of
 introductoryPlanConfig :: LazyCheck -> PlanCardConfig
 introductoryPlanConfig lazy =  {
     id : "dummy",
-    title : getString DAILY_PER_RIDE,
+    title : getString DAILY_UNLIMITED,
     description : "",
     isSelected : true,
-    frequency : "PER_RIDE",
+    frequency : "PER_DAY",
     freeRideCount : 0,
     offers : [introductoryOfferConfig Language],
-    priceBreakup : [PaymentBreakUp{amount: 10.0, component: "FINAL_FEE"}],
+    priceBreakup : [PaymentBreakUp{amount: 25.0, component: "FINAL_FEE"}],
     showOffer : true
 } 
 
