@@ -798,4 +798,6 @@ const frenchStrings = {
   GALLERY : "Galerie",
   GET_FULL_PAYMENT : "Obtenez un paiement complet",
   SELECT_CITY_STR : "Sélectionnez la ville",
+  WE_ARE_NOT_LIVE_IN_YOUR_AREA : "Nous ne sommes pas encore en direct dans votre région !\nBientôt dans votre ville !",
+  LOCATION_UNSERVICEABLE : "Emplacement inutilisable"
 }

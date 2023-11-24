@@ -1042,7 +1042,9 @@ const kannadaStrings = {
   RC_IN_PROGRESS_DESC : "ಒಮ್ಮೆ ಪರಿಶೀಲಿಸಿದ ನಂತರ ನಿಮ್ಮ ಪ್ರೊಫೈಲ್‌ಗೆ RC ಅನ್ನು ಸೇರಿಸಲಾಗುತ್ತದೆ",
   RC_VERIFICATION_SUCCESS : "ಆರ್‌ಸಿ ಪರಿಶೀಲನೆ ಯಶಸ್ವಿಯಾಗಿದೆ!",
   RC_VERIFICATION_FAILED_STATUS : "RC ಪರಿಶೀಲನೆ ವಿಫಲವಾಗಿದೆ!",
-  RC_VERIFICATION_IN_PROGRESS : "ಆರ್‌ಸಿ ಪರಿಶೀಲನೆ ಪ್ರಗತಿಯಲ್ಲಿದೆ..."
+  RC_VERIFICATION_IN_PROGRESS : "ಆರ್‌ಸಿ ಪರಿಶೀಲನೆ ಪ್ರಗತಿಯಲ್ಲಿದೆ...",
+  WE_ARE_NOT_LIVE_IN_YOUR_AREA : "ನಾವು ಇನ್ನೂ ನಿಮ್ಮ ಪ್ರದೇಶದಲ್ಲಿ ವಾಸಿಸುತ್ತಿಲ್ಲ!\nನಿಮ್ಮ ನಗರಕ್ಕೆ ಶೀಘ್ರದಲ್ಲೇ ಬರಲಿದೆ!",
+  LOCATION_UNSERVICEABLE : "ಸ್ಥಳ ಸೇವೆಗೆ ಅರ್ಹವಲ್ಲ"
 }
 
 

@@ -422,4 +422,4 @@ data DRIVE_SAVED_LOCATION_OUTPUT = EXIT_FROM_SCREEN
                       
 data WELCOME_SCREEN_OUTPUT = GoToMobileNumberScreen
 
-data CHOOSE_CITY_SCREEN_OUTPUT = GoToWelcomeScreen | GET_LAT_LONGS ChooseCityScreenState | REFRESH_SCREEN_CHOOSE_CITY ChooseCityScreenState
+data CHOOSE_CITY_SCREEN_OUTPUT = GoToWelcomeScreen | REFRESH_SCREEN_CHOOSE_CITY ChooseCityScreenState

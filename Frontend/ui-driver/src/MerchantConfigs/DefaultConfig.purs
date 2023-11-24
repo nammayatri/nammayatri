@@ -106,6 +106,7 @@ config =
   , mapConfig : 
       { animationDuration : 500
       }
+  , unserviceableThreshold : 250.0
   , cityConfig : [
             {
               cityName : "Bangalore",

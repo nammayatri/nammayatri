@@ -171,22 +171,30 @@ currentLocationView state push =
       [ height $ V 220
       , width $ V 220
       , imageWithFallback $ fetchImage FF_ASSET (getLocationMapImage state.data.locationSelected)
-      
       ]
     , textView $
-      [ text $ getString case state.data.locationDetectionFailed, Mb.isNothing state.data.locationSelected of
-                            false, true -> DETECTING_LOCATION
-                            true, true -> UNABLE_TO_DETECT_YOUR_LOCATION
-                            _, false -> YOUR_DETECTED_LOCATION_IS
+      [ text $ getString LOCATION_UNSERVICEABLE
+      , gravity CENTER
+      , color Color.black800
+      , margin $ MarginTop 4
+      , visibility if state.props.locationUnserviceable then VISIBLE else GONE
+      ] <> FontStyle.h2 TypoGraphy
+    , textView $
+      [ text $ getString case state.data.locationDetectionFailed, Mb.isNothing state.data.locationSelected, state.props.locationUnserviceable of
+                            _ , _ , true -> WE_ARE_NOT_LIVE_IN_YOUR_AREA
+                            false, true, _ -> DETECTING_LOCATION
+                            true, true, _ -> UNABLE_TO_DETECT_YOUR_LOCATION
+                            _, false, _ -> YOUR_DETECTED_LOCATION_IS
       , gravity CENTER
       , color Color.black700
-      , margin $ MarginTop 24
+      , margin $ MarginTop if state.props.locationUnserviceable then 4 else 24
       ] <> FontStyle.paragraphText TypoGraphy
     , textView $
       [ text if Mb.isJust state.data.locationSelected then (Mb.fromMaybe "--" state.data.locationSelected) else "--"
       , gravity CENTER
       , color Color.black800
       , margin $ MarginTop 4
+      , visibility if state.props.locationUnserviceable then GONE else VISIBLE
       ] <> FontStyle.priceFont TypoGraphy
     , textView $
       [ text $ getString if Mb.isJust state.data.locationSelected then CHANGE_CITY else SELECT_CITY_STR
@@ -194,6 +202,7 @@ currentLocationView state push =
       , color Color.blue800
       , margin $ MarginTop 16
       , onClick push $ const $ ChangeStage SELECT_CITY
+      , visibility GONE -- Disable change city for now
       ] <> FontStyle.tags TypoGraphy
   ]
 

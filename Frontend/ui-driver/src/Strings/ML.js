@@ -1015,7 +1015,9 @@ const mlStrings = {
   RC_IN_PROGRESS_DESC : "പരിശോധിച്ചുറപ്പിച്ചുകഴിഞ്ഞാൽ RC നിങ്ങളുടെ പ്രൊഫൈലിലേക്ക് ചേർക്കും",
   RC_VERIFICATION_SUCCESS : "ആർസി പരിശോധിച്ചുറപ്പിക്കൽ വിജയിച്ചു!",
   RC_VERIFICATION_FAILED_STATUS : "ആർസി പരിശോധന പരാജയപ്പെട്ടു!",
-  RC_VERIFICATION_IN_PROGRESS : "ആർസി വെരിഫിക്കേഷൻ പുരോഗമിക്കുകയാണ്..."
+  RC_VERIFICATION_IN_PROGRESS : "ആർസി വെരിഫിക്കേഷൻ പുരോഗമിക്കുകയാണ്...",
+  WE_ARE_NOT_LIVE_IN_YOUR_AREA : "ഞങ്ങൾ ഇതുവരെ നിങ്ങളുടെ പ്രദേശത്ത് താമസിക്കുന്നില്ല!\nനിങ്ങളുടെ നഗരത്തിലേക്ക് ഉടൻ വരുന്നു!",
+  LOCATION_UNSERVICEABLE : "ലൊക്കേഷൻ ഉപയോഗയോഗ്യമല്ല"
 }
 
 export function getStringValue(key) {
