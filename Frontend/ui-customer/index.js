@@ -260,8 +260,9 @@ window["onEvent'"] = function (_event, args) {
     purescript.onBundleUpdatedEvent(JSON.parse(args))();
   } else if ((_event == "onKeyboardOpen" || _event == "onKeyboardClose") && window.keyBoardCallback) {
     window.keyBoardCallback(_event);
+  } else {
+    purescript.onEvent(_event)();
   }
-  purescript.onEvent(_event)();
 }
 
 window["onEvent"] = function (jsonPayload, args, callback) { // onEvent from hyperPay
