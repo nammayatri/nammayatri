@@ -48,3 +48,8 @@ mkServantAPI :: FilePath -> String -> IO ()
 mkServantAPI filePath dsl = do
   let apiDef = processAPIDSL dsl
   writeToFile (filePath ++ "/" ++ T.unpack (head (map _moduleName apiDef)) ++ ".hs") (generateServantAPI apiDef)
+
+mkDomainHandler :: FilePath -> String -> IO ()
+mkDomainHandler filePath dsl = do
+  let apiDef = processAPIDSL dsl
+  writeToFile (filePath ++ "/" ++ T.unpack (head (map _moduleName apiDef)) ++ ".hs") (generateDomainHandler apiDef)
