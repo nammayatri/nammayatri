@@ -59,6 +59,7 @@ data DriverEndpoint
   | SetVehicleDriverRcStatusForFleetEndpoint
   | FleetUnlinkVehicleEndpoint
   | SendMessageToDriverViaDashboardEndPoint
+  | SendDummyNotificationToDriverViaDashboardEndPoint
   deriving (Show, Read)
 
 derivePersistField "DriverEndpoint"
@@ -1000,3 +1001,11 @@ type GetFleetVehicleAssociationAPI =
 --   | SILENT
 --   deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 --   deriving (PrettyShow) via Showable DriverMode
+
+---------------------------------------------------------
+-- Send dummy notification to driver ---------------------
+
+type SendDummyNotificationToDriverAPI =
+  Capture "driverId" (Id Driver)
+    :> "sendDummyNotification"
+    :> Post '[JSON] APISuccess

@@ -188,6 +188,7 @@ data UserActionType
   | GET_VEHICLE_ASSOCIATION
   | SEND_DASHBOARD_MESSAGE
   | VERIFY_BOOKING_DETAILS
+  | SEND_DUMMY_NOTIFICATION
   deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 genSingletons [''UserActionType]
