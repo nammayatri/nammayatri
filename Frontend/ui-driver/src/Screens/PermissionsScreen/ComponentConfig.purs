@@ -15,30 +15,53 @@
 
 module Screens.PermissionsScreen.ComponentConfig where
 
-import Common.Types.App
-import Components.PrimaryButton as PrimaryButton
-import Font.Size as FontSize
 import Language.Strings
-import Language.Types (STR(..))
 import Prelude
 import PrestoDOM
+
+import Common.Types.App as Common
+import Components.PopUpModal as PopUpModal
+import Components.PrimaryButton as PrimaryButton
+import Components.StepsHeaderModal as StepsHeaderModel
+import Data.Maybe (Maybe(..))
+import Font.Size as FontSize
+import Font.Style as FontStyle
+import Language.Types (STR(..))
+import Resource.Constants as Constant
 import Screens.Types as ST
 import Styles.Colors as Color
 
 primaryButtonConfig :: ST.PermissionsScreenState -> PrimaryButton.Config
 primaryButtonConfig state = let 
     config = PrimaryButton.config
+    isEnabled = (state.props.isOverlayPermissionChecked && state.props.isAutoStartPermissionChecked)
     primaryButtonConfig' = config 
       { textConfig
-      { text = (getString ALLOW_ACCESS)
+      { text = (getString CONTINUE)
       , color = Color.primaryButtonColor
       }
-      , margin = (Margin 0 0 0 0)
-      , cornerRadius = 0.0
       , background = Color.black900
-      , height = (V 60)
-      , alpha = if(state.props.isLocationPermissionChecked && state.props.isOverlayPermissionChecked && state.props.isAutoStartPermissionChecked) then 1.0 else 0.7
-      , isClickable = (state.props.isLocationPermissionChecked && state.props.isOverlayPermissionChecked && state.props.isAutoStartPermissionChecked)
+      , height = (V 50)
+      , alpha = if isEnabled then 1.0 else 0.7
+      , isClickable = isEnabled
       , id = "PermissionsScreenPrimaryButton"
+      , margin = Margin 15 0 15 30
+      , cornerRadius = 6.0
       }
   in primaryButtonConfig'
+
+stepsHeaderModelConfig ::ST.PermissionsScreenState -> StepsHeaderModel.Config
+stepsHeaderModelConfig state = let
+    config = StepsHeaderModel.config 7
+    stepsHeaderConfig' = config 
+     {
+      stepsViewVisibility = false,
+      profileIconVisibility = true,
+      driverNumberVisibility = true,
+      logoutVisibility = true,
+      customerTextArray = [],
+      driverTextArray = Constant.driverTextArray Common.FunctionCall,
+      rightButtonText = getString LOGOUT,
+      driverMobileNumber = Just state.data.driverMobileNumber
+     }
+  in stepsHeaderConfig'

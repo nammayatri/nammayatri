@@ -138,8 +138,9 @@ enterMobileNumberView  state lang push =
             , width MATCH_PARENT
             , margin (Margin 0 8 0 12)
             , visibility  if state.props.countryCodeOptionExpanded then GONE else VISIBLE
-            ][ commonTextView state (getString BY_TAPPING_CONTINUE) false Nothing push false false ""
-            , commonTextView state " &nbsp; <u>T&Cs</u>" true (Just (getValueFromConfig "DOCUMENT_LINK")) push true true ( " By Clicking Continue: You Agree To Our Terms And Conditions" )
+            ][ underlinedTextView state push
+            -- commonTextView state (getString BY_TAPPING_CONTINUE) false Nothing push false false ""
+            -- , commonTextView state " &nbsp; <u>T&Cs</u>" true (Just (getValueFromConfig "DOCUMENT_LINK")) push true true ( " By Clicking Continue: You Agree To Our Terms And Conditions" )
               ]
         , PrestoAnim.animationSet
           [ Anim.fadeIn $ not state.props.enterOTP 
@@ -261,3 +262,37 @@ dummyView push  =
   [ height WRAP_CONTENT
   , width WRAP_CONTENT
   ][]
+
+underlinedTextView :: ST.EnterMobileNumberScreenState -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w
+underlinedTextView state push =
+ linearLayout
+ [ width WRAP_CONTENT
+ , height WRAP_CONTENT
+ , orientation HORIZONTAL
+ ][ textView (
+    [ width WRAP_CONTENT
+    , height WRAP_CONTENT
+    , text "By clicking Continue, you agree to our "--(getString CASE_TWO)
+    , alpha 0.8
+    , color Color.greyTextColor
+    , textSize FontSize.a_14
+    ] <> FontStyle.body3 TypoGraphy),
+    linearLayout
+      [ width WRAP_CONTENT
+      , height WRAP_CONTENT
+      , orientation VERTICAL
+      , onClick (\action -> do
+                  _<- push action
+                  _ <- JB.openUrlInApp $ getValueFromConfig "DOCUMENT_LINK" 
+                  pure unit
+                  ) (const NonDisclosureAgreementAction)
+      ][ textView (
+        [ width WRAP_CONTENT
+        , height WRAP_CONTENT
+        , textSize FontSize.a_14
+        , text (" T&Cs")--getString NON_DISCLOUSER_AGREEMENT)
+        , color Color.primaryBlue
+        ] <> FontStyle.body3 TypoGraphy)
+      ]
+
+ ]

@@ -92,7 +92,7 @@ screen initialState =
   , name : "HomeScreen"
   , globalEvents : [
         ( \push -> do
-          _ <- pure $ JB.checkAndAskNotificationPermission unit
+          _ <- pure $ JB.checkAndAskNotificationPermission false
           _ <- pure $ printLog "initial State" initialState
           _ <- HU.storeCallBackForNotification push Notification
           _ <- HU.storeCallBackTime push TimeUpdate
@@ -113,7 +113,7 @@ screen initialState =
             pure unit
           else pure unit
           
-          void if (DA.any (_ == localStage)["RideRequested", "HomeScreen"]) && initialState.data.driverGotoState.isGotoEnabled then 
+          void if (DA.any (_ == localStage)["RideRequested", "HomeScreen", "__failed"]) && initialState.data.driverGotoState.isGotoEnabled then 
             runEffectFn3 HU.countDownInMinutes (EHC.getExpiryTime (HU.istToUtcDate initialState.data.driverGotoState.gotoValidTill) false) push UpdateGoHomeTimer 
             else if (initialState.data.driverGotoState.timerId /= "") then pure $ EHC.clearTimer initialState.data.driverGotoState.timerId
             else pure unit
@@ -247,7 +247,7 @@ view push state =
       , case HU.getPopupObjectFromSharedPrefs SHOW_JOIN_NAMMAYATRI of
           Just configObject -> if (isLocalStageOn HomeScreen) then PopUpModal.view (push <<< OfferPopupAC) (offerPopupConfig true configObject) else linearLayout[visibility GONE][]
           Nothing -> linearLayout[visibility GONE][]
-      , if state.props.showOffer && (MU.getMerchant FunctionCall) == MU.NAMMAYATRI then PopUpModal.view (push <<< OfferPopupAC) (offerPopupConfig false (offerConfigParams state)) else dummyTextView
+      , if state.props.showOffer && (MU.getMerchant FunctionCall) == MU.NAMMAYATRI && getValueToLocalStore SHOW_SUBSCRIPTIONS == "true" then PopUpModal.view (push <<< OfferPopupAC) (offerPopupConfig false (offerConfigParams state)) else dummyTextView
       , if (DA.any (_ == state.props.subscriptionPopupType)[ST.SOFT_NUDGE_POPUP,  ST.LOW_DUES_CLEAR_POPUP, ST.GO_ONLINE_BLOCKER] && (MU.getMerchant FunctionCall) == MU.NAMMAYATRI )
           then PopUpModal.view (push <<< PaymentPendingPopupAC) (paymentPendingPopupConfig state) 
         else linearLayout[visibility GONE][]
@@ -1319,8 +1319,8 @@ addAlternateNumber push state =
 locationLastUpdatedTextAndTimeView :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 locationLastUpdatedTextAndTimeView push state =
   linearLayout
-  [ height MATCH_PARENT
-    , width WRAP_CONTENT
+  [ height WRAP_CONTENT
+    , weight 1.0
     , gravity CENTER_VERTICAL
   ][
     textView $
@@ -1343,7 +1343,7 @@ locationLastUpdatedTextAndTimeView push state =
 updateButtonIconAndText :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 updateButtonIconAndText push state =
   linearLayout
-  [ width MATCH_PARENT
+  [ width WRAP_CONTENT
   , height MATCH_PARENT
   , orientation HORIZONTAL
   , visibility if not state.props.rideActionModal && state.props.statusOnline then VISIBLE else GONE

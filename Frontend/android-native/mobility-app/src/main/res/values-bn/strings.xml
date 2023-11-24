@@ -47,4 +47,5 @@
     <string name="invoice_for_your_ride_is_downloaded">আপনার যাত্রার চালান ডাউনলোড করা হয়!!!</string>
     <string name="qr_downloaded">QR ডাউনলোড !!!</string>
     <string name="accept_goto">প্রস্তাব গ্রহণ “গো-টু”</string>
+    <string name="take_a_clear_selfie">Take a clear photo with your driving licence \ninside the marked area</string>
 </resources>

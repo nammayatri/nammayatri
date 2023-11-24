@@ -37,6 +37,9 @@ public class Utils {
             case "FR_FR":
                 locale = new Locale("fr");
                 break;
+            case "TE_IN" :
+                locale = new Locale("te");
+                break;
             default:
                 return;
         }

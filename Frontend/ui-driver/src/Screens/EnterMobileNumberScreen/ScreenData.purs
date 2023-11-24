@@ -25,6 +25,7 @@ initData =  {
         },
   props: {
     btnActive :false,
-    isValid : false
+    isValid : false,
+    mobileNumberEditFocused : true
     }
 }

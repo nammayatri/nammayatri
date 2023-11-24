@@ -15,10 +15,17 @@
 
 module Screens.RegistrationScreen.ComponentConfig where
 
-import Components.PrimaryButton as PrimaryButton
 import Language.Strings
-import Language.Types (STR(..))
 import PrestoDOM
+
+import Common.Types.App as Common
+import Components.PopUpModal as PopUpModal
+import Components.PrimaryButton as PrimaryButton
+import Components.StepsHeaderModal as StepsHeaderModel
+import Data.Maybe (Maybe(..))
+import Font.Style as FontStyle
+import Language.Types (STR(..))
+import Resource.Constants as Constant
 import Screens.Types as ST
 import Styles.Colors as Color
 
@@ -32,6 +39,58 @@ primaryButtonConfig state = let
       , margin = (Margin 0 0 0 0)
       , cornerRadius = 0.0
       , height = (V 60)
-      , id = "RegistrationScreenPrimaryButton"
       }
   in primaryButtonConfig'
+
+stepsHeaderModelConfig :: ST.RegistrationScreenState -> StepsHeaderModel.Config
+stepsHeaderModelConfig state = let
+    config = StepsHeaderModel.config 2
+    stepsHeaderConfig' = config 
+     {
+      stepsViewVisibility = false,
+      profileIconVisibility = true,
+      driverNumberVisibility = true,
+      driverMobileNumber = (Just state.data.phoneNumber),
+      customerTextArray = [],
+      driverTextArray = Constant.driverTextArray Common.FunctionCall,
+      rightButtonText = getString LOGOUT,
+      logoutVisibility = true,
+      backArrowVisibility = false
+     }
+  in stepsHeaderConfig'
+
+logoutPopUp :: Common.LazyCheck -> PopUpModal.Config
+logoutPopUp  dummy = let 
+  config' = PopUpModal.config
+  popUpConfig' = config' {
+    primaryText {text = (getString LOGOUT)},
+    secondaryText {text = (getString ARE_YOU_SURE_YOU_WANT_TO_LOGOUT)},
+    buttonLayoutMargin = (MarginBottom 40),
+    padding = (Padding 16 16 16 0),
+    backgroundClickable = true,
+    dismissPopup = true,
+    option1 {
+      text = (getString LOGOUT),
+      color = Color.black700,
+      textStyle = FontStyle.SubHeading1,
+      strokeColor = Color.white900,
+      width = MATCH_PARENT,
+      height = WRAP_CONTENT,
+      background = Color.blue600,
+      margin = (MarginBottom 12),
+      padding = PaddingVertical 16 16
+      },
+    option2 {
+      text = (getString CANCEL),
+      color = Color.black700,
+      textStyle = FontStyle.SubHeading1,
+      height = WRAP_CONTENT,
+      strokeColor = Color.white900,
+      width = MATCH_PARENT,
+      padding = PaddingVertical 16 16,
+      margin = (MarginBottom 0),
+      background = Color.blue600
+      },
+    optionButtonOrientation = "VERTICAL"
+  }
+  in popUpConfig'

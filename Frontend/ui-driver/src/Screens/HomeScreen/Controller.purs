@@ -1116,7 +1116,7 @@ getDriverSuggestions state suggestions = case (Array.length suggestions == 0) of
 getPreviousVersion :: Merchant -> String
 getPreviousVersion merchant = 
   case merchant of
-    NAMMAYATRI -> "1.4.5"
+    NAMMAYATRI -> "1.4.8"
     YATRI -> "2.3.0"
     YATRISATHI -> "0.1.8"
     _ -> "100.100.100"

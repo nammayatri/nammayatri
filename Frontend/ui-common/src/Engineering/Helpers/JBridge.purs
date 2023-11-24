@@ -83,7 +83,7 @@ foreign import shareImageMessage :: String -> ShareImageConfig -> Unit
 foreign import showInAppNotification :: String -> String -> String -> String -> String -> String -> String -> String -> Int -> Effect Unit
 foreign import enableMyLocation :: Boolean -> Unit
 foreign import isLocationPermissionEnabled :: Unit -> Effect Boolean
-foreign import checkAndAskNotificationPermission :: Unit -> Effect Unit
+foreign import checkAndAskNotificationPermission :: Boolean -> Effect Unit
 foreign import isMicrophonePermissionEnabled :: Unit -> Effect Boolean
 -- foreign import getPackageName   :: Effect String
 foreign import getVersionCode   :: Effect Int
@@ -100,12 +100,14 @@ foreign import setFCMTokenWithTimeOut :: EffectFn2 Int (String -> Effect Unit) U
 -- foreign import getNearbyPlaces :: forall action. (action -> Effect Unit) -> (Place -> action) -> Effect Unit
 -- foreign import isNetworkAvailable :: Unit -> Boolean
 foreign import openUrlInApp  :: String -> Effect Unit
+foreign import onFocused :: forall action. (action) -> (String) -> Effect Unit
+foreign import renderCameraProfilePicture :: String -> Effect Unit
 foreign import openUrlInMailApp  :: String -> Effect Unit
 foreign import addMarkerImpl :: String -> Number -> Number -> Int -> Number -> Number -> Effect Boolean
 foreign import removeMarker :: String -> Unit
 -- foreign import parseAddress      :: String -> Address
 foreign import disableActionEditText :: String -> Unit
-foreign import uploadFile :: Unit -> Effect Unit
+foreign import uploadFile :: Boolean -> Effect Unit
 foreign import previewImage :: String -> Effect Unit
 foreign import storeCallBackImageUpload :: forall action. (action -> Effect Unit) -> (String -> String -> String -> action) -> Effect Unit
 foreign import renderBase64Image :: String -> String -> Boolean -> String -> Effect Unit
@@ -197,6 +199,7 @@ foreign import deletePopUpCallBack :: String -> Unit
 -- foreign import requestLocationPermissionDriver :: forall action. (action -> Effect Unit) -> (String -> action) -> Effect Unit
 foreign import storeCallBackOverlayPermission :: forall action. (action -> Effect Unit) -> (Boolean -> action) -> Effect Unit
 foreign import storeCallBackBatteryUsagePermission :: forall action. (action -> Effect Unit) -> (Boolean -> action) -> Effect Unit
+foreign import storeCallBackNotificationPermission :: forall action. (action -> Effect Unit) -> (Boolean -> action) -> Effect Unit
 foreign import isInternetAvailable :: Unit -> Effect Boolean
 foreign import storeCallBackInternetAction :: forall action. (action -> Effect Unit) -> (String -> action) -> Effect Unit
 
@@ -247,6 +250,7 @@ foreign import isNetworkTimeEnabled :: EffectFn1 Unit Boolean
 foreign import storeOnResumeCallback :: forall action. Fn2 (action -> Effect Unit) action Unit
 foreign import getLocationNameV2 :: Fn2 Number Number String
 foreign import getLatLonFromAddress :: Fn1 String { latitude :: Number, longitude :: Number }
+foreign import isNotificationPermissionEnabled :: Unit -> Effect Boolean
 
 type LottieAnimationConfig = {
     rawJson :: String
