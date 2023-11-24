@@ -8,9 +8,9 @@ import Data.Text (Text)
 import qualified Data.Text as T
 import Prelude
 
-apisToText :: Apis -> String
-apisToText input =
-  "module Data.Types." <> T.unpack (head (map _moduleName input)) <> " where \n\n"
+generateServantAPI :: Apis -> String
+generateServantAPI input =
+  "module API.UI." <> T.unpack (head (map _moduleName input)) <> " where \n\n"
     <> intercalate "\n" (makeImport <$> figureOutImports (T.unpack <$> concatMap handlerImports input))
     <> T.unpack
       ( ("\n\ntype API = \n " <> T.intercalate "\n <|> " (map apiTTToText input))

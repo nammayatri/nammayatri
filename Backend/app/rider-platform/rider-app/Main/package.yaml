@@ -108,6 +108,10 @@ dependencies:
   - casing
   - postgresql-simple
   - random
+  - alchemist
+  - raw-strings-qq
+  - directory
+  - filepath
 
 ghc-options:
   - -fwrite-ide-info
@@ -115,7 +119,9 @@ ghc-options:
   - -fplugin=RecordDotPreprocessor
 
 library:
-  source-dirs: src
+  source-dirs:
+    - src
+    - spec
   ghc-options:
     - -Wall
     - -Wcompat

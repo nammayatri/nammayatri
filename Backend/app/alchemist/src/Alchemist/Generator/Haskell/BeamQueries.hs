@@ -1,7 +1,7 @@
 module Alchemist.Generator.Haskell.BeamQueries where
 
 import Alchemist.DSL.Syntax.Storage
-import Data.Char (toUpper)
+import Alchemist.Utils
 import Data.List (intercalate)
 import Kernel.Prelude
 
@@ -67,11 +67,7 @@ toTTypeInstance tableDef =
   where
     toField field = "Beam." ++ fieldName field ++ " = " ++ toTTypeConversionFunction (haskellType field) (fieldName field)
 
-capitalize :: String -> String
-capitalize "" = ""
-capitalize (x : xs) = toUpper x : xs
-
 -- Generates both FromTType' and ToTType' instances
-generateTTypeInstances :: TableDef -> String
-generateTTypeInstances tableDef =
+generateBeamQueries :: TableDef -> String
+generateBeamQueries tableDef =
   generateImports tableDef ++ fromTTypeInstance tableDef ++ toTTypeInstance tableDef

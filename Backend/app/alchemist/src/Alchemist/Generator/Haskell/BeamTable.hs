@@ -1,7 +1,7 @@
 module Alchemist.Generator.Haskell.BeamTable where
 
 import Alchemist.DSL.Syntax.Storage
-import Data.Char (toUpper)
+import Alchemist.Utils
 import Data.List (intercalate)
 import Kernel.Prelude
 
@@ -74,8 +74,3 @@ generateBeamTable tableDef =
     ++ primaryKeyToBeam tableDef
     ++ "\n"
     ++ tableInstancesToBeam tableDef
-
--- Helper function to capitalize a string
-capitalize :: String -> String
-capitalize "" = ""
-capitalize (x : xs) = toUpper x : xs
