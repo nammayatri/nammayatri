@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<defaults>
+  <entry>
+    <key>forceUpdate</key>
+    <value>false</value>
+  </entry>
+  <entry>
+    <key>splash_screen</key>
+    <value>""</value>
+  </entry>
+</defaults>
