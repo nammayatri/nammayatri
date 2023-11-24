@@ -645,6 +645,8 @@ const malayalamStrings = {
   "REQUESTING_RIDE_IN" : "യാത്ര അഭ്യർത്ഥിക്കുന്നു",
   "REQUESTING_RIDE" : "യാത്ര അഭ്യർത്ഥിക്കുന്നു",
   "TAP_HERE_TO_STOP_AUTO_REQUESTING" : "ഓട്ടോ അഭ്യർത്ഥന നിർത്താൻ ഇവിടെ ടാപ്പ് ചെയ്യുക",
+  "POWERED_BY" : "പവർഡ് ബൈ",
+  "BOOK_YOUR_RIDE" : "നിങ്ങളുടെ യാത്ര ബുക്ക് ചെയ്യുക",
 }
 
 export function getStringValue(key) {

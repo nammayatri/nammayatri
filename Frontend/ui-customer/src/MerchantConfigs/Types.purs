@@ -69,6 +69,7 @@ type AppConfig =
   , enableGeocoder :: Boolean -- TODO:: Deprecated 21st Nov 2023
   , geoCoder :: GeoCoderConfig
   , appLink :: String
+  , homeScreenConfig :: HomeScreenConfig
   } 
 
 type GeoCoderConfig = {
@@ -118,6 +119,9 @@ type DriverInfoConfig = {
 , numberPlateBackground :: String
 , showCancelPrevention :: Boolean
 , specialZoneQuoteExpirySeconds :: Int
+, footerVisibility :: Boolean
+, footerImageUrl :: String
+, footerBackgroundColor :: String
 }
 
 type SearchLocationConfig = {
@@ -127,6 +131,10 @@ type SearchLocationConfig = {
   enableLocationTagbar :: String,
   resultsCardCornerRadius :: Number,
   showRateCardDetails :: Boolean,
+  backgroundColor :: String,
+  separatorColor :: String,
+  editTextColor :: String,
+  cursorColor :: String,
   showAdditionalChargesText :: Boolean,
   lottieHeight :: Int,
   lottieWidth :: Int,
@@ -182,7 +190,8 @@ type BannerViewState = {
 type TerminateBtnConfig = {
     visibility :: Boolean, 
     title :: String,
-    imageUrl :: String
+    imageUrl :: String,
+    backgroundColor :: String
 }
 
 type EstimateAndQuoteConfig = {
@@ -232,4 +241,39 @@ type PurpleRideConfig = {
   visualImpairmentVideo :: String,
   physicalImpairmentVideo :: String,
   hearingImpairmentVideo :: String
+}
+type HomeScreenConfig = {
+  primaryBackground :: String,
+  pickUpViewColor :: String,
+  homescreenHeaderConfig :: HomeScreenHeaderConfig,
+  bannerViewVisibility :: Boolean,
+  whereToButtonConfig :: WhereToButtonConfig,
+  pickupLocationTextColor :: String
+}
+
+type HomeScreenHeaderConfig = {
+  headerMenuButtonColor :: String,
+  headerMenuButtonImageUrl :: String,
+  headerLogoVisibility :: Boolean,
+  headerTextColor :: String,
+  headerSeperatorStroke :: Boolean
+}
+
+type WhereToButtonConfig = {
+  margin :: MarginConfig,
+  shadow :: ShadowConfig
+}
+type MarginConfig = {
+  top :: Int,
+  bottom :: Int,
+  left :: Int,
+  right :: Int
+}
+type ShadowConfig = {
+  color :: String,
+  blur :: Number,
+  x :: Number,
+  y :: Number,
+  spread :: Number,
+  opacity :: Number
 }

@@ -6,6 +6,35 @@ if (typeof __VERSION__ !== 'undefined') {
 window.version["configuration"]= version;
 window.getMerchantConfig = function () {
   return JSON.stringify({
+      "homeScreenConfig" : {
+        "primaryBackground" : "#FFFFFF",
+        "pickUpViewColor" : "#EFEFEF",
+        "pickupLocationTextColor" : "#1D1D1D",
+        "homescreenHeaderConfig" : {
+          "headerMenuButtonColor" : "#F6F6F6",
+          "headerMenuButtonImageUrl" : "ny_ic_menu_black,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_menu_black.png",
+          "bannerViewVisibility" : false,
+          "headerLogoVisibility" : false,
+          "headerTextColor" : "#1D1D1D",
+          "headerSeperatorStroke" : true,
+        },
+        "whereToButtonConfig" : {
+          "margin" : {
+            "top" : 3,
+            "left" : 16,
+            "right" : 16,
+            "bottom" : 16
+          },
+          "shadow" : {
+            "color" : "#2C2F3A",
+            "x": 0.3,
+            "y": 0.3,
+            "blur": 3.0,
+            "spread": 10.0,
+            "opacity" : 0.14
+          }
+        }
+      },
       "StringKeys": ["YOUR_LOCATION_HELPS_OUR_SYSTEM", "ABOUT_APP_DESCRIPTION", "CORPORATE_ADDRESS_DESCRIPTION_ADDITIONAL", "YOUR_FEEDBACK_HELPS_US", "LOCATION_PERMISSION_SUBTITLE_NEW_USER"],
       "isReferralEnabled": false,
       "showBookingPreference": true,
@@ -49,8 +78,13 @@ window.getMerchantConfig = function () {
       "searchLocationConfig": {
         "searchLocationTheme": "#D84E55",
         "setLocationOnMapColor": "#2C2F3A",
-        "strokeColor": "1,#13101010",
-        "enableLocationTagbar": "true",
+        "strokeColor": "1,#818181",
+        "enableLocationTagbar" : "true",
+         "editTextBackground" : "#EFEFEF",
+         "editTextDefaultColor" : "#E4E4E4",
+         "backgroundColor" : "#FFFFFF",
+         "separatorColor" : "#E4E4E4",
+         "editTextColor" : "#818181",
         "resultsCardCornerRadius": 8.0,
         "showRateCardDetails": true,
         "editTextBackground" : "#DA4C54",
@@ -102,7 +136,10 @@ window.getMerchantConfig = function () {
         "showNumberPlateSuffix": false,
         "numberPlateBackground": "#E9BE4D",
         "showCancelPrevention": false,
-        "showTrackingButton": true
+        "showTrackingButton": true,
+        "footerVisibility" : true
+      , "footerImageUrl" : "ic_namma_yatri_logo,https://assets.juspay.in/beckn/nammayatri/user/images/ic_namma_yatri_logo.png"
+      , "footerBackgroundColor" : "#FFFFFF"
         },
         "profileBackground": "#D63941",
         "profileName": "#FFFFFF",
@@ -168,6 +205,7 @@ window.getMerchantConfig = function () {
         "terminateBtnConfig": {
         "visibility": true,
         "title": "Redbus",
+        "backgroundColor" : "#F6F6F6",
         "imageUrl": "ny_ic_chevron_left_double,https://assets.juspay.in/beckn/mobilitypaytm/mobilitypaytmcommon/ny_ic_chevron_left_double.png"
         },
         "showDeleteAccount": false,

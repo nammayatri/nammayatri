@@ -23,7 +23,7 @@ import Components.ChatView.Controller (ChatComponent)
 import Components.ChooseVehicle.Controller as ChooseVehicle
 import Components.QuoteListItem.Controller (QuoteListItemState)
 import Components.SettingSideBar.Controller (SettingSideBarState)
-import Data.Map (Map, insert, update, lookup, member)
+import Data.Map (Map)
 import Data.Eq.Generic (genericEq)
 import Data.Generic.Rep (class Generic)
 import Data.Maybe (Maybe)

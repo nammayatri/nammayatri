@@ -520,6 +520,8 @@ const frenchStrings = {
   "REQUESTING_RIDE_IN" : "Demande de trajet dans",
   "REQUESTING_RIDE" : "Demande de trajet",
   "TAP_HERE_TO_STOP_AUTO_REQUESTING" : "Appuyez ici pour arrêter la demande automatique",
+  "POWERED_BY" : "Alimenté par",
+  "BOOK_YOUR_RIDE" : "Réservez votre trajet",
 }
 
 export function getStringValue(key) {

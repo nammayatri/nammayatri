@@ -103,6 +103,7 @@ import Animation.Config (AnimConfig, animConfig)
 import Components.SourceToDestination as SourceToDestination
 import Data.Map as Map
 import SuggestionUtils
+import MerchantConfig.Types (MarginConfig, ShadowConfig)
 
 screen :: HomeScreenState -> Screen Action HomeScreenState ScreenOutput
 screen initialState =
@@ -1915,6 +1916,7 @@ rideTrackingView push state =
         [ height WRAP_CONTENT
         , width MATCH_PARENT
         , background Color.transparent
+        , orientation VERTICAL
         -- , gravity BOTTOM -- Check it in Android.
         ]
         [ -- TODO Add Animations
@@ -1922,31 +1924,38 @@ rideTrackingView push state =
           --   [ translateYAnim 900 0 ( state.props.currentStage == RideAccepted || state.props.currentStage == RideStarted)
           --   , translateYAnim 0 900 $ not ( state.props.currentStage == RideAccepted || state.props.currentStage == RideStarted)
           --   ] $
-          coordinatorLayout
-            [ height WRAP_CONTENT
-            , width MATCH_PARENT
-            ]
-            [ bottomSheetLayout
-                [ height WRAP_CONTENT
-                , width MATCH_PARENT
-                , background Color.transparent
-                , sheetState state.props.sheetState 
-                , accessibility DISABLE
-                , peakHeight $ getPeakHeight state.props.currentStage
-                , visibility VISIBLE
-                , halfExpandedRatio 0.75
-                ]
-                [ linearLayout
+          relativeLayout 
+                [ width MATCH_PARENT
+                , height MATCH_PARENT
+                , orientation VERTICAL
+                ][
+                   coordinatorLayout
                     [ height WRAP_CONTENT
                     , width MATCH_PARENT
-                    ]
-                    [ if (any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithDriver]) then
-                        DriverInfoCard.view (push <<< DriverInfoCardActionController) $ driverInfoCardViewState state
-                      else
-                        emptyTextView state
-                    ]
+                    ][ bottomSheetLayout
+                        [ height WRAP_CONTENT
+                        , width MATCH_PARENT
+                        , background Color.transparent
+                        , sheetState state.props.sheetState 
+                        , accessibility DISABLE
+                        , peakHeight $ getPeakHeight state.props.currentStage
+                        , visibility VISIBLE
+                        , halfExpandedRatio 0.75
+                        , orientation VERTICAL
+                        ]
+                        [ linearLayout
+                            [ height WRAP_CONTENT
+                            , width MATCH_PARENT
+                            ]
+                            [ if (any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithDriver]) then
+                                DriverInfoCard.view (push <<< DriverInfoCardActionController) $ driverInfoCardViewState state
+                              else
+                                emptyTextView state
+                            ]
+                        ]
                 ]
-            ]
+                , DriverInfoCard.brandingBannerView state.data.config.driverInfoConfig VISIBLE
+              ]
         ]
     ]
 
@@ -2507,7 +2516,7 @@ homeScreenView push state =
       linearLayout
         [ height $ V ((screenHeight unit)/ 3)
         , width MATCH_PARENT
-        , background Color.black900
+        , background state.data.config.homeScreenConfig.primaryBackground 
         , padding $ (PaddingTop (safeMarginTop))
         ][] 
         , homescreenHeader push state
@@ -2547,6 +2556,7 @@ homeScreenView push state =
                         , background Color.white900
                         , margin $ MarginTop 35 
                         , padding $ PaddingTop 30 
+                        , stroke if state.data.config.homeScreenConfig.homescreenHeaderConfig.headerSeperatorStroke then ("1," <> Color.borderGreyColor) else ("0," <> Color.borderGreyColor)
                         ][ scrollView
                           [ height $ if os == "IOS" then (V (getHeightFromPercent 90)) else MATCH_PARENT
                           , width MATCH_PARENT
@@ -2653,15 +2663,17 @@ homescreenHeader push state =
 
 whereToButtonView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 whereToButtonView push state  =
+  let whereToButtonConfig = state.data.config.homeScreenConfig.whereToButtonConfig
+  in
   linearLayout  
       [ width MATCH_PARENT
       , height WRAP_CONTENT
       , orientation HORIZONTAL
       , background Color.white900
       -- , padding $ Padding 16 16 16 16
-      , margin $ (Margin 16 0 16 16)
+      , margin $ getMarginFromConfig whereToButtonConfig.margin 
       , cornerRadii $ Corners 8.0 true true true true
-      , shadow $ Shadow 0.0 0.9 10.0 24.0 Color.black900 0.14
+      , shadow $ getShadowFromConfig whereToButtonConfig.shadow
       ][
         PrestoAnim.animationSet
         [ Anim.fadeIn  ( state.props.isHomescreenExpanded) 
@@ -2669,7 +2681,7 @@ whereToButtonView push state  =
         ] $ 
         linearLayout
           [ width WRAP_CONTENT
-          , height WRAP_CONTENT
+          , height MATCH_PARENT
           , padding $ Padding 16 16 0 16
           ][ imageView
             [ height $ V 20
@@ -2767,9 +2779,33 @@ pickupLocationView push state =
           , orientation HORIZONTAL
           , margin $ Margin 0 16 0 20 
           , gravity CENTER
-          ][ linearLayout
+          ][
+            linearLayout
               [ width WRAP_CONTENT 
-              , height MATCH_PARENT
+              , height WRAP_CONTENT
+              , gravity CENTER_VERTICAL
+              , disableClickFeedback true
+              , clickable if state.props.currentStage == SearchLocationModel then false else true
+              , visibility if not state.data.config.terminateBtnConfig.visibility then GONE
+                           else if state.props.isHomescreenExpanded then INVISIBLE 
+                           else VISIBLE
+              , onClick push (const TerminateApp)
+              , margin $ MarginRight 8
+              , padding $ Padding 8 8 8 8 
+              , background $ state.data.config.terminateBtnConfig.backgroundColor
+              , cornerRadius 8.0
+              ]
+              [ imageView
+                  [ imageWithFallback state.data.config.terminateBtnConfig.imageUrl
+                  , height $ V 23
+                  , width $ V 23
+                  , visibility if state.data.config.terminateBtnConfig.visibility then VISIBLE else GONE
+
+                  ]
+              ]
+          , linearLayout
+              [ width WRAP_CONTENT 
+              , height WRAP_CONTENT
               , gravity CENTER_VERTICAL
               , disableClickFeedback true
               , clickable if state.props.currentStage == SearchLocationModel then false else true
@@ -2777,15 +2813,18 @@ pickupLocationView push state =
               , onClick push $ const OpenSettings
               , margin $ MarginRight 8
               , padding $ Padding 8 8 8 8 
+              , background $ state.data.config.homeScreenConfig.homescreenHeaderConfig.headerMenuButtonColor
+              , cornerRadius 8.0
               ]
               [ imageView
-                  [ imageWithFallback if state.data.config.showDashboard && (checkVersion "LazyCheck") then fetchImage FF_ASSET "ny_ic_menu_white" else fetchImage FF_ASSET "ny_ic_menu_white"
+                  [ imageWithFallback $ state.data.config.homeScreenConfig.homescreenHeaderConfig.headerMenuButtonImageUrl
                   , height $ V 23
                   , width $ V 23
                   , accessibility if state.props.emergencyHelpModal || state.props.currentStage == ChatWithDriver || state.props.isCancelRide || state.props.isLocationTracking || state.props.callSupportPopUp || state.props.cancelSearchCallDriver then DISABLE else ENABLE
                   , accessibilityHint "Navigation : Button"
                   ]
-              ]
+              ] 
+          
             , linearLayout
                 [ height WRAP_CONTENT
                 , weight 1.0
@@ -2797,7 +2836,13 @@ pickupLocationView push state =
                     , height $ V 50
                     , width $ V 110
                     , margin $ MarginHorizontal 10 10
+                    , visibility $ if state.data.config.homeScreenConfig.homescreenHeaderConfig.headerLogoVisibility then VISIBLE else GONE
                     ]
+                  , textView $
+                    [ text $ getString BOOK_YOUR_RIDE
+                    , color $ state.data.config.homeScreenConfig.homescreenHeaderConfig.headerTextColor
+                    , visibility $ if not state.data.config.homeScreenConfig.homescreenHeaderConfig.headerLogoVisibility then VISIBLE else GONE
+                    ] <> FontStyle.h3 TypoGraphy
                 ]
             , linearLayout
                 [ height WRAP_CONTENT
@@ -2825,7 +2870,7 @@ pickupLocationView push state =
             [ width MATCH_PARENT
             , height WRAP_CONTENT
             , orientation HORIZONTAL
-            , background Color.squidInkBlue
+            , background $ state.data.config.homeScreenConfig.pickUpViewColor
             , padding $ Padding 16 7 16 7
             , cornerRadii $ Corners 8.0 true true true true
             , gravity CENTER_VERTICAL
@@ -2844,7 +2889,7 @@ pickupLocationView push state =
                   [ height WRAP_CONTENT
                   , width WRAP_CONTENT
                   , text $ (getString PICKUP_) <> (getString CURRENT_LOCATION)
-                  , color Color.black600
+                  , color state.data.config.homeScreenConfig.pickupLocationTextColor
                   ] <> FontStyle.paragraphText TypoGraphy
             ]
         ]
@@ -3130,3 +3175,10 @@ repeatRideCard push state  index trip =
           ][ movingRightArrowView ("movingArrowView" <> show index) ]
     ]
 
+getMarginFromConfig :: MarginConfig -> Margin
+getMarginFromConfig marginConfig = 
+  Margin (marginConfig.left) (marginConfig.top) (marginConfig.right) (marginConfig.bottom)
+
+getShadowFromConfig :: ShadowConfig -> Shadow
+getShadowFromConfig shadowConfig = 
+  Shadow (shadowConfig.x) (shadowConfig.y) (shadowConfig.blur) (shadowConfig.spread) (shadowConfig.color) (shadowConfig.opacity)

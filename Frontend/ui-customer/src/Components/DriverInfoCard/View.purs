@@ -53,6 +53,7 @@ import Types.App (defaultGlobalState)
 import JBridge(fromMetersToKm)
 import Engineering.Helpers.Suggestions (getMessageFromKey)
 import Helpers.Utils (parseFloat)
+import MerchantConfig.Types (DriverInfoConfig)
 
 view :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM ( Effect Unit ) w
 view push state =
@@ -116,6 +117,7 @@ driverInfoViewSpecialZone push state =
               ][ dropPointView push state
                 , separator (MarginHorizontal 16 16) (V 1) Color.grey900 (state.props.currentStage == RideAccepted)
                 , cancelRideLayout push state
+                , brandingBannerView state.data.config.driverInfoConfig INVISIBLE
               ]
             ]
       ]
@@ -692,11 +694,38 @@ driverInfoView push state =
                 ][ if state.props.currentSearchResultType == QUOTES then destinationView push state else if not state.data.config.showPickUpandDrop then dummyView push else sourceDistanceView push state
                   , separator (Margin 0 0 0 0) (V 1) Color.grey900 (Array.any (_ == state.props.currentStage) [ RideAccepted, RideStarted, ChatWithDriver ] && state.data.config.showPickUpandDrop)
                   , cancelRideLayout push state
+                  , brandingBannerView state.data.config.driverInfoConfig INVISIBLE
                 ]
               ]
          ]
       ]
   ]
+
+brandingBannerView :: forall w. DriverInfoConfig -> Visibility -> PrestoDOM (Effect Unit) w
+brandingBannerView driverInfoConfig isVisible = 
+  linearLayout
+    [ width MATCH_PARENT
+    , height WRAP_CONTENT
+    , gravity CENTER_HORIZONTAL
+    , background driverInfoConfig.footerBackgroundColor
+    , padding $ Padding 12 12 12 12
+    , alignParentBottom "true,-1"
+    , visibility $ if not driverInfoConfig.footerVisibility 
+                      then GONE
+                      else isVisible
+    ][ textView
+        [ text $ getString POWERED_BY 
+        , width WRAP_CONTENT    
+        , height WRAP_CONTENT
+        , textSize FontSize.a_12
+        , color Color.black800
+        ]
+    , imageView
+        [ imageWithFallback $ driverInfoConfig.footerImageUrl
+        , width $ V 62
+        , height $ V 20
+        ]
+    ]
 
 cancelRideLayout :: forall w.(Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM (Effect Unit) w
 cancelRideLayout push state =
