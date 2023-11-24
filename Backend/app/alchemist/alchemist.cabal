@@ -112,9 +112,23 @@ test-suite alchemist-tests
   type: exitcode-stdio-1.0
   main-is: Main.hs
   other-modules:
+      Alchemist.App
+      Alchemist.DSL.Parser.API
+      Alchemist.DSL.Parser.Storage
+      Alchemist.DSL.Syntax.API
+      Alchemist.DSL.Syntax.Storage
+      Alchemist.Generator.Haskell
+      Alchemist.Generator.Haskell.BeamQueries
+      Alchemist.Generator.Haskell.BeamTable
+      Alchemist.Generator.Haskell.DomainType
+      Alchemist.Generator.Haskell.Servant
+      Alchemist.Generator.SQL
+      Alchemist.Generator.SQL.Table
+      Alchemist.Utils
       Paths_alchemist
   hs-source-dirs:
       tests
+      src
   default-extensions:
       ConstraintKinds
       DataKinds
