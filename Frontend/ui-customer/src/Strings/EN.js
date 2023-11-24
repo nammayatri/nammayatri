@@ -652,6 +652,8 @@ const englishStrings = {
   "REQUESTING_RIDE_IN" : "Requesting ride in",
   "REQUESTING_RIDE" : "Requesting ride",
   "TAP_HERE_TO_STOP_AUTO_REQUESTING" : "Tap here to stop auto requesting",
+  "POWERED_BY" : "Powered By",
+  "BOOK_YOUR_RIDE" : "Book Your Ride",
 }
 
 export function getStringValue(key) {

@@ -645,6 +645,8 @@ const bengaliStrings = {
   "REQUESTING_RIDE_IN" : "অশ্বারোহণ অনুরোধ",
   "REQUESTING_RIDE" : "যাত্রার অনুরোধ",
   "TAP_HERE_TO_STOP_AUTO_REQUESTING" : "অটো অনুরোধ বন্ধ করতে এখানে ট্যাপ করুন",
+  "POWERED_BY" : "পাওয়ারড বাই",
+  "BOOK_YOUR_RIDE" : "আপনার রাইড বুক করুন",
 }
 
 export function getStringValue(key) {

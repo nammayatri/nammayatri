@@ -648,6 +648,8 @@ const hindiStrings = {
   "REQUESTING_RIDE_IN" : "सवारी का अनुरोध",
   "REQUESTING_RIDE" : "सवारी का अनुरोध",
   "TAP_HERE_TO_STOP_AUTO_REQUESTING" : "ऑटो अनुरोध करना बंद करने के लिए यहां टैप करें",
+  "POWERED_BY" : "द्वारा संचालित",
+  "BOOK_YOUR_RIDE" : "अपनी सवारी बुक करें",
 }
 
 export function getStringValue(key) {

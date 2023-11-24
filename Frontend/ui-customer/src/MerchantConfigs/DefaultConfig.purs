@@ -52,11 +52,15 @@ config =
     , editTextBackground : "#313440"
     , editTextDefaultColor : "#A7A7A7"
     , strokeColor: "1,#E5E7EB"
+    , backgroundColor : "#2C2F3A"
+    , editTextColor : "#FFFFFF"
+    , separatorColor : "00FFFFFF"
     , enableLocationTagbar : "true"
     , resultsCardCornerRadius : 20.0
     , showRateCardDetails : true
     , showAdditionalChargesText : false
     , lottieHeight : 96
+    , cursorColor : "#FCC32C"
     , lottieWidth : 96
     , primaryButtonHeight : 60
     , backArrow : "ny_ic_chevron_left_white,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_chevron_left_white.png"
@@ -78,6 +82,9 @@ config =
     , showCancelPrevention : false
     , showTrackingButton : true
     , specialZoneQuoteExpirySeconds : 3600
+    , footerVisibility : false
+    , footerImageUrl : "ic_namma_yatri_logo,https://assets.juspay.in/beckn/nammayatri/user/images/ic_namma_yatri_logo.png"
+    , footerBackgroundColor : "#FFFFFF"
     }
   , ratingConfig : 
     { secondaryButtonTextColor : "#FCC32C"
@@ -118,6 +125,7 @@ config =
   , terminateBtnConfig : {
           visibility: false, 
           title : "Paytm",
+          backgroundColor : "#00FFFFFF",
           imageUrl : "ny_ic_chevron_left_double,https://assets.juspay.in/beckn/mobilitypaytm/mobilitypaytmcommon/ny_ic_chevron_left_double.png"
       }
   , suggestedTripsAndLocationConfig : {
@@ -190,4 +198,33 @@ config =
       hearingImpairmentVideo : ""
     }
   , appLink : ""
+  , homeScreenConfig : {
+      primaryBackground : "#2C2F3A",
+      pickUpViewColor : "#303440",
+      homescreenHeaderConfig : {
+        headerMenuButtonColor : "#00FFFFFF",
+        headerMenuButtonImageUrl : "ny_ic_menu_white,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_menu_white.png",
+        headerLogoVisibility : true,
+        headerTextColor : "#1D1D1D",
+        headerSeperatorStroke : false
+      },
+      bannerViewVisibility : true,
+      pickupLocationTextColor : "#A7A7A7",
+      whereToButtonConfig : {
+        margin : {
+          top : 0,
+          left : 16,
+          right : 16,
+          bottom : 16
+        },
+        shadow : {
+          color : "#2C2F3A",
+          x: 0.0,
+          y: 0.9,
+          blur: 10.0,
+          spread: 24.0,
+          opacity : 0.14
+        }
+      }
+    }
   }

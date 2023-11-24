@@ -27,7 +27,7 @@ import Control.Monad.Except (runExcept)
 import Control.Monad.Except.Trans (lift)
 import Data.Array (catMaybes, reverse, filter, length, null, snoc, (!!), any, sortBy, head, uncons, last, concat, all)
 import Data.Array as Arr
-import Data.Either (Either(..))
+import Data.Either (Either(..), either)
 import Data.Function.Uncurried (runFn3, runFn2, runFn1)
 import Data.Int as INT
 import Data.Lens ((^.))
@@ -828,7 +828,7 @@ homeScreenFlow = do
                                             currentMap = currentState.homeScreen.data.suggestionsData.suggestionsMap
                                             updatedMap = (addOrUpdateSuggestedTrips currentSourceGeohash currTrip currentMap state.data.config.suggestedTripsAndLocationConfig)
                                         when (not (isAddressFieldsNothing state.data.sourceAddress) && not (isAddressFieldsNothing state.data.destinationAddress)) do
-                                          _ <- pure $ setSuggestionsMap updatedMap
+                                          void $ pure $ setSuggestionsMap updatedMap
                                           pure unit
                                         modifyScreenState $ HomeScreenStateType (\homeScreen -> newState{data{suggestionsData{suggestionsMap =updatedMap }}})
                                         lift $ lift $ triggerRideStatusEvent notification Nothing (Just state.props.bookingId) $ getScreenFromStage state.props.currentStage
@@ -1148,7 +1148,6 @@ homeScreenFlow = do
         else
           homeScreenFlow
     UPDATE_SAVED_LOCATION -> do
-      (GlobalState currentState) <- getState
       savedLocationResp <- lift $ lift $ Remote.getSavedLocationList ""
       updateSourceLocation ""
       case savedLocationResp of
@@ -1296,10 +1295,8 @@ homeScreenFlow = do
                                               lng : (item.point)^._lon,
                                               address : item.address
                                             }) srcSpecialLocation.gates
-      if(state.isSpecialZone) then do
+      when (state.isSpecialZone) $ do
         modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{sourceSelectedOnMap = false}, data{polygonCoordinates = fromMaybe "" sourceServiceabilityResp.geoJson, nearByPickUpPoints = pickUpPoints}})
-        pure unit
-      else pure unit
       rideSearchFlow "REPEAT_RIDE_FLOW"
     _ -> homeScreenFlow
 
@@ -1992,7 +1989,7 @@ checkAndUpdateSavedLocations state = do
       (savedLocationResp )<- lift $ lift $ Remote.getSavedLocationList ""
       case savedLocationResp of
         Right (SavedLocationsListRes listResp) -> do
-          fetchAndModifyLocationLists (AddNewAddress.getSavedLocations listResp.list)
+          fetchAndModifyLocationLists $ AddNewAddress.getSavedLocations listResp.list
           pure unit
         Left (err) -> pure unit
       pure unit
@@ -2018,30 +2015,27 @@ saveToRecents :: LocationListItemState -> Number -> Number -> Boolean -> FlowBT 
 saveToRecents item lat lon serviceability = do
   (GlobalState currentState) <- getState
   recentPredictionsObject <- lift $ lift $ getObjFromLocal currentState.homeScreen
-  if serviceability && lat /= 0.0 && lon /= 0.0 then do
-    modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{ data { recentSearchs { predictionArray = addToRecentSearches item{lat = Just lat, lon = Just lon, locationScore = Just 0.0} recentPredictionsObject.predictionArray}}
-                                                                      })
+  when (serviceability && lat /= 0.0 && lon /= 0.0) $ do
+    modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{ data { recentSearchs { predictionArray = addToRecentSearches item{lat = Just lat, lon = Just lon, locationScore = Just 0.0} recentPredictionsObject.predictionArray}}})
     (GlobalState modifiedState) <- getState
     _ <- pure $ saveObject "RECENT_SEARCHES" modifiedState.homeScreen.data.recentSearchs
     pure unit
-  else pure unit
 
 setSuggestionsMapInLocal :: LocationListItemState -> Number -> Number -> Boolean -> HomeScreenState -> FlowBT String Unit
 setSuggestionsMapInLocal item lat lon serviceability state= do
     (GlobalState currentState) <- getState
     when (serviceability && lat /= 0.0 && lon /= 0.0) $ do
       let currentSourceGeohash = runFn3 encodeGeohash currentState.homeScreen.props.sourceLat currentState.homeScreen.props.sourceLong state.data.config.suggestedTripsAndLocationConfig.geohashPrecision
-      let destinationWithLatLong = item{lat = Just lat, lon = Just lon}
-      let currentMap = getSuggestionsMapFromLocal FunctionCall
-      let updatedMap = (addOrUpdateSuggestedDestination currentSourceGeohash destinationWithLatLong currentMap state.data.config.suggestedTripsAndLocationConfig)
+          destinationWithLatLong = item{lat = Just lat, lon = Just lon}
+          currentMap = getSuggestionsMapFromLocal FunctionCall
+          updatedMap = addOrUpdateSuggestedDestination currentSourceGeohash destinationWithLatLong currentMap state.data.config.suggestedTripsAndLocationConfig
       modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{suggestionsData {suggestionsMap=updatedMap}}})
       _ <- pure $ setSuggestionsMap updatedMap
       pure unit
 
 getSuggestionsMapFromLocal :: LazyCheck -> SuggestionsMap 
-getSuggestionsMapFromLocal lazycheck = case (fetchSuggestionsFromLocal (show SUGGESTIONS_MAP)) of 
-                    Right a -> a
-                    Left err -> Map.empty
+getSuggestionsMapFromLocal lazycheck =
+  either (\err -> Map.empty) (\val -> val) (fetchSuggestionsFromLocal (show SUGGESTIONS_MAP))
 
 fetchAndModifyLocationLists :: Array (LocationListItemState) -> FlowBT String Unit
 fetchAndModifyLocationLists savedLocationResp = do 
@@ -2060,11 +2054,12 @@ fetchAndModifyLocationLists savedLocationResp = do
         currentGeoHashDestinations = (fromMaybe dummySuggestionsObject (getSuggestedRidesAndLocations currentGeoHash suggestionsMap suggestionsConfig.geohashLimitForMap))
         arrWithNeighbors = (concat (map (\hash -> (fromMaybe dummySuggestionsObject (getSuggestedRidesAndLocations hash suggestionsMap suggestionsConfig.geohashLimitForMap)).destinationSuggestions) geohashNeighbors)) 
         tripArrWithNeighbors = (concat (map (\hash -> (fromMaybe dummySuggestionsObject (getSuggestedRidesAndLocations hash suggestionsMap suggestionsConfig.geohashLimitForMap)).tripSuggestions) geohashNeighbors)) 
-        sortedTripList = Arr.take 30 (Arr.reverse (Arr.sortWith (\d -> fromMaybe 0.0 d.locationScore) tripArrWithNeighbors))
         sortedDestinationsList = Arr.take 30 (Arr.reverse (Arr.sortWith (\d -> fromMaybe 0.0 d.locationScore) arrWithNeighbors))
         suggestedDestinationsArr = (differenceOfLocationLists sortedDestinationsList savedLocationWithHomeOrWorkTag)
         recentSearchesWithoutSuggested =  (differenceOfLocationLists (recents) suggestedDestinationsArr)
         sugestedFinalList =  suggestedDestinationsArr <> (Arr.take (suggestionsConfig.locationsToBeStored - (length suggestedDestinationsArr)) recentSearchesWithoutSuggested)
+
+        sortedTripList = Arr.take 30 (Arr.reverse (Arr.sortWith (\d -> fromMaybe 0.0 d.locationScore) tripArrWithNeighbors))
         updatedList = recentDistance (map (\item ->  item { postfixImageUrl = if not (checkPrediction item savedLocationsWithOtherTag) then "ny_ic_fav_red,https://assets.juspay.in/nammayatri/images/user/ny_ic_fav_red.png"
                                                                         else "ny_ic_fav,https://assets.juspay.in/nammayatri/images/user/ny_ic_fav.png" }) (sugestedFinalList)) state.props.sourceLat state.props.sourceLong
     

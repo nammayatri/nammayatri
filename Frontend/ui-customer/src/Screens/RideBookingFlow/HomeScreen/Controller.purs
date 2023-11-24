@@ -112,7 +112,6 @@ import Common.Resources.Constants (zoomLevel, pickupZoomLevel)
 import Screens.RideBookingFlow.HomeScreen.Config
 import Data.Function.Uncurried (Fn3, runFn3, Fn1, runFn1)
 
-
 instance showAction :: Show Action where
   show _ = ""
 

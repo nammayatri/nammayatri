@@ -644,6 +644,8 @@ const kannadaStrings = {
   "SEARCH_RESULTS" : "ಹುಡುಕಾಟಗಳ ಪರಿಣಾಮಗಳು",
   "REQUESTING_RIDE_IN" : "ರೈಡ್ ಮಾಡಲು ವಿನಂತಿಸಲಾಗುತ್ತಿದೆ",
   "TAP_HERE_TO_STOP_AUTO_REQUESTING" : "ಸ್ವಯಂಚಾಲಿತ ವಿನಂತಿಸುವುದನ್ನು ನಿಲ್ಲಿಸಲು ಇಲ್ಲಿ ಟ್ಯಾಪ್ ಮಾಡಿ",
+  "POWERED_BY" : "ಶಕ್ತಿ ನೀಡಿದವರು",
+  "BOOK_YOUR_RIDE" : "ನಿಮ್ಮ ಸವಾರಿಯನ್ನು ಬುಕ್ ಮಾಡಿ",
 }
 
 export function getStringValue(key) {

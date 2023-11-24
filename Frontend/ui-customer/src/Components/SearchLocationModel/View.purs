@@ -59,17 +59,16 @@ view push state =
                     _           -> Color.transparent --"#FFFFFF"
       , margin $ MarginBottom (if state.isSearchLocation == LocateOnMap then bottomSpacing else 0)
       , onBackPressed push (const $ GoBack)
-      ][ 
-        PrestoAnim.animationSet
-    ([ translateYAnimFromTop $ translateFullYAnimWithDurationConfig 500 ])
-    $
-        linearLayout
+      ][ PrestoAnim.animationSet
+          ([ translateYAnimFromTop $ translateFullYAnimWithDurationConfig 500 ])
+          $ linearLayout
          -- Temporary fix for iOS.
-            [ height WRAP_CONTENT
+          [ height WRAP_CONTENT
             , width MATCH_PARENT
             , orientation VERTICAL
-            , background state.appConfig.primaryBackground
+            , background state.appConfig.searchLocationConfig.backgroundColor
             , padding $ PaddingVertical safeMarginTop 16
+            , stroke $ "1," <> state.appConfig.searchLocationConfig.separatorColor
             ][  linearLayout
                 [ orientation HORIZONTAL
                 , height $ V 105 
@@ -245,13 +244,13 @@ sourceDestinationEditTextView state push =
             [ height $ V 37
             , weight 1.0
             , text state.source
-            , color if not(state.isSource == Just true) then state.appConfig.searchLocationConfig.editTextDefaultColor else Color.white900
+            , color if not(state.isSource == Just true) then state.appConfig.searchLocationConfig.editTextDefaultColor else state.appConfig.searchLocationConfig.editTextColor
             , singleLine true
             , ellipsize true
             , cornerRadius 4.0
             , padding (Padding 8 7 32 7)
             , lineHeight "24"
-            , cursorColor state.appConfig.primaryTextColor
+            , cursorColor state.appConfig.searchLocationConfig.cursorColor
             , accessibilityHint "Pickup Location Editable field"
             , accessibility ENABLE
             , hint (getString START_)
@@ -318,7 +317,7 @@ sourceDestinationEditTextView state push =
             ( [ height $ V 37
               , weight 1.0
               , text state.destination
-              , color if (state.isSource == Just true) then state.appConfig.searchLocationConfig.editTextDefaultColor else Color.white900
+              , color if (state.isSource == Just true) then state.appConfig.searchLocationConfig.editTextDefaultColor else state.appConfig.searchLocationConfig.editTextColor
               , stroke $ "0," <> Color.black
               , padding (Padding 8 7 4 7)
               , hint (getString WHERE_TO)
@@ -327,7 +326,7 @@ sourceDestinationEditTextView state push =
               , ellipsize true
               , accessibilityHint "Destination Location Editable field"
               , accessibility ENABLE
-              , cursorColor state.appConfig.primaryTextColor
+              , cursorColor state.appConfig.searchLocationConfig.cursorColor
               , id $ getNewIDWithTag "DestinationEditText"
               , afterRender (\action -> do
                   _ <- pure $ showKeyboard case state.isSource of
@@ -396,9 +395,10 @@ searchResultsView state push =
         , width MATCH_PARENT
         , orientation VERTICAL
         ][  textView $
-              [ text $ if state.isAutoComplete then getString SEARCH_RESULTS
-                       else if state.isSource == Just false then (getString SUGGESTED_DESTINATION) 
-                       else getString PAST_SEARCHES
+              [ text $ if state.isAutoComplete 
+                            then getString SEARCH_RESULTS
+                            else if state.isSource == Just false then (getString SUGGESTED_DESTINATION) 
+                            else getString PAST_SEARCHES
               , color Color.black700
               , margin $ MarginVertical 16 8
               ] <> FontStyle.body3 TypoGraphy
