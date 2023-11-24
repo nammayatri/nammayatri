@@ -10,7 +10,7 @@ import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Error
 import Kernel.Types.Id
-import Kernel.Utils.Error.Throwing
+import Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified SharedLogic.LocationMapping as SLM
 import qualified Storage.Beam.Ticket as BeamT
@@ -20,21 +20,21 @@ import qualified Storage.Queries.LocationMapping as QLM
 createTicket' :: MonadFlow m => Ticket -> m ()
 createTicket' = createWithKV
 
-create :: MonadFlow m => Ticket -> m ()
+create :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Ticket -> m ()
 create dTicket = do
   _ <- whenNothingM_ (QL.findById dTicket.fromLocation.id) $ do QL.create (dTicket.fromLocation)
   void $ createTicket' dTicket
 
-createTicket :: MonadFlow m => Ticket -> m ()
+createTicket :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Ticket -> m ()
 createTicket ticket = do
-  fromLocationMap <- SLM.buildPickUpLocationMapping ticket.fromLocation.id ticket.id.getId DLM.BOOKING -- Create a DLM.TICKET type?
+  fromLocationMap <- SLM.buildPickUpLocationMapping ticket.fromLocation.id ticket.id.getId DLM.BOOKING Nothing (Just ticket.merchantOperatingCityId) -- Create a DLM.TICKET type?
   void $ QLM.create fromLocationMap
   create ticket
 
-findAll :: MonadFlow m => m [Ticket]
+findAll :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => m [Ticket]
 findAll = findAllWithKV [Se.Is BeamT.id $ Se.Not $ Se.Eq ""]
 
-findById :: MonadFlow m => Id Ticket -> m (Maybe Ticket)
+findById :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Ticket -> m (Maybe Ticket)
 findById (Id ticketId) = findOneWithKV [Se.Is BeamT.id $ Se.Eq ticketId]
 
 updateStatus :: MonadFlow m => Id Ticket -> TicketStatus -> m ()
@@ -55,29 +55,29 @@ updateBPPTicketId rbId bppRbId = do
     ]
     [Se.Is BeamT.id (Se.Eq $ getId rbId)]
 
-findByBPPTicketId :: MonadFlow m => Id BPPTicket -> m (Maybe Ticket)
+findByBPPTicketId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id BPPTicket -> m (Maybe Ticket)
 findByBPPTicketId (Id bppRbId) = findOneWithKV [Se.Is BeamT.bppTicketId $ Se.Eq $ Just bppRbId]
 
-findByTransactionId :: MonadFlow m => Text -> m (Maybe Ticket)
-findByTransactionId transactionId = findOneWithKV [Se.Is BeamT.search_request_id $ Se.Eq transactionId]
+findByTransactionId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Text -> m (Maybe Ticket)
+findByTransactionId transactionId = findOneWithKV [Se.Is BeamT.searchRequestId $ Se.Eq transactionId]
 
 instance ToTType' BeamT.Ticket Ticket where
   toTType' Ticket {..} = do
     BeamT.TicketT
       { BeamT.id = getId id,
         BeamT.status = status,
-        BeamT.quote_id = getId <$> quoteId,
+        BeamT.quoteId = getId <$> quoteId,
         BeamT.itemId = itemId,
         BeamT.fulfillmentId = fulfillmentId,
         BeamT.paymentUrl = paymentUrl,
-        BeamT.search_request_id = searchRequestId,
-        BeamT.bpp_order_id = bppOrderId,
+        BeamT.searchRequestId = searchRequestId,
+        BeamT.bppOrderId = bppOrderId,
         BeamT.quantity = quantity,
         BeamT.fromLocationId = getId fromLocation.id,
-        BeamT.price_per_adult = pricePerAdult,
-        BeamT.total_price = totalPrice,
-        BeamT.qr_data = qrData,
-        BeamT.merchantId = getId merchantId,
+        BeamT.pricePerAdult = pricePerAdult,
+        BeamT.totalPrice = totalPrice,
+        BeamT.qrData = qrData,
+        BeamT.merchantOperatingCityId = getId merchantOperatingCityId,
         BeamT.providerId = providerId,
         BeamT.providerUrl = showBaseUrl providerUrl,
         BeamT.bppTicketId = getId <$> bppTicketId,
@@ -96,13 +96,13 @@ instance FromTType' BeamT.Ticket Ticket where
       Just
         Ticket
           { id = Id id,
-            quoteId = Id <$> quote_id,
-            searchRequestId = search_request_id,
-            bppOrderId = bpp_order_id,
-            pricePerAdult = price_per_adult,
-            totalPrice = total_price,
-            qrData = qr_data,
-            merchantId = Id merchantId,
+            quoteId = Id <$> quoteId,
+            searchRequestId = searchRequestId,
+            bppOrderId = bppOrderId,
+            pricePerAdult = pricePerAdult,
+            totalPrice = totalPrice,
+            qrData = qrData,
+            merchantOperatingCityId = Id merchantOperatingCityId,
             providerId = providerId,
             providerUrl = pUrl,
             itemId = itemId,

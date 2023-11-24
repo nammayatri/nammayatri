@@ -33,7 +33,7 @@ createPublicTransportQuote publicTransportQuote = do
   _ <- QueryPTQRI.create publicTransportQuote.routeInfo
   createWithKV publicTransportQuote
 
-findById :: MonadFlow m => Id PublicTransportQuote -> m (Maybe PublicTransportQuote)
+findById :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id PublicTransportQuote -> m (Maybe PublicTransportQuote)
 findById publicTransportQuoteId = findOneWithKV [Se.Is BeamPTQ.id $ Se.Eq (getId publicTransportQuoteId)]
 
 instance FromTType' BeamPTQ.PublicTransportQuote PublicTransportQuote where

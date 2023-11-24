@@ -18,15 +18,15 @@ module Storage.Queries.PublicTransportQuote.Stop where
 import Domain.Types.PublicTransportQuote.Stop
 import Kernel.Beam.Functions
 import Kernel.Prelude
-import Kernel.Types.Common
 import Kernel.Types.Id
+import Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified Storage.Beam.PublicTransportQuote.Stop as BeamPTS
 
 create :: MonadFlow m => Stop -> m ()
 create = createWithKV
 
-findById :: MonadFlow m => Id Stop -> m (Maybe Stop)
+findById :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Stop -> m (Maybe Stop)
 findById stopId = findOneWithKV [Se.Is BeamPTS.id $ Se.Eq (getId stopId)]
 
 instance FromTType' BeamPTS.Stop Stop where

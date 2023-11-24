@@ -2973,15 +2973,16 @@
         "prometheus-haskell": "prometheus-haskell_2"
       },
       "locked": {
-        "lastModified": 1700464217,
-        "narHash": "sha256-60v79mntoT/FXBgbl8Z39yH7xtPC2MOIcMGz+kJNVac=",
+        "lastModified": 1700599225,
+        "narHash": "sha256-aQN6jDSu9xUpHT43Hp8JQLBTLKu8Jy/oLl46EK6rG0M=",
         "owner": "nammayatri",
         "repo": "shared-kernel",
-        "rev": "d5bef3a22afff708fdf06cc063ef73c9be721be1",
+        "rev": "bbcdd2e3a4c02031ed3f2a25300703196f3c8869",
         "type": "github"
       },
       "original": {
         "owner": "nammayatri",
+        "ref": "backend/feat/frfs-bus-integration",
         "repo": "shared-kernel",
         "type": "github"
       }

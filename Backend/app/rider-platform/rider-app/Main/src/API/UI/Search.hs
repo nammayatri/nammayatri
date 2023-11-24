@@ -155,6 +155,7 @@ oneWaySearch personId bundleVersion clientVersion device req = do
 
 mkSearchOnType ::
   ( CacheFlow m r,
+    EsqDBFlow m r,
     HasShortDurationRetryCfg r c,
     HasFlowEnv m r ["searchRequestExpiry" ::: Maybe Seconds, "nwAddress" ::: BaseUrl]
   ) =>
@@ -180,6 +181,7 @@ taxiSearch dSearchRes = fork "search cabs" . withShortRetry $ do
 
 busSearch ::
   ( CacheFlow m r,
+    EsqDBFlow m r,
     HasShortDurationRetryCfg r c,
     HasFlowEnv m r ["searchRequestExpiry" ::: Maybe Seconds, "nwAddress" ::: BaseUrl]
   ) =>

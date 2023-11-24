@@ -1000,7 +1000,6 @@ castVehicleVariantDashboard = \case
   Just DVeh.TAXI -> Just Common.TAXI
   Just DVeh.TAXI_PLUS -> Just Common.TAXI_PLUS
   _ -> Nothing
-  DVeh.BUS -> Common.BUS
 
 ---------------------------------------------------------------------
 getAllVehicleForFleet :: ShortId DM.Merchant -> Context.City -> Text -> Maybe Int -> Maybe Int -> Flow Common.ListVehicleRes
