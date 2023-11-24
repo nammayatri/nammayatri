@@ -2,16 +2,9 @@
 
 module Main where
 
-import Alchemist.DSL.Parser.API (apiParser)
-import Alchemist.DSL.Parser.Storage
-import Alchemist.DSL.Syntax.API
-import Alchemist.DSL.Syntax.Storage
-import Alchemist.Generator.Haskell
-import Alchemist.Generator.SQL
-import Alchemist.Utils
-import qualified Data.Text as T
+import Alchemist.App
 import Kernel.Prelude
-import Text.Parsec
+import System.Directory (createDirectoryIfMissing)
 import Text.RawString.QQ
 
 dslStorageInput :: String
@@ -51,8 +44,12 @@ dslInput =
 
 generateAllExample :: IO ()
 generateAllExample = do
-  mkBeamTable "./output" dslStorageInput
-  mkBeamQueries "./output" dslStorageInput
-  mkDomainType "./output" dslStorageInput
-  mkSQLFile "./output" dslStorageInput
+  mapM_ (createDirectoryIfMissing True) ["./output/Beam", "./output/Queries", "./output/Domain/Type", "./output/SQL"]
+  mkBeamTable "./output/Beam" dslStorageInput
+  mkBeamQueries "./output/Queries" dslStorageInput
+  mkDomainType "./output/Domain/Type" dslStorageInput
+  mkSQLFile "./output/SQL" dslStorageInput
   mkServantAPI "./output" dslInput
+
+main :: IO ()
+main = generateAllExample

@@ -116,5 +116,6 @@ tests:
     main: Main.hs
     source-dirs:
       - tests
+      - src
     dependencies:
       - alchemist
