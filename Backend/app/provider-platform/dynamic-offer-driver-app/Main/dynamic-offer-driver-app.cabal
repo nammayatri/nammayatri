@@ -126,6 +126,7 @@ library
       Domain.Action.Beckn.Update
       Domain.Action.Dashboard.Booking
       Domain.Action.Dashboard.Driver
+      Domain.Action.Dashboard.Driver.Notification
       Domain.Action.Dashboard.Driver.Registration
       Domain.Action.Dashboard.DriverReferral
       Domain.Action.Dashboard.Exotel

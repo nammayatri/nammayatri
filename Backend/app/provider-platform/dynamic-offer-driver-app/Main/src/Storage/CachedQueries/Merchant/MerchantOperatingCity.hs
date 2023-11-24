@@ -49,6 +49,12 @@ findByMerchantIdAndCity merchantId city =
     Just a -> return a
     Nothing -> flip whenJust cachedMerchantIdAndCity /=<< Queries.findByMerchantIdAndCity merchantId city
 
+findByMerchantShortIdAndCity :: (CacheFlow m r, EsqDBFlow m r) => ShortId Merchant -> Context.City -> m (Maybe MerchantOperatingCity)
+findByMerchantShortIdAndCity merchantShortId city =
+  Hedis.safeGet (makeMerchantShortIdAndCityKey merchantShortId city) >>= \case
+    Just a -> return a
+    Nothing -> flip whenJust cachedMerchantShortIdAndCity /=<< Queries.findByMerchantShortIdAndCity merchantShortId city
+
 cacheMerchantOpCityById :: CacheFlow m r => MerchantOperatingCity -> m ()
 cacheMerchantOpCityById merchantOpCity = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
@@ -67,11 +73,20 @@ cachedMerchantIdAndCity merchantOperatingCity = do
   let merchantIdAndCityKey = makeMerchantIdAndCityKey merchantOperatingCity.merchantId merchantOperatingCity.city
   Hedis.setExp merchantIdAndCityKey merchantOperatingCity expTime
 
+cachedMerchantShortIdAndCity :: CacheFlow m r => MerchantOperatingCity -> m ()
+cachedMerchantShortIdAndCity merchantOperatingCity = do
+  expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
+  let merchantShortIdAndCityKey = makeMerchantShortIdAndCityKey merchantOperatingCity.merchantShortId merchantOperatingCity.city
+  Hedis.setExp merchantShortIdAndCityKey merchantOperatingCity expTime
+
 makeMerchantOpCityIdKey :: Id MerchantOperatingCity -> Text
 makeMerchantOpCityIdKey merchantOpCityId = "CachedQueries:MerchantOperatingCity:MerchantOpCityId-" <> merchantOpCityId.getId
 
 makeMerchantIdAndCityKey :: Id Merchant -> Context.City -> Text
 makeMerchantIdAndCityKey merchantId city = "CachedQueries:MerchantOperatingCity:MerchantId-" <> merchantId.getId <> ":City-" <> show city
+
+makeMerchantShortIdAndCityKey :: ShortId Merchant -> Context.City -> Text
+makeMerchantShortIdAndCityKey merchantShortId city = "CachedQueries:MerchantOperatingCity:MerchantShortId-" <> merchantShortId.getShortId <> ":City-" <> show city
 
 makeMerchantIdKey :: Id Merchant -> Text
 makeMerchantIdKey merchantId = "CachedQueries:MerchantOperatingCity:MerchantId-" <> merchantId.getId
