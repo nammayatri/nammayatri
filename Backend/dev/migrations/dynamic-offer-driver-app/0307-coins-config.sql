@@ -37,15 +37,15 @@ FROM
 
 CREATE TABLE atlas_driver_offer_bpp.coin_history (
     id VARCHAR (36) PRIMARY KEY,
-    event_function VARCHAR (255),
+    event_function VARCHAR (255) NOT NULL,
     merchant_id VARCHAR (36) NOT NULL,
     merchant_opt_city_id VARCHAR (36) NOT NULL,
     driver_id VARCHAR (36) NOT NULL,
     coins INT NOT NULL,
-    created_at timestamp with time zone,
+    created_at timestamp with time zone NOT NULL,
     expiration_at timestamp with time zone,
     status TEXT NOT NULL,
-    coins_used INT
+    coins_used INT NOT NULL
 );
 
 CREATE TABLE atlas_driver_offer_bpp.coin_purchase_history (
@@ -56,7 +56,7 @@ CREATE TABLE atlas_driver_offer_bpp.coin_purchase_history (
     num_coins INT NOT NULL,
     created_at timestamp with time zone,
     updated_at timestamp with time zone,
-    cash double precision,
+    cash double precision NOT NULL,
     title VARCHAR (36) NOT NULL
 );
 
@@ -66,7 +66,7 @@ ALTER TABLE atlas_driver_offer_bpp.person ADD COLUMN total_earned_coins INT NOT 
 
 ALTER TABLE atlas_driver_offer_bpp.person ADD COLUMN used_coins INT NOT NULL DEFAULT 0;
 
-Alter Table atlas_driver_offer_bpp.transporter_config ADD COLUMN coin_feature BOOL DEFAULT True;
+Alter Table atlas_driver_offer_bpp.transporter_config ADD COLUMN coin_feature BOOL NOT NULL DEFAULT True;
 
 Alter Table atlas_driver_offer_bpp.transporter_config ADD COLUMN coin_expire_time INT NOT NULL DEFAULT 1296000;
 
