@@ -68,12 +68,18 @@ public class Utils {
                 .start(activity);
     }
 
-    public static void encodeImageToBase64(@Nullable Intent data, Context context) {
+    public static void encodeImageToBase64(@Nullable Intent data, Context context, @Nullable Uri imageData) {
         FirebaseAnalytics mFirebaseAnalytics = FirebaseAnalytics.getInstance(context);
-        try {
-            CropImage.ActivityResult result = CropImage.getActivityResult(data);
-            Uri fileUri = null;
-            if (result != null) fileUri = result.getUri();
+        try {Uri fileUri;
+            String path="";
+            if(imageData == null) {
+                CropImage.ActivityResult result = CropImage.getActivityResult(data);
+                fileUri = result.getUri();
+                path = result.getUri().getPath();
+            }
+            else {
+                fileUri = imageData;
+            }
             InputStream imageStream = context.getContentResolver().openInputStream(fileUri);
             Bitmap selectedImage = BitmapFactory.decodeStream(imageStream);
             ByteArrayOutputStream baos = new ByteArrayOutputStream();

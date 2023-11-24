@@ -5,6 +5,7 @@ import * as bengaliStrings from "./../../src/Strings/BN.js";
 import * as malayalamStrings from "./../../src/Strings/ML.js";
 import * as tamilStrings from "./../../src/Strings/TA.js";
 import * as frenchStrings from "./../../src/Strings/FR.js";
+import * as teluguStrings from "./../../src/Strings/TE.js";
 
 const JBridge = window.JBridge;
 
@@ -31,6 +32,8 @@ function getStringFromCommon(key) {
       return tamilStrings.getStringValue(key);
     case "FR_FR":
       return frenchStrings.getStringValue(key);
+    case "TE_IN": 
+      return teluguStrings.getStringValue(key);
     default:
       return englishStrings.getStringValue(key);
   }
@@ -53,6 +56,8 @@ export const getMerchantString = function(key) {
       return window.appConfig.malayalamStrings[key];
     case "TA_IN":
       return window.appConfig.tamilStrings[key];
+    case "TE_IN": 
+      return window.appConfig.teluguStrings[key];
     case "FR_FR":
       return window.appConfig.frenchStrings[key];
     default:

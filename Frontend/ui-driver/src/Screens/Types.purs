@@ -19,6 +19,7 @@ import Common.Types.App as Common
 import Components.ChatView.Controller as ChatView
 import Components.ChatView.Controller as ChatView
 import Components.ChooseVehicle.Controller (Config) as ChooseVehicle
+import Components.GoToLocationModal.Controller as GoToModal
 import Components.PaymentHistoryListItem.Controller as PaymentHistoryListItem
 import Components.RecordAudioModel.Controller as RecordAudioModel
 import Components.RecordAudioModel.Controller as RecordAudioModel
@@ -30,16 +31,15 @@ import Foreign (Foreign)
 import Foreign.Class (class Decode, class Encode)
 import Foreign.Object (Object)
 import Halogen.VDom.DOM.Prop (PropValue)
-import MerchantConfig.Types (AppConfig, GradientConfig, SubscriptionConfig, BottomNavConfig)
+import MerchantConfig.Types (AppConfig, BottomNavConfig, GradientConfig, SubscriptionConfig, CityConfig)
 import Prelude (class Eq, class Show)
+import Presto.Core.Types.API (class StandardEncode, standardEncode)
 import Presto.Core.Utils.Encoding (defaultDecode, defaultEncode)
 import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode)
 import PrestoDOM (LetterSpacing, Visibility, visibility)
 import Screens (ScreenName)
 import Services.API (AutopayPaymentStage, BankError(..), FeeType, GetDriverInfoResp(..), MediaType, PaymentBreakUp, Route, Status, DriverProfileStatsResp(..))
 import Styles.Types (FontSize)
-import Presto.Core.Types.API (class StandardEncode, standardEncode)
-import Components.GoToLocationModal.Controller as GoToModal
 
 type EditTextInLabelState =
  {
@@ -139,7 +139,9 @@ type AddVehicleDetailsScreenData =  {
   errorMessage :: String,
   dateOfRegistration :: Maybe String,
   dateOfRegistrationView :: String,
-  logField :: Object Foreign
+  logField :: Object Foreign,
+  driverMobileNumber :: String,
+  cityConfig :: CityConfig
  }
 
 type AddVehicleDetailsScreenProps =  {
@@ -161,8 +163,24 @@ type AddVehicleDetailsScreenProps =  {
   errorVisibility :: Boolean,
   openRegistrationDateManual :: Boolean,
   addRcFromProfile :: Boolean,
-  isDateClickable :: Boolean
+  isDateClickable :: Boolean,
+  openHowToUploadManual :: Boolean,
+  logoutModalView :: Boolean,
+  validateProfilePicturePopUp :: Boolean,
+  imageCaptureLayoutView :: Boolean,
+  fileCameraOption :: Boolean,
+  fileCameraPopupModal :: Boolean,
+  validating :: Boolean,
+  successfulValidation :: Boolean,
+  multipleRCstatus :: StageStatus
  }
+
+data ValidationStatus  =  Success | Failure | InProgress | None
+
+derive instance genericValidationStatus :: Generic ValidationStatus _
+instance showValidationStatus :: Show ValidationStatus where show = genericShow
+instance eqValidationStatus :: Eq ValidationStatus where eq = genericEq
+
 
 data VehicalTypes = Sedan | Hatchback | SUV | Auto
 
@@ -190,6 +208,8 @@ type UploadDrivingLicenseStateData = {
   , dateOfIssueView :: String
   , imageFrontUrl :: String
   , logField :: Object Foreign
+  , mobileNumber :: String
+  , cityConfig :: CityConfig
 }
 
 type UploadDrivingLicenseStateProps = {
@@ -201,6 +221,14 @@ type UploadDrivingLicenseStateProps = {
   , errorVisibility :: Boolean
   , openDateOfIssueManual :: Boolean
   , isDateClickable :: Boolean
+  , openHowToUploadManual :: Boolean
+  , logoutPopupModal :: Boolean
+  , validateProfilePicturePopUp :: Boolean
+  , imageCaptureLayoutView :: Boolean 
+  , fileCameraPopupModal :: Boolean
+  , fileCameraOption :: Boolean
+  , validating :: Boolean
+  , successfulValidation :: Boolean
 }
 
  -- ############################################################# RegistrationScreen ################################################################################
@@ -208,8 +236,35 @@ type RegistrationScreenState = {
   data :: RegistrationScreenData,
   props :: RegistrationScreenProps
 }
-type RegistrationScreenData = {}
-type RegistrationScreenProps = {}
+type RegistrationScreenData = {
+  activeIndex :: Int,
+  registerationSteps :: Array StepProgress,
+  phoneNumber :: String,
+  drivingLicenseStatus :: StageStatus,
+  vehicleDetailsStatus :: StageStatus,
+  permissionsStatus :: StageStatus,
+  subscriptionStatus :: StageStatus,
+  lastUpdateTime :: String,
+  cityConfig :: CityConfig
+}
+
+type StepProgress = {
+  stageName :: String,
+  stage :: RegisterationStep
+}
+
+type RegistrationScreenProps = {
+  logoutModalView :: Boolean,
+  limitReachedFor :: Maybe String
+}
+
+data RegisterationStep = DRIVING_LICENSE_OPTION | VEHICLE_DETAILS_OPTION | GRANT_PERMISSION | SUBSCRIPTION_PLAN
+derive instance genericRegisterationStep :: Generic RegisterationStep _
+instance eqRegisterationStep :: Eq RegisterationStep where eq = genericEq
+
+data StageStatus = COMPLETED | IN_PROGRESS | NOT_STARTED | FAILED
+derive instance genericStageStatus :: Generic StageStatus _
+instance eqStageStatus :: Eq StageStatus where eq = genericEq
 
  -- ############################################################# UploadAdhaarScreen ################################################################################
 
@@ -417,7 +472,8 @@ type EnterMobileNumberScreenStateData = {
 
 type EnterMobileNumberScreenStateProps = {
   btnActive :: Boolean,
-  isValid :: Boolean
+  isValid :: Boolean,
+  mobileNumberEditFocused :: Boolean
 }
 
 --------------------------------------------------------------- BankDetailScreenState -----------------------------------------------------------------------------
@@ -449,13 +505,16 @@ type EnterOTPScreenStateData = {
   attemptCount :: Int,
   mobileNo :: String,
   timer :: String,
-  capturedOtp :: String
+  capturedOtp :: String,
+  focusedIndex :: Int,
+  editTextId :: String
 }
 
 type EnterOTPScreenStateProps = {
   btnActive :: Boolean,
   isValid :: Boolean,
-  resendEnabled :: Boolean
+  resendEnabled :: Boolean,
+  otpTmp :: Boolean
 }
 
 ---------------------PrimaryButtonState----------------------------------------
@@ -1189,16 +1248,18 @@ type PermissionsScreenState = {
 }
 
 type PermissionsScreenData = {
-  logField :: Object Foreign
-
+  logField :: Object Foreign,
+  driverMobileNumber :: String
 }
 
 type PermissionsScreenProps = {
-  isLocationPermissionChecked :: Boolean
+  isNotificationPermissionChecked :: Boolean
   , isOverlayPermissionChecked :: Boolean
   , isAutoStartPermissionChecked :: Boolean
   , androidVersion :: Int
   , isBatteryOptimizationChecked :: Boolean
+  , logoutModalView :: Boolean
+  , isDriverEnabled :: Boolean
 }
 
 ------------------------------------------- OnBoardingSubscriptionScreenState ---------------------------
@@ -1641,8 +1702,7 @@ type SubscriptionScreenData = {
   planId :: String,
   orderId :: Maybe String,
   errorMessage :: String,
-  config :: SubscriptionConfig,
-  bottomNavConfig :: BottomNavConfig
+  config :: AppConfig
 }
 
 type AutoPayDetails = {
@@ -1987,4 +2047,48 @@ type Tag = {
   visibility :: Boolean, 
   text :: String, 
   textColor :: String
+}
+
+---------------------------------------------ChooseCityScreen -------------------------------------
+
+type ChooseCityScreenState = {
+  data :: ChooseCityScreenData,
+  props :: ChooseCityScreenProps
+}
+
+type ChooseCityScreenData = {
+  config :: AppConfig,
+  locationSelected :: Maybe String,
+  locationDetectionFailed :: Boolean,
+  merchantOperatingCityConfig :: Array CityConfig
+}
+
+type ChooseCityScreenProps = {
+  selectedLanguage :: String,
+  currentStage :: ChooseCityScreenStage,
+  isLocationPermissionGiven :: Boolean,
+  radioMenuFocusedLang :: String,
+  radioMenuFocusedCity :: String
+}
+
+data ChooseCityScreenStage = SELECT_LANG | SELECT_CITY | ENABLE_PERMISSION | DETECT_LOCATION
+
+derive instance genericChooseCityScreenStage :: Generic ChooseCityScreenStage _
+instance showChooseCityScreenStage :: Show ChooseCityScreenStage where show = genericShow
+instance eqChooseCityScreenStage :: Eq ChooseCityScreenStage where eq = genericEq
+
+type StepsHeaderModelState = {
+  activeIndex :: Int,
+  textArray :: Array String,
+  backArrowVisibility :: Boolean
+}
+
+---------------------------------------------WelcomeScreen -------------------------------------
+
+type WelcomeScreenState = {
+  data :: WelcomeScreenData
+}
+
+type WelcomeScreenData = {
+  logField :: Object Foreign
 }

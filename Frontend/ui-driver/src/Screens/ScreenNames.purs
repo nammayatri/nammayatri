@@ -57,6 +57,7 @@ data ScreenName = SPLASH_SCREEN
                 | SUBSCRIPTION_SCREEN
                 | ONBOARDING_SUBSCRIPTION_SCREEN
                 | DRIVER_SAVED_LOCATION_SCREEN
+                | WELCOME_SCREEN
 
 derive instance genericScreenName :: Generic ScreenName _
 instance eqScreenName :: Eq ScreenName where eq = genericEq
@@ -100,3 +101,4 @@ getScreen str = case str of
     SUBSCRIPTION_SCREEN            -> "subscription_screen"
     ONBOARDING_SUBSCRIPTION_SCREEN -> "onboarding_subscription_screen"
     DRIVER_SAVED_LOCATION_SCREEN   -> "driver_saved_location_screen"
+    WELCOME_SCREEN                 -> "welcome_screen"

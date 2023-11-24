@@ -15,15 +15,16 @@
 
 module Screens.PermissionsScreen.Handler where
 
-import Prelude (bind, pure, ($), (<$>))
-import Engineering.Helpers.BackTrack (getState)
-import Screens.PermissionsScreen.Controller (ScreenOutput(..))
 import Control.Monad.Except.Trans (lift)
 import Control.Transformers.Back.Trans (BackT(..), FailBack(..)) as App
-import PrestoDOM.Core.Types.Language.Flow (runScreen)
-import Screens.PermissionsScreen.View as PermissionsScreen
-import Types.App (FlowBT, GlobalState(..), PERMISSIONS_SCREEN_OUTPUT(..))
+import Engineering.Helpers.BackTrack (getState)
+import Prelude (bind, pure, ($), (<$>), discard)
 import Presto.Core.Types.Language.Flow (getLogFields)
+import PrestoDOM.Core.Types.Language.Flow (runScreen)
+import Screens.PermissionsScreen.Controller (ScreenOutput(..))
+import Screens.PermissionsScreen.View as PermissionsScreen
+import Types.App (FlowBT, GlobalState(..), PERMISSIONS_SCREEN_OUTPUT(..), ScreenType(..))
+import Types.ModifyScreenState (modifyScreenState)
 
 permissions :: FlowBT String PERMISSIONS_SCREEN_OUTPUT
 permissions = do
@@ -33,3 +34,7 @@ permissions = do
     case action of 
         GoBack -> App.BackT $ pure App.GoBack
         GoToHome -> App.BackT $ App.BackPoint <$> pure DRIVER_HOME_SCREEN
+        LogoutAccount -> App.BackT $ App.BackPoint <$> pure LOGOUT_FROM_PERMISSIONS_SCREEN
+        GoToRegisteration updatedState -> do
+          modifyScreenState $ PermissionsScreenStateType (\_ -> updatedState)
+          App.BackT $ App.BackPoint <$> (pure $ GO_TO_REGISTERATION_SCREEN updatedState)

@@ -253,7 +253,7 @@ view push state =
                 [ linearLayout
                     [ if state.option2.visibility then width state.option1.width else weight 1.0
                     , background state.option1.background
-                    , height $ V 48
+                    , height $ state.option1.height
                     , cornerRadius 8.0
                     , visibility $ if state.option1.visibility then VISIBLE else GONE
                     , stroke $ "1," <> state.option1.strokeColor
@@ -287,7 +287,7 @@ view push state =
                         [ width $ MATCH_PARENT
                         , height $ MATCH_PARENT
                         , visibility $ if state.option1.showShimmer then GONE else VISIBLE
-                        , gravity $ CENTER
+                        , gravity state.option1.gravity
                         ]
                         [ imageView [
                             imageWithFallback state.option1.image.imageUrl
@@ -327,6 +327,7 @@ view push state =
                     , padding state.option2.padding
                     , accessibility DISABLE
                     , orientation VERTICAL
+                    , gravity state.option2.gravity
                     , clickable state.option2.isClickable
                     , alpha (if state.option2.isClickable then 1.0 else 0.5)
                     ]
