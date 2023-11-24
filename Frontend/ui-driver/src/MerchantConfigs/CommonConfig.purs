@@ -134,6 +134,7 @@ commonConfig =
           enableWaitTime : true,
           thresholdDist : 0.05
         }
+        , unserviceableThreshold : 250.0
         , cityConfig : [
               {
                 cityName : "Bangalore",

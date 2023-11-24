@@ -1043,7 +1043,9 @@ const tamilStrings = {
   RC_IN_PROGRESS_DESC : "சரிபார்க்கப்பட்டதும் உங்கள் சுயவிவரத்தில் RC சேர்க்கப்படும்",
   RC_VERIFICATION_SUCCESS : "RC சரிபார்ப்பு வெற்றிகரமாக உள்ளது!",
   RC_VERIFICATION_FAILED_STATUS : "RC சரிபார்ப்பு தோல்வியடைந்தது!",
-  RC_VERIFICATION_IN_PROGRESS : "ஆர்சி சரிபார்ப்பு நடந்து கொண்டிருக்கிறது..."
+  RC_VERIFICATION_IN_PROGRESS : "ஆர்சி சரிபார்ப்பு நடந்து கொண்டிருக்கிறது...",
+  WE_ARE_NOT_LIVE_IN_YOUR_AREA : "நாங்கள் இன்னும் உங்கள் பகுதியில் வசிக்கவில்லை!\nஉங்கள் நகரத்திற்கு விரைவில் வருவோம்!",
+  LOCATION_UNSERVICEABLE : "இருப்பிடம் சேவை செய்ய முடியாதது"
 }
 
 export function getStringValue(key) {

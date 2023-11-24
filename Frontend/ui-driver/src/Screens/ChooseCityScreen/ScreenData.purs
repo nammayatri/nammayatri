@@ -12,7 +12,7 @@ import Language.Types (STR(..))
 
 initData :: ChooseCityScreenState
 initData = {
-  data : {
+  data: {
     config : DC.config,
     locationSelected : Mb.Nothing,
     locationDetectionFailed : false,
@@ -23,7 +23,8 @@ initData = {
     currentStage : ENABLE_PERMISSION,
     isLocationPermissionGiven : false,
     radioMenuFocusedLang : "",
-    radioMenuFocusedCity : ""
+    radioMenuFocusedCity : "",
+    locationUnserviceable : false
   }
 }
 
