@@ -12,7 +12,7 @@ CREATE TABLE atlas_driver_offer_bpp.coin_config (
 INSERT INTO atlas_driver_offer_bpp.coin_config
     (id, event_function, event_name, merchant_id, merchant_opt_city_id, coins, expiration_at, active)
 SELECT
-    atlas_driver_offer_bpp.uuid_generate_v4(),
+    md5(random()::TEXT || clock_timestamp()::TEXT || random()::TEXT || random()::TEXT || random()::TEXT || random()::TEXT)::UUID,
     event.event_function,
     event.event_name,
     city.merchant_id,
