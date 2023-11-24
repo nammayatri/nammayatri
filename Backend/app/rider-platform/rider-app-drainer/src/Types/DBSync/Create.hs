@@ -53,6 +53,12 @@ import qualified "rider-app" Storage.Beam.SavedReqLocation as SavedReqLocation
 import qualified "rider-app" Storage.Beam.SearchRequest as SearchRequest
 import qualified "rider-app" Storage.Beam.Sos as Sos
 import qualified "rider-app" Storage.Beam.SpecialZoneQuote as SpecialZoneQuote
+import qualified "rider-app" Storage.Beam.Tickets.TicketBooking as TicketBooking
+import qualified "rider-app" Storage.Beam.Tickets.TicketBookingService as TicketBookingService
+import qualified "rider-app" Storage.Beam.Tickets.TicketBookingServicePriceBreakup as TicketBookingServicePriceBreakup
+import qualified "rider-app" Storage.Beam.Tickets.TicketPlace as TicketPlace
+import qualified "rider-app" Storage.Beam.Tickets.TicketService as TicketService
+import qualified "rider-app" Storage.Beam.Tickets.TicketServicePrice as TicketServicePrice
 import qualified "rider-app" Storage.Beam.TripTerms as TripTerms
 import qualified "rider-app" Storage.Beam.Webengage as Webengage
 
@@ -106,6 +112,12 @@ data DBCreateObject
   | BecknRequestObject BecknRequest.BecknRequest
   | LocationObject Location.Location
   | LocationMappingObject LocationMapping.LocationMapping
+  | TicketBookingObject TicketBooking.TicketBooking
+  | TicketBookingServiceObject TicketBookingService.TicketBookingService
+  | TicketServiceObject TicketService.TicketService
+  | TicketServicePriceObject TicketServicePrice.TicketServicePrice
+  | TicketBookingServicePriceBreakupObject TicketBookingServicePriceBreakup.TicketBookingServicePriceBreakup
+  | TicketPlaceObject TicketPlace.TicketPlace
   deriving (Generic, FromJSON, ToJSON, Show)
 
 modelName :: DBCreateObject -> Text
@@ -158,3 +170,9 @@ modelName (HotSpotConfigObject _) = "HotSpotConfig"
 modelName (BecknRequestObject _) = "BecknRequest"
 modelName (LocationObject _) = "Location"
 modelName (LocationMappingObject _) = "LocationMapping"
+modelName (TicketBookingObject _) = "TicketBooking"
+modelName (TicketBookingServiceObject _) = "TicketBookingService"
+modelName (TicketServiceObject _) = "TicketService"
+modelName (TicketServicePriceObject _) = "TicketServicePrice"
+modelName (TicketBookingServicePriceBreakupObject _) = "TicketBookingServicePriceBreakup"
+modelName (TicketPlaceObject _) = "TicketPlace"
