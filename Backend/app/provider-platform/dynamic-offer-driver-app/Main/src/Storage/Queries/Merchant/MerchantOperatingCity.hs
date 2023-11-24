@@ -35,6 +35,9 @@ findAllByMerchantId (Id merchantId) = findAllWithKV [Se.And [Se.Is BeamMOC.merch
 findByMerchantIdAndCity :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DM.Merchant -> Context.City -> m (Maybe MerchantOperatingCity)
 findByMerchantIdAndCity (Id merchantId) city = findOneWithKV [Se.And [Se.Is BeamMOC.merchantId $ Se.Eq merchantId, Se.Is BeamMOC.city $ Se.Eq city]]
 
+findByMerchantShortIdAndCity :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => ShortId DM.Merchant -> Context.City -> m (Maybe MerchantOperatingCity)
+findByMerchantShortIdAndCity (ShortId merchantShortId) city = findOneWithKV [Se.And [Se.Is BeamMOC.merchantShortId $ Se.Eq merchantShortId, Se.Is BeamMOC.city $ Se.Eq city]]
+
 instance FromTType' BeamMOC.MerchantOperatingCity MerchantOperatingCity where
   fromTType' BeamMOC.MerchantOperatingCityT {..} = do
     pure $

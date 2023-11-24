@@ -96,7 +96,8 @@ data DriverCommonAPIs = DriverCommonAPIs
     updateByPhoneNumber :: Text -> Driver.UpdateDriverDataReq -> Euler.EulerClient APISuccess,
     updateDriverName :: Id Driver.Driver -> Driver.UpdateDriverNameReq -> Euler.EulerClient APISuccess,
     deleteRC :: Id Driver.Driver -> Driver.DeleteRCReq -> Euler.EulerClient APISuccess,
-    clearOnRideStuckDrivers :: Maybe Int -> Euler.EulerClient Driver.ClearOnRideStuckDriversRes
+    clearOnRideStuckDrivers :: Maybe Int -> Euler.EulerClient Driver.ClearOnRideStuckDriversRes,
+    sendDummyNotificationToDriverViaDashboard :: Id Driver.Driver -> Euler.EulerClient APISuccess
   }
 
 data DriverRegistrationAPIs = DriverRegistrationAPIs
@@ -263,7 +264,8 @@ mkDriverOperationAPIs merchantId city token = do
       :<|> updateByPhoneNumber
       :<|> updateDriverName
       :<|> deleteRC
-      :<|> clearOnRideStuckDrivers = driverCommonClient
+      :<|> clearOnRideStuckDrivers
+      :<|> sendDummyNotificationToDriverViaDashboard = driverCommonClient
 
     updateReferralLinkPassword
       :<|> linkDriverReferralCode = referralClient

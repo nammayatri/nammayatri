@@ -16,6 +16,7 @@ module API.Dashboard.Management.Driver.Common where
 
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Driver as Common
 import qualified Domain.Action.Dashboard.Driver as DDriver
+import qualified Domain.Action.Dashboard.Driver.Notification as DDN
 import qualified Domain.Types.Merchant as DM
 import Environment
 import Kernel.Prelude
@@ -46,6 +47,7 @@ type API =
            :<|> Common.UpdateDriverNameAPI
            :<|> Common.DeleteRCAPI
            :<|> Common.ClearOnRideStuckDriversAPI
+           :<|> Common.SendDummyNotificationToDriverAPI
        )
 
 type BlockDriverWithReasonAPI =
@@ -82,6 +84,7 @@ handler merchantId city =
     :<|> updateDriverName merchantId city
     :<|> deleteRC merchantId city
     :<|> clearOnRideStuckDrivers merchantId city
+    :<|> sendDummyNotificationToDriver merchantId city
 
 driverDocumentsInfo :: ShortId DM.Merchant -> Context.City -> FlowHandler Common.DriverDocumentsInfoRes
 driverDocumentsInfo merchantShortId = withFlowHandlerAPI . DDriver.driverDocumentsInfo merchantShortId
@@ -140,3 +143,6 @@ deleteRC merchantShortId opCity driverId = withFlowHandlerAPI . DDriver.deleteRC
 
 clearOnRideStuckDrivers :: ShortId DM.Merchant -> Context.City -> Maybe Int -> FlowHandler Common.ClearOnRideStuckDriversRes
 clearOnRideStuckDrivers merchantShortId opCity = withFlowHandlerAPI . DDriver.clearOnRideStuckDrivers merchantShortId opCity
+
+sendDummyNotificationToDriver :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> FlowHandler APISuccess
+sendDummyNotificationToDriver merchantShortId opCity = withFlowHandlerAPI . DDN.sendDummyNotificationToDriver merchantShortId opCity
