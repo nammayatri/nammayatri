@@ -12,6 +12,9 @@ data TicketPlace = TicketPlace
     lat :: Maybe Double,
     lon :: Maybe Double,
     gallery :: [Text],
+    shortDesc :: Text,
+    iconUrl :: Maybe Text,
+    mapImageUrl :: Maybe Text,
     openTimings :: Maybe TimeOfDay,
     closeTimings :: Maybe TimeOfDay
   }
