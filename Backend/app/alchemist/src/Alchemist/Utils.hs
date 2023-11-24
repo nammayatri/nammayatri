@@ -38,9 +38,9 @@ getQualifiedImport :: String -> Maybe String
 getQualifiedImport = \case
   "Text" -> Just "Data.Text"
   "Maybe" -> Just "Data.Maybe"
-  "Id" -> Just "Beckn.Types"
-  "TimeOfDay" -> Just "Beckn.Types"
-  "Int" -> Just "Data.Int"
+  "Id" -> Just "Kernel.Types.Id"
+  "TimeOfDay" -> Just "Kernel.Prelude"
+  "Int" -> Just "Kernel.Prelude"
   _ -> Nothing
 
 -- Helper function to capitalize a string

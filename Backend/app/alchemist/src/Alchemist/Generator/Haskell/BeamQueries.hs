@@ -3,6 +3,7 @@ module Alchemist.Generator.Haskell.BeamQueries where
 import Alchemist.DSL.Syntax.Storage
 import Alchemist.Utils
 import Data.List (intercalate)
+import qualified Data.Text as Text
 import Kernel.Prelude
 
 generateImports :: TableDef -> String
@@ -12,31 +13,29 @@ generateImports tableDef =
     ++ (capitalize $ tableNameHaskell tableDef)
     ++ " where\n\n"
     ++ "import Kernel.Beam.Functions\n"
+    ++ "import Kernel.Prelude\n"
     ++ "import qualified Storage.Beam."
     ++ (capitalize $ tableNameHaskell tableDef)
-    ++ " as Beam"
+    ++ " as Beam\n"
     ++ (intercalate "\n" $ map (\i -> "import qualified " ++ i ++ " as " ++ i) $ imports tableDef)
     ++ "\n\n"
 
--- Determines the conversion function based on the Haskell type
 toTTypeConversionFunction :: String -> String -> String
-toTTypeConversionFunction haskellType fieldName =
-  case haskellType of
-    "Int" -> "roundToIntegral " ++ fieldName -- Example for Int to Float conversion
-    "Id" -> "Id " ++ fieldName -- Example for a custom ID type
-    _ -> fieldName -- Default case with no conversion
+toTTypeConversionFunction haskellType fieldName
+  | "Int" <- haskellType = "roundToIntegral " ++ fieldName
+  | "Id " `Text.isInfixOf` (Text.pack haskellType) = "Kernel.Types.Id.Id " ++ fieldName
+  | otherwise = fieldName
 
 fromTTypeConversionFunction :: String -> String -> String
-fromTTypeConversionFunction haskellType fieldName =
-  case haskellType of
-    "Int" -> "realToFrac " ++ fieldName -- Example for Int to Float conversion
-    "Id" -> "getId " ++ fieldName -- Example for a custom ID type
-    _ -> fieldName -- Default case with no conversion
+fromTTypeConversionFunction haskellType fieldName
+  | "Int" <- haskellType = "realToFrac " ++ fieldName
+  | "Id " `Text.isInfixOf` (Text.pack haskellType) = "Kernel.Types.Id.getId " ++ fieldName
+  | otherwise = fieldName
 
 -- Generates the FromTType' instance
 fromTTypeInstance :: TableDef -> String
 fromTTypeInstance tableDef =
-  "instance FromTType' Beam." ++ tableNameHaskell tableDef ++ " " ++ tableNameHaskell tableDef ++ " where\n"
+  "instance FromTType' Beam." ++ tableNameHaskell tableDef ++ " Domain.Types." ++ tableNameHaskell tableDef ++ "." ++ tableNameHaskell tableDef ++ " where\n"
     ++ "  fromTType' Beam."
     ++ tableNameHaskell tableDef
     ++ "T {..} = do\n"
@@ -54,7 +53,7 @@ fromTTypeInstance tableDef =
 -- Generates the ToTType' instance
 toTTypeInstance :: TableDef -> String
 toTTypeInstance tableDef =
-  "instance ToTType' Beam." ++ tableNameHaskell tableDef ++ " " ++ tableNameHaskell tableDef ++ " where\n"
+  "instance ToTType' Beam." ++ tableNameHaskell tableDef ++ " Domain.Types." ++ tableNameHaskell tableDef ++ "." ++ tableNameHaskell tableDef ++ " where\n"
     ++ "  toTType' "
     ++ tableNameHaskell tableDef
     ++ " {..} = do\n"
