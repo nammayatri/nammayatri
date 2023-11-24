@@ -385,10 +385,14 @@ library
       Tools.Streaming.Kafka
       Tools.Ticket
       Tools.Whatsapp
+      API.TicketBooking
+      Spec
+      Storage.TicketBooking
   other-modules:
       Paths_rider_app
   hs-source-dirs:
       src
+      spec
   default-extensions:
       ConstraintKinds
       DataKinds
@@ -426,6 +430,7 @@ library
   ghc-options: -fwrite-ide-info -hiedir=.hie -fplugin=RecordDotPreprocessor -Wall -Wcompat -Widentities -fhide-source-paths -Werror -Wwarn=ambiguous-fields
   build-depends:
       aeson
+    , alchemist
     , amazonka
     , amazonka-core
     , amazonka-ses
@@ -444,8 +449,10 @@ library
     , cryptostore >=0.2.3.0
     , dashboard-helper-api
     , data-default-class
+    , directory
     , euler-hs
     , extra
+    , filepath
     , geohash ==1.0.1
     , http-media
     , http-types
@@ -459,6 +466,7 @@ library
     , prometheus-client
     , prometheus-metrics-ghc
     , random
+    , raw-strings-qq
     , record-dot-preprocessor
     , record-hasfield
     , sequelize
@@ -534,6 +542,7 @@ executable rider-app-exe
   ghc-options: -fwrite-ide-info -hiedir=.hie -fplugin=RecordDotPreprocessor -threaded -rtsopts "-with-rtsopts=-N -T"
   build-depends:
       aeson
+    , alchemist
     , amazonka
     , amazonka-core
     , amazonka-ses
@@ -551,8 +560,10 @@ executable rider-app-exe
     , cryptostore >=0.2.3.0
     , dashboard-helper-api
     , data-default-class
+    , directory
     , euler-hs
     , extra
+    , filepath
     , geohash ==1.0.1
     , http-media
     , http-types
@@ -565,6 +576,7 @@ executable rider-app-exe
     , prometheus-client
     , prometheus-metrics-ghc
     , random
+    , raw-strings-qq
     , record-dot-preprocessor
     , record-hasfield
     , rider-app

@@ -110,3 +110,11 @@ library:
         ghc-options:
           - -O2
           - -j4
+
+tests:
+  alchemist-tests:
+    main: Main.hs
+    source-dirs:
+      - tests
+    dependencies:
+      - alchemist

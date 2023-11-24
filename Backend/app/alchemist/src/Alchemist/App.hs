@@ -4,78 +4,47 @@ module Alchemist.App where
 
 import Alchemist.DSL.Parser.API (apiParser)
 import Alchemist.DSL.Parser.Storage
-import Alchemist.Generator.Haskell.BeamQueries (generateTTypeInstances)
-import Alchemist.Generator.Haskell.BeamTable (generateBeamTable)
-import Alchemist.Generator.Haskell.DomainType (generateHaskellModule)
-import Alchemist.Generator.Haskell.Servant (apisToText)
-import Alchemist.Generator.SQL.Table (generateSQL)
+import Alchemist.DSL.Syntax.API
+import Alchemist.DSL.Syntax.Storage
+import Alchemist.Generator.Haskell
+import Alchemist.Generator.SQL
 import Alchemist.Utils
+import qualified Data.Text as T
 import Kernel.Prelude
 import Text.Parsec
-import Text.RawString.QQ
 
-dslStorageInput :: String
-dslStorageInput =
-  [r|Table "TicketService" "ticket_service"
-  Field "id" "Maybe (Id Domain.Types.TicketService.TicketService)" PrimaryKey NotNull
-  Field "placesId" "Text" PrimaryKey NotNull
-  Field "service" "Text"  SecondaryKey NotNull
-  Field "maxVerification" "Int" "INT" NotNull Default "1"
-  Field "openTimings" "Maybe TimeOfDay" "time without time zone" Default "CURRENT_TIMESTAMP"
-  Field "closeTimings" "Maybe TimeOfDay" "time without time zone"
-  Field "validityTimings" "Maybe TimeOfDay" "time without time zone"
-|]
+parseStorageDSL :: String -> TableDef
+parseStorageDSL dsl = do
+  case parse storageParser "" dsl of
+    Left err -> error (T.pack $ "Parsing rrror: " ++ show err)
+    Right tableDef -> tableDef
 
-parseStorage :: IO ()
-parseStorage = do
-  case parse parseStorageDSL "" dslStorageInput of
-    Left err -> putStrLn $ "Error: " ++ show err
-    Right tableDef -> print tableDef
-
-processAPIDSL :: String -> String
+processAPIDSL :: String -> Apis
 processAPIDSL dsl = case apiParser dsl of
-  Left err -> "Parsing error: " ++ show err
-  Right ast -> apisToText ast
+  Left err -> error $ T.pack $ "Parsing error: " ++ show err
+  Right apiDef -> apiDef
 
-dslInput :: String
-dslInput =
-  [r|
-  Module Ticket.Service
-  GET /ticket/places/{placeId:Id DTB.TicketPlace}/services?*status:Data.Types.BookingStatus&limit:Int&offset:Int
-  AUTH TokenAuth
-  Header vt {Domain.Action.UI.Tickets.Vehicle}
-  REQJ {Id Domain.Action.UI.Ticketsadfasdkfj.Driverjksadhfshlfki}
-  RESPJ {Domain.Action.UI.Tickets.TicketPlace}
-  ---
-  GET /ticket/places1/{placeId:Id DTB.TicketPlace}
-  AUTH TokenAuth
-  RESPJ {Domain.Action.UI.Tickets.TicketPlace}
-  ---
-  GET /ticket/places2/{placeId:Id DTB.TicketPlace}
-  AUTH TokenAuth
-  RESPJ {Domain.Action.UI.Tickets.TicketPlace}
-  ---
-  GET /ticket/places3/{placeId:Id DTB.TicketPlace}
-  AUTH TokenAuth
-  RESPJ {Domain.Action.UI.Tickets.TicketPlace}
-|]
+mkBeamTable :: FilePath -> String -> IO ()
+mkBeamTable filePath dsl = do
+  let tableDef = parseStorageDSL dsl
+  writeToFile (filePath ++ "/" ++ tableNameHaskell tableDef ++ ".hs") (generateBeamTable tableDef)
 
-generateStorage :: IO ()
-generateStorage = do
-  let tableDef = case parse parseStorageDSL "" dslStorageInput of
-        Left err -> error (show err)
-        Right tp -> tp
-  writeToFile "./output/GeneratedBeamTable.hs" (generateBeamTable tableDef)
-  writeToFile "./output/GeneratedBeamQueries.hs" (generateTTypeInstances tableDef)
-  writeToFile "./output/GenerateHaskellModule.hs" (generateHaskellModule tableDef)
-  writeToFile "./output/GenerateSQLTables.sql" (generateSQL tableDef)
+mkBeamQueries :: FilePath -> String -> IO ()
+mkBeamQueries filePath dsl = do
+  let tableDef = parseStorageDSL dsl
+  writeToFile (filePath ++ "/" ++ tableNameHaskell tableDef ++ ".hs") (generateBeamQueries tableDef)
 
-generateAPI :: IO ()
-generateAPI = do
-  let generatedCode = processAPIDSL dslInput
-  writeToFile "./output/GeneratedServantAPI.hs" generatedCode
+mkDomainType :: FilePath -> String -> IO ()
+mkDomainType filePath dsl = do
+  let tableDef = parseStorageDSL dsl
+  writeToFile (filePath ++ "/" ++ tableNameHaskell tableDef ++ ".hs") (generateDomainType tableDef)
 
-generateAll :: IO ()
-generateAll = do
-  generateStorage
-  generateAPI
+mkSQLFile :: FilePath -> String -> IO ()
+mkSQLFile filePath dsl = do
+  let tableDef = parseStorageDSL dsl
+  writeToFile (filePath ++ "/" ++ tableNameSql tableDef ++ ".sql") (generateSQL tableDef)
+
+mkServantAPI :: FilePath -> String -> IO ()
+mkServantAPI filePath dsl = do
+  let apiDef = processAPIDSL dsl
+  writeToFile (filePath ++ "/" ++ T.unpack (head (map _moduleName apiDef)) ++ ".hs") (generateServantAPI apiDef)
