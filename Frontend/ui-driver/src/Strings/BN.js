@@ -1048,7 +1048,9 @@ const bengaliStrings = {
   RC_IN_PROGRESS_DESC : "যাচাই হয়ে গেলে RC আপনার প্রোফাইলে যোগ করা হবে",
   RC_VERIFICATION_SUCCESS : "আরসি যাচাই সফল!",
   RC_VERIFICATION_FAILED_STATUS : "আরসি যাচাই ব্যর্থ!",
-  RC_VERIFICATION_IN_PROGRESS : "RC যাচাইকরণ চলছে..."
+  RC_VERIFICATION_IN_PROGRESS : "RC যাচাইকরণ চলছে...",
+  WE_ARE_NOT_LIVE_IN_YOUR_AREA : "আমরা এখনও আপনার এলাকায় থাকি না!\nশীঘ্রই আপনার শহরে আসছি!",
+  LOCATION_UNSERVICEABLE : "অবস্থান অপ্রচলিত"
 }
 
 export function getStringValue(key) {

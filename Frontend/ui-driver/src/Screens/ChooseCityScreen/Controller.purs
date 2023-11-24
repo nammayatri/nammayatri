@@ -6,7 +6,7 @@ import Components.SelectMenuButton.Controller (Action(..)) as MenuButtonControll
 import Data.Array as DA
 import Data.Maybe (Maybe(..), fromMaybe, isNothing)
 import Data.Number as Number
-import Data.Tuple (Tuple(..), fst)
+import Data.Tuple (Tuple(..), fst, snd)
 import Debug (spy)
 import Effect.Class (liftEffect)
 import Effect.Unsafe (unsafePerformEffect)
@@ -15,7 +15,7 @@ import Helpers.Utils (getDistanceBwCordinates)
 import JBridge (firebaseLogEvent, getCurrentLatLong, isLocationPermissionEnabled, minimizeApp, requestLocation)
 import Log (trackAppActionClick, trackAppBackPress, trackAppScreenRender)
 import MerchantConfig.Types (CityConfig)
-import Prelude (class Show, bind, pure, ($), (==), (||), unit, not, discard, (<), (&&))
+import Prelude (class Show, bind, pure, ($), (==), (||), unit, not, discard, (<), (&&), (<=))
 import PrestoDOM (Eval, continue, continueWithCmd, exit, updateAndExit)
 import PrestoDOM.Types.Core (class Loggable)
 import Screens (getScreen, ScreenName(..))
@@ -47,7 +47,7 @@ data Action = BackPressed
             | CurrentLocationCallBack String String
             -- | MenuButtonAction2 MenuButtonController.Action
 
-data ScreenOutput = WelcomeScreen | SelectLanguageScreen | GetLatLong ChooseCityScreenState | RefreshScreen ChooseCityScreenState
+data ScreenOutput = WelcomeScreen | SelectLanguageScreen | RefreshScreen ChooseCityScreenState
 
 eval :: Action -> ChooseCityScreenState -> Eval Action ScreenOutput ChooseCityScreenState
 
@@ -147,7 +147,11 @@ eval (CurrentLocationCallBack lat long) state = do
     let distanceFromBangalore = getDistanceBwCordinates (fromMaybe 0.0 $ Number.fromString  lat) (fromMaybe 0.0 $ Number.fromString long) 12.9716 77.5946
         initialAccumulator = Tuple "Bangalore" distanceFromBangalore
         result = DA.foldl (\acc city -> closestCity acc city driverLat driverLon) initialAccumulator state.data.config.cityConfig
-    continue state{ data {locationSelected = Just $ fst result}, props {radioMenuFocusedCity = fst result}}
+        insideThreshold = (snd result) <= state.data.config.unserviceableThreshold
+    if insideThreshold then
+      continue state { data { locationSelected = Just $ fst result }, props { radioMenuFocusedCity = fst result } }
+    else
+      continue state { props { locationUnserviceable = true } }
 
 eval _ state = continue state
 
