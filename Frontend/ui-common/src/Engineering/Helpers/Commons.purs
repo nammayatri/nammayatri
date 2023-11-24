@@ -266,6 +266,7 @@ getMapsLanguageFormat key =
     "KN_IN" -> "KANNADA"
     "BN_IN" -> "BENGALI"
     "ML_IN" -> "MALAYALAM"
+    "TE_IN" -> "TELUGU"
     _       -> "ENGLISH"
 
 getYoutubeData :: String -> String -> Int -> YoutubeData

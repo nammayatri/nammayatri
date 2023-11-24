@@ -92,12 +92,15 @@ instance loggableAction :: Loggable Action where
         NoAction -> trackAppScreenEvent appId (getScreen ENTER_MOBILE_NUMBER_SCREEN) "in_screen" "no_action"
         StepsHeaderModelAC _ -> trackAppActionClick appId (getScreen ENTER_MOBILE_NUMBER_SCREEN) "steps_header_modal" "backpressed"
         SetPhoneNumber _ -> trackAppScreenEvent appId (getScreen ENTER_OTP_NUMBER_SCREEN) "in_screen" "set_phone_number"
+        NonDisclosureAgreementAction -> trackAppActionClick appId (getScreen ENTER_MOBILE_NUMBER_SCREEN) "in_screen" "no_discloure_agreement"
+
 
 data ScreenOutput = GoToAccountSetUp EnterMobileNumberScreenState
                   | GoBack EnterMobileNumberScreenState
                   | GoToOTP EnterMobileNumberScreenState
                   | ResendOTP EnterMobileNumberScreenState
                   | GoToWelcomeScreen EnterMobileNumberScreenState
+
 
 data Action = EnterOTP
             | BackPressed Boolean
@@ -116,6 +119,7 @@ data Action = EnterOTP
             | TermsAndConditions
             | StepsHeaderModelAC StepsHeaderModelController.Action
             | SetPhoneNumber String
+            | NonDisclosureAgreementAction
             | WhatsAppOTPButtonAction PrimaryButtonController.Action
 
 eval :: Action -> EnterMobileNumberScreenState -> Eval Action ScreenOutput EnterMobileNumberScreenState

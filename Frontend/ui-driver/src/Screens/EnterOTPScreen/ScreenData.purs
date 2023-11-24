@@ -16,6 +16,7 @@
 module Screens.EnterOTPScreen.ScreenData where
 
 import Screens.Types (EnterOTPScreenState)
+import Engineering.Helpers.Commons as EHC
 
 initData :: EnterOTPScreenState
 initData =  {
@@ -25,11 +26,14 @@ initData =  {
     attemptCount : 3,
     mobileNo : "",
     timer: "10s",
-    capturedOtp : ""
+    capturedOtp : "",
+    focusedIndex : 1,
+    editTextId : (EHC.getNewIDWithTag "EnterOTPNumberEditText")
     },
   props: {
     btnActive :false,
     isValid : false,
-    resendEnabled : false
+    resendEnabled : false,
+    otpTmp :false
     }
 }

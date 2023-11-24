@@ -16,10 +16,11 @@
 module Screens.EnterMobileNumberScreen.View where
 
 import Data.Maybe (Maybe(..))
-import Prelude (Unit, const, ($), (<<<), (<>), bind, pure , unit)
+import Prelude (Unit, const, ($), (<<<), (<>), bind, pure , unit, (==))
 import PrestoDOM (Gravity(..), Length(..), LetterSpacing(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), alpha, background, clickable, color, cornerRadius, frameLayout, gravity, height, imageUrl, imageView, linearLayout, margin, onBackPressed, onClick, orientation, padding, stroke, text, textView, visibility, weight, width, afterRender, imageWithFallback)
 import Components.PrimaryEditText.Views as PrimaryEditText
 import Components.PrimaryButton as PrimaryButton
+import Components.MobileNumberEditor as MobileNumberEditor
 import Effect (Effect)
 import Screens.EnterMobileNumberScreen.Controller (Action(..), eval, ScreenOutput)
 import Screens.Types as ST
@@ -39,6 +40,8 @@ import MerchantConfig.Utils (getValueFromConfig)
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Common.Types.App (LazyCheck(..))
 import Prelude ((<>))
+import Components.StepsHeaderModal as StepsHeaderModal
+import Debug(spy)
 
 screen :: ST.EnterMobileNumberScreenState -> Screen Action ST.EnterMobileNumberScreenState ScreenOutput
 screen initialState =
@@ -46,45 +49,47 @@ screen initialState =
   , view
   , name : "EnterMobileNumberScreen"
   , globalEvents : []
-  , eval
+  , eval: (\action state -> do
+      let _ = spy "EnterMobileNUmber state -----" state
+      let _ = spy "EnterMobileNUmber--------action" action
+      eval action state)
   }
 
-view
-  :: forall w
-  . (Action -> Effect Unit)
-  -> ST.EnterMobileNumberScreenState
-  -> PrestoDOM (Effect Unit) w
+view :: forall w . (Action -> Effect Unit) -> ST.EnterMobileNumberScreenState -> PrestoDOM (Effect Unit) w
 view push state =
-  linearLayout
+   linearLayout
+   [  height MATCH_PARENT
+    , width MATCH_PARENT
+    , background Color.white900
+   ][  linearLayout
     [ height MATCH_PARENT
     , width MATCH_PARENT
     , orientation VERTICAL
-    , background Color.white900
-    , clickable true
     , afterRender (\action -> do
         _ <- push action
-        _ <- JB.requestKeyboardShow (EHC.getNewIDWithTag "EnterMobileNumberEditText")
+        -- _ <- requestKeyboardShow (getNewIDWithTag "EnterMobileNumberEditText")
         pure unit
         ) (const AfterRender)
+    , margin $ MarginBottom 24
+    , padding (Padding 0 EHC.safeMarginTop 0 EHC.safeMarginBottom)
+    , background Color.white900
     , onBackPressed push (const BackPressed)
-    ][    PrestoAnim.animationSet
+    ][  PrestoAnim.animationSet
           [ Anim.fadeIn true
-          ] $ backArrow state push
-        , PrestoAnim.animationSet
-          [ Anim.translateYAnimFromTopWithAlpha AnimConfig.translateYAnimConfig
-          ] $ enterMobileNumberTextView state
-        , PrestoAnim.animationSet
-          [ Anim.translateYAnimFromTopWithAlpha AnimConfig.translateYAnimConfig
-          ] $ primaryEditTextView state push
-        , PrestoAnim.animationSet
-          [ Anim.translateYAnimFromTopWithAlpha AnimConfig.translateYAnimConfig
-          ] $ termsAndConditionsView state push
-        , PrestoAnim.animationSet
-          [ Anim.fadeIn true
-          ] $ linearLayout
-              [ height WRAP_CONTENT
-              , width MATCH_PARENT
-              ][PrimaryButton.view (push <<< PrimaryButtonActionController) (primaryButtonViewConfig state)]
+          ] $ StepsHeaderModal.view (push <<< StepsHeaderModalAC) (stepsHeaderModalConfig state)
+      , frameLayout
+        [ width MATCH_PARENT
+        , height MATCH_PARENT
+        , padding (Padding 16 0 16 0)
+        ][
+          -- PrestoAnim.animationSet
+          --   [ Anim.fadeOut state.props.enterOTP
+          --   , Anim.fadeIn  (not state.props.enterOTP)
+          --   ] $
+          enterMobileNumberView  state push
+             
+          ]
+      ]
     ]
 
 
@@ -111,40 +116,11 @@ enterMobileNumberTextView state =
  textView (
   [ height WRAP_CONTENT
   , width WRAP_CONTENT
-  , text (getString ENTER_MOBILE_NUMBER)
+  , text (getString ENTER_YOUR_MOBILE_NUMBER)
   , color Color.textPrimary
-  , margin (Margin 16 37 0 0)
-  ] <> FontStyle.h1 TypoGraphy
+  , margin (MarginVertical 37 8)
+  ] <> FontStyle.body3 TypoGraphy
   )
-
------------------------------ primaryEditTextView ---------------
-primaryEditTextView :: ST.EnterMobileNumberScreenState -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w
-primaryEditTextView state push =
- linearLayout
-  [ height MATCH_PARENT
-  , width MATCH_PARENT
-  , orientation VERTICAL
-  , weight 1.0
-  ][ linearLayout
-      [ width MATCH_PARENT
-      , height WRAP_CONTENT
-      , padding (Padding 20 0 20 0)
-      , margin (MarginTop 20)
-      ][  PrimaryEditText.view(push <<< PrimaryEditTextAction) ({
-          title: (getString MOBILE_NUMBER),
-          type: "number",
-          hint: (getString ENTER_MOBILE_NUMBER),
-          valueId: "MOBILE_NUMBER",
-          isinValid: state.props.isValid ,
-          error: Just (getString INVALID_MOBILE_NUMBER),
-          pattern : Just "[0-9]*,10",
-          text: "",
-          letterSpacing: PX 0.0,
-          id: (EHC.getNewIDWithTag "EnterMobileNumberEditText"),
-          fontSize : FontSize.a_18
-        })
-      ]
-  ]
 
 --------------------------------- underlinedTextView ----------------------
 underlinedTextView :: ST.EnterMobileNumberScreenState -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w
@@ -156,9 +132,10 @@ underlinedTextView state push =
  ][ textView (
     [ width WRAP_CONTENT
     , height WRAP_CONTENT
-    , text (getString CASE_TWO)
-    , alpha 0.5
+    , text $ getString BY_CLICKING_THIS_YOU_WILL_BE_AGREEING_TO_OUR_TC
+    , alpha 0.8
     , color Color.greyTextColor
+    -- , textSize FontSize.a_14
     ] <> FontStyle.body3 TypoGraphy),
     linearLayout
       [ width WRAP_CONTENT
@@ -172,7 +149,8 @@ underlinedTextView state push =
       ][ textView (
         [ width WRAP_CONTENT
         , height WRAP_CONTENT
-        , text (getString NON_DISCLOUSER_AGREEMENT)
+        -- , textSize FontSize.a_14
+        , text (" T&Cs")--getString NON_DISCLOUSER_AGREEMENT)
         , color Color.primaryBlue
         ] <> FontStyle.body3 TypoGraphy)
       ]
@@ -188,32 +166,58 @@ termsAndConditionsView state push =
   , orientation HORIZONTAL
   , margin (Margin 15 10 16 20)
   ][ linearLayout
-      [ width MATCH_PARENT
-      , height WRAP_CONTENT
-      , margin (MarginLeft 10)
-      , gravity CENTER
-      ][textView (
-        [ width WRAP_CONTENT
-        , height WRAP_CONTENT
-        , text $ (getString BY_CLICKING_CONTINUE_YOU_WILL_BE_AGREEING_TO_OUR) <> " "
-        , color Color.greyTextColor
-        , alpha 0.5
-        ] <> FontStyle.body3 TypoGraphy)
-      , linearLayout
       [ width WRAP_CONTENT
       , height WRAP_CONTENT
       , orientation VERTICAL
-      , onClick (\action -> do
-                  _<- push action
-                  _ <- JB.openUrlInApp $ getValueFromConfig "DOCUMENT_LINK" 
-                  pure unit
-                  ) (const NonDisclosureAgreementAction)
-      ][ textView (
+      , margin (MarginLeft 10)
+      ][textView (
         [ width WRAP_CONTENT
         , height WRAP_CONTENT
-        , text "T&Cs"
-        , color Color.primaryBlue
+        , text (getString BY_CLICKING_NEXT_YOU_WILL_BE_AGREEING_TO_OUR)
+        , color Color.greyTextColor
+        , alpha 0.5
         ] <> FontStyle.body3 TypoGraphy)
-      ]
+      , underlinedTextView state push
+      -- , textView (
+      --   [ width WRAP_CONTENT
+      --   , height WRAP_CONTENT
+      --   , text (getString DATA_COLLECTION_AUTHORITY)
+      --   , color Color.greyTextColor
+      --   , alpha 0.5
+      --   ] <> FontStyle.body3 TypoGraphy)
       ]
   ]
+
+enterMobileNumberView :: ST.EnterMobileNumberScreenState -> (Action -> Effect Unit)  -> forall w . PrestoDOM (Effect Unit) w
+enterMobileNumberView  state push =
+  linearLayout
+    [ height MATCH_PARENT
+    , width MATCH_PARENT
+    , visibility  VISIBLE--if state.props.enterOTP then GONE else VISIBLE
+    , alpha 1.0 --if state.props.enterOTP then 0.0 else 1.0
+    , orientation VERTICAL
+    , margin $ MarginTop 37
+    ][   PrestoAnim.animationSet
+      [ Anim.translateYAnimFromTopWithAlpha AnimConfig.translateYAnimConfig -- 300 10 0 0 true PrestoAnim.Linear
+      ] $ MobileNumberEditor.view (push <<< PrimaryEditTextAction) (mobileNumberConfig state)  
+
+    , linearLayout
+      [ height WRAP_CONTENT
+      , width MATCH_PARENT
+      , weight 1.0
+      ][]
+    , PrestoAnim.animationSet
+      ( if EHC.os == "IOS" then [] else [ Anim.translateYAnimFromTopWithAlpha AnimConfig.translateYAnimConfig -- 400 15 0 0 true PrestoAnim.Linear -- Temporary fix for iOS
+      ]) $ linearLayout
+        [ height WRAP_CONTENT
+        , width MATCH_PARENT
+        , margin (Margin 0 0 0 10)
+        ][ --commonTextView state "BY_TAPPING_CONTINUE" false Nothing push false--(getString BY_TAPPING_CONTINUE) 
+       -- , commonTextView state " &nbsp; <u>T&Cs</u>" true (Just (getValueFromConfig "DOCUMENT_LINK")) push true
+           underlinedTextView state push
+          ]
+     , linearLayout
+        [ height WRAP_CONTENT
+        , width MATCH_PARENT
+        ][PrimaryButton.view (push <<< PrimaryButtonActionController) (mobileNumberButtonConfig state)]
+    ]

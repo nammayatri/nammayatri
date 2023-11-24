@@ -36,7 +36,7 @@ import PrestoDOM (Eval, continue, continueWithCmd, exit, updateAndExit)
 import PrestoDOM.Types.Core (class Loggable)
 import Resource.Constants as Const
 import Screens (getScreen, ScreenName(..))
-import Screens.SubscriptionScreen.Transformer (alternatePlansTransformer, constructDues, getAutoPayDetailsList, getSelectedId, getSelectedPlan, myPlanListTransformer, planListTransformer)
+import Screens.SubscriptionScreen.Transformer (alternatePlansTransformer, constructDues, getAutoPayDetailsList, getSelectedId, getSelectedPlan, introductoryPlanConfig, myPlanListTransformer, planListTransformer)
 import Screens.Types (AutoPayStatus(..), KioskLocation(..), OptionsMenuState(..), PlanCardConfig, SubscribePopupType(..), SubscriptionScreenState, SubscriptionSubview(..))
 import Services.API (BankError(..), FeeType, GetCurrentPlanResp(..), KioskLocationRes(..), MandateData(..), OfferEntity(..), PaymentBreakUp(..), PlanEntity(..), UiPlansResp(..))
 import Services.Backend (getCorrespondingErrorMessage)
@@ -92,6 +92,7 @@ data Action = BackPressed
             | DueDetailsListAction DueDetailsListController.Action
             | OfferCardBanner Banner.Action
             | TogglePlanDescription PlanCardConfig
+            | EnableIntroductoryView
 
 data ScreenOutput = HomeScreen SubscriptionScreenState
                     | RideHistory SubscriptionScreenState
@@ -123,10 +124,10 @@ eval BackPressed state =
   else if state.props.subView == DueDetails then do
     let subView' = if state.props.myPlanProps.multiTypeDues then DuesView else MyPlan
     continue state{props { subView = subView'}, data{myPlanData{selectedDue = ""}}}
-  else if state.props.subView == PlanDetails then continue state{props { subView = if state.data.config.optionsMenuItems.managePlan then ManagePlan else MyPlan}}
+  else if state.props.subView == PlanDetails then continue state{props { subView = if state.data.config.subscriptionConfig.optionsMenuItems.managePlan then ManagePlan else MyPlan}}
   else if state.props.subView == FindHelpCentre then continue state {props { subView = state.props.prevSubView, kioskLocation = [], noKioskLocation = false, showError = false}}
   else if state.props.myPlanProps.isDueViewExpanded then continue state{props { myPlanProps{isDueViewExpanded = false}}}
-  else if state.data.myPlanData.autoPayStatus == MANDATE_FAILED && not state.props.isEndRideModal && not state.data.config.enableIntroductoryView && state.data.config.enableSubscriptionSupportPopup then continue state{props { popUpState = Mb.Just SupportPopup}}
+  else if state.data.myPlanData.autoPayStatus == MANDATE_FAILED && not state.props.isEndRideModal && not state.data.config.subscriptionConfig.enableIntroductoryView && state.data.config.subscriptionConfig.enableSubscriptionSupportPopup then continue state{props { popUpState = Mb.Just SupportPopup}}
   else exit $ HomeScreen state
 
 eval ToggleDueDetails state = continue state {props {myPlanProps { isDuesExpanded = not state.props.myPlanProps.isDuesExpanded}}}
@@ -140,10 +141,10 @@ eval (OptionsMenuAction (OptionsMenu.ItemClick item)) state =
       "payment_history" -> pure ViewPaymentHistory 
       "call_support" -> pure CallSupport
       "chat_for_help" -> do
-          _ <- openUrlInApp state.data.config.whatsappSupportLink
+          _ <- openUrlInApp state.data.config.subscriptionConfig.whatsappSupportLink
           pure NoAction
       "view_faq" -> do
-          _ <- openUrlInApp state.data.config.faqLink
+          _ <- openUrlInApp state.data.config.subscriptionConfig.faqLink
           pure NoAction
       "find_help_centre" -> pure ViewHelpCentre
       "view_autopay_details" -> pure ViewAutopayDetails
@@ -233,7 +234,7 @@ eval ViewAutopayDetails state = continue state{props {subView = PlanDetails }}
 eval (BottomNavBarAction (BottomNavBar.OnNavigate screen)) state = do
   let newState = state{props{optionsMenuState = ALL_COLLAPSED, myPlanProps{ isDueViewExpanded = false }}}
   if screen == "Join" then continue state
-  else if state.data.myPlanData.autoPayStatus == MANDATE_FAILED && state.data.config.enableSubscriptionSupportPopup then do 
+  else if state.data.myPlanData.autoPayStatus == MANDATE_FAILED && state.data.config.subscriptionConfig.enableSubscriptionSupportPopup then do 
     continue state{props {popUpState = Mb.Just SupportPopup, redirectToNav = screen, optionsMenuState = ALL_COLLAPSED, myPlanProps{ isDueViewExpanded = false }}}
   else do case screen of
             "Home" -> exit $ HomeScreen newState
@@ -261,10 +262,10 @@ eval (LoadPlans plans) state = do
   let (UiPlansResp planResp) = plans
   _ <- pure $ setValueToLocalStore DRIVER_SUBSCRIBED "false"
   continue state {
-      data{ joinPlanData {allPlans = planListTransformer plans state.data.config.enableIntroductoryView state.data.config.gradientConfig,
+      data{ joinPlanData {allPlans = planListTransformer plans state.data.config.subscriptionConfig.enableIntroductoryView state.data.config.subscriptionConfig.gradientConfig,
                             subscriptionStartDate = (convertUTCtoISC planResp.subscriptionStartTime "Do MMM")}},
       props{showShimmer = false, subView = JoinPlan,  
-            joinPlanProps { selectedPlanItem = if (Mb.isNothing state.props.joinPlanProps.selectedPlanItem) then getSelectedPlan plans state.data.config.gradientConfig else state.props.joinPlanProps.selectedPlanItem}} }
+            joinPlanProps { selectedPlanItem = if (Mb.isNothing state.props.joinPlanProps.selectedPlanItem) then getSelectedPlan plans state.data.config.subscriptionConfig.gradientConfig else state.props.joinPlanProps.selectedPlanItem}} }
 
 eval (LoadHelpCentre lat lon kioskLocationList) state = do
   let transformedKioskList = transformKioskLocations kioskLocationList lat lon
@@ -281,13 +282,13 @@ eval (LoadMyPlans plans) state = do
                               Mb.Nothing -> Mb.Nothing
           isOverdue = planEntity.currentDues >= planEntity.totalPlanCreditLimit
           multiTypeDues = (planEntity.autopayDues > 0.0) && (planEntity.currentDues - planEntity.autopayDues > 0.0)
-          newState = if state.data.config.enableSubscriptionPopups then 
+          newState = if state.data.config.subscriptionConfig.enableSubscriptionPopups then 
                         state{ 
                             props{ showShimmer = false, subView = MyPlan, lastPaymentType = currentPlanResp.lastPaymentType, myPlanProps{ multiTypeDues = multiTypeDues, overDue = isOverdue } }, 
                             data { orderId = currentPlanResp.orderId, 
                                   planId = planEntity.id, 
                                   myPlanData {
-                                      planEntity = myPlanListTransformer planEntity' currentPlanResp.isLocalized state.data.config.gradientConfig,
+                                      planEntity = myPlanListTransformer planEntity' currentPlanResp.isLocalized state.data.config.subscriptionConfig.gradientConfig,
                                       maxDueAmount = planEntity.totalPlanCreditLimit,
                                       totalDueAmount = planEntity.currentDues,
                                       manualDueAmount = planEntity.currentDues - planEntity.autopayDues,
@@ -302,7 +303,7 @@ eval (LoadMyPlans plans) state = do
                             data { orderId = currentPlanResp.orderId, 
                                   planId = planEntity.id, 
                                   myPlanData {
-                                      planEntity = myPlanListTransformer planEntity' currentPlanResp.isLocalized state.data.config.gradientConfig,
+                                      planEntity = myPlanListTransformer planEntity' currentPlanResp.isLocalized state.data.config.subscriptionConfig.gradientConfig,
                                       maxDueAmount = planEntity.totalPlanCreditLimit,
                                       autoPayStatus = getAutopayStatus currentPlanResp.autoPayStatus
                                   }}
@@ -354,7 +355,7 @@ eval (TryAgainButtonAC PrimaryButton.OnClick) state =
       else updateAndExit updateState $ Refresh
 
 eval CallSupport state = do
-  _ <- pure $ showDialer state.data.config.supportNumber false
+  _ <- pure $ showDialer state.data.config.subscriptionConfig.supportNumber false
   continue state
 
 eval (CallHelpCenter phone) state = do
@@ -372,6 +373,8 @@ eval (ClearManualDues PrimaryButton.OnClick) state = updateAndExit state $ Clear
 eval (DueDetailsListAction (DueDetailsListController.SelectDue dueItem)) state = continue state {data {myPlanData{selectedDue = if state.data.myPlanData.selectedDue == dueItem.id then "" else dueItem.id}}}
 
 eval (TogglePlanDescription _) state = continue state{data{myPlanData{planEntity{isSelected = not state.data.myPlanData.planEntity.isSelected}}}}
+
+eval EnableIntroductoryView state = continue state{props{subView = JoinPlan, showShimmer = false, joinPlanProps{isIntroductory = true}}, data{joinPlanData {allPlans = [introductoryPlanConfig Language]}}}
 
 eval _ state = continue state
 

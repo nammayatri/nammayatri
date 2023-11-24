@@ -264,3 +264,6 @@ updateDriverHomeLocation homeLocationId = getBaseUrl "" <> "/driver/goHome/updat
 
 rideRoute :: String -> String
 rideRoute rideId = (getBaseUrl "") <> "/" <> rideId <>"/route"
+
+getMerchantIdList :: String -> String 
+getMerchantIdList merchantId = getBaseUrl "" <> "/city/" <> merchantId <> "/list"

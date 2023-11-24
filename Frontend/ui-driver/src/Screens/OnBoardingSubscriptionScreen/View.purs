@@ -1,18 +1,25 @@
 module Screens.OnBoardingSubscriptionScreen.View where
 
 import Prelude
-import Effect (Effect)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), Gradient(..), color, fontStyle, frameLayout, gravity, height, imageUrl, imageView, layoutGravity, linearLayout, margin, onClick, orientation, padding, scrollView, stroke, text, textSize, textView, visibility, width, cornerRadius, weight, afterRender, imageWithFallback, background, textFromHtml, gradient, alpha, fontSize, singleLine, horizontalScrollView, scrollBarX, scrollBarY, clickable, lineHeight)
-import PrestoDOM.Properties (cornerRadii)
-import PrestoDOM.Types.DomAttributes (Corners(..))
-import Styles.Colors as Color
-import Screens.OnBoardingSubscriptionScreen.Controller (Action(..), eval,ScreenOutput)
-import Screens.Types as ST
-import Halogen.VDom.DOM.Prop (Prop)
+
 import Common.Types.App (Version(..), LazyCheck(..), Event)
-import Engineering.Helpers.Commons (screenWidth, liftFlow)
-import JBridge (getWidthFromPercent)
+import Components.PrimaryButton as PrimaryButton
+import Data.Array (mapWithIndex)
+import Data.Array as DA
+import Data.Either (Either(..))
 import Data.Int (round, toNumber, fromString)
+import Data.Maybe (Maybe(..), isJust, fromMaybe)
+import Debug (spy)
+import Effect (Effect)
+import Effect.Aff (launchAff)
+import Engineering.Helpers.Commons (screenWidth, liftFlow)
+import Engineering.Helpers.Commons as EHC
+import Font.Size as FontSize
+import Font.Style as FontStyle
+import Halogen.VDom.DOM.Prop (Prop)
+import Helpers.Utils (getDateAfterNDays)
+import JBridge (getWidthFromPercent)
+import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Font.Style as FontStyle
@@ -34,7 +41,20 @@ import Storage (KeyStore(..), getValueToLocalNativeStore, getValueToLocalStore)
 import JBridge as JB
 import Helpers.Utils (fetchImage, FetchImageFrom(..), getDateAfterNDays)
 import Screens.SubscriptionScreen.ScreenData (dummyPlanConfig)
+import PrestoDOM (Gradient(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, alpha, background, clickable, color, cornerRadius, fontSize, fontStyle, frameLayout, gradient, gravity, height, horizontalScrollView, imageUrl, imageView, imageWithFallback, layoutGravity, lineHeight, linearLayout, margin, onBackPressed, onClick, orientation, padding, scrollBarX, scrollBarY, scrollView, singleLine, stroke, text, textFromHtml, textSize, textView, visibility, weight, width)
+import PrestoDOM.Properties (cornerRadii)
+import PrestoDOM.Types.DomAttributes (Corners(..))
 import Screens.OnBoardingSubscriptionScreen.ComponentConfig (joinPlanButtonConfig)
+import Screens.OnBoardingSubscriptionScreen.Controller (Action(..), ScreenOutput, eval)
+import Screens.SubscriptionScreen.Controller (getAllFareFromArray, getPlanPrice)
+import Screens.SubscriptionScreen.ScreenData (dummyPlanConfig)
+import Screens.Types (PlanCardConfig, PromoConfig)
+import Screens.Types as ST
+import Services.API (GetCurrentPlanResp(..), GetDriverInfoResp(..), OrderStatusRes(..), UiPlansResp(..), PaymentBreakUp(..), KioskLocationResp(..), KioskLocationRes(..))
+import Services.Backend as Remote
+import Storage (KeyStore(..), getValueToLocalNativeStore, getValueToLocalStore)
+import Styles.Colors as Color
+import Types.App (defaultGlobalState)
 
 
 screen :: ST.OnBoardingSubscriptionScreenState -> Screen Action ST.OnBoardingSubscriptionScreenState ScreenOutput
@@ -68,6 +88,7 @@ view push state =
     , width MATCH_PARENT
     , orientation VERTICAL
     , background Color.white900
+    , onBackPressed push $ const BackPressed
     ][
       scrollView
       [ height MATCH_PARENT
@@ -184,7 +205,7 @@ headerLayout push state =
         [ height WRAP_CONTENT
         , width WRAP_CONTENT
         , margin $ MarginLeft 8
-        , onClick push $ const GoToHomeScreen
+        , onClick push $ const GoToRegisteration
         ][
           imageView
           [ width $ V 16
@@ -193,7 +214,7 @@ headerLayout push state =
           , padding $ Padding 2 2 2 2
           , margin $ MarginRight 5
           ]
-        , commonTV push (getString SKIP) Color.white900 FontStyle.body3 CENTER 0 GoToHomeScreen false
+        , commonTV push (getString SKIP) Color.white900 FontStyle.body3 CENTER 0 GoToRegisteration false
         ]
       ]
     ]
@@ -665,7 +686,7 @@ underlinedTextView value push =
     , height WRAP_CONTENT
     , orientation VERTICAL
     , gravity CENTER
-    , onClick push $ const GoToHomeScreen
+    , onClick push $ const GoToRegisteration
     ]
     [ textView
         $ [ width WRAP_CONTENT

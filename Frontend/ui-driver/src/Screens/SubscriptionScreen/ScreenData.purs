@@ -58,8 +58,7 @@ initData = {
             payerUpiId : Mb.Nothing,
             pspLogo : ""
         },
-        config : DC.config.subscriptionConfig,
-        bottomNavConfig : DC.config.bottomNavConfig
+        config : DC.config
     },
     props : {
         isSelectedLangTamil : false,
@@ -73,7 +72,7 @@ initData = {
         joinPlanProps : {
             paymentMode : "",
             selectedPlanItem : Mb.Nothing,
-            isIntroductory : true
+            isIntroductory : false
         },
         myPlanProps : {
             isDuesExpanded : false,

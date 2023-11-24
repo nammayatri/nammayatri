@@ -1960,7 +1960,7 @@ eval MapReadyAction state = continueWithCmd state [ do
     ]
 
 eval CheckAndAskNotificationPermission state = do 
-  _ <- pure $ checkAndAskNotificationPermission unit
+  _ <- pure $ checkAndAskNotificationPermission false
   continue state
 
 eval (TriggerPermissionFlow flowType) state = exit $ ExitToPermissionFlow flowType
