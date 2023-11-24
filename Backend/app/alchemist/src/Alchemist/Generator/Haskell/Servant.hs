@@ -11,15 +11,34 @@ import Prelude
 generateServantAPI :: Apis -> String
 generateServantAPI input =
   "module API.UI." <> T.unpack (head (map _moduleName input)) <> " where \n\n"
-    <> intercalate "\n" (makeImport <$> figureOutImports (T.unpack <$> concatMap handlerImports input))
+    <> intercalate "\n" (makeQualifiedImport <$> figureOutImports (T.unpack <$> concatMap handlerImports input))
+    <> "\n"
+    <> intercalate "\n" (makeImport <$> defaultImports)
     <> T.unpack
       ( ("\n\ntype API = \n " <> T.intercalate "\n <|> " (map apiTTToText input))
-          <> "\n \nhandler  :: Flowserver API\nhandler = \n\t"
+          <> "\n \nhandler  :: FlowServer API\nhandler = \n\t"
           <> T.intercalate "\n\t:<|> " (map handlerFunctionText input)
       )
   where
+    makeQualifiedImport :: String -> String
+    makeQualifiedImport x = "import qualified " <> x <> " as " <> x
+
     makeImport :: String -> String
-    makeImport x = "import qualified " <> x <> " as " <> x
+    makeImport x = "import " <> x
+
+    defaultImports :: [String]
+    defaultImports = ["Servant", "Tools.Auth", "Environment"] ++ ["Kernel.Types.Common" | containsMandatoryQueryParam input]
+
+    containsMandatoryQueryParam :: Apis -> Bool
+    containsMandatoryQueryParam apis = any apiHasMandatoryQueryParam apis
+
+    apiHasMandatoryQueryParam :: ApiTT -> Bool
+    apiHasMandatoryQueryParam apiTT =
+      any urlPartHasMandatoryQueryParam (_urlParts apiTT)
+
+    urlPartHasMandatoryQueryParam :: UrlParts -> Bool
+    urlPartHasMandatoryQueryParam (QueryParam _ _ isMandatory) = isMandatory
+    urlPartHasMandatoryQueryParam _ = False
 
 apiTTToText :: ApiTT -> Text
 apiTTToText apiTT =
