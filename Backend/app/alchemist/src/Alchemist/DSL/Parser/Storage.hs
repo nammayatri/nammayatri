@@ -1,4 +1,4 @@
-module Alchemist.DSL.Parser.Storage (parseStorageDSL) where
+module Alchemist.DSL.Parser.Storage (storageParser) where
 
 import Alchemist.DSL.Syntax.Storage
 import Alchemist.Utils (figureOutImports, makeTypeQualified)
@@ -45,8 +45,8 @@ parseFieldDef = do
   constraints <- many (try (spaces *> parseConstraint))
   return $ FieldDef fieldName haskellType sqlType constraints
 
-parseStorageDSL :: Parser TableDef
-parseStorageDSL = do
+storageParser :: Parser TableDef
+storageParser = do
   _ <- string "Table"
   spaces
   tableNameHaskell <- betweenQuote takeTillQuotes

@@ -1,4 +1,4 @@
-module Alchemist.Generator.SQL.Table where
+module Alchemist.Generator.SQL.Table (generateSQL) where
 
 import Alchemist.DSL.Syntax.Storage
 import Data.List (intercalate)

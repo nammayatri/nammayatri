@@ -107,3 +107,72 @@ library
     ghc-options: -O0 -funfolding-use-threshold20 -fno-cse -fmax-simplifier-iterations1 -fno-specialise-aggressively -j4
   else
     ghc-options: -O2 -j4
+
+test-suite alchemist-tests
+  type: exitcode-stdio-1.0
+  main-is: Main.hs
+  other-modules:
+      Paths_alchemist
+  hs-source-dirs:
+      tests
+  default-extensions:
+      ConstraintKinds
+      DataKinds
+      DefaultSignatures
+      DeriveAnyClass
+      DeriveFunctor
+      DeriveGeneric
+      DuplicateRecordFields
+      ExplicitNamespaces
+      FlexibleContexts
+      FlexibleInstances
+      FunctionalDependencies
+      GADTs
+      LambdaCase
+      MultiParamTypeClasses
+      MultiWayIf
+      NamedFieldPuns
+      NoImplicitPrelude
+      OverloadedLabels
+      OverloadedStrings
+      PackageImports
+      PatternSynonyms
+      PolyKinds
+      RankNTypes
+      RecordWildCards
+      ScopedTypeVariables
+      TupleSections
+      TypeApplications
+      TypeFamilies
+      TypeOperators
+      ViewPatterns
+      BlockArguments
+      TypeSynonymInstances
+      UndecidableInstances
+  ghc-options: -Wall -Wcompat -Werror -Widentities -Wunused-imports -fplugin=RecordDotPreprocessor -fwrite-ide-info -hiedir=.hie
+  build-depends:
+      aeson
+    , alchemist
+    , base >=4.7 && <5
+    , beckn-spec
+    , bytestring
+    , casing
+    , directory
+    , esqueleto
+    , extra
+    , lens
+    , mobility-core
+    , parsec
+    , persistent
+    , persistent-postgresql
+    , raw-strings-qq
+    , record-dot-preprocessor
+    , record-hasfield
+    , regex-tdfa
+    , servant-server
+    , split
+    , template-haskell
+    , text
+    , time
+    , unordered-containers
+  default-language: Haskell2010

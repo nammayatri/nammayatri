@@ -4,9 +4,8 @@ import Alchemist.DSL.Syntax.Storage
 import Data.List (intercalate)
 import Kernel.Prelude
 
--- Generate Haskell module code from TableDef
-generateHaskellModule :: TableDef -> String
-generateHaskellModule tableDef =
+generateDomainType :: TableDef -> String
+generateDomainType tableDef =
   "module Domain.Types." ++ tableNameHaskell tableDef ++ " where\n\n"
     ++ intercalate "\n" (map (\i -> "import qualified " ++ i ++ " as " ++ i) (imports tableDef))
     ++ "\n\ndata "
