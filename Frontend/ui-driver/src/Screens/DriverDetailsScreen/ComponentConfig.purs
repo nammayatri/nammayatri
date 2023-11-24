@@ -37,7 +37,8 @@ import Components.SelectListModal.Controller as GenderSelection
 import Components.PopUpModal.View as PopUpModal
 import Components.PopUpModal.Controller as PopUpModalConfig
 import PrestoDOM.Types.DomAttributes (Corners(..))
-import MerchantConfig.Utils (getValueFromConfig)
+import Constants
+import ConfigProvider
 
 removeAlternateNumberConfig :: ST.DriverDetailsScreenState -> PopUpModalConfig.Config
 removeAlternateNumberConfig state = let
@@ -206,9 +207,11 @@ type Listtype =
 
 optionList :: ST.DriverDetailsScreenState -> Array Listtype
 optionList state =
+  let features = (getAppConfig appConfig).features
+  in
     [
       {title:DRIVER_NAME_INFO, value:"" , editButtonReq : false},
       {title:DRIVER_MOBILE_INFO, value:"" ,editButtonReq : false},
       {title:DRIVER_LICENCE_INFO, value:"",editButtonReq : false},
       {title:DRIVER_ALTERNATE_MOBILE_INFO, value:"" ,editButtonReq : isJust state.data.driverAlternateMobile}
-    ] <> if getValueFromConfig "showGenderBanner" then [{title:GENDER_INFO,value:"", editButtonReq : isJust state.data.driverGender}] else []
+    ] <> if features.enableGender then [{title:GENDER_INFO,value:"", editButtonReq : isJust state.data.driverGender}] else []

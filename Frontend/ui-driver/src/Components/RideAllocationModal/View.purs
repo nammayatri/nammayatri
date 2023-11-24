@@ -34,7 +34,8 @@ import Presto.Core.Types.Language.Flow (doAff)
 import Control.Transformers.Back.Trans (runBackT)
 import Control.Monad.Except.Trans (runExceptT)
 import Common.Types.App
-import MerchantConfig.Utils(getValueFromConfig)
+import ConfigProvider
+import Constants
 
 view :: forall w . (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push config =
@@ -277,7 +278,7 @@ totalPrice config =
   [ width WRAP_CONTENT
   , height WRAP_CONTENT
   , color Color.greyTextColor
-  , text ((getValueFromConfig "currency") <> " " <>  (parseFloat config.totalPrice 2))
+  , text ((getCurrency appConfig) <> " " <>  (parseFloat config.totalPrice 2))
   , margin (Margin 20 0 20 0)
   ] <> FontStyle.body8 LanguageStyle
 

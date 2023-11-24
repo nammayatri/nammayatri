@@ -20,7 +20,6 @@ import Components.PrimaryButton.Controller (Action(..), Config)
 import PrestoDOM (Gravity(..), Length(..), Orientation(..), PrestoDOM, Visibility(..), Accessiblity(..),afterRender, alpha, background, clickable, color, cornerRadius, fontStyle, gravity, height, id, imageView, lineHeight, linearLayout, lottieAnimationView, margin, onClick, orientation, padding, relativeLayout, stroke, text, textSize, textView, visibility, width, imageWithFallback, gradient, accessibilityHint, accessibility, weight, onAnimationEnd, textFromHtml)
 import JBridge (toggleBtnLoader, getKeyInSharedPrefKeys, startLottieProcess, lottieAnimationConfig)
 import Engineering.Helpers.Commons (getNewIDWithTag, os)
-import MerchantConfig.Utils (getValueFromConfig)
 import Font.Style as FontStyle
 import Common.Styles.Colors as Color
 import Common.Types.App (LazyCheck(..))

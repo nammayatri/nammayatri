@@ -33,7 +33,7 @@ import JBridge (getVersionCode)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import MerchantConfig.Utils (Merchant(..), getMerchant)
-import MerchantConfig.Utils (getMerchant, getValueFromConfig, Merchant(..))
+import MerchantConfig.Utils (getMerchant, Merchant(..))
 import Prelude ((<>))
 import Prelude (Unit, bind, const, not, discard, pure, show, unit, ($), (/=), (<>), (&&), (==), (-), (>), (||))
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), afterRender, alpha, background, clickable, color, ellipsize, fontSize, fontStyle, gravity, height, imageUrl, imageView, imageWithFallback, lineHeight, linearLayout, margin, maxLines, onClick, orientation, padding, relativeLayout, scrollView, singleLine, stroke, text, textSize, textView, visibility, weight, width, id, pivotY, onAnimationEnd, id)
@@ -46,6 +46,8 @@ import Styles.Colors as Color
 import Types.App (defaultGlobalState)
 import Helpers.Utils(getRideTypeColor, getVariantRideType)
 import JBridge as JB
+import ConfigProvider
+import Constants
 
 view :: forall w . (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push config =
@@ -481,7 +483,7 @@ estimatedFareView push config =
       , textView $
         [ height WRAP_CONTENT
         , width WRAP_CONTENT
-        , text ((getValueFromConfig "currency") <> (show config.estimatedRideFare))
+        , text ((getCurrency appConfig) <> (show config.estimatedRideFare))
         , color Color.black900
         , ellipsize true
         , singleLine true

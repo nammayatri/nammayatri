@@ -1,31 +1,13 @@
 window.version = window.version || {};
 let version = "1.0.0";
-if (typeof __VERSION__ !== 'undefined') {
+if (typeof __VERSION__ !== "undefined") {
   version = __VERSION__
 }
 window.version["configuration"]= version;
 window.getMerchantConfig = function () {
   return JSON.stringify({
-    "RC_VALIDATION_TEXT": "KA|AP|TS|DL",
-    "DOCUMENT_LINK": "https://drive.google.com/file/d/1qYXbQUF4DVo2xNOawkHNTR_VVe46nggc",
-    "APP_LINK": "https://play.google.com/store/apps/details?id=in.juspay.nammayatripartner",
-    "USER_APP_LINK": "https://nammayatri.in/link/rider/mvnw",
-    "PRIVACY_POLICY_LINK": "https://docs.google.com/document/d/1tF96MwtaEiq70y_P40E29Sy3X61moTc9",
-    "SPECIAL_ZONE_OTP_VIEW": "false",
     "StringKeys": ["WELCOME_TEXT", "ABOUT_TEXT", "NEED_IT_TO_ENABLE_LOCATION", "CURRENTLY_WE_ALLOW_ONLY_KARNATAKA_REGISTERED_NUMBER", "YOU_ARE_ABOUT_TO_CALL_NAMMA_YATRI_SUPPORT", "YOUR_LOCATION_HELPS_OUR_SYSTEM", "WHAT_IS_NAMMA_YATRI_BONUS", "EARNED_ON_APP", "TRAVELLED_ON_APP"],
-    "fontType": "Assets",
-    "currency": "₹",
-    "isGradient" : "false",
-    "gradient": [],
-    "addFavouriteScreenBackArrow" : "ny_ic_chevron_left_white,https://assets.juspay.in/nammayatri/images/user/ny_ic_chevron_left_white.png",
-    "popupBackground" : "#FFFFFF",
-    "apiLoaderLottie": "primary_button_loader.json",
-    "primaryTextColor": "#FCC32C",
-    "primaryBackground": "#2C2F3A",
     "showCorporateAddress" : true,
-    "imageUploadOptional" : false,
-    "BONUS_EARNED" : "true",
-    "clientName" : "Namma Yatri",
     "languageList" : [
       {"name":"English","value":"EN_US", "subtitle": "ಆಂಗ್ಲ"}, 
       {"name":"ಕನ್ನಡ","value":"KN_IN", "subtitle": "Kannada"},
@@ -41,8 +23,8 @@ window.getMerchantConfig = function () {
       "YOU_ARE_ABOUT_TO_CALL_NAMMA_YATRI_SUPPORT": "You are about to place a call to the Namma Yatri Support Team. Do you want to proceed?",
       "YOUR_LOCATION_HELPS_OUR_SYSTEM": "Your location helps our system to map down all the near by autos and get you the quickest ride possible.",
       "WHAT_IS_NAMMA_YATRI_BONUS" : "What is Namma Yatri Bonus?",
-      EARNED_ON_APP : "Earned on NY",
-      TRAVELLED_ON_APP : "Travelled On Namma Yatri"
+      "EARNED_ON_APP" : "Earned on NY",
+      "TRAVELLED_ON_APP" : "Travelled On Namma Yatri"
     },
     "hindiStrings": {
       "WELCOME_TEXT": "Welcome to the Namma Yatri Driver",
@@ -78,12 +60,7 @@ window.getMerchantConfig = function () {
       "TRAVELLED_ON_APP" : "நம்ம யாத்ரியில் நடந்த தூரம்"
     },
     "logs": ["JUSPAY","FIREBASE","CLEVERTAP"]
-    , "fontName" : "PlusJakartaSans"
-    , "fontKannada" : "NotoSansKannada"
     , "allowAllMobileNumber" : false
-    , "showGenderBanner" : true
-    , "defaultLanguage" : "EN_US"
-    , "OTP_MESSAGE_REGEX" : "is your OTP for login to [A-Za-z]+ [A-Za-z]+ [A-Za-z]+"
     , "leaderBoard": {
       "isMaskedName": false
     }
@@ -118,14 +95,17 @@ window.getMerchantConfig = function () {
     , "rideActionModelConfig" : {
       "showVehicleVariant" : false
     }
-    , "referralType" : "LeaderBoard"
+    , "referral": {
+      "type" : "LeaderBoard"
+      , "link" : "https://nammayatri.in/link/rider/mvnw"
+    }
     , "gotoConfig" : {
       "maxGotoLocations" : 5,
       "enableGoto" : true
     }
     , "bottomNavConfig" : {
       "subscription" : 
-            { isVisible : true
+            { "isVisible" : true
             }
     }
     , "purpleRideConfig" : {
@@ -134,6 +114,21 @@ window.getMerchantConfig = function () {
       "physicalImpairmentVideo" : "https://www.youtube.com/watch?v=B0C6SZTQO6k",
       "hearingImpairmentVideo" : "https://www.youtube.com/watch?v=udkWOt0serg",
       "genericAccessibilityVideo" : "https://youtu.be/5s21p2rI58c"
+    },
+    "others" : {
+      "otpRegex" :  "is your OTP for login to [A-Za-z]+ [A-Za-z]+ [A-Za-z]+"
+      , "termsLink" : "https://drive.google.com/file/d/1qYXbQUF4DVo2xNOawkHNTR_VVe46nggc"
+      , "privacyLink" : "https://docs.google.com/document/d/1tF96MwtaEiq70y_P40E29Sy3X61moTc9"
+    }
+    , "features" : {
+      "enableBonus" : true
+      , "enableImageUpload" : false
+      , "enableGender" : true
+      , "enableOtpRide" : false
+    }
+    , "appDatas" : {
+      "link" : "https://play.google.com/store/apps/details?id=in.juspay.nammayatripartner"
+      , "name" : "Namma Yatri"
     }
   })
 }

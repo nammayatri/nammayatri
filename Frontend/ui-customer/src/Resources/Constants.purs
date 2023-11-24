@@ -28,10 +28,11 @@ import Engineering.Helpers.Commons (os)
 import Language.Strings (getString, getEN)
 import Language.Types (STR(..))
 import MerchantConfig.Utils (getMerchant, Merchant(..))
-import MerchantConfig.Utils (getValueFromConfig)
 import Prelude (map, show, (&&), (-), (<>), (==), (>), ($), (+), (/=), (<), (/), (*))
 import Screens.Types as ST
 import Services.API (AddressComponents(..), BookingLocationAPIEntity(..), SavedReqLocationAPIEntity(..), FareBreakupAPIEntity(..))
+import ConfigProvider
+import Constants
 
 type Language
   = { name :: String
@@ -197,10 +198,12 @@ getGender gender placeHolderText =
 
 getFaresList :: Array FareBreakupAPIEntity -> String -> Array ST.FareComponent
 getFaresList fares baseDistance =
+  let currency = (getAppConfig appConfig).currency
+  in
   map
     ( \(FareBreakupAPIEntity item) ->
           { fareType : item.description
-          , price : (getValueFromConfig "currency") <> " " <> 
+          , price : currency <> " " <> 
             (show $ case item.description of 
               "BASE_FARE" -> item.amount + getMerchSpecBaseFare fares
               "SGST" -> (item.amount * 2) + getFareFromArray fares "FIXED_GOVERNMENT_RATE"

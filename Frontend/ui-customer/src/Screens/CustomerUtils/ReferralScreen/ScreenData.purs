@@ -15,7 +15,8 @@
 
 module Screens.ReferralScreen.ScreenData where
 
-import MerchantConfig.DefaultConfig as DC
+import ConfigProvider
+import Constants
 import Screens.Types (ReferralScreenState)
 import Foreign.Object (empty)
 
@@ -26,6 +27,6 @@ initData =
   , showThanks: false
   , isInvalidCode: false
   , isExpandReference: false
-  , config : DC.config
+  , config : getAppConfig appConfig
   , logField : empty 
   }

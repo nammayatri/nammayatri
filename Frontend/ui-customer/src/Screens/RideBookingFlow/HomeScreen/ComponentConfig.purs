@@ -315,8 +315,9 @@ cancelRidePopUpConfig state =
   let
     cancelRideconfig = CancelRidePopUpConfig.config
     lastIndex = (DA.length state.props.cancellationReasons) - 1
-    cancelRideconfig' =
-      cancelRideconfig
+    cancelRideConfig = state.data.config.cancelReasonConfig
+  in
+    CancelRidePopUpConfig.config
         { selectionOptions = state.props.cancellationReasons
         , showAllOptionsText = (getString SHOW_ALL_OPTIONS)
         , primaryButtonTextConfig
@@ -326,7 +327,7 @@ cancelRidePopUpConfig state =
         , activeIndex = state.props.cancelRideActiveIndex
         , activeReasonCode = Just state.props.cancelReasonCode
         , isLimitExceeded = DS.length state.props.cancelDescription >= 100
-        , cornerRadius = (MU.getValueFromConfig "primaryButtonCornerRadius")
+        , cornerRadius = cancelRideConfig.buttonCornerRadius
         , isSelectButtonActive =
           ( case state.props.cancelRideActiveIndex of
               Just cancelRideIndex -> true
@@ -345,8 +346,6 @@ cancelRidePopUpConfig state =
           }
         , config = state.data.config
         }
-  in
-    cancelRideconfig'
 
 genderBannerConfig :: ST.HomeScreenState -> Banner.Config
 genderBannerConfig state =
@@ -706,7 +705,7 @@ rateCardConfig state =
           {key : "FARE_UPDATE_POLICY", val : (getString FARE_UPDATE_POLICY)},
           {key : "YOU_MAY_SEE_AN_UPDATED_FINAL_FARE_DUE_TO_ANY_OF_THE_BELOW_REASONS", val : (getString YOU_MAY_SEE_AN_UPDATED_FINAL_FARE_DUE_TO_ANY_OF_THE_BELOW_REASONS)},
           {key : "REASON_CHANGE_IN_ROUTE", val : ("<span style=\"color:black;\">" <> (getString REASON_CHANGE_IN_ROUTE_A) <> "</span>" <> (getString REASON_CHANGE_IN_ROUTE_B))}]
-          <> if state.data.rateCard.vehicleVariant == "AUTO_RICKSHAW" && (MU.getValueFromConfig "showChargeDesc") then [{key : "CHARGE_DESCRIPTION", val : (getString ERNAKULAM_LIMIT_CHARGE)}] else []
+          <> if state.data.rateCard.vehicleVariant == "AUTO_RICKSHAW" && state.data.config.searchLocationConfig.showChargeDesc then [{key : "CHARGE_DESCRIPTION", val : (getString ERNAKULAM_LIMIT_CHARGE)}] else []
         }
   in
     rateCardConfig'
@@ -1253,7 +1252,7 @@ rideCompletedCardConfig state = let
           visible = true
         },
         primaryButtonConfig = skipButtonConfig state,
-        enableContactSupport = state.data.config.enableContactSupport
+        enableContactSupport = state.data.config.features.enableSupport
       }
   in config'
 

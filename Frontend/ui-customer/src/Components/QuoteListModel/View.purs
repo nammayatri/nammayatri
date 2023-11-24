@@ -34,7 +34,6 @@ import MerchantConfig.Utils (getMerchant, Merchant(..))
 import JBridge (getBtnLoader, startLottieProcess, lottieAnimationConfig)
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import MerchantConfig.Utils (getValueFromConfig)
 import Prelude (Unit, show, bind, const, map, pure, unit, not, void, ($), (&&), (+), (/), (/=), (<<<), (<>), (==), (||), discard)
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), Accessiblity(..), PrestoDOM, Visibility(..), afterRender, accessibilityHint ,alignParentBottom, background, clickable, color, cornerRadius, ellipsize, fontStyle, gravity, height, id, imageUrl, imageView, imageWithFallback, lineHeight, linearLayout, lottieAnimationView, margin, onClick, orientation, padding, relativeLayout, scrollBarY, scrollView, singleLine, stroke, text, textSize, textView, visibility, weight, width, accessibility)
 import PrestoDOM.Animation as PrestoAnim
@@ -686,7 +685,7 @@ checkVisibility state =
 setText :: QuoteListModelState -> String
 setText state =
   case state.selectedQuote ,(null state.quoteListModel) of
-    Just _ ,_                           -> (getString CONFIRM_FOR) <> (getValueFromConfig "currency") <> " " <> getPrice state
+    Just _ ,_                           -> (getString CONFIRM_FOR) <> state.appConfig.currency <> " " <> getPrice state
     Nothing , true                      -> (getString GO_HOME_)
     _,_                                 -> ""
 

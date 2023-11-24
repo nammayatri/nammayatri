@@ -27,7 +27,6 @@ import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import JBridge (getArray)
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import MerchantConfig.Utils (getValueFromConfig)
 import Prelude (Unit, ($), (<<<), const, (==), (<>))
 import Prelude (Unit, ($), (<<<), const, (==), (<>), map)
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), background, clickable, color, cornerRadius, ellipsize, fontStyle, frameLayout, gravity, height, imageUrl, imageView, imageWithFallback, layoutGravity, linearLayout, margin, maxLines, orientation, padding, relativeLayout, shimmerFrameLayout, stroke, text, textSize, textView, visibility, weight, width)
@@ -40,6 +39,8 @@ import Screens.RideHistoryScreen.Controller (Action(..)) as RideHistoryScreen
 import Screens.RideSelectionScreen.Controller (Action(..)) as RideSelectionScreen
 import Screens.Types (IndividualRideCardState, Tag)
 import Styles.Colors as Color
+import ConfigProvider
+import Constants
 
 view :: forall w .  (RideHistoryScreen.Action  -> Effect Unit)  -> PrestoDOM (Effect Unit) w
 view push =
@@ -241,7 +242,7 @@ rideDetails showTripId =
       , gravity RIGHT 
       ][
         textView $
-          [ text (getValueFromConfig "currency")
+          [ text $ getCurrency appConfig
           , PrestoList.colorHolder "amountColor"
           ] <> FontStyle.body11 TypoGraphy
         , textView $

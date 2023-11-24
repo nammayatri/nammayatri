@@ -1,182 +1,163 @@
 window.version = window.version || {};
 let version = "1.0.0";
-if (typeof __VERSION__ !== 'undefined') {
+if (typeof __VERSION__ !== "undefined") {
   version = __VERSION__
 }
+
 window.version["configuration"]= version;
 window.getMerchantConfig = function () {
   return JSON.stringify({
-      "StringKeys": ["YOUR_LOCATION_HELPS_OUR_SYSTEM", "ABOUT_APP_DESCRIPTION", "ACCESSIBILITY_TEXT"],
-      "isReferralEnabled": "true",
-      "showBookingPreference": "true",
-      "showRateCard": "true",
-      "showDashboard": "false",
-      "enableShareRide": "false",
-      "autoVariantEnabled": true,
-      "shareAppTitle": "Share Namma Yatri!",
-      "shareAppContent": "Hey there!\n\nCheck India's first Zero Commission auto booking app.\n100% Open source | 100% Open Data\n\nDownload Namma Yatri now! \nhttps://nammayatri.in/link/rider/SJ8D \n\n #beOpen #chooseOpen",
-      "DOCUMENT_LINK": "https://docs.google.com/document/d/1-oRR_oI8ncZRPZvFZEJZeCVQjTmXTmHA",
-      "appLink": "",
-      "PRIVACY_POLICY_LINK": "https://docs.google.com/document/d/128VU80K5E1iz-x6QnP1R127m_lwmDO3F",
-      "customerTip" : {
-        "auto" : true,
-        "cabs" : true
-      },
-      "showChargeDesc" : false,
-      "isShareAppEnabled": "false",
-      "showPickUpandDrop": true,
-      "loaderColor": "",
-      "apiLoaderLottie": "Payments-Loader.json",
-      "isEmergencyContacts": "false",
-      "isChatEnabled": "false",
-      "showHamMenu": true,
-      "showQuoteFindingText": false,
-      "showCorporateAddress": true,
-      "primaryTextColor": "#FFFFFF",
-      "isGradient": "false",
-      "gradient": [],
-      "primaryBackground": "#03B9F5",
-      "currency": "₹",
-      "alertDialogPrimaryColor": "#00B8F5",
-      "primaryButtonCornerRadius": 8.0,
-      "cancelSearchTextColor": "#FD5154",
-      "estimateConfirmText": "Request a NammaYatri Ride",
-      "autoConfirmingLoaderColor": "#00B8F5",
-      "quoteListModelBackground": "#F5F9FE",
-      "dashboardUrl" : "https://www.getyatri.com/open/?source=in-app",
-      "quoteListItemConfig": {
-          "primaryButtonCorner": 8.0,
-          "expiresColor": "#EB5757",
-          "driverImagebg": "#F1F1F1",
-          "vehicleHeight": 37,
-          "vehicleWidth": 40
-      },
-      "searchLocationConfig": {
-          "searchLocationTheme": "#F5F9FE",
-          "setLocationOnMapColor": "#101010",
-          "strokeColor": "1,#13101010",
-          "enableLocationTagbar": "true",
-          "resultsCardCornerRadius": 8.0,
-          "showRateCardDetails": true,
-          "showAdditionalChargesText" : false,
-          "lottieHeight": 96,
-          "lottieWidth": 96,
-          "primaryButtonHeight": 60,
-          "backArrow": "ny_ic_chevron_left,https://assets.juspay.in/beckn/mobilitypaytm/mobilitypaytmcommon/ny_ic_chevron_left.png"
-      },
-      "ratingConfig": {
-          "secondaryButtonTextColor": "#00B8F5",
-          "secondaryButtonStroke": "1,#00B8F5",
-          "buttonCornerRadius": 8.0
-      },
-      "cancelReasonConfig": {
-          "secondaryButtonTextColor": "#00B8F5",
-          "secondaryButtonStroke": "1,#00B8F5",
-          "buttonCornerRadius": 8.0
-      },
-      "driverInfoConfig": {
-          "ratingTextColor": "#101010",
-          "ratingBackground": "#FFFFFF",
-          "ratingStroke": "1,#10101012",
-          "ratingCornerRadius": 6.0,
-          "callBackground": "#2053BB6F",
-          "callButtonStroke": "0,#EB0055",
-          "cardStroke": "1,#E5E7EB",
-          "otpStroke": "1,#10101021",
-          "numberPlateBackground" : "#E9BE4D",
-          "showCancelPrevention" : true,
-          "showNumberPlatePrefix": true,
-          "showNumberPlateSuffix": false,
-          "callHeight": 24,
-          "callWidth": 24,
-          "closeIcon" : "ny_ic_close_white,https://assets.juspay.in/beckn/mobilitypaytm/user/ny_ic_close_white.png"
-      },
-      "quoteListModel": {
-          "backgroundColor": "#F5F9FE",
-          "textColor": "#101010",
-          "loaderColor": "#00B8F5",
-          "otpBackground": "#F5F9FE",
-          "otpTextBackground": "#FFFFFF",
-          "otpTextColor": "#101010",
-          "otpTitleColor": "#101010",
-          "selectRideTextColor": "#101010",
-          "lineImage": "ic_line",
-          "lottieHeight": 300,
-          "lottieWidth": 300,
-          "topMargin": 100,
-          "noQuotesImageHeight": 115,
-          "noQuotesImageWidth": 137
-      },
-      "profileBackground": "#00B8F5",
-      "profileName": "#FFFFFF",
-      "profileCompletion": "#FFFFFF",
-      "profileImage": "#012A72",
-      "feedbackBackground": "#D3D3D3",
-      "sideBarList": ["MyRides", "Favorites", "HelpAndSupport", "Language", "About"],
-      "rateCardColor": "#00B8F5",
-      "nyBrandingVisibility": true,
-      "fontType": "System",
-      "black900": "#101010",
-      "black800": "#101010",
-      "red": "#FD5154",
-      "popupBackground": "#FFFFFF",
-      "addFavouriteScreenBackArrow": "ny_ic_chevron_left,https://assets.juspay.in/nammayatri/images/user/ny_ic_chevron_left.png",
-      "cancelRideColor": "#101010",
-      "infoIconUrl": "ny_ic_info_blue,https://assets.juspay.in/beckn/mobilitypaytm/mobilitypaytmcommon/ny_ic_info_blue.png",
-      "profileEditGravity": "bottom",
-      "merchantLogo": "ny_ic_paytm_logo,https://assets.juspay.in/beckn/mobilitypaytm/user/ny_ic_paytm_logo.png",
-      "confirmPickUpLocationBorder": "#101010",
-      "logs": ["JUSPAY"],
-      "englishStrings": {
-          "YOUR_LOCATION_HELPS_OUR_SYSTEM": "Your location helps our system to map down all the near by autos and get you the quickest ride possible.",
-          "ABOUT_APP_DESCRIPTION": "Paytm presents you a feature to Book your Auto rides with the convenience of a click. The platform is based on the Namma Yatri Open source code for Auto bookings and is both cost effective and easy to use. Simply put in your pickup & drop locations to connect with drivers near you. Book & go now!"
-      },
-      "hindiStrings": {
-          "YOUR_LOCATION_HELPS_OUR_SYSTEM": "आपका स्थान हमारे सिस्टम को आस पास के सभी ऑटो को मैप करने में सहायता कर्ता है और आपको सबसे तेज सवारी प्रदान करता है",
-          "ABOUT_APP_DESCRIPTION": "पेटीएम आपको एक क्लिक की सुविधा के साथ अपनी ऑटो सवारी बुक करने की सुविधा प्रस्तुत करता है। प्लेटफॉर्म ऑटो बुकिंग के लिए नम्मा यात्री ओपन सोर्स कोड पर आधारित है और यह लागत प्रभावी और उपयोग में आसान दोनों है। अपने आस-पास के ड्राइवरों से जुड़ने के लिए बस अपना पिकअप और ड्रॉप स्थान डालें। बुक करें और अभी जाएं!"
-      },
-      "kannadaStrings": {
-          "YOUR_LOCATION_HELPS_OUR_SYSTEM": "ನಿಮ್ಮ ಸ್ಥಳವು ನಮ್ಮ ಸಿಸ್ಟಂ ಅನ್ನು ಆಟೋಗಳ ಮೂಲಕ ನಕ್ಷೆ ಮಾಡಲು ಸಹಾಯ ಮಾಡುತ್ತದೆ ಮತ್ತು ನಿಮಗೆ ಸಾಧ್ಯವಿರುವ ವೇಗದ ಸವಾರಿಯನ್ನು ನೀಡುತ್ತದೆ.",
-          "ABOUT_APP_DESCRIPTION": "ಒಂದು ಕ್ಲಿಕ್‌ನ ಅನುಕೂಲಕ್ಕಾಗಿ ನಿಮ್ಮ ಆಟೋ ರೈಡ್‌ಗಳನ್ನು ಬುಕ್ ಮಾಡಲು Paytm ನಿಮಗೆ ವೈಶಿಷ್ಟ್ಯವನ್ನು ಒದಗಿಸುತ್ತದೆ. ಪ್ಲಾಟ್‌ಫಾರ್ಮ್ ಸ್ವಯಂ ಬುಕಿಂಗ್‌ಗಾಗಿ ನಮ್ಮ ಯಾತ್ರಿ ಓಪನ್ ಸೋರ್ಸ್ ಕೋಡ್ ಅನ್ನು ಆಧರಿಸಿದೆ ಮತ್ತು ಇದು ವೆಚ್ಚ ಪರಿಣಾಮಕಾರಿ ಮತ್ತು ಬಳಸಲು ಸುಲಭವಾಗಿದೆ. ನಿಮ್ಮ ಹತ್ತಿರವಿರುವ ಡ್ರೈವರ್‌ಗಳೊಂದಿಗೆ ಸಂಪರ್ಕಿಸಲು ನಿಮ್ಮ ಪಿಕಪ್ ಮತ್ತು ಡ್ರಾಪ್ ಸ್ಥಳಗಳನ್ನು ಸರಳವಾಗಿ ಇರಿಸಿ. ಬುಕ್ ಮಾಡಿ ಮತ್ತು ಈಗಲೇ ಹೋಗಿ!"
-      },
-      "languageList": [{
-          "name": "English",
-          "value": "EN_US",
-          "subTitle": ""
-      }, {
-          "name": "ಕನ್ನಡ",
-          "value": "KN_IN",
-          "subTitle": "Kannada"
-      }, {
-          "name": "हिंदी",
-          "value": "HI_IN",
-          "subTitle": "Hindi"
-      }],
-      "bannerConfig": {
-          "backgroundColor": "#F0FAF0",
-          "title": "Complete your profile for a personalised ride experience",
-          "titleColor": "#21C179",
-          "actionText": "Update now",
-          "actionTextColor": "#27AE5F",
-          "imageUrl": "ny_ic_banner_gender_feat,https://assets.juspay.in/beckn/merchantcommon/images/ny_ic_banner_gender_feat.png"
-      },
-      "terminateBtnConfig": {
-          "visibility": true,
-          "title": "Paytm",
-          "imageUrl": "ny_ic_chevron_left_double,https://assets.juspay.in/beckn/mobilitypaytm/mobilitypaytmcommon/ny_ic_chevron_left_double.png"
-      },
-      "showDeleteAccount": false,
-      "showGenderBanner": true,
-      "autoSelectBackground": "#53BB6F",
-      "enableMockLocation": false,
-      "defaultLanguage": "EN_US",
-      "fontKannada": "Roboto",
-      "fontName": "Roboto"
-    , "navigationAppConfig" : {
-        "query" : "google.navigation:q=%f,%f"
-      , "packageName" : "com.google.android.apps.maps"
+    "StringKeys": ["YOUR_LOCATION_HELPS_OUR_SYSTEM", "ABOUT_APP_DESCRIPTION", "CORPORATE_ADDRESS_DESCRIPTION_ADDITIONAL", "YOUR_FEEDBACK_HELPS_US", "LOCATION_PERMISSION_SUBTITLE_NEW_USER"],
+    "showPickUpandDrop": false,
+    "primaryButtonConfig" : {
+      "loaderUrl": "https://assets.juspay.in/beckn/mobilityredbus/user/lottie/primary_button_loader.json"
+    },
+    "showCorporateAddress": false,
+    "loaderColor": "#03B9F5",
+    "primaryTextColor": "#FFFFFF",
+    "primaryBackground": "#03B9F5",
+    "autoConfirmingLoaderColor": "#80B2FF",
+    "alertDialogPrimaryColor": "#BD5500",
+    "logs": ["JUSPAY"],
+    "cancelSearchTextColor": "#D84E55",
+    "quoteListItemConfig": {
+      "primaryButtonCorner": 8.0,
+      "expiresColor": "#EB5757",
+      "driverImagebg": "#F1F1F1",
+      "vehicleHeight": 57,
+      "vehicleWidth": 57
+    },
+    "searchLocationConfig": {
+      "searchLocationTheme": "#F5F9FE",
+      "setLocationOnMapColor": "#101010",
+      "strokeColor": "1,#13101010",
+      "resultsCardCornerRadius": 8.0,
+      "showRateCardDetails": true,
+      "editTextBackground" : "#DA4C54",
+      "editTextDefaultColor" : "#E89398",
+      "backArrow": "ny_ic_chevron_left_white,https://assets.juspay.in/nammayatri/images/user/ny_ic_chevron_left_white.png"
+    },
+    "ratingConfig": {
+      "secondaryButtonTextColor": "#00B8F5",
+      "secondaryButtonStroke": "1,#00B8F5",
+      "buttonCornerRadius": 8.0
+    },
+    "cancelReasonConfig": {
+      "secondaryButtonTextColor": "#00B8F5",
+      "secondaryButtonStroke": "1,#00B8F5",
+      "buttonCornerRadius": 8.0
+    },
+    "quoteListModel": {
+      "backgroundColor": "#F5F9FE",
+      "textColor": "#101010",
+      "loaderColor": "#00B8F5",
+      "otpBackground": "#F5F9FE",
+      "otpTextBackground": "#FFFFFF",
+      "otpTextColor": "#101010",
+      "otpTitleColor": "#101010",
+      "selectRideTextColor": "#101010",
+      "lineImage": "ic_line",
+      "lottieHeight": 300,
+      "lottieWidth": 300,
+      "topMargin": 100,
+      "noQuotesImageHeight": 115,
+      "noQuotesImageWidth": 137
+    },
+    "driverInfoConfig": {
+      "ratingTextColor": "#D84E55",
+      "ratingBackground": "#FFF0F6",
+      "ratingStroke": "1,#717171",
+      "ratingCornerRadius": 8.0,
+      "callBackground": "#2053BB6F",
+      "callButtonStroke": "0,#EB0055",
+      "cardStroke": "1,#E5E7EB",
+      "otpStroke": "1,#10101021",
+      "callHeight": 24,
+      "callWidth": 24,
+      "showNumberPlatePrefix": true,
+      "showNumberPlateSuffix": false,
+      "showCancelPrevention": false,
+      "showTrackingButton": false
+    },
+    "profileBackground": "#03B9F5",
+    "profileName": "#FFFFFF",
+    "profileImage": "#012A72",
+    "feedbackBackground": "#03B9F5",
+    "profileCompletion": "#FFFFFF",
+    "cancelRideColor": "#BD5500",
+    "merchantLogo": "ic_launcher,https://assets.juspay.in/beckn/mobilityredbus/user/images/ny_ic_launcher.png",
+    "infoIconUrl": "ny_ic_info,https://assets.juspay.in/nammayatri/images/user/ny_ic_information_grey.png",
+    "sideBarList": ["MyRides", "Favorites", "HelpAndSupport", "Language", "About"],
+    "rateCardColor": "#D84E55",
+    "nyBrandingVisibility": true,
+    "showHamMenu": true,
+    "showQuoteFindingText": false,
+    "popupBackground": "#FFFFFF",
+    "englishStrings": {
+      "YOUR_LOCATION_HELPS_OUR_SYSTEM": "Your location helps our system to map down all the near by autos and get you the quickest ride possible.",
+      "LOCATION_PERMISSION_SUBTITLE_NEW_USER": "Welcome to Redbus Mobility! \nTo start booking rides, please allow us to find you!",
+      "CORPORATE_ADDRESS_DESCRIPTION_ADDITIONAL": "Website: <u>https://nammayatri.in/</u>",
+      "YOUR_FEEDBACK_HELPS_US": "Your feedback helps us improve the Redbus Mobility experience",
+      "ABOUT_APP_DESCRIPTION": "Redbus Mobility is an open platform to connect commuters with transport providers. The app makes it convenient for travellers to find available means of transport, and avail these options by connecting them with service providers "
+    },
+    "hindiStrings": {
+      "YOUR_LOCATION_HELPS_OUR_SYSTEM": "आपका स्थान हमारे सिस्टम को आस-पास के सभी ऑटो को मैप करने और आपको सबसे तेज़ संभव सवारी दिलाने में मदद करता है।",
+      "LOCATION_PERMISSION_SUBTITLE_NEW_USER": "रेडबस मोबिलिटी में आपका स्वागत है! \nसवारी की बुकिंग शुरू करने के लिए, कृपया हमें आपको ढूंढने की अनुमति दें!",
+      "CORPORATE_ADDRESS_DESCRIPTION_ADDITIONAL": "वेबसाइट: <u>https://nammayatri.in/</u>",
+      "YOUR_FEEDBACK_HELPS_US": "आपका फीडबैक हमें रेडबस मोबिलिटी अनुभव को बेहतर बनाने में मदद करता है",
+      "ABOUT_APP_DESCRIPTION": "रेडबस मोबिलिटी यात्रियों को परिवहन प्रदाताओं के साथ जोड़ने के लिए एक खुला मंच है। ऐप यात्रियों के लिए परिवहन के उपलब्ध साधनों को ढूंढना सुविधाजनक बनाता है, और उन्हें सेवा प्रदाताओं के साथ जोड़कर इन विकल्पों का लाभ उठाता है"
+    },
+    "kannadaStrings": {
+      "YOUR_LOCATION_HELPS_OUR_SYSTEM": "ನಿಮ್ಮ ಸ್ಥಳವು ನಮ್ಮ ಸಿಸ್ಟಂ ಅನ್ನು ಆಟೋಗಳ ಮೂಲಕ ಮ್ಯಾಪ್ ಮಾಡಲು ಸಹಾಯ ಮಾಡುತ್ತದೆ ಮತ್ತು ನಿಮಗೆ ತ್ವರಿತವಾದ ಸವಾರಿ ಸಾಧ್ಯ.",
+      "LOCATION_PERMISSION_SUBTITLE_NEW_USER": "ರೆಡ್‌ಬಸ್ ಮೊಬಿಲಿಟಿಗೆ ಸುಸ್ವಾಗತ! \nಬುಕಿಂಗ್ ರೈಡ್‌ಗಳನ್ನು ಪ್ರಾರಂಭಿಸಲು, ದಯವಿಟ್ಟು ನಿಮ್ಮನ್ನು ಹುಡುಕಲು ನಮಗೆ ಅನುಮತಿಸಿ!",
+      "CORPORATE_ADDRESS_DESCRIPTION_ADDITIONAL": "ವೆಬ್‌ಸೈಟ್: <u>https://nammayatri.in/</u>",
+      "YOUR_FEEDBACK_HELPS_US": "ನಿಮ್ಮ ಪ್ರತಿಕ್ರಿಯೆ ನಮಗೆ Redbus Mobility ಅನುಭವವನ್ನು ಸುಧಾರಿಸಲು ಸಹಾಯ ಮಾಡುತ್ತದೆ",
+      "ABOUT_APP_DESCRIPTION": "ರೆಡ್‌ಬಸ್ ಮೊಬಿಲಿಟಿಯು ಪ್ರಯಾಣಿಕರನ್ನು ಸಾರಿಗೆ ಪೂರೈಕೆದಾರರೊಂದಿಗೆ ಸಂಪರ್ಕಿಸಲು ಮುಕ್ತ ವೇದಿಕೆಯಾಗಿದೆ. ಈ ಅಪ್ಲಿಕೇಶನ್ ಪ್ರಯಾಣಿಕರಿಗೆ ಲಭ್ಯವಿರುವ ಸಾರಿಗೆ ಸಾಧನಗಳನ್ನು ಹುಡುಕಲು ಅನುಕೂಲಕರವಾಗಿಸುತ್ತದೆ ಮತ್ತು ಸೇವೆ ಒದಗಿಸುವವರೊಂದಿಗೆ ಅವರನ್ನು ಸಂಪರ್ಕಿಸುವ ಮೂಲಕ ಈ ಆಯ್ಕೆಗಳನ್ನು ಪಡೆದುಕೊಳ್ಳಿ "
+    },
+    "languageList": [{
+      "name": "English",
+      "value": "EN_US",
+      "subTitle": ""
+    }, {
+      "name": "ಕನ್ನಡ",
+      "value": "KN_IN",
+      "subTitle": "Kannada"
+    }, {
+      "name": "हिंदी",
+      "value": "HI_IN",
+      "subTitle": "Hindi"
+    }],
+    "terminateBtnConfig": {
+      "visibility": true,
+      "title": "Paytm",
+      "imageUrl": "ny_ic_chevron_left_double,https://assets.juspay.in/beckn/mobilitypaytm/mobilitypaytmcommon/ny_ic_chevron_left_double.png"
+    },
+    "showDeleteAccount": false,
+    "showGenderBanner": false,
+    "SUPPORT_EMAIL": "nammayatri.support@juspay.in",
+    "rideCompletedGradient": "#F2A2A2"
+    , "estimateAndQuoteConfig" : { 
+      "enableOnlyAuto" : true 
     }
-    , "estimateAndQuoteConfig" : { "enableOnlyAuto" : true
+    , "rideCompletedCardConfig" : {
+      "topCard" : {
+        "gradient" : "#F2A2A2"
+      }
+    }
+    , "features" : {
+      "enableAutoReadOtp" : false,
+      "enableShareRide" : false,
+      "enableChat": false,
+      "enableEmergencyContacts": false,
+      "enableReferral": false,
+      "enableSupport": false,
+      "enableShareApp": false
+    }
+    , "dashboard" : {
+      "enable" : false
+    }
+    , "fontConfig" : {
+      "type" : "System"
     }
   })
 }

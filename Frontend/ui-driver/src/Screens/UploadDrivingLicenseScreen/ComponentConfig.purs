@@ -29,15 +29,17 @@ import Engineering.Helpers.Commons as EHC
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Language.Types (STR(..))
-import MerchantConfig.Utils (getValueFromConfig)
 import Screens.Types as ST
 import Styles.Colors as Color
+import ConfigProvider
+import Constants
 
 ------------------------------ primaryButtonConfig --------------------------------
 primaryButtonConfig :: ST.UploadDrivingLicenseState -> PrimaryButton.Config
 primaryButtonConfig state = let 
     config = PrimaryButton.config
-    imageUploadCondition = getValueFromConfig "imageUploadOptional" || state.data.imageFront /= ""
+    features = (getAppConfig appConfig).features
+    imageUploadCondition = features.enableImageUpload || state.data.imageFront /= ""
     primaryButtonConfig' = config 
       { textConfig{ text = (getString NEXT)}
       , width = MATCH_PARENT

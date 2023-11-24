@@ -63,7 +63,6 @@ import JBridge as JB
 import Language.Strings (getString, getEN)
 import Language.Types (STR(..))
 import Log (printLog)
-import MerchantConfig.Utils (getValueFromConfig)
 import MerchantConfig.Utils as MU
 import Prelude (Unit, bind, const, discard, not, pure, unit, void, ($), (&&), (*), (-), (/), (<), (<<<), (<>), (==), (>), (>=), (||), (<=), show, void, (/=), when, map, otherwise, (+))
 import Presto.Core.Types.Language.Flow (Flow, delay, doAff)
@@ -321,13 +320,13 @@ driverMapsHeaderView push state =
                     , statsModel push state
                     , if not state.props.rideActionModal && (state.props.driverStatusSet == Online || state.props.driverStatusSet == Silent)  then updateLocationAndLastUpdatedView state push else dummyTextView
                   ]
-                , if (state.props.autoPayBanner /= ST.NO_SUBSCRIPTION_BANNER && state.props.driverStatusSet == ST.Offline && getValueFromConfig "autoPayBanner") then autoPayBannerView state push true else dummyTextView
+                , if (state.props.autoPayBanner /= ST.NO_SUBSCRIPTION_BANNER && state.props.driverStatusSet == ST.Offline && state.data.config.banners.autoPay) then autoPayBannerView state push true else dummyTextView
                 , gotoRecenterAndSupport state push
               ]
             , alternateNumberOrOTPView state push
             , if(state.props.showGenderBanner && state.props.driverStatusSet /= ST.Offline && getValueToLocalStore IS_BANNER_ACTIVE == "True" && state.props.autoPayBanner == ST.NO_SUBSCRIPTION_BANNER) then genderBannerView state push 
                 else if state.data.paymentState.paymentStatusBanner then paymentStatusBanner state push 
-                else if (state.props.autoPayBanner /= ST.NO_SUBSCRIPTION_BANNER && state.props.driverStatusSet /= ST.Offline && getValueFromConfig "autoPayBanner") then autoPayBannerView state push false 
+                else if (state.props.autoPayBanner /= ST.NO_SUBSCRIPTION_BANNER && state.props.driverStatusSet /= ST.Offline && state.data.config.banners.autoPay) then autoPayBannerView state push false 
                 else if (state.props.driverStatusSet /= ST.Offline && state.props.currentStage == HomeScreen && state.data.config.purpleRideConfig.showPurpleVideos) then accessibilityBanner state push 
                 else dummyTextView
             ]
@@ -429,7 +428,7 @@ alternateNumberOrOTPView state push =
       , orientation HORIZONTAL
       , gravity CENTER
       ][  addAlternateNumber push state
-        , if (getValueFromConfig "SPECIAL_ZONE_OTP_VIEW") == "true"  then otpButtonView state push else dummyTextView
+        , if state.data.config.features.enableOtpRide then otpButtonView state push else dummyTextView
         ]
       ]
 
@@ -440,7 +439,7 @@ genderBannerView state push =
     , width MATCH_PARENT
     , orientation VERTICAL
     , margin (Margin 10 10 10 10)
-    , visibility if (getValueFromConfig "showGenderBanner") then VISIBLE else GONE
+    , visibility if state.data.config.features.enableGender then VISIBLE else GONE
     , gravity BOTTOM
     ][
     linearLayout

@@ -35,10 +35,11 @@ import Animation as Anim
 import Animation.Config as AnimConfig
 import Common.Types.App
 import Screens.EnterMobileNumberScreen.ComponentConfig
-import MerchantConfig.Utils (getValueFromConfig)
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Common.Types.App (LazyCheck(..))
 import Prelude ((<>))
+import ConfigProvider
+import Constants
 
 screen :: ST.EnterMobileNumberScreenState -> Screen Action ST.EnterMobileNumberScreenState ScreenOutput
 screen initialState =
@@ -149,11 +150,13 @@ primaryEditTextView state push =
 --------------------------------- underlinedTextView ----------------------
 underlinedTextView :: ST.EnterMobileNumberScreenState -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w
 underlinedTextView state push =
- linearLayout
- [ width WRAP_CONTENT
- , height WRAP_CONTENT
- , orientation HORIZONTAL
- ][ textView (
+  let others = (getAppConfig appConfig).others
+  in
+  linearLayout
+  [ width WRAP_CONTENT
+  , height WRAP_CONTENT
+  , orientation HORIZONTAL
+  ][ textView (
     [ width WRAP_CONTENT
     , height WRAP_CONTENT
     , text (getString CASE_TWO)
@@ -166,7 +169,7 @@ underlinedTextView state push =
       , orientation VERTICAL
       , onClick (\action -> do
                   _<- push action
-                  _ <- JB.openUrlInApp $ getValueFromConfig "DOCUMENT_LINK" 
+                  _ <- JB.openUrlInApp $ others.termsLink
                   pure unit
                   ) (const NonDisclosureAgreementAction)
       ][ textView (
@@ -182,7 +185,9 @@ underlinedTextView state push =
 -------------------------------- termsAndConditionsView ------------------
 termsAndConditionsView :: ST.EnterMobileNumberScreenState -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w
 termsAndConditionsView state push =
- linearLayout
+  let others = (getAppConfig appConfig).others
+  in
+  linearLayout
   [ width MATCH_PARENT
   , height WRAP_CONTENT
   , orientation HORIZONTAL
@@ -205,7 +210,7 @@ termsAndConditionsView state push =
       , orientation VERTICAL
       , onClick (\action -> do
                   _<- push action
-                  _ <- JB.openUrlInApp $ getValueFromConfig "DOCUMENT_LINK" 
+                  _ <- JB.openUrlInApp $ others.termsLink
                   pure unit
                   ) (const NonDisclosureAgreementAction)
       ][ textView (

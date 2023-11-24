@@ -16,7 +16,8 @@
 module Components.RideActionModal.Controller where
 import Data.Maybe as Mb
 import MerchantConfig.Types (AppConfig)
-import MerchantConfig.DefaultConfig as DC
+import ConfigProvider
+import Constants
 import Screens.Types as ST
 
 data Action = StartRide 
@@ -84,7 +85,7 @@ config = {
   isChatOpened : false,
   requestedVehicleVariant : Mb.Nothing,
   accessibilityTag : Mb.Nothing,
-  appConfig : DC.config,
+  appConfig : getAppConfig appConfig,
   gotoTag : false,
   waitTimeStatus : ST.NoStatus
 }

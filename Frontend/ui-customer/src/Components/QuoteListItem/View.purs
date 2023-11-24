@@ -222,7 +222,7 @@ primaryButtonView state push =
   , cornerRadius state.appConfig.quoteListItemConfig.primaryButtonCorner
   , onClick push $ const ConfirmRide
   , gravity CENTER
-  ] <> if state.appConfig.isGradient == "true" then [gradient (Linear 90.0 state.appConfig.gradient)] else [background state.appConfig.primaryBackground])
+  ] <> if state.appConfig.primaryButtonConfig.isGradient then [gradient (Linear 90.0 state.appConfig.primaryButtonConfig.gradient)] else [background state.appConfig.primaryBackground])
   [ textView (
      [ width WRAP_CONTENT
      , height WRAP_CONTENT

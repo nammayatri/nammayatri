@@ -36,7 +36,7 @@ import Effect.Class (liftEffect)
 import Engineering.Helpers.Commons (getNewIDWithTag)
 import JBridge (disableActionEditText, hideKeyboardOnNavigation, openWhatsAppSupport, showDialer, uploadFile)
 import Log (printLog, trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppTextInput, trackAppScreenEvent)
-import MerchantConfig.Utils (Merchant(..), getMerchant, getValueFromConfig)
+import MerchantConfig.Utils (Merchant(..), getMerchant)
 import Prelude (Unit, bind, pure, ($), class Show, unit, (/=), discard, (==), (&&), (||), not, (<=), (>), (<>), (<), show, (+))
 import PrestoDOM (Eval, Props, continue, continueWithCmd, exit, updateAndExit)
 import PrestoDOM.Types.Core (class Loggable)
@@ -45,6 +45,8 @@ import Screens.Types (AddVehicleDetailsScreenState, VehicalTypes(..))
 import Services.Config (getSupportNumber, getWhatsAppSupportNo)
 import Effect.Unsafe (unsafePerformEffect)
 import Engineering.Helpers.LogEvent (logEvent)
+import ConfigProvider
+import Constants
 
 instance showAction :: Show Action where
   show _ = ""
@@ -276,5 +278,6 @@ dateFormat date = if date < 10 then "0" <> (show date) else (show date)
 
 validateRegistrationNumber :: String -> Boolean
 validateRegistrationNumber regNum =
-  let values = split (Pattern "|") $ getValueFromConfig ("RC_VALIDATION_TEXT")
+  let vehicleConfig = (getAppConfig appConfig).vehicle
+      values = split (Pattern "|") $ vehicleConfig.validationPrefix
   in regNum `elem` values

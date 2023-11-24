@@ -59,7 +59,7 @@ import JBridge (emitJOSEvent)
 import Juspay.OTP.Reader (initiateSMSRetriever)
 import Juspay.OTP.Reader as Readers
 import Juspay.OTP.Reader.Flow as Reader
-import MerchantConfig.Utils (Merchant(..), getMerchant, getValueFromConfig)
+import MerchantConfig.Utils (Merchant(..), getMerchant)
 import Prelude (class Eq, class Ord, class Show, Unit, bind, compare, comparing, mod, discard, identity, map, not, pure, show, unit, void, ($), (*), (+), (-), (/), (/=), (<), (<#>), (<*>), (<<<), (<=), (<>), (=<<), (==), (>), (>>>), (||), (&&), (<$>), (>=))
 import Presto.Core.Flow (Flow, doAff)
 import Presto.Core.Types.Language.Flow (FlowWrapper(..), getState, modifyState)
@@ -80,6 +80,8 @@ import Effect.Uncurried(EffectFn1, EffectFn4, EffectFn3,runEffectFn3)
 import Effect.Aff (Aff (..), error, killFiber, launchAff, launchAff_, makeAff, nonCanceler, Fiber)
 import Prelude (class EuclideanRing, Unit, bind, discard, identity, pure, unit, void, ($), (+), (<#>), (<*>), (<>), (*>), (>>>), ($>), (/=), (&&), (<=), show, (>=), (>),(<))
 import Data.String (replace, split, Pattern(..), Replacement(..))
+import Constants
+import ConfigProvider
 
 foreign import shuffle :: forall a. Array a -> Array a
 
@@ -197,10 +199,12 @@ convertUTCToISTAnd12HourFormat inputTime = do
   
 otpRule :: Reader.OtpRule
 otpRule =
+  let config = (getAppConfig appConfig).others
+  in
   Reader.OtpRule
     { matches:
         { sender: []
-        , message : (getValueFromConfig "OTP_MESSAGE_REGEX")
+        , message : config.otpRegex
         }
     , otp: "\\d{4}"
     , group: Nothing
@@ -450,7 +454,9 @@ reverse' :: String -> String
 reverse' = fromCharArray <<< reverse <<< toCharArray
 
 getVehicleSize :: Unit -> Int
-getVehicleSize unit = (getValueFromConfig "vehicleMarkerSize")
+getVehicleSize unit = 
+  let mapConfig = (getAppConfig appConfig).mapConfig
+  in mapConfig.vehicleMarkerSize
 
 getScreenFromStage :: Stage -> String
 getScreenFromStage stage = case stage of
@@ -477,32 +483,22 @@ getScreenFromStage stage = case stage of
   TryAgain -> "finding_rides_screen"
   PickUpFarFromCurrentLocation -> "finding_driver_loader"
 
-getGlobalPayload :: Unit -> Effect (Maybe GlobalPayload)
-getGlobalPayload _ = do
-  payload  ::  Either MultipleErrors GlobalPayload  <- runExcept <<< decode <<< fromMaybe (unsafeToForeign {}) <$> (getWindowVariable "__payload" Just Nothing)
-  pure $ hush payload
 
 getSearchType :: Unit -> String
-getSearchType _ = do 
-  let payload = unsafePerformEffect $ getGlobalPayload unit
-  case payload of
-    Just (GlobalPayload payload') -> do
-      let (Payload innerPayload) = payload'.payload
-      case innerPayload.search_type of
-        Just a -> a 
-        Nothing -> "normal_search"
-    Nothing -> "normal_search"
+getSearchType _ = "normal_search" --do 
+  -- let (GlobalPayload payload) = getGlobalPayload Constant.GlobalPayload
+  --     (Payload innerPayload) = payload.payload
+  -- case innerPayload.search_type of
+  --   Just a -> a 
+  --   Nothing -> "normal_search"
 
 getPaymentMethod :: Unit -> String
-getPaymentMethod _ = do 
-  let payload = unsafePerformEffect $ getGlobalPayload unit
-  case payload of
-    Just (GlobalPayload payload') -> do
-      let (Payload innerPayload) = payload'.payload
-      case innerPayload.payment_method of
-        Just a -> a 
-        Nothing -> "cash"
-    Nothing -> "cash"
+getPaymentMethod _ = "cash"--do 
+  -- let (GlobalPayload payload) = getGlobalPayload Constant.GlobalPayload
+  --     (Payload innerPayload) = payload.payload
+  -- case innerPayload.payment_method of
+  --   Just a -> a 
+  --   Nothing -> "cash"
 
 
 triggerRideStatusEvent :: String -> Maybe Int -> Maybe String -> String -> Flow GlobalState Unit 

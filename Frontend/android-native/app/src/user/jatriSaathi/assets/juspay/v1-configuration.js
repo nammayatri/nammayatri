@@ -1,156 +1,70 @@
 window.version = window.version || {};
 let version = "1.0.0";
-if (typeof __VERSION__ !== 'undefined') {
+if (typeof __VERSION__ !== "undefined") {
   version = __VERSION__
 }
 window.version["configuration"]= version;
+
+function getAppLink(os) {
+  if (os == "ANDROID"){
+    return "https://play.google.com/store/apps/details?id=in.juspay.jatrisaathi"
+  }else {return "https://apps.apple.com/us/app/yatri-sathi/id6451491581"}
+}
 window.getMerchantConfig = function () {
   return JSON.stringify({
     "StringKeys": ["ABOUT_APP_DESCRIPTION",
-    "WELCOME_TEXT",
-    "REQUEST_AUTO_RIDE",
-    "CURRENTLY_WE_ARE_LIVE_IN_",
-    "DRIVER_PICKUP_CHARGES",
-    "YOU_ARE_ABOUT_TO_CALL_YATRI_SATHI_SUPPORT",
-    "SUCCESSFUL_ONBOARD", "ABOUT_REFERRAL_PROGRAM_DISCRIPTION",
-    "YOU_CAN_GET_REFERRAL_CODE_FROM_DRIVER",
-    "YOUR_LOCATION_HELPS_OUR_SYSTEM",
-    "YOU_ARE_ABOUT_TO_CALL_NAMMA_YATRI_SUPPORT",
-    "LOCATION_PERMISSION_SUBTITLE_NEW_USER",
-    "REGISTERED_ADDRESS_DESCRIPTION_ADDITIONAL",
-    "CORPORATE_ADDRESS_DESCRIPTION_ADDITIONAL",
-    "CORPORATE_ADDRESS_DESCRIPTION",
-    "REGISTERED_ADDRESS_DESCRIPTION",
-    "CALL_NAMMA_YATRI_SUPPORT",
-    "YOUR_FEEDBACK_HELPS_US",
-    "LEARN_HOW_TEXT",
-    "DRIVER_ADDITIONS_ARE_CALCULATED_AT_RATE",
-    "ACCESSIBILITY_TEXT",
-    "TO_CATER_YOUR_SPECIFIC_NEEDS",
-    "PLEASE_ENABLE_LOCATION_PERMISSION"
+      "WELCOME_TEXT",
+      "REQUEST_AUTO_RIDE",
+      "CURRENTLY_WE_ARE_LIVE_IN_",
+      "DRIVER_PICKUP_CHARGES",
+      "YOU_ARE_ABOUT_TO_CALL_YATRI_SATHI_SUPPORT",
+      "SUCCESSFUL_ONBOARD", "ABOUT_REFERRAL_PROGRAM_DISCRIPTION",
+      "YOU_CAN_GET_REFERRAL_CODE_FROM_DRIVER",
+      "YOUR_LOCATION_HELPS_OUR_SYSTEM",
+      "YOU_ARE_ABOUT_TO_CALL_NAMMA_YATRI_SUPPORT",
+      "LOCATION_PERMISSION_SUBTITLE_NEW_USER",
+      "REGISTERED_ADDRESS_DESCRIPTION_ADDITIONAL",
+      "CORPORATE_ADDRESS_DESCRIPTION_ADDITIONAL",
+      "CORPORATE_ADDRESS_DESCRIPTION",
+      "REGISTERED_ADDRESS_DESCRIPTION",
+      "CALL_NAMMA_YATRI_SUPPORT",
+      "YOUR_FEEDBACK_HELPS_US",
+      "LEARN_HOW_TEXT",
+      "DRIVER_ADDITIONS_ARE_CALCULATED_AT_RATE",
+      "ACCESSIBILITY_TEXT",
+      "TO_CATER_YOUR_SPECIFIC_NEEDS",
+      "PLEASE_ENABLE_LOCATION_PERMISSION"
     ],
-    "isReferralEnabled": "true",
-    "showBookingPreference": "false",
-    "showRateCard": "false",
-    "showDashboard": "false",
-    "enableShareRide": "false",
     "autoVariantEnabled": false,
-    "shareAppTitle" : "Share Yatri Sathi!",
-    "shareAppContent" : "Hey there!\n\n Download Yatri Sathi now! \n" + getAppLink(window.__OS),
-    "DOCUMENT_LINK": "https://docs.google.com/document/d/19pQUgTWXBqcM7bjy4SU1-z33r-iXsdPMfZggBTXbdR4",
-    "appLink" : getAppLink(window.__OS),
-    "PRIVACY_POLICY_LINK": "https://docs.google.com/document/d/1-bcjLOZ_gR0Rda2BNmkKnqVds8Pm23v1e7JbSDdM70E",
-    "CUSTOMER_TIP": "true",
+    "shareAppConfig" : {
+      "title" : "Share Yatri Sathi!"
+      , "description" : "Hey there!\n\n Download Yatri Sathi now! \n" + getAppLink(window.__OS)
+    },
+    "others" : {
+      "otpRegex" :  "is your OTP for login to [A-Za-z]+ [A-Za-z]+ [A-Za-z]+"
+      , "termsLink" : "https://docs.google.com/document/d/19pQUgTWXBqcM7bjy4SU1-z33r-iXsdPMfZggBTXbdR4"
+      , "privacyLink" : "https://docs.google.com/document/d/1-bcjLOZ_gR0Rda2BNmkKnqVds8Pm23v1e7JbSDdM70E"
+    },
+    "appDatas" : {
+      "link" : getAppLink(window.__OS)
+      , "supportMail" :"yatrisathi.support@wb.gov.in"
+      , "name" : "Yatri Sathi"
+    },
     "customerTip" : {
       "auto" : false,
       "cabs" : true
     },
-    "showChargeDesc" : false,
-    "isShareAppEnabled": "true",
-    "apiLoaderLottie": "primary_button_loader.json",
-    "isEmergencyContacts": "true",
-    "isChatEnabled": "true",
-    "showPickUpandDrop": true,
-    "currency": "₹",
-    "loaderColor": "",
-    "showHamMenu" : true,
-    "showQuoteFindingText" : false,
-    "alertDialogPrimaryColor": "#2194FF",
-    "gradient": [],
-    "addFavouriteScreenBackArrow" : "ny_ic_chevron_left_white,https://assets.juspay.in/nammayatri/images/user/ny_ic_chevron_left_white.png",
-    "isGradient" : "false",
     "primaryTextColor": "#FCC32C",
     "primaryBackground": "#2C2F3A",
-    "estimateConfirmText": "Request a NammaYatri Ride",
-    "autoConfirmingLoaderColor": "#80B2FF",
-    "primaryButtonCornerRadius" : 8.0,
-    "cancelSearchTextColor": "#E55454",
-    "dashboardUrl" : "https://yatrisathi.in/open/?source=in-app",
-    "quoteListItemConfig": {
-      "primaryButtonCorner": 8.0,
-      "expiresColor" : "#E55454",
-      "driverImagebg": "#F1F1F1",
-      "vehicleHeight" : 37,
-      "vehicleWidth": 40
-    },
     "searchLocationConfig": {
-      "searchLocationTheme": "#2C2F3A",
-      "setLocationOnMapColor" : "#6D7280",
-      "strokeColor": "1,#E5E7EB",
       "enableLocationTagbar" : "true",
-      "resultsCardCornerRadius" : 20.0,
-      "showRateCardDetails" : true,
       "showAdditionalChargesText" : true,
-      "lottieHeight": 96,
-      "lottieWidth": 96,
-      "primaryButtonHeight": 60,
-      "backArrow" : "ny_ic_chevron_left_white,https://assets.juspay.in/beckn/jatrisaathi/user/images/ny_ic_chevron_left_white.png"
-     },
-     "ratingConfig": {
-      "secondaryButtonTextColor": "#2C2F3A",
-      "secondaryButtonStroke": "1,#2C2F3A",
-      "buttonCornerRadius": 8.0
-     },
-     "cancelReasonConfig": {
-      "secondaryButtonTextColor": "#2C2F3A",
-      "secondaryButtonStroke": "1,#2C2F3A",
-      "buttonCornerRadius": 8.0
-     },
-     "driverInfoConfig": {
-      "ratingTextColor": "#454545",
-      "ratingBackground": "#F1F1F1",
-      "ratingStroke": "0,#717171",
-      "ratingCornerRadius": 6.0,
-      "callBackground": "#2053BB6F",
-      "callButtonStroke": "0,#EB0055",
-      "cardStroke": "1,#E5E7EB",
-      "otpStroke": "0,#717171",
-      "numberPlateBackground" : "#E9BE4D",
-      "showCancelPrevention" : true,
-      "showNumberPlatePrefix": true,
-      "showNumberPlateSuffix": false,
-      "callHeight": 24,
-      "callWidth": 24,
-      "showTrackingButton" : true
+      "enableRateCard" : false
     },
-    "quoteListModelBackground": "#2C2F3A",
-    "confirmPickUpLocationBorder": "#E5E7EB",
     "logs": ["JUSPAY","FIREBASE","CLEVERTAP"],
-    "quoteListModel": {
-      "backgroundColor": "#2C2F3A",
-      "textColor": "#FFFFFF",
-      "loaderColor": "#80B2FF",
-      "otpTextBackground"  : "#2C2F3A",
-      "otpBackground" : "#F1F1F1",
-      "otpTextColor" : "#FFFFFF",
-      "otpTitleColor"  : "#6D7280",
-      "selectRideTextColor": "#2C2F3A",
-      "lineImage" : "ic_line",
-      "lottieHeight": 300,
-      "lottieWidth": 300,
-      "topMargin": 0,
-      "noQuotesImageHeight": 115,
-      "noQuotesImageWidth": 137,
-      "closeIcon" : "ny_ic_close_white,https://assets.juspay.in/beckn/jatrisaathi/user/images/ny_ic_close_white.png"
-    },
-    "profileBackground": "#2C2F3A",
-    "profileName": "#FFFFFF",
-    "profileImage": "#012A72",
-    "profileCompletion" : "#FCC32C",
-    "cancelRideColor" : "#E55454",
-    "infoIconUrl" : "ny_ic_info,https://assets.juspay.in/nammayatri/images/user/ny_ic_information_grey.png",
     "merchantLogo" : "ny_ic_yatri_sathi_logo,https://assets.juspay.in/beckn/jatrisaathi/user/images/ny_ic_yatri_sathi_logo.png",
-    "feedbackBackground": "#2C2F3A",
     "sideBarList": ["MyRides", "Tickets", "Favorites", "EmergencyContacts", "HelpAndSupport", "Language", "Separator", "ShareApp", "LiveStatsDashboard", "About", "Logout"],
-    "rateCardColor": "#2C2F3A",
-    "nyBrandingVisibility": false,
-    "fontType": "Assets",
-    "black900": "#2C2F3A",
-    "black800": "#454545",
-    "red" : "#E55454",
     "showCorporateAddress" : false,
-    "popupBackground" : "#FFFFFF",
-    "profileEditGravity" : "center",
     "englishStrings": {
       "ABOUT_APP_DESCRIPTION": "Yatri Sathi is an open platform to connect riders with drivers. The app makes it convenient for riders to book a ride with meter rate hence minimal fare.",
       "WELCOME_TEXT": "Welcome to Yatri Sathi",
@@ -238,58 +152,30 @@ window.getMerchantConfig = function () {
       "name": "हिंदी",
       "value": "HI_IN",
       "subTitle": "Hindi"
-    }],
-    "bannerConfig" : {
-      "backgroundColor" : "#F0FAF0"
-    , "title" : "Complete your profile for a personalised ride experience"
-    , "titleColor" : "#21C179"
-    , "actionText" : "Update now"
-    , "actionTextColor" : "#27AE5F"
-    , "imageUrl" : "ny_ic_banner_gender_feat,https://assets.juspay.in/beckn/merchantcommon/images/ny_ic_banner_gender_feat.png"
-    },
-    "terminateBtnConfig" : {
-      "visibility" : false,
-      "title" : "",
-      "imageUrl" : ""
-  }
-  , "showDeleteAccount" : true
-  , "fontName" : "PlusJakartaSans"
-  , "fontKannada" : "NotoSansKannada"
-  , "showGenderBanner" : true
-  , "autoSelectBackground" : "#53BB6F"
-  , "enableMockLocation" : false
-  , "defaultLanguage" : "EN_US"
-  , "enableGeocoder" : false
-  , "specialLocationView" : true
-  , "navigationAppConfig" : {
-      "query" : "google.navigation:q=%f,%f"
-    , "packageName" : "com.google.android.apps.maps"
-    , "walkQuery" : "google.navigation:q=%f,%f&mode=w"
-  }
-  , "SUPPORT_EMAIL" : "yatrisathi.support@wb.gov.in"
-  , "OTP_MESSAGE_REGEX" : "is your OTP for login to [A-Za-z]+ [A-Za-z]+ [A-Za-z]+"
-  , "internationalNumberEnabled" : true
-  , "callOptions" : ["ANONYMOUS"]
-  , "showNearByDrivers" : true
-  , "features" : {
-    "enableAutoReadOtp" : true ,
-    "enableZooTicketBookingFlow" : true
-      }
-  , "showDisabilityBanner" : false
-  , "notifyRideConfirmationConfig" : 
+    }]
+    , "showDeleteAccount" : true
+    , "specialLocationView" : true
+    , "internationalNumberEnabled" : true
+    , "dashboard" : {
+      "enable" : false
+      , "url" : "https://yatrisathi.in/open/?source=in-app"
+    }
+    , "features" : {
+      "enableAutoReadOtp" : true ,
+      "enableZooTicketBookingFlow" : true,
+      "enableShareRide" : false
+    }
+    , "showDisabilityBanner" : false
+    , "notifyRideConfirmationConfig" : 
       { "notify" : true, 
         "autoGeneratedText" : "Nomoshkar, I'll arrive in about "
       }
-  , "estimateAndQuoteConfig" : 
+    , "estimateAndQuoteConfig" : 
       { "variantTypes" : [ ["SUV"], ["SEDAN", "HATCHBACK", "TAXI_PLUS"], ["TAXI"] ]
-      , "variantOrder" : ["SEDAN", "HATCHBACK", "TAXI_PLUS", "TAXI", "SUV"]
-      , "enableOnlyAuto" : false
+        , "variantOrder" : ["SEDAN", "HATCHBACK", "TAXI_PLUS", "TAXI", "SUV"]
+        , "enableBookingPreference" : false
+        , "showNearByDrivers": true
       }
+      
   })
-}
-
-function getAppLink(os) {
-  if (os == "ANDROID"){
-      return "https://play.google.com/store/apps/details?id=in.juspay.jatrisaathi"
-  }else {return "https://apps.apple.com/us/app/yatri-sathi/id6451491581"}
 }

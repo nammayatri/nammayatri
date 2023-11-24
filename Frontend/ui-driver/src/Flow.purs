@@ -56,10 +56,10 @@ import Engineering.Helpers.Commons (flowRunner, getCurrentUTC)
 import Engineering.Helpers.Commons (liftFlow, getNewIDWithTag, getVersionByKey, os, getExpiryTime, stringToVersion, setText, convertUTCtoISC, getCurrentUTC, getCurrentTimeStamp, clearTimer)
 import Engineering.Helpers.LogEvent (logEvent, logEventWithParams, logEventWithMultipleParams)
 import Engineering.Helpers.Suggestions (suggestionsDefinitions, getSuggestions)
-import Engineering.Helpers.Utils (loaderText, toggleLoader, getAppConfig, reboot, showSplash, (?))
+import Engineering.Helpers.Utils (loaderText, toggleLoader, reboot, showSplash, (?))
 import Foreign (unsafeToForeign)
 import Foreign.Class (class Encode, encode, decode)
-import ConfigProvider (stringifyJSON)
+import DecodeUtil (stringifyJSON)
 import PaymentPage (checkPPInitiateStatus, consumeBP, initiatePP, paymentPageUI, PayPayload(..), PaymentPagePayload(..), getAvailableUpiApps, getPaymentPageLangKey, initiatePaymentPage)
 import Helpers.Utils (LatLon(..), decodeErrorCode, decodeErrorMessage, getCurrentLocation, getDatebyCount, getDowngradeOptions, getGenderIndex, getNegotiationUnit, getPastDays, getPastWeeks, getTime, getcurrentdate, hideSplash, isDateGreaterThan, isYesterday, onBoardingSubscriptionScreenCheck, parseFloat, secondsLeft, toStringJSON, translateString, getDistanceBwCordinates)
 import JBridge (cleverTapCustomEvent, cleverTapCustomEventWithParams, cleverTapEvent, cleverTapSetLocation, drawRoute, factoryResetApp, firebaseLogEvent, firebaseLogEventWithTwoParams, firebaseUserID, generateSessionId, getCurrentLatLong, getCurrentPosition, getVersionCode, getVersionName, hideKeyboardOnNavigation, initiateLocationServiceClient, isBatteryPermissionEnabled, isInternetAvailable, isLocationEnabled, isLocationPermissionEnabled, isOverlayPermissionEnabled, metaLogEvent, metaLogEventWithTwoParams, openNavigation, removeAllPolylines, removeMarker, saveSuggestionDefs, saveSuggestions, setCleverTapUserData, setCleverTapUserProp, showMarker, startLocationPollingAPI, stopChatListenerService, stopLocationPollingAPI, toast, toggleBtnLoader, unregisterDateAndTime, withinTimeRange)
@@ -67,7 +67,7 @@ import JBridge as JB
 import Helpers.Utils as HU
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import MerchantConfig.Utils (getMerchant, Merchant(..), getValueFromConfig)
+import MerchantConfig.Utils (getMerchant, Merchant(..))
 import Prelude (Unit, bind, discard, pure, unit, unless, negate, void, when, map, otherwise, ($), (==), (/=), (&&), (||), (/), when, (+), show, (>), not, (<), (*), (-), (<=), (<$>), (>=), ($>), (<<<))
 import Presto.Core.Types.Language.Flow (delay, setLogField)
 import Presto.Core.Types.Language.Flow (doAff, fork)
@@ -119,6 +119,8 @@ import Types.App as TA
 import Engineering.Helpers.Suggestions as EHS
 import Resource.Constants as RC
 import Helpers.Firebase 
+import MerchantConfig.Types (AppConfig(..))
+import ConfigProvider
 
 
 baseAppFlow :: Boolean -> Maybe Event -> FlowBT String Unit
@@ -132,7 +134,7 @@ baseAppFlow baseFlow event = do
     let regToken = getValueToLocalStore REGISTERATION_TOKEN
     _ <- pure $ saveSuggestions "SUGGESTIONS" (getSuggestions "")
     _ <- pure $ saveSuggestionDefs "SUGGESTIONS_DEFINITIONS" (suggestionsDefinitions "")
-    setValueToLocalStore CURRENCY (getValueFromConfig "currency")
+    setValueToLocalStore CURRENCY $ getCurrency Constants.appConfig
     if isTokenValid regToken
       then do
         setValueToLocalNativeStore REGISTERATION_TOKEN regToken
@@ -186,6 +188,16 @@ checkRideAndInitiate event = do
   activeRide ?
     currentRideFlow (Just (GetRidesHistoryResp activeRideResponse)) 
     $ getDriverInfoFlow event (Just (GetRidesHistoryResp activeRideResponse))
+
+getAppConfigFromCache :: FlowBT String AppConfig
+getAppConfigFromCache = do
+  (GlobalState state) <- getState
+  case state.appConfig of
+    Just appConfig -> pure appConfig
+    Nothing -> do
+      config <- getAppConfigFlowBT Constants.appConfig
+      modifyScreenState $ AppConfigType (\_ -> Just config)
+      pure config
 
 checkVersion :: Int -> FlowBT String Unit
 checkVersion versioncode = do
@@ -243,9 +255,10 @@ loginFlow = do
   liftFlowBT hideSplash
   logField_ <- lift $ lift $ getLogFields
   runInternetCondition
-  void $ pure $ setCleverTapUserProp [{key : "Preferred Language", value : unsafeToForeign $ getValueFromConfig "defaultLanguage"}]
-  setValueToLocalStore LANGUAGE_KEY $ getValueFromConfig "defaultLanguage"
-  languageType <- UI.chooseLanguage
+  config <- getAppConfigFlowBT Constants.appConfig
+  void $ pure $ setCleverTapUserProp [{key : "Preferred Language", value : unsafeToForeign $ config.defaultLanguage}]
+  setValueToLocalStore LANGUAGE_KEY $ config.defaultLanguage
+  _ <- UI.chooseLanguage
   mobileNo <- UI.enterMobileNumber
   case mobileNo of
     GO_TO_ENTER_OTP updateState -> do
@@ -817,7 +830,7 @@ applicationSubmittedFlow screenType = do
 
 driverProfileFlow :: FlowBT String Unit
 driverProfileFlow = do
-  config <- getAppConfig Constants.appConfig
+  config <- getAppConfigFromCache
   logField_ <- lift $ lift $ getLogFields
   _ <- pure $ delay $ Milliseconds 1.0
   _ <- pure $ printLog "Registration token" (getValueToLocalStore REGISTERATION_TOKEN)
@@ -1175,7 +1188,7 @@ aboutUsFlow = do
 
 goToLocationFlow :: FlowBT String Unit
 goToLocationFlow = do
-  appConfig <- getAppConfig Constants.appConfig
+  appConfig <- getAppConfigFromCache
   modifyScreenState $ DriverSavedLocationScreenStateType (\savedLocationState -> savedLocationState { data { maxGotoLocations = appConfig.gotoConfig.maxGotoLocations}} )
   action <- UI.driverSavedLocationScreen
   case action of 
@@ -1360,7 +1373,7 @@ permissionsScreenFlow event activeRideResp = do
 myRidesScreenFlow :: FlowBT String Unit
 myRidesScreenFlow = do
   let (GlobalState defGlobalState) = defaultGlobalState
-  config <- getAppConfig Constants.appConfig
+  config <- getAppConfigFromCache
   modifyScreenState $ RideHistoryScreenStateType (\ rideHistoryScreen -> rideHistoryScreen { data {config = config}} )
   flow <- UI.rideHistory
   case flow of
@@ -1538,7 +1551,7 @@ referralScreenFlow = do
   let (GlobalState defGlobalState) = defaultGlobalState
   (GlobalState allState) <- getState
   let state = allState.referralScreen
-  config <- getAppConfig Constants.appConfig
+  config <- getAppConfigFromCache
   modifyScreenState $ ReferralScreenStateType (\ referralScreen -> referralScreen { data { config = config}} )
   when (any (_ == "") [state.props.selectedDay.utcDate, state.props.selectedWeek.utcStartDate, state.props.selectedWeek.utcEndDate]) do
     let pastDates = getPastDays 7
@@ -1616,7 +1629,7 @@ currentRideFlow activeRideResp = do
   (isLocalStageOn RideRequested && (getValueToLocalNativeStore IS_RIDE_ACTIVE) == "false" && isRequestExpired) ? homeScreenFlow $ pure unit
 
   (GlobalState allState) <- getState
-  appConfig <- getAppConfig Constants.appConfig
+  appConfig <- getAppConfigFromCache
   setValueToLocalStore RIDE_STATUS_POLLING "False"
 
   if isJust activeRideResp
@@ -1744,7 +1757,7 @@ checkDriverPaymentStatus (GetDriverInfoResp getDriverInfoResp) = when
 
 onBoardingSubscriptionScreenFlow :: Int -> FlowBT String Unit
 onBoardingSubscriptionScreenFlow onBoardingSubscriptionViewCount = do
-  config <- getAppConfig Constants.appConfig
+  config <- getAppConfigFromCache
   setValueToLocalStore ONBOARDING_SUBSCRIPTION_SCREEN_COUNT $ show (onBoardingSubscriptionViewCount + 1)
   modifyScreenState $ OnBoardingSubscriptionScreenStateType (\onBoardingSubscriptionScreen -> onBoardingSubscriptionScreen{props{isSelectedLangTamil = (getValueToLocalNativeStore LANGUAGE_KEY) == "TA_IN", screenCount = onBoardingSubscriptionViewCount+1}, data{subscriptionConfig = config.subscriptionConfig}})
   action <- UI.onBoardingSubscriptionScreen
@@ -1769,7 +1782,7 @@ homeScreenFlow = do
   if (getValueToLocalNativeStore IS_RIDE_ACTIVE) == "true" && (not $ any (\item -> isLocalStageOn item) [RideAccepted, RideStarted, ChatWithCustomer]) then currentRideFlow Nothing
     else pure unit
   globalState <- getState
-  appConfig <- getAppConfig Constants.appConfig
+  appConfig <- getAppConfigFromCache
   getDriverInfoResp <- getDriverInfoDataFromCache globalState
   when appConfig.subscriptionConfig.enableBlocking $ do checkDriverBlockingStatus getDriverInfoResp
   when appConfig.subscriptionConfig.completePaymentPopup $ checkDriverPaymentStatus getDriverInfoResp
@@ -2328,7 +2341,7 @@ setPaymentStatus :: PaymentStatus -> PayPayload -> FlowBT String Unit
 setPaymentStatus paymentStatus (PayPayload payload) = do
       case paymentStatus of
         Success -> do
-                  let currency = (getValueFromConfig "currency")
+                  let currency = getCurrency Constants.appConfig
                   setValueToLocalStore SHOW_PAYMENT_MODAL "false"
                   modifyScreenState $ AcknowledgementScreenType (\a -> a { data {
                     title = Just ( case getValueToLocalStore LANGUAGE_KEY of
@@ -2383,7 +2396,7 @@ ackScreenFlow = do
 
 subScriptionFlow :: FlowBT String Unit
 subScriptionFlow = do
-  appConfig <- getAppConfig Constants.appConfig 
+  appConfig <- getAppConfigFromCache
   liftFlowBT $ runEffectFn1 initiatePP unit
   modifyScreenState $ SubscriptionScreenStateType (\subscriptionScreen -> subscriptionScreen{data{config = appConfig.subscriptionConfig, bottomNavConfig = appConfig.bottomNavConfig},props{isSelectedLangTamil = (getValueToLocalNativeStore LANGUAGE_KEY) == "TA_IN", offerBannerProps {showOfferBanner = appConfig.subscriptionConfig.offerBannerConfig.showDUOfferBanner, offerBannerValidTill = appConfig.subscriptionConfig.offerBannerConfig.offerBannerValidTill, offerBannerDeadline = appConfig.subscriptionConfig.offerBannerConfig.offerBannerDeadline}}})
   void $ lift $ lift $ loaderText (getString LOADING) (getString PLEASE_WAIT_WHILE_IN_PROGRESS)
@@ -2611,7 +2624,7 @@ driverRideRatingFlow = do
 notificationFlow :: FlowBT String Unit
 notificationFlow = do
   let (GlobalState defGlobalState) = defaultGlobalState
-  config <- getAppConfig Constants.appConfig
+  config <- getAppConfigFromCache
   modifyScreenState $ NotificationsScreenStateType (\ notificationScreen -> notificationScreen { config = config} )
   screenAction <- UI.notifications
   case screenAction of
@@ -2788,7 +2801,7 @@ updateBannerAndPopupFlags :: FlowBT String Unit
 updateBannerAndPopupFlags = do
   globalstate <- getState
   (GetDriverInfoResp getDriverInfoResp) <- getDriverInfoDataFromCache globalstate
-  appConfig <- getAppConfig Constants.appConfig
+  appConfig <- getAppConfigFromCache
   let
     autoPayNotActive = isNothing getDriverInfoResp.autoPayStatus || getDriverInfoResp.autoPayStatus /= Just "ACTIVE"
     pendingTotalManualDues = fromMaybe 0.0 getDriverInfoResp.manualDues

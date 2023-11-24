@@ -44,7 +44,6 @@ import JBridge(requestKeyboardShow, hideKeyboardOnNavigation)
 import Styles.Types (FontStyle)
 import Common.Types.App (LazyCheck(..))
 import Prelude ((<>))
-import MerchantConfig.Utils(getValueFromConfig)
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
 
 view :: forall w .  (Action  -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
@@ -452,24 +451,23 @@ primaryButtonConfig config = let
   in primaryButtonConfig'
 
 secondaryButtonConfig :: Config -> PrimaryButtonConfig.Config
-secondaryButtonConfig config = let
-  config' = PrimaryButtonConfig.config
-  primaryButtonConfig' =
-    config'
-       {textConfig
-        { text = config.primaryButtonTextConfig.secondText
-        , accessibilityHint = config.primaryButtonTextConfig.secondText <> " : Button" <> (if config.isSelectButtonActive then "" else "Disabled : Select A Reason To Enable : Button")
-        , color =  if (not config.isSelectButtonActive) && getValueFromConfig "isGradient" == "true" then "#696A6F" else config.config.primaryTextColor}
-        , width = if config.primaryButtonVisibility then (V ((screenWidth unit/2)-30)) else config.primaryButtonTextConfig.width
-        , isGradient = if (not config.isSelectButtonActive) then false else if getValueFromConfig "isGradient" == "true" then true else false
-        , cornerRadius = config.cornerRadius
-        , id = "Button2"
-        , alpha = if(config.isSelectButtonActive) || (getValueFromConfig "isGradient" == "true") then 1.0  else 0.5
-        , isClickable = config.isSelectButtonActive
-        , background = if (not config.isSelectButtonActive) && getValueFromConfig "isGradient" == "true" then "#F1F1F4" else config.config.primaryBackground
-        , stroke = (if getValueFromConfig "isGradient" == "true" then "0," else "1,") <> config.config.primaryBackground
-       }
-  in primaryButtonConfig'
+secondaryButtonConfig config = 
+  let btnConfig = config.config.primaryButtonConfig
+  in
+    PrimaryButtonConfig.config
+        {textConfig
+          { text = config.primaryButtonTextConfig.secondText
+          , accessibilityHint = config.primaryButtonTextConfig.secondText <> " : Button" <> (if config.isSelectButtonActive then "" else "Disabled : Select A Reason To Enable : Button")
+          , color =  if (not config.isSelectButtonActive) && btnConfig.isGradient then "#696A6F" else config.config.primaryTextColor}
+          , width = if config.primaryButtonVisibility then (V ((screenWidth unit/2)-30)) else config.primaryButtonTextConfig.width
+          , isGradient = if (not config.isSelectButtonActive) then false else if btnConfig.isGradient then true else false
+          , cornerRadius = config.cornerRadius
+          , id = "Button2"
+          , alpha = if(config.isSelectButtonActive) || (btnConfig.isGradient) then 1.0  else 0.5
+          , isClickable = config.isSelectButtonActive
+          , background = if (not config.isSelectButtonActive) && btnConfig.isGradient then "#F1F1F4" else config.config.primaryBackground
+          , stroke = (if btnConfig.isGradient then "0," else "1,") <> config.config.primaryBackground
+        }
 
 
 horizontalLine :: forall w . Int -> Int -> Config -> PrestoDOM (Effect Unit) w

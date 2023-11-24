@@ -1,12 +1,13 @@
 module Screens.OnBoardingFlow.PermissionScreen.ScreenData where
 
 import Screens.Types (PermissionScreenState, PermissionScreenStage(..))
-import MerchantConfig.DefaultConfig as DC
+import ConfigProvider
+import Constants
 import Foreign.Object (empty)
 
 initData :: PermissionScreenState
 initData = { 
-    appConfig : DC.config,
+    appConfig : getAppConfig appConfig,
     logField : empty,
     stage : NORMAL
 }

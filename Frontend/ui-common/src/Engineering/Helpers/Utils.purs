@@ -15,26 +15,27 @@
 module Engineering.Helpers.Utils where
 
 import Prelude
-
-import Common.Types.App (MobileNumberValidatorResp(..), CalendarModalWeekObject(..),CalendarModalDateObject(..), ModifiedCalendarObject(..))
-import Effect.Aff.Compat (EffectFnAff, fromEffectFnAff)
-import Engineering.Helpers.Commons (flowRunner, liftFlow, os)
-import Effect (Effect (..))
-import Foreign.Class (class Decode, class Encode, encode)
-import Foreign.Generic (decode, encode, Foreign, decodeJSON, encodeJSON)
+import Common.Types.App (CalendarModalDateObject, CalendarModalWeekObject, GlobalPayload(..), MobileNumberValidatorResp(..), ModifiedCalendarObject, Payload(..))
 import Control.Monad.Except (runExcept)
+import Control.Monad.Except.Trans (lift)
 import Data.Either (Either(..), hush)
+import Data.Function.Uncurried (Fn2, runFn2, Fn3, Fn1)
 import Data.Maybe (Maybe(..))
 import Data.String (length, trim)
 import Data.String.CodeUnits (charAt)
 import Data.Foldable (foldl)
 import Data.Time.Duration (Milliseconds(..))
+import Effect (Effect)
 import Effect.Aff (launchAff)
+import Effect.Aff.Compat (EffectFnAff, fromEffectFnAff)
 import Effect.Class (liftEffect)
-import Effect.Uncurried (EffectFn1, EffectFn2, mkEffectFn1, runEffectFn1, runEffectFn2)
+import Effect.Uncurried (EffectFn1, mkEffectFn1, runEffectFn1)
 import Engineering.Helpers.BackTrack (liftFlowBT)
-import Foreign (Foreign, unsafeToForeign)
-import ConfigProvider (loadInWindow, mergeObjects)
+import Engineering.Helpers.Commons (flowRunner, liftFlow)
+import Foreign (unsafeToForeign)
+import Foreign.Class (class Decode, class Encode)
+import Foreign.Generic (Foreign, decode, decodeJSON, encodeJSON)
+import Halogen.VDom.DOM.Prop (PropValue)
 import LoaderOverlay.Handler as UI
 import Log (printLog)
 import MerchantConfig.DefaultConfig as DefaultConfig
@@ -43,29 +44,24 @@ import Presto.Core.Types.Language.Flow (Flow, doAff, getState, modifyState, dela
 import PrestoDOM.Core (terminateUI)
 import Types.App (FlowBT, GlobalState(..))
 import Unsafe.Coerce (unsafeCoerce)
-import Halogen.VDom.DOM.Prop (PropValue)
 
-foreign import getFromWindow :: EffectFn1 String Foreign
+-- Common Utils
 
-foreign import saveToLocalStoreImpl :: String -> String -> EffectFnAff Unit
-
-foreign import fetchFromLocalStoreImpl :: String -> (String -> Maybe String) -> Maybe String -> Effect (Maybe String)
-
-foreign import getWeeksInMonth :: Int -> Int -> Array CalendarModalWeekObject
-
-foreign import getCurrentDay :: String -> CalendarModalDateObject
-
-foreign import decrementMonth :: Int -> Int -> CalendarModalDateObject
-
-foreign import incrementMonth :: Int -> Int -> CalendarModalDateObject
-
-saveToLocalStore' :: String -> String -> EffectFnAff Unit
-saveToLocalStore' = saveToLocalStoreImpl
 foreign import reboot :: Effect Unit
+
 foreign import showSplash :: Effect Unit
 
+ifelse :: forall a. Boolean -> a -> a -> a
+ifelse p a b = if p then a else b
+
+infixl 1 ifelse as ?
+
+fromProp :: PropValue -> String
+fromProp = unsafeCoerce
+
+-- Loader Utils
 toggleLoader :: Boolean -> Flow GlobalState Unit
-toggleLoader = 
+toggleLoader =
   if _ then do
     state <- getState
     _ <- liftFlow $ launchAff $ flowRunner state UI.loaderScreen
@@ -75,12 +71,6 @@ toggleLoader =
 
 loaderText :: String -> String -> Flow GlobalState Unit
 loaderText mainTxt subTxt = void $ modifyState (\(GlobalState state) -> GlobalState state { loaderOverlay { data { title = mainTxt, subTitle = subTxt } } })
-
-getSeparatorFactor :: Int
-getSeparatorFactor = 8
-
-defaultSeparatorCount :: Int
-defaultSeparatorCount = 4
 
 showAndHideLoader :: Number -> String -> String -> GlobalState -> Effect Unit
 showAndHideLoader delayInMs title description state = do
@@ -94,27 +84,40 @@ showAndHideLoader delayInMs title description state = do
           pure unit
   pure unit
 
-mobileNumberValidator :: String -> String -> String -> MobileNumberValidatorResp 
-mobileNumberValidator country countryShortCode mobileNumber = 
-  let len = length mobileNumber
-      maxLen = mobileNumberMaxLength countryShortCode
-  in if len <=  maxLen then 
-      case countryShortCode of 
-        "IN" -> case (charAt 0 mobileNumber) of
-                  Just a -> if a=='0' || a=='1' || a=='2' || a=='3' || a=='4' then Invalid
-                            else if a=='5' then if mobileNumber=="5000500050" then Valid else Invalid
-                                 else if len == maxLen then Valid else ValidPrefix 
-                  Nothing -> ValidPrefix 
-        "FR" -> case (charAt 0 mobileNumber) of 
-                  Just a -> if a == '6' || a == '7' then if len == maxLen then Valid else ValidPrefix
-                            else Invalid 
-                  Nothing -> ValidPrefix
-        "BD" -> case (charAt 0 mobileNumber) of 
-                  Just a -> if a == '1' then if len == maxLen then Valid else ValidPrefix 
-                            else Invalid
-                  Nothing -> ValidPrefix
-        _ -> Invalid
-      else MaxLengthExceeded
+-- Mobile Number Validator Utils
+mobileNumberValidator :: String -> String -> String -> MobileNumberValidatorResp
+mobileNumberValidator _ countryShortCode mobileNumber =
+  let
+    len = length mobileNumber
+
+    maxLen = mobileNumberMaxLength countryShortCode
+  in
+    if len <= maxLen then case countryShortCode of
+      "IN" -> case (charAt 0 mobileNumber) of
+        Just a ->
+          if a == '0' || a == '1' || a == '2' || a == '3' || a == '4' then
+            Invalid
+          else if a == '5' then
+            if mobileNumber == "5000500050" then Valid else Invalid
+          else if len == maxLen then Valid else ValidPrefix
+        Nothing -> ValidPrefix
+      "FR" -> case (charAt 0 mobileNumber) of
+        Just a ->
+          if a == '6' || a == '7' then
+            if len == maxLen then Valid else ValidPrefix
+          else
+            Invalid
+        Nothing -> ValidPrefix
+      "BD" -> case (charAt 0 mobileNumber) of
+        Just a ->
+          if a == '1' then
+            if len == maxLen then Valid else ValidPrefix
+          else
+            Invalid
+        Nothing -> ValidPrefix
+      _ -> Invalid
+    else
+      MaxLengthExceeded
 
 mobileNumberMaxLength :: String -> Int
 mobileNumberMaxLength countryShortCode = case countryShortCode of
@@ -123,25 +126,13 @@ mobileNumberMaxLength countryShortCode = case countryShortCode of
   "BD" -> 10
   _ -> 0
 
-getAppConfig :: String -> FlowBT String AppConfig
-getAppConfig = liftFlowBT <<< runEffectFn1 getAppConfigImpl
+-- Local Storage Utils
+foreign import saveToLocalStoreImpl :: String -> String -> EffectFnAff Unit
 
-getAppConfigImpl :: EffectFn1 String AppConfig
-getAppConfigImpl =
-  mkEffectFn1 \key -> do
-    config <- runEffectFn1 getFromWindow key
-    case runExcept (decode config) of
-      Right obj -> pure obj
-      Left err1 -> do
-        _ <- pure $ printLog "Not able to decode config" $ "Fallbacks to default config for missing Keys" <> (show err1)
-        mergedObjects <- runEffectFn1 mergeObjects [(unsafeToForeign DefaultConfig.config),config]
-        case runExcept (decode mergedObjects) of
-          Right obj -> do
-            runEffectFn2 loadInWindow key mergedObjects
-            pure obj
-          Left err -> do
-            _ <- pure $ printLog "Not able to decode config not able to  find in default config" (show err)
-            pure $ DefaultConfig.config
+foreign import fetchFromLocalStoreImpl :: String -> (String -> Maybe String) -> Maybe String -> Effect (Maybe String)
+
+saveToLocalStore' :: String -> String -> EffectFnAff Unit
+saveToLocalStore' = saveToLocalStoreImpl
 
 class Serializable a where
   serialize :: a -> String
@@ -156,100 +147,132 @@ saveObject objName obj =
   doAff do
     (fromEffectFnAff <<< saveToLocalStore' objName $ (serialize obj))
 
+-- Calendar Utils
+foreign import getWeeksInMonth :: Int -> Int -> Array CalendarModalWeekObject
 
-decrementCalendarMonth :: CalendarModalDateObject ->  Maybe CalendarModalDateObject ->  Maybe CalendarModalDateObject -> ModifiedCalendarObject
-decrementCalendarMonth selectedTimeSpan startDate endDate  = do
-  let decrementedMonthDate = decrementMonth selectedTimeSpan.intMonth selectedTimeSpan.year
-      weeks = getWeeksInMonth decrementedMonthDate.year decrementedMonthDate.intMonth
-      modifiedWeeks = getPreviousState startDate endDate weeks
-  { selectedTimeSpan : decrementedMonthDate,
-    weeks : modifiedWeeks,
-    startDate : startDate,
-    endDate : endDate
+foreign import getCurrentDay :: String -> CalendarModalDateObject
+
+foreign import decrementMonth :: Int -> Int -> CalendarModalDateObject
+
+foreign import incrementMonth :: Int -> Int -> CalendarModalDateObject
+
+decrementCalendarMonth :: CalendarModalDateObject -> Maybe CalendarModalDateObject -> Maybe CalendarModalDateObject -> ModifiedCalendarObject
+decrementCalendarMonth selectedTimeSpan startDate endDate = do
+  let
+    decrementedMonthDate = decrementMonth selectedTimeSpan.intMonth selectedTimeSpan.year
+
+    weeks = getWeeksInMonth decrementedMonthDate.year decrementedMonthDate.intMonth
+
+    modifiedWeeks = getPreviousState startDate endDate weeks
+  { selectedTimeSpan: decrementedMonthDate
+  , weeks: modifiedWeeks
+  , startDate: startDate
+  , endDate: endDate
   }
 
-incrementCalendarMonth :: CalendarModalDateObject ->  Maybe CalendarModalDateObject ->  Maybe CalendarModalDateObject -> ModifiedCalendarObject
-incrementCalendarMonth selectedTimeSpan startDate endDate  = do
-  let incrementedMonthDate = incrementMonth selectedTimeSpan.intMonth selectedTimeSpan.year
-      weeks = getWeeksInMonth incrementedMonthDate.year incrementedMonthDate.intMonth
-      modifiedWeeks = getPreviousState startDate endDate weeks
-  { selectedTimeSpan : incrementedMonthDate,
-    weeks : modifiedWeeks,
-    startDate : startDate,
-    endDate : endDate
+incrementCalendarMonth :: CalendarModalDateObject -> Maybe CalendarModalDateObject -> Maybe CalendarModalDateObject -> ModifiedCalendarObject
+incrementCalendarMonth selectedTimeSpan startDate endDate = do
+  let
+    incrementedMonthDate = incrementMonth selectedTimeSpan.intMonth selectedTimeSpan.year
+
+    weeks = getWeeksInMonth incrementedMonthDate.year incrementedMonthDate.intMonth
+
+    modifiedWeeks = getPreviousState startDate endDate weeks
+  { selectedTimeSpan: incrementedMonthDate
+  , weeks: modifiedWeeks
+  , startDate: startDate
+  , endDate: endDate
   }
 
-
-updateWeeks :: CalendarModalDateObject -> Boolean -> CalendarModalDateObject -> CalendarModalWeekObject ->  CalendarModalWeekObject
+updateWeeks :: CalendarModalDateObject -> Boolean -> CalendarModalDateObject -> CalendarModalWeekObject -> CalendarModalWeekObject
 updateWeeks selDate isStart startDate week =
-  if selDate == startDate then week
-  else if isStart then 
-    let modifiedData = map (\date -> if date.date == selDate.date && date.intMonth == selDate.intMonth then date {isStart = true} else date) week.week
-    in {week : modifiedData}
+  if selDate == startDate then
+    week
+  else if isStart then
+    let
+      modifiedData = map (\date -> if date.date == selDate.date && date.intMonth == selDate.intMonth then date { isStart = true } else date) week.week
+    in
+      { week: modifiedData }
   else
-    let modifiedData = map (\day -> if day.utcDate == "" then day
-                                    else if day.utcDate == startDate.utcDate then day {isStart = true, isInRange = false}
-                                    else if day.utcDate == selDate.utcDate then day {isEnd = true, isInRange = false}
-                                    else if day.utcDate > startDate.utcDate && day.utcDate < selDate.utcDate then day {isInRange = true, isStart = false, isEnd = false}
-                                    else day) week.week
-    in {week : modifiedData}
+    let
+      modifiedData =
+        map
+          ( \day ->
+              if day.utcDate == "" then
+                day
+              else if day.utcDate == startDate.utcDate then
+                day { isStart = true, isInRange = false }
+              else if day.utcDate == selDate.utcDate then
+                day { isEnd = true, isInRange = false }
+              else if day.utcDate > startDate.utcDate && day.utcDate < selDate.utcDate then
+                day { isInRange = true, isStart = false, isEnd = false }
+              else
+                day
+          )
+          week.week
+    in
+      { week: modifiedData }
 
-revertWeeks :: CalendarModalWeekObject ->  CalendarModalWeekObject
+revertWeeks :: CalendarModalWeekObject -> CalendarModalWeekObject
 revertWeeks week =
-    let modifiedData = map (\date -> date {isStart = false, isEnd = false, isInRange = false}) week.week
-    in {week : modifiedData}
+  let
+    modifiedData = map (\date -> date { isStart = false, isEnd = false, isInRange = false }) week.week
+  in
+    { week: modifiedData }
 
 getPreviousState :: Maybe CalendarModalDateObject -> Maybe CalendarModalDateObject -> Array CalendarModalWeekObject -> Array CalendarModalWeekObject
 getPreviousState mbStartDate mbEndDate weeks = do
   case mbStartDate of
     Nothing -> weeks
     Just startDate -> do
-      case mbEndDate of 
+      case mbEndDate of
         Nothing -> map (updateWeeks startDate true dummyDateItem) weeks
         Just endDate -> do
           map (updateWeeks endDate false startDate) weeks
 
-dummyDateItem = {date : 0, isInRange : false, isStart : false, isEnd : false, utcDate : "", shortMonth : "", year : 0, intMonth : 0}
-
+dummyDateItem ∷ CalendarModalDateObject
+dummyDateItem = { date: 0, isInRange: false, isStart: false, isEnd: false, utcDate: "", shortMonth: "", year: 0, intMonth: 0 }
 
 selectRangeCalendarDate :: CalendarModalDateObject -> Maybe CalendarModalDateObject -> Maybe CalendarModalDateObject -> Array CalendarModalWeekObject -> ModifiedCalendarObject
 selectRangeCalendarDate date mbStartDate mbEndDate weeks = do
-  if date.date == 0 then { startDate : mbStartDate, endDate : mbEndDate, weeks : weeks, selectedTimeSpan : date }
+  if date.date == 0 then
+    { startDate: mbStartDate, endDate: mbEndDate, weeks: weeks, selectedTimeSpan: date }
   else do
     case mbStartDate of
       Nothing -> do
-        let modifiedDates = map (updateWeeks date true dummyDateItem) weeks
-        { startDate : Just date, endDate : Nothing, weeks : modifiedDates, selectedTimeSpan : date }
+        let
+          modifiedDates = map (updateWeeks date true dummyDateItem) weeks
+        { startDate: Just date, endDate: Nothing, weeks: modifiedDates, selectedTimeSpan: date }
       Just startDate -> do
-          case mbEndDate of
-              Nothing -> do
-                  if date.date == startDate.date then { startDate : mbStartDate, endDate : mbEndDate, weeks : weeks, selectedTimeSpan : date }
-                  else do
-                    let modStartDate = if ((startDate.utcDate > date.utcDate && startDate.intMonth == date.intMonth && startDate.year == date.year) || (startDate.intMonth  > date.intMonth && startDate.year == date.year) || startDate.year > date.year) then date else startDate
-                        modEndDate = if ((startDate.utcDate > date.utcDate && startDate.intMonth == date.intMonth && startDate.year == date.year) || (startDate.intMonth  > date.intMonth && startDate.year == date.year) || startDate.year > date.year) then startDate else date
-                        modifiedDates = map (updateWeeks modEndDate false modStartDate) weeks
-                    { startDate : Just modStartDate, endDate : Just modEndDate, weeks : modifiedDates, selectedTimeSpan : modStartDate}
-              Just _ -> do
-                let revertDates = map (revertWeeks) weeks
-                    modifiedDates = map (updateWeeks date true dummyDateItem) revertDates
-                { startDate : Just date, endDate : Nothing, weeks : modifiedDates, selectedTimeSpan : date }
+        case mbEndDate of
+          Nothing -> do
+            if date.date == startDate.date then
+              { startDate: mbStartDate, endDate: mbEndDate, weeks: weeks, selectedTimeSpan: date }
+            else do
+              let
+                modStartDate = if ((startDate.utcDate > date.utcDate && startDate.intMonth == date.intMonth && startDate.year == date.year) || (startDate.intMonth > date.intMonth && startDate.year == date.year) || startDate.year > date.year) then date else startDate
+
+                modEndDate = if ((startDate.utcDate > date.utcDate && startDate.intMonth == date.intMonth && startDate.year == date.year) || (startDate.intMonth > date.intMonth && startDate.year == date.year) || startDate.year > date.year) then startDate else date
+
+                modifiedDates = map (updateWeeks modEndDate false modStartDate) weeks
+              { startDate: Just modStartDate, endDate: Just modEndDate, weeks: modifiedDates, selectedTimeSpan: modStartDate }
+          Just _ -> do
+            let
+              revertDates = map (revertWeeks) weeks
+
+              modifiedDates = map (updateWeeks date true dummyDateItem) revertDates
+            { startDate: Just date, endDate: Nothing, weeks: modifiedDates, selectedTimeSpan: date }
 
 selectSingleCalendarDate :: CalendarModalDateObject -> Maybe CalendarModalDateObject -> Maybe CalendarModalDateObject -> Array CalendarModalWeekObject -> ModifiedCalendarObject
 selectSingleCalendarDate date mbStartDate mbEndDate weeks = do
-  if date.date == 0 then { startDate : mbStartDate, endDate : mbEndDate, weeks : weeks, selectedTimeSpan : date }
+  if date.date == 0 then
+    { startDate: mbStartDate, endDate: mbEndDate, weeks: weeks, selectedTimeSpan: date }
   else do
-    case mbStartDate of 
+    case mbStartDate of
       _ -> do
-        let modifiedDates = map (updateWeeks date true dummyDateItem) weeks
-        { startDate : Just date, endDate : Nothing, weeks : modifiedDates, selectedTimeSpan : date }
-
-ifelse :: forall a. Boolean -> a -> a -> a
-ifelse p a b = if p then a else b
-
-infixl 1 ifelse as ?
-
-fromProp :: PropValue -> String
-fromProp = unsafeCoerce
+        let
+          modifiedDates = map (updateWeeks date true dummyDateItem) weeks
+        { startDate: Just date, endDate: Nothing, weeks: modifiedDates, selectedTimeSpan: date }
 
 catMaybeStrings :: Array (Maybe String) -> String
 catMaybeStrings arr = 

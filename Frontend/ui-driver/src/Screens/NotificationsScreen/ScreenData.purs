@@ -16,7 +16,8 @@
 module Screens.NotificationsScreen.ScreenData where
 
 import Data.Maybe (Maybe(..))
-import MerchantConfig.DefaultConfig as DC
+import ConfigProvider
+import Constants
 import PrestoDOM (Visibility(..), toPropValue)
 import Screens.Types (AnimationState(..), NotificationCardPropState, NotificationsScreenState, NotificationCardState)
 import Services.API (MediaType(..))
@@ -53,7 +54,7 @@ initData = {
   loadMore : false,
   selectedNotification : Nothing,
   deepLinkActivated : false,
-  config : DC.config
+  config : getAppConfig appConfig
 }
 
 dummyNotificationCard :: NotificationCardState

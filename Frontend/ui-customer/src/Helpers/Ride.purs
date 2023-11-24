@@ -17,37 +17,36 @@ module Helpers.Ride where
 
 import Prelude
 import Types.App (FlowBT, ScreenType(..))
-import JBridge
+import JBridge (stopChatListenerService)
 import Presto.Core.Types.Language.Flow (getLogFields)
-import Engineering.Helpers.Utils (getAppConfig)
-import Constants as Constants
 import ModifyScreenState (modifyScreenState)
 import Control.Monad.Except.Trans (lift)
 import Services.Backend as Remote
 import Engineering.Helpers.BackTrack (getState)
 import Types.App (GlobalState(..))
 import Data.Either (Either(..))
-import Services.API
+import Services.API (RideAPIEntity(..), RideBookingAPIDetails(..), RideBookingDetails(..), RideBookingListRes(..), RideBookingRes(..))
 import Data.Array (null, head, length)
 import Data.Maybe (Maybe(..), fromMaybe, isNothing, isJust)
 import Screens.HomeScreen.ScreenData (dummyRideBooking)
 import Screens.HomeScreen.Transformer (dummyRideAPIEntity)
 import Data.Lens ((^.))
-import Accessor
+import Accessor (_computedPrice, _contents, _status, _toLocation)
 import Screens.Types (Stage(..), SearchResultType(..), PopupType(..))
 import Screens.HomeScreen.Transformer (getDriverInfo, getSpecialTag)
 import Engineering.Helpers.Commons (liftFlow, convertUTCtoISC)
 import Engineering.Helpers.LogEvent (logEvent, logEventWithTwoParams)
-import Storage
+import Storage (KeyStore(..), getValueToLocalStore, isLocalStageOn, setValueToLocalNativeStore, setValueToLocalStore, updateLocalStage)
 import Helpers.Utils (getCurrentDate)
 import Resources.Constants (DecodeAddress(..), decodeAddress)
 import Data.String (split, Pattern(..))
+import Domain.Cache (getAppConfigFromCache)
 
 
 checkRideStatus :: Boolean -> FlowBT String Unit --TODO:: Need to refactor this function
 checkRideStatus rideAssigned = do
   logField_ <- lift $ lift $ getLogFields
-  config <- getAppConfig Constants.appConfig
+  config <- getAppConfigFromCache
   modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data {config = config}})
   rideBookingListResponse <- lift $ lift $ Remote.rideBookingList "1" "0" "true"
   case rideBookingListResponse of

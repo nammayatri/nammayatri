@@ -1,38 +1,23 @@
 window.version = window.version || {};
 let version = "1.0.0";
-if (typeof __VERSION__ !== 'undefined') {
+if (typeof __VERSION__ !== "undefined") {
   version = __VERSION__
 }
 window.version["configuration"]= version;
 window.getMerchantConfig = function () {
   return JSON.stringify({
-    "RC_VALIDATION_TEXT": "KL",
-    "DOCUMENT_LINK": "https://docs.google.com/document/d/1zmQWO_L4EjyCXC3xSlp1f3DS2wI4HfbHxg42tXelWe0",
-    "APP_LINK": "https://play.google.com/store/apps/details?id=net.openkochi.yatripartner",
-    "PRIVACY_POLICY_LINK": "https://docs.google.com/document/d/1gI_P4oZnVwE0O71rI4Mi8rpZbL9rsIRkyewbql85Np8",
-    "SPECIAL_ZONE_OTP_VIEW": "false",
     "StringKeys": ["WELCOME_TEXT", "ABOUT_TEXT", "NEED_IT_TO_ENABLE_LOCATION", "CURRENTLY_WE_ALLOW_ONLY_KARNATAKA_REGISTERED_NUMBER", "YOU_ARE_ABOUT_TO_CALL_NAMMA_YATRI_SUPPORT", "YOUR_LOCATION_HELPS_OUR_SYSTEM"],
-    "fontType": "Assets",
     "currency": "€",
-    "isGradient" : "false",
-    "gradient": [],
-    "addFavouriteScreenBackArrow" : "ny_ic_chevron_left_white,https://assets.juspay.in/nammayatri/images/user/ny_ic_chevron_left_white.png",
-    "popupBackground" : "#FFFFFF",
-    "apiLoaderLottie": "primary_button_loader.json",
-    "primaryTextColor": "#FCC32C",
-    "primaryBackground": "#2C2F3A",
     "showCorporateAddress" : false,
-    "imageUploadOptional" : false,
-    "clientName" : "Pass Culture",
     "languageList": [{
       "name": "Français",
       "value": "FR_FR",
       "subtitle": "French"
-      },
-      { "name": "English",
-        "value": "EN_US",
-        "subtitle": "Anglaise"
-      }],
+    },
+    { "name": "English",
+      "value": "EN_US",
+      "subtitle": "Anglaise"
+    }],
     "englishInNative" : "Anglaise",
     "englishStrings": {
       "WELCOME_TEXT": "Welcome to the Alliance Taxis",
@@ -57,8 +42,34 @@ window.getMerchantConfig = function () {
     , "defaultLanguage" : "FR_FR"
     , "allowAllMobileNumber" : true
     , "navigationAppConfig" : {
-      "query" : "https://waze.com/ul?ll=%f,%f"
-    , "packageName" : "com.waze"
-  }
+      "android" : {
+        "query" : "https://waze.com/ul?ll=%f,%f"
+        , "packageName" : "com.waze"
+      }
+    }
+    , "others" : {
+      "otpRegex" :  "is your OTP for login to [A-Za-z]+ [A-Za-z]+ [A-Za-z]+"
+      , "termsLink" : "https://docs.google.com/document/d/1zmQWO_L4EjyCXC3xSlp1f3DS2wI4HfbHxg42tXelWe0"
+      , "privacyLink" : "https://docs.google.com/document/d/1gI_P4oZnVwE0O71rI4Mi8rpZbL9rsIRkyewbql85Np8"
+    }
+    , "features" : {
+      "enableBonus" : false
+      , "enableImageUpload" : true
+      , "enableGender" : false
+      , "enableOtpRide" : false
+    }
+    , "appDatas" : {
+      "link" : "https://play.google.com/store/apps/details?id=net.openkochi.yatripartner"
+      , "name" : "Pass Culture"
+    }
+    , "vehicle" : {
+      "validationPrefix" :  "KL"
+    }
+    , "banners" :{
+      "autoPay" : false
+    }
+    , "referral": {
+      "link" : "https://yatricustomer.page.link/pcJb"
+    }
   })
 }

@@ -79,6 +79,8 @@ import Screens.Types (LocalStoreSubscriptionInfo)
 import Data.Int (fromString, even, fromNumber)
 import Data.Number.Format (fixed, toStringWith)
 import Data.Function.Uncurried (Fn1)
+import ConfigProvider
+import Constants
 
 type AffSuccess s = (s -> Effect Unit)
 
@@ -159,10 +161,12 @@ type RenewFile = {
 }
 
 otpRule :: Reader.OtpRule
-otpRule = Reader.OtpRule {
+otpRule =
+  let others = (getAppConfig appConfig).others
+  in Reader.OtpRule {
   matches : {
     sender : [],
-    message : (getValueFromConfig "OTP_MESSAGE_REGEX")
+    message : others.otpRegex
   },
   otp : "\\d{4}",
   group : Nothing

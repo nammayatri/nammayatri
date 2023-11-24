@@ -18,54 +18,85 @@ import Prelude
 import Constants as Constants
 import Data.Function.Uncurried (Fn1)
 import Effect (Effect)
-import Effect.Exception (throw)
-import Effect.Uncurried (EffectFn1, EffectFn2, mkEffectFn1, runEffectFn1, runEffectFn2)
-import Foreign (Foreign)
+import Effect.Uncurried (EffectFn1, EffectFn2, mkEffectFn1, mkEffectFn2, runEffectFn1, runEffectFn2)
+import Data.Function.Uncurried (Fn1)
+import Foreign (Foreign, unsafeToForeign)
 import Foreign.Generic (encode)
-import MerchantConfigs.CommonConfig (commonConfig)
+import MerchantConfig.DefaultConfig as DefaultConfig
+import MerchantConfig.Types (AppConfig(..))
+import Data.Function.Uncurried (Fn2, Fn3, runFn2, runFn3)
+import Constants as Constants
+import Presto.Core.Types.Language.Flow (Flow)
+import Common.Types.App (FlowBT)
+import Engineering.Helpers.Commons (liftFlow)
+import Control.Monad.Except.Trans (lift)
+import Data.Maybe
+import Log
+import DecodeUtil
+import Debug
 
-foreign import mergeforegin :: EffectFn1 (Array Foreign) Foreign
+foreign import mergeforegin :: Array Foreign -> Foreign
 
-foreign import appendConfigToDocument :: EffectFn1 String String
+foreign import appendConfigToDocument :: String -> String
 
-foreign import isDebugBuild :: EffectFn1 Unit Boolean
+foreign import isDebugBuild :: Unit -> Boolean
 
-foreign import loadInWindow :: forall a. EffectFn2 String a Unit
+foreign import loadInWindow :: forall a. Fn2 String a Unit
 
-foreign import loadFileInDUI :: EffectFn1 String String
+foreign import loadFileInDUI :: String -> String
 
-foreign import stringifyJSON :: forall a. Fn1 a String
+loadAppConfig :: String -> Foreign
+loadAppConfig _ =
+  let defaultConfig = unsafeToForeign DefaultConfig.config
+      merchantConfig = getConfigFromFile Constants.configuration_file
+      mergedConfig = mergeObjects [ defaultConfig, merchantConfig ]
+      _ = runFn2 loadInWindow Constants.appConfig mergedConfig
+  in mergedConfig
 
-loadAppConfig :: EffectFn1 String Unit
-loadAppConfig =
-  mkEffectFn1 \_ -> do
-    commonConfig <- commonConfig
-    merchantConfig <- runEffectFn1 getConfigFromFile Constants.configuration_file
-    mergedConfig <- runEffectFn1 mergeObjects [ commonConfig, merchantConfig ]
-    runEffectFn2 loadInWindow Constants.appConfig mergedConfig
-
-getConfigFromFile :: EffectFn1 String Foreign
-getConfigFromFile =
-  mkEffectFn1 \fileName -> do
-    config <- runEffectFn1 loadFileInDUI $ fileName <> Constants.dotJSA
-    isDebug <- runEffectFn1 isDebugBuild unit
-    if isFilePresent config  && not isDebug then do
-      merchantConfig <- runEffectFn1 appendConfigToDocument config
-      pure $ encode merchantConfig
+getConfigFromFile :: String -> Foreign
+getConfigFromFile fileName = do
+  let config = loadFileInDUI $ fileName <> Constants.dotJSA
+      isDebug = isDebugBuild unit
+  if isFilePresent config  && not isDebug 
+    then 
+    encode $ appendConfigToDocument config
     else do
-      jsConfig <- getConfigFromJS fileName
-      if isFilePresent jsConfig then do
-        merchantConfigjs <- runEffectFn1 appendConfigToDocument jsConfig
-        pure $ encode merchantConfigjs
-      else
-        throw $ fileName <> " is not present"
+      let jsConfig = getConfigFromJS fileName
+      if isFilePresent jsConfig 
+        then do
+        encode $ appendConfigToDocument jsConfig
+        else do 
+          let _ = printLog "File Not found" $ fileName <> " is not present"
+          encode $  ""
 
 -- First element is base object and priority increses with increase in descendants. Keys in high priority elements will be overrided in base object.
-mergeObjects :: EffectFn1 (Array Foreign) Foreign
-mergeObjects = mkEffectFn1 \arrayObjects -> runEffectFn1 mergeforegin arrayObjects
+mergeObjects :: Array Foreign -> Foreign
+mergeObjects = mergeforegin
 
-getConfigFromJS :: String -> Effect String
-getConfigFromJS fileName = runEffectFn1 loadFileInDUI $ fileName <> Constants.dotJS
+getConfigFromJS :: String -> String
+getConfigFromJS fileName = loadFileInDUI $ fileName <> Constants.dotJS
 
 isFilePresent :: String -> Boolean
 isFilePresent file = file /= "" && file /= "undefined"
+
+-- Decode AppConfig Decode Utils
+getAppConfigFlowBT :: forall st. String -> FlowBT String st AppConfig
+getAppConfigFlowBT = lift <<< lift <<< getAppConfigFlow
+
+getAppConfigFlow :: forall st. String -> Flow st AppConfig
+getAppConfigFlow = liftFlow <<< runEffectFn1 getAppConfigEff
+
+getAppConfigEff :: EffectFn1 String AppConfig
+getAppConfigEff = mkEffectFn1 \key -> pure $ getAppConfig key
+
+getAppConfig :: String -> AppConfig
+getAppConfig key = do
+  let
+    mBconfig = runFn3 getFromWindow key Nothing Just
+    config = case mBconfig of
+      Nothing -> loadAppConfig ""
+      Just config -> config
+  decodeForeignObject config DefaultConfig.config
+
+getCurrency :: String -> String
+getCurrency key = (getAppConfig key).currency

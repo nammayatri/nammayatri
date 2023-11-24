@@ -33,7 +33,7 @@ import Engineering.Helpers.LogEvent (logEvent)
 import Helpers.Utils (setRefreshing, clearTimer, getPastDays, getPastWeeks, convertUTCtoISC, generateQR, incrementValueOfLocalStoreKey)
 import JBridge (hideKeyboardOnNavigation, toast, showDialer, firebaseLogEvent, scrollToEnd, cleverTapCustomEvent, metaLogEvent, shareImageMessage)
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppTextInput, trackAppScreenEvent)
-import MerchantConfig.Utils (getValueFromConfig, getMerchant, Merchant(..))
+import MerchantConfig.Utils (getMerchant, Merchant(..))
 import Prelude (bind, class Show, pure, unit, ($), discard, (>=), (<=), (==), (&&), not, (+), show, void, (<>), when, map, (-), (>), (/=))
 import PrestoDOM (Eval, continue, exit, continueWithCmd, updateAndExit)
 import PrestoDOM.Types.Core (class Loggable)
@@ -47,6 +47,7 @@ import Effect.Aff (launchAff_)
 import Common.Types.App
 import Effect.Uncurried(runEffectFn4)
 import Storage(KeyStore(..), getValueToLocalStore)
+import ConfigProvider
 
 instance showAction :: Show Action where
   show _ = ""
@@ -309,7 +310,7 @@ eval (BottomNavBarAction (BottomNavBar.OnNavigate item)) state = do
 
 eval (ReferralQrRendered id) state = 
   continueWithCmd state [ do
-    runEffectFn4 generateQR (getValueFromConfig "USER_APP_LINK") id 200 0
+    runEffectFn4 generateQR state.data.config.referral.link id 200 0
     pure $ NoAction
   ]
 eval _ state = continue state
@@ -326,9 +327,9 @@ transformLeaderBoard (DriversInfo driversInfo) isMaskedName = {
   , rides : driversInfo.totalRides
 }
 
-getReferralStage :: Merchant -> ReferralType
-getReferralStage merchant =
-  case getValueFromConfig "referralType" of
+getReferralStage :: ReferralScreenState -> ReferralType
+getReferralStage state =
+  case state.data.config.referral.type of
     "LeaderBoard" -> LeaderBoard
     "QRScreen" -> QRScreen
     _ -> LeaderBoard

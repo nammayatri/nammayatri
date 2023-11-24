@@ -1,14 +1,15 @@
 module MerchantConfig.Types where
 
-type AppConfig =
+import Common.Types.Config (CommonAppConfig)
+
+type AppConfig = AppConfigDriver CommonAppConfig
+
+type AppConfigDriver a =
   {
     primaryTextColor :: String,
     primaryBackground :: String,
-    fontType :: String,
     languageList :: Array Language,
     popupBackground :: String,
-    defaultLanguage :: String,
-    imageUploadOptional :: Boolean,
     rideCompletedCardConfig :: RideCompletedCardConfig, 
     leaderBoard :: LeaderBoard,
     subscriptionConfig :: SubscriptionConfig,
@@ -20,7 +21,14 @@ type AppConfig =
     bottomNavConfig :: BottomNavConfig,
     purpleRideConfig :: PurpleRideConfig,
     mapConfig :: MapConfig,
-    waitTimeConfig :: WaitTimeConfig
+    waitTimeConfig :: WaitTimeConfig,
+    features :: Features,
+    vehicle :: VVConfig,
+    allowAllMobileNumber ::Boolean,
+    engilshInNative :: String,
+    banners :: BannerConfig,
+    referral :: ReferralConfig
+    | a
   } 
 
 type PurpleRideConfig = {
@@ -126,4 +134,25 @@ type MapConfig = {
 type WaitTimeConfig = {
   enableWaitTime :: Boolean,
   thresholdDist :: Number
+}
+
+type Features = {
+  enableBonus :: Boolean
+, enableImageUpload :: Boolean
+, enableGender ::Boolean
+, enableOtpRide :: Boolean
+}
+ 
+ -- VV - VechileVerfication
+type VVConfig = {
+  validationPrefix :: String
+}
+
+type BannerConfig = {
+  autoPay :: Boolean
+}
+
+type ReferralConfig = {
+  type :: String
+, link :: String
 }

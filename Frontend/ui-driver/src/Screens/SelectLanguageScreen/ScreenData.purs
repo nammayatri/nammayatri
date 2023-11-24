@@ -15,7 +15,8 @@
 
 module Screens.SelectLanguageScreen.ScreenData where
 
-import MerchantConfig.DefaultConfig as DC
+import ConfigProvider
+import Constants
 import Screens.Types (SelectLanguageScreenState)
 import Foreign.Object (empty)
 
@@ -23,7 +24,7 @@ initData :: SelectLanguageScreenState
 initData = {
     data: {
     isSelected : true
-  , config : DC.config
+  , config : getAppConfig appConfig
   , logField : empty
     },
     props: {

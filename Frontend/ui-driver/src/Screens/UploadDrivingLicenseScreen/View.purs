@@ -42,8 +42,9 @@ import Screens.UploadDrivingLicenseScreen.ComponentConfig
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import PaymentPage (consumeBP)
 import Common.Types.App (LazyCheck(..))
-import MerchantConfig.Utils (getValueFromConfig)
 import Effect.Uncurried (runEffectFn1)
+import ConfigProvider
+import Constants
 
 screen :: ST.UploadDrivingLicenseState -> Screen Action ST.UploadDrivingLicenseState ScreenOutput
 screen initialState =
@@ -214,6 +215,8 @@ reEnterLicenceNumber state push =
 
 frontUploadSection :: ST.UploadDrivingLicenseState -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w
 frontUploadSection state push =
+  let features = (getAppConfig appConfig).features 
+  in
   linearLayout
   [ width MATCH_PARENT
     , height WRAP_CONTENT
@@ -224,7 +227,7 @@ frontUploadSection state push =
     , visibility if state.data.dateOfIssue /= Nothing then GONE else VISIBLE
   ][
     textView
-    ([ text $ (getString FRONT_SIDE) <> if getValueFromConfig "imageUploadOptional" then (getString OPTIONAL) else ""
+    ([ text $ (getString FRONT_SIDE) <> if features.enableImageUpload then (getString OPTIONAL) else ""
     , color Color.greyTextColor
     ] <> FontStyle.body3 TypoGraphy)
   , linearLayout

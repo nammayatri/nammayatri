@@ -36,7 +36,6 @@ import PaymentPage (consumeBP)
 import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import MerchantConfig.Utils (getValueFromConfig)
 import Prelude ((<>))
 import Prelude (Unit, bind, const, pure, unit, ($), (<<<), (<>), (==), not, (>=), (&&), (/=))
 import PrestoDOM (BottomSheetState(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, alignParentBottom, alignParentRight, alpha, background, clickable, color, cornerRadius, editText, ellipsize, fontStyle, frameLayout, gravity, height, hint, id, imageUrl, imageView, imageWithFallback, inputTypeI, layoutGravity, linearLayout, margin, maxLines, onBackPressed, onChange, onClick, orientation, padding, pattern, relativeLayout, scrollView, stroke, text, textFromHtml, textSize, textView, visibility, weight, width)
@@ -46,6 +45,8 @@ import Screens.AddVehicleDetailsScreen.Controller (Action(..), eval, ScreenOutpu
 import Screens.Types (AddVehicleDetailsScreenState)
 import Styles.Colors as Color
 import Effect.Uncurried (runEffectFn1)
+import ConfigProvider
+import Constants
 
 screen :: AddVehicleDetailsScreenState -> Screen Action AddVehicleDetailsScreenState ScreenOutput
 screen initialState =
@@ -368,7 +369,9 @@ vehicleRegistrationNumber state push =
 
 ----------------------------------------------------------------- uploadRC ------------------------------------------------------
 uploadRC :: AddVehicleDetailsScreenState -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w
-uploadRC state push = 
+uploadRC state push =
+  let features = (getAppConfig appConfig).features
+  in
   linearLayout
   [ width MATCH_PARENT
   , height WRAP_CONTENT
@@ -386,7 +389,7 @@ uploadRC state push =
           ][ textView
             ([ width WRAP_CONTENT
             , height WRAP_CONTENT
-            , text $ (getString UPLOAD_REGISTRATION_CERTIFICATE) <> if getValueFromConfig "imageUploadOptional" then (getString OPTIONAL) else ""
+            , text $ (getString UPLOAD_REGISTRATION_CERTIFICATE) <> if features.enableImageUpload then (getString OPTIONAL) else ""
             , color Color.greyTextColor
             , margin (MarginBottom 10)
             ] <> FontStyle.body3 TypoGraphy)

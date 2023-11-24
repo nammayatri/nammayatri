@@ -1,41 +1,30 @@
 window.version = window.version || {};
 let version = "1.0.0";
-if (typeof __VERSION__ !== 'undefined') {
+if (typeof __VERSION__ !== "undefined") {
   version = __VERSION__
 }
 window.version["configuration"]= version;
 window.getMerchantConfig = function () {
   return JSON.stringify({
     "StringKeys": ["REQUEST_AUTO_RIDE" ,
-                         "CONFIRM_RIDE_",
-                         "PAYMENT_METHOD_STRING_",
-                         "PAYMENT_METHOD_STRING",
-                         "PAY_DRIVER_USING_CASH_OR_UPI",
-                         "PAY_DRIVER_USING_WALLET",
-                         "PAY_DRIVER_USING_CASH_OR_UPI_",
-                         "LOCATION_PERMISSION_SUBTITLE_NEW_USER"],
-    "isReferralEnabled": "false",
-    "showBookingPreference": "true",
-    "showRateCard": "true",
-    "showDashboard": "false",
-    "enableShareRide": "false",
+      "CONFIRM_RIDE_",
+      "PAYMENT_METHOD_STRING_",
+      "PAYMENT_METHOD_STRING",
+      "PAY_DRIVER_USING_CASH_OR_UPI",
+      "PAY_DRIVER_USING_WALLET",
+      "PAY_DRIVER_USING_CASH_OR_UPI_",
+      "LOCATION_PERMISSION_SUBTITLE_NEW_USER"],
     "autoVariantEnabled": false,
-    "shareAppTitle": "Share Pass Culture!",
-    "shareAppContent": "Hey there!\n\nCheck India's first Zero Commission auto booking app.\n100% Open source | 100% Open Data\n\nDownload Namma Yatri now! \nhttps://nammayatri.in/link/rider/SJ8D \n\n #beOpen #chooseOpen",
-    "DOCUMENT_LINK": "https://docs.google.com/document/d/1-oRR_oI8ncZRPZvFZEJZeCVQjTmXTmHA",
-    "appLink" : "",
-    "PRIVACY_POLICY_LINK": "https://docs.google.com/document/d/128VU80K5E1iz-x6QnP1R127m_lwmDO3F",
-    "showChargeDesc" : false,
-    "isShareAppEnabled": "false",
-    "addFavouriteScreenBackArrow" : "ny_ic_chevron_left_white,https://assets.juspay.in/nammayatri/images/user/ny_ic_chevron_left_white.png",
     "showPickUpandDrop": false,
-    "apiLoaderLottie": "",
-    "isEmergencyContacts": "false",
     "showCorporateAddress" : false,
-    "isChatEnabled": "false",
-    "loaderColor": "#EB0055",
-    "isGradient" : "true",
-    "gradient": ["#EB0055", "#320096"],
+    "loaderConfig" : {
+      "color": "#EB0055"
+    },
+    "primaryButtonConfig" : {
+      "isGradient" : true
+      , "gradient": ["#EB0055", "#320096"]
+      , "loaderUrl" : "primary_button_loader.json"
+    },
     "primaryTextColor": "#FFFFFF",
     "primaryBackground": "#EB0055",
     "estimateConfirmText": "Request a PassCulture Ride",
@@ -65,18 +54,18 @@ window.getMerchantConfig = function () {
       "lottieHeight": 40,
       "lottieWidth": 40,
       "primaryButtonHeight": 48
-     , "backArrow" : "ny_ic_chevron_left_white,https://assets.juspay.in/beckn/passculture/user/images/ny_ic_chevron_left_white.png"
-     },
-     "ratingConfig": {
+      , "backArrow" : "ny_ic_chevron_left_white,https://assets.juspay.in/beckn/passculture/user/images/ny_ic_chevron_left_white.png"
+    },
+    "ratingConfig": {
       "secondaryButtonTextColor": "#EB0055",
       "secondaryButtonStroke": "1,#EB0055",
       "buttonCornerRadius": 24.0
-     },
-     "cancelReasonConfig": {
+    },
+    "cancelReasonConfig": {
       "secondaryButtonTextColor": "#EB0055",
       "secondaryButtonStroke": "1,#EB0055",
       "buttonCornerRadius": 24.0
-     },
+    },
     "quoteListModel": {
       "backgroundColor": "#EB0055",
       "textColor": "#FFFFFF",
@@ -119,12 +108,6 @@ window.getMerchantConfig = function () {
     "merchantLogo" : "ic_launcher,https://assets.juspay.in/nammayatri/images/user/ny_ic_launcher.png",
     "infoIconUrl" : "ny_ic_info,https://assets.juspay.in/nammayatri/images/user/ny_ic_information_grey.png",
     "sideBarList": ["MyRides", "Favorites", "HelpAndSupport", "Language", "About"],
-    "rateCardColor": "#2C2F3A",
-    "profileEditGravity" : "center",
-    "nyBrandingVisibility": false,
-    "fontType": "Assets",
-    "black900": "#2C2F3A",
-    "black800": "#454545",
     "showHamMenu" : true,
     "showQuoteFindingText" : true,
     "red" : "#E55454",
@@ -156,34 +139,48 @@ window.getMerchantConfig = function () {
     }],
     "bannerConfig" : {
       "backgroundColor" : "#F0FAF0"
-    , "title" : "Complete your profile for a personalised ride experience"
-    , "titleColor" : "#21C179"
-    , "actionText" : "Update now"
-    , "actionTextColor" : "#27AE5F"
-    , "imageUrl" : "ny_ic_banner_gender_feat,https://assets.juspay.in/beckn/merchantcommon/images/ny_ic_banner_gender_feat.png"
+      , "title" : "Complete your profile for a personalised ride experience"
+      , "titleColor" : "#21C179"
+      , "actionText" : "Update now"
+      , "actionTextColor" : "#27AE5F"
+      , "imageUrl" : "ny_ic_banner_gender_feat,https://assets.juspay.in/beckn/merchantcommon/images/ny_ic_banner_gender_feat.png"
     },
     "terminateBtnConfig" : {
       "visibility" : true,
       "title" : "",
       "imageUrl" : "ny_ic_go_home,https://assets.juspay.in/beckn/passculture/user/images/ny_ic_go_home.png"
-  }
-  , "showDeleteAccount" : false
-  , "fontName" : "Montserrat"
-  , "fontKannada" : "Montserrat"
-  , "showGenderBanner" : false
-  , "autoSelectBackground" : "#320096"
-  , "defaultLanguage" : "FR_FR"
-  , "enableMockLocation" : false
-  , "navigationAppConfig" : {
-      android : {
+    }
+    , "showDeleteAccount" : false
+    , "fontConfig" : {
+      "default" : "Montserrat"
+      , "kannada" : "Montserrat"
+    }
+    , "fontName" : "Montserrat"
+    , "fontKannada" : "Montserrat"
+    , "showGenderBanner" : false
+    , "autoSelectBackground" : "#320096"
+    , "defaultLanguage" : "FR_FR"
+    , "navigationAppConfig" : {
+      "android" : {
         "query" : "https://waze.com/ul?ll=%f,%f"
-      , "packageName" : "com.waze"
+        , "packageName" : "com.waze"
       }
-    , ios : {
+      , "ios" : {
         "query" : "https://www.waze.com/ul?ll=%@,%@&navigate=yes&zoom=17"
-      , "walkQuery" : "https://www.waze.com/ul?ll=%@,%@&navigate=yes&zoom=17" // Waze not supports walk mode
+        , "walkQuery" : "https://www.waze.com/ul?ll=%@,%@&navigate=yes&zoom=17" // Waze not supports walk mode
       }
     }
-  , "dashboardUrl" : "https://www.getyatri.com/open/?source=in-app"
+    , "features" : {
+      "enableAutoReadOtp" : false,
+      "enableShareRide" : false,
+      "enableChat": false,
+      "enableEmergencyContacts": false,
+      "enableReferral": false,
+      "enableSupport": false,
+      "enableShareApp": false
+    }
+    , "dashboard" : {
+      "enable" : false
+    }
   })
 }

@@ -25,7 +25,6 @@ import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import MerchantConfig.Utils (getValueFromConfig)
 import Prelude (Unit, const, ($), (<>), (==), bind, pure, unit, (<<<))
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, background, color, gravity, height, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, relativeLayout, scrollBarY, scrollView, text, textView, visibility, weight, width)
 import Screens.AboutUsScreen.ComponentConfig (demoModePopUpConfig)
@@ -33,6 +32,8 @@ import Screens.AboutUsScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.Types as ST
 import Storage (KeyStore(..), getValueToLocalStore)
 import Styles.Colors as Color
+import ConfigProvider
+import Constants
 
 screen :: ST.AboutUsScreenState -> Screen Action ST.AboutUsScreenState ScreenOutput
 screen initialState =
@@ -156,6 +157,8 @@ footerView state =
 --------------------------------- applicationInformationLayout ----------------------------
 applicationInformationLayout :: ST.AboutUsScreenState -> (Action -> Effect Unit) -> forall w. PrestoDOM (Effect Unit) w
 applicationInformationLayout state push =
+  let config = getAppConfig appConfig
+  in
   linearLayout
     [ width MATCH_PARENT
     , height WRAP_CONTENT
@@ -184,7 +187,7 @@ applicationInformationLayout state push =
     , linearLayout
         [ height WRAP_CONTENT
         , width WRAP_CONTENT
-        , visibility if getValueFromConfig "showCorporateAddress" then VISIBLE else GONE
+        , visibility if config.showCorporateAddress then VISIBLE else GONE
         ][ComplaintsModel.view (ComplaintsModel.config { cardData = contactUsData state })]
     , underlinedTextView (getString T_C) push
     , underlinedTextView (getString PRIVACY_POLICY) push
@@ -193,6 +196,8 @@ applicationInformationLayout state push =
 --------------------------------- underlinedTextView ----------------------
 underlinedTextView :: String -> (Action -> Effect Unit) -> forall w. PrestoDOM (Effect Unit) w
 underlinedTextView value push =
+  let others = (getAppConfig appConfig).others
+  in
   linearLayout
     [ width WRAP_CONTENT
     , height WRAP_CONTENT
@@ -203,9 +208,9 @@ underlinedTextView value push =
             _ <-
               JB.openUrlInApp
                 if (value == (getString T_C)) then
-                  (getValueFromConfig "DOCUMENT_LINK")
+                  others.termsLink
                 else
-                  (getValueFromConfig "PRIVACY_POLICY_LINK")
+                  others.privacyLink
             pure unit
         )
         (const TermsAndConditionAction)

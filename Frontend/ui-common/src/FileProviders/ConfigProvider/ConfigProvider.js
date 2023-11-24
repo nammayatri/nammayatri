@@ -1,4 +1,5 @@
 const JBridge = window.JBridge;
+
 function isObject(item) {
   return (item && typeof item === "object" && !Array.isArray(item));
 }
@@ -73,15 +74,4 @@ export const loadFileInDUI = function (fileName) {
   } else {
     return "";
   }
-}
-
-// JSON UTILS
-export const stringifyJSON = function (obj) {
-  let result;
-  try{
-    result = JSON.stringify(obj);
-  } catch (errr) {
-    result = ""
-  }
-  return result;
 }

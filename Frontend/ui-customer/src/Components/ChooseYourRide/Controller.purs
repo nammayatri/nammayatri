@@ -3,7 +3,8 @@ module Components.ChooseYourRide.Controller where
 import Data.Maybe (Maybe(..))
 import Components.ChooseVehicle.Controller as ChooseVehicleController
 import Components.PrimaryButton.Controller as PrimaryButtonController
-import MerchantConfig.DefaultConfig as DC
+import ConfigProvider
+import Constants
 import MerchantConfig.Types
 
 data Action
@@ -26,6 +27,6 @@ config =
   , rideDuration: ""
   , activeIndex: 0
   , quoteList: []
-  , showTollExtraCharges : DC.config.searchLocationConfig.showAdditionalChargesText
+  , showTollExtraCharges : (getAppConfig appConfig).searchLocationConfig.showAdditionalChargesText
   , nearByDrivers : Nothing
   }

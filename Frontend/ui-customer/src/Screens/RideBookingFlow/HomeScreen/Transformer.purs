@@ -44,15 +44,16 @@ import Services.Backend as Remote
 import Types.App(FlowBT,  GlobalState(..), ScreenType(..))
 import Storage ( setValueToLocalStore, getValueToLocalStore, KeyStore(..))
 import JBridge (fromMetersToKm, Paths, getLatLonFromAddress)
-import Engineering.Helpers.Utils (getAppConfig)
 import Constants as Constants
-import MerchantConfig.DefaultConfig as DC
+import Constants
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Screens.MyRidesScreen.ScreenData (dummyIndividualCard)
 import Common.Types.App (LazyCheck(..))
-import MerchantConfig.Utils (Merchant(..), getMerchant, getValueFromConfig)
+import MerchantConfig.Utils (Merchant(..), getMerchant)
 import Language.Strings (getEN)
 import MerchantConfig.Types (EstimateAndQuoteConfig)
+import Domain.Cache (getAppConfigFromCache)
+import ConfigProvider
 
 
 getLocationList :: Array Prediction -> Array LocationListItemState
@@ -109,7 +110,7 @@ getQuote (QuoteAPIEntity quoteEntity) = do
     , vehicleType : "auto"
     , driverName : quoteDetails.driverName
     , selectedQuote : Nothing
-    , appConfig : DC.config
+    , appConfig : getAppConfig appConfig
     }
 
 getDriverInfo :: Maybe String -> RideBookingRes -> Boolean -> DriverInfoCard
@@ -147,7 +148,7 @@ getDriverInfo vehicleVariant (RideBookingRes resp) isQuote =
       , driverNumber : rideList.driverNumber
       , merchantExoPhone : resp.merchantExoPhone
       , initDistance : Nothing
-      , config : DC.config
+      , config : getAppConfig appConfig
       , vehicleVariant : if rideList.vehicleVariant /= "" 
                             then rideList.vehicleVariant 
                          else
@@ -224,7 +225,7 @@ getPlaceNameResp address placeId lat lon item = do
     checkLatLonFromAddress :: String -> FlowBT String GetPlaceNameResp
     checkLatLonFromAddress placeID = do
       let {latitude, longitude} = runFn1 getLatLonFromAddress address
-      config <- getAppConfig Constants.appConfig
+      config <- getAppConfigFromCache
       if latitude /= 0.0 && longitude /= 0.0 && config.geoCoder.enableAddressToLL then
         pure $ makePlaceNameResp latitude longitude
       else
@@ -306,7 +307,7 @@ getSpecialZoneQuote quote index =
         vehicleImage = getVehicleVariantImage quoteEntity.vehicleVariant
       , isSelected = (index == 0)
       , vehicleVariant = quoteEntity.vehicleVariant
-      , price = getValueFromConfig "currency" <> (show quoteEntity.estimatedTotalFare)
+      , price = (getCurrency Constants.appConfig) <> (show quoteEntity.estimatedTotalFare)
       , activeIndex = 0
       , index = index
       , id = trim quoteEntity.id
@@ -386,8 +387,8 @@ getFilteredQuotes quotes estimateAndQuoteConfig =
                                                                                           ) quotes) variant)
 
 getEstimates :: EstimateAPIEntity -> Int -> Boolean -> ChooseVehicle.Config
-getEstimates (EstimateAPIEntity estimate) index isFareRangePresent =
-  let currency = getValueFromConfig "currency"
+getEstimates (EstimateAPIEntity estimate) index isFareRange =
+  let currency = getCurrency Constants.appConfig
   in ChooseVehicle.config {
         vehicleImage = getVehicleVariantImage estimate.vehicleVariant
       , vehicleVariant = estimate.vehicleVariant
@@ -401,7 +402,7 @@ getEstimates (EstimateAPIEntity estimate) index isFareRangePresent =
       , capacity = getVehicleCapacity estimate.vehicleVariant
       , showInfo = (getMerchant FunctionCall) == YATRI
       , basePrice = estimate.estimatedTotalFare
-      , searchResultType = if isFareRangePresent then ChooseVehicle.ESTIMATES else ChooseVehicle.QUOTES
+      , searchResultType = if isFareRange then ChooseVehicle.ESTIMATES else ChooseVehicle.QUOTES
       }
 
 dummyFareRange :: FareRange

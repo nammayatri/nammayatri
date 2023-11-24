@@ -18,7 +18,6 @@ module Font.Style where
 
 import Common.Types.App
 import Data.Eq.Generic (genericEq)
-import MerchantConfig.Utils (getValueFromConfig)
 import Data.Generic.Rep (class Generic)
 import Data.Show.Generic (genericShow)
 import Effect (Effect)
@@ -35,31 +34,34 @@ import Styles.Types (FontStyle, FontType(..))
 import Data.Maybe (Maybe(..))
 import Data.Either (Either(..), hush)
 import Control.Monad.Except (runExcept)
-import Foreign.Generic (Foreign, decode)
+import Foreign.Generic (Foreign, decode, encode)
 import JBridge as JBridge
-
-foreign import getFontStyleFromConfig :: String -> Foreign
+import ConfigProvider
+import Constants
 
 getLanguageFromLocalStore :: Unit -> String
 getLanguageFromLocalStore _ = JBridge.getKeyInSharedPrefKeys "LANGUAGE_KEY"
 
 getFontType :: String ->  FontType
-getFontType dummy = case (decodeFont (getFontStyleFromConfig "")) of
-  Just font -> font
-  Nothing -> Assets
+getFontType dummy = 
+  let config = (getAppConfig appConfig).fontConfig
+  in 
+    case decodeFont $ encode $ config."type" of
+      Just font -> font
+      Nothing -> Assets
 
 decodeFont :: Foreign -> Maybe FontType
 decodeFont = hush <<< runExcept <<< decode
 
 italic :: FontStyle
 italic = do 
-  let font = getValueFromConfig "fontName"
+  let font = getDefaultFont TypoGraphy
   fontByOS (font <> "-Italic") (font <> "-Italic") "Arial"
 
 light :: LazyCheck -> FontStyle
 light style = do
-  let font = getValueFromConfig "fontName"
-  let fontKn = getValueFromConfig "fontKannada"
+  let font = getDefaultFont style
+  let fontKn = getKannadaFont style
   case (getLanguageFromLocalStore unit) of
     "EN_US" -> fontByOS (font <> "-Light") (font <> "-Light") "Arial"
     "KN_IN" -> fontByOS (fontKn <> "-Light") (fontKn <> "-Light") "Arial"
@@ -68,13 +70,13 @@ light style = do
 
 lightItalic :: FontStyle
 lightItalic = do 
-  let font = getValueFromConfig "fontName"
+  let font = getDefaultFont TypoGraphy
   fontByOS (font <> "-LightItalic") (font <> "-LightItalic") "Arial"
 
 extraLight :: LazyCheck -> FontStyle
 extraLight style = do
-  let font = getValueFromConfig "fontName"
-  let fontKn = getValueFromConfig "fontKannada"
+  let font = getDefaultFont style
+  let fontKn = getKannadaFont style
   case (getLanguageFromLocalStore unit) of
     "EN_US" -> fontByOS (font <> "-ExtraLight") (font <> "-ExtraLight") "Arial"
     "KN_IN" -> fontByOS (fontKn <> "-ExtraLight") (fontKn <> "-ExtraLight") "Arial"
@@ -83,13 +85,13 @@ extraLight style = do
 
 extraLightItalic :: FontStyle
 extraLightItalic = do 
-  let font = getValueFromConfig "fontName"
+  let font = getDefaultFont TypoGraphy
   fontByOS (font <> "-ExtraLightItalic") (font <> "-ExtraLightItalic") "Arial"
 
 regular :: LazyCheck -> FontStyle
 regular style = do
-  let font = getValueFromConfig "fontName"
-  let fontKn = getValueFromConfig "fontKannada"
+  let font = getDefaultFont style
+  let fontKn = getKannadaFont style
   case (getLanguageFromLocalStore unit) of
     "EN_US" -> fontByOS (font <> "-Regular") (font <> "-Regular") "Arial"
     "KN_IN" -> fontByOS (fontKn <> "-Regular") (fontKn <> "-Regular") "Arial"
@@ -98,8 +100,8 @@ regular style = do
 
 medium :: LazyCheck -> FontStyle
 medium style = do
-  let font = getValueFromConfig "fontName"
-  let fontKn = getValueFromConfig "fontKannada"
+  let font = getDefaultFont style
+  let fontKn = getKannadaFont style
   case (getLanguageFromLocalStore unit) of
     "EN_US" -> fontByOS (font <> "-Medium") (font <> "-Medium") "Arial"
     "KN_IN" -> fontByOS (fontKn <> "-Medium") (fontKn <> "-Medium") "Arial"
@@ -108,13 +110,13 @@ medium style = do
 
 mediumItalic :: FontStyle
 mediumItalic = do
-  let font = getValueFromConfig "fontName"
+  let font = getDefaultFont TypoGraphy
   fontByOS (font <> "-MediumItalic") (font <> "-MediumItalic") "Arial"
 
 semiBold :: LazyCheck -> FontStyle
 semiBold style = do
-  let font = getValueFromConfig "fontName"
-  let fontKn = getValueFromConfig "fontKannada"
+  let font = getDefaultFont style
+  let fontKn = getKannadaFont style
   case (getLanguageFromLocalStore unit) of
     "EN_US" -> fontByOS (font <> "-SemiBold") (font <> "-SemiBold") "Arial"
     "KN_IN" -> fontByOS (fontKn <> "-SemiBold") (fontKn <> "-SemiBold") "Arial"
@@ -123,13 +125,13 @@ semiBold style = do
 
 semiBoldItalic :: FontStyle
 semiBoldItalic = do 
-  let font = getValueFromConfig "fontName"
+  let font = getDefaultFont TypoGraphy
   fontByOS (font <> "-SemiBoldItalic") (font <> "-SemiBoldItalic") "Arial"
 
 bold :: LazyCheck -> FontStyle
 bold style = do
-  let font = getValueFromConfig "fontName"
-  let fontKn = getValueFromConfig "fontKannada"
+  let font = getDefaultFont style
+  let fontKn = getKannadaFont style
   case (getLanguageFromLocalStore unit) of
     "EN_US" -> fontByOS (font <> "-Bold") (font <> "-Bold") "Arial"
     "KN_IN" -> fontByOS (fontKn <> "-Bold") (fontKn <> "-Bold") "Arial"
@@ -138,13 +140,13 @@ bold style = do
 
 boldItalic :: FontStyle
 boldItalic = do 
-  let font = getValueFromConfig "fontName"
+  let font = getDefaultFont TypoGraphy
   fontByOS (font <> "-BoldItalic") (font <> "-BoldItalic") "Arial"
 
 extraBold :: LazyCheck -> FontStyle
 extraBold style = do
-  let font = getValueFromConfig "fontName"
-  let fontKn = getValueFromConfig "fontKannada"
+  let font = getDefaultFont style
+  let fontKn = getKannadaFont style
   case (getLanguageFromLocalStore unit) of
     "EN_US" -> fontByOS (font <> "-ExtraBold") (font <> "-ExtraBold") "Arial"
     "KN_IN" -> fontByOS (fontKn <> "-ExtraBold") (fontKn <> "-ExtraBold") "Arial"
@@ -153,8 +155,7 @@ extraBold style = do
 
 extraBoldItalic :: FontStyle
 extraBoldItalic = do
-  let font = getValueFromConfig "fontName"
-  let fontKn = getValueFromConfig "fontKannada"
+  let font = getDefaultFont TypoGraphy
   fontByOS (font <> "-ExtraBoldItalic") (font <> "-ExtraBoldItalic") "Arial"
 
 feFont :: LazyCheck -> FontStyle
@@ -409,3 +410,14 @@ getFontStyle style styleType = case style of
   PriceFontBig -> priceFont_big styleType
   Title0 -> title0 styleType
   Title1 -> title1 styleType
+
+
+getDefaultFont :: LazyCheck -> String
+getDefaultFont _ = 
+  let config = (getAppConfig appConfig).fontConfig
+  in config.default
+
+getKannadaFont :: LazyCheck -> String
+getKannadaFont _ = 
+  let config = (getAppConfig appConfig).fontConfig
+  in config.kannada

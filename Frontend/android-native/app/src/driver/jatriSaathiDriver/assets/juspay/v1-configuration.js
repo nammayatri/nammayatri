@@ -1,31 +1,15 @@
 window.version = window.version || {};
 let version = "1.0.0";
-if (typeof __VERSION__ !== 'undefined') {
+if (typeof __VERSION__ !== "undefined") {
   version = __VERSION__
 }
 window.version["configuration"]= version;
 window.getMerchantConfig = function () {
   return JSON.stringify({
-    "RC_VALIDATION_TEXT": "WB",
-    "DOCUMENT_LINK": "https://docs.google.com/document/d/19pQUgTWXBqcM7bjy4SU1-z33r-iXsdPMfZggBTXbdR4",
     "APP_LINK": "https://play.google.com/store/apps/details?id=in.juspay.jatrisaathidriver",
     "USER_APP_LINK" : "https://nammayatri.in/link/rider/kTZ1",
-    "PRIVACY_POLICY_LINK": "https://docs.google.com/document/d/1-bcjLOZ_gR0Rda2BNmkKnqVds8Pm23v1e7JbSDdM70E",
-    "SPECIAL_ZONE_OTP_VIEW": "true",
     "StringKeys": ["WELCOME_TEXT", "ABOUT_TEXT", "NEED_IT_TO_ENABLE_LOCATION", "CURRENTLY_WE_ALLOW_ONLY_KARNATAKA_REGISTERED_NUMBER", "YOU_ARE_ABOUT_TO_CALL_NAMMA_YATRI_SUPPORT", "YOUR_LOCATION_HELPS_OUR_SYSTEM", "EARNED_ON_APP", "TRAVELLED_ON_APP", "REPORT_ISSUE_CHAT_PLACEHOLDER", "MY_PLAN_TITLE", "CHOOSE_YOUR_PLAN", "OFFER_CARD_BANNER_TITLE"],
-    "fontType": "Assets",
-    "currency": "₹",
-    "isGradient" : "false",
-    "BONUS_EARNED" : "false",
-    "gradient": [],
-    "addFavouriteScreenBackArrow" : "ny_ic_chevron_left_white,https://assets.juspay.in/nammayatri/images/user/ny_ic_chevron_left_white.png",
-    "popupBackground" : "#FFFFFF",
-    "apiLoaderLottie": "primary_button_loader.json",
-    "primaryTextColor": "#FCC32C",
-    "primaryBackground": "#2C2F3A",
     "showCorporateAddress" : false,
-    "imageUploadOptional" : true,
-    "clientName" : "Yatri Sathi",
     "languageList": [{
       "name": "English",
       "value": "EN_US",
@@ -86,15 +70,7 @@ window.getMerchantConfig = function () {
       "OFFER_CARD_BANNER_TITLE" : "অটোপে সেটআপ করুন এবং জানুয়ারী 1-31 এর মধ্যে শুধুমাত্র ₹3/রাইড প্রদান করুন"
     },
     "logs": ["JUSPAY","FIREBASE","CLEVERTAP"]
-    , "fontName" : "PlusJakartaSans"
-    , "fontKannada" : "NotoSansKannada"
-    , "allowAllMobileNumber" : false
-    , "showGenderBanner" : false
     , "defaultLanguage" : "EN_US"
-    , "navigationAppConfig" : {
-      "query" : "google.navigation:q=%f,%f"
-      , "packageName" : "com.google.android.apps.maps"
-    }
     , "subscriptionConfig" : {
       "completePaymentPopup" : true,
       "supportNumber" : "08069724949",
@@ -114,9 +90,6 @@ window.getMerchantConfig = function () {
       "enableSubscriptionSupportPopup" : true,
       "myPlanYoutubeLink" : "https://www.youtube.com/playlist?list=PLvMgI4c44A9Y2bykEuDAtHzgcubXOYqgU-*$*-https://www.youtube.com/playlist?list=PLvMgI4c44A9Y2bykEuDAtHzgcubXOYqgU-*$*-https://www.youtube.com/playlist?list=PLvMgI4c44A9Zl0IIQcZa7ZJrSjWPLfxpA-*$*-https://www.youtube.com/playlist?list=PLvMgI4c44A9Y8NLs_8TXc7biX-JkobrGB"
     } 
-    , "OTP_MESSAGE_REGEX" : "is your OTP for login to [A-Za-z]+ [A-Za-z]+ [A-Za-z]+"
-    , "autoPayBanner" : false
-    , "referralType" : "QRScreen"
     , "profile" :
         { "bookingOptionMenuForTaxi" : true
         }
@@ -125,9 +98,33 @@ window.getMerchantConfig = function () {
     } 
     , "bottomNavConfig" : {
       "subscription" : 
-            { "isVisible" : true,
-              "showNew" : true
-            }
+        { "isVisible" : true,
+          "showNew" : true
+        }
+    }
+    , "others" : {
+      "otpRegex" :  "is your OTP for login to [A-Za-z]+ [A-Za-z]+ [A-Za-z]+"
+      , "termsLink" : "https://docs.google.com/document/d/19pQUgTWXBqcM7bjy4SU1-z33r-iXsdPMfZggBTXbdR4"
+      , "privacyLink" : "https://docs.google.com/document/d/1-bcjLOZ_gR0Rda2BNmkKnqVds8Pm23v1e7JbSDdM70E"
+    }
+    , "features" : {
+      "enableBonus" : false
+      , "enableImageUpload" : true
+      , "enableGender" : false
+      , "enableOtpRide" : true
+    }
+    , "appDatas" : {
+      "link" : "https://play.google.com/store/apps/details?id=in.juspay.jatrisaathidriver"
+      , "name" : "Yatri Sathi"
+    }
+    , "vehicle" : {
+      "validationPrefix" :  "WB"
+    }
+    , "banners" :{
+      "autoPay" : false
+    }
+    , "referral": {
+      "link" : "https://nammayatri.in/link/rider/kTZ1"
     }
   })
 }

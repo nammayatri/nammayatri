@@ -22,11 +22,13 @@ import Data.Eq.Generic (genericEq)
 import Data.Generic.Rep (class Generic)
 import Foreign.Object (empty)
 import Language.Types (STR(..)) as STR
-import MerchantConfig.Utils (getValueFromConfig)
-import MerchantConfig.DefaultConfig as DC
+import ConfigProvider
+import Constants
 import Prelude (class Eq, unit, (<>), (==), (||), (/=))
 import Screens.Types (DriverProfileScreenState, BottomNavBarState, DriverProfileScreenType(..),AutoPayStatus(..))
 import Services.API (GetDriverInfoResp(..), OrganizationInfo(..), DriverGoHomeInfo(..))
+import ConfigProvider
+import Constants
 
 initData :: DriverProfileScreenState
 initData = {
@@ -86,7 +88,7 @@ initData = {
       , totalRidesAssigned : 0
       , totalDistanceTravelled : ""
       },
-    config : DC.config
+    config : getAppConfig appConfig
     },
 
   props: {
@@ -129,9 +131,11 @@ initData = {
 
 languagesChoices :: Array CheckBoxOptions
 languagesChoices =
+  let config = getAppConfig appConfig
+  in
   [ { value : "EN_US"
     , text : "English"
-    , subText : getValueFromConfig "engilshInNative"
+    , subText : config.engilshInNative
     , isSelected : false
     }
   , { value: "KN_IN"

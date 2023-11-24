@@ -27,12 +27,3 @@ export const renewFile = function(filePath,_location,cb) {
     cb(result)();
   }));
 }
-
-// JSON UTILS
-export function parseJSON(param) {
-  try {
-    return JSON.parse(param);
-  } catch (e) {
-    return param;
-  }
-}

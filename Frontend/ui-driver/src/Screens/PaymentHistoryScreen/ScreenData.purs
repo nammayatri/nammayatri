@@ -19,7 +19,8 @@ import Common.Types.App (PaymentStatus(..))
 import Data.Maybe as Mb
 import Screens.Types (PaymentHistoryScreenState, PaymentHistorySubview(..), PaymentListItem, PlanCardConfig, TransactionListItem, PromoConfig)
 import Services.API (AutopayPaymentStage(..), FeeType(..))
-import MerchantConfig.DefaultConfig as DC
+import ConfigProvider
+import Constants
 
 initData :: PaymentHistoryScreenState
 initData = {

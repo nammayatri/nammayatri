@@ -19,8 +19,6 @@ import Data.Show.Generic (genericShow)
 
 foreign import getStringFromConfig :: String -> String
 
-foreign import getValueFromConfig :: forall a. String -> a
-
 foreign import getENStrings :: String -> String
 
 foreign import getMerchantId :: String -> Foreign

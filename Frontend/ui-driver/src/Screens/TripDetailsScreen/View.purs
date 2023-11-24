@@ -30,7 +30,7 @@ import Font.Style as FontStyle
 import Helpers.Utils (fetchImage, FetchImageFrom(..), getVehicleVariantImage)
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import MerchantConfig.Utils (Merchant(..), getMerchant, getValueFromConfig)
+import MerchantConfig.Utils (Merchant(..), getMerchant)
 import Prelude (Unit, const, map, not, show, unit, ($), (&&), (*), (/), (<<<), (<>), (==), (||))
 import Prelude (show, (<>))
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, alignParentBottom, background, color, cornerRadius, editText, fontStyle, frameLayout, gravity, height, hint, horizontalScrollView, imageUrl, imageView, imageWithFallback, linearLayout, margin, onBackPressed, onChange, onClick, orientation, padding, pattern, relativeLayout, scrollBarX, scrollView, stroke, text, textSize, textView, visibility, weight, width)
@@ -39,6 +39,8 @@ import Screens.TripDetailsScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.Types as ST
 import Styles.Colors as Color
 import Common.Styles.Colors as Colors
+import ConfigProvider
+import Constants
 
 screen :: ST.TripDetailsScreenState -> Screen Action ST.TripDetailsScreenState ScreenOutput 
 screen initialState = 
@@ -252,7 +254,7 @@ tripDetailsView state =
       , gravity RIGHT
       , orientation VERTICAL
       ][  textView $
-          [ text $ (getValueFromConfig "currency") <> ( show state.data.totalAmount)
+          [ text $ (getCurrency appConfig) <> ( show state.data.totalAmount)
           , color Color.black
           ] <> FontStyle.body14 TypoGraphy
         , textView $

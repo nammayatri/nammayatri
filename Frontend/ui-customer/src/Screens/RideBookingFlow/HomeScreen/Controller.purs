@@ -76,8 +76,7 @@ import JBridge (addMarker, animateCamera, currentPosition, exitLocateOnMap, fire
 import Language.Strings (getString, getEN)
 import Language.Types (STR(..))
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, printLog, trackAppTextInput, trackAppScreenEvent)
-import MerchantConfig.DefaultConfig as DC
-import MerchantConfig.Utils (Merchant(..), getMerchant, getValueFromConfig)
+import MerchantConfig.Utils (Merchant(..), getMerchant)
 import Prelude (class Applicative, class Show, Unit, Ordering, bind, compare, discard, map, negate, pure, show, unit, not, ($), (&&), (-), (/=), (<>), (==), (>), (||), (>=), void, (<), (*), (<=), (/), (+))
 import Presto.Core.Types.API (ErrorResponse)
 import PrestoDOM (Eval, Visibility(..), BottomSheetState(..), continue, continueWithCmd, defaultPerformLog, exit, payload, updateAndExit)
@@ -811,7 +810,7 @@ eval RemoveChat state = do
   ]
 
 eval (DriverInfoCardActionController (DriverInfoCardController.MessageDriver)) state = do
-  if (getValueFromConfig "isChatEnabled") == "true" then do
+  if state.data.config.features.enableChat then do
     if not state.props.chatcallbackInitiated then continue state else do
       _ <- pure $ performHapticFeedback unit
       _ <- pure $ updateLocalStage ChatWithDriver
@@ -1048,7 +1047,8 @@ eval (SettingSideBarActionController (SettingSideBarController.GoToMyTickets)) s
 eval (SettingSideBarActionController (SettingSideBarController.ShareAppLink)) state =
   do
     let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_share_app_menu"
-    _ <- pure $ shareTextMessage (getValueFromConfig "shareAppTitle") (getValueFromConfig "shareAppContent")
+        shareAppConfig = state.data.config.shareAppConfig
+    _ <- pure $ shareTextMessage shareAppConfig.title shareAppConfig.description
     continue state
 
 eval (SettingSideBarActionController (SettingSideBarController.EditProfile)) state = exit $ GoToMyProfile state { data { settingSideBar { opened = SettingSideBarController.OPEN } } } false
@@ -1082,7 +1082,7 @@ eval (SettingSideBarActionController (SettingSideBarController.LiveStatsDashboar
   let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_live_stats_dashboard"
   if os == "IOS" then do
     continueWithCmd state [do
-      _ <- openUrlInApp state.data.config.dashboardUrl
+      _ <- openUrlInApp state.data.config.dashboard.url
       pure NoAction
     ]
   else continue state {props {showLiveDashboard = true}}
@@ -1846,7 +1846,8 @@ eval (PopUpModalShareAppAction PopUpModal.OnButton1Click) state= continue state{
 
 eval (PopUpModalShareAppAction PopUpModal.OnButton2Click) state= do
   _ <- pure $ setValueToLocalStore SHARE_APP_COUNT "-1"
-  _ <- pure $ shareTextMessage (getValueFromConfig "shareAppTitle") (getValueFromConfig "shareAppContent")
+  let shareAppConfig = state.data.config.shareAppConfig
+  _ <- pure $ shareTextMessage shareAppConfig.title shareAppConfig.description
   continue state{props{showShareAppPopUp=false}}
 
 eval (CallSupportAction PopUpModal.OnButton1Click) state= do

@@ -1,43 +1,24 @@
 window.version = window.version || {};
 let version = "1.0.0";
-if (typeof __VERSION__ !== 'undefined') {
+if (typeof __VERSION__ !== "undefined") {
   version = __VERSION__
 }
 window.version["configuration"]= version;
 window.getMerchantConfig = function () {
   return JSON.stringify({
-    "RC_VALIDATION_TEXT": "KL",
-    "DOCUMENT_LINK": "https://docs.google.com/document/d/1zmQWO_L4EjyCXC3xSlp1f3DS2wI4HfbHxg42tXelWe0",
-    "APP_LINK": "https://play.google.com/store/apps/details?id=net.openkochi.yatripartner",
-    "USER_APP_LINK": "https://yatricustomer.page.link/pcJb",
-    "PRIVACY_POLICY_LINK": "https://docs.google.com/document/d/1gI_P4oZnVwE0O71rI4Mi8rpZbL9rsIRkyewbql85Np8",
-    "SPECIAL_ZONE_OTP_VIEW": "false",
     "StringKeys": ["WELCOME_TEXT", "ABOUT_TEXT", "NEED_IT_TO_ENABLE_LOCATION", "CURRENTLY_WE_ALLOW_ONLY_KARNATAKA_REGISTERED_NUMBER", "YOU_ARE_ABOUT_TO_CALL_NAMMA_YATRI_SUPPORT", "YOUR_LOCATION_HELPS_OUR_SYSTEM", "EARNED_ON_APP", "TRAVELLED_ON_APP", "REPORT_ISSUE_CHAT_PLACEHOLDER", "CORPORATE_ADDRESS", "CORPORATE_ADDRESS_DESCRIPTION", "CORPORATE_ADDRESS_DESCRIPTION_ADDITIONAL", "REGISTERED_ADDRESS", "REGISTERED_ADDRESS_DESCRIPTION", "REGISTERED_ADDRESS_DESCRIPTION_ADDITIONAL"],
-    "fontType": "Assets",
-    "currency": "₹",
-    "isGradient" : "false",
-    "gradient": [],
-    "addFavouriteScreenBackArrow" : "ny_ic_chevron_left_white,https://assets.juspay.in/nammayatri/images/user/ny_ic_chevron_left_white.png",
-    "popupBackground" : "#FFFFFF",
-    "apiLoaderLottie": "primary_button_loader.json",
-    "addFavouriteScreenBackArrow" : "ny_ic_chevron_left_white,https://assets.juspay.in/nammayatri/images/user/ny_ic_chevron_left_white.png",
-    "primaryTextColor": "#FCC32C",
-    "primaryBackground": "#2C2F3A",
     "showCorporateAddress" : false,
-    "imageUploadOptional" : true,
     "showPaymentDetails" : false,
-    "BONUS_EARNED" : "false",
-    "clientName" : "Yatri",
     "languageList": [{
-        "name": "English",
-        "value": "EN_US",
-        "subtitle": "ഇംഗ്ലീഷ്"
-      },
-      {
-        "name": "മലയാളം",
-        "value": "ML_IN",
-        "subtitle": "Malayalam"
-      }
+      "name": "English",
+      "value": "EN_US",
+      "subtitle": "ഇംഗ്ലീഷ്"
+    },
+    {
+      "name": "മലയാളം",
+      "value": "ML_IN",
+      "subtitle": "Malayalam"
+    }
     ],
     "engilshInNative" : "ഇംഗ്ലീഷ്",
     "englishStrings": {
@@ -75,17 +56,30 @@ window.getMerchantConfig = function () {
       "REGISTERED_ADDRESS_DESCRIPTION_ADDITIONAL" : "വെബ്സൈറ്റ്: <u>https://www.getyatri.com</u>",
     },
     "logs": ["JUSPAY","FIREBASE","CLEVERTAP"]
-    , "fontName" : "PlusJakartaSans"
-    , "fontKannada" : "NotoSansKannada"
     , "allowAllMobileNumber" : false
-    , "showGenderBanner" : false
-    , "defaultLanguage" : "EN_US"
-    , "navigationAppConfig" : {
-        "query" : "google.navigation:q=%f,%f"
-      , "packageName" : "com.google.android.apps.maps"
+    , "others" : {
+      "otpRegex" :  "is your OTP for login to [A-Za-z]+ [A-Za-z]+ [A-Za-z]+"
+      , "termsLink" : "https://docs.google.com/document/d/1zmQWO_L4EjyCXC3xSlp1f3DS2wI4HfbHxg42tXelWe0"
+      , "privacyLink" : "https://docs.google.com/document/d/1gI_P4oZnVwE0O71rI4Mi8rpZbL9rsIRkyewbql85Np8"
     }
-    , "OTP_MESSAGE_REGEX" : "is your OTP for login to [A-Za-z]+ [A-Za-z]+"
-    , "autoPayBanner" : false
-    , "referralType" : "QRScreen"
+    , "features" : {
+      "enableBonus" : false
+      , "enableImageUpload" : true
+      , "enableGender" : false
+      , "enableOtpRide" : false
+    }
+    , "appDatas" : {
+      "link" : "https://play.google.com/store/apps/details?id=net.openkochi.yatripartner"
+      , "name" : "Yatri"
+    }
+    , "vehicle" : {
+      "validationPrefix" :  "KL"
+    }
+    , "banners" :{
+      "autoPay" : false
+    }
+    , "referral": {
+      "link" : "https://yatricustomer.page.link/pcJb"
+    }
   })
 }

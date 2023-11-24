@@ -42,9 +42,11 @@ import Language.Strings (getString, getEN)
 import Language.Types (STR(..))
 import Resources.Constants (DecodeAddress(..), decodeAddress, getFaresList, getFareFromArray, getFilteredFares, getKmMeter, fetchVehicleVariant)
 import Common.Types.App (LazyCheck(..))
-import MerchantConfig.Utils (getValueFromConfig, getMerchant, Merchant(..))
+import MerchantConfig.Utils (getMerchant, Merchant(..))
 import Effect.Unsafe (unsafePerformEffect)
 import Engineering.Helpers.LogEvent (logEvent)
+import ConfigProvider
+import Constants
 
 instance showAction :: Show Action where
   show _ = ""
@@ -180,7 +182,7 @@ myRideListTransformerProp listRes =  filter (\item -> (item.status == (toPropVal
     time : toPropValue (convertUTCtoISC (fromMaybe ride.createdAt ride.rideStartTime) "h:mm A"),
     source : toPropValue (decodeAddress (Booking ride.fromLocation)),
     destination : toPropValue (decodeAddress (Booking (ride.bookingDetails ^._contents^._toLocation))),
-    totalAmount : toPropValue ((getValueFromConfig "currency") <> " " <> show (fromMaybe 0 ((fromMaybe dummyRideAPIEntity (ride.rideList !!0) )^. _computedPrice))),
+    totalAmount : toPropValue ((getCurrency appConfig) <> " " <> show (fromMaybe 0 ((fromMaybe dummyRideAPIEntity (ride.rideList !!0) )^. _computedPrice))),
     cardVisibility : toPropValue "visible",
     shimmerVisibility : toPropValue "gone",
     driverImage : toPropValue $ fetchImage FF_ASSET "ny_ic_user",
@@ -214,7 +216,7 @@ myRideListTransformer state listRes = filter (\item -> (item.status == "COMPLETE
     time :  (convertUTCtoISC (fromMaybe ride.createdAt ride.rideStartTime) "h:mm A"),
     source :  decodeAddress (Booking ride.fromLocation),
     destination : decodeAddress (Booking (ride.bookingDetails ^._contents^._toLocation)),
-    totalAmount :  ((getValueFromConfig "currency") <> " " <> show (fromMaybe (0) rideDetails.computedPrice)),
+    totalAmount :  ((getCurrency appConfig) <> " " <> show (fromMaybe (0) rideDetails.computedPrice)),
     cardVisibility :  "visible",
     shimmerVisibility :  "gone",
     driverImage : fetchImage FF_ASSET  "ny_ic_user",
@@ -237,7 +239,7 @@ myRideListTransformer state listRes = filter (\item -> (item.status == "COMPLETE
   , faresList : updatedFareList
   , baseFare : fares.baseFare
   , pickupCharges : fares.pickupCharges
-  , extraFare : (getValueFromConfig "currency") <> " " <> show (getFareFromArray ride.fareBreakup "EXTRA_DISTANCE_FARE")
+  , extraFare : (getCurrency appConfig) <> " " <> show (getFareFromArray ride.fareBreakup "EXTRA_DISTANCE_FARE")
   , waitingCharges : fares.waitingCharges
   , baseDistance : baseDistanceVal
   , extraDistance : getKmMeter $  (\a -> if a < 0 then - a else a) ((fromMaybe 0 (rideDetails.chargeableRideDistance)) - (fromMaybe 0 (((ride.bookingDetails)^._contents)^._estimatedDistance)))
@@ -261,10 +263,9 @@ matchRidebyId rideOne rideTwo = rideOne.bookingId == rideTwo.bookingId
 
 getFares ∷ Array FareBreakupAPIEntity → Fares
 getFares fares = {
-  baseFare :(getValueFromConfig "currency") <>  " " <> show (((getFareFromArray fares "BASE_FARE") + (getFareFromArray fares "EXTRA_DISTANCE_FARE")) - 10)
-, pickupCharges : (getValueFromConfig "currency") <> " 10.0"
-, waitingCharges : (getValueFromConfig "currency") <> " " <> show (getFareFromArray fares "WAITING_CHARGES")
-, nominalFare : (getValueFromConfig "currency") <> " " <> show (getFareFromArray fares "DRIVER_SELECTED_FARE")
+  baseFare :(getCurrency appConfig) <>  " " <> show (((getFareFromArray fares "BASE_FARE") + (getFareFromArray fares "EXTRA_DISTANCE_FARE")) - 10)
+, pickupCharges : (getCurrency appConfig) <> " 10.0"
+, waitingCharges : (getCurrency appConfig) <> " " <> show (getFareFromArray fares "WAITING_CHARGES")
+, nominalFare : (getCurrency appConfig) <> " " <> show (getFareFromArray fares "DRIVER_SELECTED_FARE")
 }
-
 

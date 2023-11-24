@@ -2,7 +2,8 @@ module Components.StepsHeaderModel.Controller where
 
 import Screens.Types (StepsHeaderModelState)
 import Helpers.Utils as HU
-import MerchantConfig.DefaultConfig as MC
+import ConfigProvider
+import Constants
 import Common.Types.App (LazyCheck(..)) as Lazy
 import Language.Strings (getString)
 import Language.Types (STR(..))
@@ -14,5 +15,5 @@ stepsHeaderData currentIndex = {
     activeIndex : currentIndex,
     textArray : [(getString LETS_GET_YOU_TRIP_READY), (getString GOT_AN_OTP), (getString JUST_ONE_LAST_THING)],
     backArrowVisibility : HU.showCarouselScreen Lazy.FunctionCall
-  , config : MC.config
+  , config : getAppConfig appConfig
 }

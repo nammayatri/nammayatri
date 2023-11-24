@@ -33,7 +33,7 @@ import Screens.InvoiceScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.Types as ST
 import Styles.Colors as Color
 import Helpers.Utils (isHaveFare)
-import MerchantConfig.Utils (getValueFromConfig, getMerchant, Merchant (..))
+import MerchantConfig.Utils (getMerchant, Merchant (..))
 
 screen :: ST.InvoiceScreenState -> Screen Action ST.InvoiceScreenState ScreenOutput
 screen initialState =

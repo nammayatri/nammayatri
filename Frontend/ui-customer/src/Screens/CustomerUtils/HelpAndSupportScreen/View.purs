@@ -455,7 +455,7 @@ topicsList state = [
     , title : (getString FOR_OTHER_ISSUES_WRITE_TO_US)
     , image : fetchImage FF_COMMON_ASSET "ny_ic_clip_board"
     }
-  ] <> if state.data.config.enableContactSupport then 
+  ] <> if state.data.config.features.enableSupport then 
         [ { action : CallSupport
           , title : (getString CONTACT_SUPPORT)
           , image : fetchImage FF_ASSET "ny_ic_help"

@@ -35,7 +35,7 @@ import Font.Style as FontStyle
 import Helpers.Utils (fetchImage, FetchImageFrom(..), getAssetsBaseUrl, getPaymentMethod, secondsToHms, makeNumber, getVariantRideType)
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import MerchantConfig.Utils (Merchant(..), getMerchant, getValueFromConfig)
+import MerchantConfig.Utils (Merchant(..), getMerchant)
 import Prelude (Unit, (<<<), ($), (/), (<>), (==), unit, show, const, map, (>), (-), (*), bind, pure, discard, not, (&&), (||), (/=))
 import Presto.Core.Types.Language.Flow (doAff)
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), Accessiblity(..), afterRender, alignParentBottom, alignParentLeft, alpha, background, clickable, color, cornerRadius, ellipsize, fontSize, fontStyle, frameLayout, gravity, height, imageUrl, imageView, imageWithFallback, letterSpacing, lineHeight, linearLayout, margin, maxLines, onClick, orientation, padding, scrollBarY, scrollView, singleLine, stroke, text, textSize, textView, visibility, weight, width, layoutGravity, accessibilityHint, accessibility, onAnimationEnd)
@@ -327,7 +327,9 @@ mapOptionsView push state =
 
 supportButton :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM ( Effect Unit) w
 supportButton push state =
- linearLayout
+  let config = state.data.config.features
+  in 
+  linearLayout
   [ width WRAP_CONTENT
   , height WRAP_CONTENT
   , orientation VERTICAL
@@ -345,13 +347,13 @@ supportButton push state =
       , margin $ Margin 10 10 10 10
       , accessibilityHint "Share Ride : Button"
       , accessibility ENABLE
-      , visibility (if (getValueFromConfig "enableShareRide") == "true" then VISIBLE else GONE)
+      , visibility (if config.enableShareRide then VISIBLE else GONE)
       , onClick push $ const ShareRide
       ]
     , linearLayout
       [ height (V 1)
       , width (V 19)
-      , visibility (if (getValueFromConfig "enableShareRide") == "true" && state.data.config.enableContactSupport then VISIBLE else GONE)
+      , visibility (if config.enableShareRide && state.data.config.features.enableSupport then VISIBLE else GONE)
       , margin (MarginTop 2 )
       , background Color.lightGreyShade
       ][]
@@ -359,7 +361,7 @@ supportButton push state =
       [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_contact_support"
       , height $ V 18
       , width $ V 18
-      , visibility if state.data.config.enableContactSupport then VISIBLE else GONE
+      , visibility if state.data.config.features.enableSupport then VISIBLE else GONE
       , margin $ Margin 10 12 10 10
       , accessibilityHint "Contact Customer Support : Button"
       , accessibility ENABLE
@@ -728,6 +730,9 @@ cancelRideLayout push state =
 ---------------------------------- contactView ---------------------------------------
 contactView :: forall w.(Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM (Effect Unit) w
 contactView push state =
+  let
+    features = state.data.config.features
+  in
   linearLayout
     [ orientation HORIZONTAL
     , height WRAP_CONTENT
@@ -783,7 +788,7 @@ contactView push state =
              , accessibilityHint "Chat or Call : Button"
              , accessibility ENABLE
              ][ imageView
-                 [ imageWithFallback  $ if (getValueFromConfig "isChatEnabled") == "true" then if state.props.unReadMessages then fetchImage FF_ASSET "ic_chat_badge_green" else fetchImage FF_ASSET "ic_call_msg" else fetchImage FF_COMMON_ASSET "ny_ic_call"
+                 [ imageWithFallback  $ if features.enableChat then if state.props.unReadMessages then fetchImage FF_ASSET "ic_chat_badge_green" else fetchImage FF_ASSET "ic_call_msg" else fetchImage FF_COMMON_ASSET "ny_ic_call"
                  , height $ V state.data.config.driverInfoConfig.callHeight
                  , width $ V state.data.config.driverInfoConfig.callWidth
                  ]

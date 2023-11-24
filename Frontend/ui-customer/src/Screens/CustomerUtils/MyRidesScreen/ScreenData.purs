@@ -18,7 +18,8 @@ module Screens.MyRidesScreen.ScreenData where
 import Data.Maybe (Maybe(..))
 import Screens.Types (AnimationState(..), MyRidesScreenState, IndividualRideCardState, ZoneType(..))
 import Services.API (BookingLocationAPIEntity(..))
-import MerchantConfig.DefaultConfig as DC
+import ConfigProvider
+import Constants
 import Prelude ((<>))
 import Foreign.Object (empty)
 
@@ -37,7 +38,7 @@ initData =
       { selectedItem: dummyIndividualCard
       , offsetValue: 0
       , loadMoreText: "LoadMore"
-      , config: DC.config
+      , config: getAppConfig appConfig
       , logField : empty
       , isSrcServiceable: true
       }

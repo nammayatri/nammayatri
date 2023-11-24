@@ -40,10 +40,11 @@ import Components.PopUpModal.View as PopUpModal
 import Components.PopUpModal.Controller as PopUpModalConfig
 import Screens.DriverDetailsScreen.ComponentConfig
 import PrestoDOM.Types.DomAttributes (Corners(..))
-import MerchantConfig.Utils (getValueFromConfig)
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Common.Types.App (LazyCheck(..))
 import Prelude ((<>))
+import ConfigProvider
+import Constants
 
 screen :: ST.DriverDetailsScreenState -> Screen Action ST.DriverDetailsScreenState ScreenOutput
 screen initialState =
@@ -65,6 +66,8 @@ view
   -> ST.DriverDetailsScreenState
   -> PrestoDOM (Effect Unit) w
 view push state =
+  let features = (getAppConfig appConfig).features
+  in
   Anim.screenAnimation $
   relativeLayout
   [height MATCH_PARENT
@@ -83,7 +86,7 @@ view push state =
       profilePictureLayout state push
      , driverDetailsView push state
     ]
-  , if state.props.genderSelectionModalShow && (getValueFromConfig "showGenderBanner") then selectYourGender push state else textView[]
+  , if state.props.genderSelectionModalShow && features.enableGender then selectYourGender push state else textView[]
   , if state.props.keyboardModalType == ST.MOBILE__NUMBER then enterMobileNumberModal push state else textView[height $ V 0,
   width $ V 0]
  , if state.props.keyboardModalType == ST.OTP then enterOtpModal push state else textView[height $ V 0,

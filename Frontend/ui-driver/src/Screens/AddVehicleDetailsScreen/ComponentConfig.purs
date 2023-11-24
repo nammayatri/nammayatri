@@ -27,14 +27,16 @@ import PrestoDOM
 import Screens.Types as ST
 import Styles.Colors as Color
 import Components.ReferralMobileNumber as ReferralMobileNumber
-import MerchantConfig.Utils (getValueFromConfig)
 import Data.String as DS
 import Screens.AddVehicleDetailsScreen.Controller (validateRegistrationNumber)
+import ConfigProvider
+import Constants
 
 primaryButtonConfig :: ST.AddVehicleDetailsScreenState -> PrimaryButton.Config
 primaryButtonConfig state = let 
     config = PrimaryButton.config
-    imageUploadCondition = getValueFromConfig "imageUploadOptional" || state.props.isValidState
+    features = (getAppConfig appConfig).features
+    imageUploadCondition = features.enableImageUpload || state.props.isValidState
     activate = ((toLower(state.data.vehicle_registration_number) == toLower(state.data.reEnterVehicleRegistrationNumber)) && 
                 (state.data.dateOfRegistration /= Just "") && 
                 state.data.vehicle_registration_number /= "" &&

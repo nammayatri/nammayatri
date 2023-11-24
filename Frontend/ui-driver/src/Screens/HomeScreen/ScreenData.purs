@@ -21,13 +21,14 @@ import Services.API (DriverProfileStatsResp(..), Status(..))
 import Data.Maybe
 import Foreign.Object (empty)
 import Common.Types.App as Common
-import MerchantConfig.DefaultConfig as DC
+import ConfigProvider
+import Constants
 
 initData :: HomeScreenState
 initData = {
     data: {
         snappedOrigin : Nothing,
-        config : DC.config,
+        config : getAppConfig appConfig,
         driverName : "",
         vehicleType : "",
         profileImg : Nothing,

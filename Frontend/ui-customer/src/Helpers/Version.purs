@@ -29,7 +29,6 @@ import Data.Int as INT
 import Data.Maybe (fromMaybe)
 import Data.String (split, Pattern(..))
 import Engineering.Helpers.BackTrack (liftFlowBT)
-import Engineering.Helpers.Utils (getAppConfig)
 import ModifyScreenState
 import Screens.Types (UpdatePopupType(..))
 import Data.Array ((!!), all, any)
@@ -40,6 +39,7 @@ import Services.API (UpdateProfileReq(..))
 import Data.Lens ((^.))
 import Accessor (_minor, _major, _maintenance)
 import Constants as Constants
+import Domain.Cache (getAppConfigFromCache)
 
 type IosVersion = {
   majorUpdateIndex :: Int,
@@ -58,7 +58,7 @@ checkVersion = do
   if androidUpdateRequired versionCodeAndroid 
     then do
       liftFlowBT $ JB.hideLoader
-      config <- getAppConfig Constants.appConfig
+      config <- getAppConfigFromCache
       modifyScreenState $ AppUpdatePopUpScreenType (\appUpdatePopUpScreenState → appUpdatePopUpScreenState {updatePopup = AppVersion, config = config}) --TODO:: Make update popUp screen generic if it's used for other purposes also
       appUpdatedFlow <- UI.handleAppUpdatePopUp
       case appUpdatedFlow of

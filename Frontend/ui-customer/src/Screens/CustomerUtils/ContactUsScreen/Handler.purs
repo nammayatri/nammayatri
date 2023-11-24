@@ -22,15 +22,14 @@ import Control.Monad.Except.Trans (lift)
 import Control.Transformers.Back.Trans as App
 import PrestoDOM.Core.Types.Language.Flow (runScreen)
 import Screens.ContactUsScreen.View as ContactUsScreen
-import Engineering.Helpers.Utils (getAppConfig)
-import Constants as Constants
+import Domain.Cache (getAppConfigFromCache)
 import Types.App (FlowBT, GlobalState(..),CONTACT_US_SCREEN_OUTPUT(..))
 
 
 contactUsScreen ::FlowBT String CONTACT_US_SCREEN_OUTPUT
 contactUsScreen = do
   (GlobalState state) <- getState
-  config <- getAppConfig Constants.appConfig
+  config <- getAppConfigFromCache
   act <- lift $ lift $ runScreen $ ContactUsScreen.screen state.contactUsScreen{data{config= config}}
   case act of
     GoBack ->  App.BackT $ pure App.GoBack 

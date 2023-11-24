@@ -17,7 +17,8 @@ module Screens.ContactUsScreen.ScreenData where
 
 import Screens.Types(ContactUsScreenState)
 import Data.Maybe(Maybe(..))
-import MerchantConfig.DefaultConfig as DC
+import ConfigProvider
+import Constants
 import Foreign.Object (empty)
 
 initData :: ContactUsScreenState
@@ -28,7 +29,7 @@ initData = {
     description : "",
     bookingId : "",
     errorMessage : Nothing,
-    config : DC.config,
+    config : getAppConfig appConfig,
     logField : empty
   },
   props: {
