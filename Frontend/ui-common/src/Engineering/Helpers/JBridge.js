@@ -310,7 +310,7 @@ export const getKeyInSharedPrefKeys = function (key) {
   return JBridge.getFromSharedPrefs(key);
 };
 
-export const checkAndAskNotificationPermission = function (unit) {
+export const checkAndAskNotificationPermission = function (shouldAlwaysAsk) {
   const lastAppOpened = getKeyInSharedPrefKeys("LAST_APP_OPENED");
   const appOpenCount = getKeyInSharedPrefKeys("APP_OPEN_COUNT");
   let check = true;
@@ -330,8 +330,9 @@ export const checkAndAskNotificationPermission = function (unit) {
     JBridge.setKeysInSharedPrefs("LAST_APP_OPENED", new Date().toLocaleDateString());
     JBridge.setKeysInSharedPrefs("APP_OPEN_COUNT", "0");
   }
-
-  if (check && window.__OS == "ANDROID" && window.JBridge.checkAndAskNotificationPermission) {
+  
+  if ((check || shouldAlwaysAsk) && window.__OS == "ANDROID" && window.JBridge.checkAndAskNotificationPermission) {
+    console.log("checkAndAskNotificationPermission");
     return window.JBridge.checkAndAskNotificationPermission();
   }
 };
@@ -399,7 +400,9 @@ export const getAndroidVersion = function (unit) {
   if (window.__OS == "IOS") {
     return 0;
   } else {
-    return window.JBridge.getAndroidVersion();
+    const stringifiedData = window.JBridge.getSessionInfo();
+    const parsedSessionData = JSON.parse(stringifiedData);
+    return parsedSessionData["os_version"];
   }
 };
 
@@ -992,10 +995,13 @@ export const showMapImpl = function (id) {
 
 export const getCurrentLatLong = function () {
   if (window.JBridge.getCurrentLatLong) {
+    console.log("coming_inside: ");
     const parsedData = JSON.parse(window.JBridge.getCurrentLatLong());
     if (parsedData.lat && parsedData.lng) {
+      console.log("coming_inside2: ", parsedData);
       return parsedData;
     } else { // fallBack for previous release
+      console.log("coming_inside3: ", parsedData);
       return {
         "lat": parsedData.lat,
         "lng": parsedData.long
@@ -1371,6 +1377,7 @@ export const firebaseUserID = function (str) {
 export const storeCallBackDriverLocationPermission = function (cb) {
   return function (action) {
     return function () {
+      console.log ("in_js");
       try {
         const locationCallBack = function () {
           const isPermissionEnabled = isLocationPermissionEnabled()() && isLocationEnabled()()
@@ -1456,6 +1463,28 @@ export const storeCallBackOverlayPermission = function (cb) {
         console.log("In storeCallBackOverlayPermission ---------- + " + action);
       } catch (error) {
         console.log("Error occurred in storeCallBackOverlayPermission ------", error);
+      }
+    }
+  }
+}
+
+export const storeCallBackNotificationPermission = function (cb) {
+  return function (action) {
+    return function () {
+      try {
+        const callback = callbackMapper.map(function (isPermissionEnabled) {
+          cb(action(isPermissionEnabled))();
+        });
+        const notificationCallback = function () {
+          const isPermissionEnabled = JBridge.isNotificationPermissionEnabled()
+          cb(action(isPermissionEnabled))();
+        }
+        if (window.onResumeListeners) {
+          window.onResumeListeners.push(notificationCallback);
+        }
+        console.log("In storeCallBackNotificationPermission ---------- + " + action);
+      } catch (error) {
+        console.log("Error occurred in storeCallBackNotificationPermission ------", error);
       }
     }
   }
@@ -2131,13 +2160,16 @@ export const addCarouselWithVideoExists = function () {
 }
 
 export const addCarousel = function (carouselModalJson, id) {
+  console.log("in_js_2");
   const carouselJson = JSON.stringify(carouselModalJson);
   const data = JSON.parse(carouselJson);
   const originalArray = data.carouselData;
   if(JBridge.addCarouselWithVideo){
+    console.log("in_js_3");
     return JBridge.addCarouselWithVideo(carouselJson, id);
   }
   else if(JBridge.addCarousel){
+    console.log("in_js_4");
     const modifiedArray = originalArray.map(item => ({ image : item.imageConfig.image , title : item.titleConfig.text , description : item.descriptionConfig.text }));
     return JBridge.addCarousel(JSON.stringify(modifiedArray), id);
   }
@@ -2191,4 +2223,38 @@ export const isNetworkTimeEnabled = function () {
     return JBridge.isNetworkTimeEnabled();
   }
   return true;
+}
+
+export const onFocused = function(callback){
+  return function(elementId) {
+    console.log(elementId);
+    return function (){
+      const element = document.getElementById(elementId);
+      console.log (element);
+      if (element) {
+        element.addEventListener("focus", () => {
+          callback(element.value);
+        });
+      } else {
+        console.error(`Element with ID '${elementId}' not found.`);
+      }
+    }
+  }
+};
+
+export const renderCameraProfilePicture = function (id) {
+  return function () {
+    return JBridge.renderCameraProfilePicture(id);
+  };
+};
+
+export const isNotificationPermissionEnabled = function () {
+  return function() {
+    console.log("isNotificationPermissionEnabled");
+    if (window.JBridge.isNotificationPermissionEnabled) {
+      return window.JBridge.isNotificationPermissionEnabled();
+    } else {
+      return false;
+    }
+  }
 }

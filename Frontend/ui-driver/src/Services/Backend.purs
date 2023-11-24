@@ -156,10 +156,13 @@ triggerOTPBT payload = do
 
 makeTriggerOTPReq :: String       → TriggerOTPReq
 makeTriggerOTPReq    mobileNumber = TriggerOTPReq
+    let operatingCity = getValueToLocalStore DRIVER_LOCATION
+    in
     {
       "mobileNumber"      : mobileNumber,
       "mobileCountryCode" : "+91",
-      "merchantId" : if (SC.getMerchantId "") == "NA" then getValueToLocalNativeStore MERCHANT_ID else (SC.getMerchantId "" )
+      "merchantId" : if (SC.getMerchantId "") == "NA" then getValueToLocalNativeStore MERCHANT_ID else (SC.getMerchantId "" ),
+      "merchantOperatingCity" : if operatingCity == "__failed" || operatingCity == "--" then Nothing else Just operatingCity
     }
 
 
@@ -400,6 +403,7 @@ mkUpdateDriverInfoReq dummy
           "ML_IN" -> "MALAYALAM"
           "BN_IN" -> "BENGALI"
           "TA_IN" -> "TAMIL"
+          "TE_IN" -> "TELUGU"
           _ -> "ENGLISH"
     , bundleVersion: Nothing
     , clientVersion: Nothing
@@ -1196,3 +1200,14 @@ rideRoute rideId = do
   withAPIResult (EP.rideRoute rideId) unwrapResponse $ callAPI headers $ RideRouteReq rideId
   where
     unwrapResponse x = x
+
+------------------------------------------------------------------------- MerchantOperatingCity List -----------------------------------------------------------------------------
+
+getMerchantOperatingCityListBT :: String -> FlowBT String GetCityRes
+getMerchantOperatingCityListBT _ = do 
+    let id = if (SC.getMerchantId "") == "NA" then getValueToLocalNativeStore MERCHANT_ID else (SC.getMerchantId "" )
+    headers <- getHeaders' "" false 
+    withAPIResultBT (EP.getMerchantIdList id) (\x -> x) errorHandler (lift $ lift $ callAPI headers (GetCityReq id))
+    where
+    errorHandler errorPayload = do 
+            BackT $ pure GoBack

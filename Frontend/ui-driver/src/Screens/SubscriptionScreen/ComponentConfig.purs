@@ -197,7 +197,7 @@ joinPlanButtonConfig state = let
       , alpha = if isNothing state.props.joinPlanProps.selectedPlanItem then 0.6 else 1.0
       , height = (V 48)
       , cornerRadius = 8.0
-      , visibility = if state.data.config.enableIntroductoryView then GONE else VISIBLE
+      , visibility = if state.props.joinPlanProps.isIntroductory then GONE else VISIBLE
       , id = "JoinPlanPrimaryButton"
       , enableLoader = (JB.getBtnLoader "JoinPlanPrimaryButton")
       , margin = (MarginBottom 16)
@@ -396,7 +396,7 @@ tryAgainButtonConfig state = let
 
 optionsMenuConfig :: ST.SubscriptionScreenState -> OptionsMenuConfig.Config
 optionsMenuConfig state = 
-  let optionsMenuItems = state.data.config.optionsMenuItems
+  let optionsMenuItems = state.data.config.subscriptionConfig.optionsMenuItems
   in
   OptionsMenuConfig.config {
   menuItems = [
@@ -458,7 +458,7 @@ dueDetailsListState state =
     {
       date : convertUTCtoISC item.tripDate "Do MMM YYYY",
       planType : planOfferData.plan,
-      offerApplied : (getPromoConfig [OfferEntity{title : Mb.Just planOfferData.offer, description : Mb.Nothing, tnc : Mb.Nothing, offerId : "", gradient : Nothing}] state.data.config.gradientConfig) DA.!! 0 ,
+      offerApplied : (getPromoConfig [OfferEntity{title : Mb.Just planOfferData.offer, description : Mb.Nothing, tnc : Mb.Nothing, offerId : "", gradient : Nothing}] state.data.config.subscriptionConfig.gradientConfig) DA.!! 0 ,
       noOfRides : item.noOfRides,
       totalEarningsOfDay : item.earnings,
       dueAmount : item.amount,
@@ -484,6 +484,7 @@ offerCardBannerConfig isPlanCard bannerProps=
             "TA_IN" | len > 3 -> 3
             "BN_IN" | len > 4 -> 4
             "ML_IN" | len > 5 -> 5
+            "TE_IN" | len > 6 -> 6
             _ -> 0
     date = Mb.fromMaybe "" (strArray DA.!! (getLanguage (DA.length strArray)))
     title' = getVarString OFFER_CARD_BANNER_TITLE [date]

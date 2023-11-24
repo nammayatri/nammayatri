@@ -15,13 +15,18 @@
 
 module Components.SelectMenuButton.Controller where
 
+import Styles.Types (Color)
+
 data Action = OnSelection State
 
 type State = { 
       text :: Text , 
       isSelected :: Boolean ,
       index :: Int,
-      lineVisiblity :: Boolean
+      lineVisiblity :: Boolean,
+      selectedBackgroundColor :: Color,
+      selectedStrokeColor :: Color,
+      notSelectedStrokeColor :: Color
       }
 type Text = { 
     name :: String, 

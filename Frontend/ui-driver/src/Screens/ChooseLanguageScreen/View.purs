@@ -145,5 +145,5 @@ menuButtonDriver state push =
       [ Anim.translateYAnimFromTopWithAlpha $ AnimConfig.translateYAnimMapConfig index
       ] $ MenuButton.view
           (push <<< (MenuButtonAction))
-          { text: {name: language.name, value: language.value, subtitle: language.subtitle}, isSelected: (state.props.selectedLanguage == language.value), index : index, lineVisiblity : false }) (state.data.config.languageList)
+          { text: {name: language.name, value: language.value, subtitle: language.subtitle}, isSelected: (state.props.selectedLanguage == language.value), index : index, lineVisiblity : false , selectedStrokeColor : Color.white900, selectedBackgroundColor : Color.white900, notSelectedStrokeColor: Color.white900}) (state.data.config.languageList)
   )
