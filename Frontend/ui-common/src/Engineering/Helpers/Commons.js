@@ -399,7 +399,7 @@ function formatDates(date, format, language) {
   return result;
 }
 
-export function formatCurrencyWithCommas(amount) {
+export const formatCurrencyWithCommas = function (amount) {
   amount = parseFloat(amount.replace(/[^0-9.-]+/g, ""));
   if (isNaN(amount)) {
     return "";
@@ -407,8 +407,8 @@ export function formatCurrencyWithCommas(amount) {
   return amount.toLocaleString("en-IN");
 }
 
-export function camelCaseToSentenceCase(string){
-  const result = string.replaceAll(/([A-Z])/g, " $1");
+export const camelCaseToSentenceCase = function(string) {
+  const result = string.replace(/([A-Z])/g, " $1");
   return (result.substring(0, 1).toUpperCase() + result.substring(1).toLowerCase());
 }
 
