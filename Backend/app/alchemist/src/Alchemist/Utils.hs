@@ -1,5 +1,6 @@
 module Alchemist.Utils where
 
+import Data.Char (toUpper)
 import Data.List (intercalate, nub)
 import Data.List.Split (split, splitOn, splitWhen, whenElt)
 import Kernel.Prelude hiding (hPutStr)
@@ -41,3 +42,8 @@ getQualifiedImport = \case
   "TimeOfDay" -> Just "Beckn.Types"
   "Int" -> Just "Data.Int"
   _ -> Nothing
+
+-- Helper function to capitalize a string
+capitalize :: String -> String
+capitalize "" = ""
+capitalize (x : xs) = toUpper x : xs

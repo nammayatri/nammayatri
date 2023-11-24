@@ -16,6 +16,9 @@ module Main where
 
 import App
 import EulerHS.Prelude
+import Spec
 
 main :: IO ()
-main = runRiderApp id
+main = do
+  generateCode
+  runRiderApp id
