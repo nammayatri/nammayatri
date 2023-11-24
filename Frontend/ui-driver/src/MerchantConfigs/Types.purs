@@ -21,7 +21,8 @@ type AppConfig =
     purpleRideConfig :: PurpleRideConfig,
     mapConfig :: MapConfig,
     waitTimeConfig :: WaitTimeConfig,
-    cityConfig :: Array CityConfig
+    cityConfig :: Array CityConfig,
+    unserviceableThreshold :: Number
   } 
 
 type PurpleRideConfig = {

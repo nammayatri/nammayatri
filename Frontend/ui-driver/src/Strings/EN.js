@@ -1073,6 +1073,8 @@ const englishStrings = {
   UNABLE_TO_DETECT_YOUR_LOCATION : "Unable to detect your location",
   DETECTING_LOCATION : "Detecting Location",
   SELECT_CITY_STR : "Select City",
+  WE_ARE_NOT_LIVE_IN_YOUR_AREA : "We are not live in your area yet!\nComing soon to your city!",
+  LOCATION_UNSERVICEABLE : "Location unserviceable"
 }
 
 

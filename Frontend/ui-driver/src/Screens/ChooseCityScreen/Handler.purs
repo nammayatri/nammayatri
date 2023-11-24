@@ -18,9 +18,6 @@ chooseCityScreen = do
   case act of
     SelectLanguageScreen -> App.BackT $ pure App.GoBack 
     WelcomeScreen -> App.BackT $ App.NoBack <$> (pure GoToWelcomeScreen)
-    GetLatLong updateState -> do
-      modifyScreenState $ ChooseCityScreenStateType (\chooseCityScreen -> updateState)
-      App.BackT $ App.BackPoint <$> (pure $ GET_LAT_LONGS updateState)
     RefreshScreen updatedState -> do
       modifyScreenState $ ChooseCityScreenStateType (\chooseCityScreen -> updatedState)
       App.BackT $ App.BackPoint <$> (pure $ REFRESH_SCREEN_CHOOSE_CITY updatedState)
