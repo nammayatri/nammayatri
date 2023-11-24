@@ -34,6 +34,7 @@ library
       Alchemist.Generator.Haskell
       Alchemist.Generator.Haskell.BeamQueries
       Alchemist.Generator.Haskell.BeamTable
+      Alchemist.Generator.Haskell.DomainHandler
       Alchemist.Generator.Haskell.DomainType
       Alchemist.Generator.Haskell.Servant
       Alchemist.Generator.SQL
@@ -120,6 +121,7 @@ test-suite alchemist-tests
       Alchemist.Generator.Haskell
       Alchemist.Generator.Haskell.BeamQueries
       Alchemist.Generator.Haskell.BeamTable
+      Alchemist.Generator.Haskell.DomainHandler
       Alchemist.Generator.Haskell.DomainType
       Alchemist.Generator.Haskell.Servant
       Alchemist.Generator.SQL
