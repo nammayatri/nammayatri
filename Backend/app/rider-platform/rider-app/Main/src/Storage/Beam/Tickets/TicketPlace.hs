@@ -15,6 +15,9 @@ data TicketPlaceT f = TicketPlaceT
     lat :: B.C f (Maybe Double),
     lon :: B.C f (Maybe Double),
     gallery :: B.C f [Text],
+    shortDesc :: B.C f Text,
+    iconUrl :: B.C f (Maybe Text),
+    mapImageUrl :: B.C f (Maybe Text),
     openTimings :: B.C f (Maybe TimeOfDay),
     closeTimings :: B.C f (Maybe TimeOfDay)
   }

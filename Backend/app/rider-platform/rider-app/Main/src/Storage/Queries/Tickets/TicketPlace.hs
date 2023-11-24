@@ -38,6 +38,9 @@ instance ToTType' BeamTP.TicketPlace TicketPlace where
         BeamTP.lat = lat,
         BeamTP.lon = lon,
         BeamTP.gallery = gallery,
+        BeamTP.shortDesc = shortDesc,
+        BeamTP.iconUrl = iconUrl,
+        BeamTP.mapImageUrl = mapImageUrl,
         BeamTP.openTimings = openTimings,
         BeamTP.closeTimings = closeTimings
       }
