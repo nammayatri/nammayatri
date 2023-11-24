@@ -17,11 +17,13 @@ module Screens.TicketingScreen.ScreenData where
 
 import Screens.Types as ST
 import Components.SettingSideBar.Controller as SideBar
+import Data.Maybe (Maybe(..))
 
 initData :: ST.TicketingScreenState 
 initData = 
   { data: {
-    sideBarStatus : SideBar.CLOSED
+    sideBarStatus : SideBar.CLOSED,
+    placeInfoArray : []
   }
   , props : {}
-  } 
+  }

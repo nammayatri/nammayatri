@@ -23,6 +23,9 @@ import Services.API (TicketPlaceResp(..), TicketServicesResponse(..), TicketServ
 import Data.Int (ceil)
 import Common.Types.App as Common
 import Screens.TicketBookingScreen.ScreenData as TicketBookingScreenData
+import Data.Function.Uncurried as Uncurried
+import Engineering.Helpers.Commons as EHC
+import JBridge as JB
 
 instance showAction :: Show Action where
   show _ = ""
@@ -62,6 +65,11 @@ data ScreenOutput = GoToHomeScreen TicketBookingScreenState
                   | RefreshPaymentStatus TicketBookingScreenState
 
 eval :: Action -> TicketBookingScreenState -> Eval Action ScreenOutput TicketBookingScreenState
+
+eval AfterRender state = do
+    void $ pure $ Uncurried.runFn2 JB.fillViewPort (EHC.getNewIDWithTag "ParentScrollView") true
+    continue state
+
 eval (ToggleTicketOption ticketID) state = do
   let updatedServicesInfo = map (updateExpandService ticketID) state.data.servicesInfo
       updatedAmount = updateTicketAmount ticketID updatedServicesInfo state.data.totalAmount

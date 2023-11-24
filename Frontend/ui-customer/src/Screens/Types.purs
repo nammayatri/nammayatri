@@ -1480,7 +1480,8 @@ type TicketingScreenState = {
 }
 
 type TicketingScreenData = {
-  sideBarStatus :: SideBar.Status
+  sideBarStatus :: SideBar.Status,
+  placeInfoArray :: Array TicketPlaceResp
 } 
 
 type TicketingScreenProps = {} 

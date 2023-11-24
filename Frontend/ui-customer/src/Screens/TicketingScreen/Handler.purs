@@ -33,4 +33,10 @@ ticketingScreen = do
     ExitToHomeScreen updatedState -> do
       modifyScreenState $ TicketingScreenStateType (\_ -> updatedState)
       App.BackT $ App.NoBack <$> (pure $ EXIT_TO_HOME updatedState)
+    ExitToMyTicketsScreen updatedState -> do
+      modifyScreenState $ TicketingScreenStateType (\_ -> updatedState)
+      App.BackT $ App.BackPoint <$> (pure $ EXIT_TO_MY_TICKETS updatedState)
+    BookTickets updatedState -> do
+      modifyScreenState $ TicketingScreenStateType (\_ -> updatedState)
+      App.BackT $ App.BackPoint <$> (pure $ BOOK_TICKETS updatedState)
     _ -> App.BackT $ pure App.GoBack 

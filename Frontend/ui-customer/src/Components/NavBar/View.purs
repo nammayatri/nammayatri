@@ -64,7 +64,7 @@ view push activeIndex =
                       ]
                   ]
             )
-            [ { text: "Home", defIcon: "ny_ic_home", activeIcon : "" }, { text: "Ticketing", defIcon: "ny_ic_ticket_black" , activeIcon : ""} ]
+            [ { text: "Home", defIcon: "ny_ic_nav_home_grey", activeIcon : "ny_ic_nav_home_black" }, { text: "Ticketing", defIcon: "ny_ic_ticket_grey" , activeIcon : "ny_ic_ticket_black"} ]
         )
     ]
     where isActive index = index == activeIndex

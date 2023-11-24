@@ -2211,7 +2211,10 @@ newtype TicketPlaceResp = TicketPlaceResp
     lon :: Maybe Number,
     gallery :: Array String,
     openTimings :: Maybe String,
-    closeTimings :: Maybe String
+    closeTimings :: Maybe String,
+    iconUrl :: Maybe String,
+    shortDesc :: Maybe String,
+    mapImageUrl :: Maybe String
   }
 
 newtype TicketServicePrice = TicketServicePrice

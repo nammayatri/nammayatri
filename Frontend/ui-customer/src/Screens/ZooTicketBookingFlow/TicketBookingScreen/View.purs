@@ -44,6 +44,7 @@ import Services.API as API
 import Storage (KeyStore(..), setValueToLocalStore, getValueToLocalStore)
 import Effect.Uncurried  (runEffectFn1)
 import PaymentPage (consumeBP)
+import Engineering.Helpers.Commons as EHC
 
 screen :: ST.TicketBookingScreenState -> Screen Action ST.TicketBookingScreenState ScreenOutput
 screen initialState =
@@ -102,7 +103,7 @@ view push state =
     ]
     [ shimmerView state
     , linearLayout 
-        [ height WRAP_CONTENT
+        [ height MATCH_PARENT
         , width MATCH_PARENT
         , background Color.white900
         , orientation VERTICAL
@@ -117,12 +118,14 @@ view push state =
           ] []
         , separatorView Color.greySmoke
         , scrollView
-            [ height WRAP_CONTENT
+            [ height MATCH_PARENT
             , width MATCH_PARENT
             , background Color.white900
+            , afterRender push $ const AfterRender
+            , id $ EHC.getNewIDWithTag "ParentScrollView"
             ]
             [ linearLayout
-                [ height WRAP_CONTENT
+                [ height MATCH_PARENT
                 , width MATCH_PARENT
                 , gravity CENTER
                 , orientation VERTICAL

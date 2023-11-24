@@ -23,6 +23,13 @@ import Components.GenericHeader as GenericHeader
 import Components.PrimaryButton as PrimaryButton
 import Components.SettingSideBar as SettingSideBar
 import Data.Array (mapWithIndex)
+import Presto.Core.Types.Language.Flow (doAff, Flow, delay)
+import Effect.Aff (launchAff)
+import Types.App (defaultGlobalState)
+import Control.Monad.Except.Trans (runExceptT , lift)
+import Control.Transformers.Back.Trans (runBackT)
+import Engineering.Helpers.Commons (flowRunner)
+import Effect.Class (liftEffect)
 import Effect (Effect)
 import Font.Style as FontStyle
 import Helpers.Utils (FetchImageFrom(..), fetchImage)
@@ -31,15 +38,26 @@ import Screens.TicketingScreen.Controller (Action(..), eval, ScreenOutput(..))
 import Screens.Types as ST
 import Styles.Colors as Color
 import Components.NavBar as NavBar
+import Services.API as API
+import Services.Backend as Remote
+import Data.Array as DA
 
 screen :: ST.TicketingScreenState -> Screen Action ST.TicketingScreenState ScreenOutput
 screen initialState =
   { initialState
   , view
   , name: "TicketingScreen"
-  , globalEvents: []
+  , globalEvents: [getPlaceDataEvent]
   , eval
   }
+  where 
+  getPlaceDataEvent push = do
+    void $ launchAff $ flowRunner defaultGlobalState $ runExceptT $ runBackT $ getPlaceDataEvent' push
+    pure $ pure unit
+  
+  getPlaceDataEvent' push = do
+    placesResp <- Remote.getTicketPlacesBT ""
+    lift $ lift $ doAff do liftEffect $ push $ UpdatePlacesData placesResp
 
 view :: forall w. (Action -> Effect Unit) -> ST.TicketingScreenState -> PrestoDOM (Effect Unit) w
 view push state =
@@ -122,6 +140,7 @@ headerView push state =
             , padding $ Padding 8 8 8 8
             , gravity CENTER_VERTICAL
             , background Color.black700
+            , onClick push $ const $ MyTicketsAC
             ]
             [ textView
                 $ [ text "My Tickets"
@@ -149,64 +168,14 @@ ticketingList push state =
     , margin $ MarginTop 16
     ]
     ( mapWithIndex
-        (\index item -> ticketingItem item index)
+        (\index item -> ticketingItem push item index)
         [ { title: "Alipore Zoo", description: "Explore Alipore Zoo", icon: "ny_ic_animal_1" }
         , { title: "Millennium Park Jetty", description: "Book Ferry Tickets on the Hoogli", icon: "ny_ic_jetty" }
         ]
     )
 
-navBar :: forall w. (Action -> Effect Unit) -> ST.TicketingScreenState -> PrestoDOM (Effect Unit) w
-navBar push state =
-  linearLayout
-    [ width MATCH_PARENT
-    , height WRAP_CONTENT
-    , gravity CENTER
-    ]
-    [ linearLayout
-        [ width MATCH_PARENT
-        , height MATCH_PARENT
-        , stroke $ "1," <> Color.grey900
-        , background Color.white900
-        ]
-        ( mapWithIndex
-            ( \index item ->
-                linearLayout
-                  [ width WRAP_CONTENT
-                  , height MATCH_PARENT
-                  , weight 1.0
-                  , gravity CENTER
-                  , orientation VERTICAL
-                  ]
-                  [ linearLayout
-                      [ width $ V 60
-                      , height WRAP_CONTENT
-                      , gravity CENTER
-                      , padding $ PaddingVertical 10 10
-                      , orientation VERTICAL
-                      ]
-                      [ imageView
-                          [ width $ V 24
-                          , height $ V 24
-                          , imageWithFallback $ fetchImage FF_ASSET item.icon
-                          ]
-                      , textView
-                          $ [ weight 1.0
-                            , height WRAP_CONTENT
-                            , gravity CENTER_HORIZONTAL
-                            , maxLines 1
-                            -- , color if index == state.activeIndex then Color.black else Color.black600
-                            , text item.text
-                            ]
-                          <> FontStyle.tags TypoGraphy
-                      ]
-                  ]
-            )
-            [ { text: "Home", icon: "ny_ic_home" }, { text: "Ticketing", icon: "ny_ic_ticket_black" } ]
-        )
-    ]
-
-ticketingItem :: forall w. { title :: String, description :: String, icon :: String } -> Int -> PrestoDOM (Effect Unit) w
-ticketingItem item index =
+ticketingItem :: forall w. (Action -> Effect Unit) -> { title :: String, description :: String, icon :: String } -> Int -> PrestoDOM (Effect Unit) w
+ticketingItem push item index =
   relativeLayout
     [ width MATCH_PARENT
     , height WRAP_CONTENT
@@ -215,7 +184,7 @@ ticketingItem item index =
     , stroke $ "1," <> Color.grey900
     , margin $ Margin 16 marginTop 16 0
     , padding $ Padding 8 16 12 16
-    -- , onClick push $ const $ OnSelect config
+    , onClick push $ const $ OnSelect index
     ]
     [ linearLayout
         [ height WRAP_CONTENT

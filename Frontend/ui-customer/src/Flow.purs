@@ -2405,7 +2405,10 @@ dummyTicketPlaceResp = TicketPlaceResp
     lon : Nothing,
     gallery : [],
     openTimings : Nothing,
-    closeTimings : Nothing
+    closeTimings : Nothing,
+    iconUrl : Nothing,
+    shortDesc : Nothing,
+    mapImageUrl : Nothing
   } 
 
 ticketingScreenFlow :: FlowBT String Unit 
@@ -2413,4 +2416,12 @@ ticketingScreenFlow = do
   uiAction <- UI.ticketingScreen
   case uiAction of
     EXIT_TO_HOME _ -> homeScreenFlow
+    EXIT_TO_MY_TICKETS _ -> do
+      (GetAllBookingsRes bookedRes) <- Remote.getAllBookingsBT Booked
+      (GetAllBookingsRes pendingRes) <- Remote.getAllBookingsBT Pending
+      modifyScreenState $ TicketBookingScreenStateType (\_ -> TicketBookingScreenData.initData{props{currentStage = ViewTicketStage, previousStage = ViewTicketStage, ticketBookingList = getTicketBookings (buildBookingDetails bookedRes) (buildBookingDetails pendingRes)}})            
+      zooTicketBookingFlow
+    BOOK_TICKETS _ -> do
+      modifyScreenState $ TicketBookingScreenStateType (\ticketBookingScreen -> ticketBookingScreen{props{currentStage = DescriptionStage, previousStage = DescriptionStage}})
+      zooTicketBookingFlow
   pure unit

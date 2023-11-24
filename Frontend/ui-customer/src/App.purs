@@ -204,6 +204,8 @@ data TICKET_BOOKING_SCREEN_OUTPUT =  GET_BOOKING_INFO_SCREEN TicketBookingScreen
                                     | REFRESH_PAYMENT_STATUS TicketBookingScreenState
 
 data TICKETING_SCREEN_SCREEN_OUTPUT = EXIT_TO_HOME TicketingScreenState
+                                    | EXIT_TO_MY_TICKETS TicketingScreenState
+                                    | BOOK_TICKETS TicketingScreenState
 
 data ScreenType =
     EnterMobileNumberScreenType (EnterMobileNumberScreenState -> EnterMobileNumberScreenState)

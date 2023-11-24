@@ -2251,3 +2251,15 @@ export const isNotificationPermissionEnabled = function () {
     }
   }
 }
+
+export const fillViewPort = function (id, bool){
+  if (window.__OS == "ANDROID") {
+    console.log("zxc fillViewPort",id);
+    const cmd = "set_v=ctx->findViewById:i_" + id + ";get_v->setFillViewport:b_" + bool + ";"
+    try {
+      Android.runInUI(cmd,null)
+    }catch(e){
+      console.error(e);
+    }
+  }
+}
