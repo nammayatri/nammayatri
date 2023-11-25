@@ -28,6 +28,7 @@ import Effect.Exception (error)
 import Effect.Ref (new)
 import Engineering.Helpers.Commons (flowRunner, getWindowVariable, liftFlow)
 import Flow as Flow
+import Helpers.Version
 import Foreign (MultipleErrors, unsafeToForeign)
 import Foreign.Generic (decode)
 import JBridge as JBridge
@@ -107,6 +108,6 @@ onBundleUpdatedEvent :: FCMBundleUpdate -> Effect Unit
 onBundleUpdatedEvent description= do 
   _ <- launchAff $ flowRunner defaultGlobalState $ do
     _ ← runExceptT $ runBackT $ do
-      Flow.appUpdatedFlow description
+      appUpdatedFlow description
     pure unit
   pure unit

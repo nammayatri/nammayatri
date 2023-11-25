@@ -1911,8 +1911,10 @@ export const detectPhoneNumbers = function (cb) {
 
 export const setCleverTapUserData = function (key) {
   return function (value) {
-    if (window.JBridge.setCleverTapUserData) {
-      window.JBridge.setCleverTapUserData(key, value);
+    return function () {
+      if (window.JBridge.setCleverTapUserData) {
+        window.JBridge.setCleverTapUserData(key, value);
+      }
     }
   };
 };

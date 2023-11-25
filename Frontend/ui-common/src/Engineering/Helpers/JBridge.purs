@@ -220,7 +220,7 @@ foreign import goBackPrevWebPage ::  String -> Effect Unit
 foreign import storeMainFiberOb :: forall a. Fiber a -> Effect Unit
 foreign import getMainFiber :: forall f a. Fn2 (f -> Maybe f) (Maybe f) (Maybe (Fiber a))
 foreign import detectPhoneNumbers :: forall action. (action -> Effect Unit) -> (String  -> action) -> Effect Unit
-foreign import setCleverTapUserData :: String -> String -> Unit
+foreign import setCleverTapUserData :: String -> String -> Effect Unit
 foreign import setCleverTapUserProp :: Array ClevertapEventParams -> Unit
 foreign import cleverTapCustomEvent :: String -> Effect Unit
 foreign import cleverTapCustomEventWithParams :: String -> String -> String -> Effect Unit

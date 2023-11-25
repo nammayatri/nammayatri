@@ -16,7 +16,7 @@
 module Flow where
 
 import Engineering.Helpers.LogEvent
-import Accessor (_computedPrice, _contents, _formattedAddress, _id, _lat, _lon, _status, _toLocation, _signatureAuthData, _payload, _view_param, _show_splash, _middleName, _firstName, _lastName)
+import Accessor
 import Common.Types.App (GlobalPayload(..), SignatureAuthData(..), Payload(..), Version(..), LocationData(..), EventPayload(..), ClevertapEventParams, OTPChannel(..), LazyCheck(..), FCMBundleUpdate)
 import Components.LocationListItem.Controller (dummyLocationListState)
 import Components.SavedLocationCard.Controller (getCardType)
@@ -30,7 +30,7 @@ import Data.Either (Either(..))
 import Data.Function.Uncurried (runFn3, runFn2, runFn1)
 import Data.Int as INT
 import Data.Lens ((^.))
-import Data.Maybe (Maybe(..), fromMaybe, isJust, isNothing)
+import Data.Maybe (Maybe(..), fromMaybe, isJust, isNothing, maybe)
 import Data.Newtype (unwrap)
 import Data.Number (fromString)
 import Data.String (Pattern(..), drop, indexOf, split, toLower, trim, take, joinWith)
@@ -43,7 +43,7 @@ import Engineering.Helpers.BackTrack (getState, liftFlowBT)
 import Engineering.Helpers.Commons (liftFlow, os, getNewIDWithTag, getExpiryTime, convertUTCtoISC, getCurrentUTC, getWindowVariable, flowRunner)
 import Engineering.Helpers.Commons as EHC
 import Engineering.Helpers.Suggestions (suggestionsDefinitions, getSuggestions)
-import Engineering.Helpers.Utils (loaderText, toggleLoader, getAppConfig, saveObject, reboot, showSplash, catMaybeStrings)
+import Engineering.Helpers.Utils (loaderText, toggleLoader, getAppConfig, saveObject, reboot, showSplash)
 import Foreign (MultipleErrors, unsafeToForeign)
 import Foreign.Class (class Encode, encode)
 import Foreign.Generic (decodeJSON, encodeJSON)
@@ -103,6 +103,7 @@ import Screens.Types as ST
 import Common.Types.App as Common
 import PrestoDOM.Core (terminateUI)
 import Helpers.Storage.Flow.BaseApp
+import Helpers.Storage.Flow.SearchStatus
 import Helpers.Logs -- TODO :: Move helpers import into a single file and reexport
 import Helpers.Auth
 import Helpers.Version
@@ -177,83 +178,39 @@ toggleSplash =
       void $ lift $ lift $ delay $ Milliseconds 2000.0
       liftFlowBT $ terminateUI $ Just "SplashScreen"
 
-
-appUpdatedFlow :: FCMBundleUpdate -> FlowBT String Unit
-appUpdatedFlow payload = do
-  modifyScreenState $ AppUpdatePopUpScreenType (\appUpdatePopUpScreenState → appUpdatePopUpScreenState {updatePopup = AppUpdated ,appUpdatedView{secondaryText=payload.description,primaryText=payload.title,coverImageUrl=payload.image}})
-  fl <- UI.handleAppUpdatePopUp
-  case fl of
-    UpdateNow -> do 
-      liftFlowBT showSplash
-      liftFlowBT reboot
-    Later -> pure unit
-
 currentFlowStatus :: FlowBT String Unit
 currentFlowStatus = do
   void $ lift $ lift $ toggleLoader false
-  setValueToLocalStore DRIVER_ARRIVAL_ACTION "TRIGGER_DRIVER_ARRIVAL" --TODO:: How is this being used @rohit??
   verifyProfile "LazyCheck"
-  (FlowStatusRes flowStatus) <- Remote.flowStatusBT "LazyCheck"
-  case flowStatus.currentStatus of
+  flowStatus <- Remote.flowStatusBT "LazyCheck"
+  case flowStatus ^. _currentStatus of
     WAITING_FOR_DRIVER_OFFERS currentStatus -> goToFindingQuotesStage currentStatus.estimateId false
     DRIVER_OFFERED_QUOTE currentStatus      -> goToFindingQuotesStage currentStatus.estimateId true
     RIDE_ASSIGNED _                         -> checkRideStatus true
     _                                       -> checkRideStatus false
   hideLoaderFlow
-  _ <- pure $ hideKeyboardOnNavigation true
-  -- zooTicketBookingFlow
+  void $ pure $ hideKeyboardOnNavigation true -- TODO:: Why is this added here @ashkriti?
   homeScreenFlow
   where
     verifyProfile :: String -> FlowBT String Unit
     verifyProfile dummy = do
-      (GetProfileRes response) <- Remote.getProfileBT ""
-      updateVersion response.clientVersion response.bundleVersion
-      updateFirebaseToken response.maskedDeviceToken getUpdateToken
-      updateUserLanguage response.language
-      let name = catMaybeStrings [response.firstName, response.middleName, response.lastName]
-      void $ pure $ setCleverTapUserData "Name" name
-
-      when (fromMaybe "UNKNOWN" (response.gender) /= "UNKNOWN") $ do
-          case response.gender of
-              Just value -> void $ pure $ setCleverTapUserData "gender" value
-              Nothing -> pure unit
-
-      case response.language of
-          Just value -> void $ pure $ setCleverTapUserData "Preferred Language" value
-          Nothing -> pure unit
-
-      void $ pure $ setCleverTapUserData "Identity" (getValueToLocalStore CUSTOMER_ID)
-      void $ pure $ setCleverTapUserData "Phone" ("+91" <> (getValueToLocalStore MOBILE_NUMBER))
-      setValueToLocalStore DISABILITY_UPDATED $ if isNothing response.hasDisability then "false" else "true"
-      case response.disability of
-        Just disabilityType -> setValueToLocalStore DISABILITY_NAME disabilityType 
-        Nothing -> pure unit
-      setValueToLocalStore REFERRAL_STATUS  $ if response.hasTakenRide then "HAS_TAKEN_RIDE" else if (response.referralCode /= Nothing && not response.hasTakenRide) then "REFERRED_NOT_TAKEN_RIDE" else "NOT_REFERRED_NOT_TAKEN_RIDE"
-      setValueToLocalStore HAS_TAKEN_FIRST_RIDE if response.hasTakenRide then "true" else "false"
-      -- (PersonStatsRes resp) <- Remote.getPersonStatsBT "" -- TODO:: Make this function async in non critical flow @ashkriti
-      if DS.null (fromMaybe "" response.firstName) && isNothing response.firstName then do
-        void $ updateLocalStage HomeScreen
-        hideLoaderFlow
-        accountSetUpScreenFlow
-        handleDeepLinks Nothing true
-      else do
-        let tag = case (response.disability) of
-                      Just value -> value
-                      Nothing -> ""
-        modifyScreenState $ HomeScreenStateType (\homeScreen → homeScreen{data{ disability = Just {tag : tag, id : "", description: ""}, settingSideBar{name =fromMaybe ""  response.firstName}}})
-        setValueToLocalStore USER_NAME ((fromMaybe "" response.firstName) <> " " <> (fromMaybe "" response.middleName) <> " " <> (fromMaybe "" response.lastName))
-      if (fromMaybe "UNKNOWN" (response.gender) /= "UNKNOWN") then do
-        modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{settingSideBar{gender = Just (fromMaybe "" response.gender)}} , props {isBanner = false}})
-        else pure unit
-      if isJust response.email then do
-        setValueToLocalStore USER_EMAIL $ fromMaybe "" response.email
-        case response.email of
-            Just value -> void $ pure $ setCleverTapUserData "Email" value
-            Nothing -> pure unit
-        modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{settingSideBar{email = Just (fromMaybe "" response.email)}}})
-        else pure unit
-    
-    getUpdateToken :: String -> FlowBT String Unit
+      response <- Remote.getProfileBT ""
+      updateVersion (response ^. _clientVersion) (response ^. _bundleVersion)
+      updateFirebaseToken (response ^. _maskedDeviceToken) getUpdateToken
+      updateUserLanguage $ response ^. _language
+      updateFlowStatusStorage response
+      updateCTEventData response
+      if isNothing (response ^. _firstName) 
+        then do
+          void $ updateLocalStage HomeScreen
+          hideLoaderFlow
+          accountSetUpScreenFlow
+          handleDeepLinks Nothing true
+        else do
+          tag <- maybe (pure "") pure (response ^. _disability)
+          modifyScreenState $ HomeScreenStateType $ \homeScreen → homeScreen{data{ disability = Just {tag : tag, id : "", description: ""}, settingSideBar{name =fromMaybe ""  (response ^. _firstName),gender = response ^. _gender, email = response ^. _email}} , props {isBanner = false}}
+          
+    getUpdateToken :: String -> FlowBT String Unit --TODO:: Move this to common library
     getUpdateToken token =
       let
         UpdateProfileReq initialData = Remote.mkUpdateProfileRequest FunctionCall
@@ -307,22 +264,6 @@ currentFlowStatus = do
                 })
             Nothing -> updateFlowStatus SEARCH_CANCELLED
         else updateFlowStatus SEARCH_CANCELLED
-
--- TODO :: currently this flow is not in use
--- chooseLanguageScreenFlow :: FlowBT String Unit
--- chooseLanguageScreenFlow = do
---   logField_ <- lift $ lift $ getLogFields
---   hideLoaderFlow
---   setValueToLocalStore LANGUAGE_KEY $ getValueFromConfig "defaultLanguage"
---   _ <- lift $ lift $ liftFlow $ logEvent logField_ "ny_user_choose_lang_scn_view"
---   flow <- UI.chooseLanguageScreen
---   case flow of
---     NextScreen language -> do
---                             setValueToLocalStore LANGUAGE_KEY language
---                             void $ pure $ setCleverTapUserProp [{key : "Preferred Language", value : unsafeToForeign language}]
---                             _ <- lift $ lift $ liftFlow $(logEventWithParams logField_ "ny_user_lang_choose" "language" (language))
---                             enterMobileNumberScreenFlow
---     Refresh state -> chooseLanguageScreenFlow
 
 enterMobileNumberScreenFlow :: FlowBT String Unit
 enterMobileNumberScreenFlow = do
