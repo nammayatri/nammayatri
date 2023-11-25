@@ -67,7 +67,6 @@ import Services.Config (getCustomerNumber)
 import Storage (KeyStore(..), deleteValueFromLocalStore, getValueToLocalNativeStore, getValueToLocalStore, setValueToLocalNativeStore, setValueToLocalStore)
 import Types.App (FlowBT, GlobalState(..), HOME_SCREENOUTPUT(..), ScreenType(..))
 import Types.ModifyScreenState (modifyScreenState)
-import Services.Config (getSupportNumber)
 import Helpers.Utils as HU
 import JBridge as JB
 import Effect.Uncurried (runEffectFn4)
@@ -749,7 +748,7 @@ eval (ModifyRoute lat lon) state = do
   exit $ UpdateRoute newState
 
 eval (IsMockLocation isMock) state = do
-  let val = isMock == "true"
+  let val = false --isMock == "true" -- TODO:: Handle it properly @ashkiriti 
       _ = unsafePerformEffect $ if val then  logEvent (state.data.logField) "ny_fakeGPS_enabled" else pure unit -- we are using unsafePerformEffect becasue without it we are not getting logs in firebase, since we are passing a parameter from state i.e. logField then the output will be inline and it will not be able to precompute so it's safe to use it here.
   continue state{props{isMockLocation = val}}
 
@@ -926,7 +925,7 @@ eval (RideCompletedAC (RideCompletedCard.UpiQrRendered id)) state = do
 eval (RideCompletedAC (RideCompletedCard.Support)) state = continue state {props {showContactSupportPopUp = true}}
 eval (RideCompletedAC (RideCompletedCard.ContactSupportPopUpAC PopUpModal.OnButton1Click)) state = continue state {props {showContactSupportPopUp = false}}
 eval (RideCompletedAC (RideCompletedCard.ContactSupportPopUpAC PopUpModal.OnButton2Click)) state =  do
-                                                                                                      _ <- pure $ showDialer (getSupportNumber "") false 
+                                                                                                      pure $ unsafePerformEffect $ contactSupportNumber "" -- unsafePerformEffect is temporary fix. Need to update this.
                                                                                                       continue state
 eval (RideCompletedAC (RideCompletedCard.ContactSupportPopUpAC PopUpModal.DismissPopup)) state = continue state {props {showContactSupportPopUp = false}}
 
