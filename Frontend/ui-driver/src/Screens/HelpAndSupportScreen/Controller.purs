@@ -15,7 +15,7 @@
 
 module Screens.HelpAndSupportScreen.Controller where
 
-import Prelude (class Show, pure, unit, ($), discard, bind,map,(||),(==),(&&),(/=),(>),(<>),(/))
+import Prelude (class Show, pure, unit, ($), discard, bind,map,(||),(==),(&&),(/=),(>),(<>),(/), void)
 import PrestoDOM (Eval, continue, exit)
 import Screens.Types (CategoryListType,HelpAndSupportScreenState,IssueModalType(..),IssueInfo)
 import PrestoDOM.Types.Core (class Loggable)
@@ -24,15 +24,15 @@ import Screens.HelpAndSupportScreen.ScreenData (IssueOptions(..))
 import Language.Strings (getString)
 import Services.API (GetRidesHistoryResp,IssueReportDriverListItem(..),Status(..))
 import Language.Types(STR(..))
-import Services.Config (getSupportNumber)
 import JBridge (showDialer)
-import Helpers.Utils (getTime,getCurrentUTC,differenceBetweenTwoUTC,toStringJSON)
+import Helpers.Utils (getTime,getCurrentUTC,differenceBetweenTwoUTC,toStringJSON, contactSupportNumber)
 import Data.Array (foldr,cons,filter,reverse)
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppScreenEvent)
 import Components.IssueListFlow as IssueListFlow
 import Screens (ScreenName(..), getScreen)
 import Common.Types.App (LazyCheck(..))
 import Prelude ((<>))
+import Effect.Unsafe (unsafePerformEffect)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -94,13 +94,13 @@ eval (OptionClick optionIndex) state = do
     OngoingIssues -> exit $ OngoingIssuesScreen state {data {issueListType = ONGOING_ISSUES_MODAL}}
     ResolvedIssues -> exit $ ResolvedIssuesScreen state {data {issueListType = RESOLVED_ISSUES_MODAL}}
     CallSupportCenter -> do
-      _ <- pure $ showDialer (getSupportNumber "") false -- TODO: FIX_DIALER
+      void $ pure $ unsafePerformEffect $ contactSupportNumber "" -- TODO: FIX_DIALER -- unsafePerformEffect is temporary fix
       continue state
 eval (IssueScreenModal (IssueListFlow.AfterRender )) state = continue state
 eval (IssueScreenModal (IssueListFlow.BackPressed )) state = exit (GoBack state {data {issueListType =  HELP_AND_SUPPORT_SCREEN_MODAL  }})
 eval (IssueScreenModal  (IssueListFlow.Remove issueId  )) state = exit $ RemoveIssue issueId state
 eval (IssueScreenModal (IssueListFlow.CallSupportCenter )) state = do
-       _ <- pure $ showDialer (getSupportNumber "") false -- TODO: FIX_DIALER
+       void $ pure $ unsafePerformEffect $ contactSupportNumber ""-- TODO: FIX_DIALER -- unsafePerformEffect is temporary fix
        continue state
 eval (FetchIssueListApiCall issueList) state = do
      let apiIssueList = getApiIssueList issueList

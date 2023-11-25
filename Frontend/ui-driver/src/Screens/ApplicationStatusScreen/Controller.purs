@@ -31,7 +31,7 @@ import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppScreenEvent, trackAppTextInput)
 import MerchantConfig.Utils (Merchant(..), getMerchant)
-import Prelude (class Show, pure, show, unit, bind, ($), discard, (==), (&&), (||), not, (<=), (>=), (/))
+import Prelude (class Show, pure, show, unit, bind, void, ($), discard, (==), (&&), (||), not, (<=), (>=), (/))
 import PrestoDOM (Eval, continue, exit, continueWithCmd, updateAndExit)
 import PrestoDOM.Types.Core (class Loggable)
 import Screens (ScreenName(..), getScreen)
@@ -39,6 +39,8 @@ import Screens.Types (ApplicationStatusScreenState)
 import Services.API(DriverRegistrationStatusResp(..))
 import Services.Config (getSupportNumber, getWhatsAppSupportNo)
 import Storage (KeyStore(..), getValueToLocalStore)
+import Helpers.Utils as HU
+import Effect.Unsafe (unsafePerformEffect)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -121,7 +123,7 @@ eval Logout state = exit LogoutAccount
 eval SupportCall  state = continueWithCmd state [do
   let merchant = getMerchant FunctionCall
   _ <- case merchant of
-    NAMMAYATRI -> openWhatsAppSupport $ getWhatsAppSupportNo $ show merchant
+    NAMMAYATRI -> HU.contactSupportNumber "WHATSAPP" 
     YATRISATHI -> openWhatsAppSupport $ getWhatsAppSupportNo $ show merchant
     _ -> pure $ showDialer (getSupportNumber "") false
   pure Dummy
@@ -137,7 +139,7 @@ eval (DriverRegistrationStatusAction (DriverRegistrationStatusResp resp)) state 
       else continue state { data { dlVerificationStatus = resp.dlVerificationStatus, rcVerificationStatus = resp.rcVerificationStatus}, props{onBoardingFailure = onBoardingStatus, isVerificationFailed = popup_visibility}}
 eval (PopUpModalAction (PopUpModal.OnButton1Click)) state = continue state{props{popupview=false}}
 eval (PopUpModalAction (PopUpModal.OnButton2Click)) state = do
-  _ <- pure $ showDialer (getSupportNumber "") false -- TODO: FIX_DIALER
+  void $ pure $ unsafePerformEffect $ HU.contactSupportNumber "" -- TODO: FIX_DIALER -- unsafePerformEffect -> temporary fix 
   continue state
 eval (AlternateMobileNumberAction (ReferralMobileNumberController.OnBackClick)) state = do
   if state.props.enterOtp then do
