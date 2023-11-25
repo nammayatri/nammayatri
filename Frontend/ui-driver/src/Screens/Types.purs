@@ -2070,7 +2070,8 @@ type ChooseCityScreenProps = {
   isLocationPermissionGiven :: Boolean,
   radioMenuFocusedLang :: String,
   radioMenuFocusedCity :: String,
-  locationUnserviceable :: Boolean
+  locationUnserviceable :: Boolean,
+  isMockLocation :: Boolean
 }
 
 data ChooseCityScreenStage = SELECT_LANG | SELECT_CITY | ENABLE_PERMISSION | DETECT_LOCATION
