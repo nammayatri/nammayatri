@@ -40,6 +40,10 @@ public class MobilityRemoteConfigs {
         Log.d(LOG_TAG, "CONSTRUCTOR");
     }
 
+    public boolean hasKey(String key) {
+        return mFirebaseRemoteConfig.getKeysByPrefix(key).size() > 0;
+    }
+
     public boolean getBoolean(String key) {
         return mFirebaseRemoteConfig.getBoolean(key);
     }

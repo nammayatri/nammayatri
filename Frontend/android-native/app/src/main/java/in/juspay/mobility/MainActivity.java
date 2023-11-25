@@ -94,6 +94,7 @@ import in.juspay.mobility.app.RideRequestActivity;
 import in.juspay.mobility.app.TranslatorMLKit;
 import in.juspay.mobility.app.WidgetService;
 import in.juspay.mobility.app.callbacks.ShowNotificationCallBack;
+import in.juspay.mobility.app.services.MobilityAppUpdate;
 import in.juspay.mobility.common.Utils;
 import in.juspay.services.HyperServices;
 
@@ -274,8 +275,7 @@ public class MainActivity extends AppCompatActivity {
             viewParam = res.get(0);
             deepLinkJson = res.get(1);
         }
-        // https://nammayatri.in/u?vp=rides // ---NOTE:// DeepLink example for debug
-        
+
         super.onCreate(savedInstanceState);
         FirebaseAnalytics mFirebaseAnalytics = FirebaseAnalytics.getInstance(this);
         context = getApplicationContext();
@@ -292,24 +292,6 @@ public class MainActivity extends AppCompatActivity {
         }
 
 
-
-//        String key = getResources().getString(R.string.service);
-//        String androidId = Settings.Secure.getString(getContentResolver(),Settings.Secure.ANDROID_ID);
-
-//        Bundle params = new Bundle(); TODO:: Do we want these anymore??
-//        params.putString("id", androidId);
-//        mFirebaseAnalytics.logEvent("device_id", params);
-
-//        FirebaseDynamicLinks.getInstance() TODO:: This is deprecated and not suggested to use in projects. What was the intent of adding it??
-//                .getDynamicLink(getIntent())
-//                .addOnSuccessListener(this, pendingDynamicLinkData -> {
-//                    // Get deep link from result (may be null if no link is found)
-//                    if (pendingDynamicLinkData != null) {
-//                        pendingDynamicLinkData.getLink();
-//                    }
-//                })
-//                .addOnFailureListener(this, e -> Log.w(LOG_TAG, "getDynamicLink:onFailure", e));
-        
         WebView.setWebContentsDebuggingEnabled(true);
         sharedPref = context.getSharedPreferences(this.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
 
@@ -343,36 +325,11 @@ public class MainActivity extends AppCompatActivity {
             }
         }
 
+        MobilityAppUpdate mobilityAppUpdate = new MobilityAppUpdate(this);
+        mobilityAppUpdate.checkAndUpdateApp();
+
         updateConfigURL();
         initApp(viewParam, deepLinkJson);
-
-        appUpdateManager = AppUpdateManagerFactory.create(this);
-        // Returns an intent object that you use to check for an update.
-        Task<AppUpdateInfo> appUpdateInfoTask = appUpdateManager.getAppUpdateInfo();
-        updateType = AppUpdateType.IMMEDIATE;
-        appUpdateInfoTask.addOnSuccessListener(appUpdateInfo -> {
-            if (appUpdateInfo.updateAvailability() == UpdateAvailability.UPDATE_AVAILABLE
-                    && appUpdateInfo.isUpdateTypeAllowed(updateType)) {
-                Log.d(LOG_TAG, "Inside update");
-                try {
-                    appUpdateManager.startUpdateFlowForResult(
-                            // Pass the intent that is returned by 'getAppUpdateInfo()'.
-                            appUpdateInfo,
-                            // Or 'AppUpdateType.FLEXIBLE' for flexible updates.
-                            updateType,
-                            // The current activity making the update request.
-                            this,
-                            // Include a request code to later monitor this update request.
-                            REQUEST_CODE_UPDATE_APP
-                    );
-                } catch (IntentSender.SendIntentException e) {
-                    e.printStackTrace();
-                }
-                Log.d(LOG_TAG, "Update available");
-            } else {
-                Log.d(LOG_TAG, "No Update available");
-            }
-        });
 
         mFirebaseAnalytics.logEvent(isMigrated ?"migrate_local_store_success" : "migrate_local_store_failed",new Bundle());
         CleverTapAPI cleverTap = CleverTapAPI.getDefaultInstance(context);
