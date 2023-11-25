@@ -70,7 +70,7 @@ import Foreign (unsafeToForeign)
 import Foreign.Class (class Encode, encode, decode)
 import ConfigProvider (stringifyJSON)
 import PaymentPage (checkPPInitiateStatus, consumeBP, initiatePP, paymentPageUI, PayPayload(..), PaymentPagePayload(..), getAvailableUpiApps, getPaymentPageLangKey, initiatePaymentPage)
-import Helpers.Utils (LatLon(..), decodeErrorCode, decodeErrorMessage, getCurrentLocation, getDatebyCount, getDowngradeOptions, getGenderIndex, getNegotiationUnit, getPastDays, getPastWeeks, getTime, getcurrentdate, hideSplash, isDateGreaterThan, isYesterday, onBoardingSubscriptionScreenCheck, parseFloat, secondsLeft, toStringJSON, translateString, getDistanceBwCordinates)
+import Helpers.Utils (LatLon(..), decodeErrorCode, decodeErrorMessage, getCurrentLocation, getDatebyCount, getDowngradeOptions, getGenderIndex, getNegotiationUnit, getPastDays, getPastWeeks, getTime, getcurrentdate, hideSplash, isDateGreaterThan, isYesterday, onBoardingSubscriptionScreenCheck, parseFloat, secondsLeft, toStringJSON, translateString, getDistanceBwCordinates, getCityConfig)
 import JBridge (cleverTapCustomEvent, cleverTapCustomEventWithParams, cleverTapEvent, cleverTapSetLocation, drawRoute, factoryResetApp, firebaseLogEvent, firebaseLogEventWithTwoParams, firebaseUserID, generateSessionId, getCurrentLatLong, getCurrentPosition, getVersionCode, getVersionName, hideKeyboardOnNavigation, initiateLocationServiceClient, isBatteryPermissionEnabled, isInternetAvailable, isLocationEnabled, isLocationPermissionEnabled, isOverlayPermissionEnabled, metaLogEvent, metaLogEventWithTwoParams, openNavigation, removeAllPolylines, removeMarker, saveSuggestionDefs, saveSuggestions, setCleverTapUserData, setCleverTapUserProp, showMarker, startLocationPollingAPI, stopChatListenerService, stopLocationPollingAPI, toast, toggleBtnLoader, unregisterDateAndTime, withinTimeRange)
 import JBridge as JB
 import Helpers.Utils as HU
@@ -2965,17 +2965,5 @@ welcomeScreenFlow = do
   case welcomeScreen of
     GoToMobileNumberScreen -> loginFlow
 
-getCityConfig :: Array CityConfig -> String -> CityConfig
-getCityConfig cityConfig cityName = do
-  let dummyCityConfig = {
-                          cityName : "",
-                          mapImage : "",
-                          cityCode : "",
-                          showSubscriptions : false,
-                          cityLat : 0.0,
-                          cityLong : 0.0,
-                          supportNumber : ""
-                        }
-  fromMaybe dummyCityConfig $ find (\item -> item.cityName == cityName) cityConfig
 
 

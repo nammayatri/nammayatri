@@ -22,15 +22,16 @@ module Helpers.Utils
 import Screens.Types (AllocationData, DisabilityType(..))
 import Language.Strings (getString)
 import Language.Types(STR(..))
-import Data.Array ((!!), elemIndex, length, slice, last) as DA
+import Data.Array ((!!), elemIndex, length, slice, last, find) as DA
 import Data.String (Pattern(..), split) as DS
 import Data.Number (pi, sin, cos, asin, sqrt)
-
+import Constants as Constants
+import Data.String.Common as DSC
 import MerchantConfig.Utils
-
+import Engineering.Helpers.Utils (getAppConfig)
 import Common.Types.App (LazyCheck(..), CalendarDate, CalendarWeek, PaymentStatus(..))
-import Types.App (FlowBT)
-import Control.Monad.Except (runExcept)
+import Types.App (FlowBT, defaultGlobalState)
+import Control.Monad.Except (runExcept, runExceptT)
 import Data.Array ((!!), fold) as DA
 import Data.Array.NonEmpty (fromArray)
 import Data.Either (Either(..), hush)
@@ -63,6 +64,7 @@ import Data.Function.Uncurried (Fn4(..), Fn3(..), runFn4, runFn3, Fn2, runFn1, r
 import Effect.Uncurried (EffectFn1(..),EffectFn5(..), mkEffectFn1, mkEffectFn4, runEffectFn5)
 import Common.Types.App (OptionButtonList)
 import Engineering.Helpers.Commons (parseFloat, setText, convertUTCtoISC, getCurrentUTC) as ReExport
+import Engineering.Helpers.Commons (flowRunner)
 import PaymentPage(PaymentPagePayload, UpiApps(..))
 import Presto.Core.Types.Language.Flow (Flow, doAff, loadS)
 import Control.Monad.Except.Trans (lift)
@@ -71,7 +73,7 @@ import Data.Newtype (class Newtype)
 import Presto.Core.Types.API (class StandardEncode, standardEncode)
 import Services.API (PromotionPopupConfig)
 import Storage (KeyStore) 
-import JBridge (getCurrentPositionWithTimeout, firebaseLogEventWithParams, translateStringWithTimeout)
+import JBridge (getCurrentPositionWithTimeout, firebaseLogEventWithParams, translateStringWithTimeout, openWhatsAppSupport, showDialer)
 import Effect.Uncurried(EffectFn1, EffectFn4, EffectFn3,runEffectFn3)
 import Storage (KeyStore(..), isOnFreeTrial, getValueToLocalNativeStore)
 import Styles.Colors as Color
@@ -79,6 +81,11 @@ import Screens.Types (LocalStoreSubscriptionInfo)
 import Data.Int (fromString, even, fromNumber)
 import Data.Number.Format (fixed, toStringWith)
 import Data.Function.Uncurried (Fn1)
+import MerchantConfig.Types (CityConfig(..))
+import Storage (getValueToLocalStore)
+import Services.Config (getWhatsAppSupportNo, getSupportNumber)
+import Engineering.Helpers.BackTrack (liftFlowBT)
+import Control.Transformers.Back.Trans (runBackT)
 
 type AffSuccess s = (s -> Effect Unit)
 
@@ -515,3 +522,28 @@ incrementValueOfLocalStoreKey key = do
     Nothing -> do
       let _ = runFn2 setValueToLocalStore (show key) "1"  
       pure unit
+
+contactSupportNumber :: String -> Effect Unit
+contactSupportNumber supportType = do
+  void $ launchAff $ flowRunner defaultGlobalState $ runExceptT $ runBackT do 
+    config <- getAppConfig Constants.appConfig
+    let city = getCityConfig config.cityConfig (getValueToLocalStore DRIVER_LOCATION)
+        supportNumber = if DSC.null city.supportNumber then getSupportNumber "" else city.supportNumber
+    if supportType == "WHATSAPP" && DSC.null city.supportNumber then 
+      liftFlowBT $ openWhatsAppSupport $ getWhatsAppSupportNo $ show (getMerchant FunctionCall) 
+      else
+        pure $ showDialer supportNumber false
+
+
+getCityConfig :: Array CityConfig -> String -> CityConfig
+getCityConfig cityConfig cityName = do
+  let dummyCityConfig = {
+                          cityName : "",
+                          mapImage : "",
+                          cityCode : "",
+                          showSubscriptions : false,
+                          cityLat : 0.0,
+                          cityLong : 0.0,
+                          supportNumber : ""
+                        }
+  fromMaybe dummyCityConfig $ DA.find (\item -> item.cityName == cityName) cityConfig
