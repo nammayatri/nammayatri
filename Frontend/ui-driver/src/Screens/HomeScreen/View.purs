@@ -84,6 +84,7 @@ import Storage (getValueToLocalStore, KeyStore(..), setValueToLocalStore, getVal
 import Styles.Colors as Color
 import Types.App (GlobalState, defaultGlobalState)
 import Constants (defaultDensity)
+import Components.ErrorModal as ErrorModal
 
 screen :: HomeScreenState -> Screen Action HomeScreenState ScreenOutput
 screen initialState =
@@ -94,6 +95,7 @@ screen initialState =
         ( \push -> do
           _ <- pure $ JB.checkAndAskNotificationPermission false
           _ <- pure $ printLog "initial State" initialState
+          _ <- if initialState.data.config.enableMockLocation then JB.isMockLocation push IsMockLocation else pure unit
           _ <- HU.storeCallBackForNotification push Notification
           _ <- HU.storeCallBackTime push TimeUpdate
           _ <- runEffectFn2 JB.storeKeyBoardCallback push KeyboardCallback
@@ -231,6 +233,7 @@ view push state =
       , if state.props.goOfflineModal then goOfflineModal push state else dummyTextView
       , if state.props.enterOtpModal then enterOtpModal push state else dummyTextView
       , if state.props.endRidePopUp then endRidePopView push state else dummyTextView
+      , if ((state.props.isMockLocation && (MU.getMerchant FunctionCall == MU.NAMMAYATRI)) && state.props.currentStage == HomeScreen) then (sourceUnserviceableView push state) else dummyTextView
       , if state.props.cancelConfirmationPopup then cancelConfirmation push state else dummyTextView
       , if state.props.cancelRideModalShow then cancelRidePopUpView push state else dummyTextView
       , if state.props.currentStage == ChatWithCustomer then chatView push state else dummyTextView
@@ -577,6 +580,21 @@ recenterBtnView state push =
           ) (const RecenterButtonAction)
     ]
   ]
+
+sourceUnserviceableView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+sourceUnserviceableView push state =
+  PrestoAnim.animationSet [ Anim.fadeIn true ]
+    $ relativeLayout
+        [ height MATCH_PARENT
+        , width MATCH_PARENT
+        , orientation VERTICAL
+        , PP.cornerRadii $ PTD.Corners 24.0 true true false false
+        , alignParentBottom "true,-1"
+        , gravity BOTTOM
+        ]
+        [
+          ErrorModal.view (push <<< ErrorModalActionController) (sourceUnserviceableConfig state)
+        ]
 
 offlineView :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 offlineView push state =
