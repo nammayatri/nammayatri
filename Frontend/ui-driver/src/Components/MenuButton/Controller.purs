@@ -23,10 +23,10 @@ type State = {
       text :: Text , 
       isSelected :: Boolean ,
       index :: Int,
-      lineVisiblity :: Boolean,
-      selectedBackgroundColor :: Color,
-      selectedStrokeColor :: Color,
-      notSelectedStrokeColor :: Color
+      lineVisibility :: Boolean,
+      activeBgColor :: Color,
+      activeStrokeColor :: Color,
+      inactiveStrokeColor :: Color
       }
 type Text = { 
     name :: String, 

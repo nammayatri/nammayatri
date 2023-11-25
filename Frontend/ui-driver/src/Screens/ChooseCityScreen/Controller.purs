@@ -77,8 +77,6 @@ eval (PrimaryButtonAC PrimaryButtonController.OnClick) state = do
                       pure NoAction
                   ]
               else continue state
-    -- continue state{props{currentStage = DETECT_LOCATION}}
-    -- else if state.props.currentStage == DETECT_LOCATION then continue state{props{currentStage = CAROUSEL}}
     else if state.props.currentStage == SELECT_CITY then do
       continue state{props{currentStage = DETECT_LOCATION}, data{ locationSelected = Just state.props.radioMenuFocusedCity}}
     else if state.props.currentStage == SELECT_LANG then do
@@ -105,7 +103,6 @@ eval (MenuButtonAction (MenuButtonController.OnSelection btnState)) state =
   else
     continue state { props { radioMenuFocusedLang = btnState.text.value }}
 
--- eval (MenuButtonAction2 (MenuButtonController.OnSelection btnState)) state = continue state { data { locationSelected = btnState.text.value }}
 
 eval (ChangeStage newStage) state = continue state{props{currentStage = newStage}, data {locationSelected = state.data.locationSelected}}
 
@@ -116,9 +113,6 @@ eval (LocationPermissionCallBack isLocationPermissionEnabled) state = do
     let newState =  state { props {isLocationPermissionGiven = true, currentStage = DETECT_LOCATION }}
     updateAndExit newState $ RefreshScreen newState
   else continue state
-    -- let _ = unsafePerformEffect $ logEvent state.data.logField  "permission_granted_location"
-    -- continue state {props {isLocationPermissionGiven = isLocationPermissionEnabled, currentStage = if state.props.isLocationPermissionGiven then DETECT_LOCATION else state.props.currentStage}}
-    -- else continue state {props {isLocationPermissionGiven = isLocationPermissionEnabled, currentStage = if state.props.isLocationPermissionGiven then DETECT_LOCATION else state.props.currentStage}}
 
 eval UpdateLocationPermissionState state = do
   let newState = state {props {isLocationPermissionGiven = true, currentStage = DETECT_LOCATION}}
@@ -131,10 +125,6 @@ eval (IsMockLocation isMock) state = do
 
 eval (UpdatePermission updatedState) state = do
   let newState = updatedState {props {currentStage = if updatedState.props.isLocationPermissionGiven then DETECT_LOCATION else updatedState.props.currentStage}}
-  -- if isNothing state.data.locationSelected
-  --   then
-  --     updateAndExit newState $ GetLatLong newState
-  --   else 
   continue newState
 
 eval (CurrentLocationCallBack lat long) state = do

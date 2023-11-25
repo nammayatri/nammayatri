@@ -16,15 +16,12 @@
 module Screens.RegistrationScreen.View where
 
 import Common.Types.App
-import Common.Types.App
 import Debug
 import Screens.RegistrationScreen.ComponentConfig
-import Screens.RegistrationScreen.ComponentConfig
-
 import Animation as Anim
 import Components.PopUpModal as PopUpModal
 import Components.PrimaryButton as PrimaryButton
-import Components.StepsHeaderModal as StepsHeaderModel
+import Components.AppOnboardingNavBar as AppOnboardingNavBar
 import Control.Monad.ST (for)
 import Data.Array (all, any, elem, filter, fold, length, mapWithIndex)
 import Data.Foldable (foldl)
@@ -40,7 +37,7 @@ import JBridge (lottieAnimationConfig, startLottieProcess)
 import Language.Strings (getString, getVarString)
 import Language.Types (STR(..))
 import Prelude (Unit, bind, const, map, not, pure, show, unit, void, ($), (&&), (+), (-), (<<<), (<>), (==), (>=), (||), (/=), (*))
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, alignParentBottom, background, clickable, color, cornerRadius, fontStyle, gravity, height, id, imageUrl, imageView, imageWithFallback, linearLayout, lottieAnimationView, margin, onBackPressed, onClick, orientation, padding, relativeLayout, stroke, text, textSize, textView, visibility, weight, width)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, alignParentBottom, background, clickable, color, cornerRadius, fontStyle, gravity, height, id, imageUrl, imageView, imageWithFallback, linearLayout, lottieAnimationView, margin, onBackPressed, onClick, orientation, padding, relativeLayout, stroke, text, textSize, textView, visibility, weight, width, layoutGravity)
 import PrestoDOM.Animation as PrestoAnim
 import Screens.RegistrationScreen.Controller (Action(..), eval, ScreenOutput)
 import Screens.Types (RegisterationStep(..), StageStatus(..), ValidationStatus(..))
@@ -75,7 +72,6 @@ view push state =
         true -> completedStatusCount * 25 + if state.data.subscriptionStatus == IN_PROGRESS then 25 else 0
         false -> if completedStatusCount * 33 == 99 then 100 else completedStatusCount * 33
   in
-    -- lottieLoaderView state push
     Anim.screenAnimation
       $ relativeLayout
           [ height MATCH_PARENT
@@ -97,16 +93,8 @@ view push state =
             , gravity CENTER
             , orientation VERTICAL
             ]
-            [ linearLayout
-                [ height WRAP_CONTENT
-                , width MATCH_PARENT
-                -- , visibility if state.props.logoutModalView then GONE else VISIBLE
-                ]
-                [ PrestoAnim.animationSet
-                    [ Anim.fadeIn true
-                    ]
-                    $ StepsHeaderModel.view (push <<< StepsHeaderModelAC) (stepsHeaderModelConfig state)
-                ]
+            [ PrestoAnim.animationSet [ Anim.fadeIn true]
+            $ headerView state push                    
             , linearLayout
                 [ height WRAP_CONTENT
                 , width MATCH_PARENT
@@ -170,8 +158,6 @@ view push state =
                             )
                             (state.data.registerationSteps)
                         )
-                    -- , registrationHeader state
-                    -- , tutorialView state
                     , cardItemView push state
                     ]
                 ]
@@ -208,72 +194,8 @@ view push state =
         ]
       <> if state.props.logoutModalView then [ logoutPopupModal push state ] else []
 
-registrationHeader :: ST.RegistrationScreenState -> forall w . PrestoDOM (Effect Unit) w
-registrationHeader state = 
-  linearLayout
-  [ orientation VERTICAL
-  , width MATCH_PARENT
-  , height WRAP_CONTENT
-  , orientation VERTICAL
-  ][textView 
-    [ width MATCH_PARENT
-    , height WRAP_CONTENT
-    , fontStyle $ FontStyle.bold LanguageStyle
-    , color Color.black800
-    , textSize FontSize.a_26
-    , margin (MarginVertical 15 10)
-    , text (getString REGISTRATION)
-    ]
-  , textView
-    [ text (getString FOLLOW_STEPS)
-    , textSize FontSize.a_16
-    , margin (MarginBottom 20)
-    ]
-  ]
-
--- lottieLoaderView :: forall w. ST.RegistrationScreenState -> (Action -> Effect Unit)-> PrestoDOM (Effect Unit) w
--- lottieLoaderView state push=
---   linearLayout
---   [ width MATCH_PARENT
---   , height MATCH_PARENT
---   ][ lottieAnimationView
---     [ height MATCH_PARENT
---     , width MATCH_PARENT
---     , id (getNewIDWithTag "activeIndex")
---     , background Color.black900
---     , afterRender
---         ( \action ->
---             void $ pure $ startLottieProcess lottieAnimationConfig {rawJson = "splash_lottie.json", lottieId = (getNewIDWithTag "activeIndex"), speed = 1.0 }
---         )(const NoAction)
---     ]
---   ]
-
-
-tutorialView :: ST.RegistrationScreenState -> forall w . PrestoDOM (Effect Unit) w
-tutorialView state = 
-  linearLayout
-  [ width MATCH_PARENT
-  , height WRAP_CONTENT
-  , orientation HORIZONTAL
-  , cornerRadius 7.0
-  , background Color.lightBlue
-  , gravity LEFT
-  , padding (Padding 10 10 10 10)
-  ][ textView
-      ([ width WRAP_CONTENT
-      , height MATCH_PARENT
-      , text (getString WATCH_A_TUTORIAL_FOR_EASY_REGISTRATION)
-      , weight 1.0
-      , gravity CENTER_VERTICAL
-      , color Color.black800
-      ] <> FontStyle.body1 TypoGraphy)
-    , imageView
-      [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_media"
-      , width (V 40)
-      , height (V 40)
-      ]
-  ]
-
+headerView :: forall w. ST.RegistrationScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+headerView state push = AppOnboardingNavBar.view (push <<< AppOnboardingNavBarAC) (appOnboardingNavBarConfig state)
 
 cardItemView :: forall w. (Action -> Effect Unit) -> ST.RegistrationScreenState -> PrestoDOM (Effect Unit) w
 cardItemView push state = 

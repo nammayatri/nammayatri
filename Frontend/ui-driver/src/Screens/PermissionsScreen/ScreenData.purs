@@ -20,11 +20,14 @@ import Screens.Types(PermissionsScreenState)
 import Data.Eq.Generic (genericEq)
 import Foreign.Object (empty)
 import Data.Generic.Rep (class Generic)
+import MerchantConfig.DefaultConfig as DC
+
 initData :: PermissionsScreenState
 initData = {
     data:{ 
       logField : empty,
-      driverMobileNumber : ""
+      driverMobileNumber : "",
+      config : DC.config
     },
     props:{
       isNotificationPermissionChecked : false

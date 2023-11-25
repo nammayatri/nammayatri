@@ -26,7 +26,6 @@ import Resource.Constants as Constant
 import Prelude ((<>))
 import Data.Maybe (Maybe(..))
 import Font.Style as FontStyle
-import Components.StepsHeaderModal as StepsHeaderModel
 import JBridge as JB
 import Common.Types.App
 import Font.Size as FontSize
@@ -61,19 +60,3 @@ verifyOTPButtonConfig state = let
       , enableLoader = (JB.getBtnLoader "PrimaryButtonOTP")
       }
   in primaryButtonConfig'
-
-stepsHeaderModelConfig :: ST.EnterOTPScreenState -> StepsHeaderModel.Config
-stepsHeaderModelConfig state = let
-    config = StepsHeaderModel.config 0
-    stepsHeaderConfig' = config 
-     {
-      stepsViewVisibility = false,
-      profileIconVisibility = false,
-      driverNumberVisibility = false,
-      logoutVisibility = false,
-      customerTextArray = [],
-      driverTextArray = Constant.driverTextArray Common.FunctionCall,
-      rightButtonText = getString LOGOUT,
-      activeIndex = 1
-     }
-  in stepsHeaderConfig'

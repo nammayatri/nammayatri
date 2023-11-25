@@ -27,7 +27,8 @@ import Components.PrimarySelectItem.Controller as PrimarySelectItem
 import Components.ReferralMobileNumber.Controller as ReferralMobileNumberController
 import Components.RegistrationModal.Controller as RegistrationModalController
 import Components.SelectVehicleTypeModal.Controller as SelectVehicleTypeModal
-import Components.StepsHeaderModal.Controller as StepsHeaderModelController
+import Components.GenericHeader as GenericHeader
+import Components.AppOnboardingNavBar as AppOnboardingNavBar
 import Components.TutorialModal.Controller as TutorialModalController
 import Components.ValidateDocumentModal.Controller as ValidateDocumentModal
 import Data.Array (elem)
@@ -108,9 +109,6 @@ instance loggableAction :: Loggable Action where
     DatePickerAction -> trackAppActionClick appId (getScreen ADD_VEHICLE_DETAILS_SCREEN) "in_screen" "date_picker"
     DatePicker resp year month date -> trackAppScreenEvent appId (getScreen ADD_VEHICLE_DETAILS_SCREEN) "in_screen" "date_picker"
     NoAction -> trackAppScreenEvent appId (getScreen ADD_VEHICLE_DETAILS_SCREEN) "in_screen" "no_action"
-    StepsHeaderModelAC act -> case act of
-      StepsHeaderModelController.OnArrowClick -> trackAppScreenEvent appId (getScreen ADD_VEHICLE_DETAILS_SCREEN) "in_screen" "steps_header_on_click"
-      StepsHeaderModelController.Logout -> trackAppScreenEvent appId (getScreen ADD_VEHICLE_DETAILS_SCREEN) "in_screen" "steps_header_logout"
     PopUpModalLogoutAction act -> case act of
       PopUpModal.OnButton1Click -> trackAppActionClick appId (getScreen ADD_VEHICLE_DETAILS_SCREEN) "popup_modal" "on_goback"
       PopUpModal.Tipbtnclick _ _ -> trackAppActionClick appId (getScreen ADD_VEHICLE_DETAILS_SCREEN) "popup_modal" "tip_button_click"
@@ -144,6 +142,12 @@ instance loggableAction :: Loggable Action where
       PrimaryButtonController.OnClick -> trackAppActionClick appId (getScreen ADD_VEHICLE_DETAILS_SCREEN) "activate_rc_btn" "on_click"
       PrimaryButtonController.NoAction -> trackAppActionClick appId (getScreen ADD_VEHICLE_DETAILS_SCREEN) "activate_rc_btn" "no_action"
     CancelButtonMultiRCPopup -> trackAppActionClick appId (getScreen ADD_VEHICLE_DETAILS_SCREEN) "cancel_button_multi_rc_popup" "on_click"
+    AppOnboardingNavBarAC act -> case act of
+      AppOnboardingNavBar.GenericHeaderAC genericHeaderAction -> case genericHeaderAction of 
+        GenericHeader.PrefixImgOnClick -> trackAppScreenEvent appId (getScreen ADD_VEHICLE_DETAILS_SCREEN) "in_screen" "generic_header_on_click"
+        GenericHeader.SuffixImgOnClick -> trackAppScreenEvent appId (getScreen ADD_VEHICLE_DETAILS_SCREEN) "in_screen" "generic_header_on_click"
+      AppOnboardingNavBar.Logout -> trackAppScreenEvent appId (getScreen ADD_VEHICLE_DETAILS_SCREEN) "in_screen" "onboarding_nav_bar_logout"
+      AppOnboardingNavBar.PrefixImgOnClick -> trackAppScreenEvent appId (getScreen ADD_VEHICLE_DETAILS_SCREEN) "in_screen" "app_onboarding_nav_bar_prefix_img_on_click"
 
 data ScreenOutput = ValidateDetails AddVehicleDetailsScreenState
                     | GoBack AddVehicleDetailsScreenState
@@ -178,7 +182,6 @@ data Action =   WhatsAppSupport | BackPressed Boolean | PrimarySelectItemAction 
   | DatePicker String Int Int Int
   | PreviewImageAction
   | DatePickerAction
-  | StepsHeaderModelAC StepsHeaderModelController.Action
   | PopUpModalLogoutAction PopUpModal.Action
   | ValidateDocumentModalAction ValidateDocumentModal.Action
   | RenderProfileImage String String
@@ -187,6 +190,7 @@ data Action =   WhatsAppSupport | BackPressed Boolean | PrimarySelectItemAction 
   | ChangeLocation
   | ActivateRCbtn PrimaryButtonController.Action
   | CancelButtonMultiRCPopup
+  | AppOnboardingNavBarAC AppOnboardingNavBar.Action
 
 
 eval :: Action -> AddVehicleDetailsScreenState -> Eval Action ScreenOutput AddVehicleDetailsScreenState
@@ -197,7 +201,7 @@ eval AfterRender state =
 
 eval (RenderProfileImage image id) state = do
   continueWithCmd state [do 
-    _ <- liftEffect $ renderBase64ImageFile image id true "CENTER_CROP"--state.props.fileCameraOption
+    _ <- liftEffect $ renderBase64ImageFile image id true "CENTER_CROP"
     pure NoAction]
 
 eval (BackPressed flag) state = do
@@ -253,8 +257,6 @@ eval (CallBackImageUpload base_64 imageName imagePath) state = do
     continue newState
     else continue state{props{isValidState = false}}
 eval (UploadFile) state = continueWithCmd (state {props {validateProfilePicturePopUp = false, imageCaptureLayoutView = true}}) [do
-    --  _ <- pure $ toast("Hello")
-    --  _ <- liftEffect $ uploadFile true
      _ <- liftEffect $ renderCameraProfilePicture (getNewIDWithTag "ProfilePictureCaptureLayout")
      pure NoAction
       ]
@@ -341,11 +343,11 @@ eval (PopUpModalLogoutAction (PopUpModal.OnButton2Click)) state = continue $ (st
 
 eval (PopUpModalLogoutAction (PopUpModal.OnButton1Click)) state = exit $ LogoutAccount
 
-eval (StepsHeaderModelAC (StepsHeaderModelController.Logout)) state = do
+eval (AppOnboardingNavBarAC (AppOnboardingNavBar.Logout)) state = do
     _ <- pure $ hideKeyboardOnNavigation true
     continue $ (state {props{logoutModalView = true}})
 
-eval (StepsHeaderModelAC StepsHeaderModelController.OnArrowClick) state = continueWithCmd state [ do pure $ BackPressed false]
+eval (AppOnboardingNavBarAC AppOnboardingNavBar.PrefixImgOnClick) state = continueWithCmd state [ do pure $ BackPressed false]
 
 eval (ValidateDocumentModalAction (ValidateDocumentModal.AfterRender)) state = do
  continueWithCmd state [do pure (AfterRender)] 

@@ -21,13 +21,16 @@ import PrestoDOM
 import Common.Types.App as Common
 import Components.PopUpModal as PopUpModal
 import Components.PrimaryButton as PrimaryButton
-import Components.StepsHeaderModal as StepsHeaderModel
+import Components.GenericHeader as GenericHeader
+import Components.AppOnboardingNavBar as AppOnboardingNavBar
 import Data.Maybe (Maybe(..))
 import Font.Style as FontStyle
 import Language.Types (STR(..))
 import Resource.Constants as Constant
+import Helpers.Utils as HU
 import Screens.Types as ST
 import Styles.Colors as Color
+import Storage ( getValueToLocalStore , KeyStore(..))
 
 primaryButtonConfig :: ST.RegistrationScreenState -> PrimaryButton.Config
 primaryButtonConfig state = let 
@@ -42,22 +45,14 @@ primaryButtonConfig state = let
       }
   in primaryButtonConfig'
 
-stepsHeaderModelConfig :: ST.RegistrationScreenState -> StepsHeaderModel.Config
-stepsHeaderModelConfig state = let
-    config = StepsHeaderModel.config 2
-    stepsHeaderConfig' = config 
-     {
-      stepsViewVisibility = false,
-      profileIconVisibility = true,
-      driverNumberVisibility = true,
-      driverMobileNumber = (Just state.data.phoneNumber),
-      customerTextArray = [],
-      driverTextArray = Constant.driverTextArray Common.FunctionCall,
-      rightButtonText = getString LOGOUT,
-      logoutVisibility = true,
-      backArrowVisibility = false
-     }
-  in stepsHeaderConfig'
+appOnboardingNavBarConfig :: ST.RegistrationScreenState -> AppOnboardingNavBar.Config
+appOnboardingNavBarConfig state = 
+  AppOnboardingNavBar.config
+  { prefixImageConfig = AppOnboardingNavBar.config.prefixImageConfig{visibility = GONE},
+    genericHeaderConfig = genericHeaderConfig state,
+    appConfig = state.data.config,
+    headerTextConfig = AppOnboardingNavBar.config.headerTextConfig{text = (getString REGISTRATION)}
+  }
 
 logoutPopUp :: Common.LazyCheck -> PopUpModal.Config
 logoutPopUp  dummy = let 
@@ -94,3 +89,30 @@ logoutPopUp  dummy = let
     optionButtonOrientation = "VERTICAL"
   }
   in popUpConfig'
+
+genericHeaderConfig :: ST.RegistrationScreenState -> GenericHeader.Config
+genericHeaderConfig state = let 
+  config = GenericHeader.config
+  genericHeaderConfig' = config
+    {
+      height = WRAP_CONTENT
+    , background = state.data.config.primaryBackground
+    , prefixImageConfig {
+       visibility = VISIBLE
+      , imageUrl = HU.fetchImage HU.FF_ASSET "ic_new_avatar"
+      , height = (V 25)
+      , width = (V 25)
+      , margin = (Margin 0 5 5 5)
+      }
+    , padding = (PaddingVertical 5 5)
+    , textConfig {
+        text = (getValueToLocalStore MOBILE_NUMBER_KEY)
+      , color = Color.white900
+      , margin = MarginHorizontal 5 5 
+      , textStyle = FontStyle.Body1
+      }
+    , suffixImageConfig {
+        visibility = GONE
+      }
+    }
+  in genericHeaderConfig'

@@ -1048,7 +1048,7 @@ const englishStrings = {
   RC_UPLOADING : "Uploading Registration Certificate",
   RETAKE_RC : "\nPlease retake photo with RC inside marked area",
   RETAKE_DL : "\nPlease retake photo with DL inside marked area",
-  LETS_GET_YOUR_TRIP_READY : "Let's get your trip ready!",
+  LETS_GET_YOU_TRIP_READY : "Let's get you trip ready!",
   GOT_AN_OTP : "Got an OTP?",
   DRIVING_LICENSE_DETAILS : "Driving Licence Details",
   VEHICLE_REGISTRATION_DETAILS : "Vehicle Registration Details",

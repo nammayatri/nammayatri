@@ -73,7 +73,7 @@ type Config = {
     optionWithHtml :: OptionWithHtmlConfig,
     topTitle :: TopTitle,
     listViewArray :: Array String,
-    coverVideoConfig :: CoverVideoConfig--,
+    coverVideoConfig :: CoverVideoConfig
 }
 
 type CoverVideoConfig = {
@@ -412,7 +412,6 @@ config = {
         mediaUrl : "",
         id : ""
     }
-    -- , onBoardingButtonVisibility : false
 }
 
 

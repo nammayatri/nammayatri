@@ -782,7 +782,7 @@ const frenchStrings = {
   RETAKE_DL: "\nVeuillez reprendre la photo avec le permis de conduire à l'intérieur de la zone indiquée",
   CONFIRM_AND_UPLOAD: "CONFIRMER ET TÉLÉCHARGER",
   RETAKE_PHOTO: "REPRENDRE LA PHOTO",
-  LETS_GET_YOUR_TRIP_READY : "Préparons votre voyage !",
+  LETS_GET_YOU_TRIP_READY : "Préparons votre voyage !",
   GOT_AN_OTP : "Vous avez un OTP ?",
   DRIVING_LICENSE_DETAILS: "Détails du permis de conduire",
   VEHICLE_REGISTRATION_DETAILS: "Détails d'immatriculation du véhicule",

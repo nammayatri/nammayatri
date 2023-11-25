@@ -22,7 +22,8 @@ import Animation as Anim
 import Common.Types.App (LazyCheck(..))
 import Components.PopUpModal as PopUpModal
 import Components.PrimaryButton as PrimaryButton
-import Components.StepsHeaderModal as StepsHeaderModel
+import Components.GenericHeader as GenericHeader
+import Components.AppOnboardingNavBar as AppOnboardingNavBar
 import Debug (spy)
 import Effect (Effect)
 import Font.Size as FontSize
@@ -75,9 +76,8 @@ view push state =
         , width MATCH_PARENT
         , orientation VERTICAL
         , weight 1.0
-        ][ PrestoAnim.animationSet
-            [ Anim.fadeIn true
-            ] $ StepsHeaderModel.view (push <<< StepsHeaderModelAC) (stepsHeaderModelConfig state) 
+        ][ PrestoAnim.animationSet[ Anim.fadeIn true] 
+          $ headerView state push 
           , scrollView
             [ width MATCH_PARENT
             , weight 1.0
@@ -86,34 +86,18 @@ view push state =
                 [ height MATCH_PARENT
                 , width MATCH_PARENT
                 , orientation VERTICAL
-                ][ permissionsListView state push
-                ]
-            ]
-        ]
-        ,  linearLayout
-            [ height WRAP_CONTENT
-            , width MATCH_PARENT
-            , visibility if state.props.logoutModalView then GONE else VISIBLE
-            ][PrimaryButton.view (push <<< PrimaryButtonActionController) (primaryButtonConfig state)]
+                ][ permissionsListView state push]
+              ]
+          ]
+      ,  linearLayout
+          [ height WRAP_CONTENT
+          , width MATCH_PARENT
+          , visibility if state.props.logoutModalView then GONE else VISIBLE
+          ][PrimaryButton.view (push <<< PrimaryButtonActionController) (primaryButtonConfig state)]
     ]<> if state.props.logoutModalView then [logoutPopupModal push state] else [])
 
-
-headerLayout :: forall w. ST.PermissionsScreenState -> PrestoDOM (Effect Unit) w
-headerLayout state = 
- linearLayout
- [ width MATCH_PARENT
- , height WRAP_CONTENT
- , margin (MarginTop 50)
- ][ textView (
-    [ width MATCH_PARENT
-    , height WRAP_CONTENT
-    , gravity CENTER_HORIZONTAL
-    , margin (MarginTop 20)
-    , text (getString WE_NEED_SOME_ACCESS)
-    , color Color.black800
-    ] <> FontStyle.h1 TypoGraphy
-    )
- ]
+headerView :: forall w. ST.PermissionsScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+headerView state push = AppOnboardingNavBar.view (push <<< AppOnboardingNavBarAC) (appOnboardingNavBarConfig state)
 
 
 permissionsListView :: forall w. ST.PermissionsScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w

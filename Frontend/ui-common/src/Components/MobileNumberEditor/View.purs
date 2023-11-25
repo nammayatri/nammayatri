@@ -192,7 +192,7 @@ editTextView push config = linearLayout
   , padding $ PaddingRight 3
   , stroke if config.showErrorLabel then config.warningStroke else if config.editText.focused then config.focusedStroke else config.stroke
   ][ textView
-      $ [ text "+91"
+      $ [ text config.countryCodeField.countryCode
         , padding $ PaddingHorizontal 16 8
         , color config.editText.color
         , margin $ Margin 4 1 0 0
@@ -203,7 +203,7 @@ editTextView push config = linearLayout
         , clickable false
         , visibility if config.showCountryCodeField then GONE else VISIBLE
         ] <> (FontStyle.getFontStyle config.editText.textStyle LanguageStyle)
-    ,(if( os == "IOS" && (not config.editText.singleLine )) then multiLineEditText else editText) 
+    , (if os == "IOS" && (not config.editText.singleLine ) then multiLineEditText else editText) 
     $ [ height config.height
       , width config.width
       , id config.id

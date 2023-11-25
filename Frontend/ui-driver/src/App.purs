@@ -19,7 +19,6 @@ import Control.Monad.Except.Trans (ExceptT)
 import Control.Monad.Free (Free)
 import Control.Transformers.Back.Trans (BackT)
 import Data.Maybe (Maybe(..))
-import Data.Maybe (Maybe(..))
 import LoaderOverlay.ScreenData as LoaderOverlayScreenData
 import Presto.Core.Types.Language.Flow (FlowWrapper)
 import Screens (ScreenName(..)) as ScreenNames
@@ -28,29 +27,23 @@ import Screens.AboutUsScreen.ScreenData as AboutUsScreenData
 import Screens.AcknowledgementScreen.ScreenData as AcknowledgementScreenData
 import Screens.AddVehicleDetailsScreen.ScreenData as AddVehicleDetailsScreenData
 import Screens.AppUpdatePopUpScreen.ScreenData as AppUpdatePopUpScreenData
-import Screens.AppUpdatePopUpScreen.ScreenData as AppUpdatePopUpScreenData
 import Screens.ApplicationStatusScreen.ScreenData as ApplicationStatusScreenData
 import Screens.BankDetailScreen.ScreenData as BankDetailScreenData
 import Screens.BookingOptionsScreen.ScreenData as BookingOptionsScreenData
 import Screens.ChooseCityScreen.ScreenData as ChooseCityScreenData
 import Screens.ChooseLanguageScreen.ScreenData as ChooseLanguageScreenData
-import Screens.ChooseLanguageScreen.ScreenData as ChooseLanguageScreenData
 import Screens.DriverDetailsScreen.ScreenData as DriverDetailsScreenData
 import Screens.DriverProfileScreen.ScreenData as DriverProfileScreenData
 import Screens.DriverRideRatingScreen.ScreenData as DriverRideRatingScreenData
 import Screens.DriverSavedLocationScreen.ScreenData as DriverSavedLocationScreenData
-import Screens.DriverSavedLocationScreen.ScreenData as DriverSavedLocationScreenData
 import Screens.EditAadhaarDetailsScreen.ScreenData as EditAadhaarDetailsScreenData
 import Screens.EditBankDetailsScreen.ScreenData as EditBankDetailsScreenData
-import Screens.EnterMobileNumberScreen.ScreenData as EnterMobileNumberScreenData
 import Screens.EnterMobileNumberScreen.ScreenData as EnterMobileNumberScreenData
 import Screens.EnterOTPScreen.ScreenData as EnterOTPScreenData
 import Screens.HelpAndSupportScreen.ScreenData as HelpAndSupportScreenData
 import Screens.HomeScreen.ScreenData as HomeScreenData
 import Screens.NotificationsScreen.ScreenData as NotificationsScreenData
 import Screens.OnBoardingSubscriptionScreen.ScreenData as OnBoardingSubscriptionScreenData
-import Screens.OnBoardingSubscriptionScreen.ScreenData as OnBoardingSubscriptionScreenData
-import Screens.PaymentHistoryScreen.ScreenData as PaymentHistoryScreenData
 import Screens.PaymentHistoryScreen.ScreenData as PaymentHistoryScreenData
 import Screens.PermissionsScreen.ScreenData as PermissionsScreenData
 import Screens.PopUpScreen.ScreenData as PopUpScreenData
@@ -289,7 +282,7 @@ data HELP_AND_SUPPORT_SCREEN_OUTPUT = WRITE_TO_US_SCREEN
 
 
 data WRITE_TO_US_SCREEN_OUTPUT = GO_TO_HOME_SCREEN_FLOW
-data REGISTRATION_SCREENOUTPUT = UPLOAD_DRIVER_LICENSE RegistrationScreenState
+data REGISTRATION_SCREEN_OUTPUT = UPLOAD_DRIVER_LICENSE RegistrationScreenState
                                 | UPLOAD_VEHICLE_DETAILS RegistrationScreenState
                                 | PERMISSION_SCREEN RegistrationScreenState
                                 | LOGOUT_FROM_REGISTERATION_SCREEN

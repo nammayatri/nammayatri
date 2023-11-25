@@ -1,3 +1,18 @@
+{-
+ 
+  Copyright 2022-23, Juspay India Pvt Ltd
+ 
+  This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License
+ 
+  as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program
+ 
+  is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+ 
+  or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
+ 
+  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
+-}
+
 module Screens.ChooseCityScreen.View where
 
 import Screens.ChooseCityScreen.ComponentConfig
@@ -219,7 +234,7 @@ radioButtonView state push visibility' =
   , background Color.white900
   ][  headerView state push
     , textView $
-      [ text $ getString if state.props.currentStage == SELECT_LANG then SELECT_LANGUAGE_DESC else SELECT_LOCATION_DESC
+      [ text $ getString SELECT_LOCATION_DESC
       , color Color.black800
       , margin $ Margin 16 24 16 16
       ] <> FontStyle.subHeading2 TypoGraphy
@@ -235,12 +250,17 @@ radioButtonView state push visibility' =
           [ Anim.translateYAnimFromTopWithAlpha $ AnimConfig.translateYAnimMapConfig index
           ] $ MenuButton.view
               (push <<< (MenuButtonAction))
-              { text: {name: language.name, value: language.value, subtitle: language.subtitle}, 
+              { text: 
+                  { name: language.name
+                  , value: language.value
+                  , subtitle: language.subtitle
+                  }, 
                 isSelected: (selectedVal == language.value), 
-                index : index, lineVisiblity : false, 
-                selectedStrokeColor : Color.blue900, 
-                selectedBackgroundColor : Color.blue600, 
-                notSelectedStrokeColor : Color.grey700 }) items
+                index : index, 
+                lineVisibility : false, 
+                activeStrokeColor : Color.blue900, 
+                activeBgColor : Color.blue600, 
+                inactiveStrokeColor : Color.grey700 }) items
       )
   ]
 

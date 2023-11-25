@@ -25,7 +25,7 @@ import Components.GenericMessageModal.View as GenericMessageModal
 import Components.PopUpModal as PopUpModal
 import Components.PrimaryButton as PrimaryButton
 import Components.ReferralMobileNumber.View as ReferralMobileNumber
-import Components.StepsHeaderModal as StepsHeaderModel
+import Components.AppOnboardingNavBar as AppOnboardingNavBar
 import Components.TutorialModal.View as TutorialModal
 import Components.ValidateDocumentModal as ValidateDocumentModal
 import Control.Monad.Trans.Class (lift)
@@ -58,6 +58,7 @@ import Screens.RegistrationScreen.ComponentConfig (logoutPopUp)
 import Screens.Types (AddVehicleDetailsScreenState, StageStatus(..), ValidationStatus(..))
 import Styles.Colors as Color
 import Types.App (GlobalState(..), defaultGlobalState)
+import Data.String.Common as DSC
 
 screen :: AddVehicleDetailsScreenState -> Screen Action AddVehicleDetailsScreenState ScreenOutput
 screen initialState =
@@ -102,7 +103,7 @@ view push state =
       , afterRender push (const AfterRender)
       ][  PrestoAnim.animationSet
           [ Anim.fadeIn true
-          ] $ StepsHeaderModel.view (push <<< StepsHeaderModelAC) (stepsHeaderModelConfig state)
+          ] $  headerView state push
         , linearLayout
           [ width MATCH_PARENT
           , weight 1.0
@@ -140,7 +141,7 @@ view push state =
            [ width MATCH_PARENT
            , height WRAP_CONTENT
            , text state.data.errorMessage
-           , visibility if state.data.errorMessage /= "" then VISIBLE else GONE
+           , visibility if not (DSC.null state.data.errorMessage) then VISIBLE else GONE
            , color Color.red
            , gravity CENTER
            , padding( PaddingHorizontal 20 20)
@@ -175,6 +176,9 @@ view push state =
       <> if state.props.fileCameraPopupModal then [fileCameraLayout push state] else [] 
       <> if state.props.multipleRCstatus /= NOT_STARTED then [addRCFromProfileStatusView state push] else [])
 
+headerView :: forall w. AddVehicleDetailsScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+headerView state push = AppOnboardingNavBar.view (push <<< AppOnboardingNavBarAC) (appOnboardingNavBarConfig state)
+  
 applyReferralView :: AddVehicleDetailsScreenState -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w 
 applyReferralView state push = 
   linearLayout
@@ -388,7 +392,7 @@ vehicleRegistrationNumber state push =
                 [ width MATCH_PARENT
                 , height WRAP_CONTENT
                 , text (getString SAME_REENTERED_RC_MESSAGE)
-                , visibility $ if (DS.toLower(state.data.vehicle_registration_number) /= DS.toLower(state.data.reEnterVehicleRegistrationNumber) && state.data.reEnterVehicleRegistrationNumber /= "") then VISIBLE else GONE
+                , visibility $ if (DS.toLower(state.data.vehicle_registration_number) /= DS.toLower(state.data.reEnterVehicleRegistrationNumber) && not (DSC.null state.data.reEnterVehicleRegistrationNumber )) then VISIBLE else GONE
                 , color Color.darkGrey
                 ]
           ]
@@ -477,7 +481,6 @@ uploadRC state push =
                   , cornerRadius 4.0
                   , pattern "[a-z, 0-9, A-Z]"
                   , stroke ("1," <> Color.white900)
-                  --, id "111127"
                   ] <> FontStyle.subHeading1 TypoGraphy) 
                 , linearLayout
                   [ height MATCH_PARENT
@@ -487,56 +490,6 @@ uploadRC state push =
                     , previewIcon state push
                     ]
                 ]
-    --       , background Color.grey700
-    --       , PP.cornerRadii $ PTD.Corners 4.0 true true false false
-    --       ][ imageView
-    --         [ width ( V 328 )
-    --         , height ( V 166 )
-    --         , imageWithFallback $ "ny_ic_rc_demo," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_rc_demo.png"
-    --         ]
-    --       ]
-    --     , linearLayout
-    --       [ width MATCH_PARENT
-    --       , height WRAP_CONTENT
-    --       , orientation HORIZONTAL
-    --       , stroke ("1," <> Color.borderColorLight) 
-    --       , PP.cornerRadii $ PTD.Corners 4.0 false false true true
-    --       , gravity CENTER
-    --       ][  textView
-    --           [ width $ V 20
-    --           , height WRAP_CONTENT
-    --           ]
-    --         , textView
-    --           ([ width MATCH_PARENT
-    --           , height (V 60)
-    --           , padding (Padding 0 17 20 0)
-    --           , color if state.props.rcAvailable then Color.greyTextColor else Color.darkGrey
-    --           , fontStyle $ FontStyle.semiBold LanguageStyle
-    --           , text if state.props.rcAvailable then state.props.rc_name else (getString UPLOAD_RC)
-    --           , maxLines 1
-    --           , ellipsize true
-    --           , weight 1.0
-    --           , cornerRadius 4.0
-    --           , pattern "[a-z, 0-9, A-Z]"
-    --           , stroke ("1," <> Color.white900)
-    --           --, id "111127"
-    --           ] <> FontStyle.subHeading1 TypoGraphy) 
-    --         , linearLayout
-    --           [ height MATCH_PARENT
-    --           , width WRAP_CONTENT
-    --           , margin (Margin 0 10 20 10)
-    --           ][ uploadIcon state push
-    --             , previewIcon state push
-    --             ]
-    --          ]
-    --     , textView $ -- (Error Indication)
-    --       [ width WRAP_CONTENT
-    --       , height WRAP_CONTENT
-    --       , text "some_text"
-    --       , color Color.warningRed
-    --       , margin (MarginTop 10)
-    --       , visibility GONE
-    --       ] <> FontStyle.paragraphText TypoGraphy
         ]]
      ]
 
@@ -728,7 +681,7 @@ howToUpload push state =
     , height WRAP_CONTENT
     , orientation VERTICAL
     , margin $ MarginVertical 0 10
-    , padding $ Padding 0 16 0 16
+    , padding $ PaddingVertical 16 16
     ][ 
       textView $ 
       [ text $ getString TAKE_CLEAR_PICTURE_RC
@@ -767,7 +720,7 @@ rightWrongView isRight =
   [ width MATCH_PARENT
   , height WRAP_CONTENT
   , gravity CENTER_VERTICAL
-    , margin $ MarginBottom 16
+  , margin $ MarginBottom 16
   ][ imageView
     [ width $ V 120
     , height $ V if isRight then 80 else 100
@@ -832,7 +785,7 @@ validateProfilePictureModalState state = let
          color = Color.white900
         },
           headTextConfig {
-            text = getString TAKE_PHOTO,--getString TAKE_PHOTO,--("CONFIRM_SEFIE"), --getString CONFIRM_SELFIE),
+            text = getString TAKE_PHOTO,
             color = Color.white900
           }
         }
@@ -858,7 +811,6 @@ addRCFromProfileStatusView state push =
   [ width MATCH_PARENT
   , height MATCH_PARENT
   , background Color.blue600
-  , orientation VERTICAL
   ][ linearLayout
      [ width MATCH_PARENT
      , height MATCH_PARENT

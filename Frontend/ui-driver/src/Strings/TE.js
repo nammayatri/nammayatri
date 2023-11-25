@@ -1050,7 +1050,7 @@ const teluguStrings = {
   CONFIRM_AND_UPLOAD : "నిర్ధారించి అప్‌లోడ్ చేయండి",
   RETAKE_PHOTO : "ఫోటోను మళ్లీ తీయండి",
   CHANGE_CITY : "నగరాన్ని మార్చండి",
-  LETS_GET_YOUR_TRIP_READY : "మిమ్మల్ని యాత్రకు సిద్ధం చేద్దాం!",
+  LETS_GET_YOU_TRIP_READY : "మీ యాత్రను సిద్ధం చేద్దాం!",
   GOT_AN_OTP : "OTP వచ్చిందా?",
   DRIVING_LICENSE_DETAILS : "డ్రైవింగ్ లైసెన్స్ వివరాలు",
   VEHICLE_REGISTRATION_DETAILS : "వాహన రిజిస్ట్రేషన్ వివరాలు",

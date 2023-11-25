@@ -49,6 +49,6 @@
     <string name="invoice_for_your_ride_is_downloaded">നിങ്ങളുടെ യാത്രയ്ക്കുള്ള ഇൻവോയ്സ് ഡൗൺലോഡ് ചെയ്തു!!!</string>
     <string name="qr_downloaded">QR ഡ download ൺലോഡ് ചെയ്തു !!!</string>
     <string name="accept_goto">Accept “Go To”</string>
-    <string name="take_a_clear_selfie">Take a clear photo with your driving licence \ninside the marked area</string>
+    <string name="take_a_clear_selfie">അടയാളപ്പെടുത്തിയ സ്ഥലത്തിനുള്ളിൽ നിങ്ങളുടെ \n ഡ്രൈവിംഗ് ലൈസൻസിനൊപ്പം വ്യക്തമായ ഫോട്ടോ എടുക്കുക</string>
 
 </resources>
