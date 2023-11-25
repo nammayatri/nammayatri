@@ -1050,7 +1050,9 @@ const bengaliStrings = {
   RC_VERIFICATION_FAILED_STATUS : "আরসি যাচাই ব্যর্থ!",
   RC_VERIFICATION_IN_PROGRESS : "RC যাচাইকরণ চলছে...",
   WE_ARE_NOT_LIVE_IN_YOUR_AREA : "আমরা এখনও আপনার এলাকায় থাকি না!\nশীঘ্রই আপনার শহরে আসছি!",
-  LOCATION_UNSERVICEABLE : "অবস্থান অপ্রচলিত"
+  LOCATION_UNSERVICEABLE : "অবস্থান অপ্রচলিত",
+  UNABLE_TO_GET_YOUR_LOCATION : "আপনার অবস্থান পেতে অক্ষম!",
+  TURN_OFF_ANY_MOCK_LOCATION_APP_AND_RESTART : "আপনি যে কোনও মক লোকেশন অ্যাপ ব্যবহার করছেন তা বন্ধ করুন এবং অ্যাপটি পুনরায় চালু করুন।"
 }
 
 export function getStringValue(key) {

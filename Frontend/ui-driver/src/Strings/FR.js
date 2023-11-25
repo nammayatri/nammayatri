@@ -799,5 +799,7 @@ const frenchStrings = {
   GET_FULL_PAYMENT : "Obtenez un paiement complet",
   SELECT_CITY_STR : "Sélectionnez la ville",
   WE_ARE_NOT_LIVE_IN_YOUR_AREA : "Nous ne sommes pas encore en direct dans votre région !\nBientôt dans votre ville !",
-  LOCATION_UNSERVICEABLE : "Emplacement inutilisable"
+  LOCATION_UNSERVICEABLE : "Emplacement inutilisable",
+  UNABLE_TO_GET_YOUR_LOCATION : "Impossible d'obtenir votre position!",
+  TURN_OFF_ANY_MOCK_LOCATION_APP_AND_RESTART : "Désactivez toute application Mock Location que vous utilisez et redémarrez l'application."
 }

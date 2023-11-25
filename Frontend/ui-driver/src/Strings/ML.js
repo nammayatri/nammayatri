@@ -1017,7 +1017,9 @@ const mlStrings = {
   RC_VERIFICATION_FAILED_STATUS : "ആർസി പരിശോധന പരാജയപ്പെട്ടു!",
   RC_VERIFICATION_IN_PROGRESS : "ആർസി വെരിഫിക്കേഷൻ പുരോഗമിക്കുകയാണ്...",
   WE_ARE_NOT_LIVE_IN_YOUR_AREA : "ഞങ്ങൾ ഇതുവരെ നിങ്ങളുടെ പ്രദേശത്ത് താമസിക്കുന്നില്ല!\nനിങ്ങളുടെ നഗരത്തിലേക്ക് ഉടൻ വരുന്നു!",
-  LOCATION_UNSERVICEABLE : "ലൊക്കേഷൻ ഉപയോഗയോഗ്യമല്ല"
+  LOCATION_UNSERVICEABLE : "ലൊക്കേഷൻ ഉപയോഗയോഗ്യമല്ല",
+  UNABLE_TO_GET_YOUR_LOCATION : "നിങ്ങളുടെ സ്ഥാനം കണ്ടെത്താനായില്ല!",
+  TURN_OFF_ANY_MOCK_LOCATION_APP_AND_RESTART : "നിങ്ങൾ ഉപയോഗിക്കുന്ന ഏതെങ്കിലും മോക്ക് ലൊക്കേഷൻ ആപ്പ് ഓഫാക്കി ആപ്പ് റീസ്റ്റാർട്ട് ചെയ്യുക."
 }
 
 export function getStringValue(key) {

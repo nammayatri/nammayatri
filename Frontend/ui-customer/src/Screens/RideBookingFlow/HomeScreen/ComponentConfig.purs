@@ -68,8 +68,6 @@ import Language.Types (STR(..))
 import MerchantConfig.Utils as MU
 import PrestoDOM (Accessiblity(..))
 import PrestoDOM.Types.DomAttributes (Corners(..))
-import PrestoDOM.Types.DomAttributes (Corners(..))
-import Resources.Constants (getKmMeter)
 import Resources.Constants (getKmMeter)
 import Screens.Types (DriverInfoCard, Stage(..), ZoneType(..), TipViewData, TipViewStage(..), TipViewProps)
 import Screens.Types as ST

@@ -86,6 +86,7 @@ import in.juspay.mobility.app.InAppNotification;
 import in.juspay.mobility.app.LocationUpdateService;
 import in.juspay.mobility.app.MyFirebaseMessagingService;
 import in.juspay.mobility.app.NotificationUtils;
+import in.juspay.mobility.app.RemoteConfigs.MobilityRemoteConfigs;
 import in.juspay.mobility.app.RideRequestActivity;
 import in.juspay.mobility.app.TranslatorMLKit;
 import in.juspay.mobility.app.WidgetService;
@@ -356,7 +357,7 @@ public class MainActivity extends AppCompatActivity {
             if (!city.equals("__failed")) {
                 View splash = findViewById(R.id.splash);
                 LottieAnimationView splashLottie = splash.findViewById(R.id.splash_lottie);
-                setSplashAnimAndStart(splashLottie,city);
+                setSplashAnimAndStart(splashLottie,city.toLowerCase());
             }
         } catch (Exception e){
             Bundle bundle = new Bundle();
@@ -369,19 +370,17 @@ public class MainActivity extends AppCompatActivity {
 
     private void setSplashAnimAndStart (LottieAnimationView view ,String city) {
         ResourceHandler resourceHandler = new ResourceHandler(this);
-        String splashConfig = resourceHandler.getFromAssets("splash_config.json");
+        MobilityRemoteConfigs remoteConfigs = new MobilityRemoteConfigs();
+        String splashScreenTemp = remoteConfigs.getString("splash_screen_" + city);
         @Nullable
         String animationFile = null;
         try {
-            JSONObject config = new JSONObject(splashConfig);
-            if (config.has(city)) {
-                JSONObject cityConfig = config.getJSONObject(city);
-                String file = cityConfig.optString("file_name","");
-                if  (resourceHandler.isResourcePresent("raw",file) && !cityConfig.optBoolean("forceToRemote",false)) {
-                    animationFile = resourceHandler.getRawResource(file);
-                } else {
-                    animationFile = cityConfig.optString("url");
-                }
+            JSONObject cityConfig = new JSONObject(splashScreenTemp);
+            String file = cityConfig.optString("file_name","");
+            if  (resourceHandler.isResourcePresent("raw",file) && !cityConfig.optBoolean("force_remote",false)) {
+                animationFile = resourceHandler.getRawResource(file);
+            } else {
+                animationFile = cityConfig.optString("url");
             }
         } catch (Exception e) {
             Bundle bundle = new Bundle();

@@ -1074,7 +1074,9 @@ const englishStrings = {
   DETECTING_LOCATION : "Detecting Location",
   SELECT_CITY_STR : "Select City",
   WE_ARE_NOT_LIVE_IN_YOUR_AREA : "We are not live in your area yet!\nComing soon to your city!",
-  LOCATION_UNSERVICEABLE : "Location unserviceable"
+  LOCATION_UNSERVICEABLE : "Location unserviceable",
+  UNABLE_TO_GET_YOUR_LOCATION : "Unable to get your location!",
+  TURN_OFF_ANY_MOCK_LOCATION_APP_AND_RESTART : "Turn off any Mock Location app you might be using and restart the app."
 }
 
 
