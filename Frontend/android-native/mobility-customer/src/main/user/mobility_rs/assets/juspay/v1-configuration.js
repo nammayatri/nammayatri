@@ -6,37 +6,31 @@ if (typeof __VERSION__ !== 'undefined') {
 window.version["configuration"]= version;
 window.getMerchantConfig = function () {
   return JSON.stringify({
-      "homeScreenConfig" : {
+      "homeScreen" : {
         "primaryBackground" : "#FFFFFF",
         "pickUpViewColor" : "#EFEFEF",
         "pickupLocationTextColor" : "#1D1D1D",
-        "homescreenHeaderConfig" : {
-          "headerMenuButtonColor" : "#F6F6F6",
-          "headerMenuButtonImageUrl" : "ny_ic_menu_black,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_menu_black.png",
-          "bannerViewVisibility" : false,
-          "headerLogoVisibility" : false,
-          "headerTextColor" : "#1D1D1D",
-          "headerSeperatorStroke" : true,
+        "bannerViewVisibility" : false,
+        "header" : {
+          "menuButtonBackground" : "#F6F6F6",
+          "showLogo" : false,
+          "titleColor" : "#1D1D1D",
+          "showSeparator" : true,
         },
-        "whereToButtonConfig" : {
+        "whereToButton" : {
           "margin" : {
-            "top" : 3,
-            "left" : 16,
-            "right" : 16,
-            "bottom" : 16
+            "top" : 3
           },
           "shadow" : {
-            "color" : "#2C2F3A",
             "x": 0.3,
             "y": 0.3,
             "blur": 3.0,
-            "spread": 10.0,
-            "opacity" : 0.14
+            "spread": 10.0
           }
         }
       },
       "StringKeys": ["YOUR_LOCATION_HELPS_OUR_SYSTEM", "ABOUT_APP_DESCRIPTION", "CORPORATE_ADDRESS_DESCRIPTION_ADDITIONAL", "YOUR_FEEDBACK_HELPS_US", "LOCATION_PERMISSION_SUBTITLE_NEW_USER"],
-      "isReferralEnabled": false,
+      "isReferralEnabled": "false",
       "showBookingPreference": true,
       "showRateCard": true,
       "showDashboard": false,
@@ -80,19 +74,19 @@ window.getMerchantConfig = function () {
         "setLocationOnMapColor": "#2C2F3A",
         "strokeColor": "1,#818181",
         "enableLocationTagbar" : "true",
-         "editTextBackground" : "#EFEFEF",
-         "editTextDefaultColor" : "#E4E4E4",
-         "backgroundColor" : "#FFFFFF",
-         "separatorColor" : "#E4E4E4",
-         "editTextColor" : "#818181",
+        "editTextBackground" : "#EFEFEF",
+        "editTextDefaultColor" : "#818181",
+        "backgroundColor" : "#FFFFFF",
+        "separatorColor" : "#E4E4E4",
+        "showSeparator" : true,
+        "editTextColor" : "#818181",
+        "hintColor" : "#E4E4E4",
         "resultsCardCornerRadius": 8.0,
         "showRateCardDetails": true,
-        "editTextBackground" : "#DA4C54",
-        "editTextDefaultColor" : "#E89398",
         "lottieHeight": 96,
         "lottieWidth": 96,
         "primaryButtonHeight": 60,
-        "backArrow": "ny_ic_chevron_left_white,https://assets.juspay.in/nammayatri/images/user/ny_ic_chevron_left_white.png"
+        "backArrow": "ny_ic_chevron_left,https://assets.juspay.in/beckn/nammayatri/nammayatricommon/images/ny_ic_chevron_left.png"
         },
         "ratingConfig": {
         "secondaryButtonTextColor": "#1D1D1D",
@@ -105,8 +99,10 @@ window.getMerchantConfig = function () {
         "buttonCornerRadius": 8.0
         },
         "quoteListModel": {
-        "backgroundColor": "#D63941",
-        "textColor": "#FFFFFF",
+        "backgroundColor": "#FFFFFF",
+        "textColor": "#4F4F4F",
+        "separatorColor" : "#E4E4E4",
+        "showSeparator" : true,
         "loaderColor": "#80B2FF",
         "otpTextBackground": "#FFFFFF",
         "otpBackground": "#FFF0F6",
@@ -119,7 +115,7 @@ window.getMerchantConfig = function () {
         "topMargin": 0,
         "noQuotesImageHeight": 115,
         "noQuotesImageWidth": 137,
-        "closeIcon": "ny_ic_close_white,https://assets.juspay.in/beckn/jatrisaathi/user/images/ny_ic_close_white.png",
+        "closeIcon": "ny_ic_close,https://assets.juspay.in/beckn/nammayatri/nammayatricommon/images/ny_ic_close.png",
         },
         "driverInfoConfig": {
         "ratingTextColor": "#D84E55",
@@ -136,16 +132,18 @@ window.getMerchantConfig = function () {
         "showNumberPlateSuffix": false,
         "numberPlateBackground": "#E9BE4D",
         "showCancelPrevention": false,
-        "showTrackingButton": true,
+        "showTrackingButton": false,
         "footerVisibility" : true
-      , "footerImageUrl" : "ic_namma_yatri_logo,https://assets.juspay.in/beckn/nammayatri/user/images/ic_namma_yatri_logo.png"
+      , "footerImageUrl" : "ic_namma_yatri_logo,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_namma_yatri_logo.png"
       , "footerBackgroundColor" : "#FFFFFF"
         },
-        "profileBackground": "#D63941",
-        "profileName": "#FFFFFF",
+        "profileBackground": "#EFEFEF",
+        "profileName": "#1D1D1D",
         "profileImage": "#012A72",
         "feedbackBackground": "#D63941",
         "profileCompletion": "#FFFFFF",
+        "profileArrowImage": "ny_ic_chevron_right,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_chevron_right.png",
+        "showProfileStatus": false,
         "cancelRideColor": "#BD5500",
         "merchantLogo": "ic_launcher,https://assets.juspay.in/beckn/mobilityredbus/user/images/ny_ic_launcher.png",
         "infoIconUrl": "ny_ic_info,https://assets.juspay.in/nammayatri/images/user/ny_ic_information_grey.png",
@@ -206,7 +204,7 @@ window.getMerchantConfig = function () {
         "visibility": true,
         "title": "Redbus",
         "backgroundColor" : "#F6F6F6",
-        "imageUrl": "ny_ic_chevron_left_double,https://assets.juspay.in/beckn/mobilitypaytm/mobilitypaytmcommon/ny_ic_chevron_left_double.png"
+        "imageUrl": "ny_ic_chevron_left,https://assets.juspay.in/beckn/nammayatri/nammayatricommon/images/ny_ic_chevron_left.png"
         },
         "showDeleteAccount": false,
         "fontName": "PlusJakartaSans",
@@ -226,12 +224,15 @@ window.getMerchantConfig = function () {
         }
     , "features" : {
         "enableAutoReadOtp" : false
+      , "enableLiveDashboard" : false
     }
     , "estimateAndQuoteConfig" : { "enableOnlyAuto" : true
     }
     , "rideCompletedCardConfig" : {
         "topCard" : {
           "gradient" : "#F2A2A2"
+        , "enableGradient" : false
+        , "background" : "#1D1D1D"
         }
       }
     , "enableContactSupport" : false

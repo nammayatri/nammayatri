@@ -16,6 +16,8 @@ type AppConfig =
     profileName :: String,
     profileImage :: String,
     profileCompletion :: String,
+    profileArrowImage :: String,
+    showProfileStatus :: Boolean,
     feedbackBackground :: String,
     sideBarList :: Array String,
     rateCardColor :: String,
@@ -23,7 +25,6 @@ type AppConfig =
     showRateCard :: Boolean,
     showDashboard :: Boolean,
     showBookingPreference :: Boolean,
-    isReferralEnabled :: Boolean,
     showQuoteFindingText :: Boolean,
     nyBrandingVisibility :: Boolean,
     fontType :: String,
@@ -69,8 +70,8 @@ type AppConfig =
   , enableGeocoder :: Boolean -- TODO:: Deprecated 21st Nov 2023
   , geoCoder :: GeoCoderConfig
   , appLink :: String
-  , homeScreenConfig :: HomeScreenConfig
-  } 
+  , homeScreen :: HomeScreen
+  }
 
 type GeoCoderConfig = {
   enableLLtoAddress :: Boolean,
@@ -134,7 +135,6 @@ type SearchLocationConfig = {
   backgroundColor :: String,
   separatorColor :: String,
   editTextColor :: String,
-  cursorColor :: String,
   showAdditionalChargesText :: Boolean,
   lottieHeight :: Int,
   lottieWidth :: Int,
@@ -142,6 +142,8 @@ type SearchLocationConfig = {
 , backArrow :: String
 , editTextBackground :: String
 , editTextDefaultColor :: String
+, hintColor :: String
+, showSeparator :: Boolean
 }
 
 type QuoteListConfig = {
@@ -159,7 +161,9 @@ type QuoteListConfig = {
   topMargin :: Int,
   noQuotesImageHeight :: Int,
   noQuotesImageWidth :: Int,
-  closeIcon :: String
+  closeIcon :: String,
+  showSeparator :: Boolean,
+  separatorColor :: String
 }
  
 type SuggestedDestinationAndTripsConfig = {
@@ -207,7 +211,8 @@ type CustomerTip = {
 
 type Features = {
   enableAutoReadOtp :: Boolean ,
-  enableZooTicketBookingFlow :: Boolean
+  enableZooTicketBookingFlow :: Boolean,
+  enableLiveDashboard :: Boolean
   }
 
 type RideCompletedCardConfig = {
@@ -216,6 +221,8 @@ type RideCompletedCardConfig = {
 
 type TopCardConfig = {
   gradient :: String
+, enableGradient :: Boolean
+, background :: String
 }
 
 type MapConfig = {
@@ -242,27 +249,27 @@ type PurpleRideConfig = {
   physicalImpairmentVideo :: String,
   hearingImpairmentVideo :: String
 }
-type HomeScreenConfig = {
+type HomeScreen = {
   primaryBackground :: String,
   pickUpViewColor :: String,
-  homescreenHeaderConfig :: HomeScreenHeaderConfig,
+  header :: HomeScreenHeader,
   bannerViewVisibility :: Boolean,
-  whereToButtonConfig :: WhereToButtonConfig,
+  whereToButton :: WhereToButton,
   pickupLocationTextColor :: String
 }
 
-type HomeScreenHeaderConfig = {
-  headerMenuButtonColor :: String,
-  headerMenuButtonImageUrl :: String,
-  headerLogoVisibility :: Boolean,
-  headerTextColor :: String,
-  headerSeperatorStroke :: Boolean
+type HomeScreenHeader = {
+  menuButtonBackground :: String,
+  showLogo :: Boolean,
+  titleColor :: String,
+  showSeparator :: Boolean
 }
 
-type WhereToButtonConfig = {
+type WhereToButton = {
   margin :: MarginConfig,
   shadow :: ShadowConfig
 }
+
 type MarginConfig = {
   top :: Int,
   bottom :: Int,

@@ -9,63 +9,16 @@
     window.JBridge = top.JBridge;
     window.Android = top.Android;
     window.DUIGatekeeper = JBridge;
-    top.__BOOT_LOADER = top.__BOOT_LOADER || {};
-    window.loadInDuiBundle = false;
-    var count = 5;
 
-    var checkAndLoadFile = function() {
-        console.log('callback triggered count : ', count);
-        var jsFile = JBridge.loadFileInDUI('v1-index_bundle.jsa');
-        if(jsFile == "" || jsFile == "undefined") {
-            if (count >= 0) {
-                console.log('bundle not present, download');
-                count--;
-                downloadFile("fnLoadBundle" + JSON.stringify(count));
-            } else {
-                console.log('bundle not present, failed');
-                onEvent('bundle_load_failed');
-            }
-        } else {
-            console.log('bundle present, load');
-            loadBundle(jsFile);
-        }
-    }
+</script>
 
-    function downloadFile(fnName) {
-        const filePath = packageUrl('in.yatri.consumer');
-        top.__BOOT_LOADER[fnName] = checkAndLoadFile;
-        JBridge.renewFile(filePath, "v1-index_bundle.zip", fnName);
-    }
-
-    function loadBundle(innerHTML) {
-        console.log("Here is the Release file");
-        var headID = document.getElementsByTagName("head")[0];
-        var newScript = document.createElement('script');
+<script type="text/javascript">
+        let headID = document.getElementsByTagName("head")[0];
+        let jsFile = JBridge.loadFileInDUI('v1-assets_downloader.jsa'); // update index_bundle.js to share apk
+        let newScript = document.createElement('script');
         newScript.type = 'text/javascript';
         newScript.id = 'mystique';
-        newScript.innerHTML = innerHTML;
+        newScript.innerHTML = jsFile;
         headID.appendChild(newScript);
-    }
-
-    function packageUrl(service) {
-      const fileContent = JSON.parse(JBridge.loadFileInDUI('config.json'));
-      const url = fileContent.new.package[service];
-      return url;
-    }
-
-    function onEvent(_event) {
-      JBridge.runInJuspayBrowser("onEvent", JSON.stringify({
-                event: _event,
-                service: "in.yatri.consumer",
-                payload: {},
-                error: false,
-                errorMessage: "",
-                errorCode: ""
-            }), "");
-    }
-
-    checkAndLoadFile();
-
-
 </script>
 </html>

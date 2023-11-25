@@ -29,7 +29,7 @@ window.getMerchantConfig = function () {
     "TO_CATER_YOUR_SPECIFIC_NEEDS",
     "PLEASE_ENABLE_LOCATION_PERMISSION"
     ],
-    "isReferralEnabled": true,
+    "isReferralEnabled": "true",
     "showBookingPreference": false,
     "showRateCard": false,
     "showDashboard": false,

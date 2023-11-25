@@ -20,7 +20,6 @@ config =
   , showRateCard : true
   , showDashboard : true
   , showBookingPreference : true
-  , isReferralEnabled : true
   , showQuoteFindingText : false
   , quoteListItemConfig: 
     { primaryButtonCorner: 8.0
@@ -44,6 +43,8 @@ config =
     , topMargin : 100
     , noQuotesImageHeight: 115
     , noQuotesImageWidth : 137
+    , separatorColor : "#00FFFFFF"
+    , showSeparator : false
     , closeIcon : "ny_ic_close_white,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_close_white.png"
     }
   , searchLocationConfig : 
@@ -54,15 +55,16 @@ config =
     , strokeColor: "1,#E5E7EB"
     , backgroundColor : "#2C2F3A"
     , editTextColor : "#FFFFFF"
-    , separatorColor : "00FFFFFF"
+    , separatorColor : "#00FFFFFF"
     , enableLocationTagbar : "true"
     , resultsCardCornerRadius : 20.0
     , showRateCardDetails : true
     , showAdditionalChargesText : false
     , lottieHeight : 96
-    , cursorColor : "#FCC32C"
     , lottieWidth : 96
     , primaryButtonHeight : 60
+    , hintColor : "#A7A7A7"
+    , showSeparator : false
     , backArrow : "ny_ic_chevron_left_white,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_chevron_left_white.png"
     }
   , driverInfoConfig : 
@@ -116,6 +118,8 @@ config =
       }
   , popupBackground : "#FFFFFF"
   , profileCompletion : "#FCC32C"
+  , showProfileStatus: true
+  , profileArrowImage: "ny_ic_chevron_right_white,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_chevron_right_white.png"
   , cancelRideColor : "#E55454"
   , infoIconUrl : "ny_ic_info,https://assets.juspay.in/nammayatri/images/user/ny_ic_information_grey.png"
   , profileEditGravity : "center"
@@ -170,12 +174,15 @@ config =
   , enableContactSupport : true
   , features : {
     enableAutoReadOtp : true,
-    enableZooTicketBookingFlow : false
+    enableZooTicketBookingFlow : false,
+    enableLiveDashboard : true
   }
 
   , rideCompletedCardConfig : {
       topCard : {
         gradient : "#29334A"
+      , enableGradient : true
+      , background : "#2C2F3A"
       } 
   }
   , mapConfig : 
@@ -198,19 +205,18 @@ config =
       hearingImpairmentVideo : ""
     }
   , appLink : ""
-  , homeScreenConfig : {
+  , homeScreen: {
       primaryBackground : "#2C2F3A",
       pickUpViewColor : "#303440",
-      homescreenHeaderConfig : {
-        headerMenuButtonColor : "#00FFFFFF",
-        headerMenuButtonImageUrl : "ny_ic_menu_white,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_menu_white.png",
-        headerLogoVisibility : true,
-        headerTextColor : "#1D1D1D",
-        headerSeperatorStroke : false
+      header : {
+        menuButtonBackground : "#00FFFFFF",
+        showLogo : true,
+        titleColor : "#1D1D1D",
+        showSeparator : false
       },
       bannerViewVisibility : true,
       pickupLocationTextColor : "#A7A7A7",
-      whereToButtonConfig : {
+      whereToButton : {
         margin : {
           top : 0,
           left : 16,

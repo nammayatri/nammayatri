@@ -639,9 +639,9 @@ sourceUnserviceableConfig state =
     config = ErrorModal.config
     errorModalConfig' =
       config
-        { height = if (MU.getMerchant FunctionCall) == MU.NAMMAYATRI && state.props.isMockLocation then MATCH_PARENT else WRAP_CONTENT
+        { height = MATCH_PARENT
         , background = Color.white900
-        , corners = (Corners 24.0 true true false false)
+        , corners = (Corners 24.0 false false false false)
         , stroke = ("1," <> Color.borderGreyColor)
         , imageConfig
           { imageUrl = fetchImage FF_ASSET "ny_ic_location_unserviceable"
@@ -1281,9 +1281,9 @@ sourceToDestinationConfig state = let
   in sourceToDestinationConfig'
 
 rideCompletedCardConfig :: ST.HomeScreenState -> RideCompletedCard.Config 
-rideCompletedCardConfig state = let
-  config  = RideCompletedCard.config 
-  config' = config{
+rideCompletedCardConfig state = 
+  let topCardConfig = state.data.config.rideCompletedCardConfig.topCard
+  in RideCompletedCard.config {
         isDriver = false,
         customerIssueCard{
           reportIssueView = state.data.ratingViewState.openReportIssue,
@@ -1302,7 +1302,7 @@ rideCompletedCardConfig state = let
           finalAmount = state.data.finalAmount,
           initalAmount = state.data.driverInfoCardState.price,
           fareUpdatedVisiblity = state.data.finalAmount /= state.data.driverInfoCardState.price && state.props.estimatedDistance /= Nothing,
-          gradient = [state.data.config.primaryBackground, state.data.config.primaryBackground, state.data.config.rideCompletedCardConfig.topCard.gradient, state.data.config.primaryBackground],
+          gradient = if topCardConfig.enableGradient then [state.data.config.primaryBackground, state.data.config.primaryBackground, topCardConfig.gradient, state.data.config.primaryBackground] else [topCardConfig.background,topCardConfig.background],
           infoPill {
             text = getFareUpdatedString state.data.rideRatingState.distanceDifference,
             image = fetchImage FF_COMMON_ASSET "ny_ic_parallel_arrows",
@@ -1320,7 +1320,6 @@ rideCompletedCardConfig state = let
         primaryButtonConfig = skipButtonConfig state,
         enableContactSupport = state.data.config.enableContactSupport
       }
-  in config'
 
 
 customerFeedbackPillData :: LazyCheck -> Array (Array (Array RatingCard.FeedbackItem)) 

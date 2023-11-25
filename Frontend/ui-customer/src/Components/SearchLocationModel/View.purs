@@ -68,7 +68,6 @@ view push state =
             , orientation VERTICAL
             , background state.appConfig.searchLocationConfig.backgroundColor
             , padding $ PaddingVertical safeMarginTop 16
-            , stroke $ "1," <> state.appConfig.searchLocationConfig.separatorColor
             ][  linearLayout
                 [ orientation HORIZONTAL
                 , height $ V 105 
@@ -93,6 +92,15 @@ view push state =
                   , sourceDestinationImageView state
                   , sourceDestinationEditTextView state push
                   ]]
+                  , PrestoAnim.animationSet
+                    ([ translateYAnimFromTop $ translateFullYAnimWithDurationConfig 500 ])
+                    $ linearLayout
+                      [ height $ V 1
+                      , width MATCH_PARENT
+                      , background state.appConfig.searchLocationConfig.separatorColor
+                      , visibility if state.appConfig.searchLocationConfig.showSeparator then VISIBLE else GONE
+                      ]
+                      []
                   , relativeLayout 
                     [ width MATCH_PARENT
                     , height MATCH_PARENT
@@ -244,17 +252,16 @@ sourceDestinationEditTextView state push =
             [ height $ V 37
             , weight 1.0
             , text state.source
-            , color if not(state.isSource == Just true) then state.appConfig.searchLocationConfig.editTextDefaultColor else state.appConfig.searchLocationConfig.editTextColor
+            , color if state.isSource == Just true then state.appConfig.searchLocationConfig.editTextColor else state.appConfig.searchLocationConfig.editTextDefaultColor
             , singleLine true
             , ellipsize true
             , cornerRadius 4.0
             , padding (Padding 8 7 32 7)
             , lineHeight "24"
-            , cursorColor state.appConfig.searchLocationConfig.cursorColor
             , accessibilityHint "Pickup Location Editable field"
             , accessibility ENABLE
             , hint (getString START_)
-            , hintColor state.appConfig.searchLocationConfig.editTextDefaultColor
+            , hintColor state.appConfig.searchLocationConfig.hintColor
             , id $ getNewIDWithTag "SourceEditText"
             , afterRender (\_ -> do
                   _ <- pure $ showKeyboard case state.isSource of
@@ -321,12 +328,11 @@ sourceDestinationEditTextView state push =
               , stroke $ "0," <> Color.black
               , padding (Padding 8 7 4 7)
               , hint (getString WHERE_TO)
-              , hintColor state.appConfig.searchLocationConfig.editTextDefaultColor
+              , hintColor state.appConfig.searchLocationConfig.hintColor
               , singleLine true
               , ellipsize true
               , accessibilityHint "Destination Location Editable field"
               , accessibility ENABLE
-              , cursorColor state.appConfig.searchLocationConfig.cursorColor
               , id $ getNewIDWithTag "DestinationEditText"
               , afterRender (\action -> do
                   _ <- pure $ showKeyboard case state.isSource of

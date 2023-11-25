@@ -14,7 +14,7 @@ window.getMerchantConfig = function () {
                          "PAY_DRIVER_USING_WALLET",
                          "PAY_DRIVER_USING_CASH_OR_UPI_",
                          "LOCATION_PERMISSION_SUBTITLE_NEW_USER"],
-    "isReferralEnabled": false,
+    "isReferralEnabled": "false",
     "showBookingPreference": true,
     "showRateCard": true,
     "showDashboard": false,

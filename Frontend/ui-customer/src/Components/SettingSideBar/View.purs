@@ -202,7 +202,7 @@ profileView state push =
               [ width $ V 22
               , height (V 22)
               , color state.appConfig.profileName
-              , imageWithFallback $ fetchImage FF_ASSET "ny_ic_chevron_right_white"
+              , imageWithFallback state.appConfig.profileArrowImage
               ]
           ]
         , textView $
@@ -219,9 +219,12 @@ profileView state push =
         , orientation HORIZONTAL
         , gravity CENTER_VERTICAL
         , margin $ MarginTop 4
-        , visibility case profileCompleteValue state of
-            "100" -> GONE
-            _ -> VISIBLE
+        , visibility $ 
+              if state.appConfig.showProfileStatus 
+                then case profileCompleteValue state of
+                    "100" -> GONE
+                    _ -> VISIBLE
+                else GONE
         ][textView $
           [ text $ (getString PROFILE_COMPLETION) <> ":"
           , width WRAP_CONTENT

@@ -714,7 +714,7 @@ liveStatsDashboardView push state =
   linearLayout
     [ width WRAP_CONTENT
     , height WRAP_CONTENT
-    , visibility if (state.props.isReferred || state.props.hasTakenRide) && state.props.currentStage == RideStarted then VISIBLE else GONE
+    , visibility if state.data.config.features.enableLiveDashboard && (state.props.isReferred || state.props.hasTakenRide) && state.props.currentStage == RideStarted then VISIBLE else GONE
     , stroke $ "1," <> Color.blue900
     , margin (MarginHorizontal 16 13)
     , accessibility DISABLE_DESCENDANT
@@ -850,6 +850,7 @@ emptySuggestionsBanner state push =
     , margin $ Margin 16 10 16 10
     , background Color.white900
     , gravity CENTER_VERTICAL
+    , visibility if state.data.config.homeScreen.bannerViewVisibility then VISIBLE else GONE
     ][ linearLayout
         [ height WRAP_CONTENT
           , width WRAP_CONTENT
@@ -1826,7 +1827,7 @@ loaderView push state =
                     [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_wallet_filled"
                     , height $ V 20
                     , width $ V 20
-                    , margin (MarginTop 6)
+                    , margin $ MarginTop 3
                     ]
                   , textView $
                     [ text (getString PAY_DRIVER_USING_CASH_OR_UPI)
@@ -1897,7 +1898,7 @@ emptyLayout state =
 rideTrackingView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 rideTrackingView push state =
   linearLayout
-    [ height WRAP_CONTENT
+    [ height MATCH_PARENT
     , width MATCH_PARENT
     , orientation VERTICAL
     , padding (Padding 0 0 0 0)
@@ -1913,7 +1914,7 @@ rideTrackingView push state =
       --   , translateOutXAnim (-100) $ not ( state.props.currentStage == RideAccepted || state.props.currentStage == RideStarted)
       --   ] $
       linearLayout
-        [ height WRAP_CONTENT
+        [ height MATCH_PARENT
         , width MATCH_PARENT
         , background Color.transparent
         , orientation VERTICAL
@@ -1930,7 +1931,7 @@ rideTrackingView push state =
                 , orientation VERTICAL
                 ][
                    coordinatorLayout
-                    [ height WRAP_CONTENT
+                    [ height MATCH_PARENT
                     , width MATCH_PARENT
                     ][ bottomSheetLayout
                         [ height WRAP_CONTENT
@@ -2516,7 +2517,7 @@ homeScreenView push state =
       linearLayout
         [ height $ V ((screenHeight unit)/ 3)
         , width MATCH_PARENT
-        , background state.data.config.homeScreenConfig.primaryBackground 
+        , background state.data.config.homeScreen.primaryBackground 
         , padding $ (PaddingTop (safeMarginTop))
         ][] 
         , homescreenHeader push state
@@ -2556,7 +2557,7 @@ homeScreenView push state =
                         , background Color.white900
                         , margin $ MarginTop 35 
                         , padding $ PaddingTop 30 
-                        , stroke if state.data.config.homeScreenConfig.homescreenHeaderConfig.headerSeperatorStroke then ("1," <> Color.borderGreyColor) else ("0," <> Color.borderGreyColor)
+                        , stroke if state.data.config.homeScreen.header.showSeparator then "1," <> Color.borderGreyColor else "0," <> Color.borderGreyColor
                         ][ scrollView
                           [ height $ if os == "IOS" then (V (getHeightFromPercent 90)) else MATCH_PARENT
                           , width MATCH_PARENT
@@ -2625,6 +2626,7 @@ footerView push state =
           , stroke $ "1," <> Color.grey900
           , cornerRadii $ Corners 6.0 true true true true
           , onClick push $ const OpenLiveDashboard
+          , visibility if state.data.config.features.enableLiveDashboard then VISIBLE else GONE
           ][
             imageView
               [ imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_live_stats"
@@ -2663,7 +2665,7 @@ homescreenHeader push state =
 
 whereToButtonView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 whereToButtonView push state  =
-  let whereToButtonConfig = state.data.config.homeScreenConfig.whereToButtonConfig
+  let whereToButtonConfig = state.data.config.homeScreen.whereToButton
   in
   linearLayout  
       [ width MATCH_PARENT
@@ -2683,6 +2685,7 @@ whereToButtonView push state  =
           [ width WRAP_CONTENT
           , height MATCH_PARENT
           , padding $ Padding 16 16 0 16
+          , gravity CENTER_VERTICAL
           ][ imageView
             [ height $ V 20
             , width $ if state.props.isHomescreenExpanded then V 20 else V 0
@@ -2813,11 +2816,11 @@ pickupLocationView push state =
               , onClick push $ const OpenSettings
               , margin $ MarginRight 8
               , padding $ Padding 8 8 8 8 
-              , background $ state.data.config.homeScreenConfig.homescreenHeaderConfig.headerMenuButtonColor
+              , background $ state.data.config.homeScreen.header.menuButtonBackground
               , cornerRadius 8.0
               ]
               [ imageView
-                  [ imageWithFallback $ state.data.config.homeScreenConfig.homescreenHeaderConfig.headerMenuButtonImageUrl
+                  [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_menu"
                   , height $ V 23
                   , width $ V 23
                   , accessibility if state.props.emergencyHelpModal || state.props.currentStage == ChatWithDriver || state.props.isCancelRide || state.props.isLocationTracking || state.props.callSupportPopUp || state.props.cancelSearchCallDriver then DISABLE else ENABLE
@@ -2836,12 +2839,12 @@ pickupLocationView push state =
                     , height $ V 50
                     , width $ V 110
                     , margin $ MarginHorizontal 10 10
-                    , visibility $ if state.data.config.homeScreenConfig.homescreenHeaderConfig.headerLogoVisibility then VISIBLE else GONE
+                    , visibility $ if state.data.config.homeScreen.header.showLogo then VISIBLE else GONE
                     ]
                   , textView $
                     [ text $ getString BOOK_YOUR_RIDE
-                    , color $ state.data.config.homeScreenConfig.homescreenHeaderConfig.headerTextColor
-                    , visibility $ if not state.data.config.homeScreenConfig.homescreenHeaderConfig.headerLogoVisibility then VISIBLE else GONE
+                    , color $ state.data.config.homeScreen.header.titleColor
+                    , visibility $ if state.data.config.homeScreen.header.showLogo then GONE else VISIBLE
                     ] <> FontStyle.h3 TypoGraphy
                 ]
             , linearLayout
@@ -2852,7 +2855,7 @@ pickupLocationView push state =
                 , gravity CENTER_VERTICAL
                 , cornerRadius 8.0
                 , layoutGravity "center_vertical"
-                , visibility if (not state.data.config.isReferralEnabled) || ((state.props.isReferred && state.props.currentStage == RideStarted) || state.props.hasTakenRide || state.props.sheetState == EXPANDED) then GONE else VISIBLE
+                , visibility if ((getValueFromConfig "isReferralEnabled") == "false") || ((state.props.isReferred && state.props.currentStage == RideStarted) || state.props.hasTakenRide || state.props.sheetState == EXPANDED) then GONE else VISIBLE
                 , onClick push $ const $ if state.props.isReferred then ReferralFlowNoAction else ReferralFlowAction
                 ][ textView
                     [ text $ if not state.props.isReferred then  getString HAVE_A_REFFERAL else (getString REFERRAL_CODE_APPLIED)
@@ -2870,7 +2873,7 @@ pickupLocationView push state =
             [ width MATCH_PARENT
             , height WRAP_CONTENT
             , orientation HORIZONTAL
-            , background $ state.data.config.homeScreenConfig.pickUpViewColor
+            , background $ state.data.config.homeScreen.pickUpViewColor
             , padding $ Padding 16 7 16 7
             , cornerRadii $ Corners 8.0 true true true true
             , gravity CENTER_VERTICAL
@@ -2889,7 +2892,7 @@ pickupLocationView push state =
                   [ height WRAP_CONTENT
                   , width WRAP_CONTENT
                   , text $ (getString PICKUP_) <> (getString CURRENT_LOCATION)
-                  , color state.data.config.homeScreenConfig.pickupLocationTextColor
+                  , color state.data.config.homeScreen.pickupLocationTextColor
                   ] <> FontStyle.paragraphText TypoGraphy
             ]
         ]
@@ -3022,7 +3025,7 @@ movingRightArrowView viewId =
   lottieAnimationView
       [ id (getNewIDWithTag viewId)
       , afterRender (\action-> do
-                    void $ pure $ startLottieProcess lottieAnimationConfig{ rawJson = "lottie/right_arrow.json" , speed = 1.0,lottieId = (getNewIDWithTag viewId) }
+                    void $ pure $ startLottieProcess lottieAnimationConfig{ rawJson =  (getAssetsBaseUrl FunctionCall) <> "lottie/right_arrow.json" , speed = 1.0,lottieId = (getNewIDWithTag viewId) }
                     pure unit)(const NoAction)
       , height $ V 45
       , width $ V 40

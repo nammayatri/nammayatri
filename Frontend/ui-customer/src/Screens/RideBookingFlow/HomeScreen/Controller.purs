@@ -1102,7 +1102,7 @@ eval (SettingSideBarActionController (SettingSideBarController.OnClose)) state =
       else case state.data.settingSideBar.opened of
                 SettingSideBarController.CLOSED -> do
                                                     if state.props.currentStage == HomeScreen then do
-                                                      pure $ terminateApp state.props.currentStage false
+                                                      pure $ terminateApp state.props.currentStage true
                                                       continue state
                                                       else continueWithCmd state [pure $ BackPressed]
                 _                               -> continue state {data{settingSideBar{opened = SettingSideBarController.CLOSING}}}

@@ -25,7 +25,7 @@ window.getMerchantConfig = function () {
     "ACCESIBILITY_TEXT",
     "PLEASE_ENABLE_LOCATION_PERMISSION"
     ],
-    "isReferralEnabled": true,
+    "isReferralEnabled": "true",
     "showBookingPreference": false,
     "showRateCard": false,
     "showDashboard": false,

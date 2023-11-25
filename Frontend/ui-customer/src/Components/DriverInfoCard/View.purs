@@ -333,7 +333,7 @@ supportButton push state =
   [ width WRAP_CONTENT
   , height WRAP_CONTENT
   , orientation VERTICAL
-  , visibility if (Array.any (_ == state.props.currentStage) [ RideAccepted, RideStarted, ChatWithDriver ])  && (not state.props.showChatNotification) then VISIBLE else GONE
+  , visibility if (Array.any (_ == state.props.currentStage) [ RideAccepted, RideStarted, ChatWithDriver ])  && (not ((getValueFromConfig "isChatEnabled" == "true") && state.props.showChatNotification)) then VISIBLE else GONE
   , background Color.white900
   , accessibility if state.props.currentStage == RideStarted then DISABLE else DISABLE_DESCENDANT
   , stroke $ "1,"<> Color.grey900
@@ -379,7 +379,7 @@ locationTrackButton push state =
   , gravity CENTER
   , background Color.white900
   , stroke $ "1,"<> Color.grey900
-  , visibility if (Array.any (_ == state.props.currentStage) [ RideAccepted, RideStarted, ChatWithDriver ]) && (not state.props.showChatNotification) && state.data.config.driverInfoConfig.showTrackingButton then VISIBLE else GONE
+  , visibility if (Array.any (_ == state.props.currentStage) [ RideAccepted, RideStarted, ChatWithDriver ]) && (not ((getValueFromConfig "isChatEnabled" == "true") && state.props.showChatNotification)) && state.data.config.driverInfoConfig.showTrackingButton then VISIBLE else GONE
   , cornerRadius 20.0
   , accessibility DISABLE_DESCENDANT
   , onClick push (const $ LocationTracking)
@@ -402,9 +402,9 @@ locationTrackButton push state =
 sosView :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM ( Effect Unit) w
 sosView push state =
   linearLayout
-    [ height MATCH_PARENT
+    [ height WRAP_CONTENT
     , width WRAP_CONTENT
-    , visibility if (Array.any (_ == state.props.currentStage) [ RideAccepted, RideStarted, ChatWithDriver ]) && (not state.props.showChatNotification) then VISIBLE else GONE
+    , visibility if (Array.any (_ == state.props.currentStage) [ RideAccepted, RideStarted, ChatWithDriver ]) && (not ((getValueFromConfig "isChatEnabled" == "true") && state.props.showChatNotification)) then VISIBLE else GONE
     , orientation VERTICAL
     , gravity if os == "IOS" then CENTER_VERTICAL else BOTTOM
     ][ imageView
@@ -425,7 +425,7 @@ messageNotificationView push state =
   , width MATCH_PARENT
   , margin $ Margin 16 10 16 0
   , orientation VERTICAL
-  , visibility if state.props.showChatNotification && state.props.currentSearchResultType /= QUOTES then VISIBLE else GONE
+  , visibility if ((getValueFromConfig "isChatEnabled" == "true") && state.props.showChatNotification) && state.props.currentSearchResultType /= QUOTES then VISIBLE else GONE
   ][ linearLayout
       [ height $ V 22
       , width MATCH_PARENT
@@ -706,7 +706,7 @@ brandingBannerView driverInfoConfig isVisible =
   linearLayout
     [ width MATCH_PARENT
     , height WRAP_CONTENT
-    , gravity CENTER_HORIZONTAL
+    , gravity CENTER
     , background driverInfoConfig.footerBackgroundColor
     , padding $ Padding 12 12 12 12
     , alignParentBottom "true,-1"
@@ -719,6 +719,7 @@ brandingBannerView driverInfoConfig isVisible =
         , height WRAP_CONTENT
         , textSize FontSize.a_12
         , color Color.black800
+        , padding $ PaddingRight 6
         ]
     , imageView
         [ imageWithFallback $ driverInfoConfig.footerImageUrl

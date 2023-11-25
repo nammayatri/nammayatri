@@ -27,6 +27,7 @@ let previousDateObject = new Date();
 const refreshThreshold = 30;
 const JBridge = window.JBridge;
 const JOS = window.JOS;
+const Android = window.Android;
 loadConfig();
 
 const eventObject = {
@@ -300,4 +301,5 @@ if(sessionInfo.package_name.includes(".debug") || sessionInfo.package_name.inclu
   logger.enableLogger();
 }else{
   logger.disableLogger();
+  Android.runInUI("android.webkit.WebView->setWebContentsDebuggingEnabled:b_false;","null");
 }
