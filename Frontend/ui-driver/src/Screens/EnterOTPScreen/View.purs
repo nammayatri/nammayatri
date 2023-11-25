@@ -30,7 +30,6 @@ import Language.Types(STR(..))
 import Engineering.Helpers.Commons as EHC
 import JBridge as JB
 import Helpers.Utils as HU
-import Components.StepsHeaderModal as StepsHeaderModal
 import Data.String as DS
 import PrestoDOM.Animation as PrestoAnim
 import Animation as Anim
@@ -72,16 +71,12 @@ view push state =
   , onBackPressed push (const BackPressed)
   ][    PrestoAnim.animationSet
           [ Anim.fadeIn true
-          ] $ StepsHeaderModal.view (push <<< StepsHeaderModelAC) (stepsHeaderModelConfig state)
-    
+          ] $ headerView state push 
       , linearLayout
       [ width MATCH_PARENT
       , weight 1.0
       , orientation VERTICAL
-      ][  PrestoAnim.animationSet
-          [ Anim.translateYAnimFromTopWithAlpha AnimConfig.translateYAnimConfig
-          ] $ enterOTPTextView state
-        , primaryEditTextView state push
+      ][  primaryEditTextView state push
       ]
     , PrestoAnim.animationSet
       [ Anim.fadeIn true
@@ -90,6 +85,30 @@ view push state =
           , width MATCH_PARENT
           ][PrimaryButton.view (push <<< PrimaryButtonActionController) (primaryButtonViewConfig state)]
   ]
+
+  where 
+    headerView :: ST.EnterOTPScreenState -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w
+    headerView state push = 
+      linearLayout
+      [ height WRAP_CONTENT
+      , width MATCH_PARENT
+      , orientation VERTICAL
+      , background state.data.config.primaryBackground
+      , padding $ Padding 16 16 16 16
+      ][  imageView
+          [ imageWithFallback $ HU.fetchImage HU.FF_ASSET "ny_ic_chevron_left_white"
+          , height $ V 25 
+          , width $ V 25
+          , onClick push $ const BackPressed
+          ]
+        , textView $ 
+          [ text $ getString GOT_AN_OTP
+          , color Color.white900
+          , margin $ MarginVertical 5 22
+          , height WRAP_CONTENT
+          , width MATCH_PARENT
+          ] <> FontStyle.h1 TypoGraphy
+      ]
 
 
 
@@ -194,67 +213,15 @@ underlinedTextView state push =
           [ height $ V 1
           , width MATCH_PARENT
           , background  Color.black700
-          , margin (Margin 1 0 2 0)
+          , margin $ MarginHorizontal 1 2
           , visibility if state.props.resendEnabled then GONE else VISIBLE
           ]
         , textView
           [ height $ V 1
           , width MATCH_PARENT
           , background Color.mainPrimary
-          , margin (Margin 1 0 2 0)
+          , margin $ MarginHorizontal 1 2
           , visibility if state.props.resendEnabled then VISIBLE else GONE
           ]
       ]
  ]
-
-
-
-
-
--- underlinedTextView :: ST.EnterOTPScreenState -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w
--- underlinedTextView state push =
---  linearLayout
---   [ width WRAP_CONTENT
---   , height WRAP_CONTENT
---   , margin (MarginTop 18)
---   ][ textView $
---         [ height WRAP_CONTENT
---         , width WRAP_CONTENT
---         , text $ getString DIDNT_RECIEVE_OTP
---         , orientation HORIZONTAL
---         , visibility if state.props.resendEnabled then VISIBLE else GONE
---         ]<> FontStyle.body6 LanguageStyle
---     ,linearLayout
---       [ width WRAP_CONTENT
---       , height WRAP_CONTENT
---       , orientation VERTICAL
---       , onClick push (const ResendOTP)
---       ][  textView $
---           [ height WRAP_CONTENT
---           , width WRAP_CONTENT
---           , text (getString RESEND_OTP)
---           , color Color.mainPrimary
---           , visibility if state.props.resendEnabled then VISIBLE else GONE
---           ] <> FontStyle.body6 LanguageStyle
---         , linearLayout[
---             height WRAP_CONTENT
---           , width MATCH_PARENT
---           , orientation HORIZONTAL
---           ][textView $ 
---             [ height WRAP_CONTENT
---             , width WRAP_CONTENT
---             , text "Didn't receive OTP?"
---             , visibility if state.props.resendEnabled then GONE else VISIBLE
---             , margin $ (MarginRight 5)
---             ]
---           , textView $
---             [ height WRAP_CONTENT
---             , width WRAP_CONTENT
---             , text $  (getString RESEND_OTP_IN) <> "  " <> state.data.timer
---             , visibility if state.props.resendEnabled then GONE else VISIBLE
---             , color if state.props.resendEnabled then Color.mainPrimary else Color.black700
---             ] <> FontStyle.body6 LanguageStyle
---             ]
---       ]
---   ]
-

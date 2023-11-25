@@ -22,6 +22,7 @@ import Language.Strings (getString)
 import MerchantConfig.Types (CityConfig)
 import Prelude (class Eq)
 import Screens.Types (RegisterationStep(..), RegistrationScreenState, StageStatus(..))
+import MerchantConfig.DefaultConfig as DC
 
 initData :: RegistrationScreenState
 initData = {
@@ -51,7 +52,8 @@ initData = {
         subscriptionStatus : NOT_STARTED,
         phoneNumber : "",
         lastUpdateTime : "",
-        cityConfig : dummyCityConfig
+        cityConfig : dummyCityConfig,
+        config : DC.config
       },
       props: {
         limitReachedFor : Nothing,

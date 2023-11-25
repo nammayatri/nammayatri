@@ -1020,7 +1020,7 @@ const kannadaStrings = {
   RETAKE_DL: "\nದಯವಿಟ್ಟು ನಿರ್ದಿಷ್ಟ ಪ್ರದೇಶದಲ್ಲಿ ಡ್ರೈವಿಂಗ್ ಲೈಸೆನ್ಸ್ ಜೊತೆ ಫೋಟೊವನ್ನು ಪುನಃ ತೆಗೆದುಕೊಳ್ಳಿ",
   CONFIRM_AND_UPLOAD: "ದೃಢೀಕರಿಸಿ ಮತ್ತು ಅಪ್‌ಲೋಡ್ ಮಾಡಿ",
   RETAKE_PHOTO: "ಫೋಟೊ ಪುನಃ ತೆಗೆದುಕೊಳ್ಳಿ",
-  LETS_GET_YOUR_TRIP_READY : "ನಿಮ್ಮ ಪ್ರವಾಸವನ್ನು ಸಿದ್ಧಗೊಳಿಸೋಣ!",
+  LETS_GET_YOU_TRIP_READY : "ನಿಮ್ಮ ಪ್ರವಾಸವನ್ನು ಸಿದ್ಧಗೊಳಿಸೋಣ!",
   GOT_AN_OTP : "ಒಟಿಪಿ ಸಿಕ್ಕಿತೇ?",
   DRIVING_LICENSE_DETAILS : "ಚಾಲನಾ ಪರವಾನಗಿ ವಿವರಗಳು",
   VEHICLE_REGISTRATION_DETAILS : "ವಾಹನ ನೋಂದಣಿ ವಿವರಗಳು",

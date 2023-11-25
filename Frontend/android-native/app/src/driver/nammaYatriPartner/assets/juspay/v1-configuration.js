@@ -58,7 +58,7 @@ window.getMerchantConfig = function () {
       "EARNED_ON_APP" : "NY पर अर्जित मूल्य",
       "TRAVELLED_ON_APP" : "नम्मा यात्री पर तय की गई दूरी",
       "GUARANTEED_FIXED_PRICE" : "अप्रैल 1, 2025 तक निश्चित मूल्य गारंटी",
-      "GET_READY_FOR_YS_SUBSCRIPTION" : "नम्मा यात्री योजनाओं के लिए के लिए तैयार हो जाइए!"
+      "GET_READY_FOR_YS_SUBSCRIPTION" : "नम्मा यात्री योजनाओं के लिए तैयार हो जाइए!"
     },
     "kannadaStrings": {
       "WELCOME_TEXT": "Welcome to the Namma Yatri Driver",

@@ -19,7 +19,8 @@ import Debug
 
 import Components.PopUpModal as PopUpModal
 import Components.PrimaryButton.Controller as PrimaryButtonController
-import Components.StepsHeaderModal.Controller as StepsHeaderModelController
+import Components.GenericHeader.Controller as GenericHeader
+import Components.AppOnboardingNavBar as AppOnboardingNavBar
 import Effect.Class (liftEffect)
 import Effect.Unsafe (unsafePerformEffect)
 import Engineering.Helpers.LogEvent (logEvent)
@@ -67,9 +68,12 @@ instance loggableAction :: Loggable Action where
             PopUpModal.ETextController act -> trackAppTextInput appId (getScreen NEED_ACCESS_SCREEN) "popup_modal_action" "primary_edit_text"
             PopUpModal.CountDown arg1 arg2 arg3 arg4 -> trackAppScreenEvent appId (getScreen NEED_ACCESS_SCREEN) "popup_modal_action" "countdown_updated"
             _ -> trackAppActionClick appId (getScreen NEED_ACCESS_SCREEN) "popup_modal_action" "no_action"
-        StepsHeaderModelAC act -> case act of
-            StepsHeaderModelController.OnArrowClick -> trackAppScreenEvent appId (getScreen REGISTRATION_SCREEN) "in_screen" "steps_header_on_click"
-            StepsHeaderModelController.Logout -> trackAppScreenEvent appId (getScreen REGISTRATION_SCREEN) "in_screen" "steps_header_logout"
+        AppOnboardingNavBarAC act -> case act of
+            AppOnboardingNavBar.GenericHeaderAC genericHeaderAction -> case genericHeaderAction of 
+                GenericHeader.PrefixImgOnClick -> trackAppScreenEvent appId (getScreen NEED_ACCESS_SCREEN) "in_screen" "generic_header_on_click"
+                GenericHeader.SuffixImgOnClick -> trackAppScreenEvent appId (getScreen NEED_ACCESS_SCREEN) "in_screen" "generic_header_on_click"
+            AppOnboardingNavBar.Logout -> trackAppScreenEvent appId (getScreen NEED_ACCESS_SCREEN) "in_screen" "onboarding_nav_bar_logout"
+            AppOnboardingNavBar.PrefixImgOnClick -> trackAppScreenEvent appId (getScreen NEED_ACCESS_SCREEN) "in_screen" "app_onboarding_nav_bar_prefix_img_on_click"
 
 data ScreenOutput =  GoBack | GoToHome | LogoutAccount | GoToRegisteration PermissionsScreenState
 
@@ -85,8 +89,8 @@ data Action = BackPressed
             | UpdateBatteryPermissionState
             | AfterRender
             | UpdateAllChecks PermissionsScreenState
-            | StepsHeaderModelAC StepsHeaderModelController.Action
             | PopUpModalLogoutAction PopUpModal.Action
+            | AppOnboardingNavBarAC AppOnboardingNavBar.Action
 
 eval :: Action -> PermissionsScreenState -> Eval Action ScreenOutput PermissionsScreenState
 eval AfterRender state = continueWithCmd state [ do 
@@ -106,7 +110,6 @@ eval UpdateOverlayPermissionState state = continue state {props {isOverlayPermis
 eval UpdateBatteryPermissionState state = continue state {props {isBatteryOptimizationChecked = true}}
 
 eval (NotificationPermissionCallBack isNotificationPermissionEnabled) state = do
---   _ <- pure $ spy "location permission" isNotificationPermissionEnabled
   if isNotificationPermissionEnabled then do
     let _ = unsafePerformEffect $ logEvent state.data.logField  "permission_granted_notification"
     continue state {props {isNotificationPermissionChecked = isNotificationPermissionEnabled}}
@@ -119,8 +122,6 @@ eval (OverlayPermissionSwitchCallBack isOverlayPermissionEnabled) state = do
     else continue state {props {isOverlayPermissionChecked = isOverlayPermissionEnabled}}
 
 eval (BatteryUsagePermissionCallBack isBatteryOptimizationEnabled) state = do
-  let _ = spy "Permission Request" isBatteryOptimizationEnabled
-  let _ = spy "Permission Request" state
   if isBatteryOptimizationEnabled then do 
     let _ = unsafePerformEffect $ logEvent state.data.logField "permission_granted_battery"
     continue state {props {isBatteryOptimizationChecked = isBatteryOptimizationEnabled }}
@@ -132,7 +133,6 @@ eval (ItemClick itemType) state =
         if not(state.props.isNotificationPermissionChecked) then do
             continueWithCmd state [do
                 isNotificationPermission <- isNotificationPermissionEnabled unit
-                let _ = spy "Permission Request isNotificationPermission" isNotificationPermission
                 if (isNotificationPermission) then pure UpdateNotificationPermissionState
                 else do
                     _ <- checkAndAskNotificationPermission true
@@ -173,9 +173,9 @@ eval (ItemClick itemType) state =
                 ]
             else continue state
 
-eval (StepsHeaderModelAC (StepsHeaderModelController.Logout)) state = continue $ (state {props{logoutModalView = true}})
+eval (AppOnboardingNavBarAC (AppOnboardingNavBar.Logout)) state = continue $ (state {props{logoutModalView = true}})
 
-eval (StepsHeaderModelAC StepsHeaderModelController.OnArrowClick) state = continueWithCmd state [ do pure $ BackPressed]
+eval (AppOnboardingNavBarAC AppOnboardingNavBar.PrefixImgOnClick) state = continueWithCmd state [ do pure $ BackPressed]
 
 eval (PopUpModalLogoutAction (PopUpModal.OnButton2Click)) state = continue $ (state {props {logoutModalView= false}})
 

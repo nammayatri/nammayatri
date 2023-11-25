@@ -24,9 +24,10 @@ import Components.PopUpModal.Controller as PopUpModal
 import Components.PrimaryButton as PrimaryButton
 import Components.PrimaryEditText as PrimaryEditText
 import Components.RegistrationModal as RegistrationModalController
-import Components.StepsHeaderModal.Controller as StepsHeaderModelController
 import Components.TutorialModal as TutorialModalController
 import Components.ValidateDocumentModal.Controller as ValidateDocumentModal
+import Components.AppOnboardingNavBar as AppOnboardingNavBar
+import Components.GenericHeader as GenericHeader
 import Data.String (length)
 import Debug (spy)
 import Effect.Class (liftEffect)
@@ -37,7 +38,7 @@ import Helpers.Utils (renderBase64ImageFile, contactSupportNumber)
 import JBridge (disableActionEditText, hideKeyboardOnNavigation, openWhatsAppSupport, renderBase64Image, renderCameraProfilePicture, showDialer, uploadFile)
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppTextInput, trackAppScreenEvent)
 import MerchantConfig.Utils (Merchant(..), getMerchant)
-import Prelude (pure, (==), unit, ($), class Show, bind, discard, (<), (<>), show, (+), (/=), (/), (&&), not)
+import Prelude (pure, (==), unit, void,  ($), class Show, bind, discard, (<), (<>), show, (+), (/=), (/), (&&), not)
 import PrestoDOM (Eval, continue, continueWithCmd, exit, toast, updateAndExit)
 import PrestoDOM.Types.Core (class Loggable)
 import Screens (ScreenName(..), getScreen)
@@ -96,9 +97,6 @@ instance loggableAction :: Loggable Action where
     SelectDateOfBirthAction -> trackAppActionClick appId (getScreen UPLOAD_DRIVING_LICENSE_SCREEN) "in_screen" "select_date_of_birth"
     SelectDateOfIssueAction -> trackAppActionClick appId (getScreen UPLOAD_DRIVING_LICENSE_SCREEN) "in_screen" "select_date_of_issue"
     NoAction -> trackAppScreenEvent appId (getScreen UPLOAD_DRIVING_LICENSE_SCREEN) "in_screen" "no_action"
-    StepsHeaderModelAC act -> case act of
-      StepsHeaderModelController.OnArrowClick -> trackAppScreenEvent appId (getScreen UPLOAD_DRIVING_LICENSE_SCREEN) "in_screen" "steps_header_on_click"
-      StepsHeaderModelController.Logout -> trackAppScreenEvent appId (getScreen UPLOAD_DRIVING_LICENSE_SCREEN) "in_screen" "steps_header_logout"
     PopUpModalLogoutAction act -> case act of
       PopUpModal.OnButton1Click -> trackAppActionClick appId (getScreen UPLOAD_DRIVING_LICENSE_SCREEN) "popup_modal" "on_goback"
       PopUpModal.Tipbtnclick _ _ -> trackAppActionClick appId (getScreen UPLOAD_DRIVING_LICENSE_SCREEN) "popup_modal" "tip_button_click"
@@ -125,6 +123,12 @@ instance loggableAction :: Loggable Action where
       _ -> trackAppActionClick appId (getScreen UPLOAD_DRIVING_LICENSE_SCREEN) "popup_modal_action" "no_action"
     RenderProfileImage image id -> trackAppActionClick appId (getScreen UPLOAD_DRIVING_LICENSE_SCREEN) "renderImage" "afterrender"
     RedirectScreen -> trackAppActionClick appId (getScreen UPLOAD_DRIVING_LICENSE_SCREEN) "redirect_screen" "no_action"
+    AppOnboardingNavBarAC act -> case act of
+      AppOnboardingNavBar.GenericHeaderAC genericHeaderAction -> case genericHeaderAction of 
+        GenericHeader.PrefixImgOnClick -> trackAppScreenEvent appId (getScreen UPLOAD_DRIVING_LICENSE_SCREEN) "in_screen" "generic_header_on_click"
+        GenericHeader.SuffixImgOnClick -> trackAppScreenEvent appId (getScreen UPLOAD_DRIVING_LICENSE_SCREEN) "in_screen" "generic_header_on_click"
+      AppOnboardingNavBar.Logout -> trackAppScreenEvent appId (getScreen UPLOAD_DRIVING_LICENSE_SCREEN) "in_screen" "onboarding_nav_bar_logout"
+      AppOnboardingNavBar.PrefixImgOnClick -> trackAppScreenEvent appId (getScreen UPLOAD_DRIVING_LICENSE_SCREEN) "in_screen" "app_onboarding_nav_bar_prefix_img_on_click"
 
 data ScreenOutput = GoBack UploadDrivingLicenseState
                     | ValidateDetails UploadDrivingLicenseState 
@@ -153,38 +157,41 @@ data Action = BackPressed Boolean
             | PreviewAction
             | SelectDateOfBirthAction
             | SelectDateOfIssueAction
-            | StepsHeaderModelAC StepsHeaderModelController.Action
             | PopUpModalLogoutAction PopUpModal.Action
             | ValidateDocumentModalAction ValidateDocumentModal.Action
             | RenderProfileImage String String
             | PopUpModalActions PopUpModal.Action
             | RedirectScreen
+            | AppOnboardingNavBarAC AppOnboardingNavBar.Action
 
 eval :: Action -> UploadDrivingLicenseState -> Eval Action ScreenOutput UploadDrivingLicenseState
 eval AfterRender state = 
-                 if (state.props.validateProfilePicturePopUp == true) then do 
+                 if state.props.validateProfilePicturePopUp then do 
                   continueWithCmd state [do pure (RenderProfileImage state.data.imageFrontUrl (getNewIDWithTag "ValidateProfileImage"))]  
                  else continue state
 
 eval (RenderProfileImage image id) state = do
   continueWithCmd state [do 
-    _ <- liftEffect $ renderBase64ImageFile image id false "CENTER_CROP" --state.props.fileCameraOption 
+    _ <- liftEffect $ renderBase64ImageFile image id false "CENTER_CROP"
     pure NoAction]
 
 eval (BackPressed flag) state = do
-            _ <- pure $ hideKeyboardOnNavigation true
-            if(state.props.validateProfilePicturePopUp) then do
-                if (state.props.fileCameraOption) then continueWithCmd (state {props{clickedButtonType = "front", validateProfilePicturePopUp = false,imageCaptureLayoutView = true}}) [ pure UploadImage]
-                else continueWithCmd state {props {clickedButtonType = "front", fileCameraPopupModal = false, fileCameraOption = false, validateProfilePicturePopUp = false, imageCaptureLayoutView = false}} [do
-                      _ <- liftEffect $ uploadFile false
-                      pure NoAction]
-            else if(state.props.imageCaptureLayoutView) then continue state{props{imageCaptureLayoutView = false,openHowToUploadManual = true}} 
-            else if(state.props.fileCameraPopupModal) then continue state{props{fileCameraPopupModal = false, validateProfilePicturePopUp = false, imageCaptureLayoutView = false}} 
-            else if(state.props.openHowToUploadManual) then continue state{props{openHowToUploadManual = false}} 
-            else if state.props.logoutPopupModal then continue state{props{logoutPopupModal = false}} 
-            else exit $ GoBack state
+  _ <- pure $ hideKeyboardOnNavigation true
+  if(state.props.validateProfilePicturePopUp) then do
+      if (state.props.fileCameraOption) then continueWithCmd (state {props{clickedButtonType = "front", validateProfilePicturePopUp = false,imageCaptureLayoutView = true}}) [ pure UploadImage]
+      else continueWithCmd state {props {clickedButtonType = "front", fileCameraPopupModal = false, fileCameraOption = false, validateProfilePicturePopUp = false, imageCaptureLayoutView = false}} [do
+            _ <- liftEffect $ uploadFile false
+            pure NoAction]
+  else if state.props.imageCaptureLayoutView then continue state{props{imageCaptureLayoutView = false,openHowToUploadManual = true}} 
+  else if state.props.fileCameraPopupModal then continue state{props{fileCameraPopupModal = false, validateProfilePicturePopUp = false, imageCaptureLayoutView = false}} 
+  else if state.props.openHowToUploadManual then continue state{props{openHowToUploadManual = false}} 
+  else if state.props.logoutPopupModal then continue state{props{logoutPopupModal = false}} 
+  else exit $ GoBack state
+    
 eval (OnboardingHeaderAction (OnboardingHeaderController.TriggerRegModal)) state = continue state{props{openRegistrationModal = true}}
+
 eval (RegistrationModalAction (RegistrationModalController.OnCloseClick)) state = continue state{props{openRegistrationModal = false}}
+
 eval (PrimaryButtonAction (PrimaryButton.OnClick)) state = do
   _ <- pure $ hideKeyboardOnNavigation true
   if isJust state.data.dateOfIssue then  exit $ ValidateDataCall state
@@ -194,6 +201,7 @@ eval (PrimaryButtonAction (PrimaryButton.OnClick)) state = do
     continueWithCmd state {props {clickedButtonType = "front", fileCameraPopupModal = false, fileCameraOption = false}} [do
      _ <- liftEffect $ uploadFile false
      pure NoAction]
+
 eval (PrimaryEditTextActionController (PrimaryEditText.TextChanged id value)) state = do
   _ <- pure $ disableActionEditText (getNewIDWithTag "EnterDrivingLicenseEditText")
   if (length value == 16) then do 
@@ -201,6 +209,7 @@ eval (PrimaryEditTextActionController (PrimaryEditText.TextChanged id value)) st
     pure unit
     else pure unit
   continue state {data = state.data { driver_license_number = value }}
+
 eval (PrimaryEditTextActionControllerReEnter (PrimaryEditText.TextChanged id value))state = do
   _ <- pure $ disableActionEditText (getNewIDWithTag "ReEnterDrivingLicenseEditText")
   if (length value == 16) then do 
@@ -208,8 +217,11 @@ eval (PrimaryEditTextActionControllerReEnter (PrimaryEditText.TextChanged id val
     pure unit
     else pure unit
   continue state {data = state.data { reEnterDriverLicenseNumber = value }}
+
 eval DriverLicenseManual state = continue state{props{openLicenseManual = true}}
+
 eval (OnboardingHeaderAction (OnboardingHeaderController.BackPressed)) state = exit $ GoBack state
+
 eval (TutorialModal manual) state = do
   pure $ hideKeyboardOnNavigation true 
   case manual of 
@@ -217,6 +229,7 @@ eval (TutorialModal manual) state = do
     "LICENSE" -> continue state{props{openLicenseManual = true}}
     _ -> continue state
 eval (TutorialModalAction (TutorialModalController.OnCloseClick)) state = continue state{props{openLicenseManual = false, openDateOfIssueManual = false}} 
+
 eval (TutorialModalAction (TutorialModalController.CallSupport)) state = continueWithCmd state [do
   let merchant = getMerchant FunctionCall
   _ <- case merchant of
@@ -240,9 +253,9 @@ eval (GenericMessageModalAction (GenericMessageModal.PrimaryButtonActionControll
 
 
 eval (CallBackImageUpload image imageName imagePath) state = if(state.props.clickedButtonType == "front") then do
-                                                      continue  state {data {imageFrontUrl = image, imageFront = image, imageNameFront = imageName}, props{validateProfilePicturePopUp = true, imageCaptureLayoutView = false}} -- $ ValidateImageAPICall $ state {data {imageFrontUrl = image, imageFront = image, imageNameFront = imageName}}
+                                                      continue  state {data {imageFrontUrl = image, imageFront = image, imageNameFront = imageName}, props{validateProfilePicturePopUp = true, imageCaptureLayoutView = false}}
                                                         else if(state.props.clickedButtonType == "back") then do
-                                                          continue state {data {imageBack = image, imageNameBack = imageName}, props{validateProfilePicturePopUp = true, imageCaptureLayoutView = false}} -- $ ValidateImageAPICall $ state {data {imageBack = image, imageNameBack = imageName}}
+                                                          continue state {data {imageBack = image, imageNameBack = imageName}, props{validateProfilePicturePopUp = true, imageCaptureLayoutView = false}}
                                                         else do
                                                            continue state                    
 
@@ -271,11 +284,11 @@ eval (PopUpModalLogoutAction (PopUpModal.OnButton1Click)) state = exit $ LogoutA
 
 eval (PopUpModalLogoutAction (PopUpModal.DismissPopup)) state = continue state {props {logoutPopupModal= false}}
 
-eval (StepsHeaderModelAC (StepsHeaderModelController.Logout)) state = do
+eval (AppOnboardingNavBarAC (AppOnboardingNavBar.Logout)) state = do
     _ <- pure $ hideKeyboardOnNavigation true
     continue $ (state {props{logoutPopupModal = true}})
 
-eval (StepsHeaderModelAC StepsHeaderModelController.OnArrowClick) state = continueWithCmd state{props{openLicenseManual = false}} [ do pure $ BackPressed false]
+eval (AppOnboardingNavBarAC (AppOnboardingNavBar.PrefixImgOnClick) ) state = continueWithCmd state{props{openLicenseManual = false}} [ do pure $ BackPressed false]
 
 eval (ValidateDocumentModalAction (ValidateDocumentModal.AfterRender)) state = do
  continueWithCmd state [do pure (AfterRender)] 
@@ -288,12 +301,12 @@ eval (ValidateDocumentModalAction (ValidateDocumentModal.PrimaryButtonActionCont
      updateAndExit state{props{validating = true}} $ ValidateDetails state{props{validating = true}}
    else 
      continueWithCmd state {props {validateProfilePicturePopUp = false, errorVisibility = false, clickedButtonType = "front", fileCameraPopupModal = false, fileCameraOption = false}, data{errorMessage = ""}} [do
-     _ <- liftEffect $ uploadFile false
+     void $ liftEffect $ uploadFile false
      pure NoAction]
  
 eval (PopUpModalActions (PopUpModal.OnButton2Click)) state = do
    continueWithCmd state {props {clickedButtonType = "front", fileCameraPopupModal = false, fileCameraOption = false}} [do
-     _ <- liftEffect $ uploadFile false
+     void $ liftEffect $ uploadFile false
      pure NoAction]
 
 eval (PopUpModalActions (PopUpModal.OnButton1Click)) state = do

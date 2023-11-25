@@ -70,12 +70,11 @@ public class Utils {
 
     public static void encodeImageToBase64(@Nullable Intent data, Context context, @Nullable Uri imageData) {
         FirebaseAnalytics mFirebaseAnalytics = FirebaseAnalytics.getInstance(context);
-        try {Uri fileUri;
-            String path="";
+        try {
+            Uri fileUri;
             if(imageData == null) {
                 CropImage.ActivityResult result = CropImage.getActivityResult(data);
                 fileUri = result.getUri();
-                path = result.getUri().getPath();
             }
             else {
                 fileUri = imageData;

@@ -1021,7 +1021,7 @@ const tamilStrings = {
   RETAKE_DL: "\nதயவுசெய்து டிஎல் உள்ளிட்ட படத்தை மீண்டும் எடுங்கள்",
   CONFIRM_AND_UPLOAD: "உறுதிப்படுத்தி பதிவேற்று",
   RETAKE_PHOTO: "புகைப்படத்தை மீண்டும் எடு",
-  LETS_GET_YOUR_TRIP_READY : "உங்கள் பயணத்தை தயார் செய்வோம்!",
+  LETS_GET_YOU_TRIP_READY : "உங்கள் பயணத்தை தயார் செய்வோம்!",
   GOT_AN_OTP : "OTP கிடைத்ததா?",
   DRIVING_LICENSE_DETAILS : "ஓட்டுநர் உரிம விவரங்கள்",
   VEHICLE_REGISTRATION_DETAILS : "வாகனப் பதிவு விவரங்கள்",

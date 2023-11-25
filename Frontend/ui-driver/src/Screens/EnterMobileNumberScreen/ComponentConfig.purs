@@ -21,7 +21,6 @@ import PrestoDOM
 import Common.Types.App as Common
 import Components.PrimaryButton as PrimaryButton
 import Components.PrimaryEditText as PrimaryEditText
-import Components.StepsHeaderModal as StepsHeaderModal
 import Components.MobileNumberEditor as MobileNumberEditor
 import Data.Maybe (Maybe(..))
 import Engineering.Helpers.Commons as EHC
@@ -48,22 +47,6 @@ primaryButtonViewConfig state = let
       }
   in primaryButtonConfig'
 
-stepsHeaderModalConfig :: ST.EnterMobileNumberScreenState -> StepsHeaderModal.Config
-stepsHeaderModalConfig state = let
-    config = StepsHeaderModal.config 0
-    stepsHeaderConfig' = config 
-     {
-      stepsViewVisibility = false,
-      profileIconVisibility = false,
-      driverNumberVisibility = false,
-      logoutVisibility = false,
-      customerTextArray = [],
-      driverTextArray = Constant.driverTextArray Common.FunctionCall,
-      rightButtonText = getString LOGOUT,
-      activeIndex = 0
-     }
-  in stepsHeaderConfig'
-
 mobileNumberButtonConfig :: ST.EnterMobileNumberScreenState -> PrimaryButton.Config
 mobileNumberButtonConfig state = let 
     config = PrimaryButton.config
@@ -86,19 +69,13 @@ mobileNumberEditTextConfig state = let
             color = Color.black800
           , singleLine = true
           , pattern = Just "[0-9]*,10"
-          -- , fontStyle = FontStyle.bold LanguageStyle
-          -- , textSize = FontSize.a_16
           , margin = MarginHorizontal 10 10
           , focused = state.props.mobileNumberEditFocused
-          --, text = state.data.mobileNumber
         }
       , background = Color.white900
       , topLabel
-        { 
-          -- textSize = FontSize.a_14
-          text = "Enter your Mobile number"
+        { text = "Enter your Mobile number"
         , color = Color.black800
-        -- , fontStyle = FontStyle.semiBold LanguageStyle
         , alpha = 0.8
         }
       , id = (EHC.getNewIDWithTag "EnterMobileNumberEditText")
@@ -111,8 +88,6 @@ mobileNumberEditTextConfig state = let
         }
       , showConstantField = true
       , constantField { 
-          --color = if state.props.mNumberEdtFocused then Color.black800 else Color.grey900 
-        --  textSize = FontSize.a_16
          padding = PaddingBottom 1
         }
       }
