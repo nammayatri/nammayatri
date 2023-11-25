@@ -81,3 +81,7 @@ ALTER TABLE atlas_driver_offer_bpp.driver_fee ADD COLUMN amount_paid_by_coin dou
 Alter Table atlas_driver_offer_bpp.transporter_config ADD COLUMN cancellation_time_diff INT NOT NULL DEFAULT 120;
 
 Alter Table atlas_driver_offer_bpp.transporter_config ADD COLUMN cancellation_dist_diff INT NOT NULL DEFAULT 50;
+
+ALTER TABLE atlas_driver_offer_bpp.coin_config
+ALTER COLUMN event_function SET NOT NULL,
+ALTER COLUMN event_name SET NOT NULL;
