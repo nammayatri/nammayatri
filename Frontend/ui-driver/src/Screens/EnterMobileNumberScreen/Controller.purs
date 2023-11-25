@@ -32,7 +32,6 @@ import Screens (ScreenName(..), getScreen)
 import MerchantConfig.Utils (getValueFromConfig)
 import Effect.Unsafe (unsafePerformEffect)
 import Engineering.Helpers.LogEvent (logEvent)
-import Components.StepsHeaderModal.Controller as StepsHeaderModalController
 
 instance showAction :: Show Action where
   show _ = ""
@@ -69,7 +68,6 @@ data Action = BackPressed
             | CheckClickability
             | AfterRender
             | NonDisclosureAgreementAction
-            | StepsHeaderModalAC StepsHeaderModalController.Action
 
 eval :: Action -> EnterMobileNumberScreenState -> Eval Action ScreenOutput EnterMobileNumberScreenState
 eval AfterRender state = continue state
@@ -77,7 +75,6 @@ eval BackPressed state = do
         pure $ hideKeyboardOnNavigation true
         exit GoBack
 eval (PrimaryButtonActionController (PrimaryButton.OnClick)) state = exit (GoToNextScreen state)
-eval (StepsHeaderModalAC StepsHeaderModalController.OnArrowClick) state = continueWithCmd state [ do pure $ BackPressed]
 eval (PrimaryEditTextAction (MobileNumberEditor.TextChanged valId newVal)) state = do
   _ <- if length newVal == 10 then do
             pure $ hideKeyboardOnNavigation true 

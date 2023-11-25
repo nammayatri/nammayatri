@@ -22,11 +22,11 @@ import Prelude (bind, pure, ($), (<$>), discard)
 import PrestoDOM.Core.Types.Language.Flow (runScreen)
 import Screens.RegistrationScreen.Controller (ScreenOutput(..))
 import Screens.RegistrationScreen.View as RegistrationScreen
-import Types.App (FlowBT, GlobalState(..), REGISTRATION_SCREENOUTPUT(..), ScreenType(..))
+import Types.App (FlowBT, GlobalState(..), REGISTRATION_SCREEN_OUTPUT(..), ScreenType(..))
 import Types.ModifyScreenState (modifyScreenState)
 
 
-registration :: FlowBT String REGISTRATION_SCREENOUTPUT
+registration :: FlowBT String REGISTRATION_SCREEN_OUTPUT
 registration = do
   (GlobalState state) <- getState
   action <- lift $ lift $ runScreen $ RegistrationScreen.screen state.registrationScreen

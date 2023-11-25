@@ -18,7 +18,8 @@ module Screens.RegistrationScreen.Controller where
 import Common.Types.App (LazyCheck(..))
 import Components.PopUpModal as PopUpModal
 import Components.PrimaryButton as PrimaryButtonController
-import Components.StepsHeaderModal.Controller as StepsHeaderModelController
+import Components.GenericHeader as GenericHeader
+import Components.AppOnboardingNavBar as AppOnboardingNavBar
 import Helpers.Utils (getStatus, contactSupportNumber)
 import JBridge (openWhatsAppSupport, showDialer)
 import Log (trackAppActionClick, trackAppBackPress, trackAppEndScreen, trackAppScreenEvent, trackAppScreenRender, trackAppTextInput)
@@ -40,9 +41,12 @@ instance loggableAction :: Loggable Action where
       trackAppBackPress appId (getScreen REGISTRATION_SCREEN)
       trackAppEndScreen appId (getScreen REGISTRATION_SCREEN)
     NoAction -> trackAppScreenEvent appId (getScreen REGISTRATION_SCREEN) "in_screen" "no_action"
-    StepsHeaderModelAC act -> case act of
-      StepsHeaderModelController.OnArrowClick -> trackAppScreenEvent appId (getScreen REGISTRATION_SCREEN) "in_screen" "steps_header_on_click"
-      StepsHeaderModelController.Logout -> trackAppScreenEvent appId (getScreen REGISTRATION_SCREEN) "in_screen" "steps_header_logout"
+    AppOnboardingNavBarAC act -> case act of
+      AppOnboardingNavBar.GenericHeaderAC genericHeaderAction -> case genericHeaderAction of 
+        GenericHeader.PrefixImgOnClick -> trackAppScreenEvent appId (getScreen REGISTRATION_SCREEN) "in_screen" "generic_header_on_click"
+        GenericHeader.SuffixImgOnClick -> trackAppScreenEvent appId (getScreen REGISTRATION_SCREEN) "in_screen" "generic_header_on_click"
+      AppOnboardingNavBar.Logout -> trackAppScreenEvent appId (getScreen REGISTRATION_SCREEN) "in_screen" "onboarding_nav_bar_logout"
+      AppOnboardingNavBar.PrefixImgOnClick -> trackAppScreenEvent appId (getScreen REGISTRATION_SCREEN) "in_screen" "app_onboarding_nav_bar_prefix_img_on_click"
     RegistrationAction value -> trackAppScreenRender appId "screen" (getScreen REGISTRATION_SCREEN)
     PopUpModalLogoutAction act -> case act of
       PopUpModal.OnButton1Click -> trackAppActionClick appId (getScreen REGISTRATION_SCREEN) "popup_modal" "on_goback"
@@ -74,12 +78,12 @@ data ScreenOutput = GoBack
 data Action = BackPressed 
             | NoAction
             | AfterRender
-            | StepsHeaderModelAC StepsHeaderModelController.Action
             | RegistrationAction RegisterationStep
             | PopUpModalLogoutAction PopUpModal.Action
             | PrimaryButtonAction PrimaryButtonController.Action
             | Refresh
             | ContactSupport
+            | AppOnboardingNavBarAC AppOnboardingNavBar.Action
 
 eval :: Action -> RegistrationScreenState -> Eval Action ScreenOutput RegistrationScreenState
 eval AfterRender state = continue state
@@ -91,21 +95,17 @@ eval (RegistrationAction item ) state =
           GRANT_PERMISSION -> exit $ GoToPermissionScreen state
           SUBSCRIPTION_PLAN -> exit GoToOnboardSubscription
 
-eval (StepsHeaderModelAC (StepsHeaderModelController.Logout)) state = continue $ (state {props{logoutModalView = true}})
-
-eval (StepsHeaderModelAC StepsHeaderModelController.OnArrowClick) state = continueWithCmd state [ do pure $ BackPressed]
-
 eval (PopUpModalLogoutAction (PopUpModal.OnButton2Click)) state = continue $ (state {props {logoutModalView= false}})
 
 eval (PopUpModalLogoutAction (PopUpModal.OnButton1Click)) state = exit $ LogoutAccount
 
 eval (PopUpModalLogoutAction (PopUpModal.DismissPopup)) state = continue state {props {logoutModalView= false}}
 
-eval (StepsHeaderModelAC (StepsHeaderModelController.OnArrowClick)) state = continue state
-
 eval (PrimaryButtonAction (PrimaryButtonController.OnClick)) state = exit GoToHomeScreen
 
 eval Refresh state = exit RefreshPage
+
+eval (AppOnboardingNavBarAC (AppOnboardingNavBar.Logout)) state = continue $ (state {props{logoutModalView = true}})
 
 eval ContactSupport state = continueWithCmd state [do
   let merchant = getMerchant FunctionCall

@@ -332,7 +332,6 @@ export const checkAndAskNotificationPermission = function (shouldAlwaysAsk) {
   }
   
   if ((check || shouldAlwaysAsk) && window.__OS == "ANDROID" && window.JBridge.checkAndAskNotificationPermission) {
-    console.log("checkAndAskNotificationPermission");
     return window.JBridge.checkAndAskNotificationPermission();
   }
 };
@@ -400,8 +399,8 @@ export const getAndroidVersion = function (unit) {
   if (window.__OS == "IOS") {
     return 0;
   } else {
-    const stringifiedData = window.JBridge.getSessionInfo();
-    const parsedSessionData = JSON.parse(stringifiedData);
+    const sessionData = window.JBridge.getSessionInfo();
+    const parsedSessionData = JSON.parse(sessionData);
     return parsedSessionData["os_version"];
   }
 };
@@ -995,13 +994,10 @@ export const showMapImpl = function (id) {
 
 export const getCurrentLatLong = function () {
   if (window.JBridge.getCurrentLatLong) {
-    console.log("coming_inside: ");
     const parsedData = JSON.parse(window.JBridge.getCurrentLatLong());
     if (parsedData.lat && parsedData.lng) {
-      console.log("coming_inside2: ", parsedData);
       return parsedData;
     } else { // fallBack for previous release
-      console.log("coming_inside3: ", parsedData);
       return {
         "lat": parsedData.lat,
         "lng": parsedData.long
@@ -1383,20 +1379,18 @@ export const firebaseUserID = function (str) {
 export const storeCallBackDriverLocationPermission = function (cb) {
   return function (action) {
     return function () {
-      console.log ("in_js");
       try {
-        const locationCallBack = function () {
-          const isPermissionEnabled = isLocationPermissionEnabled()() && isLocationEnabled()()
-          cb(action(isPermissionEnabled))();
-        };
-        const callback = callbackMapper.map(function (isLocationPermissionGranted) {
-          cb(action(isLocationPermissionGranted))();
-        });
         if (window.onResumeListeners) {
+          const locationCallBack = function () {
+            const isPermissionEnabled = isLocationPermissionEnabled()() && isLocationEnabled()()
+            cb(action(isPermissionEnabled))();
+          };
           window.onResumeListeners.push(locationCallBack);
         }
-
         if (window.__OS == "ANDROID") {
+          const callback = callbackMapper.map(function (isLocationPermissionGranted) {
+            cb(action(isLocationPermissionGranted))();
+          });
           window.JBridge.storeCallBackDriverLocationPermission(callback);
         }
         console.log("In storeCallBackDriverLocationPermission ---------- + " + action);
@@ -2178,16 +2172,13 @@ export const addCarouselWithVideoExists = function () {
 }
 
 export const addCarousel = function (carouselModalJson, id) {
-  console.log("in_js_2");
   const carouselJson = JSON.stringify(carouselModalJson);
   const data = JSON.parse(carouselJson);
   const originalArray = data.carouselData;
   if(JBridge.addCarouselWithVideo){
-    console.log("in_js_3");
     return JBridge.addCarouselWithVideo(carouselJson, id);
   }
   else if(JBridge.addCarousel){
-    console.log("in_js_4");
     const modifiedArray = originalArray.map(item => ({ image : item.imageConfig.image , title : item.titleConfig.text , description : item.descriptionConfig.text }));
     return JBridge.addCarousel(JSON.stringify(modifiedArray), id);
   }
@@ -2243,32 +2234,16 @@ export const isNetworkTimeEnabled = function () {
   return true;
 }
 
-export const onFocused = function(callback){
-  return function(elementId) {
-    console.log(elementId);
-    return function (){
-      const element = document.getElementById(elementId);
-      console.log (element);
-      if (element) {
-        element.addEventListener("focus", () => {
-          callback(element.value);
-        });
-      } else {
-        console.error(`Element with ID '${elementId}' not found.`);
-      }
-    }
-  }
-};
-
 export const renderCameraProfilePicture = function (id) {
   return function () {
-    return JBridge.renderCameraProfilePicture(id);
+    if (JBridge.renderCameraProfilePicture) {
+      return JBridge.renderCameraProfilePicture(id);
+    }
   };
 };
 
 export const isNotificationPermissionEnabled = function () {
   return function() {
-    console.log("isNotificationPermissionEnabled");
     if (window.JBridge.isNotificationPermissionEnabled) {
       return window.JBridge.isNotificationPermissionEnabled();
     } else {

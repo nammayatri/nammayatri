@@ -25,7 +25,8 @@ import Common.Types.App as Common
 import Components.PopUpModal as PopUpModal
 import Components.PrimaryButton as PrimaryButton
 import Components.ReferralMobileNumber as ReferralMobileNumber
-import Components.StepsHeaderModal as StepsHeaderModel
+import Components.GenericHeader as GenericHeader
+import Components.AppOnboardingNavBar as AppOnboardingNavBar
 import Data.String as DS
 import Font.Size as FontSize
 import Language.Types (STR(..))
@@ -36,6 +37,9 @@ import Screens.AddVehicleDetailsScreen.Controller (validateRegistrationNumber)
 import Screens.Types (StageStatus(..))
 import Screens.Types as ST
 import Styles.Colors as Color
+import Helpers.Utils as HU
+import Storage (KeyStore(..), getValueToLocalStore)
+import Font.Style as FontStyle
 
 primaryButtonConfig :: ST.AddVehicleDetailsScreenState -> PrimaryButton.Config
 primaryButtonConfig state = let 
@@ -72,22 +76,6 @@ referalNumberConfig state = let
     errorText = getString if state.props.isValid then INVALID_REFERRAL_NUMBER else INVALID_REFERRAL_CODE
   }
   in referalNumberConfig'
-
-stepsHeaderModelConfig :: ST.AddVehicleDetailsScreenState -> StepsHeaderModel.Config
-stepsHeaderModelConfig state = let
-    config = StepsHeaderModel.config if state.props.openHowToUploadManual then 6 else 5
-    stepsHeaderConfig' = config 
-     {
-      stepsViewVisibility = false,
-      profileIconVisibility = true,
-      driverNumberVisibility = true,
-      customerTextArray = [],
-      driverTextArray = Constant.driverTextArray Common.FunctionCall,
-      driverMobileNumber = (Just state.data.driverMobileNumber),
-      rightButtonText = getString LOGOUT,
-      logoutVisibility = true
-     }
-  in stepsHeaderConfig'
 
 fileCameraLayoutConfig:: ST.AddVehicleDetailsScreenState -> PopUpModal.Config
 fileCameraLayoutConfig state = let
@@ -147,3 +135,42 @@ activateRcButtonConfig state = let
       , id = "AddRCPrimaryButton"
       }
   in primaryButtonConfig'
+
+genericHeaderConfig :: ST.AddVehicleDetailsScreenState -> GenericHeader.Config
+genericHeaderConfig state = let 
+  config = GenericHeader.config
+  genericHeaderConfig' = config
+    {
+      height = WRAP_CONTENT
+    , background = state.data.config.primaryBackground
+    , prefixImageConfig {
+       visibility = VISIBLE
+      , imageUrl = HU.fetchImage HU.FF_ASSET "ic_new_avatar"
+      , height = (V 25)
+      , width = (V 25)
+      , margin = (Margin 12 5 5 5)
+      }
+    , padding = (PaddingVertical 5 5)
+    , textConfig {
+        text = (getValueToLocalStore MOBILE_NUMBER_KEY)
+      , color = Color.white900
+      , margin = MarginHorizontal 5 5 
+      , textStyle = FontStyle.Body1
+      }
+    , suffixImageConfig {
+        visibility = GONE
+      }
+    }
+  in genericHeaderConfig'
+
+appOnboardingNavBarConfig :: ST.AddVehicleDetailsScreenState -> AppOnboardingNavBar.Config
+appOnboardingNavBarConfig state = 
+  AppOnboardingNavBar.config
+  { genericHeaderConfig = genericHeaderConfig state,
+    appConfig = state.data.config,
+    headerTextConfig = AppOnboardingNavBar.config.headerTextConfig
+      { text = if state.props.openHowToUploadManual
+                then getString UPLOAD_REGISTRATION_CERTIFICATE_STR 
+                else getString VEHICLE_REGISTRATION_DETAILS
+      }
+  }

@@ -25,7 +25,8 @@ import Components.PopUpModal as PopUpModal
 import Components.PopUpModal.Controller as PopUpModalConfig
 import Components.PrimaryButton as PrimaryButton
 import Components.PrimaryEditText as PrimaryEditText
-import Components.StepsHeaderModal as StepsHeaderModel
+import Components.GenericHeader as GenericHeader
+import Components.AppOnboardingNavBar as AppOnboardingNavBar
 import Data.Maybe (Maybe(..), fromMaybe, isJust)
 import Data.String as DS
 import Engineering.Helpers.Commons as EHC
@@ -36,6 +37,8 @@ import PrestoDOM.Types.DomAttributes (Corners(..))
 import Resource.Constants as Constant
 import Screens.Types as ST
 import Styles.Colors as Color
+import Helpers.Utils as HU
+import Storage ( getValueToLocalStore , KeyStore(..))
 
 ------------------------------ primaryButtonConfig --------------------------------
 primaryButtonConfig :: ST.UploadDrivingLicenseState -> PrimaryButton.Config
@@ -45,7 +48,6 @@ primaryButtonConfig state = let
       { textConfig{ text = if isJust state.data.dateOfIssue then getString CONFIRM 
                            else if state.props.openHowToUploadManual then getString UPLOAD_PHOTO
                            else getString UPLOAD_DRIVING_LICENSE
-      -- , textSize = FontSize.a_16
       }
       , width = MATCH_PARENT
       , background = Color.black900
@@ -73,7 +75,6 @@ primaryEditTextConfig state = let
         text = getString DRIVING_LICENSE_NUMBER
         , color = Color.greyTextColor
         }
-      -- , type = "password"
       , margin = MarginBottom 15
       , background = Color.white900
       , id = EHC.getNewIDWithTag "EnterDrivingLicenseEditText"
@@ -88,17 +89,13 @@ primaryEditTextConfigReEnterDl state = let
       { editText
         { singleLine = true
           , pattern = Just "[A-Z0-9/-]*,25"
-          -- , fontStyle = FontStyle.bold LanguageStyle
-          -- , textSize = FontSize.a_16
           , placeholder = getString ENTER_DL_NUMBER
           , capsLock = true
           , color = Color.black800
         }
       , stroke = if (DS.toLower(state.data.driver_license_number) /= DS.toLower(state.data.reEnterDriverLicenseNumber) && state.data.reEnterDriverLicenseNumber /= "") then ("1," <> Color.red) else ("1," <> Color.borderColorLight)
       , topLabel
-        { --textSize = FontSize.a_12
-        -- , 
-        text = getString RE_ENTER_DRIVING_LICENSE_NUMBER
+        { text = getString RE_ENTER_DRIVING_LICENSE_NUMBER
         , color = Color.greyTextColor
         }
       , margin = MarginBottom 15
@@ -107,21 +104,6 @@ primaryEditTextConfigReEnterDl state = let
       }
     in primaryEditTextConfig'
 
-stepsHeaderModelConfig :: ST.UploadDrivingLicenseState ->Int -> StepsHeaderModel.Config
-stepsHeaderModelConfig state headerValue = let
-    config = StepsHeaderModel.config headerValue
-    stepsHeaderConfig' = config 
-     {
-      stepsViewVisibility = false,
-      profileIconVisibility = true,
-      driverNumberVisibility = true,
-      logoutVisibility = true,
-      driverTextArray = Constant.driverTextArray Common.FunctionCall,
-      rightButtonText = getString LOGOUT,
-      customerTextArray = [],
-      driverMobileNumber = Just state.data.mobileNumber
-     }
-  in stepsHeaderConfig'
 
 fileCameraLayoutConfig:: ST.UploadDrivingLicenseState -> PopUpModalConfig.Config
 fileCameraLayoutConfig state = let
@@ -136,7 +118,7 @@ fileCameraLayoutConfig state = let
 
      primaryText {
           text = getString UPLOAD_PHOTO
-        , margin = Margin 16 0 16 0
+        , margin = MarginHorizontal 16 16
         , visibility = VISIBLE
         , gravity = LEFT
       },
@@ -166,3 +148,42 @@ fileCameraLayoutConfig state = let
       }
     }
   in popUpConf'
+
+appOnboardingNavBarConfig :: ST.UploadDrivingLicenseState -> AppOnboardingNavBar.Config
+appOnboardingNavBarConfig state = 
+  AppOnboardingNavBar.config
+  { genericHeaderConfig = genericHeaderConfig state,
+    appConfig = state.data.config,
+    headerTextConfig = AppOnboardingNavBar.config.headerTextConfig
+              { text = if state.props.openHowToUploadManual 
+                        then getString UPLOAD_DRIVING_LICENSE 
+                        else getString DRIVING_LICENSE_DETAILS
+              }
+  }
+
+genericHeaderConfig :: ST.UploadDrivingLicenseState -> GenericHeader.Config
+genericHeaderConfig state = let 
+  config = GenericHeader.config
+  genericHeaderConfig' = config
+    {
+      height = WRAP_CONTENT
+    , background = state.data.config.primaryBackground
+    , prefixImageConfig {
+       visibility = VISIBLE
+      , imageUrl = HU.fetchImage HU.FF_ASSET "ic_new_avatar"
+      , height = (V 25)
+      , width = (V 25)
+      , margin = (Margin 12 5 5 5)
+      }
+    , padding = (PaddingVertical 5 5)
+    , textConfig {
+        text = (getValueToLocalStore MOBILE_NUMBER_KEY)
+      , color = Color.white900
+      , margin = MarginHorizontal 5 5 
+      , textStyle = FontStyle.Body1
+      }
+    , suffixImageConfig {
+        visibility = GONE
+      }
+    }
+  in genericHeaderConfig'

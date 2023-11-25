@@ -13,7 +13,7 @@
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Components.StepsHeaderModal (module Reexport) where
+module Components.AppOnboardingNavBar (module Reexport) where
 
-import Components.StepsHeaderModal.View as Reexport
-import Components.StepsHeaderModal.Controller as Reexport
+import Components.AppOnboardingNavBar.Controller(config, Config, Action(..)) as Reexport
+import Components.AppOnboardingNavBar.View (view) as Reexport

@@ -20,6 +20,7 @@ import Screens.Types
 
 import Foreign.Object (empty)
 import Screens.RegistrationScreen.ScreenData (dummyCityConfig)
+import MerchantConfig.DefaultConfig as DC
 
 initData :: AddVehicleDetailsScreenState
 initData = {
@@ -38,7 +39,8 @@ initData = {
       dateOfRegistrationView : "",
       logField : empty,
       driverMobileNumber : "",
-      cityConfig : dummyCityConfig
+      cityConfig : dummyCityConfig,
+      config : DC.config
     },
     props: {
       rcAvailable : false,

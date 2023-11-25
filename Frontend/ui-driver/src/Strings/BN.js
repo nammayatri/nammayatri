@@ -1026,7 +1026,7 @@ const bengaliStrings = {
   RETAKE_DL: "\nদয়া করে ডি এল সহ ছবি নতুন তুলুন",
   CONFIRM_AND_UPLOAD: "নিশ্চিত করুন এবং আপলোড করুন",
   RETAKE_PHOTO: "ফটো নতুন তুলুন",
-  LETS_GET_YOUR_TRIP_READY : "চলুন আপনার ট্রিপ প্রস্তুত করা যাক!",
+  LETS_GET_YOU_TRIP_READY : "আসুন আপনি ট্রিপ প্রস্তুত করা যাক!",
   GOT_AN_OTP : "একটি OTP পেয়েছেন?",
   DRIVING_LICENSE_DETAILS : "ড্রাইভিং লাইসেন্সের বিশদ বিবরণ",
   VEHICLE_REGISTRATION_DETAILS : "গাড়ির রেজিস্ট্রেশনের বিবরণ",
