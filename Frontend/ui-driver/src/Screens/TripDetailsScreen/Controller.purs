@@ -25,7 +25,6 @@ import Components.SourceToDestination as SourceToDestination
 import JBridge (copyToClipboard, toast)
 import Language.Types(STR(..))
 import Language.Strings (getString)
-import Services.Config (getSupportNumber)
 import JBridge (hideKeyboardOnNavigation)
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppScreenEvent)
 import Screens (ScreenName(..), getScreen)

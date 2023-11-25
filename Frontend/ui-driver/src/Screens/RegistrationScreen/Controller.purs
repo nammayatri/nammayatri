@@ -19,7 +19,7 @@ import Common.Types.App (LazyCheck(..))
 import Components.PopUpModal as PopUpModal
 import Components.PrimaryButton as PrimaryButtonController
 import Components.StepsHeaderModal.Controller as StepsHeaderModelController
-import Helpers.Utils (getStatus)
+import Helpers.Utils (getStatus, contactSupportNumber)
 import JBridge (openWhatsAppSupport, showDialer)
 import Log (trackAppActionClick, trackAppBackPress, trackAppEndScreen, trackAppScreenEvent, trackAppScreenRender, trackAppTextInput)
 import MerchantConfig.Utils (Merchant(..), getMerchant)
@@ -110,7 +110,7 @@ eval Refresh state = exit RefreshPage
 eval ContactSupport state = continueWithCmd state [do
   let merchant = getMerchant FunctionCall
   _ <- case merchant of
-    NAMMAYATRI -> openWhatsAppSupport $ getWhatsAppSupportNo $ show merchant
+    NAMMAYATRI -> contactSupportNumber "WHATSAPP" 
     YATRISATHI -> openWhatsAppSupport $ getWhatsAppSupportNo $ show merchant
     _ -> pure $ showDialer (getSupportNumber "") false
   pure NoAction

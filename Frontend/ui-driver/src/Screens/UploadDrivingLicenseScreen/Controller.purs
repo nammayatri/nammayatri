@@ -33,7 +33,7 @@ import Effect.Class (liftEffect)
 import Effect.Unsafe (unsafePerformEffect)
 import Engineering.Helpers.Commons (getNewIDWithTag)
 import Engineering.Helpers.LogEvent (logEvent)
-import Helpers.Utils (renderBase64ImageFile)
+import Helpers.Utils (renderBase64ImageFile, contactSupportNumber)
 import JBridge (disableActionEditText, hideKeyboardOnNavigation, openWhatsAppSupport, renderBase64Image, renderCameraProfilePicture, showDialer, uploadFile)
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppTextInput, trackAppScreenEvent)
 import MerchantConfig.Utils (Merchant(..), getMerchant)
@@ -220,9 +220,9 @@ eval (TutorialModalAction (TutorialModalController.OnCloseClick)) state = contin
 eval (TutorialModalAction (TutorialModalController.CallSupport)) state = continueWithCmd state [do
   let merchant = getMerchant FunctionCall
   _ <- case merchant of
-    NAMMAYATRI -> if state.data.cityConfig.supportNumber == "" 
-                    then openWhatsAppSupport $ getWhatsAppSupportNo $ show merchant
-                  else pure $ showDialer state.data.cityConfig.supportNumber false
+    NAMMAYATRI -> do 
+      _ <- contactSupportNumber "WHATSAPP"
+      pure unit
     YATRISATHI -> openWhatsAppSupport $ getWhatsAppSupportNo $ show merchant
     _ -> pure $ showDialer (getSupportNumber "") false
   pure NoAction
