@@ -1,11 +1,23 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <defaults>
   <entry>
-    <key>forceUpdate</key>
+    <key>force_update</key>
     <value>false</value>
   </entry>
   <entry>
-    <key>splash_screen</key>
-    <value>""</value>
+    <key>splash_screen_mysore</key>
+    <value>{"file_name":"splash_lottie_mys","url":"https://assets.juspay.in/beckn/nammayatri/driver/lottie/splash_lottie_mys.json","force_remote":true}</value>
+  </entry>
+  <entry>
+    <key>splash_screen_delhi</key>
+    <value>{"file_name":"splash_lottie_del","url":"https://assets.juspay.in/beckn/nammayatri/driver/lottie/splash_lottie_del.json","force_remote":true}</value>
+  </entry>
+  <entry>
+    <key>splash_screen_hyderabad</key>
+    <value>{"file_name":"splash_lottie_hyd","url":"https://assets.juspay.in/beckn/nammayatri/driver/lottie/splash_lottie_hyd.json","force_remote":true}</value>
+  </entry>
+  <entry>
+    <key>splash_screen_bangalore</key>
+    <value>{"file_name":"splash_lottie_blr","url":"https://assets.juspay.in/beckn/nammayatri/driver/lottie/splash_lottie_blr.json","force_remote":true}</value>
   </entry>
 </defaults>
