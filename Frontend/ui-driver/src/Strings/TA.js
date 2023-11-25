@@ -1045,7 +1045,9 @@ const tamilStrings = {
   RC_VERIFICATION_FAILED_STATUS : "RC சரிபார்ப்பு தோல்வியடைந்தது!",
   RC_VERIFICATION_IN_PROGRESS : "ஆர்சி சரிபார்ப்பு நடந்து கொண்டிருக்கிறது...",
   WE_ARE_NOT_LIVE_IN_YOUR_AREA : "நாங்கள் இன்னும் உங்கள் பகுதியில் வசிக்கவில்லை!\nஉங்கள் நகரத்திற்கு விரைவில் வருவோம்!",
-  LOCATION_UNSERVICEABLE : "இருப்பிடம் சேவை செய்ய முடியாதது"
+  LOCATION_UNSERVICEABLE : "இருப்பிடம் சேவை செய்ய முடியாதது",
+  UNABLE_TO_GET_YOUR_LOCATION : "உங்கள் இருப்பிடத்தைப் பெற முடியவில்லை!",
+  TURN_OFF_ANY_MOCK_LOCATION_APP_AND_RESTART : "நீங்கள் பயன்படுத்தக்கூடிய எந்த மாதிரி இருப்பிட பயன்பாட்டையும் முடக்கி, பயன்பாட்டை மறுதொடக்கம் செய்யுங்கள்."
 }
 
 export function getStringValue(key) {

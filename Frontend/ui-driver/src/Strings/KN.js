@@ -1044,7 +1044,9 @@ const kannadaStrings = {
   RC_VERIFICATION_FAILED_STATUS : "RC ಪರಿಶೀಲನೆ ವಿಫಲವಾಗಿದೆ!",
   RC_VERIFICATION_IN_PROGRESS : "ಆರ್‌ಸಿ ಪರಿಶೀಲನೆ ಪ್ರಗತಿಯಲ್ಲಿದೆ...",
   WE_ARE_NOT_LIVE_IN_YOUR_AREA : "ನಾವು ಇನ್ನೂ ನಿಮ್ಮ ಪ್ರದೇಶದಲ್ಲಿ ವಾಸಿಸುತ್ತಿಲ್ಲ!\nನಿಮ್ಮ ನಗರಕ್ಕೆ ಶೀಘ್ರದಲ್ಲೇ ಬರಲಿದೆ!",
-  LOCATION_UNSERVICEABLE : "ಸ್ಥಳ ಸೇವೆಗೆ ಅರ್ಹವಲ್ಲ"
+  LOCATION_UNSERVICEABLE : "ಸ್ಥಳ ಸೇವೆಗೆ ಅರ್ಹವಲ್ಲ",
+  UNABLE_TO_GET_YOUR_LOCATION : "ನಿಮ್ಮ ಸ್ಥಳವನ್ನು ಪಡೆಯಲು ಸಾಧ್ಯವಾಗುತ್ತಿಲ್ಲ!",
+  TURN_OFF_ANY_MOCK_LOCATION_APP_AND_RESTART : "ನೀವು ಬಳಸುತ್ತಿರುವ ಯಾವುದೇ ಮೋಕ್ ಸ್ಥಳ ಅಪ್ಲಿಕೇಶನ್ ಅನ್ನು ಆಫ್ ಮಾಡಿ ಮತ್ತು ಅಪ್ಲಿಕೇಶನ್ ಅನ್ನು ಮರುಪ್ರಾರಂಭಿಸಿ."
 }
 
 

@@ -1072,7 +1072,9 @@ const hindiStrings = {
   RC_VERIFICATION_FAILED_STATUS : "आरसी सत्यापन विफल!",
   RC_VERIFICATION_IN_PROGRESS : "आरसी सत्यापन जारी है...",
   WE_ARE_NOT_LIVE_IN_YOUR_AREA : "हम अभी आपके क्षेत्र में नहीं रहते हैं!\nजल्द ही आपके शहर में आ रहे हैं!",
-  LOCATION_UNSERVICEABLE : "स्थान अनुपयोगी"
+  LOCATION_UNSERVICEABLE : "स्थान अनुपयोगी",
+  UNABLE_TO_GET_YOUR_LOCATION : "आपका स्थान प्राप्त करने में असमर्थ!",
+  TURN_OFF_ANY_MOCK_LOCATION_APP_AND_RESTART : "आपके द्वारा उपयोग किए जा रहे किसी भी मॉक लोकेशन ऐप को बंद करें और ऐप को पुनरारंभ करें।"
 }
 
 

@@ -188,7 +188,8 @@ initData = {
         showChatBlockerPopUp : false,
         subscriptionPopupType : NO_SUBSCRIPTION_POPUP,
         showGenericAccessibilityPopUp : false,
-        waitTimeStatus : NoStatus
+        waitTimeStatus : NoStatus,
+        isMockLocation : false
     }
 }
 

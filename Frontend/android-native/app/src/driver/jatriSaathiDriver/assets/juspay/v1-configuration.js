@@ -149,5 +149,6 @@ window.getMerchantConfig = function () {
               "showNew" : true
             }
     }
+    , "enableMockLocation" : false
   })
 }
