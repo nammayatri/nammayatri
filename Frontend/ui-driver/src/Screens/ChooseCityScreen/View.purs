@@ -31,6 +31,10 @@ import Screens.ChooseCityScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.Types (ChooseCityScreenStage(..), ChooseCityScreenState)
 import Storage (getValueToLocalStore, KeyStore(..))
 import Styles.Colors as Color
+import MerchantConfig.Utils as MU
+import PrestoDOM.Properties as PP
+import PrestoDOM.Types.DomAttributes as PTD
+import Components.ErrorModal as ErrorModal
 
 screen :: ChooseCityScreenState -> Screen Action ChooseCityScreenState ScreenOutput
 screen initialState =
@@ -47,6 +51,10 @@ screen initialState =
     if isLocationPermissionEnabled then
       JB.getCurrentPositionWithTimeout push CurrentLocationCallBack 2000 
     else pure unit
+    -- if (initialState.props.currentStage == DETECT_LOCATION) then do
+    _ <- if initialState.data.config.enableMockLocation then JB.isMockLocation push IsMockLocation else pure unit
+      -- pure unit
+      -- else pure unit
     pure $ pure unit)]
   , eval:
       ( \state action -> do
@@ -73,16 +81,18 @@ view push state =
           ) (const AfterRender)
         -- , background if DA.any (_ == state.props.currentStage) [ENABLE_PERMISSION, CAROUSEL, DETECT_LOCATION] then "#FFFAED" else Color.white900
         , gradient (Linear 0.0 ["#F5F8FF", "#E2EAFF"])
-        , padding $ PaddingBottom 24
-        ][ relativeLayout
+        -- , padding $ PaddingBottom 24
+        ][ if ((state.props.isMockLocation && (MU.getMerchant FunctionCall == MU.NAMMAYATRI)) && state.props.currentStage == DETECT_LOCATION) then (sourceUnserviceableView push state) else dummyView
+          , relativeLayout
             [ height MATCH_PARENT
             , width MATCH_PARENT
+            , padding $ PaddingBottom 24
             ][ enableLocationPermission state push
               , linearLayout
                 [ height WRAP_CONTENT
                 , width MATCH_PARENT
                 , orientation VERTICAL
-                , visibility if state.props.currentStage == DETECT_LOCATION then VISIBLE else GONE
+                , visibility if (state.props.currentStage == DETECT_LOCATION && state.props.isMockLocation == false) then VISIBLE else GONE
                 ][ currentLocationView state push
                  , currentLanguageView state push
                 ]
@@ -109,6 +119,7 @@ view push state =
             [ height WRAP_CONTENT
             , width MATCH_PARENT
             , alignParentBottom "true,-1"
+            , visibility if (not state.props.isMockLocation) then VISIBLE else GONE
             ][ PrimaryButton.view (push <<< PrimaryButtonAC ) (primaryButtonConfig state) ]
           ]
         ]
@@ -359,6 +370,21 @@ enableLocationPermission state push =
          , margin $ MarginTop 4
          ] <> FontStyle.paragraphText TypoGraphy
   ]
+
+sourceUnserviceableView :: forall w. (Action -> Effect Unit) -> ChooseCityScreenState -> PrestoDOM (Effect Unit) w
+sourceUnserviceableView push state =
+  PrestoAnim.animationSet [ Anim.fadeIn true ]
+    $ relativeLayout
+        [ height MATCH_PARENT
+        , width MATCH_PARENT
+        , orientation VERTICAL
+        , PP.cornerRadii $ PTD.Corners 24.0 true true false false
+        , alignParentBottom "true,-1"
+        , gravity BOTTOM
+        ]
+        [
+          ErrorModal.view (push <<< ErrorModalActionController) (sourceUnserviceableConfig state)
+        ]
  
 
 dummyView :: forall w. PrestoDOM (Effect Unit) w
