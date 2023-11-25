@@ -23,8 +23,9 @@ import Screens.AppUpdatePopUp.Handler as UI
 import Control.Monad.Except.Trans (lift)
 import Engineering.Helpers.Commons (liftFlow, os, stringToVersion)
 import Engineering.Helpers.LogEvent (logEvent)
+import Engineering.Helpers.Utils (showSplash, reboot)
 import Foreign (unsafeToForeign)
-import Common.Types.App (LazyCheck(..), Version(..))
+import Common.Types.App (LazyCheck(..), Version(..), FCMBundleUpdate(..))
 import Data.Int as INT
 import Data.Maybe (fromMaybe)
 import Data.String (split, Pattern(..))
@@ -93,6 +94,16 @@ checkVersion = do
 
     versionIndex :: Array String -> Int -> Int
     versionIndex versionArray index = fromMaybe (-1) $ INT.fromString =<< versionArray !! index
+
+appUpdatedFlow :: FCMBundleUpdate -> FlowBT String Unit
+appUpdatedFlow payload = do
+  modifyScreenState $ AppUpdatePopUpScreenType (\appUpdatePopUpScreenState → appUpdatePopUpScreenState {updatePopup = AppUpdated ,appUpdatedView{secondaryText=payload.description,primaryText=payload.title,coverImageUrl=payload.image}})
+  fl <- UI.handleAppUpdatePopUp
+  case fl of
+    UpdateNow -> do 
+      liftFlowBT showSplash
+      liftFlowBT reboot
+    Later -> pure unit
 
 updateVersion :: Maybe Version -> Maybe Version -> FlowBT String Unit
 updateVersion dbClientVersion dbBundleVersion = do

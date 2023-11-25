@@ -17,15 +17,19 @@ module Helpers.Logs where
 
 import Prelude
 import Control.Monad.Except.Trans (lift)
-import JBridge (setCleverTapUserProp, getVersionCode, getVersionName)
+import JBridge (setCleverTapUserProp, getVersionCode, getVersionName, setCleverTapUserData)
 import Foreign (unsafeToForeign)
 import Presto.Core.Types.Language.Flow (getLogFields, setLogField)
 import Engineering.Helpers.LogEvent (logEvent, logEventWithParams)
 import Engineering.Helpers.BackTrack (liftFlowBT)
 import Engineering.Helpers.Commons (getVersionByKey, os)
+import Engineering.Helpers.Utils (catMaybeStrings)
 import Foreign.Class (encode)
 import Storage (getValueToLocalStore, KeyStore(..))
 import Types.App (FlowBT)
+import Services.API (GetProfileRes(..))
+import Data.Lens ((^.))
+import Accessor
 
 baseAppLogs :: FlowBT String Unit
 baseAppLogs = do
@@ -52,3 +56,13 @@ baseAppLogs = do
   void $ liftFlowBT $ logEventWithParams logField_ "ny_user_app_version" "version" versionName
   void $ liftFlowBT $ logEvent logField_ "ny_user_entered_app"
   pure unit
+
+updateCTEventData :: GetProfileRes -> FlowBT String Unit
+updateCTEventData response = do
+  let name = catMaybeStrings [ response ^. _firstName, response ^. _middleName, response ^. _lastName ]
+  void $ pure $ setCleverTapUserData "Name" name
+  void $ pure $ setCleverTapUserData "gender" <$> response ^. _gender
+  void $ pure $ setCleverTapUserData "preferred Language" <$> response ^. _language
+  void $ pure $ setCleverTapUserData "Identity" $ getValueToLocalStore CUSTOMER_ID
+  void $ pure $ setCleverTapUserData "Phone" $ "+91" <> getValueToLocalStore MOBILE_NUMBER
+  void $ pure $ setCleverTapUserData "email" <$> response ^. _email
