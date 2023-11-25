@@ -17,6 +17,7 @@ module Screens.EnterOTPScreen.ScreenData where
 
 import Screens.Types (EnterOTPScreenState)
 import Engineering.Helpers.Commons as EHC
+import MerchantConfig.DefaultConfig as DC
 
 initData :: EnterOTPScreenState
 initData =  {
@@ -28,7 +29,8 @@ initData =  {
     timer: "10s",
     capturedOtp : "",
     focusedIndex : 1,
-    editTextId : (EHC.getNewIDWithTag "EnterOTPNumberEditText")
+    editTextId : (EHC.getNewIDWithTag "EnterOTPNumberEditText"),
+    config : DC.config
     },
   props: {
     btnActive :false,

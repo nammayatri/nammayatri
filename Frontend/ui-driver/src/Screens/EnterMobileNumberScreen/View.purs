@@ -40,7 +40,6 @@ import MerchantConfig.Utils (getValueFromConfig)
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Common.Types.App (LazyCheck(..))
 import Prelude ((<>))
-import Components.StepsHeaderModal as StepsHeaderModal
 import Debug(spy)
 
 screen :: ST.EnterMobileNumberScreenState -> Screen Action ST.EnterMobileNumberScreenState ScreenOutput
@@ -65,32 +64,43 @@ view push state =
     [ height MATCH_PARENT
     , width MATCH_PARENT
     , orientation VERTICAL
-    , afterRender (\action -> do
-        _ <- push action
-        -- _ <- requestKeyboardShow (getNewIDWithTag "EnterMobileNumberEditText")
-        pure unit
-        ) (const AfterRender)
+    , afterRender push (const AfterRender)
     , margin $ MarginBottom 24
     , padding (Padding 0 EHC.safeMarginTop 0 EHC.safeMarginBottom)
     , background Color.white900
     , onBackPressed push (const BackPressed)
-    ][  PrestoAnim.animationSet
-          [ Anim.fadeIn true
-          ] $ StepsHeaderModal.view (push <<< StepsHeaderModalAC) (stepsHeaderModalConfig state)
+    ][  headerView state push
       , frameLayout
         [ width MATCH_PARENT
         , height MATCH_PARENT
         , padding (Padding 16 0 16 0)
-        ][
-          -- PrestoAnim.animationSet
-          --   [ Anim.fadeOut state.props.enterOTP
-          --   , Anim.fadeIn  (not state.props.enterOTP)
-          --   ] $
-          enterMobileNumberView  state push
-             
-          ]
+        ][enterMobileNumberView  state push]
       ]
     ]
+    where 
+      headerView :: ST.EnterMobileNumberScreenState -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w
+      headerView state push = 
+        linearLayout
+        [ height WRAP_CONTENT
+        , width MATCH_PARENT
+        , orientation VERTICAL
+        , background state.data.config.primaryBackground
+        , padding $ Padding 16 16 16 16
+        ][  imageView
+            [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_chevron_left_white"
+            , height $ V 25 
+            , width $ V 25
+            , onClick push $ const BackPressed
+            ]
+          , textView $ 
+            [ text $ getString LETS_GET_YOU_TRIP_READY
+            , color Color.white900
+            , margin $ MarginVertical 5 22
+            , height WRAP_CONTENT
+            , width MATCH_PARENT
+            ] <> FontStyle.h1 TypoGraphy
+
+        ]
 
 
 --------------------- backArrow ----------------------------
@@ -149,8 +159,7 @@ underlinedTextView state push =
       ][ textView (
         [ width WRAP_CONTENT
         , height WRAP_CONTENT
-        -- , textSize FontSize.a_14
-        , text (" T&Cs")--getString NON_DISCLOUSER_AGREEMENT)
+        , text (" T&Cs")
         , color Color.primaryBlue
         ] <> FontStyle.body3 TypoGraphy)
       ]
@@ -178,13 +187,6 @@ termsAndConditionsView state push =
         , alpha 0.5
         ] <> FontStyle.body3 TypoGraphy)
       , underlinedTextView state push
-      -- , textView (
-      --   [ width WRAP_CONTENT
-      --   , height WRAP_CONTENT
-      --   , text (getString DATA_COLLECTION_AUTHORITY)
-      --   , color Color.greyTextColor
-      --   , alpha 0.5
-      --   ] <> FontStyle.body3 TypoGraphy)
       ]
   ]
 
@@ -193,12 +195,12 @@ enterMobileNumberView  state push =
   linearLayout
     [ height MATCH_PARENT
     , width MATCH_PARENT
-    , visibility  VISIBLE--if state.props.enterOTP then GONE else VISIBLE
-    , alpha 1.0 --if state.props.enterOTP then 0.0 else 1.0
+    , visibility  VISIBLE
+    , alpha 1.0
     , orientation VERTICAL
     , margin $ MarginTop 37
     ][   PrestoAnim.animationSet
-      [ Anim.translateYAnimFromTopWithAlpha AnimConfig.translateYAnimConfig -- 300 10 0 0 true PrestoAnim.Linear
+      [ Anim.translateYAnimFromTopWithAlpha AnimConfig.translateYAnimConfig
       ] $ MobileNumberEditor.view (push <<< PrimaryEditTextAction) (mobileNumberConfig state)  
 
     , linearLayout
@@ -212,9 +214,7 @@ enterMobileNumberView  state push =
         [ height WRAP_CONTENT
         , width MATCH_PARENT
         , margin (Margin 0 0 0 10)
-        ][ --commonTextView state "BY_TAPPING_CONTINUE" false Nothing push false--(getString BY_TAPPING_CONTINUE) 
-       -- , commonTextView state " &nbsp; <u>T&Cs</u>" true (Just (getValueFromConfig "DOCUMENT_LINK")) push true
-           underlinedTextView state push
+        ][ underlinedTextView state push
           ]
      , linearLayout
         [ height WRAP_CONTENT

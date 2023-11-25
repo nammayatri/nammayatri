@@ -17,11 +17,13 @@ module Screens.EnterMobileNumberScreen.ScreenData where
 
 import Screens.Types (EnterMobileNumberScreenState)
 import Foreign.Object (empty)
+import MerchantConfig.DefaultConfig as DC
 
 initData :: EnterMobileNumberScreenState
 initData =  {
   data: { mobileNumber : "",
-          logField : empty
+          logField : empty,
+          config : DC.config
         },
   props: {
     btnActive :false,

@@ -17,7 +17,6 @@ module Screens.EnterOTPScreen.Controller where
 
 import Components.PrimaryButton as PrimaryButton
 import Components.PrimaryEditText.Controllers as PrimaryEditText
-import Components.StepsHeaderModal.Controller as StepsHeaderModalController
 import Data.String (length)
 import JBridge (hideKeyboardOnNavigation, firebaseLogEvent, toggleBtnLoader)
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppTextInput, trackAppScreenEvent)
@@ -64,7 +63,6 @@ data Action = BackPressed
             | SetToken String
             | TIMERACTION String
             | AfterRender
-            | StepsHeaderModelAC StepsHeaderModalController.Action
 
 eval :: Action -> EnterOTPScreenState -> Eval Action ScreenOutput EnterOTPScreenState
 eval AfterRender state = continue state
@@ -98,7 +96,5 @@ eval (SetToken id )state = do
   _ <-  pure $ setValueToLocalNativeStore FCM_TOKEN  id
   _ <-  pure $ setValueToLocalStore FCM_TOKEN  id
   continue state
-
-eval (StepsHeaderModelAC StepsHeaderModalController.OnArrowClick) state = continueWithCmd state [ do pure $ BackPressed]
 
 eval _ state = continue state

@@ -141,7 +141,8 @@ type AddVehicleDetailsScreenData =  {
   dateOfRegistrationView :: String,
   logField :: Object Foreign,
   driverMobileNumber :: String,
-  cityConfig :: CityConfig
+  cityConfig :: CityConfig,
+  config :: AppConfig
  }
 
 type AddVehicleDetailsScreenProps =  {
@@ -210,6 +211,7 @@ type UploadDrivingLicenseStateData = {
   , logField :: Object Foreign
   , mobileNumber :: String
   , cityConfig :: CityConfig
+  , config :: AppConfig
 }
 
 type UploadDrivingLicenseStateProps = {
@@ -245,7 +247,8 @@ type RegistrationScreenData = {
   permissionsStatus :: StageStatus,
   subscriptionStatus :: StageStatus,
   lastUpdateTime :: String,
-  cityConfig :: CityConfig
+  cityConfig :: CityConfig,
+  config :: AppConfig
 }
 
 type StepProgress = {
@@ -467,7 +470,8 @@ type EnterMobileNumberScreenState = {
 
 type EnterMobileNumberScreenStateData = {
     mobileNumber :: String,
-    logField :: Object Foreign
+    logField :: Object Foreign,
+    config :: AppConfig
 }
 
 type EnterMobileNumberScreenStateProps = {
@@ -507,7 +511,8 @@ type EnterOTPScreenStateData = {
   timer :: String,
   capturedOtp :: String,
   focusedIndex :: Int,
-  editTextId :: String
+  editTextId :: String,
+  config :: AppConfig
 }
 
 type EnterOTPScreenStateProps = {
@@ -1250,7 +1255,8 @@ type PermissionsScreenState = {
 
 type PermissionsScreenData = {
   logField :: Object Foreign,
-  driverMobileNumber :: String
+  driverMobileNumber :: String,
+  config :: AppConfig
 }
 
 type PermissionsScreenProps = {
@@ -2080,12 +2086,6 @@ data ChooseCityScreenStage = SELECT_LANG | SELECT_CITY | ENABLE_PERMISSION | DET
 derive instance genericChooseCityScreenStage :: Generic ChooseCityScreenStage _
 instance showChooseCityScreenStage :: Show ChooseCityScreenStage where show = genericShow
 instance eqChooseCityScreenStage :: Eq ChooseCityScreenStage where eq = genericEq
-
-type StepsHeaderModelState = {
-  activeIndex :: Int,
-  textArray :: Array String,
-  backArrowVisibility :: Boolean
-}
 
 ---------------------------------------------WelcomeScreen -------------------------------------
 
