@@ -24,7 +24,8 @@ initData = {
     isLocationPermissionGiven : false,
     radioMenuFocusedLang : "",
     radioMenuFocusedCity : "",
-    locationUnserviceable : false
+    locationUnserviceable : false,
+    isMockLocation : false
   }
 }
 

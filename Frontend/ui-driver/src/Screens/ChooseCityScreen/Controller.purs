@@ -21,6 +21,7 @@ import PrestoDOM.Types.Core (class Loggable)
 import Screens (getScreen, ScreenName(..))
 import Screens.Types (ChooseCityScreenStage(..), ChooseCityScreenState)
 import Storage (KeyStore(..), getValueToLocalStore, setValueToLocalStore)
+import Components.ErrorModal.Controller as ErrorModalController
 
 instance showAction :: Show Action where
   show _ = ""
@@ -45,6 +46,8 @@ data Action = BackPressed
             | UpdateLocationPermissionState
             | NoAction
             | CurrentLocationCallBack String String
+            | IsMockLocation String
+            | ErrorModalActionController ErrorModalController.Action
             -- | MenuButtonAction2 MenuButtonController.Action
 
 data ScreenOutput = WelcomeScreen | SelectLanguageScreen | RefreshScreen ChooseCityScreenState
@@ -126,6 +129,11 @@ eval (LocationPermissionCallBack isLocationPermissionEnabled) state = do
 eval UpdateLocationPermissionState state = do
   let newState = state {props {isLocationPermissionGiven = true, currentStage = DETECT_LOCATION}}
   updateAndExit newState $ RefreshScreen newState
+
+eval (IsMockLocation isMock) state = do
+  let val = isMock == "true"
+      -- _ = unsafePerformEffect $ if val then  logEvent (state.data.logField) "ny_fakeGPS_enabled" else pure unit -- we are using unsafePerformEffect becasue without it we are not getting logs in firebase, since we are passing a parameter from state i.e. logField then the output will be inline and it will not be able to precompute so it's safe to use it here.
+  continue state{props{isMockLocation = val}}
 
 eval (UpdatePermission updatedState) state = do
   _ <- pure $ spy "testing " updatedState
