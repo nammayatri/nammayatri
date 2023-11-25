@@ -163,4 +163,5 @@ config =
               supportNumber : ""
             }
         ]
+  , enableMockLocation : false
 }

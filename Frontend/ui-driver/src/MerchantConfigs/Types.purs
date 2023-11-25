@@ -22,7 +22,8 @@ type AppConfig =
     mapConfig :: MapConfig,
     waitTimeConfig :: WaitTimeConfig,
     cityConfig :: Array CityConfig,
-    unserviceableThreshold :: Number
+    unserviceableThreshold :: Number,
+    enableMockLocation :: Boolean
   } 
 
 type PurpleRideConfig = {

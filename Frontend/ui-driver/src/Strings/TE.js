@@ -1074,7 +1074,9 @@ const teluguStrings = {
   CLEAR_IMAGE : "చిత్రాన్ని క్లియర్ చేయండి",
   WE_ARE_NOT_LIVE_IN_YOUR_AREA : "మేము ఇంకా మీ ప్రాంతంలో నివసించడం లేదు!\nమీ నగరానికి త్వరలో వస్తాము!",
   LOCATION_UNSERVICEABLE : "స్థానం పనికిరానిది",
-  AND : " మరియు "
+  AND : " మరియు ",
+  UNABLE_TO_GET_YOUR_LOCATION : "మీ స్థానాన్ని పొందడం సాధ్యం కాలేదు!",
+  TURN_OFF_ANY_MOCK_LOCATION_APP_AND_RESTART : "మీరు ఉపయోగిస్తున్న ఏదైనా మాక్ లొకేషన్ యాప్‌ని ఆఫ్ చేసి, యాప్‌ని రీస్టార్ట్ చేయండి."
 }
   
   

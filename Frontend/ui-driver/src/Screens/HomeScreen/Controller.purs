@@ -87,6 +87,7 @@ import Engineering.Helpers.Commons (liftFlow)
 import PrestoDOM.Core (getPushFn)
 import Control.Monad.Except.Trans (lift)
 import Data.Either (Either(..))
+import Components.ErrorModal.Controller as ErrorModalController
 
 instance showAction :: Show Action where
   show _ = ""
@@ -333,6 +334,8 @@ data Action = NoAction
             | UpdateAndNotify ST.Location Boolean
             | UpdateWaitTime ST.TimerStatus
             | NotifyAPI
+            | IsMockLocation String
+            | ErrorModalActionController ErrorModalController.Action
             
 
 eval :: Action -> ST.HomeScreenState -> Eval Action ScreenOutput ST.HomeScreenState
@@ -744,6 +747,11 @@ eval (CurrentLocation lat lng) state = do
 eval (ModifyRoute lat lon) state = do
   let newState = state { data = state.data {currentDriverLat = getLastKnownLocValue ST.LATITUDE lat, currentDriverLon = getLastKnownLocValue ST.LONGITUDE lon} }
   exit $ UpdateRoute newState
+
+eval (IsMockLocation isMock) state = do
+  let val = isMock == "true"
+      _ = unsafePerformEffect $ if val then  logEvent (state.data.logField) "ny_fakeGPS_enabled" else pure unit -- we are using unsafePerformEffect becasue without it we are not getting logs in firebase, since we are passing a parameter from state i.e. logField then the output will be inline and it will not be able to precompute so it's safe to use it here.
+  continue state{props{isMockLocation = val}}
 
 eval RetryTimeUpdate state = do
   _ <-  pure $ setValueToLocalNativeStore REGISTERATION_TOKEN (getValueToLocalStore REGISTERATION_TOKEN)

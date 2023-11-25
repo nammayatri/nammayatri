@@ -51,7 +51,7 @@ import Helpers.Utils as HU
 import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Prelude (unit, ($), (-), (/), (<), (<=), (<>), (==), (>=), (||), (>), (/=), show, map, (&&), not, bottom, (<>), (*), negate, otherwise)
+import Prelude (unit, ($), (-), (/), (<), (<=), (<>), (==), (>=), (||), (>), (/=), show, map, (&&), not, bottom, (<>), (*), negate, otherwise, (+))
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Padding(..), Visibility(..), Accessiblity(..), cornerRadius, padding, gravity)
 import PrestoDOM.Types.DomAttributes as PTD
 import Resource.Constants as Const
@@ -60,6 +60,9 @@ import Screens.Types as ST
 import Services.API (PaymentBreakUp(..), PromotionPopupConfig(..), Status(..))
 import Storage (KeyStore(..), getValueToLocalNativeStore, getValueToLocalStore)
 import Styles.Colors as Color
+import Components.ErrorModal as ErrorModal
+import MerchantConfig.Utils as MU
+import PrestoDOM.Types.DomAttributes (Corners(..))
 
 --------------------------------- rideActionModalConfig -------------------------------------
 rideActionModalConfig :: ST.HomeScreenState -> RideActionModal.Config
@@ -1491,3 +1494,40 @@ gotoTimerConfig :: Boolean -> {bgColor :: String , imageString :: String, textCo
 gotoTimerConfig enabled 
   | enabled = {bgColor : Color.green900, imageString : fetchImage FF_ASSET "ny_pin_check_white", textColor : Color.white900}
   | otherwise = {bgColor : Color.white900, imageString : fetchImage FF_ASSET "ny_ic_goto_icon_map_pin_check", textColor : Color.black800}
+
+sourceUnserviceableConfig :: ST.HomeScreenState -> ErrorModal.Config
+sourceUnserviceableConfig state =
+  let
+    config = ErrorModal.config
+    errorModalConfig' =
+      config
+        { height = if (MU.getMerchant FunctionCall) == MU.NAMMAYATRI && state.props.isMockLocation then MATCH_PARENT else WRAP_CONTENT
+        , background = Color.white900
+        , corners = (Corners 24.0 true true false false)
+        , stroke = ("1," <> Color.borderGreyColor)
+        , imageConfig
+          { imageUrl = fetchImage FF_ASSET "ny_ic_location_unserviceable"
+          , height = V 99
+          , width = V 133
+          , margin = (Margin 0 50 0 20)
+          }
+        , errorConfig
+          { text = getString UNABLE_TO_GET_YOUR_LOCATION
+          , color = Color.black800
+          , margin = (MarginBottom 5)
+          }
+        , errorDescriptionConfig
+          { text = getString TURN_OFF_ANY_MOCK_LOCATION_APP_AND_RESTART
+          , color = Color.black700
+          , margin = (Margin 20 0 20 (40 + EHC.safeMarginBottom))
+          }
+        , buttonConfig
+          { text = (getString CHANGE_LOCATION)
+          , margin = (Margin 16 0 16 (20 + EHC.safeMarginBottom))
+          , background = state.data.config.primaryBackground
+          , color = state.data.config.primaryTextColor
+          , visibility = GONE
+          }
+        }
+  in
+    errorModalConfig'
