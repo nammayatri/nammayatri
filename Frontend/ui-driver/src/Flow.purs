@@ -2565,7 +2565,10 @@ noInternetScreenFlow triggertype = do
                         false ->  baseAppFlow false Nothing
     TURN_ON_GPS -> if not internetCondition then noInternetScreenFlow "INTERNET_ACTION"
                     else do
-                      (DriverActiveInactiveResp resp) <- Remote.driverActiveInactiveBT "true" $ toUpper $ show Online
+                      when (isTokenValid (getValueToLocalStore REGISTERATION_TOKEN)) $ do 
+                        (DriverActiveInactiveResp resp) <- Remote.driverActiveInactiveBT "true" $ toUpper $ show Online
+                        pure unit 
+                      _ <- pure $ spy "nointernetscreen" "GPS_ACTION"
                       baseAppFlow false Nothing
     CHECK_INTERNET -> case ((ifNotRegistered unit) || (getValueToLocalStore IS_DRIVER_ENABLED == "false")) of
                       true  -> pure unit

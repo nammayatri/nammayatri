@@ -15,9 +15,7 @@ import PrestoDOM (Length(..), Margin(..), Padding(..), Visibility(..), clickable
 import Screens.Types (ChooseCityScreenStage(..), ChooseCityScreenState)
 import Styles.Colors as Color
 import Components.ErrorModal as ErrorModal
-import MerchantConfig.Utils as MU
 import PrestoDOM.Types.DomAttributes (Corners(..))
-import Engineering.Helpers.Commons as EHC
 
 ---------------- genericHeaderConfig ----------------
 genericHeaderConfig :: ChooseCityScreenState -> GenericHeader.Config
@@ -28,7 +26,6 @@ genericHeaderConfig state =
       { height = (V 30)
       , width = (V 30)
       , margin = (MarginRight 16)
-      -- , imageUrl = "ny_ic_chevron_left," <> (HU.getAssetStoreLink FunctionCall) <> "ny_ic_chevron_left.png"
       , imageUrl = fetchImage FF_ASSET "ny_ic_chevron_left"
       , padding = (Padding 5 5 5 5)
       }
@@ -54,7 +51,6 @@ primaryButtonConfig state = let
       { textConfig { text = getString case state.props.currentStage of
                                         SELECT_LANG ->  CONFIRM_LANGUAGE
                                         SELECT_CITY ->  CONFIRM_LOCATION_STR
-                                        -- CAROUSEL -> GET_STARTED
                                         ENABLE_PERMISSION -> ENABLE_LOCATION
                                         _ -> CONFIRM
 
@@ -102,39 +98,34 @@ getChangeLanguageText value =
                     _ -> "Change Language"
     Mb.Nothing -> "Change Language"
 
-sourceUnserviceableConfig :: ChooseCityScreenState -> ErrorModal.Config
-sourceUnserviceableConfig state =
+mockLocationConfig :: ChooseCityScreenState -> ErrorModal.Config
+mockLocationConfig state =
   let
     config = ErrorModal.config
     errorModalConfig' =
       config
-        { height = if (MU.getMerchant FunctionCall) == MU.NAMMAYATRI && state.props.isMockLocation then MATCH_PARENT else WRAP_CONTENT
+        { height = MATCH_PARENT
         , background = Color.white900
-        , corners = (Corners 24.0 true true false false)
+        , corners = Corners 24.0 true true false false
         , stroke = ("1," <> Color.borderGreyColor)
         , imageConfig
           { imageUrl = fetchImage FF_ASSET "ny_ic_location_unserviceable"
           , height = V 99
           , width = V 133
-          , margin = (Margin 0 50 0 20)
+          , margin = MarginVertical 50 20
           }
         , errorConfig
           { text = getString UNABLE_TO_GET_YOUR_LOCATION
           , color = Color.black800
-          , margin = (MarginBottom 5)
+          , margin = MarginBottom 5
           }
         , errorDescriptionConfig
           { text = getString TURN_OFF_ANY_MOCK_LOCATION_APP_AND_RESTART
           , color = Color.black700
-          , margin = (Margin 20 0 20 (40 + EHC.safeMarginBottom))
+          , margin = Margin 20 0 20 40
           }
         , buttonConfig
-          { text = (getString CHANGE_LOCATION)
-          , margin = (Margin 16 0 16 (20 + EHC.safeMarginBottom))
-          , background = state.data.config.primaryBackground
-          , color = state.data.config.primaryTextColor
-          , visibility = GONE
-          }
+          { visibility = GONE }
         }
   in
     errorModalConfig'

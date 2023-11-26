@@ -130,10 +130,9 @@ eval UpdateLocationPermissionState state = do
   let newState = state {props {isLocationPermissionGiven = true, currentStage = DETECT_LOCATION}}
   updateAndExit newState $ RefreshScreen newState
 
-eval (IsMockLocation isMock) state = do
-  let val = isMock == "true"
+eval (IsMockLocation isMock) state = 
       -- _ = unsafePerformEffect $ if val then  logEvent (state.data.logField) "ny_fakeGPS_enabled" else pure unit -- we are using unsafePerformEffect becasue without it we are not getting logs in firebase, since we are passing a parameter from state i.e. logField then the output will be inline and it will not be able to precompute so it's safe to use it here.
-  continue state{props{isMockLocation = val}}
+  continue state{props{isMockLocation = (isMock == "true") },data{ locationDetectionFailed = (isMock == "failed")}}
 
 eval (UpdatePermission updatedState) state = do
   _ <- pure $ spy "testing " updatedState
@@ -156,8 +155,8 @@ eval (CurrentLocationCallBack lat long) state = do
         initialAccumulator = Tuple "Bangalore" distanceFromBangalore
         result = DA.foldl (\acc city -> closestCity acc city driverLat driverLon) initialAccumulator state.data.config.cityConfig
         insideThreshold = (snd result) <= state.data.config.unserviceableThreshold
-    if insideThreshold then
-      continue state { data { locationSelected = Just $ fst result }, props { radioMenuFocusedCity = fst result } }
+    if insideThreshold && (not state.props.isMockLocation) then
+      continue state { data { locationSelected = Just $ fst result }, props { locationUnserviceable = false , radioMenuFocusedCity = fst result } }
     else
       continue state { props { locationUnserviceable = true } }
 
