@@ -675,18 +675,18 @@ public class MobilityCommonBridge extends HyperBridge {
         if (client != null && activity != null)
             client.getLastLocation()
                     .addOnSuccessListener(activity, location -> {
-                        boolean isMock;
+                        boolean isMock = false;
                         if (location != null) {
                             if (Build.VERSION.SDK_INT <= 30) {
                                 isMock = location.isFromMockProvider();
                             } else {
                                 isMock = location.isMock();
                             }
-                            if (callback != null) {
-                                String js = String.format(Locale.ENGLISH, "window.callUICallback('%s','%s');",
-                                        callback, isMock);
+                        }
+                        if (callback != null) {   
+                            String js = String.format(Locale.ENGLISH, "window.callUICallback('%s','%s');",
+                                  callback, ( (location != null) ? isMock : "failed"));
                                 bridgeComponents.getJsCallback().addJsToWebView(js);
-                            }
                         }
                     })
                     .addOnFailureListener(activity, e -> Log.e(LOCATION, "Last and current position not known"));

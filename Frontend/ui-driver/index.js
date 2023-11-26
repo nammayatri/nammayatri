@@ -269,7 +269,9 @@ window["onEvent'"] = function (_event, args) {
       purescript.onEvent(_event)();
     }
   } else if (_event == "onLocationChanged") {
-    purescript.onConnectivityEvent("LOCATION_DISABLED")();
+    if (JBridge.isLocationEnabled && !JBridge.isLocationEnabled()) {
+      purescript.onConnectivityEvent("LOCATION_DISABLED")();
+    }
   } else if (_event == "onInternetChanged") {
     purescript.onConnectivityEvent("INTERNET_ACTION")();
   } else if (_event == "onPause") {
