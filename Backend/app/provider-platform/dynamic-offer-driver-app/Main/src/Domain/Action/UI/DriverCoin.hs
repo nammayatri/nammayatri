@@ -78,8 +78,7 @@ data CoinsUsageRes = CoinsUsageRes
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
 data ConvertCoinToCashReq = ConvertCoinToCashReq
-  { cashAmount :: HighPrecMoney,
-    coins :: Int
+  { coins :: Int
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
@@ -186,7 +185,10 @@ useCoinsHandler (driverId, merchantId_, merchantOpCityId) ConvertCoinToCashReq {
   uuid <- generateGUIDText
   coinBalance <- Coins.getCoinsByDriverId driverId
   let currentDate = show $ utctDay now
-  if coinBalance >= coins && (fromIntegral coins * transporterConfig.coinConversionRate) == cashAmount
+      coinConversionRateRational = getHighPrecMoney (transporterConfig.coinConversionRate)
+      calculatedAmountRational = coinConversionRateRational * (toRational coins)
+      calculatedAmount = HighPrecMoney calculatedAmountRational
+  if coinBalance >= coins
     then do
       let history =
             PurchaseHistory
@@ -195,13 +197,13 @@ useCoinsHandler (driverId, merchantId_, merchantOpCityId) ConvertCoinToCashReq {
                 merchantId = merchantId_.getId,
                 merchantOptCityId = merchantOpCityId.getId,
                 numCoins = coins,
-                cash = cashAmount,
+                cash = calculatedAmount,
                 createdAt = now,
                 updatedAt = now,
                 title = "converted from coins"
               }
       void $ PHistory.createPurchaseHistory history
-      void $ DPlan.updateCoinFieldsByDriverId driverId cashAmount
+      void $ DPlan.updateCoinFieldsByDriverId driverId calculatedAmount
       driver <- Person.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
       void $ Person.updateUsedCoins driverId (coins + driver.usedCoins)
       histories <- CHistory.getDriverCoinInfo driverId
