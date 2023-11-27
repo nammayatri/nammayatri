@@ -10,6 +10,7 @@
     "bundle:ios": "webpack --env prod --mode=production --progress --config webpack.ios.js",
     "prod:android": "npm-run-all compile:purs bundle:android",
     "prod:ios": "npm-run-all compile:purs \"bundle:ios\"",
+    "update-translation": "sh ../updateTranslation.sh ui-customer",
     "compileAndCreateJsa": "sh compileAndCreateJsa.sh",
     "dev": "spago build --watch",
     "webpack-dev": "webpack-dev-server --env sandbox --mode development --config webpack.android.js --host",

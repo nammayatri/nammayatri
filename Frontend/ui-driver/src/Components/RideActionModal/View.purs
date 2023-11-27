@@ -748,9 +748,9 @@ getTitle config = case config.startRideActive,  config.notifiedCustomer of
   false, _ -> (getString YOU_ARE_ON_A_RIDE)
   true, false  ->  (config.customerName <> " " <> (getString IS_WAITING_FOR_YOU) <> "...")
   true, true -> case (getValueToLocalStore LANGUAGE_KEY) of
-      "TA_IN" -> config.customerName <> (getString WAITING_FOR_CUSTOMER)
+      "TA_IN" -> config.customerName <> " " <> (getString WAITING_FOR_CUSTOMER)
       "HI_IN" -> "आप" <> config.customerName <> "की प्रतीक्षा कर रहे हैं"
-      _       -> (getString WAITING_FOR_CUSTOMER) <> config.customerName
+      _       -> (getString WAITING_FOR_CUSTOMER) <> " " <> config.customerName
 
 
 separatorConfig :: SeparatorView.Config

@@ -224,7 +224,7 @@ popupModalConfig state = let
                   Mb.Just FailedPopup -> (getString PAYMENT_FAILED)
                   Mb.Just DuesClearedPopup -> (getString DUES_CLEARED_SUCCESSFULLY)
                   Mb.Just CancelAutoPay -> (getString NOT_PLANNING_TO_TAKE_RIDES)
-                  Mb.Just SwitchedPlan -> (getString PLAN_SWITCHED_TO) <> (if state.data.managePlanData.currentPlan.title == getString DAILY_UNLIMITED then getString DAILY_UNLIMITED else getString DAILY_PER_RIDE)
+                  Mb.Just SwitchedPlan -> (getString PLAN_SWITCHED_TO) <> " " <> (if state.data.managePlanData.currentPlan.title == getString DAILY_UNLIMITED then getString DAILY_UNLIMITED else getString DAILY_PER_RIDE)
                   Mb.Just SupportPopup -> ""
                   Mb.Just PaymentSuccessPopup -> ""
                   Mb.Nothing -> ""

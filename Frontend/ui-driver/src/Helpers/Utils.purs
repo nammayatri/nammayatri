@@ -289,9 +289,9 @@ getDowngradeOptionsText vehicleType = do
     downgradedToString = ( prefixString
                         <> modifiedArray 
                         <> case lastElement of 
-                            Just lastElem -> (getString AND) <> " " <> (getVehicleType lastElem)
+                            Just lastElem -> " " <> (getString AND) <> " " <> (getVehicleType lastElem)
                             _ -> "" )
-  getString DOWNGRADING_VEHICLE_WILL_ALLOW_YOU_TO_TAKE_BOTH_1 <> downgradeFrom <> downgradedToString <> getString DOWNGRADING_VEHICLE_WILL_ALLOW_YOU_TO_TAKE_BOTH_3
+  getString DOWNGRADING_VEHICLE_WILL_ALLOW_YOU_TO_TAKE_BOTH_1 <> downgradeFrom <> downgradedToString <> " " <> getString DOWNGRADING_VEHICLE_WILL_ALLOW_YOU_TO_TAKE_BOTH_3
 
 getUIDowngradeOptions :: String -> Array String
 getUIDowngradeOptions variant = case (getMerchant FunctionCall) of

@@ -158,7 +158,7 @@ primaryEditTextView state push =
         [ Anim.translateYAnimFromTopWithAlpha AnimConfig.translateYAnimConfig
         ] $ PrimaryEditText.view(push <<< PrimaryEditTextAction) ({
         title: case (getValueToLocalStore LANGUAGE_KEY) of 
-                  "EN_US" -> (getString ENTER_OTP_SENT_TO) <> state.data.mobileNo
+                  "EN_US" -> (getString ENTER_OTP_SENT_TO) <> " " <> state.data.mobileNo
                   _ -> state.data.mobileNo <> (getString ENTER_OTP_SENT_TO) ,
         type: "number",
         hint: (getString AUTO_READING_OTP),

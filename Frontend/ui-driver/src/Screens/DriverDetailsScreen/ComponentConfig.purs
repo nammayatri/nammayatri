@@ -150,7 +150,7 @@ enterOtpState state = let
       margin = (Margin 0 0 0 8)
       },
       subHeadingConfig {
-        text = if((getValueToLocalStore LANGUAGE_KEY) == "EN_US") then (getString (OTP_SENT_TO) <> (if (state.props.isEditAlternateMobile) then (fromMaybe "" state.data.driverEditAlternateMobile) else (fromMaybe "" state.data.driverAlternateMobile))) else ( (if (state.props.isEditAlternateMobile) then (fromMaybe "" state.data.driverEditAlternateMobile) else (fromMaybe "" state.data.driverAlternateMobile)) <> (getString OTP_SENT_TO)),
+        text = if((getValueToLocalStore LANGUAGE_KEY) == "EN_US") then (getString (OTP_SENT_TO) <> " " <> (if (state.props.isEditAlternateMobile) then (fromMaybe "" state.data.driverEditAlternateMobile) else (fromMaybe "" state.data.driverAlternateMobile))) else ( (if (state.props.isEditAlternateMobile) then (fromMaybe "" state.data.driverEditAlternateMobile) else (fromMaybe "" state.data.driverAlternateMobile)) <> (getString OTP_SENT_TO)),
         color = Color.black800,
         margin = (Margin 0 0 0 8),
         visibility = (if not state.props.otpIncorrect then VISIBLE else GONE)

@@ -82,3 +82,18 @@ To start the frontend app for IOS, follow these steps:
 **Starting the Server**
 
     npm run start:ios:<master, sandbox, or prod>
+
+**To Update The strings files**
+
+put your string in the following sheets : 
+  - https://docs.google.com/spreadsheets/d/1543N264Vbl374BEXgZXLxxNmJ3VkkWM50GaPghLPLkU/edit#gid=0 (for customer)
+  - https://docs.google.com/spreadsheets/d/1543N264Vbl374BEXgZXLxxNmJ3VkkWM50GaPghLPLkU/edit#gid=641543613 (for driver)
+
+then publish your changes from the google sheets.
+
+Then run the following command in Frontend directory in your terminal: 
+```bash
+  bash updateTranslation.sh <directory>
+```
+
+<directory> = ui-driver ( for driver ) | ui-customer ( for customer )

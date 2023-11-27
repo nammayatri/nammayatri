@@ -287,7 +287,7 @@ enableLocationPermission state push =
          ]
        ]
     , textView $
-      [ text $ getString PLEASE_ENABLE_LOCATION_PERMISSION_FOR <> "Namma yatri " <> "from your device settings to start riding"
+      [ text $ getString PLEASE_ENABLE_LOCATION_PERMISSION_FOR <> " " <>  " Namma yatri " <> "from your device settings to start riding"
       , gravity CENTER
       , color Color.black700
       , margin $ MarginTop 4

@@ -1809,7 +1809,7 @@ rcActiveOnAnotherDriverProfilePopUpView push state =
         ]
         [ textView
             $
-              [ text $ "RC - " <> state.data.rcNumber <> (getString ACTIVE_RC_ON_ANOTHER_DRIVER)
+              [ text $ "RC - " <> state.data.rcNumber <> " " <> (getString ACTIVE_RC_ON_ANOTHER_DRIVER)
               , fontStyle $ FontStyle.bold LanguageStyle
               , height WRAP_CONTENT
               , color Color.black800

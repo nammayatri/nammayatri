@@ -40,7 +40,7 @@ alternateMobileNumberConfig state = let
     , letterSpacing = PX if  state.props.enterOtp then 5.0 else 0.0
     , subTextView = state.props.enterOtp
     , pattern = if state.props.enterOtp then Just "[0-9]*,4" else Just "[0-9]*,10"
-    , subText1 =  getString OTP_SENT_TO <> state.data.mobileNumber
+    , subText1 =  getString OTP_SENT_TO <> " " <> state.data.mobileNumber
     , subText2 = getString RESEND_OTP
   }
   in referalNumberConfig'

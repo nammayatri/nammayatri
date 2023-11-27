@@ -12,6 +12,7 @@
     "prod:ios": "npm-run-all compile:purs bundle:ios",
     "compileAndCreateJsa": "sh compileAndCreateJsa.sh",
     "dev": "spago build --watch",
+    "update-translation": "sh ../updateTranslation.sh ui-driver",
     "webpack-dev": "webpack-dev-server --env sandbox --mode development --config webpack.config.js --host",
     "start": "npm-run-all -p dev webpack-dev",
     "clean": "sh cleanSpago.sh"

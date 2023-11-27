@@ -122,7 +122,7 @@ view push state =
               commonTV push (getString $ CHOOSE_YOUR_PLAN "CHOOSE_YOUR_PLAN") Color.black800 FontStyle.subHeading1 LEFT 0 NoAction false
             , let date = getDateAfterNDays (fromMaybe 0 (fromString (getValueToLocalNativeStore FREE_TRIAL_DAYS)) -1) in 
               commonTV push ( case getValueToLocalStore LANGUAGE_KEY of 
-                                "EN_US" -> (getString FREE_UNTIL <> date)
+                                "EN_US" -> (getString FREE_UNTIL <> " " <> date)
                                 _ -> (date <> getString FREE_UNTIL)
                             ) Color.black700 FontStyle.body3 LEFT 0 NoAction false
             ]

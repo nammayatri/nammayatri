@@ -417,9 +417,9 @@ congratsBar state =
               [ width WRAP_CONTENT
               , height WRAP_CONTENT
               , text  if rank == 1 then
-                        (getString CONGRATULATIONS_YOU_ARE_RANK) <> (show rank) <> " 🏆"
+                        (getString CONGRATULATIONS_YOU_ARE_RANK) <> " " <> (show rank) <> " 🏆"
                       else
-                        (getString CONGRATULATIONS_YOU_ARE_RANK) <> (show rank) <> " 🎉"
+                        (getString CONGRATULATIONS_YOU_ARE_RANK) <> " " <> (show rank) <> " 🎉"
               , color Color.white900
               , textSize FontSize.a_18
               ]

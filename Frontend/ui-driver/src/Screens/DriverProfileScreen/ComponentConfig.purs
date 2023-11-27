@@ -284,7 +284,7 @@ enterOtpState state = let
       , margin = MarginBottom 8
       },
       subHeadingConfig {
-        text = getString OTP_SENT_TO <> fromMaybe "" state.data.driverEditAlternateMobile
+        text = getString OTP_SENT_TO <> " " <> fromMaybe "" state.data.driverEditAlternateMobile
       , color = Color.black800
       , margin = MarginBottom 8
       , visibility = if not state.props.otpIncorrect then VISIBLE else GONE
@@ -333,7 +333,7 @@ activateAndDeactivateRcPopUpConfig push state =
         , buttonLayoutMargin = (MarginHorizontal 16 16)
         , dismissPopup = true
         , optionButtonOrientation = "VERTICAL"
-        , secondaryText { text = if state.data.isRCActive then (getString CONFIRMATION_FOR_DEACTIVATING_RC) <> state.data.rcNumber <> "?" else (getString CONFIRMATION_FOR_ACTIVATING_RC) <>state.data.rcNumber<> "? "<>(getString THIS_WILL_DEACTIVATE_CURRENTLY_ACTIVE_RC), color = Color.black700}
+        , secondaryText { text = if state.data.isRCActive then (getString CONFIRMATION_FOR_DEACTIVATING_RC) <> " " <> state.data.rcNumber <> "?" else (getString CONFIRMATION_FOR_ACTIVATING_RC) <>state.data.rcNumber<> "? "<>(getString THIS_WILL_DEACTIVATE_CURRENTLY_ACTIVE_RC), color = Color.black700}
         , option1 {
           text = if state.data.isRCActive then (getString YES_DEACTIVATE) else (getString YES_ACTIVATE)
         , width = MATCH_PARENT

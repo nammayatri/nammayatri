@@ -818,7 +818,7 @@ addVehicleDetailsflow addRcFromProf = do
       case activateRCResp of
         Right (MakeRcActiveOrInactiveResp resp) -> do
           void $ lift $ lift $ toggleLoader false
-          pure $ toast $ "RC-"<>state.data.vehicle_registration_number<> (getString IS_ACTIVE_NOW)
+          pure $ toast $ "RC-"<>state.data.vehicle_registration_number<> " " <> (getString IS_ACTIVE_NOW)
           refreshDriverProfile
           driverProfileFlow
         Left errorPayload -> do
@@ -975,7 +975,7 @@ driverProfileFlow = do
       res <- lift $ lift $ Remote.makeRcActiveOrInactive (Remote.makeRcActiveOrInactiveReq (not state.data.isRCActive) (state.data.rcNumber))
       case res of
         Right (MakeRcActiveOrInactiveResp response) -> do
-          pure $ toast $ if state.data.isRCActive then "RC-"<>state.data.rcNumber<>" "<> (getString DEACTIVATED) else "RC-"<>state.data.rcNumber<> (getString IS_ACTIVE_NOW)
+          pure $ toast $ if state.data.isRCActive then "RC-"<>state.data.rcNumber<>" "<> (getString DEACTIVATED) else "RC-"<>state.data.rcNumber<> " " <> (getString IS_ACTIVE_NOW)
           if state.data.isRCActive then do
             globalstate <- getState
             (GetDriverInfoResp getDriverInfoResp) <- getDriverInfoDataFromCache globalstate false 

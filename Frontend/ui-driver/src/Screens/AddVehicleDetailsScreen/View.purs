@@ -869,7 +869,7 @@ addRCFromProfileStatusView state push =
       ] <> FontStyle.h3 TypoGraphy
     , textView $
       [ text $ case state.props.multipleRCstatus of
-                              COMPLETED -> getString CONFIRMATION_FOR_ACTIVATING_RC <> state.data.vehicle_registration_number <> "? " <> getString THIS_WILL_DEACTIVATE_CURRENTLY_ACTIVE_RC
+                              COMPLETED -> getString CONFIRMATION_FOR_ACTIVATING_RC <> " " <> state.data.vehicle_registration_number <> "? " <> getString THIS_WILL_DEACTIVATE_CURRENTLY_ACTIVE_RC
                               FAILED -> getString RC_FAILED_DESC
                               IN_PROGRESS -> getString RC_IN_PROGRESS_DESC
                               _ -> getString RC_IN_PROGRESS_DESC
