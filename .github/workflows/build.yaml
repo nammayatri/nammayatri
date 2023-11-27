@@ -72,15 +72,15 @@ jobs:
         uses: actions/upload-artifact@v2
         with:
           name: ${{ github.event.inputs.variant }}
-          path: |
-            Frontend/app/build/outputs/apk/
-            ${{ github.event.inputs.variant == 'yatriUserProdDebug' ? 'yatriUserProd/debug/app-yatriUser-prod-debug' : '' }}
-            ${{ github.event.inputs.variant == 'yatriDriverProdDebug' ? 'yatriDriverProd/debug/app-yatriDriver-prod-debug' : '' }}
-            ${{ github.event.inputs.variant == 'ysUserProdDebug' ? 'ysUserProd/debug/app-ysUser-prod-debug' : '' }}
-            ${{ github.event.inputs.variant == 'ysDriverProdDebug' ? 'ysDriverProd/debug/app-ysDriver-prod-debug' : '' }}
-            ${{ github.event.inputs.variant == 'nyDriverProdDebug' ? 'nyDriverProd/debug/app-nyDriver-prod-debug' : '' }}
-            ${{ github.event.inputs.variant == 'nyUserProdDebug' ? 'nyUserProd/debug/app-nyUser-prod-debug' : '' }}
-            .apk
+          path: Frontend/android-native/app/build/outputs/apk/nyUserProd/debug/app-nyUser-prod-debug.apk
+            # Frontend/app/build/outputs/apk/
+            # ${{ github.event.inputs.variant == 'yatriUserProdDebug' ? 'yatriUserProd/debug/app-yatriUser-prod-debug' : '' }}
+            # ${{ github.event.inputs.variant == 'yatriDriverProdDebug' ? 'yatriDriverProd/debug/app-yatriDriver-prod-debug' : '' }}
+            # ${{ github.event.inputs.variant == 'ysUserProdDebug' ? 'ysUserProd/debug/app-ysUser-prod-debug' : '' }}
+            # ${{ github.event.inputs.variant == 'ysDriverProdDebug' ? 'ysDriverProd/debug/app-ysDriver-prod-debug' : '' }}
+            # ${{ github.event.inputs.variant == 'nyDriverProdDebug' ? 'nyDriverProd/debug/app-nyDriver-prod-debug' : '' }}
+            # ${{ github.event.inputs.variant == 'nyUserProdDebug' ? 'nyUserProd/debug/app-nyUser-prod-debug' : '' }}
+            # .apk
       # - name: Upload APK
       #   uses: actions/upload-artifact@v2
       #   with:
