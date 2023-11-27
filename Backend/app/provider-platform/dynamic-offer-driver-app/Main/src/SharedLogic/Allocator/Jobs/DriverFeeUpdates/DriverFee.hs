@@ -50,7 +50,7 @@ import Kernel.Utils.Common
 import Lib.Scheduler
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import SharedLogic.Allocator
-import SharedLogic.DriverFee (calculatePlatformFeeAttr, getCoinAdjustedInSubscriptionByDriverIdKey, mkCoinAdjustedInSubscriptionByDriverIdKey, roundToHalf, setCoinToCashUsedAmount)
+import SharedLogic.DriverFee (calcNumRides, calculatePlatformFeeAttr, getCoinAdjustedInSubscriptionByDriverIdKey, mkCoinAdjustedInSubscriptionByDriverIdKey, roundToHalf, setCoinToCashUsedAmount)
 import qualified SharedLogic.Payment as SPayment
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
@@ -158,15 +158,13 @@ calculateDriverFeeForDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getI
               coinCashLeft = maybe 0 (.coinCovertedToCashLeft) mbDriverPlan
 
           driver <- QP.findById (cast driverFee.driverId) >>= fromMaybeM (PersonDoesNotExist driverFee.driverId.getId)
-
+          let numRides = calcNumRides driverFee transporterConfig - plan.freeRideCount
           (feeWithoutDiscount, totalFee, offerId, offerTitle) <- case planBaseFrequcency of
             "PER_RIDE" -> do
-              let numRides = driverFee.numRides - plan.freeRideCount
-                  feeWithoutDiscount = max 0 (min plan.maxAmount (baseAmount * HighPrecMoney (toRational numRides)))
+              let feeWithoutDiscount = max 0 (min plan.maxAmount (baseAmount * HighPrecMoney (toRational numRides)))
               getFinalOrderAmount feeWithoutDiscount merchantId transporterConfig driver plan mandateSetupDate driverFee
             "DAILY" -> do
-              let numRides = driverFee.numRides - plan.freeRideCount
-                  feeWithoutDiscount = if numRides > 0 then baseAmount else 0
+              let feeWithoutDiscount = if numRides > 0 then baseAmount else 0
               getFinalOrderAmount feeWithoutDiscount merchantId transporterConfig driver plan mandateSetupDate driverFee
             _ -> return (0, 0, Nothing, Nothing) -- TODO: handle WEEKLY and MONTHLY later
           let offerAndPlanTitle = Just plan.name <> Just "-*@*-" <> offerTitle ---- this we will send in payment history ----
@@ -259,8 +257,8 @@ processRestFee paymentMode DriverFee {..} = do
   processDriverFee paymentMode driverFee
   updateSerialOrderForInvoicesInWindow driverFee.id merchantId startTime endTime
 
-makeOfferReq :: HighPrecMoney -> Person -> Plan -> UTCTime -> UTCTime -> Int -> Payment.OfferListReq
-makeOfferReq totalFee driver plan dutyDate registrationDate numOfRides = do
+makeOfferReq :: HighPrecMoney -> Person -> Plan -> UTCTime -> UTCTime -> Int -> TransporterConfig -> Payment.OfferListReq
+makeOfferReq totalFee driver plan dutyDate registrationDate numOfRides transporterConfig = do
   let offerOrder = Payment.OfferOrder {orderId = Nothing, amount = totalFee, currency = Payment.INR} -- add UDFs
       customerReq = Payment.OfferCustomer {customerId = driver.id.getId, email = driver.email, mobile = Nothing}
   Payment.OfferListReq
@@ -270,7 +268,8 @@ makeOfferReq totalFee driver plan dutyDate registrationDate numOfRides = do
       registrationDate,
       paymentMode = show plan.paymentMode,
       dutyDate,
-      numOfRides
+      numOfRides,
+      offerListingMetric = if transporterConfig.considerSpecialZoneRidesForPlanCharges then Nothing else Just Payment.IS_APPLICABLE
     }
 
 getFinalOrderAmount :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r) => HighPrecMoney -> Id Merchant -> TransporterConfig -> Person -> Plan -> UTCTime -> DriverFee -> m (HighPrecMoney, HighPrecMoney, Maybe Text, Maybe Text)
@@ -283,14 +282,14 @@ getFinalOrderAmount feeWithoutDiscount merchantId transporterConfig driver plan 
       updateCollectedPaymentStatus CLEARED Nothing now driverFee.id
       return (0, 0, Nothing, Nothing)
     else do
-      offers <- SPayment.offerListCache merchantId driver.merchantOperatingCityId (makeOfferReq feeWithoutDiscount driver plan dutyDate registrationDateLocal driverFee.numRides) -- handle UDFs
+      offers <- SPayment.offerListCache merchantId driver.merchantOperatingCityId (makeOfferReq feeWithoutDiscount driver plan dutyDate registrationDateLocal driverFee.numRides transporterConfig) -- handle UDFs
       (finalOrderAmount, offerId, offerTitle) <-
         if null offers.offerResp
           then pure (feeWithoutDiscount, Nothing, Nothing)
           else do
             let bestOffer = minimumBy (comparing (.finalOrderAmount)) offers.offerResp
             pure (bestOffer.finalOrderAmount, Just bestOffer.offerId, bestOffer.offerDescription.title)
-      return (feeWithoutDiscount, finalOrderAmount, offerId, offerTitle)
+      return (feeWithoutDiscount + driverFee.specialZoneAmount, finalOrderAmount + driverFee.specialZoneAmount, offerId, offerTitle)
 
 splitPlatformFee :: HighPrecMoney -> HighPrecMoney -> Plan -> DriverFee -> Maybe HighPrecMoney -> Maybe HighPrecMoney -> [DriverFee]
 splitPlatformFee feeWithoutDiscount_ totalFee plan DriverFee {..} maxAmountPerDriverfeeThreshold coinClearedAmount = do
@@ -329,7 +328,7 @@ driverFeeSplitter paymentMode plan feeWithoutDiscount totalFee driverFee mandate
   case splittedFees of
     [] -> throwError (InternalError "No driver fee entity with non zero total fee")
     (firstFee : restFees) -> do
-      resetFee firstFee.id firstFee.govtCharges firstFee.platformFee.fee firstFee.platformFee.cgst firstFee.platformFee.sgst now
+      resetFee firstFee.id firstFee.govtCharges firstFee.platformFee.fee firstFee.platformFee.cgst firstFee.platformFee.sgst (Just feeWithoutDiscount) now
       mapM_ (processRestFee paymentMode) restFees
 
 unsubscribeDriverForPaymentOverdue ::
