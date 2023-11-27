@@ -1422,7 +1422,8 @@ type TicketBookingScreenProps = {
   activeListItem :: TicketBookingServiceDetails,
   activeIndex :: Int,
   rightButtonDisable :: Boolean,
-  leftButtonDisable :: Boolean
+  leftButtonDisable :: Boolean,
+  navigateToHome :: Boolean
 }
 
 type TicketItem = {
@@ -1480,8 +1481,9 @@ type TicketingScreenState = {
 }
 
 type TicketingScreenData = {
-  sideBarStatus :: SideBar.Status,
   placeInfoArray :: Array TicketPlaceResp
 } 
 
-type TicketingScreenProps = {} 
+type TicketingScreenProps = {
+  hideMyTickets :: Boolean
+} 

@@ -23,7 +23,7 @@ import Components.SettingSideBar.Controller as SideBar
 
 settingSiderBarState :: ST.TicketingScreenState -> SideBar.SettingSideBarState
 settingSiderBarState state = {
-  opened : state.data.sideBarStatus
+  opened : SideBar.OPEN
   , name : "String"
   , number : "String"
   , email : Nothing

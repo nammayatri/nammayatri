@@ -42,14 +42,14 @@ data Action = SettingSideBarActionController SettingSideBar.Action
             | BackPressed
             | NavBarAC NavBar.Action
             | MyTicketsAC
-            | OnSelect Int
+            | OnSelect API.TicketPlaceResp
             | NoAction
             | UpdatePlacesData API.TicketPlaceResponse
 
 data ScreenOutput = GoBack
                   | ExitToHomeScreen TicketingScreenState
                   | ExitToMyTicketsScreen TicketingScreenState
-                  | BookTickets TicketingScreenState
+                  | BookTickets TicketingScreenState API.TicketPlaceResp
                   | PastRides TicketingScreenState
                   | GoToHelp TicketingScreenState
                   | ChangeLanguage TicketingScreenState
@@ -62,46 +62,16 @@ data ScreenOutput = GoBack
 
 eval :: Action -> TicketingScreenState -> Eval Action ScreenOutput TicketingScreenState
 
-eval BackPressed state = do -- exit $ GoBack
-  _ <- pure $ JB.minimizeApp ""
-  continue state
-
-eval (SettingSideBarActionController (SettingSideBar.OnClosed)) state = continue state{ data{sideBarStatus = SettingSideBar.CLOSED}}
-
-eval HamburgerClick state = continue state {data{sideBarStatus = SettingSideBar.OPEN}}
+eval BackPressed state = exit $ ExitToHomeScreen state
 
 eval MyTicketsAC state = exit $ ExitToMyTicketsScreen state
-
-eval (SettingSideBarActionController (SettingSideBar.OnClose)) state =
- case state.data.sideBarStatus of
-    SettingSideBar.CLOSED -> continue state
-    _ -> continue state {data{sideBarStatus = SettingSideBar.CLOSING}}
-
-eval (SettingSideBarActionController act) state = do
-  let newState = state { data { sideBarStatus = SettingSideBar.OPEN } }
-  case act of
-    SettingSideBar.PastRides -> exit $ PastRides newState
-    SettingSideBar.OnHelp -> exit $ GoToHelp newState
-    SettingSideBar.ChangeLanguage -> exit $ ChangeLanguage newState
-    SettingSideBar.GoToAbout -> exit $ GoToAbout newState
-    SettingSideBar.GoToEmergencyContacts -> exit $ GoToEmergencyContacts newState
-    SettingSideBar.ShareAppLink -> do
-      _ <- pure $ JB.shareTextMessage (MU.getValueFromConfig "shareAppTitle") (MU.getValueFromConfig "shareAppContent")
-      continue state
-    SettingSideBar.EditProfile -> exit $ GoToMyProfile newState
-    SettingSideBar.OnLogout ->  continue state
-    SettingSideBar.GoToFavourites -> exit $ GoToFavourites newState
-    SettingSideBar.GoToMyTickets -> exit $ GoToMyTickets newState
-    SettingSideBar.GoToMyProfile -> exit $ GoToMyProfile newState
-    SettingSideBar.LiveStatsDashboard -> continue state
-    _ -> continue state
 
 eval (NavBarAC (NavBar.NavigateTo index)) state = 
   case index of 
     0 -> exit $ ExitToHomeScreen state
     _ -> continue state
 
-eval (OnSelect index) state = exit $ BookTickets state
+eval (OnSelect item) state = exit $ BookTickets state item
 
 eval (UpdatePlacesData placesData) state = do
   let API.TicketPlaceResponse ticketPlaceResp = placesData

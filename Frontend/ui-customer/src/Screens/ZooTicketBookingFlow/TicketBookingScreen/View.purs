@@ -16,7 +16,7 @@ import Font.Style as FontStyle
 import Helpers.Utils (fetchImage, FetchImageFrom(..), decodeError, convertUTCToISTAnd12HourFormat, fetchAndUpdateCurrentLocation, getAssetsBaseUrl, getCurrentLocationMarker, getLocationName, getNewTrackingId, getSearchType, parseFloat, storeCallBackCustomer)
 import JBridge as JB
 import Prelude (Unit, discard, void, bind, const, pure, unit, ($), (&&), (/=), (<<<), (<>), (==), map, show, (||), show, (-), (>), (>>=))
-import PrestoDOM (FlexWrap(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Prop, Screen, Visibility(..), shimmerFrameLayout, afterRender, alignParentBottom, background, color, cornerRadius, fontStyle, gravity, height, imageUrl, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, relativeLayout, scrollView, stroke, text, textFromHtml, textSize, textView, visibility, weight, width, clickable, id)
+import PrestoDOM (FlexWrap(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Prop, Screen, Visibility(..), shimmerFrameLayout, afterRender, alignParentBottom, background, color, cornerRadius, fontStyle, gravity, height, imageUrl, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, relativeLayout, scrollView, stroke, text, textFromHtml, textSize, textView, visibility, weight, width, clickable, id, imageUrl)
 import PrestoDOM.Animation as PrestoAnim
 import Screens.TicketBookingScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.Types as ST
@@ -67,12 +67,10 @@ screen initialState =
 
   getPlaceDataEvent' push = do
     if (any (_ == initialState.props.currentStage) [ST.DescriptionStage , ST.ViewTicketStage]) then do
-      (TicketPlaceResponse placesResp) <- Remote.getTicketPlacesBT ""
-      let mFirstPlace = head placesResp -- TODO:: Remove this once Screen for choosing place is ready
-      case mFirstPlace of
-        Just (TicketPlaceResp firstPlace) -> do
-          servicesResp <- Remote.getTicketPlaceServicesBT firstPlace.id
-          lift $ lift $ doAff do liftEffect $ push $ UpdatePlacesData (Just $ TicketPlaceResp firstPlace) (Just servicesResp)
+      case initialState.data.placeInfo of
+        Just (TicketPlaceResp place) -> do
+          servicesResp <- Remote.getTicketPlaceServicesBT place.id
+          lift $ lift $ doAff do liftEffect $ push $ UpdatePlacesData (Just $ TicketPlaceResp place) (Just servicesResp)
         Nothing -> lift $ lift $ doAff do liftEffect $ push $ UpdatePlacesData Nothing Nothing
     else pure unit
 
@@ -162,12 +160,13 @@ view push state =
     else if (state.props.currentStage == ST.TicketInfoStage) then [ individualBookingInfoView state push ]
     else []
 
-  descriptionStateMainView state push placeInfo =
-      [ imageView
-          [ height $ V 370
-          , width MATCH_PARENT
-          , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_animal_1" 
-          , margin $ MarginBottom 15
+  descriptionStateMainView state push placeInfo = 
+    let (API.TicketPlaceResp place) = placeInfo
+    in [ imageView
+          [ height $ V 360
+          , width $ V 360
+          , imageUrl $ fromMaybe "" place.iconUrl -- TODO:: Need to replace this default icon
+          , margin $ MarginVertical 15 15
           ]
       , descriptionView state push placeInfo
       ]
@@ -261,12 +260,12 @@ descriptionView state push (TicketPlaceResp placeInfo) =
       [ text (fromMaybe placeInfo.name placeInfo.description)
       , color Color.black800 
       ] <> FontStyle.body1 TypoGraphy 
-    , locationView state push 
-    , feeBreakUpView state push state.data.servicesInfo
+    , locationView state push placeInfo.mapImageUrl
+    , feeBreakUpView state push state.data.servicesInfo (TicketPlaceResp placeInfo)
   ]
 
-locationView :: forall w. ST.TicketBookingScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
-locationView state push =
+locationView :: forall w. ST.TicketBookingScreenState -> (Action -> Effect Unit) -> Maybe String -> PrestoDOM (Effect Unit) w
+locationView state push icon =
   linearLayout
   [ height WRAP_CONTENT 
   , width MATCH_PARENT
@@ -282,12 +281,12 @@ locationView state push =
       , width MATCH_PARENT
       , cornerRadius 8.0 
       , layoutGravity "center_horizontal"
-      , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_zoo_alipore_map" 
+      , imageUrl $ fromMaybe "" icon -- TODO:: Need to replace this default icon
       ]
   ]
 
-feeBreakUpView :: forall w. ST.TicketBookingScreenState -> (Action -> Effect Unit) -> Array ST.TicketServiceData -> PrestoDOM (Effect Unit) w
-feeBreakUpView state push services = 
+feeBreakUpView :: forall w. ST.TicketBookingScreenState -> (Action -> Effect Unit) -> Array ST.TicketServiceData -> TicketPlaceResp -> PrestoDOM (Effect Unit) w
+feeBreakUpView state push services (TicketPlaceResp ticketPlaceResp) = 
   linearLayout
   [ height WRAP_CONTENT
   , width MATCH_PARENT
@@ -301,7 +300,7 @@ feeBreakUpView state push services =
       , color Color.black800
       ] <> FontStyle.subHeading1 TypoGraphy
     ,textView $
-    [ text "(Zoo is closed on Thursdays)"
+    [ text "(Zoo is closed on Thursdays)" -- TODO :: Need to get this from Backend
     , color Color.black700
     ] <> FontStyle.body1 TypoGraphy
     , linearLayout
@@ -340,14 +339,14 @@ feeBreakUpView state push services =
                         )
                     ]                             
                   ]
-      ) (convertServicesDataToViewData services)
+      ) (convertServicesDataToViewData services (TicketPlaceResp ticketPlaceResp))
     )
   ]
 
-convertServicesDataToViewData :: Array ST.TicketServiceData -> Array {headingText :: String , subtext :: Array String, image :: String}
-convertServicesDataToViewData services = do
+convertServicesDataToViewData :: Array ST.TicketServiceData -> TicketPlaceResp -> Array {headingText :: String , subtext :: Array String, image :: String}
+convertServicesDataToViewData services (TicketPlaceResp ticketPlaceResp) = do
   let timingsObject = 
-        { headingText : "Zoo Timings"
+        { headingText : ticketPlaceResp.name <> " Timings"
         , image : "ny_ic_timing"
         , subtext : catMaybes $ map createTimingsSubtext services
         }
@@ -717,7 +716,7 @@ individualBookingInfoView state push =
   , background Color.white900
   , orientation VERTICAL
   , padding $ Padding 16 20 16 20
-  , onBackPressed push $ const BackPressed
+  -- , onBackPressed push $ const BackPressed
   , afterRender push (const AfterRender)
   ][ zooTicketView state push
   ,  carouselDotView state push
@@ -747,7 +746,7 @@ getTicketBackgroundColor ticketServiceName = case ticketServiceName of
   "Entrance Fee" -> Color.black900
   "Videography Fee" -> Color.yellow800
   "Aquarium Fee" -> "#DFE8FF"
-  _ -> Color.grey900
+  _ -> Color.black800
 
 getShareButtonIcon :: String -> String
 getShareButtonIcon ticketServiceName = case ticketServiceName of
@@ -764,14 +763,14 @@ getPlaceColor ticketServiceName = case ticketServiceName of
   "Entrance Fee" -> Color.white900
   "Videography Fee" -> Color.black800
   "Aquarium Fee" -> Color.black800
-  _ -> Color.grey900
+  _ -> Color.black800
 
 getInfoColor :: String -> String
 getInfoColor ticketServiceName = case ticketServiceName of
   "Entrance Fee" -> Color.white900
   "Videography Fee" -> Color.black900
   "Aquarium Fee" -> Color.black900
-  _ -> Color.grey900
+  _ -> Color.black800
 
 ticketHeaderView :: forall w. ST.TicketBookingScreenState -> (Action -> Effect Unit) -> String -> String -> PrestoDOM (Effect Unit) w
 ticketHeaderView state push placeColor infoColor  =
@@ -1109,12 +1108,12 @@ bookingConfirmationActions state push paymentStatus =
   , orientation VERTICAL
   , padding $ PaddingBottom 20
   , alignParentBottom "true,-1"
+  , background Color.white900
   , visibility if (state.props.currentStage == ST.BookingConfirmationStage) then VISIBLE else GONE
   ][ linearLayout
       [ width MATCH_PARENT
       , height $ V 1
       , background Color.grey900
-      , visibility GONE
       ][]
    , PrimaryButton.view (push <<< ViewTicketAC) (viewTicketButtonConfig primaryButtonText $ paymentStatus /= Common.Pending)
    , linearLayout

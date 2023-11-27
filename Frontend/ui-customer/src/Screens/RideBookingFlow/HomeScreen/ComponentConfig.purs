@@ -385,7 +385,7 @@ ticketBannerConfig state =
     config' = config
       {
         backgroundColor = "#FFF6DE"
-      , title = "Now buy tickets to zoo with Yatri Sathi"
+      , title = "Now buy tickets to zoo and Millenium Jetty with Yatri Sathi"
       , titleColor = Color.black800
       , actionText = "Book Now"
       , actionTextColor = Color.black900

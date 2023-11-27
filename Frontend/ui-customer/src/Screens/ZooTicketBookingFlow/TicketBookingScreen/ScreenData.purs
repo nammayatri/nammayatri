@@ -48,7 +48,8 @@ initData =
       activeListItem : { ticketServiceShortId : "", ticketServiceName : "Videography", amount : 100.0, status : "Pending", verificationCount : 0, expiryDate : Nothing,  prices : [{pricePerUnit: 2.0,numberOfUnits: 3,attendeeType: "Adults"}, {pricePerUnit: 2.0,numberOfUnits: 2,attendeeType: "Mobile"}]},
       activeIndex : 0,
       rightButtonDisable : false,
-      leftButtonDisable : true
+      leftButtonDisable : true,
+      navigateToHome : true
     }
   }
 

@@ -22,8 +22,9 @@ import Data.Maybe (Maybe(..))
 initData :: ST.TicketingScreenState 
 initData = 
   { data: {
-    sideBarStatus : SideBar.CLOSED,
     placeInfoArray : []
   }
-  , props : {}
+  , props : {
+    hideMyTickets : false
+  }
   }

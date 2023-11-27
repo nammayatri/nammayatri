@@ -63,6 +63,7 @@ data ScreenOutput = GoToHomeScreen TicketBookingScreenState
                   | GoToGetBookingInfo TicketBookingScreenState BookingStatus
                   | TryAgain TicketBookingScreenState
                   | RefreshPaymentStatus TicketBookingScreenState
+                  | BookTickets TicketBookingScreenState
 
 eval :: Action -> TicketBookingScreenState -> Eval Action ScreenOutput TicketBookingScreenState
 
@@ -96,7 +97,7 @@ eval (PrimaryButtonAC (PrimaryButton.OnClick)) state = do
   case state.props.currentStage of 
     DescriptionStage -> continue state{props{currentStage = ChooseTicketStage}}
     ChooseTicketStage -> updateAndExit state{props{previousStage = ChooseTicketStage}} $ GoToTicketPayment state{props{previousStage = ChooseTicketStage}}
-    ViewTicketStage -> continue state{props{currentStage = ChooseTicketStage, showShimmer = false}}
+    ViewTicketStage -> exit $ BookTickets state
     _ -> continue state
 
 eval (GenericHeaderAC (GenericHeader.PrefixImgOnClick)) state = continueWithCmd state [do pure BackPressed]
@@ -130,7 +131,7 @@ eval (GetBookingInfo bookingShortId bookingStatus) state = do
 eval (ViewTicketAC (PrimaryButton.OnClick)) state = 
   case state.props.paymentStatus of
    Common.Success -> continueWithCmd state [do pure (GetBookingInfo state.props.selectedBookingId Booked)]
-   Common.Failed -> exit $ TryAgain state
+   Common.Failed -> exit $ GoToHomeScreen state
    _ -> continue state
 
 eval (PaymentStatusAction status) state =

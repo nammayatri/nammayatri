@@ -24,6 +24,7 @@ import PrestoDOM.Core.Types.Language.Flow (runScreen)
 import Screens.TicketingScreen.View as TicketingScreen
 import Types.App (FlowBT, GlobalState(..), TICKETING_SCREEN_SCREEN_OUTPUT(..),ScreenType(..))
 import ModifyScreenState (modifyScreenState)
+import Data.Maybe (Maybe(..))
 
 ticketingScreen :: FlowBT String TICKETING_SCREEN_SCREEN_OUTPUT
 ticketingScreen = do
@@ -36,7 +37,8 @@ ticketingScreen = do
     ExitToMyTicketsScreen updatedState -> do
       modifyScreenState $ TicketingScreenStateType (\_ -> updatedState)
       App.BackT $ App.BackPoint <$> (pure $ EXIT_TO_MY_TICKETS updatedState)
-    BookTickets updatedState -> do
+    BookTickets updatedState selectedPlace -> do
       modifyScreenState $ TicketingScreenStateType (\_ -> updatedState)
+      modifyScreenState $ TicketBookingScreenStateType (\ticketBookingScreen -> ticketBookingScreen { data { placeInfo = Just selectedPlace}})
       App.BackT $ App.BackPoint <$> (pure $ BOOK_TICKETS updatedState)
     _ -> App.BackT $ pure App.GoBack 
