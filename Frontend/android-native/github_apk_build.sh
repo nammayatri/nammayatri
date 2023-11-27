@@ -23,27 +23,11 @@ print_status() {
     fi
 }
 
-if [[ "$1" =~ .*"ny".* ]]; then
-    user="nammaYatri"
-    partner="nammaYatriPartner"
-    echo "--------------------------nammaYatri-----------------------"
-    cat merchant-properties/nammaYatri.txt > local.properties || print_status "failure"
-elif [[ "$1" =~ .*"yatri".* ]]; then
-    user="yatri"
-    partner="yatriPartner"
-    echo "--------------------------Yatri----------------------------"
-    cat merchant-properties/yatri.txt > local.properties || print_status "failure"
-elif [[ "$1" =~ .*"ys".* ]]; then
-    user="yatriSathi"
-    partner="yatriSathiPartner"
-    echo "--------------------------yatriSathi------------------------"
-    cat merchant-properties/yatriSathi.txt > local.properties || print_status "failure"
-fi
-
-
 if [[ "$1" =~ .*"User".* ]]; then
     echo " ---------- Customer prod:android :- --------------"
+    nix develop .#frontend 
     cd ../ui-customer || print_status "failure"
+    npm i
     npm run prod:android || print_status "failure"
     cd ./../android-native || print_status "failure"
     echo " ---------- Copy index_bundle.js Customer :- --------------"
@@ -55,7 +39,9 @@ if [[ "$1" =~ .*"User".* ]]; then
     sh userJuspayAssets.sh $user || print_status "failure"
 else
     echo " ---------- Driver prod:android :- --------------"
+    nix develop .#frontend
     cd ../ui-driver || print_status "failure"
+    npm i
     npm run prod:android || print_status "failure"
     cd ./../android-native || print_status "failure"
     echo " ---------- Copy index_bundle.js Driver :- --------------"
@@ -101,6 +87,26 @@ echo -n "Step 4: Build process for $1 "
 print_status "success"
 
 build_path="app/build/outputs/apk"
+variant_lower=$(echo "$1" | awk '{print tolower($0)}')  # Convert to lowercase
+
+if [[ "$variant_lower" == *"yatriuserproddebug"* ]]; then
+  build_path="app/build/outputs/apk/yatriUserProd/debug/"
+elif [[ "$variant_lower" == *"nyuserproddebug"* ]]; then
+  build_path="app/build/outputs/apk/nyUserProd/debug/"
+elif [[ "$variant_lower" == *"ysuserproddebug"* ]]; then
+  build_path="app/build/outputs/apk/ysUserProd/debug/"
+elif [[ "$variant_lower" == *"yatriversproddebug"* ]]; then
+  build_path="app/build/outputs/apk/yatriDriverProd/debug/"
+elif [[ "$variant_lower" == *"nydriverproddebug"* ]]; then
+  build_path="app/build/outputs/apk/nyDriverProd/debug/"
+elif [[ "$variant_lower" == *"ysdriverproddebug"* ]]; then
+  build_path="app/build/outputs/apk/ysDriverProd/debug/"
+else
+  # Add more conditions as needed
+  build_path="app/build/outputs/apk/${variant_lower}/debug/"
+fi
+
+
 sed -i 's|index_bundle.js|v1-assets_downloader.jsa|' app/src/main/assets/juspay/becknbase.html || print_status "failure"
 
 

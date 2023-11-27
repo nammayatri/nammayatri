@@ -1,0 +1,96 @@
+name: Build Generation
+
+on:
+  workflow_dispatch:
+    inputs:
+
+      baseUrlUser:
+        description: 'Base URL user'
+        required: true
+        default: ''
+      
+      baseUrlDriver:
+        description: 'Base URL driver'
+        required: true
+        default: ''
+
+      mapKey:
+        description: 'Map Key'
+        required: true
+        default: ''
+
+      merchantIdUser:
+        description: 'User Merchant Id'
+        required: true
+        default: ''
+      
+      merchantIdDriver:
+        description: 'Driver Merchant Id'
+        required: true
+        default: ''
+
+      variant:
+        description: 'Build Variant'
+        required: true
+        default: 'NyUserProdDebug'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      MOBILITY_SERVICES: ${{ secrets.MOBILITY_SERVICES }}
+
+    defaults:
+      run:
+        working-directory: Frontend
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Setup Java
+        uses: actions/setup-java@v2
+        with:
+          distribution: 'adopt'
+          java-version: '11'
+
+      - name: Setup Android SDK
+        uses: actions/setup-java@v2
+        with:
+          distribution: 'android'
+          java-version: '11' 
+
+      - name: Create google-services.json
+        run: echo "$MOBILITY_SERVICES" > app/google-services.json
+
+      - name: Update local.properties 
+        run: bash android-native/update_properties.sh ${{ github.event.inputs.baseUrlUser }} ${{ github.event.inputs.baseUrlDriver }} ${{ github.event.inputs.mapKey }} ${{ github.event.inputs.merchantIdUser }} ${{ github.event.inputs.merchantIdDriver }}
+      
+      - name: Build APK
+        run: bash android-native/github_apk_build.sh ${{ github.event.inputs.variant }}
+      - name: Upload APK
+        uses: actions/upload-artifact@v2
+        with:
+          name: ${{ github.event.inputs.variant }}
+          path: |
+            Frontend/app/build/outputs/apk/
+            ${{ github.event.inputs.variant == 'yatriUserProdDebug' ? 'yatriUserProd/debug/app-yatriUser-prod-debug' : '' }}
+            ${{ github.event.inputs.variant == 'yatriDriverProdDebug' ? 'yatriDriverProd/debug/app-yatriDriver-prod-debug' : '' }}
+            ${{ github.event.inputs.variant == 'ysUserProdDebug' ? 'ysUserProd/debug/app-ysUser-prod-debug' : '' }}
+            ${{ github.event.inputs.variant == 'ysDriverProdDebug' ? 'ysDriverProd/debug/app-ysDriver-prod-debug' : '' }}
+            ${{ github.event.inputs.variant == 'nyDriverProdDebug' ? 'nyDriverProd/debug/app-nyDriver-prod-debug' : '' }}
+            ${{ github.event.inputs.variant == 'nyUserProdDebug' ? 'nyUserProd/debug/app-nyUser-prod-debug' : '' }}
+            .apk
+      # - name: Upload APK
+      #   uses: actions/upload-artifact@v2
+      #   with:
+      #     name: ${{ github.event.inputs.variant }}
+      #     path: |
+      #       Frontend/app/build/outputs/apk/
+      #       ${{ github.event.inputs.variant == 'yatriUserProdDebug' ? 'yatriUserProd/debug/' : '' }}
+      #       ${{ github.event.inputs.variant == 'yatriDriverProdDebug' ? 'yatriDriverProd/debug/' : '' }}
+      #       ${{ github.event.inputs.variant == 'ysUserProdDebug' ? 'ysUserProd/debug/' : '' }}
+      #       ${{ github.event.inputs.variant == 'ysDriverProdDebug' ? 'ysDriverProd/debug/' : '' }}
+      #       ${{ github.event.inputs.variant == 'nyDriverProdDebug' ? 'nyDriverProd/debug/' : '' }}
+      #       ${{ github.event.inputs.variant == 'nyUserProdDebug' ? 'nyUserProd/debug/' : '' }}
+      #       .apk
