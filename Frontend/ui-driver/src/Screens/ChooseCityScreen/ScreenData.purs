@@ -16,7 +16,8 @@ initData = {
     config : DC.config,
     locationSelected : Mb.Nothing,
     locationDetectionFailed : false,
-    merchantOperatingCityConfig : []
+    merchantOperatingCityConfig : [],
+    logField : empty
   },
   props : {
     selectedLanguage: "EN_US",
