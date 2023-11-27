@@ -248,6 +248,7 @@ apiRunner (API.Request request@{headers: API.Headers hs}) =
               responseHeaders : fromMaybe empty $ hush $ runExcept $ decodeJSON $ atobImpl responseHeaders
             }
             void $ pure $ printLog "callAPI response" formattedResponse
+            void $ pure $ printLog "response" formattedResponse.response
             cb $ Right formattedResponse
     headers = foldl (\acc (API.Header key value) -> insert key value acc) empty hs
     isSSLPinnedURL = lookup "x-pinned" headers == Just "true"

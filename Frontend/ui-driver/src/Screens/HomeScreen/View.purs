@@ -406,7 +406,7 @@ paymentStatusBanner state push =
             , gravity RIGHT
             , margin $ MarginRight 4
             , onClick push $ const RemovePaymentBanner
-            , imageWithFallback $ HU.fetchImage HU.FF_COMMON_ASSET "ny_ic_grey_cross"
+            , imageWithFallback $ HU.fetchImage HU.FF_COMMON_ASSET "ny_ic_grey_cross_icon"
             , visibility if state.data.paymentState.blockedDueToPayment then GONE else VISIBLE
             ]
           , Banner.view (push <<< PaymentBannerAC) (paymentStatusConfig state)
@@ -456,7 +456,7 @@ genderBannerView state push =
         , gravity RIGHT
         , margin (MarginRight 4)
         , onClick push (const RemoveGenderBanner)
-        , imageWithFallback $ HU.fetchImage HU.FF_COMMON_ASSET "ny_ic_grey_cross"
+        , imageWithFallback $ HU.fetchImage HU.FF_COMMON_ASSET "ny_ic_grey_cross_icon"
         ]
         , genderBanner push state
       ]
