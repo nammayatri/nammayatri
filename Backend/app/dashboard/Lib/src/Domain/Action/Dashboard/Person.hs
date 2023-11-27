@@ -15,7 +15,7 @@
 module Domain.Action.Dashboard.Person where
 
 import Dashboard.Common
-import Data.List (groupBy)
+import Data.List (groupBy, sortOn)
 import qualified Data.Text as T
 import qualified Domain.Types.AccessMatrix as DMatrix
 import qualified Domain.Types.Merchant as DMerchant
@@ -361,7 +361,8 @@ profile tokenInfo = do
   case merchantAccessList of
     [] -> throwError (InvalidRequest "No access to any merchant")
     merchantAccessList' -> do
-      let groupedByMerchant = groupBy ((==) `on` DAccess.merchantId) merchantAccessList'
+      let sortedMerchantAccessList = sortOn DAccess.merchantId merchantAccessList'
+      let groupedByMerchant = groupBy ((==) `on` DAccess.merchantId) sortedMerchantAccessList
       let merchantAccesslistWithCity = map (\group -> DP.AvailableCitiesForMerchant ((.merchantShortId) (head group)) (map (.operatingCity) group)) groupedByMerchant
       pure $ DP.makePersonAPIEntity decPerson role (merchantAccesslistWithCity <&> (.merchantShortId)) (Just merchantAccesslistWithCity)
 
