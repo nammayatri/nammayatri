@@ -35,6 +35,7 @@ where
 
 import AWS.S3 as S3
 import Control.Applicative ((<|>))
+import Dashboard.ProviderPlatform.Driver (DowngradePreference)
 import qualified Data.HashMap as HML
 import qualified Data.HashMap.Strict as HM
 import qualified Data.List as DL
@@ -103,7 +104,8 @@ newtype DeleteRCReq = DeleteRCReq
 
 data RCStatusReq = RCStatusReq
   { rcNo :: Text,
-    isActivate :: Bool
+    isActivate :: Bool,
+    downgradePreference :: Maybe DowngradePreference
   }
   deriving (Generic, ToSchema, ToJSON, FromJSON)
 
@@ -207,7 +209,8 @@ verifyRC isDashboard mbMerchant (personId, merchantId, merchantOpCityId) req@Dri
         let rcStatusReq =
               RCStatusReq
                 { rcNo = rcNumber,
-                  isActivate = True
+                  isActivate = True,
+                  downgradePreference = Nothing
                 }
         void $ linkRCStatus (driverId, merchantId, merchantOpCityId) rcStatusReq
 
@@ -290,7 +293,7 @@ linkRCStatus (driverId, merchantId, merchantOpCityId) req@RCStatusReq {..} = do
   if req.isActivate
     then do
       validateRCActivation driverId merchantOpCityId rc
-      activateRC driverId merchantId merchantOpCityId now rc
+      activateRC driverId merchantId merchantOpCityId now rc req.downgradePreference
     else do
       deactivateRC rc driverId
   return Success
@@ -354,8 +357,8 @@ checkIfVehicleAlreadyExists driverId rc = do
     Just vehicle -> unless (vehicle.driverId == driverId) $ throwError RCActiveOnOtherAccount
     Nothing -> return ()
 
-activateRC :: Id Person.Person -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> UTCTime -> Domain.VehicleRegistrationCertificate -> Flow ()
-activateRC driverId merchantId merchantOpCityId now rc = do
+activateRC :: Id Person.Person -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> UTCTime -> Domain.VehicleRegistrationCertificate -> Maybe DowngradePreference -> Flow ()
+activateRC driverId merchantId merchantOpCityId now rc downgradePreference = do
   deactivateCurrentRC driverId
   addVehicleToDriver
   DAQuery.activateRCForDriver driverId rc.id now
@@ -364,6 +367,9 @@ activateRC driverId merchantId merchantOpCityId now rc = do
     addVehicleToDriver = do
       rcNumber <- decrypt rc.certificateNumber
       transporterConfig <- QTC.findByMerchantOpCityId merchantOpCityId >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+      case downgradePreference of
+        Just preference -> DIQuery.updateDriverInformation driverId preference.canDowngradeToSedan preference.canDowngradeToHatchback preference.canDowngradeToTaxi Nothing
+        Nothing -> pure ()
       whenJust rc.vehicleVariant $ \variant -> do
         when (variant == Vehicle.SUV) $
           DIQuery.updateDriverDowngradeTaxiForSuv driverId transporterConfig.canSuvDowngradeToTaxi

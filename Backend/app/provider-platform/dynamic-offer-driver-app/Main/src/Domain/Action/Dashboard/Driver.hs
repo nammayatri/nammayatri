@@ -792,7 +792,7 @@ setVehicleDriverRcStatusForFleet merchantShortId opCity reqDriverId fleetOwnerId
   vehicle <- RCQuery.findLastVehicleRCWrapper req.rcNo >>= fromMaybeM (VehicleDoesNotExist req.rcNo)
   unless (isJust vehicle.fleetOwnerId && vehicle.fleetOwnerId == Just fleetOwnerId) $ throwError (FleetOwnerVehicleMismatchError fleetOwnerId)
   Redis.set (DomainRC.makeFleetOwnerKey req.rcNo) fleetOwnerId
-  _ <- DomainRC.linkRCStatus (personId, merchant.id, merchantOpCityId) (DomainRC.RCStatusReq {isActivate = req.isActivate, rcNo = req.rcNo})
+  _ <- DomainRC.linkRCStatus (personId, merchant.id, merchantOpCityId) (DomainRC.RCStatusReq {isActivate = req.isActivate, rcNo = req.rcNo, downgradePreference = Nothing})
   logTagInfo "dashboard -> addVehicle : " (show driver.id)
   pure Success
 
@@ -1151,7 +1151,7 @@ setRCStatus merchantShortId opCity reqDriverId Common.RCStatusReq {..} = do
   driver <- B.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   -- merchant access checking
   unless (merchant.id == driver.merchantId && merchantOpCityId == driver.merchantOperatingCityId) $ throwError (PersonDoesNotExist personId.getId)
-  DomainRC.linkRCStatus (personId, merchant.id, merchantOpCityId) (DomainRC.RCStatusReq {..})
+  DomainRC.linkRCStatus (personId, merchant.id, merchantOpCityId) DomainRC.RCStatusReq {..}
 
 deleteRC :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Common.DeleteRCReq -> Flow APISuccess
 deleteRC merchantShortId opCity reqDriverId Common.DeleteRCReq {..} = do

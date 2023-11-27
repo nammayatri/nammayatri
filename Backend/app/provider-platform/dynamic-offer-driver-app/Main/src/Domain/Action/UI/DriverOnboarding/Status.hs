@@ -160,6 +160,7 @@ activateRCAutomatically personId merchantId merchantOpCityId (Just rc) = do
   let rcStatusReq =
         DomainRC.RCStatusReq
           { rcNo = rcNumber,
-            isActivate = True
+            isActivate = True,
+            downgradePreference = Nothing
           }
   void $ DomainRC.linkRCStatus (personId, merchantId, merchantOpCityId) rcStatusReq
