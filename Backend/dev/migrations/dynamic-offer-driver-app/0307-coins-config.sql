@@ -85,3 +85,7 @@ Alter Table atlas_driver_offer_bpp.transporter_config ADD COLUMN cancellation_di
 ALTER TABLE atlas_driver_offer_bpp.coin_config
 ALTER COLUMN event_function SET NOT NULL,
 ALTER COLUMN event_name SET NOT NULL;
+
+ALTER TABLE atlas_driver_offer_bpp.driver_fee
+ALTER COLUMN amount_paid_by_coin DROP NOT NULL,
+ALTER COLUMN amount_paid_by_coin DROP DEFAULT;
