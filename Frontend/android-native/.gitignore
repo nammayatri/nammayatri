@@ -37,3 +37,7 @@ app/yatriUserProd/
 app/yatriDriverProd/
 **/build/
 .idea/modules.xml
+yatri.txt
+nammaYatri.txt
+yatriSathi.txt
+my-release-key.keystore
