@@ -100,10 +100,7 @@ getChangeLanguageText value =
 
 mockLocationConfig :: ChooseCityScreenState -> ErrorModal.Config
 mockLocationConfig state =
-  let
-    config = ErrorModal.config
-    errorModalConfig' =
-      config
+  ErrorModal.config
         { height = MATCH_PARENT
         , background = Color.white900
         , corners = Corners 24.0 true true false false
@@ -127,5 +124,3 @@ mockLocationConfig state =
         , buttonConfig
           { visibility = GONE }
         }
-  in
-    errorModalConfig'

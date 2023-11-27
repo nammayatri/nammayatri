@@ -672,7 +672,7 @@ public class MobilityCommonBridge extends HyperBridge {
     public void isMockLocation(String callback) {
         Activity activity = bridgeComponents.getActivity();
         if (!isLocationPermissionEnabled()) return;
-        if (client != null && activity != null)
+        if (client != null && activity != null) {
             client.getLastLocation()
                     .addOnSuccessListener(activity, location -> {
                         boolean isMock = false;
@@ -683,13 +683,21 @@ public class MobilityCommonBridge extends HyperBridge {
                                 isMock = location.isMock();
                             }
                         }
-                        if (callback != null) {   
+                        if (callback != null) {
                             String js = String.format(Locale.ENGLISH, "window.callUICallback('%s','%s');",
-                                  callback, ( (location != null) ? isMock : "failed"));
+                                  callback, ((location != null) ? isMock : "failed"));
                                 bridgeComponents.getJsCallback().addJsToWebView(js);
                         }
                     })
-                    .addOnFailureListener(activity, e -> Log.e(LOCATION, "Last and current position not known"));
+                    .addOnFailureListener(activity, e -> {
+                        Log.e(LOCATION, "Last and current position not known");
+                        if (callback != null) {
+                            String js = String.format(Locale.ENGLISH, "window.callUICallback('%s','%s');",
+                                    callback, "failed");
+                            bridgeComponents.getJsCallback().addJsToWebView(js);
+                        }
+                    });
+        }
     }
     //endregion
 
