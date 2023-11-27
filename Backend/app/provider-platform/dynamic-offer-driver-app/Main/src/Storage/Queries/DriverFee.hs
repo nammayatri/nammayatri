@@ -16,6 +16,7 @@
 module Storage.Queries.DriverFee where
 
 import Data.Time (UTCTime (UTCTime, utctDay), addDays, fromGregorian, toGregorian)
+import qualified Domain.Types.Booking as SRB
 import Domain.Types.DriverFee
 import qualified Domain.Types.DriverFee as Domain
 import Domain.Types.Merchant
@@ -261,8 +262,8 @@ findUnpaidAfterPayBy (Id driverId) now =
         ]
     ]
 
-updateFee :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DriverFee -> Maybe Money -> Money -> HighPrecMoney -> HighPrecMoney -> HighPrecMoney -> UTCTime -> Bool -> m ()
-updateFee driverFeeId mbFare govtCharges platformFee cgst sgst now isRideEnd = do
+updateFee :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DriverFee -> Maybe Money -> Money -> HighPrecMoney -> HighPrecMoney -> HighPrecMoney -> UTCTime -> Bool -> SRB.Booking -> m ()
+updateFee driverFeeId mbFare govtCharges platformFee cgst sgst now isRideEnd booking = do
   driverFeeObject <- findById driverFeeId
   case driverFeeObject of
     Just df -> do
@@ -273,27 +274,40 @@ updateFee driverFeeId mbFare govtCharges platformFee cgst sgst now isRideEnd = d
       let totalEarnings = df.totalEarnings
       let numRides = df.numRides + if isRideEnd then 1 else 0
       let fare = fromMaybe 0 mbFare
+          specialZoneRideCount' = df.specialZoneRideCount
+          specialZoneAmount' = df.specialZoneAmount
+          totalDriverFee = fromIntegral govtCharges + platformFee + cgst + sgst
       updateOneWithKV
-        [ Se.Set BeamDF.govtCharges $ govtCharges' + govtCharges,
-          Se.Set BeamDF.platformFee $ platformFee' + platformFee,
-          Se.Set BeamDF.cgst $ cgst' + cgst,
-          Se.Set BeamDF.sgst $ sgst' + sgst,
-          Se.Set BeamDF.totalEarnings $ totalEarnings + fare,
-          Se.Set BeamDF.numRides numRides,
-          Se.Set BeamDF.updatedAt now
-        ]
+        ( [ Se.Set BeamDF.govtCharges $ govtCharges' + govtCharges,
+            Se.Set BeamDF.platformFee $ platformFee' + platformFee,
+            Se.Set BeamDF.cgst $ cgst' + cgst,
+            Se.Set BeamDF.sgst $ sgst' + sgst,
+            Se.Set BeamDF.totalEarnings $ totalEarnings + fare,
+            Se.Set BeamDF.numRides numRides,
+            Se.Set BeamDF.updatedAt now
+          ]
+            <> [Se.Set BeamDF.specialZoneRideCount $ specialZoneRideCount' + 1 | toUpdateSpecialZoneMetricsInDriverFee]
+            <> [Se.Set BeamDF.specialZoneAmount $ specialZoneAmount' + totalDriverFee | toUpdateSpecialZoneMetricsInDriverFee]
+        )
         [Se.Is BeamDF.id (Se.Eq (getId driverFeeId))]
     Nothing -> pure ()
+  where
+    toUpdateSpecialZoneMetricsInDriverFee = do
+      case booking.bookingType of
+        SRB.SpecialZoneBooking -> True
+        _ -> False
 
-resetFee :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DriverFee -> Money -> HighPrecMoney -> HighPrecMoney -> HighPrecMoney -> UTCTime -> m ()
-resetFee driverFeeId govtCharges platformFee cgst sgst now = do
+resetFee :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DriverFee -> Money -> HighPrecMoney -> HighPrecMoney -> HighPrecMoney -> Maybe HighPrecMoney -> UTCTime -> m ()
+resetFee driverFeeId govtCharges platformFee cgst sgst mbFeeWithoutDiscount now = do
   updateOneWithKV
-    [ Se.Set BeamDF.govtCharges govtCharges,
-      Se.Set BeamDF.platformFee platformFee,
-      Se.Set BeamDF.cgst cgst,
-      Se.Set BeamDF.sgst sgst,
-      Se.Set BeamDF.updatedAt now
-    ]
+    ( [ Se.Set BeamDF.govtCharges govtCharges,
+        Se.Set BeamDF.platformFee platformFee,
+        Se.Set BeamDF.cgst cgst,
+        Se.Set BeamDF.sgst sgst,
+        Se.Set BeamDF.updatedAt now
+      ]
+        <> [Se.Set BeamDF.feeWithoutDiscount mbFeeWithoutDiscount | isJust mbFeeWithoutDiscount]
+    )
     [Se.Is BeamDF.id (Se.Eq (getId driverFeeId))]
 
 updateOfferId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Maybe Text -> Id DriverFee -> UTCTime -> m ()
@@ -685,7 +699,9 @@ instance FromTType' BeamDF.DriverFee DriverFee where
             badDebtDeclarationDate,
             badDebtRecoveryDate,
             amountPaidByCoin,
-            overlaySent = overlaySent
+            overlaySent = overlaySent,
+            specialZoneRideCount,
+            specialZoneAmount
           }
 
 instance ToTType' BeamDF.DriverFee DriverFee where
@@ -719,5 +735,8 @@ instance ToTType' BeamDF.DriverFee DriverFee where
         BeamDF.overlaySent = overlaySent,
         BeamDF.badDebtDeclarationDate = badDebtDeclarationDate,
         BeamDF.badDebtRecoveryDate = badDebtRecoveryDate,
-        BeamDF.amountPaidByCoin = amountPaidByCoin
+        BeamDF.amountPaidByCoin = amountPaidByCoin,
+        BeamDF.amountPaidByCoin = amountPaidByCoin,
+        BeamDF.specialZoneRideCount = specialZoneRideCount,
+        BeamDF.specialZoneAmount = specialZoneAmount
       }
