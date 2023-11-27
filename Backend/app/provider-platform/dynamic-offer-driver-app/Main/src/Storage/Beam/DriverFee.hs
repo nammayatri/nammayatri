@@ -50,7 +50,9 @@ data DriverFeeT f = DriverFeeT
     amountPaidByCoin :: B.C f (Maybe HighPrecMoney),
     createdAt :: B.C f UTCTime,
     updatedAt :: B.C f UTCTime,
-    overlaySent :: B.C f Bool
+    overlaySent :: B.C f Bool,
+    specialZoneRideCount :: B.C f Int,
+    specialZoneAmount :: B.C f HighPrecMoney
   }
   deriving (Generic, B.Beamable)
 
