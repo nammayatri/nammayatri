@@ -31,3 +31,4 @@ dslAPIInput =
 mkAPI :: String -> IO ()
 mkAPI targetFolder = do
   mkServantAPI (targetFolder ++ "/API/UI") dslAPIInput
+  mkDomainHandler (targetFolder ++ "/Domain/Action") dslAPIInput
