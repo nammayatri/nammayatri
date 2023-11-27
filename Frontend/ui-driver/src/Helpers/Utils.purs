@@ -361,9 +361,12 @@ getCommonAssetLink lazy = case (getMerchant lazy) of
   MOBILITY_RS -> "https://assets.juspay.in/beckn/passculture/passculturecommon/"
 
 fetchImage :: FetchImageFrom -> String -> String
-fetchImage fetchImageFrom imageName = case fetchImageFrom of
-  FF_ASSET -> imageName <> "," <> (getAssetLink FunctionCall) <> imageName <> ".png"
-  FF_COMMON_ASSET -> imageName <> "," <> (getCommonAssetLink FunctionCall) <> imageName <> ".png"
+fetchImage fetchImageFrom imageName =   
+  if imageName  == "" then ","
+  else 
+    case fetchImageFrom of
+      FF_ASSET -> imageName <> "," <> (getAssetLink FunctionCall) <> imageName <> ".png"
+      FF_COMMON_ASSET -> imageName <> "," <> (getCommonAssetLink FunctionCall) <> imageName <> ".png"
 
 data FetchImageFrom = FF_ASSET | FF_COMMON_ASSET
 
