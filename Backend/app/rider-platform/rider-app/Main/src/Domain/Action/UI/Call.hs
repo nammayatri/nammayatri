@@ -198,7 +198,7 @@ getDriverMobileNumber callSid callFrom_ callTo_ dtmfNumber_ callStatus to_ = do
 
 getDtmfFlow :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r) => Maybe Text -> Id Merchant -> Text -> Exophone -> m (Maybe Text, BT.Booking)
 getDtmfFlow dtmfNumber_ merchantId callSid exophone = do
-  number <- fromMaybeM (PersonWithPhoneNotFound $ show dtmfNumber_) dtmfNumber_
+  number <- maybe (throwCallError callSid (PersonWithPhoneNotFound $ show dtmfNumber_) (Just exophone.merchantId.getId) (Just exophone.callService)) pure dtmfNumber_
   let dtmfNumber = dropFirstZero $ removeQuotes number
   dtmfMobileHash <- getDbHash dtmfNumber
   person <- runInReplica $ Person.findByRoleAndMobileNumberAndMerchantId USER "+91" dtmfMobileHash merchantId >>= maybe (throwCallError callSid (PersonWithPhoneNotFound dtmfNumber) (Just exophone.merchantId.getId) (Just exophone.callService)) pure
