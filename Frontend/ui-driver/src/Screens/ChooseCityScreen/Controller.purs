@@ -130,12 +130,12 @@ eval UpdateLocationPermissionState state = do
   let newState = state {props {isLocationPermissionGiven = true, currentStage = DETECT_LOCATION}}
   updateAndExit newState $ RefreshScreen newState
 
-eval (IsMockLocation isMock) state = 
-      -- _ = unsafePerformEffect $ if val then  logEvent (state.data.logField) "ny_fakeGPS_enabled" else pure unit -- we are using unsafePerformEffect becasue without it we are not getting logs in firebase, since we are passing a parameter from state i.e. logField then the output will be inline and it will not be able to precompute so it's safe to use it here.
-  continue state{props{isMockLocation = (isMock == "true") },data{ locationDetectionFailed = (isMock == "failed")}}
+eval (IsMockLocation isMock) state = do
+  let val = isMock == "true"
+      _ = unsafePerformEffect $ if val then  logEvent (state.data.logField) "ny_fakeGPS_enabled" else pure unit -- we are using unsafePerformEffect becasue without it we are not getting logs in firebase, since we are passing a parameter from state i.e. logField then the output will be inline and it will not be able to precompute so it's safe to use it here.
+  continue state { props { isMockLocation = isMock == "true" }, data { locationDetectionFailed = isMock == "failed" } }
 
 eval (UpdatePermission updatedState) state = do
-  _ <- pure $ spy "testing " updatedState
   let newState = updatedState {props {currentStage = if updatedState.props.isLocationPermissionGiven then DETECT_LOCATION else updatedState.props.currentStage}}
   -- if isNothing state.data.locationSelected
   --   then
@@ -144,8 +144,6 @@ eval (UpdatePermission updatedState) state = do
   continue newState
 
 eval (CurrentLocationCallBack lat long) state = do
-  _ <- pure $ spy "testing2 : " lat
-  _ <- pure $ spy "testing3 : " long
   let driverLat = fromMaybe 0.0 $ Number.fromString lat
       driverLon = fromMaybe 0.0 $ Number.fromString long
   if driverLat == 0.0 && driverLon == 0.0 then do
