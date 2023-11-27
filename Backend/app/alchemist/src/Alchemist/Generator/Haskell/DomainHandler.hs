@@ -10,7 +10,7 @@ import Prelude
 
 generateDomainHandler :: Apis -> String
 generateDomainHandler input =
-  "module API.UI." <> T.unpack (head (map _moduleName input)) <> " where \n\n"
+  "module Domain.Action." <> T.unpack (head (map _moduleName input)) <> " where \n\n"
     <> intercalate "\n" (makeImport <$> figureOutImports (T.unpack <$> concatMap handlerImports input))
     <> T.unpack ("\n\n" <> T.intercalate "\n\n" (map handlerFunctionDef input))
   where
