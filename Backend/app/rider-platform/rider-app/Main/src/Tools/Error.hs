@@ -48,8 +48,16 @@ instance IsBaseError EstimateError where
   toMessage EstimateNotFound = Just "Estimate not found. "
 
 instance IsHTTPError EstimateError where
-  toErrorCode _ = "ESTIMATE_DOES_NOT_EXIST"
-  toHttpCode _ = E400
+  toErrorCode = \case
+    EstimateNotFound -> "ESTIMATE_NOT_FOUND"
+    EstimateDoesNotExist _ -> "ESTIMATE_DOES_NOT_EXIST"
+    EstimateCancelled _ -> "ESTIMATE_CANCELLED"
+    EstimateStatusDoesNotExist _ -> "ESTIMATE_STATUS_DOES_NOT_EXIST"
+  toHttpCode = \case
+    EstimateNotFound -> E400
+    EstimateDoesNotExist _ -> E400
+    EstimateCancelled _ -> E403
+    EstimateStatusDoesNotExist _ -> E400
 
 instance IsAPIError EstimateError
 
