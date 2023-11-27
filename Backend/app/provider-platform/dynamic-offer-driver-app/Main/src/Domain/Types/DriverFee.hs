@@ -50,7 +50,9 @@ data DriverFee = DriverFee
     stageUpdatedAt :: Maybe UTCTime,
     amountPaidByCoin :: Maybe HighPrecMoney,
     feeWithoutDiscount :: Maybe HighPrecMoney,
-    overlaySent :: Bool
+    overlaySent :: Bool,
+    specialZoneRideCount :: Int,
+    specialZoneAmount :: HighPrecMoney
   }
   deriving (Generic, Show, Eq)
 
