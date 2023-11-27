@@ -748,7 +748,7 @@ eval (ModifyRoute lat lon) state = do
   exit $ UpdateRoute newState
 
 eval (IsMockLocation isMock) state = do
-  let val = false --isMock == "true" -- TODO:: Handle it properly @ashkiriti 
+  let val = false --isMock == "true" -- TODO:: Handle it properly @ashkiriti
       _ = unsafePerformEffect $ if val then  logEvent (state.data.logField) "ny_fakeGPS_enabled" else pure unit -- we are using unsafePerformEffect becasue without it we are not getting logs in firebase, since we are passing a parameter from state i.e. logField then the output will be inline and it will not be able to precompute so it's safe to use it here.
   continue state{props{isMockLocation = val}}
 
