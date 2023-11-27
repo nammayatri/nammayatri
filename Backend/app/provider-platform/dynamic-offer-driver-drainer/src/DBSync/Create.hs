@@ -21,7 +21,6 @@ import Kafka.Producer as Producer
 import Kernel.Beam.Lib.Utils (getMappings, replaceMappings)
 import qualified Kernel.Beam.Types as KBT
 import qualified Kernel.Streaming.Kafka.KafkaTable as Kafka
-import Kernel.Types.Error
 import Text.Casing (quietSnake)
 import qualified "dynamic-offer-driver-app" Tools.Beam.UtilsTH as App
 import Types.DBSync
@@ -139,12 +138,8 @@ runCreateCommands cmds streamKey = do
                   entryIds = map (\(_, _, entryId', _) -> entryId') object
                   newObjectsWithEntryId = zip newObjects entryIds
               Env {..} <- ask
-              tables <- L.getOption KBT.Tables
               let tableName = textToSnakeCaseText model
-              pushToS3 <- case tables of
-                Nothing -> L.throwException $ InternalError "Tables not found"
-                Just tables' -> do
-                  pure $ tableName `elem` tables'.kafkaS3Tables
+                  pushToS3 = tableName `elem` _kafkaS3Tables
               res <- EL.runIO $ streamDriverDrainerCreates _kafkaConnection newObjectsWithEntryId streamKey' model pushToS3
               either
                 ( \err -> do

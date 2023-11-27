@@ -137,11 +137,10 @@ let kafkaProducerCfg =
 
 let tables =
       { enableKVForWriteAlso =
-            [ { nameOfTable = "beckn_request", percentEnable = 100 } ]
-          : List { nameOfTable : Text, percentEnable : Natural }
-      , enableKVForRead = [ "beckn_request" ] : List Text
+          [] : List { nameOfTable : Text, percentEnable : Natural }
+      , enableKVForRead = [] : List Text
       , kafkaNonKVTables = [] : List Text
-      , kafkaS3Tables = [ "beckn_request" ] : List Text
+      , kafkaS3Tables = [] : List Text
       }
 
 let dontEnableForDb = [] : List Text

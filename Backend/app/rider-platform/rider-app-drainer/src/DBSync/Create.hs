@@ -5,7 +5,7 @@
 module DBSync.Create where
 
 import Config.Env
-import Data.Aeson (encode)
+import qualified Data.Aeson as A
 import qualified Data.ByteString.Lazy as LBS
 import Data.Maybe (fromJust)
 import qualified Data.Text as T hiding (elem)
@@ -22,8 +22,6 @@ import Kernel.Beam.Lib.Utils (getMappings, replaceMappings)
 import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude (UTCTime)
 import qualified Kernel.Streaming.Kafka.KafkaTable as Kafka
-import Kernel.Types.Error
-import System.Timeout (timeout)
 import Text.Casing (quietSnake)
 import qualified "rider-app" Tools.Beam.UtilsTH as App
 import Types.DBSync
@@ -111,8 +109,11 @@ runCreateCommands cmds streamKey = do
                   mappings = getMappings objectIdentity
                   newObjects = map (\object' -> replaceMappings (toJSON object') mappings) objectIdentity
                   entryIds = map (\(_, _, entryId', _) -> entryId') object
+                  newObjectsWithEntryId = zip newObjects entryIds
               Env {..} <- ask
-              res <- EL.runIO $ streamRiderDrainerCreates _kafkaConnection newObjects streamKey' model
+              let tableName = textToSnakeCaseText model
+                  pushToS3 = tableName `elem` _kafkaS3Tables
+              res <- EL.runIO $ streamRiderDrainerCreates _kafkaConnection newObjectsWithEntryId streamKey' model pushToS3
               either
                 ( \err -> do
                     void $ publishDBSyncMetric Event.KafkaPushFailure
@@ -157,35 +158,36 @@ runCreateCommands cmds streamKey = do
           EL.logError ("Create failed: " :: Text) (show cmdsToErrorQueue <> "\n Error: " <> show x :: Text)
           pure [Left entryIds]
 
-streamRiderDrainerCreates :: ToJSON a => Producer.KafkaProducer -> [a] -> Text -> Text -> IO (Either Text ())
-streamRiderDrainerCreates producer dbObject streamKey model = do
+streamRiderDrainerCreates :: ToJSON a => Producer.KafkaProducer -> [(a, EL.KVDBStreamEntryID)] -> Text -> Text -> Bool -> IO (Either Text ())
+streamRiderDrainerCreates producer dbObject streamKey model pushToS3 = do
   let topicName = "aap-sessionizer-" <> T.toLower model
   result' <- mapM (KafkaProd.produceMessage producer . message topicName) dbObject
+  when pushToS3 $ mapM_ (KafkaProd.produceMessage producer . getS3Message model) dbObject
   if any isJust result' then pure $ Left ("Kafka Error: " <> show result') else pure $ Right ()
   where
-    message (obj, _, entryId, dbCreateObject) = do
-      let (topicName, kafkaObject) =
-            if pushToS3
-              then do
-                let timestamp = mkTimeStamp entryId
-                let kafkaTable =
-                      Kafka.KafkaTable
-                        { schemaName = T.pack App.currentSchemaName,
-                          tableName,
-                          tableContent = toJSON obj,
-                          timestamp
-                        }
-                (mkS3TableTopicName timestamp, encode kafkaTable)
-              else (riderDrainerTopicName, encode dbCreateObject)
+    message topicName (obj, _) =
       ProducerRecord
-        { prTopic = topicName,
+        { prTopic = TopicName topicName,
           prPartition = UnassignedPartition,
           prKey = Just $ TE.encodeUtf8 streamKey,
-          prValue = Just . LBS.toStrict $ kafkaObject
+          prValue = Just . LBS.toStrict $ A.encode obj
         }
 
-riderDrainerTopicName :: TopicName
-riderDrainerTopicName = TopicName "rider-drainer"
+    getS3Message tableName (obj, entryId) = do
+      let timestamp = mkTimeStamp entryId
+          kafkaTableObject =
+            Kafka.KafkaTable
+              { schemaName = T.pack App.currentSchemaName,
+                tableName = tableName,
+                tableContent = toJSON obj,
+                timestamp = timestamp
+              }
+      ProducerRecord
+        { prTopic = mkS3TableTopicName timestamp,
+          prPartition = UnassignedPartition,
+          prKey = Just $ TE.encodeUtf8 streamKey,
+          prValue = Just . LBS.toStrict $ A.encode kafkaTableObject
+        }
 
 mkTimeStamp :: EL.KVDBStreamEntryID -> UTCTime
 mkTimeStamp (EL.KVDBStreamEntryID posixTime _) = Time.posixSecondsToUTCTime $ fromInteger (posixTime `div` 1000)

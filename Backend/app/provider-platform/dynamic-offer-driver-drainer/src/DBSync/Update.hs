@@ -22,7 +22,6 @@ import EulerHS.CachedSqlDBQuery as CDB
 import EulerHS.KVConnector.Types as EKT
 import EulerHS.KVConnector.Utils as Utils
 import qualified EulerHS.Language as EL
-import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
 import EulerHS.Types as ET
 import Kafka.Producer as KafkaProd
@@ -31,7 +30,6 @@ import qualified Kernel.Beam.Functions as BeamFunction
 import Kernel.Beam.Lib.Utils (getMappings, replaceMappings)
 import qualified Kernel.Beam.Types as KBT
 import qualified Kernel.Streaming.Kafka.KafkaTable as Kafka
-import Kernel.Types.Error
 import Sequelize (Model, Set, Where)
 import Text.Casing (pascal, quietSnake)
 import qualified "dynamic-offer-driver-app" Tools.Beam.UtilsTH as App
@@ -184,19 +182,15 @@ runUpdateCommands (cmd, val) dbStreamKey = do
     -- If KAFKA_PUSH is false then entry will be there in DB Else Updates entry in Kafka only.
     runUpdateInKafka id value dbStreamKey' setClause whereClause model dbConf tag = do
       isPushToKafka' <- EL.runIO isPushToKafka
-      tables <- L.getOption KBT.Tables
+      Env {..} <- ask
       let tableName' = textToSnakeCaseText model
-      pushToS3 <- case tables of
-        Nothing -> L.throwException $ InternalError "Tables not found"
-        Just tables' -> do
-          pure $ tableName' `elem` tables'.kafkaS3Tables
+          pushToS3 = tableName' `elem` _kafkaS3Tables
       if not isPushToKafka'
         then runUpdate id value dbStreamKey' setClause whereClause model dbConf
         else do
           res <- getUpdatedValue tag whereClause
           case res of
             Right dataObj -> do
-              Env {..} <- ask
               let mappings = getMappings [dataObj]
                   newObject = replaceMappings (toJSON dataObj) mappings
               res'' <- EL.runIO $ streamDriverDrainerUpdates _kafkaConnection newObject dbStreamKey' model id pushToS3

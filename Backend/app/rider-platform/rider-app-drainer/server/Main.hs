@@ -50,7 +50,7 @@ main = do
             )
 
           dbSyncMetric <- Event.mkDBSyncMetric
-          let environment = Env (T.pack C.kvRedis) dbSyncMetric kafkaProducerTools.producer appCfg.dontEnableForDb
+          let environment = Env (T.pack C.kvRedis) dbSyncMetric kafkaProducerTools.producer appCfg.dontEnableForDb appCfg.tables.kafkaS3Tables
           threadPerPodCount <- Env.getThreadPerPodCount
           spawnDrainerThread threadPerPodCount flowRt environment
           R.runFlow flowRt (runReaderT DBSync.startDBSync environment)

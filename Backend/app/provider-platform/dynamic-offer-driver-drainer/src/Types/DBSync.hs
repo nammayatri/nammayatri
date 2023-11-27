@@ -32,7 +32,8 @@ data Env = Env
   { _streamRedisInfo :: Text,
     _counterHandles :: Event.DBSyncCounterHandler,
     _kafkaConnection :: Producer.KafkaProducer,
-    _dontEnableDbTables :: [Text]
+    _dontEnableDbTables :: [Text],
+    _kafkaS3Tables :: [Text]
   }
 
 type Flow = EL.ReaderFlow Env
