@@ -1792,7 +1792,9 @@ data DriverFeeInfoEntity = DriverFeeInfoEntity
     isSplit :: Bool,
     offerAndPlanDetails :: Maybe Text,
     isCoinCleared :: Bool,
-    coinDiscountAmount :: Maybe HighPrecMoney
+    coinDiscountAmount :: Maybe HighPrecMoney,
+    specialZoneRideCount :: Int,
+    totalSpecialZoneCharges :: HighPrecMoney
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -1828,13 +1830,15 @@ mkDriverFeeInfoEntity driverFees invoiceStatus transporterConfig = do
               paymentStatus = invoiceStatus,
               totalEarnings = fromIntegral driverFee.totalEarnings,
               driverFeeAmount = (\dueDfee -> SLDriverFee.roundToHalf (fromIntegral dueDfee.govtCharges + dueDfee.platformFee.fee + dueDfee.platformFee.cgst + dueDfee.platformFee.sgst)) driverFee,
-              totalRides = driverFee.numRides,
+              totalRides = SLDriverFee.calcNumRides driverFee transporterConfig,
               planAmount = fromMaybe 0 driverFee.feeWithoutDiscount,
               isSplit = length driverFeesInWindow > 1,
               rideTakenOn = addUTCTime (-1 * secondsToNominalDiffTime transporterConfig.timeDiffFromUtc) driverFee.createdAt, --- when we fix ist issue we will remove this,
               offerAndPlanDetails = driverFee.planOfferTitle,
               isCoinCleared = driverFee.status == DDF.CLEARED_BY_YATRI_COINS,
-              coinDiscountAmount = driverFee.amountPaidByCoin
+              coinDiscountAmount = driverFee.amountPaidByCoin,
+              specialZoneRideCount = driverFee.specialZoneRideCount,
+              totalSpecialZoneCharges = driverFee.specialZoneAmount
             }
     )
     driverFees
