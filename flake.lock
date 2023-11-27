@@ -2493,7 +2493,9 @@
       "flake": false,
       "locked": {
         "narHash": "sha256-Vrf3azsWC7yPKyixw1wiQy3LhUrNlqz4CBKuuIu14ZY=",
+        "narHash": "sha256-Vrf3azsWC7yPKyixw1wiQy3LhUrNlqz4CBKuuIu14ZY=",
         "type": "file",
+        "url": "http://download.geofabrik.de/asia/india/southern-zone-231126.osm.pbf"
         "url": "http://download.geofabrik.de/asia/india/southern-zone-231126.osm.pbf"
       },
       "original": {
@@ -2973,15 +2975,16 @@
         "prometheus-haskell": "prometheus-haskell_2"
       },
       "locked": {
-        "lastModified": 1701326860,
-        "narHash": "sha256-Dwt50cBB8rIuHpwVwZJKD1sO6mElhdiIMLHBiISGps4=",
+        "lastModified": 1701075456,
+        "narHash": "sha256-m0u5w7PLehHVYS6H7DKx/J9igJ7vgpiGq4FiZNbLzwE=",
         "owner": "nammayatri",
         "repo": "shared-kernel",
-        "rev": "db9aad4e54b6f72a75021fc0d3b91bd4dad57605",
+        "rev": "c9dc1af0879446fd6db9342696718cb056099d2a",
         "type": "github"
       },
       "original": {
         "owner": "nammayatri",
+        "ref": "backend/feat/updated/push-table-to-s3",
         "repo": "shared-kernel",
         "type": "github"
       }

@@ -6,7 +6,7 @@
 
     # Backend inputs
     shared-kernel = {
-      url = "github:nammayatri/shared-kernel";
+      url = "github:nammayatri/shared-kernel/backend/feat/updated/push-table-to-s3";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 

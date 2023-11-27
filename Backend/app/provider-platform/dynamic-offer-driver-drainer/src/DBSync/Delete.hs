@@ -18,7 +18,6 @@ import qualified Kafka.Producer as KafkaProd
 import qualified Kafka.Producer as Producer
 import qualified Kernel.Beam.Types as KBT
 import Sequelize
-import System.Timeout (timeout)
 import Text.Casing
 import Types.DBSync
 import Types.Event as Event
@@ -160,13 +159,9 @@ streamDriverDrainerDeletes :: ToJSON a => Producer.KafkaProducer -> a -> Text ->
 streamDriverDrainerDeletes producer dbObject dbStreamKey = do
   let topicName = "driver-drainer"
   result' <- KafkaProd.produceMessage producer (message topicName dbObject)
-  flushResult <- timeout (5 * 60 * 1000000) $ KafkaProd.flushProducer producer
-  case flushResult of
-    Just _ -> do
-      case result' of
-        Just err -> pure $ Left $ T.pack ("Kafka Error: " <> show err)
-        _ -> pure $ Right ()
-    Nothing -> pure $ Left "KafkaProd.flushProducer timed out after 5 minutes"
+  case result' of
+    Just err -> pure $ Left $ T.pack ("Kafka Error: " <> show err)
+    _ -> pure $ Right ()
   where
     message topicName event =
       ProducerRecord
