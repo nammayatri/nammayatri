@@ -60,7 +60,7 @@ import Font.Style as FontStyle
 import Foreign (unsafeToForeign)
 import Helpers.Utils as HU
 import JBridge as JB
-import Language.Strings (getString, getEN)
+import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (printLog)
 import MerchantConfig.Utils (getValueFromConfig)

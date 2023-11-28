@@ -1,14 +1,6 @@
 import { callbackMapper } from "presto-ui";
 
 const { JOS, JBridge } = window;
-import * as hindiStrings from "./../../src/Strings/HI.js";
-import * as kannadaStrings from "./../../src/Strings/KN.js";
-import * as englishStrings from "./../../src/Strings/EN.js";
-import * as bengaliStrings from "./../../src/Strings/BN.js";
-import * as malayalamStrings from "./../../src/Strings/ML.js";
-import * as tamilStrings from "./../../src/Strings/TA.js";
-import * as frenchStrings from "./../../src/Strings/FR.js";
-import * as teluguStrings from "./../../src/Strings/TE.js";
 
 const Android = window.Android;
 let timerIdForTimeout;
@@ -578,80 +570,6 @@ export const removeMediaPlayer = function (id) {
     JBridge.removeMediaPlayer();
   };
 };
-
-
-function getStringFromCommon(key) {
-  const selectedLanguage = JBridge.getKeysInSharedPref("LANGUAGE_KEY");
-  switch (selectedLanguage) {
-    case "HI_IN":
-      return hindiStrings.getStringValue(key);
-    case "KN_IN":
-      return kannadaStrings.getStringValue(key);
-    case "BN_IN":
-      return bengaliStrings.getStringValue(key);
-    case "ML_IN":
-      return malayalamStrings.getStringValue(key);
-    case "TA_IN":
-      return tamilStrings.getStringValue(key);
-    case "TE_IN":
-      return teluguStrings.getStringValue(key);
-    case "FR_FR":
-      return frenchStrings.getStringValue(key);
-    default:
-      return englishStrings.getStringValue(key);
-  }
-}
-
-function rideLabelConfig(){
-  return  {
-    SureMetro_Pickup : {
-      "backgroundColor" : "#2194FF",
-      "text" : "Metro Pickup",
-      "secondaryText" : "",
-      "imageUrl" : "ic_metro_white,https://assets.juspay.in/beckn/nammayatri/driver/images/ic_metro_white.png",
-      "cancelText" : "ZONE_CANCEL_TEXT_PICKUP",
-      "cancelConfirmImage" : "ic_cancelride_metro_pickup,https://assets.juspay.in/beckn/nammayatri/driver/images/ic_cancelride_metro_pickup.png"
-    },
-    SureMetro_Drop : {
-      "backgroundColor" : "#2194FF",
-      "text" : "Metro Drop",
-      "secondaryText" : "",
-      "imageUrl" : "ic_metro_white,https://assets.juspay.in/beckn/nammayatri/driver/images/ic_metro_white.png",
-      "cancelText" : "ZONE_CANCEL_TEXT_DROP",
-      "cancelConfirmImage" : "ic_cancelride_metro_drop,https://assets.juspay.in/beckn/nammayatri/driver/images/ic_cancelride_metro_drop.png"
-    },
-    Accessibility : {
-      "backgroundColor" : "#9747FF",
-      "text" : getStringFromCommon("ASSISTANCE_REQUIRED"),
-      "secondaryText" : getStringFromCommon("LEARN_MORE"),
-      "imageUrl" : "ny_ic_wheelchair,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_wheelchair.png",
-      "cancelText" : "FREQUENT_CANCELLATIONS_WILL_LEAD_TO_LESS_RIDES",
-      "cancelConfirmImage" : "ic_cancel_prevention,https://assets.juspay.in/beckn/nammayatri/driver/images/ic_cancel_prevention.png"
-    },
-    GOTO : {
-      "backgroundColor" : "#2C2F3A",
-      "text" : getStringFromCommon("GO_TO"),
-      "secondaryText" : "",
-      "imageUrl" : "ny_pin_check_white,",
-      "cancelText" : "GO_TO_CANCELLATION_TITLE",
-      "cancelConfirmImage" : "ny_ic_gotodriver_zero,"
-    }
-  }
-}
-
-export const getRideLabelConfig = function (just, nothing, key, zoneType){
-  const rideLabel = rideLabelConfig() 
-  if (zoneType in rideLabel ){
-    const zoneOb = rideLabel[zoneType];
-    if(key in zoneOb){
-      const prop = zoneOb[key]
-      return just(prop);
-    }
-    console.error("No value found for key "+ key);
-  }
-  console.error("No value found for key "+ zoneType);
-  return nothing;
-}
 
 export const getPeriod = function(date) {
   const currentDate = new Date();
