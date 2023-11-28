@@ -1958,6 +1958,7 @@ homeScreenFlow = do
       case (head rideHistoryResponse.list) of
         Nothing -> pure unit
         Just (RidesInfo response) -> do
+          let specialZoneConfig = HU.getRideLabelData response.specialLocationTag
           modifyScreenState $ TripDetailsScreenStateType (\tripDetailsScreen -> tripDetailsScreen {data {
               tripId = response.shortRideId,
               date = (convertUTCtoISC (response.createdAt) "D MMM"),
@@ -1972,10 +1973,10 @@ homeScreenFlow = do
               customerExtraFee = response.customerExtraFee,
               purpleTagVisibility = isJust response.disabilityTag,
               gotoTagVisibility = isJust response.driverGoHomeRequestId,
-              spLocTagVisibility = isJust response.specialLocationTag && isJust (HU.getRequiredTag "text" response.specialLocationTag),
-              specialZoneLayoutBackground = HU.getRideLabelData "backgroundColor" response.specialLocationTag,
-              specialZoneImage = HU.getRideLabelData "imageUrl" response.specialLocationTag,
-              specialZoneText = HU.getRideLabelData "text" response.specialLocationTag            
+              spLocTagVisibility = isJust response.specialLocationTag && isJust (HU.getRequiredTag response.specialLocationTag),
+              specialZoneLayoutBackground = specialZoneConfig.backgroundColor,
+              specialZoneImage = specialZoneConfig.imageUrl,
+              specialZoneText = specialZoneConfig.text
             }})
           let payerVpa = fromMaybe "" response.payerVpa
           modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen {data { 

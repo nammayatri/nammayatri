@@ -19,14 +19,14 @@ import Data.String.Common (trim)
 import Language.Types (STR)
 import MerchantConfig.Utils (getStringFromConfig, getStringWithVar)
 import Prelude (($))
-import Data.Maybe (Maybe(..))
-import Debug (spy)
 import ConfigJBridge (getKeyInSharedPrefKeysConfig)
+import Data.Maybe (Maybe(..))
 import Resources.Localizable.BN (getBN)
 import Resources.Localizable.EN (getEN)
 import Resources.Localizable.HI (getHI)
 import Resources.Localizable.KN (getKN)
 import Resources.Localizable.ML (getML)
+import Resources.Localizable.TA (getTA)
 
 getString :: STR -> String
 getString key = 
@@ -46,4 +46,8 @@ getStringFromLocal language key =
     "HI_IN" -> getHI key
     "KN_IN" -> getKN key
     "ML_IN" -> getML key
+    "TA_IN" -> getTA key
     _       -> getEN key
+
+getVarString :: STR -> Array String -> String
+getVarString key vals = getStringWithVar (getString key) vals
