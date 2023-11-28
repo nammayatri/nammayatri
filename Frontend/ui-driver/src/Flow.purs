@@ -2943,6 +2943,7 @@ chooseCityFlow :: FlowBT String Unit
 chooseCityFlow = do
   liftFlowBT hideSplash
   logField_ <- lift $ lift $ getLogFields
+  appConfig <- getAppConfig Constants.appConfig
   (GlobalState globalstate) <- getState
   runInternetCondition
   (API.GetCityRes resp) <- Remote.getMerchantOperatingCityListBT ""
@@ -2950,7 +2951,7 @@ chooseCityFlow = do
       filteredArray = filter (\item -> (any (_ == (toUpper item.cityName)) cityArray)) globalstate.chooseCityScreen.data.config.cityConfig
   void $ pure $ setCleverTapUserProp [{key : "Preferred Language", value : unsafeToForeign $ getValueFromConfig "defaultLanguage"}]
   setValueToLocalStore LANGUAGE_KEY $ getValueFromConfig "defaultLanguage"
-  modifyScreenState $ ChooseCityScreenStateType (\chooseCityScreen -> chooseCityScreen { data {merchantOperatingCityConfig = filteredArray }})
+  modifyScreenState $ ChooseCityScreenStateType (\chooseCityScreen -> chooseCityScreen { data {merchantOperatingCityConfig = filteredArray , config = appConfig}})
   chooseCityScreen <- UI.chooseCityScreen
   case chooseCityScreen of
     GoToWelcomeScreen -> authenticationFlow ""
