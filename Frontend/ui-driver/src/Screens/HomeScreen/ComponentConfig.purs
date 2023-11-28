@@ -430,7 +430,7 @@ cancelConfirmationConfig state = let
     primaryText {
       text = case state.data.activeRide.specialLocationTag of
               Nothing -> getString FREQUENT_CANCELLATIONS_WILL_LEAD_TO_LESS_RIDES
-              Just specialLocationTag -> getString $ getCancelAlertText $ HU.getRideLabelData  "cancelText" $ Just specialLocationTag
+              Just specialLocationTag -> getString $ getCancelAlertText $ (HU.getRideLabelData (Just specialLocationTag)).cancelText
     , margin = Margin 16 24 16 0 },
     secondaryText {
       visibility = if state.data.activeRide.specialLocationTag == (Just "GOTO") then VISIBLE else GONE,
@@ -458,9 +458,9 @@ cancelConfirmationConfig state = let
     backgroundClickable = false,
     cornerRadius = (PTD.Corners 15.0 true true true true),
     coverImageConfig {
-      imageUrl = fetchImage FF_ASSET  if (state.data.activeRide.specialLocationTag == Nothing || (HU.getRequiredTag "text" state.data.activeRide.specialLocationTag) == Nothing) 
+      imageUrl = fetchImage FF_ASSET  if (state.data.activeRide.specialLocationTag == Nothing || (HU.getRequiredTag state.data.activeRide.specialLocationTag) == Nothing) 
                     then "ic_cancel_prevention"
-                  else HU.getRideLabelData "cancelConfirmImage" state.data.activeRide.specialLocationTag
+                  else (HU.getRideLabelData state.data.activeRide.specialLocationTag).cancelConfirmImage
     , visibility = VISIBLE
     , margin = Margin 16 20 16 0
     , height = V 178

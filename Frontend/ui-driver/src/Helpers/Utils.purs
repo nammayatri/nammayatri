@@ -32,7 +32,7 @@ import Engineering.Helpers.Utils (getAppConfig)
 import Common.Types.App (LazyCheck(..), CalendarDate, CalendarWeek, PaymentStatus(..))
 import Types.App (FlowBT, defaultGlobalState)
 import Control.Monad.Except (runExcept, runExceptT)
-import Data.Array ((!!), fold) as DA
+import Data.Array ((!!), fold, any, head, filter) as DA
 import Data.Array.NonEmpty (fromArray)
 import Data.Either (Either(..), hush)
 import Data.Eq.Generic (genericEq)
@@ -130,7 +130,6 @@ foreign import isYesterday :: String -> Boolean
 
 -- -- ####### MAP FFI ######## -----
 foreign import currentPosition  :: String -> Effect Unit
-foreign import getRideLabelConfig :: forall f a. Fn4 (f -> Maybe f) (Maybe f) String String (Maybe String)
 foreign import getPeriod :: String -> Period
 foreign import clampNumber :: Number -> Number -> Int -> Int
 foreign import getPopupObject :: forall f a. Fn3 (f -> Maybe f) (Maybe f) String (Maybe PromotionPopupConfig)
@@ -163,6 +162,26 @@ type Period
 type RenewFile = {
   filePath :: String ,
   location :: String
+}
+
+type LabelConfig = { 
+  label :: String,
+  backgroundColor :: String,
+  text :: String,
+  secondaryText :: String,
+  imageUrl :: String,
+  cancelText :: String,
+  cancelConfirmImage :: String
+}
+
+dummyLabelConfig = { 
+  label : "",
+  backgroundColor : "",
+  text : "",
+  secondaryText : "",
+  imageUrl : "",
+  cancelText : "",
+  cancelConfirmImage : ""
 }
 
 otpRule :: Reader.OtpRule
@@ -298,36 +317,58 @@ getVehicleType vehicleType =
     "TAXI_PLUS" -> (getString TAXI_PLUS)
     _ -> ""
 
-getRideLabelData :: String -> Maybe String -> String
-getRideLabelData prop tag = do
-  case getRequiredTag prop tag of
-    Nothing -> ""
-    Just tag' -> tag'
+getRideLabelData :: Maybe String -> LabelConfig
+getRideLabelData maybeLabel = fromMaybe dummyLabelConfig (getRequiredTag maybeLabel)
 
-getRequiredTag :: String -> Maybe String -> Maybe String
-getRequiredTag prop tag = do
-  case tag of
-    Just "Accessibility" -> case (runFn4 getRideLabelConfig Just Nothing prop ("Accessibility")) of
-                                Nothing -> Nothing
-                                Just val -> Just val
-                                
-    Just "GOTO" -> case (runFn4 getRideLabelConfig Just Nothing prop "GOTO") of
-                                Nothing -> Nothing
-                                Just val -> Just val
-    Just tag' -> do
-        let arr = DS.split (DS.Pattern "_") tag'
-        let pickup = fromMaybe "" (arr DA.!! 0)
-        let drop = fromMaybe "" (arr DA.!! 1)
-        let priority = fromMaybe "" (arr DA.!! 2)
-        case priority of
-          "PriorityPickup" -> case (runFn4 getRideLabelConfig Just Nothing prop (pickup <> "_Pickup")) of
-                                Nothing -> Nothing
-                                Just val -> Just val
-          "PriorityDrop" -> case (runFn4 getRideLabelConfig Just Nothing prop (drop <> "_Drop")) of
-                                Nothing -> Nothing
-                                Just val -> Just val
-          _ -> Nothing
-    _ -> Nothing
+getRequiredTag :: Maybe String -> Maybe LabelConfig
+getRequiredTag maybeLabel  =
+  case maybeLabel of
+    Just label -> if DA.any (_ == label) ["Accessibility", "GOTO"] then
+                    DA.head (DA.filter (\item -> item.label == label) rideLabelConfig)
+                  else do
+                    let arr = DS.split (DS.Pattern "_") label
+                    let pickup = fromMaybe "" (arr DA.!! 0)
+                    let drop = fromMaybe "" (arr DA.!! 1)
+                    let priority = fromMaybe "" (arr DA.!! 2)
+                    DA.head (DA.filter (\item -> item.label == (pickup <> "_Pickup")) rideLabelConfig)
+
+    Nothing    -> Nothing
+
+rideLabelConfig :: Array LabelConfig
+rideLabelConfig = [
+    { label: "SureMetro_Pickup",
+      backgroundColor : "#2194FF",
+      text : "Metro Pickup",
+      secondaryText : "",
+      imageUrl : "ic_metro_white,https://assets.juspay.in/beckn/nammayatri/driver/images/ic_metro_white.png",
+      cancelText : "ZONE_CANCEL_TEXT_PICKUP",
+      cancelConfirmImage : "ic_cancelride_metro_pickup,https://assets.juspay.in/beckn/nammayatri/driver/images/ic_cancelride_metro_pickup.png"
+    },
+    { label : "SureMetro_Drop",
+      backgroundColor : "#2194FF",
+      text : "Metro Drop",
+      secondaryText : "",
+      imageUrl : "ic_metro_white,https://assets.juspay.in/beckn/nammayatri/driver/images/ic_metro_white.png",
+      cancelText : "ZONE_CANCEL_TEXT_DROP",
+      cancelConfirmImage : "ic_cancelride_metro_drop,https://assets.juspay.in/beckn/nammayatri/driver/images/ic_cancelride_metro_drop.png"
+    },
+    { label : "Accessibility",
+      backgroundColor : "#9747FF",
+      text : getString ASSISTANCE_REQUIRED,
+      secondaryText : getString LEARN_MORE,
+      imageUrl : "ny_ic_wheelchair,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_wheelchair.png",
+      cancelText : "FREQUENT_CANCELLATIONS_WILL_LEAD_TO_LESS_RIDES",
+      cancelConfirmImage : "ic_cancel_prevention,https://assets.juspay.in/beckn/nammayatri/driver/images/ic_cancel_prevention.png"
+    },
+    { label : "GOTO",
+      backgroundColor : "#2C2F3A",
+      text : getString GO_TO,
+      secondaryText : "",
+      imageUrl : "ny_pin_check_white,",
+      cancelText : "GO_TO_CANCELLATION_TITLE",
+      cancelConfirmImage : "ny_ic_gotodriver_zero,"
+    }
+]
 
 getGenderIndex :: String -> Array OptionButtonList -> Maybe Int
 getGenderIndex req arr = do

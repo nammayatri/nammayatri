@@ -139,10 +139,12 @@ callButton push config =
   
 rideActionViewWithLabel :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM ( Effect Unit) w
 rideActionViewWithLabel push config =
+  let specialZoneConfig = getRideLabelData config.specialLocationTag
+  in
   linearLayout
   [ width MATCH_PARENT
   , height WRAP_CONTENT
-  , background $ getRideLabelData "backgroundColor" config.specialLocationTag
+  , background $ specialZoneConfig.backgroundColor
   , cornerRadii $ Corners 25.0 true true false false
   , orientation VERTICAL
   , padding $ PaddingTop 5
@@ -155,12 +157,12 @@ rideActionViewWithLabel push config =
       ][ imageView
           [ width $ V 18
           , height $ V 18
-          , imageWithFallback $ getRideLabelData "imageUrl" config.specialLocationTag
+          , imageWithFallback $ specialZoneConfig.imageUrl
           ]
         , textView $
           [ width WRAP_CONTENT
           , height MATCH_PARENT
-          , text $ getRideLabelData "text" config.specialLocationTag
+          , text $ specialZoneConfig.text
           , gravity CENTER_VERTICAL
           , color Color.white900
           , margin $ MarginLeft 5
@@ -187,7 +189,7 @@ rideActionViewWithLabel push config =
               [ textView $ 
                   [ width WRAP_CONTENT
                   , height MATCH_PARENT
-                  , text $ getRideLabelData "secondaryText" config.specialLocationTag
+                  , text $ specialZoneConfig.secondaryText
                   , gravity CENTER_VERTICAL
                   , color Color.white900
                   ] <> FontStyle.getFontStyle FontStyle.Tags TypoGraphy
@@ -700,7 +702,7 @@ separatorConfig =
   }
 
 isSpecialRide :: Config -> Boolean
-isSpecialRide config = (Maybe.isJust config.specialLocationTag) && Maybe.isJust (getRequiredTag "text" config.specialLocationTag)
+isSpecialRide config = (Maybe.isJust config.specialLocationTag) && Maybe.isJust (getRequiredTag config.specialLocationTag)
 
 getAnimationDelay :: Config -> Int
 getAnimationDelay config = 50
