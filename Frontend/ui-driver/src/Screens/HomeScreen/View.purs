@@ -95,7 +95,6 @@ screen initialState =
         ( \push -> do
           _ <- pure $ JB.checkAndAskNotificationPermission false
           _ <- pure $ printLog "initial State" initialState
-          -- _ <- if initialState.data.config.enableMockLocation then JB.isMockLocation push IsMockLocation else pure unit
           _ <- HU.storeCallBackForNotification push Notification
           _ <- HU.storeCallBackTime push TimeUpdate
           _ <- runEffectFn2 JB.storeKeyBoardCallback push KeyboardCallback

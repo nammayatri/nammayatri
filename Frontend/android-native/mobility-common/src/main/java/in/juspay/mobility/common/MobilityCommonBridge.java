@@ -685,7 +685,7 @@ public class MobilityCommonBridge extends HyperBridge {
                         }
                         if (callback != null) {
                             String js = String.format(Locale.ENGLISH, "window.callUICallback('%s','%s');",
-                                  callback, ((location != null) ? isMock : "failed"));
+                                  callback, isMock);
                                 bridgeComponents.getJsCallback().addJsToWebView(js);
                         }
                     })
@@ -693,7 +693,7 @@ public class MobilityCommonBridge extends HyperBridge {
                         Log.e(LOCATION, "Last and current position not known");
                         if (callback != null) {
                             String js = String.format(Locale.ENGLISH, "window.callUICallback('%s','%s');",
-                                    callback, "failed");
+                                    callback, false);
                             bridgeComponents.getJsCallback().addJsToWebView(js);
                         }
                     });

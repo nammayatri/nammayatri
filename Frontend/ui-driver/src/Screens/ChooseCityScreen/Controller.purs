@@ -7,7 +7,6 @@ import Data.Array as DA
 import Data.Maybe (Maybe(..), fromMaybe, isNothing)
 import Data.Number as Number
 import Data.Tuple (Tuple(..), fst, snd)
-import Debug (spy)
 import Effect.Class (liftEffect)
 import Effect.Unsafe (unsafePerformEffect)
 import Engineering.Helpers.LogEvent (logEvent)
@@ -56,7 +55,6 @@ eval :: Action -> ChooseCityScreenState -> Eval Action ScreenOutput ChooseCitySc
 
 eval AfterRender state = if state.props.currentStage == ENABLE_PERMISSION then continueWithCmd state [ do 
                             isLocationPermission <- isLocationPermissionEnabled unit
-                            _<- pure $ spy "test1 : " isLocationPermission
                             pure $ UpdatePermission state{ props { isLocationPermissionGiven = isLocationPermission, currentStage = if isLocationPermission then DETECT_LOCATION else state.props.currentStage}}]
                             else continue state
 eval BackPressed state = do 
@@ -73,10 +71,8 @@ eval (PrimaryButtonAC PrimaryButtonController.OnClick) state = do
               continueWithCmd state [do
                   isLocationPermission <- isLocationPermissionEnabled unit
                   if (isLocationPermission) then do
-                      _ <- pure $ spy "testing5 : " "abc"  
                       pure UpdateLocationPermissionState
                       else do 
-                      _ <- pure $ spy "testing6 : " "abc" 
                       _ <- liftEffect $ requestLocation unit
                       pure NoAction
                   ]
@@ -116,9 +112,7 @@ eval (ChangeStage newStage) state = continue state{props{currentStage = newStage
 eval (GenericHeaderAC GenericHeaderController.PrefixImgOnClick) state = continue state{props{currentStage = DETECT_LOCATION}}
 
 eval (LocationPermissionCallBack isLocationPermissionEnabled) state = do
-  _ <- pure $ spy "location permission" isLocationPermissionEnabled
   if isLocationPermissionEnabled then do
-    _ <- pure $ spy "location permission" isLocationPermissionEnabled
     let newState =  state { props {isLocationPermissionGiven = true, currentStage = DETECT_LOCATION }}
     updateAndExit newState $ RefreshScreen newState
   else continue state
@@ -132,8 +126,8 @@ eval UpdateLocationPermissionState state = do
 
 eval (IsMockLocation isMock) state = do
   let val = isMock == "true"
-      _ = unsafePerformEffect $ if val then  logEvent (state.data.logField) "ny_fakeGPS_enabled" else pure unit -- we are using unsafePerformEffect becasue without it we are not getting logs in firebase, since we are passing a parameter from state i.e. logField then the output will be inline and it will not be able to precompute so it's safe to use it here.
-  continue state { props { isMockLocation = isMock == "true" }, data { locationDetectionFailed = isMock == "failed" } }
+      _ = unsafePerformEffect $ if val then logEvent (state.data.logField) "ny_fakeGPS_enabled" else pure unit -- we are using unsafePerformEffect becasue without it we are not getting logs in firebase, since we are passing a parameter from state i.e. logField then the output will be inline and it will not be able to precompute so it's safe to use it here.
+  continue state { props { isMockLocation = isMock == "true" }, data { locationDetectionFailed = false } }
 
 eval (UpdatePermission updatedState) state = do
   let newState = updatedState {props {currentStage = if updatedState.props.isLocationPermissionGiven then DETECT_LOCATION else updatedState.props.currentStage}}
