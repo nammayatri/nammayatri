@@ -20,7 +20,8 @@ type AppConfig =
     bottomNavConfig :: BottomNavConfig,
     purpleRideConfig :: PurpleRideConfig,
     mapConfig :: MapConfig,
-    waitTimeConfig :: WaitTimeConfig
+    waitTimeConfig :: WaitTimeConfig,
+    coinsConfig :: CoinsConfig
   } 
 
 type PurpleRideConfig = {
@@ -111,7 +112,8 @@ type BottomNavConfig = {
   rideHistory :: BottomNavItemConfig,
   subscription :: BottomNavItemConfig,
   referral :: BottomNavItemConfig,
-  notifications :: BottomNavItemConfig
+  notifications :: BottomNavItemConfig,
+  driverEarnings :: BottomNavItemConfig
 }
 
 type BottomNavItemConfig = {
@@ -126,4 +128,8 @@ type MapConfig = {
 type WaitTimeConfig = {
   enableWaitTime :: Boolean,
   thresholdDist :: Number
+}
+
+type CoinsConfig = {
+  enableYatriCoins :: Boolean
 }

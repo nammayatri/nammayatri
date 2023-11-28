@@ -46,6 +46,8 @@ referralScreen = do
     GoToRidesScreen updatedState -> do
       modifyScreenState $ ReferralScreenStateType (\referralScreen -> updatedState)
       App.BackT $ App.BackPoint <$> (pure $ GO_TO_RIDES_SCREEN_FROM_REFERRAL_SCREEN)
+    EarningsScreen -> do
+      App.BackT $ App.BackPoint <$> (pure $ REFERRAL_SCREEN_NAV GoToEarningsScreen)
     GoToProfileScreen updatedState -> do
       modifyScreenState $ ReferralScreenStateType (\referralScreen -> updatedState)
       App.BackT $ App.BackPoint <$> (pure $ GO_TO_PROFILE_SCREEN_FROM_REFERRAL_SCREEN)

@@ -86,6 +86,10 @@ config =
           showNew : false
         },
       rideHistory : 
+        { isVisible : false,
+          showNew : false
+        },
+      driverEarnings : 
         { isVisible : true,
           showNew : false
         },
@@ -105,4 +109,7 @@ config =
   , mapConfig : 
       { animationDuration : 500
       }
+  , coinsConfig : {
+    enableYatriCoins : false
+  }
 }

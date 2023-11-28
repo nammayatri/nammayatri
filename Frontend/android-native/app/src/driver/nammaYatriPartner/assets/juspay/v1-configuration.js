@@ -135,5 +135,8 @@ window.getMerchantConfig = function () {
       "hearingImpairmentVideo" : "https://www.youtube.com/watch?v=udkWOt0serg",
       "genericAccessibilityVideo" : "https://youtu.be/5s21p2rI58c"
     }
+    , "coinsConfig" : {
+      "enableYatriCoins" : true,
+    }
   })
 }

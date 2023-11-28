@@ -35,8 +35,14 @@ import Prelude (class Eq, class Show)
 import Presto.Core.Utils.Encoding (defaultDecode, defaultEncode)
 import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode)
 import PrestoDOM (LetterSpacing, Visibility, visibility)
+import Styles.Types (FontSize)
+import Components.ChatView.Controller as ChatView
+import Components.RecordAudioModel.Controller as RecordAudioModel
+import MerchantConfig.Types (AppConfig)
+import Foreign.Object (Object)
+import Foreign (Foreign)
 import Screens (ScreenName)
-import Services.API (AutopayPaymentStage, BankError(..), FeeType, GetDriverInfoResp(..), MediaType, PaymentBreakUp, Route, Status, DriverProfileStatsResp(..))
+import Services.API (AutopayPaymentStage, BankError(..), FeeType, GetDriverInfoResp(..), MediaType, PaymentBreakUp, Route, Status, DriverProfileStatsResp(..), RidesSummary)
 import Styles.Types (FontSize)
 import Presto.Core.Types.API (class StandardEncode, standardEncode)
 import Components.GoToLocationModal.Controller as GoToModal
@@ -325,6 +331,12 @@ type Badge =  {
   , primaryText :: String
   , subText :: String
   }
+
+type FaqQuestions = {
+  question :: String,
+  videoLink :: String,
+  answer :: Array String
+}
 
 type VehicleP = {
   vehicleName :: String,
@@ -962,7 +974,8 @@ type HomeScreenProps =  {
   showContactSupportPopUp :: Boolean,
   showChatBlockerPopUp :: Boolean,
   showGenericAccessibilityPopUp :: Boolean,
-  waitTimeStatus :: TimerStatus
+  waitTimeStatus :: TimerStatus,
+  showCoinsPopup :: Boolean
  }
 
 data SubscriptionBannerType = FREE_TRIAL_BANNER | SETUP_AUTOPAY_BANNER | CLEAR_DUES_BANNER | NO_SUBSCRIPTION_BANNER | DUE_LIMIT_WARNING_BANNER | LOW_DUES_BANNER
@@ -1744,7 +1757,8 @@ type DueItem = {
   plan :: String,
   mode :: FeeType,
   autoPayStage :: Maybe AutopayPaymentStage,
-  isSplit :: Boolean
+  isSplit :: Boolean,
+  amountPaidByYatriCoins :: Maybe Number 
 }
 
 type KioskLocation = {
@@ -1776,6 +1790,7 @@ type PromoConfig = {
   , imageURL :: String
   , offerDescription :: Maybe String
   , addedFromUI :: Boolean
+  , isPaidByYatriCoins :: Boolean
 }
 
 data SubscribePopupType = SuccessPopup | FailedPopup | DuesClearedPopup | CancelAutoPay | SwitchedPlan | SupportPopup | PaymentSuccessPopup
@@ -1846,7 +1861,8 @@ type PaymentListItem = {
   amount :: Number,
   feeType :: FeeType,
   description :: String,
-  ridesTakenDate :: String
+  ridesTakenDate :: String,
+  isPaidByYatriCoins :: Boolean
 }
 
 type ChargeBreakupItem = {
@@ -1874,7 +1890,8 @@ type DueCard = {
   id :: String,
   scheduledAt :: Maybe String,
   paymentMode :: FeeType,
-  paymentStatus :: Maybe String
+  paymentStatus :: Maybe String,
+  amountPaidByYatriCoins :: Maybe Number
 }
 
 type PaymentHistoryScreenProps = {
@@ -1988,3 +2005,105 @@ type Tag = {
   text :: String, 
   textColor :: String
 }
+
+---------------------------------------------------- DriverEarningsScreen ----------------------------------
+
+type DriverEarningsScreenState = {
+  data :: DriverEarningsScreenData,
+  props :: DriverEarningsScreenProps
+}
+
+type DriverEarningsScreenData = {
+  coinsEarned :: Int,
+  coinsUsed :: Int,
+  coinBalance :: Int,
+  coinsEarnedPreviousDay :: Int,
+  coinHistoryItems :: Array CoinHistoryItem,
+  usageHistoryItems :: Array CoinHistoryItem,
+  coinsEarnedToday :: Int,
+  expiringCoins :: Int,
+  expiringDays :: Int,
+  hasActivePlan :: Boolean,
+  timerID :: String,
+  timer :: Int,
+  totalCoinConvertedToCash :: Number,
+  coinConvertedToCashUsedForLatestDues :: Maybe Int,
+  coinConvertedTocashLeft :: Number,
+  coinConversionRate :: Number,
+  coinsToUse :: Int,
+  config :: AppConfig,
+  earningHistoryItems :: Array CoinHistoryItem,
+  weeklyEarningData :: Array WeeklyEarning,
+  tagImages :: Array String,
+  anyRidesAssignedEver :: Boolean
+}
+
+type DriverEarningsScreenProps = {
+  subView :: DriverEarningsSubView,
+  date :: String,
+  popupType :: DriverEarningsPopupType,
+  showCoinsRedeemedAnim :: String,
+  calendarState :: CalendarState,
+  showCoinsUsagePopup :: Boolean,
+  selectedBarIndex :: Int,
+  weekIndex :: Int,
+  totalEarningsData :: TotalEarningsData,
+  currWeekData :: Array WeeklyEarning,
+  weekDay :: Array String,
+  currentWeekMaxEarning :: Int,
+  showShimmer :: Boolean,
+  startDate :: String,
+  endDate :: String,
+  gotDataforWeek :: Array Boolean,
+  coinConvertedSuccess :: Boolean,
+  individualQuestion :: FaqQuestions
+}
+
+type CalendarState = { 
+  calendarPopup :: Boolean,
+  endDate :: Maybe Common.CalendarModalDateObject,
+  selectedTimeSpan :: Common.CalendarModalDateObject,
+  startDate :: Maybe Common.CalendarModalDateObject,
+  weeks  :: Array Common.CalendarModalWeekObject
+}
+
+type WeeklyEarning = {
+  earnings :: Int,
+  rideDistance :: Int,
+  rideDate :: String,
+  noOfRides :: Int,
+  percentLength :: Number
+}
+
+type TotalEarningsData = {
+  fromDate :: String,
+  toDate :: String,
+  totalEarnings :: Int,
+  totalRides :: Int,
+  totalDistanceTravelled :: Int
+}
+
+data DriverEarningsSubView = EARNINGS_VIEW | YATRI_COINS_VIEW | USE_COINS_VIEW
+
+derive instance genericDriverEarningsSubView :: Generic DriverEarningsSubView _
+instance showDriverEarningsSubView :: Show DriverEarningsSubView where show = genericShow
+instance eqDriverEarningsSubView :: Eq DriverEarningsSubView where eq = genericEq
+instance decodeDriverEarningsSubView :: Decode DriverEarningsSubView where decode = defaultEnumDecode
+instance encodeDriverEarningsSubView :: Encode DriverEarningsSubView where encode = defaultEnumEncode
+
+type CoinHistoryItem = {
+  event :: String,
+  destination :: Maybe String,
+  timestamp :: String,
+  coins :: Int,
+  earnings ::  Maybe Int,
+  status :: Maybe String,
+  tagImages :: Array String,
+  cash :: Number
+}
+
+data DriverEarningsPopupType = COIN_TO_CASH_POPUP | COIN_TO_CASH_FAIL_POPUP | NO_COINS_POPUP | COINS_EXPIRING_POPUP | NO_POPUP | FAQ_VIEW | FAQ_QUESTON_VIEW
+
+derive instance genericDriverEarningsPopupType :: Generic DriverEarningsPopupType _
+instance showDriverEarningsPopupType :: Show DriverEarningsPopupType where show = genericShow
+instance eqDriverEarningsPopupType :: Eq DriverEarningsPopupType where eq = genericEq

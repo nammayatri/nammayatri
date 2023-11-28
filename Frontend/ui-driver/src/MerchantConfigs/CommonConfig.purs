@@ -108,12 +108,19 @@ commonConfig =
         , profileVerification : {
           aadharVerificationRequired : false
         } 
+        , coinsConfig : {
+          enableYatriCoins : false
+        }
         , bottomNavConfig : {
               home : 
                 { isVisible : true,
                   showNew : false
                 },
               rideHistory : 
+                { isVisible : false,
+                  showNew : false
+                },
+              driverEarnings : 
                 { isVisible : true,
                   showNew : false
                 },
