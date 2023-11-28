@@ -57,7 +57,10 @@ genericHeaderConfig state =
     height = WRAP_CONTENT
     , padding = if state.props.subView == ST.EARNINGS_VIEW then Padding 16 16 16 16 else PaddingVertical 5 5
     , textConfig {
-        text = if not state.data.config.coinsConfig.enableYatriCoins then getString EARNINGS else getString USE_COINS
+        text = if state.props.subView == ST.FAQ_VIEW then "Yatri Coins FAQs"
+                else if state.props.subView == ST.FAQ_QUESTON_VIEW then ""
+                else if not state.data.config.coinsConfig.enableYatriCoins then getString EARNINGS
+                else getString USE_COINS
       , color = Color.darkCharcoal }
     , prefixImageConfig {
         height = V 25

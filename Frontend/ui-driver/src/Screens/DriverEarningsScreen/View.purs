@@ -47,13 +47,13 @@ import Effect (Effect)
 import Effect.Aff (launchAff)
 import Effect.Class (liftEffect)
 import Effect.Uncurried (runEffectFn7)
-import Engineering.Helpers.Commons (getCurrentUTC, flowRunner, getFormattedDate, getNewIDWithTag, screenHeight, getDayName, daysBetweenDates, safeMarginBottom, screenWidth, convertUTCtoISC, countDown, liftFlow, formatCurrencyWithCommas)
+import Engineering.Helpers.Commons (getCurrentUTC, flowRunner, getFormattedDate, getNewIDWithTag, screenHeight, getVideoID, getDayName, daysBetweenDates, safeMarginBottom, screenWidth, convertUTCtoISC, countDown, liftFlow, formatCurrencyWithCommas)
 import Engineering.Helpers.Utils (loaderText, toggleLoader)
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Foreign.Generic (decodeJSON)
-import Helpers.Utils (convertUTCtoISC, getFixedTwoDecimals, renderSlider, getcurrentdate, getPastDays, getDayOfWeek, generateUniqueId)
-import JBridge (startLottieProcess, lottieAnimationConfig, getLayoutBounds)
+import Helpers.Utils (convertUTCtoISC, getFixedTwoDecimals, renderSlider, getcurrentdate, getPastDays, getDayOfWeek, generateUniqueId, addMediaPlayer, fetchImage, FetchImageFrom(..))
+import JBridge (startLottieProcess, lottieAnimationConfig, getLayoutBounds, setYoutubePlayer)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import MerchantConfig.Utils (Merchant(..), getMerchant)
@@ -75,6 +75,10 @@ import Services.Backend as Remote
 import Storage (KeyStore(..), getValueToLocalNativeStore, setValueToLocalNativeStore)
 import Styles.Colors as Color
 import Types.App (defaultGlobalState)
+import Data.Tuple (Tuple(..))
+import Common.Types.App (YoutubeData(..))
+import Data.Function.Uncurried (runFn3)
+import PrestoDOM.Elements.Keyed as Keyed
 import Helpers.Utils (toStringJSON)
 
 screen :: ST.DriverEarningsScreenState -> Screen Action ST.DriverEarningsScreenState ScreenOutput
@@ -118,6 +122,7 @@ screen initialState =
                   coinUsageHistoryRes <- Remote.getCoinUsageHistoryReqBT ""
                   liftFlowBT $ push $ CoinUsageResponseAction coinUsageHistoryRes
                   pure unit
+                _ -> pure unit
 
               -- void $ lift $ lift $ toggleLoader false
             pure $ pure unit
@@ -165,18 +170,38 @@ view push state =
             , background Color.blue600
             , visibility if state.props.showShimmer then GONE else VISIBLE
             ][ tabView push state
-              , if state.props.subView == ST.USE_COINS_VIEW || not state.data.config.coinsConfig.enableYatriCoins then GenericHeader.view (push <<< GenericHeaderAC) (genericHeaderConfig state) else linearLayout[][]
-              , scrollView [      
-                  height MATCH_PARENT
-                , width MATCH_PARENT
-                , orientation VERTICAL
-                ][ 
-                  case state.props.subView of
-                    ST.EARNINGS_VIEW -> earningsView push state
-                    ST.YATRI_COINS_VIEW -> yatriCoinsView push state
-                    ST.USE_COINS_VIEW -> useCoinsView push state
-                ]
-            ]
+            , case state.props.subView of
+                  ST.USE_COINS_VIEW -> do
+                     if state.data.config.coinsConfig.enableYatriCoins then 
+                     linearLayout 
+                      [ width MATCH_PARENT
+                      , gravity CENTER_VERTICAL
+                      , padding $ PaddingRight 16
+                      , background Color.white900
+                      ]
+                      [ linearLayout 
+                          [ width WRAP_CONTENT
+                          ][  GenericHeader.view (push <<< GenericHeaderAC )  (genericHeaderConfig state ) 
+                          ]
+                        , helpButton push
+                        ]
+                      else linearLayout[][]
+                  ST.FAQ_VIEW -> GenericHeader.view (push <<< GenericHeaderAC )  (genericHeaderConfig state ) 
+                  ST.FAQ_QUESTON_VIEW -> GenericHeader.view (push <<< GenericHeaderAC )  (genericHeaderConfig state ) 
+                  _ -> linearLayout[][]
+            , scrollView [      
+                height MATCH_PARENT
+              , width MATCH_PARENT
+              , orientation VERTICAL
+              ][ 
+                case state.props.subView of
+                  ST.EARNINGS_VIEW -> earningsView push state
+                  ST.YATRI_COINS_VIEW -> yatriCoinsView push state
+                  ST.USE_COINS_VIEW -> useCoinsView push state
+                  ST.FAQ_VIEW -> faqView push state
+                  ST.FAQ_QUESTON_VIEW -> faqQuestionView push state
+              ]
+          ]
           , if state.props.showShimmer then shimmerView push state else dummyView
           ]
         , if state.props.showCoinsRedeemedAnim /= "" then lottieView state push else dummyView
@@ -661,6 +686,235 @@ dummyBages = [{badgeImage: "ny_ic_five_star_badge,https://assets.juspay.in/namma
                       }
                       ]
   
+
+dummyQuestions :: Array ST.FaqQuestions
+dummyQuestions = [
+                  { question: getString YATRI_COINS_FAQS_QUES1
+                  , videoLink: "https://www.youtube.com/watch?v=1340l2e0ZKY"
+                  , answer: [ getString YATRI_COINS_FAQS_QUES1_ANS1
+                            , getString YATRI_COINS_FAQS_QUES1_ANS2
+                            , getString YATRI_COINS_FAQS_QUES1_ANS3
+                            ]
+                  },
+                  { question: getString YATRI_COINS_FAQS_QUES2
+                  , videoLink: ""
+                  , answer: [ getString YATRI_COINS_FAQS_QUES2_ANS1
+                            ]
+                  },
+                  { question: getString YATRI_COINS_FAQS_QUES3
+                  , videoLink: "https://www.youtube.com/watch?v=1340l2e0ZKY"
+                  , answer: [ getString YATRI_COINS_FAQS_QUES3_ANS1
+                            , getString YATRI_COINS_FAQS_QUES3_ANS2
+                            ]
+                  },
+                  { question: getString YATRI_COINS_FAQS_QUES4
+                  , videoLink: "https://www.youtube.com/watch?v=1340l2e0ZKY"
+                  , answer: [ getString YATRI_COINS_FAQS_QUES4_ANS1
+                            , getString YATRI_COINS_FAQS_QUES4_ANS2
+                            ]
+                  },
+                  { question: getString YATRI_COINS_FAQS_QUES5
+                  , videoLink: ""
+                  , answer: [ getString YATRI_COINS_FAQS_QUES5_ANS1
+                            , getString YATRI_COINS_FAQS_QUES5_ANS2
+                            , getString YATRI_COINS_FAQS_QUES5_ANS3
+                            ]
+                  },
+                  { question: getString YATRI_COINS_FAQS_QUES6
+                  , videoLink: ""
+                  , answer: [ getString YATRI_COINS_FAQS_QUES6_ANS1
+                            , getString YATRI_COINS_FAQS_QUES6_ANS2
+                            ]
+                  },
+                  { question: getString YATRI_COINS_FAQS_QUES7
+                  , videoLink: ""
+                  , answer: [ getString YATRI_COINS_FAQS_QUES7_ANS1
+                            ]
+                  }
+                  ]
+  
+
+faqView :: forall w . (Action -> Effect Unit) -> ST.DriverEarningsScreenState -> PrestoDOM (Effect Unit) w
+faqView push state = 
+  linearLayout
+    [ height MATCH_PARENT
+    , width MATCH_PARENT
+    , orientation VERTICAL
+    , background Color.blue600
+    ][  textView $ [
+        text $ getString LEARN_ABOUT_YATRI_COINS
+      , color Color.black700
+      , margin $ Margin 16 12 0 12
+      ] <> FontStyle.subHeading2 TypoGraphy
+      , questionsListView push dummyQuestions state
+    ]
+
+questionsListView :: forall w . (Action -> Effect Unit) -> Array ST.FaqQuestions -> ST.DriverEarningsScreenState -> PrestoDOM (Effect Unit) w
+questionsListView push questionsList state = 
+  linearLayout
+    [ height MATCH_PARENT
+    , width MATCH_PARENT
+    , orientation VERTICAL
+    , background $ Color.white900
+    ] (map (\item -> individualQuestionListView push item state) questionsList)
+
+individualQuestionListView :: forall w . (Action -> Effect Unit) -> ST.FaqQuestions -> ST.DriverEarningsScreenState -> PrestoDOM (Effect Unit) w
+individualQuestionListView push faqQuestion state =
+  linearLayout
+    [ height MATCH_PARENT
+    , width MATCH_PARENT
+    , orientation VERTICAL
+    , padding (PaddingHorizontal 16 16)
+    , onClick push $ const $ FaqQuestionView faqQuestion
+    ][ linearLayout
+        [ height MATCH_PARENT
+        , width MATCH_PARENT
+        , gravity CENTER
+          ][ linearLayout
+              [ height MATCH_PARENT
+              , weight 1.0
+              , gravity CENTER_VERTICAL
+                ][ textView (
+                    [ height WRAP_CONTENT
+                    , width MATCH_PARENT
+                    , text faqQuestion.question
+                    , padding (PaddingVertical 20 20)
+                    , color Color.black900
+                    , margin $ MarginRight 16
+                    ] <> FontStyle.subHeading2 TypoGraphy)
+                ]
+              , linearLayout
+                [ height MATCH_PARENT
+                , width $ V 20
+                , gravity CENTER
+                  ][ imageView
+                      [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_chevron_right_grey,"
+                      , height $ V 18
+                      , width $ V 18
+                      , margin $ MarginHorizontal 10 8 
+                      ]
+                  ]
+          ]
+        , horizontalLine
+      ]
+
+faqQuestionView :: forall w . (Action -> Effect Unit) -> ST.DriverEarningsScreenState -> PrestoDOM (Effect Unit) w
+faqQuestionView push state = 
+  linearLayout
+    [ height WRAP_CONTENT
+    , width MATCH_PARENT
+    , orientation VERTICAL
+    , background Color.white900
+    , padding (Padding 16 16 16 16)
+    ][ textView (
+        [ height WRAP_CONTENT
+        , width WRAP_CONTENT
+        , text state.props.individualQuestion.question
+        , color Color.black900
+        , margin $ MarginBottom 20
+        ] <> FontStyle.h1 TypoGraphy)
+        , answersListView push state.props.individualQuestion.answer state
+    ]
+
+faqVid :: forall w . (Action -> Effect Unit) -> ST.DriverEarningsScreenState -> PrestoDOM (Effect Unit) w
+faqVid push state = 
+  if state.props.individualQuestion.videoLink /= ""
+    then linearLayout
+          [ width MATCH_PARENT
+          , height MATCH_PARENT
+          , background Color.red600 
+          , gravity CENTER
+          , margin $ MarginBottom 4
+          , id (getNewIDWithTag "faqVideo")
+          , afterRender
+              ( \action ->  pure $ runFn3 setYoutubePlayer (youtubeData state "VIDEO") (getNewIDWithTag "faqVideo") (show ST.PLAY))
+              (const NoAction)
+          ][]
+      else linearLayout [][]
+
+youtubeData :: ST.DriverEarningsScreenState -> String -> YoutubeData
+youtubeData state mediaType =
+  { videoTitle: "title"
+  , setVideoTitle: false
+  , showMenuButton: false
+  , showDuration: true
+  , showSeekBar: true
+  , videoId: getVideoID state.props.individualQuestion.videoLink
+  , videoType: "VIDEO"
+  , videoHeight: 200
+  }
+
+answersListView :: forall w . (Action -> Effect Unit) -> Array String -> ST.DriverEarningsScreenState -> PrestoDOM (Effect Unit) w
+answersListView push answersList state = 
+  linearLayout
+    [ height MATCH_PARENT
+    , width MATCH_PARENT
+    , orientation VERTICAL
+    ] $ [faqVid push state] <> if length answersList > 1 
+        then (map (\item -> 
+          linearLayout 
+            [ height MATCH_PARENT
+            , width MATCH_PARENT
+            , padding (PaddingVertical 10 10)
+            ][ textView (
+                [ height WRAP_CONTENT
+                , width WRAP_CONTENT
+                , text "•"
+                , margin $ MarginRight 8
+                , color Color.black900
+                ] <> FontStyle.subHeading2 TypoGraphy),
+                textView (
+                [ height WRAP_CONTENT
+                , width WRAP_CONTENT
+                , text item
+                , color Color.black900
+                ] <> FontStyle.subHeading2 TypoGraphy)
+            ]) answersList)
+        else (map (\item -> 
+          linearLayout 
+            [ height MATCH_PARENT
+            , width MATCH_PARENT
+            , padding (PaddingVertical 12 12)
+            ][ textView (
+                [ height WRAP_CONTENT
+                , width WRAP_CONTENT
+                , text item
+                , color Color.black900
+                ] <> FontStyle.subHeading2 TypoGraphy)
+            ]) answersList)
+
+horizontalLine :: forall w. PrestoDOM (Effect Unit) w 
+horizontalLine = 
+  linearLayout
+    [ height $ V 1
+    , width MATCH_PARENT
+    , background Color.grey900
+    ,gravity CENTER
+    ][] 
+
+helpButton :: forall w . (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w 
+helpButton push = 
+  linearLayout
+    [ gravity RIGHT
+    , weight 1.0
+    , width WRAP_CONTENT
+    ][  imageView $
+        [ width (V 22)
+        , height (V 22)
+        , imageWithFallback $ fetchImage FF_ASSET "ny_ic_help_circle_blue,"
+        , padding $ Padding 0 2 4 0 
+        , gravity CENTER_VERTICAL
+        , onClick push $ const $ ChangeTab ST.FAQ_VIEW
+        ]
+      , textView $ 
+        [ height WRAP_CONTENT
+        , width WRAP_CONTENT
+        , text "Help"
+        , color $ Color.blue900
+        , onClick push $ const $ ChangeTab ST.FAQ_VIEW
+        ] <> FontStyle.subHeading2 TypoGraphy
+    ]
+
 transactionView :: forall w . (Action -> Effect Unit) -> ST.DriverEarningsScreenState -> PrestoDOM (Effect Unit) w
 transactionView push state = 
   linearLayout

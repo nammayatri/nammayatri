@@ -67,6 +67,7 @@ initData = {
       totalEarnings : 0,
       totalRides : 0,
       totalDistanceTravelled : 0
+
     },
     currWeekData : [],
     startDate : "",
@@ -75,7 +76,10 @@ initData = {
     weekDay : ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
     currentWeekMaxEarning : 0,
     showShimmer: true,
-    coinConvertedSuccess : false
+    coinConvertedSuccess : false,
+    individualQuestion : { question: ""
+                , videoLink: ""
+                , answer: []}
   }
 }
 

@@ -97,6 +97,7 @@ data Action = Dummy
             | BarViewSelected Int 
             | LeftChevronClicked Int
             | RightChevronClicked Int
+            | FaqQuestionView ST.FaqQuestions
 
 eval :: Action -> DriverEarningsScreenState -> Eval Action ScreenOutput DriverEarningsScreenState
 
