@@ -19,7 +19,7 @@ import Screens.ChooseCityScreen.ComponentConfig
 
 import Animation as Anim
 import Animation.Config as AnimConfig
-import Common.Types.App (LazyCheck(..), CarouselData)
+import Common.Types.App (LazyCheck(..), CarouselData, CityConfig)
 import Components.GenericHeader as GenericHeader
 import Components.PrimaryButton as PrimaryButton
 import Components.SelectMenuButton as MenuButtonController
@@ -37,7 +37,6 @@ import JBridge (isLocationPermissionEnabled)
 import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import MerchantConfig.Types (CityConfig)
 import Prelude (Unit, bind, const, discard, map, not, pure, unit, ($), (<<<), (<>), (==), (&&), when, void)
 import PrestoDOM (Accessiblity(..), Gradient(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Prop, Screen, Visibility(..), accessibility, afterRender, alignParentBottom, alpha, background, color, cornerRadius, fontStyle, gradient, gravity, height, id, imageUrl, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, relativeLayout, stroke, text, textSize, textView, visibility, weight, width)
 import PrestoDOM.Animation as PrestoAnim
@@ -147,7 +146,7 @@ currentLocationView state push =
   ][  imageView
       [ height $ V 220
       , width $ V 220
-      , imageWithFallback $ fetchImage FF_ASSET (getLocationMapImage state.data.locationSelected)
+      , imageWithFallback $ fetchImage FF_ASSET (getLocationMapImage state.data.locationSelected state.data.config)
       ]
     , textView $
       [ text $ getString LOCATION_UNSERVICEABLE
@@ -212,7 +211,7 @@ currentLanguageView state push =
           ] <> FontStyle.subHeading1 TypoGraphy
         ]
     , textView $ 
-      [ text $ getString CHANGE_LANGUAGE_STR <> if getValueToLocalStore LANGUAGE_KEY == "EN_US" && Mb.isJust state.data.locationSelected then " (" <> getChangeLanguageText state.data.locationSelected <> ")" else ""
+      [ text $ getString CHANGE_LANGUAGE_STR <> if getValueToLocalStore LANGUAGE_KEY == "EN_US" && Mb.isJust state.data.locationSelected then " (" <> getChangeLanguageText state.data.locationSelected state.data.config <> ")" else ""
       , gravity CENTER
       , color Color.blue800
       , onClick push $ const $ ChangeStage SELECT_LANG

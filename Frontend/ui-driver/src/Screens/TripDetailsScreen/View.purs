@@ -27,7 +27,7 @@ import Effect (Effect)
 import Engineering.Helpers.Commons as EHC
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (fetchImage, FetchImageFrom(..), getVehicleVariantImage)
+import Helpers.Utils (fetchImage, FetchImageFrom(..), getVehicleVariantImage, getCityConfig)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import MerchantConfig.Utils (Merchant(..), getMerchant, getValueFromConfig)
@@ -39,6 +39,7 @@ import Screens.TripDetailsScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.Types as ST
 import Styles.Colors as Color
 import Common.Styles.Colors as Colors
+import Storage(getValueToLocalStore , KeyStore(..))
 
 screen :: ST.TripDetailsScreenState -> Screen Action ST.TripDetailsScreenState ScreenOutput 
 screen initialState = 
@@ -482,4 +483,10 @@ getVehicleImage state = case getMerchant FunctionCall of
                                           "AUTO_RICKSHAW" -> fetchImage FF_ASSET "ny_ic_auto1"
                                           _               -> fetchImage FF_ASSET "ic_vehicle_front"
                           YATRISATHI -> getVehicleVariantImage state.data.vehicleType
-                          _           -> fetchImage FF_ASSET  "ic_vehicle_front"
+                          _           -> mkAsset $ getCityConfig state.data.config.cityConfig (getValueToLocalStore DRIVER_LOCATION)
+                        
+                        where
+                          mkAsset cityConfig =
+                            if cityConfig.cityCode == "std:040" 
+                              then fetchImage FF_ASSET "ny_ic_black_yellow_auto1"
+                              else fetchImage FF_ASSET "ic_vehicle_front" 

@@ -37,7 +37,7 @@ import Storage (getValueToLocalStore, KeyStore(..))
 primaryButtonConfig :: ST.PermissionsScreenState -> PrimaryButton.Config
 primaryButtonConfig state = let 
     config = PrimaryButton.config
-    isEnabled = (state.props.isOverlayPermissionChecked && state.props.isAutoStartPermissionChecked)
+    isEnabled = (state.props.isOverlayPermissionChecked && state.props.isAutoStartPermissionChecked && (state.props.androidVersion < 13 || state.props.isNotificationPermissionChecked))
     primaryButtonConfig' = config 
       { textConfig
       { text = (getString CONTINUE)

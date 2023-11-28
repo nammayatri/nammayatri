@@ -17,7 +17,7 @@ module Screens.TripDetailsScreen.ScreenData where
 
 import Data.Maybe (Maybe(..))
 import Screens.Types (TripDetailsScreenState, PaymentMode(..))
-
+import MerchantConfig.DefaultConfig as DC
 
 initData :: TripDetailsScreenState
 initData = {
@@ -41,7 +41,8 @@ initData = {
       spLocTagVisibility : false,
       specialZoneLayoutBackground : "",
       specialZoneImage : "",
-      specialZoneText : ""
+      specialZoneText : "",
+      config : DC.config
   },
   props: {
     rating : 4,

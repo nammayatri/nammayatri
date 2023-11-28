@@ -52,7 +52,7 @@ import Engineering.Helpers.Commons as EHC
 import Engineering.Helpers.Utils as EHU
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (fetchImage, FetchImageFrom(..), getVehicleType, parseFloat)
+import Helpers.Utils (fetchImage, FetchImageFrom(..), getVehicleType, parseFloat, getCityConfig)
 import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
@@ -430,12 +430,28 @@ tabImageView state push =
         , gravity CENTER
         , alpha if (state.props.screenType == ST.VEHICLE_DETAILS) then 1.0 else 0.4
         ][  imageView
-            [ imageWithFallback $ fetchImage FF_COMMON_ASSET $ if state.data.driverVehicleType == "AUTO_RICKSHAW" then "ny_ic_auto_side_view" else "ny_ic_silhouette" --change this image link after uploading in asset store
+            [ imageWithFallback $ fetchImage FF_COMMON_ASSET $ getVehicleImage state
             , height $ V 68
             , width $ V 68
             ]
         ]
   ]
+  where 
+    getVehicleImage :: ST.DriverProfileScreenState -> String 
+    getVehicleImage state = mkAsset $ getCityConfig state.data.config.cityConfig (getValueToLocalStore DRIVER_LOCATION)
+
+    mkAsset :: CityConfig -> String
+    mkAsset cityConfig = 
+      if state.data.driverVehicleType == "AUTO_RICKSHAW" 
+        then (getAutoImage cityConfig)
+        else "ny_ic_silhouette"
+    
+    getAutoImage :: CityConfig -> String
+    getAutoImage cityConfig = 
+      if cityConfig.cityCode == "std:040" 
+        then "ny_ic_black_yellow_auto_side_view"
+        else "ny_ic_auto_side_view"
+
 
 ---------------------------------------------- DRIVER DETAILS VIEW ------------------------------------------------------------
 
