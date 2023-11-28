@@ -14,25 +14,35 @@
 
 module Storage.CachedQueries.Merchant.LeaderBoardConfig where
 
+import Domain.Types.Merchant.ConfigMapping (ConfigMapping)
 import Domain.Types.Merchant.LeaderBoardConfig
 import Domain.Types.Merchant.MerchantOperatingCity
+import Domain.Types.Vehicle.Variant (Variant)
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Hedis as Hedis
+import Kernel.Types.Common (Meters)
+import Kernel.Types.Error (GenericError (InternalError))
 import Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow)
+import qualified Storage.CachedQueries.Merchant.ConfigMapping as CMQ
 import qualified Storage.Queries.Merchant.LeaderBoardConfig as Queries
 
-findLeaderBoardConfigbyType :: (CacheFlow m r, Esq.EsqDBFlow m r) => LeaderBoardType -> Id MerchantOperatingCity -> m (Maybe LeaderBoardConfigs)
-findLeaderBoardConfigbyType leaderBType merchantOpCityId =
-  Hedis.safeGet (makeLeaderBoardConfigKey leaderBType merchantOpCityId) >>= \case
+findLeaderBoardConfigbyType :: (CacheFlow m r, Esq.EsqDBFlow m r) => LeaderBoardType -> Id MerchantOperatingCity -> Meters -> Maybe Variant -> m (Maybe LeaderBoardConfigs)
+findLeaderBoardConfigbyType leaderBType merchantOpCityId distance mbvt = do
+  currTime <- getLocalCurrentTime 19800
+  cmId <- CMQ.getConfigMapId merchantOpCityId distance mbvt currTime "leader_board_config" >>= fromMaybeM (InternalError $ "ConfigMapping not found for LeaderBoardConfig : mocid, distance, mbvt, currTime" <> show id <> "," <> show distance <> ", " <> show mbvt <> ", " <> show currTime)
+  Hedis.safeGet (makeConfigMapKey leaderBType cmId) >>= \case
     Just config -> pure $ Just config
-    Nothing -> flip whenJust (cacheLeaderBoardConfig leaderBType merchantOpCityId) /=<< Queries.findLeaderBoardConfigbyType leaderBType merchantOpCityId
+    Nothing -> flip whenJust (cacheLeaderBoardConfig leaderBType cmId) /=<< Queries.findLeaderBoardConfigbyTypeAndConfigMapping leaderBType cmId
 
 makeLeaderBoardConfigKey :: LeaderBoardType -> Id MerchantOperatingCity -> Text
 makeLeaderBoardConfigKey leaderBType merchantOpCityId = "LBCFG:" <> merchantOpCityId.getId <> ":" <> show leaderBType
 
-cacheLeaderBoardConfig :: (CacheFlow m r) => LeaderBoardType -> Id MerchantOperatingCity -> LeaderBoardConfigs -> m ()
-cacheLeaderBoardConfig leaderBType merchantOpCityId lbConfig = do
+makeConfigMapKey :: LeaderBoardType -> Id ConfigMapping -> Text
+makeConfigMapKey lbt id = "driver-offer:CachedQueries:ConfigMapping:ConfigMapId-" <> id.getId <> ":LeaderBoardType-" <> show lbt
+
+cacheLeaderBoardConfig :: (CacheFlow m r) => LeaderBoardType -> Id ConfigMapping -> LeaderBoardConfigs -> m ()
+cacheLeaderBoardConfig leaderBType cmId lbConfig = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
-  Hedis.setExp (makeLeaderBoardConfigKey leaderBType merchantOpCityId) lbConfig expTime
+  Hedis.setExp (makeConfigMapKey leaderBType cmId) lbConfig expTime

@@ -63,7 +63,7 @@ data StatusRes = StatusRes
 statusHandler :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe Bool -> Flow StatusRes
 statusHandler (personId, merchantId, merchantOpCityId) multipleRC = do
   -- multipleRC flag is temporary to support backward compatibility
-  transporterConfig <- findByMerchantOpCityId merchantOpCityId >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- findByMerchantOpCityId merchantOpCityId 0 Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   (dlStatus, mDL) <- getDLAndStatus personId merchantOpCityId transporterConfig.onboardingTryLimit
   (rcStatus, mRC) <- getRCAndStatus personId merchantOpCityId transporterConfig.onboardingTryLimit multipleRC
   (aadhaarStatus, _) <- getAadhaarStatus personId

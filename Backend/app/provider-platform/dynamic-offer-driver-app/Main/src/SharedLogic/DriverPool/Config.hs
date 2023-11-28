@@ -38,24 +38,23 @@ getDriverPoolConfig ::
   Maybe Variant.Variant ->
   Meters ->
   m DriverPoolConfig
-getDriverPoolConfig merchantOpCityId Nothing dist = do
-  configs <- CDP.findAllByMerchantOpCityId merchantOpCityId
-  getDefaultDriverPoolConfig configs dist
-getDriverPoolConfig merchantOpCityId (Just vehicle) dist = do
-  configs <- CDP.findAllByMerchantOpCityId merchantOpCityId
-  let mbApplicableConfig = find (filterByDistAndDveh (Just vehicle) dist) configs
-  case configs of
-    [] -> throwError $ InvalidRequest "DriverPoolConfig not found"
-    _ ->
-      case mbApplicableConfig of
-        Just applicableConfig -> return applicableConfig
-        Nothing -> getDefaultDriverPoolConfig configs dist
+--getDriverPoolConfig merchantOpCityId Nothing dist = flip $ CDP.findAllByMerchantOpCityId merchantOpCityId
+--  getDefaultDriverPoolConfig configs dist
+getDriverPoolConfig merchantOpCityId = flip $ CDP.findAllByMerchantOpCityId merchantOpCityId
 
-filterByDistAndDveh :: Maybe Variant.Variant -> Meters -> DriverPoolConfig -> Bool
-filterByDistAndDveh mbVehicle_ dist cfg =
-  dist >= cfg.tripDistance && cfg.vehicleVariant == mbVehicle_
+-- let mbApplicableConfig = find (filterByDistAndDveh (Just vehicle) dist) configs
+-- case configs of
+--   [] -> throwError $ InvalidRequest "DriverPoolConfig not found"
+--   _ ->
+--     case mbApplicableConfig of
+--       Just applicableConfig -> return applicableConfig
+--       Nothing -> getDefaultDriverPoolConfig configs dist
 
-getDefaultDriverPoolConfig :: (EsqDBFlow m r) => [DriverPoolConfig] -> Meters -> m DriverPoolConfig
-getDefaultDriverPoolConfig configs dist = do
-  find (filterByDistAndDveh Nothing dist) configs
-    & fromMaybeM (InvalidRequest "DriverPool default config not found")
+-- filterByDistAndDveh :: Maybe Variant.Variant -> Meters -> DriverPoolConfig -> Bool
+-- filterByDistAndDveh mbVehicle_ dist cfg =
+--   dist >= cfg.tripDistance && cfg.vehicleVariant == mbVehicle_
+
+-- getDefaultDriverPoolConfig :: (EsqDBFlow m r) => [DriverPoolConfig] -> Meters -> m DriverPoolConfig
+-- getDefaultDriverPoolConfig configs dist = do
+--   find (filterByDistAndDveh Nothing dist) configs
+--     & fromMaybeM (InvalidRequest "DriverPool default config not found")

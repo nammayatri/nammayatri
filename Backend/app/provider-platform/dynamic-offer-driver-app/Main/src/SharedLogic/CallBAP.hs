@@ -175,7 +175,7 @@ sendRideAssignedUpdateToBAP booking ride = do
   driver <- QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
   veh <- QVeh.findById ride.driverId >>= fromMaybeM (VehicleNotFound ride.driverId.getId)
   driverInfo <- QDI.findById (cast ride.driverId) >>= fromMaybeM DriverInfoNotFound
-  mbTransporterConfig <- CQTC.findByMerchantOpCityId booking.merchantOperatingCityId -- these two lines just for backfilling driver vehicleModel from idfy TODO: remove later
+  mbTransporterConfig <- CQTC.findByMerchantOpCityId booking.merchantOperatingCityId 0 Nothing -- these two lines just for backfilling driver vehicleModel from idfy TODO: remove later
   vehicle <-
     case mbTransporterConfig of
       Just transporterConfig ->

@@ -219,7 +219,7 @@ handler merchantId req eitherReq = do
     fetchPaymentMethodAndUrl merchantOpCityId = do
       mbPaymentMethod <- forM req.paymentMethodInfo $ \paymentMethodInfo -> do
         allPaymentMethods <-
-          CQMPM.findAllByMerchantOpCityId merchantOpCityId
+          CQMPM.findAllByMerchantOpCityId merchantOpCityId 0 Nothing
         let mbPaymentMethod = find (compareMerchantPaymentMethod paymentMethodInfo) allPaymentMethods
         mbPaymentMethod & fromMaybeM (InvalidRequest "Payment method not allowed")
       let paymentUrl = DMPM.getPrepaidPaymentUrl =<< mbPaymentMethod
@@ -227,7 +227,7 @@ handler merchantId req eitherReq = do
 
 findRandomExophone :: (CacheFlow m r, EsqDBFlow m r) => Id DMOC.MerchantOperatingCity -> m DExophone.Exophone
 findRandomExophone merchantOpCityId = do
-  merchantServiceUsageConfig <- CMSUC.findByMerchantOpCityId merchantOpCityId >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
+  merchantServiceUsageConfig <- CMSUC.findByMerchantOpCityId merchantOpCityId 0 Nothing >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
   exophones <- CQExophone.findByMerchantOpCityIdServiceAndExophoneType merchantOpCityId merchantServiceUsageConfig.getExophone DExophone.CALL_RIDE
   nonEmptyExophones <- case exophones of
     [] -> throwError $ ExophoneNotFound merchantOpCityId.getId

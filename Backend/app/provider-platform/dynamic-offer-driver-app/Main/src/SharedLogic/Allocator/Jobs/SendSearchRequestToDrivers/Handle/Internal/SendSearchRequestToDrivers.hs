@@ -88,7 +88,7 @@ sendSearchRequestToDrivers searchReq searchTry driverExtraFeeBounds driverPoolCo
 
   forM_ driverPoolZipSearchRequests $ \(dPoolRes, sReqFD) -> do
     let language = fromMaybe Maps.ENGLISH dPoolRes.driverPoolResult.language
-    transporterConfig <- SCT.findByMerchantOpCityId searchReq.merchantOperatingCityId >>= fromMaybeM (TransporterConfigNotFound searchReq.merchantOperatingCityId.getId)
+    transporterConfig <- SCT.findByMerchantOpCityId searchReq.merchantOperatingCityId 0 Nothing >>= fromMaybeM (TransporterConfigNotFound searchReq.merchantOperatingCityId.getId)
     let needTranslation = language `elem` transporterConfig.languagesToBeTranslated
     let translatedSearchReq =
           if needTranslation

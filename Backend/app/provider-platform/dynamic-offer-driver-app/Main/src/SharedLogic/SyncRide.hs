@@ -97,7 +97,7 @@ syncCompletedRide ride booking = do
   fareParameters <- runInReplica $ QFareParams.findById fareParametersId >>= fromMaybeM (FareParametersNotFound fareParametersId.getId)
   -- fareParameters <- QFareParams.findById fareParametersId >>= fromMaybeM (FareParametersNotFound fareParametersId.getId)
   mbPaymentMethod <- forM booking.paymentMethodId $ \paymentMethodId -> do
-    CQMPM.findByIdAndMerchantOpCityId paymentMethodId ride.merchantOperatingCityId
+    CQMPM.findByIdAndMerchantOpCityId paymentMethodId ride.merchantOperatingCityId 0 Nothing
       >>= fromMaybeM (MerchantPaymentMethodNotFound paymentMethodId.getId)
   let mbPaymentUrl = DMPM.getPostpaidPaymentUrl =<< mbPaymentMethod
   let mbPaymentMethodInfo = DMPM.mkPaymentMethodInfo <$> mbPaymentMethod

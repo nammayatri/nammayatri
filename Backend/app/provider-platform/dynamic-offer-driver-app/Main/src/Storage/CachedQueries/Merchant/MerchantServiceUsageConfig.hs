@@ -22,28 +22,39 @@ where
 
 import Data.Coerce (coerce)
 import Domain.Types.Common
+import Domain.Types.Merchant.ConfigMapping (ConfigMapping)
 import Domain.Types.Merchant.MerchantOperatingCity
 import Domain.Types.Merchant.MerchantServiceUsageConfig
+import Domain.Types.Vehicle.Variant (Variant)
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
+import Kernel.Types.Error (GenericError (..))
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Storage.CachedQueries.Merchant.ConfigMapping as CMQ
 import qualified Storage.Queries.Merchant.MerchantServiceUsageConfig as Queries
 
-findByMerchantOpCityId :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> m (Maybe MerchantServiceUsageConfig)
-findByMerchantOpCityId id =
-  Hedis.withCrossAppRedis (Hedis.safeGet $ makeMerchantOpCityIdKey id) >>= \case
+findByMerchantOpCityId :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Meters -> Maybe Variant -> m (Maybe MerchantServiceUsageConfig)
+findByMerchantOpCityId id distance mbvt = do
+  currTime <- getLocalCurrentTime 19800
+  cmId <- CMQ.getConfigMapId id distance mbvt currTime "merchant_service_usage_config" >>= fromMaybeM (InternalError $ "ConfigMapping not found for MerchantServiceUsageConfig : mocid, distance, mbvt, currTime" <> show id <> "," <> show distance <> ", " <> show mbvt <> ", " <> show currTime)
+  Hedis.withCrossAppRedis (Hedis.safeGet $ makeConfigMapKey cmId) >>= \case
     Just a -> return . Just $ coerce @(MerchantServiceUsageConfigD 'Unsafe) @MerchantServiceUsageConfig a
-    Nothing -> flip whenJust cacheMerchantServiceUsageConfig /=<< Queries.findByMerchantOpCityId id
+    Nothing -> flip whenJust cacheMerchantServiceUsageConfig /=<< Queries.findByConfigMapId id
+
+--CMTODO: Handle Dashboard calls
 
 cacheMerchantServiceUsageConfig :: (CacheFlow m r) => MerchantServiceUsageConfig -> m ()
 cacheMerchantServiceUsageConfig orgServiceUsageConfig = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
-  let idKey = makeMerchantOpCityIdKey orgServiceUsageConfig.merchantOperatingCityId
+  let idKey = makeConfigMapKey orgServiceUsageConfig.configMapId
   Hedis.withCrossAppRedis $ Hedis.setExp idKey (coerce @MerchantServiceUsageConfig @(MerchantServiceUsageConfigD 'Unsafe) orgServiceUsageConfig) expTime
 
 makeMerchantOpCityIdKey :: Id MerchantOperatingCity -> Text
 makeMerchantOpCityIdKey id = "driver-offer:CachedQueries:MerchantServiceUsageConfig:MerchantOperatingCityId-" <> id.getId
+
+makeConfigMapKey :: Id ConfigMapping -> Text
+makeConfigMapKey id = "driver-offer:CachedQueries:ConfigMapping:ConfigMapId-" <> id.getId
 
 -- Call it after any update
 clearCache :: Hedis.HedisFlow m r => Id MerchantOperatingCity -> m ()

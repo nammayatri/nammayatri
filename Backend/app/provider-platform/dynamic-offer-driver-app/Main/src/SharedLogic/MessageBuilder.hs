@@ -54,7 +54,7 @@ data BuildSendPaymentLinkReq = BuildSendPaymentLinkReq
 buildSendPaymentLink :: (EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> BuildSendPaymentLinkReq -> m Text
 buildSendPaymentLink merchantOpCityId req = do
   merchantMessage <-
-    QMM.findByMerchantOpCityIdAndMessageKey merchantOpCityId DMM.SEND_PAYMENT_LINK
+    QMM.findByMerchantOpCityIdAndMessageKey merchantOpCityId DMM.SEND_PAYMENT_LINK 0 Nothing
       >>= fromMaybeM (MerchantMessageNotFound merchantOpCityId.getId (show DMM.SEND_PAYMENT_LINK))
   return $
     merchantMessage.message
@@ -70,7 +70,7 @@ data BuildSendOTPMessageReq = BuildSendOTPMessageReq
 buildSendOTPMessage :: (EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> BuildSendOTPMessageReq -> m Text
 buildSendOTPMessage merchantOpCityId req = do
   merchantMessage <-
-    QMM.findByMerchantOpCityIdAndMessageKey merchantOpCityId DMM.SEND_OTP
+    QMM.findByMerchantOpCityIdAndMessageKey merchantOpCityId DMM.SEND_OTP 0 Nothing
       >>= fromMaybeM (MerchantMessageNotFound merchantOpCityId.getId (show DMM.SEND_OTP))
   return $
     merchantMessage.message
@@ -85,7 +85,7 @@ newtype WelcomeToPlatformMessageReq = WelcomeToPlatformMessageReq
 buildWelcomeToPlatformMessage :: (EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> WelcomeToPlatformMessageReq -> m Text
 buildWelcomeToPlatformMessage merchantOpCityId req = do
   merchantMessage <-
-    QMM.findByMerchantOpCityIdAndMessageKey merchantOpCityId DMM.WELCOME_TO_PLATFORM
+    QMM.findByMerchantOpCityIdAndMessageKey merchantOpCityId DMM.WELCOME_TO_PLATFORM 0 Nothing
       >>= fromMaybeM (MerchantMessageNotFound merchantOpCityId.getId (show DMM.WELCOME_TO_PLATFORM))
   return $
     merchantMessage.message
@@ -94,7 +94,7 @@ buildWelcomeToPlatformMessage merchantOpCityId req = do
 buildSendAlternateNumberOTPMessage :: (EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> BuildSendOTPMessageReq -> m Text
 buildSendAlternateNumberOTPMessage merchantOpCityId req = do
   merchantMessage <-
-    QMM.findByMerchantOpCityIdAndMessageKey merchantOpCityId DMM.ALTERNATE_NUMBER_OTP
+    QMM.findByMerchantOpCityIdAndMessageKey merchantOpCityId DMM.ALTERNATE_NUMBER_OTP 0 Nothing
       >>= fromMaybeM (MerchantMessageNotFound merchantOpCityId.getId (show DMM.ALTERNATE_NUMBER_OTP))
   return $
     merchantMessage.message
@@ -110,7 +110,7 @@ data BuildEndRideMessageReq = BuildEndRideMessageReq
 buildEndRideMessage :: (EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> BuildEndRideMessageReq -> m Text
 buildEndRideMessage merchantOpCityId req = do
   merchantMessage <-
-    QMM.findByMerchantOpCityIdAndMessageKey merchantOpCityId DMM.END_RIDE_MESSAGE
+    QMM.findByMerchantOpCityIdAndMessageKey merchantOpCityId DMM.END_RIDE_MESSAGE 0 Nothing
       >>= fromMaybeM (MerchantMessageNotFound merchantOpCityId.getId (show DMM.END_RIDE_MESSAGE))
   return $
     merchantMessage.message
@@ -123,7 +123,7 @@ data BuildOnboardingMessageReq = BuildOnboardingMessageReq {}
 buildOnboardingMessage :: (EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> BuildOnboardingMessageReq -> m Text
 buildOnboardingMessage merchantOpCityId _ = do
   merchantMessage <-
-    QMM.findByMerchantOpCityIdAndMessageKey merchantOpCityId DMM.ONBOARDING_YATRI_MESSAGE
+    QMM.findByMerchantOpCityIdAndMessageKey merchantOpCityId DMM.ONBOARDING_YATRI_MESSAGE 0 Nothing
       >>= fromMaybeM (MerchantMessageNotFound merchantOpCityId.getId (show DMM.ONBOARDING_YATRI_MESSAGE))
   return $
     merchantMessage.message
@@ -137,7 +137,7 @@ data BuildBookingMessageReq = BuildBookingMessageReq
 buildBookingMessage :: (EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> BuildBookingMessageReq -> m Text
 buildBookingMessage merchantOpCityId req = do
   merchantMessage <-
-    QMM.findByMerchantOpCityIdAndMessageKey merchantOpCityId DMM.BOOKING_MESSAGE
+    QMM.findByMerchantOpCityIdAndMessageKey merchantOpCityId DMM.BOOKING_MESSAGE 0 Nothing
       >>= fromMaybeM (MerchantMessageNotFound merchantOpCityId.getId (show DMM.BOOKING_MESSAGE))
   return $
     merchantMessage.message
@@ -152,7 +152,7 @@ newtype BuildCollectCashMessageReq = BuildCollectCashMessageReq
 buildCollectCashMessage :: (EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> BuildCollectCashMessageReq -> m Text
 buildCollectCashMessage merchantOpCityId req = do
   merchantMessage <-
-    QMM.findByMerchantOpCityIdAndMessageKey merchantOpCityId DMM.CASH_COLLECTED_MESSAGE
+    QMM.findByMerchantOpCityIdAndMessageKey merchantOpCityId DMM.CASH_COLLECTED_MESSAGE 0 Nothing
       >>= fromMaybeM (MerchantMessageNotFound merchantOpCityId.getId (show DMM.CASH_COLLECTED_MESSAGE))
   return $
     merchantMessage.message
@@ -164,7 +164,7 @@ data BuildGenericMessageReq = BuildGenericMessageReq {}
 buildGenericMessage :: (EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> DMM.MessageKey -> BuildGenericMessageReq -> m Text
 buildGenericMessage merchantOpCityId messageKey _ = do
   merchantMessage <-
-    QMM.findByMerchantOpCityIdAndMessageKey merchantOpCityId messageKey
+    QMM.findByMerchantOpCityIdAndMessageKey merchantOpCityId messageKey 0 Nothing
       >>= fromMaybeM (MerchantMessageNotFound merchantOpCityId.getId (show messageKey))
   let jsonData = merchantMessage.jsonData
   return $

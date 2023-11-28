@@ -1538,7 +1538,7 @@ sendSmsToDriver merchantShortId opCity driverId volunteerId _req@SendSmsReq {..}
           >>= Sms.checkSmsResult
       WHATSAPP -> do
         merchantMessage <-
-          QMM.findByMerchantOpCityIdAndMessageKey merchantOpCityId messageKey
+          QMM.findByMerchantOpCityIdAndMessageKey merchantOpCityId messageKey 0 Nothing
             >>= fromMaybeM (MerchantMessageNotFound merchantOpCityId.getId (show messageKey))
         let jsonData = merchantMessage.jsonData
         result <- Whatsapp.whatsAppSendMessageWithTemplateIdAPI driver.merchantId merchantOpCityId (Whatsapp.SendWhatsAppMessageWithTemplateIdApIReq phoneNumber merchantMessage.templateId jsonData.var1 jsonData.var2 jsonData.var3 (Just merchantMessage.containsUrlButton))

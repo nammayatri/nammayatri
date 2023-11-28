@@ -22,34 +22,45 @@ module Storage.CachedQueries.Merchant.OnboardingDocumentConfig
   )
 where
 
+import Domain.Types.Merchant.ConfigMapping (ConfigMapping)
 import Domain.Types.Merchant.MerchantOperatingCity
 import Domain.Types.Merchant.OnboardingDocumentConfig as DTO
+import Domain.Types.Vehicle.Variant (Variant)
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
+import Kernel.Types.Error (GenericError (..))
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Storage.CachedQueries.Merchant.ConfigMapping as CMQ
 import qualified Storage.Queries.Merchant.OnboardingDocumentConfig as Queries
+
+--CMTODO: Handle Dashboard calls
 
 create :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => OnboardingDocumentConfig -> m ()
 create = Queries.create
 
-findAllByMerchantOpCityId :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> m [DTO.OnboardingDocumentConfig]
-findAllByMerchantOpCityId id =
-  Hedis.withCrossAppRedis (Hedis.safeGet $ makeMerchantOpCityIdKey id) >>= \case
+findAllByMerchantOpCityId :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Meters -> Maybe Variant -> m [DTO.OnboardingDocumentConfig]
+findAllByMerchantOpCityId id distance mbvt = do
+  currTime <- getLocalCurrentTime 19800
+  cmId <- CMQ.getConfigMapId id distance mbvt currTime "onboarding_document_config" >>= fromMaybeM (InternalError $ "ConfigMapping not found for OnboardingDocumentConfig : mocid, distance, mbvt, currTime" <> show id <> "," <> show distance <> ", " <> show mbvt <> ", " <> show currTime)
+  Hedis.withCrossAppRedis (Hedis.safeGet $ makeConfigMapKey cmId) >>= \case
     Just a -> return a
-    Nothing -> cacheOnboardingDocumentConfigs id /=<< Queries.findAllByMerchantOpCityId id
+    Nothing -> cacheOnboardingDocumentConfigs cmId /=<< Queries.findByConfigMapId cmId
 
 findByMerchantOpCityIdAndDocumentType :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> DocumentType -> m (Maybe DTO.OnboardingDocumentConfig)
-findByMerchantOpCityIdAndDocumentType merchantOpCityId documentType = find (\config -> config.documentType == documentType) <$> findAllByMerchantOpCityId merchantOpCityId
+findByMerchantOpCityIdAndDocumentType merchantOpCityId documentType distance mbvt = find (\config -> config.documentType == documentType) <$> findAllByMerchantOpCityId merchantOpCityId distance mbvt
 
-cacheOnboardingDocumentConfigs :: (CacheFlow m r) => Id MerchantOperatingCity -> [DTO.OnboardingDocumentConfig] -> m ()
-cacheOnboardingDocumentConfigs merchantOpCityId configs = do
+cacheOnboardingDocumentConfigs :: (CacheFlow m r) => Id ConfigMapping -> [DTO.OnboardingDocumentConfig] -> m ()
+cacheOnboardingDocumentConfigs cmId configs = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
-  let key = makeMerchantOpCityIdKey merchantOpCityId
+  let key = makeConfigMapKey cmId
   Hedis.withCrossAppRedis $ Hedis.setExp key configs expTime
 
 makeMerchantOpCityIdKey :: Id MerchantOperatingCity -> Text
 makeMerchantOpCityIdKey merchantOpCityId = "driver-offer:CachedQueries:OnboardingDocumentConfig:MerchantOpCityId-" <> merchantOpCityId.getId
+
+makeConfigMapKey :: Id ConfigMapping -> Text
+makeConfigMapKey id = "driver-offer:CachedQueries:ConfigMapping:ConfigMapId-" <> id.getId
 
 -- Call it after any update
 clearCache :: Hedis.HedisFlow m r => Id MerchantOperatingCity -> m ()

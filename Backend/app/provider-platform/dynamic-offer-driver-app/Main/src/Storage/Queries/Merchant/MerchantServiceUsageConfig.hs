@@ -20,6 +20,7 @@ module Storage.Queries.Merchant.MerchantServiceUsageConfig
     #-}
 where
 
+import Domain.Types.Merchant.ConfigMapping (ConfigMapping)
 import Domain.Types.Merchant.MerchantOperatingCity
 import Domain.Types.Merchant.MerchantServiceUsageConfig
 import Kernel.Beam.Functions
@@ -31,6 +32,9 @@ import qualified Storage.Beam.Merchant.MerchantServiceUsageConfig as BeamMSUC
 
 findByMerchantOpCityId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id MerchantOperatingCity -> m (Maybe MerchantServiceUsageConfig)
 findByMerchantOpCityId (Id merchantOperatingCityId) = findOneWithKV [Se.Is BeamMSUC.merchantOperatingCityId $ Se.Eq merchantOperatingCityId]
+
+findByConfigMapId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id ConfigMapping -> m (Maybe MerchantServiceUsageConfig)
+findByConfigMapId (Id configMapId) = findOneWithKV [Se.Is BeamMSUC.configMapId $ Se.Eq configMapId]
 
 updateMerchantServiceUsageConfig :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => MerchantServiceUsageConfig -> m ()
 updateMerchantServiceUsageConfig MerchantServiceUsageConfig {..} = do

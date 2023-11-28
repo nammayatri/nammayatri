@@ -20,6 +20,7 @@ module Storage.Queries.Merchant.DriverPoolConfig
     #-}
 where
 
+import Domain.Types.Merchant.ConfigMapping (ConfigMapping)
 import Domain.Types.Merchant.DriverPoolConfig
 import Domain.Types.Merchant.MerchantOperatingCity
 import Kernel.Beam.Functions
@@ -34,6 +35,9 @@ create = createWithKV
 
 findAllByMerchantOpCityId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id MerchantOperatingCity -> m [DriverPoolConfig]
 findAllByMerchantOpCityId (Id merchantOperatingCityId) = findAllWithOptionsKV [Se.Is BeamDPC.merchantOperatingCityId $ Se.Eq merchantOperatingCityId] (Se.Desc BeamDPC.tripDistance) Nothing Nothing
+
+findByConfigMapId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id ConfigMapping -> m (Maybe DriverPoolConfig)
+findByConfigMapId (Id configMapId) = findOneWithKV [Se.Is BeamDPC.configMapId $ Se.Eq configMapId]
 
 findByMerchantIdAndTripDistance :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id MerchantOperatingCity -> Meters -> m (Maybe DriverPoolConfig)
 findByMerchantIdAndTripDistance (Id merchantOperatingCityId) tripDistance = findOneWithKV [Se.And [Se.Is BeamDPC.merchantOperatingCityId $ Se.Eq merchantOperatingCityId, Se.Is BeamDPC.tripDistance $ Se.Eq tripDistance]]

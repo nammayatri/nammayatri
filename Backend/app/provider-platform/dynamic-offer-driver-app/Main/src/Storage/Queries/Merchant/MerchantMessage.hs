@@ -23,6 +23,7 @@ where
 import Data.Aeson (fromJSON)
 import qualified Data.Aeson as A
 import Data.Default.Class (Default (..))
+import Domain.Types.Merchant.ConfigMapping (ConfigMapping)
 import Domain.Types.Merchant.MerchantMessage
 import Domain.Types.Merchant.MerchantOperatingCity
 import Kernel.Beam.Functions
@@ -34,6 +35,9 @@ import qualified Storage.Beam.Merchant.MerchantMessage as BeamMM
 
 findByMerchantOpCityIdAndMessageKey :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id MerchantOperatingCity -> MessageKey -> m (Maybe MerchantMessage)
 findByMerchantOpCityIdAndMessageKey (Id merchantOperatingCityId) messageKey = findOneWithKV [Se.And [Se.Is BeamMM.merchantOperatingCityId $ Se.Eq merchantOperatingCityId, Se.Is BeamMM.messageKey $ Se.Eq messageKey]]
+
+findByConfigMappingAndMessageKey :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id ConfigMapping -> MessageKey -> m (Maybe MerchantMessage)
+findByConfigMappingAndMessageKey (Id configMapId) messageKey = findOneWithKV [Se.And [Se.Is BeamMM.configMapId $ Se.Eq configMapId, Se.Is BeamMM.messageKey $ Se.Eq messageKey]]
 
 instance FromTType' BeamMM.MerchantMessage MerchantMessage where
   fromTType' BeamMM.MerchantMessageT {..} = do

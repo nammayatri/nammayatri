@@ -21,29 +21,40 @@ where
 
 import Data.Coerce (coerce)
 import Domain.Types.Common
+import Domain.Types.Merchant.ConfigMapping (ConfigMapping)
 import Domain.Types.Merchant.MerchantMessage
 import Domain.Types.Merchant.MerchantOperatingCity
+import Domain.Types.Vehicle.Variant (Variant)
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
+import Kernel.Types.Common (Meters)
+import Kernel.Types.Error (GenericError (InternalError))
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Storage.CachedQueries.Merchant.ConfigMapping as CMQ
 import qualified Storage.Queries.Merchant.MerchantMessage as Queries
 
-findByMerchantOpCityIdAndMessageKey :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> MessageKey -> m (Maybe MerchantMessage)
-findByMerchantOpCityIdAndMessageKey id messageKey =
-  Hedis.safeGet (makeMerchantOpCityIdAndMessageKey id messageKey) >>= \case
+findByMerchantOpCityIdAndMessageKey :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> MessageKey -> Meters -> Maybe Variant -> m (Maybe MerchantMessage)
+findByMerchantOpCityIdAndMessageKey id messageKey distance mbvt = do
+  currTime <- getLocalCurrentTime 19800
+  cmId <- CMQ.getConfigMapId id distance mbvt currTime "merchant_message" >>= fromMaybeM (InternalError $ "ConfigMapping not found for MerchantMessage : mocid, distance, mbvt, currTime" <> show id <> "," <> show distance <> ", " <> show mbvt <> ", " <> show currTime)
+  Hedis.safeGet (makeConfigMapKey cmId messageKey) >>= \case
     Just a -> return . Just $ coerce @(MerchantMessageD 'Unsafe) @MerchantMessage a
-    Nothing -> flip whenJust cacheMerchantMessage /=<< Queries.findByMerchantOpCityIdAndMessageKey id messageKey
+    Nothing -> flip whenJust cacheMerchantMessage /=<< Queries.findByConfigMappingAndMessageKey cmId messageKey
 
 cacheMerchantMessage :: CacheFlow m r => MerchantMessage -> m ()
 cacheMerchantMessage merchantMessage = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
-  let idKey = makeMerchantOpCityIdAndMessageKey merchantMessage.merchantOperatingCityId merchantMessage.messageKey
+  let idKey = makeConfigMapKey merchantMessage.configMapId merchantMessage.messageKey
   Hedis.setExp idKey (coerce @MerchantMessage @(MerchantMessageD 'Unsafe) merchantMessage) expTime
 
 makeMerchantOpCityIdAndMessageKey :: Id MerchantOperatingCity -> MessageKey -> Text
 makeMerchantOpCityIdAndMessageKey id messageKey = "CachedQueries:MerchantMessage:MerchantOperatingCityId-" <> id.getId <> ":MessageKey-" <> show messageKey
 
+makeConfigMapKey :: Id ConfigMapping -> MessageKey -> Text
+makeConfigMapKey id mk = "driver-offer:CachedQueries:ConfigMapping:ConfigMapId-" <> id.getId <> ":LeaderBoardType-" <> show mk
+
+--CQTODO: Handle clear cache ig, dashboard only, calls
 -- Call it after any update
 clearCache :: Hedis.HedisFlow m r => Id MerchantOperatingCity -> MessageKey -> m ()
 clearCache merchantOpCityId messageKey = do

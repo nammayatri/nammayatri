@@ -99,7 +99,7 @@ getEstimatedPickupDistances = runWithServiceConfig Maps.getDistances (.getEstima
 
 getRoutes :: ServiceFlow m r => Id Merchant -> Id MerchantOperatingCity -> GetRoutesReq -> m GetRoutesResp
 getRoutes merchantId merchantOpCityId req = do
-  transporterConfig <- TConfig.findByMerchantOpCityId merchantOpCityId >>= fromMaybeM (MerchantNotFound merchantOpCityId.getId)
+  transporterConfig <- TConfig.findByMerchantOpCityId merchantOpCityId 0 Nothing >>= fromMaybeM (MerchantNotFound merchantOpCityId.getId)
   runWithServiceConfig (Maps.getRoutes transporterConfig.isAvoidToll) (.getRoutes) merchantId merchantOpCityId req
 
 getPickupRoutes :: ServiceFlow m r => Id Merchant -> Id MerchantOperatingCity -> GetRoutesReq -> m GetRoutesResp
@@ -148,7 +148,7 @@ snapToRoadWithFallback merchantId merchantOperatingCityId = Maps.snapToRoadWithF
       pure $ transporterConfig.snapToRoadConfidenceThreshold
 
     getProvidersList = do
-      merchantConfig <- QOMC.findByMerchantOpCityId merchantOperatingCityId >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOperatingCityId.getId)
+      merchantConfig <- QOMC.findByMerchantOpCityId merchantOperatingCityId 0 Nothing >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOperatingCityId.getId)
       let snapToRoadProvidersList = merchantConfig.snapToRoadProvidersList
       when (null snapToRoadProvidersList) $ throwError $ InternalError ("No snap to road service provider configured for the merchant, merchantOperatingCityId:" <> merchantOperatingCityId.getId)
       pure snapToRoadProvidersList
@@ -170,7 +170,7 @@ runWithServiceConfig ::
   req ->
   m resp
 runWithServiceConfig func getCfg merchantId merchantOpCityId req = do
-  orgMapsConfig <- QOMC.findByMerchantOpCityId merchantOpCityId >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
+  orgMapsConfig <- QOMC.findByMerchantOpCityId merchantOpCityId 0 Nothing >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
   orgMapsServiceConfig <-
     QOMSC.findByMerchantIdAndService merchantId (DOSC.MapsService $ getCfg orgMapsConfig)
       >>= fromMaybeM (MerchantServiceConfigNotFound merchantOpCityId.getId "Maps" (show $ getCfg orgMapsConfig))

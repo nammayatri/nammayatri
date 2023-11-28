@@ -21,6 +21,7 @@ module Storage.Queries.Merchant.TransporterConfig
 where
 
 import qualified Data.Aeson as A
+import Domain.Types.Merchant.ConfigMapping (ConfigMapping)
 import Domain.Types.Merchant.MerchantOperatingCity
 import Domain.Types.Merchant.TransporterConfig
 import Kernel.Beam.Functions
@@ -33,6 +34,9 @@ import qualified Storage.Beam.Merchant.TransporterConfig as BeamTC
 
 findByMerchantOpCityId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id MerchantOperatingCity -> m (Maybe TransporterConfig)
 findByMerchantOpCityId (Id merchantOperatingCityId) = findOneWithKV [Se.Is BeamTC.merchantOperatingCityId $ Se.Eq merchantOperatingCityId]
+
+findByConfigMapId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id ConfigMapping -> m (Maybe TransporterConfig)
+findByConfigMapId (Id configMapId) = findOneWithKV [Se.Is BeamTC.configMapId $ Se.Eq configMapId]
 
 updateFCMConfig :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id MerchantOperatingCity -> BaseUrl -> Text -> m ()
 updateFCMConfig (Id merchantOperatingCityId) fcmUrl fcmServiceAccount = do

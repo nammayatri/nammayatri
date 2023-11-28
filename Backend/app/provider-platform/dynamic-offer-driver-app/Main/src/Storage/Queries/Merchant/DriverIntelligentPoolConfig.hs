@@ -20,6 +20,7 @@ module Storage.Queries.Merchant.DriverIntelligentPoolConfig
     #-}
 where
 
+import Domain.Types.Merchant.ConfigMapping (ConfigMapping)
 import Domain.Types.Merchant.DriverIntelligentPoolConfig
 import Domain.Types.Merchant.MerchantOperatingCity
 import Kernel.Beam.Functions
@@ -31,6 +32,9 @@ import qualified Storage.Beam.Merchant.DriverIntelligentPoolConfig as BeamDIPC
 
 findByMerchantOpCityId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id MerchantOperatingCity -> m (Maybe DriverIntelligentPoolConfig)
 findByMerchantOpCityId (Id merchantOperatingCityId) = findOneWithKV [Se.Is BeamDIPC.merchantOperatingCityId $ Se.Eq merchantOperatingCityId]
+
+findByConfigMapId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id ConfigMapping -> m (Maybe DriverIntelligentPoolConfig)
+findByConfigMapId (Id configMapId) = findOneWithKV [Se.Is BeamDIPC.configMapId $ Se.Eq configMapId]
 
 update :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => DriverIntelligentPoolConfig -> m ()
 update config = do

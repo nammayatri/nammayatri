@@ -33,6 +33,9 @@ import qualified Storage.Beam.Merchant.MerchantPaymentMethod as BeamMPM
 findAllByMerchantOpCityId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id MerchantOperatingCity -> m [MerchantPaymentMethod]
 findAllByMerchantOpCityId (Id merchantOperatingCityId) = findAllWithOptionsKV [Se.Is BeamMPM.merchantOperatingCityId $ Se.Eq merchantOperatingCityId] (Se.Desc BeamMPM.priority) Nothing Nothing
 
+findAllByConfigMapId :: (MonadFlow m, EsqDBFlow m r) => Id ConfigMapping -> m [MerchantPaymentMethod]
+findAllByConfigMapId (Id configMapId) = findAllWithOptionsKV [Se.Is BeamMPM.configMapId $ Se.Eq configMapId] (Se.Desc BeamMPM.priority) Nothing Nothing
+
 instance FromTType' BeamMPM.MerchantPaymentMethod MerchantPaymentMethod where
   fromTType' BeamMPM.MerchantPaymentMethodT {..} = do
     pure $

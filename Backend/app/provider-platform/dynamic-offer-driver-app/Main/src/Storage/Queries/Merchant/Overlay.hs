@@ -78,6 +78,17 @@ findByMerchantOpCityIdPNKeyLangaugeUdf id pnKey language udf1 =
         ]
     ]
 
+findByConfigMapIdPNKeyLangaugeUdf :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id ConfigMapping -> Text -> Language -> Maybe Text -> m (Maybe Overlay)
+findByConfigMapIdPNKeyLangaugeUdf id pnKey language udf1 =
+  findOneWithKV
+    [ Se.And
+        [ Se.Is BeamMPN.configMapId $ Se.Eq (getId id),
+          Se.Is BeamMPN.overlayKey $ Se.Eq pnKey,
+          Se.Is BeamMPN.language $ Se.Eq language,
+          Se.Is BeamMPN.udf1 $ Se.Eq udf1
+        ]
+    ]
+
 instance FromTType' BeamMPN.Overlay Overlay where
   fromTType' BeamMPN.OverlayT {..} = do
     pure $

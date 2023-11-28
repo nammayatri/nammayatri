@@ -15,6 +15,7 @@
 
 module Storage.Queries.Merchant.LeaderBoardConfig where
 
+import Domain.Types.Merchant.ConfigMapping (ConfigMapping)
 import Domain.Types.Merchant.LeaderBoardConfig
 import Domain.Types.Merchant.MerchantOperatingCity
 import Kernel.Beam.Functions
@@ -27,6 +28,9 @@ import qualified Storage.Beam.Merchant.LeaderBoardConfig as BeamLBC
 
 findLeaderBoardConfigbyType :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => LeaderBoardType -> Id MerchantOperatingCity -> m (Maybe LeaderBoardConfigs)
 findLeaderBoardConfigbyType leaderBType merchantOperatingCityId = findOneWithKV [Se.And [Se.Is BeamLBC.leaderBoardType $ Se.Eq leaderBType, Se.Is BeamLBC.merchantOperatingCityId $ Se.Eq (getId merchantOperatingCityId)]]
+
+findLeaderBoardConfigbyTypeAndConfigMapping :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => LeaderBoardType -> Id ConfigMapping -> m (Maybe LeaderBoardConfigs)
+findLeaderBoardConfigbyTypeAndConfigMapping leaderBType configMapId = findOneWithKV [Se.And [Se.Is BeamLBC.leaderBoardType $ Se.Eq leaderBType, Se.Is BeamLBC.configMapId $ Se.Eq (getId configMapId)]]
 
 instance FromTType' BeamLBC.LeaderBoardConfigs LeaderBoardConfigs where
   fromTType' BeamLBC.LeaderBoardConfigsT {..} = do

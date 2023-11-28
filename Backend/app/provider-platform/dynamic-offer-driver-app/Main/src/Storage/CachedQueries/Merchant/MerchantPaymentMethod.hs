@@ -21,28 +21,37 @@ where
 
 import Data.Coerce (coerce)
 import Domain.Types.Common
+import Domain.Types.Merchant.ConfigMapping (ConfigMapping)
 import Domain.Types.Merchant.MerchantOperatingCity
 import Domain.Types.Merchant.MerchantPaymentMethod
+import Domain.Types.Vehicle.Variant (Variant)
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
+import Kernel.Types.Error (GenericError (InternalError))
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Storage.CachedQueries.Merchant.ConfigMapping as CMQ
 import qualified Storage.Queries.Merchant.MerchantPaymentMethod as Queries
 
-findAllByMerchantOpCityId :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => Id MerchantOperatingCity -> m [MerchantPaymentMethod]
-findAllByMerchantOpCityId id =
-  Hedis.withCrossAppRedis (Hedis.safeGet $ makeMerchantIdKey id) >>= \case
+findAllByMerchantOpCityId :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => Id MerchantOperatingCity -> Meters -> Maybe Variant -> m [MerchantPaymentMethod]
+findAllByMerchantOpCityId id distance mbvt = do
+  currTime <- getLocalCurrentTime 19800
+  cmId <- CMQ.getConfigMapId id distance mbvt currTime "merchant_payment_method" >>= fromMaybeM (InternalError $ "ConfigMapping not found for MerchantPaymentMethod : mocid, distance, mbvt, currTime" <> show id <> "," <> show distance <> ", " <> show mbvt <> ", " <> show currTime)
+  Hedis.withCrossAppRedis (Hedis.safeGet $ makeConfigMapKey cmId) >>= \case
     Just a -> return $ fmap (coerce @(MerchantPaymentMethodD 'Unsafe) @MerchantPaymentMethod) a
-    Nothing -> cacheMerchantPaymentMethods id /=<< Queries.findAllByMerchantOpCityId id
+    Nothing -> cacheMerchantPaymentMethods cmId /=<< Queries.findAllByConfigMapId cmId
 
-findByIdAndMerchantOpCityId :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantPaymentMethod -> Id MerchantOperatingCity -> m (Maybe MerchantPaymentMethod)
-findByIdAndMerchantOpCityId id merchantId = find (\mpm -> mpm.id == id) <$> findAllByMerchantOpCityId merchantId
+findByIdAndMerchantOpCityId :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantPaymentMethod -> Id MerchantOperatingCity -> Meters -> Maybe Variant -> m (Maybe MerchantPaymentMethod)
+findByIdAndMerchantOpCityId id merchantOperatingCityId distance mbvt = find (\mpm -> mpm.id == id) <$> findAllByMerchantOpCityId merchantOperatingCityId distance mbvt
 
-cacheMerchantPaymentMethods :: (CacheFlow m r) => Id MerchantOperatingCity -> [MerchantPaymentMethod] -> m ()
-cacheMerchantPaymentMethods merchantId cfg = do
+cacheMerchantPaymentMethods :: (CacheFlow m r) => Id ConfigMapping -> [MerchantPaymentMethod] -> m ()
+cacheMerchantPaymentMethods cmId cfg = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
-  let merchantIdKey = makeMerchantIdKey merchantId
-  Hedis.withCrossAppRedis $ Hedis.setExp merchantIdKey (coerce @[MerchantPaymentMethod] @[MerchantPaymentMethodD 'Unsafe] cfg) expTime
+  let cmIdKey = makeConfigMapKey cmId
+  Hedis.withCrossAppRedis $ Hedis.setExp cmIdKey (coerce @[MerchantPaymentMethod] @[MerchantPaymentMethodD 'Unsafe] cfg) expTime
 
 makeMerchantIdKey :: Id MerchantOperatingCity -> Text
 makeMerchantIdKey id = "driver-offer:CachedQueries:MerchantPaymentMethod:MerchantOpCityId-" <> id.getId
+
+makeConfigMapKey :: Id ConfigMapping -> Text
+makeConfigMapKey id = "driver-offer:CachedQueries:ConfigMapping:ConfigMapId-" <> id.getId

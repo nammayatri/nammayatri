@@ -24,7 +24,8 @@ import Kernel.Types.Id
 data ConfigMapping = ConfigMapping
   { merchantId :: Id Merchant,
     merchantOperatingCityId :: Id MerchantOperatingCity,
-    distance :: Meters,
+    startDistance :: Meters,
+    endDistance :: Meters,
     varType :: Maybe Variant,
     startTime :: TimeOfDay,
     endTime :: TimeOfDay,

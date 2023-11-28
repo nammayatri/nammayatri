@@ -25,7 +25,8 @@ import Tools.Beam.UtilsTH
 data ConfigMappingT f = ConfigMappingT
   { merchantId :: B.C f Text,
     merchantOperatingCityId :: B.C f Text,
-    distance :: B.C f Meters,
+    startDistance :: B.C f Meters,
+    endDistance :: B.C f Meters,
     varType :: B.C f (Maybe Variant),
     startTime :: B.C f TimeOfDay,
     endTime :: B.C f TimeOfDay,
@@ -37,12 +38,13 @@ data ConfigMappingT f = ConfigMappingT
   deriving (Generic, B.Beamable)
 
 instance B.Table ConfigMappingT where
-  data PrimaryKey ConfigMappingT f = CompositeKey (B.C f Text) (B.C f Meters) (B.C f (Maybe Variant)) (B.C f TimeOfDay) (B.C f TimeOfDay) (B.C f Text)
+  data PrimaryKey ConfigMappingT f = CompositeKey (B.C f Text) (B.C f Meters) (B.C f Meters) (B.C f (Maybe Variant)) (B.C f TimeOfDay) (B.C f TimeOfDay) (B.C f Text)
     deriving (Generic, B.Beamable)
   primaryKey dt =
     CompositeKey
       (merchantOperatingCityId dt)
-      (distance dt)
+      (startDistance dt)
+      (endDistance dt)
       (varType dt)
       (startTime dt)
       (endTime dt)
@@ -50,6 +52,6 @@ instance B.Table ConfigMappingT where
 
 type ConfigMapping = ConfigMappingT Identity
 
-$(enableKVPG ''ConfigMappingT ['merchantOperatingCityId, 'distance, 'varType, 'startTime, 'endTime, 'tableName] [])
+$(enableKVPG ''ConfigMappingT ['merchantOperatingCityId, 'startDistance, 'endDistance, 'varType, 'startTime, 'endTime, 'tableName] [])
 
 $(mkTableInstances ''ConfigMappingT "config_mapping")

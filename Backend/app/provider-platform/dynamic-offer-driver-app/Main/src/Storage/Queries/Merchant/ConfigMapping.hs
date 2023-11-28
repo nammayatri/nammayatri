@@ -33,20 +33,18 @@ import qualified Storage.Beam.Merchant.ConfigMapping as BeamCM
 getConfigMapId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id MerchantOperatingCity -> Meters -> Maybe Variant -> TimeOfDay -> Text -> m (Maybe ConfigMapping)
 getConfigMapId (Id merchantOperatingCityId) distance varType currTime tableName =
   --CMTODO: Convert UTC Time to TimeOfDay (IST) then do Cache Queries then start handling the tables (also remember the dashboard update and creation apis.)
-  findAllWithOptionsKV
+  findAllWithKV
     [ Se.And
         [ Se.Is BeamCM.merchantOperatingCityId $ Se.Eq merchantOperatingCityId,
-          Se.Is BeamCM.distance $ Se.LessThanOrEq distance,
+          Se.Is BeamCM.startDistance $ Se.LessThanOrEq distance, --CMTODO: Tell PMs it functions like [,)
+          Se.Is BeamCM.endDistance $ Se.GreaterThan distance,
           Se.Is BeamCM.varType $ Se.Eq varType,
           Se.Is BeamCM.startTime $ Se.GreaterThanOrEq currTime,
           Se.Is BeamCM.endTime $ Se.LessThan currTime, --CMTODO: Ask everyone to use 24:00:00 instead of 00:00:00 for midnight end. -> time intervals are like [,)
           Se.Is BeamCM.tableName $ Se.Eq tableName
         ]
     ]
-    (Se.Desc BeamCM.distance)
-    (Just 1)
-    Nothing
-    <&> listToMaybe --CMTODO: Ask is fallback required.
+    <&> listToMaybe
 
 instance FromTType' BeamCM.ConfigMapping ConfigMapping where
   fromTType' BeamCM.ConfigMappingT {..} = do

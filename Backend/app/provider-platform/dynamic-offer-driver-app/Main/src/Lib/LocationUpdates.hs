@@ -79,7 +79,7 @@ updateDeviation routeDeviationThreshold (Just rideId) batchWaypoints = do
 
 buildRideInterpolationHandler :: Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Bool -> Flow (RideInterpolationHandler Person Flow)
 buildRideInterpolationHandler merchantId merchantOpCityId isEndRide = do
-  transportConfig <- MTC.findByMerchantOpCityId merchantOpCityId >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transportConfig <- MTC.findByMerchantOpCityId merchantOpCityId 0 Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   let snapToRoad' =
         if transportConfig.useWithSnapToRoadFallback
           then TMaps.snapToRoadWithFallback merchantId merchantOpCityId

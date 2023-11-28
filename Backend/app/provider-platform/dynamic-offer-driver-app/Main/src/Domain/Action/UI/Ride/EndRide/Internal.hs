@@ -173,7 +173,7 @@ updateLeaderboardZScore merchantId merchantOpCityId ride = do
 
 updateDriverDailyZscore :: (Esq.EsqDBFlow m r, Esq.EsqDBReplicaFlow m r, CacheFlow m r) => Ride.Ride -> Day -> Maybe Double -> Maybe Meters -> Id Merchant -> Id DMOC.MerchantOperatingCity -> m ()
 updateDriverDailyZscore ride rideDate driverZscore chargeableDistance merchantId merchantOpCityId = do
-  mbdDailyLeaderBoardConfig <- QLeaderConfig.findLeaderBoardConfigbyType LConfig.DAILY merchantOpCityId
+  mbdDailyLeaderBoardConfig <- QLeaderConfig.findLeaderBoardConfigbyType LConfig.DAILY merchantOpCityId 0 Nothing
   whenJust mbdDailyLeaderBoardConfig $ \dailyLeaderBoardConfig -> do
     when dailyLeaderBoardConfig.isEnabled $ do
       (LocalTime _ localTime) <- utcToLocalTime timeZoneIST <$> getCurrentTime
@@ -193,7 +193,7 @@ updateDriverDailyZscore ride rideDate driverZscore chargeableDistance merchantId
 
 updateDriverWeeklyZscore :: (Esq.EsqDBFlow m r, Esq.EsqDBReplicaFlow m r, CacheFlow m r) => Ride.Ride -> Day -> Day -> Day -> Maybe Double -> Maybe Meters -> Id Merchant -> Id DMOC.MerchantOperatingCity -> m ()
 updateDriverWeeklyZscore ride rideDate weekStartDate weekEndDate driverZscore rideChargeableDistance merchantId merchantOpCityId = do
-  mbWeeklyLeaderBoardConfig <- QLeaderConfig.findLeaderBoardConfigbyType LConfig.WEEKLY merchantOpCityId
+  mbWeeklyLeaderBoardConfig <- QLeaderConfig.findLeaderBoardConfigbyType LConfig.WEEKLY merchantOpCityId 0 Nothing
   whenJust mbWeeklyLeaderBoardConfig $ \weeklyLeaderBoardConfig -> do
     when weeklyLeaderBoardConfig.isEnabled $ do
       (LocalTime _ localTime) <- utcToLocalTime timeZoneIST <$> getCurrentTime
@@ -310,7 +310,7 @@ createDriverFee ::
   DI.DriverInformation ->
   m ()
 createDriverFee merchantId merchantOpCityId driverId rideFare newFareParams maxShards driverInfo = do
-  transporterConfig <- SCT.findByMerchantOpCityId merchantOpCityId >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- SCT.findByMerchantOpCityId merchantOpCityId 0 Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   freeTrialDaysLeft <- getFreeTrialDaysLeft transporterConfig.freeTrialDays driverInfo
   mbDriverPlan <- findByDriverId (cast driverId)
   let govtCharges = fromMaybe 0 newFareParams.govtCharges

@@ -40,6 +40,9 @@ create = createWithKV
 findAllByMerchantOpCityId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id MerchantOperatingCity -> m [OnboardingDocumentConfig]
 findAllByMerchantOpCityId (Id merchantOperatingCityId) = findAllWithKV [Se.Is BeamODC.merchantOperatingCityId $ Se.Eq merchantOperatingCityId]
 
+findByConfigMapId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id ConfigMapping -> m [OnboardingDocumentConfig]
+findByConfigMapId (Id configMapId) = findAllWithKV [Se.Is BeamODC.configMapId $ Se.Eq configMapId]
+
 update :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => OnboardingDocumentConfig -> m ()
 update config = do
   let supportedClassJson = BeamODC.getConfigJSON config.supportedVehicleClasses

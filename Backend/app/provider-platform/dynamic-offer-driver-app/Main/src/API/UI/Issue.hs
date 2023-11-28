@@ -142,7 +142,7 @@ castMerchantById merchantId = do
 
 buildIssueMediaUploadConfig :: (CacheFlow m r, Esq.EsqDBFlow m r) => Id DMOC.MerchantOperatingCity -> m Common.IssueMediaUploadConfig
 buildIssueMediaUploadConfig merchantOpCityId = do
-  transporterConfig <- SCT.findByMerchantOpCityId merchantOpCityId >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- SCT.findByMerchantOpCityId merchantOpCityId 0 Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   return
     Common.IssueMediaUploadConfig
       { mediaFileSizeUpperLimit = transporterConfig.mediaFileSizeUpperLimit,
