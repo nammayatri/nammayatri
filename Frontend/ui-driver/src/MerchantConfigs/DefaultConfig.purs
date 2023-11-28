@@ -129,7 +129,7 @@ config =
             {
               cityName : "Mysore",
               mapImage : "ny_ic_mysuru_map,",
-              cityCode : "*",
+              cityCode : "std:0821",
               showSubscriptions : false,
               cityLat : 12.295810,
               cityLong : 76.639381,
@@ -160,6 +160,24 @@ config =
               showSubscriptions : false,
               cityLat : 11.004556,
               cityLong : 76.961632,
+              supportNumber : ""
+            },
+            {
+              cityName : "Puducherry",
+              mapImage : "ny_ic_puducherry_map",
+              cityCode : "std:0413",
+              showSubscriptions : false,
+              cityLat : 11.943852,
+              cityLong : 79.808292,
+              supportNumber : ""
+            },
+            {
+              cityName : "Madurai",
+              mapImage : "ny_ic_madurai_map",
+              cityCode : "std:0452",
+              showSubscriptions : false,
+              cityLat : 9.93069,
+              cityLong : 78.11956,
               supportNumber : ""
             }
         ]
