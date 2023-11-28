@@ -1283,7 +1283,8 @@ type OnBoardingSubscriptionScreenData = {
 
 type OnBoardingSubscriptionScreenProps = {
   isSelectedLangTamil :: Boolean,
-  screenCount :: Int
+  screenCount :: Int,
+  supportPopup :: Boolean
 }
 
 
@@ -1788,7 +1789,8 @@ type MyPlanData = {
   autoPayDueAmount :: Number,
   manualDueAmount :: Number,
   mandateStatus :: String,
-  selectedDue :: String
+  selectedDue :: String,
+  dueBoothCharges :: Maybe Number
 }
 
 type MyPlanProps = {
@@ -1811,7 +1813,9 @@ type DueItem = {
   plan :: String,
   mode :: FeeType,
   autoPayStage :: Maybe AutopayPaymentStage,
-  isSplit :: Boolean
+  isSplit :: Boolean,
+  specialZoneRideCount :: Maybe Int,
+  totalBoothRideCharges :: Maybe Number
 }
 
 type KioskLocation = {
@@ -1941,7 +1945,8 @@ type DueCard = {
   id :: String,
   scheduledAt :: Maybe String,
   paymentMode :: FeeType,
-  paymentStatus :: Maybe String
+  paymentStatus :: Maybe String,
+  boothCharges :: Maybe String
 }
 
 type PaymentHistoryScreenProps = {

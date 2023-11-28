@@ -12,7 +12,27 @@ window.getMerchantConfig = function () {
     "USER_APP_LINK" : "https://nammayatri.in/link/rider/kTZ1",
     "PRIVACY_POLICY_LINK": "https://docs.google.com/document/d/1-bcjLOZ_gR0Rda2BNmkKnqVds8Pm23v1e7JbSDdM70E",
     "SPECIAL_ZONE_OTP_VIEW": "true",
-    "StringKeys": ["WELCOME_TEXT", "ABOUT_TEXT", "NEED_IT_TO_ENABLE_LOCATION", "CURRENTLY_WE_ALLOW_ONLY_KARNATAKA_REGISTERED_NUMBER", "YOU_ARE_ABOUT_TO_CALL_NAMMA_YATRI_SUPPORT", "YOUR_LOCATION_HELPS_OUR_SYSTEM", "EARNED_ON_APP", "TRAVELLED_ON_APP", "REPORT_ISSUE_CHAT_PLACEHOLDER", "MY_PLAN_TITLE", "CHOOSE_YOUR_PLAN", "OFFER_CARD_BANNER_TITLE", "TO_CONTINUE_USING_YATRI_SATHI", "YATRI_SATHI_FEE_PAYABLE_FOR_DATE", "PAYMENT_FAILED_DESC", "AADHAAR_LINKING_REQUIRED_DESCRIPTION", "COMPLETE_PAYMENT_TO_CONTINUE", "GET_READY_FOR_YS_SUBSCRIPTION"],
+    "StringKeys": ["WELCOME_TEXT",
+                    "ABOUT_TEXT",
+                    "NEED_IT_TO_ENABLE_LOCATION",
+                    "CURRENTLY_WE_ALLOW_ONLY_KARNATAKA_REGISTERED_NUMBER",
+                    "YOU_ARE_ABOUT_TO_CALL_NAMMA_YATRI_SUPPORT",
+                    "YOUR_LOCATION_HELPS_OUR_SYSTEM",
+                    "EARNED_ON_APP",
+                    "TRAVELLED_ON_APP",
+                    "REPORT_ISSUE_CHAT_PLACEHOLDER",
+                    "MY_PLAN_TITLE",
+                    "CHOOSE_YOUR_PLAN",
+                    "OFFER_CARD_BANNER_TITLE",
+                    "TO_CONTINUE_USING_YATRI_SATHI",
+                    "YATRI_SATHI_FEE_PAYABLE_FOR_DATE",
+                    "PAYMENT_FAILED_DESC",
+                    "AADHAAR_LINKING_REQUIRED_DESCRIPTION",
+                    "COMPLETE_PAYMENT_TO_CONTINUE",
+                    "GET_READY_FOR_YS_SUBSCRIPTION",
+                    "SUBSCRIPTION_PLAN_STR",
+                    "CHOOSE_YOUR_PLAN"
+                    ],
     "fontType": "Assets",
     "currency": "₹",
     "isGradient" : "false",
@@ -61,7 +81,9 @@ window.getMerchantConfig = function () {
       "PAYMENT_FAILED_DESC" : "You may retry payment, or make the payment at your nearest Yatri Sathi booth",
       "AADHAAR_LINKING_REQUIRED_DESCRIPTION" : "To start driving for Yatri Sathi, please \n link your Aadhaar ID",
       "COMPLETE_PAYMENT_TO_CONTINUE" : "To continue using Yatri Sathi, please complete your payment",
-      "GET_READY_FOR_YS_SUBSCRIPTION" : "Get ready for\nYatri Sathi Plans!"
+      "GET_READY_FOR_YS_SUBSCRIPTION" : "Get ready for\nYatri Sathi Plans!",
+      "SUBSCRIPTION_PLAN_STR" : "Yatri Sathi Plan",
+      "CHOOSE_YOUR_PLAN" : "Activate Plan Now!"
 
     },
     "hindiStrings": {
@@ -82,7 +104,9 @@ window.getMerchantConfig = function () {
       "PAYMENT_FAILED_DESC" : "आप भुगतान को पुनः प्रयास कर सकते हैं, या अपने नजदीकी यात्री साथी बूथ पर भुगतान कर सकते हैं",
       "AADHAAR_LINKING_REQUIRED_DESCRIPTION" : "यात्री साथी के लिए ड्राइविंग शुरू करने के लिए, कृपया अपना आधार आईडी लिंक करें",
       "COMPLETE_PAYMENT_TO_CONTINUE" : "यात्री साथी का उपयोग जारी रखने के लिए, कृपया अपना भुगतान पूरा करें",
-      "GET_READY_FOR_YS_SUBSCRIPTION" : "यात्री साथी योजनाओं के लिए तैयार रहें!"
+      "GET_READY_FOR_YS_SUBSCRIPTION" : "यात्री साथी योजनाओं के लिए तैयार रहें!",
+      "SUBSCRIPTION_PLAN_STR" : "यात्री साथी योजना",
+      "CHOOSE_YOUR_PLAN" : "योजना अभी सक्रिय करें!"
 
     },
     "bengaliStrings": {
@@ -103,7 +127,9 @@ window.getMerchantConfig = function () {
       "PAYMENT_FAILED_DESC" : "আপনি আবার অর্থপ্রদানের চেষ্টা করতে পারেন, অথবা আপনার নিকটস্থ Yatri Sathi বুথে অর্থপ্রদান করতে পারেন",
       "AADHAAR_LINKING_REQUIRED_DESCRIPTION" : "যাত্রী সাথীর জন্য গাড়ি চালানো শুরু করতে, দয়া করে \n আপনার আধার আইডি লিঙ্ক করুন",
       "COMPLETE_PAYMENT_TO_CONTINUE" : "Yatri Sathi ব্যবহার চালিয়ে যেতে, অনুগ্রহ করে আপনার অর্থপ্রদান সম্পূর্ণ করুন",
-      "GET_READY_FOR_YS_SUBSCRIPTION" : "যাত্রী সাথী পরিকল্পনার জন্য প্রস্তুত হন!"
+      "GET_READY_FOR_YS_SUBSCRIPTION" : "যাত্রী সাথী পরিকল্পনার জন্য প্রস্তুত হন!",
+      "SUBSCRIPTION_PLAN_STR" : "যাত্রী সাথী পরিকল্পনা",
+      "CHOOSE_YOUR_PLAN" : "এখনই প্ল্যান সক্রিয় করুন!"
     },
     "logs": ["JUSPAY","FIREBASE","CLEVERTAP"]
     , "fontName" : "PlusJakartaSans"
@@ -116,23 +142,29 @@ window.getMerchantConfig = function () {
       , "packageName" : "com.google.android.apps.maps"
     }
     , "subscriptionConfig" : {
-      "completePaymentPopup" : true,
-      "supportNumber" : "08069724949",
-      "maxDuesLimit" : 500.0,
-      "faqLink" : "https://yatrisathi.in/plans/",
-      "optionsMenuItems" : {
-        "viewFaqs" : true,
-        "viewAutopayDetails" : true
-      },
-      "offerBannerConfig" : {
-        "showDUOfferBanner" : true,
-        "offerBannerValidTill" : "2023-12-01T00:00:00",
-        "offerBannerDeadline" : "Jan 1-31-*$*-ಜನವರಿ 1-31-*$*-1-31 जनवरी-*$*-ஜனவரி 1-31-*$*-জানুয়ারী 1-31",
-        "offerBannerPlans" : ["25ade579-fd9c-4288-a015-337af085e66c"],
-      },
-      "gradientConfig" : [{"id" : "c1a27b2c-8287-4d79-a5d9-99e1a0026203", colors : ["#29FF4D35", "#29FFE588"]},{"id" : "5eed42c1-2388-4a86-b68b-d9da2f674091", colors : ["#29FF4D35", "#29FFE588"]},{"id" : "b6d61915-65bb-4ca9-bbb7-a90be735a722", colors : ["#29FF4D35", "#29FFE588"]}],
-      "enableSubscriptionSupportPopup" : true,
-      "myPlanYoutubeLink" : "https://www.youtube.com/playlist?list=PLvMgI4c44A9Y2bykEuDAtHzgcubXOYqgU-*$*-https://www.youtube.com/playlist?list=PLvMgI4c44A9Y2bykEuDAtHzgcubXOYqgU-*$*-https://www.youtube.com/playlist?list=PLvMgI4c44A9Zl0IIQcZa7ZJrSjWPLfxpA-*$*-https://www.youtube.com/playlist?list=PLvMgI4c44A9Y8NLs_8TXc7biX-JkobrGB"
+          "enableBlocking" : true,
+          "completePaymentPopup" : false,
+          "supportNumber" : "08069724949",
+          "enableSubscriptionPopups" : true,
+          "maxDuesLimit" : 500.0,
+          "faqLink" : "https://yatrisathi.in/plans/",
+          "optionsMenuItems" : {
+            "viewFaqs" : true,
+            "viewAutopayDetails" : true,
+            "paymentHistory" : true
+          },
+          "offerBannerConfig" : {
+            "showDUOfferBanner" : true,
+            "offerBannerValidTill" : "2023-12-01T00:00:00",
+            "offerBannerDeadline" : "Jan 1-31-*$*-ಜನವರಿ 1-31-*$*-1-31 जनवरी-*$*-ஜனவரி 1-31-*$*-জানুয়ারী 1-31",
+            "offerBannerPlans" : ["25ade579-fd9c-4288-a015-337af085e66c"],
+          },
+          "lowDuesLimit" : 15.0,
+          "highDueWarningLimit" : 75.0,
+          "gradientConfig" : [{"id" : "c1a27b2c-8287-4d79-a5d9-99e1a0026203", colors : ["#29FF4D35", "#29FFE588"]},{"id" : "5eed42c1-2388-4a86-b68b-d9da2f674091", colors : ["#29FF4D35", "#29FFE588"]},{"id" : "b6d61915-65bb-4ca9-bbb7-a90be735a722", colors : ["#29FF4D35", "#29FFE588"]}],
+          "enableSubscriptionSupportPopup" : true,
+          "myPlanYoutubeLink" : "https://www.youtube.com/playlist?list=PLvMgI4c44A9Y2bykEuDAtHzgcubXOYqgU-*$*-https://www.youtube.com/playlist?list=PLvMgI4c44A9Y2bykEuDAtHzgcubXOYqgU-*$*-https://www.youtube.com/playlist?list=PLvMgI4c44A9Zl0IIQcZa7ZJrSjWPLfxpA-*$*-https://www.youtube.com/playlist?list=PLvMgI4c44A9Y8NLs_8TXc7biX-JkobrGB",
+          "overlayYoutubeLink" : "https://www.youtube.com/playlist?list=PLvMgI4c44A9Y2bykEuDAtHzgcubXOYqgU-*$*-https://www.youtube.com/playlist?list=PLvMgI4c44A9Y2bykEuDAtHzgcubXOYqgU-*$*-https://www.youtube.com/playlist?list=PLvMgI4c44A9Zl0IIQcZa7ZJrSjWPLfxpA-*$*-https://www.youtube.com/playlist?list=PLvMgI4c44A9Y8NLs_8TXc7biX-JkobrGB"
     } 
     , "OTP_MESSAGE_REGEX" : "is your OTP for login to [A-Za-z]+ [A-Za-z]+ [A-Za-z]+"
     , "autoPayBanner" : false

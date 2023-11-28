@@ -140,9 +140,10 @@ baseAppFlow baseFlow event = do
       then do
         setValueToLocalNativeStore REGISTERATION_TOKEN regToken
         checkRideAndInitiate event
-      else if getValueToLocalStore DRIVER_LOCATION == "__failed" || getValueToLocalStore DRIVER_LOCATION == "--" || not isLocationPermission  then do
-        chooseCityFlow
-      else authenticationFlow ""
+    else if skipLocationDetection then loginFlow
+    else if getValueToLocalStore DRIVER_LOCATION == "__failed" || getValueToLocalStore DRIVER_LOCATION == "--" || not isLocationPermission  then do
+      chooseCityFlow
+    else authenticationFlow ""
     where
     cacheAppParameters :: Int -> Boolean -> FlowBT String Unit
     cacheAppParameters versionCode baseFlow = do
@@ -251,9 +252,14 @@ ifNotRegistered _ = getValueToLocalStore REGISTERATION_TOKEN == "__failed"
 isTokenValid :: String -> Boolean
 isTokenValid = (/=) "__failed"
 
+skipLocationDetection :: Boolean
+skipLocationDetection = true
+
 loginFlow :: FlowBT String Unit
 loginFlow = do
+  liftFlowBT hideSplash
   logField_ <- lift $ lift $ getLogFields
+  when skipLocationDetection $ void $ UI.chooseLanguage
   mobileNo <- UI.enterMobileNumber
   case mobileNo of
     GO_TO_ENTER_OTP updateState -> do

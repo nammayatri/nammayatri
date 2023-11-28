@@ -17,6 +17,7 @@ initData = {
     },
     props:{
         isSelectedLangTamil : false,
-        screenCount : 0
+        screenCount : 0,
+        supportPopup : false
     }
 }

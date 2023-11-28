@@ -289,7 +289,7 @@ calendarView push state =
           , gravity CENTER
           , padding $ Padding 5 5 5 5
           , onClick push $ const OpenPaymentHistory
-          , visibility $ if getMerchant FunctionCall == YATRISATHI then VISIBLE else GONE
+          , visibility GONE -- Hide from Ride history screen
           ][  textView
               $ [ height WRAP_CONTENT
                 , width WRAP_CONTENT

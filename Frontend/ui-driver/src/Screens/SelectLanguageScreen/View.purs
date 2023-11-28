@@ -19,7 +19,7 @@ import Screens.SelectLanguageScreen.ComponentConfig
 import Animation as Anim
 import Common.Types.App (LazyCheck(..))
 import Components.PrimaryButton as PrimaryButton
-import Components.SelectMenuButton.View as MenuButton
+import Components.SelectMenuButton as MenuButton
 import Data.Array as DA
 import Effect (Effect)
 import Font.Size as FontSize
@@ -125,8 +125,6 @@ menuButtonsView state push =
       , background Color.white900
       ](DA.mapWithIndex
           (\ index language ->
-          MenuButton.view
-              (push <<< (MenuButtonAction))
-              { text: {name: language.name, value: language.value, subtitle: language.subtitle}, isSelected: (state.props.selectedLanguage == language.value), index : index, lineVisibility : false, activeStrokeColor : Color.white900, activeBgColor : Color.white900, inactiveStrokeColor: Color.white900}) (state.data.config.languageList)
+          MenuButton.view (push <<< MenuButtonAction) (menuButtonConfig state language index)) (state.data.config.languageList)
       )
   ]

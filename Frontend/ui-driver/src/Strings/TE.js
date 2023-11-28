@@ -1076,7 +1076,8 @@ const teluguStrings = {
   LOCATION_UNSERVICEABLE : "స్థానం పనికిరానిది",
   AND : " మరియు ",
   UNABLE_TO_GET_YOUR_LOCATION : "మీ స్థానాన్ని పొందడం సాధ్యం కాలేదు!",
-  TURN_OFF_ANY_MOCK_LOCATION_APP_AND_RESTART : "మీరు ఉపయోగిస్తున్న ఏదైనా మాక్ లొకేషన్ యాప్‌ని ఆఫ్ చేసి, యాప్‌ని రీస్టార్ట్ చేయండి."
+  TURN_OFF_ANY_MOCK_LOCATION_APP_AND_RESTART : "మీరు ఉపయోగిస్తున్న ఏదైనా మాక్ లొకేషన్ యాప్‌ని ఆఫ్ చేసి, యాప్‌ని రీస్టార్ట్ చేయండి.",
+  BOOTH_CHARGES : "బూత్ ఛార్జ్"
 }
   
   

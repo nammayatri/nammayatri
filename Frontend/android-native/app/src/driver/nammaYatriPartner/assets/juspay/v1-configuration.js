@@ -110,32 +110,32 @@ window.getMerchantConfig = function () {
       "isMaskedName": false
     }
     , "subscriptionConfig" : {
-      "enableBlocking" : true,
-      "onBoardingSubscription" : true,
-      "showDUOfferBanner" : true,
-      "offerBannerValidTill" : "2024-01-01T00:00:00",
-      "offerBannerDeadline" : "December 31-*$*-ಡಿಸೆಂಬರ್ 31-*$*-31 दिसंबर-*$*-டிசம்பர் 31",
-      "offerBannerConfig" : {
-        "showDUOfferBanner" : true,
-        "offerBannerValidTill" : "2024-01-01T00:00:00",
-        "offerBannerDeadline" : "December 31-*$*-ಡಿಸೆಂಬರ್ 31-*$*-31 दिसंबर-*$*-டிசம்பர் 31",
-        "offerBannerPlans" : ["a35ffc7c-de0d-4dcc-83a8-e36a5a29cc1d"],
-      },
-      "lowDuesLimit" : 25.0,
-      "maxDuesLimit" : 100.0,
-      "highDueWarningLimit" : 75.0,
-      "moveDriverToOfflineInHighDueDaily" : true,
-      "enableSubscriptionPopups" : true,
-      "faqLink" : "https://nammayatri.in/plans/",
-      "supportNumber" : "08069724800",
-      "whatsappSupportLink" : "https://wa.me/917483117936?text=Hello%2C%20I%20need%20help%20with%20setting%20up%20Autopay%20Subscription%0A%E0%B2%B8%E0%B3%8D%E0%B2%B5%E0%B2%AF%E0%B2%82%20%E0%B2%AA%E0%B2%BE%E0%B2%B5%E0%B2%A4%E0%B2%BF%20%E0%B2%9A%E0%B2%82%E0%B2%A6%E0%B2%BE%E0%B2%A6%E0%B2%BE%E0%B2%B0%E0%B2%BF%E0%B2%95%E0%B3%86%E0%B2%AF%E0%B2%A8%E0%B3%8D%E0%B2%A8%E0%B3%81%20%E0%B2%B9%E0%B3%8A%E0%B2%82%E0%B2%A6%E0%B2%BF%E0%B2%B8%E0%B2%B2%E0%B3%81%20%E0%B2%A8%E0%B2%A8%E0%B2%97%E0%B3%86%20%E0%B2%B8%E0%B2%B9%E0%B2%BE%E0%B2%AF%E0%B2%A6%20%E0%B2%85%E0%B2%97%E0%B2%A4%E0%B3%8D%E0%B2%AF%E0%B2%B5%E0%B2%BF%E0%B2%A6%E0%B3%86",
-      "myPlanYoutubeLink" : "https://www.youtube.com/playlist?list=PL4AEiRR3V7kHcg2-fgzvDXDqWihZD9mTK",
-      "overlayYoutubeLink" : "https://www.youtube.com/shorts/x9cJN78j9V8",
-      "optionsMenuItems" : {
-        "managePlan" : true,
-        "paymentHistory" : true,
-        "viewFaqs" : true,
-      },
+          "enableBlocking" : true,
+          "onBoardingSubscription" : true,
+          "showDUOfferBanner" : true,
+          "offerBannerValidTill" : "2024-01-01T00:00:00",
+          "offerBannerDeadline" : "December 31-*$*-ಡಿಸೆಂಬರ್ 31-*$*-31 दिसंबर-*$*-டிசம்பர் 31",
+          "offerBannerConfig" : {
+            "showDUOfferBanner" : true,
+            "offerBannerValidTill" : "2024-01-01T00:00:00",
+            "offerBannerDeadline" : "December 31-*$*-ಡಿಸೆಂಬರ್ 31-*$*-31 दिसंबर-*$*-டிசம்பர் 31",
+            "offerBannerPlans" : ["a35ffc7c-de0d-4dcc-83a8-e36a5a29cc1d"],
+          },
+          "lowDuesLimit" : 25.0,
+          "maxDuesLimit" : 100.0,
+          "highDueWarningLimit" : 75.0,
+          "moveDriverToOfflineInHighDueDaily" : true,
+          "enableSubscriptionPopups" : true,
+          "faqLink" : "https://nammayatri.in/plans/",
+          "supportNumber" : "08069724800",
+          "whatsappSupportLink" : "https://wa.me/917483117936?text=Hello%2C%20I%20need%20help%20with%20setting%20up%20Autopay%20Subscription%0A%E0%B2%B8%E0%B3%8D%E0%B2%B5%E0%B2%AF%E0%B2%82%20%E0%B2%AA%E0%B2%BE%E0%B2%B5%E0%B2%A4%E0%B2%BF%20%E0%B2%9A%E0%B2%82%E0%B2%A6%E0%B2%BE%E0%B2%A6%E0%B2%BE%E0%B2%B0%E0%B2%BF%E0%B2%95%E0%B3%86%E0%B2%AF%E0%B2%A8%E0%B3%8D%E0%B2%A8%E0%B3%81%20%E0%B2%B9%E0%B3%8A%E0%B2%82%E0%B2%A6%E0%B2%BF%E0%B2%B8%E0%B2%B2%E0%B3%81%20%E0%B2%A8%E0%B2%A8%E0%B2%97%E0%B3%86%20%E0%B2%B8%E0%B2%B9%E0%B2%BE%E0%B2%AF%E0%B2%A6%20%E0%B2%85%E0%B2%97%E0%B2%A4%E0%B3%8D%E0%B2%AF%E0%B2%B5%E0%B2%BF%E0%B2%A6%E0%B3%86",
+          "myPlanYoutubeLink" : "https://www.youtube.com/playlist?list=PL4AEiRR3V7kHcg2-fgzvDXDqWihZD9mTK",
+          "overlayYoutubeLink" : "https://www.youtube.com/shorts/x9cJN78j9V8",
+          "optionsMenuItems" : {
+            "managePlan" : true,
+            "paymentHistory" : true,
+            "viewFaqs" : true,
+          },
     }
     , "rideActionModelConfig" : {
       "showVehicleVariant" : false

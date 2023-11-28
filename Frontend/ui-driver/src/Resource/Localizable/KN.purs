@@ -1085,3 +1085,4 @@ getKN stringKey =
         CALL_REQUEST_HAS_BEEN_PLACED -> ""
         BY_CLICKING_NEXT_YOU_WILL_BE_AGREEING_TO_OUR -> ""
         THIS_EXTRA_AMOUNT_THE_CUSTOMER_WILL_PAY -> "ಇದು ಗ್ರಾಹಕರು ನಿಮಗೆ ಪಾವತಿಸುವ ಹೆಚ್ಚುವರಿ ಮೊತ್ತವಾಗಿದೆ ಏಕೆಂದರೆ ನೀವು {} ನಿಮಿಷಗಳಿಗಿಂತ ಹೆಚ್ಚು ಕಾಯುತ್ತಿದ್ದೀರಿ"
+        BOOTH_CHARGES -> "ಬೂತ್ ಚಾರ್ಜ್"

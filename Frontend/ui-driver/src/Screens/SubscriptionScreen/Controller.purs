@@ -284,7 +284,7 @@ eval (LoadMyPlans plans) state = do
           newState = if state.data.config.subscriptionConfig.enableSubscriptionPopups then 
                         state{ 
                             props{ showShimmer = false, subView = MyPlan, lastPaymentType = currentPlanResp.lastPaymentType, myPlanProps{ multiTypeDues = multiTypeDues, overDue = isOverdue } }, 
-                            data { orderId = currentPlanResp.orderId, 
+                            data{ orderId = currentPlanResp.orderId, 
                                   planId = planEntity.id, 
                                   myPlanData {
                                       planEntity = myPlanListTransformer planEntity' currentPlanResp.isLocalized state.data.config.subscriptionConfig.gradientConfig,
@@ -294,7 +294,8 @@ eval (LoadMyPlans plans) state = do
                                       autoPayDueAmount = planEntity.autopayDues ,
                                       autoPayStatus = getAutopayStatus currentPlanResp.autoPayStatus, 
                                       lowAccountBalance = requiredBalance,
-                                      dueItems = constructDues planEntity.dues
+                                      dueItems = constructDues planEntity.dues,
+                                      dueBoothCharges = if planEntity.dueBoothCharges == Mb.Just 0.0 then Mb.Nothing else planEntity.dueBoothCharges
                                   }}
                          }
                      else state{ 

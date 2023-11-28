@@ -39,7 +39,7 @@ import Data.Bifunctor.Join (Join)
 import Data.Either (Either(..))
 import Data.Function.Uncurried (runFn1)
 import Data.Int (toNumber, pow, ceil)
-import Data.Maybe (Maybe(..), fromMaybe, isJust)
+import Data.Maybe (Maybe(..), fromMaybe, isJust, maybe)
 import Data.Maybe as Mb
 import Data.Number (fromString) as Number
 import Data.String as DS
@@ -56,7 +56,7 @@ import Helpers.Utils as HU
 import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Prelude (Unit, bind, const, discard, map, not, pure, show, unit, void, when, ($), (&&), (*), (+), (-), (/), (/=), (<), (<<<), (<>), (==), (>), (||))
+import Prelude (Unit, bind, const, discard, map, not, pure, show, unit, void, when, ($), (&&), (*), (+), (-), (/), (/=), (<), (<<<), (<>), (==), (>), (||), identity)
 import Presto.Core.Types.API (ErrorResponse)
 import Presto.Core.Types.Language.Flow (Flow, doAff, getState, delay)
 import PrestoDOM (Gradient(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Prop, Screen, Visibility(..), afterRender, alignParentBottom, alpha, background, clickable, color, cornerRadius, ellipsize, fontStyle, frameLayout, gradient, gravity, height, horizontalScrollView, id, imageView, imageWithFallback, lineHeight, linearLayout, lottieAnimationView, margin, maxLines, onBackPressed, onClick, orientation, padding, relativeLayout, scrollBarX, scrollBarY, scrollView, shimmerFrameLayout, singleLine, stroke, text, textFromHtml, textSize, textView, visibility, weight, width)
@@ -667,35 +667,42 @@ duesView push state =
       , padding $ PaddingBottom 15
       , visibility if state.props.subView == MyPlan then VISIBLE else GONE
      ][ linearLayout[
-          gravity CENTER
+          gravity CENTER_VERTICAL
         , padding $ Padding 16 16 16 8
         , width MATCH_PARENT
         , onClick push $ const $ ToggleDueDetailsView
-      ][ imageView
-          [ width $ V 16
-          , height $ V 16
-          , margin (MarginRight 4)
-          , visibility if state.props.myPlanProps.overDue then VISIBLE else GONE
-          , imageWithFallback $ HU.fetchImage HU.FF_ASSET "ny_ic_warning_unfilled_red"
+        , orientation VERTICAL
+      ][  linearLayout
+          [ width MATCH_PARENT
+          , height WRAP_CONTENT
+          , gravity CENTER_VERTICAL
+          ][  imageView
+              [ width $ V 16
+              , height $ V 16
+              , margin (MarginRight 4)
+              , visibility if state.props.myPlanProps.overDue then VISIBLE else GONE
+              , imageWithFallback $ HU.fetchImage HU.FF_ASSET "ny_ic_warning_unfilled_red"
+              ]
+            , textView $
+              [ text (getString YOUR_DUES)
+              , weight 1.0
+              , gravity CENTER_VERTICAL
+              , color if state.props.myPlanProps.overDue then Color.red else Color.black800
+              ]  <> if state.props.isSelectedLangTamil then FontStyle.body9 TypoGraphy else FontStyle.body6 TypoGraphy
+            , textView $
+              [ text $  "₹" <> HU.getFixedTwoDecimals state.data.myPlanData.totalDueAmount
+              , color if state.props.myPlanProps.overDue then Color.red else Color.blue800
+              , padding $ PaddingBottom 2
+              , visibility if state.props.myPlanProps.isDueViewExpanded then GONE else VISIBLE
+              ] <> if state.props.isSelectedLangTamil then FontStyle.body7 TypoGraphy else FontStyle.h2 TypoGraphy
+            , imageView [
+              imageWithFallback $ HU.fetchImage HU.FF_COMMON_ASSET $ if state.props.myPlanProps.isDueViewExpanded then "ny_ic_chevron_up" else "ny_ic_chevron_down"
+              , height $ V 12
+              , width $ V 12
+              , margin $ MarginLeft 6
+            ]
           ]
-          , textView $
-            [ text (getString YOUR_DUES)
-            , weight 1.0
-            , gravity CENTER_VERTICAL
-            , color if state.props.myPlanProps.overDue then Color.red else Color.black800
-            ]  <> if state.props.isSelectedLangTamil then FontStyle.body9 TypoGraphy else FontStyle.body6 TypoGraphy
-          , textView $
-            [ text $  "₹" <> HU.getFixedTwoDecimals state.data.myPlanData.totalDueAmount
-            , color if state.props.myPlanProps.overDue then Color.red else Color.blue800
-            , padding $ PaddingBottom 2
-            , visibility if state.props.myPlanProps.isDueViewExpanded then GONE else VISIBLE
-            ] <> if state.props.isSelectedLangTamil then FontStyle.body7 TypoGraphy else FontStyle.h2 TypoGraphy
-          , imageView [
-            imageWithFallback $ HU.fetchImage HU.FF_COMMON_ASSET $ if state.props.myPlanProps.isDueViewExpanded then "ny_ic_chevron_up" else "ny_ic_chevron_down"
-            , height $ V 12
-            , width $ V 12
-            , margin $ MarginLeft 6
-          ]
+        , maybe dummyView (\amount -> commonTV push ("Booth Charges included: ₹" <> (show amount)) Color.black600 (FontStyle.tags TypoGraphy) 5 LEFT (not state.props.myPlanProps.isDueViewExpanded)) $ state.data.myPlanData.dueBoothCharges -- TODO :: Chek in case of zero also
       ]
     , PrestoAnim.animationSet [ Anim.translateYAnim AnimConfig.translateYAnimConfig ] $ linearLayout
       [ height WRAP_CONTENT
@@ -811,6 +818,7 @@ duesView push state =
                   , color Color.black600
                   ] <> FontStyle.captions TypoGraphy
               ]
+            , maybe dummyView (\amount -> commonTV push ("Booth Charges included: ₹" <> (show amount)) Color.black600 (FontStyle.tags TypoGraphy) 5 LEFT (state.props.myPlanProps.isDueViewExpanded)) $ state.data.myPlanData.dueBoothCharges -- TODO :: Chek in case of zero also
         ]
     , linearLayout
       [ height WRAP_CONTENT
@@ -1182,6 +1190,7 @@ dummyView =
   linearLayout
   [ height WRAP_CONTENT
   , width WRAP_CONTENT
+  , visibility GONE
   ][]
 
 getImageURL :: String -> String

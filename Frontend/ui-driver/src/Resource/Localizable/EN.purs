@@ -1085,3 +1085,4 @@ getEN stringKey =
         DRIVER_GO_HOME_REQUEST_NOT_PRESENT -> ""
         BY_CLICKING_NEXT_YOU_WILL_BE_AGREEING_TO_OUR -> ""
         THIS_EXTRA_AMOUNT_THE_CUSTOMER_WILL_PAY -> "This is the extra amount the customer will pay you because you have waited more than {} minutes"
+        BOOTH_CHARGES -> "Booth Charges"

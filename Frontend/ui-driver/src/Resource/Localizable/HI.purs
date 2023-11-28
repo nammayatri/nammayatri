@@ -1042,7 +1042,7 @@ getHI stringKey =
         CONFIRM_AND_UPLOAD -> "पुष्टि करें और अपलोड करें"
         RETAKE_PHOTO-> "फोटो फिर से लें"
         LETS_GET_YOU_TRIP_READY -> "आइए हम आपकी यात्रा के लिए तैयार हों!"
-        GOT_AN_OTP -> "एक OTP मिला?"
+        GOT_AN_OTP -> "OTP मिला?"
         DRIVING_LICENSE_DETAILS -> "ड्राइविंग लाइसेंस विवरण"
         VEHICLE_REGISTRATION_DETAILS -> "वाहन पंजीकरण विवरण"
         UPLOAD_PHOTO -> "फोटो अपलोड करें"
@@ -1085,3 +1085,4 @@ getHI stringKey =
         CHOOSE_LANGUAGE -> ""
         BY_CLICKING_NEXT_YOU_WILL_BE_AGREEING_TO_OUR -> ""
         THIS_EXTRA_AMOUNT_THE_CUSTOMER_WILL_PAY -> "यह वह अतिरिक्त राशि है जो ग्राहक आपको भुगतान करेगा क्योंकि आपने {} मिनट से अधिक प्रतीक्षा की है"
+        BOOTH_CHARGES -> "बूथ चार्ज"

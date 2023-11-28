@@ -247,14 +247,14 @@ view push state =
       , if state.data.paymentState.showRateCard then rateCardView push state else dummyTextView
       , if (state.props.showlinkAadhaarPopup && state.props.showAadharPopUp) then linkAadhaarPopup push state else dummyTextView
       , if state.props.rcDeactivePopup then PopUpModal.view (push <<< RCDeactivatedAC) (driverRCPopUpConfig state) else dummyTextView
-      , if (state.props.subscriptionPopupType == ST.FREE_TRIAL_POPUP) && (MU.getMerchant FunctionCall) == MU.NAMMAYATRI
+      , if (state.props.subscriptionPopupType == ST.FREE_TRIAL_POPUP) && state.data.config.subscriptionConfig.enableSubscriptionPopups
            then PopUpModal.view (push <<< FreeTrialEndingAC) (freeTrialEndingPopupConfig state) 
            else linearLayout[visibility GONE][]
       , case HU.getPopupObjectFromSharedPrefs SHOW_JOIN_NAMMAYATRI of
           Just configObject -> if (isLocalStageOn HomeScreen) then PopUpModal.view (push <<< OfferPopupAC) (offerPopupConfig true configObject) else linearLayout[visibility GONE][]
           Nothing -> linearLayout[visibility GONE][]
       , if state.props.showOffer && (MU.getMerchant FunctionCall) == MU.NAMMAYATRI && getValueToLocalStore SHOW_SUBSCRIPTIONS == "true" then PopUpModal.view (push <<< OfferPopupAC) (offerPopupConfig false (offerConfigParams state)) else dummyTextView
-      , if (DA.any (_ == state.props.subscriptionPopupType)[ST.SOFT_NUDGE_POPUP,  ST.LOW_DUES_CLEAR_POPUP, ST.GO_ONLINE_BLOCKER] && (MU.getMerchant FunctionCall) == MU.NAMMAYATRI )
+      , if (DA.any (_ == state.props.subscriptionPopupType)[ST.SOFT_NUDGE_POPUP,  ST.LOW_DUES_CLEAR_POPUP, ST.GO_ONLINE_BLOCKER] && state.data.config.subscriptionConfig.enableSubscriptionPopups)
           then PopUpModal.view (push <<< PaymentPendingPopupAC) (paymentPendingPopupConfig state) 
         else linearLayout[visibility GONE][]
       , if state.props.showGenericAccessibilityPopUp then genericAccessibilityPopUpView push state else dummyTextView
@@ -327,13 +327,13 @@ driverMapsHeaderView push state =
                     , statsModel push state
                     , if not state.props.rideActionModal && (state.props.driverStatusSet == Online || state.props.driverStatusSet == Silent)  then updateLocationAndLastUpdatedView state push else dummyTextView
                   ]
-                , if (state.props.autoPayBanner /= ST.NO_SUBSCRIPTION_BANNER && state.props.driverStatusSet == ST.Offline && getValueFromConfig "autoPayBanner") then autoPayBannerView state push true else dummyTextView
+                , if (state.props.autoPayBanner /= ST.NO_SUBSCRIPTION_BANNER && state.props.driverStatusSet == ST.Offline) then autoPayBannerView state push true else dummyTextView
                 , gotoRecenterAndSupport state push
               ]
             , alternateNumberOrOTPView state push
             , if(state.props.showGenderBanner && state.props.driverStatusSet /= ST.Offline && getValueToLocalStore IS_BANNER_ACTIVE == "True" && state.props.autoPayBanner == ST.NO_SUBSCRIPTION_BANNER) then genderBannerView state push 
                 else if state.data.paymentState.paymentStatusBanner then paymentStatusBanner state push 
-                else if (state.props.autoPayBanner /= ST.NO_SUBSCRIPTION_BANNER && state.props.driverStatusSet /= ST.Offline && getValueFromConfig "autoPayBanner") then autoPayBannerView state push false 
+                else if (state.props.autoPayBanner /= ST.NO_SUBSCRIPTION_BANNER && state.props.driverStatusSet /= ST.Offline) then autoPayBannerView state push false 
                 else if (state.props.driverStatusSet /= ST.Offline && state.props.currentStage == HomeScreen && state.data.config.purpleRideConfig.showPurpleVideos) then accessibilityBanner state push 
                 else dummyTextView
             ]

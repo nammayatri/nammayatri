@@ -15,19 +15,20 @@
 
 module Screens.SelectLanguageScreen.ComponentConfig where
 
+import Language.Strings
+import PrestoDOM
+
 import Components.PrimaryButton as PrimaryButton
 import Font.Size as FontSize
-import Language.Strings
 import Language.Types (STR(..))
-import PrestoDOM
-import Styles.Colors as Color
 import Screens.Types as ST
+import Styles.Colors as Color
+import Components.SelectMenuButton as MenuButton
+import MerchantConfig.Types as MT
+import Prelude ((==))
 
 primaryButtonConfig :: ST.SelectLanguageScreenState -> PrimaryButton.Config
-primaryButtonConfig state = let 
-    config = PrimaryButton.config
-    primaryButtonConfig' = config 
-      { textConfig
+primaryButtonConfig state = PrimaryButton.config { textConfig
       { text = (getString UPDATE)
       , color = Color.primaryButtonColor}
       , margin = (Margin 0 0 0 0)
@@ -36,4 +37,20 @@ primaryButtonConfig state = let
       , height = (V 60)
       , id = "SelectLanguageScreenPrimaryButton"
       }
-  in primaryButtonConfig'
+  
+
+
+menuButtonConfig :: ST.SelectLanguageScreenState -> MT.Language -> Int -> MenuButton.State
+menuButtonConfig state language index = MenuButton.config
+    { text =
+        { name : language.name
+        , value : language.value
+        , subtitle : language.subtitle
+        }
+    , isSelected = (state.props.selectedLanguage == language.value)
+    , index = index
+    , lineVisibility = false
+    , activeStrokeColor = Color.white900
+    , activeBgColor = Color.white900
+    , inactiveStrokeColor = Color.white900
+    }

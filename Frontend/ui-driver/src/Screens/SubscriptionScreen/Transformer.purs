@@ -224,7 +224,9 @@ constructDues duesArr = (mapWithIndex (\ ind (DriverDuesEntity item) ->
     mode: item.feeType,
     autoPayStage : item.autoPayStage,
     randomId : (getCurrentUTC "") <> show ind,
-    isSplit : item.isSplit
+    isSplit : item.isSplit,
+    specialZoneRideCount : item.specialZoneRideCount,
+    totalBoothRideCharges : item.totalBoothRideCharges
   }) duesArr)
 
 getFeeBreakup :: String -> Int -> String
@@ -243,7 +245,7 @@ getFeeBreakup plan rides =
 
 getPlanAmountConfig :: String -> {value :: Number, isFixed :: Boolean, perRide :: Number}
 getPlanAmountConfig plan = case plan of
-                            "DAILY UNLIMITED" -> {value : 25.0, isFixed : true, perRide : 0.0}
+                            "DAILY UNLIMITED" -> {value : 25.0, isFixed : true, perRide : 0.0} -- TODO :: Check in YSD
                             "DAILY PER RIDE" -> {value : 35.0, isFixed : false, perRide : 3.5}
                             _ ->  {value : 25.0, isFixed : true, perRide : 0.0}
 
