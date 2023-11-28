@@ -1223,7 +1223,7 @@ updateSubscriptionDriverFeeAndInvoice merchantShortId opCity driverId Common.Sub
                     sgst = fromMaybe 0 (fee.sgst)
                     cgst = fromMaybe 0 (fee.cgst)
                 QDF.resetFee id 0 platFormFee sgst cgst now
-                when (fee.mkManualDue == Just True) $ do QDF.updateAutoPayToManual id
+                when (fee.mkManualDue == Just True) $ do QDF.updateDriverFeeToManual id
                 when (fee.mkAutoPayDue == Just True && fee.mkManualDue `elem` [Nothing, Just False]) $ do QDF.updateManualToAutoPay id
             )
         )
