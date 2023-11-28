@@ -27,7 +27,7 @@ import Data.Either (Either(..), either)
 import Data.Lens ((^.))
 import Data.Maybe (Maybe(..), maybe, fromMaybe, isJust)
 import Engineering.Helpers.Commons (liftFlow, os)
-import Engineering.Helpers.Commons (liftFlow, os, isPreviousVersion)
+import Engineering.Helpers.Commons (liftFlow, os, isPreviousVersion, isInvalidUrl)
 import Engineering.Helpers.Utils as EHU
 import Foreign.Generic (encode)
 import Helpers.Utils (decodeError, getTime)
@@ -50,6 +50,8 @@ import Tracker.Types as Tracker
 import Types.App (GlobalState(..), FlowBT, ScreenType(..))
 import Types.EndPoint as EP
 import Constants as Constants
+import Foreign.Object (empty)
+import Data.String as DS
 
 getHeaders :: String -> Boolean -> Flow GlobalState Headers
 getHeaders val isGzipCompressionEnabled = do
@@ -84,49 +86,65 @@ getHeaders' val isGzipCompressionEnabled = do
 ----------------------------------------------------------- API Results & BT Functions-------------------------------------------------------------------------------------------------
 
 withAPIResult url f flow = do
-  let start = getTime unit
-  resp <- either (pure <<< Left) (pure <<< Right <<< f <<< _.response) =<< flow
-  let end = getTime unit
-  _ <- pure $ printLog "withAPIResult url" url
-  case resp of
-    Right res -> void $ pure $ printLog "success resp" res
-    Left (err) -> do
-      _ <- pure $ toggleBtnLoader "" false
-      let errResp = err.response
-      _ <- pure $ printLog "error resp" errResp
-      let userMessage = decodeError errResp.errorMessage "errorMessage"
-      let codeMessage = decodeError errResp.errorMessage "errorCode"
-      if (err.code == 401 && (codeMessage == "INVALID_TOKEN" || codeMessage == "TOKEN_EXPIRED")) || (err.code == 400 && codeMessage == "TOKEN_EXPIRED") then do
-        _ <- pure $ deleteValueFromLocalStore REGISTERATION_TOKEN
-        _ <- pure $ deleteValueFromLocalStore REGISTRATION_APPROVED
-        _ <- liftFlow $ stopChatListenerService
-        _ <- pure $ factoryResetApp ""
-        pure unit -- default if it fails
-        else pure unit -- default if it fails
-  pure resp
+  if (isInvalidUrl url) then pure $ Left customError
+  else do
+    let start = getTime unit
+    resp <- either (pure <<< Left) (pure <<< Right <<< f <<< _.response) =<< flow
+    let end = getTime unit
+    _ <- pure $ printLog "withAPIResult url" url
+    case resp of
+        Right res -> void $ pure $ printLog "success resp" res
+        Left (err) -> do
+            _ <- pure $ toggleBtnLoader "" false
+            let errResp = err.response
+            _ <- pure $ printLog "error resp" errResp
+            let userMessage = decodeError errResp.errorMessage "errorMessage"
+            let codeMessage = decodeError errResp.errorMessage "errorCode"
+            if (err.code == 401 && (codeMessage == "INVALID_TOKEN" || codeMessage == "TOKEN_EXPIRED")) || (err.code == 400 && codeMessage == "TOKEN_EXPIRED") then do
+                _ <- pure $ deleteValueFromLocalStore REGISTERATION_TOKEN
+                _ <- pure $ deleteValueFromLocalStore REGISTRATION_APPROVED
+                _ <- liftFlow $ stopChatListenerService
+                _ <- pure $ factoryResetApp ""
+                pure unit -- default if it fails
+                else pure unit -- default if it fails
+    pure resp
 
 withAPIResultBT url f errorHandler flow = do
-  let start = getTime unit
-  resp <- either (pure <<< Left) (pure <<< Right <<< f <<< _.response) =<< flow
-  let end = getTime unit
-  _ <- pure $ printLog "withAPIResultBT url" url
-  case resp of
-    Right res -> do
-      _ <- pure $ printLog "success resp" res
-      pure res
-    Left err -> do
-      _ <- pure $ toggleBtnLoader "" false
-      let errResp = err.response
-      let userMessage = decodeError errResp.errorMessage "errorMessage"
-      let codeMessage = decodeError errResp.errorMessage "errorCode"
-      _ <- pure $ printLog "error resp" errResp
-      if (err.code == 401 && (codeMessage == "INVALID_TOKEN" || codeMessage == "TOKEN_EXPIRED")) || (err.code == 400 && codeMessage == "TOKEN_EXPIRED") then do
-          deleteValueFromLocalStore REGISTERATION_TOKEN
-          deleteValueFromLocalStore REGISTRATION_APPROVED
-          lift $ lift $ liftFlow $ stopChatListenerService
-          pure $ factoryResetApp ""
-        else pure unit
-      errorHandler err
+  if (isInvalidUrl url) then errorHandler customError
+  else do
+    let start = getTime unit
+    resp <- either (pure <<< Left) (pure <<< Right <<< f <<< _.response) =<< flow
+    let end = getTime unit
+    _ <- pure $ printLog "withAPIResultBT url" url
+    case resp of
+        Right res -> do
+            _ <- pure $ printLog "success resp" res
+            pure res
+        Left err -> do
+            _ <- pure $ toggleBtnLoader "" false
+            let errResp = err.response
+            let userMessage = decodeError errResp.errorMessage "errorMessage"
+            let codeMessage = decodeError errResp.errorMessage "errorCode"
+            _ <- pure $ printLog "error resp" errResp
+            if (err.code == 401 && (codeMessage == "INVALID_TOKEN" || codeMessage == "TOKEN_EXPIRED")) || (err.code == 400 && codeMessage == "TOKEN_EXPIRED") then do
+                deleteValueFromLocalStore REGISTERATION_TOKEN
+                deleteValueFromLocalStore REGISTRATION_APPROVED
+                lift $ lift $ liftFlow $ stopChatListenerService
+                pure $ factoryResetApp ""
+                else pure unit
+            errorHandler err
+
+
+customError :: ErrorResponse
+customError =  { code : 400
+  , status : "success"
+  , response : {
+       error : true
+     , errorMessage : "{\"errorCode\" : \"ERROR_OCCURED_TRY_AGAIN\", \"errorMessage\" : \"Error Occured ! Please try again later\"}"
+     , userMessage : getString ERROR_OCCURED_TRY_AGAIN
+    }
+  , responseHeaders : empty
+  }
 
 ---------------------------------------------------------------TriggerOTPBT Function---------------------------------------------------------------------------------------------------
 triggerOTPBT :: TriggerOTPReq → FlowBT String TriggerOTPResp
@@ -143,6 +161,7 @@ triggerOTPBT payload = do
             pure $ toast (getString OTP_RESENT_LIMIT_EXHAUSTED_PLEASE_TRY_AGAIN_LATER)
             else pure $ toast (getString SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN)
         modifyScreenState $ ChooseLanguageScreenStateType (\chooseLanguage -> chooseLanguage { props {btnActive = false} })
+        void $ lift $ lift $ EHU.toggleLoader false
         BackT $ pure GoBack
 
 

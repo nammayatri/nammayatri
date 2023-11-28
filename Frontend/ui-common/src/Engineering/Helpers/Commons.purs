@@ -61,6 +61,7 @@ import Data.Function.Uncurried (Fn1(..), runFn2)
 import Data.Either (Either(..), either, hush)
 import Data.Foldable (foldl)
 import Log (printLog)
+import Data.Maybe (maybe)
 
 foreign import callAPI :: EffectFn7 String String String String Boolean Boolean String Unit
 foreign import callAPIWithOptions :: EffectFn8 String String String String Boolean Boolean String String Unit
@@ -280,3 +281,8 @@ getYoutubeData videoId videoType videoHeight = {
   videoType : videoType,
   videoHeight : videoHeight
 }
+
+isInvalidUrl :: String -> Boolean
+isInvalidUrl url = do
+  let strippedUrl = DS.stripPrefix (DS.Pattern "https://") url
+  maybe false (\val ->  DS.contains (DS.Pattern "(null)") val || DS.contains (DS.Pattern "__failed") val || DS.contains (DS.Pattern "//") val) strippedUrl
