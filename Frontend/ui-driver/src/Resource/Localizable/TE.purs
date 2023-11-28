@@ -656,7 +656,7 @@ getTE stringKey =
         SEVEN_DAY_FREE_TRIAL_ACTIVATED -> "7-రోజుల ఉచిత ట్రయల్ ఆక్టివేట్ చేయబడింది!"
         TAKE_UNLIMITED_RIDES_FOR_THE_NEXT_SEVEN_DAYS -> "మొదటి 7 రోజులు అపరిమిత రైడ్‌లను తీసుకోండి"
         EVERY_RIDE_AT_ZERO_COMMISSION -> "ప్రతి రైడ్ జీరో కమిషన్ తో!"
-        EARN_UPTO_PER_DAY -> "రోజుకు ₹2500 వరకు సంపాదించండి!"
+        EARN_UPTO_PER_DAY -> "రోజుకు ₹{} వరకు సంపాదించండి!"
         HOW_THIS_WORKS -> "ఇది ఎలా పని చేస్తుంది"
         SIGN_UP_FOR_AUTOPAY_BY_PAYING_JUST -> "కేవలం ₹1 చెల్లించడం ద్వారా ఆటోపేయ్ సైన్ అప్ చేయండి" 
         GET_REMINDED_ABOUT_YOUR_PLAN_SETUP -> "నా ప్లాన్ సెటప్ గురించి నాకు గుర్తు చేయండి"
@@ -1085,4 +1085,5 @@ getTE stringKey =
         DRIVER_GO_HOME_REQUEST_NOT_PRESENT -> ""
         BY_CLICKING_NEXT_YOU_WILL_BE_AGREEING_TO_OUR -> ""
         THIS_EXTRA_AMOUNT_THE_CUSTOMER_WILL_PAY -> "మీరు {} నిమిషాల కంటే ఎక్కువ వేచి ఉన్నందున కస్టమర్ మీకు చెల్లించే అదనపు మొత్తం ఇది"
-    
+        BOOTH_CHARGES -> "బూత్ ఛార్జ్"
+        BOOTH_CHARGES_INCLUDED -> "బూత్ ఛార్జీలు చేర్చబడ్డాయి: ₹{}"

@@ -19,6 +19,7 @@ import Screens.Types (OnBoardingSubscriptionScreenState)
 import Screens.Types (PlanCardConfig)
 import Services.API (UiPlansResp(..))
 import Storage (KeyStore(..), setValueToLocalStore)
+import Components.PopUpModal as PopUpModal
 
 
 instance showAction :: Show Action where
@@ -46,9 +47,13 @@ data Action = BackPressed
             | SelectPlan PlanCardConfig
             | JoinPlanAC PrimaryButton.Action
             | CallSupport
+            | PopUpModalAC PopUpModal.Action
 
 eval :: Action -> OnBoardingSubscriptionScreenState -> Eval Action ScreenOutput OnBoardingSubscriptionScreenState
-eval BackPressed state = exit GoBack
+eval BackPressed state = 
+    if state.props.supportPopup then exit GoBack
+    else continue state {props {supportPopup = not state.props.supportPopup}}
+    
 eval NoAction state = continue state
 eval GoToRegisteration state = exit $ GoToRegisterationScreen state
 eval (LoadPlans plans) state = do
@@ -62,4 +67,8 @@ eval (JoinPlanAC PrimaryButton.OnClick) state = updateAndExit state $ StartFreeT
 eval CallSupport state = do
   _ <- pure $ JB.showDialer state.data.subscriptionConfig.supportNumber false
   continue state
+eval (PopUpModalAC PopUpModal.OnButton1Click) state = do
+    void $ pure $ JB.showDialer state.data.subscriptionConfig.supportNumber false
+    continue state { props { supportPopup = false }}
+eval (PopUpModalAC (PopUpModal.OnButton2Click)) _ = exit GoBack
 eval _ state = continue state

@@ -2425,7 +2425,8 @@ newtype PlanEntity = PlanEntity {
   currentDues :: Number,
   autopayDues :: Number,
   dues :: Array DriverDuesEntity,
-  bankErrors :: Array BankError
+  bankErrors :: Array BankError,
+  dueBoothCharges :: Maybe Number
 }
 
 newtype DriverDuesEntity = DriverDuesEntity {
@@ -2440,7 +2441,10 @@ newtype DriverDuesEntity = DriverDuesEntity {
     feeType :: FeeType,
     executionAt :: Maybe String,
     rideTakenOn :: String,
-    driverFeeAmount :: Number
+    driverFeeAmount :: Number,
+    specialZoneRideCount :: Maybe Int,
+    specialZoneAmount :: Maybe Number, -- 8 Rides x 11.80 => specialZoneRideCount x (specialZoneAmount /specialZoneRideCount)
+    maxRidesEligibleForCharge :: Maybe Int
 }
 
 newtype OfferEntity = OfferEntity {
@@ -2905,7 +2909,10 @@ newtype DriverFeeInfoEntity = DriverFeeInfoEntity {
     isSplit :: Boolean,
     offerAndPlanDetails :: Maybe String,
     rideTakenOn :: String,
-    driverFeeAmount :: Number
+    driverFeeAmount :: Number,
+    specialZoneRideCount :: Maybe Int,
+    specialZoneAmount :: Maybe Number,
+    maxRidesEligibleForCharge :: Maybe Int
 }
 
 instance makeHistoryEntryDetailsEntityV2Req :: RestEndpoint HistoryEntryDetailsEntityV2Req HistoryEntryDetailsEntityV2Resp where

@@ -22,8 +22,7 @@ import Animation.Config as AnimConfig
 import Common.Types.App (LazyCheck(..), CarouselData, CityConfig)
 import Components.GenericHeader as GenericHeader
 import Components.PrimaryButton as PrimaryButton
-import Components.SelectMenuButton as MenuButtonController
-import Components.SelectMenuButton.View as MenuButton
+import Components.SelectMenuButton as MenuButton
 import Data.Array as DA
 import Data.Function.Uncurried (runFn2)
 import Data.Maybe as Mb
@@ -247,19 +246,7 @@ radioButtonView state push visibility' =
           (\ index language ->  
           PrestoAnim.animationSet
           [ Anim.translateYAnimFromTopWithAlpha $ AnimConfig.translateYAnimMapConfig index
-          ] $ MenuButton.view
-              (push <<< (MenuButtonAction))
-              { text: 
-                  { name: language.name
-                  , value: language.value
-                  , subtitle: language.subtitle
-                  }, 
-                isSelected: (selectedVal == language.value), 
-                index : index, 
-                lineVisibility : false, 
-                activeStrokeColor : Color.blue900, 
-                activeBgColor : Color.blue600, 
-                inactiveStrokeColor : Color.grey700 }) items
+          ] $ MenuButton.view (push <<< MenuButtonAction) (menuButtonConfig index language selectedVal)) items
       )
   ]
 
@@ -321,7 +308,7 @@ mockLocationEnabledView push state =
 dummyView :: forall w. PrestoDOM (Effect Unit) w
 dummyView = linearLayout [visibility GONE][]
 
-transformCityConfig :: Array CityConfig -> Array MenuButtonController.Text
+transformCityConfig :: Array CityConfig -> Array MenuButton.Text
 transformCityConfig cityConfig = map (\city -> {name: city.cityName, value: city.cityName, subtitle: ""}) cityConfig
 
 boolToVisibility :: Boolean -> Visibility

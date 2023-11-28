@@ -20,7 +20,7 @@ import Halogen.VDom.DOM.Prop (Prop)
 import Helpers.Utils (getDateAfterNDays)
 import JBridge (getWidthFromPercent)
 import JBridge as JB
-import Language.Strings (getString)
+import Language.Strings (getString, getVarString)
 import Language.Types (STR(..))
 import Font.Style as FontStyle
 import Font.Size as FontSize
@@ -41,10 +41,10 @@ import Storage (KeyStore(..), getValueToLocalNativeStore, getValueToLocalStore)
 import JBridge as JB
 import Helpers.Utils (fetchImage, FetchImageFrom(..), getDateAfterNDays)
 import Screens.SubscriptionScreen.ScreenData (dummyPlanConfig)
-import PrestoDOM (Gradient(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, alpha, background, clickable, color, cornerRadius, fontSize, fontStyle, frameLayout, gradient, gravity, height, horizontalScrollView, imageUrl, imageView, imageWithFallback, layoutGravity, lineHeight, linearLayout, margin, onBackPressed, onClick, orientation, padding, scrollBarX, scrollBarY, scrollView, singleLine, stroke, text, textFromHtml, textSize, textView, visibility, weight, width)
+import PrestoDOM (Gradient(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, alpha, background, clickable, color, cornerRadius, fontSize, fontStyle, frameLayout, gradient, gravity, height, horizontalScrollView, imageUrl, imageView, imageWithFallback, layoutGravity, lineHeight, linearLayout, margin, onBackPressed, onClick, orientation, padding, scrollBarX, scrollBarY, scrollView, singleLine, stroke, text, textFromHtml, textSize, textView, visibility, weight, width, relativeLayout)
 import PrestoDOM.Properties (cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
-import Screens.OnBoardingSubscriptionScreen.ComponentConfig (joinPlanButtonConfig)
+import Screens.OnBoardingSubscriptionScreen.ComponentConfig (joinPlanButtonConfig, popupModalConfig)
 import Screens.OnBoardingSubscriptionScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.SubscriptionScreen.Controller (getAllFareFromArray, getPlanPrice)
 import Screens.SubscriptionScreen.ScreenData (dummyPlanConfig)
@@ -55,6 +55,9 @@ import Services.Backend as Remote
 import Storage (KeyStore(..), getValueToLocalNativeStore, getValueToLocalStore)
 import Styles.Colors as Color
 import Types.App (defaultGlobalState)
+import Components.PopUpModal as PopUpModal
+import PrestoDOM.Animation as PrestoAnim
+import Animation as Anim
 
 
 screen :: ST.OnBoardingSubscriptionScreenState -> Screen Action ST.OnBoardingSubscriptionScreenState ScreenOutput
@@ -83,7 +86,7 @@ screen initialState =
 
 view :: forall w. (Action -> Effect Unit) -> ST.OnBoardingSubscriptionScreenState -> PrestoDOM (Effect Unit) w
 view push state = 
-    linearLayout
+    relativeLayout
     [ height MATCH_PARENT
     , width MATCH_PARENT
     , orientation VERTICAL
@@ -146,6 +149,8 @@ view push state =
         , bottomView push state
         ]
       ]
+    , if state.props.supportPopup then PrestoAnim.animationSet [ Anim.fadeIn state.props.supportPopup ] $ PopUpModal.view (push <<< PopUpModalAC) (popupModalConfig state)
+      else linearLayout[visibility GONE][]
     ]
 
 headerLayout :: forall w. (Action -> Effect Unit) -> ST.OnBoardingSubscriptionScreenState -> PrestoDOM (Effect Unit) w
@@ -274,7 +279,7 @@ infoView push state =
         , height $ V 32
         , imageWithFallback $ fetchImage FF_ASSET "ic_mingcute_currency_rupee"
         ]
-      , commonTV push (getString EARN_UPTO_PER_DAY) Color.black900 FontStyle.h3 CENTER 0 NoAction false
+      , commonTV push (getVarString EARN_UPTO_PER_DAY [show state.data.subscriptionConfig.earnAmountInADay]) Color.black900 FontStyle.h3 CENTER 0 NoAction false
       ]
     ]
   ]

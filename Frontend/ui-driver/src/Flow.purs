@@ -127,21 +127,11 @@ baseAppFlow baseFlow event = do
     cacheAppParameters versionCode baseFlow
     void $ lift $ lift $ liftFlow $ initiateLocationServiceClient
     when baseFlow $ lift $ lift $ initUI
-    let regToken = getValueToLocalStore REGISTERATION_TOKEN
     _ <- pure $ saveSuggestions "SUGGESTIONS" (getSuggestions "")
     _ <- pure $ saveSuggestionDefs "SUGGESTIONS_DEFINITIONS" (suggestionsDefinitions "")
     setValueToLocalStore CURRENCY (getValueFromConfig "currency")
-    isLocationPermission <- lift $ lift $ liftFlow $ isLocationPermissionEnabled unit
-    if getValueToLocalStore SHOW_SUBSCRIPTIONS == "__failed" then 
-      setValueToLocalStore SHOW_SUBSCRIPTIONS "true"
-      else pure unit
-    if isTokenValid regToken
-      then do
-        setValueToLocalNativeStore REGISTERATION_TOKEN regToken
-        checkRideAndInitiate event
-      else if getValueToLocalStore DRIVER_LOCATION == "__failed" || getValueToLocalStore DRIVER_LOCATION == "--" || not isLocationPermission  then do
-        chooseCityFlow
-      else authenticationFlow ""
+    if getValueToLocalStore SHOW_SUBSCRIPTIONS == "__failed" then setValueToLocalStore SHOW_SUBSCRIPTIONS "true" else pure unit
+    initialFlow
     where
     cacheAppParameters :: Int -> Boolean -> FlowBT String Unit
     cacheAppParameters versionCode baseFlow = do
@@ -182,6 +172,20 @@ baseAppFlow baseFlow event = do
       void $ lift $ lift $ setLogField "bundle_version" $ encode (bundle)
       void $ lift $ lift $ setLogField "config_version" $ encode config
       void $ lift $ lift $ setLogField "platform" $ encode (os)
+
+    initialFlow :: FlowBT String Unit
+    initialFlow = do
+      let regToken = getValueToLocalStore REGISTERATION_TOKEN
+      config <- getAppConfig Constants.appConfig
+      isLocationPermission <- lift $ lift $ liftFlow $ isLocationPermissionEnabled unit
+      if isTokenValid regToken
+        then do
+          setValueToLocalNativeStore REGISTERATION_TOKEN regToken
+          checkRideAndInitiate event
+      else if (not config.flowConfig.chooseCity.runFlow) then loginFlow
+      else if getValueToLocalStore DRIVER_LOCATION == "__failed" || getValueToLocalStore DRIVER_LOCATION == "--" || not isLocationPermission  then do
+        chooseCityFlow
+      else authenticationFlow ""
 
 authenticationFlow :: String -> FlowBT String Unit
 authenticationFlow _ = 
@@ -252,7 +256,10 @@ isTokenValid = (/=) "__failed"
 
 loginFlow :: FlowBT String Unit
 loginFlow = do
+  liftFlowBT hideSplash
   logField_ <- lift $ lift $ getLogFields
+  config <- getAppConfig Constants.appConfig
+  when (not config.flowConfig.chooseCity.runFlow) $ void $ UI.chooseLanguage
   mobileNo <- UI.enterMobileNumber
   case mobileNo of
     GO_TO_ENTER_OTP updateState -> do

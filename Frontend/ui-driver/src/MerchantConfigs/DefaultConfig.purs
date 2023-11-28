@@ -55,7 +55,8 @@ config =
       viewAutopayDetails : false
     },
     gradientConfig : [],
-    enableSubscriptionSupportPopup : false
+    enableSubscriptionSupportPopup : false,
+    earnAmountInADay : 2500
   },
   showPaymentDetails : true,
   rideActionModelConfig : {
@@ -191,4 +192,10 @@ config =
             -- }
         ]
   , enableMockLocation : false
+  , flowConfig : {
+      chooseCity : {
+        runFlow : true,
+        defCity : "Bangalore"
+      }
+  }
 }
