@@ -96,7 +96,6 @@ data Action = Dummy
             | BarViewSelected Int 
             | LeftChevronClicked Int
             | RightChevronClicked Int
-            | FaqQuestionView FaqQuestions
 
 eval :: Action -> DriverEarningsScreenState -> Eval Action ScreenOutput DriverEarningsScreenState
 
@@ -135,7 +134,6 @@ eval (CoinUsageResponseAction (CoinsUsageRes resp)) state = do
                          coinConversionRate = resp.coinConversionRate}, 
                   props {popupType = if resp.coinBalance == 0 && state.props.popupType == ST.NO_POPUP 
                                         then ST.NO_COINS_POPUP else state.props.popupType}}
-                                        
 eval (GenericHeaderAC (GenericHeader.PrefixImgOnClick)) state = continueWithCmd state [pure BackPressed]
 
 eval (PopUpModalAC PopUpModal.OnButton1Click) state = do
@@ -256,9 +254,6 @@ eval (RideSummaryAPIResponseAction ridesSummaryList todaysDate datesList) state 
 eval (RideHistoryAPIResponseAction rideList) state = do
   let earningHistoryItemList = earningHistoryItemsListTransformer rideList
   continue $ state {data{earningHistoryItems = earningHistoryItemList}, props{showShimmer = false}}
-
-eval (FaqQuestionView faqQuestion) state = do
-  continue state{props{subView = spy "FAQ_QUESTON_VIEW" FAQ_QUESTON_VIEW, individualQuestion = faqQuestion}}
 
 eval _ state = continue state
 

@@ -221,7 +221,6 @@ data DRIVER_EARNINGS_SCREEN_OUTPUT = EARNINGS_NAV NAVIGATION_ACTIONS
                                    | CONVERT_COIN_TO_CASH DriverEarningsScreenState
                                    | REFRESH_EARNINGS_SCREEN DriverEarningsScreenState
                                    | EARNINGS_HISTORY DriverEarningsScreenState
-
 data REFERRAL_SCREEN_OUTPUT = GO_TO_HOME_SCREEN_FROM_REFERRAL_SCREEN
                             | GO_TO_RIDES_SCREEN_FROM_REFERRAL_SCREEN
                             | GO_TO_PROFILE_SCREEN_FROM_REFERRAL_SCREEN

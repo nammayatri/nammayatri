@@ -332,12 +332,6 @@ type Badge =  {
   , subText :: String
   }
 
-type FaqQuestions = {
-  question :: String,
-  videoLink :: String,
-  answer :: Array String
-}
-
 type VehicleP = {
   vehicleName :: String,
   isSelected :: Boolean
@@ -2055,8 +2049,7 @@ type DriverEarningsScreenProps = {
   startDate :: String,
   endDate :: String,
   gotDataforWeek :: Array Boolean,
-  coinConvertedSuccess :: Boolean,
-  individualQuestion :: FaqQuestions
+  coinConvertedSuccess :: Boolean
 }
 
 type CalendarState = { 
@@ -2102,7 +2095,7 @@ type CoinHistoryItem = {
   cash :: Number
 }
 
-data DriverEarningsPopupType = COIN_TO_CASH_POPUP | COIN_TO_CASH_FAIL_POPUP | NO_COINS_POPUP | COINS_EXPIRING_POPUP | NO_POPUP | FAQ_VIEW | FAQ_QUESTON_VIEW
+data DriverEarningsPopupType = COIN_TO_CASH_POPUP | COIN_TO_CASH_FAIL_POPUP | NO_COINS_POPUP | COINS_EXPIRING_POPUP | NO_POPUP
 
 derive instance genericDriverEarningsPopupType :: Generic DriverEarningsPopupType _
 instance showDriverEarningsPopupType :: Show DriverEarningsPopupType where show = genericShow
