@@ -17,7 +17,6 @@ module Services.Backend where
 
 import Data.Maybe
 import Services.API
-import Services.API
 
 import Common.Types.App (Version(..))
 import Control.Monad.Except.Trans (lift)
@@ -26,9 +25,10 @@ import Data.Either (Either(..), either)
 import Data.Int as INT
 import Data.Number as Number
 import Data.String as DS
+import Data.Array as DA
 import Debug (spy)
 import Effect.Class (liftEffect)
-import Engineering.Helpers.Commons (liftFlow)
+import Engineering.Helpers.Commons (liftFlow, isInvalidUrl)
 import Engineering.Helpers.Utils (toggleLoader)
 import Foreign.Generic (encode)
 import Foreign.NullOrUndefined (undefined)
@@ -52,6 +52,7 @@ import Tracker.Types as Tracker
 import Types.App (FlowBT, GlobalState(..), ScreenType(..))
 import Types.ModifyScreenState (modifyScreenState)
 import Types.ModifyScreenState (modifyScreenState)
+import Foreign.Object (empty)
 
 getHeaders :: String -> Boolean -> Flow GlobalState Headers
 getHeaders dummy isGzipCompressionEnabled = do
@@ -83,59 +84,83 @@ getHeaders' dummy isGzipCompressionEnabled = do
                     <> if isGzipCompressionEnabled then [Header "Accept-Encoding" "gzip"] else []
 
 withAPIResult url f flow = do
-    let start = getTime unit
-    resp <- either (pure <<< Left) (pure <<< Right <<< f <<< _.response) =<< flow
-    let end = getTime unit
-    _ <- pure $ printLog "withAPIResult url" url
-    case resp of
-        Right res -> void $ pure $ printLog "success resp" res
-        Left err -> do
-          let errResp = err.response
-          _ <- pure $ printLog "error resp" errResp
-          let codeMessage = decodeErrorCode errResp.errorMessage
-          let userMessage = decodeErrorMessage errResp.errorMessage
-          if (err.code == 401 && (codeMessage == "INVALID_TOKEN" || codeMessage == "TOKEN_EXPIRED")) || (err.code == 400 && codeMessage == "TOKEN_EXPIRED") then do
-              _ <- pure $ deleteValueFromLocalStore REGISTERATION_TOKEN
-              _ <- pure $ deleteValueFromLocalStore VERSION_NAME
-              _ <- pure $ deleteValueFromLocalStore BASE_URL
-              _ <- pure $ deleteValueFromLocalStore TEST_FLOW_FOR_REGISTRATOION
-              _ <- pure $ deleteValueFromLocalStore IS_RIDE_ACTIVE
-              _ <- pure $ deleteValueFromLocalStore IS_DRIVER_ENABLED
-              -- _ <- stopLocationPollingAPI
-              _ <- liftFlow $ stopChatListenerService
-              _ <- pure $ factoryResetApp ""
-              pure unit -- default if it fails
-              else pure unit -- default if it fails
-    pure resp
+    if (isInvalidUrl url) then pure $ Left customError
+    else do
+        let start = getTime unit
+        resp <- either (pure <<< Left) (pure <<< Right <<< f <<< _.response) =<< flow
+        let end = getTime unit
+        _ <- pure $ printLog "withAPIResult url" url
+        case resp of
+            Right res -> void $ pure $ printLog "success resp" res
+            Left err -> do
+                let errResp = err.response
+                _ <- pure $ printLog "error resp" errResp
+                let codeMessage = decodeErrorCode errResp.errorMessage
+                let userMessage = decodeErrorMessage errResp.errorMessage
+                if (err.code == 401 && (codeMessage == "INVALID_TOKEN" || codeMessage == "TOKEN_EXPIRED")) || (err.code == 400 && codeMessage == "TOKEN_EXPIRED") then do
+                    _ <- pure $ deleteValueFromLocalStore REGISTERATION_TOKEN
+                    _ <- pure $ deleteValueFromLocalStore VERSION_NAME
+                    _ <- pure $ deleteValueFromLocalStore BASE_URL
+                    _ <- pure $ deleteValueFromLocalStore TEST_FLOW_FOR_REGISTRATOION
+                    _ <- pure $ deleteValueFromLocalStore IS_RIDE_ACTIVE
+                    _ <- pure $ deleteValueFromLocalStore IS_DRIVER_ENABLED
+                    -- _ <- stopLocationPollingAPI
+                    _ <- liftFlow $ stopChatListenerService
+                    _ <- pure $ factoryResetApp ""
+                    pure unit -- default if it fails
+                    else pure unit -- default if it fails
+        pure resp
 
 
 withAPIResultBT url f errorHandler flow = do
-    let start = getTime unit
-    resp <- either (pure <<< Left) (pure <<< Right <<< f <<< _.response) =<< flow
-    let end = getTime unit
-    _ <- pure $ printLog "withAPIResultBT url" url
-    case resp of
-        Right res -> do
-          _ <- pure $ printLog "success resp" res
-          pure res
-        Left (err) -> do
-          let errResp = err.response
-          _ <- pure $ printLog "error resp" errResp
-          let codeMessage = decodeErrorCode errResp.errorMessage
-          let userMessage = decodeErrorMessage errResp.errorMessage
-          if (err.code == 401 && (codeMessage == "INVALID_TOKEN" || codeMessage == "TOKEN_EXPIRED")) || (err.code == 400 && codeMessage == "TOKEN_EXPIRED") then do
-              deleteValueFromLocalStore REGISTERATION_TOKEN
-              deleteValueFromLocalStore VERSION_NAME
-              deleteValueFromLocalStore BASE_URL
-              deleteValueFromLocalStore TEST_FLOW_FOR_REGISTRATOION
-              deleteValueFromLocalStore IS_RIDE_ACTIVE
-              deleteValueFromLocalStore IS_DRIVER_ENABLED
-              lift $ lift $ liftFlow $ stopChatListenerService
-              _ <- pure $ factoryResetApp ""
-              pure unit
-                  else pure unit
-          errorHandler (ErrorPayload err)
+    if (isInvalidUrl url) then errorHandler customErrorBT
+    else do
+        let start = getTime unit
+        resp <- either (pure <<< Left) (pure <<< Right <<< f <<< _.response) =<< flow
+        let end = getTime unit
+        _ <- pure $ printLog "withAPIResultBT url" url
+        case resp of
+            Right res -> do
+                _ <- pure $ printLog "success resp" res
+                pure res
+            Left (err) -> do
+                let errResp = err.response
+                _ <- pure $ printLog "error resp" errResp
+                let codeMessage = decodeErrorCode errResp.errorMessage
+                let userMessage = decodeErrorMessage errResp.errorMessage
+                if (err.code == 401 && (codeMessage == "INVALID_TOKEN" || codeMessage == "TOKEN_EXPIRED")) || (err.code == 400 && codeMessage == "TOKEN_EXPIRED") then do
+                    deleteValueFromLocalStore REGISTERATION_TOKEN
+                    deleteValueFromLocalStore VERSION_NAME
+                    deleteValueFromLocalStore BASE_URL
+                    deleteValueFromLocalStore TEST_FLOW_FOR_REGISTRATOION
+                    deleteValueFromLocalStore IS_RIDE_ACTIVE
+                    deleteValueFromLocalStore IS_DRIVER_ENABLED
+                    lift $ lift $ liftFlow $ stopChatListenerService
+                    _ <- pure $ factoryResetApp ""
+                    pure unit
+                        else pure unit
+                errorHandler (ErrorPayload err)
 
+customErrorBT = ErrorPayload { code : 400
+  , status : "success"
+  , response : {
+       error : true
+     , errorMessage : "{\"errorCode\" : \"ERROR_OCCURED_TRY_AGAIN\", \"errorMessage\" : \"Error Occured ! Please try again later\"}"
+     , userMessage : getString ERROR_OCCURED_PLEASE_TRY_AGAIN_LATER
+    }
+  , responseHeaders : empty
+  }
+
+customError :: ErrorResponse
+customError =  { code : 400
+  , status : "success"
+  , response : {
+       error : true
+     , errorMessage : "{\"errorCode\" : \"ERROR_OCCURED_TRY_AGAIN\", \"errorMessage\" : \"Error Occured ! Please try again later\"}"
+     , userMessage : getString ERROR_OCCURED_PLEASE_TRY_AGAIN_LATER
+    }
+  , responseHeaders : empty
+  }
 
 --------------------------------- triggerOTPBT---------------------------------------------------------------------------------------------------------------------------------
 triggerOTPBT :: TriggerOTPReq → FlowBT String TriggerOTPResp
