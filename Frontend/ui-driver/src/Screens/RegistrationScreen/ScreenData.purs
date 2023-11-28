@@ -19,7 +19,7 @@ import Data.Eq.Generic (genericEq)
 import Data.Generic.Rep (class Generic)
 import Data.Maybe (Maybe(..))
 import Language.Strings (getString)
-import MerchantConfig.Types (CityConfig)
+import Common.Types.App (CityConfig)
 import Prelude (class Eq)
 import Screens.Types (RegisterationStep(..), RegistrationScreenState, StageStatus(..))
 import MerchantConfig.DefaultConfig as DC
@@ -69,5 +69,6 @@ dummyCityConfig = {
                     showSubscriptions : false,
                     cityLat : 0.0,
                     cityLong : 0.0,
-                    supportNumber : ""
+                    supportNumber : "",
+                    languageKey : ""
                   }

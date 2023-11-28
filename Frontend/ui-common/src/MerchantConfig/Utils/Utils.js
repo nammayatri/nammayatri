@@ -9,6 +9,7 @@ export const getValueFromConfig = function (constructorKey){
   return "";
 }
 
+
 export const getMerchantString = function(key) {
   const selectedLanguage = JBridge.getKeysInSharedPref("LANGUAGE_KEY");
   switch (selectedLanguage) {

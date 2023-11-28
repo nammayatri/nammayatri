@@ -22,7 +22,7 @@ import Screens.SubscriptionScreen.Controller
 import Common.Resources.Constants (zoomLevel)
 import Common.Styles.Colors as Color
 import Common.Types.App (APIPaymentStatus(..)) as PS
-import Common.Types.App (Version(..), LazyCheck(..), PaymentStatus(..), Event, FCMBundleUpdate)
+import Common.Types.App (Version(..), LazyCheck(..), PaymentStatus(..), Event, FCMBundleUpdate, CityConfig)
 import Components.ChatView.Controller (makeChatComponent')
 import Constants as Constants
 import Control.Monad.Except (runExceptT)
@@ -68,7 +68,6 @@ import JBridge (cleverTapCustomEvent, cleverTapCustomEventWithParams, cleverTapE
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import MerchantConfig.DefaultConfig as DC
-import MerchantConfig.Types (CityConfig)
 import MerchantConfig.Utils (getMerchant, Merchant(..), getValueFromConfig)
 import Prelude (Unit, bind, discard, pure, unit, unless, negate, void, when, map, otherwise, ($), (==), (/=), (&&), (||), (/), when, (+), show, (>), not, (<), (*), (-), (<=), (<$>), (>=), ($>), (<<<))
 import Presto.Core.Types.Language.Flow (delay, setLogField, getLogFields, doAff, fork)
@@ -1598,6 +1597,8 @@ referralScreenFlow = do
 
 tripDetailsScreenFlow :: FlowBT String Unit
 tripDetailsScreenFlow = do
+  config <- getAppConfig Constants.appConfig
+  modifyScreenState $ TripDetailsScreenStateType (\tripDetailsScreen -> tripDetailsScreen { data {config = config}} )
   flow <- UI.tripDetailsScreen
   case flow of
     ON_SUBMIT  -> pure unit
@@ -2563,12 +2564,11 @@ noInternetScreenFlow triggertype = do
 
 checkAll3Permissions :: Boolean -> FlowBT String Boolean
 checkAll3Permissions checkBattery = do
-  -- androidVersion <- lift $ lift $ liftFlow $ getAndroidVersion
-  -- isNotificationPermission <- lift $ lift $ liftFlow $ isNotificationPermissionEnabled unit
+  androidVersion <- lift $ lift $ liftFlow $ getAndroidVersion
+  isNotificationPermission <- lift $ lift $ liftFlow $ isNotificationPermissionEnabled unit
   isOverlayPermission <- lift $ lift $ liftFlow $ isOverlayPermissionEnabled unit
   isBatteryUsagePermission <- lift $ lift $ liftFlow $ isBatteryPermissionEnabled unit
-  -- pure $ (androidVersion < 13 || isNotificationPermission) && isOverlayPermission && (not checkBattery || isBatteryUsagePermission)
-  pure $ isOverlayPermission && (not checkBattery || isBatteryUsagePermission)
+  pure $ (androidVersion < 13 || isNotificationPermission) && isOverlayPermission && (not checkBattery || isBatteryUsagePermission)
 
 popUpScreenFlow :: AllocationData -> FlowBT String Unit
 popUpScreenFlow entityPayload = do

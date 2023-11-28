@@ -419,5 +419,6 @@ type CityConfig = {
   showSubscriptions :: Boolean,
   cityLat :: Number,
   cityLong :: Number,
-  supportNumber :: String
+  supportNumber :: String,
+  languageKey :: String
 }
