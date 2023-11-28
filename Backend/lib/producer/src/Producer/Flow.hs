@@ -57,8 +57,8 @@ runProducer = do
         endTime <- getCurrentTimestamp
         let diff = endTime - begTime
         waitTimeMilliSec <- asks (.waitTimeMilliSec)
-        threadDelayMilliSec . Milliseconds $ max 0 (fromEnum (waitTimeMilliSec - diff) :: Int)
         fork "" $ addGenericLatency "producer" $ fromIntegral $ fromEnum diff
+        threadDelayMilliSec . Milliseconds $ max 0 (fromEnum (waitTimeMilliSec - diff) :: Int)
     case someErr of
       Left err -> logError $ show err
       Right _ -> pure ()
@@ -117,14 +117,15 @@ runReviver' = do
 
 insertIntoStream :: [B.ByteString] -> Flow ()
 insertIntoStream jobs = do
-  forM_ jobs $ \job -> do
+  forM_ jobs $ \job -> fork "putting into stream" $ do
     streamName <- asks (.streamName)
     entryId <- asks (.entryId)
     eqId <- generateGUID
     let eqIdByteString = TE.encodeUtf8 eqId
     let job_ = job
     let fieldValue = [(eqIdByteString, job_)]
-    Hedis.withNonCriticalCrossAppRedis $ Hedis.xAdd streamName entryId fieldValue
+    _ <- Hedis.withNonCriticalCrossAppRedis $ Hedis.xAdd streamName entryId fieldValue
+    return ()
 
 splitIntoBatches :: Int -> [a] -> [[a]]
 splitIntoBatches _ [] = []
