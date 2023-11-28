@@ -23,6 +23,19 @@ print_status() {
     fi
 }
 
+if [[ "$1" =~ .*"ny".* ]]; then
+    user="nammaYatri"
+    partner="nammaYatriPartner"
+elif [[ "$1" =~ .*"yatri".* ]]; then
+    user="yatri"
+    partner="yatriPartner"
+elif [[ "$1" =~ .*"ys".* ]]; then
+    user="yatriSathi"
+    partner="yatriSathiPartner"
+fi
+
+
+
 if [[ "$1" =~ .*"User".* ]]; then
     echo " ---------- Customer prod:android :- --------------"
     # nix develop .#frontend 

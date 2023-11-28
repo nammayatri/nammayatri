@@ -31,8 +31,17 @@ jobs:
       - name: Update local.properties 
         env:
           MOBILITY_SERVICES: ${{ secrets.MOBILITY_SERVICES }}
-        run: bash android-native/update_properties.sh ${{ github.event.inputs.baseUrlUser }} ${{ github.event.inputs.baseUrlDriver }} ${{ github.event.inputs.mapKey }} ${{ github.event.inputs.merchantIdUser }} ${{ github.event.inputs.merchantIdDriver }} "$MOBILITY_SERVICES"
+          MASTER_APP_CONFIG: ${{ secrets.MASTER_APP_CONFIG }}
+        run: |
+           bash android-native/update_properties.sh "$MOBILITY_SERVICES" "$MASTER_APP_CONFIG" ${{ github.event.inputs.variant }}
+           bash android-native/apk_path.sh ${{ github.event.inputs.variant }}
+           
       
+      - name: Read path from file
+        run: |
+          apk_path=$(cat path.txt)
+          echo "apk_path=$apk_path" >> "$GITHUB_OUTPUT"
+        id: set_apk_path
 
       - name: Setup Node.js
         uses: actions/setup-node@v2
@@ -41,12 +50,14 @@ jobs:
 
       - name: Build APK
         run: |
+          echo "APK Path 2: ${{ github.event.inputs.variant }}"
           cd android-native  # Adjust the path as needed
           bash github_apk_build.sh ${{ github.event.inputs.variant }}
-          bash apk_path.sh ${{ github.event.inputs.variant }}
+
+      
 
       - name: Upload APK
         uses: actions/upload-artifact@v2
         with:
           name: ${{ github.event.inputs.variant }}
-          path: path.txt
+          path: ${{ steps.set_apk_path.outputs.apk_path }}

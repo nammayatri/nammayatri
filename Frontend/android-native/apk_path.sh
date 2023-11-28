@@ -1,34 +1,29 @@
 #!/bin/bash
 
-# Check if the number of arguments is correct
-if [ "$#" -ne 1 ]; then
-  echo "Usage: $0 <variant>"
-  exit 1
-fi
-
 variant=$1
 
 case $variant in
-  "yatriDriverProdDebug")
-    path="yatriDriverProd/debug/app-yatriDriver-prod-debug.apk"
+  "YatriDriverProdDebug")
+    path="Frontend/android-native/app/build/outputs/apk/yatriDriverProd/debug/app-yatriDriver-prod-debug.apk"
     ;;
-  "yatriUserProdDebug")
-    path="yatriUserProd/debug/app-yatriUser-prod-debug.apk"
+  "YatriUserProdDebug")
+    path="Frontend/android-native/app/build/outputs/apk/yatriUserProd/debug/app-yatriUser-prod-debug.apk"
     ;;
-  "nyUserProdDebug")
-    path="nyUserProd/debug/app-nyUser-prod-debug.apk"
+  "NyUserProdDebug")
+    path="Frontend/android-native/app/build/outputs/apk/nyUserProd/debug/app-nyUser-prod-debug.apk"
     ;;
-  "nyDriverProdDebug")
-    path="nyDriverProd/debug/app-nyDriver-prod-debug.apk"
+  "NyDriverProdDebug")
+    path="Frontend/android-native/app/build/outputs/apk/nyDriverProd/debug/app-nyDriver-prod-debug.apk"
     ;;
-  "ysUserProdDebug")
-    path="ysUserProd/debug/app-ysUser-prod-debug.apk"
+  "YsUserProdDebug")
+    path="Frontend/android-native/app/build/outputs/apk/ysUserProd/debug/app-ysUser-prod-debug.apk"
     ;;
-  "ysDriverProdDebug")
-    path="ysDriverProd/debug/app-ysDriver-prod-debug.apk"
+  "YsDriverProdDebug")
+    path="Frontend/android-native/app/build/outputs/apk/ysDriverProd/debug/app-ysDriver-prod-debug.apk"
     ;;
   *)
-    path="unknown_variant/debug/app-unknown-variant-debug.apk"
+    echo "Unknown variant: $variant"
+    exit 1
     ;;
 esac
 

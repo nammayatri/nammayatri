@@ -1,5 +1,10 @@
 #!/bin/bash
 
+cd android-native/app
+echo $1 > google-services.json
+cd ..
+echo $2 > merch_config.json
+
 # Install jq if not already installed
 if ! command -v jq &> /dev/null; then
     echo "jq not found. Installing..."
@@ -8,8 +13,8 @@ if ! command -v jq &> /dev/null; then
 fi
 
 # Get the JSON data from the file in the same directory as the script
-script_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-json_file="$script_dir/merch_config.json"
+
+json_file="merch_config.json"
 
 # Check if the JSON file exists
 if [ ! -f "$json_file" ]; then
@@ -21,15 +26,15 @@ fi
 json_data=$(cat "$json_file")
 
 # Get values based on the provided variant
-variant=$1
+variant=$3
 case $variant in
-    yatriDriverProdDebug|yatriUserProdDebug)
+    YatriDriverProdDebug|YatriUserProdDebug)
         config=$(echo "$json_data" | jq -r '.yatri')
         ;;
-    nyUserProdDebug|nyDriverProdDebug)
+    NyUserProdDebug|NyDriverProdDebug)
         config=$(echo "$json_data" | jq -r '.nammayatri')
         ;;
-    ysUserProdDebug|ysDriverProdDebug)
+    YsUserProdDebug|YsDriverProdDebug)
         config=$(echo "$json_data" | jq -r '.ys')
         ;;
     *)
@@ -46,8 +51,8 @@ merchantIdUser=$(echo "$config" | jq -r '.merchantIdUser')
 merchantIdDriver=$(echo "$config" | jq -r '.merchantIdDriver')
 
 # Update local.properties
-echo "CONFIG_URL_DRIVER=\"$configUrlDriver\"" >> android-native/app/local.properties
-echo "CONFIG_URL_USER=\"$configUrlUser\"" >> android-native/app/local.properties
-echo "MAP_KEY=\"$mapKey\"" >> android-native/app/local.properties
-echo "MERCHANT_ID_USER=\"$merchantIdUser\"" >> android-native/app/local.properties
-echo "MERCHANT_ID_DRIVER=\"$merchantIdDriver\"" >> android-native/app/local.properties
+echo "CONFIG_URL_DRIVER=\"$configUrlDriver\"" >> local.properties
+echo "CONFIG_URL_USER=\"$configUrlUser\"" >> local.properties
+echo "MAP_KEY=\"$mapKey\"" >> local.properties
+echo "MERCHANT_ID_USER=\"$merchantIdUser\"" >> local.properties
+echo "MERCHANT_ID_DRIVER=\"$merchantIdDriver\"" >> local.properties
