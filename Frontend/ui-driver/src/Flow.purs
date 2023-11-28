@@ -1885,6 +1885,8 @@ homeScreenFlow = do
               modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props {wrongVehicleVariant = false, otpAttemptsExceeded = true, enterOtpModal = true, rideOtp = ""} })
             else if ( errorPayload.code == 400 && (errorMessage == "Wrong Vehicle Variant")) then do
                 modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props {wrongVehicleVariant = true, otpIncorrect = true, enterOtpModal = true, otpAttemptsExceeded = false} })
+            else if ( errorPayload.code == 403 && codeMessage == "DRIVER_UNSUBSCRIBED") then do
+                modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props {driverUnsubscribedPopup = true} })
               else pure $ toast (getString SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN)
           void $ lift $ lift $ toggleLoader false
           homeScreenFlow
@@ -2787,6 +2789,7 @@ checkDriverBlockingStatus (GetDriverInfoResp getDriverInfoResp) = do
 updateBannerAndPopupFlags :: FlowBT String Unit
 updateBannerAndPopupFlags = do
   globalstate <- getState
+  (GlobalState state) <- getState
   (GetDriverInfoResp getDriverInfoResp) <- getDriverInfoDataFromCache globalstate
   appConfig <- getAppConfig Constants.appConfig
   let
@@ -2794,7 +2797,7 @@ updateBannerAndPopupFlags = do
     pendingTotalManualDues = fromMaybe 0.0 getDriverInfoResp.manualDues
     subscriptionConfig = appConfig.subscriptionConfig
     freeTrialDays = fromMaybe 0 getDriverInfoResp.freeTrialDaysLeft
-    shouldShowPopup = getValueToLocalStore APP_SESSION_TRACK_COUNT == "true" && getValueToLocalNativeStore IS_RIDE_ACTIVE == "false" && (isOnFreeTrial FunctionCall || (pendingTotalManualDues /= 0.0)) && getDriverInfoResp.subscribed && appConfig.subscriptionConfig.enableSubscriptionPopups
+    shouldShowPopup = (getValueToLocalStore APP_SESSION_TRACK_COUNT == "true" && getValueToLocalNativeStore IS_RIDE_ACTIVE == "false" && (isOnFreeTrial FunctionCall || (pendingTotalManualDues /= 0.0)) && getDriverInfoResp.subscribed && appConfig.subscriptionConfig.enableSubscriptionPopups) || state.homeScreen.props.driverUnsubscribedPopup
     autoPayStatus = getAutopayStatus getDriverInfoResp.autoPayStatus
     autopayBannerType =
       if subscriptionConfig.enableSubscriptionPopups then case autoPayNotActive, isOnFreeTrial FunctionCall, (pendingTotalManualDues /= 0.0) of
@@ -2812,7 +2815,7 @@ updateBannerAndPopupFlags = do
       true, true , true -> case freeTrialDays of
         _ | freeTrialDays == 3 || freeTrialDays == 2 || freeTrialDays == 1 -> FREE_TRIAL_POPUP
         _ -> NO_SUBSCRIPTION_POPUP
-      false, _, true -> if pendingTotalManualDues >= subscriptionConfig.maxDuesLimit then NO_SUBSCRIPTION_POPUP else LOW_DUES_CLEAR_POPUP
+      false, _, true -> if state.homeScreen.props.driverUnsubscribedPopup then DRIVER_UNSUBSCRIBED_ZONE_POPUP  else if pendingTotalManualDues >= subscriptionConfig.maxDuesLimit then NO_SUBSCRIPTION_POPUP else LOW_DUES_CLEAR_POPUP
       _, _, _ -> NO_SUBSCRIPTION_POPUP
 
     shouldMoveDriverOffline = (withinTimeRange "12:00:00" "23:59:59" (convertUTCtoISC (getCurrentUTC "") "HH:mm:ss"))

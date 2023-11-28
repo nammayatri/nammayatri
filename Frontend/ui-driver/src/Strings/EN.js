@@ -672,6 +672,7 @@ const englishStrings = {
   CLEAR_DUES : "Clear Dues",
   PAYMENT_PENDING_ALERT : "⚠️ Payment Pending! ⚠️",
   PAYMENT_PENDING_ALERT_DESC : "To continue taking rides on Namma Yatri, clear your payment dues",
+  PAYMENT_PENDING_ZONE_DESC : "To continue taking rides from zone, clear your payment dues",
   LOW_ACCOUNT_BALANCE : "Low Account Balance",
   LOW_ACCOUNT_BALANCE_DESC : "Your bank account balance is low. Add ₹<X> by today to enjoy uninterrupted rides.",
   OKAY_GOT_IT : "Okay, Got it",

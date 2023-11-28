@@ -668,6 +668,7 @@ const bengaliStrings = {
   CLEAR_DUES : "ক্লিয়ার বকেয়া",
   PAYMENT_PENDING_ALERT : "⚠️ পেমেন্ট বাকি আছে! ⚠️",
   PAYMENT_PENDING_ALERT_DESC : "নম্মা যাত্রীতে রাইড চালিয়ে যেতে, আপনার পেমেন্ট বকেয়া পরিশোধ করুন",
+  PAYMENT_PENDING_ZONE_DESC : "জোন থেকে রাইড নেওয়া চালিয়ে যেতে, আপনার পেমেন্ট বকেয়া সাফ করুন",
   LOW_ACCOUNT_BALANCE : "কম অ্যাকাউন্ট ব্যালেন্স",
   LOW_ACCOUNT_BALANCE_DESC : "আপনার ব্যাঙ্ক অ্যাকাউন্ট ব্যালেন্স কম। নিরবচ্ছিন্ন রাইড উপভোগ করতে টাকা যোগ করুন।",
   OKAY_GOT_IT : "ঠিক আছে, বুঝেছি",

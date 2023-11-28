@@ -248,8 +248,9 @@ view push state =
           Just configObject -> if (isLocalStageOn HomeScreen) then PopUpModal.view (push <<< OfferPopupAC) (offerPopupConfig true configObject) else linearLayout[visibility GONE][]
           Nothing -> linearLayout[visibility GONE][]
       , if state.props.showOffer && (MU.getMerchant FunctionCall) == MU.NAMMAYATRI then PopUpModal.view (push <<< OfferPopupAC) (offerPopupConfig false (offerConfigParams state)) else dummyTextView
-      , if (DA.any (_ == state.props.subscriptionPopupType)[ST.SOFT_NUDGE_POPUP,  ST.LOW_DUES_CLEAR_POPUP, ST.GO_ONLINE_BLOCKER] && (MU.getMerchant FunctionCall) == MU.NAMMAYATRI )
-          then PopUpModal.view (push <<< PaymentPendingPopupAC) (paymentPendingPopupConfig state) 
+      , if (DA.any (_ == state.props.subscriptionPopupType)[ST.SOFT_NUDGE_POPUP, ST.LOW_DUES_CLEAR_POPUP, ST.GO_ONLINE_BLOCKER] && (MU.getMerchant FunctionCall) == MU.NAMMAYATRI ) 
+          || (state.props.subscriptionPopupType == ST.DRIVER_UNSUBSCRIBED_ZONE_POPUP)
+          then PopUpModal.view (push <<< PaymentPendingPopupAC) (paymentPendingPopupConfig state)
         else linearLayout[visibility GONE][]
       , if state.props.showGenericAccessibilityPopUp then genericAccessibilityPopUpView push state else dummyTextView
       , if state.data.driverGotoState.showGoto then gotoListView push state else dummyTextView

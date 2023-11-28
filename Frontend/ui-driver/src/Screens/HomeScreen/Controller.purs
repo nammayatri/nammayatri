@@ -478,6 +478,11 @@ eval (PaymentPendingPopupAC PopUpModal.OnButton1Click) state = do
     _ <- pure $ metaLogEvent "ny_driver_due_payment_settle_now"
     let _ = unsafePerformEffect $ firebaseLogEvent "ny_driver_due_payment_settle_now"
     exit $ ClearPendingDues state {props{subscriptionPopupType = ST.GO_ONLINE_BLOCKER}}
+  else if state.props.subscriptionPopupType == ST.DRIVER_UNSUBSCRIBED_ZONE_POPUP then do
+    _ <- pure $ cleverTapCustomEvent "ys_driver_payment_pending_driver_unsubscribed_zone_popup"
+    _ <- pure $ metaLogEvent "ys_driver_payment_pending_driver_unsubscribed_zone_popup"
+    let _ = unsafePerformEffect $ firebaseLogEvent "ys_driver_payment_pending_driver_unsubscribed_zone_popup"
+    exit $ ClearPendingDues state {props{subscriptionPopupType = ST.NO_SUBSCRIPTION_POPUP, driverUnsubscribedPopup = false}}
   else do
     if state.props.subscriptionPopupType == ST.SOFT_NUDGE_POPUP then do
       _ <- pure $ cleverTapCustomEvent "ny_driver_payment_pending_soft_nudge_plan"
@@ -496,6 +501,11 @@ eval (PaymentPendingPopupAC PopUpModal.OptionWithHtmlClick) state = do
     _ <- pure $ metaLogEvent "ny_driver_due_payment_view_details"
     let _ = unsafePerformEffect $ firebaseLogEvent "ny_driver_due_payment_view_details"
     exit $ SubscriptionScreen state{props{ subscriptionPopupType = ST.NO_SUBSCRIPTION_POPUP}}
+  else if state.props.subscriptionPopupType == ST.DRIVER_UNSUBSCRIBED_ZONE_POPUP then do
+    _ <- pure $ cleverTapCustomEvent "ys_driver_payment_pending_driver_unsubscribed_zone_view_details"
+    _ <- pure $ metaLogEvent "ys_driver_payment_pending_driver_unsubscribed_zone_popup"
+    let _ = unsafePerformEffect $ firebaseLogEvent "ys_driver_payment_pending_driver_unsubscribed_zone_view_details"
+    exit $ SubscriptionScreen state{props{ subscriptionPopupType = ST.NO_SUBSCRIPTION_POPUP, driverUnsubscribedPopup = false}}
   else do
     _ <- pure $ cleverTapCustomEvent "ny_driver_payment_pending_soft_nudge_plan_go_online"
     _ <- pure $ metaLogEvent "ny_driver_payment_pending_soft_nudge_plan_go_online"
@@ -518,7 +528,7 @@ eval (PaymentPendingPopupAC PopUpModal.DismissPopup) state = do
     _ <- pure $ setValueToLocalStore APP_SESSION_TRACK_COUNT "shown"
     pure unit
   else pure unit
-  continue state {props{ subscriptionPopupType = ST.NO_SUBSCRIPTION_POPUP}}
+  continue state {props{ subscriptionPopupType = ST.NO_SUBSCRIPTION_POPUP, driverUnsubscribedPopup = false}}
 
 eval (FreeTrialEndingAC PopUpModal.OnButton1Click) state = do
   exit $ SubscriptionScreen state

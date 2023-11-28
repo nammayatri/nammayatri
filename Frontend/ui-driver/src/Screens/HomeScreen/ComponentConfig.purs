@@ -331,6 +331,7 @@ paymentPendingPopupConfig :: ST.HomeScreenState -> PopUpModal.Config
 paymentPendingPopupConfig state =
   let popupType = state.props.subscriptionPopupType
       dues = if state.data.paymentState.totalPendingManualDues /= 0.0 then "( ₹" <> HU.getFixedTwoDecimals state.data.paymentState.totalPendingManualDues <> ") " else ""
+      ysDues = if state.data.paymentState.payableAndGST > 0 then "( ₹" <> EHC.formatCurrencyWithCommas (show state.data.paymentState.payableAndGST) <> ") " else ""
       isHighDues = state.data.paymentState.totalPendingManualDues >= state.data.config.subscriptionConfig.highDueWarningLimit
   in
   PopUpModal.config {
@@ -341,6 +342,7 @@ paymentPendingPopupConfig state =
     topTitle {
       text = case popupType of
                 GO_ONLINE_BLOCKER -> getString PAYMENT_PENDING_ALERT
+                DRIVER_UNSUBSCRIBED_ZONE_POPUP -> getString PAYMENT_PENDING_ALERT
                 _  -> getString $ if isHighDues then DUES_PENDING else CLEAR_YOUR_DUES_EARLY
     , visibility = VISIBLE
     , gravity = CENTER
@@ -350,6 +352,7 @@ paymentPendingPopupConfig state =
                          LOW_DUES_CLEAR_POPUP -> LOW_DUES_CLEAR_POPUP_DESC 
                          SOFT_NUDGE_POPUP     -> PAYMENT_PENDING_SOFT_NUDGE
                          GO_ONLINE_BLOCKER    -> PAYMENT_PENDING_ALERT_DESC
+                         DRIVER_UNSUBSCRIBED_ZONE_POPUP -> PAYMENT_PENDING_ZONE_DESC
                          _                    -> LOW_DUES_CLEAR_POPUP_DESC
     , margin = Margin 16 16 16 4
     , textStyle = SubHeading2
@@ -369,7 +372,7 @@ paymentPendingPopupConfig state =
       }
     },
     option1 {
-      text = getString CLEAR_DUES <> dues
+      text = getString CLEAR_DUES <> if popupType == DRIVER_UNSUBSCRIBED_ZONE_POPUP then ysDues else dues
     , background = Color.black900
     , color = Color.yellow900
     , showShimmer = state.data.paymentState.showShimmer
@@ -382,6 +385,7 @@ paymentPendingPopupConfig state =
     coverImageConfig {
       imageUrl = fetchImage FF_ASSET $ case popupType of
                           GO_ONLINE_BLOCKER  -> "ny_ic_payment_pending"
+                          DRIVER_UNSUBSCRIBED_ZONE_POPUP -> "ny_ic_payment_pending_driver_unsubscribed"
                           _ ->  if isHighDues 
                                 then "ny_ic_payment_pending" 
                                 else "ny_ic_clear_dues_early"
@@ -401,7 +405,7 @@ paymentPendingPopupConfig state =
     } 
     , height = V 24
     , margin = MarginBottom 20
-    , visibility = popupType == SOFT_NUDGE_POPUP || popupType == GO_ONLINE_BLOCKER
+    , visibility = popupType == SOFT_NUDGE_POPUP || popupType == GO_ONLINE_BLOCKER || popupType == DRIVER_UNSUBSCRIBED_ZONE_POPUP
     , background = Color.white900
     , strokeColor = Color.white900
     }

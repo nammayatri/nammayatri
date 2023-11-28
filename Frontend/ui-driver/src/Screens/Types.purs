@@ -962,7 +962,8 @@ type HomeScreenProps =  {
   showContactSupportPopUp :: Boolean,
   showChatBlockerPopUp :: Boolean,
   showGenericAccessibilityPopUp :: Boolean,
-  waitTimeStatus :: TimerStatus
+  waitTimeStatus :: TimerStatus,
+  driverUnsubscribedPopup :: Boolean
  }
 
 data SubscriptionBannerType = FREE_TRIAL_BANNER | SETUP_AUTOPAY_BANNER | CLEAR_DUES_BANNER | NO_SUBSCRIPTION_BANNER | DUE_LIMIT_WARNING_BANNER | LOW_DUES_BANNER
@@ -973,7 +974,7 @@ instance showSubscriptionBannerType :: Show SubscriptionBannerType where show = 
 instance encodeSubscriptionBannerType :: Encode SubscriptionBannerType where encode = defaultEnumEncode
 instance decodeSubscriptionBannerType :: Decode SubscriptionBannerType where decode = defaultEnumDecode
 
-data SubscriptionPopupType = GO_ONLINE_BLOCKER | LOW_DUES_CLEAR_POPUP | SOFT_NUDGE_POPUP | FREE_TRIAL_POPUP | NO_SUBSCRIPTION_POPUP
+data SubscriptionPopupType = GO_ONLINE_BLOCKER | LOW_DUES_CLEAR_POPUP | SOFT_NUDGE_POPUP | FREE_TRIAL_POPUP | NO_SUBSCRIPTION_POPUP | DRIVER_UNSUBSCRIBED_ZONE_POPUP
 
 derive instance genericSubscriptionPopupType :: Generic SubscriptionPopupType _
 instance eqSubscriptionPopupType :: Eq SubscriptionPopupType where eq = genericEq

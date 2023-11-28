@@ -501,6 +501,7 @@ const frenchStrings = {
   CLEAR_DUES : "Effacer les cotisations",
   PAYMENT_PENDING_ALERT : "⚠️ Paiement en attente ! ⚠️",
   PAYMENT_PENDING_ALERT_DESC : "Pour continuer à faire des trajets sur Namma Yatri, effacez vos frais de paiement",
+  PAYMENT_PENDING_ZONE_DESC : "Pour continuer à faire des courses depuis la zone, réglez vos cotisations",
   LOW_ACCOUNT_BALANCE : "Solde de compte faible",
   LOW_ACCOUNT_BALANCE_DESC : "Le solde de votre compte bancaire est faible. Ajoutez de l'argent pour profiter de trajets ininterrompus.",
   OKAY_GOT_IT : "D'accord, j'ai compris",

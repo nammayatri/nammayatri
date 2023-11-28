@@ -360,6 +360,7 @@
       "ny_ic_payment_failed_banner" : true,
       "ny_ic_payment_pending" : true,
       "ny_ic_payment_pending_banner" : true,
+      "ny_ic_payment_pending_driver_unsubscribed" : true,
       "ny_ic_paytm" : true,
       "ny_ic_pending" : true,
       "ny_ic_permission_autostart" : true,

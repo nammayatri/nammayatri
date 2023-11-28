@@ -670,6 +670,7 @@ const hindiStrings = {
   CLEAR_DUES : "शेष राशि चुकाएं",
   PAYMENT_PENDING_ALERT : "⚠️ भुगतान लंबित! ⚠️",
   PAYMENT_PENDING_ALERT_DESC : "नम्मा यात्री पर यात्रा जारी रखने के लिए, अपनी शेष राशि चुकाएं",
+  PAYMENT_PENDING_ZONE_DESC : "ज़ोन से सवारी लेना जारी रखने के लिए, अपना बकाया भुगतान चुकाएँ",
   LOW_ACCOUNT_BALANCE : "कम खाता शेष",
   LOW_ACCOUNT_BALANCE_DESC : "आपके बैंक खाते की शेष राशि कम है। निर्बाध सवारी का आनंद लेने के लिए पैसे जोड़ें।",
   OKAY_GOT_IT : "ठीक है, समझ गया",
