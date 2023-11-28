@@ -89,6 +89,7 @@ library
     , esqueleto
     , extra
     , lens
+    , lens-aeson
     , mobility-core
     , parsec
     , persistent
@@ -97,12 +98,14 @@ library
     , record-dot-preprocessor
     , record-hasfield
     , regex-tdfa
+    , scientific
     , servant-server
     , split
     , template-haskell
     , text
     , time
     , unordered-containers
+    , yaml
   default-language: Haskell2010
   if flag(Local)
     ghc-options: -O0 -funfolding-use-threshold20 -fno-cse -fmax-simplifier-iterations1 -fno-specialise-aggressively -j4
@@ -177,6 +180,7 @@ test-suite alchemist-tests
     , esqueleto
     , extra
     , lens
+    , lens-aeson
     , mobility-core
     , parsec
     , persistent
@@ -185,10 +189,12 @@ test-suite alchemist-tests
     , record-dot-preprocessor
     , record-hasfield
     , regex-tdfa
+    , scientific
     , servant-server
     , split
     , template-haskell
     , text
     , time
     , unordered-containers
+    , yaml
   default-language: Haskell2010

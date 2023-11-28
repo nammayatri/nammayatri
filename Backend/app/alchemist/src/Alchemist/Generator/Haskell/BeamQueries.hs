@@ -20,14 +20,16 @@ generateImports tableDef =
     ++ (intercalate "\n" $ map (\i -> "import qualified " ++ i ++ " as " ++ i) $ imports tableDef)
     ++ "\n\n"
 
-toTTypeConversionFunction :: String -> String -> String
-toTTypeConversionFunction haskellType fieldName
+toTTypeConversionFunction :: Maybe String -> String -> String -> String
+toTTypeConversionFunction transformer haskellType fieldName
+  | (isJust transformer) = fromJust transformer ++ " " ++ fieldName
   | "Int" <- haskellType = "roundToIntegral " ++ fieldName
   | "Id " `Text.isInfixOf` (Text.pack haskellType) = "Kernel.Types.Id.Id " ++ fieldName
   | otherwise = fieldName
 
-fromTTypeConversionFunction :: String -> String -> String
-fromTTypeConversionFunction haskellType fieldName
+fromTTypeConversionFunction :: Maybe String -> String -> String -> String
+fromTTypeConversionFunction transformer haskellType fieldName
+  | (isJust transformer) = fromJust transformer ++ " " ++ fieldName
   | "Int" <- haskellType = "realToFrac " ++ fieldName
   | "Id " `Text.isInfixOf` (Text.pack haskellType) = "Kernel.Types.Id.getId " ++ fieldName
   | otherwise = fieldName
@@ -48,7 +50,7 @@ fromTTypeInstance tableDef =
     ++ intercalate ",\n            " (map fromField (fields tableDef))
     ++ "\n          }\n\n"
   where
-    fromField field = fieldName field ++ " = " ++ fromTTypeConversionFunction (haskellType field) (fieldName field)
+    fromField field = fieldName field ++ " = " ++ fromTTypeConversionFunction (fromTType field) (haskellType field) (fieldName field)
 
 -- Generates the ToTType' instance
 toTTypeInstance :: TableDef -> String
@@ -64,7 +66,7 @@ toTTypeInstance tableDef =
     ++ intercalate ",\n        " (map toField (fields tableDef))
     ++ "\n      }\n\n"
   where
-    toField field = "Beam." ++ fieldName field ++ " = " ++ toTTypeConversionFunction (haskellType field) (fieldName field)
+    toField field = "Beam." ++ fieldName field ++ " = " ++ toTTypeConversionFunction (toTType field) (haskellType field) (fieldName field)
 
 -- Generates both FromTType' and ToTType' instances
 generateBeamQueries :: TableDef -> String

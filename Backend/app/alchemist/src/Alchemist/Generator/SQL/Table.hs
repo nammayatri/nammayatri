@@ -27,10 +27,10 @@ addColumnSQL tableName fieldDef =
     ++ sqlType fieldDef
     ++ " "
     ++ intercalate " " (catMaybes $ map constraintToSQL (constraints fieldDef))
+    ++ maybe "" ((++) " Default ") (defaultVal fieldDef)
     ++ ";"
 
 -- Converts a FieldConstraint to SQL
 constraintToSQL :: FieldConstraint -> Maybe String
 constraintToSQL NotNull = Just "NOT NULL"
-constraintToSQL (Default value) = Just ("DEFAULT " ++ value)
 constraintToSQL _ = Nothing
