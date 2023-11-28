@@ -151,7 +151,7 @@ window.getMerchantConfig = function () {
             }
     }
     , "purpleRideConfig" : {
-      "showPurpleVideos" : true,
+      "showPurpleVideos" : false,
       "visualImpairmentVideo" : "https://www.youtube.com/watch?v=2qYXl03N6Jg",
       "physicalImpairmentVideo" : "https://www.youtube.com/watch?v=B0C6SZTQO6k",
       "hearingImpairmentVideo" : "https://www.youtube.com/watch?v=udkWOt0serg",
@@ -161,7 +161,7 @@ window.getMerchantConfig = function () {
     , "cityConfig" : [
       {
         "cityName" : "Bangalore",
-        "mapImage" : "ny_ic_bengalore_map,",
+        "mapImage" : "ny_ic_bengalore_map",
         "cityCode" : "std:080",
         "showSubscriptions" : true,
         "cityLat" : 12.971599,
@@ -170,7 +170,7 @@ window.getMerchantConfig = function () {
       },
       {
         "cityName" : "Hyderabad",
-        "mapImage" : "ny_ic_hyderabad_map,",
+        "mapImage" : "ny_ic_hyderabad_map",
         "cityCode" : "std:040",
         "showSubscriptions" : false,
         "cityLat" : 17.387140,
@@ -179,7 +179,7 @@ window.getMerchantConfig = function () {
       },
       {
         "cityName" : "Mysore",
-        "mapImage" : "ny_ic_mysuru_map,",
+        "mapImage" : "ny_ic_mysuru_map",
         "cityCode" : "std:0821",
         "showSubscriptions" : false,
         "cityLat" : 12.295810,
@@ -188,7 +188,7 @@ window.getMerchantConfig = function () {
       },
       {
         "cityName" : "Delhi",
-        "mapImage" : "ny_ic_delhi_map,",
+        "mapImage" : "ny_ic_delhi_map",
         "cityCode" : "std:011",
         "showSubscriptions" : false,
         "cityLat" : 28.644800,
@@ -197,16 +197,16 @@ window.getMerchantConfig = function () {
       },
       {
         "cityName" : "Chennai",
-        "mapImage" : "ny_ic_chennai_map,",
+        "mapImage" : "ny_ic_chennai_map",
         "cityCode" : "std:044",
         "showSubscriptions" : false,
         "cityLat" : 13.067439,
         "cityLong" : 80.237617,
-        "supportNumber" : ""
+        "supportNumber" : "08069724899"
       },
       {
         "cityName" : "Coimbatore",
-        "mapImage" : "ny_ic_coimbatore_map,",
+        "mapImage" : "ny_ic_coimbatore_map",
         "cityCode" : "std:0422",
         "showSubscriptions" : false,
         "cityLat" : 11.004556,
@@ -215,21 +215,12 @@ window.getMerchantConfig = function () {
       },
       {
         "cityName" : "Puducherry",
-        "mapImage" : "ny_ic_puducherry_map,",
+        "mapImage" : "ny_ic_puducherry_map",
         "cityCode" : "std:0413",
         "showSubscriptions" : false,
         "cityLat" : 11.943852,
         "cityLong" : 79.808292,
-        "supportNumber" : ""
-      },
-      {
-        "cityName" : "Madurai",
-        "mapImage" : "ny_ic_madurai_map,",
-        "cityCode" : "std:0452",
-        "showSubscriptions" : false,
-        "cityLat" : 9.93069,
-        "cityLong" : 78.11956,
-        "supportNumber" : ""
+        "supportNumber" : "08069724899"
       }
   ]
   })

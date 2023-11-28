@@ -8,14 +8,16 @@ import Components.GenericHeader as GenericHeader
 import Components.PrimaryButton as PrimaryButton
 import Data.Maybe (Maybe(..))
 import Data.Maybe as Mb
-import Helpers.Utils (fetchImage, FetchImageFrom(..))
-import Language.Strings (getString)
+import Helpers.Utils (fetchImage, FetchImageFrom(..), getCityConfig)
+import Language.Strings (getString, getStringFromLocal)
 import Language.Types (STR(..))
 import PrestoDOM (Length(..), Margin(..), Padding(..), Visibility(..), clickable)
 import Screens.Types (ChooseCityScreenStage(..), ChooseCityScreenState)
 import Styles.Colors as Color
 import Components.ErrorModal as ErrorModal
 import PrestoDOM.Types.DomAttributes (Corners(..))
+import Data.String.Common as DSC
+import MerchantConfig.Types (AppConfig)
 
 ---------------- genericHeaderConfig ----------------
 genericHeaderConfig :: ChooseCityScreenState -> GenericHeader.Config
@@ -72,31 +74,32 @@ getLangFromVal value =
       "BN_IN" -> "বাংলা"
       "ML_IN" -> "മലയാളം"
       _ -> value
-getLocationMapImage :: Maybe String -> String
-getLocationMapImage value =
-  case value of 
-    Mb.Just val -> case val of
-                  "Delhi" -> "ny_ic_delhi_map"
-                  "Hyderabad" -> "ny_ic_hyderabad_map"
-                  "Mysore" -> "ny_ic_mysuru_map"
-                  "Bangalore" -> "ny_ic_bangalore_map"
-                  "Chennai" -> "ny_ic_chennai_map"
-                  "Coimbatore" -> "ny_ic_coimbatore_map"
-                  _ -> "ny_ic_driver_location_undetectable"
-    Mb.Nothing -> "ny_ic_driver_location_undetectable"
+-- getLocationMapImage :: Maybe String -> String
+-- getLocationMapImage value =
+--   case value of 
+--     Mb.Just val -> case val of
+--                   "Delhi" -> "ny_ic_delhi_map"
+--                   "Hyderabad" -> "ny_ic_hyderabad_map"
+--                   "Mysore" -> "ny_ic_mysuru_map"
+--                   "Bangalore" -> "ny_ic_bangalore_map"
+--                   "Chennai" -> "ny_ic_chennai_map"
+--                   "Coimbatore" -> "ny_ic_coimbatore_map"
+--                   _ -> "ny_ic_driver_location_undetectable"
+--     Mb.Nothing -> "ny_ic_driver_location_undetectable"
 
-getChangeLanguageText :: Maybe String -> String
-getChangeLanguageText value =
-  case value of 
-    Mb.Just val -> case val of
-                    "Delhi" -> "भाषा बदलें"
-                    "Hyderabad" -> "భాష మార్చు"
-                    "Mysore" -> "కన్నడ"
-                    "Chennai" -> "மொழியை மாற்றவும்"
-                    "Coimbatore" -> "மொழியை மாற்றவும்"
-                    "Bangalore" -> "ಭಾಷೆ ಬದಲಾಯಿಸಿ"
-                    _ -> "Change Language"
-    Mb.Nothing -> "Change Language"
+getLocationMapImage :: Maybe String -> AppConfig -> String
+getLocationMapImage value config = 
+  if (DSC.null cityConfig.mapImage) then "ny_ic_driver_location_undetectable" else cityConfig.mapImage
+  where 
+    cityConfig = getCityConfig config.cityConfig $ Mb.fromMaybe "" value
+
+getChangeLanguageText :: Maybe String -> AppConfig -> String
+getChangeLanguageText value config = 
+  getStringFromLocal cityConfig.languageKey CHANGE_LANGUAGE_STR 
+  where 
+    cityConfig = getCityConfig config.cityConfig $ Mb.fromMaybe "" value
+
+
 
 mockLocationConfig :: ChooseCityScreenState -> ErrorModal.Config
 mockLocationConfig state =

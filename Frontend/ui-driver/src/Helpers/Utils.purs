@@ -29,7 +29,7 @@ import Constants as Constants
 import Data.String.Common as DSC
 import MerchantConfig.Utils
 import Engineering.Helpers.Utils (getAppConfig)
-import Common.Types.App (LazyCheck(..), CalendarDate, CalendarWeek, PaymentStatus(..))
+import Common.Types.App (LazyCheck(..), CalendarDate, CalendarWeek, PaymentStatus(..), CityConfig)
 import Types.App (FlowBT, defaultGlobalState)
 import Control.Monad.Except (runExcept, runExceptT)
 import Data.Array ((!!), fold, any, head, filter) as DA
@@ -82,7 +82,6 @@ import Data.Int (fromString, even, fromNumber)
 import Data.Int as Int
 import Data.Number.Format (fixed, toStringWith)
 import Data.Function.Uncurried (Fn1)
-import MerchantConfig.Types (CityConfig(..))
 import Storage (getValueToLocalStore)
 import Services.Config (getWhatsAppSupportNo, getSupportNumber)
 import Engineering.Helpers.BackTrack (liftFlowBT)
@@ -587,7 +586,8 @@ getCityConfig cityConfig cityName = do
                           showSubscriptions : false,
                           cityLat : 0.0,
                           cityLong : 0.0,
-                          supportNumber : ""
+                          supportNumber : "",
+                          languageKey : ""
                         }
   fromMaybe dummyCityConfig $ DA.find (\item -> item.cityName == cityName) cityConfig
   

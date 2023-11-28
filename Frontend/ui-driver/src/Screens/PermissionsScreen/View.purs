@@ -32,7 +32,7 @@ import Helpers.Utils (FetchImageFrom(..), fetchImage)
 import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Prelude (Unit, bind, const, map, pure, unit, ($), (&&), (<<<), (<>), (==))
+import Prelude (Unit, bind, const, map, pure, unit, ($), (&&), (<<<), (<>), (==), (>))
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, background, color, cornerRadius, fontStyle, frameLayout, gravity, height, imageUrl, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, scrollView, stroke, text, textSize, textView, visibility, weight, width)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Properties (cornerRadii)
@@ -51,7 +51,7 @@ screen initialState =
   , name : "PermissionsScreen"
   , globalEvents : [ (\ push -> do
     _ <- JB.storeCallBackBatteryUsagePermission push BatteryUsagePermissionCallBack
-    -- _ <- JB.storeCallBackNotificationPermission push NotificationPermissionCallBack //removing notification permission for now
+    _ <- JB.storeCallBackNotificationPermission push NotificationPermissionCallBack
     _ <- JB.storeCallBackOverlayPermission push OverlayPermissionSwitchCallBack
     pure $ pure unit)]
   , eval:
@@ -127,7 +127,7 @@ permissionsListView state push =
             ][  linearLayout
                 [ width MATCH_PARENT
                 , height WRAP_CONTENT
-                , cornerRadii $ Corners 8.0 true true (if isPermissionEnabled then true else false) true
+                , cornerRadii $ Corners 8.0 true true isPermissionEnabled true
                 , padding (Padding 12 12 12 12)
                 , stroke ("1," <> (if isPermissionEnabled  then  Color.green900 else Color.grey900))
                 , background ( if isPermissionEnabled then  Color.green200 else Color.white900 )            
@@ -144,7 +144,12 @@ permissionsListView state push =
               , background Color.blue600
               , visibility GONE--if isPermissionEnabled then GONE else VISIBLE
               ] <> FontStyle.tags TypoGraphy
-            ]) (permissionsList state))
+            ])(
+                permissionsList state <> 
+                    if state.props.androidVersion > 12 
+                        then [{permission: Notifications , icon : ""}] 
+                        else []
+                ) )
     ]
 
 titleAndDescriptionList :: forall w. Listtype -> PrestoDOM (Effect Unit) w

@@ -31,7 +31,7 @@ import Foreign (Foreign)
 import Foreign.Class (class Decode, class Encode)
 import Foreign.Object (Object)
 import Halogen.VDom.DOM.Prop (PropValue)
-import MerchantConfig.Types (AppConfig, BottomNavConfig, GradientConfig, SubscriptionConfig, CityConfig)
+import MerchantConfig.Types (AppConfig, BottomNavConfig, GradientConfig, SubscriptionConfig)
 import Prelude (class Eq, class Show)
 import Presto.Core.Types.API (class StandardEncode, standardEncode)
 import Presto.Core.Utils.Encoding (defaultDecode, defaultEncode)
@@ -141,7 +141,7 @@ type AddVehicleDetailsScreenData =  {
   dateOfRegistrationView :: String,
   logField :: Object Foreign,
   driverMobileNumber :: String,
-  cityConfig :: CityConfig,
+  cityConfig :: Common.CityConfig,
   config :: AppConfig
  }
 
@@ -210,7 +210,7 @@ type UploadDrivingLicenseStateData = {
   , imageFrontUrl :: String
   , logField :: Object Foreign
   , mobileNumber :: String
-  , cityConfig :: CityConfig
+  , cityConfig :: Common.CityConfig
   , config :: AppConfig
 }
 
@@ -247,7 +247,7 @@ type RegistrationScreenData = {
   permissionsStatus :: StageStatus,
   subscriptionStatus :: StageStatus,
   lastUpdateTime :: String,
-  cityConfig :: CityConfig,
+  cityConfig :: Common.CityConfig,
   config :: AppConfig
 }
 
@@ -1142,7 +1142,8 @@ type TripDetailsScreenData =
     spLocTagVisibility :: Boolean,
     specialZoneLayoutBackground :: String,
     specialZoneImage :: String,
-    specialZoneText :: String
+    specialZoneText :: String,
+    config :: AppConfig
   }
 
 type TripDetailsScreenProps =
@@ -2067,7 +2068,7 @@ type ChooseCityScreenData = {
   config :: AppConfig,
   locationSelected :: Maybe String,
   locationDetectionFailed :: Boolean,
-  merchantOperatingCityConfig :: Array CityConfig,
+  merchantOperatingCityConfig :: Array Common.CityConfig,
   logField :: Object Foreign
 }
 

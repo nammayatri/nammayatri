@@ -40,7 +40,6 @@ import Data.Int (fromString)
 import Data.Int as Int
 import Data.Maybe (Maybe(..), fromMaybe, isJust)
 import Data.String as DS
-import Debug (spy)
 import Engineering.Helpers.Commons as EHC
 import Engineering.Helpers.Suggestions (getSuggestionsfromKey)
 import Font.Size as FontSize
@@ -977,10 +976,11 @@ accessibilityConfig dummy = { primaryText : getString CUSTOMER_MAY_NEED_ASSISTAN
 getAccessibilityPopupData :: ST.HomeScreenState -> Maybe ST.DisabilityType -> Boolean -> ContentConfig
 getAccessibilityPopupData state pwdtype isDriverArrived = 
   let accessibilityConfig' = accessibilityConfig Config
+      city = (HU.getCityConfig state.data.config.cityConfig (getValueToLocalStore DRIVER_LOCATION))
   in case pwdtype, isDriverArrived of 
       Just ST.BLIND_AND_LOW_VISION, true ->  accessibilityConfig' 
                                               { secondaryText = getString CUSTOMER_HAS_POOR_VISION_SOUND_HORN_AT_PICKUP ,
-                                                imageUrl = fetchImage FF_ASSET "ny_ic_blind_arrival",
+                                                imageUrl = fetchImage FF_ASSET (getUpdatedAssets city),
                                                 videoUrl = "",
                                                 mediaType = "",
                                                 videoId = ""
@@ -988,13 +988,13 @@ getAccessibilityPopupData state pwdtype isDriverArrived =
       Just ST.BLIND_AND_LOW_VISION, false -> accessibilityConfig'
                                               { secondaryText = getString CUSTOMER_HAS_LOW_VISION_CALL_THEM_INSTEAD_OF_CHATTING,
                                                 imageUrl = fetchImage FF_ASSET "ny_ic_blind_pickup",
-                                                videoUrl = state.data.config.purpleRideConfig.visualImpairmentVideo, -- "https://www.youtube.com/watch?v=2qYXl03N6Jg",
+                                                videoUrl = state.data.config.purpleRideConfig.visualImpairmentVideo,
                                                 mediaType = "VideoLink",
                                                 videoId = "BlindOrLowVisionCoverVideo"
                                               }
       Just ST.HEAR_IMPAIRMENT, true ->      accessibilityConfig'
                                               { secondaryText = getString CUSTOMER_HAS_POOR_HEARING_MESSAGE_THEM_AT_PICKUP,
-                                                imageUrl = fetchImage FF_ASSET "ny_ic_deaf_arrival",
+                                                imageUrl = fetchImage FF_ASSET (getUpdatedAssets city),
                                                 videoUrl = "",
                                                 mediaType = "",
                                                 videoId = ""
@@ -1002,21 +1002,21 @@ getAccessibilityPopupData state pwdtype isDriverArrived =
       Just ST.HEAR_IMPAIRMENT, false ->     accessibilityConfig'
                                               { secondaryText= getString CUSTOMER_HAS_POOR_HEARING_CHAT_WITH_THEM_INSTEAD_OF_CALLING ,
                                                 imageUrl = fetchImage FF_ASSET "ny_ic_deaf_pickup",
-                                                videoUrl = state.data.config.purpleRideConfig.hearingImpairmentVideo, --"https://youtu.be/udkWOt0serg?feature=shared",
+                                                videoUrl = state.data.config.purpleRideConfig.hearingImpairmentVideo,
                                                 mediaType = "VideoLink",
                                                 videoId = "HearingImpairmentCoverVideo"
                                               }
       Just ST.LOCOMOTOR_DISABILITY, true -> accessibilityConfig'
                                               { secondaryText = getString CUSTOMER_HAS_LOW_MOBILITY_STORE_THEIR_SUPPORT_AT_PICKUP ,
-                                                imageUrl = fetchImage FF_ASSET "ny_ic_locomotor_arrival",
+                                                imageUrl = fetchImage FF_ASSET (getUpdatedAssets city),
                                                 videoUrl = "",
                                                 mediaType = "",
                                                 videoId = ""
                                               }    
       Just ST.LOCOMOTOR_DISABILITY, false -> accessibilityConfig' 
                                               { secondaryText = getString CUSTOMER_HAS_LOW_MOBILITY_GO_TO_EXACT_LOC, 
-                                                imageUrl = fetchImage FF_ASSET "ny_ic_locomotor_pickup",
-                                                videoUrl = state.data.config.purpleRideConfig.physicalImpairmentVideo, --"https://youtu.be/B0C6SZTQO6k",
+                                                imageUrl = fetchImage FF_ASSET (getUpdatedAssets city),
+                                                videoUrl = state.data.config.purpleRideConfig.physicalImpairmentVideo, 
                                                 mediaType = "VideoLink",
                                                 videoId = "LocomotorDisabilityCoverVideo"
                                               }
@@ -1024,7 +1024,23 @@ getAccessibilityPopupData state pwdtype isDriverArrived =
       Just ST.OTHER_DISABILITY, false ->     accessibilityConfig' 
       _ , _-> accessibilityConfig' 
 
-
+  where 
+    getUpdatedAssets :: CommonTypes.CityConfig -> String 
+    getUpdatedAssets cityConfig = 
+      if cityConfig.cityCode == "std:040" then 
+        case pwdtype, isDriverArrived of 
+          Just ST.BLIND_AND_LOW_VISION, true ->  "ny_ic_blind_arrival_generic" 
+          Just ST.HEAR_IMPAIRMENT, true -> "ny_ic_deaf_arrival_generic"
+          Just ST.LOCOMOTOR_DISABILITY, true -> "ny_ic_locomotor_arrival_black_yellow"
+          Just ST.LOCOMOTOR_DISABILITY, false -> "ny_ic_locomotor_pickup_generic"
+          _ , _-> "ny_ic_disability_purple"
+        else 
+          case pwdtype , isDriverArrived of 
+            Just ST.BLIND_AND_LOW_VISION, true ->  "ny_ic_blind_arrival"
+            Just ST.HEAR_IMPAIRMENT, true -> "ny_ic_deaf_arrival"
+            Just ST.LOCOMOTOR_DISABILITY, true -> "ny_ic_locomotor_arrival"
+            Just ST.LOCOMOTOR_DISABILITY, false -> "ny_ic_locomotor_pickup"
+            _ , _-> "ny_ic_disability_purple"
 
 getAccessibilityHeaderText :: ST.HomeScreenState -> ContentConfig
 getAccessibilityHeaderText state = if state.data.activeRide.status == NEW then 

@@ -1,5 +1,7 @@
 module MerchantConfig.Types where
 
+import Common.Types.App (CityConfig)
+
 type AppConfig =
   {
     primaryTextColor :: String,
@@ -130,14 +132,4 @@ type WaitTimeConfig = {
   enableWaitTime :: Boolean,
   thresholdDist :: Number,
   thresholdTime :: Int
-}
-
-type CityConfig = {
-  cityName :: String,
-  mapImage :: String,
-  cityCode :: String,
-  showSubscriptions :: Boolean,
-  cityLat :: Number,
-  cityLong :: Number,
-  supportNumber :: String
 }
