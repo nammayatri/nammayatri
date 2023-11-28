@@ -1,9 +1,14 @@
 module Alchemist.Utils where
 
+import Control.Lens.Combinators
+import Data.Aeson
+import Data.Aeson.Key (fromString)
+import Data.Aeson.Lens (key, _Value)
 import Data.Char (toUpper)
 import Data.List (intercalate, nub)
 import Data.List.Split (split, splitOn, splitWhen, whenElt)
-import Kernel.Prelude hiding (hPutStr)
+import qualified Data.Text as T
+import Kernel.Prelude hiding (Show, fromString, hPutStr, toString, traceShowId, try)
 import System.IO
 
 writeToFile :: FilePath -> String -> IO ()
@@ -14,9 +19,12 @@ writeToFile filename content = do
 typeDelimiter :: String
 typeDelimiter = "() []"
 
-makeTypeQualified :: String -> String
-makeTypeQualified str = concatMap replaceOrKeep (split (whenElt (`elem` typeDelimiter)) str)
+makeTypeQualified :: Object -> String -> String
+makeTypeQualified obj str = concatMap replaceOrKeep (split (whenElt (`elem` typeDelimiter)) str)
   where
+    getQualifiedImport :: String -> Maybe String
+    getQualifiedImport tp = preview (ix "imports" . key (fromString tp) . _String) obj
+
     replaceOrKeep :: String -> String
     replaceOrKeep word =
       if '.' `elem` word
@@ -25,25 +33,19 @@ makeTypeQualified str = concatMap replaceOrKeep (split (whenElt (`elem` typeDeli
 
 figureOutImports :: [String] -> [String]
 figureOutImports fieldTypes =
-  nub $ filter (not . null) $ concatMap (map (extractUptoLastDot . makeTypeQualified)) extractWords
+  nub $ filter (not . null) $ concatMap (map (extractUptoLastDot)) extractWords
   where
     extractWords = splitWhen (`elem` typeDelimiter) <$> fieldTypes
     extractUptoLastDot str =
-      let parts = splitOn "." str
-       in if length parts > 1
-            then intercalate "." (init parts)
+      let pp = splitOn "." str
+       in if length pp > 1
+            then intercalate "." (init pp)
             else str
-
-getQualifiedImport :: String -> Maybe String
-getQualifiedImport = \case
-  "Text" -> Just "Data.Text"
-  "Maybe" -> Just "Data.Maybe"
-  "Id" -> Just "Kernel.Types.Id"
-  "TimeOfDay" -> Just "Kernel.Prelude"
-  "Int" -> Just "Kernel.Prelude"
-  _ -> Nothing
 
 -- Helper function to capitalize a string
 capitalize :: String -> String
 capitalize "" = ""
 capitalize (x : xs) = toUpper x : xs
+
+_String :: Prism' Value String
+_String = _Value . prism (String . T.pack) (\v -> case v of String s -> Right $ T.unpack s; _ -> Left v)

@@ -7,17 +7,8 @@ import Kernel.Prelude
 import System.Directory (createDirectoryIfMissing)
 import Text.RawString.QQ
 
-dslStorageInput :: String
-dslStorageInput =
-  [r|Table "TicketService" "ticket_service"
-  Field "id" "Maybe (Id Domain.Types.TicketService.TicketService)" PrimaryKey NotNull
-  Field "placesId" "Text" PrimaryKey NotNull
-  Field "service" "Text"  SecondaryKey NotNull
-  Field "maxVerification" "Int" "INT" NotNull Default "1"
-  Field "openTimings" "Maybe TimeOfDay" "time without time zone" Default "CURRENT_TIMESTAMP"
-  Field "closeTimings" "Maybe TimeOfDay" "time without time zone"
-  Field "validityTimings" "Maybe TimeOfDay" "time without time zone"
-|]
+storageYamlFilePath :: FilePath
+storageYamlFilePath = "./src/alchemist/tests/storage.yaml"
 
 dslInput :: String
 dslInput =
@@ -56,12 +47,12 @@ dslInput =
 generateAllExample :: IO ()
 generateAllExample = do
   mapM_ (createDirectoryIfMissing True) ["./output/Beam", "./output/Queries", "./output/Domain/Type", "./output/SQL"]
-  mkBeamTable "./output/Beam" dslStorageInput
-  mkBeamQueries "./output/Queries" dslStorageInput
-  mkDomainType "./output/Domain/Type" dslStorageInput
-  mkSQLFile "./output/SQL" dslStorageInput
+  mkBeamTable "./output/Beam" storageYamlFilePath
+  mkBeamQueries "./output/Queries" storageYamlFilePath
+  mkDomainType "./output/Domain/Type" storageYamlFilePath
+  mkSQLFile "./output/SQL" storageYamlFilePath
   mkServantAPI "./output" dslInput
   mkDomainHandler "./output/Domain" dslInput
 
 main :: IO ()
-main = generateAllExample
+main = pure ()
