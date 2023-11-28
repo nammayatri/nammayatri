@@ -1,5 +1,5 @@
-#!/bin/bash
-# export NODE_OPTIONS=--openssl-legacy-provider
+# !/bin/bash
+export NODE_OPTIONS=--openssl-legacy-provider
 
 # Enable case-insensitive matching
 shopt -s nocasematch
@@ -23,11 +23,24 @@ print_status() {
     fi
 }
 
+if [[ "$1" =~ .*"ny".* ]]; then
+    user="nammaYatri"
+    partner="nammaYatriPartner"
+elif [[ "$1" =~ .*"yatri".* ]]; then
+    user="yatri"
+    partner="yatriPartner"
+elif [[ "$1" =~ .*"ys".* ]]; then
+    user="jatriSaathi"
+    partner="jatriSaathiDriver"
+fi
+
+
+
 if [[ "$1" =~ .*"User".* ]]; then
     echo " ---------- Customer prod:android :- --------------"
-    nix develop .#frontend 
+    # nix develop .#frontend 
     cd ../ui-customer || print_status "failure"
-    npm i
+    npm install && npm install purescript
     npm run prod:android || print_status "failure"
     cd ./../android-native || print_status "failure"
     echo " ---------- Copy index_bundle.js Customer :- --------------"
@@ -39,9 +52,9 @@ if [[ "$1" =~ .*"User".* ]]; then
     sh userJuspayAssets.sh $user || print_status "failure"
 else
     echo " ---------- Driver prod:android :- --------------"
-    nix develop .#frontend
+    # nix develop .#frontend
     cd ../ui-driver || print_status "failure"
-    npm i
+    npm install && npm install purescript
     npm run prod:android || print_status "failure"
     cd ./../android-native || print_status "failure"
     echo " ---------- Copy index_bundle.js Driver :- --------------"
