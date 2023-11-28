@@ -140,7 +140,8 @@ initData = {
           goToPopUpType : NO_POPUP_VIEW,
           gotoEnabledForMerchant : false,
           confirmGotoCancel : false
-        }
+        },
+        coinBalance : 0
     },
     props: {
         statusOnline : true,
@@ -188,7 +189,9 @@ initData = {
         showChatBlockerPopUp : false,
         subscriptionPopupType : NO_SUBSCRIPTION_POPUP,
         showGenericAccessibilityPopUp : false,
-        waitTimeStatus : NoStatus
+        waitTimeStatus : NoStatus,
+        showCoinsPopup : false,
+        isStatsModelExpanded : false
     }
 }
 

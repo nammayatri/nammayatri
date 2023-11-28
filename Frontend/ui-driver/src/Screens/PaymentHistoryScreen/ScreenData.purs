@@ -66,7 +66,8 @@ dummyPlanConfig =
                 hasImage : true,
                 imageURL : "",
                 offerDescription : Mb.Nothing,
-                addedFromUI : false
+                addedFromUI : false,
+                isPaidByYatriCoins : false
                 }
                 ]
     , priceBreakup : []
@@ -83,5 +84,6 @@ dummyPromoConfig = {
                         gradient : [],
                         hasImage : false,
                         imageURL : "",
-                        addedFromUI : false
+                        addedFromUI : false,
+                        isPaidByYatriCoins : false
                     }

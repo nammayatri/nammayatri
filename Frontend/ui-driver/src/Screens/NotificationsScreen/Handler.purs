@@ -48,6 +48,7 @@ notifications = do
     GoToHomeScreen -> App.BackT $ App.BackPoint <$> (pure $ GO_HOME_SCREEN )
     GoToProfileScreen -> App.BackT $ App.BackPoint <$> (pure $ GO_PROFILE_SCREEN )
     GoToReferralScreen -> App.BackT $ App.BackPoint <$> (pure $ GO_REFERRAL_SCREEN)
+    EarningsScreen -> App.BackT $ App.BackPoint <$> (pure $ GO_EARNINGS_SCREEN)
     GoToCurrentRideFlow -> do
       modifyScreenState $ NotificationsScreenStateType (\notificationScreen → NotificationsScreenData.initData)
       App.BackT $ App.NoBack <$> (pure $ CHECK_RIDE_FLOW_STATUS)

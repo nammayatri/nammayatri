@@ -197,3 +197,21 @@ blue100 = "#1A2194FF"
 
 green600 :: Color
 green600 = "#269574"
+
+yellowOpacity40 :: Color
+yellowOpacity40 = "#66FEEBB9"
+
+yellowOpacity50 :: Color
+yellowOpacity50 = "#80FCC32C"
+
+red600 :: Color
+red600 = "#FFDDDD"
+
+yellowCoinGradient1 ::Color
+yellowCoinGradient1 = "#FFF8EE"
+
+yellowCoinGradient2 ::Color
+yellowCoinGradient2 = "#FFEBCC"
+
+blue400 :: Color
+blue400 = "#662194FF"

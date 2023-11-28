@@ -89,9 +89,11 @@ foreign import formatCurrencyWithCommas :: String -> String
 foreign import camelCaseToSentenceCase :: String -> String
 foreign import getVideoID :: String -> String
 foreign import getImageUrl :: String -> String
+foreign import daysBetweenDates :: String -> String -> Int
 foreign import getPastDays :: Int -> Array CalendarDate
 foreign import getPastWeeks :: Int -> Array CalendarWeek
-
+foreign import getDayName :: String -> String
+foreign import getFutureDate :: String -> Int -> String
 
 os :: String
 os = getOs unit

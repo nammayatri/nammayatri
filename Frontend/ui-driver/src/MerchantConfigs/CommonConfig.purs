@@ -114,6 +114,10 @@ commonConfig =
                   showNew : false
                 },
               rideHistory : 
+                { isVisible : false,
+                  showNew : false
+                },
+              driverEarnings : 
                 { isVisible : true,
                   showNew : false
                 },
@@ -133,5 +137,10 @@ commonConfig =
         , waitTimeConfig : {
           enableWaitTime : true,
           thresholdDist : 0.05
+        }
+        , coinsConfig : {
+            enableYatriCoins : false,
+            minCoinSliderValue : 250,
+            maxCoinSliderValue : 1500
         }
         }

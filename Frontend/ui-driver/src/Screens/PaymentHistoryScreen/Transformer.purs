@@ -30,6 +30,7 @@ import Screens.Types (PromoConfig)
 import Screens.Types as ST
 import Services.API (FeeType(..), OfferEntity(..))
 import Services.API as API
+import Styles.Colors as Color
 
 buildTransactionDetails :: API.HistoryEntryDetailsEntityV2Resp -> Array GradientConfig -> ST.TransactionInfo
 buildTransactionDetails (API.HistoryEntryDetailsEntityV2Resp resp) gradientConfig =
@@ -73,6 +74,11 @@ buildTransactionDetails (API.HistoryEntryDetailsEntityV2Resp resp) gradientConfi
                     key : "OFFER",
                     title : getString OFFER,
                     val : planOfferData.offer
+                  },
+                  {
+                    key : "COIN_DISCOUNT",
+                    title : "Discount",
+                    val : getFixedTwoDecimals $ fromMaybe 0.0 driverFee'.coinDiscountAmount
                   }
                 ]
               false -> []
@@ -123,7 +129,8 @@ buildTransactionDetails (API.HistoryEntryDetailsEntityV2Resp resp) gradientConfi
                                 id : show ind,
                                 scheduledAt : if (resp.feeType == AUTOPAY_REGISTRATION && isJust  resp.executionAt) then Just (convertUTCtoISC (fromMaybe "" resp.executionAt) "Do MMM YYYY, h:mm A") else Nothing,
                                 paymentMode : resp.feeType,
-                                paymentStatus :  if resp.feeType == AUTOPAY_REGISTRATION then Just (autoPayStageData.stage) else Nothing
+                                paymentStatus :  if resp.feeType == AUTOPAY_REGISTRATION then Just (autoPayStageData.stage) else Nothing,
+                                amountPaidByYatriCoins : driverFee.coinDiscountAmount
                             }
                             ) filteredDriverFees
                         false -> []          
@@ -176,6 +183,20 @@ dummyDriverFee =
       isSplit : false,
       offerAndPlanDetails : Just "",
       rideTakenOn : "",
-      driverFeeAmount : 0.0
+      driverFeeAmount : 0.0,
+      isCoinCleared : false,
+      coinDiscountAmount : Nothing
   }
 
+coinsOfferConfig :: String -> PromoConfig
+coinsOfferConfig amount = 
+    {  
+    title : Just $ "₹ " <> amount <> getString PAID_BY_YATRI_COINS,
+    isGradient : true,
+    gradient : [Color.yellowCoinGradient1, Color.yellowCoinGradient2],
+    hasImage : false,
+    imageURL : "",
+    offerDescription : Nothing,
+    addedFromUI : true,
+    isPaidByYatriCoins : true
+    }

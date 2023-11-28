@@ -464,4 +464,5 @@ separatorConfig =
   , width : V 2
   , layoutWidth : V 12
   , layoutHeight : V 12
+  , color : Color.black500
   }

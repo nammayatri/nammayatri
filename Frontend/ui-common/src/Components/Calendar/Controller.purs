@@ -12,7 +12,13 @@
  
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-module Components.Calendar.Controller where
+module Components.Calendar.Controller
+  ( Action(..)
+  , Config
+  , config
+  , dummyDateItem
+  )
+  where
 
 import Components.PrimaryButton as PrimaryButton
 import Data.Maybe (Maybe(..))
