@@ -83,6 +83,7 @@ dependencies:
   - yaml
   - lens-aeson
   - scientific
+  - vector
 
 ghc-options:
   - -Wall

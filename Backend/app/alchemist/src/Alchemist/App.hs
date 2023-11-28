@@ -2,7 +2,7 @@
 
 module Alchemist.App where
 
-import Alchemist.DSL.Parser.API (apiParser)
+import Alchemist.DSL.Parser.API
 import Alchemist.DSL.Parser.Storage
 import Alchemist.DSL.Syntax.API
 import Alchemist.DSL.Syntax.Storage
@@ -11,11 +11,6 @@ import Alchemist.Generator.SQL
 import Alchemist.Utils
 import qualified Data.Text as T
 import Kernel.Prelude
-
-processAPIDSL :: String -> Apis
-processAPIDSL dsl = case apiParser dsl of
-  Left err -> error $ T.pack $ "Parsing error: " ++ show err
-  Right apiDef -> apiDef
 
 mkBeamTable :: FilePath -> FilePath -> IO ()
 mkBeamTable filePath yaml = do
@@ -37,12 +32,12 @@ mkSQLFile filePath yaml = do
   tableDef <- storageParser yaml
   writeToFile (filePath ++ "/" ++ tableNameSql tableDef ++ ".sql") (generateSQL tableDef)
 
-mkServantAPI :: FilePath -> String -> IO ()
-mkServantAPI filePath dsl = do
-  let apiDef = processAPIDSL dsl
+mkServantAPI :: FilePath -> FilePath -> IO ()
+mkServantAPI filePath yaml = do
+  apiDef <- apiParser yaml
   writeToFile (filePath ++ "/" ++ T.unpack (head (map _moduleName apiDef)) ++ ".hs") (generateServantAPI apiDef)
 
-mkDomainHandler :: FilePath -> String -> IO ()
-mkDomainHandler filePath dsl = do
-  let apiDef = processAPIDSL dsl
+mkDomainHandler :: FilePath -> FilePath -> IO ()
+mkDomainHandler filePath yaml = do
+  apiDef <- apiParser yaml
   writeToFile (filePath ++ "/" ++ T.unpack (head (map _moduleName apiDef)) ++ ".hs") (generateDomainHandler apiDef)
