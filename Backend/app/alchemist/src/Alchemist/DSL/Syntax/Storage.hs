@@ -5,8 +5,8 @@ import Kernel.Prelude
 data TableDef = TableDef
   { tableNameHaskell :: String,
     tableNameSql :: String,
-    imports :: [String],
     fields :: [FieldDef],
+    imports :: [String],
     primaryKey :: [String],
     secondaryKey :: [String]
   }
@@ -16,9 +16,11 @@ data FieldDef = FieldDef
   { fieldName :: String,
     haskellType :: String,
     sqlType :: String,
-    constraints :: [FieldConstraint]
+    constraints :: [FieldConstraint],
+    defaultVal :: Maybe String,
+    toTType :: Maybe String,
+    fromTType :: Maybe String
   }
   deriving (Show)
 
-data FieldConstraint = PrimaryKey | SecondaryKey | NotNull | Default String | CustomConstraint String
-  deriving (Show, Eq)
+data FieldConstraint = PrimaryKey | SecondaryKey | NotNull | AUTOINCREMENT deriving (Show, Eq)
