@@ -57,5 +57,6 @@ instance ToTType' BeamMOC.MerchantOperatingCity MerchantOperatingCity where
       { BeamMOC.id = getId id,
         BeamMOC.merchantId = getId merchantId,
         BeamMOC.merchantShortId = getShortId merchantShortId,
-        BeamMOC.city = city
+        BeamMOC.city = city,
+        BeamMOC.contextCity = contextCity
       }

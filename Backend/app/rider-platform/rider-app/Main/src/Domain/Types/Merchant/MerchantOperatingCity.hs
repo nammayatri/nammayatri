@@ -24,6 +24,7 @@ data MerchantOperatingCity = MerchantOperatingCity
   { id :: Id MerchantOperatingCity,
     merchantId :: Id DM.Merchant,
     merchantShortId :: ShortId DM.Merchant,
-    city :: Context.City
+    city :: Context.City,
+    contextCity :: Context.City
   }
   deriving (Generic, FromJSON, ToJSON, Show, Eq, ToSchema)
