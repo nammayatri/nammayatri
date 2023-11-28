@@ -80,6 +80,9 @@ dependencies:
   - casing
   - directory
   - extra
+  - yaml
+  - lens-aeson
+  - scientific
 
 ghc-options:
   - -Wall

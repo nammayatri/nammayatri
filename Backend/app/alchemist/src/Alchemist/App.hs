@@ -11,37 +11,30 @@ import Alchemist.Generator.SQL
 import Alchemist.Utils
 import qualified Data.Text as T
 import Kernel.Prelude
-import Text.Parsec
-
-parseStorageDSL :: String -> TableDef
-parseStorageDSL dsl = do
-  case parse storageParser "" dsl of
-    Left err -> error (T.pack $ "Parsing rrror: " ++ show err)
-    Right tableDef -> tableDef
 
 processAPIDSL :: String -> Apis
 processAPIDSL dsl = case apiParser dsl of
   Left err -> error $ T.pack $ "Parsing error: " ++ show err
   Right apiDef -> apiDef
 
-mkBeamTable :: FilePath -> String -> IO ()
-mkBeamTable filePath dsl = do
-  let tableDef = parseStorageDSL dsl
+mkBeamTable :: FilePath -> FilePath -> IO ()
+mkBeamTable filePath yaml = do
+  tableDef <- storageParser yaml
   writeToFile (filePath ++ "/" ++ tableNameHaskell tableDef ++ ".hs") (generateBeamTable tableDef)
 
-mkBeamQueries :: FilePath -> String -> IO ()
-mkBeamQueries filePath dsl = do
-  let tableDef = parseStorageDSL dsl
+mkBeamQueries :: FilePath -> FilePath -> IO ()
+mkBeamQueries filePath yaml = do
+  tableDef <- storageParser yaml
   writeToFile (filePath ++ "/" ++ tableNameHaskell tableDef ++ ".hs") (generateBeamQueries tableDef)
 
-mkDomainType :: FilePath -> String -> IO ()
-mkDomainType filePath dsl = do
-  let tableDef = parseStorageDSL dsl
+mkDomainType :: FilePath -> FilePath -> IO ()
+mkDomainType filePath yaml = do
+  tableDef <- storageParser yaml
   writeToFile (filePath ++ "/" ++ tableNameHaskell tableDef ++ ".hs") (generateDomainType tableDef)
 
-mkSQLFile :: FilePath -> String -> IO ()
-mkSQLFile filePath dsl = do
-  let tableDef = parseStorageDSL dsl
+mkSQLFile :: FilePath -> FilePath -> IO ()
+mkSQLFile filePath yaml = do
+  tableDef <- storageParser yaml
   writeToFile (filePath ++ "/" ++ tableNameSql tableDef ++ ".sql") (generateSQL tableDef)
 
 mkServantAPI :: FilePath -> String -> IO ()
