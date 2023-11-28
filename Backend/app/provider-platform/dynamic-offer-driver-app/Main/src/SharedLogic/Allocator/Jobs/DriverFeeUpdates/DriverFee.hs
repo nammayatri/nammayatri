@@ -136,7 +136,7 @@ calculateDriverFeeForDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getI
               driverFeeId = driverFee.id
           if count > threshold
             then do
-              QDF.updateAutoPayToManual driverFeeId
+              QDF.updateDriverFeeToManual driverFeeId
               return Nothing
             else do
               QDF.updateRetryCount (count + 1) now driverFeeId
@@ -202,8 +202,8 @@ calculateDriverFeeForDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getI
               due = sum $ map (\fee -> roundToHalf $ fromIntegral fee.govtCharges + fee.platformFee.fee + fee.platformFee.cgst + fee.platformFee.sgst) dueDriverFees
           if roundToHalf (due + totalFee) >= plan.maxCreditLimit
             then do
-              mapM_ updateAutoPayToManual driverFeeIds
-              updateAutoPayToManual driverFee.id
+              mapM_ updateDriverFeeToManual driverFeeIds
+              updateDriverFeeToManual driverFee.id
               updateSubscription False (cast driverFee.driverId)
             else do
               unless (totalFee == 0 || coinCashLeft >= totalFee) $ processDriverFee paymentMode driverFee
@@ -237,7 +237,7 @@ processDriverFee paymentMode driverFee = do
   now <- getCurrentTime
   case paymentMode of
     MANUAL -> do
-      updateAutoPayToManual driverFee.id
+      updateDriverFeeToManual driverFee.id
     AUTOPAY -> do
       updateStatus PAYMENT_PENDING driverFee.id now
       updateFeeType RECURRING_EXECUTION_INVOICE now driverFee.id
