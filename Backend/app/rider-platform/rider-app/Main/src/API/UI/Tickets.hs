@@ -12,32 +12,92 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module API.UI.Tickets where
+module API.UI.Tickets
+  ( API,
+    handler,
+  )
+where
 
-import qualified Data.Text as Data.Text
-import qualified Domain as Domain
-import qualified Domain.Action.UI.TicketService as Domain.Action.UI.TicketService
-import qualified Domain.Types.Merchant as Domain.Types.Merchant
-import qualified Domain.Types.Person as Domain.Types.Person
-import qualified Environment as Environment
-import EulerHS.Prelude
-import qualified Kernel.External.Payment.Interface as Kernel.External.Payment.Interface
+import qualified Domain.Action.UI.Tickets as DTB
+import qualified Domain.Types.Merchant as Merchant
+import Domain.Types.Person as Person
+import qualified Domain.Types.Tickets as DTB
+import qualified Domain.Types.Tickets.TicketBooking as DTB
+import qualified Environment as App
+import EulerHS.Prelude hiding (length)
+import qualified Kernel.External.Payment.Interface as Payment
+import Kernel.Types.Id
 import Kernel.Utils.Common
-import qualified Kernel.Utils.Id as Kernel.Utils.Id
 import Servant
 import Tools.Auth
 
+-------- Support Flow----------
 type API =
-  TokenAuth :> "ticket" :> "places" :> "bookings" :> Capture "personServiceId" Kernel.Utils.Id.Id Domain.TicketService :> Capture "ticketServiceShortId" Kernel.Utils.Id.Id Domain.TicketBooking :> "details" :> QueryParam "limit" Kernel.Utils.Id.Id Domain.TicketBooking :> QueryParam "status" Kernel.Utils.Id.Id Domain.TicketService :> Header "bla" Data.Text.Text :> Header "bla2" Data.Text.Text :> ReqBody '[JSON] Domain.TicketBookingDetails :> Get '[JSON] Domain.TicketBookingDetails
-    :<|> TokenAuth :> "ticket" :> "places" :> "book" :> ReqBody '[JSON] Domain.TicketBookingReq :> Post '[JSON] Kernel.External.Payment.Interface.CreateOrderResp
+  "ticket"
+    :> ( "places"
+           :> ( TokenAuth
+                  :> Get '[JSON] [DTB.TicketPlace]
+                  :<|> TokenAuth
+                  :> Capture "placeId" (Id DTB.TicketPlace)
+                  :> "services"
+                  :> Get '[JSON] [DTB.TicketService]
+                  :<|> TokenAuth
+                  :> Capture "placeId" (Id DTB.TicketPlace)
+                  :> "book"
+                  :> ReqBody '[JSON] DTB.TicketBookingReq
+                  :> Post '[JSON] Payment.CreateOrderResp
+              )
+           :<|> "bookings"
+             :> ( TokenAuth
+                    :> MandatoryQueryParam "status" DTB.BookingStatus
+                    :> QueryParam "limit" Int
+                    :> QueryParam "offset" Int
+                    :> Get '[JSON] [DTB.TicketBookingAPIEntity]
+                    :<|> TokenAuth
+                    :> Capture "ticketBookingShortId" (ShortId DTB.TicketBooking)
+                    :> "details"
+                    :> Get '[JSON] DTB.TicketBookingDetails
+                    :<|> TokenAuth
+                    :> Capture "personServiceId" (Id DTB.TicketService)
+                    :> Capture "ticketServiceShortId" (ShortId DTB.TicketBookingService)
+                    :> "verify"
+                    :> Post '[JSON] DTB.TicketServiceVerificationResp
+                    :<|> TokenAuth
+                    :> Capture "ticketBookingShortId" (ShortId DTB.TicketBooking)
+                    :> "status"
+                    :> Get '[JSON] DTB.BookingStatus
+                )
+       )
 
-handler :: Environment.FlowServer API
+handler :: App.FlowServer API
 handler =
-  getTicketPlacesBookingsDetails
-    :<|> postTicketPlacesBook
+  ( getTicketPlaces
+      :<|> getTicketServices
+      :<|> bookTicket
+  )
+    :<|> ( getAllBookings
+             :<|> getBookingDetail
+             :<|> verifyBookingDetails
+             :<|> getBookingStatus
+         )
 
-getTicketPlacesBookingsDetails :: (Id Domain.Types.Person.Person.Person, Id Domain.Types.Merchant.Merchant.Merchant) -> Kernel.Utils.Id.Id Domain.TicketService -> Kernel.Utils.Id.Id Domain.TicketBooking -> Kernel.Utils.Id.Id Domain.TicketBooking -> Kernel.Utils.Id.Id Domain.TicketService -> Data.Text.Text -> Data.Text.Text -> Domain.TicketBookingDetails -> Environment.FlowHandler Domain.TicketBookingDetails
-getTicketPlacesBookingsDetails = withFlowHandlerAPI . Domain.Action.UI.TicketService.getTicketPlacesBookingsDetails
+getTicketPlaces :: (Id Person.Person, Id Merchant.Merchant) -> App.FlowHandler [DTB.TicketPlace]
+getTicketPlaces (personId, merchantId) = withFlowHandlerAPI $ withPersonIdLogTag personId $ DTB.getTicketPlaces (personId, merchantId)
 
-postTicketPlacesBook :: (Id Domain.Types.Person.Person.Person, Id Domain.Types.Merchant.Merchant.Merchant) -> Domain.TicketBookingReq -> Environment.FlowHandler Kernel.External.Payment.Interface.CreateOrderResp
-postTicketPlacesBook = withFlowHandlerAPI . Domain.Action.UI.TicketService.postTicketPlacesBook
+getTicketServices :: (Id Person.Person, Id Merchant.Merchant) -> Id DTB.TicketPlace -> App.FlowHandler [DTB.TicketService]
+getTicketServices (personId, merchantId) = withFlowHandlerAPI . withPersonIdLogTag personId . DTB.getTicketServices (personId, merchantId)
+
+bookTicket :: (Id Person.Person, Id Merchant.Merchant) -> Id DTB.TicketPlace -> DTB.TicketBookingReq -> App.FlowHandler Payment.CreateOrderResp
+bookTicket (personId, merchantId) placeId = withFlowHandlerAPI . withPersonIdLogTag personId . DTB.bookTicket (personId, merchantId) placeId
+
+getAllBookings :: (Id Person.Person, Id Merchant.Merchant) -> DTB.BookingStatus -> Maybe Int -> Maybe Int -> App.FlowHandler [DTB.TicketBookingAPIEntity]
+getAllBookings (personId, merchantId) status mbLimit = withFlowHandlerAPI . withPersonIdLogTag personId . DTB.getAllBookings (personId, merchantId) status mbLimit
+
+getBookingDetail :: (Id Person.Person, Id Merchant.Merchant) -> ShortId DTB.TicketBooking -> App.FlowHandler DTB.TicketBookingDetails
+getBookingDetail (personId, merchantId) = withFlowHandlerAPI . withPersonIdLogTag personId . DTB.getBookingDetail (personId, merchantId)
+
+verifyBookingDetails :: (Id Person.Person, Id Merchant.Merchant) -> Id DTB.TicketService -> ShortId DTB.TicketBookingService -> App.FlowHandler DTB.TicketServiceVerificationResp
+verifyBookingDetails (personId, _) personServiceId = withFlowHandlerAPI . withPersonIdLogTag personId . DTB.verifyBookingDetails personServiceId
+
+getBookingStatus :: (Id Person.Person, Id Merchant.Merchant) -> ShortId DTB.TicketBooking -> App.FlowHandler DTB.BookingStatus
+getBookingStatus (personId, merchantId) = withFlowHandlerAPI . withPersonIdLogTag personId . DTB.getBookingStatus (personId, merchantId)
