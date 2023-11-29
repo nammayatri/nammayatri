@@ -27,6 +27,8 @@ import Resources.Localizable.HI (getHI)
 import Resources.Localizable.KN (getKN)
 import Resources.Localizable.ML (getML)
 import Resources.Localizable.TA (getTA)
+import Resources.Localizable.FR (getFR)
+import Resources.Localizable.TE (getTE)
 
 getString :: STR -> String
 getString key = 
@@ -47,6 +49,8 @@ getStringFromLocal language key =
     "KN_IN" -> getKN key
     "ML_IN" -> getML key
     "TA_IN" -> getTA key
+    "TE_IN" -> getTE key
+    "FR_FR" -> getFR key
     _       -> getEN key
 
 getVarString :: STR -> Array String -> String
