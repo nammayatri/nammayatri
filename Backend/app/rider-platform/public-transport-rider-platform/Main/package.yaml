@@ -83,6 +83,8 @@ dependencies:
   - relude
   - wai
   - servant
+  - hashmap
+  - containers
 
 ghc-options:
   - -Wall

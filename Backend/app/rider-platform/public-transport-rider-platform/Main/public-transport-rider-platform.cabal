@@ -188,8 +188,10 @@ library
       aeson
     , base >=4.7 && <5
     , bytestring
+    , containers
     , esqueleto
     , euler-hs
+    , hashmap
     , hedis
     , mobility-core
     , openapi3
@@ -262,8 +264,10 @@ executable public-transport-rider-platform-exe
       aeson
     , base >=4.7 && <5
     , bytestring
+    , containers
     , esqueleto
     , euler-hs
+    , hashmap
     , hedis
     , mobility-core
     , openapi3

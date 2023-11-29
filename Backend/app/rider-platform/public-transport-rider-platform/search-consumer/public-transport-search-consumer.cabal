@@ -77,8 +77,10 @@ library
       aeson
     , base >=4.7 && <5
     , bytestring
+    , containers
     , esqueleto
     , euler-hs
+    , hashmap
     , mobility-core
     , persistent
     , persistent-postgresql
@@ -141,8 +143,10 @@ executable public-transport-search-consumer-exe
       aeson
     , base >=4.7 && <5
     , bytestring
+    , containers
     , esqueleto
     , euler-hs
+    , hashmap
     , mobility-core
     , persistent
     , persistent-postgresql
