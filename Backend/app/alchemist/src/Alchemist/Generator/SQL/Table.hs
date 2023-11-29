@@ -8,7 +8,7 @@ import Text.Casing (quietSnake)
 -- Generates SQL for creating a table and altering it to add columns
 generateSQL :: TableDef -> String
 generateSQL tableDef =
-  createTableSQL tableDef ++ "\n" ++ alterTableSQL tableDef
+  createTableSQL tableDef ++ "\n" ++ alterTableSQL tableDef ++ "\n" ++ addKeySQL tableDef
 
 -- SQL for creating an empty table
 createTableSQL :: TableDef -> String
@@ -29,6 +29,15 @@ addColumnSQL tableName fieldDef =
     ++ intercalate " " (catMaybes $ map constraintToSQL (constraints fieldDef))
     ++ maybe "" ((++) " Default ") (defaultVal fieldDef)
     ++ ";"
+
+addKeySQL :: TableDef -> String
+addKeySQL tableDef =
+  let keys = map quietSnake $ primaryKey tableDef <> secondaryKey tableDef
+   in "ALTER TABLE " ++ (tableNameSql tableDef) ++ " ADD PRIMARY KEY ( "
+        ++ intercalate ", " keys
+        ++ ");"
+
+-- ALTER TABLE tablename ADD PRIMARY KEY (column1, column2, ...);
 
 -- Converts a FieldConstraint to SQL
 constraintToSQL :: FieldConstraint -> Maybe String
