@@ -13,7 +13,7 @@
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Flow where
+module Flow (permissionScreenFlow, baseAppFlow, appUpdatedFlow) where
 
 import Engineering.Helpers.LogEvent
 
@@ -309,21 +309,21 @@ currentFlowStatus = do
             Nothing -> updateFlowStatus SEARCH_CANCELLED
         else updateFlowStatus SEARCH_CANCELLED
 
-
-chooseLanguageScreenFlow :: FlowBT String Unit
-chooseLanguageScreenFlow = do
-  logField_ <- lift $ lift $ getLogFields
-  hideLoaderFlow
-  setValueToLocalStore LANGUAGE_KEY $ getValueFromConfig "defaultLanguage"
-  _ <- lift $ lift $ liftFlow $ logEvent logField_ "ny_user_choose_lang_scn_view"
-  flow <- UI.chooseLanguageScreen
-  case flow of
-    NextScreen language -> do
-                            setValueToLocalStore LANGUAGE_KEY language
-                            void $ pure $ setCleverTapUserProp [{key : "Preferred Language", value : unsafeToForeign language}]
-                            _ <- lift $ lift $ liftFlow $(logEventWithParams logField_ "ny_user_lang_choose" "language" (language))
-                            enterMobileNumberScreenFlow
-    Refresh state -> chooseLanguageScreenFlow
+-- TODO :: currently not in use
+-- chooseLanguageScreenFlow :: FlowBT String Unit
+-- chooseLanguageScreenFlow = do
+--   logField_ <- lift $ lift $ getLogFields
+--   hideLoaderFlow
+--   setValueToLocalStore LANGUAGE_KEY $ getValueFromConfig "defaultLanguage"
+--   _ <- lift $ lift $ liftFlow $ logEvent logField_ "ny_user_choose_lang_scn_view"
+--   flow <- UI.chooseLanguageScreen
+--   case flow of
+--     NextScreen language -> do
+--                             setValueToLocalStore LANGUAGE_KEY language
+--                             void $ pure $ setCleverTapUserProp [{key : "Preferred Language", value : unsafeToForeign language}]
+--                             _ <- lift $ lift $ liftFlow $(logEventWithParams logField_ "ny_user_lang_choose" "language" (language))
+--                             enterMobileNumberScreenFlow
+--     Refresh state -> chooseLanguageScreenFlow
 
 enterMobileNumberScreenFlow :: FlowBT String Unit
 enterMobileNumberScreenFlow = do
