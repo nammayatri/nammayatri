@@ -9,8 +9,8 @@ defaultImports = ["Kernel.Prelude"]
 
 generateDomainType :: TableDef -> String
 generateDomainType tableDef =
-  "module Domain.Types." ++ tableNameHaskell tableDef ++ " where\n\n"
-    ++ intercalate "\n" (map (\i -> "import qualified " ++ i ++ " as " ++ i) (imports tableDef))
+  "module " ++ moduleName ++ " where\n\n"
+    ++ intercalate "\n" (map (\i -> "import qualified " ++ i ++ " as " ++ i) (removeDefaultImports moduleName $ imports tableDef))
     ++ "\n"
     ++ intercalate "\n" (map ("import " ++) defaultImports)
     ++ "\n\ndata "
@@ -20,6 +20,11 @@ generateDomainType tableDef =
     ++ "\n  { "
     ++ intercalate "\n  , " (map fieldDefToHaskell (fields tableDef))
     ++ "\n  }\n  deriving (Generic, Show)\n"
+  where
+    moduleName = "Domain.Types." ++ tableNameHaskell tableDef
+
+removeDefaultImports :: String -> [String] -> [String]
+removeDefaultImports moduleName = filter ((/=) moduleName) . filter (`notElem` defaultImports)
 
 -- Convert FieldDef to Haskell field
 fieldDefToHaskell :: FieldDef -> String
