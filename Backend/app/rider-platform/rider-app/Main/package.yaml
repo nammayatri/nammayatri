@@ -121,6 +121,7 @@ ghc-options:
 library:
   source-dirs:
     - src
+    - src-read-only
     - spec
   ghc-options:
     - -Wall

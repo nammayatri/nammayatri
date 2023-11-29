@@ -390,6 +390,7 @@ library
       Paths_rider_app
   hs-source-dirs:
       src
+      src-read-only
       spec
   default-extensions:
       ConstraintKinds
