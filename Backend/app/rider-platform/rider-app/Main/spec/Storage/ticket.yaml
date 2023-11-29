@@ -1,19 +1,19 @@
 imports:
-  TicketPlace: Domain.Types.TicketPlace
+  MerchantOperatingCity: Domain.Types.Merchant.MerchantOperatingCity
 
 model:
-  name: TicketPlace
+  name: TicketPlaceV1
 
   tableName: ticker_place
 
   fields:
-    id : Id TicketPlace
-    merchantOperatingCityId : Text
+    id : Id TicketPlaceV1
+    merchantOperatingCityId : Id MerchantOperatingCity
     name : Text
     description : Maybe Text
     lat : Maybe Double
     lon : Maybe Double
-    gallery : "[Text]"
+    gallery : [Text]
     shortDesc : Text
     iconUrl : Maybe Text
     mapImageUrl : Maybe Text
@@ -24,3 +24,112 @@ model:
     id: PrimaryKey|NotNull
     name: NotNull
     shortDesc: NotNull
+
+model :
+  name : TicketServiceV1
+
+  tableName : ticket_service
+
+  fields :
+    id : Id TicketServiceV1
+    placeId : Text
+    serviceName : Text
+    shortDesc : Text
+    operationalDays : [Day]
+    bussinessHours : Timings
+
+  constraints :
+    id : PrimaryKey | NotNull
+    serviceName : NotNull
+    placeId : NotNull
+    shortDesc : NotNull
+    bussinessHours : NotNull
+    operationalDays : NotNull
+
+
+model :
+  name : SpecialDates
+
+  tableName : special_dates
+
+  fields :
+    id : Id SpecialDates
+    entityId : Text
+    date : Day
+    specialDays : SpecialDayType
+    businessHours : Timings
+
+  constraints :
+    id : PrimaryKey | NotNull
+    date : NotNull
+    specialDays : NotNull
+    businessHours : NotNull
+    entityId : NotNull
+
+
+model:
+  name: BusinessHour
+  tableName: business_hour
+
+  fields:
+    id: Id BusinessHour
+    type: BusinessHourType
+    categoryId: Id ServiceCategory
+
+  constraints :
+    id : PrimaryKey | NotNull
+    type : NotNull
+    categoryId : NotNull
+
+
+model:
+  name: ServiceCategory
+  tableName: service_category
+
+  fields:
+    id: Id ServiceCategory
+    name: Text
+    description: Text
+    availableSeats: Int
+
+  constraints :
+    id : PrimaryKey | NotNull
+    name : NotNull
+    description : NotNull
+    availableSeats : NotNull
+
+
+model:
+  name: ServicePeopleCategory
+  tableName: service_people_category
+
+  fields:
+    id: Id ServicePeopleCategory
+    serviceCategoryId: Id ServiceCategory
+    name: Text
+    pricePerUnit: Int
+
+  constraints :
+    id : PrimaryKey | NotNull
+    serviceCategoryId : NotNull
+    name : NotNull
+    pricePerUnit : NotNull
+
+
+model:
+  name: SeatManagement
+  tableName: seat_management
+
+  fields:
+    id: Id SeatManagement
+    date: Day
+    ticketServiceCategoryId: Id TicketServiceCategory
+    booked: Int
+    blocked: Int
+
+  constraints :
+    id : PrimaryKey | NotNull
+    date : NotNull
+    ticketServiceCategoryId : NotNull
+    booked : NotNull
+    blocked : NotNull
