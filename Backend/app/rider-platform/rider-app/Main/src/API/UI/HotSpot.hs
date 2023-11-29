@@ -28,6 +28,7 @@ import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
+import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common
 import Servant hiding (throwError)
 import Storage.Beam.SystemConfigs ()
@@ -56,6 +57,12 @@ filterAccordingMaxFrequency threshold =
         sumOfFrequency >= threshold
     )
 
+groupAndFilterHotSpotWithPrecision :: Int -> Int -> [HotSpot] -> [HotSpot]
+groupAndFilterHotSpotWithPrecision precision geohashPerGroup geohashes =
+  let grouped = Dl.groupBy (\gh1 gh2 -> Dl.take precision (Dt.unpack gh1._geoHash) == Dl.take precision (Dt.unpack gh2._geoHash)) geohashes
+      selected = concatMap (Dl.take geohashPerGroup) grouped
+   in selected
+
 getHotspot ::
   ( CacheFlow m r,
     EsqDBFlow m r
@@ -69,12 +76,11 @@ getHotspot Maps.LatLong {..} merchantId = do
     (Just HotSpotConfig {..}) ->
       if shouldTakeHotSpot
         then do
-          let mbGeoHashOfLatLong = DG.encode nearbyGeohashPrecision (lat, lon)
-          case mbGeoHashOfLatLong of
-            Just geoHashOfLatLong -> do
-              let neighbours = neighboringGeohashes geoHashOfLatLong
-              let allGeoHashes = Dl.nub (geoHashOfLatLong : neighbours)
-              let deviatedCharLen = hotSpotGeoHashPrecision - nearbyGeohashPrecision
+          let geoHashOfLatLong = DG.encode precisionToGetGeohash (lat, lon)
+          case geoHashOfLatLong of
+            Just currentGeoHash -> do
+              let neighbourGeoHashes = neighboringGeohashes currentGeoHash hotSpotRadius (geoHashCellHeight precisionToGetGeohash)
+              let deviatedCharLen = precisionToSetGeohash - precisionToGetGeohash
               let listOfGeoHashToCheck =
                     concatMap
                       ( \ghash -> do
@@ -82,10 +88,13 @@ getHotspot Maps.LatLong {..} merchantId = do
                           let listOfStringsAddedToGeohash = map (ghash ++) addedCharacters
                           listOfStringsAddedToGeohash
                       )
-                      allGeoHashes
+                      neighbourGeoHashes
               filteredAccordingToGeoHash :: [HotSpot] <- mapMaybeM (Hedis.hGet makeHotSpotKey . Dt.pack) listOfGeoHashToCheck
-              let finalHotSpot = filterAccordingMaxFrequency minFrequencyOfHotSpot filteredAccordingToGeoHash
-              let hotSpots = take maxNumHotSpotsToShow $ Dl.sortOn (Down . (\x -> do (x._manualMovedSaved * weightOfManualSaved) + (x._manualMovedPickup * weightOfManualPickup) + (x._nonManualMovedPickup * weightOfAutoPickup) + (x._nonManualMovedSaved * weightOfAutoSaved) + (x._tripStart * weightOfTripStart) + (x._tripEnd * weightOfTripEnd) + (x._specialLocation * weightOfSpecialLocation))) finalHotSpot
+              let hotSpotWithInRadius = Dl.filter (\hotSpot -> fromIntegral (highPrecMetersToMeters (distanceBetweenInMeters Maps.LatLong {..} hotSpot._centroidLatLong)).getMeters <= hotSpotRadius) filteredAccordingToGeoHash
+              let finalHotSpot = filterAccordingMaxFrequency minFrequencyOfHotSpot hotSpotWithInRadius
+              let sortedHotSpotWithFrequency = Dl.sortOn (Down . (\x -> do (x._manualMovedSaved * weightOfManualSaved) + (x._manualMovedPickup * weightOfManualPickup) + (x._nonManualMovedPickup * weightOfAutoPickup) + (x._nonManualMovedSaved * weightOfAutoSaved) + (x._tripStart * weightOfTripStart) + (x._tripEnd * weightOfTripEnd) + (x._specialLocation * weightOfSpecialLocation))) finalHotSpot
+              let filteredHotSpotWithPrecisions = groupAndFilterHotSpotWithPrecision precisionToFilterGeohash maxGeoHashToFilter sortedHotSpotWithFrequency
+              let hotSpots = take maxNumHotSpotsToShow filteredHotSpotWithPrecisions
               let hotSpotInfo = map (\HotSpot {..} -> HotSpotInfo {..}) hotSpots
               return HotSpotResponse {blockRadius = Just blockRadius, ..}
             Nothing ->
@@ -95,42 +104,38 @@ getHotspot Maps.LatLong {..} merchantId = do
 
 -- Function to find all neighboring geohashes at the same precision
 
-geoHashLengthToLatLongCentroidalDistance :: Int -> Double
-geoHashLengthToLatLongCentroidalDistance geoHashLength = case geoHashLength of
-  1 -> 5009000
-  2 -> 1252300
-  3 -> 156500
-  4 -> 39100
-  5 -> 4900
-  6 -> 1200
-  7 -> 152
-  8 -> 38
-  9 -> 5
-  10 -> 1
-  11 -> 0.14
-  12 -> 0.03
-  _ -> 0
+geoHashCellHeight :: Int -> Double
+geoHashCellHeight precision =
+  case precision of
+    1 -> 5009000.0
+    2 -> 626150.0
+    3 -> 156500.0
+    4 -> 19550.0
+    5 -> 4890.0
+    6 -> 610.0
+    7 -> 153.0
+    8 -> 19.1
+    9 -> 4.77
+    10 -> 0.596
+    11 -> 0.149
+    12 -> 0.0186
+    _ -> 0.0
 
-neighboringGeohashes :: String -> [String]
-neighboringGeohashes geohash = do
-  let mbCentroid :: Maybe (Double, Double) = DG.decode geohash
+neighboringGeohashes :: String -> Double -> Double -> [String]
+neighboringGeohashes geohash distance distanceThreshold = do
+  let currentGeoHash :: Maybe (Double, Double) = DG.decode geohash
   let precision = length geohash
-  let distance = geoHashLengthToLatLongCentroidalDistance precision
-  case mbCentroid of
+  case currentGeoHash of
     Just (lat, lon) -> do
-      let neighbours = getLatlongsAtDistance (Maps.LatLong lat lon) distance
-      let geoHashes = mapMaybe (\neighbour -> DG.encode precision (neighbour.lat, neighbour.lon)) neighbours
-      geoHashes
+      let neighbours = getLatlongsAtDistance (Maps.LatLong lat lon) distance distanceThreshold
+      let geoHashes = mapMaybe (\neighbour -> DG.encode precision (neighbour.lat, neighbour.lon)) (Maps.LatLong lat lon : neighbours)
+      Dl.nub geoHashes
     Nothing -> []
 
-getLatlongsAtDistance :: Maps.LatLong -> Double -> [Maps.LatLong]
-getLatlongsAtDistance origin distance =
+getLatlongsAtDistance :: Maps.LatLong -> Double -> Double -> [Maps.LatLong]
+getLatlongsAtDistance origin distance distanceThreshold =
   let bearings = [0, 45, 90, 135, 180, 225, 270, 315]
-      toRadians deg = deg * pi / 180
-      toDegrees rad = rad * 180 / pi
-      originRadians = Maps.LatLong (toRadians $ origin.lat) (toRadians $ origin.lon)
-      latLongs = [getPointAtDistance originRadians distance (toRadians bearing) | bearing <- bearings]
-   in [Maps.LatLong (toDegrees $ latLong.lat) (toDegrees $ latLong.lon) | latLong <- latLongs]
+   in [getPointAtDistance origin distance' bearing | distance' <- [0, distanceThreshold .. distance], bearing <- bearings]
 
 getPointAtDistance :: Maps.LatLong -> Double -> Double -> Maps.LatLong
 getPointAtDistance Maps.LatLong {..} distance bearing =

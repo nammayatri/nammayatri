@@ -21,6 +21,7 @@ import Data.Default.Class
 import qualified Data.Geohash as DG
 import Data.Text
 import Domain.Types.HotSpotConfig
+import Domain.Types.LocationAddress as LA
 import Domain.Types.Merchant
 import Kernel.External.Maps
 import Kernel.Prelude
@@ -38,7 +39,8 @@ data HotSpot = HotSpot
     _nonManualMovedSaved :: Int,
     _tripStart :: Int,
     _tripEnd :: Int,
-    _specialLocation :: Int
+    _specialLocation :: Int,
+    _address :: Maybe LA.LocationAddress
   }
   deriving (Generic, ToSchema, Show, Eq)
 
@@ -63,7 +65,8 @@ instance Default HotSpot where
         _nonManualMovedSaved = 0,
         _tripStart = 0,
         _tripEnd = 0,
-        _specialLocation = 0
+        _specialLocation = 0,
+        _address = Nothing
       }
 
 makeLenses ''HotSpot
@@ -81,7 +84,8 @@ data TypeOfMovement = ManualPickup | NonManualPickup | ManualSaved | NonManualSa
 
 data HotSpotInfo = HotSpotInfo
   { _geoHash :: Text,
-    _centroidLatLong :: LatLong
+    _centroidLatLong :: LatLong,
+    _address :: Maybe LA.LocationAddress
   }
   deriving (Generic, ToSchema, Show, Eq)
 
@@ -102,13 +106,14 @@ convertToHotSpot ::
     CacheFlow m r
   ) =>
   LatLong ->
+  Maybe LA.LocationAddress ->
   Id Merchant ->
   m (Maybe HotSpot)
-convertToHotSpot LatLong {..} merchantId = do
+convertToHotSpot LatLong {..} _address merchantId = do
   hotSpotConfig <- QHotSpotConfig.findConfigByMerchantId merchantId
   case hotSpotConfig of
     Just HotSpotConfig {..} -> do
-      let mbGeoHash = DG.encode hotSpotGeoHashPrecision (lat, lon)
+      let mbGeoHash = DG.encode precisionToSetGeohash (lat, lon)
       case mbGeoHash of
         Just geo -> do
           let mbDecodedCentroid = DG.decode geo :: Maybe (Double, Double)
@@ -118,6 +123,7 @@ convertToHotSpot LatLong {..} merchantId = do
                 def
                   & geoHash .~ pack geo
                   & centroidLatLong .~ uncurry LatLong decodedCentroid
+                  & address .~ _address
             Nothing ->
               return Nothing
         Nothing ->
