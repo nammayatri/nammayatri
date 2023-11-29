@@ -1,5 +1,5 @@
 imports:
-  MerchantOperatingCity: Domain.Types.Merchant.MerchantOperatingCity
+  TicketPlace: Domain.Types.TicketPlace
 
 model:
   name: TicketPlace
@@ -8,12 +8,12 @@ model:
 
   fields:
     id : Id TicketPlace
-    merchantOperatingCityId : Id MerchantOperatingCity
+    merchantOperatingCityId : Text
     name : Text
     description : Maybe Text
     lat : Maybe Double
     lon : Maybe Double
-    gallery : [Text]
+    gallery : "[Text]"
     shortDesc : Text
     iconUrl : Maybe Text
     mapImageUrl : Maybe Text
