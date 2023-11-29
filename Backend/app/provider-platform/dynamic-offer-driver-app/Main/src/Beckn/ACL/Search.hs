@@ -66,8 +66,8 @@ buildSearchReq merchantId subscriber req = do
   let distance = getDistance =<< intent.fulfillment.tags
   let duration = getDuration =<< intent.fulfillment.tags
   let customerLanguage = buildCustomerLanguage =<< intent.fulfillment.customer
-  logDebug $ "Contest is: " context
-  logDebug $ "Subsriber is: " subscriber
+  logDebug $ "Contest is: " <> show context
+  logDebug $ "Subsriber is: " <> show subscriber
   unless (subscriber.subscriber_id == context.bap_id) $
     throwError (InvalidRequest "Invalid bap_id")
   unless (subscriber.subscriber_url == context.bap_uri) $
