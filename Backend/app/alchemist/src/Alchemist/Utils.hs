@@ -22,8 +22,19 @@ typeDelimiter = "() []"
 makeTypeQualified :: Object -> String -> String
 makeTypeQualified obj str = concatMap replaceOrKeep (split (whenElt (`elem` typeDelimiter)) str)
   where
+    defaultTypeImports :: String -> Maybe String
+    defaultTypeImports tp = case tp of
+      "Text" -> Just "Kernel.Prelude"
+      "Maybe" -> Just "Kernel.Prelude"
+      "Double" -> Just "Kernel.Prelude"
+      "TimeOfDay" -> Just "Kernel.Prelude"
+      "Id" -> Just "Kernel.Types.Id"
+      _ -> Nothing
+
     getQualifiedImport :: String -> Maybe String
-    getQualifiedImport tp = preview (ix "imports" . key (fromString tp) . _String) obj
+    getQualifiedImport tk = case preview (ix "imports" . key (fromString tk) . _String) obj of
+      Just t -> Just t
+      Nothing -> defaultTypeImports tk
 
     replaceOrKeep :: String -> String
     replaceOrKeep word =
