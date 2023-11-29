@@ -24,9 +24,9 @@ module.exports = (env, argv) => {
     },
     plugins: plugins,
     devServer: {
-      contentBase: path.join(__dirname, 'dist'),
-      host: "0.0.0.0",
-      inline: false,
+      static: {
+        directory: path.join(__dirname, 'dist'),
+      },
       port: 8081
     }
   });

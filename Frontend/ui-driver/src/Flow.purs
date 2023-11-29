@@ -13,7 +13,7 @@
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Flow where
+module Flow (baseAppFlow, noInternetScreenFlow, checkTimeSettings, appUpdatedFlow, popUpScreenFlow, homeScreenFlow) where
 
 import Constants.Configs
 import Debug
@@ -2532,10 +2532,11 @@ editBankDetailsFlow = do
   action <- UI.editBankDetailsScreen
   pure unit
 
-editAadhaarDetailsFlow :: FlowBT String Unit
-editAadhaarDetailsFlow = do
-  action <- UI.editAadhaarDetailsScreen
-  pure unit
+-- TODO : will need in future
+-- editAadhaarDetailsFlow :: FlowBT String Unit
+-- editAadhaarDetailsFlow = do
+--   action <- UI.editAadhaarDetailsScreen
+--   pure unit
 
 noInternetScreenFlow :: String -> FlowBT String Unit
 noInternetScreenFlow triggertype = do
@@ -2636,14 +2637,15 @@ updateDriverStatusGlobal mode active= do
   let updatedResponse = getDriverInfoResp{mode = Just mode, active = active}
   modifyScreenState $ GlobalPropsType $ \globalProps -> globalProps{driverInformation = Just (GetDriverInfoResp updatedResponse)}
 
-driverRideRatingFlow :: FlowBT String Unit
-driverRideRatingFlow = do
-  action <- UI.driverRideRatingScreen
-  case action of
-    SendCustomerFeedBack updatedState -> do
-      --TODO // API CALL for feedback
-      homeScreenFlow
-    CloseScreen -> homeScreenFlow
+-- TODO :: will need in future
+-- driverRideRatingFlow :: FlowBT String Unit
+-- driverRideRatingFlow = do
+--   action <- UI.driverRideRatingScreen
+--   case action of
+--     SendCustomerFeedBack updatedState -> do
+--       --TODO // API CALL for feedback
+--       homeScreenFlow
+--     CloseScreen -> homeScreenFlow
 
 notificationFlow :: FlowBT String Unit
 notificationFlow = do

@@ -6,15 +6,16 @@
   "main": "index.js",
   "scripts": {
     "compile:purs": "spago build",
-    "bundle:android": "webpack --env prod --mode=production --progress --config webpack.android.js",
+    "bundle:android": "webpack --env prod --mode=production --progress --config webpack.android.js && npm run webpack-uglify",
     "bundle:ios": "webpack --env prod --mode=production --progress --config webpack.ios.js",
     "prod:android": "npm-run-all compile:purs \"bundle:android\"",
     "prod:ios": "npm-run-all compile:purs bundle:ios",
     "compileAndCreateJsa": "sh compileAndCreateJsa.sh",
     "dev": "spago build --watch",
-    "webpack-dev": "webpack-dev-server --env sandbox --mode development --config webpack.config.js --host",
+    "webpack-dev": "webpack-dev-server --env sandbox --mode development --config webpack.config.js --host 0.0.0.0",
     "start": "npm-run-all -p dev webpack-dev",
-    "clean": "sh cleanSpago.sh"
+    "clean": "sh cleanSpago.sh",
+    "webpack-uglify": "uglifyjs dist/android/index_bundle.js --output dist/android/index_bundle.js --mangle --compress"
   },
   "author": "juspay",
   "license": "ISC",
@@ -29,7 +30,7 @@
     "@semantic-release/git": "^10.0.1",
     "@semantic-release/npm": "^9.0.1",
     "@semantic-release/release-notes-generator": "^10.0.3",
-    "babel-loader": "^8.0.6",
+    "babel-loader": "^8.2.0",
     "commitlint-config-jira": "^1.6.4",
     "commitlint-plugin-jira-rules": "^1.6.4",
     "cz-conventional-changelog": "^3.3.0",
@@ -37,10 +38,11 @@
     "node-notifier": "^10.0.1",
     "npm-run-all": "^4.1.5",
     "semantic-release": "^19.0.5",
-    "webpack": "^4.41.5",
-    "webpack-cli": "^3.3.10",
-    "webpack-dev-server": "^3.10.1",
-    "webpack-merge": "^5.8.0"
+    "uglify-js": "^3.17.4",
+    "webpack": "^5.0.0",
+    "webpack-cli": "^4.0.0",
+    "webpack-dev-server": "^4.0.0",
+    "webpack-merge": "^5.0.0"
   },
   "dependencies": {
     "axios": ">=1.6.0",
