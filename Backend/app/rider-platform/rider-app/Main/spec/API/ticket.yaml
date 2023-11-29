@@ -1,0 +1,31 @@
+
+ticket module
+  -> ticket places [operationalDays]
+      -> ticket services
+          - [operationalDays] e.g. Mon, Tue, Wed, Fri, Sat, Sun
+          - businessHours - Slots [businessHourId] | Duration businessHourId
+
+specialDates
+  - entityId (placeId, serviceId)
+  - date [YYYY-MM-DD]
+  - specialDayType [Closed | Open ]
+  - businessHours - Slots [businessHourId] | Duration businessHourId
+
+-> ticket services business hours (businessHourId) (type: Slot TimeOfDay | Duration TimeOfDay TimeOfDay )
+  -> ticket service categories [Lower, UpperDeck, VIP Longue, Sleeper, AC, NonAC, etc.]
+      -> ticket people category [Adult, Kid, All, Student, Senior Citizen, etc.]
+          - pricePerUnit
+      -> seats (totalSeats | Unlimited)
+
+
+seatManagement
+  - id
+  - date [YYYY-MM-DD]
+  - ticketServiceCategoryId
+  - booked
+  - blocked
+
+
+expiry  ->
+RelatedToTimeOfBooking
+RelatedToDayTimeOfVisit

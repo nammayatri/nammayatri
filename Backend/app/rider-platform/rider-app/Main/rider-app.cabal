@@ -385,9 +385,7 @@ library
       Tools.Streaming.Kafka
       Tools.Ticket
       Tools.Whatsapp
-      API.TicketBooking
       Spec
-      Storage.TicketBooking
   other-modules:
       Paths_rider_app
   hs-source-dirs:

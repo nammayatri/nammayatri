@@ -1,8 +1,7 @@
 module Spec (generateCode) where
 
-import qualified API.TicketBooking as AT
+import qualified Alchemist.App as Alchemist
 import Kernel.Prelude
-import qualified Storage.TicketBooking as ST
 import System.Directory
 import System.FilePath
 
@@ -23,6 +22,10 @@ generateCode = do
   currentDir <- getCurrentDirectory
   maybeGitRoot <- findGitRoot currentDir
   let rootDir = fromMaybe (error "Could not find git root") maybeGitRoot
-  let targetFolder = rootDir </> "Backend/app/rider-platform/rider-app/Main/src/"
-  ST.mkStorage targetFolder
-  AT.mkAPI targetFolder
+  let targetFolder = rootDir </> "Backend/app/rider-platform/rider-app/Main/src-read-only/"
+  let inputFolder = rootDir </> "Backend/app/rider-platform/rider-app/Main/spec/"
+  let inputFile = inputFolder </> "Storage/ticket.yaml"
+  Alchemist.mkBeamTable (targetFolder </> "Storage/Beam") inputFile
+  Alchemist.mkBeamQueries (targetFolder </> "Storage/Queries") inputFile
+  Alchemist.mkDomainType (targetFolder </> "Domain/Types") inputFile
+  Alchemist.mkSQLFile targetFolder inputFile
