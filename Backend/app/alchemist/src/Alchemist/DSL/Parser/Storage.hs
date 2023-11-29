@@ -94,14 +94,15 @@ findMatchingSqlType haskellType =
 
 defaultSQLTypes :: [(String, String)]
 defaultSQLTypes =
-  [ ("Text", "text"),
+  [ ("\\[Text\\]", "text[]"),
+    ("Text", "text"),
     ("Id ", "character varying(36)"),
     ("Int", "integer"),
     ("Double", "double precision"),
     ("Bool", "boolean"),
     ("UTCTime", "timestamp with time zone"),
-    ("Day", "date"),
-    ("TimeOfDay", "time without time zone")
+    ("TimeOfDay", "time without time zone"),
+    ("Day", "date")
   ]
 
 extractKeys :: [FieldDef] -> ([String], [String])
