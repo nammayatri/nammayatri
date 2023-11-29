@@ -29,7 +29,7 @@ makeTypeQualified obj str = concatMap replaceOrKeep (split (whenElt (`elem` type
     replaceOrKeep word =
       if '.' `elem` word
         then word
-        else maybe (if word `elem` ["", ")", "(", " ", "[", "]"] then word else error "Type not determined") (\x -> x <> "." <> word) (getQualifiedImport word)
+        else maybe (if word `elem` ["", ")", "(", " ", "[", "]"] then word else error $ T.pack ("\"" ++ word ++ "\" type not determined")) (\x -> x <> "." <> word) (getQualifiedImport word)
 
 figureOutImports :: [String] -> [String]
 figureOutImports fieldTypes =

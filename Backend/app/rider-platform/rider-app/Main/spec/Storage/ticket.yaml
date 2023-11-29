@@ -1,0 +1,26 @@
+imports:
+  MerchantOperatingCity: Domain.Types.Merchant.MerchantOperatingCity
+
+model:
+  name: TicketPlace
+
+  tableName: ticker_place
+
+  fields:
+    id : Id TicketPlace
+    merchantOperatingCityId : Id MerchantOperatingCity
+    name : Text
+    description : Maybe Text
+    lat : Maybe Double
+    lon : Maybe Double
+    gallery : [Text]
+    shortDesc : Text
+    iconUrl : Maybe Text
+    mapImageUrl : Maybe Text
+    openTimings : Maybe TimeOfDay
+    closeTimings : Maybe TimeOfDay
+
+  constraints:
+    id: PrimaryKey|NotNull
+    name: NotNull
+    shortDesc: NotNull

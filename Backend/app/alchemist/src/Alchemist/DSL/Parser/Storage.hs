@@ -89,13 +89,18 @@ mkList _ = []
 findMatchingSqlType :: String -> String
 findMatchingSqlType haskellType =
   case filter ((haskellType =~) . fst) defaultSQLTypes of
-    [] -> error "No Sql type found"
+    [] -> error $ T.pack ("\"" ++ haskellType ++ "\": No Sql type found")
     ((_, sqlType) : _) -> sqlType
 
 defaultSQLTypes :: [(String, String)]
 defaultSQLTypes =
   [ ("Text", "text"),
     ("Id ", "character varying(36)"),
+    ("Int", "integer"),
+    ("Double", "double precision"),
+    ("Bool", "boolean"),
+    ("UTCTime", "timestamp with time zone"),
+    ("Day", "date"),
     ("TimeOfDay", "time without time zone")
   ]
 
