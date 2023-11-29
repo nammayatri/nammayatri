@@ -18,6 +18,7 @@ import Control.Lens
 import Data.Default.Class
 import Domain.Types.HotSpot
 import Domain.Types.HotSpotConfig
+import Domain.Types.LocationAddress as LA
 import Domain.Types.Merchant
 import Kernel.External.Maps
 import Kernel.Prelude
@@ -34,13 +35,14 @@ frequencyUpdator ::
   ) =>
   Id Merchant ->
   LatLong ->
+  Maybe LA.LocationAddress ->
   TypeOfMovement ->
   m ()
-frequencyUpdator merchantId latLong movement = do
+frequencyUpdator merchantId latLong _address movement = do
   hotSpotConfig <- QHotSpotConfig.findConfigByMerchantId merchantId
   case hotSpotConfig of
     Just HotSpotConfig {..} -> when shouldTakeHotSpot do
-      mbHotSpot <- convertToHotSpot latLong merchantId
+      mbHotSpot <- convertToHotSpot latLong _address merchantId
       expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
       case mbHotSpot of
         Just (HotSpot {..}) -> do
@@ -55,6 +57,7 @@ frequencyUpdator merchantId latLong movement = do
                       & geoHash .~ _geoHash
                       & centroidLatLong .~ _centroidLatLong
                       & movementLens movement %~ (+ 1)
+                      & address .~ _address
               hSetExp makeHotSpotKey _geoHash updatedGeoHash expTime
         Nothing -> return ()
     Nothing -> return ()

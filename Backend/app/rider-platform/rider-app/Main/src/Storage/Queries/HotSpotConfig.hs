@@ -34,8 +34,6 @@ instance FromTType' BeamHSC.HotSpotConfig HotSpotConfig where
       Just
         HotSpotConfig
           { id = Id id,
-            hotSpotGeoHashPrecision = hotSpotGeoHashPrecision,
-            nearbyGeohashPrecision = nearbyGeohashPrecision,
             blockRadius = blockRadius,
             minFrequencyOfHotSpot = minFrequencyOfHotSpot,
             weightOfManualPickup = weightOfManualPickup,
@@ -46,15 +44,19 @@ instance FromTType' BeamHSC.HotSpotConfig HotSpotConfig where
             maxNumHotSpotsToShow = maxNumHotSpotsToShow,
             weightOfTripEnd = weightOfTripEnd,
             weightOfSpecialLocation = weightOfSpecialLocation,
-            shouldTakeHotSpot = shouldTakeHotSpot
+            shouldTakeHotSpot = shouldTakeHotSpot,
+            shouldSaveSearchHotSpot = shouldSaveSearchHotSpot,
+            hotSpotRadius = hotSpotRadius,
+            precisionToSetGeohash = precisionToSetGeohash,
+            precisionToGetGeohash = precisionToGetGeohash,
+            precisionToFilterGeohash = precisionToFilterGeohash,
+            maxGeoHashToFilter = maxGeoHashToFilter
           }
 
 instance ToTType' BeamHSC.HotSpotConfig HotSpotConfig where
   toTType' HotSpotConfig {..} =
     BeamHSC.HotSpotConfigT
       { BeamHSC.id = getId id,
-        BeamHSC.hotSpotGeoHashPrecision = hotSpotGeoHashPrecision,
-        BeamHSC.nearbyGeohashPrecision = nearbyGeohashPrecision,
         BeamHSC.blockRadius = blockRadius,
         BeamHSC.minFrequencyOfHotSpot = minFrequencyOfHotSpot,
         BeamHSC.weightOfManualPickup = weightOfManualPickup,
@@ -65,5 +67,11 @@ instance ToTType' BeamHSC.HotSpotConfig HotSpotConfig where
         BeamHSC.maxNumHotSpotsToShow = maxNumHotSpotsToShow,
         BeamHSC.weightOfTripEnd = weightOfTripEnd,
         BeamHSC.weightOfSpecialLocation = weightOfSpecialLocation,
-        BeamHSC.shouldTakeHotSpot = shouldTakeHotSpot
+        BeamHSC.shouldTakeHotSpot = shouldTakeHotSpot,
+        BeamHSC.shouldSaveSearchHotSpot = shouldSaveSearchHotSpot,
+        BeamHSC.hotSpotRadius = hotSpotRadius,
+        BeamHSC.precisionToSetGeohash = precisionToSetGeohash,
+        BeamHSC.precisionToGetGeohash = precisionToGetGeohash,
+        BeamHSC.precisionToFilterGeohash = precisionToFilterGeohash,
+        BeamHSC.maxGeoHashToFilter = maxGeoHashToFilter
       }
