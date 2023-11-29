@@ -56,8 +56,8 @@ jobs:
 
       
 
-      - name: Download APK
-        uses: actions/download-artifact@v2
+      - name: Upload APK
+        uses: actions/upload-artifact@v2
         with:
           name: ${{ github.event.inputs.variant }}
           path: ${{ steps.set_apk_path.outputs.apk_path }}
