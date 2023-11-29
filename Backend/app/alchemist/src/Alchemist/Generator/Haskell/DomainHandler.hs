@@ -10,10 +10,20 @@ import Prelude
 
 generateDomainHandler :: Apis -> String
 generateDomainHandler input =
-  "module Domain.Action." <> T.unpack (head (map _moduleName input)) <> " where \n\n"
-    <> intercalate "\n" (makeImport <$> figureOutImports (T.unpack <$> concatMap handlerImports input))
-    <> T.unpack ("\n\n" <> T.intercalate "\n\n" (map handlerFunctionDef input))
+  "module API.UI." <> T.unpack (_moduleName input) <> " where \n\n"
+    <> intercalate "\n" (map ("import " <>) defaultImports)
+    <> "\n\n"
+    <> intercalate "\n" (map makeImport defaultQualifiedImport)
+    <> "\n"
+    <> intercalate "\n" (makeImport <$> figureOutImports (T.unpack <$> concatMap handlerImports (_apis input)))
+    <> T.unpack ("\n\n" <> T.intercalate "\n\n" (map handlerFunctionDef (_apis input)))
   where
+    defaultImports :: [String]
+    defaultImports = ["EulerHS.Prelude", "Servant", "Tools.Auth"]
+
+    defaultQualifiedImport :: [String]
+    defaultQualifiedImport = ["Domain.Types.Person", "Domain.Types.Merchant", "Environment"]
+
     makeImport :: String -> String
     makeImport x = "import qualified " <> x <> " as " <> x
 
@@ -28,4 +38,4 @@ generateDomainHandler input =
        in functionName <> " :: (Id Person.Person, Id Merchant.Merchant)" <> handlerTypes
             <> "\n"
             <> functionName
-            <> " = throwError \"Logic yet to be decided\""
+            <> " = error \"Logic yet to be decided\""
