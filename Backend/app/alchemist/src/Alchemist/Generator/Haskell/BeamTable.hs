@@ -44,10 +44,17 @@ tableInstancesToBeam tableDef =
     ++ "$(enableKVPG ''"
     ++ tableNameHaskell tableDef
     ++ "T ['"
-    ++ head (primaryKey tableDef)
-    ++ "] [['"
-    ++ intercalate "', '" (secondaryKey tableDef)
-    ++ "]])\n\n"
+    ++ intercalate ", '" (primaryKey tableDef)
+    ++ "] "
+    ++ ( if (null (secondaryKey tableDef))
+           then "[]"
+           else
+             ( "[['"
+                 ++ intercalate ", '" (secondaryKey tableDef)
+                 ++ "]]"
+             )
+       )
+    ++ ")\n\n"
     ++ "$(mkTableInstances ''"
     ++ tableNameHaskell tableDef
     ++ "T \""
