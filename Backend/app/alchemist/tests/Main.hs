@@ -6,19 +6,19 @@ import Alchemist.App
 import Kernel.Prelude
 import System.Directory (createDirectoryIfMissing)
 
--- storageYamlFilePath :: FilePath
--- storageYamlFilePath = "./src/alchemist/tests/storage.yaml"
+storageYamlFilePath :: FilePath
+storageYamlFilePath = "./tests/storage.yaml"
 
 apiYamlFilePath :: FilePath
-apiYamlFilePath = "/Users/arnab.dutta/Desktop/nammayatri/Backend/app/alchemist/tests/api.yaml"
+apiYamlFilePath = "./tests/api.yaml"
 
 generateAllExample :: IO ()
 generateAllExample = do
   mapM_ (createDirectoryIfMissing True) ["./output/Beam", "./output/Queries", "./output/Domain/Type", "./output/SQL"]
-  -- mkBeamTable "./output/Beam" storageYamlFilePath
-  -- mkBeamQueries "./output/Queries" storageYamlFilePath
-  -- mkDomainType "./output/Domain/Type" storageYamlFilePath
-  -- mkSQLFile "./output/SQL" storageYamlFilePath
+  mkBeamTable "./output/Beam" storageYamlFilePath
+  mkBeamQueries "./output/Queries" storageYamlFilePath
+  mkDomainType "./output/Domain/Type" storageYamlFilePath
+  mkSQLFile "./output/SQL" storageYamlFilePath
   mkServantAPI "./output" apiYamlFilePath
   mkDomainHandler "./output/Domain" apiYamlFilePath
 

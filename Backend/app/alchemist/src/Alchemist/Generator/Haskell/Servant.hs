@@ -13,7 +13,7 @@ generateServantAPI input =
   "module API.UI." <> T.unpack (_moduleName input) <> " where \n\n"
     <> intercalate "\n" (map ("import " <>) defaultImports)
     <> "\n\n"
-    <> intercalate "\n" (map (makeQualifiedImport) defaultQualifiedImport)
+    <> intercalate "\n" (map makeQualifiedImport defaultQualifiedImport)
     <> "\n\n"
     <> intercalate "\n" (makeQualifiedImport <$> figureOutImports (T.unpack <$> concatMap handlerImports (_apis input)))
     -- <> intercalate "\n"  (T.unpack <$> concatMap handlerImports (_apis input))
@@ -63,7 +63,7 @@ generateServantAPI input =
             <> functionName
             <> " = withFlowHandlerAPI . "
             <> "Domain.Action.UI."
-            <> (_moduleName input)
+            <> _moduleName input
             <> "."
             <> functionName
             <> "\n"
@@ -74,7 +74,7 @@ apiTTToText apiTT =
       authTypeText = case _authType apiTT of
         Just AdminTokenAuth -> "AdminTokenAuth"
         Just TokenAuth -> "TokenAuth"
-        Nothing -> ""
+        Nothing -> "TokenAuth"
       apiTypeText = apiTypeToText (_apiType apiTT)
       apiReqText = apiReqToText (_apiReqType apiTT)
       apiResText = apiResToText (_apiResType apiTT)
@@ -89,10 +89,10 @@ apiTTToText apiTT =
 
     apiReqToText :: Maybe ApiReq -> Text
     apiReqToText Nothing = ""
-    apiReqToText (Just (ApiReq ty name)) = " :> ReqBody '[" <> ty <> "] " <> name
+    apiReqToText (Just (ApiReq ty frmt)) = " :> ReqBody '[" <> frmt <> "] " <> ty
 
     apiResToText :: ApiRes -> Text
-    apiResToText (ApiRes ty name) = " '[" <> ty <> "] " <> name
+    apiResToText (ApiRes name ty) = " '[" <> ty <> "] " <> name
 
     headerToText :: HeaderType -> Text
     headerToText (Header name ty) = " :> Header \"" <> name <> "\" " <> ty
@@ -112,7 +112,7 @@ handlerImports input =
   let urlTypeText = map urlToText (_urlParts input)
       headerTypeText = map (\(Header _ ty) -> ty) (_header input)
       reqTypeText = reqTypeToText $ _apiReqType input
-      resTypeText = (\(ApiRes _ ty) -> ty) $ _apiResType input
+      resTypeText = (\(ApiRes ty _) -> ty) $ _apiResType input
    in filter (/= T.empty) (snoc (snoc (urlTypeText ++ headerTypeText) reqTypeText) resTypeText)
   where
     urlToText :: UrlParts -> Text
@@ -122,7 +122,7 @@ handlerImports input =
 
     reqTypeToText :: Maybe ApiReq -> Text
     reqTypeToText Nothing = ""
-    reqTypeToText (Just (ApiReq _ ty)) = ty
+    reqTypeToText (Just (ApiReq ty _)) = ty
 
 apiTypeToText :: ApiType -> Text
 apiTypeToText apitype = case apitype of
