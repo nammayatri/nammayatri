@@ -35,9 +35,9 @@ mkSQLFile filePath yaml = do
 mkServantAPI :: FilePath -> FilePath -> IO ()
 mkServantAPI filePath yaml = do
   apiDef <- apiParser yaml
-  writeToFile (filePath ++ "/" ++ T.unpack (head (map _moduleName apiDef)) ++ ".hs") (generateServantAPI apiDef)
+  writeToFile (filePath ++ "/" ++ T.unpack (_moduleName apiDef) ++ ".hs") (generateServantAPI apiDef)
 
 mkDomainHandler :: FilePath -> FilePath -> IO ()
 mkDomainHandler filePath yaml = do
   apiDef <- apiParser yaml
-  writeToFile (filePath ++ "/" ++ T.unpack (head (map _moduleName apiDef)) ++ ".hs") (generateDomainHandler apiDef)
+  writeToFile (filePath ++ "/" ++ T.unpack (_moduleName apiDef) ++ ".hs") (generateDomainHandler apiDef)
