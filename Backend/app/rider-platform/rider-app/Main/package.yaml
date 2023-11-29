@@ -112,6 +112,7 @@ dependencies:
   - raw-strings-qq
   - directory
   - filepath
+  - hashmap
 
 ghc-options:
   - -fwrite-ide-info
