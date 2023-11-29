@@ -10,42 +10,45 @@ import Prelude
 
 generateServantAPI :: Apis -> String
 generateServantAPI input =
-  "module API.UI." <> T.unpack (head (map _moduleName input)) <> " where \n\n"
-    <> intercalate "\n" (makeImport <$> defaultImports)
-    <> "\n"
-    <> intercalate "\n" (makeQualifiedImport <$> figureOutImports (T.unpack <$> concatMap handlerImports input))
+  "module API.UI." <> T.unpack (_moduleName input) <> " where \n\n"
+    <> intercalate "\n" (map ("import " <>) defaultImports)
+    <> "\n\n"
+    <> intercalate "\n" (map (makeQualifiedImport) defaultQualifiedImport)
+    <> "\n\n"
+    <> intercalate "\n" (makeQualifiedImport <$> figureOutImports (T.unpack <$> concatMap handlerImports (_apis input)))
+    -- <> intercalate "\n"  (T.unpack <$> concatMap handlerImports (_apis input))
     <> "\nimport qualified Domain.Action.UI."
-    <> T.unpack (head (map _moduleName input))
+    <> T.unpack (_moduleName input)
     <> " as "
     <> "Domain.Action.UI."
-    <> T.unpack (head (map _moduleName input))
+    <> T.unpack (_moduleName input)
     <> T.unpack
-      ( ("\n\ntype API = \n " <> T.intercalate "\n :<|> " (map apiTTToText input))
-          <> "\n \nhandler  :: App.Flowserver API\nhandler = "
-          <> T.intercalate "\n  :<|> " (map handlerFunctionText input)
+      ( ("\n\ntype API = \n " <> T.intercalate "\n :<|> " (map apiTTToText (_apis input)))
+          <> "\n \nhandler  :: Environment.FlowServer API\nhandler = "
+          <> T.intercalate "\n  :<|> " (map handlerFunctionText (_apis input))
           <> "\n\n"
-          <> T.intercalate "\n" (map handlerFunctionDef input)
+          <> T.intercalate "\n" (map handlerFunctionDef (_apis input))
       )
   where
-    makeQualifiedImport :: String -> String
-    makeQualifiedImport x = "import qualified " <> x <> " as " <> x
-
-    makeImport :: String -> String
-    makeImport x = "import " <> x
-
     defaultImports :: [String]
-    defaultImports = ["Servant", "Tools.Auth", "Environment"] ++ ["Kernel.Types.Common" | containsMandatoryQueryParam input]
+    defaultImports = ["EulerHS.Prelude", "Servant", "Tools.Auth", "Kernel.Utils.Common"]
 
-    containsMandatoryQueryParam :: Apis -> Bool
-    containsMandatoryQueryParam apis = any apiHasMandatoryQueryParam apis
+    defaultQualifiedImport :: [String]
+    defaultQualifiedImport = ["Domain.Types.Person", "Domain.Types.Merchant", "Environment"]
 
-    apiHasMandatoryQueryParam :: ApiTT -> Bool
-    apiHasMandatoryQueryParam apiTT =
-      any urlPartHasMandatoryQueryParam (_urlParts apiTT)
+    makeQualifiedImport :: String -> String
+    makeQualifiedImport impts = "import qualified " <> impts <> " as " <> impts
 
-    urlPartHasMandatoryQueryParam :: UrlParts -> Bool
-    urlPartHasMandatoryQueryParam (QueryParam _ _ isMandatory) = isMandatory
-    urlPartHasMandatoryQueryParam _ = False
+    -- containsMandatoryQueryParam :: [ApiTT] -> Bool
+    -- containsMandatoryQueryParam apis = any apiHasMandatoryQueryParam apis
+
+    -- apiHasMandatoryQueryParam :: ApiTT -> Bool
+    -- apiHasMandatoryQueryParam apiTT =
+    --   any urlPartHasMandatoryQueryParam (_urlParts apiTT)
+
+    -- urlPartHasMandatoryQueryParam :: UrlParts -> Bool
+    -- urlPartHasMandatoryQueryParam (QueryParam _ _ isMandatory) = isMandatory
+    -- urlPartHasMandatoryQueryParam _ = False
 
     handlerFunctionDef :: ApiTT -> Text
     handlerFunctionDef apiT =
@@ -54,13 +57,13 @@ generateServantAPI input =
           showType = case filter (/= T.empty) (init allTypes) of
             [] -> T.empty
             ty -> " -> " <> T.intercalate " -> " ty
-          handlerTypes = showType <> " -> App.FlowHandler " <> last allTypes
-       in functionName <> " :: (Id Person.Person, Id Merchant.Merchant)" <> handlerTypes
+          handlerTypes = showType <> " -> Environment.FlowHandler " <> last allTypes
+       in functionName <> " :: (Id Domain.Types.Person.Person.Person, Id Domain.Types.Merchant.Merchant.Merchant)" <> handlerTypes
             <> "\n"
             <> functionName
             <> " = withFlowHandlerAPI . "
             <> "Domain.Action.UI."
-            <> head (map _moduleName input)
+            <> (_moduleName input)
             <> "."
             <> functionName
             <> "\n"
