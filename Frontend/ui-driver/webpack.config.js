@@ -23,7 +23,7 @@ module.exports = function(env, argv){
     rules: [
       {
         test: /\.m?js$/,
-        exclude: /(node_modules|bower_components)/,
+        exclude: /(node_modules)/,
         use: {
         loader: 'babel-loader',
         options: {
@@ -38,18 +38,13 @@ module.exports = function(env, argv){
     hints : false
   },
   devServer: {
-    contentBase: path.join(__dirname, 'dist'),
-    host: "0.0.0.0",
-    inline: false,
+    static: {
+      directory: path.join(__dirname, 'dist'),
+    },
     port: 8083
   },
   watchOptions: {
       aggregateTimeout: 200
-  },
-  optimization: {
-
-   usedExports: true,
-
   }
   }
   return config;
