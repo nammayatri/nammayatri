@@ -24,11 +24,14 @@ storageParser filepath = do
   contents <- BS.readFile filepath
   case Yaml.decodeEither' contents of
     Left _ -> error "Not a Valid Yaml"
-    Right yml -> pure $ map (parseTableDef yml) $ filter ((/= "imports") . fst) $ (toModelList yml)
+    Right yml -> do
+      let modelList = toModelList yml
+          dList = fst <$> modelList
+      pure $ map (parseTableDef dList yml) $ filter ((/= "imports") . fst) modelList
 
-parseTableDef :: Object -> (String, Object) -> TableDef
-parseTableDef importObj (parseDomainName, obj) =
-  let parsedFields = parseFields importObj obj
+parseTableDef :: [String] -> Object -> (String, Object) -> TableDef
+parseTableDef dList importObj (parseDomainName, obj) =
+  let parsedFields = parseFields dList importObj obj
       parsedImports = parseImports parsedFields
       parsedQueries = parseQueries obj
       (primaryKey, secondaryKey) = extractKeys parsedFields
@@ -85,8 +88,8 @@ parseWhereClause obj (Object clauseObj) = do
     parseOperator _ = error "Invalid operator"
 parseWhereClause _ val = error $ T.pack $ "Invalid where clause, must be a string or an object: " <> show val
 
-parseFields :: Object -> Object -> [FieldDef]
-parseFields impObj obj =
+parseFields :: [String] -> Object -> Object -> [FieldDef]
+parseFields dataList impObj obj =
   let fields = preview (ix "fields" . _Value . to mkList) obj
       constraintsObj = obj ^? (ix "constraints" . _Object)
       sqlTypeObj = obj ^? (ix "sqlType" . _Object)
@@ -97,15 +100,15 @@ parseFields impObj obj =
             haskellType = snd field
             fieldKey = fromString fieldName
             sqlType = fromMaybe (findMatchingSqlType haskellType) (sqlTypeObj >>= preview (ix fieldKey . _String))
-            beamType = fromMaybe (if L.isPrefixOf "Id " haskellType then "Text" else haskellType) (beamTypeObj >>= preview (ix fieldKey . _String))
+            beamType = fromMaybe (findBeamType haskellType) (beamTypeObj >>= preview (ix fieldKey . _String))
             constraints = fromMaybe [] (constraintsObj >>= preview (ix fieldKey . _String . to (splitOn "|") . to (map getProperConstraint)))
             defaultValue = defaultsObj >>= preview (ix fieldKey . _String)
             parseToTType = obj ^? (ix "toTType" . _Object) >>= preview (ix fieldKey . _String)
             parseFromTType = obj ^? (ix "fromTType" . _Object) >>= preview (ix fieldKey . _String)
          in FieldDef
               { fieldName = fieldName,
-                haskellType = makeTypeQualified impObj haskellType,
-                beamType = makeTypeQualified impObj beamType,
+                haskellType = makeTypeQualified (Just dataList) impObj haskellType,
+                beamType = makeTypeQualified (Just dataList) impObj beamType,
                 sqlType = sqlType,
                 constraints = constraints,
                 defaultVal = defaultValue,
@@ -115,6 +118,11 @@ parseFields impObj obj =
    in case (map getFieldDef) <$> fields of
         Just f -> f
         Nothing -> error "Error Parsing Fields"
+
+findBeamType :: String -> String
+findBeamType hkType
+  | L.isPrefixOf "Id " hkType = "Text"
+  | otherwise = hkType
 
 getProperConstraint :: String -> FieldConstraint
 getProperConstraint txt = case (T.unpack . T.strip . T.pack) txt of
