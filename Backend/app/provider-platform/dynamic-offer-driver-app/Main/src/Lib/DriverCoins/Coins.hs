@@ -128,7 +128,7 @@ handleEndRide driverId merchantId merchantOpCityId isDisabled chargeableDistance
       rideList <- Ride.findTotalRidesInDay driverId dateInIst
       let totalRides = length rideList
       runActionWhenValidConditions
-        [ pure (totalRides > 8),
+        [ pure (totalRides == 9),
           checkHasTakenValidRide (Just chargeableDistance_)
         ]
         $ updateEventAndGetCoinsvalue driverId merchantId merchantOpCityId eventFunction mbexpirationTime numCoins
