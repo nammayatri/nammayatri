@@ -16,7 +16,6 @@
 module Flow where
 
 import Engineering.Helpers.LogEvent
-
 import Accessor (_computedPrice, _contents, _formattedAddress, _id, _lat, _lon, _status, _toLocation, _signatureAuthData, _payload, _view_param, _show_splash, _middleName, _firstName, _lastName)
 import Common.Types.App (GlobalPayload(..), SignatureAuthData(..), Payload(..), Version(..), LocationData(..), EventPayload(..), ClevertapEventParams, OTPChannel(..), LazyCheck(..), FCMBundleUpdate)
 import Components.LocationListItem.Controller (dummyLocationListState)
@@ -611,12 +610,12 @@ homeScreenFlow = do
           _ -> 
             case state.props.isSource of
               Just true -> do
-                (GetPlaceNameResp sourceDetailResp) <- getPlaceNameResp state.data.source state.props.sourcePlaceId state.props.sourceLat state.props.sourceLong (if state.props.isSource == Just false then dummyLocationListItemState else item)
+                (GetPlaceNameResp sourceDetailResp) <- getPlaceNameResp (item.title <> ", " <> item.subTitle) state.props.sourcePlaceId state.props.sourceLat state.props.sourceLong (if state.props.isSource == Just false then dummyLocationListItemState else item)
                 let (PlaceName sourceDetailResponse) = (fromMaybe HomeScreenData.dummyLocationName (sourceDetailResp !! 0))
                     (LatLong sourceLocation) = sourceDetailResponse.location
                 modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{ props{sourceLat = sourceLocation.lat, sourceLong = sourceLocation.lon} })
               Just false  -> do
-                (GetPlaceNameResp destinationDetailResp) <- getPlaceNameResp state.data.destination state.props.destinationPlaceId state.props.destinationLat state.props.destinationLong (if state.props.isSource == Just true then dummyLocationListItemState else item)
+                (GetPlaceNameResp destinationDetailResp) <- getPlaceNameResp (item.title <> ", " <> item.subTitle) state.props.destinationPlaceId state.props.destinationLat state.props.destinationLong (if state.props.isSource == Just true then dummyLocationListItemState else item)
                 let (PlaceName destinationDetailResponse) = (fromMaybe HomeScreenData.dummyLocationName (destinationDetailResp!!0))
                     (LatLong destinationLocation) = (destinationDetailResponse.location)
                 modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{ props{destinationLat = destinationLocation.lat, destinationLong = destinationLocation.lon} })
@@ -1181,7 +1180,7 @@ homeScreenFlow = do
             Just RECENTS ->  getDistanceDiff state (fromMaybe 0.0 selectedLocationListItem.lat) (fromMaybe 0.0 selectedLocationListItem.lon)
             Nothing ->  getDistanceDiff state (fromMaybe 0.0 selectedLocationListItem.lat) (fromMaybe 0.0 selectedLocationListItem.lon)
             _ -> do
-              (GetPlaceNameResp placeNameResp) <- getPlaceNameResp selectedLocationListItem.address selectedLocationListItem.placeId (fromMaybe 0.0 selectedLocationListItem.lat) (fromMaybe 0.0 selectedLocationListItem.lon) selectedLocationListItem
+              (GetPlaceNameResp placeNameResp) <- getPlaceNameResp (selectedLocationListItem.title <> ", " <> selectedLocationListItem.subTitle) selectedLocationListItem.placeId (fromMaybe 0.0 selectedLocationListItem.lat) (fromMaybe 0.0 selectedLocationListItem.lon) selectedLocationListItem
 
               let (PlaceName placeName) = (fromMaybe HomeScreenData.dummyLocationName (placeNameResp!!0))
               let (LatLong placeLatLong) = (placeName.location)
@@ -1285,7 +1284,7 @@ fetchLatAndLong :: HomeScreenState -> String -> FlowBT String Unit
 fetchLatAndLong state tag  =
   case state.data.saveFavouriteCard.selectedItem.placeId of
     Just placeID -> do
-      (GetPlaceNameResp placeNameResp) <- getPlaceNameResp state.data.saveFavouriteCard.selectedItem.address (Just placeID) (fromMaybe 0.0 state.data.saveFavouriteCard.selectedItem.lat) (fromMaybe 0.0 state.data.saveFavouriteCard.selectedItem.lon) state.data.saveFavouriteCard.selectedItem
+      (GetPlaceNameResp placeNameResp) <- getPlaceNameResp (state.data.saveFavouriteCard.selectedItem.title <> ", " <> state.data.saveFavouriteCard.selectedItem.subTitle) (Just placeID) (fromMaybe 0.0 state.data.saveFavouriteCard.selectedItem.lat) (fromMaybe 0.0 state.data.saveFavouriteCard.selectedItem.lon) state.data.saveFavouriteCard.selectedItem
       let (PlaceName placeName) = (fromMaybe HomeScreenData.dummyLocationName (placeNameResp !! 0))
       let (LatLong placeLatLong) = (placeName.location)
       resp <- Remote.addSavedLocationBT (encodeAddressDescription state.data.saveFavouriteCard.address tag state.data.saveFavouriteCard.selectedItem.placeId (Just placeLatLong.lat) (Just placeLatLong.lon) placeName.addressComponents)
@@ -1768,7 +1767,7 @@ addNewAddressScreenFlow input = do
       else pure unit
       liftFlowBT $ logEventWithMultipleParams logField_ "ny_user_favourite_added" $ [{ key : "Address", value : unsafeToForeign state.data.address},
                                                                                                                 { key : "Tag", value : unsafeToForeign state.data.selectedTag}]
-      (GetPlaceNameResp sourcePlace) <- getPlaceNameResp state.data.selectedItem.address state.data.selectedItem.placeId (fromMaybe 0.0 state.data.selectedItem.lat) (fromMaybe 0.0 state.data.selectedItem.lon)  state.data.selectedItem
+      (GetPlaceNameResp sourcePlace) <- getPlaceNameResp (state.data.selectedItem.title <> ", " <> state.data.selectedItem.subTitle) state.data.selectedItem.placeId (fromMaybe 0.0 state.data.selectedItem.lat) (fromMaybe 0.0 state.data.selectedItem.lon)  state.data.selectedItem
       let source = state.data.selectedItem.description
           (PlaceName sourceAddressGeometry) = (fromMaybe HomeScreenData.dummyLocationName (sourcePlace!!0))
           (LatLong sourceLocation) = (sourceAddressGeometry.location)
@@ -1848,7 +1847,7 @@ addNewAddressScreenFlow input = do
       _ <- pure $ spy "Inside CHECK_LOCATION_SERVICEABILITY" state
       let item  = state.data.selectedItem
       if item.locationItemType /= Just RECENTS then do
-        (GetPlaceNameResp placeNameResp) <- getPlaceNameResp item.address item.placeId (fromMaybe 0.0 item.lat) (fromMaybe 0.0 item.lon) item
+        (GetPlaceNameResp placeNameResp) <- getPlaceNameResp (item.title <> ", " <> item.subTitle) item.placeId (fromMaybe 0.0 item.lat) (fromMaybe 0.0 item.lon) item
         let (PlaceName placeName) = (fromMaybe HomeScreenData.dummyLocationName (placeNameResp!!0))
         let (LatLong placeLatLong) = (placeName.location)
         (ServiceabilityRes serviceabilityRes) <- Remote.originServiceabilityBT (Remote.makeServiceabilityReq placeLatLong.lat placeLatLong.lon)
@@ -2170,12 +2169,13 @@ getPlaceName lat long location = do
     Nothing -> do
       let address = runFn2 getLocationNameV2 lat long
       config <- getAppConfig Constants.appConfig
+      logField_ <- lift $ lift $ getLogFields
       if address /= "NO_LOCATION_FOUND" && config.geoCoder.enableLLtoAddress then do
-        void $ pure $ firebaseLogEvent "ny_geocode_ll_address_found"
+        liftFlowBT $ logEvent logField_ "ny_geocode_ll_address_found"
         pure $ mkPlaceName lat long address Nothing
       else do
         (GetPlaceNameResp locationName) <- Remote.placeNameBT (Remote.makePlaceNameReq lat long $ EHC.getMapsLanguageFormat $ getValueToLocalStore LANGUAGE_KEY)
-        void $ pure $ firebaseLogEvent "ny_geocode_ll_address_not_used"
+        liftFlowBT $ logEvent logField_ "ny_geocode_ll_address_fallback"
         pure $ (fromMaybe HomeScreenData.dummyLocationName (locationName !! 0))
   where 
     mkPlaceName :: Number -> Number -> String -> Maybe AddressComponents -> PlaceName
