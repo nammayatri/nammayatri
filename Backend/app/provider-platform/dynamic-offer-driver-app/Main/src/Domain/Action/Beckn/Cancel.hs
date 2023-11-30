@@ -22,17 +22,22 @@ module Domain.Action.Beckn.Cancel
   )
 where
 
+import Data.Maybe (listToMaybe)
+import Domain.Action.UI.Ride.CancelRide (driverDistanceToPickup)
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.BookingCancellationReason as DBCR
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Ride as SRide
 import qualified Domain.Types.SearchTry as ST
 import EulerHS.Prelude
+import Kernel.External.Maps
 import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth (SignatureAuthResult (..))
+import qualified Lib.DriverCoins.Coins as DC
+import qualified Lib.DriverCoins.Types as DCT
 import Lib.SessionizerMetrics.Types.Event
 import qualified SharedLogic.CallBAP as BP
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
@@ -71,7 +76,8 @@ cancel ::
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     HasLongDurationRetryCfg r c,
     EventStreamFlow m r,
-    LT.HasLocationService m r
+    LT.HasLocationService m r,
+    HasField "minTripDistanceForReferralCfg" r (Maybe HighPrecMeters)
   ) =>
   CancelReq ->
   DM.Merchant ->
@@ -96,6 +102,16 @@ cancel req merchant booking = do
   logTagInfo ("bookingId-" <> getId req.bookingId) ("Cancellation reason " <> show bookingCR.source)
   fork "cancelBooking - Notify BAP" $ do
     BP.sendBookingCancelledUpdateToBAP booking merchant bookingCR.source
+
+  whenJust mbRide $ \ride -> do
+    mbLocation <- do
+      driverLocations <- LF.driversLocation [ride.driverId]
+      return $ listToMaybe driverLocations
+    disToPickup <- forM mbLocation $ \location -> do
+      driverDistanceToPickup booking.providerId booking.merchantOperatingCityId (getCoordinates location) (getCoordinates booking.fromLocation)
+    logDebug "RideCancelled Coin Event"
+    fork "DriverRideCancelledCoin by Customer Event : " $ DC.driverCoinsEvent ride.driverId merchant.id booking.merchantOperatingCityId (DCT.Cancellation ride.createdAt booking.distanceToPickup disToPickup)
+
   whenJust mbRide $ \ride ->
     fork "cancelRide - Notify driver" $ do
       driver <- QPers.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
