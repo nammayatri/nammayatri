@@ -189,21 +189,22 @@ runUpdateCommands (cmd, val) dbStreamKey = do
                   newObject = replaceMappings (toJSON dataObj) mappings
               res'' <- EL.runIO $ streamDriverDrainerUpdates _kafkaConnection newObject dbStreamKey' model
               either
-                ( \_ -> do
+                ( \err -> do
                     void $ publishDBSyncMetric Event.KafkaPushFailure
-                    EL.logError ("ERROR:" :: Text) ("Kafka Driver Update Error " :: Text)
+                    EL.logError ("ERROR:" :: Text) (("Right Kafka Rider Update Error " :: Text) <> show err <> " model:: " <> model)
                     pure $ Left (UnexpectedError "Kafka Driver Update Error", id)
                 )
                 (\_ -> pure $ Right id)
                 res''
-            Left _ -> do
+            Left err' -> do
               let updatedJSON = getDbUpdateDataJson model $ updValToJSON $ jsonKeyValueUpdates setClause <> getPKeyandValuesList tag
               Env {..} <- ask
+              EL.logError ("ERROR:" :: Text) (("Left Kafka Rider Update Error " :: Text) <> show err')
               res'' <- EL.runIO $ streamDriverDrainerUpdates _kafkaConnection updatedJSON dbStreamKey' model
               either
-                ( \_ -> do
+                ( \err -> do
                     void $ publishDBSyncMetric Event.KafkaPushFailure
-                    EL.logError ("ERROR:" :: Text) ("Kafka Driver Update Error " :: Text)
+                    EL.logError ("ERROR:" :: Text) (("Left Kafka Rider Update Error " :: Text) <> show err <> " model:: " <> model)
                     pure $ Left (UnexpectedError "Kafka Driver Update Error", id)
                 )
                 (\_ -> pure $ Right id)

@@ -160,22 +160,23 @@ runUpdateCommands (cmd, val) streamKey = do
                   newObject = replaceMappings (toJSON dataObj) mappings
               res'' <- EL.runIO $ streamRiderDrainerUpdates _kafkaConnection newObject dbStreamKey' model
               either
-                ( \_ -> do
+                ( \err -> do
                     void $ publishDBSyncMetric Event.KafkaPushFailure
-                    EL.logError ("ERROR:" :: Text) ("Kafka Rider Update Error " :: Text)
-                    pure $ Left (UnexpectedError "Kafka Rider Update Error", id)
+                    EL.logError ("ERROR:" :: Text) (("Right Kafka Rider Update Error " :: Text) <> show err <> " model:: " <> model)
+                    pure $ Left (UnexpectedError "Right Kafka Rider Update Error", id)
                 )
                 (\_ -> pure $ Right id)
                 res''
-            Left _ -> do
+            Left err' -> do
               let updatedJSON = getDbUpdateDataJson model $ updValToJSON $ jsonKeyValueUpdates setClause <> getPKeyandValuesList tag
+              EL.logError ("ERROR:" :: Text) (("Left Kafka Rider Update Error " :: Text) <> show err')
               Env {..} <- ask
               res'' <- EL.runIO $ streamRiderDrainerUpdates _kafkaConnection updatedJSON dbStreamKey' model
               either
-                ( \_ -> do
+                ( \err -> do
                     void $ publishDBSyncMetric Event.KafkaPushFailure
-                    EL.logError ("ERROR:" :: Text) ("Kafka Rider Update Error " :: Text)
-                    pure $ Left (UnexpectedError "Kafka Rider Update Error", id)
+                    EL.logError ("ERROR:" :: Text) (("Left Kafka Rider Update Error " :: Text) <> show err <> " model:: " <> model)
+                    pure $ Left (UnexpectedError "Left Kafka Rider Update Error", id)
                 )
                 (\_ -> pure $ Right id)
                 res''
