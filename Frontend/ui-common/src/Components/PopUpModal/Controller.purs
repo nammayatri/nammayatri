@@ -30,7 +30,7 @@ data Action = OnButton1Click
             | OnButton2Click
             | NoAction
             | ETextController PrimaryEditTextController.Action
-            | CountDown Int String String String
+            | CountDown Int String String
             | OnImageClick
             | Tipbtnclick Int Int
             | DismissPopup
@@ -73,7 +73,8 @@ type Config = {
     optionWithHtml :: OptionWithHtmlConfig,
     topTitle :: TopTitle,
     listViewArray :: Array String,
-    coverVideoConfig :: CoverVideoConfig
+    coverVideoConfig :: CoverVideoConfig,
+    timerId :: String
 }
 
 type CoverVideoConfig = {
@@ -411,7 +412,8 @@ config = {
         mediaType : "",
         mediaUrl : "",
         id : ""
-    }
+    },
+    timerId : ""
 }
 
 

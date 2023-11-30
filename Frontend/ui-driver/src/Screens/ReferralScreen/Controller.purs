@@ -30,7 +30,7 @@ import Debug (spy)
 import Effect.Unsafe (unsafePerformEffect)
 import Engineering.Helpers.Commons (getNewIDWithTag, getCurrentUTC)
 import Engineering.Helpers.LogEvent (logEvent)
-import Helpers.Utils (setRefreshing, clearTimer, getPastDays, getPastWeeks, convertUTCtoISC, generateQR, incrementValueOfLocalStoreKey, contactSupportNumber)
+import Helpers.Utils (setRefreshing, getPastDays, getPastWeeks, convertUTCtoISC, generateQR, incrementValueOfLocalStoreKey, contactSupportNumber)
 import JBridge (hideKeyboardOnNavigation, toast, showDialer, firebaseLogEvent, scrollToEnd, cleverTapCustomEvent, metaLogEvent, shareImageMessage)
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppTextInput, trackAppScreenEvent)
 import MerchantConfig.Utils (getMerchant, Merchant(..))
@@ -47,6 +47,7 @@ import Common.Types.App
 import Effect.Uncurried(runEffectFn4)
 import Storage(KeyStore(..), getValueToLocalStore)
 import ConfigProvider
+import Timers (clearTimer)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -88,13 +89,13 @@ instance loggableAction :: Loggable Action where
         PrimaryEditTextController.FocusChanged _ -> trackAppTextInput appId (getScreen REFERRAL_SCREEN) "referral_code_text_focus_changed" "popup_modal_edit_password"
       PopUpModal.OnImageClick -> trackAppActionClick appId (getScreen REFERRAL_SCREEN) "password_popup_modal_action" "close_icon"
       PopUpModal.OnButton1Click -> trackAppActionClick appId (getScreen REFERRAL_SCREEN) "password_popup_modal_action" "no_action"
-      PopUpModal.CountDown arg1 arg2 arg3 arg4 -> trackAppScreenEvent appId (getScreen REFERRAL_SCREEN) "password_popup_modal_action" "countdown_updated"
+      PopUpModal.CountDown arg1 arg2 arg3 -> trackAppScreenEvent appId (getScreen REFERRAL_SCREEN) "password_popup_modal_action" "countdown_updated"
       PopUpModal.NoAction -> trackAppActionClick appId (getScreen REFERRAL_SCREEN) "password_popup_modal_action" "no_action"
       PopUpModal.Tipbtnclick arg1 arg2 -> trackAppScreenEvent appId (getScreen REFERRAL_SCREEN) "popup_modal_action" "tip_clicked"
       PopUpModal.OptionWithHtmlClick -> trackAppScreenEvent appId (getScreen ABOUT_US_SCREEN) "popup_modal_action" "option_with_html_clicked"
       PopUpModal.OnSecondaryTextClick -> trackAppScreenEvent appId (getScreen ABOUT_US_SCREEN) "popup_modal_action" "secondary_text_clicked"
       PopUpModal.DismissPopup -> trackAppScreenEvent appId (getScreen REFERRAL_SCREEN) "popup_modal_action" "popup_dismissed"
-    SuccessScreenExpireCountDwon seconds id status timerId -> do
+    SuccessScreenExpireCountDwon seconds status timerId -> do
       if status == "EXPIRED" then trackAppScreenEvent appId (getScreen REFERRAL_SCREEN) "in_screen" "countdown_expired"
         else trackAppScreenEvent appId (getScreen REFERRAL_SCREEN) "in_screen" "countdown_updated"
     ContactSupportAction act -> case act of
@@ -102,7 +103,7 @@ instance loggableAction :: Loggable Action where
       PopUpModal.OnButton2Click -> trackAppActionClick appId (getScreen REFERRAL_SCREEN) "contact_support_popup_modal_action" "call_support"
       PopUpModal.OnImageClick -> trackAppActionClick appId (getScreen REFERRAL_SCREEN) "contact_support_popup_modal_action" "close_icon"
       PopUpModal.ETextController act -> trackAppTextInput appId (getScreen REFERRAL_SCREEN) "contact_support_popup_modal_action" "primary_edit_text"
-      PopUpModal.CountDown arg1 arg2 arg3 arg4 -> trackAppScreenEvent appId (getScreen REFERRAL_SCREEN) "contact_support_popup_modal_action" "countdown_updated"
+      PopUpModal.CountDown arg1 arg2 arg3 -> trackAppScreenEvent appId (getScreen REFERRAL_SCREEN) "contact_support_popup_modal_action" "countdown_updated"
       PopUpModal.NoAction -> trackAppActionClick appId (getScreen REFERRAL_SCREEN) "contact_support_popup_modal_action" "no_action"
       PopUpModal.Tipbtnclick arg1 arg2 -> trackAppScreenEvent appId (getScreen REFERRAL_SCREEN) "popup_modal_action" "tip_clicked"
       PopUpModal.OptionWithHtmlClick -> trackAppScreenEvent appId (getScreen REFERRAL_SCREEN) "popup_modal_action" "option_with_html_clicked"
@@ -136,7 +137,7 @@ data Action = BottomNavBarAction BottomNavBar.Action
             | PrimaryEditTextAction2 PrimaryEditText.Action
             | PrimaryButtonActionController PrimaryButton.Action
             | PasswordModalAction PopUpModal.Action
-            | SuccessScreenExpireCountDwon Int String String String
+            | SuccessScreenExpireCountDwon Int String String
             | ContactSupportAction PopUpModal.Action
             | GoToAlertScreen
             | EnableReferralFlow
@@ -284,7 +285,7 @@ eval (ContactSupportAction (PopUpModal.OnButton2Click)) state = do
     void $ pure $ unsafePerformEffect $ contactSupportNumber ""-- TODO: FIX_DIALER -- unsafePerformEffect is a temporary fix, need to update this.
     continue state { props = state.props { callSupportPopUpVisible = not state.props.callSupportPopUpVisible  }}
 
-eval (SuccessScreenExpireCountDwon seconds id status timerId) state = if status == "EXPIRED" then do
+eval (SuccessScreenExpireCountDwon seconds status timerId) state = if status == "EXPIRED" then do
   _ <- pure $ clearTimer timerId
   continue state{props {stage = QRScreen}} else continue state
 

@@ -19,21 +19,16 @@ import Prelude (bind, ($), pure, (<$>))
 import Engineering.Helpers.BackTrack (getState)
 import Control.Monad.Except.Trans (lift)
 import Control.Transformers.Back.Trans as App
-import PrestoDOM.Core.Types.Language.Flow (runScreenWithNameSpace, initUIWithNameSpace)
+import PrestoDOM.Core.Types.Language.Flow (showScreen)
 import Screens.NoInternetScreen.View as NoInternetScreen
-import Presto.Core.Types.Language.Flow (doAff)
 import Data.Maybe
-import PrestoDOM.Core (terminateUI)
-import Effect.Class (liftEffect)
 import Screens.NoInternetScreen.Controller (ScreenOutput(..))
 import Types.App (FlowBT, GlobalState(..), NO_INTERNET_SCREEN_OUTPUT(..))
 
 noInternetScreen :: String -> FlowBT String NO_INTERNET_SCREEN_OUTPUT
 noInternetScreen triggertype= do
   (GlobalState state) <- getState
-  _ <- lift $ lift $ doAff $ liftEffect $ initUIWithNameSpace "NoInternetScreen" Nothing
-  act <- lift $ lift $ runScreenWithNameSpace $ NoInternetScreen.screen state.noInternetScreen triggertype
-  _ <- lift $ lift $ doAff $ liftEffect $ terminateUI $ Just "NoInternetScreen"
+  act <- lift $ lift $ showScreen $ NoInternetScreen.screen state.noInternetScreen triggertype
   case act of
     GoBack -> App.BackT $ pure App.GoBack
     Refresh -> App.BackT $ App.BackPoint <$> (pure REFRESH_INTERNET)

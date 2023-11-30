@@ -221,27 +221,6 @@ export const didDriverMessage = function() {
     return false;
   }
 }
-export const clearWaitingTimer = function (id) {
-  console.log("clearWaitingTimer" + id);
-  if (window.__OS == "IOS" && id == "countUpTimerId") {
-    if (window.JBridge.clearCountUpTimer) {
-      window.JBridge.clearCountUpTimer();
-    }
-  } else {
-    clearInterval(parseInt(id));
-  }
-}
-
-export const clearCountDownTimer = function (id) {
-  if (window.__OS == "IOS") {
-    if (window.JBridge.clearCountDownTimer) {
-      window.JBridge.clearCountDownTimer();
-    }
-  }
-  else {
-    clearInterval(parseInt(id));
-  }
-}
 
 export const setRefreshing = function (id) {
   return function (bool) {

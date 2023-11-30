@@ -124,7 +124,6 @@ foreign import isOverlayPermissionEnabled :: Unit -> Effect Boolean
 foreign import requestLocation  :: Unit -> Effect Unit
 
 foreign import initiateLocationServiceClient :: Effect Unit
-foreign import waitingCountdownTimer :: forall action. Int -> (action -> Effect Unit) -> (String -> String -> Int -> action) -> Effect Unit
 foreign import checkOverlayPermission  :: Unit -> Effect Unit
 foreign import requestAutoStartPermission  :: Unit -> Effect Unit
 foreign import requestBatteryPermission :: Unit -> Effect Unit
@@ -148,7 +147,6 @@ foreign import restartApp :: Unit -> Effect Unit
 -- Deprecated
 foreign import factoryResetApp :: String -> Unit
 foreign import listDownloadedTranslationModels :: forall action. (action -> Effect Unit) -> Int -> Effect Unit
-foreign import startTimerWithTime :: forall action. String -> String -> String -> (action -> Effect Unit) -> (Int -> String -> String -> String-> action)  -> Effect Unit
 foreign import hideKeyboardOnNavigation :: Boolean -> Unit
 foreign import askNotificationPermission :: Unit -> Effect Unit
 -- foreign import onEvent        :: Foreign -> Effect Unit

@@ -68,7 +68,7 @@ instance loggableAction :: Loggable Action where
             PopUpModal.NoAction -> trackAppActionClick appId (getScreen NEED_ACCESS_SCREEN) "popup_modal_action" "no_action"
             PopUpModal.OnImageClick -> trackAppActionClick appId (getScreen NEED_ACCESS_SCREEN) "popup_modal_action" "image"
             PopUpModal.ETextController act -> trackAppTextInput appId (getScreen NEED_ACCESS_SCREEN) "popup_modal_action" "primary_edit_text"
-            PopUpModal.CountDown arg1 arg2 arg3 arg4 -> trackAppScreenEvent appId (getScreen NEED_ACCESS_SCREEN) "popup_modal_action" "countdown_updated"
+            PopUpModal.CountDown arg1 arg2 arg3 -> trackAppScreenEvent appId (getScreen NEED_ACCESS_SCREEN) "popup_modal_action" "countdown_updated"
             _ -> trackAppActionClick appId (getScreen NEED_ACCESS_SCREEN) "popup_modal_action" "no_action"
         AppOnboardingNavBarAC act -> case act of
             AppOnboardingNavBar.GenericHeaderAC genericHeaderAction -> case genericHeaderAction of 

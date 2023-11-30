@@ -466,7 +466,8 @@ cancelConfirmationConfig state = let
     , visibility = VISIBLE
     , margin = Margin 16 20 16 0
     , height = V 178
-    }
+    },
+    timerId = "PopUp"
   }
   in popUpConfig'
 

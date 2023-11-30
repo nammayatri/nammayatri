@@ -47,8 +47,8 @@ import Effect (Effect)
 import Effect.Class (liftEffect)
 import Effect.Uncurried (runEffectFn4)
 import Effect.Unsafe (unsafePerformEffect)
-import Engineering.Helpers.Commons (clearTimer, getCurrentUTC, getNewIDWithTag, convertUTCtoISC, isPreviousVersion)
-import JBridge (animateCamera, enableMyLocation, firebaseLogEvent, getCurrentPosition, getHeightFromPercent, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, minimizeApp, openNavigation, removeAllPolylines, requestLocation, showDialer, showMarker, toast, firebaseLogEventWithTwoParams,sendMessage, stopChatListenerService, getSuggestionfromKey, scrollToEnd, waitingCountdownTimer, getChatMessages, cleverTapCustomEvent, metaLogEvent, toggleBtnLoader, openUrlInApp, pauseYoutubeVideo)
+import Engineering.Helpers.Commons (getCurrentUTC, getNewIDWithTag, convertUTCtoISC, isPreviousVersion)
+import JBridge (animateCamera, enableMyLocation, firebaseLogEvent, getCurrentPosition, getHeightFromPercent, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, minimizeApp, openNavigation, removeAllPolylines, requestLocation, showDialer, showMarker, toast, firebaseLogEventWithTwoParams,sendMessage, stopChatListenerService, getSuggestionfromKey, scrollToEnd, getChatMessages, cleverTapCustomEvent, metaLogEvent, toggleBtnLoader, openUrlInApp, pauseYoutubeVideo)
 import Engineering.Helpers.LogEvent (logEvent, logEventWithTwoParams)
 import Engineering.Helpers.Suggestions (getMessageFromKey, getSuggestionsfromKey)
 import Engineering.Helpers.Utils (saveObject)
@@ -91,6 +91,7 @@ import Data.Function.Uncurried as Uncurried
 import Engineering.Helpers.Commons as EHC
 import Data.String as DS
 import Services.Config as SC
+import Timers as TF
 
 instance showAction :: Show Action where
   show _ = ""
@@ -383,7 +384,7 @@ eval (EnableGotoTimerAC PrimaryButtonController.OnClick)state = updateAndExit st
 eval AddGotoAC state = exit $ ExitGotoLocation state false
 
 eval (UpdateGoHomeTimer timerID timeInMinutes sec ) state = if sec <= 0 then do
-  void $ pure $ clearTimer timerID
+  void $ pure $ TF.clearTimer timerID
   void $ pure $ HU.setPopupType ST.VALIDITY_EXPIRED
   continue state { data { driverGotoState { goToPopUpType = ST.VALIDITY_EXPIRED}}}
   else continue state { data { driverGotoState { timerInMinutes = timeInMinutes <> " " <>(getString MIN_LEFT), timerId = timerID} } }
@@ -410,7 +411,7 @@ eval BackPressed state = do
     continue state{props{currentStage = ST.RideAccepted}}
   else if state.props.cancelRideModalShow then continue state { data { cancelRideModal {activeIndex = Nothing, selectedReasonCode = "", selectedReasonDescription = ""}} ,props{ cancelRideModalShow = false, cancelConfirmationPopup = false}}
   else if state.props.cancelConfirmationPopup then do
-    _ <- pure $ clearTimer state.data.cancelRideConfirmationPopUp.timerID
+    _ <- pure $ TF.clearTimer state.data.cancelRideConfirmationPopUp.timerID
     continue state {props{cancelConfirmationPopup = false}, data{cancelRideConfirmationPopUp{timerID = "" , continueEnabled=false, enableTimer=false}}}
   else if state.props.showBonusInfo then continue state { props { showBonusInfo = false } }
   else if state.data.paymentState.showRateCard then continue state { data { paymentState{ showRateCard = false } } }
@@ -747,14 +748,14 @@ eval (CancelRideModalAction (SelectListModal.Button2 PrimaryButtonController.OnC
 
 
 eval (PopUpModalCancelConfirmationAction (PopUpModal.OnButton2Click)) state = do
-  _ <- pure $ clearTimer state.data.cancelRideConfirmationPopUp.timerID
+  _ <- pure $ TF.clearTimer state.data.cancelRideConfirmationPopUp.timerID
   continue state {props{cancelConfirmationPopup = false}, data{cancelRideConfirmationPopUp{timerID = "" , continueEnabled=false, enableTimer=false}}}
 
 eval (PopUpModalCancelConfirmationAction (PopUpModal.OnButton1Click)) state = continue state {props {cancelRideModalShow = true, cancelConfirmationPopup = false},data {cancelRideConfirmationPopUp{enableTimer = false}, cancelRideModal {activeIndex=Nothing, selectedReasonCode="", selectionOptions = cancellationReasons "" }}}
 
-eval (PopUpModalCancelConfirmationAction (PopUpModal.CountDown seconds id status timerID)) state = do
+eval (PopUpModalCancelConfirmationAction (PopUpModal.CountDown seconds status timerID)) state = do
   if status == "EXPIRED" && seconds == 0 then do
-    _ <- pure $ clearTimer timerID
+    _ <- pure $ TF.clearTimer timerID
     continue state { data { cancelRideConfirmationPopUp{delayInSeconds = 0, timerID = "", continueEnabled = true}}}
     else continue state { data {cancelRideConfirmationPopUp{delayInSeconds = seconds, timerID = timerID, continueEnabled = false}}}
 

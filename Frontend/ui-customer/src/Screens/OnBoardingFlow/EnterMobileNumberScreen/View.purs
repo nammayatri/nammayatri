@@ -50,6 +50,7 @@ import Screens.Types as ST
 import Storage (getValueToLocalStore, KeyStore(..))
 import Styles.Colors as Color
 import Types.App (defaultGlobalState)
+import Timers (clearTimerWithId, startTimerWithTimeV2, countDown)
 
 screen :: ST.EnterMobileNumberScreenState -> Screen Action ST.EnterMobileNumberScreenState ScreenOutput
 screen initialState =
@@ -60,11 +61,12 @@ screen initialState =
     do
       _ <- JB.setFCMToken push $ SetToken
       if not initialState.props.enterOTP then JB.detectPhoneNumbers push $ SetPhoneNumber else pure unit
-      if initialState.data.timerID == "" then pure unit else pure $ EHC.clearTimer initialState.data.timerID
+      if initialState.data.timerID == "" then pure unit else pure $ clearTimerWithId initialState.data.timerID
       if not initialState.props.resendEnable && initialState.data.attempts >= 0 && initialState.props.enterOTP then do
           _ <- launchAff $ EHC.flowRunner defaultGlobalState $ runExceptT $ runBackT $ lift $ lift $ doAff do 
-            if (EHC.os == "IOS") then liftEffect $ JB.startTimerWithTime (show initialState.data.timer) "otp" "1" push CountDown
-            else  liftEffect $ EHC.countDown initialState.data.timer "otp" push CountDown
+            if (EHC.os == "IOS") then do
+              liftEffect $ startTimerWithTimeV2 (show initialState.data.timer) "otp" "1" push CountDown
+            else  liftEffect $ countDown initialState.data.timer "otp" push CountDown
           pure unit
         else pure unit
       pure (pure unit)) ] <> if EHC.os == "IOS" then [] else [ startOtpReciever AutoFill ]

@@ -21,7 +21,7 @@ import ConfigProvider
 
 data Action = Click QuoteListItemState
               | NoAction 
-              | CountDown Int String String String 
+              | CountDown Int String String 
               | ConfirmRide
               | CancelAutoAssigning
 

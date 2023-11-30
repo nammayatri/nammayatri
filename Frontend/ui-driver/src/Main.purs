@@ -56,6 +56,7 @@ main event = do
     case resp of
       Right _ -> pure $ printLog "printLog " "Success in main"
       Left error -> liftFlow $ main event
+  JBridge.storeMainFiberOb mainFiber
   _ <- launchAff $ flowRunner defaultGlobalState $ do liftFlow $ fetchAssets
   pure unit
 

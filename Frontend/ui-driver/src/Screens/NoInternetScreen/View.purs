@@ -17,7 +17,7 @@ module Screens.NoInternetScreen.View where
 
 import Prelude (Unit, bind, const, pure, unit, (<<<), ($), (==), (<>))
 import Effect (Effect)
-import PrestoDOM (Length(..), Margin(..), Gravity(..), Padding(..), Orientation(..), Visibility(..), PrestoDOM, ScopedScreen, linearLayout, clickable, height, width, gravity, background, padding, orientation, imageView, textView, text, imageUrl, textSize, fontStyle, color, margin, lineHeight, relativeLayout, alignParentBottom, onClick, visibility, afterRender, imageWithFallback)
+import PrestoDOM (Length(..), Margin(..), Gravity(..), Padding(..), Orientation(..), Visibility(..), PrestoDOM, Screen, linearLayout, clickable, height, width, gravity, background, padding, orientation, imageView, textView, text, imageUrl, textSize, fontStyle, color, margin, lineHeight, relativeLayout, alignParentBottom, onClick, visibility, afterRender, imageWithFallback)
 import Screens.NoInternetScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.Types as ST
 import Components.PrimaryButton as PrimaryButton
@@ -33,7 +33,7 @@ import Screens.NoInternetScreen.ComponentConfig
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Common.Types.App (LazyCheck(..))
 
-screen :: ST.NoInternetScreenState -> String -> ScopedScreen Action ST.NoInternetScreenState ScreenOutput
+screen :: ST.NoInternetScreenState -> String -> Screen Action ST.NoInternetScreenState ScreenOutput
 screen initialState triggertype = 
   { initialState
   , view : view triggertype
@@ -43,7 +43,6 @@ screen initialState triggertype =
     _ <- JB.storeCallBackInternetAction push InternetActionCallBack
     pure $ pure unit)]
   , eval
-  , parent : Just "NoInternetScreen"
   }
 
 view :: forall w . String -> (Action -> Effect Unit) -> ST.NoInternetScreenState -> PrestoDOM (Effect Unit) w 

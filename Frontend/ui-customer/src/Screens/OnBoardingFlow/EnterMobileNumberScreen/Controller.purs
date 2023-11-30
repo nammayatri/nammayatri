@@ -29,10 +29,10 @@ import Data.Maybe (Maybe(..))
 import Data.String (length)
 import Data.String.CodeUnits (charAt)
 import Debug (spy)
-import Engineering.Helpers.Commons (getNewIDWithTag, os, clearTimer)
+import Engineering.Helpers.Commons (getNewIDWithTag, os)
 import Engineering.Helpers.LogEvent (logEvent)
 import Engineering.Helpers.Utils (mobileNumberValidator, mobileNumberMaxLength)
-import Helpers.Utils (setText, clearCountDownTimer, showCarouselScreen)
+import Helpers.Utils (setText, showCarouselScreen)
 import JBridge (firebaseLogEvent, hideKeyboardOnNavigation, minimizeApp, toast, toggleBtnLoader)
 import Language.Strings (getString)
 import Language.Types (STR(..))
@@ -43,6 +43,7 @@ import PrestoDOM.Types.Core (class Loggable)
 import Screens (ScreenName(..), getScreen)
 import Screens.Types (EnterMobileNumberScreenState)
 import Storage (KeyStore(..), setValueToLocalNativeStore)
+import Timers (clearTimerWithId)
 
 instance showAction :: Show Action where
     show _ = ""
@@ -83,7 +84,7 @@ instance loggableAction :: Loggable Action where
                 trackAppEndScreen appId (getScreen ENTER_MOBILE_NUMBER_SCREEN)
             GenericHeaderController.SuffixImgOnClick -> trackAppActionClick appId (getScreen ENTER_MOBILE_NUMBER_SCREEN) "generic_header_action" "forward_icon"
         Resend -> trackAppActionClick appId (getScreen ENTER_OTP_NUMBER_SCREEN) "in_screen" "resend_otp"
-        CountDown seconds id status timerID -> trackAppScreenEvent appId (getScreen ENTER_OTP_NUMBER_SCREEN) "in_screen" "countdown_updated"
+        CountDown seconds status timerID -> trackAppScreenEvent appId (getScreen ENTER_OTP_NUMBER_SCREEN) "in_screen" "countdown_updated"
         AutoFill otp -> trackAppScreenEvent appId (getScreen ENTER_OTP_NUMBER_SCREEN) "in_screen" "autofill_otp"
         SetToken otp -> trackAppScreenEvent appId (getScreen ENTER_OTP_NUMBER_SCREEN) "in_screen" "settoken"
         ContinueCommand -> trackAppScreenEvent appId (getScreen ENTER_MOBILE_NUMBER_SCREEN) "in_screen" "continue_to_otp_screen"
@@ -111,7 +112,7 @@ data Action = EnterOTP
             | OTPEditTextAction PrimaryEditTextController.Action
             | GenericHeaderActionController GenericHeaderController.Action
             | Resend
-            | CountDown Int String String String
+            | CountDown Int String String
             | NoAction
             | SetToken String
             | ContinueCommand
@@ -142,7 +143,7 @@ eval (StepsHeaderModelAC StepsHeaderModelController.OnArrowClick) state = contin
 
 eval (VerifyOTPButtonAction PrimaryButtonController.OnClick) state = do
     _ <- pure $ hideKeyboardOnNavigation true
-    _ <- pure $ clearCountDownTimer state.data.timerID
+    _ <- pure $ clearTimerWithId state.data.timerID
     updateAndExit state $ GoToAccountSetUp state
 
 eval (MobileNumberEditTextAction (MobileNumberEditorController.TextChanged id value)) state = do
@@ -187,7 +188,7 @@ eval (OTPEditTextAction (PrimaryEditTextController.TextChanged id value)) state 
                   , data = state.data { otp = if length value <= 4 then value else state.data.otp }}
     if length value == 4 then do
         pure $ hideKeyboardOnNavigation true
-        _ <- pure $ clearCountDownTimer state.data.timerID
+        _ <- pure $ clearTimerWithId state.data.timerID
         updateAndExit newState $ GoToAccountSetUp newState
     else
         continue newState
@@ -212,7 +213,7 @@ eval (AutoFill otp) state = do
 eval (BackPressed flag) state = do
       _ <- pure $ spy "state" state
       _ <- pure $ toggleBtnLoader "" false
-      _ <- pure $ clearCountDownTimer state.data.timerID
+      _ <- pure $ clearTimerWithId state.data.timerID
       let newState = state {props{enterOTP =  false,letterSpacing = PX 1.0},data{otp = ""}}
       _ <- pure $ hideKeyboardOnNavigation true
       if state.props.enterOTP then exit $ GoBack newState
@@ -221,14 +222,15 @@ eval (BackPressed flag) state = do
                 void $ pure $ minimizeApp ""
                 continue state
 
-eval (CountDown seconds id status timerID) state = do
+eval (CountDown seconds status timerID) state = do
         _ <- pure $ printLog "timer" $ show seconds
         if status == "EXPIRED" then do
-            _ <- pure $ clearCountDownTimer state.data.timerID
+            _ <- pure $ clearTimerWithId state.data.timerID
             let newState = state{data{timer = 30, timerID = ""},props = state.props{resendEnable = true}}
             continue newState
         else
             continue $ state{data{timer = seconds, timerID=timerID},props = state.props{resendEnable = false}}
+
 eval (SetToken id )state = do
   _ <- pure $ spy "SetTokenSetToken" id
   _ <- pure $ setValueToLocalNativeStore FCM_TOKEN  id
