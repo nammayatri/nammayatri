@@ -66,6 +66,7 @@ library
       JuicyPixels
     , JuicyPixels-extra
     , aeson
+    , async
     , base >=4.7 && <5
     , base64-bytestring
     , beam-core

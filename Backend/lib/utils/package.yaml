@@ -70,6 +70,7 @@ dependencies:
   - servant-multipart
   - text
   - wai
+  - async
   - http-types
   - warp
   - time
