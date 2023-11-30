@@ -19,6 +19,7 @@ module Domain.Action.UI.Ride.CancelRide
     cancelRideHandle,
     driverCancelRideHandler,
     dashboardCancelRideHandler,
+    driverDistanceToPickup,
   )
 where
 
