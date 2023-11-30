@@ -82,4 +82,5 @@ in  { esqDBCfg
     , kafkaProducerCfg
     , enableRedisLatencyLogging = True
     , enablePrometheusMetricLogging = True
+    , aclEndPointMap = common.aclEndPointMap
     }

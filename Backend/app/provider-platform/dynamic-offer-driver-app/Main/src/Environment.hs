@@ -123,7 +123,8 @@ data AppCfg = AppCfg
     dontEnableForDb :: [Text],
     modelNamesMap :: M.Map Text Text,
     maxMessages :: Text,
-    incomingAPIResponseTimeout :: Int
+    incomingAPIResponseTimeout :: Int,
+    aclEndPointMap :: M.Map Text Text
   }
   deriving (Generic, FromDhall)
 
@@ -199,7 +200,8 @@ data AppEnv = AppEnv
     dontEnableForDb :: [Text],
     maxMessages :: Text,
     modelNamesHashMap :: HM.Map Text Text,
-    incomingAPIResponseTimeout :: Int
+    incomingAPIResponseTimeout :: Int,
+    aclEndPointHashMap :: HM.Map Text Text
   }
   deriving (Generic)
 
@@ -238,7 +240,7 @@ buildAppEnv cfg@AppCfg {..} = do
       driverQuoteExpirationSeconds = fromIntegral cfg.driverQuoteExpirationSeconds
       s3Env = buildS3Env cfg.s3Config
       s3EnvPublic = buildS3Env cfg.s3PublicConfig
-  return AppEnv {modelNamesHashMap = HM.fromList $ M.toList modelNamesMap, ..}
+  return AppEnv {modelNamesHashMap = HM.fromList $ M.toList modelNamesMap, aclEndPointHashMap = HM.fromList $ M.toList aclEndPointMap, ..}
 
 releaseAppEnv :: AppEnv -> IO ()
 releaseAppEnv AppEnv {..} = do

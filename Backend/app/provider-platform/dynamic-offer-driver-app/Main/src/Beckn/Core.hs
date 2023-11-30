@@ -43,7 +43,7 @@ withCallback' ::
   (HasFlowEnv m r '["nwAddress" ::: BaseUrl], EsqDBFlow m r, CacheFlow m r) =>
   DM.Merchant ->
   WithBecknCallbackMig api callback_success m
-withCallback' doWithCallback transporter action api context cbUrl f = do
+withCallback' doWithCallback transporter action api context cbUrl aclEndPointHashMap f = do
   let bppSubscriberId = getShortId $ transporter.subscriberId
       authKey = getHttpManagerKey bppSubscriberId
   bppUri <- buildBppUrl (transporter.id)
@@ -51,7 +51,7 @@ withCallback' doWithCallback transporter action api context cbUrl f = do
         context
           & #bpp_uri ?~ bppUri
           & #bpp_id ?~ bppSubscriberId
-  withBecknCallbackMig doWithCallback (Just $ ET.ManagerSelector authKey) action api context' cbUrl f
+  withBecknCallbackMig doWithCallback (Just $ ET.ManagerSelector authKey) action api context' cbUrl aclEndPointHashMap f
 
 -- logBecknRequest ::
 --   (HasField "coreMetrics" f CoreMetricsContainer) =>

@@ -14,6 +14,7 @@
 
 module Domain.Action.Beckn.Init where
 
+import qualified Data.HashMap as HM
 import qualified Domain.Action.Beckn.Search as BS
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.BookingCancellationReason as DBCR
@@ -84,7 +85,8 @@ cancelBooking ::
     EncFlow m r,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     HasHttpClientOptions r c,
-    HasLongDurationRetryCfg r c
+    HasLongDurationRetryCfg r c,
+    HasField "aclEndPointHashMap" r (HM.Map Text Text)
   ) =>
   DRB.Booking ->
   Id DM.Merchant ->

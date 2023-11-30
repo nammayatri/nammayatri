@@ -14,6 +14,7 @@
 
 module Domain.Action.UI.Rating where
 
+import qualified Data.HashMap as HM
 import Domain.Types.Ride as Ride
 import Kernel.Beam.Functions as B
 import Kernel.Prelude
@@ -26,7 +27,7 @@ import SharedLogic.CallBAPInternal as CallBAPInternal
 import qualified Storage.Queries.Ride as QRide
 import Tools.Error
 
-rating :: (EsqDBFlow m r, EsqDBReplicaFlow m r, CoreMetrics m, HasFlowEnv m r '["appBackendBapInternal" ::: AppBackendBapInternal], CacheFlow m r) => CallBAPInternal.FeedbackReq -> m APISuccess
+rating :: (EsqDBFlow m r, EsqDBReplicaFlow m r, CoreMetrics m, HasFlowEnv m r '["appBackendBapInternal" ::: AppBackendBapInternal], CacheFlow m r, HasField "aclEndPointHashMap" r (HM.Map Text Text)) => CallBAPInternal.FeedbackReq -> m APISuccess
 rating request = do
   appBackendBapInternal <- asks (.appBackendBapInternal)
   unless (request.ratingValue `elem` [1 .. 5]) $ throwError InvalidRatingValue

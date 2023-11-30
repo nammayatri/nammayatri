@@ -24,6 +24,7 @@ where
 
 import Data.Maybe (listToMaybe)
 import Domain.Action.UI.Ride.CancelRide (driverDistanceToPickup)
+import qualified Data.HashMap as HM
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.BookingCancellationReason as DBCR
 import qualified Domain.Types.Merchant as DM
@@ -81,7 +82,8 @@ cancel ::
     HasLongDurationRetryCfg r c,
     EventStreamFlow m r,
     LT.HasLocationService m r,
-    HasField "minTripDistanceForReferralCfg" r (Maybe HighPrecMeters)
+    HasField "minTripDistanceForReferralCfg" r (Maybe HighPrecMeters),
+    HasField "aclEndPointHashMap" r (HM.Map Text Text)
   ) =>
   CancelReq ->
   DM.Merchant ->

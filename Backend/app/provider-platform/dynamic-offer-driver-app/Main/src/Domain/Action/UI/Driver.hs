@@ -83,6 +83,7 @@ import AWS.S3 as S3
 import Control.Monad.Extra (mapMaybeM)
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Message as Common
 import Data.Either.Extra (eitherToMaybe)
+import qualified Data.HashMap as HM
 import Data.List (intersect, (\\))
 import qualified Data.List as DL
 import qualified Data.Map as M
@@ -1138,6 +1139,7 @@ offerQuote ::
     HasField "nwAddress" r BaseUrl,
     HasField "driverUnlockDelay" r Seconds,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    HasField "aclEndPointHashMap" r (HM.Map Text Text),
     HasHttpClientOptions r c,
     HasShortDurationRetryCfg r c,
     HasPrettyLogger m r,
@@ -1160,6 +1162,7 @@ respondQuote ::
     HasField "nwAddress" r BaseUrl,
     HasField "driverUnlockDelay" r Seconds,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    HasField "aclEndPointHashMap" r (HM.Map Text Text),
     HasHttpClientOptions r c,
     HasShortDurationRetryCfg r c,
     HasPrettyLogger m r,
