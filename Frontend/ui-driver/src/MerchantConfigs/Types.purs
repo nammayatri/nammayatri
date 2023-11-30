@@ -23,7 +23,8 @@ type AppConfig =
     waitTimeConfig :: WaitTimeConfig,
     cityConfig :: Array CityConfig,
     unserviceableThreshold :: Number,
-    enableMockLocation :: Boolean
+    enableMockLocation :: Boolean,
+    flowConfig :: FlowConfig
   } 
 
 type PurpleRideConfig = {
@@ -140,4 +141,23 @@ type CityConfig = {
   cityLat :: Number,
   cityLong :: Number,
   supportNumber :: String
+}
+
+type FlowConfig = {
+  chooseLanguage :: ChooseLanguageFlowConfig,
+  chooseCity :: ChooseCityFlowConfig,
+  welcomeScreen :: WelcomeScreenConfig
+}
+
+type ChooseLanguageFlowConfig = {
+  runFlow :: Boolean
+}
+
+type ChooseCityFlowConfig = {
+  runFlow :: Boolean,
+  defCity :: String
+}
+
+type WelcomeScreenConfig = {
+  runFlow :: Boolean
 }

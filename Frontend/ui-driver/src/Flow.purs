@@ -68,7 +68,7 @@ import JBridge (cleverTapCustomEvent, cleverTapCustomEventWithParams, cleverTapE
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import MerchantConfig.DefaultConfig as DC
-import MerchantConfig.Types (CityConfig)
+import MerchantConfig.Types (CityConfig, AppConfig)
 import MerchantConfig.Utils (getMerchant, Merchant(..), getValueFromConfig)
 import Prelude (Unit, bind, discard, pure, unit, unless, negate, void, when, map, otherwise, ($), (==), (/=), (&&), (||), (/), when, (+), show, (>), not, (<), (*), (-), (<=), (<$>), (>=), ($>), (<<<))
 import Presto.Core.Types.Language.Flow (delay, setLogField, getLogFields, doAff, fork)
@@ -132,18 +132,11 @@ baseAppFlow baseFlow event = do
     _ <- pure $ saveSuggestions "SUGGESTIONS" (getSuggestions "")
     _ <- pure $ saveSuggestionDefs "SUGGESTIONS_DEFINITIONS" (suggestionsDefinitions "")
     setValueToLocalStore CURRENCY (getValueFromConfig "currency")
-    isLocationPermission <- lift $ lift $ liftFlow $ isLocationPermissionEnabled unit
-    if getValueToLocalStore SHOW_SUBSCRIPTIONS == "__failed" then 
-      setValueToLocalStore SHOW_SUBSCRIPTIONS "true"
-      else pure unit
-    if isTokenValid regToken
-      then do
+    if getValueToLocalStore SHOW_SUBSCRIPTIONS == "__failed" then  setValueToLocalStore SHOW_SUBSCRIPTIONS "true" else pure unit
+    if isTokenValid regToken then do
         setValueToLocalNativeStore REGISTERATION_TOKEN regToken
         checkRideAndInitiate event
-    else if skipLocationDetection then loginFlow
-    else if getValueToLocalStore DRIVER_LOCATION == "__failed" || getValueToLocalStore DRIVER_LOCATION == "--" || not isLocationPermission  then do
-      chooseCityFlow
-    else authenticationFlow ""
+    else initialFlow
     where
     cacheAppParameters :: Int -> Boolean -> FlowBT String Unit
     cacheAppParameters versionCode baseFlow = do
@@ -184,6 +177,25 @@ baseAppFlow baseFlow event = do
       void $ lift $ lift $ setLogField "bundle_version" $ encode (bundle)
       void $ lift $ lift $ setLogField "config_version" $ encode config
       void $ lift $ lift $ setLogField "platform" $ encode (os)
+
+    initialFlow :: FlowBT String Unit
+    initialFlow = do
+      appConfig <- getAppConfig Constants.appConfig
+      if appConfig.flowConfig.chooseCity.runFlow then chooseCityFlow 
+      else do
+        setValueToLocalStore DRIVER_LOCATION appConfig.flowConfig.chooseCity.defCity
+        pure unit
+      if appConfig.flowConfig.chooseLanguage.runFlow then chooseLanguageFlow else pure unit
+      if versionCheck && appConfig.flowConfig.welcomeScreen.runFlow then welcomeScreenFlow else pure unit
+      loginFlow
+
+    versionCheck = not EHC.isPreviousVersion (getValueToLocalStore VERSION_NAME) (getPreviousVersion (getMerchant FunctionCall))
+
+chooseLanguageFlow :: FlowBT String Unit
+chooseLanguageFlow = do
+  liftFlowBT hideSplash
+  void $ UI.chooseLanguage
+  pure unit
 
 authenticationFlow :: String -> FlowBT String Unit
 authenticationFlow _ = 
@@ -252,14 +264,10 @@ ifNotRegistered _ = getValueToLocalStore REGISTERATION_TOKEN == "__failed"
 isTokenValid :: String -> Boolean
 isTokenValid = (/=) "__failed"
 
-skipLocationDetection :: Boolean
-skipLocationDetection = true
-
 loginFlow :: FlowBT String Unit
 loginFlow = do
   liftFlowBT hideSplash
   logField_ <- lift $ lift $ getLogFields
-  when skipLocationDetection $ void $ UI.chooseLanguage
   mobileNo <- UI.enterMobileNumber
   case mobileNo of
     GO_TO_ENTER_OTP updateState -> do
@@ -2933,21 +2941,25 @@ runInternetCondition = do
 
 chooseCityFlow :: FlowBT String Unit
 chooseCityFlow = do
-  liftFlowBT hideSplash
-  logField_ <- lift $ lift $ getLogFields
-  appConfig <- getAppConfig Constants.appConfig
-  (GlobalState globalstate) <- getState
-  runInternetCondition
-  (API.GetCityRes resp) <- Remote.getMerchantOperatingCityListBT ""
-  let cityArray = map (\(API.CityRes item) -> (toUpper item.name)) (resp)
-      filteredArray = filter (\item -> (any (_ == (toUpper item.cityName)) cityArray)) globalstate.chooseCityScreen.data.config.cityConfig
-  void $ pure $ setCleverTapUserProp [{key : "Preferred Language", value : unsafeToForeign $ getValueFromConfig "defaultLanguage"}]
-  setValueToLocalStore LANGUAGE_KEY $ getValueFromConfig "defaultLanguage"
-  modifyScreenState $ ChooseCityScreenStateType (\chooseCityScreen -> chooseCityScreen { data {merchantOperatingCityConfig = filteredArray , config = appConfig}})
-  chooseCityScreen <- UI.chooseCityScreen
-  case chooseCityScreen of
-    GoToWelcomeScreen -> authenticationFlow ""
-    REFRESH_SCREEN_CHOOSE_CITY _ -> chooseCityFlow
+  isLocationPermission <- lift $ lift $ liftFlow $ isLocationPermissionEnabled unit
+  let runFlow = getValueToLocalStore DRIVER_LOCATION == "__failed" || getValueToLocalStore DRIVER_LOCATION == "--" || not isLocationPermission
+  if runFlow then do
+    liftFlowBT hideSplash
+    logField_ <- lift $ lift $ getLogFields
+    appConfig <- getAppConfig Constants.appConfig
+    (GlobalState globalstate) <- getState
+    runInternetCondition
+    (API.GetCityRes resp) <- Remote.getMerchantOperatingCityListBT ""
+    let cityArray = map (\(API.CityRes item) -> (toUpper item.name)) (resp)
+        filteredArray = filter (\item -> (any (_ == (toUpper item.cityName)) cityArray)) globalstate.chooseCityScreen.data.config.cityConfig
+    void $ pure $ setCleverTapUserProp [{key : "Preferred Language", value : unsafeToForeign $ getValueFromConfig "defaultLanguage"}]
+    setValueToLocalStore LANGUAGE_KEY $ getValueFromConfig "defaultLanguage"
+    modifyScreenState $ ChooseCityScreenStateType (\chooseCityScreen -> chooseCityScreen { data {merchantOperatingCityConfig = filteredArray , config = appConfig}})
+    chooseCityScreen <- UI.chooseCityScreen
+    case chooseCityScreen of
+      GoToWelcomeScreen -> authenticationFlow ""
+      REFRESH_SCREEN_CHOOSE_CITY _ -> chooseCityFlow
+  else pure unit
 
 welcomeScreenFlow :: FlowBT String Unit
 welcomeScreenFlow = do

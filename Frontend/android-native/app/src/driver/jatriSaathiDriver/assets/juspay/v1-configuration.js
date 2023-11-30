@@ -182,5 +182,17 @@ window.getMerchantConfig = function () {
             }
     }
     , "enableMockLocation" : false
+    , "flowConfig" : {
+        "chooseLanguage" : {
+            "runFlow" : true
+        },
+        "chooseCity" : {
+            "runFlow" : false,
+            "defCity" : "Kolkata"
+        },
+        "welcomeScreen" : {
+            "runFlow" : false
+        }
+    }
   })
 }

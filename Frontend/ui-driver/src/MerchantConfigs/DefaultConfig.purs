@@ -183,4 +183,16 @@ config =
             }
         ]
   , enableMockLocation : false
+  , flowConfig : {
+      chooseLanguage : {
+        runFlow : false
+      },
+      chooseCity : {
+        runFlow : true,
+        defCity : "Bangalore"
+      },
+      welcomeScreen : {
+        runFlow : true
+      }
+  }
 }

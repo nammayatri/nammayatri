@@ -51,14 +51,15 @@
                 android:layout_gravity="center"
                 android:src="@drawable/ic_powered_by" />
         </LinearLayout>
-
-        <com.airbnb.lottie.LottieAnimationView
-            android:id="@+id/splash_lottie"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:visibility="gone"
-            app:lottie_autoPlay="true"
-            app:lottie_rawRes="@raw/splash_lottie"
-            app:lottie_repeatMode="restart" />
     </LinearLayout>
+
+    <com.airbnb.lottie.LottieAnimationView
+        android:id="@+id/splash_lottie"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:visibility="gone"
+        app:lottie_autoPlay="true"
+        app:lottie_rawRes="@raw/splash_lottie"
+        app:lottie_repeatMode="restart" />
+
 </RelativeLayout>
