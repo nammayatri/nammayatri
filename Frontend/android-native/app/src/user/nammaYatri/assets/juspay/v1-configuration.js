@@ -199,7 +199,7 @@ window.getMerchantConfig = function () {
   , "specialLocationView" : false
   , "geoCoder": {
       "enableLLtoAddress" : true
-    , "enableAddressToLL" : false 
+    , "enableAddressToLL" : true 
   }
   , "navigationAppConfig" : {
       "query" : "google.navigation:q=%f,%f"
