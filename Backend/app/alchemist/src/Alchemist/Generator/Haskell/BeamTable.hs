@@ -11,7 +11,7 @@ formatType t = if ' ' `elem` t then "(" ++ t ++ ")" else t
 -- Converts a FieldDef to a Beam field declaration
 fieldDefToBeam :: FieldDef -> String
 fieldDefToBeam field =
-  fieldName field ++ " :: B.C f " ++ formatType (haskellType field)
+  fieldName field ++ " :: B.C f " ++ formatType (beamType field)
 
 -- Converts a list of fields to Beam field declarations
 fieldsToBeam :: [FieldDef] -> String
@@ -27,7 +27,7 @@ primaryKeyToBeam tableDef =
     ++ "T f = "
     ++ tableNameHaskell tableDef
     ++ "Id (B.C f "
-    ++ formatType (haskellType fetchPrimaryKey)
+    ++ formatType (beamType fetchPrimaryKey)
     ++ ")\n    deriving (Generic, B.Beamable)\n"
     ++ "  primaryKey = "
     ++ tableNameHaskell tableDef
@@ -65,7 +65,8 @@ tableInstancesToBeam tableDef =
 generateBeamTable :: TableDef -> String
 generateBeamTable tableDef =
   "{-# LANGUAGE DerivingStrategies #-}\n"
-    ++ "{-# LANGUAGE TemplateHaskell #-}\n\n"
+    ++ "{-# LANGUAGE TemplateHaskell #-}\n"
+    ++ "{-# OPTIONS_GHC -Wno-unused-imports #-}\n\n"
     ++ "module Storage.Beam."
     ++ (capitalize $ tableNameHaskell tableDef)
     ++ " where\n\n"
@@ -73,7 +74,7 @@ generateBeamTable tableDef =
     ++ "import Kernel.Prelude\n"
     ++ "import Tools.Beam.UtilsTH\n"
     -- Add imports here
-    ++ (intercalate "\n" $ map (\i -> "import qualified " ++ i ++ " as " ++ i) $ imports tableDef)
+    ++ (intercalate "\n" $ map (\i -> "import qualified " ++ i ++ " as " ++ i) $ filter (not . (`elem` notRequiredImports)) $ imports tableDef)
     ++ "\n\n"
     ++ "data "
     ++ tableNameHaskell tableDef
@@ -87,3 +88,5 @@ generateBeamTable tableDef =
     ++ primaryKeyToBeam tableDef
     ++ "\n"
     ++ tableInstancesToBeam tableDef
+  where
+    notRequiredImports = ["Domain.Types." ++ (tableNameHaskell tableDef), "Kernel.Prelude", "Kernel.Types.Id"]

@@ -97,7 +97,7 @@ parseSingleApi (Object ob) = do
   let res = ApiRes responseTp responseFmt
 
   let query = fromMaybe [] $ preview (ix "query" . _Value . to mkList . to (map (\(a, b) -> QueryParam a b False))) obj
-  let mQuery = fromMaybe [] $ preview (ix "mamdatoryQuery" . _Value . to mkList . to (map (\(a, b) -> QueryParam a b True))) obj
+  let mQuery = fromMaybe [] $ preview (ix "mandatoryQuery" . _Value . to mkList . to (map (\(a, b) -> QueryParam a b True))) obj
   let allApiParts = endpoint <> query <> mQuery
 
   let headers = fromMaybe [] (preview (ix "headers" ._Array . to (mkHeaderList . V.toList)) obj)

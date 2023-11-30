@@ -15,6 +15,7 @@ data TableDef = TableDef
 data FieldDef = FieldDef
   { fieldName :: String,
     haskellType :: String,
+    beamType :: String,
     sqlType :: String,
     constraints :: [FieldConstraint],
     defaultVal :: Maybe String,

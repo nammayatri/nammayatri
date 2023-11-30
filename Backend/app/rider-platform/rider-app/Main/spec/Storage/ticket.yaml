@@ -1,9 +1,18 @@
 imports:
   MerchantOperatingCity: Domain.Types.Merchant.MerchantOperatingCity
+  SeatManagement: Domain.Types.SeatManagement
+  TicketServiceCategory: Domain.Types.TicketServiceCategory
+  ServiceCategory: Domain.Types.ServiceCategory
+  BusinessHour: Domain.Types.BusinessHour
+  BusinessHourType: Domain.Types.BusinessHourType
+  ServicePeopleCategory: Domain.Types.ServicePeopleCategory
+  Timings: Domain.Types.Timings
+  SpecialDates: Domain.Types.SpecialDates
+  SpecialDayType: Domain.Types.SpecialDatesType
+  TicketPlaceV1: Domain.Types.TicketPlaceV1
+  TicketServiceV1: Domain.Types.TicketServiceV1
 
-model:
-  name: TicketPlaceV1
-
+TicketPlaceV1:
   tableName: ticker_place
 
   fields:
@@ -25,9 +34,7 @@ model:
     name: NotNull
     shortDesc: NotNull
 
-model :
-  name : TicketServiceV1
-
+TicketServiceV1:
   tableName : ticket_service
 
   fields :
@@ -36,7 +43,10 @@ model :
     serviceName : Text
     shortDesc : Text
     operationalDays : [Day]
-    bussinessHours : Timings
+    bussinessHours : Text #Timings
+
+  sqlType:
+    bussinessHours: text
 
   constraints :
     id : PrimaryKey | NotNull
@@ -47,17 +57,18 @@ model :
     operationalDays : NotNull
 
 
-model :
-  name : SpecialDates
-
+SpecialDates:
   tableName : special_dates
 
   fields :
     id : Id SpecialDates
     entityId : Text
     date : Day
-    specialDays : SpecialDayType
-    businessHours : Timings
+    specialDays : Text #SpecialDayType
+    businessHours : Text
+
+  sqlType:
+    businessHours : Text
 
   constraints :
     id : PrimaryKey | NotNull
@@ -67,23 +78,24 @@ model :
     entityId : NotNull
 
 
-model:
-  name: BusinessHour
+BusinessHour:
   tableName: business_hour
 
   fields:
     id: Id BusinessHour
-    type: BusinessHourType
+    btype: Text
     categoryId: Id ServiceCategory
 
   constraints :
     id : PrimaryKey | NotNull
-    type : NotNull
+    btype : NotNull
     categoryId : NotNull
 
+  sqlType:
+    btype: text
 
-model:
-  name: ServiceCategory
+
+ServiceCategory:
   tableName: service_category
 
   fields:
@@ -99,8 +111,7 @@ model:
     availableSeats : NotNull
 
 
-model:
-  name: ServicePeopleCategory
+ServicePeopleCategory:
   tableName: service_people_category
 
   fields:
@@ -110,25 +121,24 @@ model:
     pricePerUnit: Int
 
   constraints :
-    id : PrimaryKey | NotNull
+    id : PrimaryKey|NotNull
     serviceCategoryId : NotNull
     name : NotNull
     pricePerUnit : NotNull
 
 
-model:
-  name: SeatManagement
+SeatManagement:
   tableName: seat_management
 
   fields:
     id: Id SeatManagement
     date: Day
-    ticketServiceCategoryId: Id TicketServiceCategory
+    ticketServiceCategoryId: Text
     booked: Int
     blocked: Int
 
   constraints :
-    id : PrimaryKey | NotNull
+    id : PrimaryKey|NotNull
     date : NotNull
     ticketServiceCategoryId : NotNull
     booked : NotNull

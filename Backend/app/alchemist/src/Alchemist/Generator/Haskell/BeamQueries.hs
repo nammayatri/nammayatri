@@ -8,7 +8,8 @@ import Kernel.Prelude
 
 generateImports :: TableDef -> String
 generateImports tableDef =
-  "{-# OPTIONS_GHC -Wno-orphans #-}\n\n"
+  "{-# OPTIONS_GHC -Wno-orphans #-}\n"
+    ++ "{-# OPTIONS_GHC -Wno-unused-imports #-}\n\n"
     ++ "module Storage.Queries."
     ++ (capitalize $ tableNameHaskell tableDef)
     ++ " where\n\n"
@@ -24,14 +25,14 @@ toTTypeConversionFunction :: Maybe String -> String -> String -> String
 toTTypeConversionFunction transformer haskellType fieldName
   | (isJust transformer) = fromJust transformer ++ " " ++ fieldName
   | "Int" <- haskellType = "roundToIntegral " ++ fieldName
-  | "Id " `Text.isInfixOf` (Text.pack haskellType) = "Kernel.Types.Id.Id " ++ fieldName
+  | "Id " `Text.isInfixOf` (Text.pack haskellType) = "Kernel.Types.Id.getId " ++ fieldName
   | otherwise = fieldName
 
 fromTTypeConversionFunction :: Maybe String -> String -> String -> String
 fromTTypeConversionFunction transformer haskellType fieldName
   | (isJust transformer) = fromJust transformer ++ " " ++ fieldName
   | "Int" <- haskellType = "realToFrac " ++ fieldName
-  | "Id " `Text.isInfixOf` (Text.pack haskellType) = "Kernel.Types.Id.getId " ++ fieldName
+  | "Id " `Text.isInfixOf` (Text.pack haskellType) = "Kernel.Types.Id.Id " ++ fieldName
   | otherwise = fieldName
 
 -- Generates the FromTType' instance
@@ -44,7 +45,10 @@ fromTTypeInstance tableDef =
     ++ "    pure $\n"
     ++ "      Just\n"
     ++ "        "
-    ++ tableNameHaskell tableDef
+    ++ "Domain.Types."
+    ++ (tableNameHaskell tableDef)
+    ++ "."
+    ++ (tableNameHaskell tableDef)
     ++ "\n"
     ++ "          { "
     ++ intercalate ",\n            " (map fromField (fields tableDef))
@@ -57,7 +61,10 @@ toTTypeInstance :: TableDef -> String
 toTTypeInstance tableDef =
   "instance ToTType' Beam." ++ tableNameHaskell tableDef ++ " Domain.Types." ++ tableNameHaskell tableDef ++ "." ++ tableNameHaskell tableDef ++ " where\n"
     ++ "  toTType' "
-    ++ tableNameHaskell tableDef
+    ++ "Domain.Types."
+    ++ (tableNameHaskell tableDef)
+    ++ "."
+    ++ (tableNameHaskell tableDef)
     ++ " {..} = do\n"
     ++ "    Beam."
     ++ tableNameHaskell tableDef
