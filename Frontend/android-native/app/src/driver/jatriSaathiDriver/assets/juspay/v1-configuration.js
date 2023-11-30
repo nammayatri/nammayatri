@@ -166,7 +166,8 @@ window.getMerchantConfig = function () {
           "enableSubscriptionSupportPopup" : true,
           "myPlanYoutubeLink" : "https://www.youtube.com/playlist?list=PLvMgI4c44A9Y2bykEuDAtHzgcubXOYqgU-*$*-https://www.youtube.com/playlist?list=PLvMgI4c44A9Y2bykEuDAtHzgcubXOYqgU-*$*-https://www.youtube.com/playlist?list=PLvMgI4c44A9Zl0IIQcZa7ZJrSjWPLfxpA-*$*-https://www.youtube.com/playlist?list=PLvMgI4c44A9Y8NLs_8TXc7biX-JkobrGB",
           "overlayYoutubeLink" : "https://www.youtube.com/playlist?list=PLvMgI4c44A9Y2bykEuDAtHzgcubXOYqgU-*$*-https://www.youtube.com/playlist?list=PLvMgI4c44A9Y2bykEuDAtHzgcubXOYqgU-*$*-https://www.youtube.com/playlist?list=PLvMgI4c44A9Zl0IIQcZa7ZJrSjWPLfxpA-*$*-https://www.youtube.com/playlist?list=PLvMgI4c44A9Y8NLs_8TXc7biX-JkobrGB",
-          "earnAmountInADay" : 5000
+          "earnAmountInADay" : 5000,
+          "showFeeBreakup" : false
     } 
     , "OTP_MESSAGE_REGEX" : "is your OTP for login to [A-Za-z]+ [A-Za-z]+ [A-Za-z]+"
     , "autoPayBanner" : false
@@ -189,5 +190,8 @@ window.getMerchantConfig = function () {
             "runFlow" : false
       }
     }
+  , "permissions" : {
+        "locationPermission" : true
+  }
   })
 }

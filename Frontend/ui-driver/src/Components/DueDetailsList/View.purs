@@ -27,11 +27,12 @@ import Font.Style as FontStyle
 import Helpers.Utils (fetchImage, FetchImageFrom(..), getFixedTwoDecimals)
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Prelude (Unit, bind, const, pure, show, unit, void, ($), (&&), (/=), (<>), (==), (||), (<))
+import Prelude (Unit, bind, const, pure, show, unit, void, ($), (&&), (/=), (<>), (==), (||), (<), not)
 import PrestoDOM (Gradient(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Prop, Visibility(..), afterRender, alignParentBottom, background, color, cornerRadius, fontStyle, gradient, gravity, height, id, imageUrl, imageView, imageWithFallback, linearLayout, lottieAnimationView, margin, onClick, orientation, padding, scrollView, stroke, text, textSize, textView, visibility, weight, width)
 import Screens.Types (PromoConfig)
 import Services.API (FeeType(..))
 import Styles.Colors as Color
+import Data.String as DS
 
 
 view :: forall w . (Action -> Effect Unit) -> DueDetailsListState -> PrestoDOM (Effect Unit) w
@@ -121,7 +122,7 @@ view push state =
                 , keyValueView (getString SCHEDULED_AT) (fromMaybe "" item.scheduledAt) (isJust item.scheduledAt) false FontStyle.Body3 16 Color.black700
                 , keyValueView (getString PAYMENT_STATUS) (fromMaybe "" item.paymentStatus) (isJust item.paymentStatus) false FontStyle.Body3 16 Color.black700
                 , keyValueView (getString YOUR_EARNINGS) ("₹" <> getFixedTwoDecimals item.totalEarningsOfDay) true false FontStyle.Body3 16 Color.black700
-                , keyValueView (getString FARE_BREAKUP) (item.fareBreakup <>" "<> getString GST_INCLUDE) true false FontStyle.Body3 16 Color.black700
+                , keyValueView (getString FARE_BREAKUP) (item.fareBreakup <>" "<> getString GST_INCLUDE) (not DS.null item.fareBreakup) false FontStyle.Body3 16 Color.black700
                 , maybe (linearLayout[visibility GONE][]) (\boothCharges -> keyValueView (getString BOOTH_CHARGES) boothCharges true false FontStyle.Captions 6 Color.black600) $ item.boothCharges
                 , linearLayout [
                   height WRAP_CONTENT

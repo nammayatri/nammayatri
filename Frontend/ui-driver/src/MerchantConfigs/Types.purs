@@ -26,7 +26,8 @@ type AppConfig =
     cityConfig :: Array CityConfig,
     unserviceableThreshold :: Number,
     enableMockLocation :: Boolean,
-    flowConfig :: FlowConfig
+    flowConfig :: FlowConfig,
+    permissions :: PermissionsConfig 
   } 
 
 type PurpleRideConfig = {
@@ -71,7 +72,8 @@ type SubscriptionConfig =  {
   optionsMenuItems :: SubscriptionOptionsMenuItems,
   gradientConfig :: Array GradientConfig,
   enableSubscriptionSupportPopup :: Boolean,
-  earnAmountInADay :: Int
+  earnAmountInADay :: Int,
+  showFeeBreakup :: Boolean
  }
 
 type SubscriptionOfferBannerConfig = {
@@ -143,4 +145,8 @@ type FlowConfig = {
 type ChooseCityFlowConfig = {
   runFlow :: Boolean,
   defCity :: String
+}
+
+type PermissionsConfig = {
+  locationPermission :: Boolean
 }

@@ -208,8 +208,8 @@ getPlanCardConfig (PlanEntity planEntity) isLocalized isIntroductory gradientCon
             showOffer : planEntity.name /= getString DAILY_PER_RIDE
         }
 
-constructDues :: Array DriverDuesEntity -> Array DueItem
-constructDues duesArr = (mapWithIndex (\ ind (DriverDuesEntity item) ->  
+constructDues :: Array DriverDuesEntity -> Boolean -> Array DueItem
+constructDues duesArr showFeeBreakup = (mapWithIndex (\ ind (DriverDuesEntity item) ->  
   let offerAndPlanDetails = fromMaybe "" item.offerAndPlanDetails
   in
   {    
@@ -219,7 +219,7 @@ constructDues duesArr = (mapWithIndex (\ ind (DriverDuesEntity item) ->
     noOfRides: item.totalRides,
     scheduledAt: convertUTCtoISC (fromMaybe "" item.executionAt) "Do MMM YYYY, h:mm A",
     paymentStatus: "",
-    feeBreakup: getFeeBreakup item.maxRidesEligibleForCharge item.planAmount item.totalRides,
+    feeBreakup: if showFeeBreakup then getFeeBreakup offerAndPlanDetails item.totalRides else "",
     plan: offerAndPlanDetails,
     mode: item.feeType,
     autoPayStage : item.autoPayStage,
@@ -229,13 +229,24 @@ constructDues duesArr = (mapWithIndex (\ ind (DriverDuesEntity item) ->
     specialZoneAmount : item.specialZoneAmount
   }) duesArr)
 
-getFeeBreakup :: Maybe Int -> Number -> Int -> String
-getFeeBreakup maxRidesEligibleForCharge planAmount totalRides =
-    case maxRidesEligibleForCharge of
-        Nothing ->  "₹" <> getFixedTwoDecimals planAmount
-        Just maxRides -> do
-            let ridesToConsider = min totalRides maxRides
-            show ridesToConsider <> "Rides x ₹" <> getFixedTwoDecimals (planAmount/ (toNumber ridesToConsider))
+getFeeBreakup :: String -> Int -> String
+getFeeBreakup plan rides = 
+    let planWithTranslations = fromMaybe "" ((split (Pattern "-*@*-") plan) !! 0)
+        planInEng = fromMaybe "" ((split (Pattern "-*$*-") planWithTranslations) !! 0)
+        planConfig = getPlanAmountConfig planInEng
+    in
+    case planConfig.isFixed of
+        true -> "₹" <> getFixedTwoDecimals planConfig.value
+        false -> if planConfig.value <= (toNumber rides) * planConfig.perRide 
+                    then "₹" <> getFixedTwoDecimals planConfig.value
+                 else show rides <> " " <> getString RIDES <> " X " <>  "₹" <> getFixedTwoDecimals planConfig.perRide
+    
+
+getPlanAmountConfig :: String -> {value :: Number, isFixed :: Boolean, perRide :: Number}
+getPlanAmountConfig plan = case plan of
+                            "DAILY UNLIMITED" -> {value : 25.0, isFixed : true, perRide : 0.0}
+                            "DAILY PER RIDE" -> {value : 35.0, isFixed : false, perRide : 3.5}
+                            _ ->  {value : 25.0, isFixed : true, perRide : 0.0}
 
 introductoryPlanConfig :: LazyCheck -> PlanCardConfig
 introductoryPlanConfig lazy =  {

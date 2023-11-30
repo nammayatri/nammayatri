@@ -472,7 +472,7 @@ dueDetailsListState state =
       paymentStatus : if item.mode == AUTOPAY_REGISTRATION then Just (autoPayStageData.stage) else Nothing,
       boothCharges : case item.specialZoneRideCount, item.specialZoneAmount of
                       Just 0, Just 0.0 -> Nothing
-                      Just count, Just charges -> Just $ show count <> "Rides " <> "x ₹" <> HU.getFixedTwoDecimals (charges / DI.toNumber count) <> " " <> getString GST_INCLUDE
+                      Just count, Just charges -> Just $ show count <> " " <> getString RIDES <> " x ₹" <> HU.getFixedTwoDecimals (charges / DI.toNumber count) <> " " <> getString GST_INCLUDE
                       _, _ -> Nothing
     }) (DA.filter (\item -> if state.props.myPlanProps.dueType == AUTOPAY_PAYMENT then item.mode == AUTOPAY_PAYMENT else item.mode /= AUTOPAY_PAYMENT ) state.data.myPlanData.dueItems)
 }

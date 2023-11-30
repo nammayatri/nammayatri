@@ -306,11 +306,11 @@ getDriverInfoFlow event activeRideResp = do
   _ <- pure $ delay $ Milliseconds 1.0
   _ <- pure $ printLog "Registration token" (getValueToLocalStore REGISTERATION_TOKEN)
   getDriverInfoApiResp <- lift $ lift $ Remote.getDriverInfoApi (GetDriverInfoReq{})
+  appConfig <- getAppConfig Constants.appConfig
   case getDriverInfoApiResp of
     Right (GetDriverInfoResp getDriverInfoResp) -> do
       updateFirebaseToken getDriverInfoResp.maskedDeviceToken getUpdateToken
       liftFlowBT $ updateCleverTapUserProps (GetDriverInfoResp getDriverInfoResp)
-      appConfig <- getAppConfig Constants.appConfig
       if getDriverInfoResp.enabled then do
         if getValueToLocalStore IS_DRIVER_ENABLED == "false" then do
           void $ pure $ firebaseLogEvent "ny_driver_enabled"
@@ -325,7 +325,7 @@ getDriverInfoFlow event activeRideResp = do
         if (isJust getDriverInfoResp.autoPayStatus) then 
           setValueToLocalStore TIMES_OPENED_NEW_SUBSCRIPTION "5"
         else pure unit
-        permissionsGiven <- checkAll3Permissions true
+        permissionsGiven <- checkAllPermissions true appConfig.permissions.locationPermission
         if permissionsGiven
           then handleDeepLinksFlow event activeRideResp
           else do
@@ -346,7 +346,7 @@ getDriverInfoFlow event activeRideResp = do
         else do
           _ <- pure $ toast $ getString SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN
           if getValueToLocalStore IS_DRIVER_ENABLED == "true" then do
-            permissionsGiven <- checkAll3Permissions true
+            permissionsGiven <- checkAllPermissions true appConfig.permissions.locationPermission
             if permissionsGiven then
               handleDeepLinksFlow event activeRideResp
               else permissionsScreenFlow event activeRideResp
@@ -424,7 +424,7 @@ onBoardingFlow = do
   _ <- pure $ hideKeyboardOnNavigation true
   config <- getAppConfig Constants.appConfig
   globalstate <- getState 
-  permissions <- checkAll3Permissions false
+  permissions <- checkAllPermissions false config.permissions.locationPermission
   (GetDriverInfoResp getDriverInfoResp) <- getDriverInfoDataFromCache globalstate
   (DriverRegistrationStatusResp resp ) <- driverRegistrationStatusBT (DriverRegistrationStatusReq { })
   let limitReachedFor = if resp.rcVerificationStatus == "LIMIT_EXCEED" then Just "RC"
@@ -2314,6 +2314,7 @@ setSubscriptionStatus paymentStatus apiPaymentStatus planCardConfig = do
 
 paymentHistoryFlow :: FlowBT String Unit
 paymentHistoryFlow = do 
+  appConfig <- getAppConfig Constants.appConfig
   action <- UI.paymentHistory
   case action of 
     GoToSetupAutoPay state -> nyPaymentFlow state.data.planData "MYPLAN"
@@ -2322,7 +2323,7 @@ paymentHistoryFlow = do
       case paymentEntityDetails of
         Right (HistoryEntryDetailsEntityV2Resp resp) ->
             modifyScreenState $ PaymentHistoryScreenStateType (\paymentHistoryScreen -> paymentHistoryScreen{props{subView = ST.TransactionDetails},
-              data { transactionDetails = (buildTransactionDetails (HistoryEntryDetailsEntityV2Resp resp) state.data.gradientConfig)}
+              data{ transactionDetails = (buildTransactionDetails (HistoryEntryDetailsEntityV2Resp resp) state.data.gradientConfig appConfig.subscriptionConfig.showFeeBreakup)}
             })
         Left errorPayload -> pure $ toast $ Remote.getCorrespondingErrorMessage errorPayload
       paymentHistoryFlow
@@ -2549,6 +2550,7 @@ editAadhaarDetailsFlow = do
 
 noInternetScreenFlow :: String -> FlowBT String Unit
 noInternetScreenFlow triggertype = do
+  config <- getAppConfig Constants.appConfig
   action <- UI.noInternetScreen triggertype
   internetCondition <- lift $ lift $ liftFlow $ isInternetAvailable unit
   case action of
@@ -2563,18 +2565,19 @@ noInternetScreenFlow triggertype = do
     CHECK_INTERNET -> case ((ifNotRegistered unit) || (getValueToLocalStore IS_DRIVER_ENABLED == "false")) of
                       true  -> pure unit
                       false -> do
-                        permissionsGiven <- checkAll3Permissions true
+                        permissionsGiven <- checkAllPermissions true config.permissions.locationPermission
                         if permissionsGiven
                           then baseAppFlow false Nothing
                           else permissionsScreenFlow Nothing Nothing
 
-checkAll3Permissions :: Boolean -> FlowBT String Boolean
-checkAll3Permissions checkBattery = do
+checkAllPermissions :: Boolean -> Boolean -> FlowBT String Boolean
+checkAllPermissions checkBattery checkLocation = do
   androidVersion <- lift $ lift $ liftFlow $ getAndroidVersion
   isNotificationPermission <- lift $ lift $ liftFlow $ isNotificationPermissionEnabled unit
   isOverlayPermission <- lift $ lift $ liftFlow $ isOverlayPermissionEnabled unit
   isBatteryUsagePermission <- lift $ lift $ liftFlow $ isBatteryPermissionEnabled unit
-  pure $ (androidVersion < 13 || isNotificationPermission) && isOverlayPermission && (not checkBattery || isBatteryUsagePermission)
+  isLocationPermission <- lift $ lift $ liftFlow $ isLocationPermissionEnabled unit
+  pure $ (androidVersion < 13 || isNotificationPermission) && isOverlayPermission && (not checkBattery || isBatteryUsagePermission) && (not checkLocation || isLocationPermission)
 
 popUpScreenFlow :: AllocationData -> FlowBT String Unit
 popUpScreenFlow entityPayload = do

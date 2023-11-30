@@ -1266,6 +1266,7 @@ type PermissionsScreenProps = {
   , isAutoStartPermissionChecked :: Boolean
   , androidVersion :: Int
   , isBatteryOptimizationChecked :: Boolean
+  , isLocationPermissionChecked :: Boolean
   , logoutModalView :: Boolean
   , isDriverEnabled :: Boolean
 }

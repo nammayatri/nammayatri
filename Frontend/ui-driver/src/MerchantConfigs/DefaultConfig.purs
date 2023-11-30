@@ -56,7 +56,8 @@ config =
     },
     gradientConfig : [],
     enableSubscriptionSupportPopup : false,
-    earnAmountInADay : 2500
+    earnAmountInADay : 2500,
+    showFeeBreakup : true
   },
   showPaymentDetails : true,
   rideActionModelConfig : {
@@ -192,6 +193,9 @@ config =
             -- }
         ]
   , enableMockLocation : false
+  , permissions : {
+      locationPermission : false
+  }
   , flowConfig : {
       chooseCity : {
         runFlow : true,

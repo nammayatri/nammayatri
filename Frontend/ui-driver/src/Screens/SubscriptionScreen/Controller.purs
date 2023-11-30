@@ -294,7 +294,7 @@ eval (LoadMyPlans plans) state = do
                                       autoPayDueAmount = planEntity.autopayDues ,
                                       autoPayStatus = getAutopayStatus currentPlanResp.autoPayStatus, 
                                       lowAccountBalance = requiredBalance,
-                                      dueItems = constructDues planEntity.dues,
+                                      dueItems = constructDues planEntity.dues state.data.config.subscriptionConfig.showFeeBreakup,
                                       dueBoothCharges = if planEntity.dueBoothCharges == Mb.Just 0.0 then Mb.Nothing else planEntity.dueBoothCharges
                                   }}
                          }
