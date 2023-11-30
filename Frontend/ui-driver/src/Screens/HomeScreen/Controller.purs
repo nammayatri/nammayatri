@@ -556,9 +556,7 @@ eval (InAppKeyboardModalAction (InAppKeyboardModal.BackPressed)) state = do
 eval (InAppKeyboardModalAction (InAppKeyboardModal.OnClickDone text)) state = do
     let exitState = if state.props.zoneRideBooking then StartZoneRide state else StartRide state
     exit exitState
-eval (RideActionModalAction (RideActionModal.NoAction)) state = do
-  void $ pure $ Uncurried.runFn2 HU.fillViewPort (EHC.getNewIDWithTag "RideInfoScrollView") true
-  continue state {data{triggerPatchCounter = state.data.triggerPatchCounter + 1,peekHeight = getPeekHeight state}}
+eval (RideActionModalAction (RideActionModal.NoAction)) state = continue state {data{triggerPatchCounter = state.data.triggerPatchCounter + 1,peekHeight = getPeekHeight state}}
 eval (RideActionModalAction (RideActionModal.StartRide)) state = do
   continue state { props = state.props { enterOtpModal = true, rideOtp = "", enterOtpFocusIndex = 0, otpIncorrect = false, zoneRideBooking = false } }
 eval (RideActionModalAction (RideActionModal.EndRide)) state = do
