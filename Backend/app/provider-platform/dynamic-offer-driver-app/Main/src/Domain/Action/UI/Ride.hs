@@ -23,6 +23,7 @@ module Domain.Action.UI.Ride
   )
 where
 
+import qualified Data.HashMap as HM
 import Data.String.Conversions
 import qualified Data.Text as T
 import Data.Time (Day)
@@ -208,7 +209,7 @@ mkDriverRideRes rideDetails driverNumber rideRating mbExophone (ride, booking) b
       customerCancellationDues = fareParams.customerCancellationDues
     }
 
-arrivedAtPickup :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, HasShortDurationRetryCfg r c, HasFlowEnv m r '["nwAddress" ::: BaseUrl], HasHttpClientOptions r c, HasFlowEnv m r '["driverReachedDistance" ::: HighPrecMeters]) => Id DRide.Ride -> LatLong -> m APISuccess
+arrivedAtPickup :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, HasShortDurationRetryCfg r c, HasFlowEnv m r '["nwAddress" ::: BaseUrl], HasHttpClientOptions r c, HasFlowEnv m r '["driverReachedDistance" ::: HighPrecMeters], CacheFlow m r, HasField "aclEndPointHashMap" r (HM.Map Text Text)) => Id DRide.Ride -> LatLong -> m APISuccess
 arrivedAtPickup rideId req = do
   ride <- runInReplica (QRide.findById rideId) >>= fromMaybeM (RideDoesNotExist rideId.getId)
   unless (isValidRideStatus (ride.status)) $ throwError $ RideInvalidStatus "The ride has already started."

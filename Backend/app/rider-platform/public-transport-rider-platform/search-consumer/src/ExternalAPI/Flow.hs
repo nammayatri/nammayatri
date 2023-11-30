@@ -16,6 +16,7 @@ module ExternalAPI.Flow where
 
 import Beckn.Spec.API.Search as Search
 import qualified Beckn.Spec.Search as Search
+import qualified Data.HashMap as HM
 import qualified EulerHS.Types as ET
 import GHC.Records.Extra
 import Kernel.Prelude
@@ -32,7 +33,8 @@ search ::
     MonadReader r m,
     CoreMetrics m,
     HasField "bapId" r Text,
-    HasField "gatewayUrl" r BaseUrl
+    HasField "gatewayUrl" r BaseUrl,
+    HasField "aclEndPointHashMap" r (HM.Map Text Text)
   ) =>
   BecknReq Search.SearchMessage ->
   m ()
@@ -46,7 +48,8 @@ callBecknAPIWithSignature ::
     CoreMetrics m,
     IsBecknAPI api req res,
     SanitizedUrl api,
-    HasField "bapId" r Text
+    HasField "bapId" r Text,
+    HasField "aclEndPointHashMap" r (HM.Map Text Text)
   ) =>
   Text ->
   Proxy api ->
@@ -55,4 +58,5 @@ callBecknAPIWithSignature ::
   m ()
 callBecknAPIWithSignature a b c d = do
   bapId <- asks (.bapId)
-  void $ callBecknAPI (Just $ ET.ManagerSelector $ getHttpManagerKey bapId) Nothing a b c d
+  aclEndPointHashMap <- asks (.aclEndPointHashMap)
+  void $ callBecknAPI (Just $ ET.ManagerSelector $ getHttpManagerKey bapId) Nothing a b c aclEndPointHashMap d

@@ -22,6 +22,7 @@ module Domain.Action.UI.Frontend
   )
 where
 
+import qualified Data.HashMap as HM
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Person.PersonFlowStatus as DPFS
@@ -98,7 +99,8 @@ handleRideTracking ::
     EncFlow m r,
     EsqDBFlow m r,
     Esq.EsqDBReplicaFlow m r,
-    HasField "rideCfg" r RideConfig
+    HasField "rideCfg" r RideConfig,
+    HasField "aclEndPointHashMap" r (HM.Map Text Text)
   ) =>
   Id DP.Person ->
   Maybe Bool ->

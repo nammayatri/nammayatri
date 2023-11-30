@@ -50,10 +50,11 @@ status transporterId (SignatureAuthResult _ subscriber) req =
 
     dStatusReq <- ACL.buildStatusReq subscriber req
     dStatusRes <- DStatus.handler transporterId dStatusReq
+    aclEndPointHashMap <- asks (.aclEndPointHashMap)
 
     let context = req.context
     void $
-      CallBAP.withCallback dStatusRes.transporter Context.STATUS OnStatus.onStatusAPI context context.bap_uri $
+      CallBAP.withCallback dStatusRes.transporter Context.STATUS OnStatus.onStatusAPI context context.bap_uri aclEndPointHashMap $
         pure $ ACL.mkOnStatusMessage dStatusRes
 
     pure Ack

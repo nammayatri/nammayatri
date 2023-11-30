@@ -27,6 +27,7 @@ module Domain.Action.Beckn.OnUpdate
   )
 where
 
+import qualified Data.HashMap as HM
 import Domain.Action.UI.HotSpot
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.BookingCancellationReason as SBCR
@@ -257,6 +258,7 @@ onUpdate ::
     HasLongDurationRetryCfg r c,
     -- HasShortDurationRetryCfg r c, -- uncomment for test update api
     HasField "minTripDistanceForReferralCfg" r (Maybe HighPrecMeters),
+    HasField "aclEndPointHashMap" r (HM.Map Text Text),
     HasBAPMetrics m r,
     EventStreamFlow m r
   ) =>

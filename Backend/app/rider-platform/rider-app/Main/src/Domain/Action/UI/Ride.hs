@@ -25,6 +25,7 @@ where
 
 import qualified Beckn.ACL.Update as ACL
 import qualified Beckn.Types.Core.Taxi.Common.Location as Common
+import qualified Data.HashMap as HM
 import qualified Domain.Types.Booking.Type as DB
 import Domain.Types.Location (LocationAPIEntity, makeLocationAPIEntity)
 import qualified Domain.Types.Location as DL
@@ -92,7 +93,8 @@ getDriverLoc ::
     EncFlow m r,
     EsqDBFlow m r,
     EsqDBReplicaFlow m r,
-    HasField "rideCfg" r RideConfig
+    HasField "rideCfg" r RideConfig,
+    HasField "aclEndPointHashMap" r (HM.Map Text Text)
   ) =>
   Id SRide.Ride ->
   Id SPerson.Person ->
@@ -137,7 +139,8 @@ getRideStatus ::
     EncFlow m r,
     EsqDBFlow m r,
     EsqDBReplicaFlow m r,
-    HasField "rideCfg" r RideConfig
+    HasField "rideCfg" r RideConfig,
+    HasField "aclEndPointHashMap" r (HM.Map Text Text)
   ) =>
   Id SRide.Ride ->
   Id SPerson.Person ->

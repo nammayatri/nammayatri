@@ -1,5 +1,6 @@
 module SharedLogic.CallBPPInternal where
 
+import qualified Data.HashMap as HM
 import Domain.Types.FeedbackForm
 import EulerHS.Types (EulerClient, client)
 import Kernel.External.Slack.Types
@@ -34,7 +35,9 @@ likeRefereeApi = Proxy
 
 linkReferee ::
   ( MonadFlow m,
-    CoreMetrics m
+    CoreMetrics m,
+    CacheFlow m r,
+    HasField "aclEndPointHashMap" r (HM.Map Text Text)
   ) =>
   Text ->
   BaseUrl ->
@@ -44,7 +47,8 @@ linkReferee ::
   Text ->
   m APISuccess
 linkReferee apiKey internalUrl merchantId referralCode phoneNumber countryCode = do
-  EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BPP_INTERNAL_API_ERROR") internalUrl (linkRefereeClient merchantId (Just apiKey) (RefereeLinkInfoReq referralCode phoneNumber countryCode)) "LinkReferee" likeRefereeApi
+  aclEndPointHashMap <- asks (.aclEndPointHashMap)
+  EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BPP_INTERNAL_API_ERROR") (Just aclEndPointHashMap) internalUrl (linkRefereeClient merchantId (Just apiKey) (RefereeLinkInfoReq referralCode phoneNumber countryCode)) "LinkReferee" likeRefereeApi
 
 type FeedbackFormAPI =
   "internal"
@@ -63,13 +67,16 @@ feedbackFormApi = Proxy
 
 feedbackForm ::
   ( MonadFlow m,
-    CoreMetrics m
+    CoreMetrics m,
+    CacheFlow m r,
+    HasField "aclEndPointHashMap" r (HM.Map Text Text)
   ) =>
   BaseUrl ->
   FeedbackFormReq ->
   m APISuccess
 feedbackForm internalUrl request = do
-  EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BPP_INTERNAL_API_ERROR") internalUrl (feedbackFormClient request) "FeedbackForm" feedbackFormApi
+  aclEndPointHashMap <- asks (.aclEndPointHashMap)
+  EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BPP_INTERNAL_API_ERROR") (Just aclEndPointHashMap) internalUrl (feedbackFormClient request) "FeedbackForm" feedbackFormApi
 
 data CancellationDuesReq = CancellationDuesReq
   { customerMobileNumber :: Text,
@@ -104,7 +111,8 @@ disputeCancellationDues ::
   Context.City ->
   m APISuccess
 disputeCancellationDues apiKey internalUrl merchantId phoneNumber countryCode merchantCity = do
-  EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BPP_INTERNAL_API_ERROR") internalUrl (disputeCancellationDuesClient merchantId merchantCity (Just apiKey) (CancellationDuesReq phoneNumber countryCode)) "DisputeCancellationDues" disputeCancellationDuesApi
+  aclEndPointHashMap <- asks (.aclEndPointHashMap)
+  EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BPP_INTERNAL_API_ERROR") (Just aclEndPointHashMap) internalUrl (disputeCancellationDuesClient merchantId merchantCity (Just apiKey) (CancellationDuesReq phoneNumber countryCode)) "DisputeCancellationDues" disputeCancellationDuesApi
 
 data CancellationDuesDetailsRes = CancellationDuesDetailsRes
   { customerCancellationDues :: HighPrecMoney,
@@ -129,7 +137,8 @@ getCancellationDuesDetailsApi = Proxy
 
 getCancellationDuesDetails ::
   ( MonadFlow m,
-    CoreMetrics m
+    CoreMetrics m,
+    HasField "aclEndPointHashMap" r (HM.Map Text Text)
   ) =>
   Text ->
   BaseUrl ->
@@ -139,7 +148,8 @@ getCancellationDuesDetails ::
   Context.City ->
   m CancellationDuesDetailsRes
 getCancellationDuesDetails apiKey internalUrl merchantId phoneNumber countryCode merchantCity = do
-  EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BPP_INTERNAL_API_ERROR") internalUrl (getCancellationDuesDetailsClient merchantId merchantCity (Just apiKey) (CancellationDuesReq phoneNumber countryCode)) "GetCancellationDuesDetails" getCancellationDuesDetailsApi
+  aclEndPointHashMap <- asks (.aclEndPointHashMap)
+  EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BPP_INTERNAL_API_ERROR") (Just aclEndPointHashMap) internalUrl (getCancellationDuesDetailsClient merchantId merchantCity (Just apiKey) (CancellationDuesReq phoneNumber countryCode)) "GetCancellationDuesDetails" getCancellationDuesDetailsApi
 
 type CustomerCancellationDuesSyncAPI =
   "internal"
@@ -167,7 +177,8 @@ customerCancellationDuesSyncApi = Proxy
 
 customerCancellationDuesSync ::
   ( MonadFlow m,
-    CoreMetrics m
+    CoreMetrics m,
+    HasField "aclEndPointHashMap" r (HM.Map Text Text)
   ) =>
   Text ->
   BaseUrl ->
@@ -180,4 +191,5 @@ customerCancellationDuesSync ::
   Context.City ->
   m APISuccess
 customerCancellationDuesSync apiKey internalUrl merchantId phoneNumber countryCode cancellationCharges disputeChancesUsed paymentMadeToDriver merchantCity = do
-  EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BPP_INTERNAL_API_ERROR") internalUrl (customerCancellationDuesSyncClient merchantId merchantCity (Just apiKey) (CustomerCancellationDuesSyncReq phoneNumber countryCode cancellationCharges disputeChancesUsed paymentMadeToDriver)) "CustomerCancellationDuesSync" customerCancellationDuesSyncApi
+  aclEndPointHashMap <- asks (.aclEndPointHashMap)
+  EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BPP_INTERNAL_API_ERROR") (Just aclEndPointHashMap) internalUrl (customerCancellationDuesSyncClient merchantId merchantCity (Just apiKey) (CustomerCancellationDuesSyncReq phoneNumber countryCode cancellationCharges disputeChancesUsed paymentMadeToDriver)) "CustomerCancellationDuesSync" customerCancellationDuesSyncApi

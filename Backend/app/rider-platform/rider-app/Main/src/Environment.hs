@@ -27,6 +27,8 @@ module Environment
 where
 
 import AWS.S3
+import qualified Data.HashMap as HM
+import qualified Data.Map as M
 import Domain.Types.FeedbackForm
 import EulerHS.Prelude (newEmptyTMVarIO)
 import Kernel.External.Encryption (EncTools)
@@ -117,7 +119,8 @@ data AppCfg = AppCfg
     kvConfigUpdateFrequency :: Int,
     dontEnableForDb :: [Text],
     maxMessages :: Text,
-    incomingAPIResponseTimeout :: Int
+    incomingAPIResponseTimeout :: Int,
+    aclEndPointMap :: M.Map Text Text
   }
   deriving (Generic, FromDhall)
 
@@ -181,7 +184,8 @@ data AppEnv = AppEnv
     eventRequestCounter :: EventCounterMetric,
     dontEnableForDb :: [Text],
     maxMessages :: Text,
-    incomingAPIResponseTimeout :: Int
+    incomingAPIResponseTimeout :: Int,
+    aclEndPointHashMap :: HM.Map Text Text
   }
   deriving (Generic)
 
@@ -211,7 +215,7 @@ buildAppEnv cfg@AppCfg {..} = do
       else connectHedisCluster hedisNonCriticalClusterCfg nonCriticalModifierFunc
   let s3Env = buildS3Env cfg.s3Config
       s3EnvPublic = buildS3Env cfg.s3PublicConfig
-  return AppEnv {..}
+  return AppEnv {aclEndPointHashMap = HM.fromList $ M.toList aclEndPointMap, ..}
 
 releaseAppEnv :: AppEnv -> IO ()
 releaseAppEnv AppEnv {..} = do

@@ -29,4 +29,5 @@ in  { esqDBCfg = main.esqDBCfg
     , longDurationRetryCfg = main.longDurationRetryCfg
     , authEntity = main.authEntity
     , kafkaConsumerCfgs
+    , aclEndPointMap = common.aclEndPointMap
     }

@@ -16,6 +16,7 @@ module API.Handler where
 
 import qualified API.Types as API
 import qualified Data.ByteString as BS
+import qualified Data.HashMap as HM
 import Environment
 import qualified EulerHS.Types as ET
 import Kernel.Prelude
@@ -40,6 +41,7 @@ trigger urlText body = withFlowHandlerBecknAPI' $ do
 callBAP ::
   ( MonadFlow m,
     HasFlowEnv m r '["selfId" ::: Text],
+    HasField "aclEndPointHashMap" r (HM.Map Text Text),
     CoreMetrics m
   ) =>
   BaseUrl ->
@@ -48,7 +50,8 @@ callBAP ::
 callBAP uri body = do
   selfId <- asks (.selfId)
   let authKey = getHttpManagerKey selfId
-  Beckn.callBecknAPI (Just $ ET.ManagerSelector authKey) Nothing "Some action" fakeAPI uri body
+  aclEndPointHashMap <- asks (.aclEndPointHashMap)
+  Beckn.callBecknAPI (Just $ ET.ManagerSelector authKey) Nothing "Some action" fakeAPI uri aclEndPointHashMap body
   where
     fakeAPI :: Proxy (ReqBody '[JSONBS] BS.ByteString :> Post '[JSON] AckResponse)
     fakeAPI = Proxy
