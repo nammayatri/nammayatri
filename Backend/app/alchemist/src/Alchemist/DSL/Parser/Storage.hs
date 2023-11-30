@@ -9,57 +9,58 @@ import Control.Lens.Operators
 import Data.Aeson
 import Data.Aeson.Key (fromString, toString)
 import qualified Data.Aeson.KeyMap as KM
-import Data.Aeson.Lens (key, _Object, _Value)
+import Data.Aeson.Lens (_Object, _Value)
 import qualified Data.ByteString as BS
+import qualified Data.List as L
 import Data.List.Split (splitOn)
 import qualified Data.Text as T
 import qualified Data.Yaml as Yaml
 import Kernel.Prelude hiding (fromString, toString, try)
 import Text.Regex.TDFA ((=~))
 
-storageParser :: FilePath -> IO TableDef
+storageParser :: FilePath -> IO [TableDef]
 storageParser filepath = do
   contents <- BS.readFile filepath
   case Yaml.decodeEither' contents of
     Left _ -> error "Not a Valid Yaml"
-    Right yml -> pure $ parseTableDef yml
+    Right yml -> pure $ map (parseTableDef yml) $ filter ((/= "imports") . fst) $ (toModelList yml)
 
-parseTableDef :: Object -> TableDef
-parseTableDef obj =
-  let parsedFields = parseFields obj
+parseTableDef :: Object -> (String, Object) -> TableDef
+parseTableDef importObj (parseDomainName, obj) =
+  let parsedFields = parseFields importObj obj
       parsedImports = parseImports parsedFields
       (primaryKey, secondaryKey) = extractKeys parsedFields
-   in TableDef (parseDomainName obj) (parseTableName obj) parsedFields parsedImports primaryKey secondaryKey
-
-parseDomainName :: Object -> String
-parseDomainName obj = view (ix "model" . key "name" . _String) obj
+   in TableDef parseDomainName (parseTableName obj) parsedFields parsedImports primaryKey secondaryKey
 
 parseTableName :: Object -> String
-parseTableName = view (ix "model" .key "tableName" . _String)
+parseTableName = view (ix "tableName" . _String)
 
 parseImports :: [FieldDef] -> [String]
 parseImports fields =
   let extraImports = concatMap (\f -> (maybe [] pure $ toTType f) <> (maybe [] pure $ fromTType f)) fields
    in figureOutImports $ (map haskellType fields <> extraImports)
 
-parseFields :: Object -> [FieldDef]
-parseFields obj =
-  let fields = preview (ix "model" . key "fields" . _Value . to mkList) obj
-      constraintsObj = obj ^? (ix "model" . key "constraints" . _Object)
-      sqlTypeObj = obj ^? (ix "model" . key "sqlType" . _Object)
-      defaultsObj = obj ^? (ix "model" . key "defaults" . _Object)
+parseFields :: Object -> Object -> [FieldDef]
+parseFields impObj obj =
+  let fields = preview (ix "fields" . _Value . to mkList) obj
+      constraintsObj = obj ^? (ix "constraints" . _Object)
+      sqlTypeObj = obj ^? (ix "sqlType" . _Object)
+      beamTypeObj = obj ^? (ix "beamType" ._Object)
+      defaultsObj = obj ^? (ix "defaults" . _Object)
       getFieldDef field =
         let fieldName = fst field
             haskellType = snd field
             fieldKey = fromString fieldName
             sqlType = fromMaybe (findMatchingSqlType haskellType) (sqlTypeObj >>= preview (ix fieldKey . _String))
+            beamType = fromMaybe (if L.isPrefixOf "Id " haskellType then "Text" else haskellType) (beamTypeObj >>= preview (ix fieldKey . _String))
             constraints = fromMaybe [] (constraintsObj >>= preview (ix fieldKey . _String . to (splitOn "|") . to (map getProperConstraint)))
             defaultValue = defaultsObj >>= preview (ix fieldKey . _String)
-            parseToTType = obj ^? (ix "model" . key "toTType" . _Object) >>= preview (ix fieldKey . _String)
-            parseFromTType = obj ^? (ix "model" . key "fromTType" . _Object) >>= preview (ix fieldKey . _String)
+            parseToTType = obj ^? (ix "toTType" . _Object) >>= preview (ix fieldKey . _String)
+            parseFromTType = obj ^? (ix "fromTType" . _Object) >>= preview (ix fieldKey . _String)
          in FieldDef
               { fieldName = fieldName,
-                haskellType = makeTypeQualified obj haskellType,
+                haskellType = makeTypeQualified impObj haskellType,
+                beamType = makeTypeQualified impObj beamType,
                 sqlType = sqlType,
                 constraints = constraints,
                 defaultVal = defaultValue,
@@ -71,7 +72,7 @@ parseFields obj =
         Nothing -> error "Error Parsing Fields"
 
 getProperConstraint :: String -> FieldConstraint
-getProperConstraint txt = case txt of
+getProperConstraint txt = case (T.unpack . T.strip . T.pack) txt of
   "PrimaryKey" -> PrimaryKey
   "SecondaryKey" -> SecondaryKey
   "NotNull" -> NotNull
@@ -84,6 +85,12 @@ mkList (Object obj) =
     String t -> [(toString k, T.unpack t)]
     _ -> []
 mkList _ = []
+
+toModelList :: Object -> [(String, Object)]
+toModelList obj =
+  KM.toList obj >>= \(k, v) -> case v of
+    Object o -> [(toString k, o)]
+    _ -> []
 
 -- SQL Types --
 findMatchingSqlType :: String -> String
