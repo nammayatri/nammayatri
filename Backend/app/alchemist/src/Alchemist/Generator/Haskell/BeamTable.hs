@@ -74,7 +74,7 @@ generateBeamTable tableDef =
     ++ "import Kernel.Prelude\n"
     ++ "import Tools.Beam.UtilsTH\n"
     -- Add imports here
-    ++ (intercalate "\n" $ map (\i -> "import qualified " ++ i ++ " as " ++ i) $ filter (not . (`elem` notRequiredImports)) $ imports tableDef)
+    ++ intercalate "\n" (map (\i -> "import qualified " ++ i ++ " as " ++ i) (imports tableDef))
     ++ "\n\n"
     ++ "data "
     ++ tableNameHaskell tableDef
@@ -88,5 +88,3 @@ generateBeamTable tableDef =
     ++ primaryKeyToBeam tableDef
     ++ "\n"
     ++ tableInstancesToBeam tableDef
-  where
-    notRequiredImports = ["Domain.Types." ++ (tableNameHaskell tableDef), "Kernel.Prelude", "Kernel.Types.Id"]
