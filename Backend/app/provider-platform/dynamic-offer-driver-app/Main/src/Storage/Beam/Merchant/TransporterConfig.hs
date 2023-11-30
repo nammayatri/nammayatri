@@ -112,8 +112,7 @@ data TransporterConfigT f = TransporterConfigT
     coinConversionRate :: B.C f HighPrecMoney,
     cancellationTimeDiff :: B.C f Seconds,
     coinExpireTime :: B.C f Seconds,
-    cancellationDistDiff :: B.C f Int,
-    considerSpecialZoneRidesForPlanCharges :: B.C f Bool
+    cancellationDistDiff :: B.C f Int
   }
   deriving (Generic, B.Beamable)
 

@@ -135,7 +135,6 @@ data TransporterConfigD u = TransporterConfig
     cancellationTimeDiff :: NominalDiffTime,
     coinExpireTime :: NominalDiffTime,
     cancellationDistDiff :: Int,
-    considerSpecialZoneRidesForPlanCharges :: Bool,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }
