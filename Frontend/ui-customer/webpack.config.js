@@ -17,7 +17,7 @@ module.exports = function(env){
     rules: [
       {
         test: /\.m?js$/,
-        exclude: /(node_modules)/,
+        exclude: /(node_modules|bower_components)/,
         use: {
         loader: 'babel-loader',
         options: {
@@ -31,13 +31,14 @@ module.exports = function(env){
     hints : false
   },
   devServer: {
-    static: {
-      directory: path.join(__dirname, 'dist'),
-    },
+    contentBase: path.join(__dirname, 'dist'),
+    host: "0.0.0.0",
+    inline: false,
     port: 8080
   },
   optimization: {
 
+   usedExports: true,
 
   },
   }
