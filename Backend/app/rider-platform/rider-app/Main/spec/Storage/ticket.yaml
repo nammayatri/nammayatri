@@ -11,6 +11,7 @@ imports:
   SpecialDayType: Domain.Types.SpecialDatesType
   TicketPlaceV1: Domain.Types.TicketPlaceV1
   TicketServiceV1: Domain.Types.TicketServiceV1
+  SpecialOccasion: Domain.Types.SpecialOccasion
 
 TicketPlaceV1:
   tableName: ticker_place
@@ -22,7 +23,7 @@ TicketPlaceV1:
     description : Maybe Text
     lat : Maybe Double
     lon : Maybe Double
-    gallery : [Text]
+    gallery : "[Text]"
     shortDesc : Text
     iconUrl : Maybe Text
     mapImageUrl : Maybe Text
@@ -42,7 +43,10 @@ TicketServiceV1:
     placeId : Text
     serviceName : Text
     shortDesc : Text
-    operationalDays : [Day]
+    operationalDays : "[Day]"
+    maxVerification : Int
+    allowFutureBooking : Bool
+    expiry : Text #InstantExpiry Int | VistDateExpiry TimeOfDay
     bussinessHours : Text #Timings
 
   sqlType:
@@ -56,19 +60,36 @@ TicketServiceV1:
     bussinessHours : NotNull
     operationalDays : NotNull
 
+  queries:
+    updateVerificationById:
+      kvFunction: updateOneWithKV
+      params: [maxVerification, allowFutureBooking]
+      where:
+        and:
+          - id
+          - or: [maxVerification, allowFutureBooking]
 
-SpecialDates:
-  tableName : special_dates
+    getAllServices:
+      kvFunction: findAllWithKV
+      params: []
+      where:
+        and: [id, placeId]
+
+
+SpecialOccasion:
+  tableName : special_occasion
 
   fields :
-    id : Id SpecialDates
+    id : Id SpecialOccasion
     entityId : Text
-    date : Day
+    date : Maybe Day
+    dayOfWeek : Maybe Text
     specialDays : Text #SpecialDayType
+    description : Maybe Text
     businessHours : Text
 
   sqlType:
-    businessHours : Text
+    businessHours : text
 
   constraints :
     id : PrimaryKey | NotNull
@@ -103,6 +124,7 @@ ServiceCategory:
     name: Text
     description: Text
     availableSeats: Int
+    allowedSeats: Int
 
   constraints :
     id : PrimaryKey | NotNull

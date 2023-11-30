@@ -30,6 +30,7 @@ makeTypeQualified obj str = concatMap replaceOrKeep (split (whenElt (`elem` type
       "TimeOfDay" -> Just "Kernel.Prelude"
       "Day" -> Just "Data.Time.Calendar"
       "Int" -> Just "Kernel.Prelude"
+      "Bool" -> Just "Kernel.Prelude"
       "Id" -> Just "Kernel.Types.Id"
       _ -> Nothing
 

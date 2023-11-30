@@ -7,10 +7,23 @@ data TableDef = TableDef
     tableNameSql :: String,
     fields :: [FieldDef],
     imports :: [String],
+    queries :: [QueryDef],
     primaryKey :: [String],
     secondaryKey :: [String]
   }
   deriving (Show)
+
+data QueryDef = QueryDef
+  { queryName :: String,
+    kvFunction :: String,
+    params :: [(String, String)],
+    whereClause :: WhereClause
+  }
+  deriving (Show)
+
+data WhereClause = EmptyWhere | Leaf (String, String) | Query (Operator, [WhereClause]) deriving (Show)
+
+data Operator = And | Or deriving (Show)
 
 data FieldDef = FieldDef
   { fieldName :: String,
