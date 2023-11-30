@@ -19,7 +19,6 @@ import Data.Maybe (listToMaybe)
 import Data.Time (Day, UTCTime (utctDay))
 import qualified Domain.Types.DriverFee as DDF
 import qualified Domain.Types.Invoice as INV
-import Domain.Types.Merchant.TransporterConfig as TC
 import Domain.Types.Person (Person)
 import Domain.Types.Plan (Plan)
 import EulerHS.Prelude hiding (id, state)
@@ -158,12 +157,6 @@ changeAutoPayFeesAndInvoicesForDriverFeesToManual alldriverFeeIdsInBatch validDr
 
 roundToHalf :: HighPrecMoney -> HighPrecMoney
 roundToHalf x = fromInteger (round (x * 2)) / 2
-
-calcNumRides :: DDF.DriverFee -> TC.TransporterConfig -> Int
-calcNumRides driverFee transporterConfig =
-  if transporterConfig.considerSpecialZoneRidesForPlanCharges
-    then driverFee.numRides
-    else driverFee.numRides - driverFee.specialZoneRideCount
 
 calculatePlatformFeeAttr :: HighPrecMoney -> Plan -> (HighPrecMoney, HighPrecMoney, HighPrecMoney)
 calculatePlatformFeeAttr totalFee plan = do
