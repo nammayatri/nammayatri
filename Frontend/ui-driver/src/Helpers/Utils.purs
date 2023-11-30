@@ -105,7 +105,6 @@ foreign import toStringJSON :: forall a. a-> String
 foreign import toInt :: forall a. a -> String
 foreign import setRefreshing :: String -> Boolean -> Unit
 foreign import setEnabled :: String -> Boolean -> Unit
-foreign import fillViewPort :: Fn2 String Boolean Unit
 foreign import decodeErrorCode :: String -> String
 foreign import decodeErrorMessage :: String -> String
 foreign import storeCallBackForNotification :: forall action. (action -> Effect Unit) -> (String -> action) -> Effect Unit
