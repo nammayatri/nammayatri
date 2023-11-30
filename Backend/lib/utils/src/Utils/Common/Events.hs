@@ -11,12 +11,16 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Utils.Common.Events where
 
 -- import Network.HTTP.Types (status503)
 
 -- import Data.List (lookup)
+
+import qualified Control.Concurrent as TD
+import Control.Concurrent.Async
 import Data.UUID.V4 (nextRandom)
 import qualified EulerHS.Runtime as R
 import Kernel.Prelude hiding (app)
@@ -26,14 +30,13 @@ import Kernel.Utils.IOLogging (HasLog)
 import Network.Wai
 import qualified Network.Wai as Wai
 import qualified Network.Wai.Internal as NWI
-import qualified System.Timeout as ST
 
 timeoutEvent :: HasLog env => R.FlowRuntime -> env -> NWI.Response -> Int -> Middleware
 timeoutEvent flowRt appEnv timeoutResponse seconds app req respond = do
-  maybeResponse <- liftIO $ ST.timeout (seconds * 1000000) (app req respond)
-  case maybeResponse of
-    Just response -> pure response
-    Nothing -> do
+  result <- race (app req respond) (TD.threadDelay (seconds * 1000000))
+  case result of
+    Left response -> pure response
+    Right _ -> do
       requestId <- getRequestId $ Wai.requestHeaders req
       runFlowR flowRt appEnv $ timeoutLog requestId
       respond timeoutResponse
