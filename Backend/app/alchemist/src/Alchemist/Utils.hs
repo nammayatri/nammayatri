@@ -28,6 +28,8 @@ makeTypeQualified obj str = concatMap replaceOrKeep (split (whenElt (`elem` type
       "Maybe" -> Just "Kernel.Prelude"
       "Double" -> Just "Kernel.Prelude"
       "TimeOfDay" -> Just "Kernel.Prelude"
+      "Day" -> Just "Data.Time.Calendar"
+      "Int" -> Just "Kernel.Prelude"
       "Id" -> Just "Kernel.Types.Id"
       _ -> Nothing
 
