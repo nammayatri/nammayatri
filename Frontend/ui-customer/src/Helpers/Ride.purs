@@ -20,8 +20,6 @@ import Types.App (FlowBT, ScreenType(..))
 import Control.Monad.Except (runExcept)
 import JBridge
 import Presto.Core.Types.Language.Flow (getLogFields)
-import Engineering.Helpers.Utils (getAppConfig)
-import Constants as Constants
 import ModifyScreenState (modifyScreenState)
 import Control.Monad.Except.Trans (lift)
 import Services.Backend as Remote
@@ -39,17 +37,16 @@ import Screens.Types (Stage(..), SearchResultType(..), PopupType(..), FlowStatus
 import Screens.HomeScreen.Transformer (getDriverInfo, getSpecialTag)
 import Engineering.Helpers.Commons (liftFlow, convertUTCtoISC)
 import Engineering.Helpers.LogEvent (logEvent, logEventWithTwoParams)
-import Storage
+import Storage (KeyStore(..), getValueToLocalStore, isLocalStageOn, setValueToLocalNativeStore, setValueToLocalStore, updateLocalStage)
 import Helpers.Utils (getCurrentDate)
 import Resources.Constants (DecodeAddress(..), decodeAddress, getAddressFromBooking)
 import Data.String (split, Pattern(..))
 import Foreign.Generic (decodeJSON)
 
+
 checkRideStatus :: Boolean -> FlowBT String Unit --TODO:: Need to refactor this function
 checkRideStatus rideAssigned = do
   logField_ <- lift $ lift $ getLogFields
-  config <- getAppConfig Constants.appConfig
-  modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data {config = config}})
   rideBookingListResponse <- lift $ lift $ Remote.rideBookingList "1" "0" "true"
   case rideBookingListResponse of
     Right (RideBookingListRes listResp) -> do
@@ -151,7 +148,6 @@ checkRideStatus rideAssigned = do
                                             Just startTime -> (convertUTCtoISC startTime "DD/MM/YYYY")
                                             Nothing        -> ""
                           }
-                          , config = config
                           , finalAmount = (fromMaybe 0 currRideListItem.computedPrice)
                           , driverInfoCardState {
                             price = resp.estimatedTotalFare,

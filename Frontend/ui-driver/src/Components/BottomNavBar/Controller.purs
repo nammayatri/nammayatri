@@ -20,7 +20,7 @@ import Data.Int (fromString)
 import Data.Maybe as Maybe
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import MerchantConfig.Types (BottomNavConfig)
-import MerchantConfig.Utils (Merchant(..), getMerchant, getValueFromConfig)
+import MerchantConfig.Utils (Merchant(..), getMerchant)
 import Prelude (bottom, ($), (<>), (||), unit, (<>), (==), negate, (/=), (<), (&&))
 import Screens as ScreenNames
 import Screens.Types (BottomNavBarState, NavIcons)

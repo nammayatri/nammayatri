@@ -32,8 +32,8 @@ import Language.Strings (getString)
 import Language.Types(STR(..))
 import Engineering.Helpers.Commons (screenWidth)
 import Common.Types.App
-import MerchantConfig.Utils(getValueFromConfig)
 import Helpers.Utils(fetchImage, FetchImageFrom(..))
+import ConfigProvider
 
 view :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w 
 view push config = 
@@ -48,6 +48,8 @@ view push config =
 
 earningsView :: forall w. Config -> (Action  -> Effect Unit) -> PrestoDOM (Effect Unit) w
 earningsView config push =
+  let feature = (getAppConfig appConfig).feature
+  in 
   linearLayout
   [ width MATCH_PARENT
   , height WRAP_CONTENT
@@ -94,7 +96,7 @@ earningsView config push =
          ]<> FontStyle.tags TypoGraphy
       , textView $ 
          [ height config.textConfig.height
-         , text $ (getValueFromConfig "currency") <> (show $ config.totalEarningsOfDay)
+         , text $ (getCurrency appConfig) <> (show $ config.totalEarningsOfDay)
          , gravity config.textConfig.gravity
          , color config.textConfig.color
          ]<> FontStyle.h2 TypoGraphy
@@ -103,14 +105,14 @@ earningsView config push =
       [ width (V 1)
       , height (V 42)
       , background Color.grey900
-      , visibility if getValueFromConfig "BONUS_EARNED" == "true" then VISIBLE else GONE
+      , visibility if feature.enableBonus then VISIBLE else GONE
       ][]
     , linearLayout
       [ height WRAP_CONTENT
       , orientation VERTICAL
       , gravity CENTER
       , weight 1.0
-      , visibility if getValueFromConfig "BONUS_EARNED" == "true" then VISIBLE else GONE
+      , visibility if feature.enableBonus then VISIBLE else GONE
       ][ textView $ 
          [ height config.bonusTextConfig.height
          , text config.bonusTextConfig.text
@@ -125,7 +127,7 @@ earningsView config push =
          ]
          [ textView $ 
             [ height config.textConfig.height
-            , text $ (getValueFromConfig "currency") <> (show $ config.bonusEarned)
+            , text $ (getCurrency appConfig) <> (show $ config.bonusEarned)
             , color config.bonusTextConfig.color
             ]<> FontStyle.h2 TypoGraphy
          , imageView

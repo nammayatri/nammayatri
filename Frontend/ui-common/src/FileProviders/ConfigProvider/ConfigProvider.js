@@ -13,6 +13,7 @@
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 */
 const JBridge = window.JBridge;
+
 function isObject(item) {
   return (item && typeof item === "object" && !Array.isArray(item));
 }
@@ -26,14 +27,8 @@ export const isDebugBuild = function () {
   }
 }
 
-export const appendConfigToDocument = function (data) {
-  const headID = document.getElementsByTagName("head")[0];
-  console.log(headID)
-  const newScript = document.createElement("script");
-  newScript.type = "text/javascript";
-  newScript.id = "ny-configuration";
-  newScript.innerHTML = data;
-  headID.appendChild(newScript);
+export const evalJSString = function (data) {
+  eval(data);
   return window.getMerchantConfig();
 }
 
@@ -87,15 +82,4 @@ export const loadFileInDUI = function (fileName) {
   } else {
     return "";
   }
-}
-
-// JSON UTILS
-export const stringifyJSON = function (obj) {
-  let result;
-  try{
-    result = JSON.stringify(obj);
-  } catch (errr) {
-    result = ""
-  }
-  return result;
 }

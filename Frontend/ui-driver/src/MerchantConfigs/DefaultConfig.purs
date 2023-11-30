@@ -1,12 +1,12 @@
 module MerchantConfig.DefaultConfig where
 
 import MerchantConfig.Types
+import Common.DefaultConfig
 
 config :: AppConfig
 config =
   { primaryTextColor: "#FCC32C"
   , primaryBackground: "#2C2F3A"
-  , fontType: "Assets"
   , languageList:
       [ { name: "English", value: "EN_US", subtitle: "" }
       , { name: "ಕನ್ನಡ", value: "KN_IN", subtitle: "Kannada" }
@@ -16,7 +16,6 @@ config =
       ]
   , popupBackground : "#FFFFFF"
   , defaultLanguage : "EN_US"
-  , imageUploadOptional : false
   , leaderBoard :{
     isMaskedName : true
   }
@@ -59,9 +58,6 @@ config =
     earnAmountInADay : 2500,
     showFeeBreakup : true
   },
-  features : {
-    enableSuggestions : false
-  },
   showPaymentDetails : true,
   rideActionModelConfig : {
     showVehicleVariant : true
@@ -97,7 +93,7 @@ config =
           showNew : false
         },
       subscription : 
-        { isVisible : false,
+        { isVisible : true,
           showNew : false
         },
       referral : 
@@ -209,5 +205,37 @@ config =
   , homeScreen : {
     specialRideOtpView : false,
     showGenderBanner : true
+  }
+  , colors : defaultColors
+  , primaryButtonConfig : defaultPrimaryButtonConfig
+  , fontConfig : defaultFontConfig
+  , loaderConfig : defaultLoaderConfig
+  , otpRegex :  "is your OTP for login to [A-Za-z]+ [A-Za-z]+ [A-Za-z]+"
+  , termsLink : "https://docs.google.com/document/d/1-oRR_oI8ncZRPZvFZEJZeCVQjTmXTmHA"
+  , privacyLink : "https://docs.google.com/document/d/128VU80K5E1iz-x6QnP1R127m_lwmDO3F"
+  , navigationAppConfig : defaultNavigationAppConfig
+  , genericHeaderConfig : defaultGenericHeader
+  , currency: "₹"
+  , internationalNumberEnabled : false
+  , feature : {
+    enableBonus : false
+  , enableImageUpload : true
+  , enableGender: false
+  , enableOtpRide: false
+  , enableSuggestions : false
+  }
+  , showCorporateAddress : false
+  , engilshInNative: "English"
+  , allowAllMobileNumber: false
+  , vehicle : {
+    validationPrefix :  "KA|AP|TS|DL|TN|PY"
+  }
+  , appData : defaultAppData
+  , banners :{
+    autoPay : true
+  }
+  ,referral: {
+    "type" : "QRScreen"
+  , link : "https://nammayatri.in/link/rider/mvnw"
   }
 }

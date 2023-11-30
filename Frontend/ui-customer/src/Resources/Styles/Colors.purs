@@ -20,8 +20,6 @@ module Styles.Colors ( module Styles.Colors
 import Styles.Types
 import Common.Styles.Colors
 
-import MerchantConfig.Utils (getValueFromConfig)
-
 -- Text Color
 
 textListItemTitle :: Color

@@ -17,7 +17,7 @@ module Screens.EnterMobileNumberScreen.View where
 
 import Data.Maybe (Maybe(..))
 import Prelude (Unit, const, ($), (<<<), (<>), bind, pure , unit, (==))
-import PrestoDOM (Gravity(..), Length(..), LetterSpacing(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), alpha, background, clickable, color, cornerRadius, frameLayout, gravity, height, imageUrl, imageView, linearLayout, margin, onBackPressed, onClick, orientation, padding, stroke, text, textView, visibility, weight, width, afterRender, imageWithFallback)
+import PrestoDOM (Gravity(..), Length(..), LetterSpacing(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), alpha, background, clickable, color, cornerRadius, frameLayout, gravity, height, imageUrl, imageView, linearLayout, margin, onBackPressed, onClick, orientation, padding, stroke, text, textView, visibility, weight, width, afterRender, imageWithFallback, singleLine, textFromHtml)
 import Components.PrimaryEditText.Views as PrimaryEditText
 import Components.PrimaryButton as PrimaryButton
 import Components.MobileNumberEditor as MobileNumberEditor
@@ -36,11 +36,11 @@ import Animation as Anim
 import Animation.Config as AnimConfig
 import Common.Types.App
 import Screens.EnterMobileNumberScreen.ComponentConfig
-import MerchantConfig.Utils (getValueFromConfig)
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Common.Types.App (LazyCheck(..))
 import Prelude ((<>))
 import Debug(spy)
+import ConfigProvider
 
 screen :: ST.EnterMobileNumberScreenState -> Screen Action ST.EnterMobileNumberScreenState ScreenOutput
 screen initialState =
@@ -134,42 +134,27 @@ enterMobileNumberTextView state =
 
 --------------------------------- underlinedTextView ----------------------
 underlinedTextView :: ST.EnterMobileNumberScreenState -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w
-underlinedTextView state push =
- linearLayout
- [ width WRAP_CONTENT
- , height WRAP_CONTENT
- , orientation HORIZONTAL
- ][ textView (
-    [ width WRAP_CONTENT
+underlinedTextView _ _ =
+  let config = getAppConfig appConfig
+  in
+  linearLayout
+  [ height WRAP_CONTENT
+  , orientation HORIZONTAL
+  , weight 1.0
+  ][ textView $
+    [ weight 1.0
     , height WRAP_CONTENT
-    , text $ getString BY_CLICKING_THIS_YOU_WILL_BE_AGREEING_TO_OUR_TC
-    , alpha 0.8
-    , color Color.greyTextColor
-    -- , textSize FontSize.a_14
-    ] <> FontStyle.body3 TypoGraphy),
-    linearLayout
-      [ width WRAP_CONTENT
-      , height WRAP_CONTENT
-      , orientation VERTICAL
-      , onClick (\action -> do
-                  _<- push action
-                  _ <- JB.openUrlInApp $ getValueFromConfig "DOCUMENT_LINK" 
-                  pure unit
-                  ) (const NonDisclosureAgreementAction)
-      ][ textView (
-        [ width WRAP_CONTENT
-        , height WRAP_CONTENT
-        , text (" T&Cs")
-        , color Color.primaryBlue
-        ] <> FontStyle.body3 TypoGraphy)
-      ]
-
+    , textFromHtml $ getString BY_CLICKING_THIS_YOU_WILL_BE_AGREEING_TO_OUR_TC
+    , color Color.black700
+    , onClick (\_ -> JB.openUrlInApp $ config.termsLink) (const NonDisclosureAgreementAction)
+    , singleLine false
+    ] <> FontStyle.body3 TypoGraphy
  ]
 
 -------------------------------- termsAndConditionsView ------------------
 termsAndConditionsView :: ST.EnterMobileNumberScreenState -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w
 termsAndConditionsView state push =
- linearLayout
+  linearLayout
   [ width MATCH_PARENT
   , height WRAP_CONTENT
   , orientation HORIZONTAL

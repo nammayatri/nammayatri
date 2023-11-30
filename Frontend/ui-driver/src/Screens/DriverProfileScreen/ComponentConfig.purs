@@ -46,8 +46,8 @@ import Prelude
 import Screens.DriverProfileScreen.Controller
 import Effect (Effect)
 import Helpers.Utils (getPeriod, fetchImage, FetchImageFrom(..))
-import MerchantConfig.Utils (getValueFromConfig)
 import Font.Style (Style(..))
+import ConfigProvider
 
 logoutPopUp :: ST.DriverProfileScreenState -> PopUpModal.Config
 logoutPopUp  state = let
@@ -467,6 +467,7 @@ getChipRailArray :: Int -> String -> Array String -> String -> Array ST.ChipRail
 getChipRailArray lateNightTrips lastRegistered lang totalDistanceTravelled =
   let
     alive = getPeriod lastRegistered
+    appData = (getAppConfig appConfig).appData
   in
     ( if lateNightTrips > 0 then
         [ { mainTxt: show lateNightTrips
@@ -477,7 +478,7 @@ getChipRailArray lateNightTrips lastRegistered lang totalDistanceTravelled =
         []
     ) <>
     ( [ { mainTxt: if alive.periodType == "new" then "" else (show alive.period) <> " " <> alive.periodType
-          , subTxt: "on " <> getValueFromConfig "clientName"
+          , subTxt: "on " <> appData.name
           }
         ]
     )<>

@@ -19,8 +19,10 @@ module Helpers.Utils
     )
     where
 
-import Accessor (_distance_meters, _payload, _deeplinkOptions)
-import Common.Types.App (EventPayload(..), GlobalPayload(..), LazyCheck(..), Payload(..), InnerPayload, CarouselModal, DeeplinkOptions(..))
+import ConfigProvider
+import DecodeUtil
+import Accessor (_deeplinkOptions, _distance_meters, _payload, _search_type, _paymentMethod)
+import Common.Types.App (EventPayload(..), GlobalPayload(..), LazyCheck(..), Payload(..), InnerPayload, DeeplinkOptions(..))
 import Components.LocationListItem.Controller (locationListStateObj)
 import Control.Monad.Except (runExcept)
 import Control.Monad.Free (resume)
@@ -67,7 +69,7 @@ import Juspay.OTP.Reader as Readers
 import Juspay.OTP.Reader.Flow as Reader
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import MerchantConfig.Utils (Merchant(..), getMerchant, getValueFromConfig)
+import MerchantConfig.Utils (Merchant(..), getMerchant)
 import Prelude (class Eq, class Ord, class Show, Unit, bind, compare, comparing, discard, identity, map, mod, not, pure, show, unit, void, ($), (&&), (*), (+), (-), (/), (/=), (<), (<#>), (<$>), (<*>), (<<<), (<=), (<>), (=<<), (==), (>), (>=), (>>>), (||))
 import Prelude (class EuclideanRing, Unit, bind, discard, identity, pure, unit, void, ($), (+), (<#>), (<*>), (<>), (*>), (>>>), ($>), (/=), (&&), (<=), show, (>=), (>), (<))
 import Presto.Core.Flow (Flow, doAff)
@@ -204,10 +206,12 @@ convertUTCToISTAnd12HourFormat inputTime = do
   
 otpRule :: Reader.OtpRule
 otpRule =
+  let config = getAppConfig appConfig
+  in
   Reader.OtpRule
     { matches:
         { sender: []
-        , message : (getValueFromConfig "OTP_MESSAGE_REGEX")
+        , message : config.otpRegex
         }
     , otp: "\\d{4}"
     , group: Nothing
@@ -451,7 +455,9 @@ reverse' :: String -> String
 reverse' = fromCharArray <<< reverse <<< toCharArray
 
 getVehicleSize :: Unit -> Int
-getVehicleSize unit = (getValueFromConfig "vehicleMarkerSize")
+getVehicleSize unit = 
+  let mapConfig = (getAppConfig appConfig).mapConfig
+  in mapConfig.vehicleMarkerSize
 
 getScreenFromStage :: Stage -> String
 getScreenFromStage stage = case stage of
@@ -479,26 +485,20 @@ getScreenFromStage stage = case stage of
   PickUpFarFromCurrentLocation -> "finding_driver_loader"
   LoadMap -> "map_loader"
 
-getGlobalPayload :: Unit -> Effect (Maybe GlobalPayload)
-getGlobalPayload _ = do
-  payload  ::  Either MultipleErrors GlobalPayload  <- runExcept <<< decode <<< fromMaybe (unsafeToForeign {}) <$> (getWindowVariable "__payload" Just Nothing)
-  pure $ hush payload
+getGlobalPayload :: String -> Maybe GlobalPayload
+getGlobalPayload key = do
+  let mBPayload = runFn3 getFromWindow key Nothing Just
+  maybe (Nothing) (\payload -> decodeForeignObjImpl payload) mBPayload
 
 getSearchType :: Unit -> String
-getSearchType _ = do 
-  let payload = unsafePerformEffect $ getGlobalPayload unit
-  case payload of
-    Just (GlobalPayload payload') -> do
-      let (Payload innerPayload) = payload'.payload
-      case innerPayload.search_type of
-        Just a -> a 
-        Nothing -> "normal_search"
-    Nothing -> "normal_search"
+getSearchType _ = 
+  let mBPayload = getGlobalPayload globalPayload
+  in maybe ("normal_search") (\payload -> fromMaybe "normal_search" $ payload ^. _payload ^. _search_type) mBPayload
 
 getDeepLinkOptions :: LazyCheck -> Maybe DeeplinkOptions
-getDeepLinkOptions _ = do 
-  let mBPayload = unsafePerformEffect $ getGlobalPayload unit
-  maybe Nothing (\payload -> payload ^. _payload ^. _deeplinkOptions) mBPayload
+getDeepLinkOptions _ = 
+  let mBPayload = getGlobalPayload globalPayload
+  in maybe Nothing (\payload -> payload ^. _payload ^. _deeplinkOptions) mBPayload
 
 isParentView :: LazyCheck -> Boolean
 isParentView lazy = maybe false (\(DeeplinkOptions options) -> fromMaybe false options.parent_view) $ getDeepLinkOptions lazy
@@ -507,15 +507,9 @@ showTitle :: LazyCheck -> Boolean
 showTitle lazy = maybe true (\(DeeplinkOptions options) -> fromMaybe false options.show_title) $ getDeepLinkOptions lazy 
 
 getPaymentMethod :: Unit -> String
-getPaymentMethod _ = do 
-  let payload = unsafePerformEffect $ getGlobalPayload unit
-  case payload of
-    Just (GlobalPayload payload') -> do
-      let (Payload innerPayload) = payload'.payload
-      case innerPayload.payment_method of
-        Just a -> a 
-        Nothing -> "cash"
-    Nothing -> "cash"
+getPaymentMethod _ = 
+  let mBPayload = getGlobalPayload globalPayload
+  in maybe ("cash") (\payload -> fromMaybe "cash" $ payload ^. _payload ^. _paymentMethod) mBPayload
 
 
 triggerRideStatusEvent :: String -> Maybe Int -> Maybe String -> String -> Flow GlobalState Unit 

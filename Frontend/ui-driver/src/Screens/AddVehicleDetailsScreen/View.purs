@@ -44,7 +44,6 @@ import PaymentPage (consumeBP)
 import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import MerchantConfig.Utils (getValueFromConfig)
 import Prelude (Unit, bind, const, discard, not, pure, unit, void, ($), (&&), (/=), (<<<), (<>), (==), (>=), (||))
 import Presto.Core.Types.Language.Flow (Flow, doAff, delay)
 import PrestoDOM (BottomSheetState(..), Gravity(..), InputType(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, alignParentBottom, alignParentRight, alpha, background, clickable, color, cornerRadius, editText, ellipsize, fontStyle, frameLayout, gravity, height, hint, id, imageUrl, imageView, imageWithFallback, inputType, inputTypeI, layoutGravity, linearLayout, margin, maxLines, onBackPressed, onChange, onClick, orientation, padding, pattern, relativeLayout, scrollView, stroke, text, textFromHtml, textSize, textView, visibility, weight, width)
@@ -59,6 +58,8 @@ import Screens.Types (AddVehicleDetailsScreenState, StageStatus(..), ValidationS
 import Styles.Colors as Color
 import Types.App (GlobalState(..), defaultGlobalState)
 import Data.String.Common as DSC
+import Effect.Uncurried (runEffectFn1)
+import ConfigProvider
 
 screen :: AddVehicleDetailsScreenState -> Screen Action AddVehicleDetailsScreenState ScreenOutput
 screen initialState =
@@ -405,7 +406,9 @@ vehicleRegistrationNumber state push =
 
 ----------------------------------------------------------------- uploadRC ------------------------------------------------------
 uploadRC :: AddVehicleDetailsScreenState -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w
-uploadRC state push = 
+uploadRC state push =
+  let feature = (getAppConfig appConfig).feature
+  in
   linearLayout
   [ width MATCH_PARENT
   , height WRAP_CONTENT
@@ -424,7 +427,7 @@ uploadRC state push =
           ][ textView
             ([ width WRAP_CONTENT
             , height WRAP_CONTENT
-            , text (getString UPLOAD_REGISTRATION_CERTIFICATE)
+            , text $ (getString UPLOAD_REGISTRATION_CERTIFICATE)
             , color Color.greyTextColor
             , margin (MarginBottom 10)
             ] <> FontStyle.body3 TypoGraphy)

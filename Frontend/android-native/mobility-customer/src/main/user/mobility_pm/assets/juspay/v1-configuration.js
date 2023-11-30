@@ -1,8 +1,9 @@
 window.version = window.version || {};
 let version = "1.0.0";
-if (typeof __VERSION__ !== 'undefined') {
+if (typeof __VERSION__ !== "undefined") {
   version = __VERSION__
 }
+
 window.version["configuration"]= version;
 window.getMerchantConfig = function () {
   return JSON.stringify({
@@ -60,6 +61,8 @@ window.getMerchantConfig = function () {
           "showRateCardDetails": true,
           "showAdditionalChargesText" : false,
           "lottieHeight": 96,
+          "enableRateCard" : false,
+          
           "lottieWidth": 96,
           "primaryButtonHeight": 60,
           "backArrow": "ny_ic_chevron_left,https://assets.juspay.in/beckn/mobilitypaytm/mobilitypaytmcommon/ny_ic_chevron_left.png"
@@ -176,7 +179,20 @@ window.getMerchantConfig = function () {
         "query" : "google.navigation:q=%f,%f"
       , "packageName" : "com.google.android.apps.maps"
     }
-    , "estimateAndQuoteConfig" : { "enableOnlyAuto" : true
+    , "feature" : {
+      "enableAutoReadOtp" : false,
+      "enableShareRide" : false,
+      "enableChat": false,
+      "enableEmergencyContacts": false,
+      "enableReferral": false,
+      "enableSupport": false,
+      "enableShareApp": false
+    }
+    , "dashboard" : {
+      "enable" : false
+    }
+    , "fontConfig" : {
+      "type" : "System"
     }
   })
 }

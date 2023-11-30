@@ -41,7 +41,7 @@ import Engineering.Helpers.Commons (getNewIDWithTag, setText)
 import Helpers.Utils (renderBase64ImageFile, contactSupportNumber)
 import JBridge (disableActionEditText, hideKeyboardOnNavigation, openWhatsAppSupport, renderCameraProfilePicture, showDialer, uploadFile)
 import Log (printLog, trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppTextInput, trackAppScreenEvent)
-import MerchantConfig.Utils (Merchant(..), getMerchant, getValueFromConfig)
+import MerchantConfig.Utils (Merchant(..), getMerchant)
 import Prelude (Unit, bind, pure, ($), class Show, unit, void, (/=), discard, (==), (&&), (||), not, (<=), (>), (<>), (<), show, (+))
 import PrestoDOM (Eval, Props, continue, continueWithCmd, exit, updateAndExit, toast)
 import PrestoDOM.Types.Core (class Loggable)
@@ -49,6 +49,7 @@ import Screens (ScreenName(..), getScreen)
 import Screens.Types (AddVehicleDetailsScreenState, VehicalTypes(..), StageStatus(..))
 import Services.Config (getSupportNumber, getWhatsAppSupportNo)
 import Effect.Unsafe (unsafePerformEffect)
+import ConfigProvider
 
 instance showAction :: Show Action where
   show _ = ""
@@ -405,5 +406,6 @@ dateFormat date = if date < 10 then "0" <> (show date) else (show date)
 
 validateRegistrationNumber :: String -> Boolean
 validateRegistrationNumber regNum =
-  let values = split (Pattern "|") $ getValueFromConfig ("RC_VALIDATION_TEXT")
+  let vehicleConfig = (getAppConfig appConfig).vehicle
+      values = split (Pattern "|") $ vehicleConfig.validationPrefix
   in regNum `elem` values

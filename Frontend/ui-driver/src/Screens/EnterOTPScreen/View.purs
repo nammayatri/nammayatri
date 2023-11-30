@@ -16,7 +16,7 @@
 module Screens.EnterOTPScreen.View where
 import Data.Maybe (Maybe(..))
 import Prelude (Unit, const, bind, pure, unit, ($), (<<<), (<>), (==), (>), discard)
-import PrestoDOM (Gravity(..), Length(..), LetterSpacing(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), alpha, background, clickable, color, fontStyle, gravity, height, imageUrl, imageView, linearLayout, margin, onBackPressed, onClick, orientation, padding, text, textSize, textView, weight, width, afterRender, visibility, imageWithFallback)
+import PrestoDOM (Gravity(..), Length(..), LetterSpacing(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), alpha, background, clickable, color, fontStyle, gravity, height, imageUrl, imageView, linearLayout, margin, onBackPressed, onClick, orientation, padding, text, textSize, textView, weight, width, afterRender, visibility, imageWithFallback, textFromHtml)
 import Components.PrimaryEditText.Views as PrimaryEditText
 import Components.PrimaryButton as PrimaryButton
 import Effect (Effect)
@@ -197,31 +197,17 @@ underlinedTextView state push =
       , onClick push (const ResendOTP)
       ][  textView $
           [ height WRAP_CONTENT
-          , width WRAP_CONTENT
-          , text (getString RESEND_OTP)
+          , weight 1.0
+          , textFromHtml (getString RESEND_OTP)
           , color Color.mainPrimary
           , visibility if state.props.resendEnabled then VISIBLE else GONE
           ] <> FontStyle.body6 LanguageStyle
         , textView $
           [ height WRAP_CONTENT
-          , width WRAP_CONTENT
-          , text $  (getString RESEND_OTP_IN) <> "  " <> state.data.timer
+          , weight 1.0
+          , textFromHtml $  (getString RESEND_OTP_IN) <> "  " <> state.data.timer
           , visibility if state.props.resendEnabled then GONE else VISIBLE
           , color if state.props.resendEnabled then Color.mainPrimary else Color.black700
           ] <> FontStyle.body6 LanguageStyle
-        , textView
-          [ height $ V 1
-          , width MATCH_PARENT
-          , background  Color.black700
-          , margin $ MarginHorizontal 1 2
-          , visibility if state.props.resendEnabled then GONE else VISIBLE
-          ]
-        , textView
-          [ height $ V 1
-          , width MATCH_PARENT
-          , background Color.mainPrimary
-          , margin $ MarginHorizontal 1 2
-          , visibility if state.props.resendEnabled then VISIBLE else GONE
-          ]
       ]
  ]

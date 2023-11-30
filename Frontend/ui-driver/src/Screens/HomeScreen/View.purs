@@ -63,7 +63,6 @@ import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (printLog)
-import MerchantConfig.Utils (getValueFromConfig)
 import MerchantConfig.Utils as MU
 import Prelude (Unit, bind, const, discard, not, pure, unit, void, ($), (&&), (*), (-), (/), (<), (<<<), (<>), (==), (>), (>=), (||), (<=), show, void, (/=), when, map, otherwise, (+), negate)
 import Presto.Core.Types.Language.Flow (Flow, delay, doAff)
@@ -442,7 +441,7 @@ alternateNumberOrOTPView state push =
       , width MATCH_PARENT
       , gravity if showAddAltNumber then CENTER else RIGHT
       ][  addAlternateNumber push state showAddAltNumber
-        , if state.data.config.homeScreen.specialRideOtpView then otpButtonView state push else dummyTextView
+        , if state.data.config.feature.enableOtpRide then otpButtonView state push else dummyTextView
         ]
       ]
   where showAddAltNumber = (state.data.driverAlternateMobile == Nothing || state.props.showlinkAadhaarPopup) && state.props.statusOnline
@@ -454,7 +453,7 @@ genderBannerView state push =
     , width MATCH_PARENT
     , orientation VERTICAL
     , margin $ Margin 10 0 10 10
-    , visibility if state.data.config.homeScreen.showGenderBanner then VISIBLE else GONE
+    , visibility if state.data.config.feature.enableGender then VISIBLE else GONE
     , gravity BOTTOM
     ][
     linearLayout

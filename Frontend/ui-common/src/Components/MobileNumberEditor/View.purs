@@ -35,8 +35,9 @@ import Components.MobileNumberEditor.CountryCodeConfig (getCountryCodesObj)
 import Effect.Aff (killFiber, launchAff, launchAff_)
 import Engineering.Helpers.Commons (flowRunner, getWindowVariable, liftFlow)
 import Types.App (defaultGlobalState, FlowBT, ScreenType(..))
-import MerchantConfig.Utils (getMerchant, Merchant(..), getValueFromConfig)
+import MerchantConfig.Utils (getMerchant, Merchant(..))
 import Common.Animation.Config (listExpandingAnimationConfig)
+import ConfigProvider
 
 view :: forall w .  (Action  -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push config = 
@@ -90,6 +91,8 @@ editTextLayout push config =
 
 countryCodeCaptureView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 countryCodeCaptureView push config  =
+  let uiConfig = getAppConfig appConfig
+  in
   linearLayout
     [ 
       height config.countryCodeCaptureConfig.height
@@ -101,7 +104,7 @@ countryCodeCaptureView push config  =
     , gravity CENTER
     , cornerRadius config.countryCodeCaptureConfig.cornerRadius
     , onClick  push $ const $ (if not config.countryCodeField.countryCodeOptionExpanded then  ShowOptions else CloseOptions)
-    , clickable $ getValueFromConfig "internationalNumberEnabled"
+    , clickable $ uiConfig.internationalNumberEnabled
     ] $
     [ 
       textView $
@@ -117,7 +120,7 @@ countryCodeCaptureView push config  =
           [ height WRAP_CONTENT
           , width WRAP_CONTENT
           , gravity RIGHT
-          , visibility if getValueFromConfig "internationalNumberEnabled" then VISIBLE else GONE
+          , visibility if uiConfig.internationalNumberEnabled then VISIBLE else GONE
           ]
           [ imageView
             [ imageWithFallback $ fetchImage FF_COMMON_ASSET if config.countryCodeField.countryCodeOptionExpanded then "ny_ic_chevron_up" else "ny_ic_chevron_down"

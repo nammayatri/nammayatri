@@ -15,8 +15,6 @@
 
 module Types.App where
 
-import Prelude
-
 import Control.Monad.Except.Trans (ExceptT)
 import Control.Monad.Free (Free)
 import Control.Transformers.Back.Trans (BackT)
@@ -47,6 +45,8 @@ import Screens.AppUpdatePopUp.ScreenData as AppUpdatePopUpScreenData
 import Foreign.Object ( Object(..), empty)
 import Services.API (BookingStatus(..))
 import Foreign (Foreign)
+import MerchantConfig.Types (AppConfig)
+import Data.Maybe (Maybe(..))
 
 type FlowBT e a = BackT (ExceptT e (Free (FlowWrapper GlobalState))) a
 
@@ -74,6 +74,7 @@ newtype GlobalState = GlobalState {
   , loaderOverlay :: LoaderScreenScreenData.LoaderOverlayState
   , ticketBookingScreen :: TicketBookingScreenState
   , ticketInfoScreen :: TicketInfoScreenState
+  , appConfig :: Maybe AppConfig
   }
 
 defaultGlobalState :: GlobalState
@@ -101,6 +102,7 @@ defaultGlobalState = GlobalState {
   , loaderOverlay : LoaderScreenScreenData.initData
   , ticketBookingScreen : TicketBookingScreenData.initData
   , ticketInfoScreen : TicketInfoScreenData.initData
+  , appConfig : Nothing
   }
 
 data ACCOUNT_SET_UP_SCREEN_OUTPUT = GO_HOME AccountSetUpScreenState | GO_BACK
@@ -221,3 +223,4 @@ data ScreenType =
   | PermissionScreenStateType (PermissionScreenState -> PermissionScreenState)
   | AboutUsScreenStateType (AboutUsScreenState -> AboutUsScreenState)
   | AppUpdatePopUpScreenType (AppUpdatePopUpState -> AppUpdatePopUpState)
+  | AppConfigType (Maybe AppConfig -> Maybe AppConfig)

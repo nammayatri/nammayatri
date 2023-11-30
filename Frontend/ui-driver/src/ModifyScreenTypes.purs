@@ -69,7 +69,6 @@ modifyScreenState st =
     ChooseCityScreenStateType a-> modifyState (\(GlobalState state) -> GlobalState $ state {chooseCityScreen = a state.chooseCityScreen})
     WelcomeScreenStateType a-> modifyState (\(GlobalState state) -> GlobalState $ state {welcomeScreen = a state.welcomeScreen})
 
-
 updateStage :: ScreenStage -> FlowBT String Unit
 updateStage stage = do
   case stage of

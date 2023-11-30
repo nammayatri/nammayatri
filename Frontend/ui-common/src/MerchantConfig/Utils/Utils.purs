@@ -20,7 +20,6 @@ import Language.Types (STR(..))
 
 foreign import getStringFromConfig :: forall a. STR -> (a -> Maybe a) -> (Maybe a) -> Maybe String
 
-foreign import getValueFromConfig :: forall a. String -> a
 foreign import getMerchantId :: String -> Foreign
 
 foreign import getStringWithVar :: String -> Array String -> String

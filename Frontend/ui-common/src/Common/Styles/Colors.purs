@@ -1,7 +1,7 @@
 module Common.Styles.Colors where
 
 import Styles.Types
-import MerchantConfig.Utils (getValueFromConfig)
+import ConfigProvider
 
 -- General Colors
 black :: Color
@@ -139,16 +139,20 @@ transparent = "#00FFFFFF"
 
 
 black800 :: Color
-black800 = getValueFromConfig "black800"
+black800 = 
+  let config = getAppConfig appConfig
+  in config.colors.black800
 
 black900 :: Color
-black900 = getValueFromConfig "black900"
+black900 =   let config = getAppConfig appConfig
+  in config.colors.black900
 
 black6000 :: Color
 black6000 = "#565961"
 
 red :: Color
-red = getValueFromConfig "red"
+red = let config = getAppConfig appConfig
+  in config.colors.red
 
 blueMagenta :: Color 
 blueMagenta = "#9747FF"

@@ -17,7 +17,7 @@ module Screens.EnterMobileNumberScreen.ScreenData where
 
 import Data.Monoid.MList (get)
 import Foreign.Object (empty)
-import MerchantConfig.DefaultConfig as DC
+import ConfigProvider
 import PrestoDOM (LetterSpacing(..))
 import Screens.Types (EnterMobileNumberScreenState)
 import Common.Types.App (OTPChannel(..))
@@ -36,7 +36,7 @@ initData = {
     , otp : ""
     , timer : 30
     , timerID : ""
-    , config : DC.config
+    , config : getAppConfig appConfig
     , logField : empty 
     , otpChannel : SMS
     },

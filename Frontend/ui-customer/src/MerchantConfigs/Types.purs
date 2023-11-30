@@ -1,17 +1,18 @@
 module MerchantConfig.Types where
 
-type AppConfig =
+import Common.Types.Config
+
+type AppConfig = AppConfigCustomer CommonAppConfig
+
+type AppConfigCustomer a =
   {
     primaryTextColor :: String,
     primaryBackground :: String,
-    currency :: String,
     estimateConfirmText :: String,
     autoConfirmingLoaderColor :: String,
     quoteListModelBackground :: String,
     quoteListModel :: QuoteListConfig,
     profileBackground :: String,
-    isGradient :: String,
-    gradient :: Array String,
     showPickUpandDrop :: Boolean,
     profileName :: String,
     profileImage :: String,
@@ -34,7 +35,6 @@ type AppConfig =
     profileEditGravity :: String,
     merchantLogo :: String,
     logs :: Array String,
-    showCorporateAddress :: Boolean,
     searchLocationConfig :: SearchLocationConfig,
     quoteListItemConfig :: QuoteListItemConfig,
     alertDialogPrimaryColor :: String,
@@ -50,8 +50,6 @@ type AppConfig =
   , showGenderBanner :: Boolean
   , enableMockLocation :: Boolean
   , specialLocationView :: Boolean
-  , internationalNumberEnabled :: Boolean
-  , dashboardUrl :: String 
   , callOptions :: Array String
   , autoVariantEnabled :: Boolean
   , showDisabilityBanner :: Boolean
@@ -60,14 +58,14 @@ type AppConfig =
   , notifyRideConfirmationConfig :: NotifyRideConfirmationConfig
   , estimateAndQuoteConfig :: EstimateAndQuoteConfig
   , customerTip :: CustomerTip
-  , enableContactSupport :: Boolean
-  , features :: Features
+  , feature :: Features
   , rideCompletedCardConfig :: RideCompletedCardConfig
   , purpleRideConfig :: PurpleRideConfig
-  , enableGeocoder :: Boolean -- TODO:: Deprecated 21st Nov 2023
   , geoCoder :: GeoCoderConfig
-  , appLink :: String
+  , shareAppConfig :: ShareAppConfig
+  , dashboard :: DashboardConfig
   , homeScreen :: HomeScreen
+  | a
   }
 
 type GeoCoderConfig = {
@@ -141,6 +139,8 @@ type SearchLocationConfig = {
 , editTextDefaultColor :: String
 , hintColor :: String
 , showSeparator :: Boolean
+, showChargeDesc :: Boolean
+, enableRateCard :: Boolean
 }
 
 type QuoteListConfig = {
@@ -197,8 +197,10 @@ type TerminateBtnConfig = {
 
 type EstimateAndQuoteConfig = {
   variantTypes :: Array (Array String),
-  variantOrder :: Array String
-  , enableOnlyAuto :: Boolean
+  variantOrder :: Array String,
+  enableOnlyAuto :: Boolean,
+  showNearByDrivers :: Boolean,
+  enableBookingPreference :: Boolean
 }
 
 type CustomerTip = {
@@ -210,7 +212,13 @@ type Features = {
   enableAutoReadOtp :: Boolean ,
   enableZooTicketBookingFlow :: Boolean,
   enableLiveDashboard :: Boolean,
-  enableSuggestions :: Boolean
+  enableSuggestions :: Boolean,
+  enableShareRide :: Boolean,
+  enableChat :: Boolean,
+  enableEmergencyContacts :: Boolean,
+  enableReferral :: Boolean,
+  enableSupport :: Boolean,
+  enableShareApp:: Boolean
   }
 
 type RideCompletedCardConfig = {
@@ -226,7 +234,8 @@ type TopCardConfig = {
 type MapConfig = {
   locateOnMapConfig :: LocateOnMapConfigs,
   labelTextSize :: Int,
-  animationDuration :: Int
+  animationDuration :: Int,
+  vehicleMarkerSize :: Int
 }
 
 type LocateOnMapConfigs = {
@@ -247,6 +256,7 @@ type PurpleRideConfig = {
   physicalImpairmentVideo :: String,
   hearingImpairmentVideo :: String
 }
+
 type HomeScreen = {
   primaryBackground :: String,
   pickUpViewColor :: String,
@@ -281,4 +291,14 @@ type ShadowConfig = {
   y :: Number,
   spread :: Number,
   opacity :: Number
+}
+
+type ShareAppConfig = {
+  title :: String
+, description :: String
+}
+
+type DashboardConfig = {
+    url :: String
+  , enable :: Boolean
 }

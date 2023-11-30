@@ -39,11 +39,11 @@ import Language.Types(STR(..))
 import JBridge(dateCallback)
 import Data.Function.Uncurried(runFn2)
 import Debug
-import MerchantConfig.Utils (getValueFromConfig)
 import Components.PopUpModal as PopUpModal
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Common.Types.App (LazyCheck(..))
+import ConfigProvider
 
 
 screen :: ST.AppUpdatePopUpScreenState -> ScopedScreen Action ST.AppUpdatePopUpScreenState ScreenOutput
@@ -142,6 +142,8 @@ primaryButtonConfig val = let
 
 updateRequiredView :: forall w. (Action  -> Effect Unit) -> ST.AppUpdatePopUpScreenState -> PrestoDOM (Effect Unit) w
 updateRequiredView push state =
+  let appData = (getAppConfig appConfig).appData
+  in
   linearLayout [
     width MATCH_PARENT
     , height MATCH_PARENT
@@ -234,7 +236,7 @@ updateRequiredView push state =
                   , color Color.yellowText
                   , onClick (\action -> do
                               _<- push action
-                              _ <- JB.openUrlInApp $ getValueFromConfig "APP_LINK"
+                              _ <- JB.openUrlInApp $ appData.link
                               pure unit
                               ) (const OnAccept)
               ] <> FontStyle.body4 LanguageStyle

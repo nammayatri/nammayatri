@@ -23,10 +23,10 @@ import Font.Style as FontStyle
 import Font.Size as FontSize
 import Halogen.VDom.DOM.Prop (Prop)
 import Components.PopUpModal as PopUpModal
-import MerchantConfig.Utils (getValueFromConfig)
 import Language.Strings (getString)
 import JBridge as JB
 import Data.Function.Uncurried (runFn1)
+import ConfigProvider
 
 view :: forall w. Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 view config push =
@@ -530,7 +530,9 @@ badgeCardView config push =
 
 ---------------------------------------------- (Driver Card 6) driverFareBreakUpView  ------------------------------------------------------------------------------------------------------------------------------------------
 driverFareBreakUpView ::  forall w. Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w 
-driverFareBreakUpView config push = 
+driverFareBreakUpView config push =
+  let currency = (getAppConfig appConfig).currency
+  in
   linearLayout[
     width MATCH_PARENT
   , height WRAP_CONTENT
@@ -565,7 +567,7 @@ driverFareBreakUpView config push =
               , padding $ PaddingHorizontal 8 8
               ][
                 textView $ [
-                  text $ (getValueFromConfig "currency") <> (show item.amount)
+                  text $ currency <> (show item.amount)
                 , color Color.pigmentGreen
                 , margin $ MarginRight 8
                 ] <> FontStyle.h0 LanguageStyle

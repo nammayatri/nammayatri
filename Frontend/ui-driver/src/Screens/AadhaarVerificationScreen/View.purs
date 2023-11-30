@@ -34,7 +34,6 @@ import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (printLog)
-import MerchantConfig.Utils (getValueFromConfig)
 import Prelude (Unit, bind, const, discard, not, pure, unit, ($), (<<<), (<>), (==), (&&), (/=))
 import PrestoDOM (Gravity(..), Length(..), LetterSpacing(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, alpha, background, clickable, color, cornerRadius, frameLayout, gravity, height, imageUrl, imageView, imageWithFallback, linearLayout, margin, onBackPressed, onClick, orientation, padding, relativeLayout, stroke, text, textFromHtml, textView, visibility, weight, width)
 import PrestoDOM.Animation as PrestoAnim
@@ -42,6 +41,7 @@ import Screens.AadhaarVerificationScreen.Controller (Action(..), ScreenOutput, e
 import Screens.Types (AadhaarStage(..))
 import Screens.Types as ST
 import Styles.Colors as Color
+import ConfigProvider
 
 screen :: ST.AadhaarVerificationScreenState -> Screen Action ST.AadhaarVerificationScreenState ScreenOutput
 screen initialState =
@@ -295,7 +295,9 @@ enterAadhaarOTPView push state =
 -------------------------------- termsAndConditionsView ------------------
 termsAndConditionsView :: ST.AadhaarVerificationScreenState -> forall w . PrestoDOM (Effect Unit) w
 termsAndConditionsView _ =
- linearLayout
+  let config = getAppConfig appConfig
+  in
+  linearLayout
   [ width MATCH_PARENT
   , height WRAP_CONTENT
   , orientation HORIZONTAL
@@ -316,7 +318,7 @@ termsAndConditionsView _ =
         , height WRAP_CONTENT
         , textFromHtml $ "<u>" <> (getString TERMS_AND_CONDITIONS_SHORT) <> "</u>"
         , color Color.primaryBlue
-        , onClick (\_ -> JB.openUrlInApp $ getValueFromConfig "DOCUMENT_LINK") (const unit)
+        , onClick (\_ -> JB.openUrlInApp $ config.termsLink) (const unit)
         ] <> FontStyle.body3 TypoGraphy
       , textView $
         [ width WRAP_CONTENT

@@ -41,7 +41,6 @@ import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (printLog)
-import MerchantConfig.Utils (getValueFromConfig)
 import Prelude (Unit, bind, const, discard, not, pure, show, unit, when, ($), (&&), (/=), (<<<), (<>), (==), (>=), (||), (-))
 import Presto.Core.Types.Language.Flow (doAff)
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), Accessiblity(..), afterRender, alpha, background, clickable, color, fontStyle, frameLayout, gravity, height, lineHeight, linearLayout, margin, onBackPressed, onClick, orientation, padding, singleLine, text, textSize, textView, visibility, weight, width, textFromHtml, accessibility, accessibilityHint)
@@ -122,6 +121,8 @@ view push state = let
 ---------------------------------- enterMobileNumberView -----------------------------------
 enterMobileNumberView:: ST.EnterMobileNumberScreenState  -> String -> (Action -> Effect Unit)  -> forall w . PrestoDOM (Effect Unit) w
 enterMobileNumberView  state lang push =
+  let config = state.data.config
+  in
   linearLayout
     [ height WRAP_CONTENT
     , width MATCH_PARENT
@@ -139,7 +140,7 @@ enterMobileNumberView  state lang push =
             , margin (Margin 0 8 0 12)
             , visibility  if state.props.countryCodeOptionExpanded then GONE else VISIBLE
             ][ commonTextView state (getString BY_TAPPING_CONTINUE) false Nothing push false false ""
-            , commonTextView state " &nbsp; <u>T&Cs</u>" true (Just (getValueFromConfig "DOCUMENT_LINK")) push true true ( " By Clicking Continue: You Agree To Our Terms And Conditions" )
+            , commonTextView state " &nbsp; <u>T&Cs</u>" true (Just config.termsLink) push true true ( " By Clicking Continue: You Agree To Our Terms And Conditions" )
               ]
         , PrestoAnim.animationSet
           [ Anim.fadeIn $ not state.props.enterOTP 

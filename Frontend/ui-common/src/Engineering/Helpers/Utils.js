@@ -1,11 +1,4 @@
 const JBridge = window.JBridge;
-export const getFromWindow = function (key) {
-  if (typeof window[key] !== "undefined") {
-    return window[key];
-  } else {
-    return {};
-  }
-}
 
 export const saveToLocalStoreImpl = function(key) {
   return function (state) {

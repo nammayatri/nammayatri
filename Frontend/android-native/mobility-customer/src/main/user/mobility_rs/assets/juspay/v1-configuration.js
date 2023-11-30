@@ -1,6 +1,6 @@
 window.version = window.version || {};
 let version = "1.0.0";
-if (typeof __VERSION__ !== 'undefined') {
+if (typeof __VERSION__ !== "undefined") {
   version = __VERSION__
 }
 window.version["configuration"]= version;
@@ -236,5 +236,20 @@ window.getMerchantConfig = function () {
         }
       }
     , "enableContactSupport" : false
+    , "feature" : {
+      "enableAutoReadOtp" : false,
+      "enableShareRide" : false,
+      "enableChat": false,
+      "enableEmergencyContacts": false,
+      "enableReferral": false,
+      "enableSupport": false,
+      "enableShareApp": false
+    }
+    , "dashboard" : {
+      "enable" : false
+    }
+    , "fontConfig" : {
+      "type" : "System"
+    }
   })
 }

@@ -26,7 +26,7 @@ import Prelude (($) ,negate)
 import Data.Array (head)
 import Prelude(negate)
 import Foreign.Object (empty)
-import MerchantConfig.DefaultConfig as DC
+import ConfigProvider
 import Screens.MyRidesScreen.ScreenData (dummyBookingDetails)
 import PrestoDOM (BottomSheetState(..))
 import Data.Map as Map 
@@ -127,7 +127,7 @@ initData = {
         issueDescription : "",
         rideBookingRes : dummyRideBooking
     }
-    , config : DC.config
+    , config : getAppConfig appConfig
     , logField : empty
     , nearByDrivers : Nothing
     , disability : Nothing
@@ -358,7 +358,7 @@ dummyDriverInfo =
   , merchantExoPhone : ""
   , createdAt : ""
   , initDistance : Nothing
-  , config : DC.config
+  , config : getAppConfig appConfig
   , vehicleVariant : ""
   , sourceAddress : dummyAddress
   , destinationAddress : dummyAddress
@@ -371,7 +371,7 @@ dummySettingBar = {
   , opened : CLOSED
   , email : Nothing
   , gender : Nothing
-  , appConfig : DC.config
+  , appConfig : getAppConfig appConfig
   , sideBarList : ["MyRides", "Tickets", "Favorites", "EmergencyContacts", "HelpAndSupport", "Language", "ShareApp", "LiveStatsDashboard", "About", "Logout"]
 }
 

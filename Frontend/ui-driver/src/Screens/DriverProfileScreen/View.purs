@@ -15,7 +15,7 @@
 
 module Screens.DriverProfileScreen.View where
 
-import Common.Types.App
+import Common.Types.Config
 import Data.List
 import Screens.DriverProfileScreen.ComponentConfig
 import Screens.SubscriptionScreen.Transformer
@@ -56,7 +56,6 @@ import Helpers.Utils (fetchImage, FetchImageFrom(..), getVehicleType, parseFloat
 import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import MerchantConfig.Utils (getValueFromConfig)
 import MerchantConfig.Utils as MU
 import Prelude (Unit, ($), const, map, (+), (==), (<), (||), (/), (/=), unit, bind, (-), (<>), (<=), (>=), (<<<), (>), pure, discard, show, (&&), void, negate, not, (*), otherwise)
 import Presto.Core.Types.Language.Flow (doAff)
@@ -520,7 +519,7 @@ driverAnalyticsView state push =
         , color Color.black900
         , fontStyle $ FontStyle.semiBold LanguageStyle
       ]
-    , let bonusActivated = getValueFromConfig "BONUS_EARNED" == "true"  in
+    , let bonusActivated = state.data.config.feature.enableBonus in
       linearLayout
       [ width MATCH_PARENT
       , height WRAP_CONTENT

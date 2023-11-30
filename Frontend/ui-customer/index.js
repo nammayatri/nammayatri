@@ -28,7 +28,6 @@ const refreshThreshold = 30;
 const JBridge = window.JBridge;
 const JOS = window.JOS;
 const Android = window.Android;
-loadConfig();
 
 const eventObject = {
   type : ""
@@ -120,9 +119,9 @@ function callInitiateResult () {
   JBridge.runInJuspayBrowser("onEvent", JSON.stringify(payload), null)
 }
 
-window.onMerchantEvent = function (_event, merchantPayload) {
-  console.log(merchantPayload);
-  const clientPaylod = JSON.parse(merchantPayload).payload;
+window.onMerchantEvent = function (_event, GlobalPayload) {
+  console.log(GlobalPayload);
+  const clientPaylod = JSON.parse(GlobalPayload).payload;
   if (_event == "initiate") {
     let clientId = clientPaylod.clientId;
     if (clientId.includes("_ios"))
@@ -161,7 +160,7 @@ window.onMerchantEvent = function (_event, merchantPayload) {
       if(clientPaylod.notificationData && clientPaylod.notificationData.notification_type == "CHAT_MESSAGE"){
         eventObject["type"] = "CHAT_MESSAGE";
       }
-      window.__payload = JSON.parse(merchantPayload);
+      window.__payload = JSON.parse(GlobalPayload);
       console.log("window Payload: ", window.__payload);
       purescript.main(eventObject)();
     }

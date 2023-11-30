@@ -33,7 +33,7 @@ import JBridge (getVersionCode)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import MerchantConfig.Utils (Merchant(..), getMerchant)
-import MerchantConfig.Utils (getMerchant, getValueFromConfig, Merchant(..))
+import MerchantConfig.Utils (getMerchant, Merchant(..))
 import Prelude ((<>))
 import Prelude (Unit, bind, const, not, discard, pure, show, unit, ($), (/=), (<>), (&&), (==), (-), (>), (||), (/), (*), (+), negate)
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), afterRender, alpha, background, clickable, color, ellipsize, fontSize, fontStyle, gravity, height, imageUrl, imageView, imageWithFallback, lineHeight, linearLayout, margin, maxLines, onClick, orientation, padding, relativeLayout, scrollView, singleLine, stroke, text, textSize, textView, visibility, weight, width, id, pivotY, onAnimationEnd, id, layoutGravity, horizontalScrollView, scrollBarX, fillViewport)
@@ -49,6 +49,7 @@ import Helpers.Utils as HU
 import JBridge as JB
 import Data.Int as Int
 import Animation as Anim
+import ConfigProvider
 
 view :: forall w . (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push config =
@@ -498,7 +499,7 @@ estimatedFareView push config =
           , if config.waitTimeSeconds > (config.thresholdTime + 60) then yellowPill push pillText (not config.startRideActive) else linearLayout[visibility GONE][]
         ]
     ]
-    where currency = getValueFromConfig "currency"
+    where currency = getCurrency appConfig
           pillText = "+" <> currency <> " " <> show (calculateCharges (config.waitTimeSeconds - config.thresholdTime))
 
           calculateCharges :: Int -> Number

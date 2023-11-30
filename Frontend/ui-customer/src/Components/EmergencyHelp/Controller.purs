@@ -24,7 +24,7 @@ import MerchantConfig.Types (AppConfig)
 import PrestoDOM (Eval, continue, exit, continueWithCmd)
 import Screens.Types (Contact)
 import Styles.Colors as Color
-import MerchantConfig.DefaultConfig as DC
+import ConfigProvider
 
 data Action = NoAction 
             | CallPolicePopup
@@ -57,7 +57,7 @@ config = {
    , showCallSuccessfulPopUp : false
    , emergencyContactData : []
    , currentlySelectedContact : selectedContactData
-   , config : DC.config
+   , config : getAppConfig appConfig
 }
 
 selectedContactData ::  Contact

@@ -16,7 +16,6 @@
 
 module Screens.ChooseCityScreen.ScreenData where
 
-import MerchantConfig.DefaultConfig as DC
 import Screens.Types (ChooseCityScreenStage(..), ChooseCityScreenState)
 import Prelude (map, (<>))
 import Common.Types.App (YoutubeData, CarouselData)
@@ -25,11 +24,12 @@ import Data.Maybe as Mb
 import Common.Styles.Colors as Color
 import Language.Strings (getString)
 import Language.Types (STR(..))
+import ConfigProvider
 
 initData :: ChooseCityScreenState
 initData = {
   data: {
-    config : DC.config,
+    config : getAppConfig appConfig,
     locationSelected : Mb.Nothing,
     locationDetectionFailed : false,
     merchantOperatingCityConfig : [],

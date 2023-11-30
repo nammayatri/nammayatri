@@ -17,7 +17,7 @@ module Components.QuoteListItem.Controller where
 
 import MerchantConfig.Types (AppConfig)
 import Data.Maybe (Maybe(..))
-import MerchantConfig.DefaultConfig as DC
+import ConfigProvider
 
 data Action = Click QuoteListItemState
               | NoAction 
@@ -53,6 +53,6 @@ config = {
   , vehicleType : "auto"
   , driverName : "Drive_Name"
   , selectedQuote : Nothing
-  , appConfig : DC.config
+  , appConfig : getAppConfig appConfig
   , city : Nothing
   }

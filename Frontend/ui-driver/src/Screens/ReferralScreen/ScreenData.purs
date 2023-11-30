@@ -19,7 +19,7 @@ import Screens.Types (ReferralScreenState, BottomNavBarState, ReferralType(..), 
 import PrestoDOM.Types.Core (toPropValue)
 import Data.Maybe (Maybe(..))
 import Foreign.Object (empty)
-import MerchantConfig.DefaultConfig as DC
+import ConfigProvider
 import Common.Types.App (CalendarDate, CalendarWeek)
 
 initData :: ReferralScreenState
@@ -42,7 +42,7 @@ initData =  {
     }
 }
   , logField : empty
-  , config : DC.config
+  , config : getAppConfig appConfig
   }
 ,  props: {
       primarybtnActive :false

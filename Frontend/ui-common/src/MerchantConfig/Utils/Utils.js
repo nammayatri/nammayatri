@@ -1,15 +1,6 @@
 
 const JBridge = window.JBridge;
 
-export const getValueFromConfig = function (constructorKey){
-  if (constructorKey in window.appConfig){
-    return window.appConfig[constructorKey];
-  }
-  console.error("no value found for key "+ constructorKey);
-  return "";
-}
-
-
 export const getMerchantString = function(key) {
   const selectedLanguage = JBridge.getKeysInSharedPref("LANGUAGE_KEY");
   switch (selectedLanguage) {

@@ -29,7 +29,6 @@ import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import MerchantConfig.Utils (getMerchant, Merchant(..))
-import MerchantConfig.Utils (getValueFromConfig)
 import Prelude (Unit, const, unit, ($), (*), (/), (<>), (==), (||), (&&), (/=), map)
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), Visibility(..), Accessiblity(..), PrestoDOM, visibility, background, clickable, color, disableClickFeedback, fontStyle, gravity, height, imageUrl, imageView, linearLayout, margin, onAnimationEnd, onBackPressed, onClick, orientation, padding, text, textSize, textView, width, weight, ellipsize, maxLines, imageWithFallback, scrollView, scrollBarY, accessibility, accessibilityHint)
 import PrestoDOM.Animation as PrestoAnim
@@ -97,7 +96,7 @@ settingsView state push =
         "Tickets" -> settingsMenuView {imageUrl : fetchImage FF_ASSET "ny_ic_ticket_grey", text : getString MY_TICKETS, accessibilityHint : "Tickets", tag : SETTINGS_TICKETS, iconUrl : ""} push
         "Favorites" -> if DA.any (\stage -> isLocalStageOn stage)  [RideStarted, RideAccepted, RideCompleted] then emptyLayout else settingsMenuView {imageUrl : fetchImage FF_ASSET "ic_fav", text : (getString FAVOURITES) , accessibilityHint : "Favourites " , tag : SETTINGS_FAVOURITES, iconUrl : ""} push
         "EmergencyContacts" ->  settingsMenuView {imageUrl : fetchImage FF_COMMON_ASSET "ny_ic_emergency_contacts" , text : (getString EMERGENCY_CONTACTS) , accessibilityHint : "Emergency Contacts " , tag : SETTINGS_EMERGENCY_CONTACTS, iconUrl : ""} push
-        "HelpAndSupport" -> settingsMenuView (helpAndSupportConfig state.appConfig.enableContactSupport) push
+        "HelpAndSupport" -> settingsMenuView (helpAndSupportConfig state.appConfig.feature.enableSupport) push
         "Language" -> settingsMenuView {imageUrl : fetchImage FF_ASSET "ic_change_language", text : (getString LANGUAGE), accessibilityHint : "Language ", tag : SETTINGS_LANGUAGE, iconUrl : ""} push
         "ShareApp" -> settingsMenuView {imageUrl : fetchImage FF_ASSET "ic_share", text : (getString SHARE_APP), accessibilityHint : "Share App ", tag : SETTINGS_SHARE_APP, iconUrl : ""} push
         "LiveStatsDashboard" -> settingsMenuView {imageUrl : fetchImage FF_ASSET "ic_graph_black", accessibilityHint : "Live Stats Dashboard ",text : (getString LIVE_STATS_DASHBOARD), tag : SETTINGS_LIVE_DASHBOARD, iconUrl : fetchImage FF_ASSET  "ic_red_icon"} push

@@ -3,10 +3,10 @@ module Components.AppOnboardingNavBar.Controller where
 import MerchantConfig.Types (AppConfig)
 import PrestoDOM(Length(..), Visibility(..), Margin(..))
 import Components.GenericHeader as GenericHeader
-import MerchantConfig.DefaultConfig as DC
 import Font.Style (Style(..))
 import Styles.Colors as Color
 import Font.Style as Style
+import ConfigProvider
 
 data Action = Logout 
             | PrefixImgOnClick 
@@ -48,5 +48,5 @@ config = {
     color : Color.white900,
     fontStyle : Style.Heading1
   },
-  appConfig : DC.config
+  appConfig : getAppConfig appConfig
 }

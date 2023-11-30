@@ -39,6 +39,7 @@ import Screens.Types as ST
 import Styles.Colors as Color
 import Helpers.Utils as HU
 import Storage ( getValueToLocalStore , KeyStore(..))
+import ConfigProvider
 
 ------------------------------ primaryButtonConfig --------------------------------
 primaryButtonConfig :: ST.UploadDrivingLicenseState -> PrimaryButton.Config

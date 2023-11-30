@@ -25,7 +25,7 @@ import Font.Size as FontSize
 import Common.Types.App (LazyCheck(..))
 import Components.SeparatorView.View as SeparatorView
 import Engineering.Helpers.Commons (getNewIDWithTag, os)
-import Engineering.Helpers.Utils (defaultSeparatorCount, getSeparatorFactor)
+import Constants (defaultSeparatorCount, getSeparatorFactor)
 import Data.Maybe (Maybe(..), isNothing, fromMaybe)
 import Data.Function.Uncurried (runFn1)
 import JBridge (getLayoutBounds)
