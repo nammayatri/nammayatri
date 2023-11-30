@@ -17,7 +17,7 @@ module Screens.TicketBookingScreen.ScreenData where
 
 import Common.Types.App as Common
 import Data.Maybe (Maybe(..))
-import MerchantConfig.DefaultConfig as DC
+import ConfigProvider
 import Screens.Types (TicketBookingScreenState(..), TicketBookingScreenStage(..), TicketBookings(..), TicketItem(..))
 import Services.API (BookingStatus(..))
 

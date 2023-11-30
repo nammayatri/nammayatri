@@ -19,7 +19,8 @@ import Screens.ChooseCityScreen.ComponentConfig
 
 import Animation as Anim
 import Animation.Config as AnimConfig
-import Common.Types.App (LazyCheck(..), CarouselData, CityConfig)
+import Common.Types.App (LazyCheck(..), CarouselData)
+import Common.Types.Config
 import Components.GenericHeader as GenericHeader
 import Components.PrimaryButton as PrimaryButton
 import Components.SelectMenuButton as MenuButton

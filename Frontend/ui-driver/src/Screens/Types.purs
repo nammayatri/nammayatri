@@ -40,6 +40,7 @@ import PrestoDOM (LetterSpacing, Visibility, visibility)
 import Screens (ScreenName)
 import Services.API (AutopayPaymentStage, BankError(..), FeeType, GetDriverInfoResp(..), MediaType, PaymentBreakUp, Route, Status, DriverProfileStatsResp(..), LastPaymentType(..))
 import Styles.Types (FontSize)
+import Common.Types.Config
 
 type EditTextInLabelState =
  {
@@ -141,7 +142,7 @@ type AddVehicleDetailsScreenData =  {
   dateOfRegistrationView :: String,
   logField :: Object Foreign,
   driverMobileNumber :: String,
-  cityConfig :: Common.CityConfig,
+  cityConfig :: CityConfig,
   config :: AppConfig
  }
 
@@ -210,7 +211,7 @@ type UploadDrivingLicenseStateData = {
   , imageFrontUrl :: String
   , logField :: Object Foreign
   , mobileNumber :: String
-  , cityConfig :: Common.CityConfig
+  , cityConfig :: CityConfig
   , config :: AppConfig
 }
 
@@ -247,7 +248,7 @@ type RegistrationScreenData = {
   permissionsStatus :: StageStatus,
   subscriptionStatus :: StageStatus,
   lastUpdateTime :: String,
-  cityConfig :: Common.CityConfig,
+  cityConfig :: CityConfig,
   config :: AppConfig
 }
 
@@ -2078,7 +2079,7 @@ type ChooseCityScreenData = {
   config :: AppConfig,
   locationSelected :: Maybe String,
   locationDetectionFailed :: Boolean,
-  merchantOperatingCityConfig :: Array Common.CityConfig,
+  merchantOperatingCityConfig :: Array CityConfig,
   logField :: Object Foreign
 }
 

@@ -70,7 +70,7 @@ import JBridge (addMarker, animateCamera, drawRoute, enableMyLocation, firebaseL
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (printLog)
-import MerchantConfig.Utils (Merchant(..), getMerchant, getValueFromConfig)
+import MerchantConfig.Utils (Merchant(..), getMerchant)
 import Prelude (Unit, bind, const, discard, map, negate, not, pure, show, unit, void, when, ($), (&&), (*), (+), (-), (/), (/=), (<), (<<<), (<=), (<>), (==), (>), (||))
 import Presto.Core.Types.API (ErrorResponse)
 import Presto.Core.Types.Language.Flow (Flow, doAff, delay)
@@ -104,6 +104,7 @@ import Components.SourceToDestination as SourceToDestination
 import Data.Map as Map
 import SuggestionUtils
 import MerchantConfig.Types (MarginConfig, ShadowConfig)
+import ConfigProvider
 
 screen :: HomeScreenState -> Screen Action HomeScreenState ScreenOutput
 screen initialState =
@@ -373,7 +374,7 @@ view push state =
             , if state.props.currentStage == ShortDistance then (shortDistanceView push state) else emptyTextView state
             , if state.props.isSaveFavourite then saveFavouriteCardView push state else emptyTextView state
             , if state.props.emergencyHelpModal then (emergencyHelpModal push state) else emptyTextView state
-            , if state.props.showShareAppPopUp && ((getValueFromConfig "isShareAppEnabled") == "true") then (shareAppPopUp push state) else emptyTextView state
+            , if state.props.showShareAppPopUp && state.data.config.feature.enableShareApp then shareAppPopUp push state else emptyTextView state
             , if state.props.showMultipleRideInfo then (requestInfoCardView push state) else emptyTextView state
             , if state.props.showLiveDashboard then showLiveStatsDashboard push state else emptyTextView state
             , if state.props.showCallPopUp then (driverCallPopUp push state) else emptyTextView state
@@ -457,7 +458,7 @@ showLiveStatsDashboard push state =
       [ height MATCH_PARENT
       , width MATCH_PARENT
       , id (getNewIDWithTag "webview")
-      , url (getValueFromConfig "dashboardUrl")
+      , url state.data.config.dashboard.url
       ]]
 
 driverCallPopUp :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
@@ -687,7 +688,7 @@ referralView push state =
   linearLayout
     [ width WRAP_CONTENT
     , height WRAP_CONTENT
-    , visibility if (getValueFromConfig "isReferralEnabled") == "false" || ((state.props.isReferred && state.props.currentStage == RideStarted) || state.props.hasTakenRide || state.props.sheetState == EXPANDED) then GONE else VISIBLE
+    , visibility if (not state.data.config.feature.enableReferral) || ((state.props.isReferred && state.props.currentStage == RideStarted) || state.props.hasTakenRide || state.props.sheetState == EXPANDED) then GONE else VISIBLE
     , stroke $ "1," <> if not state.props.isReferred then Color.blue900 else Color.black700
     , margin (MarginHorizontal 16 13)
     , cornerRadius 20.0
@@ -718,7 +719,7 @@ liveStatsDashboardView push state =
   linearLayout
     [ width WRAP_CONTENT
     , height WRAP_CONTENT
-    , visibility if state.data.config.features.enableLiveDashboard && (state.props.isReferred || state.props.hasTakenRide) && state.props.currentStage == RideStarted then VISIBLE else GONE
+    , visibility if state.data.config.dashboard.enable && (state.props.isReferred || state.props.hasTakenRide) && state.props.currentStage == RideStarted then VISIBLE else GONE
     , stroke $ "1," <> Color.blue900
     , margin (MarginHorizontal 16 13)
     , accessibility DISABLE_DESCENDANT
@@ -823,7 +824,7 @@ recentSearchesAndFavourites state push hideSavedLocsView hideRecentSearches =
     , if (getValueToLocalStore DISABILITY_UPDATED == "false" && state.data.config.showDisabilityBanner) 
         then updateDisabilityBanner state push
         else 
-          if (state.data.config.features.enableZooTicketBookingFlow) 
+          if (state.data.config.feature.enableZooTicketBookingFlow) 
             then zooTicketBookingBanner state push 
             else linearLayout[visibility GONE][]])
 
@@ -1044,7 +1045,7 @@ homeScreenTopIconView push state =
                 , onClick push $ const OpenSettings
                 ]
                 [ imageView
-                    [ imageWithFallback $ fetchImage FF_ASSET $ if ((getValueFromConfig "showDashboard") == "true") && (checkVersion "LazyCheck") then "ic_menu_notify" else "ny_ic_hamburger"
+                    [ imageWithFallback $ fetchImage FF_ASSET $ if state.data.config.dashboard.enable && (checkVersion "LazyCheck") then "ic_menu_notify" else "ny_ic_hamburger"
                     , height $ V 24
                     , width $ V 24
                     , margin (Margin 16 16 16 16)
@@ -1197,7 +1198,7 @@ topLeftIconView state push =
           , accessibility ENABLE
           ]
           [ imageView
-              [ imageWithFallback if (any (_ == state.props.currentStage) [ SettingPrice, ConfirmingLocation, PricingTutorial, DistanceOutsideLimits ]) then fetchImage FF_COMMON_ASSET "ny_ic_chevron_left" else if ((getValueFromConfig "showDashboard") == "true") && (checkVersion "LazyCheck") then fetchImage FF_ASSET "ic_menu_notify" else fetchImage FF_ASSET "ny_ic_hamburger"
+              [ imageWithFallback if (any (_ == state.props.currentStage) [ SettingPrice, ConfirmingLocation, PricingTutorial, DistanceOutsideLimits ]) then fetchImage FF_COMMON_ASSET "ny_ic_chevron_left" else if state.data.config.dashboard.enable && (checkVersion "LazyCheck") then fetchImage FF_ASSET "ic_menu_notify" else fetchImage FF_ASSET "ny_ic_hamburger"
               , height $ V 25
               , accessibility DISABLE
               , clickable true
@@ -1210,7 +1211,7 @@ topLeftIconView state push =
           , weight 1.0
           ][]
         , referralView push state
-        , if ((getValueFromConfig "showDashboard") == "false") || (isPreviousVersion (getValueToLocalStore VERSION_NAME) (if os == "IOS" then "1.2.5" else "1.2.1")) then emptyTextView state else liveStatsDashboardView push state
+        , if (not state.data.config.dashboard.enable) || (isPreviousVersion (getValueToLocalStore VERSION_NAME) (if os == "IOS" then "1.2.5" else "1.2.1")) then emptyTextView state else liveStatsDashboardView push state
       ]
 
 ----------- estimatedFareView -------------
@@ -1359,15 +1360,15 @@ rideDetailsView push state =
             , height WRAP_CONTENT
             , fontStyle $ FontStyle.bold LanguageStyle
             , accessibilityHint $ "Estimated Fare Is " <> fareEstimate
-            , onClick (\action -> if (getValueFromConfig "showRateCard") == "true" then push action else pure unit ) $ const ShowRateCard
+            , onClick (\action -> if state.data.config.searchLocationConfig.enableRateCard then push action else pure unit ) $ const ShowRateCard
             ] <> FontStyle.body7 LanguageStyle
          , imageView
             [ imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_info_blue"
             , width $ V 40
             , height $ V 40
             , accessibility DISABLE
-            , visibility if (getValueFromConfig "showRateCard") == "true" then VISIBLE else GONE
-            , onClick (\action -> if (getValueFromConfig "showRateCard") == "true" then push action else pure unit ) $ const ShowRateCard
+            , visibility if state.data.config.searchLocationConfig.enableRateCard then VISIBLE else GONE
+            , onClick (\action -> if state.data.config.searchLocationConfig.enableRateCard then push action else pure unit ) $ const ShowRateCard
             ]
         ]
     ]
@@ -1425,7 +1426,7 @@ bookingPreferencesView push state =
   [ width MATCH_PARENT
   , height WRAP_CONTENT
   , orientation VERTICAL
-  , visibility if (getValueFromConfig "showBookingPreference") == "true" && not state.props.isRepeatRide then VISIBLE else GONE
+  , visibility if state.data.config.estimateAndQuoteConfig.enableBookingPreference  && not state.props.isRepeatRide then VISIBLE else GONE
   ][ linearLayout
       [ width MATCH_PARENT
       , height $ V 1
@@ -1903,12 +1904,12 @@ emptyLayout state =
 rideTrackingView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 rideTrackingView push state =
   linearLayout
-    [ height MATCH_PARENT
+    [ height WRAP_CONTENT
     , width MATCH_PARENT
     , orientation VERTICAL
     , padding (Padding 0 0 0 0)
     , background Color.transparent
-    , accessibility if (state.data.settingSideBar.opened /= SettingSideBar.CLOSED) || state.props.currentStage == ChatWithDriver || state.props.cancelSearchCallDriver || state.props.showCallPopUp || state.props.isCancelRide || state.props.emergencyHelpModal || state.props.isLocationTracking || state.props.callSupportPopUp || (state.props.showShareAppPopUp && ((getValueFromConfig "isShareAppEnabled") == "true")) then DISABLE_DESCENDANT else DISABLE
+    , accessibility if (state.data.settingSideBar.opened /= SettingSideBar.CLOSED) || state.props.currentStage == ChatWithDriver || state.props.cancelSearchCallDriver || state.props.showCallPopUp || state.props.isCancelRide || state.props.emergencyHelpModal || state.props.isLocationTracking || state.props.callSupportPopUp || (state.props.showShareAppPopUp && state.data.config.feature.enableShareRide) then DISABLE_DESCENDANT else DISABLE
     , alignParentBottom "true,-1" -- Check it in Android.
     , onBackPressed push (const $ BackPressed)
     ]
@@ -1938,7 +1939,7 @@ rideTrackingView push state =
                         , background Color.transparent
                         , sheetState state.props.sheetState 
                         , accessibility DISABLE
-                        , peakHeight $ getPeakHeight state.props.currentStage
+                        , peakHeight $ getPeakHeight state.data.config.feature.enableShareRide state.props.currentStage
                         , halfExpandedRatio 0.75
                         , orientation VERTICAL
                         ]
@@ -1956,14 +1957,14 @@ rideTrackingView push state =
         ]
     ]
 
-getPeakHeight :: Stage -> Int
-getPeakHeight stage = case getValueFromConfig "enableShareRide" , stage of
-                      "true" , RideAccepted -> getHeightFromPercent 65
-                      "true" , ChatWithDriver -> getHeightFromPercent 65
-                      "false" , RideAccepted -> getHeightFromPercent 60
-                      "false" , ChatWithDriver -> getHeightFromPercent 60
-                      "true" , _ ->  getHeightFromPercent 52
-                      "false" , _ ->  getHeightFromPercent 47
+getPeakHeight :: Boolean -> Stage -> Int
+getPeakHeight enableShareRide stage = case enableShareRide , stage of
+                      true , RideAccepted -> getHeightFromPercent 65
+                      true , ChatWithDriver -> getHeightFromPercent 65
+                      false , RideAccepted -> getHeightFromPercent 60
+                      false , ChatWithDriver -> getHeightFromPercent 60
+                      true , _ ->  getHeightFromPercent 52
+                      false , _ ->  getHeightFromPercent 47
                       _ , _ -> getHeightFromPercent 47
 
 distanceOutsideLimitsView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
@@ -2296,7 +2297,7 @@ notinPickUpZoneView push state =
         , gravity CENTER
         , margin $ MarginTop if os == "IOS" then 10 else 0
         ][  textView $
-            [ text $ if state.data.rateCard.additionalFare == 0 then (getValueFromConfig "currency") <> (show state.data.suggestedAmount) else  (getValueFromConfig "currency") <> (show state.data.suggestedAmount) <> "-" <> (getValueFromConfig "currency") <> (show $ (state.data.suggestedAmount + state.data.rateCard.additionalFare))
+            [ text $ if state.data.rateCard.additionalFare == 0 then (getCurrency appConfig) <> (show state.data.suggestedAmount) else  (getCurrency appConfig) <> (show state.data.suggestedAmount) <> "-" <> (getCurrency appConfig) <> (show $ (state.data.suggestedAmount + state.data.rateCard.additionalFare))
             , color Color.black800
             , margin $ MarginTop 8
             , gravity CENTER_HORIZONTAL
@@ -2458,7 +2459,7 @@ genderBanner push state =
   Banner.view (push <<< GenderBannerModal) (genderBannerConfig state)
 
 isAnyOverlayEnabled :: HomeScreenState -> Boolean
-isAnyOverlayEnabled state = ( state.data.settingSideBar.opened /= SettingSideBar.CLOSED || state.props.emergencyHelpModal || state.props.cancelSearchCallDriver || state.props.isCancelRide || state.props.isLocationTracking || state.props.callSupportPopUp || state.props.showCallPopUp || state.props.showRateCard || (state.props.showShareAppPopUp && ((getValueFromConfig "isShareAppEnabled") == "true")))
+isAnyOverlayEnabled state = state.data.settingSideBar.opened /= SettingSideBar.CLOSED || state.props.emergencyHelpModal || state.props.cancelSearchCallDriver || state.props.isCancelRide || state.props.isLocationTracking || state.props.callSupportPopUp || state.props.showCallPopUp || state.props.showRateCard || (state.props.showShareAppPopUp && state.data.config.feature.enableShareRide)
 
 carouselView:: HomeScreenState -> (Action -> Effect Unit)  -> forall w . PrestoDOM (Effect Unit) w
 carouselView state push = 
@@ -2617,7 +2618,7 @@ footerView push state =
           , stroke $ "1," <> Color.grey900
           , cornerRadii $ Corners 6.0 true true true true
           , onClick push $ const OpenLiveDashboard
-          , visibility if state.data.config.features.enableLiveDashboard then VISIBLE else GONE
+          , visibility if state.data.config.dashboard.enable then VISIBLE else GONE
           ][
             imageView
               [ imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_live_stats"
@@ -2843,7 +2844,7 @@ pickupLocationView push state =
                 , gravity CENTER_VERTICAL
                 , cornerRadius 8.0
                 , layoutGravity "center_vertical"
-                , visibility if ((getValueFromConfig "isReferralEnabled") == "false") || ((state.props.isReferred && state.props.currentStage == RideStarted) || state.props.hasTakenRide || state.props.sheetState == EXPANDED) then GONE else VISIBLE
+                , visibility if (not state.data.config.feature.enableReferral) || ((state.props.isReferred && state.props.currentStage == RideStarted) || state.props.hasTakenRide || state.props.sheetState == EXPANDED) then GONE else VISIBLE
                 , onClick push $ const $ if state.props.isReferred then ReferralFlowNoAction else ReferralFlowAction
                 ][ textView
                     [ text $ if not state.props.isReferred then  getString HAVE_A_REFFERAL else (getString REFERRAL_CODE_APPLIED)

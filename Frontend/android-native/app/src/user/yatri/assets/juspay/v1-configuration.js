@@ -1,31 +1,39 @@
 window.version = window.version || {};
 let version = "1.0.0";
-if (typeof __VERSION__ !== 'undefined') {
+if (typeof __VERSION__ !== "undefined") {
   version = __VERSION__
 }
 window.version["configuration"]= version;
+
+function getAppLink(os) {
+  if (os == "ANDROID") {
+    return "https://play.google.com/store/apps/details?id=net.openkochi.yatri"
+  } else {
+    return "https://apps.apple.com/in/app/yatri/id1615871038"
+  }
+}
 window.getMerchantConfig = function () {
   return JSON.stringify({
     "StringKeys": ["ABOUT_APP_DESCRIPTION",
-    "WELCOME_TEXT", "REQUEST_AUTO_RIDE",
-    "MOST_LOVED_APP",
-    "CURRENTLY_WE_ARE_LIVE_IN_",
-    "DRIVER_PICKUP_CHARGES",
-    "SUCCESSFUL_ONBOARD",
-    "ABOUT_REFERRAL_PROGRAM_DISCRIPTION",
-    "YOU_CAN_GET_REFERRAL_CODE_FROM_DRIVER",
-    "YOUR_LOCATION_HELPS_OUR_SYSTEM",
-    "YOU_ARE_ABOUT_TO_CALL_NAMMA_YATRI_SUPPORT",
-    "LOCATION_PERMISSION_SUBTITLE_NEW_USER",
-    "CORPORATE_ADDRESS_DESCRIPTION_ADDITIONAL",
-    "REGISTERED_ADDRESS_DESCRIPTION_ADDITIONAL",
-    "CALL_NAMMA_YATRI_SUPPORT",
-    "YOUR_FEEDBACK_HELPS_US",
-    "LEARN_HOW_TEXT",
-    "DRIVER_ADDITIONS_ARE_CALCULATED_AT_RATE",
-    "ACCESSIBILITY_TEXT",
-    "TO_CATER_YOUR_SPECIFIC_NEEDS",
-    "PLEASE_ENABLE_LOCATION_PERMISSION"
+      "WELCOME_TEXT", "REQUEST_AUTO_RIDE",
+      "CURRENTLY_WE_ARE_LIVE_IN_",
+      "DRIVER_PICKUP_CHARGES",
+      "SUCCESSFUL_ONBOARD",
+      "ABOUT_REFERRAL_PROGRAM_DISCRIPTION",
+      "YOU_CAN_GET_REFERRAL_CODE_FROM_DRIVER",
+      "YOUR_LOCATION_HELPS_OUR_SYSTEM",
+      "YOU_ARE_ABOUT_TO_CALL_NAMMA_YATRI_SUPPORT",
+      "LOCATION_PERMISSION_SUBTITLE_NEW_USER",
+      "CORPORATE_ADDRESS_DESCRIPTION_ADDITIONAL",
+      "REGISTERED_ADDRESS_DESCRIPTION_ADDITIONAL",
+      "CALL_NAMMA_YATRI_SUPPORT",
+      "YOUR_FEEDBACK_HELPS_US",
+      "LEARN_HOW_TEXT",
+      "DRIVER_ADDITIONS_ARE_CALCULATED_AT_RATE",
+      "ACCESSIBILITY_TEXT",
+      "TO_CATER_YOUR_SPECIFIC_NEEDS",
+      "PLEASE_ENABLE_LOCATION_PERMISSION",
+      "MOST_LOVED_APP"
     ],
     "isReferralEnabled": "true",
     "showBookingPreference": "false",
@@ -58,73 +66,24 @@ window.getMerchantConfig = function () {
     "alertDialogPrimaryColor": "#2194FF",
     "isGradient" : "false",
     "quoteListModelBackground": "#2C2F3A",
+    "dashboard" : {
+      "enable" : false
+      , "url" : "https://www.getyatri.com/open/?source=in-app"
+    },
+    "shareAppConfig" : {
+      "title" : "Share Yatri!"
+      , "description" : "Hey there!\n\nCheck out Yatri, India's first open mobility cab hailing app built for commuters in Kochi.\n100% Open Source\n\nDownload Yatri now! \n" + (getAppLink(window.__OS)) + "\n\n#beOpen #chooseOpen"
+    },
     "logs": ["JUSPAY","FIREBASE","CLEVERTAP"],
     "primaryButtonCornerRadius" : 8.0,
     "cancelSearchTextColor": "#E55454",
     "dashboardUrl" : "https://www.getyatri.com/open/?source=in-app",
-    "quoteListItemConfig": {
-      "primaryButtonCorner": 8.0,
-      "expiresColor" : "#E55454",
-      "driverImagebg": "#F1F1F1",
-      "vehicleHeight" : 37,
-      "vehicleWidth": 40
-    },
     "searchLocationConfig": {
-      "searchLocationTheme": "#2C2F3A",
-      "setLocationOnMapColor" : "#6D7280",
-      "strokeColor": "1,#E5E7EB",
-      "enableLocationTagbar" : "true",
-      "resultsCardCornerRadius" : 20.0,
-      "showRateCardDetails" : true,
-      "showAdditionalChargesText" : false,
-      "lottieHeight": 96,
-      "lottieWidth": 96,
-      "primaryButtonHeight": 60
-    , "backArrow" : "ny_ic_chevron_left_white,https://assets.juspay.in/beckn/yatri/user/images/ny_ic_chevron_left_white.png"
-     },
-     "ratingConfig": {
-      "secondaryButtonTextColor": "#2C2F3A",
-      "secondaryButtonStroke": "1,#2C2F3A",
-      "buttonCornerRadius": 8.0
-     },
-     "cancelReasonConfig": {
-      "secondaryButtonTextColor": "#2C2F3A",
-      "secondaryButtonStroke": "1,#2C2F3A",
-      "buttonCornerRadius": 8.0
-     },
-     "driverInfoConfig": {
-      "ratingTextColor": "#454545",
-      "ratingBackground": "#F1F1F1",
-      "ratingStroke": "0,#717171",
-      "ratingCornerRadius": 6.0,
-      "callBackground": "#2053BB6F",
-      "callButtonStroke": "0,#EB0055",
-      "cardStroke": "1,#E5E7EB",
-      "otpStroke": "0,#717171",
-      "showNumberPlatePrefix": true,
-      "callHeight": 24,
-      "callWidth": 24,
-      "numberPlateBackground" : "#E9BE4D",
-      "showCancelPrevention" : true,
-      "showNumberPlateSuffix" : false,
-      "showTrackingButton" : true
+      "enableRateCard" : false,
+      "showChargeDesc" : true
     },
     "quoteListModel": {
-      "backgroundColor": "#2C2F3A",
-      "textColor": "#FFFFFF",
-      "loaderColor": "#80B2FF", 
-      "otpTextBackground"  : "#2C2F3A",
-      "otpBackground" : "#F1F1F1",
-      "otpTextColor" : "#FFFFFF",
-      "otpTitleColor"  : "#6D7280",
-      "selectRideTextColor": "#2C2F3A",
-      "lineImage" : "ic_line",
-      "lottieHeight": 300,
-      "lottieWidth": 300,
-      "topMargin": 100,
-      "noQuotesImageHeight": 115,
-      "noQuotesImageWidth": 137,
-      "closeIcon" : "ny_ic_close_white,https://assets.juspay.in/beckn/yatri/user/images/ny_ic_close_white.png"
+      "topMargin": 100
     },
     "profileBackground": "#2C2F3A",
     "profileEditGravity" : "center",
@@ -189,7 +148,7 @@ window.getMerchantConfig = function () {
       "ACCESSIBILITY_TEXT" : "യാത്രി, ഇപ്പോൾ നിങ്ങൾക്കായി ഇഷ്‌ടാനുസൃതമാക്കി!",
       "TO_CATER_YOUR_SPECIFIC_NEEDS" : "നിങ്ങളുടെ പ്രത്യേക ആവശ്യങ്ങൾ നിറവേറ്റുന്നതിനായി, ഞങ്ങൾ യാത്രിയുടെ ചില സവിശേഷതകൾ ഇഷ്‌ടാനുസൃതമാക്കിയിട്ടുണ്ട്.",
       "PLEASE_ENABLE_LOCATION_PERMISSION" : "റൈഡുകൾക്കായി തിരയാൻ ക്രമീകരണ ആപ്പിൽ നിന്ന് യാത്രയ്‌ക്ക് ലൊക്കേഷൻ അനുമതികൾ പ്രവർത്തനക്ഷമമാക്കുക."
-  },
+    },
     "languageList": [{
       "name": "English",
       "value": "EN_US",
@@ -201,42 +160,48 @@ window.getMerchantConfig = function () {
     }],
     "bannerConfig" : {
       "backgroundColor" : "#F0FAF0"
-    , "title" : "Complete your profile for a personalised ride experience"
-    , "titleColor" : "#21C179"
-    , "actionText" : "Update now"
-    , "actionTextColor" : "#27AE5F"
-    , "imageUrl" : "ny_ic_banner_gender_feat,https://assets.juspay.in/beckn/merchantcommon/images/ny_ic_banner_gender_feat.png" 
+      , "title" : "Complete your profile for a personalised ride experience"
+      , "titleColor" : "#21C179"
+      , "actionText" : "Update now"
+      , "actionTextColor" : "#27AE5F"
+      , "imageUrl" : "ny_ic_banner_gender_feat,https://assets.juspay.in/beckn/merchantcommon/images/ny_ic_banner_gender_feat.png" 
     },
     "terminateBtnConfig" : {
       "visibility" : false, 
       "title" : "Namma Yatri",
       "imageUrl" : "ny_ic_chevron_left_double,https://assets.juspay.in/beckn/mobilitypaytm/mobilitypaytmcommon/ny_ic_chevron_left_double.png"
-  }
-  , "showDeleteAccount" : true
-  , "fontName" : "PlusJakartaSans"
-  , "fontKannada" : "NotoSansKannada"
-  , "showGenderBanner" : true
-  , "autoSelectBackground" : "#53BB6F"
-  , "enableMockLocation" : false
-  , "defaultLanguage" : "EN_US"
-  , "isEmergencyContacts": "true"
-  , "enableGeocoder" : false
-  , "specialLocationView" : true
-  , "navigationAppConfig" : {
-    "query" : "google.navigation:q=%f,%f"
-  , "packageName" : "com.google.android.apps.maps"
-}
-  , "SUPPORT_EMAIL" : "nammayatri.support@juspay.in"
-  , "OTP_MESSAGE_REGEX" : "is your OTP for login to [A-Za-z]+ [A-Za-z]+"
-  , "showDisabilityBanner" : false
+    }
+    , "showDeleteAccount" : true
+    , "fontName" : "PlusJakartaSans"
+    , "fontKannada" : "NotoSansKannada"
+    , "showGenderBanner" : true
+    , "autoSelectBackground" : "#53BB6F"
+    , "enableMockLocation" : false
+    , "defaultLanguage" : "EN_US"
+    , "isEmergencyContacts": "true"
+    , "enableGeocoder" : false
+    , "specialLocationView" : true
+    , "navigationAppConfig" : {
+      "query" : "google.navigation:q=%f,%f"
+      , "packageName" : "com.google.android.apps.maps"
+    }
+    , "SUPPORT_EMAIL" : "nammayatri.support@juspay.in"
+    , "OTP_MESSAGE_REGEX" : "is your OTP for login to [A-Za-z]+ [A-Za-z]+"
+    , "showDisabilityBanner" : false
   
+    , "estimateAndQuoteConfig" : {
+      "enableBookingPreference" : false
+    }
+    , "feature" : {
+      "enableShareRide" : false
+    }
+    , "otpRegex" :  "is your OTP for login to [A-Za-z]+ [A-Za-z]+"
+    , "termsLink" :"https://docs.google.com/document/d/1zmQWO_L4EjyCXC3xSlp1f3DS2wI4HfbHxg42tXelWe0"
+    , "privacyLink" : "https://docs.google.com/document/d/1gI_P4oZnVwE0O71rI4Mi8rpZbL9rsIRkyewbql85Np8"
+    , "appData" : {
+      "link" : getAppLink(window.__OS)
+      , "supportMail" :"nammayatri.support@juspay.in"
+      , "name" : "Yatri"
+    },
   })
-}
-
-function getAppLink(os) {
-  if (os == "ANDROID") {
-    return "https://play.google.com/store/apps/details?id=net.openkochi.yatri"
-  } else {
-    return "https://apps.apple.com/in/app/yatri/id1615871038"
-  }
 }

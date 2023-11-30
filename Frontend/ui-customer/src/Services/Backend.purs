@@ -49,9 +49,9 @@ import Tracker.Labels (Label(..))
 import Tracker.Types as Tracker
 import Types.App (GlobalState(..), FlowBT, ScreenType(..))
 import Types.EndPoint as EP
-import Constants as Constants
 import Foreign.Object (empty)
 import Data.String as DS
+import ConfigProvider as CP
 
 getHeaders :: String -> Boolean -> Flow GlobalState Headers
 getHeaders val isGzipCompressionEnabled = do
@@ -149,8 +149,8 @@ customError =  { code : 400
 ---------------------------------------------------------------TriggerOTPBT Function---------------------------------------------------------------------------------------------------
 triggerOTPBT :: TriggerOTPReq → FlowBT String TriggerOTPResp
 triggerOTPBT payload = do
-    config <- EHU.getAppConfig Constants.appConfig
-    when config.features.enableAutoReadOtp $ void $ lift $ lift $ doAff Readers.initiateSMSRetriever
+    config <- CP.getAppConfigFlowBT CP.appConfig
+    when config.feature.enableAutoReadOtp $ void $ lift $ lift $ doAff Readers.initiateSMSRetriever
     headers <- getHeaders' "" false
     withAPIResultBT (EP.triggerOTP "") identity errorHandler (lift $ lift $ callAPI headers payload)
     where

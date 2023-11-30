@@ -9,7 +9,6 @@ import Debug (spy)
 import Engineering.Helpers.Commons (convertUTCtoISC)
 import JBridge as JB
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppScreenEvent)
-import MerchantConfig.Utils (getValueFromConfig)
 import PrestoDOM (Eval, continue, continueWithCmd, exit, updateAndExit)
 import PrestoDOM.Types.Core (class Loggable)
 import Screens (ScreenName(..), getScreen)

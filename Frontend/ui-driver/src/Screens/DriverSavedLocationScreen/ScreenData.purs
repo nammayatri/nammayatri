@@ -21,6 +21,7 @@ import Prelude
 import Common.Types.App as Common
 import Data.Maybe (Maybe(..))
 import Screens.Types (DriverSavedLocationScreenState, SavedLocationScreenType(..))
+import ConfigProvider
 
 initData :: DriverSavedLocationScreenState
 initData =
@@ -28,7 +29,7 @@ initData =
       { address: ""
       , currentLat: Nothing
       , currentLon: Nothing
-      , maxGotoLocations : 0
+      , maxGotoLocations : (getAppConfig appConfig).gotoConfig.maxGotoLocations
       , savedLocationsArray: [
         { id : "",
           lat : 0.0,

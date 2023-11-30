@@ -18,7 +18,7 @@ module Screens.HelpAndSupportScreen.ScreenData where
 import Screens.Types (HelpAndSupportScreenState, DeleteStatus(..))
 import Screens.MyRidesScreen.ScreenData (dummyIndividualCard)
 import Screens.Types (DeleteStatus(..))
-import MerchantConfig.DefaultConfig as DC
+import ConfigProvider
 import Data.Maybe(Maybe(..))
 import Foreign.Object (empty)
 
@@ -44,7 +44,7 @@ initData = {
     email : "",
     description : "",
     accountStatus : ACTIVE,
-    config : DC.config,
+    config : getAppConfig appConfig,
     vehicleVariant : Nothing,
     logField : empty
   },

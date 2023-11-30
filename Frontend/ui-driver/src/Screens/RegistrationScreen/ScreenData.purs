@@ -19,10 +19,10 @@ import Data.Eq.Generic (genericEq)
 import Data.Generic.Rep (class Generic)
 import Data.Maybe (Maybe(..))
 import Language.Strings (getString)
-import Common.Types.App (CityConfig)
+import Common.Types.Config (CityConfig)
 import Prelude (class Eq)
 import Screens.Types (RegisterationStep(..), RegistrationScreenState, StageStatus(..))
-import MerchantConfig.DefaultConfig as DC
+import ConfigProvider
 
 initData :: RegistrationScreenState
 initData = {
@@ -53,7 +53,7 @@ initData = {
         phoneNumber : "",
         lastUpdateTime : "",
         cityConfig : dummyCityConfig,
-        config : DC.config
+        config : getAppConfig appConfig
       },
       props: {
         limitReachedFor : Nothing,

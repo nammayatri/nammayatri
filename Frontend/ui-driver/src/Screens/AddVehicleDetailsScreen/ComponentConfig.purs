@@ -30,7 +30,6 @@ import Components.AppOnboardingNavBar as AppOnboardingNavBar
 import Data.String as DS
 import Font.Size as FontSize
 import Language.Types (STR(..))
-import MerchantConfig.Utils (getValueFromConfig)
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Resource.Constants as Constant
 import Screens.AddVehicleDetailsScreen.Controller (validateRegistrationNumber)
@@ -40,11 +39,13 @@ import Styles.Colors as Color
 import Helpers.Utils as HU
 import Storage (KeyStore(..), getValueToLocalStore)
 import Font.Style as FontStyle
+import ConfigProvider
 
 primaryButtonConfig :: ST.AddVehicleDetailsScreenState -> PrimaryButton.Config
 primaryButtonConfig state = let 
     config = PrimaryButton.config
-    imageUploadCondition = true--getValueFromConfig "imageUploadOptional" || state.props.isValidState
+    feature = (getAppConfig appConfig).feature
+    imageUploadCondition = true --feature.enableImageUpload || state.props.isValidState
     activate = ((toLower(state.data.vehicle_registration_number) == toLower(state.data.reEnterVehicleRegistrationNumber)) && 
                 -- (state.data.dateOfRegistration /= Just "") && 
                 state.data.vehicle_registration_number /= "" &&

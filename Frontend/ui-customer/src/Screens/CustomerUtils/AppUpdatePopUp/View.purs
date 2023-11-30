@@ -35,7 +35,7 @@ import Styles.Colors as Color
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Common.Types.App
-import MerchantConfig.Utils(Merchant(..), getMerchant, getValueFromConfig)
+import MerchantConfig.Utils(Merchant(..), getMerchant)
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Common.Types.App (LazyCheck(..))
@@ -158,7 +158,7 @@ updateRequiredView push state =
                   , color Color.yellowText
                   , onClick (\action -> do
                               _<- push action
-                              _ <- JB.openUrlInApp state.config.appLink
+                              _ <- JB.openUrlInApp state.config.appData.link
                               pure unit
                               ) (const OnAccept)
               ] <> FontStyle.body4 LanguageStyle

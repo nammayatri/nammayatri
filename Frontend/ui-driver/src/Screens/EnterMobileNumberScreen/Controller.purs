@@ -29,9 +29,9 @@ import Engineering.Helpers.Commons (getNewIDWithTag)
 import Effect.Class (liftEffect)
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppTextInput, trackAppScreenEvent)
 import Screens (ScreenName(..), getScreen)
-import MerchantConfig.Utils (getValueFromConfig)
 import Effect.Unsafe (unsafePerformEffect)
 import Engineering.Helpers.LogEvent (logEvent)
+import ConfigProvider
 
 instance showAction :: Show Action where
   show _ = ""
@@ -79,7 +79,8 @@ eval (PrimaryEditTextAction (MobileNumberEditor.TextChanged valId newVal)) state
   _ <- if length newVal == 10 then do
             pure $ hideKeyboardOnNavigation true 
             else pure unit    
-  let isValidMobileNumber = if getValueFromConfig "allowAllMobileNumber" then true
+  let config = getAppConfig appConfig
+      isValidMobileNumber = if config.allowAllMobileNumber then true
                               else case (charAt 0 newVal) of 
                                 Just a -> if a=='0' || a=='1' || a=='2' || a=='5' then false 
                                             else if a=='3' || a=='4' then

@@ -6,36 +6,34 @@ if (typeof __VERSION__ !== "undefined") {
 window.version["configuration"]= version;
 window.getMerchantConfig = function () {
   return JSON.stringify({
-    "RC_VALIDATION_TEXT": "WB",
-    "DOCUMENT_LINK": "https://docs.google.com/document/d/19pQUgTWXBqcM7bjy4SU1-z33r-iXsdPMfZggBTXbdR4",
     "APP_LINK": "https://play.google.com/store/apps/details?id=in.juspay.jatrisaathidriver",
     "USER_APP_LINK" : "https://nammayatri.in/link/rider/kTZ1",
     "PRIVACY_POLICY_LINK": "https://docs.google.com/document/d/1-bcjLOZ_gR0Rda2BNmkKnqVds8Pm23v1e7JbSDdM70E",
     "SPECIAL_ZONE_OTP_VIEW": "true",
     "StringKeys": ["WELCOME_TEXT",
-                    "ABOUT_TEXT",
-                    "NEED_IT_TO_ENABLE_LOCATION",
-                    "CURRENTLY_WE_ALLOW_ONLY_KARNATAKA_REGISTERED_NUMBER",
-                    "YOU_ARE_ABOUT_TO_CALL_NAMMA_YATRI_SUPPORT",
-                    "YOUR_LOCATION_HELPS_OUR_SYSTEM",
-                    "EARNED_ON_APP",
-                    "TRAVELLED_ON_APP",
-                    "REPORT_ISSUE_CHAT_PLACEHOLDER",
-                    "MY_PLAN_TITLE",
-                    "CHOOSE_YOUR_PLAN",
-                    "OFFER_CARD_BANNER_TITLE",
-                    "TO_CONTINUE_USING_YATRI_SATHI",
-                    "YATRI_SATHI_FEE_PAYABLE_FOR_DATE",
-                    "PAYMENT_FAILED_DESC",
-                    "AADHAAR_LINKING_REQUIRED_DESCRIPTION",
-                    "COMPLETE_PAYMENT_TO_CONTINUE",
-                    "GET_READY_FOR_YS_SUBSCRIPTION",
-                    "SUBSCRIPTION_PLAN_STR",
-                    "FIND_HELP_CENTRE",
-                    "HOW_IT_WORKS",
-                    "GET_SPECIAL_OFFERS",
-                    "PAYMENT_PENDING_ALERT_DESC"
-                    ],
+      "ABOUT_TEXT",
+      "NEED_IT_TO_ENABLE_LOCATION",
+      "CURRENTLY_WE_ALLOW_ONLY_KARNATAKA_REGISTERED_NUMBER",
+      "YOU_ARE_ABOUT_TO_CALL_NAMMA_YATRI_SUPPORT",
+      "YOUR_LOCATION_HELPS_OUR_SYSTEM",
+      "EARNED_ON_APP",
+      "TRAVELLED_ON_APP",
+      "REPORT_ISSUE_CHAT_PLACEHOLDER",
+      "MY_PLAN_TITLE",
+      "CHOOSE_YOUR_PLAN",
+      "OFFER_CARD_BANNER_TITLE",
+      "TO_CONTINUE_USING_YATRI_SATHI",
+      "YATRI_SATHI_FEE_PAYABLE_FOR_DATE",
+      "PAYMENT_FAILED_DESC",
+      "AADHAAR_LINKING_REQUIRED_DESCRIPTION",
+      "COMPLETE_PAYMENT_TO_CONTINUE",
+      "GET_READY_FOR_YS_SUBSCRIPTION",
+      "SUBSCRIPTION_PLAN_STR",
+      "FIND_HELP_CENTRE",
+      "HOW_IT_WORKS",
+      "GET_SPECIAL_OFFERS",
+      "PAYMENT_PENDING_ALERT_DESC"
+    ],
     "fontType": "Assets",
     "currency": "₹",
     "isGradient" : "false",
@@ -152,32 +150,32 @@ window.getMerchantConfig = function () {
       , "packageName" : "com.google.android.apps.maps"
     }
     , "subscriptionConfig" : {
-          "enableBlocking" : true,
-          "completePaymentPopup" : false,
-          "supportNumber" : "08069724949",
-          "enableSubscriptionPopups" : true,
-          "maxDuesLimit" : 500.0,
-          "faqLink" : "https://yatrisathi.in/plans/",
-          "optionsMenuItems" : {
-            "viewFaqs" : true,
-            "viewAutopayDetails" : true,
-            "paymentHistory" : true,
-            "kioskLocation" : true
-          },
-          "offerBannerConfig" : {
-            "showDUOfferBanner" : true,
-            "offerBannerValidTill" : "2023-12-01T00:00:00",
-            "offerBannerDeadline" : "Jan 1-31-*$*-ಜನವರಿ 1-31-*$*-1-31 जनवरी-*$*-ஜனவரி 1-31-*$*-জানুয়ারী 1-31",
-            "offerBannerPlans" : ["25ade579-fd9c-4288-a015-337af085e66c"],
-          },
-          "lowDuesLimit" : 15.0,
-          "highDueWarningLimit" : 75.0,
-          "gradientConfig" : [{"id" : "c1a27b2c-8287-4d79-a5d9-99e1a0026203", colors : ["#29FF4D35", "#29FFE588"]},{"id" : "5eed42c1-2388-4a86-b68b-d9da2f674091", colors : ["#29FF4D35", "#29FFE588"]},{"id" : "b6d61915-65bb-4ca9-bbb7-a90be735a722", colors : ["#29FF4D35", "#29FFE588"]}],
-          "enableSubscriptionSupportPopup" : true,
-          "myPlanYoutubeLink" : "https://www.youtube.com/playlist?list=PLvMgI4c44A9Y2bykEuDAtHzgcubXOYqgU-*$*-https://www.youtube.com/playlist?list=PLvMgI4c44A9Y2bykEuDAtHzgcubXOYqgU-*$*-https://www.youtube.com/playlist?list=PLvMgI4c44A9Zl0IIQcZa7ZJrSjWPLfxpA-*$*-https://www.youtube.com/playlist?list=PLvMgI4c44A9Y8NLs_8TXc7biX-JkobrGB",
-          "overlayYoutubeLink" : "https://youtube.com/shorts/nyJ1bIOsGfo-*$*-https://youtube.com/shorts/nyJ1bIOsGfo-*$*-https://youtu.be/RSKNT3NccPo-*$*-https://youtu.be/RSKNT3NccPo",
-          "earnAmountInADay" : 5000,
-          "showFeeBreakup" : false
+      "enableBlocking" : true,
+      "completePaymentPopup" : false,
+      "supportNumber" : "08069724949",
+      "enableSubscriptionPopups" : true,
+      "maxDuesLimit" : 500.0,
+      "faqLink" : "https://yatrisathi.in/plans/",
+      "optionsMenuItems" : {
+        "viewFaqs" : true,
+        "viewAutopayDetails" : true,
+        "paymentHistory" : true,
+        "kioskLocation" : true
+      },
+      "offerBannerConfig" : {
+        "showDUOfferBanner" : true,
+        "offerBannerValidTill" : "2023-12-01T00:00:00",
+        "offerBannerDeadline" : "Jan 1-31-*$*-ಜನವರಿ 1-31-*$*-1-31 जनवरी-*$*-ஜனவரி 1-31-*$*-জানুয়ারী 1-31",
+        "offerBannerPlans" : ["25ade579-fd9c-4288-a015-337af085e66c"],
+      },
+      "lowDuesLimit" : 15.0,
+      "highDueWarningLimit" : 75.0,
+      "gradientConfig" : [{"id" : "c1a27b2c-8287-4d79-a5d9-99e1a0026203", colors : ["#29FF4D35", "#29FFE588"]},{"id" : "5eed42c1-2388-4a86-b68b-d9da2f674091", colors : ["#29FF4D35", "#29FFE588"]},{"id" : "b6d61915-65bb-4ca9-bbb7-a90be735a722", colors : ["#29FF4D35", "#29FFE588"]}],
+      "enableSubscriptionSupportPopup" : true,
+      "myPlanYoutubeLink" : "https://www.youtube.com/playlist?list=PLvMgI4c44A9Y2bykEuDAtHzgcubXOYqgU-*$*-https://www.youtube.com/playlist?list=PLvMgI4c44A9Y2bykEuDAtHzgcubXOYqgU-*$*-https://www.youtube.com/playlist?list=PLvMgI4c44A9Zl0IIQcZa7ZJrSjWPLfxpA-*$*-https://www.youtube.com/playlist?list=PLvMgI4c44A9Y8NLs_8TXc7biX-JkobrGB",
+      "overlayYoutubeLink" : "https://youtube.com/shorts/nyJ1bIOsGfo-*$*-https://youtube.com/shorts/nyJ1bIOsGfo-*$*-https://youtu.be/RSKNT3NccPo-*$*-https://youtu.be/RSKNT3NccPo",
+      "earnAmountInADay" : 5000,
+      "showFeeBreakup" : false
     } 
     , "OTP_MESSAGE_REGEX" : "is your OTP for login to [A-Za-z]+ [A-Za-z]+ [A-Za-z]+"
     , "autoPayBanner" : false
@@ -190,23 +188,45 @@ window.getMerchantConfig = function () {
     } 
     , "bottomNavConfig" : {
       "subscription" : 
-            { "isVisible" : true,
-              "showNew" : true
-            }
+        { "isVisible" : true,
+          "showNew" : true
+        }
+    }
+    , "otpRegex" :  "is your OTP for login to [A-Za-z]+ [A-Za-z]+ [A-Za-z]+"
+    , "termsLink" : "https://docs.google.com/document/d/19pQUgTWXBqcM7bjy4SU1-z33r-iXsdPMfZggBTXbdR4"
+    , "privacyLink" : "https://docs.google.com/document/d/1-bcjLOZ_gR0Rda2BNmkKnqVds8Pm23v1e7JbSDdM70E"
+    , "feature" : {
+      "enableBonus" : false
+      , "enableImageUpload" : true
+      , "enableGender" : false
+      , "enableOtpRide" : true
+    }
+    , "appData" : {
+      "link" : "https://play.google.com/store/apps/details?id=in.juspay.jatrisaathidriver"
+      , "name" : "Yatri Sathi"
+    }
+    , "vehicle" : {
+      "validationPrefix" :  "WB"
+    }
+    , "banners" :{
+      "autoPay" : false
+    }
+    , "referral": {
+      "link" : "https://nammayatri.in/link/rider/kTZ1"
     }
     , "enableMockLocation" : false
-  , "flowConfig" : {
-        "chooseCity" : {
-            "runFlow" : false
+    , "flowConfig" : {
+      "chooseCity" : {
+        "runFlow" : false
       }
     }
-  , "permissions" : {
-        "locationPermission" : true,
-        "notification" : false
-  }
-  , "homeScreen" : {
-        "specialRideOtpView" : true,
-        "showGenderBanner" : false
-  }
+    , "permissions" : {
+      "locationPermission" : true,
+      "notification" : false
+    }
+    , "homeScreen" : {
+      "specialRideOtpView" : true,
+      "showGenderBanner" : false
+    }
   })
 }

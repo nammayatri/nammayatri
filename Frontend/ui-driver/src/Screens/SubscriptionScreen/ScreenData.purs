@@ -18,12 +18,14 @@ module Screens.SubscriptionScreen.ScreenData where
 
 import Common.Types.App (PaymentStatus(..))
 import Data.Maybe as Mb
-import MerchantConfig.DefaultConfig as DC
+import ConfigProvider
 import Screens.Types (AutoPayStatus(..), KeyValType, OptionsMenuState(..), PlanCardConfig, PromoConfig, SubscribePopupType(..), SubscriptionScreenState, SubscriptionSubview(..), DueItem)
 import Services.API (AutopayPaymentStage(..), DriverDuesEntity(..), FeeType(..), InvoiceStatus(..), OfferEntity(..), PaymentBreakUp(..))
 
 initData :: SubscriptionScreenState
-initData = {
+initData = 
+  let config = getAppConfig appConfig 
+  in {
     data: {
         driverId : "",
         paymentMode : "",
@@ -59,7 +61,7 @@ initData = {
             payerUpiId : Mb.Nothing,
             pspLogo : ""
         },
-        config : DC.config
+        config
     },
     props : {
         isSelectedLangTamil : false,
@@ -96,9 +98,9 @@ initData = {
         redirectToNav : "",
         lastPaymentType : Mb.Nothing,
         offerBannerProps : {
-            showOfferBanner : false,
-            offerBannerValidTill : "",
-            offerBannerDeadline : ""
+          showOfferBanner : config.subscriptionConfig.offerBannerConfig.showDUOfferBanner,
+          offerBannerValidTill : config.subscriptionConfig.offerBannerConfig.offerBannerValidTill,
+          offerBannerDeadline : config.subscriptionConfig.offerBannerConfig.offerBannerDeadline
         },
         isEndRideModal : false
     }

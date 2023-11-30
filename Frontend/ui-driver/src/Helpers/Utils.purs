@@ -25,11 +25,10 @@ import Language.Types(STR(..))
 import Data.Array ((!!), elemIndex, length, slice, last, find) as DA
 import Data.String (Pattern(..), split) as DS
 import Data.Number (pi, sin, cos, asin, sqrt)
-import Constants as Constants
 import Data.String.Common as DSC
 import MerchantConfig.Utils
-import Engineering.Helpers.Utils (getAppConfig)
-import Common.Types.App (LazyCheck(..), CalendarDate, CalendarWeek, PaymentStatus(..), CityConfig)
+import Common.Types.App (LazyCheck(..), CalendarDate, CalendarWeek, PaymentStatus(..))
+import Common.Types.Config (CityConfig(..))
 import Types.App (FlowBT, defaultGlobalState)
 import Control.Monad.Except (runExcept, runExceptT)
 import Data.Array ((!!), fold, any, head, filter) as DA
@@ -86,6 +85,7 @@ import Storage (getValueToLocalStore)
 import Services.Config (getWhatsAppSupportNo, getSupportNumber)
 import Engineering.Helpers.BackTrack (liftFlowBT)
 import Control.Transformers.Back.Trans (runBackT)
+import ConfigProvider
 
 type AffSuccess s = (s -> Effect Unit)
 
@@ -185,10 +185,12 @@ dummyLabelConfig = {
 }
 
 otpRule :: Reader.OtpRule
-otpRule = Reader.OtpRule {
+otpRule =
+  let others = getAppConfig appConfig
+  in Reader.OtpRule {
   matches : {
     sender : [],
-    message : (getValueFromConfig "OTP_MESSAGE_REGEX")
+    message : others.otpRegex
   },
   otp : "\\d{4}",
   group : Nothing
@@ -567,7 +569,7 @@ incrementValueOfLocalStoreKey key = do
 contactSupportNumber :: String -> Effect Unit
 contactSupportNumber supportType = do
   void $ launchAff $ flowRunner defaultGlobalState $ runExceptT $ runBackT do 
-    config <- getAppConfig Constants.appConfig
+    config <- getAppConfigFlowBT appConfig
     let city = getCityConfig config.cityConfig (getValueToLocalStore DRIVER_LOCATION)
         supportNumber = if DSC.null city.supportNumber then getSupportNumber "" else city.supportNumber
     if supportType == "WHATSAPP" && DSC.null city.supportNumber then 

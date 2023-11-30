@@ -21,7 +21,7 @@ import Engineering.Helpers.Commons as EHC
 import Foreign.Object (empty)
 import Screens.RegistrationScreen.ScreenData (dummyCityConfig)
 import Screens.Types (UploadDrivingLicenseState)
-import MerchantConfig.DefaultConfig as DC
+import ConfigProvider
 
 initData :: UploadDrivingLicenseState
 initData = {
@@ -44,7 +44,7 @@ initData = {
       , logField : empty
       , mobileNumber : ""
       , cityConfig : dummyCityConfig
-      , config : DC.config
+      , config : getAppConfig appConfig
       },
       props: {
         openRegistrationModal : false

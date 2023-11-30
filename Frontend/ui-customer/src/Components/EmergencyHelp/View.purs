@@ -38,7 +38,7 @@ import Engineering.Helpers.Commons (safeMarginTop, safeMarginBottom, os, isPrevi
 import Storage (getValueToLocalStore, KeyStore(..))
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Common.Types.App (LazyCheck(..))
-import MerchantConfig.Utils (getValueFromConfig)
+import ConfigProvider
 import JBridge as JB
 
 view :: forall w .  (Action  -> Effect Unit) -> EmergencyHelpModelState  -> PrestoDOM (Effect Unit) w
@@ -343,12 +343,14 @@ popUpViewCallSuccessful state push =
 
 showEmergencyContact :: forall w . EmergencyHelpModelState -> (Action  -> Effect Unit) -> PrestoDOM (Effect Unit) w
 showEmergencyContact state push =
+  let feature = (getAppConfig appConfig).feature
+  in
   linearLayout
     [ height WRAP_CONTENT
     , width MATCH_PARENT
     , orientation VERTICAL
     , margin $ Margin 16 20 16 12
-    , visibility if(getValueFromConfig "isEmergencyContacts" == "false") then GONE else VISIBLE
+    , visibility if feature.enableEmergencyContacts then VISIBLE else GONE
     , onClick push $ const (if (DA.null state.emergencyContactData) then  AddedEmergencyContacts else NoAction)
     ][  linearLayout
         [ width MATCH_PARENT
@@ -486,7 +488,7 @@ type CardData =  { action :: Action
 
 supportList :: EmergencyHelpModelState -> Array (CardData)
 supportList state = 
-  (if state.config.enableContactSupport then 
+  (if state.config.feature.enableSupport then 
     [{ action :  ContactSupportPopup
     , title : getString $ CALL_NAMMA_YATRI_SUPPORT "CALL_NAMMA_YATRI_SUPPORT"
     , secondaryTitle : getString ALSO_SHARE_YOUR_RIDE_STATUS_AND_LOCATION }]

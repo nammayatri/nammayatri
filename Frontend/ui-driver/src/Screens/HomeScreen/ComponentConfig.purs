@@ -16,7 +16,7 @@
 module Screens.HomeScreen.ComponentConfig where
 
 import Language.Strings
-
+import Common.Types.Config
 import Common.Types.App (LazyCheck(..), PolylineAnimationConfig)
 import Common.Types.App as CommonTypes
 import Components.Banner as Banner
@@ -550,7 +550,7 @@ chatViewConfig state = let
     , black700 = Color.black700
     , canSendSuggestion = state.props.canSendSuggestion
     , enableCall = (not (state.data.activeRide.disabilityTag == Just ST.HEAR_IMPAIRMENT))
-    , enableSuggestions = state.data.config.features.enableSuggestions
+    , enableSuggestions = state.data.config.feature.enableSuggestions
   }
   in chatViewConfig'
 
@@ -1026,7 +1026,7 @@ getAccessibilityPopupData state pwdtype isDriverArrived =
       _ , _-> accessibilityConfig' 
 
   where 
-    getUpdatedAssets :: CommonTypes.CityConfig -> String 
+    getUpdatedAssets :: CityConfig -> String 
     getUpdatedAssets cityConfig = 
       if cityConfig.cityCode == "std:040" then 
         case pwdtype, isDriverArrived of 

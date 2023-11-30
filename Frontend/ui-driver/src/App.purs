@@ -61,6 +61,8 @@ import Screens.UploadDrivingLicenseScreen.ScreenData as UploadDrivingLicenseScre
 import Screens.VehicleDetailsScreen.ScreenData as VehicleDetailsScreenData
 import Screens.WelcomeScreen.ScreenData as WelcomeScreenData
 import Screens.WriteToUsScreen.ScreenData as WriteToUsScreenData
+import Data.Maybe (Maybe(..))
+import MerchantConfig.Types (AppConfig(..))
 
 type FlowBT e a = BackT (ExceptT e (Free (FlowWrapper GlobalState))) a
 
@@ -205,7 +207,6 @@ data ScreenType =
   | DriverSavedLocationScreenStateType (DriverSavedLocationScreenState -> DriverSavedLocationScreenState)
   | ChooseCityScreenStateType (ChooseCityScreenState -> ChooseCityScreenState)
   | WelcomeScreenStateType (WelcomeScreenState -> WelcomeScreenState)
-  
 
 data ScreenStage = HomeScreenStage HomeScreenStage
 

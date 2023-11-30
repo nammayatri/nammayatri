@@ -32,7 +32,6 @@ import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import MerchantConfig.Utils (getValueFromConfig)
 import Prelude (Unit, bind, const, pure, unit, ($), (<<<), (==), (<>), not)
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), Accessiblity(..), afterRender, accessibility, background, color, cornerRadius, fontStyle, gravity, height, imageUrl, imageView, imageWithFallback, lineHeight, linearLayout, margin, onBackPressed, onClick, orientation, padding, scrollBarY, scrollView, text, textSize, textView, visibility, weight, width, accessibilityHint)
 import Screens.AboutUsScreen.Controller (Action(..), ScreenOutput, eval)
@@ -243,7 +242,7 @@ termsAndConditionsView state =
         , color Color.blue900
         , onClick (\action -> do
             _ <- pure action
-            _ <- JB.openUrlInApp $ getValueFromConfig "DOCUMENT_LINK" 
+            _ <- JB.openUrlInApp $ state.appConfig.termsLink
             pure unit
           ) (const TermsAndConditions)
         , margin (Margin 0 20 0 0)
@@ -272,7 +271,7 @@ privacyPolicyView state =
         , margin (Margin 0 20 0 0)
         , onClick (\action -> do
             _ <- pure action
-            _ <- JB.openUrlInApp $ getValueFromConfig "PRIVACY_POLICY_LINK" 
+            _ <- JB.openUrlInApp $ state.appConfig.privacyLink
             pure unit
           ) (const PrivacyPolicy)
         ] <> FontStyle.paragraphText LanguageStyle

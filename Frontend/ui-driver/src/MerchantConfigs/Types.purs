@@ -1,16 +1,15 @@
 module MerchantConfig.Types where
 
-import Common.Types.App (CityConfig)
+import Common.Types.Config
 
-type AppConfig =
+type AppConfig = AppConfigDriver CommonAppConfig
+
+type AppConfigDriver a =
   {
     primaryTextColor :: String,
     primaryBackground :: String,
-    fontType :: String,
     languageList :: Array Language,
     popupBackground :: String,
-    defaultLanguage :: String,
-    imageUploadOptional :: Boolean,
     rideCompletedCardConfig :: RideCompletedCardConfig, 
     leaderBoard :: LeaderBoard,
     subscriptionConfig :: SubscriptionConfig,
@@ -26,10 +25,16 @@ type AppConfig =
     cityConfig :: Array CityConfig,
     unserviceableThreshold :: Number,
     enableMockLocation :: Boolean,
-    features :: Features,
     flowConfig :: FlowConfig,
     permissions :: PermissionsConfig,
-    homeScreen :: HomeScreenConfig
+    homeScreen :: HomeScreenConfig,
+    feature :: Features,
+    vehicle :: VVConfig,
+    allowAllMobileNumber ::Boolean,
+    engilshInNative :: String,
+    banners :: BannerConfig,
+    referral :: ReferralConfig
+    | a
   } 
 
 type PurpleRideConfig = {
@@ -39,10 +44,6 @@ type PurpleRideConfig = {
   hearingImpairmentVideo :: String,
   genericAccessibilityVideo :: String
   }
-
-type Features = {
-  enableSuggestions :: Boolean
-}
 
 type Language =  {
   name :: String,
@@ -161,4 +162,26 @@ type PermissionsConfig = {
 type HomeScreenConfig = {
   specialRideOtpView :: Boolean,
   showGenderBanner :: Boolean
+}
+
+type Features = {
+  enableBonus :: Boolean
+, enableImageUpload :: Boolean
+, enableGender ::Boolean
+, enableOtpRide :: Boolean
+, enableSuggestions :: Boolean
+}
+ 
+ -- VV - VechileVerfication
+type VVConfig = {
+  validationPrefix :: String
+}
+
+type BannerConfig = {
+  autoPay :: Boolean
+}
+
+type ReferralConfig = {
+  type :: String
+, link :: String
 }

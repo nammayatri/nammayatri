@@ -1,6 +1,6 @@
 window.version = window.version || {};
 let version = "1.0.0";
-if (typeof __VERSION__ !== 'undefined') {
+if (typeof __VERSION__ !== "undefined") {
   version = __VERSION__
 }
 window.version["configuration"]= version;
@@ -141,13 +141,17 @@ window.getMerchantConfig = function () {
       "showVehicleVariant" : false
     }
     , "referralType" : "LeaderBoard"
+    , "referral": {
+      "type" : "LeaderBoard"
+      , "link" : "https://nammayatri.in/link/rider/mvnw"
+    }
     , "gotoConfig" : {
       "maxGotoLocations" : 5,
       "enableGoto" : true
     }
     , "bottomNavConfig" : {
       "subscription" : 
-            { isVisible : true
+            { "isVisible" : true
             }
     }
     , "purpleRideConfig" : {
@@ -156,6 +160,19 @@ window.getMerchantConfig = function () {
       "physicalImpairmentVideo" : "https://www.youtube.com/watch?v=B0C6SZTQO6k",
       "hearingImpairmentVideo" : "https://www.youtube.com/watch?v=udkWOt0serg",
       "genericAccessibilityVideo" : "https://youtu.be/5s21p2rI58c"
+    }
+    , "otpRegex" :  "is your OTP for login to [A-Za-z]+ [A-Za-z]+ [A-Za-z]+"
+    , "termsLink" : "https://drive.google.com/file/d/1qYXbQUF4DVo2xNOawkHNTR_VVe46nggc"
+    , "privacyLink" : "https://docs.google.com/document/d/1tF96MwtaEiq70y_P40E29Sy3X61moTc9"
+    , "feature" : {
+      "enableBonus" : true
+      , "enableImageUpload" : false
+      , "enableGender" : true
+      , "enableOtpRide" : false
+    }
+    , "appData" : {
+      "link" : "https://play.google.com/store/apps/details?id=in.juspay.nammayatripartner"
+      , "name" : "Namma Yatri"
     }
     , "enableMockLocation" : false
     , "cityConfig" : [

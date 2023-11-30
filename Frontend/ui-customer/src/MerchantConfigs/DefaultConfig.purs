@@ -1,18 +1,18 @@
 module MerchantConfig.DefaultConfig where
 
 import MerchantConfig.Types
+import Common.DefaultConfig
 
-config :: AppConfig
+config :: AppConfig 
 config =
   { primaryTextColor: "#FCC32C"
   , primaryBackground: "#2C2F3A"
   , estimateConfirmText: "Request a NammaYatri Ride"
   , autoConfirmingLoaderColor: "#80B2FF"
   , quoteListModelBackground: "#2C2F3A"
+  , defaultLanguage : "EN_US"
   , currency: "₹"
-  , isGradient: "false"
   , primaryButtonCornerRadius: 8.0
-  , gradient: []
   , showPickUpandDrop: true
   , alertDialogPrimaryColor: "#2194FF"
   , cancelSearchTextColor: "#E55454"
@@ -37,7 +37,7 @@ config =
     , lineImage : "ic_line"
     , lottieHeight : 300
     , lottieWidth : 300
-    , topMargin : 100
+    , topMargin : 0
     , noQuotesImageHeight: 115
     , noQuotesImageWidth : 137
     , separatorColor : "#00FFFFFF"
@@ -62,7 +62,9 @@ config =
     , primaryButtonHeight : 60
     , hintColor : "#A7A7A7"
     , showSeparator : false
+    , showChargeDesc: false
     , backArrow : "ny_ic_chevron_left_white,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_chevron_left_white.png"
+    , enableRateCard: true
     }
   , driverInfoConfig : 
     { ratingTextColor: "#454545"
@@ -78,7 +80,7 @@ config =
     , callHeight: 24
     , callWidth: 24
     , numberPlateBackground : "#E9BE4D"
-    , showCancelPrevention : false
+    , showCancelPrevention : true
     , showTrackingButton : true
     , specialZoneQuoteExpirySeconds : 3600
     , footerVisibility : false
@@ -86,7 +88,7 @@ config =
     , footerBackgroundColor : "#FFFFFF"
     }
   , ratingConfig : 
-    { secondaryButtonTextColor : "#FCC32C"
+    { secondaryButtonTextColor : "#2C2F3A"
     , secondaryButtonStroke : "1,#2C2F3A"
     , buttonCornerRadius : 8.0
     }
@@ -99,18 +101,18 @@ config =
   , profileName: "#FFFFFF"
   , profileImage: "#012A72"
   , feedbackBackground: "#2C2F3A"
-  , sideBarList: [ "MyRides", "Tickets", "Favorites", "EmergencyContacts", "HelpAndSupport", "Language", "Separator", "ShareApp", "LiveStatsDashboard", "Logout" ]
+  , sideBarList: [ "MyRides", "Favorites", "EmergencyContacts", "HelpAndSupport", "Language", "Separator", "ShareApp", "LiveStatsDashboard", "About", "Logout" ]
   , rateCardColor: "#2C2F3A"
   , nyBrandingVisibility: false
   , fontType: "Assets"
   , languageList : []
-  , confirmPickUpLocationBorder: "#101010"
+  , confirmPickUpLocationBorder: "#E5E7EB"
   , bannerConfig : {
         backgroundColor : "#F0FAF0"
       , title : "Complete your profile for a personalised ride experience"
-      , titleColor :"#269574"
+      , titleColor :"#21C179"
       , actionText : "Update now"
-      , actionTextColor : "#269574"
+      , actionTextColor : "#27AE5F"
       , imageUrl : "ny_ic_banner_gender_feat,https://assets.juspay.in/beckn/merchantcommon/images/ny_ic_banner_gender_feat.png" 
       }
   , popupBackground : "#FFFFFF"
@@ -121,11 +123,11 @@ config =
   , infoIconUrl : "ny_ic_info,https://assets.juspay.in/nammayatri/images/user/ny_ic_information_grey.png"
   , profileEditGravity : "center"
   , merchantLogo : "ic_launcher,https://assets.juspay.in/nammayatri/images/user/ny_ic_launcher.png"
-  , logs : ["JUSPAY", "FIREBASE", "CLEVERTAP"]
-  , showCorporateAddress : false
+  , logs: [ "JUSPAY" ]
+  , showCorporateAddress : true
   , terminateBtnConfig : {
           visibility: false, 
-          title : "Paytm",
+          title : "",
           backgroundColor : "#00FFFFFF",
           imageUrl : "ny_ic_chevron_left_double,https://assets.juspay.in/beckn/mobilitypaytm/mobilitypaytmcommon/ny_ic_chevron_left_double.png"
       }
@@ -145,11 +147,9 @@ config =
   , enableMockLocation : false
   , specialLocationView : false
   , internationalNumberEnabled : false
-  , dashboardUrl : "https://nammayatri.in/open/"
   , callOptions : ["ANONYMOUS"]
   , autoVariantEnabled : true
-  , showDisabilityBanner : true
-  , enableGeocoder : true --TODO:: Deprecated
+  , showDisabilityBanner : false
   , geoCoder: {
       enableLLtoAddress : true
     , enableAddressToLL : true 
@@ -163,17 +163,24 @@ config =
       { variantTypes : [ ["SUV"], ["HATCHBACK", "TAXI_PLUS", "SEDAN"], ["TAXI"], ["AUTO_RICKSHAW"] ]
       , variantOrder : ["HATCHBACK", "TAXI_PLUS", "SEDAN", "TAXI", "SUV", "AUTO_RICKSHAW"]
       , enableOnlyAuto : false
+      , showNearByDrivers: false
+      , enableBookingPreference: true
       }
   , customerTip : {
       auto : true,
       cabs : false
     }
-  , enableContactSupport : true
-  , features : {
+  , feature : {
     enableAutoReadOtp : true,
     enableZooTicketBookingFlow : false,
     enableLiveDashboard : true,
-    enableSuggestions : false
+    enableSuggestions : false,
+    enableShareRide : true,
+    enableChat: true,
+    enableEmergencyContacts: true,
+    enableReferral: true,
+    enableSupport: true,
+    enableShareApp: true
   }
 
   , rideCompletedCardConfig : {
@@ -186,7 +193,7 @@ config =
   , mapConfig : 
       { locateOnMapConfig : 
           { dottedLineConfig : 
-              { visible : true
+              { visible : false
               , range : 100
               , color : "#323643"
               },
@@ -195,6 +202,7 @@ config =
           }
       , labelTextSize : 30
       , animationDuration : 500
+      , vehicleMarkerSize: 90
       }
   , purpleRideConfig : {
       genericVideoUrl : "" ,
@@ -202,7 +210,6 @@ config =
       physicalImpairmentVideo : "",
       hearingImpairmentVideo : ""
     }
-  , appLink : ""
   , homeScreen: {
       primaryBackground : "#2C2F3A",
       pickUpViewColor : "#303440",
@@ -231,4 +238,22 @@ config =
         }
       }
     }
+  , appData : defaultAppData
+  , navigationAppConfig : defaultNavigationAppConfig
+  , genericHeaderConfig : defaultGenericHeader
+  , colors : defaultColors
+  , primaryButtonConfig : defaultPrimaryButtonConfig
+  , fontConfig : defaultFontConfig
+  , loaderConfig : defaultLoaderConfig
+  , otpRegex :  "is your OTP for login to [A-Za-z]+ [A-Za-z]+ [A-Za-z]+"
+  , termsLink : "https://docs.google.com/document/d/1-oRR_oI8ncZRPZvFZEJZeCVQjTmXTmHA"
+  , privacyLink : "https://docs.google.com/document/d/128VU80K5E1iz-x6QnP1R127m_lwmDO3F"
+  , shareAppConfig : {
+      title : "Share Namma Yatri!"
+    , description : "Hey there!\n\nCheck India's first Zero Commission auto booking app.\n100% Open source | 100% Open Data\n\nDownload Namma Yatri now! \nhttps://nammayatri.in/link/rider/SJ8D \n\n #beOpen #chooseOpen"
   }
+  , dashboard :{
+      url : "https://nammayatri.in/open?source=in-app"
+    , enable : false
+  }
+}

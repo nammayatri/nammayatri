@@ -24,9 +24,11 @@ import Components.LocationListItem as LocationListItem
 import Components.LocationTagBar as LocationTagBar
 import Components.PrimaryButton as PrimaryButton
 import Components.SearchLocationModel.Controller (Action(..), SearchLocationModelState)
-import Data.Array (mapWithIndex, length,take)
+import Components.SeparatorView.View as SeparatorView
+import Data.Array (mapWithIndex, length, take)
 import Data.Function (flip)
 import Data.Maybe (Maybe(..), fromMaybe)
+import Data.String as DS
 import Debug (spy)
 import Effect (Effect)
 import Engineering.Helpers.Commons (getNewIDWithTag, isPreviousVersion, os, safeMarginBottom, safeMarginTop, screenHeight, screenWidth, setText)
@@ -40,13 +42,12 @@ import Language.Types (STR(..))
 import MerchantConfig.Utils (Merchant(..), getMerchant)
 import Prelude ((<>))
 import Prelude (Unit, bind, const, map, pure, unit, ($), (&&), (+), (-), (/), (/=), (<<<), (<>), (==), (||), not, discard, (>=), void)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Accessiblity(..), Padding(..), PrestoDOM, Visibility(..), Accessiblity(..), accessibilityHint ,adjustViewWithKeyboard, afterRender, alignParentBottom, alpha, autoCorrectionType, background, clickable, color, cornerRadius, cursorColor, disableClickFeedback, editText, ellipsize, fontStyle, frameLayout, gravity, height, hint, hintColor, id, imageUrl, imageView, imageWithFallback, inputTypeI, lineHeight, linearLayout, margin, onBackPressed, onChange, onClick, onFocus, orientation, padding, relativeLayout, scrollBarY, scrollView, singleLine, stroke, text, textSize, textView, visibility, weight, width, accessibility, lottieAnimationView, layoutGravity, selectAllOnFocus)
+import PrestoDOM (Accessiblity(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), accessibility, accessibilityHint, adjustViewWithKeyboard, afterRender, alignParentBottom, alpha, autoCorrectionType, background, clickable, color, cornerRadius, cursorColor, disableClickFeedback, editText, ellipsize, fontStyle, frameLayout, gravity, height, hint, hintColor, id, imageUrl, imageView, imageWithFallback, inputTypeI, layoutGravity, lineHeight, linearLayout, lottieAnimationView, margin, onBackPressed, onChange, onClick, onFocus, orientation, padding, relativeLayout, scrollBarY, scrollView, selectAllOnFocus, singleLine, stroke, text, textSize, textView, visibility, weight, width)
 import PrestoDOM.Animation as PrestoAnim
 import Resources.Constants (getDelayForAutoComplete)
 import Screens.Types (SearchLocationModelType(..), LocationListItemState)
 import Storage (KeyStore(..), getValueToLocalStore)
 import Styles.Colors as Color
-import Data.String as DS
 
 view :: forall w. (Action -> Effect Unit) -> SearchLocationModelState -> PrestoDOM (Effect Unit) w
 view push state =
@@ -197,13 +198,15 @@ locationUnserviceableView state push =
 ---------------------------- sourceDestinationImageView ---------------------------------
 sourceDestinationImageView :: forall w. SearchLocationModelState -> PrestoDOM (Effect Unit) w
 sourceDestinationImageView state =
-  frameLayout
-    [ height $ V 100
-    , width $ V 35
-    , margin $ MarginTop 9
+  linearLayout
+    [ height $ WRAP_CONTENT
+    , width $ WRAP_CONTENT
+    , margin $ Margin 8 9 8 0
+    , orientation VERTICAL
+    , gravity CENTER
     ][ linearLayout
         [ height WRAP_CONTENT
-        , width $ V 30
+        , width WRAP_CONTENT
         , gravity CENTER
         , margin $ Margin 2 20 2 0
         ][  imageView
@@ -212,18 +215,11 @@ sourceDestinationImageView state =
             , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_green_circle"
             ]
           ]
-      , imageView
-        [ height $ V 40
-        , width $ V 20
-        , gravity CENTER
-        , imageUrl if os == "IOS" then "ny_ic_line_img" else "ic_line"
-        , margin if os == "IOS" then (Margin 7 35 0 0) else (Margin 16 30 0 0)
-        ]
+    , SeparatorView.view separatorConfig
     , linearLayout
         [ height WRAP_CONTENT
-        , width $ V 30
+        , width WRAP_CONTENT
         , gravity CENTER
-        , margin (Margin 2 70 2 0)
         ][  imageView
             [ height $ V 15
             , width $ V 15
@@ -637,3 +633,15 @@ srcBtnData state =
 destBtnData :: SearchLocationModelState -> Array { text :: String, imageUrl :: String, action :: Action, buttonType :: String }
 destBtnData state =
   [ { text: (getString SELECT_LOCATION_ON_MAP), imageUrl: "ny_ic_locate_on_map,https://assets.juspay.in/nammayatri/images/user/ny_ic_locate_on_map.png", action: SetLocationOnMap, buttonType: "LocateOnMap" }]
+
+
+separatorConfig :: SeparatorView.Config
+separatorConfig = 
+  {
+    orientation : VERTICAL
+  , count : 3
+  , height : V 4
+  , width : V 1
+  , layoutWidth : V 12
+  , layoutHeight : V 15
+  }

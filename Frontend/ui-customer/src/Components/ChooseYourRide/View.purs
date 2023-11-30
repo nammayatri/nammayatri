@@ -23,10 +23,12 @@ import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(
 import PrestoDOM.Properties (cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Styles.Colors as Color
-import MerchantConfig.Utils (getValueFromConfig)
+import ConfigProvider
 
 view :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push config =
+  let estimateConfig = (getAppConfig appConfig).estimateAndQuoteConfig
+  in
   PrestoAnim.animationSet (if EHC.os == "IOS" then [fadeIn true]
   else [ translateYAnimFromTop $ Animation.translateYAnimHomeConfig Animation.BOTTOM_TOP ]) $
   linearLayout
@@ -39,7 +41,7 @@ view push config =
       , height WRAP_CONTENT
       , gravity RIGHT
       , margin $ MarginRight 15
-      , visibility if (isJust config.nearByDrivers) && (getValueFromConfig "showNearByDrivers") then VISIBLE else GONE
+      , visibility if (isJust config.nearByDrivers) && estimateConfig.showNearByDrivers then VISIBLE else GONE
       , disableClickFeedback true
       ][ textView
          [ width WRAP_CONTENT
