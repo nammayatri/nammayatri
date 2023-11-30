@@ -6,6 +6,7 @@ import Data.Aeson.Key (fromString)
 import Data.Aeson.Lens (key, _Value)
 import Data.Char (toUpper)
 import Data.List (intercalate, nub)
+import qualified Data.List as L
 import Data.List.Split (split, splitOn, splitWhen, whenElt)
 import qualified Data.Text as T
 import Kernel.Prelude hiding (Show, fromString, hPutStr, toString, traceShowId, try)
@@ -19,8 +20,8 @@ writeToFile filename content = do
 typeDelimiter :: String
 typeDelimiter = "() []"
 
-makeTypeQualified :: Object -> String -> String
-makeTypeQualified obj str = concatMap replaceOrKeep (split (whenElt (`elem` typeDelimiter)) str)
+makeTypeQualified :: Maybe [String] -> Object -> String -> String
+makeTypeQualified dList obj str = concatMap replaceOrKeep (split (whenElt (`elem` typeDelimiter)) str)
   where
     defaultTypeImports :: String -> Maybe String
     defaultTypeImports tp = case tp of
@@ -43,7 +44,10 @@ makeTypeQualified obj str = concatMap replaceOrKeep (split (whenElt (`elem` type
     replaceOrKeep word =
       if '.' `elem` word
         then word
-        else maybe (if word `elem` ["", ")", "(", " ", "[", "]"] then word else error $ T.pack ("\"" ++ word ++ "\" type not determined")) (\x -> x <> "." <> word) (getQualifiedImport word)
+        else
+          if isJust dList && L.elem word (fromJust dList)
+            then "Domain.Types." ++ word ++ "." ++ word
+            else maybe (if word `elem` ["", ")", "(", " ", "[", "]"] then word else error $ T.pack ("\"" ++ word ++ "\" type not determined")) (\x -> x <> "." <> word) (getQualifiedImport word)
 
 figureOutImports :: [String] -> [String]
 figureOutImports fieldTypes =
