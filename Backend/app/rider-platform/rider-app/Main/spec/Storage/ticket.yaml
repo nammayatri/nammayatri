@@ -2,16 +2,9 @@ imports:
   MerchantOperatingCity: Domain.Types.Merchant.MerchantOperatingCity
   SeatManagement: Domain.Types.SeatManagement
   TicketServiceCategory: Domain.Types.TicketServiceCategory
-  ServiceCategory: Domain.Types.ServiceCategory
-  BusinessHour: Domain.Types.BusinessHour
   BusinessHourType: Domain.Types.BusinessHourType
-  ServicePeopleCategory: Domain.Types.ServicePeopleCategory
   Timings: Domain.Types.Timings
-  SpecialDates: Domain.Types.SpecialDates
   SpecialDayType: Domain.Types.SpecialDatesType
-  TicketPlaceV1: Domain.Types.TicketPlaceV1
-  TicketServiceV1: Domain.Types.TicketServiceV1
-  SpecialOccasion: Domain.Types.SpecialOccasion
 
 TicketPlaceV1:
   tableName: ticker_place
@@ -43,7 +36,7 @@ TicketServiceV1:
     placeId : Text
     serviceName : Text
     shortDesc : Text
-    operationalDays : "[Day]"
+    operationalDays : "[Text]"
     maxVerification : Int
     allowFutureBooking : Bool
     expiry : Text #InstantExpiry Int | VistDateExpiry TimeOfDay
