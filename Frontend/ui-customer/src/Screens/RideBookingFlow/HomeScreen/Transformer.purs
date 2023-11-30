@@ -53,6 +53,10 @@ import Common.Types.App (LazyCheck(..))
 import MerchantConfig.Utils (Merchant(..), getMerchant, getValueFromConfig)
 import Resources.Localizable.EN (getEN)
 import MerchantConfig.Types (EstimateAndQuoteConfig)
+import Engineering.Helpers.BackTrack (liftFlowBT)
+import Engineering.Helpers.LogEvent
+import Control.Monad.Except.Trans (lift)
+import Presto.Core.Types.Language.Flow (getLogFields)
 
 
 getLocationList :: Array Prediction -> Array LocationListItemState
@@ -226,9 +230,12 @@ getPlaceNameResp address placeId lat lon item = do
     checkLatLonFromAddress placeID = do
       let {latitude, longitude} = runFn1 getLatLonFromAddress address
       config <- getAppConfig Constants.appConfig
-      if latitude /= 0.0 && longitude /= 0.0 && config.geoCoder.enableAddressToLL then
+      logField_ <- lift $ lift $ getLogFields
+      if latitude /= 0.0 && longitude /= 0.0 && config.geoCoder.enableAddressToLL then do
+        void $ liftFlowBT $ logEvent logField_ "ny_geocode_address_ll_found"
         pure $ makePlaceNameResp latitude longitude
-      else
+      else do
+        void $ liftFlowBT $ logEvent logField_ "ny_geocode_address_ll_fallback"
         Remote.placeNameBT (Remote.makePlaceNameReqByPlaceId placeID $ getMapsLanguageFormat $ getValueToLocalStore LANGUAGE_KEY)
     
     checkLatLon :: FlowBT String GetPlaceNameResp
