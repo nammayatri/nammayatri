@@ -25,8 +25,7 @@ import Components.SelectListModal as SelectListModal
 import Components.StepsHeaderModel.Controller as StepsHeaderModelController
 import Data.Maybe (Maybe(..), fromMaybe)
 import Data.String (length, trim)
-import Engineering.Helpers.Commons (getNewIDWithTag)
-import Helpers.Utils (clearCountDownTimer, setText)
+import Helpers.Utils (setText)
 import JBridge (hideKeyboardOnNavigation)
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppTextInput, trackAppScreenEvent)
 import Prelude (class Show, bind, discard, pure, unit, not, ($), (/=), (&&), (>=), (==), (<))
@@ -35,6 +34,7 @@ import PrestoDOM.Types.Core (class Loggable)
 import Screens (ScreenName(..), getScreen)
 import Screens.Types (AccountSetUpScreenState, Gender(..), ActiveFieldAccountSetup(..), ErrorType(..))
 import Data.Array as DA
+import Timers (clearTimerWithId)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -65,7 +65,7 @@ instance loggableAction :: Loggable Action where
       PopUpModal.NoAction -> trackAppActionClick appId (getScreen ACCOUNT_SET_UP_SCREEN) "popup_modal_action" "no_action"
       PopUpModal.OnImageClick -> trackAppActionClick appId (getScreen ACCOUNT_SET_UP_SCREEN) "popup_modal_action" "image"
       PopUpModal.ETextController act -> trackAppTextInput appId (getScreen ACCOUNT_SET_UP_SCREEN) "popup_modal_action" "primary_edit_text"
-      PopUpModal.CountDown arg1 arg2 arg3 arg4 -> trackAppScreenEvent appId (getScreen ACCOUNT_SET_UP_SCREEN) "popup_modal_action" "countdown_updated"
+      PopUpModal.CountDown arg1 arg2 arg3 -> trackAppScreenEvent appId (getScreen ACCOUNT_SET_UP_SCREEN) "popup_modal_action" "countdown_updated"
       PopUpModal.Tipbtnclick arg1 arg2 -> trackAppScreenEvent appId (getScreen ACCOUNT_SET_UP_SCREEN) "popup_modal_action" "tip_clicked"
       PopUpModal.DismissPopup -> trackAppScreenEvent appId (getScreen ACCOUNT_SET_UP_SCREEN) "popup_modal_action" "popup_dismissed"
       PopUpModal.OnSecondaryTextClick -> trackAppScreenEvent appId (getScreen ACCOUNT_SET_UP_SCREEN) "popup_modal_action" "secondary_text_clicked"
@@ -142,7 +142,7 @@ eval BackPressed state = do
   if state.props.isSpecialAssistList then continue state {props{isSpecialAssistList = false}}
     else do 
       _ <- pure $ hideKeyboardOnNavigation true
-      _ <- pure $ clearCountDownTimer ""
+      _ <- pure $ clearTimerWithId "otp"
       continue state { props { backPressed = true } }
 
 eval (PopUpModalAction (PopUpModal.OnButton1Click)) state = continue state { props { backPressed = false } }

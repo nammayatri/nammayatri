@@ -29,6 +29,7 @@ import Screens (ScreenName(..), getScreen)
 import Screens.Types (PermissionScreenState, PermissionScreenStage(..))
 import Effect.Unsafe 
 import Engineering.Helpers.LogEvent (logEvent)
+import Data.Array
 
 instance showAction :: Show Action where 
     show _ = ""
@@ -83,7 +84,7 @@ eval (ErrorModalActionController (ErrorModalController.PrimaryButtonActionContro
 
 eval (LocationPermissionCallBackCustomer isLocationPermissionEnabled) state = do 
   let status = getLocationPermissionStatus unit
-  if isLocationPermissionEnabled then updateAndExit state (LocationCallBack state)
+  if isLocationPermissionEnabled && elem state.stage [LOCATION_DISABLED, LOCATION_DENIED] then updateAndExit state (LocationCallBack state)
     else continue state {stage = (if status == "DENIED" then LOCATION_DENIED else NORMAL)}
 eval (InternetCallBackCustomer isInternetAvailable) state = do 
   if( isInternetAvailable == "true") then do

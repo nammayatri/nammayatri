@@ -61,7 +61,7 @@ instance loggableAction :: Loggable Action where
             PopUpModalController.NoAction -> trackAppActionClick appId (getScreen TRIP_DETAILS_SCREEN) "popup_modal_action" "no_action"
             PopUpModalController.OnImageClick -> trackAppActionClick appId (getScreen TRIP_DETAILS_SCREEN) "popup_modal_action" "image"
             PopUpModalController.ETextController act -> trackAppTextInput appId (getScreen TRIP_DETAILS_SCREEN) "popup_modal_action" "primary_edit_text"
-            PopUpModalController.CountDown arg1 arg2 arg3 arg4 -> trackAppScreenEvent appId (getScreen TRIP_DETAILS_SCREEN) "popup_modal_action" "countdown_updated"
+            PopUpModalController.CountDown arg1 arg2 arg3 -> trackAppScreenEvent appId (getScreen TRIP_DETAILS_SCREEN) "popup_modal_action" "countdown_updated"
             PopUpModalController.Tipbtnclick arg1 arg2 -> trackAppScreenEvent appId (getScreen TRIP_DETAILS_SCREEN) "popup_modal_action" "tip_clicked"
             PopUpModalController.OnSecondaryTextClick -> trackAppScreenEvent appId (getScreen TRIP_DETAILS_SCREEN) "popup_modal_action" "secondary_text_clicked"
             PopUpModalController.OptionWithHtmlClick -> trackAppScreenEvent appId (getScreen TRIP_DETAILS_SCREEN) "popup_modal_action" "option_with_html_clicked"

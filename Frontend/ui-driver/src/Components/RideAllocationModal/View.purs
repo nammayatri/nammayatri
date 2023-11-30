@@ -26,7 +26,7 @@ import PrestoDOM.Properties (background, color, cornerRadius, fontStyle, gravity
 import Engineering.Helpers.Commons (screenWidth, screenHeight, flowRunner)
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Helpers.Utils (countDown, toStringJSON, parseFloat)
+import Helpers.Utils (toStringJSON, parseFloat)
 import Effect.Class (liftEffect)
 import Effect.Aff (launchAff_)
 import Control.Monad.Trans.Class (lift)
@@ -35,6 +35,7 @@ import Control.Transformers.Back.Trans (runBackT)
 import Control.Monad.Except.Trans (runExceptT)
 import Common.Types.App
 import ConfigProvider
+import Timers (countDown)
 
 view :: forall w . (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push config =

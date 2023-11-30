@@ -1844,24 +1844,7 @@ export const getExtendedPath = function (path) {
   }
 };
 
-export const startTimerWithTime = function (time) {
-  return function (qouteId) {
-    return function (interval) {
-      return function (cb) {
-        return function (action) {
-          return function () {
-            const callback = callbackMapper.map(function (seconds, quoteID, timerStatus, timerID) {
-              cb(action(seconds)(quoteID)(timerStatus)(timerID))();
-            });
-            if (JBridge.startCountDownTimerWithTime) {
-              return JBridge.startCountDownTimerWithTime(time, interval, qouteId, callback);
-            }
-          }
-        }
-      }
-    }
-  }
-}
+
 export const setMapPaddingImpl = function (left, topPadding, right, bottom) {
   if (JBridge.setMapPadding) {
     JBridge.setMapPadding(left, topPadding, right, bottom);
@@ -1984,50 +1967,6 @@ export const launchDateSettings = function (res) {
   if (JBridge.launchDateSettings) {
     return JBridge.launchDateSettings();
   }
-};
-
-function getTwoDigitsNumber(number) {
-  return number >= 10 ? number : "0" + number.toString();
-}
-
-let driverWaitingTimerId = null;
-
-export const waitingCountdownTimer = function (startingTime) {
-  return function (cb) {
-    return function (action) {
-      return function () {
-        if (window.__OS == "IOS") {
-          if (window.JBridge.startCountUpTimer) {
-            const callbackIOS = callbackMapper.map(function (timerId, sec) {
-              const minutes = getTwoDigitsNumber(Math.floor(sec / 60));
-              const seconds = getTwoDigitsNumber(sec - minutes * 60);
-              const timeInMinutesFormat = minutes + " : " + seconds;
-              cb(action(timerId)(timeInMinutesFormat)(sec))();
-            });
-            window.JBridge.startCountUpTimer(startingTime.toString(), callbackIOS);
-          }
-        } else {
-          const callback = callbackMapper.map(function () {
-            let sec = startingTime;
-
-            function convertInMinutesFromat() {
-              sec++;
-              const minutes = getTwoDigitsNumber(Math.floor(sec / 60));
-              const seconds = getTwoDigitsNumber(sec - minutes * 60);
-              const timeInMinutesFormat = minutes + " : " + seconds;
-              cb(action(driverWaitingTimerId)(timeInMinutesFormat)(sec))();
-            }
-            if (driverWaitingTimerId) clearInterval(driverWaitingTimerId);
-            driverWaitingTimerId = setInterval(
-              convertInMinutesFromat,
-              1000
-            );
-          });
-          window.callUICallback(callback);
-        }
-      };
-    };
-  };
 };
 
 export const cleverTapEvent = function (_event) {

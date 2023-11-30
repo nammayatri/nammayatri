@@ -29,16 +29,18 @@ import Common.Types.App
 import Components.PrimaryEditText.View as PrimaryEditText
 import Components.PrimaryEditText.Controller as PrimaryEditTextConfig
 import Effect.Class (liftEffect)
-import Engineering.Helpers.Commons (os, clearTimer, countDown)
+import Engineering.Helpers.Commons (os, getNewIDWithTag)
 import Data.Array ((!!), mapWithIndex, null)
 import Data.Maybe (Maybe(..),fromMaybe)
 import Control.Monad.Trans.Class (lift)
-import JBridge (startTimerWithTime, setYoutubePlayer, supportsInbuildYoutubePlayer)
+import JBridge (setYoutubePlayer, supportsInbuildYoutubePlayer)
 import Animation (fadeIn) as Anim
 import Data.String (replaceAll, Replacement(..), Pattern(..))
 import Data.Function.Uncurried (runFn3)
 import PrestoDOM.Animation as PrestoAnim
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
+import Timers (clearTimerWithId, countDown, startTimerWithTimeV2)
+import Debug
 
 view :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push state =
@@ -55,9 +57,9 @@ view push state =
               let
                 timerValue' = if state.option2.enableTimer then state.option2.timerValue else state.option1.timerValue
               if os == "IOS" then
-                liftEffect $ startTimerWithTime (show timerValue') "" "1" push CountDown
+                liftEffect $ startTimerWithTimeV2 (show timerValue') state.timerId "1"  push CountDown
               else
-                countDown timerValue' "" push CountDown
+                countDown timerValue' state.timerId push CountDown
               pure unit
             else
               pure unit
@@ -543,9 +545,9 @@ tipsView push state =
 clearTheTimer :: Config -> Effect Unit
 clearTheTimer config =
   if config.option1.enableTimer then do
-    pure $ clearTimer config.option1.timerID
+    pure $ clearTimerWithId config.option1.timerID
   else if config.option2.enableTimer then do
-    pure $ clearTimer config.option2.timerID
+    pure $ clearTimerWithId config.option2.timerID
   else
     pure unit
 

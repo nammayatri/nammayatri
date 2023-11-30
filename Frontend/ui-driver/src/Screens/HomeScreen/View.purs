@@ -84,6 +84,7 @@ import Styles.Colors as Color
 import Types.App (GlobalState, defaultGlobalState)
 import Constants (defaultDensity)
 import Components.ErrorModal as ErrorModal
+import Timers (clearTimer, waitingCountdownTimerV2)
 
 screen :: HomeScreenState -> Screen Action HomeScreenState ScreenOutput
 screen initialState =
@@ -109,13 +110,13 @@ screen initialState =
           if (localStage /= "RideAccepted" && localStage /= "ChatWithCustomer" && initialState.data.activeRide.waitTimerId /= "") then do
             void $ pure $ setValueToLocalStore WAITING_TIME_STATUS (show ST.NoStatus)
             push $ UpdateWaitTime ST.NoStatus
-            void $ pure $ EHC.clearTimer initialState.data.activeRide.waitTimerId
+            void $ pure $ clearTimer initialState.data.activeRide.waitTimerId
             pure unit
           else pure unit
           
           void if (DA.any (_ == localStage)["RideRequested", "HomeScreen", "__failed"]) && initialState.data.driverGotoState.isGotoEnabled then 
             runEffectFn3 HU.countDownInMinutes (EHC.getExpiryTime (HU.istToUtcDate initialState.data.driverGotoState.gotoValidTill) false) push UpdateGoHomeTimer 
-            else if (initialState.data.driverGotoState.timerId /= "") then pure $ EHC.clearTimer initialState.data.driverGotoState.timerId
+            else if (initialState.data.driverGotoState.timerId /= "") then pure $ clearTimer initialState.data.driverGotoState.timerId
             else pure unit
           case localStage of
             "RideRequested"  -> do
@@ -137,11 +138,12 @@ screen initialState =
                                     startingTime = (HU.differenceBetweenTwoUTC (HU.getCurrentUTC "") (fromMaybe "" (waitTime DA.!! 1)))
                                 if (getValueToLocalStore WAITING_TIME_STATUS == show ST.Triggered) then do
                                   void $ pure $ setValueToLocalStore WAITING_TIME_STATUS (show ST.PostTriggered)
-                                  void $ JB.waitingCountdownTimer startingTime push WaitTimerCallback
+                                  void $ waitingCountdownTimerV2 startingTime "1" "countUpTimerId" push WaitTimerCallback
                                   push $ UpdateWaitTime ST.PostTriggered
                                   pure unit
                                 else if (getValueToLocalStore WAITING_TIME_STATUS == (show ST.PostTriggered) && initialState.data.activeRide.waitTimeSeconds == -1) then do
-                                  if isTimerValid then void $ JB.waitingCountdownTimer startingTime push WaitTimerCallback
+                                  if isTimerValid then
+                                    void $ waitingCountdownTimerV2 startingTime "1" "countUpTimerId" push WaitTimerCallback
                                   else push $ UpdateWaitTime ST.NoStatus
                                   pure unit
                                 else pure unit

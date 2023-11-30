@@ -26,7 +26,7 @@ import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Common.Types.App (LazyCheck(..))
 import Prelude ((<>))
 
-data Action = Decline String | Request String Number | CountDown Int String String String | NoAction | IncreasePrice String | DecreasePrice String
+data Action = Decline String | Request String Number | CountDown Int String String | NoAction | IncreasePrice String | DecreasePrice String
 
 type Config = {
     id :: String,

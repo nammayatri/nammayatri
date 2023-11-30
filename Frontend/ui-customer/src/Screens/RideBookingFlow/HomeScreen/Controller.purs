@@ -68,12 +68,12 @@ import Effect (Effect)
 import Effect.Aff (launchAff)
 import Effect.Unsafe (unsafePerformEffect)
 import Effect.Uncurried (runEffectFn1)
-import Engineering.Helpers.Commons (clearTimer, flowRunner, getNewIDWithTag, os, getExpiryTime, convertUTCtoISC, getCurrentUTC, isPreviousVersion, safeMarginBottom, getDeviceHeight, screenHeight)
+import Engineering.Helpers.Commons (flowRunner, getNewIDWithTag, os, getExpiryTime, convertUTCtoISC, getCurrentUTC, isPreviousVersion, safeMarginBottom, getDeviceHeight, screenHeight)
 import Engineering.Helpers.LogEvent (logEvent, logEventWithTwoParams, logEventWithMultipleParams)
 import Engineering.Helpers.Suggestions (getMessageFromKey, getSuggestionsfromKey)
 import Foreign (unsafeToForeign)
 import Foreign.Class (encode)
-import Helpers.Utils (addToRecentSearches, getCurrentLocationMarker, clearCountDownTimer, getDistanceBwCordinates, getLocationName, getScreenFromStage, getSearchType, parseNewContacts, performHapticFeedback, setText, terminateApp, withinTimeRange, toStringJSON, secondsToHms, recentDistance, getPixels, getDeviceDefaultDensity, getDefaultPixels)
+import Helpers.Utils (addToRecentSearches, getCurrentLocationMarker, getDistanceBwCordinates, getLocationName, getScreenFromStage, getSearchType, parseNewContacts, performHapticFeedback, setText, terminateApp, withinTimeRange, toStringJSON, secondsToHms, recentDistance, getPixels, getDeviceDefaultDensity, getDefaultPixels)
 import JBridge (addMarker, animateCamera, currentPosition, exitLocateOnMap, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, getCurrentPosition, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, locateOnMap, minimizeApp, openNavigation, openUrlInApp, removeAllPolylines, removeMarker, requestKeyboardShow, requestLocation, shareTextMessage, showDialer, toast, toggleBtnLoader, goBackPrevWebPage, stopChatListenerService, sendMessage, getCurrentLatLong, isInternetAvailable, emitJOSEvent, startLottieProcess, getSuggestionfromKey, scrollToEnd, lottieAnimationConfig, methodArgumentCount, getChatMessages, scrollViewFocus, getLayoutBounds, updateInputString, checkAndAskNotificationPermission, locateOnMapConfig, addCarouselWithVideoExists, pauseYoutubeVideo)
 import Language.Strings (getString)
 import Language.Types (STR(..))
@@ -112,6 +112,7 @@ import Data.List ((:))
 import Common.Resources.Constants (zoomLevel, pickupZoomLevel)
 import Screens.RideBookingFlow.HomeScreen.Config
 import Data.Function.Uncurried (Fn3, runFn3, Fn1, runFn1)
+import Timers (clearTimerWithId)
 import Mobility.Prelude (boolToInt)
 
 instance showAction :: Show Action where
@@ -205,7 +206,7 @@ instance loggableAction :: Loggable Action where
     QuoteListModelActionController act -> case act of
       QuoteListModelController.QuoteListItemActionController act -> case act of
         QuoteListItemController.Click quote -> trackAppActionClick appId (getScreen HOME_SCREEN) "quote_list_modal" "quote_list_item_click"
-        QuoteListItemController.CountDown seconds id status timerID -> trackAppActionClick appId (getScreen HOME_SCREEN) "quote_list_modal" "quote_list_item_count_down"
+        QuoteListItemController.CountDown seconds status timerID -> trackAppActionClick appId (getScreen HOME_SCREEN) "quote_list_modal" "quote_list_item_count_down"
         QuoteListItemController.ConfirmRide -> trackAppActionClick appId (getScreen HOME_SCREEN) "quote_list_modal" "confirm_ride"
         QuoteListItemController.NoAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "quote_list_modal" "no_action"
         QuoteListItemController.CancelAutoAssigning -> trackAppActionClick appId (getScreen HOME_SCREEN) "quote_list_modal" "auto_assign_cancel"
@@ -259,7 +260,7 @@ instance loggableAction :: Loggable Action where
       PopUpModal.NoAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "popup_modal_action" "no_action"
       PopUpModal.OnImageClick -> trackAppActionClick appId (getScreen HOME_SCREEN) "popup_modal_action" "image"
       PopUpModal.ETextController act -> trackAppTextInput appId (getScreen HOME_SCREEN) "popup_modal_action" "primary_edit_text"
-      PopUpModal.CountDown arg1 arg2 arg3 arg4 -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "popup_modal_action" "countdown_updated"
+      PopUpModal.CountDown arg1 arg2 arg3 -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "popup_modal_action" "countdown_updated"
       PopUpModal.Tipbtnclick arg1 arg2 -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "popup_modal_action" "tip_clicked"
       PopUpModal.DismissPopup -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "popup_modal_action" "popup_dismissed"
       PopUpModal.OptionWithHtmlClick -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "popup_modal_action" "options_with_html_click"
@@ -281,7 +282,7 @@ instance loggableAction :: Loggable Action where
       PopUpModal.NoAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "popup_modal_distance_outside_limit" "no_action"
       PopUpModal.OnImageClick -> trackAppActionClick appId (getScreen HOME_SCREEN) "popup_modal_distance_outside_limit" "image"
       PopUpModal.ETextController act -> trackAppTextInput appId (getScreen HOME_SCREEN) "popup_modal_distance_outside_limit" "primary_edit_text"
-      PopUpModal.CountDown arg1 arg2 arg3 arg4 -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "popup_modal_distance_outside_limit" "countdown_updated"
+      PopUpModal.CountDown arg1 arg2 arg3 -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "popup_modal_distance_outside_limit" "countdown_updated"
       PopUpModal.Tipbtnclick arg1 arg2 -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "popup_modal_distance_outside_limit" "tip_clicked"
       PopUpModal.DismissPopup -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "popup_modal_distance_outside_limit" "popup_dismissed"
       PopUpModal.OptionWithHtmlClick -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "popup_modal_distance_outside_limit" "options_with_html_click"
@@ -292,7 +293,7 @@ instance loggableAction :: Loggable Action where
       PopUpModal.NoAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "popup_modal_short_distance_action" "no_action"
       PopUpModal.OnImageClick -> trackAppActionClick appId (getScreen HOME_SCREEN) "popup_modal_short_distance_action" "image"
       PopUpModal.ETextController act -> trackAppTextInput appId (getScreen HOME_SCREEN) "popup_modal_short_distance_action" "primary_edit_text"
-      PopUpModal.CountDown arg1 arg2 arg3 arg4 -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "popup_modal_short_distance_action" "countdown_updated"
+      PopUpModal.CountDown arg1 arg2 arg3 -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "popup_modal_short_distance_action" "countdown_updated"
       PopUpModal.Tipbtnclick arg1 arg2 -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "popup_modal_short_distance_action" "tip_clicked"
       PopUpModal.DismissPopup -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "popup_modal_short_distance_action" "popup_dismissed"
       PopUpModal.OptionWithHtmlClick -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "popup_modal_short_distance_action" "options_with_html_click"
@@ -311,7 +312,7 @@ instance loggableAction :: Loggable Action where
       PopUpModal.NoAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "popup_modal_estimate_changed" "no_action"
       PopUpModal.OnImageClick -> trackAppActionClick appId (getScreen HOME_SCREEN) "popup_modal_estimate_changed" "image"
       PopUpModal.ETextController act -> trackAppTextInput appId (getScreen HOME_SCREEN) "popup_modal_estimate_changed" "primary_edit_text"
-      PopUpModal.CountDown arg1 arg2 arg3 arg4 -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "popup_modal_estimate_changed" "countdown_updated"
+      PopUpModal.CountDown arg1 arg2 arg3 -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "popup_modal_estimate_changed" "countdown_updated"
       PopUpModal.Tipbtnclick arg1 arg2 -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "popup_modal_estimate_changed" "tip_clicked"
       PopUpModal.DismissPopup -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "popup_modal_estimate_changed" "popup_dismissed"
       PopUpModal.OptionWithHtmlClick -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "popup_modal_estimate_changed" "options_with_html_click"
@@ -367,7 +368,7 @@ instance loggableAction :: Loggable Action where
         PopUpModal.NoAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "emergency_call_police_pop_up" "no_action"
         PopUpModal.OnImageClick -> trackAppActionClick appId (getScreen HOME_SCREEN) "emergency_call_police_pop_up" "image"
         PopUpModal.ETextController act -> trackAppTextInput appId (getScreen HOME_SCREEN) "emergency_call_police_pop_up" "primary_edit_text"
-        PopUpModal.CountDown arg1 arg2 arg3 arg4 -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "emergency_call_police_pop_up" "countdown_updated"
+        PopUpModal.CountDown arg1 arg2 arg3 -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "emergency_call_police_pop_up" "countdown_updated"
         PopUpModal.Tipbtnclick arg1 arg2 -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "emergency_call_police_pop_up" "tip_clicked"
         PopUpModal.DismissPopup -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "emergency_call_police_pop_up" "popup_dismissed"
         PopUpModal.OptionWithHtmlClick -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "emergency_call_police_pop_up" "options_with_html_click"
@@ -378,7 +379,7 @@ instance loggableAction :: Loggable Action where
         PopUpModal.NoAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "call_emergency_pop_up" "no_action"
         PopUpModal.OnImageClick -> trackAppActionClick appId (getScreen HOME_SCREEN) "call_emergency_pop_up" "image"
         PopUpModal.ETextController act -> trackAppTextInput appId (getScreen HOME_SCREEN) "call_emergency_pop_up" "primary_edit_text"
-        PopUpModal.CountDown arg1 arg2 arg3 arg4 -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "call_emergency_pop_up" "countdown_updated"
+        PopUpModal.CountDown arg1 arg2 arg3 -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "call_emergency_pop_up" "countdown_updated"
         PopUpModal.Tipbtnclick arg1 arg2 -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "call_emergency_pop_up" "tip_clicked"
         PopUpModal.DismissPopup -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "call_emergency_pop_up" "popup_dismissed"
         PopUpModal.OptionWithHtmlClick -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "call_emergency_pop_up" "options_with_html_click"
@@ -389,7 +390,7 @@ instance loggableAction :: Loggable Action where
         PopUpModal.NoAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "emergency_call_success_pup_up" "no_action"
         PopUpModal.OnImageClick -> trackAppActionClick appId (getScreen HOME_SCREEN) "emergency_call_success_pup_up" "image"
         PopUpModal.ETextController act -> trackAppTextInput appId (getScreen HOME_SCREEN) "emergency_call_success_pup_up" "primary_edit_text"
-        PopUpModal.CountDown arg1 arg2 arg3 arg4 -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "emergency_call_success_pup_up" "countdown_updated"
+        PopUpModal.CountDown arg1 arg2 arg3 -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "emergency_call_success_pup_up" "countdown_updated"
         PopUpModal.Tipbtnclick arg1 arg2 -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "emergency_call_success_pup_up" "tip_clicked"
         PopUpModal.DismissPopup -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "emergency_call_success_pup_up" "popup_dismissed"
         PopUpModal.OptionWithHtmlClick -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "emergency_call_success_pup_up" "options_with_html_click"
@@ -400,7 +401,7 @@ instance loggableAction :: Loggable Action where
         PopUpModal.NoAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "emergency_contact_support_pup_up" "no_action"
         PopUpModal.OnImageClick -> trackAppActionClick appId (getScreen HOME_SCREEN) "emergency_contact_support_pup_up" "image"
         PopUpModal.ETextController act -> trackAppTextInput appId (getScreen HOME_SCREEN) "emergency_contact_support_pup_up" "primary_edit_text"
-        PopUpModal.CountDown arg1 arg2 arg3 arg4 -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "emergency_contact_support_pup_up" "countdown_updated"
+        PopUpModal.CountDown arg1 arg2 arg3 -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "emergency_contact_support_pup_up" "countdown_updated"
         PopUpModal.Tipbtnclick arg1 arg2 -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "emergency_contact_support_pup_up" "tip_clicked"
         PopUpModal.DismissPopup -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "emergency_contact_support_pup_up" "popup_dismissed"
         PopUpModal.OptionWithHtmlClick -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "emergency_contact_support_pup_up" "options_with_html_click"
@@ -412,7 +413,7 @@ instance loggableAction :: Loggable Action where
       PopUpModal.NoAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "popup_modal_share_app" "no_action"
       PopUpModal.OnImageClick -> trackAppActionClick appId (getScreen HOME_SCREEN) "popup_modal_share_app" "image"
       PopUpModal.ETextController act -> trackAppTextInput appId (getScreen HOME_SCREEN) "popup_modal_share_app" "primary_edit_text"
-      PopUpModal.CountDown arg1 arg2 arg3 arg4 -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "popup_modal_share_app" "countdown_updated"
+      PopUpModal.CountDown arg1 arg2 arg3 -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "popup_modal_share_app" "countdown_updated"
       PopUpModal.Tipbtnclick arg1 arg2 -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "popup_modal_share_app" "tip_clicked"
       PopUpModal.DismissPopup -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "popup_modal_share_app" "popup_dismissed"
       PopUpModal.OptionWithHtmlClick -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "popup_modal_share_app" "options_with_html_click"
@@ -423,7 +424,7 @@ instance loggableAction :: Loggable Action where
       PopUpModal.NoAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "popup_modal_contact_support" "no_action"
       PopUpModal.OnImageClick -> trackAppActionClick appId (getScreen HOME_SCREEN) "popup_modal_contact_support" "image"
       PopUpModal.ETextController act -> trackAppTextInput appId (getScreen HOME_SCREEN) "popup_modal_contact_support" "primary_edit_text"
-      PopUpModal.CountDown arg1 arg2 arg3 arg4 -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "popup_modal_contact_support" "countdown_updated"
+      PopUpModal.CountDown arg1 arg2 arg3 -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "popup_modal_contact_support" "countdown_updated"
       PopUpModal.Tipbtnclick arg1 arg2 -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "popup_modal_contact_support" "tip_clicked"
       PopUpModal.DismissPopup -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "popup_modal_contact_support" "popup_dismissed"
       PopUpModal.OptionWithHtmlClick -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "popup_modal_contact_support" "options_with_html_click"
@@ -435,7 +436,7 @@ instance loggableAction :: Loggable Action where
     WaitingTimeAction timerID timeInMinutes seconds -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "waiting_time_action"
     UpdateETA currentETA currentDistance -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "update_eta"
     EstimatesTryAgain quotesRes -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "estimates_try_again"
-    SearchExpireCountDown seconds id status timerID -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "search_expiry_count_down"
+    SearchExpireCountDown seconds status timerID -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "search_expiry_count_down"
     UpdateCurrentStage stage -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "update_current_stage"
     ExitLocationSelected item addToRecents -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "exit_location_selected"
     NotificationListener notificationType -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "notification_listener"
@@ -465,7 +466,7 @@ instance loggableAction :: Loggable Action where
         PopUpModal.NoAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "popup_modal_action" "no_action"
         PopUpModal.OnImageClick -> trackAppActionClick appId (getScreen HOME_SCREEN) "popup_modal_action" "image"
         PopUpModal.ETextController act -> trackAppTextInput appId (getScreen HOME_SCREEN) "popup_modal_action" "primary_edit_text"
-        PopUpModal.CountDown arg1 arg2 arg3 arg4 -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "popup_modal_action" "countdown_updated"
+        PopUpModal.CountDown arg1 arg2 arg3 -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "popup_modal_action" "countdown_updated"
         PopUpModal.Tipbtnclick arg1 arg2 -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "popup_modal_action" "tip_clicked"
         PopUpModal.DismissPopup -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "popup_modal_action" "popup_dismissed"
         PopUpModal.OptionWithHtmlClick -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "popup_modal_action" "options_with_html_click"
@@ -518,7 +519,7 @@ instance loggableAction :: Loggable Action where
       PopUpModal.NoAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "popup_modal_cancel_search" "no_action"
       PopUpModal.OnImageClick -> trackAppActionClick appId (getScreen HOME_SCREEN) "popup_modal_cancel_search" "image"
       PopUpModal.ETextController act -> trackAppTextInput appId (getScreen HOME_SCREEN) "popup_modal_cancel_search" "primary_edit_text"
-      PopUpModal.CountDown arg1 arg2 arg3 arg4 -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "popup_modal_cancel_search" "countdown_updated"
+      PopUpModal.CountDown arg1 arg2 arg3 -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "popup_modal_cancel_search" "countdown_updated"
       PopUpModal.Tipbtnclick arg1 arg2 -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "popup_modal_cancel_search" "tip_clicked"
       PopUpModal.DismissPopup -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "popup_modal_cancel_search" "popup_dismissed"
       PopUpModal.OptionWithHtmlClick -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "popup_modal_cancel_search" "options_with_html_click"
@@ -530,7 +531,7 @@ instance loggableAction :: Loggable Action where
       PopUpModal.NoAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "popup_modal_cancel_confirmation" "no_action"
       PopUpModal.OnImageClick -> trackAppActionClick appId (getScreen HOME_SCREEN) "popup_modal_cancel_confirmation" "image_click"
       PopUpModal.ETextController act -> trackAppTextInput appId (getScreen HOME_SCREEN) "popup_modal_cancel_confirmation" "primary_edit_text"
-      PopUpModal.CountDown arg1 arg2 arg3 arg4 -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "popup_modal_cancel_confirmation" "countdown_updated"
+      PopUpModal.CountDown arg1 arg2 arg3 -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "popup_modal_cancel_confirmation" "countdown_updated"
       PopUpModal.Tipbtnclick arg1 arg2 -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "popup_modal_cancel_confirmation" "tip_clicked"
       PopUpModal.DismissPopup -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "popup_modal_cancel_confirmation" "popup_dismissed"
       PopUpModal.OptionWithHtmlClick -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "popup_modal_cancel_confirmation" "options_with_html_click"
@@ -549,7 +550,7 @@ instance loggableAction :: Loggable Action where
       PopUpModal.NoAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "popup_modal_zone_timer_expired" "no_action"
       PopUpModal.OnImageClick -> trackAppActionClick appId (getScreen HOME_SCREEN) "popup_modal_zone_timer_expired" "image_click"
       PopUpModal.ETextController act -> trackAppTextInput appId (getScreen HOME_SCREEN) "popup_modal_zone_timer_expired" "primary_edit_text"
-      PopUpModal.CountDown arg1 arg2 arg3 arg4 -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "popup_modal_zone_timer_expired" "countdown_updated"
+      PopUpModal.CountDown arg1 arg2 arg3 -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "popup_modal_zone_timer_expired" "countdown_updated"
       PopUpModal.Tipbtnclick arg1 arg2 -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "popup_modal_zone_timer_expired" "tip_clicked"
       PopUpModal.DismissPopup -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "popup_modal_zone_timer_expired" "popup_dismissed"
       PopUpModal.OptionWithHtmlClick -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "popup_modal_zone_timer_expired" "options_with_html_click"
@@ -563,7 +564,7 @@ instance loggableAction :: Loggable Action where
       PopUpModal.NoAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "disability_pop_up" "no_action"
       PopUpModal.OnImageClick -> trackAppActionClick appId (getScreen HOME_SCREEN) "disability_pop_up" "image_click"
       PopUpModal.ETextController act -> trackAppTextInput appId (getScreen HOME_SCREEN) "disability_pop_up" "primary_edit_text"
-      PopUpModal.CountDown arg1 arg2 arg3 arg4 -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "disability_pop_up" "countdown_updated"
+      PopUpModal.CountDown arg1 arg2 arg3 -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "disability_pop_up" "countdown_updated"
       PopUpModal.Tipbtnclick arg1 arg2 -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "disability_pop_up" "tip_clicked"
       PopUpModal.DismissPopup -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "disability_pop_up" "popup_dismissed"
       PopUpModal.OptionWithHtmlClick -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "disability_pop_up" "options_with_html_click"
@@ -595,7 +596,7 @@ instance loggableAction :: Loggable Action where
         PopUpModal.NoAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "ride_completed_screen_conatct_support_pop_up" "no_action"
         PopUpModal.OnImageClick -> trackAppActionClick appId (getScreen HOME_SCREEN) "ride_completed_screen_conatct_support_pop_up" "image_click"
         PopUpModal.ETextController act -> trackAppTextInput appId (getScreen HOME_SCREEN) "ride_completed_screen_conatct_support_pop_up" "primary_edit_text"
-        PopUpModal.CountDown arg1 arg2 arg3 arg4 -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "ride_completed_screen_conatct_support_pop_up" "countdown_updated"
+        PopUpModal.CountDown arg1 arg2 arg3 -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "ride_completed_screen_conatct_support_pop_up" "countdown_updated"
         PopUpModal.Tipbtnclick arg1 arg2 -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "ride_completed_screen_conatct_support_pop_up" "tip_clicked"
         PopUpModal.DismissPopup -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "ride_completed_screen_conatct_support_pop_up" "popup_dismissed"
         PopUpModal.OptionWithHtmlClick -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "ride_completed_screen_conatct_support_pop_up" "options_with_html_click"
@@ -606,14 +607,14 @@ instance loggableAction :: Loggable Action where
         Banner.NoAction -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "ride_completed_banner" "banner_no_action"
     LoadMessages -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "load_messages"
     KeyboardCallback val -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "key_board_callback"
-    NotifyDriverStatusCountDown arg1 arg2 arg3 arg4 -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "notify_driver_status_countdown"
+    NotifyDriverStatusCountDown arg1 arg2 arg3 -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "notify_driver_status_countdown"
     UpdateProfileButtonAC act -> case act of 
       PrimaryButtonController.OnClick -> trackAppActionClick appId (getScreen HOME_SCREEN) "update_profile_button" "primary_button_on_click"
       PrimaryButtonController.NoAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "update_profile_button" "primary_button_no_action"
     SkipAccessibilityUpdateAC act -> case act of 
       PrimaryButtonController.OnClick -> trackAppActionClick appId (getScreen HOME_SCREEN) "skip_accessibility_button" "primary_button_on_click"
       PrimaryButtonController.NoAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "skip_accessibility_button" "primary_button_no_action"
-    SpecialZoneOTPExpiryAction arg1 arg2 arg3 arg4 -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "special_zone_otp_expiry_action"
+    SpecialZoneOTPExpiryAction arg1 arg2 arg3 -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "special_zone_otp_expiry_action"
     TicketBookingFlowBannerAC act -> case act of 
       Banner.OnClick -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "ticket_booking_flow" "banner_on_click"
       Banner.NoAction -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "ticket_booking_flow" "banner_no_action"
@@ -623,7 +624,7 @@ instance loggableAction :: Loggable Action where
     RemoveNotification -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "remove_notification"
     MessageDriver -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "message_driver"
     SendQuickMessage val -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "send_quick_message"
-    MessageExpiryTimer seconds id status timerID -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "message_expiry_timer"
+    MessageExpiryTimer seconds status timerID -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "message_expiry_timer"
     NotificationAnimationEnd -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "notification_animation_end"
     RideSupport -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "ride_support"
     OpenEmergencyHelp -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "open_emergency_help"
@@ -637,7 +638,7 @@ instance loggableAction :: Loggable Action where
       PopUpModal.NoAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "pick_up_far_from_curr_location_pop_up" "no_action"
       PopUpModal.OnImageClick -> trackAppActionClick appId (getScreen HOME_SCREEN) "pick_up_far_from_curr_location_pop_up" "image"
       PopUpModal.ETextController act -> trackAppTextInput appId (getScreen HOME_SCREEN) "pick_up_far_from_curr_location_pop_up" "primary_edit_text"
-      PopUpModal.CountDown arg1 arg2 arg3 arg4 -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "pick_up_far_from_curr_location_pop_up" "countdown_updated"
+      PopUpModal.CountDown arg1 arg2 arg3 -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "pick_up_far_from_curr_location_pop_up" "countdown_updated"
       PopUpModal.Tipbtnclick arg1 arg2 -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "pick_up_far_from_curr_location_pop_up" "tip_clicked"
       PopUpModal.DismissPopup -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "pick_up_far_from_curr_location_pop_up" "popup_dismissed"
       PopUpModal.OptionWithHtmlClick -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "pick_up_far_from_curr_location_pop_up" "options_with_html_click"
@@ -662,7 +663,7 @@ instance loggableAction :: Loggable Action where
       PopUpModal.NoAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen_pop_up" "no_action"
       PopUpModal.OnImageClick -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen_pop_up" "image_click"
       PopUpModal.ETextController act -> trackAppTextInput appId (getScreen HOME_SCREEN) "in_screen_pop_up" "primary_edit_text"
-      PopUpModal.CountDown arg1 arg2 arg3 arg4 -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen_pop_up" "countdown_updated"
+      PopUpModal.CountDown arg1 arg2 arg3 -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen_pop_up" "countdown_updated"
       PopUpModal.Tipbtnclick arg1 arg2 -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen_pop_up" "tip_clicked"
       PopUpModal.DismissPopup -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen_pop_up" "popup_dismissed"
       PopUpModal.OptionWithHtmlClick -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen_pop_up" "options_with_html_click"
@@ -673,7 +674,7 @@ instance loggableAction :: Loggable Action where
     WhereToClick -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "where_to_click"
     ShowMoreSuggestions -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "show_more_suggestions"
     SuggestedDestinationClicked arg1 -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "suggested_destination_clicked"
-    RepeatRideCountDown arg1 arg2 arg3 arg4 -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "repeat_ride_count_down"
+    RepeatRideCountDown arg1 arg2 arg3 -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "repeat_ride_count_down"
     StopRepeatRideTimer -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "stop_repeat_ride_timer"
     OpenLiveDashboard -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "open_live_dashboard"
     UpdatePeekHeight -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "update_peek_height"
@@ -773,7 +774,7 @@ data Action = NoAction
             | UpdateCurrentStage String
             | GoBackToSearchLocationModal
             | SkipButtonActionController PrimaryButtonController.Action
-            | SearchExpireCountDown Int String String String
+            | SearchExpireCountDown Int String String
             | EstimatesTryAgain GetQuotesRes
             | EstimateChangedPopUpController PopUpModal.Action
             | RateCardAction RateCard.Action
@@ -838,10 +839,10 @@ data Action = NoAction
             | RideCompletedAC RideCompletedCard.Action
             | LoadMessages
             | KeyboardCallback String
-            | NotifyDriverStatusCountDown Int String String String
+            | NotifyDriverStatusCountDown Int String String
             | UpdateProfileButtonAC PrimaryButtonController.Action 
             | SkipAccessibilityUpdateAC PrimaryButtonController.Action
-            | SpecialZoneOTPExpiryAction Int String String String
+            | SpecialZoneOTPExpiryAction Int String String
             | TicketBookingFlowBannerAC Banner.Action
             | WaitingInfo
             | ShareRide
@@ -849,7 +850,7 @@ data Action = NoAction
             | RemoveNotification
             | MessageDriver
             | SendQuickMessage String
-            | MessageExpiryTimer Int String String String
+            | MessageExpiryTimer Int String String
             | NotificationAnimationEnd
             | RideSupport
             | OpenEmergencyHelp
@@ -859,7 +860,7 @@ data Action = NoAction
             | WhereToClick 
             | ShowMoreSuggestions 
             | SuggestedDestinationClicked LocationListItemState
-            | RepeatRideCountDown Int String String String
+            | RepeatRideCountDown Int String String
             | StopRepeatRideTimer 
             | OpenLiveDashboard
             | UpdatePeekHeight
@@ -896,9 +897,9 @@ eval (KeyboardCallback keyBoardState) state = do
   else pure unit
   continue state
 
-eval (NotifyDriverStatusCountDown seconds id status timerID) state = do 
+eval (NotifyDriverStatusCountDown seconds status timerID) state = do 
   if status == "EXPIRED" then do
-    _ <- pure $ clearCountDownTimer timerID
+    _ <- pure $ clearTimerWithId timerID
     _ <- pure $ setValueToLocalStore NOTIFIED_CUSTOMER "true"
     let eta = fromMaybe 0 state.data.driverInfoCardState.eta
     if isLocalStageOn RideAccepted && isJust state.data.driverInfoCardState.eta && (secondsToHms eta) /= "--" then 
@@ -906,9 +907,9 @@ eval (NotifyDriverStatusCountDown seconds id status timerID) state = do
     else continue state
   else continue state
 
-eval (RepeatRideCountDown seconds id status timerID) state = do
+eval (RepeatRideCountDown seconds status timerID) state = do
   if status == "EXPIRED" then do
-    void $ pure $ clearCountDownTimer timerID
+    void $ pure $ clearTimerWithId timerID
     void $ pure $ performHapticFeedback unit
     void $ pure $ updateLocalStage FindingQuotes
     let updatedState = state{data{rideHistoryTrip = Nothing}, props{repeatRideTimerId = "", currentStage = FindingQuotes, searchExpire = (getSearchExpiryTime "LazyCheck")}}
@@ -916,7 +917,7 @@ eval (RepeatRideCountDown seconds id status timerID) state = do
   else continue state{props{repeatRideTimer = (show seconds), repeatRideTimerId = timerID}}
 
 eval StopRepeatRideTimer state =  do
-  void $ pure $ clearCountDownTimer state.props.repeatRideTimerId
+  void $ pure $ clearTimerWithId state.props.repeatRideTimerId
   continue state{props{repeatRideTimer = "", repeatRideTimerId = ""}}
 
 eval (IsMockLocation isMock) state = do
@@ -1115,11 +1116,11 @@ eval (MessagingViewActionController (MessagingView.SendSuggestion chatSuggestion
 
 ------------------------------- ChatService - End --------------------------
 
-eval (MessageExpiryTimer seconds id status timerID) state = do
+eval (MessageExpiryTimer seconds status timerID) state = do
   let newState = state{data{triggerPatchCounter = state.data.triggerPatchCounter + 1}}
   if status == "EXPIRED"
     then do
-      _ <- pure $ clearTimer timerID
+      _ <- pure $ clearTimerWithId timerID
       if state.data.lastMessage.sentBy /= "Driver" then
       continueWithCmd newState [ do
         pure $ RemoveNotification
@@ -1165,7 +1166,7 @@ eval BackPressed state = do
                                     updateAndExit state{props{currentStage = HomeScreen}} $ GoToHome
     SettingPrice    -> do
                       _ <- pure $ performHapticFeedback unit
-                      void $ pure $ clearCountDownTimer state.props.repeatRideTimerId
+                      void $ pure $ clearTimerWithId state.props.repeatRideTimerId
                       let updatedState = state{props{repeatRideTimer = "", repeatRideTimerId = ""}}
                       if updatedState.props.showRateCard then do
                         if (updatedState.data.rateCard.currentRateCardType /= DefaultRateCard) then
@@ -1484,9 +1485,9 @@ eval OpenSettings state = do
   let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_burger_menu"
   continue state { data { settingSideBar { opened = SettingSideBarController.OPEN } } }
 
-eval (SearchExpireCountDown seconds id status timerID) state = do
+eval (SearchExpireCountDown seconds status timerID) state = do
   if status == "EXPIRED" then do
-    _ <- pure $ clearTimer timerID
+    _ <- pure $ clearTimerWithId timerID
     let tipViewData = HomeScreenData.initData.props.tipViewProps
     _ <- pure $ setTipViewData (TipViewData { stage : tipViewData.stage , activeIndex : tipViewData.activeIndex , isVisible : tipViewData.isVisible })
     continue state { props { searchExpire = seconds } }
@@ -1494,7 +1495,7 @@ eval (SearchExpireCountDown seconds id status timerID) state = do
     let enableTips = isTipEnabled state
     if any ( _ == state.props.currentStage) [FindingQuotes , QuoteList] then continue state { props { searchExpire = seconds ,timerId = timerID , tipViewProps {isVisible = enableTips && (seconds <= (getSearchExpiryTime "LazyCheck")-30 || state.props.tipViewProps.isVisible) && (state.props.customerTip.tipActiveIndex >0) }, customerTip{enableTips = enableTips}} }
       else do
-        _ <- pure $ clearTimer timerID
+        _ <- pure $ clearTimerWithId timerID
         let tipViewData = HomeScreenData.initData.props.tipViewProps
         _ <- pure $ setTipViewData (TipViewData { stage : tipViewData.stage , activeIndex : tipViewData.activeIndex , isVisible : tipViewData.isVisible })
         continue state { props { searchExpire = (getSearchExpiryTime "LazyCheck") ,timerId = timerID , tipViewProps {isVisible = false}} }
@@ -1534,10 +1535,10 @@ eval (WaitingTimeAction timerID timeInMinutes seconds) state = do
                 else pure unit
   continue state { data { driverInfoCardState { waitingTime = timeInMinutes} }, props { waitingTimeTimerIds = union state.props.waitingTimeTimerIds [timerID] } }
 
-eval (SpecialZoneOTPExpiryAction seconds id status timerID) state = do
+eval (SpecialZoneOTPExpiryAction seconds status timerID) state = do
   if status == "EXPIRED" then do
     _ <- pure $ toast $ getString $ OTP_FOR_THE_JATRI_SATHI_ZONE_HAS_BEEN_EXPIRED_PLEASE_TRY_LOOKING_AGAIN "OTP_FOR_THE_JATRI_SATHI_ZONE_HAS_BEEN_EXPIRED_PLEASE_TRY_LOOKING_AGAIN"
-    _ <- pure $ clearTimer timerID
+    _ <- pure $ clearTimerWithId timerID
     exit $ NotificationHandler "CANCELLED_PRODUCT" state
   else do
     let timeInMinutes = formatDigits $ seconds/60
@@ -1869,7 +1870,7 @@ eval (QuoteListModelActionController (QuoteListModelController.CancelAutoAssigni
 
 
 eval (QuoteListModelActionController (QuoteListModelController.TipViewPrimaryButtonClick PrimaryButtonController.OnClick)) state = do
-  _ <- pure $ clearTimer state.props.timerId
+  _ <- pure $ clearTimerWithId state.props.timerId
   void $ pure $ startLottieProcess lottieAnimationConfig {rawJson = "progress_loader_line", lottieId = (getNewIDWithTag "lottieLoaderAnimProgress"), scaleType="CENTER_CROP"}
   let tipViewData = state.props.tipViewProps{stage = TIP_ADDED_TO_SEARCH }
   let newState = state{ props{findingRidesAgain = true ,searchExpire = (getSearchExpiryTime "LazyCheck"), currentStage = TryAgain, sourceSelectedOnMap = true, isPopUp = NoPopUp ,tipViewProps = tipViewData ,customerTip {tipForDriver = (fromMaybe 10 (state.props.tipViewProps.customerTipArrayWithValues !! state.props.tipViewProps.activeIndex)) , tipActiveIndex = state.props.tipViewProps.activeIndex+1 , isTipSelected = true } }, data{nearByDrivers = Nothing}}
@@ -1885,9 +1886,9 @@ eval (QuoteListModelActionController (QuoteListModelController.QuoteListItemActi
   let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_quote_confirm"
   exit $ ConfirmRide state
 
-eval (QuoteListModelActionController (QuoteListModelController.QuoteListItemActionController (QuoteListItemController.CountDown seconds id status timerID))) state = do
+eval (QuoteListModelActionController (QuoteListModelController.QuoteListItemActionController (QuoteListItemController.CountDown seconds status id))) state = do
   if status == "EXPIRED" then do
-    _ <- pure $ clearTimer timerID
+    _ <- pure $ clearTimerWithId id
     let
       autoSelecting = (getValueToLocalStore AUTO_SELECTING) == id
     if (id == fromMaybe "" state.props.selectedQuote && autoSelecting && state.props.currentStage == QuoteList) then do
@@ -1928,7 +1929,7 @@ eval (PopUpModalAction (PopUpModal.OnButton1Click)) state =   case state.props.i
   TipsPopUp -> do
     _ <- pure $ performHapticFeedback unit
     let _ = unsafePerformEffect $ logEvent state.data.logField if state.props.customerTip.isTipSelected then ("ny_added_tip_for_" <> (show state.props.currentStage)) else "ny_no_tip_added"
-    _ <- pure $ clearTimer state.props.timerId
+    _ <- pure $ clearTimerWithId state.props.timerId
     let tipViewData = state.props.tipViewProps{stage = RETRY_SEARCH_WITH_TIP , isVisible = not (state.props.customerTip.tipActiveIndex == 0) , activeIndex = state.props.customerTip.tipActiveIndex-1 }
     let newState = state{ props{findingRidesAgain = true ,searchExpire = (getSearchExpiryTime "LazyCheck"), currentStage = RetryFindingQuote, sourceSelectedOnMap = true, isPopUp = NoPopUp ,tipViewProps = tipViewData }}
     _ <- pure $ setTipViewData (TipViewData { stage : tipViewData.stage , activeIndex : tipViewData.activeIndex , isVisible : tipViewData.isVisible })
@@ -1938,12 +1939,12 @@ eval (PopUpModalAction (PopUpModal.OnButton1Click)) state =   case state.props.i
     _ <- pure $ performHapticFeedback unit
     _ <- pure $ firebaseLogEvent "ny_tip_not_applicable"
     if (isLocalStageOn FindingQuotes ) then do
-        _ <- pure $ clearTimer state.props.timerId
+        _ <- pure $ clearTimerWithId state.props.timerId
         let tipViewData = HomeScreenData.initData.props.tipViewProps
         _ <- pure $ setTipViewData (TipViewData { stage : tipViewData.stage , activeIndex : tipViewData.activeIndex , isVisible : tipViewData.isVisible })
         exit $ CheckCurrentStatus
       else do
-      _ <- pure $ clearTimer state.props.timerId
+      _ <- pure $ clearTimerWithId state.props.timerId
       let newState = state{props{findingRidesAgain = true , searchExpire = (getSearchExpiryTime "LazyCheck"), currentStage = RetryFindingQuote, sourceSelectedOnMap = true, isPopUp = NoPopUp}}
       updateAndExit newState $ RetryFindingQuotes true newState
 

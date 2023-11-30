@@ -2,8 +2,6 @@ import { callbackMapper as PrestoCallbackMapper } from "presto-ui";
 
 const { JBridge, Android } = window;
 
-const countDownTimers = {};
-
 export const getOs = function () {
   if (window.__OS) {
     return window.__OS;
@@ -179,47 +177,6 @@ export const setText = function (id) {
     setTextImpl(id, text, text.length);
   }
 }
-
-function instantGetTimer (fn , delay) {
-  fn();
-  window.timerId = setInterval( fn, delay );
-  return window.timerId;
-}
-
-export const countDown = function (countDownTime) {
-  return function (id) {
-    return function (cb) {
-      return function (action) {
-        return function () {
-          if (countDownTimers[id] != undefined) {
-            clearInterval(parseInt(countDownTimers[id]));
-          }
-          const callback = PrestoCallbackMapper.map(function () {
-            let countDownCounter = countDownTime;
-            countDownTimers[id] = instantGetTimer(function () {
-              const timerIID = countDownTimers[id];
-              if (timerIID != undefined) {
-                countDownCounter -= 1;
-                if (countDownCounter <= 0) {
-                  delete countDownTimers[id];
-                  cb(action(0)(id)("EXPIRED")(timerIID))();
-                } else {
-                  cb(action(countDownCounter)(id)("INPROGRESS")(timerIID))();
-                }
-              }
-            }, 1000);
-          });
-          window.callUICallback(callback);
-        }
-      }
-    }
-  }
-}
-
-export const clearTimer = function (a)
-{
-  clearInterval(parseInt(a));
-};
 
 export const getExpiryTime = function (str1) {
   return function (reverse) {

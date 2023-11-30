@@ -95,13 +95,11 @@ foreign import shuffle :: forall a. Array a -> Array a
 foreign import generateUniqueId :: Unit -> String
 foreign import storeCallBackTime :: forall action. (action -> Effect Unit) -> (String -> String -> String -> action)  -> Effect Unit
 foreign import getTime :: Unit -> Int
-foreign import countDown :: forall action. Int -> String -> (action -> Effect Unit) -> (Int -> String -> String -> String-> action)  -> Effect Unit
 foreign import hideSplash :: Effect Unit
 foreign import startTimer :: forall action. Int -> Boolean -> (action -> Effect Unit) -> (String -> action) -> Effect Unit
 foreign import convertKmToM :: String -> String
 foreign import differenceBetweenTwoUTC :: String -> String -> Int
 foreign import clearTimer :: String -> Unit
-foreign import clearPopUpTimer :: String -> Unit
 foreign import clearAllTimer :: String -> Unit
 foreign import toStringJSON :: forall a. a-> String
 foreign import toInt :: forall a. a -> String

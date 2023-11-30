@@ -22,134 +22,6 @@ export const getOs = function () {
   return "ANDROID";
 };
 
-
-function instantGetTimer (fn , delay) {
-  fn();
-  window.timerId = setInterval( fn, delay );
-  allTimerIID.push(window.timerId);
-  return window.timerId;
-}
-
-export const getTimer = function (valType) {
-  return function (startTime) {
-    return function (inputVal) {
-      return function (cb){
-        return function (action) {
-          return function(){
-            const callback = callbackMapper.map(function () {
-
-              console.log(valType+"<===>"+startTime+"<===>"+inputVal)
-
-              const t = new Date().getTime()
-
-              console.log("ttt-->>"+t)
-              let countDownDate = (new Date(inputVal).getTime())-5000;
-
-              console.log("countDownDate-->>"+countDownDate)
-
-              if((Math.floor(((countDownDate - t) % (1000 * 60)) / 1000)) > 25000)
-              {
-                countDownDate = (new Date().getTime())+ 20000;
-              }
-
-              instantGetTimer (function() {
-
-                // Get today's date and time
-                const now = new Date().getTime();
-
-                // Find the distance between now and the count down date
-                const distance = countDownDate - now;
-
-                // Time calculations for days, hours, minutes and seconds
-                const days = Math.floor(distance / (1000 * 60 * 60 * 24));
-                const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-                const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
-                const seconds = Math.floor((distance % (1000 * 60)) / 1000);
-
-                // Display the result in the element with id="demo"
-                // document.getElementById("demo").innerHTML = days + "d " + hours + "h "
-                // + minutes + "m " + seconds + "s ";
-                // If the count down is finished, write some text
-                // console.log("Distance -->>")
-                // console.log(distance)
-                // console.log("-------------")
-                if (valType == "STOP"){
-                  clearInterval(window.timerId);
-                }
-
-                if (distance <= 0) {
-                  clearInterval(window.timerId);
-
-                  console.log("EXPIRED");
-                  cb(action("EXPIRED"))();
-                  // return "EXPIRED";
-                }else{
-                  let timer;
-                  if(days==0){
-                    if(hours == 0){
-                      if(minutes==0){
-                        timer = (seconds+1) + "s "
-                      }else{
-                        timer = minutes + "m " + seconds + "s "
-                      }
-                    }else{
-                      timer = hours + "h "+ minutes + "m " + seconds + "s "
-                    }
-                  }else{
-                    timer = days + "d " + hours + "h "+ minutes + "m " + seconds + "s "
-                  }
-
-                  console.log(timer);
-                  // return timer;
-                  cb(action(timer))();
-                }
-              }, 1000);
-              console.log("timerId",window.timerId);
-            });
-            // return JBridge.timerCallback(callback);
-            window.callUICallback(callback);
-          }
-
-        }
-      }
-    }
-  }
-}
-
-export const countDown = function (countDownTime) {
-  return function (id) {
-    return function (cb) {
-      return function (action) {
-        return function () {
-          const callback = callbackMapper.map(function () {
-            let countDownCounter = countDownTime;
-            const timerIID = instantGetTimer(function () {
-              countDownCounter -= 1;
-              if (countDownCounter <= 0) {
-                //clearInterval(window.timerId);
-                cb(action(0)(id)("EXPIRED")(timerIID))();
-              } else {
-                cb(action(countDownCounter)(id)("INPROGRESS")(timerIID))();
-              }
-            }, 1000);
-            // let timerId = setInterval(function () {
-            //     countDown -= 1;
-            //     if (countDown < 0) {
-            //       cb(action(0)(id)("EXPIRED"))();
-            //     } else {
-            //       cb(action(countDown)(id)("INPROGRESS"))();
-            //     }
-            //   }, 1000);
-            // setTimeout(() => { clearInterval(timerId); }, countDownTime*1000 + 1000);
-          });
-          window.callUICallback(callback);
-        }
-      }
-    }
-  }
-}
-
-
 export const clampNumber = function (number) {
   return function(originalMax) {
     return function(newMax) {
@@ -165,62 +37,6 @@ export const clampNumber = function (number) {
   }
 }
 
-export const get15sTimer = function (cb){
-  return function (action) {
-    return function(){
-      const callback = callbackMapper.map(function () {
-        let seconds = 15;
-        instantGetTimer (function() {
-          seconds = seconds - 1;
-          if (seconds <= 0) {
-            clearInterval(window.timerId);
-            console.log("EXPIRED");
-            cb(action("EXPIRED"))();
-          }else{
-            const timer = seconds + "s "
-            console.log(timer);
-            cb(action(timer))();
-          }
-        }, 1000);
-        console.log("timerId",window.timerId);
-      });
-      window.callUICallback(callback);
-    }
-
-  }
-}
-
-export const get5sTimer = function (cb){
-  return function (action) {
-    return function(){
-      function sayLetter(seconds){
-        if (seconds >= 0)
-        {
-          console.log(seconds+ "seconds")
-          setTimeout(() => {
-            if (seconds <= 0) {
-              clearInterval(window.timerId);
-              console.log("EXPIRED");
-              cb(action("EXPIRED"))();
-            }else{
-              const timer = seconds + "s "
-              console.log(timer);
-              cb(action(timer))();
-              sayLetter(seconds-1);
-            }
-          }, 1000);
-        }
-      }
-      const callback = callbackMapper.map(function () {
-        const time = 5;
-        sayLetter(time);
-        console.log("timerId",window.timerId);
-      });
-      window.callUICallback(callback);
-    }
-  }
-}
-
 export const parseNumber = function (num) {
   num = num.toString();
   let lastThree = num.substring(num.length-3);
@@ -229,38 +45,6 @@ export const parseNumber = function (num) {
     lastThree = "," + lastThree;
   const res = otherNumbers.replace(/\B(?=(\d{2})+(?!\d))/g, ",") + lastThree;
   return res;
-}
-
-
-export const get10sTimer = function (cb){
-  return function (action) {
-    return function(){
-      const callback = callbackMapper.map(function () {
-        function sayLetter(seconds){
-          if (seconds >= 0)
-          {
-            console.log(seconds+ "seconds")
-            setTimeout(() => {
-              if (seconds <= 0) {
-                clearInterval(window.timerId);
-                console.log("EXPIRED");
-                cb(action("EXPIRED"))();
-              }else{
-                const timer = seconds + "s "
-                console.log(timer);
-                cb(action(timer))();
-                sayLetter(seconds-1);
-              }
-            }, 1000);
-          }
-        }
-        const time = 10;
-        sayLetter(time);
-        console.log("timerId",window.timerId);
-      });
-      window.callUICallback(callback);
-    }
-  }
 }
 
 export const startTimer = function(input) {
@@ -309,9 +93,6 @@ if(window.timerId){
 }
 };
 
-export const clearPopUpTimer = function (a) {
-  clearInterval(parseInt(a));
-};
 
 export const clearAllTimer = function(a) {
   console.log("allTimerIID");

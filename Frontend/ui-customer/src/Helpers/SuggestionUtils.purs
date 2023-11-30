@@ -17,7 +17,7 @@ module SuggestionUtils where
 
 import Data.Map (Map, insert, update, lookup, member, delete, keys, isEmpty, empty)
 import Data.Tuple.Nested ((/\))
-import Engineering.Helpers.Commons (clearTimer, getCurrentUTC, getNewIDWithTag, convertUTCtoISC)
+import Engineering.Helpers.Commons (getCurrentUTC, getNewIDWithTag, convertUTCtoISC)
 import Data.Maybe
 import Prelude
 import Data.Array(singleton,catMaybes, any, sortWith, reverse, take, filter, (:), length, (!!), fromFoldable, toUnfoldable, snoc)

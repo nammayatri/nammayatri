@@ -22,13 +22,14 @@ import Language.Strings(getString)
 import Language.Types (STR(..))
 import Components.RideAllocationModal.Controller as RideAllocationModal
 import Data.Array as Array
-import Helpers.Utils (clearPopUpTimer, toStringJSON, secondsLeft, objectToAllocationType, clearAllTimer)
+import Helpers.Utils (toStringJSON, secondsLeft, objectToAllocationType, clearAllTimer)
 import Data.Maybe
 import Log
 import JBridge (deletePopUpCallBack)
 import Effect.Class (liftEffect)
 import Data.String (take)
 import Screens (ScreenName(..), getScreen)
+import Timers (clearTimerWithId)
 
 instance showAction :: Show Action where
     show _ = ""
@@ -45,7 +46,7 @@ instance loggableAction :: Loggable Action where
         RideAllocationModal.Request id extraFare -> trackAppActionClick appId (getScreen POPUP_SCREEEN) "ride_allocation_modal" "request_onclick"
         RideAllocationModal.IncreasePrice id -> trackAppActionClick appId (getScreen POPUP_SCREEEN) "ride_allocation_modal" "increase_price_onclick"
         RideAllocationModal.DecreasePrice id -> trackAppActionClick appId (getScreen POPUP_SCREEEN) "ride_allocation_modal" "decrease_price_onclick"
-        RideAllocationModal.CountDown seconds id status timerID -> trackAppScreenEvent appId (getScreen POPUP_SCREEEN) "ride_allocation_modal" "countdown"
+        RideAllocationModal.CountDown seconds status timerID -> trackAppScreenEvent appId (getScreen POPUP_SCREEEN) "ride_allocation_modal" "countdown"
         RideAllocationModal.NoAction -> trackAppActionClick appId (getScreen POPUP_SCREEEN) "ride_allocation_modal" "no_action"
       NoAction -> pure unit
 
@@ -71,12 +72,11 @@ eval (RideAllocationModalAction (RideAllocationModal.Request id extraFare)) stat
   _ <- pure $ deletePopUpCallBack ""
   _ <- pure $ clearAllTimer ""
   exit $ RequestRide id extraFare
-eval (RideAllocationModalAction (RideAllocationModal.CountDown seconds id status timerID)) state = do 
+eval (RideAllocationModalAction (RideAllocationModal.CountDown seconds status id)) state = do 
   _ <- pure $ printLog "rideAllocationModal state" state
   if status == "EXPIRED" then do
     _ <- pure $ printLog "id EXPIRED" id
-    _ <- pure $ printLog "TimerID EXPIRED" timerID
-    _ <- pure $ clearPopUpTimer timerID
+    _ <- pure $ clearTimerWithId id
     let rides = Array.filter (\ride -> ride.id /= id ) state.data.availableRides
     if (Array.length rides) > 0 then do 
         let newState = state { data = state.data { availableRides = rides } } 

@@ -29,7 +29,7 @@ import Effect (Effect)
 import Engineering.Helpers.Commons (safeMarginTop, safeMarginBottom, os, getNewIDWithTag, flowRunner, screenWidth, getCurrentUTC)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import JBridge (openUrlInApp, startTimerWithTime, toast)
+import JBridge (openUrlInApp, toast)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit, bind, const, pure, unit, ($), (<<<), (==), (<>), map, discard, show, (>), void, (/=), (/), (*), (+), not, (||), negate, (<=), (&&), (-), (<))
@@ -54,13 +54,14 @@ import Effect.Class (liftEffect)
 import Control.Monad.Except.Trans (runExceptT , lift)
 import Control.Transformers.Back.Trans (runBackT)
 import Presto.Core.Types.Language.Flow (doAff)
-import Helpers.Utils (setRefreshing, countDown, getPastWeeks, convertUTCtoISC, getPastDays, getPastWeeks, getcurrentdate, fetchImage, FetchImageFrom(..))
+import Helpers.Utils (setRefreshing, getPastWeeks, convertUTCtoISC, getPastDays, getPastWeeks, getcurrentdate, fetchImage, FetchImageFrom(..))
 import Screens.ReferralScreen.ComponentConfig
 import Screens as ScreenNames
 import Data.Either (Either(..))
 import MerchantConfig.Utils (getMerchant, Merchant(..))
 import Common.Types.App (LazyCheck(..))
 import Debug (spy)
+import Timers (countDown)
 
 screen :: ST.ReferralScreenState -> Screen Action ST.ReferralScreenState ScreenOutput
 screen initialState =
@@ -771,8 +772,7 @@ commonView push img title description state=
     , afterRender (\action -> do
                         if state.props.stage == ST.SuccessScreen then do
                           void $ launchAff $ flowRunner defaultGlobalState $ runExceptT $ runBackT $ lift $ lift $ doAff do
-                            if (os == "IOS") then liftEffect $ startTimerWithTime (show state.props.seconds) state.props.id "1" push SuccessScreenExpireCountDwon
-                              else liftEffect $ countDown state.props.seconds state.props.id push SuccessScreenExpireCountDwon
+                            liftEffect $ countDown state.props.seconds state.props.id push SuccessScreenExpireCountDwon
                         else pure unit
                         push action
                   ) (const SuccessScreenRenderAction)
