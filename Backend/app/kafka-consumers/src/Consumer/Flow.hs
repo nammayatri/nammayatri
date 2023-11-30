@@ -126,9 +126,10 @@ kafkaTableConsumer flowRt appEnv kafkaConsumer = do
       >>= commitAllTopics
   where
     riderDrainerWithFlow messages = do
+      now <- getCurrentTime
       runFlowR flowRt appEnv $
         generateGUID
-          >>= flip withLogTag (KTProcessor.kafkaTableProcessor messages)
+          >>= flip withLogTag (KTProcessor.kafkaTableProcessor messages now)
       pure messages
 
     commitAllTopics messages =

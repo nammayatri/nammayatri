@@ -26,9 +26,8 @@ import Kernel.Prelude
 import Kernel.Streaming.Kafka.KafkaTable as Kafka
 import Kernel.Utils.Common (encodeToText, logDebug, logWarning)
 
--- for now kafkaTable.tableName = "beckn_request", in future can be added other tables
-kafkaTableProcessor :: Map.Map String [Kafka.KafkaTable] -> Flow ()
-kafkaTableProcessor mapKafkaTable = do
+kafkaTableProcessor :: Map.Map String [Kafka.KafkaTable] -> UTCTime -> Flow ()
+kafkaTableProcessor mapKafkaTable now = do
   pathPrefix <- T.unpack <$> asks (.s3Env.pathPrefix)
   void $
     flip Map.traverseWithKey mapKafkaTable $ \filePathWithoutPrefix mappedKafkaTables -> do
@@ -40,7 +39,9 @@ kafkaTableProcessor mapKafkaTable = do
         then do
           -- normal case
           logDebug $ "Create new file: " <> show filePath
+          S3.put filePath newTableContent
         else do
-          -- overwriting file because of some drainer delay
-          logWarning $ "Overwriting file with beckn requests: " <> show filePath
-      S3.put filePath $ existingTableContent <> newTableContent
+          -- creating new file because of some drainer delay while appending current time of consumer to the file name
+          let newFilePath = filePath <> "_consumedAt_" <> show now
+          logWarning $ "Creating new file for existing table " <> show filePath
+          S3.put newFilePath newTableContent
