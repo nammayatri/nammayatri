@@ -208,7 +208,7 @@ currentFlowStatus = do
     verifyProfile :: String -> FlowBT String Unit
     verifyProfile dummy = do
       (GetProfileRes response) <- Remote.getProfileBT ""
-      updateVersion response.bundleVersion response.clientVersion
+      updateVersion response.clientVersion response.bundleVersion
       updateFirebaseToken response.maskedDeviceToken getUpdateToken
       updateUserLanguage response.language
       let name = catMaybeStrings [response.firstName, response.middleName, response.lastName]
@@ -309,21 +309,21 @@ currentFlowStatus = do
             Nothing -> updateFlowStatus SEARCH_CANCELLED
         else updateFlowStatus SEARCH_CANCELLED
 
-
-chooseLanguageScreenFlow :: FlowBT String Unit
-chooseLanguageScreenFlow = do
-  logField_ <- lift $ lift $ getLogFields
-  hideLoaderFlow
-  setValueToLocalStore LANGUAGE_KEY $ getValueFromConfig "defaultLanguage"
-  _ <- lift $ lift $ liftFlow $ logEvent logField_ "ny_user_choose_lang_scn_view"
-  flow <- UI.chooseLanguageScreen
-  case flow of
-    NextScreen language -> do
-                            setValueToLocalStore LANGUAGE_KEY language
-                            void $ pure $ setCleverTapUserProp [{key : "Preferred Language", value : unsafeToForeign language}]
-                            _ <- lift $ lift $ liftFlow $(logEventWithParams logField_ "ny_user_lang_choose" "language" (language))
-                            enterMobileNumberScreenFlow
-    Refresh state -> chooseLanguageScreenFlow
+-- TODO :: currently this flow is not in use
+-- chooseLanguageScreenFlow :: FlowBT String Unit
+-- chooseLanguageScreenFlow = do
+--   logField_ <- lift $ lift $ getLogFields
+--   hideLoaderFlow
+--   setValueToLocalStore LANGUAGE_KEY $ getValueFromConfig "defaultLanguage"
+--   _ <- lift $ lift $ liftFlow $ logEvent logField_ "ny_user_choose_lang_scn_view"
+--   flow <- UI.chooseLanguageScreen
+--   case flow of
+--     NextScreen language -> do
+--                             setValueToLocalStore LANGUAGE_KEY language
+--                             void $ pure $ setCleverTapUserProp [{key : "Preferred Language", value : unsafeToForeign language}]
+--                             _ <- lift $ lift $ liftFlow $(logEventWithParams logField_ "ny_user_lang_choose" "language" (language))
+--                             enterMobileNumberScreenFlow
+--     Refresh state -> chooseLanguageScreenFlow
 
 enterMobileNumberScreenFlow :: FlowBT String Unit
 enterMobileNumberScreenFlow = do

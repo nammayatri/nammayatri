@@ -2535,10 +2535,11 @@ editBankDetailsFlow = do
   action <- UI.editBankDetailsScreen
   pure unit
 
-editAadhaarDetailsFlow :: FlowBT String Unit
-editAadhaarDetailsFlow = do
-  action <- UI.editAadhaarDetailsScreen
-  pure unit
+-- TODO :: currently this flow is not in use
+-- editAadhaarDetailsFlow :: FlowBT String Unit
+-- editAadhaarDetailsFlow = do
+--   action <- UI.editAadhaarDetailsScreen
+--   pure unit
 
 noInternetScreenFlow :: String -> FlowBT String Unit
 noInternetScreenFlow triggertype = do
@@ -2638,14 +2639,15 @@ updateDriverStatusGlobal mode active= do
   let updatedResponse = getDriverInfoResp{mode = Just mode, active = active}
   modifyScreenState $ GlobalPropsType $ \globalProps -> globalProps{driverInformation = Just (GetDriverInfoResp updatedResponse)}
 
-driverRideRatingFlow :: FlowBT String Unit
-driverRideRatingFlow = do
-  action <- UI.driverRideRatingScreen
-  case action of
-    SendCustomerFeedBack updatedState -> do
-      --TODO // API CALL for feedback
-      homeScreenFlow
-    CloseScreen -> homeScreenFlow
+-- TODO :: currently this flow is not in use
+-- driverRideRatingFlow :: FlowBT String Unit
+-- driverRideRatingFlow = do
+--   action <- UI.driverRideRatingScreen
+--   case action of
+--     SendCustomerFeedBack updatedState -> do
+--       --TODO // API CALL for feedback
+--       homeScreenFlow
+--     CloseScreen -> homeScreenFlow
 
 notificationFlow :: FlowBT String Unit
 notificationFlow = do
