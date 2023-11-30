@@ -869,6 +869,9 @@ export const getSuggestionfromKey = function (key) {
           case "TA_IN":
             suggestion = val["ta_in"];
             break;
+          case "TE_IN":
+            suggestion = val["te_in"];
+            break;
           default:
             suggestion = val["en_us"];
             break;

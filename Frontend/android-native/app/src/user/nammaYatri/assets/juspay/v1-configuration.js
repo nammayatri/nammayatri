@@ -175,7 +175,13 @@ window.getMerchantConfig = function () {
       "name": "हिंदी",
       "value": "HI_IN",
       "subTitle": "Hindi"
-    }],
+    },
+    {
+      "name":"తెలుగు",
+      "value":"TE_IN",
+      "subTitle": "Telugu"
+    }
+    ],
     "bannerConfig" : {
       "backgroundColor" : "#F0FAF0"
     , "title" : "Complete your profile for a personalised ride experience"

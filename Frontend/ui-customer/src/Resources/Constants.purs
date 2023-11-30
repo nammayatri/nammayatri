@@ -184,6 +184,7 @@ getKeyByLanguage language = case language of
   "MALAYALAM" -> "ML_IN" 
   "TAMIL"   ->"TA_IN"
   "BENGALI" -> "BN_IN"
+  "TELUGU" -> "TE_IN"
   _ -> "EN_US" 
 
 getGender :: Maybe ST.Gender -> String -> String 

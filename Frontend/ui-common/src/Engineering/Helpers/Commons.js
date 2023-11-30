@@ -245,6 +245,7 @@ function getFormattedLanguage(language){
   else if (language == "TA_IN") return "ta-in";
   else if (language == "BN_IN") return "bn-in";
   else if (language == "ML_IN") return "ml-in";
+  else if (language == "TE_IN") return "te_in";
   else return "en-us";
 }
 

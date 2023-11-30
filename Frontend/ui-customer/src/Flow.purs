@@ -1519,6 +1519,7 @@ selectLanguageScreenFlow = do
                                                                                      "KN_IN" -> "KANNADA"
                                                                                      "BN_IN" -> "BENGALI"
                                                                                      "ML_IN" -> "MALAYALAM"
+                                                                                     "TE_IN" -> "TELUGU"
                                                                                      _ -> getValueFromConfig "defaultLanguage"
                                 void $ pure $ setCleverTapUserProp [{key : "Preferred Language", value : unsafeToForeign langVal}]
                                 resp <- lift $ lift $ Remote.updateProfile (Remote.mkUpdateProfileRequest FunctionCall)

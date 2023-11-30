@@ -493,6 +493,7 @@ mkUpdateProfileRequest _ =
             "ML_IN" -> "MALAYALAM"
             "BN_IN" -> "BENGALI"
             "TA_IN" -> "TAMIL"
+            "TE_IN" -> "TELUGU"
             _       -> "ENGLISH"
         , clientVersion : Nothing
         , bundleVersion : Nothing
@@ -517,6 +518,7 @@ editProfileRequest firstName middleName lastName emailID gender hasDisability di
             "ML_IN" -> "MALAYALAM"
             "BN_IN" -> "BENGALI"
             "TA_IN" -> "TAMIL"
+            "TE_IN" -> "TELUGU"
             _       -> "ENGLISH"
         , clientVersion : Nothing
         , bundleVersion : Nothing
