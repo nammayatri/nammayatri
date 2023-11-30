@@ -197,6 +197,10 @@ window.getMerchantConfig = function () {
   , "enableMockLocation" : true
   , "defaultLanguage" : "EN_US"
   , "specialLocationView" : false
+  , "geoCoder": {
+      "enableLLtoAddress" : true
+    , "enableAddressToLL" : false 
+  }
   , "navigationAppConfig" : {
       "query" : "google.navigation:q=%f,%f"
     , "packageName" : "com.google.android.apps.maps"
