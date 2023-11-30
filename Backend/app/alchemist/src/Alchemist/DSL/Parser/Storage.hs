@@ -9,11 +9,12 @@ import Control.Lens.Operators
 import Data.Aeson
 import Data.Aeson.Key (fromString, toString)
 import qualified Data.Aeson.KeyMap as KM
-import Data.Aeson.Lens (_Object, _Value)
+import Data.Aeson.Lens (key, _Array, _Object, _Value)
 import qualified Data.ByteString as BS
 import qualified Data.List as L
 import Data.List.Split (splitOn)
 import qualified Data.Text as T
+import qualified Data.Vector as V
 import qualified Data.Yaml as Yaml
 import Kernel.Prelude hiding (fromString, toString, try)
 import Text.Regex.TDFA ((=~))
@@ -29,8 +30,9 @@ parseTableDef :: Object -> (String, Object) -> TableDef
 parseTableDef importObj (parseDomainName, obj) =
   let parsedFields = parseFields importObj obj
       parsedImports = parseImports parsedFields
+      parsedQueries = parseQueries obj
       (primaryKey, secondaryKey) = extractKeys parsedFields
-   in TableDef parseDomainName (parseTableName obj) parsedFields parsedImports primaryKey secondaryKey
+   in TableDef parseDomainName (parseTableName obj) parsedFields parsedImports parsedQueries primaryKey secondaryKey
 
 parseTableName :: Object -> String
 parseTableName = view (ix "tableName" . _String)
@@ -39,6 +41,49 @@ parseImports :: [FieldDef] -> [String]
 parseImports fields =
   let extraImports = concatMap (\f -> (maybe [] pure $ toTType f) <> (maybe [] pure $ fromTType f)) fields
    in figureOutImports $ (map haskellType fields <> extraImports)
+
+searchForKey :: Object -> String -> (String, String)
+searchForKey obj inputKey = (inputKey, fromMaybe (error $ T.pack $ "Query param " ++ inputKey ++ " not found in fields") $ obj ^? (ix "fields" . key (fromString inputKey) . _String))
+
+parseQueries :: Object -> [QueryDef]
+parseQueries obj = do
+  let mbQueries = preview (ix "queries" . _Value . to mkListObject) obj
+      parseQuery query =
+        let queryName = fst query
+            queryDataObj = snd query
+            params = fromMaybe [] (queryDataObj ^? ix "params" . _Array . to V.toList . to (map (searchForKey obj . valueToString)))
+            kvFunction = fromMaybe (error $ "kvFunction is neccessary") (queryDataObj ^? ix "kvFunction" . _String)
+            whereClause = fromMaybe EmptyWhere (queryDataObj ^? ix "where" . to (parseWhereClause obj))
+         in QueryDef queryName kvFunction params whereClause
+
+  case mbQueries of
+    Just queries -> map parseQuery queries
+    Nothing -> []
+  where
+    valueToString :: Value -> String
+    valueToString (String s) = T.unpack s
+    valueToString _ = error "Param not a string"
+
+parseWhereClause :: Object -> Value -> WhereClause
+parseWhereClause obj (String st) = do
+  let (key_, value) = searchForKey obj (T.unpack st)
+  Leaf (key_, value)
+parseWhereClause obj (Object clauseObj) = do
+  let clauseObj' = KM.toList clauseObj
+  case clauseObj' of
+    [(operatorStr, value)] -> do
+      case value of
+        Array arr_ -> do
+          let clauses = map (parseWhereClause obj) (V.toList arr_)
+          Query (parseOperator (toString operatorStr), clauses)
+        _ -> error "Invalid where clause, operator must be followed by an array of clauses"
+    _ -> error "Invalid where clause, element of where clause array must be an single key object"
+  where
+    parseOperator :: String -> Operator
+    parseOperator "and" = And
+    parseOperator "or" = Or
+    parseOperator _ = error "Invalid operator"
+parseWhereClause _ val = error $ T.pack $ "Invalid where clause, must be a string or an object: " <> show val
 
 parseFields :: Object -> Object -> [FieldDef]
 parseFields impObj obj =
@@ -91,6 +136,13 @@ toModelList obj =
   KM.toList obj >>= \(k, v) -> case v of
     Object o -> [(toString k, o)]
     _ -> []
+
+mkListObject :: Value -> [(String, Object)]
+mkListObject (Object obj) =
+  KM.toList obj >>= \(k, v) -> case v of
+    Object t -> [(toString k, t)]
+    _ -> []
+mkListObject _ = []
 
 -- SQL Types --
 findMatchingSqlType :: String -> String
