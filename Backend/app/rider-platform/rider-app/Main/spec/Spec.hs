@@ -25,7 +25,10 @@ generateCode = do
   let targetFolder = rootDir </> "Backend/app/rider-platform/rider-app/Main/src-read-only/"
   let inputFolder = rootDir </> "Backend/app/rider-platform/rider-app/Main/spec/"
   let inputFile = inputFolder </> "Storage/ticket.yaml"
+  let apiInputFile = inputFolder </> "API/ticket.yaml"
   Alchemist.mkBeamTable (targetFolder </> "Storage/Beam") inputFile
   Alchemist.mkBeamQueries (targetFolder </> "Storage/Queries") inputFile
   Alchemist.mkDomainType (targetFolder </> "Domain/Types") inputFile
   Alchemist.mkSQLFile targetFolder inputFile
+  Alchemist.mkFrontendAPIBackend (targetFolder </> "Domain/Action") apiInputFile
+  Alchemist.mkFrontendAPIEndpoint (targetFolder </> "Domain/Action") apiInputFile

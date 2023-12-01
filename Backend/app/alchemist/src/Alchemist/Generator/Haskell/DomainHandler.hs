@@ -1,7 +1,7 @@
 module Alchemist.Generator.Haskell.DomainHandler where
 
 import Alchemist.DSL.Syntax.API
-import Alchemist.Generator.Haskell.Servant (handlerFunctionText, handlerImports)
+import Alchemist.Generator.Haskell.Servant (handlerFunctionText, handlerSignature)
 import Alchemist.Utils
 import Data.List (intercalate)
 import Data.Text (Text)
@@ -15,7 +15,7 @@ generateDomainHandler input =
     <> "\n\n"
     <> intercalate "\n" (map makeImport defaultQualifiedImport)
     <> "\n"
-    <> intercalate "\n" (makeImport <$> figureOutImports (T.unpack <$> concatMap handlerImports (_apis input)))
+    <> intercalate "\n" (makeImport <$> figureOutImports (T.unpack <$> concatMap handlerSignature (_apis input)))
     <> T.unpack ("\n\n" <> T.intercalate "\n\n" (map handlerFunctionDef (_apis input)))
   where
     defaultImports :: [String]
@@ -30,7 +30,7 @@ generateDomainHandler input =
     handlerFunctionDef :: ApiTT -> Text
     handlerFunctionDef apiT =
       let functionName = handlerFunctionText apiT
-          allTypes = handlerImports apiT
+          allTypes = handlerSignature apiT
           showType = case filter (/= T.empty) (init allTypes) of
             [] -> T.empty
             ty -> " -> " <> T.intercalate " -> " ty
