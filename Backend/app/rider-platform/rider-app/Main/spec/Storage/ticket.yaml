@@ -1,6 +1,9 @@
 imports:
   MerchantOperatingCity: Domain.Types.Merchant.MerchantOperatingCity
-  BusinessHourType: Domain.Types.BusinessHourType
+  HighPrecMoney: Kernel.Types.Common
+  UTCTime: Kernel.Prelude
+  Person: Domain.Types.Person
+  ShortId: Kernel.Types.Id
 
 TicketPlace:
   tableName: ticker_place
@@ -21,6 +24,11 @@ TicketPlace:
     openTimings : Maybe TimeOfDay
     closeTimings : Maybe TimeOfDay
 
+  types:
+    PlaceType:
+      enum: "Museum,ThemePark,AmusementPark,WaterPark,WildLifeSanctuary,ArtGallery,HeritageSite,ReligiousSite,Other"
+
+
   constraints:
     id: PrimaryKey|NotNull
     name: NotNull
@@ -28,9 +36,9 @@ TicketPlace:
     gallery: NotNull
     termsAndConditions: NotNull
 
-  default:
-    gallery: []
-    termsAndConditions: []
+  # default:
+  #   gallery: []
+  #   termsAndConditions: []
 
 TicketService:
   tableName : ticket_service
@@ -44,7 +52,10 @@ TicketService:
     maxVerification : Int
     allowFutureBooking : Bool
     expiry : ExpiryType
-    bussinessHours : [Id BusinessHour]
+    bussinessHours : "[Id BusinessHour]"
+  types:
+    ExpiryType:
+      enum: "SameDay,NextDay,NextWeek,NextMonth"
 
   constraints :
     id : PrimaryKey | NotNull
@@ -66,13 +77,16 @@ SpecialOccasion:
     dayOfWeek : Maybe Text
     specialDayType : SpecialDayType
     description : Maybe Text
-    businessHours : [Id BusinessHour]
+    businessHours : "[Id BusinessHour]"
 
   constraints :
     id : PrimaryKey | NotNull
     entityId : NotNull
     specialDayType : NotNull
     businessHours : NotNull
+  types:
+    SpecialDayType:
+      enum: "Open,Closed"
 
 BusinessHour:
   tableName: business_hour
@@ -80,7 +94,10 @@ BusinessHour:
   fields:
     id: Id BusinessHour
     btype: BusinessHourType # Slot TimeOfDay | Duration TimeOfDay TimeOfDay
-    categoryId: [Id ServiceCategory]
+    categoryId: "[Id ServiceCategory]"
+  types:
+    BusinessHourType:
+      enum: "A,B"
 
   constraints :
     id : PrimaryKey | NotNull
@@ -96,7 +113,7 @@ ServiceCategory:
     description: Text
     availableSeats: Maybe Int
     allowedSeats: Maybe Int
-    peopleCategory: [Id ServicePeopleCategory]
+    peopleCategory: "[Id ServicePeopleCategory]"
 
   constraints :
     id : PrimaryKey | NotNull
@@ -136,8 +153,8 @@ SeatManagement:
     blocked : NotNull
 
   default:
-    booked: 0
-    blocked: 0
+    booked: "0"
+    blocked: "0"
 
 ### Ticket Booking ###
 TicketBooking:
@@ -166,6 +183,9 @@ TicketBooking:
     status: NotNull
     createdAt: NotNull
     updatedAt: NotNull
+  types:
+    BookingStatus:
+      enum: "Pending,Confirmed,Cancelled,Expired"
 
   default:
     createdAt: CURRENT_TIMESTAMP
@@ -187,6 +207,12 @@ TicketBookingService:
     expiryDate: Maybe UTCTime
     createdAt: UTCTime
     updatedAt: UTCTime
+
+  types:
+    ServiceStatus:
+      enum: "Pending,Confirmed,Cancelled,Expired"
+    BusinessHourType:
+      enum: "DinKaSamay,RatKaSamay"
 
   constraints:
     id: PrimaryKey|NotNull
@@ -214,13 +240,17 @@ TicketBookingServiceCategory:
     name: Text
     bookedSeats: Int
     amount: HighPrecMoney
+  constraints:
+    id: PrimaryKey|NotNull
 
 TicketBookingPeopleCategory:
-  tableName: ticket_booking_service_category
+  tableName: ticket_booking_people_category
 
   fields:
     id: Id TicketBookingPeopleCategory
-    ticketBookingServiceCategoryId: Id TicketBookingServiceCategory
+    ticketBookingServiceCategoryId: Id TicketBookingPeopleCategory
     name: Text
     pricePerUnit: HighPrecMoney
     numberOfUnits: Int
+  constraints:
+    id: PrimaryKey|NotNull

@@ -1,169 +1,200 @@
 imports:
-  MerchantOperatingCity: Domain.Types.Merchant.MerchantOperatingCity
-  CreateOrderResp: Kernel.External.Payment.Interface
+  Text: Data.Text
+  TicketService: Domain.Types.TicketService
+  Place: Domain.Types.Place
+  BusinessHour: Domain.Types.BusinessHour
+  SpecialDayType: Domain.Types.SpecialOccasion.SpecialDayType
+  ServiceCategory: Domain.Types.ServiceCategory
+  ServicePeopleCategory: Domain.Types.ServicePeopleCategory
+  HighPrecMoney: Kernel.Types.Common
+  ShortId: Kernel.Types.Id
+  BookingStatus: Domain.Types.TicketBooking
+  ServiceStatus: Domain.Types.TicketBookingService
+  UTCTime: Kernel.Prelude
+  ExpiryType: Domain.Types.TicketService
+  TicketPlace: Domain.Types.TicketPlace
+  CreateOrderResp: Domain.Types.CreateOrderResp
+  TicketServiceVerificationResp: Domain.Types.TicketServiceVerificationResp
+  APISuccess: Kernel.Types.APISuccess
+  TicketBooking: Domain.Types.TicketBooking
+  TicketBookingService: Domain.Types.TicketBookingService
+module: TicketService
+types:
+  TicketServiceResp:
+    id: Id TicketService
+    placesId: Id Place
+    name: Text
+    maxVerification: Int
+    allowFutureBooking: Bool
+    expiry: ExpiryType
+    businessHours: [BusinessHourResp]
 
-module:
-  name: TicketService
-  types:
-    TicketServiceResp:
-      id: Id TicketService
-      placesId: Id Place
-      name: Text
-      maxVerification: Int
-      allowFutureBooking: Bool
-      expiry: ExpiryType
-      businessHours: [BusinessHourResp]
+  BusinessHourResp:
+    id: Id BusinessHour
+    slot: Maybe TimeOfDay
+    startTime: Maybe TimeOfDay
+    endTime: Maybe TimeOfDay
+    specialDayDescription: Maybe Text
+    specialDayType: SpecialDayType
+    operationalDays: [Text]
+    categories: [CategoriesResp]
 
-    BusinessHourResp:
-      id: Id BusinessHour
-      slot: Maybe TimeOfDay
-      startTime: Maybe TimeOfDay
-      endTime: Maybe TimeOfDay
-      specialDayDescription: Maybe Text
-      specialDayType: SpecialDayType
-      operationalDays: "[Text]"
-      categories: "[CategoriesResp]"
+  CategoriesResp:
+    name: Text
+    id: Id ServiceCategory
+    availableSeats: Maybe Int
+    allowedSeats: Maybe Int
+    bookedSeats: Int
+    peopleCategories: [PeopleCategoriesResp]
 
-    CategoriesResp:
-      name: Text
-      id: Id ServiceCategory
-      availableSeats: Maybe Int
-      allowedSeats: Maybe Int
-      bookedSeats: Int
-      peopleCategories: [PeopleCategoriesResp]
+  PeopleCategoriesResp:
+    id: Id ServicePeopleCategory
+    name: Text
+    pricePerUnit: HighPrecMoney
 
-    PeopleCategoriesResp:
-      id: Id ServicePeopleCategory
-      name: Text
-      pricePerUnit: HighPrecMoney
+  TicketBookingReq:
+    visitDate: Maybe Day
+    services: TicketBookingServicesReq
 
-    TicketBookingReq:
-      visitDate: Maybe Day
-      services: TicketBookingServicesReq
+  TicketBookingServicesReq:
+    serviceId: Id TicketService
+    businessHourId: Id BusinessHour
+    categories: [TicketBookingCategoryReq]
 
-    TicketBookingServicesReq:
-      serviceId: Id TicketService
-      businessHourId: Id BusinessHour
-      categories: [TicketBookingCategoryReq]
+  TicketBookingCategoryReq:
+    categoryId: Id ServiceCategory
+    peopleCategories: [TicketBookingPeopleCategoryReq]
 
-    TicketBookingCategoryReq:
-      categoryId: Id ServiceCategory
-      peopleCategories: [TicketBookingPeopleCategoryReq]
+  TicketBookingPeopleCategoryReq:
+    peopleCategoryId: Id ServicePeopleCategory
+    numberOfUnits: Int
 
-    TicketBookingPeopleCategoryReq:
-      peopleCategoryId: Id ServicePeopleCategory
-      numberOfUnits: Int
+  TicketBookingAPIEntity:
+    ticketShortId: Text
+    ticketPlaceId: Text
+    ticketPlaceName: Text
+    personId: Text
+    amount: HighPrecMoney
+    visitDate: Day
+    status: BookingStatus
 
-    TicketBookingAPIEntity:
-      ticketShortId: Text
-      ticketPlaceId: Text
-      ticketPlaceName: Text
-      personId: Text
-      amount: HighPrecMoney
-      visitDate: Day
-      status: BookingStatus
+  TicketBookingDetails:
+    ticketShortId: Text
+    ticketPlaceId: Text
+    ticketPlaceName: Text
+    personId: Text
+    amount: HighPrecMoney
+    visitDate: Day
+    status: BookingStatus
+    services: [TickectBookingServiceDetails]
 
-    TicketBookingDetails:
-      ticketShortId: Text
-      ticketPlaceId: Text
-      ticketPlaceName: Text
-      personId: Text
-      amount: HighPrecMoney
-      visitDate: Day
-      status: BookingStatus
-      services: [TickectBookingServiceDetails]
+  TickectBookingServiceDetails:
+    serviceShortId: Text
+    ticketServiceName: Text
+    amount : HighPrecMoney
+    status : ServiceStatus
+    verificationCount : Int
+    slot: Maybe TimeOfDay
+    expiryDate : Maybe UTCTime
+    categories : [TicketBookingCategoryDetails]
 
-    TickectBookingServiceDetails:
-      serviceShortId: Text
-      ticketServiceName: Text
-      amount : HighPrecMoney
-      status : ServiceStatus
-      verificationCount : Int
-      slot: Maybe TimeOfDay
-      expiryDate : Maybe UTCTime
-      categories : [TicketBookingCategoryDetails]
+  TicketBookingCategoryDetails :
+    name : Text
+    bookedSeats: Int
+    amount: HighPrecMoney
+    peopleCategories : [TicketBookingPeopleCategoryDetails]
 
-    TicketBookingCategoryDetails :
-      name : Text
-      bookedSeats: Int
-      amount: HighPrecMoney
-      peopleCategories : [TicketBookingPeopleCategoryDetails]
+  TicketBookingPeopleCategoryDetails:
+    name : Text
+    pricePerUnit : HighPrecMoney
+    numberOfUnits : Int
 
-    TicketBookingPeopleCategoryDetails:
-      name : Text
-      pricePerUnit : HighPrecMoney
-      numberOfUnits : Int
+  TicketBookingUpdateSeatsReq:
+    ticketServiceId: Id TicketService
+    date: Day
+    businessHourId: Id BusinessHour
+    categoryId: Id ServiceCategory
+    updatedBookedSeats: Int
+# apis:
+#   - GET:
+#       endpoint: ticket/places/book
+#       request:
+#         type: Domain.Types.TicketPlaceV1.TicketPlaceV1
+#       response:
+#         type: Domain.Types.TicketPlaceV1.TicketPlaceV1
+#         format: JSON
+apis:
+  # GET /ticket/places
+  - GET:
+      endpoint: /ticket/places
+      response:
+        type: "[TicketPlace]"
 
-    TicketBookingUpdateSeatsReq:
-      ticketServiceId: Id TicketService
-      date: Day
-      businessHourId: Id BusinessHour
-      categoryId: Id ServiceCategory
-      updatedBookedSeats: Int
+  # GET /ticket/places/{placeId}/services
+  - GET:
+      endpoint: /v2/ticket/places/{placeId}/services
+      auth: TokenAuth
+      params:
+        placeId: Id TicketPlace
+      response:
+        type: "[Domain.Actions.UI.TicketService.TicketServiceResp]"
 
-  API:
-    # GET /ticket/places
-    - GET:
-        endpoint: /ticket/places
-        auth: TokenAuth
-        response: [TicketPlace]
+  # # POST /ticket/places/{placeId}/book
+  - POST:
+      endpoint: /v2/ticket/places/{placeId}/book
+      auth: TokenAuth
+      params:
+        placeId: Id TicketPlace
+      request:
+        type: Domain.Actions.UI.TicketService.TicketBookingReq
+      response:
+        type: CreateOrderResp
 
-    # GET /ticket/places/{placeId}/services
-    - GET:
-        endpoint: /v2/ticket/places/{placeId}/services
-        auth: TokenAuth
-        params:
-          placeId: Id TicketPlace
-        response: [TicketServiceResp]
+  # # GET /ticket/places/bookings
+  - GET:
+      endpoint: /ticket/places/bookings
+      auth: TokenAuth
+      query:
+        limit: Int
+        offset: Int
+      mandatoryQuery:
+        status: BookingStatus
+      response:
+        type: "[Domain.Actions.UI.TicketService.TicketBookingAPIEntity]"
 
-    # POST /ticket/places/{placeId}/book
-    - POST:
-        endpoint: /v2/ticket/places/{placeId}/book
-        auth: TokenAuth
-        params:
-          placeId: Id TicketPlace
-        request: TicketBookingReq
-        response: CreateOrderResp
+  # # GET /ticket/places/bookings/{ticketBookingShortId}/details
+  - GET:
+      endpoint: /v2/ticket/places/bookings/{ticketBookingShortId}/details
+      auth: TokenAuth
+      params:
+        ticketBookingShortId: ShortId TicketBooking
+      response:
+        type: Domain.Actions.UI.TicketService.TicketBookingDetails
 
-    # GET /ticket/places/bookings
-    - GET:
-        endpoint: /ticket/places/bookings
-        auth: TokenAuth
-        query:
-          limit: Int
-          offset: Int
-        mandatoryQuery:
-          status: BookingStatus
-        response: [TicketBookingAPIEntity]
+  # # POST /ticket/places/bookings/{personServiceId}/{ticketServiceShortId}/verify
+  - POST:
+      endpoint: /ticket/places/bookings/{personServiceId}/{ticketServiceShortId}/verify
+      auth: TokenAuth
+      params:
+        personServiceId: Id Domain.Actions.UI.TicketService.TicketService
+        ticketServiceShortId: ShortId TicketBookingService
+      response:
+        type: TicketServiceVerificationResp
 
-    # GET /ticket/places/bookings/{ticketBookingShortId}/details
-    - GET:
-        endpoint: /v2/ticket/places/bookings/{ticketBookingShortId}/details
-        auth: TokenAuth
-        params:
-          ticketBookingShortId: ShortId TicketBooking
-        response: TicketBookingDetails
+  # # GET /ticket/places/bookings/{ticketBookingShortId}/status
+  - GET:
+      endpoint: /ticket/places/bookings/{ticketBookingShortId}/status
+      auth: TokenAuth
+      params:
+        ticketBookingShortId: ShortId TicketBooking
+      response:
+        type: BookingStatus
 
-    # POST /ticket/places/bookings/{personServiceId}/{ticketServiceShortId}/verify
-    - POST:
-        endpoint: /ticket/places/bookings/{personServiceId}/{ticketServiceShortId}/verify
-        auth: TokenAuth
-        params:
-          personServiceId: Id TicketService
-          ticketServiceShortId: ShortId TicketBookingService
-        response: TicketServiceVerificationResp
-
-    # GET /ticket/places/bookings/{ticketBookingShortId}/status
-    - GET:
-        endpoint: /ticket/places/bookings/{ticketBookingShortId}/status
-        auth: TokenAuth
-        params:
-          ticketBookingShortId: ShortId TicketBooking
-        response: BookingStatus
-
-    # dashboard APIs
-    - POST:
-        endpoint: /ticket/places/bookings/update/seats
-        auth: TokenAuth
-        request: TicketBookingUpdateSeatsReq
-        response: APISuccess
+  # # dashboard APIs
+  - POST:
+      endpoint: /ticket/places/bookings/update/seats
+      auth: TokenAuth
+      request:
+        type: Domain.Actions.UI.TicketService.TicketBookingUpdateSeatsReq
+      response:
+        type: APISuccess
