@@ -1,16 +1,12 @@
 imports:
   MerchantOperatingCity: Domain.Types.Merchant.MerchantOperatingCity
-  SeatManagement: Domain.Types.SeatManagement
-  TicketServiceCategory: Domain.Types.TicketServiceCategory
   BusinessHourType: Domain.Types.BusinessHourType
-  Timings: Domain.Types.Timings
-  SpecialDayType: Domain.Types.SpecialDatesType
 
-TicketPlaceV1:
+TicketPlace:
   tableName: ticker_place
 
   fields:
-    id : Id TicketPlaceV1
+    id : Id TicketPlace
     merchantOperatingCityId : Id MerchantOperatingCity
     name : Text
     description : Maybe Text
@@ -19,6 +15,8 @@ TicketPlaceV1:
     gallery : "[Text]"
     shortDesc : Text
     iconUrl : Maybe Text
+    termsAndConditions : "[Text]"
+    placeType : PlaceType #
     mapImageUrl : Maybe Text
     openTimings : Maybe TimeOfDay
     closeTimings : Maybe TimeOfDay
@@ -27,57 +25,36 @@ TicketPlaceV1:
     id: PrimaryKey|NotNull
     name: NotNull
     shortDesc: NotNull
+    gallery: NotNull
+    termsAndConditions: NotNull
 
-  types:
-    TicketServiceResp:
-      id: Id TicketService
-      placesId: Text
-    TicketBooking:
-      allTickets: "[TicketService]"
-    TicketService:
-      id: Text
-      name: Text
+  default:
+    gallery: []
+    termsAndConditions: []
 
-TicketServiceV1:
+TicketService:
   tableName : ticket_service
 
   fields :
-    id : Id TicketServiceV1
+    id : Id TicketService
     placeId : Text
     serviceName : Text
-    shortDesc : Text
+    shortDesc : Maybe Text
     operationalDays : "[Text]"
     maxVerification : Int
     allowFutureBooking : Bool
-    expiry : Text #InstantExpiry Int | VistDateExpiry TimeOfDay
-    bussinessHours : Text #Timings
-
-  sqlType:
-    bussinessHours: text
+    expiry : ExpiryType
+    bussinessHours : [Id BusinessHour]
 
   constraints :
     id : PrimaryKey | NotNull
     serviceName : NotNull
     placeId : NotNull
-    shortDesc : NotNull
     bussinessHours : NotNull
     operationalDays : NotNull
 
-  queries:
-    updateVerificationById:
-      kvFunction: updateOneWithKV
-      params: [maxVerification, allowFutureBooking]
-      where:
-        and:
-          - id
-          - or: [maxVerification, allowFutureBooking]
-
-    getAllServices:
-      kvFunction: findAllWithKV
-      params: []
-      where:
-        and: [id, placeId]
-
+  default:
+    operationalDays: "{Monday, Tuesday, Wednesday, Thursday, Friday, Saturday, Sunday}"
 
 SpecialOccasion:
   tableName : special_occasion
@@ -87,37 +64,28 @@ SpecialOccasion:
     entityId : Text
     date : Maybe Day
     dayOfWeek : Maybe Text
-    specialDays : Text #SpecialDayType
+    specialDayType : SpecialDayType
     description : Maybe Text
-    businessHours : Text
-
-  sqlType:
-    businessHours : text
+    businessHours : [Id BusinessHour]
 
   constraints :
     id : PrimaryKey | NotNull
-    date : NotNull
-    specialDays : NotNull
-    businessHours : NotNull
     entityId : NotNull
-
+    specialDayType : NotNull
+    businessHours : NotNull
 
 BusinessHour:
   tableName: business_hour
 
   fields:
     id: Id BusinessHour
-    btype: Text
-    categoryId: Id ServiceCategory
+    btype: BusinessHourType # Slot TimeOfDay | Duration TimeOfDay TimeOfDay
+    categoryId: [Id ServiceCategory]
 
   constraints :
     id : PrimaryKey | NotNull
     btype : NotNull
     categoryId : NotNull
-
-  sqlType:
-    btype: text
-
 
 ServiceCategory:
   tableName: service_category
@@ -126,31 +94,29 @@ ServiceCategory:
     id: Id ServiceCategory
     name: Text
     description: Text
-    availableSeats: Int
-    allowedSeats: Int
+    availableSeats: Maybe Int
+    allowedSeats: Maybe Int
+    peopleCategory: [Id ServicePeopleCategory]
 
   constraints :
     id : PrimaryKey | NotNull
     name : NotNull
     description : NotNull
-    availableSeats : NotNull
-
 
 ServicePeopleCategory:
   tableName: service_people_category
 
   fields:
     id: Id ServicePeopleCategory
-    serviceCategoryId: Id ServiceCategory
     name: Text
+    description: Text
     pricePerUnit: Int
 
   constraints :
     id : PrimaryKey|NotNull
-    serviceCategoryId : NotNull
     name : NotNull
+    description : NotNull
     pricePerUnit : NotNull
-
 
 SeatManagement:
   tableName: seat_management
@@ -158,7 +124,7 @@ SeatManagement:
   fields:
     id: Id SeatManagement
     date: Day
-    ticketServiceCategoryId: Text
+    ticketServiceCategoryId: Id ServiceCategory
     booked: Int
     blocked: Int
 
@@ -168,3 +134,93 @@ SeatManagement:
     ticketServiceCategoryId : NotNull
     booked : NotNull
     blocked : NotNull
+
+  default:
+    booked: 0
+    blocked: 0
+
+### Ticket Booking ###
+TicketBooking:
+  tableName: ticket_booking
+
+  fields:
+    id: Id TicketBooking
+    shortId: ShortId TicketBooking
+    merchantOperatingCityId: Id MerchantOperatingCity
+    ticketPlaceId: Id TicketPlace
+    personId: Id Person
+    amount: HighPrecMoney
+    visitDate: Day
+    status: BookingStatus
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  constraints:
+    id: PrimaryKey|NotNull
+    shortId: SecondaryKey|NotNull
+    merchantOperatingCityId: NotNull
+    ticketPlaceId: NotNull
+    personId: SecondaryKey|NotNull
+    amount: NotNull
+    visitDate: NotNull
+    status: NotNull
+    createdAt: NotNull
+    updatedAt: NotNull
+
+  default:
+    createdAt: CURRENT_TIMESTAMP
+    updatedAt: CURRENT_TIMESTAMP
+
+TicketBookingService:
+  tableName: ticket_booking_service
+
+  fields:
+    id: Id TicketBookingService
+    shortId: ShortId TicketBookingService
+    ticketBookingId: Id TicketBooking
+    ticketServiceId: Id TicketService
+    merchantOperatingCityId: Id MerchantOperatingCity
+    amount: HighPrecMoney
+    status: ServiceStatus
+    verificationCount: Int
+    btype: BusinessHourType
+    expiryDate: Maybe UTCTime
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  constraints:
+    id: PrimaryKey|NotNull
+    shortId: NotNull
+    ticketBookingId: NotNull
+    ticketServiceId: NotNull
+    merchantOperatingCityId: NotNull
+    amount: NotNull
+    status: NotNull
+    verificationCount: NotNull
+    btype: NotNull
+    createdAt: NotNull
+    updatedAt: NotNull
+
+  default:
+    createdAt: CURRENT_TIMESTAMP
+    updatedAt: CURRENT_TIMESTAMP
+
+TicketBookingServiceCategory:
+  tableName: ticket_booking_service_category
+
+  fields:
+    id: Id TicketBookingServiceCategory
+    ticketBookingServiceId: Id TicketBookingService
+    name: Text
+    bookedSeats: Int
+    amount: HighPrecMoney
+
+TicketBookingPeopleCategory:
+  tableName: ticket_booking_service_category
+
+  fields:
+    id: Id TicketBookingPeopleCategory
+    ticketBookingServiceCategoryId: Id TicketBookingServiceCategory
+    name: Text
+    pricePerUnit: HighPrecMoney
+    numberOfUnits: Int
