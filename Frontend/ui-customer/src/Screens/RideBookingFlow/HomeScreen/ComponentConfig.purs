@@ -649,7 +649,7 @@ sourceUnserviceableConfig state =
           , margin = (MarginBottom 5)
           }
         , errorDescriptionConfig
-          { text = if state.props.isMockLocation then "Turn off any Mock Location app you might be using and restart the app." else (getString CURRENTLY_WE_ARE_LIVE_IN_)
+          { text = if state.props.isMockLocation then "Turn off any Mock Location app you might be using and restart the app." else getString $ CURRENTLY_WE_ARE_LIVE_IN_ "CURRENTLY_WE_ARE_LIVE_IN_"
           , color = Color.black700
           , margin = (Margin 20 0 20 (40 + EHC.safeMarginBottom))
           }
@@ -693,13 +693,13 @@ rateCardConfig state =
         , otherOptions  = [
           {key : "DRIVER_ADDITIONS", val : (getString DRIVER_ADDITIONS)},
           {key : "FARE_UPDATE_POLICY", val : (getString FARE_UPDATE_POLICY)}]
-        , fareInfoText = (getString FARE_INFO_TEXT)
+        , fareInfoText = (getString $ FARE_INFO_TEXT "FARE_INFO_TEXT")
         , additionalStrings = [
           {key : "DRIVER_ADDITIONS_OPTIONAL", val : (getString DRIVER_ADDITIONS_OPTIONAL)},
           {key : "THE_DRIVER_MAY_QUOTE_EXTRA_TO_COVER_FOR_TRAFFIC", val : (getString THE_DRIVER_MAY_QUOTE_EXTRA_TO_COVER_FOR_TRAFFIC)},
           {key : "DRIVER_ADDITIONS_ARE_CALCULATED_AT_RATE", val : (if (state.data.rateCard.vehicleVariant /= "AUTO_RICKSHAW") 
                                                                     then getString DRIVER_ADDITION_LIMITS_ARE_IN_INCREMENTS
-                                                                   else getString DRIVER_ADDITIONS_ARE_CALCULATED_AT_RATE)},
+                                                                   else getString $ DRIVER_ADDITIONS_ARE_CALCULATED_AT_RATE "DRIVER_ADDITIONS_ARE_CALCULATED_AT_RATE" )},
           {key : "DRIVER_MAY_NOT_CHARGE_THIS_ADDITIONAL_FARE", val : (getString DRIVER_MAY_NOT_CHARGE_THIS_ADDITIONAL_FARE)},
           {key : "FARE_UPDATE_POLICY", val : (getString FARE_UPDATE_POLICY)},
           {key : "YOU_MAY_SEE_AN_UPDATED_FINAL_FARE_DUE_TO_ANY_OF_THE_BELOW_REASONS", val : (getString YOU_MAY_SEE_AN_UPDATED_FINAL_FARE_DUE_TO_ANY_OF_THE_BELOW_REASONS)},
@@ -756,7 +756,7 @@ nyRateCardList :: ST.HomeScreenState -> Array FareList
 nyRateCardList state =
   ([{key : ((getString MIN_FARE_UPTO) <> if state.data.rateCard.nightCharges then " 🌙" else ""), val : ("₹" <> HU.toStringJSON (state.data.rateCard.baseFare))},
     {key : ((getString RATE_ABOVE_MIN_FARE) <> if state.data.rateCard.nightCharges then " 🌙" else ""), val : ("₹" <> HU.toStringJSON (state.data.rateCard.extraFare) <> "/ km")},
-    {key : (getString DRIVER_PICKUP_CHARGES), val : ("₹" <> HU.toStringJSON (state.data.rateCard.pickUpCharges))}
+    {key : (getString $ DRIVER_PICKUP_CHARGES "DRIVER_PICKUP_CHARGES"), val : ("₹" <> HU.toStringJSON (state.data.rateCard.pickUpCharges))}
     ]) <> (if (MU.getMerchant FunctionCall) == MU.NAMMAYATRI && (state.data.rateCard.additionalFare > 0) then
     [{key : (getString DRIVER_ADDITIONS), val : (getString PERCENTAGE_OF_NOMINAL_FARE)}] else [])
 
@@ -1015,7 +1015,7 @@ callSupportConfig state = let
       text = getString CONTACT_SUPPORT <>"?"
     }
   , secondaryText {
-      text = getString YOU_ARE_ABOUT_TO_CALL_NAMMA_YATRI_SUPPORT
+      text = getString $ YOU_ARE_ABOUT_TO_CALL_NAMMA_YATRI_SUPPORT "YOU_ARE_ABOUT_TO_CALL_NAMMA_YATRI_SUPPORT"
     , margin = (Margin 24 12 24 12)
     , color = Color.black700
     }
@@ -1247,7 +1247,7 @@ rideCompletedCardConfig state = let
         },
         customerBottomCard {
           title = (getString RATE_YOUR_RIDE_WITH) <> state.data.rideRatingState.driverName,
-          subTitle = (getString YOUR_FEEDBACK_HELPS_US),
+          subTitle = (getString $ YOUR_FEEDBACK_HELPS_US "YOUR_FEEDBACK_HELPS_US"),
           selectedRating = state.data.ratingViewState.selectedRating,
           visible = true
         },

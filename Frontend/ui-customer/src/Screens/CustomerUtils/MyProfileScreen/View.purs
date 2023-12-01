@@ -240,7 +240,7 @@ personalDetailsArray state =
                                                                         Just false -> (getString NO_DISABILITY)
                                                                         _ -> case state.data.disabilityType of 
                                                                                 Just disabilityType -> disabilityType.description
-                                                                                _ ->  (getString SET_NOW) , fieldType : ST.DISABILITY_TYPE, supportText :  if (state.data.hasDisability == Just false || isNothing state.data.disabilityType ) then Nothing else  Just (getString LEARN_HOW_TEXT)}
+                                                                                _ ->  (getString SET_NOW) , fieldType : ST.DISABILITY_TYPE, supportText :  if (state.data.hasDisability == Just false || isNothing state.data.disabilityType ) then Nothing else  Just (getString $ LEARN_HOW_TEXT "LEARN_HOW_TEXT")}
   ]
 
 horizontalLineView :: forall w. ST.MyProfileScreenState -> Boolean -> PrestoDOM (Effect Unit) w

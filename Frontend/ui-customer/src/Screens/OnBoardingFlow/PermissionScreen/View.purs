@@ -105,7 +105,7 @@ locationAccessPermissionView push state =
           , fontStyle $ FontStyle.bold LanguageStyle
         ]
         , textView
-          [ text $ getString if (getValueToLocalStore PERMISSION_POPUP_TIRGGERED) /= "true" then LOCATION_PERMISSION_SUBTITLE_NEW_USER else LOCATION_PERMISSION_SUBTITLE
+          [ text $ getString if (getValueToLocalStore PERMISSION_POPUP_TIRGGERED) /= "true" then (LOCATION_PERMISSION_SUBTITLE_NEW_USER "LOCATION_PERMISSION_SUBTITLE_NEW_USER") else LOCATION_PERMISSION_SUBTITLE
           , textSize FontSize.a_16
           , color Color.black800
           , fontStyle $ FontStyle.regular LanguageStyle

@@ -78,7 +78,7 @@ locationAccessPermissionView push state triggertype =
           , margin (MarginVertical 22 16)
           ] <> FontStyle.h1 LanguageStyle
         , textView $
-          [ text (getString YOUR_LOCATION_HELPS_OUR_SYSTEM)
+          [ text $ getString $ YOUR_LOCATION_HELPS_OUR_SYSTEM "YOUR_LOCATION_HELPS_OUR_SYSTEM"
           , color Color.black800
           ] <> FontStyle.body5 TypoGraphy
         ]

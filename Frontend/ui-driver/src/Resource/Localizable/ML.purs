@@ -185,7 +185,7 @@ getML stringKey =
         BOOK_NOW -> "ഇപ്പോൾ ബുക്ക് ചെയ്യു"
         RESEND_OTP_IN -> "OTP  വീണ്ടും അയയ്ക്കുക"
         WE_NEED_ACCESS_TO_YOUR_LOCATION -> "ഞങ്ങൾക്ക് നിങ്ങളുടെ ലൊക്കേഷൻ ആക്സസ് ആവശ്യമാണ്!"
-        YOUR_LOCATION_HELPS_OUR_SYSTEM -> "നിങ്ങളുടെ ലൊക്കേഷൻ, വേഗത്തിൽ സവാരി കണ്ടെത്താൻ ഞങ്ങളുടെ സിസ്റ്റത്തെ സഹായിക്കുന്നു."
+        YOUR_LOCATION_HELPS_OUR_SYSTEM _ -> "നിങ്ങളുടെ ലൊക്കേഷൻ, വേഗത്തിൽ സവാരി കണ്ടെത്താൻ ഞങ്ങളുടെ സിസ്റ്റത്തെ സഹായിക്കുന്നു."
         NO_INTERNET_CONNECTION -> "ഇന്റർനെറ്റ് കണക്ഷൻ ഇല്ല"
         PLEASE_CHECK_YOUR_INTERNET_CONNECTION_AND_TRY_AGAIN -> "ദയവായി ഇന്റർനെറ്റ് കണക്ഷൻ പരിശോധിച്ച് വീണ്ടും ശ്രമിക്കുക"
         TRY_AGAIN -> "വീണ്ടും ശ്രമിക്കുക"
