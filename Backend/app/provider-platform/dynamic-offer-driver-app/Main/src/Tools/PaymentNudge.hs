@@ -32,7 +32,6 @@ import Domain.Types.Plan
 import Kernel.Beam.Functions as B
 import qualified Kernel.External.Notification.FCM.Types as FCM
 import qualified Kernel.External.Payment.Interface as Payment
-import qualified Kernel.External.Payment.Interface.Types as Payments
 import Kernel.External.Types (Language (..))
 import Kernel.Prelude
 import Kernel.Types.Error
@@ -140,8 +139,7 @@ sendSwitchPlanNudge transporterConfig driverInfo mbCurrPlan mbDriverPlan numRide
             registrationDate = addUTCTime (fromIntegral transporterConfig.timeDiffFromUtc) date,
             dutyDate = addUTCTime (fromIntegral transporterConfig.timeDiffFromUtc) now,
             paymentMode = show paymentMode_,
-            numOfRides = if paymentMode_ == AUTOPAY then 0 else -1,
-            offerListingMetric = if transporterConfig.considerSpecialZoneRidesForPlanCharges then Nothing else Just Payments.IS_VISIBLE
+            numOfRides = if paymentMode_ == AUTOPAY then 0 else -1
           }
 
 switchPlanNudge :: (CacheFlow m r, EsqDBFlow m r) => DP.Person -> Int -> HighPrecMoney -> Text -> m ()

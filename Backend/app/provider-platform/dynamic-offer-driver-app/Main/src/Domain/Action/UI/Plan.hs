@@ -45,7 +45,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common hiding (id)
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as SOrder
-import SharedLogic.DriverFee (calcNumRides, calculatePlatformFeeAttr, roundToHalf)
+import SharedLogic.DriverFee (calculatePlatformFeeAttr, roundToHalf)
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import qualified SharedLogic.Payment as SPayment
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as QTC
@@ -86,7 +86,6 @@ data PlanEntity = PlanEntity
     totalPlanCreditLimit :: Money,
     currentDues :: HighPrecMoney,
     autopayDues :: HighPrecMoney,
-    dueBoothCharges :: HighPrecMoney,
     dues :: [DriverDuesEntity],
     bankErrors :: [ErrorEntity]
   }
@@ -162,9 +161,7 @@ data DriverDuesEntity = DriverDuesEntity
     isSplit :: Bool,
     offerAndPlanDetails :: Maybe Text,
     isCoinCleared :: Bool,
-    coinDiscountAmount :: Maybe HighPrecMoney,
-    specialZoneRideCount :: Int,
-    totalSpecialZoneCharges :: HighPrecMoney
+    coinDiscountAmount :: Maybe HighPrecMoney
   }
   deriving (Generic, ToJSON, ToSchema, FromJSON)
 
@@ -448,9 +445,7 @@ createMandateInvoiceAndOrder driverId merchantId merchantOpCityId plan = do
             schedulerTryCount = 0,
             collectedAt = Nothing,
             overlaySent = False,
-            amountPaidByCoin = Nothing,
-            specialZoneRideCount = 0,
-            specialZoneAmount = 0
+            amountPaidByCoin = Nothing
           }
     calculateDues driverFees = sum $ map (\dueInvoice -> roundToHalf (fromIntegral dueInvoice.govtCharges + dueInvoice.platformFee.fee + dueInvoice.platformFee.cgst + dueInvoice.platformFee.sgst)) driverFees
     checkIfInvoiceIsReusable invoice newDriverFees = do
@@ -483,7 +478,6 @@ convertPlanToPlanEntity driverId merchantOpCityId applicationDate isCurrentPlanE
 
   let currentDues = sum $ map (.driverFeeAmount) dues
   let autopayDues = sum $ map (.driverFeeAmount) $ filter (\due -> due.feeType == DF.RECURRING_EXECUTION_INVOICE) dues
-  let dueBoothCharges = sum $ map (.totalSpecialZoneCharges) dues
 
   return
     PlanEntity
@@ -524,8 +518,7 @@ convertPlanToPlanEntity driverId merchantOpCityId applicationDate isCurrentPlanE
             registrationDate = addUTCTime (fromIntegral transporterConfig.timeDiffFromUtc) date,
             dutyDate = addUTCTime (fromIntegral transporterConfig.timeDiffFromUtc) now,
             paymentMode = show paymentMode_,
-            numOfRides = if paymentMode_ == AUTOPAY then 0 else -1,
-            offerListingMetric = if transporterConfig.considerSpecialZoneRidesForPlanCharges then Nothing else Just Payment.IS_VISIBLE
+            numOfRides = if paymentMode_ == AUTOPAY then 0 else -1
           }
     mkPlanFareBreakup offers = do
       let baseAmount = case plan.planBaseAmount of
@@ -612,7 +605,7 @@ mkDueDriverFeeInfoEntity driverFees transporterConfig = do
             { autoPayStage = driverFee.autopayPaymentStage,
               paymentStatus = invoice <&> (.invoiceStatus),
               totalEarnings = fromIntegral driverFee.totalEarnings,
-              totalRides = calcNumRides driverFee transporterConfig,
+              totalRides = driverFee.numRides,
               planAmount = fromMaybe 0 driverFee.feeWithoutDiscount,
               isSplit = length driverFeesInWindow > 1,
               offerAndPlanDetails = driverFee.planOfferTitle,
@@ -622,9 +615,7 @@ mkDueDriverFeeInfoEntity driverFees transporterConfig = do
               executionAt,
               feeType,
               isCoinCleared = driverFee.status == DF.CLEARED_BY_YATRI_COINS,
-              coinDiscountAmount = driverFee.amountPaidByCoin,
-              specialZoneRideCount = driverFee.specialZoneRideCount,
-              totalSpecialZoneCharges = driverFee.specialZoneAmount
+              coinDiscountAmount = driverFee.amountPaidByCoin
             }
     )
     driverFees

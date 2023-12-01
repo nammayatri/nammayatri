@@ -122,7 +122,7 @@ endRideTransaction driverId booking ride mbFareParams mbRiderDetailsId newFarePa
 
   when (thresholdConfig.subscription) $ do
     maxShards <- asks (.maxShards)
-    createDriverFee booking.providerId booking.merchantOperatingCityId driverId ride.fare newFareParams maxShards driverInfo booking
+    createDriverFee booking.providerId booking.merchantOperatingCityId driverId ride.fare newFareParams maxShards driverInfo
 
   triggerRideEndEvent RideEventData {ride = ride{status = Ride.COMPLETED}, personId = cast driverId, merchantId = booking.providerId}
   triggerBookingCompletedEvent BookingEventData {booking = booking{status = SRB.COMPLETED}, personId = cast driverId, merchantId = booking.providerId}
@@ -313,9 +313,8 @@ createDriverFee ::
   DFare.FareParameters ->
   Int ->
   DI.DriverInformation ->
-  SRB.Booking ->
   m ()
-createDriverFee merchantId merchantOpCityId driverId rideFare newFareParams maxShards driverInfo booking = do
+createDriverFee merchantId merchantOpCityId driverId rideFare newFareParams maxShards driverInfo = do
   transporterConfig <- SCT.findByMerchantOpCityId merchantOpCityId >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   freeTrialDaysLeft <- getFreeTrialDaysLeft transporterConfig.freeTrialDays driverInfo
   mbDriverPlan <- findByDriverId (cast driverId)
@@ -326,13 +325,13 @@ createDriverFee merchantId merchantOpCityId driverId rideFare newFareParams maxS
   let totalDriverFee = fromIntegral govtCharges + platformFee + cgst + sgst
   now <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
   lastDriverFee <- QDF.findLatestFeeByDriverId driverId
-  driverFee <- mkDriverFee now merchantId driverId rideFare govtCharges platformFee cgst sgst transporterConfig booking
+  driverFee <- mkDriverFee now merchantId driverId rideFare govtCharges platformFee cgst sgst transporterConfig
   when (totalDriverFee > 0 || (totalDriverFee <= 0 && transporterConfig.isPlanMandatory && isJust mbDriverPlan && freeTrialDaysLeft == 0)) $ do
     numRides <- case lastDriverFee of
       Just ldFee ->
         if now >= ldFee.startTime && now < ldFee.endTime
           then do
-            QDF.updateFee ldFee.id rideFare govtCharges platformFee cgst sgst now True booking
+            QDF.updateFee ldFee.id rideFare govtCharges platformFee cgst sgst now True
             return (ldFee.numRides + 1)
           else do
             QDF.create driverFee
@@ -406,9 +405,8 @@ mkDriverFee ::
   HighPrecMoney ->
   HighPrecMoney ->
   TransporterConfig ->
-  SRB.Booking ->
   m DF.DriverFee
-mkDriverFee now merchantId driverId rideFare govtCharges platformFee cgst sgst transporterConfig booking = do
+mkDriverFee now merchantId driverId rideFare govtCharges platformFee cgst sgst transporterConfig = do
   id <- generateGUID
   let potentialStart = addUTCTime transporterConfig.driverPaymentCycleStartTime (UTCTime (utctDay now) (secondsToDiffTime 0))
       startTime = if now >= potentialStart then potentialStart else addUTCTime (-1 * transporterConfig.driverPaymentCycleDuration) potentialStart
@@ -417,8 +415,6 @@ mkDriverFee now merchantId driverId rideFare govtCharges platformFee cgst sgst t
       platformFee_ = if isNothing transporterConfig.driverFeeCalculationTime then DF.PlatformFee platformFee cgst sgst else DF.PlatformFee 0 0 0
       govtCharges_ = if isNothing transporterConfig.driverFeeCalculationTime then govtCharges else 0
       isPlanMandatory = transporterConfig.isPlanMandatory
-      totalFee = platformFee + cgst + sgst
-      (specialZoneRideCount, specialZoneAmount) = specialZoneMetricsIntialization totalFee
   mbDriverPlan <- findByDriverId (cast driverId) -- what if its changed? needed inside lock?
   plan <- getPlan mbDriverPlan merchantId
   return $
@@ -447,11 +443,6 @@ mkDriverFee now merchantId driverId rideFare govtCharges platformFee cgst sgst t
         amountPaidByCoin = Nothing,
         ..
       }
-  where
-    specialZoneMetricsIntialization totalFee' = do
-      case booking.bookingType of
-        SRB.SpecialZoneBooking -> (1, totalFee')
-        _ -> (0, 0)
 
 getPlan :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Maybe DriverPlan -> Id Merchant -> m (Maybe Plan)
 getPlan mbDriverPlan merchantId = do

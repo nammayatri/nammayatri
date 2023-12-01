@@ -90,7 +90,7 @@ runnerIterationRedis SchedulerHandle {..} runTask = do
   readyTasks <- getReadyTask
   filteredTasks <- filterM (\(AnyJob Job {..}, _) -> attemptTaskLockAtomic parentJobId) readyTasks
   logTagDebug "Available tasks - Count" . show $ length filteredTasks
-  logTagDebug "Available tasks " . show $ filteredTasks
+  logTagDebug "Available tasks " . show $ map (\(AnyJob Job {..}, _) -> id) filteredTasks
   mapM_ (runTask . fst) filteredTasks
   let recordIds = map snd filteredTasks
   unless (null recordIds) do
