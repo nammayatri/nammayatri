@@ -2,7 +2,7 @@ module Alchemist.Generator.Haskell.BeamQueries where
 
 import Alchemist.DSL.Syntax.Storage
 import Alchemist.Utils
-import Data.List (intercalate, isPrefixOf)
+import Data.List (intercalate, isPrefixOf, nub)
 import qualified Data.Text as Text
 import Kernel.Prelude
 
@@ -15,6 +15,7 @@ generateImports tableDef =
     ++ " where\n\n"
     ++ "import Kernel.Beam.Functions\n"
     ++ "import Kernel.Prelude\n"
+    ++ "import Kernel.Utils.Common (MonadFlow, CacheFlow, EsqDBFlow)\n"
     ++ "import qualified Storage.Beam."
     ++ (capitalize $ tableNameHaskell tableDef)
     ++ " as Beam\n"
@@ -92,28 +93,25 @@ generateBeamQuery tableNameHaskell query =
 
 generateFunctionSignature :: QueryDef -> String -> String
 generateFunctionSignature query tableNameHaskell =
-  query.queryName
-    ++ " :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => "
-    ++ foldMap (\s -> s ++ " -> ") (map (\(_, t) -> t) (params query))
-    ++ foldMap (\s -> s ++ " -> ") (getWhereClauseFieldTypes (whereClause query))
-    ++ "m ("
-    ++ (if "update" `isPrefixOf` query.queryName then "" else ("Maybe " ++ tableNameHaskell))
-    ++ ")\n"
-    ++ query.queryName
-    ++ " "
-    ++ foldMap (\s -> s ++ " ") (map (\(n, _) -> n) (params query))
-    ++ foldMap (\s -> s ++ " ") (getWhereClauseFieldNames (whereClause query))
-    ++ "= do\n"
+  let qparams = map getIdsOut $ nub (params query ++ (getWhereClauseFieldNamesAndTypes (whereClause query)))
+   in query.queryName
+        ++ " :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => "
+        ++ foldMap (\s -> s ++ " -> ") (map snd qparams)
+        ++ "m ("
+        ++ (if "update" `isPrefixOf` query.queryName then "" else ("[" ++ "Domain.Types." ++ tableNameHaskell ++ "." ++ tableNameHaskell ++ "]"))
+        ++ ")\n"
+        ++ query.queryName
+        ++ " "
+        ++ foldMap (\s -> s ++ " ") (map fst qparams)
+        ++ "= do\n"
+  where
+    getIdsOut :: (String, String) -> (String, String)
+    getIdsOut (k, t) = if (isPrefixOf "Kernel.Types.Id.Id " t) then ("(Kernel.Types.Id.Id " ++ k ++ ")", t) else (k, t)
 
-getWhereClauseFieldTypes :: WhereClause -> [String]
-getWhereClauseFieldTypes EmptyWhere = []
-getWhereClauseFieldTypes (Leaf (_, _type)) = [_type]
-getWhereClauseFieldTypes (Query (_, clauses)) = concatMap getWhereClauseFieldTypes clauses
-
-getWhereClauseFieldNames :: WhereClause -> [String]
-getWhereClauseFieldNames EmptyWhere = []
-getWhereClauseFieldNames (Leaf (field, _)) = [field]
-getWhereClauseFieldNames (Query (_, clauses)) = concatMap getWhereClauseFieldNames clauses
+getWhereClauseFieldNamesAndTypes :: WhereClause -> [(String, String)]
+getWhereClauseFieldNamesAndTypes EmptyWhere = []
+getWhereClauseFieldNamesAndTypes (Leaf (field, _type)) = [(field, _type)]
+getWhereClauseFieldNamesAndTypes (Query (_, clauses)) = concatMap getWhereClauseFieldNamesAndTypes clauses
 
 generateBeamFunctionCall :: String -> String
 generateBeamFunctionCall kvFunction = "   " ++ kvFunction ++ "\n"
