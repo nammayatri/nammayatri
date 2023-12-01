@@ -45,7 +45,7 @@
   "dependencies": {
     "axios": ">=1.6.0",
     "core-js": "^2.6.11",
-    "presto-ui": "git+https://github.com/juspay/presto-ui.git#nammayatri-pilot",
+    "presto-ui": "git+https://github.com/juspay/presto-ui.git#nammayatri",
     "ramda": "^0.26.1",
     "purty": "^7.0.0",
     "regenerator-runtime": "^0.13.5",
