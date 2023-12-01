@@ -176,7 +176,7 @@ specialZoneHeader vehicleVariant =
           , width WRAP_CONTENT
           ] <> FontStyle.h2 TypoGraphy
         , textView $
-          [ text $ getString TAXI_FROM_ZONE
+          [ text $ getString $ TAXI_FROM_ZONE "TAXI_FROM_ZONE"
           , color Color.black800
           , height WRAP_CONTENT
           , width WRAP_CONTENT
@@ -539,7 +539,7 @@ navigateView push state =
           [ width WRAP_CONTENT
           , height WRAP_CONTENT
           , margin (MarginLeft 8)
-          , text $ getString GO_TO_ZONE
+          , text $ getString $ GO_TO_ZONE "GO_TO_ZONE"
           , gravity CENTER
           , color Color.blue900
           ] <> FontStyle.body1 TypoGraphy

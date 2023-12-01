@@ -651,7 +651,7 @@ locationUnserviceableView state push =
       , height WRAP_CONTENT
       , gravity CENTER
       ][  textView $
-          [ text (getString  CURRENTLY_WE_ARE_LIVE_IN_)
+          [ text $ getString $ CURRENTLY_WE_ARE_LIVE_IN_ "CURRENTLY_WE_ARE_LIVE_IN_"
           , gravity CENTER
           , color Color.black700
           ] <> FontStyle.paragraphText LanguageStyle

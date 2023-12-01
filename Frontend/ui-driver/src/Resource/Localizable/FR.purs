@@ -181,7 +181,7 @@ getFR stringKey =
         BOOK_NOW -> "Réserver maintenant"
         RESEND_OTP_IN -> "Renvoyer le code à usage unique dans"
         WE_NEED_ACCESS_TO_YOUR_LOCATION -> "Nous avons besoin d'accéder à votre localisation!"
-        YOUR_LOCATION_HELPS_OUR_SYSTEM -> "Votre position aide notre système à localiser tous les chauffeurs à proximité et à vous trouver la course la plus rapide possible"
+        YOUR_LOCATION_HELPS_OUR_SYSTEM _ -> "Votre position aide notre système à localiser tous les chauffeurs à proximité et à vous trouver la course la plus rapide possible"
         NO_INTERNET_CONNECTION -> "Pas de connexion Internet"
         PLEASE_CHECK_YOUR_INTERNET_CONNECTION_AND_TRY_AGAIN -> "Veuillez vérifier votre connexion Internet et réessayer"
         TRY_AGAIN -> "Essayer à nouveau"

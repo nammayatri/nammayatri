@@ -194,7 +194,7 @@ referenceView push state =
         [ textView
             $ [ width MATCH_PARENT
               , height WRAP_CONTENT
-              , text (getString ABOUT_REFERRAL_PROGRAM_DISCRIPTION)
+              , text (getString $ ABOUT_REFERRAL_PROGRAM_DISCRIPTION "ABOUT_REFERRAL_PROGRAM_DISCRIPTION")
               , color Color.black700
               , gravity START
               ]
@@ -202,7 +202,7 @@ referenceView push state =
         , textView
             $ [ width MATCH_PARENT
               , height WRAP_CONTENT
-              , text (getString YOU_CAN_GET_REFERRAL_CODE_FROM_DRIVER)
+              , text (getString $ YOU_CAN_GET_REFERRAL_CODE_FROM_DRIVER "YOU_CAN_GET_REFERRAL_CODE_FROM_DRIVER")
               , color Color.black700
               , gravity START
               ]

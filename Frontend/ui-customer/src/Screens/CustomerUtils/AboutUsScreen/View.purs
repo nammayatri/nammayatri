@@ -102,7 +102,7 @@ topTextView push state =
       , textView $
         [ height WRAP_CONTENT
         , width MATCH_PARENT
-        , text (getString ABOUT_APP_DESCRIPTION)
+        , text (getString $ ABOUT_APP_DESCRIPTION "ABOUT_APP_DESCRIPTION")
         , color Color.black800
         , gravity LEFT
         , lineHeight "22"
@@ -286,11 +286,11 @@ privacyPolicyView state =
 contactUsData :: ST.AboutUsScreenState -> Array ComplaintsModel.CardData
 contactUsData state = [
   { title : (getString CORPORATE_ADDRESS)
-  , subTitle : (getString CORPORATE_ADDRESS_DESCRIPTION)
-  , addtionalData : Just (getString CORPORATE_ADDRESS_DESCRIPTION_ADDITIONAL)
+  , subTitle : (getString $ CORPORATE_ADDRESS_DESCRIPTION "CORPORATE_ADDRESS_DESCRIPTION")
+  , addtionalData : Just (getString $ CORPORATE_ADDRESS_DESCRIPTION_ADDITIONAL "CORPORATE_ADDRESS_DESCRIPTION_ADDITIONAL")
   }
 , { title : (getString REGISTERED_ADDRESS)
-  , subTitle : (getString REGISTERED_ADDRESS_DESCRIPTION)
-  , addtionalData : Just (getString REGISTERED_ADDRESS_DESCRIPTION_ADDITIONAL)
+  , subTitle : (getString $ REGISTERED_ADDRESS_DESCRIPTION "REGISTERED_ADDRESS_DESCRIPTION")
+  , addtionalData : Just (getString $ REGISTERED_ADDRESS_DESCRIPTION_ADDITIONAL "REGISTERED_ADDRESS_DESCRIPTION_ADDITIONAL")
   }
 ]

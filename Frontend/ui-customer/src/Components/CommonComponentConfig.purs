@@ -110,7 +110,7 @@ getAccessibilityPopupData pwdtype purpleRideConfig =
         Mb.Nothing -> accessibilityConfig' 
 
 accessibilityConfig :: Common.LazyCheck -> ContentConfig
-accessibilityConfig _ = { primaryText : (getString ACCESSIBILITY_TEXT), secondaryText : (getString TO_CATER_YOUR_SPECIFIC_NEEDS), imageUrl : fetchImage FF_ASSET "ny_ic_disability_illustration", videoUrl : "", mediaType : "" ,listViewArray : [(getString GENERAL_DISABILITY_DESCRIPTION)], videoId : "GeneralDisabilityCoverVideo"}
+accessibilityConfig _ = { primaryText : (getString $ ACCESSIBILITY_TEXT "ACCESSIBILITY_TEXT"), secondaryText : (getString $ TO_CATER_YOUR_SPECIFIC_NEEDS "TO_CATER_YOUR_SPECIFIC_NEEDS"), imageUrl : fetchImage FF_ASSET "ny_ic_disability_illustration", videoUrl : "", mediaType : "" ,listViewArray : [(getString GENERAL_DISABILITY_DESCRIPTION)], videoId : "GeneralDisabilityCoverVideo"}
 
 accessibilityListConfig :: ST.DisabilityData -> String -> AppConfig -> SelectListModal.Config
 accessibilityListConfig disabilityData otherDisability config = 

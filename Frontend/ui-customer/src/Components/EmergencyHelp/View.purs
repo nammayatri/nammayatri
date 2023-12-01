@@ -211,7 +211,7 @@ contactSupportConfig state  =
   config' = PopUpModalConfig.config
   popUpConfig' = config' {
     primaryText {
-      text = (<>) (getString CALL_NAMMA_YATRI_SUPPORT) "?"
+      text = (<>) (getString $ CALL_NAMMA_YATRI_SUPPORT "CALL_NAMMA_YATRI_SUPPORT") "?"
     , margin = (Margin 40 23 40 12)
     }
     , option1 {
@@ -228,7 +228,7 @@ contactSupportConfig state  =
     }
     , backgroundClickable = true
     , secondaryText {
-      text = getString YOU_ARE_ABOUT_TO_CALL_NAMMA_YATRI_SUPPORT
+      text = getString $ YOU_ARE_ABOUT_TO_CALL_NAMMA_YATRI_SUPPORT "YOU_ARE_ABOUT_TO_CALL_NAMMA_YATRI_SUPPORT"
     , margin = (Margin 40 0 40 32) }
     , gravity = CENTER
     , margin = (MarginHorizontal 16 16)
@@ -488,7 +488,7 @@ supportList :: EmergencyHelpModelState -> Array (CardData)
 supportList state = 
   (if state.config.enableContactSupport then 
     [{ action :  ContactSupportPopup
-    , title : getString CALL_NAMMA_YATRI_SUPPORT
+    , title : getString $ CALL_NAMMA_YATRI_SUPPORT "CALL_NAMMA_YATRI_SUPPORT"
     , secondaryTitle : getString ALSO_SHARE_YOUR_RIDE_STATUS_AND_LOCATION }]
   else [])
   <> ([{ action : CallPolicePopup

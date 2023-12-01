@@ -186,7 +186,7 @@ getEN stringKey =
         BOOK_NOW -> "Book Now"
         RESEND_OTP_IN -> "Resend OTP in "
         WE_NEED_ACCESS_TO_YOUR_LOCATION -> "We need access to your location!"
-        YOUR_LOCATION_HELPS_OUR_SYSTEM -> "Your location helps our system to map down all the near by autos and get you the quickest ride possible."
+        YOUR_LOCATION_HELPS_OUR_SYSTEM _ -> "Your location helps our system to map down all the near by autos and get you the quickest ride possible."
         NO_INTERNET_CONNECTION -> "No Internet Connection"
         PLEASE_CHECK_YOUR_INTERNET_CONNECTION_AND_TRY_AGAIN -> "Please check you internet connection and try again"
         TRY_AGAIN -> "Try Again"
