@@ -126,7 +126,7 @@ allImports :: Apis -> [Text]
 allImports input =
   let definedTypes = map fst (_types input)
       typesDef = map snd $ concatMap (snd) (_types input)
-      allTypes = concatMap handlerImports (_apis input)
+      allTypes = concatMap handlerSignature (_apis input)
    in filter (/= T.empty) ((typesDef `intersect` definedTypes) ++ (allTypes `intersect` definedTypes))
 
 handlerSignature :: ApiTT -> [Text]

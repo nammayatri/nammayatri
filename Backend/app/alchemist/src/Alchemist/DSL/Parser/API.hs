@@ -37,7 +37,7 @@ parseTypes = preview (ix "types" . _Value)
 
 parseApis :: Object -> Apis
 parseApis obj =
-  set imports (extractImports res) res
+  maybe (error "Failed to parse") (\r -> set imports (extractImports r) r) res
   where
     res = mkQApis <$> (Apis <$> modelName <*> allApis <*> Just [] <*> (Just parseTyp))
     mkQualified = makeTypeQualified obj
