@@ -20,8 +20,9 @@ writeToFile filename content = do
 typeDelimiter :: String
 typeDelimiter = "() []"
 
-makeTypeQualified :: Maybe [String] -> Maybe [String] -> Object -> String -> String
-makeTypeQualified excludedList dList obj str = concatMap replaceOrKeep (split (whenElt (`elem` typeDelimiter)) str)
+-- makeTypeQualified (Maybe Module name)
+makeTypeQualified :: Maybe String -> Maybe [String] -> Maybe [String] -> Object -> String -> String
+makeTypeQualified moduleName excludedList dList obj str = concatMap replaceOrKeep (split (whenElt (`elem` typeDelimiter)) str)
   where
     defaultTypeImports :: String -> Maybe String
     defaultTypeImports tp = case tp of
@@ -42,12 +43,15 @@ makeTypeQualified excludedList dList obj str = concatMap replaceOrKeep (split (w
 
     replaceOrKeep :: String -> String
     replaceOrKeep word =
-      if ('.' `elem` word || (isJust excludedList && word `elem` (fromJust excludedList)))
+      if '.' `elem` word
         then word
         else
-          if isJust dList && L.elem word (fromJust dList)
-            then "Domain.Types." ++ word ++ "." ++ word
-            else maybe (if word `elem` ["", ")", "(", " ", "[", "]"] then word else error $ T.pack ("\"" ++ word ++ "\" type not determined")) (\x -> x <> "." <> word) (getQualifiedImport word)
+          if isJust moduleName && isJust excludedList && word `elem` (fromJust excludedList)
+            then "Domain.Types." ++ fromJust moduleName ++ "." ++ word
+            else
+              if isJust dList && L.elem word (fromJust dList)
+                then "Domain.Types." ++ word ++ "." ++ word
+                else maybe (if word `elem` ["", ")", "(", " ", "[", "]"] then word else error $ T.pack ("\"" ++ word ++ "\" type not determined")) (\x -> x <> "." <> word) (getQualifiedImport word)
 
 figureOutImports :: [String] -> [String]
 figureOutImports fieldTypes =
