@@ -110,7 +110,7 @@ scrollableView state push =
             ] $ textView $
                 [ height WRAP_CONTENT
                 , width WRAP_CONTENT
-                , text $ getString WELCOME_TEXT
+                , text $ getString $ WELCOME_TEXT "WELCOME_TEXT"
                 , color Color.greyTextColor
                 , gravity CENTER_HORIZONTAL
                 , margin $ Margin 70 32 74 32

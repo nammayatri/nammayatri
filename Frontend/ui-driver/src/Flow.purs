@@ -2388,7 +2388,7 @@ setPaymentStatus paymentStatus (PayPayload payload) = do
                     }}})
 
 
-        Failed -> modifyScreenState $ AcknowledgementScreenType (\ackScreenState -> ackScreenState { data { title = Just (getString PAYMENT_FAILED), description = Just (getString PAYMENT_FAILED_DESC), primaryButtonText = Just  "Retry Payment" , illustrationAsset = "ny_failed,"}, props {illustrationType = ST.Image, paymentStatus = paymentStatus}})
+        Failed -> modifyScreenState $ AcknowledgementScreenType (\ackScreenState -> ackScreenState { data { title = Just (getString PAYMENT_FAILED), description = Just (getString (PAYMENT_FAILED_DESC "PAYMENT_FAILED_DESC")), primaryButtonText = Just  "Retry Payment" , illustrationAsset = "ny_failed,"}, props {illustrationType = ST.Image, paymentStatus = paymentStatus}})
 
         Pending -> do
                   setValueToLocalStore PAYMENT_STATUS_POOLING "true"

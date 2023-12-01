@@ -528,7 +528,7 @@ driverAnalyticsView state push =
             , width MATCH_PARENT
             ]
             [
-              infoTileView state {primaryText: "₹ " <> (EHC.formatCurrencyWithCommas analyticsData.totalEarnings), subText: (getString EARNED_ON_APP), postImgVisibility : false, seperatorView : false, margin : Margin 0 0 0 0}
+              infoTileView state {primaryText: "₹ " <> (EHC.formatCurrencyWithCommas analyticsData.totalEarnings), subText: (getString $ EARNED_ON_APP "EARNED_ON_APP"), postImgVisibility : false, seperatorView : false, margin : Margin 0 0 0 0}
             , linearLayout
               [ height MATCH_PARENT
               , width (V 1)
@@ -537,7 +537,7 @@ driverAnalyticsView state push =
               ][]
             , infoTileView state {primaryText: "₹ " <> EHC.formatCurrencyWithCommas analyticsData.bonusEarned , subText: (getString NAMMA_BONUS), postImgVisibility : false, seperatorView : false, margin : Margin 0 0 0 0}
             ]
-          else infoCard state push {key : (getString EARNED_ON_APP), value : "₹" <> (EHC.formatCurrencyWithCommas analyticsData.totalEarnings) , value1 : "", infoImageUrl : "", postfixImage : "", showPostfixImage : false, showInfoImage : false, valueColor : Color.charcoalGrey, action : NoAction}
+          else infoCard state push {key : (getString $ EARNED_ON_APP "EARNED_ON_APP"), value : "₹" <> (EHC.formatCurrencyWithCommas analyticsData.totalEarnings) , value1 : "", infoImageUrl : "", postfixImage : "", showPostfixImage : false, showInfoImage : false, valueColor : Color.charcoalGrey, action : NoAction}
         ]
       , linearLayout
         [ width MATCH_PARENT
@@ -1568,7 +1568,7 @@ genderOptionsArray _ =
   ]
 
 vehicleSummaryArray :: ST.DriverProfileScreenState -> Array {key :: String, value :: String, value1 :: String, infoImageUrl :: String, postfixImage :: String, showInfoImage :: Boolean , showPostfixImage :: Boolean , action :: Action, valueColor :: String}
-vehicleSummaryArray state = [{key : (getString TRAVELLED_ON_APP), value : (state.data.analyticsData.totalDistanceTravelled) , value1 : "" , infoImageUrl : fetchImage FF_COMMON_ASSET "ny_ic_info_blue", postfixImage : fetchImage FF_ASSET "ny_ic_api_failure_popup", showPostfixImage : false, showInfoImage : false, valueColor : Color.charcoalGrey, action : NoAction}]
+vehicleSummaryArray state = [{key : (getString $ TRAVELLED_ON_APP "TRAVELLED_ON_APP"), value : (state.data.analyticsData.totalDistanceTravelled) , value1 : "" , infoImageUrl : fetchImage FF_COMMON_ASSET "ny_ic_info_blue", postfixImage : fetchImage FF_ASSET "ny_ic_api_failure_popup", showPostfixImage : false, showInfoImage : false, valueColor : Color.charcoalGrey, action : NoAction}]
 
 vehicleAboutMeArray :: ST.DriverProfileScreenState -> Array {key :: String, value :: Maybe String, action :: Action , isEditable :: Boolean , keyInfo :: Boolean, isRightInfo :: Boolean}
 vehicleAboutMeArray state =  [{ key : (getString YEARS_OLD) , value : Nothing , action : UpdateValue ST.VEHICLE_AGE , isEditable : true , keyInfo : false, isRightInfo : false }

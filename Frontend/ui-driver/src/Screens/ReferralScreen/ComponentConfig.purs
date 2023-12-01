@@ -72,7 +72,7 @@ contactSupportConfig state  =
     , margin = (MarginHorizontal 12 0) }
     , backgroundClickable = true
     , secondaryText {
-      text = (getString YOU_ARE_ABOUT_TO_CALL_NAMMA_YATRI_SUPPORT)
+      text = (getString $ YOU_ARE_ABOUT_TO_CALL_NAMMA_YATRI_SUPPORT "YOU_ARE_ABOUT_TO_CALL_NAMMA_YATRI_SUPPORT")
     , margin = (Margin 40 0 40 32) }
     , gravity = CENTER
     , margin = (MarginHorizontal 16 16)

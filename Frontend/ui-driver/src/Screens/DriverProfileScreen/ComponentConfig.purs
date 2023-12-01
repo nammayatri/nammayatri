@@ -491,7 +491,7 @@ getChipRailArray lateNightTrips lastRegistered lang totalDistanceTravelled =
     )<>
     (
       [ { mainTxt: totalDistanceTravelled
-        , subTxt: getString TRAVELLED_ON_APP
+        , subTxt: getString $ TRAVELLED_ON_APP "TRAVELLED_ON_APP"
         }
       ]
     )

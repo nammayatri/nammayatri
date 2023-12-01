@@ -327,7 +327,7 @@ vehicleRegistrationNumber state push =
           , textView $ -- (Error Indication)
             [ width WRAP_CONTENT
             , height WRAP_CONTENT
-            , text (getString CURRENTLY_WE_ALLOW_ONLY_KARNATAKA_REGISTERED_NUMBER)
+            , text (getString $ CURRENTLY_WE_ALLOW_ONLY_KARNATAKA_REGISTERED_NUMBER "CURRENTLY_WE_ALLOW_ONLY_KARNATAKA_REGISTERED_NUMBER")
             , color Color.warningRed
             , fontStyle $ FontStyle.regular LanguageStyle
             , margin (MarginTop 10)
