@@ -21,13 +21,13 @@ generateDomainHandler input =
     <> "\n\n"
     <> intercalate "\n" (map makeImport defaultQualifiedImport)
     <> "\n"
-    <> intercalate "\n" (makeImport <$> figureOutImports (T.unpack <$> concatMap handlerImports (_apis input)))
+    <> intercalate "\n" (makeImport <$> figureOutImports (T.unpack <$> concatMap handlerSignature (_apis input)))
     <> "\n\n"
     <> T.unpack (generateHaskellTypes (_types input))
     <> T.unpack (T.intercalate "\n\n" (map handlerFunctionDef (_apis input)))
   where
     defaultImports :: [String]
-    defaultImports = ["EulerHS.Prelude", "Servant", "Tools.Auth"]
+    defaultImports = ["EulerHS.Prelude hiding (id)", "Servant", "Tools.Auth", "Data.OpenApi (ToSchema)"]
 
     defaultQualifiedImport :: [String]
     defaultQualifiedImport = ["Domain.Types.Person", "Domain.Types.Merchant", "Environment", "Kernel.Types.Id"]
