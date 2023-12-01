@@ -109,8 +109,8 @@ window.getMerchantConfig = function () {
       "showCancelPrevention" : true,
       "showNumberPlatePrefix": true,
       "showNumberPlateSuffix": false,
-      "callHeight": 24,
-      "callWidth": 24,
+      "callHeight": 32,
+      "callWidth": 32,
       "showTrackingButton" : true
     },
     "quoteListModelBackground": "#2C2F3A",

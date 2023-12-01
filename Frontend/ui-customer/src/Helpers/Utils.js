@@ -106,7 +106,7 @@ export const secondsToHms = function (d) {
   const m = Math.floor(d % 3600 / 60);
 
   const hDisplay = h > 0 ? h + (h == 1 ? " hr, " : " hrs, ") : "";
-  const mDisplay = m > 0 ? m + (m == 1 ? " min " : " mins ") : "";
+  const mDisplay = m > 0 ? m + (m == 1 ? " min " : " mins ") : "--";
   return hDisplay + mDisplay;
 }
 
@@ -204,6 +204,14 @@ export const toStringJSON = function (attr) {
   return JSON.stringify(attr);
 };
 
+export const didDriverMessage = function() {
+  try {
+    return window.didDriverMessage || false;
+  } catch (error) {
+    console.log("Error in didDriverMessage " + error);
+    return false
+  }
+}
 export const clearWaitingTimer = function (id) {
   console.log("clearWaitingTimer" + id);
   if (window.__OS == "IOS" && id == "countUpTimerId") {
@@ -411,6 +419,22 @@ export const getMobileNumber = function (signatureAuthData, maskedNumber) {
 export const extractKeyByRegex = (regex, text) => {
   const matches = text.match(regex);
   return matches ? matches[0] : "";
+}
+
+export const getPixels = function (){
+  if (window.parent.devicePixelRatio) {
+    return window.parent.devicePixelRatio;
+  } else {
+    return window.JBridge.getPixels();
+  }
+}
+export const getDeviceDefaultDensity = function (){
+  if (window.JBridge.getSessionInfo) {
+    const sessionInfo = JSON.parse(window.JBridge.getSessionInfo())
+    return sessionInfo.screen_ppi;
+  } else {
+    return window.JBridge.getDensity() * 160;
+  }
 }
 
 export const _generateQRCode = function (data, id, size, margin, sc) {

@@ -333,14 +333,17 @@ dummyTextView =
 
 quickMessageView :: forall w. Config -> String -> Boolean -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 quickMessageView config message isLastItem push =
+  let value = getMessageFromKey message config.languageKey
+  in
   linearLayout
   [ height WRAP_CONTENT
   , width (V (((screenWidth unit)/100)* 80))
   , gravity LEFT
+  , visibility if message /= "" then VISIBLE else GONE
   , orientation VERTICAL
   , onClick push (if config.enableSuggestionClick then const (SendSuggestion message) else (const NoAction))
   ][ textView $
-     [ text $ getMessageFromKey message config.languageKey
+     [ text $ value
      , color config.blue800
      , padding (Padding 12 16 12 16)
      ] <> FontStyle.body1 TypoGraphy
@@ -353,6 +356,8 @@ quickMessageView config message isLastItem push =
   ]
 chatComponent :: forall w. Config -> (Action -> Effect Unit) -> ChatComponent -> Boolean -> String -> PrestoDOM (Effect Unit) w
 chatComponent state push config isLastItem userType =
+  let value = getMessageFromKey config.message state.languageKey
+  in
   PrestoAnim.animationSet
     [ if state.userConfig.appType == config.sentBy then
         if (state.spanParent) then
@@ -372,6 +377,7 @@ chatComponent state push config isLastItem userType =
   , margin (getChatConfig state config.sentBy isLastItem (STR.length config.timeStamp > 0)).margin
   , gravity (getChatConfig state config.sentBy isLastItem (STR.length config.timeStamp > 0)).gravity
   , orientation VERTICAL
+  , visibility $ if not state.spanParent && value == "" then GONE else VISIBLE
   , onAnimationEnd (\action ->
       if isLastItem || state.spanParent then do
         _ <- scrollToEnd (getNewIDWithTag "ChatScrollView") true
@@ -437,7 +443,7 @@ chatComponent state push config isLastItem userType =
                     ]
                    ]
         _ -> textView
-          [ text if state.spanParent then config.message else getMessageFromKey config.message state.languageKey
+          [ text if state.spanParent then config.message else value
           , textSize FontSize.a_14
           , singleLine false
           , lineHeight "18"

@@ -45,7 +45,7 @@ dependencies {
     compileOnly 'com.google.android.material:material:1.6.0'
 
     implementation project(':mobility-common')
-    api 'in.juspay:hyper:2.1.20-nammayatri.02'
+    api 'in.juspay:hyper:2.1.20-nammayatri.11'
     compileOnly project(':mobility-app')
     compileOnly 'com.google.maps.android:android-maps-utils:2.4.0'
     compileOnly 'com.google.android.gms:play-services-maps:18.1.0'

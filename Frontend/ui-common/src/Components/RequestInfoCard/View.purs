@@ -16,9 +16,9 @@
 module Components.RequestInfoCard.View where
 
 import Components.RequestInfoCard.Controller (Action(..) , Config, TextConfig)
-import Prelude ((*), Unit, ($), const, (/), unit, (-), (<>))
+import Prelude ((*), Unit, ($), const, (/), unit, (-), (<>), (/=))
 import Effect (Effect)
-import PrestoDOM (PrestoDOM, Orientation(..), Gravity(..), Padding(..), Margin(..), Length(..), margin, padding, orientation, height, width, linearLayout, imageView, imageUrl, text, textView, textSize, fontStyle, gravity, onClick, color, background, cornerRadius, weight, imageWithFallback , visibility)
+import PrestoDOM (PrestoDOM, Accessiblity(..),Orientation(..), Gravity(..), Padding(..), Margin(..), Length(..), margin, padding, orientation, height, width, linearLayout, imageView, imageUrl, text, textView, textSize, fontStyle, gravity, onClick, color, background, cornerRadius, weight, imageWithFallback , visibility, accessibility, accessibilityHint)
 import Styles.Colors as Color
 import Font.Size as FontSize
 import Font.Style as FontStyle
@@ -88,11 +88,13 @@ view push state =
 genericTextView :: forall w. (Action -> Effect Unit) -> TextConfig -> PrestoDOM (Effect Unit) w
 genericTextView push config = 
   textView $
-  [ width WRAP_CONTENT
-  , height WRAP_CONTENT
+  [ width config.width
+  , height config.height
   , padding config.padding
   , margin config.margin
   , text config.text
   , color config.color
   , visibility config.visibility
+  , accessibility $ if config.accessibilityHint /= "" then ENABLE else DISABLE
+  , accessibilityHint $ config.accessibilityHint
   ] <> (FontStyle.getFontStyle config.textStyle LanguageStyle)

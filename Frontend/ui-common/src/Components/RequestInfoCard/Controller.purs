@@ -48,7 +48,10 @@ type TextConfig = {
   padding :: Padding,
   margin :: Margin,
   visibility :: Visibility,
-  textStyle :: FontStyle.Style
+  textStyle :: FontStyle.Style,
+  height :: Length,
+  width :: Length,
+  accessibilityHint :: String
 }
 
 type ButtonConfig = {
@@ -58,7 +61,8 @@ type ButtonConfig = {
   margin :: Margin,
   padding :: Padding,
   gravity :: Gravity,
-  textStyle :: FontStyle.Style
+  textStyle :: FontStyle.Style,
+  accessibilityHint :: String
 }
 
 config :: Config
@@ -69,7 +73,10 @@ config = {
       padding : Padding 16 24 0 0,
       margin : Margin 0 0 0 0,
       visibility : VISIBLE,
-      textStyle : FontStyle.SubHeading1
+      textStyle : FontStyle.SubHeading1,
+      height : WRAP_CONTENT,
+      width : WRAP_CONTENT,
+      accessibilityHint : ""
     }
   , primaryText : {
       text : "",
@@ -77,7 +84,10 @@ config = {
       textStyle : FontStyle.ParagraphText,
       padding : Padding 16 16 0 0,
       margin : Margin 0 0 0 0,
-      visibility : VISIBLE
+      visibility : VISIBLE,
+      height : WRAP_CONTENT,
+      width : WRAP_CONTENT,
+      accessibilityHint : ""
     }
   , secondaryText : {
       text : "",
@@ -85,7 +95,10 @@ config = {
       padding : Padding 16 16 0 0,
       margin : Margin 0 0 0 0,
       visibility : GONE,
-      textStyle : FontStyle.SubHeading1
+      textStyle : FontStyle.SubHeading1,
+      height : WRAP_CONTENT,
+      width : WRAP_CONTENT,
+      accessibilityHint : ""
     }
   , imageConfig : {
       visibility : VISIBLE,
@@ -102,6 +115,7 @@ config = {
       margin : Margin 0 0 0 0,
       padding : PaddingVertical 28 20,
       textStyle : FontStyle.SubHeading1,
-      gravity : CENTER
+      gravity : CENTER,
+      accessibilityHint : ""
     }
 }
