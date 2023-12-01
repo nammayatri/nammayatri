@@ -1,5 +1,6 @@
 module Alchemist.Generator.Haskell.DomainHandler where
 
+-- import Alchemist.DSL.Parser.API hiding (figureOutImports)
 import Alchemist.DSL.Syntax.API
 import Alchemist.Generator.Haskell.Servant (handlerFunctionText, handlerSignature)
 import Alchemist.Utils
@@ -20,8 +21,10 @@ generateDomainHandler input =
     <> "\n\n"
     <> intercalate "\n" (map makeImport defaultQualifiedImport)
     <> "\n"
-    <> intercalate "\n" (makeImport <$> figureOutImports (T.unpack <$> concatMap handlerSignature (_apis input)))
-    <> T.unpack ("\n\n" <> T.intercalate "\n\n" (map handlerFunctionDef (_apis input)))
+    <> intercalate "\n" (makeImport <$> figureOutImports (T.unpack <$> concatMap handlerImports (_apis input)))
+    <> "\n\n"
+    <> T.unpack (generateHaskellTypes (_types input))
+    <> T.unpack (T.intercalate "\n\n" (map handlerFunctionDef (_apis input)))
   where
     defaultImports :: [String]
     defaultImports = ["EulerHS.Prelude", "Servant", "Tools.Auth"]
@@ -44,3 +47,31 @@ generateDomainHandler input =
             <> "\n"
             <> functionName
             <> " = error \"Logic yet to be decided\""
+
+    generateHaskellTypes :: [TypeObject] -> Text
+    generateHaskellTypes typeObj = T.unlines $ concatMap processType typeObj
+      where
+        processType :: TypeObject -> [Text]
+        processType (typeName, fields)
+          | isEnum fields = generateEnum typeName fields
+          | otherwise = generateDataStructure typeName fields
+
+        isEnum :: [(Text, Text)] -> Bool
+        isEnum [("enum", _)] = True
+        isEnum _ = False
+
+        generateEnum :: Text -> [(Text, Text)] -> [Text]
+        generateEnum typeName [("enum", values)] =
+          let enumValues = T.splitOn "," values
+           in ["data " <> typeName <> " = " <> T.intercalate " | " enumValues]
+                ++ ["  deriving (Eq, Show, Generic, ToJSON, FromJSON)\n"]
+        generateEnum _ _ = error "Invalid enum definition"
+
+        generateDataStructure :: Text -> [(Text, Text)] -> [Text]
+        generateDataStructure typeName fields =
+          ["data " <> typeName <> " = " <> typeName]
+            ++ ["  { " <> T.intercalate ",\n    " (map formatField fields) <> "\n  }"]
+            ++ ["  deriving (Generic, ToJSON, FromJSON, ToSchema)\n"]
+
+        formatField :: (Text, Text) -> Text
+        formatField (fieldName, fieldType) = fieldName <> " :: " <> fieldType

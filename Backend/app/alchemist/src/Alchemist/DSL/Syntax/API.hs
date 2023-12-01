@@ -3,6 +3,7 @@
 module Alchemist.DSL.Syntax.API where
 
 import Control.Lens hiding (noneOf)
+-- import Data.Aeson
 import Kernel.Prelude
 
 data UrlParts
@@ -35,10 +36,13 @@ data ApiTT = ApiTT
 
 $(makeLenses ''ApiTT)
 
+type TypeObject = (Text, [(Text, Text)])
+
 data Apis = Apis
   { _moduleName :: Text,
     _apis :: [ApiTT],
-    _imports :: [Text]
+    _imports :: [Text],
+    _types :: [TypeObject]
   }
   deriving (Show)
 
