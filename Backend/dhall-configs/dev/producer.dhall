@@ -51,6 +51,11 @@ let tables =
       , kafkaNonKVTables = [] : List Text
       }
 
+let kafkaProducerCfg =
+      { brokers = [ "localhost:29092" ]
+      , kafkaCompression = common.kafkaCompression.LZ4
+      }
+
 in  { hedisCfg
     , hedisClusterCfg
     , hedisNonCriticalCfg = hedisCfg
@@ -78,4 +83,5 @@ in  { hedisCfg
     , metricsPort = +9990
     , tables
     , runReviver = True
+    , kafkaProducerCfg
     }

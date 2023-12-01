@@ -17,12 +17,15 @@ module Lib.Scheduler.Environment where
 
 import qualified Data.Map as M
 import EulerHS.Interpreters (runFlow)
+import qualified EulerHS.Language as L
 import qualified EulerHS.Runtime as R
 import Kernel.Beam.Connection.Flow (prepareConnectionDriver)
 import Kernel.Beam.Connection.Types
+import Kernel.Beam.Types (KafkaConn (..))
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config
 import Kernel.Storage.Hedis (HedisCfg, HedisEnv, HedisFlow, disconnectHedis)
+import Kernel.Streaming.Kafka.Producer.Types
 import Kernel.Tools.Metrics.CoreMetrics as Metrics
 import Kernel.Types.Common
 import Kernel.Types.Flow
@@ -60,7 +63,8 @@ data SchedulerConfig = SchedulerConfig
     tasksPerIteration :: Int,
     graceTerminationPeriod :: Seconds,
     enableRedisLatencyLogging :: Bool,
-    enablePrometheusMetricLogging :: Bool
+    enablePrometheusMetricLogging :: Bool,
+    kafkaProducerCfg :: KafkaProducerCfg
   }
   deriving (Generic, FromDhall)
 
@@ -77,6 +81,7 @@ data SchedulerEnv = SchedulerEnv
     loggerEnv :: LoggerEnv,
     schedulerType :: SchedulerType,
     schedulerSetName :: Text,
+    kafkaProducerTools :: KafkaProducerTools,
     streamName :: Text,
     groupName :: Text,
     block :: Integer,
@@ -121,12 +126,14 @@ runSchedulerM schedulerConfig env action = do
   R.withFlowRuntime (Just loggerRt) $ \flowRt -> do
     runFlow
       flowRt
-      ( prepareConnectionDriver
-          ConnectionConfigDriver
-            { esqDBCfg = schedulerConfig.esqDBCfg,
-              esqDBReplicaCfg = schedulerConfig.esqDBCfg,
-              hedisClusterCfg = schedulerConfig.hedisClusterCfg
-            }
-          env.tables
+      ( ( prepareConnectionDriver
+            ConnectionConfigDriver
+              { esqDBCfg = schedulerConfig.esqDBCfg,
+                esqDBReplicaCfg = schedulerConfig.esqDBCfg,
+                hedisClusterCfg = schedulerConfig.hedisClusterCfg
+              }
+            env.tables
+        )
+          >> L.setOption KafkaConn env.kafkaProducerTools
       )
     runFlowR flowRt env action

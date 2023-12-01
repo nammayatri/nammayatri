@@ -29,6 +29,7 @@ import Kernel.External.Encryption (EncTools)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config
 import Kernel.Storage.Hedis (HedisEnv, connectHedis, connectHedisCluster, disconnectHedis)
+import Kernel.Streaming.Kafka.Producer.Types
 import Kernel.Types.Base64 (Base64)
 import Kernel.Types.Common
 import Kernel.Types.Flow
@@ -61,6 +62,7 @@ data HandlerEnv = HandlerEnv
     esqDBReplicaEnv :: EsqDBEnv,
     encTools :: EncTools,
     hedisEnv :: HedisEnv,
+    kafkaProducerTools :: KafkaProducerTools,
     hedisNonCriticalEnv :: HedisEnv,
     hedisNonCriticalClusterEnv :: HedisEnv,
     hedisClusterEnv :: HedisEnv,
@@ -92,6 +94,7 @@ buildHandlerEnv HandlerCfg {..} = do
   loggerEnv <- prepareLoggerEnv appCfg.loggerConfig hostname
   esqDBEnv <- prepareEsqDBEnv appCfg.esqDBCfg loggerEnv
   esqDBReplicaEnv <- prepareEsqDBEnv appCfg.esqDBReplicaCfg loggerEnv
+  kafkaProducerTools <- buildKafkaProducerTools appCfg.kafkaProducerCfg
   hedisEnv <- connectHedis appCfg.hedisCfg ("driver-offer-allocator:" <>)
   hedisNonCriticalEnv <- connectHedis appCfg.hedisNonCriticalCfg ("doa:n_c:" <>)
   hedisClusterEnv <-
