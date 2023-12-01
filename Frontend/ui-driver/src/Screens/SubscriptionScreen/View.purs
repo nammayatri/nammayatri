@@ -275,7 +275,7 @@ enjoyBenefitsView push state =
         [ width WRAP_CONTENT
         , height WRAP_CONTENT
         , orientation VERTICAL
-        ][  commonTV push (getString GET_READY_FOR_YS_SUBSCRIPTION) Color.black800 (FontStyle.h1 TypoGraphy) 0 LEFT state.props.joinPlanProps.isIntroductory
+        ][  commonTV push (getString $ GET_READY_FOR_YS_SUBSCRIPTION "GET_READY_FOR_YS_SUBSCRIPTION") Color.black800 (FontStyle.h1 TypoGraphy) 0 LEFT state.props.joinPlanProps.isIntroductory
           , commonTV push (getString ENJOY_THESE_BENEFITS) Color.black800 (FontStyle.body4 TypoGraphy) 0 LEFT true
           , linearLayout
             [ width WRAP_CONTENT
@@ -303,9 +303,9 @@ enjoyBenefitsView push state =
                       ]
                 )
               ([(getString ZERO_COMMISION), (getString EARN_TODAY_PAY_TOMORROW)] 
-                  <> if state.props.joinPlanProps.isIntroductory then [getString GET_FULL_PAYMENT, getString GUARANTEED_FIXED_PRICE]
+                  <> if state.props.joinPlanProps.isIntroductory then [getString GET_FULL_PAYMENT, getString (GUARANTEED_FIXED_PRICE "GUARANTEED_FIXED_PRICE")]
                      else if not state.data.config.subscriptionConfig.enableSubscriptionPopups
-                      then [(getString SIGNUP_EARLY_FOR_SPECIAL_OFFERS), getString GUARANTEED_FIXED_PRICE]
+                      then [(getString SIGNUP_EARLY_FOR_SPECIAL_OFFERS), getString (GUARANTEED_FIXED_PRICE "GUARANTEED_FIXED_PRICE")]
                       else [(getString PAY_ONLY_IF_YOU_TAKE_RIDES), getString GET_SPECIAL_OFFERS])
             ) 
             , textView $ [
@@ -401,7 +401,7 @@ plansBottomView push state =
           ][ textView $
               [ weight 1.0
               , height WRAP_CONTENT
-              , text if state.props.joinPlanProps.isIntroductory then getString COMING_SOON else (getString CHOOSE_YOUR_PLAN)
+              , text if state.props.joinPlanProps.isIntroductory then getString COMING_SOON else (getString $ CHOOSE_YOUR_PLAN "CHOOSE_YOUR_PLAN")
               , color Color.black800
               ] <> FontStyle.body8 TypoGraphy
           , linearLayout

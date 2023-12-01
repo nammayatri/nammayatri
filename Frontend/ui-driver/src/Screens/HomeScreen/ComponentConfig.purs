@@ -207,7 +207,7 @@ linkAadhaarPopupConfig state = let
       text = (getString AADHAAR_LINKING_REQUIRED)
     , margin = Margin 16 24 16 4 },
     secondaryText {
-      text = (getString AADHAAR_LINKING_REQUIRED_DESCRIPTION)
+      text = (getString $ AADHAAR_LINKING_REQUIRED_DESCRIPTION "AADHAAR_LINKING_REQUIRED_DESCRIPTION")
     , margin = MarginBottom 24},
     option1 {
       text = (getString LINK_AADHAAR_ID)
@@ -418,7 +418,7 @@ offerConfigParams state = PromotionPopupConfig $ {
   description : getString JOIN_THE_UNLIMITED_PLAN,
   imageUrl : fetchImage FF_ASSET "ny_ic_limited_time_offer",
   buttonText : getString JOIN_NOW,
-  heading : getString MY_PLAN_TITLE
+  heading : getString $ MY_PLAN_TITLE "MY_PLAN_TITLE"
 }
 
 ------------------------------------ cancelConfirmationConfig -----------------------------
@@ -659,7 +659,7 @@ requestInfoCardConfig _ = let
   config = RequestInfoCard.config
   requestInfoCardConfig' = config{
     title {
-      text = getString WHAT_IS_NAMMA_YATRI_BONUS
+      text = getString $ WHAT_IS_NAMMA_YATRI_BONUS "WHAT_IS_NAMMA_YATRI_BONUS"
     }
   , primaryText {
       text = getString BONUS_PRIMARY_TEXT
@@ -717,7 +717,7 @@ makePaymentState state =
   {
     title : getString GREAT_JOB,
     description : getDescription state,
-    description2 : getString COMPLETE_PAYMENT_TO_CONTINUE,
+    description2 : getString $ COMPLETE_PAYMENT_TO_CONTINUE "COMPLETE_PAYMENT_TO_CONTINUE",
     okButtontext : ( case getValueToLocalStore LANGUAGE_KEY of
                           "EN_US" -> "Pay ₹" <> payableAndGST <> " now"
                           "HI_IN" -> "अभी ₹" <> payableAndGST <>" का भुगतान करें"
@@ -759,7 +759,7 @@ rateCardState state =
     rateCardConfig' =
       config'
         { title = getString FEE_BREAKUP
-        , description = getString YATRI_SATHI_FEE_PAYABLE_FOR_DATE <> " " <> state.data.paymentState.date
+        , description = getString (YATRI_SATHI_FEE_PAYABLE_FOR_DATE "YATRI_SATHI_FEE_PAYABLE_FOR_DATE") <> " " <> state.data.paymentState.date
         , buttonText = Nothing
         , currentRateCardType = CommonTypes.PaymentFareBreakup
         , primaryButtonText = getString GOT_IT
@@ -1131,7 +1131,7 @@ getRideCompletedConfig state = let
         margin = MarginBottom 12
       },
       secondaryText {
-        text = getString YOU_ARE_ABOUT_TO_CALL_NAMMA_YATRI_SUPPORT,
+        text = getString $ YOU_ARE_ABOUT_TO_CALL_NAMMA_YATRI_SUPPORT "YOU_ARE_ABOUT_TO_CALL_NAMMA_YATRI_SUPPORT",
         margin = MarginBottom 16
       },
       option1 {

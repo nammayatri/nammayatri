@@ -174,7 +174,7 @@ applicationInformationLayout state push =
     , textView
         $ [ width MATCH_PARENT
           , height WRAP_CONTENT
-          , text $ getString ABOUT_TEXT
+          , text $ getString $ ABOUT_TEXT "ABOUT_TEXT"
           , color Color.black800
           , gravity LEFT
           , margin (MarginTop 20)
@@ -240,12 +240,12 @@ horizontalLine marginLeft marginRight =
 
 contactUsData :: ST.AboutUsScreenState -> Array ComplaintsModel.CardData
 contactUsData state =
-  [ { title: (getString CORPORATE_ADDRESS)
-    , subTitle: (getString CORPORATE_ADDRESS_DESCRIPTION)
-    , addtionalData: Just (getString CORPORATE_ADDRESS_DESCRIPTION_ADDITIONAL)
+  [ { title: (getString $ CORPORATE_ADDRESS "CORPORATE_ADDRESS")
+    , subTitle: (getString $ CORPORATE_ADDRESS_DESCRIPTION "CORPORATE_ADDRESS_DESCRIPTION")
+    , addtionalData: Just (getString $ CORPORATE_ADDRESS_DESCRIPTION_ADDITIONAL "CORPORATE_ADDRESS_DESCRIPTION_ADDITIONAL")
     }
-  , { title: (getString REGISTERED_ADDRESS)
-    , subTitle: (getString REGISTERED_ADDRESS_DESCRIPTION)
-    , addtionalData: Just (getString REGISTERED_ADDRESS_DESCRIPTION_ADDITIONAL)
+  , { title: (getString $ REGISTERED_ADDRESS "REGISTERED_ADDRESS")
+    , subTitle: (getString $ REGISTERED_ADDRESS_DESCRIPTION "REGISTERED_ADDRESS_DESCRIPTION")
+    , addtionalData: Just (getString $ REGISTERED_ADDRESS_DESCRIPTION_ADDITIONAL "REGISTERED_ADDRESS_DESCRIPTION_ADDITIONAL")
     }
   ]
