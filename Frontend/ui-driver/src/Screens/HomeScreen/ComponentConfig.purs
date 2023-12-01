@@ -161,41 +161,6 @@ statsModelConfig state =
       }
   in config'
 
--------------------------------------genderBannerConfig------------------------------------
-genderBannerConfig :: ST.HomeScreenState -> Banner.Config
-genderBannerConfig state =
-  let
-    config = Banner.config
-    config' = config
-      {
-        backgroundColor = Color.green600,
-        title = (getString COMPLETE_YOUR_PROFILE_AND_FIND_MORE_RIDES),
-        titleColor = Color.white900,
-        actionText = (getString UPDATE_NOW),
-        actionTextColor = Color.white900,
-        imageUrl = fetchImage FF_ASSET "ny_ic_driver_gender_banner",
-        isBanner = true
-      }
-  in config'
-
-
-accessbilityBannerConfig :: ST.HomeScreenState -> Banner.Config
-accessbilityBannerConfig state = 
-  let 
-    config = Banner.config
-    config' = config  
-      {
-        backgroundColor = Color.lightPurple,
-        title = getString LEARN_HOW_YOU_CAN_HELP_CUSTOMERS_REQUIRING_SPECIAL_ASSISTANCE,
-        titleColor = Color.purple,
-        actionText = getString LEARN_MORE,
-        actionTextColor = Color.purple,
-        imageUrl = fetchImage FF_ASSET "ny_ic_purple_badge",
-        isBanner = true,
-        stroke = "1,"<>Color.fadedPurple
-      }
-  in config'
-
 ------------------------------------ linkAadhaarPopupConfig -----------------------------
 linkAadhaarPopupConfig :: ST.HomeScreenState -> PopUpModal.Config
 linkAadhaarPopupConfig state = let
@@ -775,22 +740,6 @@ rateCardState state =
         }
   in
     rateCardConfig'
-
-paymentStatusConfig :: ST.HomeScreenState -> Banner.Config
-paymentStatusConfig state = 
-  let 
-    config = Banner.config
-    config' = config
-      { 
-        backgroundColor = state.data.paymentState.bannerBG,
-        title = state.data.paymentState.bannerTitle,
-        titleColor = state.data.paymentState.bannerTitleColor,
-        actionText = state.data.paymentState.banneActionText,
-        actionTextColor = state.data.paymentState.actionTextColor,
-        imageUrl = state.data.paymentState.bannerImage,
-        isBanner = true
-      }
-  in config'
 
 
 getChargesBreakup :: Array PaymentBreakUp -> Array CommonTypes.FareList

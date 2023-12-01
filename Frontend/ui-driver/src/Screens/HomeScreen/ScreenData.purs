@@ -141,6 +141,7 @@ initData = {
           gotoEnabledForMerchant : false,
           confirmGotoCancel : false
         }
+      , bannerItem : Nothing
     },
     props: {
         statusOnline : true,

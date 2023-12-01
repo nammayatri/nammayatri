@@ -136,40 +136,7 @@ in  upstream
     , repo = "https://github.com/juspay/purescript-backtrack.git"
     , version = "update/github-purescript-backtrack-repo"
     }
-  with presto-dom =
-    { dependencies =
-      [ "effect"
-      , "prelude"
-      , "hyrule"
-      , "halogen-vdom"
-      , "tracker"
-      , "presto"
-      , "aff"
-      , "arrays"
-      , "control"
-      , "either"
-      , "exceptions"
-      , "foldable-traversable"
-      , "foreign"
-      , "foreign-generic"
-      , "foreign-object"
-      , "functions"
-      , "integers"
-      , "lists"
-      , "maybe"
-      , "newtype"
-      , "refs"
-      , "strings"
-      , "transformers"
-      , "tuples"
-      , "typelevel-prelude"
-      , "unsafe-coerce"
-      , "web-dom"
-      , "web-events"
-      ]
-    , repo = "https://github.com/juspay/purescript-presto-dom.git"
-    , version = "nammayatri-pilot"
-    }
+  with presto-dom = /Users/vigneshs/Documents/presto/purescript-presto-dom/spago.dhall as Location
   with halogen-vdom =
     { dependencies =
       [ "effect"

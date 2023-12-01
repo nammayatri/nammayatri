@@ -17,7 +17,7 @@ module Screens.HomeScreen.Handler where
 
 import Control.Monad.Except.Trans (lift)
 import Control.Transformers.Back.Trans as App
-import Engineering.Helpers.BackTrack (getState)
+import Engineering.Helpers.BackTrack (getState, liftFlowBT)
 import Engineering.Helpers.Utils (toggleLoader)
 import ModifyScreenState (modifyScreenState)
 import Prelude (bind, discard, ($), (<$>), pure, void)
@@ -27,11 +27,17 @@ import Screens.HomeScreen.View as HomeScreen
 import Types.App (FlowBT, GlobalState(..), ScreenType(..), HOME_SCREEN_OUTPUT(..))
 import Screens.HomeScreen.Transformer(getTripDetailsState)
 import Presto.Core.Types.Language.Flow (getLogFields)
+import Components.PSBanner as PSBanner
+import PrestoDOM.List
+import PrestoDOM.Core (getPushFn)
+import Data.Maybe
 
 homeScreen ::FlowBT String HOME_SCREEN_OUTPUT
 homeScreen = do
   (GlobalState state) <- getState
-  act <- lift $ lift $ runScreen $ HomeScreen.screen state.homeScreen
+  push <- liftFlowBT $ getPushFn Nothing "HomeScreen"
+  listItemm <- lift $ lift $ preComputeListItem $ PSBanner.view push PSBanner.config
+  act <- lift $ lift $ runScreen $ HomeScreen.screen state.homeScreen listItemm
   void $ lift $ lift $ toggleLoader false
   case act of
     UpdateLocationName updatedState lat lng-> do

@@ -14,10 +14,23 @@
 -}
 
 
-module Screens.HomeScreen.Transformer where
+module Screens.HomeScreen.Transformer
+  ( accessbilityBannerConfig
+  , genderBannerConfig
+  , getBannerConfigs
+  , getDisabledLocById
+  )
+  where
 
 import Prelude
-import Screens.Types (GoToLocation)
+import Screens.HomeScreen.ComponentConfig
+import Screens.Types
+
+import Components.PSBanner as PSBanner
+import Language.Strings (getString)
+import Language.Types (STR(..))
+import Screens.HomeScreen.Controller (Action(..))
+import Styles.Colors as Color
 
 getDisabledLocById :: String -> Array GoToLocation -> Array GoToLocation
 getDisabledLocById id gotoArray = (map (\item ->  {   
@@ -28,3 +41,60 @@ getDisabledLocById id gotoArray = (map (\item ->  {
     tag : item.tag,
     disabled : item.id == id || item.disabled
     }) gotoArray)
+
+
+getBannerConfigs :: HomeScreenState -> Array (PSBanner.Config (PSBanner.Action -> Action))
+getBannerConfigs state = [
+  genderBannerConfig state
+, accessbilityBannerConfig state
+] 
+
+
+genderBannerConfig :: forall a. HomeScreenState -> PSBanner.Config  (PSBanner.Action -> Action)
+genderBannerConfig state =
+  let
+    config = PSBanner.config $ BannerCarousal
+    config' = config
+      {
+        backgroundColor = Color.green600,
+        title = (getString COMPLETE_YOUR_PROFILE_AND_FIND_MORE_RIDES),
+        titleColor = Color.white900,
+        actionText = (getString UPDATE_NOW),
+        actionTextColor = Color.white900,
+        imageUrl = "ny_ic_driver_gender_banner",
+        isBanner = true
+      }
+  in config'
+
+
+accessbilityBannerConfig :: HomeScreenState -> PSBanner.Config (PSBanner.Action -> Action)
+accessbilityBannerConfig state = 
+  let 
+    config = PSBanner.config BannerCarousal
+    config' = config  
+      {
+        backgroundColor = Color.lightPurple,
+        title = getString LEARN_HOW_YOU_CAN_HELP_CUSTOMERS_REQUIRING_SPECIAL_ASSISTANCE,
+        titleColor = Color.purple,
+        actionText = getString LEARN_MORE,
+        actionTextColor = Color.purple,
+        imageUrl = "ny_ic_purple_badge",
+        isBanner = true
+      }
+  in config'
+
+-- paymentStatusConfig :: HomeScreenState -> PSBanner.Config Action
+-- paymentStatusConfig state = 
+--   let 
+--     config = PSBanner.config BannerCarousal
+--     confign = config
+--       { 
+--         backgroundColor = state.data.paymentState.bannerBG,
+--         title = state.data.paymentState.bannerTitle,
+--         titleColor = state.data.paymentState.bannerTitleColor,
+--         actionText = state.data.paymentState.banneActionText,
+--         actionTextColor = state.data.paymentState.actionTextColor,
+--         imageUrl = state.data.paymentState.bannerImage,
+--         isBanner = true
+--       }
+--   in confign

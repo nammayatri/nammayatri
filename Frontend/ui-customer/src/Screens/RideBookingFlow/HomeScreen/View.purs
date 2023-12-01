@@ -81,7 +81,7 @@ import PrestoDOM.Types.DomAttributes (Corners(..))
 import Screens.AddNewAddressScreen.Controller as AddNewAddress
 import Screens.HomeScreen.Controller (Action(..), ScreenOutput, checkCurrentLocation, checkSavedLocations, dummySelectedQuotes, eval, flowWithoutOffers, getCurrentCustomerLocation)
 import Screens.HomeScreen.ScreenData as HomeScreenData
-import Screens.HomeScreen.Transformer (transformSavedLocations)
+import Screens.HomeScreen.Transformer 
 import Screens.RideBookingFlow.HomeScreen.Config
 import Screens.Types (HomeScreenState, LocationListItemState, PopupType(..), SearchLocationModelType(..), Stage(..), CallType(..), ZoneType(..), SearchResultType(..))
 import Services.API (GetDriverLocationResp(..), GetQuotesRes(..), GetRouteResp(..), LatLong(..), RideAPIEntity(..), RideBookingRes(..), Route(..), SavedLocationsListRes(..), SearchReqLocationAPIEntity(..), SelectListRes(..), Snapped(..), GetPlaceNameResp(..), PlaceName(..))
@@ -96,11 +96,13 @@ import Data.Function.Uncurried (runFn1, runFn2)
 import Components.CommonComponentConfig as CommonComponentConfig
 import Constants.Configs 
 import Common.Resources.Constants (zoomLevel)
+import PrestoDOM.List
+import Components.PSBanner as PSBanner
 
-screen :: HomeScreenState -> Screen Action HomeScreenState ScreenOutput
-screen initialState =
+screen :: HomeScreenState -> ListItem -> Screen Action HomeScreenState ScreenOutput
+screen initialState listItem =
   { initialState
-  , view
+  , view: view listItem
   , name: "HomeScreen"
   , globalEvents:
       [ ( \push -> do
@@ -250,8 +252,8 @@ disableCurrentLocation = false
 isCurrentLocationEnabled :: Boolean
 isCurrentLocationEnabled = if (isLocalStageOn HomeScreen) then enableCurrentLocation else disableCurrentLocation
 
-view :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
-view push state =
+view :: forall w. ListItem -> (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+view listItem push state =
   let showLabel = if state.props.defaultPickUpPoint == "" then false else true
   in
   frameLayout
@@ -268,18 +270,6 @@ view push state =
         , orientation VERTICAL
         , accessibility DISABLE
         , clickable true
-        , afterRender
-            ( \action -> do
-                _ <- push action
-                _ <- getCurrentPosition push CurrentLocation
-                _ <- showMap (getNewIDWithTag "CustomerHomeScreenMap") isCurrentLocationEnabled "satellite" zoomLevel push MAPREADY
-                if state.props.openChatScreen && state.props.currentStage == RideAccepted then push OpenChatScreen
-                else pure unit
-                case state.props.currentStage of
-                  HomeScreen -> if ((getSearchType unit) == "direct_search") then push DirectSearch else pure unit
-                  _ -> pure unit
-            )
-            (const MapReadyAction)
         ]
        [ relativeLayout
             [ width MATCH_PARENT
@@ -307,6 +297,16 @@ view push state =
                     , width MATCH_PARENT
                     , accessibility DISABLE_DESCENDANT
                     , id (getNewIDWithTag "CustomerHomeScreenMap")
+                    , afterRender ( \action -> do
+                                    _ <- push action
+                                    _ <- getCurrentPosition push CurrentLocation
+                                    _ <- showMap (getNewIDWithTag "CustomerHomeScreenMap") isCurrentLocationEnabled "satellite" zoomLevel push MAPREADY
+                                    if state.props.openChatScreen && state.props.currentStage == RideAccepted then push OpenChatScreen
+                                    else pure unit
+                                    case state.props.currentStage of
+                                      HomeScreen -> if ((getSearchType unit) == "direct_search") then push DirectSearch else pure unit
+                                      _ -> pure unit
+                                )(const MapReadyAction)
                     , visibility if state.props.isSrcServiceable then VISIBLE else GONE
                     ]
                     []]
@@ -353,7 +353,7 @@ view push state =
                     ]
                 ]
             , homeScreenView push state
-            , buttonLayoutParentView push state
+            , buttonLayoutParentView push state listItem
             , if (not state.props.rideRequestFlow) || (state.props.currentStage == FindingEstimate || state.props.currentStage == ConfirmingRide) then emptyTextView state else topLeftIconView state push
             , rideRequestFlowView push state
             , if state.props.currentStage == PricingTutorial then (pricingTutorialView push state) else emptyTextView state
@@ -625,14 +625,14 @@ shareAppPopUp push state =
 
 
 
-buttonLayoutParentView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
-buttonLayoutParentView push state =
+buttonLayoutParentView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> ListItem -> PrestoDOM (Effect Unit) w
+buttonLayoutParentView push state listItem =
   linearLayout
   [ height WRAP_CONTENT
   , width MATCH_PARENT
   , alignParentBottom "true,-1"
   , orientation VERTICAL
-  ][ if (state.props.currentStage == HomeScreen && (not state.props.rideRequestFlow) && (not state.props.showlocUnserviceablePopUp)) then buttonLayout state push else emptyTextView state]
+  ][ if (state.props.currentStage == HomeScreen && (not state.props.rideRequestFlow) && (not state.props.showlocUnserviceablePopUp)) then buttonLayout state push listItem else emptyTextView state]
 
 recenterButtonView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 recenterButtonView push state =
@@ -766,8 +766,8 @@ requestInfoCardView push state =
         ]
         [ RequestInfoCard.view (push <<< RequestInfoCardAction) (requestInfoCardConfig FunctionCall) ]
 
-buttonLayout :: forall w. HomeScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
-buttonLayout state push =
+buttonLayout :: forall w. HomeScreenState -> (Action -> Effect Unit) -> ListItem -> PrestoDOM (Effect Unit) w
+buttonLayout state push listItem1 =
   PrestoAnim.animationSet (buttonLayoutAnimation state)
     $ linearLayout
         [ height WRAP_CONTENT
@@ -786,7 +786,7 @@ buttonLayout state push =
           , recenterButtonView push state
           ]
         , linearLayout
-            [ height WRAP_CONTENT
+            [ height MATCH_PARENT
             , width MATCH_PARENT
             , background if (((state.data.savedLocations == []) && state.data.recentSearchs.predictionArray == []) || state.props.isSearchLocation == LocateOnMap) then Color.transparent else Color.white900
             , gradient if os == "IOS" then (Linear 90.0 ["#FFFFFF" , "#FFFFFF" , "#FFFFFF", Color.transparent]) else (Linear 0.0 ["#FFFFFF" , "#FFFFFF" , "#FFFFFF", Color.transparent])
@@ -794,9 +794,10 @@ buttonLayout state push =
             , padding (PaddingTop 16)
             ]
             [ PrimaryButton.view (push <<< PrimaryButtonActionController) (whereToButtonConfig state)
-            , if state.props.isSearchLocation == LocateOnMap
-                then emptyLayout state 
-                else recentSearchesAndFavourites state push (null state.data.savedLocations) (null state.data.recentSearchs.predictionArray)
+
+            -- , if state.props.isSearchLocation == LocateOnMap
+            --     then emptyLayout state 
+            --     else recentSearchesAndFavourites state push (null state.data.savedLocations) (null state.data.recentSearchs.predictionArray)
             ]
         ]
 

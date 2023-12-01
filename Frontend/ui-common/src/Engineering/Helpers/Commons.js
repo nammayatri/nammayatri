@@ -37,7 +37,7 @@ export const getNewIDWithTag = function(tag){
 }
 
 export const callAPI = function () {
-  return window.JBridge.callAPI(arguments[0], arguments[1], getEncodedData(arguments[2]), getEncodedData(arguments[3]), arguments[4], arguments[5], arguments[6] )
+  return window.JBridge.callAPI(arguments[0], (arguments[1]), getEncodedData(arguments[2]), getEncodedData(arguments[3]), arguments[4], arguments[5], arguments[6] )
 }
 
 export const callAPIWithOptions = function () {

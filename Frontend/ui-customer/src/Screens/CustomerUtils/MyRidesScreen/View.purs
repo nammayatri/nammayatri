@@ -156,7 +156,7 @@ ridesView listItemm push state =
     , height MATCH_PARENT
     , orientation VERTICAL
     ]([ Tuple "Rides"
-        $ PrestoList.list
+        $ PrestoList.viewPager2
         [ height MATCH_PARENT
         , scrollBarY false
         , width MATCH_PARENT

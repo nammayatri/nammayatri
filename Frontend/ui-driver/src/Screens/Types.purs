@@ -37,6 +37,7 @@ import Presto.Core.Types.API (class StandardEncode, standardEncode)
 import Presto.Core.Utils.Encoding (defaultDecode, defaultEncode)
 import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode)
 import PrestoDOM (LetterSpacing, Visibility, visibility)
+import PrestoDOM.List (ListItem)
 import Screens (ScreenName)
 import Services.API (AutopayPaymentStage, BankError(..), FeeType, GetDriverInfoResp(..), MediaType, PaymentBreakUp, Route, Status, DriverProfileStatsResp(..))
 import Styles.Types (FontSize)
@@ -853,7 +854,8 @@ type HomeScreenData =  {
   triggerPatchCounter :: Int,
   peekHeight :: Int,
   driverGotoState :: DriverGoToState,
-  snappedOrigin :: Maybe Location
+  snappedOrigin :: Maybe Location,
+  bannerItem :: Maybe ListItem
 }
 
 type DriverGoToState = {

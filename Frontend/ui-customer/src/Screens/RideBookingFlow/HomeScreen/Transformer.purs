@@ -53,6 +53,8 @@ import Common.Types.App (LazyCheck(..))
 import MerchantConfig.Utils (Merchant(..), getMerchant, getValueFromConfig)
 import Resources.Localizable.EN (getEN)
 import MerchantConfig.Types (EstimateAndQuoteConfig)
+import Components.PSBanner as PSBanner
+import PrestoDOM.Types.Core
 
 
 getLocationList :: Array Prediction -> Array LocationListItemState
@@ -570,3 +572,5 @@ getZoneType tag =
     Just "SureMetro" -> METRO
     Just "SureBlockedAreaForAutos" -> AUTO_BLOCKED
     _                -> NOZONE
+
+

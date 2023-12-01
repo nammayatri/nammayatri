@@ -15,7 +15,10 @@
 
 module Screens.HomeScreen.View where
 
+import Data.Maybe
+import PrestoDOM.List
 import Screens.HomeScreen.ComponentConfig
+import Screens.HomeScreen.Transformer
 
 import Animation as Anim
 import Animation.Config as AnimConfig
@@ -25,9 +28,11 @@ import Components.Banner.View as Banner
 import Components.BottomNavBar as BottomNavBar
 import Components.BottomNavBar.Controller (navData)
 import Components.ChatView as ChatView
+import Components.ErrorModal as ErrorModal
 import Components.GoToLocationModal as GoToLocationModal
 import Components.InAppKeyboardModal as InAppKeyboardModal
 import Components.MakePaymentModal as MakePaymentModal
+import Components.PSBanner as PSBanner
 import Components.PopUpModal as PopUpModal
 import Components.PrimaryButton as PrimaryButton
 import Components.RateCard as RateCard
@@ -36,8 +41,8 @@ import Components.RequestInfoCard as RequestInfoCard
 import Components.RideActionModal as RideActionModal
 import Components.RideCompletedCard as RideCompletedCard
 import Components.SelectListModal as SelectListModal
-import PaymentPage (consumeBP)
 import Components.StatsModel as StatsModel
+import Constants (defaultDensity)
 import Control.Monad.Except (runExceptT)
 import Control.Monad.Except.Trans (lift)
 import Control.Transformers.Back.Trans (runBackT)
@@ -45,7 +50,6 @@ import Data.Array as DA
 import Data.Either (Either(..))
 import Data.Function.Uncurried (runFn1, runFn2)
 import Data.Int (ceil, toNumber, fromString)
-import Data.Maybe (Maybe(..), fromMaybe, isJust)
 import Data.String as DS
 import Data.Time.Duration (Milliseconds(..))
 import Debug (spy)
@@ -53,7 +57,7 @@ import Effect (Effect)
 import Effect.Aff (launchAff)
 import Effect.Class (liftEffect)
 import Effect.Uncurried (runEffectFn1, runEffectFn2, runEffectFn3)
-import Engineering.Helpers.Commons (flowRunner, getCurrentUTC, getNewIDWithTag)
+import Engineering.Helpers.Commons (flowRunner, getCurrentUTC, getNewIDWithTag, liftFlow)
 import Engineering.Helpers.Commons as EHC
 import Font.Size as FontSize
 import Font.Style as FontStyle
@@ -65,9 +69,10 @@ import Language.Types (STR(..))
 import Log (printLog)
 import MerchantConfig.Utils (getValueFromConfig)
 import MerchantConfig.Utils as MU
+import PaymentPage (consumeBP)
 import Prelude (Unit, bind, const, discard, not, pure, unit, void, ($), (&&), (*), (-), (/), (<), (<<<), (<>), (==), (>), (>=), (||), (<=), show, void, (/=), when, map, otherwise, (+), negate)
 import Presto.Core.Types.Language.Flow (Flow, delay, doAff)
-import PrestoDOM (BottomSheetState(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), adjustViewWithKeyboard, afterRender, alignParentBottom, alpha, background, bottomSheetLayout, clickable, color, cornerRadius, ellipsize, fontStyle, frameLayout, gravity, halfExpandedRatio, height, id, imageUrl, imageView, imageWithFallback, layoutGravity, lineHeight, linearLayout, lottieAnimationView, margin, onBackPressed, onClick, orientation, padding, peakHeight, relativeLayout, singleLine, stroke, text, textSize, textView, visibility, weight, width, topShift, onAnimationEnd  )
+import PrestoDOM (BottomSheetState(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), adjustViewWithKeyboard, afterRender, alignParentBottom, alpha, background, bottomSheetLayout, clickable, color, cornerRadius, ellipsize, fontStyle, frameLayout, gravity, halfExpandedRatio, height, id, imageUrl, imageView, imageWithFallback, layoutGravity, lineHeight, linearLayout, lottieAnimationView, margin, onBackPressed, onClick, orientation, padding, peakHeight, relativeLayout, singleLine, stroke, text, textSize, textView, visibility, weight, width, topShift, onAnimationEnd)
 import PrestoDOM (BottomSheetState(..), alignParentBottom, layoutGravity, Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, alpha, background, bottomSheetLayout, clickable, color, cornerRadius, fontStyle, frameLayout, gravity, halfExpandedRatio, height, id, imageUrl, imageView, lineHeight, linearLayout, margin, onBackPressed, onClick, orientation, padding, peakHeight, stroke, text, textSize, textView, visibility, weight, width, imageWithFallback, adjustViewWithKeyboard, lottieAnimationView, relativeLayout, ellipsize, singleLine, scrollView, scrollBarY)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Elements.Elements (coordinatorLayout)
@@ -76,15 +81,13 @@ import PrestoDOM.Types.DomAttributes as PTD
 import Screens as ScreenNames
 import Screens.HomeScreen.Controller (Action(..), RideRequestPollingData, ScreenOutput, ScreenOutput(GoToHelpAndSupportScreen), checkPermissionAndUpdateDriverMarker, eval, getPeekHeight)
 import Screens.HomeScreen.ScreenData as HomeScreenData
-import Screens.Types (HomeScreenStage(..), HomeScreenState, KeyboardModalType(..),DriverStatus(..), DriverStatusResult(..), PillButtonState(..),TimerStatus(..), DisabilityType(..), SavedLocationScreenType(..), LocalStoreSubscriptionInfo, SubscriptionBannerType(..))
+import Screens.Types (HomeScreenStage(..), HomeScreenState, KeyboardModalType(..), DriverStatus(..), DriverStatusResult(..), PillButtonState(..), TimerStatus(..), DisabilityType(..), SavedLocationScreenType(..), LocalStoreSubscriptionInfo, SubscriptionBannerType(..))
 import Screens.Types as ST
 import Services.API (GetRidesHistoryResp(..), OrderStatusRes(..), Status(..))
 import Services.Backend as Remote
 import Storage (getValueToLocalStore, KeyStore(..), setValueToLocalStore, getValueToLocalNativeStore, isLocalStageOn, setValueToLocalNativeStore)
 import Styles.Colors as Color
 import Types.App (GlobalState, defaultGlobalState)
-import Constants (defaultDensity)
-import Components.ErrorModal as ErrorModal
 
 screen :: HomeScreenState -> Screen Action HomeScreenState ScreenOutput
 screen initialState =
@@ -94,7 +97,7 @@ screen initialState =
   , globalEvents : [
         ( \push -> do
           _ <- pure $ JB.checkAndAskNotificationPermission false
-          _ <- pure $ printLog "initial State" initialState
+          _ <- pure $ spy "initial State" initialState
           _ <- HU.storeCallBackForNotification push Notification
           _ <- HU.storeCallBackTime push TimeUpdate
           _ <- runEffectFn2 JB.storeKeyBoardCallback push KeyboardCallback
@@ -118,6 +121,7 @@ screen initialState =
             runEffectFn3 HU.countDownInMinutes (EHC.getExpiryTime (HU.istToUtcDate initialState.data.driverGotoState.gotoValidTill) false) push UpdateGoHomeTimer 
             else if (initialState.data.driverGotoState.timerId /= "") then pure $ EHC.clearTimer initialState.data.driverGotoState.timerId
             else pure unit
+          when (isNothing initialState.data.bannerItem) $ void $ launchAff $ EHC.flowRunner defaultGlobalState $ computeListItem push
           case localStage of
             "RideRequested"  -> do
                                 if (getValueToLocalStore RIDE_STATUS_POLLING) == "False" then do
@@ -310,7 +314,7 @@ driverMapsHeaderView push state =
         , frameLayout
           [ width MATCH_PARENT
           , height MATCH_PARENT
-          ][  googleMap state
+          ]$[  googleMap state
             , if (state.props.driverStatusSet == Offline && not state.data.paymentState.blockedDueToPayment) then offlineView push state else dummyTextView
             , linearLayout
               [ width MATCH_PARENT
@@ -330,13 +334,13 @@ driverMapsHeaderView push state =
                 , if (state.props.autoPayBanner /= ST.NO_SUBSCRIPTION_BANNER && state.props.driverStatusSet == ST.Offline && getValueFromConfig "autoPayBanner") then autoPayBannerView state push true else dummyTextView
                 , gotoRecenterAndSupport state push
               ]
-            , alternateNumberOrOTPView state push
-            , if(state.props.showGenderBanner && state.props.driverStatusSet /= ST.Offline && getValueToLocalStore IS_BANNER_ACTIVE == "True" && state.props.autoPayBanner == ST.NO_SUBSCRIPTION_BANNER) then genderBannerView state push 
+            -- , alternateNumberOrOTPView state push   
+            {-if(state.props.showGenderBanner && state.props.driverStatusSet /= ST.Offline && getValueToLocalStore IS_BANNER_ACTIVE == "True" && state.props.autoPayBanner == ST.NO_SUBSCRIPTION_BANNER) then genderBannerView state push 
                 else if state.data.paymentState.paymentStatusBanner then paymentStatusBanner state push 
                 else if (state.props.autoPayBanner /= ST.NO_SUBSCRIPTION_BANNER && state.props.driverStatusSet /= ST.Offline && getValueFromConfig "autoPayBanner") then autoPayBannerView state push false 
                 else if (state.props.driverStatusSet /= ST.Offline && state.props.currentStage == HomeScreen && state.data.config.purpleRideConfig.showPurpleVideos) then accessibilityBanner state push 
-                else dummyTextView
-            ]
+                else dummyTextView -}
+            ] <> maybe ([]) (\item -> [bannersView item push state]) state.data.bannerItem
         ]
         , bottomNavBar push state
   ]
@@ -351,8 +355,15 @@ accessibilityBanner state push =
   , gravity BOTTOM 
   , weight 1.0 
   ][
-    Banner.view (push <<< AccessibilityBannerAction) (accessbilityBannerConfig state )
+    -- Banner.view (push <<< AccessibilityBannerAction) (accessbilityBannerConfig state )
   ]
+bannersView :: forall w. ListItem -> (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+bannersView item push state = 
+  linearLayout
+  [ height MATCH_PARENT
+  , width MATCH_PARENT
+  , gravity BOTTOM 
+  ][]
 
 genericAccessibilityPopUpView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 genericAccessibilityPopUpView push state = 
@@ -415,7 +426,7 @@ paymentStatusBanner state push =
             , imageWithFallback $ HU.fetchImage HU.FF_COMMON_ASSET "ny_ic_grey_cross_icon"
             , visibility if state.data.paymentState.blockedDueToPayment then GONE else VISIBLE
             ]
-          , Banner.view (push <<< PaymentBannerAC) (paymentStatusConfig state)
+          -- , Banner.view (push <<< PaymentBannerAC) (paymentStatusConfig state)
         ]
     ]
 
@@ -464,7 +475,7 @@ genderBannerView state push =
         , onClick push (const RemoveGenderBanner)
         , imageWithFallback $ HU.fetchImage HU.FF_COMMON_ASSET "ny_ic_grey_cross_icon"
         ]
-        , genderBanner push state
+        -- , genderBanner push state
       ]
     ]
 
@@ -479,7 +490,7 @@ autoPayBannerView state push configureImage =
     , gravity BOTTOM
     , weight 1.0
     ][
-        Banner.view (push <<< AutoPayBanner) (autopayBannerConfig state configureImage)
+        -- Banner.view (push <<< AutoPayBanner) (autopayBannerConfig state configureImage)
     ]
   
 otpButtonView :: forall w . HomeScreenState -> (Action -> Effect Unit) ->  PrestoDOM (Effect Unit) w
@@ -1594,7 +1605,13 @@ launchMaps push action = do
     else pure unit
   pure unit
 
-genderBanner :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
-genderBanner push state =
-  Banner.view (push <<< GenderBannerModal) (genderBannerConfig state)
+-- genderBanner :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+-- genderBanner push state =
+--   Banner.view (push <<< GenderBannerModal) (genderBannerConfig state)
 
+
+
+computeListItem :: (Action -> Effect Unit) -> Flow GlobalState Unit
+computeListItem push = do
+  bannerItem <- preComputeListItem $ PSBanner.view push (PSBanner.config BannerCarousal)
+  void $ liftFlow $ push (SetBannerItem bannerItem)

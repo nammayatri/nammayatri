@@ -211,8 +211,9 @@ ext {
 
 dependencies {
     implementation fileTree(dir: 'libs', include: ['*.jar', '*.aar'])
-    implementation "in.juspay:hypersdk:$jpSDKversion"
+//    implementation "in.juspay:hypersdk:$jpSDKversion"
     implementation "in.juspay:hyperqr:$jpSDKversion"
+    implementation files("/Users/vigneshs/Documents/hyper/hyper-sdk/hyper-sdk-android/hyper-sdk/build/outputs/aar/hyper-sdk-release.aar")
     implementation project(path: ':mobility-app')
     compileOnly project(path: ':mobility-common')
     implementation platform('com.google.firebase:firebase-bom:31.1.1')

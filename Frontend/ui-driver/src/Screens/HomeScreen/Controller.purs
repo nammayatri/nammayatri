@@ -90,6 +90,8 @@ import Components.ErrorModal.Controller as ErrorModalController
 import Data.Int as Int
 import Data.Function.Uncurried as Uncurried
 import Engineering.Helpers.Commons as EHC
+import Components.PSBanner as PSBanner
+import PrestoDOM.List (ListItem)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -338,6 +340,8 @@ data Action = NoAction
             | NotifyAPI
             | IsMockLocation String
             | ErrorModalActionController ErrorModalController.Action
+            | BannerCarousal PSBanner.Action
+            | SetBannerItem ListItem
             
 
 eval :: Action -> ST.HomeScreenState -> Eval Action ScreenOutput ST.HomeScreenState
@@ -960,6 +964,8 @@ eval (AccessibilityBannerAction (Banner.OnClick)) state = continue state{props{s
 eval (PaymentBannerAC (Banner.OnClick)) state = do
   _ <- pure $ showDialer state.data.config.subscriptionConfig.supportNumber false
   continue state
+
+eval (SetBannerItem bannerItem) state = continue state{data{bannerItem = Just bannerItem}}
 
 eval _ state = continue state
 
