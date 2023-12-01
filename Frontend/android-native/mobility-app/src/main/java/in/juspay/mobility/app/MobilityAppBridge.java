@@ -79,6 +79,7 @@ import in.juspay.hyper.bridge.HyperBridge;
 import in.juspay.hyper.core.BridgeComponents;
 import in.juspay.hyper.core.ExecutorManager;
 import in.juspay.hypersdk.data.KeyValueStore;
+import in.juspay.mobility.app.RemoteConfigs.MobilityRemoteConfigs;
 import in.juspay.mobility.app.callbacks.CallBack;
 import in.juspay.mobility.app.carousel.VPAdapter;
 import in.juspay.mobility.app.carousel.ViewPagerItem;
@@ -94,6 +95,8 @@ public class MobilityAppBridge extends HyperBridge {
     private static final String REFERRER = "REFERRER";
     private ArrayList<ViewPagerItem> viewPagerItemArrayList = new ArrayList<>();
     private static FirebaseAnalytics mFirebaseAnalytics;
+
+    private static MobilityRemoteConfigs remoteConfigs;
     CleverTapAPI clevertapDefaultInstance;
     protected static String storeChatMessageCallBack = null;
     public static String storeCallBackOpenChatScreen = null;
@@ -147,6 +150,7 @@ public class MobilityAppBridge extends HyperBridge {
     public MobilityAppBridge(BridgeComponents bridgeComponents) {
         super(bridgeComponents);
         mFirebaseAnalytics = FirebaseAnalytics.getInstance(bridgeComponents.getContext());
+        remoteConfigs = new MobilityRemoteConfigs(false, false);
         ChatService.registerCallback(callBack);
         InAppNotification.registerCallback(callBack);
         RemoteAssetsDownloader.registerCallback(callBack);
@@ -252,6 +256,31 @@ public class MobilityAppBridge extends HyperBridge {
     public static void firebaseLogEvent(String event) {
         Bundle params = new Bundle();
         mFirebaseAnalytics.logEvent(event, params);
+    }
+
+    @JavascriptInterface
+    public static boolean fetchRemoteConfigBool(String key){
+        return remoteConfigs.getBoolean(key);
+    }
+
+    @JavascriptInterface
+    public static String fetchRemoteConfigString(String key){
+        return remoteConfigs.getString(key);
+    }
+
+    @JavascriptInterface
+    public static double fetchRemoteConfigDouble(String key){
+        return remoteConfigs.getDouble(key);
+    }
+
+    @JavascriptInterface
+    public static long fetchRemoteConfigLong(String key){
+        return remoteConfigs.getLong(key);
+    }
+
+    @JavascriptInterface
+    public static void fetchAndUpdateRemoteConfig(){
+        remoteConfigs = new MobilityRemoteConfigs(true, false);
     }
 
     @JavascriptInterface
@@ -913,6 +942,5 @@ public class MobilityAppBridge extends HyperBridge {
     public boolean onRequestPermissionResult(int requestCode, String[] permissions, int[] grantResults) {
         return super.onRequestPermissionResult(requestCode, permissions, grantResults);
     }
-
     // endregion
 }
