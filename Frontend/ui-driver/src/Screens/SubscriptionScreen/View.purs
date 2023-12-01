@@ -312,7 +312,7 @@ enjoyBenefitsView push state =
                 text $ getString VALID_ONLY_IF_PAYMENT
                 , color Color.black700
                 , margin $ Margin 22 3 0 0
-                , visibility if not state.data.config.subscriptionConfig.enableSubscriptionPopups || state.props.joinPlanProps.isIntroductory   then GONE else VISIBLE
+                , visibility GONE
               ] <> FontStyle.body16 TypoGraphy
         ]
         
@@ -1471,7 +1471,6 @@ findHelpCentreView push state visibility' =
   , height MATCH_PARENT
   , orientation VERTICAL
   , visibility if visibility' then VISIBLE else GONE
-  , gravity CENTER
   ][ linearLayout
      [ height $ WRAP_CONTENT
      , width MATCH_PARENT
@@ -1583,7 +1582,7 @@ helpCentreCardView push state =
       , gravity CENTER_VERTICAL
       , onClick push $ const $ CallHelpCenter (fromMaybe "" state.contact)
       , visibility $ case state.contact of 
-                      Just _ -> VISIBLE
+                      Just contact -> if not DS.null contact then VISIBLE else GONE
                       Nothing -> GONE
       ][  commonImageView "ny_ic_phone_unfilled" 24 24 (MarginLeft 4) (Padding 2 2 2 2)
         , textView

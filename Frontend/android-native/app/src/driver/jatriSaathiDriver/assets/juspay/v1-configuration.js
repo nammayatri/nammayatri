@@ -31,7 +31,9 @@ window.getMerchantConfig = function () {
                     "COMPLETE_PAYMENT_TO_CONTINUE",
                     "GET_READY_FOR_YS_SUBSCRIPTION",
                     "SUBSCRIPTION_PLAN_STR",
-                    "CHOOSE_YOUR_PLAN"
+                    "FIND_HELP_CENTRE",
+                    "HOW_IT_WORKS",
+                    "GET_SPECIAL_OFFERS"
                     ],
     "fontType": "Assets",
     "currency": "₹",
@@ -74,7 +76,6 @@ window.getMerchantConfig = function () {
       "TRAVELLED_ON_APP" : "Travelled On Yatri Sathi",
       "REPORT_ISSUE_CHAT_PLACEHOLDER" : "Describe your issue. Yatri Sathi will try to resolve it in under 24 hours.",
       "MY_PLAN_TITLE" : "Yatri Sathi Plans",
-      "CHOOSE_YOUR_PLAN" : "Start your Plan Now!",
       "OFFER_CARD_BANNER_TITLE" : "Setup Autopay and pay only ₹1/ride from Jan 1-31",
       "TO_CONTINUE_USING_YATRI_SATHI" : "To continue using Yatri Sathi, please complete your payment for",
       "YATRI_SATHI_FEE_PAYABLE_FOR_DATE" : "Yatri Sathi fee payable for",
@@ -83,8 +84,10 @@ window.getMerchantConfig = function () {
       "COMPLETE_PAYMENT_TO_CONTINUE" : "To continue using Yatri Sathi, please complete your payment",
       "GET_READY_FOR_YS_SUBSCRIPTION" : "Get ready for\nYatri Sathi Plans!",
       "SUBSCRIPTION_PLAN_STR" : "Yatri Sathi Plan",
-      "CHOOSE_YOUR_PLAN" : "Activate Plan Now!"
-
+      "CHOOSE_YOUR_PLAN" : "Activate Plan Now!",
+      "FIND_HELP_CENTRE" : "Find Help Desk",
+      "HOW_IT_WORKS" : "How Autopay works?",
+      "GET_SPECIAL_OFFERS" : "Guaranteed fixed price until\nJan 1, 2025"
     },
     "hindiStrings": {
       "WELCOME_TEXT": "Welcome to Yatri Sathi Driver App",
@@ -97,7 +100,6 @@ window.getMerchantConfig = function () {
       "TRAVELLED_ON_APP" : "यात्री साथी पर तय की गई दूरी",
       "REPORT_ISSUE_CHAT_PLACEHOLDER" : "अपनी समस्या बताएं। यात्री साथी 24 घंटे के अंदर इसका समाधान करने का प्रयास करेगा।",
       "MY_PLAN_TITLE" : "यात्री साथी प्लान्स",
-      "CHOOSE_YOUR_PLAN" : "अपना प्लान शुरू करें!",
       "OFFER_CARD_BANNER_TITLE" : "ऑटोपे सेटअप करें और 1-31 जनवरी तक केवल ₹1/सवारी का पेमेंट करें",
       "TO_CONTINUE_USING_YATRI_SATHI" : "यात्री साथी का उपयोग जारी रखने के लिए",
       "YATRI_SATHI_FEE_PAYABLE_FOR_DATE" : "यात्री साथी शुल्क लागू" ,
@@ -106,8 +108,10 @@ window.getMerchantConfig = function () {
       "COMPLETE_PAYMENT_TO_CONTINUE" : "यात्री साथी का उपयोग जारी रखने के लिए, कृपया अपना भुगतान पूरा करें",
       "GET_READY_FOR_YS_SUBSCRIPTION" : "यात्री साथी योजनाओं के लिए तैयार रहें!",
       "SUBSCRIPTION_PLAN_STR" : "यात्री साथी योजना",
-      "CHOOSE_YOUR_PLAN" : "योजना अभी सक्रिय करें!"
-
+      "CHOOSE_YOUR_PLAN" : "योजना अभी सक्रिय करें!",
+      "FIND_HELP_CENTRE" : "सहायता डेस्क ढूंढें",
+      "HOW_IT_WORKS" : "ऑटोपे कैसे काम करता है?",
+      "GET_SPECIAL_OFFERS" : "1 जनवरी, 2025 तक निश्चित मूल्य की गारंटी"
     },
     "bengaliStrings": {
       "WELCOME_TEXT": "Welcome to Yatri Sathi Driver App",
@@ -120,7 +124,6 @@ window.getMerchantConfig = function () {
       "TRAVELLED_ON_APP" : "যাত্রী সাথীতে দূরত্ব ভ্রমণ",
       "REPORT_ISSUE_CHAT_PLACEHOLDER" : "আপনার সমস্যাটি বর্ণনা করুন। যাত্রী সাথী 24 ঘন্টার মধ্যে এটি সমাধান করার চেষ্টা করবেন।",
       "MY_PLAN_TITLE" : "যাত্রী সাথী পরিকল্পনা",
-      "CHOOSE_YOUR_PLAN" : "এখন প্ল্যান শুরু করুন!",
       "OFFER_CARD_BANNER_TITLE" : "অটোপে সেটআপ করুন এবং জানুয়ারী 1-31 এর মধ্যে শুধুমাত্র ₹1/রাইড প্রদান করুন",
       "TO_CONTINUE_USING_YATRI_SATHI" : "Yatri Sathi ব্যবহার চালিয়ে যেতে, অনুগ্রহ করে আপনার অর্থপ্রদান সম্পূর্ণ করুন",
       "YATRI_SATHI_FEE_PAYABLE_FOR_DATE" : "Yatri Sathi ফি জন্য প্রদেয়" ,
@@ -129,7 +132,10 @@ window.getMerchantConfig = function () {
       "COMPLETE_PAYMENT_TO_CONTINUE" : "Yatri Sathi ব্যবহার চালিয়ে যেতে, অনুগ্রহ করে আপনার অর্থপ্রদান সম্পূর্ণ করুন",
       "GET_READY_FOR_YS_SUBSCRIPTION" : "যাত্রী সাথী পরিকল্পনার জন্য প্রস্তুত হন!",
       "SUBSCRIPTION_PLAN_STR" : "যাত্রী সাথী পরিকল্পনা",
-      "CHOOSE_YOUR_PLAN" : "এখনই প্ল্যান সক্রিয় করুন!"
+      "CHOOSE_YOUR_PLAN" : "এখনই প্ল্যান সক্রিয় করুন!",
+      "FIND_HELP_CENTRE" : "সহায়তা ডেস্ক খুঁজুন",
+      "HOW_IT_WORKS" : "স্বতঃপে কিভাবে কাজ করে?",
+      "GET_SPECIAL_OFFERS" : "জানুয়ারি 1, 2025 পর্যন্ত গ্যারান্টিযুক্ত নির্দিষ্ট মূল্য"
     },
     "logs": ["JUSPAY","FIREBASE","CLEVERTAP"]
     , "fontName" : "PlusJakartaSans"
@@ -192,6 +198,10 @@ window.getMerchantConfig = function () {
     }
   , "permissions" : {
         "locationPermission" : true
+  }
+  , "homeScreen" : {
+        "specialRideOtpView" : true,
+        "showGenderBanner" : false
   }
   })
 }

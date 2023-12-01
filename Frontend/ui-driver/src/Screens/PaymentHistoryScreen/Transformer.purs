@@ -104,7 +104,7 @@ buildTransactionDetails (API.HistoryEntryDetailsEntityV2Resp resp) gradientConfi
               },
               {
                 key : "AMOUNT_PAID",
-                title : getString AMOUNT,
+                title : getString TOTAL_AMOUNT,
                 val : "₹" <> getFixedTwoDecimals resp.amount
               },
               { key : "PAYMENT_MODE",

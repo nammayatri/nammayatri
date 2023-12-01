@@ -549,7 +549,7 @@ manualPaymentRidesList push state =
           , width $ V (screenwidth/3)
           ] <> FontStyle.body3 TypoGraphy
         , textView $
-          [ text $ "₹" <> getString AMOUNT
+          [ text $ "₹" <> getString TOTAL_AMOUNT
           , width $ V (screenwidth/3)
           , color Color.black700
           , gravity RIGHT

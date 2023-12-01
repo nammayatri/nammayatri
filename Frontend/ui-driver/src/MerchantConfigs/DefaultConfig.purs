@@ -202,4 +202,8 @@ config =
         defCity : "Bangalore"
       }
   }
+  , homeScreen : {
+    specialRideOtpView : false,
+    showGenderBanner : true
+  }
 }

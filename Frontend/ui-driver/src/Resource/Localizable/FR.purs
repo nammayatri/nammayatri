@@ -800,4 +800,5 @@ getFR stringKey =
         BY_CLICKING_NEXT_YOU_WILL_BE_AGREEING_TO_OUR -> ""
         BOOTH_CHARGES -> "Frais de cabine"
         BOOTH_CHARGES_INCLUDED -> "Frais de stand inclus : ₹{}"
+        TOTAL_AMOUNT -> "Montant total"
         _ -> ""

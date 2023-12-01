@@ -27,7 +27,8 @@ type AppConfig =
     unserviceableThreshold :: Number,
     enableMockLocation :: Boolean,
     flowConfig :: FlowConfig,
-    permissions :: PermissionsConfig 
+    permissions :: PermissionsConfig,
+    homeScreen :: HomeScreenConfig
   } 
 
 type PurpleRideConfig = {
@@ -149,4 +150,9 @@ type ChooseCityFlowConfig = {
 
 type PermissionsConfig = {
   locationPermission :: Boolean
+}
+
+type HomeScreenConfig = {
+  specialRideOtpView :: Boolean,
+  showGenderBanner :: Boolean
 }
