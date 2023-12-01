@@ -43,7 +43,7 @@ makeTypeQualified moduleName excludedList dList obj str = concatMap replaceOrKee
 
     replaceOrKeep :: String -> String
     replaceOrKeep word =
-      if '.' `elem` word
+      if '.' `elem` word || ',' `elem` word
         then word
         else
           if isJust moduleName && isJust excludedList && word `elem` (fromJust excludedList)
