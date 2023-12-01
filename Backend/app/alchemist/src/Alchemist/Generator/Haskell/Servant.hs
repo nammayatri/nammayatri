@@ -34,10 +34,14 @@ generateServantAPI input =
     defaultImports = ["EulerHS.Prelude", "Servant", "Tools.Auth", "Kernel.Utils.Common"]
 
     defaultQualifiedImport :: [String]
-    defaultQualifiedImport = ["Domain.Types.Person", "Domain.Types.Merchant", "Environment"]
+    defaultQualifiedImport = ["Domain.Types.Person", "Domain.Types.Merchant", "Environment", "Kernel.Types.Id"]
 
     makeQualifiedImport :: String -> String
     makeQualifiedImport impts = "import qualified " <> impts <> " as " <> impts
+
+    generateParams :: Int -> Text
+    generateParams 0 = ""
+    generateParams n = " a" <> T.pack (show n) <> generateParams (n - 1)
 
     -- containsMandatoryQueryParam :: [ApiTT] -> Bool
     -- containsMandatoryQueryParam apis = any apiHasMandatoryQueryParam apis
@@ -58,14 +62,16 @@ generateServantAPI input =
             [] -> T.empty
             ty -> " -> " <> T.intercalate " -> " ty
           handlerTypes = showType <> " -> Environment.FlowHandler " <> last allTypes
-       in functionName <> " :: (Id Domain.Types.Person.Person.Person, Id Domain.Types.Merchant.Merchant.Merchant)" <> handlerTypes
+       in functionName <> " :: (Kernel.Types.Id.Id Domain.Types.Person.Person, Kernel.Types.Id.Id Domain.Types.Merchant.Merchant)" <> handlerTypes
             <> "\n"
             <> functionName
-            <> " = withFlowHandlerAPI . "
+            <> generateParams (length allTypes)
+            <> " = withFlowHandlerAPI $ "
             <> "Domain.Action.UI."
             <> _moduleName input
             <> "."
             <> functionName
+            <> generateParams (length allTypes)
             <> "\n"
 
 apiTTToText :: ApiTT -> Text
