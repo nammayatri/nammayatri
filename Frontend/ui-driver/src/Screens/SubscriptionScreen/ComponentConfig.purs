@@ -434,7 +434,7 @@ clearManualDuesBtn state = let
 getHeaderConfig :: ST.SubscriptionSubview -> Boolean -> Boolean -> HeaderData
 getHeaderConfig subView isManualPayDue isMultiDueType = 
   case subView of
-    ST.JoinPlan    -> {title : (getString MY_PLAN_TITLE), actionText : getString SUPPORT, backbutton : false}
+    ST.JoinPlan    -> {title : (getString (MY_PLAN_TITLE "MY_PLAN_TITLE")), actionText : getString SUPPORT, backbutton : false}
     ST.ManagePlan  -> {title : (getString MANAGE_PLAN), actionText : "", backbutton : true}
     ST.MyPlan      -> {title : (getString PLAN), actionText : "", backbutton : false}
     ST.PlanDetails -> {title : (getString AUTOPAY_DETAILS), actionText : "", backbutton : true}
@@ -444,7 +444,7 @@ getHeaderConfig subView isManualPayDue isMultiDueType =
                                           true, false -> AUTOPAY_DUE_DETAILS
                                           true, true -> MANUAL_DUE_DETAILS
                                           _, _ -> DUE_DETAILS , actionText : "", backbutton : true}
-    _           -> {title : (getString MY_PLAN_TITLE), actionText : "", backbutton : false}
+    _           -> {title : (getString (MY_PLAN_TITLE "MY_PLAN_TITLE")), actionText : "", backbutton : false}
 
 type HeaderData = {title :: String, actionText :: String, backbutton :: Boolean}
 
@@ -487,7 +487,7 @@ offerCardBannerConfig isPlanCard bannerProps=
             "TE_IN" | len > 6 -> 6
             _ -> 0
     date = Mb.fromMaybe "" (strArray DA.!! (getLanguage (DA.length strArray)))
-    title' = getVarString OFFER_CARD_BANNER_TITLE [date]
+    title' = getVarString (OFFER_CARD_BANNER_TITLE "OFFER_CARD_BANNER_TITLE") [date]
     config = Banner.config
     config' = config  
       {

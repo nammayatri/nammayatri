@@ -116,7 +116,7 @@ view push state =
             , weight 1.0
             , orientation VERTICAL
             ][
-              commonTV push (getString CHOOSE_YOUR_PLAN) Color.black800 FontStyle.subHeading1 LEFT 0 NoAction false
+              commonTV push (getString $ CHOOSE_YOUR_PLAN "CHOOSE_YOUR_PLAN") Color.black800 FontStyle.subHeading1 LEFT 0 NoAction false
             , let date = getDateAfterNDays (fromMaybe 0 (fromString (getValueToLocalNativeStore FREE_TRIAL_DAYS)) -1) in 
               commonTV push ( case getValueToLocalStore LANGUAGE_KEY of 
                                 "EN_US" -> (getString FREE_UNTIL <> date)
@@ -218,7 +218,7 @@ headerLayout push state =
         ]
       ]
     ]
-  , commonTV push (getString MY_PLAN_TITLE) Color.white900 FontStyle.h1 LEFT 20 NoAction false
+  , commonTV push (getString $ MY_PLAN_TITLE "MY_PLAN_TITLE") Color.white900 FontStyle.h1 LEFT 20 NoAction false
   ]
 
 infoView :: forall w. (Action -> Effect Unit) -> ST.OnBoardingSubscriptionScreenState -> PrestoDOM (Effect Unit) w
