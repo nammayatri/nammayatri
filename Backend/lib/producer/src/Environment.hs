@@ -19,6 +19,7 @@ import qualified Data.Text as T
 import EulerHS.Prelude hiding (maybe, show)
 import Kernel.Storage.Esqueleto.Config
 import Kernel.Storage.Hedis
+import Kernel.Streaming.Kafka.Producer.Types
 import Kernel.Tools.Metrics.CoreMetrics
 import Kernel.Types.CacheFlow as CF
 import Kernel.Types.Common hiding (id)
@@ -54,7 +55,8 @@ data AppCfg = AppCfg
     metricsPort :: Int,
     schedulerType :: SchedulerType,
     tables :: Tables,
-    runReviver :: Bool
+    runReviver :: Bool,
+    kafkaProducerCfg :: KafkaProducerCfg
   }
   deriving (Generic, FromDhall)
 
@@ -85,7 +87,8 @@ data AppEnv = AppEnv
     schedulerType :: SchedulerType,
     reviverInterval :: Minutes,
     reviveThreshold :: Seconds,
-    runReviver :: Bool
+    runReviver :: Bool,
+    kafkaProducerTools :: KafkaProducerTools
   }
   deriving (Generic)
 
@@ -96,6 +99,7 @@ buildAppEnv AppCfg {..} = do
   hostname <- map T.pack <$> lookupEnv "POD_NAME"
   coreMetrics <- registerCoreMetricsContainer
   loggerEnv <- prepareLoggerEnv loggerConfig hostname
+  kafkaProducerTools <- buildKafkaProducerTools kafkaProducerCfg
   hedisNonCriticalEnv <- connectHedis hedisNonCriticalCfg id
   hedisClusterEnv <-
     if cutOffHedisCluster

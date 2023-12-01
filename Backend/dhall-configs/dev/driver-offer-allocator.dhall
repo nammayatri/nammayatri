@@ -37,6 +37,7 @@ let schedulerConfig =
       , maxThreads = +10
       , block = +10000
       , readCount = +1
+      , kafkaProducerCfg = appCfg.kafkaProducerCfg
       }
 
 in  { appCfg =
