@@ -340,6 +340,7 @@ getDriverInfoFlow event activeRideResp = do
   _ <- pure $ printLog "Registration token" (getValueToLocalStore REGISTERATION_TOKEN)
   getDriverInfoApiResp <- lift $ lift $ Remote.getDriverInfoApi (GetDriverInfoReq{})
   appConfig <- getAppConfigFlowBT Constants.appConfig
+  permissionsGiven <- checkAllPermissions true appConfig.permissions.locationPermission
   case getDriverInfoApiResp of
     Right (GetDriverInfoResp getDriverInfoResp) -> do
       updateFirebaseToken getDriverInfoResp.maskedDeviceToken getUpdateToken
@@ -358,7 +359,7 @@ getDriverInfoFlow event activeRideResp = do
         if (isJust getDriverInfoResp.autoPayStatus) then 
           setValueToLocalStore TIMES_OPENED_NEW_SUBSCRIPTION "5"
         else pure unit
-        permissionsGiven <- checkAllPermissions true appConfig.permissions.locationPermission
+        checkLocationPermission
         if permissionsGiven
           then handleDeepLinksFlow event activeRideResp
           else do
@@ -379,7 +380,7 @@ getDriverInfoFlow event activeRideResp = do
         else do
           _ <- pure $ toast $ getString SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN
           if getValueToLocalStore IS_DRIVER_ENABLED == "true" then do
-            permissionsGiven <- checkAllPermissions true appConfig.permissions.locationPermission
+            checkLocationPermission
             if permissionsGiven then
               handleDeepLinksFlow event activeRideResp
               else permissionsScreenFlow event activeRideResp
@@ -1703,6 +1704,7 @@ tripDetailsScreenFlow = do
 
 currentRideFlow :: Maybe GetRidesHistoryResp -> FlowBT String Unit
 currentRideFlow activeRideResp = do
+  checkLocationPermission
   let isRequestExpired = 
         if (getValueToLocalNativeStore RIDE_REQUEST_TIME) == "__failed" then false
           else ceil ((toNumber (rideRequestPollingData.duration - (getExpiryTime (getValueToLocalNativeStore RIDE_REQUEST_TIME) true)) * 1000.0)/rideRequestPollingData.delay) > 0
@@ -2629,6 +2631,7 @@ editBankDetailsFlow = do
 noInternetScreenFlow :: String -> FlowBT String Unit
 noInternetScreenFlow triggertype = do
   config <- getAppConfigFlowBT Constants.appConfig
+  liftFlowBT $ hideSplash
   action <- UI.noInternetScreen triggertype
   internetCondition <- lift $ lift $ liftFlow $ isInternetAvailable unit
   case action of
@@ -2644,9 +2647,19 @@ noInternetScreenFlow triggertype = do
                       true  -> pure unit
                       false -> do
                         permissionsGiven <- checkAllPermissions true config.permissions.locationPermission
+                        checkLocationPermission
                         if permissionsGiven
                           then baseAppFlow false Nothing
                           else permissionsScreenFlow Nothing Nothing
+
+
+checkLocationPermission :: FlowBT String Unit
+checkLocationPermission = do 
+  appConfig <- getAppConfigFlowBT Constants.appConfig
+  locationPermissionGiven <- liftFlowBT $ isLocationPermissionEnabled unit
+  when ( not locationPermissionGiven && not appConfig.permissions.locationPermission ) $ do 
+    noInternetScreenFlow "LOCATION_DISABLED"
+  pure unit
 
 checkAllPermissions :: Boolean -> Boolean -> FlowBT String Boolean
 checkAllPermissions checkBattery checkLocation = do
