@@ -223,6 +223,7 @@ currentLanguageView state push =
 radioButtonView :: ChooseCityScreenState -> (Action -> Effect Unit) -> Boolean -> forall w . PrestoDOM (Effect Unit) w
 radioButtonView state push visibility' =
   let items = if state.props.currentStage == SELECT_LANG then state.data.config.languageList else transformCityConfig state.data.merchantOperatingCityConfig
+      subTitle = if state.props.currentStage == SELECT_LANG then SELECT_LANGUAGE_DESC else SELECT_LOCATION_DESC
       selectedVal = if state.props.currentStage == SELECT_LANG then state.props.radioMenuFocusedLang else state.props.radioMenuFocusedCity
   in
   PrestoAnim.animationSet [ Anim.fadeIn visibility' ] $
@@ -233,7 +234,7 @@ radioButtonView state push visibility' =
   , background Color.white900
   ][  headerView state push
     , textView $
-      [ text $ getString SELECT_LOCATION_DESC
+      [ text $ getString subTitle
       , color Color.black800
       , margin $ Margin 16 24 16 16
       ] <> FontStyle.subHeading2 TypoGraphy

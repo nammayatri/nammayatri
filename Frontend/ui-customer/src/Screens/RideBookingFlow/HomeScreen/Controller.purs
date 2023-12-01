@@ -1205,7 +1205,7 @@ eval (WaitingTimeAction timerID timeInMinutes seconds) state = do
 
 eval (SpecialZoneOTPExpiryAction seconds id status timerID) state = do
   if status == "EXPIRED" then do
-    _ <- pure $ toast $ getString OTP_FOR_THE_JATRI_SATHI_ZONE_HAS_BEEN_EXPIRED_PLEASE_TRY_LOOKING_AGAIN
+    _ <- pure $ toast $ getString $ OTP_FOR_THE_JATRI_SATHI_ZONE_HAS_BEEN_EXPIRED_PLEASE_TRY_LOOKING_AGAIN "OTP_FOR_THE_JATRI_SATHI_ZONE_HAS_BEEN_EXPIRED_PLEASE_TRY_LOOKING_AGAIN"
     _ <- pure $ clearTimer timerID
     exit $ NotificationHandler "CANCELLED_PRODUCT" state
   else do
@@ -1879,7 +1879,7 @@ eval NewUser state = continueWithCmd state [ do
   if (getValueToLocalNativeStore REGISTRATION_APPROVED) == "true" then do
     _ <- pure $ setValueToLocalStore REGISTRATION_APPROVED "false"
     _ <- launchAff $ flowRunner defaultGlobalState $ runExceptT $ runBackT $ do
-      _ <- UI.successScreen ((getString HEY) <> " " <> (getValueToLocalStore USER_NAME)) (getString SUCCESSFUL_ONBOARD)
+      _ <- UI.successScreen ((getString HEY) <> " " <> (getValueToLocalStore USER_NAME)) (getString $ SUCCESSFUL_ONBOARD "SUCCESSFUL_ONBOARD")
       pure unit
     pure unit
     else

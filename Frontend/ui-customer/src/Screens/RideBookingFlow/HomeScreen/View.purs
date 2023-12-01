@@ -1217,7 +1217,7 @@ suggestedPriceView push state =
       , gravity CENTER
       , cornerRadii $ Corners 24.0 true true false false
       ][  textView
-          [ text $ getString REQUEST_AUTO_RIDE
+          [ text $ getString $ REQUEST_AUTO_RIDE "REQUEST_AUTO_RIDE"
           , textSize FontSize.a_22
           , color Color.black800
           , accessibility ENABLE

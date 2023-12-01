@@ -104,7 +104,7 @@ getLocationBlockerPopUpConfig state = let
       visibility = GONE
     }
   , secondaryText {
-      text = getString PLEASE_ENABLE_LOCATION_PERMISSION
+      text = getString $ PLEASE_ENABLE_LOCATION_PERMISSION "PLEASE_ENABLE_LOCATION_PERMISSION"
     , margin = MarginTop 0
     , padding = Padding 0 0 0 0
     }

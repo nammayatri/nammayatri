@@ -35,7 +35,7 @@ export const getMerchantString = function(key) {
 export const getStringFromConfig = function (constructors) {
   return function (just) {
     return function (nothing) {
-      const key = constructors.constructor.name;
+      const key = constructors.value0 || "";
       if (window.appConfig.StringKeys.includes(key)){
         return just(getMerchantString(key));
       }

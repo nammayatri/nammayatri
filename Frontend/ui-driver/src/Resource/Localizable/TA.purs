@@ -185,7 +185,7 @@ getTA stringKey =
         BOOK_NOW -> "பதிவு"
         RESEND_OTP_IN -> "OTP ஐ மீண்டும் அனுப்பவும்"
         WE_NEED_ACCESS_TO_YOUR_LOCATION -> "உங்கள் இருப்பிடத்திற்கான அணுகல் எங்களுக்கு தேவை!"
-        YOUR_LOCATION_HELPS_OUR_SYSTEM -> "உங்கள் இருப்பிடம் எங்கள் கணினியை ஆட்டோக்கள் மூலம் அருகிலுள்ள அனைத்து வரைபடத்தையும், விரைவாக சவாரி செய்ய உதவுகிறது."
+        YOUR_LOCATION_HELPS_OUR_SYSTEM _ -> "உங்கள் இருப்பிடம் எங்கள் கணினியை ஆட்டோக்கள் மூலம் அருகிலுள்ள அனைத்து வரைபடத்தையும், விரைவாக சவாரி செய்ய உதவுகிறது."
         NO_INTERNET_CONNECTION -> "இணைய இணைப்பு இல்லை"
         PLEASE_CHECK_YOUR_INTERNET_CONNECTION_AND_TRY_AGAIN -> "இணைய இணைப்பை சரிபார்த்து மீண்டும் முயற்சிக்கவும்"
         TRY_AGAIN -> "மீண்டும் முயற்சி செய்"
