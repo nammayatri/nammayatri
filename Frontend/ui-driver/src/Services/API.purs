@@ -2667,7 +2667,7 @@ newtype GetCurrentPlanResp = GetCurrentPlanResp {
   autoPayStatus :: Maybe String,
   orderId :: Maybe String,
   isLocalized :: Maybe Boolean,
-  lastPaymentType :: Maybe String
+  lastPaymentType :: Maybe LastPaymentType
 }
 
 newtype MandateData = MandateData {
@@ -2826,6 +2826,20 @@ instance encodeFeeType :: Encode FeeType where
   encode _ = encode {}
 instance eqFeeType :: Eq FeeType where eq = genericEq
 instance standardEncodeFeeType :: StandardEncode FeeType where standardEncode _ = standardEncode {}
+
+data LastPaymentType = AUTOPAY_REGISTRATION_TYPE | CLEAR_DUE
+
+derive instance genericLastPaymentType :: Generic LastPaymentType _
+instance showLastPaymentType :: Show LastPaymentType where show = genericShow
+instance decodeLastPaymentType :: Decode LastPaymentType where 
+  decode body = case unsafeFromForeign body of
+                  "AUTOPAY_REGISTRATION"        -> except $ Right AUTOPAY_REGISTRATION_TYPE 
+                  "CLEAR_DUE"           -> except $ Right CLEAR_DUE 
+                  _                             -> fail $ ForeignError "Unknown response"
+instance encodeLastPaymentType :: Encode LastPaymentType where 
+  encode _ = encode {}
+instance eqLastPaymentType :: Eq LastPaymentType where eq = genericEq
+instance standardEncodeLastPaymentType :: StandardEncode LastPaymentType where standardEncode _ = standardEncode {}
 
 --------------------------------------------------------------------------------------------------------------------------------------------------------
 

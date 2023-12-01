@@ -38,7 +38,7 @@ import Presto.Core.Utils.Encoding (defaultDecode, defaultEncode)
 import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode)
 import PrestoDOM (LetterSpacing, Visibility, visibility)
 import Screens (ScreenName)
-import Services.API (AutopayPaymentStage, BankError(..), FeeType, GetDriverInfoResp(..), MediaType, PaymentBreakUp, Route, Status, DriverProfileStatsResp(..))
+import Services.API (AutopayPaymentStage, BankError(..), FeeType, GetDriverInfoResp(..), MediaType, PaymentBreakUp, Route, Status, DriverProfileStatsResp(..), LastPaymentType(..))
 import Styles.Types (FontSize)
 
 type EditTextInLabelState =
@@ -1748,7 +1748,7 @@ type SubscriptionScreenProps = {
   noKioskLocation :: Boolean,
   optionsMenuState :: OptionsMenuState,
   redirectToNav :: String,
-  lastPaymentType :: Maybe String,
+  lastPaymentType :: Maybe LastPaymentType,
   offerBannerProps :: OfferBanner,
   isEndRideModal :: Boolean
 }

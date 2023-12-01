@@ -2219,7 +2219,7 @@ clearPendingDuesFlow showLoader = do
                             else if any ( _ == statusResp.status)[PS.AUTHORIZATION_FAILED, PS.AUTHENTICATION_FAILED, PS.JUSPAY_DECLINED] then Just FailedPopup
                             else Nothing
           case popUpState of
-            Just popUpState' -> modifyScreenState $ SubscriptionScreenStateType (\subscribeScreenState -> subscribeScreenState { props {popUpState = Just popUpState'}})
+            Just popUpState' -> modifyScreenState $ SubscriptionScreenStateType (\subscribeScreenState -> subscribeScreenState { props {popUpState = Just popUpState', lastPaymentType = Just API.CLEAR_DUE}})
             Nothing -> pure unit
         Left err -> pure $ toast $ Remote.getCorrespondingErrorMessage err 
     Left errorPayload -> pure $ toast $ Remote.getCorrespondingErrorMessage errorPayload
@@ -2308,7 +2308,7 @@ setSubscriptionStatus paymentStatus apiPaymentStatus planCardConfig = do
       _ <- pure $ cleverTapCustomEventWithParams "ny_driver_subscription_failure" "failure_code" (show apiPaymentStatus)
       liftFlowBT $ metaLogEventWithTwoParams "ny_driver_subscription_failure" "selected_plan" planCardConfig.title "failure_code" (show apiPaymentStatus)
       liftFlowBT $ firebaseLogEventWithTwoParams "ny_driver_subscription_failure" "selected_plan" planCardConfig.title "failure_code" (show apiPaymentStatus)
-      modifyScreenState $ SubscriptionScreenStateType (\subscribeScreenState -> subscribeScreenState { props {popUpState = Just FailedPopup}})
+      modifyScreenState $ SubscriptionScreenStateType (\subscribeScreenState -> subscribeScreenState { props {popUpState = Just FailedPopup, lastPaymentType = Just API.AUTOPAY_REGISTRATION_TYPE}})
     Pending -> modifyScreenState $ SubscriptionScreenStateType (\subscribeScreenState -> subscribeScreenState { props {joinPlanProps {selectedPlanItem = Nothing}}})
     Scheduled -> pure unit
 
@@ -2459,6 +2459,7 @@ subScriptionFlow = do
           let (GlobalState defGlobalState) = defaultGlobalState
           modifyScreenState $ SubscriptionScreenStateType (\_ -> defGlobalState.subscriptionScreen{props{isEndRideModal = state.props.isEndRideModal}})
           pure $ toast $ getString AUTOPAY_CANCELLED
+          pure $ toggleBtnLoader "" false
           subScriptionFlow
         Left errorPayload -> do 
           pure $ toast $ Remote.getCorrespondingErrorMessage errorPayload

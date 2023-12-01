@@ -69,7 +69,7 @@ import Screens as ScreenNames
 import Screens.DriverProfileScreen.ScreenData (dummyDriverInfo)
 import Screens.SubscriptionScreen.Controller (Action(..), ScreenOutput, eval, getAllFareFromArray, getPlanPrice)
 import Screens.Types (AutoPayStatus(..), DueItem, GlobalProps, KioskLocation(..), MyPlanData, OfferBanner, OptionsMenuState(..), PlanCardConfig, PromoConfig, SubscriptionScreenState, SubscriptionSubview(..))
-import Services.API (FeeType(..), GetCurrentPlanResp(..), GetDriverInfoResp(..), KioskLocationRes(..), KioskLocationResp(..), OrderStatusRes(..), PaymentBreakUp(..), UiPlansResp(..), GetDriverInfoReq(..))
+import Services.API (FeeType(..), GetCurrentPlanResp(..), GetDriverInfoResp(..), KioskLocationRes(..), KioskLocationResp(..), OrderStatusRes(..), PaymentBreakUp(..), UiPlansResp(..), GetDriverInfoReq(..), LastPaymentType(..))
 import Services.Backend as Remote
 import Storage (KeyStore(..), getValueToLocalNativeStore, getValueToLocalStore, setValueToLocalStore, isOnFreeTrial)
 import Styles.Colors as Color
@@ -319,7 +319,7 @@ enjoyBenefitsView push state =
     ]
 
 paymentPendingView :: forall w. (Action -> Effect Unit) -> SubscriptionScreenState -> PrestoDOM (Effect Unit) w
-paymentPendingView push state = let isAutoPayPending = state.props.lastPaymentType == Just "AUTOPAY_REGISTRATION"
+paymentPendingView push state = let isAutoPayPending = state.props.lastPaymentType == Just AUTOPAY_REGISTRATION_TYPE
   in
   linearLayout
   [ height WRAP_CONTENT
@@ -328,7 +328,7 @@ paymentPendingView push state = let isAutoPayPending = state.props.lastPaymentTy
   , background Color.yellow800
   , cornerRadii $ Corners 24.0 false false true true
   , padding $ Padding 16 12 16 12
-  , visibility if ((state.data.config.subscriptionConfig.enableSubscriptionPopups && state.data.orderId /= Nothing) || state.props.lastPaymentType == Just "AUTOPAY_REGISTRATION") then VISIBLE else GONE -- Condition will be updated when dues are introduced to YS flow.
+  , visibility if ((state.data.config.subscriptionConfig.enableSubscriptionPopups && state.data.orderId /= Nothing) || state.props.lastPaymentType == Just AUTOPAY_REGISTRATION_TYPE) then VISIBLE else GONE -- Condition will be updated when dues are introduced to YS flow.
   ][  commonTV push (getString if isAutoPayPending then AUTOPAY_SETUP_PENDING_STR else PAYMENT_PENDING) Color.black800 (FontStyle.h2 TypoGraphy) 0 LEFT true
     , commonTV push (getString AUTOPAY_PENDING_DESC_STR) Color.black800 (FontStyle.tags TypoGraphy) 0 LEFT true
     , textView $
@@ -598,7 +598,7 @@ headerView push state =
 
 myPlanBodyview :: forall w. (Action -> Effect Unit) -> SubscriptionScreenState -> PrestoDOM (Effect Unit) w 
 myPlanBodyview push state =
-  let isFreezed = ((state.data.config.subscriptionConfig.enableSubscriptionPopups && state.data.orderId /= Nothing) || state.props.lastPaymentType == Just "AUTOPAY_REGISTRATION")
+  let isFreezed = ((state.data.config.subscriptionConfig.enableSubscriptionPopups && state.data.orderId /= Nothing) || state.props.lastPaymentType == Just AUTOPAY_REGISTRATION_TYPE)
       paddingBottom = case state.data.myPlanData.autoPayStatus /= ACTIVE_AUTOPAY , state.data.myPlanData.manualDueAmount > 0.0 of
                         true, true -> 270
                         _, _ -> 250
@@ -1816,7 +1816,7 @@ lottieView state viewId margin' padding'=
   , padding padding'
   , cornerRadius 4.0
   , background Color.blue600
-  , alpha if ((state.data.config.subscriptionConfig.enableSubscriptionPopups && state.data.orderId /= Nothing) || state.props.lastPaymentType == Just "AUTOPAY_REGISTRATION") then 0.4 else 1.0
+  , alpha if ((state.data.config.subscriptionConfig.enableSubscriptionPopups && state.data.orderId /= Nothing) || state.props.lastPaymentType == Just AUTOPAY_REGISTRATION_TYPE) then 0.4 else 1.0
   ][
     lottieAnimationView
     [ id (getNewIDWithTag viewId)

@@ -64,7 +64,7 @@ clearDueButtonConfig state = let
     primaryButtonConfig' = config 
       { textConfig { text = buttonText }
       , isClickable = true
-      , alpha = if true then 1.0 else 0.6
+      , alpha = 1.0
       , height = (V 48)
       , cornerRadius = 8.0
       , id = "SetupAutoPayPrimaryButton"
@@ -234,7 +234,7 @@ popupModalConfig state = let
       option1 {
         text = case state.props.popUpState of
                   Mb.Just SuccessPopup -> getString GOT_IT
-                  Mb.Just FailedPopup -> getString GOT_IT
+                  Mb.Just FailedPopup -> getString RETRY_PAYMENT_STR
                   Mb.Just DuesClearedPopup -> getString GOT_IT
                   Mb.Just SwitchedPlan -> getString GOT_IT
                   Mb.Just CancelAutoPay -> getString PAUSE_AUTOPAY_STR
