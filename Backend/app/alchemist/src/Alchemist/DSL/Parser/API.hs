@@ -20,7 +20,8 @@ import Data.List.Split (split, whenElt)
 import qualified Data.Text as T
 import qualified Data.Vector as V
 import qualified Data.Yaml as Yaml
-import Kernel.Prelude hiding (toText)
+import Kernel.Prelude hiding (toText) --,traceShowId)
+--import Debug.Trace (traceShowId)
 
 apiParser :: FilePath -> IO Apis
 apiParser filepath = do
@@ -42,7 +43,7 @@ parseApis obj =
     res = mkQApis <$> (Apis <$> modelName <*> allApis <*> Just [] <*> (Just parseTyp))
     mkQualified = makeTypeQualified obj
     modelName = parseModule obj
-    parseTyp = markQualifiedTypesInTypes (typesToTypeObject (parseTypes obj)) obj
+    parseTyp = markQualifiedTypesInTypes modelName (typesToTypeObject (parseTypes obj)) obj
     -- parseTyp = typesToTypeObject (parseTypes obj)
     allApis = preview (ix "apis" . _Array . to V.toList) obj >>= (mapM parseSingleApi)
     mkQApis aps = aps & apis . traverse %~ mkQUrlApiTT
@@ -65,20 +66,25 @@ checkIfTypeExists t1 t2 = any (\t -> t == t1 || "[" <> t <> "]" == t1) t2
 checkTypeNames :: [TypeObject] -> [[Text]]
 checkTypeNames input = map (\(_, y) -> map (\(_, b) -> (if checkIfTypeExists b (map fst input) then b else b <> "mkQualified")) y) input
 
-markQualifiedTypesInTypes :: [TypeObject] -> Object -> [TypeObject]
-markQualifiedTypesInTypes input obj =
+markQualifiedTypesInTypes :: Maybe Text -> [TypeObject] -> Object -> [TypeObject]
+markQualifiedTypesInTypes moduleName input obj =
   let dataNames = map (T.unpack . fst) input
-   in map (\(x, y) -> (x, map (\(a, b) -> (a, T.pack $ makeTypeQualified1 Nothing (Just dataNames) Nothing obj (T.unpack b))) y)) input
+   in map (\(x, y) -> (x, map (\(a, b) -> (a, T.pack $ makeTypeQualified1 (T.unpack <$> moduleName) (Just dataNames) Nothing obj (T.unpack b))) y)) input
 
 extractImports :: Apis -> [Text]
 extractImports api =
-  figureOutImports (importUrlPart ++ importHeader ++ importApiRes ++ importApiReq)
+  figureOutImports (importUrlPart ++ importHeader ++ importApiRes ++ importApiReq ++ concat importComplexTypes)
   where
     apiTTParts = api ^. apis
     importUrlPart = apiTTParts ^.. traverse . urlPartsTraversal . to importFromUrlPart . _Just
     importHeader = apiTTParts ^.. traverse . headerTraversal . to (\(Header _ t2) -> t2)
     importApiRes = apiTTParts ^.. traverse . apiResTraversal . to (\(ApiRes t1 _) -> t1)
     importApiReq = apiTTParts ^.. traverse . apiReqTraversal . to (\(ApiReq t1 _) -> t1)
+    importComplexTypes = map figureOutImports' (api ^. types)
+
+    figureOutImports' :: TypeObject -> [Text]
+    figureOutImports' (_, arr) = map (\(_, b) -> b) arr
+
     apiReqTraversal :: Traversal' ApiTT ApiReq
     apiReqTraversal = apiReqType . _Just
 
@@ -94,7 +100,9 @@ extractImports api =
     importFromUrlPart :: UrlParts -> Maybe Text
     importFromUrlPart (Capture _ t2) = Just t2
     importFromUrlPart (QueryParam _ t2 _) = Just t2
-    importFromUrlPart _ = error "Not a valid url part"
+    importFromUrlPart _ = Nothing
+
+--importFromUrlPart _ = error "Not a valid url part"
 
 parseSingleApi :: Value -> Maybe ApiTT
 parseSingleApi (Object ob) = do
@@ -202,7 +210,7 @@ typesToTypeObject (Just (Object obj)) =
 typesToTypeObject Nothing = error "Expecting Object in Types"
 
 makeTypeQualified1 :: Maybe String -> Maybe [String] -> Maybe [String] -> Object -> String -> String
-makeTypeQualified1 _ excludedList dList obj str = concatMap replaceOrKeep (split (whenElt (`elem` U.typeDelimiter)) str)
+makeTypeQualified1 moduleName excludedList dList obj str = concatMap replaceOrKeep (split (whenElt (`elem` U.typeDelimiter)) str)
   where
     defaultTypeImports :: String -> Maybe String
     defaultTypeImports tp = case tp of
@@ -223,9 +231,12 @@ makeTypeQualified1 _ excludedList dList obj str = concatMap replaceOrKeep (split
 
     replaceOrKeep :: String -> String
     replaceOrKeep word =
-      if '.' `elem` word || isJust excludedList && word `elem` (fromJust excludedList)
+      if '.' `elem` word || ',' `elem` word
         then word
         else
-          if isJust dList && L.elem word (fromJust dList)
-            then "Domain.Types." ++ word ++ "." ++ word
-            else maybe (if word `elem` ["", ")", "(", " ", "[", "]"] then word else error $ T.pack ("\"" ++ word ++ "\" type not determined")) (\x -> x <> "." <> word) (getQualifiedImport word)
+          if isJust moduleName && isJust excludedList && word `elem` (fromJust excludedList)
+            then "Domain.Action.UI." ++ fromJust moduleName ++ "." ++ word
+            else
+              if isJust dList && L.elem word (fromJust dList)
+                then "Domain.Action.UI." ++ word ++ "." ++ word
+                else maybe (if word `elem` ["", ")", "(", " ", "[", "]"] then word else error $ T.pack ("\"" ++ word ++ "\" type not determined")) (\x -> x <> "." <> word) (getQualifiedImport word)

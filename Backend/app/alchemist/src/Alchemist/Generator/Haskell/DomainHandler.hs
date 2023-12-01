@@ -3,8 +3,8 @@ module Alchemist.Generator.Haskell.DomainHandler where
 -- import Alchemist.DSL.Parser.API hiding (figureOutImports)
 import Alchemist.DSL.Syntax.API
 import Alchemist.Generator.Haskell.Servant (handlerFunctionText, handlerSignature)
-import Alchemist.Utils
-import Data.List (intercalate)
+-- import Alchemist.Utils
+import Data.List (intercalate, isInfixOf, nub)
 import Data.Text (Text)
 import qualified Data.Text as T
 import Prelude
@@ -19,15 +19,19 @@ generateDomainHandler input =
     <> " where \n\n"
     <> intercalate "\n" (map ("import " <>) defaultImports)
     <> "\n\n"
-    <> intercalate "\n" (map makeImport defaultQualifiedImport)
-    <> "\n"
-    <> intercalate "\n" (makeImport <$> figureOutImports (T.unpack <$> concatMap handlerSignature (_apis input)))
+    <> intercalate "\n" (nub $ removeComplexTypeImports $ makeImport <$> (T.unpack <$> _imports input) <> defaultQualifiedImport)
+    -- <> intercalate "\n" (removeComplexTypeImports $ nub $ (map makeImport defaultQualifiedImport) <> (makeImport <$> figureOutImports  (T.unpack <$> concatMap handlerSignature (_apis input))))
     <> "\n\n"
     <> T.unpack (generateHaskellTypes (_types input))
     <> T.unpack (T.intercalate "\n\n" (map handlerFunctionDef (_apis input)))
   where
+    qualifiedModuleName = T.unpack ("Domain.Action.UI." <> _moduleName input)
+
     defaultImports :: [String]
     defaultImports = ["EulerHS.Prelude hiding (id)", "Servant", "Tools.Auth", "Data.OpenApi (ToSchema)"]
+
+    removeComplexTypeImports :: [String] -> [String]
+    removeComplexTypeImports = filter (\x -> not $ (qualifiedModuleName `isInfixOf` x))
 
     defaultQualifiedImport :: [String]
     defaultQualifiedImport = ["Domain.Types.Person", "Domain.Types.Merchant", "Environment", "Kernel.Types.Id"]
