@@ -33,7 +33,7 @@ parseTableDef :: [String] -> Object -> (String, Object) -> TableDef
 parseTableDef dList importObj (parseDomainName, obj) =
   let parsedFields = parseFields dList importObj obj
       parsedImports = parseImports parsedFields
-      parsedQueries = parseQueries obj
+      parsedQueries = parseQueries dList importObj obj
       (primaryKey, secondaryKey) = extractKeys parsedFields
    in TableDef parseDomainName (parseTableName obj) parsedFields parsedImports parsedQueries primaryKey secondaryKey
 
@@ -48,15 +48,16 @@ parseImports fields =
 searchForKey :: Object -> String -> (String, String)
 searchForKey obj inputKey = (inputKey, fromMaybe (error $ T.pack $ "Query param " ++ inputKey ++ " not found in fields") $ obj ^? (ix "fields" . key (fromString inputKey) . _String))
 
-parseQueries :: Object -> [QueryDef]
-parseQueries obj = do
+parseQueries :: [String] -> Object -> Object -> [QueryDef]
+parseQueries dList impObj obj = do
   let mbQueries = preview (ix "queries" . _Value . to mkListObject) obj
+      makeTypeQualified' = makeTypeQualified (Just dList) impObj
       parseQuery query =
         let queryName = fst query
             queryDataObj = snd query
-            params = fromMaybe [] (queryDataObj ^? ix "params" . _Array . to V.toList . to (map (searchForKey obj . valueToString)))
+            params = map (\(k, v) -> (k, makeTypeQualified' v)) $ fromMaybe [] (queryDataObj ^? ix "params" . _Array . to V.toList . to (map (searchForKey obj . valueToString)))
             kvFunction = fromMaybe (error $ "kvFunction is neccessary") (queryDataObj ^? ix "kvFunction" . _String)
-            whereClause = fromMaybe EmptyWhere (queryDataObj ^? ix "where" . to (parseWhereClause obj))
+            whereClause = fromMaybe EmptyWhere (queryDataObj ^? ix "where" . to (parseWhereClause makeTypeQualified' obj))
          in QueryDef queryName kvFunction params whereClause
 
   case mbQueries of
@@ -67,17 +68,17 @@ parseQueries obj = do
     valueToString (String s) = T.unpack s
     valueToString _ = error "Param not a string"
 
-parseWhereClause :: Object -> Value -> WhereClause
-parseWhereClause obj (String st) = do
+parseWhereClause :: (String -> String) -> Object -> Value -> WhereClause
+parseWhereClause mkQTypeFunc obj (String st) = do
   let (key_, value) = searchForKey obj (T.unpack st)
-  Leaf (key_, value)
-parseWhereClause obj (Object clauseObj) = do
+  Leaf (key_, mkQTypeFunc value)
+parseWhereClause mkQTypeFunc obj (Object clauseObj) = do
   let clauseObj' = KM.toList clauseObj
   case clauseObj' of
     [(operatorStr, value)] -> do
       case value of
         Array arr_ -> do
-          let clauses = map (parseWhereClause obj) (V.toList arr_)
+          let clauses = map (parseWhereClause mkQTypeFunc obj) (V.toList arr_)
           Query (parseOperator (toString operatorStr), clauses)
         _ -> error "Invalid where clause, operator must be followed by an array of clauses"
     _ -> error "Invalid where clause, element of where clause array must be an single key object"
@@ -86,7 +87,7 @@ parseWhereClause obj (Object clauseObj) = do
     parseOperator "and" = And
     parseOperator "or" = Or
     parseOperator _ = error "Invalid operator"
-parseWhereClause _ val = error $ T.pack $ "Invalid where clause, must be a string or an object: " <> show val
+parseWhereClause _ _ val = error $ T.pack $ "Invalid where clause, must be a string or an object: " <> show val
 
 parseFields :: [String] -> Object -> Object -> [FieldDef]
 parseFields dataList impObj obj =
