@@ -115,14 +115,6 @@ types:
     businessHourId: Id BusinessHour
     categoryId: Id ServiceCategory
     updatedBookedSeats: Int
-# apis:
-#   - GET:
-#       endpoint: ticket/places/book
-#       request:
-#         type: Domain.Types.TicketPlaceV1.TicketPlaceV1
-#       response:
-#         type: Domain.Types.TicketPlaceV1.TicketPlaceV1
-#         format: JSON
 apis:
   # GET /ticket/places
   - GET:
