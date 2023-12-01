@@ -315,8 +315,9 @@ public class MainActivity extends AppCompatActivity {
             }
         }
 
+        MobilityRemoteConfigs remoteConfigs = new MobilityRemoteConfigs(false, true);
         MobilityAppUpdate mobilityAppUpdate = new MobilityAppUpdate(this);
-        mobilityAppUpdate.checkAndUpdateApp();
+        mobilityAppUpdate.checkAndUpdateApp(remoteConfigs);
 
         updateConfigURL();
         initApp(viewParam, deepLinkJson);
@@ -371,7 +372,7 @@ public class MainActivity extends AppCompatActivity {
 
     private void setSplashAnimAndStart (LottieAnimationView view ,String city) {
         ResourceHandler resourceHandler = new ResourceHandler(this);
-        MobilityRemoteConfigs remoteConfigs = new MobilityRemoteConfigs();
+        MobilityRemoteConfigs remoteConfigs = new MobilityRemoteConfigs(false, false);
         String splashScreenTemp = remoteConfigs.getString("splash_screen_" + city);
         @Nullable
         String animationFile = null;

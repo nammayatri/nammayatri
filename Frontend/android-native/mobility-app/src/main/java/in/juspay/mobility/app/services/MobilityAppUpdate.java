@@ -39,10 +39,9 @@ public class MobilityAppUpdate {
         appUpdateManager = AppUpdateManagerFactory.create(context);
     }
 
-    public void checkAndUpdateApp() {
+    public void checkAndUpdateApp(MobilityRemoteConfigs remoteConfigs) {
         // Returns an intent object that you use to check for an update.
         Task<AppUpdateInfo> appUpdateInfoTask = appUpdateManager.getAppUpdateInfo();
-        MobilityRemoteConfigs remoteConfigs = new MobilityRemoteConfigs();
 
         if(remoteConfigs.hasKey("force_update")) {
             updateType = remoteConfigs.getBoolean("force_update") ? AppUpdateType.IMMEDIATE : AppUpdateType.FLEXIBLE;

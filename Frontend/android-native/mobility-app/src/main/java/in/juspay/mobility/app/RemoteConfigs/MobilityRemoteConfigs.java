@@ -30,13 +30,13 @@ public class MobilityRemoteConfigs {
     private FirebaseRemoteConfig mFirebaseRemoteConfig;
     private FirebaseRemoteConfigSettings configSettings;
 
-    public MobilityRemoteConfigs() {
+    public MobilityRemoteConfigs(boolean fetch, boolean realTime){
         mFirebaseRemoteConfig = FirebaseRemoteConfig.getInstance();
         configSettings = new FirebaseRemoteConfigSettings.Builder()
                 .build();
         mFirebaseRemoteConfig.setDefaultsAsync(R.xml.remote_config_defaults);
-        fetchRemoteConfigs();
-        realTimeConfigListner(); // TODO:: Remove before release
+        if(fetch) fetchRemoteConfigs();
+        if(realTime) realTimeConfigListner();
         Log.d(LOG_TAG, "CONSTRUCTOR");
     }
 
@@ -94,6 +94,4 @@ public class MobilityRemoteConfigs {
             }
         });
     }
-
-
 }
