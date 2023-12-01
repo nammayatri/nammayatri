@@ -6,7 +6,7 @@ imports:
   ShortId: Kernel.Types.Id
 
 TicketPlace:
-  tableName: ticker_place
+  tableName: ticket_place
 
   fields:
     id : Id TicketPlace
