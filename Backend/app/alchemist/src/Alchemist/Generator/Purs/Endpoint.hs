@@ -44,6 +44,6 @@ getUrlSignature input =
   T.intercalate " -> " $ filter (/= T.empty) $ map urlToText (_urlParts input)
   where
     urlToText :: UrlParts -> Text
-    urlToText (Capture _ ty) = "String"
-    urlToText (QueryParam _ ty _) = "String"
+    urlToText (Capture _ _) = "String"
+    urlToText (QueryParam _ _ _) = "String"
     urlToText _ = ""
