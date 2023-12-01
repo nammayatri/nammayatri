@@ -37,6 +37,7 @@ import Domain.Types.Merchant.Overlay (OverlayCondition (..))
 import Domain.Types.Merchant.TransporterConfig (TransporterConfig)
 import Domain.Types.Person
 import Domain.Types.Plan (PaymentMode (AUTOPAY, MANUAL), Plan (..), PlanBaseAmount (..))
+import EulerHS.Language (logError, logInfo)
 import qualified Kernel.Beam.Functions as B
 import qualified Kernel.External.Notification.FCM.Types as FCM
 import qualified Kernel.External.Payment.Interface as PaymentInterface
@@ -116,34 +117,34 @@ calculateDriverFeeForDrivers ::
   Job 'CalculateDriverFees ->
   m ExecutionResult
 calculateDriverFeeForDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
-  -- handle 1st time
-  let jobData = jobInfo.jobData
-      merchantId = jobData.merchantId
-      mbMerchantOpCityId = jobData.merchantOperatingCityId
-      startTime = jobData.startTime
-      endTime = jobData.endTime
-      applyOfferCall = TPayment.offerApply merchantId
-  now <- getCurrentTime
-  merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
-  merchantOpCityId <- CQMOC.getMerchantOpCityId mbMerchantOpCityId merchant Nothing
-  transporterConfig <- SCT.findByMerchantOpCityId merchantOpCityId >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-  driverFees <- findAllFeesInRangeWithStatus (Just merchantId) startTime endTime ONGOING transporterConfig.driverFeeCalculatorBatchSize
-  let threshold = transporterConfig.driverFeeRetryThresholdConfig
-  driverFeesToProccess <-
-    mapMaybeM
-      ( \driverFee -> do
-          let count = driverFee.schedulerTryCount
-              driverFeeId = driverFee.id
-          if count > threshold
-            then do
-              QDF.updateDriverFeeToManual driverFeeId
-              return Nothing
-            else do
-              QDF.updateRetryCount (count + 1) now driverFeeId
-              return (Just driverFee)
-      )
-      driverFees
   flip C.catchAll (\e -> C.mask_ $ logError $ "Driver fee scheduler for merchant id " <> merchantId.getId <> " failed. Error: " <> show e) $ do
+    -- handle 1st time
+    let jobData = jobInfo.jobData
+        merchantId = jobData.merchantId
+        mbMerchantOpCityId = jobData.merchantOperatingCityId
+        startTime = jobData.startTime
+        endTime = jobData.endTime
+        applyOfferCall = TPayment.offerApply merchantId
+    now <- getCurrentTime
+    merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
+    merchantOpCityId <- CQMOC.getMerchantOpCityId mbMerchantOpCityId merchant Nothing
+    transporterConfig <- SCT.findByMerchantOpCityId merchantOpCityId >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+    driverFees <- findAllFeesInRangeWithStatus (Just merchantId) startTime endTime ONGOING transporterConfig.driverFeeCalculatorBatchSize
+    let threshold = transporterConfig.driverFeeRetryThresholdConfig
+    driverFeesToProccess <-
+      mapMaybeM
+        ( \driverFee -> do
+            let count = driverFee.schedulerTryCount
+                driverFeeId = driverFee.id
+            if count > threshold
+              then do
+                QDF.updateDriverFeeToManual driverFeeId
+                return Nothing
+              else do
+                QDF.updateRetryCount (count + 1) now driverFeeId
+                return (Just driverFee)
+        )
+        driverFees
     for_ driverFeesToProccess $ \driverFee -> do
       mbDriverPlan <- findByDriverId (cast driverFee.driverId)
       mbPlan <- getPlan mbDriverPlan merchantId
@@ -208,13 +209,13 @@ calculateDriverFeeForDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getI
 
           updateSerialOrderForInvoicesInWindow driverFee.id merchantId startTime endTime
 
-  case listToMaybe driverFees of
-    Nothing -> do
-      Hedis.del (mkDriverFeeBillNumberKey merchantId)
-      maxShards <- asks (.maxShards)
-      scheduleJobs transporterConfig startTime endTime merchantId merchantOpCityId maxShards
-      return Complete
-    _ -> ReSchedule <$> getRescheduledTime (fromMaybe 5 transporterConfig.driverFeeCalculatorBatchGap)
+    case listToMaybe driverFees of
+      Nothing -> do
+        Hedis.del (mkDriverFeeBillNumberKey merchantId)
+        maxShards <- asks (.maxShards)
+        scheduleJobs transporterConfig startTime endTime merchantId merchantOpCityId maxShards
+        return Complete
+      _ -> ReSchedule <$> getRescheduledTime (fromMaybe 5 transporterConfig.driverFeeCalculatorBatchGap)
   where
     mkApplyOfferRequest offerTxnUUID appliedOfferIds due plan driverId dutyDate registrationDate numOfRides =
       PaymentInterface.OfferApplyReq
