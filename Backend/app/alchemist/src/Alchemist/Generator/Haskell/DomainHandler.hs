@@ -10,7 +10,12 @@ import Prelude
 
 generateDomainHandler :: Apis -> String
 generateDomainHandler input =
-  "module API.UI." <> T.unpack (_moduleName input) <> " where \n\n"
+  "{-# OPTIONS_GHC -Wno-orphans #-}\n"
+    <> "{-# OPTIONS_GHC -Wno-unused-imports #-}"
+    <> "\n\n"
+    <> "module Domain.Action.UI."
+    <> T.unpack (_moduleName input)
+    <> " where \n\n"
     <> intercalate "\n" (map ("import " <>) defaultImports)
     <> "\n\n"
     <> intercalate "\n" (map makeImport defaultQualifiedImport)
@@ -22,7 +27,7 @@ generateDomainHandler input =
     defaultImports = ["EulerHS.Prelude", "Servant", "Tools.Auth"]
 
     defaultQualifiedImport :: [String]
-    defaultQualifiedImport = ["Domain.Types.Person", "Domain.Types.Merchant", "Environment"]
+    defaultQualifiedImport = ["Domain.Types.Person", "Domain.Types.Merchant", "Environment", "Kernel.Types.Id"]
 
     makeImport :: String -> String
     makeImport x = "import qualified " <> x <> " as " <> x
@@ -34,8 +39,8 @@ generateDomainHandler input =
           showType = case filter (/= T.empty) (init allTypes) of
             [] -> T.empty
             ty -> " -> " <> T.intercalate " -> " ty
-          handlerTypes = showType <> " -> " <> last allTypes
-       in functionName <> " :: (Id Person.Person, Id Merchant.Merchant)" <> handlerTypes
+          handlerTypes = showType <> " -> " <> "Environment.Flow " <> last allTypes
+       in functionName <> " :: (Kernel.Types.Id.Id Domain.Types.Person.Person, Kernel.Types.Id.Id Domain.Types.Merchant.Merchant)" <> handlerTypes
             <> "\n"
             <> functionName
             <> " = error \"Logic yet to be decided\""
