@@ -18,9 +18,11 @@ module App (startProducer) where
 import Data.Function hiding (id)
 import Environment
 import EulerHS.Interpreters (runFlow)
+import qualified EulerHS.Language as L
 import qualified EulerHS.Runtime as L
 import Kernel.Beam.Connection.Flow (prepareConnectionRider)
 import Kernel.Beam.Connection.Types (ConnectionConfigRider (..))
+import Kernel.Beam.Types (KafkaConn (..))
 import Kernel.Prelude
 import Kernel.Tools.LoopGracefully (loopGracefully)
 import qualified Kernel.Tools.Metrics.Init as Metrics
@@ -42,14 +44,16 @@ startProducerWithEnv :: L.FlowRuntime -> AppCfg -> AppEnv -> IO ()
 startProducerWithEnv flowRt appCfg appEnv = do
   runFlow
     flowRt
-    ( prepareConnectionRider
-        ( ConnectionConfigRider
-            { esqDBCfg = appCfg.esqDBCfg,
-              esqDBReplicaCfg = appCfg.esqDBReplicaCfg,
-              hedisClusterCfg = appCfg.hedisClusterCfg
-            }
-        )
-        appCfg.tables
+    ( ( prepareConnectionRider
+          ( ConnectionConfigRider
+              { esqDBCfg = appCfg.esqDBCfg,
+                esqDBReplicaCfg = appCfg.esqDBReplicaCfg,
+                hedisClusterCfg = appCfg.hedisClusterCfg
+              }
+          )
+          appCfg.tables
+      )
+        >> L.setOption KafkaConn appEnv.kafkaProducerTools
     )
   runFlowR flowRt appEnv $ do
     loopGracefully $ bool [PF.runProducer] [PF.runReviver, PF.runProducer] appEnv.runReviver

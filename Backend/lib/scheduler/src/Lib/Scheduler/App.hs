@@ -21,6 +21,7 @@ import Kernel.Prelude hiding (mask, throwIO)
 import Kernel.Randomizer
 import Kernel.Storage.Esqueleto.Config (prepareEsqDBEnv)
 import Kernel.Storage.Hedis (connectHedis, connectHedisCluster)
+import Kernel.Streaming.Kafka.Producer.Types
 import qualified Kernel.Tools.Metrics.CoreMetrics as Metrics
 import qualified Kernel.Tools.Metrics.Init as Metrics
 import Kernel.Types.Common (Seconds (..), Tables)
@@ -51,6 +52,7 @@ runSchedulerService s@SchedulerConfig {..} jobInfoMap tables handle_ = do
   loggerEnv <- prepareLoggerEnv loggerConfig hostname
   esqDBEnv <- prepareEsqDBEnv esqDBCfg loggerEnv
   coreMetrics <- Metrics.registerCoreMetricsContainer
+  kafkaProducerTools <- buildKafkaProducerTools kafkaProducerCfg
   hedisEnv <- connectHedis hedisCfg (\k -> hedisPrefix <> ":" <> k)
   hedisNonCriticalEnv <- connectHedis hedisNonCriticalCfg (\k -> hedisPrefix <> ":" <> k)
   hedisNonCriticalClusterEnv <-
