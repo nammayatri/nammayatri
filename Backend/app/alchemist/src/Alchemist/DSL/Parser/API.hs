@@ -30,12 +30,12 @@ parseModule = preview (ix "module" . _String)
 
 parseApis :: Object -> Apis
 parseApis obj =
-  maybe (error "Failed to parse") (\r -> set imports (extractImports r) r) res
+  set imports (extractImports res) res
   where
-    res = mkQApis <$> (Apis <$> modelName <*> allApis <*> Just [])
+    res = mkQApis (Apis modelName allApis [])
     mkQualified = makeTypeQualified obj
-    modelName = parseModule obj
-    allApis = preview (ix "apis" . _Array . to V.toList) obj >>= (mapM parseSingleApi)
+    modelName = fromMaybe (error "Module name parsing failed") $ parseModule obj
+    allApis = fromMaybe (error "APIs extraction parsing failed") $ preview (ix "apis" . _Array . to V.toList) obj >>= (mapM parseSingleApi)
     mkQApis aps = aps & apis . traverse %~ mkQUrlApiTT
     mkQApiReq (ApiReq t1 t2) = ApiReq (mkQualified t1) t2
     mkQApiRes (ApiRes t1 t2) = ApiRes (mkQualified t1) t2
@@ -74,7 +74,7 @@ extractImports api =
     importFromUrlPart :: UrlParts -> Maybe Text
     importFromUrlPart (Capture _ t2) = Just t2
     importFromUrlPart (QueryParam _ t2 _) = Just t2
-    importFromUrlPart _ = Nothing
+    importFromUrlPart _ = error "Not a valid url part"
 
 parseSingleApi :: Value -> Maybe ApiTT
 parseSingleApi (Object ob) = do

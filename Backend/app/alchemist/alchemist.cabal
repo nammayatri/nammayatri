@@ -37,6 +37,11 @@ library
       Alchemist.Generator.Haskell.DomainHandler
       Alchemist.Generator.Haskell.DomainType
       Alchemist.Generator.Haskell.Servant
+      Alchemist.Generator.Purs
+      Alchemist.Generator.Purs.API
+      Alchemist.Generator.Purs.Backend
+      Alchemist.Generator.Purs.Endpoint
+      Alchemist.Generator.Purs.Utils
       Alchemist.Generator.SQL
       Alchemist.Generator.SQL.Table
       Alchemist.Utils
@@ -128,6 +133,11 @@ test-suite alchemist-tests
       Alchemist.Generator.Haskell.DomainHandler
       Alchemist.Generator.Haskell.DomainType
       Alchemist.Generator.Haskell.Servant
+      Alchemist.Generator.Purs
+      Alchemist.Generator.Purs.API
+      Alchemist.Generator.Purs.Backend
+      Alchemist.Generator.Purs.Endpoint
+      Alchemist.Generator.Purs.Utils
       Alchemist.Generator.SQL
       Alchemist.Generator.SQL.Table
       Alchemist.Utils

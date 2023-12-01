@@ -15,8 +15,8 @@ generateServantAPI input =
     <> "\n\n"
     <> intercalate "\n" (map makeQualifiedImport defaultQualifiedImport)
     <> "\n\n"
-    <> intercalate "\n" (makeQualifiedImport <$> figureOutImports (T.unpack <$> concatMap handlerImports (_apis input)))
-    -- <> intercalate "\n"  (T.unpack <$> concatMap handlerImports (_apis input))
+    <> intercalate "\n" (makeQualifiedImport <$> figureOutImports (T.unpack <$> concatMap handlerSignature (_apis input)))
+    -- <> intercalate "\n"  (T.unpack <$> concatMap handlerSignature (_apis input))
     <> "\nimport qualified Domain.Action.UI."
     <> T.unpack (_moduleName input)
     <> " as "
@@ -53,7 +53,7 @@ generateServantAPI input =
     handlerFunctionDef :: ApiTT -> Text
     handlerFunctionDef apiT =
       let functionName = handlerFunctionText apiT
-          allTypes = handlerImports apiT
+          allTypes = handlerSignature apiT
           showType = case filter (/= T.empty) (init allTypes) of
             [] -> T.empty
             ty -> " -> " <> T.intercalate " -> " ty
@@ -107,8 +107,8 @@ handlerFunctionText apiTT =
     urlPartToName (UnitPath name) = (T.toUpper . T.singleton . T.head) name <> T.tail name
     urlPartToName _ = ""
 
-handlerImports :: ApiTT -> [Text]
-handlerImports input =
+handlerSignature :: ApiTT -> [Text]
+handlerSignature input =
   let urlTypeText = map urlToText (_urlParts input)
       headerTypeText = map (\(Header _ ty) -> ty) (_header input)
       reqTypeText = reqTypeToText $ _apiReqType input
