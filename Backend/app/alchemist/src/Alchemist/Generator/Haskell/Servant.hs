@@ -2,7 +2,7 @@ module Alchemist.Generator.Haskell.Servant where
 
 import Alchemist.DSL.Syntax.API
 import Alchemist.Utils
-import Data.List (intercalate, intersect)
+import Data.List (intercalate, intersect, nub)
 import Data.List.Extra (snoc)
 import Data.Text (Text)
 import qualified Data.Text as T
@@ -17,9 +17,8 @@ generateServantAPI input =
     <> " where \n\n"
     <> intercalate "\n" (map ("import " <>) defaultImports)
     <> "\n\n"
-    <> intercalate "\n" (map makeQualifiedImport defaultQualifiedImport)
+    <> intercalate "\n" (nub $ (map makeQualifiedImport defaultQualifiedImport) <> (makeQualifiedImport <$> figureOutImports (T.unpack <$> concatMap handlerSignature (_apis input))))
     <> "\n\n"
-    <> intercalate "\n" (makeQualifiedImport <$> figureOutImports (T.unpack <$> concatMap handlerSignature (_apis input)))
     -- <> intercalate "\n"  (T.unpack <$> concatMap handlerImports (_apis input))
     <> "\nimport Domain.Action.UI."
     <> T.unpack (_moduleName input)
