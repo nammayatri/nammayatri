@@ -1,8 +1,10 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wno-incomplete-patterns #-}
+{-# OPTIONS_GHC -Wno-name-shadowing #-}
 {-# OPTIONS_GHC -Wno-unused-top-binds #-}
 
-module Alchemist.DSL.Parser.API (apiParser) where
+module Alchemist.DSL.Parser.API where
 
 import Alchemist.DSL.Syntax.API
 import qualified Alchemist.Utils as U
@@ -10,9 +12,11 @@ import Control.Lens hiding (noneOf)
 import Data.Aeson
 import Data.Aeson.Key (fromText, toText)
 import qualified Data.Aeson.KeyMap as KM
-import Data.Aeson.Lens (_Array, _Object, _String, _Value)
+import Data.Aeson.Lens (key, _Array, _Object, _String, _Value)
 import Data.Bool
 import qualified Data.ByteString as BS
+import qualified Data.List as L
+import Data.List.Split (split, whenElt)
 import qualified Data.Text as T
 import qualified Data.Vector as V
 import qualified Data.Yaml as Yaml
@@ -28,14 +32,19 @@ apiParser filepath = do
 parseModule :: Object -> Maybe Text
 parseModule = preview (ix "module" . _String)
 
+parseTypes :: Object -> Maybe Value
+parseTypes = preview (ix "types" . _Value)
+
 parseApis :: Object -> Apis
 parseApis obj =
   set imports (extractImports res) res
   where
-    res = mkQApis (Apis modelName allApis [])
+    res = mkQApis <$> (Apis <$> modelName <*> allApis <*> Just [] <*> (Just parseTyp))
     mkQualified = makeTypeQualified obj
-    modelName = fromMaybe (error "Module name parsing failed") $ parseModule obj
-    allApis = fromMaybe (error "APIs extraction parsing failed") $ preview (ix "apis" . _Array . to V.toList) obj >>= (mapM parseSingleApi)
+    modelName = parseModule obj
+    parseTyp = markQualifiedTypesInTypes (typesToTypeObject (parseTypes obj)) obj
+    -- parseTyp = typesToTypeObject (parseTypes obj)
+    allApis = preview (ix "apis" . _Array . to V.toList) obj >>= (mapM parseSingleApi)
     mkQApis aps = aps & apis . traverse %~ mkQUrlApiTT
     mkQApiReq (ApiReq t1 t2) = ApiReq (mkQualified t1) t2
     mkQApiRes (ApiRes t1 t2) = ApiRes (mkQualified t1) t2
@@ -49,6 +58,17 @@ parseApis obj =
         & apiResType %~ mkQApiRes
         & urlParts . traverse %~ mkQUrlParts
         & header . traverse %~ mkQHeaders
+
+checkIfTypeExists :: Text -> [Text] -> Bool
+checkIfTypeExists t1 t2 = any (\t -> t == t1 || "[" <> t <> "]" == t1) t2
+
+checkTypeNames :: [TypeObject] -> [[Text]]
+checkTypeNames input = map (\(_, y) -> map (\(_, b) -> (if checkIfTypeExists b (map fst input) then b else b <> "mkQualified")) y) input
+
+markQualifiedTypesInTypes :: [TypeObject] -> Object -> [TypeObject]
+markQualifiedTypesInTypes input obj =
+  let dataNames = map (T.unpack . fst) input
+   in map (\(x, y) -> (x, map (\(a, b) -> (a, T.pack $ makeTypeQualified1 Nothing (Just dataNames) Nothing obj (T.unpack b))) y)) input
 
 extractImports :: Apis -> [Text]
 extractImports api =
@@ -160,3 +180,52 @@ makeTypeQualified obj txt = T.pack $ U.makeTypeQualified Nothing Nothing Nothing
 
 figureOutImports :: [Text] -> [Text]
 figureOutImports imps = T.pack <$> U.figureOutImports (T.unpack <$> imps)
+
+typesToTypeObject :: Maybe Value -> [TypeObject]
+typesToTypeObject (Just (Object obj)) =
+  map (processType1) $ KM.toList obj
+  where
+    extractFields :: KM.KeyMap Value -> [(T.Text, T.Text)]
+    extractFields = map (first toText) . KM.toList . fmap extractString
+
+    extractString :: Value -> T.Text
+    extractString (String t) = t
+    extractString (Array arr) = case V.head arr of
+      String t -> "[" <> t <> "]"
+      _ -> error "Unexpected type in array: "
+    extractString _ = error "Non-string type found in field definition"
+
+    processType1 :: (Key, Value) -> TypeObject
+    processType1 (typeName, Object typeDef) =
+      (toText typeName, extractFields typeDef)
+    processType1 _ = error "Expected an object in fields"
+typesToTypeObject Nothing = error "Expecting Object in Types"
+
+makeTypeQualified1 :: Maybe String -> Maybe [String] -> Maybe [String] -> Object -> String -> String
+makeTypeQualified1 _ excludedList dList obj str = concatMap replaceOrKeep (split (whenElt (`elem` U.typeDelimiter)) str)
+  where
+    defaultTypeImports :: String -> Maybe String
+    defaultTypeImports tp = case tp of
+      "Text" -> Just "Kernel.Prelude"
+      "Maybe" -> Just "Kernel.Prelude"
+      "Double" -> Just "Kernel.Prelude"
+      "TimeOfDay" -> Just "Kernel.Prelude"
+      "Day" -> Just "Data.Time.Calendar"
+      "Int" -> Just "Kernel.Prelude"
+      "Bool" -> Just "Kernel.Prelude"
+      "Id" -> Just "Kernel.Types.Id"
+      _ -> Nothing
+
+    getQualifiedImport :: String -> Maybe String
+    getQualifiedImport tk = case preview (ix "imports" . key (fromString tk) . U._String) obj of
+      Just t -> Just t
+      Nothing -> defaultTypeImports tk
+
+    replaceOrKeep :: String -> String
+    replaceOrKeep word =
+      if '.' `elem` word || isJust excludedList && word `elem` (fromJust excludedList)
+        then word
+        else
+          if isJust dList && L.elem word (fromJust dList)
+            then "Domain.Types." ++ word ++ "." ++ word
+            else maybe (if word `elem` ["", ")", "(", " ", "[", "]"] then word else error $ T.pack ("\"" ++ word ++ "\" type not determined")) (\x -> x <> "." <> word) (getQualifiedImport word)
