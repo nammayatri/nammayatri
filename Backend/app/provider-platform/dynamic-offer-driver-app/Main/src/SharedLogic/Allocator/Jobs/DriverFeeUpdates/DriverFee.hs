@@ -277,7 +277,7 @@ getFinalOrderAmount feeWithoutDiscount merchantId transporterConfig driver plan 
   now <- getCurrentTime
   let dutyDate = driverFee.createdAt
       registrationDateLocal = addUTCTime (secondsToNominalDiffTime transporterConfig.timeDiffFromUtc) registrationDate
-  if feeWithoutDiscount == 0
+  if (feeWithoutDiscount + driverFee.specialZoneAmount) == 0
     then do
       updateCollectedPaymentStatus CLEARED Nothing now driverFee.id
       return (0, 0, Nothing, Nothing)
