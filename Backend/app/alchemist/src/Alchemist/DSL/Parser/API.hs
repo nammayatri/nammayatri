@@ -156,7 +156,7 @@ parseEndpoint obj txt =
         Nothing -> error "Not enclosed in curly braces"
 
 makeTypeQualified :: Object -> Text -> Text
-makeTypeQualified obj txt = T.pack $ U.makeTypeQualified Nothing Nothing obj (T.unpack txt)
+makeTypeQualified obj txt = T.pack $ U.makeTypeQualified Nothing Nothing Nothing obj (T.unpack txt)
 
 figureOutImports :: [Text] -> [Text]
 figureOutImports imps = T.pack <$> U.figureOutImports (T.unpack <$> imps)

@@ -31,10 +31,10 @@ storageParser filepath = do
 
 parseTableDef :: [String] -> Object -> (String, Object) -> TableDef
 parseTableDef dList importObj (parseDomainName, obj) =
-  let parsedTypesAndExcluded = parseExtraTypes dList importObj obj
+  let parsedTypesAndExcluded = parseExtraTypes (Just parseDomainName) dList importObj obj
       parsedTypes = parsedTypesAndExcluded >>= pure . fst
       excludedList = parsedTypesAndExcluded >>= pure . snd
-      parsedFields = parseFields excludedList dList importObj obj
+      parsedFields = parseFields (Just parseDomainName) excludedList dList importObj obj
       parsedImports = parseImports parsedFields
       parsedQueries = parseQueries dList importObj obj
       (primaryKey, secondaryKey) = extractKeys parsedFields
@@ -54,7 +54,7 @@ searchForKey obj inputKey = (inputKey, fromMaybe (error $ T.pack $ "Query param 
 parseQueries :: [String] -> Object -> Object -> [QueryDef]
 parseQueries dList impObj obj = do
   let mbQueries = preview (ix "queries" . _Value . to mkListObject) obj
-      makeTypeQualified' = makeTypeQualified Nothing (Just dList) impObj
+      makeTypeQualified' = makeTypeQualified Nothing Nothing (Just dList) impObj --TODO
       parseQuery query =
         let queryName = fst query
             queryDataObj = snd query
@@ -113,17 +113,17 @@ parseTypeObjects obj =
       TypeObject (toText typeName, extractFields typeDef)
     processType1 _ = error "Expected an object in fields"
 
-parseExtraTypes :: [String] -> Object -> Object -> Maybe ([TypeObject], [String])
-parseExtraTypes dList importObj obj = do
+parseExtraTypes :: Maybe String -> [String] -> Object -> Object -> Maybe ([TypeObject], [String])
+parseExtraTypes moduleName dList importObj obj = do
   _types <- parseTypes obj
   let allExcludeQualified = map (\(TypeObject (name, _)) -> T.unpack name) _types
   return $ (map (mkQualifiedTypeObject allExcludeQualified) _types, allExcludeQualified)
   where
     mkQualifiedTypeObject :: [String] -> TypeObject -> TypeObject
-    mkQualifiedTypeObject excluded (TypeObject (_nm, arrOfFields)) = TypeObject (_nm, map (\(_n, _t) -> (_n, T.pack $ makeTypeQualified (Just excluded) (Just dList) importObj $ T.unpack _t)) arrOfFields)
+    mkQualifiedTypeObject excluded (TypeObject (_nm, arrOfFields)) = TypeObject (_nm, map (\(_n, _t) -> (_n, T.pack $ makeTypeQualified moduleName (Just excluded) (Just dList) importObj $ T.unpack _t)) arrOfFields)
 
-parseFields :: Maybe [String] -> [String] -> Object -> Object -> [FieldDef]
-parseFields excludedList dataList impObj obj =
+parseFields :: Maybe String -> Maybe [String] -> [String] -> Object -> Object -> [FieldDef]
+parseFields moduleName excludedList dataList impObj obj =
   let fields = preview (ix "fields" . _Value . to mkList) obj
       constraintsObj = obj ^? (ix "constraints" . _Object)
       sqlTypeObj = obj ^? (ix "sqlType" . _Object)
@@ -141,8 +141,8 @@ parseFields excludedList dataList impObj obj =
             parseFromTType = obj ^? (ix "fromTType" . _Object) >>= preview (ix fieldKey . _String)
          in FieldDef
               { fieldName = fieldName,
-                haskellType = makeTypeQualified excludedList (Just dataList) impObj haskellType,
-                beamType = makeTypeQualified excludedList (Just dataList) impObj beamType,
+                haskellType = makeTypeQualified moduleName excludedList (Just dataList) impObj haskellType,
+                beamType = makeTypeQualified moduleName excludedList (Just dataList) impObj beamType,
                 sqlType = sqlType,
                 constraints = constraints,
                 defaultVal = defaultValue,
@@ -190,7 +190,7 @@ mkListObject _ = []
 findMatchingSqlType :: String -> String
 findMatchingSqlType haskellType =
   case filter ((haskellType =~) . fst) defaultSQLTypes of
-    [] -> error $ T.pack ("\"" ++ haskellType ++ "\": No Sql type found")
+    [] -> "NO_SQL_TYPE" --error $ T.pack ("\"" ++ haskellType ++ "\": No Sql type found")
     ((_, sqlType) : _) -> sqlType
 
 defaultSQLTypes :: [(String, String)]
