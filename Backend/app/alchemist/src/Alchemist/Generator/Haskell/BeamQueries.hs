@@ -77,6 +77,12 @@ toTTypeInstance tableDef =
   where
     toField field = "Beam." ++ fieldName field ++ " = " ++ toTTypeConversionFunction (toTType field) (haskellType field) (fieldName field)
 
+generateDefaultCreateQuery :: String -> String
+generateDefaultCreateQuery tableNameHaskell =
+  let qname = "Domain.Types." ++ tableNameHaskell ++ "." ++ tableNameHaskell
+   in "create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => " ++ qname ++ "-> m ()\n"
+        ++ "create = createWithKV\n\n"
+
 generateBeamQuery :: String -> QueryDef -> String
 generateBeamQuery tableNameHaskell query =
   generateFunctionSignature
@@ -150,6 +156,7 @@ spaces n = replicate n ' '
 generateBeamQueries :: TableDef -> String
 generateBeamQueries tableDef =
   generateImports tableDef
+    ++ generateDefaultCreateQuery tableDef.tableNameHaskell
     ++ intercalate "\n" (map (generateBeamQuery tableDef.tableNameHaskell) (queries tableDef))
     ++ fromTTypeInstance tableDef
     ++ toTTypeInstance tableDef

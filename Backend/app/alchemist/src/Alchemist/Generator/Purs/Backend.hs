@@ -71,8 +71,8 @@ getHandlerTypeSignature input =
    in filter (/= T.empty) (snoc (snoc urlTypeText reqTypeText) resTypeText)
   where
     urlToText :: UrlParts -> Text
-    urlToText (Capture _ ty) = "String"
-    urlToText (QueryParam _ ty _) = "String"
+    urlToText (Capture _ _) = "String"
+    urlToText (QueryParam _ _ _) = "String"
     urlToText _ = ""
 
 reqTypeToText :: Maybe ApiReq -> Text

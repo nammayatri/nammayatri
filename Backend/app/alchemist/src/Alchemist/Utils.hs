@@ -20,8 +20,8 @@ writeToFile filename content = do
 typeDelimiter :: String
 typeDelimiter = "() []"
 
-makeTypeQualified :: Maybe [String] -> Object -> String -> String
-makeTypeQualified dList obj str = concatMap replaceOrKeep (split (whenElt (`elem` typeDelimiter)) str)
+makeTypeQualified :: Maybe [String] -> Maybe [String] -> Object -> String -> String
+makeTypeQualified excludedList dList obj str = concatMap replaceOrKeep (split (whenElt (`elem` typeDelimiter)) str)
   where
     defaultTypeImports :: String -> Maybe String
     defaultTypeImports tp = case tp of
@@ -42,7 +42,7 @@ makeTypeQualified dList obj str = concatMap replaceOrKeep (split (whenElt (`elem
 
     replaceOrKeep :: String -> String
     replaceOrKeep word =
-      if '.' `elem` word
+      if ('.' `elem` word || (isJust excludedList && word `elem` (fromJust excludedList)))
         then word
         else
           if isJust dList && L.elem word (fromJust dList)
