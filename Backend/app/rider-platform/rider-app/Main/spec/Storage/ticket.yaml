@@ -28,6 +28,16 @@ TicketPlaceV1:
     name: NotNull
     shortDesc: NotNull
 
+  types:
+    TicketServiceResp:
+      id: Id TicketService
+      placesId: Text
+    TicketBooking:
+      allTickets: "[TicketService]"
+    TicketService:
+      id: Text
+      name: Text
+
 TicketServiceV1:
   tableName : ticket_service
 

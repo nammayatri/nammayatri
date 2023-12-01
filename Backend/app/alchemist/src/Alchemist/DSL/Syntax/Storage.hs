@@ -9,8 +9,12 @@ data TableDef = TableDef
     imports :: [String],
     queries :: [QueryDef],
     primaryKey :: [String],
-    secondaryKey :: [String]
+    secondaryKey :: [String],
+    types :: Maybe [TypeObject]
   }
+  deriving (Show)
+
+data TypeObject = TypeObject (Text, [(Text, Text)])
   deriving (Show)
 
 data QueryDef = QueryDef

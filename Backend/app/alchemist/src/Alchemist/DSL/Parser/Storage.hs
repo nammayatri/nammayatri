@@ -7,7 +7,7 @@ import Alchemist.Utils (figureOutImports, makeTypeQualified, _String)
 import Control.Lens.Combinators
 import Control.Lens.Operators
 import Data.Aeson
-import Data.Aeson.Key (fromString, toString)
+import Data.Aeson.Key (fromString, toString, toText)
 import qualified Data.Aeson.KeyMap as KM
 import Data.Aeson.Lens (key, _Array, _Object, _Value)
 import qualified Data.ByteString as BS
@@ -16,7 +16,7 @@ import Data.List.Split (splitOn)
 import qualified Data.Text as T
 import qualified Data.Vector as V
 import qualified Data.Yaml as Yaml
-import Kernel.Prelude hiding (fromString, toString, try)
+import Kernel.Prelude hiding (fromString, toString, toText, traceShowId, try)
 import Text.Regex.TDFA ((=~))
 
 storageParser :: FilePath -> IO [TableDef]
@@ -31,11 +31,14 @@ storageParser filepath = do
 
 parseTableDef :: [String] -> Object -> (String, Object) -> TableDef
 parseTableDef dList importObj (parseDomainName, obj) =
-  let parsedFields = parseFields dList importObj obj
+  let parsedTypesAndExcluded = parseExtraTypes dList importObj obj
+      parsedTypes = parsedTypesAndExcluded >>= pure . fst
+      excludedList = parsedTypesAndExcluded >>= pure . snd
+      parsedFields = parseFields excludedList dList importObj obj
       parsedImports = parseImports parsedFields
       parsedQueries = parseQueries dList importObj obj
       (primaryKey, secondaryKey) = extractKeys parsedFields
-   in TableDef parseDomainName (parseTableName obj) parsedFields parsedImports parsedQueries primaryKey secondaryKey
+   in TableDef parseDomainName (parseTableName obj) parsedFields parsedImports parsedQueries primaryKey secondaryKey parsedTypes
 
 parseTableName :: Object -> String
 parseTableName = view (ix "tableName" . _String)
@@ -51,7 +54,7 @@ searchForKey obj inputKey = (inputKey, fromMaybe (error $ T.pack $ "Query param 
 parseQueries :: [String] -> Object -> Object -> [QueryDef]
 parseQueries dList impObj obj = do
   let mbQueries = preview (ix "queries" . _Value . to mkListObject) obj
-      makeTypeQualified' = makeTypeQualified (Just dList) impObj
+      makeTypeQualified' = makeTypeQualified Nothing (Just dList) impObj
       parseQuery query =
         let queryName = fst query
             queryDataObj = snd query
@@ -89,8 +92,38 @@ parseWhereClause mkQTypeFunc obj (Object clauseObj) = do
     parseOperator _ = error "Invalid operator"
 parseWhereClause _ _ val = error $ T.pack $ "Invalid where clause, must be a string or an object: " <> show val
 
-parseFields :: [String] -> Object -> Object -> [FieldDef]
-parseFields dataList impObj obj =
+parseTypes :: Object -> Maybe [TypeObject]
+parseTypes obj = case preview (ix "types" ._Object) obj of
+  Just typesObj -> Just $ parseTypeObjects typesObj
+  _ -> Nothing
+
+parseTypeObjects :: Object -> [TypeObject]
+parseTypeObjects obj =
+  map (processType1) $ KM.toList obj
+  where
+    extractFields :: KM.KeyMap Value -> [(Text, Text)]
+    extractFields = map (first toText) . KM.toList . fmap extractString
+
+    extractString :: Value -> Text
+    extractString (String t) = t
+    extractString _ = error "Non-string type found in field definition"
+
+    processType1 :: (Key, Value) -> TypeObject
+    processType1 (typeName, Object typeDef) =
+      TypeObject (toText typeName, extractFields typeDef)
+    processType1 _ = error "Expected an object in fields"
+
+parseExtraTypes :: [String] -> Object -> Object -> Maybe ([TypeObject], [String])
+parseExtraTypes dList importObj obj = do
+  _types <- parseTypes obj
+  let allExcludeQualified = map (\(TypeObject (name, _)) -> T.unpack name) _types
+  return $ (map (mkQualifiedTypeObject allExcludeQualified) _types, allExcludeQualified)
+  where
+    mkQualifiedTypeObject :: [String] -> TypeObject -> TypeObject
+    mkQualifiedTypeObject excluded (TypeObject (_nm, arrOfFields)) = TypeObject (_nm, map (\(_n, _t) -> (_n, T.pack $ makeTypeQualified (Just excluded) (Just dList) importObj $ T.unpack _t)) arrOfFields)
+
+parseFields :: Maybe [String] -> [String] -> Object -> Object -> [FieldDef]
+parseFields excludedList dataList impObj obj =
   let fields = preview (ix "fields" . _Value . to mkList) obj
       constraintsObj = obj ^? (ix "constraints" . _Object)
       sqlTypeObj = obj ^? (ix "sqlType" . _Object)
@@ -108,8 +141,8 @@ parseFields dataList impObj obj =
             parseFromTType = obj ^? (ix "fromTType" . _Object) >>= preview (ix fieldKey . _String)
          in FieldDef
               { fieldName = fieldName,
-                haskellType = makeTypeQualified (Just dataList) impObj haskellType,
-                beamType = makeTypeQualified (Just dataList) impObj beamType,
+                haskellType = makeTypeQualified excludedList (Just dataList) impObj haskellType,
+                beamType = makeTypeQualified excludedList (Just dataList) impObj beamType,
                 sqlType = sqlType,
                 constraints = constraints,
                 defaultVal = defaultValue,
