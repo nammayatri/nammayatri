@@ -17,6 +17,26 @@ import qualified Storage.Beam.SeatManagement as Beam
 create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.SeatManagement.SeatManagement -> m ()
 create = createWithKV
 
+findByTicketServiceCategoryIdAndDate :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.ServiceCategory.ServiceCategory -> Data.Time.Calendar.Day -> m (Maybe (Domain.Types.SeatManagement.SeatManagement))
+findByTicketServiceCategoryIdAndDate (Kernel.Types.Id.Id ticketServiceCategoryId) date = do
+  findOneWithKV
+    [ Se.And
+        [ Se.Is Beam.ticketServiceCategoryId $ Se.Eq ticketServiceCategoryId,
+          Se.Is Beam.date $ Se.Eq date
+        ]
+    ]
+
+updateBookedSeats :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Prelude.Int -> Kernel.Types.Id.Id Domain.Types.ServiceCategory.ServiceCategory -> Data.Time.Calendar.Day -> m ()
+updateBookedSeats booked (Kernel.Types.Id.Id ticketServiceCategoryId) date = do
+  updateWithKV
+    [ Se.Set Beam.booked booked
+    ]
+    [ Se.And
+        [ Se.Is Beam.ticketServiceCategoryId $ Se.Eq ticketServiceCategoryId,
+          Se.Is Beam.date $ Se.Eq date
+        ]
+    ]
+
 instance FromTType' Beam.SeatManagement Domain.Types.SeatManagement.SeatManagement where
   fromTType' Beam.SeatManagementT {..} = do
     pure $

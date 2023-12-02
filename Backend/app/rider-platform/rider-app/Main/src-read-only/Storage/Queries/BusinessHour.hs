@@ -15,6 +15,12 @@ import qualified Storage.Beam.BusinessHour as Beam
 create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.BusinessHour.BusinessHour -> m ()
 create = createWithKV
 
+findById :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.BusinessHour.BusinessHour -> m (Maybe (Domain.Types.BusinessHour.BusinessHour))
+findById (Kernel.Types.Id.Id id) = do
+  findOneWithKV
+    [ Se.Is Beam.id $ Se.Eq id
+    ]
+
 instance FromTType' Beam.BusinessHour Domain.Types.BusinessHour.BusinessHour where
   fromTType' Beam.BusinessHourT {..} = do
     pure $
