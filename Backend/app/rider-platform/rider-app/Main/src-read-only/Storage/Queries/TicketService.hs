@@ -16,6 +16,12 @@ import qualified Storage.Beam.TicketService as Beam
 create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.TicketService.TicketService -> m ()
 create = createWithKV
 
+getTicketServicesByPlaceId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Prelude.Text -> m ([Domain.Types.TicketService.TicketService])
+getTicketServicesByPlaceId placeId = do
+  findAllWithKV
+    [ Se.Is Beam.placeId $ Se.Eq placeId
+    ]
+
 instance FromTType' Beam.TicketService Domain.Types.TicketService.TicketService where
   fromTType' Beam.TicketServiceT {..} = do
     pure $

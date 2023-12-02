@@ -110,7 +110,7 @@ generateFunctionSignature query tableNameHaskell =
         ++ " :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => "
         ++ foldMap (\s -> s ++ " -> ") (map snd qparams)
         ++ "m ("
-        ++ (if "update" `isPrefixOf` query.queryName then "" else ("[" ++ "Domain.Types." ++ tableNameHaskell ++ "." ++ tableNameHaskell ++ "]"))
+        ++ generateQueryReturnType query.kvFunction tableNameHaskell
         ++ ")\n"
         ++ query.queryName
         ++ " "
@@ -119,6 +119,15 @@ generateFunctionSignature query tableNameHaskell =
   where
     getIdsOut :: (String, String) -> (String, String)
     getIdsOut (k, t) = if (isPrefixOf "Kernel.Types.Id.Id " t) then ("(Kernel.Types.Id.Id " ++ k ++ ")", t) else (k, t)
+
+generateQueryReturnType :: String -> String -> String
+generateQueryReturnType kvFunction tableNameHaskell = do
+  if kvFunction `elem` ["findOneWithKV", "findOneWithKVScheduler", "findOneWithDb"]
+    then "Maybe (Domain.Types." ++ tableNameHaskell ++ "." ++ tableNameHaskell ++ ")"
+    else
+      if kvFunction `elem` ["findAllWithKV", "findAllWithKVScheduler", "findAllWithOptionsKV", "findAllWithOptionsKV'", "findAllWithOptionsKVScheduler", "findAllWithDb", "findAllWithOptionsDb", "findAllWithKVAndConditionalDB"]
+        then ("[" ++ "Domain.Types." ++ tableNameHaskell ++ "." ++ tableNameHaskell ++ "]")
+        else ""
 
 getWhereClauseFieldNamesAndTypes :: WhereClause -> [(String, String)]
 getWhereClauseFieldNamesAndTypes EmptyWhere = []

@@ -17,6 +17,24 @@ import qualified Storage.Beam.SpecialOccasion as Beam
 create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.SpecialOccasion.SpecialOccasion -> m ()
 create = createWithKV
 
+findSpecialOccasionByEntityIdAndDate :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Prelude.Text -> Kernel.Prelude.Maybe Data.Time.Calendar.Day -> m (Maybe (Domain.Types.SpecialOccasion.SpecialOccasion))
+findSpecialOccasionByEntityIdAndDate entityId date = do
+  findOneWithKV
+    [ Se.And
+        [ Se.Is Beam.entityId $ Se.Eq entityId,
+          Se.Is Beam.date $ Se.Eq date
+        ]
+    ]
+
+findSpecialOccasionByEntityIdAndDayOfWeek :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> m (Maybe (Domain.Types.SpecialOccasion.SpecialOccasion))
+findSpecialOccasionByEntityIdAndDayOfWeek entityId dayOfWeek = do
+  findOneWithKV
+    [ Se.And
+        [ Se.Is Beam.entityId $ Se.Eq entityId,
+          Se.Is Beam.dayOfWeek $ Se.Eq dayOfWeek
+        ]
+    ]
+
 instance FromTType' Beam.SpecialOccasion Domain.Types.SpecialOccasion.SpecialOccasion where
   fromTType' Beam.SpecialOccasionT {..} = do
     pure $

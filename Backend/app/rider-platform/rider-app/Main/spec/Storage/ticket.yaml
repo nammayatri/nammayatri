@@ -78,6 +78,11 @@ TicketService:
   default:
     operationalDays: "{Monday, Tuesday, Wednesday, Thursday, Friday, Saturday, Sunday}"
 
+  queries:
+    getTicketServicesByPlaceId:
+      kvFunction: findAllWithKV
+      where: placeId
+
 SpecialOccasion:
   tableName : special_occasion
 
@@ -99,6 +104,17 @@ SpecialOccasion:
     SpecialDayType:
       enum: "Open,Closed"
 
+  queries:
+    findSpecialOccasionByEntityIdAndDate:
+      kvFunction: findOneWithKV
+      where:
+        and: [entityId, date]
+
+    findSpecialOccasionByEntityIdAndDayOfWeek:
+      kvFunction: findOneWithKV
+      where:
+        and: [entityId, dayOfWeek]
+
 BusinessHour:
   tableName: business_hour
 
@@ -114,6 +130,11 @@ BusinessHour:
     id : PrimaryKey | NotNull
     btype : NotNull
     categoryId : NotNull
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
 
 ServiceCategory:
   tableName: service_category
@@ -166,6 +187,18 @@ SeatManagement:
   default:
     booked: "0"
     blocked: "0"
+
+  queries:
+    findByTicketServiceCategoryIdAndDate:
+      kvFunction: findOneWithKV
+      where:
+        and: [ticketServiceCategoryId, date]
+    updateBookedSeats:
+      kvFunction: updateWithKV
+      params: [booked]
+      where:
+        and: [ticketServiceCategoryId, date]
+
 
 ### Ticket Booking ###
 TicketBooking:
@@ -263,3 +296,8 @@ TicketBookingPeopleCategory:
     numberOfUnits: Int
   constraints:
     id: PrimaryKey|NotNull
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
