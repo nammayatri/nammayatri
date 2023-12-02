@@ -4,6 +4,17 @@ imports:
   UTCTime: Kernel.Prelude
   Person: Domain.Types.Person
   ShortId: Kernel.Types.Id
+  TicketBookingService: Domain.Types.TicketBookingService
+  TicketBookingServiceCategory: Domain.Types.TicketBookingServiceCategory
+  TicketBookingPeopleCategory: Domain.Types.TicketBookingPeopleCategory
+  TicketBooking: Domain.Types.TicketBooking
+  TicketPlace: Domain.Types.TicketPlace
+  TicketService: Domain.Types.TicketService
+  BusinessHour: Domain.Types.BusinessHour
+  SpecialOccasion: Domain.Types.SpecialOccasion
+  ServiceCategory: Domain.Types.ServiceCategory
+  ServicePeopleCategory: Domain.Types.ServicePeopleCategory
+  BusinessHourType: Domain.Types.BusinessHour
 
 TicketPlace:
   tableName: ticket_place
@@ -97,7 +108,7 @@ BusinessHour:
     categoryId: "[Id ServiceCategory]"
   types:
     BusinessHourType:
-      enum: "A,B"
+      enum: "Slot,Duration"
 
   constraints :
     id : PrimaryKey | NotNull
@@ -211,8 +222,6 @@ TicketBookingService:
   types:
     ServiceStatus:
       enum: "Pending,Confirmed,Cancelled,Expired"
-    BusinessHourType:
-      enum: "DinKaSamay,RatKaSamay"
 
   constraints:
     id: PrimaryKey|NotNull
@@ -248,7 +257,7 @@ TicketBookingPeopleCategory:
 
   fields:
     id: Id TicketBookingPeopleCategory
-    ticketBookingServiceCategoryId: Id TicketBookingPeopleCategory
+    ticketBookingServiceCategoryId: Id TicketBookingServiceCategory
     name: Text
     pricePerUnit: HighPrecMoney
     numberOfUnits: Int

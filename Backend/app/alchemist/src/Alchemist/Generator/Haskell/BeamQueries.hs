@@ -27,14 +27,20 @@ toTTypeConversionFunction :: Maybe String -> String -> String -> String
 toTTypeConversionFunction transformer haskellType fieldName
   | (isJust transformer) = fromJust transformer ++ " " ++ fieldName
   | "Int" <- haskellType = "roundToIntegral " ++ fieldName
-  | "Id " `Text.isInfixOf` (Text.pack haskellType) = "Kernel.Types.Id.getId " ++ fieldName
+  | "[Kernel.Types.Id.Id " `Text.isPrefixOf` (Text.pack haskellType) = "Kernel.Types.Id.getId <$> " ++ fieldName
+  | "Kernel.Types.Id.Id " `Text.isPrefixOf` (Text.pack haskellType) = "Kernel.Types.Id.getId " ++ fieldName
+  | "[Kernel.Types.Id.ShortId " `Text.isPrefixOf` (Text.pack haskellType) = "Kernel.Types.Id.getShortId <$> " ++ fieldName
+  | "Kernel.Types.Id.ShortId " `Text.isPrefixOf` (Text.pack haskellType) = "Kernel.Types.Id.getShortId " ++ fieldName
   | otherwise = fieldName
 
 fromTTypeConversionFunction :: Maybe String -> String -> String -> String
 fromTTypeConversionFunction transformer haskellType fieldName
   | (isJust transformer) = fromJust transformer ++ " " ++ fieldName
   | "Int" <- haskellType = "realToFrac " ++ fieldName
-  | "Id " `Text.isInfixOf` (Text.pack haskellType) = "Kernel.Types.Id.Id " ++ fieldName
+  | "[Kernel.Types.Id.Id " `Text.isPrefixOf` (Text.pack haskellType) = "Kernel.Types.Id.Id <$> " ++ fieldName
+  | "Kernel.Types.Id.Id " `Text.isPrefixOf` (Text.pack haskellType) = "Kernel.Types.Id.Id " ++ fieldName
+  | "[Kernel.Types.Id.ShortId " `Text.isPrefixOf` (Text.pack haskellType) = "Kernel.Types.Id.ShortId <$> " ++ fieldName
+  | "Kernel.Types.Id.ShortId " `Text.isPrefixOf` (Text.pack haskellType) = "Kernel.Types.Id.ShortId " ++ fieldName
   | otherwise = fieldName
 
 -- Generates the FromTType' instance

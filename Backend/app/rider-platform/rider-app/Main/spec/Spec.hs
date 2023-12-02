@@ -32,5 +32,6 @@ generateCode = do
   Alchemist.mkSQLFile targetFolder inputFile
   Alchemist.mkServantAPI (targetFolder </> "API/UI") apiInputFile
   Alchemist.mkDomainHandler (targetFolder </> "Domain/Action/UI") apiInputFile
-  Alchemist.mkFrontendAPIBackend (targetFolder </> "Domain/Action") apiInputFile
-  Alchemist.mkFrontendAPIEndpoint (targetFolder </> "Domain/Action") apiInputFile
+
+-- Alchemist.mkFrontendAPIBackend (targetFolder </> "Domain/Action") apiInputFile
+-- Alchemist.mkFrontendAPIEndpoint (targetFolder </> "Domain/Action") apiInputFile
