@@ -222,6 +222,7 @@ makeTypeQualified1 moduleName excludedList dList obj str = concatMap replaceOrKe
       "Int" -> Just "Kernel.Prelude"
       "Bool" -> Just "Kernel.Prelude"
       "Id" -> Just "Kernel.Types.Id"
+      "ShortId" -> Just "Kernel.Types.Id"
       _ -> Nothing
 
     getQualifiedImport :: String -> Maybe String

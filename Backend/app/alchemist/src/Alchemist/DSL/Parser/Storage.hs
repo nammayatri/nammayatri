@@ -153,9 +153,13 @@ parseFields moduleName excludedList dataList impObj obj =
         Just f -> f
         Nothing -> error "Error Parsing Fields"
 
+-- FIXME: This is a hack, we need to figure out a better way to do this
 findBeamType :: String -> String
 findBeamType hkType
   | L.isPrefixOf "Id " hkType = "Text"
+  | L.isPrefixOf "[Id " hkType = "[Text]"
+  | L.isPrefixOf "ShortId " hkType = "Text"
+  | L.isPrefixOf "[ShortId " hkType = "[Text]"
   | otherwise = hkType
 
 getProperConstraint :: String -> FieldConstraint
@@ -198,6 +202,7 @@ defaultSQLTypes =
   [ ("\\[Text\\]", "text[]"),
     ("Text", "text"),
     ("Id ", "character varying(36)"),
+    ("ShortId ", "character varying(36)"),
     ("Int", "integer"),
     ("Double", "double precision"),
     ("Bool", "boolean"),

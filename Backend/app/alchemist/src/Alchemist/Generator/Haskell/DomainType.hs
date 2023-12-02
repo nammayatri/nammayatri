@@ -5,13 +5,15 @@ import Data.List (intercalate)
 import qualified Data.Text as T
 import Kernel.Prelude
 
-defaultImports :: [String]
-defaultImports = ["Kernel.Prelude"]
-
 generateDomainType :: TableDef -> String
-generateDomainType tableDef =
-  "module " ++ moduleName ++ " where\n\n"
-    ++ intercalate "\n" (map (\i -> "import qualified " ++ i ++ " as " ++ i) (removeDefaultImports moduleName $ imports tableDef))
+generateDomainType tableDef = do
+  let defaultImports = createDefaultImports tableDef
+
+  "{-# LANGUAGE TemplateHaskell #-}\n"
+    ++ "module "
+    ++ moduleName
+    ++ " where\n\n"
+    ++ intercalate "\n" (map (\i -> "import qualified " ++ i ++ " as " ++ i) (removeDefaultImports defaultImports moduleName $ imports tableDef))
     ++ "\n"
     ++ intercalate "\n" (map ("import " ++) defaultImports)
     ++ "\n\ndata "
@@ -25,13 +27,29 @@ generateDomainType tableDef =
   where
     moduleName = "Domain.Types." ++ tableNameHaskell tableDef
 
-removeDefaultImports :: String -> [String] -> [String]
-removeDefaultImports moduleName = filter ((/=) moduleName) . filter (`notElem` defaultImports)
+removeDefaultImports :: [String] -> String -> [String] -> [String]
+removeDefaultImports defaultImports moduleName = filter ((/=) moduleName) . filter (`notElem` defaultImports)
 
 -- Convert FieldDef to Haskell field
 fieldDefToHaskell :: FieldDef -> String
 fieldDefToHaskell fieldDef =
   fieldName fieldDef ++ " :: " ++ haskellType fieldDef
+
+createDefaultImports :: TableDef -> [String]
+createDefaultImports tableDef =
+  ["Kernel.Prelude"] <> ["Tools.Beam.UtilsTH" | shouldImportUtilsTH (fromMaybe [] $ types tableDef)]
+
+shouldImportUtilsTH :: [TypeObject] -> Bool
+shouldImportUtilsTH typeObj =
+  any
+    ( \case
+        TypeObject (_, fields) -> isEnum fields
+    )
+    typeObj
+
+isEnum :: [(Text, Text)] -> Bool
+isEnum [("enum", _)] = True
+isEnum _ = False
 
 generateHaskellTypes :: [TypeObject] -> String
 generateHaskellTypes typeObj = T.unpack $ T.unlines $ concatMap processType typeObj
@@ -41,15 +59,12 @@ generateHaskellTypes typeObj = T.unpack $ T.unlines $ concatMap processType type
       | isEnum fields = generateEnum typeName fields
       | otherwise = generateDataStructure typeName fields
 
-    isEnum :: [(Text, Text)] -> Bool
-    isEnum [("enum", _)] = True
-    isEnum _ = False
-
     generateEnum :: Text -> [(Text, Text)] -> [Text]
     generateEnum typeName [("enum", values)] =
       let enumValues = T.splitOn "," values
        in ["data " <> typeName <> " = " <> T.intercalate " | " enumValues]
-            ++ ["  deriving (Eq, Show, Generic, ToJSON, FromJSON)\n"]
+            ++ ["  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)\n\n"]
+            ++ ["$(mkBeamInstancesForEnum ''" <> typeName <> ")\n"]
     generateEnum _ _ = error "Invalid enum definition"
 
     generateDataStructure :: Text -> [(Text, Text)] -> [Text]

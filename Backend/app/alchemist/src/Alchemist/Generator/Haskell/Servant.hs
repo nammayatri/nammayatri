@@ -42,7 +42,7 @@ generateServantAPI input =
     defaultImports = ["EulerHS.Prelude", "Servant", "Tools.Auth", "Kernel.Utils.Common"]
 
     defaultQualifiedImport :: [String]
-    defaultQualifiedImport = ["Domain.Types.Person", "Domain.Types.Merchant", "Environment", "Kernel.Types.Id"]
+    defaultQualifiedImport = ["Domain.Types.Person", "Kernel.Prelude", "Domain.Types.Merchant", "Environment", "Kernel.Types.Id"]
 
     makeQualifiedImport :: String -> String
     makeQualifiedImport impts = "import qualified " <> impts <> " as " <> impts
@@ -97,9 +97,9 @@ apiTTToText apiTT =
   where
     urlPartToText :: UrlParts -> Text
     urlPartToText (UnitPath path) = " :> \"" <> path <> "\""
-    urlPartToText (Capture path ty) = " :> Capture \"" <> path <> "\" " <> ty
+    urlPartToText (Capture path ty) = " :> Capture \"" <> path <> "\" (" <> ty <> ")"
     urlPartToText (QueryParam path ty isMandatory) =
-      " :> " <> (if isMandatory then "Mandatory" else "") <> "QueryParam \"" <> path <> "\" " <> ty
+      " :> " <> (if isMandatory then "Mandatory" else "") <> "QueryParam \"" <> path <> "\" (" <> ty <> ")"
 
     apiReqToText :: Maybe ApiReq -> Text
     apiReqToText Nothing = ""
@@ -138,7 +138,10 @@ handlerSignature input =
   where
     urlToText :: UrlParts -> Text
     urlToText (Capture _ ty) = ty
-    urlToText (QueryParam _ ty _) = ty
+    urlToText (QueryParam _ ty isMandatory) = do
+      if isMandatory
+        then ty
+        else "Kernel.Prelude.Maybe (" <> ty <> ")"
     urlToText _ = ""
 
     reqTypeToText :: Maybe ApiReq -> Text
