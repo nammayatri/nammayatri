@@ -34,7 +34,7 @@ data BusinessHourResp = BusinessHourResp
     operationalDays :: [Data.Text.Text],
     slot :: Kernel.Prelude.Maybe Kernel.Prelude.TimeOfDay,
     specialDayDescription :: Kernel.Prelude.Maybe Data.Text.Text,
-    specialDayType :: Domain.Types.SpecialOccasion.SpecialDayType,
+    specialDayType :: Kernel.Prelude.Maybe Domain.Types.SpecialOccasion.SpecialDayType,
     startTime :: Kernel.Prelude.Maybe Kernel.Prelude.TimeOfDay
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
@@ -50,7 +50,8 @@ data CategoriesResp = CategoriesResp
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
 data PeopleCategoriesResp = PeopleCategoriesResp
-  { id :: Kernel.Types.Id.Id Domain.Types.ServicePeopleCategory.ServicePeopleCategory,
+  { description :: Data.Text.Text,
+    id :: Kernel.Types.Id.Id Domain.Types.ServicePeopleCategory.ServicePeopleCategory,
     name :: Data.Text.Text,
     pricePerUnit :: Kernel.Types.Common.HighPrecMoney
   }
@@ -119,7 +120,7 @@ data TicketBookingPeopleCategoryReq = TicketBookingPeopleCategoryReq
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
 data TicketBookingReq = TicketBookingReq
-  { services :: Domain.Action.UI.TicketService.TicketBookingServicesReq,
+  { services :: [Domain.Action.UI.TicketService.TicketBookingServicesReq],
     visitDate :: Kernel.Prelude.Maybe Data.Time.Calendar.Day
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)

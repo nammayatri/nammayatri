@@ -9,7 +9,7 @@ import Tools.Beam.UtilsTH
 
 data TicketService = TicketService
   { allowFutureBooking :: Kernel.Prelude.Bool,
-    bussinessHours :: [Kernel.Types.Id.Id Domain.Types.BusinessHour.BusinessHour],
+    businessHours :: [Kernel.Types.Id.Id Domain.Types.BusinessHour.BusinessHour],
     expiry :: Domain.Types.TicketService.ExpiryType,
     id :: Kernel.Types.Id.Id Domain.Types.TicketService.TicketService,
     maxVerification :: Kernel.Prelude.Int,

@@ -28,7 +28,7 @@ instance FromTType' Beam.TicketService Domain.Types.TicketService.TicketService 
       Just
         Domain.Types.TicketService.TicketService
           { allowFutureBooking = allowFutureBooking,
-            bussinessHours = Kernel.Types.Id.Id <$> bussinessHours,
+            businessHours = Kernel.Types.Id.Id <$> businessHours,
             expiry = expiry,
             id = Kernel.Types.Id.Id id,
             maxVerification = maxVerification,
@@ -42,7 +42,7 @@ instance ToTType' Beam.TicketService Domain.Types.TicketService.TicketService wh
   toTType' Domain.Types.TicketService.TicketService {..} = do
     Beam.TicketServiceT
       { Beam.allowFutureBooking = allowFutureBooking,
-        Beam.bussinessHours = Kernel.Types.Id.getId <$> bussinessHours,
+        Beam.businessHours = Kernel.Types.Id.getId <$> businessHours,
         Beam.expiry = expiry,
         Beam.id = Kernel.Types.Id.getId id,
         Beam.maxVerification = maxVerification,

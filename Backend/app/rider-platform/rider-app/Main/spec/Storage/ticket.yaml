@@ -63,7 +63,7 @@ TicketService:
     maxVerification : Int
     allowFutureBooking : Bool
     expiry : ExpiryType
-    bussinessHours : "[Id BusinessHour]"
+    businessHours : "[Id BusinessHour]"
   types:
     ExpiryType:
       enum: "SameDay,NextDay,NextWeek,NextMonth"
@@ -72,7 +72,7 @@ TicketService:
     id : PrimaryKey | NotNull
     serviceName : NotNull
     placeId : NotNull
-    bussinessHours : NotNull
+    businessHours : NotNull
     operationalDays : NotNull
 
   default:
@@ -152,6 +152,11 @@ ServiceCategory:
     name : NotNull
     description : NotNull
 
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+
 ServicePeopleCategory:
   tableName: service_people_category
 
@@ -159,13 +164,18 @@ ServicePeopleCategory:
     id: Id ServicePeopleCategory
     name: Text
     description: Text
-    pricePerUnit: Int
+    pricePerUnit: HighPrecMoney
 
   constraints :
     id : PrimaryKey|NotNull
     name : NotNull
     description : NotNull
     pricePerUnit : NotNull
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
 
 SeatManagement:
   tableName: seat_management

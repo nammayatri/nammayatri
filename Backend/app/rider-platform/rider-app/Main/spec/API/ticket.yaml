@@ -35,7 +35,7 @@ types:
     startTime: Maybe TimeOfDay
     endTime: Maybe TimeOfDay
     specialDayDescription: Maybe Text
-    specialDayType: SpecialDayType
+    specialDayType: Maybe SpecialDayType
     operationalDays: [Text]
     categories: [CategoriesResp]
 
@@ -51,10 +51,11 @@ types:
     id: Id ServicePeopleCategory
     name: Text
     pricePerUnit: HighPrecMoney
+    description: Text
 
   TicketBookingReq:
     visitDate: Maybe Day
-    services: TicketBookingServicesReq
+    services: [TicketBookingServicesReq]
 
   TicketBookingServicesReq:
     serviceId: Id TicketService
