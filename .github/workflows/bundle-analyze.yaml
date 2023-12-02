@@ -1,0 +1,26 @@
+name: Dummy Workflow
+
+on: [pull_request]
+
+jobs:
+  my-job:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Set Output
+        id: set-output
+        run: echo "::set-output name=my-output::Hello from the workflow!"
+
+      - name: Display Information in Status Check
+        run: |
+          curl -X POST \
+            -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            -H "Accept: application/vnd.github.v3+json" \
+            -d '{
+              "state": "success",
+              "description": "My Custom Text: ${{ needs.my-job.outputs.my-output }}",
+              "context": "My Custom Check"
+            }' \
+            "https://api.github.com/repos/${{ github.repository }}/statuses/${{ github.sha }}"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
