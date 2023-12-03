@@ -13,12 +13,24 @@ import Kernel.Prelude
 import qualified Kernel.Prelude as Kernel.Prelude
 import qualified Kernel.Types.Common as Kernel.Types.Common
 import qualified Kernel.Types.Id as Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow)
+import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.TicketBooking as Beam
 
 create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.TicketBooking.TicketBooking -> m ()
 create = createWithKV
+
+findByShortId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.ShortId Domain.Types.TicketBooking.TicketBooking -> m (Maybe Domain.Types.TicketBooking.TicketBooking)
+findByShortId (Kernel.Types.Id.ShortId shortId) = findOneWithKV [Se.Is Beam.shortId $ Se.Eq shortId]
+
+updateStatusByShortId :: MonadFlow m => Kernel.Types.Id.ShortId Domain.Types.TicketBooking.TicketBooking -> Domain.Types.TicketBooking.BookingStatus -> m ()
+updateStatusByShortId (Kernel.Types.Id.ShortId shortId) status = do
+  now <- getCurrentTime
+  updateWithKV
+    [ Se.Set Beam.status status,
+      Se.Set Beam.updatedAt now
+    ]
+    [Se.Is Beam.shortId $ Se.Eq shortId]
 
 instance FromTType' Beam.TicketBooking Domain.Types.TicketBooking.TicketBooking where
   fromTType' Beam.TicketBookingT {..} = do

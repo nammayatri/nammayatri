@@ -239,7 +239,7 @@ TicketBooking:
     updatedAt: NotNull
   types:
     BookingStatus:
-      enum: "Pending,Confirmed,Cancelled,Expired"
+      enum: "Pendind,Failed,Booked"
 
   default:
     createdAt: CURRENT_TIMESTAMP
@@ -264,7 +264,7 @@ TicketBookingService:
 
   types:
     ServiceStatus:
-      enum: "Pending,Confirmed,Cancelled,Expired"
+      enum: "Pending,Failed,Confirmed,Verified"
 
   constraints:
     id: PrimaryKey|NotNull

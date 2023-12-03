@@ -5,6 +5,7 @@ module Domain.Action.UI.TicketService where
 
 import Data.OpenApi (ToSchema)
 import qualified Data.Text as Data.Text
+import Data.Time (dayOfWeek, utctDay)
 import qualified Data.Time.Calendar as Data.Time.Calendar
 import qualified Domain.Action.UI.Tickets as Domain.Action.UI.Tickets
 import qualified Domain.Types.BusinessHour as Domain.Types.BusinessHour
@@ -13,7 +14,9 @@ import qualified Domain.Types.Person as Domain.Types.Person
 import qualified Domain.Types.ServiceCategory as Domain.Types.ServiceCategory
 import qualified Domain.Types.ServicePeopleCategory as Domain.Types.ServicePeopleCategory
 import qualified Domain.Types.SpecialOccasion as Domain.Types.SpecialOccasion
+import qualified Domain.Types.TicketBooking as DTTB
 import qualified Domain.Types.TicketBooking as Domain.Types.TicketBooking
+import qualified Domain.Types.TicketBookingService as DTB
 import qualified Domain.Types.TicketBookingService as Domain.Types.TicketBookingService
 import qualified Domain.Types.TicketPlace as Domain.Types.TicketPlace
 import qualified Domain.Types.TicketService as Domain.Types.TicketService
@@ -24,8 +27,22 @@ import qualified Kernel.Prelude as Kernel.Prelude
 import qualified Kernel.Types.APISuccess as Kernel.Types.APISuccess
 import qualified Kernel.Types.Common as Kernel.Types.Common
 import qualified Kernel.Types.Id as Kernel.Types.Id
+import Kernel.Utils.Common
+import qualified Lib.Payment.Domain.Action as DPayment
+import qualified Lib.Payment.Domain.Types.Common as DPayment
+import qualified Lib.Payment.Storage.Queries.PaymentOrder as QOrder
 import Servant
+import qualified Storage.Queries.BusinessHour as QBH
+import qualified Storage.Queries.SeatManagement as QTSM
+import qualified Storage.Queries.ServiceCategory as QSC
+import qualified Storage.Queries.ServicePeopleCategory as QPC
+import qualified Storage.Queries.SpecialOccasion as QSO
+import qualified Storage.Queries.TicketBooking as QTB
+import qualified Storage.Queries.TicketBookingService as QTBS
+import qualified Storage.Queries.TicketService as QTS
 import Tools.Auth
+import Tools.Error
+import qualified Tools.Payment as Payment
 
 data BusinessHourResp = BusinessHourResp
   { categories :: [Domain.Action.UI.TicketService.CategoriesResp],
@@ -171,7 +188,28 @@ postTicketPlacesBookingsVerify :: (Kernel.Types.Id.Id Domain.Types.Person.Person
 postTicketPlacesBookingsVerify = error "Logic yet to be decided"
 
 getTicketPlacesBookingsStatus :: (Kernel.Types.Id.Id Domain.Types.Person.Person, Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Types.Id.ShortId Domain.Types.TicketBooking.TicketBooking -> Environment.Flow Domain.Types.TicketBooking.BookingStatus
-getTicketPlacesBookingsStatus = error "Logic yet to be decided"
+getTicketPlacesBookingsStatus (personId, merchantId) (Kernel.Types.Id.ShortId shortId) = do
+  let commonPersonId = Kernel.Types.Id.cast @Domain.Types.Person.Person @DPayment.Person personId
+      orderStatusCall = Payment.orderStatus merchantId -- api call
+  order <- QOrder.findByShortId (Kernel.Types.Id.ShortId shortId) >>= fromMaybeM (PaymentOrderNotFound shortId)
+  ticketBooking' <- QTB.findByShortId (Kernel.Types.Id.ShortId shortId) >>= fromMaybeM (TicketBookingNotFound shortId)
+  if order.status == Payment.CHARGED -- Consider CHARGED status as terminal status
+    then return ticketBooking'.status
+    else do
+      paymentStatus <- DPayment.orderStatusService commonPersonId order.id orderStatusCall
+      case paymentStatus of
+        DPayment.PaymentStatus {..} -> do
+          when (status == Payment.CHARGED) $ do
+            QTB.updateStatusByShortId (Kernel.Types.Id.ShortId shortId) DTTB.Booked
+            QTBS.updateAllStatusByBookingId ticketBooking'.id DTB.Confirmed
+          when (status `elem` [Payment.AUTHENTICATION_FAILED, Payment.AUTHORIZATION_FAILED, Payment.JUSPAY_DECLINED]) $ do
+            QTB.updateStatusByShortId (Kernel.Types.Id.ShortId shortId) DTTB.Failed
+            QTBS.updateAllStatusByBookingId ticketBooking'.id DTB.Failed
+        _ -> return ()
+      ticketBooking <- QTB.findByShortId (Kernel.Types.Id.ShortId shortId) >>= fromMaybeM (TicketBookingNotFound shortId) -- fetch again for updated status
+      return ticketBooking.status
 
 postTicketPlacesBookingsUpdateSeats :: (Kernel.Types.Id.Id Domain.Types.Person.Person, Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Domain.Action.UI.TicketService.TicketBookingUpdateSeatsReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess
-postTicketPlacesBookingsUpdateSeats = error "Logic yet to be decided"
+postTicketPlacesBookingsUpdateSeats (_, _) TicketBookingUpdateSeatsReq {..} = do
+  void $ QTSM.updateBookedSeats updatedBookedSeats categoryId date
+  pure Kernel.Types.APISuccess.Success

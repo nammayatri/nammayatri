@@ -13,12 +13,21 @@ import Kernel.Prelude
 import qualified Kernel.Prelude as Kernel.Prelude
 import qualified Kernel.Types.Common as Kernel.Types.Common
 import qualified Kernel.Types.Id as Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow)
+import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.TicketBookingService as Beam
 
 create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.TicketBookingService.TicketBookingService -> m ()
 create = createWithKV
+
+updateAllStatusByBookingId :: MonadFlow m => Kernel.Types.Id.Id Domain.Types.TicketBooking.TicketBooking -> Domain.Types.TicketBookingService.ServiceStatus -> m ()
+updateAllStatusByBookingId (Kernel.Types.Id.Id bookingId) status = do
+  now <- getCurrentTime
+  updateWithKV
+    [ Se.Set Beam.status status,
+      Se.Set Beam.updatedAt now
+    ]
+    [Se.Is Beam.ticketBookingId $ Se.Eq bookingId]
 
 instance FromTType' Beam.TicketBookingService Domain.Types.TicketBookingService.TicketBookingService where
   fromTType' Beam.TicketBookingServiceT {..} = do
