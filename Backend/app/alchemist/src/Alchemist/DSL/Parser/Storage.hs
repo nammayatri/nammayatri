@@ -167,8 +167,14 @@ getDefaultFieldConstraints :: FieldName -> HaskellType -> [FieldConstraint]
 getDefaultFieldConstraints nm tp = primaryKeyConstraint ++ notNullConstraint
   where
     trimmedTp = L.trim tp
-    primaryKeyConstraint = if nm == "id" then [PrimaryKey] else []
-    notNullConstraint = if not (L.isPrefixOf "Maybe " trimmedTp || L.isPrefixOf "Data.Maybe.Maybe " trimmedTp) then [NotNull] else []
+    primaryKeyConstraint = [PrimaryKey | nm == "id"]
+    notNullConstraint =
+      [ NotNull
+        | not
+            ( L.isPrefixOf "Maybe " trimmedTp
+                || L.isPrefixOf "Data.Maybe.Maybe " trimmedTp
+            )
+      ]
 
 getProperConstraint :: String -> FieldConstraint
 getProperConstraint txt = case L.trim txt of

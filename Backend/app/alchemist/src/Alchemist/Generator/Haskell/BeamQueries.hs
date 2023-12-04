@@ -2,7 +2,7 @@ module Alchemist.Generator.Haskell.BeamQueries where
 
 import Alchemist.DSL.Syntax.Storage
 import Alchemist.Utils
-import Data.List (intercalate, isPrefixOf, nub)
+import Data.List (intercalate, isInfixOf, isPrefixOf, nub)
 import qualified Data.Text as Text
 import Kernel.Prelude
 
@@ -164,7 +164,13 @@ generateBeamFunctionCall kvFunction = "   " ++ kvFunction ++ "\n"
 
 generateQueryParams :: [(String, String)] -> String
 generateQueryParams [] = ""
-generateQueryParams params = "    [ " ++ intercalate ",\n      " (map (\(field, _) -> "Se.Set Beam." ++ field ++ " " ++ field) params) ++ "\n    ]\n"
+generateQueryParams params = "    [ " ++ intercalate ",\n      " (map (\(field, tp) -> "Se.Set Beam." ++ field ++ " " ++ correctSetField field tp) params) ++ "\n    ]\n"
+  where
+    correctSetField :: String -> String -> String
+    correctSetField field tp
+      | "Kernel.Types.Id.Id " `isInfixOf` tp && not ("Kernel.Types.Id.Id " `isPrefixOf` tp) = "(Kernel.Types.Id.getId <$> " ++ field ++ ")"
+      | "Kernel.Types.Id.ShortId " `isInfixOf` tp && not ("Kernel.Types.Id.ShortId " `isPrefixOf` tp) = "(Kernel.Types.Id.getShortId <$> " ++ field ++ ")"
+      | otherwise = field
 
 mapWithIndex :: (Int -> a -> b) -> [a] -> [b]
 mapWithIndex f xs = zipWith f [0 ..] xs
@@ -186,8 +192,8 @@ generateClause n i (Query (op, clauses)) =
 
 -- Helper to determine the operator
 operator :: Operator -> String
-operator And = "Se.And "
-operator Or = "Se.Or "
+operator And = "Se.And"
+operator Or = "Se.Or"
 
 spaces :: Int -> String
 spaces n = replicate n ' '
@@ -197,7 +203,24 @@ generateBeamQueries :: TableDef -> String
 generateBeamQueries tableDef =
   generateImports tableDef
     ++ generateDefaultCreateQuery tableDef.tableNameHaskell
-    ++ generateDefaultCreateManyQuery tableDef.tableNameHaskell
-    ++ intercalate "\n" (map (generateBeamQuery tableDef.tableNameHaskell) (queries tableDef))
+    ++ intercalate "\n" (map (generateBeamQuery tableDef.tableNameHaskell) (queries tableDef ++ defaultQueryDefs tableDef))
     ++ fromTTypeInstance tableDef
     ++ toTTypeInstance tableDef
+
+defaultQueryDefs :: TableDef -> [QueryDef]
+defaultQueryDefs tableDef =
+  [ QueryDef "findByPrimaryKey" "findOneWithKV" [] findByPrimayKeyWhereClause,
+    QueryDef "updateByPrimaryKey" "updateWithKV" (getAllFieldNamesWithTypesExcludingPks (fields tableDef)) findByPrimayKeyWhereClause
+  ]
+  where
+    getAllFieldNamesWithTypesExcludingPks :: [FieldDef] -> [(String, String)]
+    getAllFieldNamesWithTypesExcludingPks fieldDefs = map (\fieldDef -> (fieldName fieldDef, haskellType fieldDef)) $ filter (\fieldDef -> PrimaryKey `notElem` (constraints fieldDef)) fieldDefs
+
+    getAllPrimaryKeyWithTypes :: [FieldDef] -> [(String, String)]
+    getAllPrimaryKeyWithTypes fieldDefs = map (\fieldDef -> (fieldName fieldDef, haskellType fieldDef)) $ filter (\fieldDef -> PrimaryKey `elem` constraints fieldDef) fieldDefs
+
+    primaryKeysAndTypes :: [(String, String)]
+    primaryKeysAndTypes = getAllPrimaryKeyWithTypes (fields tableDef)
+
+    findByPrimayKeyWhereClause :: WhereClause
+    findByPrimayKeyWhereClause = Query (And, Leaf <$> primaryKeysAndTypes)
