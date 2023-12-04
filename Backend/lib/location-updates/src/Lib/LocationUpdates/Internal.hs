@@ -56,7 +56,7 @@ data RideInterpolationHandler person m = RideInterpolationHandler
     clearInterpolatedPoints :: Id person -> m (),
     expireInterpolatedPoints :: Id person -> m (),
     getInterpolatedPoints :: Id person -> m [LatLong],
-    interpolatePointsAndCalculateDistance :: [LatLong] -> m (HighPrecMeters, [LatLong], MapsService),
+    interpolatePointsAndCalculateDistance :: [LatLong] -> m (HighPrecMeters, [LatLong], Maybe MapsService),
     wrapDistanceCalculation :: Id person -> m () -> m (),
     isDistanceCalculationFailed :: Id person -> m Bool,
     updateDistance :: Id person -> HighPrecMeters -> Int -> Int -> m (),
@@ -125,8 +125,8 @@ recalcDistanceBatches h@RideInterpolationHandler {..} ending driverId estDist pi
         then do
           (dist, serviceProvider) <- recalcDistanceBatchStep h driverId
           case serviceProvider of
-            Google -> recalcDistanceBatches' (acc + dist) (googleSnapToRoadCalls + 1) osrmSnapToRoadCalls
-            OSRM -> recalcDistanceBatches' (acc + dist) googleSnapToRoadCalls (osrmSnapToRoadCalls + 1)
+            Just Google -> recalcDistanceBatches' (acc + dist) (googleSnapToRoadCalls + 1) osrmSnapToRoadCalls
+            Just OSRM -> recalcDistanceBatches' (acc + dist) googleSnapToRoadCalls (osrmSnapToRoadCalls + 1)
             _ -> recalcDistanceBatches' (acc + dist) googleSnapToRoadCalls osrmSnapToRoadCalls
         else pure (acc, googleSnapToRoadCalls, osrmSnapToRoadCalls)
 
@@ -134,7 +134,7 @@ recalcDistanceBatchStep ::
   (Monad m, Log m) =>
   RideInterpolationHandler person m ->
   Id person ->
-  m (HighPrecMeters, MapsService)
+  m (HighPrecMeters, Maybe MapsService)
 recalcDistanceBatchStep RideInterpolationHandler {..} driverId = do
   batchWaypoints <- getFirstNwaypoints driverId (batchSize + 1)
   (distance, interpolatedWps, serviceProvider) <- interpolatePointsAndCalculateDistance batchWaypoints
@@ -241,13 +241,13 @@ interpolatePointsAndCalculateDistanceImplementation ::
   Bool ->
   (Maps.SnapToRoadReq -> m (Maps.MapsService, Maps.SnapToRoadResp)) ->
   [LatLong] ->
-  m (HighPrecMeters, [LatLong], Maps.MapsService)
+  m (HighPrecMeters, [LatLong], Maybe Maps.MapsService)
 interpolatePointsAndCalculateDistanceImplementation isEndRide snapToRoadCall wps = do
   if isEndRide && isAllPointsEqual wps
-    then pure (0, take 1 wps, Maps.Google)
+    then pure (0, take 1 wps, Nothing)
     else do
       (service, res) <- snapToRoadCall $ Maps.SnapToRoadReq {points = wps}
-      pure (res.distance, res.snappedPoints, service)
+      pure (res.distance, res.snappedPoints, Just service)
 
 isAllPointsEqual :: [LatLong] -> Bool
 isAllPointsEqual [] = True
