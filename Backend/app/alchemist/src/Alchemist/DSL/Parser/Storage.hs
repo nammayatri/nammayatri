@@ -134,8 +134,8 @@ parseFields moduleName excludedList dataList impObj obj =
             fieldKey = fromString fieldName
             sqlType = fromMaybe (findMatchingSqlType haskellType) (sqlTypeObj >>= preview (ix fieldKey . _String))
             beamType = fromMaybe (findBeamType haskellType) (beamTypeObj >>= preview (ix fieldKey . _String))
-            constraints = fromMaybe [] (constraintsObj >>= preview (ix fieldKey . _String . to (splitOn "|") . to (map getProperConstraint)))
-            defaultValue = defaultsObj >>= preview (ix fieldKey . _String)
+            constraints = L.nub $ getDefaultFieldConstraints fieldName haskellType ++ fromMaybe [] (constraintsObj >>= preview (ix fieldKey . _String . to (splitOn "|") . to (map getProperConstraint)))
+            defaultValue = maybe (sqlDefaultsWrtName fieldName) pure (defaultsObj >>= preview (ix fieldKey . _String))
             parseToTType = obj ^? (ix "toTType" . _Object) >>= preview (ix fieldKey . _String)
             parseFromTType = obj ^? (ix "fromTType" . _Object) >>= preview (ix fieldKey . _String)
          in FieldDef
@@ -162,6 +162,13 @@ findBeamType str = concatMap (typeMapper . L.trim) (split (whenElt (`elem` typeD
       | L.isPrefixOf "Id " hkType || L.isPrefixOf "Kernel.Types.Id.Id " hkType = "Text"
       | L.isPrefixOf "ShortId " hkType || L.isPrefixOf "Kernel.Types.Id.ShortId " hkType = "Text"
       | otherwise = hkType
+
+getDefaultFieldConstraints :: FieldName -> HaskellType -> [FieldConstraint]
+getDefaultFieldConstraints nm tp = primaryKeyConstraint ++ notNullConstraint
+  where
+    trimmedTp = L.trim tp
+    primaryKeyConstraint = if nm == "id" then [PrimaryKey] else []
+    notNullConstraint = if not (L.isPrefixOf "Maybe " trimmedTp || L.isPrefixOf "Data.Maybe.Maybe " trimmedTp) then [NotNull] else []
 
 getProperConstraint :: String -> FieldConstraint
 getProperConstraint txt = case L.trim txt of
@@ -194,12 +201,18 @@ mkListObject _ = []
 -- SQL Types --
 findMatchingSqlType :: String -> String
 findMatchingSqlType haskellType =
-  case filter ((haskellType =~) . fst) defaultSQLTypes of
-    [] -> "NO_SQL_TYPE" --error $ T.pack ("\"" ++ haskellType ++ "\": No Sql type found")
+  case filter ((haskellType =~) . fst) sqlTypeWrtType of
+    [] -> error $ T.pack ("SQL TYPE NOT DETERMINED for " ++ haskellType)
     ((_, sqlType) : _) -> sqlType
 
-defaultSQLTypes :: [(String, String)]
-defaultSQLTypes =
+sqlDefaultsWrtName :: String -> Maybe String
+sqlDefaultsWrtName = \case
+  "createdAt" -> Just "CURRENT_TIMESTAMP"
+  "updatedAt" -> Just "CURRENT_TIMESTAMP"
+  _ -> Nothing
+
+sqlTypeWrtType :: [(String, String)]
+sqlTypeWrtType =
   [ ("\\[Text\\]", "text[]"),
     ("Text", "text"),
     ("Id ", "character varying(36)"),

@@ -29,6 +29,14 @@ data WhereClause = EmptyWhere | Leaf (String, String) | Query (Operator, [WhereC
 
 data Operator = And | Or deriving (Show)
 
+type FieldName = String
+
+type HaskellType = String
+
+type BeamType = String
+
+type SqlType = String
+
 data FieldDef = FieldDef
   { fieldName :: String,
     haskellType :: String,
