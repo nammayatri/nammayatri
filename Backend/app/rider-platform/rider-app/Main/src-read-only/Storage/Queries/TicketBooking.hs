@@ -13,12 +13,21 @@ import Kernel.Prelude
 import qualified Kernel.Prelude as Kernel.Prelude
 import qualified Kernel.Types.Common as Kernel.Types.Common
 import qualified Kernel.Types.Id as Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow)
+import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.TicketBooking as Beam
 
 create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.TicketBooking.TicketBooking -> m ()
 create = createWithKV
+
+createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [Domain.Types.TicketBooking.TicketBooking] -> m ()
+createMany = traverse_ createWithKV
+
+findById :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.TicketBooking.TicketBooking -> m (Maybe (Domain.Types.TicketBooking.TicketBooking))
+findById (Kernel.Types.Id.Id id) = do
+  findOneWithKV
+    [ Se.Is Beam.id $ Se.Eq id
+    ]
 
 findByShortId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.ShortId Domain.Types.TicketBooking.TicketBooking -> m (Maybe (Domain.Types.TicketBooking.TicketBooking))
 findByShortId (Kernel.Types.Id.ShortId shortId) = do
@@ -26,14 +35,35 @@ findByShortId (Kernel.Types.Id.ShortId shortId) = do
     [ Se.Is Beam.shortId $ Se.Eq shortId
     ]
 
-updateStatusByShortId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Domain.Types.TicketBooking.BookingStatus -> Kernel.Prelude.UTCTime -> Kernel.Types.Id.ShortId Domain.Types.TicketBooking.TicketBooking -> m ()
-updateStatusByShortId status updatedAt (Kernel.Types.Id.ShortId shortId) = do
+updateStatusByShortId :: MonadFlow m => Kernel.Types.Id.ShortId Domain.Types.TicketBooking.TicketBooking -> Domain.Types.TicketBooking.BookingStatus -> m ()
+updateStatusByShortId (Kernel.Types.Id.ShortId shortId) status = do
+  now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.status status,
-      Se.Set Beam.updatedAt updatedAt
+      Se.Set Beam.updatedAt now
     ]
-    [ Se.Is Beam.shortId $ Se.Eq shortId
+    [Se.Is Beam.shortId $ Se.Eq shortId]
+
+getAllBookingsByPersonId ::
+  ( MonadFlow m,
+    CacheFlow m r,
+    EsqDBFlow m r
+  ) =>
+  Kernel.Types.Id.Id Domain.Types.Person.Person ->
+  Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity ->
+  Domain.Types.TicketBooking.BookingStatus ->
+  Maybe Int ->
+  Maybe Int ->
+  m [Domain.Types.TicketBooking.TicketBooking]
+getAllBookingsByPersonId personId merchantOpCityId status =
+  findAllWithOptionsKV
+    [ Se.And
+        [ Se.Is Beam.personId $ Se.Eq personId.getId,
+          Se.Is Beam.merchantOperatingCityId $ Se.Eq merchantOpCityId.getId,
+          Se.Is Beam.status $ Se.Eq status
+        ]
     ]
+    (Se.Desc Beam.createdAt)
 
 instance FromTType' Beam.TicketBooking Domain.Types.TicketBooking.TicketBooking where
   fromTType' Beam.TicketBookingT {..} = do

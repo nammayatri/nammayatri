@@ -16,6 +16,15 @@ import qualified Storage.Beam.TicketService as Beam
 create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.TicketService.TicketService -> m ()
 create = createWithKV
 
+createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [Domain.Types.TicketService.TicketService] -> m ()
+createMany = traverse_ createWithKV
+
+findById :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.TicketService.TicketService -> m (Maybe (Domain.Types.TicketService.TicketService))
+findById (Kernel.Types.Id.Id id) = do
+  findOneWithKV
+    [ Se.Is Beam.id $ Se.Eq id
+    ]
+
 getTicketServicesByPlaceId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Prelude.Text -> m ([Domain.Types.TicketService.TicketService])
 getTicketServicesByPlaceId placeId = do
   findAllWithKV
@@ -28,7 +37,7 @@ instance FromTType' Beam.TicketService Domain.Types.TicketService.TicketService 
       Just
         Domain.Types.TicketService.TicketService
           { allowFutureBooking = allowFutureBooking,
-            bussinessHours = Kernel.Types.Id.Id <$> bussinessHours,
+            businessHours = Kernel.Types.Id.Id <$> businessHours,
             expiry = expiry,
             id = Kernel.Types.Id.Id id,
             maxVerification = maxVerification,
@@ -42,7 +51,7 @@ instance ToTType' Beam.TicketService Domain.Types.TicketService.TicketService wh
   toTType' Domain.Types.TicketService.TicketService {..} = do
     Beam.TicketServiceT
       { Beam.allowFutureBooking = allowFutureBooking,
-        Beam.bussinessHours = Kernel.Types.Id.getId <$> bussinessHours,
+        Beam.businessHours = Kernel.Types.Id.getId <$> businessHours,
         Beam.expiry = expiry,
         Beam.id = Kernel.Types.Id.getId id,
         Beam.maxVerification = maxVerification,

@@ -17,6 +17,9 @@ import qualified Storage.Beam.SeatManagement as Beam
 create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.SeatManagement.SeatManagement -> m ()
 create = createWithKV
 
+createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [Domain.Types.SeatManagement.SeatManagement] -> m ()
+createMany = traverse_ createWithKV
+
 findByTicketServiceCategoryIdAndDate :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.ServiceCategory.ServiceCategory -> Data.Time.Calendar.Day -> m (Maybe (Domain.Types.SeatManagement.SeatManagement))
 findByTicketServiceCategoryIdAndDate (Kernel.Types.Id.Id ticketServiceCategoryId) date = do
   findOneWithKV

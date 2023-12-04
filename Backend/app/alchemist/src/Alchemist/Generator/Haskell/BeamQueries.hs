@@ -89,6 +89,12 @@ generateDefaultCreateQuery tableNameHaskell =
    in "create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => " ++ qname ++ "-> m ()\n"
         ++ "create = createWithKV\n\n"
 
+generateDefaultCreateManyQuery :: String -> String
+generateDefaultCreateManyQuery tableNameHaskell =
+  let qname = "Domain.Types." ++ tableNameHaskell ++ "." ++ tableNameHaskell
+   in "createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => " ++ "[" ++ qname ++ "]" ++ "-> m ()\n"
+        ++ "createMany = traverse_ createWithKV\n\n"
+
 generateBeamQuery :: String -> QueryDef -> String
 generateBeamQuery tableNameHaskell query =
   generateFunctionSignature
@@ -191,6 +197,7 @@ generateBeamQueries :: TableDef -> String
 generateBeamQueries tableDef =
   generateImports tableDef
     ++ generateDefaultCreateQuery tableDef.tableNameHaskell
+    ++ generateDefaultCreateManyQuery tableDef.tableNameHaskell
     ++ intercalate "\n" (map (generateBeamQuery tableDef.tableNameHaskell) (queries tableDef))
     ++ fromTTypeInstance tableDef
     ++ toTTypeInstance tableDef
