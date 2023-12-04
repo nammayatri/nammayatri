@@ -55,7 +55,7 @@ runCreateQuery createDataEntry dbCreateObject = do
       let insertQuery = generateInsertForTable dbCreateObject
       case insertQuery of
         Just query -> do
-          EL.logDebug ("QUERY" :: Text) query
+          EL.logDebug ("QUERY" :: Text) query -- TODO redundant
           result <- EL.runIO $ try $ executeQuery _pgConnection (Query $ TE.encodeUtf8 query)
           case result of
             Left (QueryError errorMsg) -> do
