@@ -480,7 +480,7 @@ getHI stringKey =
         DRIVER_PREFERRED_YOUR_SPECIAL_REQUEST -> "ड्राइवर ने आपके विशेष अनुरोध को प्राथमिकता दी और पहले ही "
         AND_HAS_TRAVELLED -> " की यात्रा कर चुका है।"
         PLEASE_FIND_REVISED_FARE_ESTIMATE -> "कृपया संशोधित अनुमानित किराया ज्ञात करें। रात का शुल्क दिन के शुल्क का 1.5 गुना है।"
-        GO_TO_ZONE _ -> "यात्री साथी जोन पर जाएं" 
+        GO_TO_ZONE _ -> "जोन पर जाएं" 
         FARE_ESTIMATE -> "किराया अनुमान" 
         TIP_SELECTED -> "टिप चयनित"
         ADD_A_TIP_TO_FIND_A_RIDE_QUICKER -> "तेजी से सवारी खोजने के लिए एक टिप जोड़ें!"
