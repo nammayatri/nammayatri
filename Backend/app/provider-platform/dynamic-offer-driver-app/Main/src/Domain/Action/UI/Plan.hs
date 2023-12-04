@@ -21,7 +21,7 @@ import Data.Maybe (listToMaybe)
 import Data.OpenApi (ToSchema (..))
 import qualified Data.Text as T
 import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
-import Domain.Action.UI.Driver (calcExecutionTime)
+import Domain.Action.UI.Driver (calcExecutionTime, getPlanDataFromDriverFee, planMaxRides)
 import qualified Domain.Types.DriverFee as DF
 import qualified Domain.Types.DriverInformation as DI
 import Domain.Types.DriverPlan
@@ -162,6 +162,7 @@ data DriverDuesEntity = DriverDuesEntity
     isSplit :: Bool,
     offerAndPlanDetails :: Maybe Text,
     isCoinCleared :: Bool,
+    maxRidesEligibleForCharge :: Maybe Int,
     coinDiscountAmount :: Maybe HighPrecMoney,
     specialZoneRideCount :: Int,
     totalSpecialZoneCharges :: HighPrecMoney
@@ -255,7 +256,7 @@ planSubscribe planId isDashboard (driverId, merchantId, merchantOpCityId) driver
 
   unless (driverInfo.autoPayStatus == Just DI.PENDING) $ DI.updateAutoPayStatusAndPayerVpa (Just DI.PENDING) Nothing (cast driverId)
   when (isNothing driverPlan) $ do
-    newDriverPlan <- mkDriverPlan plan
+    newDriverPlan <- mkDriverPlan plan driverId
     QDPlan.create newDriverPlan
   when (isJust driverPlan) $ do
     unless (driverInfo.autoPayStatus == Just DI.PENDING && maybe False (\dp -> dp.planId == planId) driverPlan) $ QDF.updateRegisterationFeeStatusByDriverId DF.INACTIVE driverId
@@ -283,22 +284,23 @@ planSubscribe planId isDashboard (driverId, merchantId, merchantOpCityId) driver
       { orderId = orderId,
         orderResp = createOrderResp
       }
-  where
-    mkDriverPlan plan = do
-      now <- getCurrentTime
-      return $
-        DriverPlan
-          { driverId = cast driverId,
-            planId = plan.id,
-            planType = plan.paymentMode,
-            mandateId = Nothing,
-            createdAt = now,
-            updatedAt = now,
-            mandateSetupDate = Nothing,
-            coinCovertedToCashLeft = 0.0,
-            totalCoinsConvertedCash = 0.0,
-            ..
-          }
+
+mkDriverPlan :: (MonadFlow m) => Plan -> Id SP.Person -> m DriverPlan
+mkDriverPlan plan driverId = do
+  now <- getCurrentTime
+  return $
+    DriverPlan
+      { driverId = cast driverId,
+        planId = plan.id,
+        planType = plan.paymentMode,
+        mandateId = Nothing,
+        createdAt = now,
+        updatedAt = now,
+        mandateSetupDate = Nothing,
+        coinCovertedToCashLeft = 0.0,
+        totalCoinsConvertedCash = 0.0,
+        ..
+      }
 
 -- This API is to switch between plans of current Payment Method Preference.
 planSelect :: Id Plan -> (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Flow APISuccess
@@ -378,7 +380,7 @@ createMandateInvoiceAndOrder driverId merchantId merchantOpCityId plan = do
   driverRegisterationFee <- QDF.findLatestRegisterationFeeByDriverId (cast driverId)
   now <- getCurrentTime
   let currentDues = calculateDues driverManualDuesFees
-  let maxMandateAmount = max plan.maxAmount currentDues
+  let maxMandateAmount = max plan.maxMandateAmount currentDues
   case driverRegisterationFee of
     Just registerFee -> do
       invoices <- QINV.findActiveMandateSetupInvoiceByFeeId registerFee.id
@@ -407,7 +409,7 @@ createMandateInvoiceAndOrder driverId merchantId merchantOpCityId plan = do
   where
     mandateOrder currentDues now mandateValidity =
       SPayment.MandateOrder
-        { maxAmount = max plan.maxAmount currentDues,
+        { maxAmount = max plan.maxMandateAmount currentDues,
           _type = Payment.REQUIRED,
           frequency = Payment.ASPRESENTED,
           mandateStartDate = T.pack $ show $ utcTimeToPOSIXSeconds now,
@@ -450,7 +452,9 @@ createMandateInvoiceAndOrder driverId merchantId merchantOpCityId plan = do
             overlaySent = False,
             amountPaidByCoin = Nothing,
             specialZoneRideCount = 0,
-            specialZoneAmount = 0
+            specialZoneAmount = 0,
+            planId = Just $ plan.id,
+            planMode = Just plan.paymentMode
           }
     calculateDues driverFees = sum $ map (\dueInvoice -> roundToHalf (fromIntegral dueInvoice.govtCharges + dueInvoice.platformFee.fee + dueInvoice.platformFee.cgst + dueInvoice.platformFee.sgst)) driverFees
     checkIfInvoiceIsReusable invoice newDriverFees = do
@@ -525,7 +529,7 @@ convertPlanToPlanEntity driverId merchantOpCityId applicationDate isCurrentPlanE
             dutyDate = addUTCTime (fromIntegral transporterConfig.timeDiffFromUtc) now,
             paymentMode = show paymentMode_,
             numOfRides = if paymentMode_ == AUTOPAY then 0 else -1,
-            offerListingMetric = if transporterConfig.considerSpecialZoneRidesForPlanCharges then Nothing else Just Payment.IS_VISIBLE
+            offerListingMetric = if transporterConfig.enableUdfForOffers then Just Payment.IS_VISIBLE else Nothing
           }
     mkPlanFareBreakup offers = do
       let baseAmount = case plan.planBaseAmount of
@@ -597,7 +601,9 @@ mkDueDriverFeeInfoEntity driverFees transporterConfig = do
     ( \driverFee -> do
         driverFeesInWindow <- QDF.findFeeInRangeAndDriverId driverFee.startTime driverFee.endTime driverFee.driverId
         invoice <- listToMaybe <$> QINV.findActiveByDriverFeeIds [driverFee.id]
+        mbPlan <- getPlanDataFromDriverFee driverFee
         let invoiceType = invoice <&> (.paymentMode)
+            maxRidesEligibleForCharge = planMaxRides =<< mbPlan
             createdAt = if invoiceType `elem` [Just INV.MANUAL_INVOICE, Just INV.MANDATE_SETUP_INVOICE, Nothing] then invoice <&> (.createdAt) else Nothing
             executionAt =
               if invoiceType == Just INV.AUTOPAY_INVOICE
@@ -621,6 +627,7 @@ mkDueDriverFeeInfoEntity driverFees transporterConfig = do
               createdAt,
               executionAt,
               feeType,
+              maxRidesEligibleForCharge,
               isCoinCleared = driverFee.status == DF.CLEARED_BY_YATRI_COINS,
               coinDiscountAmount = driverFee.amountPaidByCoin,
               specialZoneRideCount = driverFee.specialZoneRideCount,

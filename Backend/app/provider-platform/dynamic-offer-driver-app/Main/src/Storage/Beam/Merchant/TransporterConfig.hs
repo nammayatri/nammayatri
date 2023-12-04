@@ -102,14 +102,16 @@ data TransporterConfigT f = TransporterConfigT
     volunteerSmsSendingLimit :: B.C f (Maybe A.Value),
     driverSmsReceivingLimit :: B.C f (Maybe A.Value),
     languagesToBeTranslated :: B.C f [Language],
-    createdAt :: B.C f UTCTime,
-    updatedAt :: B.C f UTCTime,
     coinFeature :: B.C f Bool,
     coinConversionRate :: B.C f HighPrecMoney,
     cancellationTimeDiff :: B.C f Seconds,
     coinExpireTime :: B.C f Seconds,
     cancellationDistDiff :: B.C f Int,
-    considerSpecialZoneRidesForPlanCharges :: B.C f Bool
+    considerSpecialZoneRidesForPlanCharges :: B.C f Bool,
+    considerSpecialZoneRideChargesInFreeTrial :: B.C f Bool,
+    enableUdfForOffers :: B.C f Bool,
+    createdAt :: B.C f UTCTime,
+    updatedAt :: B.C f UTCTime
   }
   deriving (Generic, B.Beamable)
 

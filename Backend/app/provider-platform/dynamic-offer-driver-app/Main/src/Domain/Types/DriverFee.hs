@@ -19,6 +19,7 @@ module Domain.Types.DriverFee where
 import Data.Aeson
 import Domain.Types.Merchant (Merchant)
 import Domain.Types.Person (Driver)
+import Domain.Types.Plan (PaymentMode, Plan)
 import Kernel.Prelude
 import Kernel.Types.Common (HighPrecMoney, Money)
 import Kernel.Types.Id
@@ -52,7 +53,9 @@ data DriverFee = DriverFee
     feeWithoutDiscount :: Maybe HighPrecMoney,
     overlaySent :: Bool,
     specialZoneRideCount :: Int,
-    specialZoneAmount :: HighPrecMoney
+    specialZoneAmount :: HighPrecMoney,
+    planId :: Maybe (Id Plan),
+    planMode :: Maybe PaymentMode
   }
   deriving (Generic, Show, Eq)
 

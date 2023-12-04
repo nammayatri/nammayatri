@@ -14,7 +14,7 @@
 
 module SharedLogic.Payment where
 
-import Data.Time (utctDay)
+import Data.Time (UTCTime (UTCTime), secondsToDiffTime, utctDay)
 import Domain.Types.DriverFee
 import qualified Domain.Types.Invoice as INV
 import qualified Domain.Types.Merchant as DM
@@ -150,9 +150,18 @@ makeOfferListCacheKey includeDriverId req = do
           <> show (utctDay req.dutyDate)
           <> ":ft-"
           <> show (utctDay req.registrationDate)
+          <> ":Listing-"
+          <> maybe "N/A" parseValidityForCaching req.offerListingMetric
     _ ->
       return $
         "OfferList:PId-" <> req.planId <> ":PM-" <> req.paymentMode <> ":n-" <> show req.numOfRides <> ":dt-"
           <> show (utctDay req.dutyDate)
           <> ":ft-"
           <> show (utctDay req.registrationDate)
+          <> ":Listing-"
+          <> maybe "N/A" parseValidityForCaching req.offerListingMetric
+  where
+    parseValidityForCaching offerListingMetric' =
+      case offerListingMetric' of
+        LIST_BASED_ON_DATE listingDates -> show $ UTCTime (utctDay listingDates) (secondsToDiffTime 0)
+        _ -> show offerListingMetric'

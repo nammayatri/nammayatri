@@ -132,6 +132,8 @@ data TransporterConfigD u = TransporterConfig
     coinExpireTime :: NominalDiffTime,
     cancellationDistDiff :: Int,
     considerSpecialZoneRidesForPlanCharges :: Bool,
+    considerSpecialZoneRideChargesInFreeTrial :: Bool,
+    enableUdfForOffers :: Bool,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }

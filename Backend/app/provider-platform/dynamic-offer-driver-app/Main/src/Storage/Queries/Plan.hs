@@ -67,7 +67,8 @@ instance FromTType' BeamP.Plan Plan where
             frequency = frequency,
             cgstPercentage = cgstPercentage,
             sgstPercentage = sgstPercentage,
-            planType = planType
+            planType = planType,
+            maxMandateAmount = maxMandateAmount
           }
 
 instance ToTType' BeamP.Plan Plan where
@@ -87,5 +88,6 @@ instance ToTType' BeamP.Plan Plan where
         BeamP.frequency = frequency,
         BeamP.cgstPercentage = cgstPercentage,
         BeamP.sgstPercentage = sgstPercentage,
-        BeamP.planType = planType
+        BeamP.planType = planType,
+        BeamP.maxMandateAmount = maxMandateAmount
       }

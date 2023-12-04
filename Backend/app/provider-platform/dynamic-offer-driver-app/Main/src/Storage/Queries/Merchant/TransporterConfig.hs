@@ -227,5 +227,7 @@ instance ToTType' BeamTC.TransporterConfig TransporterConfig where
         BeamTC.cancellationTimeDiff = nominalDiffTimeToSeconds cancellationTimeDiff,
         BeamTC.cancellationDistDiff = cancellationDistDiff,
         BeamTC.coinExpireTime = nominalDiffTimeToSeconds coinExpireTime,
-        BeamTC.considerSpecialZoneRidesForPlanCharges = considerSpecialZoneRidesForPlanCharges
+        BeamTC.considerSpecialZoneRidesForPlanCharges = considerSpecialZoneRidesForPlanCharges,
+        BeamTC.considerSpecialZoneRideChargesInFreeTrial = considerSpecialZoneRideChargesInFreeTrial,
+        BeamTC.enableUdfForOffers = enableUdfForOffers
       }
