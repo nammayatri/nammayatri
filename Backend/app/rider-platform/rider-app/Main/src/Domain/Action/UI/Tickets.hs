@@ -327,7 +327,10 @@ verifyBookingDetails = processBookingService
           status,
           amount = mBookingService <&> (.amount),
           verificationCount = mBookingService <&> (.verificationCount),
-          units = mBookingService <&> (.prices)
+          units = mBookingService <&> (.prices) --deprecated :: first array of service category
+          -- startTime :: TimeOfDay
+          -- endTime :: Maybe TimeOfDay
+          -- categories :: [ServiceCategories]
         }
 
     verificationMsg :: TicketVerificationStatus -> Text

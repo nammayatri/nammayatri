@@ -20,5 +20,4 @@ import Spec
 
 main :: IO ()
 main = do
-  generateCode
   runRiderApp id

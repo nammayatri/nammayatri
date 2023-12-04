@@ -9,7 +9,7 @@ import Tools.Beam.UtilsTH
 
 data TicketService = TicketService
   { allowFutureBooking :: Kernel.Prelude.Bool,
-    bussinessHours :: [Kernel.Types.Id.Id Domain.Types.BusinessHour.BusinessHour],
+    businessHours :: [Kernel.Types.Id.Id Domain.Types.BusinessHour.BusinessHour],
     expiry :: Domain.Types.TicketService.ExpiryType,
     id :: Kernel.Types.Id.Id Domain.Types.TicketService.TicketService,
     maxVerification :: Kernel.Prelude.Int,
@@ -18,9 +18,9 @@ data TicketService = TicketService
     serviceName :: Kernel.Prelude.Text,
     shortDesc :: Kernel.Prelude.Maybe Kernel.Prelude.Text
   }
-  deriving (Generic, Show)
+  deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
 
-data ExpiryType = SameDay | NextDay | NextWeek | NextMonth
+data ExpiryType = InstantExpiry Kernel.Prelude.Int | VisitDate Kernel.Prelude.TimeOfDay
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 $(mkBeamInstancesForEnum ''ExpiryType)

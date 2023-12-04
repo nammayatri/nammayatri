@@ -17,7 +17,7 @@ data SpecialOccasion = SpecialOccasion
     id :: Kernel.Types.Id.Id Domain.Types.SpecialOccasion.SpecialOccasion,
     specialDayType :: Domain.Types.SpecialOccasion.SpecialDayType
   }
-  deriving (Generic, Show)
+  deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
 
 data SpecialDayType = Open | Closed
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)

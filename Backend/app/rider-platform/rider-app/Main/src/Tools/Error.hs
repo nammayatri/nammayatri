@@ -183,6 +183,10 @@ data TicketBookingError
   | TicketBookingNotFound Text
   | TicketBookingServiceNotFound Text
   | TicketPlaceNotFound Text
+  | BusinessHourNotFound Text
+  | ServiceCategoryNotFound Text
+  | TicketSeatManagementNotFound Text Text
+  | PeopleCategoryNotFound Text
   deriving (Eq, Show, IsBecknAPIError)
 
 instanceExceptionWithParent 'HTTPException ''TicketBookingError
@@ -192,6 +196,10 @@ instance IsBaseError TicketBookingError where
   toMessage (TicketBookingNotFound bookingId) = Just $ "Ticket booking not found: " <> show bookingId
   toMessage (TicketBookingServiceNotFound bookingServiceId) = Just $ "Ticket booking service not found: " <> show bookingServiceId
   toMessage (TicketPlaceNotFound placeId) = Just $ "Ticket place not found: " <> show placeId
+  toMessage (BusinessHourNotFound businessHourId) = Just $ "Business hour not found: " <> show businessHourId
+  toMessage (ServiceCategoryNotFound sCategoryId) = Just $ "Service category not found: " <> show sCategoryId
+  toMessage (TicketSeatManagementNotFound seatMId curDate) = Just $ "Seat management details not found for seat management id: " <> show seatMId <> " and date: " <> show curDate
+  toMessage (PeopleCategoryNotFound pCatId) = Just $ "People category not found: " <> show pCatId
 
 instance IsHTTPError TicketBookingError where
   toErrorCode = \case
@@ -199,10 +207,18 @@ instance IsHTTPError TicketBookingError where
     TicketBookingNotFound _ -> "TICKET_BOOKING_NOT_FOUND"
     TicketBookingServiceNotFound _ -> "TICKET_BOOKING_SERVICE_NOT_FOUND"
     TicketPlaceNotFound _ -> "TICKET_PLACE_NOT_FOUND"
+    BusinessHourNotFound _ -> "BUSINESS_HOUR_NOT_FOUND"
+    ServiceCategoryNotFound _ -> "SERVICE_CATEGORY_NOT_FOUND"
+    TicketSeatManagementNotFound _ _ -> "TICKET_SEAT_MANAGEMENT_NOT_FOUND"
+    PeopleCategoryNotFound _ -> "PEOPLE_CATEGORY_NOT_FOUND"
   toHttpCode = \case
     TicketServiceNotFound _ -> E500
     TicketBookingNotFound _ -> E500
     TicketBookingServiceNotFound _ -> E400
     TicketPlaceNotFound _ -> E500
+    BusinessHourNotFound _ -> E500
+    ServiceCategoryNotFound _ -> E500
+    TicketSeatManagementNotFound _ _ -> E500
+    PeopleCategoryNotFound _ -> E500
 
 instance IsAPIError TicketBookingError
