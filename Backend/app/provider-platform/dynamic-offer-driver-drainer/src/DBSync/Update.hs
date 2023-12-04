@@ -45,6 +45,7 @@ runUpdateQuery updateDataEntries updateData tableName = do
   Env {..} <- ask
   let (entryId, byteString) = updateDataEntries
       (mbModel, mbObject, mbMappings, _) = updateData
+  EL.logDebug ("BYTE STRING" :: Text) (show byteString)
   if shouldPushToKafkaOnly tableName _dontEnableDbTables
     then return $ Right entryId
     else do

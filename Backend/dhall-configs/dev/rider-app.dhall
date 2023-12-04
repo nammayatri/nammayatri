@@ -158,8 +158,169 @@ let hccfg =
 
 let tables =
       { enableKVForWriteAlso =
-          [] : List { nameOfTable : Text, percentEnable : Natural }
-      , enableKVForRead = [] : List Text
+            [ { nameOfTable = "tag", percentEnable = 100 }
+            , { nameOfTable = "on_search_event", percentEnable = 100 }
+            , { nameOfTable = "location_backup", percentEnable = 100 }
+            , { nameOfTable = "black_list_org", percentEnable = 100 }
+            , { nameOfTable = "issue", percentEnable = 100 }
+            , { nameOfTable = "product_instance_backup", percentEnable = 100 }
+            , { nameOfTable = "quote_bak_1022", percentEnable = 100 }
+            , { nameOfTable = "schema_migrations", percentEnable = 100 }
+            , { nameOfTable = "ride_booking_bak_1022", percentEnable = 100 }
+            , { nameOfTable = "search_request_bak_1022", percentEnable = 100 }
+            , { nameOfTable = "beckn_request", percentEnable = 100 }
+            , { nameOfTable = "quote_bak_1026", percentEnable = 100 }
+            , { nameOfTable = "ride_booking_bak_1026", percentEnable = 100 }
+            , { nameOfTable = "search_request_location_1026"
+              , percentEnable = 100
+              }
+            , { nameOfTable = "rental_quote_bak_1027", percentEnable = 100 }
+            , { nameOfTable = "quote_terms_bak_1027", percentEnable = 100 }
+            , { nameOfTable = "rental_slab", percentEnable = 100 }
+            , { nameOfTable = "trip_terms", percentEnable = 100 }
+            , { nameOfTable = "fare_breakup", percentEnable = 100 }
+            , { nameOfTable = "cancellation_reason", percentEnable = 100 }
+            , { nameOfTable = "merchant_service_config", percentEnable = 100 }
+            , { nameOfTable = "webengage", percentEnable = 100 }
+            , { nameOfTable = "estimate_breakup", percentEnable = 100 }
+            , { nameOfTable = "person_flow_status", percentEnable = 100 }
+            , { nameOfTable = "search_request_location", percentEnable = 100 }
+            , { nameOfTable = "booking_location", percentEnable = 100 }
+            , { nameOfTable = "person_default_emergency_number"
+              , percentEnable = 100
+              }
+            , { nameOfTable = "sos", percentEnable = 100 }
+            , { nameOfTable = "special_zone_quote", percentEnable = 100 }
+            , { nameOfTable = "special_location", percentEnable = 100 }
+            , { nameOfTable = "tag_category_mapping", percentEnable = 100 }
+            , { nameOfTable = "place_name_cache", percentEnable = 100 }
+            , { nameOfTable = "call_status", percentEnable = 100 }
+            , { nameOfTable = "registration_token", percentEnable = 100 }
+            , { nameOfTable = "callback_request", percentEnable = 100 }
+            , { nameOfTable = "booking_cancellation_reason"
+              , percentEnable = 100
+              }
+            , { nameOfTable = "app_installs", percentEnable = 100 }
+            , { nameOfTable = "feedback_form", percentEnable = 100 }
+            , { nameOfTable = "hot_spot_config", percentEnable = 100 }
+            , { nameOfTable = "saved_location", percentEnable = 100 }
+            , { nameOfTable = "person_stats", percentEnable = 100 }
+            , { nameOfTable = "rating", percentEnable = 100 }
+            , { nameOfTable = "disability", percentEnable = 100 }
+            , { nameOfTable = "disability_translation", percentEnable = 100 }
+            , { nameOfTable = "person_disability", percentEnable = 100 }
+            , { nameOfTable = "payment_order", percentEnable = 100 }
+            , { nameOfTable = "payment_transaction", percentEnable = 100 }
+            , { nameOfTable = "location", percentEnable = 100 }
+            , { nameOfTable = "location_mapping", percentEnable = 100 }
+            , { nameOfTable = "aadhaar_otp_req", percentEnable = 100 }
+            , { nameOfTable = "aadhaar_otp_verify", percentEnable = 100 }
+            , { nameOfTable = "aadhaar_verification", percentEnable = 100 }
+            , { nameOfTable = "merchant_operating_city", percentEnable = 100 }
+            , { nameOfTable = "merchant_service_usage_config"
+              , percentEnable = 100
+              }
+            , { nameOfTable = "merchant_message", percentEnable = 100 }
+            , { nameOfTable = "merchant_payment_method", percentEnable = 100 }
+            , { nameOfTable = "exophone", percentEnable = 100 }
+            , { nameOfTable = "merchant_config", percentEnable = 100 }
+            , { nameOfTable = "search_request", percentEnable = 100 }
+            , { nameOfTable = "estimate", percentEnable = 100 }
+            , { nameOfTable = "quote", percentEnable = 100 }
+            , { nameOfTable = "driver_offer", percentEnable = 100 }
+            , { nameOfTable = "booking", percentEnable = 100 }
+            , { nameOfTable = "ride", percentEnable = 100 }
+            , { nameOfTable = "geometry", percentEnable = 100 }
+            , { nameOfTable = "person", percentEnable = 100 }
+            , { nameOfTable = "issue_category", percentEnable = 100 }
+            , { nameOfTable = "issue_option", percentEnable = 100 }
+            , { nameOfTable = "comment", percentEnable = 100 }
+            , { nameOfTable = "issue_translation", percentEnable = 100 }
+            , { nameOfTable = "media_file", percentEnable = 100 }
+            , { nameOfTable = "issue_message", percentEnable = 100 }
+            , { nameOfTable = "issue_config", percentEnable = 100 }
+            , { nameOfTable = "merchant", percentEnable = 100 }
+            , { nameOfTable = "issue_report", percentEnable = 100 }
+            ]
+          : List { nameOfTable : Text, percentEnable : Natural }
+      , enableKVForRead =
+            [ "tag"
+            , "on_search_event"
+            , "location_backup"
+            , "black_list_org"
+            , "issue"
+            , "product_instance_backup"
+            , "quote_bak_1022"
+            , "schema_migrations"
+            , "ride_booking_bak_1022"
+            , "search_request_bak_1022"
+            , "beckn_request"
+            , "quote_bak_1026"
+            , "ride_booking_bak_1026"
+            , "search_request_location_1026"
+            , "rental_quote_bak_1027"
+            , "quote_terms_bak_1027"
+            , "rental_slab"
+            , "trip_terms"
+            , "fare_breakup"
+            , "cancellation_reason"
+            , "merchant_service_config"
+            , "webengage"
+            , "estimate_breakup"
+            , "person_flow_status"
+            , "search_request_location"
+            , "booking_location"
+            , "person_default_emergency_number"
+            , "sos"
+            , "special_zone_quote"
+            , "special_location"
+            , "tag_category_mapping"
+            , "place_name_cache"
+            , "call_status"
+            , "registration_token"
+            , "callback_request"
+            , "booking_cancellation_reason"
+            , "app_installs"
+            , "feedback_form"
+            , "hot_spot_config"
+            , "saved_location"
+            , "person_stats"
+            , "rating"
+            , "disability"
+            , "disability_translation"
+            , "person_disability"
+            , "payment_order"
+            , "payment_transaction"
+            , "location"
+            , "location_mapping"
+            , "aadhaar_otp_req"
+            , "aadhaar_otp_verify"
+            , "aadhaar_verification"
+            , "merchant_operating_city"
+            , "merchant_service_usage_config"
+            , "merchant_message"
+            , "merchant_payment_method"
+            , "exophone"
+            , "merchant_config"
+            , "search_request"
+            , "estimate"
+            , "quote"
+            , "driver_offer"
+            , "booking"
+            , "ride"
+            , "geometry"
+            , "person"
+            , "issue_category"
+            , "issue_option"
+            , "comment"
+            , "issue_translation"
+            , "media_file"
+            , "issue_message"
+            , "issue_config"
+            , "merchant"
+            , "issue_report"
+            ]
+          : List Text
       , kafkaNonKVTables = [] : List Text
       }
 

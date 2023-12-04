@@ -598,16 +598,16 @@
         "tinylog": "tinylog"
       },
       "locked": {
-        "lastModified": 1702988070,
-        "narHash": "sha256-AnLUHv26SVbLXXF6naT5h3GJDY0OpHYWmTWu9uK/fGA=",
-        "owner": "enigma-commits",
+        "lastModified": 1700223005,
+        "narHash": "sha256-D7EWBRQXlho39s6R3HAb49Lrr8qkV4nvxFn+VGYG9K8=",
+        "owner": "roman-bodavskiy",
         "repo": "euler-hs",
-        "rev": "720fd7a140d53b14e933c06a330104ed01573cbe",
+        "rev": "55b202e1c8c4eed9013b39338b1acac97cebcf70",
         "type": "github"
       },
       "original": {
-        "owner": "enigma-commits",
-        "ref": "Backend/feat/redis-cluster-pipelining",
+        "owner": "roman-bodavskiy",
+        "ref": "backend/db-object-contents-v2",
         "repo": "euler-hs",
         "type": "github"
       }
@@ -2973,11 +2973,11 @@
         "prometheus-haskell": "prometheus-haskell_2"
       },
       "locked": {
-        "lastModified": 1702981356,
-        "narHash": "sha256-yAAPE9o7kaXhlPeaQ1FvZE03gKok90F6lcX7KJ9EN9M=",
+        "lastModified": 1701706550,
+        "narHash": "sha256-ibVHRvIwFl/JiQ4Zaqn/Gvqa+mMfaH0E0I3bUrdGllo=",
         "owner": "nammayatri",
         "repo": "shared-kernel",
-        "rev": "bb16dcab88abf603d205baecea41eee49fe73661",
+        "rev": "2091dfb46040fa63e14bd7cb63c25930e789563f",
         "type": "github"
       },
       "original": {

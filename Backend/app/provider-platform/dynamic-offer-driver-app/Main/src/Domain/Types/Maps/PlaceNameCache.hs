@@ -16,6 +16,7 @@
 
 module Domain.Types.Maps.PlaceNameCache where
 
+import Database.Beam.Backend
 import Kernel.Prelude
 import Kernel.Types.Id
 import Tools.Beam.UtilsTH (mkBeamInstancesForList)
@@ -41,5 +42,9 @@ data AddressResp = AddressResp
   }
   deriving stock (Generic, Show, Read, Ord, Eq)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+-- TODO test this
+instance HasSqlValueSyntax be String => HasSqlValueSyntax be AddressResp where
+  sqlValueSyntax = autoSqlValueSyntax
 
 $(mkBeamInstancesForList ''AddressResp)

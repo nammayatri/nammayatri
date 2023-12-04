@@ -1,9 +1,11 @@
-@token1 = 503d9b3b-18ef-4101-a68c-0bac45e3406e
-@token2 = 47f98c05-2859-484a-9f23-155af76d5f9b
-@driver-offer-bpp-host = http://localhost:8016
+@token1 = {{driver-offer-bpp-auto-token1}}
+@token2 = {{driver-offer-bpp-auto-token2}}
 
-@app-host = http://localhost:8013/v2
-@app-token = 851a466b-33cd-461d-87ab-0c4e081efbb4
+@driverId = favorit-auto1-0000000000000000000000
+@driver-offer-bpp-host = http://localhost:8016
+@location-tracking-service-host = http://localhost:8081
+@merchantId = favorit0-0000-0000-0000-00000favorit
+
 
 # @name healthcheck
 GET {{driver-offer-bpp-host}}/ui
@@ -15,9 +17,25 @@ GET {{app-host}}
 
 ###
 
+@adminToken = favorit-admin-0000000000000000-token
+
+# @name updateVehicle
+
+POST {{driver-offer-bpp-host}}/ui/org/vehicle/{{driverId}}
+content-type: application/json
+token: {{adminToken}}
+
+{
+    "variant" : "AUTO_RICKSHAW"
+}
+
+###
 # @name updateInitial
-POST http://localhost:8081/ui/driver/location
+POST {{location-tracking-service-host}}/ui/driver/location
 token: {{token1}}
+mId: {{merchantId}}
+vt: AUTO_RICKSHAW
+dm: ONLINE
 content-type: application/json
 dm: ONLINE
 mid: favorit0-0000-0000-0000-00000favorit
@@ -30,7 +48,7 @@ vt: SUV
             "lon": 75.919028
 
         },
-        "ts": "2023-11-10T08:58:00+0000",
+        "ts": "{{$localDatetime iso8601}}",
         "acc": 0
     }
 ]
@@ -38,7 +56,7 @@ vt: SUV
 ###
 
 # @name setActive
-POST {{driver-offer-bpp-host}}/ui/driver/setActivity?active=true
+POST {{driver-offer-bpp-host}}/ui/driver/setActivity?active=true&mode="ONLINE"
 content-type: application/json
 token: {{token1}}
 
@@ -233,8 +251,11 @@ content-type: application/json
 # location updates taken from karnatakaLocationUpdates, so mock-google could handle it
 
 # @name update1
-POST {{driver-offer-bpp-host}}/ui/driver/location
+POST {{location-tracking-service-host}}/ui/driver/location
 token: {{token1}}
+mId: {{merchantId}}
+vt: AUTO_RICKSHAW
+dm: ONLINE
 content-type: application/json
 
 [
@@ -276,8 +297,11 @@ content-type: application/json
 ###
 
 # @name update2
-POST {{driver-offer-bpp-host}}/ui/driver/location
+POST {{location-tracking-service-host}}/ui/driver/location
 token: {{token1}}
+mId: {{merchantId}}
+vt: AUTO_RICKSHAW
+dm: ONLINE
 content-type: application/json
 
 [
@@ -366,17 +390,3 @@ content-type: application/json
   "rating" : 5,
   "feedbackDetails": "The ride was good"
 }
-
-###
-
-# @name disputeCancellationDues
-POST {{app-host}}/dispute/cancellationDues
-content-type: application/json
-token: {{app-token}}
-
-###
-
-# @name getCancellationDuesDetails
-GET {{app-host}}/get/cancellationDuesDetails
-content-type: application/json
-token: {{app-token}}
