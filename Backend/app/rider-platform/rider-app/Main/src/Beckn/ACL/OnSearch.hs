@@ -112,7 +112,7 @@ buildEstimateOrQuoteInfo provider item = do
   let totalFareRange =
         DEstimate.FareRange
           { minFare = roundToIntegral item.price.minimum_value,
-            maxFare = roundToIntegral item.price.maximum_value
+            maxFare = max (roundToIntegral item.price.maximum_value) (roundToIntegral item.price.minimum_value)
           }
   validateFareRange estimatedTotalFare totalFareRange
 
@@ -171,7 +171,6 @@ validateFareRange :: (MonadThrow m, Log m) => Money -> DEstimate.FareRange -> m 
 validateFareRange totalFare DEstimate.FareRange {..} = do
   when (minFare < 0) $ throwError $ InvalidRequest "Minimum discounted price is less than zero"
   when (maxFare < 0) $ throwError $ InvalidRequest "Maximum discounted price is less than zero"
-  when (maxFare < minFare) $ throwError $ InvalidRequest "Maximum discounted price is less than minimum discounted price"
   when (totalFare > maxFare || totalFare < minFare) $ throwError $ InvalidRequest "Discounted price outside of range"
 
 buildEstimateBreakUpItem ::
