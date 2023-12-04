@@ -208,8 +208,8 @@ getPlanCardConfig (PlanEntity planEntity) isLocalized isIntroductory gradientCon
             showOffer : planEntity.name /= getString DAILY_PER_RIDE
         }
 
-constructDues :: Array DriverDuesEntity -> Array DueItem
-constructDues duesArr = (mapWithIndex (\ ind (DriverDuesEntity item) ->  
+constructDues :: Array DriverDuesEntity -> Boolean -> Array DueItem
+constructDues duesArr showFeeBreakup = (mapWithIndex (\ ind (DriverDuesEntity item) ->  
   let offerAndPlanDetails = fromMaybe "" item.offerAndPlanDetails
   in
   {    
@@ -219,12 +219,14 @@ constructDues duesArr = (mapWithIndex (\ ind (DriverDuesEntity item) ->
     noOfRides: item.totalRides,
     scheduledAt: convertUTCtoISC (fromMaybe "" item.executionAt) "Do MMM YYYY, h:mm A",
     paymentStatus: "",
-    feeBreakup: getFeeBreakup offerAndPlanDetails item.totalRides ,
+    feeBreakup: if showFeeBreakup then getFeeBreakup offerAndPlanDetails item.totalRides else "",
     plan: offerAndPlanDetails,
     mode: item.feeType,
     autoPayStage : item.autoPayStage,
     randomId : (getCurrentUTC "") <> show ind,
-    isSplit : item.isSplit
+    isSplit : item.isSplit,
+    specialZoneRideCount : item.specialZoneRideCount,
+    specialZoneAmount : item.specialZoneAmount
   }) duesArr)
 
 getFeeBreakup :: String -> Int -> String
@@ -239,7 +241,6 @@ getFeeBreakup plan rides =
                     then "₹" <> getFixedTwoDecimals planConfig.value
                  else show rides <> " " <> getString RIDES <> " X " <>  "₹" <> getFixedTwoDecimals planConfig.perRide
     
-
 
 getPlanAmountConfig :: String -> {value :: Number, isFixed :: Boolean, perRide :: Number}
 getPlanAmountConfig plan = case plan of

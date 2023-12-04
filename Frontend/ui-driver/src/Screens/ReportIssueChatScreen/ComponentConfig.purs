@@ -41,7 +41,7 @@ primaryEditTextConfig dummy = let
       , margin = (Margin 0 0 0 0)
       , id = getNewIDWithTag "submit_chat_edit_text"
       , editText
-        { placeholder = (getString $ REPORT_ISSUE_CHAT_PLACEHOLDER "GET_READY_FOR_YS_SUBSCRIPTION")
+        { placeholder = (getString $ REPORT_ISSUE_CHAT_PLACEHOLDER "REPORT_ISSUE_CHAT_PLACEHOLDER")
         , singleLine = false
         }
       }

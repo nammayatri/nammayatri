@@ -46,7 +46,8 @@ initData = {
             autoPayDueAmount : 0.0,
             manualDueAmount : 0.0,
             mandateStatus : "",
-            selectedDue : ""
+            selectedDue : "",
+            dueBoothCharges : Mb.Nothing
         },
         managePlanData : {
             currentPlan : dummyPlanConfig,

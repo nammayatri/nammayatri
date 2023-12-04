@@ -29,9 +29,9 @@ import Types.App (FlowBT, GlobalState(..), ScreenType(..))
 import Types.ModifyScreenState (modifyScreenState)
 import MerchantConfig.Utils (getValueFromConfig)
 import Constants as Constants
+import Types.App as TA
 
-
-chooseLanguage :: FlowBT String ScreenOutput
+chooseLanguage :: FlowBT String TA.CHOOSE_LANG_SCREEN_OUTPUT
 chooseLanguage = do
   (GlobalState state) <- getState
   config <- getAppConfig Constants.appConfig
@@ -39,4 +39,4 @@ chooseLanguage = do
   case action of
     GoToEnterMobileScreen updateState -> do
       modifyScreenState $ ChooseLanguageScreenStateType (\chooseLanguageScreenScreen -> updateState)
-      App.BackT $ App.BackPoint <$> pure action
+      App.BackT $ App.BackPoint <$> pure TA.LOGIN_FLOW

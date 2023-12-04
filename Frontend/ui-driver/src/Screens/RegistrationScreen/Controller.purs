@@ -21,10 +21,10 @@ import Components.PrimaryButton as PrimaryButtonController
 import Components.GenericHeader as GenericHeader
 import Components.AppOnboardingNavBar as AppOnboardingNavBar
 import Helpers.Utils (getStatus, contactSupportNumber)
-import JBridge (openWhatsAppSupport, showDialer)
+import JBridge as JB
 import Log (trackAppActionClick, trackAppBackPress, trackAppEndScreen, trackAppScreenEvent, trackAppScreenRender, trackAppTextInput)
 import MerchantConfig.Utils (Merchant(..), getMerchant)
-import Prelude (class Show, bind, discard, pure, show, unit, ($))
+import Prelude (class Show, bind, discard, pure, show, unit, ($), void)
 import PrestoDOM (Eval, continue, continueWithCmd, exit)
 import PrestoDOM.Types.Core (class Loggable)
 import Screens (ScreenName(..), getScreen)
@@ -87,7 +87,9 @@ data Action = BackPressed
 
 eval :: Action -> RegistrationScreenState -> Eval Action ScreenOutput RegistrationScreenState
 eval AfterRender state = continue state
-eval BackPressed state = continue state
+eval BackPressed state = do
+  void $ pure $ JB.minimizeApp ""
+  continue state
 eval (RegistrationAction item ) state = 
        case item of 
           DRIVING_LICENSE_OPTION -> exit $ GoToUploadDriverLicense state
@@ -111,8 +113,8 @@ eval ContactSupport state = continueWithCmd state [do
   let merchant = getMerchant FunctionCall
   _ <- case merchant of
     NAMMAYATRI -> contactSupportNumber "WHATSAPP" 
-    YATRISATHI -> openWhatsAppSupport $ getWhatsAppSupportNo $ show merchant
-    _ -> pure $ showDialer (getSupportNumber "") false
+    YATRISATHI -> JB.openWhatsAppSupport $ getWhatsAppSupportNo $ show merchant
+    _ -> pure $ JB.showDialer (getSupportNumber "") false
   pure NoAction
   ]
 

@@ -34,13 +34,14 @@ initData = {
     , isOverlayPermissionChecked : false
     , isAutoStartPermissionChecked : false
     , isBatteryOptimizationChecked : false
+    , isLocationPermissionChecked : false
     , androidVersion : 0
     , logoutModalView : false
     , isDriverEnabled : false
     }
 }
 
-data Permissions = Overlay | Battery | AutoStart | Notifications
+data Permissions = Overlay | Battery | AutoStart | Notifications | LocationPermission
 derive instance genericPermissions :: Generic Permissions _
 instance eqPermissions :: Eq Permissions where eq = genericEq
 
@@ -55,4 +56,4 @@ permissionsList state =
       {permission: Overlay , icon:"" },
       {permission: AutoStart , icon:""},
       {permission: Battery , icon:""}
-    ]
+    ] <> if state.data.config.permissions.locationPermission then [{permission: LocationPermission , icon:""}] else []

@@ -24,11 +24,11 @@ import Components.AppOnboardingNavBar as AppOnboardingNavBar
 import Effect.Class (liftEffect)
 import Effect.Unsafe (unsafePerformEffect)
 import Engineering.Helpers.LogEvent (logEvent)
-import JBridge (checkAndAskNotificationPermission, checkOverlayPermission, firebaseLogEvent, isBatteryPermissionEnabled, isNotificationPermissionEnabled, isOverlayPermissionEnabled, requestAutoStartPermission, requestBatteryPermission, requestLocation, getAndroidVersion)
+import JBridge (checkAndAskNotificationPermission, checkOverlayPermission, firebaseLogEvent, isBatteryPermissionEnabled, isNotificationPermissionEnabled, isOverlayPermissionEnabled, requestAutoStartPermission, requestBatteryPermission, requestLocation, getAndroidVersion, isLocationPermissionEnabled)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (trackAppActionClick, trackAppBackPress, trackAppEndScreen, trackAppScreenEvent, trackAppScreenRender, trackAppTextInput)
-import Prelude (class Show, bind, discard, not, pure, unit, when, ($), (==))
+import Prelude (class Show, bind, discard, not, pure, unit, when, ($), (==), void)
 import PrestoDOM (Eval, continue, continueWithCmd, exit)
 import PrestoDOM.Types.Core (class Loggable)
 import Screens (ScreenName(..), getScreen)
@@ -53,9 +53,11 @@ instance loggableAction :: Loggable Action where
         UpdateNotificationPermissionState -> trackAppActionClick appId (getScreen NEED_ACCESS_SCREEN) "in_screen" "update_location_permission_state"
         UpdateOverlayPermissionState -> trackAppActionClick appId (getScreen NEED_ACCESS_SCREEN) "in_screen" "update_overlay_permission_state"
         UpdateBatteryPermissionState -> trackAppActionClick appId (getScreen NEED_ACCESS_SCREEN) "in_screen" "update_battery_permission_state"
+        UpdateLocationPermissionState -> trackAppActionClick appId (getScreen NEED_ACCESS_SCREEN) "in_screen" "location_permission_callback"
         NotificationPermissionCallBack str -> trackAppActionClick appId (getScreen NEED_ACCESS_SCREEN) "in_screen" "location_permission_callback"
         OverlayPermissionSwitchCallBack str -> trackAppActionClick appId (getScreen NEED_ACCESS_SCREEN) "in_screen" "overlay_permission_switch_callback"
         BatteryUsagePermissionCallBack str -> trackAppActionClick appId (getScreen NEED_ACCESS_SCREEN) "in_screen" "battery_usage_permission_callback"
+        LocationPermissionCallBack str -> trackAppActionClick appId (getScreen NEED_ACCESS_SCREEN) "in_screen" "location_permission_callback"
         UpdateAllChecks updatedState -> trackAppScreenEvent appId (getScreen NEED_ACCESS_SCREEN) "in_screen" "update_all_checks"
         NoAction -> trackAppScreenEvent appId (getScreen NEED_ACCESS_SCREEN) "in_screen" "no_action"
         PopUpModalLogoutAction act -> case act of
@@ -86,6 +88,8 @@ data Action = BackPressed
             | NotificationPermissionCallBack Boolean
             | OverlayPermissionSwitchCallBack Boolean
             | BatteryUsagePermissionCallBack Boolean
+            | LocationPermissionCallBack Boolean
+            | UpdateLocationPermissionState
             | UpdateBatteryPermissionState
             | AfterRender
             | UpdateAllChecks PermissionsScreenState
@@ -98,8 +102,10 @@ eval AfterRender state = continueWithCmd state [ do
                             isNotificationPermissionChecked <- isNotificationPermissionEnabled unit
                             isOverlayPermission <- isOverlayPermissionEnabled unit
                             isBatteryUsagePermission <- isBatteryPermissionEnabled unit
+                            isLocationPermission <- isLocationPermissionEnabled unit
                             pure $ UpdateAllChecks state{ props { isNotificationPermissionChecked = isNotificationPermissionChecked,
                                                         isOverlayPermissionChecked = isOverlayPermission,
+                                                        isLocationPermissionChecked = isLocationPermission,
                                                         isBatteryOptimizationChecked = isBatteryUsagePermission, androidVersion = androidVersion}}]
 
 eval (UpdateAllChecks updatedState) state = continue updatedState
@@ -108,6 +114,8 @@ eval (PrimaryButtonActionController (PrimaryButtonController.OnClick)) state = e
 eval UpdateNotificationPermissionState state = continue state {props {isNotificationPermissionChecked = true}}
 eval UpdateOverlayPermissionState state = continue state {props {isOverlayPermissionChecked = true}}
 eval UpdateBatteryPermissionState state = continue state {props {isBatteryOptimizationChecked = true}}
+eval UpdateLocationPermissionState state = continue state {props {isLocationPermissionChecked = true}}
+
 
 eval (NotificationPermissionCallBack isNotificationPermissionEnabled) state = do
   if isNotificationPermissionEnabled then do
@@ -126,6 +134,13 @@ eval (BatteryUsagePermissionCallBack isBatteryOptimizationEnabled) state = do
     let _ = unsafePerformEffect $ logEvent state.data.logField "permission_granted_battery"
     continue state {props {isBatteryOptimizationChecked = isBatteryOptimizationEnabled }}
     else continue state {props {isBatteryOptimizationChecked = isBatteryOptimizationEnabled }}
+
+eval (LocationPermissionCallBack isLocationPermissionEnabled) state = do
+    let newState = state {props {isLocationPermissionChecked = isLocationPermissionEnabled}}
+    if isLocationPermissionEnabled then do
+        let _ = unsafePerformEffect $ logEvent state.data.logField  "permission_granted_location"
+        continue newState
+    else continue newState
 
 eval (ItemClick itemType) state =
     case itemType of 
@@ -149,6 +164,18 @@ eval (ItemClick itemType) state =
                     else do 
                     _ <- liftEffect $ checkOverlayPermission unit
                     pure NoAction
+                ]
+            else continue state
+
+    LocationPermission -> do
+        let _ = unsafePerformEffect $ logEvent state.data.logField "permission_btn_click_location"
+        if not(state.props.isLocationPermissionChecked) then do
+            continueWithCmd state [do
+                isLocationPermission <- isLocationPermissionEnabled unit
+                if isLocationPermission then pure UpdateLocationPermissionState
+                    else do 
+                        void $ liftEffect $ requestLocation unit
+                        pure NoAction
                 ]
             else continue state
 
@@ -192,6 +219,7 @@ getTitle permission =
       Battery -> (getString BATTERY_OPTIMIZATIONS)
       AutoStart -> (getString AUTO_START_APPLICATION_IN_BACKGROUND)
       Notifications -> (getString NOTIFICATION_ACCESS)
+      LocationPermission -> getString LOCATION_ACCESS
 
 getDescription :: Permissions -> String
 getDescription permission = 
@@ -200,3 +228,4 @@ getDescription permission =
       Battery -> (getString NEED_IT_TO_DISABLE_BATTERY_OPTIMIZATION_FOR_THE_APP)
       AutoStart -> (getString NEED_IT_TO_AUTOSTART_YOUR_APP)
       Notifications -> (getString NOTIFICATION_ACCESS_DESC)
+      LocationPermission -> getString $ NEED_IT_TO_ENABLE_LOCATION "NEED_IT_TO_ENABLE_LOCATION" 
