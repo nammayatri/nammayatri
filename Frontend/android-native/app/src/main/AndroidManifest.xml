@@ -92,11 +92,19 @@
             android:launchMode="singleTask"
             android:resizeableActivity="false"
             android:screenOrientation="portrait"
-            android:windowSoftInputMode="adjustResize">
-            <intent-filter>
+            android:windowSoftInputMode="adjustResize"
+            tools:ignore="DuplicateActivity">
+            <intent-filter android:priority="0">
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
+                <action android:name="android.intent.action.VIEW" />
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data android:scheme="http"/>
+                <data android:scheme="geo" />
             </intent-filter>
+
         </activity>
     </application>
 

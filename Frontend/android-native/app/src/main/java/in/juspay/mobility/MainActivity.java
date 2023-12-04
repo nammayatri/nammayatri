@@ -283,6 +283,81 @@ public class MainActivity extends AppCompatActivity {
         sharedPref = context.getSharedPreferences(this.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
         handleSplashScreen();
 
+        Intent intent = getIntent();
+        String action = intent.getAction();
+        String type = intent.getType();
+
+//        Intent intent = getIntent();
+        if (intent != null && Intent.ACTION_VIEW.equals(intent.getAction())) {
+            // Get the data URI from the intent
+            Uri uri = intent.getData();
+
+            if (uri != null) {
+                String scheme = uri.getScheme();
+
+                if (scheme != null && "geo".equals(scheme)) {
+                    // Extract latitude and longitude from the geo URI
+                    String[] latLng = uri.getSchemeSpecificPart().toString().split(",");
+                    String[] latLngstr = uri.getSchemeSpecificPart().split(",");
+//                    double latitude = Double.parseDouble(latLng[0]);
+//                    double longitude = Double.parseDouble(latLng[1]);
+//                    System.out.println("latitude" + latitude);
+//                    System.out.println("longitude" + longitude);
+                    System.out.println("uri.getSchemeSpecificPart()" + uri.getSchemeSpecificPart().toString());
+                    System.out.println("latLngstr" + latLngstr);
+
+                    // Now you have the latitude and longitude, and you can use them as needed
+                    // For example, you might want to display the location or perform some other action
+                }
+            }
+        }
+
+//        if (intent != null && Intent.ACTION_VIEW.equals(intent.getAction())) {
+//            // Get the data URI from the intent
+//            Uri uri = intent.getData();
+//
+//            if (uri != null && "geo".equals(uri.getScheme())) {
+//                // Extract latitude and longitude from the geo URI
+//                double latitude = Double.parseDouble(uri.getQueryParameter("lat"));
+//                double longitude = Double.parseDouble(uri.getQueryParameter("lng"));
+//                System.out.println("latitude" + latitude);
+//                System.out.println("longitude" + longitude);
+//
+//                // Now you have the latitude and longitude, and you can use them as needed
+//                // For example, you might want to display the location or perform some other action
+//            }
+//        }
+
+         if (Intent.ACTION_SEND.equals(action) && type != null) {
+             System.out.println("sharedText action" + action);
+             Log.e(LOG_TAG, "sharedText action log");
+                if ("text/plain".equals(type)) {
+                    String sharedText = intent.getStringExtra(Intent.EXTRA_TEXT);
+                    if (sharedText != null) {
+                        System.out.println("sharedText" + sharedText);
+                        Log.e(LOG_TAG, "sharedText log");
+                        // Update UI to reflect text being shared
+                    }
+            } 
+         }
+
+        if (Intent.ACTION_VIEW.equals(action) && type != null) {
+            System.out.println("sharedText action" + action);
+            Log.e(LOG_TAG, "sharedText action log");
+            if ("text/plain".equals(type)) {
+                String sharedText = intent.getStringExtra(Intent.EXTRA_TEXT);
+                if (sharedText != null) {
+                    System.out.println("sharedText" + sharedText);
+                    Log.e(LOG_TAG, "sharedText log");
+                    // Update UI to reflect text being shared
+                }
+            }
+        }
+
+//        final String uri = "geo:" + lat + "," + lng;
+//        startActivity(new Intent(android.content.Intent.ACTION_VIEW, Uri.parse(uri)));
+
+
         WebView.setWebContentsDebuggingEnabled(true);
 
         if (MERCHANT_TYPE.equals("DRIVER")) {
