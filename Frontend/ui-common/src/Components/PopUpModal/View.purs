@@ -210,6 +210,7 @@ view push state =
             , gravity CENTER
             , margin $ state.secondaryText.margin
             , padding state.secondaryText.padding
+            , visibility $ state.secondaryText.visibility
             , onClick push $ const OnSecondaryTextClick
           ][ textView $
              [ width WRAP_CONTENT
