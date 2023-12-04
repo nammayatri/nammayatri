@@ -45,6 +45,7 @@ import Data.String.CodeUnits (splitAt)
 import Data.String.Common (joinWith, split, toUpper, trim)
 import Data.Time.Duration (Milliseconds(..))
 import Data.Tuple (Tuple(..), fst)
+import Data.Traversable (traverse)
 import Effect (Effect)
 import Effect.Aff (makeAff, nonCanceler, launchAff)
 import Effect.Class (liftEffect)
@@ -282,7 +283,7 @@ enterOTPFlow = do
           _ <- lift $ lift $ setLogField "driver_id" $ encode (driverId)
           pure unit
       setValueToLocalStore DRIVER_ID driverId
-      void $ pure $ setCleverTapUserData "Identity" (getValueToLocalStore DRIVER_ID)
+      void $ liftFlowBT $ setCleverTapUserData "Identity" (getValueToLocalStore DRIVER_ID)
       setValueToLocalStore REGISTERATION_TOKEN resp.token -- add from response
       void $ lift $ lift $ toggleLoader false
       (UpdateDriverInfoResp updateDriverResp) <- Remote.updateDriverInfoBT $ mkUpdateDriverInfoReq ""
@@ -2758,19 +2759,17 @@ updateCleverTapUserProps (GetDriverInfoResp getDriverInfoResp)= do
                     Just name -> " " <> name
                     Nothing -> ""
       name = getDriverInfoResp.firstName <> middleName <> lastName
-  void $ pure $ setCleverTapUserData "Name" name
-  void $ pure $ setCleverTapUserData "Identity" $ getValueToLocalStore DRIVER_ID
+  setCleverTapUserData "Name" name
+  setCleverTapUserData "Identity" $ getValueToLocalStore DRIVER_ID
   case getDriverInfoResp.mobileNumber of
     Just value -> do 
-      void $ pure $ setCleverTapUserData "Phone" $ "+91" <> value
+      setCleverTapUserData "Phone" $ "+91" <> value
       void $ pure $ setCleverTapUserProp [{key : "Mobile_Number", value : unsafeToForeign $ "91" <> value}]
     Nothing -> pure unit
-  case getDriverInfoResp.gender of
-    Just value | value /= "UNKNOWN" -> void $ pure $ setCleverTapUserData "gender" value
-    _ -> pure unit
-  case getDriverInfoResp.alternateNumber of
-    Just value -> void $ pure $ setCleverTapUserData "Alternate Number" $ "+91" <> value
-    Nothing -> pure unit
+
+  void $ traverse (setCleverTapUserData "gender") $ getDriverInfoResp.gender
+  void $ traverse (setCleverTapUserData "Alternate Number") $ getDriverInfoResp.alternateNumber
+
   case getDriverInfoResp.numberOfRides of
     Just value -> void $ pure $ setCleverTapUserProp [{key : "total_driver_trips", value : unsafeToForeign value }]
     Nothing -> pure unit

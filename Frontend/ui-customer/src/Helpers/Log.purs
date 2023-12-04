@@ -30,6 +30,7 @@ import Types.App (FlowBT)
 import Services.API (GetProfileRes(..))
 import Data.Lens ((^.))
 import Accessor
+import Data.Traversable (traverse)
 
 baseAppLogs :: FlowBT String Unit
 baseAppLogs = do
@@ -60,9 +61,9 @@ baseAppLogs = do
 updateCTEventData :: GetProfileRes -> FlowBT String Unit
 updateCTEventData response = do
   let name = catMaybeStrings [ response ^. _firstName, response ^. _middleName, response ^. _lastName ]
-  void $ pure $ setCleverTapUserData "Name" name
-  void $ pure $ setCleverTapUserData "gender" <$> response ^. _gender
-  void $ pure $ setCleverTapUserData "preferred Language" <$> response ^. _language
-  void $ pure $ setCleverTapUserData "Identity" $ getValueToLocalStore CUSTOMER_ID
-  void $ pure $ setCleverTapUserData "Phone" $ "+91" <> getValueToLocalStore MOBILE_NUMBER
-  void $ pure $ setCleverTapUserData "email" <$> response ^. _email
+  void $ liftFlowBT $ setCleverTapUserData "Name" name
+  void $ liftFlowBT $ traverse (setCleverTapUserData "gender") $ response ^. _gender
+  void $ liftFlowBT $ traverse (setCleverTapUserData "preferred Language") $ response ^. _language
+  void $ liftFlowBT $ setCleverTapUserData "Identity" $ getValueToLocalStore CUSTOMER_ID
+  void $ liftFlowBT $ setCleverTapUserData "Phone" $ "+91" <> getValueToLocalStore MOBILE_NUMBER
+  void $ liftFlowBT $ traverse (setCleverTapUserData "email") $ response ^. _email
