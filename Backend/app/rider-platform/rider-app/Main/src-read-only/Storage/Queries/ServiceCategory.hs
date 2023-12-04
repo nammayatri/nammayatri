@@ -16,6 +16,15 @@ import qualified Storage.Beam.ServiceCategory as Beam
 create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.ServiceCategory.ServiceCategory -> m ()
 create = createWithKV
 
+createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [Domain.Types.ServiceCategory.ServiceCategory] -> m ()
+createMany = traverse_ createWithKV
+
+findById :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.ServiceCategory.ServiceCategory -> m (Maybe (Domain.Types.ServiceCategory.ServiceCategory))
+findById (Kernel.Types.Id.Id id) = do
+  findOneWithKV
+    [ Se.Is Beam.id $ Se.Eq id
+    ]
+
 instance FromTType' Beam.ServiceCategory Domain.Types.ServiceCategory.ServiceCategory where
   fromTType' Beam.ServiceCategoryT {..} = do
     pure $

@@ -16,6 +16,21 @@ import qualified Storage.Beam.TicketPlace as Beam
 create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.TicketPlace.TicketPlace -> m ()
 create = createWithKV
 
+createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [Domain.Types.TicketPlace.TicketPlace] -> m ()
+createMany = traverse_ createWithKV
+
+findById :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace -> m (Maybe (Domain.Types.TicketPlace.TicketPlace))
+findById (Kernel.Types.Id.Id id) = do
+  findOneWithKV
+    [ Se.Is Beam.id $ Se.Eq id
+    ]
+
+getTicketPlaces :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity -> m ([Domain.Types.TicketPlace.TicketPlace])
+getTicketPlaces (Kernel.Types.Id.Id merchantOperatingCityId) = do
+  findAllWithKV
+    [ Se.Is Beam.merchantOperatingCityId $ Se.Eq merchantOperatingCityId
+    ]
+
 instance FromTType' Beam.TicketPlace Domain.Types.TicketPlace.TicketPlace where
   fromTType' Beam.TicketPlaceT {..} = do
     pure $

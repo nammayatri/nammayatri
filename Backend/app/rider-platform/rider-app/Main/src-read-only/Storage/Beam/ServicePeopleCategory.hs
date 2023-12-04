@@ -8,6 +8,7 @@ import qualified Database.Beam as B
 import qualified Domain.Types.ServicePeopleCategory as Domain.Types.ServicePeopleCategory
 import Kernel.Prelude
 import qualified Kernel.Prelude as Kernel.Prelude
+import qualified Kernel.Types.Common as Kernel.Types.Common
 import qualified Kernel.Types.Id as Kernel.Types.Id
 import Tools.Beam.UtilsTH
 
@@ -15,7 +16,7 @@ data ServicePeopleCategoryT f = ServicePeopleCategoryT
   { description :: B.C f Kernel.Prelude.Text,
     id :: B.C f Kernel.Prelude.Text,
     name :: B.C f Kernel.Prelude.Text,
-    pricePerUnit :: B.C f Kernel.Prelude.Int
+    pricePerUnit :: B.C f Kernel.Types.Common.HighPrecMoney
   }
   deriving (Generic, B.Beamable)
 

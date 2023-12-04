@@ -51,6 +51,14 @@ TicketPlace:
   #   gallery: []
   #   termsAndConditions: []
 
+  queries:
+    getTicketPlaces:
+      kvFunction: findAllWithKV
+      where: merchantOperatingCityId
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+
 TicketService:
   tableName : ticket_service
 
@@ -63,7 +71,7 @@ TicketService:
     maxVerification : Int
     allowFutureBooking : Bool
     expiry : ExpiryType
-    bussinessHours : "[Id BusinessHour]"
+    businessHours : "[Id BusinessHour]"
   types:
     ExpiryType:
       enum: "SameDay,NextDay,NextWeek,NextMonth"
@@ -72,13 +80,17 @@ TicketService:
     id : PrimaryKey | NotNull
     serviceName : NotNull
     placeId : NotNull
-    bussinessHours : NotNull
+    businessHours : NotNull
     operationalDays : NotNull
 
   default:
     operationalDays: "{Monday, Tuesday, Wednesday, Thursday, Friday, Saturday, Sunday}"
 
   queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+
     getTicketServicesByPlaceId:
       kvFunction: findAllWithKV
       where: placeId
@@ -152,6 +164,11 @@ ServiceCategory:
     name : NotNull
     description : NotNull
 
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+
 ServicePeopleCategory:
   tableName: service_people_category
 
@@ -159,13 +176,18 @@ ServicePeopleCategory:
     id: Id ServicePeopleCategory
     name: Text
     description: Text
-    pricePerUnit: Int
+    pricePerUnit: HighPrecMoney
 
   constraints :
     id : PrimaryKey|NotNull
     name : NotNull
     description : NotNull
     pricePerUnit : NotNull
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
 
 SeatManagement:
   tableName: seat_management
@@ -227,9 +249,10 @@ TicketBooking:
     status: NotNull
     createdAt: NotNull
     updatedAt: NotNull
+
   types:
     BookingStatus:
-      enum: "Pending,Confirmed,Cancelled,Expired"
+      enum: "Pending,Failed,Booked"
 
   default:
     createdAt: CURRENT_TIMESTAMP
@@ -240,10 +263,16 @@ TicketBooking:
       kvFunction: updateWithKV
       params: [status, updatedAt]
       where: shortId
-
+    findById:
+      kvFunction: findOneWithKV
+      where: id
     findByShortId:
       kvFunction: findOneWithKV
       where: shortId
+    getAllBookingsByPersonId:
+      kvFunction: findAllWithOptionsKV
+      where:
+        and: [personId, merchantOperatingCityId, status]
 
 TicketBookingService:
   tableName: ticket_booking_service
@@ -264,7 +293,7 @@ TicketBookingService:
 
   types:
     ServiceStatus:
-      enum: "Pending,Confirmed,Cancelled,Expired"
+      enum: "Pending,Failed,Confirmed,Verified"
 
   constraints:
     id: PrimaryKey|NotNull
@@ -287,8 +316,11 @@ TicketBookingService:
     findById:
       kvFunction: findOneWithKV
       where: id
+    findByShortId:
+      kvFunction: findOneWithKV
+      where: shortId
     findAllByBookingId:
-      kvFunction: findAllWithOptionsKV
+      kvFunction: findAllWithKV
       where: ticketBookingId
 
 TicketBookingServiceCategory:
@@ -300,6 +332,7 @@ TicketBookingServiceCategory:
     name: Text
     bookedSeats: Int
     amount: HighPrecMoney
+
   constraints:
     id: PrimaryKey|NotNull
 

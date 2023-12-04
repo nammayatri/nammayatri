@@ -2,6 +2,7 @@
 
 module Domain.Types.TicketBooking where
 
+import Data.Aeson
 import qualified Data.Time.Calendar as Data.Time.Calendar
 import qualified Domain.Types.Merchant.MerchantOperatingCity as Domain.Types.Merchant.MerchantOperatingCity
 import qualified Domain.Types.Person as Domain.Types.Person
@@ -9,6 +10,7 @@ import qualified Domain.Types.TicketPlace as Domain.Types.TicketPlace
 import Kernel.Prelude
 import qualified Kernel.Types.Common as Kernel.Types.Common
 import qualified Kernel.Types.Id as Kernel.Types.Id
+import Kernel.Utils.TH (mkHttpInstancesForEnum)
 import Tools.Beam.UtilsTH
 
 data TicketBooking = TicketBooking
@@ -23,9 +25,11 @@ data TicketBooking = TicketBooking
     updatedAt :: Kernel.Prelude.UTCTime,
     visitDate :: Data.Time.Calendar.Day
   }
-  deriving (Generic, Show)
+  deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
 
-data BookingStatus = Pending | Confirmed | Cancelled | Expired
-  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+data BookingStatus = Pending | Failed | Booked
+  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+
+$(mkHttpInstancesForEnum ''BookingStatus)
 
 $(mkBeamInstancesForEnum ''BookingStatus)

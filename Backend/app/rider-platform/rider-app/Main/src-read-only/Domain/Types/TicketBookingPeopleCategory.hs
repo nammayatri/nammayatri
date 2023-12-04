@@ -14,4 +14,4 @@ data TicketBookingPeopleCategory = TicketBookingPeopleCategory
     pricePerUnit :: Kernel.Types.Common.HighPrecMoney,
     ticketBookingServiceCategoryId :: Kernel.Types.Id.Id Domain.Types.TicketBookingServiceCategory.TicketBookingServiceCategory
   }
-  deriving (Generic, Show)
+  deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
