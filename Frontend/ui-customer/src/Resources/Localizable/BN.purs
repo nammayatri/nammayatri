@@ -427,7 +427,7 @@ getBN stringKey =
         YOUR_NUMBER_WILL_BE_VISIBLE_TO_THE_DRIVER_USE_IF_NOT_CALLING_FROM_REGISTERED_NUMBER  -> "আপনার নম্বরটি ড্রাইভারের কাছে দৃশ্যমান হবে। নিবন্ধিত নম্বর থেকে কল না করলে ব্যবহার করুন"
         CALL_DRIVER_USING  -> "ব্যবহার করে ড্রাইভারকে কল করুন"
         WAS_YOUR_CALL_SUCCESSFUL  -> "আপনার কল সফল ছিল" 
-        GO_TO_ZONE _  -> "যাত্রী সাথী জোনে যান"
+        GO_TO_ZONE _  -> "জোনে যান"
         REQUEST_RECEIVED_WE_WILL_CALL_YOU_BACK_SOON  -> "অনুরোধ পেয়েছি. আমরা তোমার সাথে শীঘ্রই যোগাযোগ করবো"
         CONTACT_REMOVED_SUCCESSFULLY  -> "যোগাযোগ সফলভাবে সরানো হয়েছে"
         CORPORATE_ADDRESS  -> "অভিযোগ এবং অভিযোগ"
