@@ -93,6 +93,84 @@ library
     , directory
     , esqueleto
     , extra
+    , filepath
+    , lens
+    , lens-aeson
+    , mobility-core
+    , parsec
+    , persistent
+    , persistent-postgresql
+    , raw-strings-qq
+    , record-dot-preprocessor
+    , record-hasfield
+    , regex-tdfa
+    , scientific
+    , servant-server
+    , split
+    , template-haskell
+    , text
+    , time
+    , unordered-containers
+    , vector
+    , yaml
+  default-language: Haskell2010
+  if flag(Local)
+    ghc-options: -O0 -funfolding-use-threshold20 -fno-cse -fmax-simplifier-iterations1 -fno-specialise-aggressively -j4
+  else
+    ghc-options: -O2 -j4
+
+executable alchemist-generator-exe
+  main-is: Main.hs
+  other-modules:
+      Paths_alchemist
+  hs-source-dirs:
+      spec
+  default-extensions:
+      ConstraintKinds
+      DataKinds
+      DefaultSignatures
+      DeriveAnyClass
+      DeriveFunctor
+      DeriveGeneric
+      DuplicateRecordFields
+      ExplicitNamespaces
+      FlexibleContexts
+      FlexibleInstances
+      FunctionalDependencies
+      GADTs
+      LambdaCase
+      MultiParamTypeClasses
+      MultiWayIf
+      NamedFieldPuns
+      NoImplicitPrelude
+      OverloadedLabels
+      OverloadedStrings
+      PackageImports
+      PatternSynonyms
+      PolyKinds
+      RankNTypes
+      RecordWildCards
+      ScopedTypeVariables
+      TupleSections
+      TypeApplications
+      TypeFamilies
+      TypeOperators
+      ViewPatterns
+      BlockArguments
+      TypeSynonymInstances
+      UndecidableInstances
+  ghc-options: -Wall -Wcompat -Werror -Widentities -Wunused-imports -fplugin=RecordDotPreprocessor -fwrite-ide-info -hiedir=.hie -threaded -rtsopts "-with-rtsopts=-N -T"
+  build-depends:
+      aeson
+    , alchemist
+    , base >=4.7 && <5
+    , beckn-spec
+    , bytestring
+    , casing
+    , directory
+    , esqueleto
+    , extra
+    , filepath
     , lens
     , lens-aeson
     , mobility-core
@@ -190,6 +268,7 @@ test-suite alchemist-tests
     , directory
     , esqueleto
     , extra
+    , filepath
     , lens
     , lens-aeson
     , mobility-core
