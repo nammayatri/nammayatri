@@ -282,28 +282,6 @@ calendarView push state =
             , weight 1.0
             ]
             []
-        , linearLayout 
-          [ height WRAP_CONTENT
-          , width WRAP_CONTENT
-          , orientation HORIZONTAL
-          , gravity CENTER
-          , padding $ Padding 5 5 5 5
-          , onClick push $ const OpenPaymentHistory
-          , visibility $ if getMerchant FunctionCall == YATRISATHI then VISIBLE else GONE
-          ][  textView
-              $ [ height WRAP_CONTENT
-                , width WRAP_CONTENT
-                , text $ getString VIEW_PAYMENT_HISTORY
-                , color Color.blue900
-                , margin $ MarginRight 5
-                ]
-              <> FontStyle.tags LanguageStyle
-            , imageView
-              [ height $ V 8
-              , width $ V 10
-              , imageWithFallback $ fetchImage FF_ASSET "ny_ic_right_arrow_blue"
-              ]
-          ]
         ]
     ]
 

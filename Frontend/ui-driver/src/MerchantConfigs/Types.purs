@@ -25,7 +25,10 @@ type AppConfig =
     waitTimeConfig :: WaitTimeConfig,
     cityConfig :: Array CityConfig,
     unserviceableThreshold :: Number,
-    enableMockLocation :: Boolean
+    enableMockLocation :: Boolean,
+    flowConfig :: FlowConfig,
+    permissions :: PermissionsConfig,
+    homeScreen :: HomeScreenConfig
   } 
 
 type PurpleRideConfig = {
@@ -69,7 +72,9 @@ type SubscriptionConfig =  {
   enableIntroductoryView :: Boolean,
   optionsMenuItems :: SubscriptionOptionsMenuItems,
   gradientConfig :: Array GradientConfig,
-  enableSubscriptionSupportPopup :: Boolean
+  enableSubscriptionSupportPopup :: Boolean,
+  earnAmountInADay :: Int,
+  showFeeBreakup :: Boolean
  }
 
 type SubscriptionOfferBannerConfig = {
@@ -132,4 +137,23 @@ type WaitTimeConfig = {
   enableWaitTime :: Boolean,
   thresholdDist :: Number,
   thresholdTime :: Int
+}
+
+type FlowConfig = {
+  chooseCity :: ChooseCityFlowConfig
+}
+
+type ChooseCityFlowConfig = {
+  runFlow :: Boolean,
+  defCity :: String
+}
+
+type PermissionsConfig = {
+  locationPermission :: Boolean,
+  notification :: Boolean
+}
+
+type HomeScreenConfig = {
+  specialRideOtpView :: Boolean,
+  showGenderBanner :: Boolean
 }

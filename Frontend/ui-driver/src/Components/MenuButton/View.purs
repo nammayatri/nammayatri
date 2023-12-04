@@ -49,9 +49,9 @@ view push state =
           [ height WRAP_CONTENT
           , width MATCH_PARENT
           , orientation HORIZONTAL
-          , padding (Padding 16 16 16 16)
-          , margin $ MarginBottom 16
-          , onClick push (const (OnSelection state))
+          , padding state.padding
+          , margin state.margin
+          , onClick push $ const $ OnSelection state
           , gravity CENTER_VERTICAL
           , cornerRadius 6.0
           , background if state.isSelected then state.activeBgColor else Color.white900

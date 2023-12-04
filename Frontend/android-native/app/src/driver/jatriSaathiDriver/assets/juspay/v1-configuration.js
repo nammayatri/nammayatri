@@ -12,7 +12,30 @@ window.getMerchantConfig = function () {
     "USER_APP_LINK" : "https://nammayatri.in/link/rider/kTZ1",
     "PRIVACY_POLICY_LINK": "https://docs.google.com/document/d/1-bcjLOZ_gR0Rda2BNmkKnqVds8Pm23v1e7JbSDdM70E",
     "SPECIAL_ZONE_OTP_VIEW": "true",
-    "StringKeys": ["WELCOME_TEXT", "ABOUT_TEXT", "NEED_IT_TO_ENABLE_LOCATION", "CURRENTLY_WE_ALLOW_ONLY_KARNATAKA_REGISTERED_NUMBER", "YOU_ARE_ABOUT_TO_CALL_NAMMA_YATRI_SUPPORT", "YOUR_LOCATION_HELPS_OUR_SYSTEM", "EARNED_ON_APP", "TRAVELLED_ON_APP", "REPORT_ISSUE_CHAT_PLACEHOLDER", "MY_PLAN_TITLE", "CHOOSE_YOUR_PLAN", "OFFER_CARD_BANNER_TITLE", "TO_CONTINUE_USING_YATRI_SATHI", "YATRI_SATHI_FEE_PAYABLE_FOR_DATE", "PAYMENT_FAILED_DESC", "AADHAAR_LINKING_REQUIRED_DESCRIPTION", "COMPLETE_PAYMENT_TO_CONTINUE", "GET_READY_FOR_YS_SUBSCRIPTION"],
+    "StringKeys": ["WELCOME_TEXT",
+                    "ABOUT_TEXT",
+                    "NEED_IT_TO_ENABLE_LOCATION",
+                    "CURRENTLY_WE_ALLOW_ONLY_KARNATAKA_REGISTERED_NUMBER",
+                    "YOU_ARE_ABOUT_TO_CALL_NAMMA_YATRI_SUPPORT",
+                    "YOUR_LOCATION_HELPS_OUR_SYSTEM",
+                    "EARNED_ON_APP",
+                    "TRAVELLED_ON_APP",
+                    "REPORT_ISSUE_CHAT_PLACEHOLDER",
+                    "MY_PLAN_TITLE",
+                    "CHOOSE_YOUR_PLAN",
+                    "OFFER_CARD_BANNER_TITLE",
+                    "TO_CONTINUE_USING_YATRI_SATHI",
+                    "YATRI_SATHI_FEE_PAYABLE_FOR_DATE",
+                    "PAYMENT_FAILED_DESC",
+                    "AADHAAR_LINKING_REQUIRED_DESCRIPTION",
+                    "COMPLETE_PAYMENT_TO_CONTINUE",
+                    "GET_READY_FOR_YS_SUBSCRIPTION",
+                    "SUBSCRIPTION_PLAN_STR",
+                    "FIND_HELP_CENTRE",
+                    "HOW_IT_WORKS",
+                    "GET_SPECIAL_OFFERS",
+                    "PAYMENT_PENDING_ALERT_DESC"
+                    ],
     "fontType": "Assets",
     "currency": "₹",
     "isGradient" : "false",
@@ -54,15 +77,19 @@ window.getMerchantConfig = function () {
       "TRAVELLED_ON_APP" : "Travelled On Yatri Sathi",
       "REPORT_ISSUE_CHAT_PLACEHOLDER" : "Describe your issue. Yatri Sathi will try to resolve it in under 24 hours.",
       "MY_PLAN_TITLE" : "Yatri Sathi Plans",
-      "CHOOSE_YOUR_PLAN" : "Start your Plan Now!",
       "OFFER_CARD_BANNER_TITLE" : "Setup Autopay and pay only ₹1/ride from Jan 1-31",
       "TO_CONTINUE_USING_YATRI_SATHI" : "To continue using Yatri Sathi, please complete your payment for",
       "YATRI_SATHI_FEE_PAYABLE_FOR_DATE" : "Yatri Sathi fee payable for",
       "PAYMENT_FAILED_DESC" : "You may retry payment, or make the payment at your nearest Yatri Sathi booth",
       "AADHAAR_LINKING_REQUIRED_DESCRIPTION" : "To start driving for Yatri Sathi, please \n link your Aadhaar ID",
       "COMPLETE_PAYMENT_TO_CONTINUE" : "To continue using Yatri Sathi, please complete your payment",
-      "GET_READY_FOR_YS_SUBSCRIPTION" : "Get ready for\nYatri Sathi Plans!"
-
+      "GET_READY_FOR_YS_SUBSCRIPTION" : "Get ready for\nYatri Sathi Plans!",
+      "SUBSCRIPTION_PLAN_STR" : "Yatri Sathi Plan",
+      "CHOOSE_YOUR_PLAN" : "Activate Plan Now!",
+      "FIND_HELP_CENTRE" : "Find Help Desk",
+      "HOW_IT_WORKS" : "How Autopay works?",
+      "GET_SPECIAL_OFFERS" : "Guaranteed fixed price until\nJan 1, 2025",
+      "PAYMENT_PENDING_ALERT_DESC" : "To continue taking rides on Yatri Sathi, clear your payment dues"
     },
     "hindiStrings": {
       "WELCOME_TEXT": "Welcome to Yatri Sathi Driver App",
@@ -75,15 +102,19 @@ window.getMerchantConfig = function () {
       "TRAVELLED_ON_APP" : "यात्री साथी पर तय की गई दूरी",
       "REPORT_ISSUE_CHAT_PLACEHOLDER" : "अपनी समस्या बताएं। यात्री साथी 24 घंटे के अंदर इसका समाधान करने का प्रयास करेगा।",
       "MY_PLAN_TITLE" : "यात्री साथी प्लान्स",
-      "CHOOSE_YOUR_PLAN" : "अपना प्लान शुरू करें!",
       "OFFER_CARD_BANNER_TITLE" : "ऑटोपे सेटअप करें और 1-31 जनवरी तक केवल ₹1/सवारी का पेमेंट करें",
       "TO_CONTINUE_USING_YATRI_SATHI" : "यात्री साथी का उपयोग जारी रखने के लिए",
       "YATRI_SATHI_FEE_PAYABLE_FOR_DATE" : "यात्री साथी शुल्क लागू" ,
       "PAYMENT_FAILED_DESC" : "आप भुगतान को पुनः प्रयास कर सकते हैं, या अपने नजदीकी यात्री साथी बूथ पर भुगतान कर सकते हैं",
       "AADHAAR_LINKING_REQUIRED_DESCRIPTION" : "यात्री साथी के लिए ड्राइविंग शुरू करने के लिए, कृपया अपना आधार आईडी लिंक करें",
       "COMPLETE_PAYMENT_TO_CONTINUE" : "यात्री साथी का उपयोग जारी रखने के लिए, कृपया अपना भुगतान पूरा करें",
-      "GET_READY_FOR_YS_SUBSCRIPTION" : "यात्री साथी योजनाओं के लिए तैयार रहें!"
-
+      "GET_READY_FOR_YS_SUBSCRIPTION" : "यात्री साथी योजनाओं के लिए तैयार रहें!",
+      "SUBSCRIPTION_PLAN_STR" : "यात्री साथी योजना",
+      "CHOOSE_YOUR_PLAN" : "योजना अभी सक्रिय करें!",
+      "FIND_HELP_CENTRE" : "सहायता डेस्क ढूंढें",
+      "HOW_IT_WORKS" : "ऑटोपे कैसे काम करता है?",
+      "GET_SPECIAL_OFFERS" : "1 जनवरी, 2025 तक निश्चित मूल्य की गारंटी",
+      "PAYMENT_PENDING_ALERT_DESC" : "यात्री साथी पर यात्रा जारी रखने के लिए, अपनी शेष राशि चुकाएं"
     },
     "bengaliStrings": {
       "WELCOME_TEXT": "Welcome to Yatri Sathi Driver App",
@@ -96,14 +127,19 @@ window.getMerchantConfig = function () {
       "TRAVELLED_ON_APP" : "যাত্রী সাথীতে দূরত্ব ভ্রমণ",
       "REPORT_ISSUE_CHAT_PLACEHOLDER" : "আপনার সমস্যাটি বর্ণনা করুন। যাত্রী সাথী 24 ঘন্টার মধ্যে এটি সমাধান করার চেষ্টা করবেন।",
       "MY_PLAN_TITLE" : "যাত্রী সাথী পরিকল্পনা",
-      "CHOOSE_YOUR_PLAN" : "এখন প্ল্যান শুরু করুন!",
       "OFFER_CARD_BANNER_TITLE" : "অটোপে সেটআপ করুন এবং জানুয়ারী 1-31 এর মধ্যে শুধুমাত্র ₹1/রাইড প্রদান করুন",
       "TO_CONTINUE_USING_YATRI_SATHI" : "Yatri Sathi ব্যবহার চালিয়ে যেতে, অনুগ্রহ করে আপনার অর্থপ্রদান সম্পূর্ণ করুন",
       "YATRI_SATHI_FEE_PAYABLE_FOR_DATE" : "Yatri Sathi ফি জন্য প্রদেয়" ,
       "PAYMENT_FAILED_DESC" : "আপনি আবার অর্থপ্রদানের চেষ্টা করতে পারেন, অথবা আপনার নিকটস্থ Yatri Sathi বুথে অর্থপ্রদান করতে পারেন",
       "AADHAAR_LINKING_REQUIRED_DESCRIPTION" : "যাত্রী সাথীর জন্য গাড়ি চালানো শুরু করতে, দয়া করে \n আপনার আধার আইডি লিঙ্ক করুন",
       "COMPLETE_PAYMENT_TO_CONTINUE" : "Yatri Sathi ব্যবহার চালিয়ে যেতে, অনুগ্রহ করে আপনার অর্থপ্রদান সম্পূর্ণ করুন",
-      "GET_READY_FOR_YS_SUBSCRIPTION" : "যাত্রী সাথী পরিকল্পনার জন্য প্রস্তুত হন!"
+      "GET_READY_FOR_YS_SUBSCRIPTION" : "যাত্রী সাথী পরিকল্পনার জন্য প্রস্তুত হন!",
+      "SUBSCRIPTION_PLAN_STR" : "যাত্রী সাথী পরিকল্পনা",
+      "CHOOSE_YOUR_PLAN" : "এখনই প্ল্যান সক্রিয় করুন!",
+      "FIND_HELP_CENTRE" : "সহায়তা ডেস্ক খুঁজুন",
+      "HOW_IT_WORKS" : "স্বতঃপে কিভাবে কাজ করে?",
+      "GET_SPECIAL_OFFERS" : "জানুয়ারি 1, 2025 পর্যন্ত গ্যারান্টিযুক্ত নির্দিষ্ট মূল্য",
+      "PAYMENT_PENDING_ALERT_DESC" : "যাত্রী সাথীতে যাত্রা চালিয়ে যেতে, আপনার পেমেন্ট বকেয়া পরিশোধ করুন"
     },
     "logs": ["JUSPAY","FIREBASE","CLEVERTAP"]
     , "fontName" : "PlusJakartaSans"
@@ -116,23 +152,32 @@ window.getMerchantConfig = function () {
       , "packageName" : "com.google.android.apps.maps"
     }
     , "subscriptionConfig" : {
-      "completePaymentPopup" : true,
-      "supportNumber" : "08069724949",
-      "maxDuesLimit" : 500.0,
-      "faqLink" : "https://yatrisathi.in/plans/",
-      "optionsMenuItems" : {
-        "viewFaqs" : true,
-        "viewAutopayDetails" : true
-      },
-      "offerBannerConfig" : {
-        "showDUOfferBanner" : true,
-        "offerBannerValidTill" : "2023-12-01T00:00:00",
-        "offerBannerDeadline" : "Jan 1-31-*$*-ಜನವರಿ 1-31-*$*-1-31 जनवरी-*$*-ஜனவரி 1-31-*$*-জানুয়ারী 1-31",
-        "offerBannerPlans" : ["25ade579-fd9c-4288-a015-337af085e66c"],
-      },
-      "gradientConfig" : [{"id" : "c1a27b2c-8287-4d79-a5d9-99e1a0026203", colors : ["#29FF4D35", "#29FFE588"]},{"id" : "5eed42c1-2388-4a86-b68b-d9da2f674091", colors : ["#29FF4D35", "#29FFE588"]},{"id" : "b6d61915-65bb-4ca9-bbb7-a90be735a722", colors : ["#29FF4D35", "#29FFE588"]}],
-      "enableSubscriptionSupportPopup" : true,
-      "myPlanYoutubeLink" : "https://www.youtube.com/playlist?list=PLvMgI4c44A9Y2bykEuDAtHzgcubXOYqgU-*$*-https://www.youtube.com/playlist?list=PLvMgI4c44A9Y2bykEuDAtHzgcubXOYqgU-*$*-https://www.youtube.com/playlist?list=PLvMgI4c44A9Zl0IIQcZa7ZJrSjWPLfxpA-*$*-https://www.youtube.com/playlist?list=PLvMgI4c44A9Y8NLs_8TXc7biX-JkobrGB"
+          "enableBlocking" : true,
+          "completePaymentPopup" : false,
+          "supportNumber" : "08069724949",
+          "enableSubscriptionPopups" : true,
+          "maxDuesLimit" : 500.0,
+          "faqLink" : "https://yatrisathi.in/plans/",
+          "optionsMenuItems" : {
+            "viewFaqs" : true,
+            "viewAutopayDetails" : true,
+            "paymentHistory" : true,
+            "kioskLocation" : true
+          },
+          "offerBannerConfig" : {
+            "showDUOfferBanner" : true,
+            "offerBannerValidTill" : "2023-12-01T00:00:00",
+            "offerBannerDeadline" : "Jan 1-31-*$*-ಜನವರಿ 1-31-*$*-1-31 जनवरी-*$*-ஜனவரி 1-31-*$*-জানুয়ারী 1-31",
+            "offerBannerPlans" : ["25ade579-fd9c-4288-a015-337af085e66c"],
+          },
+          "lowDuesLimit" : 15.0,
+          "highDueWarningLimit" : 75.0,
+          "gradientConfig" : [{"id" : "c1a27b2c-8287-4d79-a5d9-99e1a0026203", colors : ["#29FF4D35", "#29FFE588"]},{"id" : "5eed42c1-2388-4a86-b68b-d9da2f674091", colors : ["#29FF4D35", "#29FFE588"]},{"id" : "b6d61915-65bb-4ca9-bbb7-a90be735a722", colors : ["#29FF4D35", "#29FFE588"]}],
+          "enableSubscriptionSupportPopup" : true,
+          "myPlanYoutubeLink" : "https://www.youtube.com/playlist?list=PLvMgI4c44A9Y2bykEuDAtHzgcubXOYqgU-*$*-https://www.youtube.com/playlist?list=PLvMgI4c44A9Y2bykEuDAtHzgcubXOYqgU-*$*-https://www.youtube.com/playlist?list=PLvMgI4c44A9Zl0IIQcZa7ZJrSjWPLfxpA-*$*-https://www.youtube.com/playlist?list=PLvMgI4c44A9Y8NLs_8TXc7biX-JkobrGB",
+          "overlayYoutubeLink" : "https://youtube.com/shorts/nyJ1bIOsGfo-*$*-https://youtube.com/shorts/nyJ1bIOsGfo-*$*-https://youtu.be/RSKNT3NccPo-*$*-https://youtu.be/RSKNT3NccPo",
+          "earnAmountInADay" : 5000,
+          "showFeeBreakup" : false
     } 
     , "OTP_MESSAGE_REGEX" : "is your OTP for login to [A-Za-z]+ [A-Za-z]+ [A-Za-z]+"
     , "autoPayBanner" : false
@@ -150,5 +195,18 @@ window.getMerchantConfig = function () {
             }
     }
     , "enableMockLocation" : false
+  , "flowConfig" : {
+        "chooseCity" : {
+            "runFlow" : false
+      }
+    }
+  , "permissions" : {
+        "locationPermission" : true,
+        "notification" : false
+  }
+  , "homeScreen" : {
+        "specialRideOtpView" : true,
+        "showGenderBanner" : false
+  }
   })
 }

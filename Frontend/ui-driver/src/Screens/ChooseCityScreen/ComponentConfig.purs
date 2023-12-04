@@ -18,6 +18,8 @@ import Components.ErrorModal as ErrorModal
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Data.String.Common as DSC
 import MerchantConfig.Types (AppConfig)
+import Components.SelectMenuButton as MenuButton
+import MerchantConfig.Types as MT
 
 ---------------- genericHeaderConfig ----------------
 genericHeaderConfig :: ChooseCityScreenState -> GenericHeader.Config
@@ -127,3 +129,17 @@ mockLocationConfig state =
         , buttonConfig
           { visibility = GONE }
         }
+menuButtonConfig :: Int -> MT.Language -> String -> MenuButton.State
+menuButtonConfig index language selectedVal = MenuButton.config { 
+  text =
+    { name: language.name
+    , value: language.value
+    , subtitle: language.subtitle
+    }, 
+  isSelected = selectedVal == language.value,
+  index = index, 
+  lineVisibility = false, 
+  activeStrokeColor = Color.blue900, 
+  activeBgColor = Color.blue600, 
+  inactiveStrokeColor = Color.grey700
+  }

@@ -90,6 +90,7 @@ import Components.ErrorModal.Controller as ErrorModalController
 import Data.Int as Int
 import Data.Function.Uncurried as Uncurried
 import Engineering.Helpers.Commons as EHC
+import Data.String as DS
 
 instance showAction :: Show Action where
   show _ = ""
@@ -511,7 +512,7 @@ eval (PaymentPendingPopupAC PopUpModal.OptionWithHtmlClick) state = do
 
 eval (PaymentPendingPopupAC PopUpModal.OnSecondaryTextClick) state = do
   continueWithCmd state [do
-    _ <- openUrlInApp $ state.data.config.subscriptionConfig.overlayYoutubeLink
+    _ <- openUrlInApp $ HU.splitBasedOnLanguage state.data.config.subscriptionConfig.overlayYoutubeLink
     pure NoAction
   ]
   
@@ -811,7 +812,9 @@ eval RecenterButtonAction state = continue state
 eval (SwitchDriverStatus status) state =
   if state.data.paymentState.driverBlocked && not state.data.paymentState.subscribed then continue state { props{ subscriptionPopupType = ST.GO_ONLINE_BLOCKER }}
   else if state.data.paymentState.driverBlocked then continue state { data{paymentState{ showBlockingPopup = true}}}
-  else if not state.props.rcActive then exit (DriverAvailabilityStatus state { props = state.props { goOfflineModal = false }} ST.Offline)
+  else if not state.props.rcActive then do
+    void $ pure $ toast $ getString PLEASE_ADD_RC
+    exit (DriverAvailabilityStatus state { props = state.props { goOfflineModal = false }} ST.Offline)
   else if ((getValueToLocalStore IS_DEMOMODE_ENABLED) == "true") then do
     continueWithCmd state [ do
           _ <- pure $ setValueToLocalStore IS_DEMOMODE_ENABLED "false"
@@ -1002,7 +1005,12 @@ constructLatLong lat lon =
   }
 
 activeRideDetail :: ST.HomeScreenState -> RidesInfo -> ST.ActiveRide
-activeRideDetail state (RidesInfo ride) = {
+activeRideDetail state (RidesInfo ride) = 
+  let waitTimeSeconds = DS.split (DS.Pattern "<$>") (getValueToLocalStore TOTAL_WAITED)
+      waitTime = fromMaybe 0 $ Int.fromString $ fromMaybe "" $ waitTimeSeconds Array.!! 1
+      isTimerValid = (fromMaybe "" (waitTimeSeconds Array.!! 0)) == ride.id
+  in 
+  {
   id : ride.id,
   source : (decodeAddress ride.fromLocation true),
   destination : (decodeAddress ride.toLocation true),
@@ -1023,7 +1031,7 @@ activeRideDetail state (RidesInfo ride) = {
   estimatedFare : ride.driverSelectedFare + ride.estimatedBaseFare,
   notifiedCustomer : getValueToLocalStore WAITING_TIME_STATUS == (show ST.PostTriggered),
   exoPhone : ride.exoPhone,
-  waitTimeSeconds :if ride.status == "INPROGRESS" then fromMaybe 0 (Int.fromString (getValueToLocalStore TOTAL_WAITED)) else -1,
+  waitTimeSeconds :if (ride.status == "INPROGRESS" && isTimerValid) then waitTime else -1,
   rideCreatedAt : ride.createdAt,
   waitTimeInfo : state.data.activeRide.waitTimeInfo,
   requestedVehicleVariant : ride.requestedVehicleVariant,

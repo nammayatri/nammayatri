@@ -64,7 +64,7 @@ clearDueButtonConfig state = let
     primaryButtonConfig' = config 
       { textConfig { text = buttonText }
       , isClickable = true
-      , alpha = if true then 1.0 else 0.6
+      , alpha = 1.0
       , height = (V 48)
       , cornerRadius = 8.0
       , id = "SetupAutoPayPrimaryButton"
@@ -234,7 +234,7 @@ popupModalConfig state = let
       option1 {
         text = case state.props.popUpState of
                   Mb.Just SuccessPopup -> getString GOT_IT
-                  Mb.Just FailedPopup -> getString GOT_IT
+                  Mb.Just FailedPopup -> getString RETRY_PAYMENT_STR
                   Mb.Just DuesClearedPopup -> getString GOT_IT
                   Mb.Just SwitchedPlan -> getString GOT_IT
                   Mb.Just CancelAutoPay -> getString PAUSE_AUTOPAY_STR
@@ -404,7 +404,7 @@ optionsMenuConfig state =
     {image : HU.fetchImage HU.FF_ASSET "ny_ic_calendar_black", textdata : getString PAYMENT_HISTORY, action : "payment_history", isVisible : optionsMenuItems.paymentHistory},
     {image : HU.fetchImage HU.FF_ASSET "ny_ic_phone_unfilled", textdata : getString CALL_SUPPORT, action : "call_support", isVisible :  optionsMenuItems.callSupport},
     {image : "ny_ic_message_unfilled,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_message_unfilled.png", textdata : getString CHAT_FOR_HELP, action : "chat_for_help", isVisible : optionsMenuItems.chatSupport},
-    {image : HU.fetchImage HU.FF_ASSET "ny_ic_loc_grey", textdata : getString FIND_HELP_CENTRE, action : "find_help_centre", isVisible : optionsMenuItems.kioskLocation},
+    {image : HU.fetchImage HU.FF_ASSET "ny_ic_loc_grey", textdata : getString (FIND_HELP_CENTRE "FIND_HELP_CENTRE"), action : "find_help_centre", isVisible : optionsMenuItems.kioskLocation},
     {image : HU.fetchImage HU.FF_ASSET "ny_ic_help_circle_transparent", textdata : getString VIEW_FAQs, action : "view_faq", isVisible : optionsMenuItems.viewFaqs},
     {image : "ny_ic_settings_unfilled,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_settings_unfilled.png", textdata : getString VIEW_AUTOPAY_DETAILS, action : "view_autopay_details", isVisible : optionsMenuItems.viewAutopayDetails && state.data.myPlanData.autoPayStatus == ACTIVE_AUTOPAY}],
   backgroundColor = Color.blackLessTrans,
@@ -438,7 +438,7 @@ getHeaderConfig subView isManualPayDue isMultiDueType =
     ST.ManagePlan  -> {title : (getString MANAGE_PLAN), actionText : "", backbutton : true}
     ST.MyPlan      -> {title : (getString PLAN), actionText : "", backbutton : false}
     ST.PlanDetails -> {title : (getString AUTOPAY_DETAILS), actionText : "", backbutton : true}
-    ST.FindHelpCentre -> {title : (getString FIND_HELP_CENTRE), actionText : "", backbutton : true}
+    ST.FindHelpCentre -> {title : (getString (FIND_HELP_CENTRE "FIND_HELP_CENTRE")), actionText : "", backbutton : true}
     ST.DuesView -> {title : (getString DUE_OVERVIEW), actionText : "", backbutton : true}
     ST.DueDetails -> {title : getString case isMultiDueType, isManualPayDue of 
                                           true, false -> AUTOPAY_DUE_DETAILS
@@ -468,8 +468,13 @@ dueDetailsListState state =
       isSplitPayment : item.isSplit,
       id : item.randomId,
       paymentMode : item.mode,
+      isDue : true,
       scheduledAt : if item.mode == AUTOPAY_REGISTRATION then Just (convertUTCtoISC item.scheduledAt "Do MMM YYYY, h:mm A") else Nothing,
-      paymentStatus : if item.mode == AUTOPAY_REGISTRATION then Just (autoPayStageData.stage) else Nothing
+      paymentStatus : if item.mode == AUTOPAY_REGISTRATION then Just (autoPayStageData.stage) else Nothing,
+      boothCharges : case item.specialZoneRideCount, item.specialZoneAmount of
+                      Just 0, Just 0.0 -> Nothing
+                      Just count, Just charges -> Just $ show count <> " " <> getString RIDES <> " x ₹" <> HU.getFixedTwoDecimals (charges / DI.toNumber count) <> " " <> getString GST_INCLUDE
+                      _, _ -> Nothing
     }) (DA.filter (\item -> if state.props.myPlanProps.dueType == AUTOPAY_PAYMENT then item.mode == AUTOPAY_PAYMENT else item.mode /= AUTOPAY_PAYMENT ) state.data.myPlanData.dueItems)
 }
 

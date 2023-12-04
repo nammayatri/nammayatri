@@ -15,9 +15,14 @@
 
 module Screens.ChooseLanguageScreen.ComponentConfig where
 
+import PrestoDOM(Margin(..), Padding(..), Length(..))
+
+import Components.SelectMenuButton as MenuButton
 import Components.PrimaryButton as PrimaryButton
-import PrestoDOM
 import Screens.Types as ST
+import MerchantConfig.Types as MT
+import Prelude ((==))
+import Styles.Colors as Color
 
 primaryButtonViewConfig :: ST.ChooseLanguageScreenState -> PrimaryButton.Config
 primaryButtonViewConfig state = let
@@ -31,3 +36,16 @@ primaryButtonViewConfig state = let
       , margin = (Margin 16 19 16 24)
       }
   in primaryButtonConfig'
+
+menuButtonConfig :: ST.ChooseLanguageScreenState -> Int -> MT.Language -> MenuButton.State
+menuButtonConfig state index language = MenuButton.config { 
+    text = {name: language.name, value: language.value, subtitle: language.subtitle}, 
+    isSelected = state.props.selectedLanguage == language.value,
+    index = index, 
+    lineVisibility = false , 
+    activeStrokeColor = Color.white900, 
+    activeBgColor = Color.white900, 
+    inactiveStrokeColor = Color.white900,
+    margin = MarginBottom 16,
+    padding = Padding 16 24 0 0
+  }

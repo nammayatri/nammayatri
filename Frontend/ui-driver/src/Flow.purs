@@ -128,21 +128,11 @@ baseAppFlow baseFlow event = do
     cacheAppParameters versionCode baseFlow
     void $ lift $ lift $ liftFlow $ initiateLocationServiceClient
     when baseFlow $ lift $ lift $ initUI
-    let regToken = getValueToLocalStore REGISTERATION_TOKEN
     _ <- pure $ saveSuggestions "SUGGESTIONS" (getSuggestions "")
     _ <- pure $ saveSuggestionDefs "SUGGESTIONS_DEFINITIONS" (suggestionsDefinitions "")
     setValueToLocalStore CURRENCY (getValueFromConfig "currency")
-    isLocationPermission <- lift $ lift $ liftFlow $ isLocationPermissionEnabled unit
-    if getValueToLocalStore SHOW_SUBSCRIPTIONS == "__failed" then 
-      setValueToLocalStore SHOW_SUBSCRIPTIONS "true"
-      else pure unit
-    if isTokenValid regToken
-      then do
-        setValueToLocalNativeStore REGISTERATION_TOKEN regToken
-        checkRideAndInitiate event
-      else if getValueToLocalStore DRIVER_LOCATION == "__failed" || getValueToLocalStore DRIVER_LOCATION == "--" || not isLocationPermission  then do
-        chooseCityFlow
-      else authenticationFlow ""
+    if getValueToLocalStore SHOW_SUBSCRIPTIONS == "__failed" then setValueToLocalStore SHOW_SUBSCRIPTIONS "true" else pure unit
+    initialFlow
     where
     cacheAppParameters :: Int -> Boolean -> FlowBT String Unit
     cacheAppParameters versionCode baseFlow = do
@@ -183,6 +173,20 @@ baseAppFlow baseFlow event = do
       void $ lift $ lift $ setLogField "bundle_version" $ encode (bundle)
       void $ lift $ lift $ setLogField "config_version" $ encode config
       void $ lift $ lift $ setLogField "platform" $ encode (os)
+
+    initialFlow :: FlowBT String Unit
+    initialFlow = do
+      let regToken = getValueToLocalStore REGISTERATION_TOKEN
+      config <- getAppConfig Constants.appConfig
+      isLocationPermission <- lift $ lift $ liftFlow $ isLocationPermissionEnabled unit
+      if isTokenValid regToken
+        then do
+          setValueToLocalNativeStore REGISTERATION_TOKEN regToken
+          checkRideAndInitiate event
+      else if (not config.flowConfig.chooseCity.runFlow) then loginFlow
+      else if getValueToLocalStore DRIVER_LOCATION == "__failed" || getValueToLocalStore DRIVER_LOCATION == "--" || not isLocationPermission  then do
+        chooseCityFlow
+      else authenticationFlow ""
 
 authenticationFlow :: String -> FlowBT String Unit
 authenticationFlow _ = 
@@ -253,7 +257,10 @@ isTokenValid = (/=) "__failed"
 
 loginFlow :: FlowBT String Unit
 loginFlow = do
+  liftFlowBT hideSplash
   logField_ <- lift $ lift $ getLogFields
+  config <- getAppConfig Constants.appConfig
+  when (not config.flowConfig.chooseCity.runFlow) $ void $ UI.chooseLanguage
   mobileNo <- UI.enterMobileNumber
   case mobileNo of
     GO_TO_ENTER_OTP updateState -> do
@@ -300,11 +307,11 @@ getDriverInfoFlow event activeRideResp = do
   _ <- pure $ delay $ Milliseconds 1.0
   _ <- pure $ printLog "Registration token" (getValueToLocalStore REGISTERATION_TOKEN)
   getDriverInfoApiResp <- lift $ lift $ Remote.getDriverInfoApi (GetDriverInfoReq{})
+  appConfig <- getAppConfig Constants.appConfig
   case getDriverInfoApiResp of
     Right (GetDriverInfoResp getDriverInfoResp) -> do
       updateFirebaseToken getDriverInfoResp.maskedDeviceToken getUpdateToken
       liftFlowBT $ updateCleverTapUserProps (GetDriverInfoResp getDriverInfoResp)
-      appConfig <- getAppConfig Constants.appConfig
       if getDriverInfoResp.enabled then do
         if getValueToLocalStore IS_DRIVER_ENABLED == "false" then do
           void $ pure $ firebaseLogEvent "ny_driver_enabled"
@@ -319,7 +326,7 @@ getDriverInfoFlow event activeRideResp = do
         if (isJust getDriverInfoResp.autoPayStatus) then 
           setValueToLocalStore TIMES_OPENED_NEW_SUBSCRIPTION "5"
         else pure unit
-        permissionsGiven <- checkAll3Permissions true
+        permissionsGiven <- checkAllPermissions true appConfig.permissions.locationPermission
         if permissionsGiven
           then handleDeepLinksFlow event activeRideResp
           else do
@@ -340,7 +347,7 @@ getDriverInfoFlow event activeRideResp = do
         else do
           _ <- pure $ toast $ getString SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN
           if getValueToLocalStore IS_DRIVER_ENABLED == "true" then do
-            permissionsGiven <- checkAll3Permissions true
+            permissionsGiven <- checkAllPermissions true appConfig.permissions.locationPermission
             if permissionsGiven then
               handleDeepLinksFlow event activeRideResp
               else permissionsScreenFlow event activeRideResp
@@ -418,7 +425,7 @@ onBoardingFlow = do
   _ <- pure $ hideKeyboardOnNavigation true
   config <- getAppConfig Constants.appConfig
   globalstate <- getState 
-  permissions <- checkAll3Permissions false
+  permissions <- checkAllPermissions false config.permissions.locationPermission
   (GetDriverInfoResp getDriverInfoResp) <- getDriverInfoDataFromCache globalstate
   (DriverRegistrationStatusResp resp ) <- driverRegistrationStatusBT (DriverRegistrationStatusReq { })
   let limitReachedFor = if resp.rcVerificationStatus == "LIMIT_EXCEED" then Just "RC"
@@ -1877,7 +1884,7 @@ homeScreenFlow = do
           _ <- pure $ setValueToLocalStore TRIGGER_MAPS "true"
           _ <- pure $ setValueToLocalStore TRIP_STATUS "started"
           void $ pure $ setValueToLocalStore WAITING_TIME_STATUS (show ST.NoStatus)
-          void $ pure $ setValueToLocalStore TOTAL_WAITED if updatedState.data.activeRide.waitTimeSeconds > updatedState.data.config.waitTimeConfig.thresholdTime then show updatedState.data.activeRide.waitTimeSeconds else "-1"
+          void $ pure $ setValueToLocalStore TOTAL_WAITED if updatedState.data.activeRide.waitTimeSeconds > updatedState.data.config.waitTimeConfig.thresholdTime then (updatedState.data.activeRide.id <> "<$>" <> show updatedState.data.activeRide.waitTimeSeconds) else "-1"
           void $ pure $ EHC.clearTimer updatedState.data.activeRide.waitTimerId
           currentRideFlow Nothing
         Left errorPayload -> do
@@ -2213,7 +2220,7 @@ clearPendingDuesFlow showLoader = do
                             else if any ( _ == statusResp.status)[PS.AUTHORIZATION_FAILED, PS.AUTHENTICATION_FAILED, PS.JUSPAY_DECLINED] then Just FailedPopup
                             else Nothing
           case popUpState of
-            Just popUpState' -> modifyScreenState $ SubscriptionScreenStateType (\subscribeScreenState -> subscribeScreenState { props {popUpState = Just popUpState'}})
+            Just popUpState' -> modifyScreenState $ SubscriptionScreenStateType (\subscribeScreenState -> subscribeScreenState { props {popUpState = Just popUpState', lastPaymentType = Just API.CLEAR_DUE}})
             Nothing -> pure unit
         Left err -> pure $ toast $ Remote.getCorrespondingErrorMessage err 
     Left errorPayload -> pure $ toast $ Remote.getCorrespondingErrorMessage errorPayload
@@ -2302,21 +2309,35 @@ setSubscriptionStatus paymentStatus apiPaymentStatus planCardConfig = do
       _ <- pure $ cleverTapCustomEventWithParams "ny_driver_subscription_failure" "failure_code" (show apiPaymentStatus)
       liftFlowBT $ metaLogEventWithTwoParams "ny_driver_subscription_failure" "selected_plan" planCardConfig.title "failure_code" (show apiPaymentStatus)
       liftFlowBT $ firebaseLogEventWithTwoParams "ny_driver_subscription_failure" "selected_plan" planCardConfig.title "failure_code" (show apiPaymentStatus)
-      modifyScreenState $ SubscriptionScreenStateType (\subscribeScreenState -> subscribeScreenState { props {popUpState = Just FailedPopup}})
+      modifyScreenState $ SubscriptionScreenStateType (\subscribeScreenState -> subscribeScreenState { props {popUpState = Just FailedPopup, lastPaymentType = Just API.AUTOPAY_REGISTRATION_TYPE}})
     Pending -> modifyScreenState $ SubscriptionScreenStateType (\subscribeScreenState -> subscribeScreenState { props {joinPlanProps {selectedPlanItem = Nothing}}})
     Scheduled -> pure unit
 
 paymentHistoryFlow :: FlowBT String Unit
 paymentHistoryFlow = do 
+  appConfig <- getAppConfig Constants.appConfig
   action <- UI.paymentHistory
   case action of 
-    GoToSetupAutoPay state -> nyPaymentFlow state.data.planData "MYPLAN"
+    GoToSetupAutoPay state -> 
+      if state.data.autoPayStatus == ST.SUSPENDED then do
+        resumeMandate <- lift $ lift $ Remote.resumeMandate ""
+        case resumeMandate of 
+          Right resp -> do
+            getDriverInfoResp <- Remote.getDriverInfoBT (GetDriverInfoReq { })
+            modifyScreenState $ GlobalPropsType (\globalProps -> globalProps {driverInformation = Just getDriverInfoResp})
+            updateDriverDataToStates
+            let (GlobalState defGlobalState) = defaultGlobalState
+            modifyScreenState $ SubscriptionScreenStateType (\_ -> defGlobalState.subscriptionScreen)
+            pure $ toast $ getString RESUMED_AUTOPAY
+          Left errorPayload -> pure $ toast $ Remote.getCorrespondingErrorMessage errorPayload
+        subScriptionFlow
+      else nyPaymentFlow state.data.planData "MYPLAN"
     EntityDetailsAPI state id -> do
       paymentEntityDetails <- lift $ lift $ Remote.paymentEntityDetails id
       case paymentEntityDetails of
         Right (HistoryEntryDetailsEntityV2Resp resp) ->
             modifyScreenState $ PaymentHistoryScreenStateType (\paymentHistoryScreen -> paymentHistoryScreen{props{subView = ST.TransactionDetails},
-              data { transactionDetails = (buildTransactionDetails (HistoryEntryDetailsEntityV2Resp resp) state.data.gradientConfig)}
+              data{ transactionDetails = (buildTransactionDetails (HistoryEntryDetailsEntityV2Resp resp) state.data.gradientConfig appConfig.subscriptionConfig.showFeeBreakup)}
             })
         Left errorPayload -> pure $ toast $ Remote.getCorrespondingErrorMessage errorPayload
       paymentHistoryFlow
@@ -2440,7 +2461,7 @@ subScriptionFlow = do
         Nothing -> subScriptionFlow
     GOTO_PAYMENT_HISTORY state -> do
       let (GlobalState defGlobalState) = defaultGlobalState
-      modifyScreenState $ PaymentHistoryScreenStateType(\_ -> defGlobalState.paymentHistoryScreen{props{autoPaySetup = state.data.myPlanData.autoPayStatus == ACTIVE_AUTOPAY, subView = ST.PaymentHistory}, data{planData = state.data.myPlanData.planEntity, gradientConfig = state.data.config.subscriptionConfig.gradientConfig}})
+      modifyScreenState $ PaymentHistoryScreenStateType(\_ -> defGlobalState.paymentHistoryScreen{props{autoPaySetup = state.data.myPlanData.autoPayStatus == ACTIVE_AUTOPAY, subView = ST.PaymentHistory}, data{autoPayStatus = state.data.myPlanData.autoPayStatus, planData = state.data.myPlanData.planEntity, gradientConfig = state.data.config.subscriptionConfig.gradientConfig}})
       paymentHistoryFlow
     CANCEL_AUTOPAY state -> do
       suspendMandate <- lift $ lift $ Remote.suspendMandate state.data.driverId
@@ -2452,6 +2473,7 @@ subScriptionFlow = do
           let (GlobalState defGlobalState) = defaultGlobalState
           modifyScreenState $ SubscriptionScreenStateType (\_ -> defGlobalState.subscriptionScreen{props{isEndRideModal = state.props.isEndRideModal}})
           pure $ toast $ getString AUTOPAY_CANCELLED
+          pure $ toggleBtnLoader "" false
           subScriptionFlow
         Left errorPayload -> do 
           pure $ toast $ Remote.getCorrespondingErrorMessage errorPayload
@@ -2544,6 +2566,7 @@ editBankDetailsFlow = do
 
 noInternetScreenFlow :: String -> FlowBT String Unit
 noInternetScreenFlow triggertype = do
+  config <- getAppConfig Constants.appConfig
   action <- UI.noInternetScreen triggertype
   internetCondition <- lift $ lift $ liftFlow $ isInternetAvailable unit
   case action of
@@ -2558,18 +2581,23 @@ noInternetScreenFlow triggertype = do
     CHECK_INTERNET -> case ((ifNotRegistered unit) || (getValueToLocalStore IS_DRIVER_ENABLED == "false")) of
                       true  -> pure unit
                       false -> do
-                        permissionsGiven <- checkAll3Permissions true
+                        permissionsGiven <- checkAllPermissions true config.permissions.locationPermission
                         if permissionsGiven
                           then baseAppFlow false Nothing
                           else permissionsScreenFlow Nothing Nothing
 
-checkAll3Permissions :: Boolean -> FlowBT String Boolean
-checkAll3Permissions checkBattery = do
+checkAllPermissions :: Boolean -> Boolean -> FlowBT String Boolean
+checkAllPermissions checkBattery checkLocation = do
+  config <- getAppConfig Constants.appConfig
   androidVersion <- lift $ lift $ liftFlow $ getAndroidVersion
   isNotificationPermission <- lift $ lift $ liftFlow $ isNotificationPermissionEnabled unit
   isOverlayPermission <- lift $ lift $ liftFlow $ isOverlayPermissionEnabled unit
   isBatteryUsagePermission <- lift $ lift $ liftFlow $ isBatteryPermissionEnabled unit
-  pure $ (androidVersion < 13 || isNotificationPermission) && isOverlayPermission && (not checkBattery || isBatteryUsagePermission)
+  isLocationPermission <- lift $ lift $ liftFlow $ isLocationPermissionEnabled unit
+  pure $ (androidVersion < 13 || not config.permissions.notification || isNotificationPermission) && 
+          isOverlayPermission && 
+          (not checkBattery || isBatteryUsagePermission) && 
+          (not checkLocation || isLocationPermission)
 
 popUpScreenFlow :: AllocationData -> FlowBT String Unit
 popUpScreenFlow entityPayload = do

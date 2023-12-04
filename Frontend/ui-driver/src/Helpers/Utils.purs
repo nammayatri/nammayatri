@@ -597,3 +597,18 @@ formatSecIntoMinSecs seconds =
     secs = seconds `mod` 60
   in 
     show mins <> ":" <> (if secs < 10 then "0" else "") <> show secs
+
+splitBasedOnLanguage :: String -> String
+splitBasedOnLanguage str = 
+    let strArray = DS.split (DS.Pattern "-*$*-") str
+    in
+    fromMaybe "" (strArray DA.!! (getLanguage (DA.length strArray)))
+    where 
+        getLanguage len = do
+            case getValueToLocalStore LANGUAGE_KEY of
+                "KN_IN" | len > 1 -> 1
+                "HI_IN" | len > 2 -> 2
+                "BN_IN" | len > 3 -> 3
+                "ML_IN" | len > 4 -> 4
+                "TA_IN" | len > 5 -> 5
+                _ -> 0

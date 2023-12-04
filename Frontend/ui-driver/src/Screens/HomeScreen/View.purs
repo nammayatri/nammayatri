@@ -247,14 +247,14 @@ view push state =
       , if state.data.paymentState.showRateCard then rateCardView push state else dummyTextView
       , if (state.props.showlinkAadhaarPopup && state.props.showAadharPopUp) then linkAadhaarPopup push state else dummyTextView
       , if state.props.rcDeactivePopup then PopUpModal.view (push <<< RCDeactivatedAC) (driverRCPopUpConfig state) else dummyTextView
-      , if (state.props.subscriptionPopupType == ST.FREE_TRIAL_POPUP) && (MU.getMerchant FunctionCall) == MU.NAMMAYATRI
+      , if (state.props.subscriptionPopupType == ST.FREE_TRIAL_POPUP) && state.data.config.subscriptionConfig.enableSubscriptionPopups
            then PopUpModal.view (push <<< FreeTrialEndingAC) (freeTrialEndingPopupConfig state) 
            else linearLayout[visibility GONE][]
       , case HU.getPopupObjectFromSharedPrefs SHOW_JOIN_NAMMAYATRI of
           Just configObject -> if (isLocalStageOn HomeScreen) then PopUpModal.view (push <<< OfferPopupAC) (offerPopupConfig true configObject) else linearLayout[visibility GONE][]
           Nothing -> linearLayout[visibility GONE][]
       , if state.props.showOffer && (MU.getMerchant FunctionCall) == MU.NAMMAYATRI && getValueToLocalStore SHOW_SUBSCRIPTIONS == "true" then PopUpModal.view (push <<< OfferPopupAC) (offerPopupConfig false (offerConfigParams state)) else dummyTextView
-      , if (DA.any (_ == state.props.subscriptionPopupType)[ST.SOFT_NUDGE_POPUP,  ST.LOW_DUES_CLEAR_POPUP, ST.GO_ONLINE_BLOCKER] && (MU.getMerchant FunctionCall) == MU.NAMMAYATRI )
+      , if (DA.any (_ == state.props.subscriptionPopupType)[ST.SOFT_NUDGE_POPUP,  ST.LOW_DUES_CLEAR_POPUP, ST.GO_ONLINE_BLOCKER] && state.data.config.subscriptionConfig.enableSubscriptionPopups)
           then PopUpModal.view (push <<< PaymentPendingPopupAC) (paymentPendingPopupConfig state) 
         else linearLayout[visibility GONE][]
       , if state.props.showGenericAccessibilityPopUp then genericAccessibilityPopUpView push state else dummyTextView
@@ -327,15 +327,22 @@ driverMapsHeaderView push state =
                     , statsModel push state
                     , if not state.props.rideActionModal && (state.props.driverStatusSet == Online || state.props.driverStatusSet == Silent)  then updateLocationAndLastUpdatedView state push else dummyTextView
                   ]
-                , if (state.props.autoPayBanner /= ST.NO_SUBSCRIPTION_BANNER && state.props.driverStatusSet == ST.Offline && getValueFromConfig "autoPayBanner") then autoPayBannerView state push true else dummyTextView
+                , if (state.props.autoPayBanner /= ST.NO_SUBSCRIPTION_BANNER && state.props.driverStatusSet == ST.Offline) then autoPayBannerView state push true else dummyTextView
                 , gotoRecenterAndSupport state push
               ]
-            , alternateNumberOrOTPView state push
-            , if(state.props.showGenderBanner && state.props.driverStatusSet /= ST.Offline && getValueToLocalStore IS_BANNER_ACTIVE == "True" && state.props.autoPayBanner == ST.NO_SUBSCRIPTION_BANNER) then genderBannerView state push 
-                else if state.data.paymentState.paymentStatusBanner then paymentStatusBanner state push 
-                else if (state.props.autoPayBanner /= ST.NO_SUBSCRIPTION_BANNER && state.props.driverStatusSet /= ST.Offline && getValueFromConfig "autoPayBanner") then autoPayBannerView state push false 
-                else if (state.props.driverStatusSet /= ST.Offline && state.props.currentStage == HomeScreen && state.data.config.purpleRideConfig.showPurpleVideos) then accessibilityBanner state push 
-                else dummyTextView
+            , linearLayout
+              [ width MATCH_PARENT
+              , height MATCH_PARENT
+              , orientation VERTICAL
+              , background Color.transparent
+              , gravity BOTTOM
+              ][  alternateNumberOrOTPView state push
+                , if(state.props.showGenderBanner && state.props.driverStatusSet /= ST.Offline && getValueToLocalStore IS_BANNER_ACTIVE == "True" && state.props.autoPayBanner == ST.NO_SUBSCRIPTION_BANNER) then genderBannerView state push 
+                    else if state.data.paymentState.paymentStatusBanner then paymentStatusBanner state push 
+                    else if (state.props.autoPayBanner /= ST.NO_SUBSCRIPTION_BANNER && state.props.driverStatusSet /= ST.Offline) then autoPayBannerView state push false 
+                    else if (state.props.driverStatusSet /= ST.Offline && state.props.currentStage == HomeScreen && state.data.config.purpleRideConfig.showPurpleVideos) then accessibilityBanner state push 
+                    else dummyTextView
+              ]
             ]
         ]
         , bottomNavBar push state
@@ -344,10 +351,10 @@ driverMapsHeaderView push state =
 accessibilityBanner :: forall w. HomeScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 accessibilityBanner state push = 
   linearLayout
-  [ height MATCH_PARENT
+  [ height WRAP_CONTENT
   , width MATCH_PARENT
   , orientation VERTICAL
-  , margin (Margin 10 10 10 10)
+  , margin $ Margin 10 0 10 10
   , gravity BOTTOM 
   , weight 1.0 
   ][
@@ -396,10 +403,10 @@ rateCardView push state =
 paymentStatusBanner :: forall w. HomeScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 paymentStatusBanner state push =
   linearLayout
-    [ height MATCH_PARENT
+    [ height WRAP_CONTENT
     , width MATCH_PARENT
     , orientation VERTICAL
-    , margin $ Margin 10 10 10 10
+    , margin $ Margin 10 0 10 10
     , gravity BOTTOM
     ][  linearLayout
         [ height WRAP_CONTENT
@@ -423,30 +430,30 @@ paymentStatusBanner state push =
 alternateNumberOrOTPView :: forall w. HomeScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 alternateNumberOrOTPView state push =
   linearLayout
-  [ height MATCH_PARENT
+  [ height WRAP_CONTENT
   , width MATCH_PARENT
   , orientation HORIZONTAL
   , background Color.transparent
-  , padding $ PaddingBottom 16
+  , padding $ Padding 10 0 10 8
   , gravity BOTTOM
   ][  linearLayout
       [ height WRAP_CONTENT
       , width MATCH_PARENT
-      , orientation HORIZONTAL
-      , gravity CENTER
-      ][  addAlternateNumber push state
-        , if (getValueFromConfig "SPECIAL_ZONE_OTP_VIEW") == "true"  then otpButtonView state push else dummyTextView
+      , gravity if showAddAltNumber then CENTER else RIGHT
+      ][  addAlternateNumber push state showAddAltNumber
+        , if state.data.config.homeScreen.specialRideOtpView then otpButtonView state push else dummyTextView
         ]
       ]
+  where showAddAltNumber = (state.data.driverAlternateMobile == Nothing || state.props.showlinkAadhaarPopup) && state.props.statusOnline
 
 genderBannerView :: forall w. HomeScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 genderBannerView state push =
   linearLayout
-    [ height MATCH_PARENT
+    [ height WRAP_CONTENT
     , width MATCH_PARENT
     , orientation VERTICAL
-    , margin (Margin 10 10 10 10)
-    , visibility if (getValueFromConfig "showGenderBanner") then VISIBLE else GONE
+    , margin $ Margin 10 0 10 10
+    , visibility if state.data.config.homeScreen.showGenderBanner then VISIBLE else GONE
     , gravity BOTTOM
     ][
     linearLayout
@@ -471,13 +478,12 @@ genderBannerView state push =
 autoPayBannerView :: forall w. HomeScreenState -> (Action -> Effect Unit) -> Boolean -> PrestoDOM (Effect Unit) w
 autoPayBannerView state push configureImage =
   linearLayout
-    [ height MATCH_PARENT
+    [ height WRAP_CONTENT
     , width  MATCH_PARENT
     , orientation VERTICAL
-    , margin (Margin 10 10 10 10)
+    , margin $ Margin 10 0 10 10
     , visibility if state.props.autoPayBanner /= ST.NO_SUBSCRIPTION_BANNER then VISIBLE else GONE
     , gravity BOTTOM
-    , weight 1.0
     ][
         Banner.view (push <<< AutoPayBanner) (autopayBannerConfig state configureImage)
     ]
@@ -489,9 +495,9 @@ otpButtonView state push =
     , height WRAP_CONTENT
     , stroke $ "1," <> Color.blue900
     , cornerRadius 32.0
-    , background Color.blue600
-    , visibility $ if (state.props.statusOnline) then VISIBLE else GONE
-    , padding (Padding 16 14 16 14)
+    , background Color.white900
+    , visibility if state.props.statusOnline then VISIBLE else GONE
+    , padding $ Padding 16 14 16 14
     , margin $ MarginLeft 8
     , gravity CENTER_VERTICAL
     , onClick push $ const $ ZoneOtpAction
@@ -607,7 +613,7 @@ offlineView push state =
   [ width MATCH_PARENT
   , height MATCH_PARENT
   , gravity BOTTOM
-  , background "#2C2F3A80"
+  , background Color.black9000
   ][ frameLayout
       [ height WRAP_CONTENT
       , width MATCH_PARENT
@@ -617,7 +623,7 @@ offlineView push state =
           , gravity CENTER_HORIZONTAL
           ][ lottieAnimationView
               [ id (EHC.getNewIDWithTag "RippleGoOnlineLottie")
-              , afterRender (\action-> do
+              , afterRender (\_-> do
                               void $ pure $ JB.startLottieProcess JB.lottieAnimationConfig{ rawJson = "rippling_online_effect.json", lottieId = (EHC.getNewIDWithTag "RippleGoOnlineLottie"), speed = 1.0 }
                             )(const NoAction)
               , height WRAP_CONTENT
@@ -1309,8 +1315,8 @@ goOfflineModal push state =
   ]
 
 
-addAlternateNumber :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
-addAlternateNumber push state =
+addAlternateNumber :: forall w . (Action -> Effect Unit) -> HomeScreenState -> Boolean -> PrestoDOM (Effect Unit) w
+addAlternateNumber push state visibility' =
   linearLayout
   [ height WRAP_CONTENT
   , width WRAP_CONTENT
@@ -1318,10 +1324,10 @@ addAlternateNumber push state =
   , orientation HORIZONTAL
   , cornerRadius 32.0
   , stroke $ "1," <> Color.black600
-  , padding (Padding 20 16 20 16)
+  , padding $ Padding 20 16 20 16
   , gravity CENTER_VERTICAL
-  , onClick push (const ClickAddAlternateButton)
-  , visibility (if ((state.data.driverAlternateMobile == Nothing || state.props.showlinkAadhaarPopup) && (state.props.statusOnline))  then VISIBLE else GONE)
+  , onClick push $ const ClickAddAlternateButton
+  , visibility if visibility' then VISIBLE else GONE
   ][  imageView
       [ width $ V 20
       , height $ V 15

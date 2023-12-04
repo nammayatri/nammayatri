@@ -167,7 +167,7 @@ public class GpsListeningService extends Service {
         String baseUrl = sharedPref.getString("BASE_URL", "null");
         String deviceDetails = sharedPref.getString("DEVICE_DETAILS", "null");
         try {
-            String orderUrl = baseUrl + "/driver/setActivity?active=true&mode=ONLINE"; // TODO:- Need to refactor
+            String orderUrl = baseUrl + "/driver/setActivity?active=true&mode=" + "\"ONLINE\"";
             HttpURLConnection connection = (HttpURLConnection) (new URL(orderUrl).openConnection());
             if (connection instanceof HttpsURLConnection)
                 ((HttpsURLConnection) connection).setSSLSocketFactory(new TLSSocketFactory());

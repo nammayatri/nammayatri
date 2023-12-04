@@ -259,7 +259,7 @@ cardItemView push state =
                           ST.DRIVING_LICENSE_OPTION -> (getString DRIVING_LICENSE)
                           ST.VEHICLE_DETAILS_OPTION -> getString VEHICLE_REGISTERATON_CERTIFICATE
                           ST.GRANT_PERMISSION -> getString GRANT_PERMISSIONS
-                          ST.SUBSCRIPTION_PLAN -> getString SUBSCRIPTION_PLAN_STR
+                          ST.SUBSCRIPTION_PLAN -> getString $ SUBSCRIPTION_PLAN_STR "SUBSCRIPTION_PLAN_STR"
                 , color Color.black800
                 ] <> FontStyle.body1 TypoGraphy
               , textView $

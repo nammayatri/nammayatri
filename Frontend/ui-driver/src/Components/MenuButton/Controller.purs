@@ -15,6 +15,7 @@
 
 module Components.SelectMenuButton.Controller where
 
+import PrestoDOM (Margin(..), Padding(..))
 import Styles.Types (Color)
 
 data Action = OnSelection State
@@ -26,10 +27,30 @@ type State = {
       lineVisibility :: Boolean,
       activeBgColor :: Color,
       activeStrokeColor :: Color,
-      inactiveStrokeColor :: Color
+      inactiveStrokeColor :: Color,
+      margin :: Margin,
+      padding :: Padding
       }
 type Text = { 
     name :: String, 
     value :: String, 
     subtitle :: String
     }
+
+
+config :: State 
+config = {
+  text : {
+    name : "",
+    value : "",
+    subtitle : ""
+  }, 
+  isSelected : false,
+  index : 0 ,
+  lineVisibility : false,
+  activeBgColor : "",
+  activeStrokeColor : "",
+  inactiveStrokeColor : "",
+  margin : MarginBottom 16,
+  padding : Padding 16 16 16 16
+}
