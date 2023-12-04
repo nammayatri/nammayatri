@@ -12,6 +12,8 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE OverloadedLabels #-}
+{-# OPTIONS_GHC -Wwarn=incomplete-record-updates #-}
+{-# OPTIONS_GHC -Wwarn=incomplete-uni-patterns #-}
 
 module Beckn.ACL.Update
   ( buildUpdateReq,
@@ -21,6 +23,7 @@ where
 
 import qualified Beckn.ACL.Common as Common
 import qualified Beckn.Types.Core.Taxi.Update as Update
+import qualified Beckn.Types.Core.Taxi.Update.UpdateEvent.DestinationChangedEvent as DestinationChangedU
 import qualified Beckn.Types.Core.Taxi.Update.UpdateEvent.PaymentCompletedEvent as PaymentCompletedU
 import Control.Lens ((%~))
 import qualified Data.Text as T
@@ -35,16 +38,30 @@ import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common
 
-data UpdateBuildReq = PaymentCompletedBuildReq
-  { bppBookingId :: Id DBooking.BPPBooking,
-    bppRideId :: Id DRide.BPPRide,
-    paymentMethodInfo :: DMPM.PaymentMethodInfo,
-    bppId :: Text,
-    bppUrl :: BaseUrl,
-    transactionId :: Text,
-    merchant :: DM.Merchant,
-    city :: Context.City -- Booking city, not merchant default city
-  }
+-- import qualified Domain.Types.Location as DL
+-- import Domain.Types.LocationAddress as DLA
+-- import Kernel.Types.Backen.Gps
+
+data UpdateBuildReq
+  = PaymentCompletedBuildReq
+      { bppBookingId :: Id DBooking.BPPBooking,
+        bppRideId :: Id DRide.BPPRide,
+        paymentMethodInfo :: DMPM.PaymentMethodInfo,
+        bppId :: Text,
+        bppUrl :: BaseUrl,
+        transactionId :: Text,
+        merchant :: DM.Merchant
+      }
+  | DestinationChangedBuildReq
+      { bppBookingId :: Id DBooking.BPPBooking,
+        bppRideId :: Id DRide.BPPRide,
+        start :: Update.StartInfo,
+        end :: Update.StopInfo,
+        bppId :: Text,
+        bppUrl :: BaseUrl,
+        transactionId :: Text,
+        merchant :: DM.Merchant
+      }
 
 buildUpdateReq ::
   (MonadFlow m, HasFlowEnv m r '["nwAddress" ::: BaseUrl]) =>
@@ -61,20 +78,102 @@ mkUpdateMessage ::
   UpdateBuildReq ->
   Update.UpdateMessage
 mkUpdateMessage req@PaymentCompletedBuildReq {} = do
-  Update.UpdateMessage $
-    Update.PaymentCompleted
-      PaymentCompletedU.PaymentCompletedEvent
-        { id = req.bppBookingId.getId,
-          update_target = "fulfillment.state.code,payment.status",
-          payment =
-            PaymentCompletedU.Payment
-              { collected_by = Common.castDPaymentCollector req.paymentMethodInfo.collectedBy,
-                _type = Common.castDPaymentType req.paymentMethodInfo.paymentType,
-                instrument = Common.castDPaymentInstrument req.paymentMethodInfo.paymentInstrument,
-                status = PaymentCompletedU.PAID
-              },
-          fulfillment =
-            PaymentCompletedU.FulfillmentInfo
-              { id = req.bppRideId.getId
-              }
-        }
+  Update.UpdateMessage
+    { order =
+        Update.PaymentCompleted
+          PaymentCompletedU.PaymentCompletedEvent
+            { id = req.bppBookingId.getId,
+              update_target = "fulfillment.state.code,payment.status",
+              payment =
+                PaymentCompletedU.Payment
+                  { collected_by = Common.castDPaymentCollector req.paymentMethodInfo.collectedBy,
+                    _type = Common.castDPaymentType req.paymentMethodInfo.paymentType,
+                    instrument = Common.castDPaymentInstrument req.paymentMethodInfo.paymentInstrument,
+                    status = PaymentCompletedU.PAID
+                  },
+              fulfillment =
+                PaymentCompletedU.FulfillmentInfo
+                  { id = req.bppRideId.getId
+                  }
+            },
+      update_target = "fulfillment.state.code,payment.status"
+    }
+mkUpdateMessage req@DestinationChangedBuildReq {} = do
+  Update.UpdateMessage
+    { order =
+        Update.DestinationChanged
+          DestinationChangedU.DestinationChangedEvent
+            { id = req.bppBookingId.getId,
+              update_target = "fulfillment.end",
+              fulfillment =
+                DestinationChangedU.FulfillmentInfo
+                  { id = req.bppRideId.getId,
+                    start =
+                      Update.StartInfo
+                        { -- location = mklocation req.start.location
+                          location =
+                            Update.Location
+                              { gps =
+                                  Update.Gps
+                                    { -- lat = req.start.location.lat,
+                                      lat = 20.5937,
+                                      -- lon = req.start.location.lon
+                                      lon = 78.9629
+                                    },
+                                address =
+                                  Update.Address
+                                    { locality = Nothing,
+                                      state = Nothing,
+                                      country = Nothing,
+                                      building = Nothing,
+                                      street = Nothing,
+                                      city = Nothing,
+                                      area_code = Nothing,
+                                      ward = Nothing,
+                                      door = Nothing
+                                    }
+                                    -- address =
+                              },
+                          authorization = Nothing
+                        },
+                    end =
+                      Update.StopInfo
+                        { -- location =  mkLocation req.end.location
+                          location =
+                            Update.Location
+                              { gps =
+                                  Update.Gps
+                                    { -- lat = req.end.location.lat,
+                                      lat = 20.5937,
+                                      -- lon = req.end.location.lon
+                                      lon = 78.9629
+                                    },
+                                address =
+                                  Update.Address
+                                    { locality = Nothing,
+                                      state = Nothing,
+                                      country = Nothing,
+                                      building = Nothing,
+                                      street = Nothing,
+                                      city = Nothing,
+                                      area_code = Nothing,
+                                      ward = Nothing,
+                                      door = Nothing
+                                    }
+                                    -- address =
+                              }
+                        }
+                  }
+            },
+      update_target = "fulfillment.end"
+    }
+
+-- mkAddress :: DLA.LocationAddress -> Update.Address
+-- mkAddress DLA.LocationAddress {..} =
+--   Update.Address
+--     { area_code = areaCode,
+--       locality = area,
+--       ward = ward,
+--       door = door,
+--       ..
+--     }

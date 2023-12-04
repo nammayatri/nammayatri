@@ -18,6 +18,7 @@ import qualified Beckn.ACL.Common as Common
 import qualified Beckn.Types.Core.Taxi.API.Update as Update
 import qualified Beckn.Types.Core.Taxi.Update as Update
 import qualified Beckn.Types.Core.Taxi.Update.UpdateEvent.PaymentCompletedEvent as Update
+-- import qualified Beckn.Types.Core.Taxi.Update.UpdateEvent.DestinationChangedEvent as Update
 import qualified Domain.Action.Beckn.Update as DUpdate
 import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
 import EulerHS.Prelude hiding (state)
@@ -49,6 +50,13 @@ parseEvent (Update.PaymentCompleted pcEvent) = do
       rideId = Id pcEvent.fulfillment.id,
       paymentStatus = castPaymentStatus pcEvent.payment.status,
       paymentMethodInfo = mkPaymentMethodInfo pcEvent.payment
+    }
+parseEvent (Update.DestinationChanged dcEvent) = do
+  DUpdate.DestinationChangedReq
+    { bookingId = Id dcEvent.id,
+      rideId = Id dcEvent.fulfillment.id,
+      start = dcEvent.fulfillment.start,
+      end = dcEvent.fulfillment.end
     }
 
 mkPaymentMethodInfo :: Update.Payment -> DMPM.PaymentMethodInfo

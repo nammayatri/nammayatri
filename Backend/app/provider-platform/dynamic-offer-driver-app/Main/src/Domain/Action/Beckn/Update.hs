@@ -11,9 +11,12 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# OPTIONS_GHC -Wwarn=incomplete-record-updates #-}
 
 module Domain.Action.Beckn.Update where
 
+import Beckn.Types.Core.Taxi.Common.StartInfo as StartI
+import Beckn.Types.Core.Taxi.Common.StopInfo as StopI
 import qualified Domain.Types.Booking as DBooking
 import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.Ride as DRide
@@ -26,17 +29,24 @@ import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.Ride as QRide
 import Tools.Error
 
-data DUpdateReq = PaymentCompletedReq
-  { bookingId :: Id DBooking.Booking,
-    rideId :: Id DRide.Ride,
-    paymentStatus :: PaymentStatus,
-    paymentMethodInfo :: DMPM.PaymentMethodInfo
-  }
+data DUpdateReq
+  = PaymentCompletedReq
+      { bookingId :: Id DBooking.Booking,
+        rideId :: Id DRide.Ride,
+        paymentStatus :: PaymentStatus,
+        paymentMethodInfo :: DMPM.PaymentMethodInfo
+      }
+  | DestinationChangedReq
+      { bookingId :: Id DBooking.Booking,
+        rideId :: Id DRide.Ride,
+        start :: StartI.StartInfo,
+        end :: StopI.StopInfo
+      }
 
 data PaymentStatus = PAID | NOT_PAID
 
 handler :: DUpdateReq -> Flow ()
-handler req = do
+handler req@PaymentCompletedReq {} = do
   unless (req.paymentMethodInfo.paymentType == DMPM.POSTPAID) $
     throwError $ InvalidRequest "Payment completed update available only for POSTPAID payments."
   unless (req.paymentMethodInfo.collectedBy == DMPM.BAP) $
@@ -57,5 +67,12 @@ handler req = do
   unless (ride.status == DRide.COMPLETED) $
     throwError $ RideInvalidStatus "Ride is not completed yet."
   logTagInfo "Payment completed : " ("bookingId " <> req.bookingId.getId <> ", rideId " <> req.rideId.getId)
+handler req@DestinationChangedReq {} = do
+  ride <-
+    QRide.findById req.rideId
+      >>= fromMaybeM (RideNotFound req.rideId.getId)
+  when (ride.status == DRide.COMPLETED) $
+    throwError $ RideInvalidStatus "Ride is already completed."
+  logTagInfo "Destination changed : " ("bookingId " <> req.bookingId.getId <> ", rideId " <> req.rideId.getId)
 
 -- TODO store to DB

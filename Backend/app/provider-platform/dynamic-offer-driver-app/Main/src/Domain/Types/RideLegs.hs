@@ -12,22 +12,24 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Beckn.Types.Core.Taxi.Update
-  ( module Beckn.Types.Core.Taxi.Update,
-    module Reexport,
-  )
-where
+module Domain.Types.RideLegs where
 
-import Beckn.Types.Core.Taxi.Common.Address as Reexport
-import Beckn.Types.Core.Taxi.Common.Location as Reexport
-import Beckn.Types.Core.Taxi.Common.StartInfo as Reexport
-import Beckn.Types.Core.Taxi.Common.StopInfo as Reexport
-import Beckn.Types.Core.Taxi.Update.UpdateEvent as Reexport
+import Data.Aeson
 import Data.OpenApi (ToSchema)
-import EulerHS.Prelude
+import EulerHS.Prelude hiding (id)
+import Kernel.External.Maps (LatLong)
+import qualified Kernel.Prelude as BP
+import Kernel.Types.Id
+import Kernel.Utils.Common
 
-data UpdateMessage = UpdateMessage
-  { update_target :: Text,
-    order :: UpdateEvent
+data RideLegs = RideLegs
+  { id :: Id RideLegs,
+    rideId :: Id Ride,
+    startLocation :: LatLong,
+    startTime :: UTCTime,
+    endLocation :: LatLong,
+    endTime :: UTCTime,
+    waitTime :: Seconds,
+    traveledDistance :: HighPrecMeters
   }
-  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
+  deriving (Generic, Show, Eq, ToJSON, FromJSON)

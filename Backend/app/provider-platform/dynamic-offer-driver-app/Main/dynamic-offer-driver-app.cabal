@@ -184,6 +184,7 @@ library
       Domain.Types.Booking
       Domain.Types.Booking.BookingLocation
       Domain.Types.BookingCancellationReason
+      Domain.Types.BookingHistory
       Domain.Types.BusinessEvent
       Domain.Types.CallStatus
       Domain.Types.CancellationReason
@@ -213,7 +214,9 @@ library
       Domain.Types.DriverReferral
       Domain.Types.DriverStats
       Domain.Types.Estimate
+      Domain.Types.EstimateRevised
       Domain.Types.Exophone
+      Domain.Types.FareBreakupHistory
       Domain.Types.FareParameters
       Domain.Types.FarePolicy
       Domain.Types.FarePolicy.Common
@@ -262,12 +265,14 @@ library
       Domain.Types.RegistryMapFallback
       Domain.Types.Ride
       Domain.Types.RideDetails
+      Domain.Types.RideLegs
       Domain.Types.RiderDetails
       Domain.Types.RideRoute
       Domain.Types.SearchRequest
       Domain.Types.SearchRequest.SearchReqLocation
       Domain.Types.SearchRequestForDriver
       Domain.Types.SearchRequestSpecialZone
+      Domain.Types.SearchRevised
       Domain.Types.SearchTry
       Domain.Types.Vehicle
       Domain.Types.Vehicle.Variant

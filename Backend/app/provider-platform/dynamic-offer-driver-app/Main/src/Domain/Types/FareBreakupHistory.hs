@@ -11,23 +11,20 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# LANGUAGE DerivingVia #-}
 
-module Beckn.Types.Core.Taxi.Update
-  ( module Beckn.Types.Core.Taxi.Update,
-    module Reexport,
-  )
-where
+module Domain.Types.FareParameters where
 
-import Beckn.Types.Core.Taxi.Common.Address as Reexport
-import Beckn.Types.Core.Taxi.Common.Location as Reexport
-import Beckn.Types.Core.Taxi.Common.StartInfo as Reexport
-import Beckn.Types.Core.Taxi.Common.StopInfo as Reexport
-import Beckn.Types.Core.Taxi.Update.UpdateEvent as Reexport
-import Data.OpenApi (ToSchema)
-import EulerHS.Prelude
+import qualified Domain.Types.Booking as DRB
+import Kernel.Prelude
+import Kernel.Types.Id
+import Kernel.Utils.Common
+import Kernel.Utils.GenericPretty (PrettyShow (..))
 
-data UpdateMessage = UpdateMessage
-  { update_target :: Text,
-    order :: UpdateEvent
+data FareBreakupHistory = FareBreakupHistory
+  { bookingId :: Id DRB.Booking,
+    version :: Text,
+    lineItem :: Text,
+    amount :: Money
   }
-  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
+  deriving (Generic, Show, Eq, PrettyShow)

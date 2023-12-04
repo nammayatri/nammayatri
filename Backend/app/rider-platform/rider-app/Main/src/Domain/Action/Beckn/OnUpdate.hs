@@ -120,6 +120,11 @@ data OnUpdateReq
         bppRideId :: Id SRide.BPPRide,
         message :: Text
       }
+  -- | DestinationChangedReq
+  --     { bppBookingId :: Id SRB.BPPBooking,
+  --       bppRideId :: Id SRide.BPPRide,
+  --       destination :: LatLong
+  --     }
 
 data ValidatedOnUpdateReq
   = ValidatedRideAssignedReq
@@ -193,6 +198,13 @@ data ValidatedOnUpdateReq
         booking :: SRB.Booking,
         ride :: SRide.Ride
       }
+  -- | ValidatedDestinationChangedReq
+  --     { bppBookingId :: Id SRB.BPPBooking,
+  --       bppRideId :: Id SRide.BPPRide,
+  --       booking :: SRB.Booking,
+  --       destination :: LatLong,
+  --       ride :: SRide.Ride
+  --     }
 
 data OnUpdateFareBreakup = OnUpdateFareBreakup
   { amount :: HighPrecMoney,
@@ -416,6 +428,9 @@ onUpdate ValidatedEstimateRepetitionReq {..} = do
   QPFS.clearCache searchReq.riderId
   -- notify customer
   Notify.notifyOnEstimatedReallocated booking estimate.id
+-- onUpdate ValidatedDestinationChangedReq {..} = do
+--   _ <- QRide.updateDestination ride.id destination
+--   Notify.notifyOnDestinationChanged booking ride
 
 validateRequest ::
   ( CacheFlow m r,
@@ -487,6 +502,10 @@ validateRequest EstimateRepetitionReq {..} = do
   ride <- QRide.findByBPPRideId bppRideId >>= fromMaybeM (RideDoesNotExist $ "BppRideId" <> bppRideId.getId)
   estimate <- QEstimate.findByBPPEstimateId bppEstimateId >>= fromMaybeM (EstimateDoesNotExist bppEstimateId.getId)
   return $ ValidatedEstimateRepetitionReq {..}
+-- validateRequest DestinationChangedReq {..} = do
+--   booking <- runInReplica $ QRB.findByBPPBookingId bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId: " <> bppBookingId.getId)
+--   ride <- QRide.findByBPPRideId bppRideId >>= fromMaybeM (RideDoesNotExist $ "BppRideId" <> bppRideId.getId)
+--   return $ ValidatedDestinationChangedReq {..}
 
 mkBookingCancellationReason ::
   Id SRB.Booking ->

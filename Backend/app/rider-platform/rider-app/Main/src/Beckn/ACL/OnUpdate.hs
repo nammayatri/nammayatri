@@ -167,6 +167,15 @@ parseEvent transactionId (OnUpdate.EstimateRepetition erEvent) = do
         cancellationSource = castCancellationSource cancellationReason
       }
 
+-- parseEvent _ (OnUpdate.DestinationChanged dcEvent) = do
+--   -- tagsGroup <- fromMaybeM (InvalidRequest "agent tags is not present in DestinationChanged Event.") dcEvent.fulfillment.tags
+--   return $
+--     DOnUpdate.DestinationChangedReq
+--       { bppBookingId = Id dcEvent.id,
+--         bppRideId = Id dcEvent.fulfillment.id,
+--         destination = dcEvent.fulfillment.end
+--       }
+
 castCancellationSource :: OnUpdate.CancellationSource -> SBCR.CancellationSource
 castCancellationSource = \case
   OnUpdate.ByUser -> SBCR.ByUser
