@@ -40,6 +40,7 @@ data Plan = Plan
     registrationAmount :: HighPrecMoney,
     isOfferApplicable :: Bool,
     maxCreditLimit :: HighPrecMoney,
+    maxMandateAmount :: HighPrecMoney,
     planBaseAmount :: PlanBaseAmount,
     freeRideCount :: Int,
     frequency :: Frequency,
