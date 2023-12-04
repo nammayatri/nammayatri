@@ -38,7 +38,7 @@ import Resource.Constants as Const
 import Screens (getScreen, ScreenName(..))
 import Screens.SubscriptionScreen.Transformer (alternatePlansTransformer, constructDues, getAutoPayDetailsList, getSelectedId, getSelectedPlan, introductoryPlanConfig, myPlanListTransformer, planListTransformer)
 import Screens.Types (AutoPayStatus(..), KioskLocation(..), OptionsMenuState(..), PlanCardConfig, SubscribePopupType(..), SubscriptionScreenState, SubscriptionSubview(..))
-import Services.API (BankError(..), FeeType, GetCurrentPlanResp(..), KioskLocationRes(..), MandateData(..), OfferEntity(..), PaymentBreakUp(..), PlanEntity(..), UiPlansResp(..))
+import Services.API (BankError(..), FeeType, GetCurrentPlanResp(..), KioskLocationRes(..), MandateData(..), OfferEntity(..), PaymentBreakUp(..), PlanEntity(..), UiPlansResp(..), LastPaymentType(..))
 import Services.Backend (getCorrespondingErrorMessage)
 import Storage (KeyStore(..), setValueToLocalNativeStore, setValueToLocalStore, getValueToLocalStore)
 
@@ -180,7 +180,10 @@ eval (HeaderRightClick menuType) state =  if state.props.optionsMenuState == men
 
 eval (PopUpModalAC (PopUpModal.OnButton1Click)) state = case state.props.popUpState of
                   Mb.Just SuccessPopup -> updateAndExit state { props{showShimmer = true, popUpState = Mb.Nothing}} $ Refresh
-                  Mb.Just FailedPopup ->  continue state{props { popUpState = Mb.Nothing}}
+                  Mb.Just FailedPopup ->  case state.props.lastPaymentType of
+                                            Mb.Just CLEAR_DUE -> updateAndExit state { props{showShimmer = true, popUpState = Mb.Nothing}} $ ClearDues state { props{showShimmer = true, popUpState = Mb.Nothing}}
+                                            Mb.Just AUTOPAY_REGISTRATION_TYPE -> updateAndExit state { props{showShimmer = true, popUpState = Mb.Nothing}} $ SubscribeAPI state { props{showShimmer = true, popUpState = Mb.Nothing}}
+                                            _ -> continue state { props{popUpState = Mb.Nothing}}
                   Mb.Just DuesClearedPopup -> exit $ Refresh
                   Mb.Just SwitchedPlan -> exit $ Refresh
                   Mb.Just SupportPopup -> continueWithCmd state [pure CallSupport]
@@ -220,8 +223,8 @@ eval (ResumeAutoPay PrimaryButton.OnClick) state =
 
 eval (RetryPaymentAC PrimaryButton.OnClick) state =
   case state.props.lastPaymentType of
-    Mb.Just "CLEAR_DUE" -> updateAndExit state $ ClearDues state
-    Mb.Just "AUTOPAY_REGISTRATION" -> updateAndExit state $ SubscribeAPI state
+    Mb.Just CLEAR_DUE -> updateAndExit state $ ClearDues state
+    Mb.Just AUTOPAY_REGISTRATION_TYPE -> updateAndExit state $ SubscribeAPI state
     _ -> continueWithCmd state [ pure $ ResumeAutoPay PrimaryButton.OnClick]
 
 eval (OneTimeSettlement PrimaryButton.OnClick) state = updateAndExit state $ ClearDues state
@@ -281,10 +284,13 @@ eval (LoadMyPlans plans) state = do
                               Mb.Nothing -> Mb.Nothing
           isOverdue = planEntity.currentDues >= planEntity.totalPlanCreditLimit
           multiTypeDues = (planEntity.autopayDues > 0.0) && (planEntity.currentDues - planEntity.autopayDues > 0.0)
+          lastPaymentType' = case currentPlanResp.lastPaymentType of
+                              Mb.Just val -> Mb.Just val
+                              Mb.Nothing -> state.props.lastPaymentType
           newState = if state.data.config.subscriptionConfig.enableSubscriptionPopups then 
                         state{ 
-                            props{ showShimmer = false, subView = MyPlan, lastPaymentType = currentPlanResp.lastPaymentType, myPlanProps{ multiTypeDues = multiTypeDues, overDue = isOverdue } }, 
-                            data { orderId = currentPlanResp.orderId, 
+                            props{ showShimmer = false, subView = MyPlan, lastPaymentType = lastPaymentType', myPlanProps{ multiTypeDues = multiTypeDues, overDue = isOverdue } }, 
+                            data{ orderId = currentPlanResp.orderId, 
                                   planId = planEntity.id, 
                                   myPlanData {
                                       planEntity = myPlanListTransformer planEntity' currentPlanResp.isLocalized state.data.config.subscriptionConfig.gradientConfig,
@@ -294,12 +300,13 @@ eval (LoadMyPlans plans) state = do
                                       autoPayDueAmount = planEntity.autopayDues ,
                                       autoPayStatus = getAutopayStatus currentPlanResp.autoPayStatus, 
                                       lowAccountBalance = requiredBalance,
-                                      dueItems = constructDues planEntity.dues
+                                      dueItems = constructDues planEntity.dues state.data.config.subscriptionConfig.showFeeBreakup,
+                                      dueBoothCharges = if planEntity.dueBoothCharges == Mb.Just 0.0 then Mb.Nothing else planEntity.dueBoothCharges
                                   }}
                          }
                      else state{ 
-                            props{ showShimmer = false, subView = MyPlan , lastPaymentType = currentPlanResp.lastPaymentType}, 
-                            data { orderId = currentPlanResp.orderId, 
+                            props{ showShimmer = false, subView = MyPlan , lastPaymentType = lastPaymentType'}, 
+                            data{ orderId = currentPlanResp.orderId, 
                                   planId = planEntity.id, 
                                   myPlanData {
                                       planEntity = myPlanListTransformer planEntity' currentPlanResp.isLocalized state.data.config.subscriptionConfig.gradientConfig,
@@ -371,7 +378,7 @@ eval (ClearManualDues PrimaryButton.OnClick) state = updateAndExit state $ Clear
 
 eval (DueDetailsListAction (DueDetailsListController.SelectDue dueItem)) state = continue state {data {myPlanData{selectedDue = if state.data.myPlanData.selectedDue == dueItem.id then "" else dueItem.id}}}
 
-eval (TogglePlanDescription _) state = continue state{data{myPlanData{planEntity{isSelected = not state.data.myPlanData.planEntity.isSelected}}}}
+-- eval (TogglePlanDescription _) state = continue state{data{myPlanData{planEntity{isSelected = not state.data.myPlanData.planEntity.isSelected}}}} --Always expended
 
 eval EnableIntroductoryView state = continue state{props{subView = JoinPlan, showShimmer = false, joinPlanProps{isIntroductory = true}}, data{joinPlanData {allPlans = [introductoryPlanConfig Language]}}}
 

@@ -38,7 +38,7 @@ import Presto.Core.Utils.Encoding (defaultDecode, defaultEncode)
 import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode)
 import PrestoDOM (LetterSpacing, Visibility, visibility)
 import Screens (ScreenName)
-import Services.API (AutopayPaymentStage, BankError(..), FeeType, GetDriverInfoResp(..), MediaType, PaymentBreakUp, Route, Status, DriverProfileStatsResp(..))
+import Services.API (AutopayPaymentStage, BankError(..), FeeType, GetDriverInfoResp(..), MediaType, PaymentBreakUp, Route, Status, DriverProfileStatsResp(..), LastPaymentType(..))
 import Styles.Types (FontSize)
 
 type EditTextInLabelState =
@@ -1267,6 +1267,7 @@ type PermissionsScreenProps = {
   , isAutoStartPermissionChecked :: Boolean
   , androidVersion :: Int
   , isBatteryOptimizationChecked :: Boolean
+  , isLocationPermissionChecked :: Boolean
   , logoutModalView :: Boolean
   , isDriverEnabled :: Boolean
 }
@@ -1285,7 +1286,8 @@ type OnBoardingSubscriptionScreenData = {
 
 type OnBoardingSubscriptionScreenProps = {
   isSelectedLangTamil :: Boolean,
-  screenCount :: Int
+  screenCount :: Int,
+  supportPopup :: Boolean
 }
 
 
@@ -1748,7 +1750,7 @@ type SubscriptionScreenProps = {
   noKioskLocation :: Boolean,
   optionsMenuState :: OptionsMenuState,
   redirectToNav :: String,
-  lastPaymentType :: Maybe String,
+  lastPaymentType :: Maybe LastPaymentType,
   offerBannerProps :: OfferBanner,
   isEndRideModal :: Boolean
 }
@@ -1791,7 +1793,8 @@ type MyPlanData = {
   autoPayDueAmount :: Number,
   manualDueAmount :: Number,
   mandateStatus :: String,
-  selectedDue :: String
+  selectedDue :: String,
+  dueBoothCharges :: Maybe Number
 }
 
 type MyPlanProps = {
@@ -1814,7 +1817,9 @@ type DueItem = {
   plan :: String,
   mode :: FeeType,
   autoPayStage :: Maybe AutopayPaymentStage,
-  isSplit :: Boolean
+  isSplit :: Boolean,
+  specialZoneRideCount :: Maybe Int,
+  specialZoneAmount :: Maybe Number
 }
 
 type KioskLocation = {
@@ -1895,7 +1900,8 @@ type PaymentHistoryScreenData = {
   planData :: PlanCardConfig,
   autoPayList :: Array PaymentListItem,
   manualPayList :: Array PaymentListItem,
-  gradientConfig :: Array GradientConfig
+  gradientConfig :: Array GradientConfig,
+  autoPayStatus :: AutoPayStatus
 }
 
 type TransactionInfo = {
@@ -1944,7 +1950,9 @@ type DueCard = {
   id :: String,
   scheduledAt :: Maybe String,
   paymentMode :: FeeType,
-  paymentStatus :: Maybe String
+  paymentStatus :: Maybe String,
+  boothCharges :: Maybe String,
+  isDue :: Boolean
 }
 
 type PaymentHistoryScreenProps = {

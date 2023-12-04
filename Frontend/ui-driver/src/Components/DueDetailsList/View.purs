@@ -19,7 +19,7 @@ import Common.Types.App
 import Components.DueDetailsList.Controller
 
 import Data.Array (length, mapWithIndex)
-import Data.Maybe (Maybe(..), fromMaybe, isJust)
+import Data.Maybe (Maybe(..), fromMaybe, isJust, maybe)
 import Data.Maybe as Mb
 import Effect (Effect)
 import Font.Size as FontSize
@@ -27,11 +27,12 @@ import Font.Style as FontStyle
 import Helpers.Utils (fetchImage, FetchImageFrom(..), getFixedTwoDecimals)
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Prelude (Unit, bind, const, pure, show, unit, void, ($), (&&), (/=), (<>), (==), (||), (<))
-import PrestoDOM (Gradient(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), afterRender, alignParentBottom, background, color, cornerRadius, fontStyle, gradient, gravity, height, id, imageUrl, imageView, imageWithFallback, linearLayout, lottieAnimationView, margin, onClick, orientation, padding, scrollView, stroke, text, textSize, textView, visibility, weight, width)
+import Prelude (Unit, bind, const, pure, show, unit, void, ($), (&&), (/=), (<>), (==), (||), (<), not)
+import PrestoDOM (Gradient(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Prop, Visibility(..), afterRender, alignParentBottom, background, color, cornerRadius, fontStyle, gradient, gravity, height, id, imageUrl, imageView, imageWithFallback, linearLayout, lottieAnimationView, margin, onClick, orientation, padding, scrollView, stroke, text, textSize, textView, visibility, weight, width)
 import Screens.Types (PromoConfig)
 import Services.API (FeeType(..))
 import Styles.Colors as Color
+import Data.String as DS
 
 
 view :: forall w . (Action -> Effect Unit) -> DueDetailsListState -> PrestoDOM (Effect Unit) w
@@ -115,18 +116,18 @@ view push state =
                   height $ V 1
                   , width MATCH_PARENT
                   , background Color.grey900
-                  , margin $ MarginBottom 16
                 ][]
-                , keyValueView (getString NUMBER_OF_RIDES) (rideNumberPrefix <> show item.noOfRides) true false
-                , keyValueView (getString PAYMENT_MODE) (if item.paymentMode == AUTOPAY_PAYMENT then getString UPI_AUTOPAY_S else "UPI") true true
-                , keyValueView (getString SCHEDULED_AT) (fromMaybe "" item.scheduledAt) (isJust item.scheduledAt) false
-                , keyValueView (getString PAYMENT_STATUS) (fromMaybe "" item.paymentStatus) (isJust item.paymentStatus) false
-                , keyValueView (getString YOUR_EARNINGS) ("₹" <> getFixedTwoDecimals item.totalEarningsOfDay) true false
-                , keyValueView (getString FARE_BREAKUP) (item.fareBreakup <>" "<> getString GST_INCLUDE) true false
+                , keyValueView (getString NUMBER_OF_RIDES) (rideNumberPrefix <> show item.noOfRides) true false FontStyle.Body3 16 Color.black700
+                , keyValueView (getString PAYMENT_MODE) (mode item) true (not item.isDue) FontStyle.Body3 16 Color.black700
+                , keyValueView (getString SCHEDULED_AT) (fromMaybe "" item.scheduledAt) (isJust item.scheduledAt) false FontStyle.Body3 16 Color.black700
+                , keyValueView (getString PAYMENT_STATUS) (fromMaybe "" item.paymentStatus) (isJust item.paymentStatus) false FontStyle.Body3 16 Color.black700
+                , keyValueView (getString YOUR_EARNINGS) ("₹" <> getFixedTwoDecimals item.totalEarningsOfDay) true false FontStyle.Body3 16 Color.black700
+                , keyValueView (getString FARE_BREAKUP) (item.fareBreakup <>" "<> getString GST_INCLUDE) (not DS.null item.fareBreakup) false FontStyle.Body3 16 Color.black700
+                , maybe (linearLayout[visibility GONE][]) (\boothCharges -> keyValueView (getString BOOTH_CHARGES) boothCharges true false FontStyle.Captions 6 Color.black600) $ item.boothCharges
                 , linearLayout [
                   height WRAP_CONTENT
                   , width MATCH_PARENT
-                  , margin $ MarginBottom 16
+                  , margin $ MarginVertical 16 16
                   , gravity CENTER_VERTICAL
                 ][
                   textView $ [
@@ -176,22 +177,23 @@ view push state =
          ) state.dues
          )
     ]
+    where mode item = if item.paymentMode == AUTOPAY_PAYMENT then getString UPI_AUTOPAY_S else if item.isDue then "Manual" else "UPI"
 
-keyValueView :: String -> String -> Boolean -> Boolean -> forall w . PrestoDOM (Effect Unit) w
-keyValueView key value visibility' prefixImage = 
+keyValueView :: forall w properties . String -> String -> Boolean -> Boolean -> FontStyle.Style -> Int -> String -> PrestoDOM (Effect Unit) w
+keyValueView key value visibility' prefixImage keyFont marginTop keyColor = 
   linearLayout 
   [
     height WRAP_CONTENT
     , width MATCH_PARENT
-    , margin $ MarginBottom 16
+    , margin $ MarginTop marginTop
     , visibility if visibility' then VISIBLE else GONE
     , gravity CENTER_VERTICAL
   ][ 
     textView $ [
       text key
-      , margin $ MarginRight 8
-      , color Color.black700
-    ] <> FontStyle.body3 TypoGraphy
+      , margin $ MarginRight marginTop
+      , color keyColor
+    ] <> FontStyle.getFontStyle keyFont TypoGraphy
     , imageView
     [ width $ V 12
     , height $ V 12

@@ -2426,7 +2426,8 @@ newtype PlanEntity = PlanEntity {
   currentDues :: Number,
   autopayDues :: Number,
   dues :: Array DriverDuesEntity,
-  bankErrors :: Array BankError
+  bankErrors :: Array BankError,
+  dueBoothCharges :: Maybe Number
 }
 
 newtype DriverDuesEntity = DriverDuesEntity {
@@ -2441,7 +2442,10 @@ newtype DriverDuesEntity = DriverDuesEntity {
     feeType :: FeeType,
     executionAt :: Maybe String,
     rideTakenOn :: String,
-    driverFeeAmount :: Number
+    driverFeeAmount :: Number,
+    specialZoneRideCount :: Maybe Int,
+    specialZoneAmount :: Maybe Number, -- 8 Rides x 11.80 => specialZoneRideCount x (specialZoneAmount /specialZoneRideCount)
+    maxRidesEligibleForCharge :: Maybe Int
 }
 
 newtype OfferEntity = OfferEntity {
@@ -2664,7 +2668,7 @@ newtype GetCurrentPlanResp = GetCurrentPlanResp {
   autoPayStatus :: Maybe String,
   orderId :: Maybe String,
   isLocalized :: Maybe Boolean,
-  lastPaymentType :: Maybe String
+  lastPaymentType :: Maybe LastPaymentType
 }
 
 newtype MandateData = MandateData {
@@ -2824,6 +2828,20 @@ instance encodeFeeType :: Encode FeeType where
 instance eqFeeType :: Eq FeeType where eq = genericEq
 instance standardEncodeFeeType :: StandardEncode FeeType where standardEncode _ = standardEncode {}
 
+data LastPaymentType = AUTOPAY_REGISTRATION_TYPE | CLEAR_DUE
+
+derive instance genericLastPaymentType :: Generic LastPaymentType _
+instance showLastPaymentType :: Show LastPaymentType where show = genericShow
+instance decodeLastPaymentType :: Decode LastPaymentType where 
+  decode body = case unsafeFromForeign body of
+                  "AUTOPAY_REGISTRATION"        -> except $ Right AUTOPAY_REGISTRATION_TYPE 
+                  "CLEAR_DUE"           -> except $ Right CLEAR_DUE 
+                  _                             -> fail $ ForeignError "Unknown response"
+instance encodeLastPaymentType :: Encode LastPaymentType where 
+  encode _ = encode {}
+instance eqLastPaymentType :: Eq LastPaymentType where eq = genericEq
+instance standardEncodeLastPaymentType :: StandardEncode LastPaymentType where standardEncode _ = standardEncode {}
+
 --------------------------------------------------------------------------------------------------------------------------------------------------------
 
 data HistoryEntityV2Req = HistoryEntityV2Req String String String
@@ -2906,7 +2924,10 @@ newtype DriverFeeInfoEntity = DriverFeeInfoEntity {
     isSplit :: Boolean,
     offerAndPlanDetails :: Maybe String,
     rideTakenOn :: String,
-    driverFeeAmount :: Number
+    driverFeeAmount :: Number,
+    specialZoneRideCount :: Maybe Int,
+    specialZoneAmount :: Maybe Number,
+    maxRidesEligibleForCharge :: Maybe Int
 }
 
 instance makeHistoryEntryDetailsEntityV2Req :: RestEndpoint HistoryEntryDetailsEntityV2Req HistoryEntryDetailsEntityV2Resp where

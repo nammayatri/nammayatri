@@ -354,7 +354,7 @@ paymentPendingPopupConfig state =
       text = getString case popupType of 
                          LOW_DUES_CLEAR_POPUP -> LOW_DUES_CLEAR_POPUP_DESC 
                          SOFT_NUDGE_POPUP     -> PAYMENT_PENDING_SOFT_NUDGE
-                         GO_ONLINE_BLOCKER    -> PAYMENT_PENDING_ALERT_DESC
+                         GO_ONLINE_BLOCKER    -> PAYMENT_PENDING_ALERT_DESC "PAYMENT_PENDING_ALERT_DESC"
                          _                    -> LOW_DUES_CLEAR_POPUP_DESC
     , margin = Margin 16 16 16 4
     , textStyle = SubHeading2
@@ -386,9 +386,9 @@ paymentPendingPopupConfig state =
     cornerRadius = (PTD.Corners 15.0 true true true true),
     coverImageConfig {
       imageUrl = fetchImage FF_ASSET $ case popupType of
-                          GO_ONLINE_BLOCKER  -> "ny_ic_payment_pending"
+                          GO_ONLINE_BLOCKER  -> "ny_ic_dues_pending"
                           _ ->  if isHighDues 
-                                then "ny_ic_payment_pending" 
+                                then "ny_ic_dues_pending" 
                                 else "ny_ic_clear_dues_early"
     , visibility = VISIBLE
     , height = V 220
@@ -833,7 +833,7 @@ autopayBannerConfig state configureImage =
         imageUrl = fetchImage FF_ASSET $ case bannerType of
                       FREE_TRIAL_BANNER -> "ic_free_trial_period" 
                       SETUP_AUTOPAY_BANNER -> "ny_ic_autopay_setup_banner"
-                      _ | bannerType == CLEAR_DUES_BANNER || bannerType == LOW_DUES_BANNER -> "ny_ic_clear_dues_banner"
+                      _ | bannerType == CLEAR_DUES_BANNER || bannerType == LOW_DUES_BANNER -> "ny_ic_clear_dues"
                       DUE_LIMIT_WARNING_BANNER -> "ny_ic_due_limit_warning"
                       _ -> "",
         isBanner = bannerType /= NO_SUBSCRIPTION_BANNER && not state.props.rideActionModal,
