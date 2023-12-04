@@ -24,11 +24,12 @@ import PrestoDOM.Core.Types.Language.Flow (runScreen)
 import Screens.HelpAndSupportScreen.View as HelpAndSupportScreen
 import Types.App (FlowBT, GlobalState(..), HELP_AND_SUPPORT_SCREEN_OUTPUT(..), ScreenType(..))
 import Types.ModifyScreenState (modifyScreenState)
+import React.Navigation.Navigate (navigateToScreen)
 
 helpAndSupportScreen :: FlowBT String HELP_AND_SUPPORT_SCREEN_OUTPUT
 helpAndSupportScreen = do
   (GlobalState state) <- getState
-  action <- lift $ lift $ runScreen $ HelpAndSupportScreen.screen state.helpAndSupportScreen
+  action <- lift $ lift $ navigateToScreen $ HelpAndSupportScreen.screen state.helpAndSupportScreen
   case action of
     GoBack updatedState -> do
      modifyScreenState $ HelpAndSupportScreenStateType (\_ -> updatedState)

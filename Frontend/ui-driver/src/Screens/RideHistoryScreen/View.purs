@@ -50,7 +50,7 @@ import Language.Types (STR(..))
 import MerchantConfig.Utils (Merchant(..), getMerchant)
 import Prelude (Unit, ($), (<$>), const, (==), (<<<), bind, pure, unit, discard, show, not, map, (&&), ($), (<$>), (<>), (<<<), (==), (/), (>), (-))
 import Presto.Core.Types.Language.Flow (doAff)
-import PrestoDOM (Gradient(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, alignParentBottom, background, calendar, clickable, color, cornerRadius, fontSize, fontStyle, gradient, gravity, height, horizontalScrollView, id, imageView, imageWithFallback, linearLayout, margin, onAnimationEnd, onBackPressed, onClick, onRefresh, onScroll, onScrollStateChange, orientation, padding, relativeLayout, scrollBarX, scrollBarY, stroke, swipeRefreshLayout, text, textSize, textView, visibility, weight, width)
+import PrestoDOM (Gradient(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, ScopedScreen, Visibility(..), afterRender, alignParentBottom, background, calendar, clickable, color, cornerRadius, fontSize, fontStyle, gradient, gravity, height, horizontalScrollView, id, imageView, imageWithFallback, linearLayout, margin, onAnimationEnd, onBackPressed, onClick, onRefresh, onScroll, onScrollStateChange, orientation, padding, relativeLayout, scrollBarX, scrollBarY, stroke, swipeRefreshLayout, text, textSize, textView, visibility, weight, width)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Elements.Keyed as Keyed
 import PrestoDOM.Events (globalOnScroll)
@@ -66,9 +66,10 @@ import Services.Backend as Remote
 import Storage (getValueToLocalStore)
 import Styles.Colors as Color
 import Types.App (defaultGlobalState)
+import Data.Maybe (Maybe(..))
 
 
-screen :: ST.RideHistoryScreenState -> PrestoList.ListItem -> Screen Action ST.RideHistoryScreenState ScreenOutput
+screen :: ST.RideHistoryScreenState -> PrestoList.ListItem -> ScopedScreen Action ST.RideHistoryScreenState ScreenOutput
 screen initialState rideListItem =
   {
     initialState : initialState {
@@ -94,6 +95,7 @@ screen initialState rideListItem =
     let _ = spy "RideHistoryScreenState action" action
     let _ = spy "RideHistoryScreenState state" state 
     eval action state)
+  , parent: Nothing
   }
 
 view :: forall w . PrestoList.ListItem -> (Action -> Effect Unit) -> ST.RideHistoryScreenState -> PrestoDOM (Effect Unit) w

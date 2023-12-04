@@ -43,7 +43,7 @@ screen initialState triggertype =
     _ <- JB.storeCallBackInternetAction push InternetActionCallBack
     pure $ pure unit)]
   , eval
-  , parent : Just "NoInternetScreen"
+  , parent : Nothing -- Just "NoInternetScreen"
   }
 
 view :: forall w . String -> (Action -> Effect Unit) -> ST.NoInternetScreenState -> PrestoDOM (Effect Unit) w 

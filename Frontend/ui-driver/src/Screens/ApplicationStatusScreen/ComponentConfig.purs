@@ -5,7 +5,7 @@ import Components.PrimaryButton as PrimaryButton
 import Components.PopUpModal as PopUpModal
 import Prelude((<>),(||))
 import Language.Types (STR(..))
-import PrestoDOM (Gravity(..), Length(..), LetterSpacing(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..),background, color, fontStyle, gravity, height,  margin, orientation, padding, text, textSize, textView, width, visibility, cornerRadius)
+import PrestoDOM (Gravity(..), Length(..), LetterSpacing(..), Margin(..), Orientation(..), Padding(..), PrestoDOM,  Visibility(..),background, color, fontStyle, gravity, height,  margin, orientation, padding, text, textSize, textView, width, visibility, cornerRadius)
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Language.Strings (getString)
 import Styles.Colors as Color

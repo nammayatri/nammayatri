@@ -13,6 +13,7 @@ import Helpers.Utils (hideSplash)
 import Presto.Core.Types.Language.Flow (doAff)
 import Effect.Class (liftEffect)
 import Types.ModifyScreenState (modifyScreenState)
+import React.Navigation.Navigate (navigateToScreen)
 
 
 onBoardingSubscriptionScreen :: FlowBT String ONBOARDING_SUBSCRIPTION_SCREENOUTPUT
@@ -20,7 +21,7 @@ onBoardingSubscriptionScreen = do
     (GlobalState state) <- getState
     logField_ <- lift $ lift $ getLogFields
     lift $ lift $ doAff do liftEffect hideSplash 
-    action <- lift $ lift $ runScreen $ OnBoardingSubscriptionScreen.screen state.onBoardingSubscriptionScreen
+    action <- lift $ lift $ navigateToScreen $ OnBoardingSubscriptionScreen.screen state.onBoardingSubscriptionScreen
     case action of 
         GoBack -> App.BackT $ pure App.GoBack
         StartFreeTrialExit updatedState -> do

@@ -20,7 +20,6 @@ import Data.Maybe (Maybe(..))
 import Engineering.Helpers.BackTrack (getState)
 import Engineering.Helpers.Commons (liftFlow)
 import Prelude (bind, pure, ($), (<$>))
-import PrestoDOM.Core.Types.Language.Flow (runScreen)
 import PrestoDOM.Core (getPushFn)
 import Screens.RideSelectionScreen.Controller (ScreenOutput(..))
 import Screens.Types (AnimationState(..))
@@ -29,13 +28,14 @@ import Control.Transformers.Back.Trans as App
 import Components.IndividualRideCard.View (selectView) as IndividualRideCard
 import PrestoDOM.List as PrestoList
 import Screens.RideSelectionScreen.View as RideSelectionScreen
+import React.Navigation.Navigate (navigateToScreen)
 
 rideSelection :: FlowBT String RIDES_SELECTION_SCREEN_OUTPUT
 rideSelection = do
   (GlobalState state) <- getState
   push         <- lift $ lift $ liftFlow $ getPushFn Nothing "RideSelectionScreen"
   rideListItem <- lift $ lift $ PrestoList.preComputeListItem $ IndividualRideCard.selectView push
-  act          <- lift $ lift $ runScreen $ RideSelectionScreen.screen state.rideSelectionScreen{shimmerLoader = AnimatedIn} rideListItem
+  act          <- lift $ lift $ navigateToScreen $ RideSelectionScreen.screen state.rideSelectionScreen{shimmerLoader = AnimatedIn} rideListItem
   case act of
     GoBack -> App.BackT $ pure App.GoBack
     SelectRide    updatedState -> App.BackT $ App.BackPoint <$> (pure $ SELECT_RIDE updatedState)

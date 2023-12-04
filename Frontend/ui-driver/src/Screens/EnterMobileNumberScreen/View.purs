@@ -42,7 +42,7 @@ import Prelude ((<>))
 import Debug(spy)
 import ConfigProvider
 
-screen :: ST.EnterMobileNumberScreenState -> Screen Action ST.EnterMobileNumberScreenState ScreenOutput
+screen :: ST.EnterMobileNumberScreenState -> ScopedScreen Action ST.EnterMobileNumberScreenState ScreenOutput
 screen initialState =
   { initialState
   , view
@@ -52,6 +52,7 @@ screen initialState =
       let _ = spy "EnterMobileNUmber state -----" state
       let _ = spy "EnterMobileNUmber--------action" action
       eval action state)
+  , parent: Nothing
   }
 
 view :: forall w . (Action -> Effect Unit) -> ST.EnterMobileNumberScreenState -> PrestoDOM (Effect Unit) w

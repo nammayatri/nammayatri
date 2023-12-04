@@ -20,15 +20,15 @@ import Screens.EnterMobileNumberScreen.Controller (ScreenOutput(..))
 import Storage (KeyStore(..), setValueToLocalStore)
 import Control.Monad.Except.Trans (lift)
 import Control.Transformers.Back.Trans (BackT(..), FailBack(..)) as App
-import PrestoDOM.Core.Types.Language.Flow (runScreen)
 import Screens.EnterMobileNumberScreen.View as EnterMobileNumberScreen
 import Types.App (FlowBT, GlobalState(..),ScreenType(..), ENTER_MOBILE_NUMBER_SCREEN_OUTPUT(..))
 import Types.ModifyScreenState (modifyScreenState)
+import React.Navigation.Navigate (navigateToScreen)
 
 enterMobileNumber :: FlowBT String ENTER_MOBILE_NUMBER_SCREEN_OUTPUT
 enterMobileNumber = do
   (GlobalState state) <- getState
-  act <- lift $ lift $ runScreen $ EnterMobileNumberScreen.screen state.mobileNumberScreen
+  act <- lift $ lift $ navigateToScreen $ EnterMobileNumberScreen.screen state.mobileNumberScreen
   case act of
     GoBack -> do 
       modifyScreenState $ EnterMobileNumberScreenType (\enterMobileNumber → enterMobileNumber { data { mobileNumber = ""}, props{btnActive = false}})

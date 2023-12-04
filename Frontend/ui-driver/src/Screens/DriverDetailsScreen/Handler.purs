@@ -25,11 +25,12 @@ import Screens.Types (KeyboardModalType(..))
 import Screens.DriverDetailsScreen.View as DriverDetailsScreen
 import Types.App (GlobalState(..), DRIVER_DETAILS_SCREEN_OUTPUT(..), FlowBT,  ScreenType(..))
 import Types.ModifyScreenState(modifyScreenState)
+import React.Navigation.Navigate (navigateToScreen)
 
 driverDetailsScreen :: FlowBT String DRIVER_DETAILS_SCREEN_OUTPUT
 driverDetailsScreen = do
   (GlobalState state) <- getState
-  action <- lift $ lift $ runScreen $ DriverDetailsScreen.screen state.driverDetailsScreen
+  action <- lift $ lift $ navigateToScreen $ DriverDetailsScreen.screen state.driverDetailsScreen
   case action of
     GoBack updatedState -> do
       modifyScreenState $ DriverDetailsScreenStateType (\driverDetailsScreen -> updatedState )

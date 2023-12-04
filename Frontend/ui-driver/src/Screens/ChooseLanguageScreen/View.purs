@@ -31,21 +31,23 @@ import PaymentPage (consumeBP)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit, const, pure, unit, discard, ($), (<<<), (==), (<>))
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, afterRender, background, clickable, color, fontStyle, gravity, height, imageUrl, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, scrollView, text, textSize, textView, weight, width)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, ScopedScreen, afterRender, background, clickable, color, fontStyle, gravity, height, imageUrl, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, scrollView, text, textSize, textView, weight, width)
 import PrestoDOM.Animation as PrestoAnim
 import Screens.ChooseLanguageScreen.Controller (Action(..), eval, ScreenOutput)
 import Screens.Types as ST
 import Styles.Colors as Color
 import Common.Types.App (LazyCheck(..))
 import Prelude ((<>))
+import Data.Maybe (Maybe(..))
 
-screen :: ST.ChooseLanguageScreenState -> Screen Action ST.ChooseLanguageScreenState ScreenOutput
+screen :: ST.ChooseLanguageScreenState -> ScopedScreen Action ST.ChooseLanguageScreenState ScreenOutput
 screen initialState =
   { initialState
   , view
   , name : "ChooseLanguageScreen" 
   , globalEvents : [(\_ -> pure $ runEffectFn1 consumeBP unit)]
   , eval
+  , parent: Nothing
   }
 
 view

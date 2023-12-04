@@ -14,13 +14,13 @@ import Font.Style as FontStyle
 import Halogen.VDom.DOM.Prop (Prop)
 import JBridge as JB
 import Prelude (Unit, const, map, ($), (<<<), (<>), bind, pure, unit)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Prop, Screen, Visibility(..), afterRender, alignParentBottom, alpha, background, color, cornerRadius, fontStyle, gravity, height, id, imageUrl, imageView, imageWithFallback, layoutGravity, linearLayout, lottieAnimationView, margin, onBackPressed, onClick, orientation, padding, relativeLayout, stroke, text, textSize, textView, visibility, weight, width)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Prop, Visibility(..), ScopedScreen, afterRender, alignParentBottom, alpha, background, color, cornerRadius, fontStyle, gravity, height, id, imageUrl, imageView, imageWithFallback, layoutGravity, linearLayout, lottieAnimationView, margin, onBackPressed, onClick, orientation, padding, relativeLayout, stroke, text, textSize, textView, visibility, weight, width)
 import Screens.AcknowledgementScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.Types as ST
 import Styles.Colors as Color
 
 
-screen :: ST.AcknowledgementScreenState -> Screen Action ST.AcknowledgementScreenState ScreenOutput
+screen :: ST.AcknowledgementScreenState -> ScopedScreen Action ST.AcknowledgementScreenState ScreenOutput
 screen initialState =
   { initialState
   , view
@@ -32,6 +32,7 @@ screen initialState =
           let _ = spy "AcknowledgementScreen --------action" action
           eval state action
       )
+  , parent: Nothing
   }
 
 

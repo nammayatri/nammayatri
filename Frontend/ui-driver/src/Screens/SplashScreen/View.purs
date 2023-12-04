@@ -18,14 +18,15 @@ module Screens.SplashScreen.View where
 import Data.Int (round, toNumber)
 import Engineering.Helpers.Commons as EHC
 import Prelude (Unit, const, pure, unit, ($), (*))
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), PrestoDOM, Screen, background, clickable, gravity, height, imageUrl, imageView, linearLayout, margin, onClick, orientation, weight, width, afterRender, imageWithFallback)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), PrestoDOM, ScopedScreen, background, clickable, gravity, height, imageUrl, imageView, linearLayout, margin, onClick, orientation, weight, width, afterRender, imageWithFallback)
 import Effect (Effect)
 import Screens.SplashScreen.Controller (Action(..), eval)
 import Screens.Types as ST
 import Styles.Colors as Color
 import Log
+import Data.Maybe (Maybe(..))
 
-screen :: ST.SplashScreenState -> Screen Action ST.SplashScreenState Unit
+screen :: ST.SplashScreenState -> ScopedScreen Action ST.SplashScreenState Unit
 screen initialState =
   { initialState
   , view
@@ -34,6 +35,7 @@ screen initialState =
                       let _ = printLog "SplashScreen " "view "
                       pure (pure unit))]
   , eval
+  , parent : Nothing
   }
 view
   :: forall w

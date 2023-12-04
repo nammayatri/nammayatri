@@ -25,12 +25,13 @@ import PrestoDOM.Core.Types.Language.Flow (runScreen)
 import Screens.UploadDrivingLicenseScreen.View as UploadDrivingLicenseScreen
 import Types.App (FlowBT, GlobalState(..), UPLOAD_DRIVER_LICENSE_SCREENOUTPUT(..),ScreenType(..))
 import Types.ModifyScreenState (modifyScreenState)
+import React.Navigation.Navigate (navigateToScreen)
 
 
 uploadDrivingLicense :: FlowBT String UPLOAD_DRIVER_LICENSE_SCREENOUTPUT
 uploadDrivingLicense = do
   (GlobalState state) <- getState
-  action <- lift $ lift $ runScreen $ UploadDrivingLicenseScreen.screen state.uploadDrivingLicenseScreen
+  action <- lift $ lift $ navigateToScreen $ UploadDrivingLicenseScreen.screen state.uploadDrivingLicenseScreen
   case action of
     GoBack updatedState -> do
       modifyScreenState $ UploadDrivingLicenseScreenStateType $ \uploadDrivingLicenseScreen -> updatedState

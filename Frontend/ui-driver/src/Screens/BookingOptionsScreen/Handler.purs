@@ -9,11 +9,12 @@ import Screens.BookingOptionsScreen.Controller (ScreenOutput(..))
 import Screens.BookingOptionsScreen.View as BookingOptionsScreen
 import Types.App (BOOKING_OPTIONS_SCREEN_OUTPUT(..), FlowBT, GlobalState(..), ScreenType(..))
 import Types.ModifyScreenState (modifyScreenState)
+import React.Navigation.Navigate (navigateToScreen)
 
 bookingOptions :: FlowBT String BOOKING_OPTIONS_SCREEN_OUTPUT
 bookingOptions = do
   (GlobalState state) <- getState
-  action <- lift $ lift $ runScreen $ BookingOptionsScreen.screen state.bookingOptionsScreen
+  action <- lift $ lift $ navigateToScreen $ BookingOptionsScreen.screen state.bookingOptionsScreen
   case action of
     SelectCab updatedState toggleDowngrade -> do
       _ <- modifyScreenState $ BookingOptionsScreenType (\_ -> updatedState)

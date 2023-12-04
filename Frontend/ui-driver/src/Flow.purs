@@ -121,7 +121,10 @@ import Helpers.Firebase
 import Types.ModifyScreenState (modifyScreenState, updateStage)
 import MerchantConfig.Types (AppConfig(..))
 import ConfigProvider
+import React.Navigation.Navigate (initNamespace)
 
+-- baseAppScreen :: Screen m -> ScopedScreen m
+-- baseAppScreen = {parent: Nothing, ..}
 
 baseAppFlow :: Boolean -> Maybe Event -> FlowBT String Unit
 baseAppFlow baseFlow event = do
@@ -131,7 +134,7 @@ baseAppFlow baseFlow event = do
     checkTimeSettings
     cacheAppParameters versionCode baseFlow
     void $ lift $ lift $ liftFlow $ initiateLocationServiceClient
-    when baseFlow $ lift $ lift $ initUI
+    when baseFlow $ lift $ lift $ initNamespace Nothing Nothing
     _ <- pure $ saveSuggestions "SUGGESTIONS" (getSuggestions "")
     _ <- pure $ saveSuggestionDefs "SUGGESTIONS_DEFINITIONS" (suggestionsDefinitions "")
     setValueToLocalStore CURRENCY (getCurrency Constants.appConfig)

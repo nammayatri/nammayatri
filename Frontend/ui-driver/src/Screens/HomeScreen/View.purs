@@ -85,7 +85,7 @@ import Types.App (GlobalState, defaultGlobalState)
 import Constants (defaultDensity)
 import Components.ErrorModal as ErrorModal
 
-screen :: HomeScreenState -> Screen Action HomeScreenState ScreenOutput
+screen :: HomeScreenState -> ScopedScreen Action HomeScreenState ScreenOutput
 screen initialState =
   { initialState
   , view
@@ -204,6 +204,7 @@ screen initialState =
       let _ = spy "HomeScreen state -----" state
       let _ = spy "HomeScreen--------action" action
       eval action state)
+  , parent: Nothing
   }
 
 

@@ -24,10 +24,11 @@ import PrestoDOM.Core.Types.Language.Flow (runScreen)
 import Screens.SelectLanguageScreen.View as SelectLanguageScreen
 import Types.App (GlobalState(..), FlowBT, SELECT_LANGUAGE_SCREEN_OUTPUT(..))
 import Constants as Constants
+import React.Navigation.Navigate (navigateToScreen)
 
 selectLanguageScreen :: FlowBT String SELECT_LANGUAGE_SCREEN_OUTPUT
 selectLanguageScreen = do
   (GlobalState state) <- getState
-  action <- lift $ lift $ runScreen $ SelectLanguageScreen.screen state.selectedLanguageScreen
+  action <- lift $ lift $ navigateToScreen $ SelectLanguageScreen.screen state.selectedLanguageScreen
   case action of
     GoBack -> App.BackT $ App.NoBack <$> pure CHANGE_LANGUAGE

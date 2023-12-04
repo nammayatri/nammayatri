@@ -16,7 +16,7 @@
 module Screens.PopUpScreen.View where
 
 import Prelude --(Unit, bind, const, map, pure, unit, ($), (&&), (<<<))
-import PrestoDOM --(Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), color, fontStyle, frameLayout, gravity, height, imageUrl, imageView, layoutGravity, linearLayout, margin, onClick, orientation, padding, scrollView, stroke, text, textSize, textView, visibility, width)
+import PrestoDOM --(Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM,  Visibility(..), color, fontStyle, frameLayout, gravity, height, imageUrl, imageView, layoutGravity, linearLayout, margin, onClick, orientation, padding, scrollView, stroke, text, textSize, textView, visibility, width)
 import Effect (Effect)
 import Language.Strings(getString)
 import Language.Types (STR(..))
@@ -37,7 +37,7 @@ screen initialState =
     _ <- JB.setStoreCallBackPopUp push PopUpCallBack
     pure $ pure unit)]
   , eval
-  , parent : Just "PopUpScreen"
+  , parent : Nothing 
   }
 
 view :: forall w. (Action -> Effect Unit) -> ST.PopUpScreenState -> PrestoDOM (Effect Unit) w

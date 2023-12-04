@@ -22,18 +22,18 @@ import Types.App (ScreenType(..))
 import Types.ModifyScreenState (modifyScreenState)
 import Control.Monad.Except.Trans (lift)
 import Control.Transformers.Back.Trans (BackT(..), FailBack(..)) as App
-import PrestoDOM.Core.Types.Language.Flow (runScreen)
 import Screens.ChooseLanguageScreen.View as ChooseLanguageScreen
 import Types.App (FlowBT, GlobalState(..), ScreenType(..))
 import Types.ModifyScreenState (modifyScreenState)
 import Types.App as TA
 import ConfigProvider
+import React.Navigation.Navigate (navigateToScreen)
 
 chooseLanguage :: FlowBT String TA.CHOOSE_LANG_SCREEN_OUTPUT
 chooseLanguage = do
   (GlobalState state) <- getState
   config <- getAppConfigFlowBT appConfig
-  action <- lift $ lift $ runScreen $ ChooseLanguageScreen.screen state.chooseLanguageScreen{props{selectedLanguage = config.defaultLanguage}}
+  action <- lift $ lift $ navigateToScreen $ ChooseLanguageScreen.screen state.chooseLanguageScreen{props{selectedLanguage = config.defaultLanguage}}
   case action of
     GoToEnterMobileScreen updateState -> do
       modifyScreenState $ ChooseLanguageScreenStateType (\chooseLanguageScreenScreen -> updateState)
