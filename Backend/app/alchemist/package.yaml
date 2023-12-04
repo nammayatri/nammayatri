@@ -84,6 +84,7 @@ dependencies:
   - lens-aeson
   - scientific
   - vector
+  - filepath
 
 ghc-options:
   - -Wall
@@ -123,3 +124,32 @@ tests:
       - src
     dependencies:
       - alchemist
+
+executables:
+  alchemist-generator-exe:
+    main: Main.hs
+    source-dirs:
+      - spec
+    ghc-options:
+      - -threaded
+      - -rtsopts
+      - '"-with-rtsopts=-N -T"'
+    when:
+    - condition: flag(Local)
+      then:
+        ghc-options:
+          - -O0
+          - -funfolding-use-threshold20
+          - -fno-cse
+          - -fmax-simplifier-iterations1
+          - -fno-specialise-aggressively
+          - -j4
+      else:
+        ghc-options:
+          - -O2
+          - -j4
+    dependencies:
+      - beckn-spec
+      - mobility-core
+      - alchemist
+
