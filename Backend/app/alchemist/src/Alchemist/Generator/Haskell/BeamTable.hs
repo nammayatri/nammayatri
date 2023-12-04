@@ -3,6 +3,7 @@ module Alchemist.Generator.Haskell.BeamTable where
 import Alchemist.DSL.Syntax.Storage
 import Alchemist.Utils
 import Data.List (intercalate)
+import qualified Data.Text as T
 import Kernel.Prelude
 
 formatType :: String -> String
@@ -32,10 +33,10 @@ primaryKeyToBeam tableDef =
     ++ "  primaryKey = "
     ++ tableNameHaskell tableDef
     ++ "Id . "
-    ++ head (primaryKey tableDef)
+    ++ fromMaybe (error $ T.pack ("Primary Key not found for " ++ tableNameHaskell tableDef)) (headMay (primaryKey tableDef))
     ++ "\n"
   where
-    fetchPrimaryKey = head $ filter (\f -> fieldName f `elem` primaryKey tableDef) $ fields tableDef
+    fetchPrimaryKey = fromMaybe (error $ T.pack ("Primary Key not found for " ++ tableNameHaskell tableDef)) (headMay $ filter (\f -> fieldName f `elem` primaryKey tableDef) $ fields tableDef)
 
 -- Generates Haskell code for the table instances
 tableInstancesToBeam :: TableDef -> String

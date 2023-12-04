@@ -18,6 +18,7 @@ import qualified Data.Text as T
 import qualified Data.Vector as V
 import qualified Data.Yaml as Yaml
 import Kernel.Prelude hiding (fromString, toString, toText, traceShowId, try)
+import Text.Casing (quietSnake)
 import Text.Regex.TDFA ((=~))
 
 storageParser :: FilePath -> IO [TableDef]
@@ -39,10 +40,7 @@ parseTableDef dList importObj (parseDomainName, obj) =
       parsedImports = parseImports parsedFields
       parsedQueries = parseQueries (Just parseDomainName) excludedList dList importObj obj
       (primaryKey, secondaryKey) = extractKeys parsedFields
-   in TableDef parseDomainName (parseTableName obj) parsedFields parsedImports parsedQueries primaryKey secondaryKey parsedTypes
-
-parseTableName :: Object -> String
-parseTableName = view (ix "tableName" . _String)
+   in TableDef parseDomainName (quietSnake parseDomainName) parsedFields parsedImports parsedQueries primaryKey secondaryKey parsedTypes
 
 parseImports :: [FieldDef] -> [String]
 parseImports fields =
