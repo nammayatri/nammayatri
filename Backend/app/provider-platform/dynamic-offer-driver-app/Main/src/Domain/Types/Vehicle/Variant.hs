@@ -22,7 +22,7 @@ import Kernel.Utils.GenericPretty
 import Kernel.Utils.TH (mkFromHttpInstanceForEnum)
 import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
 
-data Variant = SEDAN | SUV | HATCHBACK | AUTO_RICKSHAW | TAXI | TAXI_PLUS
+data Variant = SEDAN | SUV | HATCHBACK | AUTO_RICKSHAW | TAXI | TAXI_PLUS | METRO
   deriving
     ( Show,
       Eq,

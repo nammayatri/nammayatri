@@ -82,6 +82,7 @@ buildInitMessage res = do
       VehVar.AUTO_RICKSHAW -> Init.AUTO_RICKSHAW
       VehVar.TAXI -> Init.TAXI
       VehVar.TAXI_PLUS -> Init.TAXI_PLUS
+      VehVar.METRO -> Init.METRO
 
 mkBilling :: Maybe Text -> Maybe Text -> Init.Billing
 mkBilling phone name = Init.Billing {..}

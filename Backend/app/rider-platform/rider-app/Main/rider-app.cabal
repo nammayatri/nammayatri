@@ -90,6 +90,7 @@ library
       API.UI.Serviceability
       API.UI.Sos
       API.UI.Support
+      API.UI.TestMetro.Search
       API.UI.Tickets
       API.UI.Webengage.InfoBIPWebhook
       API.UI.Webengage.Webengage
@@ -160,6 +161,7 @@ library
       Domain.Action.UI.Serviceability
       Domain.Action.UI.Sos
       Domain.Action.UI.Support
+      Domain.Action.UI.TestMetro.Search
       Domain.Action.UI.Tickets
       Domain.Action.UI.Webengage.InfoBIPWebhook
       Domain.Action.UI.Webengage.Webengage

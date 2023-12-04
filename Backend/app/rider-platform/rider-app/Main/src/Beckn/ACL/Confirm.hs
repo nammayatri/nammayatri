@@ -86,6 +86,7 @@ mkConfirmMessage res = do
       VehVar.AUTO_RICKSHAW -> Confirm.AUTO_RICKSHAW
       VehVar.TAXI -> Confirm.TAXI
       VehVar.TAXI_PLUS -> Confirm.TAXI_PLUS
+      VehVar.METRO -> Confirm.METRO
     fulfillmentType = case res.bookingDetails of
       DRB.OneWaySpecialZoneDetails _ -> Confirm.RIDE_OTP
       _ -> Confirm.RIDE

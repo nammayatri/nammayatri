@@ -1007,6 +1007,7 @@ castVehicleVariant = \case
   Common.AUTO_RICKSHAW -> DVeh.AUTO_RICKSHAW
   Common.TAXI -> DVeh.TAXI
   Common.TAXI_PLUS -> DVeh.TAXI_PLUS
+  Common.METRO -> DVeh.METRO
 
 castVehicleVariantDashboard :: Maybe DVeh.Variant -> Maybe Common.Variant
 castVehicleVariantDashboard = \case
@@ -1016,6 +1017,7 @@ castVehicleVariantDashboard = \case
   Just DVeh.AUTO_RICKSHAW -> Just Common.AUTO_RICKSHAW
   Just DVeh.TAXI -> Just Common.TAXI
   Just DVeh.TAXI_PLUS -> Just Common.TAXI_PLUS
+  Just DVeh.METRO -> Just Common.METRO
   _ -> Nothing
 
 ---------------------------------------------------------------------

@@ -14,8 +14,8 @@
 
 module SharedLogic.CallBPP where
 
+import qualified Beckn.ACL.Metro.Search as MetroACL
 import qualified Beckn.ACL.Track as TrackACL
-import qualified Beckn.Types.Core.Metro.API.Search as MigAPI
 import Beckn.Types.Core.Taxi.API.Cancel as API
 import Beckn.Types.Core.Taxi.API.Confirm as API
 import qualified Beckn.Types.Core.Taxi.API.Init as API
@@ -31,7 +31,6 @@ import qualified EulerHS.Types as Euler
 import GHC.Records.Extra
 import qualified Kernel.External.Maps.Types as MapSearch
 import Kernel.Prelude
-import Kernel.Types.Beckn.ReqTypes
 import Kernel.Types.Error
 import Kernel.Utils.Common
 import Kernel.Utils.Error.BaseError.HTTPError.BecknAPIError (IsBecknAPI)
@@ -58,10 +57,10 @@ searchMetro ::
     CoreMetrics m
   ) =>
   BaseUrl ->
-  BecknReq MigAPI.SearchIntent ->
+  MetroACL.MetroSearchReq ->
   m ()
 searchMetro gatewayUrl req = do
-  void $ callBecknAPIWithSignatureMetro "search" MigAPI.searchAPI gatewayUrl req
+  void $ callBecknAPIWithSignature req.context.bap_id "search" MetroACL.metroSearchAPI gatewayUrl req
 
 select ::
   ( MonadFlow m,

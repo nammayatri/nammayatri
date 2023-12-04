@@ -24,7 +24,7 @@ import qualified API.Internal as Internal
 import qualified API.MetroBeckn as MetroBeckn
 import qualified API.UI as UI
 import qualified Data.ByteString as BS
-import Data.OpenApi
+-- import Data.OpenApi
 import qualified Domain.Action.UI.Payment as Payment
 import qualified Domain.Types.Merchant as DM
 import Environment
@@ -35,12 +35,13 @@ import Kernel.Utils.Common
 import Kernel.Utils.Servant.BasicAuth ()
 import Kernel.Utils.Servant.HTML
 import Servant hiding (serveDirectoryWebApp, throwError)
-import Servant.OpenApi
+
+-- import Servant.OpenApi
 
 type API =
   MainAPI
     :<|> SwaggerAPI
-    :<|> OpenAPI
+    -- :<|> OpenAPI
     :<|> Raw
 
 type MainAPI =
@@ -59,7 +60,7 @@ handler :: FlowServer API
 handler =
   mainServer
     :<|> writeSwaggerHTMLFlow
-    :<|> writeOpenAPIFlow
+    -- :<|> writeOpenAPIFlow
     :<|> serveDirectoryWebApp "swagger"
 
 mainServer :: FlowServer MainAPI
@@ -75,24 +76,24 @@ mainServer =
 
 type SwaggerAPI = "swagger" :> Get '[HTML] BS.ByteString
 
-type OpenAPI = "openapi" :> Get '[JSON] OpenApi
+-- type OpenAPI = "openapi" :> Get '[JSON] OpenApi
 
-openAPI :: OpenApi
-openAPI = do
-  let openApi = toOpenApi (Proxy :: Proxy MainAPI)
-  openApi
-    { _openApiInfo =
-        (_openApiInfo openApi)
-          { _infoTitle = "Yatri",
-            _infoVersion = "1.0"
-          }
-    }
+-- openAPI :: OpenApi
+-- openAPI = do
+--   let openApi = toOpenApi (Proxy :: Proxy MainAPI)
+--   openApi
+--     { _openApiInfo =
+--         (_openApiInfo openApi)
+--           { _infoTitle = "Yatri",
+--             _infoVersion = "1.0"
+--           }
+--     }
 
 writeSwaggerHTMLFlow :: FlowServer SwaggerAPI
 writeSwaggerHTMLFlow = lift $ BS.readFile "swagger/index.html"
 
-writeOpenAPIFlow :: FlowServer OpenAPI
-writeOpenAPIFlow = pure openAPI
+-- writeOpenAPIFlow :: FlowServer OpenAPI
+-- writeOpenAPIFlow = pure openAPI
 
 juspayWebhookHandler ::
   ShortId DM.Merchant ->

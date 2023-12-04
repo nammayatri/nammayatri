@@ -139,6 +139,7 @@ mkOnInitMessage res = do
       VehVar.AUTO_RICKSHAW -> OnInit.AUTO_RICKSHAW
       VehVar.TAXI -> OnInit.TAXI
       VehVar.TAXI_PLUS -> OnInit.TAXI_PLUS
+      VehVar.METRO -> OnInit.METRO
     buildFulfillmentType = \case
       DRB.NormalBooking -> OnInit.RIDE
       DRB.SpecialZoneBooking -> OnInit.RIDE_OTP

@@ -76,6 +76,7 @@ buildInitReq subscriber req = do
       Init.AUTO_RICKSHAW -> VehVar.AUTO_RICKSHAW
       Init.TAXI -> VehVar.TAXI
       Init.TAXI_PLUS -> VehVar.TAXI_PLUS
+      Init.METRO -> VehVar.METRO
 
 mkPaymentMethodInfo :: Init.Payment -> Maybe DMPM.PaymentMethodInfo
 mkPaymentMethodInfo Init.Payment {..} =

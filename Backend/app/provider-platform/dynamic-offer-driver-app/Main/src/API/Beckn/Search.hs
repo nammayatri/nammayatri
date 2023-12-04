@@ -46,7 +46,7 @@ search ::
   SignatureAuthResult ->
   Search.SearchReq ->
   FlowHandler AckResponse
-search transporterId (SignatureAuthResult _ subscriber) (SignatureAuthResult _ gateway) req =
+search transporterId (SignatureAuthResult _ subscriber) (SignatureAuthResult _ _gateway) req =
   withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
     logTagInfo "Search API Flow" "Reached"
     dSearchReq <- ACL.buildSearchReq transporterId subscriber req
@@ -56,9 +56,8 @@ search transporterId (SignatureAuthResult _ subscriber) (SignatureAuthResult _ g
         Redis.whenWithLockRedis (searchProcessingLockKey dSearchReq.messageId transporterId.getId) 60 $ do
           dSearchRes <- DSearch.handler merchant dSearchReq
           let context = req.context
-          let callbackUrl = gateway.subscriber_url
           void $
-            CallBAP.withCallback dSearchRes.provider Context.SEARCH OnSearch.onSearchAPI context callbackUrl $ do
+            CallBAP.withCallback dSearchRes.provider Context.SEARCH OnSearch.onSearchAPI context context.bap_uri $ do
               pure $ ACL.mkOnSearchMessage dSearchRes
     pure Ack
 

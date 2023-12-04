@@ -203,7 +203,7 @@ in  { esqDBCfg
     , shortDurationRetryCfg = common.shortDurationRetryCfg
     , longDurationRetryCfg = common.longDurationRetryCfg
     , authTokenCacheExpiry = +600
-    , disableSignatureAuth = False
+    , disableSignatureAuth = True
     , encTools
     , kafkaProducerCfg
     , rideCfg = rideConfig

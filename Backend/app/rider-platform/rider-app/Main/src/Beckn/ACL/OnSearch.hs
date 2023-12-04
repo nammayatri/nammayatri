@@ -17,7 +17,6 @@ module Beckn.ACL.OnSearch where
 import Beckn.ACL.Common (getTag, validatePrices)
 import qualified Beckn.Types.Core.Taxi.API.OnSearch as OnSearch
 import qualified Beckn.Types.Core.Taxi.OnSearch as OnSearch
--- import Beckn.Types.Core.Taxi.OnSearch.Item (BreakupItem (..))
 import qualified Data.Text as T
 import qualified Domain.Action.Beckn.OnSearch as DOnSearch
 import qualified Domain.Types.Estimate as DEstimate
@@ -25,10 +24,8 @@ import Domain.Types.OnSearchEvent
 import qualified Domain.Types.VehicleVariant as VehVar
 import EulerHS.Prelude hiding (find, id, map, readMaybe, state, unpack)
 import GHC.Float (int2Double)
--- import Kernel.External.Maps (LatLong)
 import Kernel.Prelude
 import Kernel.Product.Validation.Context (validateContext)
--- import Kernel.Storage.Esqueleto (runTransaction)
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Beckn.DecimalValue as DecimalValue
 import Kernel.Types.Beckn.ReqTypes
@@ -133,6 +130,7 @@ buildEstimateOrQuoteInfo provider item = do
       OnSearch.AUTO_RICKSHAW -> VehVar.AUTO_RICKSHAW
       OnSearch.TAXI -> VehVar.TAXI
       OnSearch.TAXI_PLUS -> VehVar.TAXI_PLUS
+      OnSearch.METRO -> VehVar.METRO
 
 buildOneWayQuoteDetails ::
   (MonadThrow m, Log m) =>

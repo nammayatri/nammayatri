@@ -61,6 +61,7 @@ buildConfirmReq req = do
       Confirm.AUTO_RICKSHAW -> VehVar.AUTO_RICKSHAW
       Confirm.TAXI -> VehVar.TAXI
       Confirm.TAXI_PLUS -> VehVar.TAXI_PLUS
+      Confirm.METRO -> VehVar.METRO
 
 buildNightSafetyCheckTag :: Maybe Confirm.TagGroups -> Bool
 buildNightSafetyCheckTag tagGroups' = do

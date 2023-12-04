@@ -90,3 +90,4 @@ getCategory HATCHBACK = CAR
 getCategory AUTO_RICKSHAW = AUTO_CATEGORY
 getCategory TAXI = CAR
 getCategory TAXI_PLUS = CAR
+getCategory METRO = TRAIN

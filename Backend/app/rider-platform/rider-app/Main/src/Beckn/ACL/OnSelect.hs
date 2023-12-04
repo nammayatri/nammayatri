@@ -28,7 +28,7 @@ import Kernel.Product.Validation.Context
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common
 import Kernel.Types.Id
-import Kernel.Types.TimeRFC339
+import Kernel.Types.TimeRFC339 hiding (Domain (..))
 import Kernel.Utils.Common
 import Tools.Error
 
@@ -106,6 +106,7 @@ buildQuoteInfo driverId fulfillment quote contextTime item = do
       OnSelect.AUTO_RICKSHAW -> AUTO_RICKSHAW
       OnSelect.TAXI -> TAXI
       OnSelect.TAXI_PLUS -> TAXI_PLUS
+      OnSelect.METRO -> METRO
 
 buildDriverOfferQuoteDetails ::
   (MonadThrow m, Log m, MonadTime m) =>

@@ -47,6 +47,7 @@ import qualified API.UI.Select as Select
 import qualified API.UI.Serviceability as Serviceability
 import qualified API.UI.Sos as Sos
 import qualified API.UI.Support as Support
+import qualified API.UI.TestMetro.Search as MetroSearch
 import qualified API.UI.TicketService as TicketService
 import qualified API.UI.Webengage.InfoBIPWebhook as InfoBIPWebhook
 import qualified API.UI.Webengage.Webengage as Webengage
@@ -62,6 +63,7 @@ type API =
            :<|> Profile.API
            :<|> Payment.API
            :<|> Search.API
+           :<|> MetroSearch.API
            :<|> Select.API
            :<|> Quote.API
            :<|> Confirm.API
@@ -100,6 +102,7 @@ handler =
     :<|> Profile.handler
     :<|> Payment.handler
     :<|> Search.handler
+    :<|> MetroSearch.handler
     :<|> Select.handler
     :<|> Quote.handler
     :<|> Confirm.handler
