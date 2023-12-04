@@ -52,14 +52,17 @@ parseUpdateCommandValues = A.withArray "DBUpdateCommand" $ \v -> do
 
 parseCreateCommandValues :: A.Value -> Parser [TermWrap]
 parseCreateCommandValues = A.withObject "DBCreateCommand" $ \o -> do
-  let termWrapList = (\(k, v) -> TermWrap (Column k) (Value v)) <$> HM.toList o
+  termWrapList <- forM (HM.toList o) $ \(k, v) -> do
+    val <- parseJSON v
+    pure $ TermWrap (Column k) val
   case termWrapList of
     [] -> fail "Expected at least one term wrap for CreateCommand"
     _ -> pure termWrapList
 
 parseSetClause :: [(Text, A.Value)] -> Parser [Set]
 parseSetClause kvPairs = forM kvPairs $ \(key, value) -> do
-  pure $ Set (Column key) (Value value)
+  val <- parseJSON value
+  pure $ Set (Column key) val
 
 parseWhereValuePairs :: A.Value -> Parser Where
 parseWhereValuePairs = A.withArray "Where clause list" $ \v -> do
@@ -157,4 +160,6 @@ decodeTerm = \case
       _ -> fail "Unable to decode term - Expecting object with single key"
 
 parseFieldAndGetClause :: A.Value -> Text -> Parser TermWrap
-parseFieldAndGetClause obj fieldName = pure $ TermWrap (Column fieldName) (Value obj)
+parseFieldAndGetClause obj fieldName = do
+  val <- parseJSON obj
+  pure $ TermWrap (Column fieldName) val

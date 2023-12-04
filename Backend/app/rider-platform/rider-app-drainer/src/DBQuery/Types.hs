@@ -5,6 +5,8 @@ module DBQuery.Types where
 
 import qualified Data.Aeson as A
 import qualified Data.Map.Strict as M
+import Data.Text as T
+import qualified Data.Vector as V
 import Kernel.Prelude
 
 data InsertQuery = InsertQuery
@@ -77,6 +79,15 @@ data TermWrap where
   TermWrap :: Column -> Value -> TermWrap
   deriving stock (Show)
 
-newtype Value = Value {getValue :: A.Value}
+data Value = SqlNull | SqlString Text | SqlNum Double | SqlValue Text | SqlList [Value]
   deriving stock (Show)
-  deriving newtype (FromJSON)
+
+instance FromJSON Value where
+  parseJSON (A.String "SqlNull") = pure SqlNull
+  parseJSON (A.String str) | T.length str >= 2 && T.isPrefixOf "\"" str && T.isSuffixOf "\"" str = pure . SqlString . T.take (T.length str - 2) $ T.drop 1 str
+  parseJSON (A.String str) = do
+    case readMaybe $ T.unpack str of
+      Just num -> pure $ SqlNum num
+      Nothing -> pure $ SqlValue str
+  parseJSON (A.Array ar) = SqlList . V.toList <$> (parseJSON `mapM` ar)
+  parseJSON _ = fail "Expected String or Array"
