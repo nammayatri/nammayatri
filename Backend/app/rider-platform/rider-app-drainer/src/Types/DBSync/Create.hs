@@ -26,7 +26,7 @@ instance FromJSON DBCreateObject where
       -- why last?
       tagObject :: DBModelObject <- obj A..: "tag"
       contentsObj <- obj A..: "contents"
-      contents <- obj A..: "contents"
+      contents <- obj A..: "contents_v2" -- TODO remove "contents" field after roll out
       mbMappings <- obj A..:? "mappings"
       let mappings = fromMaybe (Mapping M.empty) mbMappings
           dbModel = tagObject.getDBModelObject

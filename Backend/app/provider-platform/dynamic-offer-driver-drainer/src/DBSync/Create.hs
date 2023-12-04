@@ -45,6 +45,7 @@ runCreateQuery createDataEntry createData tableName = do
   Env {..} <- ask
   let (entryId, byteString) = createDataEntry
       (mbModel, mbObject, mbMappings) = createData
+  EL.logDebug ("BYTE STRING" :: Text) (show byteString)
   if shouldPushToKafkaOnly tableName _dontEnableDbTables
     then return $ Right entryId
     else do

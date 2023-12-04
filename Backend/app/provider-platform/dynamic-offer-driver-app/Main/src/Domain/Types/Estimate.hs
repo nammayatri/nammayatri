@@ -69,6 +69,10 @@ instance FromBackendRow Postgres [EstimateBreakupD 'Unsafe]
 instance FromField [EstimateBreakupD 'Unsafe] where
   fromField f mbValue = V.toList <$> fromField f mbValue
 
+-- TODO test this
+instance HasSqlValueSyntax be String => HasSqlValueSyntax be (EstimateBreakupD 'Unsafe) where
+  sqlValueSyntax = autoSqlValueSyntax . encodeToText
+
 instance FromField (EstimateBreakupD 'Unsafe) where
   fromField = fromFieldJSON
 

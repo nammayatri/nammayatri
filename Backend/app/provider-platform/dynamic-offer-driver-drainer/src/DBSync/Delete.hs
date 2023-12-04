@@ -46,6 +46,7 @@ runDeleteQuery deleteEntries deleteData tableName = do
   Env {..} <- ask
   let (entryId, byteString) = deleteEntries
       (mbModel, mbObject, mbMappings) = deleteData
+  EL.logDebug ("BYTE STRING" :: Text) (show byteString)
   if shouldPushToKafkaOnly tableName _dontEnableDbTables
     then return $ Right entryId
     else do

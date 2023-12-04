@@ -2,11 +2,8 @@ module DBQuery.Functions where
 
 import Control.Exception (throwIO)
 import DBQuery.Types
-import qualified Data.Aeson as A
 import qualified Data.Map.Strict as M
-import qualified Data.Scientific as Sci
 import qualified Data.Text as T
-import qualified Data.Vector as V
 import qualified Database.PostgreSQL.Simple as Pg
 import EulerHS.Prelude hiding (id)
 import Text.Casing (quietSnake)
@@ -23,7 +20,7 @@ generateInsertQuery InsertQuery {..} = do
                 let keyText = quote' $ replaceMappings column mappings
                 let valueText = valueToText value
                 (keyText, valueText)
-          table = schemaName <> "." <> textToSnakeCaseText (quote' dbModel.getDBModel)
+          table = schemaName <> "." <> quote' (textToSnakeCaseText dbModel.getDBModel)
           inserts = T.intercalate ", " columnNames
           valuesList = T.intercalate ", " values
       Just $ "INSERT INTO " <> table <> " (" <> inserts <> ") VALUES (" <> valuesList <> ")" <> " ON CONFLICT DO NOTHING;"
@@ -33,7 +30,7 @@ generateUpdateQuery UpdateQuery {..} = do
   let schemaName = schema.getSchemaName
   let correctWhereClauseText = makeWhereCondition whereClause mappings
       setQuery = makeSetConditions
-      table = schemaName <> "." <> textToSnakeCaseText (quote' dbModel.getDBModel)
+      table = schemaName <> "." <> quote' (textToSnakeCaseText dbModel.getDBModel)
   if T.null correctWhereClauseText
     then Nothing -- why?
     else Just $ "UPDATE " <> table <> " SET " <> setQuery <> " WHERE " <> correctWhereClauseText <> ";"
@@ -47,7 +44,7 @@ generateDeleteQuery :: DeleteQuery -> Maybe Text
 generateDeleteQuery DeleteQuery {..} = do
   let schemaName = schema.getSchemaName
       correctWhereClauseText = makeWhereCondition whereClause mappings
-      table = schemaName <> "." <> textToSnakeCaseText (quote' dbModel.getDBModel)
+      table = schemaName <> "." <> quote' (textToSnakeCaseText dbModel.getDBModel)
   if T.null correctWhereClauseText
     then Nothing -- why?
     else Just $ "DELETE FROM " <> table <> " WHERE " <> correctWhereClauseText <> ";"
@@ -75,28 +72,21 @@ quote' t = "\"" <> t <> "\""
 quote :: Text -> Text
 quote t = "'" <> t <> "'"
 
+-- for "contents_v2" field
 valueToText :: Value -> T.Text
-valueToText value = case value.getValue of
-  (A.String t) -> quote t
-  (A.Number n) -> quote $ scientificToText n
-  (A.Bool b) -> quote $ if b then "true" else "false"
-  (A.Array a) -> quote $ "{" <> T.intercalate "," (map valueToText' (V.toList a)) <> "}" -- in case of array of value of a key in object
-  (A.Object obj) -> quote $ T.pack (show (A.encode obj))
-  A.Null -> "null"
+valueToText value = case value of
+  SqlNull -> "null"
+  SqlString t -> quote t
+  SqlNum n -> show n
+  SqlValue t -> quote t
+  SqlList a -> quote $ "{" <> T.intercalate "," (map valueToText' a) <> "}" -- in case of array of value of a key in object
   where
-    valueToText' :: A.Value -> T.Text
-    valueToText' (A.String t) = t
-    valueToText' (A.Number n) = scientificToText n
-    valueToText' (A.Bool b) = if b then "true" else "false"
-    valueToText' (A.Array a) = "[" <> T.intercalate "," (map valueToText' (V.toList a)) <> "]" -- why different brackets [] an {}?
-    valueToText' (A.Object obj) = T.pack (show (A.encode obj)) -- Convert to floating-point
-    valueToText' _ = "null"
-
-    scientificToText :: Sci.Scientific -> Text
-    scientificToText n =
-      if Sci.isInteger n
-        then T.pack (show (Sci.coefficient n)) -- Convert to integer if it's an integer
-        else T.pack (show @_ @Double (Sci.toRealFloat n)) -- Convert to floating-point
+    valueToText' :: Value -> T.Text
+    valueToText' SqlNull = "null"
+    valueToText' (SqlString t) = quote' t
+    valueToText' (SqlNum n) = show n
+    valueToText' (SqlValue t) = quote' t
+    valueToText' (SqlList a) = "[" <> T.intercalate "," (map valueToText' a) <> "]" -- why different brackets [] an {}?
 
 -- TODO test for empty lists, list with one or more values
 valueToTextForInConditions :: [Value] -> T.Text

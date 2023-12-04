@@ -364,17 +364,3 @@ content-type: application/json
   "rating" : 5,
   "feedbackDetails": "The ride was good"
 }
-
-###
-
-# @name disputeCancellationDues
-POST {{app-host}}/dispute/cancellationDues
-content-type: application/json
-token: {{app-token}}
-
-###
-
-# @name getCancellationDuesDetails
-GET {{app-host}}/get/cancellationDuesDetails
-content-type: application/json
-token: {{app-token}}
