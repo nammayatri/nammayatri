@@ -12,7 +12,8 @@ import qualified Data.Aeson.KeyMap as KM
 import Data.Aeson.Lens (key, _Array, _Object, _Value)
 import qualified Data.ByteString as BS
 import qualified Data.List as L
-import Data.List.Split (splitOn)
+import qualified Data.List.Extra as L
+import Data.List.Split (split, splitOn, whenElt)
 import qualified Data.Text as T
 import qualified Data.Vector as V
 import qualified Data.Yaml as Yaml
@@ -153,17 +154,19 @@ parseFields moduleName excludedList dataList impObj obj =
         Just f -> f
         Nothing -> error "Error Parsing Fields"
 
--- FIXME: This is a hack, we need to figure out a better way to do this
 findBeamType :: String -> String
-findBeamType hkType
-  | L.isPrefixOf "Id " hkType = "Text"
-  | L.isPrefixOf "[Id " hkType = "[Text]"
-  | L.isPrefixOf "ShortId " hkType = "Text"
-  | L.isPrefixOf "[ShortId " hkType = "[Text]"
-  | otherwise = hkType
+findBeamType str = concatMap (typeMapper . L.trim) (split (whenElt (`elem` typeDelimiter)) str)
+  where
+    typeDelimiter :: String
+    typeDelimiter = "()[]"
+    typeMapper :: String -> String
+    typeMapper hkType
+      | L.isPrefixOf "Id " hkType || L.isPrefixOf "Kernel.Types.Id.Id " hkType = "Text"
+      | L.isPrefixOf "ShortId " hkType || L.isPrefixOf "Kernel.Types.Id.ShortId " hkType = "Text"
+      | otherwise = hkType
 
 getProperConstraint :: String -> FieldConstraint
-getProperConstraint txt = case (T.unpack . T.strip . T.pack) txt of
+getProperConstraint txt = case L.trim txt of
   "PrimaryKey" -> PrimaryKey
   "SecondaryKey" -> SecondaryKey
   "NotNull" -> NotNull
