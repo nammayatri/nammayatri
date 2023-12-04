@@ -918,13 +918,18 @@ ratingCardViewState state = {
     , enableLoader = (JB.getBtnLoader "RateYourDriverButton")
   }
   , showProfileImg : true
-  , title : getString RATE_YOUR_RIDE_WITH <> state.data.rideRatingState.driverName
+  , title : getRateYourRideString ( getString RATE_YOUR_RIDE_WITH) state.data.rideRatingState.driverName
   , feedbackPlaceHolder : getString HELP_US_WITH_YOUR_FEEDBACK_OPTIONAL
   , showFeedbackPill : true
   , overallFeedbackArray : [(getString TERRIBLE_EXPERIENCE), (getString POOR_EXPERIENCE),(getString NEEDS_IMPROVEMENT), (getString ALMOST_PERFECT), (getString AMAZING)]
   , accessibility : ENABLE
   , closeImgVisible : GONE
 }
+
+getRateYourRideString :: String -> String -> String 
+getRateYourRideString str driverName = case getValueToLocalStore LANGUAGE_KEY of 
+    "EN_IN" -> str <> " " <> driverName
+    _   -> driverName <> " " <> str
 
 searchLocationModelViewState :: ST.HomeScreenState -> SearchLocationModel.SearchLocationModelState
 searchLocationModelViewState state = { isSearchLocation: state.props.isSearchLocation
@@ -1246,7 +1251,7 @@ rideCompletedCardConfig state = let
           bottomText =  getString RIDE_DETAILS
         },
         customerBottomCard {
-          title = (getString RATE_YOUR_RIDE_WITH) <> state.data.rideRatingState.driverName,
+          title = getRateYourRideString (getString RATE_YOUR_RIDE_WITH) state.data.rideRatingState.driverName,
           subTitle = (getString $ YOUR_FEEDBACK_HELPS_US "YOUR_FEEDBACK_HELPS_US"),
           selectedRating = state.data.ratingViewState.selectedRating,
           visible = true

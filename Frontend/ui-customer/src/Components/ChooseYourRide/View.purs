@@ -156,6 +156,7 @@ primaryButtonRequestRideConfig config = PrimaryButton.config
   { textConfig
     { text = (getString CONFIRM_AND_BOOK)
     , color = Color.yellow900
+    , accessibilityHint = "Confirm And Book Button"
     }
   , id = "ConfirmAndBookButton"
   , background = Color.black900
