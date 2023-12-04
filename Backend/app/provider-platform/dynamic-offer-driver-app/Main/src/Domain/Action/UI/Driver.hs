@@ -74,6 +74,8 @@ module Domain.Action.UI.Driver
     calcExecutionTime,
     fetchDriverPhoto,
     getCity,
+    getPlanDataFromDriverFee,
+    planMaxRides,
   )
 where
 
@@ -110,6 +112,7 @@ import Domain.Types.Merchant.TransporterConfig
 import qualified Domain.Types.MetaData as MD
 import Domain.Types.Person (Person, PersonAPIEntity)
 import qualified Domain.Types.Person as SP
+import Domain.Types.Plan as Plan
 import qualified Domain.Types.SearchRequest as DSR
 import Domain.Types.SearchRequestForDriver
 import qualified Domain.Types.SearchTry as DST
@@ -175,6 +178,7 @@ import qualified Storage.CachedQueries.GoHomeConfig as CQGHC
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as CQTC
+import qualified Storage.CachedQueries.Plan as CQP
 import qualified Storage.Queries.Driver.GoHomeFeature.DriverGoHomeRequest as QDGR
 import qualified Storage.Queries.Driver.GoHomeFeature.DriverHomeLocation as QDHL
 import qualified Storage.Queries.DriverFee as QDF
@@ -1791,6 +1795,7 @@ data DriverFeeInfoEntity = DriverFeeInfoEntity
     planAmount :: HighPrecMoney,
     rideTakenOn :: UTCTime,
     driverFeeAmount :: HighPrecMoney,
+    maxRidesEligibleForCharge :: Maybe Int,
     isSplit :: Bool,
     offerAndPlanDetails :: Maybe Text,
     isCoinCleared :: Bool,
@@ -1826,6 +1831,8 @@ mkDriverFeeInfoEntity driverFees invoiceStatus transporterConfig = do
   mapM
     ( \driverFee -> do
         driverFeesInWindow <- QDF.findFeeInRangeAndDriverId driverFee.startTime driverFee.endTime driverFee.driverId
+        mbPlan <- getPlanDataFromDriverFee driverFee
+        let maxRidesEligibleForCharge = planMaxRides =<< mbPlan
         return
           DriverFeeInfoEntity
             { autoPayStage = driverFee.autopayPaymentStage,
@@ -1840,7 +1847,8 @@ mkDriverFeeInfoEntity driverFees invoiceStatus transporterConfig = do
               isCoinCleared = driverFee.status == DDF.CLEARED_BY_YATRI_COINS,
               coinDiscountAmount = driverFee.amountPaidByCoin,
               specialZoneRideCount = driverFee.specialZoneRideCount,
-              totalSpecialZoneCharges = driverFee.specialZoneAmount
+              totalSpecialZoneCharges = driverFee.specialZoneAmount,
+              maxRidesEligibleForCharge
             }
     )
     driverFees
@@ -1866,3 +1874,16 @@ getCity req = do
         (g : _) -> pure $ Just g
   let city = (.city) <$> geometry
   pure $ GetCityResp {city = show <$> city}
+
+planMaxRides :: Plan -> Maybe Int
+planMaxRides plan = do
+  case plan.planBaseAmount of
+    PERRIDE_BASE baseAmount -> Just $ round $ (plan.maxAmount) / baseAmount
+    _ -> Nothing
+
+getPlanDataFromDriverFee :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => DDF.DriverFee -> m (Maybe Plan)
+getPlanDataFromDriverFee driverFee = do
+  let (mbPlanId, mbPaymentMode) = (driverFee.planId, driverFee.planMode)
+  case (mbPlanId, mbPaymentMode) of
+    (Just planId, _) -> CQP.findByIdAndPaymentMode planId $ fromMaybe MANUAL mbPaymentMode
+    _ -> return Nothing

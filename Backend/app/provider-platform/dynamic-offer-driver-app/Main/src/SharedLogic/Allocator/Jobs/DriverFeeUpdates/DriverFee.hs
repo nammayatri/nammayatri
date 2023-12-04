@@ -168,7 +168,7 @@ calculateDriverFeeForDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getI
               getFinalOrderAmount feeWithoutDiscount merchantId transporterConfig driver plan mandateSetupDate driverFee
             _ -> return (0, 0, Nothing, Nothing) -- TODO: handle WEEKLY and MONTHLY later
           let offerAndPlanTitle = Just plan.name <> Just "-*@*-" <> offerTitle ---- this we will send in payment history ----
-          updateOfferAndPlanDetails offerId offerAndPlanTitle driverFee.id now
+          updateOfferAndPlanDetails offerId offerAndPlanTitle driverFee.id (Just plan.id) (Just plan.paymentMode) now
 
           fork "Applying offer" $ do
             offerTxnId <- getShortId <$> generateShortId
@@ -198,14 +198,13 @@ calculateDriverFeeForDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getI
           dueDriverFees <- QDF.findAllPendingAndDueDriverFeeByDriverId (cast driverFee.driverId) -- Problem with lazy evaluation?
           let driverFeeIds = map (.id) dueDriverFees
               due = sum $ map (\fee -> roundToHalf $ fromIntegral fee.govtCharges + fee.platformFee.fee + fee.platformFee.cgst + fee.platformFee.sgst) dueDriverFees
-          if roundToHalf (due + totalFee) >= plan.maxCreditLimit
+          if roundToHalf (due + totalFee - min coinCashLeft totalFee) >= plan.maxCreditLimit
             then do
               mapM_ updateDriverFeeToManual driverFeeIds
               updateDriverFeeToManual driverFee.id
               updateSubscription False (cast driverFee.driverId)
             else do
               unless (totalFee == 0 || coinCashLeft >= totalFee) $ processDriverFee paymentMode driverFee
-
           updateSerialOrderForInvoicesInWindow driverFee.id merchantId startTime endTime
 
   case listToMaybe driverFees of
@@ -269,7 +268,7 @@ makeOfferReq totalFee driver plan dutyDate registrationDate numOfRides transport
       paymentMode = show plan.paymentMode,
       dutyDate,
       numOfRides,
-      offerListingMetric = if transporterConfig.considerSpecialZoneRidesForPlanCharges then Nothing else Just Payment.IS_APPLICABLE
+      offerListingMetric = if transporterConfig.enableUdfForOffers then Just Payment.IS_APPLICABLE else Nothing
     }
 
 getFinalOrderAmount :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r) => HighPrecMoney -> Id Merchant -> TransporterConfig -> Person -> Plan -> UTCTime -> DriverFee -> m (HighPrecMoney, HighPrecMoney, Maybe Text, Maybe Text)

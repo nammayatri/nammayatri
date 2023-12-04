@@ -20,6 +20,7 @@ import Domain.Types.DriverFee
 import qualified Domain.Types.DriverFee as Domain
 import Domain.Types.Merchant
 import Domain.Types.Person
+import Domain.Types.Plan as DPlan
 import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.Id
@@ -311,10 +312,15 @@ updateOfferId offerId driverFeeId now = do
     [Se.Set BeamDF.offerId offerId, Se.Set BeamDF.updatedAt now]
     [Se.Is BeamDF.id (Se.Eq driverFeeId.getId)]
 
-updateOfferAndPlanDetails :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Maybe Text -> Maybe Text -> Id DriverFee -> UTCTime -> m ()
-updateOfferAndPlanDetails offerId planAndOfferTitle driverFeeId now = do
+updateOfferAndPlanDetails :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Maybe Text -> Maybe Text -> Id DriverFee -> Maybe (Id DPlan.Plan) -> Maybe DPlan.PaymentMode -> UTCTime -> m ()
+updateOfferAndPlanDetails offerId planAndOfferTitle driverFeeId planId paymentMode now = do
   updateOneWithKV
-    [Se.Set BeamDF.offerId offerId, Se.Set BeamDF.planOfferTitle planAndOfferTitle, Se.Set BeamDF.updatedAt now]
+    [ Se.Set BeamDF.offerId offerId,
+      Se.Set BeamDF.planOfferTitle planAndOfferTitle,
+      Se.Set BeamDF.planId $ planId <&> getId,
+      Se.Set BeamDF.planMode paymentMode,
+      Se.Set BeamDF.updatedAt now
+    ]
     [Se.Is BeamDF.id (Se.Eq driverFeeId.getId)]
 
 updateAutopayPaymentStageById :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Maybe Domain.AutopayPaymentStage -> Id DriverFee -> m ()
@@ -606,7 +612,9 @@ instance FromTType' BeamDF.DriverFee DriverFee where
             amountPaidByCoin,
             overlaySent = overlaySent,
             specialZoneRideCount,
-            specialZoneAmount
+            specialZoneAmount,
+            planId = Id <$> planId,
+            planMode
           }
 
 instance ToTType' BeamDF.DriverFee DriverFee where
@@ -640,5 +648,7 @@ instance ToTType' BeamDF.DriverFee DriverFee where
         BeamDF.overlaySent = overlaySent,
         BeamDF.amountPaidByCoin = amountPaidByCoin,
         BeamDF.specialZoneRideCount = specialZoneRideCount,
-        BeamDF.specialZoneAmount = specialZoneAmount
+        BeamDF.specialZoneAmount = specialZoneAmount,
+        BeamDF.planId = getId <$> planId,
+        BeamDF.planMode = planMode
       }

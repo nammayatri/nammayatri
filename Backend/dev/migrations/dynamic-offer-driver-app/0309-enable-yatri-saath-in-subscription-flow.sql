@@ -33,4 +33,4 @@ where dp.driver_id is null and dr.merchant_id = '96dd7f78-787e-4a0b-8675-e9e6fe9
 
 update atlas_driver_offer_bpp.driver_information
 set auto_pay_status = 'PENDING'
-where merchant_id = '96dd7f78-787e-4a0b-8675-e9e6fe93bb8f';
+where merchant_id = '96dd7f78-787e-4a0b-8675-e9e6fe93bb8f' and auto_pay_status is null;
