@@ -298,7 +298,7 @@ enterMobileNumberScreenFlow = do
                         _ <- lift $ lift $ setLogField "customer_id" $ encode (customerId)
                         pure unit
                     setValueToLocalStore CUSTOMER_ID customerId
-                    void $ pure $ setCleverTapUserData "Identity" (getValueToLocalStore CUSTOMER_ID)
+                    void $ liftFlowBT $ setCleverTapUserData "Identity" (getValueToLocalStore CUSTOMER_ID)
                     setValueToLocalStore REGISTERATION_TOKEN response.token
                     setValueToLocalStore USER_NAME $ (fromMaybe "" $ response.person ^. _firstName) <> " " <> (fromMaybe "" $ response.person ^. _middleName) <> " " <> (fromMaybe "" $ response.person ^. _lastName)
                     if isNothing (response.person ^. _firstName) then currentFlowStatus else handleDeepLinks Nothing false
@@ -322,7 +322,7 @@ enterMobileNumberScreenFlow = do
     GoToOTP state -> do
             setValueToLocalStore MOBILE_NUMBER (state.data.mobileNumber)
             setValueToLocalStore COUNTRY_CODE (state.data.countryObj.countryCode)
-            void $ pure $ setCleverTapUserData "Phone" (state.data.countryObj.countryCode <> (getValueToLocalStore MOBILE_NUMBER))
+            void $ liftFlowBT $ setCleverTapUserData "Phone" (state.data.countryObj.countryCode <> (getValueToLocalStore MOBILE_NUMBER))
             (TriggerOTPResp triggerOtpResp) <- Remote.triggerOTPBT (Remote.makeTriggerOTPReq state.data.mobileNumber state.data.countryObj.countryCode (show state.data.otpChannel))
             _ <- pure $ toast (getString if state.data.otpChannel == SMS then SENT_OTP_VIA_SMS else  SENT_OTP_VIA_WHATSAPP) 
             modifyScreenState $ EnterMobileNumberScreenType (\enterMobileNumberScreen → enterMobileNumberScreen { data { tokenId = triggerOtpResp.authId, attempts = triggerOtpResp.attempts}, props {enterOTP = true,resendEnable = false}})
@@ -364,14 +364,14 @@ accountSetUpScreenFlow = do
       setValueToLocalStore DISABILITY_UPDATED "true"
       modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{showDisabilityPopUp = (isJust selectedDisability)} , data{disability = selectedDisability}})
       case gender of
-          Just value -> void $ pure $ setCleverTapUserData "gender" value
+          Just value -> void $ liftFlowBT $ setCleverTapUserData "gender" value
           Nothing -> pure unit
 
       resp <- lift $ lift $ Remote.updateProfile (UpdateProfileReq requiredData)
       case resp of
         Right response -> do
           setValueToLocalStore USER_NAME state.data.name
-          void $ pure $ setCleverTapUserData "Name" (getValueToLocalStore USER_NAME)
+          void $ liftFlowBT $ setCleverTapUserData "Name" (getValueToLocalStore USER_NAME)
           case gender of
             Just value -> modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{settingSideBar{gender = Just value}}, props{isBanner = false}})
             Nothing    -> pure unit
