@@ -1491,7 +1491,7 @@ data MediaChannel
 
 data SendSmsReq = SendSmsReq
   { channel :: MediaChannel,
-    messageKey :: MessageKey,
+    messageKey :: Maybe MessageKey,
     overlayKey :: Maybe Text,
     messageId :: Maybe Text
   }
@@ -1533,14 +1533,14 @@ sendSmsToDriver merchantShortId opCity driverId volunteerId _req@SendSmsReq {..}
       sender = smsCfg.sender
   withLogTag ("personId_" <> personId.getId) $ do
     case channel of
-      SMS -> do
-        message <- MessageBuilder.buildGenericMessage merchantOpCityId messageKey MessageBuilder.BuildGenericMessageReq {}
+      SMS -> whenJust messageKey $ \mkey -> do
+        message <- MessageBuilder.buildGenericMessage merchantOpCityId mkey MessageBuilder.BuildGenericMessageReq {}
         Sms.sendSMS driver.merchantId merchantOpCityId (Sms.SendSMSReq message phoneNumber sender)
           >>= Sms.checkSmsResult
-      WHATSAPP -> do
+      WHATSAPP -> whenJust messageKey $ \mkey -> do
         merchantMessage <-
-          QMM.findByMerchantOpCityIdAndMessageKey merchantOpCityId messageKey
-            >>= fromMaybeM (MerchantMessageNotFound merchantOpCityId.getId (show messageKey))
+          QMM.findByMerchantOpCityIdAndMessageKey merchantOpCityId mkey
+            >>= fromMaybeM (MerchantMessageNotFound merchantOpCityId.getId (show mkey))
         let jsonData = merchantMessage.jsonData
         result <- Whatsapp.whatsAppSendMessageWithTemplateIdAPI driver.merchantId merchantOpCityId (Whatsapp.SendWhatsAppMessageWithTemplateIdApIReq phoneNumber merchantMessage.templateId jsonData.var1 jsonData.var2 jsonData.var3 (Just merchantMessage.containsUrlButton))
         when (result._response.status /= "success") $ throwError (InternalError "Unable to send Whatsapp message via dashboard")
