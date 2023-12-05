@@ -246,7 +246,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
             }
             sharedPref = getApplication().getSharedPreferences(getApplicationContext().getString(R.string.preference_file_key), Context.MODE_PRIVATE);
             String useMLKit = sharedPref.getString("USE_ML_TRANSLATE", "false");
-            if (useMLKit.equals("false") && !model.isTranslated()) updateViewFromMlTranslation(holder, model);
+            if (useMLKit.equals("false") && !model.isTranslated()) RideRequestUtils.updateViewFromMlTranslation(holder, model, sharedPref, OverlaySheetService.this);
 
             if (key.equals("yatrisathiprovider") || key.equals("yatriprovider")) {
                 holder.textIncludesCharges.setVisibility(View.GONE);
@@ -389,27 +389,6 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
             });
         }
     });
-
-    private void updateViewFromMlTranslation(SheetAdapter.SheetViewHolder holder,  SheetModel model) {
-
-        String lang = sharedPref.getString( "LANGUAGE_KEY", "ENGLISH");
-        TranslatorMLKit translate = new TranslatorMLKit("en", lang, this);
-        translate.translateStringInTextView(removeCommas(model.getSourceArea()), holder.sourceArea);
-        translate.translateStringInTextView(model.getSourceAddress(),  holder.sourceAddress);
-        translate.translateStringInTextView(removeCommas(model.getDestinationArea()), holder.destinationArea);
-        translate.translateStringInTextView(model.getDestinationAddress(),  holder.destinationAddress);
-
-    }
-
-    public static String removeCommas(String input) {
-        String str = input;
-        input = input.trim();
-        input = input.replaceAll(",+\\s*$", "");
-        if (str.trim().endsWith(",")) {
-            input += " ,";
-        }
-        return input;
-    }
 
     private void removeCard(int position) {
         try {

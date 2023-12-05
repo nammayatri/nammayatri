@@ -125,6 +125,25 @@ public class RideRequestUtils {
         }
     }
 
+    public static void updateViewFromMlTranslation(SheetAdapter.SheetViewHolder holder, SheetModel model, SharedPreferences sharedPref, Context context){
+        String lang = sharedPref.getString( "LANGUAGE_KEY", "ENGLISH");
+        TranslatorMLKit translate = new TranslatorMLKit("en", lang, context);
+        translate.translateStringInTextView(removeCommas(model.getSourceArea()), holder.sourceArea);
+        translate.translateStringInTextView(model.getSourceAddress(),  holder.sourceAddress);
+        translate.translateStringInTextView(removeCommas(model.getDestinationArea()), holder.destinationArea);
+        translate.translateStringInTextView(model.getDestinationAddress(),  holder.destinationAddress);
+    }
+
+    public static String removeCommas(String input) {
+        String str = input;
+        input = input.trim();
+        input = input.replaceAll(",+\\s*$", "");
+        if (str.trim().endsWith(",")) {
+            input += " ,";
+        }
+        return input;
+    }
+
 
     public static int calculateExpireTimer(String expireTimeTemp, String currTimeTemp) {
         if (expireTimeTemp == null || currTimeTemp == null) return 0;
