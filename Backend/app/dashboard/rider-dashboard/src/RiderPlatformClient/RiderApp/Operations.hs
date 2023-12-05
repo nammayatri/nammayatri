@@ -26,10 +26,12 @@ import qualified Dashboard.RiderPlatform.Merchant as Merchant
 import qualified Dashboard.RiderPlatform.Ride as Ride
 import qualified "rider-app" Domain.Action.Dashboard.IssueList as DI
 import qualified Domain.Action.Dashboard.Ride as DCM
-import qualified "rider-app" Domain.Action.UI.Tickets as DTB
+import qualified "rider-app" Domain.Action.UI.TicketService as DTB
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
 import Domain.Types.ServerName
-import qualified "rider-app" Domain.Types.Tickets as DTB
+import qualified "rider-app" Domain.Types.TicketBookingService as DTB
+import qualified "rider-app" Domain.Types.TicketPlace as DTB
+import qualified "rider-app" Domain.Types.TicketService as DTB
 import qualified EulerHS.Types as Euler
 import qualified IssueManagement.Common as DIssue
 import IssueManagement.Common.Dashboard.Issue as Issue
@@ -103,8 +105,10 @@ data IssueAPIs = IssueAPIs
     ticketStatusCallBack_ :: Issue.TicketStatusCallBackReq -> Euler.EulerClient APISuccess
   }
 
-newtype TicketAPIs = TicketAPIs
-  { verifyBookingDetails :: Id DTB.TicketService -> ShortId DTB.TicketBookingService -> Euler.EulerClient DTB.TicketServiceVerificationResp
+data TicketAPIs = TicketAPIs
+  { verifyBookingDetails :: Id DTB.TicketService -> ShortId DTB.TicketBookingService -> Euler.EulerClient DTB.TicketServiceVerificationResp,
+    getServices :: Id DTB.TicketPlace -> Euler.EulerClient [DTB.TicketServiceResp],
+    updateSeatManagement :: DTB.TicketBookingUpdateSeatsReq -> Euler.EulerClient APISuccess
   }
 
 mkAppBackendAPIs :: CheckedShortId DM.Merchant -> City.City -> Text -> AppBackendAPIs
@@ -161,7 +165,9 @@ mkAppBackendAPIs merchantId city token = do
       :<|> issueFetchMedia
       :<|> ticketStatusCallBack_ = issueV2Client
 
-    verifyBookingDetails = ticketsClient
+    verifyBookingDetails
+      :<|> getServices
+      :<|> updateSeatManagement = ticketsClient
 
 callRiderAppOperations ::
   forall m r b c.

@@ -8,12 +8,15 @@ where
 
 import qualified "rider-app" API.Dashboard.Tickets as ADT
 import Dashboard.Common (HideSecrets)
-import qualified "rider-app" Domain.Action.UI.Tickets as DTB
+import qualified "rider-app" Domain.Action.UI.TicketService as DTB
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
-import qualified "rider-app" Domain.Types.Tickets as DTB
+import qualified "rider-app" Domain.Types.TicketBookingService as DTB
+import qualified "rider-app" Domain.Types.TicketPlace as DTB
+import qualified "rider-app" Domain.Types.TicketService as DTB
 import qualified Domain.Types.Transaction as DT
 import "lib-dashboard" Environment
 import Kernel.Prelude
+import Kernel.Types.APISuccess (APISuccess)
 import qualified Kernel.Types.Beckn.City as City
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -26,13 +29,26 @@ import "lib-dashboard" Tools.Auth.Merchant
 type API =
   "tickets"
     :> VerifyBookingDetailsAPI
+    :<|> GetServicesAPI
+    :<|> UpdateSeatManagementAPI
 
 type VerifyBookingDetailsAPI =
   ApiAuth 'APP_BACKEND_MANAGEMENT 'CUSTOMERS 'VERIFY_BOOKING_DETAILS
     :> ADT.VerifyBookingDetailsAPI
 
+type GetServicesAPI =
+  ApiAuth 'APP_BACKEND_MANAGEMENT 'CUSTOMERS 'GET_TICKET_SERVICES
+    :> ADT.GetServicesAPI
+
+type UpdateSeatManagementAPI =
+  ApiAuth 'APP_BACKEND_MANAGEMENT 'CUSTOMERS 'UPDATE_SEAT_MANAGEMENT
+    :> ADT.UpdateSeatManagementAPI
+
 handler :: ShortId DM.Merchant -> City.City -> FlowServer API
-handler = verifyBookingDetails
+handler merchantId city =
+  verifyBookingDetails merchantId city
+    :<|> getServices merchantId city
+    :<|> updateSeatManagement merchantId city
 
 buildTransaction ::
   ( MonadFlow m,
@@ -56,3 +72,23 @@ verifyBookingDetails merchantShortId opCity apiTokenInfo personServiceId ticketB
   transaction <- buildTransaction ADT.VerifyBookingDetails apiTokenInfo T.emptyRequest
   T.withTransactionStoring transaction $
     Client.callRiderAppOperations checkedMerchantId opCity (.tickets.verifyBookingDetails) personServiceId ticketBookingShortId
+
+getServices ::
+  ShortId DM.Merchant ->
+  City.City ->
+  ApiTokenInfo ->
+  Id DTB.TicketPlace ->
+  FlowHandler [DTB.TicketServiceResp]
+getServices merchantShortId opCity apiTokenInfo ticketPlaceId = withFlowHandlerAPI $ do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  Client.callRiderAppOperations checkedMerchantId opCity (.tickets.getServices) ticketPlaceId
+
+updateSeatManagement ::
+  ShortId DM.Merchant ->
+  City.City ->
+  ApiTokenInfo ->
+  DTB.TicketBookingUpdateSeatsReq ->
+  FlowHandler APISuccess
+updateSeatManagement merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI $ do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  Client.callRiderAppOperations checkedMerchantId opCity (.tickets.updateSeatManagement) req
