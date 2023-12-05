@@ -41,7 +41,7 @@ instance FromJSON (FPSlabsDetailsSlabD 'Unsafe)
 
 instance ToJSON (FPSlabsDetailsSlabD 'Unsafe)
 
-data PlatformFeeCharge = ProgressivePlatformFee HighPrecMoney | ConstantPlatformFee Money
+data PlatformFeeCharge = ProgressivePlatformFee HighPrecMoney | ConstantPlatformFee HighPrecMoney
   deriving stock (Show, Eq, Read, Ord, Generic)
   deriving anyclass (FromJSON, ToJSON, ToSchema)
 
