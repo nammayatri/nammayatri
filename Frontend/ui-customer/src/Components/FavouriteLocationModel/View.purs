@@ -211,4 +211,7 @@ getFavouritesItem item = {
   , distance : item.distance
   , showDistance: Just false
   , actualDistance : Nothing
+  , frequencyCount : Nothing
+  , recencyDate : Nothing
+  , locationScore : Nothing
 }

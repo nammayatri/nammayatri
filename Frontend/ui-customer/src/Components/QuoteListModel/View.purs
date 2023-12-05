@@ -469,6 +469,7 @@ quoteListTopSheetView state push =
       , background state.appConfig.quoteListModel.backgroundColor
       , accessibility DISABLE
       , padding $ PaddingTop safeMarginTop
+      , orientation VERTICAL
       ][  linearLayout
           [ height WRAP_CONTENT
           , width MATCH_PARENT
@@ -496,6 +497,13 @@ quoteListTopSheetView state push =
                 , sourceDestinationView state push
                 ]
             ]
+        , linearLayout
+          [ height $ V 1
+          , width MATCH_PARENT
+          , background state.appConfig.quoteListModel.separatorColor
+          , visibility if state.appConfig.quoteListModel.showSeparator then VISIBLE else GONE
+          ]
+          []
         ]
 
 noQuotesErrorModel :: forall w . QuoteListModelState -> PrestoDOM (Effect Unit) w

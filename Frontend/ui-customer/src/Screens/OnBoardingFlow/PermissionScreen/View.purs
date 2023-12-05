@@ -62,7 +62,6 @@ view push state =
   ][ linearLayout
      [ height MATCH_PARENT
      , width MATCH_PARENT
-     , padding $ Padding 0 EHC.safeMarginTop 0 EHC.safeMarginBottom
      , gravity CENTER
      , afterRender push (const AfterRender)
      ]([] <> (case state.stage of

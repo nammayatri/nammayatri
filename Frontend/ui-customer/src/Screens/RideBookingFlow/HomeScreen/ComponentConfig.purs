@@ -78,6 +78,7 @@ import Engineering.Helpers.Suggestions (getSuggestionsfromKey)
 import Components.ChooseVehicle.Controller as ChooseVehicle
 import Foreign.Generic (decode, encode, Foreign, decodeJSON, encodeJSON, class Decode, class Encode)
 import Data.Either (Either(..))
+import Font.Style (Style(..))
 
 shareAppConfig :: ST.HomeScreenState -> PopUpModal.Config
 shareAppConfig state = let
@@ -275,7 +276,10 @@ primaryButtonRequestRideConfig state =
     primaryButtonConfig' =
       config
         { textConfig
-          { text = (getString REQUEST_RIDE)
+          { text = if state.props.repeatRideTimer /= "0" && not DS.null state.props.repeatRideTimerId 
+                    then ((getString REQUESTING_RIDE_IN) <> state.props.repeatRideTimer <> "s") 
+                    else if state.props.repeatRideTimer == "0" then (getString REQUESTING_RIDE) <> "..." 
+                    else (getString REQUEST_RIDE)
           , color = state.data.config.primaryTextColor
           , accessibilityHint = "Request Ride : Button"
           }
@@ -633,29 +637,28 @@ sourceUnserviceableConfig state =
     config = ErrorModal.config
     errorModalConfig' =
       config
-        { height = if (MU.getMerchant FunctionCall) == MU.NAMMAYATRI && state.props.isMockLocation then MATCH_PARENT else WRAP_CONTENT
+        { height = MATCH_PARENT
         , background = Color.white900
-        , corners = (Corners 24.0 true true false false)
         , stroke = ("1," <> Color.borderGreyColor)
         , imageConfig
           { imageUrl = fetchImage FF_ASSET "ny_ic_location_unserviceable"
           , height = V 99
           , width = V 133
-          , margin = (Margin 0 50 0 20)
+          , margin = Margin 0 50 0 20
           }
         , errorConfig
           { text = if state.props.isMockLocation then "Unable to get your location!" else (getString LOCATION_UNSERVICEABLE)
           , color = Color.black800
-          , margin = (MarginBottom 5)
+          , margin = MarginBottom 5
           }
         , errorDescriptionConfig
           { text = if state.props.isMockLocation then "Turn off any Mock Location app you might be using and restart the app." else getString $ CURRENTLY_WE_ARE_LIVE_IN_ "CURRENTLY_WE_ARE_LIVE_IN_"
           , color = Color.black700
-          , margin = (Margin 20 0 20 (40 + EHC.safeMarginBottom))
+          , margin = Margin 20 0 20 (40 + EHC.safeMarginBottom)
           }
         , buttonConfig
-          { text = (getString CHANGE_LOCATION)
-          , margin = (Margin 16 0 16 (20 + EHC.safeMarginBottom))
+          { text = getString CHANGE_LOCATION
+          , margin = Margin 16 0 16 (20 + EHC.safeMarginBottom)
           , background = state.data.config.primaryBackground
           , color = state.data.config.primaryTextColor
           , visibility = GONE
@@ -1218,11 +1221,64 @@ reportIssueOptions state =
     }
   ]
 
+sourceToDestinationConfig :: ST.HomeScreenState -> SourceToDestination.Config
+sourceToDestinationConfig state = let 
+  config = SourceToDestination.config
+  sourceToDestinationConfig' = config
+    { sourceImageConfig {
+        imageUrl = fetchImage FF_COMMON_ASSET "ny_ic_source_dot"
+      , margin = (MarginTop 3)
+      , width = V 20
+      , height = V 20
+      }
+    , sourceTextConfig {
+        text = state.data.source
+      , padding = (Padding 2 0 2 2)
+      , margin = MarginHorizontal 12 15
+      , color = Color.black800
+      , ellipsize = true
+      , maxLines = 1
+      , textStyle = Body1
+      }
+    , rideStartedAtConfig {
+        text = ""
+      , color = Color.black700
+      , visibility = GONE
+      , padding = (Padding 2 0 2 2)
+      , margin = MarginHorizontal 12 15
+      , maxLines = 1
+      , ellipsize = true
+    }
+    , destinationImageConfig {
+        imageUrl = fetchImage FF_COMMON_ASSET "ny_ic_destination"
+      , margin = (MarginTop 3)
+      , width = V 20
+      , height = V 20
+      }
+    , destinationBackground = Color.blue600
+    , destinationTextConfig {
+        text = state.data.destination
+      , padding = (Padding 2 0 2 2)
+      , margin = MarginHorizontal 12 15
+      , color = Color.greyDavy
+      , ellipsize = true
+      , maxLines = 1
+      , textStyle = Body1
+      }
+    , horizontalSeperatorConfig {
+        visibility = VISIBLE
+      , background = Color.grey900
+      , padding = (Padding 2 0 2 2)
+      , margin = (Margin 12 18 15 0)
+      }
+    }
+  in sourceToDestinationConfig'
 
 rideCompletedCardConfig :: ST.HomeScreenState -> RideCompletedCard.Config 
-rideCompletedCardConfig state = let
-  config  = RideCompletedCard.config 
-  config' = config{
+rideCompletedCardConfig state = 
+  let topCardConfig = state.data.config.rideCompletedCardConfig.topCard
+      topCardGradient = if topCardConfig.enableGradient then [state.data.config.primaryBackground, state.data.config.primaryBackground, topCardConfig.gradient, state.data.config.primaryBackground] else [topCardConfig.background,topCardConfig.background]
+  in RideCompletedCard.config {
         isDriver = false,
         customerIssueCard{
           reportIssueView = state.data.ratingViewState.openReportIssue,
@@ -1241,7 +1297,7 @@ rideCompletedCardConfig state = let
           finalAmount = state.data.finalAmount,
           initalAmount = state.data.driverInfoCardState.price,
           fareUpdatedVisiblity = state.data.finalAmount /= state.data.driverInfoCardState.price && state.props.estimatedDistance /= Nothing,
-          gradient = [state.data.config.primaryBackground, state.data.config.primaryBackground, state.data.config.rideCompletedCardConfig.topCard.gradient, state.data.config.primaryBackground],
+          gradient = topCardGradient,
           infoPill {
             text = getFareUpdatedString state.data.rideRatingState.distanceDifference,
             image = fetchImage FF_COMMON_ASSET "ny_ic_parallel_arrows",
@@ -1259,7 +1315,6 @@ rideCompletedCardConfig state = let
         primaryButtonConfig = skipButtonConfig state,
         enableContactSupport = state.data.config.enableContactSupport
       }
-  in config'
 
 
 customerFeedbackPillData :: LazyCheck -> Array (Array (Array RatingCard.FeedbackItem)) 

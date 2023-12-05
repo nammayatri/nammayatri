@@ -206,3 +206,6 @@ blue100 = "#1A2194FF"
 
 green600 :: Color
 green600 = "#269574"
+
+squidInkBlue :: Color
+squidInkBlue = "#303440"

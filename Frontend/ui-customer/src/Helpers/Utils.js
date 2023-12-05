@@ -430,3 +430,36 @@ export const _generateQRCode = function (data, id, size, margin, sc) {
     sc("FAILURE")();
   }
 }
+
+export const getDifferenceBetweenDates = function (date1, date2) {
+  const diffInSeconds = Math.floor((new Date(date1) - new Date(date2)) / 1000);
+  return diffInSeconds;
+}
+
+export const parseSourceHashArray = function (str) {
+  return JSON.parse(str);
+}
+export const getDeviceDefaultDensity = function (){
+  if (window.JBridge.getSessionInfo) {
+    const sessionInfo = JSON.parse(window.JBridge.getSessionInfo())
+    return sessionInfo.screen_ppi;
+  } else {
+    return window.JBridge.getDensity() * 160;
+  }
+}
+export const getDefaultPixels = function (){
+  if(window.JBridge.getDefaultPixels)return parseFloat(window.JBridge.getDefaultPixels());
+  else return getDeviceDefaultDensity();
+}
+
+export const getPixels = function (){
+  if(window.__OS == "IOS"){
+    return parseFloat(window.JBridge.getPixel());
+  } 
+  if (window.parent.devicePixelRatio) {
+    return window.parent.devicePixelRatio;
+  } else {
+    return window.JBridge.getPixels();
+  }
+}
+
