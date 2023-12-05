@@ -1,18 +1,20 @@
 module DBSync.Delete where
 
 import Config.Env
+import DBQuery.Functions
+import DBQuery.Types
 import qualified Data.Aeson as A
 import qualified Data.ByteString.Lazy as LBS
-import qualified Data.HashMap.Strict as HM
 import Data.Maybe
 import qualified Data.Text as T hiding (elem)
 import qualified Data.Text.Encoding as TE
-import qualified Data.Vector as V
 import Database.PostgreSQL.Simple.Types (Query (..))
 import qualified EulerHS.Language as EL
 import EulerHS.Prelude hiding (id)
 import Text.Casing (pascal)
+import "dynamic-offer-driver-app" Tools.Beam.UtilsTH (currentSchemaName)
 import Types.DBSync
+import Types.DBSync.Delete
 import Utils.Utils
 
 -- | This function is used to run the delete operation for a single entry in the stream
@@ -21,38 +23,39 @@ runDelete deleteEntry streamName = do
   Env {..} <- ask
   isPushToKafka' <- EL.runIO isPushToKafka
   let (entryId, streamData) = deleteEntry
-      (mbModel, mbObject, mbMappings) = getDataFromByteStringForDelete streamData
-  case (mbModel, mbObject) of
-    (Just model, Just obj) -> do
-      let tableName = getModelname model 7 -- 7 because "Options" is appended to the model name
+  EL.logDebug ("BYTE STRING" :: Text) (show streamData)
+  case A.eitherDecode @DBDeleteObject . LBS.fromStrict $ streamData of
+    Right deleteDBModel -> do
+      EL.logDebug ("DB OBJECT" :: Text) (show deleteDBModel)
+      let tableName = deleteDBModel.dbModel
       if shouldPushToDbOnly tableName _dontEnableForKafka || not isPushToKafka'
-        then runDeleteQuery deleteEntry (mbModel, mbObject, mbMappings) tableName
+        then runDeleteQuery deleteEntry deleteDBModel
         else do
-          let deleteObject = getDbDeleteDataJson model obj
+          let deleteObject = getDbDeleteDataJson tableName deleteDBModel.whereObj
           res <- EL.runIO $ createInKafka _kafkaConnection deleteObject streamName tableName
           case res of
             Left err -> do
-              EL.logError ("KAFKA DELETE FAILED" :: Text) (err <> " for Object :: " <> show obj)
+              EL.logError ("KAFKA DELETE FAILED" :: Text) (err <> " for Object :: " <> show deleteDBModel.contents)
               return $ Left entryId
             Right _ -> do
-              EL.logInfo ("KAFKA DELETE SUCCESSFUL" :: Text) (" Delete successful for object :: " <> show obj)
-              runDeleteQuery deleteEntry (mbModel, mbObject, mbMappings) tableName
+              EL.logInfo ("KAFKA DELETE SUCCESSFUL" :: Text) (" Delete successful for object :: " <> show deleteDBModel.contents)
+              runDeleteQuery deleteEntry deleteDBModel
     _ -> do
       EL.logError ("DELETE FAILED" :: Text) ("Invalid streamData or Extraction of data from redis stream failed :: " <> TE.decodeUtf8 streamData)
       return $ Left entryId
 
-runDeleteQuery :: (EL.KVDBStreamEntryID, ByteString) -> (Maybe Text, Maybe A.Value, Maybe A.Object) -> Text -> ReaderT Env EL.Flow (Either EL.KVDBStreamEntryID EL.KVDBStreamEntryID)
-runDeleteQuery deleteEntries deleteData tableName = do
+runDeleteQuery :: (EL.KVDBStreamEntryID, ByteString) -> DBDeleteObject -> ReaderT Env EL.Flow (Either EL.KVDBStreamEntryID EL.KVDBStreamEntryID)
+runDeleteQuery deleteEntries dbDeleteObject = do
   Env {..} <- ask
   let (entryId, byteString) = deleteEntries
-      (mbModel, mbObject, mbMappings) = deleteData
-  EL.logDebug ("BYTE STRING" :: Text) (show byteString)
-  if shouldPushToKafkaOnly tableName _dontEnableDbTables
+  let dbModel = dbDeleteObject.dbModel
+  if shouldPushToKafkaOnly dbModel _dontEnableDbTables
     then return $ Right entryId
     else do
-      let deleteQuery = getDeleteQueryForTable (mbModel, mbObject, mbMappings) tableName
+      let deleteQuery = getDeleteQueryForTable dbDeleteObject
       case deleteQuery of
         Just query -> do
+          EL.logDebug ("QUERY" :: Text) query
           result <- EL.runIO $ try $ executeQuery _pgConnection (Query $ TE.encodeUtf8 query)
           case result of
             Left (QueryError errorMsg) -> do
@@ -65,32 +68,17 @@ runDeleteQuery deleteEntries deleteData tableName = do
           EL.logError ("No query generated for streamData: " :: Text) (TE.decodeUtf8 byteString)
           return $ Left entryId
 
-getDeleteQueryForTable :: (Maybe Text, Maybe A.Value, Maybe A.Object) -> Text -> Maybe Text
-getDeleteQueryForTable (mbModel, mbwhereVal, mbMappings) tableName = do
-  case (mbModel, mbwhereVal) of
-    (Just _, Just mbWhereVal') -> do
-      let whereClause = makeWhereCondition mbWhereVal' (fromMaybe HM.empty mbMappings)
-      pure $ "DELETE FROM atlas_driver_offer_bpp." <> quote' tableName <> " WHERE " <> whereClause <> ";"
-    _ -> Nothing
+getDeleteQueryForTable :: DBDeleteObject -> Maybe Text
+getDeleteQueryForTable DBDeleteObject {dbModel, contents, mappings} = do
+  let DBDeleteObjectContent whereClause = contents
+  let schema = SchemaName $ T.pack currentSchemaName
+  generateDeleteQuery DeleteQuery {..}
 
--- This function is used to extract the model name, object and mappings from the stream data
-getDataFromByteStringForDelete :: ByteString -> (Maybe T.Text, Maybe A.Value, Maybe A.Object)
-getDataFromByteStringForDelete dbCommandByteString = do
-  case A.decode $ LBS.fromStrict dbCommandByteString of
-    Just (A.Object o) -> case HM.lookup "contents" o of
-      Just (A.Array a) -> case V.last a of
-        (A.Object obj') -> case HM.lookup "contents" obj' of
-          Just (A.Object obj) -> (lookupText "tag" obj', HM.lookup "value1" obj, lookupObject "mappings" o)
-          _ -> (Nothing, Nothing, Nothing)
-        _ -> (Nothing, Nothing, Nothing)
-      _ -> (Nothing, Nothing, Nothing)
-    _ -> (Nothing, Nothing, Nothing)
-
-getDbDeleteDataJson :: Text -> A.Value -> A.Value
+getDbDeleteDataJson :: DBModel -> A.Value -> A.Value
 getDbDeleteDataJson model whereClause =
   A.object
     [ "contents"
         A..= whereClause,
-      "tag" A..= ((T.pack . pascal . T.unpack) (T.take (T.length model - 7) model) <> "Object"),
+      "tag" A..= ((T.pack . pascal . T.unpack) model.getDBModel <> "Object"),
       "type" A..= ("DELETE" :: Text)
     ]
