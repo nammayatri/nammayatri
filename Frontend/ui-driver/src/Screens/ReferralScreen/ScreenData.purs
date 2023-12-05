@@ -69,10 +69,10 @@ initData =  {
 }
 
 dummyRankData :: RankCardData
-dummyRankData = { goodName : "-", profileUrl : Nothing, rank : 0, rides : 0 }
+dummyRankData = { goodName : "-", profileUrl : Nothing, rank : 0, rides : 0 , gender : "UNKNOWN"}
 
 dummyCurrentDriverData :: RankCardData
-dummyCurrentDriverData = {goodName : "Driver", profileUrl : Nothing, rank : 8, rides : 155}
+dummyCurrentDriverData = {goodName : "Driver", profileUrl : Nothing, rank : 8, rides : 155, gender : "UNKNOWN"}
 
 dummyDay :: CalendarDate
 dummyDay = {

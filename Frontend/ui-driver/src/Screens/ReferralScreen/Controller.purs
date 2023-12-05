@@ -318,12 +318,14 @@ transformLeaderBoardList :: (Array DriversInfo) -> Boolean -> Array RankCardData
 transformLeaderBoardList driversList isMaskedName = map (\x -> transformLeaderBoard x isMaskedName) driversList
 
 transformLeaderBoard :: DriversInfo -> Boolean -> RankCardData
-transformLeaderBoard (DriversInfo driversInfo) isMaskedName = {
-    goodName : if isMaskedName then "*******" else driversInfo.name
-  , profileUrl : Nothing
-  , rank : driversInfo.rank
-  , rides : driversInfo.totalRides
-}
+transformLeaderBoard (DriversInfo driversInfo) isMaskedName = 
+  {
+      goodName : if isMaskedName then "*******" else driversInfo.name
+    , profileUrl : Nothing
+    , rank : driversInfo.rank
+    , rides : driversInfo.totalRides
+    , gender : driversInfo.gender
+  }
 
 getReferralStage :: Merchant -> ReferralType
 getReferralStage merchant =

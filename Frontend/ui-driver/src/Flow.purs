@@ -2701,6 +2701,7 @@ updateDriverDataToStates = do
         , totalEarningsOfDay = resp.totalEarningsOfDay
         , bonusEarned = resp.bonusEarning
         , profileImg = getDriverInfoResp.aadhaarCardPhoto
+        , gender = fromMaybe "UNKNOWN" getDriverInfoResp.gender
         , driverGotoState { gotoCount = driverGoHomeInfo.cnt,
                             gotoValidTill = fromMaybe "-" driverGoHomeInfo.validTill,
                             isGotoEnabled = driverGoHomeInfo.status == Just "ACTIVE",

@@ -853,7 +853,8 @@ type HomeScreenData =  {
   triggerPatchCounter :: Int,
   peekHeight :: Int,
   driverGotoState :: DriverGoToState,
-  snappedOrigin :: Maybe Location
+  snappedOrigin :: Maybe Location,
+  gender :: String
 }
 
 type DriverGoToState = {
@@ -1623,6 +1624,7 @@ type RankCardData = {
   , profileUrl :: Maybe String
   , rank :: Int
   , rides :: Int
+  , gender :: String
 }
 
 type AcknowledgementScreenState = {
