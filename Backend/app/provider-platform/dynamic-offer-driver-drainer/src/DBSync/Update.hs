@@ -2,56 +2,60 @@ module DBSync.Update where
 
 import Config.Env
 import Control.Exception
+import DBQuery.Functions
+import DBQuery.Types
 import Data.Aeson as A
 import qualified Data.ByteString.Lazy as LBS
-import qualified Data.HashMap.Strict as HM
 import Data.Text as T hiding (map)
 import qualified Data.Text.Encoding as TE
-import qualified Data.Vector as V
 import Database.PostgreSQL.Simple.Types
 import qualified EulerHS.Language as EL
 import EulerHS.Prelude hiding (id, try)
+import Text.Casing (pascal)
+import "dynamic-offer-driver-app" Tools.Beam.UtilsTH (currentSchemaName)
 import Types.DBSync
+import Types.DBSync.Update
 import Utils.Utils
 
 -- | This function is used to run the update operation for a single entry in the stream
-rundUpdate :: (EL.KVDBStreamEntryID, ByteString) -> Text -> ReaderT Env EL.Flow (Either EL.KVDBStreamEntryID EL.KVDBStreamEntryID)
-rundUpdate updateDataEntries streamName = do
+runUpdate :: (EL.KVDBStreamEntryID, ByteString) -> Text -> ReaderT Env EL.Flow (Either EL.KVDBStreamEntryID EL.KVDBStreamEntryID)
+runUpdate updateDataEntries streamName = do
   Env {..} <- ask
   isPushToKafka' <- EL.runIO isPushToKafka
   let (entryId, streamData) = updateDataEntries
-      (mbModel, mbObject, mbMappings, mbModelObject) = getDataFromByteStringForUpdate streamData
-  case (mbModel, mbObject, mbModelObject) of
-    (Just model, Just obj, Just modelObj) -> do
-      let tableName = getModelname model 7 -- 7 beacuse "Options" is appended to the model name
+  EL.logDebug ("BYTE STRING" :: Text) (show streamData)
+  case A.eitherDecode @DBUpdateObject . LBS.fromStrict $ streamData of
+    Right updateDBModel -> do
+      EL.logDebug ("DB OBJECT" :: Text) (show updateDBModel)
+      let tableName = updateDBModel.dbModel
       if shouldPushToDbOnly tableName _dontEnableForKafka || not isPushToKafka'
-        then runUpdateQuery updateDataEntries (mbModel, mbObject, mbMappings, mbModelObject) tableName
+        then runUpdateQuery updateDataEntries updateDBModel
         else do
-          let updateObject = getObjectForKafka modelObj mbMappings
+          let updateObject = getDbUpdateDataJson tableName updateDBModel.updatedModel
           res <- EL.runIO $ createInKafka _kafkaConnection updateObject streamName tableName
           case res of
             Left err -> do
-              EL.logError ("KAFKA UPDATE FAILED" :: Text) (err <> " for Object :: " <> show obj)
+              EL.logError ("KAFKA UPDATE FAILED" :: Text) (err <> " for Object :: " <> show updateDBModel.contents)
               return $ Left entryId
             Right _ -> do
-              EL.logInfo ("KAFKA UPDATE SUCCESSFUL" :: Text) (" Update successful for object :: " <> show obj)
-              runUpdateQuery updateDataEntries (mbModel, mbObject, mbMappings, mbModelObject) tableName
-    _ -> do
-      EL.logError ("UPDATE FAILED" :: Text) ("Invalid streamData or Extraction of data from redis stream failed :: " <> TE.decodeUtf8 streamData)
+              EL.logInfo ("KAFKA UPDATE SUCCESSFUL" :: Text) (" Update successful for object :: " <> show updateDBModel.contents)
+              runUpdateQuery updateDataEntries updateDBModel
+    Left err -> do
+      EL.logError ("UPDATE FAILED" :: Text) ("Invalid streamData or Extraction of data from redis stream failed :: " <> TE.decodeUtf8 streamData <> "; error :: " <> show err)
       return $ Left entryId
 
-runUpdateQuery :: (EL.KVDBStreamEntryID, ByteString) -> (Maybe Text, Maybe Array, Maybe Object, Maybe Object) -> Text -> ReaderT Env EL.Flow (Either EL.KVDBStreamEntryID EL.KVDBStreamEntryID)
-runUpdateQuery updateDataEntries updateData tableName = do
+runUpdateQuery :: (EL.KVDBStreamEntryID, ByteString) -> DBUpdateObject -> ReaderT Env EL.Flow (Either EL.KVDBStreamEntryID EL.KVDBStreamEntryID)
+runUpdateQuery updateDataEntries dbUpdateObject = do
   Env {..} <- ask
   let (entryId, byteString) = updateDataEntries
-      (mbModel, mbObject, mbMappings, _) = updateData
-  EL.logDebug ("BYTE STRING" :: Text) (show byteString)
-  if shouldPushToKafkaOnly tableName _dontEnableDbTables
+  let dbModel = dbUpdateObject.dbModel
+  if shouldPushToKafkaOnly dbModel _dontEnableDbTables
     then return $ Right entryId
     else do
-      let updateQuery = getUpdateQueryForTable (mbModel, mbObject, mbMappings) tableName
+      let updateQuery = getUpdateQueryForTable dbUpdateObject
       case updateQuery of
         Just query -> do
+          EL.logDebug ("QUERY" :: Text) query
           result <- EL.runIO $ try $ executeQuery _pgConnection (Query $ TE.encodeUtf8 query)
           case result of
             Left (QueryError errorMsg) -> do
@@ -64,43 +68,16 @@ runUpdateQuery updateDataEntries updateData tableName = do
           EL.logError ("No query generated for streamData: " :: Text) (TE.decodeUtf8 byteString)
           return $ Left entryId
 
--- This function is used to extract the model name, object and mappings from the stream data
-getDataFromByteStringForUpdate :: ByteString -> (Maybe T.Text, Maybe A.Array, Maybe A.Object, Maybe A.Object)
-getDataFromByteStringForUpdate dbCommandByteString = do
-  case A.decode $ LBS.fromStrict dbCommandByteString of
-    Just (A.Object o) -> case HM.lookup "contents" o of
-      Just (A.Array a) -> case V.last a of
-        (A.Object obj) -> (lookupText "tag" obj, lookupArray "contents" obj, lookupObject "mappings" o, lookupObject "updatedModel" o)
-        _ -> (Nothing, Nothing, Nothing, Nothing)
-      _ -> (Nothing, Nothing, Nothing, Nothing)
-    _ -> (Nothing, Nothing, Nothing, Nothing)
+getUpdateQueryForTable :: DBUpdateObject -> Maybe Text
+getUpdateQueryForTable DBUpdateObject {dbModel, contents, mappings} = do
+  let DBUpdateObjectContent setClauses whereClause = contents
+  let schema = SchemaName $ T.pack currentSchemaName
+  generateUpdateQuery UpdateQuery {..}
 
-getUpdateQueryForTable :: (Maybe Text, Maybe Array, Maybe Object) -> Text -> Maybe Text
-getUpdateQueryForTable (mbModel, mbArray, mbMappings) tableName = do
-  case (mbModel, mbArray) of
-    (Just _, Just array') -> do
-      let (setValues, [whereValues]) = getSetAndWhereClause (Just array')
-          correctWhereClauseText = makeWhereCondition whereValues (fromMaybe HM.empty mbMappings)
-          setQuery = makeSetConditions setValues (fromMaybe HM.empty mbMappings)
-      if T.null correctWhereClauseText
-        then Nothing
-        else Just $ "UPDATE atlas_driver_offer_bpp." <> quote' tableName <> " SET " <> setQuery <> " WHERE " <> correctWhereClauseText <> ";"
-    _ -> Nothing
-
-makeSetConditions :: [(Text, Value)] -> A.Object -> Text
-makeSetConditions setValues mbMappings = do
-  let setClauseText = map (second valueToText) setValues
-  let correctSetClausetext = map (\(k, v) -> (replaceMappings k mbMappings, v)) setClauseText
-  T.intercalate "," (map (\(k, v) -> (quote' . textToSnakeCaseText) k <> "=" <> v) correctSetClausetext)
-
--- this is being used to get the set and where clause from the json array
-getSetAndWhereClause :: Maybe A.Array -> ([(Text, A.Value)], [A.Value])
-getSetAndWhereClause jsonArray = case toList <$> jsonArray of
-  Just [firstArray, secondArray] -> do
-    let firstList = extractValues firstArray
-        secondList = extractValues secondArray
-        setValues = mapMaybe extractBothValues firstList
-        whereValues = mapMaybe extractBothValues secondList
-        whereConditions = map snd whereValues
-     in (setValues, whereConditions)
-  _ -> ([], [])
+getDbUpdateDataJson :: DBModel -> Maybe A.Object -> A.Value
+getDbUpdateDataJson model a =
+  A.object
+    [ "contents" .= a,
+      "tag" .= ((T.pack . pascal . T.unpack) model.getDBModel <> "Object"),
+      "type" .= ("UPDATE" :: Text)
+    ]
