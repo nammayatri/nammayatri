@@ -13,7 +13,7 @@ generateDomainType tableDef = do
     ++ "module "
     ++ moduleName
     ++ " where\n\n"
-    ++ intercalate "\n" (map (\i -> "import qualified " ++ i ++ " as " ++ i) (removeDefaultImports defaultImports moduleName $ imports tableDef))
+    ++ intercalate "\n" (map ("import qualified " ++) (removeDefaultImports defaultImports moduleName $ imports tableDef))
     ++ "\n"
     ++ intercalate "\n" (map ("import " ++) defaultImports)
     ++ "\n\ndata "

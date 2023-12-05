@@ -53,7 +53,8 @@ searchForKey obj inputKey = (inputKey, fromMaybe (error $ T.pack $ "Query param 
 parseQueries :: Maybe String -> Maybe [String] -> [String] -> Object -> Object -> [QueryDef]
 parseQueries moduleName excludedList dList impObj obj = do
   let mbQueries = preview (ix "queries" . _Value . to mkListObject) obj
-      makeTypeQualified' = makeTypeQualified moduleName excludedList (Just dList) impObj
+      defaultImportModule = "Domain.Types."
+      makeTypeQualified' = makeTypeQualified moduleName excludedList (Just dList) defaultImportModule impObj
       parseQuery query =
         let queryName = fst query
             queryDataObj = snd query
@@ -119,7 +120,9 @@ parseExtraTypes moduleName dList importObj obj = do
   return $ (map (mkQualifiedTypeObject allExcludeQualified) _types, allExcludeQualified)
   where
     mkQualifiedTypeObject :: [String] -> TypeObject -> TypeObject
-    mkQualifiedTypeObject excluded (TypeObject (_nm, arrOfFields)) = TypeObject (_nm, map (\(_n, _t) -> (_n, T.pack $ makeTypeQualified moduleName (Just excluded) (Just dList) importObj $ T.unpack _t)) arrOfFields)
+    mkQualifiedTypeObject excluded (TypeObject (_nm, arrOfFields)) =
+      let defaultImportModule = "Domain.Types."
+       in TypeObject (_nm, map (\(_n, _t) -> (_n, T.pack $ makeTypeQualified moduleName (Just excluded) (Just dList) defaultImportModule importObj $ T.unpack _t)) arrOfFields)
 
 parseFields :: Maybe String -> Maybe [String] -> [String] -> Object -> Object -> [FieldDef]
 parseFields moduleName excludedList dataList impObj obj =
@@ -138,10 +141,11 @@ parseFields moduleName excludedList dataList impObj obj =
             defaultValue = maybe (sqlDefaultsWrtName fieldName) pure (defaultsObj >>= preview (ix fieldKey . _String))
             parseToTType = obj ^? (ix "toTType" . _Object) >>= preview (ix fieldKey . _String)
             parseFromTType = obj ^? (ix "fromTType" . _Object) >>= preview (ix fieldKey . _String)
+            defaultImportModule = "Domain.Types."
          in FieldDef
               { fieldName = fieldName,
-                haskellType = makeTypeQualified moduleName excludedList (Just dataList) impObj haskellType,
-                beamType = makeTypeQualified moduleName excludedList (Just dataList) impObj beamType,
+                haskellType = makeTypeQualified moduleName excludedList (Just dataList) defaultImportModule impObj haskellType,
+                beamType = makeTypeQualified moduleName excludedList (Just dataList) defaultImportModule impObj beamType,
                 sqlType = sqlType,
                 constraints = constraints,
                 defaultVal = defaultValue,

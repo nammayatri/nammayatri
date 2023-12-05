@@ -75,7 +75,7 @@ generateBeamTable tableDef =
     ++ "import Kernel.Prelude\n"
     ++ "import Tools.Beam.UtilsTH\n"
     -- Add imports here
-    ++ intercalate "\n" (map (\i -> "import qualified " ++ i ++ " as " ++ i) (imports tableDef))
+    ++ intercalate "\n" (map ("import qualified " ++) (imports tableDef))
     ++ "\n\n"
     ++ "data "
     ++ tableNameHaskell tableDef

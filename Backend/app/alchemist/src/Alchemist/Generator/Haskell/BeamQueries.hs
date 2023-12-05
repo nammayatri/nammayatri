@@ -20,7 +20,7 @@ generateImports tableDef =
     ++ (capitalize $ tableNameHaskell tableDef)
     ++ " as Beam\n"
     ++ "import qualified Sequelize as Se\n"
-    ++ (intercalate "\n" $ map (\i -> "import qualified " ++ i ++ " as " ++ i) $ imports tableDef)
+    ++ intercalate "\n" (map ("import qualified " ++) $ imports tableDef)
     ++ "\n\n"
 
 toTTypeConversionFunction :: Maybe String -> String -> String -> String
@@ -214,7 +214,7 @@ defaultQueryDefs tableDef =
   ]
   where
     getAllFieldNamesWithTypesExcludingPks :: [FieldDef] -> [(String, String)]
-    getAllFieldNamesWithTypesExcludingPks fieldDefs = map (\fieldDef -> (fieldName fieldDef, haskellType fieldDef)) $ filter (\fieldDef -> PrimaryKey `notElem` (constraints fieldDef)) fieldDefs
+    getAllFieldNamesWithTypesExcludingPks fieldDefs = map (\fieldDef -> (fieldName fieldDef, haskellType fieldDef)) $ filter (\fieldDef -> PrimaryKey `notElem` constraints fieldDef) fieldDefs
 
     getAllPrimaryKeyWithTypes :: [FieldDef] -> [(String, String)]
     getAllPrimaryKeyWithTypes fieldDefs = map (\fieldDef -> (fieldName fieldDef, haskellType fieldDef)) $ filter (\fieldDef -> PrimaryKey `elem` constraints fieldDef) fieldDefs
