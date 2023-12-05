@@ -253,8 +253,8 @@ getTicketPlaces (_, merchantId) = do
   merchantOpCity <- CQM.getDefaultMerchantOperatingCity merchantId
   QTP.getTicketPlaces merchantOpCity.id
 
-getTicketPlacesServices :: (Kernel.Types.Id.Id Domain.Types.Person.Person, Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace -> Environment.Flow [Domain.Action.UI.TicketService.TicketServiceResp]
-getTicketPlacesServices (_, _) placeId = do
+getTicketPlacesServices :: Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace -> Environment.Flow [Domain.Action.UI.TicketService.TicketServiceResp]
+getTicketPlacesServices placeId = do
   ticketServices <- QTS.getTicketServicesByPlaceId placeId.getId
   now <- getCurrentTime
   let currentDay = dayOfWeek $ utctDay now
@@ -613,8 +613,8 @@ getTicketPlacesBookingsDetails _ shortId_ = do
           { ..
           }
 
-postTicketPlacesBookingsVerify :: (Kernel.Types.Id.Id Domain.Types.Person.Person, Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Types.Id.Id Domain.Types.TicketService.TicketService -> Kernel.Types.Id.ShortId Domain.Types.TicketBookingService.TicketBookingService -> Environment.Flow Domain.Action.UI.TicketService.TicketServiceVerificationResp
-postTicketPlacesBookingsVerify _ = processBookingService
+postTicketPlacesBookingsVerify :: Kernel.Types.Id.Id Domain.Types.TicketService.TicketService -> Kernel.Types.Id.ShortId Domain.Types.TicketBookingService.TicketBookingService -> Environment.Flow Domain.Action.UI.TicketService.TicketServiceVerificationResp
+postTicketPlacesBookingsVerify = processBookingService
   where
     processBookingService :: Kernel.Types.Id.Id Domain.Types.TicketService.TicketService -> Kernel.Types.Id.ShortId Domain.Types.TicketBookingService.TicketBookingService -> Environment.Flow Domain.Action.UI.TicketService.TicketServiceVerificationResp
     processBookingService ticketServiceId bookingServiceShortId = do
@@ -770,7 +770,7 @@ getTicketPlacesBookingsStatus (personId, merchantId) _shortId@(Kernel.Types.Id.S
       ticketBooking <- QTB.findByShortId (Kernel.Types.Id.ShortId shortId) >>= fromMaybeM (TicketBookingNotFound shortId) -- fetch again for updated status
       return ticketBooking.status
 
-postTicketPlacesBookingsUpdateSeats :: (Kernel.Types.Id.Id Domain.Types.Person.Person, Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Domain.Action.UI.TicketService.TicketBookingUpdateSeatsReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess
-postTicketPlacesBookingsUpdateSeats (_, _) TicketBookingUpdateSeatsReq {..} = do
+postTicketPlacesBookingsUpdateSeats :: Domain.Action.UI.TicketService.TicketBookingUpdateSeatsReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess
+postTicketPlacesBookingsUpdateSeats TicketBookingUpdateSeatsReq {..} = do
   void $ QTSM.updateBookedSeats updatedBookedSeats categoryId date
   pure Kernel.Types.APISuccess.Success
