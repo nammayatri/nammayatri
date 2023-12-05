@@ -439,13 +439,13 @@ calculateFinalValuesForFailedDistanceCalculations handle@ServiceHandle {..} book
         Nothing -> getCoordinates booking.fromLocation
         Just tripStartPos -> tripStartPos
   interpolatedPoints <- getInterpolatedPoints ride.driverId
-  approxTraveledDistance <- getDistanceBetweenPoints tripStartPoint tripEndPoint interpolatedPoints
-  logTagInfo "endRide" $ "approxTraveledDistance: " <> show approxTraveledDistance
-  distanceDiff <- getDistanceDiff booking approxTraveledDistance
 
   if not pickupDropOutsideOfThreshold
     then recalculateFareForDistance handle booking ride booking.estimatedDistance thresholdConfig
-    else
+    else do
+      approxTraveledDistance <- getDistanceBetweenPoints tripStartPoint tripEndPoint interpolatedPoints
+      logTagInfo "endRide" $ "approxTraveledDistance when pickup and drop are not outside threshold: " <> show approxTraveledDistance
+      distanceDiff <- getDistanceDiff booking approxTraveledDistance
       if distanceDiff < 0
         then recalculateFareForDistance handle booking ride approxTraveledDistance thresholdConfig
         else
