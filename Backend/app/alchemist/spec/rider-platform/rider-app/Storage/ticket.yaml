@@ -46,9 +46,11 @@ TicketPlace:
     shortDesc: NotNull
     gallery: NotNull
     termsAndConditions: NotNull
+    placeType: NotNull
 
   default:
-    termsAndConditions: "[]"
+    termsAndConditions: "'{}'"
+    placeType: "'Other'"
 
   queries:
     getTicketPlaces:
@@ -81,9 +83,14 @@ TicketService:
     placesId : NotNull
     businessHours : NotNull
     operationalDays : NotNull
+    allowFutureBooking: NotNull
+    expiry: NotNull
 
   default:
-    operationalDays: "{Monday, Tuesday, Wednesday, Thursday, Friday, Saturday, Sunday}"
+    operationalDays: "'{Monday, Tuesday, Wednesday, Thursday, Friday, Saturday, Sunday}'"
+    allowFutureBooking: "true"
+    business_hours: "'{}'"
+    expiry: "'VisitDate 12:00:00'"
 
   queries:
     findById:
@@ -311,7 +318,7 @@ TicketBookingService:
   default:
     createdAt: CURRENT_TIMESTAMP
     updatedAt: CURRENT_TIMESTAMP
-    btype: "Duration 03:30:00 12:00:00"
+    btype: "'Duration 03:30:00 12:00:00'"
 
   queries:
     findById:

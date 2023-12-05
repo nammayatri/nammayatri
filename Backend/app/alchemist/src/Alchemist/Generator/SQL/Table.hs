@@ -31,7 +31,7 @@ addColumnSQL tableName fieldDef =
     ++ sqlType fieldDef
     ++ " "
     ++ intercalate " " (catMaybes $ map constraintToSQL (constraints fieldDef))
-    ++ maybe "" ((++) " Default ") (defaultVal fieldDef)
+    ++ maybe "" ((++) " default ") (defaultVal fieldDef)
     ++ ";"
 
 addKeySQL :: TableDef -> String
