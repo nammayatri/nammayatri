@@ -32,6 +32,7 @@ initData = {
         vehicleType : "",
         profileImg : Nothing,
         driverAlternateMobile : Nothing,
+        gender : "UNKNOWN",
         activeRide : {
           id : "",
           source : "",

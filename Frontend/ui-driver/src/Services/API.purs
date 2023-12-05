@@ -1737,6 +1737,7 @@ newtype DriversInfo = DriversInfo
   , rank :: Int
   , isCurrentDriver :: Boolean
   , totalDistance :: Int
+  , gender :: String
   }
 
 instance makeLeaderBoardReq :: RestEndpoint LeaderBoardReq LeaderBoardRes where

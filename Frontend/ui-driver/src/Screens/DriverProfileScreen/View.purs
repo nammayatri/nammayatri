@@ -386,6 +386,11 @@ tabView state push =
 ------------------------------------------ TAB IMAGE VIEW ---------------------------------------------------------
 tabImageView :: forall w. ST.DriverProfileScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 tabImageView state push =
+  let driverImage = case (fromMaybe "UNKNOWN" state.data.driverGender) of
+                      "MALE" -> "ny_ic_new_avatar_profile"
+                      "FEMALE" -> "ny_ic_profile_female"
+                      _ -> "ny_ic_generic_mascot"
+  in
   linearLayout
   [ height WRAP_CONTENT
   , width MATCH_PARENT
@@ -408,7 +413,7 @@ tabImageView state push =
           imageView[ 
             height $ V 88
           , width $ V 88
-          , imageWithFallback $ fetchImage FF_ASSET "ny_ic_new_avatar_profile"
+          , imageWithFallback $ fetchImage FF_ASSET driverImage
           ]
         else 
           linearLayout [

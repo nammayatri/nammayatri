@@ -474,6 +474,10 @@ otherRankers state =
 rankCard :: forall w . ST.RankCardData -> Boolean -> ST.ReferralScreenState -> PrestoDOM (Effect Unit) w
 rankCard item aboveThreshold state =
   let currentDriverData = state.props.currentDriverData
+      driverImage = case item.gender of
+                      "MALE" -> "ny_ic_general_profile"
+                      "FEMALE" -> "ny_ic_general_profile_female"
+                      _ -> "ny_ic_generic_mascot"
   in
     linearLayout
     ([ width MATCH_PARENT
@@ -509,7 +513,7 @@ rankCard item aboveThreshold state =
           , height (V 40)
           , cornerRadius 30.0
           , margin (MarginHorizontal 8 10)
-          , imageWithFallback $ fetchImage FF_ASSET "ny_ic_general_profile"
+          , imageWithFallback $ fetchImage FF_ASSET driverImage
           ]
         , textView
           [ width WRAP_CONTENT
@@ -541,9 +545,9 @@ rankCard item aboveThreshold state =
 topRankers :: forall w . ST.ReferralScreenState -> PrestoDOM (Effect Unit) w
 topRankers state =
   let rankersList = state.props.rankersData
-      rank1 = fromMaybe ReferralScreenData.dummyRankData (index rankersList 0)
-      rank2 = fromMaybe ReferralScreenData.dummyRankData (index rankersList 1)
-      rank3 = fromMaybe ReferralScreenData.dummyRankData (index rankersList 2)
+      personDetail1 = fromMaybe ReferralScreenData.dummyRankData (index rankersList 0)
+      personDetail2 = fromMaybe ReferralScreenData.dummyRankData (index rankersList 1)
+      personDetail3 = fromMaybe ReferralScreenData.dummyRankData (index rankersList 2)
   in
     linearLayout
     [ width MATCH_PARENT
@@ -555,12 +559,23 @@ topRankers state =
     , padding (PaddingVertical 20 24)
     , cornerRadius 16.0
     , visibility if not state.props.showShimmer then VISIBLE else GONE
-    ][ rankers 72 2 Color.darkMint false FontSize.a_16 rank2 "ny_ic_rank2,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_rank2.png"
-    , rankers 102 1 Color.yellow900 true FontSize.a_22 rank1 "ny_ic_rank1,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_rank1.png"
-    , rankers 72 3 Color.orange900 false FontSize.a_16 rank3 "ny_ic_rank3,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_rank3.png"
+    ][ rankers 72 2 Color.darkMint false FontSize.a_16 personDetail2  (imageWrtGenderRank personDetail2.gender personDetail2.rank)
+    , rankers 102 1 Color.yellow900 true FontSize.a_22 personDetail1 (imageWrtGenderRank personDetail1.gender  personDetail1.rank)
+    , rankers 72 3 Color.orange900 false FontSize.a_16 personDetail3 (imageWrtGenderRank personDetail3.gender  personDetail3.rank) 
     ]
 
-rankers :: forall w . Int -> Int -> String -> Boolean -> Font.FontSize -> ST.RankCardData -> String -> PrestoDOM (Effect Unit) w
+imageWrtGenderRank :: String -> Int -> String
+imageWrtGenderRank gender rank =
+  case gender , rank  of
+    "MALE", 1 -> "ny_ic_rank1"
+    "MALE", 2 -> "ny_ic_rank2"
+    "MALE", 3 -> "ny_ic_rank3"
+    "FEMALE", 1 -> "ny_ic_rank1_female"
+    "FEMALE", 2 -> "ny_ic_rank2_female"
+    "FEMALE", 3 -> "ny_ic_rank3_female"
+    _,  _ -> "ny_ic_generic_mascot"
+
+rankers :: forall w . Int -> Int -> String -> Boolean -> Font.FontSize -> ST.RankCardData  -> String -> PrestoDOM (Effect Unit) w
 rankers size rank themeColor showCrown fontSize detail imageUrl =
   let bottomMargin = ceil ( (toNumber size) / 7.0 )
       rankWidth = bottomMargin * 2 + 5
@@ -597,7 +612,7 @@ rankers size rank themeColor showCrown fontSize detail imageUrl =
           ][ imageView
              [ width MATCH_PARENT
              , height MATCH_PARENT
-             , imageWithFallback imageUrl
+             , imageWithFallback $ fetchImage FF_ASSET imageUrl
              ]
            ]
         , linearLayout

@@ -690,6 +690,11 @@ popupModelSilentAsk push state =
 
 driverDetail :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 driverDetail push state =
+  let driverImage = case state.data.gender of
+                      "MALE" -> "ny_ic_new_avatar_profile"
+                      "FEMALE" -> "ny_ic_profile_female"
+                      _ -> "ny_ic_generic_mascot"
+  in
   linearLayout
   [ width MATCH_PARENT
   , height WRAP_CONTENT
@@ -710,7 +715,7 @@ driverDetail push state =
         ][ imageView
            [ width $ V 42
            , height $ V 42
-           , imageWithFallback $ HU.fetchImage HU.FF_ASSET "ny_ic_new_avatar_profile"
+           , imageWithFallback $ HU.fetchImage HU.FF_ASSET driverImage
            ]
          ]
       ]
