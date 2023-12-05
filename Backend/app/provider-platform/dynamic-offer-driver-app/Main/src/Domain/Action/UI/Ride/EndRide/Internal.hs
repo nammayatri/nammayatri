@@ -504,6 +504,8 @@ mkDriverFee now merchantId driverId rideFare govtCharges platformFee cgst sgst t
         planId = Nothing,
         planMode = Nothing,
         notificationRetryCount = 0,
+        badDebtDeclarationDate = Nothing,
+        badDebtRecoveryDate = Nothing,
         ..
       }
   where

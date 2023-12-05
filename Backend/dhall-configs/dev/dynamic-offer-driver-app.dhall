@@ -191,6 +191,7 @@ let AllocatorJobType =
       | CalculateDriverFees
       | OrderAndNotificationStatusUpdate
       | SendOverlay
+      | BadDebtCalculation
       >
 
 let jobInfoMapx =
@@ -211,6 +212,7 @@ let jobInfoMapx =
         , mapValue = True
         }
       , { mapKey = AllocatorJobType.SendOverlay, mapValue = True }
+      , { mapKey = AllocatorJobType.BadDebtCalculation, mapValue = True }
       ]
 
 let LocationTrackingeServiceConfig = { url = "http://localhost:8081/" }

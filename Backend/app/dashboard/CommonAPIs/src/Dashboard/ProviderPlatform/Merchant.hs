@@ -625,3 +625,26 @@ type UpdateFPDriverExtraFee =
     :> MandatoryQueryParam "startDistance" Meters
     :> ReqBody '[JSON] CreateFPDriverExtraFeeReq
     :> Post '[JSON] APISuccess
+
+---- generic trigger for schedulers ----
+
+type SchedulerTriggerAPI =
+  "scheduler"
+    :> "trigger"
+    :> ReqBody '[JSON] SchedulerTriggerReq
+    :> Post '[JSON] APISuccess
+
+data SchedulerTriggerReq = SchedulerTriggerReq
+  { scheduledAt :: Maybe UTCTime,
+    jobName :: Maybe JobName,
+    jobData :: Text
+  }
+  deriving stock (Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data JobName = BadDebtCalculationTrigger | DriverFeeCalculationTrigger
+  deriving stock (Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+instance HideSecrets SchedulerTriggerReq where
+  hideSecrets = identity

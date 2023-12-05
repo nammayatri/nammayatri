@@ -58,6 +58,7 @@ data MerchantEndpoint
   | VerificationServiceConfigUpdateEndpoint
   | CreateFPDriverExtraFeeEndpoint
   | UpdateFPDriverExtraFeeEndpoint
+  | SchedulerTriggerAPIEndpoint
   deriving (Show, Read)
 
 derivePersistField "MerchantEndpoint"
