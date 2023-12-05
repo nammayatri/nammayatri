@@ -12,4 +12,4 @@ data ServicePeopleCategory = ServicePeopleCategory
     name :: Kernel.Prelude.Text,
     pricePerUnit :: Kernel.Types.Common.HighPrecMoney
   }
-  deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)

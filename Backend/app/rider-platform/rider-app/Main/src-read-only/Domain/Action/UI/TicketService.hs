@@ -439,7 +439,7 @@ postV2TicketPlacesBook (personId, merchantId) placeId req = do
 getTicketPlacesBookings :: (Kernel.Types.Id.Id Domain.Types.Person.Person, Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Domain.Types.TicketBooking.BookingStatus -> Environment.Flow [Domain.Action.UI.TicketService.TicketBookingAPIEntity]
 getTicketPlacesBookings (personId_, merchantId) mbLimit mbOffset status_ = do
   merchantOpCity <- CQM.getDefaultMerchantOperatingCity merchantId
-  ticketBookings <- QTB.getAllBookingsByPersonId personId_ merchantOpCity.id status_ mbLimit mbOffset
+  ticketBookings <- QTB.getAllBookingsByPersonId mbLimit mbOffset personId_ merchantOpCity.id status_
   convertToApiEntity `mapM` ticketBookings
   where
     convertToApiEntity :: DTTB.TicketBooking -> Environment.Flow TicketBookingAPIEntity
@@ -547,7 +547,7 @@ postTicketPlacesBookingsVerify _ = processBookingService
         createVerificationResp BookingAlreadyVerified (Just bookingService) (Just ticketServiceConfig) (Just booking)
       | otherwise = do
         now <- getCurrentTime
-        QTBS.updateVerification bookingService.id (bookingService.verificationCount + 1) now
+        QTBS.updateVerificationById DTB.Verified (bookingService.verificationCount + 1) now bookingService.id
         createVerificationResp BookingSuccess (Just bookingService) (Just ticketServiceConfig) (Just booking)
 
     createVerificationResp :: TicketVerificationStatus -> Maybe DTB.TicketBookingService -> Maybe Domain.Types.TicketService.TicketService -> Maybe DTTB.TicketBooking -> Environment.Flow TicketServiceVerificationResp
@@ -635,7 +635,7 @@ postTicketPlacesBookingsVerify _ = processBookingService
     verificationMsg InvalidBooking = "Not a valid QR"
 
 getTicketPlacesBookingsStatus :: (Kernel.Types.Id.Id Domain.Types.Person.Person, Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Types.Id.ShortId Domain.Types.TicketBooking.TicketBooking -> Environment.Flow Domain.Types.TicketBooking.BookingStatus
-getTicketPlacesBookingsStatus (personId, merchantId) (Kernel.Types.Id.ShortId shortId) = do
+getTicketPlacesBookingsStatus (personId, merchantId) _shortId@(Kernel.Types.Id.ShortId shortId) = do
   let commonPersonId = Kernel.Types.Id.cast @Domain.Types.Person.Person @DPayment.Person personId
       orderStatusCall = Payment.orderStatus merchantId -- api call
   order <- QOrder.findByShortId (Kernel.Types.Id.ShortId shortId) >>= fromMaybeM (PaymentOrderNotFound shortId)
@@ -643,15 +643,16 @@ getTicketPlacesBookingsStatus (personId, merchantId) (Kernel.Types.Id.ShortId sh
   if order.status == Payment.CHARGED -- Consider CHARGED status as terminal status
     then return ticketBooking'.status
     else do
+      now <- getCurrentTime
       paymentStatus <- DPayment.orderStatusService commonPersonId order.id orderStatusCall
       case paymentStatus of
         DPayment.PaymentStatus {..} -> do
           when (status == Payment.CHARGED) $ do
-            QTB.updateStatusByShortId (Kernel.Types.Id.ShortId shortId) DTTB.Booked
-            QTBS.updateAllStatusByBookingId ticketBooking'.id DTB.Confirmed
+            QTB.updateStatusByShortId DTTB.Booked now _shortId
+            QTBS.updateAllStatusByBookingId DTB.Confirmed now ticketBooking'.id
           when (status `elem` [Payment.AUTHENTICATION_FAILED, Payment.AUTHORIZATION_FAILED, Payment.JUSPAY_DECLINED]) $ do
-            QTB.updateStatusByShortId (Kernel.Types.Id.ShortId shortId) DTTB.Failed
-            QTBS.updateAllStatusByBookingId ticketBooking'.id DTB.Failed
+            QTB.updateStatusByShortId DTTB.Failed now _shortId
+            QTBS.updateAllStatusByBookingId DTB.Failed now ticketBooking'.id
         _ -> return ()
       ticketBooking <- QTB.findByShortId (Kernel.Types.Id.ShortId shortId) >>= fromMaybeM (TicketBookingNotFound shortId) -- fetch again for updated status
       return ticketBooking.status

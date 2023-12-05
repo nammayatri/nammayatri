@@ -74,7 +74,7 @@ TicketService:
     businessHours : "[Id BusinessHour]"
   types:
     ExpiryType:
-      enum: "SameDay,NextDay,NextWeek,NextMonth"
+      enum: "InstantExpiry Kernel.Prelude.Int,VisitDate Kernel.Prelude.TimeOfDay"
 
   constraints :
     id : PrimaryKey | NotNull
@@ -136,7 +136,7 @@ BusinessHour:
     categoryId: "[Id ServiceCategory]"
   types:
     BusinessHourType:
-      enum: "Slot,Duration"
+      enum: "Slot Kernel.Prelude.TimeOfDay,Duration Kernel.Prelude.TimeOfDay Kernel.Prelude.TimeOfDay"
 
   constraints :
     id : PrimaryKey | NotNull
@@ -253,6 +253,7 @@ TicketBooking:
   types:
     BookingStatus:
       enum: "Pending,Failed,Booked"
+      derive: HttpInstance
 
   default:
     createdAt: CURRENT_TIMESTAMP
@@ -322,6 +323,14 @@ TicketBookingService:
     findAllByBookingId:
       kvFunction: findAllWithKV
       where: ticketBookingId
+    updateAllStatusByBookingId:
+      kvFunction: updateWithKV
+      params: [status, updatedAt]
+      where: ticketBookingId
+    updateVerificationById:
+      kvFunction: updateWithKV
+      params: [status, verificationCount, updatedAt]
+      where: id
 
 TicketBookingServiceCategory:
   tableName: ticket_booking_service_category

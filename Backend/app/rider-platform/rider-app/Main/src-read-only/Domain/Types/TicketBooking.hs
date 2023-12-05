@@ -10,7 +10,7 @@ import qualified Domain.Types.TicketPlace as Domain.Types.TicketPlace
 import Kernel.Prelude
 import qualified Kernel.Types.Common as Kernel.Types.Common
 import qualified Kernel.Types.Id as Kernel.Types.Id
-import Kernel.Utils.TH (mkHttpInstancesForEnum)
+import Kernel.Utils.TH
 import Tools.Beam.UtilsTH
 
 data TicketBooking = TicketBooking
@@ -25,11 +25,11 @@ data TicketBooking = TicketBooking
     updatedAt :: Kernel.Prelude.UTCTime,
     visitDate :: Data.Time.Calendar.Day
   }
-  deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
 data BookingStatus = Pending | Failed | Booked
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-$(mkHttpInstancesForEnum ''BookingStatus)
-
 $(mkBeamInstancesForEnum ''BookingStatus)
+
+$(mkHttpInstancesForEnum ''BookingStatus)

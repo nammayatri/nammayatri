@@ -23,7 +23,7 @@ data TicketPlace = TicketPlace
     shortDesc :: Kernel.Prelude.Text,
     termsAndConditions :: [Kernel.Prelude.Text]
   }
-  deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
 data PlaceType = Museum | ThemePark | AmusementPark | WaterPark | WildLifeSanctuary | ArtGallery | HeritageSite | ReligiousSite | Other
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)

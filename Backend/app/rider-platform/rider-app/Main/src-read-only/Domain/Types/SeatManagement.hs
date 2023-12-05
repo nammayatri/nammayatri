@@ -14,4 +14,4 @@ data SeatManagement = SeatManagement
     id :: Kernel.Types.Id.Id Domain.Types.SeatManagement.SeatManagement,
     ticketServiceCategoryId :: Kernel.Types.Id.Id Domain.Types.ServiceCategory.ServiceCategory
   }
-  deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)

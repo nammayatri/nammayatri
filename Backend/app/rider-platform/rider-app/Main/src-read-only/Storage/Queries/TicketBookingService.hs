@@ -7,14 +7,13 @@ import qualified Domain.Types.BusinessHour as Domain.Types.BusinessHour
 import qualified Domain.Types.Merchant.MerchantOperatingCity as Domain.Types.Merchant.MerchantOperatingCity
 import qualified Domain.Types.TicketBooking as Domain.Types.TicketBooking
 import qualified Domain.Types.TicketBookingService as Domain.Types.TicketBookingService
-import qualified Domain.Types.TicketBookingService as DomainTB
 import qualified Domain.Types.TicketService as Domain.Types.TicketService
 import Kernel.Beam.Functions
 import Kernel.Prelude
 import qualified Kernel.Prelude as Kernel.Prelude
 import qualified Kernel.Types.Common as Kernel.Types.Common
 import qualified Kernel.Types.Id as Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, getCurrentTime)
+import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow)
 import qualified Sequelize as Se
 import qualified Storage.Beam.TicketBookingService as Beam
 
@@ -42,23 +41,24 @@ findByShortId (Kernel.Types.Id.ShortId shortId) = do
     [ Se.Is Beam.shortId $ Se.Eq shortId
     ]
 
-updateAllStatusByBookingId :: MonadFlow m => Kernel.Types.Id.Id Domain.Types.TicketBooking.TicketBooking -> Domain.Types.TicketBookingService.ServiceStatus -> m ()
-updateAllStatusByBookingId (Kernel.Types.Id.Id bookingId) status = do
-  now <- getCurrentTime
+updateAllStatusByBookingId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Domain.Types.TicketBookingService.ServiceStatus -> Kernel.Prelude.UTCTime -> Kernel.Types.Id.Id Domain.Types.TicketBooking.TicketBooking -> m ()
+updateAllStatusByBookingId status updatedAt (Kernel.Types.Id.Id ticketBookingId) = do
   updateWithKV
     [ Se.Set Beam.status status,
-      Se.Set Beam.updatedAt now
+      Se.Set Beam.updatedAt updatedAt
     ]
-    [Se.Is Beam.ticketBookingId $ Se.Eq bookingId]
+    [ Se.Is Beam.ticketBookingId $ Se.Eq ticketBookingId
+    ]
 
-updateVerification :: MonadFlow m => Kernel.Types.Id.Id Domain.Types.TicketBookingService.TicketBookingService -> Int -> UTCTime -> m ()
-updateVerification (Kernel.Types.Id.Id id) verfCount now =
+updateVerificationById :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Domain.Types.TicketBookingService.ServiceStatus -> Kernel.Prelude.Int -> Kernel.Prelude.UTCTime -> Kernel.Types.Id.Id Domain.Types.TicketBookingService.TicketBookingService -> m ()
+updateVerificationById status verificationCount updatedAt (Kernel.Types.Id.Id id) = do
   updateWithKV
-    [ Se.Set Beam.status DomainTB.Verified,
-      Se.Set Beam.verificationCount verfCount,
-      Se.Set Beam.updatedAt now
+    [ Se.Set Beam.status status,
+      Se.Set Beam.verificationCount verificationCount,
+      Se.Set Beam.updatedAt updatedAt
     ]
-    [Se.Is Beam.id $ Se.Eq id]
+    [ Se.Is Beam.id $ Se.Eq id
+    ]
 
 instance FromTType' Beam.TicketBookingService Domain.Types.TicketBookingService.TicketBookingService where
   fromTType' Beam.TicketBookingServiceT {..} = do

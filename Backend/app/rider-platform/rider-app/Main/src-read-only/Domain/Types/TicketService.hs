@@ -18,7 +18,7 @@ data TicketService = TicketService
     serviceName :: Kernel.Prelude.Text,
     shortDesc :: Kernel.Prelude.Maybe Kernel.Prelude.Text
   }
-  deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
 data ExpiryType = InstantExpiry Kernel.Prelude.Int | VisitDate Kernel.Prelude.TimeOfDay
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)

@@ -14,7 +14,7 @@ data TableDef = TableDef
   }
   deriving (Show)
 
-data TypeObject = TypeObject (Text, [(Text, Text)])
+data TypeObject = TypeObject (Text, ([(Text, Text)], Maybe Text))
   deriving (Show)
 
 data QueryDef = QueryDef

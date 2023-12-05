@@ -108,19 +108,35 @@ parseTypeObjects obj =
     extractString (String t) = t
     extractString _ = error "Non-string type found in field definition"
 
+    splitTypeAndDerivation :: [(Text, Text)] -> ([(Text, Text)], Maybe Text)
+    splitTypeAndDerivation fields = (filter (\(k, _) -> k /= "derive") fields, extractDerive fields)
+      where
+        extractDerive :: [(Text, Text)] -> Maybe Text
+        extractDerive [] = Nothing
+        extractDerive ((k, value) : xs)
+          | k == "derive" = Just value
+          | otherwise = extractDerive xs
+
     processType1 :: (Key, Value) -> TypeObject
     processType1 (typeName, Object typeDef) =
-      TypeObject (toText typeName, extractFields typeDef)
+      TypeObject (toText typeName, splitTypeAndDerivation $ extractFields typeDef)
     processType1 _ = error "Expected an object in fields"
 
 parseExtraTypes :: Maybe String -> [String] -> Object -> Object -> Maybe ([TypeObject], [String])
-parseExtraTypes moduleName dList importObj obj = do
+parseExtraTypes _moduleName _dList _importObj obj = do
   _types <- parseTypes obj
   let allExcludeQualified = map (\(TypeObject (name, _)) -> T.unpack name) _types
   return $ (map (mkQualifiedTypeObject allExcludeQualified) _types, allExcludeQualified)
   where
     mkQualifiedTypeObject :: [String] -> TypeObject -> TypeObject
-    mkQualifiedTypeObject excluded (TypeObject (_nm, arrOfFields)) = TypeObject (_nm, map (\(_n, _t) -> (_n, T.pack $ makeTypeQualified moduleName (Just excluded) (Just dList) importObj $ T.unpack _t)) arrOfFields)
+    mkQualifiedTypeObject _excluded (TypeObject (_nm, (arrOfFields, derive))) =
+      TypeObject (_nm, (map (\(_n, _t) -> (_n, mkEnumTypeQualified _t)) arrOfFields, derive))
+
+    mkEnumTypeQualified :: Text -> Text
+    mkEnumTypeQualified = identity -- TODO: Fix this
+    -- let ty = intercalate "," . (map (tail . T.splitOn " ")) . T.splitOn "," $ _t
+    -- let constructors = intercalate "," . (map (tail . T.splitOn " ")) . T.splitOn "," $ _t
+    -- T.pack $ makeTypeQualified moduleName (Just excluded) (Just dList) importObj $ T.unpack ty
 
 parseFields :: Maybe String -> Maybe [String] -> [String] -> Object -> Object -> [FieldDef]
 parseFields moduleName excludedList dataList impObj obj =

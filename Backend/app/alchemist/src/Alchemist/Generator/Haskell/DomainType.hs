@@ -22,7 +22,7 @@ generateDomainType tableDef = do
     ++ tableNameHaskell tableDef
     ++ "\n  { "
     ++ intercalate "\n  , " (map fieldDefToHaskell (fields tableDef))
-    ++ "\n  }\n  deriving (Generic, Show)\n\n\n"
+    ++ "\n  }\n  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)\n\n\n"
     ++ maybe "" generateHaskellTypes (types tableDef)
   where
     moduleName = "Domain.Types." ++ tableNameHaskell tableDef
@@ -38,12 +38,25 @@ fieldDefToHaskell fieldDef =
 createDefaultImports :: TableDef -> [String]
 createDefaultImports tableDef =
   ["Kernel.Prelude"] <> ["Tools.Beam.UtilsTH" | shouldImportUtilsTH (fromMaybe [] $ types tableDef)]
+    <> ["Kernel.Utils.TH" | isHttpInstanceDerived (fromMaybe [] $ types tableDef)]
+    <> ["Data.Aeson" | isHttpInstanceDerived (fromMaybe [] $ types tableDef)]
 
 shouldImportUtilsTH :: [TypeObject] -> Bool
 shouldImportUtilsTH typeObj =
   any
     ( \case
-        TypeObject (_, fields) -> isEnum fields
+        TypeObject (_, (fields, _)) -> isEnum fields
+    )
+    typeObj
+
+isHttpInstanceDerived :: [TypeObject] -> Bool
+isHttpInstanceDerived typeObj =
+  any
+    ( \case
+        TypeObject (_, (_, derive)) ->
+          case derive of
+            Just "HttpInstance" -> True
+            _ -> False
     )
     typeObj
 
@@ -55,7 +68,7 @@ generateHaskellTypes :: [TypeObject] -> String
 generateHaskellTypes typeObj = T.unpack $ T.unlines $ concatMap processType typeObj
   where
     processType :: TypeObject -> [Text]
-    processType (TypeObject (typeName, fields))
+    processType (TypeObject (typeName, (fields, _)))
       | isEnum fields = generateEnum typeName fields
       | otherwise = generateDataStructure typeName fields
 
@@ -63,8 +76,9 @@ generateHaskellTypes typeObj = T.unpack $ T.unlines $ concatMap processType type
     generateEnum typeName [("enum", values)] =
       let enumValues = T.splitOn "," values
        in ["data " <> typeName <> " = " <> T.intercalate " | " enumValues]
-            ++ ["  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)\n\n"]
-            ++ ["$(mkBeamInstancesForEnum ''" <> typeName <> ")\n"]
+            ++ ["  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema" <> (if isHttpInstanceDerived typeObj then ", ToParamSchema)\n\n" else ")\n\n")]
+            ++ ["$(mkBeamInstancesForEnum ''" <> typeName <> ")\n\n"]
+            ++ (if isHttpInstanceDerived typeObj then ["$(mkHttpInstancesForEnum ''" <> typeName <> ")\n"] else [])
     generateEnum _ _ = error "Invalid enum definition"
 
     generateDataStructure :: Text -> [(Text, Text)] -> [Text]

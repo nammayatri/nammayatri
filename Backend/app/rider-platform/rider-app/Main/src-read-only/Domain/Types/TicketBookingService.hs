@@ -25,7 +25,7 @@ data TicketBookingService = TicketBookingService
     updatedAt :: Kernel.Prelude.UTCTime,
     verificationCount :: Kernel.Prelude.Int
   }
-  deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
 data ServiceStatus = Pending | Failed | Confirmed | Verified
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)

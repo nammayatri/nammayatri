@@ -12,9 +12,9 @@ data BusinessHour = BusinessHour
     categoryId :: [Kernel.Types.Id.Id Domain.Types.ServiceCategory.ServiceCategory],
     id :: Kernel.Types.Id.Id Domain.Types.BusinessHour.BusinessHour
   }
-  deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-data BusinessHourType = Slot TimeOfDay | Duration TimeOfDay TimeOfDay
+data BusinessHourType = Slot Kernel.Prelude.TimeOfDay | Duration Kernel.Prelude.TimeOfDay Kernel.Prelude.TimeOfDay
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 $(mkBeamInstancesForEnum ''BusinessHourType)

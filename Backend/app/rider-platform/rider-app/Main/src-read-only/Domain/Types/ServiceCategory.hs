@@ -14,4 +14,4 @@ data ServiceCategory = ServiceCategory
     name :: Kernel.Prelude.Text,
     peopleCategory :: [Kernel.Types.Id.Id Domain.Types.ServicePeopleCategory.ServicePeopleCategory]
   }
-  deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
