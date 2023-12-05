@@ -60,22 +60,39 @@ updateDeviation _ Nothing _ = do
   logInfo "No ride found to check deviation"
   return False
 updateDeviation routeDeviationThreshold (Just rideId) batchWaypoints = do
-  logWarning "Updating Deviation"
-  let key = searchRequestKey (getId rideId)
-  routeInfo :: Maybe RI.RouteInfo <- Redis.get key
-  case routeInfo >>= (.points) of
-    Just estimatedRoute ->
-      if checkForDeviation routeDeviationThreshold estimatedRoute batchWaypoints 0
-        then do
-          logInfo $ "Deviation detected for rideId: " <> show rideId
-          QRide.updateDriverDeviatedFromRoute rideId True
-          return True
-        else do
-          logInfo $ "No deviation detected for rideId: " <> show rideId
+  routeDeviation <- getRouteDeviation rideId
+  if routeDeviation
+    then do
+      logInfo $ "Ride already deviated for rideId: " <> getId rideId
+      return True
+    else do
+      logInfo $ "Updating Deviation for rideId: " <> getId rideId
+      let key = searchRequestKey (getId rideId)
+      routeInfo :: Maybe RI.RouteInfo <- Redis.get key
+      case routeInfo >>= (.points) of
+        Just estimatedRoute ->
+          if checkForDeviation routeDeviationThreshold estimatedRoute batchWaypoints 0
+            then do
+              logInfo $ "Deviation detected for rideId: " <> getId rideId
+              QRide.updateDriverDeviatedFromRoute rideId True
+              return True
+            else do
+              logInfo $ "No deviation detected for rideId: " <> getId rideId
+              return False
+        Nothing -> do
+          logWarning $ "Ride route points not found for rideId: " <> getId rideId
           return False
-    Nothing -> do
-      logWarning $ "Ride route points not found for rideId: " <> show rideId
-      return False
+  where
+    getRouteDeviation id = do
+      rideDetails <- QRide.findById id
+      case rideDetails of
+        Just ride -> do
+          case driverDeviatedFromRoute ride of
+            Just deviation -> return deviation
+            Nothing -> return False
+        Nothing -> do
+          logInfo $ "Ride not found for rideId: " <> getId id
+          return False
 
 buildRideInterpolationHandler :: Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Bool -> Flow (RideInterpolationHandler Person Flow)
 buildRideInterpolationHandler merchantId merchantOpCityId isEndRide = do

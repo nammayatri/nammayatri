@@ -34,11 +34,13 @@ module Lib.LocationUpdates.Internal
 where
 
 import qualified Control.Monad.Catch as C
+import qualified Data.List.NonEmpty as NE
 import EulerHS.Prelude hiding (id, state)
 import GHC.Records.Extra
 import Kernel.External.Maps as Maps
 import Kernel.Storage.Hedis
 import qualified Kernel.Storage.Hedis as Hedis
+import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Tools.Metrics.CoreMetrics as Metrics
 import Kernel.Types.Common
 import Kernel.Types.Id (Id)
@@ -82,7 +84,7 @@ resetFailedDistanceCalculationFlag :: (HedisFlow m r) => Id person -> m ()
 resetFailedDistanceCalculationFlag driverId = Hedis.del $ getFailedDistanceCalculationKey driverId
 
 processWaypoints ::
-  (Log m, MonadThrow m) =>
+  (CacheFlow m r, Log m, MonadThrow m) =>
   RideInterpolationHandler person m ->
   Id person ->
   Bool ->
@@ -96,24 +98,39 @@ processWaypoints ih@RideInterpolationHandler {..} driverId ending estDist pickup
     then logWarning "Failed to calculate actual distance for this ride, ignoring"
     else wrapDistanceCalculation driverId $ do
       addPoints driverId waypoints
-      when ending $ recalcDistanceBatches ih ending driverId estDist pickupDropOutsideThreshold
+      recalcDistanceBatches ih ending driverId estDist pickupDropOutsideThreshold waypoints
+
+lastTwoOnRidePointsRedisKey :: Id person -> Text
+lastTwoOnRidePointsRedisKey driverId = "Driver-Location-Last-Two-OnRide-Points:DriverId-" <> driverId.getId
+
+takeLastTwo :: [a] -> [a]
+takeLastTwo xs = drop (max 0 (length xs - 2)) xs
 
 recalcDistanceBatches ::
-  (Monad m, Log m) =>
+  (CacheFlow m r, Monad m, Log m) =>
   RideInterpolationHandler person m ->
   Bool ->
   Id person ->
   Meters ->
   Bool ->
+  NonEmpty LatLong ->
   m ()
-recalcDistanceBatches h@RideInterpolationHandler {..} ending driverId estDist pickupDropOutsideThreshold = do
-  waypoints <- getAllWaypoints driverId
-  routeDeviation <- updateRouteDeviation driverId (toList waypoints)
-  if routeDeviation || pickupDropOutsideThreshold
-    then do
-      (distanceToUpdate, googleSnapToRoadCalls, osrmSnapToRoadCalls) <- recalcDistanceBatches' 0 0 0
-      updateDistance driverId distanceToUpdate googleSnapToRoadCalls osrmSnapToRoadCalls
-    else updateDistance driverId (metersToHighPrecMeters estDist) 0 0
+recalcDistanceBatches h@RideInterpolationHandler {..} ending driverId estDist pickupDropOutsideThreshold waypoints = do
+  prevBatchTwoEndPoints :: Maybe [LatLong] <- Redis.safeGet $ lastTwoOnRidePointsRedisKey driverId
+  let modifiedWaypoints =
+        case prevBatchTwoEndPoints of
+          Just points -> NE.fromList points <> waypoints
+          _ -> waypoints
+  let currentLastTwoPoints = takeLastTwo (toList waypoints)
+  Redis.setExp (lastTwoOnRidePointsRedisKey driverId) currentLastTwoPoints 21600 -- 6 hours
+  routeDeviation <- updateRouteDeviation driverId (toList modifiedWaypoints)
+  when ending $ do
+    Redis.del (lastTwoOnRidePointsRedisKey driverId)
+    if routeDeviation || pickupDropOutsideThreshold
+      then do
+        (distanceToUpdate, googleSnapToRoadCalls, osrmSnapToRoadCalls) <- recalcDistanceBatches' 0 0 0
+        updateDistance driverId distanceToUpdate googleSnapToRoadCalls osrmSnapToRoadCalls
+      else updateDistance driverId (metersToHighPrecMeters estDist) 0 0
   where
     -- atLeastBatchPlusOne = (> batchSize) <$> getWaypointsNumber driverId
     pointsRemaining = (> 0) <$> getWaypointsNumber driverId
