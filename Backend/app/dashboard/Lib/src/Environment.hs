@@ -20,6 +20,7 @@ import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config
 import Kernel.Storage.Hedis (HedisCfg, HedisEnv, connectHedis, connectHedisCluster, disconnectHedis)
 import qualified Kernel.Tools.Metrics.CoreMetrics as Metrics
+import Kernel.Tools.Slack.Internal
 import Kernel.Types.Common
 import Kernel.Types.Flow
 import Kernel.Types.SlidingWindowLimiter
@@ -55,7 +56,9 @@ data AppCfg = AppCfg
     exotelToken :: Text,
     dataServers :: [DataServer],
     enableRedisLatencyLogging :: Bool,
-    enablePrometheusMetricLogging :: Bool
+    enablePrometheusMetricLogging :: Bool,
+    slackToken :: Text,
+    slackChannel :: Text
   }
   deriving (Generic, FromDhall)
 
@@ -87,7 +90,8 @@ data AppEnv = AppEnv
     dataServers :: [DataServer],
     version :: DeploymentVersion,
     enableRedisLatencyLogging :: Bool,
-    enablePrometheusMetricLogging :: Bool
+    enablePrometheusMetricLogging :: Bool,
+    slackEnv :: SlackEnv
   }
   deriving (Generic)
 
@@ -99,6 +103,7 @@ buildAppEnv authTokenCacheKeyPrefix AppCfg {..} = do
   esqDBEnv <- prepareEsqDBEnv esqDBCfg loggerEnv
   esqDBReplicaEnv <- prepareEsqDBEnv esqDBReplicaCfg loggerEnv
   coreMetrics <- registerCoreMetricsContainer
+  slackEnv <- createSlackConfig slackToken slackChannel
   let modifierFunc = ("dashboard:" <>)
   let nonCriticalModifierFunc = ("dashboard:non-critical:" <>)
   hedisEnv <- connectHedis hedisCfg modifierFunc

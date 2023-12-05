@@ -108,4 +108,6 @@ in  { esqDBCfg
       [ driverOfferBpp, driverOfferBppManagement, appBackend, specialZone ]
     , enableRedisLatencyLogging = True
     , enablePrometheusMetricLogging = True
+    , slackToken = sec.slackToken
+    , slackChannel = "CXXXXXXXXXF"
     }
