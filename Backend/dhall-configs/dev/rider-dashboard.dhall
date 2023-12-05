@@ -89,4 +89,6 @@ in  { esqDBCfg
     , dataServers = [ appBackend, appBackendManagement ]
     , enableRedisLatencyLogging = True
     , enablePrometheusMetricLogging = True
+    , slackToken = sec.slackToken
+    , slackChannel = "CXXXXXXXXXF"
     }
