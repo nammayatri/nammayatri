@@ -20,6 +20,21 @@ import qualified Storage.Beam.TicketBooking as Beam
 create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.TicketBooking.TicketBooking -> m ()
 create = createWithKV
 
+findByShortId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.ShortId Domain.Types.TicketBooking.TicketBooking -> m (Maybe (Domain.Types.TicketBooking.TicketBooking))
+findByShortId (Kernel.Types.Id.ShortId shortId) = do
+  findOneWithKV
+    [ Se.Is Beam.shortId $ Se.Eq shortId
+    ]
+
+updateStatusByShortId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Domain.Types.TicketBooking.BookingStatus -> Kernel.Prelude.UTCTime -> Kernel.Types.Id.ShortId Domain.Types.TicketBooking.TicketBooking -> m ()
+updateStatusByShortId status updatedAt (Kernel.Types.Id.ShortId shortId) = do
+  updateWithKV
+    [ Se.Set Beam.status status,
+      Se.Set Beam.updatedAt updatedAt
+    ]
+    [ Se.Is Beam.shortId $ Se.Eq shortId
+    ]
+
 instance FromTType' Beam.TicketBooking Domain.Types.TicketBooking.TicketBooking where
   fromTType' Beam.TicketBookingT {..} = do
     pure $

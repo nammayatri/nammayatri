@@ -17,6 +17,12 @@ import qualified Storage.Beam.TicketBookingPeopleCategory as Beam
 create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.TicketBookingPeopleCategory.TicketBookingPeopleCategory -> m ()
 create = createWithKV
 
+findAllByServiceCategoryId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.TicketBookingServiceCategory.TicketBookingServiceCategory -> m ([Domain.Types.TicketBookingPeopleCategory.TicketBookingPeopleCategory])
+findAllByServiceCategoryId (Kernel.Types.Id.Id ticketBookingServiceCategoryId) = do
+  findAllWithKV
+    [ Se.Is Beam.ticketBookingServiceCategoryId $ Se.Eq ticketBookingServiceCategoryId
+    ]
+
 findById :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.TicketBookingPeopleCategory.TicketBookingPeopleCategory -> m (Maybe (Domain.Types.TicketBookingPeopleCategory.TicketBookingPeopleCategory))
 findById (Kernel.Types.Id.Id id) = do
   findOneWithKV
