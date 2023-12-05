@@ -210,17 +210,21 @@ mkListObject _ = []
 findMatchingSqlType :: String -> String
 findMatchingSqlType haskellType =
   case filter ((haskellType =~) . fst) defaultSQLTypes of
-    [] -> "NO_SQL_TYPE" --error $ T.pack ("\"" ++ haskellType ++ "\": No Sql type found")
+    [] -> "text" --error $ T.pack ("\"" ++ haskellType ++ "\": No Sql type found")
     ((_, sqlType) : _) -> sqlType
 
 defaultSQLTypes :: [(String, String)]
 defaultSQLTypes =
   [ ("\\[Text\\]", "text[]"),
     ("Text", "text"),
+    ("\\[Id ", "text[]"),
     ("Id ", "character varying(36)"),
+    ("\\[ShortId ", "text[]"),
     ("ShortId ", "character varying(36)"),
     ("Int", "integer"),
     ("Double", "double precision"),
+    ("HighPrecMoney", "double precision"),
+    ("Money", "integer"),
     ("Bool", "boolean"),
     ("UTCTime", "timestamp with time zone"),
     ("TimeOfDay", "time without time zone"),

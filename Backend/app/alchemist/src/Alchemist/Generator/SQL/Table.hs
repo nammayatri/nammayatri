@@ -13,7 +13,7 @@ generateSQL tableDef =
 -- SQL for creating an empty table
 createTableSQL :: TableDef -> String
 createTableSQL tableDef =
-  "CREATE TABLE " ++ tableNameSql tableDef ++ " ();\n"
+  "CREATE TABLE atlas_app." ++ tableNameSql tableDef ++ " ();\n"
 
 -- SQL for altering the table to add each column
 alterTableSQL :: TableDef -> String
@@ -23,7 +23,7 @@ alterTableSQL tableDef =
 -- SQL for adding a single column with constraints
 addColumnSQL :: String -> FieldDef -> String
 addColumnSQL tableName fieldDef =
-  "ALTER TABLE " ++ tableName ++ " ADD COLUMN " ++ quietSnake (fieldName fieldDef) ++ " "
+  "ALTER TABLE atlas_app." ++ tableName ++ " ADD COLUMN " ++ quietSnake (fieldName fieldDef) ++ " "
     ++ sqlType fieldDef
     ++ " "
     ++ intercalate " " (catMaybes $ map constraintToSQL (constraints fieldDef))
@@ -33,7 +33,7 @@ addColumnSQL tableName fieldDef =
 addKeySQL :: TableDef -> String
 addKeySQL tableDef =
   let keys = map quietSnake $ primaryKey tableDef <> secondaryKey tableDef
-   in "ALTER TABLE " ++ (tableNameSql tableDef) ++ " ADD PRIMARY KEY ( "
+   in "ALTER TABLE atlas_app." ++ (tableNameSql tableDef) ++ " ADD PRIMARY KEY ( "
         ++ intercalate ", " keys
         ++ ");"
 
