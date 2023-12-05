@@ -385,10 +385,46 @@ library
       Tools.Streaming.Kafka
       Tools.Ticket
       Tools.Whatsapp
+      API.UI.TicketService
+      Domain.Action.UI.TicketService
+      Domain.Types.BusinessHour
+      Domain.Types.SeatManagement
+      Domain.Types.ServiceCategory
+      Domain.Types.ServicePeopleCategory
+      Domain.Types.SpecialOccasion
+      Domain.Types.TicketBooking
+      Domain.Types.TicketBookingPeopleCategory
+      Domain.Types.TicketBookingService
+      Domain.Types.TicketBookingServiceCategory
+      Domain.Types.TicketPlace
+      Domain.Types.TicketService
+      Storage.Beam.BusinessHour
+      Storage.Beam.SeatManagement
+      Storage.Beam.ServiceCategory
+      Storage.Beam.ServicePeopleCategory
+      Storage.Beam.SpecialOccasion
+      Storage.Beam.TicketBooking
+      Storage.Beam.TicketBookingPeopleCategory
+      Storage.Beam.TicketBookingService
+      Storage.Beam.TicketBookingServiceCategory
+      Storage.Beam.TicketPlace
+      Storage.Beam.TicketService
+      Storage.Queries.BusinessHour
+      Storage.Queries.SeatManagement
+      Storage.Queries.ServiceCategory
+      Storage.Queries.ServicePeopleCategory
+      Storage.Queries.SpecialOccasion
+      Storage.Queries.TicketBooking
+      Storage.Queries.TicketBookingPeopleCategory
+      Storage.Queries.TicketBookingService
+      Storage.Queries.TicketBookingServiceCategory
+      Storage.Queries.TicketPlace
+      Storage.Queries.TicketService
   other-modules:
       Paths_rider_app
   hs-source-dirs:
       src
+      src-read-only
   default-extensions:
       ConstraintKinds
       DataKinds
@@ -426,6 +462,7 @@ library
   ghc-options: -fwrite-ide-info -hiedir=.hie -fplugin=RecordDotPreprocessor -Wall -Wcompat -Widentities -fhide-source-paths -Werror -Wwarn=ambiguous-fields
   build-depends:
       aeson
+    , alchemist
     , amazonka
     , amazonka-core
     , amazonka-ses
@@ -444,8 +481,10 @@ library
     , cryptostore >=0.2.3.0
     , dashboard-helper-api
     , data-default-class
+    , directory
     , euler-hs
     , extra
+    , filepath
     , geohash ==1.0.1
     , http-media
     , http-types
@@ -459,6 +498,7 @@ library
     , prometheus-client
     , prometheus-metrics-ghc
     , random
+    , raw-strings-qq
     , record-dot-preprocessor
     , record-hasfield
     , sequelize
@@ -534,6 +574,7 @@ executable rider-app-exe
   ghc-options: -fwrite-ide-info -hiedir=.hie -fplugin=RecordDotPreprocessor -threaded -rtsopts "-with-rtsopts=-N -T"
   build-depends:
       aeson
+    , alchemist
     , amazonka
     , amazonka-core
     , amazonka-ses
@@ -551,8 +592,10 @@ executable rider-app-exe
     , cryptostore >=0.2.3.0
     , dashboard-helper-api
     , data-default-class
+    , directory
     , euler-hs
     , extra
+    , filepath
     , geohash ==1.0.1
     , http-media
     , http-types
@@ -565,6 +608,7 @@ executable rider-app-exe
     , prometheus-client
     , prometheus-metrics-ghc
     , random
+    , raw-strings-qq
     , record-dot-preprocessor
     , record-hasfield
     , rider-app

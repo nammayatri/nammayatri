@@ -47,7 +47,7 @@ import qualified API.UI.Select as Select
 import qualified API.UI.Serviceability as Serviceability
 import qualified API.UI.Sos as Sos
 import qualified API.UI.Support as Support
-import qualified API.UI.Tickets as Tickets
+import qualified API.UI.TicketService as TicketService
 import qualified API.UI.Webengage.InfoBIPWebhook as InfoBIPWebhook
 import qualified API.UI.Webengage.Webengage as Webengage
 import qualified API.UI.Whatsapp as Whatsapp
@@ -90,7 +90,7 @@ type API =
            :<|> Disability.API
            :<|> AadhaarVerification.API
            :<|> Issue.API
-           :<|> Tickets.API
+           :<|> TicketService.API
        )
 
 handler :: FlowServer API
@@ -128,4 +128,4 @@ handler =
     :<|> Disability.handler
     :<|> AadhaarVerification.handler
     :<|> Issue.handler
-    :<|> Tickets.handler
+    :<|> TicketService.handler

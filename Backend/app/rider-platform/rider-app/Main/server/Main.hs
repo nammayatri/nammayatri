@@ -18,4 +18,5 @@ import App
 import EulerHS.Prelude
 
 main :: IO ()
-main = runRiderApp id
+main = do
+  runRiderApp id

@@ -1,4 +1,4 @@
-name: rider-app
+name: alchemist
 version: 0.1.0.0
 github: "nammayatri/nammayatri"
 license: AllRightsReserved
@@ -6,13 +6,15 @@ author: "nammayatri"
 maintainer: "nammayatri"
 copyright: "2023 Juspay Technologies Private Limited"
 
-synopsis: The nammayatri rider application
-
 flags:
   Local:
     description: Enable this flag for faster compile times
     manual: true
     default: false
+
+# Metadata used when publishing your package
+# synopsis:            Short description of your package
+# category:            Web
 
 # To avoid duplicated efforts in documentation and dealing with the
 # complications of embedding Haddock markup inside cabal files, it is
@@ -37,13 +39,14 @@ default-extensions:
   - MultiWayIf
   - NamedFieldPuns
   - NoImplicitPrelude
+  - OverloadedLabels
   - OverloadedStrings
+  - PackageImports
   - PatternSynonyms
   - PolyKinds
   - RankNTypes
   - RecordWildCards
   - ScopedTypeVariables
-  - StandaloneDeriving
   - TupleSections
   - TypeApplications
   - TypeFamilies
@@ -52,82 +55,51 @@ default-extensions:
   - BlockArguments
   - TypeSynonymInstances
   - UndecidableInstances
-  - PackageImports
 
 dependencies:
   - aeson
-  - amazonka
-  - amazonka-core
-  - amazonka-ses
   - base >= 4.7 && < 5
-  - base64-bytestring
+  - mobility-core
+  - beckn-spec
   - bytestring
-  - cryptonite
-  - cryptostore >= 0.2.3.0
-  - x509
-  - euler-hs
-  - lens
-  - memory
-  - prometheus-client
-  - wai-middleware-prometheus
-  - prometheus-metrics-ghc
-  - unliftio-core
-  - servant
-  - servant-client
-  - servant-client-core
-  - servant-server
-  - http-media
-  - text
-  - wai
-  - uuid
-  - wai-extra
-  - http-types
-  - warp
-  - time
-  - record-hasfield
   - record-dot-preprocessor
-  - servant-openapi3
-  - openapi3
+  - record-hasfield
+  - text
+  - time
+  - servant-server
   - persistent
-  - extra
-  - text-conversions
-  - dashboard-helper-api
-  - data-default-class
-  - http-types
-  - containers
-  - geohash == 1.0.1
-  - euler-hs
-  - unordered-containers
-  - vector
-  - cereal
-  - beam-core
-  - beam-mysql
-  - beam-postgres
+  - persistent-postgresql
+  - esqueleto
   - template-haskell
-  - sequelize
-  - casing
-  - postgresql-simple
-  - random
-  - alchemist
+  - parsec
   - raw-strings-qq
+  - regex-tdfa
+  - split
+  - unordered-containers
+  - lens
+  - casing
   - directory
+  - extra
+  - yaml
+  - lens-aeson
+  - scientific
+  - vector
   - filepath
 
 ghc-options:
+  - -Wall
+  - -Wcompat
+  - -Werror
+  - -Widentities
+  - -Wunused-imports
+  - -fplugin=RecordDotPreprocessor
   - -fwrite-ide-info
   - -hiedir=.hie
-  - -fplugin=RecordDotPreprocessor
 
 library:
-  source-dirs:
-    - src
-    - src-read-only
+  source-dirs: src
   ghc-options:
-    - -Wall
-    - -Wcompat
-    - -Widentities
-    - -fhide-source-paths
-    - -Werror
+    - -Wincomplete-uni-patterns
     - -Wwarn=ambiguous-fields
   when:
     - condition: flag(Local)
@@ -143,22 +115,21 @@ library:
         ghc-options:
           - -O2
           - -j4
-  dependencies:
-    - mobility-core
-    - beckn-spec
-    - beckn-services
-    - special-zone-a
-    - special-zone
-    - payment
-    - sessionizer-metrics
-    - beckn-services
-    - shared-services
-    - utils
+
+tests:
+  alchemist-tests:
+    main: Main.hs
+    source-dirs:
+      - tests
+      - src
+    dependencies:
+      - alchemist
 
 executables:
-  rider-app-exe:
+  alchemist-generator-exe:
     main: Main.hs
-    source-dirs: server
+    source-dirs:
+      - spec
     ghc-options:
       - -threaded
       - -rtsopts
@@ -178,6 +149,7 @@ executables:
           - -O2
           - -j4
     dependencies:
-      - rider-app
-      - mobility-core
       - beckn-spec
+      - mobility-core
+      - alchemist
+

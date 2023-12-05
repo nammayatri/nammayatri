@@ -37,6 +37,20 @@ _:
         '';
       };
 
+      run-generator = {
+        category = "Backend";
+        description = "Run run-generate to generate code.";
+        exec = ''
+          set -x
+          cd ./Backend  # These processes expect $PWD to be backend, for reading dhall configs
+          cabal run alchemist-generator-exe
+          cd ..
+          treefmt
+          hpack
+          hlint . --report
+        '';
+      };
+
       run-mobility-stack-nix = {
         category = "Backend";
         description = ''
