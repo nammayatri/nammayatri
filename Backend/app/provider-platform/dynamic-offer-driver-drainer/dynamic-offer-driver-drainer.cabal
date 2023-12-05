@@ -28,6 +28,8 @@ library
   exposed-modules:
       Config.Env
       Constants
+      DBQuery.Functions
+      DBQuery.Types
       DBSync.Create
       DBSync.DBSync
       DBSync.Delete
@@ -35,6 +37,10 @@ library
       Event.Event
       Types.Config
       Types.DBSync
+      Types.DBSync.Create
+      Types.DBSync.DBModel
+      Types.DBSync.Delete
+      Types.DBSync.Update
       Types.Event
       Utils.Config
       Utils.Event
