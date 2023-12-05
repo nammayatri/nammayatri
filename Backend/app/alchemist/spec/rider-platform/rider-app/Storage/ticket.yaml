@@ -47,9 +47,13 @@ TicketPlace:
     gallery: NotNull
     termsAndConditions: NotNull
 
-  # default:
-  #   gallery: []
-  #   termsAndConditions: []
+  queries:
+    getTicketPlaces:
+      kvFunction: findAllWithKV
+      where: merchantOperatingCityId
+    findById:
+      kvFunction: findOneWithKV
+      where: id
 
 TicketService:
   tableName : ticket_service
@@ -63,22 +67,26 @@ TicketService:
     maxVerification : Int
     allowFutureBooking : Bool
     expiry : ExpiryType
-    bussinessHours : "[Id BusinessHour]"
+    businessHours : "[Id BusinessHour]"
   types:
     ExpiryType:
-      enum: "SameDay,NextDay,NextWeek,NextMonth"
+      enum: "InstantExpiry Kernel.Prelude.Int,VisitDate Kernel.Prelude.TimeOfDay"
 
   constraints :
     id : PrimaryKey | NotNull
     serviceName : NotNull
     placeId : NotNull
-    bussinessHours : NotNull
+    businessHours : NotNull
     operationalDays : NotNull
 
   default:
     operationalDays: "{Monday, Tuesday, Wednesday, Thursday, Friday, Saturday, Sunday}"
 
   queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+
     getTicketServicesByPlaceId:
       kvFunction: findAllWithKV
       where: placeId
@@ -124,7 +132,7 @@ BusinessHour:
     categoryId: "[Id ServiceCategory]"
   types:
     BusinessHourType:
-      enum: "Slot,Duration"
+      enum: "Slot Kernel.Prelude.TimeOfDay,Duration Kernel.Prelude.TimeOfDay Kernel.Prelude.TimeOfDay"
 
   constraints :
     id : PrimaryKey | NotNull
@@ -152,6 +160,11 @@ ServiceCategory:
     name : NotNull
     description : NotNull
 
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+
 ServicePeopleCategory:
   tableName: service_people_category
 
@@ -159,13 +172,18 @@ ServicePeopleCategory:
     id: Id ServicePeopleCategory
     name: Text
     description: Text
-    pricePerUnit: Int
+    pricePerUnit: HighPrecMoney
 
   constraints :
     id : PrimaryKey|NotNull
     name : NotNull
     description : NotNull
     pricePerUnit : NotNull
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
 
 SeatManagement:
   tableName: seat_management
@@ -227,13 +245,31 @@ TicketBooking:
     status: NotNull
     createdAt: NotNull
     updatedAt: NotNull
+
   types:
     BookingStatus:
-      enum: "Pending,Confirmed,Cancelled,Expired"
+      enum: "Pending,Failed,Booked"
+      derive: HttpInstance
 
   default:
     createdAt: CURRENT_TIMESTAMP
     updatedAt: CURRENT_TIMESTAMP
+
+  queries:
+    updateStatusByShortId:
+      kvFunction: updateWithKV
+      params: [status, updatedAt]
+      where: shortId
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+    findByShortId:
+      kvFunction: findOneWithKV
+      where: shortId
+    getAllBookingsByPersonId:
+      kvFunction: findAllWithOptionsKV
+      where:
+        and: [personId, merchantOperatingCityId, status]
 
 TicketBookingService:
   tableName: ticket_booking_service
@@ -254,7 +290,7 @@ TicketBookingService:
 
   types:
     ServiceStatus:
-      enum: "Pending,Confirmed,Cancelled,Expired"
+      enum: "Pending,Failed,Confirmed,Verified"
 
   constraints:
     id: PrimaryKey|NotNull
@@ -273,6 +309,25 @@ TicketBookingService:
     createdAt: CURRENT_TIMESTAMP
     updatedAt: CURRENT_TIMESTAMP
 
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+    findByShortId:
+      kvFunction: findOneWithKV
+      where: shortId
+    findAllByBookingId:
+      kvFunction: findAllWithKV
+      where: ticketBookingId
+    updateAllStatusByBookingId:
+      kvFunction: updateWithKV
+      params: [status, updatedAt]
+      where: ticketBookingId
+    updateVerificationById:
+      kvFunction: updateWithKV
+      params: [status, verificationCount, updatedAt]
+      where: id
+
 TicketBookingServiceCategory:
   tableName: ticket_booking_service_category
 
@@ -282,8 +337,14 @@ TicketBookingServiceCategory:
     name: Text
     bookedSeats: Int
     amount: HighPrecMoney
+
   constraints:
     id: PrimaryKey|NotNull
+
+  queries:
+    findAllByTicketBookingServiceId:
+      kvFunction: findAllWithKV
+      where: ticketBookingServiceId
 
 TicketBookingPeopleCategory:
   tableName: ticket_booking_people_category
@@ -301,3 +362,6 @@ TicketBookingPeopleCategory:
     findById:
       kvFunction: findOneWithKV
       where: id
+    findAllByServiceCategoryId:
+      kvFunction: findAllWithKV
+      where: ticketBookingServiceCategoryId

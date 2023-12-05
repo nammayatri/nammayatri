@@ -420,13 +420,11 @@ library
       Storage.Queries.TicketBookingServiceCategory
       Storage.Queries.TicketPlace
       Storage.Queries.TicketService
-      Spec
   other-modules:
       Paths_rider_app
   hs-source-dirs:
       src
       src-read-only
-      spec
   default-extensions:
       ConstraintKinds
       DataKinds
