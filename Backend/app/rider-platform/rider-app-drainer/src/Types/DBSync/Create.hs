@@ -1,4 +1,3 @@
-{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DerivingStrategies #-}
 
 module Types.DBSync.Create where

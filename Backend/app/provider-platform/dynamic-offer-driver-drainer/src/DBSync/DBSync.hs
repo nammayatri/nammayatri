@@ -131,7 +131,7 @@ runCriticalDBSyncOperations dbStreamKey updateEntries deleteEntries createDataEn
             throwE (length cSucc)
       else pure (length cSucc)
   {- run updates parallel -}
-  (uSucc, uFail) <- pureRightExceptT $ executeInSequence rundUpdate ([], []) dbStreamKey updateEntries
+  (uSucc, uFail) <- pureRightExceptT $ executeInSequence runUpdate ([], []) dbStreamKey updateEntries
   void $ pureRightExceptT $ publishDBSyncMetric $ Event.DrainerQueryExecutes "Update" (fromIntegral $ length uSucc)
   void $
     if null uSucc

@@ -1,16 +1,20 @@
 module DBSync.Create where
 
 import Config.Env
+import DBQuery.Functions
+import DBQuery.Types
 import qualified Data.Aeson as A
-import qualified Data.HashMap.Strict as HM
+import qualified Data.ByteString.Lazy as LBS
 import Data.Maybe
 import Data.Text as T hiding (any, map, null)
 import qualified Data.Text.Encoding as TE
-import qualified Data.Vector as V
 import Database.PostgreSQL.Simple.Types
 import EulerHS.Language as EL
 import EulerHS.Prelude
+import Text.Casing (pascal)
+import "dynamic-offer-driver-app" Tools.Beam.UtilsTH (currentSchemaName)
 import Types.DBSync
+import Types.DBSync.Create
 import Utils.Utils
 
 -- | This function is used to run the create operation for a single entry in the stream
@@ -19,37 +23,37 @@ runCreate createDataEntry streamName = do
   Env {..} <- ask
   isPushToKafka' <- EL.runIO isPushToKafka
   let (entryId, streamData) = createDataEntry
-      (mbModel, mbObject, mbMappings) = getDataFromByteStringForCreate streamData
-  case (mbModel, mbObject) of
-    (Just model, Just obj) -> do
-      let tableName = getModelname model 6 -- 6 because this string has "Object" appendend to it along with the model name
+  EL.logDebug ("BYTE STRING" :: Text) (show streamData)
+  case A.eitherDecode @DBCreateObject . LBS.fromStrict $ streamData of
+    Right createDBModel -> do
+      EL.logDebug ("DB OBJECT" :: Text) (show createDBModel)
+      let tableName = createDBModel.dbModel
       if shouldPushToDbOnly tableName _dontEnableForKafka || not isPushToKafka'
-        then runCreateQuery createDataEntry (mbModel, mbObject, mbMappings) tableName
+        then runCreateQuery createDataEntry createDBModel
         else do
-          let createObject = getObjectForKafka obj mbMappings
+          let createObject = getCreateObjectForKafka tableName createDBModel.contentsObj
           res <- EL.runIO $ createInKafka _kafkaConnection createObject streamName tableName
           case res of
             Left err -> do
-              EL.logError ("KAFKA CREATE FAILED" :: Text) (err <> " for Object :: " <> show obj)
+              EL.logError ("KAFKA CREATE FAILED" :: Text) (err <> " for Object :: " <> show createDBModel.contents)
               return $ Left entryId
             Right _ -> do
-              EL.logInfo ("KAFKA CREATE SUCCESSFUL" :: Text) (" Create successful for object :: " <> show obj)
-              runCreateQuery createDataEntry (mbModel, mbObject, mbMappings) tableName
-    _ -> do
-      EL.logError ("CREATE FAILED" :: Text) ("Invalid streamData or Extraction of data from redis stream failed :: " <> TE.decodeUtf8 streamData)
+              EL.logInfo ("KAFKA CREATE SUCCESSFUL" :: Text) (" Create successful for object :: " <> show createDBModel.contents)
+              runCreateQuery createDataEntry createDBModel
+    Left err -> do
+      EL.logError ("CREATE FAILED" :: Text) ("Invalid streamData or Extraction of data from redis stream failed :: " <> TE.decodeUtf8 streamData <> "; error :: " <> show err)
       return $ Left entryId
 
 -- | Run a create query for a single entry in the stream
-runCreateQuery :: (EL.KVDBStreamEntryID, ByteString) -> (Maybe Text, Maybe A.Object, Maybe A.Object) -> Text -> ReaderT Env EL.Flow (Either EL.KVDBStreamEntryID EL.KVDBStreamEntryID)
-runCreateQuery createDataEntry createData tableName = do
+runCreateQuery :: (EL.KVDBStreamEntryID, ByteString) -> DBCreateObject -> ReaderT Env EL.Flow (Either EL.KVDBStreamEntryID EL.KVDBStreamEntryID)
+runCreateQuery createDataEntry dbCreateObject = do
   Env {..} <- ask
   let (entryId, byteString) = createDataEntry
-      (mbModel, mbObject, mbMappings) = createData
-  EL.logDebug ("BYTE STRING" :: Text) (show byteString)
-  if shouldPushToKafkaOnly tableName _dontEnableDbTables
+      dbModel = dbCreateObject.dbModel
+  if shouldPushToKafkaOnly dbModel _dontEnableDbTables
     then return $ Right entryId
     else do
-      let insertQuery = generateInsertForTable (mbModel, mbObject, mbMappings) tableName
+      let insertQuery = generateInsertForTable dbCreateObject
       case insertQuery of
         Just query -> do
           result <- EL.runIO $ try $ executeQuery _pgConnection (Query $ TE.encodeUtf8 query)
@@ -64,30 +68,17 @@ runCreateQuery createDataEntry createData tableName = do
           EL.logError ("No query generated for streamData: " :: Text) (TE.decodeUtf8 byteString)
           return $ Left entryId
 
--- | Generate an insert query for the atlas_driver_offer_bpp schema
-generateInsertForTable :: (Maybe Text, Maybe A.Object, Maybe A.Object) -> Text -> Maybe Text
-generateInsertForTable (mbModel, mbObject, mbMappings) tableName =
-  case (mbModel, mbObject) of
-    (Just _, Just object') -> do
-      let keys' = HM.keys object'
-          newKeys = map (`replaceMappings` fromMaybe HM.empty mbMappings) keys'
-          newKeys' = map (quote' . textToSnakeCaseText) newKeys
-          values = map (valueToText . fromMaybe A.Null . (`HM.lookup` object')) keys'
-          table = "atlas_driver_offer_bpp." <> quote' tableName
-          inserts = T.intercalate ", " newKeys'
-          valuesList = T.intercalate ", " values
-      Just $ "INSERT INTO " <> table <> " (" <> inserts <> ") VALUES (" <> valuesList <> ")" <> " ON CONFLICT DO NOTHING;"
-    _ -> Nothing
+-- | Generate an insert query for the rider_app schema
+generateInsertForTable :: DBCreateObject -> Maybe Text
+generateInsertForTable DBCreateObject {dbModel, contents, mappings} = do
+  let DBCreateObjectContent termWarps = contents
+  let schema = SchemaName $ T.pack currentSchemaName
+  generateInsertQuery InsertQuery {..}
 
--- This function is used to extract the model name, object and mappings from the stream data
-getDataFromByteStringForCreate :: ByteString -> (Maybe Text, Maybe A.Object, Maybe A.Object)
-getDataFromByteStringForCreate dbCommandByteString =
-  case A.decodeStrict dbCommandByteString of
-    Just (A.Object o) ->
-      case HM.lookup "contents" o of
-        Just (A.Array a) ->
-          case V.last a of
-            (A.Object obj) -> (lookupText "tag" obj, lookupObject "contents" obj, lookupObject "mappings" obj)
-            _ -> (Nothing, Nothing, Nothing)
-        _ -> (Nothing, Nothing, Nothing)
-    _ -> (Nothing, Nothing, Nothing)
+getCreateObjectForKafka :: DBModel -> A.Object -> A.Value
+getCreateObjectForKafka model content =
+  A.object
+    [ "contents" A..= content,
+      "tag" A..= ((T.pack . pascal . T.unpack) model.getDBModel <> "Object"),
+      "type" A..= ("INSERT" :: Text)
+    ]
