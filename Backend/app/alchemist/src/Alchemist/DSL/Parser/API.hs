@@ -1,8 +1,6 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE TemplateHaskell #-}
-{-# OPTIONS_GHC -Wno-incomplete-patterns #-}
 {-# OPTIONS_GHC -Wno-name-shadowing #-}
-{-# OPTIONS_GHC -Wno-unused-top-binds #-}
 
 module Alchemist.DSL.Parser.API where
 
@@ -20,8 +18,7 @@ import Data.List.Split (split, whenElt)
 import qualified Data.Text as T
 import qualified Data.Vector as V
 import qualified Data.Yaml as Yaml
-import Kernel.Prelude hiding (toText) --,traceShowId)
---import Debug.Trace (traceShowId)
+import Kernel.Prelude hiding (toText)
 
 apiParser :: FilePath -> IO Apis
 apiParser filepath = do
@@ -38,14 +35,13 @@ parseTypes = preview (ix "types" . _Value)
 
 parseApis :: Object -> Apis
 parseApis obj =
-  maybe (error "Failed to parse") (\r -> set imports (extractImports r) r) res
+  set imports (extractImports res) res
   where
-    res = mkQApis <$> (Apis <$> modelName <*> allApis <*> Just [] <*> (Just parseTyp))
+    res = mkQApis (Apis modelName allApis [] parseTyp)
     mkQualified = makeTypeQualified obj
-    modelName = parseModule obj
+    modelName = fromMaybe (error "Required module name") $ parseModule obj
     parseTyp = markQualifiedTypesInTypes modelName (typesToTypeObject (parseTypes obj)) obj
-    -- parseTyp = typesToTypeObject (parseTypes obj)
-    allApis = preview (ix "apis" . _Array . to V.toList) obj >>= (mapM parseSingleApi)
+    allApis = fromMaybe (error "Failed to parse apis") $ preview (ix "apis" . _Array . to V.toList) obj >>= (mapM parseSingleApi)
     mkQApis aps = aps & apis . traverse %~ mkQUrlApiTT
     mkQApiReq (ApiReq t1 t2) = ApiReq (mkQualified t1) t2
     mkQApiRes (ApiRes t1 t2) = ApiRes (mkQualified t1) t2
@@ -60,16 +56,10 @@ parseApis obj =
         & urlParts . traverse %~ mkQUrlParts
         & header . traverse %~ mkQHeaders
 
-checkIfTypeExists :: Text -> [Text] -> Bool
-checkIfTypeExists t1 t2 = any (\t -> t == t1 || "[" <> t <> "]" == t1) t2
-
-checkTypeNames :: [TypeObject] -> [[Text]]
-checkTypeNames input = map (\(_, y) -> map (\(_, b) -> (if checkIfTypeExists b (map fst input) then b else b <> "mkQualified")) y) input
-
-markQualifiedTypesInTypes :: Maybe Text -> [TypeObject] -> Object -> [TypeObject]
+markQualifiedTypesInTypes :: Text -> [TypeObject] -> Object -> [TypeObject]
 markQualifiedTypesInTypes moduleName input obj =
   let dataNames = map (T.unpack . fst) input
-   in map (\(x, y) -> (x, map (\(a, b) -> (a, T.pack $ makeTypeQualified1 (T.unpack <$> moduleName) (Just dataNames) Nothing obj (T.unpack b))) y)) input
+   in map (\(x, y) -> (x, map (\(a, b) -> (a, T.pack $ makeTypeQualified1 (Just $ T.unpack moduleName) (Just dataNames) Nothing obj (T.unpack b))) y)) input
 
 extractImports :: Apis -> [Text]
 extractImports api =
@@ -102,25 +92,23 @@ extractImports api =
     importFromUrlPart (QueryParam _ t2 _) = Just t2
     importFromUrlPart _ = Nothing
 
---importFromUrlPart _ = error "Not a valid url part"
-
 parseSingleApi :: Value -> Maybe ApiTT
 parseSingleApi (Object ob) = do
   let (key, val) = head $ KM.toList ob
   let apiTp = getApiType $ toText key
   obj <- preview (_Object) val
   let params = fromMaybe KM.empty $ preview (ix "params" ._Object) obj
-  endpoint <- preview (ix "endpoint" . _String . to (parseEndpoint params)) obj
+  let endpoint = parseEndpoint params $ fromMaybe (error "Endpoint not found !") $ preview (ix "endpoint" . _String) obj
 
-  let auth = getAuthType <$> preview (ix "auth" . _String) obj
+  let auth = maybe Nothing (Just . getAuthType) $ preview (ix "auth" . _String) obj
 
   let requestObj = preview (ix "request" . _Object) obj
   let requestTp = requestObj >>= preview (ix "type" . _String)
   let requestFmt = Just $ fromMaybe "JSON" $ requestObj >>= preview (ix "format" . _String)
   let req = ApiReq <$> requestTp <*> requestFmt
 
-  responseObj <- preview (ix "response" . _Object) obj
-  responseTp <- preview (ix "type" . _String) responseObj
+  let responseObj = fromMaybe (error "Response Object is required") $ preview (ix "response" . _Object) obj
+  let responseTp = fromMaybe (error "Response type is required") $ preview (ix "type" . _String) responseObj
   let responseFmt = fromMaybe "JSON" $ preview (ix "format" . _String) responseObj
   let res = ApiRes responseTp responseFmt
 
@@ -207,7 +195,7 @@ typesToTypeObject (Just (Object obj)) =
     processType1 (typeName, Object typeDef) =
       (toText typeName, extractFields typeDef)
     processType1 _ = error "Expected an object in fields"
-typesToTypeObject Nothing = error "Expecting Object in Types"
+typesToTypeObject _ = error "Expecting Object in Types"
 
 makeTypeQualified1 :: Maybe String -> Maybe [String] -> Maybe [String] -> Object -> String -> String
 makeTypeQualified1 moduleName excludedList dList obj str = concatMap replaceOrKeep (split (whenElt (`elem` U.typeDelimiter)) str)

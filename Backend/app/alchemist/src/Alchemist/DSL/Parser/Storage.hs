@@ -228,7 +228,10 @@ sqlTypeWrtType =
     ("Bool", "boolean"),
     ("UTCTime", "timestamp with time zone"),
     ("TimeOfDay", "time without time zone"),
-    ("Day", "date")
+    ("Day", "date"),
+    ("Meters", "interger"),
+    ("HighPrecMeters", "integer"),
+    ("Kilometers", "integer")
   ]
 
 extractKeys :: [FieldDef] -> ([String], [String])
