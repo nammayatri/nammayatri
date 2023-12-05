@@ -1,3 +1,5 @@
+DROP TABLE IF EXISTS atlas_app.service_category;
+
 CREATE TABLE atlas_app.service_category ();
 
 ALTER TABLE atlas_app.service_category ADD COLUMN allowed_seats integer ;

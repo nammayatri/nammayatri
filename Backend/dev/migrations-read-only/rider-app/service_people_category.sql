@@ -1,3 +1,5 @@
+DROP TABLE IF EXISTS atlas_app.service_people_category;
+
 CREATE TABLE atlas_app.service_people_category ();
 
 ALTER TABLE atlas_app.service_people_category ADD COLUMN description text NOT NULL;

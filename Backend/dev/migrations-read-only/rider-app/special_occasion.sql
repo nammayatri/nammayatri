@@ -1,3 +1,5 @@
+DROP TABLE IF EXISTS atlas_app.special_occasion;
+
 CREATE TABLE atlas_app.special_occasion ();
 
 ALTER TABLE atlas_app.special_occasion ADD COLUMN business_hours text[] NOT NULL;

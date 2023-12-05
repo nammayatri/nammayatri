@@ -16,7 +16,6 @@ module Main where
 
 import App
 import EulerHS.Prelude
-import Spec
 
 main :: IO ()
 main = do

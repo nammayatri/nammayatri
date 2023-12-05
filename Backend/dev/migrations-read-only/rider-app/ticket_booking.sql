@@ -1,3 +1,5 @@
+DROP TABLE IF EXISTS atlas_app.ticket_booking;
+
 CREATE TABLE atlas_app.ticket_booking ();
 
 ALTER TABLE atlas_app.ticket_booking ADD COLUMN amount double precision NOT NULL;

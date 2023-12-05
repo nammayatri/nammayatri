@@ -1,3 +1,5 @@
+DROP TABLE IF EXISTS atlas_app.seat_management;
+
 CREATE TABLE atlas_app.seat_management ();
 
 ALTER TABLE atlas_app.seat_management ADD COLUMN blocked integer NOT NULL;

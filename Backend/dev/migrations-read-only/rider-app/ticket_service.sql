@@ -1,3 +1,5 @@
+DROP TABLE IF EXISTS atlas_app.ticket_service;
+
 CREATE TABLE atlas_app.ticket_service ();
 
 ALTER TABLE atlas_app.ticket_service ADD COLUMN allow_future_booking boolean ;

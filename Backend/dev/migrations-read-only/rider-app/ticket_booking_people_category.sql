@@ -1,3 +1,5 @@
+DROP TABLE IF EXISTS atlas_app.ticket_booking_people_category;
+
 CREATE TABLE atlas_app.ticket_booking_people_category ();
 
 ALTER TABLE atlas_app.ticket_booking_people_category ADD COLUMN id character varying(36) NOT NULL;

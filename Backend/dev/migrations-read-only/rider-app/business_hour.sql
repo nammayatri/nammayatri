@@ -1,3 +1,5 @@
+DROP TABLE IF EXISTS atlas_app.business_hour;
+
 CREATE TABLE atlas_app.business_hour ();
 
 ALTER TABLE atlas_app.business_hour ADD COLUMN btype text NOT NULL;

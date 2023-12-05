@@ -1,3 +1,5 @@
+DROP TABLE IF EXISTS atlas_app.ticket_place;
+
 CREATE TABLE atlas_app.ticket_place ();
 
 ALTER TABLE atlas_app.ticket_place ADD COLUMN close_timings time without time zone ;
