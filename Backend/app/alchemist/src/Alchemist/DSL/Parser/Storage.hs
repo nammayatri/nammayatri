@@ -36,7 +36,7 @@ parseTableDef dList importObj (parseDomainName, obj) =
       excludedList = parsedTypesAndExcluded >>= pure . snd
       parsedFields = parseFields (Just parseDomainName) excludedList dList importObj obj
       parsedImports = parseImports parsedFields
-      parsedQueries = parseQueries dList importObj obj
+      parsedQueries = parseQueries (Just parseDomainName) excludedList dList importObj obj
       (primaryKey, secondaryKey) = extractKeys parsedFields
    in TableDef parseDomainName (parseTableName obj) parsedFields parsedImports parsedQueries primaryKey secondaryKey parsedTypes
 
@@ -51,10 +51,10 @@ parseImports fields =
 searchForKey :: Object -> String -> (String, String)
 searchForKey obj inputKey = (inputKey, fromMaybe (error $ T.pack $ "Query param " ++ inputKey ++ " not found in fields") $ obj ^? (ix "fields" . key (fromString inputKey) . _String))
 
-parseQueries :: [String] -> Object -> Object -> [QueryDef]
-parseQueries dList impObj obj = do
+parseQueries :: Maybe String -> Maybe [String] -> [String] -> Object -> Object -> [QueryDef]
+parseQueries moduleName excludedList dList impObj obj = do
   let mbQueries = preview (ix "queries" . _Value . to mkListObject) obj
-      makeTypeQualified' = makeTypeQualified Nothing Nothing (Just dList) impObj --TODO
+      makeTypeQualified' = makeTypeQualified moduleName excludedList (Just dList) impObj
       parseQuery query =
         let queryName = fst query
             queryDataObj = snd query

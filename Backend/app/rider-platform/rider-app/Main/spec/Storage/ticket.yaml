@@ -235,6 +235,16 @@ TicketBooking:
     createdAt: CURRENT_TIMESTAMP
     updatedAt: CURRENT_TIMESTAMP
 
+  queries:
+    updateStatusByShortId:
+      kvFunction: updateWithKV
+      params: [status, updatedAt]
+      where: shortId
+
+    findByShortId:
+      kvFunction: findOneWithKV
+      where: shortId
+
 TicketBookingService:
   tableName: ticket_booking_service
 
@@ -273,6 +283,14 @@ TicketBookingService:
     createdAt: CURRENT_TIMESTAMP
     updatedAt: CURRENT_TIMESTAMP
 
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+    findAllByBookingId:
+      kvFunction: findAllWithKV
+      where: ticketBookingId
+
 TicketBookingServiceCategory:
   tableName: ticket_booking_service_category
 
@@ -284,6 +302,11 @@ TicketBookingServiceCategory:
     amount: HighPrecMoney
   constraints:
     id: PrimaryKey|NotNull
+
+  queries:
+    findAllByTicketBookingServiceId:
+      kvFunction: findAllWithKV
+      where: ticketBookingServiceId
 
 TicketBookingPeopleCategory:
   tableName: ticket_booking_people_category
@@ -301,3 +324,6 @@ TicketBookingPeopleCategory:
     findById:
       kvFunction: findOneWithKV
       where: id
+    findAllByServiceCategoryId:
+      kvFunction: findAllWithKV
+      where: ticketBookingServiceCategoryId

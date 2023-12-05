@@ -118,7 +118,13 @@ generateFunctionSignature query tableNameHaskell =
         ++ "= do\n"
   where
     getIdsOut :: (String, String) -> (String, String)
-    getIdsOut (k, t) = if (isPrefixOf "Kernel.Types.Id.Id " t) then ("(Kernel.Types.Id.Id " ++ k ++ ")", t) else (k, t)
+    getIdsOut (k, t) =
+      if (isPrefixOf "Kernel.Types.Id.Id " t)
+        then ("(Kernel.Types.Id.Id " ++ k ++ ")", t)
+        else
+          if (isPrefixOf "Kernel.Types.Id.ShortId " t)
+            then ("(Kernel.Types.Id.ShortId " ++ k ++ ")", t)
+            else (k, t)
 
 generateQueryReturnType :: String -> String -> String
 generateQueryReturnType kvFunction tableNameHaskell = do
