@@ -288,7 +288,7 @@ TicketBookingService:
       kvFunction: findOneWithKV
       where: id
     findAllByBookingId:
-      kvFunction: findAllWithKV
+      kvFunction: findAllWithOptionsKV
       where: ticketBookingId
 
 TicketBookingServiceCategory:

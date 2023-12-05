@@ -20,11 +20,14 @@ import qualified Storage.Beam.TicketBookingService as Beam
 create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.TicketBookingService.TicketBookingService -> m ()
 create = createWithKV
 
-findAllByBookingId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.TicketBooking.TicketBooking -> m ([Domain.Types.TicketBookingService.TicketBookingService])
-findAllByBookingId (Kernel.Types.Id.Id ticketBookingId) = do
-  findAllWithKV
+findAllByBookingId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Maybe Int -> Maybe Int -> Kernel.Types.Id.Id Domain.Types.TicketBooking.TicketBooking -> m ([Domain.Types.TicketBookingService.TicketBookingService])
+findAllByBookingId limit offset (Kernel.Types.Id.Id ticketBookingId) = do
+  findAllWithOptionsKV
     [ Se.Is Beam.ticketBookingId $ Se.Eq ticketBookingId
     ]
+    (Se.Desc Beam.createdAt)
+    limit
+    offset
 
 findById :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.TicketBookingService.TicketBookingService -> m (Maybe (Domain.Types.TicketBookingService.TicketBookingService))
 findById (Kernel.Types.Id.Id id) = do
