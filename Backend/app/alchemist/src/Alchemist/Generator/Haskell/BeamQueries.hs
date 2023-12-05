@@ -99,13 +99,23 @@ generateBeamQuery tableNameHaskell query =
     ++ "    ["
     ++ genWhereClause
     ++ (if genWhereClause == "" then "" else "\n    ")
-    ++ "]\n\n"
+    ++ "]\n"
+    ++ orderAndLimit query
   where
     genWhereClause = generateClause 6 0 query.whereClause
 
+orderAndLimit :: QueryDef -> String
+orderAndLimit query = do
+  if query.kvFunction `elem` ["findAllWithOptionsKV", "findAllWithOptionsKV'", "findAllWithOptionsKVScheduler", "findAllWithOptionsDb"]
+    then
+      "    (Se.Desc Beam.createdAt)\n"
+        ++ "    limit\n"
+        ++ "    offset\n\n"
+    else "\n"
+
 generateFunctionSignature :: QueryDef -> String -> String
 generateFunctionSignature query tableNameHaskell =
-  let qparams = map getIdsOut $ nub (params query ++ (getWhereClauseFieldNamesAndTypes (whereClause query)))
+  let qparams = map getIdsOut $ nub (params query ++ addLimitParams query ++ (getWhereClauseFieldNamesAndTypes (whereClause query)))
    in query.queryName
         ++ " :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => "
         ++ foldMap (\s -> s ++ " -> ") (map snd qparams)
@@ -116,15 +126,18 @@ generateFunctionSignature query tableNameHaskell =
         ++ " "
         ++ foldMap (\s -> s ++ " ") (map fst qparams)
         ++ "= do\n"
-  where
-    getIdsOut :: (String, String) -> (String, String)
-    getIdsOut (k, t) =
-      if (isPrefixOf "Kernel.Types.Id.Id " t)
-        then ("(Kernel.Types.Id.Id " ++ k ++ ")", t)
-        else
-          if (isPrefixOf "Kernel.Types.Id.ShortId " t)
-            then ("(Kernel.Types.Id.ShortId " ++ k ++ ")", t)
-            else (k, t)
+
+addLimitParams :: QueryDef -> [(String, String)]
+addLimitParams query =
+  if query.kvFunction `elem` ["findAllWithOptionsKV", "findAllWithOptionsKV'", "findAllWithOptionsKVScheduler", "findAllWithOptionsDb"]
+    then [("limit", "Maybe Int"), ("offset", "Maybe Int")]
+    else []
+
+getIdsOut :: (String, String) -> (String, String)
+getIdsOut (k, t)
+  | "Kernel.Types.Id.Id " `isPrefixOf` t = ("(Kernel.Types.Id.Id " ++ k ++ ")", t)
+  | "Kernel.Types.Id.ShortId " `isPrefixOf` t = ("(Kernel.Types.Id.ShortId " ++ k ++ ")", t)
+  | otherwise = (k, t)
 
 generateQueryReturnType :: String -> String -> String
 generateQueryReturnType kvFunction tableNameHaskell = do
