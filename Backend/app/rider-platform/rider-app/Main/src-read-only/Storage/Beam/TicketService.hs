@@ -19,8 +19,8 @@ data TicketServiceT f = TicketServiceT
     id :: B.C f Kernel.Prelude.Text,
     maxVerification :: B.C f Kernel.Prelude.Int,
     operationalDays :: B.C f [Kernel.Prelude.Text],
-    placeId :: B.C f Kernel.Prelude.Text,
-    serviceName :: B.C f Kernel.Prelude.Text,
+    placesId :: B.C f Kernel.Prelude.Text,
+    service :: B.C f Kernel.Prelude.Text,
     shortDesc :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)
   }
   deriving (Generic, B.Beamable)

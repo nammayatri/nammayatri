@@ -14,8 +14,8 @@ data TicketService = TicketService
     id :: Kernel.Types.Id.Id Domain.Types.TicketService.TicketService,
     maxVerification :: Kernel.Prelude.Int,
     operationalDays :: [Kernel.Prelude.Text],
-    placeId :: Kernel.Prelude.Text,
-    serviceName :: Kernel.Prelude.Text,
+    placesId :: Kernel.Prelude.Text,
+    service :: Kernel.Prelude.Text,
     shortDesc :: Kernel.Prelude.Maybe Kernel.Prelude.Text
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)

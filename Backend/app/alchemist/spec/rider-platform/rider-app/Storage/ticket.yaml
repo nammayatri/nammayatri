@@ -47,6 +47,9 @@ TicketPlace:
     gallery: NotNull
     termsAndConditions: NotNull
 
+  default:
+    termsAndConditions: "[]"
+
   queries:
     getTicketPlaces:
       kvFunction: findAllWithKV
@@ -60,8 +63,8 @@ TicketService:
 
   fields :
     id : Id TicketService
-    placeId : Text
-    serviceName : Text
+    placesId : Text
+    service : Text
     shortDesc : Maybe Text
     operationalDays : "[Text]"
     maxVerification : Int
@@ -74,8 +77,8 @@ TicketService:
 
   constraints :
     id : PrimaryKey | NotNull
-    serviceName : NotNull
-    placeId : NotNull
+    service : NotNull
+    placesId : NotNull
     businessHours : NotNull
     operationalDays : NotNull
 
@@ -89,7 +92,7 @@ TicketService:
 
     getTicketServicesByPlaceId:
       kvFunction: findAllWithKV
-      where: placeId
+      where: placesId
 
 SpecialOccasion:
   tableName : special_occasion
@@ -308,6 +311,7 @@ TicketBookingService:
   default:
     createdAt: CURRENT_TIMESTAMP
     updatedAt: CURRENT_TIMESTAMP
+    btype: "Duration 03:30:00 12:00:00"
 
   queries:
     findById:

@@ -148,7 +148,7 @@ apis:
 
   # GET /ticket/places/{placeId}/services
   - GET:
-      endpoint: /v2/ticket/places/{placeId}/services
+      endpoint: /ticket/places/{placeId}/services
       auth: TokenAuth
       params:
         placeId: Id TicketPlace
@@ -157,7 +157,7 @@ apis:
 
   # # POST /ticket/places/{placeId}/book
   - POST:
-      endpoint: /v2/ticket/places/{placeId}/book
+      endpoint: /ticket/places/{placeId}/book
       auth: TokenAuth
       params:
         placeId: Id TicketPlace
@@ -180,7 +180,7 @@ apis:
 
   # # GET /ticket/places/bookings/{ticketBookingShortId}/details
   - GET:
-      endpoint: /v2/ticket/places/bookings/{ticketBookingShortId}/details
+      endpoint: /ticket/places/bookings/{ticketBookingShortId}/details
       auth: TokenAuth
       params:
         ticketBookingShortId: ShortId TicketBooking

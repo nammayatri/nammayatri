@@ -26,9 +26,9 @@ findById (Kernel.Types.Id.Id id) = do
     ]
 
 getTicketServicesByPlaceId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Prelude.Text -> m ([Domain.Types.TicketService.TicketService])
-getTicketServicesByPlaceId placeId = do
+getTicketServicesByPlaceId placesId = do
   findAllWithKV
-    [ Se.Is Beam.placeId $ Se.Eq placeId
+    [ Se.Is Beam.placesId $ Se.Eq placesId
     ]
 
 instance FromTType' Beam.TicketService Domain.Types.TicketService.TicketService where
@@ -42,8 +42,8 @@ instance FromTType' Beam.TicketService Domain.Types.TicketService.TicketService 
             id = Kernel.Types.Id.Id id,
             maxVerification = maxVerification,
             operationalDays = operationalDays,
-            placeId = placeId,
-            serviceName = serviceName,
+            placesId = placesId,
+            service = service,
             shortDesc = shortDesc
           }
 
@@ -56,7 +56,7 @@ instance ToTType' Beam.TicketService Domain.Types.TicketService.TicketService wh
         Beam.id = Kernel.Types.Id.getId id,
         Beam.maxVerification = maxVerification,
         Beam.operationalDays = operationalDays,
-        Beam.placeId = placeId,
-        Beam.serviceName = serviceName,
+        Beam.placesId = placesId,
+        Beam.service = service,
         Beam.shortDesc = shortDesc
       }

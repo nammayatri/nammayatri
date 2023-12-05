@@ -3,6 +3,7 @@
 
 module Domain.Action.UI.TicketService where
 
+import qualified Data.List.NonEmpty as DLN
 import Data.OpenApi (ToSchema)
 import qualified Data.Text as Data.Text
 import Data.Time (UTCTime (UTCTime), dayOfWeek, midnight, timeOfDayToTime, utctDay)
@@ -155,18 +156,23 @@ data TicketBookingServiceDetails = TicketBookingServiceDetails
   { amount :: Kernel.Types.Common.HighPrecMoney,
     categories :: [Domain.Action.UI.TicketService.TicketBookingCategoryDetails],
     expiryDate :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
-    serviceShortId :: Data.Text.Text,
+    ticketServiceShortId :: Data.Text.Text,
     slot :: Kernel.Prelude.Maybe Kernel.Prelude.TimeOfDay,
     status :: Domain.Types.TicketBookingService.ServiceStatus,
     ticketServiceName :: Data.Text.Text,
-    verificationCount :: Kernel.Prelude.Int
+    verificationCount :: Kernel.Prelude.Int,
+    -- deprecated fields
+    prices :: [TicketBookingServicePriceBreakup]
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
 data TicketBookingServicesReq = TicketBookingServicesReq
-  { businessHourId :: Kernel.Types.Id.Id Domain.Types.BusinessHour.BusinessHour,
-    categories :: [Domain.Action.UI.TicketService.TicketBookingCategoryReq],
-    serviceId :: Kernel.Types.Id.Id Domain.Types.TicketService.TicketService
+  { businessHourId :: Maybe (Kernel.Types.Id.Id Domain.Types.BusinessHour.BusinessHour), -- handle backward compatibility
+    categories :: Maybe [Domain.Action.UI.TicketService.TicketBookingCategoryReq],
+    serviceId :: Kernel.Types.Id.Id Domain.Types.TicketService.TicketService,
+    -- deprecated fields
+    attendeeType :: Maybe Data.Text.Text,
+    numberOfUnits :: Maybe Int
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
@@ -179,6 +185,23 @@ data TicketBookingUpdateSeatsReq = TicketBookingUpdateSeatsReq
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
+-- deprecated types
+data TicketServicePrice = TicketServicePrice
+  { ticketServiceId :: Data.Text.Text,
+    attendeeType :: Data.Text.Text,
+    pricePerUnit :: HighPrecMoney
+  }
+  deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
+
+-- deprecated types
+data TicketBookingServicePriceBreakup = TicketBookingServicePriceBreakup
+  { ticketBookingServiceId :: Kernel.Types.Id.Id DTB.TicketBookingService,
+    attendeeType :: Data.Text.Text,
+    numberOfUnits :: Int,
+    pricePerUnit :: HighPrecMoney
+  }
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+
 data TicketServiceResp = TicketServiceResp
   { allowFutureBooking :: Kernel.Prelude.Bool,
     businessHours :: [Domain.Action.UI.TicketService.BusinessHourResp],
@@ -186,7 +209,13 @@ data TicketServiceResp = TicketServiceResp
     id :: Kernel.Types.Id.Id Domain.Types.TicketService.TicketService,
     maxVerification :: Kernel.Prelude.Int,
     name :: Data.Text.Text,
-    placesId :: Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace
+    placesId :: Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace,
+    -- deprecated fields
+    service :: Data.Text.Text,
+    openTimings :: Maybe Kernel.Prelude.TimeOfDay,
+    closeTimings :: Maybe Kernel.Prelude.TimeOfDay,
+    validityTimings :: Maybe Kernel.Prelude.TimeOfDay,
+    prices :: [TicketServicePrice]
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
@@ -199,7 +228,7 @@ data TicketServiceVerificationResp = TicketServiceVerificationResp
     status :: Domain.Action.UI.TicketService.TicketVerificationStatus,
     ticketServiceName :: Kernel.Prelude.Maybe Data.Text.Text,
     ticketServiceShortId :: Kernel.Prelude.Maybe Data.Text.Text,
-    units :: Kernel.Prelude.Maybe [Domain.Types.Tickets.TicketBookingServicePriceBreakup],
+    units :: Kernel.Prelude.Maybe [TicketBookingServicePriceBreakup],
     validTill :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     verificationCount :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     visitDate :: Kernel.Prelude.Maybe Data.Time.Calendar.Day
@@ -224,8 +253,8 @@ getTicketPlaces (_, merchantId) = do
   merchantOpCity <- CQM.getDefaultMerchantOperatingCity merchantId
   QTP.getTicketPlaces merchantOpCity.id
 
-getV2TicketPlacesServices :: (Kernel.Types.Id.Id Domain.Types.Person.Person, Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace -> Environment.Flow [Domain.Action.UI.TicketService.TicketServiceResp]
-getV2TicketPlacesServices (_, _) placeId = do
+getTicketPlacesServices :: (Kernel.Types.Id.Id Domain.Types.Person.Person, Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace -> Environment.Flow [Domain.Action.UI.TicketService.TicketServiceResp]
+getTicketPlacesServices (_, _) placeId = do
   ticketServices <- QTS.getTicketServicesByPlaceId placeId.getId
   now <- getCurrentTime
   let currentDay = dayOfWeek $ utctDay now
@@ -243,14 +272,36 @@ getV2TicketPlacesServices (_, _) placeId = do
               TicketServiceResp
                 { id = service.id,
                   placesId = pId,
-                  name = service.serviceName,
+                  name = service.service,
                   maxVerification = service.maxVerification,
                   allowFutureBooking = service.allowFutureBooking,
                   expiry = service.expiry,
-                  businessHours
+                  businessHours,
+                  -- deprecated fields
+                  service = service.service,
+                  openTimings = Kernel.Prelude.listToMaybe businessHours >>= (.startTime),
+                  closeTimings = Kernel.Prelude.listToMaybe businessHours >>= (.endTime),
+                  validityTimings =
+                    case service.expiry of
+                      Domain.Types.TicketService.InstantExpiry _ -> Nothing
+                      Domain.Types.TicketService.VisitDate timeOfDay -> Just timeOfDay,
+                  prices = mkPrices service.id businessHours
                 }
         )
         ticketServicesWSpOcc
+
+    mkPrices :: Kernel.Types.Id.Id Domain.Types.TicketService.TicketService -> [BusinessHourResp] -> [TicketServicePrice]
+    mkPrices serviceId businessHours = do
+      let mbPeopleCategories = Kernel.Prelude.listToMaybe businessHours >>= Just . (.categories) >>= Kernel.Prelude.listToMaybe >>= Just . (.peopleCategories)
+      map (mkPrice serviceId) (fromMaybe [] mbPeopleCategories)
+
+    mkPrice :: Kernel.Types.Id.Id Domain.Types.TicketService.TicketService -> PeopleCategoriesResp -> TicketServicePrice
+    mkPrice serviceId PeopleCategoriesResp {..} =
+      TicketServicePrice
+        { ticketServiceId = Kernel.Types.Id.getId serviceId,
+          attendeeType = name,
+          pricePerUnit = pricePerUnit
+        }
 
     mkBusinessHoursRes service currDate mbSpecialOcc bhId = do
       businessHour <- QBH.findById bhId >>= fromMaybeM (BusinessHourNotFound bhId.getId)
@@ -304,16 +355,22 @@ getV2TicketPlacesServices (_, _) placeId = do
         Nothing -> Nothing
         Just availableSeats -> Just $ availableSeats - seatM.booked - seatM.blocked
 
-postV2TicketPlacesBook :: (Kernel.Types.Id.Id Domain.Types.Person.Person, Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace -> Domain.Action.UI.TicketService.TicketBookingReq -> Environment.Flow Kernel.External.Payment.Interface.Types.CreateOrderResp
-postV2TicketPlacesBook (personId, merchantId) placeId req = do
+postTicketPlacesBook :: (Kernel.Types.Id.Id Domain.Types.Person.Person, Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace -> Domain.Action.UI.TicketService.TicketBookingReq -> Environment.Flow Kernel.External.Payment.Interface.Types.CreateOrderResp
+postTicketPlacesBook (personId, merchantId) placeId req' = do
   person <- B.runInReplica $ QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   merchantOpCity <- CQM.getDefaultMerchantOperatingCity merchantId
 
+  -- to handle backward compatability fill in new data
+  req <-
+    case (Kernel.Prelude.head req'.services).businessHourId of
+      Nothing -> backfillTicketServiceReq req'
+      Just _ -> return req'
+
   ticketBookingId <- generateGUID
-  ticketBookingServices <- mapM (createTicketBookingService merchantOpCity.id ticketBookingId) req.services
+  ticketBookingServices <- mapM (createTicketBookingService req merchantOpCity.id ticketBookingId) req.services
 
   let amount = sum (map (.amount) ticketBookingServices)
-  ticketBooking <- createTicketBooking merchantOpCity.id ticketBookingId amount
+  ticketBooking <- createTicketBooking req merchantOpCity.id ticketBookingId amount
 
   QTBS.createMany ticketBookingServices
   QTB.create ticketBooking
@@ -345,7 +402,7 @@ postV2TicketPlacesBook (personId, merchantId) placeId req = do
     Nothing -> do
       throwError $ InternalError "Failed to create order"
   where
-    createTicketBooking merchantOperatingCityId ticketBookingId amount = do
+    createTicketBooking req merchantOperatingCityId ticketBookingId amount = do
       shortId <- generateShortId
       now <- getCurrentTime
       return $
@@ -362,15 +419,16 @@ postV2TicketPlacesBook (personId, merchantId) placeId req = do
             updatedAt = now
           }
 
-    createTicketBookingService merchantOperatingCityId ticketBookingId ticketServicesReq = do
+    createTicketBookingService req merchantOperatingCityId ticketBookingId ticketServicesReq = do
       let ticketServiceId = ticketServicesReq.serviceId
-      let bHourId = ticketServicesReq.businessHourId
+      bHourId <- ticketServicesReq.businessHourId & fromMaybeM (BusinessHourNotFound "No business hours found")
+      categories <- ticketServicesReq.categories & fromMaybeM (ServiceCategoryNotFound "No categories found")
       id <- generateGUID
       shortId <- generateShortId
       now <- getCurrentTime
       ticketService <- QTS.findById ticketServicesReq.serviceId >>= fromMaybeM (TicketServiceNotFound ticketServicesReq.serviceId.getId)
       businessHour <- QBH.findById bHourId >>= fromMaybeM (BusinessHourNotFound bHourId.getId)
-      tBookingSCats <- mapM (createTicketBookingServiceCategory id) ticketServicesReq.categories
+      tBookingSCats <- mapM (createTicketBookingServiceCategory id) categories
       QTBSC.createMany tBookingSCats
       let amount = sum (map (.amount) tBookingSCats)
       let expiry = calcExpiry ticketService.expiry req.visitDate now
@@ -436,6 +494,59 @@ postV2TicketPlacesBook (personId, merchantId) placeId req = do
       Domain.Types.TicketService.InstantExpiry minutes -> addUTCTime (fromIntegral (minutes * 60)) currentTime
       Domain.Types.TicketService.VisitDate timeOfDay -> UTCTime visitDate (timeOfDayToTime timeOfDay)
 
+    -- temporary code for backfilling
+    backfillTicketServiceReq :: Domain.Action.UI.TicketService.TicketBookingReq -> Environment.Flow Domain.Action.UI.TicketService.TicketBookingReq
+    backfillTicketServiceReq (TicketBookingReq services' visitDate) = do
+      let peopleCategoriesArray = map DLN.toList $ groupBy ((==) `on` serviceId) services'
+      services <-
+        mapM
+          ( \peopleCategories -> do
+              let ticketServiceId = (.serviceId) (Kernel.Prelude.head peopleCategories)
+              ticketService <- QTS.findById ticketServiceId >>= fromMaybeM (TicketServiceNotFound ticketServiceId.getId)
+              backfillTicketBookingServiceReq peopleCategories ticketService
+          )
+          peopleCategoriesArray
+      return $
+        TicketBookingReq
+          { services,
+            visitDate = visitDate
+          }
+
+    backfillTicketBookingServiceReq :: [TicketBookingServicesReq] -> Domain.Types.TicketService.TicketService -> Environment.Flow TicketBookingServicesReq
+    backfillTicketBookingServiceReq peopleCategories ticketService = do
+      businessHourId <- Kernel.Prelude.listToMaybe ticketService.businessHours & fromMaybeM (BusinessHourNotFound "No business hours found")
+      businessHour <- QBH.findById businessHourId >>= fromMaybeM (BusinessHourNotFound businessHourId.getId)
+      categoryId <- Kernel.Prelude.listToMaybe businessHour.categoryId & fromMaybeM (ServiceCategoryNotFound "No categories found")
+      category <- createTicketBookingCategoryReq categoryId peopleCategories
+      return $
+        TicketBookingServicesReq
+          { businessHourId = Just businessHourId,
+            categories = Just [category],
+            serviceId = ticketService.id,
+            attendeeType = Nothing,
+            numberOfUnits = Nothing
+          }
+
+    createTicketBookingCategoryReq :: Kernel.Types.Id.Id Domain.Types.ServiceCategory.ServiceCategory -> [TicketBookingServicesReq] -> Environment.Flow TicketBookingCategoryReq
+    createTicketBookingCategoryReq cid peopleCategories' = do
+      categoryConfig <- QSC.findById cid >>= fromMaybeM (ServiceCategoryNotFound cid.getId)
+      peopleCategoriesConfigs <- mapM QPC.findById categoryConfig.peopleCategory
+      peopleCategories <- mapM (createPeopleCategory (catMaybes peopleCategoriesConfigs)) peopleCategories'
+      return $
+        TicketBookingCategoryReq
+          { categoryId = cid,
+            peopleCategories
+          }
+
+    createPeopleCategory :: [Domain.Types.ServicePeopleCategory.ServicePeopleCategory] -> TicketBookingServicesReq -> Environment.Flow TicketBookingPeopleCategoryReq
+    createPeopleCategory peopleCategoriesConfigs TicketBookingServicesReq {..} = do
+      peopleCategory <- find (\pc -> Just pc.name == attendeeType) peopleCategoriesConfigs & fromMaybeM (PeopleCategoryNotFound "No people category found")
+      return $
+        TicketBookingPeopleCategoryReq
+          { numberOfUnits = fromMaybe 0 numberOfUnits,
+            peopleCategoryId = peopleCategory.id
+          }
+
 getTicketPlacesBookings :: (Kernel.Types.Id.Id Domain.Types.Person.Person, Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Domain.Types.TicketBooking.BookingStatus -> Environment.Flow [Domain.Action.UI.TicketService.TicketBookingAPIEntity]
 getTicketPlacesBookings (personId_, merchantId) mbLimit mbOffset status_ = do
   merchantOpCity <- CQM.getDefaultMerchantOperatingCity merchantId
@@ -454,8 +565,8 @@ getTicketPlacesBookings (personId_, merchantId) mbLimit mbOffset status_ = do
             ..
           }
 
-getV2TicketPlacesBookingsDetails :: (Kernel.Types.Id.Id Domain.Types.Person.Person, Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Types.Id.ShortId Domain.Types.TicketBooking.TicketBooking -> Environment.Flow Domain.Action.UI.TicketService.TicketBookingDetails
-getV2TicketPlacesBookingsDetails _ shortId_ = do
+getTicketPlacesBookingsDetails :: (Kernel.Types.Id.Id Domain.Types.Person.Person, Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Types.Id.ShortId Domain.Types.TicketBooking.TicketBooking -> Environment.Flow Domain.Action.UI.TicketService.TicketBookingDetails
+getTicketPlacesBookingsDetails _ shortId_ = do
   ticketBooking <- QTB.findByShortId shortId_ >>= fromMaybeM (TicketBookingNotFound shortId_.getShortId)
   ticketBookingServices <- QTBS.findAllByBookingId ticketBooking.id
   services <- mapM mkTicketBookingServiceDetails ticketBookingServices
@@ -480,9 +591,10 @@ getV2TicketPlacesBookingsDetails _ shortId_ = do
       return $
         TicketBookingServiceDetails
           { categories = categoryDetails,
-            serviceShortId = shortId.getShortId,
+            ticketServiceShortId = shortId.getShortId,
             slot = convertedBH.slot,
-            ticketServiceName = ticketService.serviceName,
+            ticketServiceName = ticketService.service,
+            prices = fromMaybe [] $ mkUnits categoryDetails (Just id),
             ..
           }
 
@@ -559,7 +671,7 @@ postTicketPlacesBookingsVerify _ = processBookingService
       serviceCatDetails <- mkTicketBookingCategoryDetails serviceCategories
       pure $
         TicketServiceVerificationResp
-          { ticketServiceName = mbTicketService <&> (.serviceName),
+          { ticketServiceName = mbTicketService <&> (.service),
             visitDate = mbBooking <&> (.visitDate),
             validTill = mbBookingService >>= (.expiryDate) >>= (Just . addUTCTime (secondsToNominalDiffTime 19800)), -- 19800 for +5:30 timezone
             ticketServiceShortId = mbBookingService <&> (.shortId) <&> (.getShortId),
@@ -592,23 +704,6 @@ postTicketPlacesBookingsVerify _ = processBookingService
             )
             list
 
-    mkUnits :: [TicketBookingCategoryDetails] -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id DTB.TicketBookingService) -> Maybe [Domain.Types.Tickets.TicketBookingServicePriceBreakup]
-    mkUnits serviceCatDetails mbTicketBookingServiceId = do
-      case serviceCatDetails of
-        [] -> Nothing
-        (x : _) ->
-          Just $
-            map
-              ( \peopleCat ->
-                  Domain.Types.Tickets.TicketBookingServicePriceBreakup
-                    { ticketBookingServiceId = Kernel.Types.Id.cast $ fromMaybe (Kernel.Types.Id.Id "") mbTicketBookingServiceId,
-                      attendeeType = peopleCat.name,
-                      numberOfUnits = peopleCat.numberOfUnits,
-                      pricePerUnit = peopleCat.pricePerUnit
-                    }
-              )
-              x.peopleCategories
-
     mkTicketBookingPeopleCategoryDetails :: DTB.TicketBookingPeopleCategory -> TicketBookingPeopleCategoryDetails
     mkTicketBookingPeopleCategoryDetails DTB.TicketBookingPeopleCategory {..} =
       TicketBookingPeopleCategoryDetails
@@ -625,7 +720,7 @@ postTicketPlacesBookingsVerify _ = processBookingService
             _ -> Nothing
         Nothing -> Nothing
 
-    verificationMsg :: TicketVerificationStatus -> Text
+    verificationMsg :: TicketVerificationStatus -> Data.Text.Text
     verificationMsg BookingSuccess = "Validated successfully!"
     verificationMsg BookingExpired = "Booking Expired!"
     verificationMsg BookingFuture = "Booking for Later Date!"
@@ -633,6 +728,24 @@ postTicketPlacesBookingsVerify _ = processBookingService
     verificationMsg DifferentService = "Different Service!"
     verificationMsg PaymentPending = "Payment Pending!"
     verificationMsg InvalidBooking = "Not a valid QR"
+
+-- deprecated function
+mkUnits :: [TicketBookingCategoryDetails] -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id DTB.TicketBookingService) -> Maybe [TicketBookingServicePriceBreakup]
+mkUnits serviceCatDetails mbTicketBookingServiceId = do
+  case serviceCatDetails of
+    [] -> Nothing
+    (x : _) ->
+      Just $
+        map
+          ( \peopleCat ->
+              TicketBookingServicePriceBreakup
+                { ticketBookingServiceId = Kernel.Types.Id.cast $ fromMaybe (Kernel.Types.Id.Id "") mbTicketBookingServiceId,
+                  attendeeType = peopleCat.name,
+                  numberOfUnits = peopleCat.numberOfUnits,
+                  pricePerUnit = peopleCat.pricePerUnit
+                }
+          )
+          x.peopleCategories
 
 getTicketPlacesBookingsStatus :: (Kernel.Types.Id.Id Domain.Types.Person.Person, Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Types.Id.ShortId Domain.Types.TicketBooking.TicketBooking -> Environment.Flow Domain.Types.TicketBooking.BookingStatus
 getTicketPlacesBookingsStatus (personId, merchantId) _shortId@(Kernel.Types.Id.ShortId shortId) = do
