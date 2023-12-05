@@ -418,7 +418,8 @@ scheduleJobs :: (CacheFlow m r, EsqDBFlow m r, HasField "schedulerSetName" r Tex
 scheduleJobs transporterConfig startTime endTime merchantId merchantOpCityId maxShards = do
   now <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
   let dfNotificationTime = transporterConfig.driverAutoPayNotificationTime
-  let dfCalculationJobTs = diffUTCTime (addUTCTime dfNotificationTime endTime) now
+  let timeDiffNormalFlow = addUTCTime dfNotificationTime endTime
+  let dfCalculationJobTs = if timeDiffNormalFlow > now then diffUTCTime timeDiffNormalFlow now else 0
   createJobIn @_ @'SendPDNNotificationToDriver dfCalculationJobTs maxShards $
     SendPDNNotificationToDriverJobData
       { merchantId = merchantId,

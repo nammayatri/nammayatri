@@ -134,6 +134,9 @@ instance FromTType' BeamTC.TransporterConfig TransporterConfig where
             stepFunctionToConvertCoins = stepFunctionToConvertCoins,
             cancellationDistDiff = cancellationDistDiff,
             notificationRetryTimeGap = secondsToNominalDiffTime notificationRetryTimeGap,
+            badDebtRescheduleTime = secondsToNominalDiffTime badDebtRescheduleTime,
+            badDebtSchedulerTime = secondsToNominalDiffTime badDebtSchedulerTime,
+            badDebtTimeThreshold = badDebtTimeThreshold,
             ..
           }
     where
@@ -226,8 +229,10 @@ instance ToTType' BeamTC.TransporterConfig TransporterConfig where
         BeamTC.driverSmsReceivingLimit = toJSON <$> driverSmsReceivingLimit,
         BeamTC.snapToRoadConfidenceThreshold = snapToRoadConfidenceThreshold,
         BeamTC.useWithSnapToRoadFallback = useWithSnapToRoadFallback,
-        BeamTC.createdAt = createdAt,
-        BeamTC.updatedAt = updatedAt,
+        BeamTC.badDebtRescheduleTime = nominalDiffTimeToSeconds badDebtRescheduleTime,
+        BeamTC.badDebtSchedulerTime = nominalDiffTimeToSeconds badDebtSchedulerTime,
+        BeamTC.badDebtBatchSize = badDebtBatchSize,
+        BeamTC.badDebtTimeThreshold = badDebtTimeThreshold,
         BeamTC.cancellationTimeDiff = nominalDiffTimeToSeconds cancellationTimeDiff,
         BeamTC.cancellationDistDiff = cancellationDistDiff,
         BeamTC.coinExpireTime = nominalDiffTimeToSeconds coinExpireTime,
@@ -248,5 +253,7 @@ instance ToTType' BeamTC.TransporterConfig TransporterConfig where
         BeamTC.allowDefaultPlanAllocation = allowDefaultPlanAllocation,
         BeamTC.notificationRetryEligibleErrorCodes = notificationRetryEligibleErrorCodes,
         BeamTC.notificationRetryCountThreshold = notificationRetryCountThreshold,
-        BeamTC.notificationRetryTimeGap = nominalDiffTimeToSeconds notificationRetryTimeGap
+        BeamTC.notificationRetryTimeGap = nominalDiffTimeToSeconds notificationRetryTimeGap,
+        BeamTC.createdAt = createdAt,
+        BeamTC.updatedAt = updatedAt
       }

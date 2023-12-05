@@ -196,6 +196,7 @@ data UserActionType
   | UPDATE_SEAT_MANAGEMENT
   | SEND_DUMMY_NOTIFICATION
   | CHANGE_OPERATING_CITY
+  | SCHEDULER_TRIGGER
   deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 genSingletons [''UserActionType]

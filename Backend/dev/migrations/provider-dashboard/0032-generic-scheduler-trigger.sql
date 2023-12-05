@@ -1,0 +1,2 @@
+INSERT INTO atlas_bpp_dashboard.access_matrix (id, role_id, api_entity, user_access_type, created_at, updated_at, user_action_type) VALUES
+    ('aef13d16-8601-182c-084d-eerc1f476a29', '37947162-3b5d-4ed6-bcac-08841be1534d', 'MERCHANT', 'USER_FULL_ACCESS', now(), now(), 'SCHEDULER_TRIGGER');

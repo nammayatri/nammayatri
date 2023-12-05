@@ -32,6 +32,7 @@ module Domain.Action.Dashboard.Merchant
     verificationServiceConfigUpdate,
     createFPDriverExtraFee,
     updateFPDriverExtraFee,
+    schedulerTrigger,
   )
 where
 
@@ -58,6 +59,8 @@ import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Validation
+import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
+import SharedLogic.Allocator (AllocatorJobType (..), BadDebtCalculationJobData, CalculateDriverFeesJobData)
 import qualified SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool.Config as DriverPool
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified Storage.CachedQueries.Exophone as CQExophone
@@ -202,6 +205,35 @@ merchantCommonConfigUpdate merchantShortId opCity req = do
   CQTC.clearCache merchantOpCityId
   logTagInfo "dashboard -> merchantCommonConfigUpdate : " (show merchant.id)
   pure Success
+
+schedulerTrigger :: ShortId DM.Merchant -> Context.City -> Common.SchedulerTriggerReq -> Flow APISuccess
+schedulerTrigger merchantShortId _ req = do
+  void $ findMerchantByShortId merchantShortId
+  now <- getCurrentTime
+  maxShards <- asks (.maxShards)
+  case req.scheduledAt of
+    Just utcTime -> do
+      let diffTimeS = diffUTCTime utcTime now
+      triggerScheduler req.jobName maxShards req.jobData diffTimeS
+    _ -> throwError $ InternalError "invalid scheduled at time"
+  where
+    triggerScheduler jobName maxShards jobDataRaw diffTimeS = do
+      case jobName of
+        Just Common.DriverFeeCalculationTrigger -> do
+          let jobData' = decodeFromText jobDataRaw :: Maybe CalculateDriverFeesJobData
+          case jobData' of
+            Just jobData -> do
+              createJobIn @_ @'CalculateDriverFees diffTimeS maxShards (jobData :: CalculateDriverFeesJobData)
+              pure Success
+            Nothing -> throwError $ InternalError "invalid job data"
+        Just Common.BadDebtCalculationTrigger -> do
+          let jobData' = decodeFromText jobDataRaw :: Maybe BadDebtCalculationJobData
+          case jobData' of
+            Just jobData -> do
+              createJobIn @_ @'BadDebtCalculation diffTimeS maxShards (jobData :: BadDebtCalculationJobData)
+              pure Success
+            Nothing -> throwError $ InternalError "invalid job data"
+        _ -> throwError $ InternalError "invalid job name"
 
 ---------------------------------------------------------------------
 driverPoolConfig :: ShortId DM.Merchant -> Context.City -> Maybe Meters -> Flow Common.DriverPoolConfigRes

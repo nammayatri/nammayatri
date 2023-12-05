@@ -50,6 +50,8 @@ data DriverFeeT f = DriverFeeT
     notificationRetryCount :: B.C f Int,
     feeWithoutDiscount :: B.C f (Maybe HighPrecMoney),
     amountPaidByCoin :: B.C f (Maybe HighPrecMoney),
+    badDebtDeclarationDate :: B.C f (Maybe UTCTime),
+    badDebtRecoveryDate :: B.C f (Maybe UTCTime),
     overlaySent :: B.C f Bool,
     specialZoneRideCount :: B.C f Int,
     specialZoneAmount :: B.C f HighPrecMoney,

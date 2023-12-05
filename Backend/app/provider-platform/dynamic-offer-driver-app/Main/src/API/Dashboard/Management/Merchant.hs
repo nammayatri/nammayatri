@@ -46,6 +46,7 @@ type API =
            :<|> Common.VerificationServiceConfigUpdateAPI
            :<|> Common.CreateFPDriverExtraFee
            :<|> Common.UpdateFPDriverExtraFee
+           :<|> Common.SchedulerTriggerAPI
        )
 
 handler :: ShortId DM.Merchant -> Context.City -> FlowServer API
@@ -69,6 +70,7 @@ handler merchantId city =
     :<|> verificationServiceConfigUpdate merchantId city
     :<|> createFPDriverExtraFee merchantId city
     :<|> updateFPDriverExtraFee merchantId city
+    :<|> schedulerTrigger merchantId city
 
 merchantUpdate ::
   ShortId DM.Merchant ->
@@ -89,6 +91,13 @@ merchantCommonConfigUpdate ::
   Common.MerchantCommonConfigUpdateReq ->
   FlowHandler APISuccess
 merchantCommonConfigUpdate merchantShortId opCity = withFlowHandlerAPI . DMerchant.merchantCommonConfigUpdate merchantShortId opCity
+
+schedulerTrigger ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Common.SchedulerTriggerReq ->
+  FlowHandler APISuccess
+schedulerTrigger merchantShortId opCity req = withFlowHandlerAPI $ DMerchant.schedulerTrigger merchantShortId opCity req
 
 driverPoolConfig ::
   ShortId DM.Merchant ->
