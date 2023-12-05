@@ -42,7 +42,9 @@ import qualified SharedLogic.Payment as SPayment
 import qualified Storage.CachedQueries.Merchant.Overlay as CMP
 import qualified Storage.CachedQueries.Plan as CQP
 import qualified Storage.Queries.DriverFee as QDF
+import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.Person as QDP
+import Tools.Error
 import Tools.Notifications (sendOverlay)
 
 templateText :: Text -> Text
@@ -181,9 +183,12 @@ notifyMandateCancelled :: (CacheFlow m r, EsqDBFlow m r) => Id DP.Person -> Id D
 notifyMandateCancelled driverId _merchantId deviceToken language = do
   let pnKey = mandateCancelledKey
   driver <- B.runInReplica $ QDP.findById driverId >>= fromMaybeM (PersonDoesNotExist driverId.getId)
-  mOverlay <- CMP.findByMerchantOpCityIdPNKeyLangaugeUdf driver.merchantOperatingCityId pnKey (fromMaybe ENGLISH language) Nothing
-  whenJust mOverlay $ \overlay -> do
-    sendOverlay driver.merchantOperatingCityId driverId deviceToken overlay.title overlay.description overlay.imageUrl overlay.okButtonText overlay.cancelButtonText overlay.actions overlay.link overlay.endPoint overlay.method overlay.reqBody overlay.delay overlay.contactSupportNumber overlay.toastMessage overlay.secondaryActions overlay.socialMediaLinks
+  driverInfo <- QDI.findById driverId >>= fromMaybeM DriverInfoNotFound
+  whenJust driverInfo.autoPayStatus $ \autoPayStatus -> do
+    when (autoPayStatus /= DI.PAUSED_PSP) $ do
+      mOverlay <- CMP.findByMerchantOpCityIdPNKeyLangaugeUdf driver.merchantOperatingCityId pnKey (fromMaybe ENGLISH language) Nothing
+      whenJust mOverlay $ \overlay -> do
+        sendOverlay driver.merchantOperatingCityId driverId deviceToken overlay.title overlay.description overlay.imageUrl overlay.okButtonText overlay.cancelButtonText overlay.actions overlay.link overlay.endPoint overlay.method overlay.reqBody overlay.delay overlay.contactSupportNumber overlay.toastMessage overlay.secondaryActions overlay.socialMediaLinks
 
 notifyPlanActivatedForDay :: (CacheFlow m r, EsqDBFlow m r) => Id DP.Person -> Id DM.Merchant -> Maybe FCM.FCMRecipientToken -> Maybe Language -> m ()
 notifyPlanActivatedForDay driverId _merchantId deviceToken language = do

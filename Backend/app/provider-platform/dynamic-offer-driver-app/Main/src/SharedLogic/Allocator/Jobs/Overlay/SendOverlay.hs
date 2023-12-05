@@ -74,7 +74,7 @@ sendOverlayToDriver (Job {id, jobInfo}) = withLogTag ("JobId-" <> id.getId) do
           manualDues <- getManualDues driverId jobDataInfo.timeDiffFromUtc jobDataInfo.driverFeeOverlaySendingTimeLimitInDays
           when ((fromIntegral rLimit <= manualDues) && (manualDues <= fromIntegral lLimit)) $ sendOverlay driver jobDataInfo.overlayKey jobDataInfo.udf1 manualDues
         DOverlay.InvoiceGenerated _ -> do
-          manualDues <- getManualDues driverId jobDataInfo.timeDiffFromUtc jobDataInfo.driverFeeOverlaySendingTimeLimitInDays
+          manualDues <- getAllManualDuesWithoutFilter driverId
           sendOverlay driver jobDataInfo.overlayKey jobDataInfo.udf1 manualDues
         DOverlay.FreeTrialDaysLeft _ -> do
           driverInfo <- QDI.findById driverId >>= fromMaybeM (PersonDoesNotExist driverId.getId)
@@ -91,6 +91,10 @@ sendOverlayToDriver (Job {id, jobInfo}) = withLogTag ("JobId-" <> id.getId) do
         Just DTDI.ACTIVE -> return $ Just ""
         Just DTDI.PENDING -> return $ Just ""
         _ -> return $ Just "AUTOPAY_NOT_SET"
+
+    getAllManualDuesWithoutFilter driverId = do
+      pendingDriverFees <- QDF.findAllOverdueDriverFeeByDriverId driverId
+      return $ sum $ map (\dueInvoice -> SLDriverFee.roundToHalf (fromIntegral dueInvoice.govtCharges + dueInvoice.platformFee.fee + dueInvoice.platformFee.cgst + dueInvoice.platformFee.sgst)) pendingDriverFees
 
     getManualDues driverId timeDiffFromUtc driverFeeOverlaySendingTimeLimitInDays = do
       windowEndTime <- getLocalCurrentTime timeDiffFromUtc
@@ -153,7 +157,8 @@ getBatchedDriverIds merchantId jobId condition freeTrialDays timeDiffFromUtc dri
           startTime = addUTCTime (-1 * driverPaymentCycleDuration) potentialStartToday
           endTime = addUTCTime 120 potentialStartToday
       driverFees <- QDF.findWindowsWithFeeTypeAndLimit merchantId startTime endTime (getFeeType paymentMode) overlayBatchSize
-      let driverIds = driverFees <&> (.driverId)
+      let filteredDriverFees = filter (\dueInvoice -> SLDriverFee.roundToHalf (fromIntegral dueInvoice.govtCharges + dueInvoice.platformFee.fee + dueInvoice.platformFee.cgst + dueInvoice.platformFee.sgst) > 0) driverFees
+      let driverIds = filteredDriverFees <&> (.driverId)
       void $ QDF.updateDriverFeeOverlayScheduled driverIds True startTime endTime
       return driverIds
     _ -> do
