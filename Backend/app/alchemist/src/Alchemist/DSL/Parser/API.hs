@@ -83,7 +83,7 @@ extractImports api =
     importComplexTypes = map figureOutImports' (api ^. types)
 
     figureOutImports' :: TypeObject -> [Text]
-    figureOutImports' (_, arr) = map (\(_, b) -> b) arr
+    figureOutImports' (_, arr) = filter (not . ("," `T.isInfixOf`)) $ map snd arr
 
     apiReqTraversal :: Traversal' ApiTT ApiReq
     apiReqTraversal = apiReqType . _Just
