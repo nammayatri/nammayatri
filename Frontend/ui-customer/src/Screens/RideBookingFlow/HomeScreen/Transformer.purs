@@ -36,9 +36,9 @@ import Engineering.Helpers.Commons (convertUTCtoISC, getExpiryTime, getCurrentUT
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import PrestoDOM (Visibility(..))
-import Resources.Constants (DecodeAddress(..), decodeAddress, getValueByComponent, getWard, getVehicleCapacity, getFaresList, getKmMeter, fetchVehicleVariant)
+import Resources.Constants (DecodeAddress(..), decodeAddress, getValueByComponent, getWard, getVehicleCapacity, getFaresList, getKmMeter, fetchVehicleVariant, getAddressFromBooking)
 import Screens.HomeScreen.ScreenData (dummyAddress, dummyLocationName, dummySettingBar, dummyZoneType)
-import Screens.Types (DriverInfoCard, LocationListItemState, LocItemType(..), LocationItemType(..), NewContacts, Contact, VehicleVariant(..), TripDetailsScreenState, SearchResultType(..), EstimateInfo, SpecialTags, ZoneType(..), HomeScreenState(..))
+import Screens.Types (DriverInfoCard, LocationListItemState, LocItemType(..), LocationItemType(..), NewContacts, Contact, VehicleVariant(..), TripDetailsScreenState, SearchResultType(..), EstimateInfo, SpecialTags, ZoneType(..), HomeScreenState(..), MyRidesScreenState(..), Trip(..))
 import Services.API (AddressComponents(..), BookingLocationAPIEntity, DeleteSavedLocationReq(..), DriverOfferAPIEntity(..), EstimateAPIEntity(..), GetPlaceNameResp(..), LatLong(..), OfferRes, OfferRes(..), PlaceName(..), Prediction, QuoteAPIContents(..), QuoteAPIEntity(..), RideAPIEntity(..), RideBookingAPIDetails(..), RideBookingRes(..), SavedReqLocationAPIEntity(..), SpecialZoneQuoteAPIDetails(..), FareRange(..), LatLong(..))
 import Services.Backend as Remote
 import Types.App(FlowBT,  GlobalState(..), ScreenType(..))
@@ -88,6 +88,9 @@ getLocation prediction = {
   , distance : Just (fromMetersToKm (fromMaybe 0 (prediction ^._distance)))
   , showDistance : Just $ checkShowDistance (fromMaybe 0 (prediction ^._distance))
   , actualDistance : (prediction ^._distance)
+  , frequencyCount : Nothing
+  , recencyDate : Nothing
+  , locationScore : Nothing
 }
 
 checkShowDistance :: Int ->  Boolean
@@ -255,7 +258,8 @@ makePlaceNameResp lat lon =
             lon : lon
           },
           plusCode : Nothing,
-          addressComponents : []
+          addressComponents : [],
+          placeId : Nothing
         }
         ])
 
@@ -577,3 +581,19 @@ getZoneType tag =
     Just "SureMetro" -> METRO
     Just "SureBlockedAreaForAutos" -> AUTO_BLOCKED
     _                -> NOZONE
+
+getTripFromRideHistory :: MyRidesScreenState -> Trip
+getTripFromRideHistory state = {
+    source :  state.data.selectedItem.source
+  , destination : state.data.selectedItem.destination
+  , sourceAddress : getAddressFromBooking state.data.selectedItem.sourceLocation
+  , destinationAddress : getAddressFromBooking state.data.selectedItem.destinationLocation
+  , sourceLat : state.data.selectedItem.sourceLocation^._lat
+  , sourceLong : state.data.selectedItem.sourceLocation^._lon
+  , destLat : state.data.selectedItem.destinationLocation^._lat
+  , destLong : state.data.selectedItem.destinationLocation^._lon
+  , isSpecialZone : state.data.selectedItem.isSpecialZone
+  , frequencyCount : Nothing
+  , recencyDate : Nothing
+  , locationScore : Nothing
+  }

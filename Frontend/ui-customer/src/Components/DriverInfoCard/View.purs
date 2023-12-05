@@ -53,6 +53,7 @@ import Types.App (defaultGlobalState)
 import JBridge(fromMetersToKm)
 import Engineering.Helpers.Suggestions (getMessageFromKey)
 import Helpers.Utils (parseFloat)
+import MerchantConfig.Types (DriverInfoConfig)
 
 view :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM ( Effect Unit ) w
 view push state =
@@ -116,6 +117,7 @@ driverInfoViewSpecialZone push state =
               ][ dropPointView push state
                 , separator (MarginHorizontal 16 16) (V 1) Color.grey900 (state.props.currentStage == RideAccepted)
                 , cancelRideLayout push state
+                , brandingBannerView state.data.config.driverInfoConfig INVISIBLE
               ]
             ]
       ]
@@ -331,7 +333,7 @@ supportButton push state =
   [ width WRAP_CONTENT
   , height WRAP_CONTENT
   , orientation VERTICAL
-  , visibility if (Array.any (_ == state.props.currentStage) [ RideAccepted, RideStarted, ChatWithDriver ])  && (not state.props.showChatNotification) then VISIBLE else GONE
+  , visibility if (Array.any (_ == state.props.currentStage) [ RideAccepted, RideStarted, ChatWithDriver ])  && (not ((getValueFromConfig "isChatEnabled" == "true") && state.props.showChatNotification)) then VISIBLE else GONE
   , background Color.white900
   , accessibility if state.props.currentStage == RideStarted then DISABLE else DISABLE_DESCENDANT
   , stroke $ "1,"<> Color.grey900
@@ -377,7 +379,7 @@ locationTrackButton push state =
   , gravity CENTER
   , background Color.white900
   , stroke $ "1,"<> Color.grey900
-  , visibility if (Array.any (_ == state.props.currentStage) [ RideAccepted, RideStarted, ChatWithDriver ]) && (not state.props.showChatNotification) && state.data.config.driverInfoConfig.showTrackingButton then VISIBLE else GONE
+  , visibility if (Array.any (_ == state.props.currentStage) [ RideAccepted, RideStarted, ChatWithDriver ]) && (not ((getValueFromConfig "isChatEnabled" == "true") && state.props.showChatNotification)) && state.data.config.driverInfoConfig.showTrackingButton then VISIBLE else GONE
   , cornerRadius 20.0
   , accessibility DISABLE_DESCENDANT
   , onClick push (const $ LocationTracking)
@@ -400,9 +402,9 @@ locationTrackButton push state =
 sosView :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM ( Effect Unit) w
 sosView push state =
   linearLayout
-    [ height MATCH_PARENT
+    [ height WRAP_CONTENT
     , width WRAP_CONTENT
-    , visibility if (Array.any (_ == state.props.currentStage) [ RideAccepted, RideStarted, ChatWithDriver ]) && (not state.props.showChatNotification) then VISIBLE else GONE
+    , visibility if (Array.any (_ == state.props.currentStage) [ RideAccepted, RideStarted, ChatWithDriver ]) && (not ((getValueFromConfig "isChatEnabled" == "true") && state.props.showChatNotification)) then VISIBLE else GONE
     , orientation VERTICAL
     , gravity if os == "IOS" then CENTER_VERTICAL else BOTTOM
     ][ imageView
@@ -423,7 +425,7 @@ messageNotificationView push state =
   , width MATCH_PARENT
   , margin $ Margin 16 10 16 0
   , orientation VERTICAL
-  , visibility if state.props.showChatNotification && state.props.currentSearchResultType /= QUOTES then VISIBLE else GONE
+  , visibility if ((getValueFromConfig "isChatEnabled" == "true") && state.props.showChatNotification) && state.props.currentSearchResultType /= QUOTES then VISIBLE else GONE
   ][ linearLayout
       [ height $ V 22
       , width MATCH_PARENT
@@ -692,11 +694,38 @@ driverInfoView push state =
                 ][ if state.props.currentSearchResultType == QUOTES then destinationView push state else if not state.data.config.showPickUpandDrop then dummyView push else sourceDistanceView push state
                   , separator (Margin 0 0 0 0) (V 1) Color.grey900 (Array.any (_ == state.props.currentStage) [ RideAccepted, RideStarted, ChatWithDriver ] && state.data.config.showPickUpandDrop)
                   , cancelRideLayout push state
+                  , brandingBannerView state.data.config.driverInfoConfig INVISIBLE
                 ]
               ]
          ]
       ]
   ]
+
+brandingBannerView :: forall w. DriverInfoConfig -> Visibility -> PrestoDOM (Effect Unit) w
+brandingBannerView driverInfoConfig isVisible = 
+  let brandingVisibility = if not driverInfoConfig.footerVisibility then GONE else isVisible
+  in 
+  linearLayout
+    [ width MATCH_PARENT
+    , height WRAP_CONTENT
+    , gravity CENTER
+    , background driverInfoConfig.footerBackgroundColor
+    , padding $ Padding 12 12 12 12
+    , alignParentBottom "true,-1"
+    , visibility $ brandingVisibility
+    ][ textView $
+        [ text $ getString POWERED_BY 
+        , width WRAP_CONTENT    
+        , height WRAP_CONTENT
+        , color Color.black800
+        , padding $ PaddingRight 6
+        ] <> FontStyle.body3 TypoGraphy
+    , imageView
+        [ imageWithFallback $ driverInfoConfig.footerImageUrl
+        , width $ V 62
+        , height $ V 20
+        ]
+    ]
 
 cancelRideLayout :: forall w.(Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM (Effect Unit) w
 cancelRideLayout push state =

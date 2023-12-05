@@ -16,6 +16,8 @@ type AppConfig =
     profileName :: String,
     profileImage :: String,
     profileCompletion :: String,
+    profileArrowImage :: String,
+    showProfileStatus :: Boolean,
     feedbackBackground :: String,
     sideBarList :: Array String,
     rateCardColor :: String,
@@ -42,6 +44,7 @@ type AppConfig =
     cancelSearchTextColor :: String,
     cancelReasonConfig :: CancelReasonConfig,
     terminateBtnConfig :: TerminateBtnConfig,
+    suggestedTripsAndLocationConfig  :: SuggestedDestinationAndTripsConfig,
     showDeleteAccount :: Boolean
   , autoSelectBackground :: String
   , showGenderBanner :: Boolean
@@ -64,7 +67,8 @@ type AppConfig =
   , enableGeocoder :: Boolean -- TODO:: Deprecated 21st Nov 2023
   , geoCoder :: GeoCoderConfig
   , appLink :: String
-  } 
+  , homeScreen :: HomeScreen
+  }
 
 type GeoCoderConfig = {
   enableLLtoAddress :: Boolean,
@@ -113,6 +117,9 @@ type DriverInfoConfig = {
 , numberPlateBackground :: String
 , showCancelPrevention :: Boolean
 , specialZoneQuoteExpirySeconds :: Int
+, footerVisibility :: Boolean
+, footerImageUrl :: String
+, footerBackgroundColor :: String
 }
 
 type SearchLocationConfig = {
@@ -122,6 +129,9 @@ type SearchLocationConfig = {
   enableLocationTagbar :: String,
   resultsCardCornerRadius :: Number,
   showRateCardDetails :: Boolean,
+  backgroundColor :: String,
+  separatorColor :: String,
+  editTextColor :: String,
   showAdditionalChargesText :: Boolean,
   lottieHeight :: Int,
   lottieWidth :: Int,
@@ -129,6 +139,8 @@ type SearchLocationConfig = {
 , backArrow :: String
 , editTextBackground :: String
 , editTextDefaultColor :: String
+, hintColor :: String
+, showSeparator :: Boolean
 }
 
 type QuoteListConfig = {
@@ -146,7 +158,20 @@ type QuoteListConfig = {
   topMargin :: Int,
   noQuotesImageHeight :: Int,
   noQuotesImageWidth :: Int,
-  closeIcon :: String
+  closeIcon :: String,
+  showSeparator :: Boolean,
+  separatorColor :: String
+}
+ 
+type SuggestedDestinationAndTripsConfig = {
+  geohashLimitForMap :: Int,
+  geohashPrecision :: Int,
+  locationsToBeShown :: Int,
+  tripsToBeShown :: Int,
+  locationsToBeStored :: Int,
+  tripsToBeStored :: Int,
+  frequencyWeight :: Number,
+  tripDistanceThreshold :: Number
 }
 
 type Language =  {
@@ -166,7 +191,8 @@ type BannerViewState = {
 type TerminateBtnConfig = {
     visibility :: Boolean, 
     title :: String,
-    imageUrl :: String
+    imageUrl :: String,
+    backgroundColor :: String
 }
 
 type EstimateAndQuoteConfig = {
@@ -182,7 +208,8 @@ type CustomerTip = {
 
 type Features = {
   enableAutoReadOtp :: Boolean ,
-  enableZooTicketBookingFlow :: Boolean
+  enableZooTicketBookingFlow :: Boolean,
+  enableLiveDashboard :: Boolean
   }
 
 type RideCompletedCardConfig = {
@@ -191,6 +218,8 @@ type RideCompletedCardConfig = {
 
 type TopCardConfig = {
   gradient :: String
+, enableGradient :: Boolean
+, background :: String
 }
 
 type MapConfig = {
@@ -216,4 +245,39 @@ type PurpleRideConfig = {
   visualImpairmentVideo :: String,
   physicalImpairmentVideo :: String,
   hearingImpairmentVideo :: String
+}
+type HomeScreen = {
+  primaryBackground :: String,
+  pickUpViewColor :: String,
+  header :: HomeScreenHeader,
+  bannerViewVisibility :: Boolean,
+  whereToButton :: WhereToButton,
+  pickupLocationTextColor :: String
+}
+
+type HomeScreenHeader = {
+  menuButtonBackground :: String,
+  showLogo :: Boolean,
+  titleColor :: String,
+  showSeparator :: Boolean
+}
+
+type WhereToButton = {
+  margin :: MarginConfig,
+  shadow :: ShadowConfig
+}
+
+type MarginConfig = {
+  top :: Int,
+  bottom :: Int,
+  left :: Int,
+  right :: Int
+}
+type ShadowConfig = {
+  color :: String,
+  blur :: Number,
+  x :: Number,
+  y :: Number,
+  spread :: Number,
+  opacity :: Number
 }

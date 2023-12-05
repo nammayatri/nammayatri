@@ -16,11 +16,11 @@
 module Screens.HomeScreen.ScreenData where
 
 import Common.Types.App (RateCardType(..))
-import Components.LocationListItem.Controller (dummyLocationListState)
+import Components.LocationListItem.Controller (locationListStateObj)
 import Components.SettingSideBar.Controller (SettingSideBarState, Status(..))
 import Components.ChooseVehicle.Controller (SearchType(..)) as CV
 import Data.Maybe (Maybe(..))
-import Screens.Types (Contact, DriverInfoCard, HomeScreenState, LocationListItemState, PopupType(..), RatingCard(..), SearchLocationModelType(..), Stage(..), Address, EmergencyHelpModelState,Location, ZoneType(..), SpecialTags, TipViewStage(..), SearchResultType(..))
+import Screens.Types (Contact, DriverInfoCard, HomeScreenState, LocationListItemState, PopupType(..), RatingCard(..), SearchLocationModelType(..), Stage(..), Address, EmergencyHelpModelState,Location, ZoneType(..), SpecialTags, TipViewStage(..), SearchResultType(..), Trip(..))
 import Services.API (DriverOfferAPIEntity(..), QuoteAPIDetails(..), QuoteAPIEntity(..), PlaceName(..), LatLong(..), SpecialLocation(..), QuoteAPIContents(..), RideBookingRes(..), RideBookingAPIDetails(..), RideBookingDetails(..), FareRange(..), FareBreakupAPIEntity(..))
 import Prelude (($) ,negate)
 import Data.Array (head)
@@ -29,6 +29,7 @@ import Foreign.Object (empty)
 import MerchantConfig.DefaultConfig as DC
 import Screens.MyRidesScreen.ScreenData (dummyBookingDetails)
 import PrestoDOM (BottomSheetState(..))
+import Data.Map as Map 
 
 initData :: HomeScreenState
 initData = {
@@ -47,6 +48,9 @@ initData = {
     , locationList : []
     , savedLocations : []
     , recentSearchs : { predictionArray : []}
+    , destinationSuggestions : []
+    , tripSuggestions: []
+    , suggestionsData : { suggestionsMap: Map.empty }
     , previousCurrentLocations : {pastCurrentLocations:[]}
     , selectList : []
     , quoteListModelState : []
@@ -74,7 +78,7 @@ initData = {
         address : ""
       , tag : ""
       , tagExists : false
-      , selectedItem : dummyLocationListState
+      , selectedItem : locationListStateObj
       , tagData : []
       , isBtnActive : false
       }
@@ -128,9 +132,12 @@ initData = {
     , nearByDrivers : Nothing
     , disability : Nothing
     , searchLocationModelData : dummySearchLocationModelData
+    , peekHeight : 0
+    , rideHistoryTrip : Nothing
     },
     props: {
       rideRequestFlow : false
+    , isHomescreenExpanded : false
     , isSearchLocation : NoView
     , currentStage : HomeScreen
     , showCallPopUp : false
@@ -247,6 +254,12 @@ initData = {
         , destinationAddress : dummyAddress
       }
     , city : Nothing
+    , isRepeatRide : false
+    , currSlideIndex : 0.0
+    , suggestionsListExpanded : false
+    , repeatRideTimer : ""
+    , repeatRideTimerId : ""
+    , showShimmer : false
     }
 }
 
@@ -407,7 +420,8 @@ dummyLocationName = PlaceName {
     "lon" : 0.0
   },
   "plusCode" : Nothing,
-  "addressComponents" : []
+  "addressComponents" : [],
+  "placeId" : Nothing
 }
 
 specialLocation :: SpecialLocation
@@ -468,4 +482,20 @@ dummyFareBreakUp :: FareBreakupAPIEntity
 dummyFareBreakUp = FareBreakupAPIEntity{
   amount : 0,
   description : "fare"
+}
+
+dummyTrip :: Trip
+dummyTrip = {
+    sourceLat: 0.0,
+    source: "",
+    destination: "",
+    sourceAddress: dummyAddress,
+    destinationAddress: dummyAddress,
+    sourceLong: 0.0,
+    destLat: 0.0,
+    destLong: 0.0,
+    frequencyCount: Nothing,  
+    recencyDate: Nothing,  
+    locationScore: Nothing,  
+    isSpecialZone: true
 }

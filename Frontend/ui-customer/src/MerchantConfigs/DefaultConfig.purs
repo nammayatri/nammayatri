@@ -40,6 +40,8 @@ config =
     , topMargin : 100
     , noQuotesImageHeight: 115
     , noQuotesImageWidth : 137
+    , separatorColor : "#00FFFFFF"
+    , showSeparator : false
     , closeIcon : "ny_ic_close_white,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_close_white.png"
     }
   , searchLocationConfig : 
@@ -48,6 +50,9 @@ config =
     , editTextBackground : "#313440"
     , editTextDefaultColor : "#A7A7A7"
     , strokeColor: "1,#E5E7EB"
+    , backgroundColor : "#2C2F3A"
+    , editTextColor : "#FFFFFF"
+    , separatorColor : "#00FFFFFF"
     , enableLocationTagbar : "true"
     , resultsCardCornerRadius : 20.0
     , showRateCardDetails : true
@@ -55,6 +60,8 @@ config =
     , lottieHeight : 96
     , lottieWidth : 96
     , primaryButtonHeight : 60
+    , hintColor : "#A7A7A7"
+    , showSeparator : false
     , backArrow : "ny_ic_chevron_left_white,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_chevron_left_white.png"
     }
   , driverInfoConfig : 
@@ -74,6 +81,9 @@ config =
     , showCancelPrevention : false
     , showTrackingButton : true
     , specialZoneQuoteExpirySeconds : 3600
+    , footerVisibility : false
+    , footerImageUrl : "ic_namma_yatri_logo,https://assets.juspay.in/beckn/nammayatri/user/images/ic_namma_yatri_logo.png"
+    , footerBackgroundColor : "#FFFFFF"
     }
   , ratingConfig : 
     { secondaryButtonTextColor : "#FCC32C"
@@ -105,6 +115,8 @@ config =
       }
   , popupBackground : "#FFFFFF"
   , profileCompletion : "#FCC32C"
+  , showProfileStatus: true
+  , profileArrowImage: "ny_ic_chevron_right_white,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_chevron_right_white.png"
   , cancelRideColor : "#E55454"
   , infoIconUrl : "ny_ic_info,https://assets.juspay.in/nammayatri/images/user/ny_ic_information_grey.png"
   , profileEditGravity : "center"
@@ -114,7 +126,18 @@ config =
   , terminateBtnConfig : {
           visibility: false, 
           title : "Paytm",
+          backgroundColor : "#00FFFFFF",
           imageUrl : "ny_ic_chevron_left_double,https://assets.juspay.in/beckn/mobilitypaytm/mobilitypaytmcommon/ny_ic_chevron_left_double.png"
+      }
+  , suggestedTripsAndLocationConfig : {
+        geohashLimitForMap : 60,
+        geohashPrecision : 7,
+        locationsToBeShown : 5,
+        tripsToBeShown : 5,
+        locationsToBeStored : 30,
+        tripsToBeStored : 30,
+        frequencyWeight : 0.7,
+        tripDistanceThreshold : 0.021
       }
   , showDeleteAccount : false
   , autoSelectBackground : "#53BB6F"
@@ -148,12 +171,15 @@ config =
   , enableContactSupport : true
   , features : {
     enableAutoReadOtp : true,
-    enableZooTicketBookingFlow : false
+    enableZooTicketBookingFlow : false,
+    enableLiveDashboard : true
   }
 
   , rideCompletedCardConfig : {
       topCard : {
         gradient : "#29334A"
+      , enableGradient : true
+      , background : "#2C2F3A"
       } 
   }
   , mapConfig : 
@@ -176,4 +202,32 @@ config =
       hearingImpairmentVideo : ""
     }
   , appLink : ""
+  , homeScreen: {
+      primaryBackground : "#2C2F3A",
+      pickUpViewColor : "#303440",
+      header : {
+        menuButtonBackground : "#00FFFFFF",
+        showLogo : true,
+        titleColor : "#1D1D1D",
+        showSeparator : false
+      },
+      bannerViewVisibility : true,
+      pickupLocationTextColor : "#A7A7A7",
+      whereToButton : {
+        margin : {
+          top : 0,
+          left : 16,
+          right : 16,
+          bottom : 16
+        },
+        shadow : {
+          color : "#2C2F3A",
+          x: 0.0,
+          y: 0.9,
+          blur: 10.0,
+          spread: 24.0,
+          opacity : 0.14
+        }
+      }
+    }
   }

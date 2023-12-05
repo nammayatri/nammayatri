@@ -64,13 +64,11 @@ genericHeaderConfig state = let
       , accessibilityHint = if state.props.showSavePlaceView then "Close : Button" else "Back : Button"
       , visibility = VISIBLE
       , accessibility = ENABLE
-      , imageUrl = if state.data.config.nyBrandingVisibility && (not state.props.showSavePlaceView) then config.prefixImageConfig.imageUrl 
-                    else if state.props.showSavePlaceView then if state.data.config.nyBrandingVisibility then fetchImage FF_COMMON_ASSET "ny_ic_close"
-                      else fetchImage FF_COMMON_ASSET "ny_ic_close_white" else config.prefixImageConfig.imageUrl
+      , imageUrl = if state.props.showSavePlaceView then fetchImage FF_COMMON_ASSET "ny_ic_close_white" else config.prefixImageConfig.imageUrl
       }
     , textConfig {
         text = if state.props.showSavePlaceView then (getString FAVOURITE_LOCATION) else if state.props.editLocation then (getString EDIT_FAVOURITE) else (getString ADD_FAVOURITE)
-      , color = state.data.config.quoteListModel.textColor
+      , color = state.data.config.primaryTextColor
       }
     , suffixImageConfig {
         visibility = GONE

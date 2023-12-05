@@ -91,6 +91,10 @@ dummy_data = [
     , distance : Nothing
     , showDistance : Just false
     , actualDistance : Nothing
+    , frequencyCount : Nothing
+    , recencyDate : Nothing
+    , locationScore : Nothing
+
     }
   , { prefixImageUrl : fetchImage FF_ASSET "ny_ic_recent_search"
     , postfixImageUrl : fetchImage FF_ASSET "ny_ic_fav"
@@ -116,6 +120,10 @@ dummy_data = [
     , distance : Nothing
     , showDistance : Just false
     , actualDistance : Nothing
+    , frequencyCount : Nothing
+    , recencyDate : Nothing
+    , locationScore : Nothing
+
     }
   , { prefixImageUrl : fetchImage FF_ASSET "ny_ic_loc_grey"
     , postfixImageUrl : fetchImage FF_ASSET "ny_ic_fav"
@@ -141,5 +149,9 @@ dummy_data = [
     , distance : Nothing
     , showDistance : Just false
     , actualDistance : Nothing
+    , frequencyCount : Nothing
+    , recencyDate : Nothing
+    , locationScore : Nothing
+
     }
 ]

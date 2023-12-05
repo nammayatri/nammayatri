@@ -28,6 +28,7 @@ commonConfig =
           enableLLtoAddress : true
         , enableAddressToLL : true 
         }
+        , showBookingPreference : true
         , showCorporateAddress: true
         , primaryTextColor: "#FFFFFF"
         , isGradient: "false"
@@ -76,6 +77,16 @@ commonConfig =
             , variantOrder : ["HATCHBACK", "TAXI_PLUS", "SEDAN", "TAXI", "SUV", "AUTO_RICKSHAW"]
             , enableOnlyAuto : false
             }
+        , suggestedTripsAndLocationConfig : 
+          { geohashLimitForMap : 60,
+            geohashPrecision : 7,
+            locationsToBeShown : 5,
+            tripsToBeShown : 5,
+            locationsToBeStored : 30,
+            tripsToBeStored : 30,
+            frequencyWeight : 0.7,
+            tripDistanceThreshold : 0.021
+          }
         , mapConfig : 
             { locateOnMapConfig : 
                 { dottedLineConfig : 
@@ -123,4 +134,32 @@ commonConfig =
         , editTextDefaultColor : "#A7A7A7"
         }
         , appLink : ""
+        , homeScreen: {
+            primaryBackground : "#2C2F3A",
+            pickUpViewColor : "#303440",
+            header : {
+              menuButtonBackground : "#00FFFFFF",
+              showLogo : true,
+              titleColor : "#1D1D1D",
+              showSeparator : false
+            },
+            bannerViewVisibility : true,
+            pickupLocationTextColor : "#A7A7A7",
+            whereToButton : {
+              margin : {
+                top : 0,
+                left : 16,
+                right : 16,
+                bottom : 16
+              },
+              shadow : {
+                color : "#2C2F3A",
+                x: 0.0,
+                y: 0.9,
+                blur: 10.0,
+                spread: 24.0,
+                opacity : 0.14
+              }
+            }
+          }
         }

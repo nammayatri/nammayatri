@@ -24,7 +24,7 @@ import Components.LocationListItem as LocationListItem
 import Components.LocationTagBar as LocationTagBar
 import Components.PrimaryButton as PrimaryButton
 import Components.SearchLocationModel.Controller (Action(..), SearchLocationModelState)
-import Data.Array (mapWithIndex, length)
+import Data.Array (mapWithIndex, length,take)
 import Data.Function (flip)
 import Data.Maybe (Maybe(..), fromMaybe)
 import Debug (spy)
@@ -59,14 +59,13 @@ view push state =
                     _           -> Color.transparent --"#FFFFFF"
       , margin $ MarginBottom (if state.isSearchLocation == LocateOnMap then bottomSpacing else 0)
       , onBackPressed push (const $ GoBack)
-      ][PrestoAnim.animationSet
-        (if os == "IOS" then [] else [ translateYAnimFromTop $ translateFullYAnimWithDurationConfig 500 ])
-        $ linearLayout
-         -- Temporary fix for iOS.
-            [ height WRAP_CONTENT
+      ][ PrestoAnim.animationSet
+          [ translateYAnimFromTop $ translateFullYAnimWithDurationConfig 500 ]
+          $ linearLayout
+          [ height WRAP_CONTENT
             , width MATCH_PARENT
             , orientation VERTICAL
-            , background state.appConfig.primaryBackground
+            , background state.appConfig.searchLocationConfig.backgroundColor
             , padding $ PaddingVertical safeMarginTop 16
             ][  linearLayout
                 [ orientation HORIZONTAL
@@ -92,6 +91,15 @@ view push state =
                   , sourceDestinationImageView state
                   , sourceDestinationEditTextView state push
                   ]]
+                  , PrestoAnim.animationSet
+                    [ translateYAnimFromTop $ translateFullYAnimWithDurationConfig 500 ]
+                    $ linearLayout
+                      [ height $ V 1
+                      , width MATCH_PARENT
+                      , background state.appConfig.searchLocationConfig.separatorColor
+                      , visibility if state.appConfig.searchLocationConfig.showSeparator then VISIBLE else GONE
+                      ]
+                      []
                   , relativeLayout 
                     [ width MATCH_PARENT
                     , height MATCH_PARENT
@@ -243,17 +251,16 @@ sourceDestinationEditTextView state push =
             [ height $ V 37
             , weight 1.0
             , text state.source
-            , color if not(state.isSource == Just true) then state.appConfig.searchLocationConfig.editTextDefaultColor else Color.white900
+            , color if state.isSource == Just true then state.appConfig.searchLocationConfig.editTextColor else state.appConfig.searchLocationConfig.editTextDefaultColor
             , singleLine true
             , ellipsize true
             , cornerRadius 4.0
             , padding (Padding 8 7 32 7)
             , lineHeight "24"
-            , cursorColor state.appConfig.primaryTextColor
             , accessibilityHint "Pickup Location Editable field"
             , accessibility ENABLE
             , hint (getString START_)
-            , hintColor state.appConfig.searchLocationConfig.editTextDefaultColor
+            , hintColor state.appConfig.searchLocationConfig.hintColor
             , id $ getNewIDWithTag "SourceEditText"
             , afterRender (\_ -> do
                   _ <- pure $ showKeyboard case state.isSource of
@@ -316,16 +323,15 @@ sourceDestinationEditTextView state push =
             ( [ height $ V 37
               , weight 1.0
               , text state.destination
-              , color if (state.isSource == Just true) then state.appConfig.searchLocationConfig.editTextDefaultColor else Color.white900
+              , color if state.isSource == Just true then state.appConfig.searchLocationConfig.editTextDefaultColor else state.appConfig.searchLocationConfig.editTextColor
               , stroke $ "0," <> Color.black
               , padding (Padding 8 7 4 7)
               , hint (getString WHERE_TO)
-              , hintColor state.appConfig.searchLocationConfig.editTextDefaultColor
+              , hintColor state.appConfig.searchLocationConfig.hintColor
               , singleLine true
               , ellipsize true
               , accessibilityHint "Destination Location Editable field"
               , accessibility ENABLE
-              , cursorColor state.appConfig.primaryTextColor
               , id $ getNewIDWithTag "DestinationEditText"
               , afterRender (\action -> do
                   _ <- pure $ showKeyboard case state.isSource of
@@ -382,6 +388,11 @@ sourceDestinationEditTextView state push =
 ---------------------------- searchResultsView ---------------------------------
 searchResultsView :: forall w . SearchLocationModelState -> (Action  -> Effect Unit) -> PrestoDOM (Effect Unit) w
 searchResultsView state push =
+    let searchResultText = if state.isAutoComplete 
+                            then getString SEARCH_RESULTS
+                            else if state.isSource == Just false then getString SUGGESTED_DESTINATION
+                            else getString PAST_SEARCHES
+    in 
     scrollView
     [ height WRAP_CONTENT
     , width MATCH_PARENT
@@ -393,7 +404,12 @@ searchResultsView state push =
         [ height MATCH_PARENT
         , width MATCH_PARENT
         , orientation VERTICAL
-        ][  linearLayout
+        ][  textView $
+              [ text searchResultText
+              , color Color.black700
+              , margin $ MarginVertical 16 8
+              ] <> FontStyle.body3 TypoGraphy
+          , linearLayout
             [ height WRAP_CONTENT
             , width MATCH_PARENT
             , cornerRadius state.appConfig.primaryButtonCornerRadius
@@ -444,7 +460,7 @@ savedLocationBar state push =
   linearLayout
   [ width MATCH_PARENT
   , height WRAP_CONTENT
-  , margin $ MarginBottom 15
+  , margin $ MarginVertical 15 15
   , accessibility DISABLE_DESCENDANT
   , visibility if (not state.isAutoComplete) then VISIBLE else GONE
   ][ linearLayout
@@ -579,5 +595,3 @@ srcBtnData state =
 destBtnData :: SearchLocationModelState -> Array { text :: String, imageUrl :: String, action :: Action, buttonType :: String }
 destBtnData state =
   [ { text: (getString SELECT_LOCATION_ON_MAP), imageUrl: "ny_ic_locate_on_map,https://assets.juspay.in/nammayatri/images/user/ny_ic_locate_on_map.png", action: SetLocationOnMap, buttonType: "LocateOnMap" }]
-
-

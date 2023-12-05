@@ -48,8 +48,7 @@ getConfigFromFile :: EffectFn1 String Foreign
 getConfigFromFile =
   mkEffectFn1 \fileName -> do
     config <- runEffectFn1 loadFileInDUI $ fileName <> Constants.dotJSA
-    isDebug <- runEffectFn1 isDebugBuild unit
-    if isFilePresent config  && not isDebug then do
+    if isFilePresent config then do
       merchantConfig <- runEffectFn1 appendConfigToDocument config
       pure $ encode merchantConfig
     else do

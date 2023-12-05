@@ -23,6 +23,7 @@ import Components.ChatView.Controller (ChatComponent)
 import Components.ChooseVehicle.Controller as ChooseVehicle
 import Components.QuoteListItem.Controller (QuoteListItemState)
 import Components.SettingSideBar.Controller (SettingSideBarState)
+import Data.Map (Map)
 import Data.Eq.Generic (genericEq)
 import Data.Generic.Rep (class Generic)
 import Data.Maybe (Maybe)
@@ -33,8 +34,12 @@ import Foreign.Object (Object)
 import Halogen.VDom.DOM.Prop (PropValue)
 import Prelude (class Eq, class Show)
 import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode, defaultDecode, defaultEncode)
+import Data.Argonaut.Decode (class DecodeJson)
+import Data.Argonaut.Decode.Generic (genericDecodeJson)
+import Data.Argonaut.Encode (class EncodeJson)
+import Data.Argonaut.Encode.Generic (genericEncodeJson)
 import PrestoDOM (LetterSpacing, BottomSheetState(..))
-import Services.API (AddressComponents, BookingLocationAPIEntity, EstimateAPIEntity(..), QuoteAPIEntity, TicketPlaceResp, RideBookingRes, Route, BookingStatus(..))
+import Services.API (AddressComponents, BookingLocationAPIEntity, EstimateAPIEntity(..), QuoteAPIEntity, TicketPlaceResp, RideBookingRes, Route, BookingStatus(..), LatLong(..))
 
 type Contacts = {
   name :: String,
@@ -531,6 +536,7 @@ data Stage = HomeScreen
            | FindEstimateAndSearch
            | RetryFindingQuote
            | PickUpFarFromCurrentLocation
+           | LoadMap
 
 derive instance genericStage :: Generic Stage _
 instance eqStage :: Eq Stage where eq = genericEq
@@ -568,6 +574,8 @@ type HomeScreenStateData =
   , locationList :: Array LocationListItemState
   , savedLocations :: Array LocationListItemState
   , recentSearchs :: RecentlySearchedObject
+  , destinationSuggestions :: Array LocationListItemState
+  , tripSuggestions :: Array Trip
   , selectList :: Array QuoteAPIEntity
   , quoteListModelState :: Array QuoteListItemState
   , driverInfoCardState :: DriverInfoCard
@@ -604,7 +612,19 @@ type HomeScreenStateData =
   , nearByDrivers :: Maybe Int
   , disability :: Maybe DisabilityT
   , searchLocationModelData :: SearchLocationModelData
+  , suggestionsData :: SuggestionsData
+  , peekHeight :: Int
+  , rideHistoryTrip :: Maybe Trip
   }
+
+type LocationDetails = {
+    formattedAddress :: String,
+    location :: LatLong,
+    plusCode :: Maybe String,
+    addressComponents :: Array AddressComponents,
+    placeId :: Maybe String
+  }
+
 
 type DisabilityT = 
   {
@@ -710,6 +730,13 @@ type HomeScreenStateProps =
   , currentLocation :: Location
   , isShorterTrip :: Boolean
   , city :: Maybe String
+  , isHomescreenExpanded :: Boolean
+  , isRepeatRide :: Boolean
+  , currSlideIndex :: Number
+  , suggestionsListExpanded :: Boolean
+  , repeatRideTimer :: String
+  , repeatRideTimerId :: String
+  , showShimmer :: Boolean
   }
 
 type SearchLocationModelProps = {
@@ -1225,15 +1252,50 @@ type LocationListItemState = {
   , distance :: Maybe String
   , showDistance :: Maybe Boolean
   , actualDistance :: Maybe Int
+  , frequencyCount :: Maybe Int
+  , recencyDate :: Maybe String
+  , locationScore :: Maybe Number
 }
 
-data LocationItemType = RECENTS | PREDICTION | SAVED_LOCATION
+type SuggestionsMap = Map SourceGeoHash Suggestions
+type SourceGeoHash = String
+type DestinationGeoHash = String
+
+type Suggestions = {
+    destinationSuggestions :: Array LocationListItemState
+  , tripSuggestions :: Array Trip
+}
+
+type Trip = {
+    sourceLat :: Number
+  , source :: String 
+  , destination :: String
+  , sourceAddress :: Address 
+  , destinationAddress :: Address
+  , sourceLong :: Number
+  , destLat :: Number
+  , destLong :: Number
+  , frequencyCount :: Maybe Int
+  , recencyDate :: Maybe String
+  , locationScore :: Maybe Number
+  , isSpecialZone :: Boolean
+}
+type SuggestionsData =  {
+    suggestionsMap :: SuggestionsMap
+}
+
+data LocationItemType = RECENTS | PREDICTION | SAVED_LOCATION | SUGGESTED_DESTINATIONS
 
 derive instance genericLocationItemType :: Generic LocationItemType _
 instance eqLocationItemType :: Eq LocationItemType where eq = genericEq
 instance showLocationItemType :: Show LocationItemType where show = genericShow
 instance encodeLocationItemType :: Encode LocationItemType where encode = defaultEnumEncode
 instance decodeLocationItemType:: Decode LocationItemType where decode = defaultEnumDecode
+instance encodeJsonLocationItemType :: EncodeJson LocationItemType where
+  encodeJson = genericEncodeJson
+instance decodeJsonLocationItemType :: DecodeJson LocationItemType where
+  decodeJson = genericDecodeJson
+  
 
 type SaveFavouriteCardState =
   {

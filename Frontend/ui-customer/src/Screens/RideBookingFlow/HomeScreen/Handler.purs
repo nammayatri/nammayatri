@@ -167,3 +167,6 @@ homeScreen = do
       modifyScreenState $ HomeScreenStateType (\homeScreenState -> updatedState)
       modifyScreenState $ TripDetailsScreenStateType (\_ -> getTripDetailsState updatedState.data.ratingViewState.rideBookingRes state.tripDetailsScreen)
       App.BackT $ App.BackPoint <$> (pure $ RIDE_DETAILS_SCREEN updatedState)
+    RepeatTrip state trip-> do
+      modifyScreenState $ HomeScreenStateType (\homeScreenState -> state)
+      App.BackT $ App.BackPoint <$> (pure $ REPEAT_RIDE_FLOW_HOME trip)

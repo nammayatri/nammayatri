@@ -151,6 +151,11 @@ logoutView state push =
 ------------------------------ profileView --------------------------------
 profileView :: forall w. SettingSideBarState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 profileView state push =
+  let profileStatusVisibility = case state.appConfig.showProfileStatus, profileCompleteValue state of
+                  true , "100" -> GONE
+                  false, _ -> GONE
+                  _, _ -> VISIBLE
+  in 
   linearLayout
   [ width MATCH_PARENT
   , height WRAP_CONTENT
@@ -190,7 +195,7 @@ profileView state push =
               [ width $ V 22
               , height (V 22)
               , color state.appConfig.profileName
-              , imageWithFallback $ fetchImage FF_ASSET "ny_ic_chevron_right_white"
+              , imageWithFallback state.appConfig.profileArrowImage
               ]
           ]
         , textView $
@@ -207,9 +212,7 @@ profileView state push =
         , orientation HORIZONTAL
         , gravity CENTER_VERTICAL
         , margin $ MarginTop 4
-        , visibility case profileCompleteValue state of
-            "100" -> GONE
-            _ -> VISIBLE
+        , visibility $ profileStatusVisibility
         ][textView $
           [ text $ (getString PROFILE_COMPLETION) <> ":"
           , width WRAP_CONTENT
