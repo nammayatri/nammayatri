@@ -114,7 +114,7 @@ mkBreakupList mkPrice mkBreakupItem fareParams = do
 
     mkFPSlabDetailsBreakupList det = do
       let platformFeeCaption = "PLATFORM_FEE"
-          mbPlatformFeeItem = mkBreakupItem platformFeeCaption . mkPrice <$> det.platformFee
+          mbPlatformFeeItem = mkBreakupItem platformFeeCaption . mkPrice . roundToIntegral <$> det.platformFee
           sgstCaption = "SGST"
           mbSgstItem = mkBreakupItem sgstCaption . mkPrice . roundToIntegral <$> det.sgst
           cgstCaption = "CGST"
@@ -277,12 +277,12 @@ calculateFareParameters params = do
       where
         countPlatformFeeMath platformFeeInfo' = do
           let baseFee = case platformFeeInfo'.platformFeeCharge of
-                ProgressivePlatformFee charge -> fromIntegral fullCompleteRideCost * realToFrac charge
-                ConstantPlatformFee charge -> fromIntegral charge
+                ProgressivePlatformFee charge -> fromIntegral fullCompleteRideCost * charge
+                ConstantPlatformFee charge -> charge
           FParamsSlabDetails
-            { platformFee = Just . roundToIntegral $ baseFee,
-              cgst = Just . realToFrac $ baseFee * platformFeeInfo'.cgst,
-              sgst = Just . realToFrac $ baseFee * platformFeeInfo'.sgst
+            { platformFee = Just baseFee,
+              cgst = Just . HighPrecMoney . toRational $ platformFeeInfo'.cgst * realToFrac baseFee,
+              sgst = Just . HighPrecMoney . toRational $ platformFeeInfo'.sgst * realToFrac baseFee
             }
     calculateExtraTimeFare :: Meters -> Maybe HighPrecMoney -> Maybe Seconds -> Variant -> AvgSpeedOfVechilePerKm -> Maybe Money
     calculateExtraTimeFare distance perMinuteRideExtraTimeCharge actualRideDuration vehicleVariant avgSpeedOfVehicle = do
@@ -309,7 +309,7 @@ calculateFareParameters params = do
 countFullFareOfParamsDetails :: DFParams.FareParametersDetails -> (Money, Money, Money)
 countFullFareOfParamsDetails = \case
   DFParams.ProgressiveDetails det -> (fromMaybe 0 det.extraKmFare, det.deadKmFare, 0) -- (partOfNightShiftCharge, notPartOfNightShiftCharge)
-  DFParams.SlabDetails det -> (0, 0, fromMaybe 0 det.platformFee + roundToIntegral (fromMaybe 0 det.sgst + fromMaybe 0 det.cgst))
+  DFParams.SlabDetails det -> (0, 0, roundToIntegral (fromMaybe 0 det.platformFee + fromMaybe 0 det.sgst + fromMaybe 0 det.cgst))
 
 isNightShift ::
   DFP.NightShiftBounds ->
