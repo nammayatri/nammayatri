@@ -103,7 +103,7 @@ mobileNumberConfig state = let
       , pattern = Just "[0-9]*,10"
       , margin = MarginHorizontal 10 0
       , text = ""
-      , placeholder = "9999999999"
+      , placeholder = getString TEN_DIGIT_MOBILE_NUMBER
       , padding = Padding 0 16 16 16
       }
     , showCountryCodeField = false

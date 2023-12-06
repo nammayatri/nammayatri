@@ -645,7 +645,7 @@ getBN stringKey =
         BOOK_AND_MOVE  -> "বুক করুন এবং চলুন"
         ANYWHERE_IN_THE_CITY  -> "শহরের যেকোন জায়গায়"
         CHECKOUT_OUR_LIVE_STATS  -> "আমাদের লাইভ পরিসংখ্যান চেক করুন"
-        BENGALURU_MOST_LOVED_APP  -> "বেঙ্গালুরুর সবচেয়ে ❤️ অটো অ্যাপ"
+        MOST_LOVED_APP _  -> "বেঙ্গালুরুর সবচেয়ে ❤️ অটো অ্যাপ"
         PICKUP_  -> "পিকআপ -> "
         PAST_SEARCHES  -> "গত অনুসন্ধান"
         SEARCH_RESULTS  -> "অনুসন্ধানের ফলাফল"

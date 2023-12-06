@@ -1085,3 +1085,4 @@ getML stringKey =
         COMPLETE_PAYMENT_TO_CONTINUE _ -> ""
         BY_CLICKING_NEXT_YOU_WILL_BE_AGREEING_TO_OUR -> ""
         THIS_EXTRA_AMOUNT_THE_CUSTOMER_WILL_PAY -> "നിങ്ങൾ {} മിനിറ്റിലധികം കാത്തിരുന്നതിനാൽ ഉപഭോക്താവ് നിങ്ങൾക്ക് നൽകുന്ന അധിക തുകയാണിത്"
+        TEN_DIGIT_MOBILE_NUMBER -> "10 അക്ക മൊബൈൽ നമ്പർ"
