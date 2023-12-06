@@ -1093,3 +1093,4 @@ getKN stringKey =
         LOCATION_CANNOT_BE_ADDED_WHILE_GOTO_ACTIVE -> "ಗೋ-ಟು ಅನ್ನು ಸಕ್ರಿಯಗೊಳಿಸದಿದ್ದಾಗ ಮಾತ್ರ ಆಯ್ಕೆಯು ಲಭ್ಯವಿರುತ್ತದೆ"
         LOCATION_CANNOT_BE_ADDED_WHILE_ON_RIDE -> "ರೈಡ್ ಪ್ರಗತಿಯಲ್ಲಿರುವಾಗ ಆಯ್ಕೆಯು ಲಭ್ಯವಿರುವುದಿಲ್ಲ"
         ADD_GOTO -> "ಹೋಗಿ-ಗೆ ಸೇರಿಸಿ"
+        NO_OPEN_MARKET_RIDES _ -> "ಸವಾರಿ ಇಲ್ಲ"

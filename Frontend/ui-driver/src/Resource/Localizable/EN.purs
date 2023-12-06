@@ -1093,3 +1093,4 @@ getEN stringKey =
         LOCATION_CANNOT_BE_ADDED_WHILE_GOTO_ACTIVE -> "Option is available only when Go-To is not enabled"
         LOCATION_CANNOT_BE_ADDED_WHILE_ON_RIDE -> "Option is not available when ride is in progress"
         ADD_GOTO -> "Add Go-To"
+        NO_OPEN_MARKET_RIDES _ -> "No rides"

@@ -1093,3 +1093,4 @@ getML stringKey =
         LOCATION_CANNOT_BE_ADDED_WHILE_GOTO_ACTIVE -> "Go-To പ്രവർത്തനക്ഷമമാക്കാത്തപ്പോൾ മാത്രമേ ഓപ്ഷൻ ലഭ്യമാകൂ"
         LOCATION_CANNOT_BE_ADDED_WHILE_ON_RIDE -> "റൈഡ് പുരോഗമിക്കുമ്പോൾ ഓപ്‌ഷൻ ലഭ്യമല്ല"
         ADD_GOTO -> "ഗോ-ടു ചേർക്കുക"
+        NO_OPEN_MARKET_RIDES _ -> "റൈഡുകൾ ഇല്ല"
