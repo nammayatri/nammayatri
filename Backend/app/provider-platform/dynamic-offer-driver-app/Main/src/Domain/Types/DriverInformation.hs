@@ -23,7 +23,6 @@ import Data.Time (UTCTime)
 import qualified Domain.Types.Merchant as DMerchant
 import Domain.Types.Person (Person)
 import EulerHS.Prelude
-import Kernel.External.Encryption
 import Kernel.Storage.Esqueleto (derivePersistField)
 import Kernel.Types.Common (Money)
 import Kernel.Types.Id
@@ -61,7 +60,7 @@ $(mkBeamInstancesForEnum ''DriverAutoPayStatus)
 
 $(mkHttpInstancesForEnum ''DriverAutoPayStatus)
 
-data DriverInformationE e = DriverInformation
+data DriverInformation = DriverInformation
   { driverId :: Id Person,
     adminId :: Maybe (Id Person),
     merchantId :: Maybe (Id DMerchant.Merchant),
@@ -73,7 +72,8 @@ data DriverInformationE e = DriverInformation
     verified :: Bool,
     subscribed :: Bool,
     paymentPending :: Bool,
-    referralCode :: Maybe (EncryptedHashedField e Text),
+    referralCode :: Maybe Text,
+    referredByDriverId :: Maybe (Id Person),
     lastEnabledOn :: Maybe UTCTime,
     canDowngradeToSedan :: Bool,
     canDowngradeToHatchback :: Bool,
@@ -120,12 +120,6 @@ data Badges = Badges
     badgeCount :: Int
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
-
-type DriverInformation = DriverInformationE 'AsEncrypted
-
-instance FromJSON (EncryptedHashed Text)
-
-instance ToJSON (EncryptedHashed Text)
 
 instance FromJSON DriverInformation
 

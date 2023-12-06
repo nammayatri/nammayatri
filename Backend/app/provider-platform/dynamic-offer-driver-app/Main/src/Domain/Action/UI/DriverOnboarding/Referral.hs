@@ -19,14 +19,18 @@ import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as Person
 import Environment
-import Kernel.External.Encryption (encrypt)
+import qualified Kernel.Beam.Functions as B
 import Kernel.Prelude
 import Kernel.Types.APISuccess (APISuccess (..))
 import Kernel.Types.Id
+import Kernel.Types.Predicate
 import Kernel.Types.Validation (Validate)
-import qualified Kernel.Utils.Predicates as P
+import Kernel.Utils.Common (fromMaybeM)
+import Kernel.Utils.Error (throwError)
 import Kernel.Utils.Validation (runRequestValidation, validateField)
 import qualified Storage.Queries.DriverInformation as DriverInformation
+import qualified Storage.Queries.DriverReferral as QDR
+import Tools.Error (DriverInformationError (..), DriverReferralError (..))
 
 newtype ReferralReq = ReferralReq
   {value :: Text}
@@ -37,7 +41,7 @@ type ReferralRes = APISuccess
 validateReferralReq :: Validate ReferralReq
 validateReferralReq ReferralReq {..} =
   sequenceA_
-    [ validateField "value" value P.mobileNumber
+    [ validateField "value" value $ ExactLength 6
     ]
 
 addReferral ::
@@ -46,6 +50,8 @@ addReferral ::
   Flow ReferralRes
 addReferral (personId, _, _) req = do
   runRequestValidation validateReferralReq req
-  value <- encrypt req.value
-  DriverInformation.addReferralCode personId value
+  di <- B.runInReplica (DriverInformation.findById personId) >>= fromMaybeM DriverInfoNotFound
+  when (isJust di.referralCode || isJust di.referredByDriverId) $ throwError (AlreadyReffered personId.getId)
+  dr <- B.runInReplica (QDR.findByRefferalCode $ Id req.value) >>= fromMaybeM (InvalidReferralCode req.value)
+  DriverInformation.addReferralCode personId req.value dr.driverId
   return Success
