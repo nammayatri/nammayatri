@@ -12,11 +12,13 @@ import qualified Data.Aeson.KeyMap as KM
 import Data.Aeson.Lens (key, _Array, _Object, _Value)
 import qualified Data.ByteString as BS
 import qualified Data.List as L
-import Data.List.Split (splitOn)
+import qualified Data.List.Extra as L
+import Data.List.Split (split, splitOn, whenElt)
 import qualified Data.Text as T
 import qualified Data.Vector as V
 import qualified Data.Yaml as Yaml
 import Kernel.Prelude hiding (fromString, toString, toText, traceShowId, try)
+import Text.Casing (quietSnake)
 import Text.Regex.TDFA ((=~))
 
 storageParser :: FilePath -> IO [TableDef]
@@ -38,10 +40,7 @@ parseTableDef dList importObj (parseDomainName, obj) =
       parsedImports = parseImports parsedFields
       parsedQueries = parseQueries (Just parseDomainName) excludedList dList importObj obj
       (primaryKey, secondaryKey) = extractKeys parsedFields
-   in TableDef parseDomainName (parseTableName obj) parsedFields parsedImports parsedQueries primaryKey secondaryKey parsedTypes
-
-parseTableName :: Object -> String
-parseTableName = view (ix "tableName" . _String)
+   in TableDef parseDomainName (quietSnake parseDomainName) parsedFields parsedImports parsedQueries primaryKey secondaryKey parsedTypes
 
 parseImports :: [FieldDef] -> [String]
 parseImports fields =
@@ -54,7 +53,8 @@ searchForKey obj inputKey = (inputKey, fromMaybe (error $ T.pack $ "Query param 
 parseQueries :: Maybe String -> Maybe [String] -> [String] -> Object -> Object -> [QueryDef]
 parseQueries moduleName excludedList dList impObj obj = do
   let mbQueries = preview (ix "queries" . _Value . to mkListObject) obj
-      makeTypeQualified' = makeTypeQualified moduleName excludedList (Just dList) impObj
+      defaultImportModule = "Domain.Types."
+      makeTypeQualified' = makeTypeQualified moduleName excludedList (Just dList) defaultImportModule impObj
       parseQuery query =
         let queryName = fst query
             queryDataObj = snd query
@@ -123,20 +123,31 @@ parseTypeObjects obj =
     processType1 _ = error "Expected an object in fields"
 
 parseExtraTypes :: Maybe String -> [String] -> Object -> Object -> Maybe ([TypeObject], [String])
-parseExtraTypes _moduleName _dList _importObj obj = do
+parseExtraTypes moduleName dList importObj obj = do
   _types <- parseTypes obj
   let allExcludeQualified = map (\(TypeObject (name, _)) -> T.unpack name) _types
   return $ (map (mkQualifiedTypeObject allExcludeQualified) _types, allExcludeQualified)
   where
-    mkQualifiedTypeObject :: [String] -> TypeObject -> TypeObject
-    mkQualifiedTypeObject _excluded (TypeObject (_nm, (arrOfFields, derive))) =
-      TypeObject (_nm, (map (\(_n, _t) -> (_n, mkEnumTypeQualified _t)) arrOfFields, derive))
-
     mkEnumTypeQualified :: Text -> Text
-    mkEnumTypeQualified = identity -- TODO: Fix this
-    -- let ty = intercalate "," . (map (tail . T.splitOn " ")) . T.splitOn "," $ _t
-    -- let constructors = intercalate "," . (map (tail . T.splitOn " ")) . T.splitOn "," $ _t
-    -- T.pack $ makeTypeQualified moduleName (Just excluded) (Just dList) importObj $ T.unpack ty
+    mkEnumTypeQualified = identity
+
+    mkQualifiedTypeObject :: [String] -> TypeObject -> TypeObject
+    mkQualifiedTypeObject excluded (TypeObject (_nm, (arrOfFields, derive))) =
+      let defaultImportModule = "Domain.Types."
+       in TypeObject
+            ( _nm,
+              ( map
+                  ( \(_n, _t) ->
+                      ( _n,
+                        if _n == "enum"
+                          then mkEnumTypeQualified _t
+                          else T.pack $ makeTypeQualified moduleName (Just excluded) (Just dList) defaultImportModule importObj $ T.unpack _t
+                      )
+                  )
+                  arrOfFields,
+                derive
+              )
+            )
 
 parseFields :: Maybe String -> Maybe [String] -> [String] -> Object -> Object -> [FieldDef]
 parseFields moduleName excludedList dataList impObj obj =
@@ -151,14 +162,15 @@ parseFields moduleName excludedList dataList impObj obj =
             fieldKey = fromString fieldName
             sqlType = fromMaybe (findMatchingSqlType haskellType) (sqlTypeObj >>= preview (ix fieldKey . _String))
             beamType = fromMaybe (findBeamType haskellType) (beamTypeObj >>= preview (ix fieldKey . _String))
-            constraints = fromMaybe [] (constraintsObj >>= preview (ix fieldKey . _String . to (splitOn "|") . to (map getProperConstraint)))
-            defaultValue = defaultsObj >>= preview (ix fieldKey . _String)
+            constraints = L.nub $ getDefaultFieldConstraints fieldName haskellType ++ fromMaybe [] (constraintsObj >>= preview (ix fieldKey . _String . to (splitOn "|") . to (map getProperConstraint)))
+            defaultValue = maybe (sqlDefaultsWrtName fieldName) pure (defaultsObj >>= preview (ix fieldKey . _String))
             parseToTType = obj ^? (ix "toTType" . _Object) >>= preview (ix fieldKey . _String)
             parseFromTType = obj ^? (ix "fromTType" . _Object) >>= preview (ix fieldKey . _String)
+            defaultImportModule = "Domain.Types."
          in FieldDef
               { fieldName = fieldName,
-                haskellType = makeTypeQualified moduleName excludedList (Just dataList) impObj haskellType,
-                beamType = makeTypeQualified moduleName excludedList (Just dataList) impObj beamType,
+                haskellType = makeTypeQualified moduleName excludedList (Just dataList) defaultImportModule impObj haskellType,
+                beamType = makeTypeQualified moduleName excludedList (Just dataList) defaultImportModule impObj beamType,
                 sqlType = sqlType,
                 constraints = constraints,
                 defaultVal = defaultValue,
@@ -169,14 +181,29 @@ parseFields moduleName excludedList dataList impObj obj =
         Just f -> f
         Nothing -> error "Error Parsing Fields"
 
--- FIXME: This is a hack, we need to figure out a better way to do this
 findBeamType :: String -> String
-findBeamType hkType
-  | L.isPrefixOf "Id " hkType = "Text"
-  | L.isPrefixOf "[Id " hkType = "[Text]"
-  | L.isPrefixOf "ShortId " hkType = "Text"
-  | L.isPrefixOf "[ShortId " hkType = "[Text]"
-  | otherwise = hkType
+findBeamType str = concatMap (typeMapper . L.trim) (split (whenElt (`elem` typeDelimiter)) str)
+  where
+    typeDelimiter :: String
+    typeDelimiter = "()[]"
+    typeMapper :: String -> String
+    typeMapper hkType
+      | L.isPrefixOf "Id " hkType || L.isPrefixOf "Kernel.Types.Id.Id " hkType = "Text"
+      | L.isPrefixOf "ShortId " hkType || L.isPrefixOf "Kernel.Types.Id.ShortId " hkType = "Text"
+      | otherwise = hkType
+
+getDefaultFieldConstraints :: String -> String -> [FieldConstraint]
+getDefaultFieldConstraints nm tp = primaryKeyConstraint ++ notNullConstraint
+  where
+    trimmedTp = L.trim tp
+    primaryKeyConstraint = [PrimaryKey | nm == "id"]
+    notNullConstraint =
+      [ NotNull
+        | not
+            ( L.isPrefixOf "Maybe " trimmedTp
+                || L.isPrefixOf "Data.Maybe.Maybe " trimmedTp
+            )
+      ]
 
 getProperConstraint :: String -> FieldConstraint
 getProperConstraint txt = case (T.unpack . T.strip . T.pack) txt of
@@ -209,12 +236,18 @@ mkListObject _ = []
 -- SQL Types --
 findMatchingSqlType :: String -> String
 findMatchingSqlType haskellType =
-  case filter ((haskellType =~) . fst) defaultSQLTypes of
-    [] -> "text" --error $ T.pack ("\"" ++ haskellType ++ "\": No Sql type found")
+  case filter ((haskellType =~) . fst) sqlTypeWrtType of
+    [] -> "text"
     ((_, sqlType) : _) -> sqlType
 
-defaultSQLTypes :: [(String, String)]
-defaultSQLTypes =
+sqlDefaultsWrtName :: String -> Maybe String
+sqlDefaultsWrtName = \case
+  "createdAt" -> Just "CURRENT_TIMESTAMP"
+  "updatedAt" -> Just "CURRENT_TIMESTAMP"
+  _ -> Nothing
+
+sqlTypeWrtType :: [(String, String)]
+sqlTypeWrtType =
   [ ("\\[Text\\]", "text[]"),
     ("Text", "text"),
     ("\\[Id ", "text[]"),

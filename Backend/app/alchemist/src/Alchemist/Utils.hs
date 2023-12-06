@@ -10,32 +10,38 @@ import qualified Data.List as L
 import Data.List.Split (split, splitOn, splitWhen, whenElt)
 import qualified Data.Text as T
 import Kernel.Prelude hiding (Show, fromString, hPutStr, toString, traceShowId, try)
+import System.Directory (createDirectoryIfMissing)
 import System.IO
 
-writeToFile :: FilePath -> String -> IO ()
-writeToFile filename content = do
-  withFile filename WriteMode $ \handle_ -> do
+writeToFile :: FilePath -> FilePath -> String -> IO ()
+writeToFile directoryPath fileName content = do
+  createDirectoryIfMissing True directoryPath
+  withFile (directoryPath ++ "/" ++ fileName) WriteMode $ \handle_ -> do
     hPutStr handle_ content
 
 typeDelimiter :: String
 typeDelimiter = "() []"
 
--- makeTypeQualified (Maybe Module name)
-makeTypeQualified :: Maybe String -> Maybe [String] -> Maybe [String] -> Object -> String -> String
-makeTypeQualified moduleName excludedList dList obj str = concatMap replaceOrKeep (split (whenElt (`elem` typeDelimiter)) str)
-  where
-    defaultTypeImports :: String -> Maybe String
-    defaultTypeImports tp = case tp of
-      "Text" -> Just "Kernel.Prelude"
-      "Maybe" -> Just "Kernel.Prelude"
-      "Double" -> Just "Kernel.Prelude"
-      "TimeOfDay" -> Just "Kernel.Prelude"
-      "Day" -> Just "Data.Time.Calendar"
-      "Int" -> Just "Kernel.Prelude"
-      "Bool" -> Just "Kernel.Prelude"
-      "Id" -> Just "Kernel.Types.Id"
-      _ -> Nothing
+defaultTypeImports :: String -> Maybe String
+defaultTypeImports tp = case tp of
+  "Text" -> Just "Kernel.Prelude"
+  "Maybe" -> Just "Kernel.Prelude"
+  "Double" -> Just "Kernel.Prelude"
+  "TimeOfDay" -> Just "Kernel.Prelude"
+  "Day" -> Just "Data.Time.Calendar"
+  "Int" -> Just "Kernel.Prelude"
+  "Bool" -> Just "Kernel.Prelude"
+  "Id" -> Just "Kernel.Types.Id"
+  "Meters" -> Just "Kernel.Types.Common"
+  "HighPrecMeters" -> Just "Kernel.Types.Common"
+  "Kilometers" -> Just "Kernel.Types.Common"
+  "HighPrecMoney" -> Just "Kernel.Types.Common"
+  _ -> Nothing
 
+-- makeTypeQualified (Maybe Module name)
+makeTypeQualified :: Maybe String -> Maybe [String] -> Maybe [String] -> String -> Object -> String -> String
+makeTypeQualified moduleName excludedList dList defaultImportModule obj str = concatMap replaceOrKeep (split (whenElt (`elem` typeDelimiter)) str)
+  where
     getQualifiedImport :: String -> Maybe String
     getQualifiedImport tk = case preview (ix "imports" . key (fromString tk) . _String) obj of
       Just t -> Just t
@@ -47,10 +53,10 @@ makeTypeQualified moduleName excludedList dList obj str = concatMap replaceOrKee
         then word
         else
           if isJust moduleName && isJust excludedList && word `elem` (fromJust excludedList)
-            then "Domain.Types." ++ fromJust moduleName ++ "." ++ word
+            then defaultImportModule ++ fromJust moduleName ++ "." ++ word
             else
               if isJust dList && L.elem word (fromJust dList)
-                then "Domain.Types." ++ word ++ "." ++ word
+                then defaultImportModule ++ word ++ "." ++ word
                 else maybe (if word `elem` ["", ")", "(", " ", "[", "]"] then word else error $ T.pack ("\"" ++ word ++ "\" type not determined")) (\x -> x <> "." <> word) (getQualifiedImport word)
 
 figureOutImports :: [String] -> [String]
