@@ -61,7 +61,8 @@ data OnInitRes = OnInitRes
     mbRiderName :: Maybe Text,
     transactionId :: Text,
     merchant :: DM.Merchant,
-    city :: Context.City
+    city :: Context.City,
+    nightSafetyCheck :: Bool
   }
   deriving (Generic, Show)
 
@@ -102,5 +103,6 @@ onInit req = do
         mbRiderName = decRider.firstName,
         transactionId = booking.transactionId,
         merchant = merchant,
+        nightSafetyCheck = decRider.nightSafetyChecks,
         ..
       }

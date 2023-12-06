@@ -14,6 +14,7 @@
 
 module Beckn.Types.Core.Taxi.Common.Customer where
 
+import Beckn.Types.Core.Taxi.Common.Tags
 import Data.Aeson
 import Data.OpenApi (ToSchema (..), defaultSchemaOptions)
 import qualified Data.Text as T
@@ -69,8 +70,9 @@ instance FromJSON Phone where
 instance ToSchema Phone where
   declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
 
-newtype OrderPerson = OrderPerson
-  { name :: Text
+data OrderPerson = OrderPerson
+  { name :: Text,
+    tags :: Maybe TagGroups
   }
   deriving (Generic, FromJSON, ToJSON, Show)
 

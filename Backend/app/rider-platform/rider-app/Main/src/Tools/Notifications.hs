@@ -536,3 +536,29 @@ notifyOnNewMessage booking message = do
           [ message
           ]
   notifyPersonWithMutableContent person.merchantId merchantOperatingCityId notificationData
+
+notifySafetyAlert ::
+  ServiceFlow m r =>
+  SRB.Booking ->
+  T.Text ->
+  m ()
+notifySafetyAlert booking reason = do
+  person <- runInReplica $ Person.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
+  let notificationData =
+        Notification.NotificationReq
+          { category = Notification.SAFETY_ALERT,
+            subCategory = Nothing,
+            showNotification = Notification.SHOW,
+            messagePriority = Nothing,
+            entity = Notification.Entity Notification.Product person.id.getId (),
+            body = body,
+            title = title,
+            dynamicParams = EmptyDynamicParam,
+            auth = Notification.Auth person.id.getId person.deviceToken person.notificationToken
+          }
+      title = T.pack "SafetyAlert"
+      body =
+        unwords
+          [ reason
+          ]
+  notifyPerson person.merchantId person.merchantOperatingCityId notificationData

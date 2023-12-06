@@ -24,6 +24,7 @@ module SharedLogic.CallBAP
     sendDriverOffer,
     callOnConfirm,
     buildBppUrl,
+    sendAlertToBAP,
   )
 where
 
@@ -386,6 +387,27 @@ sendNewMessageToBAP booking ride message = do
   newMessageMsg <- ACL.buildOnUpdateMessage newMessageBuildReq
   retryConfig <- asks (.shortDurationRetryCfg)
   void $ callOnUpdate transporter booking.bapId booking.bapUri booking.bapCity booking.bapCountry booking.transactionId newMessageMsg retryConfig
+
+sendAlertToBAP ::
+  ( CacheFlow m r,
+    EsqDBFlow m r,
+    EncFlow m r,
+    HasHttpClientOptions r c,
+    HasShortDurationRetryCfg r c,
+    HasFlowEnv m r '["nwAddress" ::: BaseUrl]
+  ) =>
+  DRB.Booking ->
+  SRide.Ride ->
+  T.Text ->
+  m ()
+sendAlertToBAP booking ride reason = do
+  transporter <-
+    CQM.findById booking.providerId
+      >>= fromMaybeM (MerchantNotFound booking.providerId.getId)
+  let safetyAlertBuildReq = ACL.SafetyAlertBuildReq {ride, reason}
+  safetyAlertMsg <- ACL.buildOnUpdateMessage safetyAlertBuildReq
+  retryConfig <- asks (.shortDurationRetryCfg)
+  void $ callOnUpdate transporter booking.bapId booking.bapUri booking.bapCity booking.bapCountry booking.transactionId safetyAlertMsg retryConfig
 
 sendEstimateRepetitionUpdateToBAP ::
   ( CacheFlow m r,

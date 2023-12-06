@@ -31,6 +31,7 @@ import qualified Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.RideAssignedEvent 
 import Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.RideCompletedEvent as OnUpdate
 import qualified Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.RideCompletedEvent as RideCompletedOU
 import qualified Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.RideStartedEvent as RideStartedOU
+import qualified Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.SafetyAlertEvent as SafetyAlertDU
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.BookingCancellationReason as SBCR
 import qualified Domain.Types.Estimate as DEst
@@ -93,6 +94,10 @@ data OnUpdateBuildReq
         vehicle :: SVeh.Vehicle,
         booking :: DRB.Booking,
         message :: Text
+      }
+  | SafetyAlertBuildReq
+      { ride :: DRide.Ride,
+        reason :: Text
       }
 
 mkFullfillment ::
@@ -351,6 +356,18 @@ buildOnUpdateMessage NewMessageBuildReq {..} = do
               { id = ride.bookingId.getId,
                 fulfillment = fulfillment
               }
+      }
+buildOnUpdateMessage SafetyAlertBuildReq {..} = do
+  return $
+    OnUpdate.OnUpdateMessage
+      { order =
+          OnUpdate.SafetyAlert $
+            SafetyAlertDU.SafetyAlertEvent
+              { id = ride.bookingId.getId,
+                fulfillment = SafetyAlertDU.FulfillmentInfo ride.id.getId,
+                reason = reason
+              },
+        update_target = "order.fufillment.state.code, order.fulfillment.tags"
       }
 
 castCancellationSource :: SBCR.CancellationSource -> BookingCancelledOU.CancellationSource

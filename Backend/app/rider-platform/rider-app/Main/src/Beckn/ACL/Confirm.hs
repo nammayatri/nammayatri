@@ -15,6 +15,7 @@
 
 module Beckn.ACL.Confirm (buildConfirmReq) where
 
+import qualified Beckn.Types.Core.Taxi.Common.Tags as Tags
 import qualified Beckn.Types.Core.Taxi.Confirm as Confirm
 import Control.Lens ((%~))
 import qualified Data.Text as T
@@ -45,6 +46,7 @@ buildConfirmReq res = do
 mkConfirmMessage :: (MonadFlow m) => DOnInit.OnInitRes -> m Confirm.ConfirmMessage
 mkConfirmMessage res = do
   let vehicleVariant = castVehicleVariant res.vehicleVariant
+      nightSafetyCheck = res.nightSafetyCheck
   pure
     Confirm.ConfirmMessage
       { order =
@@ -56,7 +58,7 @@ mkConfirmMessage res = do
                       price = Nothing
                     }
                 ],
-              fulfillment = mkFulfillment res.fulfillmentId fulfillmentType res.fromLocation res.mbToLocation res.riderPhoneCountryCode res.riderPhoneNumber res.mbRiderName vehicleVariant,
+              fulfillment = mkFulfillment res.fulfillmentId fulfillmentType res.fromLocation res.mbToLocation res.riderPhoneCountryCode res.riderPhoneNumber res.mbRiderName vehicleVariant nightSafetyCheck,
               payment = mkPayment res.estimatedTotalFare res.paymentUrl,
               quote =
                 Confirm.Quote
@@ -88,8 +90,8 @@ mkConfirmMessage res = do
       DRB.OneWaySpecialZoneDetails _ -> Confirm.RIDE_OTP
       _ -> Confirm.RIDE
 
-mkFulfillment :: Maybe Text -> Confirm.FulfillmentType -> DL.Location -> Maybe DL.Location -> Text -> Text -> Maybe Text -> Confirm.VehicleVariant -> Confirm.FulfillmentInfo
-mkFulfillment fulfillmentId fulfillmentType startLoc mbStopLoc riderPhoneCountryCode riderPhoneNumber mbRiderName vehicleVariant =
+mkFulfillment :: Maybe Text -> Confirm.FulfillmentType -> DL.Location -> Maybe DL.Location -> Text -> Text -> Maybe Text -> Confirm.VehicleVariant -> Bool -> Confirm.FulfillmentInfo
+mkFulfillment fulfillmentId fulfillmentType startLoc mbStopLoc riderPhoneCountryCode riderPhoneNumber mbRiderName vehicleVariant nightSafetyCheck =
   Confirm.FulfillmentInfo
     { id = fulfillmentId,
       _type = fulfillmentType,
@@ -132,7 +134,8 @@ mkFulfillment fulfillmentId fulfillmentType startLoc mbStopLoc riderPhoneCountry
             person =
               mbRiderName <&> \riderName ->
                 Confirm.OrderPerson
-                  { name = riderName
+                  { name = riderName,
+                    tags = Just $ Confirm.TG [mkCustomerInfoTags]
                   }
           },
       vehicle =
@@ -140,6 +143,21 @@ mkFulfillment fulfillmentId fulfillmentType startLoc mbStopLoc riderPhoneCountry
           { category = vehicleVariant
           }
     }
+  where
+    mkCustomerInfoTags =
+      Tags.TagGroup
+        { display = False,
+          code = "customer_info",
+          name = "Customer Information",
+          list =
+            [ Tags.Tag
+                { display = (\_ -> Just False) =<< Just nightSafetyCheck,
+                  code = (\_ -> Just "night_safety_check") =<< Just nightSafetyCheck,
+                  name = (\_ -> Just "Night Safety Check") =<< Just nightSafetyCheck,
+                  value = (Just . show) =<< Just nightSafetyCheck
+                }
+            ]
+        }
 
 mkAddress :: DLA.LocationAddress -> Confirm.Address
 mkAddress DLA.LocationAddress {..} =

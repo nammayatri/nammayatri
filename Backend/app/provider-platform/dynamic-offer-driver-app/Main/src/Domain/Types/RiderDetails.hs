@@ -35,7 +35,8 @@ data RiderDetailsE e = RiderDetails
     hasTakenValidRide :: Bool,
     hasTakenValidRideAt :: Maybe UTCTime,
     merchantId :: Id Merchant,
-    otpCode :: Maybe Text
+    otpCode :: Maybe Text,
+    nightSafetyChecks :: Bool
   }
   deriving (Generic)
 

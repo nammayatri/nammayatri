@@ -29,6 +29,7 @@ import Beckn.Types.Core.Taxi.Common.Provider as Reexport
 import Beckn.Types.Core.Taxi.Common.Quote as Reexport
 import Beckn.Types.Core.Taxi.Common.StartInfo as Reexport
 import Beckn.Types.Core.Taxi.Common.StopInfo as Reexport
+import Beckn.Types.Core.Taxi.Common.Tags as Reexport
 import Beckn.Types.Core.Taxi.Common.Vehicle as Reexport
 import Beckn.Types.Core.Taxi.Confirm.Fulfillment as Reexport
 import Beckn.Types.Core.Taxi.Confirm.Order as Reexport

@@ -19,25 +19,41 @@ module Lib.LocationUpdates
   )
 where
 
+import Data.Time hiding (secondsToNominalDiffTime)
 import Domain.Action.Beckn.Search
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
+import Domain.Types.Merchant.TransporterConfig
 import Domain.Types.Person
 import Domain.Types.Ride
 import qualified Domain.Types.RideRoute as RI
 import Environment
+import Kernel.Beam.Functions (runInReplica)
 import Kernel.External.Maps
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id
 import Kernel.Utils.CalculateDistance
 import Kernel.Utils.Common
 import "location-updates" Lib.LocationUpdates as Reexport
+import qualified SharedLogic.CallBAP as BP
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as MTC
+import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.Ride as QRide
+import qualified Storage.Queries.RiderDetails as QRiderDetails
 import Tools.Error
 import qualified Tools.Maps as TMaps
+
+getDeviationForPoint :: LatLong -> [LatLong] -> Meters
+getDeviationForPoint pt estimatedRoute =
+  highPrecMetersToMeters (minimum $ map (distanceBetweenInMeters pt) estimatedRoute)
+
+getMaxDeviation :: [LatLong] -> [LatLong] -> Meters -> Meters -> Meters -> Meters
+getMaxDeviation _ [] _ _ acc = acc
+getMaxDeviation estimatedRoute (pt : batchWaypoints) pt1 pt2 acc = do
+  let currDeviation = getDeviationForPoint pt estimatedRoute
+      currentWindowDeviation = min pt1 (min pt2 currDeviation)
+  getMaxDeviation estimatedRoute batchWaypoints pt2 currDeviation (max acc currentWindowDeviation)
 
 isWithinTolerance :: LatLong -> [LatLong] -> Meters -> Bool
 isWithinTolerance pt estimatedRoute routeDeviationThreshold = do
@@ -55,65 +71,83 @@ checkForDeviation routeDeviationThreshold estimatedRoute (pt : batchWaypoints) d
       then checkForDeviation routeDeviationThreshold estimatedRoute batchWaypoints 0
       else checkForDeviation routeDeviationThreshold estimatedRoute batchWaypoints (deviationCount + 1)
 
-updateDeviation :: (HedisFlow m r, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r) => Meters -> Maybe (Id Ride) -> [LatLong] -> m Bool
-updateDeviation _ Nothing _ = do
+updateDeviation :: TransporterConfig -> Bool -> Maybe (Id Ride) -> [LatLong] -> Flow Bool
+updateDeviation _ _ Nothing _ = do
   logInfo "No ride found to check deviation"
   return False
-updateDeviation routeDeviationThreshold (Just rideId) batchWaypoints = do
-  routeDeviation <- getRouteDeviation rideId
-  if routeDeviation
+updateDeviation transportConfig safetyCheckEnabled (Just rideId) batchWaypoints = do
+  (alreadyDeviated, safetyAlertAlreadyTriggered) <- getDeviationAndSafetyDetails rideId
+  if safetyAlertAlreadyTriggered
     then do
-      logInfo $ "Ride already deviated for rideId: " <> getId rideId
+      logInfo $ "Safety alert already triggered for rideId: " <> getId rideId
       return True
     else do
-      logInfo $ "Updating Deviation for rideId: " <> getId rideId
-      let key = searchRequestKey (getId rideId)
+      let routeDeviationThreshold = transportConfig.routeDeviationThreshold
+          key = searchRequestKey (getId rideId)
       routeInfo :: Maybe RI.RouteInfo <- Redis.get key
       case routeInfo >>= (.points) of
-        Just estimatedRoute ->
-          if checkForDeviation routeDeviationThreshold estimatedRoute batchWaypoints 0
-            then do
+        Just estimatedRoute -> do
+          currentlyDeviated <-
+            case (safetyCheckEnabled, alreadyDeviated) of
+              (True, _) -> do
+                let deviation = getMaxDeviation estimatedRoute batchWaypoints 0 0 0
+                fork "Performing safety check" $
+                  when (deviation >= transportConfig.nightSafetyRouteDeviationThreshold) $ performSafetyCheck rideId
+                return $ deviation >= routeDeviationThreshold
+              (False, False) -> return $ checkForDeviation routeDeviationThreshold estimatedRoute batchWaypoints 0
+              (False, True) -> return True
+          case (alreadyDeviated, currentlyDeviated) of
+            (True, _) -> return True
+            (False, True) -> do
               logInfo $ "Deviation detected for rideId: " <> getId rideId
               QRide.updateDriverDeviatedFromRoute rideId True
               return True
-            else do
+            (False, False) -> do
               logInfo $ "No deviation detected for rideId: " <> getId rideId
               return False
         Nothing -> do
           logWarning $ "Ride route points not found for rideId: " <> getId rideId
           return False
   where
-    getRouteDeviation id = do
-      rideDetails <- QRide.findById id
-      case rideDetails of
-        Just ride -> do
-          case driverDeviatedFromRoute ride of
-            Just deviation -> return deviation
-            Nothing -> return False
+    getDeviationAndSafetyDetails id = do
+      mbRideDetails <- QRide.findById id
+      case mbRideDetails of
         Nothing -> do
-          logInfo $ "Ride not found for rideId: " <> getId id
-          return False
+          logWarning $ "Ride not found for rideId: " <> getId id
+          return (False, False)
+        Just rideDetails -> do
+          let alreadyDeviated = fromMaybe False rideDetails.driverDeviatedFromRoute
+          return (alreadyDeviated, rideDetails.safetyAlertTriggered)
 
 buildRideInterpolationHandler :: Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Bool -> Flow (RideInterpolationHandler Person Flow)
 buildRideInterpolationHandler merchantId merchantOpCityId isEndRide = do
   transportConfig <- MTC.findByMerchantOpCityId merchantOpCityId >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  now <- getLocalCurrentTime transportConfig.timeDiffFromUtc
   let snapToRoad' =
         if transportConfig.useWithSnapToRoadFallback
           then TMaps.snapToRoadWithFallback merchantId merchantOpCityId
           else snapToRoadWithService
+      enableNightSafety = checkTimeConstraint transportConfig now
   return $
     mkRideInterpolationHandler
       isEndRide
       (\driverId dist googleSnapCalls osrmSnapCalls -> void (QRide.updateDistance driverId dist googleSnapCalls osrmSnapCalls))
       ( \driverId batchWaypoints -> do
           mRide <- QRide.getInProgressOrNewRideIdAndStatusByDriverId driverId
-          updateDeviation transportConfig.routeDeviationThreshold (mRide <&> fst) batchWaypoints
+          updateDeviation transportConfig enableNightSafety (mRide <&> fst) batchWaypoints
       )
       snapToRoad'
   where
     snapToRoadWithService req = do
       resp <- TMaps.snapToRoad merchantId merchantOpCityId req
       return (Google, resp)
+
+    checkTimeConstraint config now = do
+      let midnightTime = UTCTime (utctDay now) 0
+          nextMidNight = addUTCTime nominalDay midnightTime
+          startTime = addUTCTime (secondsToNominalDiffTime config.nightSafetyStartTime) midnightTime
+          endTime = addUTCTime (secondsToNominalDiffTime config.nightSafetyEndTime) midnightTime
+      now >= midnightTime && now <= endTime || now >= startTime && now <= nextMidNight
 
 whenWithLocationUpdatesLock :: (HedisFlow m r, MonadMask m) => Id Person -> m () -> m ()
 whenWithLocationUpdatesLock driverId f = do
@@ -132,3 +166,17 @@ whenWithLocationUpdatesLock driverId f = do
       throwError (HitsLimitError 5)
   where
     lockKey = "DriverLocationUpdate:DriverId-" <> driverId.getId
+
+performSafetyCheck :: Id Ride -> Flow ()
+performSafetyCheck rideId = do
+  logInfo $ "Performing safety check for rideId: " <> getId rideId
+  ride <- runInReplica $ QRide.findById rideId >>= fromMaybeM (RideNotFound rideId.getId)
+  when (not ride.safetyAlertTriggered) $ do
+    booking <- runInReplica $ QBooking.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
+    riderId <-
+      booking.riderId
+        & fromMaybeM (BookingFieldNotPresent "riderId")
+    riderDetails <- runInReplica $ QRiderDetails.findById riderId >>= fromMaybeM (RiderDetailsNotFound ride.id.getId)
+    void $ QRide.updateSafetyAlertTriggered ride.id
+    when riderDetails.nightSafetyChecks $ do
+      BP.sendAlertToBAP booking ride "Deviation"

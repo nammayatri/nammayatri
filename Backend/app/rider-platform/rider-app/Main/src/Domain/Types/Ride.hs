@@ -71,7 +71,8 @@ data Ride = Ride
     rideEndTime :: Maybe UTCTime,
     rideRating :: Maybe Int,
     createdAt :: UTCTime,
-    updatedAt :: UTCTime
+    updatedAt :: UTCTime,
+    safetyCheckStatus :: Maybe Bool
   }
   deriving (Generic, Show)
 

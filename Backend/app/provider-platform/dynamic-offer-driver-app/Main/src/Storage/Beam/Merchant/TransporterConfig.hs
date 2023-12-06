@@ -110,6 +110,9 @@ data TransporterConfigT f = TransporterConfigT
     considerSpecialZoneRidesForPlanCharges :: B.C f Bool,
     considerSpecialZoneRideChargesInFreeTrial :: B.C f Bool,
     enableUdfForOffers :: B.C f Bool,
+    nightSafetyRouteDeviationThreshold :: B.C f Meters,
+    nightSafetyStartTime :: B.C f Seconds,
+    nightSafetyEndTime :: B.C f Seconds,
     createdAt :: B.C f UTCTime,
     updatedAt :: B.C f UTCTime
   }
