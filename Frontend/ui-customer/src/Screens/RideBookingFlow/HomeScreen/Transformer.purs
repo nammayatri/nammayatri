@@ -143,6 +143,8 @@ getDriverInfo vehicleVariant (RideBookingRes resp) isQuote =
       , sourceLng : resp.fromLocation ^._lon
       , destinationLat : (resp.bookingDetails ^._contents^._toLocation ^._lat)
       , destinationLng : (resp.bookingDetails ^._contents^._toLocation ^._lon)
+      , sourceAddress : getAddressFromBooking resp.fromLocation
+      , destinationAddress : getAddressFromBooking (resp.bookingDetails ^._contents^._toLocation)
       , estimatedDistance : parseFloat ((toNumber (fromMaybe 0 (resp.bookingDetails ^._contents ^._estimatedDistance)))/1000.0) 2
       , createdAt : resp.createdAt
       , driverLat : 0.0

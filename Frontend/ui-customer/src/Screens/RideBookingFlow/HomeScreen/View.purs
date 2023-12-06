@@ -871,7 +871,7 @@ emptySuggestionsBanner state push =
             [ height WRAP_CONTENT
             , width MATCH_PARENT
             , gravity LEFT
-            , text $ getString WELCOME_TO_NAMMA_YATRI_
+            , text $ getString $ WELCOME_TEXT "WELCOME_TEXT"
             , color Color.black800
             , padding $ PaddingBottom 2
             ] <> (FontStyle.body2 LanguageStyle)

@@ -76,7 +76,7 @@ addOrUpdateSuggestedDestination sourceGeohash destination suggestionsMap config 
                   { locationScore = Just $ calculateScore (toNumber (fromMaybe 0 existingDestination.frequencyCount)) (fromMaybe (getCurrentUTC "") existingDestination.recencyDate) config.frequencyWeight }
 
           updatedDestinations = map updateExisting destinations
-          destinationExists = any (\destination -> destination.placeId == destination.placeId) destinations
+          destinationExists = any (\destinationItem -> destinationItem.placeId == destination.placeId) destinations
           sortedDestinations = sortDestinationsByScore updatedDestinations
         in
           if destinationExists
@@ -133,16 +133,16 @@ addOrUpdateSuggestedTrips sourceGeohash trip suggestionsMap config =
                   { locationScore = Just $ calculateScore (toNumber (fromMaybe 0 existingTrip.frequencyCount)) (fromMaybe (getCurrentUTC "") existingTrip.recencyDate) config.frequencyWeight }
 
           updatedTrips = map updateExisting trips
-          tripExists = any (\trip -> (getDistanceBwCordinates trip.sourceLat trip.sourceLong trip.sourceLat trip.sourceLong) < config.tripDistanceThreshold
-            && (getDistanceBwCordinates trip.destLat trip.destLong trip.destLat trip.destLong) < config.tripDistanceThreshold) trips
+          tripExists = any (\tripItem -> (getDistanceBwCordinates tripItem.sourceLat tripItem.sourceLong trip.sourceLat trip.sourceLong) < config.tripDistanceThreshold
+            && (getDistanceBwCordinates tripItem.destLat tripItem.destLong trip.destLat trip.destLong) < config.tripDistanceThreshold) trips
           sortedTrips = sortTripsByScore updatedTrips
         in
           if tripExists
           then sortedTrips
-          else  (take (config.tripsToBeStored - 1) sortedTrips) <> ( singleton trip{recencyDate = Just $ getCurrentUTC "",
+          else (take (config.tripsToBeStored - 1) sortedTrips) <> ( singleton trip{recencyDate = Just $ getCurrentUTC "",
                                                       frequencyCount = Just 1,
                                                       locationScore = Just $ calculateScore (toNumber 1) (getCurrentUTC "") config.frequencyWeight
-                                                      }) 
+                                                      })
 
 getSuggestedRidesAndLocations :: SourceGeoHash -> SuggestionsMap -> Int -> Maybe Suggestions
 getSuggestedRidesAndLocations sourceGeohash suggestionsMap geoHashLimit = do

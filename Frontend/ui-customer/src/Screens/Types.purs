@@ -1040,6 +1040,8 @@ type DriverInfoCard =
   , initDistance :: Maybe Int
   , config :: AppConfig
   , vehicleVariant :: String
+  , sourceAddress :: Address
+  , destinationAddress :: Address
   }
 
 type RatingCard =

@@ -359,6 +359,8 @@ dummyDriverInfo =
   , initDistance : Nothing
   , config : DC.config
   , vehicleVariant : ""
+  , sourceAddress : dummyAddress
+  , destinationAddress : dummyAddress
   }
 
 dummySettingBar :: SettingSideBarState
