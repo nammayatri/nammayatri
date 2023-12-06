@@ -13,7 +13,7 @@ import Data.Aeson.Lens (key, _Array, _Object, _Value)
 import qualified Data.ByteString as BS
 import qualified Data.List as L
 import qualified Data.List.Extra as L
-import Data.List.Split (split, splitOn, whenElt)
+import Data.List.Split (split, splitOn, splitWhen, whenElt)
 import qualified Data.Text as T
 import qualified Data.Vector as V
 import qualified Data.Yaml as Yaml
@@ -37,15 +37,27 @@ parseTableDef dList importObj (parseDomainName, obj) =
       parsedTypes = parsedTypesAndExcluded >>= pure . fst
       excludedList = parsedTypesAndExcluded >>= pure . snd
       parsedFields = parseFields (Just parseDomainName) excludedList dList importObj obj
-      parsedImports = parseImports parsedFields
+      parsedImports = parseImports parsedFields (fromMaybe [] parsedTypes)
       parsedQueries = parseQueries (Just parseDomainName) excludedList dList importObj obj
       (primaryKey, secondaryKey) = extractKeys parsedFields
    in TableDef parseDomainName (quietSnake parseDomainName) parsedFields parsedImports parsedQueries primaryKey secondaryKey parsedTypes
 
-parseImports :: [FieldDef] -> [String]
-parseImports fields =
-  let extraImports = concatMap (\f -> (maybe [] pure $ toTType f) <> (maybe [] pure $ fromTType f)) fields
-   in figureOutImports $ (map haskellType fields <> extraImports)
+parseImports :: [FieldDef] -> [TypeObject] -> [String]
+parseImports fields typObj =
+  figureOutImports (map haskellType fields <> extraImports <> concatMap figureOutInsideTypeImports typObj)
+  where
+    figureOutInsideTypeImports :: TypeObject -> [String]
+    figureOutInsideTypeImports (TypeObject (_, (tps, _))) =
+      concatMap
+        ( ( \potentialImport ->
+              if "," `T.isInfixOf` potentialImport
+                then filter ('.' `elem`) $ splitWhen (`elem` ("() []," :: String)) (T.unpack potentialImport)
+                else T.unpack <$> [potentialImport]
+          )
+            . snd
+        )
+        tps
+    extraImports = concatMap (\f -> maybe [] pure (toTType f) <> maybe [] pure (fromTType f)) fields
 
 searchForKey :: Object -> String -> (String, String)
 searchForKey obj inputKey = (inputKey, fromMaybe (error $ T.pack $ "Query param " ++ inputKey ++ " not found in fields") $ obj ^? (ix "fields" . key (fromString inputKey) . _String))
@@ -128,26 +140,28 @@ parseExtraTypes moduleName dList importObj obj = do
   let allExcludeQualified = map (\(TypeObject (name, _)) -> T.unpack name) _types
   return $ (map (mkQualifiedTypeObject allExcludeQualified) _types, allExcludeQualified)
   where
-    mkEnumTypeQualified :: Text -> Text
-    mkEnumTypeQualified = identity
+    defaultImportModule = "Domain.Types."
+    mkEnumTypeQualified :: [String] -> Text -> Text
+    mkEnumTypeQualified excluded enumTp =
+      let individualEnums = T.strip <$> T.splitOn "," enumTp
+       in T.intercalate "," $ map (uncurry (<>) . second (T.pack . makeTypeQualified moduleName (Just excluded) (Just dList) defaultImportModule importObj . T.unpack) . T.breakOn " ") individualEnums
 
     mkQualifiedTypeObject :: [String] -> TypeObject -> TypeObject
     mkQualifiedTypeObject excluded (TypeObject (_nm, (arrOfFields, derive))) =
-      let defaultImportModule = "Domain.Types."
-       in TypeObject
-            ( _nm,
-              ( map
-                  ( \(_n, _t) ->
-                      ( _n,
-                        if _n == "enum"
-                          then mkEnumTypeQualified _t
-                          else T.pack $ makeTypeQualified moduleName (Just excluded) (Just dList) defaultImportModule importObj $ T.unpack _t
-                      )
+      TypeObject
+        ( _nm,
+          ( map
+              ( \(_n, _t) ->
+                  ( _n,
+                    if _n == "enum"
+                      then mkEnumTypeQualified excluded _t
+                      else T.pack $ makeTypeQualified moduleName (Just excluded) (Just dList) defaultImportModule importObj $ T.unpack _t
                   )
-                  arrOfFields,
-                derive
               )
-            )
+              arrOfFields,
+            derive
+          )
+        )
 
 parseFields :: Maybe String -> Maybe [String] -> [String] -> Object -> Object -> [FieldDef]
 parseFields moduleName excludedList dataList impObj obj =
