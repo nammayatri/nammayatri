@@ -4,7 +4,7 @@ import Animation as Anim
 import Animation.Config (translateYAnimConfig, translateYAnimMapConfig, removeYAnimFromTopConfig)
 import JBridge as JB 
 import Prelude (Unit, bind, const, pure, unit, ($), (&&), (/=), (<<<),(<>), (==), map, show, (||), show, (-))
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), Visibility(..), PrestoDOM, Screen, afterRender, background, color, fontStyle, gravity, height, imageUrl, imageView, linearLayout, margin, onBackPressed, orientation, padding, scrollView, text, textSize, textView, weight, width, imageWithFallback, cornerRadius, relativeLayout, alignParentBottom, layoutGravity, stroke, visibility, textFromHtml, onClick, clickable, id)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), Visibility(..), PrestoDOM, Screen, afterRender, background, color, fontStyle, gravity, height, imageUrl, imageView, linearLayout, margin, onBackPressed, orientation, padding, scrollView, text, textSize, textView, weight, width, imageWithFallback, cornerRadius, relativeLayout, alignParentBottom, layoutGravity, stroke, visibility, textFromHtml, onClick, clickable, id, horizontalScrollView)
 import PrestoDOM.Animation as PrestoAnim
 import Screens.TicketInfoScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.Types as ST
@@ -16,8 +16,8 @@ import Components.GenericHeader as GenericHeader
 import Components.PrimaryButton as PrimaryButton
 import Font.Style as FontStyle
 import Engineering.Helpers.Commons (screenWidth, convertUTCtoISC, getNewIDWithTag)
-import Helpers.Utils (fetchImage, FetchImageFrom(..), decodeError, fetchAndUpdateCurrentLocation, getAssetsBaseUrl, getCurrentLocationMarker, getLocationName, getNewTrackingId, getSearchType, parseFloat, storeCallBackCustomer)
-import Services.API (BookingStatus(..))
+import Helpers.Utils (convertUTCToISTAnd12HourFormat, fetchImage, FetchImageFrom(..), decodeError, fetchAndUpdateCurrentLocation, getAssetsBaseUrl, getCurrentLocationMarker, getLocationName, getNewTrackingId, getSearchType, parseFloat, storeCallBackCustomer)
+import Services.API (BookingStatus(..), TicketPlaceResp(..), PlaceType(..))
 import Animation (fadeInWithDelay, translateInXBackwardAnim, translateInXBackwardFadeAnimWithDelay, translateInXForwardAnim, translateInXForwardFadeAnimWithDelay)
 import Halogen.VDom.DOM.Prop (Prop)
 import Data.Array as DA
@@ -160,31 +160,35 @@ getTicketBackgroundColor ticketServiceName = case ticketServiceName of
   "Entrance" -> Color.black900
   "Videography" -> Color.yellow800
   "Aquarium" -> "#DFE8FF"
-  _ -> Color.grey900
+  _ -> Color.black900
 
 getShareButtonIcon :: String -> String
 getShareButtonIcon ticketServiceName = case ticketServiceName of
   "Entrance" -> "ny_ic_share_unfilled_white"
-  _ -> "ny_ic_share_unfilled_black"
+  "Videography" -> "ny_ic_share_unfilled_black"
+  "Aquarium" -> "ny_ic_share_unfilled_black"
+  _ -> "ny_ic_share_unfilled_white"
 
 getShareButtonColor :: String -> String
 getShareButtonColor ticketServiceName = case ticketServiceName of
   "Entrance" -> Color.white900
-  _ -> Color.black900
+  "Videography" -> Color.black900
+  "Aquarium" -> Color.black900
+  _ -> Color.white900
 
 getPlaceColor :: String -> String
 getPlaceColor ticketServiceName = case ticketServiceName of
   "Entrance" -> Color.white900
   "Videography" -> Color.black800
   "Aquarium" -> Color.black800
-  _ -> Color.grey900
+  _ -> Color.white900
 
 getInfoColor :: String -> String
 getInfoColor ticketServiceName = case ticketServiceName of
   "Entrance" -> Color.white900
   "Videography" -> Color.black900
   "Aquarium" -> Color.black900
-  _ -> Color.grey900
+  _ -> Color.white900
 
 ticketHeaderView :: forall w. ST.TicketInfoScreenState -> (Action -> Effect Unit) -> String -> String -> PrestoDOM (Effect Unit) w
 ticketHeaderView state push placeColor infoColor  =
@@ -221,7 +225,9 @@ ticketHeaderView state push placeColor infoColor  =
 getTicketImage :: String -> String
 getTicketImage ticketServiceName = case ticketServiceName of
   "Entrance" -> fetchImage FF_ASSET "ny_ic_ticket"
-  _ -> fetchImage FF_ASSET "ny_ic_ticket_black"
+  "Videography" -> fetchImage FF_ASSET "ny_ic_ticket_black"
+  "Aquarium" -> fetchImage FF_ASSET "ny_ic_ticket_black"
+  _ -> fetchImage FF_ASSET "ny_ic_ticket"
 
 carouselDotView :: forall w. ST.TicketInfoScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 carouselDotView state push =
@@ -253,12 +259,12 @@ ticketImageView state push =
           , height $ V 150
           , gravity CENTER
           , onClick push $ const DecrementSliderIndex
+          , clickable $ if state.props.leftButtonDisable then false else true
           ][ imageView
               [ width $ V 24
               , height $ V 24
               , imageWithFallback $ getLeftButtonForSlider state.props.activeListItem.ticketServiceName state.props.leftButtonDisable
               , visibility $ if state.props.leftButtonDisable then INVISIBLE else VISIBLE
-              , clickable $ if state.props.leftButtonDisable then false else true
               ]
           ]
         , linearLayout
@@ -280,12 +286,12 @@ ticketImageView state push =
           , height $ V 150
           , gravity CENTER
           , onClick push $ const IncrementSliderIndex
+          , clickable $ if state.props.rightButtonDisable then false else true
           ][ imageView
             [ width $ V 24
             , height $ V 24
             , imageWithFallback $ getRightButtonForSlider state.props.activeListItem.ticketServiceName state.props.rightButtonDisable
             , visibility $ if state.props.rightButtonDisable then INVISIBLE else VISIBLE
-            , clickable $ if state.props.rightButtonDisable then false else true
             ]
           ]
       ]
@@ -298,37 +304,69 @@ getTextForQRType ticketServiceName = case ticketServiceName of
   "Entrance" -> "Zoo Entry "
   "Videography" -> "Photo / VideoGraphy "
   "Aquarium" -> "Aquarium Entry "
-  _ -> ""
- 
+  _ -> ticketServiceName <> " "
+
 getPillBackgroundColor :: String -> String
 getPillBackgroundColor ticketServiceName = case ticketServiceName of
   "Entrance" -> Color.black6000
   "Videography" -> Color.yellow900
   "Aquarium" ->  Color.blue800
-  _ -> Color.white900
+  _ -> Color.black6000
 
 getPillInfoColor :: String -> String
 getPillInfoColor ticketServiceName = case ticketServiceName of
   "Entrance" -> Color.grey900
   "Videography" -> Color.black800
   "Aquarium" ->  Color.white900
-  _ -> Color.white900
+  _ -> Color.grey900
   
 getLeftButtonForSlider :: String -> Boolean -> String
 getLeftButtonForSlider ticketServiceName buttonDisabled = case ticketServiceName of
-  "Entrance" -> if buttonDisabled then "" else fetchImage FF_ASSET "ny_ic_chevron_left_white"
-  _ -> if buttonDisabled then "" else fetchImage FF_ASSET "ny_ic_chevron_left"
+  "Videography" -> if buttonDisabled then "" else fetchImage FF_ASSET "ny_ic_chevron_left"
+  "Aquarium" -> if buttonDisabled then "" else fetchImage FF_ASSET "ny_ic_chevron_left"
+  _ -> if buttonDisabled then "" else fetchImage FF_ASSET "ny_ic_chevron_left_white"
 
 getRightButtonForSlider :: String -> Boolean -> String
 getRightButtonForSlider ticketServiceName buttonDisabled = case ticketServiceName of
-  "Entrance" -> if buttonDisabled then "" else fetchImage FF_ASSET "ny_ic_chevron_right_white"
-  _ -> if buttonDisabled then "" else fetchImage FF_ASSET "ny_ic_chevron_right"
+  "Videography" -> if buttonDisabled then "" else fetchImage FF_ASSET "ny_ic_chevron_right"
+  "Aquarium" ->if buttonDisabled then "" else fetchImage FF_ASSET "ny_ic_chevron_right"
+  _ -> if buttonDisabled then "" else fetchImage FF_ASSET "ny_ic_chevron_right_white"
 
 pillView :: forall w. ST.TicketInfoScreenState -> (Action -> Effect Unit) -> String -> String -> PrestoDOM (Effect Unit) w
 pillView state push backgroudColor textColor =
   let activeItem = state.props.activeListItem
-      itemLength = (DA.length activeItem.prices) - 1
+      peopleCatInfo = getPCs activeItem.categories
   in
+  horizontalScrollView
+  [ width WRAP_CONTENT
+  , height WRAP_CONTENT
+  , orientation HORIZONTAL
+  , padding $ Padding 10 10 10 10
+  ][ linearLayout
+     [ width WRAP_CONTENT
+     , height MATCH_PARENT
+     , orientation HORIZONTAL
+     ] $ [ linearLayout
+        [ width WRAP_CONTENT
+        , height MATCH_PARENT
+        , orientation HORIZONTAL
+        ] (map (\item -> (individualPill state push backgroudColor textColor (show item.numberOfUnits) (getNameAccToPlaceType item.name activeItem) )) peopleCatInfo.pcs)
+     ] <> (case activeItem.slot of 
+           Nothing -> []
+           Just slot -> case convertUTCToISTAnd12HourFormat slot of
+            Nothing -> []
+            Just formattedSlot -> [individualPill state push backgroudColor textColor formattedSlot ""])
+  ]
+   where
+    getPCs :: Array ST.TicketBookingCategoryDetails -> {length :: Int, pcs :: Array ST.TicketBookingPeopleCategoryDetails}
+    getPCs categories = case categories DA.!! 0 of
+      Nothing -> { length : 0, pcs : []}
+      Just cat -> {length : DA.length cat.peopleCategories, pcs : cat.peopleCategories}
+
+    getNameAccToPlaceType pcName activeItem = pcName -- todo : handle the case to show person for ferry
+
+individualPill :: forall w. ST.TicketInfoScreenState -> (Action -> Effect Unit) -> String -> String -> String -> String -> PrestoDOM (Effect Unit) w
+individualPill state push backgroudColor textColor title desc =
   linearLayout
   [ width $ WRAP_CONTENT
   , height $ WRAP_CONTENT
@@ -336,15 +374,14 @@ pillView state push backgroudColor textColor =
   , background backgroudColor
   , cornerRadius 30.0
   , padding $ Padding 16 6 16 6
-  ] (DA.mapWithIndex (\index item ->
-      linearLayout
+  , margin $ MarginLeft 10
+  ] [  linearLayout
       [ width $ WRAP_CONTENT
       , height WRAP_CONTENT
       , orientation HORIZONTAL
-            , gravity CENTER_VERTICAL
-      ]([  tvView (show item.numberOfUnits <> " " <> item.attendeeType) textColor (MarginBottom 0) (FontStyle.subHeading1 TypoGraphy)
-      ] <> if index == itemLength then [] else [dotView (getPillInfoColor activeItem.ticketServiceName) (Margin 6 3 6 0) 5] )
-    ) activeItem.prices )
+      , gravity CENTER_VERTICAL
+      ][  tvView (title <> " " <> desc) textColor (MarginBottom 0) (FontStyle.subHeading1 TypoGraphy)]
+  ]
 
 dotView :: forall w. String -> Margin -> Int -> PrestoDOM (Effect Unit) w
 dotView color layMargin size =
@@ -388,7 +425,7 @@ getSeparatorColor ticketServiceName = case ticketServiceName of
   "Entrance" -> Color.black700
   "Videography" -> Color.white900
   "Aquarium" -> Color.white900
-  _ -> Color.white900
+  _ -> Color.black700
 
 bookingInfoListItemView :: forall w.  ST.TicketInfoScreenState -> String -> String -> PrestoDOM (Effect Unit ) w
 bookingInfoListItemView state key value =

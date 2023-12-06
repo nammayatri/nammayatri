@@ -23,6 +23,9 @@ ticketBookingScreen = do
     GoToTicketPayment state -> do
       modifyScreenState $ TicketBookingScreenStateType (\ticketBookingScreenState -> state)
       App.BackT $ App.NoBack <$> (pure (GO_TO_TICKET_PAYMENT state))
+    GoToOpenGoogleMaps state lat2 long2 -> do
+      modifyScreenState $ TicketBookingScreenStateType (\ticketBookingScreenState -> state)
+      App.BackT $ App.BackPoint <$> (pure (GO_TO_OPEN_GOOGLE_MAPS_FROM_ZOO_FLOW lat2 long2))
     GoToGetBookingInfo updatedState bookingStatus -> do
       modifyScreenState $ TicketBookingScreenStateType (\ticketBookingScreenState -> updatedState)
       App.BackT $ App.BackPoint <$> (pure $ GET_BOOKING_INFO_SCREEN updatedState bookingStatus)

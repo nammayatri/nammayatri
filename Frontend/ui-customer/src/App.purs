@@ -201,6 +201,7 @@ data TICKET_BOOKING_SCREEN_OUTPUT =  GET_BOOKING_INFO_SCREEN TicketBookingScreen
                                     | GO_TO_HOME_SCREEN_FROM_TICKET_BOOKING TicketBookingScreenState
                                     | GO_TO_TICKET_PAYMENT TicketBookingScreenState
                                     | RESET_SCREEN_STATE
+                                    | GO_TO_OPEN_GOOGLE_MAPS_FROM_ZOO_FLOW Number Number
                                     | REFRESH_PAYMENT_STATUS TicketBookingScreenState
 
 data TICKETING_SCREEN_SCREEN_OUTPUT = EXIT_TO_HOME TicketingScreenState

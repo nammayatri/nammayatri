@@ -21,12 +21,12 @@ import Accessor (_deviceToken)
 import Common.Types.App (Version(..), SignatureAuthData(..), LazyCheck(..))
 import Control.Monad.Except.Trans (lift)
 import Control.Transformers.Back.Trans (BackT(..), FailBack(..))
-import Data.Array ((!!), catMaybes, concat, take, any, singleton)
+import Data.Array ((!!), catMaybes, concat, take, any, singleton, find, filter, length, null)
 import Common.Types.App (Version(..), SignatureAuthData(..), LazyCheck (..), FeedbackAnswer)
 import Data.Either (Either(..), either)
 import Data.Lens ((^.))
 import Data.Maybe (Maybe(..), maybe, fromMaybe, isJust)
-import Engineering.Helpers.Commons (liftFlow, os)
+import Engineering.Helpers.Commons (liftFlow, os, convertUTCtoISC)
 import Engineering.Helpers.Commons (liftFlow, os, isPreviousVersion, isInvalidUrl)
 import Engineering.Helpers.Utils as EHU
 import Foreign.Generic (encode)
@@ -41,7 +41,7 @@ import ModifyScreenState (modifyScreenState)
 import Prelude (Unit, bind, discard, map, pure, unit, void, ($), ($>), (>), (&&), (*>), (<<<), (=<<), (==), (<=), (||), show, (<>), (/=), when)
 import Presto.Core.Types.API (Header(..), Headers(..), ErrorResponse)
 import Presto.Core.Types.Language.Flow (Flow, APIResult, callAPI, doAff, loadS)
-import Screens.Types (AccountSetUpScreenState(..), HomeScreenState(..), NewContacts, DisabilityT(..), Address, Stage(..), TicketBookingScreenData(..), TicketServiceData, TicketServicePriceData)
+import Screens.Types (AccountSetUpScreenState(..), HomeScreenState(..), NewContacts, DisabilityT(..), Address, Stage(..), TicketBookingScreenData(..), TicketServiceData, PeopleCategoriesRespData)
 import Services.Config as SC
 import Storage (getValueToLocalStore, deleteValueFromLocalStore, getValueToLocalNativeStore, KeyStore(..), setValueToLocalStore)
 import Tracker (trackApiCallFlow, trackExceptionFlow)
@@ -947,24 +947,44 @@ bookTicketsBT payload placeId = do
 mkBookingTicketReq :: TicketBookingScreenData -> TicketBookingReq -- TODO:: Refactor and make it generic without having state for serviceType
 mkBookingTicketReq ticketBookingScreenData = 
   TicketBookingReq 
-    { services : concat $ map createTicketServiceRequest ticketBookingScreenData.servicesInfo,
-      visitDate : ticketBookingScreenData.dateOfVisit
+    { services : createTicketServiceRequest ticketBookingScreenData.servicesInfo,
+      visitDate : convertUTCtoISC ticketBookingScreenData.dateOfVisit "YYYY-MM-DD"
     }
   where
-    createTicketServiceRequest :: TicketServiceData -> Array TicketService
-    createTicketServiceRequest service =
-      catMaybes $ map createTicketServicePriceRequest service.prices
+    createTicketServiceRequest :: Array TicketServiceData -> Array TicketService
+    createTicketServiceRequest services = catMaybes $ map createPeopleCategoriesRespRequest services
       where
-        createTicketServicePriceRequest :: TicketServicePriceData -> Maybe TicketService
-        createTicketServicePriceRequest price =
-          if price.currentValue > 0 then
-            Just $
-              TicketService {
-                serviceId : service.id,
-                attendeeType : price.attendeeType,
-                numberOfUnits : price.currentValue
-              }
-          else Nothing
+        createPeopleCategoriesRespRequest :: TicketServiceData -> Maybe TicketService
+        createPeopleCategoriesRespRequest service = do
+          let mbBhId = service.selectedBHid
+          case mbBhId of
+            Nothing -> Nothing
+            Just bhId -> do
+              let mbbh = find (\bh -> bh.bhourId == bhId) service.businessHours
+              case mbbh of
+                Nothing -> Nothing
+                Just bh -> do
+                  let categories = filter (\cat -> cat.isSelected) bh.categories
+                  if null categories then Nothing
+                  else do 
+                    let filteredValidCat = catMaybes $ map getValidCategories categories
+                    if null filteredValidCat 
+                      then Nothing
+                      else
+                        Just $ 
+                          TicketService {
+                            serviceId : service.id,
+                            businessHourId : bhId,
+                            categories : filteredValidCat
+                        }
+    
+        getValidCategories category = do
+          let filteredPC = filter (\pc -> pc.currentValue > 0) category.peopleCategories
+          if length filteredPC == 0 then Nothing
+          else Just $ TicketBookingCategory {
+            categoryId : category.categoryId,
+            peopleCategories : map (\pc -> TicketBookingPeopleCategory {peopleCategoryId : pc.peopleCategoryId, numberOfUnits : pc.currentValue}) filteredPC
+          }
 
 ------------------------------------------------------------------------ ZoneTicketBookingFlow --------------------------------------------------------------------------------
 getAllBookingsBT :: BookingStatus ->  FlowBT String GetAllBookingsRes
@@ -976,7 +996,7 @@ getAllBookingsBT status = do
             BackT $ pure GoBack
 
 
-getTicketBookingDetailsBT :: String -> FlowBT String GetBookingInfoRes 
+getTicketBookingDetailsBT :: String -> FlowBT String TicketBookingDetails
 getTicketBookingDetailsBT shortId = do
     headers <- getHeaders' "" false 
     withAPIResultBT (EP.ticketBookingDetails shortId) (\x -> x) errorHandler (lift $ lift $ callAPI headers (GetBookingInfoReq shortId))

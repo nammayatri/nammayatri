@@ -62,8 +62,19 @@ export const getCurrentDate = function (string) {
   return today;
 }
 
+export const getCurrentDatev2 = function (string) {
+  let today = new Date();
+  const dd = String(today.getDate()).padStart(2, "0");
+  const mm = String(today.getMonth() + 1).padStart(2, "0"); //January is 0!
+  const yyyy = today.getFullYear();
+
+  today = yyyy + "-" + mm + "-" + dd;
+  return today;
+}
+
 
 export const compareDate = function (date1, date2) {
+  console.log(date1, date2);
   return date1 >= date2;
 }
 
@@ -429,4 +440,26 @@ export const _generateQRCode = function (data, id, size, margin, sc) {
   else {
     sc("FAILURE")();
   }
+}
+
+export const getDateAfterNDays = function (n) {
+  const today = new Date();
+  const dateAfterNDays = new Date(today);
+  dateAfterNDays.setDate(today.getDate() + n);
+  const year = dateAfterNDays.getFullYear();
+  const month = String(dateAfterNDays.getMonth() + 1).padStart(2, "0");
+  const day = String(dateAfterNDays.getDate()).padStart(2, "0");
+  const result = `${day}/${month}/${year}`;
+  return `${day}/${month}/${year}`;
+}
+
+export const getDateAfterNDaysv2 = function (n) {
+  const today = new Date();
+  const dateAfterNDays = new Date(today);
+  dateAfterNDays.setDate(today.getDate() + n);
+  const year = dateAfterNDays.getFullYear();
+  const month = String(dateAfterNDays.getMonth() + 1).padStart(2, "0");
+  const day = String(dateAfterNDays.getDate()).padStart(2, "0");
+  const result = `${day}/${month}/${year}`;
+  return `${year}-${month}-${day}`;
 }

@@ -34,7 +34,7 @@ import Data.Maybe (fromMaybe, Maybe(..))
 import Effect (Effect)
 import Font.Style as FontStyle
 import Helpers.Utils (FetchImageFrom(..), fetchImage)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), background, color, cornerRadius, fontStyle, gravity, height, imageView, imageWithFallback, linearLayout, margin, maxLines, onBackPressed, onClick, orientation, padding, relativeLayout, stroke, text, textSize, textView, visibility, weight, width, shimmerFrameLayout, imageUrl)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), background, color, cornerRadius, fontStyle, gravity, height, imageView, imageWithFallback, linearLayout, margin, maxLines, onBackPressed, onClick, orientation, padding, relativeLayout, stroke, text, textSize, textView, visibility, weight, width, shimmerFrameLayout, imageUrl, alignParentBottom)
 import Screens.TicketingScreen.Controller (Action(..), eval, ScreenOutput(..))
 import Screens.Types as ST
 import Styles.Colors as Color
@@ -106,15 +106,15 @@ headerView push state =
     , padding $ Padding 16 20 16 25
     ]
     [ linearLayout
-        [ width MATCH_PARENT
+        [ width WRAP_CONTENT
         , height WRAP_CONTENT
         , gravity CENTER_VERTICAL
+        , onClick push $ const $ BackPressed
         ]
         [ imageView
             [ width $ V 20
             , height $ V 20
             , imageWithFallback $ fetchImage FF_ASSET "ic_chevron_left_white"
-            , onClick push $ const $ BackPressed
             ]
         , imageView
             [ width $ V 78
@@ -174,7 +174,7 @@ ticketingList push state =
     ] if DA.null state.data.placeInfoArray then [sfl 70, sfl 70] else
     ( mapWithIndex
         (\index item -> ticketingItem push item index)
-        state.data.placeInfoArray--[dummyTicketPlaceResp,dummyTicketPlaceResp]
+        state.data.placeInfoArray
     )
 
 dummyTicketPlaceResp :: API.TicketPlaceResp
@@ -186,79 +186,105 @@ dummyTicketPlaceResp = API.TicketPlaceResp
     lat : Nothing,
     lon : Nothing,
     gallery : [],
-    openTimings : Nothing,
-    closeTimings : Nothing,
+    openTimings : Just "06:30:00",
+    closeTimings : Just "08:05:00",
     iconUrl : Just "ny_ic_jetty",
     shortDesc : Just "Desc of place",
-    mapImageUrl : Nothing
+    mapImageUrl : Nothing,
+    termsAndConditions : ["kjfak;j"],
+    placeType : "HeritageSite"
   } 
 
 
 ticketingItem :: forall w. (Action -> Effect Unit) -> API.TicketPlaceResp -> Int -> PrestoDOM (Effect Unit) w
 ticketingItem push (API.TicketPlaceResp item) index =
-  relativeLayout
-    [ width MATCH_PARENT
-    , height WRAP_CONTENT
-    , background Color.white900
-    , cornerRadius 6.0
-    , stroke $ "1," <> Color.grey900
-    , margin $ Margin 16 marginTop 16 0
-    , padding $ Padding 8 16 12 16
-    , onClick push $ const $ OnSelect $ API.TicketPlaceResp item
-    ]
-    [ linearLayout
-        [ height WRAP_CONTENT
-        , width MATCH_PARENT
-        , gravity CENTER_VERTICAL
-        ]
-        [ imageView
-            [ imageUrl $ fromMaybe "ny_ic_jetty" item.iconUrl -- TODO: Get default image
-            , cornerRadius 6.0
-            , height $ V 48
-            , width $ V 60
+  linearLayout
+  [ width MATCH_PARENT
+  , height WRAP_CONTENT
+  , orientation VERTICAL
+  , cornerRadius 16.0
+  , background Color.yellow800
+  , margin $ Margin 16 marginTop 16 0
+  , gravity CENTER
+  ] $ [  relativeLayout
+      [ width MATCH_PARENT
+      , height WRAP_CONTENT
+      , background Color.white900
+      , cornerRadius 16.0
+      , stroke $ "1," <> Color.grey900
+      , padding $ Padding 12 12 12 12
+      , onClick push $ const $ OnSelect $ API.TicketPlaceResp item
+      ]
+      [ linearLayout
+          [ height WRAP_CONTENT
+          , width MATCH_PARENT
+          , gravity CENTER_VERTICAL
+          ]
+          [  linearLayout
+             [ width $ WRAP_CONTENT
+             , height $ WRAP_CONTENT
+             , cornerRadius 6.0
+             ][imageView
+              [ imageUrl $ fromMaybe "ny_ic_jetty" item.iconUrl -- TODO: Get default image
+              , cornerRadius 6.0
+              , height $ V 64
+              , width $ V 64
+              ]
             ]
-        , linearLayout
-            [ width WRAP_CONTENT
-            , height WRAP_CONTENT
-            , weight 1.0
-            , orientation VERTICAL
-            , margin $ MarginLeft 16
-            ]
-            [ textView
-                $ [ text item.name
-                  , color Color.black800
-                  , height WRAP_CONTENT
-                  , padding $ PaddingBottom 2
-                  ]
-                <> FontStyle.h3 LanguageStyle
-            , textView
-                $ [ color Color.black900
-                  , height WRAP_CONTENT
-                  , padding $ PaddingBottom 2
-                  ] <> case item.shortDesc of
-                    Nothing -> [visibility GONE]
-                    Just desc -> [text desc]
-                <> FontStyle.tags LanguageStyle
-            ]
-        ]
-    , linearLayout
-        [ width MATCH_PARENT
-        , height WRAP_CONTENT
-        , gravity RIGHT
-        ]
-        [ imageView
-            [ width $ V 32
-            , height $ V 32
-            , cornerRadius 32.0
-            , margin $ MarginTop 8
-            , padding $ Padding 8 8 8 8
-            , imageWithFallback $ fetchImage FF_ASSET "ny_ic_right_arrow_blue"
-            , background Color.blue100
-            ]
-        ]
-    ]
+          , linearLayout
+              [ width WRAP_CONTENT
+              , height WRAP_CONTENT
+              , weight 1.0
+              , orientation VERTICAL
+              , margin $ MarginLeft 16
+              ]
+              [ textView
+                  $ [ text item.name
+                    , color Color.black800
+                    , height WRAP_CONTENT
+                    , padding $ PaddingBottom 2
+                    ]
+                  <> FontStyle.h3 LanguageStyle
+              , textView
+                  $ [ color Color.black900
+                    , height WRAP_CONTENT
+                    , padding $ PaddingBottom 2
+                    ] <> case item.shortDesc of
+                      Nothing -> [visibility GONE]
+                      Just desc -> [text desc]
+                  <> FontStyle.tags LanguageStyle
+              ]
+          ]
+      , linearLayout
+          [ width MATCH_PARENT
+          , height WRAP_CONTENT
+          , gravity RIGHT
+          ]
+          [ imageView
+              [ width $ V 32
+              , height $ V 32
+              , cornerRadius 32.0
+              , margin $ MarginTop 8
+              , padding $ Padding 8 8 8 8
+              , imageWithFallback $ fetchImage FF_ASSET "ny_ic_right_arrow_blue"
+              , background Color.blue100
+              ]
+          ]
+      ]
+    ] 
+    -- <> if true then [ hurryLimitedView push ] else [] 
   where
   marginTop = if index == 0 then 0 else 16
+
+hurryLimitedView :: forall w. (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+hurryLimitedView push =
+  textView $
+  [ text "Hurry! Limited number of tickets available today! adsfkjaksdfjaksjd fkafjdk;a .jdfkl;ajdkfja; klj"
+  , color Color.black900
+  , width WRAP_CONTENT
+  , gravity CENTER
+  , margin $ MarginVertical 8 8 
+  ] <> FontStyle.tags TypoGraphy
 
 settingSideBarView :: forall w. (Action -> Effect Unit) -> ST.TicketingScreenState -> PrestoDOM (Effect Unit) w
 settingSideBarView push state =

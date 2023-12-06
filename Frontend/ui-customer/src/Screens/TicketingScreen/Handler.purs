@@ -39,6 +39,6 @@ ticketingScreen = do
       App.BackT $ App.BackPoint <$> (pure $ EXIT_TO_MY_TICKETS updatedState)
     BookTickets updatedState selectedPlace -> do
       modifyScreenState $ TicketingScreenStateType (\_ -> updatedState)
-      modifyScreenState $ TicketBookingScreenStateType (\ticketBookingScreen -> ticketBookingScreen { data { placeInfo = Just selectedPlace}})
+      modifyScreenState $ TicketBookingScreenStateType (\ticketBookingScreen -> ticketBookingScreen { data { totalAmount = 0, placeInfo = Just selectedPlace}})
       App.BackT $ App.BackPoint <$> (pure $ BOOK_TICKETS updatedState)
     _ -> App.BackT $ pure App.GoBack 

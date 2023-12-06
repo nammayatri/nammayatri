@@ -34,7 +34,7 @@ import Halogen.VDom.DOM.Prop (PropValue)
 import Prelude (class Eq, class Show)
 import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode, defaultDecode, defaultEncode)
 import PrestoDOM (LetterSpacing, BottomSheetState(..))
-import Services.API (AddressComponents, BookingLocationAPIEntity, EstimateAPIEntity(..), QuoteAPIEntity, TicketPlaceResp, RideBookingRes, Route, BookingStatus(..))
+import Services.API (AddressComponents, BookingLocationAPIEntity, EstimateAPIEntity(..), QuoteAPIEntity, TicketPlaceResp, RideBookingRes, Route, BookingStatus(..), PlaceType(..))
 import Components.SettingSideBar.Controller as SideBar
 
 type Contacts = {
@@ -1341,33 +1341,110 @@ type TicketBookingScreenState =
     props :: TicketBookingScreenProps
   }
 
+
+----- data for the screen internally (transformed data from the response) ------
 type Ticket = 
   { title :: String
+  , shortDesc :: Maybe String
   , ticketID :: String
-  , ticketOption :: Array TicketOption
   , isExpanded :: Boolean
+  , businessHours :: Array TicketBusinessHoursOptionData
+  , timeIntervals :: Array TimeInterval
+  , slot :: Array SlotInterval
+  , selectedBHid :: Maybe String
   }
 
-type TicketOption = 
-  { ticketID :: String
-  , title :: String
-  , currentValue :: Int
-  , subcategory :: String
+type TicketBusinessHoursOptionData =
+  { ticketID :: String,
+    bhourId :: String,
+    categories :: Array TicketCategoriesOptionData
   }
 
+type TicketCategoriesOptionData =
+  {   ticketID :: String,
+      categoryName :: String, -- (SEAT-TYPES, DESTINATION, ZOO)
+      categoryId :: String,
+      availableSeats :: Maybe Int,
+      allowedSeats :: Maybe Int,
+      bookedSeats :: Int,
+      peopleCategories :: Array TicketPeopleCategoriesOptionData,
+      isSelected :: Boolean
+  }
+
+type TicketPeopleCategoriesOptionData =
+  { ticketID :: String,
+    title ::String,
+    subcategory :: String,
+    currentValue :: Int,
+    pricePerUnit :: Int,
+    ticketLimitCrossed :: Boolean,
+    peopleCategoryId :: String
+  }
+
+---- data for the --------------------------------------------------------
 type TicketServiceData =
   { id :: String,
-    service :: String,
-    openTimings :: Maybe String,
-    closeTimings :: Maybe String,
+    serviceName :: String,
+    allowFutureBooking :: Boolean,
+    shortDesc :: Maybe String,
+    -- expiry :: String,
+    businessHours :: Array BusinessHoursData,
+    timeIntervalData :: Array SlotsAndTimeIntervalData,
     isExpanded :: Boolean,
-    prices :: Array TicketServicePriceData
+    selectedBHid :: Maybe String
   }
 
-type TicketServicePriceData =
-  { attendeeType :: String,
+type BusinessHoursData = {
+  bhourId :: String,
+  slot :: Maybe String,
+  startTime :: Maybe String, -- TimeOfDay -- OpenTimings CloseTimings
+  endTime :: Maybe String,
+  categories :: Array TicketCategoriesData
+}
+
+type SlotsAndTimeIntervalData = {
+  operationalDays :: Array String,
+  slot :: Array SlotInterval,
+  timeIntervals :: Array TimeInterval
+}
+
+type SlotInterval = {
+  bhourId :: String,
+  slot :: String
+}
+type TimeInterval = {
+  bhourId :: String,
+  startTime :: String,
+  endTime :: String
+}
+
+type TicketCategoriesData = {
+  categoryName :: String, -- (SEAT-TYPES, DESTINATION, ZOO)
+  categoryId :: String,
+  availableSeats :: Maybe Int,
+  allowedSeats :: Maybe Int,
+  bookedSeats :: Int,
+  peopleCategories :: Array PeopleCategoriesRespData,
+  isSelected :: Boolean
+}
+
+type PeopleCategoriesRespData =
+  { peopleCategoryName :: String,
     pricePerUnit :: Int,
-    currentValue :: Int
+    currentValue :: Int,
+    peopleCategoryId :: String,
+    ticketLimitCrossed :: Boolean
+  }
+
+type TiketingListTransformedData =
+  { timings :: Array KeyVal,
+    fees :: Array KVPairArr
+  }
+
+type KVPairArr =
+  { key :: String
+  , val :: Array KeyVal
+  , disableCategory :: Boolean
   }
 
 type TicketBookingScreenData = {
@@ -1380,12 +1457,13 @@ type TicketBookingScreenData = {
   totalAmount :: Int,
   placeInfo :: Maybe TicketPlaceResp,
   servicesInfo :: Array TicketServiceData,
-  shortOrderId :: String
+  shortOrderId :: String,
+  selectedPlaceType :: PlaceType
 }
 
 type TicketServiceI = {
   id :: String,
-  attendeeType :: String,
+  peopleCategoryName :: String,
   numberOfUnits :: Int
 }
 
@@ -1423,7 +1501,8 @@ type TicketBookingScreenProps = {
   activeIndex :: Int,
   rightButtonDisable :: Boolean,
   leftButtonDisable :: Boolean,
-  navigateToHome :: Boolean
+  navigateToHome :: Boolean,
+  selectedOperationalDay :: String
 }
 
 type TicketItem = {
@@ -1446,18 +1525,26 @@ type IndividualBookingItem =
   }
 
 type TicketBookingServiceDetails =
-  { ticketServiceShortId :: String,
-    ticketServiceName :: String,
-    amount :: Number,
+  { amount :: Number,
     status :: String,
     verificationCount :: Int,
     expiryDate :: Maybe String,
-    prices :: Array TicketBookingServicePriceBreakup
+    ticketServiceName :: String,
+    categories :: Array TicketBookingCategoryDetails,
+    ticketServiceShortId :: String,
+    slot :: Maybe String
   }
 
-type TicketBookingServicePriceBreakup =
-  { attendeeType :: String,
-    numberOfUnits :: Int,
+type TicketBookingCategoryDetails =
+  { amount :: Number,
+    bookedSeats :: Int,
+    name :: String,
+    peopleCategories :: Array TicketBookingPeopleCategoryDetails
+  }
+
+type TicketBookingPeopleCategoryDetails =
+  { name :: String,
+    numberOfUnits ::Int,
     pricePerUnit :: Number
   }
 
