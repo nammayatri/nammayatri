@@ -166,9 +166,9 @@ apis:
       response:
         type: Kernel.External.Payment.Interface.Types.CreateOrderResp
 
-  # # GET /ticket/places/bookings
+  # # GET /ticket/bookings
   - GET:
-      endpoint: /ticket/places/bookings
+      endpoint: /ticket/bookings
       auth: TokenAuth
       query:
         limit: Int
@@ -178,18 +178,18 @@ apis:
       response:
         type: "[Domain.Action.UI.TicketService.TicketBookingAPIEntity]"
 
-  # # GET /ticket/places/bookings/{ticketBookingShortId}/details
+  # # GET /ticket/bookings/{ticketBookingShortId}/details
   - GET:
-      endpoint: /ticket/places/bookings/{ticketBookingShortId}/details
+      endpoint: /ticket/bookings/{ticketBookingShortId}/details
       auth: TokenAuth
       params:
         ticketBookingShortId: ShortId TicketBooking
       response:
         type: Domain.Action.UI.TicketService.TicketBookingDetails
 
-  # # POST /ticket/places/bookings/{personServiceId}/{ticketServiceShortId}/verify
+  # # POST /ticket/bookings/{personServiceId}/{ticketServiceShortId}/verify
   - POST:
-      endpoint: /ticket/places/bookings/{personServiceId}/{ticketServiceShortId}/verify
+      endpoint: /ticket/bookings/{personServiceId}/{ticketServiceShortId}/verify
       auth: TokenAuth
       params:
         personServiceId: Id TicketService
@@ -197,9 +197,9 @@ apis:
       response:
         type: Domain.Action.UI.TicketService.TicketServiceVerificationResp
 
-  # # GET /ticket/places/bookings/{ticketBookingShortId}/status
+  # # GET /ticket/bookings/{ticketBookingShortId}/status
   - GET:
-      endpoint: /ticket/places/bookings/{ticketBookingShortId}/status
+      endpoint: /ticket/bookings/{ticketBookingShortId}/status
       auth: TokenAuth
       params:
         ticketBookingShortId: ShortId TicketBooking
@@ -208,7 +208,7 @@ apis:
 
   # # dashboard APIs
   - POST:
-      endpoint: /ticket/places/bookings/update/seats
+      endpoint: /ticket/bookings/update/seats
       auth: TokenAuth
       request:
         type: Domain.Action.UI.TicketService.TicketBookingUpdateSeatsReq

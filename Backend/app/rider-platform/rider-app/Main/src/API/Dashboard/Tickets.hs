@@ -51,10 +51,10 @@ handler merchantId =
     :<|> updateSeatManagement merchantId
 
 verifyBookingDetails :: ShortId DM.Merchant -> Id DTB.TicketService -> ShortId DTB.TicketBookingService -> FlowHandler DTB.TicketServiceVerificationResp
-verifyBookingDetails _ personServiceId = withFlowHandlerAPI . DTB.postTicketPlacesBookingsVerify personServiceId
+verifyBookingDetails _ personServiceId = withFlowHandlerAPI . DTB.postTicketBookingsVerify personServiceId
 
 getServices :: ShortId DM.Merchant -> Id DTB.TicketPlace -> FlowHandler [DTB.TicketServiceResp]
 getServices _ ticketPlaceId = withFlowHandlerAPI $ DTB.getTicketPlacesServices ticketPlaceId
 
 updateSeatManagement :: ShortId DM.Merchant -> DTB.TicketBookingUpdateSeatsReq -> FlowHandler APISuccess
-updateSeatManagement _ = withFlowHandlerAPI . DTB.postTicketPlacesBookingsUpdateSeats
+updateSeatManagement _ = withFlowHandlerAPI . DTB.postTicketBookingsUpdateSeats

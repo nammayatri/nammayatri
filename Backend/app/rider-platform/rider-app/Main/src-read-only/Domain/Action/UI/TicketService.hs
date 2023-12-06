@@ -14,6 +14,7 @@ import qualified Domain.Types.Merchant as Domain.Types.Merchant
 import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Person as Domain.Types.Person
+import qualified Domain.Types.SeatManagement as Domain.Types.SeatManagement
 import qualified Domain.Types.ServiceCategory as Domain.Types.ServiceCategory
 import qualified Domain.Types.ServicePeopleCategory as Domain.Types.ServicePeopleCategory
 import qualified Domain.Types.SpecialOccasion as Domain.Types.SpecialOccasion
@@ -322,15 +323,15 @@ getTicketPlacesServices placeId = do
 
     mkServiceCategories curDate serviceCatId = do
       serviceCategory <- QSC.findById serviceCatId >>= fromMaybeM (ServiceCategoryNotFound serviceCatId.getId)
-      seatManagement <- QTSM.findByTicketServiceCategoryIdAndDate serviceCatId curDate >>= fromMaybeM (TicketSeatManagementNotFound serviceCatId.getId (show curDate))
+      mBeatManagement <- QTSM.findByTicketServiceCategoryIdAndDate serviceCatId curDate
       peopleCategories <- mapM mkPeopleCategoriesRes serviceCategory.peopleCategory
       pure $
         CategoriesResp
           { name = serviceCategory.name,
             id = serviceCategory.id,
             availableSeats = serviceCategory.availableSeats,
-            bookedSeats = seatManagement.booked,
-            allowedSeats = calcAllowedSeats serviceCategory seatManagement,
+            bookedSeats = maybe 0 (.booked) mBeatManagement,
+            allowedSeats = calcAllowedSeats serviceCategory mBeatManagement,
             peopleCategories
           }
 
@@ -350,10 +351,10 @@ getTicketPlacesServices placeId = do
         Just occ -> pure (Just occ)
         Nothing -> QSO.findSpecialOccasionByEntityIdAndDayOfWeek service.id.getId (Just $ show curDay)
 
-    calcAllowedSeats serC seatM =
+    calcAllowedSeats serC mSeatM =
       case serC.availableSeats of
         Nothing -> Nothing
-        Just availableSeats -> Just $ availableSeats - seatM.booked - seatM.blocked
+        Just availableSeats -> Just $ availableSeats - (maybe 0 (.booked) mSeatM) - (maybe 0 (.blocked) mSeatM)
 
 postTicketPlacesBook :: (Kernel.Types.Id.Id Domain.Types.Person.Person, Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace -> Domain.Action.UI.TicketService.TicketBookingReq -> Environment.Flow Kernel.External.Payment.Interface.Types.CreateOrderResp
 postTicketPlacesBook (personId, merchantId) placeId req' = do
@@ -455,6 +456,22 @@ postTicketPlacesBook (personId, merchantId) placeId req' = do
       tBookingPCats <- mapM (createTicketBookingPeopleCategory id) ticketServiceCReq.peopleCategories
       let (amount, bookedSeats) = calculateAmountAndSeats tBookingPCats
       QTBPC.createMany tBookingPCats
+
+      mbSeatM <- QTSM.findByTicketServiceCategoryIdAndDate serviceCatId req'.visitDate
+      if isJust mbSeatM
+        then QTSM.updateBookedSeats bookedSeats serviceCatId req'.visitDate
+        else do
+          seatId <- generateGUID
+          let seatM =
+                Domain.Types.SeatManagement.SeatManagement
+                  { id = seatId,
+                    ticketServiceCategoryId = serviceCatId,
+                    date = req'.visitDate,
+                    blocked = 0,
+                    booked = bookedSeats
+                  }
+          QTSM.create seatM
+
       return $
         DTB.TicketBookingServiceCategory
           { id,
@@ -547,8 +564,8 @@ postTicketPlacesBook (personId, merchantId) placeId req' = do
             peopleCategoryId = peopleCategory.id
           }
 
-getTicketPlacesBookings :: (Kernel.Types.Id.Id Domain.Types.Person.Person, Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Domain.Types.TicketBooking.BookingStatus -> Environment.Flow [Domain.Action.UI.TicketService.TicketBookingAPIEntity]
-getTicketPlacesBookings (personId_, merchantId) mbLimit mbOffset status_ = do
+getTicketBookings :: (Kernel.Types.Id.Id Domain.Types.Person.Person, Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Domain.Types.TicketBooking.BookingStatus -> Environment.Flow [Domain.Action.UI.TicketService.TicketBookingAPIEntity]
+getTicketBookings (personId_, merchantId) mbLimit mbOffset status_ = do
   merchantOpCity <- CQM.getDefaultMerchantOperatingCity merchantId
   ticketBookings <- QTB.getAllBookingsByPersonId mbLimit mbOffset personId_ merchantOpCity.id status_
   convertToApiEntity `mapM` ticketBookings
@@ -565,8 +582,8 @@ getTicketPlacesBookings (personId_, merchantId) mbLimit mbOffset status_ = do
             ..
           }
 
-getTicketPlacesBookingsDetails :: (Kernel.Types.Id.Id Domain.Types.Person.Person, Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Types.Id.ShortId Domain.Types.TicketBooking.TicketBooking -> Environment.Flow Domain.Action.UI.TicketService.TicketBookingDetails
-getTicketPlacesBookingsDetails _ shortId_ = do
+getTicketBookingsDetails :: (Kernel.Types.Id.Id Domain.Types.Person.Person, Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Types.Id.ShortId Domain.Types.TicketBooking.TicketBooking -> Environment.Flow Domain.Action.UI.TicketService.TicketBookingDetails
+getTicketBookingsDetails _ shortId_ = do
   ticketBooking <- QTB.findByShortId shortId_ >>= fromMaybeM (TicketBookingNotFound shortId_.getShortId)
   ticketBookingServices <- QTBS.findAllByBookingId ticketBooking.id
   services <- mapM mkTicketBookingServiceDetails ticketBookingServices
@@ -613,8 +630,8 @@ getTicketPlacesBookingsDetails _ shortId_ = do
           { ..
           }
 
-postTicketPlacesBookingsVerify :: Kernel.Types.Id.Id Domain.Types.TicketService.TicketService -> Kernel.Types.Id.ShortId Domain.Types.TicketBookingService.TicketBookingService -> Environment.Flow Domain.Action.UI.TicketService.TicketServiceVerificationResp
-postTicketPlacesBookingsVerify = processBookingService
+postTicketBookingsVerify :: Kernel.Types.Id.Id Domain.Types.TicketService.TicketService -> Kernel.Types.Id.ShortId Domain.Types.TicketBookingService.TicketBookingService -> Environment.Flow Domain.Action.UI.TicketService.TicketServiceVerificationResp
+postTicketBookingsVerify = processBookingService
   where
     processBookingService :: Kernel.Types.Id.Id Domain.Types.TicketService.TicketService -> Kernel.Types.Id.ShortId Domain.Types.TicketBookingService.TicketBookingService -> Environment.Flow Domain.Action.UI.TicketService.TicketServiceVerificationResp
     processBookingService ticketServiceId bookingServiceShortId = do
@@ -747,8 +764,8 @@ mkUnits serviceCatDetails mbTicketBookingServiceId = do
           )
           x.peopleCategories
 
-getTicketPlacesBookingsStatus :: (Kernel.Types.Id.Id Domain.Types.Person.Person, Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Types.Id.ShortId Domain.Types.TicketBooking.TicketBooking -> Environment.Flow Domain.Types.TicketBooking.BookingStatus
-getTicketPlacesBookingsStatus (personId, merchantId) _shortId@(Kernel.Types.Id.ShortId shortId) = do
+getTicketBookingsStatus :: (Kernel.Types.Id.Id Domain.Types.Person.Person, Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Types.Id.ShortId Domain.Types.TicketBooking.TicketBooking -> Environment.Flow Domain.Types.TicketBooking.BookingStatus
+getTicketBookingsStatus (personId, merchantId) _shortId@(Kernel.Types.Id.ShortId shortId) = do
   let commonPersonId = Kernel.Types.Id.cast @Domain.Types.Person.Person @DPayment.Person personId
       orderStatusCall = Payment.orderStatus merchantId -- api call
   order <- QOrder.findByShortId (Kernel.Types.Id.ShortId shortId) >>= fromMaybeM (PaymentOrderNotFound shortId)
@@ -770,7 +787,7 @@ getTicketPlacesBookingsStatus (personId, merchantId) _shortId@(Kernel.Types.Id.S
       ticketBooking <- QTB.findByShortId (Kernel.Types.Id.ShortId shortId) >>= fromMaybeM (TicketBookingNotFound shortId) -- fetch again for updated status
       return ticketBooking.status
 
-postTicketPlacesBookingsUpdateSeats :: Domain.Action.UI.TicketService.TicketBookingUpdateSeatsReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess
-postTicketPlacesBookingsUpdateSeats TicketBookingUpdateSeatsReq {..} = do
+postTicketBookingsUpdateSeats :: Domain.Action.UI.TicketService.TicketBookingUpdateSeatsReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess
+postTicketBookingsUpdateSeats TicketBookingUpdateSeatsReq {..} = do
   void $ QTSM.updateBookedSeats updatedBookedSeats categoryId date
   pure Kernel.Types.APISuccess.Success
