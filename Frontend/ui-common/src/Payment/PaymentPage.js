@@ -167,8 +167,10 @@ export const startPP = function (payload) {
             const response = JSON.parse(_response);
             console.log("%cHyperpay Response ","background:darkblue;color:white;font-size:13px;padding:2px", response);                                                        
             sc(response.payload.status)();
-            const ppServices = Object.keys(top.JOSHolder).filter((key) => { return key != JOS.self });
-            killPP(ppServices);
+            if ((window.__OS).toUpperCase() == "ANDROID") {
+              const ppServices = Object.keys(top.JOSHolder).filter((key) => { return key != JOS.self });
+              killPP(ppServices);
+            }
             consumeBP();
           }
         }
