@@ -1085,3 +1085,4 @@ getTA stringKey =
         NO_GOTO_LOCS_ADDED_YET_DESC -> ""
         BY_CLICKING_NEXT_YOU_WILL_BE_AGREEING_TO_OUR -> ""
         THIS_EXTRA_AMOUNT_THE_CUSTOMER_WILL_PAY -> "நீங்கள் {} நிமிடங்களுக்கு மேல் காத்திருந்ததால் வாடிக்கையாளர் உங்களுக்குச் செலுத்தும் கூடுதல் தொகை இது"
+        TEN_DIGIT_MOBILE_NUMBER -> "10 இலக்க மொபைல் எண்"

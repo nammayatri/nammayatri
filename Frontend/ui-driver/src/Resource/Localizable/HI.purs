@@ -1085,3 +1085,4 @@ getHI stringKey =
         CHOOSE_LANGUAGE -> ""
         BY_CLICKING_NEXT_YOU_WILL_BE_AGREEING_TO_OUR -> ""
         THIS_EXTRA_AMOUNT_THE_CUSTOMER_WILL_PAY -> "यह वह अतिरिक्त राशि है जो ग्राहक आपको भुगतान करेगा क्योंकि आपने {} मिनट से अधिक प्रतीक्षा की है"
+        TEN_DIGIT_MOBILE_NUMBER -> "10 अंकों का मोबाइल नंबर"

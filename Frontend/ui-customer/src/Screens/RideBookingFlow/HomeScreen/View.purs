@@ -352,7 +352,13 @@ view push state =
             , if (not state.props.rideRequestFlow) || (state.props.currentStage == FindingEstimate || state.props.currentStage == ConfirmingRide) then emptyTextView state else topLeftIconView state push
             , rideRequestFlowView push state
             , if state.props.currentStage == PricingTutorial then (pricingTutorialView push state) else emptyTextView state
-            , rideTrackingView push state
+            , relativeLayout 
+                [ width MATCH_PARENT
+                , height MATCH_PARENT
+                , visibility if (any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithDriver]) then VISIBLE else GONE
+                ][ rideTrackingView push state 
+                , DriverInfoCard.brandingBannerView state.data.config.driverInfoConfig VISIBLE
+                ]
             , if state.props.currentStage == ChatWithDriver then (chatView push state) else emptyTextView state
             , if ((state.props.currentStage /= RideRating) && (state.props.showlocUnserviceablePopUp || (state.props.isMockLocation && (getMerchant FunctionCall == NAMMAYATRI))) && state.props.currentStage == HomeScreen) then (sourceUnserviceableView push state) else emptyTextView state
             , if state.data.settingSideBar.opened /= SettingSideBar.CLOSED then settingSideBarView push state else emptyTextView state
@@ -1408,7 +1414,6 @@ requestRideButtonView push state =
             , width MATCH_PARENT
             , alpha 0.5
             , background Color.white900
-            , cornerRadius 8.0
             , visibility if not DS.null state.props.repeatRideTimerId then VISIBLE else GONE
             , margin $ MarginTop 32
             ][]
@@ -1420,7 +1425,7 @@ bookingPreferencesView push state =
   [ width MATCH_PARENT
   , height WRAP_CONTENT
   , orientation VERTICAL
-  , visibility if (getValueFromConfig "showBookingPreference") == "true" then VISIBLE else GONE
+  , visibility if (getValueFromConfig "showBookingPreference") == "true" && not state.props.isRepeatRide then VISIBLE else GONE
   ][ linearLayout
       [ width MATCH_PARENT
       , height $ V 1
@@ -1452,7 +1457,7 @@ bookingPreferencesView push state =
               , accessibility DISABLE
               , imageWithFallback $ if state.data.showPreferences
                                       then fetchImage FF_COMMON_ASSET "ny_ic_chevron_up"
-                                      else fetchImage FF_ASSET "ny_ic_down_arrow"
+                                      else fetchImage FF_ASSET "ny_ic_chevron_down"
               ]
           ]
         , linearLayout
@@ -1898,7 +1903,7 @@ emptyLayout state =
 rideTrackingView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 rideTrackingView push state =
   linearLayout
-    [ height MATCH_PARENT
+    [ height WRAP_CONTENT
     , width MATCH_PARENT
     , orientation VERTICAL
     , padding (Padding 0 0 0 0)
@@ -1906,7 +1911,6 @@ rideTrackingView push state =
     , accessibility if (state.data.settingSideBar.opened /= SettingSideBar.CLOSED) || state.props.currentStage == ChatWithDriver || state.props.cancelSearchCallDriver || state.props.showCallPopUp || state.props.isCancelRide || state.props.emergencyHelpModal || state.props.isLocationTracking || state.props.callSupportPopUp || (state.props.showShareAppPopUp && ((getValueFromConfig "isShareAppEnabled") == "true")) then DISABLE_DESCENDANT else DISABLE
     , alignParentBottom "true,-1" -- Check it in Android.
     , onBackPressed push (const $ BackPressed)
-    , visibility if (any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithDriver]) then VISIBLE else GONE
     ]
     [ -- TODO Add Animations
       -- PrestoAnim.animationSet
@@ -1914,7 +1918,7 @@ rideTrackingView push state =
       --   , translateOutXAnim (-100) $ not ( state.props.currentStage == RideAccepted || state.props.currentStage == RideStarted)
       --   ] $
       linearLayout
-        [ height MATCH_PARENT
+        [ height WRAP_CONTENT
         , width MATCH_PARENT
         , background Color.transparent
         , orientation VERTICAL
@@ -1925,13 +1929,8 @@ rideTrackingView push state =
           --   [ translateYAnim 900 0 ( state.props.currentStage == RideAccepted || state.props.currentStage == RideStarted)
           --   , translateYAnim 0 900 $ not ( state.props.currentStage == RideAccepted || state.props.currentStage == RideStarted)
           --   ] $
-          relativeLayout 
-                [ width MATCH_PARENT
-                , height MATCH_PARENT
-                , orientation VERTICAL
-                ][
                    coordinatorLayout
-                    [ height MATCH_PARENT
+                    [ height WRAP_CONTENT
                     , width MATCH_PARENT
                     ][ bottomSheetLayout
                         [ height WRAP_CONTENT
@@ -1954,8 +1953,6 @@ rideTrackingView push state =
                             ]
                         ]
                 ]
-                , DriverInfoCard.brandingBannerView state.data.config.driverInfoConfig VISIBLE
-              ]
         ]
     ]
 
@@ -2638,7 +2635,7 @@ footerView push state =
                 ]
           ]
       , textView $
-        [ text $ getString BENGALURU_MOST_LOVED_APP
+        [ text $ getString $ MOST_LOVED_APP "MOST_LOVED_APP"
         , gravity CENTER
         , color Color.black600
         , margin $ MarginTop 16

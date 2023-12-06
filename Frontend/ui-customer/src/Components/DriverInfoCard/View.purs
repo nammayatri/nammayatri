@@ -36,7 +36,7 @@ import Helpers.Utils (fetchImage, FetchImageFrom(..), getAssetsBaseUrl, getPayme
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import MerchantConfig.Utils (Merchant(..), getMerchant, getValueFromConfig)
-import Prelude (Unit, (<<<), ($), (/), (<>), (==), unit, show, const, map, (>), (-), (*), bind, pure, discard, not, (&&), (||), (/=))
+import Prelude (Unit, (<<<), ($), (/), (<>), (==), unit, show, const, map, (>), (-), (*), bind, pure, discard, not, (&&), (||), (/=), (+))
 import Presto.Core.Types.Language.Flow (doAff)
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), Accessiblity(..), afterRender, alignParentBottom, alignParentLeft, alpha, background, clickable, color, cornerRadius, ellipsize, fontSize, fontStyle, frameLayout, gravity, height, imageUrl, imageView, imageWithFallback, letterSpacing, lineHeight, linearLayout, margin, maxLines, onClick, orientation, padding, scrollBarY, scrollView, singleLine, stroke, text, textSize, textView, visibility, weight, width, layoutGravity, accessibilityHint, accessibility, onAnimationEnd)
 import PrestoDOM.Animation as PrestoAnim
@@ -710,7 +710,7 @@ brandingBannerView driverInfoConfig isVisible =
     , height WRAP_CONTENT
     , gravity CENTER
     , background driverInfoConfig.footerBackgroundColor
-    , padding $ Padding 12 12 12 12
+    , padding $ Padding 12 12 12 (12+safeMarginBottom)
     , alignParentBottom "true,-1"
     , visibility $ brandingVisibility
     ][ textView $

@@ -799,3 +799,4 @@ getFR stringKey =
         TURN_OFF_ANY_MOCK_LOCATION_APP_AND_RESTART  -> "Désactivez toute application Mock Location que vous utilisez et redémarrez l'application."
         BY_CLICKING_NEXT_YOU_WILL_BE_AGREEING_TO_OUR -> ""
         _ -> ""
+        TEN_DIGIT_MOBILE_NUMBER -> "Numéro de portable à 10 chiffres"

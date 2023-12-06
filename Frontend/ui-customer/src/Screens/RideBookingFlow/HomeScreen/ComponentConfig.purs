@@ -280,7 +280,7 @@ primaryButtonRequestRideConfig state =
       config
         { textConfig
           { text = if state.props.repeatRideTimer /= "0" && not DS.null state.props.repeatRideTimerId 
-                    then ((getString REQUESTING_RIDE_IN) <> state.props.repeatRideTimer <> "s") 
+                    then ((getString REQUESTING_RIDE_IN) <> " " <> state.props.repeatRideTimer <> "s") 
                     else if state.props.repeatRideTimer == "0" then (getString REQUESTING_RIDE) <> "..." 
                     else (getString REQUEST_RIDE)
           , color = state.data.config.primaryTextColor

@@ -646,7 +646,7 @@ getKN stringKey =
         BOOK_AND_MOVE  -> "ಬುಕ್ ಮಾಡಿ ಮತ್ತು ಸವಾರಿ ಪಡೆಯಿರಿ"
         ANYWHERE_IN_THE_CITY  -> "ನಗರದಲ್ಲಿ ಎಲ್ಲಿಯೂ"
         CHECKOUT_OUR_LIVE_STATS  -> "ನಮ್ಮ ಲೈವ್ ಸ್ಟ್ಯಾಟಸ್ ನೋಡಿ"
-        BENGALURU_MOST_LOVED_APP  -> "ಬೆಂಗಳೂರಿನ ನೆಚ್ಚಿನ ❤️ ಅಪ್ಲಿಕೇಶನ್"
+        MOST_LOVED_APP _  -> "ಬೆಂಗಳೂರಿನ ನೆಚ್ಚಿನ ❤️ ಅಪ್ಲಿಕೇಶನ್"
         PICKUP_  -> "ಪಿಕಪ್-> "
         PAST_SEARCHES  -> "ಹಿಂದಿನ ಹುಡುಕಾಟಗಳು"
         SEARCH_RESULTS  -> "ಹುಡುಕಾಟಗಳ ಪರಿಣಾಮಗಳು"
