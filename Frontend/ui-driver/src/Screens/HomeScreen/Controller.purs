@@ -70,8 +70,8 @@ import Helpers.Utils as HU
 import JBridge as JB
 import Effect.Uncurried (runEffectFn4)
 import Constants 
-import Data.Function.Uncurried (runFn1)
-import Screens.HomeScreen.ComponentConfig (rideActionModalConfig)
+import Data.Function.Uncurried (runFn1, runFn2)
+import Screens.HomeScreen.ComponentConfig
 import MerchantConfig.Utils (getMerchant, Merchant(..))
 import Common.Resources.Constants (zoomLevel)
 import Control.Monad.Except (runExceptT)
@@ -92,6 +92,10 @@ import Engineering.Helpers.Commons as EHC
 import Data.String as DS
 import Services.Config as SC
 import Timers as TF
+import Components.BannerCarousel as BannerCarousel
+import Styles.Colors as Color
+import PrestoDOM.Core
+import PrestoDOM.List
 
 instance showAction :: Show Action where
   show _ = ""
@@ -344,6 +348,11 @@ data Action = NoAction
             | AddNewLocation
             | AddGotoAC
             | LinkAadhaarAC
+            | BannerCarousal BannerCarousel.Action
+            | SetBannerItem ListItem
+            | UpdateBanner
+            | BannerChanged String
+            | BannerStateChanged String
             
 
 eval :: Action -> ST.HomeScreenState -> Eval Action ScreenOutput ST.HomeScreenState
@@ -369,6 +378,29 @@ eval (AccountBlockedAC PopUpModal.OnButton2Click) state = continue state { props
 eval (AccountBlockedAC PopUpModal.OnButton1Click) state = do 
   void $ pure $ showDialer (SC.getSupportNumber "") false 
   continue state
+  
+eval UpdateBanner state = do
+  if state.data.bannerData.bannerScrollState == "1" then continue state
+  else do
+    let nextBanner = state.data.bannerData.currentBanner + 1
+        updatedIdx = if nextBanner >= Array.length (getBannerConfigs state) then 0 else nextBanner
+        newState = state{data {bannerData{currentBanner = updatedIdx, currentPage = updatedIdx}}}
+    continue newState
+
+eval (BannerChanged item) state = do
+  let currentBanner = fromString item
+  case currentBanner of
+    Just idx -> do 
+        let newState = state{data {bannerData{currentBanner = idx}}}
+        if state.data.bannerData.currentPage /= idx then void $ pure $ unsafePerformEffect $ processEvent "RestartAutoScroll" unit -- To stop and stop the new autosroll
+          else pure unit
+        continue newState
+    Nothing  -> continue state
+
+eval (BannerStateChanged item) state = do
+  let newState = state{data {bannerData{bannerScrollState = item}}}
+  continue newState
+
 
 eval (GotoRequestPopupAction (PopUpModal.OnButton1Click)) state = 
   case state.data.driverGotoState.goToPopUpType of
@@ -881,6 +913,19 @@ eval ZoneOtpAction state = do
 
 eval HelpAndSupportScreen state = exit $ GoToHelpAndSupportScreen state
 
+eval (BannerCarousal (BannerCarousel.OnClick index)) state =
+  continueWithCmd state [do
+    let banners = getBannerConfigs state
+    case Array.index banners index of
+      Just config -> do
+        let _ = runFn2 EHC.updatePushInIdMap "bannerCarousel" false
+        case config.type of
+          BannerCarousel.Gender -> pure (GenderBannerModal (Banner.OnClick))
+          BannerCarousel.Disability -> pure (AccessibilityBannerAction (Banner.OnClick))
+          BannerCarousel.AutoPay -> pure (AutoPayBanner (Banner.OnClick))
+      Nothing -> pure NoAction
+  ] 
+
 eval (GenderBannerModal (Banner.OnClick)) state = do
   _ <- pure $ firebaseLogEvent "ny_driver_gender_banner_click"
   exit $ GotoEditGenderScreen
@@ -903,8 +948,6 @@ eval (RequestInfoCardAction RequestInfoCard.Close) state = continue state { data
 eval (RequestInfoCardAction RequestInfoCard.BackPressed) state = continue state { data {activeRide {waitTimeInfo =false}}, props { showBonusInfo = false } }
 
 eval (RequestInfoCardAction RequestInfoCard.NoAction) state = continue state
-
-eval (GenderBannerModal (Banner.OnClick)) state = exit $ GotoEditGenderScreen
 
 eval RemovePaymentBanner state = if state.data.paymentState.blockedDueToPayment then
                                                   continue state else continue state {data { paymentState {paymentStatusBanner = false}}}
@@ -982,6 +1025,8 @@ eval (AccessibilityBannerAction (Banner.OnClick)) state = continue state{props{s
 eval (PaymentBannerAC (Banner.OnClick)) state = do
   _ <- pure $ showDialer state.data.config.subscriptionConfig.supportNumber false
   continue state
+
+eval (SetBannerItem bannerItem) state = continue state{data{bannerData{bannerItem = Just bannerItem}}}
 
 eval _ state = continue state
 
@@ -1166,3 +1211,12 @@ getPreviousVersion merchant =
     YATRI -> "2.3.0"
     YATRISATHI -> "0.1.8"
     _ -> "100.100.100"
+
+
+getBannerConfigs :: ST.HomeScreenState -> Array (BannerCarousel.Config (BannerCarousel.Action -> Action))
+getBannerConfigs state = 
+  (if state.props.autoPayBanner /= ST.NO_SUBSCRIPTION_BANNER 
+    then [autpPayBannerCarousel state BannerCarousal] 
+    else [])
+  <> (if getValueToLocalStore IS_BANNER_ACTIVE == "True" then [genderBannerConfig state BannerCarousal] else [])
+  <> (if state.props.currentStage == ST.HomeScreen && state.data.config.purpleRideConfig.showPurpleVideos then [accessbilityBannerConfig state BannerCarousal] else [])

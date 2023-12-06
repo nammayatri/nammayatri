@@ -143,6 +143,12 @@ initData = {
           confirmGotoCancel : false,
           savedLocationCount : 0
         }
+      , bannerData : {
+          bannerItem : Nothing
+        , currentBanner : 0
+        , bannerScrollState: "0"
+        , currentPage : 0
+      } 
     },
     props: {
         isFreeRide : false,

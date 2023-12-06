@@ -2,6 +2,8 @@ import { callbackMapper as PrestoCallbackMapper } from "presto-ui";
 
 const { JBridge, Android } = window;
 
+const idMap = {};
+
 export const getOs = function () {
   if (window.__OS) {
     return window.__OS;
@@ -474,3 +476,27 @@ export const getTimeStampObject = function(){
     return keyValuePairArray;
   }
 }
+
+function getRandom(max) {
+  return Math.floor(Math.random() * max) + 1; 
+}
+
+export const updateIdMap = function (key) {
+  idMap[key] = {id : getRandom(10000), shouldPush: true};
+  return idMap[key];
+};
+
+export const updatePushInIdMap = function (key, flag) {
+  if (idMap[key]) {
+    idMap[key]["shouldPush"] = flag;
+  }
+}
+
+export const getValueFromIdMap = function (key) {
+  let val = idMap[key]; 
+  if (!val) {
+    idMap[key] = getRandom(10000);
+    val = idMap[key];
+  }
+  return val;
+};

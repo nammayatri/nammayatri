@@ -37,6 +37,7 @@ import Presto.Core.Types.API (class StandardEncode, standardEncode)
 import Presto.Core.Utils.Encoding (defaultDecode, defaultEncode)
 import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode)
 import PrestoDOM (LetterSpacing, Visibility, visibility)
+import PrestoDOM.List (ListItem)
 import Screens (ScreenName)
 import Services.API (AutopayPaymentStage, BankError(..), FeeType, GetDriverInfoResp(..), MediaType, PaymentBreakUp, Route, Status, DriverProfileStatsResp(..), LastPaymentType(..))
 import Styles.Types (FontSize)
@@ -864,7 +865,15 @@ type HomeScreenData =  {
   peekHeight :: Int,
   driverGotoState :: DriverGoToState,
   snappedOrigin :: Maybe Location,
-  gender :: String
+  gender :: String,
+  bannerData :: BannerCarousalData
+}
+
+type BannerCarousalData = {
+  bannerItem :: Maybe ListItem,
+  currentBanner :: Int,
+  bannerScrollState :: String,
+  currentPage :: Int
 }
 
 type DriverGoToState = {
