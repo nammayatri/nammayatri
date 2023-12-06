@@ -43,7 +43,7 @@ data AppCfg = AppCfg
     loggerConfig :: LoggerConfig,
     graceTerminationPeriod :: Seconds,
     kafkaConsumerCfgs :: KafkaConsumerCfgs,
-    aclEndPointMap :: M.Map Text Text
+    internalEndPointMap :: M.Map BaseUrl BaseUrl
   }
   deriving (Generic, FromDhall)
 
@@ -64,7 +64,7 @@ data AppEnv = AppEnv
     coreMetrics :: CoreMetricsContainer,
     kafkaConsumerEnv :: KafkaConsumerEnv,
     version :: DeploymentVersion,
-    aclEndPointHashMap :: HM.Map Text Text
+    internalEndPointHashMap :: HM.Map BaseUrl BaseUrl
   }
   deriving (Generic)
 
@@ -77,7 +77,8 @@ buildAppEnv AppCfg {..} = do
   isShuttingDown <- mkShutdown
   kafkaConsumerEnv <- buildKafkaConsumerEnv kafkaConsumerCfgs
   esqDBEnv <- prepareEsqDBEnv esqDBCfg loggerEnv
-  return $ AppEnv {aclEndPointHashMap = HM.fromList $ M.toList aclEndPointMap, ..}
+  let internalEndPointHashMap = HM.fromList $ M.toList internalEndPointMap
+  return $ AppEnv {..}
 
 releaseAppEnv :: AppEnv -> IO ()
 releaseAppEnv AppEnv {..} = do

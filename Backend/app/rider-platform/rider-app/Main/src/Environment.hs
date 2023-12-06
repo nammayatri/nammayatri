@@ -120,7 +120,7 @@ data AppCfg = AppCfg
     dontEnableForDb :: [Text],
     maxMessages :: Text,
     incomingAPIResponseTimeout :: Int,
-    aclEndPointMap :: M.Map Text Text
+    internalEndPointMap :: M.Map BaseUrl BaseUrl
   }
   deriving (Generic, FromDhall)
 
@@ -185,7 +185,7 @@ data AppEnv = AppEnv
     dontEnableForDb :: [Text],
     maxMessages :: Text,
     incomingAPIResponseTimeout :: Int,
-    aclEndPointHashMap :: HM.Map Text Text
+    internalEndPointHashMap :: HM.Map BaseUrl BaseUrl
   }
   deriving (Generic)
 
@@ -215,7 +215,8 @@ buildAppEnv cfg@AppCfg {..} = do
       else connectHedisCluster hedisNonCriticalClusterCfg nonCriticalModifierFunc
   let s3Env = buildS3Env cfg.s3Config
       s3EnvPublic = buildS3Env cfg.s3PublicConfig
-  return AppEnv {aclEndPointHashMap = HM.fromList $ M.toList aclEndPointMap, ..}
+  let internalEndPointHashMap = HM.fromList $ M.toList internalEndPointMap
+  return AppEnv {..}
 
 releaseAppEnv :: AppEnv -> IO ()
 releaseAppEnv AppEnv {..} = do

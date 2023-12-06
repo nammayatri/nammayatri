@@ -86,7 +86,7 @@ cancelBooking ::
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     HasHttpClientOptions r c,
     HasLongDurationRetryCfg r c,
-    HasField "aclEndPointHashMap" r (HM.Map Text Text)
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.Map BaseUrl BaseUrl]
   ) =>
   DRB.Booking ->
   Id DM.Merchant ->

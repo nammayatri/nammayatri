@@ -20,7 +20,7 @@ let mockGoogleCfg =
       , googleKey = "mock-google-key"
       }
 
-let aclEndPointMap =
+let internalEndPointMap =
       [ { mapKey = "http://localhost:8016/v2"
         , mapValue = "http://localhost:8016/v2"
         }
@@ -59,5 +59,5 @@ in  { smsSessionConfig = globalCommon.smsSessionConfig
     , authServiceUrl = "http://localhost:8013/"
     , consumerType = globalCommon.consumerType
     , schedulerType = SchedulerType
-    , aclEndPointMap
+    , internalEndPointMap
     }

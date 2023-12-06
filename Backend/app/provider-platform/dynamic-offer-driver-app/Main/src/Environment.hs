@@ -124,7 +124,7 @@ data AppCfg = AppCfg
     modelNamesMap :: M.Map Text Text,
     maxMessages :: Text,
     incomingAPIResponseTimeout :: Int,
-    aclEndPointMap :: M.Map Text Text
+    internalEndPointMap :: M.Map BaseUrl BaseUrl
   }
   deriving (Generic, FromDhall)
 
@@ -201,7 +201,7 @@ data AppEnv = AppEnv
     maxMessages :: Text,
     modelNamesHashMap :: HM.Map Text Text,
     incomingAPIResponseTimeout :: Int,
-    aclEndPointHashMap :: HM.Map Text Text
+    internalEndPointHashMap :: HM.Map BaseUrl BaseUrl
   }
   deriving (Generic)
 
@@ -240,7 +240,8 @@ buildAppEnv cfg@AppCfg {..} = do
       driverQuoteExpirationSeconds = fromIntegral cfg.driverQuoteExpirationSeconds
       s3Env = buildS3Env cfg.s3Config
       s3EnvPublic = buildS3Env cfg.s3PublicConfig
-  return AppEnv {modelNamesHashMap = HM.fromList $ M.toList modelNamesMap, aclEndPointHashMap = HM.fromList $ M.toList aclEndPointMap, ..}
+  let internalEndPointHashMap = HM.fromList $ M.toList internalEndPointMap
+  return AppEnv {modelNamesHashMap = HM.fromList $ M.toList modelNamesMap, ..}
 
 releaseAppEnv :: AppEnv -> IO ()
 releaseAppEnv AppEnv {..} = do
