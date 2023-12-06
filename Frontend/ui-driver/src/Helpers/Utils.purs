@@ -86,6 +86,7 @@ import Services.Config (getWhatsAppSupportNo, getSupportNumber)
 import Engineering.Helpers.BackTrack (liftFlowBT)
 import Control.Transformers.Back.Trans (runBackT)
 import ConfigProvider
+import Screens.Types as ST
 
 type AffSuccess s = (s -> Effect Unit)
 
@@ -144,6 +145,9 @@ foreign import getDateAfterNDays :: Int -> String
 foreign import downloadQR  :: String -> Effect Unit
 
 foreign import _generateQRCode :: EffectFn5 String String Int Int (AffSuccess String) Unit
+foreign import setPopupType :: ST.GoToPopUpType -> Unit
+foreign import getPopupType :: forall f. Fn2 (f -> Maybe f) (Maybe f) (Maybe ST.GoToPopUpType)
+
 
 generateQR:: EffectFn4 String String Int Int Unit
 generateQR  = mkEffectFn4 \qrString viewId size margin ->  launchAff_  $ void $ makeAff $

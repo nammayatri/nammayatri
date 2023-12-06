@@ -334,7 +334,7 @@ data HOME_SCREENOUTPUT = GO_TO_PROFILE_SCREEN
                           | ENABLE_GOTO_API HomeScreenState String String
                           | LOAD_GOTO_LOCATIONS HomeScreenState
                           | DISABLE_GOTO HomeScreenState
-                          | GOTO_LOCATION_FLOW HomeScreenState
+                          | GOTO_LOCATION_FLOW HomeScreenState Boolean
                           | REFRESH_GOTO HomeScreenState
 
 data REPORT_ISSUE_CHAT_SCREEN_OUTPUT = GO_TO_HELP_AND_SUPPORT | SUBMIT_ISSUE ReportIssueChatScreenState | CALL_CUSTOMER ReportIssueChatScreenState

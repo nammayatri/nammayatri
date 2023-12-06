@@ -1090,3 +1090,6 @@ getBN stringKey =
         BOOTH_CHARGES_INCLUDED -> "বুথ চার্জ অন্তর্ভুক্ত: ₹{}"
         TOTAL_AMOUNT -> "মোট পরিমাণ"
         PLEASE_ADD_RC -> "অনুগ্রহ করে রাইড নিতে RC যোগ করুন"
+        LOCATION_CANNOT_BE_ADDED_WHILE_GOTO_ACTIVE -> "গো-টু সক্ষম না থাকলেই বিকল্প উপলব্ধ"
+        LOCATION_CANNOT_BE_ADDED_WHILE_ON_RIDE -> "অপশন পাওয়া যায় না যখন রাইড চলছে"
+        ADD_GOTO -> "এড গো-টু"

@@ -1090,3 +1090,6 @@ getHI stringKey =
         BOOTH_CHARGES_INCLUDED -> "बूथ शुल्क शामिल: ₹{}"
         TOTAL_AMOUNT -> "कुल राशि"
         PLEASE_ADD_RC -> "कृपया सवारी लेने के लिए RC जोड़ें"
+        LOCATION_CANNOT_BE_ADDED_WHILE_GOTO_ACTIVE -> "विकल्प केवल तभी उपलब्ध होता है जब गो-टू सक्षम न हो"
+        LOCATION_CANNOT_BE_ADDED_WHILE_ON_RIDE -> "जब सवारी चल रही हो तो विकल्प उपलब्ध नहीं होता"
+        ADD_GOTO -> "गो-टू जोड़ें"

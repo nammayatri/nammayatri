@@ -247,5 +247,12 @@ window.getMerchantConfig = function () {
         "languageKey" : "TA_IN"
       }
   ]
+  , "dashboard" : {
+        "enable" : true,
+        "url" : "https://nammayatri.in/open?source=in-app"
+    }
+  , "profile" : {
+    "showBookingOption" : false
+  }
   })
 }

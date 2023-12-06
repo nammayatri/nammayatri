@@ -802,4 +802,7 @@ getFR stringKey =
         BOOTH_CHARGES -> "Frais de cabine"
         BOOTH_CHARGES_INCLUDED -> "Frais de stand inclus : ₹{}"
         TOTAL_AMOUNT -> "Montant total"
+        LOCATION_CANNOT_BE_ADDED_WHILE_GOTO_ACTIVE -> "L'option est disponible uniquement lorsque Go-To n'est pas activé"
+        LOCATION_CANNOT_BE_ADDED_WHILE_ON_RIDE -> "L'option n'est pas disponible lorsque le trajet est en cours"
+        ADD_GOTO -> "Ajouter un Go-To"
         _ -> ""

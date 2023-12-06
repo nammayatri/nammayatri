@@ -78,6 +78,7 @@ import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Resource.Constants as Const
 import Data.Either (Either (..))
 import Data.Enum (enumFromThenTo)
+import Data.String as DS
 
 screen :: ST.DriverProfileScreenState -> Screen Action ST.DriverProfileScreenState ScreenOutput
 screen initialState =
@@ -1029,6 +1030,7 @@ showLiveStatsDashboard push state =
   [ height MATCH_PARENT
   , width MATCH_PARENT
   , background Color.grey800
+  , visibility if (DS.null state.data.config.dashboard.url) then GONE else VISIBLE
   , afterRender
         ( \action -> do
             JB.initialWebViewSetUp push (getNewIDWithTag "webview") HideLiveDashboard
@@ -1038,8 +1040,8 @@ showLiveStatsDashboard push state =
   ] [ webView
       [ height MATCH_PARENT
       , width MATCH_PARENT
-      , id (getNewIDWithTag "webview")
-      , url if (isPreviousVersion (getValueToLocalStore VERSION_NAME) ("1.2.8")) then "https://nammayatri.in/open/" else "https://nammayatri.in/open?source=in-app"
+      , id $ getNewIDWithTag "webview"
+      , url state.data.config.dashboard.url
       ]]
 
 --------------------------------------------------- SETTINGS VIEW ------------------------------------------
@@ -1081,11 +1083,8 @@ profileOptionsLayout state push =
               , orientation VERTICAL
               , gravity CENTER_VERTICAL
               , onClick push $ const $ OptionClick optionItem.menuOptions
-              , visibility if (optionItem.menuOptions == DRIVER_BOOKING_OPTIONS && (MU.getMerchant FunctionCall) == MU.YATRI && null state.data.downgradeOptions) then GONE else VISIBLE
-              ] <>  if (optionItem.menuOptions == DRIVER_BOOKING_OPTIONS) && ((null state.data.downgradeOptions && not state.props.showBookingOptionForTaxi) || (not state.data.activeRCData.rcStatus && MU.getMerchant FunctionCall/= MU.YATRI)) then 
-                      [ alpha 0.5
-                      , clickable false] 
-                    else [])
+              , visibility if visibilityCondition optionItem then VISIBLE else GONE
+              ] <> if disableCondition optionItem then [ alpha 0.5, clickable $ disabledOptionClickable optionItem] else [])
               [ linearLayout
                 [ width MATCH_PARENT
                 , height WRAP_CONTENT
@@ -1129,6 +1128,18 @@ profileOptionsLayout state push =
             ) (optionList state)
       )
   ]
+  where visibilityCondition optionItem = 
+          case optionItem.menuOptions of
+            GO_TO_LOCATIONS -> state.props.enableGoto
+            DRIVER_BOOKING_OPTIONS -> state.data.config.profile.showBookingOption && not (null state.data.downgradeOptions)
+            LIVE_STATS_DASHBOARD -> state.data.config.dashboard.enable && not DS.null state.data.config.dashboard.url
+            _ -> true
+        disableCondition optionItem = 
+          case optionItem.menuOptions of
+            DRIVER_BOOKING_OPTIONS -> not state.data.activeRCData.rcStatus
+            GO_TO_LOCATIONS -> state.data.goHomeActive || state.props.isRideActive
+            _ -> false
+        disabledOptionClickable optionItem = optionItem.menuOptions /= DRIVER_BOOKING_OPTIONS
 
 
 ----------------------------------------------- UPDATE LANGUAGE VIEW ------------------------------------------------------------------

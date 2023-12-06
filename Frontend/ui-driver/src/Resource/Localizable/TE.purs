@@ -1090,3 +1090,6 @@ getTE stringKey =
         BOOTH_CHARGES_INCLUDED -> "బూత్ ఛార్జీలు చేర్చబడ్డాయి: ₹{}"
         TOTAL_AMOUNT -> "మొత్తం మొత్తం"
         PLEASE_ADD_RC -> "దయచేసి రైడ్ చేయడానికి RCని జోడించండి"
+        LOCATION_CANNOT_BE_ADDED_WHILE_GOTO_ACTIVE -> "Go-To ప్రారంభించబడనప్పుడు మాత్రమే ఎంపిక అందుబాటులో ఉంటుంది"
+        LOCATION_CANNOT_BE_ADDED_WHILE_ON_RIDE -> "రైడ్ పురోగతిలో ఉన్నప్పుడు ఎంపిక అందుబాటులో ఉండదు"
+        ADD_GOTO -> "గో-టుకు జోడించు"

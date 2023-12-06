@@ -191,7 +191,8 @@ accessbilityBannerConfig state =
         actionTextColor = Color.purple,
         imageUrl = fetchImage FF_ASSET "ny_ic_purple_badge",
         isBanner = true,
-        stroke = "1,"<>Color.fadedPurple
+        stroke = "1,"<>Color.fadedPurple,
+        margin = Margin 0 0 0 0
       }
   in config'
 

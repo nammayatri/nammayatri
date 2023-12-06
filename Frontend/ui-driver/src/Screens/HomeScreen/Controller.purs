@@ -250,7 +250,7 @@ data ScreenOutput =   Refresh ST.HomeScreenState
                     | EnableGoto ST.HomeScreenState String
                     | LoadGotoLocations ST.HomeScreenState
                     | DisableGoto ST.HomeScreenState
-                    | ExitGotoLocation ST.HomeScreenState
+                    | ExitGotoLocation ST.HomeScreenState Boolean
                     | RefreshGoTo ST.HomeScreenState
 
 data Action = NoAction
@@ -339,6 +339,9 @@ data Action = NoAction
             | NotifyAPI
             | IsMockLocation String
             | ErrorModalActionController ErrorModalController.Action
+            | AddNewLocation
+            | AddGotoAC
+            | LinkAadhaarAC
             
 
 eval :: Action -> ST.HomeScreenState -> Eval Action ScreenOutput ST.HomeScreenState
@@ -370,14 +373,19 @@ eval (GoToLocationModalAC (GoToLocationModal.CardClicked item)) state = continue
 
 eval (EnableGotoTimerAC PrimaryButtonController.OnClick)state = updateAndExit state $ EnableGoto state state.data.driverGotoState.selectedGoTo
 
+eval AddGotoAC state = exit $ ExitGotoLocation state false
+
 eval (UpdateGoHomeTimer timerID timeInMinutes sec ) state = if sec <= 0 then do
-  _ <- pure $ clearTimer timerID
+  void $ pure $ clearTimer timerID
+  void $ pure $ HU.setPopupType ST.VALIDITY_EXPIRED
   continue state { data { driverGotoState { goToPopUpType = ST.VALIDITY_EXPIRED}}}
   else continue state { data { driverGotoState { timerInMinutes = timeInMinutes <> " " <>(getString MIN_LEFT), timerId = timerID} } }
 
 eval (CancelBackAC PrimaryButtonController.OnClick) state = continue state { data { driverGotoState { showGoto = false}}}
 
-eval (AddLocation PrimaryButtonController.OnClick) state = exit $ ExitGotoLocation state
+eval (AddLocation PrimaryButtonController.OnClick) state = exit $ ExitGotoLocation state true
+
+eval AddNewLocation state = exit $ ExitGotoLocation state true
 
 eval AfterRender state = continue state { props { mapRendered = true}}
 
@@ -854,6 +862,7 @@ eval ClickAddAlternateButton state = do
       else do
         exit $ AddAlternateNumber state
 
+eval LinkAadhaarAC state = exit $ AadhaarVerificationFlow state
 
 eval ZoneOtpAction state = do
   continue state { props = state.props { enterOtpModal = true, rideOtp = "", enterOtpFocusIndex = 0, otpIncorrect = false } }

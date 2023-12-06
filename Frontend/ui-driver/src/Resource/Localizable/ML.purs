@@ -1090,3 +1090,6 @@ getML stringKey =
         BOOTH_CHARGES_INCLUDED -> "ബൂത്ത് ചാർജുകൾ ഉൾപ്പെടുന്നു: ₹{}"
         TOTAL_AMOUNT -> "മൊത്തം തുക"
         PLEASE_ADD_RC -> "സവാരി ചെയ്യാൻ ദയവായി RC ചേർക്കുക"
+        LOCATION_CANNOT_BE_ADDED_WHILE_GOTO_ACTIVE -> "Go-To പ്രവർത്തനക്ഷമമാക്കാത്തപ്പോൾ മാത്രമേ ഓപ്ഷൻ ലഭ്യമാകൂ"
+        LOCATION_CANNOT_BE_ADDED_WHILE_ON_RIDE -> "റൈഡ് പുരോഗമിക്കുമ്പോൾ ഓപ്‌ഷൻ ലഭ്യമല്ല"
+        ADD_GOTO -> "ഗോ-ടു ചേർക്കുക"
