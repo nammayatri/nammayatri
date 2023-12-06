@@ -654,3 +654,8 @@ getFR stringKey =
         TAP_HERE_TO_STOP_AUTO_REQUESTING -> "Appuyez ici pour arrêter la demande automatique"
         POWERED_BY -> "Alimenté par"
         BOOK_YOUR_RIDE -> "Réservez votre trajet"
+        FARE_UPDATED_WITH_CHARGES -> "Le tarif a été mis à jour pour inclure les frais d'attente applicables"
+        FARE_UPDATED_WITH_SHORTER_DIST -> "Votre tarif a été mis à jour car votre trajet était plus court de {} km"
+        FARE_UPDATED_WITH_LONGER_DIST -> "Votre tarif a été mis à jour car votre trajet était plus long de {} km"
+        FARE_UPDATED_WITH_CHARGES_SHORTER_DIST -> "Votre tarif a été mis à jour car votre trajet était plus court de {} km et des frais de temps d'attente ont été engagés"
+        FARE_UPDATED_WITH_CHARGES_LONGER_DIST -> "Votre tarif a été mis à jour car votre trajet était plus long de {} km et des frais de temps d'attente ont été engagés"
