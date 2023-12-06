@@ -37,7 +37,7 @@ generateDomainHandler input =
     defaultQualifiedImport = ["Domain.Types.Person", "Domain.Types.Merchant", "Environment", "Kernel.Types.Id"]
 
     makeImport :: String -> String
-    makeImport x = "import qualified " <> x <> " as " <> x
+    makeImport x = "import qualified " <> x
 
     handlerFunctionDef :: ApiTT -> Text
     handlerFunctionDef apiT =
@@ -68,7 +68,7 @@ generateDomainHandler input =
         generateEnum typeName [("enum", values)] =
           let enumValues = T.splitOn "," values
            in ["data " <> typeName <> " = " <> T.intercalate " | " enumValues]
-                ++ ["  deriving (Eq, Show, Generic, ToJSON, FromJSON)\n"]
+                ++ ["  deriving (Eq, Show, Generic, ToJSON, FromJSON, ToSchema)\n"]
         generateEnum _ _ = error "Invalid enum definition"
 
         generateDataStructure :: Text -> [(Text, Text)] -> [Text]

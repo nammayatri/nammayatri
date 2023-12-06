@@ -12,16 +12,13 @@ import Control.Lens hiding (noneOf)
 import Data.Aeson
 import Data.Aeson.Key (fromText, toText)
 import qualified Data.Aeson.KeyMap as KM
-import Data.Aeson.Lens (key, _Array, _Object, _String, _Value)
+import Data.Aeson.Lens (_Array, _Object, _String, _Value)
 import Data.Bool
 import qualified Data.ByteString as BS
-import qualified Data.List as L
-import Data.List.Split (split, whenElt)
 import qualified Data.Text as T
 import qualified Data.Vector as V
 import qualified Data.Yaml as Yaml
-import Kernel.Prelude hiding (toText) --,traceShowId)
---import Debug.Trace (traceShowId)
+import Kernel.Prelude hiding (toText)
 
 apiParser :: FilePath -> IO Apis
 apiParser filepath = do
@@ -38,14 +35,14 @@ parseTypes = preview (ix "types" . _Value)
 
 parseApis :: Object -> Apis
 parseApis obj =
-  maybe (error "Failed to parse") (\r -> set imports (extractImports r) r) res
+  set imports (extractImports res) res
   where
-    res = mkQApis <$> (Apis <$> modelName <*> allApis <*> Just [] <*> (Just parseTyp))
-    mkQualified = makeTypeQualified obj
-    modelName = parseModule obj
+    defaultImportModule = "Domain.Action.UI."
+    res = mkQApis (Apis modelName allApis [] parseTyp)
+    mkQualified = T.pack . U.makeTypeQualified Nothing Nothing Nothing defaultImportModule obj . T.unpack
+    modelName = fromMaybe (error "Required module name") $ parseModule obj
     parseTyp = markQualifiedTypesInTypes modelName (typesToTypeObject (parseTypes obj)) obj
-    -- parseTyp = typesToTypeObject (parseTypes obj)
-    allApis = preview (ix "apis" . _Array . to V.toList) obj >>= (mapM parseSingleApi)
+    allApis = fromMaybe (error "Failed to parse apis") $ preview (ix "apis" . _Array . to V.toList) obj >>= mapM parseSingleApi
     mkQApis aps = aps & apis . traverse %~ mkQUrlApiTT
     mkQApiReq (ApiReq t1 t2) = ApiReq (mkQualified t1) t2
     mkQApiRes (ApiRes t1 t2) = ApiRes (mkQualified t1) t2
@@ -66,10 +63,11 @@ checkIfTypeExists t1 t2 = any (\t -> t == t1 || "[" <> t <> "]" == t1) t2
 checkTypeNames :: [TypeObject] -> [[Text]]
 checkTypeNames input = map (\(_, y) -> map (\(_, b) -> (if checkIfTypeExists b (map fst input) then b else b <> "mkQualified")) y) input
 
-markQualifiedTypesInTypes :: Maybe Text -> [TypeObject] -> Object -> [TypeObject]
+markQualifiedTypesInTypes :: Text -> [TypeObject] -> Object -> [TypeObject]
 markQualifiedTypesInTypes moduleName input obj =
   let dataNames = map (T.unpack . fst) input
-   in map (\(x, y) -> (x, map (\(a, b) -> (a, T.pack $ makeTypeQualified1 (T.unpack <$> moduleName) (Just dataNames) Nothing obj (T.unpack b))) y)) input
+      defaultImportModule = "Domain.Action.UI."
+   in map (\(x, y) -> (x, map (\(a, b) -> (a, T.pack $ U.makeTypeQualified (Just $ T.unpack moduleName) (Just dataNames) Nothing defaultImportModule obj (T.unpack b))) y)) input
 
 extractImports :: Apis -> [Text]
 extractImports api =
@@ -83,7 +81,7 @@ extractImports api =
     importComplexTypes = map figureOutImports' (api ^. types)
 
     figureOutImports' :: TypeObject -> [Text]
-    figureOutImports' (_, arr) = map (\(_, b) -> b) arr
+    figureOutImports' (_, arr) = filter (not . ("," `T.isInfixOf`)) $ map snd arr
 
     apiReqTraversal :: Traversal' ApiTT ApiReq
     apiReqTraversal = apiReqType . _Just
@@ -102,16 +100,13 @@ extractImports api =
     importFromUrlPart (QueryParam _ t2 _) = Just t2
     importFromUrlPart _ = Nothing
 
---importFromUrlPart _ = error "Not a valid url part"
-
 parseSingleApi :: Value -> Maybe ApiTT
 parseSingleApi (Object ob) = do
   let (key, val) = head $ KM.toList ob
   let apiTp = getApiType $ toText key
   obj <- preview (_Object) val
   let params = fromMaybe KM.empty $ preview (ix "params" ._Object) obj
-  endpoint <- preview (ix "endpoint" . _String . to (parseEndpoint params)) obj
-
+  let endpoint = parseEndpoint params $ fromMaybe (error "Endpoint not found !") $ preview (ix "endpoint" . _String) obj
   let auth = getAuthType <$> preview (ix "auth" . _String) obj
 
   let requestObj = preview (ix "request" . _Object) obj
@@ -119,8 +114,8 @@ parseSingleApi (Object ob) = do
   let requestFmt = Just $ fromMaybe "JSON" $ requestObj >>= preview (ix "format" . _String)
   let req = ApiReq <$> requestTp <*> requestFmt
 
-  responseObj <- preview (ix "response" . _Object) obj
-  responseTp <- preview (ix "type" . _String) responseObj
+  let responseObj = fromMaybe (error "Response Object is required") $ preview (ix "response" . _Object) obj
+  let responseTp = fromMaybe (error "Response type is required") $ preview (ix "type" . _String) responseObj
   let responseFmt = fromMaybe "JSON" $ preview (ix "format" . _String) responseObj
   let res = ApiRes responseTp responseFmt
 
@@ -183,9 +178,6 @@ parseEndpoint obj txt =
         Just content -> content
         Nothing -> error "Not enclosed in curly braces"
 
-makeTypeQualified :: Object -> Text -> Text
-makeTypeQualified obj txt = T.pack $ U.makeTypeQualified Nothing Nothing Nothing obj (T.unpack txt)
-
 figureOutImports :: [Text] -> [Text]
 figureOutImports imps = T.pack <$> U.figureOutImports (T.unpack <$> imps)
 
@@ -207,37 +199,4 @@ typesToTypeObject (Just (Object obj)) =
     processType1 (typeName, Object typeDef) =
       (toText typeName, extractFields typeDef)
     processType1 _ = error "Expected an object in fields"
-typesToTypeObject Nothing = error "Expecting Object in Types"
-
-makeTypeQualified1 :: Maybe String -> Maybe [String] -> Maybe [String] -> Object -> String -> String
-makeTypeQualified1 moduleName excludedList dList obj str = concatMap replaceOrKeep (split (whenElt (`elem` U.typeDelimiter)) str)
-  where
-    defaultTypeImports :: String -> Maybe String
-    defaultTypeImports tp = case tp of
-      "Text" -> Just "Kernel.Prelude"
-      "Maybe" -> Just "Kernel.Prelude"
-      "Double" -> Just "Kernel.Prelude"
-      "TimeOfDay" -> Just "Kernel.Prelude"
-      "Day" -> Just "Data.Time.Calendar"
-      "Int" -> Just "Kernel.Prelude"
-      "Bool" -> Just "Kernel.Prelude"
-      "Id" -> Just "Kernel.Types.Id"
-      "ShortId" -> Just "Kernel.Types.Id"
-      _ -> Nothing
-
-    getQualifiedImport :: String -> Maybe String
-    getQualifiedImport tk = case preview (ix "imports" . key (fromString tk) . U._String) obj of
-      Just t -> Just t
-      Nothing -> defaultTypeImports tk
-
-    replaceOrKeep :: String -> String
-    replaceOrKeep word =
-      if '.' `elem` word || ',' `elem` word
-        then word
-        else
-          if isJust moduleName && isJust excludedList && word `elem` (fromJust excludedList)
-            then "Domain.Action.UI." ++ fromJust moduleName ++ "." ++ word
-            else
-              if isJust dList && L.elem word (fromJust dList)
-                then "Domain.Action.UI." ++ word ++ "." ++ word
-                else maybe (if word `elem` ["", ")", "(", " ", "[", "]"] then word else error $ T.pack ("\"" ++ word ++ "\" type not determined")) (\x -> x <> "." <> word) (getQualifiedImport word)
+typesToTypeObject _ = error "Expecting Object in Types"

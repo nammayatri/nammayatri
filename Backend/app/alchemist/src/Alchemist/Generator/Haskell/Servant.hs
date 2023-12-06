@@ -45,22 +45,11 @@ generateServantAPI input =
     defaultQualifiedImport = ["Domain.Types.Person", "Kernel.Prelude", "Domain.Types.Merchant", "Environment", "Kernel.Types.Id"]
 
     makeQualifiedImport :: String -> String
-    makeQualifiedImport impts = "import qualified " <> impts <> " as " <> impts
+    makeQualifiedImport impts = "import qualified " <> impts
 
     generateParams :: Int -> Text
     generateParams 0 = ""
     generateParams n = " a" <> T.pack (show n) <> generateParams (n - 1)
-
-    -- containsMandatoryQueryParam :: [ApiTT] -> Bool
-    -- containsMandatoryQueryParam apis = any apiHasMandatoryQueryParam apis
-
-    -- apiHasMandatoryQueryParam :: ApiTT -> Bool
-    -- apiHasMandatoryQueryParam apiTT =
-    --   any urlPartHasMandatoryQueryParam (_urlParts apiTT)
-
-    -- urlPartHasMandatoryQueryParam :: UrlParts -> Bool
-    -- urlPartHasMandatoryQueryParam (QueryParam _ _ isMandatory) = isMandatory
-    -- urlPartHasMandatoryQueryParam _ = False
 
     handlerFunctionDef :: ApiTT -> Text
     handlerFunctionDef apiT =
