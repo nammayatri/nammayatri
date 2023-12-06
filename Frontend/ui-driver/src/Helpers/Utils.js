@@ -8,6 +8,7 @@ const allTimerIID = [];
 let uniqueId = 0;
 let countDownInMinutesId = null;
 const microapps = ["in.juspay.hyperpay", "in.juspay.ec", "in.juspay.upiintent"];
+let popupType = null;
 
 export const generateUniqueId = function (unit) {
   uniqueId += 1;
@@ -782,4 +783,18 @@ export const istToUtcDate = function (dateStr) {
 
 export const setValueToLocalStore = function (key,value){
   JBridge.setInSharedPrefs(key, value);
+}
+
+export const setPopupType = function (pType) {
+  popupType = pType;
+};
+
+export const getPopupType = function (just, nothing) {
+  if (popupType === null) {
+    return nothing;
+  } else {
+    const localPopup = popupType;
+    popupType = null;
+    return just(localPopup);
+  }
 }

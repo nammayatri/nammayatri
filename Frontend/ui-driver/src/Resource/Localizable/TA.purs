@@ -1090,3 +1090,6 @@ getTA stringKey =
         BOOTH_CHARGES_INCLUDED -> "பூத் கட்டணங்கள் சேர்க்கப்பட்டுள்ளன: ₹{}"
         TOTAL_AMOUNT -> "மொத்தத் தொகை"
         PLEASE_ADD_RC -> "சவாரி செய்ய RC ஐச் சேர்க்கவும்"
+        LOCATION_CANNOT_BE_ADDED_WHILE_GOTO_ACTIVE -> "Go-To இயக்கப்படாத போது மட்டுமே விருப்பம் கிடைக்கும்"
+        LOCATION_CANNOT_BE_ADDED_WHILE_ON_RIDE -> "சவாரி நடந்து கொண்டிருக்கும்போது விருப்பம் கிடைக்காது"
+        ADD_GOTO -> "செல்-செல்"

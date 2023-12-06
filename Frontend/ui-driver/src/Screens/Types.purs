@@ -344,7 +344,8 @@ type DriverProfileScreenData = {
   profileImg :: Maybe String,
   payerVpa :: String,
   autoPayStatus :: AutoPayStatus,
-  config :: AppConfig
+  config :: AppConfig,
+  goHomeActive :: Boolean
 }
 
 type RcData = {
@@ -421,7 +422,8 @@ type DriverProfileScreenProps = {
   showBookingOptionForTaxi :: Boolean,
   upiQrView :: Boolean,
   paymentInfoView :: Boolean,
-  enableGoto :: Boolean
+  enableGoto :: Boolean,
+  isRideActive :: Boolean
 }
 data Gender = MALE | FEMALE | OTHER | PREFER_NOT_TO_SAY
 

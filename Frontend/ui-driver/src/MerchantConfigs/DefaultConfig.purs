@@ -76,7 +76,8 @@ config =
       genericAccessibilityVideo : ""
   }
   , profile : { 
-    bookingOptionMenuForTaxi : false
+    bookingOptionMenuForTaxi : false,
+    showBookingOption : true
   }
   , waitTimeConfig : {
     enableWaitTime : true,
@@ -238,4 +239,8 @@ config =
     "type" : "QRScreen"
   , link : "https://nammayatri.in/link/rider/mvnw"
   }
+  , dashboard : {
+      enable : false,
+      url : ""
+    }
 }

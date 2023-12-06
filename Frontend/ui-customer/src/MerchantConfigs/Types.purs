@@ -63,7 +63,6 @@ type AppConfigCustomer a =
   , purpleRideConfig :: PurpleRideConfig
   , geoCoder :: GeoCoderConfig
   , shareAppConfig :: ShareAppConfig
-  , dashboard :: DashboardConfig
   , homeScreen :: HomeScreen
   | a
   }
@@ -296,9 +295,4 @@ type ShadowConfig = {
 type ShareAppConfig = {
   title :: String
 , description :: String
-}
-
-type DashboardConfig = {
-    url :: String
-  , enable :: Boolean
 }

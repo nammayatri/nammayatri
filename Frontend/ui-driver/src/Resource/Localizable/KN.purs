@@ -1090,3 +1090,6 @@ getKN stringKey =
         BOOTH_CHARGES_INCLUDED -> "ಬೂತ್ ಶುಲ್ಕಗಳು ಒಳಗೊಂಡಿವೆ: ₹{}"
         TOTAL_AMOUNT -> "ಒಟ್ಟು ಮೊತ್ತ"
         PLEASE_ADD_RC -> "ರೈಡ್‌ಗಳನ್ನು ತೆಗೆದುಕೊಳ್ಳಲು ದಯವಿಟ್ಟು RC ಸೇರಿಸಿ"
+        LOCATION_CANNOT_BE_ADDED_WHILE_GOTO_ACTIVE -> "ಗೋ-ಟು ಅನ್ನು ಸಕ್ರಿಯಗೊಳಿಸದಿದ್ದಾಗ ಮಾತ್ರ ಆಯ್ಕೆಯು ಲಭ್ಯವಿರುತ್ತದೆ"
+        LOCATION_CANNOT_BE_ADDED_WHILE_ON_RIDE -> "ರೈಡ್ ಪ್ರಗತಿಯಲ್ಲಿರುವಾಗ ಆಯ್ಕೆಯು ಲಭ್ಯವಿರುವುದಿಲ್ಲ"
+        ADD_GOTO -> "ಹೋಗಿ-ಗೆ ಸೇರಿಸಿ"

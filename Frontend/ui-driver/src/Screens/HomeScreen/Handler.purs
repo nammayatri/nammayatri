@@ -132,9 +132,9 @@ homeScreen = do
     DisableGoto updatedState -> do 
       modifyScreenState $ HomeScreenStateType (\_ → updatedState)
       App.BackT $ App.NoBack <$> (pure $ DISABLE_GOTO updatedState)
-    ExitGotoLocation updatedState -> do
+    ExitGotoLocation updatedState addLocation -> do
       modifyScreenState $ HomeScreenStateType (\_ → updatedState)
-      App.BackT $ App.BackPoint <$> (pure $ GOTO_LOCATION_FLOW updatedState)
+      App.BackT $ App.BackPoint <$> (pure $ GOTO_LOCATION_FLOW updatedState addLocation)
     RefreshGoTo updatedState -> do
       modifyScreenState $ HomeScreenStateType (\_ → updatedState)
       App.BackT $ App.BackPoint <$> (pure $ REFRESH_GOTO updatedState)

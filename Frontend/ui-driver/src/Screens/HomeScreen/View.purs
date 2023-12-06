@@ -45,7 +45,7 @@ import Data.Array as DA
 import Data.Either (Either(..))
 import Data.Function.Uncurried (runFn1, runFn2)
 import Data.Int (ceil, toNumber, fromString)
-import Data.Maybe (Maybe(..), fromMaybe, isJust)
+import Data.Maybe (Maybe(..), fromMaybe, isJust, isNothing)
 import Data.String as DS
 import Data.Time.Duration (Milliseconds(..))
 import Debug (spy)
@@ -66,7 +66,7 @@ import Log (printLog)
 import MerchantConfig.Utils as MU
 import Prelude (Unit, bind, const, discard, not, pure, unit, void, ($), (&&), (*), (-), (/), (<), (<<<), (<>), (==), (>), (>=), (||), (<=), show, void, (/=), when, map, otherwise, (+), negate)
 import Presto.Core.Types.Language.Flow (Flow, delay, doAff)
-import PrestoDOM (BottomSheetState(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), adjustViewWithKeyboard, afterRender, alignParentBottom, alpha, background, bottomSheetLayout, clickable, color, cornerRadius, ellipsize, fontStyle, frameLayout, gravity, halfExpandedRatio, height, id, imageUrl, imageView, imageWithFallback, layoutGravity, lineHeight, linearLayout, lottieAnimationView, margin, onBackPressed, onClick, orientation, padding, peakHeight, relativeLayout, singleLine, stroke, text, textSize, textView, visibility, weight, width, topShift, onAnimationEnd  )
+import PrestoDOM (BottomSheetState(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), adjustViewWithKeyboard, afterRender, alignParentBottom, alpha, background, bottomSheetLayout, clickable, color, cornerRadius, ellipsize, fontStyle, frameLayout, gravity, halfExpandedRatio, height, id, imageUrl, imageView, imageWithFallback, layoutGravity, lineHeight, linearLayout, lottieAnimationView, margin, onBackPressed, onClick, orientation, padding, peakHeight, relativeLayout, singleLine, stroke, text, textSize, textView, visibility, weight, width, topShift, onAnimationEnd, horizontalScrollView, scrollBarX)
 import PrestoDOM (BottomSheetState(..), alignParentBottom, layoutGravity, Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, alpha, background, bottomSheetLayout, clickable, color, cornerRadius, fontStyle, frameLayout, gravity, halfExpandedRatio, height, id, imageUrl, imageView, lineHeight, linearLayout, margin, onBackPressed, onClick, orientation, padding, peakHeight, stroke, text, textSize, textView, visibility, weight, width, imageWithFallback, adjustViewWithKeyboard, lottieAnimationView, relativeLayout, ellipsize, singleLine, scrollView, scrollBarY)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Elements.Elements (coordinatorLayout)
@@ -328,6 +328,8 @@ driverMapsHeaderView push state =
                   ]
                 , if (state.props.autoPayBanner /= ST.NO_SUBSCRIPTION_BANNER && state.props.driverStatusSet == ST.Offline) then autoPayBannerView state push true else dummyTextView
                 , gotoRecenterAndSupport state push
+                , accessibilityBanner state push
+                , offlineNavigationLinks push state
               ]
             , linearLayout
               [ width MATCH_PARENT
@@ -339,7 +341,6 @@ driverMapsHeaderView push state =
                 , if showGenderBanner then genderBannerView state push 
                     else if state.data.paymentState.paymentStatusBanner then paymentStatusBanner state push 
                     else if (state.props.autoPayBanner /= ST.NO_SUBSCRIPTION_BANNER && state.props.driverStatusSet /= ST.Offline) then autoPayBannerView state push false 
-                    else if (state.props.driverStatusSet /= ST.Offline && state.props.currentStage == HomeScreen && state.data.config.purpleRideConfig.showPurpleVideos) then accessibilityBanner state push 
                     else dummyTextView
               ]
             ]
@@ -354,12 +355,14 @@ accessibilityBanner state push =
   [ height WRAP_CONTENT
   , width MATCH_PARENT
   , orientation VERTICAL
-  , margin $ Margin 10 0 10 10
+  , margin $ Margin 16 12 16 0
   , gravity BOTTOM 
   , weight 1.0 
+  , visibility if bannerVisibility then VISIBLE else GONE
   ][
     Banner.view (push <<< AccessibilityBannerAction) (accessbilityBannerConfig state )
   ]
+  where bannerVisibility = state.props.driverStatusSet == ST.Offline && state.props.currentStage == HomeScreen && state.data.config.purpleRideConfig.showPurpleVideos
 
 genericAccessibilityPopUpView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 genericAccessibilityPopUpView push state = 
@@ -378,6 +381,7 @@ gotoRecenterAndSupport state push =
   , height WRAP_CONTENT
   , margin $ Margin 12 8 12 0
   , gravity if centerView then CENTER_HORIZONTAL else RIGHT
+  , visibility if state.props.driverStatusSet /= ST.Offline then VISIBLE else GONE
   ][ linearLayout
       [ width WRAP_CONTENT
       , height if showReportText then MATCH_PARENT else WRAP_CONTENT
@@ -1062,13 +1066,45 @@ savedLocationListView push state =
       , width MATCH_PARENT
       , weight 1.0
       , scrollBarY true
-      ][  linearLayout
+      ][ linearLayout
           [ width MATCH_PARENT
           , height WRAP_CONTENT
           , margin $ MarginTop 8
           , orientation VERTICAL
-          ](map (\item -> 
-          GoToLocationModal.view (push <<< GoToLocationModalAC) (locationListItemConfig item state) ) state.data.driverGotoState.savedLocationsArray)] 
+          , padding $ PaddingBottom 10
+          ][  linearLayout
+              [ width MATCH_PARENT
+              , height WRAP_CONTENT
+              , margin $ MarginTop 8
+              , orientation VERTICAL
+              ](map (\item -> 
+                GoToLocationModal.view (push <<< GoToLocationModalAC) (locationListItemConfig item state) ) state.data.driverGotoState.savedLocationsArray)
+            , linearLayout
+              [ width MATCH_PARENT
+              , height WRAP_CONTENT
+              , padding $ Padding 16 20 16 20
+              , margin $ Margin 16 16 16 0
+              , stroke $ "1," <> Color.grey900
+              , cornerRadius 8.0
+              , gravity CENTER_VERTICAL
+              , visibility if showAddGoto then VISIBLE else GONE
+              , onClick push $ const AddNewLocation
+              ][  imageView
+                  [ width $ V 24
+                  , height $ V 24
+                  , imageWithFallback $ HU.fetchImage HU.FF_ASSET "ny_ic_add_filled"
+                  ]
+                , textView $
+                  [ width MATCH_PARENT
+                  , height WRAP_CONTENT
+                  , text $ getString ADD_A_GOTO_LOC
+                  , margin $ MarginLeft 12
+                  , color Color.blue900
+                  ] <> FontStyle.body1 TypoGraphy
+              ]
+          ]
+        ]
+        where showAddGoto = DA.length state.data.driverGotoState.savedLocationsArray < state.data.config.gotoConfig.maxGotoLocations
 
 
 gotoHeader :: forall w . HomeScreenState ->  (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
@@ -1348,6 +1384,60 @@ addAlternateNumber push state visibility' =
       ] <> FontStyle.paragraphText TypoGraphy
    ]
 
+offlineNavigationLinks :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+offlineNavigationLinks push state =
+  horizontalScrollView
+  [ height WRAP_CONTENT
+  , width MATCH_PARENT
+  , scrollBarX false
+  , margin $ MarginLeft 16
+  , visibility if state.props.driverStatusSet == ST.Offline then VISIBLE else GONE
+  ][ linearLayout
+      [ width MATCH_PARENT
+      , height WRAP_CONTENT
+      , margin $ MarginTop 8
+      ](DA.mapWithIndex (\index item -> 
+          linearLayout
+            [ height WRAP_CONTENT
+            , width WRAP_CONTENT
+            , background Color.white900
+            , orientation HORIZONTAL
+            , cornerRadius 32.0
+            , stroke $ "1," <> Color.black600
+            , padding $ Padding 12 12 12 12
+            , margin $ MarginLeft if index == 0 then 0 else 5
+            , gravity CENTER_VERTICAL
+            , onClick push $ const item.action
+            , visibility $ itemVisibility item.action
+            ][  imageView
+                [ width $ V 16
+                , height $ V 16
+                , imageWithFallback $ HU.fetchImage HU.FF_ASSET item.icon
+                , margin $ MarginRight 5
+                ]
+              , textView $
+                [ width WRAP_CONTENT
+                , height WRAP_CONTENT
+                , gravity CENTER
+                , text item.title
+                , color Color.black900
+                , padding $ PaddingBottom 1
+                ] <> FontStyle.tags TypoGraphy
+            ]
+          ) navLinksArray)
+    ]
+    where
+      navLinksArray = [ {title : getString ADD_GOTO, icon : "ny_ic_loc_goto", action : AddGotoAC},
+                        {title : getString ADD_ALTERNATE_NUMBER, icon : "ic_call_plus", action : ClickAddAlternateButton},
+                        {title : getString REPORT_ISSUE, icon : "ny_ic_vector_black", action : HelpAndSupportScreen},
+                        {title : getString ENTER_AADHAAR_DETAILS, icon : "ny_ic_aadhaar_logo", action : LinkAadhaarAC}
+                      ]
+      itemVisibility action = case action of
+                        ClickAddAlternateButton -> if isNothing state.data.driverAlternateMobile then VISIBLE else GONE
+                        LinkAadhaarAC -> if state.props.showlinkAadhaarPopup then VISIBLE else GONE
+                        AddGotoAC -> if state.data.driverGotoState.gotoEnabledForMerchant && state.data.config.gotoConfig.enableGoto then VISIBLE else GONE
+                        _ -> VISIBLE
+
 locationLastUpdatedTextAndTimeView :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 locationLastUpdatedTextAndTimeView push state =
   linearLayout
@@ -1500,7 +1590,6 @@ knowMoreLocInRangeDisGotoPopups push state =
           ST.LocInRange -> gotoLocInRangeConfig state
           ST.KnowMore -> gotoKnowMoreConfig state
           ST.DisableGotoPopup -> disableGotoConfig state
-          _ -> gotoLocInRangeConfig state
       ]
   where 
   
@@ -1513,7 +1602,6 @@ knowMoreLocInRangeDisGotoPopups push state =
           ST.LocInRange -> GotoLocInRangeAction
           ST.KnowMore -> GotoKnowMoreAction
           ST.DisableGotoPopup -> ConfirmDisableGoto
-          _ -> GotoKnowMoreAction
 
 enableCurrentLocation :: HomeScreenState -> Boolean
 enableCurrentLocation state = if (DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted]) then false else true

@@ -29,6 +29,7 @@ type CommonAppConfig = (
   , otpRegex :: String
   , termsLink :: String
   , privacyLink :: String
+  , dashboard :: DashboardConfig
   , defaultLanguage :: String)
   
 type Colors = {
@@ -89,4 +90,9 @@ type CityConfig = {
   cityLong :: Number,
   supportNumber :: String,
   languageKey :: String
+}
+
+type DashboardConfig = {
+    url :: String
+  , enable :: Boolean
 }
