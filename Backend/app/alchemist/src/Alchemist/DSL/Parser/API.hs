@@ -15,6 +15,7 @@ import qualified Data.Aeson.KeyMap as KM
 import Data.Aeson.Lens (_Array, _Object, _String, _Value)
 import Data.Bool
 import qualified Data.ByteString as BS
+import Data.List.Split (splitWhen)
 import qualified Data.Text as T
 import qualified Data.Vector as V
 import qualified Data.Yaml as Yaml
@@ -57,17 +58,30 @@ parseApis obj =
         & urlParts . traverse %~ mkQUrlParts
         & header . traverse %~ mkQHeaders
 
-checkIfTypeExists :: Text -> [Text] -> Bool
-checkIfTypeExists t1 t2 = any (\t -> t == t1 || "[" <> t <> "]" == t1) t2
-
-checkTypeNames :: [TypeObject] -> [[Text]]
-checkTypeNames input = map (\(_, y) -> map (\(_, b) -> (if checkIfTypeExists b (map fst input) then b else b <> "mkQualified")) y) input
-
 markQualifiedTypesInTypes :: Text -> [TypeObject] -> Object -> [TypeObject]
 markQualifiedTypesInTypes moduleName input obj =
-  let dataNames = map (T.unpack . fst) input
-      defaultImportModule = "Domain.Action.UI."
-   in map (\(x, y) -> (x, map (\(a, b) -> (a, T.pack $ U.makeTypeQualified (Just $ T.unpack moduleName) (Just dataNames) Nothing defaultImportModule obj (T.unpack b))) y)) input
+  map
+    ( \(x, y) ->
+        ( x,
+          map
+            ( \(a, b) ->
+                ( a,
+                  if a == "enum"
+                    then mkEnumTypeQualified dataNames b
+                    else T.pack $ U.makeTypeQualified (Just $ T.unpack moduleName) (Just dataNames) Nothing defaultImportModule obj (T.unpack b)
+                )
+            )
+            y
+        )
+    )
+    input
+  where
+    dataNames = map (T.unpack . fst) input
+    defaultImportModule = "Domain.Action.UI."
+    mkEnumTypeQualified :: [String] -> Text -> Text
+    mkEnumTypeQualified excluded enumTp =
+      let individualEnums = T.strip <$> T.splitOn "," enumTp
+       in T.intercalate "," $ map (uncurry (<>) . second (T.pack . U.makeTypeQualified (Just $ T.unpack moduleName) (Just excluded) Nothing defaultImportModule obj . T.unpack) . T.breakOn " ") individualEnums
 
 extractImports :: Apis -> [Text]
 extractImports api =
@@ -81,7 +95,16 @@ extractImports api =
     importComplexTypes = map figureOutImports' (api ^. types)
 
     figureOutImports' :: TypeObject -> [Text]
-    figureOutImports' (_, arr) = filter (not . ("," `T.isInfixOf`)) $ map snd arr
+    figureOutImports' (_, arr) =
+      concatMap
+        ( ( \potentialImport ->
+              if "," `T.isInfixOf` potentialImport
+                then fmap T.pack $ filter ('.' `elem`) $ splitWhen (`elem` ("() []," :: String)) (T.unpack potentialImport)
+                else [potentialImport]
+          )
+            . snd
+        )
+        arr
 
     apiReqTraversal :: Traversal' ApiTT ApiReq
     apiReqTraversal = apiReqType . _Just
