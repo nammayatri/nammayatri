@@ -692,7 +692,7 @@ priceView prices categoryDisabled =
 chooseTicketsView :: forall w. ST.TicketBookingScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 chooseTicketsView state push = 
   let serviceData = (convertServicesDataToTicketsData state.props.selectedOperationalDay state.data.servicesInfo)
-      filteredServiceData = DA.filter (\ticket -> not (length ticket.timeIntervals == 0 && length ticket.slot == 0)) serviceData
+      filteredServiceData = DA.filter (\ticket -> not (length ticket.timeIntervals == 0 && length (getFilteredSlots ticket.slot state) == 0)) serviceData
   in
   PrestoAnim.animationSet [Anim.fadeIn true]  $  
   linearLayout[
@@ -782,6 +782,13 @@ chooseTicketsView state push =
       if (getCurrentDate "") < (convertUTCtoISC state.data.dateOfVisit "DD/MM/YYYY") then "Date Error! Booking allowed only upto 7 days in advance"
       else "Tickets are available current day onwards"
 
+    getFilteredSlots slots state = do
+      let currentDate = convertUTCtoISC (getCurrentUTC "") "YYYY-MM-DD"
+      if currentDate == (convertUTCtoISC state.data.dateOfVisit "YYYY-MM-DD") then do
+        let currentTime = convertUTCtoISC (getCurrentUTC "") "HH:mm:ss"
+        filter (\slot -> (convertUTCTimeToISTTimeinHHMMSS slot.slot) > currentTime) slots
+      else slots
+
 convertServicesDataToTicketsData :: String -> Array ST.TicketServiceData -> Array ST.Ticket
 convertServicesDataToTicketsData selectedOperationalDay services = do
   map createServiceTicket services
@@ -851,7 +858,14 @@ ticketInputView push state ticket =
   , orientation VERTICAL
   ] $ [] <> (if isValid ticket then [individualTicketView push state ticket] else [])
   where
-    isValid ticket = not (length ticket.timeIntervals == 0 && length ticket.slot == 0)
+    isValid ticket = not (length ticket.timeIntervals == 0 && length (getFilteredSlots ticket.slot state) == 0)
+
+    getFilteredSlots slots state = do
+      let currentDate = convertUTCtoISC (getCurrentUTC "") "YYYY-MM-DD"
+      if currentDate == (convertUTCtoISC state.data.dateOfVisit "YYYY-MM-DD") then do
+        let currentTime = convertUTCtoISC (getCurrentUTC "") "HH:mm:ss"
+        filter (\slot -> (convertUTCTimeToISTTimeinHHMMSS slot.slot) > currentTime) slots
+      else slots
 
 individualTicketView :: forall w. (Action -> Effect Unit) -> ST.TicketBookingScreenState -> ST.Ticket -> PrestoDOM (Effect Unit) w
 individualTicketView push state ticket =
