@@ -540,4 +540,4 @@ fromMetersToKm distanceInMeters
   | otherwise = show distanceInMeters <> " m"
 
 getArray :: Int ->Array Int
-getArray count = if count == 0 then [count] else [count] <> (getArray (count - 1))
+getArray count = if count <= 0 then [] else [count] <> (getArray (count - 1))

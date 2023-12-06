@@ -37,7 +37,7 @@ import Effect.Aff.Compat (EffectFnAff, fromEffectFnAff)
 import Effect.Class (liftEffect)
 import Effect.Exception (Error)
 import Effect.Ref (Ref, read, write)
-import Effect.Uncurried (EffectFn2, EffectFn8, EffectFn7, mkEffectFn2, mkEffectFn6, mkEffectFn7, runEffectFn2, runEffectFn6, runEffectFn7, runEffectFn8)
+import Effect.Uncurried (EffectFn2, EffectFn8, EffectFn7, mkEffectFn2, mkEffectFn6, mkEffectFn7, runEffectFn2, runEffectFn6, runEffectFn7, runEffectFn8, EffectFn1)
 import Foreign.Class (class Decode, class Encode)
 import Foreign.Object (empty, insert, lookup, Object, foldM, delete)
 import JSURI (decodeURIComponent)
@@ -96,6 +96,8 @@ foreign import getPastDays :: Int -> Array CalendarDate
 foreign import getPastWeeks :: Int -> Array CalendarWeek
 foreign import setEventTimestamp :: String -> Effect Unit
 foreign import getTimeStampObject :: Unit -> Effect (Array ClevertapEventParams)
+foreign import updateIdMap :: EffectFn1 String Int
+foreign import getValueFromIdMap :: EffectFn1 String Int
 
 
 os :: String
