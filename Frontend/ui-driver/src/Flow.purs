@@ -39,7 +39,7 @@ import Data.Number (fromString) as Number
 import Data.Ord (compare)
 import Data.Semigroup ((<>))
 import Data.Set (toggle)
-import Data.String (Pattern(..), split, toUpper, drop, indexOf)
+import Data.String (Pattern(..), split, toUpper, drop, indexOf, toLower, take)
 import Data.String (length) as STR
 import Data.String.CodeUnits (splitAt)
 import Data.String.Common (joinWith, split, toUpper, trim)
@@ -49,7 +49,7 @@ import Data.Traversable (traverse)
 import Effect (Effect)
 import Effect.Aff (makeAff, nonCanceler, launchAff)
 import Effect.Class (liftEffect)
-import Effect.Uncurried (runEffectFn1, runEffectFn5)
+import Effect.Uncurried (runEffectFn1, runEffectFn5, runEffectFn2)
 import Engineering.Helpers.BackTrack (getState, liftFlowBT)
 import Engineering.Helpers.Commons (flowRunner, liftFlow, getNewIDWithTag, getVersionByKey, os, getExpiryTime, stringToVersion, setText, convertUTCtoISC, getCurrentUTC, getCurrentTimeStamp, clearTimer)
 import Engineering.Helpers.Commons as EHC
@@ -195,10 +195,23 @@ authenticationFlow _ =
 checkRideAndInitiate :: Maybe Event -> FlowBT String Unit
 checkRideAndInitiate event = do
   (GetRidesHistoryResp activeRideResponse) <- Remote.getRideHistoryReqBT "1" "0" "true" "null" "null"
+  checkAndDownloadMLModel
   let activeRide = (not (null activeRideResponse.list))
   activeRide ?
     currentRideFlow (Just (GetRidesHistoryResp activeRideResponse)) 
     $ getDriverInfoFlow event (Just (GetRidesHistoryResp activeRideResponse))
+    where 
+      checkAndDownloadMLModel :: FlowBT String Unit
+      checkAndDownloadMLModel = do
+        let language = getValueToLocalStore LANGUAGE_KEY
+        downloadedLanguages <- lift $ lift $ doAff $ makeAff \cb -> JB.listDownloadedTranslationModels (cb <<< Right) 1000 $> nonCanceler
+        if (language /= "__failed" && not (languageExists downloadedLanguages language)) then do
+          void $ liftFlowBT $ runEffectFn1 JB.downloadMLTranslationModel language
+        else pure unit
+      languageExists :: Array String -> String -> Boolean
+      languageExists languages lang =
+        let firstTwoChars = toLower $ take 2 lang
+        in firstTwoChars `elem` languages
 
 checkVersion :: Int -> FlowBT String Unit
 checkVersion versioncode = do

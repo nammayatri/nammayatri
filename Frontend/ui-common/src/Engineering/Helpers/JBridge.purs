@@ -147,6 +147,7 @@ foreign import toast          :: String -> Unit
 foreign import restartApp :: Unit -> Effect Unit
 -- Deprecated
 foreign import factoryResetApp :: String -> Unit
+foreign import listDownloadedTranslationModels :: forall action. (action -> Effect Unit) -> Int -> Effect Unit
 foreign import startTimerWithTime :: forall action. String -> String -> String -> (action -> Effect Unit) -> (Int -> String -> String -> String-> action)  -> Effect Unit
 foreign import hideKeyboardOnNavigation :: Boolean -> Unit
 foreign import askNotificationPermission :: Unit -> Effect Unit
@@ -246,6 +247,7 @@ foreign import pauseYoutubeVideo :: Unit -> Unit
 foreign import storeCallBackLocateOnMap :: forall action. (action -> Effect Unit) -> (String -> String -> String -> action) -> Effect Unit
 foreign import debounceFunction :: forall action. Int -> (action -> Effect Unit) -> (String -> Boolean -> action) -> Boolean -> Effect Unit
 foreign import updateInputString :: String -> Unit
+foreign import downloadMLTranslationModel :: EffectFn1 String Unit
 foreign import supportsInbuildYoutubePlayer :: Unit -> Boolean 
 foreign import addCarouselWithVideoExists :: Unit -> Boolean
 foreign import isNetworkTimeEnabled :: EffectFn1 Unit Boolean

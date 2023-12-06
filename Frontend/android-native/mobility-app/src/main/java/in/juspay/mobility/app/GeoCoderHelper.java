@@ -7,7 +7,7 @@
  *  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 
-package in.juspay.mobility.common;
+package in.juspay.mobility.app;
 
 import android.content.Context;
 import android.location.Address;
@@ -27,7 +27,8 @@ public class GeoCoderHelper {
 
     public GeoCoderHelper(Context context){
         this.context = context;
-        geocoder = new Geocoder(context, Locale.getDefault());
+        Locale kannadaLocale = new Locale("kn");
+        geocoder = new Geocoder(context, kannadaLocale);
     }
 
     public class GeoCoordinate {
@@ -83,6 +84,24 @@ public class GeoCoderHelper {
         }
         return new GeoCoordinate(0.0, 0.0);
     }
+
+    public String getAddressTranslation(String address){
+        Locale kannadaLocale = new Locale("kn");
+        Geocoder geocoder = new Geocoder(context, kannadaLocale);
+        try {
+            List<Address> addresses = geocoder.getFromLocationName(address, 1);
+            if (addresses != null && addresses.size() > 0) {
+                Log.d(LOG_TAG, "FromLocationName: " + addresses + " \n" + "GivenAddress: " + address);
+
+                return addresses.get(0).getAddressLine(0);
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+            return address;
+        }
+        return address;
+    }
+
 
 }
 
