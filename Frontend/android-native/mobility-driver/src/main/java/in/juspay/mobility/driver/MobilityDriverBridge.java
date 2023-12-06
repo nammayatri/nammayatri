@@ -158,12 +158,14 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
     private PreviewView previewView;
     private ImageCapture imageCapture;
     private Button bCapture;
+    private TranslatorMLKit translator;
     public static Runnable cameraPermissionCallback;
     public static Boolean considerCameraOption = true;
 
     public MobilityDriverBridge(BridgeComponents bridgeComponents) {
         super(bridgeComponents);
         registerCallBacks();
+        translator = new TranslatorMLKit(bridgeComponents.getContext());
     }
 
     //region Store and Trigger CallBack
@@ -182,8 +184,17 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
 
     @JavascriptInterface
     public void deleteTranslatorModel(String model) {
-        TranslatorMLKit translator = new TranslatorMLKit(bridgeComponents.getContext());
-        translator.deleteDownloadedModel(model);
+        if(translator!=null) translator.deleteDownloadedModel(model);
+    }
+
+    @JavascriptInterface
+    public void listDownloadedTranslationModels(String callback) {
+        if(translator!=null) translator.listDownloadedModels(callback, bridgeComponents);
+    }
+
+    @JavascriptInterface
+    public void triggerDownloadForML(String language) {
+        if(translator!=null) translator.triggerDownloadForLang(language);
     }
 
     @JavascriptInterface

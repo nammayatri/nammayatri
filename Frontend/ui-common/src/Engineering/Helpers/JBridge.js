@@ -2085,7 +2085,23 @@ export const getLayoutBounds = function (id) {
   }
 };
 
-
+export const listDownloadedTranslationModels = function (cb) {
+  return function (delay){
+    return function () {
+      const fallbackCB = function () {
+        cb([])();
+      };
+      const modelListTimer = setTimeout(fallbackCB, delay);
+      const modelsCB = callbackMapper.map(function (modelList) {
+        clearTimeout(modelListTimer);
+        cb(modelList)();
+      }); 
+      if (JBridge.listDownloadedTranslationModels) {
+        JBridge.listDownloadedTranslationModels(modelsCB);
+      }
+    }
+  }
+}
 
 export const horizontalScrollToPos = function (id, childId, scrollFocus) {
   if (window.JBridge.horizontalScrollToPos) {
@@ -2162,6 +2178,12 @@ export const setYoutubePlayer = function (json, viewId, videoStatus) {
 export const pauseYoutubeVideo = function (unit){
   if (JBridge.pauseYoutubeVideo) {
     return JBridge.pauseYoutubeVideo();
+  }
+}
+
+export const downloadMLTranslationModel = function (language) {
+  if(JBridge.triggerDownloadForML){
+    return JBridge.triggerDownloadForML(language);
   }
 }
 

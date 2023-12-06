@@ -28,12 +28,14 @@ import com.google.mlkit.nl.translate.TranslateRemoteModel;
 import com.google.mlkit.nl.translate.Translation;
 import com.google.mlkit.nl.translate.Translator;
 import com.google.mlkit.nl.translate.TranslatorOptions;
+import org.json.JSONArray;
 
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
 
 import in.juspay.hyper.core.BridgeComponents;
+import in.juspay.hyper.core.JsCallback;
 
 
 public class TranslatorMLKit {
@@ -41,7 +43,7 @@ public class TranslatorMLKit {
 
     private Context context;
 
-    final RemoteModelManager remoteModelManager = RemoteModelManager.getInstance();
+    static final RemoteModelManager remoteModelManager = RemoteModelManager.getInstance();
 
     public TranslatorMLKit(Context context) {
         this.context = context;
@@ -59,49 +61,52 @@ public class TranslatorMLKit {
 
     public static String result, LOG_TAG = "Mobility Translator";
 
-    public Translator downloadModel(String sourceLanguage, String finalLanguage) {
-        if (finalLanguage == null || finalLanguage.equals("null")) {
-            finalLanguage = "en";
-        } else if (finalLanguage.length() >= 2) {
-            finalLanguage = finalLanguage.substring(0, 2).toLowerCase();
-        }
-        TranslatorOptions options =
-                new TranslatorOptions.Builder()
-                        .setSourceLanguage(sourceLanguage)
-                        .setTargetLanguage(finalLanguage)
-                        .build();
-        final Translator scopedTranslator =
-                Translation.getClient(options);
+    public void triggerDownloadForLang(String language) {
         try {
-            scopedTranslator.downloadModelIfNeeded()
-                    .addOnSuccessListener(
-                            v -> {
-                                firebaseLogEventWithParams("download_translation_model", "download_successful", "successful_translation", context);
-                            })
-                    .addOnFailureListener(
-                            e -> {
-                                Log.d(LOG_TAG, "download failed");
-                                firebaseLogEventWithParams("download_translation_model", "download_failed", e.toString(), context);
-                            });
+            TranslatorOptions options = buildTranslatorOptions("en", language);
+            initializeTranslator(options, context);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    public Translator downloadModel(String sourceLanguage, String finalLanguage) {
+        try {
+            TranslatorOptions options = buildTranslatorOptions(sourceLanguage, finalLanguage);
+            return initializeTranslator(options, context);
         } catch (Exception exception) {
             exception.printStackTrace();
             firebaseLogEventWithParams("download_translation_model_ml", "download_failed", exception.toString(), context);
+            return null;
         }
-        return scopedTranslator;
     }
 
-    public void listDownloadedModels() {
-        remoteModelManager.getDownloadedModels(TranslateRemoteModel.class)
+    private TranslatorOptions buildTranslatorOptions(String sourceLanguage, String finalLanguage) {
+        String targetLanguage = (finalLanguage == null || finalLanguage.equals("null")) ? "en" : finalLanguage.substring(0, 2).toLowerCase();
+        return new TranslatorOptions.Builder()
+                .setSourceLanguage(sourceLanguage)
+                .setTargetLanguage(targetLanguage)
+                .build();
+    }
+
+    private Translator initializeTranslator(TranslatorOptions options, Context context) {
+        if (translator != null) {
+            translator.close();
+        }
+
+        Translator scopedTranslator = Translation.getClient(options);
+
+        scopedTranslator.downloadModelIfNeeded()
                 .addOnSuccessListener(
-                        remoteModels -> {
-                            for (TranslateRemoteModel model : remoteModels) {
-                                Log.d(LOG_TAG, "models names - " + model.getLanguage() + "   " + model);
-                            }
+                        v -> {
+                            firebaseLogEventWithParams("download_translation_model", "download_successful", "successful_translation", context);
                         })
                 .addOnFailureListener(
                         e -> {
-                            Log.d(LOG_TAG, "list downloaded models failed");
+                            Log.d(LOG_TAG, "download failed");
+                            firebaseLogEventWithParams("download_translation_model", "download_failed", e.toString(), context);
                         });
+        return scopedTranslator;
     }
 
     public void deleteDownloadedModel(String language) {
@@ -174,7 +179,34 @@ public class TranslatorMLKit {
 
     }
 
-    public Map<String, String> languageMap = new HashMap<>(Map.ofEntries(
+    public static void listDownloadedModels(String callback, BridgeComponents bridgeComponents) {
+        remoteModelManager.getDownloadedModels(TranslateRemoteModel.class)
+                .addOnSuccessListener(
+                        remoteModels -> {
+                            JSONArray models = new JSONArray();
+                            for (TranslateRemoteModel model : remoteModels) {
+                                models.put(model.getLanguage());
+                            }
+                            if (callback != null && bridgeComponents != null) {
+                                String javascript = String.format(Locale.ENGLISH, "window.callUICallback('%s','%s');",
+                                        callback, models);
+                                bridgeComponents.getJsCallback().addJsToWebView(javascript);
+                            }
+                            Log.d(LOG_TAG, "list of downloaded models - " + models);
+                        })
+                .addOnFailureListener(
+                        e -> {
+                            if (callback != null && bridgeComponents != null) {
+                                JSONArray models = new JSONArray();
+                                String javascript = String.format(Locale.ENGLISH, "window.callUICallback('%s','%s');",
+                                        callback, models);
+                                bridgeComponents.getJsCallback().addJsToWebView(javascript);
+                            }
+                            Log.d(LOG_TAG, "list downloaded models failed");
+                        });
+    }
+
+    public Map<String, String> languageMap = new HashMap<>(Map.<String, String>ofEntries(
             entry("af", "Afrikaans"),
             entry("ar", "Arabic"),
             entry("be", "Belarusian"),
