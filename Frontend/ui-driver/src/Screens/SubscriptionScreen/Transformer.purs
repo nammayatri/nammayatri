@@ -219,27 +219,25 @@ constructDues duesArr showFeeBreakup = (mapWithIndex (\ ind (DriverDuesEntity it
     noOfRides: item.totalRides,
     scheduledAt: convertUTCtoISC (fromMaybe "" item.executionAt) "Do MMM YYYY, h:mm A",
     paymentStatus: "",
-    feeBreakup: if showFeeBreakup then getFeeBreakup offerAndPlanDetails item.totalRides else "",
+    feeBreakup: if showFeeBreakup then getFeeBreakup item.maxRidesEligibleForCharge (item.planAmount - (fromMaybe 0.0 item.totalSpecialZoneCharges)) item.totalRides else "",
     plan: offerAndPlanDetails,
     mode: item.feeType,
     autoPayStage : item.autoPayStage,
     randomId : (getCurrentUTC "") <> show ind,
     isSplit : item.isSplit,
     specialZoneRideCount : item.specialZoneRideCount,
-    specialZoneAmount : item.specialZoneAmount
+    totalSpecialZoneCharges : item.totalSpecialZoneCharges
   }) duesArr)
 
-getFeeBreakup :: String -> Int -> String
-getFeeBreakup plan rides = 
-    let planWithTranslations = fromMaybe "" ((split (Pattern "-*@*-") plan) !! 0)
-        planInEng = fromMaybe "" ((split (Pattern "-*$*-") planWithTranslations) !! 0)
-        planConfig = getPlanAmountConfig planInEng
-    in
-    case planConfig.isFixed of
-        true -> "₹" <> getFixedTwoDecimals planConfig.value
-        false -> if planConfig.value <= (toNumber rides) * planConfig.perRide 
-                    then "₹" <> getFixedTwoDecimals planConfig.value
-                 else show rides <> " " <> getString RIDES <> " X " <>  "₹" <> getFixedTwoDecimals planConfig.perRide
+getFeeBreakup :: Maybe Int -> Number -> Int -> String
+getFeeBreakup maxRidesEligibleForCharge planAmount totalRides =
+    case maxRidesEligibleForCharge of
+        Nothing ->  "₹" <> getFixedTwoDecimals planAmount
+        Just maxRides -> do
+            let ridesToConsider = min totalRides maxRides
+            if ridesToConsider /= 0 then 
+                show ridesToConsider <> " "<> getString (if ridesToConsider >1 then RIDES else RIDE) <>" x ₹" <> getFixedTwoDecimals (planAmount/ (toNumber ridesToConsider)) <> " " <> getString GST_INCLUDE
+            else getString $ NO_OPEN_MARKET_RIDES "NO_OPEN_MARKET_RIDES"
     
 
 getPlanAmountConfig :: String -> {value :: Number, isFixed :: Boolean, perRide :: Number}

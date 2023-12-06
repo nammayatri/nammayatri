@@ -122,7 +122,7 @@ view push state =
                 , keyValueView (getString SCHEDULED_AT) (fromMaybe "" item.scheduledAt) (isJust item.scheduledAt) false FontStyle.Body3 16 Color.black700
                 , keyValueView (getString PAYMENT_STATUS) (fromMaybe "" item.paymentStatus) (isJust item.paymentStatus) false FontStyle.Body3 16 Color.black700
                 , keyValueView (getString YOUR_EARNINGS) ("₹" <> getFixedTwoDecimals item.totalEarningsOfDay) true false FontStyle.Body3 16 Color.black700
-                , keyValueView (getString FARE_BREAKUP) (item.fareBreakup <>" "<> getString GST_INCLUDE) (not DS.null item.fareBreakup) false FontStyle.Body3 16 Color.black700
+                , keyValueView (getString FARE_BREAKUP) item.fareBreakup (not DS.null item.fareBreakup) false FontStyle.Body3 16 Color.black700
                 , maybe (linearLayout[visibility GONE][]) (\boothCharges -> keyValueView (getString BOOTH_CHARGES) boothCharges true false FontStyle.Captions 6 Color.black600) $ item.boothCharges
                 , linearLayout [
                   height WRAP_CONTENT
@@ -179,7 +179,7 @@ view push state =
     ]
     where mode item = if item.paymentMode == AUTOPAY_PAYMENT then getString UPI_AUTOPAY_S else if item.isDue then "Manual" else "UPI"
 
-keyValueView :: forall w properties . String -> String -> Boolean -> Boolean -> FontStyle.Style -> Int -> String -> PrestoDOM (Effect Unit) w
+keyValueView :: forall w . String -> String -> Boolean -> Boolean -> FontStyle.Style -> Int -> String -> PrestoDOM (Effect Unit) w
 keyValueView key value visibility' prefixImage keyFont marginTop keyColor = 
   linearLayout 
   [
@@ -191,7 +191,7 @@ keyValueView key value visibility' prefixImage keyFont marginTop keyColor =
   ][ 
     textView $ [
       text key
-      , margin $ MarginRight marginTop
+      , margin $ MarginRight 8
       , color keyColor
     ] <> FontStyle.getFontStyle keyFont TypoGraphy
     , imageView

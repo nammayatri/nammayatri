@@ -1093,3 +1093,4 @@ getBN stringKey =
         LOCATION_CANNOT_BE_ADDED_WHILE_GOTO_ACTIVE -> "গো-টু সক্ষম না থাকলেই বিকল্প উপলব্ধ"
         LOCATION_CANNOT_BE_ADDED_WHILE_ON_RIDE -> "অপশন পাওয়া যায় না যখন রাইড চলছে"
         ADD_GOTO -> "এড গো-টু"
+        NO_OPEN_MARKET_RIDES _ -> "রাইড নেই"

@@ -455,7 +455,7 @@ dueDetailsListState :: ST.SubscriptionScreenState -> DueDetailsListState
 dueDetailsListState state = let 
     calculateCharges count charges = 
       if count == 0 && charges == 0.0 then Nothing 
-      else Just $ show count <> " " <> getString RIDES <> " x ₹" <> HU.getFixedTwoDecimals (charges / DI.toNumber count) <> " " <> getString GST_INCLUDE
+      else Just $ show count <> " " <> getString (if count > 1 then RIDES else RIDE) <> " x ₹" <> HU.getFixedTwoDecimals (charges / DI.toNumber count) <> " " <> getString GST_INCLUDE
   in
   {
   dues : map (\ item -> do
@@ -477,7 +477,7 @@ dueDetailsListState state = let
       isDue : true,
       scheduledAt : if item.mode == AUTOPAY_REGISTRATION then Just (convertUTCtoISC item.scheduledAt "Do MMM YYYY, h:mm A") else Nothing,
       paymentStatus : if item.mode == AUTOPAY_REGISTRATION then Just (autoPayStageData.stage) else Nothing,
-      boothCharges : Mb.maybe Nothing (TPL.uncurry calculateCharges) (CA.lift2 TPL.Tuple item.specialZoneRideCount item.specialZoneAmount)
+      boothCharges : Mb.maybe Nothing (TPL.uncurry calculateCharges) (CA.lift2 TPL.Tuple item.specialZoneRideCount item.totalSpecialZoneCharges)
     }) (DA.filter (\item -> if state.props.myPlanProps.dueType == AUTOPAY_PAYMENT then item.mode == AUTOPAY_PAYMENT else item.mode /= AUTOPAY_PAYMENT ) state.data.myPlanData.dueItems)
 }
 
