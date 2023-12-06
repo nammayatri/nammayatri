@@ -14,8 +14,10 @@
 
 module Beckn.ACL.Confirm where
 
+import Beckn.ACL.Common
 import qualified Beckn.Types.Core.Taxi.API.Confirm as Confirm
 import qualified Beckn.Types.Core.Taxi.Confirm as Confirm
+import qualified Data.Text as T
 import Domain.Action.Beckn.Confirm as DConfirm
 import qualified Domain.Types.Location as DL
 import qualified Domain.Types.Vehicle.Variant as VehVar
@@ -43,6 +45,7 @@ buildConfirmReq req = do
       mbRiderName = fulfillment.customer.person <&> (.name)
       vehicleVariant = castVehicleVariant fulfillment.vehicle.category
       driverId = req.message.order.provider <&> (.id)
+      nightSafetyCheck = buildNightSafetyCheckTag $ (.tags) =<< fulfillment.customer.person
   toAddress <- (castAddress . (.location.address) <$> fulfillment.end) & fromMaybeM (InvalidRequest "end location missing")
 
   return $
@@ -58,3 +61,12 @@ buildConfirmReq req = do
       Confirm.AUTO_RICKSHAW -> VehVar.AUTO_RICKSHAW
       Confirm.TAXI -> VehVar.TAXI
       Confirm.TAXI_PLUS -> VehVar.TAXI_PLUS
+
+buildNightSafetyCheckTag :: Maybe Confirm.TagGroups -> Bool
+buildNightSafetyCheckTag tagGroups' = do
+  maybe True getTagValue tagGroups'
+  where
+    getTagValue tagGroups = do
+      let tagValue = getTag "customer_info" "night_safety_check" tagGroups
+          res = maybe (Just True) ((\val -> readMaybe val :: Maybe Bool) . T.unpack) tagValue
+      fromMaybe True res

@@ -229,5 +229,8 @@ instance ToTType' BeamTC.TransporterConfig TransporterConfig where
         BeamTC.coinExpireTime = nominalDiffTimeToSeconds coinExpireTime,
         BeamTC.considerSpecialZoneRidesForPlanCharges = considerSpecialZoneRidesForPlanCharges,
         BeamTC.considerSpecialZoneRideChargesInFreeTrial = considerSpecialZoneRideChargesInFreeTrial,
-        BeamTC.enableUdfForOffers = enableUdfForOffers
+        BeamTC.enableUdfForOffers = enableUdfForOffers,
+        BeamTC.nightSafetyRouteDeviationThreshold = nightSafetyRouteDeviationThreshold,
+        BeamTC.nightSafetyStartTime = nightSafetyStartTime,
+        BeamTC.nightSafetyEndTime = nightSafetyEndTime
       }

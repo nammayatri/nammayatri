@@ -164,6 +164,7 @@ library
       Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.RideAssignedEvent
       Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.RideCompletedEvent
       Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.RideStartedEvent
+      Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.SafetyAlertEvent
       Beckn.Types.Core.Taxi.Rating
       Beckn.Types.Core.Taxi.Rating.FeedbackForm
       Beckn.Types.Core.Taxi.Search

@@ -72,6 +72,13 @@ updateReferralInfo customerNumberHash merchantId referralId driverId = do
     ]
     [Se.And [Se.Is BeamRD.mobileNumberHash (Se.Eq customerNumberHash), Se.Is BeamRD.merchantId (Se.Eq $ getId merchantId)]]
 
+updateNightSafetyChecks :: MonadFlow m => Id RiderDetails -> Bool -> m ()
+updateNightSafetyChecks (Id riderId) nightSafetyChecks = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [Se.Set BeamRD.nightSafetyChecks nightSafetyChecks, Se.Set BeamRD.updatedAt now]
+    [Se.Is BeamRD.id (Se.Eq riderId)]
+
 instance FromTType' BeamRD.RiderDetails RiderDetails where
   fromTType' BeamRD.RiderDetailsT {..} = do
     pure $
@@ -88,7 +95,8 @@ instance FromTType' BeamRD.RiderDetails RiderDetails where
             hasTakenValidRide = hasTakenValidRide,
             hasTakenValidRideAt = hasTakenValidRideAt,
             merchantId = Id merchantId,
-            otpCode = otpCode
+            otpCode = otpCode,
+            nightSafetyChecks = nightSafetyChecks
           }
 
 instance ToTType' BeamRD.RiderDetails RiderDetails where
@@ -106,5 +114,6 @@ instance ToTType' BeamRD.RiderDetails RiderDetails where
         BeamRD.hasTakenValidRide = hasTakenValidRide,
         BeamRD.hasTakenValidRideAt = hasTakenValidRideAt,
         BeamRD.merchantId = getId merchantId,
+        BeamRD.nightSafetyChecks = nightSafetyChecks,
         BeamRD.otpCode = otpCode
       }

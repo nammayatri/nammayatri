@@ -81,5 +81,6 @@ linkReferee merchantId apiKey RefereeLinkInfoReq {..} = do
             referredAt = Just now,
             hasTakenValidRide = False,
             hasTakenValidRideAt = Nothing,
-            otpCode = Just otp
+            otpCode = Just otp,
+            nightSafetyChecks = True
           }

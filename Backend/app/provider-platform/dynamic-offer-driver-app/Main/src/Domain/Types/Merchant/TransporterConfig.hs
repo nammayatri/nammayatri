@@ -134,6 +134,9 @@ data TransporterConfigD u = TransporterConfig
     considerSpecialZoneRidesForPlanCharges :: Bool,
     considerSpecialZoneRideChargesInFreeTrial :: Bool,
     enableUdfForOffers :: Bool,
+    nightSafetyRouteDeviationThreshold :: Meters,
+    nightSafetyStartTime :: Seconds,
+    nightSafetyEndTime :: Seconds,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }
