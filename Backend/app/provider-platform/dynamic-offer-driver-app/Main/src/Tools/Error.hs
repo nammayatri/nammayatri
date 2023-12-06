@@ -847,3 +847,25 @@ instance IsHTTPError DriverCoinError where
     NegativeCoins _ -> E400
 
 instance IsAPIError DriverCoinError
+
+data DriverReferralError
+  = AlreadyReffered Text
+  | InvalidReferralCode Text
+  deriving (Generic, Eq, Show, FromJSON, ToJSON, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''DriverReferralError
+
+instance IsBaseError DriverReferralError where
+  toMessage = \case
+    AlreadyReffered driverId -> Just ("You already has a referral code linked for driverId: " <> show driverId <> ".")
+    InvalidReferralCode referralCode -> Just ("Invalid referral code " <> show referralCode <> ".")
+
+instance IsHTTPError DriverReferralError where
+  toErrorCode = \case
+    AlreadyReffered _ -> "ALREADY_REFFERED"
+    InvalidReferralCode _ -> "INVALID_REFERRAL_CODE"
+  toHttpCode = \case
+    AlreadyReffered _ -> E400
+    InvalidReferralCode _ -> E400
+
+instance IsAPIError DriverReferralError

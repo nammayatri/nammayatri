@@ -290,10 +290,11 @@ fetchDriverIDsFromLocations = map DriverLocation.driverId
 fetchDriverIDsFromInfo :: [DriverInformation] -> [Id Person]
 fetchDriverIDsFromInfo = map DriverInfo.driverId
 
-addReferralCode :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> EncryptedHashedField 'AsEncrypted Text -> m ()
-addReferralCode (Id personId) code = do
+addReferralCode :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> Text -> Id Person -> m ()
+addReferralCode (Id personId) code referredByDriverId = do
   updateWithKV
-    [ Se.Set BeamDI.referralCode (Just (code & unEncrypted . (.encrypted)))
+    [ Se.Set BeamDI.referralCode (Just code),
+      Se.Set BeamDI.referredByDriverId (Just referredByDriverId.getId)
     ]
     [Se.Is BeamDI.driverId (Se.Eq personId)]
 
