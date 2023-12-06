@@ -1090,3 +1090,4 @@ getKN stringKey =
         BOOTH_CHARGES_INCLUDED -> "ಬೂತ್ ಶುಲ್ಕಗಳು ಒಳಗೊಂಡಿವೆ: ₹{}"
         TOTAL_AMOUNT -> "ಒಟ್ಟು ಮೊತ್ತ"
         PLEASE_ADD_RC -> "ರೈಡ್‌ಗಳನ್ನು ತೆಗೆದುಕೊಳ್ಳಲು ದಯವಿಟ್ಟು RC ಸೇರಿಸಿ"
+        NO_OPEN_MARKET_RIDES _ -> "ಸವಾರಿ ಇಲ್ಲ"

@@ -1090,3 +1090,4 @@ getHI stringKey =
         BOOTH_CHARGES_INCLUDED -> "बूथ शुल्क शामिल: ₹{}"
         TOTAL_AMOUNT -> "कुल राशि"
         PLEASE_ADD_RC -> "कृपया सवारी लेने के लिए RC जोड़ें"
+        NO_OPEN_MARKET_RIDES _ -> "कोई सवारी नहीं"

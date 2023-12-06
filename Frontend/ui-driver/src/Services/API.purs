@@ -2443,7 +2443,7 @@ newtype DriverDuesEntity = DriverDuesEntity {
     rideTakenOn :: String,
     driverFeeAmount :: Number,
     specialZoneRideCount :: Maybe Int,
-    specialZoneAmount :: Maybe Number, -- 8 Rides x 11.80 => specialZoneRideCount x (specialZoneAmount /specialZoneRideCount)
+    totalSpecialZoneCharges :: Maybe Number,
     maxRidesEligibleForCharge :: Maybe Int
 }
 
@@ -2925,7 +2925,7 @@ newtype DriverFeeInfoEntity = DriverFeeInfoEntity {
     rideTakenOn :: String,
     driverFeeAmount :: Number,
     specialZoneRideCount :: Maybe Int,
-    specialZoneAmount :: Maybe Number,
+    totalSpecialZoneCharges :: Maybe Number,
     maxRidesEligibleForCharge :: Maybe Int
 }
 

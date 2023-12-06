@@ -1090,3 +1090,4 @@ getEN stringKey =
         BOOTH_CHARGES_INCLUDED -> "Booth Charges included: ₹{}"
         TOTAL_AMOUNT -> "Total Amount"
         PLEASE_ADD_RC -> "Please add RC to take rides"
+        NO_OPEN_MARKET_RIDES _ -> "No rides"

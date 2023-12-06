@@ -1090,3 +1090,4 @@ getBN stringKey =
         BOOTH_CHARGES_INCLUDED -> "বুথ চার্জ অন্তর্ভুক্ত: ₹{}"
         TOTAL_AMOUNT -> "মোট পরিমাণ"
         PLEASE_ADD_RC -> "অনুগ্রহ করে রাইড নিতে RC যোগ করুন"
+        NO_OPEN_MARKET_RIDES _ -> "রাইড নেই"

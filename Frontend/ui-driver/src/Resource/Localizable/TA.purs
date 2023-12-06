@@ -1090,3 +1090,4 @@ getTA stringKey =
         BOOTH_CHARGES_INCLUDED -> "பூத் கட்டணங்கள் சேர்க்கப்பட்டுள்ளன: ₹{}"
         TOTAL_AMOUNT -> "மொத்தத் தொகை"
         PLEASE_ADD_RC -> "சவாரி செய்ய RC ஐச் சேர்க்கவும்"
+        NO_OPEN_MARKET_RIDES _ -> "சவாரிகள் இல்லை"

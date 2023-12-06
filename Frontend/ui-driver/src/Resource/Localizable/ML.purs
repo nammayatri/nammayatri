@@ -1090,3 +1090,4 @@ getML stringKey =
         BOOTH_CHARGES_INCLUDED -> "ബൂത്ത് ചാർജുകൾ ഉൾപ്പെടുന്നു: ₹{}"
         TOTAL_AMOUNT -> "മൊത്തം തുക"
         PLEASE_ADD_RC -> "സവാരി ചെയ്യാൻ ദയവായി RC ചേർക്കുക"
+        NO_OPEN_MARKET_RIDES _ -> "റൈഡുകൾ ഇല്ല"

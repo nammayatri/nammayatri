@@ -68,12 +68,12 @@ buildTransactionDetails (API.HistoryEntryDetailsEntityV2Resp resp) gradientConfi
                   {
                     key : "FEE_BREAKUP",
                     title : getString FEE_BREAKUP,
-                    val : if (resp.feeType == AUTOPAY_REGISTRATION || not showFeeBreakup) then "" else (getFeeBreakup offerAndPlanDetails driverFee'.totalRides <> " "<> getString GST_INCLUDE)
+                    val : if (resp.feeType == AUTOPAY_REGISTRATION || not showFeeBreakup) then "" else (getFeeBreakup driverFee'.maxRidesEligibleForCharge (driverFee'.planAmount - (fromMaybe 0.0 driverFee'.totalSpecialZoneCharges)) driverFee'.totalRides)
                   },
                   {
                     key : "BOOTH_CHARGES",
                     title : getString BOOTH_CHARGES,
-                    val : case driverFee'.specialZoneRideCount, driverFee'.specialZoneAmount of
+                    val : case driverFee'.specialZoneRideCount, driverFee'.totalSpecialZoneCharges of
                             Just 0, Just 0.0 -> ""
                             Just count, Just charges -> show count <> " " <>getString RIDES <> " x ₹" <> getFixedTwoDecimals (charges / INT.toNumber count) <> " " <> getString GST_INCLUDE
                             _, _ -> ""
@@ -125,7 +125,7 @@ buildTransactionDetails (API.HistoryEntryDetailsEntityV2Resp resp) gradientConfi
                                 noOfRides : driverFee.totalRides,
                                 totalEarningsOfDay : driverFee.totalEarnings,
                                 dueAmount : driverFee.driverFeeAmount,
-                                fareBreakup : getFeeBreakup offerAndPlanDetails driverFee.totalRides,
+                                fareBreakup : getFeeBreakup driverFee.maxRidesEligibleForCharge (driverFee.planAmount - (fromMaybe 0.0 driverFee.totalSpecialZoneCharges)) driverFee.totalRides,
                                 expanded : false,
                                 isAutoPayFailed : isJust driverFee.autoPayStage && resp.feeType == MANUAL_PAYMENT,
                                 isSplitPayment : driverFee.isSplit,
@@ -134,9 +134,9 @@ buildTransactionDetails (API.HistoryEntryDetailsEntityV2Resp resp) gradientConfi
                                 scheduledAt : if (resp.feeType == AUTOPAY_REGISTRATION && isJust  resp.executionAt) then Just (convertUTCtoISC (fromMaybe "" resp.executionAt) "Do MMM YYYY, h:mm A") else Nothing,
                                 paymentMode : resp.feeType,
                                 paymentStatus :  if resp.feeType == AUTOPAY_REGISTRATION then Just (autoPayStageData.stage) else Nothing,
-                                boothCharges : case driverFee.specialZoneRideCount, driverFee.specialZoneAmount of
+                                boothCharges : case driverFee.specialZoneRideCount, driverFee.totalSpecialZoneCharges of
                                                 Just 0, Just 0.0 -> Nothing
-                                                Just count, Just charges -> Just $ show count <> " " <> getString RIDES <> " x ₹" <> getFixedTwoDecimals (charges / INT.toNumber count) <> " " <> getString GST_INCLUDE
+                                                Just count, Just charges -> Just $ show count <> " " <> getString (if count > 1 then RIDES else RIDE) <> " x ₹" <> getFixedTwoDecimals (charges / INT.toNumber count) <> " " <> getString GST_INCLUDE
                                                 _, _ -> Nothing
                             }
                             ) filteredDriverFees
@@ -192,7 +192,7 @@ dummyDriverFee =
       rideTakenOn : "",
       driverFeeAmount : 0.0,
       specialZoneRideCount : Nothing,
-      specialZoneAmount : Nothing,
+      totalSpecialZoneCharges : Nothing,
       maxRidesEligibleForCharge : Nothing
   }
 

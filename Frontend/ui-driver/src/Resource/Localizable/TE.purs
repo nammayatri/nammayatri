@@ -1090,3 +1090,4 @@ getTE stringKey =
         BOOTH_CHARGES_INCLUDED -> "బూత్ ఛార్జీలు చేర్చబడ్డాయి: ₹{}"
         TOTAL_AMOUNT -> "మొత్తం మొత్తం"
         PLEASE_ADD_RC -> "దయచేసి రైడ్ చేయడానికి RCని జోడించండి"
+        NO_OPEN_MARKET_RIDES _ -> "సవారీలు లేవు"

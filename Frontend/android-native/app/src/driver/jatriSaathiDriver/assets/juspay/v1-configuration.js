@@ -34,7 +34,8 @@ window.getMerchantConfig = function () {
                     "FIND_HELP_CENTRE",
                     "HOW_IT_WORKS",
                     "GET_SPECIAL_OFFERS",
-                    "PAYMENT_PENDING_ALERT_DESC"
+                    "PAYMENT_PENDING_ALERT_DESC",
+                    "NO_OPEN_MARKET_RIDES"
                     ],
     "fontType": "Assets",
     "currency": "₹",
@@ -89,7 +90,8 @@ window.getMerchantConfig = function () {
       "FIND_HELP_CENTRE" : "Find Help Desk",
       "HOW_IT_WORKS" : "How Autopay works?",
       "GET_SPECIAL_OFFERS" : "Guaranteed fixed price until\nJan 1, 2025",
-      "PAYMENT_PENDING_ALERT_DESC" : "To continue taking rides on Yatri Sathi, clear your payment dues"
+      "PAYMENT_PENDING_ALERT_DESC" : "To continue taking rides on Yatri Sathi, clear your payment dues",
+      "NO_OPEN_MARKET_RIDES" : "0 open market rides"
     },
     "hindiStrings": {
       "WELCOME_TEXT": "Welcome to Yatri Sathi Driver App",
@@ -114,7 +116,8 @@ window.getMerchantConfig = function () {
       "FIND_HELP_CENTRE" : "सहायता डेस्क ढूंढें",
       "HOW_IT_WORKS" : "ऑटोपे कैसे काम करता है?",
       "GET_SPECIAL_OFFERS" : "1 जनवरी, 2025 तक निश्चित मूल्य की गारंटी",
-      "PAYMENT_PENDING_ALERT_DESC" : "यात्री साथी पर यात्रा जारी रखने के लिए, अपनी शेष राशि चुकाएं"
+      "PAYMENT_PENDING_ALERT_DESC" : "यात्री साथी पर यात्रा जारी रखने के लिए, अपनी शेष राशि चुकाएं",
+      "NO_OPEN_MARKET_RIDES" : "0 ओपन मार्केट राइड"
     },
     "bengaliStrings": {
       "WELCOME_TEXT": "Welcome to Yatri Sathi Driver App",
@@ -139,7 +142,8 @@ window.getMerchantConfig = function () {
       "FIND_HELP_CENTRE" : "সহায়তা ডেস্ক খুঁজুন",
       "HOW_IT_WORKS" : "স্বতঃপে কিভাবে কাজ করে?",
       "GET_SPECIAL_OFFERS" : "জানুয়ারি 1, 2025 পর্যন্ত গ্যারান্টিযুক্ত নির্দিষ্ট মূল্য",
-      "PAYMENT_PENDING_ALERT_DESC" : "যাত্রী সাথীতে যাত্রা চালিয়ে যেতে, আপনার পেমেন্ট বকেয়া পরিশোধ করুন"
+      "PAYMENT_PENDING_ALERT_DESC" : "যাত্রী সাথীতে যাত্রা চালিয়ে যেতে, আপনার পেমেন্ট বকেয়া পরিশোধ করুন",
+      "NO_OPEN_MARKET_RIDES" : "0 ওপেন মার্কেট রাইডস"
     },
     "logs": ["JUSPAY","FIREBASE","CLEVERTAP"]
     , "fontName" : "PlusJakartaSans"
@@ -177,7 +181,7 @@ window.getMerchantConfig = function () {
           "myPlanYoutubeLink" : "https://www.youtube.com/playlist?list=PLvMgI4c44A9Y2bykEuDAtHzgcubXOYqgU-*$*-https://www.youtube.com/playlist?list=PLvMgI4c44A9Y2bykEuDAtHzgcubXOYqgU-*$*-https://www.youtube.com/playlist?list=PLvMgI4c44A9Zl0IIQcZa7ZJrSjWPLfxpA-*$*-https://www.youtube.com/playlist?list=PLvMgI4c44A9Y8NLs_8TXc7biX-JkobrGB",
           "overlayYoutubeLink" : "https://youtube.com/shorts/nyJ1bIOsGfo-*$*-https://youtube.com/shorts/nyJ1bIOsGfo-*$*-https://youtu.be/RSKNT3NccPo-*$*-https://youtu.be/RSKNT3NccPo",
           "earnAmountInADay" : 5000,
-          "showFeeBreakup" : false
+          "showFeeBreakup" : true
     } 
     , "OTP_MESSAGE_REGEX" : "is your OTP for login to [A-Za-z]+ [A-Za-z]+ [A-Za-z]+"
     , "autoPayBanner" : false
