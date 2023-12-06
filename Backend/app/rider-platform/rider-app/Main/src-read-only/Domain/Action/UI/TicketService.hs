@@ -215,6 +215,7 @@ data TicketServiceResp = TicketServiceResp
     service :: Data.Text.Text,
     openTimings :: Maybe Kernel.Prelude.TimeOfDay,
     closeTimings :: Maybe Kernel.Prelude.TimeOfDay,
+    shortDesc :: Maybe Text,
     validityTimings :: Maybe Kernel.Prelude.TimeOfDay,
     prices :: [TicketServicePrice]
   }
@@ -258,17 +259,18 @@ getTicketPlacesServices :: Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPla
 getTicketPlacesServices placeId = do
   ticketServices <- QTS.getTicketServicesByPlaceId placeId.getId
   now <- getCurrentTime
-  let currentDay = dayOfWeek $ utctDay now
-      currentDate = utctDay now
-  specialOccasions <- mapM (findSpecialOccasion currentDay currentDate) ticketServices
-  let ticketServicesWSpOcc = zip ticketServices specialOccasions
-  mkTicketServiceListRes ticketServicesWSpOcc currentDate placeId
+  let currentDate = utctDay now
+  mkTicketServiceListRes ticketServices currentDate placeId
   where
-    mkTicketServiceListRes ticketServicesWSpOcc currentDate_ pId =
+    mkTicketServiceListRes ticketServices currentDate_ pId =
       mapM
-        ( \(service, mbSpecialOcc) -> do
-            let bhIds = maybe (service.businessHours) (.businessHours) mbSpecialOcc
-            businessHours <- mapM (mkBusinessHoursRes service currentDate_ mbSpecialOcc) bhIds
+        ( \service -> do
+            specialOccasions <- findSpecialOccasion service
+            let getBusinessHourForSpecialLocation sl businessHours = if null businessHours then map (\bh -> (sl, bh)) service.businessHours else map (\bh -> (sl, bh)) businessHours
+            let specialOccBHourIds = concat (map (\sl -> getBusinessHourForSpecialLocation sl sl.businessHours) specialOccasions)
+            specialOccBHours <- mapM (\(specialOcc, bhId) -> mkBusinessHoursRes service currentDate_ (Just specialOcc) bhId) specialOccBHourIds
+            normalBusinessHours <- mapM (mkBusinessHoursRes service currentDate_ Nothing) service.businessHours
+            let businessHours = normalBusinessHours ++ specialOccBHours
             pure $
               TicketServiceResp
                 { id = service.id,
@@ -278,6 +280,7 @@ getTicketPlacesServices placeId = do
                   allowFutureBooking = service.allowFutureBooking,
                   expiry = service.expiry,
                   businessHours,
+                  shortDesc = service.shortDesc,
                   -- deprecated fields
                   service = service.service,
                   openTimings = Kernel.Prelude.listToMaybe businessHours >>= (.startTime),
@@ -289,7 +292,7 @@ getTicketPlacesServices placeId = do
                   prices = mkPrices service.id businessHours
                 }
         )
-        ticketServicesWSpOcc
+        ticketServices
 
     mkPrices :: Kernel.Types.Id.Id Domain.Types.TicketService.TicketService -> [BusinessHourResp] -> [TicketServicePrice]
     mkPrices serviceId businessHours = do
@@ -304,6 +307,7 @@ getTicketPlacesServices placeId = do
           pricePerUnit = pricePerUnit
         }
 
+    mkBusinessHoursRes :: Domain.Types.TicketService.TicketService -> Data.Time.Calendar.Day -> Kernel.Prelude.Maybe Domain.Types.SpecialOccasion.SpecialOccasion -> Kernel.Types.Id.Id Domain.Types.BusinessHour.BusinessHour -> Environment.Flow BusinessHourResp
     mkBusinessHoursRes service currDate mbSpecialOcc bhId = do
       businessHour <- QBH.findById bhId >>= fromMaybeM (BusinessHourNotFound bhId.getId)
       let convertedBusinessHT = convertBusinessHT businessHour.btype
@@ -345,11 +349,7 @@ getTicketPlacesServices placeId = do
             description = peopleCategory.description
           }
 
-    findSpecialOccasion curDay curDate service = do
-      maybeOccasionByDate <- QSO.findSpecialOccasionByEntityIdAndDate service.id.getId (Just curDate)
-      case maybeOccasionByDate of
-        Just occ -> pure (Just occ)
-        Nothing -> QSO.findSpecialOccasionByEntityIdAndDayOfWeek service.id.getId (Just $ show curDay)
+    findSpecialOccasion service = QSO.findAllSpecialOccasionByEntityId service.id.getId Nothing
 
     calcAllowedSeats serC mSeatM =
       case serC.availableSeats of

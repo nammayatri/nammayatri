@@ -127,7 +127,10 @@ SpecialOccasion:
       kvFunction: findOneWithKV
       where:
         and: [entityId, date]
-
+    findAllSpecialOccasionByEntityId:
+      kvFunction: findAllWithKV
+      where:
+        and: [entityId, date]
     findSpecialOccasionByEntityIdAndDayOfWeek:
       kvFunction: findOneWithKV
       where:
