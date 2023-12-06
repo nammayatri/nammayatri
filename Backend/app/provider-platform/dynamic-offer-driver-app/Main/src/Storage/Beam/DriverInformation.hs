@@ -36,6 +36,7 @@ data DriverInformationT f = DriverInformationT
     aadhaarVerified :: B.C f Bool,
     lastEnabledOn :: B.C f (Maybe UTCTime),
     referralCode :: B.C f (Maybe Text),
+    referredByDriverId :: B.C f (Maybe Text),
     canDowngradeToSedan :: B.C f Bool,
     canDowngradeToHatchback :: B.C f Bool,
     canDowngradeToTaxi :: B.C f Bool,
