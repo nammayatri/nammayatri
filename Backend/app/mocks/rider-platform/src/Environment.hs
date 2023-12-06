@@ -42,7 +42,7 @@ data AppCfg = AppCfg
     shortDurationRetryCfg :: RetryCfg,
     longDurationRetryCfg :: RetryCfg,
     disableSignatureAuth :: Bool,
-    aclEndPointMap :: M.Map Text Text
+    internalEndPointMap :: M.Map BaseUrl BaseUrl
   }
   deriving (Generic, FromDhall)
 
@@ -64,7 +64,7 @@ data AppEnv = AppEnv
     hostName :: Text,
     disableSignatureAuth :: Bool,
     version :: DeploymentVersion,
-    aclEndPointHashMap :: HM.Map Text Text
+    internalEndPointHashMap :: HM.Map BaseUrl BaseUrl
   }
   deriving (Generic)
 
@@ -75,7 +75,8 @@ buildAppEnv AppCfg {..} = do
   loggerEnv <- prepareLoggerEnv loggerConfig podName
   coreMetrics <- registerCoreMetricsContainer
   isShuttingDown <- mkShutdown
-  return AppEnv {aclEndPointHashMap = HM.fromList $ M.toList aclEndPointMap, ..}
+  let internalEndPointHashMap = HM.fromList $ M.toList internalEndPointMap
+  return AppEnv {..}
 
 releaseAppEnv :: AppEnv -> IO ()
 releaseAppEnv AppEnv {..} =

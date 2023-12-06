@@ -37,7 +37,7 @@ run ::
     HasHttpClientOptions r c,
     HasShortDurationRetryCfg r c,
     MonadConsumer PublicTransportSearch m,
-    HasField "aclEndPointHashMap" r (HM.Map Text Text),
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.Map BaseUrl BaseUrl],
     EsqDBFlow m r
   ) =>
   m ()

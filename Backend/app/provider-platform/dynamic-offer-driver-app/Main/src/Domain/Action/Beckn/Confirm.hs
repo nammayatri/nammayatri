@@ -317,7 +317,7 @@ cancelBooking ::
     HasHttpClientOptions r c,
     HasLongDurationRetryCfg r c,
     LT.HasLocationService m r,
-    HasField "aclEndPointHashMap" r (HM.Map Text Text)
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.Map BaseUrl BaseUrl]
   ) =>
   DRB.Booking ->
   Maybe DPerson.Person ->
@@ -376,7 +376,7 @@ validateRequest ::
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     HasLongDurationRetryCfg r c,
     LT.HasLocationService m r,
-    HasField "aclEndPointHashMap" r (HM.Map Text Text)
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.Map BaseUrl BaseUrl]
   ) =>
   Subscriber.Subscriber ->
   Id DM.Merchant ->

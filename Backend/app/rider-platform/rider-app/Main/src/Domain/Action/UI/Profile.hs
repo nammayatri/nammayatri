@@ -133,7 +133,7 @@ getPersonDetails (personId, _) = do
   decPerson <- decrypt person
   return $ Person.makePersonAPIEntity decPerson tag riderConfig
 
-updatePerson :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasField "aclEndPointHashMap" r (HM.Map Text Text)) => Id Person.Person -> UpdateProfileReq -> m APISuccess.APISuccess
+updatePerson :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasFlowEnv m r '["internalEndPointHashMap" ::: HM.Map BaseUrl BaseUrl]) => Id Person.Person -> UpdateProfileReq -> m APISuccess.APISuccess
 updatePerson personId req = do
   mPerson <- join <$> QPerson.findByEmail `mapM` req.email
   whenJust mPerson (\_ -> throwError PersonEmailExists)
@@ -189,7 +189,7 @@ updateDisability hasDisability mbDisability personId = do
               }
   pure APISuccess.Success
 
-validateRefferalCode :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasField "aclEndPointHashMap" r (HM.Map Text Text)) => Id Person.Person -> Text -> m (Maybe Text)
+validateRefferalCode :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasFlowEnv m r '["internalEndPointHashMap" ::: HM.Map BaseUrl BaseUrl]) => Id Person.Person -> Text -> m (Maybe Text)
 validateRefferalCode personId refCode = do
   unless (TU.validateAllDigitWithMinLength 6 refCode) (throwError $ InvalidRequest "Referral Code must have 6 digits")
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId) >>= decrypt

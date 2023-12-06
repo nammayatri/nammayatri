@@ -41,7 +41,7 @@ trigger urlText body = withFlowHandlerBecknAPI' $ do
 callBAP ::
   ( MonadFlow m,
     HasFlowEnv m r '["selfId" ::: Text],
-    HasField "aclEndPointHashMap" r (HM.Map Text Text),
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.Map BaseUrl BaseUrl],
     CoreMetrics m
   ) =>
   BaseUrl ->
@@ -50,8 +50,8 @@ callBAP ::
 callBAP uri body = do
   selfId <- asks (.selfId)
   let authKey = getHttpManagerKey selfId
-  aclEndPointHashMap <- asks (.aclEndPointHashMap)
-  Beckn.callBecknAPI (Just $ ET.ManagerSelector authKey) Nothing "Some action" fakeAPI uri aclEndPointHashMap body
+  internalEndPointHashMap <- asks (.internalEndPointHashMap)
+  Beckn.callBecknAPI (Just $ ET.ManagerSelector authKey) Nothing "Some action" fakeAPI uri internalEndPointHashMap body
   where
     fakeAPI :: Proxy (ReqBody '[JSONBS] BS.ByteString :> Post '[JSON] AckResponse)
     fakeAPI = Proxy

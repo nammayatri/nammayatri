@@ -94,7 +94,7 @@ getDriverLoc ::
     EsqDBFlow m r,
     EsqDBReplicaFlow m r,
     HasField "rideCfg" r RideConfig,
-    HasField "aclEndPointHashMap" r (HM.Map Text Text)
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.Map BaseUrl BaseUrl]
   ) =>
   Id SRide.Ride ->
   Id SPerson.Person ->
@@ -140,7 +140,7 @@ getRideStatus ::
     EsqDBFlow m r,
     EsqDBReplicaFlow m r,
     HasField "rideCfg" r RideConfig,
-    HasField "aclEndPointHashMap" r (HM.Map Text Text)
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.Map BaseUrl BaseUrl]
   ) =>
   Id SRide.Ride ->
   Id SPerson.Person ->
@@ -175,7 +175,8 @@ editLocation ::
     EsqDBFlow m r,
     MonadFlow m,
     HasField "shortDurationRetryCfg" r RetryCfg,
-    HasFlowEnv m r '["nwAddress" ::: BaseUrl]
+    HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.Map BaseUrl BaseUrl]
   ) =>
   Id SRide.Ride ->
   (Id SPerson.Person, Id DM.Merchant) ->

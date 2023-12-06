@@ -59,13 +59,12 @@ feedbackApi = Proxy
 feedback ::
   ( MonadFlow m,
     CoreMetrics m,
-    CacheFlow m r,
-    HasField "aclEndPointHashMap" r (HM.Map Text Text)
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.Map BaseUrl BaseUrl]
   ) =>
   Text ->
   BaseUrl ->
   FeedbackReq ->
   m APISuccess
 feedback apiKey internalUrl request = do
-  aclEndPointHashMap <- asks (.aclEndPointHashMap)
-  EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BAP_INTERNAL_API_ERROR") (Just aclEndPointHashMap) internalUrl (feedbackClient (Just apiKey) request) "FeedBack" feedbackApi
+  internalEndPointHashMap <- asks (.internalEndPointHashMap)
+  EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BAP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (feedbackClient (Just apiKey) request) "FeedBack" feedbackApi

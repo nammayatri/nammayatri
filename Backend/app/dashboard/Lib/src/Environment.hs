@@ -27,7 +27,6 @@ import Kernel.Types.Common
 import Kernel.Types.Flow
 import Kernel.Types.SlidingWindowLimiter
 import Kernel.Utils.App (getPodName, lookupDeploymentVersion)
-import Kernel.Utils.Common (CacheConfig)
 import Kernel.Utils.Dhall (FromDhall)
 import Kernel.Utils.IOLogging
 import Kernel.Utils.Servant.Client
@@ -62,8 +61,7 @@ data AppCfg = AppCfg
     enablePrometheusMetricLogging :: Bool,
     slackToken :: Text,
     slackChannel :: Text,
-    cacheConfig :: CacheConfig,
-    aclEndPointMap :: M.Map Text Text
+    internalEndPointMap :: M.Map BaseUrl BaseUrl
   }
   deriving (Generic, FromDhall)
 
@@ -97,8 +95,7 @@ data AppEnv = AppEnv
     enableRedisLatencyLogging :: Bool,
     enablePrometheusMetricLogging :: Bool,
     slackEnv :: SlackEnv,
-    cacheConfig :: CacheConfig,
-    aclEndPointHashMap :: HM.Map Text Text
+    internalEndPointHashMap :: HM.Map BaseUrl BaseUrl
   }
   deriving (Generic)
 
@@ -124,7 +121,8 @@ buildAppEnv authTokenCacheKeyPrefix AppCfg {..} = do
       then pure hedisNonCriticalEnv
       else connectHedisCluster hedisNonCriticalClusterCfg modifierFunc
   isShuttingDown <- mkShutdown
-  return $ AppEnv {aclEndPointHashMap = HM.fromList $ M.toList aclEndPointMap, ..}
+  let internalEndPointHashMap = HM.fromList $ M.toList internalEndPointMap
+  return $ AppEnv {..}
 
 releaseAppEnv :: AppEnv -> IO ()
 releaseAppEnv AppEnv {..} = do

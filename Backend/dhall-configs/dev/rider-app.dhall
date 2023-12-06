@@ -224,5 +224,5 @@ in  { esqDBCfg
     , dontEnableForDb
     , maxMessages
     , incomingAPIResponseTimeout = +15
-    , aclEndPointMap = common.aclEndPointMap
+    , internalEndPointMap = common.internalEndPointMap
     }

@@ -60,8 +60,6 @@ let rccfg =
       , connectTimeout = None Integer
       }
 
-let cacheConfig = { configsExpTime = +86400 }
-
 in  { esqDBCfg
     , esqDBReplicaCfg
     , hedisCfg = rcfg
@@ -93,6 +91,5 @@ in  { esqDBCfg
     , enablePrometheusMetricLogging = True
     , slackToken = sec.slackToken
     , slackChannel = "CXXXXXXXXXF"
-    , cacheConfig
-    , aclEndPointMap = common.aclEndPointMap
+    , internalEndPointMap = common.internalEndPointMap
     }

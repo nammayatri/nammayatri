@@ -258,7 +258,7 @@ onUpdate ::
     HasLongDurationRetryCfg r c,
     -- HasShortDurationRetryCfg r c, -- uncomment for test update api
     HasField "minTripDistanceForReferralCfg" r (Maybe HighPrecMeters),
-    HasField "aclEndPointHashMap" r (HM.Map Text Text),
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.Map BaseUrl BaseUrl],
     HasBAPMetrics m r,
     EventStreamFlow m r
   ) =>

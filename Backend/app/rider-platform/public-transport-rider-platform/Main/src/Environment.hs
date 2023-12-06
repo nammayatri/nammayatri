@@ -61,7 +61,7 @@ data AppCfg = AppCfg
     kafkaProducerCfg :: KafkaProducerCfg,
     enableRedisLatencyLogging :: Bool,
     enablePrometheusMetricLogging :: Bool,
-    aclEndPointMap :: M.Map Text Text
+    internalEndPointMap :: M.Map BaseUrl BaseUrl
   }
   deriving (Generic, FromDhall)
 
@@ -97,7 +97,7 @@ data AppEnv = AppEnv
     version :: DeploymentVersion,
     enableRedisLatencyLogging :: Bool,
     enablePrometheusMetricLogging :: Bool,
-    aclEndPointHashMap :: HM.Map Text Text
+    internalEndPointHashMap :: HM.Map BaseUrl BaseUrl
   }
   deriving (Generic)
 
@@ -123,7 +123,8 @@ buildAppEnv AppCfg {..} = do
     if cutOffHedisCluster
       then pure hedisNonCriticalEnv
       else connectHedisCluster hedisNonCriticalClusterCfg publicTransportBapPrefix
-  return $ AppEnv {aclEndPointHashMap = HM.fromList $ M.toList aclEndPointMap, ..}
+  let internalEndPointHashMap = HM.fromList $ M.toList internalEndPointMap
+  return $ AppEnv {..}
 
 releaseAppEnv :: AppEnv -> IO ()
 releaseAppEnv AppEnv {..} = do
