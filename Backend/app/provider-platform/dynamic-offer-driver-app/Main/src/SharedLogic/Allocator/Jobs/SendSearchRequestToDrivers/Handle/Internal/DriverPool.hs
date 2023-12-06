@@ -173,6 +173,7 @@ prepareDriverPoolBatch driverPoolCfg searchReq searchTry batchNum goHomeConfig =
           logDebug $ "IntelligentDriverPool - SortedDriversCount " <> show (length sortedPart)
           logDebug $ "IntelligentDriverPool - RandomizedDriversCount " <> show (length randomPart)
           logDebug $ "IntelligentDriverPool - DriversFromRestCount " <> show (length driversFromRestCount)
+          logDebug $ "IntelligentDriverPool - PoolBatch " <> show (poolBatch <> driversFromRestCount)
           pure $ poolBatch <> driversFromRestCount
 
         addDistanceSplitConfigBasedDelaysForDriversWithinBatch filledPoolBatch =
@@ -221,6 +222,7 @@ prepareDriverPoolBatch driverPoolCfg searchReq searchTry batchNum goHomeConfig =
           let nonGoHomeNormalDriversWithValidReqCount = filter (\ngd -> ngd.driverPoolResult.driverId `notElem` blockListedDrivers) nonGoHomeDriversWithValidReqCount
           let fillSize = batchSize - length batch
           transporterConfig <- TC.findByMerchantOpCityId merchantOpCityId
+          logDebug $ "SortingType : " <> show sortingType
           (batch <>)
             <$> case sortingType of
               Intelligent -> do
@@ -241,6 +243,8 @@ prepareDriverPoolBatch driverPoolCfg searchReq searchTry batchNum goHomeConfig =
           foldrM
             ( \dObj (gtX, ltX) -> do
                 driverQuotesCount <- getQuotesCount merchantId dObj.driverPoolResult.driverId
+                logDebug $ "driverQuoteCount for driver Id-" <> show (dObj.driverPoolResult.driverId, driverQuotesCount)
+                logDebug $ "minQuotes-" <> show minQuotes
                 pure $
                   if driverQuotesCount >= minQuotes
                     then (dObj : gtX, ltX)
