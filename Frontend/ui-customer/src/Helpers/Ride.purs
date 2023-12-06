@@ -29,7 +29,7 @@ import Engineering.Helpers.BackTrack (getState)
 import Types.App (GlobalState(..))
 import Data.Either (Either(..))
 import Services.API
-import Data.Array (null, head, length)
+import Data.Array (null, head, length, (!!))
 import Data.Maybe (Maybe(..), fromMaybe, isNothing, isJust, maybe')
 import Screens.HomeScreen.ScreenData (dummyRideBooking)
 import Screens.HomeScreen.Transformer (dummyRideAPIEntity)
@@ -41,7 +41,7 @@ import Engineering.Helpers.Commons (liftFlow, convertUTCtoISC)
 import Engineering.Helpers.LogEvent (logEvent, logEventWithTwoParams)
 import Storage
 import Helpers.Utils (getCurrentDate)
-import Resources.Constants (DecodeAddress(..), decodeAddress)
+import Resources.Constants (DecodeAddress(..), decodeAddress, getAddressFromBooking)
 import Data.String (split, Pattern(..))
 import Foreign.Generic (decodeJSON)
 
@@ -64,6 +64,8 @@ checkRideStatus rideAssigned = do
                 { data
                     { driverInfoCardState = getDriverInfo state.data.specialZoneSelectedVariant (RideBookingRes resp) (null resp.rideList)
                     , finalAmount = fromMaybe 0 $ (fromMaybe dummyRideAPIEntity (head resp.rideList) )^. _computedPrice
+                    , sourceAddress = getAddressFromBooking resp.fromLocation
+                    , destinationAddress = getAddressFromBooking (resp.bookingDetails ^._contents^._toLocation)
                     , currentSearchResultType = if null resp.rideList then QUOTES else ESTIMATES},
                   props
                     { currentStage = rideStatus

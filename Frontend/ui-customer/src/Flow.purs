@@ -485,7 +485,7 @@ homeScreenFlow = do
             else pure unit
           pure unit
         Nothing -> pure unit
-      void $ pure $ setFlowStatusData (FlowStatusData { source : {lat : state.props.sourceLat, lng : state.props.sourceLong, place : state.data.source, address : Nothing, city : state.props.city}
+      void $ liftFlowBT $ setFlowStatusData (FlowStatusData { source : {lat : state.props.sourceLat, lng : state.props.sourceLong, place : state.data.source, address : Nothing, city : state.props.city}
                                                       , destination : {lat : state.props.destinationLat, lng : state.props.destinationLong, place : state.data.destination, address : Nothing, city : Nothing}
                                                       , sourceAddress : state.data.sourceAddress
                                                       , destinationAddress : state.data.destinationAddress })
@@ -755,8 +755,8 @@ homeScreenFlow = do
                                                         destLong : dstLon, 
                                                         source : state.data.driverInfoCardState.source,
                                                         destination  : state.data.driverInfoCardState.destination,
-                                                        sourceAddress : state.data.sourceAddress,
-                                                        destinationAddress : state.data.destinationAddress,
+                                                        sourceAddress : state.data.driverInfoCardState.sourceAddress,
+                                                        destinationAddress : state.data.driverInfoCardState.destinationAddress,
                                                         locationScore: Just 1.0,
                                                         recencyDate : Nothing,
                                                         frequencyCount : Just 1,
@@ -765,8 +765,7 @@ homeScreenFlow = do
                                             currentSourceGeohash = runFn3 encodeGeohash srcLat srcLon state.data.config.suggestedTripsAndLocationConfig.geohashPrecision
                                             currentMap = currentState.homeScreen.data.suggestionsData.suggestionsMap
                                             updatedMap = (addOrUpdateSuggestedTrips currentSourceGeohash currTrip currentMap state.data.config.suggestedTripsAndLocationConfig)
-                                        when (not (isAddressFieldsNothing state.data.sourceAddress) && not (isAddressFieldsNothing state.data.destinationAddress)) do
-                                          void $ pure $ setSuggestionsMap updatedMap
+                                        void $ pure $ setSuggestionsMap updatedMap
                                         modifyScreenState $ HomeScreenStateType (\homeScreen -> newState{data{suggestionsData{suggestionsMap = getSuggestionsMapFromLocal FunctionCall }}})
                                         lift $ lift $ triggerRideStatusEvent notification Nothing (Just state.props.bookingId) $ getScreenFromStage state.props.currentStage
                                       homeScreenFlow
@@ -1214,6 +1213,7 @@ homeScreenFlow = do
     REPEAT_RIDE_FLOW_HOME state -> do
       updateRepeatRideDetails state
       (ServiceabilityRes sourceServiceabilityResp) <- Remote.originServiceabilityBT (Remote.makeServiceabilityReq state.sourceLat state.sourceLong)
+      modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{city = sourceServiceabilityResp.city }})
       let (SpecialLocation srcSpecialLocation) = fromMaybe HomeScreenData.specialLocation (sourceServiceabilityResp.specialLocation)
       let pickUpPoints = map (\(GatesInfo item) -> {
                                               place: item.name,
@@ -1270,7 +1270,7 @@ rideSearchFlow flowType = do
           void $ pure $ setCleverTapUserProp [{key : "Latest Search From", value : unsafeToForeign ("lat: " <> (show finalState.props.sourceLat) <> " long: " <> (show finalState.props.sourceLong))},
                                               {key : "Latest Search", value : unsafeToForeign (currentDate <> " " <> currentTime)}]
           (SearchRes rideSearchRes) <- Remote.rideSearchBT (Remote.makeRideSearchReq finalState.props.sourceLat finalState.props.sourceLong finalState.props.destinationLat finalState.props.destinationLong finalState.data.sourceAddress finalState.data.destinationAddress)
-          void $ pure $ setFlowStatusData (FlowStatusData { source : {lat : finalState.props.sourceLat, lng : finalState.props.sourceLong, place : finalState.data.source, address : Nothing, city : finalState.props.city}
+          void $ liftFlowBT $ setFlowStatusData (FlowStatusData { source : {lat : finalState.props.sourceLat, lng : finalState.props.sourceLong, place : finalState.data.source, address : Nothing, city : finalState.props.city}
                                                           , destination : {lat : finalState.props.destinationLat, lng : finalState.props.destinationLong, place : finalState.data.destination, address : Nothing, city : Nothing}
                                                           , sourceAddress : finalState.data.sourceAddress
                                                           , destinationAddress : finalState.data.destinationAddress })
