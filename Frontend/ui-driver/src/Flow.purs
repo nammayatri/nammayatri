@@ -31,7 +31,7 @@ import Control.Monad.Except.Trans (lift)
 import Control.Transformers.Back.Trans (runBackT)
 import Data.Array (any, concat, cons, elem, elemIndex, filter, find, foldl, head, last, length, mapWithIndex, null, snoc, sortBy, (!!))
 import Data.Either (Either(..), either)
-import Data.Function.Uncurried (runFn1)
+import Data.Function.Uncurried (runFn1, runFn2)
 import Data.Functor (map)
 import Data.Int (ceil, fromString, round, toNumber)
 import Data.Lens ((^.))
@@ -2943,6 +2943,7 @@ updateBannerAndPopupFlags = do
     autoPayNotActive = isNothing getDriverInfoResp.autoPayStatus || getDriverInfoResp.autoPayStatus /= Just "ACTIVE"
     pendingTotalManualDues = fromMaybe 0.0 getDriverInfoResp.manualDues
     subscriptionConfig = appConfig.subscriptionConfig
+    _ = runFn2 EHC.updatePushInIdMap "bannerCarousel" true
     freeTrialDays = fromMaybe 0 getDriverInfoResp.freeTrialDaysLeft
     shouldShowPopup = getValueToLocalStore APP_SESSION_TRACK_COUNT == "true" 
                       && getValueToLocalNativeStore IS_RIDE_ACTIVE == "false" 

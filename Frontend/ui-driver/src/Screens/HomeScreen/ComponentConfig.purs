@@ -20,6 +20,7 @@ import Common.Types.Config
 import Common.Types.App (LazyCheck(..), PolylineAnimationConfig)
 import Common.Types.App as CommonTypes
 import Components.Banner as Banner
+import Components.BannerCarousel as BannerCarousel
 import Components.ChatView as ChatView
 import Components.ErrorModal (primaryButtonConfig)
 import Components.GoToLocationModal as GoToLocationModal
@@ -160,10 +161,10 @@ statsModelConfig state =
   in config'
 
 -------------------------------------genderBannerConfig------------------------------------
-genderBannerConfig :: ST.HomeScreenState -> Banner.Config
-genderBannerConfig state =
+genderBannerConfig :: forall a. ST.HomeScreenState -> (BannerCarousel.Action -> a) -> BannerCarousel.Config  (BannerCarousel.Action -> a)
+genderBannerConfig _ action =
   let
-    config = Banner.config
+    config = BannerCarousel.config action
     config' = config
       {
         backgroundColor = Color.green600,
@@ -172,15 +173,35 @@ genderBannerConfig state =
         actionText = (getString UPDATE_NOW),
         actionTextColor = Color.white900,
         imageUrl = fetchImage FF_ASSET "ny_ic_driver_gender_banner",
-        isBanner = true
+        "type" = BannerCarousel.Gender
       }
   in config'
 
+autpPayBannerCarousel :: forall a. ST.HomeScreenState -> (BannerCarousel.Action -> a) -> BannerCarousel.Config (BannerCarousel.Action -> a)
+autpPayBannerCarousel state action =
+  let config = BannerCarousel.config action
+      bannerConfig = autopayBannerConfig state false
+  in config {
+     backgroundColor = bannerConfig.backgroundColor,
+        title = bannerConfig.title,
+        titleColor = bannerConfig.titleColor,
+        actionText = bannerConfig.actionText,
+        actionTextColor =bannerConfig.actionTextColor,
+        imageUrl = bannerConfig.imageUrl,
+        isBanner = bannerConfig.isBanner,
+        imageHeight = bannerConfig.imageHeight,
+        imageWidth = bannerConfig.imageWidth,
+        actionTextStyle = bannerConfig.actionTextStyle,
+        titleStyle = bannerConfig.titleStyle,
+        "type" = BannerCarousel.AutoPay,
+        imagePadding = bannerConfig.imagePadding
+  }
 
-accessbilityBannerConfig :: ST.HomeScreenState -> Banner.Config
-accessbilityBannerConfig state = 
+
+accessbilityBannerConfig :: forall a. ST.HomeScreenState -> (BannerCarousel.Action -> a) -> BannerCarousel.Config  (BannerCarousel.Action -> a)
+accessbilityBannerConfig _ action = 
   let 
-    config = Banner.config
+    config = BannerCarousel.config action
     config' = config  
       {
         backgroundColor = Color.lightPurple,
@@ -190,8 +211,8 @@ accessbilityBannerConfig state =
         actionTextColor = Color.purple,
         imageUrl = fetchImage FF_ASSET "ny_ic_purple_badge",
         isBanner = true,
-        stroke = "1,"<>Color.fadedPurple,
-        margin = Margin 0 0 0 0
+        margin = Margin 0 0 0 0,
+        "type" = BannerCarousel.Disability
       }
   in config'
 
@@ -776,23 +797,6 @@ rateCardState state =
   in
     rateCardConfig'
 
-paymentStatusConfig :: ST.HomeScreenState -> Banner.Config
-paymentStatusConfig state = 
-  let 
-    config = Banner.config
-    config' = config
-      { 
-        backgroundColor = state.data.paymentState.bannerBG,
-        title = state.data.paymentState.bannerTitle,
-        titleColor = state.data.paymentState.bannerTitleColor,
-        actionText = state.data.paymentState.banneActionText,
-        actionTextColor = state.data.paymentState.actionTextColor,
-        imageUrl = state.data.paymentState.bannerImage,
-        isBanner = true
-      }
-  in config'
-
-
 getChargesBreakup :: Array PaymentBreakUp -> Array CommonTypes.FareList
 getChargesBreakup paymentBreakUpArr = map (\(PaymentBreakUp item) -> {val : "₹" <>  (show item.amount),
   key : case item.component of
@@ -801,7 +805,7 @@ getChargesBreakup paymentBreakUpArr = map (\(PaymentBreakUp item) -> {val : "₹
         _ -> item.component
     } ) paymentBreakUpArr
 
-autopayBannerConfig :: ST.HomeScreenState -> Boolean -> Banner.Config
+autopayBannerConfig :: ST.HomeScreenState -> Boolean -> Banner.Config -- Make sure to update the mapping in carousel config also.
 autopayBannerConfig state configureImage =
   let
     config = Banner.config
@@ -837,7 +841,6 @@ autopayBannerConfig state configureImage =
                       _ | bannerType == CLEAR_DUES_BANNER || bannerType == LOW_DUES_BANNER -> "ny_ic_clear_dues"
                       DUE_LIMIT_WARNING_BANNER -> "ny_ic_due_limit_warning"
                       _ -> "",
-        isBanner = bannerType /= NO_SUBSCRIPTION_BANNER && not state.props.rideActionModal,
         imageHeight = if configureImage then (V 75) else (V 105),
         imageWidth = if configureImage then (V 98) else (V 118),
         actionTextStyle = if configureImage then FontStyle.Body3 else FontStyle.ParagraphText,

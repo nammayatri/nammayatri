@@ -20,8 +20,6 @@ import Screens.HomeScreen.ComponentConfig
 import Animation as Anim
 import Animation.Config as AnimConfig
 import Common.Types.App (LazyCheck(..), APIPaymentStatus(..))
-import Components.Banner.Controller as BannerConfig
-import Components.Banner.View as Banner
 import Components.BottomNavBar as BottomNavBar
 import Components.BottomNavBar.Controller (navData)
 import Components.ChatView as ChatView
@@ -45,7 +43,7 @@ import Data.Array as DA
 import Data.Either (Either(..))
 import Data.Function.Uncurried (runFn1, runFn2)
 import Data.Int (ceil, toNumber, fromString)
-import Data.Maybe (Maybe(..), fromMaybe, isJust, isNothing)
+import Data.Maybe (Maybe(..), fromMaybe, isJust, maybe, isNothing)
 import Data.String as DS
 import Data.Time.Duration (Milliseconds(..))
 import Debug (spy)
@@ -73,7 +71,7 @@ import PrestoDOM.Elements.Elements (coordinatorLayout)
 import PrestoDOM.Properties as PP
 import PrestoDOM.Types.DomAttributes as PTD
 import Screens as ScreenNames
-import Screens.HomeScreen.Controller (Action(..), RideRequestPollingData, ScreenOutput, ScreenOutput(GoToHelpAndSupportScreen), checkPermissionAndUpdateDriverMarker, eval, getPeekHeight)
+import Screens.HomeScreen.Controller (Action(..), RideRequestPollingData, ScreenOutput, ScreenOutput(GoToHelpAndSupportScreen), checkPermissionAndUpdateDriverMarker, eval, getPeekHeight, getBannerConfigs)
 import Screens.HomeScreen.ScreenData as HomeScreenData
 import Screens.Types (HomeScreenStage(..), HomeScreenState, KeyboardModalType(..),DriverStatus(..), DriverStatusResult(..), PillButtonState(..),TimerStatus(..), DisabilityType(..), SavedLocationScreenType(..), LocalStoreSubscriptionInfo, SubscriptionBannerType(..))
 import Screens.Types as ST
@@ -85,6 +83,9 @@ import Types.App (GlobalState, defaultGlobalState)
 import Constants (defaultDensity)
 import Components.ErrorModal as ErrorModal
 import Timers (clearTimerWithId, waitingCountdownTimerV2)
+import Components.BannerCarousel as BannerCarousel
+import CarouselHolder as CarouselHolder
+import PrestoDOM.List
 
 screen :: HomeScreenState -> Screen Action HomeScreenState ScreenOutput
 screen initialState =
@@ -94,7 +95,7 @@ screen initialState =
   , globalEvents : [
         ( \push -> do
           _ <- pure $ JB.checkAndAskNotificationPermission false
-          _ <- pure $ printLog "initial State" initialState
+          _ <- pure $ spy "initial State" initialState
           _ <- HU.storeCallBackForNotification push Notification
           _ <- HU.storeCallBackTime push TimeUpdate
           _ <- runEffectFn2 JB.storeKeyBoardCallback push KeyboardCallback
@@ -118,6 +119,7 @@ screen initialState =
             runEffectFn3 HU.countDownInMinutes (EHC.getExpiryTime (HU.istToUtcDate initialState.data.driverGotoState.gotoValidTill) false) push UpdateGoHomeTimer 
             else if (initialState.data.driverGotoState.timerId /= "") then pure $ clearTimerWithId initialState.data.driverGotoState.timerId
             else pure unit
+          when (isNothing initialState.data.bannerData.bannerItem) $ void $ launchAff $ EHC.flowRunner defaultGlobalState $ computeListItem push
           case localStage of
             "RideRequested"  -> do
                                 if (getValueToLocalStore RIDE_STATUS_POLLING) == "False" then do
@@ -310,13 +312,13 @@ driverMapsHeaderView push state =
         , frameLayout
           [ width MATCH_PARENT
           , height MATCH_PARENT
-          ][  googleMap state
+          ]$[  googleMap state
             , if (state.props.driverStatusSet == Offline && not state.data.paymentState.blockedDueToPayment) then offlineView push state else dummyTextView
             , linearLayout
               [ width MATCH_PARENT
               , height WRAP_CONTENT
               , orientation VERTICAL
-              ][ linearLayout
+              ]$ [ linearLayout
                   [ width MATCH_PARENT
                   , height WRAP_CONTENT
                   , orientation VERTICAL
@@ -327,11 +329,8 @@ driverMapsHeaderView push state =
                     , statsModel push state
                     , if not state.props.rideActionModal && (state.props.driverStatusSet == Online || state.props.driverStatusSet == Silent)  then updateLocationAndLastUpdatedView state push else dummyTextView
                   ]
-                , if (state.props.autoPayBanner /= ST.NO_SUBSCRIPTION_BANNER && state.props.driverStatusSet == ST.Offline) then autoPayBannerView state push true else dummyTextView
-                , gotoRecenterAndSupport state push
-                , accessibilityBanner state push
-                , offlineNavigationLinks push state
-              ]
+              ] <> maybe ([]) (\item -> if DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithCustomer] then [] else [bannersCarousal item state push]) state.data.bannerData.bannerItem
+                <> [gotoRecenterAndSupport state push]
             , linearLayout
               [ width MATCH_PARENT
               , height MATCH_PARENT
@@ -339,31 +338,36 @@ driverMapsHeaderView push state =
               , background Color.transparent
               , gravity BOTTOM
               ][  alternateNumberOrOTPView state push
-                , if showGenderBanner then genderBannerView state push 
-                    else if state.data.paymentState.paymentStatusBanner then paymentStatusBanner state push 
-                    else if (state.props.autoPayBanner /= ST.NO_SUBSCRIPTION_BANNER && state.props.driverStatusSet /= ST.Offline) then autoPayBannerView state push false 
-                    else dummyTextView
               ]
             ]
         ]
         , bottomNavBar push state
   ]
-  where showGenderBanner = state.props.showGenderBanner && state.props.driverStatusSet /= ST.Offline && getValueToLocalStore IS_BANNER_ACTIVE == "True" && state.props.autoPayBanner == ST.NO_SUBSCRIPTION_BANNER
 
-accessibilityBanner :: forall w. HomeScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
-accessibilityBanner state push = 
+bannersCarousal :: forall w. ListItem -> HomeScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+bannersCarousal view state push =
   linearLayout
   [ height WRAP_CONTENT
   , width MATCH_PARENT
-  , orientation VERTICAL
-  , margin $ Margin 16 12 16 0
-  , gravity BOTTOM 
-  , weight 1.0 
-  , visibility if bannerVisibility then VISIBLE else GONE
-  ][
-    Banner.view (push <<< AccessibilityBannerAction) (accessbilityBannerConfig state )
-  ]
-  where bannerVisibility = state.props.driverStatusSet == ST.Offline && state.props.currentStage == HomeScreen && state.data.config.purpleRideConfig.showPurpleVideos
+  , margin $ MarginTop 12
+  ][CarouselHolder.carouselView push $ getCarouselConfig view state]
+
+
+getCarouselConfig ∷ forall a. ListItem → HomeScreenState → CarouselHolder.CarouselHolderConfig BannerCarousel.PropConfig Action
+getCarouselConfig view state = {
+    view
+  , items : BannerCarousel.bannerTransformer $ getBannerConfigs state
+  , orientation : VERTICAL
+  , currentPage : state.data.bannerData.currentPage
+  , autoScroll : true
+  , autoScrollDelay : 3000.0
+  , id : "bannerCarousel"
+  , autoScrollAction : Just UpdateBanner
+  , onPageSelected : Just BannerChanged
+  , onPageScrollStateChanged : Just BannerStateChanged
+  , onPageScrolled : Nothing
+  , currentIndex : state.data.bannerData.currentBanner
+}
 
 genericAccessibilityPopUpView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 genericAccessibilityPopUpView push state = 
@@ -405,32 +409,6 @@ rateCardView push state =
   , width MATCH_PARENT
   ][ RateCard.view (push <<< RateCardAC) (rateCardState state) ]
 
-paymentStatusBanner :: forall w. HomeScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
-paymentStatusBanner state push =
-  linearLayout
-    [ height WRAP_CONTENT
-    , width MATCH_PARENT
-    , orientation VERTICAL
-    , margin $ Margin 10 0 10 10
-    , gravity BOTTOM
-    ][  linearLayout
-        [ height WRAP_CONTENT
-        , width MATCH_PARENT
-        , orientation VERTICAL
-        , gravity RIGHT
-        ][ imageView
-            [ height $ V 24
-            , width $ V 24
-            , gravity RIGHT
-            , margin $ MarginRight 4
-            , onClick push $ const RemovePaymentBanner
-            , imageWithFallback $ HU.fetchImage HU.FF_COMMON_ASSET "ny_ic_grey_cross_icon"
-            , visibility if state.data.paymentState.blockedDueToPayment then GONE else VISIBLE
-            ]
-          , Banner.view (push <<< PaymentBannerAC) (paymentStatusConfig state)
-        ]
-    ]
-
 
 alternateNumberOrOTPView :: forall w. HomeScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 alternateNumberOrOTPView state push =
@@ -451,48 +429,6 @@ alternateNumberOrOTPView state push =
       ]
   where showAddAltNumber = (state.data.driverAlternateMobile == Nothing || state.props.showlinkAadhaarPopup) && state.props.statusOnline
 
-genderBannerView :: forall w. HomeScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
-genderBannerView state push =
-  linearLayout
-    [ height WRAP_CONTENT
-    , width MATCH_PARENT
-    , orientation VERTICAL
-    , margin $ Margin 10 0 10 10
-    , visibility if state.data.config.feature.enableGender then VISIBLE else GONE
-    , gravity BOTTOM
-    ][
-    linearLayout
-      [ height WRAP_CONTENT
-      , width MATCH_PARENT
-      , orientation VERTICAL
-      , gravity RIGHT
-      ][
-        imageView
-        [
-          height $ V 24
-        , width $ V 24
-        , gravity RIGHT
-        , margin (MarginRight 4)
-        , onClick push (const RemoveGenderBanner)
-        , imageWithFallback $ HU.fetchImage HU.FF_COMMON_ASSET "ny_ic_grey_cross_icon"
-        ]
-        , genderBanner push state
-      ]
-    ]
-
-autoPayBannerView :: forall w. HomeScreenState -> (Action -> Effect Unit) -> Boolean -> PrestoDOM (Effect Unit) w
-autoPayBannerView state push configureImage =
-  linearLayout
-    [ height WRAP_CONTENT
-    , width  MATCH_PARENT
-    , orientation VERTICAL
-    , margin $ Margin 10 0 10 10
-    , visibility if state.props.autoPayBanner /= ST.NO_SUBSCRIPTION_BANNER then VISIBLE else GONE
-    , gravity BOTTOM
-    ][
-        Banner.view (push <<< AutoPayBanner) (autopayBannerConfig state configureImage)
-    ]
-  
 otpButtonView :: forall w . HomeScreenState -> (Action -> Effect Unit) ->  PrestoDOM (Effect Unit) w
 otpButtonView state push =
   linearLayout
@@ -1698,7 +1634,7 @@ launchMaps push action = do
     else pure unit
   pure unit
 
-genderBanner :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
-genderBanner push state =
-  Banner.view (push <<< GenderBannerModal) (genderBannerConfig state)
-
+computeListItem :: (Action -> Effect Unit) -> Flow GlobalState Unit
+computeListItem push = do
+  bannerItem <- preComputeListItem $ BannerCarousel.view push (BannerCarousel.config BannerCarousal)
+  void $ EHC.liftFlow $ push (SetBannerItem bannerItem)
