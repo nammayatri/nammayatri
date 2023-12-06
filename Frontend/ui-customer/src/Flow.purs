@@ -763,7 +763,7 @@ homeScreenFlow = do
                                                         isSpecialZone : state.props.isSpecialZone
                                                         }
                                             currentSourceGeohash = runFn3 encodeGeohash srcLat srcLon state.data.config.suggestedTripsAndLocationConfig.geohashPrecision
-                                            currentMap = currentState.homeScreen.data.suggestionsData.suggestionsMap
+                                            currentMap = getSuggestionsMapFromLocal FunctionCall
                                             updatedMap = (addOrUpdateSuggestedTrips currentSourceGeohash currTrip currentMap state.data.config.suggestedTripsAndLocationConfig)
                                         void $ pure $ setSuggestionsMap updatedMap
                                         modifyScreenState $ HomeScreenStateType (\homeScreen -> newState{data{suggestionsData{suggestionsMap = getSuggestionsMapFromLocal FunctionCall }}})

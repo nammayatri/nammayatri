@@ -23,7 +23,8 @@ window.getMerchantConfig = function () {
     "YOUR_FEEDBACK_HELPS_US",
     "LEARN_HOW_TEXT",
     "DRIVER_ADDITIONS_ARE_CALCULATED_AT_RATE",
-    "ACCESIBILITY_TEXT",
+    "ACCESSIBILITY_TEXT",
+    "TO_CATER_YOUR_SPECIFIC_NEEDS",
     "PLEASE_ENABLE_LOCATION_PERMISSION"
     ],
     "isReferralEnabled": "true",
@@ -162,7 +163,7 @@ window.getMerchantConfig = function () {
       "YOUR_FEEDBACK_HELPS_US" : "Your feedback helps us improve the Yatri experience",
       "LEARN_HOW_TEXT" : "Learn how Yatri caters to your needs",
       "DRIVER_ADDITIONS_ARE_CALCULATED_AT_RATE": "Driver addition limits are in increments of ₹10",
-      "ACCESIBILITY_TEXT" : "Yatri, now customised for you!",
+      "ACCESSIBILITY_TEXT" : "Yatri, now customised for you!",
       "TO_CATER_YOUR_SPECIFIC_NEEDS" : "To cater to your specific needs, we have customised certain features of Yatri.",
       "PLEASE_ENABLE_LOCATION_PERMISSION" : "Please enable location permissions for Yatri from the settings app to start looking for rides."
     },
