@@ -1,8 +1,8 @@
 module Alchemist.Generator.Haskell.DomainType where
 
 import Alchemist.DSL.Syntax.Storage
-import Data.List (intercalate)
-import qualified Data.Text as T
+import qualified Data.List as L
+import qualified Data.List.Split as L
 import Data.Tuple.Extra (both)
 import Kernel.Prelude
 
@@ -14,15 +14,15 @@ generateDomainType tableDef = do
     ++ "module "
     ++ moduleName
     ++ " where\n\n"
-    ++ intercalate "\n" (map ("import qualified " ++) (removeDefaultImports defaultImports moduleName $ imports tableDef))
+    ++ L.intercalate "\n" (map ("import qualified " ++) (removeDefaultImports defaultImports moduleName $ imports tableDef))
     ++ "\n"
-    ++ intercalate "\n" (map ("import " ++) defaultImports)
+    ++ L.intercalate "\n" (map ("import " ++) defaultImports)
     ++ "\n\ndata "
     ++ tableNameHaskell tableDef
     ++ " = "
     ++ tableNameHaskell tableDef
     ++ "\n  { "
-    ++ intercalate "\n  , " (map fieldDefToHaskell (fields tableDef))
+    ++ L.intercalate "\n  , " (map fieldDefToHaskell (fields tableDef))
     ++ "\n  }\n  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)\n\n\n"
     ++ maybe "" (uncurry (++) . generateHaskellTypes) (types tableDef)
   where
@@ -61,35 +61,35 @@ isHttpInstanceDerived typeObj =
     )
     typeObj
 
-isEnum :: [(Text, Text)] -> Bool
+isEnum :: [(String, String)] -> Bool
 isEnum [("enum", _)] = True
 isEnum _ = False
 
 generateHaskellTypes :: [TypeObject] -> (String, String)
-generateHaskellTypes typeObj = (both concat . unzip . map (both (T.unpack . T.unlines) . processType)) typeObj
+generateHaskellTypes typeObj = (both concat . unzip . map (both L.unlines . processType)) typeObj
   where
-    processType :: TypeObject -> ([Text], [Text])
+    processType :: TypeObject -> ([String], [String])
     processType (TypeObject (typeName, (fields, _)))
       | isEnum fields = generateEnum typeName fields
       | otherwise = generateDataStructure typeName fields
 
-    generateEnum :: Text -> [(Text, Text)] -> ([Text], [Text])
+    generateEnum :: String -> [(String, String)] -> ([String], [String])
     generateEnum typeName [("enum", values)] =
-      let enumValues = T.splitOn "," values
-       in ( ("data " <> typeName <> " = " <> T.intercalate " | " enumValues) :
+      let enumValues = L.splitOn "," values
+       in ( ("data " <> typeName <> " = " <> L.intercalate " | " enumValues) :
             ["  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema" <> (if isHttpInstanceDerived typeObj then ", ToParamSchema)\n\n" else ")\n\n")],
             ("$(mkBeamInstancesForEnum ''" <> typeName <> ")\n\n") :
               ["$(mkHttpInstancesForEnum ''" <> typeName <> ")\\n" | isHttpInstanceDerived typeObj]
           )
     generateEnum _ _ = error "Invalid enum definition"
 
-    generateDataStructure :: Text -> [(Text, Text)] -> ([Text], [Text])
+    generateDataStructure :: String -> [(String, String)] -> ([String], [String])
     generateDataStructure typeName fields =
       ( ["data " <> typeName <> " = " <> typeName]
-          ++ ["  { " <> T.intercalate ",\n    " (map formatField fields) <> "\n  }"]
+          ++ ["  { " <> L.intercalate ",\n    " (map formatField fields) <> "\n  }"]
           ++ ["  deriving (Generic, ToJSON, FromJSON, ToSchema)\n"],
         []
       )
 
-    formatField :: (Text, Text) -> Text
-    formatField (fieldName, fieldType) = fieldName <> " :: " <> fieldType
+    formatField :: (String, String) -> String
+    formatField (fieldName, fieldType) = fieldName ++ " :: " ++ fieldType

@@ -7,7 +7,7 @@ import Alchemist.Utils (figureOutImports, makeTypeQualified, _String)
 import Control.Lens.Combinators
 import Control.Lens.Operators
 import Data.Aeson
-import Data.Aeson.Key (fromString, toString, toText)
+import Data.Aeson.Key (fromString, toString)
 import qualified Data.Aeson.KeyMap as KM
 import Data.Aeson.Lens (key, _Array, _Object, _Value)
 import qualified Data.ByteString as BS
@@ -50,9 +50,9 @@ parseImports fields typObj =
     figureOutInsideTypeImports (TypeObject (_, (tps, _))) =
       concatMap
         ( ( \potentialImport ->
-              if "," `T.isInfixOf` potentialImport
-                then filter ('.' `elem`) $ splitWhen (`elem` ("() []," :: String)) (T.unpack potentialImport)
-                else T.unpack <$> [potentialImport]
+              if "," `L.isInfixOf` potentialImport
+                then filter ('.' `elem`) $ splitWhen (`elem` ("() []," :: String)) potentialImport
+                else [potentialImport]
           )
             . snd
         )
@@ -113,17 +113,17 @@ parseTypeObjects :: Object -> [TypeObject]
 parseTypeObjects obj =
   map (processType1) $ KM.toList obj
   where
-    extractFields :: KM.KeyMap Value -> [(Text, Text)]
-    extractFields = map (first toText) . KM.toList . fmap extractString
+    extractFields :: KM.KeyMap Value -> [(String, String)]
+    extractFields = map (first toString) . KM.toList . fmap extractString
 
-    extractString :: Value -> Text
-    extractString (String t) = t
+    extractString :: Value -> String
+    extractString (String t) = T.unpack t
     extractString _ = error "Non-string type found in field definition"
 
-    splitTypeAndDerivation :: [(Text, Text)] -> ([(Text, Text)], Maybe Text)
+    splitTypeAndDerivation :: [(String, String)] -> ([(String, String)], Maybe String)
     splitTypeAndDerivation fields = (filter (\(k, _) -> k /= "derive") fields, extractDerive fields)
       where
-        extractDerive :: [(Text, Text)] -> Maybe Text
+        extractDerive :: [(String, String)] -> Maybe String
         extractDerive [] = Nothing
         extractDerive ((k, value) : xs)
           | k == "derive" = Just value
@@ -131,20 +131,20 @@ parseTypeObjects obj =
 
     processType1 :: (Key, Value) -> TypeObject
     processType1 (typeName, Object typeDef) =
-      TypeObject (toText typeName, splitTypeAndDerivation $ extractFields typeDef)
+      TypeObject (toString typeName, splitTypeAndDerivation $ extractFields typeDef)
     processType1 _ = error "Expected an object in fields"
 
 parseExtraTypes :: Maybe String -> [String] -> Object -> Object -> Maybe ([TypeObject], [String])
 parseExtraTypes moduleName dList importObj obj = do
   _types <- parseTypes obj
-  let allExcludeQualified = map (\(TypeObject (name, _)) -> T.unpack name) _types
+  let allExcludeQualified = map (\(TypeObject (name, _)) -> name) _types
   return $ (map (mkQualifiedTypeObject allExcludeQualified) _types, allExcludeQualified)
   where
     defaultImportModule = "Domain.Types."
-    mkEnumTypeQualified :: [String] -> Text -> Text
+    mkEnumTypeQualified :: [String] -> String -> String
     mkEnumTypeQualified excluded enumTp =
-      let individualEnums = T.strip <$> T.splitOn "," enumTp
-       in T.intercalate "," $ map (uncurry (<>) . second (T.pack . makeTypeQualified moduleName (Just excluded) (Just dList) defaultImportModule importObj . T.unpack) . T.breakOn " ") individualEnums
+      let individualEnums = L.trim <$> L.splitOn "," enumTp
+       in L.intercalate "," $ map (uncurry (<>) . second (makeTypeQualified moduleName (Just excluded) (Just dList) defaultImportModule importObj) . L.breakOn " ") individualEnums
 
     mkQualifiedTypeObject :: [String] -> TypeObject -> TypeObject
     mkQualifiedTypeObject excluded (TypeObject (_nm, (arrOfFields, derive))) =
@@ -155,7 +155,7 @@ parseExtraTypes moduleName dList importObj obj = do
                   ( _n,
                     if _n == "enum"
                       then mkEnumTypeQualified excluded _t
-                      else T.pack $ makeTypeQualified moduleName (Just excluded) (Just dList) defaultImportModule importObj $ T.unpack _t
+                      else makeTypeQualified moduleName (Just excluded) (Just dList) defaultImportModule importObj _t
                   )
               )
               arrOfFields,
@@ -220,7 +220,7 @@ getDefaultFieldConstraints nm tp = primaryKeyConstraint ++ notNullConstraint
       ]
 
 getProperConstraint :: String -> FieldConstraint
-getProperConstraint txt = case (T.unpack . T.strip . T.pack) txt of
+getProperConstraint txt = case L.trim txt of
   "PrimaryKey" -> PrimaryKey
   "SecondaryKey" -> SecondaryKey
   "NotNull" -> NotNull
