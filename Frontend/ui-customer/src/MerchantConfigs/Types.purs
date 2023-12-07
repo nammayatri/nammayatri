@@ -209,6 +209,7 @@ type CustomerTip = {
 type Features = {
   enableAutoReadOtp :: Boolean ,
   enableZooTicketBookingFlow :: Boolean,
+  enableSuggestions :: Boolean,
   enableLiveDashboard :: Boolean
   }
 

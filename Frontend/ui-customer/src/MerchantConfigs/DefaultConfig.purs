@@ -172,6 +172,7 @@ config =
   , features : {
     enableAutoReadOtp : true,
     enableZooTicketBookingFlow : false,
+    enableSuggestions : false,
     enableLiveDashboard : true
   }
 

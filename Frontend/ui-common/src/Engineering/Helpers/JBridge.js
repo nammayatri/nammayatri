@@ -675,6 +675,7 @@ export const storeCallBackMessageUpdated = function (cb) {
               delay: 0
             }
             window.chatMessages = window.chatMessages || [];
+            if(sentBy == "Driver") window.didDriverMessage = true;
             window.chatMessages.push(messageObj);
             if (window.chatMessages.length - 1 == messagesSize || messagesSize === "-1") {
               cb(action(message)(sentBy)(timeStamp)(messagesSize))();
@@ -703,6 +704,7 @@ export const getChatMessages = function (string) {
 
 export const clearChatMessages = function () {
   window.chatMessages = undefined;
+  window.didDriverMessage = undefined;
 }
 
 export const dateCallback = function (cb, action) {
@@ -760,6 +762,7 @@ export const startChatListenerService = function () {
 export const stopChatListenerService = function () {
   if (JBridge.stopChatListenerService) {
     window.chatMessages = undefined;
+    window.didDriverMessage = undefined;
     JBridge.stopChatListenerService();
   }
 }

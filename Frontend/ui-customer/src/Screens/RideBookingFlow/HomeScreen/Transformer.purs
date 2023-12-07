@@ -128,7 +128,7 @@ getDriverInfo vehicleVariant (RideBookingRes resp) isQuote =
       , driverName : if length (fromMaybe "" ((split (Pattern " ") (rideList.driverName)) DA.!! 0)) < 4 then
                         (fromMaybe "" ((split (Pattern " ") (rideList.driverName)) DA.!! 0)) <> " " <> (fromMaybe "" ((split (Pattern " ") (rideList.driverName)) DA.!! 1)) else
                           (fromMaybe "" ((split (Pattern " ") (rideList.driverName)) DA.!! 0))
-      , eta : 0
+      , eta : Nothing
       , currentSearchResultType : if isQuote then QUOTES else ESTIMATES
       , vehicleDetails : rideList.vehicleModel
       , registrationNumber : rideList.vehicleNumber

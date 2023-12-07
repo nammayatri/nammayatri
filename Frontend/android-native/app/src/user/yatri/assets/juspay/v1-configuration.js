@@ -92,6 +92,9 @@ window.getMerchantConfig = function () {
       "secondaryButtonStroke": "1,#2C2F3A",
       "buttonCornerRadius": 8.0
      },
+     "features" : {
+      "enableSuggestions" : false,
+     },
      "driverInfoConfig": {
       "ratingTextColor": "#454545",
       "ratingBackground": "#F1F1F1",
@@ -102,8 +105,8 @@ window.getMerchantConfig = function () {
       "cardStroke": "1,#E5E7EB",
       "otpStroke": "0,#717171",
       "showNumberPlatePrefix": true,
-      "callHeight": 24,
-      "callWidth": 24,
+      "callHeight": 32,
+      "callWidth": 32,
       "numberPlateBackground" : "#E9BE4D",
       "showCancelPrevention" : true,
       "showNumberPlateSuffix" : false,

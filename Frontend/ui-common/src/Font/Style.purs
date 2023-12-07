@@ -158,7 +158,7 @@ extraBoldItalic = do
   fontByOS (font <> "-ExtraBoldItalic") (font <> "-ExtraBoldItalic") "Arial"
 
 feFont :: LazyCheck -> FontStyle
-feFont style = fontByOS "FEFont" "FEFont" "Arial"
+feFont style = fontByOS "FEFont" "FE-Font" "Arial"
 
 h1 :: LazyCheck -> forall properties. (Array (Prop properties))
 h1 typography = [
@@ -316,6 +316,11 @@ body17 ::  LazyCheck ->  forall properties. (Array (Prop properties))
 body17 typography = [
   textSize FontSize.a_10
 ]  <> if (getFontType "") == Assets then [fontStyle $ semiBold LanguageStyle] else [fontWeight $ FontWeight 600]
+
+body19 ::  LazyCheck ->  forall properties. (Array (Prop properties))
+body19 typography = [
+  textSize FontSize.a_10
+]  <> if getFontType "" == Assets then [fontStyle $ bold LanguageStyle] else [fontWeight $ FontWeight 700]
 
 body18 ::  LazyCheck ->  forall properties. (Array (Prop properties))
 body18 typography = [

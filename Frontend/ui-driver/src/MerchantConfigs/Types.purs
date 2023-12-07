@@ -25,7 +25,8 @@ type AppConfig =
     waitTimeConfig :: WaitTimeConfig,
     cityConfig :: Array CityConfig,
     unserviceableThreshold :: Number,
-    enableMockLocation :: Boolean
+    enableMockLocation :: Boolean,
+    features :: Features
   } 
 
 type PurpleRideConfig = {
@@ -44,6 +45,10 @@ type Language =  {
 
 type LeaderBoard = {
   isMaskedName :: Boolean
+}
+
+type Features = {
+  enableSuggestions :: Boolean
 }
 
 type ProfileVerificationConfig = {

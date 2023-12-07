@@ -77,6 +77,9 @@ config =
   , profile : { 
     bookingOptionMenuForTaxi : false
   }
+  , features : {
+    enableSuggestions : false
+  }
   , waitTimeConfig : {
     enableWaitTime : true,
     thresholdDist : 0.05,

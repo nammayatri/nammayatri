@@ -175,7 +175,6 @@ initData = {
         notRemoveBanner : true,
         showBonusInfo : false,
         showlinkAadhaarPopup : false,
-        isChatOpened : false,
         showAadharPopUp : true,
         canSendSuggestion : true,
         showOffer : false,

@@ -81,6 +81,9 @@ import Services.API (Prediction)
 import Storage (KeyStore(..), getValueToLocalStore)
 import Types.App (GlobalState(..))
 import Unsafe.Coerce (unsafeCoerce)
+import Data.Function.Uncurried (Fn1)
+import Styles.Colors as Color
+import Common.Styles.Colors as CommonColor
 
 foreign import shuffle :: forall a. Array a -> Array a
 
@@ -162,13 +165,14 @@ foreign import contactPermission :: Unit -> Effect Unit
 foreign import performHapticFeedback :: Unit -> Effect Unit
 foreign import adjustViewWithKeyboard :: String -> Effect Unit
 
-foreign import getPixels :: Fn1 String Number
 foreign import getDefaultPixels :: Fn1 String Number
-foreign import getDeviceDefaultDensity ::Fn1 String Number
 
 foreign import getMobileNumber :: EffectFn2 String String String
 
 foreign import extractKeyByRegex :: Fn2 String String String
+foreign import getPixels :: Fn1 LazyCheck Number
+foreign import getDeviceDefaultDensity ::Fn1 LazyCheck Number
+foreign import didDriverMessage :: Fn1 LazyCheck Boolean
 
 data TimeUnit
   = HOUR
@@ -564,3 +568,16 @@ getVariantRideType variant =
                     "SUV"  -> getString AC_SUV
                     _      -> getString AC_CAB
     _          -> getString AC_CAB
+
+getTitleConfig :: forall w. String -> {text :: String , color :: String}
+getTitleConfig vehicleVariant =
+  case vehicleVariant of
+        "TAXI" -> mkReturnObj ((getString NON_AC )<> " " <> (getString TAXI)) CommonColor.orange900
+        "SUV" -> mkReturnObj ((getString AC_SUV )<> " " <> (getString TAXI)) Color.blue800 
+        "AUTO_RICKSHAW" -> mkReturnObj ((getString AUTO_RICKSHAW)) Color.green600
+        _ -> mkReturnObj ((getString AC) <> " " <> (getString TAXI)) Color.blue800 
+  where mkReturnObj text' color' = 
+          {
+            text : text',
+            color : color'
+          }

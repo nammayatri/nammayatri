@@ -24,6 +24,9 @@ window.getMerchantConfig = function () {
     "primaryBackground": "#2C2F3A",
     "showCorporateAddress" : true,
     "imageUploadOptional" : false,
+    "features" : {
+      "enableSuggestions" : false,
+     },
     "BONUS_EARNED" : "true",
     "clientName" : "Namma Yatri",
     "languageList" : [

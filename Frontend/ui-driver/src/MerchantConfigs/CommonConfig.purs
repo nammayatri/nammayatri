@@ -39,6 +39,9 @@ commonConfig =
         , leaderBoard: { 
             isMaskedName: false
           }
+        , features : {
+          enableSuggestions : false
+        }
         , black800 : "#454545"
         , black900 : "#2C2F3A"
         , red : "#E55454"

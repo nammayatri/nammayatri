@@ -28,6 +28,9 @@ window.getMerchantConfig = function () {
     "showPaymentDetails" : false,
     "BONUS_EARNED" : "false",
     "clientName" : "Yatri",
+    "features" : {
+      "enableSuggestions" : false,
+     },
     "languageList": [{
         "name": "English",
         "value": "EN_US",

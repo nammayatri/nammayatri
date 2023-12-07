@@ -18,8 +18,8 @@ module Screens.HomeScreen.Controller where
 import Accessor (_estimatedFare, _estimateId, _vehicleVariant, _status, _estimateFareBreakup, _title, _price, _totalFareRange, _maxFare, _minFare, _nightShiftRate, _nightShiftEnd, _nightShiftMultiplier, _nightShiftStart, _selectedQuotes, _specialLocationTag)
 import Common.Types.App (EventPayload(..), GlobalPayload(..), LazyCheck(..), OptionButtonList, Payload(..), RateCardType(..), FeedbackAnswer(..))
 import Components.Banner as Banner
-import Components.ChatView as ChatView
-import Components.ChatView.Controller as ChatView
+import Components.MessagingView as MessagingView
+import Components.MessagingView.Controller as MessagingView
 import Components.ChooseVehicle as ChooseVehicleController
 import Components.ChooseYourRide as ChooseYourRide
 import Components.ChooseYourRide.Controller as ChooseYourRideController
@@ -50,37 +50,39 @@ import Components.SearchLocationModel.Controller as SearchLocationModelControlle
 import Components.SelectListModal.Controller as CancelRidePopUp
 import Components.SettingSideBar.Controller as SettingSideBarController
 import Components.SourceToDestination.Controller as SourceToDestinationController
+import Constants (defaultDensity)
 import Control.Monad.Except.Trans (runExceptT)
 import Control.Monad.Except (runExcept)
 import Control.Monad.Trans.Class (lift)
 import Control.Transformers.Back.Trans (runBackT)
 import Data.Array ((!!), filter, null, any, snoc, length, head, last, sortBy, union, elem, findIndex)
+import Data.Function.Uncurried (runFn1)
 import Data.Function.Uncurried (runFn3)
 import Data.Int (toNumber, round, fromString, fromNumber, ceil)
 import Data.Lens ((^.))
 import Data.Maybe (Maybe(..), fromMaybe, isJust)
-import Data.Number (fromString) as NUM
+import Data.Number (fromString, round) as NUM
 import Data.String as STR
 import Debug (spy)
 import Effect (Effect)
 import Effect.Aff (launchAff)
 import Effect.Unsafe (unsafePerformEffect)
 import Effect.Uncurried (runEffectFn1)
-import Engineering.Helpers.Commons (clearTimer, flowRunner, getNewIDWithTag, os, getExpiryTime, convertUTCtoISC, getCurrentUTC, isPreviousVersion, getDeviceHeight, screenHeight)
+import Engineering.Helpers.Commons (clearTimer, flowRunner, getNewIDWithTag, os, getExpiryTime, convertUTCtoISC, getCurrentUTC, isPreviousVersion, safeMarginBottom, getDeviceHeight, screenHeight)
 import Engineering.Helpers.LogEvent (logEvent, logEventWithTwoParams, logEventWithMultipleParams)
 import Engineering.Helpers.Suggestions (getMessageFromKey, getSuggestionsfromKey)
 import Foreign (unsafeToForeign)
 import Foreign.Class (encode)
+import Helpers.Utils (addToRecentSearches, getCurrentLocationMarker, clearCountDownTimer, getDistanceBwCordinates, getLocationName, getScreenFromStage, getSearchType, parseNewContacts, performHapticFeedback, setText, terminateApp, withinTimeRange, toStringJSON, secondsToHms, recentDistance, getPixels, getDeviceDefaultDensity, getDefaultPixels)
+import JBridge (addMarker, animateCamera, currentPosition, exitLocateOnMap, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, getCurrentPosition, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, locateOnMap, minimizeApp, openNavigation, openUrlInApp, removeAllPolylines, removeMarker, requestKeyboardShow, requestLocation, shareTextMessage, showDialer, toast, toggleBtnLoader, goBackPrevWebPage, stopChatListenerService, sendMessage, getCurrentLatLong, isInternetAvailable, emitJOSEvent, startLottieProcess, getSuggestionfromKey, scrollToEnd, lottieAnimationConfig, methodArgumentCount, getChatMessages, scrollViewFocus, getLayoutBounds, updateInputString, checkAndAskNotificationPermission, locateOnMapConfig, addCarouselWithVideoExists, pauseYoutubeVideo)
 import Language.Strings (getString)
-import JBridge (addMarker, animateCamera, currentPosition, exitLocateOnMap, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, getCurrentPosition, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, locateOnMap, minimizeApp, openNavigation, openUrlInApp, removeAllPolylines, removeMarker, requestKeyboardShow, requestLocation, shareTextMessage, showDialer, toast, toggleBtnLoader, goBackPrevWebPage, stopChatListenerService, sendMessage, getCurrentLatLong, isInternetAvailable, emitJOSEvent, startLottieProcess, getSuggestionfromKey, scrollToEnd, lottieAnimationConfig, methodArgumentCount, getChatMessages, scrollViewFocus, updateInputString, checkAndAskNotificationPermission, locateOnMapConfig, addCarouselWithVideoExists, pauseYoutubeVideo, getLayoutBounds)
-import Helpers.Utils (addToRecentSearches, getCurrentLocationMarker, clearCountDownTimer, getDistanceBwCordinates, getLocationName, getScreenFromStage, getSearchType, parseNewContacts, performHapticFeedback, setText, terminateApp, withinTimeRange, toStringJSON, secondsToHms, recentDistance, getDeviceDefaultDensity, getPixels, getDefaultPixels)
 import Language.Types (STR(..))
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, printLog, trackAppTextInput, trackAppScreenEvent)
 import MerchantConfig.DefaultConfig as DC
 import MerchantConfig.Utils (Merchant(..), getMerchant, getValueFromConfig)
 import Prelude (class Applicative, class Show, Unit, Ordering, bind, compare, discard, map, negate, pure, show, unit, not, ($), (&&), (-), (/=), (<>), (==), (>), (||), (>=), void, (<), (*), (<=), (/), (+))
 import Presto.Core.Types.API (ErrorResponse)
-import PrestoDOM (Eval ,Visibility(..), BottomSheetState(..), continue, continueWithCmd, defaultPerformLog, exit, payload, updateAndExit)
+import PrestoDOM (BottomSheetState(..), Eval, ScrollState(..), Visibility(..), continue, continueWithCmd, defaultPerformLog, exit, payload, updateAndExit)
 import PrestoDOM.Types.Core (class Loggable)
 import Resources.Constants (encodeAddress)
 import Constants (defaultDensity)
@@ -91,7 +93,7 @@ import Screens.HomeScreen.ScreenData as HomeScreenData
 import Screens.HomeScreen.Transformer (dummyRideAPIEntity, getDriverInfo, getEstimateList, getQuoteList, getSpecialZoneQuotes, transformContactList, getNearByDrivers, getEstimatesInfo, dummyEstimateEntity)
 import Screens.RideBookingFlow.HomeScreen.Config (setTipViewData)
 import Screens.SuccessScreen.Handler as UI
-import Screens.Types (HomeScreenState, Location, SearchResultType(..), LocationListItemState, PopupType(..), SearchLocationModelType(..), Stage(..), CardType(..), RatingCard, CurrentLocationDetailsWithDistance(..), CurrentLocationDetails, LocationItemType(..), CallType(..), ZoneType(..), SpecialTags, TipViewStage(..), Trip)
+import Screens.Types (CallType(..), CardType(..), CurrentLocationDetails, CurrentLocationDetailsWithDistance(..), HomeScreenState, Location, LocationItemType(..), LocationListItemState, PopupType(..), RatingCard, SearchLocationModelType(..), SearchResultType(..), SheetState(..), SpecialTags, Stage(..), TipViewStage(..), ZoneType(..), Trip)
 import Services.API (EstimateAPIEntity(..), FareRange, GetDriverLocationResp, GetQuotesRes(..), GetRouteResp, LatLong(..), OfferRes, PlaceName(..), QuoteAPIEntity(..), RideBookingRes(..), SelectListRes(..), SelectedQuotes(..), RideBookingAPIDetails(..), GetPlaceNameResp(..))
 import Services.Backend as Remote
 import Services.Config (getDriverNumber, getSupportNumber)
@@ -116,360 +118,564 @@ instance showAction :: Show Action where
   show _ = ""
 
 instance loggableAction :: Loggable Action where
-  performLog = defaultPerformLog --case action of
-    -- AfterRender -> trackAppScreenRender appId "screen" (getScreen HOME_SCREEN)
-    -- BackPressed -> trackAppBackPress appId (getScreen HOME_SCREEN)
-    -- CancelSearch -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "cancel_search"
-    -- RecenterCurrentLocation -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "recenter_location"
-    -- SidebarCloseAnimationCompleted -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "side_bar_close"
-    -- OpenSettings -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "open_settings"
-    -- OpenPricingTutorial -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "open_pricing_tutorial"
-    -- OpenSearchLocation -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "open_search_modal"
-    -- UpdateSource lat lon name -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "update_source_address"
-    -- HideLiveDashboard val -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "hide_live_stats_dashboard"
-    -- LiveDashboardAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "live_Dashboard_action"
-    -- PrimaryButtonActionController act -> case act of
-    --   PrimaryButtonController.OnClick -> trackAppActionClick appId (getScreen HOME_SCREEN) "primary_button" "onclick"
-    --   PrimaryButtonController.NoAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "primary_button" "no_action"
-    -- SettingSideBarActionController act -> case act of
-    --   SettingSideBarController.PastRides -> do
-    --     trackAppActionClick appId (getScreen HOME_SCREEN) "setting_side_bar" "past_rides"
-    --     trackAppEndScreen appId (getScreen HOME_SCREEN)
-    --   SettingSideBarController.OnHelp -> do
-    --     trackAppActionClick appId (getScreen HOME_SCREEN) "setting_side_bar" "on_help"
-    --     trackAppEndScreen appId (getScreen HOME_SCREEN)
-    --   SettingSideBarController.ChangeLanguage -> do
-    --     trackAppActionClick appId (getScreen HOME_SCREEN) "setting_side_bar" "change_language"
-    --     trackAppEndScreen appId (getScreen HOME_SCREEN)
-    --   SettingSideBarController.GoToAbout -> do
-    --     trackAppActionClick appId (getScreen HOME_SCREEN) "setting_side_bar" "go_to_about"
-    --     trackAppEndScreen appId (getScreen HOME_SCREEN)
-    --   SettingSideBarController.EditProfile -> do
-    --     trackAppActionClick appId (getScreen HOME_SCREEN) "setting_side_bar" "edit_profile"
-    --     trackAppEndScreen appId (getScreen HOME_SCREEN)
-    --   SettingSideBarController.OnClosed -> do
-    --     trackAppActionClick appId (getScreen HOME_SCREEN) "setting_side_bar" "on_closed"
-    --     trackAppEndScreen appId (getScreen HOME_SCREEN)
-    --   SettingSideBarController.OnClose -> do
-    --     trackAppActionClick appId (getScreen HOME_SCREEN) "setting_side_bar" "on_close"
-    --     trackAppEndScreen appId (getScreen HOME_SCREEN)
-    --   SettingSideBarController.OnLogout -> do
-    --     trackAppActionClick appId (getScreen HOME_SCREEN) "setting_side_bar" "on_logout"
-    --     trackAppEndScreen appId (getScreen HOME_SCREEN)
-    --   SettingSideBarController.ShareAppLink -> do
-    --     trackAppActionClick appId (getScreen HOME_SCREEN) "setting_side_bar" "share_app_link"
-    --     trackAppEndScreen appId (getScreen HOME_SCREEN)
-    --   SettingSideBarController.GoToFavourites -> do
-    --     trackAppActionClick appId (getScreen HOME_SCREEN) "setting_side_bar" "go_to_favourites"
-    --     trackAppEndScreen appId (getScreen HOME_SCREEN)
-    --   SettingSideBarController.GoToMyProfile -> do
-    --     trackAppActionClick appId (getScreen HOME_SCREEN) "setting_side_bar" "go_to_my_profile"
-    --     trackAppEndScreen appId (getScreen HOME_SCREEN)
-    --   SettingSideBarController.GoToEmergencyContacts -> do
-    --     trackAppActionClick appId (getScreen HOME_SCREEN) "setting_side_bar" "go_to_emergency_contacts_onclick"
-    --     trackAppEndScreen appId (getScreen HOME_SCREEN)
-    --     trackAppEndScreen appId (getScreen HOME_SCREEN)
-    --   SettingSideBarController.LiveStatsDashboard -> do
-    --     trackAppActionClick appId (getScreen HOME_SCREEN) "setting_side_bar" "go_to_live_stats_dashboard"
-    --     trackAppEndScreen appId (getScreen HOME_SCREEN)
-    --   SettingSideBarController.NoAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "setting_side_bar" "no_action"
-    -- PricingTutorialModelActionController (PricingTutorialModelController.Close) -> trackAppActionClick appId (getScreen HOME_SCREEN) "pricing_tutorial" "close_icon"
-    -- SearchLocationModelActionController act -> case act of
-    --   SearchLocationModelController.LocationListItemActionController act -> case act of
-    --     LocationListItemController.OnClick item -> trackAppActionClick appId (getScreen HOME_SCREEN) "search_location_modal" "location_list_item"
-    --     LocationListItemController.SelectedCurrentLocation lat lng name -> trackAppActionClick appId (getScreen HOME_SCREEN) "search_location_modal" "location_list_item_onclick_current_location"
-    --     LocationListItemController.FavClick item -> trackAppActionClick appId (getScreen HOME_SCREEN) "search_location_modal" "favourite"
-    --   SearchLocationModelController.PrimaryButtonActionController act -> case act of
-    --     PrimaryButtonController.OnClick -> trackAppActionClick appId (getScreen HOME_SCREEN) "search_location_modal" "primary_button"
-    --     PrimaryButtonController.NoAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "search_location_modal" "primary_button_no_action"
-    --   SearchLocationModelController.SourceChanged input -> trackAppActionClick appId (getScreen HOME_SCREEN) "search_location_modal" "source_changed"
-    --   SearchLocationModelController.DestinationChanged input -> trackAppActionClick appId (getScreen HOME_SCREEN) "search_location_modal" "destination_changed"
-    --   SearchLocationModelController.EditTextFocusChanged textType -> trackAppActionClick appId (getScreen HOME_SCREEN) "search_location_modal" "edit_text_focus_changed"
-    --   SearchLocationModelController.GoBack -> trackAppActionClick appId (getScreen HOME_SCREEN) "search_location_modal" "go_back"
-    --   SearchLocationModelController.SetCurrentLocation -> trackAppActionClick appId (getScreen HOME_SCREEN) "search_location_modal" "set_current_location"
-    --   SearchLocationModelController.SetLocationOnMap -> trackAppActionClick appId (getScreen HOME_SCREEN) "search_location_modal" "set_location_on_map"
-    --   SearchLocationModelController.UpdateSource lat lng name -> trackAppActionClick appId (getScreen HOME_SCREEN) "search_location_modal" "set_current_location_update_source"
-    --   SearchLocationModelController.SourceClear -> trackAppActionClick appId (getScreen HOME_SCREEN) "search_location_modal" "source_clear"
-    --   SearchLocationModelController.DestinationClear -> trackAppActionClick appId (getScreen HOME_SCREEN) "search_location_modal" "destination_clear_options"
-    --   SearchLocationModelController.DebounceCallBack searchString -> trackAppActionClick appId (getScreen HOME_SCREEN) "search_location_modal" "debounce_callback_search"
-    --   SearchLocationModelController.UpdateCurrentLocation lat lng -> trackAppActionClick appId (getScreen HOME_SCREEN) "search_location_modal" "update_current_location"
-    --   SearchLocationModelController.RecenterCurrentLocation -> trackAppActionClick appId (getScreen HOME_SCREEN) "search_location_modal" "recenter_location"
-    --   SearchLocationModelController.SavedAddressClicked act -> case act of
-    --     LocationTagBarController.TagClick savedAddressType arrItem -> trackAppActionClick appId (getScreen HOME_SCREEN) "location_tag_bar" "tag"
-    --   SearchLocationModelController.NoAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "search_location_modal" "no_action"
-    -- QuoteListModelActionController act -> case act of
-    --   QuoteListModelController.QuoteListItemActionController act -> case act of
-    --     QuoteListItemController.Click quote -> trackAppActionClick appId (getScreen HOME_SCREEN) "quote_list_modal" "quote_list_item_click"
-    --     QuoteListItemController.CountDown seconds id status timerID -> trackAppActionClick appId (getScreen HOME_SCREEN) "quote_list_modal" "quote_list_item_count_down"
-    --     QuoteListItemController.ConfirmRide -> trackAppActionClick appId (getScreen HOME_SCREEN) "quote_list_modal" "confirm_ride"
-    --     QuoteListItemController.NoAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "quote_list_modal" "no_action"
-    --     QuoteListItemController.CancelAutoAssigning -> trackAppActionClick appId (getScreen HOME_SCREEN) "quote_list_modal" "auto_assign_cancel"
-    --   QuoteListModelController.PrimaryButtonActionController act -> case act of
-    --     PrimaryButtonController.OnClick -> trackAppActionClick appId (getScreen HOME_SCREEN) "quote_list_modal" "confirm_primary_button"
-    --     PrimaryButtonController.NoAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "quote_list_modal" "primary_button_no_action"
-    --   QuoteListModelController.GoBack -> trackAppActionClick appId (getScreen HOME_SCREEN) "quote_list_modal" "on_goback"
-    --   QuoteListModelController.CancelAutoAssigning -> trackAppActionClick appId (getScreen HOME_SCREEN) "quote_list_modal" "auto_assign_cancel"
-    --   QuoteListModelController.HomeButtonActionController act -> case act of
-    --     PrimaryButtonController.OnClick -> trackAppActionClick appId (getScreen HOME_SCREEN) "quote_list_modal" "home_primary_button"
-    --     PrimaryButtonController.NoAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "quote_list_modal" "primary_button_no_action"
-    --   QuoteListModelController.TryAgainButtonActionController act -> case act of
-    --     PrimaryButtonController.OnClick -> trackAppActionClick appId (getScreen HOME_SCREEN) "quote_list_modal" "try_again_primary_button"
-    --     PrimaryButtonController.NoAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "quote_list_modal" "primary_button_no_action"
-    --   QuoteListModelController.HidePopUp -> trackAppActionClick appId (getScreen HOME_SCREEN) "quote_list_modal" "hide_popup"
-    --   QuoteListModelController.NoAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "quote_list_modal" "no_action"
-    -- DriverInfoCardActionController act -> case act of
-    --   DriverInfoCardController.PrimaryButtonAC act -> case act of
-    --     PrimaryButtonController.OnClick -> trackAppActionClick appId (getScreen HOME_SCREEN) "driver_info_card" "call_primary_button"
-    --     PrimaryButtonController.NoAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "driver_info_card" "primary_button_no_action"
-    --   DriverInfoCardController.Support -> trackAppActionClick appId (getScreen HOME_SCREEN) "driver_info_card" "support"
-    --   DriverInfoCardController.CancelRide infoCard -> trackAppActionClick appId (getScreen HOME_SCREEN) "driver_info_card" "cancel_ride"
-    --   DriverInfoCardController.LocationTracking -> trackAppActionClick appId (getScreen HOME_SCREEN) "driver_info_card" "location_tracking"
-    --   DriverInfoCardController.OpenEmergencyHelp -> trackAppActionClick appId (getScreen HOME_SCREEN) "driver_info_card" "open_emergency_help"
-    --   DriverInfoCardController.SourceToDestinationAC  act -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "driver_info_card" "source_to_destination"
-    --   DriverInfoCardController.NoAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "driver_info_card" "no_action"
-    --   DriverInfoCardController.MessageDriver -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "driver_info_card" "open_in_app_messaging"
-    -- UpdateLocation key lat lon ->  trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "update_location"
-    -- RateRideButtonActionController act -> case act of
-    --   PrimaryButtonController.OnClick -> trackAppActionClick appId (getScreen HOME_SCREEN) "rate_your_ride" "primary_button"
-    --   PrimaryButtonController.NoAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "rate_your_ride" "primary_button_no_action"
-    -- CancelRidePopUpAction act -> case act of
-    --   CancelRidePopUp.Button1 act -> case act of
-    --     PrimaryButtonController.OnClick -> trackAppActionClick appId (getScreen HOME_SCREEN) "cancel_ride_popup" "cancel_ride_declined"
-    --     PrimaryButtonController.NoAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "cancel_ride_popup" "primary_button_no_action"
-    --   CancelRidePopUp.Button2 act -> case act of
-    --     PrimaryButtonController.OnClick -> trackAppActionClick appId (getScreen HOME_SCREEN) "cancel_ride_popup" "cancel_ride_accepted"
-    --     PrimaryButtonController.NoAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "cancel_ride_popup" "primary_button_no_action"
-    --   CancelRidePopUp.UpdateIndex index -> trackAppActionClick appId (getScreen HOME_SCREEN) "cancel_ride_popup" "update_index"
-    --   CancelRidePopUp.OnGoBack -> trackAppActionClick appId (getScreen HOME_SCREEN) "cancel_ride_popup" "go_back"
-    --   CancelRidePopUp.ClearOptions -> trackAppActionClick appId (getScreen HOME_SCREEN) "cancel_ride_popup" "clear_options"
-    --   CancelRidePopUp.TextChanged valId newVal ->  trackAppTextInput appId (getScreen HOME_SCREEN) "cancelling_reason_text_changed" "cancel_ride_popup"
-    --   CancelRidePopUp.NoAction ->  trackAppActionClick appId (getScreen HOME_SCREEN) "cancel_ride_popup" "no_action"
-    -- PopUpModalAction act -> case act of
-    --   PopUpModal.OnButton1Click -> trackAppActionClick appId (getScreen HOME_SCREEN) "popup_modal_action" "on_goback"
-    --   PopUpModal.OnButton2Click -> trackAppActionClick appId (getScreen HOME_SCREEN) "popup_modal_action" "on_cancel"
-    --   PopUpModal.NoAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "popup_modal_action" "no_action"
-    --   PopUpModal.OnImageClick -> trackAppActionClick appId (getScreen HOME_SCREEN) "popup_modal_action" "image"
-    --   PopUpModal.ETextController act -> trackAppTextInput appId (getScreen HOME_SCREEN) "popup_modal_action" "primary_edit_text"
-    --   PopUpModal.CountDown arg1 arg2 arg3 arg4 -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "popup_modal_action" "countdown_updated"
-    --   PopUpModal.Tipbtnclick arg1 arg2 -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "popup_modal_action" "tip_clicked"
-    --   PopUpModal.DismissPopup -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "popup_modal_action" "popup_dismissed"
-    -- RatingCardAC act -> case act of
-    --   RatingCard.Rating index -> trackAppActionClick appId (getScreen HOME_SCREEN) "rating_card" "star"
-    --   RatingCard.PrimaryButtonAC act -> case act of
-    --     PrimaryButtonController.OnClick -> trackAppActionClick appId (getScreen HOME_SCREEN) "rating_card" "primary_button"
-    --     PrimaryButtonController.NoAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "rating_card" "primary_button_no_action"
-    --   RatingCard.FareBreakUpAC act -> case act of
-    --     FareBreakUp.ShowInvoice -> do
-    --       trackAppActionClick appId (getScreen HOME_SCREEN) "rating_card" "show_invoice_click"
-    --       trackAppEndScreen appId (getScreen HOME_SCREEN)
-    --     FareBreakUp.NoAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "fare_breakup" "no_action"
-    --     FareBreakUp.SourceToDestinationActionController act -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "fare_breakup" "source_to_destination"
-    --   RatingCard.SkipButtonAC act -> case act of
-    --     PrimaryButtonController.OnClick -> trackAppActionClick appId (getScreen HOME_SCREEN) "rating_card" "skip_primary_button"
-    --     PrimaryButtonController.NoAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "rating_card" "primary_button_no_action"
-    --   RatingCard.FeedbackChanged value -> trackAppActionClick appId (getScreen HOME_SCREEN) "rating_card" "feedback_changed"
-    --   RatingCard.BackPressed -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "rating_card" "back_pressed"
-    --   RatingCard.SourceToDestinationAC act -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "rating_card" "source_to_destination"
-    --   RatingCard.NoAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "rating_card" "no_action"
-    -- CloseLocationTracking -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "close_location_tracking"
-    -- StartLocationTracking item -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "start_location_tracking"
-    -- DistanceOutsideLimitsActionController act -> case act of
-    --   PopUpModal.OnButton2Click -> trackAppActionClick appId (getScreen HOME_SCREEN) "popup_modal_distance_outside_limit" "change_drop_location"
-    --   PopUpModal.OnButton1Click -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "popup_modal_distance_outside_limit" "change_drop_location_cancel"
-    --   PopUpModal.NoAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "popup_modal_distance_outside_limit" "no_action"
-    --   PopUpModal.OnImageClick -> trackAppActionClick appId (getScreen HOME_SCREEN) "popup_modal_distance_outside_limit" "image"
-    --   PopUpModal.ETextController act -> trackAppTextInput appId (getScreen HOME_SCREEN) "popup_modal_distance_outside_limit" "primary_edit_text"
-    --   PopUpModal.CountDown arg1 arg2 arg3 arg4 -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "popup_modal_distance_outside_limit" "countdown_updated"
-    --   PopUpModal.Tipbtnclick arg1 arg2 -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "popup_modal_action" "tip_clicked"
-    --   PopUpModal.DismissPopup -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "popup_modal_action" "popup_dismissed"
-    -- ShortDistanceActionController act -> case act of
-    --   PopUpModal.OnButton1Click -> trackAppActionClick appId (getScreen HOME_SCREEN) "popup_modal_short_distance_action" "book_ride"
-    --   PopUpModal.OnButton2Click -> trackAppActionClick appId (getScreen HOME_SCREEN) "popup_modal_short_distance_action" "go_back"
-    --   PopUpModal.NoAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "popup_modal_short_distance_action" "no_action"
-    --   PopUpModal.OnImageClick -> trackAppActionClick appId (getScreen HOME_SCREEN) "popup_modal_short_distance_action" "image"
-    --   PopUpModal.ETextController act -> trackAppTextInput appId (getScreen HOME_SCREEN) "popup_modal_short_distance_action" "primary_edit_text"
-    --   PopUpModal.CountDown arg1 arg2 arg3 arg4 -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "popup_modal_short_distance_action" "countdown_updated"
-    --   PopUpModal.Tipbtnclick arg1 arg2 -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "popup_modal_action" "tip_clicked"
-    --   PopUpModal.DismissPopup -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "popup_modal_action" "popup_dismissed"
-    -- SourceUnserviceableActionController act -> case act of
-    --   ErrorModalController.PrimaryButtonActionController act -> case act of
-    --     PrimaryButtonController.OnClick -> trackAppActionClick appId (getScreen HOME_SCREEN) "source_unserviceable_error" "primary_button_change_location"
-    --     PrimaryButtonController.NoAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "source_unservice_error_modal" "primary_button_no_action"
-    -- GoBackToSearchLocationModal -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "go_back_search_location_modal"
-    -- SkipButtonActionController act -> case act of
-    --   PrimaryButtonController.OnClick -> trackAppActionClick appId (getScreen HOME_SCREEN) "primary_button" "skip"
-    --   PrimaryButtonController.NoAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "source_unservice_error_modal" "primary_button_no_action"
-    -- EstimateChangedPopUpController act -> case act of
-    --   PopUpModal.OnButton1Click -> trackAppActionClick appId (getScreen HOME_SCREEN) "popup_modal_estimate_changed" "go_to_home"
-    --   PopUpModal.OnButton2Click -> trackAppActionClick appId (getScreen HOME_SCREEN) "popup_modal_estimate_changed" "continue"
-    --   PopUpModal.NoAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "popup_modal_estimate_changed" "no_action"
-    --   PopUpModal.OnImageClick -> trackAppActionClick appId (getScreen HOME_SCREEN) "popup_modal_estimate_changed" "image"
-    --   PopUpModal.ETextController act -> trackAppTextInput appId (getScreen HOME_SCREEN) "popup_modal_estimate_changed" "primary_edit_text"
-    --   PopUpModal.CountDown arg1 arg2 arg3 arg4 -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "popup_modal_estimate_changed" "countdown_updated"
-    --   PopUpModal.Tipbtnclick arg1 arg2 -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "popup_modal_action" "tip_clicked"
-    --   PopUpModal.DismissPopup -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "popup_modal_action" "popup_dismissed"
-    -- RateCardAction act -> case act of
-    --   RateCard.Close -> trackAppActionClick appId (getScreen HOME_SCREEN) "rate_card" "close_click"
-    --   RateCard.BackPressed -> trackAppActionClick appId (getScreen HOME_SCREEN) "rate_card" "back_click"
-    --   RateCard.NoAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "rate_card_action" "no_action"
-    --   RateCard.GoToDefaultStart -> trackAppActionClick appId (getScreen HOME_SCREEN) "rate_card_action" "back_click"
-    --   RateCard.GoToDriverAddition -> trackAppActionClick appId (getScreen HOME_SCREEN) "rate_card_action" "view_change"
-    --   RateCard.GoToFareUpdate -> trackAppActionClick appId (getScreen HOME_SCREEN) "rate_card_action" "view_change"
-    -- ShowRateCard -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "show_rate_card"
-    -- PredictionClickedAction act -> case act of
-    --   LocationListItemController.OnClick item -> trackAppActionClick appId (getScreen HOME_SCREEN) "location_list_item" "prediction"
-    --   LocationListItemController.FavClick item -> trackAppActionClick appId (getScreen HOME_SCREEN) "location_list_item" "prediction_fav_click"
-    --   LocationListItemController.SelectedCurrentLocation lat lng name -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "location_list_item" "selected_current_location"
-    -- SavedAddressClicked (LocationTagBarController.TagClick savedAddressType arrItem) -> trackAppActionClick appId (getScreen HOME_SCREEN) "location_tag_bar" "tag"
-    -- FavouriteLocationModelAC act -> case act of
-    --   FavouriteLocationModelController.GenericHeaderAC act -> case act of
-    --     GenericHeaderController.PrefixImgOnClick -> trackAppActionClick appId (getScreen HOME_SCREEN) "fav_location_modal" "generic_header_back_icon"
-    --     GenericHeaderController.SuffixImgOnClick -> trackAppActionClick appId (getScreen HOME_SCREEN) "fav_location_modal" "generic_header_forward_icon"
-    --   FavouriteLocationModelController.FavouriteLocationAC act -> case act of
-    --     SavedLocationCardController.CardClicked item -> trackAppActionClick appId (getScreen HOME_SCREEN) "fav_location_modal" "saved_loc_card"
-    --     SavedLocationCardController.DeleteLocation act -> trackAppActionClick appId (getScreen HOME_SCREEN) "fav_location_modal" "delete_location"
-    --     SavedLocationCardController.EditLocation act -> trackAppActionClick appId (getScreen HOME_SCREEN) "fav_location_modal" "edit_location_modal"
-    --     SavedLocationCardController.NoAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "fav_location_modal" "no_action"
-    --   FavouriteLocationModelController.ErrorModalAC act -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "fav_location_modal" "error_modal_action"
-    -- SaveFavouriteCardAction act -> case act of
-    --   SaveFavouriteCardController.OnClose -> trackAppActionClick appId (getScreen HOME_SCREEN) "save_fav_card" "on_close_click"
-    --   SaveFavouriteCardController.SaveFavourite -> trackAppActionClick appId (getScreen HOME_SCREEN) "save_fav_card" "save_fav"
-    --   SaveFavouriteCardController.PrimayEditTA (PrimaryEditTextController.TextChanged id val) -> trackAppTextInput appId (getScreen HOME_SCREEN) "save_fav_card_text_changed" "primary_edit_text"
-    --   SaveFavouriteCardController.TagSelected act -> trackAppActionClick appId (getScreen HOME_SCREEN) "save_fav_card" "tag_selected"
-    --   SaveFavouriteCardController.NoAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "save_fav_card" "no_action"
-    -- UpdateCurrentLocation lat lng -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "update_current_location"
-    -- EmergencyHelpModalAC act -> case act of
-    --   EmergencyHelpController.GenericHeaderAC act -> case act of
-    --     GenericHeaderController.PrefixImgOnClick -> trackAppActionClick appId (getScreen HOME_SCREEN) "emergency_help_modal" "generic_header_back_icon"
-    --     GenericHeaderController.SuffixImgOnClick -> trackAppActionClick appId (getScreen HOME_SCREEN) "generic_header_action" "forward_icon"
-    --   EmergencyHelpController.CallPolicePopup -> trackAppActionClick appId (getScreen HOME_SCREEN) "emergency_help_modal" "call_police_popup"
-    --   EmergencyHelpController.ContactSupportPopup -> trackAppActionClick appId (getScreen HOME_SCREEN) "emergency_help_modal" "contact_support_popup"
-    --   EmergencyHelpController.CallSuccessfulPopup -> trackAppActionClick appId (getScreen HOME_SCREEN) "emergency_help_modal" "call_successful_popup"
-    --   EmergencyHelpController.CallContactPopUp contact -> trackAppActionClick appId (getScreen HOME_SCREEN) "emergency_help_modal" "call_contact_popup"
-    --   EmergencyHelpController.StoreContacts -> trackAppActionClick appId (getScreen HOME_SCREEN) "emergency_help_modal" "store_contacts"
-    --   EmergencyHelpController.AddedEmergencyContacts -> trackAppActionClick appId (getScreen HOME_SCREEN) "emergency_help_modal" "add_emergency_contacts"
-    --   EmergencyHelpController.CallPolice act -> case act of
-    --     PopUpModal.OnButton1Click -> trackAppActionClick appId (getScreen HOME_SCREEN) "popup_modal_emergency_help" "call_police_cancel"
-    --     PopUpModal.OnButton2Click -> trackAppActionClick appId (getScreen HOME_SCREEN) "popup_modal_emergency_help" "call_police_accept"
-    --     PopUpModal.NoAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "popup_modal_emergency_help" "no_action"
-    --     PopUpModal.OnImageClick -> trackAppActionClick appId (getScreen HOME_SCREEN) "popup_modal_emergency_help" "image"
-    --     PopUpModal.ETextController act -> trackAppTextInput appId (getScreen HOME_SCREEN) "popup_modal_emergency_help" "primary_edit_text"
-    --     PopUpModal.CountDown arg1 arg2 arg3 arg4 -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "popup_modal_emergency_help" "countdown_updated"
-    --     PopUpModal.Tipbtnclick arg1 arg2 -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "popup_modal_action" "tip_clicked"
-    --     PopUpModal.DismissPopup -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "popup_modal_action" "popup_dismissed"
-    --   EmergencyHelpController.CallEmergencyContact act -> case act of
-    --     PopUpModal.OnButton1Click -> trackAppActionClick appId (getScreen HOME_SCREEN) "popup_modal_emergency_help" "call_contact_cancel"
-    --     PopUpModal.OnButton2Click -> trackAppActionClick appId (getScreen HOME_SCREEN) "popup_modal_emergency_help" "call_contact_accept"
-    --     PopUpModal.NoAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "popup_modal_emergency_help" "no_action"
-    --     PopUpModal.OnImageClick -> trackAppActionClick appId (getScreen HOME_SCREEN) "popup_modal_emergency_help" "image"
-    --     PopUpModal.ETextController act -> trackAppTextInput appId (getScreen HOME_SCREEN) "popup_modal_emergency_help" "primary_edit_text"
-    --     PopUpModal.CountDown arg1 arg2 arg3 arg4 -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "popup_modal_emergency_help" "countdown_updated"
-    --     PopUpModal.Tipbtnclick arg1 arg2 -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "popup_modal_action" "tip_clicked"
-    --     PopUpModal.DismissPopup -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "popup_modal_action" "popup_dismissed"
-    --   EmergencyHelpController.CallSuccessful act -> case act of
-    --     PopUpModal.OnButton1Click -> trackAppActionClick appId (getScreen HOME_SCREEN) "popup_modal_emergency_help" "call_feedback_cancel"
-    --     PopUpModal.OnButton2Click -> trackAppActionClick appId (getScreen HOME_SCREEN) "popup_modal_emergency_help" "call_feedback_accept"
-    --     PopUpModal.NoAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "popup_modal_emergency_help" "no_action"
-    --     PopUpModal.OnImageClick -> trackAppActionClick appId (getScreen HOME_SCREEN) "popup_modal_emergency_help" "image"
-    --     PopUpModal.ETextController act -> trackAppTextInput appId (getScreen HOME_SCREEN) "popup_modal_emergency_help" "primary_edit_text"
-    --     PopUpModal.CountDown arg1 arg2 arg3 arg4 -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "popup_modal_emergency_help" "countdown_updated"
-    --     PopUpModal.Tipbtnclick arg1 arg2 -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "popup_modal_action" "tip_clicked"
-    --     PopUpModal.DismissPopup -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "popup_modal_action" "popup_dismissed"
-    --   EmergencyHelpController.ContactSupport act -> case act of
-    --     PopUpModal.OnButton1Click -> trackAppActionClick appId (getScreen HOME_SCREEN) "popup_modal_emergency_help" "contact_support_cancel"
-    --     PopUpModal.OnButton2Click -> trackAppActionClick appId (getScreen HOME_SCREEN) "popup_modal_emergency_help" "contact_support_accept"
-    --     PopUpModal.NoAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "popup_modal_emergency_help" "no_action"
-    --     PopUpModal.OnImageClick -> trackAppActionClick appId (getScreen HOME_SCREEN) "popup_modal_emergency_help" "image"
-    --     PopUpModal.ETextController act -> trackAppTextInput appId (getScreen HOME_SCREEN) "popup_modal_emergency_help" "primary_edit_text"
-    --     PopUpModal.CountDown arg1 arg2 arg3 arg4 -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "popup_modal_emergency_help" "countdown_updated"
-    --     PopUpModal.Tipbtnclick arg1 arg2 -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "popup_modal_action" "tip_clicked"
-    --     PopUpModal.DismissPopup -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "popup_modal_action" "popup_dismissed"
-    --   EmergencyHelpController.NoAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "popup_modal_emergency_help" "no_action"
-    -- PopUpModalShareAppAction act -> case act of
-    --   PopUpModal.OnButton1Click -> trackAppActionClick appId (getScreen HOME_SCREEN) "popup_modal_share_app" "cancel"
-    --   PopUpModal.OnButton2Click -> trackAppActionClick appId (getScreen HOME_SCREEN) "popup_modal_share_app" "accept"
-    --   PopUpModal.NoAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "popup_modal_share_app" "no_action"
-    --   PopUpModal.OnImageClick -> trackAppActionClick appId (getScreen HOME_SCREEN) "popup_modal_share_app" "image"
-    --   PopUpModal.ETextController act -> trackAppTextInput appId (getScreen HOME_SCREEN) "popup_modal_share_app" "primary_edit_text"
-    --   PopUpModal.CountDown arg1 arg2 arg3 arg4 -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "popup_modal_share_app" "countdown_updated"
-    --   PopUpModal.Tipbtnclick arg1 arg2 -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "popup_modal_action" "tip_clicked"
-    --   PopUpModal.DismissPopup -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "popup_modal_action" "popup_dismissed"
-    -- CallSupportAction act -> case act of
-    --   PopUpModal.OnButton1Click -> trackAppActionClick appId (getScreen HOME_SCREEN) "popup_modal_contact_support" "cancel"
-    --   PopUpModal.OnButton2Click -> trackAppActionClick appId (getScreen HOME_SCREEN) "popup_modal_contact_support" "accept"
-    --   PopUpModal.NoAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "popup_modal_contact_support" "no_action"
-    --   PopUpModal.OnImageClick -> trackAppActionClick appId (getScreen HOME_SCREEN) "popup_modal_contact_support" "image"
-    --   PopUpModal.ETextController act -> trackAppTextInput appId (getScreen HOME_SCREEN) "popup_modal_contact_support" "primary_edit_text"
-    --   PopUpModal.CountDown arg1 arg2 arg3 arg4 -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "popup_modal_contact_support" "countdown_updated"
-    --   PopUpModal.Tipbtnclick arg1 arg2 -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "popup_modal_action" "tip_clicked"
-    --   PopUpModal.DismissPopup -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "popup_modal_action" "popup_dismissed"
-    -- ContinueWithoutOffers resp -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "continue_without_offers"
-    -- CheckBoxClick autoAssign -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "check_box_click"
-    -- TagClick savedAddressType arrItem -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "tag_click"
-    -- DriverArrivedAction driverArrivalTime -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "driver_arrived_action"
-    -- WaitingTimeAction timerID timeInMinutes seconds -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "waiting_time_action"
-    -- UpdateETA currentETA currentDistance -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "update_eta"
-    -- EstimatesTryAgain quotesRes -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "estimates_try_again"
-    -- SearchExpireCountDown seconds id status timerID -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "search_expiry_count_down"
-    -- FareBreakUpActionController act -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "fare_break_up_action"
-    -- UpdateCurrentStage stage -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "update_current_stage"
-    -- ExitLocationSelected item addToRecents -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "exit_location_selected"
-    -- NotificationListener notificationType -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "notification_listener"
-    -- GetEstimates quotesRes -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "get_estimates"
-    -- GetRideConfirmation resp -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "get_ride_confirmation"
-    -- GetQuotesList (SelectListRes resp) -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" ("get_quotes_list -" <> fromMaybe "" resp.bookingId)
-    -- MAPREADY key latitude longitude -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "map_ready"
-    -- CurrentLocation lat lng -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "current_location"
-    -- SourceToDestinationActionController act -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "source_to_destination"
-    -- TrackDriver resp -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "track_driver"
-    -- HandleCallback -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "handle_call_back"
-    -- UpdatePickupLocation  key lat lon -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "update_pickup_location"
-    -- ContinueCmd -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "continue_cmd"
-    -- Restart err -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "restart"
-    -- UpdateSourceName lat lon name -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "update_source_name"
-    -- RequestInfoCardAction act -> case act of
-    --   RequestInfoCard.Close -> trackAppActionClick appId (getScreen HOME_SCREEN) "request_info_card" "got_it"
-    --   RequestInfoCard.BackPressed -> trackAppActionClick appId (getScreen HOME_SCREEN) "request_info_card" "backpressed_in_screen"
-    --   RequestInfoCard.NoAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "request_info_card" "no_action"
-    -- PreferencesDropDown -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "preferences_drop_down"
-    -- OnIconClick autoAssign -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "close_icon_auto_assign"
-    -- PopUpModalAction act -> case act of
-    --     PopUpModal.OnButton1Click -> trackAppActionClick appId (getScreen HOME_SCREEN) "popup_modal_action" "on_goback"
-    --     PopUpModal.OnButton2Click -> do
-    --       trackAppActionClick appId (getScreen HOME_SCREEN) "popup_modal_action" "register_on_different_number"
-    --       trackAppEndScreen appId (getScreen HOME_SCREEN)
-    --     PopUpModal.NoAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "popup_modal_action" "no_action"
-    --     PopUpModal.OnImageClick -> trackAppActionClick appId (getScreen HOME_SCREEN) "popup_modal_action" "image"
-    --     PopUpModal.ETextController act -> trackAppTextInput appId (getScreen HOME_SCREEN) "popup_modal_action" "primary_edit_text"
-    --     PopUpModal.CountDown arg1 arg2 arg3 arg4 -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "popup_modal_action" "countdown_updated"
-    --     PopUpModal.Tipbtnclick arg1 arg2 -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "popup_modal_action" "tip_clicked"
-    --     PopUpModal.DismissPopup -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "popup_modal_action" "popup_dismissed"
-    -- ReferralFlowAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "have_referral_code"
-    -- ReferralFlowNoAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "have_referral_code_no_action"
-    -- NewUser -> do
-    --   trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "have_referral_code_no_action"
-    --   trackAppEndScreen appId (getScreen HOME_SCREEN)
-    -- MapReadyAction -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "map_render"
-    -- TrackLiveLocationAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "track_live_location_using"
-    -- LottieLoaderAction -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "auto_rickshaw_processing"
-    -- UpdateSourceFromPastLocations -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "update_source_from_past_saved_locations"
-    -- UpdateLocAndLatLong lat lon-> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "update_current_loc_lat_and_lon"
-    -- UpdateSavedLoc state -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "update_saved_loc"
-    -- NoAction -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "no_action"
-    -- UpdateMessages msg sender timeStamp -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "update_messages"
-    -- InitializeChat -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "initialize_chat"
-    -- RemoveChat -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "remove_chat"
-    -- ChatViewActionController act -> case act of
-    --   ChatView.SendMessage -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_app_messaging" "send_message"
-    --   ChatView.SendSuggestion suggestion -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_app_messaging" "send_suggestion"
-    --   ChatView.BackPressed -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_app_messaging" "back_pressed"
-    --   ChatView.TextChanged input -> trackAppTextInput appId (getScreen HOME_SCREEN) "in_app_messaging" "text_changed"
-    --   ChatView.Call -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_app_messaging" "call_driver"
-    --   ChatView.Navigate -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_app_messaging" "navigate_to_google_maps"
-    --   ChatView.NoAction -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_app_messaging" "no_action"
-    -- OnResumeCallback -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "on_resume_callback"
-    -- CheckFlowStatusAction -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "check_flow_status"
-    -- GoToEditProfile -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "go_to_my_profile"
+  performLog action appId = case action of
+    AfterRender -> trackAppScreenRender appId "screen" (getScreen HOME_SCREEN)
+    BackPressed -> trackAppBackPress appId (getScreen HOME_SCREEN)
+    CancelSearch -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "cancel_search"
+    RecenterCurrentLocation -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "recenter_location"
+    SidebarCloseAnimationCompleted -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "side_bar_close"
+    OpenSettings -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "open_settings"
+    OpenPricingTutorial -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "open_pricing_tutorial"
+    OpenSearchLocation -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "open_search_modal"
+    UpdateSource lat lon name -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "update_source_address"
+    HideLiveDashboard val -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "hide_live_stats_dashboard"
+    LiveDashboardAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "live_Dashboard_action"
+    PrimaryButtonActionController act -> case act of
+      PrimaryButtonController.OnClick -> trackAppActionClick appId (getScreen HOME_SCREEN) "primary_button" "onclick"
+      PrimaryButtonController.NoAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "primary_button" "no_action"
+    SettingSideBarActionController act -> case act of
+      SettingSideBarController.PastRides -> do
+        trackAppActionClick appId (getScreen HOME_SCREEN) "setting_side_bar" "past_rides"
+        trackAppEndScreen appId (getScreen HOME_SCREEN)
+      SettingSideBarController.OnHelp -> do
+        trackAppActionClick appId (getScreen HOME_SCREEN) "setting_side_bar" "on_help"
+        trackAppEndScreen appId (getScreen HOME_SCREEN)
+      SettingSideBarController.ChangeLanguage -> do
+        trackAppActionClick appId (getScreen HOME_SCREEN) "setting_side_bar" "change_language"
+        trackAppEndScreen appId (getScreen HOME_SCREEN)
+      SettingSideBarController.GoToAbout -> do
+        trackAppActionClick appId (getScreen HOME_SCREEN) "setting_side_bar" "go_to_about"
+        trackAppEndScreen appId (getScreen HOME_SCREEN)
+      SettingSideBarController.EditProfile -> do
+        trackAppActionClick appId (getScreen HOME_SCREEN) "setting_side_bar" "edit_profile"
+        trackAppEndScreen appId (getScreen HOME_SCREEN)
+      SettingSideBarController.OnClosed -> do
+        trackAppActionClick appId (getScreen HOME_SCREEN) "setting_side_bar" "on_closed"
+        trackAppEndScreen appId (getScreen HOME_SCREEN)
+      SettingSideBarController.OnClose -> do
+        trackAppActionClick appId (getScreen HOME_SCREEN) "setting_side_bar" "on_close"
+        trackAppEndScreen appId (getScreen HOME_SCREEN)
+      SettingSideBarController.OnLogout -> do
+        trackAppActionClick appId (getScreen HOME_SCREEN) "setting_side_bar" "on_logout"
+        trackAppEndScreen appId (getScreen HOME_SCREEN)
+      SettingSideBarController.ShareAppLink -> do
+        trackAppActionClick appId (getScreen HOME_SCREEN) "setting_side_bar" "share_app_link"
+        trackAppEndScreen appId (getScreen HOME_SCREEN)
+      SettingSideBarController.GoToFavourites -> do
+        trackAppActionClick appId (getScreen HOME_SCREEN) "setting_side_bar" "go_to_favourites"
+        trackAppEndScreen appId (getScreen HOME_SCREEN)
+      SettingSideBarController.GoToMyProfile -> do
+        trackAppActionClick appId (getScreen HOME_SCREEN) "setting_side_bar" "go_to_my_profile"
+        trackAppEndScreen appId (getScreen HOME_SCREEN)
+      SettingSideBarController.GoToEmergencyContacts -> do
+        trackAppActionClick appId (getScreen HOME_SCREEN) "setting_side_bar" "go_to_emergency_contacts_onclick"
+        trackAppEndScreen appId (getScreen HOME_SCREEN)
+        trackAppEndScreen appId (getScreen HOME_SCREEN)
+      SettingSideBarController.LiveStatsDashboard -> do
+        trackAppActionClick appId (getScreen HOME_SCREEN) "setting_side_bar" "go_to_live_stats_dashboard"
+        trackAppEndScreen appId (getScreen HOME_SCREEN)
+      SettingSideBarController.GoToMyTickets -> do
+        trackAppActionClick appId (getScreen HOME_SCREEN) "setting_side_bar" "go_to_my_tickets"
+        trackAppEndScreen appId (getScreen HOME_SCREEN)
+      SettingSideBarController.NoAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "setting_side_bar" "no_action"
+    PricingTutorialModelActionController (PricingTutorialModelController.Close) -> trackAppActionClick appId (getScreen HOME_SCREEN) "pricing_tutorial" "close_icon"
+    SearchLocationModelActionController act -> case act of
+      SearchLocationModelController.LocationListItemActionController act -> case act of
+        LocationListItemController.OnClick item -> trackAppActionClick appId (getScreen HOME_SCREEN) "search_location_modal" "location_list_item"
+        LocationListItemController.SelectedCurrentLocation lat lng name -> trackAppActionClick appId (getScreen HOME_SCREEN) "search_location_modal" "location_list_item_onclick_current_location"
+        LocationListItemController.FavClick item -> trackAppActionClick appId (getScreen HOME_SCREEN) "search_location_modal" "favourite"
+      SearchLocationModelController.PrimaryButtonActionController act -> case act of
+        PrimaryButtonController.OnClick -> trackAppActionClick appId (getScreen HOME_SCREEN) "search_location_modal" "primary_button"
+        PrimaryButtonController.NoAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "search_location_modal" "primary_button_no_action"
+      SearchLocationModelController.SourceChanged input -> trackAppActionClick appId (getScreen HOME_SCREEN) "search_location_modal" "source_changed"
+      SearchLocationModelController.DestinationChanged input -> trackAppActionClick appId (getScreen HOME_SCREEN) "search_location_modal" "destination_changed"
+      SearchLocationModelController.EditTextFocusChanged textType -> trackAppActionClick appId (getScreen HOME_SCREEN) "search_location_modal" "edit_text_focus_changed"
+      SearchLocationModelController.GoBack -> trackAppActionClick appId (getScreen HOME_SCREEN) "search_location_modal" "go_back"
+      SearchLocationModelController.SetCurrentLocation -> trackAppActionClick appId (getScreen HOME_SCREEN) "search_location_modal" "set_current_location"
+      SearchLocationModelController.SetLocationOnMap -> trackAppActionClick appId (getScreen HOME_SCREEN) "search_location_modal" "set_location_on_map"
+      SearchLocationModelController.UpdateSource lat lng name -> trackAppActionClick appId (getScreen HOME_SCREEN) "search_location_modal" "set_current_location_update_source"
+      SearchLocationModelController.SourceClear -> trackAppActionClick appId (getScreen HOME_SCREEN) "search_location_modal" "source_clear"
+      SearchLocationModelController.DestinationClear -> trackAppActionClick appId (getScreen HOME_SCREEN) "search_location_modal" "destination_clear_options"
+      SearchLocationModelController.DebounceCallBack searchString arg -> trackAppActionClick appId (getScreen HOME_SCREEN) "search_location_modal" "debounce_callback_search"
+      SearchLocationModelController.UpdateCurrentLocation lat lng -> trackAppActionClick appId (getScreen HOME_SCREEN) "search_location_modal" "update_current_location"
+      SearchLocationModelController.RecenterCurrentLocation -> trackAppActionClick appId (getScreen HOME_SCREEN) "search_location_modal" "recenter_location"
+      SearchLocationModelController.SavedAddressClicked act -> case act of
+        LocationTagBarController.TagClick savedAddressType arrItem -> trackAppActionClick appId (getScreen HOME_SCREEN) "location_tag_bar" "tag"
+      SearchLocationModelController.NoAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "search_location_modal" "no_action"
+    QuoteListModelActionController act -> case act of
+      QuoteListModelController.QuoteListItemActionController act -> case act of
+        QuoteListItemController.Click quote -> trackAppActionClick appId (getScreen HOME_SCREEN) "quote_list_modal" "quote_list_item_click"
+        QuoteListItemController.CountDown seconds id status timerID -> trackAppActionClick appId (getScreen HOME_SCREEN) "quote_list_modal" "quote_list_item_count_down"
+        QuoteListItemController.ConfirmRide -> trackAppActionClick appId (getScreen HOME_SCREEN) "quote_list_modal" "confirm_ride"
+        QuoteListItemController.NoAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "quote_list_modal" "no_action"
+        QuoteListItemController.CancelAutoAssigning -> trackAppActionClick appId (getScreen HOME_SCREEN) "quote_list_modal" "auto_assign_cancel"
+      QuoteListModelController.PrimaryButtonActionController act -> case act of
+        PrimaryButtonController.OnClick -> trackAppActionClick appId (getScreen HOME_SCREEN) "quote_list_modal" "confirm_primary_button"
+        PrimaryButtonController.NoAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "quote_list_modal" "primary_button_no_action"
+      QuoteListModelController.GoBack -> trackAppActionClick appId (getScreen HOME_SCREEN) "quote_list_modal" "on_goback"
+      QuoteListModelController.CancelAutoAssigning -> trackAppActionClick appId (getScreen HOME_SCREEN) "quote_list_modal" "auto_assign_cancel"
+      QuoteListModelController.HomeButtonActionController act -> case act of
+        PrimaryButtonController.OnClick -> trackAppActionClick appId (getScreen HOME_SCREEN) "quote_list_modal" "home_primary_button"
+        PrimaryButtonController.NoAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "quote_list_modal" "primary_button_no_action"
+      QuoteListModelController.TryAgainButtonActionController act -> case act of
+        PrimaryButtonController.OnClick -> trackAppActionClick appId (getScreen HOME_SCREEN) "quote_list_modal" "try_again_primary_button"
+        PrimaryButtonController.NoAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "quote_list_modal" "primary_button_no_action"
+      QuoteListModelController.HidePopUp -> trackAppActionClick appId (getScreen HOME_SCREEN) "quote_list_modal" "hide_popup"
+      QuoteListModelController.NoAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "quote_list_modal" "no_action"
+      QuoteListModelController.TipBtnClick arg1 arg2-> trackAppActionClick appId (getScreen HOME_SCREEN) "quote_list_modal" "tip_button_click"
+      QuoteListModelController.TipViewPrimaryButtonClick act -> case act of
+        PrimaryButtonController.OnClick -> trackAppActionClick appId (getScreen HOME_SCREEN) "quote_list_modal" "primary_button_on_click"
+        PrimaryButtonController.NoAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "quote_list_modal" "primary_button_no_action"
+    DriverInfoCardActionController act -> case act of
+      DriverInfoCardController.NoAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "driver_info_card" "no_action"
+      DriverInfoCardController.PrimaryButtonAC act -> case act of
+        PrimaryButtonController.OnClick -> trackAppActionClick appId (getScreen HOME_SCREEN) "driver_info_card" "call_primary_button"
+        PrimaryButtonController.NoAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "driver_info_card" "primary_button_no_action"
+      DriverInfoCardController.SourceToDestinationAC  act -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "driver_info_card" "source_to_destination"
+      DriverInfoCardController.CancelRide infoCard -> trackAppActionClick appId (getScreen HOME_SCREEN) "driver_info_card" "cancel_ride"
+      DriverInfoCardController.LocationTracking -> trackAppActionClick appId (getScreen HOME_SCREEN) "driver_info_card" "location_tracking"
+      DriverInfoCardController.MessageDriver -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "driver_info_card" "open_in_app_messaging"
+      DriverInfoCardController.OnNavigate -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "driver_info_card" "on_navigate"
+      DriverInfoCardController.CallDriver -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "driver_info_card" "call_driver"
+      DriverInfoCardController.OnNavigateToZone -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "driver_info_card" "on_navigate_to_zone"
+      DriverInfoCardController.ToggleBottomSheet -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "driver_info_card" "toggle_bottom_sheet"
+      DriverInfoCardController.CollapseBottomSheet -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "driver_info_card" "collapse_bottom_sheet"
+    UpdateLocation key lat lon ->  trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "update_location"
+    CancelRidePopUpAction act -> case act of
+      CancelRidePopUp.Button1 act -> case act of
+        PrimaryButtonController.OnClick -> trackAppActionClick appId (getScreen HOME_SCREEN) "cancel_ride_popup" "cancel_ride_declined"
+        PrimaryButtonController.NoAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "cancel_ride_popup" "primary_button_no_action"
+      CancelRidePopUp.Button2 act -> case act of
+        PrimaryButtonController.OnClick -> trackAppActionClick appId (getScreen HOME_SCREEN) "cancel_ride_popup" "cancel_ride_accepted"
+        PrimaryButtonController.NoAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "cancel_ride_popup" "primary_button_no_action"
+      CancelRidePopUp.UpdateIndex index -> trackAppActionClick appId (getScreen HOME_SCREEN) "cancel_ride_popup" "update_index"
+      CancelRidePopUp.OnGoBack -> trackAppActionClick appId (getScreen HOME_SCREEN) "cancel_ride_popup" "go_back"
+      CancelRidePopUp.ClearOptions -> trackAppActionClick appId (getScreen HOME_SCREEN) "cancel_ride_popup" "clear_options"
+      CancelRidePopUp.TextChanged valId newVal ->  trackAppTextInput appId (getScreen HOME_SCREEN) "cancelling_reason_text_changed" "cancel_ride_popup"
+      CancelRidePopUp.NoAction ->  trackAppActionClick appId (getScreen HOME_SCREEN) "cancel_ride_popup" "no_action"
+    PopUpModalAction act -> case act of
+      PopUpModal.OnButton1Click -> trackAppActionClick appId (getScreen HOME_SCREEN) "popup_modal_action" "on_goback"
+      PopUpModal.OnButton2Click -> trackAppActionClick appId (getScreen HOME_SCREEN) "popup_modal_action" "on_cancel"
+      PopUpModal.NoAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "popup_modal_action" "no_action"
+      PopUpModal.OnImageClick -> trackAppActionClick appId (getScreen HOME_SCREEN) "popup_modal_action" "image"
+      PopUpModal.ETextController act -> trackAppTextInput appId (getScreen HOME_SCREEN) "popup_modal_action" "primary_edit_text"
+      PopUpModal.CountDown arg1 arg2 arg3 arg4 -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "popup_modal_action" "countdown_updated"
+      PopUpModal.Tipbtnclick arg1 arg2 -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "popup_modal_action" "tip_clicked"
+      PopUpModal.DismissPopup -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "popup_modal_action" "popup_dismissed"
+      PopUpModal.OptionWithHtmlClick -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "popup_modal_action" "options_with_html_click"
+      PopUpModal.OnSecondaryTextClick -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "popup_modal_action" "secondary_text_click"
+    RatingCardAC act -> case act of
+      RatingCard.Rating index -> trackAppActionClick appId (getScreen HOME_SCREEN) "rating_card" "star"
+      RatingCard.PrimaryButtonAC act -> case act of
+        PrimaryButtonController.OnClick -> trackAppActionClick appId (getScreen HOME_SCREEN) "rating_card" "primary_button"
+        PrimaryButtonController.NoAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "rating_card" "primary_button_no_action"
+      RatingCard.FeedbackChanged value -> trackAppActionClick appId (getScreen HOME_SCREEN) "rating_card" "feedback_changed"
+      RatingCard.BackPressed -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "rating_card" "back_pressed"
+      RatingCard.NoAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "rating_card" "no_action"
+      RatingCard.SelectPill arg1 arg2 -> trackAppActionClick appId (getScreen HOME_SCREEN) "rating_card" "select_pill"
+    CloseLocationTracking -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "close_location_tracking"
+    StartLocationTracking item -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "start_location_tracking"
+    DistanceOutsideLimitsActionController act -> case act of
+      PopUpModal.OnButton2Click -> trackAppActionClick appId (getScreen HOME_SCREEN) "popup_modal_distance_outside_limit" "change_drop_location"
+      PopUpModal.OnButton1Click -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "popup_modal_distance_outside_limit" "change_drop_location_cancel"
+      PopUpModal.NoAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "popup_modal_distance_outside_limit" "no_action"
+      PopUpModal.OnImageClick -> trackAppActionClick appId (getScreen HOME_SCREEN) "popup_modal_distance_outside_limit" "image"
+      PopUpModal.ETextController act -> trackAppTextInput appId (getScreen HOME_SCREEN) "popup_modal_distance_outside_limit" "primary_edit_text"
+      PopUpModal.CountDown arg1 arg2 arg3 arg4 -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "popup_modal_distance_outside_limit" "countdown_updated"
+      PopUpModal.Tipbtnclick arg1 arg2 -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "popup_modal_distance_outside_limit" "tip_clicked"
+      PopUpModal.DismissPopup -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "popup_modal_distance_outside_limit" "popup_dismissed"
+      PopUpModal.OptionWithHtmlClick -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "popup_modal_distance_outside_limit" "options_with_html_click"
+      PopUpModal.OnSecondaryTextClick -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "popup_modal_distance_outside_limit" "secondary_text_click"
+    ShortDistanceActionController act -> case act of
+      PopUpModal.OnButton1Click -> trackAppActionClick appId (getScreen HOME_SCREEN) "popup_modal_short_distance_action" "book_ride"
+      PopUpModal.OnButton2Click -> trackAppActionClick appId (getScreen HOME_SCREEN) "popup_modal_short_distance_action" "go_back"
+      PopUpModal.NoAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "popup_modal_short_distance_action" "no_action"
+      PopUpModal.OnImageClick -> trackAppActionClick appId (getScreen HOME_SCREEN) "popup_modal_short_distance_action" "image"
+      PopUpModal.ETextController act -> trackAppTextInput appId (getScreen HOME_SCREEN) "popup_modal_short_distance_action" "primary_edit_text"
+      PopUpModal.CountDown arg1 arg2 arg3 arg4 -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "popup_modal_short_distance_action" "countdown_updated"
+      PopUpModal.Tipbtnclick arg1 arg2 -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "popup_modal_short_distance_action" "tip_clicked"
+      PopUpModal.DismissPopup -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "popup_modal_short_distance_action" "popup_dismissed"
+      PopUpModal.OptionWithHtmlClick -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "popup_modal_short_distance_action" "options_with_html_click"
+      PopUpModal.OnSecondaryTextClick -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "popup_modal_short_distance_action" "secondary_text_click"
+    SourceUnserviceableActionController act -> case act of
+      ErrorModalController.PrimaryButtonActionController act -> case act of
+        PrimaryButtonController.OnClick -> trackAppActionClick appId (getScreen HOME_SCREEN) "source_unserviceable_error" "primary_button_change_location"
+        PrimaryButtonController.NoAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "source_unservice_error_modal" "primary_button_no_action"
+    GoBackToSearchLocationModal -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "go_back_search_location_modal"
+    SkipButtonActionController act -> case act of
+      PrimaryButtonController.OnClick -> trackAppActionClick appId (getScreen HOME_SCREEN) "primary_button" "skip"
+      PrimaryButtonController.NoAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "source_unservice_error_modal" "primary_button_no_action"
+    EstimateChangedPopUpController act -> case act of
+      PopUpModal.OnButton1Click -> trackAppActionClick appId (getScreen HOME_SCREEN) "popup_modal_estimate_changed" "go_to_home"
+      PopUpModal.OnButton2Click -> trackAppActionClick appId (getScreen HOME_SCREEN) "popup_modal_estimate_changed" "continue"
+      PopUpModal.NoAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "popup_modal_estimate_changed" "no_action"
+      PopUpModal.OnImageClick -> trackAppActionClick appId (getScreen HOME_SCREEN) "popup_modal_estimate_changed" "image"
+      PopUpModal.ETextController act -> trackAppTextInput appId (getScreen HOME_SCREEN) "popup_modal_estimate_changed" "primary_edit_text"
+      PopUpModal.CountDown arg1 arg2 arg3 arg4 -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "popup_modal_estimate_changed" "countdown_updated"
+      PopUpModal.Tipbtnclick arg1 arg2 -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "popup_modal_estimate_changed" "tip_clicked"
+      PopUpModal.DismissPopup -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "popup_modal_estimate_changed" "popup_dismissed"
+      PopUpModal.OptionWithHtmlClick -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "popup_modal_estimate_changed" "options_with_html_click"
+      PopUpModal.OnSecondaryTextClick -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "popup_modal_estimate_changed" "secondary_text_click"
+    RateCardAction act -> case act of
+      RateCard.Close -> trackAppActionClick appId (getScreen HOME_SCREEN) "rate_card" "close_click"
+      RateCard.BackPressed -> trackAppActionClick appId (getScreen HOME_SCREEN) "rate_card" "back_click"
+      RateCard.NoAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "rate_card_action" "no_action"
+      RateCard.GoToDefaultStart -> trackAppActionClick appId (getScreen HOME_SCREEN) "rate_card_action" "back_click"
+      RateCard.GoToDriverAddition -> trackAppActionClick appId (getScreen HOME_SCREEN) "rate_card_action" "go_to_driver_addition"
+      RateCard.GoToFareUpdate -> trackAppActionClick appId (getScreen HOME_SCREEN) "rate_card_action" "go_to_fare_update"
+      RateCard.PrimaryButtonAC act -> case act of
+        PrimaryButtonController.OnClick -> trackAppActionClick appId (getScreen HOME_SCREEN) "rate_card_primary_button" "on_click"
+        PrimaryButtonController.NoAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "rate_card_primary_button" "no_action"
+    ShowRateCard -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "show_rate_card"
+    PredictionClickedAction act -> case act of
+      LocationListItemController.OnClick item -> trackAppActionClick appId (getScreen HOME_SCREEN) "location_list_item" "prediction"
+      LocationListItemController.FavClick item -> trackAppActionClick appId (getScreen HOME_SCREEN) "location_list_item" "prediction_fav_click"
+      LocationListItemController.SelectedCurrentLocation lat lng name -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "location_list_item" "selected_current_location"
+    SavedAddressClicked (LocationTagBarController.TagClick savedAddressType arrItem) -> trackAppActionClick appId (getScreen HOME_SCREEN) "location_tag_bar" "tag"
+    FavouriteLocationModelAC act -> case act of
+      FavouriteLocationModelController.GenericHeaderAC act -> case act of
+        GenericHeaderController.PrefixImgOnClick -> trackAppActionClick appId (getScreen HOME_SCREEN) "fav_location_modal" "generic_header_back_icon"
+        GenericHeaderController.SuffixImgOnClick -> trackAppActionClick appId (getScreen HOME_SCREEN) "fav_location_modal" "generic_header_forward_icon"
+      FavouriteLocationModelController.FavouriteLocationAC act -> case act of
+        SavedLocationCardController.CardClicked item -> trackAppActionClick appId (getScreen HOME_SCREEN) "fav_location_modal" "saved_loc_card"
+        SavedLocationCardController.DeleteLocation act -> trackAppActionClick appId (getScreen HOME_SCREEN) "fav_location_modal" "delete_location"
+        SavedLocationCardController.EditLocation act -> trackAppActionClick appId (getScreen HOME_SCREEN) "fav_location_modal" "edit_location_modal"
+        SavedLocationCardController.NoAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "fav_location_modal" "no_action"
+      FavouriteLocationModelController.ErrorModalAC act -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "fav_location_modal" "error_modal_action"
+    SaveFavouriteCardAction act -> case act of
+      SaveFavouriteCardController.OnClose -> trackAppActionClick appId (getScreen HOME_SCREEN) "save_fav_card" "on_close_click"
+      SaveFavouriteCardController.SaveFavourite -> trackAppActionClick appId (getScreen HOME_SCREEN) "save_fav_card" "save_fav"
+      SaveFavouriteCardController.PrimayEditTA (PrimaryEditTextController.TextChanged id val) -> trackAppTextInput appId (getScreen HOME_SCREEN) "save_fav_card_text_changed" "primary_edit_text"
+      SaveFavouriteCardController.PrimayEditTA (PrimaryEditTextController.FocusChanged id) -> trackAppTextInput appId (getScreen HOME_SCREEN) "save_fav_card_text_changed" "focus_changed"
+      SaveFavouriteCardController.TagSelected act -> trackAppActionClick appId (getScreen HOME_SCREEN) "save_fav_card" "tag_selected"
+      SaveFavouriteCardController.NoAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "save_fav_card" "no_action"
+    UpdateCurrentLocation lat lng -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "update_current_location"
+    EmergencyHelpModalAC act -> case act of
+      EmergencyHelpController.GenericHeaderAC act -> case act of
+        GenericHeaderController.PrefixImgOnClick -> trackAppActionClick appId (getScreen HOME_SCREEN) "emergency_help_modal" "generic_header_back_icon"
+        GenericHeaderController.SuffixImgOnClick -> trackAppActionClick appId (getScreen HOME_SCREEN) "generic_header_action" "forward_icon"
+      EmergencyHelpController.CallPolicePopup -> trackAppActionClick appId (getScreen HOME_SCREEN) "emergency_help_modal" "call_police_popup"
+      EmergencyHelpController.ContactSupportPopup -> trackAppActionClick appId (getScreen HOME_SCREEN) "emergency_help_modal" "contact_support_popup"
+      EmergencyHelpController.CallSuccessfulPopup -> trackAppActionClick appId (getScreen HOME_SCREEN) "emergency_help_modal" "call_successful_popup"
+      EmergencyHelpController.CallContactPopUp contact -> trackAppActionClick appId (getScreen HOME_SCREEN) "emergency_help_modal" "call_contact_popup"
+      EmergencyHelpController.StoreContacts -> trackAppActionClick appId (getScreen HOME_SCREEN) "emergency_help_modal" "store_contacts"
+      EmergencyHelpController.AddedEmergencyContacts -> trackAppActionClick appId (getScreen HOME_SCREEN) "emergency_help_modal" "add_emergency_contacts"
+      EmergencyHelpController.CallPolice act -> case act of
+        PopUpModal.OnButton1Click -> trackAppActionClick appId (getScreen HOME_SCREEN) "emergency_call_police_pop_up" "call_police_cancel"
+        PopUpModal.OnButton2Click -> trackAppActionClick appId (getScreen HOME_SCREEN) "emergency_call_police_pop_up" "call_police_accept"
+        PopUpModal.NoAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "emergency_call_police_pop_up" "no_action"
+        PopUpModal.OnImageClick -> trackAppActionClick appId (getScreen HOME_SCREEN) "emergency_call_police_pop_up" "image"
+        PopUpModal.ETextController act -> trackAppTextInput appId (getScreen HOME_SCREEN) "emergency_call_police_pop_up" "primary_edit_text"
+        PopUpModal.CountDown arg1 arg2 arg3 arg4 -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "emergency_call_police_pop_up" "countdown_updated"
+        PopUpModal.Tipbtnclick arg1 arg2 -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "emergency_call_police_pop_up" "tip_clicked"
+        PopUpModal.DismissPopup -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "emergency_call_police_pop_up" "popup_dismissed"
+        PopUpModal.OptionWithHtmlClick -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "emergency_call_police_pop_up" "options_with_html_click"
+        PopUpModal.OnSecondaryTextClick -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "emergency_call_police_pop_up" "secondary_text_click"
+      EmergencyHelpController.CallEmergencyContact act -> case act of
+        PopUpModal.OnButton1Click -> trackAppActionClick appId (getScreen HOME_SCREEN) "call_emergency_pop_up" "call_contact_cancel"
+        PopUpModal.OnButton2Click -> trackAppActionClick appId (getScreen HOME_SCREEN) "call_emergency_pop_up" "call_contact_accept"
+        PopUpModal.NoAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "call_emergency_pop_up" "no_action"
+        PopUpModal.OnImageClick -> trackAppActionClick appId (getScreen HOME_SCREEN) "call_emergency_pop_up" "image"
+        PopUpModal.ETextController act -> trackAppTextInput appId (getScreen HOME_SCREEN) "call_emergency_pop_up" "primary_edit_text"
+        PopUpModal.CountDown arg1 arg2 arg3 arg4 -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "call_emergency_pop_up" "countdown_updated"
+        PopUpModal.Tipbtnclick arg1 arg2 -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "call_emergency_pop_up" "tip_clicked"
+        PopUpModal.DismissPopup -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "call_emergency_pop_up" "popup_dismissed"
+        PopUpModal.OptionWithHtmlClick -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "call_emergency_pop_up" "options_with_html_click"
+        PopUpModal.OnSecondaryTextClick -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "call_emergency_pop_up" "secondary_text_click"
+      EmergencyHelpController.CallSuccessful act -> case act of
+        PopUpModal.OnButton1Click -> trackAppActionClick appId (getScreen HOME_SCREEN) "emergency_call_success_pup_up" "call_feedback_cancel"
+        PopUpModal.OnButton2Click -> trackAppActionClick appId (getScreen HOME_SCREEN) "emergency_call_success_pup_up" "call_feedback_accept"
+        PopUpModal.NoAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "emergency_call_success_pup_up" "no_action"
+        PopUpModal.OnImageClick -> trackAppActionClick appId (getScreen HOME_SCREEN) "emergency_call_success_pup_up" "image"
+        PopUpModal.ETextController act -> trackAppTextInput appId (getScreen HOME_SCREEN) "emergency_call_success_pup_up" "primary_edit_text"
+        PopUpModal.CountDown arg1 arg2 arg3 arg4 -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "emergency_call_success_pup_up" "countdown_updated"
+        PopUpModal.Tipbtnclick arg1 arg2 -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "emergency_call_success_pup_up" "tip_clicked"
+        PopUpModal.DismissPopup -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "emergency_call_success_pup_up" "popup_dismissed"
+        PopUpModal.OptionWithHtmlClick -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "emergency_call_success_pup_up" "options_with_html_click"
+        PopUpModal.OnSecondaryTextClick -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "emergency_call_success_pup_up" "secondary_text_click"
+      EmergencyHelpController.ContactSupport act -> case act of
+        PopUpModal.OnButton1Click -> trackAppActionClick appId (getScreen HOME_SCREEN) "emergency_contact_support_pup_up" "contact_support_cancel"
+        PopUpModal.OnButton2Click -> trackAppActionClick appId (getScreen HOME_SCREEN) "emergency_contact_support_pup_up" "contact_support_accept"
+        PopUpModal.NoAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "emergency_contact_support_pup_up" "no_action"
+        PopUpModal.OnImageClick -> trackAppActionClick appId (getScreen HOME_SCREEN) "emergency_contact_support_pup_up" "image"
+        PopUpModal.ETextController act -> trackAppTextInput appId (getScreen HOME_SCREEN) "emergency_contact_support_pup_up" "primary_edit_text"
+        PopUpModal.CountDown arg1 arg2 arg3 arg4 -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "emergency_contact_support_pup_up" "countdown_updated"
+        PopUpModal.Tipbtnclick arg1 arg2 -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "emergency_contact_support_pup_up" "tip_clicked"
+        PopUpModal.DismissPopup -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "emergency_contact_support_pup_up" "popup_dismissed"
+        PopUpModal.OptionWithHtmlClick -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "emergency_contact_support_pup_up" "options_with_html_click"
+        PopUpModal.OnSecondaryTextClick -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "emergency_contact_support_pup_up" "secondary_text_click"
+      EmergencyHelpController.NoAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "emergency_contact_support_pup_up" "no_action"
+    PopUpModalShareAppAction act -> case act of
+      PopUpModal.OnButton1Click -> trackAppActionClick appId (getScreen HOME_SCREEN) "popup_modal_share_app" "cancel"
+      PopUpModal.OnButton2Click -> trackAppActionClick appId (getScreen HOME_SCREEN) "popup_modal_share_app" "accept"
+      PopUpModal.NoAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "popup_modal_share_app" "no_action"
+      PopUpModal.OnImageClick -> trackAppActionClick appId (getScreen HOME_SCREEN) "popup_modal_share_app" "image"
+      PopUpModal.ETextController act -> trackAppTextInput appId (getScreen HOME_SCREEN) "popup_modal_share_app" "primary_edit_text"
+      PopUpModal.CountDown arg1 arg2 arg3 arg4 -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "popup_modal_share_app" "countdown_updated"
+      PopUpModal.Tipbtnclick arg1 arg2 -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "popup_modal_share_app" "tip_clicked"
+      PopUpModal.DismissPopup -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "popup_modal_share_app" "popup_dismissed"
+      PopUpModal.OptionWithHtmlClick -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "popup_modal_share_app" "options_with_html_click"
+      PopUpModal.OnSecondaryTextClick -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "popup_modal_share_app" "secondary_text_click"
+    CallSupportAction act -> case act of
+      PopUpModal.OnButton1Click -> trackAppActionClick appId (getScreen HOME_SCREEN) "popup_modal_contact_support" "cancel"
+      PopUpModal.OnButton2Click -> trackAppActionClick appId (getScreen HOME_SCREEN) "popup_modal_contact_support" "accept"
+      PopUpModal.NoAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "popup_modal_contact_support" "no_action"
+      PopUpModal.OnImageClick -> trackAppActionClick appId (getScreen HOME_SCREEN) "popup_modal_contact_support" "image"
+      PopUpModal.ETextController act -> trackAppTextInput appId (getScreen HOME_SCREEN) "popup_modal_contact_support" "primary_edit_text"
+      PopUpModal.CountDown arg1 arg2 arg3 arg4 -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "popup_modal_contact_support" "countdown_updated"
+      PopUpModal.Tipbtnclick arg1 arg2 -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "popup_modal_contact_support" "tip_clicked"
+      PopUpModal.DismissPopup -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "popup_modal_contact_support" "popup_dismissed"
+      PopUpModal.OptionWithHtmlClick -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "popup_modal_contact_support" "options_with_html_click"
+      PopUpModal.OnSecondaryTextClick -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "popup_modal_contact_support" "secondary_text_click"
+    ContinueWithoutOffers resp -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "continue_without_offers"
+    CheckBoxClick autoAssign -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "check_box_click"
+    TagClick savedAddressType arrItem -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "tag_click"
+    DriverArrivedAction driverArrivalTime -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "driver_arrived_action"
+    WaitingTimeAction timerID timeInMinutes seconds -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "waiting_time_action"
+    UpdateETA currentETA currentDistance -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "update_eta"
+    EstimatesTryAgain quotesRes -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "estimates_try_again"
+    SearchExpireCountDown seconds id status timerID -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "search_expiry_count_down"
+    UpdateCurrentStage stage -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "update_current_stage"
+    ExitLocationSelected item addToRecents -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "exit_location_selected"
+    NotificationListener notificationType -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "notification_listener"
+    GetEstimates quotesRes -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "get_estimates"
+    GetRideConfirmation resp -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "get_ride_confirmation"
+    GetQuotesList (SelectListRes resp) -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "get_quotes_list"
+    MAPREADY key latitude longitude -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "map_ready"
+    CurrentLocation lat lng -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "current_location"
+    SourceToDestinationActionController act -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "source_to_destination"
+    TrackDriver resp -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "track_driver"
+    HandleCallback -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "handle_call_back"
+    UpdatePickupLocation  key lat lon -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "update_pickup_location"
+    ContinueCmd -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "continue_cmd"
+    Restart err -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "restart"
+    UpdateSourceName lat lon name -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "update_source_name"
+    RequestInfoCardAction act -> case act of
+      RequestInfoCard.Close -> trackAppActionClick appId (getScreen HOME_SCREEN) "request_info_card" "got_it"
+      RequestInfoCard.BackPressed -> trackAppActionClick appId (getScreen HOME_SCREEN) "request_info_card" "backpressed_in_screen"
+      RequestInfoCard.NoAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "request_info_card" "no_action"
+    PreferencesDropDown -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "preferences_drop_down"
+    OnIconClick autoAssign -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "close_icon_auto_assign"
+    PopUpModalAction act -> case act of
+        PopUpModal.OnButton1Click -> trackAppActionClick appId (getScreen HOME_SCREEN) "popup_modal_action" "on_goback"
+        PopUpModal.OnButton2Click -> do
+          trackAppActionClick appId (getScreen HOME_SCREEN) "popup_modal_action" "register_on_different_number"
+          trackAppEndScreen appId (getScreen HOME_SCREEN)
+        PopUpModal.NoAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "popup_modal_action" "no_action"
+        PopUpModal.OnImageClick -> trackAppActionClick appId (getScreen HOME_SCREEN) "popup_modal_action" "image"
+        PopUpModal.ETextController act -> trackAppTextInput appId (getScreen HOME_SCREEN) "popup_modal_action" "primary_edit_text"
+        PopUpModal.CountDown arg1 arg2 arg3 arg4 -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "popup_modal_action" "countdown_updated"
+        PopUpModal.Tipbtnclick arg1 arg2 -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "popup_modal_action" "tip_clicked"
+        PopUpModal.DismissPopup -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "popup_modal_action" "popup_dismissed"
+        PopUpModal.OptionWithHtmlClick -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "popup_modal_action" "options_with_html_click"
+        PopUpModal.OnSecondaryTextClick -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "popup_modal_action" "secondary_text_click"
+    ReferralFlowAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "have_referral_code"
+    ReferralFlowNoAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "have_referral_code_no_action"
+    NewUser -> do
+      trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "have_referral_code_no_action"
+      trackAppEndScreen appId (getScreen HOME_SCREEN)
+    MapReadyAction -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "map_render"
+    TrackLiveLocationAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "track_live_location_using"
+    LottieLoaderAction -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "auto_rickshaw_processing"
+    UpdateSourceFromPastLocations -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "update_source_from_past_saved_locations"
+    UpdateLocAndLatLong lat lon-> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "update_current_loc_lat_and_lon"
+    UpdateSavedLoc state -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "update_saved_loc"
+    NoAction -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "no_action"
+    UpdateMessages msg sender timeStamp size -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "update_messages"
+    InitializeChat -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "initialize_chat"
+    RemoveChat -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "remove_chat"
+    MessagingViewActionController act -> case act of
+      MessagingView.SendMessage -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_app_messaging" "send_message"
+      MessagingView.SendSuggestion suggestion -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_app_messaging" "send_suggestion"
+      MessagingView.BackPressed -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_app_messaging" "back_pressed"
+      MessagingView.TextChanged input -> trackAppTextInput appId (getScreen HOME_SCREEN) "in_app_messaging" "text_changed"
+      MessagingView.Call -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_app_messaging" "call_driver"
+      MessagingView.NoAction -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_app_messaging" "no_action"
+    OnResumeCallback -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "on_resume_callback"
+    CheckFlowStatusAction -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "check_flow_status"
+    GoToEditProfile -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "GoToEditProfile"
+    HideLiveDashboard val -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "hide_live_dashboard"
+    LiveDashboardAction -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "LiveDashboardAction"
+    OnResumeCallback -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "OnResumeCallback"
+    CheckFlowStatusAction -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "CheckFlowStatusAction"
+    IsMockLocation val -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "IsMockLocation"
+    MenuButtonActionController act -> case act of 
+      MenuButtonController.OnClick arg -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "menu_button_action" "on_click"
+    ChooseYourRideAction act -> case act of 
+      ChooseYourRideController.NoAction -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "choose_your_ride_action" "no_action"
+      ChooseYourRideController.ChooseVehicleAC arg -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "choose_your_ride_action" "choose_vehicle"
+      ChooseYourRideController.PrimaryButtonActionController act -> case act of
+        PrimaryButtonController.OnClick -> trackAppActionClick appId (getScreen HOME_SCREEN) "choose_your_ride_action" "primary_button"
+        PrimaryButtonController.NoAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "choose_your_ride_action" "primary_button_no_action"
+    SearchForSelectedLocation -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "search_for_saved_location"
+    GenderBannerModal act -> case act of 
+      Banner.OnClick -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "gender_banner_modal" "banner_on_click"
+      Banner.NoAction -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "gender_banner_modal" "banner_no_action"
+    CancelSearchAction act -> case act of 
+      PopUpModal.OnButton1Click -> trackAppActionClick appId (getScreen HOME_SCREEN) "popup_modal_cancel_search" "cancel"
+      PopUpModal.OnButton2Click -> trackAppActionClick appId (getScreen HOME_SCREEN) "popup_modal_cancel_search" "accept"
+      PopUpModal.NoAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "popup_modal_cancel_search" "no_action"
+      PopUpModal.OnImageClick -> trackAppActionClick appId (getScreen HOME_SCREEN) "popup_modal_cancel_search" "image"
+      PopUpModal.ETextController act -> trackAppTextInput appId (getScreen HOME_SCREEN) "popup_modal_cancel_search" "primary_edit_text"
+      PopUpModal.CountDown arg1 arg2 arg3 arg4 -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "popup_modal_cancel_search" "countdown_updated"
+      PopUpModal.Tipbtnclick arg1 arg2 -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "popup_modal_cancel_search" "tip_clicked"
+      PopUpModal.DismissPopup -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "popup_modal_cancel_search" "popup_dismissed"
+      PopUpModal.OptionWithHtmlClick -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "popup_modal_cancel_search" "options_with_html_click"
+      PopUpModal.OnSecondaryTextClick -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "popup_modal_cancel_search" "secondary_text_click"
+    TriggerPermissionFlow val -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "trigger_persmission_screen_flow"
+    PopUpModalCancelConfirmationAction act -> case act of 
+      PopUpModal.OnButton1Click -> trackAppActionClick appId (getScreen HOME_SCREEN) "popup_modal_cancel_confirmation" "button1_click"
+      PopUpModal.OnButton2Click -> trackAppActionClick appId (getScreen HOME_SCREEN) "popup_modal_cancel_confirmation" "button2_click"
+      PopUpModal.NoAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "popup_modal_cancel_confirmation" "no_action"
+      PopUpModal.OnImageClick -> trackAppActionClick appId (getScreen HOME_SCREEN) "popup_modal_cancel_confirmation" "image_click"
+      PopUpModal.ETextController act -> trackAppTextInput appId (getScreen HOME_SCREEN) "popup_modal_cancel_confirmation" "primary_edit_text"
+      PopUpModal.CountDown arg1 arg2 arg3 arg4 -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "popup_modal_cancel_confirmation" "countdown_updated"
+      PopUpModal.Tipbtnclick arg1 arg2 -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "popup_modal_cancel_confirmation" "tip_clicked"
+      PopUpModal.DismissPopup -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "popup_modal_cancel_confirmation" "popup_dismissed"
+      PopUpModal.OptionWithHtmlClick -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "popup_modal_cancel_confirmation" "options_with_html_click"
+      PopUpModal.OnSecondaryTextClick -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "popup_modal_cancel_confirmation" "secondary_text_click"
+    ScrollToBottom -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "scroll_to_bottom"
+    SelectButton val -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "select_button"
+    RateClick val -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "rate_click"
+    Support -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "support"
+    IssueReportIndex val -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "issue_report_index"
+    RideDetails -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "ride_details"
+    TerminateApp -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "terminate_app"
+    DirectSearch -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "direct_search"
+    ZoneTimerExpired act -> case act of 
+      PopUpModal.OnButton1Click -> trackAppActionClick appId (getScreen HOME_SCREEN) "popup_modal_zone_timer_expired" "button1_click"
+      PopUpModal.OnButton2Click -> trackAppActionClick appId (getScreen HOME_SCREEN) "popup_modal_zone_timer_expired" "button2_click"
+      PopUpModal.NoAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "popup_modal_zone_timer_expired" "no_action"
+      PopUpModal.OnImageClick -> trackAppActionClick appId (getScreen HOME_SCREEN) "popup_modal_zone_timer_expired" "image_click"
+      PopUpModal.ETextController act -> trackAppTextInput appId (getScreen HOME_SCREEN) "popup_modal_zone_timer_expired" "primary_edit_text"
+      PopUpModal.CountDown arg1 arg2 arg3 arg4 -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "popup_modal_zone_timer_expired" "countdown_updated"
+      PopUpModal.Tipbtnclick arg1 arg2 -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "popup_modal_zone_timer_expired" "tip_clicked"
+      PopUpModal.DismissPopup -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "popup_modal_zone_timer_expired" "popup_dismissed"
+      PopUpModal.OptionWithHtmlClick -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "popup_modal_zone_timer_expired" "options_with_html_click"
+      PopUpModal.OnSecondaryTextClick -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "popup_modal_zone_timer_expired" "secondary_text_click"
+    DisabilityBannerAC act -> case act of 
+      Banner.OnClick -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "disability_banner" "banner_on_click"
+      Banner.NoAction -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "disability_banner" "banner_no_action"
+    DisabilityPopUpAC act -> case act of 
+      PopUpModal.OnButton1Click -> trackAppActionClick appId (getScreen HOME_SCREEN) "disability_pop_up" "button1_click"
+      PopUpModal.OnButton2Click -> trackAppActionClick appId (getScreen HOME_SCREEN) "disability_pop_up" "button2_click"
+      PopUpModal.NoAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "disability_pop_up" "no_action"
+      PopUpModal.OnImageClick -> trackAppActionClick appId (getScreen HOME_SCREEN) "disability_pop_up" "image_click"
+      PopUpModal.ETextController act -> trackAppTextInput appId (getScreen HOME_SCREEN) "disability_pop_up" "primary_edit_text"
+      PopUpModal.CountDown arg1 arg2 arg3 arg4 -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "disability_pop_up" "countdown_updated"
+      PopUpModal.Tipbtnclick arg1 arg2 -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "disability_pop_up" "tip_clicked"
+      PopUpModal.DismissPopup -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "disability_pop_up" "popup_dismissed"
+      PopUpModal.OptionWithHtmlClick -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "disability_pop_up" "options_with_html_click"
+      PopUpModal.OnSecondaryTextClick -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "disability_pop_up" "secondary_text_click"
+    RideCompletedAC act -> case act of 
+      RideCompletedCard.Support -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "ride_completed_screen" "support_clicked"
+      RideCompletedCard.RideDetails -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "ride_completed_screen" "ride_details_clicked"
+      RideCompletedCard.SelectButton arg1 -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "ride_completed_screen" "select_button_click"
+      RideCompletedCard.IssueReportIndex arg1 -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "ride_completed_screen" "issue_report_index"
+      RideCompletedCard.RateClick arg1 -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "ride_completed_screen" "rate_click"
+      RideCompletedCard.IssueReportPopUpAC act -> case act of 
+        CancelRidePopUp.Button1 act -> case act of
+          PrimaryButtonController.OnClick -> trackAppActionClick appId (getScreen HOME_SCREEN) "ride_completed_screen_issue_report_popup_1" "primary_button_on_click"
+          PrimaryButtonController.NoAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "ride_completed_screen_issue_report_popup_1" "primary_button_no_action"
+        CancelRidePopUp.Button2 act -> case act of
+          PrimaryButtonController.OnClick -> trackAppActionClick appId (getScreen HOME_SCREEN) "ride_completed_screen_issue_report_popup_2" "primary_button_on_click"
+          PrimaryButtonController.NoAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "ride_completed_screen_issue_report_popup_2" "primary_button_no_action"
+        CancelRidePopUp.UpdateIndex index -> trackAppActionClick appId (getScreen HOME_SCREEN) "ride_completed_screen_issue_report_popup" "update_index"
+        CancelRidePopUp.OnGoBack -> trackAppActionClick appId (getScreen HOME_SCREEN) "ride_completed_screen_issue_report_popup" "go_back"
+        CancelRidePopUp.ClearOptions -> trackAppActionClick appId (getScreen HOME_SCREEN) "ride_completed_screen_issue_report_popup" "clear_options"
+        CancelRidePopUp.TextChanged valId newVal ->  trackAppTextInput appId (getScreen HOME_SCREEN) "ride_completed_screen_issue_report_popup" "text_changed"
+        CancelRidePopUp.NoAction ->  trackAppActionClick appId (getScreen HOME_SCREEN) "ride_completed_screen_issue_report_popup" "no_action"
+      RideCompletedCard.SkipButtonActionController act -> case act of 
+        PrimaryButtonController.OnClick -> trackAppActionClick appId (getScreen HOME_SCREEN) "ride_completed_screen_skip_button_action" "primary_button_on_click"
+        PrimaryButtonController.NoAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "ride_completed_screen_skip_button_action" "primary_button_no_action"
+      RideCompletedCard.ContactSupportPopUpAC act -> case act of 
+        PopUpModal.OnButton1Click -> trackAppActionClick appId (getScreen HOME_SCREEN) "ride_completed_screen_conatct_support_pop_up" "button1_click"
+        PopUpModal.OnButton2Click -> trackAppActionClick appId (getScreen HOME_SCREEN) "ride_completed_screen_conatct_support_pop_up" "button2_click"
+        PopUpModal.NoAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "ride_completed_screen_conatct_support_pop_up" "no_action"
+        PopUpModal.OnImageClick -> trackAppActionClick appId (getScreen HOME_SCREEN) "ride_completed_screen_conatct_support_pop_up" "image_click"
+        PopUpModal.ETextController act -> trackAppTextInput appId (getScreen HOME_SCREEN) "ride_completed_screen_conatct_support_pop_up" "primary_edit_text"
+        PopUpModal.CountDown arg1 arg2 arg3 arg4 -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "ride_completed_screen_conatct_support_pop_up" "countdown_updated"
+        PopUpModal.Tipbtnclick arg1 arg2 -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "ride_completed_screen_conatct_support_pop_up" "tip_clicked"
+        PopUpModal.DismissPopup -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "ride_completed_screen_conatct_support_pop_up" "popup_dismissed"
+        PopUpModal.OptionWithHtmlClick -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "ride_completed_screen_conatct_support_pop_up" "options_with_html_click"
+        PopUpModal.OnSecondaryTextClick -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "ride_completed_screen_conatct_support_pop_up" "secondary_text_click"
+      RideCompletedCard.UpiQrRendered arg1 -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "ride_completed_screen_conatct_support_pop_up" "upi_qr_rendered"
+      RideCompletedCard.BannerAction act -> case act of 
+        Banner.OnClick -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "ride_completed_banner" "banner_on_click"
+        Banner.NoAction -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "ride_completed_banner" "banner_no_action"
+    LoadMessages -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "load_messages"
+    KeyboardCallback val -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "key_board_callback"
+    NotifyDriverStatusCountDown arg1 arg2 arg3 arg4 -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "notify_driver_status_countdown"
+    UpdateProfileButtonAC act -> case act of 
+      PrimaryButtonController.OnClick -> trackAppActionClick appId (getScreen HOME_SCREEN) "update_profile_button" "primary_button_on_click"
+      PrimaryButtonController.NoAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "update_profile_button" "primary_button_no_action"
+    SkipAccessibilityUpdateAC act -> case act of 
+      PrimaryButtonController.OnClick -> trackAppActionClick appId (getScreen HOME_SCREEN) "skip_accessibility_button" "primary_button_on_click"
+      PrimaryButtonController.NoAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "skip_accessibility_button" "primary_button_no_action"
+    SpecialZoneOTPExpiryAction arg1 arg2 arg3 arg4 -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "special_zone_otp_expiry_action"
+    TicketBookingFlowBannerAC act -> case act of 
+      Banner.OnClick -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "ticket_booking_flow" "banner_on_click"
+      Banner.NoAction -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "ticket_booking_flow" "banner_no_action"
+    WaitingInfo -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "waiting_info"
+    ShareRide -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "share_ride"
+    ScrollStateChanged val -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "scroll_state_changed"
+    RemoveNotification -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "remove_notification"
+    MessageDriver -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "message_driver"
+    SendQuickMessage val -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "send_quick_message"
+    MessageExpiryTimer seconds id status timerID -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "message_expiry_timer"
+    NotificationAnimationEnd -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "notification_animation_end"
+    RideSupport -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "ride_support"
+    OpenEmergencyHelp -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "open_emergency_help"
+    ShowCallDialer callType -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "show_call_dialer"
+    CloseShowCallDialer -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "close_show_call_dialer"
+    CheckAndAskNotificationPermission -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "check_and_ask_notification_permission"
+    OpenChatScreen -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "open_chat_screen"
+    PickUpFarFromCurrentLocAC act -> case act of
+      PopUpModal.OnButton1Click -> trackAppActionClick appId (getScreen HOME_SCREEN) "pick_up_far_from_curr_location_pop_up" "book_ride"
+      PopUpModal.OnButton2Click -> trackAppActionClick appId (getScreen HOME_SCREEN) "pick_up_far_from_curr_location_pop_up" "go_back"
+      PopUpModal.NoAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "pick_up_far_from_curr_location_pop_up" "no_action"
+      PopUpModal.OnImageClick -> trackAppActionClick appId (getScreen HOME_SCREEN) "pick_up_far_from_curr_location_pop_up" "image"
+      PopUpModal.ETextController act -> trackAppTextInput appId (getScreen HOME_SCREEN) "pick_up_far_from_curr_location_pop_up" "primary_edit_text"
+      PopUpModal.CountDown arg1 arg2 arg3 arg4 -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "pick_up_far_from_curr_location_pop_up" "countdown_updated"
+      PopUpModal.Tipbtnclick arg1 arg2 -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "pick_up_far_from_curr_location_pop_up" "tip_clicked"
+      PopUpModal.DismissPopup -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "pick_up_far_from_curr_location_pop_up" "popup_dismissed"
+      PopUpModal.OptionWithHtmlClick -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "pick_up_far_from_curr_location_pop_up" "options_with_html_click"
+      PopUpModal.OnSecondaryTextClick -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "pick_up_far_from_curr_location_pop_up" "secondary_text_click"
+    IssueReportPopUpAC act -> case act of
+      CancelRidePopUp.Button1 act -> case act of
+        PrimaryButtonController.OnClick -> trackAppActionClick appId (getScreen HOME_SCREEN) "issue_report_popup_button1_action" "primary_button_on_click"
+        PrimaryButtonController.NoAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "issue_report_popup_button1_action" "primary_button_no_action"
+      CancelRidePopUp.Button2 act -> case act of
+        PrimaryButtonController.OnClick -> trackAppActionClick appId (getScreen HOME_SCREEN) "issue_report_popup_button2_action" "primary_button_on_click"
+        PrimaryButtonController.NoAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "issue_report_popup_button2_action" "primary_button_no_action"
+      CancelRidePopUp.UpdateIndex index -> trackAppActionClick appId (getScreen HOME_SCREEN) "issue_report_popup" "update_index"
+      CancelRidePopUp.OnGoBack -> trackAppActionClick appId (getScreen HOME_SCREEN) "issue_report_popup" "go_back"
+      CancelRidePopUp.ClearOptions -> trackAppActionClick appId (getScreen HOME_SCREEN) "issue_report_popup" "clear_options"
+      CancelRidePopUp.TextChanged valId newVal ->  trackAppTextInput appId (getScreen HOME_SCREEN) "issue_report_popup" "text_changed"
+      CancelRidePopUp.NoAction ->  trackAppActionClick appId (getScreen HOME_SCREEN) "issue_report_popup" "no_action"
+    CheckFlowStatusAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "check_flow_status_action"
+    HideLiveDashboard arg -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "hide_dash_board_action"
+    PopUpModalAction act -> case act of 
+      PopUpModal.OnButton1Click -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen_pop_up" "button1_click"
+      PopUpModal.OnButton2Click -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen_pop_up" "button2_click"
+      PopUpModal.NoAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen_pop_up" "no_action"
+      PopUpModal.OnImageClick -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen_pop_up" "image_click"
+      PopUpModal.ETextController act -> trackAppTextInput appId (getScreen HOME_SCREEN) "in_screen_pop_up" "primary_edit_text"
+      PopUpModal.CountDown arg1 arg2 arg3 arg4 -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen_pop_up" "countdown_updated"
+      PopUpModal.Tipbtnclick arg1 arg2 -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen_pop_up" "tip_clicked"
+      PopUpModal.DismissPopup -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen_pop_up" "popup_dismissed"
+      PopUpModal.OptionWithHtmlClick -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen_pop_up" "options_with_html_click"
+      PopUpModal.OnSecondaryTextClick -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen_pop_up" "secondary_text_click"
+    MessageViewAnimationEnd -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "message_view_animation_end"
+    RepeatRide arg1 arg2 -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "repeat_ride"
+    Scroll arg1 -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "scroll_action"
+    WhereToClick -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "where_to_click"
+    ShowMoreSuggestions -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "show_more_suggestions"
+    SuggestedDestinationClicked arg1 -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "suggested_destination_clicked"
+    RepeatRideCountDown arg1 arg2 arg3 arg4 -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "repeat_ride_count_down"
+    StopRepeatRideTimer -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "stop_repeat_ride_timer"
+    OpenLiveDashboard -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "open_live_dashboard"
+    UpdatePeekHeight -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "update_peek_height"
 
 data ScreenOutput = LogoutUser
                   | Cancel HomeScreenState
@@ -601,7 +807,7 @@ data Action = NoAction
             | InitializeChat
             | RemoveChat
             | OpenChatScreen
-            | ChatViewActionController ChatView.Action
+            | MessagingViewActionController MessagingView.Action
             | HideLiveDashboard String
             | LiveDashboardAction
             | OnResumeCallback
@@ -635,6 +841,17 @@ data Action = NoAction
             | SkipAccessibilityUpdateAC PrimaryButtonController.Action
             | SpecialZoneOTPExpiryAction Int String String String
             | TicketBookingFlowBannerAC Banner.Action
+            | WaitingInfo
+            | ShareRide
+            | ScrollStateChanged String
+            | RemoveNotification
+            | MessageDriver
+            | SendQuickMessage String
+            | MessageExpiryTimer Int String String String
+            | NotificationAnimationEnd
+            | RideSupport
+            | OpenEmergencyHelp
+            | MessageViewAnimationEnd
             | RepeatRide Int Trip
             | Scroll Number
             | WhereToClick 
@@ -681,10 +898,11 @@ eval (NotifyDriverStatusCountDown seconds id status timerID) state = do
   if status == "EXPIRED" then do
     _ <- pure $ clearCountDownTimer timerID
     _ <- pure $ setValueToLocalStore NOTIFIED_CUSTOMER "true"
-    if isLocalStageOn RideAccepted && (secondsToHms state.data.driverInfoCardState.eta) /= "" then 
-      continue state{data{lastMessage = state.data.lastMessage{message = state.data.config.notifyRideConfirmationConfig.autoGeneratedText <> (secondsToHms state.data.driverInfoCardState.eta), sentBy = "Driver"}},props{unReadMessages = true, showChatNotification = true}}
-      else continue state
+    let eta = fromMaybe 0 state.data.driverInfoCardState.eta
+    if isLocalStageOn RideAccepted && isJust state.data.driverInfoCardState.eta && (secondsToHms $ eta) /= "--" then 
+      continue state{data{lastMessage = state.data.lastMessage{message = state.data.config.notifyRideConfirmationConfig.autoGeneratedText <> (secondsToHms $ eta), sentBy = "Driver"}},props{unReadMessages = true, showChatNotification = true}}
     else continue state
+  else continue state
 
 eval (RepeatRideCountDown seconds id status timerID) state = do
   if status == "EXPIRED" then do
@@ -775,27 +993,23 @@ eval (RideCompletedAC (RideCompletedCard.RideDetails)) state = exit $ RideDetail
 ------------------------------- ChatService - Start --------------------------
 
 eval (UpdateMessages message sender timeStamp size) state = do
-  if not state.props.chatcallbackInitiated then continue state {props {canSendSuggestion = true}} else do
-    continueWithCmd state{data{messagesSize = size}, props {canSendSuggestion = true}} [do
-      pure $ (DriverInfoCardActionController (DriverInfoCardController.LoadMessages))
+  if not state.props.chatcallbackInitiated then continue state else do
+    continueWithCmd state{data{messagesSize = size}} [do
+      pure $ LoadMessages
     ]
 
 eval LoadMessages state = do
-  continueWithCmd state [do
-    pure $ (DriverInfoCardActionController (DriverInfoCardController.LoadMessages))
-  ]
-
-eval (DriverInfoCardActionController (DriverInfoCardController.LoadMessages)) state = do
-  let allMessages = getChatMessages ""
+  let allMessages = getChatMessages FunctionCall
   case (last allMessages) of
       Just value -> if value.message == "" then continue state {data { messagesSize = show (fromMaybe 0 (fromString state.data.messagesSize) + 1)}, props {canSendSuggestion = true, isChatNotificationDismissed = false}} else
-                      if value.sentBy == "Customer" then updateMessagesWithCmd state {data {messages = allMessages, suggestionsList = []}, props {canSendSuggestion = true,  isChatNotificationDismissed = false}}
+                      if value.sentBy == "Customer" then updateMessagesWithCmd state {data {messages = allMessages, suggestionsList = [], lastMessage = value, lastSentMessage = value}, props {canSendSuggestion = true,  isChatNotificationDismissed = false}}
                       else do
                         let readMessages = fromMaybe 0 (fromString (getValueToLocalNativeStore READ_MESSAGES))
                             unReadMessages = (if readMessages == 0 && state.props.currentStage /= ChatWithDriver then true else (if (readMessages < (length allMessages) && state.props.currentStage /= ChatWithDriver) then true else false))
-                            suggestions = getCustomerSuggestions state $ getSuggestionsfromKey value.message
+                            suggestions = getSuggestionsfromKey value.message
                             isChatNotificationDismissed = not state.props.isChatNotificationDismissed || state.data.lastMessage.message /= value.message
-                        updateMessagesWithCmd state {data {messages = allMessages, suggestionsList = suggestions, lastMessage = value }, props {unReadMessages = unReadMessages, showChatNotification = isChatNotificationDismissed && unReadMessages, canSendSuggestion = true,  isChatNotificationDismissed = false}}
+                            showNotification = isChatNotificationDismissed && unReadMessages
+                        updateMessagesWithCmd state {data {messages = allMessages, suggestionsList = suggestions, lastMessage = value, lastSentMessage = dummyChatComponent, lastReceivedMessage = value}, props {unReadMessages = unReadMessages, showChatNotification = showNotification, canSendSuggestion = true, isChatNotificationDismissed = false, removeNotification = not showNotification}}
       Nothing -> continue state {props {canSendSuggestion = true}}
 
 eval (OpenChatScreen) state = do
@@ -804,16 +1018,21 @@ eval (OpenChatScreen) state = do
       pure $ (DriverInfoCardActionController (DriverInfoCardController.MessageDriver))
     ]
 
-eval (ChatViewActionController (ChatView.TextChanged value)) state = continue state{data{messageToBeSent = (STR.trim value)},props{sendMessageActive = (STR.length (STR.trim value)) >= 1}}
+eval MessageDriver state = do
+    continueWithCmd state{props{openChatScreen = false}} [do
+      pure $ (DriverInfoCardActionController (DriverInfoCardController.MessageDriver))
+    ]
 
-eval(ChatViewActionController (ChatView.Call)) state = do
+eval (MessagingViewActionController (MessagingView.TextChanged value)) state = continue state{data{messageToBeSent = (STR.trim value)},props{sendMessageActive = (STR.length (STR.trim value)) >= 1}}
+
+eval(MessagingViewActionController (MessagingView.Call)) state = do
   _ <- pure $ performHapticFeedback unit
   _ <- pure $ hideKeyboardOnNavigation true
   if length state.data.config.callOptions > 1 then
     continue state { props { showCallPopUp = true } }
   else callDriver state $ fromMaybe "ANONYMOUS" $ state.data.config.callOptions !! 0
 
-eval (ChatViewActionController (ChatView.SendMessage)) state = do
+eval (MessagingViewActionController (MessagingView.SendMessage)) state = do
   if state.data.messageToBeSent /= ""
   then do
     pure $ sendMessage state.data.messageToBeSent
@@ -822,7 +1041,7 @@ eval (ChatViewActionController (ChatView.SendMessage)) state = do
   else
     continue state
 
-eval (ChatViewActionController (ChatView.BackPressed)) state = do
+eval (MessagingViewActionController (MessagingView.BackPressed)) state = do
   _ <- pure $ performHapticFeedback unit
   _ <- pure $ hideKeyboardOnNavigation true
   continueWithCmd state [do
@@ -844,30 +1063,78 @@ eval RemoveChat state = do
     pure $ NoAction
   ]
 
+eval WaitingInfo state = continue state{data{waitTimeInfo  = true }}
+
+eval (RequestInfoCardAction RequestInfoCard.Close) state = continue state { data  {waitTimeInfo =false}}
+
+eval (SendQuickMessage chatSuggestion) state = do
+  if state.props.canSendSuggestion then do
+    _ <- pure $ sendMessage chatSuggestion
+    let _ = unsafePerformEffect $ logEvent state.data.logField $ "ny_" <> STR.toLower (STR.replaceAll (STR.Pattern "'") (STR.Replacement "") (STR.replaceAll (STR.Pattern ",") (STR.Replacement "") (STR.replaceAll (STR.Pattern " ") (STR.Replacement "_") chatSuggestion)))
+    continue state {props {unReadMessages = false}}
+  else continue state
+
 eval (DriverInfoCardActionController (DriverInfoCardController.MessageDriver)) state = do
   if (getValueFromConfig "isChatEnabled") == "true" then do
-    if not state.props.chatcallbackInitiated then continue state else do
+    if not state.props.chatcallbackInitiated || state.props.emergencyHelpModal then continue state else do
       _ <- pure $ performHapticFeedback unit
       _ <- pure $ updateLocalStage ChatWithDriver
       _ <- pure $ setValueToLocalNativeStore READ_MESSAGES (show (length state.data.messages))
-      let allMessages = getChatMessages ""
-      continue state {data{messages = allMessages}, props {currentStage = ChatWithDriver, sendMessageActive = false, unReadMessages = false, showChatNotification = false, isChatOpened = true , isChatNotificationDismissed = false}}
+      let allMessages = getChatMessages FunctionCall
+      continueWithCmd state {data{messages = allMessages}, props {currentStage = ChatWithDriver, sendMessageActive = false, unReadMessages = false, showChatNotification = false, isChatNotificationDismissed = false}} [ do
+        pure $ (DriverInfoCardActionController (DriverInfoCardController.CollapseBottomSheet))
+      ]
   else continueWithCmd state[ do
-        pure $ DriverInfoCardActionController (DriverInfoCardController.CallDriver)
+        pure $ DriverInfoCardActionController (DriverInfoCardController.CallDriver) 
       ]
 
-eval (DriverInfoCardActionController (DriverInfoCardController.RemoveNotification)) state = do
+eval (DriverInfoCardActionController (DriverInfoCardController.CollapseBottomSheet)) state = continue state {props {sheetState = COLLAPSED}}
+
+eval RemoveNotification state = do
   continue state {props { showChatNotification = false, isChatNotificationDismissed = true}}
 
-eval (ChatViewActionController (ChatView.SendSuggestion chatSuggestion)) state = do
+eval NotificationAnimationEnd state = do
+  let isExpanded = state.props.showChatNotification && state.props.chatcallbackInitiated
+      showNotification = (length (getChatMessages FunctionCall) == 0 || state.props.showChatNotification) && state.props.currentStage == RideAccepted && not state.props.isChatNotificationDismissed
+  continue state {props { isNotificationExpanded = isExpanded, showChatNotification = showNotification , removeNotification = not showNotification}}
+
+eval MessageViewAnimationEnd state = do
+  continue state {props { removeNotification = not state.props.showChatNotification}}
+
+eval (MessagingViewActionController (MessagingView.SendSuggestion chatSuggestion)) state = do
   if state.props.canSendSuggestion then do
-    let message = getMessageFromKey chatSuggestion "EN_US"
-    _ <- pure $ sendMessage message
+    _ <- pure $ sendMessage chatSuggestion
     let _ = unsafePerformEffect $ logEvent state.data.logField $ "ny_" <> STR.toLower (STR.replaceAll (STR.Pattern "'") (STR.Replacement "") (STR.replaceAll (STR.Pattern ",") (STR.Replacement "") (STR.replaceAll (STR.Pattern " ") (STR.Replacement "_") chatSuggestion)))
     continue state {data {suggestionsList = []}, props {canSendSuggestion = false}}
   else continue state
 
 ------------------------------- ChatService - End --------------------------
+
+eval (MessageExpiryTimer seconds id status timerID) state = do
+  let newState = state{data{triggerPatchCounter = state.data.triggerPatchCounter + 1}}
+  if status == "EXPIRED"
+    then do
+      _ <- pure $ clearTimer timerID
+      if state.data.lastMessage.sentBy /= "Driver" then
+      continueWithCmd newState [ do
+        pure $ RemoveNotification
+      ]
+      else continue newState
+  else
+      continue newState
+
+eval (DriverInfoCardActionController (DriverInfoCardController.NoAction)) state = continue state {data{triggerPatchCounter = state.data.triggerPatchCounter + 1,infoCardPeekHeight = getInfoCardPeekHeight state}}
+
+eval (ScrollStateChanged scrollState) state = do
+  let sheetState = case scrollState of 
+              "1" -> STATE_DRAGGING
+              "2" -> STATE_SETTLING
+              "3" -> STATE_EXPANDED
+              "4" -> STATE_COLLAPSED
+              "5" -> STATE_HIDDEN
+              "6" -> STATE_HALF_EXPANDED
+              _ -> STATE_HIDDEN
+  continue state {props {bottomSheetState = sheetState, sheetState = if sheetState == STATE_EXPANDED then EXPANDED else state.props.sheetState}}
 
 eval (DriverInfoCardActionController (DriverInfoCardController.CallDriver)) state = do
   if length state.data.config.callOptions > 1 then
@@ -964,6 +1231,7 @@ eval BackPressed state = do
                           else if state.props.showEducationalCarousel then do 
                             _ <- pure $ pauseYoutubeVideo unit
                             continue state{props{showEducationalCarousel = false}}
+                          else if state.data.waitTimeInfo then continue state { data {waitTimeInfo =false} }
                           else do
                               pure $ terminateApp state.props.currentStage true
                               continue state
@@ -1274,7 +1542,7 @@ eval (DriverInfoCardActionController (DriverInfoCardController.OnNavigateToZone)
   void $ pure $ openNavigation 0.0 0.0 state.data.driverInfoCardState.sourceLat state.data.driverInfoCardState.sourceLng "WALK"
   continue state
 
-eval (DriverInfoCardActionController (DriverInfoCardController.Support)) state = do
+eval RideSupport state = do
   _ <- pure $ performHapticFeedback unit
   continue state{props{callSupportPopUp = true}}
 
@@ -1297,12 +1565,13 @@ eval (DriverInfoCardActionController (DriverInfoCardController.LocationTracking)
   _ <- pure $ performHapticFeedback unit
   continue state { props { isLocationTracking = true } }
 
-eval (DriverInfoCardActionController (DriverInfoCardController.OpenEmergencyHelp)) state = do
+eval OpenEmergencyHelp state = do
   _ <- pure $ performHapticFeedback unit
   continue state{props{emergencyHelpModal = true}}
 
-eval (DriverInfoCardActionController (DriverInfoCardController.ExpandBottomSheet)) state = continue state{props{sheetState = if state.props.sheetState == EXPANDED then COLLAPSED else EXPANDED}}
-eval (DriverInfoCardActionController (DriverInfoCardController.ShareRide)) state = do
+eval (DriverInfoCardActionController (DriverInfoCardController.ToggleBottomSheet)) state = continue state{props{sheetState = if state.props.sheetState == EXPANDED then COLLAPSED else EXPANDED}}
+
+eval ShareRide state = do
   continueWithCmd state
         [ do
             _ <- pure $ shareTextMessage (getValueToLocalStore USER_NAME <> "is on a Namma Yatri Ride") $ "👋 Hey,\n\nI am riding with Namma Driver " <> (state.data.driverInfoCardState.driverName) <> "! Track this ride on: " <> ("https://nammayatri.in/track/?id="<>state.data.driverInfoCardState.rideId) <> "\n\nVehicle number: " <> (state.data.driverInfoCardState.registrationNumber)
@@ -1924,7 +2193,7 @@ eval (UpdateETA currentETA currentDistance) state = do
                                       pure currentDistance
                                       else pure $ fromMaybe 0 (fromString storedDistance)
   let
-    newState = state { data { driverInfoCardState { eta = currentETA, distance = currentDistance, initDistance = Just distance } } }
+    newState = state { data { driverInfoCardState { eta = (Just currentETA), distance = currentDistance, initDistance = Just distance } } }
   continue newState
 
 eval (RepeatRide index item) state = do 
@@ -2030,6 +2299,9 @@ eval (TriggerPermissionFlow flowType) state = exit $ ExitToPermissionFlow flowTy
 eval (GenderBannerModal (Banner.OnClick)) state = exit $ GoToMyProfile state true
 
 eval _ state = continue state
+
+dummyChatComponent :: MessagingView.ChatComponent
+dummyChatComponent = { message : "", sentBy : "", timeStamp : "", type : "", delay : 0 }
 
 validateSearchInput :: HomeScreenState -> String -> Eval Action ScreenOutput HomeScreenState
 validateSearchInput state searchString =
@@ -2289,7 +2561,7 @@ updateMessagesWithCmd state =
       pure unit
     else
       pure unit
-    pure NoAction
+    if state.props.showChatNotification then pure $ (DriverInfoCardActionController (DriverInfoCardController.CollapseBottomSheet)) else pure NoAction
     ]
 
 dummySelectedQuotes :: SelectedQuotes
@@ -2477,10 +2749,14 @@ callDriver state callType = do
         pure NoAction
     ]
 
-getCustomerSuggestions :: HomeScreenState -> Array String -> Array String
-getCustomerSuggestions state suggestions = case (length suggestions == 0) of
-                                  true -> if (metersToKm state.data.driverInfoCardState.distance state) == (getString AT_PICKUP) then getSuggestionsfromKey "customerDefaultAP" else getSuggestionsfromKey "customerDefaultBP"
-                                  false -> suggestions
+getInfoCardPeekHeight :: HomeScreenState -> Int
+getInfoCardPeekHeight state = 
+  let bottomSheetLayout = (runFn1 getLayoutBounds $ getNewIDWithTag (if state.data.currentSearchResultType == QUOTES then "driverInfoViewSpecialZone" else "driverInfoView"))
+      pixels = runFn1 getPixels FunctionCall
+      density = (runFn1 getDeviceDefaultDensity FunctionCall)/  defaultDensity
+      currentPeekHeight = bottomSheetLayout.height
+      requiredPeekHeight = if os /= "IOS" then ceil (((toNumber currentPeekHeight) /pixels) * density) else currentPeekHeight
+    in requiredPeekHeight
 
 getPeekHeight :: HomeScreenState -> Int
 getPeekHeight state = 
@@ -2493,13 +2769,13 @@ getPeekHeight state =
       where 
         getPeekHeightForIos :: Int -> Int -> Int
         getPeekHeightForIos homescreenHeader scrHeight =
-          let iosScale = runFn1 getPixels ""
+          let iosScale = runFn1 getPixels FunctionCall
               iosNativeScale = runFn1 getDefaultPixels ""
               displayZoomFactor = iosNativeScale / iosScale
           in ceil((( (toNumber scrHeight) / displayZoomFactor)/ iosScale) - (toNumber homescreenHeader) )
 
         getPeekHeightForAndroid :: Int -> Int
         getPeekHeightForAndroid homescreenHeader =
-          let androidPixels = runFn1 getPixels ""
-              androidDensity = (runFn1 getDeviceDefaultDensity "")/  defaultDensity
+          let androidPixels = runFn1 getPixels FunctionCall
+              androidDensity = (runFn1 getDeviceDefaultDensity FunctionCall)/  defaultDensity
           in (screenHeight unit) - ( ceil(((toNumber homescreenHeader)/androidPixels) *androidDensity))
