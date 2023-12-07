@@ -22,6 +22,8 @@ import Servant (JSON, Post, ReqBody, (:>))
 
 type OnSearchReq = BecknCallbackReq OnSearchMessage
 
+type OnSearchReqV2 = BecknCallbackReq OnSearchMessageV2
+
 type OnSearchRes = AckResponse
 
 type OnSearchAPI =
@@ -29,5 +31,13 @@ type OnSearchAPI =
     :> ReqBody '[JSON] OnSearchReq
     :> Post '[JSON] OnSearchRes
 
+type OnSearchAPIV2 =
+  "on_search"
+    :> ReqBody '[JSON] OnSearchReqV2
+    :> Post '[JSON] OnSearchRes
+
 onSearchAPI :: Proxy OnSearchAPI
 onSearchAPI = Proxy
+
+onSearchAPIV2 :: Proxy OnSearchAPIV2
+onSearchAPIV2 = Proxy

@@ -28,6 +28,16 @@ import Data.OpenApi hiding (Example, example, name, tags)
 import GHC.Exts (fromList)
 import Kernel.Prelude
 
+data RideAssignedEventV2 = RideAssignedEventV2
+  { id :: Text,
+    state :: Text,
+    -- update_target :: Text,
+    fulfillment :: FulfillmentInfoV2
+  }
+  deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
+
+---------------- Code for backward compatibility : To be deprecated after v2.x release ----------------
+
 data RideAssignedEvent = RideAssignedEvent
   { id :: Text,
     state :: Text,

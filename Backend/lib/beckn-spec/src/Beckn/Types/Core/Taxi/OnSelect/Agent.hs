@@ -25,6 +25,18 @@ import Data.OpenApi (ToSchema (..), defaultSchemaOptions, fromAesonOptions)
 import EulerHS.Prelude
 import Kernel.Utils.Schema (genericDeclareUnNamedSchema)
 
+data AgentV2 = AgentV2
+  { name :: Maybe Text,
+    rateable :: Maybe Bool,
+    tags :: [TagGroupV2]
+  }
+  deriving (Generic, Show, ToJSON, FromJSON)
+
+instance ToSchema AgentV2 where
+  declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
+
+---------------- Code for backward compatibility : To be deprecated after v2.x release ----------------
+
 data Agent = Agent
   { name :: Maybe Text,
     rateable :: Maybe Bool,

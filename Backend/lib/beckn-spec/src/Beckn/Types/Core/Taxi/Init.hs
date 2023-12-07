@@ -39,3 +39,8 @@ newtype InitMessage = InitMessage
   { order :: Order
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+
+newtype InitMessageV2 = InitMessageV2
+  { order :: OrderV2
+  }
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)

@@ -31,6 +31,17 @@ import GHC.Exts (fromList)
 import Kernel.Utils.GenericPretty (PrettyShow)
 import Kernel.Utils.Schema
 
+data RideCompletedEventV2 = RideCompletedEventV2
+  { id :: Text,
+    -- update_target :: Text,
+    quote :: RideCompletedQuote,
+    fulfillment :: FulfillmentInfoV2,
+    payment :: Maybe PaymentV2
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
+
+---------------- Code for backward compatibility : To be deprecated after v2.x release ----------------
+
 data RideCompletedEvent = RideCompletedEvent
   { id :: Text,
     -- update_target :: Text,

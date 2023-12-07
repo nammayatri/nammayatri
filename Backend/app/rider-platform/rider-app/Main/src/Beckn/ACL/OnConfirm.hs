@@ -26,7 +26,7 @@ import Kernel.Utils.Common
 buildOnConfirmReq ::
   ( HasFlowEnv m r '["coreVersion" ::: Text]
   ) =>
-  OnConfirm.OnConfirmReq ->
+  OnConfirm.OnConfirmReqV2 ->
   m (Maybe DOnConfirm.OnConfirmReq)
 buildOnConfirmReq req = do
   validateContext Context.ON_CONFIRM req.context
@@ -41,8 +41,8 @@ buildOnConfirmReq req = do
 
 handleError ::
   (MonadFlow m) =>
-  Either Error OnConfirm.OnConfirmMessage ->
-  (OnConfirm.OnConfirmMessage -> m DOnConfirm.OnConfirmReq) ->
+  Either Error OnConfirm.OnConfirmMessageV2 ->
+  (OnConfirm.OnConfirmMessageV2 -> m DOnConfirm.OnConfirmReq) ->
   m (Maybe DOnConfirm.OnConfirmReq)
 handleError etr action =
   case etr of

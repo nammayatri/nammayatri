@@ -27,7 +27,7 @@ import Kernel.Utils.Common
 buildOnInitReq ::
   ( HasFlowEnv m r '["coreVersion" ::: Text]
   ) =>
-  OnInit.OnInitReq ->
+  OnInit.OnInitReqV2 ->
   m (Maybe DOnInit.OnInitReq)
 buildOnInitReq req = do
   validateContext Context.ON_INIT $ req.context
@@ -50,8 +50,8 @@ buildOnInitReq req = do
 
 handleError ::
   (MonadFlow m) =>
-  Either Error OnInit.OnInitMessage ->
-  (OnInit.OnInitMessage -> m DOnInit.OnInitReq) ->
+  Either Error OnInit.OnInitMessageV2 ->
+  (OnInit.OnInitMessageV2 -> m DOnInit.OnInitReq) ->
   m (Maybe DOnInit.OnInitReq)
 handleError etr action =
   case etr of

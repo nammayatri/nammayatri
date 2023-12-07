@@ -24,23 +24,23 @@ import EulerHS.Prelude hiding (State, id, state)
 import Kernel.Utils.JSON
 import Kernel.Utils.Schema (genericDeclareUnNamedSchema)
 
-data Order = Order
+data OrderV2 = OrderV2
   { items :: [OrderItem],
-    fulfillment :: FulfillmentInfo,
+    fulfillment :: FulfillmentInfoV2,
     billing :: Billing,
-    payment :: Payment,
+    payment :: PaymentV2,
     quote :: Quote,
     provider :: Maybe Provider
   }
   deriving (Generic, Show)
 
-instance ToSchema Order where
+instance ToSchema OrderV2 where
   declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
 
-instance FromJSON Order where
+instance FromJSON OrderV2 where
   parseJSON = genericParseJSON $ stripPrefixUnderscoreIfAny {omitNothingFields = True}
 
-instance ToJSON Order where
+instance ToJSON OrderV2 where
   toJSON = genericToJSON $ stripPrefixUnderscoreIfAny {omitNothingFields = True}
 
 data OrderItem = OrderItem
@@ -71,4 +71,25 @@ instance FromJSON Billing where
   parseJSON = genericParseJSON $ stripPrefixUnderscoreIfAny {omitNothingFields = True}
 
 instance ToJSON Billing where
+  toJSON = genericToJSON $ stripPrefixUnderscoreIfAny {omitNothingFields = True}
+
+---------------- Code for backward compatibility : To be deprecated after v2.x release ----------------
+
+data Order = Order
+  { items :: [OrderItem],
+    fulfillment :: FulfillmentInfo,
+    billing :: Billing,
+    payment :: Payment,
+    quote :: Quote,
+    provider :: Maybe Provider
+  }
+  deriving (Generic, Show)
+
+instance ToSchema Order where
+  declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
+
+instance FromJSON Order where
+  parseJSON = genericParseJSON $ stripPrefixUnderscoreIfAny {omitNothingFields = True}
+
+instance ToJSON Order where
   toJSON = genericToJSON $ stripPrefixUnderscoreIfAny {omitNothingFields = True}

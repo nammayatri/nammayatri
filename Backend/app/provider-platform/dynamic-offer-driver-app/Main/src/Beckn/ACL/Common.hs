@@ -14,9 +14,10 @@
 
 module Beckn.ACL.Common where
 
-import qualified Beckn.Types.Core.Taxi.Common.Payment as Payment
 -- import qualified Domain.Types.Merchant as DM
 
+import qualified Beckn.Types.Core.Taxi.Common.Descriptor as Descriptor
+import qualified Beckn.Types.Core.Taxi.Common.Payment as Payment
 import qualified Beckn.Types.Core.Taxi.Common.Tags as Tags
 import qualified Beckn.Types.Core.Taxi.Common.Vehicle as Common
 import qualified Beckn.Types.Core.Taxi.Search as Search
@@ -56,6 +57,9 @@ castPaymentCollector Payment.BPP = DMPM.BPP
 castPaymentType :: Payment.PaymentType -> DMPM.PaymentType
 castPaymentType Payment.ON_ORDER = DMPM.PREPAID
 castPaymentType Payment.ON_FULFILLMENT = DMPM.POSTPAID
+castPaymentType Payment.PRE_ORDER = DMPM.PREPAID
+castPaymentType Payment.PRE_FULFILLMENT = DMPM.PREPAID
+castPaymentType Payment.POST_FULFILLMENT = DMPM.POSTPAID
 
 castPaymentInstrument :: Payment.PaymentInstrument -> DMPM.PaymentInstrument
 castPaymentInstrument (Payment.Card Payment.DefaultCardType) = DMPM.Card DMPM.DefaultCardType
@@ -95,3 +99,13 @@ getTag tagGroupCode tagCode (Tags.TG tagGroups) = do
   tagGroup <- find (\tagGroup -> tagGroup.code == tagGroupCode) tagGroups
   tag <- find (\tag -> tag.code == Just tagCode) tagGroup.list
   tag.value
+
+getTagV2 :: TagGroupCode -> TagCode -> [Tags.TagGroupV2] -> Maybe Text
+getTagV2 tagGroupCode tagCode tagGroups = do
+  tagGroup <- find (\tagGroup -> tagGroup.descriptor.code == tagGroupCode) tagGroups
+  tag <- find (\tag -> descriptorCode tag.descriptor == Just tagCode) tagGroup.list
+  tag.value
+  where
+    descriptorCode :: Maybe Descriptor.DescriptorV2 -> Maybe Text
+    descriptorCode (Just desc) = Just desc.code
+    descriptorCode Nothing = Nothing

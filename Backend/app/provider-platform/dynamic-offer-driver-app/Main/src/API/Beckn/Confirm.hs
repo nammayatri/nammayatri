@@ -17,10 +17,14 @@ module API.Beckn.Confirm (API, handler) where
 import qualified Beckn.ACL.Confirm as ACL
 import qualified Beckn.ACL.OnConfirm as ACL
 import qualified Beckn.Types.Core.Taxi.API.Confirm as Confirm
+import qualified Data.Aeson as A
+import qualified Data.Text as T
+import qualified Data.Text.Encoding as T
 import qualified Domain.Action.Beckn.Confirm as DConfirm
 import qualified Domain.Types.Booking as DBooking
 import qualified Domain.Types.Merchant as DM
 import Environment
+import EulerHS.Prelude (ByteString)
 import Kernel.Beam.Functions
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
@@ -32,7 +36,7 @@ import Kernel.Utils.Error.BaseError.HTTPError.BecknAPIError
 import Kernel.Utils.Servant.SignatureAuth
 import qualified Lib.DriverScore as DS
 import qualified Lib.DriverScore.Types as DST
-import Servant
+import Servant hiding (throwError)
 import qualified SharedLogic.CallBAP as BP
 import qualified Storage.Queries.Person as QPerson
 
@@ -47,42 +51,80 @@ handler = confirm
 confirm ::
   Id DM.Merchant ->
   SignatureAuthResult ->
-  Confirm.ConfirmReq ->
+  -- Confirm.ConfirmReq ->
+  ByteString ->
   FlowHandler AckResponse
-confirm transporterId (SignatureAuthResult _ subscriber) req =
-  withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
-    logTagInfo "Confirm API Flow" "Reached"
-    dConfirmReq <- ACL.buildConfirmReq req
-    Redis.whenWithLockRedis (confirmLockKey dConfirmReq.bookingId.getId) 60 $ do
-      let context = req.context
-      now <- getCurrentTime
-      (transporter, eitherQuote) <- DConfirm.validateRequest subscriber transporterId dConfirmReq now
-      fork "confirm" $ do
-        Redis.whenWithLockRedis (confirmProcessingLockKey dConfirmReq.bookingId.getId) 60 $ do
-          dConfirmRes <- DConfirm.handler transporter dConfirmReq eitherQuote
-          case dConfirmRes.booking.bookingType of
-            DBooking.NormalBooking -> do
-              ride <- dConfirmRes.ride & fromMaybeM (RideNotFound dConfirmRes.booking.id.getId)
-              driverId <- dConfirmRes.driverId & fromMaybeM (InvalidRequest "driverId Not Found for Normal Booking")
-              --driverQuote <- QDQ.findById (Id dConfirmRes.booking.quoteId) >>= fromMaybeM (QuoteNotFound dConfirmRes.booking.quoteId)
-              driver <- runInReplica $ QPerson.findById (Id driverId) >>= fromMaybeM (PersonNotFound driverId)
-              -- driver <- QPerson.findById (Id driverId) >>= fromMaybeM (PersonNotFound driverId)
-              let booking = dConfirmRes.booking
-              fork "on_confirm/on_update" $ do
-                handle (errHandler dConfirmRes transporter (Just driver)) $ do
-                  onConfirmMessage <- ACL.buildOnConfirmMessage dConfirmRes
-                  void $
-                    BP.callOnConfirm dConfirmRes.transporter context onConfirmMessage
-                  void $
-                    BP.sendRideAssignedUpdateToBAP dConfirmRes.booking ride
-              DS.driverScoreEventHandler booking.merchantOperatingCityId DST.OnNewRideAssigned {merchantId = transporterId, driverId = Id driverId}
-            DBooking.SpecialZoneBooking -> do
-              fork "on_confirm/on_update" $ do
-                handle (errHandler' dConfirmRes transporter) $ do
-                  onConfirmMessage <- ACL.buildOnConfirmMessage dConfirmRes
-                  void $
-                    BP.callOnConfirm dConfirmRes.transporter context onConfirmMessage
-    pure Ack
+confirm transporterId (SignatureAuthResult _ subscriber) reqBS = withFlowHandlerBecknAPI $ do
+  req <- decodeReq reqBS
+  case req of
+    Left reqV1 ->
+      withTransactionIdLogTag reqV1 $ do
+        logTagInfo "Confirm API Flow" "Reached"
+        dConfirmReq <- ACL.buildConfirmReqV1 reqV1
+        Redis.whenWithLockRedis (confirmLockKey dConfirmReq.bookingId.getId) 60 $ do
+          let context = reqV1.context
+          now <- getCurrentTime
+          (transporter, eitherQuote) <- DConfirm.validateRequest subscriber transporterId dConfirmReq now
+          fork "confirm" $ do
+            Redis.whenWithLockRedis (confirmProcessingLockKey dConfirmReq.bookingId.getId) 60 $ do
+              dConfirmRes <- DConfirm.handler transporter dConfirmReq eitherQuote
+              case dConfirmRes.booking.bookingType of
+                DBooking.NormalBooking -> do
+                  ride <- dConfirmRes.ride & fromMaybeM (RideNotFound dConfirmRes.booking.id.getId)
+                  driverId <- dConfirmRes.driverId & fromMaybeM (InvalidRequest "driverId Not Found for Normal Booking")
+                  --driverQuote <- QDQ.findById (Id dConfirmRes.booking.quoteId) >>= fromMaybeM (QuoteNotFound dConfirmRes.booking.quoteId)
+                  driver <- runInReplica $ QPerson.findById (Id driverId) >>= fromMaybeM (PersonNotFound driverId)
+                  -- driver <- QPerson.findById (Id driverId) >>= fromMaybeM (PersonNotFound driverId)
+                  let booking = dConfirmRes.booking
+                  fork "on_confirm/on_update" $ do
+                    handle (errHandler dConfirmRes transporter (Just driver)) $ do
+                      onConfirmMessage <- ACL.buildOnConfirmMessage dConfirmRes
+                      void $
+                        BP.callOnConfirm dConfirmRes.transporter context onConfirmMessage
+                      void $
+                        BP.sendRideAssignedUpdateToBAP dConfirmRes.booking ride
+                  DS.driverScoreEventHandler booking.merchantOperatingCityId DST.OnNewRideAssigned {merchantId = transporterId, driverId = Id driverId}
+                DBooking.SpecialZoneBooking -> do
+                  fork "on_confirm/on_update" $ do
+                    handle (errHandler' dConfirmRes transporter) $ do
+                      onConfirmMessage <- ACL.buildOnConfirmMessage dConfirmRes
+                      void $
+                        BP.callOnConfirm dConfirmRes.transporter context onConfirmMessage
+        pure Ack
+    Right reqV2 ->
+      withTransactionIdLogTag reqV2 $ do
+        logTagInfo "Confirm API Flow" "Reached"
+        dConfirmReq <- ACL.buildConfirmReqV2 reqV2
+        Redis.whenWithLockRedis (confirmLockKey dConfirmReq.bookingId.getId) 60 $ do
+          let context = reqV2.context
+          now <- getCurrentTime
+          (transporter, eitherQuote) <- DConfirm.validateRequest subscriber transporterId dConfirmReq now
+          fork "confirm" $ do
+            Redis.whenWithLockRedis (confirmProcessingLockKey dConfirmReq.bookingId.getId) 60 $ do
+              dConfirmRes <- DConfirm.handler transporter dConfirmReq eitherQuote
+              case dConfirmRes.booking.bookingType of
+                DBooking.NormalBooking -> do
+                  ride <- dConfirmRes.ride & fromMaybeM (RideNotFound dConfirmRes.booking.id.getId)
+                  driverId <- dConfirmRes.driverId & fromMaybeM (InvalidRequest "driverId Not Found for Normal Booking")
+                  --driverQuote <- QDQ.findById (Id dConfirmRes.booking.quoteId) >>= fromMaybeM (QuoteNotFound dConfirmRes.booking.quoteId)
+                  driver <- runInReplica $ QPerson.findById (Id driverId) >>= fromMaybeM (PersonNotFound driverId)
+                  -- driver <- QPerson.findById (Id driverId) >>= fromMaybeM (PersonNotFound driverId)
+                  let booking = dConfirmRes.booking
+                  fork "on_confirm/on_update" $ do
+                    handle (errHandler dConfirmRes transporter (Just driver)) $ do
+                      onConfirmMessage <- ACL.buildOnConfirmMessageV2 dConfirmRes
+                      void $
+                        BP.callOnConfirmV2 dConfirmRes.transporter context onConfirmMessage
+                      void $
+                        BP.sendRideAssignedUpdateToBAP dConfirmRes.booking ride
+                  DS.driverScoreEventHandler booking.merchantOperatingCityId DST.OnNewRideAssigned {merchantId = transporterId, driverId = Id driverId}
+                DBooking.SpecialZoneBooking -> do
+                  fork "on_confirm/on_update" $ do
+                    handle (errHandler' dConfirmRes transporter) $ do
+                      onConfirmMessage <- ACL.buildOnConfirmMessageV2 dConfirmRes
+                      void $
+                        BP.callOnConfirmV2 dConfirmRes.transporter context onConfirmMessage
+        pure Ack
   where
     errHandler dConfirmRes transporter driver exc
       | Just BecknAPICallError {} <- fromException @BecknAPICallError exc = DConfirm.cancelBooking dConfirmRes.booking driver transporter
@@ -99,3 +141,12 @@ confirmLockKey id = "Driver:Confirm:BookingId-" <> id
 
 confirmProcessingLockKey :: Text -> Text
 confirmProcessingLockKey id = "Driver:Confirm:Processing:BookingId-" <> id
+
+decodeReq :: MonadFlow m => ByteString -> m (Either Confirm.ConfirmReq Confirm.ConfirmReqV2)
+decodeReq reqBS =
+  case A.eitherDecodeStrict reqBS of
+    Right reqV1 -> pure $ Left reqV1
+    Left _ ->
+      case A.eitherDecodeStrict reqBS of
+        Right reqV2 -> pure $ Right reqV2
+        Left err -> throwError . InvalidRequest $ "Unable to parse request: " <> T.pack err <> T.decodeUtf8 reqBS

@@ -19,15 +19,50 @@ module Beckn.Types.Core.Taxi.OnSearch.Fulfillment
   )
 where
 
+import Beckn.Types.Core.Taxi.Common.Agent as Reexport
+import Beckn.Types.Core.Taxi.Common.Customer as Reexport
 import Beckn.Types.Core.Taxi.Common.FulfillmentInfo as Reexport (FulfillmentType (..), stripPrefixUnderscoreAndRemoveNullFields)
+import Beckn.Types.Core.Taxi.Common.State as Reexport
+import Beckn.Types.Core.Taxi.Common.Stops as Reexport
+-- import Data.Aeson (Options (..))
+-- import Kernel.Utils.JSON
+import Beckn.Types.Core.Taxi.Common.Tags as Reexport
 import Beckn.Types.Core.Taxi.Common.Vehicle as Reexport
 import Beckn.Types.Core.Taxi.OnSearch.StartInfo as Reexport
 import Beckn.Types.Core.Taxi.OnSearch.StopInfo as Reexport
--- import Data.Aeson (Options (..))
 import Data.OpenApi (ToSchema (..), defaultSchemaOptions)
-import EulerHS.Prelude hiding (id)
--- import Kernel.Utils.JSON
+import EulerHS.Prelude hiding (State, id)
 import Kernel.Utils.Schema (genericDeclareUnNamedSchema)
+
+data FulfillmentInfoV2 = FulfillmentInfoV2
+  { id :: Text,
+    _type :: FulfillmentType,
+    stops :: [Stops],
+    vehicle :: Vehicle
+    -- tags :: Maybe [TagGroupV2]
+    -- rateable :: Maybe Bool,
+    -- rating :: Maybe Text,
+    -- _state :: Maybe State,
+    -- tracking :: Maybe Text,
+    -- customer :: Maybe Customer,
+    -- agent :: Maybe Agent,
+    -- contact :: Maybe Contact,
+    -- start :: StartInfo,
+    -- end :: StopInfo,
+    -- path :: Maybe Text,
+  }
+  deriving (Generic, Show)
+
+instance FromJSON FulfillmentInfoV2 where
+  parseJSON = genericParseJSON stripPrefixUnderscoreAndRemoveNullFields
+
+instance ToJSON FulfillmentInfoV2 where
+  toJSON = genericToJSON stripPrefixUnderscoreAndRemoveNullFields
+
+instance ToSchema FulfillmentInfoV2 where
+  declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
+
+---------------- Code for backward compatibility : To be deprecated after v2.x release ----------------
 
 data FulfillmentInfo = FulfillmentInfo
   { id :: Text,

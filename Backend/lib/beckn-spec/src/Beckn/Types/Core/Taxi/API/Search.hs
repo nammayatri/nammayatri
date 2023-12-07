@@ -14,20 +14,32 @@
 
 module Beckn.Types.Core.Taxi.API.Search where
 
-import Beckn.Types.Core.Taxi.Search (SearchMessage)
+import Beckn.Types.Core.Taxi.Search (SearchMessage, SearchMessageV2)
 import EulerHS.Prelude
 import Kernel.Types.Beckn.Ack (AckResponse)
 import Kernel.Types.Beckn.ReqTypes (BecknReq)
+import Kernel.Utils.Servant.JSONBS
 import Servant (JSON, Post, ReqBody, (:>))
 
 type SearchReq = BecknReq SearchMessage
+
+type SearchReqV2 = BecknReq SearchMessageV2
 
 type SearchRes = AckResponse
 
 type SearchAPI =
   "search"
-    :> ReqBody '[JSON] SearchReq
+    -- :> ReqBody '[JSON] SearchReq
+    :> ReqBody '[JSONBS] ByteString
+    :> Post '[JSON] SearchRes
+
+type SearchAPIV2 =
+  "search"
+    :> ReqBody '[JSON] SearchReqV2
     :> Post '[JSON] SearchRes
 
 searchAPI :: Proxy SearchAPI
 searchAPI = Proxy
+
+searchAPIV2 :: Proxy SearchAPIV2
+searchAPIV2 = Proxy

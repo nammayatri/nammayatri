@@ -18,16 +18,28 @@ import Beckn.Types.Core.Taxi.Confirm
 import EulerHS.Prelude
 import Kernel.Types.Beckn.Ack (AckResponse)
 import Kernel.Types.Beckn.ReqTypes (BecknReq)
+import Kernel.Utils.Servant.JSONBS
 import Servant (JSON, Post, ReqBody, (:>))
 
 type ConfirmReq = BecknReq ConfirmMessage
+
+type ConfirmReqV2 = BecknReq ConfirmMessageV2
 
 type ConfirmRes = AckResponse
 
 type ConfirmAPI =
   "confirm"
-    :> ReqBody '[JSON] ConfirmReq
+    -- :> ReqBody '[JSON] ConfirmReq
+    :> ReqBody '[JSONBS] ByteString
+    :> Post '[JSON] ConfirmRes
+
+type ConfirmAPIV2 =
+  "confirm"
+    :> ReqBody '[JSON] ConfirmReqV2
     :> Post '[JSON] ConfirmRes
 
 confirmAPI :: Proxy ConfirmAPI
 confirmAPI = Proxy
+
+confirmAPIV2 :: Proxy ConfirmAPIV2
+confirmAPIV2 = Proxy

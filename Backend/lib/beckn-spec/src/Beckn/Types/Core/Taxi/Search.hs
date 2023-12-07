@@ -18,10 +18,13 @@ module Beckn.Types.Core.Taxi.Search
   )
 where
 
+import Beckn.Types.Core.Taxi.Common.Descriptor as Reexport
+import Beckn.Types.Core.Taxi.Common.Stops as Reexport
 import Beckn.Types.Core.Taxi.Common.Tags as Reexport
 import Beckn.Types.Core.Taxi.Search.Fulfillment as Reexport
 import Beckn.Types.Core.Taxi.Search.Intent as Reexport
 import Beckn.Types.Core.Taxi.Search.Location as Reexport
+import Beckn.Types.Core.Taxi.Search.Payment as Reexport
 import Beckn.Types.Core.Taxi.Search.StartInfo as Reexport
 import Beckn.Types.Core.Taxi.Search.StopInfo as Reexport
 import Data.Aeson
@@ -48,6 +51,17 @@ instance ToJSON SearchMessage where
   toJSON = genericToJSON removeNullFields
 
 instance FromJSON SearchMessage where
+  parseJSON = genericParseJSON removeNullFields
+
+newtype SearchMessageV2 = SearchMessageV2
+  { intent :: IntentV2
+  }
+  deriving (Generic, Show, ToSchema)
+
+instance ToJSON SearchMessageV2 where
+  toJSON = genericToJSON removeNullFields
+
+instance FromJSON SearchMessageV2 where
   parseJSON = genericParseJSON removeNullFields
 
 -- searchMessageJSONOptions :: Options

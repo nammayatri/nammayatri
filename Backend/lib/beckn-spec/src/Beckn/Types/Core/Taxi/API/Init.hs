@@ -18,16 +18,28 @@ import Beckn.Types.Core.Taxi.Init
 import EulerHS.Prelude
 import Kernel.Types.Beckn.Ack (AckResponse)
 import Kernel.Types.Beckn.ReqTypes (BecknReq)
+import Kernel.Utils.Servant.JSONBS
 import Servant (JSON, Post, ReqBody, (:>))
 
 type InitReq = BecknReq InitMessage
+
+type InitReqV2 = BecknReq InitMessageV2
 
 type InitRes = AckResponse
 
 type InitAPI =
   "init"
-    :> ReqBody '[JSON] InitReq
+    -- :> ReqBody '[JSON] InitReq
+    :> ReqBody '[JSONBS] ByteString
+    :> Post '[JSON] InitRes
+
+type InitAPIV2 =
+  "init"
+    :> ReqBody '[JSON] InitReqV2
     :> Post '[JSON] InitRes
 
 initAPI :: Proxy InitAPI
 initAPI = Proxy
+
+initAPIV2 :: Proxy InitAPIV2
+initAPIV2 = Proxy

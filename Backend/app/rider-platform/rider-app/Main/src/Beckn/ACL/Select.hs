@@ -31,7 +31,7 @@ import Tools.Error
 buildSelectReq ::
   (MonadFlow m, HasFlowEnv m r '["nwAddress" ::: BaseUrl]) =>
   DSelect.DSelectRes ->
-  m (BecknReq Select.SelectMessage)
+  m (BecknReq Select.SelectMessageV2)
 buildSelectReq dSelectRes = do
   let messageId = dSelectRes.estimate.bppEstimateId.getId
   let transactionId = dSelectRes.searchRequest.id.getId
@@ -39,53 +39,68 @@ buildSelectReq dSelectRes = do
   -- TODO :: Add request city, after multiple city support on gateway.
   context <- buildTaxiContext Context.SELECT messageId (Just transactionId) dSelectRes.merchant.bapId bapUrl (Just dSelectRes.providerId) (Just dSelectRes.providerUrl) dSelectRes.merchant.defaultCity dSelectRes.merchant.country dSelectRes.autoAssignEnabled
   order <- buildOrder dSelectRes
-  pure $ BecknReq context $ Select.SelectMessage order
+  pure $ BecknReq context $ Select.SelectMessageV2 order
 
-buildOrder :: (Monad m, Log m, MonadThrow m) => DSelect.DSelectRes -> m Select.Order
+buildOrder :: (Monad m, Log m, MonadThrow m) => DSelect.DSelectRes -> m Select.OrderV2
 buildOrder res = do
   let start = mkLocation $ DSearchCommon.makeSearchReqLoc' res.searchRequest.fromLocation
   toLocation <- res.searchRequest.toLocation & fromMaybeM (InternalError "To location address not found")
   let end = mkLocation $ DSearchCommon.makeSearchReqLoc' toLocation
   let variant = castVariant res.variant
   let item =
-        Select.OrderItem
+        Select.OrderItemV2
           { id = res.estimate.itemId,
             price =
               Select.Price
                 { currency = "INR",
                   value = show res.estimate.estimatedFare.getMoney
                 },
-            tags = if isJust res.customerExtraFee then Just $ Select.TG [mkCustomerTipTags] else Nothing
+            tags = if isJust res.customerExtraFee then Just [mkCustomerTipTags] else Nothing
           }
   return
-    Select.Order
+    Select.OrderV2
       { items = [item],
         fulfillment =
-          Select.FulfillmentInfo
-            { start =
-                Select.StartInfo
-                  { location = start
-                  },
-              end =
-                Select.StopInfo
-                  { location = end
-                  },
+          Select.FulfillmentInfoV2
+            { stops =
+                [ Select.Stops
+                    { location = start,
+                      stopType = Select.START
+                    },
+                  Select.Stops
+                    { location = end,
+                      stopType = Select.END
+                    }
+                ],
               id = res.estimate.bppEstimateId.getId,
-              vehicle = Select.Vehicle {category = variant},
+              vehicle =
+                Select.Vehicle
+                  { category = variant
+                  },
               _type = Select.RIDE
+              -- tags = Nothing
             }
       }
   where
     mkCustomerTipTags =
-      Select.TagGroup
+      Select.TagGroupV2
         { display = False,
-          code = "customer_tip_info",
-          name = "Customer Tip Info",
+          descriptor =
+            Select.DescriptorV2
+              { code = "customer_tip_info",
+                name = Just "Customer Tip Info",
+                short_desc = Nothing
+              },
           list =
-            [ Select.Tag
+            [ Select.TagV2
                 { display = (\_ -> Just False) =<< res.customerExtraFee,
-                  code = (\_ -> Just "customer_tip") =<< res.customerExtraFee,
-                  name = (\_ -> Just "Customer Tip") =<< res.customerExtraFee,
+                  descriptor =
+                    Just
+                      Select.DescriptorV2
+                        { code = "customer_tip",
+                          name = (\_ -> Just "Customer Tip") =<< res.customerExtraFee,
+                          short_desc = Nothing
+                        },
                   value = (\charges -> Just $ show charges.getMoney) =<< res.customerExtraFee
                 }
             ]

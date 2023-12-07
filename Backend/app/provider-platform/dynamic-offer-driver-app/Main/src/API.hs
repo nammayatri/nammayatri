@@ -37,13 +37,14 @@ import Servant.OpenApi
 
 type DriverOfferAPI =
   MainAPI
+    :<|> Beckn.API -- TODO : Revert after 2.x release
     :<|> SwaggerAPI
     :<|> OpenAPI
     :<|> Raw
 
 type MainAPI =
   UI.API
-    :<|> Beckn.API
+    -- :<|> Beckn.API -- TODO : Revert after 2.x release
     :<|> Idfy.IdfyWebhookAPI
     :<|> ( Capture "merchantId" (ShortId DM.Merchant)
              :> Idfy.IdfyWebhookAPI
@@ -65,7 +66,7 @@ driverOfferAPI = Proxy
 mainServer :: FlowServer MainAPI
 mainServer =
   UI.handler
-    :<|> Beckn.handler
+    -- :<|> Beckn.handler -- TODO : Revert after 2.x release
     :<|> oldIdfyWebhookHandler
     :<|> idfyWebhookHandler
     :<|> idfyWebhookV2Handler
@@ -77,6 +78,7 @@ mainServer =
 driverOfferServer :: FlowServer DriverOfferAPI
 driverOfferServer =
   mainServer
+    :<|> Beckn.handler -- TODO : Revert after 2.x release
     :<|> writeSwaggerHTMLFlow
     :<|> writeOpenAPIFlow
     :<|> serveDirectoryWebApp "swagger"

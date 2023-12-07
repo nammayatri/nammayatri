@@ -22,6 +22,9 @@ import Kernel.Utils.Schema
 data PaymentType
   = ON_ORDER
   | ON_FULFILLMENT
+  | PRE_ORDER
+  | PRE_FULFILLMENT
+  | POST_FULFILLMENT
   deriving (Generic, Eq, Show)
 
 instance FromJSON PaymentType where

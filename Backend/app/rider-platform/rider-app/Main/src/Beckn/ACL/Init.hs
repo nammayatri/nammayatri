@@ -36,7 +36,7 @@ import qualified SharedLogic.Confirm as SConfirm
 buildInitReq ::
   (MonadFlow m, HasFlowEnv m r '["nwAddress" ::: BaseUrl]) =>
   SConfirm.DConfirmRes ->
-  m (BecknReq Init.InitMessage)
+  m (BecknReq Init.InitMessageV2)
 buildInitReq res = do
   let transactionId = res.searchRequestId.getId
   bapUrl <- asks (.nwAddress) <&> #baseUrlPath %~ (<> "/" <> T.unpack res.merchant.id.getId)
@@ -45,7 +45,7 @@ buildInitReq res = do
   initMessage <- buildInitMessage res
   pure $ BecknReq context initMessage
 
-buildInitMessage :: (MonadThrow m, Log m) => SConfirm.DConfirmRes -> m Init.InitMessage
+buildInitMessage :: (MonadThrow m, Log m) => SConfirm.DConfirmRes -> m Init.InitMessageV2
 buildInitMessage res = do
   let (fulfillmentType, mbBppFullfillmentId, mbDriverId) = case res.quoteDetails of
         SConfirm.ConfirmOneWayDetails -> (Init.RIDE, Nothing, Nothing)
@@ -54,9 +54,9 @@ buildInitMessage res = do
         SConfirm.ConfirmOneWaySpecialZoneDetails quoteId -> (Init.RIDE_OTP, Just quoteId, Nothing) --need to be  checked
   let vehicleVariant = castVehicleVariant res.vehicleVariant
   pure
-    Init.InitMessage
+    Init.InitMessageV2
       { order =
-          Init.Order
+          Init.OrderV2
             { items = [mkOrderItem res.itemId mbBppFullfillmentId],
               quote =
                 Init.Quote
@@ -70,7 +70,7 @@ buildInitMessage res = do
                   },
               billing = mkBilling res.riderPhone res.riderName,
               fulfillment = mkFulfillmentInfo fulfillmentType mbBppFullfillmentId res.fromLoc res.toLoc res.maxEstimatedDistance vehicleVariant,
-              payment = mkPayment res.paymentMethodInfo,
+              payment = mkPaymentV2 res.paymentMethodInfo,
               provider = mkProvider mbDriverId
             }
       }
@@ -101,30 +101,38 @@ mkOrderItem itemId mbBppFullfillmentId =
       fulfillment_id = mbBppFullfillmentId
     }
 
-mkFulfillmentInfo :: Init.FulfillmentType -> Maybe Text -> DL.Location -> Maybe DL.Location -> Maybe HighPrecMeters -> Init.VehicleVariant -> Init.FulfillmentInfo
+mkFulfillmentInfo :: Init.FulfillmentType -> Maybe Text -> DL.Location -> Maybe DL.Location -> Maybe HighPrecMeters -> Init.VehicleVariant -> Init.FulfillmentInfoV2
 mkFulfillmentInfo fulfillmentType mbBppFullfillmentId fromLoc mbToLoc mbMaxDistance vehicleVariant =
-  Init.FulfillmentInfo
+  Init.FulfillmentInfoV2
     { id = mbBppFullfillmentId,
       _type = fulfillmentType,
       tags =
         if isJust mbMaxDistance
           then
-            Just $
-              Init.TG
-                [ Init.TagGroup
-                    { display = True,
-                      code = "estimations",
-                      name = "Estimations",
-                      list =
-                        [ Init.Tag
-                            { display = (\_ -> Just True) =<< mbMaxDistance,
-                              code = (\_ -> Just "max_estimated_distance") =<< mbMaxDistance,
-                              name = (\_ -> Just "Max Estimated Distance") =<< mbMaxDistance,
-                              value = (Just . show) =<< mbMaxDistance
-                            }
-                        ]
-                    }
-                ]
+            Just
+              [ Init.TagGroupV2
+                  { display = True,
+                    descriptor =
+                      Init.DescriptorV2
+                        { code = "estimations",
+                          name = Just "Estimations",
+                          short_desc = Nothing
+                        },
+                    list =
+                      [ Init.TagV2
+                          { display = (\_ -> Just True) =<< mbMaxDistance,
+                            descriptor =
+                              Just
+                                Init.DescriptorV2
+                                  { code = "max_estimated_distance",
+                                    name = (\_ -> Just "Max Estimated Distance") =<< mbMaxDistance,
+                                    short_desc = Nothing
+                                  },
+                            value = (Just . show) =<< mbMaxDistance
+                          }
+                      ]
+                  }
+              ]
           else Nothing,
       start =
         Init.StartInfo
@@ -169,29 +177,41 @@ mkAddress DLA.LocationAddress {..} =
       ..
     }
 
-mkPayment :: Maybe DMPM.PaymentMethodInfo -> Init.Payment
-mkPayment (Just DMPM.PaymentMethodInfo {..}) =
-  Init.Payment
-    { _type = Common.castDPaymentType paymentType,
+mkPaymentV2 :: Maybe DMPM.PaymentMethodInfo -> Init.PaymentV2
+mkPaymentV2 (Just DMPM.PaymentMethodInfo {..}) =
+  Init.PaymentV2
+    { --id = Nothing,
+      _type = Common.castDPaymentType paymentType,
+      collectedBy = Init.BPP,
       params =
-        Init.PaymentParams
-          { collected_by = Init.BPP,
+        Init.PaymentParamsV2
+          { -- collected_by = Init.BPP,
             instrument = Just $ Common.castDPaymentInstrument paymentInstrument,
             currency = "INR",
             amount = Nothing
           },
-      uri = Nothing
+      uri = Nothing,
+      status = Nothing,
+      buyerAppFindeFeeType = Nothing,
+      buyerAppFinderFeeAmount = Nothing,
+      settlementDetails = Nothing
     }
 -- for backward compatibility
-mkPayment Nothing =
-  Init.Payment
-    { _type = Init.ON_FULFILLMENT,
+mkPaymentV2 Nothing =
+  Init.PaymentV2
+    { --id = Nothing,
+      _type = Init.ON_FULFILLMENT,
+      collectedBy = Init.BPP,
       params =
-        Init.PaymentParams
-          { collected_by = Init.BPP,
+        Init.PaymentParamsV2
+          { -- collected_by = Init.BPP,
             instrument = Nothing,
             currency = "INR",
             amount = Nothing
           },
-      uri = Nothing
+      uri = Nothing,
+      status = Nothing,
+      buyerAppFindeFeeType = Nothing,
+      buyerAppFinderFeeAmount = Nothing,
+      settlementDetails = Nothing
     }

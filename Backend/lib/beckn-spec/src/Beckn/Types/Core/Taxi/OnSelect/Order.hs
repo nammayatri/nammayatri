@@ -25,6 +25,27 @@ import Kernel.Prelude
 import Kernel.Utils.JSON (slashedRecordFields)
 import Kernel.Utils.Schema (genericDeclareUnNamedSchema)
 
+data OrderV2 = OrderV2
+  { provider :: Provider,
+    items :: [ItemV2],
+    -- add_ons :: [Addon],
+    fulfillment :: FulfillmentInfoV2,
+    quote :: Quote,
+    payment :: PaymentV2
+  }
+  deriving (Generic, Show)
+
+instance ToSchema OrderV2 where
+  declareNamedSchema = genericDeclareUnNamedSchema $ fromAesonOptions slashedRecordFields
+
+instance FromJSON OrderV2 where
+  parseJSON = genericParseJSON slashedRecordFields
+
+instance ToJSON OrderV2 where
+  toJSON = genericToJSON slashedRecordFields
+
+---------------- Code for backward compatibility : To be deprecated after v2.x release ----------------
+
 data Order = Order
   { provider :: Provider,
     items :: [Item],

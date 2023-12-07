@@ -29,6 +29,15 @@ import EulerHS.Prelude hiding (fromList, id)
 import GHC.Exts (fromList)
 import Kernel.Prelude (UTCTime)
 
+data DriverArrivedEventV2 = DriverArrivedEventV2
+  { id :: Text,
+    -- update_target :: Text,
+    fulfillment :: FulfillmentInfoV2
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
+
+---------------- Code for backward compatibility : To be deprecated after v2.x release ----------------
+
 data DriverArrivedEvent = DriverArrivedEvent
   { id :: Text,
     -- update_target :: Text,

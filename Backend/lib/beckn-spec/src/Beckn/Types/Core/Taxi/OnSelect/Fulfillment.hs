@@ -29,6 +29,27 @@ import Data.OpenApi.Schema (fromAesonOptions)
 import EulerHS.Prelude hiding (id)
 import Kernel.Utils.Schema (genericDeclareUnNamedSchema)
 
+data FulfillmentInfoV2 = FulfillmentInfoV2
+  { id :: Text,
+    start :: StartInfo,
+    end :: StopInfo,
+    vehicle :: Vehicle,
+    _type :: FulfillmentType,
+    agent :: AgentV2
+  }
+  deriving (Generic, Show)
+
+instance FromJSON FulfillmentInfoV2 where
+  parseJSON = genericParseJSON stripPrefixUnderscoreAndRemoveNullFields
+
+instance ToJSON FulfillmentInfoV2 where
+  toJSON = genericToJSON stripPrefixUnderscoreAndRemoveNullFields
+
+instance ToSchema FulfillmentInfoV2 where
+  declareNamedSchema = genericDeclareUnNamedSchema $ fromAesonOptions stripPrefixUnderscoreAndRemoveNullFields
+
+---------------- Code for backward compatibility : To be deprecated after v2.x release ----------------
+
 data FulfillmentInfo = FulfillmentInfo
   { id :: Text,
     start :: StartInfo,

@@ -24,14 +24,14 @@ import Kernel.Types.Beckn.Ack
 import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth
 
-type API = OnSelect.OnSelectAPI
+type API = OnSelect.OnSelectAPIV2
 
 handler :: SignatureAuthResult -> FlowServer API
 handler = onSelect
 
 onSelect ::
   SignatureAuthResult ->
-  OnSelect.OnSelectReq ->
+  OnSelect.OnSelectReqV2 ->
   FlowHandler AckResponse
 onSelect _ req = withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
   mbDOnSelectReq <- ACL.buildOnSelectReq req

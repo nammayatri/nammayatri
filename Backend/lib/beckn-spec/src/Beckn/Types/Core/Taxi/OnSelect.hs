@@ -39,3 +39,8 @@ newtype OnSelectMessage = OnSelectMessage
   { order :: Order
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
+
+newtype OnSelectMessageV2 = OnSelectMessageV2
+  { order :: OrderV2
+  }
+  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)

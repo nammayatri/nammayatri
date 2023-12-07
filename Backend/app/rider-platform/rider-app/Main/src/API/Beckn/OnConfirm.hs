@@ -24,14 +24,14 @@ import Kernel.Types.Beckn.Ack
 import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth
 
-type API = OnConfirm.OnConfirmAPI
+type API = OnConfirm.OnConfirmAPIV2
 
 handler :: SignatureAuthResult -> FlowServer API
 handler = onConfirm
 
 onConfirm ::
   SignatureAuthResult ->
-  OnConfirm.OnConfirmReq ->
+  OnConfirm.OnConfirmReqV2 ->
   FlowHandler AckResponse
 onConfirm _ req = withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
   mbDOnConfirmReq <- ACL.buildOnConfirmReq req

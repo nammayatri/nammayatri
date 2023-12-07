@@ -28,11 +28,42 @@ import Kernel.Types.Field
 import Kernel.Types.Id
 import Kernel.Utils.Error.Throwing
 
-buildConfirmReq ::
+buildConfirmReqV1 ::
   (HasFlowEnv m r '["coreVersion" ::: Text]) =>
   Confirm.ConfirmReq ->
   m DConfirm.DConfirmReq
-buildConfirmReq req = do
+buildConfirmReqV1 req = do
+  validateContext Context.CONFIRM req.context
+  let bookingId = Id req.message.order.id
+      fulfillment = req.message.order.fulfillment
+      phone = fulfillment.customer.contact.phone
+      customerMobileCountryCode = phone.phoneCountryCode
+      customerPhoneNumber = phone.phoneNumber
+      fromAddress = castAddress fulfillment.start.location.address
+      mbRiderName = fulfillment.customer.person <&> (.name)
+      vehicleVariant = castVehicleVariant fulfillment.vehicle.category
+      driverId = req.message.order.provider <&> (.id)
+  toAddress <- (castAddress . (.location.address) <$> fulfillment.end) & fromMaybeM (InvalidRequest "end location missing")
+
+  return $
+    DConfirm.DConfirmReq
+      { ..
+      }
+  where
+    castAddress Confirm.Address {..} = DL.LocationAddress {areaCode = area_code, area = locality, fullAddress = Nothing, ..}
+    castVehicleVariant = \case
+      Confirm.SEDAN -> VehVar.SEDAN
+      Confirm.SUV -> VehVar.SUV
+      Confirm.HATCHBACK -> VehVar.HATCHBACK
+      Confirm.AUTO_RICKSHAW -> VehVar.AUTO_RICKSHAW
+      Confirm.TAXI -> VehVar.TAXI
+      Confirm.TAXI_PLUS -> VehVar.TAXI_PLUS
+
+buildConfirmReqV2 ::
+  (HasFlowEnv m r '["coreVersion" ::: Text]) =>
+  Confirm.ConfirmReqV2 ->
+  m DConfirm.DConfirmReq
+buildConfirmReqV2 req = do
   validateContext Context.CONFIRM req.context
   let bookingId = Id req.message.order.id
       fulfillment = req.message.order.fulfillment

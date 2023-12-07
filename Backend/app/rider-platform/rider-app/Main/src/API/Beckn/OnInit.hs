@@ -31,14 +31,14 @@ import Kernel.Utils.Servant.SignatureAuth
 import qualified SharedLogic.CallBPP as CallBPP
 import qualified Storage.Queries.Booking as QRideB
 
-type API = OnInit.OnInitAPI
+type API = OnInit.OnInitAPIV2
 
 handler :: SignatureAuthResult -> FlowServer API
 handler = onInit
 
 onInit ::
   SignatureAuthResult ->
-  OnInit.OnInitReq ->
+  OnInit.OnInitReqV2 ->
   FlowHandler AckResponse
 onInit _ req = withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
   mbDOnInitReq <- TaxiACL.buildOnInitReq req

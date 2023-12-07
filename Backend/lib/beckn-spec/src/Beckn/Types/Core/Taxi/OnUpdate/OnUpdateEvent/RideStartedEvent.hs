@@ -23,6 +23,15 @@ import Data.OpenApi hiding (Example, example)
 import EulerHS.Prelude hiding (fromList, id)
 import GHC.Exts (fromList)
 
+data RideStartedEventV2 = RideStartedEventV2
+  { id :: Text,
+    -- update_target :: Text,
+    fulfillment :: FulfillmentInfoV2
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
+
+---------------- Code for backward compatibility : To be deprecated after v2.x release ----------------
+
 data RideStartedEvent = RideStartedEvent
   { id :: Text,
     -- update_target :: Text,

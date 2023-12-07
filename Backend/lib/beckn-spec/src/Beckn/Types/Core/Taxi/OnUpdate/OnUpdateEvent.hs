@@ -30,6 +30,28 @@ import EulerHS.Prelude
 import qualified Kernel.Utils.JSON as J
 import qualified Kernel.Utils.Schema as S
 
+data OnUpdateEventV2
+  = RideAssignedV2 RideAssignedEventV2
+  | RideStartedV2 RideStartedEventV2
+  | RideCompletedV2 RideCompletedEventV2
+  | BookingCancelledV2 BookingCancelledEvent
+  | BookingReallocationV2 BookingReallocationEvent
+  | DriverArrivedV2 DriverArrivedEventV2
+  | EstimateRepetitionV2 EstimateRepetitionEventV2
+  | NewMessageV2 NewMessageEventV2
+  deriving (Generic, Show)
+
+instance ToJSON OnUpdateEventV2 where
+  toJSON = genericToJSON J.untaggedValue
+
+instance FromJSON OnUpdateEventV2 where
+  parseJSON = genericParseJSON J.untaggedValue
+
+instance ToSchema OnUpdateEventV2 where
+  declareNamedSchema = genericDeclareNamedSchema S.untaggedValue
+
+---------------- Code for backward compatibility : To be deprecated after v2.x release ----------------
+
 data OnUpdateEvent
   = RideAssigned RideAssignedEvent
   | RideStarted RideStartedEvent

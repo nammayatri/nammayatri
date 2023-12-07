@@ -22,6 +22,8 @@ import Servant (JSON, Post, ReqBody, (:>))
 
 type OnInitReq = BecknCallbackReq OnInitMessage
 
+type OnInitReqV2 = BecknCallbackReq OnInitMessageV2
+
 type OnInitRes = AckResponse
 
 type OnInitAPI =
@@ -29,5 +31,13 @@ type OnInitAPI =
     :> ReqBody '[JSON] OnInitReq
     :> Post '[JSON] OnInitRes
 
+type OnInitAPIV2 =
+  "on_init"
+    :> ReqBody '[JSON] OnInitReqV2
+    :> Post '[JSON] OnInitRes
+
 onInitAPI :: Proxy OnInitAPI
 onInitAPI = Proxy
+
+onInitAPIV2 :: Proxy OnInitAPIV2
+onInitAPIV2 = Proxy

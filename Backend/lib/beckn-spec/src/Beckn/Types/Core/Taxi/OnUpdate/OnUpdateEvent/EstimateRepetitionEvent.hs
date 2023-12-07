@@ -29,6 +29,24 @@ import GHC.Exts (fromList)
 import Kernel.Prelude
 import Kernel.Utils.Schema
 
+data EstimateRepetitionEventV2 = EstimateRepetitionEventV2
+  { id :: Text, -- bppBookingId
+  -- update_target :: Text,
+    fulfillment :: FulfillmentInfoV2,
+    item :: Item
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
+
+newtype Item = Item
+  { id :: Text
+  }
+  deriving (Generic, Show, ToJSON, FromJSON)
+
+instance ToSchema Item where
+  declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
+
+---------------- Code for backward compatibility : To be deprecated after v2.x release ----------------
+
 data EstimateRepetitionEvent = EstimateRepetitionEvent
   { id :: Text, -- bppBookingId
   -- update_target :: Text,
@@ -87,11 +105,3 @@ instance ToSchema EstimateRepetitionEvent where
                 ("item", item)
               ]
           & required L..~ ["id", "cancellation_reason", "fulfillment", "item"]
-
-newtype Item = Item
-  { id :: Text
-  }
-  deriving (Generic, Show, ToJSON, FromJSON)
-
-instance ToSchema Item where
-  declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions

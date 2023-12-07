@@ -12,24 +12,32 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Beckn.Types.Core.Taxi.OnUpdate
-  ( module Beckn.Types.Core.Taxi.OnUpdate,
-    module Reexport,
-  )
-where
+module Beckn.Types.Core.Taxi.Common.Time where
 
-import Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent as Reexport
+import Beckn.Types.Core.Taxi.Common.TimeDuration
+import Beckn.Types.Core.Taxi.Common.TimeTimestamp
 import Data.OpenApi (ToSchema)
-import EulerHS.Prelude
+import EulerHS.Prelude hiding (State)
 
-data OnUpdateMessage = OnUpdateMessage
-  { update_target :: Text,
-    order :: OnUpdateEvent
+data Time = Time
+  { label :: Text,
+    timeStamp :: TimeTimestamp,
+    duration :: TimeDuration,
+    range :: Range,
+    days :: String,
+    schedule :: Schedule
   }
-  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
+  deriving (Generic, Show, ToSchema, ToJSON, FromJSON)
 
-data OnUpdateMessageV2 = OnUpdateMessageV2
-  { update_target :: Text,
-    order :: OnUpdateEventV2
+data Range = Range
+  { start :: TimeTimestamp,
+    end :: TimeTimestamp
   }
-  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
+  deriving (Generic, Show, ToSchema, ToJSON, FromJSON)
+
+data Schedule = Schedule
+  { frequency :: TimeDuration,
+    hoidays :: Maybe [TimeTimestamp],
+    times :: Maybe [TimeTimestamp]
+  }
+  deriving (Generic, Show, ToSchema, ToJSON, FromJSON)

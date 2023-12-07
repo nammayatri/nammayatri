@@ -15,6 +15,7 @@
 module Beckn.ACL.OnSelect where
 
 import Beckn.ACL.Common
+import qualified Beckn.Types.Core.Taxi.Common.Descriptor as Descriptor
 import qualified Beckn.Types.Core.Taxi.OnSelect as OS
 import qualified Data.Text as T
 import Data.Time (diffUTCTime, nominalDiffTimeToSeconds)
@@ -68,6 +69,37 @@ mkOnSelectMessage req@DOnSelectReq {..} = do
   OS.OnSelectMessage $
     OS.Order {..}
 
+mkOnSelectMessageV2 ::
+  DOnSelectReq ->
+  OS.OnSelectMessageV2
+mkOnSelectMessageV2 req@DOnSelectReq {..} = do
+  let fulfillment = mkFulfillmentV2 req driverQuote
+      item = mkItemV2 fulfillment.id driverQuote transporterInfo
+      items = [item]
+      quote = mkQuote driverQuote req.now
+      payment =
+        OS.PaymentV2
+          { params =
+              OS.PaymentParamsV2
+                { instrument = Nothing,
+                  currency = "INR",
+                  amount = Nothing
+                },
+            collectedBy = OS.BPP,
+            _type = OS.ON_FULFILLMENT,
+            uri = Nothing,
+            status = Nothing,
+            buyerAppFindeFeeType = Nothing,
+            buyerAppFinderFeeAmount = Nothing,
+            settlementDetails = Nothing
+          }
+  let provider =
+        OS.Provider
+          { id = driverQuote.driverId.getId
+          }
+  OS.OnSelectMessageV2 $
+    OS.OrderV2 {..}
+
 mkFulfillment :: DOnSelectReq -> DQuote.DriverQuote -> OS.FulfillmentInfo
 mkFulfillment dReq quote = do
   let fromLocation = dReq.searchRequest.fromLocation
@@ -116,6 +148,68 @@ mkFulfillment dReq quote = do
             ]
         }
 
+mkFulfillmentV2 :: DOnSelectReq -> DQuote.DriverQuote -> OS.FulfillmentInfoV2
+mkFulfillmentV2 dReq quote = do
+  let fromLocation = dReq.searchRequest.fromLocation
+  let toLocation = dReq.searchRequest.toLocation -- have to take last or all ?
+  OS.FulfillmentInfoV2
+    { id = quote.estimateId.getId,
+      start =
+        OS.StartInfo
+          { location = makeLocation fromLocation
+          },
+      end =
+        OS.StopInfo
+          { location = makeLocation toLocation
+          },
+      vehicle =
+        OS.Vehicle
+          { category = castVariant quote.vehicleVariant
+          },
+      _type = OS.RIDE,
+      agent =
+        OS.AgentV2
+          { name = Just quote.driverName,
+            rateable = Just True,
+            tags = [mkAgentTags]
+          }
+    }
+  where
+    mkAgentTags =
+      OS.TagGroupV2
+        { display = False,
+          descriptor =
+            Descriptor.DescriptorV2
+              { code = "agent_info",
+                name = Just "Agent Info",
+                short_desc = Nothing
+              },
+          list =
+            [ OS.TagV2
+                { display = (\_ -> Just False) =<< quote.driverRating,
+                  descriptor =
+                    Just
+                      Descriptor.DescriptorV2
+                        { code = "rating",
+                          name = (\_ -> Just "Agent Rating") =<< quote.driverRating, -- why are we using this if value is discarded
+                          short_desc = Nothing
+                        },
+                  value = (\rating -> Just $ show $ rating.getCenti) =<< quote.driverRating
+                },
+              OS.TagV2
+                { display = Just False,
+                  descriptor =
+                    Just
+                      Descriptor.DescriptorV2
+                        { code = "duration_to_pickup_in_s",
+                          name = Just "Agent Duration to Pickup in Seconds",
+                          short_desc = Nothing
+                        },
+                  value = Just $ show $ quote.durationToPickup.getSeconds
+                }
+            ]
+        }
+
 mkItem :: Text -> DQuote.DriverQuote -> TransporterInfo -> OS.Item
 mkItem fulfillmentId q provider =
   OS.Item
@@ -147,6 +241,61 @@ mkItem fulfillmentId q provider =
                 { display = Just False,
                   code = Just "bpp_quote_id",
                   name = Just "BPP Quote Id",
+                  value = Just q.id.getId
+                }
+            ]
+        }
+
+mkItemV2 :: Text -> DQuote.DriverQuote -> TransporterInfo -> OS.ItemV2
+mkItemV2 fulfillmentId q provider =
+  OS.ItemV2
+    { id = mkItemId provider.merchantShortId.getShortId q.vehicleVariant,
+      fulfillment_id = fulfillmentId,
+      price = mkPrice q,
+      tags = Just [mkItemTags]
+    }
+  where
+    mkItemTags =
+      OS.TagGroupV2
+        { display = False,
+          descriptor =
+            Descriptor.DescriptorV2
+              { code = "general_info",
+                name = Just "General Info",
+                short_desc = Nothing
+              },
+          list =
+            [ OS.TagV2
+                { display = (\_ -> Just False) =<< q.specialLocationTag,
+                  descriptor =
+                    Just
+                      Descriptor.DescriptorV2
+                        { code = "special_location_tag",
+                          name = (\_ -> Just "Special Zone Tag") =<< q.specialLocationTag,
+                          short_desc = Nothing
+                        },
+                  value = q.specialLocationTag
+                },
+              OS.TagV2
+                { display = Just False,
+                  descriptor =
+                    Just
+                      Descriptor.DescriptorV2
+                        { code = "distance_to_nearest_driver_in_m",
+                          name = Just "Distance To Nearest Driver In Meters",
+                          short_desc = Nothing
+                        },
+                  value = Just $ show $ q.distanceToPickup.getMeters
+                },
+              OS.TagV2
+                { display = Just False,
+                  descriptor =
+                    Just
+                      Descriptor.DescriptorV2
+                        { code = "bpp_quote_id",
+                          name = Just "BPP Quote Id",
+                          short_desc = Nothing
+                        },
                   value = Just q.id.getId
                 }
             ]

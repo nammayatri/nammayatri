@@ -12,28 +12,21 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Beckn.Types.Core.Taxi.Select
-  ( module Beckn.Types.Core.Taxi.Select,
+module Beckn.Types.Core.Taxi.Search.Payment
+  ( module Beckn.Types.Core.Taxi.Search.Payment,
     module Reexport,
   )
 where
 
-import Beckn.Types.Core.Taxi.Common.BreakupItem as Reexport
-import Beckn.Types.Core.Taxi.Common.Descriptor as Reexport
 import Beckn.Types.Core.Taxi.Common.Tags as Reexport
-import Beckn.Types.Core.Taxi.OnSearch.Fulfillment as Reexport
-import Beckn.Types.Core.Taxi.Select.Order as Reexport
-import Beckn.Types.Core.Taxi.Select.Quote as Reexport
--- import Beckn.Types.Core.Taxi.Select.StartInfo as Reexport
-import Data.OpenApi (ToSchema)
-import EulerHS.Prelude
+import Data.OpenApi (ToSchema (..), defaultSchemaOptions)
+import EulerHS.Prelude hiding (id)
+import Kernel.Utils.Schema (genericDeclareUnNamedSchema)
 
-newtype SelectMessage = SelectMessage
-  { order :: Order
+newtype Payment = Payment
+  { tags :: Maybe [TagGroupV2]
   }
-  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+  deriving (Generic, Show, FromJSON, ToJSON)
 
-newtype SelectMessageV2 = SelectMessageV2
-  { order :: OrderV2
-  }
-  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+instance ToSchema Payment where
+  declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions

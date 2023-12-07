@@ -13,12 +13,53 @@
 -}
 module Beckn.Types.Core.Taxi.Common.Agent where
 
+import Beckn.Types.Core.Taxi.Common.Customer as Customer
+import Beckn.Types.Core.Taxi.Common.Descriptor
 import Beckn.Types.Core.Taxi.Common.Tags
 import Data.Aeson
 import Data.OpenApi hiding (Example, example, name, tags)
 import Kernel.Prelude
 import Kernel.Utils.JSON
 import Kernel.Utils.Schema (genericDeclareUnNamedSchema)
+
+data AgentV2 = AgentV2
+  { person :: Maybe OrderPerson,
+    _contact :: Maybe Customer.Contact,
+    organization :: Maybe Organization,
+    rating :: Maybe Text
+    -- name :: Text, -- moved to person in 2.x
+    -- rateable :: Bool, -- removed in 2.x
+    -- phone :: Maybe Text, -- moved to _contact in 2.x
+    -- image :: Maybe Text, -- moved to person in 2.x
+    -- tags :: Maybe TagGroups -- moved to person in 2.x
+  }
+  deriving (Generic, Show)
+
+instance ToSchema AgentV2 where
+  declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
+
+instance FromJSON AgentV2 where
+  parseJSON = genericParseJSON $ stripPrefixUnderscoreIfAny {omitNothingFields = True}
+
+instance ToJSON AgentV2 where
+  toJSON = genericToJSON $ stripPrefixUnderscoreIfAny {omitNothingFields = True}
+
+data Organization = Organization
+  { descriptor :: Maybe Descriptor,
+    address :: Maybe String,
+    state :: Maybe Place,
+    city :: Maybe Place,
+    _contact :: Maybe Customer.Contact
+  }
+  deriving (Generic, Show, ToSchema, FromJSON, ToJSON)
+
+data Place = Place
+  { name :: Maybe String,
+    code :: Maybe String
+  }
+  deriving (Generic, Show, ToSchema, FromJSON, ToJSON)
+
+---------------- Code for backward compatibility : To be deprecated after v2.x release ----------------
 
 data Agent = Agent
   { name :: Text,

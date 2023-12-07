@@ -12,34 +12,21 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Beckn.Types.Core.Taxi.Search.Intent
-  ( module Beckn.Types.Core.Taxi.Search.Intent,
-    module Reexport,
-  )
-where
+module Beckn.Types.Core.Taxi.Common.State where
 
-import Beckn.Types.Core.Taxi.Common.DecimalValue as Reexport
-import Beckn.Types.Core.Taxi.Search.Fulfillment
-import Beckn.Types.Core.Taxi.Search.Payment
+import Beckn.Types.Core.Taxi.Common.Descriptor
+import Data.Aeson
 import Data.OpenApi (ToSchema (..), defaultSchemaOptions)
-import EulerHS.Prelude hiding (id)
+import Data.Time (UTCTime)
+import EulerHS.Prelude hiding (State, exp, id)
 import Kernel.Utils.Schema (genericDeclareUnNamedSchema)
 
-data IntentV2 = IntentV2
-  { fulfillment :: FulfillmentInfoV2,
-    payment :: Payment
+data State = State
+  { descriptor :: Maybe DescriptorV2,
+    updatedAt :: UTCTime,
+    updatedBy :: Maybe Text
   }
-  deriving (Generic, FromJSON, ToJSON, Show)
+  deriving (Generic, Show, ToJSON, FromJSON)
 
-instance ToSchema IntentV2 where
-  declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
-
----------------- Code for backward compatibility : To be deprecated after v2.x release ----------------
-
-newtype Intent = Intent
-  { fulfillment :: FulfillmentInfo
-  }
-  deriving (Generic, FromJSON, ToJSON, Show)
-
-instance ToSchema Intent where
+instance ToSchema State where
   declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions

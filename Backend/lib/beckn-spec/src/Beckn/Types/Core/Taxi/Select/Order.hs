@@ -24,6 +24,43 @@ import EulerHS.Prelude hiding (State, id, state)
 import Kernel.Utils.JSON
 import Kernel.Utils.Schema (genericDeclareUnNamedSchema)
 
+data OrderV2 = OrderV2
+  { items :: [OrderItemV2],
+    fulfillment :: FulfillmentInfoV2
+    -- quote :: Quote
+  }
+  deriving (Generic, FromJSON, ToJSON, Show)
+
+instance ToSchema OrderV2 where
+  declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
+
+data OrderItemV2 = OrderItemV2
+  { id :: Text,
+    price :: Price,
+    tags :: Maybe [TagGroupV2]
+  }
+  deriving (Generic, Show)
+
+instance ToSchema OrderItemV2 where
+  declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
+
+instance FromJSON OrderItemV2 where
+  parseJSON = genericParseJSON $ stripPrefixUnderscoreIfAny {omitNothingFields = True}
+
+instance ToJSON OrderItemV2 where
+  toJSON = genericToJSON $ stripPrefixUnderscoreIfAny {omitNothingFields = True}
+
+data Price = Price
+  { currency :: Text,
+    value :: Text
+  }
+  deriving (Generic, FromJSON, ToJSON, Show)
+
+instance ToSchema Price where
+  declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
+
+---------------- Code for backward compatibility : To be deprecated after v2.x release ----------------
+
 data Order = Order
   { items :: [OrderItem],
     fulfillment :: FulfillmentInfo
@@ -49,12 +86,3 @@ instance FromJSON OrderItem where
 
 instance ToJSON OrderItem where
   toJSON = genericToJSON $ stripPrefixUnderscoreIfAny {omitNothingFields = True}
-
-data Price = Price
-  { currency :: Text,
-    value :: Text
-  }
-  deriving (Generic, FromJSON, ToJSON, Show)
-
-instance ToSchema Price where
-  declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions

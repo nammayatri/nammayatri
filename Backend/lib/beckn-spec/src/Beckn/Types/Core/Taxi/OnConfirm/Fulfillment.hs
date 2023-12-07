@@ -32,6 +32,37 @@ import Kernel.Utils.Schema (genericDeclareUnNamedSchema)
 
 -- If end = Nothing, then bpp sends quotes only for RENTAL
 -- If end is Just, then bpp sends quotes both for RENTAL and ONE_WAY
+data FulfillmentInfoV2 = FulfillmentInfoV2
+  { id :: Text,
+    _type :: FulfillmentType,
+    state :: FulfillmentStateV2,
+    start :: StartInfo,
+    end :: Maybe StopInfo,
+    vehicle :: Vehicle,
+    customer :: Customer,
+    agent :: Maybe AgentV2 -- If NormalBooking then Just else Nothing for SpecialZoneBooking
+  }
+  deriving (Generic, Show)
+
+instance ToSchema FulfillmentInfoV2 where
+  declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
+
+instance FromJSON FulfillmentInfoV2 where
+  parseJSON = genericParseJSON $ stripPrefixUnderscoreIfAny {omitNothingFields = True}
+
+instance ToJSON FulfillmentInfoV2 where
+  toJSON = genericToJSON $ stripPrefixUnderscoreIfAny {omitNothingFields = True}
+
+newtype FulfillmentStateV2 = FulfillmentStateV2
+  { descriptor :: DescriptorV2
+  }
+  deriving (Generic, FromJSON, ToJSON, Show)
+
+instance ToSchema FulfillmentStateV2 where
+  declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
+
+---------------- Code for backward compatibility : To be deprecated after v2.x release ----------------
+
 data FulfillmentInfo = FulfillmentInfo
   { id :: Text,
     _type :: FulfillmentType,

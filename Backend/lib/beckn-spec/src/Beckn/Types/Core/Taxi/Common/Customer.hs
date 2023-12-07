@@ -14,6 +14,8 @@
 
 module Beckn.Types.Core.Taxi.Common.Customer where
 
+import Beckn.Types.Core.Taxi.Common.Image
+import Beckn.Types.Core.Taxi.Common.Tags
 import Data.Aeson
 import Data.OpenApi (ToSchema (..), defaultSchemaOptions)
 import qualified Data.Text as T
@@ -37,8 +39,9 @@ instance FromJSON Customer where
 instance ToJSON Customer where
   toJSON = genericToJSON $ stripPrefixUnderscoreIfAny {omitNothingFields = True}
 
-newtype Contact = Contact
-  { phone :: Phone
+data Contact = Contact
+  { phone :: Phone,
+    email :: Maybe Text
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -69,10 +72,38 @@ instance FromJSON Phone where
 instance ToSchema Phone where
   declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
 
-newtype OrderPerson = OrderPerson
-  { name :: Text
+data OrderPerson = OrderPerson -- TODO : Move to Common
+  { id :: Maybe Text, -- TODO : Remove Maybe
+    name :: Text,
+    -- url :: Maybe Text,
+    image :: Maybe Image,
+    -- age :: Maybe Text,
+    -- dob :: Maybe Text,
+    -- gender :: Maybe Text,
+    -- creds :: Maybe [Credential],
+    -- language :: Maybe [Language],
+    tags :: Maybe [TagGroupV2]
   }
   deriving (Generic, FromJSON, ToJSON, Show)
 
 instance ToSchema OrderPerson where
   declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
+
+-- data Credential = Credential
+--   { id :: Maybe Text,
+--     _type :: Maybe Text,
+--     url :: Maybe Text
+--   }
+--   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
+
+-- data Language = Language
+--   { code :: Maybe Text,
+--     name :: Maybe Text
+--   }
+--   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
+
+-- data Skills = Skills
+--   { code :: Maybe Text,
+--     name :: Maybe Text
+--   }
+--   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)

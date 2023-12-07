@@ -26,7 +26,7 @@ import Servant hiding (throwError)
 
 type API =
   SignatureAuth "X-Gateway-Authorization"
-    :> OnSearch.OnSearchAPI
+    :> OnSearch.OnSearchAPIV2
 
 handler :: SignatureAuthResult -> FlowServer API
 handler = onSearch
@@ -34,7 +34,7 @@ handler = onSearch
 onSearch ::
   SignatureAuthResult ->
   SignatureAuthResult ->
-  OnSearch.OnSearchReq ->
+  OnSearch.OnSearchReqV2 ->
   FlowHandler AckResponse
 onSearch _ _ req = withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
   mbDOnSearchReq <- TaxiACL.buildOnSearchReq req

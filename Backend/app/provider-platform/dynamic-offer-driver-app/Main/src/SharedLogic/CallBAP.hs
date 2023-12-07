@@ -23,6 +23,7 @@ module SharedLogic.CallBAP
     sendNewMessageToBAP,
     sendDriverOffer,
     callOnConfirm,
+    callOnConfirmV2,
     buildBppUrl,
   )
 where
@@ -98,6 +99,28 @@ callOnSelect transporter searchRequest searchTry content = do
   logDebug $ "on_select request bpp: " <> show content
   void $ withShortRetry $ Beckn.callBecknAPI (Just $ ET.ManagerSelector authKey) Nothing (show Context.ON_SELECT) API.onSelectAPI bapUri . BecknCallbackReq context $ Right content
 
+callOnSelectV2 ::
+  ( HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    CoreMetrics m,
+    HasHttpClientOptions r c,
+    HasShortDurationRetryCfg r c
+  ) =>
+  DM.Merchant ->
+  DSR.SearchRequest ->
+  DST.SearchTry ->
+  OnSelect.OnSelectMessageV2 ->
+  m ()
+callOnSelectV2 transporter searchRequest searchTry content = do
+  let bapId = searchRequest.bapId
+      bapUri = searchRequest.bapUri
+  let bppSubscriberId = getShortId $ transporter.subscriberId
+      authKey = getHttpManagerKey bppSubscriberId
+  bppUri <- buildBppUrl (transporter.id)
+  let msgId = searchTry.estimateId.getId
+  context <- buildTaxiContext Context.ON_SELECT msgId (Just searchRequest.transactionId) bapId bapUri (Just bppSubscriberId) (Just bppUri) (fromMaybe transporter.city searchRequest.bapCity) (fromMaybe Context.India searchRequest.bapCountry) False
+  logDebug $ "on_select request bpp: " <> show content
+  void $ withShortRetry $ Beckn.callBecknAPI (Just $ ET.ManagerSelector authKey) Nothing (show Context.ON_SELECT) API.onSelectAPIV2 bapUri . BecknCallbackReq context $ Right content
+
 callOnUpdate ::
   ( HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     CoreMetrics m,
@@ -141,6 +164,28 @@ callOnConfirm transporter contextFromConfirm content = do
   bppUri <- buildBppUrl transporter.id
   context_ <- buildTaxiContext Context.ON_CONFIRM msgId contextFromConfirm.transaction_id bapId bapUri (Just bppSubscriberId) (Just bppUri) city country False
   void $ withShortRetry $ Beckn.callBecknAPI (Just $ ET.ManagerSelector authKey) Nothing (show Context.ON_CONFIRM) API.onConfirmAPI bapUri . BecknCallbackReq context_ $ Right content
+
+callOnConfirmV2 ::
+  ( HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    HasHttpClientOptions r c,
+    HasShortDurationRetryCfg r c,
+    CoreMetrics m
+  ) =>
+  DM.Merchant ->
+  Context.Context ->
+  OnConfirm.OnConfirmMessageV2 ->
+  m ()
+callOnConfirmV2 transporter contextFromConfirm content = do
+  let bapUri = contextFromConfirm.bap_uri
+      bapId = contextFromConfirm.bap_id
+      msgId = contextFromConfirm.message_id
+      city = contextFromConfirm.city
+      country = contextFromConfirm.country
+      bppSubscriberId = getShortId $ transporter.subscriberId
+      authKey = getHttpManagerKey bppSubscriberId
+  bppUri <- buildBppUrl transporter.id
+  context_ <- buildTaxiContext Context.ON_CONFIRM msgId contextFromConfirm.transaction_id bapId bapUri (Just bppSubscriberId) (Just bppUri) city country False
+  void $ withShortRetry $ Beckn.callBecknAPI (Just $ ET.ManagerSelector authKey) Nothing (show Context.ON_CONFIRM) API.onConfirmAPIV2 bapUri . BecknCallbackReq context_ $ Right content
 
 buildBppUrl ::
   ( HasFlowEnv m r '["nwAddress" ::: BaseUrl]
@@ -311,6 +356,7 @@ sendDriverOffer ::
 sendDriverOffer transporter searchReq searchTry driverQuote = do
   logDebug $ "on_select ttl request driver: " <> show driverQuote.validTill
   callOnSelect transporter searchReq searchTry =<< (buildOnSelectReq transporter searchReq driverQuote <&> ACL.mkOnSelectMessage)
+  callOnSelectV2 transporter searchReq searchTry =<< (buildOnSelectReq transporter searchReq driverQuote <&> ACL.mkOnSelectMessageV2)
   where
     buildOnSelectReq ::
       (MonadTime m, HasPrettyLogger m r) =>

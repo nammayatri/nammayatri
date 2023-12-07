@@ -38,7 +38,7 @@ import qualified Tools.Maps as Maps
 buildOneWaySearchReq ::
   (MonadFlow m, HasFlowEnv m r '["nwAddress" ::: BaseUrl]) =>
   DOneWaySearch.OneWaySearchRes ->
-  m (BecknReq Search.SearchMessage)
+  m (BecknReq Search.SearchMessageV2)
 buildOneWaySearchReq DOneWaySearch.OneWaySearchRes {..} =
   buildSearchReq
     origin
@@ -58,7 +58,7 @@ buildOneWaySearchReq DOneWaySearch.OneWaySearchRes {..} =
 buildRentalSearchReq ::
   (MonadFlow m, HasFlowEnv m r '["nwAddress" ::: BaseUrl]) =>
   DRentalSearch.RentalSearchRes ->
-  m (BecknReq Search.SearchMessage)
+  m (BecknReq Search.SearchMessageV2)
 buildRentalSearchReq DRentalSearch.RentalSearchRes {..} =
   buildSearchReq
     origin
@@ -86,7 +86,7 @@ buildSearchReq ::
   DM.Merchant ->
   Context.City ->
   Maybe [Maps.LatLong] ->
-  m (BecknReq Search.SearchMessage)
+  m (BecknReq Search.SearchMessageV2)
 buildSearchReq origin destination searchId _ distance duration customerLanguage disabilityTag merchant _city mbPoints = do
   let transactionId = getId searchId
       messageId = transactionId
@@ -94,7 +94,7 @@ buildSearchReq origin destination searchId _ distance duration customerLanguage 
   -- TODO :: Add request city, after multiple city support on gateway.
   context <- buildTaxiContext Context.SEARCH messageId (Just transactionId) merchant.bapId bapUrl Nothing Nothing merchant.defaultCity merchant.country False
   let intent = mkIntent origin destination customerLanguage disabilityTag distance duration mbPoints
-  let searchMessage = Search.SearchMessage intent
+  let searchMessage = Search.SearchMessageV2 intent
 
   pure $ BecknReq context searchMessage
 
@@ -106,88 +106,125 @@ mkIntent ::
   Maybe Meters ->
   Maybe Seconds ->
   Maybe [Maps.LatLong] ->
-  Search.Intent
+  Search.IntentV2
 mkIntent origin destination customerLanguage disabilityTag distance duration mbPoints = do
   let startLocation =
-        Search.StartInfo
-          { location = mkLocation origin
+        Search.Stops
+          { location = mkLocation origin,
+            stopType = Search.START
           }
       endLocation =
-        Search.StopInfo
-          { location = mkLocation destination
+        Search.Stops
+          { location = mkLocation destination,
+            stopType = Search.END
           }
 
       fulfillment =
-        Search.FulfillmentInfo
-          { start = startLocation,
-            end = endLocation,
+        Search.FulfillmentInfoV2
+          { stops = [startLocation, endLocation],
             tags =
               if isJust distance || isJust duration
-                then
-                  Just $
-                    Search.TG
-                      [ mkRouteInfoTags
-                      ]
+                then Just [mkRouteInfoTags]
                 else Nothing,
             customer =
               if isJust customerLanguage || isJust disabilityTag
                 then
                   Just $
-                    Search.Customer
+                    Search.CustomerV2
                       { person =
-                          Search.Person
-                            { tags = Search.TG [mkCustomerInfoTags]
+                          Search.PersonV2
+                            { tags = [mkCustomerInfoTags]
                             }
                       }
                 else Nothing
           }
-  Search.Intent
+
+      payment =
+        Search.Payment
+          { tags = Nothing
+          }
+
+  Search.IntentV2
     { ..
     }
   where
     mkRouteInfoTags =
-      Search.TagGroup
+      Search.TagGroupV2
         { display = False,
-          code = "route_info",
-          name = "Route Information",
+          descriptor =
+            Search.DescriptorV2
+              { code = "route_info",
+                name =
+                  Just "Route Information",
+                short_desc = Nothing
+              },
           list =
-            [ Search.Tag
+            [ Search.TagV2
                 { display = (\_ -> Just False) =<< distance,
-                  code = (\_ -> Just "distance_info_in_m") =<< distance,
-                  name = (\_ -> Just "Distance Information In Meters") =<< distance,
+                  descriptor =
+                    Just
+                      Search.DescriptorV2
+                        { code = "distance_info_in_m",
+                          name = (\_ -> Just "Distance Information In Meters") =<< distance,
+                          short_desc = Nothing
+                        },
                   value = (\distanceInM -> Just $ show distanceInM.getMeters) =<< distance
                 },
-              Search.Tag
+              Search.TagV2
                 { display = (\_ -> Just False) =<< duration,
-                  code = (\_ -> Just "duration_info_in_s") =<< duration,
-                  name = (\_ -> Just "Duration Information In Seconds") =<< duration,
+                  descriptor =
+                    Just
+                      Search.DescriptorV2
+                        { code = "duration_info_in_s",
+                          name = (\_ -> Just "Duration Information In Seconds") =<< duration,
+                          short_desc = Nothing
+                        },
                   value = (\durationInS -> Just $ show durationInS.getSeconds) =<< duration
                 },
-              Search.Tag
+              Search.TagV2
                 { display = (\_ -> Just False) =<< mbPoints,
-                  code = (\_ -> Just "route_points") =<< mbPoints,
-                  name = (\_ -> Just "Route Points") =<< mbPoints,
+                  descriptor =
+                    Just
+                      Search.DescriptorV2
+                        { code = "route_points",
+                          name = (\_ -> Just "Route Points") =<< mbPoints,
+                          short_desc = Nothing
+                        },
                   value = LT.toStrict . TE.decodeUtf8 . encode <$> mbPoints
                 }
             ]
         }
 
     mkCustomerInfoTags =
-      Search.TagGroup
+      Search.TagGroupV2
         { display = False,
-          code = "customer_info",
-          name = "Customer Information",
+          descriptor =
+            Search.DescriptorV2
+              { code = "customer_info",
+                name = Just "Customer Information",
+                short_desc = Nothing
+              },
           list =
-            [ Search.Tag
+            [ Search.TagV2
                 { display = (\_ -> Just False) =<< customerLanguage,
-                  code = (\_ -> Just "customer_language") =<< customerLanguage,
-                  name = (\_ -> Just "Customer Language") =<< customerLanguage,
+                  descriptor =
+                    Just
+                      Search.DescriptorV2
+                        { code = "customer_language",
+                          name = (\_ -> Just "Customer Language") =<< customerLanguage,
+                          short_desc = Nothing
+                        },
                   value = (Just . show) =<< customerLanguage
                 },
-              Search.Tag
+              Search.TagV2
                 { display = (\_ -> Just False) =<< disabilityTag,
-                  code = (\_ -> Just "customer_disability") =<< disabilityTag,
-                  name = (\_ -> Just "Customer Disability") =<< disabilityTag,
+                  descriptor =
+                    Just
+                      Search.DescriptorV2
+                        { code = "customer_disability",
+                          name = (\_ -> Just "Customer Disability") =<< disabilityTag,
+                          short_desc = Nothing
+                        },
                   value = (Just . show) =<< disabilityTag
                 }
             ]

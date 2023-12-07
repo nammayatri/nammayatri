@@ -48,10 +48,10 @@ search ::
     CoreMetrics m
   ) =>
   BaseUrl ->
-  API.SearchReq ->
+  API.SearchReqV2 ->
   m API.SearchRes
 search gatewayUrl req = do
-  callBecknAPIWithSignature req.context.bap_id "search" API.searchAPI gatewayUrl req
+  callBecknAPIWithSignature req.context.bap_id "search" API.searchAPIV2 gatewayUrl req
 
 searchMetro ::
   ( MonadFlow m,
@@ -68,27 +68,27 @@ select ::
     CoreMetrics m
   ) =>
   BaseUrl ->
-  SelectReq ->
+  SelectReqV2 ->
   m SelectRes
-select providerUrl req = callBecknAPIWithSignature req.context.bap_id "select" API.selectAPI providerUrl req
+select providerUrl req = callBecknAPIWithSignature req.context.bap_id "select" API.selectAPIV2 providerUrl req
 
 init ::
   ( MonadFlow m,
     CoreMetrics m
   ) =>
   BaseUrl ->
-  API.InitReq ->
+  API.InitReqV2 ->
   m API.InitRes
-init providerUrl req = callBecknAPIWithSignature req.context.bap_id "init" API.initAPI providerUrl req
+init providerUrl req = callBecknAPIWithSignature req.context.bap_id "init" API.initAPIV2 providerUrl req
 
 confirm ::
   ( MonadFlow m,
     CoreMetrics m
   ) =>
   BaseUrl ->
-  ConfirmReq ->
+  ConfirmReqV2 ->
   m ConfirmRes
-confirm providerUrl req = callBecknAPIWithSignature req.context.bap_id "confirm" API.confirmAPI providerUrl req
+confirm providerUrl req = callBecknAPIWithSignature req.context.bap_id "confirm" API.confirmAPIV2 providerUrl req
 
 cancel ::
   ( MonadFlow m,

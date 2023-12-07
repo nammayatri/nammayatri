@@ -19,11 +19,10 @@ module Beckn.Types.Core.Taxi.Search.Fulfillment
 where
 
 import Beckn.Types.Core.Taxi.Common.DecimalValue as Reexport
--- import Kernel.External.Types (Language)
-
+import Beckn.Types.Core.Taxi.Common.Stops
 import Beckn.Types.Core.Taxi.Common.Tags
-import Beckn.Types.Core.Taxi.Search.StartInfo
-import Beckn.Types.Core.Taxi.Search.StopInfo
+import Beckn.Types.Core.Taxi.Search.StartInfo -- To be removed in next release
+import Beckn.Types.Core.Taxi.Search.StopInfo -- To be removed in next release
 import Data.Aeson
 import Data.OpenApi (ToSchema (..), defaultSchemaOptions)
 import Kernel.Prelude
@@ -32,6 +31,41 @@ import Kernel.Utils.Schema (genericDeclareUnNamedSchema)
 
 -- If end = Nothing, then bpp sends quotes only for RENTAL
 -- If end is Just, then bpp sends quotes both for RENTAL and ONE_WAY
+
+data FulfillmentInfoV2 = FulfillmentInfoV2
+  { stops :: [Stops],
+    tags :: Maybe [TagGroupV2],
+    customer :: Maybe CustomerV2
+  }
+  deriving (Generic, Show)
+
+instance ToSchema FulfillmentInfoV2 where
+  declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
+
+instance ToJSON FulfillmentInfoV2 where
+  toJSON = genericToJSON removeNullFields
+
+instance FromJSON FulfillmentInfoV2 where
+  parseJSON = genericParseJSON removeNullFields
+
+newtype CustomerV2 = CustomerV2
+  { person :: PersonV2
+  }
+  deriving (Generic, FromJSON, ToJSON, Show)
+
+instance ToSchema CustomerV2 where
+  declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
+
+newtype PersonV2 = PersonV2
+  { tags :: [TagGroupV2]
+  }
+  deriving (Generic, FromJSON, ToJSON, Show)
+
+instance ToSchema PersonV2 where
+  declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
+
+---------------- Code for backward compatibility : To be deprecated after v2.x release ----------------
+
 data FulfillmentInfo = FulfillmentInfo
   { start :: StartInfo,
     end :: StopInfo,

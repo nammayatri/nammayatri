@@ -14,10 +14,11 @@
 
 module Beckn.ACL.OnSearch where
 
-import Beckn.ACL.Common (getTag, validatePrices)
+import Beckn.ACL.Common (getTagV2, validatePrices)
 import qualified Beckn.Types.Core.Taxi.API.OnSearch as OnSearch
-import qualified Beckn.Types.Core.Taxi.OnSearch as OnSearch
+-- import Beckn.Types.Core.Taxi.Common.Descriptor as Descriptor -- imported seperately because onsearch has a seperate descriptor
 -- import Beckn.Types.Core.Taxi.OnSearch.Item (BreakupItem (..))
+import qualified Beckn.Types.Core.Taxi.OnSearch as OnSearch
 import qualified Data.Text as T
 import qualified Domain.Action.Beckn.OnSearch as DOnSearch
 import qualified Domain.Types.Estimate as DEstimate
@@ -42,7 +43,7 @@ buildOnSearchReq ::
   ( HasFlowEnv m r '["coreVersion" ::: Text],
     EsqDBFlow m r
   ) =>
-  BecknCallbackReq OnSearch.OnSearchMessage ->
+  BecknCallbackReq OnSearch.OnSearchMessageV2 ->
   m (Maybe DOnSearch.DOnSearchReq)
 buildOnSearchReq req = do
   validateContext Context.ON_SEARCH $ req.context
@@ -55,18 +56,19 @@ buildOnSearchReq req = do
       logTagError "on_search req" $ "on_search error: " <> show err
       pure Nothing
 
-searchCbService :: MonadFlow m => Context.Context -> OnSearch.Catalog -> m DOnSearch.DOnSearchReq
+searchCbService :: MonadFlow m => Context.Context -> OnSearch.CatalogV2 -> m DOnSearch.DOnSearchReq
 searchCbService context catalog = do
   providerId <- context.bpp_id & fromMaybeM (InvalidRequest "Missing bpp_id")
   providerUrl <- context.bpp_uri & fromMaybeM (InvalidRequest "Missing bpp_uri")
   -- do we need throw an error when we have more than one provider?
-  let (provider :| _) = catalog.bpp_providers
+  let (provider :| _) = catalog.providers
   let items = provider.items
   (estimatesInfo, quotesInfo) <- partitionEithers <$> traverse (buildEstimateOrQuoteInfo provider) items
+  providerName <- fromMaybeM (InvalidRequest "Missing provider info: provider name") $ provider.descriptor.name
   let providerInfo =
         DOnSearch.ProviderInfo
           { providerId = providerId,
-            name = provider.descriptor.name,
+            name = providerName,
             url = providerUrl,
             mobileNumber = "", ----------TODO----------Need to remove it or make it maybe in db
             ridesCompleted = 0 ----------TODO----------Need to remove it or make it maybe in db
@@ -78,7 +80,7 @@ searchCbService context catalog = do
         ..
       }
 
-logOnSearchEvent :: EsqDBFlow m r => OnSearch.OnSearchReq -> m ()
+logOnSearchEvent :: EsqDBFlow m r => OnSearch.OnSearchReqV2 -> m ()
 logOnSearchEvent (BecknCallbackReq context (leftToMaybe -> mbErr)) = do
   createdAt <- getCurrentTime
   id <- generateGUID
@@ -94,8 +96,8 @@ logOnSearchEvent (BecknCallbackReq context (leftToMaybe -> mbErr)) = do
 
 buildEstimateOrQuoteInfo ::
   (MonadThrow m, Log m) =>
-  OnSearch.Provider ->
-  OnSearch.Item ->
+  OnSearch.ProviderV2 ->
+  OnSearch.ItemV2 ->
   m (Either DOnSearch.EstimateInfo DOnSearch.QuoteInfo)
 buildEstimateOrQuoteInfo provider item = do
   fulfillment <- find (\fulf -> fulf.id == item.fulfillment_id) provider.fulfillments & fromMaybeM (InvalidRequest "Missing fulfillment")
@@ -136,7 +138,7 @@ buildEstimateOrQuoteInfo provider item = do
 
 buildOneWayQuoteDetails ::
   (MonadThrow m, Log m) =>
-  OnSearch.Item ->
+  OnSearch.ItemV2 ->
   m DOnSearch.OneWayQuoteDetails
 buildOneWayQuoteDetails item = do
   distanceToNearestDriver <-
@@ -149,7 +151,7 @@ buildOneWayQuoteDetails item = do
 
 buildOneWaySpecialZoneQuoteDetails ::
   (MonadThrow m, Log m) =>
-  OnSearch.FulfillmentInfo ->
+  OnSearch.FulfillmentInfoV2 ->
   m DOnSearch.OneWaySpecialZoneQuoteDetails
 buildOneWaySpecialZoneQuoteDetails fulfillment = do
   pure
@@ -177,11 +179,12 @@ validateFareRange totalFare DEstimate.FareRange {..} = do
 buildEstimateBreakUpItem ::
   (MonadThrow m, Log m) =>
   Text ->
-  OnSearch.Tag ->
+  OnSearch.TagV2 ->
   m DOnSearch.EstimateBreakupInfo
 buildEstimateBreakUpItem currency tag = do
-  tagValue <- (readMaybe . T.unpack =<< tag.value) & fromMaybeM (InvalidRequest "Missing fare breakup item")
-  title <- tag.code & fromMaybeM (InvalidRequest "Missing fare breakup item")
+  tagValue <- (readMaybe . T.unpack =<< tag.value) & fromMaybeM (InvalidRequest "Missing fare breakup item : value")
+  tagDescriptor <- tag.descriptor & fromMaybeM (InvalidRequest "Missing fare breakup item : descriptor")
+  title <- pure tagDescriptor.code -- & fromMaybeM (InvalidRequest "Missing fare breakup item : descriptor code")
   pure
     DOnSearch.EstimateBreakupInfo
       { title = title,
@@ -192,15 +195,15 @@ buildEstimateBreakUpItem currency tag = do
             }
       }
 
-buildEstimateBreakUpList :: (MonadThrow m, Log m) => OnSearch.Item -> m [DOnSearch.EstimateBreakupInfo]
+buildEstimateBreakUpList :: (MonadThrow m, Log m) => OnSearch.ItemV2 -> m [DOnSearch.EstimateBreakupInfo]
 buildEstimateBreakUpList item = do
-  (OnSearch.TG tagGroups) <- item.tags & fromMaybeM (InvalidRequest "Missing fare breakup item")
+  tagGroups <- item.tags & fromMaybeM (InvalidRequest "Missing fare breakup item")
 
-  tagGroup <- find (\tagGroup -> tagGroup.code == "fare_breakup") tagGroups & fromMaybeM (InvalidRequest "Missing fare breakup")
+  tagGroup <- find (\tagGroup -> tagGroup.descriptor.code == "fare_breakup") tagGroups & fromMaybeM (InvalidRequest "Missing fare breakup")
   mapM (buildEstimateBreakUpItem item.price.currency) tagGroup.list
 
 buildNightShiftInfo ::
-  OnSearch.TagGroups ->
+  [OnSearch.TagGroupV2] ->
   Maybe DOnSearch.NightShiftInfo
 buildNightShiftInfo itemTags = do
   nightShiftCharge <- getNightShiftCharge itemTags
@@ -213,44 +216,44 @@ buildNightShiftInfo itemTags = do
         ..
       }
 
-buildWaitingChargeInfo' :: OnSearch.TagGroups -> Maybe Money
+buildWaitingChargeInfo' :: [OnSearch.TagGroupV2] -> Maybe Money
 buildWaitingChargeInfo' tagGroups = do
-  tagValue <- getTag "rate_card" "waiting_charge_per_min" tagGroups
+  tagValue <- getTagV2 "rate_card" "waiting_charge_per_min" tagGroups
   waitingChargeValue <- readMaybe $ T.unpack tagValue
   Just $ Money waitingChargeValue
 
-buildWaitingChargeInfo :: OnSearch.TagGroups -> DOnSearch.WaitingChargesInfo
+buildWaitingChargeInfo :: [OnSearch.TagGroupV2] -> DOnSearch.WaitingChargesInfo
 buildWaitingChargeInfo tags = do
   DOnSearch.WaitingChargesInfo
     { waitingChargePerMin = buildWaitingChargeInfo' tags
     }
 
-buildSpecialLocationTag :: OnSearch.TagGroups -> Maybe Text
-buildSpecialLocationTag = getTag "general_info" "special_location_tag"
+buildSpecialLocationTag :: [OnSearch.TagGroupV2] -> Maybe Text
+buildSpecialLocationTag = getTagV2 "general_info" "special_location_tag"
 
-getNightShiftCharge :: OnSearch.TagGroups -> Maybe Money
+getNightShiftCharge :: [OnSearch.TagGroupV2] -> Maybe Money
 getNightShiftCharge tagGroups = do
-  tagValue <- getTag "rate_card" "night_shift_charge" tagGroups
+  tagValue <- getTagV2 "rate_card" "night_shift_charge" tagGroups
   nightShiftCharge <- readMaybe $ T.unpack tagValue
   Just $ Money nightShiftCharge
 
-getOldNightShiftCharge :: OnSearch.TagGroups -> Maybe DecimalValue
+getOldNightShiftCharge :: [OnSearch.TagGroupV2] -> Maybe DecimalValue
 getOldNightShiftCharge tagGroups = do
-  tagValue <- getTag "rate_card" "old_night_shift_charge" tagGroups
+  tagValue <- getTagV2 "rate_card" "old_night_shift_charge" tagGroups
   DecimalValue.valueFromString tagValue
 
-buildDistanceToNearestDriver :: OnSearch.TagGroups -> Maybe DecimalValue
+buildDistanceToNearestDriver :: [OnSearch.TagGroupV2] -> Maybe DecimalValue
 buildDistanceToNearestDriver tagGroups = do
-  tagValue <- getTag "general_info" "distance_to_nearest_driver" tagGroups
+  tagValue <- getTagV2 "general_info" "distance_to_nearest_driver" tagGroups
   distanceToNearestDriver <- readMaybe $ T.unpack tagValue
   Just $ realToFrac $ int2Double distanceToNearestDriver
 
-getNightShiftStart :: OnSearch.TagGroups -> Maybe TimeOfDay
+getNightShiftStart :: [OnSearch.TagGroupV2] -> Maybe TimeOfDay
 getNightShiftStart tagGroups = do
-  tagValue <- getTag "rate_card" "night_shift_start" tagGroups
+  tagValue <- getTagV2 "rate_card" "night_shift_start" tagGroups
   readMaybe $ T.unpack tagValue
 
-getNightShiftEnd :: OnSearch.TagGroups -> Maybe TimeOfDay
+getNightShiftEnd :: [OnSearch.TagGroupV2] -> Maybe TimeOfDay
 getNightShiftEnd tagGroups = do
-  tagValue <- getTag "rate_card" "night_shift_end" tagGroups
+  tagValue <- getTagV2 "rate_card" "night_shift_end" tagGroups
   readMaybe $ T.unpack tagValue

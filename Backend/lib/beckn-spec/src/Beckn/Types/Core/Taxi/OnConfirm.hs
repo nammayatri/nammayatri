@@ -42,3 +42,8 @@ newtype OnConfirmMessage = OnConfirmMessage
   { order :: Order
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
+
+newtype OnConfirmMessageV2 = OnConfirmMessageV2
+  { order :: OrderV2
+  }
+  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)

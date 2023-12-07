@@ -34,7 +34,7 @@ import Tools.Error
 
 buildOnSelectReq ::
   HasFlowEnv m r '["coreVersion" ::: Text] =>
-  OnSelect.OnSelectReq ->
+  OnSelect.OnSelectReqV2 ->
   m (Maybe DOnSelect.DOnSelectReq)
 buildOnSelectReq req = do
   logDebug $ "on_select request: " <> show req
@@ -62,8 +62,8 @@ buildOnSelectReq req = do
 
 handleError ::
   (MonadFlow m) =>
-  Either Error OnSelect.OnSelectMessage ->
-  (OnSelect.OnSelectMessage -> m DOnSelect.DOnSelectReq) ->
+  Either Error OnSelect.OnSelectMessageV2 ->
+  (OnSelect.OnSelectMessageV2 -> m DOnSelect.DOnSelectReq) ->
   m (Maybe DOnSelect.DOnSelectReq)
 handleError etr action =
   case etr of
@@ -76,10 +76,10 @@ handleError etr action =
 buildQuoteInfo ::
   (MonadThrow m, Log m, MonadTime m) =>
   Text ->
-  OnSelect.FulfillmentInfo ->
+  OnSelect.FulfillmentInfoV2 ->
   OnSelect.Quote ->
   UTCTimeRFC3339 ->
-  OnSelect.Item ->
+  OnSelect.ItemV2 ->
   m DOnSelect.QuoteInfo
 buildQuoteInfo driverId fulfillment quote contextTime item = do
   quoteDetails <- case fulfillment._type of
@@ -89,7 +89,7 @@ buildQuoteInfo driverId fulfillment quote contextTime item = do
       estimatedFare = roundToIntegral item.price.value
       estimatedTotalFare = roundToIntegral item.price.value
       descriptions = []
-      specialLocationTag = getTag "general_info" "special_location_tag" =<< item.tags
+      specialLocationTag = getTagV2 "general_info" "special_location_tag" =<< item.tags
   validatePrices estimatedFare estimatedTotalFare
   -- if we get here, the discount >= 0, estimatedFare >= estimatedTotalFare
   let discount = if estimatedTotalFare == estimatedFare then Nothing else Just $ estimatedFare - estimatedTotalFare
@@ -109,8 +109,8 @@ buildQuoteInfo driverId fulfillment quote contextTime item = do
 
 buildDriverOfferQuoteDetails ::
   (MonadThrow m, Log m, MonadTime m) =>
-  OnSelect.Item ->
-  OnSelect.FulfillmentInfo ->
+  OnSelect.ItemV2 ->
+  OnSelect.FulfillmentInfoV2 ->
   OnSelect.Quote ->
   UTCTimeRFC3339 ->
   Text ->
@@ -122,7 +122,7 @@ buildDriverOfferQuoteDetails item fulfillment quote timestamp driverId = do
   validTill <- (getQuoteValidTill (convertRFC3339ToUTC timestamp) =<< quote.ttl) & fromMaybeM (InvalidRequest "Missing valid_till in driver offer select item")
   logDebug $ "on_select ttl request rider: " <> show validTill
   let rating = getDriverRating fulfillment.agent.tags
-  bppQuoteId <- (getTag "general_info" "bpp_quote_id" =<< item.tags) & fromMaybeM (InvalidRequest "Missing bpp quoteId select item")
+  bppQuoteId <- (getTagV2 "general_info" "bpp_quote_id" =<< item.tags) & fromMaybeM (InvalidRequest "Missing bpp quoteId select item")
   pure $
     DOnSelect.DriverOfferQuoteDetails
       { distanceToPickup = realToFrac distanceToPickup',
@@ -130,9 +130,9 @@ buildDriverOfferQuoteDetails item fulfillment quote timestamp driverId = do
         ..
       }
 
-getDriverRating :: OnSelect.TagGroups -> Maybe Centesimal
+getDriverRating :: [OnSelect.TagGroupV2] -> Maybe Centesimal
 getDriverRating tagGroups = do
-  tagValue <- getTag "agent_info" "rating" tagGroups
+  tagValue <- getTagV2 "agent_info" "rating" tagGroups
   driverRating <- readMaybe $ T.unpack tagValue
   Just $ Centesimal driverRating
 
@@ -141,14 +141,14 @@ getQuoteValidTill contextTime time = do
   valid <- parseISO8601Duration time
   Just $ addDurationToUTCTime contextTime valid
 
-getDurationToPickup :: OnSelect.TagGroups -> Maybe Int
+getDurationToPickup :: [OnSelect.TagGroupV2] -> Maybe Int
 getDurationToPickup tagGroups = do
-  tagValue <- getTag "agent_info" "duration_to_pickup_in_s" tagGroups
+  tagValue <- getTagV2 "agent_info" "duration_to_pickup_in_s" tagGroups
   readMaybe $ T.unpack tagValue
 
-getDistanceToNearestDriver :: OnSelect.TagGroups -> Maybe Meters
+getDistanceToNearestDriver :: [OnSelect.TagGroupV2] -> Maybe Meters
 getDistanceToNearestDriver tagGroups = do
-  tagValue <- getTag "general_info" "distance_to_nearest_driver_in_m" tagGroups
+  tagValue <- getTagV2 "general_info" "distance_to_nearest_driver_in_m" tagGroups
   distanceToPickup <- readMaybe $ T.unpack tagValue
   Just $ Meters distanceToPickup
 

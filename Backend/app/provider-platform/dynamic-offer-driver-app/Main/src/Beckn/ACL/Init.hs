@@ -30,14 +30,26 @@ import Kernel.Types.Field
 import qualified Kernel.Types.Registry.Subscriber as Subscriber
 import Kernel.Utils.Error.Throwing
 
-buildInitReq ::
+-- buildInitReq ::
+--   ( MonadThrow m,
+--     HasFlowEnv m r '["coreVersion" ::: Text]
+--   ) =>
+--   Subscriber.Subscriber ->
+--   Either Init.InitReq Init.InitReqV2 ->
+--   m DInit.InitReq
+-- buildInitReq subscriber req =
+--   case req of
+--     Left reqV1 -> buildInitReqV1 subscriber reqV1
+--     Right reqV2 -> buildInitReqV2 subscriber reqV2
+
+buildInitReqV1 ::
   ( MonadThrow m,
     HasFlowEnv m r '["coreVersion" ::: Text]
   ) =>
   Subscriber.Subscriber ->
   Init.InitReq ->
   m DInit.InitReq
-buildInitReq subscriber req = do
+buildInitReqV1 subscriber req = do
   let context = req.context
   Context.validateContext Context.INIT context
   let order = req.message.order
@@ -77,6 +89,51 @@ buildInitReq subscriber req = do
       Init.TAXI -> VehVar.TAXI
       Init.TAXI_PLUS -> VehVar.TAXI_PLUS
 
+buildInitReqV2 ::
+  ( MonadThrow m,
+    HasFlowEnv m r '["coreVersion" ::: Text]
+  ) =>
+  Subscriber.Subscriber ->
+  Init.InitReqV2 ->
+  m DInit.InitReq
+buildInitReqV2 subscriber req = do
+  let context = req.context
+  Context.validateContext Context.INIT context
+  let order = req.message.order
+  _ <- case order.items of
+    [it] -> pure it
+    _ -> throwError $ InvalidRequest "There must be exactly one item in init request"
+  fulfillmentId <- order.fulfillment.id & fromMaybeM (InvalidRequest "FulfillmentId not found. It should either be estimateId or quoteId")
+  let maxEstimatedDistance = getMaxEstimateDistanceV2 =<< order.fulfillment.tags
+  let initTypeReq = buildInitTypeReq order.fulfillment._type
+  unless (subscriber.subscriber_id == context.bap_id) $
+    throwError (InvalidRequest "Invalid bap_id")
+  unless (subscriber.subscriber_url == context.bap_uri) $
+    throwError (InvalidRequest "Invalid bap_uri")
+  pure
+    DInit.InitReq
+      { estimateId = fulfillmentId,
+        bapId = subscriber.subscriber_id,
+        bapUri = subscriber.subscriber_url,
+        bapCity = context.city,
+        bapCountry = context.country,
+        vehicleVariant = castVehicleVariant order.fulfillment.vehicle.category,
+        driverId = order.provider <&> (.id),
+        paymentMethodInfo = mkPaymentMethodInfoV2 order.payment,
+        ..
+      }
+  where
+    buildInitTypeReq = \case
+      Init.RIDE_OTP -> DInit.InitSpecialZoneReq
+      Init.RIDE -> DInit.InitNormalReq
+    castVehicleVariant = \case
+      Init.SEDAN -> VehVar.SEDAN
+      Init.SUV -> VehVar.SUV
+      Init.HATCHBACK -> VehVar.HATCHBACK
+      Init.AUTO_RICKSHAW -> VehVar.AUTO_RICKSHAW
+      Init.TAXI -> VehVar.TAXI
+      Init.TAXI_PLUS -> VehVar.TAXI_PLUS
+
 mkPaymentMethodInfo :: Init.Payment -> Maybe DMPM.PaymentMethodInfo
 mkPaymentMethodInfo Init.Payment {..} =
   params.instrument <&> \instrument' -> do
@@ -86,8 +143,23 @@ mkPaymentMethodInfo Init.Payment {..} =
         paymentInstrument = Common.castPaymentInstrument instrument'
       }
 
+mkPaymentMethodInfoV2 :: Init.PaymentV2 -> Maybe DMPM.PaymentMethodInfo
+mkPaymentMethodInfoV2 Init.PaymentV2 {..} =
+  params.instrument <&> \instrument' -> do
+    DMPM.PaymentMethodInfo
+      { collectedBy = Common.castPaymentCollector collectedBy,
+        paymentType = Common.castPaymentType _type,
+        paymentInstrument = Common.castPaymentInstrument instrument'
+      }
+
 getMaxEstimateDistance :: Init.TagGroups -> Maybe HighPrecMeters
 getMaxEstimateDistance tagGroups = do
   tagValue <- Common.getTag "estimations" "max_estimated_distance" tagGroups
+  maxEstimatedDistance <- readMaybe $ T.unpack tagValue
+  Just $ HighPrecMeters maxEstimatedDistance
+
+getMaxEstimateDistanceV2 :: [Init.TagGroupV2] -> Maybe HighPrecMeters
+getMaxEstimateDistanceV2 tagGroups = do
+  tagValue <- Common.getTagV2 "estimations" "max_estimated_distance" tagGroups
   maxEstimatedDistance <- readMaybe $ T.unpack tagValue
   Just $ HighPrecMeters maxEstimatedDistance

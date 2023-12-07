@@ -23,14 +23,14 @@ import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth
 
-type API = OnUpdate.OnUpdateAPI
+type API = OnUpdate.OnUpdateAPIV2
 
 handler :: SignatureAuthResult -> FlowServer API
 handler = onUpdate
 
 onUpdate ::
   SignatureAuthResult ->
-  OnUpdate.OnUpdateReq ->
+  OnUpdate.OnUpdateReqV2 ->
   FlowHandler AckResponse
 onUpdate _ req = withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
   mbDOnUpdateReq <- ACL.buildOnUpdateReq req

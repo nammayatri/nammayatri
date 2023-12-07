@@ -15,6 +15,7 @@
 
 module Beckn.ACL.Confirm (buildConfirmReq) where
 
+-- import qualified Beckn.Types.Core.Taxi.Common.Image as Image
 import qualified Beckn.Types.Core.Taxi.Confirm as Confirm
 import Control.Lens ((%~))
 import qualified Data.Text as T
@@ -33,7 +34,7 @@ import Kernel.Utils.Common
 buildConfirmReq ::
   (MonadFlow m, HasFlowEnv m r '["nwAddress" ::: BaseUrl]) =>
   DOnInit.OnInitRes ->
-  m (BecknReq Confirm.ConfirmMessage)
+  m (BecknReq Confirm.ConfirmMessageV2)
 buildConfirmReq res = do
   messageId <- generateGUID
   bapUrl <- asks (.nwAddress) <&> #baseUrlPath %~ (<> "/" <> T.unpack res.merchant.id.getId)
@@ -42,13 +43,13 @@ buildConfirmReq res = do
   message <- mkConfirmMessage res
   pure $ BecknReq context message
 
-mkConfirmMessage :: (MonadFlow m) => DOnInit.OnInitRes -> m Confirm.ConfirmMessage
+mkConfirmMessage :: (MonadFlow m) => DOnInit.OnInitRes -> m Confirm.ConfirmMessageV2
 mkConfirmMessage res = do
   let vehicleVariant = castVehicleVariant res.vehicleVariant
   pure
-    Confirm.ConfirmMessage
+    Confirm.ConfirmMessageV2
       { order =
-          Confirm.Order
+          Confirm.OrderV2
             { id = getId res.bppBookingId,
               items =
                 [ Confirm.OrderItem
@@ -127,12 +128,16 @@ mkFulfillment fulfillmentId fulfillmentType startLoc mbStopLoc riderPhoneCountry
                     Confirm.Phone
                       { phoneNumber = riderPhoneNumber,
                         phoneCountryCode = riderPhoneCountryCode
-                      }
+                      },
+                  email = Nothing
                 },
             person =
               mbRiderName <&> \riderName ->
                 Confirm.OrderPerson
-                  { name = riderName
+                  { name = riderName,
+                    id = Nothing,
+                    image = Nothing,
+                    tags = Nothing
                   }
           },
       vehicle =
@@ -151,16 +156,22 @@ mkAddress DLA.LocationAddress {..} =
       ..
     }
 
-mkPayment :: Money -> Maybe Text -> Confirm.Payment
+mkPayment :: Money -> Maybe Text -> Confirm.PaymentV2
 mkPayment estimatedTotalFare uri =
-  Confirm.Payment
-    { _type = Confirm.ON_FULFILLMENT,
+  Confirm.PaymentV2
+    { --id = Nothing,
+      collectedBy = Confirm.BPP,
+      _type = Confirm.ON_FULFILLMENT,
       params =
-        Confirm.PaymentParams
-          { collected_by = Confirm.BPP,
+        Confirm.PaymentParamsV2
+          { -- collected_by = Confirm.BPP,
             instrument = Nothing,
             currency = "INR",
             amount = Just $ realToFrac estimatedTotalFare
           },
-      uri
+      uri,
+      status = Nothing,
+      buyerAppFindeFeeType = Nothing,
+      buyerAppFinderFeeAmount = Nothing,
+      settlementDetails = Nothing
     }

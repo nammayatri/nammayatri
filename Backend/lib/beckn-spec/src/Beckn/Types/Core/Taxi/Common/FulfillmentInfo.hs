@@ -57,24 +57,24 @@ data FulfillmentType
   deriving
     (Generic, ToSchema, Show, FromJSON, ToJSON, Read)
 
-data FulfillmentInfo = FulfillmentInfo
+data FulfillmentInfoV2 = FulfillmentInfoV2
   { id :: Text, -- bppRideId
     start :: StartInfo,
     end :: EndInfo,
-    agent :: Maybe Agent,
+    agent :: Maybe AgentV2,
     _type :: FulfillmentType,
     vehicle :: Maybe Vehicle,
-    tags :: Maybe T.TagGroups
+    tags :: Maybe [T.TagGroupV2]
   }
   deriving (Generic, Show)
 
-instance FromJSON FulfillmentInfo where
+instance FromJSON FulfillmentInfoV2 where
   parseJSON = genericParseJSON stripPrefixUnderscoreAndRemoveNullFields
 
-instance ToJSON FulfillmentInfo where
+instance ToJSON FulfillmentInfoV2 where
   toJSON = genericToJSON stripPrefixUnderscoreAndRemoveNullFields
 
-instance ToSchema FulfillmentInfo where
+instance ToSchema FulfillmentInfoV2 where
   declareNamedSchema = genericDeclareUnNamedSchema $ fromAesonOptions stripPrefixUnderscoreAndRemoveNullFields
 
 newtype EndInfo = EndInfo
@@ -106,3 +106,25 @@ stripPrefixUnderscoreAndRemoveNullFields =
   stripPrefixUnderscoreIfAny
     { omitNothingFields = True
     }
+
+---------------- Code for backward compatibility : To be deprecated after v2.x release ----------------
+
+data FulfillmentInfo = FulfillmentInfo
+  { id :: Text, -- bppRideId
+    start :: StartInfo,
+    end :: EndInfo,
+    agent :: Maybe Agent,
+    _type :: FulfillmentType,
+    vehicle :: Maybe Vehicle,
+    tags :: Maybe T.TagGroups
+  }
+  deriving (Generic, Show)
+
+instance FromJSON FulfillmentInfo where
+  parseJSON = genericParseJSON stripPrefixUnderscoreAndRemoveNullFields
+
+instance ToJSON FulfillmentInfo where
+  toJSON = genericToJSON stripPrefixUnderscoreAndRemoveNullFields
+
+instance ToSchema FulfillmentInfo where
+  declareNamedSchema = genericDeclareUnNamedSchema $ fromAesonOptions stripPrefixUnderscoreAndRemoveNullFields
