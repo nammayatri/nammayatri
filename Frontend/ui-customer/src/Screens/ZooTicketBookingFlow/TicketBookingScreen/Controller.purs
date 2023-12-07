@@ -14,7 +14,7 @@ import Components.GenericHeader as GenericHeader
 import Components.PrimaryButton as PrimaryButton
 import Effect.Uncurried(runEffectFn4)
 import Debug (spy)
-import Helpers.Utils (generateQR)
+import Helpers.Utils (generateQR, incrOrDecrTimeFrom)
 import Data.Array (length, (:), foldl, mapWithIndex, head, (!!), filter, elem, groupBy, find)
 import Data.Maybe (Maybe(..), fromMaybe, maybe)
 import Engineering.Helpers.Commons(convertUTCTimeToISTTimeinHHMMSS, getCurrentUTC, convertUTCtoISC, getNewIDWithTag)
@@ -27,6 +27,8 @@ import Data.Function.Uncurried as Uncurried
 import Engineering.Helpers.Commons as EHC
 import JBridge as JB
 import Data.Array.NonEmpty as DAN
+import Services.API (ServiceExpiry(..))
+import Data.Function.Uncurried (runFn3)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -105,7 +107,7 @@ eval  (DatePicker _ resp year month date ) state = do
       continue state { props{selectedOperationalDay = selectedOpDay, validDate = validDate },data { totalAmount = 0, servicesInfo = modifiedServicesData, dateOfVisit = selectedDateString }}
     _ -> continue state
   where
-    modifyServicSelectedBHid selectedOpDay selectedDateString service = service {businessHours = map initBusinessHours service.businessHours, selectedSlot = Nothing, selectedBHid = spy ("hello world" <> service.serviceName <> selectedOpDay ) $  getValidBHid (getValidTimeIntervals service.timeIntervalData selectedOpDay ) selectedOpDay selectedDateString state} -- update here selected BHID
+    modifyServicSelectedBHid selectedOpDay selectedDateString service = service {businessHours = map initBusinessHours service.businessHours, selectedSlot = Nothing, selectedBHid = getValidBHid (getValidTimeIntervals service.timeIntervalData selectedOpDay) selectedOpDay selectedDateString state service.expiry}
     initBusinessHours bh = bh { categories = map (initCategories bh) bh.categories }
     initCategories bh cat = cat {isSelected = if length bh.categories > 1 then false else true, peopleCategories = map initPeopleCategories cat.peopleCategories}
     initPeopleCategories pc = pc {currentValue = 0}
@@ -194,11 +196,11 @@ transformRespToStateData isFirstElement (TicketServiceResp service) state selOpD
     serviceName : service.name,
     shortDesc : service.shortDesc,
     allowFutureBooking : service.allowFutureBooking,
-    -- expiry : service.expiry,
+    expiry : service.expiry,
     businessHours : map convertServiceBusinessHoursData service.businessHours,
     timeIntervalData : timeIntervalDataInfo,
     isExpanded : isFirstElement,
-    selectedBHid : getValidBHid (getValidTimeIntervals timeIntervalDataInfo selOpDay) selOpDay state.data.dateOfVisit state,
+    selectedBHid : getValidBHid (getValidTimeIntervals timeIntervalDataInfo selOpDay) selOpDay state.data.dateOfVisit state service.expiry,
     selectedSlot : Nothing
   }
   where
@@ -247,8 +249,8 @@ transformRespToStateData isFirstElement (TicketServiceResp service) state selOpD
       isSelected : if catLength > 1 then false else true
     }
 
-getValidBHid :: Array TimeInterval -> String -> String -> TicketBookingScreenState -> Maybe String
-getValidBHid timeIntervals selOperationalDay dateOfVisit state = do
+getValidBHid :: Array TimeInterval -> String -> String -> TicketBookingScreenState -> ServiceExpiry -> Maybe String
+getValidBHid timeIntervals selOperationalDay dateOfVisit state expiry = do
     let now = convertUTCtoISC (getCurrentUTC "") "HH:mm:ss"
         currentDate = convertUTCtoISC (getCurrentUTC "") "YYYY-MM-DD"
         selTimeInterval = timeIntervals !! 0
@@ -258,13 +260,25 @@ getValidBHid timeIntervals selOperationalDay dateOfVisit state = do
         let startTime = if sti.startTime /= "" then convertUTCTimeToISTTimeinHHMMSS sti.startTime else ""
             endTime = if sti.endTime /= "" then convertUTCTimeToISTTimeinHHMMSS sti.endTime else ""
         if dateOfVisit == currentDate then do
-            if (startTime /= "" && endTime /= "") then do
-              if (startTime < now && now < endTime) then Just sti.bhourId
-              else Nothing
-            else if (endTime /= "") then do
-              if (now < endTime) then Just sti.bhourId
-              else Nothing 
-            else Nothing
+            case expiry of
+              InstantExpiry val -> do
+                if startTime /= "" then do
+                  let newStartTime = runFn3 incrOrDecrTimeFrom startTime val false
+                  if (now > newStartTime) then 
+                      if (endTime /= "") then do
+                        if (now < endTime) then Just sti.bhourId
+                        else Nothing 
+                      else Just sti.bhourId
+                  else Nothing
+                else 
+                    if (endTime /= "") then do
+                      if (now < endTime) then Just sti.bhourId
+                      else Nothing 
+                    else Nothing
+              _ ->  if (endTime /= "") then do
+                      if (now < endTime) then Just sti.bhourId
+                      else Nothing 
+                    else Nothing
         else Just sti.bhourId
 
 getValidTimeIntervals :: Array SlotsAndTimeIntervalData -> String -> Array TimeInterval

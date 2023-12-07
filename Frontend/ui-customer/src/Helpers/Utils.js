@@ -463,3 +463,16 @@ export const getDateAfterNDaysv2 = function (n) {
   const result = `${day}/${month}/${year}`;
   return `${year}-${month}-${day}`;
 }
+
+export const incrOrDecrTimeFrom = function (inputTime, minutesToAddOrSubtract, isIncrement) {
+  const [hours, minutes, seconds] = inputTime.split(":").map(Number);
+  const date = new Date();
+  date.setHours(hours);
+  date.setMinutes(minutes);
+  date.setSeconds(seconds);
+    
+  if (isIncrement) date.setMinutes(date.getMinutes() + minutesToAddOrSubtract);
+  else date.setMinutes(date.getMinutes() - minutesToAddOrSubtract);
+  const newTime = `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}:${String(date.getSeconds()).padStart(2, "0")}`;
+  return newTime;
+}

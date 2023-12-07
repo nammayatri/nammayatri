@@ -34,7 +34,7 @@ import Halogen.VDom.DOM.Prop (PropValue)
 import Prelude (class Eq, class Show)
 import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode, defaultDecode, defaultEncode)
 import PrestoDOM (LetterSpacing, BottomSheetState(..))
-import Services.API (AddressComponents, BookingLocationAPIEntity, EstimateAPIEntity(..), QuoteAPIEntity, TicketPlaceResp, RideBookingRes, Route, BookingStatus(..), PlaceType(..))
+import Services.API (ServiceExpiry(..), AddressComponents, BookingLocationAPIEntity, EstimateAPIEntity(..), QuoteAPIEntity, TicketPlaceResp, RideBookingRes, Route, BookingStatus(..), PlaceType(..))
 import Components.SettingSideBar.Controller as SideBar
 
 type Contacts = {
@@ -1353,6 +1353,7 @@ type Ticket =
   , slot :: Array SlotInterval
   , selectedBHid :: Maybe String
   , selectedSlot :: Maybe String
+  , expiry :: ServiceExpiry
   }
 
 type TicketBusinessHoursOptionData =
@@ -1389,7 +1390,7 @@ type TicketServiceData =
     serviceName :: String,
     allowFutureBooking :: Boolean,
     shortDesc :: Maybe String,
-    -- expiry :: String,
+    expiry :: ServiceExpiry,
     businessHours :: Array BusinessHoursData,
     timeIntervalData :: Array SlotsAndTimeIntervalData,
     isExpanded :: Boolean,

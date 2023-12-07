@@ -19,7 +19,7 @@ import Engineering.Helpers.Commons (getCurrentUTC, screenWidth, flowRunner)
 import Data.Foldable (foldl, foldMap)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (getCurrentDatev2, getMinutesBetweenTwoUTChhmmss, fetchImage, FetchImageFrom(..), decodeError, convertUTCToISTAnd12HourFormat, fetchAndUpdateCurrentLocation, getAssetsBaseUrl, getCurrentLocationMarker, getLocationName, getNewTrackingId, getSearchType, parseFloat, storeCallBackCustomer)
+import Helpers.Utils (incrOrDecrTimeFrom, getCurrentDatev2, getMinutesBetweenTwoUTChhmmss, fetchImage, FetchImageFrom(..), decodeError, convertUTCToISTAnd12HourFormat, fetchAndUpdateCurrentLocation, getAssetsBaseUrl, getCurrentLocationMarker, getLocationName, getNewTrackingId, getSearchType, parseFloat, storeCallBackCustomer)
 import JBridge as JB
 import Prelude (not, Unit, discard, void, bind, const, pure, unit, ($), (&&), (/=), (&&), (<<<), (+), (<>), (==), map, show, (||), show, (-), (>), (>>=), mod, negate, (<=), (>=), (<))
 import PrestoDOM (FlexWrap(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Prop, Screen, Visibility(..), shimmerFrameLayout, afterRender, alignParentBottom, background, color, cornerRadius, fontStyle, gravity, height, imageUrl, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, relativeLayout, scrollView, stroke, text, textFromHtml, textSize, textView, visibility, weight, width, clickable, id, imageUrl)
@@ -52,6 +52,7 @@ import Effect.Uncurried  (runEffectFn1)
 import PaymentPage (consumeBP)
 import Engineering.Helpers.Commons as EHC
 import Data.Ord (comparing)
+import Data.Function.Uncurried (runFn3)
 
 screen :: ST.TicketBookingScreenState -> Screen Action ST.TicketBookingScreenState ScreenOutput
 screen initialState =
@@ -675,6 +676,7 @@ convertServicesDataToTicketsData selectedOperationalDay services = do
     , slot : slotTIInfo.slot
     , selectedBHid : service.selectedBHid
     , selectedSlot : service.selectedSlot
+    , expiry : service.expiry
     }
 
   getTimeIntervalDataForSelectedBH :: Array ST.SlotsAndTimeIntervalData -> String -> { timeIntervals :: Array ST.TimeInterval, slot :: Array ST.SlotInterval}
@@ -741,9 +743,9 @@ ticketInputView push state ticket =
 
 individualTicketView :: forall w. (Action -> Effect Unit) -> ST.TicketBookingScreenState -> ST.Ticket -> PrestoDOM (Effect Unit) w
 individualTicketView push state ticket =
-  let valBH =  (findValidBusinessHour state.props.selectedOperationalDay ticket.selectedBHid ticket.timeIntervals ticket.slot state ticket.businessHours)
+  let valBH =  (findValidBusinessHour state.props.selectedOperationalDay ticket.selectedBHid ticket.timeIntervals ticket.slot state ticket.businessHours ticket.expiry)
       -- bookingClosed = (not state.props.validDate) || ((not $ allowFutureBooking state.data.servicesInfo) && (placeClosed state.data.placeInfo)) || (allowFutureBooking state.data.servicesInfo && (not $ isJust valBH))
-      bookingClosedForService = (not state.props.validDate) || not (validHourPresent state.props.selectedOperationalDay ticket.selectedBHid ticket.timeIntervals ticket.slot state ticket.businessHours)
+      bookingClosedForService = (not state.props.validDate) || not (validHourPresent state.props.selectedOperationalDay ticket.selectedBHid ticket.timeIntervals ticket.slot state ticket.businessHours ticket.expiry)
   in
   linearLayout
   [ height WRAP_CONTENT
@@ -787,7 +789,7 @@ individualTicketView push state ticket =
   where
     -- allowFutureBooking services = foldl (\acc service -> acc || service.allowFutureBooking) false services
 
-    validHourPresent selOperationalDay selBHId timeIntervals slots state bhs = 
+    validHourPresent selOperationalDay selBHId timeIntervals slots state bhs expiry = 
       if (length timeIntervals == 0) && (length slots == 0) then do
               let now = convertUTCtoISC (getCurrentUTC "") "HH:mm:ss"
               false
@@ -802,17 +804,29 @@ individualTicketView push state ticket =
               Just sti -> do
                 let startTime = if sti.startTime /= "" then convertUTCTimeToISTTimeinHHMMSS sti.startTime else ""
                     endTime = if sti.endTime /= "" then convertUTCTimeToISTTimeinHHMMSS sti.endTime else ""
-                if (startTime /= "" && endTime /= "") then do
-                  if (startTime < now && now < endTime) then true
-                  else false
-                else if (endTime /= "") then do
-                  if (now < endTime) then true
-                  else false 
-                else (length slots > 0)
+                case expiry of
+                  API.InstantExpiry val -> do
+                    if startTime /= "" then do
+                      let newStartTime = runFn3 incrOrDecrTimeFrom startTime val false
+                      if (now > newStartTime) then 
+                        if (endTime /= "") then do
+                          if (now < endTime) then true
+                          else false 
+                        else (length slots > 0)
+                      else (length slots > 0)
+                    else 
+                        if (endTime /= "") then do
+                          if (now < endTime) then true
+                          else false 
+                        else (length slots > 0)
+                  _ ->  if (endTime /= "") then do
+                          if (now < endTime) then true
+                          else false 
+                        else  (length slots > 0)
           else true
         Just bhId -> true
 
-    findValidBusinessHour selOperationalDay selBHId timeIntervals slot state  bhs = 
+    findValidBusinessHour selOperationalDay selBHId timeIntervals slot state bhs expiry = 
       if (length timeIntervals == 0) && (length slot == 0) then do
         let now = convertUTCtoISC (getCurrentUTC "") "HH:mm:ss"
         Nothing
@@ -827,13 +841,25 @@ individualTicketView push state ticket =
                 let startTime = if sti.startTime /= "" then convertUTCTimeToISTTimeinHHMMSS sti.startTime else ""
                     endTime = if sti.endTime /= "" then convertUTCTimeToISTTimeinHHMMSS sti.endTime else ""
                 if currentDate == state.data.dateOfVisit then do
-                    if (startTime /= "" && endTime /= "") then do
-                      if (startTime < now && now < endTime) then find (\bh -> bh.bhourId == sti.bhourId && selOperationalDay `elem` bh.operationalDays) bhs
-                      else Nothing
-                    else if (endTime /= "") then do
-                      if (now < endTime) then find (\bh -> bh.bhourId == sti.bhourId && selOperationalDay `elem` bh.operationalDays) bhs
-                      else Nothing 
-                    else Nothing
+                    case expiry of
+                      API.InstantExpiry val -> do
+                        if startTime /= "" then do
+                          let newStartTime = runFn3 incrOrDecrTimeFrom startTime val false
+                          if (now > newStartTime) then 
+                              if (endTime /= "") then do
+                                if (now < endTime) then find (\bh -> bh.bhourId == sti.bhourId && selOperationalDay `elem` bh.operationalDays) bhs
+                                else Nothing 
+                              else find (\bh -> bh.bhourId == sti.bhourId && selOperationalDay `elem` bh.operationalDays) bhs
+                          else
+                              if (endTime /= "") then do
+                                if (now < endTime) then find (\bh -> bh.bhourId == sti.bhourId && selOperationalDay `elem` bh.operationalDays) bhs
+                                else Nothing 
+                              else Nothing
+                        else Nothing
+                      _ ->  if (endTime /= "") then do
+                              if (now < endTime) then find (\bh -> bh.bhourId == sti.bhourId && selOperationalDay `elem` bh.operationalDays) bhs
+                              else Nothing 
+                            else Nothing
                 else find (\bh -> bh.bhourId == sti.bhourId && selOperationalDay `elem` bh.operationalDays) bhs
         Just bhId -> find (\bh -> bh.bhourId == bhId && selOperationalDay `elem` bh.operationalDays) bhs
 

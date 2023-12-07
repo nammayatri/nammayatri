@@ -2219,6 +2219,16 @@ newtype PaymentLinks = PaymentLinks
 
 data PlaceType = Museum | ThemePark | AmusementPark | WaterPark | WildLifeSanctuary | ArtGallery | HeritageSite | ReligiousSite | Other
 
+data ServiceExpiry = VisitDate String | InstantExpiry Int
+derive instance genericServiceExpiry :: Generic ServiceExpiry _
+instance showServiceExpiry :: Show ServiceExpiry where show = genericShow
+instance decodeServiceExpiry :: Decode ServiceExpiry where decode = defaultDecode
+instance encodeServiceExpiry :: Encode ServiceExpiry where encode = defaultEncode
+instance standardEncodeServiceExpiry :: StandardEncode ServiceExpiry
+  where
+    standardEncode (VisitDate param) = standardEncode param
+    standardEncode (InstantExpiry body) = standardEncode body
+
 newtype TicketServiceResp = TicketServiceResp
   { id :: String,
     placesId :: String,
@@ -2226,7 +2236,7 @@ newtype TicketServiceResp = TicketServiceResp
     maxVerification :: Int,
     allowFutureBooking :: Boolean,
     shortDesc :: Maybe String,
-    -- expiry :: String, -- its an enum
+    expiry :: ServiceExpiry,
     businessHours :: Array BusinessHoursResp
   }
 

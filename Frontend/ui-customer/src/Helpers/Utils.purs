@@ -31,7 +31,7 @@ import Data.Date (Date)
 import Data.Either (Either(..), hush)
 import Data.Eq.Generic (genericEq)
 import Data.Foldable (or)
-import Data.Function.Uncurried (Fn2, runFn3)
+import Data.Function.Uncurried (Fn2, runFn3, Fn3)
 import Data.Generic.Rep (class Generic)
 import Data.Int (round, toNumber, fromString)
 import Data.Lens ((^.))
@@ -165,6 +165,8 @@ foreign import getDateAfterNDays :: Int -> String
 foreign import getDateAfterNDaysv2 :: Int -> String
 
 foreign import extractKeyByRegex :: Fn2 String String String
+
+foreign import incrOrDecrTimeFrom :: Fn3 String Int Boolean String
 
 data TimeUnit
   = HOUR
