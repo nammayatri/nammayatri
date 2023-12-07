@@ -18,6 +18,7 @@ data TicketBookingServiceCategoryT f = TicketBookingServiceCategoryT
     bookedSeats :: B.C f Kernel.Prelude.Int,
     id :: B.C f Kernel.Prelude.Text,
     name :: B.C f Kernel.Prelude.Text,
+    serviceCategoryId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     ticketBookingServiceId :: B.C f Kernel.Prelude.Text
   }
   deriving (Generic, B.Beamable)

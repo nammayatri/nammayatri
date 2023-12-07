@@ -8,6 +8,7 @@ where
 
 import qualified "rider-app" API.Dashboard.Tickets as ADT
 import Dashboard.Common (HideSecrets)
+import Data.Time
 import qualified "rider-app" Domain.Action.UI.TicketService as DTB
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
 import qualified "rider-app" Domain.Types.TicketBookingService as DTB
@@ -78,10 +79,11 @@ getServices ::
   City.City ->
   ApiTokenInfo ->
   Id DTB.TicketPlace ->
+  Maybe Day ->
   FlowHandler [DTB.TicketServiceResp]
-getServices merchantShortId opCity apiTokenInfo ticketPlaceId = withFlowHandlerAPI $ do
+getServices merchantShortId opCity apiTokenInfo ticketPlaceId mbDate = withFlowHandlerAPI $ do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  Client.callRiderAppOperations checkedMerchantId opCity (.tickets.getServices) ticketPlaceId
+  Client.callRiderAppOperations checkedMerchantId opCity (.tickets.getServices) ticketPlaceId mbDate
 
 updateSeatManagement ::
   ShortId DM.Merchant ->

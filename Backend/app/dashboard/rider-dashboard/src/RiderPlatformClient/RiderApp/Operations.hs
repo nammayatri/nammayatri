@@ -24,6 +24,7 @@ import qualified Dashboard.Common.Booking as Booking
 import qualified Dashboard.RiderPlatform.Customer as Customer
 import qualified Dashboard.RiderPlatform.Merchant as Merchant
 import qualified Dashboard.RiderPlatform.Ride as Ride
+import Data.Time
 import qualified "rider-app" Domain.Action.Dashboard.IssueList as DI
 import qualified Domain.Action.Dashboard.Ride as DCM
 import qualified "rider-app" Domain.Action.UI.TicketService as DTB
@@ -107,7 +108,7 @@ data IssueAPIs = IssueAPIs
 
 data TicketAPIs = TicketAPIs
   { verifyBookingDetails :: Id DTB.TicketService -> ShortId DTB.TicketBookingService -> Euler.EulerClient DTB.TicketServiceVerificationResp,
-    getServices :: Id DTB.TicketPlace -> Euler.EulerClient [DTB.TicketServiceResp],
+    getServices :: Id DTB.TicketPlace -> Maybe Day -> Euler.EulerClient [DTB.TicketServiceResp],
     updateSeatManagement :: DTB.TicketBookingUpdateSeatsReq -> Euler.EulerClient APISuccess
   }
 
