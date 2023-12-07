@@ -487,7 +487,7 @@ convertPlanToPlanEntity driverId merchantOpCityId applicationDate isCurrentPlanE
 
   let currentDues = sum $ map (.driverFeeAmount) dues
   let autopayDues = sum $ map (.driverFeeAmount) $ filter (\due -> due.feeType == DF.RECURRING_EXECUTION_INVOICE) dues
-  let dueBoothCharges = sum $ map (.totalSpecialZoneCharges) dues
+  let dueBoothCharges = roundToHalf $ sum $ map (.totalSpecialZoneCharges) dues
 
   return
     PlanEntity
