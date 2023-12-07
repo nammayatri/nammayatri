@@ -79,7 +79,7 @@ generateHaskellTypes typeObj = (both concat . unzip . map (both L.unlines . proc
        in ( ("data " <> typeName <> " = " <> L.intercalate " | " enumValues) :
             ["  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema" <> (if isHttpInstanceDerived typeObj then ", ToParamSchema)\n\n" else ")\n\n")],
             ("$(mkBeamInstancesForEnum ''" <> typeName <> ")\n\n") :
-              ["$(mkHttpInstancesForEnum ''" <> typeName <> ")\\n" | isHttpInstanceDerived typeObj]
+              ["$(mkHttpInstancesForEnum ''" <> typeName <> ")\n" | isHttpInstanceDerived typeObj]
           )
     generateEnum _ _ = error "Invalid enum definition"
 

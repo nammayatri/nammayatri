@@ -3,12 +3,12 @@
 
 module Storage.Queries.TicketService where
 
-import qualified Domain.Types.BusinessHour as Domain.Types.BusinessHour
-import qualified Domain.Types.TicketService as Domain.Types.TicketService
+import qualified Domain.Types.BusinessHour
+import qualified Domain.Types.TicketService
 import Kernel.Beam.Functions
 import Kernel.Prelude
-import qualified Kernel.Prelude as Kernel.Prelude
-import qualified Kernel.Types.Id as Kernel.Types.Id
+import qualified Kernel.Prelude
+import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow)
 import qualified Sequelize as Se
 import qualified Storage.Beam.TicketService as Beam
@@ -29,6 +29,31 @@ getTicketServicesByPlaceId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Ker
 getTicketServicesByPlaceId placesId = do
   findAllWithKV
     [ Se.Is Beam.placesId $ Se.Eq placesId
+    ]
+
+findByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.TicketService.TicketService -> m (Maybe (Domain.Types.TicketService.TicketService))
+findByPrimaryKey (Kernel.Types.Id.Id id) = do
+  findOneWithKV
+    [ Se.And
+        [ Se.Is Beam.id $ Se.Eq id
+        ]
+    ]
+
+updateByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Prelude.Bool -> [Kernel.Types.Id.Id Domain.Types.BusinessHour.BusinessHour] -> Domain.Types.TicketService.ExpiryType -> Kernel.Prelude.Int -> [Kernel.Prelude.Text] -> Kernel.Prelude.Text -> Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.TicketService.TicketService -> m ()
+updateByPrimaryKey allowFutureBooking businessHours expiry maxVerification operationalDays placesId service shortDesc (Kernel.Types.Id.Id id) = do
+  updateWithKV
+    [ Se.Set Beam.allowFutureBooking allowFutureBooking,
+      Se.Set Beam.businessHours (Kernel.Types.Id.getId <$> businessHours),
+      Se.Set Beam.expiry expiry,
+      Se.Set Beam.maxVerification maxVerification,
+      Se.Set Beam.operationalDays operationalDays,
+      Se.Set Beam.placesId placesId,
+      Se.Set Beam.service service,
+      Se.Set Beam.shortDesc shortDesc
+    ]
+    [ Se.And
+        [ Se.Is Beam.id $ Se.Eq id
+        ]
     ]
 
 instance FromTType' Beam.TicketService Domain.Types.TicketService.TicketService where

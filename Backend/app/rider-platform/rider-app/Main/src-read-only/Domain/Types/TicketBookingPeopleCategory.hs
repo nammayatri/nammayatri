@@ -2,10 +2,10 @@
 
 module Domain.Types.TicketBookingPeopleCategory where
 
-import qualified Domain.Types.TicketBookingServiceCategory as Domain.Types.TicketBookingServiceCategory
+import qualified Domain.Types.TicketBookingServiceCategory
 import Kernel.Prelude
-import qualified Kernel.Types.Common as Kernel.Types.Common
-import qualified Kernel.Types.Id as Kernel.Types.Id
+import qualified Kernel.Types.Common
+import qualified Kernel.Types.Id
 
 data TicketBookingPeopleCategory = TicketBookingPeopleCategory
   { id :: Kernel.Types.Id.Id Domain.Types.TicketBookingPeopleCategory.TicketBookingPeopleCategory,

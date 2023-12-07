@@ -3,13 +3,13 @@
 module Domain.Types.TicketBooking where
 
 import Data.Aeson
-import qualified Data.Time.Calendar as Data.Time.Calendar
-import qualified Domain.Types.Merchant.MerchantOperatingCity as Domain.Types.Merchant.MerchantOperatingCity
-import qualified Domain.Types.Person as Domain.Types.Person
-import qualified Domain.Types.TicketPlace as Domain.Types.TicketPlace
+import qualified Data.Time.Calendar
+import qualified Domain.Types.Merchant.MerchantOperatingCity
+import qualified Domain.Types.Person
+import qualified Domain.Types.TicketPlace
 import Kernel.Prelude
-import qualified Kernel.Types.Common as Kernel.Types.Common
-import qualified Kernel.Types.Id as Kernel.Types.Id
+import qualified Kernel.Types.Common
+import qualified Kernel.Types.Id
 import Kernel.Utils.TH
 import Tools.Beam.UtilsTH
 

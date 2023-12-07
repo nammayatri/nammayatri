@@ -3,21 +3,22 @@
 
 module API.UI.TicketService where
 
-import qualified Data.Time.Calendar as Data.Time.Calendar
+import qualified Data.Time.Calendar
 import Domain.Action.UI.TicketService (BusinessHourResp, CategoriesResp, PeopleCategoriesResp, PeopleCategoriesVerificationRes, TicketBookingAPIEntity, TicketBookingCategoryDetails, TicketBookingCategoryReq, TicketBookingDetails, TicketBookingPeopleCategoryDetails, TicketBookingPeopleCategoryReq, TicketBookingReq, TicketBookingServiceDetails, TicketBookingServicesReq, TicketBookingUpdateSeatsReq, TicketServiceResp, TicketServiceVerificationResp, TicketVerificationStatus)
+import qualified Domain.Action.UI.TicketService
 import qualified Domain.Action.UI.TicketService as Domain.Action.UI.TicketService
-import qualified Domain.Types.Merchant as Domain.Types.Merchant
-import qualified Domain.Types.Person as Domain.Types.Person
-import qualified Domain.Types.TicketBooking as Domain.Types.TicketBooking
-import qualified Domain.Types.TicketBookingService as Domain.Types.TicketBookingService
-import qualified Domain.Types.TicketPlace as Domain.Types.TicketPlace
-import qualified Domain.Types.TicketService as Domain.Types.TicketService
-import qualified Environment as Environment
+import qualified Domain.Types.Merchant
+import qualified Domain.Types.Person
+import qualified Domain.Types.TicketBooking
+import qualified Domain.Types.TicketBookingService
+import qualified Domain.Types.TicketPlace
+import qualified Domain.Types.TicketService
+import qualified Environment
 import EulerHS.Prelude
-import qualified Kernel.External.Payment.Interface.Types as Kernel.External.Payment.Interface.Types
-import qualified Kernel.Prelude as Kernel.Prelude
-import qualified Kernel.Types.APISuccess as Kernel.Types.APISuccess
-import qualified Kernel.Types.Id as Kernel.Types.Id
+import qualified Kernel.External.Payment.Interface.Types
+import qualified Kernel.Prelude
+import qualified Kernel.Types.APISuccess
+import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
 import Tools.Auth

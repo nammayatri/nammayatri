@@ -4,13 +4,13 @@
 
 module Storage.Beam.SeatManagement where
 
-import qualified Data.Time.Calendar as Data.Time.Calendar
+import qualified Data.Time.Calendar
 import qualified Database.Beam as B
-import qualified Domain.Types.SeatManagement as Domain.Types.SeatManagement
-import qualified Domain.Types.ServiceCategory as Domain.Types.ServiceCategory
+import qualified Domain.Types.SeatManagement
+import qualified Domain.Types.ServiceCategory
 import Kernel.Prelude
-import qualified Kernel.Prelude as Kernel.Prelude
-import qualified Kernel.Types.Id as Kernel.Types.Id
+import qualified Kernel.Prelude
+import qualified Kernel.Types.Id
 import Tools.Beam.UtilsTH
 
 data SeatManagementT f = SeatManagementT

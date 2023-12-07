@@ -5,11 +5,11 @@
 module Storage.Beam.ServiceCategory where
 
 import qualified Database.Beam as B
-import qualified Domain.Types.ServiceCategory as Domain.Types.ServiceCategory
-import qualified Domain.Types.ServicePeopleCategory as Domain.Types.ServicePeopleCategory
+import qualified Domain.Types.ServiceCategory
+import qualified Domain.Types.ServicePeopleCategory
 import Kernel.Prelude
-import qualified Kernel.Prelude as Kernel.Prelude
-import qualified Kernel.Types.Id as Kernel.Types.Id
+import qualified Kernel.Prelude
+import qualified Kernel.Types.Id
 import Tools.Beam.UtilsTH
 
 data ServiceCategoryT f = ServiceCategoryT

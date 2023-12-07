@@ -2,9 +2,9 @@
 
 module Domain.Types.TicketPlace where
 
-import qualified Domain.Types.Merchant.MerchantOperatingCity as Domain.Types.Merchant.MerchantOperatingCity
+import qualified Domain.Types.Merchant.MerchantOperatingCity
 import Kernel.Prelude
-import qualified Kernel.Types.Id as Kernel.Types.Id
+import qualified Kernel.Types.Id
 import Tools.Beam.UtilsTH
 
 data TicketPlace = TicketPlace

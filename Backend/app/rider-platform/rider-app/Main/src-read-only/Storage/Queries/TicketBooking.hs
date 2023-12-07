@@ -3,16 +3,16 @@
 
 module Storage.Queries.TicketBooking where
 
-import qualified Data.Time.Calendar as Data.Time.Calendar
-import qualified Domain.Types.Merchant.MerchantOperatingCity as Domain.Types.Merchant.MerchantOperatingCity
-import qualified Domain.Types.Person as Domain.Types.Person
-import qualified Domain.Types.TicketBooking as Domain.Types.TicketBooking
-import qualified Domain.Types.TicketPlace as Domain.Types.TicketPlace
+import qualified Data.Time.Calendar
+import qualified Domain.Types.Merchant.MerchantOperatingCity
+import qualified Domain.Types.Person
+import qualified Domain.Types.TicketBooking
+import qualified Domain.Types.TicketPlace
 import Kernel.Beam.Functions
 import Kernel.Prelude
-import qualified Kernel.Prelude as Kernel.Prelude
-import qualified Kernel.Types.Common as Kernel.Types.Common
-import qualified Kernel.Types.Id as Kernel.Types.Id
+import qualified Kernel.Prelude
+import qualified Kernel.Types.Common
+import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow)
 import qualified Sequelize as Se
 import qualified Storage.Beam.TicketBooking as Beam
@@ -55,6 +55,32 @@ updateStatusByShortId status updatedAt (Kernel.Types.Id.ShortId shortId) = do
       Se.Set Beam.updatedAt updatedAt
     ]
     [ Se.Is Beam.shortId $ Se.Eq shortId
+    ]
+
+findByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.TicketBooking.TicketBooking -> m (Maybe (Domain.Types.TicketBooking.TicketBooking))
+findByPrimaryKey (Kernel.Types.Id.Id id) = do
+  findOneWithKV
+    [ Se.And
+        [ Se.Is Beam.id $ Se.Eq id
+        ]
+    ]
+
+updateByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Common.HighPrecMoney -> Kernel.Prelude.UTCTime -> Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Types.Id.ShortId Domain.Types.TicketBooking.TicketBooking -> Domain.Types.TicketBooking.BookingStatus -> Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace -> Kernel.Prelude.UTCTime -> Data.Time.Calendar.Day -> Kernel.Types.Id.Id Domain.Types.TicketBooking.TicketBooking -> m ()
+updateByPrimaryKey amount createdAt (Kernel.Types.Id.Id merchantOperatingCityId) (Kernel.Types.Id.Id personId) (Kernel.Types.Id.ShortId shortId) status (Kernel.Types.Id.Id ticketPlaceId) updatedAt visitDate (Kernel.Types.Id.Id id) = do
+  updateWithKV
+    [ Se.Set Beam.amount amount,
+      Se.Set Beam.createdAt createdAt,
+      Se.Set Beam.merchantOperatingCityId merchantOperatingCityId,
+      Se.Set Beam.personId personId,
+      Se.Set Beam.shortId shortId,
+      Se.Set Beam.status status,
+      Se.Set Beam.ticketPlaceId ticketPlaceId,
+      Se.Set Beam.updatedAt updatedAt,
+      Se.Set Beam.visitDate visitDate
+    ]
+    [ Se.And
+        [ Se.Is Beam.id $ Se.Eq id
+        ]
     ]
 
 instance FromTType' Beam.TicketBooking Domain.Types.TicketBooking.TicketBooking where

@@ -2,13 +2,13 @@
 
 module Domain.Types.TicketBookingService where
 
-import qualified Domain.Types.BusinessHour as Domain.Types.BusinessHour
-import qualified Domain.Types.Merchant.MerchantOperatingCity as Domain.Types.Merchant.MerchantOperatingCity
-import qualified Domain.Types.TicketBooking as Domain.Types.TicketBooking
-import qualified Domain.Types.TicketService as Domain.Types.TicketService
+import qualified Domain.Types.BusinessHour
+import qualified Domain.Types.Merchant.MerchantOperatingCity
+import qualified Domain.Types.TicketBooking
+import qualified Domain.Types.TicketService
 import Kernel.Prelude
-import qualified Kernel.Types.Common as Kernel.Types.Common
-import qualified Kernel.Types.Id as Kernel.Types.Id
+import qualified Kernel.Types.Common
+import qualified Kernel.Types.Id
 import Tools.Beam.UtilsTH
 
 data TicketBookingService = TicketBookingService

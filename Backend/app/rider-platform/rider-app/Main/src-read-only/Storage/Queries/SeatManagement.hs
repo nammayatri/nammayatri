@@ -3,13 +3,13 @@
 
 module Storage.Queries.SeatManagement where
 
-import qualified Data.Time.Calendar as Data.Time.Calendar
-import qualified Domain.Types.SeatManagement as Domain.Types.SeatManagement
-import qualified Domain.Types.ServiceCategory as Domain.Types.ServiceCategory
+import qualified Data.Time.Calendar
+import qualified Domain.Types.SeatManagement
+import qualified Domain.Types.ServiceCategory
 import Kernel.Beam.Functions
 import Kernel.Prelude
-import qualified Kernel.Prelude as Kernel.Prelude
-import qualified Kernel.Types.Id as Kernel.Types.Id
+import qualified Kernel.Prelude
+import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow)
 import qualified Sequelize as Se
 import qualified Storage.Beam.SeatManagement as Beam
@@ -48,6 +48,27 @@ updateBookedSeats booked (Kernel.Types.Id.Id ticketServiceCategoryId) date = do
     [ Se.And
         [ Se.Is Beam.ticketServiceCategoryId $ Se.Eq ticketServiceCategoryId,
           Se.Is Beam.date $ Se.Eq date
+        ]
+    ]
+
+findByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.SeatManagement.SeatManagement -> m (Maybe (Domain.Types.SeatManagement.SeatManagement))
+findByPrimaryKey (Kernel.Types.Id.Id id) = do
+  findOneWithKV
+    [ Se.And
+        [ Se.Is Beam.id $ Se.Eq id
+        ]
+    ]
+
+updateByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Prelude.Int -> Kernel.Prelude.Int -> Data.Time.Calendar.Day -> Kernel.Types.Id.Id Domain.Types.ServiceCategory.ServiceCategory -> Kernel.Types.Id.Id Domain.Types.SeatManagement.SeatManagement -> m ()
+updateByPrimaryKey blocked booked date (Kernel.Types.Id.Id ticketServiceCategoryId) (Kernel.Types.Id.Id id) = do
+  updateWithKV
+    [ Se.Set Beam.blocked blocked,
+      Se.Set Beam.booked booked,
+      Se.Set Beam.date date,
+      Se.Set Beam.ticketServiceCategoryId ticketServiceCategoryId
+    ]
+    [ Se.And
+        [ Se.Is Beam.id $ Se.Eq id
         ]
     ]
 

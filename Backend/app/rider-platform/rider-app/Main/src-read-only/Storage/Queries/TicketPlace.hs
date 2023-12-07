@@ -3,12 +3,12 @@
 
 module Storage.Queries.TicketPlace where
 
-import qualified Domain.Types.Merchant.MerchantOperatingCity as Domain.Types.Merchant.MerchantOperatingCity
-import qualified Domain.Types.TicketPlace as Domain.Types.TicketPlace
+import qualified Domain.Types.Merchant.MerchantOperatingCity
+import qualified Domain.Types.TicketPlace
 import Kernel.Beam.Functions
 import Kernel.Prelude
-import qualified Kernel.Prelude as Kernel.Prelude
-import qualified Kernel.Types.Id as Kernel.Types.Id
+import qualified Kernel.Prelude
+import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow)
 import qualified Sequelize as Se
 import qualified Storage.Beam.TicketPlace as Beam
@@ -29,6 +29,36 @@ getTicketPlaces :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.I
 getTicketPlaces (Kernel.Types.Id.Id merchantOperatingCityId) = do
   findAllWithKV
     [ Se.Is Beam.merchantOperatingCityId $ Se.Eq merchantOperatingCityId
+    ]
+
+findByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace -> m (Maybe (Domain.Types.TicketPlace.TicketPlace))
+findByPrimaryKey (Kernel.Types.Id.Id id) = do
+  findOneWithKV
+    [ Se.And
+        [ Se.Is Beam.id $ Se.Eq id
+        ]
+    ]
+
+updateByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Prelude.Maybe Kernel.Prelude.TimeOfDay -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> [Kernel.Prelude.Text] -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Double -> Kernel.Prelude.Maybe Kernel.Prelude.Double -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity -> Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.TimeOfDay -> Domain.Types.TicketPlace.PlaceType -> Kernel.Prelude.Text -> [Kernel.Prelude.Text] -> Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace -> m ()
+updateByPrimaryKey closeTimings description gallery iconUrl lat lon mapImageUrl (Kernel.Types.Id.Id merchantOperatingCityId) name openTimings placeType shortDesc termsAndConditions (Kernel.Types.Id.Id id) = do
+  updateWithKV
+    [ Se.Set Beam.closeTimings closeTimings,
+      Se.Set Beam.description description,
+      Se.Set Beam.gallery gallery,
+      Se.Set Beam.iconUrl iconUrl,
+      Se.Set Beam.lat lat,
+      Se.Set Beam.lon lon,
+      Se.Set Beam.mapImageUrl mapImageUrl,
+      Se.Set Beam.merchantOperatingCityId merchantOperatingCityId,
+      Se.Set Beam.name name,
+      Se.Set Beam.openTimings openTimings,
+      Se.Set Beam.placeType placeType,
+      Se.Set Beam.shortDesc shortDesc,
+      Se.Set Beam.termsAndConditions termsAndConditions
+    ]
+    [ Se.And
+        [ Se.Is Beam.id $ Se.Eq id
+        ]
     ]
 
 instance FromTType' Beam.TicketPlace Domain.Types.TicketPlace.TicketPlace where
