@@ -57,6 +57,9 @@ config =
     gradientConfig : [],
     enableSubscriptionSupportPopup : false
   },
+  features : {
+    enableSuggestions : false
+  },
   showPaymentDetails : true,
   rideActionModelConfig : {
     showVehicleVariant : true

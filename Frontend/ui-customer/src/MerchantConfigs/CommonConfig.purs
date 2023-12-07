@@ -104,6 +104,7 @@ commonConfig =
         , features : {
             enableAutoReadOtp : true
           , enableZooTicketBookingFlow : false
+          , enableSuggestions : false
           }
         , rideCompletedCardConfig : {
             topCard : {

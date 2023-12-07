@@ -313,7 +313,7 @@ suggestionsView config push =
     , margin if config.spanParent then (Margin 0 0 16 20) else (Margin 0 (if os == "IOS" then 8 else 0) 16 0)
     , onAnimationEnd push (const EnableSuggestions)
     , alpha if config.spanParent then 0.0 else 1.0
-    , visibility if (length config.suggestionsList == 0 ) && not config.canSendSuggestion then GONE else VISIBLE
+    , visibility if (length config.suggestionsList == 0 ) && not config.canSendSuggestion || (not config.spanParent && not config.enableSuggestions) then GONE else VISIBLE
     ][ linearLayout
       [ height WRAP_CONTENT
       , width WRAP_CONTENT
