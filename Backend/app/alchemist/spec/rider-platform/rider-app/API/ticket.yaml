@@ -150,6 +150,8 @@ apis:
   - GET:
       endpoint: /ticket/places/{placeId}/services
       auth: TokenAuth
+      query:
+        date: Day
       params:
         placeId: Id TicketPlace
       response:

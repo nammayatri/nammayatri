@@ -229,6 +229,11 @@ SeatManagement:
       params: [booked]
       where:
         and: [ticketServiceCategoryId, date]
+    updateBlockedSeats:
+      kvFunction: updateWithKV
+      params: [blocked]
+      where:
+        and: [ticketServiceCategoryId, date]
 
 
 ### Ticket Booking ###
@@ -351,6 +356,7 @@ TicketBookingServiceCategory:
     name: Text
     bookedSeats: Int
     amount: HighPrecMoney
+    serviceCategoryId: Maybe Text
 
   constraints:
     id: PrimaryKey|NotNull

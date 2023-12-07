@@ -12,6 +12,7 @@ data TicketBookingServiceCategory = TicketBookingServiceCategory
     bookedSeats :: Kernel.Prelude.Int,
     id :: Kernel.Types.Id.Id Domain.Types.TicketBookingServiceCategory.TicketBookingServiceCategory,
     name :: Kernel.Prelude.Text,
+    serviceCategoryId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     ticketBookingServiceId :: Kernel.Types.Id.Id Domain.Types.TicketBookingService.TicketBookingService
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)

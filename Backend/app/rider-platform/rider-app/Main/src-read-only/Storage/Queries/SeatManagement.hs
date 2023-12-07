@@ -29,6 +29,17 @@ findByTicketServiceCategoryIdAndDate (Kernel.Types.Id.Id ticketServiceCategoryId
         ]
     ]
 
+updateBlockedSeats :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Prelude.Int -> Kernel.Types.Id.Id Domain.Types.ServiceCategory.ServiceCategory -> Data.Time.Calendar.Day -> m ()
+updateBlockedSeats blocked (Kernel.Types.Id.Id ticketServiceCategoryId) date = do
+  updateWithKV
+    [ Se.Set Beam.blocked blocked
+    ]
+    [ Se.And
+        [ Se.Is Beam.ticketServiceCategoryId $ Se.Eq ticketServiceCategoryId,
+          Se.Is Beam.date $ Se.Eq date
+        ]
+    ]
+
 updateBookedSeats :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Prelude.Int -> Kernel.Types.Id.Id Domain.Types.ServiceCategory.ServiceCategory -> Data.Time.Calendar.Day -> m ()
 updateBookedSeats booked (Kernel.Types.Id.Id ticketServiceCategoryId) date = do
   updateWithKV

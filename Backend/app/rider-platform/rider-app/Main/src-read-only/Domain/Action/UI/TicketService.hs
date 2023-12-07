@@ -255,21 +255,21 @@ getTicketPlaces (_, merchantId) = do
   merchantOpCity <- CQM.getDefaultMerchantOperatingCity merchantId
   QTP.getTicketPlaces merchantOpCity.id
 
-getTicketPlacesServices :: Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace -> Environment.Flow [Domain.Action.UI.TicketService.TicketServiceResp]
-getTicketPlacesServices placeId = do
+getTicketPlacesServices :: Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace -> Kernel.Prelude.Maybe (Data.Time.Calendar.Day) -> Environment.Flow [Domain.Action.UI.TicketService.TicketServiceResp]
+getTicketPlacesServices placeId mbDate = do
   ticketServices <- QTS.getTicketServicesByPlaceId placeId.getId
   now <- getCurrentTime
-  let currentDate = utctDay now
-  mkTicketServiceListRes ticketServices currentDate placeId
+  let bookingDate = fromMaybe (utctDay now) mbDate
+  mkTicketServiceListRes ticketServices bookingDate placeId
   where
-    mkTicketServiceListRes ticketServices currentDate_ pId =
+    mkTicketServiceListRes ticketServices bookingDate_ pId =
       mapM
         ( \service -> do
             specialOccasions <- findSpecialOccasion service
             let getBusinessHourForSpecialLocation sl businessHours = if null businessHours then map (\bh -> (sl, bh)) service.businessHours else map (\bh -> (sl, bh)) businessHours
             let specialOccBHourIds = concat (map (\sl -> getBusinessHourForSpecialLocation sl sl.businessHours) specialOccasions)
-            specialOccBHours <- mapM (\(specialOcc, bhId) -> mkBusinessHoursRes service currentDate_ (Just specialOcc) bhId) specialOccBHourIds
-            normalBusinessHours <- mapM (mkBusinessHoursRes service currentDate_ Nothing) service.businessHours
+            specialOccBHours <- mapM (\(specialOcc, bhId) -> mkBusinessHoursRes service bookingDate_ (Just specialOcc) bhId) specialOccBHourIds
+            normalBusinessHours <- mapM (mkBusinessHoursRes service bookingDate_ Nothing) service.businessHours
             let businessHours = normalBusinessHours ++ specialOccBHours
             pure $
               TicketServiceResp
@@ -308,11 +308,11 @@ getTicketPlacesServices placeId = do
         }
 
     mkBusinessHoursRes :: Domain.Types.TicketService.TicketService -> Data.Time.Calendar.Day -> Kernel.Prelude.Maybe Domain.Types.SpecialOccasion.SpecialOccasion -> Kernel.Types.Id.Id Domain.Types.BusinessHour.BusinessHour -> Environment.Flow BusinessHourResp
-    mkBusinessHoursRes service currDate mbSpecialOcc bhId = do
+    mkBusinessHoursRes service bDate mbSpecialOcc bhId = do
       businessHour <- QBH.findById bhId >>= fromMaybeM (BusinessHourNotFound bhId.getId)
       let convertedBusinessHT = convertBusinessHT businessHour.btype
           mbOperationalDay = (.dayOfWeek) =<< mbSpecialOcc
-      categories <- mapM (mkServiceCategories currDate) businessHour.categoryId
+      categories <- mapM (mkServiceCategories bDate) businessHour.categoryId
       pure $
         BusinessHourResp
           { id = bhId,
@@ -325,9 +325,9 @@ getTicketPlacesServices placeId = do
             categories
           }
 
-    mkServiceCategories curDate serviceCatId = do
+    mkServiceCategories bDate_ serviceCatId = do
       serviceCategory <- QSC.findById serviceCatId >>= fromMaybeM (ServiceCategoryNotFound serviceCatId.getId)
-      mBeatManagement <- QTSM.findByTicketServiceCategoryIdAndDate serviceCatId curDate
+      mBeatManagement <- QTSM.findByTicketServiceCategoryIdAndDate serviceCatId bDate_
       peopleCategories <- mapM mkPeopleCategoriesRes serviceCategory.peopleCategory
       pure $
         CategoriesResp
@@ -459,7 +459,7 @@ postTicketPlacesBook (personId, merchantId) placeId req' = do
 
       mbSeatM <- QTSM.findByTicketServiceCategoryIdAndDate serviceCatId req'.visitDate
       if isJust mbSeatM
-        then QTSM.updateBookedSeats bookedSeats serviceCatId req'.visitDate
+        then QTSM.updateBlockedSeats bookedSeats serviceCatId req'.visitDate
         else do
           seatId <- generateGUID
           let seatM =
@@ -467,8 +467,8 @@ postTicketPlacesBook (personId, merchantId) placeId req' = do
                   { id = seatId,
                     ticketServiceCategoryId = serviceCatId,
                     date = req'.visitDate,
-                    blocked = 0,
-                    booked = bookedSeats
+                    blocked = bookedSeats,
+                    booked = 0
                   }
           QTSM.create seatM
 
@@ -478,7 +478,8 @@ postTicketPlacesBook (personId, merchantId) placeId req' = do
             name = tBookingSC.name,
             ticketBookingServiceId,
             bookedSeats,
-            amount
+            amount,
+            serviceCategoryId = Just $ Kernel.Types.Id.getId tBookingSC.id
           }
 
     createTicketBookingPeopleCategory ticketBookingServiceCategoryId ticketServicePCReq = do
@@ -770,6 +771,9 @@ getTicketBookingsStatus (personId, merchantId) _shortId@(Kernel.Types.Id.ShortId
       orderStatusCall = Payment.orderStatus merchantId -- api call
   order <- QOrder.findByShortId (Kernel.Types.Id.ShortId shortId) >>= fromMaybeM (PaymentOrderNotFound shortId)
   ticketBooking' <- QTB.findByShortId (Kernel.Types.Id.ShortId shortId) >>= fromMaybeM (TicketBookingNotFound shortId)
+  ticketBookingServices <- QTBS.findAllByBookingId ticketBooking'.id
+  tBookingServiceCats <- mapM (\tBookingS -> QTBSC.findAllByTicketBookingServiceId tBookingS.id) ticketBookingServices
+  let ticketBookingServiceCategories = concat tBookingServiceCats
   if order.status == Payment.CHARGED -- Consider CHARGED status as terminal status
     then return ticketBooking'.status
     else do
@@ -780,14 +784,50 @@ getTicketBookingsStatus (personId, merchantId) _shortId@(Kernel.Types.Id.ShortId
           when (status == Payment.CHARGED) $ do
             QTB.updateStatusByShortId DTTB.Booked now _shortId
             QTBS.updateAllStatusByBookingId DTB.Confirmed now ticketBooking'.id
+            mapM_
+              ( \tbsc ->
+                  whenJust tbsc.serviceCategoryId $ \serviceId ->
+                    updateBookedAndBlockedSeats (Kernel.Types.Id.Id serviceId) tbsc ticketBooking'.visitDate
+              )
+              ticketBookingServiceCategories
           when (status `elem` [Payment.AUTHENTICATION_FAILED, Payment.AUTHORIZATION_FAILED, Payment.JUSPAY_DECLINED]) $ do
             QTB.updateStatusByShortId DTTB.Failed now _shortId
             QTBS.updateAllStatusByBookingId DTB.Failed now ticketBooking'.id
+            mapM_
+              ( \tbsc ->
+                  whenJust tbsc.serviceCategoryId $ \serviceId ->
+                    updateBlockedSeats (Kernel.Types.Id.Id serviceId) tbsc ticketBooking'.visitDate
+              )
+              ticketBookingServiceCategories
         _ -> return ()
       ticketBooking <- QTB.findByShortId (Kernel.Types.Id.ShortId shortId) >>= fromMaybeM (TicketBookingNotFound shortId) -- fetch again for updated status
       return ticketBooking.status
+  where
+    updateBookedAndBlockedSeats :: Kernel.Types.Id.Id Domain.Types.ServiceCategory.ServiceCategory -> DTB.TicketBookingServiceCategory -> Data.Time.Calendar.Day -> Environment.Flow ()
+    updateBookedAndBlockedSeats serviceCatId tbsc visitDate = do
+      seatManagement <- QTSM.findByTicketServiceCategoryIdAndDate serviceCatId visitDate >>= fromMaybeM (TicketSeatManagementNotFound serviceCatId.getId (show visitDate))
+      QTSM.updateBlockedSeats (seatManagement.blocked - tbsc.bookedSeats) serviceCatId visitDate
+      QTSM.updateBookedSeats (seatManagement.booked + tbsc.bookedSeats) serviceCatId visitDate
+
+    updateBlockedSeats :: Kernel.Types.Id.Id Domain.Types.ServiceCategory.ServiceCategory -> DTB.TicketBookingServiceCategory -> Data.Time.Calendar.Day -> Environment.Flow ()
+    updateBlockedSeats serviceCatId tbsc visitDate = do
+      seatManagement <- QTSM.findByTicketServiceCategoryIdAndDate serviceCatId visitDate >>= fromMaybeM (TicketSeatManagementNotFound serviceCatId.getId (show visitDate))
+      QTSM.updateBlockedSeats (seatManagement.blocked - tbsc.bookedSeats) serviceCatId visitDate
 
 postTicketBookingsUpdateSeats :: Domain.Action.UI.TicketService.TicketBookingUpdateSeatsReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess
 postTicketBookingsUpdateSeats TicketBookingUpdateSeatsReq {..} = do
-  void $ QTSM.updateBookedSeats updatedBookedSeats categoryId date
+  mbSeatM <- QTSM.findByTicketServiceCategoryIdAndDate categoryId date
+  if isJust mbSeatM
+    then QTSM.updateBookedSeats updatedBookedSeats categoryId date
+    else do
+      seatId <- generateGUID
+      let seatM =
+            Domain.Types.SeatManagement.SeatManagement
+              { id = seatId,
+                ticketServiceCategoryId = categoryId,
+                date = date,
+                blocked = 0,
+                booked = updatedBookedSeats
+              }
+      QTSM.create seatM
   pure Kernel.Types.APISuccess.Success

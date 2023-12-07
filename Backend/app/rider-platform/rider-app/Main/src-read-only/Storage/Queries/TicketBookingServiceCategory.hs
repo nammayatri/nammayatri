@@ -35,6 +35,7 @@ instance FromTType' Beam.TicketBookingServiceCategory Domain.Types.TicketBooking
             bookedSeats = bookedSeats,
             id = Kernel.Types.Id.Id id,
             name = name,
+            serviceCategoryId = serviceCategoryId,
             ticketBookingServiceId = Kernel.Types.Id.Id ticketBookingServiceId
           }
 
@@ -45,5 +46,6 @@ instance ToTType' Beam.TicketBookingServiceCategory Domain.Types.TicketBookingSe
         Beam.bookedSeats = bookedSeats,
         Beam.id = Kernel.Types.Id.getId id,
         Beam.name = name,
+        Beam.serviceCategoryId = serviceCategoryId,
         Beam.ticketBookingServiceId = Kernel.Types.Id.getId ticketBookingServiceId
       }

@@ -3,6 +3,7 @@
 
 module API.Dashboard.Tickets where
 
+import Data.Time
 import qualified Domain.Action.UI.TicketService as DTB
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.TicketBookingService as DTB
@@ -30,6 +31,7 @@ type VerifyBookingDetailsAPI =
 
 type GetServicesAPI =
   Capture "ticketPlaceId" (Id DTB.TicketPlace)
+    :> QueryParam "date" Day
     :> "services"
     :> Post '[JSON] [DTB.TicketServiceResp]
 
@@ -53,8 +55,8 @@ handler merchantId =
 verifyBookingDetails :: ShortId DM.Merchant -> Id DTB.TicketService -> ShortId DTB.TicketBookingService -> FlowHandler DTB.TicketServiceVerificationResp
 verifyBookingDetails _ personServiceId = withFlowHandlerAPI . DTB.postTicketBookingsVerify personServiceId
 
-getServices :: ShortId DM.Merchant -> Id DTB.TicketPlace -> FlowHandler [DTB.TicketServiceResp]
-getServices _ ticketPlaceId = withFlowHandlerAPI $ DTB.getTicketPlacesServices ticketPlaceId
+getServices :: ShortId DM.Merchant -> Id DTB.TicketPlace -> Maybe Day -> FlowHandler [DTB.TicketServiceResp]
+getServices _ ticketPlaceId = withFlowHandlerAPI . DTB.getTicketPlacesServices ticketPlaceId
 
 updateSeatManagement :: ShortId DM.Merchant -> DTB.TicketBookingUpdateSeatsReq -> FlowHandler APISuccess
 updateSeatManagement _ = withFlowHandlerAPI . DTB.postTicketBookingsUpdateSeats
