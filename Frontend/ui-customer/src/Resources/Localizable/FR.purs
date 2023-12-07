@@ -659,3 +659,4 @@ getFR stringKey =
         FARE_UPDATED_WITH_LONGER_DIST -> "Votre tarif a été mis à jour car votre trajet était plus long de {} km"
         FARE_UPDATED_WITH_CHARGES_SHORTER_DIST -> "Votre tarif a été mis à jour car votre trajet était plus court de {} km et des frais de temps d'attente ont été engagés"
         FARE_UPDATED_WITH_CHARGES_LONGER_DIST -> "Votre tarif a été mis à jour car votre trajet était plus long de {} km et des frais de temps d'attente ont été engagés"
+        START_TYPING_TO_SEARCH_PLACES -> "Commencez à taper pour rechercher des lieux"

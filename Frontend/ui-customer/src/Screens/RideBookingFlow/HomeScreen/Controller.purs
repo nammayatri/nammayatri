@@ -78,7 +78,7 @@ import Language.Types (STR(..))
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, printLog, trackAppTextInput, trackAppScreenEvent)
 import MerchantConfig.DefaultConfig as DC
 import MerchantConfig.Utils (Merchant(..), getMerchant, getValueFromConfig)
-import Prelude (class Applicative, class Show, Unit, Ordering, bind, compare, discard, map, negate, pure, show, unit, not, ($), (&&), (-), (/=), (<>), (==), (>), (||), (>=), void, (<), (*), (<=), (/), (+))
+import Prelude (class Applicative, class Show, Unit, Ordering, bind, compare, discard, map, negate, pure, show, unit, not, ($), (&&), (-), (/=), (<>), (==), (>), (||), (>=), void, (<), (*), (<=), (/), (+), when)
 import Presto.Core.Types.API (ErrorResponse)
 import PrestoDOM (Eval ,Visibility(..), BottomSheetState(..), continue, continueWithCmd, defaultPerformLog, exit, payload, updateAndExit)
 import PrestoDOM.Types.Core (class Loggable)
@@ -1145,7 +1145,7 @@ eval (PrimaryButtonActionController (PrimaryButtonController.OnClick)) state = d
       HomeScreen   -> do
         _ <- pure $ performHapticFeedback unit
         let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_where_to_btn"
-        exit $ UpdateSavedLocation state{props{isSource = Just false, isSearchLocation = SearchLocation, currentStage = SearchLocationModel, searchLocationModelProps{crossBtnSrcVisibility = false}}, data{source=(getString CURRENT_LOCATION)}}
+        exit $ UpdateSavedLocation state{props{isSource = Just false, isSearchLocation = SearchLocation, currentStage = SearchLocationModel, searchLocationModelProps{crossBtnSrcVisibility = false, findPlaceIllustration = state.data.locationList == []}}, data{source=(getString CURRENT_LOCATION)}}
       ConfirmingLocation -> do
         _ <- pure $ performHapticFeedback unit
         _ <- pure $ exitLocateOnMap ""
@@ -1163,7 +1163,7 @@ eval (PrimaryButtonActionController (PrimaryButtonController.OnClick)) state = d
 eval WhereToClick state = do
   _ <- pure $ performHapticFeedback unit
   let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_where_to_btn"
-      updateState = state{props{isSource = Just false, isSearchLocation = SearchLocation, currentStage = SearchLocationModel, searchLocationModelProps{crossBtnSrcVisibility = false}}, data{source=(getString CURRENT_LOCATION)}}
+      updateState = state{props{isSource = Just false, isSearchLocation = SearchLocation, currentStage = SearchLocationModel, searchLocationModelProps{crossBtnSrcVisibility = false, findPlaceIllustration = state.data.locationList == []}}, data{source=(getString CURRENT_LOCATION)}}
   exit $ UpdateSavedLocation updateState 
 
 eval (RideCompletedAC (RideCompletedCard.SkipButtonActionController (PrimaryButtonController.OnClick))) state =
@@ -1535,6 +1535,8 @@ eval (SearchLocationModelActionController (SearchLocationModelController.SetLoca
   _ <- pure $ unsafePerformEffect $ runEffectFn1 locateOnMap locateOnMapConfig { goToCurrentLocation = false, lat = lat, lon = lon, geoJson = state.data.polygonCoordinates, points = state.data.nearByPickUpPoints, zoomLevel = pickupZoomLevel, labelId = getNewIDWithTag "LocateOnMapPin"}
   pure $ unsafePerformEffect $ logEvent state.data.logField if state.props.isSource == Just true  then "ny_user_src_set_location_on_map" else "ny_user_dest_set_location_on_map"
   let srcValue = if state.data.source == "" then getString CURRENT_LOCATION else state.data.source
+  when (state.data.destination == "") $ do
+    pure $ setText (getNewIDWithTag "DestinationEditText") ""
   let newState = state
                   { data {source = srcValue}
                   , props { isSearchLocation = LocateOnMap
@@ -2038,7 +2040,7 @@ validateSearchInput state searchString =
   else
     continue state
   where
-  callSearchLocationAPI = updateAndExit state{props{ searchLocationModelProps{showLoader = true}}} $ SearchPlace searchString state
+  callSearchLocationAPI = updateAndExit state{props{ searchLocationModelProps{showLoader = true, findPlaceIllustration = false}}} $ SearchPlace searchString state
 
 constructLatLong :: Number -> Number -> String -> Location
 constructLatLong lat lng _ =

@@ -626,7 +626,7 @@ homeScreenFlow = do
                         lon = item.lon,
                         locationItemType = item.locationItemType,
                         postfixImageUrl = fetchImage FF_ASSET "ny_ic_fav" }
-            ) ((filteredRecentsList) <> filteredPredictionList) }, props{searchLocationModelProps{isAutoComplete = true,  showLoader = false}}})
+            ) ((filteredRecentsList) <> filteredPredictionList) }, props{searchLocationModelProps{isAutoComplete = true,  showLoader = false, findPlaceIllustration = false}}})
       homeScreenFlow
     GET_QUOTES state -> do
           setValueToLocalStore AUTO_SELECTING "false"

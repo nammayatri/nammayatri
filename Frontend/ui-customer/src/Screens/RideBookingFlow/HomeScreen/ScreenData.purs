@@ -268,6 +268,7 @@ dummySearchLocationModelProps = {
   , showLoader : false
   , crossBtnSrcVisibility : false
   , crossBtnDestVisibility : false
+  , findPlaceIllustration : true
 }
 
 dummySearchLocationModelData = {
