@@ -53,6 +53,7 @@ instance ToTType' BeamDI.DriverInformation DriverInformation where
         BeamDI.aadhaarVerified = aadhaarVerified,
         BeamDI.referralCode = referralCode,
         BeamDI.referredByDriverId = getId <$> referredByDriverId,
+        BeamDI.totalReferred = totalReferred,
         BeamDI.lastEnabledOn = lastEnabledOn,
         BeamDI.canDowngradeToSedan = canDowngradeToSedan,
         BeamDI.canDowngradeToHatchback = canDowngradeToHatchback,

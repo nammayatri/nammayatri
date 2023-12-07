@@ -608,6 +608,7 @@ createDriverDetails personId admin merchantId = do
             aadhaarVerified = False,
             referralCode = Nothing,
             referredByDriverId = Nothing,
+            totalReferred = Just 0,
             canDowngradeToSedan = transporterConfig.canDowngradeToSedan,
             canDowngradeToHatchback = transporterConfig.canDowngradeToHatchback,
             canDowngradeToTaxi = transporterConfig.canDowngradeToTaxi,
