@@ -44,6 +44,7 @@ import PrestoDOM.Core (terminateUI)
 import Types.App (FlowBT, GlobalState(..))
 import Unsafe.Coerce (unsafeCoerce)
 import Halogen.VDom.DOM.Prop (PropValue)
+import Data.String as DS
 
 foreign import getFromWindow :: EffectFn1 String Foreign
 
@@ -258,3 +259,9 @@ catMaybeStrings arr =
       case x of
         Just a -> acc <> a <> " "
         Nothing -> acc) "" arr
+
+capitalizeFirstChar :: String -> String
+capitalizeFirstChar inputStr =
+  let splitedArray = DS.split (DS.Pattern " ") inputStr
+      output = map (\item -> (DS.toUpper (DS.take 1 item)) <> (DS.toLower (DS.drop 1 item))) splitedArray
+    in DS.joinWith " " output

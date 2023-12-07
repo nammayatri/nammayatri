@@ -78,6 +78,7 @@ import Engineering.Helpers.Suggestions (getSuggestionsfromKey)
 import Components.ChooseVehicle.Controller as ChooseVehicle
 import Foreign.Generic (decode, encode, Foreign, decodeJSON, encodeJSON, class Decode, class Encode)
 import Data.Either (Either(..))
+import Engineering.Helpers.Utils as EHU
 
 shareAppConfig :: ST.HomeScreenState -> PopUpModal.Config
 shareAppConfig state = let
@@ -855,7 +856,7 @@ driverInfoTransformer state =
   let cardState = state.data.driverInfoCardState
   in
     { otp : cardState.otp
-    , driverName : cardState.driverName
+    , driverName : EHU.capitalizeFirstChar cardState.driverName
     , eta : cardState.eta
     , vehicleDetails : cardState.vehicleDetails
     , registrationNumber : cardState.registrationNumber
