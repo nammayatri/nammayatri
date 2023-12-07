@@ -216,7 +216,7 @@ cancelRideImpl ServiceHandle {..} requestorId rideId req = do
           disToPickup <- forM mbLocation $ \location -> do
             pickUpDistance booking.providerId booking.merchantOperatingCityId (getCoordinates location) (getCoordinates booking.fromLocation)
           let currentDriverLocation = getCoordinates <$> mbLocation
-          logDebug "RideCancelled Coin Event"
+          logDebug "RideCancelled Coin Event by driver"
           fork "DriverRideCancelledCoin Event : " $ DC.driverCoinsEvent driverId driver.merchantId booking.merchantOperatingCityId (DCT.Cancellation ride.createdAt booking.distanceToPickup disToPickup)
           buildRideCancelationReason currentDriverLocation disToPickup (Just driverId) DBCR.ByDriver ride (Just driver.merchantId) >>= \res -> return (res, cancellationCount, isGoToDisabled)
       return (rideCancellationReason, mbCancellationCnt, isGoToDisabled)

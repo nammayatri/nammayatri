@@ -825,7 +825,7 @@ instance IsAPIError DashboardSMSError
 data DriverCoinError
   = CoinServiceUnavailable Text
   | InsufficientCoins Text
-  | NegativeCoins Text
+  | CoinConversionToCash Text
   deriving (Generic, Eq, Show, FromJSON, ToJSON, IsBecknAPIError)
 
 instanceExceptionWithParent 'HTTPException ''DriverCoinError
@@ -834,17 +834,17 @@ instance IsBaseError DriverCoinError where
   toMessage = \case
     CoinServiceUnavailable merchantId -> Just ("Coin Service is not available for merchantId " <> show merchantId <> ".")
     InsufficientCoins driverId -> Just ("Insufficient coin balance for driverId " <> show driverId <> ".")
-    NegativeCoins driverId -> Just ("Negative coins is not allowed for driverId " <> show driverId <> ".")
+    CoinConversionToCash driverId -> Just ("Atleast 250 coins is required for conversion driverId " <> show driverId <> ".")
 
 instance IsHTTPError DriverCoinError where
   toErrorCode = \case
     CoinServiceUnavailable _ -> "COIN_SERVICE_UNAVAILABLE"
     InsufficientCoins _ -> "INSUFFICIENT_COINS"
-    NegativeCoins _ -> "NEGATIVE_COIN"
+    CoinConversionToCash _ -> "ATLEAST_250_COINS_REQUIRED_FOR_CONVERSION"
   toHttpCode = \case
     CoinServiceUnavailable _ -> E400
     InsufficientCoins _ -> E400
-    NegativeCoins _ -> E400
+    CoinConversionToCash _ -> E400
 
 instance IsAPIError DriverCoinError
 

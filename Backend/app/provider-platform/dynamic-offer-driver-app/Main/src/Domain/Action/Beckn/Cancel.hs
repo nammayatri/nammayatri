@@ -95,6 +95,17 @@ cancel req merchant booking = do
   QBCR.upsert bookingCR
   QRB.updateStatus booking.id SRB.CANCELLED
 
+  fork "DriverRideCancelledCoin Location trakking" $ do
+    whenJust mbRide $ \ride -> do
+      mbLocation <- do
+        driverLocations <- LF.driversLocation [ride.driverId]
+        return $ listToMaybe driverLocations
+      disToPickup <- forM mbLocation $ \location -> do
+        driverDistanceToPickup booking.providerId booking.merchantOperatingCityId (getCoordinates location) (getCoordinates booking.fromLocation)
+      logDebug $ "RideCancelled Coin Event by customer distance to pickup" <> show disToPickup
+      logDebug "RideCancelled Coin Event by customer"
+      DC.driverCoinsEvent ride.driverId merchant.id booking.merchantOperatingCityId (DCT.Cancellation ride.createdAt booking.distanceToPickup disToPickup)
+
   whenJust mbRide $ \ride -> do
     triggerRideCancelledEvent RideEventData {ride = ride{status = SRide.CANCELLED}, personId = ride.driverId, merchantId = merchant.id}
     triggerBookingCancelledEvent BookingEventData {booking = booking{status = SRB.CANCELLED}, personId = ride.driverId, merchantId = merchant.id}
@@ -102,15 +113,6 @@ cancel req merchant booking = do
   logTagInfo ("bookingId-" <> getId req.bookingId) ("Cancellation reason " <> show bookingCR.source)
   fork "cancelBooking - Notify BAP" $ do
     BP.sendBookingCancelledUpdateToBAP booking merchant bookingCR.source
-
-  whenJust mbRide $ \ride -> do
-    mbLocation <- do
-      driverLocations <- LF.driversLocation [ride.driverId]
-      return $ listToMaybe driverLocations
-    disToPickup <- forM mbLocation $ \location -> do
-      driverDistanceToPickup booking.providerId booking.merchantOperatingCityId (getCoordinates location) (getCoordinates booking.fromLocation)
-    logDebug "RideCancelled Coin Event"
-    fork "DriverRideCancelledCoin by Customer Event : " $ DC.driverCoinsEvent ride.driverId merchant.id booking.merchantOperatingCityId (DCT.Cancellation ride.createdAt booking.distanceToPickup disToPickup)
 
   whenJust mbRide $ \ride ->
     fork "cancelRide - Notify driver" $ do

@@ -188,8 +188,8 @@ useCoinsHandler (driverId, merchantId_, merchantOpCityId) ConvertCoinToCashReq {
       coinConversionRateRational = getHighPrecMoney (transporterConfig.coinConversionRate)
       calculatedAmountRational = coinConversionRateRational * (toRational coins)
       calculatedAmount = HighPrecMoney calculatedAmountRational
-  when (coins <= 0) $
-    throwError $ NegativeCoins driverId.getId
+  when (coins < 250) $
+    throwError $ CoinConversionToCash driverId.getId
   if coinBalance >= coins
     then do
       let history =
