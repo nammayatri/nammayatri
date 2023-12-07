@@ -11,6 +11,8 @@ module Domain.Types.Merchant.MerchantOperatingCity where
 
 import Database.Beam.MySQL ()
 import qualified Domain.Types.Merchant as DM
+import Kernel.External.Maps.Types (LatLong)
+import Kernel.External.Types (Language)
 import Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
@@ -19,6 +21,9 @@ data MerchantOperatingCity = MerchantOperatingCity
   { id :: Id MerchantOperatingCity,
     merchantId :: Id DM.Merchant,
     merchantShortId :: ShortId DM.Merchant,
-    city :: Context.City
+    city :: Context.City,
+    location :: LatLong,
+    supportNumber :: Maybe Text,
+    language :: Language
   }
   deriving (Generic, FromJSON, ToJSON, Show, Eq, ToSchema)
