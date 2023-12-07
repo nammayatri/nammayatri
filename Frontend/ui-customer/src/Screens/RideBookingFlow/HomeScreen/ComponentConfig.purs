@@ -49,10 +49,7 @@ import Data.Array as DA
 import Data.Either (Either(..))
 import Data.Int (toNumber)
 import Data.Int as INT
-import Data.Int as INT
 import Data.Maybe (Maybe(..), fromMaybe, isJust)
-import Data.String as DS
-import Data.String as DS
 import Data.String as DS
 import Effect (Effect)
 import Engineering.Helpers.Commons as EHC
@@ -82,6 +79,7 @@ import Font.Style (Style(..))
 import Services.API as API
 import Data.Lens ((^.))
 import Accessor (_fareBreakup, _description)
+import Engineering.Helpers.Utils as EHU
 
 shareAppConfig :: ST.HomeScreenState -> PopUpModal.Config
 shareAppConfig state = let
@@ -864,7 +862,7 @@ driverInfoTransformer state =
   let cardState = state.data.driverInfoCardState
   in
     { otp : cardState.otp
-    , driverName : cardState.driverName
+    , driverName : (DS.toUpper (DS.take 1 cardState.driverName)) <> (DS.toLower (DS.drop 1 cardState.driverName))
     , eta : cardState.eta
     , vehicleDetails : cardState.vehicleDetails
     , registrationNumber : cardState.registrationNumber

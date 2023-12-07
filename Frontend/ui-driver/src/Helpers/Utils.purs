@@ -265,12 +265,6 @@ getDistanceBwCordinates lat1 long1 lat2 long2 = do
 toRad :: Number -> Number
 toRad n = (n * pi) / 180.0
 
-capitalizeFirstChar :: String -> String
-capitalizeFirstChar inputStr =
-  let splitedArray = DS.split (DS.Pattern " ") (inputStr)
-      output = map (\item -> (DS.toUpper (DS.take 1 item)) <> (DS.toLower (DS.drop 1 item))) splitedArray
-    in DS.joinWith " " output
-
 getDowngradeOptions :: String -> Array String
 getDowngradeOptions variant = case (getMerchant FunctionCall) of
                                 YATRISATHI -> case variant of

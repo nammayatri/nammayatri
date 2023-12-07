@@ -14,7 +14,7 @@
 -}
 module Mobility.Prelude where
 
-import Data.String (null,Pattern(..), contains, joinWith, toLower, take, toUpper, drop, trim)
+import Data.String (null,Pattern(..), contains, joinWith, toLower, take, toUpper, drop, trim, split)
 import Data.Maybe (Maybe(..), fromMaybe, maybe)
 import PrestoDOM as PD
 import Prelude
@@ -45,3 +45,14 @@ catMaybeStrings :: Array (Maybe String) -> String
 catMaybeStrings arr = 
   trim $ foldl 
     (\acc x -> maybe acc (\a -> acc <> a <> " ") x) "" arr
+
+-- | Capitalize the first letter of each `Word` in a `Sentence` and lower case the rest.
+spaceSeparatedPascalCase :: String -> String
+spaceSeparatedPascalCase inputStr =
+  let 
+    splitedArray = split (Pattern " ") inputStr
+  in 
+    trim $ foldl (\acc item -> acc <> capitalize' item) "" splitedArray
+  where 
+    capitalize' :: String -> String
+    capitalize' str = capitalize $ toLower str <> " "
