@@ -331,7 +331,7 @@ createDriverFee merchantId merchantOpCityId driverId rideFare newFareParams maxS
   now <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
   lastDriverFee <- QDF.findLatestFeeByDriverId driverId
   driverFee <- mkDriverFee now merchantId driverId rideFare govtCharges platformFee cgst sgst transporterConfig booking
-  when (totalDriverFee > 0 || (totalDriverFee <= 0 && transporterConfig.isPlanMandatory && isJust mbDriverPlan && isEligibleForCharge transporterConfig freeTrialDaysLeft)) $ do
+  when ((totalDriverFee > 0 || (totalDriverFee <= 0 && transporterConfig.isPlanMandatory && isJust mbDriverPlan)) && isEligibleForCharge transporterConfig freeTrialDaysLeft) $ do
     numRides <- case lastDriverFee of
       Just ldFee ->
         if now >= ldFee.startTime && now < ldFee.endTime
