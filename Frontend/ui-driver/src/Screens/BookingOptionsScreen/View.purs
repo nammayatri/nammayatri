@@ -8,8 +8,9 @@ import Debug (spy)
 import Effect (Effect)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (capitalizeFirstChar, getVehicleType, fetchImage, FetchImageFrom(..), getVariantRideType, getVehicleVariantImage, getDowngradeOptionsText, getUIDowngradeOptions)
+import Helpers.Utils (getVehicleType, fetchImage, FetchImageFrom(..), getVariantRideType, getVehicleVariantImage, getDowngradeOptionsText, getUIDowngradeOptions)
 import Language.Strings (getString)
+import Engineering.Helpers.Utils as EHU
 import Language.Types (STR(..))
 import Prelude (Unit, const, map, not, ($), (<<<), (<>), (==), (<>))
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Prop, Screen, Visibility(..), afterRender, alpha, background, color, cornerRadius, fontStyle, gravity, height, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, stroke, text, textSize, textView, weight, width, frameLayout, visibility, clickable, singleLine)
@@ -249,7 +250,7 @@ vehicleDetailsView push state =
         , weight 1.0
         ]
         [ customTV (getString YOUR_VEHICLE) FontSize.a_12 FontStyle.body3 Color.black650
-        , customTV (capitalizeFirstChar state.data.vehicleName) FontSize.a_20 FontStyle.h3 Color.black800
+        , customTV (EHU.capitalizeFirstChar state.data.vehicleName) FontSize.a_20 FontStyle.h3 Color.black800
         ]
     , linearLayout
         [ width WRAP_CONTENT
