@@ -25,7 +25,8 @@ type AppConfig =
     waitTimeConfig :: WaitTimeConfig,
     cityConfig :: Array CityConfig,
     unserviceableThreshold :: Number,
-    enableMockLocation :: Boolean
+    enableMockLocation :: Boolean,
+    features :: Features
   } 
 
 type PurpleRideConfig = {
@@ -35,6 +36,10 @@ type PurpleRideConfig = {
   hearingImpairmentVideo :: String,
   genericAccessibilityVideo :: String
   }
+
+type Features = {
+  enableSuggestions :: Boolean
+}
 
 type Language =  {
   name :: String,
