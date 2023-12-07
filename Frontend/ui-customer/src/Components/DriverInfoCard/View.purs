@@ -38,7 +38,7 @@ import Language.Types (STR(..))
 import MerchantConfig.Utils (Merchant(..), getMerchant)
 import Prelude (Unit, (<<<), ($), (/), (<>), (==), unit, show, const, map, (>), (-), (*), bind, pure, discard, not, (&&), (||), (/=), (+))
 import Presto.Core.Types.Language.Flow (doAff)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), Accessiblity(..), afterRender, alignParentBottom, alignParentLeft, alpha, background, clickable, color, cornerRadius, ellipsize, fontSize, fontStyle, frameLayout, gravity, height, imageUrl, imageView, imageWithFallback, letterSpacing, lineHeight, linearLayout, margin, maxLines, onClick, orientation, padding, scrollBarY, scrollView, singleLine, stroke, text, textSize, textView, visibility, weight, width, layoutGravity, accessibilityHint, accessibility, onAnimationEnd)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), Accessiblity(..), afterRender, alignParentBottom, alignParentLeft, alpha, background, clickable, color, cornerRadius, ellipsize, fontSize, fontStyle, frameLayout, gravity, height, imageUrl, imageView, imageWithFallback, letterSpacing, lineHeight, linearLayout, margin, maxLines, onClick, orientation, padding, scrollBarY, scrollView, singleLine, stroke, text, textSize, textView, visibility, weight, width, layoutGravity, accessibilityHint, accessibility, onAnimationEnd, horizontalScrollView, scrollBarX)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Properties (cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
@@ -248,26 +248,36 @@ estimatedTimeAndDistanceView push state =
 
 otpView :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM ( Effect Unit) w
 otpView push state =
-  linearLayout
-  [ height WRAP_CONTENT
-  , width WRAP_CONTENT
-  ] (map(\item ->
-      linearLayout
-        [ height $ V 32
-        , width $ V 32
-        , gravity CENTER
-        , cornerRadius 4.0
-        , accessibility DISABLE
-        , background state.data.config.quoteListModel.otpTextBackground
-        , margin $ MarginLeft 7
-        ][ textView (
-            [ height WRAP_CONTENT
-            , width WRAP_CONTENT
-            , text item
-            , accessibility DISABLE
-            , color state.data.config.quoteListModel.otpTextColor
-            ] <> FontStyle.h2 TypoGraphy)
-        ]) $ split (Pattern "")  state.data.otp)
+  parentView os $ 
+  [ linearLayout
+    [ height WRAP_CONTENT
+    , width WRAP_CONTENT
+    , gravity CENTER
+    ] (map(\item ->
+        linearLayout
+          [ height $ V 32
+          , width $ V 32
+          , gravity CENTER
+          , cornerRadius 4.0
+          , accessibility DISABLE
+          , background state.data.config.quoteListModel.otpTextBackground
+          , margin $ MarginLeft 7
+          ][ textView (
+              [ height WRAP_CONTENT
+              , width WRAP_CONTENT
+              , text item
+              , accessibility DISABLE
+              , color state.data.config.quoteListModel.otpTextColor
+              ] <> FontStyle.h2 TypoGraphy)
+          ]) $ split (Pattern "") state.data.otp)
+  ]
+  where 
+    parentView os = ( (if os == "IOS" then linearLayout else horizontalScrollView) $
+                        [ height WRAP_CONTENT
+                        , width WRAP_CONTENT
+                        , gravity CENTER
+                        , scrollBarX false
+                        ] )
 
 expiryTimeView :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM ( Effect Unit) w
 expiryTimeView push state =
