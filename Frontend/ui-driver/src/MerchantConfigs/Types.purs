@@ -26,6 +26,7 @@ type AppConfig =
     cityConfig :: Array CityConfig,
     unserviceableThreshold :: Number,
     enableMockLocation :: Boolean,
+    features :: Features,
     flowConfig :: FlowConfig,
     permissions :: PermissionsConfig,
     homeScreen :: HomeScreenConfig
@@ -38,6 +39,10 @@ type PurpleRideConfig = {
   hearingImpairmentVideo :: String,
   genericAccessibilityVideo :: String
   }
+
+type Features = {
+  enableSuggestions :: Boolean
+}
 
 type Language =  {
   name :: String,

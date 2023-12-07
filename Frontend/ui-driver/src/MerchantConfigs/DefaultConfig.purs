@@ -59,6 +59,9 @@ config =
     earnAmountInADay : 2500,
     showFeeBreakup : true
   },
+  features : {
+    enableSuggestions : false
+  },
   showPaymentDetails : true,
   rideActionModelConfig : {
     showVehicleVariant : true
