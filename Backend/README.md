@@ -281,3 +281,7 @@ Run `nix run github:nix-community/nix-melt` to navigate and find that transitive
 [arion]: https://github.com/hercules-ci/arion
 [cabal]: https://cabal.readthedocs.io/
 [nix-shell]: https://nixos.wiki/wiki/Development_environment_with_nix-shell
+
+## Running Load Test
+
+See Documentation [README.md](load-test/README.md)

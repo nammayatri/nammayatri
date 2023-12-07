@@ -42,3 +42,13 @@ s3
 
 .hie-bios-cache
 .cabal-dir
+
+# load test files
+load-test/bin
+load-test/lib
+load-test/include
+load-test/__pycache__
+load-test/scripts/__pycache__
+load-test/pyvenv.cfg
+load-test/output
+load-test/tokens

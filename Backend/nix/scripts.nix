@@ -104,6 +104,42 @@ _:
           ${lib.getExe pkgs.tree} ./app/"''${name}"
         '';
       };
+
+      run-load-test = {
+        category = "Backend";
+        description = ''
+          Run load tests using Locust
+        '';
+        exec = ''
+          cd ./Backend/load-test
+
+          python3 ./setup/auth.py
+
+          python3 ./setup/locationUpdateService.py &
+          LOC_UPDATE_PID=$!
+          sleep 4
+
+          python3 ./services/shareOTP.py &
+          SHARE_OTP_PID=$!
+          sleep 4
+
+          locust --headless --run-time 2m --users 50  --only-summary --html ./output/riderApp.html --csv ./output/riderApp.csv -f ./scripts/riderApp.py  &
+          LOCUST_RIDER_PID=$!
+
+          locust --headless --run-time 2m --users 50 --only-summary  --html ./output/driverOffer.html --csv ./output/driverOffer.csv -f ./scripts/driverOffer.py &
+          LOCUST_DRIVER_PID=$!
+
+          wait $LOCUST_RIDER_PID $LOCUST_DRIVER_PID
+
+          cleanup() {
+              echo "Cleaning up..."
+              kill $LOC_UPDATE_PID $SHARE_OTP_PID $LOCUST_RIDER_PID $LOCUST_DRIVER_PID
+              exit 0
+          }
+          trap cleanup EXIT
+          wait
+        '';
+      };
     };
   };
 }
