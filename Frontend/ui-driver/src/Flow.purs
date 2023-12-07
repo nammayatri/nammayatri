@@ -808,6 +808,7 @@ applicationSubmittedFlow screenType = do
       modifyScreenState $ UploadDrivingLicenseScreenStateType (\_ -> defaultEpassState'.uploadDrivingLicenseScreen)
       modifyScreenState $ AddVehicleDetailsScreenStateType (\_ -> defaultEpassState'.addVehicleDetailsScreen)
       pure $ setText (getNewIDWithTag "VehicleRegistrationNumber") ""
+      pure $ setText (getNewIDWithTag "ReenterVehicleRegistrationNumber") ""
       addVehicleDetailsflow false
     VALIDATE_NUMBER state -> do
       getAlternateMobileResp <- lift $ lift $ Remote.validateAlternateNumber (makeValidateAlternateNumberRequest (state.data.mobileNumber))
@@ -966,6 +967,7 @@ driverProfileFlow = do
       modifyScreenState $ DriverProfileScreenStateType (\driverProfileScreen -> state {props = driverProfileScreen.props { alreadyActive = false}})
       let (GlobalState defaultEpassState) = defaultGlobalState
       pure $ setText (getNewIDWithTag "VehicleRegistrationNumber") ""
+      pure $ setText (getNewIDWithTag "ReenterVehicleRegistrationNumber") ""
       modifyScreenState $ AddVehicleDetailsScreenStateType (\_ -> defaultEpassState.addVehicleDetailsScreen)
       addVehicleDetailsflow true
     SUBCRIPTION -> updateAvailableAppsAndGoToSubs

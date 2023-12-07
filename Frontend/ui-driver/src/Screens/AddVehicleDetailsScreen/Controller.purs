@@ -32,17 +32,17 @@ import Components.AppOnboardingNavBar as AppOnboardingNavBar
 import Components.TutorialModal.Controller as TutorialModalController
 import Components.ValidateDocumentModal.Controller as ValidateDocumentModal
 import Data.Array (elem)
-import Data.String (length, split, Pattern(..))
+import Data.String (length, split, Pattern(..), toUpper)
 import Data.String.CodeUnits (charAt)
 import Debug (spy)
 import Effect (Effect)
 import Effect.Class (liftEffect)
-import Engineering.Helpers.Commons (getNewIDWithTag)
+import Engineering.Helpers.Commons (getNewIDWithTag, setText)
 import Helpers.Utils (renderBase64ImageFile, contactSupportNumber)
 import JBridge (disableActionEditText, hideKeyboardOnNavigation, openWhatsAppSupport, renderCameraProfilePicture, showDialer, uploadFile)
 import Log (printLog, trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppTextInput, trackAppScreenEvent)
 import MerchantConfig.Utils (Merchant(..), getMerchant, getValueFromConfig)
-import Prelude (Unit, bind, pure, ($), class Show, unit, (/=), discard, (==), (&&), (||), not, (<=), (>), (<>), (<), show, (+))
+import Prelude (Unit, bind, pure, ($), class Show, unit, void, (/=), discard, (==), (&&), (||), not, (<=), (>), (<>), (<), show, (+))
 import PrestoDOM (Eval, Props, continue, continueWithCmd, exit, updateAndExit, toast)
 import PrestoDOM.Types.Core (class Loggable)
 import Screens (ScreenName(..), getScreen)
@@ -236,10 +236,12 @@ eval RemoveUploadedFile state = do
   let newState = state { props = state.props { rcAvailable = false, rc_name = "", isValidState = false }, data = state.data { rc_base64 = "" }}
   continue newState
 eval (VehicleRegistrationNumber val) state = do
-  let newState = state {data = state.data { vehicle_registration_number = val }, props = state.props{isValidState = (checkRegNum (val) && state.props.rcAvailable) }}
+  void $ pure $ setText (getNewIDWithTag "VehicleRegistrationNumber") $ toUpper val
+  let newState = state {data = state.data { vehicle_registration_number = toUpper val }, props = state.props{isValidState = (checkRegNum (toUpper val) && state.props.rcAvailable) }}
   continue newState
 eval (ReEnterVehicleRegistrationNumber val) state = do
-  let newState = state {data = state.data { reEnterVehicleRegistrationNumber = val }, props = state.props{isValidState = (checkRegNum (val) && state.props.rcAvailable) }}
+  void $ pure $ setText (getNewIDWithTag "ReenterVehicleRegistrationNumber") $ toUpper val
+  let newState = state {data = state.data { reEnterVehicleRegistrationNumber = toUpper val }, props = state.props{isValidState = (checkRegNum (toUpper val) && state.props.rcAvailable) }}
   continue newState
 eval (VehicleModelName val) state = do
   _ <- pure $ disableActionEditText (getNewIDWithTag "VehicleModelName")

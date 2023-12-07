@@ -66,7 +66,7 @@ primaryEditTextConfig state = let
     primaryEditTextConfig' = config
       { editText
         { singleLine = true
-          , pattern = Just "[A-Z0-9/-]*,25"
+          , pattern = Just "[A-Za-z0-9/-]*,25"
           , placeholder = getString ENTER_DL_NUMBER
           , capsLock = true
         }
@@ -88,7 +88,7 @@ primaryEditTextConfigReEnterDl state = let
     primaryEditTextConfig' = config
       { editText
         { singleLine = true
-          , pattern = Just "[A-Z0-9/-]*,25"
+          , pattern = Just "[A-Za-z0-9/-]*,25"
           , placeholder = getString ENTER_DL_NUMBER
           , capsLock = true
           , color = Color.black800
