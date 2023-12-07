@@ -3,8 +3,8 @@
 module Domain.Types.ServicePeopleCategory where
 
 import Kernel.Prelude
-import qualified Kernel.Types.Common as Kernel.Types.Common
-import qualified Kernel.Types.Id as Kernel.Types.Id
+import qualified Kernel.Types.Common
+import qualified Kernel.Types.Id
 
 data ServicePeopleCategory = ServicePeopleCategory
   { description :: Kernel.Prelude.Text,

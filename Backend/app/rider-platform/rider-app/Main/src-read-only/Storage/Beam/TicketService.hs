@@ -5,11 +5,11 @@
 module Storage.Beam.TicketService where
 
 import qualified Database.Beam as B
-import qualified Domain.Types.BusinessHour as Domain.Types.BusinessHour
-import qualified Domain.Types.TicketService as Domain.Types.TicketService
+import qualified Domain.Types.BusinessHour
+import qualified Domain.Types.TicketService
 import Kernel.Prelude
-import qualified Kernel.Prelude as Kernel.Prelude
-import qualified Kernel.Types.Id as Kernel.Types.Id
+import qualified Kernel.Prelude
+import qualified Kernel.Types.Id
 import Tools.Beam.UtilsTH
 
 data TicketServiceT f = TicketServiceT

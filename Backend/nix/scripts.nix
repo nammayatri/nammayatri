@@ -47,7 +47,6 @@ _:
           cd ..
           treefmt
           hpack
-          hlint . --report
         '';
       };
 

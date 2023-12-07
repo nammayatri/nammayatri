@@ -2,9 +2,9 @@
 
 module Domain.Types.ServiceCategory where
 
-import qualified Domain.Types.ServicePeopleCategory as Domain.Types.ServicePeopleCategory
+import qualified Domain.Types.ServicePeopleCategory
 import Kernel.Prelude
-import qualified Kernel.Types.Id as Kernel.Types.Id
+import qualified Kernel.Types.Id
 
 data ServiceCategory = ServiceCategory
   { allowedSeats :: Kernel.Prelude.Maybe Kernel.Prelude.Int,

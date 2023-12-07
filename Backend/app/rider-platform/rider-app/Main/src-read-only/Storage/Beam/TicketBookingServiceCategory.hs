@@ -5,12 +5,12 @@
 module Storage.Beam.TicketBookingServiceCategory where
 
 import qualified Database.Beam as B
-import qualified Domain.Types.TicketBookingService as Domain.Types.TicketBookingService
-import qualified Domain.Types.TicketBookingServiceCategory as Domain.Types.TicketBookingServiceCategory
+import qualified Domain.Types.TicketBookingService
+import qualified Domain.Types.TicketBookingServiceCategory
 import Kernel.Prelude
-import qualified Kernel.Prelude as Kernel.Prelude
-import qualified Kernel.Types.Common as Kernel.Types.Common
-import qualified Kernel.Types.Id as Kernel.Types.Id
+import qualified Kernel.Prelude
+import qualified Kernel.Types.Common
+import qualified Kernel.Types.Id
 import Tools.Beam.UtilsTH
 
 data TicketBookingServiceCategoryT f = TicketBookingServiceCategoryT

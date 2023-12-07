@@ -3,12 +3,12 @@
 
 module Storage.Queries.ServicePeopleCategory where
 
-import qualified Domain.Types.ServicePeopleCategory as Domain.Types.ServicePeopleCategory
+import qualified Domain.Types.ServicePeopleCategory
 import Kernel.Beam.Functions
 import Kernel.Prelude
-import qualified Kernel.Prelude as Kernel.Prelude
-import qualified Kernel.Types.Common as Kernel.Types.Common
-import qualified Kernel.Types.Id as Kernel.Types.Id
+import qualified Kernel.Prelude
+import qualified Kernel.Types.Common
+import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow)
 import qualified Sequelize as Se
 import qualified Storage.Beam.ServicePeopleCategory as Beam
@@ -23,6 +23,26 @@ findById :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Do
 findById (Kernel.Types.Id.Id id) = do
   findOneWithKV
     [ Se.Is Beam.id $ Se.Eq id
+    ]
+
+findByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.ServicePeopleCategory.ServicePeopleCategory -> m (Maybe (Domain.Types.ServicePeopleCategory.ServicePeopleCategory))
+findByPrimaryKey (Kernel.Types.Id.Id id) = do
+  findOneWithKV
+    [ Se.And
+        [ Se.Is Beam.id $ Se.Eq id
+        ]
+    ]
+
+updateByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Prelude.Text -> Kernel.Prelude.Text -> Kernel.Types.Common.HighPrecMoney -> Kernel.Types.Id.Id Domain.Types.ServicePeopleCategory.ServicePeopleCategory -> m ()
+updateByPrimaryKey description name pricePerUnit (Kernel.Types.Id.Id id) = do
+  updateWithKV
+    [ Se.Set Beam.description description,
+      Se.Set Beam.name name,
+      Se.Set Beam.pricePerUnit pricePerUnit
+    ]
+    [ Se.And
+        [ Se.Is Beam.id $ Se.Eq id
+        ]
     ]
 
 instance FromTType' Beam.ServicePeopleCategory Domain.Types.ServicePeopleCategory.ServicePeopleCategory where

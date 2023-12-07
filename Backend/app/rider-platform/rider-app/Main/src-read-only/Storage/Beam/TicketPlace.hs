@@ -5,11 +5,11 @@
 module Storage.Beam.TicketPlace where
 
 import qualified Database.Beam as B
-import qualified Domain.Types.Merchant.MerchantOperatingCity as Domain.Types.Merchant.MerchantOperatingCity
-import qualified Domain.Types.TicketPlace as Domain.Types.TicketPlace
+import qualified Domain.Types.Merchant.MerchantOperatingCity
+import qualified Domain.Types.TicketPlace
 import Kernel.Prelude
-import qualified Kernel.Prelude as Kernel.Prelude
-import qualified Kernel.Types.Id as Kernel.Types.Id
+import qualified Kernel.Prelude
+import qualified Kernel.Types.Id
 import Tools.Beam.UtilsTH
 
 data TicketPlaceT f = TicketPlaceT

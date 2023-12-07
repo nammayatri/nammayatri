@@ -4,13 +4,13 @@
 
 module Storage.Beam.SpecialOccasion where
 
-import qualified Data.Time.Calendar as Data.Time.Calendar
+import qualified Data.Time.Calendar
 import qualified Database.Beam as B
-import qualified Domain.Types.BusinessHour as Domain.Types.BusinessHour
-import qualified Domain.Types.SpecialOccasion as Domain.Types.SpecialOccasion
+import qualified Domain.Types.BusinessHour
+import qualified Domain.Types.SpecialOccasion
 import Kernel.Prelude
-import qualified Kernel.Prelude as Kernel.Prelude
-import qualified Kernel.Types.Id as Kernel.Types.Id
+import qualified Kernel.Prelude
+import qualified Kernel.Types.Id
 import Tools.Beam.UtilsTH
 
 data SpecialOccasionT f = SpecialOccasionT

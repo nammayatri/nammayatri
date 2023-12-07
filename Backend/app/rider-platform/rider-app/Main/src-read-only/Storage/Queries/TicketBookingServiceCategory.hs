@@ -3,13 +3,13 @@
 
 module Storage.Queries.TicketBookingServiceCategory where
 
-import qualified Domain.Types.TicketBookingService as Domain.Types.TicketBookingService
-import qualified Domain.Types.TicketBookingServiceCategory as Domain.Types.TicketBookingServiceCategory
+import qualified Domain.Types.TicketBookingService
+import qualified Domain.Types.TicketBookingServiceCategory
 import Kernel.Beam.Functions
 import Kernel.Prelude
-import qualified Kernel.Prelude as Kernel.Prelude
-import qualified Kernel.Types.Common as Kernel.Types.Common
-import qualified Kernel.Types.Id as Kernel.Types.Id
+import qualified Kernel.Prelude
+import qualified Kernel.Types.Common
+import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow)
 import qualified Sequelize as Se
 import qualified Storage.Beam.TicketBookingServiceCategory as Beam
@@ -24,6 +24,28 @@ findAllByTicketBookingServiceId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) =
 findAllByTicketBookingServiceId (Kernel.Types.Id.Id ticketBookingServiceId) = do
   findAllWithKV
     [ Se.Is Beam.ticketBookingServiceId $ Se.Eq ticketBookingServiceId
+    ]
+
+findByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.TicketBookingServiceCategory.TicketBookingServiceCategory -> m (Maybe (Domain.Types.TicketBookingServiceCategory.TicketBookingServiceCategory))
+findByPrimaryKey (Kernel.Types.Id.Id id) = do
+  findOneWithKV
+    [ Se.And
+        [ Se.Is Beam.id $ Se.Eq id
+        ]
+    ]
+
+updateByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Common.HighPrecMoney -> Kernel.Prelude.Int -> Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.TicketBookingService.TicketBookingService -> Kernel.Types.Id.Id Domain.Types.TicketBookingServiceCategory.TicketBookingServiceCategory -> m ()
+updateByPrimaryKey amount bookedSeats name serviceCategoryId (Kernel.Types.Id.Id ticketBookingServiceId) (Kernel.Types.Id.Id id) = do
+  updateWithKV
+    [ Se.Set Beam.amount amount,
+      Se.Set Beam.bookedSeats bookedSeats,
+      Se.Set Beam.name name,
+      Se.Set Beam.serviceCategoryId serviceCategoryId,
+      Se.Set Beam.ticketBookingServiceId ticketBookingServiceId
+    ]
+    [ Se.And
+        [ Se.Is Beam.id $ Se.Eq id
+        ]
     ]
 
 instance FromTType' Beam.TicketBookingServiceCategory Domain.Types.TicketBookingServiceCategory.TicketBookingServiceCategory where

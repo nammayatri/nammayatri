@@ -3,13 +3,13 @@
 
 module Storage.Queries.SpecialOccasion where
 
-import qualified Data.Time.Calendar as Data.Time.Calendar
-import qualified Domain.Types.BusinessHour as Domain.Types.BusinessHour
-import qualified Domain.Types.SpecialOccasion as Domain.Types.SpecialOccasion
+import qualified Data.Time.Calendar
+import qualified Domain.Types.BusinessHour
+import qualified Domain.Types.SpecialOccasion
 import Kernel.Beam.Functions
 import Kernel.Prelude
-import qualified Kernel.Prelude as Kernel.Prelude
-import qualified Kernel.Types.Id as Kernel.Types.Id
+import qualified Kernel.Prelude
+import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow)
 import qualified Sequelize as Se
 import qualified Storage.Beam.SpecialOccasion as Beam
@@ -44,6 +44,29 @@ findSpecialOccasionByEntityIdAndDayOfWeek entityId dayOfWeek = do
     [ Se.And
         [ Se.Is Beam.entityId $ Se.Eq entityId,
           Se.Is Beam.dayOfWeek $ Se.Eq dayOfWeek
+        ]
+    ]
+
+findByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.SpecialOccasion.SpecialOccasion -> m (Maybe (Domain.Types.SpecialOccasion.SpecialOccasion))
+findByPrimaryKey (Kernel.Types.Id.Id id) = do
+  findOneWithKV
+    [ Se.And
+        [ Se.Is Beam.id $ Se.Eq id
+        ]
+    ]
+
+updateByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => [Kernel.Types.Id.Id Domain.Types.BusinessHour.BusinessHour] -> Kernel.Prelude.Maybe Data.Time.Calendar.Day -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Text -> Domain.Types.SpecialOccasion.SpecialDayType -> Kernel.Types.Id.Id Domain.Types.SpecialOccasion.SpecialOccasion -> m ()
+updateByPrimaryKey businessHours date dayOfWeek description entityId specialDayType (Kernel.Types.Id.Id id) = do
+  updateWithKV
+    [ Se.Set Beam.businessHours (Kernel.Types.Id.getId <$> businessHours),
+      Se.Set Beam.date date,
+      Se.Set Beam.dayOfWeek dayOfWeek,
+      Se.Set Beam.description description,
+      Se.Set Beam.entityId entityId,
+      Se.Set Beam.specialDayType specialDayType
+    ]
+    [ Se.And
+        [ Se.Is Beam.id $ Se.Eq id
         ]
     ]
 

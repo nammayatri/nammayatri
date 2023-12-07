@@ -2,10 +2,10 @@
 
 module Domain.Types.SpecialOccasion where
 
-import qualified Data.Time.Calendar as Data.Time.Calendar
-import qualified Domain.Types.BusinessHour as Domain.Types.BusinessHour
+import qualified Data.Time.Calendar
+import qualified Domain.Types.BusinessHour
 import Kernel.Prelude
-import qualified Kernel.Types.Id as Kernel.Types.Id
+import qualified Kernel.Types.Id
 import Tools.Beam.UtilsTH
 
 data SpecialOccasion = SpecialOccasion
