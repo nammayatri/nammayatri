@@ -47,9 +47,14 @@ generateServantAPI input =
     makeQualifiedImport :: String -> String
     makeQualifiedImport impts = "import qualified " <> impts
 
-    generateParams :: Int -> Text
-    generateParams 0 = ""
-    generateParams n = " a" <> T.pack (show n) <> generateParams (n - 1)
+    generateParams :: Bool -> Int -> Int -> Text
+    generateParams _ _ 0 = ""
+    generateParams isbackParam mx n =
+      ( if mx == n && isbackParam
+          then "(Kernel.Prelude.first Kernel.Prelude.Just a" <> T.pack (show n) <> ")"
+          else " a" <> T.pack (show n)
+      )
+        <> generateParams isbackParam mx (n - 1)
 
     handlerFunctionDef :: ApiTT -> Text
     handlerFunctionDef apiT =
@@ -62,13 +67,13 @@ generateServantAPI input =
        in functionName <> " :: (Kernel.Types.Id.Id Domain.Types.Person.Person, Kernel.Types.Id.Id Domain.Types.Merchant.Merchant)" <> handlerTypes
             <> "\n"
             <> functionName
-            <> generateParams (length allTypes)
+            <> generateParams False (length allTypes) (length allTypes)
             <> " = withFlowHandlerAPI $ "
             <> "Domain.Action.UI."
             <> _moduleName input
             <> "."
             <> functionName
-            <> generateParams (length allTypes)
+            <> generateParams True (length allTypes) (length allTypes)
             <> "\n"
 
 apiTTToText :: ApiTT -> Text

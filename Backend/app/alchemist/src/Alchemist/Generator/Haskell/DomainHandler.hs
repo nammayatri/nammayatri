@@ -34,7 +34,7 @@ generateDomainHandler input =
     removeComplexTypeImports = filter (\x -> not $ (qualifiedModuleName `isInfixOf` x))
 
     defaultQualifiedImport :: [String]
-    defaultQualifiedImport = ["Domain.Types.Person", "Domain.Types.Merchant", "Environment", "Kernel.Types.Id"]
+    defaultQualifiedImport = ["Kernel.Prelude", "Domain.Types.Person", "Domain.Types.Merchant", "Environment", "Kernel.Types.Id"]
 
     makeImport :: String -> String
     makeImport x = "import qualified " <> x
@@ -47,7 +47,7 @@ generateDomainHandler input =
             [] -> T.empty
             ty -> " -> " <> T.intercalate " -> " ty
           handlerTypes = showType <> " -> " <> "Environment.Flow " <> last allTypes
-       in functionName <> " :: (Kernel.Types.Id.Id Domain.Types.Person.Person, Kernel.Types.Id.Id Domain.Types.Merchant.Merchant)" <> handlerTypes
+       in functionName <> " :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant)" <> handlerTypes
             <> "\n"
             <> functionName
             <> " = error \"Logic yet to be decided\""
