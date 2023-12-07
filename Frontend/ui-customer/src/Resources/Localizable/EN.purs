@@ -659,3 +659,4 @@ getEN stringKey =
         FARE_UPDATED_WITH_LONGER_DIST -> "Your fare has been updated as your ride was {} km longer"
         FARE_UPDATED_WITH_CHARGES_SHORTER_DIST -> "Your fare has been updated as your ride was {} km shorter and wait time charges incurred"
         FARE_UPDATED_WITH_CHARGES_LONGER_DIST -> "Your fare has been updated as your ride was {} km longer and wait time charges incurred"
+        START_TYPING_TO_SEARCH_PLACES -> "Start typing to search for places"
