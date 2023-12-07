@@ -16,6 +16,7 @@ module Storage.Beam.Merchant.MerchantOperatingCity where
 import qualified Database.Beam as B
 import Database.Beam.MySQL ()
 import GHC.Generics (Generic)
+import Kernel.External.Types (Language)
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Beckn.Context as Context
 import Tools.Beam.UtilsTH
@@ -24,7 +25,11 @@ data MerchantOperatingCityT f = MerchantOperatingCityT
   { id :: B.C f Text,
     merchantId :: B.C f Text,
     merchantShortId :: B.C f Text,
-    city :: B.C f Context.City
+    city :: B.C f Context.City,
+    lat :: B.C f Double,
+    lon :: B.C f Double,
+    supportNumber :: B.C f (Maybe Text),
+    language :: B.C f Language
   }
   deriving (Generic, B.Beamable)
 

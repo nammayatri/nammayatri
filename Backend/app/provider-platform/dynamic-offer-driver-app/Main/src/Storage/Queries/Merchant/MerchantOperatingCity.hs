@@ -18,6 +18,7 @@ where
 import qualified Domain.Types.Merchant as DM
 import Domain.Types.Merchant.MerchantOperatingCity
 import Kernel.Beam.Functions
+import Kernel.External.Maps.Types (LatLong (..))
 import Kernel.Prelude
 import Kernel.Types.App
 import Kernel.Types.Beckn.Context as Context
@@ -46,7 +47,8 @@ instance FromTType' BeamMOC.MerchantOperatingCity MerchantOperatingCity where
           { id = Id id,
             merchantId = Id merchantId,
             merchantShortId = ShortId merchantShortId,
-            city
+            location = LatLong lat lon,
+            ..
           }
 
 instance ToTType' BeamMOC.MerchantOperatingCity MerchantOperatingCity where
@@ -55,5 +57,9 @@ instance ToTType' BeamMOC.MerchantOperatingCity MerchantOperatingCity where
       { BeamMOC.id = getId id,
         BeamMOC.merchantId = getId merchantId,
         BeamMOC.merchantShortId = getShortId merchantShortId,
-        BeamMOC.city = city
+        BeamMOC.city = city,
+        BeamMOC.lat = location.lat,
+        BeamMOC.lon = location.lon,
+        BeamMOC.supportNumber = supportNumber,
+        BeamMOC.language = language
       }
