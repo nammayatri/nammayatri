@@ -148,7 +148,8 @@ config =
   , enableContactSupport : true
   , features : {
     enableAutoReadOtp : true,
-    enableZooTicketBookingFlow : false
+    enableZooTicketBookingFlow : false,
+    enableSuggestions : false
   }
 
   , rideCompletedCardConfig : {
