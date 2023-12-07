@@ -40,7 +40,7 @@ import Control.Monad.State (state)
 import Data.Array as Array
 import Data.Int (round, toNumber, fromString, ceil)
 import Data.Lens ((^.))
-import Data.Maybe (Maybe(..), fromMaybe, isJust, isNothing)
+import Data.Maybe (Maybe(..), fromMaybe, isJust, isNothing, maybe)
 import Data.Number (fromString) as Number
 import Data.String (Pattern(..), Replacement(..), drop, length, take, trim, replaceAll, toLower)
 import Effect (Effect)
@@ -55,7 +55,7 @@ import Engineering.Helpers.Utils (saveObject)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (printLog, trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppTextInput, trackAppScreenEvent)
-import Prelude (class Show, Unit, bind, discard, map, not, pure, show, unit, void, ($), (&&), (*), (+), (-), (/), (/=), (<), (<>), (==), (>), (||), (<=), (>=), when, negate)
+import Prelude (class Show, Unit, bind, discard, map, not, pure, show, unit, void, ($), (&&), (*), (+), (-), (/), (/=), (<), (<>), (==), (>), (||), (<=), (>=), when, negate,(<<<))
 import PrestoDOM (Eval, continue, continueWithCmd, exit, updateAndExit, updateWithCmdAndExit)
 import PrestoDOM.Types.Core (class Loggable)
 import Resource.Constants (decodeAddress)
@@ -1007,7 +1007,7 @@ constructLatLong lat lon =
 activeRideDetail :: ST.HomeScreenState -> RidesInfo -> ST.ActiveRide
 activeRideDetail state (RidesInfo ride) = 
   let waitTimeSeconds = DS.split (DS.Pattern "<$>") (getValueToLocalStore TOTAL_WAITED)
-      waitTime = fromMaybe 0 $ Int.fromString $ fromMaybe "" $ waitTimeSeconds Array.!! 1
+      waitTime = maybe 0 (fromMaybe 0 <<< Int.fromString) $ waitTimeSeconds Array.!! 1
       isTimerValid = (fromMaybe "" (waitTimeSeconds Array.!! 0)) == ride.id
   in 
   {
