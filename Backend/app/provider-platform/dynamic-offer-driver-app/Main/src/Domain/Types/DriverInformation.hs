@@ -74,6 +74,7 @@ data DriverInformation = DriverInformation
     paymentPending :: Bool,
     referralCode :: Maybe Text,
     referredByDriverId :: Maybe (Id Person),
+    totalReferred :: Maybe Int,
     lastEnabledOn :: Maybe UTCTime,
     canDowngradeToSedan :: Bool,
     canDowngradeToHatchback :: Bool,

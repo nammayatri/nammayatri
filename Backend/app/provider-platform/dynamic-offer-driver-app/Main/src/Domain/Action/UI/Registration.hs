@@ -186,6 +186,7 @@ createDriverDetails personId merchantId merchantOpCityId = do
             autoPayStatus = Nothing,
             referralCode = Nothing,
             referredByDriverId = Nothing,
+            totalReferred = Just 0,
             lastEnabledOn = Nothing,
             canDowngradeToSedan = transporterConfig.canDowngradeToSedan,
             canDowngradeToHatchback = transporterConfig.canDowngradeToHatchback,
