@@ -308,7 +308,7 @@ vehicleRegistrationNumber state push =
               , hint (getString ENTER_VEHICLE_NO)
               , weight 1.0
               , cornerRadius 4.0
-              , pattern "[0-9A-Z]*,10"
+              , pattern "[0-9a-zA-Z]*,10"
               , stroke ("1," <> Color.white900)
               , id (EHC.getNewIDWithTag "VehicleRegistrationNumber")
               , onChange push (const VehicleRegistrationNumber state.props.input_data)
@@ -379,11 +379,10 @@ vehicleRegistrationNumber state push =
                     , text state.props.input_data
                     , hint  (getString ENTER_VEHICLE_NO)
                     , weight 1.0
-                    , inputType Password
                     , cornerRadius 4.0
-                    , pattern "[0-9A-Z]*,10"
+                    , pattern "[0-9a-zA-Z]*,10"
                     , stroke ("1," <> Color.white900)
-                    , id (EHC.getNewIDWithTag "VehicleRegistrationNumber")
+                    , id (EHC.getNewIDWithTag "ReenterVehicleRegistrationNumber")
                     , onChange push (const ReEnterVehicleRegistrationNumber state.props.input_data)
                     , inputTypeI 4097
                     ] <> FontStyle.subHeading1 TypoGraphy)

@@ -183,7 +183,7 @@ window.getMerchantConfig = function () {
         "cityName" : "Mysore",
         "mapImage" : "ny_ic_mysuru_map",
         "cityCode" : "std:0821",
-        "showSubscriptions" : false,
+        "showSubscriptions" : true,
         "cityLat" : 12.295810,
         "cityLong" : 76.639381,
         "supportNumber" : "",

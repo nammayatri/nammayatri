@@ -28,11 +28,11 @@ import Components.TutorialModal as TutorialModalController
 import Components.ValidateDocumentModal.Controller as ValidateDocumentModal
 import Components.AppOnboardingNavBar as AppOnboardingNavBar
 import Components.GenericHeader as GenericHeader
-import Data.String (length)
+import Data.String (length, toUpper)
 import Debug (spy)
 import Effect.Class (liftEffect)
 import Effect.Unsafe (unsafePerformEffect)
-import Engineering.Helpers.Commons (getNewIDWithTag)
+import Engineering.Helpers.Commons (getNewIDWithTag, setText)
 import Engineering.Helpers.LogEvent (logEvent)
 import Helpers.Utils (renderBase64ImageFile, contactSupportNumber)
 import JBridge (disableActionEditText, hideKeyboardOnNavigation, openWhatsAppSupport, renderBase64Image, renderCameraProfilePicture, showDialer, uploadFile)
@@ -204,19 +204,21 @@ eval (PrimaryButtonAction (PrimaryButton.OnClick)) state = do
 
 eval (PrimaryEditTextActionController (PrimaryEditText.TextChanged id value)) state = do
   _ <- pure $ disableActionEditText (getNewIDWithTag "EnterDrivingLicenseEditText")
+  void $ pure $ setText (getNewIDWithTag "EnterDrivingLicenseEditText") $ toUpper value
   if (length value == 16) then do 
     let _ = unsafePerformEffect $ logEvent state.data.logField "ny_driver_dl_entry"
     pure unit
     else pure unit
-  continue state {data = state.data { driver_license_number = value }}
+  continue state {data = state.data { driver_license_number = toUpper value }}
 
 eval (PrimaryEditTextActionControllerReEnter (PrimaryEditText.TextChanged id value))state = do
   _ <- pure $ disableActionEditText (getNewIDWithTag "ReEnterDrivingLicenseEditText")
+  void $ pure $ setText (getNewIDWithTag "ReEnterDrivingLicenseEditText") $ toUpper value
   if (length value == 16) then do 
     let _ = unsafePerformEffect $ logEvent state.data.logField "ny_driver_dl_re_entry"
     pure unit
     else pure unit
-  continue state {data = state.data { reEnterDriverLicenseNumber = value }}
+  continue state {data = state.data { reEnterDriverLicenseNumber = toUpper value }}
 
 eval DriverLicenseManual state = continue state{props{openLicenseManual = true}}
 
