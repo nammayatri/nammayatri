@@ -36,6 +36,10 @@ newtype ReferralReq = ReferralReq
   {value :: Text}
   deriving (Generic, ToSchema, ToJSON, FromJSON)
 
+newtype GetReferredDriverRes = GetReferredDriverRes
+  {value :: Int}
+  deriving (Generic, ToSchema, ToJSON, FromJSON)
+
 type ReferralRes = APISuccess
 
 validateReferralReq :: Validate ReferralReq
@@ -54,4 +58,12 @@ addReferral (personId, _, _) req = do
   when (isJust di.referralCode || isJust di.referredByDriverId) $ throwError (AlreadyReffered personId.getId)
   dr <- B.runInReplica (QDR.findByRefferalCode $ Id req.value) >>= fromMaybeM (InvalidReferralCode req.value)
   DriverInformation.addReferralCode personId req.value dr.driverId
+  let newtotalRef = fromJust di.totalReferred + 1
+  DriverInformation.incrementReferralCountByPersonId personId newtotalRef
   return Success
+
+getReferredDrivers :: (Id Person.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Flow GetReferredDriverRes
+getReferredDrivers (personId, _, _) = do
+  di <- B.runInReplica (DriverInformation.findById personId) >>= fromMaybeM DriverInfoNotFound
+  let totalRef = fromMaybe 0 di.totalReferred
+  pure $ GetReferredDriverRes {value = totalRef}

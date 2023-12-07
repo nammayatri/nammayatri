@@ -37,6 +37,7 @@ data DriverInformationT f = DriverInformationT
     lastEnabledOn :: B.C f (Maybe UTCTime),
     referralCode :: B.C f (Maybe Text),
     referredByDriverId :: B.C f (Maybe Text),
+    totalReferred :: B.C f (Maybe Int),
     canDowngradeToSedan :: B.C f Bool,
     canDowngradeToHatchback :: B.C f Bool,
     canDowngradeToTaxi :: B.C f Bool,

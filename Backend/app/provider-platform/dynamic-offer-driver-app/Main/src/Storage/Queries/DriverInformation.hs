@@ -298,6 +298,13 @@ addReferralCode (Id personId) code referredByDriverId = do
     ]
     [Se.Is BeamDI.driverId (Se.Eq personId)]
 
+incrementReferralCountByPersonId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> Int -> m ()
+incrementReferralCountByPersonId (Id personId) value = do
+  updateOneWithKV
+    [ Se.Set BeamDI.totalReferred (Just value)
+    ]
+    [Se.Is BeamDI.driverId (Se.Eq personId)]
+
 countDrivers :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Merchant -> m (Int, Int)
 countDrivers merchantID =
   getResults <$> do
