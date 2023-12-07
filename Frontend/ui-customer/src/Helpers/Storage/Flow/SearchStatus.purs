@@ -19,7 +19,7 @@ import Prelude
 import Services.API (GetProfileRes(..))
 import Types.App (FlowBT)
 import Storage (setValueToLocalStore, KeyStore(..), getValueToLocalStore)
-import Engineering.Helpers.Utils (catMaybeStrings)
+import Mobility.Prelude (catMaybeStrings)
 import Data.Lens ((^.))
 import Accessor
 import Data.Maybe

@@ -250,11 +250,3 @@ infixl 1 ifelse as ?
 
 fromProp :: PropValue -> String
 fromProp = unsafeCoerce
-
-catMaybeStrings :: Array (Maybe String) -> String
-catMaybeStrings arr = 
-  trim $ foldl 
-    (\acc x -> 
-      case x of
-        Just a -> acc <> a <> " "
-        Nothing -> acc) "" arr

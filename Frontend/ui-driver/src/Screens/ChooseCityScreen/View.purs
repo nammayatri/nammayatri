@@ -47,7 +47,7 @@ import MerchantConfig.Utils as MU
 import PrestoDOM.Properties as PP
 import PrestoDOM.Types.DomAttributes as PTD
 import Components.ErrorModal as ErrorModal
-
+import Mobility.Prelude
 screen :: ChooseCityScreenState -> Screen Action ChooseCityScreenState ScreenOutput
 screen initialState =
   { initialState
@@ -311,6 +311,3 @@ dummyView = linearLayout [visibility GONE][]
 
 transformCityConfig :: Array CityConfig -> Array MenuButton.Text
 transformCityConfig cityConfig = map (\city -> {name: city.cityName, value: city.cityName, subtitle: ""}) cityConfig
-
-boolToVisibility :: Boolean -> Visibility
-boolToVisibility val = if val then VISIBLE else GONE
