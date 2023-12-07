@@ -169,7 +169,8 @@ mkRideInterpolationHandler ::
     HasCallStack,
     Metrics.CoreMetrics m,
     EncFlow m r,
-    HasFlowEnv m r '["snapToRoadSnippetThreshold" ::: HighPrecMeters]
+    HasFlowEnv m r '["snapToRoadSnippetThreshold" ::: HighPrecMeters],
+    HasFlowEnv m r '["droppedPointsThreshold" ::: HighPrecMeters]
   ) =>
   Bool ->
   (Id person -> HighPrecMeters -> Int -> Int -> m ()) ->
@@ -253,7 +254,8 @@ interpolatePointsAndCalculateDistanceImplementation ::
   ( HasCallStack,
     EncFlow m r,
     Metrics.CoreMetrics m,
-    HasFlowEnv m r '["snapToRoadSnippetThreshold" ::: HighPrecMeters]
+    HasFlowEnv m r '["snapToRoadSnippetThreshold" ::: HighPrecMeters],
+    HasFlowEnv m r '["droppedPointsThreshold" ::: HighPrecMeters]
   ) =>
   Bool ->
   (Maps.SnapToRoadReq -> m (Maps.MapsService, Maps.SnapToRoadResp)) ->
