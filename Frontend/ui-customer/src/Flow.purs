@@ -48,7 +48,7 @@ import Foreign (MultipleErrors, unsafeToForeign)
 import Foreign.Class (class Encode, encode)
 import Foreign.Generic (decodeJSON, encodeJSON)
 import JBridge (getCurrentLatLong, addMarker, cleverTapSetLocation, currentPosition, drawRoute, emitJOSEvent, enableMyLocation, factoryResetApp, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, firebaseUserID, generateSessionId, getLocationPermissionStatus, getVersionCode, getVersionName, hideKeyboardOnNavigation, hideLoader, initiateLocationServiceClient, isCoordOnPath, isInternetAvailable, isLocationEnabled, isLocationPermissionEnabled, launchInAppRatingPopup, locateOnMap, locateOnMapConfig, metaLogEvent, openNavigation, reallocateMapFragment, removeAllPolylines, saveSuggestionDefs, saveSuggestions, setCleverTapUserData, setCleverTapUserProp, stopChatListenerService, toast, toggleBtnLoader, updateRoute, updateRouteMarker, extractReferrerUrl, getLocationNameV2, getLatLonFromAddress)
-import Helpers.Utils (decodeError, addToPrevCurrLoc, addToRecentSearches, adjustViewWithKeyboard, checkPrediction, clearWaitingTimer, differenceOfLocationLists, drawPolygon, filterRecentSearches, fetchImage, FetchImageFrom(..), getCurrentDate, getNextDateV2, getCurrentLocationMarker, getCurrentLocationsObjFromLocal, getDistanceBwCordinates, getGlobalPayload, getMobileNumber, getNewTrackingId, getObjFromLocal, getPrediction, getRecentSearches, getScreenFromStage, getSearchType, parseFloat, parseNewContacts, removeLabelFromMarker, requestKeyboardShow, saveCurrentLocations, seperateByWhiteSpaces, setText, showCarouselScreen, sortPredctionByDistance, toStringJSON, triggerRideStatusEvent, withinTimeRange, fetchDefaultPickupPoint, recentDistance)
+import Helpers.Utils (convertUTCToISTAnd12HourFormat, decodeError, addToPrevCurrLoc, addToRecentSearches, adjustViewWithKeyboard, checkPrediction, clearWaitingTimer, differenceOfLocationLists, drawPolygon, filterRecentSearches, fetchImage, FetchImageFrom(..), getCurrentDate, getNextDateV2, getCurrentLocationMarker, getCurrentLocationsObjFromLocal, getDistanceBwCordinates, getGlobalPayload, getMobileNumber, getNewTrackingId, getObjFromLocal, getPrediction, getRecentSearches, getScreenFromStage, getSearchType, parseFloat, parseNewContacts, removeLabelFromMarker, requestKeyboardShow, saveCurrentLocations, seperateByWhiteSpaces, setText, showCarouselScreen, sortPredctionByDistance, toStringJSON, triggerRideStatusEvent, withinTimeRange, fetchDefaultPickupPoint, recentDistance)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (printLog)
@@ -2479,7 +2479,12 @@ fillBookingDetails (TicketBookingDetails resp) shortOrderID ticketStatus = do
                   ]
                     <> case serv of
                         Nothing -> []
-                        Just (TicketBookingServiceDetails serviceDetails) -> if isJust serviceDetails.expiryDate then [ { key: "Valid until", val: (convertUTCtoISC (fromMaybe "" serviceDetails.expiryDate) "hh:mm A") <> ", " <> (convertUTCtoISC (fromMaybe "" serviceDetails.expiryDate) "Do MMM YYYY") } ] else []
+                        Just (TicketBookingServiceDetails serviceDetails) -> 
+                          if isJust serviceDetails.expiryDate then 
+                            [ { key: "Valid until",
+                                val: (maybe (convertUTCtoISC (fromMaybe "" serviceDetails.expiryDate) "hh:mm A") (\sl -> fromMaybe "" (convertUTCToISTAnd12HourFormat sl)) serviceDetails.slot )  
+                                     <> ", " <> (convertUTCtoISC (fromMaybe "" serviceDetails.expiryDate) "Do MMM YYYY") } ] 
+                          else []
                 , bookedForArray = (map (\(TicketBookingServiceDetails item) -> item.ticketServiceName) resp.services)
                 }
               }

@@ -78,7 +78,7 @@ eval AfterRender state = do
 
 eval (ToggleTicketOption ticketID) state = do
   let updatedServicesInfo = map (updateExpandService ticketID) state.data.servicesInfo
-      updatedAmount = updateTicketAmount ticketID updatedServicesInfo state.data.totalAmount
+      updatedAmount = updateTicketAmount state ticketID updatedServicesInfo state.data.totalAmount
   continue state { data { servicesInfo = updatedServicesInfo, totalAmount = updatedAmount } }
 
 eval (IncrementTicket peopleCat limit) state = do
@@ -86,28 +86,26 @@ eval (IncrementTicket peopleCat limit) state = do
     let updatedData = markLimitCrossed peopleCat true state.data.servicesInfo
     continue state { data {servicesInfo = markLimitCrossed peopleCat true state.data.servicesInfo}}
   else do
-    let {finalAmount, updateServicesInfo} = calculateTicketAmount peopleCat (Just true) state.data.servicesInfo
-        hello = spy "dkafjka" updateServicesInfo
-        hello1 = spy "kdfja;" finalAmount
+    let {finalAmount, updateServicesInfo} = calculateTicketAmount peopleCat (Just true) state state.data.servicesInfo
     continue state { data { totalAmount = finalAmount, servicesInfo = updateServicesInfo } }
 
 eval (DecrementTicket peopleCat limit) state = do
-  let {finalAmount, updateServicesInfo} = calculateTicketAmount peopleCat (Just false) state.data.servicesInfo
+  let {finalAmount, updateServicesInfo} = calculateTicketAmount peopleCat (Just false) state state.data.servicesInfo
       limitUpdatedServicesInfo = markLimitCrossed peopleCat false updateServicesInfo
   continue state { data { totalAmount = finalAmount, servicesInfo = limitUpdatedServicesInfo } }
 
 eval  (DatePicker _ resp year month date ) state = do
   case resp of 
     "SELECTED" -> do 
-      let selectedDateString = (show year) <> "-" <> (show (month+1)) <> "-" <> (if date < 10 then "0"  else "") <> (show date)
+      let selectedDateString = (show year) <> "-" <> (if (month + 1 < 10) then "0" else "") <> (show (month+1)) <> "-" <> (if date < 10 then "0"  else "") <> (show date)
           validDate = (unsafePerformEffect $ runEffectFn2 compareDate (getDateAfterNDaysv2 (getLimitOfDaysAccToPlaceType state)) selectedDateString)
                       && (unsafePerformEffect $ runEffectFn2 compareDate selectedDateString (getCurrentDatev2 "" ))
-          modifiedServicesData = map (modifyServicSelectedBHid selectedOpDay) state.data.servicesInfo
-          selectedOpDay = convertUTCtoISC ((show year) <> "-" <> (show (month + 1)) <> "-" <> (show date)) "dddFull"
+          modifiedServicesData = map (modifyServicSelectedBHid selectedOpDay selectedDateString) state.data.servicesInfo
+          selectedOpDay = convertUTCtoISC ((show year) <> "-" <> (if (month + 1 < 10) then "0" else "") <> (show (month + 1)) <> "-" <> (show date)) "dddFull"
       continue state { props{selectedOperationalDay = selectedOpDay, validDate = validDate },data { totalAmount = 0, servicesInfo = modifiedServicesData, dateOfVisit = selectedDateString }}
     _ -> continue state
   where
-    modifyServicSelectedBHid selectedOpDay service = service {businessHours = map initBusinessHours service.businessHours, selectedBHid = getValidBHid (getValidTimeIntervals service.timeIntervalData selectedOpDay) state} -- update here selected BHID
+    modifyServicSelectedBHid selectedOpDay selectedDateString service = service {businessHours = map initBusinessHours service.businessHours, selectedSlot = Nothing, selectedBHid = spy ("hello world" <> service.serviceName <> selectedOpDay ) $  getValidBHid (getValidTimeIntervals service.timeIntervalData selectedOpDay ) selectedOpDay selectedDateString state} -- update here selected BHID
     initBusinessHours bh = bh { categories = map (initCategories bh) bh.categories }
     initCategories bh cat = cat {isSelected = if length bh.categories > 1 then false else true, peopleCategories = map initPeopleCategories cat.peopleCategories}
     initPeopleCategories pc = pc {currentValue = 0}
@@ -165,7 +163,7 @@ eval (RefreshStatusAC (PrimaryButton.OnClick)) state = exit $ RefreshPaymentStat
 
 eval (SelectDestination selCategory) state = do
   let modifiedServicesData = map (modifyDestinationInfo) state.data.servicesInfo
-      finalAmount = calculateTotalAmount modifiedServicesData
+      finalAmount = calculateTotalAmount state modifiedServicesData
   continue state {data {totalAmount = finalAmount, servicesInfo = modifiedServicesData}}
   where
     modifyDestinationInfo service = if service.id == selCategory.ticketID then service {businessHours = map (modifyBH service.selectedBHid) service.businessHours} else service
@@ -174,10 +172,13 @@ eval (SelectDestination selCategory) state = do
 
 eval (SelectSlot ticketId slot) state = do
   let modifiedServicesData = map (modifySlotInfo) state.data.servicesInfo 
-      finalAmount = calculateTotalAmount modifiedServicesData
+      finalAmount = calculateTotalAmount state modifiedServicesData
   continue state {data {totalAmount = finalAmount, servicesInfo = modifiedServicesData}}
   where
-    modifySlotInfo service =  if service.id == ticketId then service { selectedBHid = Just slot.bhourId} else service
+    modifySlotInfo service =  if service.id == ticketId then service { selectedSlot = Just slot.slot, selectedBHid = Just slot.bhourId, businessHours = map (modifyBH service.selectedBHid) service.businessHours} else service
+    modifyBH selectedBHid bh =  bh {categories = map (initCategories bh) bh.categories} 
+    initCategories bh cat = cat {isSelected = if length bh.categories > 1 then false else true, peopleCategories = map initPeopleCategories cat.peopleCategories}
+    initPeopleCategories pc = pc {currentValue = 0}
 
 eval (OpenGoogleMap lat long) state = do
   let dstLat = fromMaybe 0.0 lat
@@ -189,7 +190,6 @@ eval _ state = continue state
 transformRespToStateData :: Boolean -> TicketServiceResp -> TicketBookingScreenState -> String -> TicketServiceData
 transformRespToStateData isFirstElement (TicketServiceResp service) state selOpDay = do
   let timeIntervalDataInfo = convertServiceDataToTimeIntervalData service.businessHours
-      hello = spy "dkfajk;fj" (map convertServiceBusinessHoursData service.businessHours)
   { id : service.id,
     serviceName : service.name,
     shortDesc : service.shortDesc,
@@ -198,7 +198,8 @@ transformRespToStateData isFirstElement (TicketServiceResp service) state selOpD
     businessHours : map convertServiceBusinessHoursData service.businessHours,
     timeIntervalData : timeIntervalDataInfo,
     isExpanded : isFirstElement,
-    selectedBHid : getValidBHid (getValidTimeIntervals timeIntervalDataInfo selOpDay) state
+    selectedBHid : getValidBHid (getValidTimeIntervals timeIntervalDataInfo selOpDay) selOpDay state.data.dateOfVisit state,
+    selectedSlot : Nothing
   }
   where
   convertServiceDataToTimeIntervalData :: Array BusinessHoursResp -> Array SlotsAndTimeIntervalData
@@ -224,7 +225,8 @@ transformRespToStateData isFirstElement (TicketServiceResp service) state selOpD
       slot : resp.slot,
       startTime : resp.startTime,
       endTime : resp.endTime ,
-      categories : map (convertServiceTicketCategoriesData (length resp.categories)) resp.categories 
+      categories : map (convertServiceTicketCategoriesData (length resp.categories)) resp.categories,
+      operationalDays : resp.operationalDays
     }
   convertPeopleCategoriesData :: PeopleCategoriesResp -> PeopleCategoriesRespData
   convertPeopleCategoriesData (PeopleCategoriesResp price) = do
@@ -245,14 +247,25 @@ transformRespToStateData isFirstElement (TicketServiceResp service) state selOpD
       isSelected : if catLength > 1 then false else true
     }
 
-getValidBHid :: Array TimeInterval -> TicketBookingScreenState -> Maybe String
-getValidBHid timeIntervals state = do
+getValidBHid :: Array TimeInterval -> String -> String -> TicketBookingScreenState -> Maybe String
+getValidBHid timeIntervals selOperationalDay dateOfVisit state = do
     let now = convertUTCtoISC (getCurrentUTC "") "HH:mm:ss"
         currentDate = convertUTCtoISC (getCurrentUTC "") "YYYY-MM-DD"
         selTimeInterval = timeIntervals !! 0
     case selTimeInterval of
       Nothing -> Nothing
-      Just sti -> Just sti.bhourId
+      Just sti -> do
+        let startTime = if sti.startTime /= "" then convertUTCTimeToISTTimeinHHMMSS sti.startTime else ""
+            endTime = if sti.endTime /= "" then convertUTCTimeToISTTimeinHHMMSS sti.endTime else ""
+        if dateOfVisit == currentDate then do
+            if (startTime /= "" && endTime /= "") then do
+              if (startTime < now && now < endTime) then Just sti.bhourId
+              else Nothing
+            else if (endTime /= "") then do
+              if (now < endTime) then Just sti.bhourId
+              else Nothing 
+            else Nothing
+        else Just sti.bhourId
 
 getValidTimeIntervals :: Array SlotsAndTimeIntervalData -> String -> Array TimeInterval
 getValidTimeIntervals timeInData selOpDay = do
@@ -276,20 +289,22 @@ toggleAndInitServiceIfNotExpanded service = if service.isExpanded then
     initCategories bh cat = cat {isSelected = if length bh.categories > 1 then false else true, peopleCategories = map initPeopleCategories cat.peopleCategories}
     initPeopleCategories pc = pc {currentValue = 0}
 
-updateTicketAmount :: String -> Array TicketServiceData -> Int -> Int
-updateTicketAmount ticketID servicesInfo actualAmount = sum (map calculatePrice servicesInfo)
+updateTicketAmount :: TicketBookingScreenState -> String -> Array TicketServiceData -> Int -> Int
+updateTicketAmount state ticketID servicesInfo actualAmount = sum (map calculatePrice servicesInfo)
   where
   calculateAmountPrice :: PeopleCategoriesRespData -> Int
   calculateAmountPrice price = price.currentValue * price.pricePerUnit
 
   calculatePrice :: TicketServiceData -> Int
-  calculatePrice service = sum (map (\bh -> if service.selectedBHid == Just bh.bhourId
+  calculatePrice service = sum (map (\bh -> do
+                                            let selOpDay = convertUTCtoISC state.data.dateOfVisit "dddFull" 
+                                            if (Just bh.bhourId == service.selectedBHid && bh.slot == service.selectedSlot && (selOpDay `elem` bh.operationalDays))
                                             then (sum (map (\cat -> if cat.isSelected then (sum (map calculateAmountPrice cat.peopleCategories)) else 0) bh.categories))
                                             else 0
                                 ) service.businessHours)
 
-calculateTicketAmount :: TicketPeopleCategoriesOptionData -> Maybe Boolean -> Array TicketServiceData -> {finalAmount :: Int, updateServicesInfo :: Array TicketServiceData }
-calculateTicketAmount ticketOption isIncrement servicesInfo = do
+calculateTicketAmount :: TicketPeopleCategoriesOptionData -> Maybe Boolean -> TicketBookingScreenState -> Array TicketServiceData -> {finalAmount :: Int, updateServicesInfo :: Array TicketServiceData }
+calculateTicketAmount ticketOption isIncrement state servicesInfo = do
   let updatedServices = map (updateService ticketOption) servicesInfo
       finalAmount = sum (map calculateAmountService updatedServices)
   
@@ -298,12 +313,17 @@ calculateTicketAmount ticketOption isIncrement servicesInfo = do
     updateService :: TicketPeopleCategoriesOptionData -> TicketServiceData -> TicketServiceData
     updateService ticketOption service =
       if service.id == ticketOption.ticketID then do
-        service {businessHours = map (modifyBH ticketOption service.selectedBHid) service.businessHours}
+        service {businessHours = map (modifyBH ticketOption service) service.businessHours}
       else service
 
-    modifyBH ticketOption selectedBHid bh = if Just bh.bhourId == selectedBHid then bh { categories = map (modifyCategory ticketOption) bh.categories} else bh 
-    
+    modifyBH ticketOption service bh = if (isValidBH service bh) then bh { categories = map (modifyCategory ticketOption) bh.categories} else bh{ categories = map (initCategories bh) bh.categories} 
     modifyCategory ticketOption cat = cat { peopleCategories = map (updatePricePerUnit ticketOption) cat.peopleCategories}
+    initCategories bh cat = cat {isSelected = if length bh.categories > 1 then false else true, peopleCategories = map initPeopleCategories cat.peopleCategories}
+    initPeopleCategories pc = pc {currentValue = 0}
+
+    isValidBH service bh = do
+      let selOpDay = convertUTCtoISC state.data.dateOfVisit "dddFull" 
+      (Just bh.bhourId == service.selectedBHid && bh.slot == service.selectedSlot && (selOpDay `elem` bh.operationalDays))
 
     updatePricePerUnit :: TicketPeopleCategoriesOptionData -> PeopleCategoriesRespData -> PeopleCategoriesRespData
     updatePricePerUnit ticketOption price =
@@ -331,22 +351,24 @@ markLimitCrossed :: TicketPeopleCategoriesOptionData -> Boolean -> Array TicketS
 markLimitCrossed ticketOption value servicesInfo = do
   map (updateService ticketOption value) servicesInfo
   where
-    updateService ticketOption value service = if (ticketOption.ticketID == service.id) then service {businessHours = map (modifyBH ticketOption service.selectedBHid value) service.businessHours} else service
-    modifyBH ticketOption selectedBHid value bh = if Just bh.bhourId == selectedBHid then bh { categories = map (modifyCategory ticketOption value) bh.categories} else bh 
+    updateService ticketOption value service = if (ticketOption.ticketID == service.id) then service {businessHours = map (modifyBH ticketOption service.selectedBHid service.selectedSlot value) service.businessHours} else service
+    modifyBH ticketOption selectedBHid selectedSlot value bh = if (Just bh.bhourId == selectedBHid  && bh.slot == selectedSlot) then bh { categories = map (modifyCategory ticketOption value) bh.categories} else bh 
     modifyCategory ticketOption value cat =  cat { peopleCategories = map (modifyPC ticketOption value) cat.peopleCategories}
     modifyPC ticketOption value pc = if ticketOption.peopleCategoryId == pc.peopleCategoryId then pc { ticketLimitCrossed = value} else pc
 
 sum :: Array Int -> Int
 sum = foldl (\acc x -> acc + x) 0
 
-calculateTotalAmount :: Array TicketServiceData -> Int
-calculateTotalAmount services = sum $ map (calculateServiceAmount) services
+calculateTotalAmount :: TicketBookingScreenState -> Array TicketServiceData -> Int
+calculateTotalAmount state services = sum $ map (calculateServiceAmount state) services
 
-calculateServiceAmount :: TicketServiceData -> Int
-calculateServiceAmount service = if service.isExpanded then sum (map (calculateBHAmount service) service.businessHours) else 0
+calculateServiceAmount :: TicketBookingScreenState -> TicketServiceData -> Int
+calculateServiceAmount state service = if service.isExpanded then sum (map (calculateBHAmount state service) service.businessHours) else 0
 
-calculateBHAmount :: TicketServiceData -> BusinessHoursData -> Int
-calculateBHAmount service bh = if (Just bh.bhourId == service.selectedBHid) then (sum (map (calculateCategoryAmount) bh.categories)) else 0
+calculateBHAmount :: TicketBookingScreenState -> TicketServiceData -> BusinessHoursData -> Int
+calculateBHAmount state service bh = do
+  let selOpDay = convertUTCtoISC state.data.dateOfVisit "dddFull" 
+  if (Just bh.bhourId == service.selectedBHid && bh.slot == service.selectedSlot && (selOpDay `elem` bh.operationalDays)) then (sum (map (calculateCategoryAmount) bh.categories)) else 0
 
 calculateCategoryAmount :: TicketCategoriesData -> Int
 calculateCategoryAmount category = if category.isSelected then  sum ( map (\peopleCat -> peopleCat.pricePerUnit * peopleCat.currentValue) category.peopleCategories ) else 0

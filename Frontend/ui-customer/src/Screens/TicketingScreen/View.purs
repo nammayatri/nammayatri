@@ -34,7 +34,7 @@ import Data.Maybe (fromMaybe, Maybe(..))
 import Effect (Effect)
 import Font.Style as FontStyle
 import Helpers.Utils (FetchImageFrom(..), fetchImage)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), background, color, cornerRadius, fontStyle, gravity, height, imageView, imageWithFallback, linearLayout, margin, maxLines, onBackPressed, onClick, orientation, padding, relativeLayout, stroke, text, textSize, textView, visibility, weight, width, shimmerFrameLayout, imageUrl, alignParentBottom)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), maxLines, ellipsize, Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), background, color, cornerRadius, fontStyle, gravity, height, imageView, imageWithFallback, linearLayout, margin, maxLines, onBackPressed, onClick, orientation, padding, relativeLayout, stroke, text, textSize, textView, visibility, weight, width, shimmerFrameLayout, imageUrl, alignParentBottom)
 import Screens.TicketingScreen.Controller (Action(..), eval, ScreenOutput(..))
 import Screens.Types as ST
 import Styles.Colors as Color
@@ -206,57 +206,63 @@ ticketingItem push (API.TicketPlaceResp item) index =
   , background Color.yellow800
   , margin $ Margin 16 marginTop 16 0
   , gravity CENTER
-  ] $ [  relativeLayout
-      [ width MATCH_PARENT
-      , height WRAP_CONTENT
-      , background Color.white900
-      , cornerRadius 16.0
-      , stroke $ "1," <> Color.grey900
-      , padding $ Padding 12 12 12 12
-      , onClick push $ const $ OnSelect $ API.TicketPlaceResp item
-      ]
-      [ linearLayout
-          [ height WRAP_CONTENT
-          , width MATCH_PARENT
-          , gravity CENTER_VERTICAL
-          ]
-          [  linearLayout
-             [ width $ WRAP_CONTENT
-             , height $ WRAP_CONTENT
-             , cornerRadius 6.0
-             ][imageView
-              [ imageUrl $ fromMaybe "ny_ic_jetty" item.iconUrl -- TODO: Get default image
-              , cornerRadius 6.0
-              , height $ V 64
-              , width $ V 64
-              ]
-            ]
-          , linearLayout
-              [ width WRAP_CONTENT
-              , height WRAP_CONTENT
-              , weight 1.0
-              , orientation VERTICAL
-              , margin $ MarginLeft 16
-              ]
-              [ textView
-                  $ [ text item.name
-                    , color Color.black800
-                    , height WRAP_CONTENT
-                    , padding $ PaddingBottom 2
-                    ]
-                  <> FontStyle.h3 LanguageStyle
-              , textView
-                  $ [ color Color.black900
-                    , height WRAP_CONTENT
-                    , padding $ PaddingBottom 2
-                    ] <> case item.shortDesc of
-                      Nothing -> [visibility GONE]
-                      Just desc -> [text desc]
-                  <> FontStyle.tags LanguageStyle
-              ]
-          ]
-      , linearLayout
+  ] $ [  linearLayout
           [ width MATCH_PARENT
+          , height WRAP_CONTENT
+          , background Color.white900
+          , cornerRadius 16.0
+          , stroke $ "1," <> Color.grey900
+          , padding $ Padding 12 12 12 12
+          , onClick push $ const $ OnSelect $ API.TicketPlaceResp item
+          ]
+          [ linearLayout
+              [ height WRAP_CONTENT
+              , weight 1.0
+              , gravity CENTER_VERTICAL
+              ]
+              [  linearLayout
+                  [ width $ WRAP_CONTENT
+                  , height $ WRAP_CONTENT
+                  , cornerRadius 6.0
+                  ][  imageView
+                      [ imageUrl $ fromMaybe "ny_ic_jetty" item.iconUrl -- TODO: Get default image
+                      , cornerRadius 6.0
+                      , height $ V 64
+                      , width $ V 64
+                  ]
+                ]
+              , linearLayout
+                  [ width WRAP_CONTENT
+                  , height WRAP_CONTENT
+                  , weight 1.0
+                  , orientation VERTICAL
+                  , margin $ MarginLeft 16
+                  ]
+                  [ textView
+                      $ [ text $ item.name
+                        , color Color.black800
+                        , height WRAP_CONTENT
+                        , width WRAP_CONTENT
+                        , padding $ PaddingBottom 2
+                        , maxLines 2
+                        , ellipsize true
+                        ]
+                      <> FontStyle.h3 LanguageStyle
+                  , textView
+                      $ [ color Color.black900
+                        , height WRAP_CONTENT
+                        , width WRAP_CONTENT
+                        , padding $ PaddingBottom 2
+                        , maxLines 2
+                        , ellipsize true
+                        ] <> case item.shortDesc of
+                          Nothing -> [visibility GONE]
+                          Just desc -> [text $ desc]
+                      <> FontStyle.tags LanguageStyle
+                  ]
+          ]
+      ,   linearLayout
+          [ width WRAP_CONTENT
           , height WRAP_CONTENT
           , gravity RIGHT
           ]

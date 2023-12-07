@@ -1352,12 +1352,14 @@ type Ticket =
   , timeIntervals :: Array TimeInterval
   , slot :: Array SlotInterval
   , selectedBHid :: Maybe String
+  , selectedSlot :: Maybe String
   }
 
 type TicketBusinessHoursOptionData =
   { ticketID :: String,
     bhourId :: String,
-    categories :: Array TicketCategoriesOptionData
+    categories :: Array TicketCategoriesOptionData,
+    operationalDays :: Array String
   }
 
 type TicketCategoriesOptionData =
@@ -1391,7 +1393,8 @@ type TicketServiceData =
     businessHours :: Array BusinessHoursData,
     timeIntervalData :: Array SlotsAndTimeIntervalData,
     isExpanded :: Boolean,
-    selectedBHid :: Maybe String
+    selectedBHid :: Maybe String,
+    selectedSlot :: Maybe String
   }
 
 type BusinessHoursData = {
@@ -1399,7 +1402,8 @@ type BusinessHoursData = {
   slot :: Maybe String,
   startTime :: Maybe String, -- TimeOfDay -- OpenTimings CloseTimings
   endTime :: Maybe String,
-  categories :: Array TicketCategoriesData
+  categories :: Array TicketCategoriesData,
+  operationalDays :: Array String
 }
 
 type SlotsAndTimeIntervalData = {
