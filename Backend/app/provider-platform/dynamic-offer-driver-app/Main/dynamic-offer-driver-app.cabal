@@ -68,6 +68,7 @@ library
       API.Internal.FeedbackForm
       API.UI
       API.UI.Call
+      API.UI.CallEvent
       API.UI.CancellationReason
       API.UI.City
       API.UI.Driver
@@ -142,6 +143,7 @@ library
       Domain.Action.Internal.DriverReferee
       Domain.Action.Internal.FeedbackForm
       Domain.Action.UI.Call
+      Domain.Action.UI.CallEvent
       Domain.Action.UI.CancellationReason
       Domain.Action.UI.City
       Domain.Action.UI.Driver

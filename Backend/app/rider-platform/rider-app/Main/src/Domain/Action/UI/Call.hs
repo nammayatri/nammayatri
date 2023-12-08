@@ -29,6 +29,7 @@ where
 
 import Data.Text
 import qualified Data.Text as T
+import qualified Domain.Action.UI.CallEvent as DCE
 import qualified Domain.Types.Booking as BT
 import Domain.Types.CallStatus
 import qualified Domain.Types.CallStatus as DCS
@@ -49,6 +50,7 @@ import Kernel.Types.Beckn.Ack
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.SessionizerMetrics.Types.Event
 import qualified Storage.CachedQueries.Exophone as CQExophone
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Queries.Booking as QB
@@ -129,7 +131,7 @@ callStatusCallback req = do
   void $ QCallStatus.updateCallStatus callStatusId (exotelStatusToInterfaceStatus req.status) req.conversationDuration (Just req.recordingUrl)
   return Ack
 
-directCallStatusCallback :: (CacheFlow m r, EsqDBFlow m r) => Text -> Call.ExotelCallStatus -> Maybe Text -> Maybe Int -> Maybe Int -> m CallCallbackRes
+directCallStatusCallback :: (EsqDBFlow m r, EncFlow m r, CacheFlow m r, EsqDBReplicaFlow m r, EventStreamFlow m r) => Text -> Call.ExotelCallStatus -> Maybe Text -> Maybe Int -> Maybe Int -> m CallCallbackRes
 directCallStatusCallback callSid dialCallStatus recordingUrl_ callDuratioExotel callDurationFallback = do
   let callDuration = callDuratioExotel <|> callDurationFallback
   callStatus <- QCallStatus.findByCallSid callSid >>= fromMaybeM CallStatusDoesNotExist
@@ -148,11 +150,12 @@ directCallStatusCallback callSid dialCallStatus recordingUrl_ callDuratioExotel 
           void $ updateCallStatus callStatus.id newCallStatus Nothing callDuration
           throwError CallStatusDoesNotExist
         else updateCallStatus callStatus.id newCallStatus Nothing callDuration
+  DCE.sendCallDataToKafka (Just "EXOTEL") callStatus.rideId (Just "ANONYMOUS_CALLER") (Just callSid) (Just (show dialCallStatus)) System Nothing
   return Ack
   where
     updateCallStatus id callStatus url callDuration = QCallStatus.updateCallStatus id callStatus (fromMaybe 0 callDuration) url
 
-getDriverMobileNumber :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r) => Text -> Text -> Text -> Maybe Text -> Call.ExotelCallStatus -> Text -> m GetDriverMobileNumberResp
+getDriverMobileNumber :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r, EventStreamFlow m r) => Text -> Text -> Text -> Maybe Text -> Call.ExotelCallStatus -> Text -> m GetDriverMobileNumberResp
 getDriverMobileNumber callSid callFrom_ callTo_ dtmfNumber_ callStatus to_ = do
   callId <- generateGUID
   callStatusObj <- buildCallStatus callId callSid (exotelStatusToInterfaceStatus callStatus)
@@ -176,6 +179,7 @@ getDriverMobileNumber callSid callFrom_ callTo_ dtmfNumber_ callStatus to_ = do
           Just activeBooking -> return (Nothing, activeBooking)
   ride <- runInReplica $ QRide.findActiveByRBId booking.id >>= maybe (throwCallError callSid (RideWithBookingIdNotFound $ getId booking.id) (Just exophone.merchantId.getId) (Just exophone.callService)) pure
   QCallStatus.updateCallStatusInformation callId (Just ride.id) (Just merchantId.getId) (Just exophone.callService) dtmfNumberUsed
+  DCE.sendCallDataToKafka (Just "EXOTEL") (Just ride.id) (Just "ANONYMOUS_CALLER") (Just callSid) Nothing System (Just to)
   return ride.driverMobileNumber
   where
     dropFirstZero = T.dropWhile (== '0')

@@ -65,6 +65,7 @@ library
       API.UI.AppInstalls
       API.UI.Booking
       API.UI.Call
+      API.UI.CallEvent
       API.UI.Cancel
       API.UI.CancellationReason
       API.UI.Confirm
@@ -134,6 +135,7 @@ library
       Domain.Action.UI.AppInstalls
       Domain.Action.UI.Booking
       Domain.Action.UI.Call
+      Domain.Action.UI.CallEvent
       Domain.Action.UI.Cancel
       Domain.Action.UI.CancellationReason
       Domain.Action.UI.Confirm

@@ -23,6 +23,7 @@ import qualified API.UI.AadhaarVerification as AadhaarVerification
 import qualified API.UI.AppInstalls as AppInstalls
 import qualified API.UI.Booking as Booking
 import qualified API.UI.Call as Call
+import qualified API.UI.CallEvent as CallEvent
 import qualified API.UI.Cancel as Cancel
 import qualified API.UI.CancellationReason as CancellationReason
 import qualified API.UI.Confirm as Confirm
@@ -84,6 +85,7 @@ type API =
            :<|> Frontend.API
            :<|> Whatsapp.API
            :<|> Sos.API
+           :<|> CallEvent.API
            :<|> AppInstalls.API
            :<|> PersonStats.API
            :<|> HotSpot.API
@@ -122,6 +124,7 @@ handler =
     :<|> Frontend.handler
     :<|> Whatsapp.handler
     :<|> Sos.handler
+    :<|> CallEvent.handler
     :<|> AppInstalls.handler
     :<|> PersonStats.handler
     :<|> HotSpot.handler

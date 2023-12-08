@@ -31,7 +31,7 @@ data Event p = Event
     personId :: Maybe Text, -- id for customer or driver (whoever triggered the event)
     merchantId :: Text, -- id for merchant
     deploymentVersion :: Text, -- version of the current deployment
-    at :: UTCTime, -- time of the event
+    at :: Double, -- time of the event
     eventType :: EventType, -- type of the event. Type should be defined at the application layer
     subType :: Maybe Text, -- sub type of the event based on type, for easy processig of event in the pipeline. Defined at the application layer
     primaryId :: Maybe Text, -- id of the primary entity involved in the event
@@ -62,7 +62,7 @@ data EventStreamMap = EventStreamMap
   }
   deriving (Show, Read, Eq, Ord, Generic, ToJSON, FromJSON, ToSchema, FromDhall)
 
-data EventType = RideCreated | RideStarted | RideEnded | RideCancelled | BookingCreated | BookingCancelled | BookingCompleted | SearchRequest | Quotes | Estimate
+data EventType = RideCreated | RideStarted | RideEnded | RideCancelled | BookingCreated | BookingCancelled | BookingCompleted | SearchRequest | Quotes | Estimate | ExophoneData
   deriving (Show, Read, Eq, Ord, Generic, ToJSON, FromJSON, ToSchema, FromDhall)
 
 type EventStreamFlow m r = (HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools], HasField "version" r DeploymentVersion, HasField "eventStreamMap" r [EventStreamMap], HasField "eventRequestCounter" r (Vector (Text, Text, Text) Counter))
