@@ -100,6 +100,7 @@ library
     , euler-events-hs >=2.0.0 && <2.1
     , euler-hs
     , extra
+    , filepath
     , formatting
     , hedis
     , http-client
@@ -193,6 +194,7 @@ executable rider-app-drainer-exe
     , euler-events-hs >=2.0.0 && <2.1
     , euler-hs
     , extra
+    , filepath
     , formatting
     , hedis
     , http-client

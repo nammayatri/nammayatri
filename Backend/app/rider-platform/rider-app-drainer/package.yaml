@@ -106,6 +106,7 @@ dependencies:
   - cereal
   - postgresql-simple
   - scientific
+  - filepath
 
 ghc-options:
   - -fwrite-ide-info
