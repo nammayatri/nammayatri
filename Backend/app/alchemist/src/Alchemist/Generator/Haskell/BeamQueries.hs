@@ -108,7 +108,7 @@ generateBeamQuery tableNameHaskell query =
     ++ "]\n"
     ++ orderAndLimit query
   where
-    genWhereClause = generateClause 6 0 query.whereClause
+    genWhereClause = generateClause query.takeFullObjectAsInput 6 0 query.whereClause
 
 orderAndLimit :: QueryDef -> String
 orderAndLimit query = do
@@ -124,13 +124,13 @@ generateFunctionSignature query tableNameHaskell =
   let qparams = map getIdsOut $ nub (params query ++ addLimitParams query ++ (getWhereClauseFieldNamesAndTypes (whereClause query)))
    in query.queryName
         ++ " :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => "
-        ++ foldMap (\s -> s ++ " -> ") (map snd qparams)
+        ++ bool (foldMap (\s -> s ++ " -> ") (map snd qparams)) ("Domain.Types." ++ tableNameHaskell ++ "." ++ tableNameHaskell ++ " -> ") query.takeFullObjectAsInput
         ++ "m ("
         ++ generateQueryReturnType query.kvFunction tableNameHaskell
         ++ ")\n"
         ++ query.queryName
         ++ " "
-        ++ foldMap (\s -> s ++ " ") (map fst qparams)
+        ++ bool (foldMap (\s -> s ++ " ") (map fst qparams)) ("Domain.Types." ++ tableNameHaskell ++ "." ++ tableNameHaskell ++ " {..} ") query.takeFullObjectAsInput
         ++ "= do\n"
 
 addLimitParams :: QueryDef -> [(String, String)]
@@ -165,27 +165,29 @@ generateBeamFunctionCall kvFunction = "   " ++ kvFunction ++ "\n"
 generateQueryParams :: [(String, String)] -> String
 generateQueryParams [] = ""
 generateQueryParams params = "    [ " ++ intercalate ",\n      " (map (\(field, tp) -> "Se.Set Beam." ++ field ++ " " ++ correctSetField field tp) params) ++ "\n    ]\n"
-  where
-    correctSetField :: String -> String -> String
-    correctSetField field tp
-      | "Kernel.Types.Id.Id " `isInfixOf` tp && not ("Kernel.Types.Id.Id " `isPrefixOf` tp) = "(Kernel.Types.Id.getId <$> " ++ field ++ ")"
-      | "Kernel.Types.Id.ShortId " `isInfixOf` tp && not ("Kernel.Types.Id.ShortId " `isPrefixOf` tp) = "(Kernel.Types.Id.getShortId <$> " ++ field ++ ")"
-      | otherwise = field
+
+correctSetField :: String -> String -> String
+correctSetField field tp
+  | "Kernel.Types.Id.Id " `isInfixOf` tp && not ("Kernel.Types.Id.Id " `isPrefixOf` tp) = "(Kernel.Types.Id.getId <$> " ++ field ++ ")"
+  | "Kernel.Types.Id.ShortId " `isInfixOf` tp && not ("Kernel.Types.Id.ShortId " `isPrefixOf` tp) = "(Kernel.Types.Id.getShortId <$> " ++ field ++ ")"
+  | "Kernel.Types.Id.Id " `isPrefixOf` tp = "(Kernel.Types.Id.getId " ++ field ++ ")"
+  | "Kernel.Types.Id.ShortId " `isPrefixOf` tp = "(Kernel.Types.Id.getShortId " ++ field ++ ")"
+  | otherwise = field
 
 mapWithIndex :: (Int -> a -> b) -> [a] -> [b]
 mapWithIndex f xs = zipWith f [0 ..] xs
 
 -- Function to process each clause
-generateClause :: Int -> Int -> WhereClause -> String
-generateClause _ _ EmptyWhere = ""
-generateClause n i (Leaf (field, _)) =
-  (if i == 0 then " " else spaces n) ++ "Se.Is Beam." ++ field ++ " $ Se.Eq " ++ field
-generateClause n i (Query (op, clauses)) =
+generateClause :: Bool -> Int -> Int -> WhereClause -> String
+generateClause _ _ _ EmptyWhere = ""
+generateClause isFullObjInp n i (Leaf (field, tp)) =
+  (if i == 0 then " " else spaces n) ++ "Se.Is Beam." ++ field ++ " $ Se.Eq " ++ (if isFullObjInp then correctSetField field tp else field)
+generateClause isFullObjInp n i (Query (op, clauses)) =
   (if i == 0 then " " else spaces n) ++ operator op
     ++ "\n"
     ++ spaces (n + 2)
     ++ "["
-    ++ intercalate ",\n" (mapWithIndex (generateClause (n + 4)) clauses)
+    ++ intercalate ",\n" (mapWithIndex (generateClause isFullObjInp (n + 4)) clauses)
     ++ "\n"
     ++ spaces (n + 2)
     ++ "]"
@@ -210,8 +212,8 @@ generateBeamQueries tableDef =
 
 defaultQueryDefs :: TableDef -> [QueryDef]
 defaultQueryDefs tableDef =
-  [ QueryDef "findByPrimaryKey" "findOneWithKV" [] findByPrimayKeyWhereClause,
-    QueryDef "updateByPrimaryKey" "updateWithKV" (getAllFieldNamesWithTypesExcludingPks (fields tableDef)) findByPrimayKeyWhereClause
+  [ QueryDef "findByPrimaryKey" "findOneWithKV" [] findByPrimayKeyWhereClause False,
+    QueryDef "updateByPrimaryKey" "updateWithKV" (getAllFieldNamesWithTypesExcludingPks (fields tableDef)) findByPrimayKeyWhereClause True
   ]
   where
     getAllFieldNamesWithTypesExcludingPks :: [FieldDef] -> [(String, String)]

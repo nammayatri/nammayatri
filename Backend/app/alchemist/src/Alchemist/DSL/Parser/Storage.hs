@@ -73,7 +73,7 @@ parseQueries moduleName excludedList dList impObj obj = do
             params = map (\(k, v) -> (k, makeTypeQualified' v)) $ fromMaybe [] (queryDataObj ^? ix "params" . _Array . to V.toList . to (map (searchForKey obj . valueToString)))
             kvFunction = fromMaybe (error $ "kvFunction is neccessary") (queryDataObj ^? ix "kvFunction" . _String)
             whereClause = fromMaybe EmptyWhere (queryDataObj ^? ix "where" . to (parseWhereClause makeTypeQualified' obj))
-         in QueryDef queryName kvFunction params whereClause
+         in QueryDef queryName kvFunction params whereClause False
 
   case mbQueries of
     Just queries -> map parseQuery queries
