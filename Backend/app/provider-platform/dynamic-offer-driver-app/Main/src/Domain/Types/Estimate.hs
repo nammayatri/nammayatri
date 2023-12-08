@@ -23,6 +23,7 @@ import Database.PostgreSQL.Simple.FromField (FromField (fromField))
 import Domain.Types.Common (UsageSafety (..))
 import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.Vehicle as Variant
+import qualified Kernel.Beam.Lib.UtilsTH as TH
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
@@ -69,9 +70,8 @@ instance FromBackendRow Postgres [EstimateBreakupD 'Unsafe]
 instance FromField [EstimateBreakupD 'Unsafe] where
   fromField f mbValue = V.toList <$> fromField f mbValue
 
--- TODO test this
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be (EstimateBreakupD 'Unsafe) where
-  sqlValueSyntax = autoSqlValueSyntax . encodeToText
+instance {-# OVERLAPPING #-} TH.ToSQLObject (EstimateBreakupD 'Unsafe) where
+  convertToSQLObject = TH.SQLObjectValue . show . encodeToText
 
 instance FromField (EstimateBreakupD 'Unsafe) where
   fromField = fromFieldJSON
