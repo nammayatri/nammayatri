@@ -66,6 +66,9 @@ commonConfig =
         , rideActionModelConfig : {
             showVehicleVariant : true
           }
+        , features : {
+            enableSuggestions : false
+          }
         , referralType : "QRScreen"
         , mapConfig : 
             { animationDuration : 400

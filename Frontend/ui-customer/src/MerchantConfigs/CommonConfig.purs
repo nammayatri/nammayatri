@@ -84,4 +84,7 @@ commonConfig =
           }
         , showChargeDesc : false
         , vehicleMarkerSize : 90
+        , features : {
+            enableSuggestions : false
+          }
         }

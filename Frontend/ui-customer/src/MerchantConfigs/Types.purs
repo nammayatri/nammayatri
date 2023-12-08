@@ -58,6 +58,7 @@ type AppConfig =
   , notifyRideConfirmationConfig :: NotifyRideConfirmationConfig
   , estimateAndQuoteConfig :: EstimateAndQuoteConfig
   , customerTip :: CustomerTip
+  , features :: Features
   } 
 
 type NotifyRideConfirmationConfig = {
@@ -163,4 +164,8 @@ type EstimateAndQuoteConfig = {
 type CustomerTip = {
   auto :: Boolean,
   cabs :: Boolean
+}
+
+type Features = {
+  enableSuggestions :: Boolean
 }
