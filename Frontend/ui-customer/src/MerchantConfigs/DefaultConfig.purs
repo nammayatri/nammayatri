@@ -262,6 +262,10 @@ config =
       title : "Share Namma Yatri!"
     , description : "Hey there!\n\nCheck India's first Zero Commission auto booking app.\n100% Open source | 100% Open Data\n\nDownload Namma Yatri now! \nhttps://nammayatri.in/link/rider/SJ8D \n\n #beOpen #chooseOpen"
   }
+  , driverLocationPollingConfig : {
+    rideListExponentialFactor : 2.0
+  , exponentialFactor : 3.0
+  }
   , dashboard :{
       url : "https://nammayatri.in/open?source=in-app"
     , enable : false

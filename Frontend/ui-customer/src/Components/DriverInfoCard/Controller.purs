@@ -18,8 +18,8 @@ module Components.DriverInfoCard.Controller where
 import Components.MessagingView as MessagingView
 import Components.PrimaryButton as PrimaryButtonController
 import Components.SourceToDestination as SourceToDestinationController
-import Screens.Types(Stage, ZoneType(..), SheetState(..), SearchResultType)
-import Data.Maybe(Maybe)
+import Screens.Types(Stage, ZoneType(..), SearchResultType, DriverInfoCardState, RideDetails)
+import Data.Maybe(Maybe(..))
 import MerchantConfig.Types
 
 data Action = NoAction
@@ -34,57 +34,15 @@ data Action = NoAction
             | ToggleBottomSheet
             | CollapseBottomSheet
 
-type DriverInfoCardState =
-  { props :: DriverInfoCardProps
-  , data :: DriverInfoCardData
-  }
-
-type DriverInfoCardProps =
-  {
-    currentStage :: Stage,
-    currentSearchResultType :: SearchResultType,
-    trackingEnabled :: Boolean,
-    unReadMessages :: Boolean,
-    showCallPopUp :: Boolean,
-    isSpecialZone :: Boolean,
-    estimatedTime :: String,
-    zoneType :: ZoneType,
-    merchantCity :: Maybe String
-  }
-
-type DriverInfoCardData =
-  { otp :: String
-  , driverName :: String
-  , eta :: Maybe Int
-  , vehicleDetails :: String
-  , registrationNumber :: String
-  , rating :: Number
-  , startedAt :: String
-  , endedAt :: String
-  , source :: String
-  , destination :: String
-  , rideId :: String
-  , price :: Int
-  , sourceLat :: Number
-  , sourceLng :: Number
-  , destinationLat :: Number
-  , destinationLng :: Number
-  , driverLat :: Number
-  , driverLng :: Number
-  , distance :: Int
-  , waitingTime :: String
-  , driverArrived :: Boolean
-  , estimatedDistance :: String
-  , driverArrivalTime :: Int
-  , bppRideId :: String
-  , driverNumber :: Maybe String
-  , merchantExoPhone :: String
-  , estimatedDropTime :: String
-  , isSpecialZone :: Boolean
-  , isLocationTracking :: Boolean
-  , bookingCreatedAt :: String
-  , config :: AppConfig
-  , vehicleVariant :: String
-  , defaultPeekHeight :: Int
-  , bottomSheetState :: SheetState
-  }
+dummyRideDetails :: RideDetails
+dummyRideDetails = {
+    bppRideId : ""
+  , vehicleDetails : ""
+  , registrationNumber : ""
+  , rating : 0.0
+  , rideId : ""
+  , driverName : ""
+  , otp : ""
+  , driverNumber : Nothing
+  , vehicleVariant : ""
+}

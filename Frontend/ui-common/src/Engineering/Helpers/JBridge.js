@@ -679,6 +679,7 @@ export const storeCallBackMessageUpdated = function (cb) {
             window.chatMessages.push(messageObj);
             if (window.chatMessages.length - 1 == messagesSize || messagesSize === "-1") {
               cb(action(message)(sentBy)(timeStamp)(messagesSize))();
+              window.didDriverMesssage = window.didDriverMesssage || true
             }
           });
           window.storeCallBackMessageUpdated = callback;

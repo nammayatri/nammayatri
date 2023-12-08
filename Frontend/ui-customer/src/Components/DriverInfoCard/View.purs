@@ -18,7 +18,7 @@ module Components.DriverInfoCard.View where
 import Common.Types.App
 import Animation (fadeIn, fadeInWithDelay, scaleYAnimWithDelay)
 import Common.Types.App (LazyCheck(..))
-import Components.DriverInfoCard.Controller (Action(..), DriverInfoCardState)
+import Components.DriverInfoCard.Controller (Action(..), dummyRideDetails)
 import Components.PrimaryButton as PrimaryButton
 import Components.SourceToDestination as SourceToDestination
 import Data.Array as Array
@@ -44,7 +44,7 @@ import PrestoDOM (Accessiblity(..), Gradient(..), Gravity(..), Length(..), Margi
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Properties (cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
-import Screens.Types (Stage(..), ZoneType(..), SearchResultType(..), SheetState(..))
+import Screens.Types (Stage(..), ZoneType(..), SearchResultType(..), DriverInfoCardState, RideDetails)
 import Storage (isLocalStageOn, getValueToLocalStore)
 import Styles.Colors as Color
 import Common.Styles.Colors as CommonColor
@@ -57,6 +57,7 @@ import Helpers.Utils (parseFloat)
 import Data.Int(toNumber)
 import MerchantConfig.Types (DriverInfoConfig)
 import Mobility.Prelude (boolToVisibility)
+import Screens.Types (SheetState(..))
 
 view :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM ( Effect Unit ) w
 view push state =
@@ -112,7 +113,7 @@ driverInfoViewSpecialZone push state =
                  ][]
                ]
               , titleAndETA push state
-              , driverDetailsView push state "SpecialDriverDetailsView"
+              , driverDetailsView push state "SpecialDriverDetailsView" (fromMaybe dummyRideDetails state.data.rideDetails)
               , navigateView push state
               , paymentMethodView push state (getString FARE_ESTIMATE) true "SpecialPaymentMethodView"
             ]
@@ -221,6 +222,8 @@ navigateView push state =
 
 driverInfoView :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM ( Effect Unit) w
 driverInfoView push state =
+  let rideData = fromMaybe dummyRideDetails state.data.rideDetails
+  in
   linearLayout
   [ width MATCH_PARENT
   , height WRAP_CONTENT
@@ -311,7 +314,7 @@ driverInfoView push state =
          ]
       ]
   ]
-
+  
 distanceView :: forall w.(Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM (Effect Unit) w
 distanceView push state = 
   linearLayout
@@ -412,8 +415,8 @@ cancelRideLayout push state =
   ]
 
 ---------------------------------- contactView ---------------------------------------
-contactView :: forall w.(Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM (Effect Unit) w
-contactView push state =
+contactView :: forall w.(Action -> Effect Unit) -> DriverInfoCardState -> RideDetails -> PrestoDOM (Effect Unit) w
+contactView push state rideData =
   let
     feature = state.data.config.feature
     eta = secondsToHms (fromMaybe 0 state.data.eta)
@@ -425,15 +428,15 @@ contactView push state =
     , afterRender push $ const $ NoAction
     , gravity CENTER_VERTICAL
     , padding $ Padding 16 20 16 16
-    , visibility if (Array.any (_ == state.props.currentStage) [ RideAccepted, ChatWithDriver ]) then VISIBLE else GONE
+    , visibility if (Array.any (_ == state.props.currentStage) [ RideAccepted, ChatWithDriver ]) then if state.data.rideDetails == Nothing then INVISIBLE else VISIBLE else GONE
     ][  linearLayout
         [ width (V (((screenWidth unit)/3 * 2)-27))
         , height WRAP_CONTENT
-        , accessibilityHint $ "Ride Status : " <>  if state.data.distance > 1000 then (state.data.driverName <> " is " <> eta <> " and " <> show (toNumber (state.data.distance) / 1000.0) <> " Kilo Meters Away ") else (state.data.driverName <> if state.data.waitingTime == "--" then " is on the way" else " is waiting for you.")
+        , accessibilityHint $ "Ride Status : " <>  if state.data.bookingDetails.distance > 1000 then (rideData.driverName <> " is " <> eta <> " and " <> show (toNumber (state.data.bookingDetails.distance) / 1000.0) <> " Kilo Meters Away ") else (rideData.driverName <> if state.data.waitingTime == "--" then " is on the way" else " is waiting for you.")
         , accessibility ENABLE
-        , orientation if length state.data.driverName > 16 then VERTICAL else HORIZONTAL
+        , orientation if length rideData.driverName > 16 then VERTICAL else HORIZONTAL
         ][  textView $
-            [ text $ state.data.driverName <> " "
+            [ text $ rideData.driverName <> " "
             , color Color.black900
             , ellipsize true
             , singleLine true
@@ -445,10 +448,10 @@ contactView push state =
             ][ textView $
                 [ text $"is " <> eta
                 , color Color.black900
-                , visibility $ boolToVisibility $ state.data.distance > 1000 && eta /= "--"
+                , visibility $ boolToVisibility $ state.data.bookingDetails.distance > 1000 && eta /= "--"
                 ] <> FontStyle.subHeading1 TypoGraphy
               , textView $
-                [ text case (state.data.distance > 1000 && eta /= "--") of
+                [ text case (state.data.bookingDetails.distance > 1000 && eta /= "--") of
                     true -> getString AWAY
                     false -> if state.data.waitingTime == "--" then getString IS_ON_THE_WAY else getString IS_WAITING_AT_PICKUP
                 , color Color.black900
@@ -480,10 +483,8 @@ contactView push state =
 
 
 ---------------------------------- driverDetailsView ---------------------------------------
-
-
-driverDetailsView :: forall w.(Action -> Effect Unit) -> DriverInfoCardState -> String -> PrestoDOM (Effect Unit) w
-driverDetailsView push state uid =
+driverDetailsView :: forall w.(Action -> Effect Unit) -> DriverInfoCardState -> String -> RideDetails -> PrestoDOM (Effect Unit) w
+driverDetailsView push state uid rideData =
  linearLayout
   [ orientation HORIZONTAL
   , height $ V 150
@@ -494,7 +495,7 @@ driverDetailsView push state uid =
   , margin $ Margin 16 (if state.props.currentSearchResultType == QUOTES then 12 else 0) 16 0
   , background Color.white900
   , cornerRadius 8.0
-  , visibility if state.props.currentSearchResultType == QUOTES then (if state.props.currentStage == RideStarted then VISIBLE else GONE) else VISIBLE
+  , visibility if state.props.currentSearchResultType == QUOTES then (if state.props.currentStage == RideStarted then VISIBLE else GONE) else if state.data.rideDetails == Nothing then INVISIBLE else VISIBLE
   , gravity BOTTOM
   ][  linearLayout
       [ orientation VERTICAL
@@ -515,33 +516,33 @@ driverDetailsView push state uid =
             [ height $ V 50
             , width $ V 50
             , padding $ Padding 2 3 2 1
-            , accessibility if state.data.rating == 0.0 then DISABLE else ENABLE
-            , accessibilityHint $ "Driver : Rated " <> show state.data.rating <> " stars"
+            , accessibility if rideData.rating == 0.0 then DISABLE else ENABLE
+            , accessibilityHint $ "Driver : Rated " <> show rideData.rating <> " stars"
             , imageWithFallback $ fetchImage FF_ASSET "ny_ic_driver"
             ]
-            , ratingView push state
+            , ratingView push state rideData
             ]
           ]
         , textView $
-          [ text state.data.driverName
+          [ text rideData.driverName
           , maxLines 1
           , ellipsize true
           , accessibility DISABLE
           , color Color.black800
-          , width MATCH_PARENT
+          , width $ MATCH_PARENT
           , height WRAP_CONTENT
           , gravity LEFT
           ] <> FontStyle.body9 TypoGraphy
         , textView (
-          [ text $ state.data.vehicleDetails <> " " 
+          [ text $ rideData.vehicleDetails <> " " 
                     <> case getMerchant FunctionCall of
-                          YATRISATHI -> "· " <> getVariantRideType state.data.vehicleVariant
-                          _          -> case state.data.vehicleVariant of
+                          YATRISATHI -> "· " <> getVariantRideType rideData.vehicleVariant
+                          _          -> case rideData.vehicleVariant of
                                           "TAXI_PLUS" -> " (" <> (getString AC_TAXI) <> ")"
                                           "TAXI" -> " (" <> (getString NON_AC_TAXI) <> ")"
                                           _ -> ""
           , color Color.black700
-          , accessibilityHint $ "Driver : " <> state.data.driverName <> " : Vehicle : " <> getVehicleType
+          , accessibilityHint $ "Driver : " <> rideData.driverName <> " : Vehicle : " <> getVehicleType
           , accessibility ENABLE
           , width $ V ((screenWidth unit) /2 - 20)
           , maxLines 2
@@ -563,7 +564,7 @@ driverDetailsView push state uid =
           , margin $ MarginBottom 16
           , accessibility DISABLE 
           ][  imageView
-              [ imageWithFallback (getVehicleImage state.data.vehicleVariant state.data.vehicleDetails state.props.merchantCity)
+              [ imageWithFallback (getVehicleImage rideData.vehicleVariant rideData.vehicleDetails state.props.merchantCity)
               , height $ V 125
               , gravity RIGHT
               , width MATCH_PARENT
@@ -604,7 +605,7 @@ driverDetailsView push state uid =
                         [ margin $ Margin 2 2 2 2
                         , weight 1.0
                         , height MATCH_PARENT
-                        , text $ (makeNumber state.data.registrationNumber)
+                        , text $ (makeNumber rideData.registrationNumber)
                         , color Color.black800
                         , fontStyle $ FontStyle.feFont LanguageStyle
                         , gravity CENTER
@@ -623,20 +624,20 @@ driverDetailsView push state uid =
             ]
         ]
     ]
-  where getVehicleType = case getMerchant FunctionCall of
-                          YATRISATHI -> case state.data.vehicleVariant of
+  where getVehicleType = maybe "" (\rideData -> case getMerchant FunctionCall of
+                          YATRISATHI -> case rideData.vehicleVariant of
                                           "TAXI" -> getEN NON_AC_TAXI
                                           "SUV"  -> getEN AC_SUV
                                           _      -> getEN AC_CAB
-                          _          -> case state.data.vehicleVariant of
+                          _          -> case rideData.vehicleVariant of
                                         "TAXI_PLUS" -> (getEN AC_TAXI)
                                         "TAXI" -> (getEN NON_AC_TAXI)
-                                        _ -> ""
+                                        _ -> "") state.data.rideDetails
 
 ---------------------------------- ratingView ---------------------------------------
 
-ratingView :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM (Effect Unit) w
-ratingView push state =
+ratingView :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> RideDetails -> PrestoDOM (Effect Unit) w
+ratingView push state rideData =
   linearLayout
   [ orientation HORIZONTAL
   , margin $ MarginTop 40
@@ -656,7 +657,7 @@ ratingView push state =
       , accessibility DISABLE
       ]
     , textView $
-      [ text $ if state.data.rating == 0.0 then (getString NEW_) else show state.data.rating
+      [ text $ if rideData.rating == 0.0 then (getString NEW_) else show rideData.rating
       , color state.data.config.driverInfoConfig.ratingTextColor
       , gravity CENTER_VERTICAL
       , margin (Margin 3 0 3 1)
@@ -680,7 +681,7 @@ paymentMethodView push state title shouldShowIcon uid =
   , background Color.white900
   , padding $ Padding 16 16 16 16
   , accessibility ENABLE
-  , accessibilityHint $ "Fare Estimate :" <> state.data.config.currency <> show state.data.price <> " : Pay by cash or U P I"
+  , accessibilityHint $ "Fare Estimate :" <> state.data.config.currency <> show state.data.bookingDetails.price <> " : Pay by cash or U P I"
   , cornerRadius 8.0
   ][  linearLayout
       [ orientation VERTICAL
@@ -693,7 +694,7 @@ paymentMethodView push state title shouldShowIcon uid =
           , color Color.black700
           ] <> FontStyle.body3 TypoGraphy
         , textView $
-          [ text $ state.data.config.currency <> show state.data.price
+          [ text $ state.data.config.currency <> show state.data.bookingDetails.price
           , color Color.black800
           ] <> FontStyle.h2 TypoGraphy
       ]
@@ -741,7 +742,7 @@ sourceDestinationView push state =
     , width WRAP_CONTENT
     , gravity LEFT
     , accessibility ENABLE
-    , accessibilityHint $ "Pickup : " <> state.data.source
+    , accessibilityHint $ "Pickup : " <> state.data.bookingDetails.source
     ][linearLayout
       [ orientation HORIZONTAL
       , gravity CENTER
@@ -757,7 +758,7 @@ sourceDestinationView push state =
          ] <> FontStyle.body3 TypoGraphy
         ]
        , textView $
-         [ text state.data.source
+         [ text state.data.bookingDetails.source
          , maxLines 1
          , ellipsize true
          , width $ V ((screenWidth unit) / 10 * 6)
@@ -774,7 +775,7 @@ sourceDestinationView push state =
       , width WRAP_CONTENT
       , gravity LEFT
       , accessibility ENABLE
-      , accessibilityHint $ "Drop : " <> state.data.destination
+      , accessibilityHint $ "Drop : " <> state.data.bookingDetails.destination
     ][linearLayout
       [ orientation HORIZONTAL
       , gravity CENTER
@@ -790,7 +791,7 @@ sourceDestinationView push state =
         ] <> FontStyle.body3 TypoGraphy
       ]
       , textView $
-        [ text state.data.destination
+        [ text state.data.bookingDetails.destination
         , maxLines 1
         , ellipsize true
         , width $ V ((screenWidth unit) / 10 * 6)
@@ -871,25 +872,7 @@ shimmerView push state =
       , cornerRadius if os == "IOS" then 2.0 else 4.0
       ][] 
     ]
-    , linearLayout
-      [ height $ WRAP_CONTENT
-      , width MATCH_PARENT
-      , gravity CENTER_VERTICAL
-      ][ customTextView 20 ((screenWidth unit) / 10 * 6) 0
-       , linearLayout [weight 1.0][]
-       , shimmerFrameLayout
-         [ height $ V 40
-         , width $ V 64
-         , cornerRadius 52.0
-         , visibility $ boolToVisibility $ state.props.currentStage == RideAccepted
-         ][linearLayout
-           [ height $ V 40
-           , width $ V 64
-           , cornerRadius 52.0 
-           , background Color.grey900
-           ][]
-         ]
-      ]
+    , contactsViewShimmer push state
       , driverInfoShimmer push state
       , paymentMethodShimmer push state
       , addressShimmerView push state
@@ -904,13 +887,15 @@ shimmerView push state =
 customTextView :: forall w. Int -> Int -> Int -> PrestoDOM (Effect Unit) w
 customTextView height' width' bottomMargin' =
   shimmerFrameLayout
-  [ cornerRadius 8.0
+  [ cornerRadius $ (toNumber height') / 2.0
+  , width $ V width'
+  , height $ V height'
   ][linearLayout 
     [ width $ V width'
     , height $ V height'
     , background Color.grey900
     , margin $ MarginBottom bottomMargin'
-    , cornerRadius 8.0
+    , cornerRadius $ (toNumber height') / 2.0
     ][]
   ]
 
@@ -920,6 +905,8 @@ sfl height' width' radius' =
   [ cornerRadius radius'
   , stroke $ "1," <> Color.grey900
   , margin $ MarginBottom 12
+  , width $ V width'
+  , height $ V height'
   ][linearLayout 
     [ width $ V width'
     , height $ V height'
@@ -927,16 +914,40 @@ sfl height' width' radius' =
     , background Color.grey900
     ][]
   ]
+contactsViewShimmer :: forall w.(Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM (Effect Unit) w
+contactsViewShimmer push state = 
+  linearLayout
+      [ height $ WRAP_CONTENT
+      , width MATCH_PARENT
+      , gravity CENTER_VERTICAL
+      , padding $ Padding 16 20 16 16
+      , visibility if state.data.rideDetails == Nothing then VISIBLE else INVISIBLE
+      ][ customTextView 20 ((screenWidth unit) / 10 * 6) 0
+       , linearLayout [weight 1.0][]
+       , shimmerFrameLayout
+         [ height $ V 40
+         , width $ V 64
+         , cornerRadius 20.0
+         , visibility $ boolToVisibility $ state.props.currentStage == RideAccepted
+         ][linearLayout
+           [ height $ V 40
+           , width $ V 64
+           , cornerRadius 20.0 
+           , background Color.grey900
+           ][]
+         ]
+      ]
 
 driverInfoShimmer :: forall w.(Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM (Effect Unit) w
 driverInfoShimmer push state = 
   linearLayout
   [ height $ WRAP_CONTENT
   , width MATCH_PARENT
-  , margin $ MarginVertical 12 12
+  , margin $ Margin 16 12 16 12
   , cornerRadius 8.0
   , stroke $ "1," <> Color.grey900
   , background Color.white900
+  , visibility if state.data.rideDetails == Nothing then VISIBLE else INVISIBLE
   ][linearLayout
     [ width $ MATCH_PARENT
     , height $ V 130
@@ -952,8 +963,12 @@ driverInfoShimmer push state =
         , width $ V ((screenWidth unit) / 10 * 4)
         , orientation VERTICAL
         , cornerRadius 8.0
-        ][ sfl 40 40 52.0
+        ][ sfl 40 40 20.0
         , customTextView 16 ((screenWidth unit) / 10 * 4) 4
+        , linearLayout
+          [ width $ V ((screenWidth unit) / 10 * 3)
+          , height $ V 5
+          ][]
         , customTextView 13 ((screenWidth unit) / 10 * 3) 0
         ]
       , linearLayout
@@ -1082,9 +1097,7 @@ primaryButtonConfig = let
 ---------------------------------- sourceToDestinationConfig ---------------------------------------
 
 sourceToDestinationConfig :: DriverInfoCardState -> SourceToDestination.Config
-sourceToDestinationConfig state = let
-  config = SourceToDestination.config
-  sourceToDestinationConfig' = config
+sourceToDestinationConfig state = SourceToDestination.config
     {
       margin = Margin 16 0 40 0
     , id = Just "DriverInfoCardSTDC"
@@ -1096,7 +1109,7 @@ sourceToDestinationConfig state = let
       , width = V 14
       }
     , sourceTextConfig {
-        text = state.data.source
+        text = state.data.bookingDetails.source
       , textStyle = FontStyle.Body1
       , ellipsize = true
       , margin = MarginLeft 10
@@ -1108,7 +1121,7 @@ sourceToDestinationConfig state = let
       , width = V 14
       }
     , destinationTextConfig {
-        text = state.data.destination
+        text = state.data.bookingDetails.destination
       , maxLines = 1
       , textStyle = FontStyle.Body1
       , margin = MarginLeft 10
@@ -1116,11 +1129,10 @@ sourceToDestinationConfig state = let
       }
     , distanceConfig {
         distanceVisibility = VISIBLE
-      , distanceValue = state.data.estimatedDistance <> " km"
+      , distanceValue = state.data.bookingDetails.estimatedDistance <> " km"
       , background = Color.grey700
   }
     }
-  in sourceToDestinationConfig'
 
 destinationView ::  forall w.(Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM (Effect Unit) w
 destinationView push state=
@@ -1136,7 +1148,7 @@ destinationView push state=
           , color Color.black700
           ] <> FontStyle.body3 TypoGraphy
         , textView $
-          [ text state.data.destination
+          [ text state.data.bookingDetails.destination
           , color Color.black800
           ] <> FontStyle.h2 TypoGraphy
         , linearLayout
@@ -1145,7 +1157,7 @@ destinationView push state=
             , gravity CENTER
             , margin $ MarginTop 4
             ][ textView (
-                [ text $ state.data.estimatedDistance <> " km"
+                [ text $ state.data.bookingDetails.estimatedDistance <> " km"
                 , width MATCH_PARENT
                 , gravity CENTER
                 , color Color.black650

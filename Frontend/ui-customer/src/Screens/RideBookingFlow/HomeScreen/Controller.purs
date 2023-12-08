@@ -89,11 +89,11 @@ import Screens (ScreenName(..), getScreen)
 import Screens.AddNewAddressScreen.Controller (validTag, getSavedTagsFromHome)
 import Screens.HomeScreen.ScreenData (dummyAddress, dummyQuoteAPIEntity, dummyZoneType)
 import Screens.HomeScreen.ScreenData as HomeScreenData
-import Screens.HomeScreen.Transformer (dummyRideAPIEntity, getDriverInfo, getEstimateList, getQuoteList, getSpecialZoneQuotes, transformContactList, getNearByDrivers, getEstimatesInfo, dummyEstimateEntity)
+import Screens.HomeScreen.Transformer (dummyRideAPIEntity, getEstimateList, getQuoteList, getSpecialZoneQuotes, transformContactList, getNearByDrivers, getEstimatesInfo, dummyEstimateEntity, getBookingDetails, getRideDetails)
 import Screens.RideBookingFlow.HomeScreen.Config (setTipViewData)
 import Screens.SuccessScreen.Handler as UI
-import Screens.Types (CallType(..), CardType(..), CurrentLocationDetails, CurrentLocationDetailsWithDistance(..), HomeScreenState, Location, LocationItemType(..), LocationListItemState, PopupType(..), RatingCard, SearchLocationModelType(..), SearchResultType(..), SheetState(..), SpecialTags, Stage(..), TipViewStage(..), ZoneType(..), Trip)
-import Services.API (EstimateAPIEntity(..), FareRange, GetDriverLocationResp, GetQuotesRes(..), GetRouteResp, LatLong(..), OfferRes, PlaceName(..), QuoteAPIEntity(..), RideBookingRes(..), SelectListRes(..), SelectedQuotes(..), RideBookingAPIDetails(..), GetPlaceNameResp(..))
+import Screens.Types (CallType(..), CardType(..), CurrentLocationDetails, CurrentLocationDetailsWithDistance(..), HomeScreenState, Location, LocationItemType(..), LocationListItemState, PopupType(..), RatingCard, SearchLocationModelType(..), SearchResultType(..), SheetState(..), SpecialTags, Stage(..), TipViewStage(..), ZoneType(..), Trip, Counters)
+import Services.API (EstimateAPIEntity(..), FareRange, GetDriverLocationResp, GetQuotesRes(..), GetRouteResp, LatLong(..), OfferRes, PlaceName(..), QuoteAPIEntity(..), RideBookingRes(..), SelectListRes(..), SelectedQuotes(..), RideBookingAPIDetails(..), GetPlaceNameResp(..), RideAPIEntity(..))
 import Services.Backend as Remote
 import Services.Config (getDriverNumber, getSupportNumber)
 import Storage (KeyStore(..), isLocalStageOn, updateLocalStage, getValueToLocalStore, setValueToLocalStore, getValueToLocalNativeStore, setValueToLocalNativeStore)
@@ -770,7 +770,7 @@ data Action = NoAction
             | PickUpFarFromCurrentLocAC PopUpModal.Action
             | SourceUnserviceableActionController ErrorModalController.Action
             | UpdateCurrentLocation String String
-            | UpdateCurrentStage String
+            | UpdateCurrentStage RideBookingRes
             | GoBackToSearchLocationModal
             | SkipButtonActionController PrimaryButtonController.Action
             | SearchExpireCountDown Int String String String
@@ -863,6 +863,7 @@ data Action = NoAction
             | StopRepeatRideTimer 
             | OpenLiveDashboard
             | UpdatePeekHeight
+            | UpdateCounters Counters
 
 eval :: Action -> HomeScreenState -> Eval Action ScreenOutput HomeScreenState
 
@@ -882,6 +883,8 @@ eval SearchForSelectedLocation state = do
 
 eval CheckFlowStatusAction state = exit $ CheckFlowStatus state
 
+eval (UpdateCounters counter) state = continue state{data{expoCounters = counter}}
+
 eval TerminateApp state = do
   pure $ terminateApp state.props.currentStage true
   continue state
@@ -894,7 +897,7 @@ eval (KeyboardCallback keyBoardState) state = do
   if isLocalStageOn ChatWithDriver && isOpen then
     void $ pure $ scrollToEnd (getNewIDWithTag "ChatScrollView") true 
   else pure unit
-  continue state
+  continue state {props {isKeyboardOpen = isOpen, chatSheetState = if isOpen then COLLAPSED else state.props.chatSheetState}}
 
 eval (NotifyDriverStatusCountDown seconds id status timerID) state = do 
   if status == "EXPIRED" then do
@@ -924,16 +927,25 @@ eval (IsMockLocation isMock) state = do
       _ = unsafePerformEffect $ if val then  logEvent (state.data.logField) "ny_fakeGPS_enabled" else pure unit -- we are using unsafePerformEffect becasue without it we are not getting logs in firebase, since we are passing a parameter from state i.e. logField then the output will be inline and it will not be able to precompute so it's safe to use it here.
   continue state{props{isMockLocation = val}}
 
-eval (UpdateCurrentStage stage) state = do
-  _ <- pure $ spy "updateCurrentStage" stage
-  if (stage == "INPROGRESS") && (not $ isLocalStageOn RideStarted) then
-    exit $ NotificationHandler "TRIP_STARTED" state
-  else if (stage == "COMPLETED") && (not $ isLocalStageOn HomeScreen) then
-    exit $ NotificationHandler "TRIP_FINISHED" state
-  else if (stage == "CANCELLED") && (not $ isLocalStageOn HomeScreen) then
-    exit $ NotificationHandler "CANCELLED_PRODUCT" state
-  else
-    continue state
+eval (UpdateCurrentStage (RideBookingRes resp)) state = do
+  case head resp.rideList of
+    Nothing -> continue state
+    Just (RideAPIEntity rideData) -> do 
+      let status = rideData.status
+          newState =  case state.data.driverInfoCardState.rideDetails of
+                        Nothing -> state{data{driverInfoCardState {
+                          rideDetails = getRideDetails state.data.specialZoneSelectedVariant resp.rideList 
+                        , bookingDetails = getBookingDetails (RideBookingRes resp) (state.data.currentSearchResultType == QUOTES)}}
+                        , props{bookingId = resp.id}}
+                        _ -> if state.props.bookingId == "" then state{props{bookingId = resp.id}} else state
+      if (status == "INPROGRESS") && (not $ isLocalStageOn RideStarted) then
+        exit $ NotificationHandler "TRIP_STARTED" newState
+      else if (status == "COMPLETED") && (not $ isLocalStageOn HomeScreen) then
+        exit $ NotificationHandler "TRIP_FINISHED" newState
+      else if (status == "CANCELLED") && (not $ isLocalStageOn HomeScreen) then
+        exit $ NotificationHandler "CANCELLED_PRODUCT" newState
+      else
+        continue newState
 
 eval OnResumeCallback state =
   if(state.props.currentStage == RideAccepted || state.props.currentStage == RideStarted) && state.props.emergencyHelpModelState.waitingDialerCallback then 
@@ -1210,12 +1222,12 @@ eval BackPressed state = do
                         if state.props.showCallPopUp then continue state {props{showCallPopUp = false}}
                          else do
                             _ <- pure $ updateLocalStage RideAccepted
-                            continue state {props {currentStage = RideAccepted}}
+                            continue state {props {currentStage = RideAccepted, chatSheetState = COLLAPSED}}
     RideRating ->     do
                       _ <- pure $ updateLocalStage RideCompleted
                       continue state {props {currentStage = RideCompleted}}
     _               -> do
-                        if state.props.isLocationTracking then continue state{props{isLocationTracking = false}}
+                        if state.data.driverInfoCardState.isLocationTracking then continue state{data{driverInfoCardState{isLocationTracking = false}}}
                           else if state.props.cancelSearchCallDriver then continue state{props{cancelSearchCallDriver = false}}
                           else if state.props.showCallPopUp then continue state{props{showCallPopUp = false}}
                           else if state.props.isCancelRide then continue state{props{isCancelRide = false}}
@@ -1449,12 +1461,13 @@ eval (RideCompletedAC (RideCompletedCard.SkipButtonActionController (PrimaryButt
               state
                 { props { nightSafetyFlow = false }
                 , data
-                  { rideRatingState =
-                    dummyRideRatingState
-                      { driverName = state.data.driverInfoCardState.driverName
-                      , rideId = state.data.driverInfoCardState.rideId
-                      },
-                    ratingViewState {issueFacedView = false, openReportIssue = false, selectedYesNoButton = -1, doneButtonVisibility = false}
+                  { rideRatingState = case state.data.driverInfoCardState.rideDetails of
+                                        Just rideData -> dummyRideRatingState
+                                                          { driverName = rideData.driverName
+                                                          , rideId = rideData.rideId
+                                                          }
+                                        Nothing -> dummyRideRatingState
+                  , ratingViewState {issueFacedView = false, openReportIssue = false, selectedYesNoButton = -1, doneButtonVisibility = false}
                   }
                 }
     false ->  
@@ -1526,7 +1539,14 @@ eval (DriverInfoCardActionController (DriverInfoCardController.PrimaryButtonAC P
     ]
 eval (DriverArrivedAction driverArrivalTime) state = do
   _ <- pure $ setValueToLocalStore DRIVER_ARRIVAL_ACTION "TRIGGER_WAITING_ACTION"
-  exit $ Cancel state { data { driverInfoCardState { driverArrived = true, driverArrivalTime = getExpiryTime driverArrivalTime true } } }
+  let newState = state {data{
+      driverInfoCardState {
+        driverArrived = true
+      , driverArrivalTime = getExpiryTime driverArrivalTime true
+      }
+    }
+  }
+  exit $ Cancel newState
 
 eval (WaitingTimeAction timerID timeInMinutes seconds) state = do
   _ <- pure $ if getValueToLocalStore DRIVER_ARRIVAL_ACTION == "TRIGGER_WAITING_ACTION"
@@ -1548,11 +1568,11 @@ eval (SpecialZoneOTPExpiryAction seconds id status timerID) state = do
     formatDigits time = (if time >= 10 then "" else "0") <> show time
 
 eval (DriverInfoCardActionController (DriverInfoCardController.OnNavigate)) state = do
-  void $ pure $ openNavigation 0.0 0.0 state.data.driverInfoCardState.destinationLat state.data.driverInfoCardState.destinationLng "DRIVE"
+  void $ pure $ openNavigation 0.0 0.0 state.data.driverInfoCardState.bookingDetails.destinationLat state.data.driverInfoCardState.bookingDetails.destinationLng "DRIVE"
   continue state
 
 eval (DriverInfoCardActionController (DriverInfoCardController.OnNavigateToZone)) state = do
-  void $ pure $ openNavigation 0.0 0.0 state.data.driverInfoCardState.sourceLat state.data.driverInfoCardState.sourceLng "WALK"
+  void $ pure $ openNavigation 0.0 0.0 state.data.driverInfoCardState.bookingDetails.sourceLat state.data.driverInfoCardState.bookingDetails.sourceLng "WALK"
   continue state
 
 eval RideSupport state = do
@@ -1570,13 +1590,13 @@ eval (CancelSearchAction PopUpModal.OnButton2Click) state = do
   continue state { props { isCancelRide = true, cancellationReasons = cancelReasons "", cancelRideActiveIndex = Nothing, cancelReasonCode = "", cancelDescription = "", cancelSearchCallDriver = false } }
 
 eval (DriverInfoCardActionController (DriverInfoCardController.CancelRide infoCard)) state =
-  if state.data.config.driverInfoConfig.showCancelPrevention && not state.props.isSpecialZone then
+  if state.data.config.driverInfoConfig.showCancelPrevention && not state.data.driverInfoCardState.bookingDetails.isSpecialZone then
     continue state { props { cancelSearchCallDriver = true } }
       else continueWithCmd state [ pure $ CancelSearchAction PopUpModal.OnButton2Click]
 
 eval (DriverInfoCardActionController (DriverInfoCardController.LocationTracking)) state = do
   _ <- pure $ performHapticFeedback unit
-  continue state { props { isLocationTracking = true } }
+  continue state { data { driverInfoCardState {isLocationTracking = true } } }
 
 eval OpenEmergencyHelp state = do
   _ <- pure $ performHapticFeedback unit
@@ -1585,11 +1605,11 @@ eval OpenEmergencyHelp state = do
 eval (DriverInfoCardActionController (DriverInfoCardController.ToggleBottomSheet)) state = continue state{props{sheetState = if state.props.sheetState == EXPANDED then COLLAPSED else EXPANDED}}
 
 eval ShareRide state = do
-  continueWithCmd state
-        [ do
-            _ <- pure $ shareTextMessage (getValueToLocalStore USER_NAME <> "is on a Namma Yatri Ride") $ "👋 Hey,\n\nI am riding with Namma Driver " <> (state.data.driverInfoCardState.driverName) <> "! Track this ride on: " <> ("https://nammayatri.in/track/?id="<>state.data.driverInfoCardState.rideId) <> "\n\nVehicle number: " <> (state.data.driverInfoCardState.registrationNumber)
-            pure NoAction
-         ]
+  case state.data.driverInfoCardState.rideDetails of
+    Nothing -> continue state
+    Just rideData -> do
+      _ <- pure $ shareTextMessage (getValueToLocalStore USER_NAME <> "is on a Namma Yatri Ride") $ "👋 Hey,\n\nI am riding with Namma Driver " <> (rideData.driverName) <> "! Track this ride on: " <> ("https://nammayatri.in/track/?id="<> rideData.rideId) <> "\n\nVehicle number: " <> (rideData.registrationNumber)
+      continue state
 
 eval (EmergencyHelpModalAC (EmergencyHelpController.GenericHeaderAC  GenericHeaderController.PrefixImgOnClick)) state = continue state{props{emergencyHelpModal = false}}
 
@@ -1670,7 +1690,9 @@ eval ( RideCompletedAC (RideCompletedCard.IssueReportPopUpAC (CancelRidePopUp.Bu
       reason = (fromMaybe dummyCancelReason issue)
   exit $ ReportIssue state { data {
     ratingViewState { issueReason = Just reason.reasonCode, issueDescription = reason.description},
-    rideRatingState {rideId = state.data.driverInfoCardState.rideId, feedback = ""}
+    rideRatingState  = case state.data.driverInfoCardState.rideDetails of
+                        Just rideData -> state.data.rideRatingState{rideId = rideData.rideId, feedback = ""}
+                        Nothing -> state.data.rideRatingState
     }}
 
 eval (PredictionClickedAction (LocationListItemController.OnClick item)) state = do
@@ -2014,7 +2036,7 @@ eval (EstimateChangedPopUpController (PopUpModal.OnButton2Click)) state = do
     updatedState = state { props { currentStage = FindingQuotes, isEstimateChanged = false, searchExpire = (getSearchExpiryTime "LazyCheck") } }
   updateAndExit updatedState $ GetQuotes updatedState
 
-eval CloseLocationTracking state = continue state { props { isLocationTracking = false } }
+eval CloseLocationTracking state = continue state { data { driverInfoCardState{isLocationTracking = false } }}
 
 eval CloseShowCallDialer state = continue state { props { showCallPopUp = false } }
 
@@ -2028,9 +2050,9 @@ eval (StartLocationTracking item) state = do
   case item of
     "GOOGLE_MAP" -> do
       let
-        newState = state { props { isLocationTracking = false } }
-      updateAndExit (newState) (OpenGoogleMaps newState)
-    "IN_APP" -> exit $ InAppTrackStatus state { props { isInApp = not state.props.isInApp, isLocationTracking = false, forFirst = true } }
+        newState = state { data { driverInfoCardState {isLocationTracking = false }}}
+      updateAndExit newState $ OpenGoogleMaps newState
+    "IN_APP" -> exit $ InAppTrackStatus state { props { isInApp = not state.props.isInApp, forFirst = true }, data {driverInfoCardState {isLocationTracking = false }}}
     _ -> continue state
 
 eval (GetEstimates (GetQuotesRes quotesRes)) state = do
@@ -2201,7 +2223,7 @@ eval (CallSupportAction PopUpModal.OnButton2Click) state= do
   continue state{props{callSupportPopUp=false}}
 
 eval (UpdateETA currentETA currentDistance) state = do
-  let initDistance = state.data.driverInfoCardState.initDistance
+  let initDistance = state.data.initDistance
   distance <- case initDistance of
                       Just initDistance -> pure initDistance
                       Nothing -> do
@@ -2211,7 +2233,7 @@ eval (UpdateETA currentETA currentDistance) state = do
                                       pure currentDistance
                                       else pure $ fromMaybe 0 (fromString storedDistance)
   let
-    newState = state { data { driverInfoCardState { eta = Just currentETA, distance = currentDistance, initDistance = Just distance } } }
+    newState = state { data { driverInfoCardState { eta = Just currentETA, bookingDetails{distance = currentDistance}, initDistance = Just distance } } }
   continue newState
 
 eval (RepeatRide index item) state = do 
@@ -2716,18 +2738,14 @@ estimatesListTryAgainFlow (GetQuotesRes quotesRes) state = do
 
 normalRideFlow :: RideBookingRes -> HomeScreenState -> Eval Action ScreenOutput HomeScreenState
 normalRideFlow  (RideBookingRes response) state = do
-  let rideStatus = (fromMaybe dummyRideAPIEntity ((response.rideList) !! 0)) ^. _status
-      newState = state{ props { currentStage =
-            case rideStatus of
-              "NEW" -> RideAccepted
-              "INPROGRESS" -> RideStarted
-              "COMPLETED" -> RideCompleted
-              "CANCELLED" -> HomeScreen
-              _ -> RideAccepted
+  let newState = state{ props { currentStage = RideAccepted
           , isSearchLocation = NoView
           }
         , data
-          { driverInfoCardState = getDriverInfo state.data.specialZoneSelectedVariant (RideBookingRes response) (state.data.currentSearchResultType == QUOTES)
+          { driverInfoCardState {
+            bookingDetails = getBookingDetails (RideBookingRes response) (state.data.currentSearchResultType == QUOTES)
+          , rideDetails = getRideDetails state.data.specialZoneSelectedVariant response.rideList
+          }
           }}
   exit $ RideConfirmed newState { props { isInApp = true } }
 
@@ -2741,7 +2759,10 @@ specialZoneRideFlow  (RideBookingRes response) state = do
           , isSearchLocation = NoView
           }
         , data
-          { driverInfoCardState = getDriverInfo state.data.specialZoneSelectedVariant (RideBookingRes response) (state.data.currentSearchResultType == QUOTES)
+          { driverInfoCardState {
+            bookingDetails = getBookingDetails (RideBookingRes response) (state.data.currentSearchResultType == QUOTES)
+          , rideDetails = getRideDetails state.data.specialZoneSelectedVariant response.rideList
+          }
           }
         }
   exit $ RideConfirmed newState { props { isInApp = true } }
@@ -2763,9 +2784,12 @@ findingQuotesSearchExpired gotQuotes =
 callDriver :: HomeScreenState -> String -> Eval Action ScreenOutput HomeScreenState
 callDriver state callType = do
   let newState = state{props{ showCallPopUp = false }}
-      driverNumber = case callType of
-                        "DIRECT" ->(fromMaybe state.data.driverInfoCardState.merchantExoPhone state.data.driverInfoCardState.driverNumber)
-                        _ -> if (STR.take 1 state.data.driverInfoCardState.merchantExoPhone) == "0" then state.data.driverInfoCardState.merchantExoPhone else "0" <> state.data.driverInfoCardState.merchantExoPhone
+      merchantExoPhone = state.data.driverInfoCardState.bookingDetails.merchantExoPhone
+      driverNumber =  case callType of
+                        "DIRECT" -> case state.data.driverInfoCardState.rideDetails of
+                                      Nothing -> merchantExoPhone 
+                                      Just rideData -> fromMaybe merchantExoPhone rideData.driverNumber
+                        _ -> if (STR.take 1 merchantExoPhone) == "0" then merchantExoPhone else "0" <> merchantExoPhone
   updateWithCmdAndExit newState
     [ do
         _ <- pure $ showDialer driverNumber false

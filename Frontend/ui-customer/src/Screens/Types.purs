@@ -579,7 +579,7 @@ type HomeScreenStateData =
   , tripSuggestions :: Array Trip
   , selectList :: Array QuoteAPIEntity
   , quoteListModelState :: Array QuoteListItemState
-  , driverInfoCardState :: DriverInfoCard
+  , driverInfoCardState :: DriverInfoCardData
   , rideRatingState :: RatingCard
   , settingSideBar :: SettingSideBarState
   , sourceAddress :: Address
@@ -621,6 +621,13 @@ type HomeScreenStateData =
   , suggestionsData :: SuggestionsData
   , peekHeight :: Int
   , rideHistoryTrip :: Maybe Trip
+  , initDistance :: Maybe Int
+  , expoCounters :: Counters
+  }
+
+type Counters = {
+    rideListCounter :: Int
+  , exponentialCounter :: Int
   }
 
 type LocationDetails = {
@@ -676,7 +683,6 @@ type HomeScreenStateProps =
   , isPopUp :: PopupType
   , forFirst :: Boolean
   , callbackInitiated :: Boolean
-  , isLocationTracking :: Boolean
   , isInApp :: Boolean
   , locateOnMap :: Boolean
   , sourceSelectedOnMap :: Boolean
@@ -710,7 +716,6 @@ type HomeScreenStateProps =
   , isBanner :: Boolean
   , callSupportPopUp :: Boolean
   , defaultPickUpPoint :: String
-  , isSpecialZone :: Boolean
   , showChatNotification :: Boolean
   , cancelSearchCallDriver :: Boolean
   , zoneType :: SpecialTags
@@ -747,6 +752,7 @@ type HomeScreenStateProps =
   , repeatRideTimerId :: String
   , showShimmer :: Boolean
   , nightSafetyFlow :: Boolean 
+  , isSpecialZone :: Boolean
   }
 
 type SearchLocationModelProps = {
@@ -1028,19 +1034,43 @@ type Location = {
   city :: Maybe String
 }
 
-type DriverInfoCard =
-  { otp :: String
-  , driverName :: String
-  , currentSearchResultType :: SearchResultType
+-- ############################################## DriverInfoCardState #############################
+
+type DriverInfoCardState =
+  { props :: DriverInfoCardProps
+  , data :: DriverInfoCardData
+  }
+
+type DriverInfoCardProps =
+  { currentStage :: Stage,
+    currentSearchResultType :: SearchResultType,
+    trackingEnabled :: Boolean,
+    unReadMessages :: Boolean,
+    showCallPopUp :: Boolean,
+    estimatedTime :: String,
+    zoneType :: ZoneType,
+    merchantCity :: Maybe String
+  }
+
+type DriverInfoCardData =
+  { waitingTime :: String
+  , driverArrived :: Boolean
+  , isLocationTracking :: Boolean
+  , estimatedDropTime :: String
+  , config :: AppConfig
+  , rideDetails :: Maybe RideDetails
+  , bookingDetails :: BookingDetails
   , eta :: Maybe Int
-  , vehicleDetails :: String
-  , registrationNumber :: String
-  , rating :: Number
-  , startedAt :: String
+  , driverArrivalTime :: Int
+  , bottomSheetState :: SheetState
+  }
+
+
+type BookingDetails = {
+    startedAt :: String
   , endedAt :: String
   , source :: String
   , destination :: String
-  , rideId :: String
   , price :: Int
   , sourceLat :: Number
   , sourceLng :: Number
@@ -1049,20 +1079,60 @@ type DriverInfoCard =
   , driverLat :: Number
   , driverLng :: Number
   , distance :: Int
-  , waitingTime :: String
-  , driverArrived :: Boolean
   , estimatedDistance :: String
-  , driverArrivalTime :: Int
-  , bppRideId :: String
-  , driverNumber :: Maybe String
+  , bookingCreatedAt :: String
+  , isSpecialZone :: Boolean
+  , specialZoneOTP :: Maybe String
   , merchantExoPhone :: String
-  , createdAt :: String
-  , initDistance :: Maybe Int
-  , config :: AppConfig
-  , vehicleVariant :: String
   , sourceAddress :: Address
   , destinationAddress :: Address
-  }
+}
+
+type RideDetails = {
+    bppRideId :: String
+  , vehicleDetails :: String
+  , registrationNumber :: String
+  , rating :: Number
+  , rideId :: String
+  , driverName :: String
+  , otp :: String
+  , driverNumber :: Maybe String
+  , vehicleVariant :: String
+}
+
+-- type DriverInfoCard =
+--   { otp :: String
+--   , driverName :: String
+--   , currentSearchResultType :: SearchResultType
+--   , eta :: Int
+--   , vehicleDetails :: String
+--   , registrationNumber :: String
+--   , rating :: Number
+--   , startedAt :: String
+--   , endedAt :: String
+--   , source :: String
+--   , destination :: String
+--   , rideId :: String
+--   , price :: Int
+--   , sourceLat :: Number
+--   , sourceLng :: Number
+--   , destinationLat :: Number
+--   , destinationLng :: Number
+--   , driverLat :: Number
+--   , driverLng :: Number
+--   , distance :: Int
+--   , waitingTime :: String
+--   , driverArrived :: Boolean
+--   , estimatedDistance :: String
+--   , driverArrivalTime :: Int
+--   , bppRideId :: String
+--   , driverNumber :: Maybe String
+--   , merchantExoPhone :: String
+--   , createdAt :: String
+--   , initDistance :: Maybe Int
+--   , config :: AppConfig
+--   , vehicleVariant :: String
+--   }
 
 type RatingCard =
   {

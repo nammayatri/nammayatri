@@ -65,6 +65,7 @@ type AppConfigCustomer a =
   , shareAppConfig :: ShareAppConfig
   , homeScreen :: HomeScreen
   , locationTagBar :: LocationTagBarConfig
+  , driverLocationPollingConfig :: DriverLocationPollingConfig 
   | a
   }
 
@@ -314,4 +315,9 @@ type LocationTagBarConfig = {
   cornerRadius :: Number
 , textColor :: String
 , stroke:: String
+}
+
+type DriverLocationPollingConfig = {
+  rideListExponentialFactor :: Number
+, exponentialFactor :: Number
 }

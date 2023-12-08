@@ -26,7 +26,6 @@ import Common.Types.App (LazyCheck(..))
 import Components.Banner as Banner
 import Components.MessagingView as MessagingView
 import Components.ChooseYourRide as ChooseYourRide
-import Components.DriverInfoCard (DriverInfoCardData)
 import Components.DriverInfoCard as DriverInfoCard
 import Components.EmergencyHelp as EmergencyHelp
 import Components.ErrorModal as ErrorModal
@@ -65,7 +64,7 @@ import MerchantConfig.Utils as MU
 import PrestoDOM (Accessiblity(..))
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Resources.Constants (getKmMeter)
-import Screens.Types (DriverInfoCard, Stage(..), ZoneType(..), TipViewData, TipViewStage(..), TipViewProps)
+import Screens.Types (Stage(..), ZoneType(..), TipViewData, TipViewStage(..), TipViewProps)
 import Screens.Types as ST
 import Storage (KeyStore(..), getValueToLocalStore, isLocalStageOn, setValueToLocalStore)
 import Styles.Colors as Color
@@ -153,9 +152,9 @@ cancelAppConfig state = let
       },
       cornerRadius = Corners 15.0 true true false false,
       coverImageConfig {
-        imageUrl = fetchImage FF_ASSET $ if state.data.driverInfoCardState.distance <= 500
-                    then if state.data.driverInfoCardState.vehicleVariant == "AUTO_RICKSHAW"  then "ny_ic_driver_near_auto" else "ny_ic_driver_near"
-                    else if state.data.driverInfoCardState.vehicleVariant == "AUTO_RICKSHAW" then  "ny_ic_driver_started_auto" else "ny_ic_driver_started"
+        imageUrl = fetchImage FF_ASSET $ if state.data.driverInfoCardState.bookingDetails.distance <= 500
+                    then getVehicleBasedImage state.data.driverInfoCardState.rideDetails "ny_ic_driver_near"
+                    else getVehicleBasedImage state.data.driverInfoCardState.rideDetails "ny_ic_driver_started"
       , visibility = VISIBLE
       , margin = Margin 16 20 16 24
       , width = MATCH_PARENT
@@ -163,7 +162,12 @@ cancelAppConfig state = let
       }
   }
   in popUpConfig'
-      where distanceString = getDistanceString state.data.driverInfoCardState.distance (fromMaybe 0 state.data.driverInfoCardState.initDistance) state.props.zoneType.priorityTag
+      where 
+        distanceString = getDistanceString state.data.driverInfoCardState.bookingDetails.distance (fromMaybe 0 state.data.initDistance) state.props.zoneType.priorityTag
+
+        getVehicleBasedImage :: Maybe ST.RideDetails -> String -> String
+        getVehicleBasedImage Nothing name = name
+        getVehicleBasedImage (Just rideDetails) name = if rideDetails.vehicleVariant == "AUTO_RICKSHAW" then name <> "_auto" else name
 
 
 getDistanceString :: Int -> Int -> ZoneType -> String
@@ -845,27 +849,26 @@ estimateChangedPopupConfig state =
   in
     popUpConfig'
 
-driverInfoCardViewState :: ST.HomeScreenState -> DriverInfoCard.DriverInfoCardState
+driverInfoCardViewState :: ST.HomeScreenState -> ST.DriverInfoCardState
 driverInfoCardViewState state = { props:
                                   { currentStage: state.props.currentStage
                                   , trackingEnabled: state.props.isInApp
                                   , unReadMessages : state.props.unReadMessages
                                   , showCallPopUp: state.props.showCallPopUp
-                                  , isSpecialZone: state.props.isSpecialZone
                                   , estimatedTime : state.data.rideDuration
                                   , zoneType : state.props.zoneType.priorityTag
                                   , currentSearchResultType : state.data.currentSearchResultType
                                   , merchantCity : state.props.city
                                   }
-                              , data: driverInfoTransformer state
+                              , data: state.data.driverInfoCardState
                             }
 
-messagingViewConfig :: ST.HomeScreenState -> MessagingView.Config
-messagingViewConfig state = let
-  config = MessagingView.config
-  messagingViewConfig' = config {
+messagingViewConfig :: ST.HomeScreenState -> Maybe MessagingView.Config
+messagingViewConfig state = case state.data.driverInfoCardState.rideDetails of
+      Nothing -> Nothing
+      Just rideData -> Just $ MessagingView.config {
     userConfig
-    { userName = state.data.driverInfoCardState.driverName
+    { userName = rideData.driverName
     , appType = "Customer"
     }
   , feature 
@@ -876,19 +879,18 @@ messagingViewConfig state = let
     }
   , messages = state.data.messages
   , messagesSize = state.data.messagesSize
-  , vehicleNo = HU.makeNumber $ state.data.driverInfoCardState.registrationNumber     
+  , vehicleNo = HU.makeNumber $ rideData.registrationNumber     
   , chatSuggestionsList = getChatSuggestions state
   , hint = (getString MESSAGE)
   , languageKey = (getValueToLocalStore LANGUAGE_KEY)
-  , rideConfirmedAt = state.data.driverInfoCardState.startedAt
+  , rideConfirmedAt = state.data.driverInfoCardState.bookingDetails.startedAt
   , autoGeneratedText = state.data.config.notifyRideConfirmationConfig.autoGeneratedText <> (HU.secondsToHms $ fromMaybe 0 state.data.driverInfoCardState.eta)
-  , driverRating = show $ state.data.driverInfoCardState.rating
-  , fareAmount = show $ state.data.driverInfoCardState.price
+  , driverRating = show $ rideData.rating
+  , fareAmount = show $ state.data.driverInfoCardState.bookingDetails.price
   , config = state.data.config
   , peekHeight = if state.data.infoCardPeekHeight == 0 then getDefaultPeekHeight state else state.data.infoCardPeekHeight
-  , otp = state.data.driverInfoCardState.otp
+  , otp = if state.data.driverInfoCardState.bookingDetails.isSpecialZone then fromMaybe "" state.data.driverInfoCardState.bookingDetails.specialZoneOTP else rideData.otp
   }
-  in messagingViewConfig'
 
 getDefaultPeekHeight :: ST.HomeScreenState -> Int
 getDefaultPeekHeight state = do
@@ -1356,8 +1358,8 @@ rideCompletedCardConfig state =
           title =  getString RIDE_COMPLETED,
           titleColor = topCardConfig.titleColor,
           finalAmount = state.data.finalAmount,
-          initalAmount = state.data.driverInfoCardState.price,
-          fareUpdatedVisiblity = state.data.finalAmount /= state.data.driverInfoCardState.price && state.props.estimatedDistance /= Nothing,
+          initalAmount = state.data.driverInfoCardState.bookingDetails.price,
+          fareUpdatedVisiblity = state.data.finalAmount /= state.data.driverInfoCardState.bookingDetails.price && state.props.estimatedDistance /= Nothing,
           gradient = topCardGradient,
           infoPill {
             text = getFareUpdatedStr state.data.rideRatingState.distanceDifference waitingChargesApplied,
@@ -1365,7 +1367,7 @@ rideCompletedCardConfig state =
             color = topCardConfig.rideDescription.textColor,
             image = fetchImage FF_COMMON_ASSET "ny_ic_parallel_arrows",
             imageVis = VISIBLE,
-            visible = if state.data.finalAmount == state.data.driverInfoCardState.price || state.props.estimatedDistance == Nothing then GONE else VISIBLE
+            visible = if state.data.finalAmount == state.data.driverInfoCardState.bookingDetails.price || state.props.estimatedDistance == Nothing then GONE else VISIBLE
           },
           bottomText =  getString RIDE_DETAILS
         },
@@ -1516,14 +1518,14 @@ getChatSuggestions state = do
       canShowSuggestions = case lastMessage of 
                             Just value -> (value.sentBy /= "Customer") || not didDriverMessage
                             Nothing -> true
-      isAtPickup = (metersToKm state.data.driverInfoCardState.distance state) == getString AT_PICKUP
+      isAtPickup = (metersToKm state.data.driverInfoCardState.bookingDetails.distance state) == getString AT_PICKUP
   if (DA.null state.data.chatSuggestionsList) && canShowSuggestions && state.props.canSendSuggestion then
     if didDriverMessage && (not $ DA.null state.data.messages) then
       if isAtPickup then getSuggestionsfromKey "customerDefaultAP" else getSuggestionsfromKey "customerDefaultBP"
     else 
     if isAtPickup then getSuggestionsfromKey "customerInitialAP" else do
         let hideInitial = not (DA.null state.data.messages) && not didDriverMessage
-        if (DA.null state.data.messages) && (EHC.getExpiryTime state.data.driverInfoCardState.createdAt true) > 30 then getSuggestionsfromKey "customerInitialBP3"
+        if (DA.null state.data.messages) && (EHC.getExpiryTime state.data.driverInfoCardState.bookingDetails.bookingCreatedAt true) > 30 then getSuggestionsfromKey "customerInitialBP3"
         else if hideInitial then getSuggestionsfromKey "customerInitialBP2"
         else getSuggestionsfromKey "customerInitialBP1"
   else state.data.chatSuggestionsList

@@ -38,8 +38,8 @@ import Language.Types (STR(..))
 import PrestoDOM (Visibility(..))
 import Resources.Constants (DecodeAddress(..), decodeAddress, getValueByComponent, getWard, getVehicleCapacity, getFaresList, getKmMeter, fetchVehicleVariant, getAddressFromBooking)
 import Screens.HomeScreen.ScreenData (dummyAddress, dummyLocationName, dummySettingBar, dummyZoneType)
-import Screens.Types (DriverInfoCard, LocationListItemState, LocItemType(..), LocationItemType(..), NewContacts, Contact, VehicleVariant(..), TripDetailsScreenState, SearchResultType(..), EstimateInfo, SpecialTags, ZoneType(..), HomeScreenState(..), MyRidesScreenState(..), Trip(..))
-import Services.API (AddressComponents(..), BookingLocationAPIEntity, DeleteSavedLocationReq(..), DriverOfferAPIEntity(..), EstimateAPIEntity(..), GetPlaceNameResp(..), LatLong(..), OfferRes, OfferRes(..), PlaceName(..), Prediction, QuoteAPIContents(..), QuoteAPIEntity(..), RideAPIEntity(..), RideBookingAPIDetails(..), RideBookingRes(..), SavedReqLocationAPIEntity(..), SpecialZoneQuoteAPIDetails(..), FareRange(..), LatLong(..), EstimateFares(..))
+import Screens.Types 
+import Services.API
 import Services.Backend as Remote
 import Types.App(FlowBT,  GlobalState(..), ScreenType(..))
 import Storage ( setValueToLocalStore, getValueToLocalStore, KeyStore(..))
@@ -118,48 +118,57 @@ getQuote (QuoteAPIEntity quoteEntity) city = do
     , city : city
     }
 
-getDriverInfo :: Maybe String -> RideBookingRes -> Boolean -> DriverInfoCard
-getDriverInfo vehicleVariant (RideBookingRes resp) isQuote =
-  let (RideAPIEntity rideList) = fromMaybe  dummyRideAPIEntity ((resp.rideList) DA.!! 0)
-  in  {
-        otp : if isQuote then fromMaybe "" ((resp.bookingDetails)^._contents ^._otpCode) else rideList.rideOtp
-      , driverName : if length (fromMaybe "" ((split (Pattern " ") (rideList.driverName)) DA.!! 0)) < 4 then
-                        (fromMaybe "" ((split (Pattern " ") (rideList.driverName)) DA.!! 0)) <> " " <> (fromMaybe "" ((split (Pattern " ") (rideList.driverName)) DA.!! 1)) else
-                          (fromMaybe "" ((split (Pattern " ") (rideList.driverName)) DA.!! 0))
-      , eta : Nothing
-      , currentSearchResultType : if isQuote then QUOTES else ESTIMATES
-      , vehicleDetails : rideList.vehicleModel
-      , registrationNumber : rideList.vehicleNumber
-      , rating : (fromMaybe 0.0 rideList.driverRatings)
-      , startedAt : (convertUTCtoISC resp.createdAt "h:mm A")
-      , endedAt : (convertUTCtoISC resp.updatedAt "h:mm A")
-      , source : decodeAddress (Booking resp.fromLocation)
-      , destination : decodeAddress (Booking (resp.bookingDetails ^._contents^._toLocation))
-      , rideId : rideList.id
-      , price : resp.estimatedTotalFare
-      , sourceLat : resp.fromLocation ^._lat
-      , sourceLng : resp.fromLocation ^._lon
-      , destinationLat : (resp.bookingDetails ^._contents^._toLocation ^._lat)
-      , destinationLng : (resp.bookingDetails ^._contents^._toLocation ^._lon)
-      , sourceAddress : getAddressFromBooking resp.fromLocation
-      , destinationAddress : getAddressFromBooking (resp.bookingDetails ^._contents^._toLocation)
-      , estimatedDistance : parseFloat ((toNumber (fromMaybe 0 (resp.bookingDetails ^._contents ^._estimatedDistance)))/1000.0) 2
-      , createdAt : resp.createdAt
-      , driverLat : 0.0
-      , driverLng : 0.0
-      , distance : 0
-      , waitingTime : "--"
-      , driverArrived : false
-      , driverArrivalTime : 0
-      , bppRideId : rideList.bppRideId
-      , driverNumber : rideList.driverNumber
-      , merchantExoPhone : resp.merchantExoPhone
-      , initDistance : Nothing
-      , config : getAppConfig appConfig
-      , vehicleVariant : if rideList.vehicleVariant /= "" 
-                            then rideList.vehicleVariant 
-                         else
-                            fromMaybe "" vehicleVariant
+-- getDriverInfo :: Maybe String -> RideBookingRes -> Boolean -> DriverInfoCardData
+-- getDriverInfo vehicleVariant (RideBookingRes resp) isQuote =
+--   case ((resp.rideList) DA.!! 0) of
+--     Nothing -> if isQuote then Just $ getDriverInfoData vehicleVariant (RideBookingRes resp) dummyRideAPIEntity isQuote else Nothing
+--     Just (RideAPIEntity rideList) -> Just $ getDriverInfoData vehicleVariant (RideBookingRes resp) dummyRideAPIEntity isQuote --getDriverInfoData vehicleVariant (RideBookingRes resp) (RideAPIEntity rideList) isQuote 
+
+getBookingDetails :: RideBookingRes -> Boolean -> BookingDetails
+getBookingDetails (RideBookingRes resp) isSpecialZone =
+  { price: resp.estimatedTotalFare
+  , sourceLat: resp.fromLocation ^. _lat
+  , sourceLng: resp.fromLocation ^. _lon
+  , startedAt: convertUTCtoISC resp.createdAt "h:mm A"
+  , endedAt: convertUTCtoISC resp.updatedAt "h:mm A"
+  , source: decodeAddress $ Booking resp.fromLocation
+  , destination: decodeAddress $ Booking $ resp.bookingDetails ^. _contents ^. _toLocation
+  , destinationLat: resp.bookingDetails ^. _contents ^. _toLocation ^. _lat
+  , destinationLng: resp.bookingDetails ^. _contents ^. _toLocation ^. _lon
+  , bookingCreatedAt: resp.createdAt
+  , estimatedDistance: parseFloat ((toNumber $ fromMaybe 0 (resp.bookingDetails ^. _contents ^. _estimatedDistance)) / 1000.0) 2
+  , driverLat: 0.0
+  , driverLng: 0.0
+  , distance: 0
+  , isSpecialZone: isSpecialZone
+  , specialZoneOTP: resp.bookingDetails ^. _contents ^. _otpCode
+  , merchantExoPhone: resp.merchantExoPhone
+  , sourceAddress : getAddressFromBooking resp.fromLocation
+  , destinationAddress : getAddressFromBooking (resp.bookingDetails ^._contents^._toLocation)
+  }
+
+getRideDetails :: Maybe String -> Array RideAPIEntity -> Maybe RideDetails
+getRideDetails vehicleVariant rideList = case DA.head rideList of
+  Nothing -> Nothing
+  Just (RideAPIEntity ride) ->
+    Just
+      $ { vehicleDetails: ride.vehicleModel
+        , registrationNumber: ride.vehicleNumber
+        , vehicleVariant:
+            if ride.vehicleVariant /= "" then
+              ride.vehicleVariant
+            else
+              fromMaybe "" vehicleVariant
+        , rating: (fromMaybe 0.0 ride.driverRatings)
+        , bppRideId: ride.bppRideId
+        , driverNumber: ride.driverNumber
+        , rideId: ride.id
+        , otp: ride.rideOtp
+        , driverName:
+            if length (fromMaybe "" ((split (Pattern " ") (ride.driverName)) DA.!! 0)) < 4 then
+              (fromMaybe "" ((split (Pattern " ") (ride.driverName)) DA.!! 0)) <> " " <> (fromMaybe "" ((split (Pattern " ") (ride.driverName)) DA.!! 1))
+            else
+              (fromMaybe "" ((split (Pattern " ") (ride.driverName)) DA.!! 0))
         }
 
 encodeAddressDescription :: String -> String -> Maybe String -> Maybe Number -> Maybe Number -> Array AddressComponents -> SavedReqLocationAPIEntity

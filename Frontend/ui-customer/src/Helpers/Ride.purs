@@ -52,6 +52,15 @@ checkRideStatus rideAssigned = do
     Right (RideBookingListRes listResp) -> do
       if not (null listResp.list) then do
         (GlobalState state') <- getState
+        let (RideBookingRes resp) = (fromMaybe dummyRideBooking (listResp.list !! 0))  
+            status = (fromMaybe dummyRideAPIEntity ((resp.rideList) !! 0))^._status -- only for log
+            rideStatus =  case head resp.rideList of
+                            Nothing -> RideAccepted
+                            Just (RideAPIEntity ride) -> if ride.status == "NEW" then RideAccepted else RideStarted
+            (RideBookingAPIDetails bookingDetails) = resp.bookingDetails
+            fareProductType = bookingDetails.fareProductType
+            (RideBookingDetails contents) = bookingDetails.contents
+            otpCode = contents.otpCode
         let state = state'.homeScreen
             (RideBookingRes resp) = (fromMaybe dummyRideBooking (head listResp.list))
             status = (fromMaybe dummyRideAPIEntity (head resp.rideList))^._status
@@ -191,3 +200,115 @@ showNightSafetyFlow hasNightIssue rideStartTime rideEndTime = not (fromMaybe tru
 
 isNightRide :: Maybe String -> Boolean
 isNightRide = maybe false (\time -> withinTimeRange "21:00:00" "06:00:00" $ convertUTCtoISC time "HH:mm:ss")
+
+{-
+  currentRideFlow :: Boolean -> FlowBT String Unit
+currentRideFlow rideAssigned = do
+  logField_ <- lift $ lift $ getLogFields
+  config <- getAppConfig Constants.appConfig
+  modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data {config = config}})
+  rideBookingListResponse <- lift $ lift $ Remote.rideBookingList "1" "0" "true"
+  (GlobalState state') <- getState
+  let state = state'.homeScreen
+  case rideBookingListResponse of
+    Right (RideBookingListRes listResp) -> do
+      if not (null listResp.list) then do
+        when (not rideAssigned) $ lift $ lift $ liftFlow $ logEvent logField_ "ny_active_ride_with_idle_state"
+        let (RideBookingRes resp) = (fromMaybe dummyRideBooking (listResp.list !! 0))  
+            status = (fromMaybe dummyRideAPIEntity ((resp.rideList) !! 0))^._status -- only for log
+            rideStatus =  case head resp.rideList of
+                            Nothing -> RideAccepted
+                            Just (RideAPIEntity ride) -> if ride.status == "NEW" then RideAccepted else RideStarted
+            (RideBookingAPIDetails bookingDetails) = resp.bookingDetails
+            fareProductType = bookingDetails.fareProductType
+            (RideBookingDetails contents) = bookingDetails.contents
+            otpCode = contents.otpCode
+            isSpecialZone = fareProductType == "OneWaySpecialZoneAPIDetails" || resp.status == "CONFIRMED" || isJust otpCode
+            newState = state{data{driverInfoCardState {bookingDetails = getBookingDetails (RideBookingRes resp) isSpecialZone
+                , rideDetails = getRideDetails state.data.specialZoneSelectedVariant resp.rideList 
+                }
+                , finalAmount = fromMaybe 0 ((fromMaybe dummyRideAPIEntity (resp.rideList !!0) )^. _computedPrice)
+                , currentSearchResultType = if (fareProductType == "OneWaySpecialZoneAPIDetails" || otpCode /= Nothing) then QUOTES else ESTIMATES},
+                  props{currentStage = rideStatus
+                  , rideRequestFlow = true
+                  , bookingId = resp.id
+                  , isPopUp = NoPopUp
+                  , zoneType = getSpecialTag resp.specialLocationTag
+                  , isSpecialZone = isSpecialZone
+                  }}
+        when (not rideAssigned) $ do
+          void $ pure $ logEventWithTwoParams logField_ "ny_active_ride_with_idle_state" "status" status "bookingId" resp.id
+        _ <- pure $ spy "Active api" listResp
+        modifyScreenState $ HomeScreenStateType (\_ → newState)
+        updateLocalStage rideStatus
+        when isSpecialZone $ setValueToLocalStore TRACKING_ENABLED "True"
+      else if ((getValueToLocalStore RATING_SKIPPED) == "false") then do
+        updateLocalStage HomeScreen
+        rideBookingListResponse <- lift $ lift $ Remote.rideBookingList "1" "0" "false"
+        case rideBookingListResponse of
+          Right (RideBookingListRes listResp) -> do
+            let (RideBookingRes resp) = (fromMaybe dummyRideBooking (listResp.list !! 0))
+            let (RideBookingAPIDetails bookingDetails) = resp.bookingDetails
+            let (RideBookingDetails contents) = bookingDetails.contents
+            let (RideAPIEntity currRideListItem) = (fromMaybe dummyRideAPIEntity (resp.rideList !!0))
+                isSpecialZone = bookingDetails.fareProductType == "OneWaySpecialZoneAPIDetails" || isJust contents.otpCode
+            _ <- pure $ spy "CurrentRideListItem" currRideListItem
+            let differenceOfDistance = fromMaybe 0 contents.estimatedDistance - (fromMaybe 0 currRideListItem.chargeableRideDistance)
+            let lastRideDate = (case currRideListItem.rideStartTime of
+                                Just startTime -> (convertUTCtoISC startTime "DD/MM/YYYY")
+                                Nothing        -> "")
+                currentDate =  getCurrentDate ""
+            if(lastRideDate /= currentDate) then do
+              _ <- pure $ setValueToLocalStore FLOW_WITHOUT_OFFERS "true"
+              _ <- pure $ setValueToLocalStore TEST_MINIMUM_POLLING_COUNT "4"
+              _ <- pure $ setValueToLocalStore TEST_POLLING_INTERVAL "8000.0"
+              _ <- pure $ setValueToLocalStore TEST_POLLING_COUNT "22"
+              pure unit
+              else pure unit
+            when (isNothing currRideListItem.rideRating) $ do
+              when (resp.status /= "CANCELLED" && length listResp.list > 0) $ do
+                modifyScreenState $ HomeScreenStateType (\homeScreen → homeScreen{
+                    props { currentStage = RideCompleted
+                          , estimatedDistance = contents.estimatedDistance
+                          , zoneType = getSpecialTag resp.specialLocationTag}
+                  , data { rideRatingState
+                          { driverName = currRideListItem.driverName
+                          , rideId = currRideListItem.id
+                          , finalAmount = (fromMaybe 0 currRideListItem.computedPrice)
+                          , source = decodeAddress (Booking resp.fromLocation)
+                          , destination = (decodeAddress (Booking (resp.bookingDetails ^._contents^._toLocation)))
+                          , vehicleNumber = (currRideListItem.vehicleNumber)
+                          , status = (currRideListItem.status)
+                          , shortRideId = currRideListItem.shortRideId
+                          , rideEndTimeUTC = ""
+                          , offeredFare = resp.estimatedTotalFare
+                          , distanceDifference = differenceOfDistance
+                          , bookingId = resp.id
+                          , feedback = ""
+                          , rideStartTime = case currRideListItem.rideStartTime of
+                                              Just startTime -> (convertUTCtoISC startTime "h:mm A")
+                                              Nothing        -> ""
+                          , rideEndTime   = case currRideListItem.rideEndTime of
+                                              Just endTime   -> " " <>(convertUTCtoISC endTime "h:mm A")
+                                              Nothing        -> ""
+                          , rideStartDate = case currRideListItem.rideStartTime of
+                                              Just startTime ->( (fromMaybe "" ((split (Pattern ",") (convertUTCtoISC startTime "llll")) !!0 )) <> ", " <>  (convertUTCtoISC startTime "Do MMM") )
+                                              Nothing        -> ""
+                          , dateDDMMYY =  case currRideListItem.rideStartTime of
+                                            Just startTime -> (convertUTCtoISC startTime "DD/MM/YYYY")
+                                            Nothing        -> ""
+                          }
+                          , config = config
+                          , finalAmount = (fromMaybe 0 currRideListItem.computedPrice)
+                          , driverInfoCardState {
+                            bookingDetails = getBookingDetails (RideBookingRes resp) isSpecialZone
+                          , rideDetails = getRideDetails state.data.specialZoneSelectedVariant resp.rideList }
+                          , ratingViewState { rideBookingRes = (RideBookingRes resp)}
+                          }
+                })
+                updateLocalStage RideCompleted
+          Left err -> updateLocalStage HomeScreen
+      else do
+        updateLocalStage HomeScreen
+    Left err -> updateLocalStage HomeScreen
+  if not (isLocalStageOn RideAccepted) then removeChatService "" else pure unit -}
