@@ -136,4 +136,7 @@ config =
       auto : true,
       cabs : false
     }
+  , features : {
+      enableSuggestions : false
+    }
   }

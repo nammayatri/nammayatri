@@ -15,7 +15,8 @@ type AppConfig =
     rideActionModelConfig :: RideActionModelConfig,
     profile :: ProfileConfig,
     enablePurpleRideBanner :: Boolean,
-    showPaymentDetails :: Boolean
+    showPaymentDetails :: Boolean,
+    features :: Features
   } 
 
 type Language =  {
@@ -53,4 +54,8 @@ type RideCompletedCardConfig = {
 
 type ProfileConfig = {
   bookingOptionMenuForTaxi :: Boolean
+}
+
+type Features = {
+  enableSuggestions :: Boolean
 }
