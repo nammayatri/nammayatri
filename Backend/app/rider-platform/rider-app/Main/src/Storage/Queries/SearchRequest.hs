@@ -16,6 +16,7 @@
 module Storage.Queries.SearchRequest where
 
 import Data.Ord
+import Data.Text (strip)
 import qualified Domain.Types.Location as DL
 import qualified Domain.Types.LocationMapping as DLM
 import Domain.Types.Merchant.MerchantPaymentMethod (MerchantPaymentMethod)
@@ -95,8 +96,8 @@ updatePaymentMethods (Id searchReqId) availablePaymentMethods =
 
 instance FromTType' BeamSR.SearchRequest SearchRequest where
   fromTType' BeamSR.SearchRequestT {..} = do
-    bundleVersion' <- forM bundleVersion readVersion
-    clientVersion' <- forM clientVersion readVersion
+    bundleVersion' <- mapM readVersion (strip <$> bundleVersion)
+    clientVersion' <- mapM readVersion (strip <$> clientVersion)
     mappings <- QLM.findByEntityId id
     (fl, tl) <-
       if null mappings -- HANDLING OLD DATA : TO BE REMOVED AFTER SOME TIME
