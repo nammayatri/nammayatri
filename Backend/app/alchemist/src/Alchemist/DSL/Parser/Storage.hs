@@ -33,10 +33,11 @@ storageParser filepath = do
 
 parseTableDef :: [String] -> Object -> (String, Object) -> TableDef
 parseTableDef dList importObj (parseDomainName, obj) =
-  let parsedTypesAndExcluded = parseExtraTypes (Just parseDomainName) dList importObj obj
-      parsedTypes = parsedTypesAndExcluded >>= pure . fst
-      excludedList = parsedTypesAndExcluded >>= pure . snd
-      parsedFields = parseFields (Just parseDomainName) excludedList dList importObj obj
+  let parsedTypesAndExcluded = parseExtraTypes parseDomainName dList importObj obj
+      parsedTypes = (view _1) <$> parsedTypesAndExcluded
+      excludedList = (view _2) <$> parsedTypesAndExcluded
+      enumList = fromMaybe [] ((view _3) <$> parsedTypesAndExcluded)
+      parsedFields = parseFields (Just parseDomainName) excludedList dList enumList importObj obj
       parsedImports = parseImports parsedFields (fromMaybe [] parsedTypes)
       parsedQueries = parseQueries (Just parseDomainName) excludedList dList parsedFields importObj obj
       (primaryKey, secondaryKey) = extractKeys parsedFields
@@ -140,17 +141,22 @@ parseTypeObjects obj =
       TypeObject (toString typeName, splitTypeAndDerivation $ extractFields typeDef)
     processType1 _ = error "Expected an object in fields"
 
-parseExtraTypes :: Maybe String -> [String] -> Object -> Object -> Maybe ([TypeObject], [String])
+parseExtraTypes :: String -> [String] -> Object -> Object -> Maybe ([TypeObject], [String], [String])
 parseExtraTypes moduleName dList importObj obj = do
   _types <- parseTypes obj
   let allExcludeQualified = map (\(TypeObject (name, _)) -> name) _types
-  return $ (map (mkQualifiedTypeObject allExcludeQualified) _types, allExcludeQualified)
+  let allEnums = map (\(TypeObject (name, _)) -> name) $ filter isEnumType _types
+  return $ (map (mkQualifiedTypeObject allExcludeQualified) _types, allExcludeQualified, map (\nm -> defaultImportModule ++ moduleName ++ "." ++ nm) allEnums ++ allEnums)
   where
     defaultImportModule = "Domain.Types."
+
+    isEnumType :: TypeObject -> Bool
+    isEnumType (TypeObject (_, (arrOfFields, _))) = any (\(k, _) -> k == "enum") arrOfFields
+
     mkEnumTypeQualified :: [String] -> String -> String
     mkEnumTypeQualified excluded enumTp =
       let individualEnums = L.trim <$> L.splitOn "," enumTp
-       in L.intercalate "," $ map (uncurry (<>) . second (makeTypeQualified moduleName (Just excluded) (Just dList) defaultImportModule importObj) . L.breakOn " ") individualEnums
+       in L.intercalate "," $ map (uncurry (<>) . second (makeTypeQualified (Just moduleName) (Just excluded) (Just dList) defaultImportModule importObj) . L.breakOn " ") individualEnums
 
     mkQualifiedTypeObject :: [String] -> TypeObject -> TypeObject
     mkQualifiedTypeObject excluded (TypeObject (_nm, (arrOfFields, derive))) =
@@ -161,7 +167,7 @@ parseExtraTypes moduleName dList importObj obj = do
                   ( _n,
                     if _n == "enum"
                       then mkEnumTypeQualified excluded _t
-                      else makeTypeQualified moduleName (Just excluded) (Just dList) defaultImportModule importObj _t
+                      else makeTypeQualified (Just moduleName) (Just excluded) (Just dList) defaultImportModule importObj _t
                   )
               )
               arrOfFields,
@@ -169,8 +175,8 @@ parseExtraTypes moduleName dList importObj obj = do
           )
         )
 
-parseFields :: Maybe String -> Maybe [String] -> [String] -> Object -> Object -> [FieldDef]
-parseFields moduleName excludedList dataList impObj obj =
+parseFields :: Maybe String -> Maybe [String] -> [String] -> [String] -> Object -> Object -> [FieldDef]
+parseFields moduleName excludedList dataList enumList impObj obj =
   let fields = (++) <$> preview (ix "fields" . _Value . to mkList . to filterOutAlreadyDefaultTypes) obj <*> pure defaultFields
       constraintsObj = obj ^? (ix "constraints" . _Object)
       sqlTypeObj = obj ^? (ix "sqlType" . _Object)
@@ -180,7 +186,7 @@ parseFields moduleName excludedList dataList impObj obj =
         let fieldName = fst field
             haskellType = snd field
             fieldKey = fromString fieldName
-            sqlType = fromMaybe (findMatchingSqlType haskellType) (sqlTypeObj >>= preview (ix fieldKey . _String))
+            sqlType = fromMaybe (findMatchingSqlType enumList haskellType) (sqlTypeObj >>= preview (ix fieldKey . _String))
             beamType = fromMaybe (findBeamType haskellType) (beamTypeObj >>= preview (ix fieldKey . _String))
             constraints = L.nub $ getDefaultFieldConstraints fieldName haskellType ++ fromMaybe [] (constraintsObj >>= preview (ix fieldKey . _String . to (splitOn "|") . to (map getProperConstraint)))
             defaultValue = maybe (sqlDefaultsWrtName fieldName) pure (defaultsObj >>= preview (ix fieldKey . _String))
@@ -266,11 +272,13 @@ filterOutAlreadyDefaultTypes :: [(String, String)] -> [(String, String)]
 filterOutAlreadyDefaultTypes = filter (\(k, _) -> k `notElem` map fst defaultFields)
 
 -- SQL Types --
-findMatchingSqlType :: String -> String
-findMatchingSqlType haskellType =
-  case filter ((haskellType =~) . fst) sqlTypeWrtType of
-    [] -> "text"
-    ((_, sqlType) : _) -> sqlType
+findMatchingSqlType :: [String] -> String -> String
+findMatchingSqlType allEnums haskellType =
+  if any (haskellType =~) allEnums
+    then "text"
+    else case filter ((haskellType =~) . fst) sqlTypeWrtType of
+      [] -> "text"
+      ((_, sqlType) : _) -> sqlType
 
 sqlDefaultsWrtName :: String -> Maybe String
 sqlDefaultsWrtName = \case
