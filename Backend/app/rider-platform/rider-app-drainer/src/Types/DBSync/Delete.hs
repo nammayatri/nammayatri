@@ -54,12 +54,6 @@ import qualified "rider-app" Storage.Beam.SavedReqLocation as SavedReqLocation
 import qualified "rider-app" Storage.Beam.SearchRequest as SearchRequest
 import qualified "rider-app" Storage.Beam.Sos as Sos
 import qualified "rider-app" Storage.Beam.SpecialZoneQuote as SpecialZoneQuote
-import qualified "rider-app" Storage.Beam.Tickets.TicketBooking as TicketBooking
-import qualified "rider-app" Storage.Beam.Tickets.TicketBookingService as TicketBookingService
-import qualified "rider-app" Storage.Beam.Tickets.TicketBookingServicePriceBreakup as TicketBookingServicePriceBreakup
-import qualified "rider-app" Storage.Beam.Tickets.TicketPlace as TicketPlace
-import qualified "rider-app" Storage.Beam.Tickets.TicketService as TicketService
-import qualified "rider-app" Storage.Beam.Tickets.TicketServicePrice as TicketServicePrice
 import qualified "rider-app" Storage.Beam.TripTerms as TripTerms
 import qualified "rider-app" Storage.Beam.Webengage as Webengage
 import Utils.Parse
@@ -113,12 +107,6 @@ data DeleteModel
   | BecknRequestDelete
   | LocationDelete
   | LocationMappingDelete
-  | TicketBookingDelete
-  | TicketBookingServiceDelete
-  | TicketServiceDelete
-  | TicketServicePriceDelete
-  | TicketBookingServicePriceBreakupDelete
-  | TicketPlaceDelete
   deriving (Generic, Show)
 
 getTagDelete :: DeleteModel -> Text
@@ -170,12 +158,6 @@ getTagDelete HotSpotConfigDelete = "HotSpotConfigOptions"
 getTagDelete BecknRequestDelete = "BecknRequestOptions"
 getTagDelete LocationDelete = "LocationOptions"
 getTagDelete LocationMappingDelete = "LocationMappingOptions"
-getTagDelete TicketBookingDelete = "TicketBookingOptions"
-getTagDelete TicketBookingServiceDelete = "TicketBookingServiceOptions"
-getTagDelete TicketServiceDelete = "TicketServiceOptions"
-getTagDelete TicketServicePriceDelete = "TicketServicePriceOptions"
-getTagDelete TicketBookingServicePriceBreakupDelete = "TicketBookingServicePriceBreakupOptions"
-getTagDelete TicketPlaceDelete = "TicketPlaceOptions"
 
 parseTagDelete :: Text -> Parser DeleteModel
 parseTagDelete "AppInstallsOptions" = return AppInstallsDelete
@@ -226,12 +208,6 @@ parseTagDelete "HotSpotConfigOptions" = return HotSpotConfigDelete
 parseTagDelete "BecknRequestOptions" = return BecknRequestDelete
 parseTagDelete "LocationOptions" = return LocationDelete
 parseTagDelete "LocationMappingOptions" = return LocationMappingDelete
-parseTagDelete "TicketBookingOptions" = return TicketBookingDelete
-parseTagDelete "TicketBookingServiceOptions" = return TicketBookingServiceDelete
-parseTagDelete "TicketServiceOptions" = return TicketServiceDelete
-parseTagDelete "TicketServicePriceOptions" = return TicketServicePriceDelete
-parseTagDelete "TicketBookingServicePriceBreakupOptions" = return TicketBookingServicePriceBreakupDelete
-parseTagDelete "TicketPlaceOptions" = return TicketPlaceDelete
 parseTagDelete t = fail $ T.unpack ("Expected a DeleteModel but got '" <> t <> "'")
 
 data DBDeleteObject
@@ -283,12 +259,6 @@ data DBDeleteObject
   | BecknRequestDeleteOptions DeleteModel (Where Postgres BecknRequest.BecknRequestT)
   | LocationDeleteOptions DeleteModel (Where Postgres Location.LocationT)
   | LocationMappingDeleteOptions DeleteModel (Where Postgres LocationMapping.LocationMappingT)
-  | TicketBookingDeleteOptions DeleteModel (Where Postgres TicketBooking.TicketBookingT)
-  | TicketBookingServiceDeleteOptions DeleteModel (Where Postgres TicketBookingService.TicketBookingServiceT)
-  | TicketServiceDeleteOptions DeleteModel (Where Postgres TicketService.TicketServiceT)
-  | TicketServicePriceDeleteOptions DeleteModel (Where Postgres TicketServicePrice.TicketServicePriceT)
-  | TicketBookingServicePriceBreakupDeleteOptions DeleteModel (Where Postgres TicketBookingServicePriceBreakup.TicketBookingServicePriceBreakupT)
-  | TicketPlaceDeleteOptions DeleteModel (Where Postgres TicketPlace.TicketPlaceT)
 
 instance ToJSON DBDeleteObject where
   toJSON = error "ToJSON not implemented for DBDeleteObject - Use getDbDeleteCommandJson instead" -- Using getDbDeleteCommandJson instead of toJSON
@@ -442,21 +412,3 @@ instance FromJSON DBDeleteObject where
       LocationMappingDelete -> do
         whereClause <- parseDeleteCommandValues contents
         return $ LocationMappingDeleteOptions deleteModel whereClause
-      TicketBookingDelete -> do
-        whereClause <- parseDeleteCommandValues contents
-        return $ TicketBookingDeleteOptions deleteModel whereClause
-      TicketBookingServiceDelete -> do
-        whereClause <- parseDeleteCommandValues contents
-        return $ TicketBookingServiceDeleteOptions deleteModel whereClause
-      TicketServiceDelete -> do
-        whereClause <- parseDeleteCommandValues contents
-        return $ TicketServiceDeleteOptions deleteModel whereClause
-      TicketServicePriceDelete -> do
-        whereClause <- parseDeleteCommandValues contents
-        return $ TicketServicePriceDeleteOptions deleteModel whereClause
-      TicketBookingServicePriceBreakupDelete -> do
-        whereClause <- parseDeleteCommandValues contents
-        return $ TicketBookingServicePriceBreakupDeleteOptions deleteModel whereClause
-      TicketPlaceDelete -> do
-        whereClause <- parseDeleteCommandValues contents
-        return $ TicketPlaceDeleteOptions deleteModel whereClause

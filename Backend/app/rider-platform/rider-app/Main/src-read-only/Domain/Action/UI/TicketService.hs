@@ -8,7 +8,6 @@ import Data.OpenApi (ToSchema)
 import qualified Data.Text as Data.Text
 import Data.Time (UTCTime (UTCTime), dayOfWeek, midnight, timeOfDayToTime, utctDay)
 import qualified Data.Time.Calendar as Data.Time.Calendar
-import qualified Domain.Action.UI.Tickets as Domain.Action.UI.Tickets
 import qualified Domain.Types.BusinessHour as Domain.Types.BusinessHour
 import qualified Domain.Types.Merchant as Domain.Types.Merchant
 import qualified Domain.Types.Merchant as Merchant
@@ -26,7 +25,6 @@ import qualified Domain.Types.TicketBookingService as Domain.Types.TicketBooking
 import qualified Domain.Types.TicketBookingServiceCategory as DTB
 import qualified Domain.Types.TicketPlace as Domain.Types.TicketPlace
 import qualified Domain.Types.TicketService as Domain.Types.TicketService
-import qualified Domain.Types.Tickets as Domain.Types.Tickets
 import qualified Environment as Environment
 import EulerHS.Prelude hiding (id)
 import Kernel.Beam.Functions as B
@@ -43,6 +41,7 @@ import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QOrder
 import Servant hiding (throwError)
+import Storage.Beam.Payment ()
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.Queries.BusinessHour as QBH
 import qualified Storage.Queries.Person as QP
