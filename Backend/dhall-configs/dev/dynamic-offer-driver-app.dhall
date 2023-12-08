@@ -92,6 +92,12 @@ let sampleKafkaConfig
       , kafkaKey = "dynamic-offer-driver"
       }
 
+let exophoneKafkaConfig
+    : globalCommon.kafkaConfig
+    = { topicName = "ExophoneData"
+      , kafkaKey = "dynamic-offer-driver-exophone-events"
+      }
+
 let sampleLogConfig
     : Text
     = "log-stream"
@@ -111,6 +117,11 @@ let eventStreamMappings =
           , globalCommon.eventType.Quotes
           , globalCommon.eventType.Estimate
           ]
+        }
+      , { streamName = globalCommon.eventStreamNameType.KAFKA_STREAM
+        , streamConfig =
+            globalCommon.streamConfig.KafkaStream exophoneKafkaConfig
+        , eventTypes = [ globalCommon.eventType.ExophoneData ]
         }
       , { streamName = globalCommon.eventStreamNameType.LOG_STREAM
         , streamConfig = globalCommon.streamConfig.LogStream sampleLogConfig
