@@ -1,2 +1,2 @@
-ALTER TABLE atlas_driver_offer_bpp.fare_policy_slabs_details_slab ALTER COLUMN platform_fee_charge TYPE json;
 ALTER TABLE atlas_driver_offer_bpp.fare_parameters_slab_details ALTER COLUMN platform_fee TYPE double precision;
+

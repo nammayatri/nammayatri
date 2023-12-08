@@ -61,14 +61,6 @@ ALTER TABLE atlas_app.ticket_booking_service_category ADD COLUMN name text ;
 ALTER TABLE atlas_app.ticket_booking_service_category ADD COLUMN ticket_booking_service_id character varying(36) ;
 ALTER TABLE atlas_app.ticket_booking_service_category ADD PRIMARY KEY ( id);
 
-grant select on business_hour to atlas_etl_ro;
-grant select on seat_management to atlas_etl_ro;
-grant select on service_category to atlas_etl_ro;
-grant select on service_people_category to atlas_etl_ro;
-grant select on special_occasion to atlas_etl_ro;
-grant select on ticket_booking_people_category to atlas_etl_ro;
-grant select on ticket_booking_service_category to atlas_etl_ro;
-
 -- ALTER QUERIES
 ALTER TABLE atlas_app.ticket_booking ALTER COLUMN merchant_operating_city_id SET NOT NULL;
 ALTER TABLE atlas_app.ticket_booking ALTER COLUMN person_id SET NOT NULL;
@@ -113,7 +105,7 @@ update atlas_app.ticket_service set business_hours = '{b25378b5-0a86-44ce-afa1-b
 update atlas_app.ticket_service set business_hours = '{b35378b5-0a86-44ce-afa1-b4d27d712a23}' where id = 'd8f47b42-50a5-4a97-8dda-e80a3633d7ab';
 
 -- old bookings
-insert into atlas_app.ticket_booking_service_category (id, name, amount, booked_seats, ticket_booking_service_id) (select uuid_generate_v4() as id, 'all' as name, amount, null as booked_seats, id as ticket_booking_service_id from atlas_app.ticket_booking_service);
+insert into atlas_app.ticket_booking_service_category (id, name, amount, booked_seats, ticket_booking_service_id) (select atlas_app.uuid_generate_v4() as id, 'all' as name, amount, null as booked_seats, id as ticket_booking_service_id from atlas_app.ticket_booking_service);
 
 insert into atlas_app.ticket_booking_people_category (id, name, number_of_units, price_per_unit, ticket_booking_service_category_id) (select atlas_app.uuid_generate_v4(), attendee_type as name, number_of_units, price_per_unit, tbsc.id as ticket_booking_service_category_id from atlas_app.ticket_booking_service_price_breakup pb left join atlas_app.ticket_booking_service_category as tbsc on tbsc.ticket_booking_service_id = pb.ticket_booking_service_id);
 
