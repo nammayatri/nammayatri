@@ -17,6 +17,12 @@ import Types.DBSync
 import Types.DBSync.Create
 import Utils.Utils
 
+-- import qualified Data.ByteString as BS
+-- import Kernel.Prelude (UTCTime)
+-- import qualified Data.Time.Clock.POSIX as Time
+-- import System.FilePath.Posix as Path
+-- import qualified System.Directory as Dir
+
 -- | This function is used to run the create operation for a single entry in the stream
 runCreate :: (EL.KVDBStreamEntryID, ByteString) -> Text -> ReaderT Env EL.Flow (Either EL.KVDBStreamEntryID EL.KVDBStreamEntryID)
 runCreate createDataEntry streamName = do
@@ -24,10 +30,14 @@ runCreate createDataEntry streamName = do
   isPushToKafka' <- EL.runIO isPushToKafka
   let (entryId, streamData) = createDataEntry
   EL.logDebug ("BYTE STRING" :: Text) (show streamData)
+
   case A.eitherDecode @DBCreateObject . LBS.fromStrict $ streamData of
     Right createDBModel -> do
       EL.logDebug ("DB OBJECT" :: Text) (show createDBModel)
       let tableName = createDBModel.dbModel
+      -- uncomment for debug purposes
+      -- writeDebugFile tableName entryId "streamData.json" streamData
+      -- writeDebugFile tableName entryId "dbObject.txt" $ show createDBModel
       if shouldPushToDbOnly tableName _dontEnableForKafka || not isPushToKafka'
         then runCreateQuery createDataEntry createDBModel
         else do
@@ -54,15 +64,20 @@ runCreateQuery createDataEntry dbCreateObject = do
     then return $ Right entryId
     else do
       let insertQuery = generateInsertForTable dbCreateObject
+
       case insertQuery of
         Just query -> do
           result <- EL.runIO $ try $ executeQuery _pgConnection (Query $ TE.encodeUtf8 query)
           case result of
             Left (QueryError errorMsg) -> do
               EL.logError ("QUERY INSERT FAILED" :: Text) (errorMsg <> " for query :: " <> query)
+              -- uncomment for debug purposes
+              -- writeDebugFile dbModel entryId "queryFailed.sql" $ encodeUtf8 query
               return $ Left entryId
             Right _ -> do
               EL.logInfo ("QUERY INSERT SUCCESSFUL" :: Text) (" Insert successful for query :: " <> query <> " with streamData :: " <> TE.decodeUtf8 byteString)
+              -- uncomment for debug purposes
+              -- writeDebugFile dbModel entryId "querySuccessful.sql" $ encodeUtf8 query
               return $ Right entryId
         Nothing -> do
           EL.logError ("No query generated for streamData: " :: Text) (TE.decodeUtf8 byteString)
@@ -82,3 +97,19 @@ getCreateObjectForKafka model content =
       "tag" A..= ((T.pack . pascal . T.unpack) model.getDBModel <> "Object"),
       "type" A..= ("INSERT" :: Text)
     ]
+
+-- uncomment for debug purposes
+-- writeDebugFile ::
+--   DBModel ->
+--   EL.KVDBStreamEntryID ->
+--   String ->
+--   BS.ByteString ->
+--   ReaderT Env EL.Flow ()
+-- writeDebugFile dbModel entryId fileName entity = EL.runIO $ do
+--   let fullPath'Name = "/tmp/drainer/driver/create/" <> T.unpack dbModel.getDBModel <> "/" <> show (mkTimeStamp entryId) <> "/" <> fileName
+--   let fullPath = Path.takeDirectory fullPath'Name
+--   Dir.createDirectoryIfMissing True fullPath
+--   BS.writeFile fullPath'Name entity
+
+-- mkTimeStamp :: EL.KVDBStreamEntryID -> UTCTime
+-- mkTimeStamp (EL.KVDBStreamEntryID posixTime _) = Time.posixSecondsToUTCTime $ fromInteger (posixTime `div` 1000)
