@@ -15,7 +15,7 @@ generateImports tableDef =
     ++ " where\n\n"
     ++ "import Kernel.Beam.Functions\n"
     ++ "import Kernel.Prelude\n"
-    ++ "import Kernel.Utils.Common (MonadFlow, CacheFlow, EsqDBFlow)\n"
+    ++ "import Kernel.Utils.Common (MonadFlow, CacheFlow, EsqDBFlow, getCurrentTime)\n"
     ++ "import qualified Storage.Beam."
     ++ (capitalize $ tableNameHaskell tableDef)
     ++ " as Beam\n"
@@ -27,20 +27,20 @@ toTTypeConversionFunction :: Maybe String -> String -> String -> String
 toTTypeConversionFunction transformer haskellType fieldName
   | (isJust transformer) = fromJust transformer ++ " " ++ fieldName
   | "Int" <- haskellType = "roundToIntegral " ++ fieldName
-  | "[Kernel.Types.Id.Id " `Text.isPrefixOf` (Text.pack haskellType) = "Kernel.Types.Id.getId <$> " ++ fieldName
   | "Kernel.Types.Id.Id " `Text.isPrefixOf` (Text.pack haskellType) = "Kernel.Types.Id.getId " ++ fieldName
-  | "[Kernel.Types.Id.ShortId " `Text.isPrefixOf` (Text.pack haskellType) = "Kernel.Types.Id.getShortId <$> " ++ fieldName
+  | "Kernel.Types.Id.Id " `Text.isInfixOf` (Text.pack haskellType) = "Kernel.Types.Id.getId <$> " ++ fieldName
   | "Kernel.Types.Id.ShortId " `Text.isPrefixOf` (Text.pack haskellType) = "Kernel.Types.Id.getShortId " ++ fieldName
+  | "Kernel.Types.Id.ShortId " `Text.isInfixOf` (Text.pack haskellType) = "Kernel.Types.Id.getShortId <$> " ++ fieldName
   | otherwise = fieldName
 
 fromTTypeConversionFunction :: Maybe String -> String -> String -> String
 fromTTypeConversionFunction transformer haskellType fieldName
   | (isJust transformer) = fromJust transformer ++ " " ++ fieldName
   | "Int" <- haskellType = "realToFrac " ++ fieldName
-  | "[Kernel.Types.Id.Id " `Text.isPrefixOf` (Text.pack haskellType) = "Kernel.Types.Id.Id <$> " ++ fieldName
   | "Kernel.Types.Id.Id " `Text.isPrefixOf` (Text.pack haskellType) = "Kernel.Types.Id.Id " ++ fieldName
-  | "[Kernel.Types.Id.ShortId " `Text.isPrefixOf` (Text.pack haskellType) = "Kernel.Types.Id.ShortId <$> " ++ fieldName
+  | "Kernel.Types.Id.Id " `Text.isInfixOf` (Text.pack haskellType) = "Kernel.Types.Id.Id <$> " ++ fieldName
   | "Kernel.Types.Id.ShortId " `Text.isPrefixOf` (Text.pack haskellType) = "Kernel.Types.Id.ShortId " ++ fieldName
+  | "Kernel.Types.Id.ShortId " `Text.isInfixOf` (Text.pack haskellType) = "Kernel.Types.Id.ShortId <$> " ++ fieldName
   | otherwise = fieldName
 
 -- Generates the FromTType' instance
@@ -101,7 +101,7 @@ generateBeamQuery tableNameHaskell query =
     query
     tableNameHaskell
     ++ generateBeamFunctionCall query.kvFunction
-    ++ generateQueryParams query.params
+    ++ generateQueryParams (query.params)
     ++ "    ["
     ++ genWhereClause
     ++ (if genWhereClause == "" then "" else "\n    ")
@@ -160,7 +160,8 @@ getWhereClauseFieldNamesAndTypes (Leaf (field, _type)) = [(field, _type)]
 getWhereClauseFieldNamesAndTypes (Query (_, clauses)) = concatMap getWhereClauseFieldNamesAndTypes clauses
 
 generateBeamFunctionCall :: String -> String
-generateBeamFunctionCall kvFunction = "   " ++ kvFunction ++ "\n"
+generateBeamFunctionCall kvFunction =
+  (if "update" `isPrefixOf` kvFunction then "   " ++ "now <- getCurrentTime\n" else "") ++ "   " ++ kvFunction ++ "\n"
 
 generateQueryParams :: [(String, String)] -> String
 generateQueryParams [] = ""
@@ -172,6 +173,13 @@ correctSetField field tp
   | "Kernel.Types.Id.ShortId " `isInfixOf` tp && not ("Kernel.Types.Id.ShortId " `isPrefixOf` tp) = "(Kernel.Types.Id.getShortId <$> " ++ field ++ ")"
   | "Kernel.Types.Id.Id " `isPrefixOf` tp = "(Kernel.Types.Id.getId " ++ field ++ ")"
   | "Kernel.Types.Id.ShortId " `isPrefixOf` tp = "(Kernel.Types.Id.getShortId " ++ field ++ ")"
+  | field == "updatedAt" = "now"
+  | otherwise = field
+
+correctEqField :: String -> String -> String
+correctEqField field tp
+  | "Kernel.Types.Id.Id " `isInfixOf` tp && not ("Kernel.Types.Id.Id " `isPrefixOf` tp) = "(Kernel.Types.Id.getId <$> " ++ field ++ ")"
+  | "Kernel.Types.Id.ShortId " `isInfixOf` tp && not ("Kernel.Types.Id.ShortId " `isPrefixOf` tp) = "(Kernel.Types.Id.getShortId <$> " ++ field ++ ")"
   | otherwise = field
 
 mapWithIndex :: (Int -> a -> b) -> [a] -> [b]
@@ -181,7 +189,7 @@ mapWithIndex f xs = zipWith f [0 ..] xs
 generateClause :: Bool -> Int -> Int -> WhereClause -> String
 generateClause _ _ _ EmptyWhere = ""
 generateClause isFullObjInp n i (Leaf (field, tp)) =
-  (if i == 0 then " " else spaces n) ++ "Se.Is Beam." ++ field ++ " $ Se.Eq " ++ (if isFullObjInp then correctSetField field tp else field)
+  (if i == 0 then " " else spaces n) ++ "Se.Is Beam." ++ field ++ " $ Se.Eq " ++ (if isFullObjInp then correctSetField field tp else correctEqField field tp)
 generateClause isFullObjInp n i (Query (op, clauses)) =
   (if i == 0 then " " else spaces n) ++ operator op
     ++ "\n"
