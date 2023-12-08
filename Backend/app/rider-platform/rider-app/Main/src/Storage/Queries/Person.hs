@@ -16,6 +16,7 @@
 module Storage.Queries.Person where
 
 import Control.Applicative ((<|>))
+import Data.Text (strip)
 import qualified Data.Time as T
 import qualified Database.Beam as B
 import qualified Domain.Types.Booking.Type as Booking
@@ -307,8 +308,8 @@ updateCityInfoById (Id personId) currentCity (Id merchantOperatingCityId) = do
 
 instance FromTType' BeamP.Person Person where
   fromTType' BeamP.PersonT {..} = do
-    bundleVersion' <- forM bundleVersion readVersion
-    clientVersion' <- forM clientVersion readVersion
+    bundleVersion' <- mapM readVersion (strip <$> bundleVersion)
+    clientVersion' <- mapM readVersion (strip <$> clientVersion)
     (merchantOperatingCityId', currentCity') <- backfillCityAndMOCId currentCity merchantOperatingCityId
     pure $
       Just $

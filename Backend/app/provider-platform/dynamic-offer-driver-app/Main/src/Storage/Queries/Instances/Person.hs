@@ -3,6 +3,7 @@
 
 module Storage.Queries.Instances.Person where
 
+import Data.Text (strip)
 import qualified Database.Beam.Query ()
 import Domain.Types.Person as Person
 import qualified EulerHS.Language as L
@@ -29,8 +30,8 @@ import Tools.Error
 instance FromTType' BeamP.Person Person where
   fromTType' :: (L.MonadFlow m, Log m, CacheFlow m r, EsqDBFlow m r) => BeamP.Person -> m (Maybe Person)
   fromTType' BeamP.PersonT {..} = do
-    bundleVersion' <- forM bundleVersion readVersion
-    clientVersion' <- forM clientVersion readVersion
+    bundleVersion' <- mapM readVersion (strip <$> bundleVersion)
+    clientVersion' <- mapM readVersion (strip <$> clientVersion)
     merchant <- CQM.findById (Id merchantId) >>= fromMaybeM (MerchantNotFound merchantId)
     merchantOpCityId <- CQMOC.getMerchantOpCityId (Id <$> merchantOperatingCityId) merchant Nothing
     pure $
