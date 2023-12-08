@@ -17,9 +17,11 @@
 module Domain.Types.AccessMatrix where
 
 import Data.Singletons.TH
+import Domain.Types.Merchant
 import Domain.Types.Role as DRole
 import Domain.Types.ServerName as DSN
 import Kernel.Prelude
+import qualified Kernel.Types.Beckn.City as City
 import Kernel.Types.Id
 
 -------- Possible user action for helper API --------
@@ -221,6 +223,12 @@ data AccessMatrixItem = AccessMatrixItem
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }
+
+data MerchantCityList = MerchantCityList
+  { merchantId :: ShortId Merchant,
+    cityList :: [City.City]
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema)
 
 newtype AccessMatrixAPIEntity = AccessMatrixAPIEntity
   {accessMatrix :: [AccessMatrixRowAPIEntity]}
