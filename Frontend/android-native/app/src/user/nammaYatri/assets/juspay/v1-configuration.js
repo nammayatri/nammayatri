@@ -4,6 +4,15 @@ if (typeof __VERSION__ !== 'undefined') {
   version = __VERSION__
 }
 window.version["configuration"]= version;
+
+function getAppLink(os) {
+  if (os == "ANDROID") {
+    return "https://play.google.com/store/apps/details?id=in.juspay.nammayatri"
+  } else {
+    return "https://apps.apple.com/in/app/namma-yatri/id1637429831"
+  }
+}
+
 window.getMerchantConfig = function () {
   return JSON.stringify({
     "StringKeys": ["YOUR_LOCATION_HELPS_OUR_SYSTEM","LOCATION_PERMISSION_SUBTITLE_NEW_USER","CORPORATE_ADDRESS_DESCRIPTION_ADDITIONAL", "YOUR_FEEDBACK_HELPS_US", "LEARN_HOW_TEXT", "FARE_INFO_TEXT", "DRIVER_ADDITIONS_ARE_CALCULATED_AT_RATE", "PLEASE_ENABLE_LOCATION_PERMISSION", "TAXI_FROM_ZONE", "GO_TO_ZONE", "OTP_FOR_THE_JATRI_SATHI_ZONE_HAS_BEEN_EXPIRED_PLEASE_TRY_LOOKING_AGAIN"],
@@ -62,17 +71,17 @@ window.getMerchantConfig = function () {
       "lottieWidth": 96,
       "primaryButtonHeight": 60,
       "backArrow" : "ny_ic_chevron_left_white,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_chevron_left_white.png"
-     },
-     "ratingConfig": {
+    },
+    "ratingConfig": {
       "secondaryButtonTextColor": "#2C2F3A",
       "secondaryButtonStroke": "1,#2C2F3A",
       "buttonCornerRadius": 8.0
-     },
-     "cancelReasonConfig": {
+    },
+    "cancelReasonConfig": {
       "secondaryButtonTextColor": "#2C2F3A",
       "secondaryButtonStroke": "1,#2C2F3A",
       "buttonCornerRadius": 8.0
-     },
+    },
     "quoteListModel": {
       "backgroundColor": "#2C2F3A",
       "textColor": "#FFFFFF",
@@ -115,7 +124,7 @@ window.getMerchantConfig = function () {
     "cancelRideColor" : "#E55454",
     "merchantLogo" : "ic_invoice_logo,https://assets.juspay.in/beckn/nammayatri/user/images/ic_invoice_logo.png",
     "infoIconUrl" : "ny_ic_info,https://assets.juspay.in/nammayatri/images/user/ny_ic_information_grey.png",
-    "sideBarList": ["MyRides", "Favorites", "EmergencyContacts", "HelpAndSupport", "Language", "Separator", "ShareApp", "LiveStatsDashboard", "About", "Logout"],
+    "sideBarList": ["MyRides", "Favorites", "NammaSafety", "EmergencyContacts", "HelpAndSupport", "Language", "Separator", "ShareApp", "LiveStatsDashboard", "About", "Logout"],
     "rateCardColor": "#2C2F3A",
     "profileEditGravity" : "center",
     "nyBrandingVisibility": false,
@@ -178,11 +187,11 @@ window.getMerchantConfig = function () {
     }],
     "bannerConfig" : {
       "backgroundColor" : "#F0FAF0"
-    , "title" : "Complete your profile for a personalised ride experience"
-    , "titleColor" : "#21C179"
-    , "actionText" : "Update now"
-    , "actionTextColor" : "#27AE5F"
-    , "imageUrl" : "ny_ic_banner_gender_feat,https://assets.juspay.in/beckn/merchantcommon/images/ny_ic_banner_gender_feat.png"
+      , "title" : "Complete your profile for a personalised ride experience"
+      , "titleColor" : "#21C179"
+      , "actionText" : "Update now"
+      , "actionTextColor" : "#27AE5F"
+      , "imageUrl" : "ny_ic_banner_gender_feat,https://assets.juspay.in/beckn/merchantcommon/images/ny_ic_banner_gender_feat.png"
     },
     "terminateBtnConfig" : {
       "visibility" : false,
@@ -203,30 +212,22 @@ window.getMerchantConfig = function () {
   }
   , "navigationAppConfig" : {
       "query" : "google.navigation:q=%f,%f"
-    , "packageName" : "com.google.android.apps.maps"
-  }
-  , "purpleRideConfig" : {
-        "genericVideoUrl" : "https://www.youtube.com/watch?v=tzrf2Rdpkc4",
-        "visualImpairmentVideo" : "https://www.youtube.com/watch?v=GllvoYpOUpc" ,
-        "physicalImpairmentVideo" : "https://youtu.be/-ku9Gc8U5B8",
-        "hearingImpairmentVideo" : "https://www.youtube.com/watch?v=QcKeSF9uiJ4"
-  }
-  , "SUPPORT_EMAIL" : "nammayatri.support@juspay.in"
-  , "OTP_MESSAGE_REGEX" : "is your OTP for login to [A-Za-z]+ [A-Za-z]+ [A-Za-z]+"
-  , "callOptions" : ["ANONYMOUS", "DIRECT"]
-  , "showDisabilityBanner" : true
-  , "enableContactSupport" : false
-  , "enableGeocoder" : true
-  , "estimateAndQuoteConfig" :
+      , "packageName" : "com.google.android.apps.maps"
+    }
+    , "purpleRideConfig" : {
+      "genericVideoUrl" : "https://www.youtube.com/watch?v=tzrf2Rdpkc4",
+      "visualImpairmentVideo" : "https://www.youtube.com/watch?v=GllvoYpOUpc" ,
+      "physicalImpairmentVideo" : "https://youtu.be/-ku9Gc8U5B8",
+      "hearingImpairmentVideo" : "https://www.youtube.com/watch?v=QcKeSF9uiJ4"
+    }
+    , "SUPPORT_EMAIL" : "nammayatri.support@juspay.in"
+    , "OTP_MESSAGE_REGEX" : "is your OTP for login to [A-Za-z]+ [A-Za-z]+ [A-Za-z]+"
+    , "callOptions" : ["ANONYMOUS", "DIRECT"]
+    , "showDisabilityBanner" : true
+    , "enableContactSupport" : false
+    , "enableGeocoder" : true
+    , "estimateAndQuoteConfig" :
                 { "enableOnlyAuto" : true
                 }
   })
-}
-
-function getAppLink(os) {
-  if (os == "ANDROID") {
-    return "https://play.google.com/store/apps/details?id=in.juspay.nammayatri"
-  } else {
-    return "https://apps.apple.com/in/app/namma-yatri/id1637429831"
-  }
 }

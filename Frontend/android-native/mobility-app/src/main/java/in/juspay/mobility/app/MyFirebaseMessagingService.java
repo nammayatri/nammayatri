@@ -373,7 +373,9 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                                 }
                             }
                             break;
-
+                        case NotificationTypes.SAFETY_ALERT:
+                            showSafetyAlert(title, body, payload, imageUrl);
+                            break;
                         default:
                             if (payload.get("show_notification").equals("true")) {
                                 NotificationUtils.showNotification(this, title, body, payload, imageUrl);
@@ -571,6 +573,19 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
         return ob;
     }
 
+    private void showSafetyAlert(String title, String body, JSONObject payload, String imageUrl){
+        try {
+            String nBody = null;
+            String nTitle = "Everything Okay?";
+            SharedPreferences sharedPref = this.getSharedPreferences(this.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
+            sharedPref.edit().putString("SAFETY_ALERT_TYPE", body).apply();
+            nBody = "We noticed your ride is on a different route. Are you feeling safe on your trip?";
+            NotificationUtils.showNotification(this, nTitle, nBody, payload, imageUrl);
+        }
+        catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
     private static class NotificationTypes {
         private static final String TRIGGER_SERVICE = "TRIGGER_SERVICE";
         private static final String NEW_RIDE_AVAILABLE = "NEW_RIDE_AVAILABLE";
@@ -595,5 +610,6 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
         private static final String JOIN_NAMMAYATRI = "JOIN_NAMMAYATRI";
         private static final String UPDATE_BUNDLE = "UPDATE_BUNDLE";
         private static final String FCM_UPDATE_BUNDLE = "FCM_UPDATE_BUNDLE";
+        private static final String SAFETY_ALERT = "SAFETY_ALERT";
     }
 }

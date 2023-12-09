@@ -33,15 +33,16 @@ import Data.Either (Either(..))
 import Data.Foldable (find)
 import Data.Int (fromString)
 import Data.Maybe (Maybe(..), fromMaybe, isJust)
-import Engineering.Helpers.Commons (getNewIDWithTag)
-import Helpers.Utils (clearFocus, clearTimer, convertUTCtoISC, getCurrentUTC, removeMediaPlayer, renderBase64ImageFile, saveAudioFile, startAudioRecording, startTimer, stopAudioRecording, uploadMultiPartData)
-import JBridge (addMediaFile, hideKeyboardOnNavigation, scrollToEnd, startLottieProcess, toast, uploadFile, lottieAnimationConfig)
 import Data.String.CodeUnits (stripSuffix)
 import Data.String.Common (joinWith)
 import Data.String.Pattern (Pattern(Pattern))
 import Data.TraversableWithIndex (forWithIndex)
 import Effect.Aff (makeAff, nonCanceler)
 import Effect.Class (liftEffect)
+import Engineering.Helpers.Commons (getNewIDWithTag)
+import Engineering.Helpers.Utils (uploadMultiPartData)
+import Helpers.Utils (clearFocus, clearTimer, convertUTCtoISC, getCurrentUTC, removeMediaPlayer, renderBase64ImageFile, saveAudioFile, startAudioRecording, startTimer, stopAudioRecording)
+import JBridge (addMediaFile, hideKeyboardOnNavigation, scrollToEnd, startLottieProcess, toast, uploadFile, lottieAnimationConfig)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (trackAppActionClick, trackAppBackPress, trackAppEndScreen, trackAppScreenEvent, trackAppScreenRender)
@@ -286,7 +287,7 @@ eval (ImageUploadCallback image imageName imagePath) state = do
                 else
                   snoc state.data.addImagesState.images { image, imageName }
   continueWithCmd state { data { addImagesState { isLoading = true } } } [do
-    res <- uploadMultiPartData imagePath (EndPoint.uploadFile "") "Image"
+    res <- uploadMultiPartData imagePath (EndPoint.uploadFile "") "Image" "file" "fileId"
     let uploadedImagesIds' = if length state.data.addImagesState.imageMediaIds == 3
                              then do
                                state.data.addImagesState.imageMediaIds
@@ -335,7 +336,7 @@ eval (RecordAudioModelAction RecordAudioModel.OnClickDone) state =
     case state.data.recordAudioState.recordedFile of
       Just url -> do
                   res <- saveAudioFile url
-                  audioId <- uploadMultiPartData res (EndPoint.uploadFile "") "Audio"
+                  audioId <- uploadMultiPartData res (EndPoint.uploadFile "") "Audio" "file" "fileId"
                   _ <- removeMediaPlayer ""
                   pure $ UpdateState state { data  { recordedAudioUrl = Just res, uploadedAudioId = Just audioId }
                                            , props { isPopupModelOpen = false, showRecordModel = false } }

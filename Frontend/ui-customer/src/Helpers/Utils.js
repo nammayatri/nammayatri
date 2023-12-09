@@ -161,7 +161,7 @@ export const storeCallBackContacts = function (cb) {
         });
 
         console.log("In storeCallBackContacts ---------- + " + action);
-        window.JBridge.storeCallBackContacts(callback);
+        return window.JBridge.storeCallBackContacts(callback);
       } catch (err) {
         console.log("storeCallBackContacts error " + err);
       }
@@ -463,3 +463,8 @@ export const getPixels = function (){
   }
 }
 
+export const requestCameraAndMicrophonePermissions = function () {
+  if (window.JBridge.requestCameraAndMicrophonePermissions) {
+    return window.JBridge.requestCameraAndMicrophonePermissions();
+  }
+}

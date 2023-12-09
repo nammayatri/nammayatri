@@ -68,6 +68,7 @@ type AppConfig =
   , geoCoder :: GeoCoderConfig
   , appLink :: String
   , homeScreen :: HomeScreen
+  , safetyConfig :: SafetyConfig
   }
 
 type GeoCoderConfig = {
@@ -273,6 +274,7 @@ type MarginConfig = {
   left :: Int,
   right :: Int
 }
+
 type ShadowConfig = {
   color :: String,
   blur :: Number,
@@ -280,4 +282,8 @@ type ShadowConfig = {
   y :: Number,
   spread :: Number,
   opacity :: Number
+}
+
+type SafetyConfig = {
+  enableSupport :: Boolean
 }

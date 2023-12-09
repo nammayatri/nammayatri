@@ -74,4 +74,14 @@ dependencies {
     implementation 'com.google.mlkit:translate:17.0.1'
     implementation 'com.google.firebase:firebase-perf'
     implementation fileTree(dir: 'libs', include: ['*.jar', '*.aar'])
+    def cameraxVersion = "1.1.0-alpha05"
+    // CameraX View class
+    implementation 'androidx.camera:camera-view:1.0.0-alpha25'
+    implementation 'androidx.appcompat:appcompat:1.4.1'
+    implementation 'com.google.android.material:material:1.6.0'
+//    def cameraxVersion = "1.1.0-alpha05"
+    implementation "androidx.camera:camera-core:${cameraxVersion}"
+    implementation "androidx.camera:camera-camera2:${cameraxVersion}"
+    implementation "androidx.camera:camera-lifecycle:${cameraxVersion}"
+
 }

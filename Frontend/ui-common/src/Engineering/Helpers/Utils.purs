@@ -46,6 +46,9 @@ import Unsafe.Coerce (unsafeCoerce)
 import Halogen.VDom.DOM.Prop (PropValue)
 
 foreign import getFromWindow :: EffectFn1 String Foreign
+foreign import uploadMultiPartData :: String -> String -> String -> String -> String -> Effect String
+foreign import uploadMultiPartDataIOS :: forall action. String -> String -> String -> String -> String -> (action -> Effect Unit) -> (String -> String -> action) -> Effect Unit
+
 
 foreign import saveToLocalStoreImpl :: String -> String -> EffectFnAff Unit
 
@@ -82,15 +85,13 @@ getSeparatorFactor = 8
 defaultSeparatorCount :: Int
 defaultSeparatorCount = 4
 
-showAndHideLoader :: Number -> String -> String -> GlobalState -> Effect Unit
-showAndHideLoader delayInMs title description state = do
+showAndHideLoader :: Boolean -> String -> String -> GlobalState -> Effect Unit
+showAndHideLoader showLoader title description state = do
   _ <-
     launchAff $ flowRunner state
       $ do
           _ <- loaderText title description
-          _ <- toggleLoader true
-          _ <- delay $ Milliseconds delayInMs
-          _ <- toggleLoader false
+          _ <- toggleLoader showLoader
           pure unit
   pure unit
 

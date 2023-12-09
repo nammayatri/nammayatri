@@ -14,6 +14,7 @@ import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
 import android.animation.ValueAnimator;
 import android.annotation.SuppressLint;
+import android.content.ActivityNotFoundException;
 import android.content.ContentResolver;
 import android.content.Context;
 import android.content.Intent;
@@ -34,6 +35,7 @@ import android.view.animation.LinearInterpolator;
 import android.webkit.JavascriptInterface;
 import android.widget.LinearLayout;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
@@ -1048,5 +1050,6 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
         }
         return super.onRequestPermissionResult(requestCode, permissions, grantResults);
     }
+    
     //endregion
 }

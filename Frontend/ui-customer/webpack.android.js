@@ -27,7 +27,7 @@ module.exports = (env, argv) => {
       contentBase: path.join(__dirname, 'dist'),
       host: "0.0.0.0",
       inline: false,
-      port: 8081
+      port: 8082
     }
   });
 }

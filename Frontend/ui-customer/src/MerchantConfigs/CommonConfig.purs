@@ -162,4 +162,7 @@ commonConfig =
               }
             }
           }
+        , safetyConfig : {
+            enableSupport : false
+          }
         }

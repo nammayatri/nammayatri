@@ -144,10 +144,13 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.io.BufferedInputStream;
 import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
+import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -155,7 +158,9 @@ import java.io.Reader;
 import java.io.StringWriter;
 import java.io.Writer;
 import java.lang.reflect.Method;
+import java.net.HttpURLConnection;
 import java.net.URISyntaxException;
+import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -168,6 +173,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.TimeZone;
 
+import java.util.UUID;
 
 import in.juspay.hyper.bridge.HyperBridge;
 import in.juspay.hyper.constants.LogCategory;
@@ -1828,6 +1834,7 @@ public class MobilityCommonBridge extends HyperBridge {
         if (call && ContextCompat.checkSelfPermission(bridgeComponents.getContext(), Manifest.permission.CALL_PHONE) != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(bridgeComponents.getActivity(), new String[]{Manifest.permission.CALL_PHONE}, REQUEST_CALL);
         } else {
+            System.out.println("showDialer" + call);
             bridgeComponents.getContext().startActivity(intent);
         }
     }
@@ -2584,5 +2591,84 @@ public class MobilityCommonBridge extends HyperBridge {
             } catch (Exception ignored) {
             }
         }
+
+
+    }
+    @JavascriptInterface
+    public String uploadMultiPartData(String filePath, String uploadUrl, String fileType, String fileField, String outputField) throws IOException {
+        String boundary = UUID.randomUUID().toString();
+        System.out.print("file share : "+ uploadUrl + ' ' + filePath + ' ' + fileType);
+        URL url = new URL(uploadUrl);
+        HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+        connection.setRequestMethod("POST");
+        connection.setDoOutput(true);
+        connection.setUseCaches(false);
+        connection.setRequestProperty("Content-Type", "multipart/form-data; boundary=" + boundary);
+        connection.setRequestProperty("token", getKeyInNativeSharedPrefKeys("REGISTERATION_TOKEN"));
+
+        File file = new File(filePath);
+        String fileName = file.getName();
+        DataOutputStream outputStream = new DataOutputStream(connection.getOutputStream());
+
+        outputStream.writeBytes("--" + boundary + "\r\n");
+        outputStream.writeBytes(("Content-Disposition: form-data; name=\""+fileField+"\"; filename=\"" + fileName + "\"" + "\r\n"));
+        if (fileType.equals("Image"))
+            outputStream.writeBytes("Content-Type: image/jpeg\r\n");
+        else if (fileType.equals("Audio"))
+            outputStream.writeBytes("Content-Type: audio/mpeg\r\n");
+        else if (fileType.equals("Video"))
+            outputStream.writeBytes("Content-Type: video/mp4\r\n");
+        outputStream.writeBytes("\r\n");
+
+        FileInputStream fileInputStream = new FileInputStream(file);
+        int bytesAvailable = fileInputStream.available();
+        int maxBufferSize = 1024 * 1024;
+        int bufferSize = Math.min(bytesAvailable, maxBufferSize);
+
+        byte[] buffer = new byte[bufferSize];
+        int bytesRead = fileInputStream.read(buffer, 0, bufferSize);
+
+        while (bytesRead > 0) {
+            outputStream.write(buffer, 0, bufferSize);
+            bytesAvailable = fileInputStream.available();
+            bufferSize = Math.min(bytesAvailable, maxBufferSize);
+            bytesRead = fileInputStream.read(buffer, 0, bufferSize);
+        }
+        outputStream.writeBytes("\r\n");
+        outputStream.writeBytes("--" + boundary + "\r\n");
+
+        outputStream.writeBytes("Content-Disposition: form-data; name=\"fileType\"" + "\r\n");
+        outputStream.writeBytes("Content-Type: application/json" + "\r\n");
+        outputStream.writeBytes("\r\n");
+        outputStream.writeBytes(fileType);
+        outputStream.writeBytes("\r\n");
+        outputStream.writeBytes("--" + boundary + "\r\n" + "--");
+
+        int responseCode = connection.getResponseCode();
+        String res = "";
+        System.out.print("responsecode for purescript" + responseCode);
+        if (responseCode == 200) {
+            StringBuilder s_buffer = new StringBuilder();
+            InputStream is = new BufferedInputStream(connection.getInputStream());
+            BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(is));
+            String inputLine;
+            while ((inputLine = bufferedReader.readLine()) != null) {
+                s_buffer.append(inputLine);
+            }
+            res = s_buffer.toString();
+            System.out.print("response for purescript" + res);
+            JSONObject jsonObject;
+            try {
+                jsonObject = new JSONObject(res);
+                res = jsonObject.optString(outputField, "Success");
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        } else {
+            System.out.print("Response code");
+            Toast.makeText(bridgeComponents.getContext(), "Unable to upload image", Toast.LENGTH_SHORT).show();
+        }
+        System.out.print("java code");
+        return res;
     }
 }

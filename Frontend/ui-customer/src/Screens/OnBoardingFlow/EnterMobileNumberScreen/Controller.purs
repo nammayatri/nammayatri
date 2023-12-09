@@ -150,7 +150,7 @@ eval (MobileNumberEditTextAction (MobileNumberEditorController.TextChanged id va
             pure $ hideKeyboardOnNavigation true
             else pure unit
     let validatorResp = mobileNumberValidator state.data.countryObj.countryCode state.data.countryObj.countryShortCode value 
-    let newState = state { props = state.props { isValidMobileNumber = isValidPrefixMobileNumber validatorResp
+    let newState = state { props = state.props { isValidMobileNumber = true --isValidPrefixMobileNumber validatorResp
                                         , btnActiveMobileNumber = isValidMobileNumber validatorResp
                                         , countryCodeOptionExpanded = false}
                                         , data = state.data { mobileNumber = if validatorResp == MVR.MaxLengthExceeded then state.data.mobileNumber else value}}

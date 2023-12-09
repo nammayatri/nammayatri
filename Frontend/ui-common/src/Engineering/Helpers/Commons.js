@@ -481,3 +481,7 @@ export const getImageUrl = function (url) {
     console.log("error in getImageUrl " + e);
   }
 };
+
+export const encodeURIData = function (uri){
+  return encodeURIComponent(uri);
+}

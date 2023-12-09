@@ -247,3 +247,9 @@ _hasDisability = lens (unwrap >>> _.hasDisability) (\oldRec newVal -> wrap ((unw
 
 _currentStatus :: forall a b c. Newtype a { currentStatus :: b | c } => Lens' a b
 _currentStatus = lens (unwrap >>> _.currentStatus) (\oldRec newVal -> wrap ((unwrap oldRec) { currentStatus = newVal }))
+
+_hasCompletedSafetySetup :: forall a b c. Newtype a { hasCompletedSafetySetup :: b | c } => Lens' a b
+_hasCompletedSafetySetup = lens (unwrap >>> _.hasCompletedSafetySetup) (\oldRec newVal -> wrap ((unwrap oldRec) { hasCompletedSafetySetup = newVal }))
+
+_enableLocalPoliceSupport :: forall a b c. Newtype a { enableLocalPoliceSupport :: b | c } => Lens' a b
+_enableLocalPoliceSupport = lens (unwrap >>> _.enableLocalPoliceSupport) (\oldRec newVal -> wrap ((unwrap oldRec) { enableLocalPoliceSupport = newVal }))

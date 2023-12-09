@@ -56,7 +56,8 @@ type DriverInfoCardProps =
     zoneType :: ZoneType,
     isChatOpened :: Boolean,
     chatcallbackInitiated :: Boolean,
-    merchantCity :: Maybe String
+    merchantCity :: Maybe String,
+    enableLocalPoliceSupport :: Boolean
   }
 
 type DriverInfoCardData =

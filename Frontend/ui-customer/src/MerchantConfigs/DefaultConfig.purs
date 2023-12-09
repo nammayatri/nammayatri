@@ -142,7 +142,7 @@ config =
   , showDeleteAccount : false
   , autoSelectBackground : "#53BB6F"
   , showGenderBanner : true
-  , enableMockLocation : false
+  , enableMockLocation : true
   , specialLocationView : false
   , internationalNumberEnabled : false
   , dashboardUrl : "https://nammayatri.in/open/"
@@ -229,5 +229,8 @@ config =
           opacity : 0.14
         }
       }
+    }
+  , safetyConfig : {
+      enableSupport : false
     }
   }

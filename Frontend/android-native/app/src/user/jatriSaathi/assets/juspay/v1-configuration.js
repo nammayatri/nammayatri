@@ -4,6 +4,14 @@ if (typeof __VERSION__ !== 'undefined') {
   version = __VERSION__
 }
 window.version["configuration"]= version;
+
+
+function getAppLink(os) {
+  if (os == "ANDROID"){
+    return "https://play.google.com/store/apps/details?id=in.juspay.jatrisaathi"
+  }else {return "https://apps.apple.com/us/app/yatri-sathi/id6451491581"}
+}
+
 window.getMerchantConfig = function () {
   return JSON.stringify({
     "StringKeys": ["ABOUT_APP_DESCRIPTION",
@@ -29,7 +37,12 @@ window.getMerchantConfig = function () {
     "TO_CATER_YOUR_SPECIFIC_NEEDS",
     "PLEASE_ENABLE_LOCATION_PERMISSION",
     "TAXI_FROM_ZONE",
-    "GO_TO_ZONE"
+    "GO_TO_ZONE",
+    "ABOUT_SOS_12_PLUS",
+    "TRIGGER_ALERT_TO_NAMMA_YATRI_SUPPORT_PLUS",
+    "TRIGGER_ALERT_TO_NAMMAYATRI_SUPPORT_TITLE_PLUS",
+    "PERSONAL_SAFETY_SETTINGS_ACTIONS_PLUS",
+    "SAFETY_MEASURE_6"
     ],
     "isReferralEnabled": "true",
     "showBookingPreference": "false",
@@ -87,18 +100,18 @@ window.getMerchantConfig = function () {
       "lottieWidth": 96,
       "primaryButtonHeight": 60,
       "backArrow" : "ny_ic_chevron_left_white,https://assets.juspay.in/beckn/jatrisaathi/user/images/ny_ic_chevron_left_white.png"
-     },
-     "ratingConfig": {
+    },
+    "ratingConfig": {
       "secondaryButtonTextColor": "#2C2F3A",
       "secondaryButtonStroke": "1,#2C2F3A",
       "buttonCornerRadius": 8.0
-     },
-     "cancelReasonConfig": {
+    },
+    "cancelReasonConfig": {
       "secondaryButtonTextColor": "#2C2F3A",
       "secondaryButtonStroke": "1,#2C2F3A",
       "buttonCornerRadius": 8.0
-     },
-     "driverInfoConfig": {
+    },
+    "driverInfoConfig": {
       "ratingTextColor": "#454545",
       "ratingBackground": "#F1F1F1",
       "ratingStroke": "0,#717171",
@@ -143,7 +156,7 @@ window.getMerchantConfig = function () {
     "infoIconUrl" : "ny_ic_info,https://assets.juspay.in/nammayatri/images/user/ny_ic_information_grey.png",
     "merchantLogo" : "ny_ic_yatri_sathi_logo,https://assets.juspay.in/beckn/jatrisaathi/user/images/ny_ic_yatri_sathi_logo.png",
     "feedbackBackground": "#2C2F3A",
-    "sideBarList": ["MyRides", "Tickets", "Favorites", "EmergencyContacts", "HelpAndSupport", "Language", "Separator", "ShareApp", "LiveStatsDashboard", "About", "Logout"],
+    "sideBarList": ["MyRides", "Tickets", "Favorites", "NammaSafety", "HelpAndSupport", "Language", "Separator", "ShareApp", "LiveStatsDashboard", "About", "Logout"],
     "rateCardColor": "#2C2F3A",
     "nyBrandingVisibility": false,
     "fontType": "Assets",
@@ -178,7 +191,12 @@ window.getMerchantConfig = function () {
       "TO_CATER_YOUR_SPECIFIC_NEEDS" : "To cater to your specific needs, we have customised certain features of Yatri Sathi.",
       "PLEASE_ENABLE_LOCATION_PERMISSION" : "Please enable location permissions for Yatri Sathi from the settings app to start looking for rides.",
       "TAXI_FROM_ZONE" : "from Yatri Sathi Zone",
-      "GO_TO_ZONE" : "Go to Yatri Sathi Zone"
+      "GO_TO_ZONE" : "Go to Yatri Sathi Zone",
+      "ABOUT_SOS_12_PLUS" : "Choose an appropriate SOS option from: Call Police (112)/ Call Yatri Sathi support/ Record video (to share with emergency contacts & Yatri Sathi",
+      "TRIGGER_ALERT_TO_NAMMA_YATRI_SUPPORT_PLUS" : "Trigger alert to Yatri Sathi support",
+      "TRIGGER_ALERT_TO_NAMMAYATRI_SUPPORT_TITLE_PLUS" : "Trigger alert to Yatri Sathi support",
+      "PERSONAL_SAFETY_SETTINGS_ACTIONS_PLUS" : " •  Call 112\n •  Call Yatri Sathi support\n •  Record video",
+      "SAFETY_MEASURE_6" : "Safety Training and Certification for all Yatri Sathi Drivers"
     },
     "hindiStrings": {
       "ABOUT_APP_DESCRIPTION": "यात्री साथी सवारियों को चालकों से जोड़ने का एक खुला मंच है। ऐप राइडर्स के लिए मीटर रेट के साथ राइड बुक करना सुविधाजनक बनाता है इसलिए न्यूनतम किराया।",
@@ -205,7 +223,12 @@ window.getMerchantConfig = function () {
       "TO_CATER_YOUR_SPECIFIC_NEEDS" : "आपकी विशिष्ट आवश्यकताओं को पूरा करने के लिए, हमने यात्री साथी की कुछ विशेषताओं को अनुकूलित किया है",
       "PLEASE_ENABLE_LOCATION_PERMISSION" : "सवारी की तलाश शुरू करने के लिए कृपया सेटिंग ऐप से यात्री साथी के लिए स्थान अनुमतियां सक्षम करें।",
       "TAXI_FROM_ZONE" : "टैक्सी में सवार हों",
-      "GO_TO_ZONE" : "यात्री साथी जोन पर जाएं" 
+      "GO_TO_ZONE" : "यात्री साथी जोन पर जाएं",
+      "ABOUT_SOS_12_PLUS" : "सही एसओएस विकल्प चुनें: पुलिस (112) को कॉल करें / यात्री साथी सहायता कॉल करें / वीडियो रिकॉर्ड करें (आपातकालीन संपर्कों और यात्री साथी के साथ साझा करने के लिए",
+      "TRIGGER_ALERT_TO_NAMMA_YATRI_SUPPORT_PLUS" : "यात्री साथी सहायता को चेतावनी दें",
+      "TRIGGER_ALERT_TO_NAMMAYATRI_SUPPORT_TITLE_PLUS" : "यात्री साथी सहायता को चेतावनी दें",
+      "PERSONAL_SAFETY_SETTINGS_ACTIONS_PLUS" : " •  112 को कॉल करें\n •  यात्री साथी सहायता कॉल करें\n •  वीडियो रिकॉर्ड करें",
+      "SAFETY_MEASURE_6" : "सभी यात्री साथी चालकों के लिए सुरक्षा प्रशिक्षण और प्रमाणीकरण"
     },
     "bengaliStrings": {
       "ABOUT_APP_DESCRIPTION": "যাত্রী সাথী হল চালকদের সাথে রাইডারদের সংযোগ করার জন্য একটি উন্মুক্ত প্ল্যাটফর্ম। অ্যাপটি রাইডারদের জন্য মিটার রেট সহ একটি রাইড বুক করা সুবিধাজনক করে তোলে তাই ন্যূনতম ভাড়া।",
@@ -224,7 +247,7 @@ window.getMerchantConfig = function () {
       "CORPORATE_ADDRESS_DESCRIPTION" : "পশ্চিমবঙ্গ সরকারের তথ্য প্রযুক্তি ও ইলেকট্রনিক্স বিভাগ, মনিভান্ডার (৫ম এবং ৬ষ্ঠ তলা), ওয়েবেল ভবনের প্রাঙ্গণ, ব্লক - ইপি অ্যান্ড জিপি, সেক্টর-ভি, সল্টলেক, কলকাতা - 700091",
       "REGISTERED_ADDRESS_DESCRIPTION" : "পশ্চিমবঙ্গ সরকারের তথ্য প্রযুক্তি ও ইলেকট্রনিক্স বিভাগ, মনিভান্ডার (৫ম এবং ৬ষ্ঠ তলা), ওয়েবেল ভবনের প্রাঙ্গণ, ব্লক - ইপি অ্যান্ড জিপি, সেক্টর-ভি, সল্টলেক, কলকাতা - 700091",
       "REGISTERED_ADDRESS_DESCRIPTION_ADDITIONAL" : "",
-      "CALL_NAMMA_YATRI_SUPPORT" : "সহযাত্রী সমর্থন কল করুন",
+      "CALL_NAMMA_YATRI_SUPPORT" : "সহযাত্রী সাহায্য কল করুন",
       "YOUR_FEEDBACK_HELPS_US" : "আপনার প্রতিক্রিয়া আমাদের যাত্রী সাথী অভিজ্ঞতা উন্নত করতে সাহায্য করে",
       "LEARN_HOW_TEXT" : "জানুন কীভাবে যাত্রী সাথী আপনার প্রয়োজন মেটায়",
       "DRIVER_ADDITIONS_ARE_CALCULATED_AT_RATE": "ড্রাইভার যোগ করার সীমা ₹10 বৃদ্ধিতে রয়েছে ",
@@ -232,7 +255,12 @@ window.getMerchantConfig = function () {
       "TO_CATER_YOUR_SPECIFIC_NEEDS" : "আপনার নির্দিষ্ট চাহিদা মেটাতে আমরা যাত্রী সাথীর কিছু বৈশিষ্ট্য কাস্টমাইজ করেছি",
       "PLEASE_ENABLE_LOCATION_PERMISSION" : "অনুগ্রহ করে সেটিংস অ্যাপ থেকে যাত্রী সাথীর জন্য অবস্থানের অনুমতি সক্ষম করুন যাতে রাইডের খোঁজ শুরু করা যায়।",
       "TAXI_FROM_ZONE" : "চড়ুন",
-      "GO_TO_ZONE" : "যাত্রী সাথী জোনে যান"
+      "GO_TO_ZONE" : "যাত্রী সাথী জোনে যান",
+      "ABOUT_SOS_12_PLUS" : "পুলিশ (112)/ কল যাত্রী সহায়তা/ ভিডিও রেকর্ড করুন (জরুরি যোগাযোগের জন্য জরুরি যোগাযোগ এবং যাত্রী সাথির সাথে ভাগ করার জন্য)",
+      "TRIGGER_ALERT_TO_NAMMA_YATRI_SUPPORT_PLUS" : "যাত্রী সাথি সহায়তা প্রাপ্ত করুন",
+      "TRIGGER_ALERT_TO_NAMMAYATRI_SUPPORT_TITLE_PLUS" : "যাত্রী সাথি সহায়তা প্রাপ্ত করুন",
+      "PERSONAL_SAFETY_SETTINGS_ACTIONS_PLUS" : " • 112 কল করুন\n • যাত্রী সাথি সাহায্য কল করুন\n • ভিডিও রেকর্ড করুন",
+      "SAFETY_MEASURE_6" : "সকল যাত্রী সাথী চালকদের জন্য সুরক্ষা প্রশিক্ষণ এবং সার্টিফিকেশন"
     },
     "languageList": [{
       "name": "English",
@@ -249,55 +277,53 @@ window.getMerchantConfig = function () {
     }],
     "bannerConfig" : {
       "backgroundColor" : "#F0FAF0"
-    , "title" : "Complete your profile for a personalised ride experience"
-    , "titleColor" : "#21C179"
-    , "actionText" : "Update now"
-    , "actionTextColor" : "#27AE5F"
-    , "imageUrl" : "ny_ic_banner_gender_feat,https://assets.juspay.in/beckn/merchantcommon/images/ny_ic_banner_gender_feat.png"
+      , "title" : "Complete your profile for a personalised ride experience"
+      , "titleColor" : "#21C179"
+      , "actionText" : "Update now"
+      , "actionTextColor" : "#27AE5F"
+      , "imageUrl" : "ny_ic_banner_gender_feat,https://assets.juspay.in/beckn/merchantcommon/images/ny_ic_banner_gender_feat.png"
     },
     "terminateBtnConfig" : {
       "visibility" : false,
       "title" : "",
       "imageUrl" : ""
-  }
-  , "showDeleteAccount" : true
-  , "fontName" : "PlusJakartaSans"
-  , "fontKannada" : "NotoSansKannada"
-  , "showGenderBanner" : true
-  , "autoSelectBackground" : "#53BB6F"
-  , "enableMockLocation" : false
-  , "defaultLanguage" : "EN_US"
-  , "enableGeocoder" : false
-  , "specialLocationView" : true
-  , "navigationAppConfig" : {
+    }
+    , "showDeleteAccount" : true
+    , "fontName" : "PlusJakartaSans"
+    , "fontKannada" : "NotoSansKannada"
+    , "showGenderBanner" : true
+    , "autoSelectBackground" : "#53BB6F"
+    , "enableMockLocation" : false
+    , "defaultLanguage" : "EN_US"
+    , "enableGeocoder" : false
+    , "specialLocationView" : true
+    , "navigationAppConfig" : {
       "query" : "google.navigation:q=%f,%f"
-    , "packageName" : "com.google.android.apps.maps"
-    , "walkQuery" : "google.navigation:q=%f,%f&mode=w"
-  }
-  , "SUPPORT_EMAIL" : "yatrisathi.support@wb.gov.in"
-  , "OTP_MESSAGE_REGEX" : "is your OTP for login to [A-Za-z]+ [A-Za-z]+ [A-Za-z]+"
-  , "internationalNumberEnabled" : true
-  , "callOptions" : ["ANONYMOUS"]
-  , "showNearByDrivers" : true
-  , "features" : {
-    "enableAutoReadOtp" : true ,
-    "enableZooTicketBookingFlow" : true
-      }
-  , "showDisabilityBanner" : false
-  , "notifyRideConfirmationConfig" : 
+      , "packageName" : "com.google.android.apps.maps"
+      , "walkQuery" : "google.navigation:q=%f,%f&mode=w"
+    }
+    , "SUPPORT_EMAIL" : "yatrisathi.support@wb.gov.in"
+    , "OTP_MESSAGE_REGEX" : "is your OTP for login to [A-Za-z]+ [A-Za-z]+ [A-Za-z]+"
+    , "internationalNumberEnabled" : true
+    , "callOptions" : ["ANONYMOUS"]
+    , "showNearByDrivers" : true
+    , "features" : {
+      "enableAutoReadOtp" : true ,
+      "enableZooTicketBookingFlow" : true
+    }
+    , "showDisabilityBanner" : false
+    , "notifyRideConfirmationConfig" : 
       { "notify" : true, 
         "autoGeneratedText" : "Nomoshkar, I'll arrive in about "
       }
-  , "estimateAndQuoteConfig" : 
+    , "estimateAndQuoteConfig" : 
       { "variantTypes" : [ ["SUV"], ["SEDAN", "HATCHBACK", "TAXI_PLUS"], ["TAXI"] ]
-      , "variantOrder" : ["SEDAN", "HATCHBACK", "TAXI_PLUS", "TAXI", "SUV"]
-      , "enableOnlyAuto" : false
+        , "variantOrder" : ["SEDAN", "HATCHBACK", "TAXI_PLUS", "TAXI", "SUV"]
+        , "enableOnlyAuto" : false
+      }
+    , "safetyConfig" : 
+      {
+        "enableSupport" : true
       }
   })
-}
-
-function getAppLink(os) {
-  if (os == "ANDROID"){
-      return "https://play.google.com/store/apps/details?id=in.juspay.jatrisaathi"
-  }else {return "https://apps.apple.com/us/app/yatri-sathi/id6451491581"}
 }

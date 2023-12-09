@@ -96,7 +96,7 @@ settingsView state push =
         "MyRides" -> settingsMenuView {imageUrl : fetchImage FF_ASSET "ic_past_rides", text : (getString MY_RIDES), accessibilityHint : "My Rides " ,tag : SETTINGS_RIDES, iconUrl : ""} push
         "Tickets" -> settingsMenuView {imageUrl : fetchImage FF_ASSET "ny_ic_ticket_grey", text : getString MY_TICKETS, accessibilityHint : "Tickets", tag : SETTINGS_TICKETS, iconUrl : ""} push
         "Favorites" -> if DA.any (\stage -> isLocalStageOn stage)  [RideStarted, RideAccepted, RideCompleted] then emptyLayout else settingsMenuView {imageUrl : fetchImage FF_ASSET "ic_fav", text : (getString FAVOURITES) , accessibilityHint : "Favourites " , tag : SETTINGS_FAVOURITES, iconUrl : ""} push
-        "EmergencyContacts" ->  settingsMenuView {imageUrl : fetchImage FF_COMMON_ASSET "ny_ic_emergency_contacts" , text : (getString EMERGENCY_CONTACTS) , accessibilityHint : "Emergency Contacts " , tag : SETTINGS_EMERGENCY_CONTACTS, iconUrl : ""} push
+        "NammaSafety" -> settingsMenuView {imageUrl : fetchImage FF_COMMON_ASSET "ny_ic_shield_heart", text : getSafetyModeString, accessibilityHint : "Namma Safety ", tag : SETTINGS_NAMMASAFETY, iconUrl : fetchImage FF_ASSET "ic_red_icon"} push
         "HelpAndSupport" -> settingsMenuView (helpAndSupportConfig state.appConfig.enableContactSupport) push
         "Language" -> settingsMenuView {imageUrl : fetchImage FF_ASSET "ic_change_language", text : (getString LANGUAGE), accessibilityHint : "Language ", tag : SETTINGS_LANGUAGE, iconUrl : ""} push
         "ShareApp" -> settingsMenuView {imageUrl : fetchImage FF_ASSET "ic_share", text : (getString SHARE_APP), accessibilityHint : "Share App ", tag : SETTINGS_SHARE_APP, iconUrl : ""} push
@@ -107,6 +107,7 @@ settingsView state push =
         _ -> emptyLayout
       ) state.appConfig.sideBarList
     )
+  where getSafetyModeString = getString if state.appConfig.safetyConfig.enableSupport || state.isLocalPoliceSupportEnabled then NAMMA_SAFETY_PLUS else NAMMA_SAFETY
 
 helpAndSupportConfig :: Boolean -> Item
 helpAndSupportConfig enableContactSupport = {
@@ -254,9 +255,9 @@ settingsMenuView item push  =
                               SETTINGS_HELP           -> OnHelp
                               SETTINGS_LANGUAGE       -> ChangeLanguage
                               SETTINGS_ABOUT          -> GoToAbout
+                              SETTINGS_NAMMASAFETY    -> GoToNammaSafety
                               SETTINGS_LOGOUT         -> OnLogout
                               SETTINGS_SHARE_APP      -> ShareAppLink
-                              SETTINGS_EMERGENCY_CONTACTS       -> GoToEmergencyContacts
                               SETTINGS_LIVE_DASHBOARD -> LiveStatsDashboard)
   , accessibility case item.tag of
                               SETTINGS_RIDES          -> ENABLE
@@ -267,7 +268,7 @@ settingsMenuView item push  =
                               SETTINGS_ABOUT          -> ENABLE
                               SETTINGS_LOGOUT         -> ENABLE
                               SETTINGS_SHARE_APP      -> DISABLE_DESCENDANT
-                              SETTINGS_EMERGENCY_CONTACTS       -> ENABLE
+                              SETTINGS_NAMMASAFETY       -> ENABLE
                               SETTINGS_LIVE_DASHBOARD -> DISABLE_DESCENDANT
   ][  imageView
       [ width ( V 25 )
