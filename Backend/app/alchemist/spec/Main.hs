@@ -31,7 +31,8 @@ main = do
   Alchemist.mkBeamQueries (targetFolder </> "Storage/Queries") inputFile
   Alchemist.mkDomainType (targetFolder </> "Domain/Types") inputFile
   Alchemist.mkSQLFile sqlTargetFolder inputFile
-  Alchemist.mkServantAPI (targetFolder </> "API/UI") apiInputFile
+  Alchemist.mkServantAPI (targetFolder </> "API/Action/UI") apiInputFile
+  Alchemist.mkApiTypes (targetFolder </> "API/Types/UI") apiInputFile
   Alchemist.mkDomainHandler (targetFolder </> "Domain/Action/UI") apiInputFile
 
 -- Alchemist.mkFrontendAPIBackend (targetFolder </> "Domain/Action") apiInputFile

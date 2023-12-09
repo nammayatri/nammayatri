@@ -32,6 +32,7 @@ library
       Alchemist.DSL.Syntax.API
       Alchemist.DSL.Syntax.Storage
       Alchemist.Generator.Haskell
+      Alchemist.Generator.Haskell.ApiTypes
       Alchemist.Generator.Haskell.BeamQueries
       Alchemist.Generator.Haskell.BeamTable
       Alchemist.Generator.Haskell.DomainHandler
@@ -206,6 +207,7 @@ test-suite alchemist-tests
       Alchemist.DSL.Syntax.API
       Alchemist.DSL.Syntax.Storage
       Alchemist.Generator.Haskell
+      Alchemist.Generator.Haskell.ApiTypes
       Alchemist.Generator.Haskell.BeamQueries
       Alchemist.Generator.Haskell.BeamTable
       Alchemist.Generator.Haskell.DomainHandler

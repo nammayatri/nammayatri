@@ -38,11 +38,19 @@ $(makeLenses ''ApiTT)
 
 type TypeObject = (Text, [(Text, Text)])
 
+data TypesInfo = TypesInfo
+  { _typeImports :: [Text],
+    _types :: [TypeObject]
+  }
+  deriving (Show)
+
+$(makeLenses ''TypesInfo)
+
 data Apis = Apis
   { _moduleName :: Text,
     _apis :: [ApiTT],
     _imports :: [Text],
-    _types :: [TypeObject]
+    _apiTypes :: TypesInfo
   }
   deriving (Show)
 

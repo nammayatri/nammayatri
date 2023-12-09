@@ -7,6 +7,7 @@ import Alchemist.DSL.Parser.Storage
 import Alchemist.DSL.Syntax.API
 import Alchemist.DSL.Syntax.Storage
 import Alchemist.Generator.Haskell
+import Alchemist.Generator.Haskell.ApiTypes
 import Alchemist.Generator.Purs
 import Alchemist.Generator.SQL
 import Alchemist.Utils
@@ -37,6 +38,11 @@ mkServantAPI :: FilePath -> FilePath -> IO ()
 mkServantAPI filePath yaml = do
   apiDef <- apiParser yaml
   writeToFile filePath (T.unpack (_moduleName apiDef) ++ ".hs") (generateServantAPI apiDef)
+
+mkApiTypes :: FilePath -> FilePath -> IO ()
+mkApiTypes filePath yaml = do
+  apiDef <- apiParser yaml
+  writeToFile filePath (T.unpack (_moduleName apiDef) ++ ".hs") (generateApiTypes apiDef)
 
 mkDomainHandler :: FilePath -> FilePath -> IO ()
 mkDomainHandler filePath yaml = do

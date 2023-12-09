@@ -2,7 +2,8 @@ module Alchemist.Generator.Haskell.Servant where
 
 import Alchemist.DSL.Syntax.API
 import Alchemist.Utils
-import Data.List (intercalate, intersect, nub)
+import Control.Lens ((^.))
+import Data.List (intercalate, nub)
 import Data.List.Extra (snoc)
 import Data.Text (Text)
 import qualified Data.Text as T
@@ -12,7 +13,7 @@ generateServantAPI :: Apis -> String
 generateServantAPI input =
   "{-# OPTIONS_GHC -Wno-orphans #-}\n"
     <> "{-# OPTIONS_GHC -Wno-unused-imports #-}\n\n"
-    <> "module API.UI."
+    <> "module API.Action.UI."
     <> T.unpack (_moduleName input)
     <> " where \n\n"
     <> intercalate "\n" (map ("import " <>) defaultImports)
@@ -20,10 +21,10 @@ generateServantAPI input =
     <> intercalate "\n" (nub $ (map makeQualifiedImport defaultQualifiedImport) <> (makeQualifiedImport <$> figureOutImports (T.unpack <$> concatMap handlerSignature (_apis input))))
     <> "\n\n"
     -- <> intercalate "\n"  (T.unpack <$> concatMap handlerImports (_apis input))
-    <> "\nimport Domain.Action.UI."
+    <> "\nimport API.Types.UI."
     <> T.unpack (_moduleName input)
     <> " ("
-    <> intercalate ", " (map (T.unpack . fst) (_types input))
+    <> intercalate ", " (map (T.unpack . fst) (input ^. apiTypes . types))
     <> ")"
     <> "\nimport qualified Domain.Action.UI."
     <> T.unpack (_moduleName input)
@@ -114,13 +115,6 @@ handlerFunctionText apiTT =
     urlPartToName :: UrlParts -> Text
     urlPartToName (UnitPath name) = (T.toUpper . T.singleton . T.head) name <> T.tail name
     urlPartToName _ = ""
-
-allImports :: Apis -> [Text]
-allImports input =
-  let definedTypes = map fst (_types input)
-      typesDef = map snd $ concatMap (snd) (_types input)
-      allTypes = concatMap handlerSignature (_apis input)
-   in filter (/= T.empty) ((typesDef `intersect` definedTypes) ++ (allTypes `intersect` definedTypes))
 
 handlerSignature :: ApiTT -> [Text]
 handlerSignature input =
