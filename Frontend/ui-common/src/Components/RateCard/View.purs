@@ -91,6 +91,7 @@ view push config =
             DriverAddition -> driverAdditionView push config 
             FareUpdate -> fareUpdateView push config
             PaymentFareBreakup -> paymentfareBreakup push config
+            WaitingCharges -> waitingChargesView push config
             _ -> defaultRateCardView push config 
         ]     
       ,linearLayout
@@ -204,6 +205,7 @@ defaultRateCardView push config =
                       , onClick push $ const case item.key of
                         "DRIVER_ADDITIONS" -> GoToDriverAddition
                         "FARE_UPDATE_POLICY" -> GoToFareUpdate
+                        "WAITING_CHARGES" -> GoToWaitingCharges
                         _  -> NoAction
                     ][  textView
                         [ width WRAP_CONTENT
@@ -305,6 +307,18 @@ fareUpdateView push config =
       , margin $ MarginTop 20
       ]
   ]
+
+waitingChargesView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w 
+waitingChargesView push config = 
+  linearLayout
+  [ width MATCH_PARENT
+  , height WRAP_CONTENT
+  , orientation VERTICAL
+  , padding $ Padding 20 0 20 180
+  ][  commonTV push (getString MISC_WAITING_CHARGE) Color.black800 FontStyle.subHeading1 LEFT 8 NoAction
+    , commonTV push (getString WAITING_CHARGE_RATECARD_DESCRIPTION) Color.black650 FontStyle.body3 LEFT 12 NoAction
+  ]
+
 
 paymentfareBreakup :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w 
 paymentfareBreakup push config = 
