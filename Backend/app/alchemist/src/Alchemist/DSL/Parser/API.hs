@@ -86,7 +86,7 @@ markQualifiedTypesInTypes moduleName input obj =
        in T.intercalate "," $ map (uncurry (<>) . second (T.pack . U.makeTypeQualified (Just $ T.unpack moduleName) (Just excluded) Nothing defaultTypeImportModule obj . T.unpack) . T.breakOn " ") individualEnums
 
 extractComplexTypeImports :: Apis -> [Text]
-extractComplexTypeImports api = figureOutImports (concat $ map figureOutImports' (api ^. apiTypes . types))
+extractComplexTypeImports api = figureOutImports (concatMap figureOutImports' (api ^. apiTypes . types))
   where
     figureOutImports' :: TypeObject -> [Text]
     figureOutImports' (_, arr) =

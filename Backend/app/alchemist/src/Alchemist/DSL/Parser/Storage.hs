@@ -34,9 +34,9 @@ storageParser filepath = do
 parseTableDef :: [String] -> Object -> (String, Object) -> TableDef
 parseTableDef dList importObj (parseDomainName, obj) =
   let parsedTypesAndExcluded = parseExtraTypes parseDomainName dList importObj obj
-      parsedTypes = (view _1) <$> parsedTypesAndExcluded
-      excludedList = (view _2) <$> parsedTypesAndExcluded
-      enumList = fromMaybe [] ((view _3) <$> parsedTypesAndExcluded)
+      parsedTypes = view _1 <$> parsedTypesAndExcluded
+      excludedList = view _2 <$> parsedTypesAndExcluded
+      enumList = maybe [] (view _3) parsedTypesAndExcluded
       parsedFields = parseFields (Just parseDomainName) excludedList dList enumList importObj obj
       parsedImports = parseImports parsedFields (fromMaybe [] parsedTypes)
       parsedQueries = parseQueries (Just parseDomainName) excludedList dList parsedFields importObj obj
@@ -71,7 +71,7 @@ parseQueries moduleName excludedList dList fields impObj obj = do
       parseQuery query =
         let queryName = fst query
             queryDataObj = snd query
-            params = addDefaultUpdatedAtToQueryParams queryName $ map (\(k, v) -> (k, makeTypeQualified' v)) $ fromMaybe [] (queryDataObj ^? ix "params" . _Array . to V.toList . to (map (searchForKey fields . valueToString)))
+            params = addDefaultUpdatedAtToQueryParams queryName $ map (second makeTypeQualified') $ fromMaybe [] (queryDataObj ^? ix "params" . _Array . to V.toList . to (map (searchForKey fields . valueToString)))
             kvFunction = fromMaybe (error $ "kvFunction is neccessary") (queryDataObj ^? ix "kvFunction" . _String)
             whereClause = fromMaybe EmptyWhere (queryDataObj ^? ix "where" . to (parseWhereClause makeTypeQualified' fields))
          in QueryDef queryName kvFunction params whereClause False
@@ -146,7 +146,7 @@ parseExtraTypes moduleName dList importObj obj = do
   _types <- parseTypes obj
   let allExcludeQualified = map (\(TypeObject (name, _)) -> name) _types
   let allEnums = map (\(TypeObject (name, _)) -> name) $ filter isEnumType _types
-  return $ (map (mkQualifiedTypeObject allExcludeQualified) _types, allExcludeQualified, map (\nm -> defaultImportModule ++ moduleName ++ "." ++ nm) allEnums ++ allEnums)
+  return (map (mkQualifiedTypeObject allExcludeQualified) _types, allExcludeQualified, map (\nm -> defaultImportModule ++ moduleName ++ "." ++ nm) allEnums ++ allEnums)
   where
     defaultImportModule = "Domain.Types."
 

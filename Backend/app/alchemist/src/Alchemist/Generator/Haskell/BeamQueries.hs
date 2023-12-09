@@ -27,20 +27,20 @@ toTTypeConversionFunction :: Maybe String -> String -> String -> String
 toTTypeConversionFunction transformer haskellType fieldName
   | (isJust transformer) = fromJust transformer ++ " " ++ fieldName
   | "Int" <- haskellType = "roundToIntegral " ++ fieldName
-  | "Kernel.Types.Id.Id " `Text.isPrefixOf` (Text.pack haskellType) = "Kernel.Types.Id.getId " ++ fieldName
-  | "Kernel.Types.Id.Id " `Text.isInfixOf` (Text.pack haskellType) = "Kernel.Types.Id.getId <$> " ++ fieldName
-  | "Kernel.Types.Id.ShortId " `Text.isPrefixOf` (Text.pack haskellType) = "Kernel.Types.Id.getShortId " ++ fieldName
-  | "Kernel.Types.Id.ShortId " `Text.isInfixOf` (Text.pack haskellType) = "Kernel.Types.Id.getShortId <$> " ++ fieldName
+  | "Kernel.Types.Id.Id " `Text.isPrefixOf` Text.pack haskellType = "Kernel.Types.Id.getId " ++ fieldName
+  | "Kernel.Types.Id.Id " `Text.isInfixOf` Text.pack haskellType = "Kernel.Types.Id.getId <$> " ++ fieldName
+  | "Kernel.Types.Id.ShortId " `Text.isPrefixOf` Text.pack haskellType = "Kernel.Types.Id.getShortId " ++ fieldName
+  | "Kernel.Types.Id.ShortId " `Text.isInfixOf` Text.pack haskellType = "Kernel.Types.Id.getShortId <$> " ++ fieldName
   | otherwise = fieldName
 
 fromTTypeConversionFunction :: Maybe String -> String -> String -> String
 fromTTypeConversionFunction transformer haskellType fieldName
   | (isJust transformer) = fromJust transformer ++ " " ++ fieldName
   | "Int" <- haskellType = "realToFrac " ++ fieldName
-  | "Kernel.Types.Id.Id " `Text.isPrefixOf` (Text.pack haskellType) = "Kernel.Types.Id.Id " ++ fieldName
-  | "Kernel.Types.Id.Id " `Text.isInfixOf` (Text.pack haskellType) = "Kernel.Types.Id.Id <$> " ++ fieldName
-  | "Kernel.Types.Id.ShortId " `Text.isPrefixOf` (Text.pack haskellType) = "Kernel.Types.Id.ShortId " ++ fieldName
-  | "Kernel.Types.Id.ShortId " `Text.isInfixOf` (Text.pack haskellType) = "Kernel.Types.Id.ShortId <$> " ++ fieldName
+  | "Kernel.Types.Id.Id " `Text.isPrefixOf` Text.pack haskellType = "Kernel.Types.Id.Id " ++ fieldName
+  | "Kernel.Types.Id.Id " `Text.isInfixOf` Text.pack haskellType = "Kernel.Types.Id.Id <$> " ++ fieldName
+  | "Kernel.Types.Id.ShortId " `Text.isPrefixOf` Text.pack haskellType = "Kernel.Types.Id.ShortId " ++ fieldName
+  | "Kernel.Types.Id.ShortId " `Text.isInfixOf` Text.pack haskellType = "Kernel.Types.Id.ShortId <$> " ++ fieldName
   | otherwise = fieldName
 
 -- Generates the FromTType' instance
@@ -121,16 +121,16 @@ orderAndLimit query = do
 
 generateFunctionSignature :: QueryDef -> String -> String
 generateFunctionSignature query tableNameHaskell =
-  let qparams = filter ((/= "updatedAt") . fst) $ map getIdsOut $ nub (params query ++ addLimitParams query ++ (getWhereClauseFieldNamesAndTypes (whereClause query)))
+  let qparams = filter ((/= "updatedAt") . fst) $ map getIdsOut $ nub (params query ++ addLimitParams query ++ getWhereClauseFieldNamesAndTypes (whereClause query))
    in query.queryName
         ++ " :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => "
-        ++ bool (foldMap (\s -> s ++ " -> ") (map snd qparams)) ("Domain.Types." ++ tableNameHaskell ++ "." ++ tableNameHaskell ++ " -> ") query.takeFullObjectAsInput
+        ++ bool (foldMap ((++ " -> ") . snd) qparams) ("Domain.Types." ++ tableNameHaskell ++ "." ++ tableNameHaskell ++ " -> ") query.takeFullObjectAsInput
         ++ "m ("
         ++ generateQueryReturnType query.kvFunction tableNameHaskell
         ++ ")\n"
         ++ query.queryName
         ++ " "
-        ++ bool (foldMap (\s -> s ++ " ") (map fst qparams)) ("Domain.Types." ++ tableNameHaskell ++ "." ++ tableNameHaskell ++ " {..} ") query.takeFullObjectAsInput
+        ++ bool (foldMap ((++ " ") . fst) qparams) ("Domain.Types." ++ tableNameHaskell ++ "." ++ tableNameHaskell ++ " {..} ") query.takeFullObjectAsInput
         ++ "= do\n"
 
 addLimitParams :: QueryDef -> [(String, String)]

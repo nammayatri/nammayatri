@@ -30,7 +30,7 @@ generateDomainHandler input =
     defaultImports = ["EulerHS.Prelude hiding (id)", "Servant", "Tools.Auth", "Data.OpenApi (ToSchema)", "API.Types.UI." <> T.unpack (_moduleName input)]
 
     preventSameModuleImports :: [String] -> [String]
-    preventSameModuleImports = filter (\x -> not $ (qualifiedModuleName `isInfixOf` x))
+    preventSameModuleImports = filter (\x -> not (qualifiedModuleName `isInfixOf` x))
 
     defaultQualifiedImport :: [String]
     defaultQualifiedImport = ["Kernel.Prelude", "Domain.Types.Person", "Domain.Types.Merchant", "Environment", "Kernel.Types.Id"]

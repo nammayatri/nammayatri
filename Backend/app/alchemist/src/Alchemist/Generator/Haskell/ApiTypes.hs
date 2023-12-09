@@ -27,7 +27,7 @@ generateApiTypes input =
     defaultImports = ["EulerHS.Prelude hiding (id)", "Servant", "Tools.Auth", "Data.OpenApi (ToSchema)"]
 
     preventSameModuleImports :: [String] -> [String]
-    preventSameModuleImports = filter (\x -> not $ (qualifiedModuleName `isInfixOf` x))
+    preventSameModuleImports = filter (\x -> not (qualifiedModuleName `isInfixOf` x))
 
     defaultQualifiedImport :: [String]
     defaultQualifiedImport = ["Kernel.Prelude", "Domain.Types.Person", "Domain.Types.Merchant", "Environment", "Kernel.Types.Id"]
@@ -50,8 +50,8 @@ generateApiTypes input =
         generateEnum :: Text -> [(Text, Text)] -> [Text]
         generateEnum typeName [("enum", values)] =
           let enumValues = T.splitOn "," values
-           in ["data " <> typeName <> " = " <> T.intercalate " | " enumValues]
-                ++ ["  deriving (Eq, Show, Generic, ToJSON, FromJSON, ToSchema)\n"]
+           in ("data " <> typeName <> " = " <> T.intercalate " | " enumValues) :
+              ["  deriving (Eq, Show, Generic, ToJSON, FromJSON, ToSchema)\n"]
         generateEnum _ _ = error "Invalid enum definition"
 
         generateDataStructure :: Text -> [(Text, Text)] -> [Text]
