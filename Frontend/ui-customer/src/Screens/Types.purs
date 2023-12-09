@@ -1548,3 +1548,7 @@ data TicketBookingScreenStage = DescriptionStage
 derive instance genericTicketBookingScreenStage :: Generic TicketBookingScreenStage _
 instance showTicketBookingScreenStage :: Show TicketBookingScreenStage where show = genericShow
 instance eqTicketBookingScreenStage :: Eq TicketBookingScreenStage where eq = genericEq
+
+data SearchLocationEditTextFocus = SOURCE | DESTINATION
+derive instance genericSearchLocationEditTextFocus :: Generic SearchLocationEditTextFocus _
+instance eqSearchLocationEditTextFocus :: Eq SearchLocationEditTextFocus where eq = genericEq

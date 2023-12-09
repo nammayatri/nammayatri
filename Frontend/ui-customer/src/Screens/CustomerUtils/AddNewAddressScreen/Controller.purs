@@ -100,7 +100,6 @@ instance loggableAction :: Loggable Action where
     SelectedCurrentLocation key lat lon ->  trackAppScreenEvent appId (getScreen ADD_NEW_ADDRESS_SCREEN) "in_screen" "current_location_selected"
     MAPREADY key latitude longitude -> trackAppScreenEvent appId (getScreen ADD_NEW_ADDRESS_SCREEN) "in_screen" "map_view_rendered"
     UpdateLocation key lat lon -> trackAppScreenEvent appId (getScreen ADD_NEW_ADDRESS_SCREEN) "in_screen" "location_updated"
-    EditTextFocusChanged -> trackAppScreenEvent appId (getScreen ADD_NEW_ADDRESS_SCREEN) "in_screen" "edit_text_change_focussed"
     UpdateCurrLocName lat lon name -> trackAppScreenEvent appId (getScreen ADD_NEW_ADDRESS_SCREEN) "in_screen" "current_location_name_updated"
     CurrentLocationAction -> trackAppActionClick appId (getScreen ADD_NEW_ADDRESS_SCREEN) "in_screen" "current_location"
     RenderKeyboardActin -> trackAppScreenEvent appId (getScreen ADD_NEW_ADDRESS_SCREEN) "in_screen" "render_keyboard"
@@ -132,7 +131,6 @@ data Action = BackPressed AddNewAddressScreenState
             | UpdateCurrentLocation String String
             | RecenterCurrentLocation
             | SelectedCurrentLocation Number Number String
-            | EditTextFocusChanged
             | ClearEditText
             | CurrentLocationAction
             | RenderKeyboardActin

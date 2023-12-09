@@ -481,3 +481,8 @@ export const getImageUrl = function (url) {
     console.log("error in getImageUrl " + e);
   }
 };
+
+export const isTrue = function (a) {
+  const bool = true;
+  return a.toString() === bool.toString();
+};

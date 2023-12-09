@@ -94,6 +94,7 @@ foreign import getVideoID :: String -> String
 foreign import getImageUrl :: String -> String
 foreign import getPastDays :: Int -> Array CalendarDate
 foreign import getPastWeeks :: Int -> Array CalendarWeek
+foreign import isTrue :: forall a. a -> Boolean
 
 
 os :: String

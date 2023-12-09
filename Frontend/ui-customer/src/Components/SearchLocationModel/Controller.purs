@@ -21,7 +21,7 @@ import Components.PrimaryButton as PrimaryButton
 import Data.Maybe (Maybe(..))
 import Prelude (show)
 import PrestoDOM (Visibility(..))
-import Screens.Types (SearchLocationModelType, LocationListItemState, LocItemType(..))
+import Screens.Types (SearchLocationModelType, LocationListItemState, LocItemType(..), SearchLocationEditTextFocus(..))
 import MerchantConfig.Types (AppConfig)
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Common.Types.App (LazyCheck(..))
@@ -38,7 +38,7 @@ data Action = GoBack
             | DestinationClear
             | SetLocationOnMap
             | SetCurrentLocation
-            | EditTextFocusChanged String
+            | EditTextFocusChanged SearchLocationEditTextFocus Boolean
             | LocationListItemActionController LocationListItem.Action
             | PrimaryButtonActionController PrimaryButton.Action
             | DebounceCallBack String Boolean

@@ -624,63 +624,7 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
         return false;
     }
 
-    private Boolean isServiceable(Double lat, Double lng) {
-        StringBuilder result = new StringBuilder();
-        regToken = getKeyInNativeSharedPrefKeys("REGISTERATION_TOKEN");
-        baseUrl = getKeyInNativeSharedPrefKeys("BASE_URL");
-        String version = getKeyInNativeSharedPrefKeys("VERSION_NAME");
-        String deviceDetails = getKeyInNativeSharedPrefKeys("DEVICE_DETAILS");
-        System.out.println("BaseUrl" + baseUrl);
-        try {
-            String url = baseUrl + "/serviceability/origin";
-            HttpURLConnection connection = (HttpURLConnection) (new URL(url).openConnection());
-            connection.setRequestMethod("POST");
-            connection.setRequestProperty("Content-Type", "application/json");
-            connection.setRequestProperty("token", regToken);
-            connection.setRequestProperty("x-client-version", version);
-            connection.setRequestProperty("x-device",deviceDetails);
-
-            JSONObject payload = new JSONObject();
-
-            JSONObject latLng = new JSONObject();
-            latLng.put("lat", lat);
-            latLng.put("lon", lng);
-            payload.put("location", latLng);
-
-            OutputStream stream = connection.getOutputStream();
-            stream.write(payload.toString().getBytes());
-            connection.connect();
-            int respCode = connection.getResponseCode();
-            System.out.println("Response Code ::" + respCode);
-            InputStreamReader respReader;
-            if ((respCode < 200 || respCode >= 300) && respCode != 302) {
-                respReader = new InputStreamReader(connection.getErrorStream());
-                BufferedReader in = new BufferedReader(respReader);
-                String inputLine;
-                while ((inputLine = in.readLine()) != null) {
-                    result.append(inputLine);
-                }
-                JSONObject errorPayload = new JSONObject(result.toString());
-            } else {
-                respReader = new InputStreamReader(connection.getInputStream());
-                BufferedReader in = new BufferedReader(respReader);
-                String inputLine;
-                while ((inputLine = in.readLine()) != null) {
-                    result.append(inputLine);
-                }
-                JSONObject res = new JSONObject(String.valueOf(result));
-                System.out.println( res.getString("serviceable") + "my point result");
-                return  true;
-            }
-
-            return false;
-        } catch (Exception e) {
-            return false;
-        }
-    }
-
     //endregion
-
     private float bearingBetweenLocations(LatLng latLng1, LatLng latLng2) {
         double PI = 3.14159;
         double lat1 = latLng1.latitude * PI / 180;

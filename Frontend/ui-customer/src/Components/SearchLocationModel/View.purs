@@ -43,7 +43,7 @@ import Prelude (Unit, bind, const, map, pure, unit, ($), (&&), (+), (-), (/), (/
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Accessiblity(..), Padding(..), PrestoDOM, Visibility(..), Accessiblity(..), accessibilityHint ,adjustViewWithKeyboard, afterRender, alignParentBottom, alpha, autoCorrectionType, background, clickable, color, cornerRadius, cursorColor, disableClickFeedback, editText, ellipsize, fontStyle, frameLayout, gravity, height, hint, hintColor, id, imageUrl, imageView, imageWithFallback, inputTypeI, lineHeight, linearLayout, margin, onBackPressed, onChange, onClick, onFocus, orientation, padding, relativeLayout, scrollBarY, scrollView, singleLine, stroke, text, textSize, textView, visibility, weight, width, accessibility, lottieAnimationView, layoutGravity, selectAllOnFocus)
 import PrestoDOM.Animation as PrestoAnim
 import Resources.Constants (getDelayForAutoComplete)
-import Screens.Types (SearchLocationModelType(..), LocationListItemState)
+import Screens.Types (SearchLocationModelType(..), LocationListItemState, SearchLocationEditTextFocus(..))
 import Storage (KeyStore(..), getValueToLocalStore)
 import Styles.Colors as Color
 import Data.String as DS
@@ -277,7 +277,7 @@ sourceDestinationEditTextView state push =
                 )
                 SourceChanged
             , inputTypeI if state.isSearchLocation == LocateOnMap then 0 else 1
-            , onFocus push $ const $ EditTextFocusChanged "S"
+            , onFocus push $ EditTextFocusChanged SOURCE
               , selectAllOnFocus true
             , autoCorrectionType 1
             ] <> FontStyle.subHeading1 LanguageStyle
@@ -348,7 +348,7 @@ sourceDestinationEditTextView state push =
                   )
                   DestinationChanged
               , inputTypeI if state.isSearchLocation == LocateOnMap then 0 else 1
-              , onFocus push $ const $ EditTextFocusChanged "D"
+              , onFocus push $ EditTextFocusChanged DESTINATION
               , selectAllOnFocus true
               , autoCorrectionType 1
               ]
