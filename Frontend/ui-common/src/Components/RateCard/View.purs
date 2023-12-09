@@ -91,6 +91,7 @@ view push config =
             DriverAddition -> driverAdditionView push config 
             FareUpdate -> fareUpdateView push config
             PaymentFareBreakup -> paymentfareBreakup push config
+            WaitingCharges -> waitingChargesView push config
             _ -> defaultRateCardView push config 
         ]     
       ,linearLayout
@@ -204,6 +205,7 @@ defaultRateCardView push config =
                       , onClick push $ const case item.key of
                         "DRIVER_ADDITIONS" -> GoToDriverAddition
                         "FARE_UPDATE_POLICY" -> GoToFareUpdate
+                        "WAITING_CHARGES" -> GoToWaitingCharges
                         _  -> NoAction
                     ][  textView
                         [ width WRAP_CONTENT
@@ -291,7 +293,7 @@ fareUpdateView push config =
   [ width MATCH_PARENT
   , height WRAP_CONTENT
   , orientation VERTICAL
-  , padding $ Padding 20 0 20 180
+  , padding $ Padding 20 0 20 160
   ][  commonTV push (getStringByKey config "FARE_UPDATE_POLICY") Color.black800 FontStyle.subHeading1 LEFT 8 NoAction
     , commonTV push (getStringByKey config "YOU_MAY_SEE_AN_UPDATED_FINAL_FARE_DUE_TO_ANY_OF_THE_BELOW_REASONS") Color.black650 FontStyle.body3 LEFT 12 NoAction
     , textView
@@ -304,7 +306,29 @@ fareUpdateView push config =
       , textFromHtml $ getStringByKey config "REASON_CHANGE_IN_ROUTE"
       , margin $ MarginTop 20
       ]
+    , textView
+      [ width WRAP_CONTENT
+      , height WRAP_CONTENT
+      , textSize FontSize.a_14
+      , lineHeight "16"
+      , fontStyle $ FontStyle.regular LanguageStyle
+      , color Color.black650
+      , textFromHtml $ getStringByKey config "WAITING_CHARGES_APPLICABLE"
+      , margin $ MarginTop 12
+      ]
   ]
+
+waitingChargesView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w 
+waitingChargesView push config = 
+  linearLayout
+  [ width MATCH_PARENT
+  , height WRAP_CONTENT
+  , orientation VERTICAL
+  , padding $ Padding 20 0 20 180
+  ][  commonTV push (getStringByKey config "WAITING_CHARGE") Color.black800 FontStyle.subHeading1 LEFT 8 NoAction
+    , commonTV push (getStringByKey config "WAITING_CHARGE_RATECARD_DESCRIPTION") Color.black650 FontStyle.body3 LEFT 12 NoAction
+  ]
+
 
 paymentfareBreakup :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w 
 paymentfareBreakup push config = 

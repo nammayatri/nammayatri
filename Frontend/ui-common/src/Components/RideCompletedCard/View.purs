@@ -153,7 +153,7 @@ priceAndDistanceUpdateView config push =
 pillView :: forall w. Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 pillView config push =
   linearLayout
-    [ width WRAP_CONTENT
+    [ width if os == "IOS" then (V 300) else WRAP_CONTENT
     , height WRAP_CONTENT
     , padding config.topCard.infoPill.padding
     , margin config.topCard.infoPill.margin

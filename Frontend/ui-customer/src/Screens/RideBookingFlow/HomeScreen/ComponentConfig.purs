@@ -697,7 +697,8 @@ rateCardConfig state =
 
         , otherOptions  = [
           {key : "DRIVER_ADDITIONS", val : (getString DRIVER_ADDITIONS)},
-          {key : "FARE_UPDATE_POLICY", val : (getString FARE_UPDATE_POLICY)}]
+          {key : "FARE_UPDATE_POLICY", val : (getString FARE_UPDATE_POLICY)},
+          {key : "WAITING_CHARGES", val : getString WAITING_CHARGE }]
         , fareInfoText = (getString $ FARE_INFO_TEXT "FARE_INFO_TEXT")
         , additionalStrings = [
           {key : "DRIVER_ADDITIONS_OPTIONAL", val : (getString DRIVER_ADDITIONS_OPTIONAL)},
@@ -707,8 +708,11 @@ rateCardConfig state =
                                                                    else getString $ DRIVER_ADDITIONS_ARE_CALCULATED_AT_RATE "DRIVER_ADDITIONS_ARE_CALCULATED_AT_RATE" )},
           {key : "DRIVER_MAY_NOT_CHARGE_THIS_ADDITIONAL_FARE", val : (getString DRIVER_MAY_NOT_CHARGE_THIS_ADDITIONAL_FARE)},
           {key : "FARE_UPDATE_POLICY", val : (getString FARE_UPDATE_POLICY)},
+          {key : "WAITING_CHARGE", val : (getString WAITING_CHARGE)<> "°"},
+          {key : "WAITING_CHARGE_RATECARD_DESCRIPTION", val : (getString WAITING_CHARGE_RATECARD_DESCRIPTION)},
           {key : "YOU_MAY_SEE_AN_UPDATED_FINAL_FARE_DUE_TO_ANY_OF_THE_BELOW_REASONS", val : (getString YOU_MAY_SEE_AN_UPDATED_FINAL_FARE_DUE_TO_ANY_OF_THE_BELOW_REASONS)},
-          {key : "REASON_CHANGE_IN_ROUTE", val : ("<span style=\"color:black;\">" <> (getString REASON_CHANGE_IN_ROUTE_A) <> "</span>" <> (getString REASON_CHANGE_IN_ROUTE_B))}]
+          {key : "REASON_CHANGE_IN_ROUTE", val : ("<span style=\"color:black;\">" <> (getString REASON_CHANGE_IN_ROUTE_A) <> "</span>" <> (getString REASON_CHANGE_IN_ROUTE_B))},
+          {key : "WAITING_CHARGES_APPLICABLE", val : ("<span style=\"color:black;\">" <> "2." <> (getString WAITING_CHARGE) <> "</span>" <> " " <> getString FARE_POLICY_WAITING_CHARGES )}]
           <> if state.data.rateCard.vehicleVariant == "AUTO_RICKSHAW" && state.data.config.searchLocationConfig.showChargeDesc then [{key : "CHARGE_DESCRIPTION", val : (getString ERNAKULAM_LIMIT_CHARGE)}] else []
         }
   in
@@ -934,7 +938,7 @@ ratingCardViewState state = {
 
 getRateYourRideString :: String -> String -> String 
 getRateYourRideString str driverName = case getValueToLocalStore LANGUAGE_KEY of 
-    "EN_IN" -> str <> " " <> driverName
+    "EN_US" -> str <> " " <> driverName
     _   -> driverName <> " " <> str
 
 searchLocationModelViewState :: ST.HomeScreenState -> SearchLocationModel.SearchLocationModelState
