@@ -50,7 +50,7 @@ import Data.Either (Either(..))
 import Data.Int (toNumber)
 import Data.Int as INT
 import Data.Int as INT
-import Data.Maybe (Maybe(..), fromMaybe)
+import Data.Maybe (Maybe(..), fromMaybe, isJust)
 import Data.String as DS
 import Data.String as DS
 import Data.String as DS
@@ -79,6 +79,10 @@ import Components.ChooseVehicle.Controller as ChooseVehicle
 import Foreign.Generic (decode, encode, Foreign, decodeJSON, encodeJSON, class Decode, class Encode)
 import Data.Either (Either(..))
 import Engineering.Helpers.Utils as EHU
+import Font.Style (Style(..))
+import Services.API as API
+import Data.Lens ((^.))
+import Accessor (_fareBreakup, _description)
 
 shareAppConfig :: ST.HomeScreenState -> PopUpModal.Config
 shareAppConfig state = let
@@ -1224,6 +1228,7 @@ reportIssueOptions state =
 rideCompletedCardConfig :: ST.HomeScreenState -> RideCompletedCard.Config 
 rideCompletedCardConfig state = let
   config  = RideCompletedCard.config 
+  waitingChargesApplied = isJust $ DA.find (\entity  -> entity ^._description == "WAITING_OR_PICKUP_CHARGES") (state.data.ratingViewState.rideBookingRes ^._fareBreakup)
   config' = config{
         isDriver = false,
         customerIssueCard{
@@ -1245,7 +1250,7 @@ rideCompletedCardConfig state = let
           fareUpdatedVisiblity = state.data.finalAmount /= state.data.driverInfoCardState.price && state.props.estimatedDistance /= Nothing,
           gradient = [state.data.config.primaryBackground, state.data.config.primaryBackground, state.data.config.rideCompletedCardConfig.topCard.gradient, state.data.config.primaryBackground],
           infoPill {
-            text = getFareUpdatedString state.data.rideRatingState.distanceDifference,
+            text = getFareUpdatedStr state.data.rideRatingState.distanceDifference waitingChargesApplied,
             image = fetchImage FF_COMMON_ASSET "ny_ic_parallel_arrows",
             imageVis = VISIBLE,
             visible = if state.data.finalAmount == state.data.driverInfoCardState.price || state.props.estimatedDistance == Nothing then GONE else VISIBLE
@@ -1263,6 +1268,17 @@ rideCompletedCardConfig state = let
       }
   in config'
 
+getFareUpdatedStr :: Int -> Boolean -> String
+getFareUpdatedStr diffInDist waitingChargeApplied = do
+  let shorter = diffInDist > 0
+      positiveDist = if shorter then diffInDist else -diffInDist
+      distInKm = parseFloat (toNumber positiveDist / 1000.0) 2
+      distanceChanged = diffInDist/= 0
+  case waitingChargeApplied, distanceChanged of
+    true, false -> getString FARE_UPDATED_WITH_CHARGES
+    false, true -> getVarString (if shorter then FARE_UPDATED_WITH_SHORTER_DIST else FARE_UPDATED_WITH_LONGER_DIST) [distInKm]
+    true , true -> getVarString (if shorter then FARE_UPDATED_WITH_CHARGES_SHORTER_DIST else FARE_UPDATED_WITH_CHARGES_LONGER_DIST) [distInKm]
+    false, false -> getString FARE_UPDATED
 
 customerFeedbackPillData :: LazyCheck -> Array (Array (Array RatingCard.FeedbackItem)) 
 customerFeedbackPillData lazyCheck = [feedbackPillDataWithRating1 Language, feedbackPillDataWithRating2 Language, feedbackPillDataWithRating3 Language, feedbackPillDataWithRating4 Language, feedbackPillDataWithRating5 Language]
@@ -1318,20 +1334,6 @@ feedbackPillDataWithRating5 lazyCheck = [
   [{id : "10", text : getString SKILLED_NAVIGATOR},
   {id : "5", text : getString SAFE_RIDE}]
 ]
-
-getFareUpdatedString :: Int -> String
-getFareUpdatedString diffInDist = do
-  let dist = if diffInDist > 0 then (parseFloat (toNumber diffInDist / 1000.0) 2) else (parseFloat (toNumber (-diffInDist) / 1000.0) 2)
-  if diffInDist > 0 then ((getString FARE_UPDATED) <> " - " <> case (getValueToLocalStore LANGUAGE_KEY) of
-                                                        "HI_IN" -> "आपकी सवारी  "<> dist <> "किमी कम थी"
-                                                        "KN_IN" -> "ನಿಮ್ಮ ಸವಾರಿ " <> dist <> " ಕಿಮೀ ಕಡಿಮೆಯಾಗಿದೆ"
-                                                        "ML_IN" -> "താങ്കളുടെ യാത്ര " <> dist <> " Km കുറവായിരുന്നു"
-                                                        _       -> "your ride was " <> dist <> " km shorter" )
-    else ((getString FARE_UPDATED) <> " - " <> case (getValueToLocalStore LANGUAGE_KEY) of
-                                                        "HI_IN" -> "आपकी सवारी  "<> dist <> "किमी लंबी थी"
-                                                        "KN_IN" -> "ನಿಮ್ಮ ಸವಾರಿ " <> dist <> " ಕಿಮೀ ಉದ್ದವಾಗಿದೆ"
-                                                        "ML_IN" -> "താങ്കളുടെ യാത്ര " <> dist <> " Km കൂടുതലായിരുന്നു"
-                                                        _       -> "your ride was " <> dist <> " km longer")
 
 getCarouselData :: ST.HomeScreenState -> Array CarouselData
 getCarouselData state =

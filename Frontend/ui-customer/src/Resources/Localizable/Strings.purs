@@ -39,6 +39,9 @@ getStringFromConfigOrLocal language key =
   case (getStringFromConfig key Just Nothing) of
     Just value -> value
     Nothing    -> getStringFromLocal language key
+  
+getVarString :: STR -> Array String -> String
+getVarString key vals = getStringWithVar (getString key) vals
 
 getStringFromLocal :: String -> STR -> String
 getStringFromLocal language key = 

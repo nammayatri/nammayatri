@@ -247,3 +247,6 @@ _hasDisability = lens (unwrap >>> _.hasDisability) (\oldRec newVal -> wrap ((unw
 
 _currentStatus :: forall a b c. Newtype a { currentStatus :: b | c } => Lens' a b
 _currentStatus = lens (unwrap >>> _.currentStatus) (\oldRec newVal -> wrap ((unwrap oldRec) { currentStatus = newVal }))
+
+_fareBreakup :: forall a b c. Newtype a { fareBreakup :: b | c } => Lens' a b
+_fareBreakup = lens (unwrap >>> _.fareBreakup) (\oldRec newVal -> wrap ((unwrap oldRec) { fareBreakup = newVal }))
