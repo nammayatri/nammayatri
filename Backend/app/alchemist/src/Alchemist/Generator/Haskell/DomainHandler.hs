@@ -19,22 +19,21 @@ generateDomainHandler input =
     <> " where \n\n"
     <> intercalate "\n" (map ("import " <>) defaultImports)
     <> "\n\n"
-    <> intercalate "\n" (nub $ removeComplexTypeImports $ makeImport <$> (T.unpack <$> _imports input) <> defaultQualifiedImport)
-    -- <> intercalate "\n" (removeComplexTypeImports $ nub $ (map makeImport defaultQualifiedImport) <> (makeImport <$> figureOutImports  (T.unpack <$> concatMap handlerSignature (_apis input))))
+    <> intercalate "\n" (nub $ preventSameModuleImports $ makeImport <$> (T.unpack <$> _imports input) <> defaultQualifiedImport)
     <> "\n\n"
-    <> T.unpack (generateHaskellTypes (_types input))
+    -- <> T.unpack (generateHaskellTypes (_types input))
     <> T.unpack (T.intercalate "\n\n" (map handlerFunctionDef (_apis input)))
   where
     qualifiedModuleName = T.unpack ("Domain.Action.UI." <> _moduleName input)
 
     defaultImports :: [String]
-    defaultImports = ["EulerHS.Prelude hiding (id)", "Servant", "Tools.Auth", "Data.OpenApi (ToSchema)"]
+    defaultImports = ["EulerHS.Prelude hiding (id)", "Servant", "Tools.Auth", "Data.OpenApi (ToSchema)", "API.Types.UI." <> T.unpack (_moduleName input)]
 
-    removeComplexTypeImports :: [String] -> [String]
-    removeComplexTypeImports = filter (\x -> not $ (qualifiedModuleName `isInfixOf` x))
+    preventSameModuleImports :: [String] -> [String]
+    preventSameModuleImports = filter (\x -> not (qualifiedModuleName `isInfixOf` x))
 
     defaultQualifiedImport :: [String]
-    defaultQualifiedImport = ["Domain.Types.Person", "Domain.Types.Merchant", "Environment", "Kernel.Types.Id"]
+    defaultQualifiedImport = ["Kernel.Prelude", "Domain.Types.Person", "Domain.Types.Merchant", "Environment", "Kernel.Types.Id"]
 
     makeImport :: String -> String
     makeImport x = "import qualified " <> x
@@ -47,35 +46,7 @@ generateDomainHandler input =
             [] -> T.empty
             ty -> " -> " <> T.intercalate " -> " ty
           handlerTypes = showType <> " -> " <> "Environment.Flow " <> last allTypes
-       in functionName <> " :: (Kernel.Types.Id.Id Domain.Types.Person.Person, Kernel.Types.Id.Id Domain.Types.Merchant.Merchant)" <> handlerTypes
+       in functionName <> " :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant)" <> handlerTypes
             <> "\n"
             <> functionName
             <> " = error \"Logic yet to be decided\""
-
-    generateHaskellTypes :: [TypeObject] -> Text
-    generateHaskellTypes typeObj = T.unlines $ concatMap processType typeObj
-      where
-        processType :: TypeObject -> [Text]
-        processType (typeName, fields)
-          | isEnum fields = generateEnum typeName fields
-          | otherwise = generateDataStructure typeName fields
-
-        isEnum :: [(Text, Text)] -> Bool
-        isEnum [("enum", _)] = True
-        isEnum _ = False
-
-        generateEnum :: Text -> [(Text, Text)] -> [Text]
-        generateEnum typeName [("enum", values)] =
-          let enumValues = T.splitOn "," values
-           in ["data " <> typeName <> " = " <> T.intercalate " | " enumValues]
-                ++ ["  deriving (Eq, Show, Generic, ToJSON, FromJSON, ToSchema)\n"]
-        generateEnum _ _ = error "Invalid enum definition"
-
-        generateDataStructure :: Text -> [(Text, Text)] -> [Text]
-        generateDataStructure typeName fields =
-          ["data " <> typeName <> " = " <> typeName]
-            ++ ["  { " <> T.intercalate ",\n    " (map formatField fields) <> "\n  }"]
-            ++ ["  deriving (Generic, ToJSON, FromJSON, ToSchema)\n"]
-
-        formatField :: (Text, Text) -> Text
-        formatField (fieldName, fieldType) = fieldName <> " :: " <> fieldType

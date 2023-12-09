@@ -2,12 +2,12 @@ module Alchemist.Generator.Haskell.BeamTable where
 
 import Alchemist.DSL.Syntax.Storage
 import Alchemist.Utils
-import Data.List (intercalate)
+import Data.List (intercalate, isInfixOf)
 import qualified Data.Text as T
 import Kernel.Prelude
 
 formatType :: String -> String
-formatType t = if ' ' `elem` t then "(" ++ t ++ ")" else t
+formatType t = if " " `isInfixOf` t then "(" ++ t ++ ")" else t
 
 -- Converts a FieldDef to a Beam field declaration
 fieldDefToBeam :: FieldDef -> String

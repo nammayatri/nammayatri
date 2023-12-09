@@ -370,7 +370,8 @@ library
       Tools.Streaming.Kafka
       Tools.Ticket
       Tools.Whatsapp
-      API.UI.TicketService
+      API.Action.UI.TicketService
+      API.Types.UI.TicketService
       Domain.Action.UI.TicketService
       Domain.Types.BusinessHour
       Domain.Types.SeatManagement

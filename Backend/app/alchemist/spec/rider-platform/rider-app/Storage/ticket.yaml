@@ -78,13 +78,7 @@ TicketService:
       enum: "InstantExpiry Kernel.Prelude.Int,VisitDate Kernel.Prelude.TimeOfDay"
 
   constraints :
-    id : PrimaryKey | NotNull
-    service : NotNull
-    placesId : NotNull
-    businessHours : NotNull
-    operationalDays : NotNull
-    allowFutureBooking: NotNull
-    expiry: NotNull
+    id : PrimaryKey
 
   default:
     operationalDays: "'{Monday, Tuesday, Wednesday, Thursday, Friday, Saturday, Sunday}'"
@@ -114,10 +108,8 @@ SpecialOccasion:
     businessHours : "[Id BusinessHour]"
 
   constraints :
-    id : PrimaryKey | NotNull
-    entityId : NotNull
-    specialDayType : NotNull
-    businessHours : NotNull
+    id : PrimaryKey
+
   types:
     SpecialDayType:
       enum: "Open,Closed"
@@ -148,9 +140,7 @@ BusinessHour:
       enum: "Slot Kernel.Prelude.TimeOfDay,Duration Kernel.Prelude.TimeOfDay Kernel.Prelude.TimeOfDay"
 
   constraints :
-    id : PrimaryKey | NotNull
-    btype : NotNull
-    categoryId : NotNull
+    id : PrimaryKey
 
   queries:
     findById:
@@ -169,9 +159,7 @@ ServiceCategory:
     peopleCategory: "[Id ServicePeopleCategory]"
 
   constraints :
-    id : PrimaryKey | NotNull
-    name : NotNull
-    description : NotNull
+    id : PrimaryKey
 
   queries:
     findById:
@@ -188,10 +176,7 @@ ServicePeopleCategory:
     pricePerUnit: HighPrecMoney
 
   constraints :
-    id : PrimaryKey|NotNull
-    name : NotNull
-    description : NotNull
-    pricePerUnit : NotNull
+    id : PrimaryKey
 
   queries:
     findById:
@@ -209,11 +194,7 @@ SeatManagement:
     blocked: Int
 
   constraints :
-    id : PrimaryKey|NotNull
-    date : NotNull
-    ticketServiceCategoryId : NotNull
-    booked : NotNull
-    blocked : NotNull
+    id : PrimaryKey
 
   default:
     booked: "0"
@@ -253,25 +234,14 @@ TicketBooking:
     updatedAt: UTCTime
 
   constraints:
-    id: PrimaryKey|NotNull
-    shortId: SecondaryKey|NotNull
-    merchantOperatingCityId: NotNull
-    ticketPlaceId: NotNull
-    personId: SecondaryKey|NotNull
-    amount: NotNull
-    visitDate: NotNull
-    status: NotNull
-    createdAt: NotNull
-    updatedAt: NotNull
+    id: PrimaryKey
+    shortId: SecondaryKey
+    personId: SecondaryKey
 
   types:
     BookingStatus:
       enum: "Pending,Failed,Booked"
       derive: HttpInstance
-
-  default:
-    createdAt: CURRENT_TIMESTAMP
-    updatedAt: CURRENT_TIMESTAMP
 
   queries:
     updateStatusByShortId:
@@ -311,21 +281,9 @@ TicketBookingService:
       enum: "Pending,Failed,Confirmed,Verified"
 
   constraints:
-    id: PrimaryKey|NotNull
-    shortId: NotNull
-    ticketBookingId: NotNull
-    ticketServiceId: NotNull
-    merchantOperatingCityId: NotNull
-    amount: NotNull
-    status: NotNull
-    verificationCount: NotNull
-    btype: NotNull
-    createdAt: NotNull
-    updatedAt: NotNull
+    id: PrimaryKey
 
   default:
-    createdAt: CURRENT_TIMESTAMP
-    updatedAt: CURRENT_TIMESTAMP
     btype: "'Duration 03:30:00 12:00:00'"
 
   queries:
@@ -359,7 +317,7 @@ TicketBookingServiceCategory:
     serviceCategoryId: Maybe Text
 
   constraints:
-    id: PrimaryKey|NotNull
+    id: PrimaryKey
 
   queries:
     findAllByTicketBookingServiceId:
@@ -376,7 +334,7 @@ TicketBookingPeopleCategory:
     pricePerUnit: HighPrecMoney
     numberOfUnits: Int
   constraints:
-    id: PrimaryKey|NotNull
+    id: PrimaryKey
 
   queries:
     findById:

@@ -3,6 +3,8 @@
 
 module Storage.Queries.TicketBookingPeopleCategory where
 
+import qualified Domain.Types.Merchant
+import qualified Domain.Types.Merchant.MerchantOperatingCity
 import qualified Domain.Types.TicketBookingPeopleCategory
 import qualified Domain.Types.TicketBookingServiceCategory
 import Kernel.Beam.Functions
@@ -10,7 +12,7 @@ import Kernel.Prelude
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow)
+import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.TicketBookingPeopleCategory as Beam
 
@@ -40,16 +42,21 @@ findByPrimaryKey (Kernel.Types.Id.Id id) = do
         ]
     ]
 
-updateByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Prelude.Text -> Kernel.Prelude.Int -> Kernel.Types.Common.HighPrecMoney -> Kernel.Types.Id.Id Domain.Types.TicketBookingServiceCategory.TicketBookingServiceCategory -> Kernel.Types.Id.Id Domain.Types.TicketBookingPeopleCategory.TicketBookingPeopleCategory -> m ()
-updateByPrimaryKey name numberOfUnits pricePerUnit (Kernel.Types.Id.Id ticketBookingServiceCategoryId) (Kernel.Types.Id.Id id) = do
+updateByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Domain.Types.TicketBookingPeopleCategory.TicketBookingPeopleCategory -> m ()
+updateByPrimaryKey Domain.Types.TicketBookingPeopleCategory.TicketBookingPeopleCategory {..} = do
+  now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.name name,
       Se.Set Beam.numberOfUnits numberOfUnits,
       Se.Set Beam.pricePerUnit pricePerUnit,
-      Se.Set Beam.ticketBookingServiceCategoryId ticketBookingServiceCategoryId
+      Se.Set Beam.ticketBookingServiceCategoryId (Kernel.Types.Id.getId ticketBookingServiceCategoryId),
+      Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
+      Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId),
+      Se.Set Beam.createdAt createdAt,
+      Se.Set Beam.updatedAt now
     ]
     [ Se.And
-        [ Se.Is Beam.id $ Se.Eq id
+        [ Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)
         ]
     ]
 
@@ -62,7 +69,11 @@ instance FromTType' Beam.TicketBookingPeopleCategory Domain.Types.TicketBookingP
             name = name,
             numberOfUnits = numberOfUnits,
             pricePerUnit = pricePerUnit,
-            ticketBookingServiceCategoryId = Kernel.Types.Id.Id ticketBookingServiceCategoryId
+            ticketBookingServiceCategoryId = Kernel.Types.Id.Id ticketBookingServiceCategoryId,
+            merchantId = Kernel.Types.Id.Id <$> merchantId,
+            merchantOperatingCityId = Kernel.Types.Id.Id <$> merchantOperatingCityId,
+            createdAt = createdAt,
+            updatedAt = updatedAt
           }
 
 instance ToTType' Beam.TicketBookingPeopleCategory Domain.Types.TicketBookingPeopleCategory.TicketBookingPeopleCategory where
@@ -72,5 +83,9 @@ instance ToTType' Beam.TicketBookingPeopleCategory Domain.Types.TicketBookingPeo
         Beam.name = name,
         Beam.numberOfUnits = numberOfUnits,
         Beam.pricePerUnit = pricePerUnit,
-        Beam.ticketBookingServiceCategoryId = Kernel.Types.Id.getId ticketBookingServiceCategoryId
+        Beam.ticketBookingServiceCategoryId = Kernel.Types.Id.getId ticketBookingServiceCategoryId,
+        Beam.merchantId = Kernel.Types.Id.getId <$> merchantId,
+        Beam.merchantOperatingCityId = Kernel.Types.Id.getId <$> merchantOperatingCityId,
+        Beam.createdAt = createdAt,
+        Beam.updatedAt = updatedAt
       }

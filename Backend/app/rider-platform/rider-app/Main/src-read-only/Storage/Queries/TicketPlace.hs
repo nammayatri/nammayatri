@@ -3,13 +3,14 @@
 
 module Storage.Queries.TicketPlace where
 
+import qualified Domain.Types.Merchant
 import qualified Domain.Types.Merchant.MerchantOperatingCity
 import qualified Domain.Types.TicketPlace
 import Kernel.Beam.Functions
 import Kernel.Prelude
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow)
+import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.TicketPlace as Beam
 
@@ -25,10 +26,10 @@ findById (Kernel.Types.Id.Id id) = do
     [ Se.Is Beam.id $ Se.Eq id
     ]
 
-getTicketPlaces :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity -> m ([Domain.Types.TicketPlace.TicketPlace])
-getTicketPlaces (Kernel.Types.Id.Id merchantOperatingCityId) = do
+getTicketPlaces :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity) -> m ([Domain.Types.TicketPlace.TicketPlace])
+getTicketPlaces merchantOperatingCityId = do
   findAllWithKV
-    [ Se.Is Beam.merchantOperatingCityId $ Se.Eq merchantOperatingCityId
+    [ Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId <$> merchantOperatingCityId)
     ]
 
 findByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace -> m (Maybe (Domain.Types.TicketPlace.TicketPlace))
@@ -39,8 +40,9 @@ findByPrimaryKey (Kernel.Types.Id.Id id) = do
         ]
     ]
 
-updateByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Prelude.Maybe Kernel.Prelude.TimeOfDay -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> [Kernel.Prelude.Text] -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Double -> Kernel.Prelude.Maybe Kernel.Prelude.Double -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity -> Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.TimeOfDay -> Domain.Types.TicketPlace.PlaceType -> Kernel.Prelude.Text -> [Kernel.Prelude.Text] -> Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace -> m ()
-updateByPrimaryKey closeTimings description gallery iconUrl lat lon mapImageUrl (Kernel.Types.Id.Id merchantOperatingCityId) name openTimings placeType shortDesc termsAndConditions (Kernel.Types.Id.Id id) = do
+updateByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Domain.Types.TicketPlace.TicketPlace -> m ()
+updateByPrimaryKey Domain.Types.TicketPlace.TicketPlace {..} = do
+  now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.closeTimings closeTimings,
       Se.Set Beam.description description,
@@ -49,15 +51,18 @@ updateByPrimaryKey closeTimings description gallery iconUrl lat lon mapImageUrl 
       Se.Set Beam.lat lat,
       Se.Set Beam.lon lon,
       Se.Set Beam.mapImageUrl mapImageUrl,
-      Se.Set Beam.merchantOperatingCityId merchantOperatingCityId,
       Se.Set Beam.name name,
       Se.Set Beam.openTimings openTimings,
       Se.Set Beam.placeType placeType,
       Se.Set Beam.shortDesc shortDesc,
-      Se.Set Beam.termsAndConditions termsAndConditions
+      Se.Set Beam.termsAndConditions termsAndConditions,
+      Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
+      Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId),
+      Se.Set Beam.createdAt createdAt,
+      Se.Set Beam.updatedAt now
     ]
     [ Se.And
-        [ Se.Is Beam.id $ Se.Eq id
+        [ Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)
         ]
     ]
 
@@ -74,12 +79,15 @@ instance FromTType' Beam.TicketPlace Domain.Types.TicketPlace.TicketPlace where
             lat = lat,
             lon = lon,
             mapImageUrl = mapImageUrl,
-            merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
             name = name,
             openTimings = openTimings,
             placeType = placeType,
             shortDesc = shortDesc,
-            termsAndConditions = termsAndConditions
+            termsAndConditions = termsAndConditions,
+            merchantId = Kernel.Types.Id.Id <$> merchantId,
+            merchantOperatingCityId = Kernel.Types.Id.Id <$> merchantOperatingCityId,
+            createdAt = createdAt,
+            updatedAt = updatedAt
           }
 
 instance ToTType' Beam.TicketPlace Domain.Types.TicketPlace.TicketPlace where
@@ -93,10 +101,13 @@ instance ToTType' Beam.TicketPlace Domain.Types.TicketPlace.TicketPlace where
         Beam.lat = lat,
         Beam.lon = lon,
         Beam.mapImageUrl = mapImageUrl,
-        Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
         Beam.name = name,
         Beam.openTimings = openTimings,
         Beam.placeType = placeType,
         Beam.shortDesc = shortDesc,
-        Beam.termsAndConditions = termsAndConditions
+        Beam.termsAndConditions = termsAndConditions,
+        Beam.merchantId = Kernel.Types.Id.getId <$> merchantId,
+        Beam.merchantOperatingCityId = Kernel.Types.Id.getId <$> merchantOperatingCityId,
+        Beam.createdAt = createdAt,
+        Beam.updatedAt = updatedAt
       }

@@ -36,10 +36,12 @@ parseTypes = preview (ix "types" . _Value)
 
 parseApis :: Object -> Apis
 parseApis obj =
-  set imports (extractImports res) res
+  res
+    & imports .~ extractImports res
+    & apiTypes . typeImports .~ extractComplexTypeImports res
   where
     defaultImportModule = "Domain.Action.UI."
-    res = mkQApis (Apis modelName allApis [] parseTyp)
+    res = mkQApis (Apis modelName allApis [] (TypesInfo [] parseTyp))
     mkQualified = T.pack . U.makeTypeQualified Nothing Nothing Nothing defaultImportModule obj . T.unpack
     modelName = fromMaybe (error "Required module name") $ parseModule obj
     parseTyp = markQualifiedTypesInTypes modelName (typesToTypeObject (parseTypes obj)) obj
@@ -68,7 +70,7 @@ markQualifiedTypesInTypes moduleName input obj =
                 ( a,
                   if a == "enum"
                     then mkEnumTypeQualified dataNames b
-                    else T.pack $ U.makeTypeQualified (Just $ T.unpack moduleName) (Just dataNames) Nothing defaultImportModule obj (T.unpack b)
+                    else T.pack $ U.makeTypeQualified (Just $ T.unpack moduleName) (Just dataNames) Nothing defaultTypeImportModule obj (T.unpack b)
                 )
             )
             y
@@ -77,23 +79,15 @@ markQualifiedTypesInTypes moduleName input obj =
     input
   where
     dataNames = map (T.unpack . fst) input
-    defaultImportModule = "Domain.Action.UI."
+    defaultTypeImportModule = "API.Types.UI."
     mkEnumTypeQualified :: [String] -> Text -> Text
     mkEnumTypeQualified excluded enumTp =
       let individualEnums = T.strip <$> T.splitOn "," enumTp
-       in T.intercalate "," $ map (uncurry (<>) . second (T.pack . U.makeTypeQualified (Just $ T.unpack moduleName) (Just excluded) Nothing defaultImportModule obj . T.unpack) . T.breakOn " ") individualEnums
+       in T.intercalate "," $ map (uncurry (<>) . second (T.pack . U.makeTypeQualified (Just $ T.unpack moduleName) (Just excluded) Nothing defaultTypeImportModule obj . T.unpack) . T.breakOn " ") individualEnums
 
-extractImports :: Apis -> [Text]
-extractImports api =
-  figureOutImports (importUrlPart ++ importHeader ++ importApiRes ++ importApiReq ++ concat importComplexTypes)
+extractComplexTypeImports :: Apis -> [Text]
+extractComplexTypeImports api = figureOutImports (concatMap figureOutImports' (api ^. apiTypes . types))
   where
-    apiTTParts = api ^. apis
-    importUrlPart = apiTTParts ^.. traverse . urlPartsTraversal . to importFromUrlPart . _Just
-    importHeader = apiTTParts ^.. traverse . headerTraversal . to (\(Header _ t2) -> t2)
-    importApiRes = apiTTParts ^.. traverse . apiResTraversal . to (\(ApiRes t1 _) -> t1)
-    importApiReq = apiTTParts ^.. traverse . apiReqTraversal . to (\(ApiReq t1 _) -> t1)
-    importComplexTypes = map figureOutImports' (api ^. types)
-
     figureOutImports' :: TypeObject -> [Text]
     figureOutImports' (_, arr) =
       concatMap
@@ -105,6 +99,16 @@ extractImports api =
             . snd
         )
         arr
+
+extractImports :: Apis -> [Text]
+extractImports api =
+  figureOutImports (importUrlPart ++ importHeader ++ importApiRes ++ importApiReq)
+  where
+    apiTTParts = api ^. apis
+    importUrlPart = apiTTParts ^.. traverse . urlPartsTraversal . to importFromUrlPart . _Just
+    importHeader = apiTTParts ^.. traverse . headerTraversal . to (\(Header _ t2) -> t2)
+    importApiRes = apiTTParts ^.. traverse . apiResTraversal . to (\(ApiRes t1 _) -> t1)
+    importApiReq = apiTTParts ^.. traverse . apiReqTraversal . to (\(ApiReq t1 _) -> t1)
 
     apiReqTraversal :: Traversal' ApiTT ApiReq
     apiReqTraversal = apiReqType . _Just

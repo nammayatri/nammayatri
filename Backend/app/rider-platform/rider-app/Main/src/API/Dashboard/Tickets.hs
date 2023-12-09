@@ -3,6 +3,7 @@
 
 module API.Dashboard.Tickets where
 
+import qualified API.Types.UI.TicketService as ATB
 import Data.Time
 import qualified Domain.Action.UI.TicketService as DTB
 import qualified Domain.Types.Merchant as DM
@@ -16,6 +17,7 @@ import Kernel.Types.APISuccess (APISuccess)
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant hiding (throwError)
+import SharedLogic.Merchant
 
 data TicketBookingEndpoint
   = VerifyBookingDetails
@@ -27,17 +29,17 @@ type VerifyBookingDetailsAPI =
   Capture "personServiceId" (Id DTB.TicketService)
     :> Capture "ticketBookingShortId" (ShortId DTB.TicketBookingService)
     :> "verify"
-    :> Post '[JSON] DTB.TicketServiceVerificationResp
+    :> Post '[JSON] ATB.TicketServiceVerificationResp
 
 type GetServicesAPI =
   Capture "ticketPlaceId" (Id DTB.TicketPlace)
     :> QueryParam "date" Day
     :> "services"
-    :> Post '[JSON] [DTB.TicketServiceResp]
+    :> Post '[JSON] [ATB.TicketServiceResp]
 
 type UpdateSeatManagementAPI =
   "update"
-    :> ReqBody '[JSON] DTB.TicketBookingUpdateSeatsReq
+    :> ReqBody '[JSON] ATB.TicketBookingUpdateSeatsReq
     :> Post '[JSON] APISuccess
 
 type API =
@@ -52,11 +54,17 @@ handler merchantId =
     :<|> getServices merchantId
     :<|> updateSeatManagement merchantId
 
-verifyBookingDetails :: ShortId DM.Merchant -> Id DTB.TicketService -> ShortId DTB.TicketBookingService -> FlowHandler DTB.TicketServiceVerificationResp
-verifyBookingDetails _ personServiceId = withFlowHandlerAPI . DTB.postTicketBookingsVerify personServiceId
+verifyBookingDetails :: ShortId DM.Merchant -> Id DTB.TicketService -> ShortId DTB.TicketBookingService -> FlowHandler ATB.TicketServiceVerificationResp
+verifyBookingDetails merchantShortId personServiceId ticketBookingServiceShortId = do
+  m <- withFlowHandlerAPI $ findMerchantByShortId merchantShortId
+  withFlowHandlerAPI $ DTB.postTicketBookingsVerify (Nothing, m.id) personServiceId ticketBookingServiceShortId
 
-getServices :: ShortId DM.Merchant -> Id DTB.TicketPlace -> Maybe Day -> FlowHandler [DTB.TicketServiceResp]
-getServices _ ticketPlaceId = withFlowHandlerAPI . DTB.getTicketPlacesServices ticketPlaceId
+getServices :: ShortId DM.Merchant -> Id DTB.TicketPlace -> Maybe Day -> FlowHandler [ATB.TicketServiceResp]
+getServices merchantShortId ticketPlaceId date = do
+  m <- withFlowHandlerAPI $ findMerchantByShortId merchantShortId
+  withFlowHandlerAPI $ DTB.getTicketPlacesServices (Nothing, m.id) ticketPlaceId date
 
-updateSeatManagement :: ShortId DM.Merchant -> DTB.TicketBookingUpdateSeatsReq -> FlowHandler APISuccess
-updateSeatManagement _ = withFlowHandlerAPI . DTB.postTicketBookingsUpdateSeats
+updateSeatManagement :: ShortId DM.Merchant -> ATB.TicketBookingUpdateSeatsReq -> FlowHandler APISuccess
+updateSeatManagement merchantShortId req = do
+  m <- withFlowHandlerAPI $ findMerchantByShortId merchantShortId
+  withFlowHandlerAPI $ DTB.postTicketBookingsUpdateSeats (Nothing, m.id) req

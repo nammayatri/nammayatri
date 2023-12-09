@@ -3,6 +3,8 @@
 module Domain.Types.TicketService where
 
 import qualified Domain.Types.BusinessHour
+import qualified Domain.Types.Merchant
+import qualified Domain.Types.Merchant.MerchantOperatingCity
 import Kernel.Prelude
 import qualified Kernel.Types.Id
 import Tools.Beam.UtilsTH
@@ -16,7 +18,11 @@ data TicketService = TicketService
     operationalDays :: [Kernel.Prelude.Text],
     placesId :: Kernel.Prelude.Text,
     service :: Kernel.Prelude.Text,
-    shortDesc :: Kernel.Prelude.Maybe Kernel.Prelude.Text
+    shortDesc :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
+    merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity),
+    createdAt :: Kernel.Prelude.UTCTime,
+    updatedAt :: Kernel.Prelude.UTCTime
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 

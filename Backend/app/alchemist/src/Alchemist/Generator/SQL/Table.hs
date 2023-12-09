@@ -8,11 +8,7 @@ import Text.Casing (quietSnake)
 -- Generates SQL for creating a table and altering it to add columns
 generateSQL :: TableDef -> String
 generateSQL tableDef =
-  dropTableSQL tableDef ++ "\n" ++ createTableSQL tableDef ++ "\n" ++ alterTableSQL tableDef ++ "\n" ++ addKeySQL tableDef
-
-dropTableSQL :: TableDef -> String
-dropTableSQL tableDef =
-  "DROP TABLE IF EXISTS atlas_app." ++ tableNameSql tableDef ++ ";\n"
+  createTableSQL tableDef ++ "\n" ++ alterTableSQL tableDef ++ "\n" ++ addKeySQL tableDef
 
 -- SQL for creating an empty table
 createTableSQL :: TableDef -> String

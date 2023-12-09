@@ -6,6 +6,8 @@ module Storage.Beam.SeatManagement where
 
 import qualified Data.Time.Calendar
 import qualified Database.Beam as B
+import qualified Domain.Types.Merchant
+import qualified Domain.Types.Merchant.MerchantOperatingCity
 import qualified Domain.Types.SeatManagement
 import qualified Domain.Types.ServiceCategory
 import Kernel.Prelude
@@ -18,7 +20,11 @@ data SeatManagementT f = SeatManagementT
     booked :: B.C f Kernel.Prelude.Int,
     date :: B.C f Data.Time.Calendar.Day,
     id :: B.C f Kernel.Prelude.Text,
-    ticketServiceCategoryId :: B.C f Kernel.Prelude.Text
+    ticketServiceCategoryId :: B.C f Kernel.Prelude.Text,
+    merchantId :: B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text)),
+    merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text)),
+    createdAt :: B.C f Kernel.Prelude.UTCTime,
+    updatedAt :: B.C f Kernel.Prelude.UTCTime
   }
   deriving (Generic, B.Beamable)
 

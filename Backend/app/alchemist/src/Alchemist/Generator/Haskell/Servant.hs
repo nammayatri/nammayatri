@@ -2,7 +2,8 @@ module Alchemist.Generator.Haskell.Servant where
 
 import Alchemist.DSL.Syntax.API
 import Alchemist.Utils
-import Data.List (intercalate, intersect, nub)
+import Control.Lens ((^.))
+import Data.List (intercalate, nub)
 import Data.List.Extra (snoc)
 import Data.Text (Text)
 import qualified Data.Text as T
@@ -12,7 +13,7 @@ generateServantAPI :: Apis -> String
 generateServantAPI input =
   "{-# OPTIONS_GHC -Wno-orphans #-}\n"
     <> "{-# OPTIONS_GHC -Wno-unused-imports #-}\n\n"
-    <> "module API.UI."
+    <> "module API.Action.UI."
     <> T.unpack (_moduleName input)
     <> " where \n\n"
     <> intercalate "\n" (map ("import " <>) defaultImports)
@@ -20,10 +21,10 @@ generateServantAPI input =
     <> intercalate "\n" (nub $ (map makeQualifiedImport defaultQualifiedImport) <> (makeQualifiedImport <$> figureOutImports (T.unpack <$> concatMap handlerSignature (_apis input))))
     <> "\n\n"
     -- <> intercalate "\n"  (T.unpack <$> concatMap handlerImports (_apis input))
-    <> "\nimport Domain.Action.UI."
+    <> "\nimport API.Types.UI."
     <> T.unpack (_moduleName input)
     <> " ("
-    <> intercalate ", " (map (T.unpack . fst) (_types input))
+    <> intercalate ", " (map (T.unpack . fst) (input ^. apiTypes . types))
     <> ")"
     <> "\nimport qualified Domain.Action.UI."
     <> T.unpack (_moduleName input)
@@ -47,9 +48,14 @@ generateServantAPI input =
     makeQualifiedImport :: String -> String
     makeQualifiedImport impts = "import qualified " <> impts
 
-    generateParams :: Int -> Text
-    generateParams 0 = ""
-    generateParams n = " a" <> T.pack (show n) <> generateParams (n - 1)
+    generateParams :: Bool -> Int -> Int -> Text
+    generateParams _ _ 0 = ""
+    generateParams isbackParam mx n =
+      ( if mx == n && isbackParam
+          then "(Kernel.Prelude.first Kernel.Prelude.Just a" <> T.pack (show n) <> ")"
+          else " a" <> T.pack (show n)
+      )
+        <> generateParams isbackParam mx (n - 1)
 
     handlerFunctionDef :: ApiTT -> Text
     handlerFunctionDef apiT =
@@ -62,13 +68,13 @@ generateServantAPI input =
        in functionName <> " :: (Kernel.Types.Id.Id Domain.Types.Person.Person, Kernel.Types.Id.Id Domain.Types.Merchant.Merchant)" <> handlerTypes
             <> "\n"
             <> functionName
-            <> generateParams (length allTypes)
+            <> generateParams False (length allTypes) (length allTypes)
             <> " = withFlowHandlerAPI $ "
             <> "Domain.Action.UI."
             <> _moduleName input
             <> "."
             <> functionName
-            <> generateParams (length allTypes)
+            <> generateParams True (length allTypes) (length allTypes)
             <> "\n"
 
 apiTTToText :: ApiTT -> Text
@@ -109,13 +115,6 @@ handlerFunctionText apiTT =
     urlPartToName :: UrlParts -> Text
     urlPartToName (UnitPath name) = (T.toUpper . T.singleton . T.head) name <> T.tail name
     urlPartToName _ = ""
-
-allImports :: Apis -> [Text]
-allImports input =
-  let definedTypes = map fst (_types input)
-      typesDef = map snd $ concatMap (snd) (_types input)
-      allTypes = concatMap handlerSignature (_apis input)
-   in filter (/= T.empty) ((typesDef `intersect` definedTypes) ++ (allTypes `intersect` definedTypes))
 
 handlerSignature :: ApiTT -> [Text]
 handlerSignature input =

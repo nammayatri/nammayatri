@@ -6,6 +6,7 @@ module Storage.Beam.TicketBookingService where
 
 import qualified Database.Beam as B
 import qualified Domain.Types.BusinessHour
+import qualified Domain.Types.Merchant
 import qualified Domain.Types.Merchant.MerchantOperatingCity
 import qualified Domain.Types.TicketBooking
 import qualified Domain.Types.TicketBookingService
@@ -19,16 +20,17 @@ import Tools.Beam.UtilsTH
 data TicketBookingServiceT f = TicketBookingServiceT
   { amount :: B.C f Kernel.Types.Common.HighPrecMoney,
     btype :: B.C f Domain.Types.BusinessHour.BusinessHourType,
-    createdAt :: B.C f Kernel.Prelude.UTCTime,
     expiryDate :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     id :: B.C f Kernel.Prelude.Text,
-    merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
     shortId :: B.C f Kernel.Prelude.Text,
     status :: B.C f Domain.Types.TicketBookingService.ServiceStatus,
     ticketBookingId :: B.C f Kernel.Prelude.Text,
     ticketServiceId :: B.C f Kernel.Prelude.Text,
-    updatedAt :: B.C f Kernel.Prelude.UTCTime,
-    verificationCount :: B.C f Kernel.Prelude.Int
+    verificationCount :: B.C f Kernel.Prelude.Int,
+    merchantId :: B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text)),
+    merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text)),
+    createdAt :: B.C f Kernel.Prelude.UTCTime,
+    updatedAt :: B.C f Kernel.Prelude.UTCTime
   }
   deriving (Generic, B.Beamable)
 

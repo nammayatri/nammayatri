@@ -21,7 +21,8 @@ data QueryDef = QueryDef
   { queryName :: String,
     kvFunction :: String,
     params :: [(String, String)],
-    whereClause :: WhereClause
+    whereClause :: WhereClause,
+    takeFullObjectAsInput :: Bool
   }
   deriving (Show)
 
