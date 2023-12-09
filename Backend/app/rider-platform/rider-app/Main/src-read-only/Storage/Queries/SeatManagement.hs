@@ -4,13 +4,15 @@
 module Storage.Queries.SeatManagement where
 
 import qualified Data.Time.Calendar
+import qualified Domain.Types.Merchant
+import qualified Domain.Types.Merchant.MerchantOperatingCity
 import qualified Domain.Types.SeatManagement
 import qualified Domain.Types.ServiceCategory
 import Kernel.Beam.Functions
 import Kernel.Prelude
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow)
+import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.SeatManagement as Beam
 
@@ -31,8 +33,10 @@ findByTicketServiceCategoryIdAndDate (Kernel.Types.Id.Id ticketServiceCategoryId
 
 updateBlockedSeats :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Prelude.Int -> Kernel.Types.Id.Id Domain.Types.ServiceCategory.ServiceCategory -> Data.Time.Calendar.Day -> m ()
 updateBlockedSeats blocked (Kernel.Types.Id.Id ticketServiceCategoryId) date = do
+  now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.blocked blocked
+    [ Se.Set Beam.blocked blocked,
+      Se.Set Beam.updatedAt now
     ]
     [ Se.And
         [ Se.Is Beam.ticketServiceCategoryId $ Se.Eq ticketServiceCategoryId,
@@ -42,8 +46,10 @@ updateBlockedSeats blocked (Kernel.Types.Id.Id ticketServiceCategoryId) date = d
 
 updateBookedSeats :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Prelude.Int -> Kernel.Types.Id.Id Domain.Types.ServiceCategory.ServiceCategory -> Data.Time.Calendar.Day -> m ()
 updateBookedSeats booked (Kernel.Types.Id.Id ticketServiceCategoryId) date = do
+  now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.booked booked
+    [ Se.Set Beam.booked booked,
+      Se.Set Beam.updatedAt now
     ]
     [ Se.And
         [ Se.Is Beam.ticketServiceCategoryId $ Se.Eq ticketServiceCategoryId,
@@ -59,16 +65,21 @@ findByPrimaryKey (Kernel.Types.Id.Id id) = do
         ]
     ]
 
-updateByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Prelude.Int -> Kernel.Prelude.Int -> Data.Time.Calendar.Day -> Kernel.Types.Id.Id Domain.Types.ServiceCategory.ServiceCategory -> Kernel.Types.Id.Id Domain.Types.SeatManagement.SeatManagement -> m ()
-updateByPrimaryKey blocked booked date (Kernel.Types.Id.Id ticketServiceCategoryId) (Kernel.Types.Id.Id id) = do
+updateByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Domain.Types.SeatManagement.SeatManagement -> m ()
+updateByPrimaryKey Domain.Types.SeatManagement.SeatManagement {..} = do
+  now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.blocked blocked,
       Se.Set Beam.booked booked,
       Se.Set Beam.date date,
-      Se.Set Beam.ticketServiceCategoryId ticketServiceCategoryId
+      Se.Set Beam.ticketServiceCategoryId (Kernel.Types.Id.getId ticketServiceCategoryId),
+      Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
+      Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId),
+      Se.Set Beam.createdAt createdAt,
+      Se.Set Beam.updatedAt now
     ]
     [ Se.And
-        [ Se.Is Beam.id $ Se.Eq id
+        [ Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)
         ]
     ]
 
@@ -81,7 +92,11 @@ instance FromTType' Beam.SeatManagement Domain.Types.SeatManagement.SeatManageme
             booked = booked,
             date = date,
             id = Kernel.Types.Id.Id id,
-            ticketServiceCategoryId = Kernel.Types.Id.Id ticketServiceCategoryId
+            ticketServiceCategoryId = Kernel.Types.Id.Id ticketServiceCategoryId,
+            merchantId = Kernel.Types.Id.Id <$> merchantId,
+            merchantOperatingCityId = Kernel.Types.Id.Id <$> merchantOperatingCityId,
+            createdAt = createdAt,
+            updatedAt = updatedAt
           }
 
 instance ToTType' Beam.SeatManagement Domain.Types.SeatManagement.SeatManagement where
@@ -91,5 +106,9 @@ instance ToTType' Beam.SeatManagement Domain.Types.SeatManagement.SeatManagement
         Beam.booked = booked,
         Beam.date = date,
         Beam.id = Kernel.Types.Id.getId id,
-        Beam.ticketServiceCategoryId = Kernel.Types.Id.getId ticketServiceCategoryId
+        Beam.ticketServiceCategoryId = Kernel.Types.Id.getId ticketServiceCategoryId,
+        Beam.merchantId = Kernel.Types.Id.getId <$> merchantId,
+        Beam.merchantOperatingCityId = Kernel.Types.Id.getId <$> merchantOperatingCityId,
+        Beam.createdAt = createdAt,
+        Beam.updatedAt = updatedAt
       }

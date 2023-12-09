@@ -4,12 +4,14 @@
 module Storage.Queries.TicketService where
 
 import qualified Domain.Types.BusinessHour
+import qualified Domain.Types.Merchant
+import qualified Domain.Types.Merchant.MerchantOperatingCity
 import qualified Domain.Types.TicketService
 import Kernel.Beam.Functions
 import Kernel.Prelude
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow)
+import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.TicketService as Beam
 
@@ -39,8 +41,9 @@ findByPrimaryKey (Kernel.Types.Id.Id id) = do
         ]
     ]
 
-updateByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Prelude.Bool -> [Kernel.Types.Id.Id Domain.Types.BusinessHour.BusinessHour] -> Domain.Types.TicketService.ExpiryType -> Kernel.Prelude.Int -> [Kernel.Prelude.Text] -> Kernel.Prelude.Text -> Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.TicketService.TicketService -> m ()
-updateByPrimaryKey allowFutureBooking businessHours expiry maxVerification operationalDays placesId service shortDesc (Kernel.Types.Id.Id id) = do
+updateByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Domain.Types.TicketService.TicketService -> m ()
+updateByPrimaryKey Domain.Types.TicketService.TicketService {..} = do
+  now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.allowFutureBooking allowFutureBooking,
       Se.Set Beam.businessHours (Kernel.Types.Id.getId <$> businessHours),
@@ -49,10 +52,14 @@ updateByPrimaryKey allowFutureBooking businessHours expiry maxVerification opera
       Se.Set Beam.operationalDays operationalDays,
       Se.Set Beam.placesId placesId,
       Se.Set Beam.service service,
-      Se.Set Beam.shortDesc shortDesc
+      Se.Set Beam.shortDesc shortDesc,
+      Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
+      Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId),
+      Se.Set Beam.createdAt createdAt,
+      Se.Set Beam.updatedAt now
     ]
     [ Se.And
-        [ Se.Is Beam.id $ Se.Eq id
+        [ Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)
         ]
     ]
 
@@ -69,7 +76,11 @@ instance FromTType' Beam.TicketService Domain.Types.TicketService.TicketService 
             operationalDays = operationalDays,
             placesId = placesId,
             service = service,
-            shortDesc = shortDesc
+            shortDesc = shortDesc,
+            merchantId = Kernel.Types.Id.Id <$> merchantId,
+            merchantOperatingCityId = Kernel.Types.Id.Id <$> merchantOperatingCityId,
+            createdAt = createdAt,
+            updatedAt = updatedAt
           }
 
 instance ToTType' Beam.TicketService Domain.Types.TicketService.TicketService where
@@ -83,5 +94,9 @@ instance ToTType' Beam.TicketService Domain.Types.TicketService.TicketService wh
         Beam.operationalDays = operationalDays,
         Beam.placesId = placesId,
         Beam.service = service,
-        Beam.shortDesc = shortDesc
+        Beam.shortDesc = shortDesc,
+        Beam.merchantId = Kernel.Types.Id.getId <$> merchantId,
+        Beam.merchantOperatingCityId = Kernel.Types.Id.getId <$> merchantOperatingCityId,
+        Beam.createdAt = createdAt,
+        Beam.updatedAt = updatedAt
       }

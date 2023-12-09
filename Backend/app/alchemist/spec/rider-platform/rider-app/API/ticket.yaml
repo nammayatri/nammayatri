@@ -10,7 +10,6 @@ imports:
   ShortId: Kernel.Types.Id
   UTCTime: Kernel.Prelude
   TicketPlace: Domain.Types.TicketPlace
-  TicketBookingServicePriceBreakup: Domain.Types.Tickets
   APISuccess: Kernel.Types.APISuccess
   TicketBooking: Domain.Types.TicketBooking
   BookingStatus: Domain.Types.TicketBooking
@@ -28,6 +27,7 @@ types:
     allowFutureBooking: Bool
     expiry: ExpiryType
     businessHours: [BusinessHourResp]
+    shortDesc: Maybe Text
 
   BusinessHourResp:
     id: Id BusinessHour
@@ -90,7 +90,7 @@ types:
     services: [TicketBookingServiceDetails]
 
   TicketBookingServiceDetails:
-    serviceShortId: Text
+    ticketServiceShortId: Text
     ticketServiceName: Text
     amount : HighPrecMoney
     status : ServiceStatus
@@ -126,7 +126,6 @@ types:
     status: TicketVerificationStatus
     amount: Maybe HighPrecMoney
     verificationCount: Maybe Int
-    units: Maybe [TicketBookingServicePriceBreakup]
     startTime: Maybe TimeOfDay
     endTime: Maybe TimeOfDay
     categories: [TicketBookingCategoryDetails]
@@ -155,7 +154,7 @@ apis:
       params:
         placeId: Id TicketPlace
       response:
-        type: "[Domain.Action.UI.TicketService.TicketServiceResp]"
+        type: "[API.Types.UI.TicketService.TicketServiceResp]"
 
   # # POST /ticket/places/{placeId}/book
   - POST:
@@ -164,7 +163,7 @@ apis:
       params:
         placeId: Id TicketPlace
       request:
-        type: Domain.Action.UI.TicketService.TicketBookingReq
+        type: API.Types.UI.TicketService.TicketBookingReq
       response:
         type: Kernel.External.Payment.Interface.Types.CreateOrderResp
 
@@ -178,7 +177,7 @@ apis:
       mandatoryQuery:
         status: BookingStatus
       response:
-        type: "[Domain.Action.UI.TicketService.TicketBookingAPIEntity]"
+        type: "[API.Types.UI.TicketService.TicketBookingAPIEntity]"
 
   # # GET /ticket/bookings/{ticketBookingShortId}/details
   - GET:
@@ -187,7 +186,7 @@ apis:
       params:
         ticketBookingShortId: ShortId TicketBooking
       response:
-        type: Domain.Action.UI.TicketService.TicketBookingDetails
+        type: API.Types.UI.TicketService.TicketBookingDetails
 
   # # POST /ticket/bookings/{personServiceId}/{ticketServiceShortId}/verify
   - POST:
@@ -197,7 +196,7 @@ apis:
         personServiceId: Id TicketService
         ticketServiceShortId: ShortId TicketBookingService
       response:
-        type: Domain.Action.UI.TicketService.TicketServiceVerificationResp
+        type: API.Types.UI.TicketService.TicketServiceVerificationResp
 
   # # GET /ticket/bookings/{ticketBookingShortId}/status
   - GET:
@@ -213,6 +212,6 @@ apis:
       endpoint: /ticket/bookings/update/seats
       auth: TokenAuth
       request:
-        type: Domain.Action.UI.TicketService.TicketBookingUpdateSeatsReq
+        type: API.Types.UI.TicketService.TicketBookingUpdateSeatsReq
       response:
         type: APISuccess

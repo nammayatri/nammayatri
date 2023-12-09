@@ -7,6 +7,8 @@ module Storage.Beam.SpecialOccasion where
 import qualified Data.Time.Calendar
 import qualified Database.Beam as B
 import qualified Domain.Types.BusinessHour
+import qualified Domain.Types.Merchant
+import qualified Domain.Types.Merchant.MerchantOperatingCity
 import qualified Domain.Types.SpecialOccasion
 import Kernel.Prelude
 import qualified Kernel.Prelude
@@ -20,7 +22,11 @@ data SpecialOccasionT f = SpecialOccasionT
     description :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     entityId :: B.C f Kernel.Prelude.Text,
     id :: B.C f Kernel.Prelude.Text,
-    specialDayType :: B.C f Domain.Types.SpecialOccasion.SpecialDayType
+    specialDayType :: B.C f Domain.Types.SpecialOccasion.SpecialDayType,
+    merchantId :: B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text)),
+    merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text)),
+    createdAt :: B.C f Kernel.Prelude.UTCTime,
+    updatedAt :: B.C f Kernel.Prelude.UTCTime
   }
   deriving (Generic, B.Beamable)
 

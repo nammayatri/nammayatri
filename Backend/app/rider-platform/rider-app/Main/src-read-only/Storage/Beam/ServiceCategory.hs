@@ -5,6 +5,8 @@
 module Storage.Beam.ServiceCategory where
 
 import qualified Database.Beam as B
+import qualified Domain.Types.Merchant
+import qualified Domain.Types.Merchant.MerchantOperatingCity
 import qualified Domain.Types.ServiceCategory
 import qualified Domain.Types.ServicePeopleCategory
 import Kernel.Prelude
@@ -18,7 +20,11 @@ data ServiceCategoryT f = ServiceCategoryT
     description :: B.C f Kernel.Prelude.Text,
     id :: B.C f Kernel.Prelude.Text,
     name :: B.C f Kernel.Prelude.Text,
-    peopleCategory :: B.C f [Kernel.Prelude.Text]
+    peopleCategory :: B.C f [Kernel.Prelude.Text],
+    merchantId :: B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text)),
+    merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text)),
+    createdAt :: B.C f Kernel.Prelude.UTCTime,
+    updatedAt :: B.C f Kernel.Prelude.UTCTime
   }
   deriving (Generic, B.Beamable)
 

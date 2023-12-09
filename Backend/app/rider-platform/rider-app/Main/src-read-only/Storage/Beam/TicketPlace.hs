@@ -5,6 +5,7 @@
 module Storage.Beam.TicketPlace where
 
 import qualified Database.Beam as B
+import qualified Domain.Types.Merchant
 import qualified Domain.Types.Merchant.MerchantOperatingCity
 import qualified Domain.Types.TicketPlace
 import Kernel.Prelude
@@ -21,12 +22,15 @@ data TicketPlaceT f = TicketPlaceT
     lat :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
     lon :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
     mapImageUrl :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
     name :: B.C f Kernel.Prelude.Text,
     openTimings :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.TimeOfDay),
     placeType :: B.C f Domain.Types.TicketPlace.PlaceType,
     shortDesc :: B.C f Kernel.Prelude.Text,
-    termsAndConditions :: B.C f [Kernel.Prelude.Text]
+    termsAndConditions :: B.C f [Kernel.Prelude.Text],
+    merchantId :: B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text)),
+    merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text)),
+    createdAt :: B.C f Kernel.Prelude.UTCTime,
+    updatedAt :: B.C f Kernel.Prelude.UTCTime
   }
   deriving (Generic, B.Beamable)
 

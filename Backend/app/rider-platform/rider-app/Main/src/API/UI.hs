@@ -18,6 +18,7 @@ module API.UI
   )
 where
 
+import qualified API.Action.UI.TicketService as TicketService
 import qualified API.UI.AadhaarVerification as AadhaarVerification
 import qualified API.UI.AppInstalls as AppInstalls
 import qualified API.UI.Booking as Booking
@@ -47,7 +48,6 @@ import qualified API.UI.Select as Select
 import qualified API.UI.Serviceability as Serviceability
 import qualified API.UI.Sos as Sos
 import qualified API.UI.Support as Support
-import qualified API.UI.TicketService as TicketService
 import qualified API.UI.Webengage.InfoBIPWebhook as InfoBIPWebhook
 import qualified API.UI.Webengage.Webengage as Webengage
 import qualified API.UI.Whatsapp as Whatsapp

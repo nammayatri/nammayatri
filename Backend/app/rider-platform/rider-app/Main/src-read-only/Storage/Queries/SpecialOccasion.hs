@@ -5,12 +5,14 @@ module Storage.Queries.SpecialOccasion where
 
 import qualified Data.Time.Calendar
 import qualified Domain.Types.BusinessHour
+import qualified Domain.Types.Merchant
+import qualified Domain.Types.Merchant.MerchantOperatingCity
 import qualified Domain.Types.SpecialOccasion
 import Kernel.Beam.Functions
 import Kernel.Prelude
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow)
+import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.SpecialOccasion as Beam
 
@@ -55,18 +57,23 @@ findByPrimaryKey (Kernel.Types.Id.Id id) = do
         ]
     ]
 
-updateByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => [Kernel.Types.Id.Id Domain.Types.BusinessHour.BusinessHour] -> Kernel.Prelude.Maybe Data.Time.Calendar.Day -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Text -> Domain.Types.SpecialOccasion.SpecialDayType -> Kernel.Types.Id.Id Domain.Types.SpecialOccasion.SpecialOccasion -> m ()
-updateByPrimaryKey businessHours date dayOfWeek description entityId specialDayType (Kernel.Types.Id.Id id) = do
+updateByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Domain.Types.SpecialOccasion.SpecialOccasion -> m ()
+updateByPrimaryKey Domain.Types.SpecialOccasion.SpecialOccasion {..} = do
+  now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.businessHours (Kernel.Types.Id.getId <$> businessHours),
       Se.Set Beam.date date,
       Se.Set Beam.dayOfWeek dayOfWeek,
       Se.Set Beam.description description,
       Se.Set Beam.entityId entityId,
-      Se.Set Beam.specialDayType specialDayType
+      Se.Set Beam.specialDayType specialDayType,
+      Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
+      Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId),
+      Se.Set Beam.createdAt createdAt,
+      Se.Set Beam.updatedAt now
     ]
     [ Se.And
-        [ Se.Is Beam.id $ Se.Eq id
+        [ Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)
         ]
     ]
 
@@ -81,7 +88,11 @@ instance FromTType' Beam.SpecialOccasion Domain.Types.SpecialOccasion.SpecialOcc
             description = description,
             entityId = entityId,
             id = Kernel.Types.Id.Id id,
-            specialDayType = specialDayType
+            specialDayType = specialDayType,
+            merchantId = Kernel.Types.Id.Id <$> merchantId,
+            merchantOperatingCityId = Kernel.Types.Id.Id <$> merchantOperatingCityId,
+            createdAt = createdAt,
+            updatedAt = updatedAt
           }
 
 instance ToTType' Beam.SpecialOccasion Domain.Types.SpecialOccasion.SpecialOccasion where
@@ -93,5 +104,9 @@ instance ToTType' Beam.SpecialOccasion Domain.Types.SpecialOccasion.SpecialOccas
         Beam.description = description,
         Beam.entityId = entityId,
         Beam.id = Kernel.Types.Id.getId id,
-        Beam.specialDayType = specialDayType
+        Beam.specialDayType = specialDayType,
+        Beam.merchantId = Kernel.Types.Id.getId <$> merchantId,
+        Beam.merchantOperatingCityId = Kernel.Types.Id.getId <$> merchantOperatingCityId,
+        Beam.createdAt = createdAt,
+        Beam.updatedAt = updatedAt
       }

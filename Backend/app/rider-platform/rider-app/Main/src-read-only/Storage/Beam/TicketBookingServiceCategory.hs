@@ -5,6 +5,8 @@
 module Storage.Beam.TicketBookingServiceCategory where
 
 import qualified Database.Beam as B
+import qualified Domain.Types.Merchant
+import qualified Domain.Types.Merchant.MerchantOperatingCity
 import qualified Domain.Types.TicketBookingService
 import qualified Domain.Types.TicketBookingServiceCategory
 import Kernel.Prelude
@@ -19,7 +21,11 @@ data TicketBookingServiceCategoryT f = TicketBookingServiceCategoryT
     id :: B.C f Kernel.Prelude.Text,
     name :: B.C f Kernel.Prelude.Text,
     serviceCategoryId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    ticketBookingServiceId :: B.C f Kernel.Prelude.Text
+    ticketBookingServiceId :: B.C f Kernel.Prelude.Text,
+    merchantId :: B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text)),
+    merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text)),
+    createdAt :: B.C f Kernel.Prelude.UTCTime,
+    updatedAt :: B.C f Kernel.Prelude.UTCTime
   }
   deriving (Generic, B.Beamable)
 

@@ -121,7 +121,7 @@ orderAndLimit query = do
 
 generateFunctionSignature :: QueryDef -> String -> String
 generateFunctionSignature query tableNameHaskell =
-  let qparams = map getIdsOut $ nub (params query ++ addLimitParams query ++ (getWhereClauseFieldNamesAndTypes (whereClause query)))
+  let qparams = filter ((/= "updatedAt") . fst) $ map getIdsOut $ nub (params query ++ addLimitParams query ++ (getWhereClauseFieldNamesAndTypes (whereClause query)))
    in query.queryName
         ++ " :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => "
         ++ bool (foldMap (\s -> s ++ " -> ") (map snd qparams)) ("Domain.Types." ++ tableNameHaskell ++ "." ++ tableNameHaskell ++ " -> ") query.takeFullObjectAsInput
