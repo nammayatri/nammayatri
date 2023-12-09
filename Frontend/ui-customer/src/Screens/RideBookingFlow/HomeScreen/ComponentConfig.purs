@@ -83,6 +83,7 @@ import Font.Style (Style(..))
 import Services.API as API
 import Data.Lens ((^.))
 import Accessor (_fareBreakup, _description)
+import Debug
 
 shareAppConfig :: ST.HomeScreenState -> PopUpModal.Config
 shareAppConfig state = let
@@ -934,8 +935,8 @@ ratingCardViewState state = {
 }
 
 getRateYourRideString :: String -> String -> String 
-getRateYourRideString str driverName = case getValueToLocalStore LANGUAGE_KEY of 
-    "EN_IN" -> str <> " " <> driverName
+getRateYourRideString str driverName = case getValueToLocalStore LANGUAGE_KEY of
+    "EN_US" -> str <> " " <> driverName
     _   -> driverName <> " " <> str
 
 searchLocationModelViewState :: ST.HomeScreenState -> SearchLocationModel.SearchLocationModelState
