@@ -11,7 +11,6 @@ import qualified Data.Aeson.KeyMap as AKM
 import qualified Data.ByteString.Lazy as BL
 import qualified Data.Text as T hiding (elem)
 import qualified Data.Text.Encoding as DTE
-import qualified Data.Vector as V
 import qualified Database.Redis as R
 import qualified EulerHS.Language as EL
 import EulerHS.Prelude hiding (fail, id, succ)
@@ -77,9 +76,9 @@ parseDBCommand dbStreamKey entries =
           let mbAction = case AKM.lookup "tag" o of
                 Just (A.String actionTag) -> return actionTag
                 _ -> Nothing
-              mbModel = case AKM.lookup "contents" o of
-                Just _commandArray@(A.Array a) -> case V.last a of
-                  A.Object command -> case AKM.lookup "tag" command of
+              mbModel = case AKM.lookup "contents_v2" o of
+                Just (A.Object commandObject) -> case AKM.lookup "command" commandObject of
+                  Just (A.Object command) -> case AKM.lookup "tag" command of
                     Just (A.String modelTag) -> return modelTag
                     _ -> Nothing
                   _ -> Nothing
@@ -102,7 +101,6 @@ dropDBCommand dbStreamKey entryId = do
 runCriticalDBSyncOperations :: Text -> [(EL.KVDBStreamEntryID, ByteString)] -> [(EL.KVDBStreamEntryID, ByteString)] -> [(EL.KVDBStreamEntryID, ByteString)] -> ExceptT Int Flow Int
 runCriticalDBSyncOperations dbStreamKey updateEntries deleteEntries createDataEntries = do
   isForcePushEnabled <- pureRightExceptT $ fromMaybe False <$> getValueFromRedis C.forceDrainEnabledKey
-
   (cSucc, cFail) <- pureRightExceptT $ executeInSequence runCreate ([], []) dbStreamKey createDataEntries
   void $ pureRightExceptT $ publishDBSyncMetric $ Event.DrainerQueryExecutes "Create" (fromIntegral $ length cSucc)
   void $ pureRightExceptT $ publishDBSyncMetric $ Event.DrainerQueryExecutes "CreateInBatch" (if null cSucc then 0 else 1)

@@ -81,11 +81,12 @@ valueToText value = case value of
   SqlValue t -> quote t
   SqlList a -> quote $ "{" <> T.intercalate "," (map valueToText' a) <> "}" -- in case of array of value of a key in object
   where
+    -- we should escape symbols inside of list, so use 'show' instead of just double quotes suffix and prefix
     valueToText' :: Value -> T.Text
     valueToText' SqlNull = "null"
-    valueToText' (SqlString t) = quote' t
+    valueToText' (SqlString t) = show t -- quote' t
     valueToText' (SqlNum n) = show n
-    valueToText' (SqlValue t) = quote' t
+    valueToText' (SqlValue t) = show t -- quote' t
     valueToText' (SqlList a) = "[" <> T.intercalate "," (map valueToText' a) <> "]" -- why different brackets [] an {}?
 
 -- TODO test for empty lists, list with one or more values
@@ -111,7 +112,7 @@ makeWhereCondition whereClause mappings = do
       let columnText = quote' $ replaceMappings column mappings
       case term of
         In values -> columnText <> " IN " <> valueToTextForInConditions values
-        Eq value -> columnText <> " != " <> valueToText value
+        Eq value -> columnText <> " = " <> valueToText value
         GreaterThan value -> columnText <> " > " <> valueToText value
         GreaterThanOrEq value -> columnText <> " >= " <> valueToText value
         LessThan value -> columnText <> " < " <> valueToText value

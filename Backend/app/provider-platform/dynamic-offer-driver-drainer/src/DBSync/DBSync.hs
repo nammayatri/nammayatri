@@ -11,7 +11,6 @@ import qualified Data.Aeson.KeyMap as AKM
 import qualified Data.ByteString.Lazy as BL
 import qualified Data.Text as T hiding (elem)
 import qualified Data.Text.Encoding as DTE
-import qualified Data.Vector as V
 import qualified Database.Redis as R
 import EulerHS.Language (runIO)
 import qualified EulerHS.Language as EL
@@ -82,9 +81,9 @@ parseDBCommand dbStreamKey entries =
           let mbAction = case AKM.lookup "tag" o of
                 Just (A.String actionTag) -> return actionTag
                 _ -> Nothing
-              mbModel = case AKM.lookup "contents" o of
-                Just _commandArray@(A.Array a) -> case V.last a of
-                  _commandObject@(A.Object command) -> case AKM.lookup "tag" command of
+              mbModel = case AKM.lookup "contents_v2" o of
+                Just (A.Object commandObject) -> case AKM.lookup "command" commandObject of
+                  Just (A.Object command) -> case AKM.lookup "tag" command of
                     Just (A.String modelTag) -> return modelTag
                     _ -> Nothing
                   _ -> Nothing

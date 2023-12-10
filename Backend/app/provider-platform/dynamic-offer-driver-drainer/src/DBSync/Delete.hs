@@ -17,6 +17,8 @@ import Types.DBSync
 import Types.DBSync.Delete
 import Utils.Utils
 
+-- we are not pushing delete events to kafka | Todo : To be removed in new drainer PR
+
 -- | This function is used to run the delete operation for a single entry in the stream
 runDelete :: (EL.KVDBStreamEntryID, ByteString) -> Text -> ReaderT Env EL.Flow (Either EL.KVDBStreamEntryID EL.KVDBStreamEntryID)
 runDelete deleteEntry streamName = do
@@ -28,6 +30,9 @@ runDelete deleteEntry streamName = do
     Right deleteDBModel -> do
       EL.logDebug ("DB OBJECT" :: Text) (show deleteDBModel)
       let tableName = deleteDBModel.dbModel
+      -- uncomment for debug purposes
+      -- writeDebugFile "delete" tableName entryId "streamData.json" streamData
+      -- writeDebugFile "delete" tableName entryId "dbObject.txt" $ show deleteDBModel
       if shouldPushToDbOnly tableName _dontEnableForKafka || not isPushToKafka'
         then runDeleteQuery deleteEntry deleteDBModel
         else do
@@ -60,9 +65,13 @@ runDeleteQuery deleteEntries dbDeleteObject = do
           case result of
             Left (QueryError errorMsg) -> do
               EL.logError ("QUERY DELETE FAILED" :: Text) (errorMsg <> " for query :: " <> query)
+              -- uncomment for debug purposes
+              -- writeDebugFile "delete" dbModel entryId "queryFailed.sql" $ encodeUtf8 query
               return $ Left entryId
             Right _ -> do
               EL.logInfo ("QUERY DELETE SUCCESSFUL" :: Text) (" Delete successful for query :: " <> query <> " with streamData :: " <> TE.decodeUtf8 byteString)
+              -- uncomment for debug purposes
+              -- writeDebugFile "delete" dbModel entryId "querySuccessful.sql" $ encodeUtf8 query
               return $ Right entryId
         Nothing -> do
           EL.logError ("No query generated for streamData: " :: Text) (TE.decodeUtf8 byteString)
