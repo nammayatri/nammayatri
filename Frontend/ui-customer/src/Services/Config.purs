@@ -1,27 +1,10 @@
-{-
-
-  Copyright 2022-23, Juspay India Pvt Ltd
-
-  This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License
-
-  as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program
-
-  is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
-
-  or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
-
-  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
--}
-
 module Services.Config where
 
-import Debug (spy)
+import Debug
 import Prelude (class Eq, (==))
 import Data.Eq.Generic (genericEq)
 import Data.Generic.Rep (class Generic)
 import ConfigJBridge (getKeyInSharedPrefKeysConfig, getValueToLocalNativeStoreConfig)
-
-
 foreign import environment :: String -> String
 
 foreign import getMerchant :: String -> String
@@ -34,7 +17,6 @@ newtype Config = Config
   { baseUrl :: String
   , fingerprint :: String
   }
-
 getEnv :: Env
 getEnv = case spy "Selected Environment :- " (environment "") of
   "local"       -> LOCAL
@@ -48,36 +30,43 @@ getConfig = do
   case getEnv of
     LOCAL -> Config
         { baseUrl: "http://localhost:8013/v2"
-        , fingerprint : ""
+        , fingerprint : "[\"GwTg/ASRViI4veIkOMZTXPAKc6ct/ocbQHPdMzPhdn0=\"]"
         }
     DEV  -> Config
-        { baseUrl: getValueToLocalNativeStoreConfig "BASE_URL"
-        , fingerprint : ""
+        { baseUrl: "https://api.beckn.juspay.in/pilot/app/v2"
+        , fingerprint : "[\"GwTg/ASRViI4veIkOMZTXPAKc6ct/ocbQHPdMzPhdn0=\"]"
         }
     UAT  -> Config
-        { baseUrl: getValueToLocalNativeStoreConfig "BASE_URL"
-        , fingerprint : ""
+        { baseUrl: "https://api.beckn.juspay.in/pilot/app/v2"
+        , fingerprint : "[\"GwTg/ASRViI4veIkOMZTXPAKc6ct/ocbQHPdMzPhdn0=\"]"
         }
     PROD -> Config
-        { baseUrl: getValueToLocalNativeStoreConfig "BASE_URL"
-        , fingerprint : ""
+        { baseUrl: "https://api.beckn.juspay.in/pilot/app/v2"
+        , fingerprint : "[\"6oc0n8dAm42JFWP2ClTuC0JqnHJ2IIszzTE98r5Om/I=\"]"
         }
-
 getMerchantId :: String -> String
-getMerchantId dummy = "NA"
+getMerchantId dummy = case (getMerchant "") of 
+  "NAMMAYATRI" -> "NAMMA_YATRI"
+  "YATRISATHI" -> "JATRI_SAATHI"
+  "YATRI" -> "YATRI"
+  "MOBILITY_PM" -> "MOBILITY_PAYTM"
+  "PASSCULTURE" -> "MOBILITY_PASSCULTURE"
+  "MOBILITY_RS" -> "MOBILITY_REDBUS"
+  _ -> "NAMMA_YATRI"
+
 getEndpoint :: String -> String
 getEndpoint dummy = do
   if ((getKeyInSharedPrefKeysConfig "MOBILE_NUMBER") == "5000500050") then
-    ""
-    else
+    "api.sandbox.beckn.juspay.in/dev/app/v2"
+    else 
       let Config config = getConfig
       in config.baseUrl
-
+      
 getBaseUrl :: String -> String
 getBaseUrl dummy = do
   let a = spy "dummy" dummy
   if ((getKeyInSharedPrefKeysConfig "MOBILE_NUMBER") == "5000500050") then
-    spy "getBaseUrl inside if" ""
+    spy "getBaseUrl inside if" "https://api.sandbox.beckn.juspay.in/dev/app/v2"
     else
       let Config config = getConfig
       in spy "getBaseUrl inside else" (config.baseUrl)
@@ -85,22 +74,37 @@ getBaseUrl dummy = do
 getFingerPrint :: String -> String
 getFingerPrint dummy = do
   if ((getKeyInSharedPrefKeysConfig "MOBILE_NUMBER") == "5000500050") then
-    ""
-    else
+    "[\"GwTg/ASRViI4veIkOMZTXPAKc6ct/ocbQHPdMzPhdn0=\"]"
+    else 
       let Config config = getConfig
       in config.fingerprint
 
-
 getDriverNumber :: String -> String
-getDriverNumber _ = case getEnv of
-                        DEV  -> "9999999999"
-                        UAT  -> "9999999999"
-                        PROD -> "9999999999"
-                        _    -> "9999999999"
+getDriverNumber _ = case getEnv of 
+                        DEV  -> (getDevNumber "").driverNumber
+                        UAT  -> (getDevNumber "").driverNumber
+                        PROD -> (getProdNumber "").driverNumber
+                        _    -> (getDevNumber "").driverNumber
 
 getSupportNumber :: String -> String
-getSupportNumber _ = case getEnv of
-                        DEV  -> "9999999999"
-                        UAT  -> "9999999999"
-                        PROD -> "9999999999"
-                        _    -> "9999999999"
+getSupportNumber _ = case getEnv of 
+                        DEV  -> (getDevNumber "").supportNumber
+                        UAT  -> (getDevNumber "").supportNumber
+                        PROD -> (getProdNumber "").supportNumber
+                        _    -> (getDevNumber "").supportNumber
+
+
+getDevNumber :: String -> { supportNumber :: String , driverNumber :: String }
+getDevNumber _ = case (getMerchant "") of 
+    "YATRISATHI" -> {supportNumber : "08068501060", driverNumber : "03340585169"}
+    "YATRI"       -> {supportNumber : "08068501060", driverNumber : "08047108594"}
+    "UNKNOWN"     -> {supportNumber : "08069490360", driverNumber : "08069456526"}
+    _             -> {supportNumber : "08068501060", driverNumber : "08069456526"}
+
+
+getProdNumber :: String -> { supportNumber :: String , driverNumber :: String}
+getProdNumber _ = case (getMerchant "") of
+    "YATRISATHI" -> {supportNumber : "08069724888", driverNumber : "03340585514"}
+    "YATRI"       -> {supportNumber : "07411782309", driverNumber : "08047108594"}
+    "UNKNOWN"     -> {supportNumber : "08069490360", driverNumber : "08069457995"}
+    _             -> {supportNumber : "08068501060", driverNumber : "08069457995"}
