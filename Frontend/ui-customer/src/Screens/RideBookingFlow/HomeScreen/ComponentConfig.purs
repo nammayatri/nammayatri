@@ -13,7 +13,70 @@
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Screens.RideBookingFlow.HomeScreen.Config where
+module Screens.RideBookingFlow.HomeScreen.Config
+  ( autoAnimConfig
+  , callSupportConfig
+  , cancelAppConfig
+  , cancelRidePopUpConfig
+  , chatViewConfig
+  , chooseYourRideConfig
+  , customerFeedbackPillData
+  , disabilityBannerConfig
+  , distanceOusideLimitsConfig
+  , driverInfoCardViewState
+  , driverInfoTransformer
+  , emergencyHelpModelViewState
+  , estimateChangedPopupConfig
+  , feedbackPillDataWithRating1
+  , feedbackPillDataWithRating2
+  , feedbackPillDataWithRating3
+  , feedbackPillDataWithRating4
+  , feedbackPillDataWithRating5
+  , genderBannerConfig
+  , getBottomMargin
+  , getCarouselData
+  , getDistanceString
+  , getFareUpdatedStr
+  , getSelectedEstimatesObject
+  , getTipViewData
+  , getTipViewProps
+  , getTipViewText
+  , getVehicleTitle
+  , logOutPopUpModelConfig
+  , maybeLaterButtonConfig
+  , menuButtonConfig
+  , metersToKm
+  , nyRateCardList
+  , pickUpFarFromCurrentLocationConfig
+  , primaryButtonConfirmPickupConfig
+  , primaryButtonRequestRideConfig
+  , quoteListModelViewState
+  , rateCardConfig
+  , ratingCardViewState
+  , reportIssueOptions
+  , reportIssuePopUpConfig
+  , requestInfoCardConfig
+  , rideCompletedAnimConfig
+  , rideCompletedCardConfig
+  , rideRequestAnimConfig
+  , searchLocationModelViewState
+  , setSelectedEstimatesObject
+  , setTipViewData
+  , shareAppConfig
+  , shortDistanceConfig
+  , showSuggestions
+  , skipButtonConfig
+  , sourceUnserviceableConfig
+  , specialLocationConfig
+  , specialLocationIcons
+  , ticketBannerConfig
+  , updateProfileConfig
+  , updateRouteMarkerConfig
+  , whereToButtonConfig
+  , yatriRateCardList
+  , zoneTimerExpiredConfig
+  )
+  where
 
 import Common.Types.App
 import Language.Strings
@@ -927,7 +990,7 @@ ratingCardViewState state = {
     , enableLoader = (JB.getBtnLoader "RateYourDriverButton")
   }
   , showProfileImg : true
-  , title : getRateYourRideString ( getString RATE_YOUR_RIDE_WITH) state.data.rideRatingState.driverName
+  , title : getString RATE_YOUR_RIDE_WITH1 <> " " <> state.data.rideRatingState.driverName <> " " <>  getString RATE_YOUR_RIDE_WITH2
   , feedbackPlaceHolder : getString HELP_US_WITH_YOUR_FEEDBACK_OPTIONAL
   , showFeedbackPill : true
   , overallFeedbackArray : [(getString TERRIBLE_EXPERIENCE), (getString POOR_EXPERIENCE),(getString NEEDS_IMPROVEMENT), (getString ALMOST_PERFECT), (getString AMAZING)]
@@ -1261,7 +1324,7 @@ rideCompletedCardConfig state = let
           bottomText =  getString RIDE_DETAILS
         },
         customerBottomCard {
-          title = getRateYourRideString (getString RATE_YOUR_RIDE_WITH) state.data.rideRatingState.driverName,
+          title = getString RATE_YOUR_RIDE_WITH1 <> " " <> state.data.rideRatingState.driverName <> " " <>  getString RATE_YOUR_RIDE_WITH2,
           subTitle = (getString $ YOUR_FEEDBACK_HELPS_US "YOUR_FEEDBACK_HELPS_US"),
           selectedRating = state.data.ratingViewState.selectedRating,
           visible = true
