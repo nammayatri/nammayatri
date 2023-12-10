@@ -17,23 +17,63 @@ findGitRoot dir = do
             then return Nothing -- No more directories to check
             else findGitRoot parent
 
+dslInputPathPrefix :: FilePath
+dslInputPathPrefix = "Backend" </> "app" </> "alchemist" </> "spec"
+
+haskellOutputPathPrefix :: FilePath
+haskellOutputPathPrefix = "Backend" </> "app"
+
+sqlOutputPathPrefix :: FilePath
+sqlOutputPathPrefix = "Backend" </> "dev" </> "migrations-read-only"
+
+rideAppName :: FilePath
+rideAppName = "rider-app"
+
+driverAppName :: FilePath
+driverAppName = "dynamic-offer-driver-app"
+
+riderAppPath :: FilePath
+riderAppPath = "rider-platform" </> rideAppName </> "Main"
+
+driverAppPath :: FilePath
+driverAppPath = "provider-platform" </> driverAppName </> "Main"
+
+applyDirectory :: FilePath -> (FilePath -> IO ()) -> IO ()
+applyDirectory dirPath processFile = do
+  files <- listDirectory dirPath
+  let yamlFiles = filter (\file -> takeExtension file `elem` [".yaml", ".yml"]) files
+  mapM_ (processFile . (dirPath </>)) yamlFiles
+
 main :: IO ()
 main = do
   currentDir <- getCurrentDirectory
   maybeGitRoot <- findGitRoot currentDir
   let rootDir = fromMaybe (error "Could not find git root") maybeGitRoot
-  let targetFolder = rootDir </> "Backend/app/rider-platform/rider-app/Main/src-read-only/"
-  let sqlTargetFolder = rootDir </> "Backend/dev/migrations-read-only/rider-app"
-  let inputFolder = rootDir </> "Backend/app/alchemist/spec/rider-platform/rider-app/"
-  let inputFile = inputFolder </> "Storage/ticket.yaml"
-  let apiInputFile = inputFolder </> "API/ticket.yaml"
-  Alchemist.mkBeamTable (targetFolder </> "Storage/Beam") inputFile
-  Alchemist.mkBeamQueries (targetFolder </> "Storage/Queries") inputFile
-  Alchemist.mkDomainType (targetFolder </> "Domain/Types") inputFile
-  Alchemist.mkSQLFile sqlTargetFolder inputFile
-  Alchemist.mkServantAPI (targetFolder </> "API/Action/UI") apiInputFile
-  Alchemist.mkApiTypes (targetFolder </> "API/Types/UI") apiInputFile
-  Alchemist.mkDomainHandler (targetFolder </> "Domain/Action/UI") apiInputFile
 
--- Alchemist.mkFrontendAPIBackend (targetFolder </> "Domain/Action") apiInputFile
--- Alchemist.mkFrontendAPIEndpoint (targetFolder </> "Domain/Action") apiInputFile
+  processApp rootDir riderAppPath rideAppName
+  processApp rootDir driverAppPath driverAppName
+  where
+    processApp :: FilePath -> FilePath -> FilePath -> IO ()
+    processApp rootDir appPath appName = do
+      applyDirectory (rootDir </> dslInputPathPrefix </> appPath </> "Storage") (processStorageDSL rootDir appPath appName)
+      applyDirectory (rootDir </> dslInputPathPrefix </> appPath </> "API") (processAPIDSL rootDir appPath)
+
+    processStorageDSL rootDir appPath appName inputFile = do
+      let readOnlySrc = rootDir </> haskellOutputPathPrefix </> appPath </> "src-read-only/"
+      let readOnlyMigration = rootDir </> sqlOutputPathPrefix </> appName
+
+      Alchemist.mkBeamTable (readOnlySrc </> "Storage/Beam") inputFile
+      Alchemist.mkBeamQueries (readOnlySrc </> "Storage/Queries") inputFile
+      Alchemist.mkDomainType (readOnlySrc </> "Domain/Types") inputFile
+      Alchemist.mkSQLFile readOnlyMigration inputFile
+
+    processAPIDSL rootDir appPath inputFile = do
+      let readOnlySrc = rootDir </> haskellOutputPathPrefix </> appPath </> "src-read-only/"
+      let src = rootDir </> haskellOutputPathPrefix </> appPath </> "src"
+
+      Alchemist.mkServantAPI (readOnlySrc </> "API/Action/UI") inputFile
+      Alchemist.mkApiTypes (readOnlySrc </> "API/Types/UI") inputFile
+      Alchemist.mkDomainHandler (src </> "Domain/Action/UI") inputFile
+
+-- Alchemist.mkFrontendAPIBackend (targetFolder </> "Domain/Action") inputFile
+-- Alchemist.mkFrontendAPIEndpoint (targetFolder </> "Domain/Action") inputFile

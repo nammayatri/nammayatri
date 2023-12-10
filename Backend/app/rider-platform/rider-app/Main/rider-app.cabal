@@ -159,6 +159,7 @@ library
       Domain.Action.UI.Serviceability
       Domain.Action.UI.Sos
       Domain.Action.UI.Support
+      Domain.Action.UI.TicketService
       Domain.Action.UI.Webengage.InfoBIPWebhook
       Domain.Action.UI.Webengage.Webengage
       Domain.Action.UI.Whatsapp
@@ -372,7 +373,6 @@ library
       Tools.Whatsapp
       API.Action.UI.TicketService
       API.Types.UI.TicketService
-      Domain.Action.UI.TicketService
       Domain.Types.BusinessHour
       Domain.Types.SeatManagement
       Domain.Types.ServiceCategory

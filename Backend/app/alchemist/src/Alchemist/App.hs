@@ -13,6 +13,8 @@ import Alchemist.Generator.SQL
 import Alchemist.Utils
 import qualified Data.Text as T
 import Kernel.Prelude
+import System.Directory
+import System.FilePath
 
 mkBeamTable :: FilePath -> FilePath -> IO ()
 mkBeamTable filePath yaml = do
@@ -47,7 +49,9 @@ mkApiTypes filePath yaml = do
 mkDomainHandler :: FilePath -> FilePath -> IO ()
 mkDomainHandler filePath yaml = do
   apiDef <- apiParser yaml
-  writeToFile filePath (T.unpack (_moduleName apiDef) ++ ".hs") (generateDomainHandler apiDef)
+  let fileName = T.unpack (_moduleName apiDef) ++ ".hs"
+  fileExists <- doesFileExist (filePath </> fileName)
+  unless fileExists $ writeToFile filePath fileName (generateDomainHandler apiDef)
 
 mkFrontendAPIBackend :: FilePath -> FilePath -> IO ()
 mkFrontendAPIBackend filePath yaml = do
