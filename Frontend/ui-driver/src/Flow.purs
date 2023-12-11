@@ -123,8 +123,6 @@ import MerchantConfig.Types (AppConfig(..))
 import ConfigProvider
 import React.Navigation.Navigate (initNamespace)
 
--- baseAppScreen :: Screen m -> ScopedScreen m
--- baseAppScreen = {parent: Nothing, ..}
 
 baseAppFlow :: Boolean -> Maybe Event -> FlowBT String Unit
 baseAppFlow baseFlow event = do
