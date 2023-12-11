@@ -1,0 +1,84 @@
+name: Src-Read-Only Diff Check
+
+on:
+  pull_request:
+    paths:
+    - '**/src-read-only/**'
+
+jobs:
+  src_read_only_diff_check:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+      with:
+        fetch-depth: 0  # Fetches all commits
+
+    - name: Run Src Read-Only Diff Check script
+      id: src_read_only_diff_check
+      run: |
+        RESULT=$(./Backend/src-read-only-diff-check.sh)
+        echo "::set-output name=result::$RESULT"
+      continue-on-error: true
+
+    - name: Check if there are differences
+      id: check_diff
+      run: |
+        if [ -z "${{ steps.src_read_only_diff_check.outputs.result }}" ]; then
+          echo "::set-output name=diff_detected::no"
+        else
+          echo "::set-output name=diff_detected::yes"
+        fi
+
+    - name : Create GitHub Check Run
+      if: steps.check_diff.outputs.diff_detected == 'yes'
+      id: create_check
+      run: |
+        echo "Creating check run..."
+        RESPONSE=$(curl -s -X POST \
+          -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+          -H "Accept: application/vnd.github.v3+json" \
+          https://api.github.com/repos/${{ github.repository }}/check-runs \
+          -d '{
+          "name": "src-read-only-diff-check",
+          "head_sha": "${{ github.event.pull_request.head.sha }}",
+          "status": "in_progress"
+        }')
+        CHECK_RUN_ID=$(echo "$RESPONSE" | jq .id)
+        echo "CHECK_RUN_ID=$CHECK_RUN_ID" >> $GITHUB_ENV
+
+    - name: Annotate GitHub Check
+      if: steps.check_diff.outputs.diff_detected == 'yes'
+      run: |
+        # Parse the output of src-read-only-diff-check.sh
+        echo "Output from src-read-only-diff-check.sh: ${{ steps.src_read_only_diff_check.outputs.result }}"
+        echo "${{ steps.src_read_only_diff_check.outputs.result }}" | while read -r line; do
+          FILE=$(echo "$line" | cut -d: -f1)
+          LINE=$(echo "$line" | cut -d: -f2)
+          MESSAGE=$(echo "$line" | cut -d: -f3-)
+          echo "Annotating $FILE at line $LINE with message: $MESSAGE"
+          curl -s -X POST \
+            -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            -H "Accept: application/vnd.github.v3+json" \
+            https://api.github.com/repos/${{ github.repository }}/check-runs/$CHECK_RUN_ID/annotations \
+            -d '{
+            "path": "'"$FILE"'",
+            "start_line": '"$LINE"',
+            "end_line": '"$LINE"',
+            "annotation_level": "failure",
+            "message": "'"$MESSAGE"'"
+          }'
+        done
+
+    - name: Complete GitHub Check Run
+      if: steps.check_diff.outputs.diff_detected == 'yes'
+      run: |
+        curl -s -X PATCH \
+          -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+          -H "Accept: application/vnd.github.v3+json" \
+          https://api.github.com/repos/${{ github.repository }}/check-runs/$CHECK_RUN_ID \
+          -d '{
+          "status": "completed",
+          "conclusion": "failure"
+        }'
