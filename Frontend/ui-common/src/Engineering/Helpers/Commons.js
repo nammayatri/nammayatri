@@ -481,3 +481,24 @@ export const getImageUrl = function (url) {
     console.log("error in getImageUrl " + e);
   }
 };
+
+export const setEventTimestamp = function(string){
+  return function(){
+    if (!window.flowTimeStampObject[string]){
+      window.flowTimeStampObject[string] = Date.now() - window.prevTimeStamp;
+      window.prevTimeStamp = Date.now();
+    }
+  }
+}
+
+export const getTimeStampObject = function(){
+  return function(){
+    const keyValuePairArray = Object.keys(window.flowTimeStampObject).map(function(key) {
+      return {
+        key: key,
+        value: window.flowTimeStampObject[key]
+      };
+    });
+    return keyValuePairArray;
+  }
+}

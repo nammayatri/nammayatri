@@ -50,7 +50,7 @@ import Presto.Core.Types.API (Header(..), Headers(..), Request(..), RestAPIOptio
 import Presto.Core.Types.Language.Flow (Flow, doAff, defaultState, getState, modifyState)
 import Presto.Core.Types.Permission (PermissionStatus(..))
 import Presto.Core.Utils.Encoding (defaultDecodeJSON, defaultEncodeJSON)
-import Common.Types.App (FlowBT)
+import Common.Types.App (FlowBT, ClevertapEventParams)
 import Effect.Aff.AVar (new)
 import Data.String as DS
 import Data.Array ((!!))
@@ -94,6 +94,8 @@ foreign import getVideoID :: String -> String
 foreign import getImageUrl :: String -> String
 foreign import getPastDays :: Int -> Array CalendarDate
 foreign import getPastWeeks :: Int -> Array CalendarWeek
+foreign import setEventTimestamp :: String -> Effect Unit
+foreign import getTimeStampObject :: Unit -> Effect (Array ClevertapEventParams)
 
 
 os :: String

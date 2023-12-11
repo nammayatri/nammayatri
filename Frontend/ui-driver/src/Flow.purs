@@ -52,7 +52,7 @@ import Effect.Aff (makeAff, nonCanceler, launchAff)
 import Effect.Class (liftEffect)
 import Effect.Uncurried (runEffectFn1, runEffectFn5, runEffectFn2)
 import Engineering.Helpers.BackTrack (getState, liftFlowBT)
-import Engineering.Helpers.Commons (flowRunner, liftFlow, getNewIDWithTag, getVersionByKey, os, getExpiryTime, stringToVersion, setText, convertUTCtoISC, getCurrentUTC, getCurrentTimeStamp, clearTimer)
+import Engineering.Helpers.Commons (flowRunner, liftFlow, getNewIDWithTag, getVersionByKey, os, getExpiryTime, stringToVersion, setText, convertUTCtoISC, getCurrentUTC, getCurrentTimeStamp, clearTimer, setEventTimestamp, getTimeStampObject)
 import Engineering.Helpers.Commons as EHC
 import Engineering.Helpers.LogEvent (logEvent, logEventWithParams, logEventWithMultipleParams)
 import Engineering.Helpers.Suggestions (suggestionsDefinitions, getSuggestions)
@@ -125,6 +125,7 @@ import ConfigProvider
 
 baseAppFlow :: Boolean -> Maybe Event -> FlowBT String Unit
 baseAppFlow baseFlow event = do
+    liftFlowBT $ setEventTimestamp "baseAppFlow"
     versionCode <- lift $ lift $ liftFlow $ getVersionCode
     checkVersion versionCode
     checkTimeSettings
@@ -283,6 +284,12 @@ loginFlow :: FlowBT String Unit
 loginFlow = do
   liftFlowBT hideSplash
   logField_ <- lift $ lift $ getLogFields
+  (GlobalState allState) <- getState
+  when (allState.globalProps.addTimestamp) $ do
+    liftFlowBT $ setEventTimestamp "loginFlow"
+    logData <- liftFlowBT $ getTimeStampObject unit
+    liftFlowBT $ logEventWithMultipleParams logField_ "sending_logs" logData
+    modifyScreenState $ GlobalPropsType $ \globalProps -> globalProps{addTimestamp = false}
   mobileNo <- UI.enterMobileNumber
   case mobileNo of
     GO_TO_ENTER_OTP updateState -> do
@@ -443,6 +450,7 @@ checkStatusAndStartLocationUpdates = do
 
 onBoardingFlow :: FlowBT String Unit
 onBoardingFlow = do
+  logField_ <- lift $ lift $ getLogFields
   _ <- pure $ hideKeyboardOnNavigation true
   config <- getAppConfigFlowBT Constants.appConfig
   globalstate <- getState 
@@ -468,6 +476,12 @@ onBoardingFlow = do
                       cityConfig = cityConfig
                   }, props {limitReachedFor = limitReachedFor, referralCodeSubmitted = referralCodeAdded}})
   liftFlowBT hideSplash
+  (GlobalState allState) <- getState
+  when (allState.globalProps.addTimestamp) $ do
+    liftFlowBT $ setEventTimestamp "onBoardingFlow"
+    logData <- liftFlowBT $ getTimeStampObject unit
+    liftFlowBT $ logEventWithMultipleParams logField_ "sending_logs" logData
+    modifyScreenState $ GlobalPropsType $ \globalProps -> globalProps{addTimestamp = false}
   flow <- UI.registration
   case flow of
     UPLOAD_DRIVER_LICENSE state -> do
@@ -607,6 +621,11 @@ uploadDrivingLicenseFlow :: FlowBT String Unit
 uploadDrivingLicenseFlow = do
   (GlobalState state) <- getState
   logField_ <- lift $ lift $ getLogFields
+  when (state.globalProps.addTimestamp) $ do
+    liftFlowBT $ setEventTimestamp "uploadDrivingLicenseFlow"
+    logData <- liftFlowBT $ getTimeStampObject unit
+    liftFlowBT $ logEventWithMultipleParams logField_ "sending_logs" logData
+    modifyScreenState $ GlobalPropsType $ \globalProps -> globalProps{addTimestamp = false}
   flow <- UI.uploadDrivingLicense
   case flow of
     VALIDATE_DL_DETAILS state -> do
@@ -680,6 +699,12 @@ addVehicleDetailsflow :: Boolean -> FlowBT String Unit
 addVehicleDetailsflow addRcFromProf = do
   logField_ <- lift $ lift $ getLogFields
   modifyScreenState $ AddVehicleDetailsScreenStateType (\addVehicleDetailsScreen  -> addVehicleDetailsScreen{props{addRcFromProfile = addRcFromProf }})
+  (GlobalState globalState) <- getState
+  when (globalState.globalProps.addTimestamp) $ do
+    liftFlowBT $ setEventTimestamp "addVehicleDetailsflow"
+    logData <- liftFlowBT $ getTimeStampObject unit
+    liftFlowBT $ logEventWithMultipleParams logField_ "sending_logs" logData
+    modifyScreenState $ GlobalPropsType $ \globalProps -> globalProps{addTimestamp = false}
   flow <- UI.addVehicleDetails
   case flow of
     VALIDATE_DETAILS state -> do
@@ -1398,6 +1423,12 @@ permissionsScreenFlow event activeRideResp = do
   logField_ <- lift $ lift $ getLogFields
   liftFlowBT hideSplash
   _ <- pure $ hideKeyboardOnNavigation true
+  (GlobalState state) <- getState
+  when (state.globalProps.addTimestamp) $ do
+    liftFlowBT $ setEventTimestamp "permissionsScreenFlow"
+    logData <- liftFlowBT $ getTimeStampObject unit
+    liftFlowBT $ logEventWithMultipleParams logField_ "sending_logs" logData
+    modifyScreenState $ GlobalPropsType $ \globalProps -> globalProps{addTimestamp = false}
   action <- UI.permissions
   case action of
     DRIVER_HOME_SCREEN -> do
@@ -1693,7 +1724,7 @@ currentRideFlow activeRideResp = do
   when (allState.homeScreen.data.config.profileVerification.aadharVerificationRequired) $ do -- TODO :: Should be moved to global events as an async event
     (DriverRegistrationStatusResp resp) <- driverRegistrationStatusBT (DriverRegistrationStatusReq { })
     modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props {showlinkAadhaarPopup = (resp.aadhaarVerificationStatus == "INVALID" || resp.aadhaarVerificationStatus == "NO_DOC_AVAILABLE")}})
-
+  modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props {tobeLogged = true}})
   homeScreenFlow
   where
     activeRidePatch activeRideResponse allState onBoardingSubscriptionViewCount = 
@@ -1830,6 +1861,12 @@ homeScreenFlow = do
   updateBannerAndPopupFlags
   liftFlowBT hideSplash
   void $ lift $ lift $ toggleLoader false
+  when (globalState.globalProps.addTimestamp && globalState.homeScreen.props.tobeLogged) $ do
+    liftFlowBT $ setEventTimestamp "homeScreenFlow"
+    logData <- liftFlowBT $ getTimeStampObject unit
+    liftFlowBT $ logEventWithMultipleParams logField_ "sending_logs" logData
+    modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props {tobeLogged = false}})
+    modifyScreenState $ GlobalPropsType $ \globalProps -> globalProps{addTimestamp = false}
   action <- UI.homeScreen
   case action of
     GO_TO_PROFILE_SCREEN -> do
@@ -2077,6 +2114,7 @@ homeScreenFlow = do
           void $ pure $ setValueToLocalStore WAITING_TIME_STATUS (show ST.Triggered)
           void $ pure $ setValueToLocalStore WAITING_TIME_VAL $ state.data.activeRide.id <> "<$>" <> getCurrentUTC ""
           void $ pure $ JB.sendMessage $ if EHC.isPreviousVersion (getValueToLocalStore VERSION_NAME) (getPreviousVersion (getMerchant FunctionCall)) then (EHS.getMessageFromKey "dis1AP" "EN_US") else "dis1AP"
+          liftFlowBT $ logEvent logField_ "ny_driver_i_have_arrived_clicked"
           modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{activeRide{notifiedCustomer = true}}})
         Left _ -> pure unit
       homeScreenFlow
@@ -2982,6 +3020,11 @@ chooseCityFlow = do
   void $ pure $ setCleverTapUserProp [{key : "Preferred Language", value : unsafeToForeign $ appConfig.defaultLanguage}]
   setValueToLocalStore LANGUAGE_KEY $ appConfig.defaultLanguage
   modifyScreenState $ ChooseCityScreenStateType (\chooseCityScreen -> chooseCityScreen { data {merchantOperatingCityConfig = filteredArray , config = appConfig}})
+  when (globalstate.globalProps.addTimestamp) $ do
+    liftFlowBT $ setEventTimestamp "chooseCity"
+    logData <- liftFlowBT $ getTimeStampObject unit
+    liftFlowBT $ logEventWithMultipleParams logField_ "sending_logs" logData
+    modifyScreenState $ GlobalPropsType $ \globalProps -> globalProps{addTimestamp = false}
   chooseCityScreen <- UI.chooseCityScreen
   case chooseCityScreen of
     GoToWelcomeScreen -> authenticationFlow ""

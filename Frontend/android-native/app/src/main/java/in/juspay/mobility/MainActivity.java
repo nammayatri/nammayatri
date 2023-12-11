@@ -113,6 +113,7 @@ public class MainActivity extends AppCompatActivity {
     @SuppressLint("StaticFieldLeak")
     private static InAppNotification inAppNotification;
     ShowNotificationCallBack inappCallBack;
+    long onCreateTimeStamp = 0;
     SharedPreferences.OnSharedPreferenceChangeListener mListener = new SharedPreferences.OnSharedPreferenceChangeListener() {
         @Override
         public void onSharedPreferenceChanged(SharedPreferences sharedPreferences, String key) {
@@ -276,6 +277,8 @@ public class MainActivity extends AppCompatActivity {
         }
 
         super.onCreate(savedInstanceState);
+        onCreateTimeStamp = System.currentTimeMillis();
+        FirebaseAnalytics mFirebaseAnalytics = FirebaseAnalytics.getInstance(this);
         context = getApplicationContext();
         boolean isMigrated = migrateLocalStore(context);
         String clientId = context.getResources().getString(R.string.client_id);
@@ -457,7 +460,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void initApp(String viewParam, String deepLinkJSON) {
-
+        long initiateTimeStamp = System.currentTimeMillis();
         hyperServices = new HyperServices(this, findViewById(R.id.cl_dui_container));
         final JSONObject json = new JSONObject();
         JSONObject payload = new JSONObject();
@@ -471,6 +474,8 @@ public class MainActivity extends AppCompatActivity {
             if (viewParam != null) payload.put("viewParam", viewParam);
             if (viewParam != null) payload.put("view_param", viewParam);
             if (deepLinkJSON != null) payload.put("deepLinkJSON", deepLinkJSON);
+            payload.put("onCreateTimeStamp", onCreateTimeStamp);
+            payload.put("initiateTimeStamp" , initiateTimeStamp);
             json.put(PaymentConstants.PAYLOAD, payload);
         } catch (JSONException e) {
             e.printStackTrace();
