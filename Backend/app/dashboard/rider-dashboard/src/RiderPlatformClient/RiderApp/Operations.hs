@@ -20,6 +20,7 @@ module RiderPlatformClient.RiderApp.Operations
 where
 
 import qualified "rider-app" API.Dashboard as BAP
+import qualified "rider-app" API.Types.UI.TicketService as DTB
 import qualified Dashboard.Common.Booking as Booking
 import qualified Dashboard.RiderPlatform.Customer as Customer
 import qualified Dashboard.RiderPlatform.Merchant as Merchant
@@ -27,7 +28,6 @@ import qualified Dashboard.RiderPlatform.Ride as Ride
 import Data.Time
 import qualified "rider-app" Domain.Action.Dashboard.IssueList as DI
 import qualified Domain.Action.Dashboard.Ride as DCM
-import qualified "rider-app" Domain.Action.UI.TicketService as DTB
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
 import Domain.Types.ServerName
 import qualified "rider-app" Domain.Types.TicketBookingService as DTB
