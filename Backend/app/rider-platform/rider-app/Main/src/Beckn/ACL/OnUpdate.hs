@@ -156,20 +156,6 @@ parseEvent _ (OnUpdate.NewMessage daEvent) = do
         bppRideId = Id daEvent.fulfillment.id,
         message = message
       }
-parseEvent transactionId (OnUpdate.EstimateRepetition erEvent) = do
-  tagsGroup <- fromMaybeM (InvalidRequest "agent tags is not present in EstimateRepetition Event.") erEvent.fulfillment.tags
-  cancellationReason <-
-    fromMaybeM (InvalidRequest "cancellation_reason is not present.") $
-      readMaybe . T.unpack
-        =<< getTag "previous_cancellation_reasons" "cancellation_reason" tagsGroup
-  return $
-    DOnUpdate.EstimateRepetitionReq
-      { searchRequestId = Id transactionId,
-        bppEstimateId = Id erEvent.item.id,
-        bppBookingId = Id $ erEvent.id,
-        bppRideId = Id erEvent.fulfillment.id,
-        cancellationSource = Common.castCancellationSource cancellationReason
-      }
 parseEvent _ (OnUpdate.SafetyAlert saEvent) = do
   tagsGroup <- fromMaybeM (InvalidRequest "agent tags is not present in SafetyAlert Event.") saEvent.fulfillment.tags
   deviation :: Text <-

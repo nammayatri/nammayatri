@@ -83,7 +83,8 @@ data DSelectRes = DSelectRes
     customerExtraFee :: Maybe Money,
     merchant :: DM.Merchant,
     city :: Context.City,
-    autoAssignEnabled :: Bool
+    autoAssignEnabled :: Bool,
+    isOldEstimateValid :: Bool
   }
 
 data QuotesResultResponse = QuotesResultResponse
@@ -142,6 +143,7 @@ select personId estimateId req@DSelectReq {..} = do
       { providerId = estimate.providerId,
         providerUrl = estimate.providerUrl,
         variant = estimate.vehicleVariant,
+        isOldEstimateValid = False,
         ..
       }
 

@@ -20,7 +20,6 @@ where
 import Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.BookingCancelledEvent
 import Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.BookingReallocationEvent
 import Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.DriverArrivedEvent
-import Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.EstimateRepetitionEvent
 import Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.NewMessageEvent
 import Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.RideAssignedEvent
 import Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.RideCompletedEvent
@@ -38,7 +37,6 @@ data OnUpdateEvent
   | BookingCancelled BookingCancelledEvent
   | BookingReallocation BookingReallocationEvent
   | DriverArrived DriverArrivedEvent
-  | EstimateRepetition EstimateRepetitionEvent
   | NewMessage NewMessageEvent
   | SafetyAlert SafetyAlertEvent
   deriving (Generic, Show)

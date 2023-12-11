@@ -55,7 +55,8 @@ data DSelectReq = DSelectReq
     bapUri :: BaseUrl,
     pickupTime :: UTCTime,
     autoAssignEnabled :: Bool,
-    customerExtraFee :: Maybe Money
+    customerExtraFee :: Maybe Money,
+    isOldEstimateValid :: Maybe Bool
   }
 
 handler :: DM.Merchant -> DSelectReq -> DEst.Estimate -> Flow ()
@@ -108,7 +109,11 @@ handler merchant sReq estimate = do
           _ <- QST.create searchTry
           return searchTry
         Just oldSearchTry -> do
-          let searchRepeatType = if oldSearchTry.status == DST.ACTIVE then DST.CANCELLED_AND_RETRIED else DST.RETRIED
+          let isReallocation = fromMaybe False sReq.isOldEstimateValid
+          let searchRepeatType
+                | isReallocation = DST.REALLOCATION
+                | oldSearchTry.status == DST.ACTIVE = DST.CANCELLED_AND_RETRIED
+                | otherwise = DST.RETRIED
           unless (pureEstimatedFare == oldSearchTry.baseFare - fromMaybe 0 oldSearchTry.customerExtraFee) $
             throwError SearchTryEstimatedFareChanged
           searchTry <- buildSearchTry merchant.id searchReq.merchantOperatingCityId searchReq.id estimate sReq estimatedFare (oldSearchTry.searchRepeatCounter + 1) searchRepeatType

@@ -25,7 +25,6 @@ import qualified Beckn.Types.Core.Taxi.Common.Tags as Tags
 import qualified Beckn.Types.Core.Taxi.OnUpdate as OnUpdate
 import qualified Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.BookingCancelledEvent as BookingCancelledOU
 import qualified Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.DriverArrivedEvent as DriverArrivedOU
-import qualified Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.EstimateRepetitionEvent as EstimateRepetitionOU
 import qualified Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.NewMessageEvent as NewMessageOU
 import qualified Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.RideAssignedEvent as RideAssignedOU
 import Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.RideCompletedEvent as OnUpdate
@@ -34,7 +33,6 @@ import qualified Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.RideStartedEvent a
 import qualified Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.SafetyAlertEvent as SafetyAlertDU
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.BookingCancellationReason as SBCR
-import qualified Domain.Types.Estimate as DEst
 import qualified Domain.Types.FareParameters as Fare
 import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.Person as SP
@@ -42,7 +40,6 @@ import Domain.Types.Ride as DRide
 import qualified Domain.Types.Vehicle as SVeh
 import Kernel.Prelude
 import Kernel.Types.Common
-import Kernel.Types.Id
 
 data OnUpdateBuildReq
   = RideAssignedBuildReq
@@ -78,12 +75,6 @@ data OnUpdateBuildReq
         vehicle :: SVeh.Vehicle,
         booking :: DRB.Booking,
         arrivalTime :: Maybe UTCTime
-      }
-  | EstimateRepetitionBuildReq
-      { ride :: DRide.Ride,
-        booking :: DRB.Booking,
-        estimateId :: Id DEst.Estimate,
-        cancellationSource :: SBCR.CancellationSource
       }
   | NewMessageBuildReq
       { ride :: DRide.Ride,
@@ -168,28 +159,6 @@ buildOnUpdateMessage DriverArrivedBuildReq {..} = do
                 fulfillment
               },
         update_target = "order.fufillment.state.code, order.fulfillment.tags"
-      }
-buildOnUpdateMessage EstimateRepetitionBuildReq {..} = do
-  let tagGroups =
-        [ Tags.TagGroup
-            { display = False,
-              code = "previous_cancellation_reasons",
-              name = "Previous Cancellation Reasons",
-              list = [Tags.Tag (Just False) (Just "cancellation_reason") (Just "Chargeable Distance") (Just . show $ Common.castCancellationSource cancellationSource)]
-            }
-        ]
-  fulfillment <- Common.mkFulfillment Nothing ride booking Nothing Nothing (Just $ Tags.TG tagGroups) False
-  let item = EstimateRepetitionOU.Item {id = estimateId.getId}
-  return $
-    OnUpdate.OnUpdateMessage
-      { order =
-          OnUpdate.EstimateRepetition $
-            EstimateRepetitionOU.EstimateRepetitionEvent
-              { id = booking.id.getId,
-                item = item,
-                fulfillment
-              },
-        update_target = "order.fufillment.state.code, order.tags"
       }
 buildOnUpdateMessage NewMessageBuildReq {..} = do
   let tagGroups =

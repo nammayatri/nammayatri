@@ -19,7 +19,7 @@ module SharedLogic.CallBAP
     sendRideCompletedUpdateToBAP,
     sendBookingCancelledUpdateToBAP,
     sendDriverArrivalUpdateToBAP,
-    sendEstimateRepetitionUpdateToBAP,
+    callOnCancel',
     sendNewMessageToBAP,
     sendDriverOffer,
     callOnConfirm,
@@ -29,11 +29,14 @@ module SharedLogic.CallBAP
 where
 
 import qualified AWS.S3 as S3
+import qualified Beckn.ACL.OnCancel as ACL
 import qualified Beckn.ACL.OnSelect as ACL
 import qualified Beckn.ACL.OnUpdate as ACL
+import qualified Beckn.Types.Core.Taxi.API.OnCancel as API
 import qualified Beckn.Types.Core.Taxi.API.OnConfirm as API
 import qualified Beckn.Types.Core.Taxi.API.OnSelect as API
 import qualified Beckn.Types.Core.Taxi.API.OnUpdate as API
+import qualified Beckn.Types.Core.Taxi.OnCancel as OnCancel
 import qualified Beckn.Types.Core.Taxi.OnConfirm as OnConfirm
 import qualified Beckn.Types.Core.Taxi.OnSelect as OnSelect
 import qualified Beckn.Types.Core.Taxi.OnUpdate as OnUpdate
@@ -73,6 +76,7 @@ import Kernel.Utils.Servant.SignatureAuth
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as CQTC
+import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.DriverOnboarding.IdfyVerification as QIV
 import qualified Storage.Queries.Person as QPerson
@@ -151,6 +155,30 @@ callOnConfirm transporter contextFromConfirm content = do
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
   context_ <- buildTaxiContext Context.ON_CONFIRM msgId contextFromConfirm.transaction_id bapId bapUri (Just bppSubscriberId) (Just bppUri) city country False
   void $ withShortRetry $ Beckn.callBecknAPI (Just $ ET.ManagerSelector authKey) Nothing (show Context.ON_CONFIRM) API.onConfirmAPI bapUri internalEndPointHashMap (BecknCallbackReq context_ $ Right content)
+
+callOnCancel ::
+  ( HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.Map BaseUrl BaseUrl],
+    CoreMetrics m,
+    HasHttpClientOptions r c
+  ) =>
+  DM.Merchant ->
+  Text ->
+  BaseUrl ->
+  Maybe Context.City ->
+  Maybe Context.Country ->
+  Text ->
+  OnCancel.OnCancelMessage ->
+  RetryCfg ->
+  m ()
+callOnCancel transporter bapId bapUri bapCity bapCountry transactionId content retryConfig = do
+  let bppSubscriberId = getShortId $ transporter.subscriberId
+      authKey = getHttpManagerKey bppSubscriberId
+  bppUri <- buildBppUrl (transporter.id)
+  msgId <- generateGUID
+  internalEndPointHashMap <- asks (.internalEndPointHashMap)
+  context <- buildTaxiContext Context.ON_CANCEL msgId (Just transactionId) bapId bapUri (Just bppSubscriberId) (Just bppUri) (fromMaybe transporter.city bapCity) (fromMaybe Context.India bapCountry) False
+  void $ withRetryConfig retryConfig $ Beckn.callBecknAPI (Just $ ET.ManagerSelector authKey) Nothing (show Context.ON_CANCEL) API.onCancelAPI bapUri internalEndPointHashMap (BecknCallbackReq context $ Right content)
 
 buildBppUrl ::
   ( HasFlowEnv m r '["nwAddress" ::: BaseUrl]
@@ -434,7 +462,7 @@ sendSafetyAlertToBAP booking ride code reason = do
   retryConfig <- asks (.shortDurationRetryCfg)
   void $ callOnUpdate transporter booking.bapId booking.bapUri booking.bapCity booking.bapCountry booking.transactionId safetyAlertMsg retryConfig
 
-sendEstimateRepetitionUpdateToBAP ::
+callOnCancel' ::
   ( CacheFlow m r,
     EsqDBFlow m r,
     EncFlow m r,
@@ -443,16 +471,19 @@ sendEstimateRepetitionUpdateToBAP ::
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.Map BaseUrl BaseUrl]
   ) =>
+  DM.Merchant ->
   DRB.Booking ->
   SRide.Ride ->
   Id DEst.Estimate ->
   SRBCR.CancellationSource ->
+  Bool ->
   m ()
-sendEstimateRepetitionUpdateToBAP booking ride estimateId cancellationSource = do
-  transporter <-
-    CQM.findById booking.providerId
-      >>= fromMaybeM (MerchantNotFound booking.providerId.getId)
-  let estimateRepetitionBuildReq = ACL.EstimateRepetitionBuildReq {cancellationSource, booking, estimateId, ride}
-  estimateRepMsg <- ACL.buildOnUpdateMessage estimateRepetitionBuildReq
+callOnCancel' transporter booking ride estimateId cancellationSource isRepeatSearch = do
+  mbDriver <- QPerson.findById ride.driverId
+  mbVehicle <- QVeh.findById ride.driverId
+  when isRepeatSearch $ do
+    void $ QRB.updateStatus booking.id DRB.REALLOCATED
+  let onCancelReq = ACL.OnCancelBuildReq {ride, booking, estimateId, cancellationSource, mbDriver, mbVehicle, isRepeatSearch}
+  onCancelMsg <- ACL.buildOnCancelMessage onCancelReq
   retryConfig <- asks (.shortDurationRetryCfg)
-  void $ callOnUpdate transporter booking.bapId booking.bapUri booking.bapCity booking.bapCountry booking.transactionId estimateRepMsg retryConfig
+  void $ callOnCancel transporter booking.bapId booking.bapUri booking.bapCity booking.bapCountry booking.transactionId onCancelMsg retryConfig

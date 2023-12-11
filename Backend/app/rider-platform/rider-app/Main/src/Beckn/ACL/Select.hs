@@ -55,7 +55,7 @@ buildOrder res = do
                 { currency = "INR",
                   value = show res.estimate.estimatedFare.getMoney
                 },
-            tags = if isJust res.customerExtraFee then Just $ Select.TG [mkCustomerTipTags] else Nothing
+            tags = if null selectedTags then Nothing else Just $ Select.TG selectedTags
           }
   return
     Select.Order
@@ -76,6 +76,7 @@ buildOrder res = do
             }
       }
   where
+    selectedTags = ([mkCustomerTipTags | isJust res.customerExtraFee]) ++ ([mkOldEstimateInfoTags | res.isOldEstimateValid])
     mkCustomerTipTags =
       Select.TagGroup
         { display = False,
@@ -87,6 +88,20 @@ buildOrder res = do
                   code = (\_ -> Just "customer_tip") =<< res.customerExtraFee,
                   name = (\_ -> Just "Customer Tip") =<< res.customerExtraFee,
                   value = (\charges -> Just $ show charges.getMoney) =<< res.customerExtraFee
+                }
+            ]
+        }
+    mkOldEstimateInfoTags =
+      Select.TagGroup
+        { display = False,
+          code = "old_estimate_info",
+          name = "Old Estimate Info",
+          list =
+            [ Select.Tag
+                { display = (\_ -> Just False) =<< Just res.isOldEstimateValid,
+                  code = (\_ -> Just "is_old_estimate_valid") =<< Just res.isOldEstimateValid,
+                  name = (\_ -> Just "Is Old Estimate Valid") =<< Just res.isOldEstimateValid,
+                  value = (Just . show) =<< Just res.isOldEstimateValid
                 }
             ]
         }

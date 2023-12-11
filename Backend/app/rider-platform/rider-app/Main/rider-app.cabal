@@ -29,6 +29,7 @@ library
   exposed-modules:
       API
       API.Beckn
+      API.Beckn.OnCancel
       API.Beckn.OnConfirm
       API.Beckn.OnInit
       API.Beckn.OnSearch
@@ -102,6 +103,7 @@ library
       Beckn.ACL.Init
       Beckn.ACL.Metro.OnSearch
       Beckn.ACL.Metro.Search
+      Beckn.ACL.OnCancel
       Beckn.ACL.OnConfirm
       Beckn.ACL.OnInit
       Beckn.ACL.OnSearch
@@ -116,6 +118,7 @@ library
       Beckn.ACL.Track
       Beckn.ACL.Update
       Beckn.Core
+      Domain.Action.Beckn.OnCancel
       Domain.Action.Beckn.OnConfirm
       Domain.Action.Beckn.OnInit
       Domain.Action.Beckn.OnSearch

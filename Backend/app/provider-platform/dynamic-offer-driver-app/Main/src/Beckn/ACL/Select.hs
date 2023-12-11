@@ -50,6 +50,7 @@ buildSelectReq subscriber req = do
     [item] -> pure item
     _ -> throwError $ InvalidRequest "There should be only one item"
   let customerExtraFee = getCustomerExtraFee =<< item.tags
+      isOldEstimateValid = getOldEstimateInfo =<< item.tags
 
   pure
     DSelect.DSelectReq
@@ -60,7 +61,8 @@ buildSelectReq subscriber req = do
         pickupTime = now,
         autoAssignEnabled = isJust context.max_callbacks && (fromMaybe 0 context.max_callbacks == 1),
         customerExtraFee = customerExtraFee,
-        estimateId = Id order.fulfillment.id
+        estimateId = Id order.fulfillment.id,
+        ..
       }
 
 getCustomerExtraFee :: Select.TagGroups -> Maybe Money
@@ -68,3 +70,8 @@ getCustomerExtraFee tagGroups = do
   tagValue <- getTag "customer_tip_info" "customer_tip" tagGroups
   customerExtraFee <- readMaybe $ T.unpack tagValue
   Just $ Money customerExtraFee
+
+getOldEstimateInfo :: Select.TagGroups -> Maybe Bool
+getOldEstimateInfo tagGroups = do
+  tagValue <- getTag "old_estimate_info" "is_old_estimate_valid" tagGroups
+  readMaybe $ T.unpack tagValue

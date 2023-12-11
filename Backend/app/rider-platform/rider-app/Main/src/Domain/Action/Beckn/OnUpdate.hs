@@ -18,7 +18,6 @@ module Domain.Action.Beckn.OnUpdate
     validateRequest,
     OnUpdateReq (..),
     OnUpdateFareBreakup (..),
-    EstimateRepetitionEstimateInfo (..),
     NightShiftInfo (..),
     WaitingChargesInfo (..),
     DEstimate.FareRange (..),
@@ -40,8 +39,6 @@ import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Person.PersonFlowStatus as DPFS
 import Domain.Types.Ride
 import qualified Domain.Types.Ride as SRide
-import qualified Domain.Types.SearchRequest as DSR
-import Domain.Types.VehicleVariant
 import Environment ()
 import Kernel.Beam.Functions
 import qualified Kernel.External.Maps as Maps
@@ -57,14 +54,11 @@ import qualified Storage.CachedQueries.MerchantConfig as CMC
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BookingCancellationReason as QBCR
-import qualified Storage.Queries.Estimate as QEstimate
 import qualified Storage.Queries.FareBreakup as QFareBreakup
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Ride as QRide
-import qualified Storage.Queries.SearchRequest as QSR
 import Tools.Error
 import Tools.Event
-import Tools.Maps (LatLong)
 import Tools.Metrics (HasBAPMetrics, incrementRideCreatedRequestCount)
 import qualified Tools.Notifications as Notify
 
@@ -111,13 +105,6 @@ data OnUpdateReq
       { bppBookingId :: Id SRB.BPPBooking,
         bppRideId :: Id SRide.BPPRide,
         arrivalTime :: Maybe UTCTime
-      }
-  | EstimateRepetitionReq
-      { searchRequestId :: Id DSR.SearchRequest,
-        bppEstimateId :: Id DEstimate.BPPEstimate,
-        bppBookingId :: Id SRB.BPPBooking,
-        bppRideId :: Id SRide.BPPRide,
-        cancellationSource :: SBCR.CancellationSource
       }
   | NewMessageReq
       { bppBookingId :: Id SRB.BPPBooking,
@@ -186,17 +173,6 @@ data ValidatedOnUpdateReq
         booking :: SRB.Booking,
         ride :: SRide.Ride
       }
-  | ValidatedEstimateRepetitionReq
-      { searchRequestId :: Id DSR.SearchRequest,
-        bppEstimateId :: Id DEstimate.BPPEstimate,
-        bppBookingId :: Id SRB.BPPBooking,
-        bppRideId :: Id SRide.BPPRide,
-        cancellationSource :: SBCR.CancellationSource,
-        booking :: SRB.Booking,
-        ride :: SRide.Ride,
-        searchReq :: DSR.SearchRequest,
-        estimate :: DEstimate.Estimate
-      }
   | ValidatedNewMessageReq
       { bppBookingId :: Id SRB.BPPBooking,
         bppRideId :: Id SRide.BPPRide,
@@ -216,19 +192,6 @@ data ValidatedOnUpdateReq
 data OnUpdateFareBreakup = OnUpdateFareBreakup
   { amount :: HighPrecMoney,
     description :: Text
-  }
-
-data EstimateRepetitionEstimateInfo = EstimateRepetitionEstimateInfo
-  { vehicleVariant :: VehicleVariant,
-    estimatedFare :: Money,
-    discount :: Maybe Money,
-    estimatedTotalFare :: Money,
-    totalFareRange :: DEstimate.FareRange,
-    descriptions :: [Text],
-    estimateBreakupList :: [EstimateBreakupInfo],
-    nightShiftInfo :: Maybe NightShiftInfo,
-    waitingCharges :: WaitingChargesInfo,
-    driversLocation :: [LatLong]
   }
 
 data NightShiftInfo = NightShiftInfo
@@ -432,18 +395,6 @@ onUpdate ValidatedDriverArrivedReq {..} = do
     void $ QPFS.updateStatus booking.riderId DPFS.DRIVER_ARRIVED {rideId = ride.id, bookingId = booking.id, trackingUrl = Nothing, driverLocation = Nothing, driverArrivalTime = Just now}
 onUpdate ValidatedNewMessageReq {..} = do
   Notify.notifyOnNewMessage booking message
-onUpdate ValidatedEstimateRepetitionReq {..} = do
-  let bookingCancellationReason = mkBookingCancellationReason booking.id (Just ride.id) cancellationSource booking.merchantId
-  logTagInfo ("EstimateId-" <> getId estimate.id) "Estimate repetition."
-
-  _ <- QEstimate.updateStatus estimate.id DEstimate.DRIVER_QUOTE_REQUESTED
-  _ <- QRB.updateStatus booking.id SRB.REALLOCATED
-  _ <- QRide.updateStatus ride.id SRide.CANCELLED
-  _ <- QBCR.upsert bookingCancellationReason
-  _ <- QPFS.updateStatus searchReq.riderId DPFS.WAITING_FOR_DRIVER_OFFERS {estimateId = estimate.id, validTill = searchReq.validTill}
-  QPFS.clearCache searchReq.riderId
-  -- notify customer
-  Notify.notifyOnEstimatedReallocated booking estimate.id
 onUpdate ValidatedSafetyAlertReq {..} = do
   Notify.notifySafetyAlert booking code
 
@@ -511,12 +462,6 @@ validateRequest NewMessageReq {..} = do
   return $ ValidatedNewMessageReq {..}
   where
     isValidRideStatus status = status == SRide.NEW
-validateRequest EstimateRepetitionReq {..} = do
-  booking <- runInReplica $ QRB.findByBPPBookingId bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId: " <> bppBookingId.getId)
-  searchReq <- QSR.findById searchRequestId >>= fromMaybeM (SearchRequestNotFound searchRequestId.getId)
-  ride <- QRide.findByBPPRideId bppRideId >>= fromMaybeM (RideDoesNotExist $ "BppRideId" <> bppRideId.getId)
-  estimate <- QEstimate.findByBPPEstimateId bppEstimateId >>= fromMaybeM (EstimateDoesNotExist bppEstimateId.getId)
-  return $ ValidatedEstimateRepetitionReq {..}
 validateRequest SafetyAlertReq {..} = do
   booking <- runInReplica $ QRB.findByBPPBookingId bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId: " <> bppBookingId.getId)
   unless (booking.status == SRB.TRIP_ASSIGNED) $ throwError (BookingInvalidStatus $ show booking.status)
