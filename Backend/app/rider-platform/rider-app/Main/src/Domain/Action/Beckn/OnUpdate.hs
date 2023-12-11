@@ -125,7 +125,8 @@ data OnUpdateReq
   | SafetyAlertReq
       { bppBookingId :: Id SRB.BPPBooking,
         bppRideId :: Id SRide.BPPRide,
-        reason :: Text
+        reason :: Text,
+        code :: Text
       }
 
 data ValidatedOnUpdateReq
@@ -205,6 +206,7 @@ data ValidatedOnUpdateReq
         bppRideId :: Id SRide.BPPRide,
         booking :: SRB.Booking,
         ride :: SRide.Ride,
+        code :: Text,
         reason :: Text
       }
 
@@ -438,7 +440,7 @@ onUpdate ValidatedEstimateRepetitionReq {..} = do
   -- notify customer
   Notify.notifyOnEstimatedReallocated booking estimate.id
 onUpdate ValidatedSafetyAlertReq {..} = do
-  Notify.notifySafetyAlert booking reason
+  Notify.notifySafetyAlert booking code
 
 validateRequest ::
   ( CacheFlow m r,

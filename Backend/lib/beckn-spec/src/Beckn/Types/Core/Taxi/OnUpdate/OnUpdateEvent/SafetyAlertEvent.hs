@@ -15,18 +15,17 @@
 
 module Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.SafetyAlertEvent where
 
+import Beckn.Types.Core.Taxi.Common.FulfillmentInfo
 import Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.OnUpdateEventType (OnUpdateEventType (SAFETY_ALERT))
 import qualified Control.Lens as L
 import Data.Aeson as A
 import Data.OpenApi hiding (Example, example)
 import EulerHS.Prelude hiding (fromList, id)
 import GHC.Exts (fromList)
-import Kernel.Utils.Schema
 
 data SafetyAlertEvent = SafetyAlertEvent
   { id :: Text,
-    fulfillment :: FulfillmentInfo,
-    reason :: Text
+    fulfillment :: FulfillmentInfo
   }
   deriving (Generic, Show)
 
@@ -35,17 +34,15 @@ instance ToJSON SafetyAlertEvent where
     let (A.Object fulfJSON) = toJSON fulfillment
     A.Object $
       "id" .= id
-        <> "fulfillment" .= (fulfJSON <> ("state" .= (("code" .= SAFETY_ALERT) :: A.Object)))
-        <> "reason" .= reason
+        <> "fulfillment" .= (fulfJSON <> ("state" .= ("descriptor" .= (("code" .= SAFETY_ALERT <> "name" .= A.String "Safety Alert") :: A.Object) :: A.Object)))
 
 instance FromJSON SafetyAlertEvent where
   parseJSON = withObject "SafetyAlertEvent" $ \obj -> do
-    update_type <- (obj .: "fulfillment") >>= (.: "state") >>= (.: "code")
+    update_type <- (obj .: "fulfillment") >>= (.: "state") >>= (.: "descriptor") >>= (.: "code")
     unless (update_type == SAFETY_ALERT) $ fail "Wrong update_type."
     SafetyAlertEvent
       <$> obj .: "id"
       <*> obj .: "fulfillment"
-      <*> obj .: "reason"
 
 instance ToSchema SafetyAlertEvent where
   declareNamedSchema _ = do
@@ -56,12 +53,20 @@ instance ToSchema SafetyAlertEvent where
             & type_ L.?~ OpenApiObject
             & properties
               L..~ fromList
-                [("code", update_type)]
-            & required L..~ ["code"]
+                [("code", update_type), ("name", txt)]
+            & required L..~ ["code", "name"]
+        descriptor =
+          mempty
+            & type_ L.?~ OpenApiObject
+            & properties
+              L..~ fromList
+                [("descriptor", Inline st)]
+            & required L..~ ["descriptor"]
+
         fulfillment =
           toInlinedSchema (Proxy :: Proxy FulfillmentInfo)
             & properties
-              L.<>~ fromList [("state", Inline st)]
+              L.<>~ fromList [("state", Inline descriptor)]
             & required L.<>~ ["state"]
     return $
       NamedSchema (Just "SafetyAlertEvent") $
@@ -70,15 +75,6 @@ instance ToSchema SafetyAlertEvent where
           & properties
             L..~ fromList
               [ ("id", txt),
-                ("fulfillment", Inline fulfillment),
-                ("reason", txt)
+                ("fulfillment", Inline fulfillment)
               ]
-          & required L..~ ["id", "fulfillment", "reason"]
-
-newtype FulfillmentInfo = FulfillmentInfo
-  { id :: Text
-  }
-  deriving (Generic, Show, ToJSON, FromJSON)
-
-instance ToSchema FulfillmentInfo where
-  declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
+          & required L..~ ["id", "fulfillment"]

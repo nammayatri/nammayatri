@@ -72,7 +72,8 @@ data MerchantT f = MerchantT
     trackingShortUrlPattern :: B.C f Text,
     editPickupDistanceThreshold :: B.C f HighPrecMeters,
     driverDistanceThresholdFromPickup :: B.C f HighPrecMeters,
-    numOfAllowedEditPickupLocationAttemptsThreshold :: B.C f Int
+    numOfAllowedEditPickupLocationAttemptsThreshold :: B.C f Int,
+    publicMediaFileUrlPattern :: B.C f Text
   }
   deriving (Generic, B.Beamable)
 

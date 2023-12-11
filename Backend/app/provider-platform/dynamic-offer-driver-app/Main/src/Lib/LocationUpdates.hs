@@ -179,4 +179,4 @@ performSafetyCheck rideId = do
     riderDetails <- runInReplica $ QRiderDetails.findById riderId >>= fromMaybeM (RiderDetailsNotFound ride.id.getId)
     void $ QRide.updateSafetyAlertTriggered ride.id
     when riderDetails.nightSafetyChecks $ do
-      BP.sendAlertToBAP booking ride "Deviation"
+      BP.sendSafetyAlertToBAP booking ride "deviation" "Route Deviation Detected"

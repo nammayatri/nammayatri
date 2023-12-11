@@ -97,6 +97,8 @@ data OnUpdateBuildReq
       }
   | SafetyAlertBuildReq
       { ride :: DRide.Ride,
+        booking :: DRB.Booking,
+        code :: Text,
         reason :: Text
       }
 
@@ -360,14 +362,22 @@ buildOnUpdateMessage NewMessageBuildReq {..} = do
               }
       }
 buildOnUpdateMessage SafetyAlertBuildReq {..} = do
+  let tagGroups =
+        [ Tags.TagGroup
+            { display = False,
+              code = "safety_alert",
+              name = "Safety Alert",
+              list = [Tags.Tag (Just False) (Just code) (Just "Safety Alert Trigger") (Just reason)]
+            }
+        ]
+  fulfillment <- mkFullfillment Nothing ride booking Nothing Nothing (Just $ Tags.TG tagGroups)
   return $
     OnUpdate.OnUpdateMessage
       { order =
           OnUpdate.SafetyAlert $
             SafetyAlertDU.SafetyAlertEvent
               { id = ride.bookingId.getId,
-                fulfillment = SafetyAlertDU.FulfillmentInfo ride.id.getId,
-                reason = reason
+                fulfillment = fulfillment
               },
         update_target = "order.fufillment.state.code, order.fulfillment.tags"
       }
