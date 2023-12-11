@@ -18,6 +18,7 @@ import android.content.SharedPreferences;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
+import android.os.HandlerThread;
 import android.os.Looper;
 import android.provider.Settings;
 import android.util.Log;
@@ -426,9 +427,18 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
 
     private void showOverlayMessage(JSONObject payload) {
         try {
-            Intent showMessage = new Intent(getApplicationContext(), OverlayMessagingService.class);
-            showMessage.putExtra("payload", payload.toString());
-            startService(showMessage);
+            int delay = payload.optInt("delay", 0);
+            HandlerThread handlerThread = new HandlerThread("OverlayHandlerThread");
+            handlerThread.start();
+
+            Handler handler = new Handler(handlerThread.getLooper());
+
+            handler.postDelayed(() -> {
+                Intent showMessage = new Intent(getApplicationContext(), OverlayMessagingService.class);
+                showMessage.putExtra("payload", payload.toString());
+                startService(showMessage);
+            }, delay * 1000);
+
         } catch (Exception e) {
             e.printStackTrace();
         }

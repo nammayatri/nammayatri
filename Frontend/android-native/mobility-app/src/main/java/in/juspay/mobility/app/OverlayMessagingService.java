@@ -56,10 +56,16 @@ import android.app.Service;
 import android.content.ActivityNotFoundException;
 import android.content.Intent;
 import android.content.pm.ActivityInfo;
+import android.graphics.Paint;
 import android.graphics.PixelFormat;
+import android.graphics.Typeface;
 import android.net.Uri;
+import android.os.Build;
+import android.os.Handler;
 import android.os.IBinder;
+import android.os.Looper;
 import android.provider.Settings;
+import android.text.Html;
 import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -75,16 +81,27 @@ import com.bumptech.glide.Glide;
 import com.google.android.material.button.MaterialButton;
 
 import org.json.JSONArray;
+import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.util.Iterator;
+import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
+import in.juspay.mobility.app.services.MobilityAPIResponse;
+import in.juspay.mobility.app.services.MobilityCallAPI;
 
 public class OverlayMessagingService extends Service {
     private WindowManager windowManager;
     private View messageView;
     private String link, endPoint, method;
     private JSONArray actions;
-    private JSONObject reqBody;
+    private JSONArray secondaryActions;
+    private String reqBody;
+    private String toastMessage;
+    private String supportPhoneNumber;
 
     @Nullable
     @Override
@@ -119,7 +136,8 @@ public class OverlayMessagingService extends Service {
         params.dimAmount = 0.6f;
         params.gravity = Gravity.CENTER;
         params.screenOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT;
-        messageView = LayoutInflater.from(this).inflate(R.layout.message_overlay, null);
+        messageView = LayoutInflater.from(getApplicationContext()).inflate(R.layout.message_overlay, null);
+
         setViewListeners(messageView);
         windowManager.addView(messageView, params);
         setDataToViews(intentMessage);
@@ -135,6 +153,8 @@ public class OverlayMessagingService extends Service {
             LinearLayout buttonLayout = messageView.findViewById(R.id.button_view);
             MaterialButton buttonOk = messageView.findViewById(R.id.button_ok);
             TextView buttonCancel = messageView.findViewById(R.id.button_cancel);
+            ImageView cancelButtonImage = messageView.findViewById(R.id.cancel_button_image);
+            TextView buttonCancelRight = messageView.findViewById(R.id.button_cancel_right);
             title.setText(data.has("title") ? data.getString("title") : "");
             buttonOk.setText(data.has("okButtonText") ? data.getString("okButtonText") : "Cancel");
             buttonCancel.setText(data.has("cancelButtonText") ? data.getString("cancelButtonText") : "Ok");
@@ -142,8 +162,11 @@ public class OverlayMessagingService extends Service {
             link = data.has("link") ? data.getString("link") : null;
             endPoint = data.has("endPoint") ? data.getString("endPoint") : null;
             method = data.has("method") ? data.getString("method") : null;
-            reqBody = data.has("reqBody") ? (JSONObject) data.get("reqBody") : null;
+            reqBody = data.has("reqBody") ?  data.getString("reqBody") : null;
             actions = data.has("actions") ? data.getJSONArray("actions") : null;
+            secondaryActions = data.has("secondaryActions") ? data.getJSONArray("secondaryActions") : null;
+            toastMessage = data.optString("toastMessage", null);
+            supportPhoneNumber = data.optString("contactSupportNumber", null);
             Glide.with(this).load(data.getString("imageUrl")).into(imageView);
             boolean titleVisibility = data.has("titleVisibility") && data.getBoolean("titleVisibility");
             boolean descriptionVisibility = data.has("descriptionVisibility") && data.getBoolean("descriptionVisibility");
@@ -157,8 +180,75 @@ public class OverlayMessagingService extends Service {
             buttonOk.setVisibility(buttonOkVisibility ? View.VISIBLE : View.GONE);
             buttonCancel.setVisibility(buttonCancelVisibility ? View.VISIBLE : View.GONE);
             imageView.setVisibility(imageVisibility ? View.VISIBLE : View.GONE);
+            try {
+                setDataToMediaView(data);
+            } catch (Exception e){
+                RideRequestUtils.firebaseLogEventWithParams("exception", "CONSTRUCT_MEDIA_VIEW", Objects.requireNonNull(e.getMessage()).substring(0, 40), this);
+            }
+            Boolean showContactSupport = supportPhoneNumber != null;
+            if (showContactSupport) {
+                buttonCancelRight.setVisibility(View.VISIBLE);
+                cancelButtonImage.setVisibility(View.VISIBLE);
+                secondaryActions = secondaryActions != null ? secondaryActions.put("CALL_SUPPORT") : new JSONArray("CALL_SUPPORT");
+                buttonCancel.setText(R.string.need_help);
+            }
+
         } catch (Exception e) {
+            RideRequestUtils.firebaseLogEventWithParams("exception", "CONSTRUCT_VIEW", Objects.requireNonNull(e.getMessage()).substring(0, 40), this);
             stopSelf();
+        }
+    }
+
+    public void setDataToMediaView (JSONObject data) throws JSONException {
+        LinearLayout dynamicView = messageView.findViewById(R.id.dynamic_views);
+        dynamicView.removeAllViews();
+        JSONArray mediaViews = data.has("socialMediaLinks") ? data.getJSONArray("socialMediaLinks") : null;
+        if(mediaViews != null){
+            for (int i = 0; i < mediaViews.length(); i++){
+                LinearLayout mediaView = new LinearLayout(this);
+                JSONObject mediaViewData = mediaViews.getJSONObject(i);
+                int imageHeight = mediaViewData.has("height") ? mediaViewData.getInt("height") : 0;
+                int imageWidth = mediaViewData.has("width") ? mediaViewData.getInt("height") : 0;
+                if(mediaViewData.has("prefixImage")) {
+                    ImageView prefixImage = new ImageView(this);
+                    Glide.with(this).load(mediaViewData.getString("prefixImage")).into(prefixImage);
+                    prefixImage.setLayoutParams(new LinearLayout.LayoutParams(imageWidth, imageHeight));
+                    boolean prefixImageVisibility = mediaViewData.has("prefixImage") && mediaViewData.getString("prefixImage").length() != 0;
+                    prefixImage.setVisibility(prefixImageVisibility ? View.VISIBLE : View.GONE);
+                    mediaView.addView(prefixImage);
+                }
+
+                TextView linkText = new TextView(this);
+                linkText.setText(mediaViewData.has("linkText") ? mediaViewData.getString("linkText") : "");
+                linkText.setTextColor(mediaViewData.has("linkTextColor") ? mediaViewData.getInt("linkTextColor") :  getResources().getColor(R.color.blue800, null)); //ask theme
+                boolean isTextUnderLined = !mediaViewData.has("isTextUnderlined") || mediaViewData.getBoolean("isTextUnderlined");
+                if (isTextUnderLined)
+                    linkText.setPaintFlags(linkText.getPaintFlags() | Paint.UNDERLINE_TEXT_FLAG);
+                boolean linkTextVisibility = mediaViewData.has("linkText") && mediaViewData.getString("linkText").length() != 0;
+                linkText.setVisibility(linkTextVisibility ? View.VISIBLE : View.GONE);
+                linkText.setPadding(10,0,10,0);
+                mediaView.addView(linkText);
+
+                if(mediaViewData.has("suffixImage")) {
+                    ImageView suffixImage = new ImageView(this);
+                    Glide.with(this).load(mediaViewData.getString("suffixImage")).into(suffixImage);
+                    suffixImage.setLayoutParams(new LinearLayout.LayoutParams(imageWidth, imageHeight));
+                    boolean suffixImageVisibility = mediaViewData.has("suffixImage") && mediaViewData.getString("suffixImage").length() != 0;
+                    suffixImage.setVisibility(suffixImageVisibility ? View.VISIBLE : View.GONE);
+                    mediaView.addView(suffixImage);
+                }
+
+                mediaView.setGravity(Gravity.CENTER);
+                String mediaLink = mediaViewData.has("link") ? mediaViewData.getString("link") : null;
+                if(mediaLink != null){
+                    mediaView.setOnClickListener(view -> {
+                        openLink(mediaLink);
+                        stopSelf();
+                    });
+                }
+
+                dynamicView.addView(mediaView);
+            }
         }
     }
 
@@ -168,45 +258,7 @@ public class OverlayMessagingService extends Service {
             try {
                 for (int i = 0; i < actions.length(); i++) {
                     String action = String.valueOf(actions.get(i));
-                    switch (action) {
-                        case "SET_DRIVER_ONLINE":
-                            RideRequestUtils.updateDriverStatus(true, "ONLINE", this, false);
-                            RideRequestUtils.restartLocationService(this);
-                            break;
-                        case "OPEN_LINK":
-                            if (link != null) {
-                                Uri uri = Uri.parse(link); // missing 'http://' will cause crash
-                                Intent intent = new Intent(Intent.ACTION_VIEW, uri);
-                                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                                try {
-                                    startActivity(intent);
-                                } catch (ActivityNotFoundException e) {
-                                    String message = this.getResources().getString(Utils.getResIdentifier(getApplicationContext(),"no_enabled_browser", "string"));
-                                    Toast.makeText(this, message, Toast.LENGTH_LONG).show();
-                                    RideRequestUtils.firebaseLogEventWithParams("exception", "OPEN_LINK", "ActivityNotFoundException", this);
-                                } catch (Exception e) {
-                                    RideRequestUtils.firebaseLogEventWithParams("exception", "OPEN_LINK", Objects.requireNonNull(e.getMessage()).substring(0, 40), this);
-                                }
-                            }
-                            break;
-                        case "CALL_API":
-                            if (endPoint != null && reqBody != null && method != null) {
-                                RideRequestUtils.callAPIViaFCM(endPoint, reqBody, method, this);
-                            }
-                            break;
-                        case "OPEN_APP":
-                            RideRequestUtils.openApplication(this);
-                            break;
-                        case "OPEN_SUBSCRIPTION" :
-                            Intent intent = getApplicationContext().getPackageManager().getLaunchIntentForPackage(getApplicationContext().getPackageName());
-                            intent.putExtra("notification_type", "PAYMENT_MODE_MANUAL");
-                            intent.putExtra("entity_ids", "");
-                            intent.putExtra("entity_type", "");
-                            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                            startActivity(intent);
-                            Utils.logEvent("ny_driver_overlay_join_now", getApplicationContext());
-                            break;
-                    }
+                    performAction(action);
                 }
             } catch (Exception e) {
                 e.printStackTrace();
@@ -214,16 +266,105 @@ public class OverlayMessagingService extends Service {
             stopSelf();
         });
 
-        messageView.findViewById(R.id.button_cancel).setOnClickListener(view -> stopSelf());
+        messageView.findViewById(R.id.secondary_button).setOnClickListener(view -> {
+            try {
+                for (int i = 0; i < secondaryActions.length(); i++) {
+                    String action = String.valueOf(secondaryActions.get(i));
+                    performAction(action);
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+            stopSelf();
+        });
     }
 
+    void performAction(String action){
+        switch (action) {
+            case "SET_DRIVER_ONLINE":
+                RideRequestUtils.updateDriverStatus(true, "ONLINE", this, false);
+                RideRequestUtils.restartLocationService(this);
+                break;
+            case "OPEN_LINK":
+                openLink(link);
+                break;
+            case "CALL_API":
+                try{
+                    if (endPoint != null && reqBody != null && method != null) {
+
+                        new Thread(new Runnable() {
+                            @Override
+                            public void run() {
+                                MobilityCallAPI mobilityApiHandler = new MobilityCallAPI();
+                                Map<String, String> baseHeaders = mobilityApiHandler.getBaseHeaders(OverlayMessagingService.this);
+                                MobilityAPIResponse apiResponse = mobilityApiHandler.callAPI(endPoint, baseHeaders, reqBody, method);
+                                Handler handler = new Handler(Looper.getMainLooper());
+                                handler.post(new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        if (toastMessage != null && apiResponse.getStatusCode() == 200)
+                                            Toast.makeText(OverlayMessagingService.this, toastMessage, Toast.LENGTH_SHORT).show();
+                                    }
+                                });
+                            }
+
+
+                        }).start();
+                    }
+                } catch (Exception e){
+                    System.out.println("Error : " + e);
+                }
+                break;
+            case "OPEN_APP":
+                RideRequestUtils.openApplication(this);
+                break;
+            case "OPEN_SUBSCRIPTION" :
+                Intent intent = getApplicationContext().getPackageManager().getLaunchIntentForPackage(getApplicationContext().getPackageName());
+                intent.putExtra("notification_type", "PAYMENT_MODE_MANUAL");
+                intent.putExtra("entity_ids", "");
+                intent.putExtra("entity_type", "");
+                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                startActivity(intent);
+                Utils.logEvent("ny_driver_overlay_join_now", getApplicationContext());
+                break;
+            case "CALL_SUPPORT" :
+                try {
+                    intent = new Intent(Intent.ACTION_DIAL);
+                    intent.setData(Uri.parse("tel:" + supportPhoneNumber));
+                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                    startActivity(intent);
+                } catch (Exception e){
+                    System.out.println(e.toString());
+                }
+
+                break;
+        }
+        stopSelf();
+    }
 
     @Override
     public void onDestroy() {
         super.onDestroy();
-        if (messageView != null) {
+        if (windowManager != null && messageView != null) {
             windowManager.removeView(messageView);
             messageView = null;
+        }
+    }
+
+    void openLink (String link) {
+        if (link != null) {
+            Uri uri = Uri.parse(link); // missing 'http://' will cause crash
+            Intent intent = new Intent(Intent.ACTION_VIEW, uri);
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            try {
+                startActivity(intent);
+            } catch (ActivityNotFoundException e) {
+                String message = this.getResources().getString(Utils.getResIdentifier(getApplicationContext(), "no_enabled_browser", "string"));
+                Toast.makeText(this, message, Toast.LENGTH_LONG).show();
+                RideRequestUtils.firebaseLogEventWithParams("exception", "OPEN_LINK", "ActivityNotFoundException", this);
+            } catch (Exception e) {
+                RideRequestUtils.firebaseLogEventWithParams("exception", "OPEN_LINK", Objects.requireNonNull(e.getMessage()).substring(0, 40), this);
+            }
         }
     }
 }
