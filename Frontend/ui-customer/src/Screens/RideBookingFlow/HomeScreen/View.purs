@@ -1903,7 +1903,7 @@ emptyLayout state =
 rideTrackingView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 rideTrackingView push state =
   linearLayout
-    [ height MATCH_PARENT
+    [ height WRAP_CONTENT
     , width MATCH_PARENT
     , orientation VERTICAL
     , padding (Padding 0 0 0 0)
@@ -1918,7 +1918,7 @@ rideTrackingView push state =
       --   , translateOutXAnim (-100) $ not ( state.props.currentStage == RideAccepted || state.props.currentStage == RideStarted)
       --   ] $
       linearLayout
-        [ height MATCH_PARENT
+        [ height WRAP_CONTENT
         , width MATCH_PARENT
         , background Color.transparent
         , orientation VERTICAL
