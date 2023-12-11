@@ -251,6 +251,7 @@ data RideInfoRes = RideInfoRes
     driverInitiatedCallCount :: Int,
     bookingToRideStartDuration :: Maybe Minutes,
     distanceCalculationFailed :: Maybe Bool,
+    driverDeviatedFromRoute :: Maybe Bool,
     vehicleVariant :: Maybe Variant
   }
   deriving stock (Show, Generic)
