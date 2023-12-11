@@ -1919,7 +1919,7 @@ rideTrackingView push state =
       --   , translateOutXAnim (-100) $ not ( state.props.currentStage == RideAccepted || state.props.currentStage == RideStarted)
       --   ] $
       linearLayout
-        [ height MATCH_PARENT
+        [ height WRAP_CONTENT
         , width MATCH_PARENT
         , background Color.transparent
         , orientation VERTICAL
