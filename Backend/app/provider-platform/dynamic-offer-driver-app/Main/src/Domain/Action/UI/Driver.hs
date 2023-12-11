@@ -246,8 +246,7 @@ data DriverInformationRes = DriverInformationRes
     maskedDeviceToken :: Maybe Text,
     currentDues :: Maybe HighPrecMoney,
     manualDues :: Maybe HighPrecMoney,
-    blockStateModifier :: Maybe Text,
-    coinBalance :: Maybe Int
+    blockStateModifier :: Maybe Text
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
 
@@ -402,7 +401,8 @@ data DriverRespondReq = DriverRespondReq
 data DriverStatsRes = DriverStatsRes
   { totalRidesOfDay :: Int,
     totalEarningsOfDay :: Money,
-    bonusEarning :: Money
+    bonusEarning :: Money,
+    coinBalance :: Int
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -655,13 +655,12 @@ getInformation (personId, merchantId, merchantOpCityId) = do
   dues <- QDF.findAllPendingAndDueDriverFeeByDriverId driverId
   let currentDues = sum $ map (\dueInvoice -> SLDriverFee.roundToHalf (fromIntegral dueInvoice.govtCharges + dueInvoice.platformFee.fee + dueInvoice.platformFee.cgst + dueInvoice.platformFee.sgst)) dues
   let manualDues = sum $ map (\dueInvoice -> SLDriverFee.roundToHalf (fromIntegral dueInvoice.govtCharges + dueInvoice.platformFee.fee + dueInvoice.platformFee.cgst + dueInvoice.platformFee.sgst)) $ filter (\due -> due.status == DDF.PAYMENT_OVERDUE) dues
-  coinBalance_ <- Coins.getCoinsByDriverId driverId
   logDebug $ "alternateNumber-" <> show driverEntity.alternateNumber
   organization <-
     CQM.findById merchantId
       >>= fromMaybeM (MerchantNotFound merchantId.getId)
   driverGoHomeInfo <- CQDGR.getDriverGoHomeRequestInfo driverId merchantOpCityId Nothing
-  makeDriverInformationRes merchantOpCityId driverEntity organization driverReferralCode driverStats driverGoHomeInfo (Just currentDues) (Just manualDues) (Just coinBalance_)
+  makeDriverInformationRes merchantOpCityId driverEntity organization driverReferralCode driverStats driverGoHomeInfo (Just currentDues) (Just manualDues)
 
 setActivity :: (CacheFlow m r, EsqDBFlow m r) => (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Bool -> Maybe DriverInfo.DriverMode -> m APISuccess.APISuccess
 setActivity (personId, _merchantId, merchantOpCityId) isActive mode = do
@@ -938,7 +937,7 @@ updateDriver (personId, _, merchantOpCityId) req = do
     CQM.findById merchantId
       >>= fromMaybeM (MerchantNotFound merchantId.getId)
   driverGoHomeInfo <- CQDGR.getDriverGoHomeRequestInfo personId merchantOpCityId Nothing
-  makeDriverInformationRes merchantOpCityId driverEntity org driverReferralCode driverStats driverGoHomeInfo Nothing Nothing Nothing
+  makeDriverInformationRes merchantOpCityId driverEntity org driverReferralCode driverStats driverGoHomeInfo Nothing Nothing
   where
     checkIfCanDowngrade mVehicle = do
       case mVehicle of
@@ -1081,8 +1080,8 @@ buildMetaData req personId = do
         MD.updatedAt = now
       }
 
-makeDriverInformationRes :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id DMOC.MerchantOperatingCity -> DriverEntityRes -> DM.Merchant -> Maybe (Id DR.DriverReferral) -> DriverStats -> DDGR.CachedGoHomeRequest -> Maybe HighPrecMoney -> Maybe HighPrecMoney -> Maybe Int -> m DriverInformationRes
-makeDriverInformationRes merchantOpCityId DriverEntityRes {..} org referralCode driverStats dghInfo currentDues manualDues coinBalance_ = do
+makeDriverInformationRes :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id DMOC.MerchantOperatingCity -> DriverEntityRes -> DM.Merchant -> Maybe (Id DR.DriverReferral) -> DriverStats -> DDGR.CachedGoHomeRequest -> Maybe HighPrecMoney -> Maybe HighPrecMoney -> m DriverInformationRes
+makeDriverInformationRes merchantOpCityId DriverEntityRes {..} org referralCode driverStats dghInfo currentDues manualDues = do
   merchantOperatingCity <- CQMOC.findById merchantOpCityId >>= fromMaybeM (MerchantOperatingCityDoesNotExist merchantOpCityId.getId)
   CQGHC.findByMerchantOpCityId merchantOpCityId >>= \cfg ->
     return $
@@ -1093,7 +1092,6 @@ makeDriverInformationRes merchantOpCityId DriverEntityRes {..} org referralCode 
           driverGoHomeInfo = dghInfo,
           isGoHomeEnabled = cfg.enableGoHome,
           operatingCity = merchantOperatingCity.city,
-          coinBalance = coinBalance_,
           ..
         }
 
@@ -1306,9 +1304,11 @@ getStats (driverId, _, merchantOpCityId) date = do
   rides <- runInReplica $ QRide.getRidesForDate driverId date transporterConfig.timeDiffFromUtc
   let fareParamId = mapMaybe (.fareParametersId) rides
   fareParameters <- (runInReplica . QFP.findAllIn) fareParamId
+  coinBalance_ <- Coins.getCoinsByDriverId driverId
   return $
     DriverStatsRes
-      { totalRidesOfDay = length rides,
+      { coinBalance = coinBalance_,
+        totalRidesOfDay = length rides,
         totalEarningsOfDay = sum (mapMaybe (.fare) rides),
         bonusEarning =
           let (driverSelFares, customerExtFees) = (mapMaybe (.driverSelectedFare) fareParameters, mapMaybe (.customerExtraFee) fareParameters)
