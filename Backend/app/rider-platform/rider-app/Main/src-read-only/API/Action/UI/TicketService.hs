@@ -24,7 +24,7 @@ import Servant
 import Tools.Auth
 
 type API =
-  TokenAuth :> "ticket" :> "places" :> Get '[JSON] [Domain.Types.TicketPlace.TicketPlace]
+  TokenAuth :> "ticket" :> "placesss" :> Get '[JSON] [Domain.Types.TicketPlace.TicketPlace]
     :<|> TokenAuth :> "ticket" :> "places" :> Capture "placeId" (Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace) :> "services" :> QueryParam "date" (Data.Time.Calendar.Day) :> Get '[JSON] [API.Types.UI.TicketService.TicketServiceResp]
     :<|> TokenAuth :> "ticket" :> "places" :> Capture "placeId" (Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace) :> "book" :> ReqBody '[JSON] API.Types.UI.TicketService.TicketBookingReq :> Post '[JSON] Kernel.External.Payment.Interface.Types.CreateOrderResp
     :<|> TokenAuth :> "ticket" :> "bookings" :> QueryParam "limit" (Kernel.Prelude.Int) :> QueryParam "offset" (Kernel.Prelude.Int) :> MandatoryQueryParam "status" (Domain.Types.TicketBooking.BookingStatus) :> Get '[JSON] [API.Types.UI.TicketService.TicketBookingAPIEntity]
