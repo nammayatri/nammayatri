@@ -293,7 +293,7 @@ fareUpdateView push config =
   [ width MATCH_PARENT
   , height WRAP_CONTENT
   , orientation VERTICAL
-  , padding $ Padding 20 0 20 170
+  , padding $ Padding 20 0 20 160
   ][  commonTV push (getStringByKey config "FARE_UPDATE_POLICY") Color.black800 FontStyle.subHeading1 LEFT 8 NoAction
     , commonTV push (getStringByKey config "YOU_MAY_SEE_AN_UPDATED_FINAL_FARE_DUE_TO_ANY_OF_THE_BELOW_REASONS") Color.black650 FontStyle.body3 LEFT 12 NoAction
     , textView
