@@ -10,10 +10,27 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+    - uses: actions/checkout@v3
+    - uses: cachix/install-nix-action@v22
+      with:
+        github_access_token: ${{ secrets.GITHUB_TOKEN }}
+    - uses: cachix/cachix-action@v13
+      with:
+        name: nammayatri
+        authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
+        extraPullNames: nix-community
+
     - name: Checkout code
       uses: actions/checkout@v3
       with:
         fetch-depth: 0  # Fetches all commits
+
+
+    - name: Enter Nix Shell
+      run: |
+          cd Backend
+          nix develop .#backend 
+
 
     - name: Run Src Read-Only Diff Check script
       id: src_read_only_diff_check

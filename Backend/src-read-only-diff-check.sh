@@ -1,6 +1,8 @@
 #!/bin/bash
 
-, run-generator
+cd Backend
+cabal run alchemist-generator-exe
+treefmt
 # This script checks if there are any changes in the src-read-only folder
 CHANGES_FOUND=false
 
