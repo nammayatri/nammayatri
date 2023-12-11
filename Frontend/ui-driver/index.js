@@ -2,6 +2,8 @@ import "core-js";
 import "presto-ui";
 import "regenerator-runtime/runtime";
 
+const bundleLoadTime = Date.now();
+window.flowTimeStampObject = {};
 const blackListFunctions = ["getFromSharedPrefs", "getKeysInSharedPref", "setInSharedPrefs", "addToLogList", "requestPendingLogs", "sessioniseLogs", "setKeysInSharedPrefs", "getLayoutBounds"]
 
 if (window.JBridge.firebaseLogEventWithParams){  
@@ -175,6 +177,16 @@ window.onMerchantEvent = function (_event, payload) {
       // window.merchantID = clientPaylod.payload.clientId.toUpperCase();
       window.merchantID = "NAMMAYATRI";
     }
+    if (clientPaylod.payload && clientPaylod.payload.hasOwnProperty('onCreateTimeStamp') && clientPaylod.payload.hasOwnProperty('initiateTimeStamp'))
+    {
+      const onCreateTimeStamp = clientPaylod.payload.onCreateTimeStamp;
+      const initiateTimeStamp = clientPaylod.payload.initiateTimeStamp;
+      window.flowTimeStampObject["onCreateToBundle"] = window.prevTimeStamp - onCreateTimeStamp;
+      window.flowTimeStampObject["nativeIntiateToBundle"] = window.prevTimeStamp - initiateTimeStamp;
+    }
+    window.flowTimeStampObject["bundleLoadTime"] = bundleLoadTime - window.prevTimeStamp;
+    window.flowTimeStampObject["bundleToInitiate"] = Date.now() - bundleLoadTime;
+    window.prevTimeStamp = Date.now();
     callInitiateResult();
   } else if (_event == "process") {
     window.__payload.sdkVersion = "2.0.1"

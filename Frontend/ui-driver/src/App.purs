@@ -163,7 +163,8 @@ defaultGlobalProps = {
   driverInformation : Nothing,
   driverRideStats : Nothing,
   callScreen : ScreenNames.HOME_SCREEN,
-  gotoPopupType : NO_POPUP_VIEW
+  gotoPopupType : NO_POPUP_VIEW,
+  addTimestamp : true
 }
 
 data ScreenType =

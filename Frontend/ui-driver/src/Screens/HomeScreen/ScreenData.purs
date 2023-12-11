@@ -191,7 +191,8 @@ initData = {
         showGenericAccessibilityPopUp : false,
         waitTimeStatus : NoStatus,
         isMockLocation : false,
-        accountBlockedPopup : false
+        accountBlockedPopup : false,
+        tobeLogged : false
     }
 }
 
