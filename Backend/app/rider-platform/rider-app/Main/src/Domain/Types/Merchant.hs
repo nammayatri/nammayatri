@@ -57,7 +57,8 @@ data MerchantD (s :: UsageSafety) = Merchant
     trackingShortUrlPattern :: Text,
     editPickupDistanceThreshold :: HighPrecMeters,
     driverDistanceThresholdFromPickup :: HighPrecMeters,
-    numOfAllowedEditPickupLocationAttemptsThreshold :: Int
+    numOfAllowedEditPickupLocationAttemptsThreshold :: Int,
+    publicMediaFileUrlPattern :: Text
   }
   deriving (Generic, Show)
 

@@ -166,12 +166,17 @@ parseEvent transactionId (OnUpdate.EstimateRepetition erEvent) = do
         bppRideId = Id erEvent.fulfillment.id,
         cancellationSource = castCancellationSource cancellationReason
       }
-parseEvent _ (OnUpdate.SafetyAlert saEvent) =
+parseEvent _ (OnUpdate.SafetyAlert saEvent) = do
+  tagsGroup <- fromMaybeM (InvalidRequest "agent tags is not present in SafetyAlert Event.") saEvent.fulfillment.tags
+  deviation :: Text <-
+    fromMaybeM (InvalidRequest "deviation is not present.") $
+      getTag "safety_alert" "deviation" tagsGroup
   return $
     DOnUpdate.SafetyAlertReq
       { bppBookingId = Id saEvent.id,
         bppRideId = Id saEvent.fulfillment.id,
-        reason = saEvent.reason
+        reason = deviation,
+        code = "deviation"
       }
 
 castCancellationSource :: OnUpdate.CancellationSource -> SBCR.CancellationSource

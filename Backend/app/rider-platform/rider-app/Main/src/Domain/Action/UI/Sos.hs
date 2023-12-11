@@ -211,7 +211,7 @@ addSosVideo sosId personId SOSVideoUploadReq {..} = do
   mediaFile <- L.runIO $ base64Encode <$> BS.readFile video
   filePath <- createFilePath (getId sosId) DMF.Video contentType
   let fileUrl =
-        merchantConfig.mediaFileUrlPattern
+        merchantConfig.publicMediaFileUrlPattern
           & T.replace "<DOMAIN>" "sos-video"
           & T.replace "<FILE_PATH>" filePath
   result <- try @_ @SomeException $ S3.putPublic (T.unpack filePath) mediaFile
@@ -223,7 +223,7 @@ addSosVideo sosId personId SOSVideoUploadReq {..} = do
       let rideInfo = buildRideInfo ride person phoneNumber
           trackLink = merchantConfig.trackingShortUrlPattern <> ride.shortId.getShortId
       when riderConfig.enableSupportForSafety $
-        void $ try @_ @SomeException (createTicket person.merchantId person.merchantOperatingCityId (mkTicket person phoneNumber ["https://" <> trackLink, fileUrl] rideInfo))
+        void $ try @_ @SomeException $ withShortRetry (createTicket person.merchantId person.merchantOperatingCityId (mkTicket person phoneNumber ["https://" <> trackLink, fileUrl] rideInfo))
       createMediaEntry Common.AddLinkAsMedia {url = fileUrl, fileType}
   where
     validateContentType = do

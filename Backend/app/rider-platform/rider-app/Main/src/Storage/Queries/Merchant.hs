@@ -98,7 +98,8 @@ instance FromTType' BeamM.Merchant Merchant where
             trackingShortUrlPattern = trackingShortUrlPattern,
             editPickupDistanceThreshold = editPickupDistanceThreshold,
             driverDistanceThresholdFromPickup = driverDistanceThresholdFromPickup,
-            numOfAllowedEditPickupLocationAttemptsThreshold = numOfAllowedEditPickupLocationAttemptsThreshold
+            numOfAllowedEditPickupLocationAttemptsThreshold = numOfAllowedEditPickupLocationAttemptsThreshold,
+            publicMediaFileUrlPattern = publicMediaFileUrlPattern
           }
 
 instance ToTType' BeamM.Merchant Merchant where
@@ -138,5 +139,6 @@ instance ToTType' BeamM.Merchant Merchant where
         BeamM.trackingShortUrlPattern = trackingShortUrlPattern,
         BeamM.editPickupDistanceThreshold = editPickupDistanceThreshold,
         BeamM.driverDistanceThresholdFromPickup = driverDistanceThresholdFromPickup,
-        BeamM.numOfAllowedEditPickupLocationAttemptsThreshold = numOfAllowedEditPickupLocationAttemptsThreshold
+        BeamM.numOfAllowedEditPickupLocationAttemptsThreshold = numOfAllowedEditPickupLocationAttemptsThreshold,
+        BeamM.publicMediaFileUrlPattern = publicMediaFileUrlPattern
       }
