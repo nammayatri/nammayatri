@@ -27,8 +27,7 @@ public class GeoCoderHelper {
 
     public GeoCoderHelper(Context context){
         this.context = context;
-        Locale kannadaLocale = new Locale("kn");
-        geocoder = new Geocoder(context, kannadaLocale);
+        geocoder = new Geocoder(context, Locale.getDefault());
     }
 
     public class GeoCoordinate {
@@ -86,8 +85,7 @@ public class GeoCoderHelper {
     }
 
     public String getAddressTranslation(String address){
-        Locale kannadaLocale = new Locale("kn");
-        Geocoder geocoder = new Geocoder(context, kannadaLocale);
+        Geocoder geocoder = new Geocoder(context, Locale.getDefault());
         try {
             List<Address> addresses = geocoder.getFromLocationName(address, 1);
             if (addresses != null && addresses.size() > 0) {
