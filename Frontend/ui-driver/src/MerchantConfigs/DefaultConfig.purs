@@ -243,4 +243,5 @@ config =
       enable : false,
       url : ""
     }
+  , logFunctionCalls : true
 }

@@ -105,6 +105,7 @@ public class MainActivity extends AppCompatActivity {
     private static int updateType;
     MyFirebaseMessagingService.BundleUpdateCallBack bundleUpdateCallBack;
     private HyperServices hyperServices;
+    private FirebaseAnalytics mFirebaseAnalytics = FirebaseAnalytics.getInstance(this);
     private Context context;
     private Activity activity;
     @Nullable
@@ -275,7 +276,6 @@ public class MainActivity extends AppCompatActivity {
         }
 
         super.onCreate(savedInstanceState);
-        FirebaseAnalytics mFirebaseAnalytics = FirebaseAnalytics.getInstance(this);
         context = getApplicationContext();
         boolean isMigrated = migrateLocalStore(context);
         String clientId = context.getResources().getString(R.string.client_id);
@@ -444,6 +444,7 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
+        mFirebaseAnalytics.logEvent("ny_hyper_onActivityResult",null);
         hyperServices.onActivityResult(requestCode, resultCode, data);
         if (requestCode == REQUEST_CODE_UPDATE_APP) {
                 if (resultCode != RESULT_OK) {
@@ -474,11 +475,13 @@ public class MainActivity extends AppCompatActivity {
         } catch (JSONException e) {
             e.printStackTrace();
         }
+        mFirebaseAnalytics.logEvent("ny_hyper_initiate",null);
         hyperServices.initiate(json, new HyperPaymentsCallbackAdapter() {
             @Override
             public void onEvent(JSONObject jsonObject, JuspayResponseHandler juspayResponseHandler) {
                 Log.d(LOG_TAG, "onEvent: " + jsonObject.toString());
                 String event = jsonObject.optString("event");
+                mFirebaseAnalytics.logEvent("ny_hyper_" + event,null);
                 switch (event) {
                     case "initiate_result":
                         try {
@@ -491,6 +494,7 @@ public class MainActivity extends AppCompatActivity {
                         } catch (JSONException e) {
                             Log.e(LOG_TAG, e.toString());
                         }
+                        mFirebaseAnalytics.logEvent("ny_hyper_process",null);
                         hyperServices.process(json);
                         break;
                     case "hide_loader":
@@ -510,6 +514,7 @@ public class MainActivity extends AppCompatActivity {
                         break;
                     case "reboot":
                         Log.i(LOG_TAG, "event reboot");
+                        mFirebaseAnalytics.logEvent("ny_hyper_terminate",null);
                         hyperServices.terminate();
                         hyperServices = null;
                         initApp(null,null);
@@ -579,6 +584,7 @@ public class MainActivity extends AppCompatActivity {
         builder.setView(constraintLayout);
         builder.setPositiveButton(in.juspay.mobility.app.R.string.okay_got_it, (dialog, which) -> {
             dialog.cancel();
+            mFirebaseAnalytics.logEvent("ny_hyper_terminate",null);
             hyperServices.terminate();
             hyperServices = null;
             initApp(null, null);
@@ -633,7 +639,8 @@ public class MainActivity extends AppCompatActivity {
                         .put("merchantId", getResources().getString(R.string.merchant_id))
                         .put("requestId", UUID.randomUUID())
                         .put(PaymentConstants.PAYLOAD, innerPayloadDL);
-                {hyperServices.process(proccessPayloadDL);}
+                mFirebaseAnalytics.logEvent("ny_hyper_process",null);
+                hyperServices.process(proccessPayloadDL);
             }
         }catch (Exception e){
             // Need to handle exception
@@ -661,7 +668,8 @@ public class MainActivity extends AppCompatActivity {
                     }
                 }
                 proccessPayload.put(PaymentConstants.PAYLOAD, innerPayload);
-                {hyperServices.process(proccessPayload);}
+                mFirebaseAnalytics.logEvent("ny_hyper_process",null);
+                hyperServices.process(proccessPayload);
             } catch (Exception e) {
                 e.printStackTrace();
             }
@@ -728,6 +736,7 @@ public class MainActivity extends AppCompatActivity {
         }
         pauseYoutubePlayer();
         if (hyperServices != null) {
+            mFirebaseAnalytics.logEvent("ny_hyper_terminate",null);
             hyperServices.terminate();
         }
         ChatService.deRegisterInAppCallback(inappCallBack);
@@ -740,6 +749,7 @@ public class MainActivity extends AppCompatActivity {
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        mFirebaseAnalytics.logEvent("ny_hyper_onRequestPermissionsResult",null);
         hyperServices.onRequestPermissionsResult(requestCode, permissions, grantResults);
     }
 

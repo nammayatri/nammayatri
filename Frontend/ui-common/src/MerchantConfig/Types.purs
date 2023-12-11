@@ -30,6 +30,7 @@ type CommonAppConfig = (
   , termsLink :: String
   , privacyLink :: String
   , dashboard :: DashboardConfig
+  , logFunctionCalls :: Boolean
   , defaultLanguage :: String)
   
 type Colors = {
