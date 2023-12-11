@@ -13,19 +13,20 @@
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module ReactComponents.IncrementDecrement.Controller (IncrementDecrementState, dummyIncrementDecrementState) where
+module ReactComponents.IncrementDecrement.Controller where
 
-import Prelude (Unit, pure, unit)
+import Prelude 
+import Common.Types.App
 import Effect (Effect)
+import Screens.RideHistoryScreen.Controller (Action(..))
 
 type IncrementDecrementState = {
-    count :: Int
-  , onIncrement :: Effect Unit
-  , onDecrement :: Effect Unit
+    initialCount :: Int
+  , push :: (Action -> Effect Unit)
 }
 
+dummyIncrementDecrementState :: IncrementDecrementState
 dummyIncrementDecrementState = {
-    count: 0
-  , onIncrement: pure unit
-  , onDecrement: pure unit
+    initialCount: 0
+  , push: \_ -> pure unit
 }

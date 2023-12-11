@@ -15,18 +15,31 @@
 
 module ReactComponents.IncrementDecrement.View (app) where
 
-import Prelude (Unit, show, pure, (<>), ($))
+import Prelude
 import React.Basic.Hooks (Component, component)
-import Data.Tuple.Nested (type (/\), (/\))
-import Effect.Console (log)
 import Effect (Effect)
-import React.Render.CustomBase
+import React.Render.CustomBase (linearLayout, textView)
 import Styles.Colors as Color
 import ReactComponents.IncrementDecrement.Controller (IncrementDecrementState)
+import React.Basic.Hooks as React
+import Screens.RideHistoryScreen.Controller (Action(..))
+import React.Basic.Hooks (JSX, Component, component, useEffect, useState)
+import Data.Tuple.Nested (type (/\), (/\))
+import Effect.Console (log)
+import Halogen.VDom.Types (VDom(..))
 
 app :: Component IncrementDecrementState
 app = do 
-  component "app" \{count, onIncrement, onDecrement} ->
+  component "app" \{initialCount, push} -> React.do
+    count /\ setCount <- useState initialCount
+    let onIncrement = setCount (\prevCount -> prevCount + 1)
+    let onDecrement = setCount (\prevCount -> if(prevCount > 1) then prevCount - 1 else prevCount)
+
+    useEffect count (\_ -> do
+                    log ("count: " <> show count)
+                    when(count > initialCount) do push $ CounterChange count
+                    pure $ pure unit)
+
     pure $
       linearLayout {
           height: "wrap_content"
