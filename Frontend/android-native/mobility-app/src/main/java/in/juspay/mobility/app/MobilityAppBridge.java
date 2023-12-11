@@ -55,6 +55,7 @@ import com.google.android.play.core.review.ReviewInfo;
 import com.google.android.play.core.review.ReviewManager;
 import com.google.android.play.core.review.ReviewManagerFactory;
 import com.google.firebase.analytics.FirebaseAnalytics;
+import com.google.firebase.crashlytics.FirebaseCrashlytics;
 import com.google.firebase.messaging.FirebaseMessaging;
 import com.google.firebase.perf.FirebasePerformance;
 import com.google.firebase.perf.metrics.Trace;
@@ -93,10 +94,10 @@ public class MobilityAppBridge extends HyperBridge {
     private static final String UTILS = "UTILS";
 
     private static final String REFERRER = "REFERRER";
-    private ArrayList<ViewPagerItem> viewPagerItemArrayList = new ArrayList<>();
-    private static FirebaseAnalytics mFirebaseAnalytics;
+    private final ArrayList<ViewPagerItem> viewPagerItemArrayList = new ArrayList<>();
+    private final FirebaseAnalytics mFirebaseAnalytics;
 
-    private static MobilityRemoteConfigs remoteConfigs;
+    private MobilityRemoteConfigs remoteConfigs;
     CleverTapAPI clevertapDefaultInstance;
     protected static String storeChatMessageCallBack = null;
     public static String storeCallBackOpenChatScreen = null;
@@ -253,33 +254,39 @@ public class MobilityAppBridge extends HyperBridge {
     // endregion
 
     @JavascriptInterface
-    public static void firebaseLogEvent(String event) {
+    public void firebaseLogEvent(String event) {
         Bundle params = new Bundle();
         mFirebaseAnalytics.logEvent(event, params);
     }
 
     @JavascriptInterface
-    public static boolean fetchRemoteConfigBool(String key){
+    public void addCrashlyticsCustomKey(String key, String value) {
+        FirebaseCrashlytics crashlytics = FirebaseCrashlytics.getInstance();
+        crashlytics.setCustomKey(key,value);
+    }
+
+    @JavascriptInterface
+    public boolean fetchRemoteConfigBool(String key){
         return remoteConfigs.getBoolean(key);
     }
 
     @JavascriptInterface
-    public static String fetchRemoteConfigString(String key){
+    public String fetchRemoteConfigString(String key){
         return remoteConfigs.getString(key);
     }
 
     @JavascriptInterface
-    public static double fetchRemoteConfigDouble(String key){
+    public double fetchRemoteConfigDouble(String key){
         return remoteConfigs.getDouble(key);
     }
 
     @JavascriptInterface
-    public static long fetchRemoteConfigLong(String key){
+    public long fetchRemoteConfigLong(String key){
         return remoteConfigs.getLong(key);
     }
 
     @JavascriptInterface
-    public static void fetchAndUpdateRemoteConfig(){
+    public void fetchAndUpdateRemoteConfig(){
         remoteConfigs = new MobilityRemoteConfigs(true, false);
     }
 
@@ -652,7 +659,7 @@ public class MobilityAppBridge extends HyperBridge {
     public void setYoutubePlayer(String rawJson, final String playerId, String videoStatus) {
         if (bridgeComponents.getActivity() != null) {
             videoDuration = 0;
-            this.youtubeVideoStatus = videoStatus;
+            youtubeVideoStatus = videoStatus;
             ExecutorManager.runOnMainThread(() -> {
                 try {
                     if (videoStatus.equals("PAUSE")) {

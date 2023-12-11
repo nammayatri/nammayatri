@@ -256,4 +256,5 @@ config =
       url : "https://nammayatri.in/open?source=in-app"
     , enable : false
   }
+  , logFunctionCalls : true
 }
