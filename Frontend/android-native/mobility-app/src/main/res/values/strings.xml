@@ -57,4 +57,5 @@
     <string name="qr_downloaded">QR Downloaded!!!</string>
     <string name="accept_goto">Accept “Go To”</string>
     <string name="take_a_clear_selfie">Take a clear photo with your driving licence \ninside the marked area</string>
+    <string name="need_help">Need Help?</string>
 </resources>
