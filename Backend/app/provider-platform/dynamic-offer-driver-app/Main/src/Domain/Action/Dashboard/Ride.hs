@@ -304,6 +304,7 @@ rideInfo merchantShortId reqRideId = do
         driverInitiatedCallCount,
         bookingToRideStartDuration = timeDiffInMinutes <$> ride.tripStartTime <*> (Just booking.createdAt),
         distanceCalculationFailed = ride.distanceCalculationFailed,
+        driverDeviatedFromRoute = ride.driverDeviatedFromRoute,
         vehicleVariant = castDVehicleVariant <$> rideDetails.vehicleVariant
       }
 
