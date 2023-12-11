@@ -204,7 +204,6 @@ eval (PrimaryButtonAction (PrimaryButton.OnClick)) state = do
 
 eval (PrimaryEditTextActionController (PrimaryEditText.TextChanged id value)) state = do
   _ <- pure $ disableActionEditText (getNewIDWithTag "EnterDrivingLicenseEditText")
-  void $ pure $ setText (getNewIDWithTag "EnterDrivingLicenseEditText") $ toUpper value
   if (length value == 16) then do 
     let _ = unsafePerformEffect $ logEvent state.data.logField "ny_driver_dl_entry"
     pure unit
@@ -213,7 +212,6 @@ eval (PrimaryEditTextActionController (PrimaryEditText.TextChanged id value)) st
 
 eval (PrimaryEditTextActionControllerReEnter (PrimaryEditText.TextChanged id value))state = do
   _ <- pure $ disableActionEditText (getNewIDWithTag "ReEnterDrivingLicenseEditText")
-  void $ pure $ setText (getNewIDWithTag "ReEnterDrivingLicenseEditText") $ toUpper value
   if (length value == 16) then do 
     let _ = unsafePerformEffect $ logEvent state.data.logField "ny_driver_dl_re_entry"
     pure unit

@@ -237,11 +237,9 @@ eval RemoveUploadedFile state = do
   let newState = state { props = state.props { rcAvailable = false, rc_name = "", isValidState = false }, data = state.data { rc_base64 = "" }}
   continue newState
 eval (VehicleRegistrationNumber val) state = do
-  void $ pure $ setText (getNewIDWithTag "VehicleRegistrationNumber") $ toUpper val
   let newState = state {data = state.data { vehicle_registration_number = toUpper val }, props = state.props{isValidState = (checkRegNum (toUpper val) && state.props.rcAvailable) }}
   continue newState
 eval (ReEnterVehicleRegistrationNumber val) state = do
-  void $ pure $ setText (getNewIDWithTag "ReenterVehicleRegistrationNumber") $ toUpper val
   let newState = state {data = state.data { reEnterVehicleRegistrationNumber = toUpper val }, props = state.props{isValidState = (checkRegNum (toUpper val) && state.props.rcAvailable) }}
   continue newState
 eval (VehicleModelName val) state = do
