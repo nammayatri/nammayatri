@@ -2248,7 +2248,7 @@ locationSelected item addToRecents state = do
                                                                                                               {key : "Favourite", value : unsafeToForeign favClick}]
     let newState = state {data{ source = item.title, sourceAddress = encodeAddress (item.title <> ", " <>item.subTitle) [] item.placeId},props{sourcePlaceId = item.placeId,sourceLat = fromMaybe 0.0 item.lat,sourceLong =fromMaybe 0.0  item.lon, sourceSelectedOnMap = (item.tag /= "") }}
     pure $ setText (getNewIDWithTag "SourceEditText") item.title
-    updateAndExit state{props{currentStage = LoadMap}} $ LocationSelected item addToRecents newState
+    updateAndExit state $ LocationSelected item addToRecents newState
     else do
       let _ = unsafePerformEffect $ logEventWithMultipleParams state.data.logField  "ny_user_destination_select" $ [{key : "Destination", value : unsafeToForeign item.title},
                                                                                                                     {key : "Favourite", value : unsafeToForeign favClick}]
