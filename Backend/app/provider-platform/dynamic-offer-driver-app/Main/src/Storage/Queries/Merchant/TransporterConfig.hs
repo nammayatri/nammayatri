@@ -130,6 +130,7 @@ instance FromTType' BeamTC.TransporterConfig TransporterConfig where
             coinConversionRate = coinConversionRate,
             cancellationTimeDiff = secondsToNominalDiffTime cancellationTimeDiff,
             coinExpireTime = secondsToNominalDiffTime coinExpireTime,
+            stepFunctionToConvertCoins = stepFunctionToConvertCoins,
             cancellationDistDiff = cancellationDistDiff,
             ..
           }
@@ -227,6 +228,7 @@ instance ToTType' BeamTC.TransporterConfig TransporterConfig where
         BeamTC.cancellationTimeDiff = nominalDiffTimeToSeconds cancellationTimeDiff,
         BeamTC.cancellationDistDiff = cancellationDistDiff,
         BeamTC.coinExpireTime = nominalDiffTimeToSeconds coinExpireTime,
+        BeamTC.stepFunctionToConvertCoins = stepFunctionToConvertCoins,
         BeamTC.considerSpecialZoneRidesForPlanCharges = considerSpecialZoneRidesForPlanCharges,
         BeamTC.considerSpecialZoneRideChargesInFreeTrial = considerSpecialZoneRideChargesInFreeTrial,
         BeamTC.enableUdfForOffers = enableUdfForOffers,

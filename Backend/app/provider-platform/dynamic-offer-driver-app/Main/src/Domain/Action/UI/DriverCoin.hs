@@ -184,10 +184,13 @@ useCoinsHandler (driverId, merchantId_, merchantOpCityId) ConvertCoinToCashReq {
   now <- getCurrentTime
   uuid <- generateGUIDText
   coinBalance <- Coins.getCoinsByDriverId driverId
+  let stepFunctionToConvertCoins = transporterConfig.stepFunctionToConvertCoins
+  when (coins < stepFunctionToConvertCoins) $
+    throwError $ CoinConversionToCash driverId.getId coins
+  when (coins `mod` stepFunctionToConvertCoins /= 0) $
+    throwError $ CoinUsedForConverting driverId.getId coins
   let currentDate = show $ utctDay now
       calculatedAmount = fromIntegral coins * transporterConfig.coinConversionRate
-  when (coins < 250) $
-    throwError $ CoinConversionToCash driverId.getId
   if coinBalance >= coins
     then do
       let history =
@@ -211,5 +214,5 @@ useCoinsHandler (driverId, merchantId_, merchantOpCityId) ConvertCoinToCashReq {
       mapM_ (\(id, coinValue, status) -> CHistory.updateStatusOfCoins id coinValue status) result
       void $ Hedis.incrby (Coins.mkCoinAccumulationByDriverIdKey driverId currentDate) (fromIntegral (- coins))
     else do
-      throwError $ InsufficientCoins driverId.getId
+      throwError $ InsufficientCoins driverId.getId coins
   pure Success

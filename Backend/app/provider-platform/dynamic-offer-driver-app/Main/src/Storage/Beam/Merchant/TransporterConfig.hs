@@ -106,6 +106,7 @@ data TransporterConfigT f = TransporterConfigT
     coinConversionRate :: B.C f HighPrecMoney,
     cancellationTimeDiff :: B.C f Seconds,
     coinExpireTime :: B.C f Seconds,
+    stepFunctionToConvertCoins :: B.C f Int,
     cancellationDistDiff :: B.C f Int,
     considerSpecialZoneRidesForPlanCharges :: B.C f Bool,
     considerSpecialZoneRideChargesInFreeTrial :: B.C f Bool,
