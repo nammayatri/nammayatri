@@ -7,9 +7,9 @@ where
 -- import qualified "dynamic-offer-driver-app" Domain.Types.Invoice as INV
 
 import qualified "rider-app" API.Dashboard.Tickets as ADT
+import qualified "rider-app" API.Types.UI.TicketService as DTB
 import Dashboard.Common (HideSecrets)
 import Data.Time
-import qualified "rider-app" Domain.Action.UI.TicketService as DTB
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
 import qualified "rider-app" Domain.Types.TicketBookingService as DTB
 import qualified "rider-app" Domain.Types.TicketPlace as DTB
