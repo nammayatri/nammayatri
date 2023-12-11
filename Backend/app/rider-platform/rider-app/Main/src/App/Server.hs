@@ -32,7 +32,7 @@ run = withModifiedEnv $ \modifiedEnv ->
   BU.run appAPI API.handler context modifiedEnv
     & logRequestAndResponse modifiedEnv
     -- & logBecknRequest modifiedEnv
-    & addServantInfo modifiedEnv.appEnv.version appAPI
+    & addServantInfo modifiedEnv.appEnv.version (Just modifiedEnv.appEnv.criticalAPIs) appAPI
     & hashBodyForSignature
     & supportProxyAuthorization
   where

@@ -26,6 +26,7 @@ import Kernel.Storage.Esqueleto.Config (EsqDBConfig (..))
 import Kernel.Storage.Esqueleto.Logger
 import Kernel.Storage.Esqueleto.Migration
 import Kernel.Storage.Hedis (HedisCfg (..))
+import Kernel.Tools.Metrics.CoreMetrics (ApiPriorityList (ApiPriorityList))
 import Kernel.Types.Logging
 import Kernel.Utils.App
 import Kernel.Utils.Servant.Server (runServer)
@@ -117,5 +118,6 @@ defaultConfig =
       streamName = "",
       schedulerType = DbBased,
       enableRedisLatencyLogging = False,
-      groupName = ""
+      groupName = "",
+      criticalAPIs = ApiPriorityList []
     }

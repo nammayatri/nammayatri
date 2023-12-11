@@ -15,7 +15,7 @@
 module Environment where
 
 import Kernel.Prelude
-import Kernel.Tools.Metrics.CoreMetrics
+import Kernel.Tools.Metrics.CoreMetrics as Metrics
 import Kernel.Types.App
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Flow
@@ -39,7 +39,8 @@ data AppCfg = AppCfg
     httpClientOptions :: HttpClientOptions,
     shortDurationRetryCfg :: RetryCfg,
     longDurationRetryCfg :: RetryCfg,
-    disableSignatureAuth :: Bool
+    disableSignatureAuth :: Bool,
+    criticalAPIs :: Metrics.ApiPriorityList
   }
   deriving (Generic, FromDhall)
 
@@ -54,13 +55,14 @@ data AppEnv = AppEnv
     registryUrl :: BaseUrl,
     isShuttingDown :: Shutdown,
     loggerEnv :: LoggerEnv,
-    coreMetrics :: CoreMetricsContainer,
+    coreMetrics :: Metrics.CoreMetricsContainer,
     httpClientOptions :: HttpClientOptions,
     shortDurationRetryCfg :: RetryCfg,
     longDurationRetryCfg :: RetryCfg,
     hostName :: Text,
     disableSignatureAuth :: Bool,
-    version :: DeploymentVersion
+    version :: Metrics.DeploymentVersion,
+    criticalAPIs :: Metrics.ApiPriorityList
   }
   deriving (Generic)
 

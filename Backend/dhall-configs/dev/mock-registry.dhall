@@ -12,6 +12,8 @@ let esqDBCfg =
       , connectionPoolCount = +25
       }
 
+let criticalAPIs = { criticalAPIList = [ "/lookup/" ] }
+
 in  { port = +8020
     , graceTerminationPeriod = +90
     , loggerConfig =
@@ -22,4 +24,5 @@ in  { port = +8020
         (   env:MOCK_REGISTRY_MIGRATION_PATH as Text
           ? "dev/migrations/mock-registry"
         )
+    , criticalAPIs
     }

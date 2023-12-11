@@ -60,6 +60,15 @@ let rccfg =
       , connectTimeout = None Integer
       }
 
+let criticalAPIs =
+      { criticalAPIList =
+        [ "/dashboard/:merchantId/booking/sync"
+        , "/dashboard/:merchantId/ride/sync/"
+        , "/dashboard/:merchantId/ride/rideinfo/:rideId/"
+        , "/dashboard/:merchantId/volunteer/:bookingOtp/booking/"
+        ]
+      }
+
 in  { esqDBCfg
     , esqDBReplicaCfg
     , hedisCfg = rcfg
@@ -91,4 +100,5 @@ in  { esqDBCfg
     , enablePrometheusMetricLogging = True
     , slackToken = sec.slackToken
     , slackChannel = "CXXXXXXXXXF"
+    , criticalAPIs
     }

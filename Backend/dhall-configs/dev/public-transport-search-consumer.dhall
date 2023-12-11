@@ -13,6 +13,8 @@ let kafkaConsumerCfgs =
         }
       }
 
+let criticalAPIs = { criticalAPIList = [ "/beckn/:merchantId/search/" ] }
+
 in  { esqDBCfg = main.esqDBCfg
     , migrationPath = main.migrationPath
     , autoMigrate = main.autoMigrate
@@ -29,4 +31,5 @@ in  { esqDBCfg = main.esqDBCfg
     , longDurationRetryCfg = main.longDurationRetryCfg
     , authEntity = main.authEntity
     , kafkaConsumerCfgs
+    , criticalAPIs
     }

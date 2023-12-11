@@ -21,6 +21,7 @@ where
 import App.Routes (mockSmsAPI, mockSmsServer)
 import App.Types
 import Kernel.Prelude
+import Kernel.Tools.Metrics.CoreMetrics (ApiPriorityList (ApiPriorityList))
 import Kernel.Types.Logging
 import Kernel.Utils.Servant.Server
 import Servant
@@ -43,5 +44,6 @@ defaultConfig =
             logRawSql = True,
             prettyPrinting = True
           },
-      graceTerminationPeriod = 90
+      graceTerminationPeriod = 90,
+      criticalAPIs = ApiPriorityList []
     }

@@ -100,11 +100,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1700470711,
-        "narHash": "sha256-d4oIDzr7E8trgeszZ7rhs695jxCqAMY24zp4FeEAd38=",
+        "lastModified": 1702375170,
+        "narHash": "sha256-n/J5+NmOTBObplLR4BTNnjp/O5OIPgvwf0gUdC9In3k=",
         "owner": "nammayatri",
         "repo": "beckn-gateway",
-        "rev": "53af8b5ec18b8ffbd1874a2396dc200a3d209e4c",
+        "rev": "0c8a16339b1d997c433ab6596ac60ec7263c96bf",
         "type": "github"
       },
       "original": {
@@ -768,24 +768,6 @@
         "owner": "hercules-ci",
         "repo": "flake-parts",
         "rev": "59cf3f1447cfc75087e7273b04b31e689a8599fb",
-        "type": "github"
-      },
-      "original": {
-        "owner": "hercules-ci",
-        "repo": "flake-parts",
-        "type": "github"
-      }
-    },
-    "flake-parts_11": {
-      "inputs": {
-        "nixpkgs-lib": "nixpkgs-lib_11"
-      },
-      "locked": {
-        "lastModified": 1683560683,
-        "narHash": "sha256-XAygPMN5Xnk/W2c1aW0jyEa6lfMDZWlQgiNtmHXytPc=",
-        "owner": "hercules-ci",
-        "repo": "flake-parts",
-        "rev": "006c75898cf814ef9497252b022e91c946ba8e17",
         "type": "github"
       },
       "original": {
@@ -1815,24 +1797,6 @@
         "type": "github"
       }
     },
-    "nixpkgs-lib_11": {
-      "locked": {
-        "dir": "lib",
-        "lastModified": 1682879489,
-        "narHash": "sha256-sASwo8gBt7JDnOOstnps90K1wxmVfyhsTPPNTGBPjjg=",
-        "owner": "NixOS",
-        "repo": "nixpkgs",
-        "rev": "da45bf6ec7bbcc5d1e14d3795c025199f28e0de0",
-        "type": "github"
-      },
-      "original": {
-        "dir": "lib",
-        "owner": "NixOS",
-        "ref": "nixos-unstable",
-        "repo": "nixpkgs",
-        "type": "github"
-      }
-    },
     "nixpkgs-lib_2": {
       "locked": {
         "dir": "lib",
@@ -2361,22 +2325,6 @@
         "type": "github"
       }
     },
-    "nixpkgs_23": {
-      "locked": {
-        "lastModified": 1683657389,
-        "narHash": "sha256-jx91UqqoBneE8QPAKJA29GANrU/Z7ULghoa/JE0+Edw=",
-        "owner": "nixos",
-        "repo": "nixpkgs",
-        "rev": "9524f57dd5b3944c819dd594aed8ed941932ef56",
-        "type": "github"
-      },
-      "original": {
-        "owner": "nixos",
-        "ref": "nixpkgs-unstable",
-        "repo": "nixpkgs",
-        "type": "github"
-      }
-    },
     "nixpkgs_3": {
       "locked": {
         "lastModified": 1696261572,
@@ -2800,31 +2748,6 @@
         "type": "github"
       }
     },
-    "prometheus-haskell_2": {
-      "inputs": {
-        "flake-parts": "flake-parts_11",
-        "haskell-flake": [
-          "shared-kernel",
-          "common",
-          "haskell-flake"
-        ],
-        "nixpkgs": "nixpkgs_23"
-      },
-      "locked": {
-        "lastModified": 1687373886,
-        "narHash": "sha256-KWxG4SyXo39yG+7b1H0ULKzVu8Z1Hj8KCqS0rQKw3qU=",
-        "owner": "juspay",
-        "repo": "prometheus-haskell",
-        "rev": "f1d996bb317d0a50450ace2b4ae08b5afdf22955",
-        "type": "github"
-      },
-      "original": {
-        "owner": "juspay",
-        "ref": "more-proc-metrics",
-        "repo": "prometheus-haskell",
-        "type": "github"
-      }
-    },
     "root": {
       "inputs": {
         "amazonka-git": "amazonka-git",
@@ -2969,15 +2892,14 @@
         "nixpkgs": [
           "nixpkgs"
         ],
-        "passetto-hs": "passetto-hs",
-        "prometheus-haskell": "prometheus-haskell_2"
+        "passetto-hs": "passetto-hs"
       },
       "locked": {
-        "lastModified": 1702552071,
-        "narHash": "sha256-5/USRJ6nfKr9D5Du5bNkZZIoiDM2SMAflX1SperRjh4=",
+        "lastModified": 1702812343,
+        "narHash": "sha256-YtSkDJJg6X5RpwcMsl1E/olHa8n5nLhz8EhMMD9fR+8=",
         "owner": "nammayatri",
         "repo": "shared-kernel",
-        "rev": "c4c35b9c7c2e4059e9da4cbcad0809589e9e2780",
+        "rev": "7e7ee9e5ccbd2a42d791f368838e6e326e07ed91",
         "type": "github"
       },
       "original": {

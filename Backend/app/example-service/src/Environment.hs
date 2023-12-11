@@ -28,7 +28,8 @@ data AppCfg = AppCfg
   { esqDBCfg :: EsqDBConfig,
     port :: Int,
     loggerConfig :: LoggerConfig,
-    graceTerminationPeriod :: Seconds
+    graceTerminationPeriod :: Seconds,
+    criticalAPIs :: ApiPriorityList
   }
   deriving (Generic, FromDhall)
 
@@ -40,7 +41,8 @@ data AppEnv = AppEnv
     isShuttingDown :: Shutdown,
     loggerEnv :: LoggerEnv,
     coreMetrics :: CoreMetricsContainer,
-    version :: DeploymentVersion
+    version :: DeploymentVersion,
+    criticalAPIs :: ApiPriorityList
   }
   deriving (Generic)
 

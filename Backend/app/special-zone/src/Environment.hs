@@ -33,7 +33,8 @@ data AppCfg = AppCfg
     dashboardToken :: Text,
     port :: Int,
     loggerConfig :: LoggerConfig,
-    graceTerminationPeriod :: Seconds
+    graceTerminationPeriod :: Seconds,
+    criticalAPIs :: ApiPriorityList
   }
   deriving (Generic, FromDhall)
 
@@ -48,7 +49,8 @@ data AppEnv = AppEnv
     apiKey :: ApiKey,
     version :: DeploymentVersion,
     dashboardToken :: Text,
-    loggerEnv :: LoggerEnv
+    loggerEnv :: LoggerEnv,
+    criticalAPIs :: ApiPriorityList
   }
   deriving (Generic)
 

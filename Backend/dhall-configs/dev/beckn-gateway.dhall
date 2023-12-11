@@ -22,6 +22,11 @@ let rccfg =
       , connectTimeout = None Integer
       }
 
+let criticalAPIs =
+      { criticalAPIList =
+        [ "/beckn/cab/v1/:merchantId/on_search/", "/beckn/:merchantId/search/" ]
+      }
+
 in  { hedisCfg = rcfg
     , hedisClusterCfg = rccfg
     , hedisNonCriticalCfg = rcfg
@@ -47,4 +52,5 @@ in  { hedisCfg = rcfg
     , disableSignatureAuth = False
     , enableRedisLatencyLogging = True
     , enablePrometheusMetricLogging = True
+    , criticalAPIs
     }

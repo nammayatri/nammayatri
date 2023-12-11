@@ -28,7 +28,8 @@ import Kernel.Utils.Shutdown
 data AppCfg = AppCfg
   { port :: Int,
     loggerConfig :: LoggerConfig,
-    graceTerminationPeriod :: Seconds
+    graceTerminationPeriod :: Seconds,
+    criticalAPIs :: Metrics.ApiPriorityList
   }
   deriving (Generic, FromDhall)
 
@@ -41,7 +42,8 @@ data AppEnv = AppEnv
     notificationsMap :: MVar (Map.Map FCMRecipientToken [FCMMessage Value]),
     isShuttingDown :: Shutdown,
     loggerEnv :: LoggerEnv,
-    version :: Metrics.DeploymentVersion
+    version :: Metrics.DeploymentVersion,
+    criticalAPIs :: Metrics.ApiPriorityList
   }
   deriving (Generic)
 

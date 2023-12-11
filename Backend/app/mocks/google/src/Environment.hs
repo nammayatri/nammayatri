@@ -31,7 +31,8 @@ data AppCfg = AppCfg
     graceTerminationPeriod :: Seconds,
     mockDataPath :: FilePath,
     googleCfg :: Maybe GoogleCfgUnencrypted,
-    snapToRoadIdentityMode :: Bool
+    snapToRoadIdentityMode :: Bool,
+    criticalAPIs :: ApiPriorityList
   }
   deriving (Generic, FromDhall)
 
@@ -45,7 +46,8 @@ data AppEnv = AppEnv
     mockDataPath :: FilePath,
     googleCfg :: Maybe GoogleCfgUnencrypted,
     version :: DeploymentVersion,
-    snapToRoadIdentityMode :: Bool
+    snapToRoadIdentityMode :: Bool,
+    criticalAPIs :: ApiPriorityList
   }
   deriving (Generic)
 

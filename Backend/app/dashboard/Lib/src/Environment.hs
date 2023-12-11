@@ -19,7 +19,6 @@ import Kernel.External.Encryption (EncTools)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config
 import Kernel.Storage.Hedis (HedisCfg, HedisEnv, connectHedis, connectHedisCluster, disconnectHedis)
-import qualified Kernel.Tools.Metrics.CoreMetrics as Metrics
 import Kernel.Tools.Slack.Internal
 import Kernel.Types.Common
 import Kernel.Types.Flow
@@ -58,7 +57,8 @@ data AppCfg = AppCfg
     enableRedisLatencyLogging :: Bool,
     enablePrometheusMetricLogging :: Bool,
     slackToken :: Text,
-    slackChannel :: Text
+    slackChannel :: Text,
+    criticalAPIs :: ApiPriorityList
   }
   deriving (Generic, FromDhall)
 
@@ -83,12 +83,13 @@ data AppEnv = AppEnv
     authTokenCacheExpiry :: Seconds,
     registrationTokenExpiry :: Days,
     encTools :: EncTools,
-    coreMetrics :: Metrics.CoreMetricsContainer,
+    coreMetrics :: CoreMetricsContainer,
     isShuttingDown :: Shutdown,
     authTokenCacheKeyPrefix :: Text,
     exotelToken :: Text,
     dataServers :: [DataServer],
     version :: DeploymentVersion,
+    criticalAPIs :: ApiPriorityList,
     enableRedisLatencyLogging :: Bool,
     enablePrometheusMetricLogging :: Bool,
     slackEnv :: SlackEnv

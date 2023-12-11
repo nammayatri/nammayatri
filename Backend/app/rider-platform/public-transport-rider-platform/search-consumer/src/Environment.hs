@@ -40,7 +40,8 @@ data AppCfg = AppCfg
     authEntity :: AuthenticatingEntity',
     loggerConfig :: LoggerConfig,
     graceTerminationPeriod :: Seconds,
-    kafkaConsumerCfgs :: KafkaConsumerCfgs
+    kafkaConsumerCfgs :: KafkaConsumerCfgs,
+    criticalAPIs :: ApiPriorityList
   }
   deriving (Generic, FromDhall)
 
@@ -60,7 +61,8 @@ data AppEnv = AppEnv
     loggerEnv :: LoggerEnv,
     coreMetrics :: CoreMetricsContainer,
     kafkaConsumerEnv :: KafkaConsumerEnv,
-    version :: DeploymentVersion
+    version :: DeploymentVersion,
+    criticalAPIs :: ApiPriorityList
   }
   deriving (Generic)
 

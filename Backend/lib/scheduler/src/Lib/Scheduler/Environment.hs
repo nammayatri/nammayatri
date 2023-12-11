@@ -64,7 +64,8 @@ data SchedulerConfig = SchedulerConfig
     graceTerminationPeriod :: Seconds,
     enableRedisLatencyLogging :: Bool,
     enablePrometheusMetricLogging :: Bool,
-    kafkaProducerCfg :: KafkaProducerCfg
+    kafkaProducerCfg :: KafkaProducerCfg,
+    criticalAPIs :: Metrics.ApiPriorityList
   }
   deriving (Generic, FromDhall)
 
@@ -100,7 +101,8 @@ data SchedulerEnv = SchedulerEnv
     enablePrometheusMetricLogging :: Bool,
     maxThreads :: Int,
     jobInfoMap :: JobInfoMap,
-    tables :: Tables
+    tables :: Tables,
+    criticalAPIs :: Metrics.ApiPriorityList
   }
   deriving (Generic)
 

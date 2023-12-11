@@ -18,6 +18,7 @@ import App.Routes (mockIdfyAPI, mockIdfyServer)
 import App.Types
 import qualified EulerHS.Runtime as R
 import Kernel.Prelude
+import Kernel.Tools.Metrics.CoreMetrics (ApiPriorityList (ApiPriorityList))
 import Kernel.Types.Logging
 import Kernel.Utils.Servant.Client
 import Kernel.Utils.Servant.Server
@@ -41,6 +42,7 @@ defaultConfig =
       accountId = "xxxxxxx",
       apiKey = "xxxxxxx",
       secret = "xxxxxxx",
+      criticalAPIs = ApiPriorityList [],
       httpClientOptions =
         HttpClientOptions
           { timeoutMs = 2000

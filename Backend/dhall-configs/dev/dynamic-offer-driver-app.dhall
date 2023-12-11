@@ -228,6 +228,41 @@ let modelNamesMap =
         }
       ]
 
+let criticalAPIs =
+      { criticalAPIList =
+        [ "/ui/auth/"
+        , "/ui/auth/:authId/verify/"
+        , "/ui/auth/otp/:authId/resend/"
+        , "/ui/driver/profile/"
+        , "/ui/driver/location/"
+        , "/ui/driver/location/:rideId/"
+        , "/ui/driver/setActivity/"
+        , "/ui/driver/searchRequest/quote/respond/"
+        , "/internal/drivers/nearby/"
+        , "/internal/drivers/location/"
+        , "/internal/ride/rideDetails/"
+        , "/internal/ride/:rideId/start/"
+        , "/internal/ride/:rideId/end/"
+        , "/beckn/:merchantId/search/"
+        , "/beckn/:merchantId/select/"
+        , "/beckn/:merchantId/init/"
+        , "/beckn/:merchantId/confirm/"
+        , "/beckn/:merchantId/cancel/"
+        , "/beckn/:merchantId/status/"
+        , "/ui/driver/ride/:rideId/cancel/"
+        , "/ui/driver/otpRide/start/"
+        , "/ui/driver/ride/:rideId/start/"
+        , "/ui/driver/ride/:rideId/end/"
+        , "/ui/driver/ride/:rideId/call/customer/"
+        , "/ui/exotel/call/customer/number/"
+        , "/ui/driver/cleardues/"
+        , "/ui/payment/:invoiceId/createOrder/"
+        , "/:merchantId/service/juspay/payment/"
+        , "/ui/payment/:orderId/status/"
+        , "/ui/driver/v2/payments/history/:invoiceId/entity/"
+        ]
+      }
+
 in  { esqDBCfg
     , esqDBReplicaCfg
     , kafkaClickhouseCfg
@@ -302,4 +337,5 @@ in  { esqDBCfg
     , maxMessages
     , modelNamesMap
     , incomingAPIResponseTimeout = +15
+    , criticalAPIs
     }
