@@ -185,9 +185,7 @@ useCoinsHandler (driverId, merchantId_, merchantOpCityId) ConvertCoinToCashReq {
   uuid <- generateGUIDText
   coinBalance <- Coins.getCoinsByDriverId driverId
   let currentDate = show $ utctDay now
-      coinConversionRateRational = getHighPrecMoney (transporterConfig.coinConversionRate)
-      calculatedAmountRational = coinConversionRateRational * (toRational coins)
-      calculatedAmount = HighPrecMoney calculatedAmountRational
+      calculatedAmount = fromIntegral coins * transporterConfig.coinConversionRate
   when (coins < 250) $
     throwError $ CoinConversionToCash driverId.getId
   if coinBalance >= coins
