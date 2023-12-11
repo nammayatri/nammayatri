@@ -130,6 +130,7 @@ data TransporterConfigD u = TransporterConfig
     driverSmsReceivingLimit :: Maybe DashboardMediaSendingLimit,
     cancellationTimeDiff :: NominalDiffTime,
     coinExpireTime :: NominalDiffTime,
+    stepFunctionToConvertCoins :: Int,
     cancellationDistDiff :: Int,
     considerSpecialZoneRidesForPlanCharges :: Bool,
     considerSpecialZoneRideChargesInFreeTrial :: Bool,

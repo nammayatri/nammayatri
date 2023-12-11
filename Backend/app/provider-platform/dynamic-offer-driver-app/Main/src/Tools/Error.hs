@@ -824,8 +824,9 @@ instance IsAPIError DashboardSMSError
 
 data DriverCoinError
   = CoinServiceUnavailable Text
-  | InsufficientCoins Text
-  | CoinConversionToCash Text
+  | InsufficientCoins Text Int
+  | CoinConversionToCash Text Int
+  | CoinUsedForConverting Text Int
   deriving (Generic, Eq, Show, FromJSON, ToJSON, IsBecknAPIError)
 
 instanceExceptionWithParent 'HTTPException ''DriverCoinError
@@ -833,18 +834,21 @@ instanceExceptionWithParent 'HTTPException ''DriverCoinError
 instance IsBaseError DriverCoinError where
   toMessage = \case
     CoinServiceUnavailable merchantId -> Just ("Coin Service is not available for merchantId " <> show merchantId <> ".")
-    InsufficientCoins driverId -> Just ("Insufficient coin balance for driverId " <> show driverId <> ".")
-    CoinConversionToCash driverId -> Just ("Atleast 250 coins is required for conversion driverId " <> show driverId <> ".")
+    InsufficientCoins driverId coins -> Just ("Insufficient coin balance for driverId : " <> show driverId <> ". coins value is : " <> show coins <> ".")
+    CoinConversionToCash driverId coins -> Just ("Atleast 250 coins is required for conversion driverId : " <> show driverId <> ". coins value is : " <> show coins <> ".")
+    CoinUsedForConverting driverId coins -> Just ("Coins used for converting to cash should be multiple of 250 for driverId : " <> show driverId <> ". coins value is : " <> show coins <> ".")
 
 instance IsHTTPError DriverCoinError where
   toErrorCode = \case
     CoinServiceUnavailable _ -> "COIN_SERVICE_UNAVAILABLE"
-    InsufficientCoins _ -> "INSUFFICIENT_COINS"
-    CoinConversionToCash _ -> "ATLEAST_250_COINS_REQUIRED_FOR_CONVERSION"
+    InsufficientCoins _ _ -> "INSUFFICIENT_COINS"
+    CoinConversionToCash _ _ -> "ATLEAST_250_COINS_REQUIRED_FOR_CONVERSION"
+    CoinUsedForConverting _ _ -> "COINS_USED_FOR_CONVERTING_TO_CASH_SHOULD_BE_MULTIPLE_OF_250"
   toHttpCode = \case
     CoinServiceUnavailable _ -> E400
-    InsufficientCoins _ -> E400
-    CoinConversionToCash _ -> E400
+    InsufficientCoins _ _ -> E400
+    CoinConversionToCash _ _ -> E400
+    CoinUsedForConverting _ _ -> E400
 
 instance IsAPIError DriverCoinError
 
