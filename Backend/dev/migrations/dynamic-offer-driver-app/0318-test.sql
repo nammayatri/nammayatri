@@ -1,0 +1,1 @@
+DROP TABLE IF EXISTS atlas_driver_offer_bpp.person;

@@ -212,6 +212,6 @@ apis:
       endpoint: /ticket/bookings/update/seats
       auth: TokenAuth
       request:
-        type: API.Types.UI.TicketService.TicketBookingUpdateSeatsReq
+        type: API.Types.UI.TicketService.TicketBookingUpdateSeatsReqq
       response:
         type: APISuccess
