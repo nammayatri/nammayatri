@@ -174,7 +174,7 @@ config =
     enableAutoReadOtp : true,
     enableZooTicketBookingFlow : false,
     enableLiveDashboard : true,
-    enableSuggestions : false,
+    enableSuggestions : true,
     enableShareRide : true,
     enableChat: true,
     enableEmergencyContacts: true,
