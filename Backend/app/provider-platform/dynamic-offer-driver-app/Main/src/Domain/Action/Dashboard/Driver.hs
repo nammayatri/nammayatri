@@ -1533,25 +1533,28 @@ sendSmsToDriver merchantShortId opCity driverId volunteerId _req@SendSmsReq {..}
       sender = smsCfg.sender
   withLogTag ("personId_" <> personId.getId) $ do
     case channel of
-      SMS -> whenJust messageKey $ \mkey -> do
+      SMS -> do
+        mkey <- fromMaybeM (InvalidRequest "Message Key field is required for channel : SMS") messageKey --whenJust messageKey $ \mkey -> do
         message <- MessageBuilder.buildGenericMessage merchantOpCityId mkey MessageBuilder.BuildGenericMessageReq {}
         Sms.sendSMS driver.merchantId merchantOpCityId (Sms.SendSMSReq message phoneNumber sender)
           >>= Sms.checkSmsResult
-      WHATSAPP -> whenJust messageKey $ \mkey -> do
+      WHATSAPP -> do
+        mkey <- fromMaybeM (InvalidRequest "Message Key field is required for channel : WHATSAPP") messageKey -- whenJust messageKey $ \mkey -> do
         merchantMessage <-
           QMM.findByMerchantOpCityIdAndMessageKey merchantOpCityId mkey
             >>= fromMaybeM (MerchantMessageNotFound merchantOpCityId.getId (show mkey))
         let jsonData = merchantMessage.jsonData
         result <- Whatsapp.whatsAppSendMessageWithTemplateIdAPI driver.merchantId merchantOpCityId (Whatsapp.SendWhatsAppMessageWithTemplateIdApIReq phoneNumber merchantMessage.templateId jsonData.var1 jsonData.var2 jsonData.var3 (Just merchantMessage.containsUrlButton))
         when (result._response.status /= "success") $ throwError (InternalError "Unable to send Whatsapp message via dashboard")
-      OVERLAY -> whenJust overlayKey $ \oKey -> do
+      OVERLAY -> do
+        oKey <- fromMaybeM (InvalidRequest "Overlay Key field is required for channel : OVERLAY") overlayKey --whenJust overlayKey $ \oKey -> do
         manualDues <- getManualDues personId transporterConfig.timeDiffFromUtc transporterConfig.driverFeeOverlaySendingTimeLimitInDays
-        mOverlay <- CMP.findByMerchantOpCityIdPNKeyLangaugeUdf merchantOpCityId oKey (fromMaybe ENGLISH driver.language) Nothing
-        whenJust mOverlay $ \overlay -> do
-          let okButtonText = T.replace (templateText "dueAmount") (show manualDues) <$> overlay.okButtonText
-          let description = T.replace (templateText "dueAmount") (show manualDues) <$> overlay.description
-          TN.sendOverlay merchantOpCityId driver.id driver.deviceToken overlay.title description overlay.imageUrl okButtonText overlay.cancelButtonText overlay.actions overlay.link overlay.endPoint overlay.method overlay.reqBody overlay.delay overlay.contactSupportNumber overlay.toastMessage overlay.secondaryActions overlay.socialMediaLinks
-      ALERT -> whenJust messageId $ \_mId -> do
+        overlay <- CMP.findByMerchantOpCityIdPNKeyLangaugeUdf merchantOpCityId oKey (fromMaybe ENGLISH driver.language) Nothing >>= fromMaybeM (OverlayKeyNotFound oKey)
+        let okButtonText = T.replace (templateText "dueAmount") (show manualDues) <$> overlay.okButtonText
+        let description = T.replace (templateText "dueAmount") (show manualDues) <$> overlay.description
+        TN.sendOverlay merchantOpCityId driver.id driver.deviceToken overlay.title description overlay.imageUrl okButtonText overlay.cancelButtonText overlay.actions overlay.link overlay.endPoint overlay.method overlay.reqBody overlay.delay overlay.contactSupportNumber overlay.toastMessage overlay.secondaryActions overlay.socialMediaLinks
+      ALERT -> do
+        _mId <- fromMaybeM (InvalidRequest "Message Id field is required for channel : ALERT") messageId -- whenJust messageId $ \_mId -> do
         topicName <- asks (.broadcastMessageTopic)
         message <- B.runInReplica $ MQuery.findById (Id _mId) >>= fromMaybeM (InvalidRequest "Message Not Found")
         msg <- createMessageLanguageDict message
@@ -1590,7 +1593,7 @@ checkIfVolunteerSMSSendingLimitExceeded volunteerId limitConfig channel = do
         Nothing -> 500
         Just config -> getLimitAccordingToChannel config channel
   (currentLimit :: Int) <- sum . catMaybes <$> SWC.getCurrentWindowValues (mkVolunteerSMSSendingLimitKey volunteerId channel) windowLimit
-  when (currentLimit >= limit) $ throwError VolunteerSmsSendingLimitExceeded -- the limit is counted from 0
+  when (currentLimit >= limit) $ throwError (VolunteerMessageSendingLimitExceeded (show channel)) -- the limit is counted from 0
 
 incrementVolunteerSMSSendingCount :: (CacheFlow m r, MonadFlow m) => Text -> MediaChannel -> m ()
 incrementVolunteerSMSSendingCount volunteerId channel = SWC.incrementWindowCount (mkVolunteerSMSSendingLimitKey volunteerId channel) windowLimit
@@ -1601,7 +1604,7 @@ checkIfDriverSMSReceivingLimitExceeded driverId limitConfig channel = do
         Nothing -> 10
         Just config -> getLimitAccordingToChannel config channel
   (currentLimit :: Int) <- sum . catMaybes <$> SWC.getCurrentWindowValues (mkDriverSMSRecevingLimitKey driverId channel) windowLimit
-  when (currentLimit >= limit) $ throwError DriverSmsReceivingLimitExceeded -- the limit is counted from 0
+  when (currentLimit >= limit) $ throwError (DriverMessageReceivingLimitExceeded (show channel)) -- the limit is counted from 0
 
 incrementDriverSMSReceivingCount :: (CacheFlow m r, MonadFlow m) => Text -> MediaChannel -> m ()
 incrementDriverSMSReceivingCount driverId channel = SWC.incrementWindowCount (mkDriverSMSRecevingLimitKey driverId channel) windowLimit
