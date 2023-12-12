@@ -18,15 +18,58 @@ module ReactComponents.IncrementDecrement.Controller where
 import Prelude 
 import Common.Types.App
 import Effect (Effect)
-import Screens.RideHistoryScreen.Controller (Action(..))
+import Styles.Colors as Color
+import Data.Maybe (Maybe(..))
 
 type Config = {
     initialCount :: Int
-  , push :: (Action -> Effect Unit)
+  , plus :: PlusMinusObj
+  , minus :: PlusMinusObj
+  , stroke :: String
+  , backgroundColor :: String
+  , fontSize :: String
+  , cornerRadius :: String
+  , padding :: String
+  , margin :: String
+  , onChange :: Maybe (Int -> Effect Unit)
+}
+
+type PlusMinusObj = {
+    backgroundColor :: String
+  , textColor :: String
+  , height :: String
+  , width :: String
+  , fontSize :: String
+  , fontWeight :: String
+  , rippleColor :: String
 }
 
 config :: Config
-config = {
-    initialCount: 0
-  , push: \_ -> pure unit
-}
+config = 
+  { initialCount: 0
+  , plus: {
+      backgroundColor: Color.black900
+    , textColor: Color.yellow900
+    , height: "wrap_content"
+    , width: "wrap_content"
+    , fontSize: "16"
+    , fontWeight: "bold"
+    , rippleColor: Color.black500
+    }
+  , minus: {
+      backgroundColor: Color.grey700
+    , textColor: Color.black900
+    , height: "wrap_content"
+    , width: "wrap_content"
+    , fontSize: "16"
+    , fontWeight: "bold"
+    , rippleColor: Color.black200
+    }
+  , stroke: "1," <> Color.grey700
+  , backgroundColor: Color.white900
+  , fontSize: "16"
+  , cornerRadius: "4.0"
+  , padding: "28, 7, 28, 7"
+  , margin: "0, 24, 0, 24"
+  , onChange: Nothing
+  }

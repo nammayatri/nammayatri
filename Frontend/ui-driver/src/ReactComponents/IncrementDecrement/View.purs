@@ -13,7 +13,7 @@
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module ReactComponents.IncrementDecrement.View (app) where
+module ReactComponents.IncrementDecrement.View (app)  where
 
 import Prelude
 import React.Basic.Hooks (Component, component)
@@ -22,23 +22,23 @@ import React.Render.CustomBase (linearLayout, textView)
 import Styles.Colors as Color
 import ReactComponents.IncrementDecrement.Controller (Config)
 import React.Basic.Hooks as React
-import Screens.RideHistoryScreen.Controller (Action(..))
 import React.Basic.Hooks (Component, component, useEffect, useState)
 import Data.Tuple.Nested (type (/\), (/\))
 import Effect.Console (log)
 import Halogen.VDom.Types (VDom(..))
+import Data.Maybe (fromJust, fromMaybe, Maybe(..), maybe)
 
-app :: Component Config
-app = do 
-  component "app" \{initialCount, push} -> React.do
+app :: forall action . (Int -> action) -> (action -> Effect Unit) -> Component Config
+app action push = do 
+  component "app" \{initialCount, plus, minus, stroke, backgroundColor, fontSize, cornerRadius, padding, margin, onChange} -> React.do
     count /\ setCount <- useState initialCount
     let onIncrement = setCount (\prevCount -> prevCount + 1)
     let onDecrement = setCount (\prevCount -> if(prevCount > 1) then prevCount - 1 else prevCount)
 
     useEffect count (\_ -> do
-                    log ("count: " <> show count)
-                    when(count > initialCount) do push $ CounterChange count
-                    pure $ pure unit)
+                      log ("IncrementDecrementView count: " <> show count)
+                      _ <- maybe (push $ action count) (\f -> f count) onChange
+                      pure $ pure unit)
 
     pure $
       linearLayout {
@@ -46,49 +46,48 @@ app = do
         , width: "match_parent"
         , orientation: "vertical"
         , weight: "0.0"
-        , margin: "0, 24, 0, 24"
+        , margin: margin
       } [ linearLayout {
             height: "wrap_content"
           , width: "match_parent"
           , orientation: "horizontal"
           , padding: "4, 4, 4, 4"
           , cornerRadius: "8.0"
-          , background: Color.white900
-          , stroke: "1," <> Color.grey700
+          , background: backgroundColor
+          , stroke: stroke
         } [ textView {
-              background: Color.grey700
+              background: minus.backgroundColor
             , text: "-"
-            , textSize: "16"
+            , textSize: fontSize
             , gravity: "center"
-            , cornerRadius: "4.0"
-            , width: "wrap_content"
-            , padding: "28, 7, 28, 7"
+            , cornerRadius: cornerRadius
+            , width: minus.width
+            , padding: padding
             , onClick: onDecrement
-            , height: "wrap_content"
-            , rippleColor: Color.black900
+            , height: minus.height
+            , rippleColor: minus.rippleColor
             }
           , textView {
               background: Color.white900
             , text: (show count)
-            , textSize: "16"
+            , textSize: fontSize
             , height: "wrap_content"
             , color: Color.black800
-            , padding: "28, 7, 28, 7"
+            , padding: padding
             , weight: "1.0"
             , gravity: "center"
             } 
           , textView {
-              background: Color.black900
-            , width: "wrap_content"
-            , height: "wrap_content"
-            , gravity: "bottom"
+              background: plus.backgroundColor
+            , width: plus.width
+            , height: plus.height
             , text: "+"
-            , textSize: "16"
-            , color: Color.yellow900
-            , padding: "28, 7, 28, 7"
-            , cornerRadius: "4.0"
+            , textSize: fontSize
+            , color: plus.textColor
+            , padding: padding
+            , cornerRadius: cornerRadius
             , onClick: onIncrement
-            , rippleColor: Color.grey700
+            , rippleColor: plus.rippleColor
             }
           ]
         ]
