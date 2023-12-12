@@ -28,14 +28,14 @@ import Kernel.Utils.Common
 buildRatingReq ::
   (MonadFlow m, HasFlowEnv m r '["nwAddress" ::: BaseUrl]) =>
   DFeedback.FeedbackRes ->
-  m (BecknReq Rating.RatingMessageV2)
+  m (BecknReq Rating.RatingMessage)
 buildRatingReq DFeedback.FeedbackRes {..} = do
   msgId <- generateGUID
   bapUrl <- asks (.nwAddress) <&> #baseUrlPath %~ (<> "/" <> T.unpack merchant.id.getId)
   -- TODO :: Add request city, after multiple city support on gateway.
   context <- buildTaxiContext Context.RATING msgId (Just transactionId) merchant.bapId bapUrl (Just providerId) (Just providerUrl) merchant.defaultCity merchant.country False
   let message =
-        Rating.RatingMessageV2
+        Rating.RatingMessage
           { id = bppBookingId.getId,
             value = ratingValue,
             feedback_form =

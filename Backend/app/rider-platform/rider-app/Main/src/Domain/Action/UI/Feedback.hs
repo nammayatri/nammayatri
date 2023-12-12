@@ -76,7 +76,7 @@ feedback request = do
   _ <- QRide.updateRideRating rideId ratingValue
   QPFS.clearCache booking.riderId
   ratingu <- QRating.findRatingForRide rideId
-  void $ case ratingu of
+  _ <- case ratingu of
     Nothing -> do
       newRating <- DRating.buildRating rideId booking.riderId ratingValue feedbackDetails request.wasOfferedAssistance
       QRating.create newRating

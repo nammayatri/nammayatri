@@ -180,11 +180,11 @@ feedback ::
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.Map BaseUrl BaseUrl]
   ) =>
   BaseUrl ->
-  RatingReqV2 ->
+  RatingReq ->
   m RatingRes
 feedback providerUrl req = do
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
-  callBecknAPIWithSignature req.context.bap_id "feedback" API.ratingAPIV2 providerUrl internalEndPointHashMap req
+  callBecknAPIWithSignature req.context.bap_id "feedback" API.ratingAPI providerUrl internalEndPointHashMap req
 
 callStatus ::
   ( MonadFlow m,
