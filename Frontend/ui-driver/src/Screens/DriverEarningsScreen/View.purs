@@ -34,7 +34,7 @@ import Components.RequestInfoCard as RequestInfoCard
 import Control.Monad.Except (runExceptT, runExcept)
 import Control.Monad.Trans.Class (lift)
 import Control.Transformers.Back.Trans (runBackT)
-import Data.Array (length, (..), foldl, filter, (!!), null, last, mapWithIndex)
+import Data.Array (length, (..), foldl, filter, (!!), null, last, mapWithIndex, any)
 import Data.Either (Either(..), either)
 import Data.Function.Uncurried (runFn1)
 import Data.Int (ceil, floor, fromNumber, toNumber, fromString)
@@ -45,13 +45,13 @@ import Effect (Effect)
 import Effect.Aff (launchAff)
 import Effect.Class (liftEffect)
 import Effect.Uncurried (runEffectFn7)
-import Engineering.Helpers.Commons (getCurrentUTC, flowRunner, getFormattedDate, getNewIDWithTag, screenHeight, getDayName, daysBetweenDates, safeMarginBottom, screenWidth, convertUTCtoISC, countDown, liftFlow, formatCurrencyWithCommas)
+import Engineering.Helpers.Commons (getCurrentUTC, flowRunner, getFormattedDate, getNewIDWithTag, screenHeight, getVideoID, getDayName, daysBetweenDates, safeMarginBottom, screenWidth, convertUTCtoISC, countDown, liftFlow, formatCurrencyWithCommas)
 import Engineering.Helpers.Utils (loaderText, toggleLoader)
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Foreign.Generic (decodeJSON)
-import Helpers.Utils (FetchImageFrom(..), toStringJSON, convertUTCtoISC, getFixedTwoDecimals, renderSlider, getcurrentdate, getPastDays, getDayOfWeek, generateUniqueId, fetchImage)
-import JBridge (startLottieProcess, lottieAnimationConfig, getLayoutBounds)
+import Helpers.Utils (FetchImageFrom(..), toStringJSON, convertUTCtoISC, getFixedTwoDecimals, renderSlider, getcurrentdate, getPastDays, getDayOfWeek, generateUniqueId, addMediaPlayer, fetchImage, FetchImageFrom(..))
+import JBridge (startLottieProcess, lottieAnimationConfig, getLayoutBounds, setYoutubePlayer)
 import Language.Strings (getString, getVarString)
 import Language.Types (STR(..))
 import MerchantConfig.Utils (Merchant(..), getMerchant)
@@ -64,7 +64,7 @@ import PrestoDOM.Properties (cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Services.API (GetRidesHistoryResp(..), GetRidesSummaryListResp(..), DriverProfileSummaryRes(..))
 import Screens as ScreenNames
-import Screens.DriverEarningsScreen.Controller (Action(..), ScreenOutput, eval, fetchWeekyEarningData)
+import Screens.DriverEarningsScreen.Controller (Action(..), ScreenOutput, eval, fetchWeekyEarningData, dummyQuestions)
 import Screens.DriverEarningsScreen.ScreenData (dummyDateItem)
 import Screens.Types (DriverEarningsScreenState)
 import Screens.Types as ST
@@ -73,6 +73,10 @@ import Services.Backend as Remote
 import Storage (KeyStore(..), getValueToLocalStore)
 import Styles.Colors as Color
 import Types.App (defaultGlobalState)
+import Data.Tuple (Tuple(..))
+import Common.Types.App (YoutubeData(..))
+import Data.Function.Uncurried (runFn3)
+import PrestoDOM.Elements.Keyed as Keyed
 
 screen :: ST.DriverEarningsScreenState -> Screen Action ST.DriverEarningsScreenState ScreenOutput
 screen initialState =
@@ -103,6 +107,9 @@ screen initialState =
                 ST.USE_COINS_VIEW -> do
                   coinUsageHistoryRes <- Remote.getCoinUsageHistoryReqBT ""
                   liftFlowBT $ push $ CoinUsageResponseAction coinUsageHistoryRes
+                  pure unit
+                _ -> do
+                  liftFlowBT $ push $ FaqViewAction 
                   pure unit
             pure $ pure unit
         )
@@ -142,7 +149,25 @@ view push state =
             , orientation VERTICAL
             , visibility if state.props.showShimmer then GONE else VISIBLE
             ][ tabView push state
-              , if showGenericHeader then GenericHeader.view (push <<< GenericHeaderAC) (genericHeaderConfig state) else dummyView
+              , case state.props.subView of
+                  ST.USE_COINS_VIEW -> do
+                     if state.data.config.coinsConfig.enableYatriCoins then 
+                     linearLayout 
+                      [ width MATCH_PARENT
+                      , gravity CENTER_VERTICAL
+                      , padding $ PaddingRight 16
+                      , background Color.white900
+                      ]
+                      [ linearLayout 
+                          [ width WRAP_CONTENT
+                          ][  GenericHeader.view (push <<< GenericHeaderAC )  (genericHeaderConfig state ) 
+                          ]
+                        , helpButton push
+                        ]
+                      else linearLayout[][]
+                  _ | any (_ == state.props.subView)[ST.FAQ_VIEW, ST.FAQ_QUESTON_VIEW] -> GenericHeader.view (push <<< GenericHeaderAC )  (genericHeaderConfig state ) 
+                  _ -> linearLayout[][]
+              , separatorView (if any (_ == state.props.subView) [ST.FAQ_VIEW, ST.FAQ_QUESTON_VIEW] then true else false) state.props.subView
               , if not state.data.anyRidesAssignedEver
                   then  noRideHistoryView push state
                   else  scrollView 
@@ -154,6 +179,8 @@ view push state =
                             ST.EARNINGS_VIEW -> earningsView push state
                             ST.YATRI_COINS_VIEW -> yatriCoinsView push state
                             ST.USE_COINS_VIEW -> useCoinsView push state
+                            ST.FAQ_VIEW -> faqView push state
+                            ST.FAQ_QUESTON_VIEW -> faqQuestionView push state
                         ]
             ]
           , if state.props.showShimmer then shimmerView push state else dummyView
@@ -190,6 +217,8 @@ lottieView state push =
 
 tabView :: forall w . (Action -> Effect Unit) -> ST.DriverEarningsScreenState -> PrestoDOM (Effect Unit) w
 tabView push state = 
+ let setVisibility = if ((state.props.subView == ST.EARNINGS_VIEW || state.props.subView == ST.YATRI_COINS_VIEW) && state.data.config.coinsConfig.enableYatriCoins) then VISIBLE else GONE
+ in
   linearLayout
   [ height WRAP_CONTENT
   , width MATCH_PARENT
@@ -199,7 +228,7 @@ tabView push state =
   , padding $ Padding 4 4 4 4
   , margin $ Margin 16 24 16 24
   , gravity CENTER
-  , visibility if state.props.subView /= ST.USE_COINS_VIEW && state.data.config.coinsConfig.enableYatriCoins then VISIBLE else GONE
+  , visibility $ setVisibility
   ][  tabItem push (state.props.subView == ST.EARNINGS_VIEW) EARNINGS ST.EARNINGS_VIEW "ny_ic_tab_earnings"
     , tabItem push (state.props.subView == ST.YATRI_COINS_VIEW) YATRI_COINS ST.YATRI_COINS_VIEW "ny_ic_tab_coins"
   ]
@@ -348,7 +377,7 @@ totalEarningsView push state =
           ]
         ]
       , barGraphView push state
-      , separatorView true
+      , separatorView true state.props.subView
       , linearLayout
         [ height WRAP_CONTENT
         , width MATCH_PARENT
@@ -452,7 +481,8 @@ balanceView push state =
               , gravity BOTTOM
               ][ textView $ [
                 text $ formatCurrencyWithCommas (show state.data.coinBalance)
-              , color Color.yellow900
+              -- , color Color.yellow900
+              , color Color.saffron
             ] <> FontStyle.priceFont TypoGraphy
               , linearLayout 
                 [ height WRAP_CONTENT
@@ -480,7 +510,7 @@ balanceView push state =
           , width $ V 94
           ]
         ]
-      , separatorView true
+      , separatorView true state.props.subView
       , linearLayout
         [ height WRAP_CONTENT
         , width MATCH_PARENT
@@ -639,6 +669,196 @@ balanceView push state =
 --                       }
 --                       ]
   
+faqView :: forall w . (Action -> Effect Unit) -> ST.DriverEarningsScreenState -> PrestoDOM (Effect Unit) w
+faqView push state = 
+  linearLayout
+    [ height MATCH_PARENT
+    , width MATCH_PARENT
+    , orientation VERTICAL
+    , background Color.blue600
+    ][  textView $ [
+        text $ getString LEARN_ABOUT_YATRI_COINS
+      , color Color.black700
+      , margin $ Margin 16 12 0 12
+      ] <> FontStyle.subHeading2 TypoGraphy
+      , questionsListView push dummyQuestions state
+    ]
+
+questionsListView :: forall w . (Action -> Effect Unit) -> Array ST.FaqQuestions -> ST.DriverEarningsScreenState -> PrestoDOM (Effect Unit) w
+questionsListView push questionsList state = 
+  linearLayout
+    [ height MATCH_PARENT
+    , width MATCH_PARENT
+    , orientation VERTICAL
+    , background $ Color.white900
+    ] (map (\item -> individualQuestionListView push item state) questionsList)
+
+individualQuestionListView :: forall w . (Action -> Effect Unit) -> ST.FaqQuestions -> ST.DriverEarningsScreenState -> PrestoDOM (Effect Unit) w
+individualQuestionListView push faqQuestion state =
+  linearLayout
+    [ height MATCH_PARENT
+    , width MATCH_PARENT
+    , orientation VERTICAL
+    , padding (PaddingHorizontal 16 16)
+    , onClick push $ const $ OpenFaqQuestion faqQuestion
+    ][ linearLayout
+        [ height MATCH_PARENT
+        , width MATCH_PARENT
+        , gravity CENTER
+          ][ linearLayout
+              [ height MATCH_PARENT
+              , weight 1.0
+              , gravity CENTER_VERTICAL
+                ][ textView (
+                    [ height WRAP_CONTENT
+                    , width MATCH_PARENT
+                    , text faqQuestion.question
+                    , padding (PaddingVertical 20 20)
+                    , color Color.black900
+                    , margin $ MarginRight 16
+                    ] <> FontStyle.subHeading2 TypoGraphy)
+                ]
+              , linearLayout
+                [ height MATCH_PARENT
+                , width $ V 20
+                , gravity CENTER
+                  ][ imageView
+                      [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_chevron_right_grey,"
+                      , height $ V 18
+                      , width $ V 18
+                      , margin $ MarginHorizontal 10 8 
+                      ]
+                  ]
+          ]
+        , horizontalLine
+      ]
+
+faqQuestionView :: forall w . (Action -> Effect Unit) -> ST.DriverEarningsScreenState -> PrestoDOM (Effect Unit) w
+faqQuestionView push state = 
+  linearLayout
+    [ height WRAP_CONTENT
+    , width MATCH_PARENT
+    , orientation VERTICAL
+    , background Color.white900
+    , padding (Padding 16 16 16 16)
+    ][ textView (
+        [ height WRAP_CONTENT
+        , width WRAP_CONTENT
+        , text state.props.individualQuestion.question
+        , color Color.black900
+        , margin $ MarginBottom 20
+        ] <> FontStyle.h1 TypoGraphy)
+        , answersListView push state.props.individualQuestion.answer state
+    ]
+
+faqVideoView :: forall w . (Action -> Effect Unit) -> ST.DriverEarningsScreenState -> PrestoDOM (Effect Unit) w
+faqVideoView push state = 
+  if state.props.individualQuestion.videoLink /= Nothing
+    then linearLayout
+          [ width MATCH_PARENT
+          , height MATCH_PARENT
+          , background Color.red600 
+          , gravity CENTER
+          , margin $ MarginBottom 4
+          , id (getNewIDWithTag "faqVideo")
+          , afterRender
+              ( \action ->  pure $ runFn3 setYoutubePlayer (youtubeData state "VIDEO") (getNewIDWithTag "faqVideo") (show ST.PLAY))
+              (const NoAction)
+          ][]
+      else linearLayout [][]
+
+youtubeData :: ST.DriverEarningsScreenState -> String -> YoutubeData
+youtubeData state mediaType =
+  { videoTitle: "title"
+  , setVideoTitle: false
+  , showMenuButton: false
+  , showDuration: true
+  , showSeekBar: true
+  -- , videoId: getVideoID state.props.individualQuestion.videoLink
+  , videoId : case state.props.individualQuestion.videoLink of
+      Just x -> getVideoID x
+      Nothing -> ""
+  , videoType: "VIDEO"
+  , videoHeight: 200
+  }
+
+answersListView :: forall w . (Action -> Effect Unit) -> Array String -> ST.DriverEarningsScreenState -> PrestoDOM (Effect Unit) w
+answersListView push answersList state = 
+  linearLayout
+    [ height MATCH_PARENT
+    , width MATCH_PARENT
+    , orientation VERTICAL
+    ] $ [faqVideoView push state] <> if length answersList > 1 
+        then (map (\item -> singleAnswerView push item state) answersList)
+        else (map (\item -> multipleAnswerView push item state) answersList)
+
+singleAnswerView :: forall w . (Action -> Effect Unit) -> String -> ST.DriverEarningsScreenState -> PrestoDOM (Effect Unit) w
+singleAnswerView push answer state =
+  linearLayout 
+    [ height MATCH_PARENT
+    , width MATCH_PARENT
+    , padding (PaddingVertical 10 10)
+    ][ textView (
+        [ height WRAP_CONTENT
+        , width WRAP_CONTENT
+        , text "•"
+        , margin $ MarginRight 8
+        , color Color.black900
+        ] <> FontStyle.subHeading2 TypoGraphy),
+        textView (
+        [ height WRAP_CONTENT
+        , width WRAP_CONTENT
+        , text answer
+        , color Color.black900
+        ] <> FontStyle.subHeading2 TypoGraphy)
+    ]
+
+multipleAnswerView :: forall w . (Action -> Effect Unit) -> String -> ST.DriverEarningsScreenState -> PrestoDOM (Effect Unit) w
+multipleAnswerView push answer state =
+  linearLayout 
+    [ height MATCH_PARENT
+    , width MATCH_PARENT
+    , padding (PaddingVertical 12 12)
+    ][ textView (
+        [ height WRAP_CONTENT
+        , width WRAP_CONTENT
+        , text answer
+        , color Color.black900
+        ] <> FontStyle.subHeading2 TypoGraphy)
+    ]
+
+
+horizontalLine :: forall w. PrestoDOM (Effect Unit) w 
+horizontalLine = 
+  linearLayout
+    [ height $ V 1
+    , width MATCH_PARENT
+    , background Color.grey900
+    ,gravity CENTER
+    ][] 
+
+helpButton :: forall w . (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w 
+helpButton push = 
+  linearLayout
+    [ gravity RIGHT
+    , weight 1.0
+    , width WRAP_CONTENT
+    , onClick push $ const $ ChangeTab ST.FAQ_VIEW
+    ][  imageView $
+        [ width (V 22)
+        , height (V 22)
+        , imageWithFallback $ fetchImage FF_ASSET "ny_ic_help_circle_blue,"
+        , padding $ Padding 0 2 4 0 
+        , gravity CENTER_VERTICAL
+        ]
+      , textView $ 
+        [ height WRAP_CONTENT
+        , width WRAP_CONTENT
+        , text $ getString HELP_STR
+        , color $ Color.blue900
+        ] <> FontStyle.subHeading2 TypoGraphy
+    ]
+
 transactionView :: forall w . (Action -> Effect Unit) -> ST.DriverEarningsScreenState -> PrestoDOM (Effect Unit) w
 transactionView push state = 
   linearLayout
@@ -819,7 +1039,7 @@ historyViewItem item isLast subView =
           ]
       ]
     ]
-    , separatorView (not isLast)
+    , separatorView (not isLast) subView
   ]
 
 
@@ -1018,13 +1238,12 @@ usageHistoryView push state =
     , historyView push state
     ]
 
-
-separatorView :: forall w. Boolean -> PrestoDOM (Effect Unit) w 
-separatorView isVisible = 
+separatorView :: forall w. Boolean -> ST.DriverEarningsSubView -> PrestoDOM (Effect Unit) w 
+separatorView isVisible subView = 
   linearLayout
   [ height $ V 1
   , width MATCH_PARENT
-  , background Color.grey700
+  , background $ if any (_ == subView)[ST.FAQ_VIEW, ST.FAQ_QUESTON_VIEW] then Color.grey900 else Color.grey700
   , visibility if isVisible then VISIBLE else GONE
   ][]
 
@@ -1291,7 +1510,7 @@ historyViewItemForEarnings item state =
           ] <> FontStyle.body6 TypoGraphy
       ]
     ]
-    , separatorView true
+    , separatorView true state.props.subView
   ]
 
 tagview :: String -> forall w. PrestoDOM (Effect Unit) w 

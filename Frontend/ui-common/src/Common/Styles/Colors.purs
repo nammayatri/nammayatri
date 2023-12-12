@@ -231,6 +231,9 @@ blue400 = "#662194FF"
 atlantisGreen :: Color
 atlantisGreen = "#E1E7F5"
 
+saffron :: Color
+saffron = "#FCC32C"
+
 greenCoin :: Color
 greenCoin = "#1A53BB6F"
 

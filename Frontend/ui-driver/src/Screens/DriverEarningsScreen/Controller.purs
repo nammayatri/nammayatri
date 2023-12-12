@@ -40,6 +40,8 @@ import Engineering.Helpers.LogEvent (logEvent)
 import Engineering.Helpers.Utils (initializeCalendar, saveObject, getCurrentDay)
 import Foreign.Generic (decodeJSON)
 import Helpers.Utils (getcurrentdate, getDayOfWeek, incrementValueOfLocalStoreKey)
+import Language.Strings (getString)
+import Language.Types
 import Log (trackAppScreenRender)
 import PrestoDOM (Eval, continue, exit, ScrollState(..), updateAndExit, continueWithCmd)
 import PrestoDOM.Types.Core (class Loggable, toPropValue)
@@ -96,13 +98,17 @@ data Action = NoAction
             | BarViewSelected Int 
             | LeftChevronClicked Int
             | RightChevronClicked Int
+            | OpenFaqQuestion ST.FaqQuestions
             | ShowPaymentHistory
+            | FaqViewAction
 
 eval :: Action -> DriverEarningsScreenState -> Eval Action ScreenOutput DriverEarningsScreenState
 
-eval BackPressed state = if state.props.subView == USE_COINS_VIEW 
-                            then exit $ ChangeDriverEarningsTab YATRI_COINS_VIEW state
-                            else exit $ HomeScreen (updateToState state)
+eval BackPressed state = case state.props.subView of
+                            USE_COINS_VIEW -> exit $ ChangeDriverEarningsTab YATRI_COINS_VIEW state
+                            FAQ_VIEW -> exit $ ChangeDriverEarningsTab USE_COINS_VIEW state
+                            FAQ_QUESTON_VIEW -> exit $ ChangeDriverEarningsTab FAQ_VIEW state
+                            _ -> exit $ HomeScreen (updateToState state)
 
 eval (PrimaryButtonActionController PrimaryButtonController.OnClick) state = exit $ PurchasePlan state
 
@@ -252,6 +258,11 @@ eval (UpdateRidesEver anyRidesAssignedEver) state = continue state{data{anyRides
 
 eval ShowPaymentHistory state = exit $ PaymentHistory
 
+eval FaqViewAction state = continue $ state {props{showShimmer = false}}
+
+eval (OpenFaqQuestion faqQuestion) state = do
+  continue $ state {props{individualQuestion = faqQuestion, subView = ST.FAQ_QUESTON_VIEW}}
+
 eval _ state = continue state
 
 getEarningListWithMissingDates :: Array ST.WeeklyEarning -> Array String -> Array ST.WeeklyEarning 
@@ -365,3 +376,50 @@ updateToState state = do
                                       Just index -> index
                                       Nothing -> 0
   state{props{weekIndex = 3, selectedBarIndex = -1, currWeekData = currentWeekData, totalEarningsData = getTotalCurrentWeekData currentWeekData, currentWeekMaxEarning = currWeekMaxEarning}}
+
+dummyQuestions :: Array ST.FaqQuestions
+dummyQuestions = 
+  [
+    { question: getString YATRI_COINS_FAQS_QUES1
+    , videoLink: Just "https://www.youtube.com/watch?v=1340l2e0ZKY"
+    , answer: [ getString YATRI_COINS_FAQS_QUES1_ANS1
+              , getString YATRI_COINS_FAQS_QUES1_ANS2
+              , getString YATRI_COINS_FAQS_QUES1_ANS3
+              ]
+    },
+    { question: getString YATRI_COINS_FAQS_QUES2
+    , videoLink: Nothing
+    , answer: [ getString YATRI_COINS_FAQS_QUES2_ANS1
+              ]
+    },
+    { question: getString YATRI_COINS_FAQS_QUES3
+    , videoLink: Just "https://www.youtube.com/watch?v=1340l2e0ZKY"
+    , answer: [ getString YATRI_COINS_FAQS_QUES3_ANS1
+              , getString YATRI_COINS_FAQS_QUES3_ANS2
+              ]
+    },
+    { question: getString YATRI_COINS_FAQS_QUES4
+    , videoLink: Just "https://www.youtube.com/watch?v=1340l2e0ZKY"
+    , answer: [ getString YATRI_COINS_FAQS_QUES4_ANS1
+              , getString YATRI_COINS_FAQS_QUES4_ANS2
+              ]
+    },
+    { question: getString YATRI_COINS_FAQS_QUES5
+    , videoLink: Nothing
+    , answer: [ getString YATRI_COINS_FAQS_QUES5_ANS1
+              , getString YATRI_COINS_FAQS_QUES5_ANS2
+              , getString YATRI_COINS_FAQS_QUES5_ANS3
+              ]
+    },
+    { question: getString YATRI_COINS_FAQS_QUES6
+    , videoLink: Nothing
+    , answer: [ getString YATRI_COINS_FAQS_QUES6_ANS1
+              , getString YATRI_COINS_FAQS_QUES6_ANS2
+              ]
+    },
+    { question: getString YATRI_COINS_FAQS_QUES7
+    , videoLink: Nothing
+    , answer: [ getString YATRI_COINS_FAQS_QUES7_ANS1
+              ]
+    }
+  ]

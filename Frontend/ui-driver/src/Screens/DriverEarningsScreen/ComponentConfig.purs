@@ -53,11 +53,16 @@ primaryButtonConfig isActive =
 
 genericHeaderConfig :: ST.DriverEarningsScreenState -> GenericHeaderConfig.Config
 genericHeaderConfig state = 
+  let headerText = if state.props.subView == ST.FAQ_VIEW then getString YATRI_COINS_FAQS
+                    else if state.props.subView == ST.FAQ_QUESTON_VIEW then ""
+                    else if not state.data.config.coinsConfig.enableYatriCoins then getString EARNINGS
+                    else getString USE_COINS
+  in
   GenericHeaderConfig.config{ 
     height = WRAP_CONTENT
     , padding = if state.props.subView == ST.EARNINGS_VIEW then Padding 16 16 16 16 else PaddingVertical 5 5
     , textConfig {
-        text = if not state.data.config.coinsConfig.enableYatriCoins then getString EARNINGS else getString USE_COINS
+        text = headerText
       , color = Color.darkCharcoal }
     , prefixImageConfig {
         height = V 25

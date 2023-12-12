@@ -2169,7 +2169,8 @@ type DriverEarningsScreenProps = {
   startDate :: String,
   endDate :: String,
   gotDataforWeek :: Array Boolean,
-  coinConvertedSuccess :: Boolean
+  coinConvertedSuccess :: Boolean,
+  individualQuestion :: FaqQuestions
 }
 
 type CalendarState = { 
@@ -2180,6 +2181,11 @@ type CalendarState = {
   weeks  :: Array Common.CalendarModalWeekObject
 }
 
+type FaqQuestions = {
+  question :: String,
+  videoLink :: Maybe String,
+  answer :: Array String
+}
 type WeeklyEarning = {
   earnings :: Int,
   rideDistance :: Int,
@@ -2207,7 +2213,7 @@ instance showCachedEarningsForDriver :: Show CachedEarningsForDriver where show 
 instance decodeCachedEarningsForDriver :: Decode CachedEarningsForDriver where decode = defaultDecode
 instance encodeCachedEarningsForDriver :: Encode CachedEarningsForDriver where encode = defaultEncode
 
-data DriverEarningsSubView = EARNINGS_VIEW | YATRI_COINS_VIEW | USE_COINS_VIEW
+data DriverEarningsSubView = EARNINGS_VIEW | YATRI_COINS_VIEW | USE_COINS_VIEW | FAQ_VIEW | FAQ_QUESTON_VIEW
 
 derive instance genericDriverEarningsSubView :: Generic DriverEarningsSubView _
 instance showDriverEarningsSubView :: Show DriverEarningsSubView where show = genericShow

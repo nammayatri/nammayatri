@@ -2942,6 +2942,7 @@ updateBannerAndPopupFlags = do
                   , showShimmer = false
                   }
                 , config = appConfig
+                , coinBalance = fromMaybe 0 getDriverInfoResp.coinBalance
                 }
               , props
                 { autoPayBanner = autopayBannerType

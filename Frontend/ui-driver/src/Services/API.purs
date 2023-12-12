@@ -426,6 +426,7 @@ newtype GetDriverInfoResp = GetDriverInfoResp
     , isGoHomeEnabled       :: Boolean
     , maskedDeviceToken     :: Maybe String
     , operatingCity         :: Maybe String
+    , coinBalance           :: Maybe Int
     }
 
 

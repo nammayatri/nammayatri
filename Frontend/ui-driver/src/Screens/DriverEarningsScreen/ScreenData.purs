@@ -74,7 +74,10 @@ initData = {
     weekDay : ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
     currentWeekMaxEarning : 0,
     showShimmer: true,
-    coinConvertedSuccess : false
+    coinConvertedSuccess : false,
+    individualQuestion : { question: ""
+                , videoLink: Nothing
+                , answer: []}
   }
 }
 
