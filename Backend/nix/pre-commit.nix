@@ -1,5 +1,6 @@
 # https://pre-commit.com/ hooks defined in Nix
 # cf. https://github.com/cachix/pre-commit-hooks.nix
+{ self', ... }:
 { pkgs, lib, ... }:
 
 {
@@ -33,5 +34,15 @@
         '';
       });
     };
+    check-src-read-only-diff-check = {
+      enable = true;
+      name = "check-src-read-only-diff-check";
+      description = "Check that src-read-only folder is read-only";
+      types = [ "file" ];
+      pass_filenames = true;
+      files = ".*\\/((rider-platform\\/rider-app)|(provider-platform\\/dynamic-offer-driver-app))\\/Main\\/src-read-only\\/.*\\.hs$";
+      entry = lib.getExe self'.packages.alchemist;
+    };
+
   };
 }

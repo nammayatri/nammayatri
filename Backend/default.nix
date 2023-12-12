@@ -9,7 +9,7 @@
   ];
   perSystem = { config, self', pkgs, lib, ... }: {
     pre-commit.settings.imports = [
-      ./nix/pre-commit.nix
+      (import ./nix/pre-commit.nix { inherit self'; })
     ];
 
     haskellProjects.default = {
