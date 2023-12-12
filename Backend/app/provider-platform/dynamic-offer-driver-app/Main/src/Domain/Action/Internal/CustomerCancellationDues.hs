@@ -140,6 +140,7 @@ customerCancellationDuesSync merchantId merchantCity apiKey req = do
     (Just amountPaid, Nothing) -> do
       when (amountPaid > riderDetails.cancellationDues || amountPaid < 0) $ do
         throwError (CustomerCancellationDuesLimitNotMet riderDetails.id.getId)
+
       when (req.paymentMadeToDriver) $ do
         booking <- (QBooking.findLastCancelledByRiderId riderDetails.id) >>= fromMaybeM (BookingDoesNotExist riderDetails.id.getId)
         ride <- QRide.findOneByBookingId booking.id >>= fromMaybeM (RideDoesNotExist booking.id.getId)
@@ -153,9 +154,12 @@ customerCancellationDuesSync merchantId merchantCity apiKey req = do
                 }
         QCC.create cancellationCharges
 
-      when (transporterConfig.cancellationFee == 0) $ do
-        throwError $ InternalError "Cancellation Fee in Transporter Config is 0"
-      let disputeChances = round $ amountPaid / transporterConfig.cancellationFee
+      disputeChances <-
+        if transporterConfig.cancellationFee == 0
+          then do
+            logWarning "Unable to calculate dispute chances used"
+            return 0
+          else return $ round $ amountPaid / transporterConfig.cancellationFee
       QRD.updateDisputeChancesUsedAndCancellationDues riderDetails.id (max 0 (riderDetails.disputeChancesUsed - disputeChances)) (riderDetails.cancellationDues - amountPaid)
     (Nothing, Just disputeChancesUsedReq) -> do
       when (disputeChancesUsedReq > transporterConfig.cancellationFeeDisputeLimit || disputeChancesUsedReq < 0) $ do
