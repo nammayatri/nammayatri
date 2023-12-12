@@ -3,7 +3,7 @@
 , run-generator
 # This script checks if there are any changes in the src-read-only folder
 CHANGES_FOUND=false
-
+treefmt
 git diff --unified=0 -- | grep -E "^\\+\\+\\+|^@@" | while read -r line; do
     file_path=$(grep -oP "^\\+\\+\\+ b/\K(.+)" <<< "$line")
     if [[ $file_path == *"/src-read-only/"* ]]; then
