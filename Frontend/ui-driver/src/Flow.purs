@@ -35,7 +35,7 @@ import Data.Function.Uncurried (runFn1)
 import Data.Functor (map)
 import Data.Int (ceil, fromString, round, toNumber)
 import Data.Lens ((^.))
-import Data.Maybe (Maybe(..), fromJust, fromMaybe, isJust, isNothing)
+import Data.Maybe (Maybe(..), fromJust, fromMaybe, isJust, isNothing, maybe)
 import Data.Number (fromString) as Number
 import Data.Ord (compare)
 import Data.Semigroup ((<>))
@@ -179,8 +179,11 @@ baseAppFlow baseFlow event = do
 
     initialFlow :: FlowBT String Unit
     initialFlow = do
-      let regToken = getValueToLocalStore REGISTERATION_TOKEN
       config <- getAppConfigFlowBT Constants.appConfig
+      let regToken = getValueToLocalStore REGISTERATION_TOKEN
+          driver_location = getValueToLocalStore DRIVER_LOCATION
+          mbCity = find (\city' -> city'.cityName == driver_location) config.cityConfig
+      maybe (pure unit) (\city -> setValueToLocalStore SHOW_SUBSCRIPTIONS (show city.showSubscriptions)) $ mbCity
       isLocationPermission <- lift $ lift $ liftFlow $ isLocationPermissionEnabled unit
       if isTokenValid regToken then do
         setValueToLocalNativeStore REGISTERATION_TOKEN regToken
