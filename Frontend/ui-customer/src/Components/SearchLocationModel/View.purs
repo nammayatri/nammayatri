@@ -47,7 +47,7 @@ import Prelude (Unit, bind, const, map, pure, unit, ($), (&&), (+), (-), (/), (/
 import PrestoDOM (Accessiblity(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), accessibility, accessibilityHint, adjustViewWithKeyboard, afterRender, alignParentBottom, alpha, autoCorrectionType, background, clickable, color, cornerRadius, cursorColor, disableClickFeedback, editText, ellipsize, fontStyle, frameLayout, gravity, height, hint, hintColor, id, imageUrl, imageView, imageWithFallback, inputTypeI, layoutGravity, lineHeight, linearLayout, lottieAnimationView, margin, onBackPressed, onChange, onClick, onFocus, orientation, padding, relativeLayout, scrollBarY, scrollView, selectAllOnFocus, singleLine, stroke, text, textSize, textView, visibility, weight, width, rippleColor)
 import PrestoDOM.Animation as PrestoAnim
 import Resources.Constants (getDelayForAutoComplete)
-import Screens.Types (SearchLocationModelType(..), LocationListItemState)
+import Screens.Types (SearchLocationModelType(..), LocationListItemState, SearchLocationEditTextFocusType(..)) as ST
 import Storage (KeyStore(..), getValueToLocalStore)
 import Styles.Colors as Color
 import Mobility.Prelude (boolToVisibility)
@@ -59,9 +59,9 @@ view push state =
       , width MATCH_PARENT
       , orientation VERTICAL
       , background case state.isSearchLocation of
-                    SearchLocation -> Color.white900
+                    ST.SearchLocation -> Color.white900
                     _           -> Color.transparent --"#FFFFFF"
-      , margin $ MarginBottom (if state.isSearchLocation == LocateOnMap then bottomSpacing else 0)
+      , margin $ MarginBottom (if state.isSearchLocation == ST.LocateOnMap then bottomSpacing else 0)
       , onBackPressed push (const $ GoBack)
       ][ PrestoAnim.animationSet
           [ translateYAnimFromTop $ translateFullYAnimWithDurationConfig 500 ]
@@ -134,7 +134,7 @@ searchResultsParentView state push =
   , height MATCH_PARENT
   , margin $ MarginHorizontal 16 16
   , orientation VERTICAL
-  , visibility $ boolToVisibility $ state.isSearchLocation == SearchLocation && state.isRideServiceable && not state.showLoader 
+  , visibility $ boolToVisibility $ state.isSearchLocation == ST.SearchLocation && state.isRideServiceable && not state.showLoader 
     ][  savedLocationBar state push
       , findPlacesIllustration  push state
       , searchResultsView state push ]
@@ -249,7 +249,7 @@ sourceDestinationEditTextView state push =
       , orientation HORIZONTAL
       , background state.appConfig.searchLocationConfig.editTextBackground
       , cornerRadius 4.0 
-      , stroke $ if state.isSource == Just true && state.isSearchLocation == LocateOnMap then "1," <> Color.yellowText else "0," <> Color.yellowText
+      , stroke $ if state.isSource == Just true && state.isSearchLocation == ST.LocateOnMap then "1," <> Color.yellowText else "0," <> Color.yellowText
       ][ editText $
             [ height $ V 37
             , weight 1.0
@@ -279,8 +279,8 @@ sourceDestinationEditTextView state push =
                     pure unit
                 )
                 SourceChanged
-            , inputTypeI if state.isSearchLocation == LocateOnMap then 0 else 1
-            , onFocus push $ const $ EditTextFocusChanged "S"
+            , inputTypeI if state.isSearchLocation == ST.LocateOnMap then 0 else 1
+            , onFocus push $ EditTextFocusChanged ST.SOURCE
               , selectAllOnFocus true
             , autoCorrectionType 1
             ] <> FontStyle.subHeading1 LanguageStyle
@@ -296,7 +296,7 @@ sourceDestinationEditTextView state push =
                       )(const $ SourceClear)
             , accessibilityHint "Clear Source Text : Button"
             , accessibility ENABLE
-            , visibility if state.crossBtnSrcVisibility && state.isSource == Just true && state.isSearchLocation /= LocateOnMap then VISIBLE else GONE
+            , visibility if state.crossBtnSrcVisibility && state.isSource == Just true && state.isSearchLocation /= ST.LocateOnMap then VISIBLE else GONE
             ]
             [ imageView
                 [ height $ V 19
@@ -310,7 +310,7 @@ sourceDestinationEditTextView state push =
         , width MATCH_PARENT
         , background Color.grey900
         , background if state.isSrcServiceable then Color.grey900 else Color.textDanger
-        , visibility if state.isSource == Just true && state.isSearchLocation /= LocateOnMap then VISIBLE else GONE
+        , visibility if state.isSource == Just true && state.isSearchLocation /= ST.LocateOnMap then VISIBLE else GONE
         ]
         []
     , linearLayout
@@ -320,7 +320,7 @@ sourceDestinationEditTextView state push =
         , orientation HORIZONTAL
         , margin $ MarginTop 12
         , background state.appConfig.searchLocationConfig.editTextBackground
-        , stroke if state.isSource == Just false && state.isSearchLocation == LocateOnMap then "1," <> Color.yellowText else "0," <> Color.yellowText
+        , stroke if state.isSource == Just false && state.isSearchLocation == ST.LocateOnMap then "1," <> Color.yellowText else "0," <> Color.yellowText
         ]
         [ editText
             ( [ height $ V 37
@@ -350,8 +350,8 @@ sourceDestinationEditTextView state push =
                       pure unit
                   )
                   DestinationChanged
-              , inputTypeI if state.isSearchLocation == LocateOnMap then 0 else 1
-              , onFocus push $ const $ EditTextFocusChanged "D"
+              , inputTypeI if state.isSearchLocation == ST.LocateOnMap then 0 else 1
+              , onFocus push $ EditTextFocusChanged ST.DESTINATION
               , selectAllOnFocus true
               , autoCorrectionType 1
               ]
@@ -362,7 +362,7 @@ sourceDestinationEditTextView state push =
             , width $ V 30
             , gravity CENTER
             , margin $ MarginTop 2
-            , visibility if state.crossBtnDestVisibility && state.isSource == Just false && state.isSearchLocation /= LocateOnMap then VISIBLE else GONE
+            , visibility if state.crossBtnDestVisibility && state.isSource == Just false && state.isSearchLocation /= ST.LocateOnMap then VISIBLE else GONE
             , onClick (\action -> do
                         _ <- if state.isSource == Just false then pure $ setText (getNewIDWithTag  "DestinationEditText") "" else pure unit
                         _ <- push action
@@ -383,7 +383,7 @@ sourceDestinationEditTextView state push =
         , width MATCH_PARENT
         , margin (MarginBottom 5)
         , background if state.isDestServiceable then Color.grey900 else Color.textDanger
-        , visibility if state.isSource == Just false && state.isSearchLocation /= LocateOnMap then VISIBLE else GONE
+        , visibility if state.isSource == Just false && state.isSearchLocation /= ST.LocateOnMap then VISIBLE else GONE
         ]
         []
     ]
@@ -423,7 +423,7 @@ searchResultsView state push =
                   [ width MATCH_PARENT
                   , height WRAP_CONTENT
                   , orientation VERTICAL
-                  ][ LocationListItem.view (push <<< LocationListItemActionController) item (if (state.isSource == Just true && state.isSearchLocation /= LocateOnMap && state.isAutoComplete) then true else false) 
+                  ][ LocationListItem.view (push <<< LocationListItemActionController) item (if (state.isSource == Just true && state.isSearchLocation /= ST.LocateOnMap && state.isAutoComplete) then true else false) 
                   , linearLayout
                     [ height $ V 1
                     , width MATCH_PARENT
@@ -444,7 +444,7 @@ primaryButtonConfig state =
     config = PrimaryButton.config
     primaryButtonConfig' = config
       { textConfig
-        { text = if state.isSearchLocation == LocateOnMap then if state.isSource == Just true then (getString CONFIRM_PICKUP_LOCATION) else (getString CONFIRM_DROP_LOCATION) else ""
+        { text = if state.isSearchLocation == ST.LocateOnMap then if state.isSource == Just true then (getString CONFIRM_PICKUP_LOCATION) else (getString CONFIRM_DROP_LOCATION) else ""
         , color = state.appConfig.primaryTextColor
         , height = V 40
         }
@@ -483,7 +483,7 @@ primaryButtonView state push =
     , orientation VERTICAL
     , alignParentBottom "true,-1"
     , background Color.transparent
-    , visibility if state.isSearchLocation == LocateOnMap then VISIBLE else GONE
+    , visibility if state.isSearchLocation == ST.LocateOnMap then VISIBLE else GONE
     ][ recenterButtonView push state
       , PrimaryButton.view (push <<< PrimaryButtonActionController)(primaryButtonConfig state)]
 
@@ -564,7 +564,7 @@ bottomBtnsView state push =
     , alignParentBottom "true,-1"
     , background Color.white900
     , accessibility DISABLE_DESCENDANT
-    , visibility if state.isSearchLocation == LocateOnMap || (not state.isRideServiceable) then GONE else VISIBLE
+    , visibility if state.isSearchLocation == ST.LocateOnMap || (not state.isRideServiceable) then GONE else VISIBLE
     , adjustViewWithKeyboard "true"
     ][  linearLayout
         [ height $ V 1
@@ -582,7 +582,7 @@ bottomBtnsView state push =
             ( \idx item ->
                 linearLayout
                   [ height MATCH_PARENT
-                  , width if (state.isSource == Just true && state.isSearchLocation /= LocateOnMap) then (V 190) else MATCH_PARENT
+                  , width if (state.isSource == Just true && state.isSearchLocation /= ST.LocateOnMap) then (V 190) else MATCH_PARENT
                   , orientation HORIZONTAL
                   , gravity CENTER
                   ]
@@ -604,7 +604,7 @@ bottomBtnsView state push =
                             , text item.text
                             , layoutGravity "center"
                             , color Color.black800
-                            , padding if (state.isSource == Just true && state.isSearchLocation /= LocateOnMap) then (Padding 5 16 0 16) else (Padding 5 16 0 16)
+                            , padding if (state.isSource == Just true && state.isSearchLocation /= ST.LocateOnMap) then (Padding 5 16 0 16) else (Padding 5 16 0 16)
                             , onClick
                                 ( \action ->
                                     if item.buttonType == "CurrentLocation" then do
@@ -625,23 +625,23 @@ bottomBtnsView state push =
                       , alpha 0.25
                       , layoutGravity "center"
                       , margin $ if os == "IOS" then MarginVertical 7 7 else MarginVertical 0 0
-                      , visibility if length (if (state.isSource == Just true && state.isSearchLocation /= LocateOnMap) then srcBtnData state else destBtnData state) - 1 == idx then GONE else VISIBLE
+                      , visibility if length (if (state.isSource == Just true && state.isSearchLocation /= ST.LocateOnMap) then srcBtnData state else destBtnData state) - 1 == idx then GONE else VISIBLE
                       ]
                       []
                   ]
             )
-            $ if (state.isSource == Just true && state.isSearchLocation /= LocateOnMap) then srcBtnData state else destBtnData state
+            $ if (state.isSource == Just true && state.isSearchLocation /= ST.LocateOnMap) then srcBtnData state else destBtnData state
         )]
 
 srcBtnData :: SearchLocationModelState -> Array { text :: String, imageUrl :: String, action :: Action, buttonType :: String }
 srcBtnData state =
-  [ { text: (getString SELECT_ON_MAP), imageUrl: "ny_ic_locate_on_map,https://assets.juspay.in/nammayatri/images/user/ny_ic_locate_on_map.png", action: SetLocationOnMap, buttonType: "LocateOnMap" }
+  [ { text: (getString SELECT_ON_MAP), imageUrl: "ny_ic_locate_on_map,https://assets.juspay.in/nammayatri/images/user/ny_ic_locate_on_map.png", action: SetLocationOnMap, buttonType: "ST.LocateOnMap" }
   , { text: (getString CURRENT_LOCATION), imageUrl: "ny_ic_current_location,https://assets.juspay.in/nammayatri/images/user/ny_ic_current_location.png", action: SetCurrentLocation, buttonType: "CurrentLocation" }
   ]
 
 destBtnData :: SearchLocationModelState -> Array { text :: String, imageUrl :: String, action :: Action, buttonType :: String }
 destBtnData state =
-  [ { text: (getString SELECT_LOCATION_ON_MAP), imageUrl: "ny_ic_locate_on_map,https://assets.juspay.in/nammayatri/images/user/ny_ic_locate_on_map.png", action: SetLocationOnMap, buttonType: "LocateOnMap" }]
+  [ { text: (getString SELECT_LOCATION_ON_MAP), imageUrl: "ny_ic_locate_on_map,https://assets.juspay.in/nammayatri/images/user/ny_ic_locate_on_map.png", action: SetLocationOnMap, buttonType: "ST.LocateOnMap" }]
 
 
 separatorConfig :: SeparatorView.Config

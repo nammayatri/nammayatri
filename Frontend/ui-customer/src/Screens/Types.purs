@@ -2195,3 +2195,7 @@ instance eqLocationType :: Eq LocationType where eq = genericEq
 type GlobalFlowCache = {
   savedLocations :: Maybe SavedLocationsListRes
 }
+
+data SearchLocationEditTextFocusType = SOURCE | DESTINATION
+derive instance genericSearchLocationEditTextFocus :: Generic SearchLocationEditTextFocusType _
+instance eqSearchLocationEditTextFocus :: Eq SearchLocationEditTextFocusType where eq = genericEq
