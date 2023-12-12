@@ -145,6 +145,7 @@ data TransporterConfigD u = TransporterConfig
     driverDistanceToPickupThresholdOnCancel :: Meters,
     numOfCancellationsAllowed :: Int,
     canAddCancellationFee :: Bool,
+    allowDefaultPlanAllocation :: Bool,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }

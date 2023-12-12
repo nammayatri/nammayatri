@@ -672,7 +672,7 @@ setActivity (personId, _merchantId, merchantOpCityId) isActive mode = do
     freeTrialDaysLeft <- getFreeTrialDaysLeft transporterConfig.freeTrialDays driverInfo
     mbVehicle <- QV.findById personId
     when (isNothing mbVehicle) $ throwError (DriverWithoutVehicle personId.getId)
-    when (transporterConfig.isPlanMandatory && isNothing driverInfo.autoPayStatus && freeTrialDaysLeft <= 0) $ throwError (NoPlanSelected personId.getId)
+    when (transporterConfig.isPlanMandatory && isNothing driverInfo.autoPayStatus && freeTrialDaysLeft <= 0 && not transporterConfig.allowDefaultPlanAllocation) $ throwError (NoPlanSelected personId.getId)
     unless (driverInfo.enabled) $ throwError DriverAccountDisabled
     unless (driverInfo.subscribed || transporterConfig.openMarketUnBlocked) $ throwError DriverUnsubscribed
     unless (not driverInfo.blocked) $ throwError DriverAccountBlocked

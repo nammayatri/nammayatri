@@ -345,7 +345,7 @@ createDriverFee ::
 createDriverFee merchantId merchantOpCityId driverId rideFare newFareParams maxShards driverInfo booking = do
   transporterConfig <- SCT.findByMerchantOpCityId merchantOpCityId >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   freeTrialDaysLeft <- getFreeTrialDaysLeft transporterConfig.freeTrialDays driverInfo
-  mbDriverPlan <- getPlanAndPushToDefualtIfEligible transporterConfig
+  mbDriverPlan <- getPlanAndPushToDefualtIfEligible transporterConfig freeTrialDaysLeft
   let govtCharges = fromMaybe 0 newFareParams.govtCharges
   let (platformFee, cgst, sgst) = case newFareParams.fareParametersDetails of
         DFare.ProgressiveDetails _ -> (0, 0, 0)
@@ -354,7 +354,8 @@ createDriverFee merchantId merchantOpCityId driverId rideFare newFareParams maxS
   now <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
   lastDriverFee <- QDF.findLatestFeeByDriverId driverId
   driverFee <- mkDriverFee now merchantId driverId rideFare govtCharges platformFee cgst sgst transporterConfig booking
-  when ((totalDriverFee > 0 || (totalDriverFee <= 0 && transporterConfig.isPlanMandatory && isJust mbDriverPlan)) && isEligibleForCharge transporterConfig freeTrialDaysLeft) $ do
+  let toUpdateOrCreateDriverfee = totalDriverFee > 0 || (totalDriverFee <= 0 && transporterConfig.isPlanMandatory && isJust mbDriverPlan)
+  when (toUpdateOrCreateDriverfee && isEligibleForCharge transporterConfig freeTrialDaysLeft) $ do
     numRides <- case lastDriverFee of
       Just ldFee ->
         if now >= ldFee.startTime && now < ldFee.endTime
@@ -374,20 +375,30 @@ createDriverFee merchantId merchantOpCityId driverId rideFare newFareParams maxS
     isEligibleForCharge transporterConfig freeTrialDaysLeft = case booking.bookingType of
       SRB.SpecialZoneBooking -> transporterConfig.considerSpecialZoneRideChargesInFreeTrial || freeTrialDaysLeft <= 0
       _ -> freeTrialDaysLeft <= 0
-    getPlanAndPushToDefualtIfEligible :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => TransporterConfig -> m (Maybe DriverPlan)
-    getPlanAndPushToDefualtIfEligible transporterConfig = do
+    getPlanAndPushToDefualtIfEligible :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => TransporterConfig -> Int -> m (Maybe DriverPlan)
+    getPlanAndPushToDefualtIfEligible transporterConfig freeTrialDaysLeft' = do
       mbDriverPlan' <- findByDriverId (cast driverId)
-      case (booking.bookingType, mbDriverPlan', transporterConfig.considerSpecialZoneRideChargesInFreeTrial && transporterConfig.isPlanMandatory) of
-        (SRB.SpecialZoneBooking, Nothing, True) -> do
-          plans <- CQP.findByMerchantIdAndType merchantId DEFAULT
-          case plans of
-            (plan' : _) -> do
-              newDriverPlan <- Plan.mkDriverPlan plan' driverId
-              QDPlan.create newDriverPlan
-              QDI.updateAutoPayStatusAndPayerVpa (Just DI.PENDING) Nothing (cast driverId)
-              return $ Just newDriverPlan
-            _ -> return Nothing
-        _ -> return mbDriverPlan'
+      let planMandatory = transporterConfig.isPlanMandatory
+          chargeSPZRides = transporterConfig.considerSpecialZoneRideChargesInFreeTrial
+          isEligibleForDefaultPlanAfterFreeTrial = freeTrialDaysLeft' <= 0 && planMandatory && transporterConfig.allowDefaultPlanAllocation
+          isEligibleForDefaultPlanBeforeFreeTrial = freeTrialDaysLeft' > 0 && chargeSPZRides && planMandatory
+      if isNothing mbDriverPlan'
+        then do
+          case (booking.bookingType, isEligibleForDefaultPlanBeforeFreeTrial, isEligibleForDefaultPlanAfterFreeTrial) of
+            (SRB.SpecialZoneBooking, True, _) -> assignDefaultPlan
+            (_, _, True) -> assignDefaultPlan
+            _ -> return mbDriverPlan'
+        else return mbDriverPlan'
+    assignDefaultPlan :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => m (Maybe DriverPlan)
+    assignDefaultPlan = do
+      plans <- CQP.findByMerchantIdAndType merchantId DEFAULT
+      case plans of
+        (plan' : _) -> do
+          newDriverPlan <- Plan.mkDriverPlan plan' driverId
+          QDPlan.create newDriverPlan
+          QDI.updateAutoPayStatusAndPayerVpa (Just DI.PENDING) Nothing (cast driverId)
+          return $ Just newDriverPlan
+        _ -> return Nothing
 
 scheduleJobs :: (CacheFlow m r, EsqDBFlow m r, HasField "schedulerSetName" r Text, HasField "schedulerType" r SchedulerType, HasField "jobInfoMap" r (M.Map Text Bool)) => TransporterConfig -> DF.DriverFee -> Id Merchant -> Id MerchantOperatingCity -> Int -> UTCTime -> m ()
 scheduleJobs transporterConfig driverFee merchantId merchantOpCityId maxShards now = do

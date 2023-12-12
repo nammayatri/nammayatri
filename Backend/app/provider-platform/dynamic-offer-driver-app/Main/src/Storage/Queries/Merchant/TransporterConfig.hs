@@ -243,5 +243,6 @@ instance ToTType' BeamTC.TransporterConfig TransporterConfig where
         BeamTC.driverDistanceToPickupThresholdOnCancel = driverDistanceToPickupThresholdOnCancel,
         BeamTC.cancellationFeeDisputeLimit = cancellationFeeDisputeLimit,
         BeamTC.numOfCancellationsAllowed = numOfCancellationsAllowed,
-        BeamTC.canAddCancellationFee = canAddCancellationFee
+        BeamTC.canAddCancellationFee = canAddCancellationFee,
+        BeamTC.allowDefaultPlanAllocation = allowDefaultPlanAllocation
       }
