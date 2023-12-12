@@ -2492,13 +2492,13 @@
     "osrm-pbf": {
       "flake": false,
       "locked": {
-        "narHash": "sha256-Vrf3azsWC7yPKyixw1wiQy3LhUrNlqz4CBKuuIu14ZY=",
+        "narHash": "sha256-Hak75ewOsVJS9oEHEuZAS0nE86mSJ/sxKHvMUjDjjvo=",
         "type": "file",
-        "url": "http://download.geofabrik.de/asia/india/southern-zone-231126.osm.pbf"
+        "url": "https://download.geofabrik.de/asia/india/southern-zone-latest.osm.pbf"
       },
       "original": {
         "type": "file",
-        "url": "http://download.geofabrik.de/asia/india/southern-zone-231126.osm.pbf"
+        "url": "https://download.geofabrik.de/asia/india/southern-zone-latest.osm.pbf"
       }
     },
     "passetto-hs": {
@@ -2973,17 +2973,14 @@
         "prometheus-haskell": "prometheus-haskell_2"
       },
       "locked": {
-        "lastModified": 1702014492,
-        "narHash": "sha256-sLnsCXZWT/wOvcpwUfJXkADgO68P/YhmXS2nuLTSrQk=",
-        "owner": "nammayatri",
-        "repo": "shared-kernel",
-        "rev": "3b64023a782f1d481d0f1bcf385461c0cd34f75e",
-        "type": "github"
+        "lastModified": 1702373450,
+        "narHash": "sha256-YcwHm+bS6LOoY9nAv2h+BP0pf10lEK/Q1ATE0hGSbLc=",
+        "path": "/Users/rupak.korde/Projects/shared-kernel",
+        "type": "path"
       },
       "original": {
-        "owner": "nammayatri",
-        "repo": "shared-kernel",
-        "type": "github"
+        "path": "/Users/rupak.korde/Projects/shared-kernel",
+        "type": "path"
       }
     },
     "systems": {

@@ -138,7 +138,7 @@ snapToRoadWithFallback ::
   Id Merchant ->
   Id MerchantOperatingCity ->
   SnapToRoadReq ->
-  m (Maps.MapsService, SnapToRoadResp)
+  m ([MapsService], Maybe SnapToRoadResp, Bool)
 snapToRoadWithFallback merchantId merchantOperatingCityId = Maps.snapToRoadWithFallback handler
   where
     handler = Maps.SnapToRaodHandler {..}

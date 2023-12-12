@@ -128,39 +128,47 @@ recalcDistanceBatches h@RideInterpolationHandler {..} ending driverId estDist pi
     Redis.del (lastTwoOnRidePointsRedisKey driverId)
     if routeDeviation || pickupDropOutsideThreshold
       then do
-        (distanceToUpdate, googleSnapToRoadCalls, osrmSnapToRoadCalls) <- recalcDistanceBatches' 0 0 0
+        (distanceToUpdate, googleSnapToRoadCalls, osrmSnapToRoadCalls, snapToRoadCallFailed) <- recalcDistanceBatches' 0 0 0 False
         updateDistance driverId distanceToUpdate googleSnapToRoadCalls osrmSnapToRoadCalls
+        when snapToRoadCallFailed throwError $ InternalError $ "Snap to road call failed for driverId =" <> driverId.getId
       else updateDistance driverId (metersToHighPrecMeters estDist) 0 0
   where
     -- atLeastBatchPlusOne = (> batchSize) <$> getWaypointsNumber driverId
     pointsRemaining = (> 0) <$> getWaypointsNumber driverId
     continueCondition = if ending then pointsRemaining else return False
 
-    recalcDistanceBatches' acc googleSnapToRoadCalls osrmSnapToRoadCalls = do
+    recalcDistanceBatches' acc googleSnapToRoadCalls osrmSnapToRoadCalls snapToRoadCallFailed = do
       batchLeft <- continueCondition
       if batchLeft
         then do
-          (dist, serviceProvider) <- recalcDistanceBatchStep h driverId
-          case serviceProvider of
-            Just Google -> recalcDistanceBatches' (acc + dist) (googleSnapToRoadCalls + 1) osrmSnapToRoadCalls
-            Just OSRM -> recalcDistanceBatches' (acc + dist) googleSnapToRoadCalls (osrmSnapToRoadCalls + 1)
-            _ -> recalcDistanceBatches' (acc + dist) googleSnapToRoadCalls osrmSnapToRoadCalls
-        else pure (acc, googleSnapToRoadCalls, osrmSnapToRoadCalls)
+          (dist, servicesUsed, snapToRoadCallFailed) <- recalcDistanceBatchStep h driverId
+          if snapToRoadCallFailed
+            then pure (acc, googleSnapToRoadCalls + 1, osrmSnapToRoadCalls + 1, snapToRoadCallFailed)
+            else do
+              let googleCalled = Google `elem` servicesUsed
+                  osrmCalled = OSRM `elem` servicesUsed
+              recalcDistanceBatches' (acc + dist) (googleSnapToRoadCalls + fromEnum googleCalled) (osrmSnapToRoadCalls + fromEnum osrmCalled) snapToRoadCallFailed
+        else -- case servicesUsed of
+        --   [OSRM, Google] -> recalcDistanceBatches' (acc + dist) (googleSnapToRoadCalls + 1) (osrmSnapToRoadCalls + 1) snapToRoadCallFailed
+        --   [OSRM] -> recalcDistanceBatches' (acc + dist) googleSnapToRoadCalls (osrmSnapToRoadCalls + 1) snapToRoadCallFailed
+        --   [Google] -> recalcDistanceBatches' (acc + dist) (googleSnapToRoadCalls + 1) osrmSnapToRoadCalls snapToRoadCallFailed
+        --   _ -> recalcDistanceBatches' (acc + dist) googleSnapToRoadCalls osrmSnapToRoadCalls snapToRoadCallFailed
+          pure (acc, googleSnapToRoadCalls, osrmSnapToRoadCalls, snapToRoadCallFailed)
 
 recalcDistanceBatchStep ::
   (Monad m, Log m) =>
   RideInterpolationHandler person m ->
   Id person ->
-  m (HighPrecMeters, Maybe MapsService)
+  m (HighPrecMeters, [MapsService], Bool)
 recalcDistanceBatchStep RideInterpolationHandler {..} driverId = do
   batchWaypoints <- getFirstNwaypoints driverId (batchSize + 1)
-  (distance, interpolatedWps, serviceProvider) <- interpolatePointsAndCalculateDistance batchWaypoints
+  (distance, interpolatedWps, servicesUsed, snapToRoadCallFailed) <- interpolatePointsAndCalculateDistance batchWaypoints
   whenJust (nonEmpty interpolatedWps) $ \nonEmptyInterpolatedWps -> do
     addInterpolatedPoints driverId nonEmptyInterpolatedWps
   logInfo $ mconcat ["points interpolation: input=", show batchWaypoints, "; output=", show interpolatedWps]
   logInfo $ mconcat ["calculated distance for ", show (length interpolatedWps), " points, ", "distance is ", show distance]
   deleteFirstNwaypoints driverId batchSize
-  pure (distance, serviceProvider)
+  pure (distance, servicesUsed, snapToRoadCallFailed)
 
 -------------------------------------------------------------------------
 mkRideInterpolationHandler ::
@@ -258,13 +266,15 @@ interpolatePointsAndCalculateDistanceImplementation ::
   Bool ->
   (Maps.SnapToRoadReq -> m (Maps.MapsService, Maps.SnapToRoadResp)) ->
   [LatLong] ->
-  m (HighPrecMeters, [LatLong], Maybe Maps.MapsService)
+  m (HighPrecMeters, [LatLong], [Maps.MapsService], Bool)
 interpolatePointsAndCalculateDistanceImplementation isEndRide snapToRoadCall wps = do
   if isEndRide && isAllPointsEqual wps
-    then pure (0, take 1 wps, Nothing)
+    then pure (0, take 1 wps, [])
     else do
-      (service, res) <- snapToRoadCall $ Maps.SnapToRoadReq {points = wps}
-      pure (res.distance, res.snappedPoints, Just service)
+      (servicesUsed, res, snapToRoadCallFailed) <- snapToRoadCall $ Maps.SnapToRoadReq {points = wps}
+      if isNothing res
+        then pure (0, [], servicesUsed, snapToRoadCallFailed)
+        else pure (res.distance, res.snappedPoints, servicesUsed, snapToRoadCallFailed)
 
 isAllPointsEqual :: [LatLong] -> Bool
 isAllPointsEqual [] = True
