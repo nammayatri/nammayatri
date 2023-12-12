@@ -198,7 +198,6 @@ makeTriggerOTPReq mobileNumber (LatLon lat lng _) = TriggerOTPReq
         mkOperatingCity operatingCity = 
             if DA.any (_ == operatingCity) [ "__failed", "--"] then Nothing
             else if operatingCity == "Puducherry" then Just "Pondicherry"
-            else if operatingCity == "Mysore" then Just "Bangalore" -- Temp fix TODO: Remove this once Mysore is added in backend
             else Just operatingCity
         mkLatLon :: String -> Maybe Number
         mkLatLon latlon = 
