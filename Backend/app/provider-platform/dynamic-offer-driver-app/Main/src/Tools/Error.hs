@@ -780,6 +780,7 @@ instance IsAPIError FleetErrors
 
 data OverlayError
   = OverlayKeyAndUdfNotFound Text
+  | OverlayKeyNotFound Text
   | OverlayKeyAndUdfAlreadyPresent Text
   deriving (Eq, Show, IsBecknAPIError)
 
@@ -788,37 +789,40 @@ instanceExceptionWithParent 'HTTPException ''OverlayError
 instance IsBaseError OverlayError where
   toMessage = \case
     OverlayKeyAndUdfNotFound overlayKeyAndUdf -> Just $ "Overlay Key and Udf \"" <> show overlayKeyAndUdf <> "\" not found. "
+    OverlayKeyNotFound overlayKey -> Just $ "Overlay Key\"" <> overlayKey <> "\" not found. "
     OverlayKeyAndUdfAlreadyPresent overlayKeyAndUdf -> Just $ "Overlay Key and Udf \"" <> show overlayKeyAndUdf <> "\" already present."
 
 instance IsHTTPError OverlayError where
   toErrorCode = \case
     OverlayKeyAndUdfNotFound _ -> "OVERLAY_KEY_AND_UDF_NOT_FOUND"
+    OverlayKeyNotFound _ -> "OVERLAY_KEY_NOT_FOUND"
     OverlayKeyAndUdfAlreadyPresent _ -> "OVERLAY_KEY_AND_UDF_ALREADY_PRESENT"
   toHttpCode = \case
     OverlayKeyAndUdfNotFound _ -> E400
+    OverlayKeyNotFound _ -> E400
     OverlayKeyAndUdfAlreadyPresent _ -> E400
 
 instance IsAPIError OverlayError
 
 data DashboardSMSError
-  = VolunteerSmsSendingLimitExceeded
-  | DriverSmsReceivingLimitExceeded
+  = VolunteerMessageSendingLimitExceeded Text
+  | DriverMessageReceivingLimitExceeded Text
   deriving (Eq, Show, IsBecknAPIError)
 
 instanceExceptionWithParent 'HTTPException ''DashboardSMSError
 
 instance IsBaseError DashboardSMSError where
   toMessage = \case
-    VolunteerSmsSendingLimitExceeded -> Just "Volunteer Sms Sending limit exceeded"
-    DriverSmsReceivingLimitExceeded -> Just "Drivers' Sms receiving limit exceeded"
+    VolunteerMessageSendingLimitExceeded channel -> Just $ "Volunteer message Sending limit exceeded for channel : " <> channel
+    DriverMessageReceivingLimitExceeded channel -> Just $ "Drivers' message receiving limit exceeded for channel : " <> channel
 
 instance IsHTTPError DashboardSMSError where
   toErrorCode = \case
-    VolunteerSmsSendingLimitExceeded -> "VOLUNTEER_SMS_SENDING_LIMIT_EXCEEDED"
-    DriverSmsReceivingLimitExceeded -> "DRIVER_SMS_RECEIVING_LIMIT_EXCEEDED"
+    VolunteerMessageSendingLimitExceeded _ -> "VOLUNTEER_MESSAGE_SENDING_LIMIT_EXCEEDED"
+    DriverMessageReceivingLimitExceeded _ -> "DRIVER_MESSAGE_RECEIVING_LIMIT_EXCEEDED"
   toHttpCode = \case
-    VolunteerSmsSendingLimitExceeded -> E400
-    DriverSmsReceivingLimitExceeded -> E400
+    VolunteerMessageSendingLimitExceeded _ -> E400
+    DriverMessageReceivingLimitExceeded _ -> E400
 
 instance IsAPIError DashboardSMSError
 
