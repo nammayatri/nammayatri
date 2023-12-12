@@ -269,4 +269,7 @@ config =
   , inAppKeyboardModalConfig : {
       enableDeviceKeyboard : true
     }
+  , chooseCity : {
+      straightLineDistLogic : false
+  }
 }

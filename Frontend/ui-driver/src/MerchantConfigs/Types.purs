@@ -36,7 +36,8 @@ type AppConfigDriver a =
     referral :: ReferralConfig,
     enableDriverReferral :: Boolean,
     rideRequest :: RideRequestConfig,
-    inAppKeyboardModalConfig :: InAppKeyboardModalConfig
+    inAppKeyboardModalConfig :: InAppKeyboardModalConfig,
+    chooseCity :: ChooseCityScreenConfig
     | a
   } 
 
@@ -202,4 +203,7 @@ type NegotiationUnit = {
 
 type InAppKeyboardModalConfig = {
   enableDeviceKeyboard :: Boolean
+}
+type ChooseCityScreenConfig = {
+  straightLineDistLogic :: Boolean
 }

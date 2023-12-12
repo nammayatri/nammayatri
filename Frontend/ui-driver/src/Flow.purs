@@ -45,7 +45,7 @@ import Data.String (length) as STR
 import Data.String.CodeUnits (splitAt)
 import Data.String.Common (joinWith, split, toUpper, trim)
 import Data.Time.Duration (Milliseconds(..))
-import Data.Tuple (Tuple(..), fst)
+import Data.Tuple (Tuple(..), fst, snd)
 import Data.Traversable (traverse)
 import Effect (Effect)
 import Effect.Aff (makeAff, nonCanceler, launchAff)
@@ -125,6 +125,7 @@ import ConfigProvider
 import Timers (clearTimerWithId)
 import RemoteConfigs as RC
 import Locale.Utils
+import Data.Array as DA
 
 
 baseAppFlow :: Boolean -> Maybe Event -> FlowBT String Unit
@@ -3049,16 +3050,9 @@ runInternetCondition = do
 chooseCityFlow :: FlowBT String Unit
 chooseCityFlow = do
   liftFlowBT hideSplash
-  logField_ <- lift $ lift $ getLogFields
-  appConfig <- getAppConfigFlowBT Constants.appConfig
   (GlobalState globalstate) <- getState
+  logField_ <- lift $ lift $ getLogFields
   runInternetCondition
-  (API.GetCityRes resp) <- Remote.getMerchantOperatingCityListBT ""
-  let cityArray = map (\(API.CityRes item) -> (toUpper item.name)) (resp)
-      filteredArray = filter (\item -> (any (_ == (toUpper item.cityName)) cityArray)) appConfig.cityConfig
-  void $ pure $ setCleverTapUserProp [{key : "Preferred Language", value : unsafeToForeign $ appConfig.defaultLanguage}]
-  void $ pure $ setLanguageLocale appConfig.defaultLanguage
-  modifyScreenState $ ChooseCityScreenStateType (\chooseCityScreen -> chooseCityScreen { data {merchantOperatingCityConfig = filteredArray , config = appConfig}})
   when (globalstate.globalProps.addTimestamp) $ do
     liftFlowBT $ setEventTimestamp "chooseCity"
     logData <- liftFlowBT $ getTimeStampObject unit
@@ -3068,6 +3062,36 @@ chooseCityFlow = do
   case chooseCityScreen of
     GoToWelcomeScreen -> authenticationFlow ""
     REFRESH_SCREEN_CHOOSE_CITY _ -> chooseCityFlow
+    DETECT_CITY lat lon state -> do
+      if state.data.config.chooseCity.straightLineDistLogic then straightLineDist lat lon state else detectCityAPI lat lon state
+      chooseCityFlow
+  where 
+    closestCity :: (Tuple String Number) -> CityConfig -> Number -> Number -> (Tuple String Number)
+    closestCity (Tuple cityName distance) city driverLat driverLon = do
+      let distanceFromCity = getDistanceBwCordinates driverLat driverLon city.cityLat city.cityLong
+      if distanceFromCity < distance then (Tuple city.cityName distanceFromCity) else (Tuple cityName distance)
+    
+    straightLineDist :: Number -> Number -> ST.ChooseCityScreenState -> FlowBT String Unit
+    straightLineDist lat lon state = do
+      let distanceFromBangalore = getDistanceBwCordinates lat lon 12.9716 77.5946
+          initialAccumulator = Tuple "Bangalore" distanceFromBangalore
+          result = DA.foldl (\acc city -> closestCity acc city lat lon) initialAccumulator state.data.config.cityConfig
+          insideThreshold = (snd result) <= state.data.config.unserviceableThreshold
+      if insideThreshold && (not state.props.isMockLocation) then
+        modifyScreenState $ ChooseCityScreenStateType \chooseCityScreenState -> chooseCityScreenState { data { locationSelected = Just $ fst result }, props { locationUnserviceable = false, locationDetectionFailed = false }}
+      else
+        modifyScreenState $ ChooseCityScreenStateType \chooseCityScreenState -> chooseCityScreenState { props { locationUnserviceable = true }}
+    
+    detectCityAPI :: Number -> Number -> ST.ChooseCityScreenState -> FlowBT String Unit
+    detectCityAPI lat lon state = do
+      resp <- lift $ lift $ Remote.detectCity lat lon
+      case resp of
+        Right (API.DetectCityResp resp') -> case resp'.city of
+          Just city -> modifyScreenState $ ChooseCityScreenStateType \chooseCityScreenState -> chooseCityScreenState { data { locationSelected = Just city }, props { locationUnserviceable = false, locationDetectionFailed = false }}
+          Nothing -> modifyScreenState $ ChooseCityScreenStateType \chooseCityScreenState -> chooseCityScreenState { props { locationUnserviceable = true }}
+        Left _ -> do
+          liftFlowBT $ firebaseLogEvent "ny_driver_detect_city_fallback"
+          straightLineDist lat lon state
 
 welcomeScreenFlow :: FlowBT String Unit
 welcomeScreenFlow = do

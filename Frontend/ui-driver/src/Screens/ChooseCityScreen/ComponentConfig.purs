@@ -89,11 +89,12 @@ getLangFromVal value =
 --                   _ -> "ny_ic_driver_location_undetectable"
 --     Mb.Nothing -> "ny_ic_driver_location_undetectable"
 
-getLocationMapImage :: Maybe String -> AppConfig -> String
-getLocationMapImage value config = 
-  if (DSC.null cityConfig.mapImage) then "ny_ic_driver_location_undetectable" else cityConfig.mapImage
+getLocationMapImage :: ChooseCityScreenState -> String
+getLocationMapImage state =
+  if shouldShowUndetectable then "ny_ic_driver_location_undetectable" else cityConfig.mapImage
   where 
-    cityConfig = getCityConfig config.cityConfig $ Mb.fromMaybe "" value
+    cityConfig = getCityConfig state.data.config.cityConfig $ Mb.fromMaybe "" state.data.locationSelected
+    shouldShowUndetectable = state.props.locationUnserviceable || state.props.locationDetectionFailed || DSC.null cityConfig.mapImage
 
 getChangeLanguageText :: Maybe String -> AppConfig -> String
 getChangeLanguageText value config = 
