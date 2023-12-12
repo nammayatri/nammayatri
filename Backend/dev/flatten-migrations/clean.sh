@@ -10,4 +10,4 @@ for schema in $SCHEMAS ; do
   cp -r $schema.mig $TRASH_FOLDER/
   rm -r $schema.mig
 done
-
+# Path: Backend/dev/flatten-migrations/flatten.sh
