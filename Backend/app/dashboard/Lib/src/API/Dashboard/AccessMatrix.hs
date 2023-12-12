@@ -35,15 +35,14 @@ type API =
              :> DashboardAuth 'DASHBOARD_ADMIN
              :> Capture "roleId" (Id DRole.Role) -- role.name?
              :> Get '[JSON] DMatrix.AccessMatrixRowAPIEntity
+           :<|> "merchantWithCityList"
+             :> Get '[JSON] [DMatrix.MerchantCityList]
        )
-    :<|> "merchantWithCityList"
-      :> Get '[JSON] [DMatrix.MerchantCityList]
 
 handler :: FlowServer API
 handler =
-  ( getAccessMatrix
-      :<|> getAccessMatrixByRole
-  )
+  getAccessMatrix
+    :<|> getAccessMatrixByRole
     :<|> getMerchantWithCityList
 
 getAccessMatrix :: TokenInfo -> Maybe Integer -> Maybe Integer -> FlowHandler AccessMatrixAPIEntity
