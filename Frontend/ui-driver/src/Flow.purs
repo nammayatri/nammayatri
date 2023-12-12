@@ -194,6 +194,14 @@ authenticationFlow _ =
 checkRideAndInitiate :: Maybe Event -> FlowBT String Unit
 checkRideAndInitiate event = do
   (GetRidesHistoryResp activeRideResponse) <- Remote.getRideHistoryReqBT "1" "0" "true" "null" "null"
+  config <- getAppConfig Constants.appConfig 
+  let driver_location = getValueToLocalStore DRIVER_LOCATION 
+      mbCity = find (\city' -> city'.cityName == driver_location) config.cityConfig
+  case mbCity of 
+    Just city -> do
+      _ <- pure $ setValueToLocalStore SHOW_SUBSCRIPTIONS if city.showSubscriptions then "true" else "false"
+      pure unit
+    Nothing -> pure unit
   let activeRide = (not (null activeRideResponse.list))
   activeRide ?
     currentRideFlow (Just (GetRidesHistoryResp activeRideResponse)) 
