@@ -85,6 +85,8 @@ dependencies:
   - scientific
   - vector
   - filepath
+  - mtl
+  - stringbuilder
 
 ghc-options:
   - -Wall
