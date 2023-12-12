@@ -288,7 +288,11 @@ getFinalOrderAmount feeWithoutDiscount merchantId transporterConfig driver plan 
           else do
             let bestOffer = minimumBy (comparing (.finalOrderAmount)) offers.offerResp
             pure (bestOffer.finalOrderAmount, Just bestOffer.offerId, bestOffer.offerDescription.title)
-      return (feeWithoutDiscount + driverFee.specialZoneAmount, finalOrderAmount + driverFee.specialZoneAmount, offerId, offerTitle)
+      if finalOrderAmount + driverFee.specialZoneAmount == 0
+        then do
+          updateCollectedPaymentStatus CLEARED offerId now driverFee.id
+          return (0, 0, offerId, offerTitle)
+        else return (feeWithoutDiscount + driverFee.specialZoneAmount, finalOrderAmount + driverFee.specialZoneAmount, offerId, offerTitle)
 
 splitPlatformFee :: HighPrecMoney -> HighPrecMoney -> Plan -> DriverFee -> Maybe HighPrecMoney -> Maybe HighPrecMoney -> [DriverFee]
 splitPlatformFee feeWithoutDiscount_ totalFee plan DriverFee {..} maxAmountPerDriverfeeThreshold coinClearedAmount = do

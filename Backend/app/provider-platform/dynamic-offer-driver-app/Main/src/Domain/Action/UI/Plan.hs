@@ -377,9 +377,9 @@ createMandateInvoiceAndOrder driverId merchantId merchantOpCityId plan = do
   transporterConfig <- QTC.findByMerchantOpCityId merchantOpCityId >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   let allowAtMerchantLevel = isJust transporterConfig.driverFeeCalculationTime
   driverManualDuesFees <- if allowAtMerchantLevel then QDF.findAllByStatusAndDriverId driverId [DF.PAYMENT_OVERDUE] else return []
-  driverRegisterationFee <- QDF.findLatestRegisterationFeeByDriverId (cast driverId)
-  now <- getCurrentTime
   let currentDues = calculateDues driverManualDuesFees
+  now <- getCurrentTime
+  driverRegisterationFee <- getLatestMandateRegistrationFeeAndCheckIfEligible currentDues now
   let maxMandateAmount = max plan.maxMandateAmount currentDues
   case driverRegisterationFee of
     Just registerFee -> do
@@ -415,6 +415,17 @@ createMandateInvoiceAndOrder driverId merchantId merchantOpCityId plan = do
           mandateStartDate = T.pack $ show $ utcTimeToPOSIXSeconds now,
           mandateEndDate = T.pack $ show $ utcTimeToPOSIXSeconds $ addUTCTime (secondsToNominalDiffTime (fromIntegral (60 * 60 * 24 * 365 * mandateValidity))) now
         }
+    getLatestMandateRegistrationFeeAndCheckIfEligible currentDues' now = do
+      registerFee' <- QDF.findLatestRegisterationFeeByDriverId (cast driverId)
+      case registerFee' of
+        Just registerFee -> do
+          let totalRegisFee = registerFee.platformFee.fee + registerFee.platformFee.cgst + registerFee.platformFee.sgst
+          case (totalRegisFee > 0, currentDues' > 0) of
+            (True, True) -> do
+              QDF.updateStatus DF.INACTIVE registerFee.id now
+              return Nothing
+            _ -> return registerFee'
+        Nothing -> return Nothing
     createOrderForDriverFee driverManualDuesFees driverFee currentDues now mandateValidity = do
       if not (null driverManualDuesFees)
         then SPayment.createOrder (driverId, merchantId) (driverFee : driverManualDuesFees, []) (Just $ mandateOrder currentDues now mandateValidity) INV.MANDATE_SETUP_INVOICE Nothing
