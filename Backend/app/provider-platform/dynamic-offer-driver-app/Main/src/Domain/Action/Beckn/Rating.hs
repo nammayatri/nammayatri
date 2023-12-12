@@ -16,7 +16,6 @@ module Domain.Action.Beckn.Rating where
 
 import Data.List.Extra ((!?))
 import Data.Maybe (listToMaybe)
-import Data.Text as T (unpack)
 import qualified Domain.Types.Booking as DBooking
 import Domain.Types.Merchant
 import qualified Domain.Types.Person as DP
@@ -50,9 +49,12 @@ handler merchantId req ride = do
   rating <- B.runInReplica $ QRating.findRatingForRide ride.id
   let driverId = ride.driverId
   let ratingValue = req.ratingValue
-      feedbackDetails = join $ listToMaybe req.feedbackDetails
-      wasOfferedAssistance = readMaybe =<< (T.unpack <$> join (req.feedbackDetails !? 1)) :: Maybe Bool
-      issueId = join (req.feedbackDetails !? 2)
+      feedbackDetails = fromMaybe Nothing (listToMaybe req.feedbackDetails)
+      wasOfferedAssistance = case fromMaybe Nothing (req.feedbackDetails !? 1) of
+        Just "True" -> Just True
+        Just "False" -> Just False
+        _ -> Nothing
+      issueId = fromMaybe Nothing (req.feedbackDetails !? 2)
       isSafe = Just $ isNothing issueId
   _ <- case rating of
     Nothing -> do

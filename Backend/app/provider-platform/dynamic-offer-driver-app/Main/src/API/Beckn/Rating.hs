@@ -16,8 +16,6 @@ module API.Beckn.Rating (API, handler) where
 
 import qualified Beckn.ACL.Rating as ACL
 import qualified Beckn.Types.Core.Taxi.API.Rating as Rating
-import qualified Data.Aeson as A
-import Data.Text as T
 import qualified Domain.Action.Beckn.Rating as DRating
 import Domain.Types.Merchant (Merchant)
 import Environment
@@ -29,7 +27,6 @@ import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth
 import Servant hiding (throwError)
 import Storage.Beam.SystemConfigs ()
-import Tools.Error
 
 type API =
   Capture "merchantId" (Id Merchant)
@@ -42,39 +39,21 @@ handler = rating
 rating ::
   Id Merchant ->
   SignatureAuthResult ->
-  ByteString ->
+  Rating.RatingReq ->
   FlowHandler AckResponse
-rating merchantId (SignatureAuthResult _ subscriber) rawReq = do
-  let req1 :: Either String Rating.RatingReq = A.eitherDecodeStrict rawReq
-  case req1 of
-    Right req ->
-      withFlowHandlerBecknAPI $
-        withTransactionIdLogTag req $ do
-          logTagInfo "ratingAPI" "Received rating API call."
-          dRatingReq <- ACL.buildRatingReq subscriber req
-          processRatingReq dRatingReq merchantId
-          pure Ack
-    Left _ -> do
-      let req2 :: Either String Rating.RatingReqV2 = A.eitherDecodeStrict rawReq
-      case req2 of
-        Right req ->
-          withFlowHandlerBecknAPI $
-            withTransactionIdLogTag req $ do
-              logTagInfo "ratingAPI" "Received rating API call."
-              dRatingReq <- ACL.buildRatingReqV2 subscriber req
-              processRatingReq dRatingReq merchantId
-              pure Ack
-        Left err -> withFlowHandlerBecknAPI . throwError . InvalidRequest . T.pack $ err
+rating merchantId (SignatureAuthResult _ subscriber) req = withFlowHandlerBecknAPI $
+  withTransactionIdLogTag req $ do
+    logTagInfo "ratingAPI" "Received rating API call."
+    dRatingReq <- ACL.buildRatingReq subscriber req
+    Redis.whenWithLockRedis (ratingLockKey dRatingReq.bookingId.getId) 60 $ do
+      ride <- DRating.validateRequest dRatingReq
+      fork "rating request processing" $
+        Redis.whenWithLockRedis (ratingProcessingLockKey dRatingReq.bookingId.getId) 60 $
+          DRating.handler merchantId dRatingReq ride
+    pure Ack
 
 ratingLockKey :: Text -> Text
 ratingLockKey id = "Driver:Rating:BookingId-" <> id
 
 ratingProcessingLockKey :: Text -> Text
 ratingProcessingLockKey id = "Driver:Rating:Processing:BookingId-" <> id
-
-processRatingReq :: DRating.DRatingReq -> Id Merchant -> Flow ()
-processRatingReq dRatingReq merchantId = Redis.whenWithLockRedis (ratingLockKey dRatingReq.bookingId.getId) 60 $ do
-  ride <- DRating.validateRequest dRatingReq
-  fork "rating request processing" $
-    Redis.whenWithLockRedis (ratingProcessingLockKey dRatingReq.bookingId.getId) 60 $
-      DRating.handler merchantId dRatingReq ride
