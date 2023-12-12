@@ -270,3 +270,6 @@ rideRoute rideId = (getBaseUrl "") <> "/" <> rideId <>"/route"
 
 getMerchantIdList :: String -> String 
 getMerchantIdList merchantId = getBaseUrl "" <> "/city/" <> merchantId <> "/list"
+
+detectCity :: String -> String
+detectCity _ = (getBaseUrl "") <> "/driver/city"

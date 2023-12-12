@@ -31,7 +31,6 @@ initData = {
   data: {
     config : getAppConfig appConfig,
     locationSelected : Mb.Nothing,
-    locationDetectionFailed : false,
     merchantOperatingCityConfig : [],
     logField : empty
   },
@@ -42,7 +41,10 @@ initData = {
     radioMenuFocusedLang : "",
     radioMenuFocusedCity : "",
     locationUnserviceable : false,
-    isMockLocation : false
+    locationDetectionFailed : false,
+    isMockLocation : false,
+    lat : 0.0,
+    lon : 0.0
   }
 }
 

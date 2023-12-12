@@ -66,7 +66,7 @@ screen initialState =
 
     isLocationPermissionEnabled <- JB.isLocationPermissionEnabled unit
     when isLocationPermissionEnabled $
-      JB.getCurrentPositionWithTimeout push CurrentLocationCallBack 2000 true
+      JB.getCurrentPositionWithTimeout push CurrentLocationCallBack 3500 true
 
     pure $ pure unit)]
   , eval:
@@ -148,7 +148,7 @@ currentLocationView state push =
   ][  imageView
       [ height $ V 220
       , width $ V 220
-      , imageWithFallback $ fetchImage FF_ASSET (getLocationMapImage state.data.locationSelected state.data.config)
+      , imageWithFallback $ fetchImage FF_ASSET $ getLocationMapImage state
       ]
     , textView $
       [ text $ getString LOCATION_UNSERVICEABLE
@@ -158,7 +158,7 @@ currentLocationView state push =
       , visibility $ boolToVisibility state.props.locationUnserviceable
       ] <> FontStyle.h2 TypoGraphy
     , textView $
-      [ text $ getString case state.data.locationDetectionFailed, Mb.isNothing state.data.locationSelected, state.props.locationUnserviceable of
+      [ text $ getString case state.props.locationDetectionFailed, Mb.isNothing state.data.locationSelected, state.props.locationUnserviceable of
                             _ , _ , true -> WE_ARE_NOT_LIVE_IN_YOUR_AREA
                             false, true, _ -> DETECTING_LOCATION
                             true, true, _ -> UNABLE_TO_DETECT_YOUR_LOCATION

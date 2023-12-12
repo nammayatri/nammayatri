@@ -1268,3 +1268,15 @@ referredDriversBT payload = do
     where 
         errorHandler (ErrorPayload errorPayload) =  do
             BackT $ pure GoBack
+
+
+detectCity :: Number -> Number -> Flow GlobalState (Either ErrorResponse DetectCityResp)
+detectCity lat lon = do
+  headers <- getHeaders "" false
+  withAPIResult (EP.detectCity "") unwrapResponse $ callAPI headers $ makeDetectCityReq
+  where
+    unwrapResponse x = x
+    makeDetectCityReq = DetectCityReq $ {
+        lat : lat,
+        lon : lon
+    }

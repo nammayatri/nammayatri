@@ -2103,7 +2103,6 @@ type ChooseCityScreenState = {
 type ChooseCityScreenData = {
   config :: AppConfig,
   locationSelected :: Maybe String,
-  locationDetectionFailed :: Boolean,
   merchantOperatingCityConfig :: Array CityConfig,
   logField :: Object Foreign
 }
@@ -2115,7 +2114,10 @@ type ChooseCityScreenProps = {
   radioMenuFocusedLang :: String,
   radioMenuFocusedCity :: String,
   locationUnserviceable :: Boolean,
-  isMockLocation :: Boolean
+  locationDetectionFailed :: Boolean,
+  isMockLocation :: Boolean,
+  lat :: Number,
+  lon :: Number
 }
 
 data ChooseCityScreenStage = SELECT_LANG | SELECT_CITY | ENABLE_PERMISSION | DETECT_LOCATION

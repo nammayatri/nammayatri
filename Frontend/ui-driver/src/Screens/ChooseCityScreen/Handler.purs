@@ -37,3 +37,6 @@ chooseCityScreen = do
     RefreshScreen updatedState -> do
       modifyScreenState $ ChooseCityScreenStateType (\chooseCityScreen -> updatedState)
       App.BackT $ App.BackPoint <$> (pure $ REFRESH_SCREEN_CHOOSE_CITY updatedState)
+    DetectCityAPI lat lon updatedState -> do
+      modifyScreenState $ ChooseCityScreenStateType (\chooseCityScreen -> updatedState)
+      App.BackT $ App.BackPoint <$> (pure $ DETECT_CITY lat lon updatedState)
