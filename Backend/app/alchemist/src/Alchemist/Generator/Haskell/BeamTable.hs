@@ -12,7 +12,17 @@ formatType t = if " " `isInfixOf` t then "(" ++ t ++ ")" else t
 -- Converts a FieldDef to a Beam field declaration
 fieldDefToBeam :: FieldDef -> String
 fieldDefToBeam field =
-  fieldName field ++ " :: B.C f " ++ formatType (beamType field)
+  if isEncrypted field
+    then
+      fieldName field ++ "Encrypted :: B.C f " ++ (wrapMaybe "Text") ++ ",\n"
+        ++ "    "
+        ++ fieldName field
+        ++ "Hash :: B.C f "
+        ++ (wrapMaybe "DbHash")
+    else fieldName field ++ " :: B.C f " ++ formatType (beamType field)
+  where
+    wrapMaybe :: String -> String
+    wrapMaybe beamType = if isMaybeType (haskellType field) then "(Maybe " ++ beamType ++ ")" else beamType
 
 -- Converts a list of fields to Beam field declarations
 fieldsToBeam :: [FieldDef] -> String
@@ -74,6 +84,7 @@ generateBeamTable tableDef =
     ++ "import qualified Database.Beam as B\n"
     ++ "import Kernel.Prelude\n"
     ++ "import Tools.Beam.UtilsTH\n"
+    ++ "import Kernel.External.Encryption\n"
     -- Add imports here
     ++ intercalate "\n" (map ("import qualified " ++) (imports tableDef))
     ++ "\n\n"

@@ -4,7 +4,7 @@ import Control.Lens.Combinators
 import Data.Aeson
 import Data.Aeson.Key (fromString)
 import Data.Aeson.Lens (key, _Value)
-import Data.Char (toUpper)
+import Data.Char (isLower, toUpper)
 import Data.List (intercalate, nub)
 import qualified Data.List as L
 import Data.List.Split (split, splitOn, splitWhen, whenElt)
@@ -12,6 +12,10 @@ import qualified Data.Text as T
 import Kernel.Prelude hiding (Show, fromString, hPutStr, toString, traceShowId, try)
 import System.Directory (createDirectoryIfMissing)
 import System.IO
+
+startsWithLower :: String -> Bool
+startsWithLower (x : _) = isLower x
+startsWithLower _ = False
 
 writeToFile :: FilePath -> FilePath -> String -> IO ()
 writeToFile directoryPath fileName content = do
@@ -21,6 +25,9 @@ writeToFile directoryPath fileName content = do
 
 typeDelimiter :: String
 typeDelimiter = "() []"
+
+isMaybeType :: String -> Bool
+isMaybeType tp = L.isPrefixOf "Maybe " tp || L.isPrefixOf "Data.Maybe.Maybe " tp || L.isPrefixOf "Kernel.Prelude.Maybe " tp
 
 defaultTypeImports :: String -> Maybe String
 defaultTypeImports tp = case tp of
@@ -57,7 +64,7 @@ makeTypeQualified moduleName excludedList dList defaultImportModule obj str = co
             else
               if isJust dList && L.elem word (fromJust dList)
                 then defaultImportModule ++ word ++ "." ++ word
-                else maybe (if word `elem` ["", ")", "(", " ", "[", "]"] then word else error $ T.pack ("\"" ++ word ++ "\" type not determined")) (\x -> x <> "." <> word) (getQualifiedImport word)
+                else maybe (if word `elem` ["", ")", "(", " ", "[", "]", "e"] then word else error $ T.pack ("\"" ++ word ++ "\" type not determined")) (\x -> x <> "." <> word) (getQualifiedImport word)
 
 figureOutImports :: [String] -> [String]
 figureOutImports fieldTypes =
@@ -68,7 +75,10 @@ figureOutImports fieldTypes =
       let pp = splitOn "." str
        in if length pp > 1
             then intercalate "." (init pp)
-            else str
+            else
+              if startsWithLower str
+                then ""
+                else str
 
 -- Helper function to capitalize a string
 capitalize :: String -> String

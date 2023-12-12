@@ -23,12 +23,19 @@ alterTableSQL tableDef =
 -- SQL for adding a single column with constraints
 addColumnSQL :: String -> FieldDef -> String
 addColumnSQL tableName fieldDef =
-  "ALTER TABLE atlas_app." ++ tableName ++ " ADD COLUMN " ++ quietSnake (fieldName fieldDef) ++ " "
-    ++ sqlType fieldDef
-    ++ " "
-    ++ intercalate " " (catMaybes $ map constraintToSQL (constraints fieldDef))
-    ++ maybe "" ((++) " default ") (defaultVal fieldDef)
-    ++ ";"
+  if isEncrypted fieldDef
+    then
+      generateAlterColumnSQL (quietSnake (fieldName fieldDef) ++ "_hash") "bytea"
+        ++ "\n"
+        ++ generateAlterColumnSQL (quietSnake (fieldName fieldDef) ++ "_encrypted") "character varying(255)"
+    else generateAlterColumnSQL (quietSnake (fieldName fieldDef)) (sqlType fieldDef)
+  where
+    generateAlterColumnSQL :: String -> String -> String
+    generateAlterColumnSQL fieldName_ sqlType_ =
+      "ALTER TABLE atlas_app." ++ tableName ++ " ADD COLUMN " ++ fieldName_ ++ " " ++ sqlType_ ++ " "
+        ++ intercalate " " (catMaybes $ map constraintToSQL (constraints fieldDef))
+        ++ maybe "" ((++) " default ") (defaultVal fieldDef)
+        ++ ";"
 
 addKeySQL :: TableDef -> String
 addKeySQL tableDef =
