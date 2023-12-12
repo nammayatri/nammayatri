@@ -20,13 +20,13 @@ import Common.Types.App
 import Effect (Effect)
 import Screens.RideHistoryScreen.Controller (Action(..))
 
-type IncrementDecrementState = {
+type Config = {
     initialCount :: Int
   , push :: (Action -> Effect Unit)
 }
 
-dummyIncrementDecrementState :: IncrementDecrementState
-dummyIncrementDecrementState = {
+config :: Config
+config = {
     initialCount: 0
   , push: \_ -> pure unit
 }

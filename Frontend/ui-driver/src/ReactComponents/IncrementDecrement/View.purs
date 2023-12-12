@@ -20,15 +20,15 @@ import React.Basic.Hooks (Component, component)
 import Effect (Effect)
 import React.Render.CustomBase (linearLayout, textView)
 import Styles.Colors as Color
-import ReactComponents.IncrementDecrement.Controller (IncrementDecrementState)
+import ReactComponents.IncrementDecrement.Controller (Config)
 import React.Basic.Hooks as React
 import Screens.RideHistoryScreen.Controller (Action(..))
-import React.Basic.Hooks (JSX, Component, component, useEffect, useState)
+import React.Basic.Hooks (Component, component, useEffect, useState)
 import Data.Tuple.Nested (type (/\), (/\))
 import Effect.Console (log)
 import Halogen.VDom.Types (VDom(..))
 
-app :: Component IncrementDecrementState
+app :: Component Config
 app = do 
   component "app" \{initialCount, push} -> React.do
     count /\ setCount <- useState initialCount
