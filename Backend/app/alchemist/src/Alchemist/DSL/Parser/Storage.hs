@@ -3,7 +3,7 @@
 module Alchemist.DSL.Parser.Storage (storageParser) where
 
 import Alchemist.DSL.Syntax.Storage
-import Alchemist.Utils (figureOutImports, makeTypeQualified, _String)
+import Alchemist.Utils (figureOutImports, isMaybeType, makeTypeQualified, _String)
 import Control.Lens.Combinators
 import Control.Lens.Operators
 import Data.Aeson
@@ -38,10 +38,11 @@ parseTableDef dList importObj (parseDomainName, obj) =
       excludedList = view _2 <$> parsedTypesAndExcluded
       enumList = maybe [] (view _3) parsedTypesAndExcluded
       parsedFields = parseFields (Just parseDomainName) excludedList dList enumList importObj obj
+      containsEncryptedField = any isEncrypted parsedFields
       parsedImports = parseImports parsedFields (fromMaybe [] parsedTypes)
       parsedQueries = parseQueries (Just parseDomainName) excludedList dList parsedFields importObj obj
       (primaryKey, secondaryKey) = extractKeys parsedFields
-   in TableDef parseDomainName (quietSnake parseDomainName) parsedFields parsedImports parsedQueries primaryKey secondaryKey parsedTypes
+   in TableDef parseDomainName (quietSnake parseDomainName) parsedFields parsedImports parsedQueries primaryKey secondaryKey parsedTypes containsEncryptedField
 
 parseImports :: [FieldDef] -> [TypeObject] -> [String]
 parseImports fields typObj =
@@ -60,8 +61,11 @@ parseImports fields typObj =
         tps
     extraImports = concatMap (\f -> maybe [] pure (toTType f) <> maybe [] pure (fromTType f)) fields
 
-searchForKey :: [FieldDef] -> String -> (String, String)
-searchForKey fields inputKey = (inputKey, haskellType $ fromMaybe (error $ T.pack $ "Query param " ++ inputKey ++ " not found in fields") $ find ((== inputKey) . fieldName) fields)
+searchForKey :: [FieldDef] -> String -> ((String, String), Bool)
+searchForKey fields inputKey = do
+  let errorMsg = error $ T.pack $ "Query param " ++ inputKey ++ " not found in fields"
+  let filedDef = fromMaybe errorMsg $ find ((== inputKey) . fieldName) fields
+  ((inputKey, haskellType filedDef), isEncrypted filedDef)
 
 parseQueries :: Maybe String -> Maybe [String] -> [String] -> [FieldDef] -> Object -> Object -> [QueryDef]
 parseQueries moduleName excludedList dList fields impObj obj = do
@@ -71,7 +75,7 @@ parseQueries moduleName excludedList dList fields impObj obj = do
       parseQuery query =
         let queryName = fst query
             queryDataObj = snd query
-            params = addDefaultUpdatedAtToQueryParams queryName $ map (second makeTypeQualified') $ fromMaybe [] (queryDataObj ^? ix "params" . _Array . to V.toList . to (map (searchForKey fields . valueToString)))
+            params = addDefaultUpdatedAtToQueryParams queryName $ map (first (second makeTypeQualified')) $ fromMaybe [] (queryDataObj ^? ix "params" . _Array . to V.toList . to (map (searchForKey fields . valueToString)))
             kvFunction = fromMaybe (error $ "kvFunction is neccessary") (queryDataObj ^? ix "kvFunction" . _String)
             whereClause = fromMaybe EmptyWhere (queryDataObj ^? ix "where" . to (parseWhereClause makeTypeQualified' fields))
          in QueryDef queryName kvFunction params whereClause False
@@ -80,10 +84,10 @@ parseQueries moduleName excludedList dList fields impObj obj = do
     Just queries -> map parseQuery queries
     Nothing -> []
   where
-    addDefaultUpdatedAtToQueryParams :: String -> [(String, String)] -> [(String, String)]
+    addDefaultUpdatedAtToQueryParams :: String -> [((String, String), Bool)] -> [((String, String), Bool)]
     addDefaultUpdatedAtToQueryParams queryName params =
       if "update" `L.isPrefixOf` queryName
-        then if any (\(k, _) -> k == "updatedAt") params then params else params <> [("updatedAt", "Kernel.Prelude.UTCTime")]
+        then if any (\((k, _), _) -> k == "updatedAt") params then params else params <> [(("updatedAt", "Kernel.Prelude.UTCTime"), False)]
         else params
 
     valueToString :: Value -> String
@@ -92,7 +96,7 @@ parseQueries moduleName excludedList dList fields impObj obj = do
 
 parseWhereClause :: (String -> String) -> [FieldDef] -> Value -> WhereClause
 parseWhereClause mkQTypeFunc fields (String st) = do
-  let (key_, value) = searchForKey fields (T.unpack st)
+  let ((key_, value), _) = searchForKey fields (T.unpack st)
   Leaf (key_, mkQTypeFunc value)
 parseWhereClause mkQTypeFunc fields (Object clauseObj) = do
   let clauseObj' = KM.toList clauseObj
@@ -201,7 +205,8 @@ parseFields moduleName excludedList dataList enumList impObj obj =
                 constraints = constraints,
                 defaultVal = defaultValue,
                 toTType = parseToTType,
-                fromTType = parseFromTType
+                fromTType = parseFromTType,
+                isEncrypted = "EncryptedHashedField" `T.isInfixOf` (T.pack haskellType)
               }
    in case (map getFieldDef) <$> fields of
         Just f -> f
@@ -224,11 +229,7 @@ getDefaultFieldConstraints nm tp = primaryKeyConstraint ++ notNullConstraint
     trimmedTp = L.trim tp
     primaryKeyConstraint = [PrimaryKey | nm == "id"]
     notNullConstraint =
-      [ NotNull
-        | not
-            ( L.isPrefixOf "Maybe " trimmedTp
-                || L.isPrefixOf "Data.Maybe.Maybe " trimmedTp
-            )
+      [ NotNull | not (isMaybeType trimmedTp)
       ]
 
 getProperConstraint :: String -> FieldConstraint

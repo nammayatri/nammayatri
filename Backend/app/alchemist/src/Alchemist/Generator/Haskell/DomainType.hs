@@ -1,16 +1,24 @@
 module Alchemist.Generator.Haskell.DomainType where
 
 import Alchemist.DSL.Syntax.Storage
+import Alchemist.Utils (isMaybeType)
 import qualified Data.List as L
 import qualified Data.List.Split as L
 import Data.Tuple.Extra (both)
 import Kernel.Prelude
+
+tableNameHaskellType :: TableDef -> String
+tableNameHaskellType tableDef = do
+  if tableDef.containsEncryptedField
+    then tableNameHaskell tableDef ++ "E e"
+    else tableNameHaskell tableDef
 
 generateDomainType :: TableDef -> String
 generateDomainType tableDef = do
   let defaultImports = createDefaultImports tableDef
 
   "{-# LANGUAGE TemplateHaskell #-}\n"
+    ++ "{-# LANGUAGE ApplicativeDo #-}\n"
     ++ "module "
     ++ moduleName
     ++ " where\n\n"
@@ -18,15 +26,65 @@ generateDomainType tableDef = do
     ++ "\n"
     ++ L.intercalate "\n" (map ("import " ++) defaultImports)
     ++ "\n\ndata "
-    ++ tableNameHaskell tableDef
+    ++ tableNameHaskellType tableDef
     ++ " = "
     ++ tableNameHaskell tableDef
     ++ "\n  { "
     ++ L.intercalate "\n  , " (map fieldDefToHaskell (fields tableDef))
-    ++ "\n  }\n  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)\n\n\n"
+    ++ "\n  }\n  deriving ("
+    ++ L.intercalate "," (derivingInstances $ containsEncryptedField tableDef)
+    ++ ")\n\n"
+    ++ (if tableDef.containsEncryptedField then generateEncryptionInstance tableDef else "")
     ++ maybe "" (uncurry (++) . generateHaskellTypes) (types tableDef)
   where
     moduleName = "Domain.Types." ++ tableNameHaskell tableDef
+
+derivingInstances :: Bool -> [String]
+derivingInstances containsEncryptedField =
+  if containsEncryptedField
+    then ["Generic"]
+    else ["Generic", "Show", "ToJSON", "FromJSON", "ToSchema"]
+
+generateEncryptionInstance :: TableDef -> String
+generateEncryptionInstance tableDef =
+  unlines $
+    [ "type " ++ baseType ++ " = " ++ encryptedType ++ "\n",
+      "type " ++ decryptBaseType ++ " = " ++ decryptedType ++ "\n",
+      "instance EncryptedItem " ++ baseType ++ " where",
+      "  type Unencrypted " ++ baseType ++ " = (" ++ decryptBaseType ++ ", HashSalt)",
+      "  encryptItem (" ++ baseType ++ " {..}, salt) = do",
+      unlines ((catMaybes $ map encryptField (fields tableDef)) ++ ["    return " ++ baseType ++ " {" ++ L.intercalate "," (catMaybes $ map mapFields (fields tableDef)) ++ ", ..}"]),
+      "  decryptItem " ++ baseType ++ " {..} = do",
+      unlines ((catMaybes $ map decryptField (fields tableDef)) ++ ["    return (" ++ baseType ++ " {" ++ L.intercalate "," (catMaybes $ map mapFields (fields tableDef)) ++ ", ..}, \"\")\n"]),
+      "instance EncryptedItem' " ++ baseType ++ " where",
+      "  type UnencryptedItem " ++ baseType ++ " = " ++ decryptBaseType,
+      "  toUnencrypted a salt = (a, salt)",
+      "  fromUnencrypted = fst\n\n"
+    ]
+  where
+    baseType = tableNameHaskell tableDef
+    decryptBaseType = "Decrypted" ++ tableNameHaskell tableDef
+    encryptedType = baseType ++ "E 'AsEncrypted"
+    decryptedType = baseType ++ "E 'AsUnencrypted"
+    encryptField field = do
+      if field.isEncrypted
+        then
+          if isMaybeType field.haskellType
+            then Just $ "    " ++ field.fieldName ++ "_ <- encryptItem $ (,salt) <$> " ++ field.fieldName
+            else Just $ "    " ++ field.fieldName ++ "_ <- encryptItem $ (" ++ field.fieldName ++ ",salt)"
+        else Nothing
+    decryptField field = do
+      if field.isEncrypted
+        then
+          if isMaybeType field.haskellType
+            then Just $ "    " ++ field.fieldName ++ "_ <- fmap fst <$> decryptItem " ++ field.fieldName
+            else Just $ "    " ++ field.fieldName ++ "_ <- fst <$> decryptItem " ++ field.fieldName
+        else Nothing
+
+    mapFields field = do
+      if field.isEncrypted
+        then Just $ field.fieldName ++ " = " ++ field.fieldName ++ "_"
+        else Nothing
 
 removeDefaultImports :: [String] -> String -> [String] -> [String]
 removeDefaultImports defaultImports moduleName = filter ((/=) moduleName) . filter (`notElem` defaultImports)
@@ -41,6 +99,7 @@ createDefaultImports tableDef =
   ["Kernel.Prelude"] <> ["Tools.Beam.UtilsTH" | shouldImportUtilsTH (fromMaybe [] $ types tableDef)]
     <> ["Kernel.Utils.TH" | isHttpInstanceDerived (fromMaybe [] $ types tableDef)]
     <> ["Data.Aeson" | isHttpInstanceDerived (fromMaybe [] $ types tableDef)]
+    <> ["Kernel.External.Encryption" | tableDef.containsEncryptedField]
 
 shouldImportUtilsTH :: [TypeObject] -> Bool
 shouldImportUtilsTH typeObj =

@@ -10,7 +10,8 @@ data TableDef = TableDef
     queries :: [QueryDef],
     primaryKey :: [String],
     secondaryKey :: [String],
-    types :: Maybe [TypeObject]
+    types :: Maybe [TypeObject],
+    containsEncryptedField :: Bool
   }
   deriving (Show)
 
@@ -20,7 +21,7 @@ data TypeObject = TypeObject (String, ([(String, String)], Maybe String))
 data QueryDef = QueryDef
   { queryName :: String,
     kvFunction :: String,
-    params :: [(String, String)],
+    params :: [((String, String), Bool)],
     whereClause :: WhereClause,
     takeFullObjectAsInput :: Bool
   }
@@ -38,7 +39,8 @@ data FieldDef = FieldDef
     constraints :: [FieldConstraint],
     defaultVal :: Maybe String,
     toTType :: Maybe String,
-    fromTType :: Maybe String
+    fromTType :: Maybe String,
+    isEncrypted :: Bool
   }
   deriving (Show)
 

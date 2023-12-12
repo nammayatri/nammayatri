@@ -10,6 +10,7 @@ import qualified Domain.Types.TicketBooking
 import qualified Domain.Types.TicketBookingService
 import qualified Domain.Types.TicketService
 import Kernel.Beam.Functions
+import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Common

@@ -39,14 +39,8 @@ TicketPlace:
     PlaceType:
       enum: "Museum,ThemePark,AmusementPark,WaterPark,WildLifeSanctuary,ArtGallery,HeritageSite,ReligiousSite,Other"
 
-
   constraints:
-    id: PrimaryKey|NotNull
-    name: NotNull
-    shortDesc: NotNull
-    gallery: NotNull
-    termsAndConditions: NotNull
-    placeType: NotNull
+    id: PrimaryKey
 
   default:
     termsAndConditions: "'{}'"

@@ -15,6 +15,7 @@ generateImports tableDef =
     ++ " where\n\n"
     ++ "import Kernel.Beam.Functions\n"
     ++ "import Kernel.Prelude\n"
+    ++ "import Kernel.External.Encryption\n"
     ++ "import Kernel.Utils.Common (MonadFlow, CacheFlow, EsqDBFlow, getCurrentTime)\n"
     ++ "import qualified Storage.Beam."
     ++ (capitalize $ tableNameHaskell tableDef)
@@ -26,7 +27,6 @@ generateImports tableDef =
 toTTypeConversionFunction :: Maybe String -> String -> String -> String
 toTTypeConversionFunction transformer haskellType fieldName
   | (isJust transformer) = fromJust transformer ++ " " ++ fieldName
-  | "Int" <- haskellType = "roundToIntegral " ++ fieldName
   | "Kernel.Types.Id.Id " `Text.isPrefixOf` Text.pack haskellType = "Kernel.Types.Id.getId " ++ fieldName
   | "Kernel.Types.Id.Id " `Text.isInfixOf` Text.pack haskellType = "Kernel.Types.Id.getId <$> " ++ fieldName
   | "Kernel.Types.Id.ShortId " `Text.isPrefixOf` Text.pack haskellType = "Kernel.Types.Id.getShortId " ++ fieldName
@@ -36,7 +36,6 @@ toTTypeConversionFunction transformer haskellType fieldName
 fromTTypeConversionFunction :: Maybe String -> String -> String -> String
 fromTTypeConversionFunction transformer haskellType fieldName
   | (isJust transformer) = fromJust transformer ++ " " ++ fieldName
-  | "Int" <- haskellType = "realToFrac " ++ fieldName
   | "Kernel.Types.Id.Id " `Text.isPrefixOf` Text.pack haskellType = "Kernel.Types.Id.Id " ++ fieldName
   | "Kernel.Types.Id.Id " `Text.isInfixOf` Text.pack haskellType = "Kernel.Types.Id.Id <$> " ++ fieldName
   | "Kernel.Types.Id.ShortId " `Text.isPrefixOf` Text.pack haskellType = "Kernel.Types.Id.ShortId " ++ fieldName
@@ -62,7 +61,13 @@ fromTTypeInstance tableDef =
     ++ intercalate ",\n            " (map fromField (fields tableDef))
     ++ "\n          }\n\n"
   where
-    fromField field = fieldName field ++ " = " ++ fromTTypeConversionFunction (fromTType field) (haskellType field) (fieldName field)
+    fromField field =
+      if isEncrypted field
+        then do
+          let mapOperator = if isMaybeType (haskellType field) then " <$> " else " "
+          let applicativeOperator = if isMaybeType (haskellType field) then " <*> " else " "
+          fieldName field ++ " = EncryptedHashed" ++ mapOperator ++ "(Encrypted" ++ mapOperator ++ fieldName field ++ "Encrypted)" ++ applicativeOperator ++ fieldName field ++ "Hash"
+        else fieldName field ++ " = " ++ fromTTypeConversionFunction (fromTType field) (haskellType field) (fieldName field)
 
 -- Generates the ToTType' instance
 toTTypeInstance :: TableDef -> String
@@ -81,7 +86,14 @@ toTTypeInstance tableDef =
     ++ intercalate ",\n        " (map toField (fields tableDef))
     ++ "\n      }\n\n"
   where
-    toField field = "Beam." ++ fieldName field ++ " = " ++ toTTypeConversionFunction (toTType field) (haskellType field) (fieldName field)
+    toField field =
+      if isEncrypted field
+        then do
+          let mapOperator = if isMaybeType (haskellType field) then " <&> " else " & "
+          let encryptedField = "Beam." ++ fieldName field ++ "Encrypted = " ++ fieldName field ++ mapOperator ++ "unEncrypted . (.encrypted)"
+          let hashField = "Beam." ++ fieldName field ++ "Hash = " ++ fieldName field ++ mapOperator ++ "(.hash)"
+          encryptedField ++ ",\n        " ++ hashField
+        else "Beam." ++ fieldName field ++ " = " ++ toTTypeConversionFunction (toTType field) (haskellType field) (fieldName field)
 
 generateDefaultCreateQuery :: String -> String
 generateDefaultCreateQuery tableNameHaskell =
@@ -119,9 +131,12 @@ orderAndLimit query = do
         ++ "    offset\n\n"
     else "\n"
 
+ignoreEncryptionFlag :: ((String, String), Bool) -> (String, String)
+ignoreEncryptionFlag ((field, tp), _) = (field, tp)
+
 generateFunctionSignature :: QueryDef -> String -> String
 generateFunctionSignature query tableNameHaskell =
-  let qparams = filter ((/= "updatedAt") . fst) $ map getIdsOut $ nub (params query ++ addLimitParams query ++ getWhereClauseFieldNamesAndTypes (whereClause query))
+  let qparams = filter ((/= "updatedAt") . fst) $ map getIdsOut $ nub (map ignoreEncryptionFlag (params query) ++ addLimitParams query ++ getWhereClauseFieldNamesAndTypes (whereClause query))
    in query.queryName
         ++ " :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => "
         ++ bool (foldMap ((++ " -> ") . snd) qparams) ("Domain.Types." ++ tableNameHaskell ++ "." ++ tableNameHaskell ++ " -> ") query.takeFullObjectAsInput
@@ -163,9 +178,19 @@ generateBeamFunctionCall :: String -> String
 generateBeamFunctionCall kvFunction =
   (if "update" `isPrefixOf` kvFunction then "   " ++ "now <- getCurrentTime\n" else "") ++ "   " ++ kvFunction ++ "\n"
 
-generateQueryParams :: [(String, String)] -> String
+generateQueryParams :: [((String, String), Bool)] -> String
 generateQueryParams [] = ""
-generateQueryParams params = "    [ " ++ intercalate ",\n      " (map (\(field, tp) -> "Se.Set Beam." ++ field ++ " " ++ correctSetField field tp) params) ++ "\n    ]\n"
+generateQueryParams params = "    [ " ++ intercalate ",\n      " (map generateQueryParam params) ++ "\n    ]\n"
+
+generateQueryParam :: ((String, String), Bool) -> String
+generateQueryParam ((field, tp), encrypted) =
+  if encrypted
+    then do
+      let mapOperator = if isMaybeType tp then " <&> " else " & "
+      let encryptedField = "Se.Set Beam." ++ field ++ "Encrypted $ " ++ field ++ mapOperator ++ "unEncrypted . (.encrypted)"
+      let hashField = "Se.Set Beam." ++ field ++ "Hash $ " ++ field ++ mapOperator ++ "(.hash)"
+      encryptedField ++ ",\n      " ++ hashField
+    else "Se.Set Beam." ++ field ++ " " ++ correctSetField field tp
 
 correctSetField :: String -> String -> String
 correctSetField field tp
@@ -224,8 +249,8 @@ defaultQueryDefs tableDef =
     QueryDef "updateByPrimaryKey" "updateWithKV" (getAllFieldNamesWithTypesExcludingPks (fields tableDef)) findByPrimayKeyWhereClause True
   ]
   where
-    getAllFieldNamesWithTypesExcludingPks :: [FieldDef] -> [(String, String)]
-    getAllFieldNamesWithTypesExcludingPks fieldDefs = map (\fieldDef -> (fieldName fieldDef, haskellType fieldDef)) $ filter (\fieldDef -> PrimaryKey `notElem` constraints fieldDef) fieldDefs
+    getAllFieldNamesWithTypesExcludingPks :: [FieldDef] -> [((String, String), Bool)]
+    getAllFieldNamesWithTypesExcludingPks fieldDefs = map (\fieldDef -> ((fieldName fieldDef, haskellType fieldDef), isEncrypted fieldDef)) $ filter (\fieldDef -> PrimaryKey `notElem` constraints fieldDef) fieldDefs
 
     getAllPrimaryKeyWithTypes :: [FieldDef] -> [(String, String)]
     getAllPrimaryKeyWithTypes fieldDefs = map (\fieldDef -> (fieldName fieldDef, haskellType fieldDef)) $ filter (\fieldDef -> PrimaryKey `elem` constraints fieldDef) fieldDefs

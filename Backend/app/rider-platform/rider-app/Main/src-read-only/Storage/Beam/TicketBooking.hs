@@ -11,6 +11,7 @@ import qualified Domain.Types.Merchant.MerchantOperatingCity
 import qualified Domain.Types.Person
 import qualified Domain.Types.TicketBooking
 import qualified Domain.Types.TicketPlace
+import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
