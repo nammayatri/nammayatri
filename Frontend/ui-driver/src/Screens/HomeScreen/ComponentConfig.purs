@@ -596,7 +596,6 @@ enterOtpStateConfig state = let
       otpAttemptsExceeded = (state.props.otpAttemptsExceeded),
       inputTextConfig {
         text = state.props.rideOtp,
-        -- pattern = "[0-9]*,4",
         focusIndex = state.props.enterOtpFocusIndex
         , textStyle = FontStyle.Heading1
       },

@@ -55,7 +55,7 @@ import Screens.RideSelectionScreen.ScreenData as RideSelectionScreenData
 import Screens.SelectLanguageScreen.ScreenData as SelectLanguageScreenData
 import Screens.SubscriptionScreen.ScreenData as SubscriptionScreenData
 import Screens.TripDetailsScreen.ScreenData as TripDetailsScreenData
-import Screens.Types (AadhaarVerificationScreenState, AboutUsScreenState, AcknowledgementScreenState, ActiveRide, AddVehicleDetailsScreenState, AppUpdatePopUpScreenState, ApplicationStatusScreenState, BankDetailScreenState, BookingOptionsScreenState, CategoryListType, ChooseLanguageScreenState, DriverDetailsScreenState, DriverProfileScreenState, DriverRideRatingScreenState, DriverSavedLocationScreenState, DriverStatus, EditAadhaarDetailsScreenState, EditBankDetailsScreenState, EnterMobileNumberScreenState, EnterOTPScreenState, GlobalProps, GoToPopUpType(..), HelpAndSupportScreenState, HomeScreenStage(..), HomeScreenState, IndividualRideCardState, NoInternetScreenState, NotificationsScreenState, OnBoardingSubscriptionScreenState, PaymentHistoryScreenState, PermissionsScreenState, PopUpScreenState, ReferralScreenState, RegistrationScreenState, ReportIssueChatScreenState, RideDetailScreenState, RideHistoryScreenState, RideSelectionScreenState, SelectLanguageScreenState, SplashScreenState, SubscriptionScreenState, TripDetailsScreenState, UpdatePopupType(..), UploadAdhaarScreenState, UploadDrivingLicenseState, VehicleDetailsScreenState, WelcomeScreenState, WriteToUsScreenState, ChooseCityScreenState)
+import Screens.Types (AadhaarVerificationScreenState, AboutUsScreenState, AcknowledgementScreenState, ActiveRide, AddVehicleDetailsScreenState, AppUpdatePopUpScreenState, ApplicationStatusScreenState, BankDetailScreenState, BookingOptionsScreenState, CategoryListType, ChooseLanguageScreenState, DriverDetailsScreenState, DriverProfileScreenState, DriverRideRatingScreenState, DriverSavedLocationScreenState, DriverStatus, EditAadhaarDetailsScreenState, EditBankDetailsScreenState, EnterMobileNumberScreenState, EnterOTPScreenState, GlobalProps, GoToPopUpType(..), HelpAndSupportScreenState, HomeScreenStage(..), HomeScreenState, IndividualRideCardState, NoInternetScreenState, NotificationsScreenState, OnBoardingSubscriptionScreenState, PaymentHistoryScreenState, PermissionsScreenState, PopUpScreenState, ReferralScreenState, RegistrationScreenState, ReportIssueChatScreenState, RideDetailScreenState, RideHistoryScreenState, RideSelectionScreenState, SelectLanguageScreenState, SplashScreenState, SubscriptionScreenState, TripDetailsScreenState, UpdatePopupType(..), UploadAdhaarScreenState, UploadDrivingLicenseState, VehicleDetailsScreenState, WelcomeScreenState, WriteToUsScreenState, ChooseCityScreenState, DriverReferralScreenState)
 import Screens.UploadAdhaarScreen.ScreenData as UploadAdhaarScreenData
 import Screens.UploadDrivingLicenseScreen.ScreenData as UploadDrivingLicenseScreenData
 import Screens.VehicleDetailsScreen.ScreenData as VehicleDetailsScreenData
@@ -63,6 +63,7 @@ import Screens.WelcomeScreen.ScreenData as WelcomeScreenData
 import Screens.WriteToUsScreen.ScreenData as WriteToUsScreenData
 import Data.Maybe (Maybe(..))
 import MerchantConfig.Types (AppConfig(..))
+import Screens.DriverReferralScreen.ScreenData as DriverReferralScreenData
 
 type FlowBT e a = BackT (ExceptT e (Free (FlowWrapper GlobalState))) a
 
@@ -109,6 +110,7 @@ newtype GlobalState = GlobalState {
   , driverSavedLocationScreen :: DriverSavedLocationScreenState
   , chooseCityScreen :: ChooseCityScreenState
   , welcomeScreen :: WelcomeScreenState
+  , driverReferralScreen :: DriverReferralScreenState
   }
 
 defaultGlobalState :: GlobalState
@@ -155,6 +157,7 @@ defaultGlobalState = GlobalState {
 , driverSavedLocationScreen : DriverSavedLocationScreenData.initData
 , chooseCityScreen : ChooseCityScreenData.initData
 , welcomeScreen : WelcomeScreenData.initData
+, driverReferralScreen : DriverReferralScreenData.initData
 }
 
 defaultGlobalProps :: GlobalProps
@@ -207,6 +210,9 @@ data ScreenType =
   | DriverSavedLocationScreenStateType (DriverSavedLocationScreenState -> DriverSavedLocationScreenState)
   | ChooseCityScreenStateType (ChooseCityScreenState -> ChooseCityScreenState)
   | WelcomeScreenStateType (WelcomeScreenState -> WelcomeScreenState)
+  | DriverReferralScreenStateType (DriverReferralScreenState -> DriverReferralScreenState)
+  | RegistrationScreenStateType (RegistrationScreenState -> RegistrationScreenState)
+  
 
 data ScreenStage = HomeScreenStage HomeScreenStage
 
@@ -290,6 +296,7 @@ data REGISTRATION_SCREEN_OUTPUT = UPLOAD_DRIVER_LICENSE RegistrationScreenState
                                 | GO_TO_ONBOARD_SUBSCRIPTION
                                 | GO_TO_HOME_SCREEN_FROM_REGISTERATION_SCREEN
                                 | REFRESH_REGISTERATION_SCREEN
+                                | REFERRAL_CODE_SUBMIT RegistrationScreenState
 
 data UPLOAD_DRIVER_LICENSE_SCREENOUTPUT = VALIDATE_DL_DETAILS UploadDrivingLicenseState | VALIDATE_DATA_API UploadDrivingLicenseState | GOTO_VEHICLE_DETAILS_SCREEN | LOGOUT_ACCOUNT | GOTO_ONBOARDING_FLOW
 
@@ -419,3 +426,5 @@ data WELCOME_SCREEN_OUTPUT = GoToMobileNumberScreen
 data CHOOSE_CITY_SCREEN_OUTPUT = GoToWelcomeScreen | REFRESH_SCREEN_CHOOSE_CITY ChooseCityScreenState
 
 data CHOOSE_LANG_SCREEN_OUTPUT = LOGIN_FLOW
+data DRIVER_REFERRAL_SCREEN_OUTPUT = DRIVER_REFERRAL_SCREEN_NAV NAVIGATION_ACTIONS
+                                   | DRIVER_CONTEST_SCREEN

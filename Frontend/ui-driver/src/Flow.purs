@@ -113,7 +113,7 @@ import Services.Backend (driverRegistrationStatusBT, dummyVehicleObject, makeDri
 import Services.Backend as Remote
 import Services.Config (getBaseUrl)
 import Storage (KeyStore(..), deleteValueFromLocalStore, getValueToLocalNativeStore, getValueToLocalStore, isLocalStageOn, isOnFreeTrial, setValueToLocalNativeStore, setValueToLocalStore)
-import Types.App (REPORT_ISSUE_CHAT_SCREEN_OUTPUT(..), RIDES_SELECTION_SCREEN_OUTPUT(..), ABOUT_US_SCREEN_OUTPUT(..), BANK_DETAILS_SCREENOUTPUT(..), ADD_VEHICLE_DETAILS_SCREENOUTPUT(..), APPLICATION_STATUS_SCREENOUTPUT(..), DRIVER_DETAILS_SCREEN_OUTPUT(..), DRIVER_PROFILE_SCREEN_OUTPUT(..), CHOOSE_CITY_SCREEN_OUTPUT(..), DRIVER_RIDE_RATING_SCREEN_OUTPUT(..), ENTER_MOBILE_NUMBER_SCREEN_OUTPUT(..), ENTER_OTP_SCREEN_OUTPUT(..), FlowBT, GlobalState(..), HELP_AND_SUPPORT_SCREEN_OUTPUT(..), HOME_SCREENOUTPUT(..), MY_RIDES_SCREEN_OUTPUT(..), NOTIFICATIONS_SCREEN_OUTPUT(..), NO_INTERNET_SCREEN_OUTPUT(..), PERMISSIONS_SCREEN_OUTPUT(..), POPUP_SCREEN_OUTPUT(..), REGISTRATION_SCREEN_OUTPUT(..), RIDE_DETAIL_SCREENOUTPUT(..), PAYMENT_HISTORY_SCREEN_OUTPUT(..), SELECT_LANGUAGE_SCREEN_OUTPUT(..), ScreenStage(..), ScreenType(..), TRIP_DETAILS_SCREEN_OUTPUT(..), UPLOAD_ADHAAR_CARD_SCREENOUTPUT(..), UPLOAD_DRIVER_LICENSE_SCREENOUTPUT(..), VEHICLE_DETAILS_SCREEN_OUTPUT(..), WRITE_TO_US_SCREEN_OUTPUT(..), NOTIFICATIONS_SCREEN_OUTPUT(..), REFERRAL_SCREEN_OUTPUT(..), BOOKING_OPTIONS_SCREEN_OUTPUT(..), ACKNOWLEDGEMENT_SCREEN_OUTPUT(..), defaultGlobalState, SUBSCRIPTION_SCREEN_OUTPUT(..), NAVIGATION_ACTIONS(..), AADHAAR_VERIFICATION_SCREEN_OUTPUT(..), ONBOARDING_SUBSCRIPTION_SCREENOUTPUT(..), APP_UPDATE_POPUP(..), DRIVE_SAVED_LOCATION_OUTPUT(..), WELCOME_SCREEN_OUTPUT(..))
+import Types.App (REPORT_ISSUE_CHAT_SCREEN_OUTPUT(..), RIDES_SELECTION_SCREEN_OUTPUT(..), ABOUT_US_SCREEN_OUTPUT(..), BANK_DETAILS_SCREENOUTPUT(..), ADD_VEHICLE_DETAILS_SCREENOUTPUT(..), APPLICATION_STATUS_SCREENOUTPUT(..), DRIVER_DETAILS_SCREEN_OUTPUT(..), DRIVER_PROFILE_SCREEN_OUTPUT(..), CHOOSE_CITY_SCREEN_OUTPUT(..), DRIVER_RIDE_RATING_SCREEN_OUTPUT(..), ENTER_MOBILE_NUMBER_SCREEN_OUTPUT(..), ENTER_OTP_SCREEN_OUTPUT(..), FlowBT, GlobalState(..), HELP_AND_SUPPORT_SCREEN_OUTPUT(..), HOME_SCREENOUTPUT(..), MY_RIDES_SCREEN_OUTPUT(..), NOTIFICATIONS_SCREEN_OUTPUT(..), NO_INTERNET_SCREEN_OUTPUT(..), PERMISSIONS_SCREEN_OUTPUT(..), POPUP_SCREEN_OUTPUT(..), REGISTRATION_SCREEN_OUTPUT(..), RIDE_DETAIL_SCREENOUTPUT(..), PAYMENT_HISTORY_SCREEN_OUTPUT(..), SELECT_LANGUAGE_SCREEN_OUTPUT(..), ScreenStage(..), ScreenType(..), TRIP_DETAILS_SCREEN_OUTPUT(..), UPLOAD_ADHAAR_CARD_SCREENOUTPUT(..), UPLOAD_DRIVER_LICENSE_SCREENOUTPUT(..), VEHICLE_DETAILS_SCREEN_OUTPUT(..), WRITE_TO_US_SCREEN_OUTPUT(..), NOTIFICATIONS_SCREEN_OUTPUT(..), REFERRAL_SCREEN_OUTPUT(..), BOOKING_OPTIONS_SCREEN_OUTPUT(..), ACKNOWLEDGEMENT_SCREEN_OUTPUT(..), defaultGlobalState, SUBSCRIPTION_SCREEN_OUTPUT(..), NAVIGATION_ACTIONS(..), AADHAAR_VERIFICATION_SCREEN_OUTPUT(..), ONBOARDING_SUBSCRIPTION_SCREENOUTPUT(..), APP_UPDATE_POPUP(..), DRIVE_SAVED_LOCATION_OUTPUT(..), WELCOME_SCREEN_OUTPUT(..), DRIVER_REFERRAL_SCREEN_OUTPUT(..))
 import Types.App as TA
 import Engineering.Helpers.Suggestions as EHS
 import Resource.Constants as RC
@@ -452,6 +452,7 @@ onBoardingFlow = do
                         else if resp.dlVerificationStatus == "LIMIT_EXCEED" then Just "DL" 
                         else Nothing
       cityConfig = getCityConfig config.cityConfig (getValueToLocalStore DRIVER_LOCATION)
+      referralCodeAdded = getValueToLocalStore REFERRAL_CODE_ADDED == "true"
   modifyScreenState $ RegisterScreenStateType (\registerationScreen -> 
                   registerationScreen { data { 
                       vehicleDetailsStatus = getStatusValue resp.rcVerificationStatus,
@@ -464,7 +465,7 @@ onBoardingFlow = do
                         Just status -> if status == "ACTIVE" then ST.COMPLETED else ST.IN_PROGRESS
                         Nothing -> ST.NOT_STARTED,
                       cityConfig = cityConfig
-                  }, props {limitReachedFor = limitReachedFor }})
+                  }, props {limitReachedFor = limitReachedFor, referralCodeSubmitted = referralCodeAdded}})
   liftFlowBT hideSplash
   flow <- UI.registration
   case flow of
@@ -486,6 +487,16 @@ onBoardingFlow = do
     GO_TO_ONBOARD_SUBSCRIPTION -> do
       let onBoardingSubscriptionViewCount =  fromMaybe 0 (fromString (getValueToLocalNativeStore ONBOARDING_SUBSCRIPTION_SCREEN_COUNT))
       onBoardingSubscriptionScreenFlow onBoardingSubscriptionViewCount
+    REFERRAL_CODE_SUBMIT state -> do
+      referDriverResponse <- lift $ lift $ Remote.referDriver $ makeReferDriverReq state.data.referralCode
+      case referDriverResponse of
+        Right (ReferDriverResp resp) -> do
+          modifyScreenState $ RegistrationScreenStateType (\driverReferralScreen -> state{ props{isValidReferralCode = true, referralCodeSubmitted = true, enterReferralCodeModal = false}})
+          setValueToLocalStore REFERRAL_CODE_ADDED "true"
+          onBoardingFlow
+        Left errorPayload -> do
+          modifyScreenState $ RegistrationScreenStateType (\driverReferralScreen -> state{ props{isValidReferralCode = false}})
+          onBoardingFlow
 
 updateDriverVersion :: Maybe Version -> Maybe Version -> FlowBT String Unit
 updateDriverVersion dbClientVersion dbBundleVersion = do
@@ -878,7 +889,7 @@ driverProfileFlow = do
   action <- UI.driverProfileScreen
   case action of
     GO_TO_HOME_FROM_PROFILE -> homeScreenFlow
-    GO_TO_REFERRAL_SCREEN_FROM_DRIVER_PROFILE_SCREEN -> referralScreenFlow
+    GO_TO_REFERRAL_SCREEN_FROM_DRIVER_PROFILE_SCREEN -> referralFlow
     DRIVER_DETAILS_SCREEN -> driverDetailsFlow
     VEHICLE_DETAILS_SCREEN -> vehicleDetailsFlow
     ABOUT_US_SCREEN -> aboutUsFlow
@@ -1411,7 +1422,7 @@ myRidesScreenFlow = do
       myRidesScreenFlow
     HOME_SCREEN -> homeScreenFlow
     PROFILE_SCREEN -> driverProfileFlow
-    GO_TO_REFERRAL_SCREEN -> referralScreenFlow
+    GO_TO_REFERRAL_SCREEN -> referralFlow
     LOADER_OUTPUT state -> do
       modifyScreenState $ RideHistoryScreenStateType (\rideHistoryScreen -> state{offsetValue = state.offsetValue + 8})
       myRidesScreenFlow
@@ -1832,7 +1843,7 @@ homeScreenFlow = do
       myRidesScreenFlow
     GO_TO_REFERRAL_SCREEN_FROM_HOME_SCREEN -> do
       liftFlowBT $ logEvent logField_ "ny_driver_rankings"
-      referralScreenFlow
+      referralFlow
     DRIVER_AVAILABILITY_STATUS state status -> do
       void $ lift $ lift $ loaderText (getString PLEASE_WAIT) if status == Online then (getString SETTING_YOU_ONLINE) else if status == Silent then (getString SETTING_YOU_SILENT) else (getString SETTING_YOU_OFFLINE)
       void $ lift $ lift $ toggleLoader true
@@ -2455,7 +2466,7 @@ subScriptionFlow = do
   case uiAction of
     NAV HomeScreenNav -> homeScreenFlow
     NAV GoToRideHistory -> myRidesScreenFlow
-    NAV GoToContest -> referralScreenFlow
+    NAV GoToContest -> referralFlow
     NAV GoToAlerts -> notificationFlow
     GOTO_HOMESCREEN -> homeScreenFlow
     MAKE_PAYMENT state -> do
@@ -2695,7 +2706,7 @@ notificationFlow = do
       modifyScreenState $ NotificationsScreenStateType (\notificationScreen -> state{offsetValue = (length state.notificationList)})
       notificationFlow
     GO_HOME_SCREEN -> homeScreenFlow
-    GO_REFERRAL_SCREEN -> referralScreenFlow
+    GO_REFERRAL_SCREEN -> referralFlow
     GO_RIDE_HISTORY_SCREEN -> myRidesScreenFlow
     GO_PROFILE_SCREEN -> driverProfileFlow
     CHECK_RIDE_FLOW_STATUS -> currentRideFlow Nothing
@@ -2944,6 +2955,7 @@ logoutFlow = do
   deleteValueFromLocalStore SET_ALTERNATE_TIME
   deleteValueFromLocalStore ONBOARDING_SUBSCRIPTION_SCREEN_COUNT
   deleteValueFromLocalStore FREE_TRIAL_DAYS
+  deleteValueFromLocalStore REFERRAL_CODE_ADDED
   pure $ factoryResetApp ""
   _ <- lift $ lift $ liftFlow $ logEvent logField_ "logout"
   isLocationPermission <- lift $ lift $ liftFlow $ isLocationPermissionEnabled unit
@@ -2984,5 +2996,25 @@ welcomeScreenFlow = do
   case welcomeScreen of
     GoToMobileNumberScreen -> loginFlow
 
+driverReferralScreenFlow :: FlowBT String Unit
+driverReferralScreenFlow = do
+  logField_ <- lift $ lift $ getLogFields
+  _ <- lift $ lift $ liftFlow $ logEvent logField_ "driverReferralScreenFlow"
+  let referralCode = getValueToLocalStore REFERRAL_CODE
+  modifyScreenState $ DriverReferralScreenStateType (\driverReferralScreen -> driverReferralScreen { data {referralCode = referralCode}})
+  driverReferralScreen <- UI.driverReferralScreen
+  case driverReferralScreen of
+    DRIVER_REFERRAL_SCREEN_NAV GoToSubscription -> updateAvailableAppsAndGoToSubs
+    DRIVER_REFERRAL_SCREEN_NAV HomeScreenNav -> homeScreenFlow
+    DRIVER_REFERRAL_SCREEN_NAV GoToRideHistory -> myRidesScreenFlow
+    DRIVER_REFERRAL_SCREEN_NAV GoToAlerts -> notificationFlow
+    DRIVER_REFERRAL_SCREEN_NAV _ -> driverReferralScreenFlow
+    DRIVER_CONTEST_SCREEN -> referralScreenFlow
 
+referralFlow :: FlowBT String Unit
+referralFlow = do
+  appConfig <- getAppConfigFlowBT Constants.appConfig
+  let cityConfig = getCityConfig appConfig.cityConfig (getValueToLocalStore DRIVER_LOCATION)
+  if cityConfig.showDriverReferral then driverReferralScreenFlow
+    else referralScreenFlow
 

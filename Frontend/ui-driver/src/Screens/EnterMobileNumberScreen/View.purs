@@ -180,7 +180,7 @@ enterMobileNumberView  state push =
   linearLayout
     [ height MATCH_PARENT
     , width MATCH_PARENT
-    , visibility  VISIBLE
+    , visibility VISIBLE
     , alpha 1.0
     , orientation VERTICAL
     , margin $ MarginTop 37

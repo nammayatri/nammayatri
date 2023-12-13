@@ -31,6 +31,10 @@ import Helpers.Utils as HU
 import Screens.Types as ST
 import Styles.Colors as Color
 import Storage ( getValueToLocalStore , KeyStore(..))
+import Components.InAppKeyboardModal as InAppKeyboardModal
+import Prelude ((<), not, ($))
+import Data.String as DS
+import Mobility.Prelude
 
 primaryButtonConfig :: ST.RegistrationScreenState -> PrimaryButton.Config
 primaryButtonConfig state = let 
@@ -116,3 +120,29 @@ genericHeaderConfig state = let
       }
     }
   in genericHeaderConfig'
+
+enterReferralStateConfig :: ST.RegistrationScreenState -> InAppKeyboardModal.InAppKeyboardModalState
+enterReferralStateConfig state = InAppKeyboardModal.config{
+      otpIncorrect = not state.props.isValidReferralCode,
+      inputTextConfig {
+        text = state.data.referralCode,
+        focusIndex = state.props.enterOtpFocusIndex
+        , textStyle = FontStyle.Heading1
+      },
+      headingConfig {
+        text = getString ENTER_REFERRAL_CODE
+      },
+      errorConfig {
+        text = if state.props.isValidReferralCode then "" else getString INVALID_REFERRAL_CODE,
+        visibility = boolToVisibility $ not state.props.isValidReferralCode
+      },
+      imageConfig {
+        alpha = if(DS.length state.data.referralCode < 6) then 0.3 else 1.0
+      },
+      textBoxConfig{
+        textBoxesArray = [1,2,3,4,5,6],
+        width = V 36,
+        height = V 44
+      },
+      modalType = ST.OTP
+    }
