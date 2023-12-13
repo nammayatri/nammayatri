@@ -1,0 +1,244 @@
+cabal-version: 1.12
+
+-- This file has been generated from package.yaml by hpack version 0.35.2.
+--
+-- see: https://github.com/sol/hpack
+
+name:           safety-dashboard-api
+version:        0.1.0.0
+synopsis:       The nammayatri rider application
+description:    Please see the README on GitHub at <https://github.com/nammayatri/nammayatri#readme>
+homepage:       https://github.com/nammayatri/nammayatri#readme
+bug-reports:    https://github.com/nammayatri/nammayatri/issues
+author:         nammayatri
+maintainer:     nammayatri
+copyright:      2023 Juspay Technologies Private Limited
+license:        AllRightsReserved
+build-type:     Simple
+
+source-repository head
+  type: git
+  location: https://github.com/nammayatri/nammayatri
+
+flag Local
+  description: Enable this flag for faster compile times
+  manual: True
+  default: False
+
+library
+  other-modules:
+      Paths_safety_dashboard_api
+  hs-source-dirs:
+      src
+      src-read-only
+  default-extensions:
+      ConstraintKinds
+      DataKinds
+      DefaultSignatures
+      DeriveAnyClass
+      DeriveFunctor
+      DeriveGeneric
+      DuplicateRecordFields
+      ExplicitNamespaces
+      FlexibleContexts
+      FlexibleInstances
+      FunctionalDependencies
+      GADTs
+      LambdaCase
+      MultiParamTypeClasses
+      MultiWayIf
+      NamedFieldPuns
+      NoImplicitPrelude
+      OverloadedStrings
+      PatternSynonyms
+      PolyKinds
+      RankNTypes
+      RecordWildCards
+      ScopedTypeVariables
+      StandaloneDeriving
+      TupleSections
+      TypeApplications
+      TypeFamilies
+      TypeOperators
+      ViewPatterns
+      BlockArguments
+      TypeSynonymInstances
+      UndecidableInstances
+      PackageImports
+  ghc-options: -fwrite-ide-info -hiedir=.hie -fplugin=RecordDotPreprocessor -Wall -Wcompat -Widentities -fhide-source-paths -Werror -Wwarn=ambiguous-fields
+  build-depends:
+      aeson
+    , alchemist
+    , amazonka
+    , amazonka-core
+    , amazonka-ses
+    , base >=4.7 && <5
+    , base64-bytestring
+    , beam-core
+    , beam-mysql
+    , beam-postgres
+    , beckn-services
+    , beckn-spec
+    , bytestring
+    , casing
+    , cereal
+    , containers
+    , cryptonite
+    , cryptostore >=0.2.3.0
+    , dashboard-helper-api
+    , data-default-class
+    , directory
+    , euler-hs
+    , extra
+    , filepath
+    , geohash ==1.0.1
+    , http-media
+    , http-types
+    , lens
+    , memory
+    , mobility-core
+    , openapi3
+    , payment
+    , persistent
+    , postgresql-simple
+    , prometheus-client
+    , prometheus-metrics-ghc
+    , random
+    , raw-strings-qq
+    , record-dot-preprocessor
+    , record-hasfield
+    , sequelize
+    , servant
+    , servant-client
+    , servant-client-core
+    , servant-openapi3
+    , servant-server
+    , sessionizer-metrics
+    , shared-services
+    , special-zone
+    , special-zone-a
+    , template-haskell
+    , text
+    , text-conversions
+    , time
+    , unliftio-core
+    , unordered-containers
+    , utils
+    , uuid
+    , vector
+    , wai
+    , wai-extra
+    , wai-middleware-prometheus
+    , warp
+    , x509
+  default-language: Haskell2010
+  if flag(Local)
+    ghc-options: -O0 -funfolding-use-threshold20 -fno-cse -fmax-simplifier-iterations1 -fno-specialise-aggressively -j4
+  else
+    ghc-options: -O2 -j4
+
+executable rider-app-exe
+  main-is: Main.hs
+  other-modules:
+      Paths_safety_dashboard_api
+  hs-source-dirs:
+      server
+  default-extensions:
+      ConstraintKinds
+      DataKinds
+      DefaultSignatures
+      DeriveAnyClass
+      DeriveFunctor
+      DeriveGeneric
+      DuplicateRecordFields
+      ExplicitNamespaces
+      FlexibleContexts
+      FlexibleInstances
+      FunctionalDependencies
+      GADTs
+      LambdaCase
+      MultiParamTypeClasses
+      MultiWayIf
+      NamedFieldPuns
+      NoImplicitPrelude
+      OverloadedStrings
+      PatternSynonyms
+      PolyKinds
+      RankNTypes
+      RecordWildCards
+      ScopedTypeVariables
+      StandaloneDeriving
+      TupleSections
+      TypeApplications
+      TypeFamilies
+      TypeOperators
+      ViewPatterns
+      BlockArguments
+      TypeSynonymInstances
+      UndecidableInstances
+      PackageImports
+  ghc-options: -fwrite-ide-info -hiedir=.hie -fplugin=RecordDotPreprocessor -threaded -rtsopts "-with-rtsopts=-N -T"
+  build-depends:
+      aeson
+    , alchemist
+    , amazonka
+    , amazonka-core
+    , amazonka-ses
+    , base >=4.7 && <5
+    , base64-bytestring
+    , beam-core
+    , beam-mysql
+    , beam-postgres
+    , beckn-spec
+    , bytestring
+    , casing
+    , cereal
+    , containers
+    , cryptonite
+    , cryptostore >=0.2.3.0
+    , dashboard-helper-api
+    , data-default-class
+    , directory
+    , euler-hs
+    , extra
+    , filepath
+    , geohash ==1.0.1
+    , http-media
+    , http-types
+    , lens
+    , memory
+    , mobility-core
+    , openapi3
+    , persistent
+    , postgresql-simple
+    , prometheus-client
+    , prometheus-metrics-ghc
+    , random
+    , raw-strings-qq
+    , record-dot-preprocessor
+    , record-hasfield
+    , rider-app
+    , sequelize
+    , servant
+    , servant-client
+    , servant-client-core
+    , servant-openapi3
+    , servant-server
+    , template-haskell
+    , text
+    , text-conversions
+    , time
+    , unliftio-core
+    , unordered-containers
+    , uuid
+    , vector
+    , wai
+    , wai-extra
+    , wai-middleware-prometheus
+    , warp
+    , x509
+  default-language: Haskell2010
+  if flag(Local)
+    ghc-options: -O0 -funfolding-use-threshold20 -fno-cse -fmax-simplifier-iterations1 -fno-specialise-aggressively -j4
+  else
+    ghc-options: -O2 -j4
