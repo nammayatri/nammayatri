@@ -598,16 +598,16 @@
         "tinylog": "tinylog"
       },
       "locked": {
-        "lastModified": 1701939462,
-        "narHash": "sha256-ZVrFeWGmj0zVpEn/iZncsDcDO4K4yzDz3h2K64aelLM=",
-        "owner": "juspay",
+        "lastModified": 1702549068,
+        "narHash": "sha256-th4rnWCZYXlHPbUrcwd9F977xrqmocn9YfrA+JYvr6s=",
+        "owner": "enigma-commits",
         "repo": "euler-hs",
-        "rev": "61ef36ab8bab51c59f5a62129ec2fb857db3d0c9",
+        "rev": "2d9664bc472bacccd8a005da802ab82530e1e86d",
         "type": "github"
       },
       "original": {
-        "owner": "juspay",
-        "ref": "ag/open-source",
+        "owner": "enigma-commits",
+        "ref": "Backend/feat/redis-cluster-pipelining",
         "repo": "euler-hs",
         "type": "github"
       }
@@ -2973,11 +2973,11 @@
         "prometheus-haskell": "prometheus-haskell_2"
       },
       "locked": {
-        "lastModified": 1702552071,
-        "narHash": "sha256-5/USRJ6nfKr9D5Du5bNkZZIoiDM2SMAflX1SperRjh4=",
+        "lastModified": 1702883302,
+        "narHash": "sha256-J3qyEIvkcXDJnVU3u/z6nk98oEiYSbVEeBfxWa45PeU=",
         "owner": "nammayatri",
         "repo": "shared-kernel",
-        "rev": "c4c35b9c7c2e4059e9da4cbcad0809589e9e2780",
+        "rev": "536385d2769f674179287ff6fffa704b4a9e73ca",
         "type": "github"
       },
       "original": {
