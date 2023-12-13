@@ -135,8 +135,8 @@ cancelAppConfig state = let
       secondaryText { visibility = GONE },
       option1 {
         text = getString CALL_DRIVER
-      , color = Color.yellow900
-      , background = Color.black900
+      , color = state.data.config.primaryTextColor
+      , background = state.data.config.primaryBackground
       , strokeColor = Color.transparent
       , textStyle = FontStyle.SubHeading1
       , width = MATCH_PARENT
@@ -1301,12 +1301,15 @@ rideCompletedCardConfig state =
         },
         topCard {
           title =  getString RIDE_COMPLETED,
+          titleColor = topCardConfig.titleColor,
           finalAmount = state.data.finalAmount,
           initalAmount = state.data.driverInfoCardState.price,
           fareUpdatedVisiblity = state.data.finalAmount /= state.data.driverInfoCardState.price && state.props.estimatedDistance /= Nothing,
           gradient = topCardGradient,
           infoPill {
             text = getFareUpdatedStr state.data.rideRatingState.distanceDifference waitingChargesApplied,
+            background = topCardConfig.rideDesctiption.background,
+            color = topCardConfig.rideDesctiption.textColor,
             image = fetchImage FF_COMMON_ASSET "ny_ic_parallel_arrows",
             imageVis = VISIBLE,
             visible = if state.data.finalAmount == state.data.driverInfoCardState.price || state.props.estimatedDistance == Nothing then GONE else VISIBLE

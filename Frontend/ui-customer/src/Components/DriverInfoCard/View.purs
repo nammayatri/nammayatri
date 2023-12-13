@@ -704,7 +704,7 @@ driverInfoView push state =
                 , height if os == "IOS" then (V 210) else WRAP_CONTENT
                 , orientation VERTICAL
                 ][ if state.props.currentSearchResultType == QUOTES then destinationView push state else if not state.data.config.showPickUpandDrop then dummyView push else sourceDistanceView push state
-                  , separator (Margin 0 0 0 0) (V 1) Color.grey900 (Array.any (_ == state.props.currentStage) [ RideAccepted, RideStarted, ChatWithDriver ] && state.data.config.showPickUpandDrop)
+                  , separator (Margin 0 0 0 0) (V 1) Color.grey900 (Array.any (_ == state.props.currentStage) [ RideAccepted, ChatWithDriver ])
                   , cancelRideLayout push state
                   , brandingBannerView state.data.config.driverInfoConfig INVISIBLE
                 ]
@@ -717,25 +717,32 @@ brandingBannerView :: forall w. DriverInfoConfig -> Visibility -> PrestoDOM (Eff
 brandingBannerView driverInfoConfig isVisible = 
   let brandingVisibility = if not driverInfoConfig.footerVisibility then GONE else isVisible
   in 
-  linearLayout
+    linearLayout
     [ width MATCH_PARENT
     , height WRAP_CONTENT
-    , gravity CENTER
-    , background driverInfoConfig.footerBackgroundColor
-    , padding $ Padding 12 12 12 (12+safeMarginBottom)
+    , orientation VERTICAL
     , alignParentBottom "true,-1"
+    , gravity BOTTOM
     , visibility $ brandingVisibility
-    ][ textView $
-        [ text $ getString POWERED_BY 
-        , width WRAP_CONTENT    
+    ][ separator (MarginTop 0) (V 1) Color.grey900 true
+      , linearLayout
+        [ width MATCH_PARENT
         , height WRAP_CONTENT
-        , color Color.black800
-        , padding $ PaddingRight 6
-        ] <> FontStyle.body3 TypoGraphy
-    , imageView
-        [ imageWithFallback $ driverInfoConfig.footerImageUrl
-        , width $ V 62
-        , height $ V 20
+        , gravity CENTER
+        , background driverInfoConfig.footerBackgroundColor
+        , padding $ Padding 12 12 12 (12+safeMarginBottom)
+        ][ textView $
+            [ text $ getString POWERED_BY 
+            , width WRAP_CONTENT    
+            , height WRAP_CONTENT
+            , color Color.black800
+            , padding $ PaddingRight 6
+            ] <> FontStyle.body3 TypoGraphy
+        , imageView
+            [ imageWithFallback $ driverInfoConfig.footerImageUrl
+            , width $ V 62
+            , height $ V 20
+            ]
         ]
     ]
 

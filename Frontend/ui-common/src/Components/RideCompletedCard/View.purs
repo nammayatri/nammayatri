@@ -122,7 +122,7 @@ priceAndDistanceUpdateView config push =
           [ width WRAP_CONTENT
           , height WRAP_CONTENT
           , text config.topCard.title
-          , color $ if config.theme == LIGHT then Color.black800 else Color.grey900
+          , color $ if config.theme == LIGHT then Color.black800 else config.topCard.titleColor
           ] <> if config.theme == LIGHT then FontStyle.h3 TypoGraphy else FontStyle.h1 TypoGraphy
         , linearLayout
           [ width WRAP_CONTENT
@@ -143,7 +143,7 @@ priceAndDistanceUpdateView config push =
               , margin $ Margin 8 5 0 0
               , width WRAP_CONTENT
               , height WRAP_CONTENT
-              , color Color.black600
+              , color config.topCard.titleColor
               , visibility if config.topCard.fareUpdatedVisiblity then VISIBLE else GONE
               ] <> (FontStyle.title1 TypoGraphy)
           ]
@@ -656,7 +656,7 @@ whiteHorizontalLine config =
   linearLayout
     [ width MATCH_PARENT
     , height $ V 1
-    , background if config.isDriver then Color.white900 else Color.black800
+    , background if config.isDriver then Color.white900 else config.topCard.titleColor
     ][]
 
 getBottomCardHeight :: String -> Length 
