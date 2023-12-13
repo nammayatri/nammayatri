@@ -155,7 +155,7 @@ calculateDriverFeeForDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getI
               (mandateSetupDate, mandateId) = case mbDriverPlan of
                 Nothing -> (now, Nothing)
                 Just driverPlan -> (fromMaybe now driverPlan.mandateSetupDate, driverPlan.mandateId)
-              coinCashLeft = maybe 0 (.coinCovertedToCashLeft) mbDriverPlan
+              coinCashLeft = max 0 $ maybe 0 (.coinCovertedToCashLeft) mbDriverPlan
 
           driver <- QP.findById (cast driverFee.driverId) >>= fromMaybeM (PersonDoesNotExist driverFee.driverId.getId)
           let numRides = calcNumRides driverFee transporterConfig - plan.freeRideCount
@@ -187,6 +187,7 @@ calculateDriverFeeForDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getI
                 QDF.updateStatusByIds CLEARED_BY_YATRI_COINS [driverFee.id] now
                 driverFeeSplitter paymentMode plan feeWithoutDiscount totalFee driverFeeUpdateWithPlanAndOffer mandateId Nothing now
                 invoice <- mkInvoiceAgainstDriverFee driverFee (True, paymentMode == AUTOPAY)
+                updateAmountPaidByCoins driverFee.id (Just totalFee)
                 QINV.create invoice
               else do
                 when (coinCashLeft > 0) $ updateCoinToCashByDriverId (cast driverFee.driverId) (-1 * coinCashLeft)
@@ -277,7 +278,7 @@ getFinalOrderAmount feeWithoutDiscount merchantId transporterConfig driver plan 
   let dutyDate = driverFee.createdAt
       registrationDateLocal = addUTCTime (secondsToNominalDiffTime transporterConfig.timeDiffFromUtc) registrationDate
       feeWithOutDiscountPlusSpecialZone = feeWithoutDiscount + driverFee.specialZoneAmount
-  if (feeWithOutDiscountPlusSpecialZone) == 0
+  if feeWithOutDiscountPlusSpecialZone == 0
     then do
       updateCollectedPaymentStatus CLEARED Nothing now driverFee.id
       return (0, 0, Nothing, Nothing)
@@ -292,7 +293,7 @@ getFinalOrderAmount feeWithoutDiscount merchantId transporterConfig driver plan 
       if finalOrderAmount + driverFee.specialZoneAmount == 0
         then do
           updateCollectedPaymentStatus CLEARED offerId now driverFee.id
-          updateFeeWithoutDiscount driverFee.id (Just $ feeWithOutDiscountPlusSpecialZone)
+          updateFeeWithoutDiscount driverFee.id (Just feeWithOutDiscountPlusSpecialZone)
           return (0, 0, offerId, offerTitle)
         else return (feeWithOutDiscountPlusSpecialZone, finalOrderAmount + driverFee.specialZoneAmount, offerId, offerTitle)
 
@@ -328,12 +329,13 @@ driverFeeSplitter :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r) =>
 driverFeeSplitter paymentMode plan feeWithoutDiscount totalFee driverFee mandateId mbCoinAmountUsed now = do
   mandate <- maybe (pure Nothing) QMD.findById mandateId
   let amountForSpiltting = if isNothing mbCoinAmountUsed then Just $ roundToHalf totalFee else roundToHalf <$> (mandate <&> (.maxAmount))
-  let coinAmountUsed = fromMaybe 0 mbCoinAmountUsed
-  let splittedFees = splitPlatformFee feeWithoutDiscount (roundToHalf (totalFee - coinAmountUsed)) plan driverFee amountForSpiltting mbCoinAmountUsed
+      coinAmountUsed = fromMaybe 0 mbCoinAmountUsed
+      totalFeeWithCoinDeduction = roundToHalf $ totalFee - coinAmountUsed
+      splittedFees = splitPlatformFee feeWithoutDiscount totalFeeWithCoinDeduction plan driverFee amountForSpiltting mbCoinAmountUsed
   case splittedFees of
     [] -> throwError (InternalError "No driver fee entity with non zero total fee")
     (firstFee : restFees) -> do
-      resetFee firstFee.id firstFee.govtCharges firstFee.platformFee.fee firstFee.platformFee.cgst firstFee.platformFee.sgst (Just feeWithoutDiscount) now
+      resetFee firstFee.id firstFee.govtCharges firstFee.platformFee (Just feeWithoutDiscount) firstFee.amountPaidByCoin now
       mapM_ (processRestFee paymentMode) restFees
 
 unsubscribeDriverForPaymentOverdue ::

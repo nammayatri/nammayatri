@@ -1211,7 +1211,7 @@ updateSubscriptionDriverFeeAndInvoice merchantShortId opCity driverId Common.Sub
   if isJust mkDuesToAmount
     then do
       let amount = maybe 0 (/ (fromIntegral $ length dueDriverFee)) mkDuesToAmount
-      mapM_ (\feeId -> QDF.resetFee feeId 0 amount 0 0 Nothing now) (dueDriverFee <&> (.id))
+      mapM_ (\feeId -> QDF.resetFee feeId 0 (PlatformFee amount 0 0) Nothing Nothing now) (dueDriverFee <&> (.id))
       return $ mkResponse dueDriverFee
     else do
       maybe
@@ -1219,10 +1219,11 @@ updateSubscriptionDriverFeeAndInvoice merchantShortId opCity driverId Common.Sub
         ( mapM_
             ( \fee -> do
                 let id = cast (Id fee.driverFeeId)
-                    platFormFee = fromMaybe 0 (fee.platformFee)
+                    platFormFee' = fromMaybe 0 (fee.platformFee)
                     sgst = fromMaybe 0 (fee.sgst)
                     cgst = fromMaybe 0 (fee.cgst)
-                QDF.resetFee id 0 platFormFee sgst cgst Nothing now
+                    platFormFee = PlatformFee platFormFee' sgst cgst
+                QDF.resetFee id 0 platFormFee Nothing Nothing now
                 when (fee.mkManualDue == Just True) $ do QDF.updateAutoPayToManual id
                 when (fee.mkAutoPayDue == Just True && fee.mkManualDue `elem` [Nothing, Just False]) $ do QDF.updateManualToAutoPay id
             )
