@@ -484,7 +484,7 @@ getVehicleImage state = case getMerchant FunctionCall of
                                           "AUTO_RICKSHAW" -> fetchImage FF_ASSET "ny_ic_auto1"
                                           _               -> fetchImage FF_ASSET "ic_vehicle_front"
                           YATRISATHI -> getVehicleVariantImage state.data.vehicleType
-                          _           -> mkAsset $ getCityConfig state.data.config.cityConfig (getValueToLocalStore DRIVER_LOCATION)
+                          _           -> mkAsset $ getCityConfig (getValueToLocalStore DRIVER_LOCATION)
                         
                         where
                           mkAsset cityConfig =

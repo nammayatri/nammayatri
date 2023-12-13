@@ -20,6 +20,9 @@ appConfig = "appConfig"
 configuration_file :: String
 configuration_file = "v1-configuration"
 
+cityConfig :: String 
+cityConfig = "cityConfig"
+
 dotJSA :: String
 dotJSA = ".jsa"
 

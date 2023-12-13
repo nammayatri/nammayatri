@@ -25,7 +25,9 @@ import Data.Function.Uncurried (Fn1)
 import Foreign (Foreign, unsafeToForeign)
 import Foreign.Generic (encode)
 import MerchantConfig.DefaultConfig as DefaultConfig
+import MerchantConfig.DefaultCityConfig as DefaultCityConfig
 import MerchantConfig.Types (AppConfig(..))
+import Common.Types.Config
 import Data.Function.Uncurried (Fn2, Fn3, runFn2, runFn3)
 import Presto.Core.Types.Language.Flow (Flow)
 import Common.Types.App (FlowBT)
@@ -52,6 +54,14 @@ loadAppConfig _ =
       
       mergedConfig = mergeObjects $ [ defaultConfig] <> merchantConfig
       _ = runFn2 loadInWindow ReExport.appConfig mergedConfig
+  in mergedConfig
+
+loadCityConfig :: CityConfigs -> Foreign
+loadCityConfig cityConfig' =
+  let defaultConfig = unsafeToForeign DefaultCityConfig.config
+      config = unsafeToForeign cityConfig'
+      mergedConfig = mergeObjects $ [defaultConfig ] <> [config]
+      _ = runFn2 loadInWindow ReExport.cityConfig mergedConfig
   in mergedConfig
 
 getConfigFromFile :: String -> Array Foreign
@@ -97,6 +107,31 @@ getAppConfig key = do
       Nothing -> loadAppConfig ""
       Just config -> config
   decodeForeignObject config DefaultConfig.config
+
+--- decode city config
+
+getCityConfigFlowBT :: forall st. String -> CityConfigs -> FlowBT String st (Array CityConfig)
+getCityConfigFlowBT key config = lift $ lift $ getCityConfigFlow key config
+
+getCityConfigFlow :: forall st. String -> CityConfigs -> Flow st (Array CityConfig)
+getCityConfigFlow key config = liftFlow $ runEffectFn2 getCityConfigEff key config
+
+getCityConfigEff :: EffectFn2 String CityConfigs (Array CityConfig)
+getCityConfigEff = mkEffectFn2 \key apiResp -> pure $ getCities key apiResp
+  where
+    getCities :: String -> CityConfigs -> Array CityConfig
+    getCities key apiResp = 
+      let x = fetchCityConfig key apiResp
+      in x.cities
+
+fetchCityConfig :: String -> CityConfigs -> CityConfigs
+fetchCityConfig key cityConfigFromAPI = do 
+  let 
+    cityConfig = runFn3 getFromWindow key Nothing Just
+    config = case cityConfig of 
+      Nothing -> loadCityConfig cityConfigFromAPI
+      Just config -> config
+  decodeForeignObject config DefaultCityConfig.config
 
 getCurrency :: String -> String
 getCurrency key = (getAppConfig key).currency

@@ -93,13 +93,13 @@ getLocationMapImage :: Maybe String -> AppConfig -> String
 getLocationMapImage value config = 
   if (DSC.null cityConfig.mapImage) then "ny_ic_driver_location_undetectable" else cityConfig.mapImage
   where 
-    cityConfig = getCityConfig config.cityConfig $ Mb.fromMaybe "" value
+    cityConfig = getCityConfig $ Mb.fromMaybe "" value
 
 getChangeLanguageText :: Maybe String -> AppConfig -> String
 getChangeLanguageText value config = 
   getStringFromLocal cityConfig.languageKey CHANGE_LANGUAGE_STR 
   where 
-    cityConfig = getCityConfig config.cityConfig $ Mb.fromMaybe "" value
+    cityConfig = getCityConfig $ Mb.fromMaybe "" value
 
 
 

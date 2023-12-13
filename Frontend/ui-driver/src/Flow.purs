@@ -180,6 +180,8 @@ baseAppFlow baseFlow event = do
     initialFlow :: FlowBT String Unit
     initialFlow = do
       let regToken = getValueToLocalStore REGISTERATION_TOKEN
+      (API.GetCityRes apiResp) <- Remote.getMerchantOperatingCityListBT ""
+      cityConfig <- getCityConfigFlowBT Constants.cityConfig $ HU.transformCities (API.GetCityRes apiResp)
       config <- getAppConfigFlowBT Constants.appConfig
       isLocationPermission <- lift $ lift $ liftFlow $ isLocationPermissionEnabled unit
       if isTokenValid regToken then do
@@ -448,10 +450,12 @@ onBoardingFlow = do
   permissions <- checkAllPermissions false config.permissions.locationPermission
   (GetDriverInfoResp getDriverInfoResp) <- getDriverInfoDataFromCache globalstate false
   (DriverRegistrationStatusResp resp ) <- driverRegistrationStatusBT (DriverRegistrationStatusReq { })
+  (API.GetCityRes apiResp) <- Remote.getMerchantOperatingCityListBT ""
+  void $ getCityConfigFlowBT Constants.cityConfig $ HU.transformCities (API.GetCityRes apiResp)
   let limitReachedFor = if resp.rcVerificationStatus == "LIMIT_EXCEED" then Just "RC"
                         else if resp.dlVerificationStatus == "LIMIT_EXCEED" then Just "DL" 
                         else Nothing
-      cityConfig = getCityConfig config.cityConfig (getValueToLocalStore DRIVER_LOCATION)
+      cityConfig = getCityConfig (getValueToLocalStore DRIVER_LOCATION)
   modifyScreenState $ RegisterScreenStateType (\registerationScreen -> 
                   registerationScreen { data { 
                       vehicleDetailsStatus = getStatusValue resp.rcVerificationStatus,

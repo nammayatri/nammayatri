@@ -3211,7 +3211,11 @@ newtype GetCityRes = GetCityRes (Array CityRes)
 
 newtype CityRes = CityRes {
   name :: String ,
-  code :: String
+  code :: String , 
+  language :: String ,
+  location :: LatLong ,
+  subscription :: Boolean ,
+  supportNumber :: Maybe String 
 }
 
 data GetCityReq = GetCityReq String

@@ -93,6 +93,10 @@ type CityConfig = {
   languageKey :: String
 }
 
+type CityConfigs = {
+  cities :: Array CityConfig
+}
+
 type DashboardConfig = {
     url :: String
   , enable :: Boolean

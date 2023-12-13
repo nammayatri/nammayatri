@@ -28,7 +28,7 @@ import Data.Number (pi, sin, cos, asin, sqrt)
 import Data.String.Common as DSC
 import MerchantConfig.Utils
 import Common.Types.App (LazyCheck(..), CalendarDate, CalendarWeek, PaymentStatus(..))
-import Common.Types.Config (CityConfig(..))
+import Common.Types.Config (CityConfig(..), CityConfigs)
 import Types.App (FlowBT, defaultGlobalState)
 import Control.Monad.Except (runExcept, runExceptT)
 import Data.Array ((!!), fold, any, head, filter) as DA
@@ -45,9 +45,10 @@ import Data.String (Pattern(..), split) as DS
 import Data.String as DS
 import Data.Traversable (traverse)
 import Effect (Effect)
+import Effect.Unsafe (unsafePerformEffect)
 import Effect.Aff (Aff (..), error, killFiber, launchAff, launchAff_, makeAff, nonCanceler, Fiber)
 import Effect.Class (liftEffect)
-import Engineering.Helpers.Commons (parseFloat, setText, getCurrentUTC, getPastDays, getPastWeeks) as ReExport
+import Engineering.Helpers.Commons (parseFloat, setText, getCurrentUTC, getPastDays, getPastWeeks, getWindowVariable) as ReExport
 import Foreign (Foreign)
 import Foreign.Class (class Decode, class Encode, decode)
 import Juspay.OTP.Reader (initiateSMSRetriever)
@@ -70,7 +71,7 @@ import Control.Monad.Except.Trans (lift)
 import Foreign.Generic (Foreign, decodeJSON, encodeJSON)
 import Data.Newtype (class Newtype)
 import Presto.Core.Types.API (class StandardEncode, standardEncode)
-import Services.API (PromotionPopupConfig)
+import Services.API (PromotionPopupConfig, GetCityRes(..), CityRes(..))
 import Storage (KeyStore) 
 import JBridge (getCurrentPositionWithTimeout, firebaseLogEventWithParams, translateStringWithTimeout, openWhatsAppSupport, showDialer)
 import Effect.Uncurried(EffectFn1, EffectFn4, EffectFn3,runEffectFn3)
@@ -87,6 +88,9 @@ import Engineering.Helpers.BackTrack (liftFlowBT)
 import Control.Transformers.Back.Trans (runBackT)
 import ConfigProvider
 import Screens.Types as ST
+import MerchantConfig.DefaultCityConfig as DefaultCityConfig
+import Services.Accessor (_lat, _lon)
+import Data.Lens ((^.))
 
 type AffSuccess s = (s -> Effect Unit)
 
@@ -567,8 +571,7 @@ incrementValueOfLocalStoreKey key = do
 contactSupportNumber :: String -> Effect Unit
 contactSupportNumber supportType = do
   void $ launchAff $ flowRunner defaultGlobalState $ runExceptT $ runBackT do 
-    config <- getAppConfigFlowBT appConfig
-    let city = getCityConfig config.cityConfig (getValueToLocalStore DRIVER_LOCATION)
+    let city = getCityConfig (getValueToLocalStore DRIVER_LOCATION)
         supportNumber = if DSC.null city.supportNumber then getSupportNumber "" else city.supportNumber
     if supportType == "WHATSAPP" && DSC.null city.supportNumber then 
       liftFlowBT $ openWhatsAppSupport $ getWhatsAppSupportNo $ show (getMerchant FunctionCall) 
@@ -576,9 +579,11 @@ contactSupportNumber supportType = do
         pure $ showDialer supportNumber false
 
 
-getCityConfig :: Array CityConfig -> String -> CityConfig
-getCityConfig cityConfig cityName = do
-  let dummyCityConfig = {
+
+getCityConfig :: String -> CityConfig
+getCityConfig cityName = do
+  let cityConfig = getCities ""
+      dummyCityConfig = {
                           cityName : "",
                           mapImage : "",
                           cityCode : "",
@@ -589,7 +594,27 @@ getCityConfig cityConfig cityName = do
                           languageKey : ""
                         }
   fromMaybe dummyCityConfig $ DA.find (\item -> item.cityName == cityName) cityConfig
+  where
+    getCities :: String -> Array CityConfig
+    getCities _ = 
+      case unsafePerformEffect (ReExport.getWindowVariable cityConfig Just Nothing) of
+        Just value -> value.cities
+        Nothing -> DefaultCityConfig.config.cities 
   
+transformCities :: GetCityRes -> CityConfigs
+transformCities (GetCityRes apiResp) = 
+  { cities : map ( \(CityRes item) -> 
+              { cityName : item.name,
+                cityCode : item.code,
+                showSubscriptions : item.subscription,
+                cityLat : (item.location)^._lat,
+                cityLong : (item.location)^._lon,
+                supportNumber : fromMaybe "" item.supportNumber,
+                languageKey : item.language,
+                mapImage : ""
+              }) (apiResp)
+  }
+
 formatSecIntoMinSecs :: Int -> String
 formatSecIntoMinSecs seconds = 
   let

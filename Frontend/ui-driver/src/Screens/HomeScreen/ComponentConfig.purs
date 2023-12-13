@@ -978,7 +978,7 @@ accessibilityConfig dummy = { primaryText : getString CUSTOMER_MAY_NEED_ASSISTAN
 getAccessibilityPopupData :: ST.HomeScreenState -> Maybe ST.DisabilityType -> Boolean -> ContentConfig
 getAccessibilityPopupData state pwdtype isDriverArrived = 
   let accessibilityConfig' = accessibilityConfig Config
-      city = (HU.getCityConfig state.data.config.cityConfig (getValueToLocalStore DRIVER_LOCATION))
+      city = (HU.getCityConfig (getValueToLocalStore DRIVER_LOCATION))
   in case pwdtype, isDriverArrived of 
       Just ST.BLIND_AND_LOW_VISION, true ->  accessibilityConfig' 
                                               { secondaryText = getString CUSTOMER_HAS_POOR_VISION_SOUND_HORN_AT_PICKUP ,

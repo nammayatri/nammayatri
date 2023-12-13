@@ -443,7 +443,7 @@ tabImageView state push =
   ]
   where 
     getVehicleImage :: ST.DriverProfileScreenState -> String 
-    getVehicleImage state = mkAsset $ getCityConfig state.data.config.cityConfig (getValueToLocalStore DRIVER_LOCATION)
+    getVehicleImage state = mkAsset $ getCityConfig (getValueToLocalStore DRIVER_LOCATION)
 
     mkAsset :: CityConfig -> String
     mkAsset cityConfig = 
