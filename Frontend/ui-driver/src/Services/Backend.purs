@@ -1246,3 +1246,13 @@ getMerchantOperatingCityListBT _ = do
     where
     errorHandler errorPayload = do 
             BackT $ pure GoBack
+
+------------------------------------------------------------------------- Referred Drivers -----------------------------------------------------------------------------
+
+referredDriversBT :: ReferredDriversReq -> FlowBT String ReferredDriversResp
+referredDriversBT payload = do
+    headers <- getHeaders' "" true
+    withAPIResultBT (EP.referredDrivers "") identity errorHandler (lift $ lift $ callAPI headers payload)
+    where 
+        errorHandler (ErrorPayload errorPayload) =  do
+            BackT $ pure GoBack

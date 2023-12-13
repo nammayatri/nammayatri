@@ -37,7 +37,7 @@ import JBridge (lottieAnimationConfig, startLottieProcess)
 import Language.Strings (getString, getVarString)
 import Language.Types (STR(..))
 import Prelude (Unit, bind, const, map, not, pure, show, unit, void, ($), (&&), (+), (-), (<<<), (<>), (==), (>=), (||), (/=), (*))
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, alignParentBottom, background, clickable, color, cornerRadius, fontStyle, gravity, height, id, imageUrl, imageView, imageWithFallback, linearLayout, lottieAnimationView, margin, onBackPressed, onClick, orientation, padding, relativeLayout, stroke, text, textSize, textView, visibility, weight, width, layoutGravity)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, alignParentBottom, background, clickable, color, cornerRadius, fontStyle, gravity, height, id, imageUrl, imageView, imageWithFallback, linearLayout, lottieAnimationView, margin, onBackPressed, onClick, orientation, padding, relativeLayout, stroke, text, textSize, textView, visibility, weight, width, layoutGravity, editText, hint, pattern, onChange)
 import PrestoDOM.Animation as PrestoAnim
 import Screens.RegistrationScreen.Controller (Action(..), eval, ScreenOutput)
 import Screens.Types (RegisterationStep(..), StageStatus(..), ValidationStatus(..))
@@ -45,6 +45,11 @@ import Screens.Types as ST
 import Storage (KeyStore(..), getValueToLocalNativeStore)
 import Styles.Colors as Color
 import Storage(getValueToLocalStore , KeyStore(..))
+import Components.PrimaryEditText as PrimaryEditText
+import Engineering.Helpers.Commons as EHC
+import Data.String as DS
+import Components.InAppKeyboardModal as InAppKeyboardModal
+import Mobility.Prelude
 
 screen :: ST.RegistrationScreenState -> Screen Action ST.RegistrationScreenState ScreenOutput
 screen initialState =
@@ -190,7 +195,16 @@ view push state =
                 , visibility if all (_ == COMPLETED) [ state.data.vehicleDetailsStatus, state.data.drivingLicenseStatus, state.data.permissionsStatus ] then VISIBLE else GONE
                 ]
                 [ PrimaryButton.view (push <<< PrimaryButtonAction) (primaryButtonConfig state) ]
+            , linearLayout
+                [ height WRAP_CONTENT
+                , width MATCH_PARENT
+                , margin $ Margin 16 0 16 16
+                , clickable false
+                , visibility $ boolToVisibility state.data.cityConfig.showDriverReferral
+                ][enterReferralCode push state]
+            
             ]
+            , if state.props.enterReferralCodeModal then enterReferralCodeModal push state else linearLayout[][]
         ]
       <> if state.props.logoutModalView then [ logoutPopupModal push state ] else []
 
@@ -360,6 +374,45 @@ messageView push state =
             ] <> FontStyle.body9 TypoGraphy
           ]
       ]
+
+enterReferralCode :: forall w . (Action -> Effect Unit) -> ST.RegistrationScreenState -> PrestoDOM (Effect Unit) w
+enterReferralCode push state =
+  let allStepsCompleted = all (_ == COMPLETED) [ state.data.vehicleDetailsStatus, state.data.drivingLicenseStatus, state.data.permissionsStatus ]
+    in linearLayout
+            [ width MATCH_PARENT
+            , height WRAP_CONTENT
+            , orientation HORIZONTAL
+            , stroke $ "1," <> Color.grey900
+            , cornerRadius 4.0
+            , padding $ Padding 10 10 10 10
+            ][  textView $
+                [ width MATCH_PARENT
+                , height WRAP_CONTENT
+                , color if allStepsCompleted then Color.black900 else Color.greyTextColor
+                , text $ getString if state.props.referralCodeSubmitted then REFERRAL_APPLIED else HAVE_A_REFERRAL_CODE
+                , weight 1.0
+                ] <> FontStyle.body3 TypoGraphy
+              , textView $
+                [ width WRAP_CONTENT
+                , height WRAP_CONTENT
+                , text $ getString ENTER_CODE
+                , margin $ MarginRight 7
+                , color if allStepsCompleted then Color.darkBlue else Color.primaryBG
+                , onClick push $ const $ EnterReferralCode allStepsCompleted
+                , visibility $ boolToVisibility $ not state.props.referralCodeSubmitted
+                ] <> FontStyle.body3 TypoGraphy
+              , imageView
+                [ width $ V 20
+                , height $ V 20 
+                , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_green_tick"
+                , visibility $ boolToVisibility state.props.referralCodeSubmitted
+                , margin $ MarginRight 7
+                ]
+              ]
+
+enterReferralCodeModal :: forall w . (Action -> Effect Unit) -> ST.RegistrationScreenState -> PrestoDOM (Effect Unit) w
+enterReferralCodeModal push state =
+  InAppKeyboardModal.view (push <<< InAppKeyboardModalAction) (enterReferralStateConfig state)
 
 checkLimitReached :: ST.RegisterationStep -> Maybe String -> Boolean
 checkLimitReached step limitReachedFor = 

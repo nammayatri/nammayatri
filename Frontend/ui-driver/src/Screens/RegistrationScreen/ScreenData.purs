@@ -53,11 +53,17 @@ initData = {
         phoneNumber : "",
         lastUpdateTime : "",
         cityConfig : dummyCityConfig,
-        config : getAppConfig appConfig
+        config : getAppConfig appConfig,
+        referralCode : "",
+        referral_code_input_data : ""
       },
       props: {
         limitReachedFor : Nothing,
-        logoutModalView : false
+        logoutModalView : false,
+        isValidReferralCode : true,
+        enterOtpFocusIndex : 0,
+        enterReferralCodeModal : false,
+        referralCodeSubmitted : false
       }
   }
 
@@ -70,5 +76,6 @@ dummyCityConfig = {
                     cityLat : 0.0,
                     cityLong : 0.0,
                     supportNumber : "",
-                    languageKey : ""
+                    languageKey : "",
+                    showDriverReferral : false
                   }

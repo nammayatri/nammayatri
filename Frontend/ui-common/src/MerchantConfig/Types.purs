@@ -90,7 +90,8 @@ type CityConfig = {
   cityLat :: Number,
   cityLong :: Number,
   supportNumber :: String,
-  languageKey :: String
+  languageKey :: String,
+  showDriverReferral :: Boolean
 }
 
 type DashboardConfig = {

@@ -24,12 +24,17 @@ import Helpers.Utils (getStatus, contactSupportNumber)
 import JBridge as JB
 import Log (trackAppActionClick, trackAppBackPress, trackAppEndScreen, trackAppScreenEvent, trackAppScreenRender, trackAppTextInput)
 import MerchantConfig.Utils (Merchant(..), getMerchant)
-import Prelude (class Show, bind, discard, pure, show, unit, ($), void)
-import PrestoDOM (Eval, continue, continueWithCmd, exit)
+import Prelude (class Show, bind, discard, pure, show, unit, ($), void, (>), (+), (<>), (>=), (-), not, min)
+import PrestoDOM (Eval, continue, continueWithCmd, exit, updateAndExit)
 import PrestoDOM.Types.Core (class Loggable)
 import Screens (ScreenName(..), getScreen)
 import Screens.Types (RegisterationStep(..), RegistrationScreenState, StageStatus(..))
 import Services.Config (getSupportNumber, getWhatsAppSupportNo)
+import Components.PrimaryEditText as PrimaryEditText
+import Components.InAppKeyboardModal as InAppKeyboardModal
+import Data.String as DS
+import Language.Strings (getString)
+import Language.Types (STR(..))
 
 instance showAction :: Show Action where
   show _ = ""
@@ -63,6 +68,12 @@ instance loggableAction :: Loggable Action where
         trackAppActionClick appId (getScreen REGISTRATION_SCREEN) "primary_button" "next_on_click"
         trackAppEndScreen appId (getScreen REGISTRATION_SCREEN)
       PrimaryButtonController.NoAction -> trackAppActionClick appId (getScreen REGISTRATION_SCREEN) "primary_button" "no_action"
+    PrimaryEditTextActionController act -> case act of
+      PrimaryEditText.TextChanged id value -> trackAppTextInput appId (getScreen VEHICLE_DETAILS_SCREEN) "registration_number_text_changed" "primary_edit_text"
+      PrimaryEditText.FocusChanged _ -> trackAppTextInput appId (getScreen VEHICLE_DETAILS_SCREEN) "registration_number_text_focus_changed" "primary_edit_text"
+    ReferralCodeTextChanged str -> pure unit
+    SubmitReferralCode -> pure unit
+    EnterReferralCode val -> pure unit
     _ -> trackAppActionClick appId (getScreen REGISTRATION_SCREEN) "popup_modal_action" "no_action"
 
     
@@ -74,6 +85,7 @@ data ScreenOutput = GoBack
                   | GoToOnboardSubscription
                   | GoToHomeScreen
                   | RefreshPage
+                  | ReferralCode RegistrationScreenState
 
 data Action = BackPressed 
             | NoAction
@@ -84,12 +96,21 @@ data Action = BackPressed
             | Refresh
             | ContactSupport
             | AppOnboardingNavBarAC AppOnboardingNavBar.Action
+            | PrimaryEditTextActionController PrimaryEditText.Action 
+            | ReferralCodeTextChanged String
+            | SubmitReferralCode
+            | EnterReferralCode Boolean
+            | InAppKeyboardModalAction InAppKeyboardModal.Action
+            
 
 eval :: Action -> RegistrationScreenState -> Eval Action ScreenOutput RegistrationScreenState
 eval AfterRender state = continue state
 eval BackPressed state = do
-  void $ pure $ JB.minimizeApp ""
-  continue state
+  if state.props.enterReferralCodeModal
+      then continue state { props = state.props {enterOtpFocusIndex = 0, enterReferralCodeModal = false}, data {referralCode = ""} }
+    else do
+        void $ pure $ JB.minimizeApp ""
+        continue state
 eval (RegistrationAction item ) state = 
        case item of 
           DRIVING_LICENSE_OPTION -> exit $ GoToUploadDriverLicense state
@@ -99,7 +120,7 @@ eval (RegistrationAction item ) state =
 
 eval (PopUpModalLogoutAction (PopUpModal.OnButton2Click)) state = continue $ (state {props {logoutModalView= false}})
 
-eval (PopUpModalLogoutAction (PopUpModal.OnButton1Click)) state = exit $ LogoutAccount
+eval (PopUpModalLogoutAction (PopUpModal.OnButton1Click)) state = exit LogoutAccount
 
 eval (PopUpModalLogoutAction (PopUpModal.DismissPopup)) state = continue state {props {logoutModalView= false}}
 
@@ -108,6 +129,36 @@ eval (PrimaryButtonAction (PrimaryButtonController.OnClick)) state = exit GoToHo
 eval Refresh state = exit RefreshPage
 
 eval (AppOnboardingNavBarAC (AppOnboardingNavBar.Logout)) state = continue $ (state {props{logoutModalView = true}})
+
+eval (PrimaryEditTextActionController (PrimaryEditText.TextChanged id value)) state = continue state
+
+eval (ReferralCodeTextChanged val) state = continue state{data { referralCode = val }, props {isValidReferralCode = true} }
+
+eval SubmitReferralCode state = exit $ ReferralCode state
+
+eval (EnterReferralCode val ) state = if not val then do
+                                        pure $ JB.toast $ getString COMPLETE_STEPS_TO_APPLY_REFERRAL
+                                        continue state
+                                      else continue state {props {enterReferralCodeModal = true}}
+
+eval (InAppKeyboardModalAction (InAppKeyboardModal.OnSelection key index)) state = do
+  let
+    referralCode = if (index + 1) > (DS.length state.data.referralCode) then (DS.take 6 (state.data.referralCode <> key))
+                   else (DS.take index (state.data.referralCode)) <> key <> (DS.take 6 (DS.drop (index+1) state.data.referralCode))
+    focusIndex = DS.length referralCode
+    newState = state { props = state.props {enterOtpFocusIndex = focusIndex }, data{referralCode = referralCode} }
+  continue newState
+eval (InAppKeyboardModalAction (InAppKeyboardModal.OnClickBack text)) state = do
+  let
+    referralCode = if DS.length( text ) > 0 then (DS.take (DS.length ( text ) - 1 ) text) else ""
+    focusIndex = DS.length referralCode
+  continue state { props = state.props { enterOtpFocusIndex = focusIndex, isValidReferralCode = true }, data {referralCode = referralCode} }
+eval (InAppKeyboardModalAction (InAppKeyboardModal.OnclickTextBox index)) state = do
+  let focusIndex = min index (DS.length  state.data.referralCode)
+      referralCode = DS.take index state.data.referralCode
+  continue state { props = state.props { enterOtpFocusIndex = focusIndex, isValidReferralCode = true }, data {referralCode = referralCode} }
+eval (InAppKeyboardModalAction (InAppKeyboardModal.BackPressed)) state = continue state { props = state.props {enterOtpFocusIndex = 0, enterReferralCodeModal = false}, data {referralCode = ""} }
+eval (InAppKeyboardModalAction (InAppKeyboardModal.OnClickDone text)) state = exit $ ReferralCode state
 
 eval ContactSupport state = continueWithCmd state [do
   let merchant = getMerchant FunctionCall

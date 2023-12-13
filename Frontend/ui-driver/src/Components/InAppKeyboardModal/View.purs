@@ -37,6 +37,8 @@ import Language.Strings (getString)
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Common.Types.App (LazyCheck(..))
 import Prelude ((<>))
+import Debug (spy)
+import Data.Array as DA
 
 view :: forall w . (Action -> Effect Unit) -> InAppKeyboardModalState -> PrestoDOM (Effect Unit) w
 view push state =
@@ -109,8 +111,8 @@ textBoxes push state =
   , clickable false
   ](mapWithIndex (\index item ->
       textView $
-      [ width (V 48)
-      , height (V 56)
+      [ width state.textBoxConfig.width
+      , height state.textBoxConfig.height
       , color Color.greyTextColor
       , text ( take 1 (drop index state.inputTextConfig.text) )
       , gravity CENTER
@@ -118,7 +120,7 @@ textBoxes push state =
       , stroke ("1," <> if (state.otpIncorrect || state.otpAttemptsExceeded ) then Color.textDanger else if state.inputTextConfig.focusIndex == index then Color.highlightBorderColor else Color.borderColorLight )
       , margin (Margin ((screenWidth unit)/30) 0 ((screenWidth unit)/30) 0)
       , onClick push (const (OnclickTextBox index))
-      ]<> (FontStyle.getFontStyle state.inputTextConfig.textStyle LanguageStyle)) [1,2,3,4])
+      ]<> (FontStyle.getFontStyle state.inputTextConfig.textStyle LanguageStyle)) state.textBoxConfig.textBoxesArray)
 
 singleTextBox :: forall w . (Action -> Effect Unit) -> InAppKeyboardModalState -> PrestoDOM (Effect Unit) w
 singleTextBox push state =
@@ -237,8 +239,8 @@ keyboard push state =
            , cornerRadius 4.0
            , cornerRadii $ if key == "back" then Corners 30.0 false false false true else Corners 30.0 false false true false
            , onClick push if key == "back" then (const (OnClickBack state.inputTextConfig.text)) else (const (OnClickDone state.inputTextConfig.text))
-           , clickable if key == "back" then true else 
-                      if ((length state.inputTextConfig.text == 4  && state.modalType == KeyboardModalType.OTP && not state.otpIncorrect ) || (length state.inputTextConfig.text == 10  && state.modalType == KeyboardModalType.MOBILE__NUMBER && state.isValidAlternateNumber)) then true else false 
+           , clickable if key == "back" then true 
+                      else ((length state.inputTextConfig.text == (DA.length state.textBoxConfig.textBoxesArray) && state.modalType == KeyboardModalType.OTP && not state.otpIncorrect ) || (length state.inputTextConfig.text == 10  && state.modalType == KeyboardModalType.MOBILE__NUMBER && state.isValidAlternateNumber))
            ][ 
                 if key == "back" then 
                 imageView

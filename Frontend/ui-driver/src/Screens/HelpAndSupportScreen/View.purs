@@ -282,7 +282,7 @@ allOtherTopics state push =
               , height WRAP_CONTENT
               , orientation HORIZONTAL
               , gravity CENTER_VERTICAL
-              , padding (Padding 15 17 15 17)
+              , padding $ Padding 15 17 15 17
               ][  textView $
                   [ height WRAP_CONTENT
                   , weight 1.0

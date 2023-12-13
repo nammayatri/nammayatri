@@ -3239,3 +3239,31 @@ instance standardGetCityRes :: StandardEncode GetCityRes where standardEncode (G
 instance showGetCityRes :: Show GetCityRes where show = genericShow
 instance decodeGetCityRes :: Decode GetCityRes where decode = defaultDecode
 instance encodeGetCityRes :: Encode GetCityRes where encode = defaultEncode
+
+
+----------------------------- Referred Drivers -----------------------------------------------------
+
+data ReferredDriversReq = ReferredDriversReq String
+
+newtype ReferredDriversResp = ReferredDriversResp
+ {
+   value :: Int
+ }
+
+instance makeReferredDriversReq :: RestEndpoint ReferredDriversReq ReferredDriversResp where
+    makeRequest reqBody headers = defaultMakeRequest GET (EP.referredDrivers "") headers reqBody Nothing
+    decodeResponse = decodeJSON
+    encodeRequest req = standardEncode req
+
+derive instance genericReferredDriversResp :: Generic ReferredDriversResp _
+derive instance newtypeReferredDriversResp :: Newtype ReferredDriversResp _
+instance standardReferredDriversResp :: StandardEncode ReferredDriversResp where standardEncode (ReferredDriversResp id) = standardEncode id
+instance showReferredDriversResp :: Show ReferredDriversResp where show = genericShow
+instance decodeReferredDriversResp :: Decode ReferredDriversResp where decode = defaultDecode
+instance encodeReferredDriversResp :: Encode ReferredDriversResp where encode = defaultEncode
+
+derive instance genericReferredDriversReq :: Generic ReferredDriversReq _
+instance showReferredDriversReq :: Show ReferredDriversReq where show = genericShow
+instance decodeReferredDriversReq :: Decode ReferredDriversReq where decode = defaultDecode
+instance encodeRReferredDriversReq :: Encode ReferredDriversReq where encode = defaultEncode
+instance standardReferredDriversReq :: StandardEncode ReferredDriversReq where standardEncode body = standardEncode {}

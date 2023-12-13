@@ -170,6 +170,9 @@ leaderBoardDaily date = (getBaseUrl "") <> "/driver/leaderBoard/daily?date=" <> 
 leaderBoardWeekly :: String -> String -> String
 leaderBoardWeekly fromDate toDate = (getBaseUrl "") <> "/driver/leaderBoard/weekly?fromDate=" <> fromDate <> "&toDate=" <> toDate
 
+referredDrivers :: String -> String
+referredDrivers dummy = (getBaseUrl "") <> "/driver/referral/getReferredDrivers"
+
 currentDateAndTime :: String -> String
 currentDateAndTime _ = "https://tools.aimylogic.com/api/now"
 

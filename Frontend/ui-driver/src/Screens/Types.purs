@@ -249,7 +249,9 @@ type RegistrationScreenData = {
   subscriptionStatus :: StageStatus,
   lastUpdateTime :: String,
   cityConfig :: CityConfig,
-  config :: AppConfig
+  config :: AppConfig,
+  referralCode :: String,
+  referral_code_input_data :: String
 }
 
 type StepProgress = {
@@ -259,7 +261,11 @@ type StepProgress = {
 
 type RegistrationScreenProps = {
   logoutModalView :: Boolean,
-  limitReachedFor :: Maybe String
+  limitReachedFor :: Maybe String,
+  isValidReferralCode :: Boolean,
+  enterOtpFocusIndex :: Int,
+  enterReferralCodeModal :: Boolean,
+  referralCodeSubmitted :: Boolean
 }
 
 data RegisterationStep = DRIVING_LICENSE_OPTION | VEHICLE_DETAILS_OPTION | GRANT_PERMISSION | SUBSCRIPTION_PLAN
@@ -2110,4 +2116,23 @@ type WelcomeScreenState = {
 
 type WelcomeScreenData = {
   logField :: Object Foreign
+}
+
+---------------------------------------------DriverReferralScreen -------------------------------------
+
+type DriverReferralScreenState = {
+  data :: DriverReferralScreenData,
+  props :: DriverReferralScreenProps
+}
+
+type DriverReferralScreenData = {
+    logField :: Object Foreign
+  , config :: AppConfig
+  , referredDrivers :: String
+  , referralCode :: String
+}
+
+type DriverReferralScreenProps = {
+  showDriverReferralQRCode :: Boolean
+, showNewDriverReferralText :: Boolean
 }

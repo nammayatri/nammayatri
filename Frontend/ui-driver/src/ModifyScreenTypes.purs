@@ -62,12 +62,14 @@ modifyScreenState st =
     AcknowledgementScreenType a -> modifyState (\(GlobalState state) -> GlobalState $ state { acknowledgementScreen = a state.acknowledgementScreen })
     AadhaarVerificationScreenType a -> modifyState (\(GlobalState state) -> GlobalState $ state { aadhaarVerificationScreen = a state.aadhaarVerificationScreen })
     GlobalPropsType a -> modifyState (\(GlobalState state) -> GlobalState $ state { globalProps = a state.globalProps })
-    SubscriptionScreenStateType a->  modifyState (\(GlobalState state) -> GlobalState $ state { subscriptionScreen = a state.subscriptionScreen })
-    OnBoardingSubscriptionScreenStateType a-> modifyState (\(GlobalState state) -> GlobalState $ state { onBoardingSubscriptionScreen = a state.onBoardingSubscriptionScreen })
-    PaymentHistoryScreenStateType a->  modifyState (\(GlobalState state) -> GlobalState $ state { paymentHistoryScreen = a state.paymentHistoryScreen })
-    DriverSavedLocationScreenStateType a-> modifyState (\(GlobalState state) -> GlobalState $ state {driverSavedLocationScreen = a state.driverSavedLocationScreen})
-    ChooseCityScreenStateType a-> modifyState (\(GlobalState state) -> GlobalState $ state {chooseCityScreen = a state.chooseCityScreen})
-    WelcomeScreenStateType a-> modifyState (\(GlobalState state) -> GlobalState $ state {welcomeScreen = a state.welcomeScreen})
+    SubscriptionScreenStateType a ->  modifyState (\(GlobalState state) -> GlobalState $ state { subscriptionScreen = a state.subscriptionScreen })
+    OnBoardingSubscriptionScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state { onBoardingSubscriptionScreen = a state.onBoardingSubscriptionScreen })
+    PaymentHistoryScreenStateType a ->  modifyState (\(GlobalState state) -> GlobalState $ state { paymentHistoryScreen = a state.paymentHistoryScreen })
+    DriverSavedLocationScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {driverSavedLocationScreen = a state.driverSavedLocationScreen})
+    ChooseCityScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {chooseCityScreen = a state.chooseCityScreen})
+    WelcomeScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {welcomeScreen = a state.welcomeScreen})
+    DriverReferralScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {driverReferralScreen = a state.driverReferralScreen})
+    RegistrationScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {registrationScreen = a state.registrationScreen})
 
 updateStage :: ScreenStage -> FlowBT String Unit
 updateStage stage = do
