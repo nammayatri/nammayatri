@@ -548,6 +548,12 @@ updateAllExecutionPendingToManualOverdueByDriverId driverId = do
         ]
     ]
 
+updateFeeWithoutDiscount :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DriverFee -> Maybe HighPrecMoney -> m ()
+updateFeeWithoutDiscount driverFeeId mbFeeWithoutDiscount = do
+  updateOneWithKV
+    [Se.Set BeamDF.feeWithoutDiscount mbFeeWithoutDiscount]
+    [Se.Is BeamDF.id (Se.Eq driverFeeId.getId)]
+
 instance FromTType' BeamDF.DriverFee DriverFee where
   fromTType' BeamDF.DriverFeeT {..} = do
     pure $
