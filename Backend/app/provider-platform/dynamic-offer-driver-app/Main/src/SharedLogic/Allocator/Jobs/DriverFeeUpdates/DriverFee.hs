@@ -16,8 +16,6 @@ module SharedLogic.Allocator.Jobs.DriverFeeUpdates.DriverFee
   ( sendPaymentReminderToDriver,
     unsubscribeDriverForPaymentOverdue,
     calculateDriverFeeForDrivers,
-    mkCoinAdjustedInSubscriptionByDriverIdKey,
-    getCoinAdjustedInSubscriptionByDriverIdKey,
   )
 where
 
@@ -50,7 +48,7 @@ import Kernel.Utils.Common
 import Lib.Scheduler
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import SharedLogic.Allocator
-import SharedLogic.DriverFee (calcNumRides, calculatePlatformFeeAttr, getCoinAdjustedInSubscriptionByDriverIdKey, mkCoinAdjustedInSubscriptionByDriverIdKey, roundToHalf, setCoinToCashUsedAmount)
+import SharedLogic.DriverFee (calcNumRides, calculatePlatformFeeAttr, roundToHalf, setCoinToCashUsedAmount)
 import qualified SharedLogic.Payment as SPayment
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC

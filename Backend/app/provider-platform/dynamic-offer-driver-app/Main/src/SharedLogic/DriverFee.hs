@@ -177,7 +177,7 @@ setCoinToCashUsedAmount driverFee totalFee = do
   coinAdjustedInSubscriptionKeyExists <- getCoinAdjustedInSubscriptionByDriverIdKey (cast driverFee.driverId)
   let integralTotalFee = double2Int $ realToFrac totalFee
   case coinAdjustedInSubscriptionKeyExists of
-    Just _ -> void $ Hedis.incrby (mkCoinAdjustedInSubscriptionByDriverIdKey (cast driverFee.driverId)) (fromIntegral integralTotalFee)
+    Just _ -> void $ Hedis.withCrossAppRedis $ Hedis.incrby (mkCoinAdjustedInSubscriptionByDriverIdKey (cast driverFee.driverId)) (fromIntegral integralTotalFee)
     Nothing -> setCoinAdjustedInSubscriptionByDriverIdKey (cast driverFee.driverId) (fromIntegral integralTotalFee)
 
 mkCoinAdjustedInSubscriptionByDriverIdKey :: Id Person -> Text
@@ -187,12 +187,12 @@ coinToCashProcessingLockKey :: Id Person -> Text
 coinToCashProcessingLockKey (Id driverId) = "CoinToCash:Processing:DriverId" <> driverId
 
 getCoinAdjustedInSubscriptionByDriverIdKey :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> m (Maybe Int)
-getCoinAdjustedInSubscriptionByDriverIdKey driverId = Hedis.get (mkCoinAdjustedInSubscriptionByDriverIdKey driverId)
+getCoinAdjustedInSubscriptionByDriverIdKey driverId = Hedis.withCrossAppRedis $ Hedis.get (mkCoinAdjustedInSubscriptionByDriverIdKey driverId)
 
 delCoinAdjustedInSubscriptionByDriverIdKey :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> m ()
-delCoinAdjustedInSubscriptionByDriverIdKey driverId = Hedis.del (mkCoinAdjustedInSubscriptionByDriverIdKey driverId)
+delCoinAdjustedInSubscriptionByDriverIdKey driverId = Hedis.withCrossAppRedis $ Hedis.del (mkCoinAdjustedInSubscriptionByDriverIdKey driverId)
 
 setCoinAdjustedInSubscriptionByDriverIdKey :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> Integer -> m ()
 setCoinAdjustedInSubscriptionByDriverIdKey driverId count = do
-  _ <- Hedis.incrby (mkCoinAdjustedInSubscriptionByDriverIdKey driverId) count
-  Hedis.expire (mkCoinAdjustedInSubscriptionByDriverIdKey driverId) 2592000 -- expire in 30 days
+  _ <- Hedis.withCrossAppRedis $ Hedis.incrby (mkCoinAdjustedInSubscriptionByDriverIdKey driverId) count
+  Hedis.withCrossAppRedis $ Hedis.expire (mkCoinAdjustedInSubscriptionByDriverIdKey driverId) 2592000 -- expire in 30 days

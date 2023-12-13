@@ -28,7 +28,7 @@ import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
 import Kernel.Prelude
-import qualified Kernel.Storage.Hedis.Queries as Hedis
+import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -44,18 +44,18 @@ mkCoinAccumulationByDriverIdKey :: Id DP.Person -> Text -> Text
 mkCoinAccumulationByDriverIdKey driverId date = "DriverCoinBalance:DriverId:" <> driverId.getId <> ":" <> date
 
 getCoinAccumulationByDriverIdKey :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DP.Person -> Text -> m (Maybe Int)
-getCoinAccumulationByDriverIdKey driverId currentDate = Hedis.get (mkCoinAccumulationByDriverIdKey driverId currentDate)
+getCoinAccumulationByDriverIdKey driverId currentDate = Hedis.withCrossAppRedis $ Hedis.get (mkCoinAccumulationByDriverIdKey driverId currentDate)
 
 setCoinAccumulationByDriverIdKey :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DP.Person -> Text -> Int -> m ()
 setCoinAccumulationByDriverIdKey driverId currentDate count = do
-  void $ Hedis.incrby (mkCoinAccumulationByDriverIdKey driverId currentDate) (fromIntegral count)
-  Hedis.expire (mkCoinAccumulationByDriverIdKey driverId currentDate) 86400
+  void $ Hedis.withCrossAppRedis $ Hedis.incrby (mkCoinAccumulationByDriverIdKey driverId currentDate) (fromIntegral count)
+  Hedis.withCrossAppRedis $ Hedis.expire (mkCoinAccumulationByDriverIdKey driverId currentDate) 86400
 
 updateCoinsByDriverId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DP.Person -> Int -> m ()
 updateCoinsByDriverId driverId coinUpdateValue = do
   now <- getCurrentTime
   let currentDate = show $ utctDay now
-  void $ Hedis.incrby (mkCoinAccumulationByDriverIdKey driverId currentDate) (fromIntegral coinUpdateValue)
+  void $ Hedis.withCrossAppRedis $ Hedis.incrby (mkCoinAccumulationByDriverIdKey driverId currentDate) (fromIntegral coinUpdateValue)
 
 getCoinsByDriverId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DP.Person -> m Int
 getCoinsByDriverId driverId = do
@@ -75,20 +75,20 @@ mkValidRideCountByDriverIdKey :: Id DP.Person -> Text
 mkValidRideCountByDriverIdKey driverId = "DriverValidRideCount:DriverId:" <> driverId.getId
 
 getValidRideCountByDriverIdKey :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DP.Person -> m (Maybe Int)
-getValidRideCountByDriverIdKey driverId = Hedis.get (mkValidRideCountByDriverIdKey driverId)
+getValidRideCountByDriverIdKey driverId = Hedis.withCrossAppRedis $ Hedis.get (mkValidRideCountByDriverIdKey driverId)
 
 setValidRideCountByDriverIdKey :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DP.Person -> UTCTime -> Int -> m ()
 setValidRideCountByDriverIdKey driverId istTime count = do
   let expirationSeconds = round $ diffUTCTime (UTCTime (addDays 1 $ utctDay istTime) 0) istTime
   logDebug $ "Setting Valid Ride Count with expirationSeconds - " <> show expirationSeconds
-  void $ Hedis.incrby (mkValidRideCountByDriverIdKey driverId) (fromIntegral count)
-  Hedis.expire (mkValidRideCountByDriverIdKey driverId) expirationSeconds -- expire at 12:00 AM IST
+  void $ Hedis.withCrossAppRedis $ Hedis.incrby (mkValidRideCountByDriverIdKey driverId) (fromIntegral count)
+  Hedis.withCrossAppRedis $ Hedis.expire (mkValidRideCountByDriverIdKey driverId) expirationSeconds -- expire at 12:00 AM IST
 
 incrementValidRideCount :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DP.Person -> UTCTime -> Int -> m ()
 incrementValidRideCount driverId istTime incrementValue = do
   validRideCountKeyExists <- getValidRideCountByDriverIdKey driverId
   case validRideCountKeyExists of
-    Just _ -> void $ Hedis.incrby (mkValidRideCountByDriverIdKey driverId) (fromIntegral incrementValue)
+    Just _ -> void $ Hedis.withCrossAppRedis $ Hedis.incrby (mkValidRideCountByDriverIdKey driverId) (fromIntegral incrementValue)
     Nothing -> setValidRideCountByDriverIdKey driverId istTime incrementValue
 
 driverCoinsEvent :: EventFlow m r => Id DP.Person -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DCT.DriverCoinsEventType -> m ()
