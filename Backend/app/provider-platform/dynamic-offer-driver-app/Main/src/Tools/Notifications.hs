@@ -19,13 +19,14 @@ import qualified Data.Text as T
 import Domain.Types.Booking (Booking)
 import qualified Domain.Types.BookingCancellationReason as SBCR
 import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
+import qualified Domain.Types.Merchant.Overlay as DTMO
 import Domain.Types.Message.Message as Message
 import Domain.Types.Person as Person
 import Domain.Types.RegistrationToken as RegToken
 import qualified Domain.Types.Ride as DRide
 import Domain.Types.SearchRequestForDriver
 import Domain.Types.SearchTry
-import EulerHS.Prelude
+import EulerHS.Prelude hiding (id)
 import qualified Kernel.External.Notification.FCM.Flow as FCM
 import Kernel.External.Notification.FCM.Types as FCM
 import Kernel.Prelude hiding (unwords)
@@ -605,23 +606,9 @@ sendOverlay ::
   Id DMOC.MerchantOperatingCity ->
   Id Person ->
   Maybe FCM.FCMRecipientToken ->
-  Maybe Text ->
-  Maybe Text ->
-  Maybe Text ->
-  Maybe Text ->
-  Maybe Text ->
-  [Text] ->
-  Maybe Text ->
-  Maybe Text ->
-  Maybe Text ->
-  Value ->
-  Maybe Int ->
-  Maybe Text ->
-  Maybe Text ->
-  Maybe [Text] ->
-  Maybe [FCM.FCMMediaLink] ->
+  FCM.FCMOverlayReq ->
   m ()
-sendOverlay merchantOpCityId personId mbDeviceToken mbTitle description imageUrl okButtonText cancelButtonText actions link endPoint method reqBody delay contactSupportNumber toastMessage secondaryActions socialMediaLinks = do
+sendOverlay merchantOpCityId personId mbDeviceToken req@FCM.FCMOverlayReq {..} = do
   transporterConfig <- findByMerchantOpCityId merchantOpCityId >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   FCM.notifyPersonWithPriority transporterConfig.fcmConfig (Just FCM.HIGH) False notificationData $ FCMNotificationRecipient personId.getId mbDeviceToken
   where
@@ -629,14 +616,14 @@ sendOverlay merchantOpCityId personId mbDeviceToken mbTitle description imageUrl
     notificationData =
       FCM.FCMData
         { fcmNotificationType = notifType,
-          fcmShowNotification = if isJust mbTitle then FCM.SHOW else FCM.DO_NOT_SHOW,
+          fcmShowNotification = if isJust req.title then FCM.SHOW else FCM.DO_NOT_SHOW,
           fcmEntityType = FCM.Person,
           fcmEntityIds = personId.getId,
           fcmEntityData = (),
-          fcmNotificationJSON = FCM.createAndroidNotification title body notifType,
-          fcmOverlayNotificationJSON = Just $ FCM.createAndroidOverlayNotification mbTitle description imageUrl okButtonText cancelButtonText actions link endPoint method reqBody delay contactSupportNumber toastMessage secondaryActions socialMediaLinks
+          fcmNotificationJSON = FCM.createAndroidNotification notifTitle body notifType,
+          fcmOverlayNotificationJSON = Just $ FCM.createAndroidOverlayNotification req
         }
-    title = FCMNotificationTitle $ fromMaybe "Title" mbTitle -- if nothing then anyways fcmShowNotification is false
+    notifTitle = FCMNotificationTitle $ fromMaybe "Title" req.title -- if nothing then anyways fcmShowNotification is false
     body = FCMNotificationBody $ fromMaybe "Description" description
 
 notifyPickupOrDropLocationChange ::
@@ -669,3 +656,13 @@ notifyPickupOrDropLocationChange merchantOpCityId personId mbDeviceToken entityD
         unwords
           [ "Customer has changed pickup or drop location. Please check the app for more details"
           ]
+
+mkOverlayReq :: DTMO.Overlay -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> FCM.FCMOverlayReq
+mkOverlayReq _overlay@DTMO.Overlay {..} modDescription modOkButtonText modCancelButtonText modEndpoint =
+  FCM.FCMOverlayReq
+    { description = modDescription,
+      okButtonText = modOkButtonText,
+      cancelButtonText = modCancelButtonText,
+      endPoint = modEndpoint,
+      ..
+    }
