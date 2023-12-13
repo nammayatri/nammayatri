@@ -136,7 +136,12 @@ data OverlayItem = OverlayItem
     cancelButtonText :: Maybe Text,
     reqBody :: Value,
     method :: Maybe Text,
-    endPoint :: Maybe Text
+    endPoint :: Maybe Text,
+    delay :: Maybe Int,
+    contactSupportNumber :: Maybe Text,
+    toastMessage :: Maybe Text,
+    secondaryActions :: Maybe [Text],
+    socialMediaLinks :: Maybe [FCM.FCMMediaLink]
   }
   deriving (Generic, Show, Eq)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
