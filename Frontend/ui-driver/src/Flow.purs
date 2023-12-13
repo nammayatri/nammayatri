@@ -287,7 +287,8 @@ loginFlow = do
   case mobileNo of
     GO_TO_ENTER_OTP updateState -> do
       liftFlowBT $ logEvent logField_ "ny_driver_otp_trigger"
-      TriggerOTPResp triggerOtpResp <- Remote.triggerOTPBT (makeTriggerOTPReq updateState.data.mobileNumber)
+      latLong <- getCurrentLocation 0.0 0.0 0.0 0.0 400 false
+      TriggerOTPResp triggerOtpResp <- Remote.triggerOTPBT (makeTriggerOTPReq updateState.data.mobileNumber latLong)
       modifyScreenState $ EnterOTPScreenType (\enterOTPScreen → enterOTPScreen { data { tokenId = triggerOtpResp.authId}})
       enterOTPFlow
 

@@ -66,7 +66,9 @@ newtype TriggerOTPReq = TriggerOTPReq {
   mobileNumber :: String,
   mobileCountryCode :: String,
   merchantId :: String,
-  merchantOperatingCity :: Maybe String
+  merchantOperatingCity :: Maybe String,
+  registrationLat :: Maybe Number,
+  registrationLon :: Maybe Number
 }
 
 newtype TriggerOTPResp = TriggerOTPResp {
