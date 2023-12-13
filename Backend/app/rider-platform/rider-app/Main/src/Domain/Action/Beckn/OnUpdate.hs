@@ -264,7 +264,10 @@ onUpdate ::
 onUpdate ValidatedRideAssignedReq {..} = do
   ride <- buildRide
   triggerRideCreatedEvent RideEventData {ride = ride, personId = booking.riderId, merchantId = booking.merchantId}
-  incrementRideCreatedRequestCount booking.merchantId.getId
+  let category = case booking.specialLocationTag of
+        Just _ -> "specialLocation"
+        Nothing -> "normal"
+  incrementRideCreatedRequestCount booking.merchantId.getId booking.merchantOperatingCityId.getId category
   _ <- QRB.updateStatus booking.id SRB.TRIP_ASSIGNED
   _ <- QRide.createRide ride
 
