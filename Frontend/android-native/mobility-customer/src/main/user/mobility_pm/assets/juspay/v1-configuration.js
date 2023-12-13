@@ -178,7 +178,7 @@ window.getMerchantConfig = function () {
       "imageUrl": "ny_ic_chevron_left_double,https://assets.juspay.in/beckn/mobilitypaytm/mobilitypaytmcommon/ny_ic_chevron_left_double.png"
     },
     "showDeleteAccount": false,
-    "showGenderBanner": true,
+    "showGenderBanner": false,
     "autoSelectBackground": "#53BB6F",
     "enableMockLocation": false,
     "defaultLanguage": "EN_US",
