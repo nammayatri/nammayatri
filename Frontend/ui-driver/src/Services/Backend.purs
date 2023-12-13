@@ -32,13 +32,13 @@ import Engineering.Helpers.Commons (liftFlow, isInvalidUrl)
 import Engineering.Helpers.Utils (toggleLoader)
 import Foreign.Generic (encode)
 import Foreign.NullOrUndefined (undefined)
-import Helpers.Utils (decodeErrorCode, getTime, toStringJSON, decodeErrorMessage)
+import Helpers.Utils (decodeErrorCode, getTime, toStringJSON, decodeErrorMessage, LatLon(..))
 import JBridge (setKeyInSharedPrefKeys, toast, factoryResetApp, stopLocationPollingAPI, Locations, getVersionName, stopChatListenerService)
 import Juspay.OTP.Reader as Readers
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (printLog)
-import Prelude (bind, discard, pure, unit, identity, ($), ($>), (&&), (*>), (<<<), (=<<), (==), void, map, show, class Show, (<>), (||), not)
+import Prelude (bind, discard, pure, unit, identity, ($), ($>), (&&), (*>), (<<<), (=<<), (==), void, map, show, class Show, (<>), (||), not, (/=))
 import Presto.Core.Types.API (ErrorResponse(..), Header(..), Headers(..))
 import Presto.Core.Types.Language.Flow (Flow, callAPI, doAff, loadS)
 import Screens.Types (DriverStatus)
@@ -179,15 +179,19 @@ triggerOTPBT payload = do
         BackT $ pure GoBack
 
 
-makeTriggerOTPReq :: String       → TriggerOTPReq
-makeTriggerOTPReq    mobileNumber = TriggerOTPReq
+makeTriggerOTPReq :: String → LatLon -> TriggerOTPReq
+makeTriggerOTPReq mobileNumber (LatLon lat lng) = TriggerOTPReq
     let operatingCity = getValueToLocalStore DRIVER_LOCATION
+        latitiude = mkLatLon lat
+        longitude = mkLatLon lng
     in
     {
       "mobileNumber"      : mobileNumber,
       "mobileCountryCode" : "+91",
       "merchantId" : if (SC.getMerchantId "") == "NA" then getValueToLocalNativeStore MERCHANT_ID else (SC.getMerchantId "" ),
-      "merchantOperatingCity" : mkOperatingCity operatingCity
+      "merchantOperatingCity" : mkOperatingCity operatingCity,
+      "registrationLat" : latitiude,
+      "registrationLon" : longitude
     }
     where 
         mkOperatingCity :: String -> Maybe String
@@ -196,6 +200,11 @@ makeTriggerOTPReq    mobileNumber = TriggerOTPReq
             else if operatingCity == "Puducherry" then Just "Pondicherry"
             else if operatingCity == "Mysore" then Just "Bangalore" -- Temp fix TODO: Remove this once Mysore is added in backend
             else Just operatingCity
+        mkLatLon :: String -> Maybe Number
+        mkLatLon latlon = 
+            if latlon == "0.0" 
+                then Nothing
+                else Number.fromString latlon
 
 
 
