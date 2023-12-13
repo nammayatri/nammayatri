@@ -34,6 +34,7 @@ import Kernel.External.Encryption (decrypt, getDbHash)
 import Kernel.Prelude
 import Kernel.Storage.Hedis (withCrossAppRedis)
 import Kernel.Types.APISuccess
+import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -41,6 +42,7 @@ import qualified Kernel.Utils.SlidingWindowCounters as SWC
 import qualified SharedLogic.CallBPPInternal as CallBPPInternal
 import qualified SharedLogic.MerchantConfig as SMC
 import qualified Storage.CachedQueries.Merchant as QM
+import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.MerchantConfig as CMC
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
 import qualified Storage.Queries.Booking as QRB
@@ -50,13 +52,15 @@ import qualified Storage.Queries.SavedReqLocation as QSRL
 ---------------------------------------------------------------------
 deleteCustomer ::
   ShortId DM.Merchant ->
+  Context.City ->
   Id Common.Customer ->
   Flow APISuccess
-deleteCustomer merchantShortId customerId = do
+deleteCustomer merchantShortId opCity customerId = do
   let personId = cast @Common.Customer @DP.Person customerId
   merchant <- QM.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
+  merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchant.id.getId <> "-city-" <> show opCity)
   person <- runInReplica $ QP.findById personId >>= fromMaybeM (PersonNotFound $ getId personId)
-  unless (merchant.id == person.merchantId) $ throwError (PersonDoesNotExist $ getId personId)
+  unless (merchant.id == person.merchantId && person.merchantOperatingCityId == merchantOpCity.id) $ throwError (PersonDoesNotExist $ getId personId)
   bookings <- runInReplica $ QRB.findByRiderIdAndStatus personId [DRB.NEW, DRB.TRIP_ASSIGNED, DRB.AWAITING_REASSIGNMENT, DRB.CONFIRMED, DRB.COMPLETED]
   unless (null bookings) $ throwError (InvalidRequest "Can't delete customer, has a valid booking in past.")
   _ <- QP.deleteById personId
@@ -66,10 +70,10 @@ deleteCustomer merchantShortId customerId = do
   pure Success
 
 ---------------------------------------------------------------------
-blockCustomer :: ShortId DM.Merchant -> Id Common.Customer -> Flow APISuccess
-blockCustomer merchantShortId customerId = do
+blockCustomer :: ShortId DM.Merchant -> Context.City -> Id Common.Customer -> Flow APISuccess
+blockCustomer merchantShortId opCity customerId = do
   merchant <- QM.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
-
+  merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchant.id.getId <> "-city-" <> show opCity)
   let personId = cast @Common.Customer @DP.Person customerId
   customer <-
     runInReplica $
@@ -78,17 +82,17 @@ blockCustomer merchantShortId customerId = do
 
   -- merchant access checking
   let merchantId = customer.merchantId
-  unless (merchant.id == merchantId) $ throwError (PersonDoesNotExist personId.getId)
+  unless (merchant.id == merchantId && customer.merchantOperatingCityId == merchantOpCity.id) $ throwError (PersonDoesNotExist personId.getId)
 
   SMC.blockCustomer personId Nothing
   logTagInfo "dashboard -> blockCustomer : " (show personId)
   pure Success
 
 ---------------------------------------------------------------------
-unblockCustomer :: ShortId DM.Merchant -> Id Common.Customer -> Flow APISuccess
-unblockCustomer merchantShortId customerId = do
+unblockCustomer :: ShortId DM.Merchant -> Context.City -> Id Common.Customer -> Flow APISuccess
+unblockCustomer merchantShortId opCity customerId = do
   merchant <- QM.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
-
+  merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchant.id.getId <> "-city-" <> show opCity)
   let personId = cast @Common.Customer @DP.Person customerId
   customer <-
     runInReplica $
@@ -97,7 +101,7 @@ unblockCustomer merchantShortId customerId = do
 
   -- merchant access checking
   let merchantId = customer.merchantId
-  unless (merchant.id == merchantId) $ throwError (PersonDoesNotExist personId.getId)
+  unless (merchant.id == merchantId && customer.merchantOperatingCityId == merchantOpCity.id) $ throwError (PersonDoesNotExist personId.getId)
   merchantConfigs <- CMC.findAllByMerchantOperatingCityId customer.merchantOperatingCityId
   mapM_
     ( \mc -> withCrossAppRedis $ do
@@ -110,10 +114,10 @@ unblockCustomer merchantShortId customerId = do
   pure Success
 
 ---------------------------------------------------------------------
-customerInfo :: ShortId DM.Merchant -> Id Common.Customer -> Flow Common.CustomerInfoRes
-customerInfo merchantShortId customerId = do
+customerInfo :: ShortId DM.Merchant -> Context.City -> Id Common.Customer -> Flow Common.CustomerInfoRes
+customerInfo merchantShortId opCity customerId = do
   merchant <- QM.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
-
+  merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchant.id.getId <> "-city-" <> show opCity)
   let personId = cast @Common.Customer @DP.Person customerId
   customer <-
     runInReplica $
@@ -122,19 +126,20 @@ customerInfo merchantShortId customerId = do
 
   -- merchant access checking
   let merchantId = customer.merchantId
-  unless (merchant.id == merchantId) $ throwError (PersonDoesNotExist personId.getId)
+  unless (merchant.id == merchantId && customer.merchantOperatingCityId == merchantOpCity.id) $ throwError (PersonDoesNotExist personId.getId)
 
   numberOfRides <- fromMaybe 0 <$> runInReplica (QP.fetchRidesCount personId)
   pure Common.CustomerInfoRes {numberOfRides}
 
 ---------------------------------------------------------------------
-listCustomers :: ShortId DM.Merchant -> Maybe Int -> Maybe Int -> Maybe Bool -> Maybe Bool -> Maybe Text -> Flow Common.CustomerListRes
-listCustomers merchantShortId mbLimit mbOffset mbEnabled mbBlocked mbSearchPhone = do
+listCustomers :: ShortId DM.Merchant -> Context.City -> Maybe Int -> Maybe Int -> Maybe Bool -> Maybe Bool -> Maybe Text -> Flow Common.CustomerListRes
+listCustomers merchantShortId opCity mbLimit mbOffset mbEnabled mbBlocked mbSearchPhone = do
   merchant <- QM.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
+  merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchant.id.getId <> "-city-" <> show opCity)
   let limit = min maxLimit . fromMaybe defaultLimit $ mbLimit
       offset = fromMaybe 0 mbOffset
   mbSearchPhoneDBHash <- getDbHash `traverse` mbSearchPhone
-  customers <- runInReplica $ QP.findAllCustomers merchant.id limit offset mbEnabled mbBlocked mbSearchPhoneDBHash
+  customers <- runInReplica $ QP.findAllCustomers merchant merchantOpCity limit offset mbEnabled mbBlocked mbSearchPhoneDBHash
   items <- mapM buildCustomerListItem customers
   let count = length items
   let summary = Common.Summary {totalCount = 10000, count}

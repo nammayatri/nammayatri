@@ -24,6 +24,7 @@ import Domain.Types.Booking.Type as Booking
 import qualified Domain.Types.Booking.Type as DRB
 import qualified Domain.Types.LocationMapping as DLM
 import Domain.Types.Merchant
+import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import Domain.Types.Person
 import Domain.Types.Ride as Ride
 import qualified EulerHS.Language as L
@@ -151,14 +152,18 @@ data StuckRideItem = StuckRideItem
     riderId :: Id Person
   }
 
-findStuckRideItems :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Merchant -> [Id Booking] -> UTCTime -> m [StuckRideItem]
-findStuckRideItems (Id merchantId) bookingIds now = do
+findStuckRideItems :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Merchant -> DMOC.MerchantOperatingCity -> [Id Booking] -> UTCTime -> m [StuckRideItem]
+findStuckRideItems merchant moCity bookingIds now = do
   let now6HrBefore = addUTCTime (- (6 * 60 * 60) :: NominalDiffTime) now
   bookings <-
     findAllWithDb
       [ Se.And
-          [ Se.Is BeamB.providerId $ Se.Eq merchantId,
-            Se.Is BeamB.id $ Se.In $ getId <$> bookingIds
+          [ Se.Is BeamB.providerId $ Se.Eq merchant.id.getId,
+            Se.Is BeamB.id $ Se.In $ getId <$> bookingIds,
+            Se.Or
+              ( [Se.Is BeamB.merchantOperatingCityId $ Se.Eq (Just $ getId moCity.id)]
+                  <> [Se.Is BeamB.merchantOperatingCityId $ Se.Eq Nothing | merchant.defaultCity == moCity.city]
+              )
           ]
       ]
   rides <-

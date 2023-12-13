@@ -15,7 +15,7 @@
 module Domain.Action.Dashboard.Person where
 
 import Dashboard.Common
-import Data.List (groupBy, sortOn)
+import Data.List (groupBy, nub, sortOn)
 import qualified Data.Text as T
 import qualified Domain.Types.AccessMatrix as DMatrix
 import qualified Domain.Types.Merchant as DMerchant
@@ -211,14 +211,14 @@ listPerson _ mbSearchString mbLimit mbOffset mbPersonId = do
   res <- forM personAndRoleList $ \(encPerson, role, merchantAccessList, merchantCityAccessList) -> do
     decPerson <- decrypt encPerson
     let availableCitiesForMerchant = makeAvailableCitiesForMerchant merchantAccessList merchantCityAccessList
-    pure $ DP.makePersonAPIEntity decPerson role merchantAccessList (Just availableCitiesForMerchant)
+    pure $ DP.makePersonAPIEntity decPerson role (nub merchantAccessList) (Just availableCitiesForMerchant)
   let count = length res
   let summary = Summary {totalCount = 10000, count}
   pure $ ListPersonRes {list = res, summary = summary}
 
 makeAvailableCitiesForMerchant :: [ShortId DMerchant.Merchant] -> [City.City] -> [DP.AvailableCitiesForMerchant]
 makeAvailableCitiesForMerchant merchantAccessList merchantCityAccessList = do
-  let merchantCityList = zip merchantAccessList merchantCityAccessList
+  let merchantCityList = sortOn fst $ zip merchantAccessList merchantCityAccessList
   let groupedByMerchant = groupBy ((==) `on` fst) merchantCityList
   if null groupedByMerchant
     then []

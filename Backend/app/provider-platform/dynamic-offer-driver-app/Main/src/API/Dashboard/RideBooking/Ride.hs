@@ -55,34 +55,35 @@ rideStart merchantShortId opCity reqRideId Common.StartRideReq {point} = withFlo
   merchant <- findMerchantByShortId merchantShortId
   let rideId = cast @Common.Ride @DRide.Ride reqRideId
   let merchantId = merchant.id
-  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
-  let dashboardReq = SHandler.DashboardStartRideReq {point, merchantId}
-  shandle <- SHandler.buildStartRideHandle merchantId merchantOpCityId
+  merchantOperatingCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  let dashboardReq = SHandler.DashboardStartRideReq {point, merchantId, merchantOperatingCityId}
+  shandle <- SHandler.buildStartRideHandle merchantId merchantOperatingCityId
   SHandler.dashboardStartRide shandle rideId dashboardReq
 
 rideEnd :: ShortId DM.Merchant -> Context.City -> Id Common.Ride -> Common.EndRideReq -> FlowHandler APISuccess
 rideEnd merchantShortId opCity reqRideId Common.EndRideReq {point} = withFlowHandlerAPI $ do
   merchant <- findMerchantByShortId merchantShortId
+  merchantOperatingCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   let rideId = cast @Common.Ride @DRide.Ride reqRideId
   let merchantId = merchant.id
-  let dashboardReq = EHandler.DashboardEndRideReq {point, merchantId}
-  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
-  shandle <- EHandler.buildEndRideHandle merchantId merchantOpCityId
+  let dashboardReq = EHandler.DashboardEndRideReq {point, merchantId, merchantOperatingCityId}
+  shandle <- EHandler.buildEndRideHandle merchantId merchantOperatingCityId
   EHandler.dashboardEndRide shandle rideId dashboardReq
 
 currentActiveRide :: ShortId DM.Merchant -> Context.City -> Text -> FlowHandler (Id Common.Ride)
 currentActiveRide merchantShortId _ vehicleNumber = withFlowHandlerAPI $ DRide.currentActiveRide merchantShortId vehicleNumber
 
 rideCancel :: ShortId DM.Merchant -> Context.City -> Id Common.Ride -> Common.CancelRideReq -> FlowHandler APISuccess
-rideCancel merchantShortId _ reqRideId Common.CancelRideReq {reasonCode, additionalInfo} = withFlowHandlerAPI $ do
+rideCancel merchantShortId opCity reqRideId Common.CancelRideReq {reasonCode, additionalInfo} = withFlowHandlerAPI $ do
   merchant <- findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   let rideId = cast @Common.Ride @DRide.Ride reqRideId
   let dashboardReq =
         CHandler.CancelRideReq
           { reasonCode = coerce @Common.CancellationReasonCode @DCReason.CancellationReasonCode reasonCode,
             additionalInfo
           }
-  CHandler.dashboardCancelRideHandler CHandler.cancelRideHandle merchant.id rideId dashboardReq
+  CHandler.dashboardCancelRideHandler CHandler.cancelRideHandle merchant.id merchantOpCityId rideId dashboardReq
 
 bookingWithVehicleNumberAndPhone :: ShortId DM.Merchant -> Context.City -> Common.BookingWithVehicleAndPhoneReq -> FlowHandler Common.BookingWithVehicleAndPhoneRes
 bookingWithVehicleNumberAndPhone merchantShortId opCity req = withFlowHandlerAPI $ do

@@ -88,11 +88,12 @@ castRideInfo ::
     EsqDBFlow m r,
     HasFlowEnv m r '["ltsCfg" ::: LocationTrackingeServiceConfig]
   ) =>
-  ShortId Common.Merchant ->
+  Id Common.Merchant ->
+  Id Common.MerchantOperatingCity ->
   Id Common.Ride ->
   m Common.RideInfoRes
-castRideInfo merchantShortId rideId = do
-  rideInfoRes <- DRide.rideInfo (ShortId $ show merchantShortId) (cast rideId)
+castRideInfo merchantId merchantOpCityId rideId = do
+  rideInfoRes <- DRide.rideInfo (cast merchantId) (cast merchantOpCityId) (cast rideId)
   return $ castRideInfoRes rideInfoRes
   where
     castRideInfoRes res =

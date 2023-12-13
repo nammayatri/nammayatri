@@ -46,7 +46,7 @@ data ServiceHandle m = ServiceHandle
   { findRideById :: Id Ride -> m (Maybe Ride),
     findPersonById :: Id Person -> m (Maybe Person),
     findMerchant :: Id Merchant -> m (Maybe Merchant),
-    getRideInfo :: ShortId Merchant -> Id Ride -> m RideInfoRes,
+    getRideInfo :: Id Merchant -> Id MerchantOperatingCity -> Id Ride -> m RideInfoRes,
     createTicket :: Id Merchant -> Id MerchantOperatingCity -> TIT.CreateTicketReq -> m TIT.CreateTicketResp
   }
 
@@ -333,8 +333,7 @@ createIssueReport (personId, merchantId, merchantOpCityId) mbLanguage Common.Iss
             messages
   issueReport <- mkIssueReport updatedChats
   _ <- QIR.create issueReport
-  merchant <- issueHandle.findMerchant merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
-  ticket <- buildTicket issueReport category mbOption mbRide merchant.shortId mediaFileUrls issueHandle identifier
+  ticket <- buildTicket issueReport category mbOption mbRide merchantId merchantOpCityId mediaFileUrls issueHandle identifier
   ticketResponse <- try @_ @SomeException (issueHandle.createTicket merchantId merchantOpCityId ticket)
   case ticketResponse of
     Right ticketResponse' -> do
@@ -365,9 +364,9 @@ createIssueReport (personId, merchantId, merchantOpCityId) mbLanguage Common.Iss
             chats = updatedChats
           }
 
-    buildTicket :: (EsqDBReplicaFlow m r, EncFlow m r, BeamFlow m r) => D.IssueReport -> D.IssueCategory -> Maybe D.IssueOption -> Maybe Ride -> ShortId Merchant -> [Text] -> ServiceHandle m -> Identifier -> m TIT.CreateTicketReq
-    buildTicket issue category mbOption mbRide merchantShortId mediaFileUrls issueServiceHandle identifier_ = do
-      info <- forM mbRide (buildRideInfo merchantShortId issueServiceHandle)
+    buildTicket :: (EsqDBReplicaFlow m r, EncFlow m r, BeamFlow m r) => D.IssueReport -> D.IssueCategory -> Maybe D.IssueOption -> Maybe Ride -> Id Merchant -> Id MerchantOperatingCity -> [Text] -> ServiceHandle m -> Identifier -> m TIT.CreateTicketReq
+    buildTicket issue category mbOption mbRide merchId moCityId mediaFileUrls issueServiceHandle identifier_ = do
+      info <- forM mbRide (buildRideInfo merchId moCityId issueServiceHandle)
       person <- issueServiceHandle.findPersonById personId >>= fromMaybeM (PersonNotFound personId.getId)
       phoneNumber <- mapM decrypt person.mobileNumber
       return $
@@ -384,9 +383,9 @@ createIssueReport (personId, merchantId, merchantOpCityId) mbLanguage Common.Iss
             rideDescription = info
           }
 
-    buildRideInfo :: (EsqDBReplicaFlow m r, BeamFlow m r) => ShortId Merchant -> ServiceHandle m -> Ride -> m TIT.RideInfo
-    buildRideInfo merchantShortId issueServiceHandle ride = do
-      res <- issueServiceHandle.getRideInfo merchantShortId (cast ride.id)
+    buildRideInfo :: (EsqDBReplicaFlow m r, BeamFlow m r) => Id Merchant -> Id MerchantOperatingCity -> ServiceHandle m -> Ride -> m TIT.RideInfo
+    buildRideInfo mId moCId issueServiceHandle ride = do
+      res <- issueServiceHandle.getRideInfo mId moCId (cast ride.id)
       return
         TIT.RideInfo
           { rideShortId = ride.shortId.getShortId,

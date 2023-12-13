@@ -18,6 +18,7 @@ module Domain.Types.Message.Message where
 
 import Data.Map as HM
 import Domain.Types.Merchant (Merchant)
+import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import qualified IssueManagement.Domain.Types.MediaFile as MF
 import Kernel.External.Types (Language)
 import Kernel.Prelude
@@ -42,6 +43,7 @@ data Message = Message
     mediaFiles :: [Id MF.MediaFile],
     messageTranslations :: [MessageTranslation],
     merchantId :: Id Merchant,
+    merchantOperatingCityId :: Id DMOC.MerchantOperatingCity,
     createdAt :: UTCTime
   }
 

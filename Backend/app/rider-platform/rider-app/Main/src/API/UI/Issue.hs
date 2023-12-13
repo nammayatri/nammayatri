@@ -80,9 +80,9 @@ castRideById rideId = do
   where
     castRide ride = Common.Ride (cast ride.id) (ShortId $ show ride.shortId) ride.createdAt
 
-castRideInfo :: (EncFlow m r, EsqDBReplicaFlow m r, CacheFlow m r, EsqDBFlow m r) => ShortId Common.Merchant -> Id Common.Ride -> m Common.RideInfoRes
-castRideInfo merchantShortId rideId = do
-  rideInfoRes <- DRide.rideInfo (ShortId $ show merchantShortId) (cast rideId)
+castRideInfo :: (EncFlow m r, EsqDBReplicaFlow m r, CacheFlow m r, EsqDBFlow m r) => Id Common.Merchant -> Id Common.MerchantOperatingCity -> Id Common.Ride -> m Common.RideInfoRes
+castRideInfo merchantId _ rideId = do
+  rideInfoRes <- DRide.rideInfo (cast merchantId) (cast rideId)
   return $ castRideInfoRes rideInfoRes
   where
     castRideInfoRes res =

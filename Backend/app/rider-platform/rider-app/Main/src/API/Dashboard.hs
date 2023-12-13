@@ -91,8 +91,8 @@ handlerV2 =
 
 operationHandler :: ShortId DM.Merchant -> Context.City -> FlowServer OperationsAPI
 operationHandler merchantId city _ = do
-  Customer.handler merchantId
-    :<|> Booking.handler merchantId
+  Customer.handler merchantId city
+    :<|> Booking.handler merchantId city
     :<|> Merchant.handler merchantId city
     :<|> Ride.handler merchantId
     :<|> IssueList.handler merchantId
