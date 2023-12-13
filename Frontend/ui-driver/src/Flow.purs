@@ -2164,8 +2164,8 @@ homeScreenFlow = do
     ADD_ALTERNATE_HOME -> do
       modifyScreenState $ DriverProfileScreenStateType (\driverProfileScreen -> driverProfileScreen{props{alternateNumberView = true, isEditAlternateMobile = true, mNumberEdtFocused = true}, data {fromHomeScreen = true}})
       driverProfileFlow
-    ON_CALL state -> do
-      (OnCallRes resp) <- Remote.onCallBT (Remote.makeOnCallReq state.data.activeRide.id)
+    ON_CALL state exophoneNumber -> do
+      (OnCallRes resp) <- Remote.onCallBT (Remote.makeOnCallReq state.data.activeRide.id exophoneNumber)
       homeScreenFlow
     OPEN_PAYMENT_PAGE state -> ysPaymentFlow
     HOMESCREEN_NAV GoToSubscription -> do

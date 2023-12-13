@@ -159,7 +159,7 @@ otpRide :: String -> String
 otpRide dummyRideOtp = (getBaseUrl "") <> "/driver/otpRide/start"
 
 onCall :: String -> String
-onCall _ = (getBaseUrl "") <> "/onCall"
+onCall _ = (getBaseUrl "") <> "/callEvent"
 
 likeMessage :: String -> String
 likeMessage messageId = (getBaseUrl "") <> "/message/" <> messageId <> "/like"

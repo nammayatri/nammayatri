@@ -79,7 +79,7 @@ import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackA
 import MerchantConfig.Utils (Merchant(..), getMerchant)
 import Prelude (class Applicative, class Show, Unit, Ordering, bind, compare, discard, map, negate, pure, show, unit, not, ($), (&&), (-), (/=), (<>), (==), (>), (||), (>=), void, (<), (*), (<=), (/), (+), when)
 import Presto.Core.Types.API (ErrorResponse)
-import PrestoDOM (Eval ,Visibility(..), BottomSheetState(..), continue, continueWithCmd, defaultPerformLog, exit, payload, updateAndExit)
+import PrestoDOM (Eval ,Visibility(..), BottomSheetState(..), continue, continueWithCmd, defaultPerformLog, exit, payload, updateAndExit, updateWithCmdAndExit)
 import PrestoDOM.Types.Core (class Loggable)
 import Resources.Constants (encodeAddress)
 import Constants (defaultDensity)
@@ -503,7 +503,7 @@ data ScreenOutput = LogoutUser
                   | CheckFavDistance HomeScreenState
                   | SaveFavourite HomeScreenState
                   | GoToReferral HomeScreenState
-                  | CallDriver HomeScreenState CallType
+                  | CallDriver HomeScreenState CallType String
                   | CallContact HomeScreenState
                   | CallSupport HomeScreenState
                   | CallPolice HomeScreenState
@@ -2476,15 +2476,16 @@ findingQuotesSearchExpired gotQuotes =
 
 callDriver :: HomeScreenState -> String -> Eval Action ScreenOutput HomeScreenState
 callDriver state callType = do
-  continueWithCmd state{props{ showCallPopUp = false }}
+  let newState = state{props{ showCallPopUp = false }}
+      driverNumber = case callType of
+                        "DIRECT" ->(fromMaybe state.data.driverInfoCardState.merchantExoPhone state.data.driverInfoCardState.driverNumber)
+                        _ -> if (STR.take 1 state.data.driverInfoCardState.merchantExoPhone) == "0" then state.data.driverInfoCardState.merchantExoPhone else "0" <> state.data.driverInfoCardState.merchantExoPhone
+  updateWithCmdAndExit newState
     [ do
-        let driverNumber = case callType of
-                            "DIRECT" ->(fromMaybe state.data.driverInfoCardState.merchantExoPhone state.data.driverInfoCardState.driverNumber)
-                            _ -> if (STR.take 1 state.data.driverInfoCardState.merchantExoPhone) == "0" then state.data.driverInfoCardState.merchantExoPhone else "0" <> state.data.driverInfoCardState.merchantExoPhone
         _ <- pure $ showDialer driverNumber false
         let _ = unsafePerformEffect $ logEventWithTwoParams state.data.logField ("ny_user_"<> callType <>"_call_click") "trip_id" (state.props.bookingId) "user_id" (getValueToLocalStore CUSTOMER_ID)
         pure NoAction
-    ]
+    ] $ CallDriver newState (if callType == "DIRECT" then DIRECT_CALLER else ANONYMOUS_CALLER) driverNumber
 
 getCustomerSuggestions :: HomeScreenState -> Array String -> Array String
 getCustomerSuggestions state suggestions = case (length suggestions == 0) of

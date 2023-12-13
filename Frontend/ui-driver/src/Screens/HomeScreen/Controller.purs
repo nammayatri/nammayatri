@@ -238,7 +238,7 @@ data ScreenOutput =   Refresh ST.HomeScreenState
                     | GoToNotifications ST.HomeScreenState
                     | AddAlternateNumber ST.HomeScreenState
                     | StartZoneRide ST.HomeScreenState
-                    | CallCustomer ST.HomeScreenState
+                    | CallCustomer ST.HomeScreenState String
                     | GotoEditGenderScreen
                     | OpenPaymentPage ST.HomeScreenState
                     | AadhaarVerificationFlow ST.HomeScreenState
@@ -586,11 +586,13 @@ eval (RideActionModalAction (RideActionModal.OnNavigate)) state = do
   continue state
 eval (RideActionModalAction (RideActionModal.CancelRide)) state = do
   continue state{ data {cancelRideConfirmationPopUp{delayInSeconds = 5,  continueEnabled=false}}, props{cancelConfirmationPopup = true}}
-eval (RideActionModalAction (RideActionModal.CallCustomer)) state = continueWithCmd state [ do
-  _ <- pure $ showDialer (if (take 1 state.data.activeRide.exoPhone) == "0" then state.data.activeRide.exoPhone else "0" <> state.data.activeRide.exoPhone) false -- TODO: FIX_DIALER
-  _ <- logEventWithTwoParams state.data.logField "call_customer" "trip_id" (state.data.activeRide.id) "user_id" (getValueToLocalStore DRIVER_ID)
-  pure NoAction
-  ]
+eval (RideActionModalAction (RideActionModal.CallCustomer)) state = do
+  let exophoneNumber = if (take 1 state.data.activeRide.exoPhone) == "0" then state.data.activeRide.exoPhone else "0" <> state.data.activeRide.exoPhone
+  updateWithCmdAndExit state [ do
+    void $ pure $ showDialer exophoneNumber false -- TODO: FIX_DIALER
+    _ <- logEventWithTwoParams state.data.logField "call_customer" "trip_id" (state.data.activeRide.id) "user_id" (getValueToLocalStore DRIVER_ID)
+    pure NoAction
+    ] $ CallCustomer state exophoneNumber
 
 eval (RideActionModalAction (RideActionModal.SecondaryTextClick)) state = continue state{props{showAccessbilityPopup = true}}
 

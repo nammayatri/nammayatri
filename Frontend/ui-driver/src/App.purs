@@ -332,7 +332,7 @@ data HOME_SCREENOUTPUT = GO_TO_PROFILE_SCREEN
                           | ADD_ALTERNATE_HOME
                           | GO_TO_AADHAAR_VERIFICATION
                           | GO_TO_START_ZONE_RIDE {otp :: String, lat :: String, lon :: String}
-                          | ON_CALL HomeScreenState
+                          | ON_CALL HomeScreenState String
                           | OPEN_PAYMENT_PAGE HomeScreenState
                           | HOMESCREEN_NAV NAVIGATION_ACTIONS
                           | GO_TO_VEHICLE_DETAILS_SCREEN

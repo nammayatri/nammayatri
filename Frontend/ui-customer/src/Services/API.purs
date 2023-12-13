@@ -1921,7 +1921,8 @@ instance encodeSosStatus :: Encode SosStatus where encode = defaultEncode
 newtype OnCallReq = OnCallReq
   {
      rideId :: String,
-     callType :: String
+     callType :: String,
+     exophoneNumber :: String
   }
 
 newtype OnCallRes = OnCallRes

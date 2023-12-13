@@ -101,9 +101,9 @@ homeScreen = do
     AddAlternateNumber updatedState -> do
       modifyScreenState $ HomeScreenStateType (\_ → updatedState)
       App.BackT $ App.BackPoint <$> (pure $ ADD_ALTERNATE_HOME)
-    CallCustomer updatedState -> do
+    CallCustomer updatedState exophoneNumber -> do
       modifyScreenState $ HomeScreenStateType (\_ → updatedState)
-      App.BackT $ App.BackPoint <$> (pure $ ON_CALL updatedState)
+      App.BackT $ App.BackPoint <$> (pure $ ON_CALL updatedState exophoneNumber)
     OpenPaymentPage updatedState -> do
       modifyScreenState $ HomeScreenStateType (\_ → updatedState)
       App.BackT $ App.BackPoint <$> (pure $ OPEN_PAYMENT_PAGE updatedState)
