@@ -293,13 +293,14 @@ updateFee driverFeeId mbFare govtCharges platformFee cgst sgst now isRideEnd boo
         SRB.SpecialZoneBooking -> True
         _ -> False
 
-resetFee :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DriverFee -> Money -> HighPrecMoney -> HighPrecMoney -> HighPrecMoney -> Maybe HighPrecMoney -> UTCTime -> m ()
-resetFee driverFeeId govtCharges platformFee cgst sgst mbFeeWithoutDiscount now = do
+resetFee :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DriverFee -> Money -> Domain.PlatformFee -> Maybe HighPrecMoney -> Maybe HighPrecMoney -> UTCTime -> m ()
+resetFee driverFeeId govtCharges platformFee mbFeeWithoutDiscount mbAmountPaidByCoin now = do
   updateOneWithKV
     ( [ Se.Set BeamDF.govtCharges govtCharges,
-        Se.Set BeamDF.platformFee platformFee,
-        Se.Set BeamDF.cgst cgst,
-        Se.Set BeamDF.sgst sgst,
+        Se.Set BeamDF.platformFee platformFee.fee,
+        Se.Set BeamDF.cgst platformFee.cgst,
+        Se.Set BeamDF.sgst platformFee.sgst,
+        Se.Set BeamDF.amountPaidByCoin mbAmountPaidByCoin,
         Se.Set BeamDF.updatedAt now
       ]
         <> [Se.Set BeamDF.feeWithoutDiscount mbFeeWithoutDiscount | isJust mbFeeWithoutDiscount]
@@ -552,6 +553,12 @@ updateFeeWithoutDiscount :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Dr
 updateFeeWithoutDiscount driverFeeId mbFeeWithoutDiscount = do
   updateOneWithKV
     [Se.Set BeamDF.feeWithoutDiscount mbFeeWithoutDiscount]
+    [Se.Is BeamDF.id (Se.Eq driverFeeId.getId)]
+
+updateAmountPaidByCoins :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DriverFee -> Maybe HighPrecMoney -> m ()
+updateAmountPaidByCoins driverFeeId mbAmountPaidByCoin = do
+  updateOneWithKV
+    [Se.Set BeamDF.amountPaidByCoin mbAmountPaidByCoin]
     [Se.Is BeamDF.id (Se.Eq driverFeeId.getId)]
 
 instance FromTType' BeamDF.DriverFee DriverFee where
