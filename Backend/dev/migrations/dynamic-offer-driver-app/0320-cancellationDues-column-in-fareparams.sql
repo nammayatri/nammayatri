@@ -20,6 +20,6 @@ CREATE TABLE atlas_driver_offer_bpp.cancellation_charges (
 
 CREATE INDEX ON atlas_driver_offer_bpp.cancellation_charges USING btree (driver_id);
 
-ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ADD column customer_cancellation_dues int DEFAULT 0 NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ADD column customer_cancellation_dues double precision DEFAULT 0 NOT NULL;
 
-ALTER TABLE atlas_driver_offer_bpp.search_request ADD column customer_cancellation_dues int DEFAULT 0 NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.search_request ADD column customer_cancellation_dues double precision DEFAULT 0 NOT NULL;
