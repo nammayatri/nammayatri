@@ -274,7 +274,8 @@ getFinalOrderAmount feeWithoutDiscount merchantId transporterConfig driver plan 
   now <- getCurrentTime
   let dutyDate = driverFee.createdAt
       registrationDateLocal = addUTCTime (secondsToNominalDiffTime transporterConfig.timeDiffFromUtc) registrationDate
-  if (feeWithoutDiscount + driverFee.specialZoneAmount) == 0
+      feeWithOutDiscountPlusSpecialZone = feeWithoutDiscount + driverFee.specialZoneAmount
+  if (feeWithOutDiscountPlusSpecialZone) == 0
     then do
       updateCollectedPaymentStatus CLEARED Nothing now driverFee.id
       return (0, 0, Nothing, Nothing)
@@ -289,8 +290,9 @@ getFinalOrderAmount feeWithoutDiscount merchantId transporterConfig driver plan 
       if finalOrderAmount + driverFee.specialZoneAmount == 0
         then do
           updateCollectedPaymentStatus CLEARED offerId now driverFee.id
+          updateFeeWithoutDiscount driverFee.id (Just $ feeWithOutDiscountPlusSpecialZone)
           return (0, 0, offerId, offerTitle)
-        else return (feeWithoutDiscount + driverFee.specialZoneAmount, finalOrderAmount + driverFee.specialZoneAmount, offerId, offerTitle)
+        else return (feeWithOutDiscountPlusSpecialZone, finalOrderAmount + driverFee.specialZoneAmount, offerId, offerTitle)
 
 splitPlatformFee :: HighPrecMoney -> HighPrecMoney -> Plan -> DriverFee -> Maybe HighPrecMoney -> Maybe HighPrecMoney -> [DriverFee]
 splitPlatformFee feeWithoutDiscount_ totalFee plan DriverFee {..} maxAmountPerDriverfeeThreshold coinClearedAmount = do
