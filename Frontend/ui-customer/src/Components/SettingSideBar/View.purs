@@ -109,7 +109,7 @@ settingsView state push =
 
 helpAndSupportConfig :: Boolean -> Item
 helpAndSupportConfig enableContactSupport = {
-  imageUrl : fetchImage FF_ASSET $  if enableContactSupport then "ic_help" else  "ny_ic_help_menu" ,
+  imageUrl : fetchImage FF_ASSET $  if enableContactSupport then "ny_ic_help" else  "ny_ic_help_menu" ,
   text : if enableContactSupport then (getString HELP_AND_SUPPORT) else  (getString HELP) ,
   accessibilityHint : if enableContactSupport then "Help And Support" else "Help",
   tag : SETTINGS_HELP, 

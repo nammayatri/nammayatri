@@ -7,7 +7,7 @@
  *  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 
-package in.juspay.mobility.app;
+package in.juspay.mobility.common;
 
 import android.content.Context;
 import android.location.Address;

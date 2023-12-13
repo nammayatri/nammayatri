@@ -1267,7 +1267,7 @@ estimatedFareView push state =
       , stroke ("1," <> Color.grey900)
       , gravity CENTER
       , cornerRadii $ Corners 24.0 true true false false
-      ][  textView
+      ][  textView $
           [ text $ getString $ REQUEST_AUTO_RIDE "REQUEST_AUTO_RIDE"
           , textSize FontSize.a_22
           , color Color.black800
@@ -1276,8 +1276,7 @@ estimatedFareView push state =
           , gravity CENTER_HORIZONTAL
           , height WRAP_CONTENT
           , width MATCH_PARENT
-          , fontStyle $ FontStyle.bold LanguageStyle
-          ]
+          ] <> FontStyle.h1 TypoGraphy
         , linearLayout
           [ width MATCH_PARENT
           , height WRAP_CONTENT
@@ -1454,7 +1453,7 @@ bookingPreferencesView push state =
            , imageView
               [ width $ V 10
               , height $ V 10
-              , margin (Margin 9 8 0 0)
+              , margin (Margin 9 5 0 0)
               , accessibility DISABLE
               , imageWithFallback $ if state.data.showPreferences
                                       then fetchImage FF_COMMON_ASSET "ny_ic_chevron_up"
@@ -1503,7 +1502,7 @@ showMenuButtonView push menuText menuImage autoAssign state =
       [ text menuText
       , width MATCH_PARENT
       , gravity CENTER
-      , color Color.black700
+      , color state.data.config.estimateAndQuoteConfig.textColor
       , height WRAP_CONTENT
       , margin (MarginHorizontal 10 10)
       , onClick push (const $ CheckBoxClick autoAssign)
@@ -1532,8 +1531,8 @@ showMenuButtonView push menuText menuImage autoAssign state =
           ]
         else
           imageView
-          [ height $ V 25
-          , width $ V 25
+          [ height $ V 16
+          , width $ V 16
           , imageWithFallback menuImage
           , margin $ (MarginHorizontal 5 5)
           , onClick push (const $ OnIconClick autoAssign)
@@ -2833,6 +2832,8 @@ pickupLocationView push state =
                   , textView $
                     [ text $ getString BOOK_YOUR_RIDE
                     , color $ state.data.config.homeScreen.header.titleColor
+                    , width MATCH_PARENT
+                    , gravity CENTER
                     , visibility $ if state.data.config.homeScreen.header.showLogo then GONE else VISIBLE
                     ] <> FontStyle.h3 TypoGraphy
                 ]

@@ -709,6 +709,6 @@ separatorConfig =
   , count : 3
   , height : V 4
   , width : V 2
-  , layoutWidth : V 12
+  , layoutWidth : V 15
   , layoutHeight : V 15
   }

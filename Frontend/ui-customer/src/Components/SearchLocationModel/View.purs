@@ -295,7 +295,7 @@ sourceDestinationEditTextView state push =
             [ imageView
                 [ height $ V 19
                 , width $ V 19
-                , imageWithFallback $ fetchImage FF_ASSET "ny_ic_close_grey"
+                , imageWithFallback $ fetchImage FF_ASSET state.appConfig.searchLocationConfig.clearTextImage
                 ]
             ]
         ]
@@ -368,7 +368,7 @@ sourceDestinationEditTextView state push =
             [ imageView
                 [ height $ V 19
                 , width $ V 19
-                , imageWithFallback $ fetchImage FF_ASSET "ny_ic_close_grey"
+                , imageWithFallback $ fetchImage FF_ASSET state.appConfig.searchLocationConfig.clearTextImage
                 ]
             ]
         ]

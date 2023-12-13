@@ -66,6 +66,7 @@ config = {
   isDriver : true,
   topCard : {
     title : "",
+    titleColor : Color.grey900,
     finalAmount : 0,
     initalAmount : 0,
     fareUpdatedVisiblity : false,
@@ -164,6 +165,7 @@ type CustomerIssueCard = {
 
 type TopCard = {
   title :: String,
+  titleColor :: String,
   finalAmount :: Int,
   initalAmount :: Int,
   fareUpdatedVisiblity :: Boolean,

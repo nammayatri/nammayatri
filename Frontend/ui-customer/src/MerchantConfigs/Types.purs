@@ -64,6 +64,7 @@ type AppConfigCustomer a =
   , geoCoder :: GeoCoderConfig
   , shareAppConfig :: ShareAppConfig
   , homeScreen :: HomeScreen
+  , locationTagBar :: LocationTagBarConfig
   | a
   }
 
@@ -140,6 +141,7 @@ type SearchLocationConfig = {
 , showSeparator :: Boolean
 , showChargeDesc :: Boolean
 , enableRateCard :: Boolean
+, clearTextImage :: String
 }
 
 type QuoteListConfig = {
@@ -199,7 +201,8 @@ type EstimateAndQuoteConfig = {
   variantOrder :: Array String,
   enableOnlyAuto :: Boolean,
   showNearByDrivers :: Boolean,
-  enableBookingPreference :: Boolean
+  enableBookingPreference :: Boolean, 
+  textColor :: String
 }
 
 type CustomerTip = {
@@ -228,6 +231,13 @@ type TopCardConfig = {
   gradient :: String
 , enableGradient :: Boolean
 , background :: String
+, titleColor :: String
+, rideDesctiption :: RideDesctiptionConfig
+}
+
+type RideDesctiptionConfig = {
+  background :: String
+, textColor :: String
 }
 
 type MapConfig = {
@@ -295,4 +305,10 @@ type ShadowConfig = {
 type ShareAppConfig = {
   title :: String
 , description :: String
+}
+
+type LocationTagBarConfig = {
+  cornerRadius :: Number
+, textColor :: String
+, stroke:: String
 }

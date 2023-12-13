@@ -65,6 +65,7 @@ config =
     , showChargeDesc: false
     , backArrow : "ny_ic_chevron_left_white,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_chevron_left_white.png"
     , enableRateCard: true
+    , clearTextImage: "ny_ic_close_grey"
     }
   , driverInfoConfig : 
     { ratingTextColor: "#454545"
@@ -165,6 +166,7 @@ config =
       , enableOnlyAuto : false
       , showNearByDrivers: false
       , enableBookingPreference: true
+      , textColor: "#6D7280"
       }
   , customerTip : {
       auto : true,
@@ -188,7 +190,12 @@ config =
         gradient : "#29334A"
       , enableGradient : true
       , background : "#2C2F3A"
-      } 
+      , titleColor : "#E5E7EB"
+      , rideDesctiption : { 
+          background : "#00FFFFFF"
+        , textColor : "#A7A7A7"
+        }                     
+    }
   }
   , mapConfig : 
       { locateOnMapConfig : 
@@ -257,4 +264,9 @@ config =
     , enable : false
   }
   , logFunctionCalls : true
+  , locationTagBar : {
+    cornerRadius : 8.0
+  , textColor : "#454545"
+  , stroke: "1,#E5E7EB"
+  }
 }

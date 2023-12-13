@@ -173,7 +173,7 @@ bottomLinksView state =
             [ imageView
                 [ height $ V 20
                 , width $ V 20
-                , imageWithFallback $ fetchImage FF_COMMON_ASSET "ic_launcher"
+                , imageWithFallback $ fetchImage FF_ASSET "ic_launcher"
                 ]
             , textView
                 $ [ text $ "namma yatri"
