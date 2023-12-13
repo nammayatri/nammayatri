@@ -622,6 +622,8 @@ type HomeScreenStateData =
   , suggestionsData :: SuggestionsData
   , peekHeight :: Int
   , rideHistoryTrip :: Maybe Trip
+  , cancellationDues :: Maybe Int
+  , blockRideFlow :: Boolean
   }
 
 type LocationDetails = {
@@ -753,6 +755,8 @@ type HomeScreenStateProps =
   , autoScrollTimer :: String
   , autoScrollTimerId :: String
   , autoScroll :: Boolean
+  , showCancellationFeePopUp :: Boolean
+  , showCancellationFeeInfo :: Boolean
   }
 
 type SearchLocationModelProps = {

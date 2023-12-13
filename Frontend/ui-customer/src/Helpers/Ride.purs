@@ -27,7 +27,7 @@ import Engineering.Helpers.BackTrack (getState)
 import Types.App (GlobalState(..))
 import Data.Either (Either(..))
 import Services.API
-import Data.Array (null, head, length, (!!))
+import Data.Array (null, head, length, (!!), find, filter)
 import Data.Maybe (Maybe(..), fromMaybe, isNothing, isJust, maybe', maybe)
 import Screens.HomeScreen.ScreenData (dummyRideBooking, initData) as HSD
 import Screens.HomeScreen.Transformer (dummyRideAPIEntity, getDriverInfo, getSpecialTag)
@@ -42,12 +42,15 @@ import Helpers.Utils (getCurrentDate)
 import Resources.Constants (DecodeAddress(..), decodeAddress, getAddressFromBooking)
 import Data.String (split, Pattern(..))
 import Foreign.Generic (decodeJSON)
+import Debug(spy)
+import Common.Types.App(LazyCheck(..))
 
 
 checkRideStatus :: Boolean -> FlowBT String Unit --TODO:: Need to refactor this function
 checkRideStatus rideAssigned = do
   logField_ <- lift $ lift $ getLogFields
   rideBookingListResponse <- lift $ lift $ Remote.rideBookingList "1" "0" "true"
+  updateCancellationDues FunctionCall
   case rideBookingListResponse of
     Right (RideBookingListRes listResp) -> do
       if not (null listResp.list) then do
@@ -109,6 +112,9 @@ checkRideStatus rideAssigned = do
                 (RideBookingAPIDetails bookingDetails) = resp.bookingDetails
                 (RideBookingDetails contents) = bookingDetails.contents
                 (RideAPIEntity currRideListItem) = fromMaybe dummyRideAPIEntity $ head resp.rideList
+                cancellationDues = 
+                  let cancellationDues = filter (\fare -> fare ^. _description == "CUSTOMER_CANCELLATION_DUES") resp.fareBreakup
+                  in maybe 0 (\fare -> fare ^. _amount) (head cancellationDues)
                 differenceOfDistance = fromMaybe 0 contents.estimatedDistance - (fromMaybe 0 currRideListItem.chargeableRideDistance)
                 lastRideDate = (case currRideListItem.rideStartTime of
                                 Just startTime -> (convertUTCtoISC startTime "DD/MM/YYYY")
@@ -158,6 +164,7 @@ checkRideStatus rideAssigned = do
                                             Just startTime -> (convertUTCtoISC startTime "DD/MM/YYYY")
                                             Nothing        -> ""
                           }
+                          , cancellationDues = if cancellationDues > 0 then Just cancellationDues else Nothing
                           , finalAmount = (fromMaybe 0 currRideListItem.computedPrice)
                           , driverInfoCardState {
                             price = resp.estimatedTotalFare,
@@ -175,7 +182,16 @@ checkRideStatus rideAssigned = do
   where 
     updateCity :: FlowStatusData -> FlowBT String Unit
     updateCity (FlowStatusData flowStatusData) = modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{city = flowStatusData.source.city}})
-        
+
+updateCancellationDues :: LazyCheck -> FlowBT String Unit
+updateCancellationDues _ = do
+  cancellationResp <- lift $ lift $ Remote.getCancellationDues ""
+  case cancellationResp of
+    Right dueDetails -> let dues = (dueDetails ^. _cancellationDues)
+      in
+        modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{cancellationDues =  if dues  > 0 then Just dues else Nothing }})  
+    _ -> pure unit
+  pure unit
 
 removeChatService :: String -> FlowBT String Unit
 removeChatService _ = do

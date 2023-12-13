@@ -141,6 +141,8 @@ initData = {
     , infoCardPeekHeight : 0
     , peekHeight : 0
     , rideHistoryTrip : Nothing
+    , cancellationDues : Nothing
+    , blockRideFlow : false
     },
     props: {
       rideRequestFlow : false
@@ -238,6 +240,7 @@ initData = {
     , sheetState : COLLAPSED
     , showOfferedAssistancePopUp : false
     , showDisabilityPopUp : false
+    , showCancellationFeePopUp : false
     , isChatNotificationDismissed : false
     , searchLocationModelProps : dummySearchLocationModelProps
     , flowWithoutOffers : true
@@ -278,6 +281,7 @@ initData = {
     , autoScrollTimer : ""
     , autoScrollTimerId : ""
     , autoScroll : true
+    , showCancellationFeeInfo : false
     }
 }
 

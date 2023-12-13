@@ -47,5 +47,6 @@
     <string name="message_from_customer">வாடிக்கையாளரிடமிருந்து செய்தி</string>
     <string name="go_to">கோ-டூ</string>
     <string name="call_support">ஆதரவை அழை</string>
+    <string name="cancel_fee">ரத்து கட்டணம்</string>
 
 </resources>

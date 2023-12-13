@@ -46,4 +46,5 @@
     <string name="message_from_customer">গ্রাহক থেকে বার্তা</string>
     <string name="go_to">গো-টু</string>
     <string name="call_support">সাহায্য কল করুন</string>
+    <string name="cancel_fee">বাতিল ফি</string>
 </resources>

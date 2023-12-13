@@ -1,6 +1,7 @@
 module Resources.Localizable.KN where
 
 import Language.Types (STR(..))
+import Prelude
 
 getKN :: STR -> String
 getKN stringKey =
@@ -694,3 +695,16 @@ getKN stringKey =
         I_DID_NOT_FEEL_SAFE -> "ನನಗೆ ಸುರಕ್ಷಿತ ಅನಿಸಲಿಲ್ಲ"
         LOOKING_FOR_ANOTHER_RIDE -> "ಇನ್ನೊಂದು ಸವಾರಿಗಾಗಿ ಹುಡುಕುತ್ತಿದ್ದೇವೆ..."
         THE_RIDE_HAD_BEEN_CANCELLED_WE_ARE_FINDING_YOU_ANOTHER -> "ಸವಾರಿ ರದ್ದಾಗಿದೆ, ನಾವು ನಿಮಗೆ ಇನ್ನೊಂದನ್ನು ಹುಡುಕುತ್ತಿದ್ದೇವೆ"
+        IF_YOU_FEEL_THIS_IS_WRONGLY_CHARGED -> "ಇದು ತಪ್ಪುಯಾಗಿ ಖರೀದಿಸಲಾಗಿದೆ ಎಂದರೆ, ನೀವು ಸಹಾಯ ಮತ್ತು ಬೆಂಬಲ ಕೆಳಗೆ ಟಿಕೆಟ್ ಮೂಲಕ ರೈಸ್ ಮಾಡಬಹುದು."
+        CANCELLATION_FEE_WILL_BE_APPLIED -> "ರದ್ದು ವ್ಯಯಗಳನ್ನು ಅನ್ವಯಿಸಲಾಗುತ್ತದೆ."
+        DRIVER_IS_ALREADY_ON_THE_WAY -> "ಚಾಲಕ ಈಗಾಗಲೇ ಮಾರುತ್ತಿದ್ದಾರೆ."
+        YOUR_DRIVER_IS_DISTANCE_AWAY distance -> "ನಿಮ್ಮ ಚಾಲಕ ಮಾತ್ರ" <> show distance <> "ಮೀಟರ್ ದೂರದಲ್ಲಿದ್ದಾರೆ."
+        YOU_HAVE_DUE_AGAINST_PREVIOUS_CANCELLATIONS cancellationDues -> "ನೀವು ಹಿಂದಿನ ರದ್ದುಗಳ ವಿರುದ್ಧವಾಗಿ " <> "₹" <> show cancellationDues <> " ಬಾಕಿ ಉಳಿದಿದೆ (" <> show (cancellationDues / 10) <> ")"
+        THIS_WILL_BE_ADDED_TO_YOUR_NEXT_RIDE -> "ಇದು ನಿಮ್ಮ ಮುಂದಿನ ಸವಾರಿಗೆ ಸೇರಿಸಲಾಗುತ್ತದೆ"
+        CHARGE_DUE_AGAINST_PREVIOUS_CANCELLATION_WILL_BE_ADDED_TO_THIS_RIDE cancellationFee ->  "ಈ ಸವಾರಿಗೆ ಈಗಿನ ರದ್ದಿಗೆ " <> "₹" <> (show cancellationFee) <> " ಬಾಕಿಯಿದೆ (" <> (show (cancellationFee / 10)) <> ") ಹಿಂದಿನ ರದ್ದಿನ ವಿರುದ್ಧವಾಗಿ ಸೇರಿಸಲಾಗುತ್ತದೆ"
+        RUPEES_PAYABLE cancellationDues -> "₹" <> show cancellationDues <> " ಪಾವತಿಸಬೇಕು"
+        CLEAR_DUES ->  "ಬಾಕಿಗಳನ್ನು ತೆರವುಗೊಳಿಸಿ"
+        INCLUDES_PREVIOUS_CANCELLATION_FEE cancellationDues -> "ಹೊಂದಿಕೆಯೊಳಗೊಂದು ₹" <> show cancellationDues <> " ಅನ್ನು (" <> show (cancellationDues / 10) <> ") ಹಿಂದಿನ ರದ್ದುಗೊಳಿಸುವ ಶುಲ್ಕವಾಗಿ"
+        RIDE_CANCELLATION_DUE -> "ಸವಾರಿ ರದ್ದು ವ್ಯಯಗಳು"
+        WHICH_IS_ADDED_TO_THIS_RIDE -> "ಈ ಸವಾರಿಗೆ ಸೇರಿಸಲಾಗುತ್ತದೆ"
+        CLEAR_YOUR_DUES_TO_CONTINUE_TAKING_RIDES -> "ಸವಾರಿಗಳನ್ನು ಮುಂದುವರಿಸಲು ನಿಮ್ಮ ಬಾಕಿಗಳನ್ನು ತೆರವುಗೊಳಿಸಿ"

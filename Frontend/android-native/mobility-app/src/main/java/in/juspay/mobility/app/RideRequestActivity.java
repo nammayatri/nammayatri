@@ -126,6 +126,7 @@ public class RideRequestActivity extends AppCompatActivity {
                     rideRequestBundle.getString("requestedVehicleVariant"),
                     rideRequestBundle.getBoolean("disabilityTag"),
                     rideRequestBundle.getBoolean("isTranslated"),
+                    rideRequestBundle.getInt("customerCancellationDues"),
                     rideRequestBundle.getBoolean("gotoTag")
             );
 
@@ -141,7 +142,7 @@ public class RideRequestActivity extends AppCompatActivity {
     private void updateTagsView (SheetAdapter.SheetViewHolder holder, SheetModel model) {
         mainLooper.post(() -> {
             String variant = model.getRequestedVehicleVariant();
-            if (model.getCustomerTip() > 0 || model.getDisabilityTag() || model.isGotoTag()) {
+            if (model.getCustomerTip() > 0 || model.getDisabilityTag() || model.isGotoTag() || model.getCustomerCancellationDues() > 0) {
                 holder.tagsBlock.setVisibility(View.VISIBLE);
                 holder.accessibilityTag.setVisibility(model.getDisabilityTag() ? View.VISIBLE: View.GONE);
                 holder.textIncludesCharges.setText(model.getCustomerTip() > 0 ?
@@ -149,6 +150,9 @@ public class RideRequestActivity extends AppCompatActivity {
                         getString(R.string.includes_pickup_charges_10));
                 holder.customerTipTag.setVisibility(model.getCustomerTip() > 0 ? View.VISIBLE : View.GONE);
                 holder.customerTipText.setText(sharedPref.getString("CURRENCY", "₹") + " " + model.getCustomerTip());
+                holder.cancelFeeTag.setVisibility(model.getCustomerCancellationDues() > 0 ? View.VISIBLE : View.GONE);
+                holder.cancelFeeTagText.setText(sharedPref.getString("CURRENCY", "₹") + " " + model.getCustomerCancellationDues() + " " + getString(R.string.cancel_fee)) ;
+                holder.cancelFeeTag.setVisibility(model.getCustomerCancellationDues() > 0 ? View.VISIBLE : View.GONE);
                 holder.gotoTag.setVisibility(model.isGotoTag() ? View.VISIBLE : View.GONE);
                 holder.reqButton.setTextColor(model.isGotoTag() ? getColor(R.color.yellow900) : getColor(R.color.white));
                 holder.reqButton.setBackgroundTintList(model.isGotoTag() ?

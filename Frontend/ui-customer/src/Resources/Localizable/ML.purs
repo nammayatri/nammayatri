@@ -1,6 +1,7 @@
 module Resources.Localizable.ML where
 
 import Language.Types (STR(..))
+import Prelude
 
 getML :: STR -> String
 getML stringKey =
@@ -693,3 +694,16 @@ getML stringKey =
         I_DID_NOT_FEEL_SAFE -> "എനിക്ക് സുരക്ഷിതത്വം തോന്നിയില്ല"
         LOOKING_FOR_ANOTHER_RIDE -> "മറ്റൊരു യാത്രയില്‍ തിരഞ്ഞെടുക്കുന്നു..."
         THE_RIDE_HAD_BEEN_CANCELLED_WE_ARE_FINDING_YOU_ANOTHER -> "യാത്ര റൈഡ് റദ്ദാക്കപ്പെട്ടു, നാം നിനക്ക് മറ്റൊരു യാത്ര തിരിച്ചെത്തുന്നു"
+        IF_YOU_FEEL_THIS_IS_WRONGLY_CHARGED -> "നിങ്ങൾക്ക് ഇത് തെറ്റായി ചാർജ് ആയിരിക്കുന്നെങ്കിൽ, നിങ്ങൾക്ക് സഹായവും പിന്തുണയും കൂട്ടാനും പിന്തുണയുള്ള ഒരു ടിക്കറ്റ് എടുക്കാനും കഴിയും."
+        CANCELLATION_FEE_WILL_BE_APPLIED -> "രദ്ദാക്കല്‍ ചാര്‍ജുകള്‍ പ്രവർത്തനത്തിനു വന്നുചേരും."
+        DRIVER_IS_ALREADY_ON_THE_WAY -> "ഡ്രൈവർ ഇതിനേക്കാൾ മുന്നോട്ട് പോകുന്നു."
+        YOUR_DRIVER_IS_DISTANCE_AWAY distance -> "നിനക്ക്" <> show distance <> " മീറ്റർ മാത്രം വേഗത്തിൽ ഉണ്ട്."
+        YOU_HAVE_DUE_AGAINST_PREVIOUS_CANCELLATIONS cancellationDues ->  "നിങ്ങൾക്ക് " <> "₹" <> show cancellationDues <> " മുമ്പത്തെ റദ്ദിനെയും (" <> show (cancellationDues / 10) <> ") വിലക്ക് നിരക്കിൽ നിന്നുള്ള ബാക്കി ഉണ്ട്"
+        THIS_WILL_BE_ADDED_TO_YOUR_NEXT_RIDE -> "ഇത് നിങ്ങളുടെ അടുത്ത യാത്രയിൽ ചേർക്കും"
+        CHARGE_DUE_AGAINST_PREVIOUS_CANCELLATION_WILL_BE_ADDED_TO_THIS_RIDE cancellationFee -> "ഈ യാത്രയിൽ മുമ്പത്തെ റദ്ദിനെയും (" <> (show (cancellationFee / 10)) <> ") വിലക്ക് നിരക്കിൽ നിന്നുള്ള " <> "₹" <> (show cancellationFee) <> " ബാക്കി ചേർക്കുന്നു"
+        RUPEES_PAYABLE cancellationDues -> "₹" <> show cancellationDues <> " രൂപ നൽകണം"
+        CLEAR_DUES -> "ബാക്കി നിരക്ക് നീക്കം ചെയ്യുക"
+        INCLUDES_PREVIOUS_CANCELLATION_FEE cancellationDues ->"പഴയ റദ്ദാക്കല്‍ ഫീസ് ആയി (" <> show (cancellationDues / 10) <> ") ഉൾപ്പെടുത്തിയിരിക്കുന്നു ₹" <> show cancellationDues
+        RIDE_CANCELLATION_DUE -> "യാത്ര റദ്ദാക്കല്‍ ബാക്കി"
+        WHICH_IS_ADDED_TO_THIS_RIDE -> "ഇത് ഈ യാത്രയിൽ ചേർക്കുന്നു"
+        CLEAR_YOUR_DUES_TO_CONTINUE_TAKING_RIDES -> "യാത്രകൾ തുടരുന്നതിന് നിങ്ങളുടെ ബാക്കി നീക്കം ചെയ്യുക"

@@ -1,6 +1,7 @@
 module Resources.Localizable.HI where
 
 import Language.Types (STR(..))
+import Prelude
 
 getHI :: STR -> String
 getHI stringKey =
@@ -693,3 +694,16 @@ getHI stringKey =
         I_DID_NOT_FEEL_SAFE -> "मैं सुरक्षित महसूस नहीं कर रहा था"
         LOOKING_FOR_ANOTHER_RIDE -> "एक और सफर ढूंढ़ रहे हैं..."
         THE_RIDE_HAD_BEEN_CANCELLED_WE_ARE_FINDING_YOU_ANOTHER -> "यात्रा को रद्द कर दिया गया था, हम आपके लिए एक और ढूंढ़ रहे हैं"
+        IF_YOU_FEEL_THIS_IS_WRONGLY_CHARGED -> "यदि आपको ऐसा लगता है कि यह गलत तरीके से चार्ज हुआ है, तो आप मदद और समर्थन के तहत एक टिकट खोल सकते हैं।"
+        CANCELLATION_FEE_WILL_BE_APPLIED -> "रद्दी करने का शुल्क लागू होगा।"
+        DRIVER_IS_ALREADY_ON_THE_WAY -> "ड्राइवर पहले से ही रास्ते पर है।"
+        YOUR_DRIVER_IS_DISTANCE_AWAY distance -> "आपका ड्राइवर सिर्फ" <> show distance <> "मीटर की दूरी पर है।"
+        YOU_HAVE_DUE_AGAINST_PREVIOUS_CANCELLATIONS cancellationDues -> "आपके पास पिछले रद्दी के खिलाफ " <> "₹" <> show cancellationDues <> " बकाया है (" <> show (cancellationDues / 10) <> ")"
+        THIS_WILL_BE_ADDED_TO_YOUR_NEXT_RIDE -> "यह आपकी अगली सवारी में जोड़ा जाएगा"
+        CHARGE_DUE_AGAINST_PREVIOUS_CANCELLATION_WILL_BE_ADDED_TO_THIS_RIDE cancellationFee -> "इस सवारी में पिछले रद्दी के खिलाफ " <> "₹" <> (show cancellationFee) <> " बकाया है (" <> (show (cancellationFee / 10)) <> ") जोड़ा जाएगा" 
+        RUPEES_PAYABLE cancellationDues -> "₹" <> show cancellationDues <> " देय"
+        CLEAR_DUES -> "शेष राशि चुकाएं"
+        INCLUDES_PREVIOUS_CANCELLATION_FEE cancellationDues -> "₹" <> show cancellationDues <> " को शामिल किया गया है (" <> show (cancellationDues / 10) <> ") पिछले रद्द करने की फीस के रूप में"
+        RIDE_CANCELLATION_DUE -> "राइड रद्द करने का कारण"
+        WHICH_IS_ADDED_TO_THIS_RIDE -> "जो इस सवारी में जोड़ा जाता है"
+        CLEAR_YOUR_DUES_TO_CONTINUE_TAKING_RIDES -> "यात्रा जारी रखने के लिए अपने बकाया चुकाएं"

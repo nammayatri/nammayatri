@@ -863,6 +863,7 @@ homeScreenFlow = do
                                         , exit_app : false
                                         }
                                         }
+      updateCancellationDues FunctionCall
       updateUserInfoToState state
       if state.props.currentStage == RideCompleted then
         if (getSearchType unit) == "direct_search" then do
@@ -2097,7 +2098,6 @@ getTicketBookings bookedRes pendingRes = {
   pendingBooking : pendingRes,
   booked : bookedRes
 }
-
 
 cancelEstimate :: String -> FlowBT String Unit
 cancelEstimate bookingId = do

@@ -91,142 +91,17 @@ view push state =
         , accessibility DISABLE
         , clickable true
         ]
-        [ linearLayout
-            [ height WRAP_CONTENT
-            , width MATCH_PARENT
-            , gravity CENTER
-            , visibility state.coverImageConfig.visibility
-            , cornerRadii state.cornerRadius
-            , accessibility DISABLE_DESCENDANT
-            , orientation VERTICAL
-            ][  textView $
-                [ width state.topTitle.width
-                , height state.topTitle.height
-                , margin state.topTitle.margin
-                , color state.topTitle.color
-                , gravity state.topTitle.gravity
-                , text state.topTitle.text
-                , visibility state.topTitle.visibility
-                ] <> (FontStyle.h2 LanguageStyle)
-              , imageView
-                [ height state.coverImageConfig.height
-                , width state.coverImageConfig.width
-                , margin state.coverImageConfig.margin
-                , padding state.coverImageConfig.padding
-                , imageWithFallback state.coverImageConfig.imageUrl
-                , visibility state.coverImageConfig.visibility
-                ]
-            ]
-        ,   linearLayout
-            [ height WRAP_CONTENT
-            , width MATCH_PARENT
-            , gravity CENTER
-            , visibility state.coverVideoConfig.visibility
-            , cornerRadii state.cornerRadius
-            , accessibility DISABLE_DESCENDANT
-            , orientation VERTICAL
-            ][  textView $
-                [ width state.topTitle.width
-                , height state.topTitle.height
-                , margin state.topTitle.margin
-                , color state.topTitle.color
-                , gravity state.topTitle.gravity
-                , text state.topTitle.text
-                , visibility state.topTitle.visibility
-                ] <> (FontStyle.h2 LanguageStyle)
-              , linearLayout[
-                  height $ state.coverVideoConfig.height
-                , width state.coverVideoConfig.width
-                , width MATCH_PARENT
-                , gravity CENTER
-                ][  PrestoAnim.animationSet [Anim.fadeIn (state.coverVideoConfig.visibility == VISIBLE) ] $   linearLayout
-                    [ height WRAP_CONTENT
-                    , width state.coverVideoConfig.width
-                    , margin state.coverVideoConfig.margin
-                    , padding state.coverVideoConfig.padding
-                    , cornerRadius 16.0
-                    , visibility state.coverVideoConfig.visibility
-                    , id (getNewIDWithTag  state.coverVideoConfig.id)
-                    , onAnimationEnd
-                        ( \action -> do
-                            let
-                                mediaType = state.coverVideoConfig.mediaType
-                                id = getNewIDWithTag state.coverVideoConfig.id
-                                url = state.coverVideoConfig.mediaUrl
-                            if (supportsInbuildYoutubePlayer unit) then 
-                                case mediaType of
-                                    "VideoLink" -> pure $ runFn3 setYoutubePlayer (getYoutubeData (getVideoID url) "VIDEO" 0 ) id (show PLAY)
-                                    "PortraitVideoLink" -> pure $ runFn3 setYoutubePlayer (getYoutubeData (getVideoID url) "PORTRAIT_VIDEO" 0) id (show PLAY)
-                                    _ -> pure unit
-                                else pure unit
-                        )(const NoAction)
-                    ][]
-                  ]
-                ]
+        [ coverImageView state
+        , coverVideoView push state
         , linearLayout
             [ width MATCH_PARENT
             , height WRAP_CONTENT
             , orientation HORIZONTAL
             ]
-            [ textView $
-                [ text $ state.primaryText.text
-                , accessibilityHint state.primaryText.text
-                , accessibility ENABLE
-                , color $ state.primaryText.color
-                , margin $ state.primaryText.margin
-                , gravity $ state.primaryText.gravity
-                , width if state.dismissPopupConfig.visibility == VISIBLE then WRAP_CONTENT else MATCH_PARENT
-                , height WRAP_CONTENT
-                , visibility $ state.primaryText.visibility
-                ] <> (FontStyle.getFontStyle state.primaryText.textStyle LanguageStyle)
-            , linearLayout
-                [ height WRAP_CONTENT
-                , width MATCH_PARENT
-                , gravity RIGHT
-                , visibility state.dismissPopupConfig.visibility
-                ]
-                [ linearLayout
-                    [ height WRAP_CONTENT
-                    , width WRAP_CONTENT
-                    , margin state.dismissPopupConfig.margin
-                    , onClick push $ const OnImageClick
-                    , padding state.dismissPopupConfig.padding
-                    ]
-                    [ imageView
-                        [ width state.dismissPopupConfig.width
-                        , height state.dismissPopupConfig.height
-                        , imageWithFallback state.dismissPopupConfig.imageUrl
-                        , visibility state.dismissPopupConfig.visibility
-                        ]
-                    ]
-                ]
+            [ primaryTextView state
+            , dismissPopupView push state
             ]
-        , linearLayout
-          [ width MATCH_PARENT
-            , height WRAP_CONTENT
-            , gravity CENTER
-            , margin $ state.secondaryText.margin
-            , padding state.secondaryText.padding
-            , visibility $ state.secondaryText.visibility
-            , onClick push $ const OnSecondaryTextClick
-          ][ textView $
-             [ width WRAP_CONTENT
-             , height WRAP_CONTENT
-             , color $ state.secondaryText.color
-             , gravity $ state.secondaryText.gravity
-             , textFromHtml state.secondaryText.text
-             , accessibility ENABLE
-             , accessibilityHint $ replaceAll (Pattern " ,") (Replacement ":") state.secondaryText.text
-             , visibility $ state.secondaryText.visibility
-             ]  <> (FontStyle.getFontStyle state.secondaryText.textStyle LanguageStyle)
-            , imageView [
-               width state.secondaryText.suffixImage.width
-               , height state.secondaryText.suffixImage.height
-               , imageWithFallback state.secondaryText.suffixImage.imageUrl
-               , visibility state.secondaryText.suffixImage.visibility
-               , margin state.secondaryText.suffixImage.margin
-             ]
-          ]
+        , secondaryTextView push state
         , if (null state.listViewArray) then textView[height $ V 0] else listView push state
         , contactView push state
         , linearLayout
@@ -429,6 +304,167 @@ listView push state =
 
         ]
         ) state.listViewArray)
+
+secondaryTextView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
+secondaryTextView push state =
+    linearLayout
+        [ width MATCH_PARENT
+        , height WRAP_CONTENT
+        , gravity CENTER
+        , margin $ state.secondaryText.margin
+        , padding state.secondaryText.padding
+        , visibility $ state.secondaryText.visibility
+        , onClick push $ const OnSecondaryTextClick
+        ][ textView $
+            [ width WRAP_CONTENT
+            , height WRAP_CONTENT
+            , color $ state.secondaryText.color
+            , gravity $ state.secondaryText.gravity
+            , textFromHtml state.secondaryText.text
+            , accessibility ENABLE
+            , accessibilityHint $ replaceAll (Pattern " ,") (Replacement ":") state.secondaryText.text
+            , visibility $ state.secondaryText.visibility
+            ]  <> (FontStyle.getFontStyle state.secondaryText.textStyle LanguageStyle)
+        , imageView [
+            width state.secondaryText.suffixImage.width
+            , height state.secondaryText.suffixImage.height
+            , imageWithFallback state.secondaryText.suffixImage.imageUrl
+            , visibility state.secondaryText.suffixImage.visibility
+            , margin state.secondaryText.suffixImage.margin
+            ]
+        ]
+
+dismissPopupView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
+dismissPopupView push state = 
+    linearLayout
+        [ height WRAP_CONTENT
+        , width MATCH_PARENT
+        , gravity RIGHT
+        , visibility state.dismissPopupConfig.visibility
+        ]
+        [ linearLayout
+            [ height WRAP_CONTENT
+            , width WRAP_CONTENT
+            , margin state.dismissPopupConfig.margin
+            , onClick push $ const OnImageClick
+            , padding state.dismissPopupConfig.padding
+            ]
+            [ imageView
+                    [ width state.dismissPopupConfig.width
+                    , height state.dismissPopupConfig.height
+                    , imageWithFallback state.dismissPopupConfig.imageUrl
+                    , visibility state.dismissPopupConfig.visibility
+                    ]
+            ]
+        ]
+
+primaryTextView :: forall w. Config -> PrestoDOM (Effect Unit) w
+primaryTextView state =
+    linearLayout
+        [ height WRAP_CONTENT
+        , width MATCH_PARENT
+        , orientation VERTICAL
+        ][ textView $
+            [ text $ state.primaryText.text
+            , accessibilityHint state.primaryText.text
+            , accessibility ENABLE
+            , color $ state.primaryText.color
+            , margin $ state.primaryText.margin
+            , gravity $ state.primaryText.gravity
+            , width if state.dismissPopupConfig.visibility == VISIBLE then WRAP_CONTENT else MATCH_PARENT
+            , height WRAP_CONTENT
+            , visibility $ state.primaryText.visibility
+            ] <> (FontStyle.getFontStyle state.primaryText.textStyle LanguageStyle)
+        , textView $
+            [ text $ state.primarySubText.text
+            , accessibilityHint state.primarySubText.text
+            , accessibility ENABLE
+            , color $ state.primarySubText.color
+            , margin $ state.primarySubText.margin
+            , gravity $ state.primarySubText.gravity
+            , width if state.dismissPopupConfig.visibility == VISIBLE then WRAP_CONTENT else MATCH_PARENT
+            , height WRAP_CONTENT
+            , visibility $ state.primarySubText.visibility
+            ] <> (FontStyle.getFontStyle state.primarySubText.textStyle LanguageStyle)
+        ]
+
+coverVideoView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
+coverVideoView push state = 
+    linearLayout
+            [ height WRAP_CONTENT
+            , width MATCH_PARENT
+            , gravity CENTER
+            , visibility state.coverVideoConfig.visibility
+            , cornerRadii state.cornerRadius
+            , accessibility DISABLE_DESCENDANT
+            , orientation VERTICAL
+            ][  textView $
+                [ width state.topTitle.width
+                , height state.topTitle.height
+                , margin state.topTitle.margin
+                , color state.topTitle.color
+                , gravity state.topTitle.gravity
+                , text state.topTitle.text
+                , visibility state.topTitle.visibility
+                ] <> (FontStyle.h2 LanguageStyle)
+              , linearLayout[
+                  height $ state.coverVideoConfig.height
+                , width state.coverVideoConfig.width
+                , width MATCH_PARENT
+                , gravity CENTER
+                ][  PrestoAnim.animationSet [Anim.fadeIn (state.coverVideoConfig.visibility == VISIBLE) ] $   linearLayout
+                    [ height WRAP_CONTENT
+                    , width state.coverVideoConfig.width
+                    , margin state.coverVideoConfig.margin
+                    , padding state.coverVideoConfig.padding
+                    , cornerRadius 16.0
+                    , visibility state.coverVideoConfig.visibility
+                    , id (getNewIDWithTag  state.coverVideoConfig.id)
+                    , onAnimationEnd
+                        ( \action -> do
+                            let
+                                mediaType = state.coverVideoConfig.mediaType
+                                id = getNewIDWithTag state.coverVideoConfig.id
+                                url = state.coverVideoConfig.mediaUrl
+                            if (supportsInbuildYoutubePlayer unit) then 
+                                case mediaType of
+                                    "VideoLink" -> pure $ runFn3 setYoutubePlayer (getYoutubeData (getVideoID url) "VIDEO" 0 ) id (show PLAY)
+                                    "PortraitVideoLink" -> pure $ runFn3 setYoutubePlayer (getYoutubeData (getVideoID url) "PORTRAIT_VIDEO" 0) id (show PLAY)
+                                    _ -> pure unit
+                                else pure unit
+                        )(const NoAction)
+                    ][]
+                  ]
+                ]
+
+coverImageView :: forall w. Config -> PrestoDOM (Effect Unit) w 
+coverImageView state = 
+    linearLayout
+        [ height WRAP_CONTENT
+        , width MATCH_PARENT
+        , gravity CENTER
+        , visibility state.coverImageConfig.visibility
+        , cornerRadii state.cornerRadius
+        , accessibility DISABLE_DESCENDANT
+        , orientation VERTICAL
+        ][  textView $
+            [ width state.topTitle.width
+            , height state.topTitle.height
+            , margin state.topTitle.margin
+            , color state.topTitle.color
+            , gravity state.topTitle.gravity
+            , text state.topTitle.text
+            , visibility state.topTitle.visibility
+            ] <> (FontStyle.h2 LanguageStyle)
+            , imageView
+            [ height state.coverImageConfig.height
+            , width state.coverImageConfig.width
+            , margin state.coverImageConfig.margin
+            , padding state.coverImageConfig.padding
+            , imageWithFallback state.coverImageConfig.imageUrl
+            , visibility state.coverImageConfig.visibility
+            ]
+        ]
 
 tipsView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 tipsView push state =

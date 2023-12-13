@@ -46,5 +46,5 @@
     <string name="message_from_customer">ഉപഭോക്താവിൽ നിന്നുള്ള സന്ദേശം</string>
     <string name="go_to">ഗോ റ്റു</string>
     <string name="call_support">സഹായം അഴകുക</string>
-
+    <string name="cancel_fee">റദ്ദാക്കൽ ഫീ</string>
 </resources>

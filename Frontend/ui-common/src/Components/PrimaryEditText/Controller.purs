@@ -15,7 +15,7 @@
 
 module Components.PrimaryEditText.Controller where
 
-import Prelude((<>))
+import Prelude
 import Font.Size as FontSize
 import Common.Styles.Colors as Color
 import Font.Style (Style(..)) 

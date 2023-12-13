@@ -231,3 +231,8 @@ squidInkBlue = "#303440"
 
 rippleShade :: Color
 rippleShade = "#D5D5D8"
+apricot :: Color
+apricot = "#fff0e6"
+
+lightPeach :: Color
+lightPeach = "#ffe0cc"

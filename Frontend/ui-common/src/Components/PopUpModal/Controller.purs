@@ -16,7 +16,7 @@
 module Components.PopUpModal.Controller where
 
 import Common.Styles.Colors as Color
-import PrestoDOM (Padding(..), Margin(..), Gravity(..), Visibility(..), Length(..))
+import PrestoDOM (Padding(..), Margin(..), Gravity(..), Visibility(..), Length(..),Orientation(..))
 import Font.Size as FontSize
 import Font.Style (Style(..))
 import Common.Types.App as Common
@@ -39,6 +39,7 @@ data Action = OnButton1Click
 
 type Config = {
     primaryText :: TextConfig,
+    primarySubText :: TextConfig,
     customerTipArray :: Array String,
     customerTipArrayWithValues :: Array Int,
     secondaryText :: TextConfig,
@@ -204,6 +205,24 @@ config = {
       padding : (Padding 16 0 16 0),
       margin : (Margin 0 20 0 0),
       visibility : VISIBLE,
+      textStyle : Heading2,
+      accessibilityHint : "", 
+      suffixImage : {
+        visibility : GONE
+        , imageUrl : ""
+        , height : (V 0)
+        , width : (V 0)
+        , margin : (Margin 0 0 0 0)
+        , padding : (Padding 0 0 0 0)
+      }
+    }
+  , primarySubText : {
+      text : "Text1",
+      color : Color.black800,
+      gravity : CENTER,
+      padding : (Padding 16 0 16 0),
+      margin : (Margin 0 20 0 0),
+      visibility : GONE,
       textStyle : Heading2,
       accessibilityHint : "", 
       suffixImage : {

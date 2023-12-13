@@ -92,7 +92,7 @@ import Screens.HomeScreen.ScreenData as HomeScreenData
 import Screens.HomeScreen.Transformer (dummyRideAPIEntity, getDriverInfo, getEstimateList, getQuoteList, getSpecialZoneQuotes, transformContactList, getNearByDrivers, getEstimatesInfo, dummyEstimateEntity)
 import Screens.SuccessScreen.Handler as UI
 import Screens.Types (CallType(..), CardType(..), CurrentLocationDetails, CurrentLocationDetailsWithDistance(..), HomeScreenState, Location, LocationItemType(..), LocationListItemState, PopupType(..), RatingCard, SearchLocationModelType(..), SearchResultType(..), SheetState(..), SpecialTags, Stage(..), TipViewStage(..), ZoneType(..), Trip)
-import Services.API (EstimateAPIEntity(..), FareRange, GetDriverLocationResp, GetQuotesRes(..), GetRouteResp, LatLong(..), OfferRes, PlaceName(..), QuoteAPIEntity(..), RideBookingRes(..), SelectListRes(..), SelectedQuotes(..), RideBookingAPIDetails(..), GetPlaceNameResp(..), RideBookingListRes(..))
+import Services.API (EstimateAPIEntity(..), FareRange, GetDriverLocationResp, GetQuotesRes(..), GetRouteResp, LatLong(..), OfferRes, PlaceName(..), QuoteAPIEntity(..), RideBookingRes(..), SelectListRes(..), SelectedQuotes(..), RideBookingAPIDetails(..), GetPlaceNameResp(..), RideBookingListRes(..), GetCancellationDuesResp(..))
 import Services.Backend as Remote
 import Services.Config (getDriverNumber, getSupportNumber)
 import Storage (KeyStore(..), isLocalStageOn, updateLocalStage, getValueToLocalStore, setValueToLocalStore, getValueToLocalNativeStore, setValueToLocalNativeStore)
@@ -241,6 +241,8 @@ instance loggableAction :: Loggable Action where
       DriverInfoCardController.OnNavigateToZone -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "driver_info_card" "on_navigate_to_zone"
       DriverInfoCardController.ToggleBottomSheet -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "driver_info_card" "toggle_bottom_sheet"
       DriverInfoCardController.CollapseBottomSheet -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "driver_info_card" "collapse_bottom_sheet"
+      DriverInfoCardController.CancellationFeeInfo -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "driver_info_card" "cancellation_fee_info"
+      DriverInfoCardController.ExpandBottomSheet -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "driver_info_card" "expand_bottom_sheet"
     UpdateLocation key lat lon ->  trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "update_location"
     CancelRidePopUpAction act -> case act of
       CancelRidePopUp.Button1 act -> case act of
@@ -683,6 +685,26 @@ instance loggableAction :: Loggable Action where
     StopAutoScrollTimer -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "stop_auto_scroll_timer" 
     UpdateRepeatTrips arg1 arg2 -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "update_repeat_trips"
     RemoveShimmer -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "remove_shimmer"
+    CancellationFeeBannerAC act -> case act of 
+      Banner.OnClick -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "cancellation_fee_banner" "banner_on_click"
+      Banner.NoAction -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "cancellation_fee_banner" "banner_no_action"
+    CancellationFeeInfoPopUpAC act -> case act of 
+      RequestInfoCard.Close -> trackAppActionClick appId (getScreen HOME_SCREEN) "CancellationFeeInfoPopUpAC" "got_it"
+      RequestInfoCard.BackPressed -> trackAppActionClick appId (getScreen HOME_SCREEN) "CancellationFeeInfoPopUpAC" "backpressed_in_screen"
+      RequestInfoCard.NoAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "CancellationFeeInfoPopUpAC" "no_action"
+    CancellationFeePopUpAC act -> case act of 
+      PopUpModal.OnButton1Click -> trackAppActionClick appId (getScreen HOME_SCREEN) "cancellation_fee_pop_up" "button1_click"
+      PopUpModal.OnButton2Click -> trackAppActionClick appId (getScreen HOME_SCREEN) "cancellation_fee_pop_up" "button2_click"
+      PopUpModal.NoAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "cancellation_fee_pop_up" "no_action"
+      PopUpModal.OnImageClick -> trackAppActionClick appId (getScreen HOME_SCREEN) "cancellation_fee_pop_up" "image_click"
+      PopUpModal.ETextController act -> trackAppTextInput appId (getScreen HOME_SCREEN) "cancellation_fee_pop_up" "primary_edit_text"
+      PopUpModal.CountDown arg1 arg2 arg3 -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "cancellation_fee_pop_up" "countdown_updated"
+      PopUpModal.Tipbtnclick arg1 arg2 -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "cancellation_fee_pop_up" "tip_clicked"
+      PopUpModal.DismissPopup -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "cancellation_fee_pop_up" "popup_dismissed"
+      PopUpModal.OptionWithHtmlClick -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "cancellation_fee_pop_up" "options_with_html_click"
+      PopUpModal.OnSecondaryTextClick -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "cancellation_fee_pop_up" "secondary_text_click"
+    UpdateCancellationDues arg1 -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "update_cancellation_dues"
+    
 
 data ScreenOutput = LogoutUser
                   | Cancel HomeScreenState
@@ -841,6 +863,8 @@ data Action = NoAction
             | ZoneTimerExpired PopUpModal.Action
             | DisabilityBannerAC Banner.Action
             | DisabilityPopUpAC PopUpModal.Action
+            | CancellationFeePopUpAC PopUpModal.Action
+            | CancellationFeeInfoPopUpAC RequestInfoCard.Action
             | RideCompletedAC RideCompletedCard.Action
             | LoadMessages
             | KeyboardCallback String
@@ -874,6 +898,9 @@ data Action = NoAction
             | StopAutoScrollTimer 
             | UpdateRepeatTrips RideBookingListRes String
             | RemoveShimmer 
+            | CancellationFeeBannerAC Banner.Action 
+            | UpdateCancellationDues GetCancellationDuesResp
+
 
 eval :: Action -> HomeScreenState -> Eval Action ScreenOutput HomeScreenState
 
@@ -894,6 +921,18 @@ eval (UpdateRepeatTrips rideList status) state = do
               continue shimmerState
         _ -> continue shimmerState
         
+eval (UpdateCancellationDues res) state = do
+  let (GetCancellationDuesResp response) = res
+      updatedCancellationDues = if response.cancellationDues > 0 
+                                  then Just response.cancellationDues
+                                  else Nothing
+      updatedBlockRideFlow = fromMaybe false response.canBlockCustomer
+  continue $ state 
+    { data 
+        { cancellationDues = updatedCancellationDues
+        , blockRideFlow = updatedBlockRideFlow
+        }
+    }
 eval UpdatePeekHeight state = continue state{data{peekHeight = getPeekHeight state}}
 
 eval (Scroll item) state = do
@@ -1143,6 +1182,8 @@ eval (DriverInfoCardActionController (DriverInfoCardController.MessageDriver)) s
 
 eval (DriverInfoCardActionController (DriverInfoCardController.CollapseBottomSheet)) state = continue state {props {sheetState = COLLAPSED}}
 
+eval (DriverInfoCardActionController (DriverInfoCardController.CancellationFeeInfo)) state = continue state{props{showCancellationFeeInfo = true}}
+
 eval RemoveNotification state = do
   continue state {props { showChatNotification = false, isChatNotificationDismissed = true}}
 
@@ -1322,9 +1363,34 @@ eval (MAPREADY key latitude longitude) state =
     ]
 
 eval OpenSearchLocation state = do
-  _ <- pure $ performHapticFeedback unit
-  let srcValue = if state.data.source == "" then (getString CURRENT_LOCATION) else state.data.source
-  exit $ UpdateSavedLocation state { props { isSource = Just true, currentStage = SearchLocationModel, isSearchLocation = SearchLocation, searchLocationModelProps{crossBtnSrcVisibility = (STR.length srcValue) > 2, findPlaceIllustration = null state.data.locationList}}, data {source=srcValue, locationList = state.data.recentSearchs.predictionArray} }
+  if state.data.blockRideFlow then 
+    continue $ state
+      { props
+          { showCancellationFeePopUp = true
+          }
+      }
+  else do 
+    void $ pure $ performHapticFeedback unit
+    let srcValue = if STR.null state.data.source 
+                   then getString CURRENT_LOCATION 
+                   else state.data.source
+        isCrossBtnVisible = STR.length srcValue > 2
+        isFindPlaceIllustrationNull = null state.data.locationList
+    exit $ UpdateSavedLocation state 
+      { props 
+          { isSource = Just true
+          , currentStage = SearchLocationModel
+          , isSearchLocation = SearchLocation
+          , searchLocationModelProps
+              { crossBtnSrcVisibility = isCrossBtnVisible
+              , findPlaceIllustration = isFindPlaceIllustrationNull
+              }
+          }
+      , data 
+          { source = srcValue
+          , locationList = state.data.recentSearchs.predictionArray
+          }
+      }
 
 eval (SourceUnserviceableActionController (ErrorModalController.PrimaryButtonActionController PrimaryButtonController.OnClick)) state = continueWithCmd state [ do pure $ OpenSearchLocation ]
 
@@ -1483,10 +1549,12 @@ eval (PrimaryButtonActionController (PrimaryButtonController.OnClick)) state = d
       _            -> continue state
 
 eval WhereToClick state = do
-  _ <- pure $ performHapticFeedback unit
-  let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_where_to_btn"
-      updateState = state{props{isSource = Just false, isSearchLocation = SearchLocation, currentStage = SearchLocationModel, searchLocationModelProps{crossBtnSrcVisibility = false, findPlaceIllustration = null state.data.locationList }}, data{source=(getString CURRENT_LOCATION)}}
-  exit $ UpdateSavedLocation updateState 
+  if state.data.blockRideFlow then continue state{props{showCancellationFeePopUp = true}}
+  else do 
+    void $ pure $ performHapticFeedback unit
+    let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_where_to_btn"
+        updateState = state{props{isSource = Just false, isSearchLocation = SearchLocation, currentStage = SearchLocationModel, searchLocationModelProps{crossBtnSrcVisibility = false, findPlaceIllustration = null state.data.locationList }}, data{source=(getString CURRENT_LOCATION)}}
+    exit $ UpdateSavedLocation updateState 
 
 eval (RideCompletedAC (RideCompletedCard.SkipButtonActionController (PrimaryButtonController.OnClick))) state = 
   case state.data.ratingViewState.issueFacedView of
@@ -1726,8 +1794,10 @@ eval (PredictionClickedAction (LocationListItemController.OnClick item)) state =
   locationSelected item false state{data{source = (getString CURRENT_LOCATION)}, props{isSource = Just false}}
 
 eval (SuggestedDestinationClicked item) state = do
-  let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_sd_list_item"
-  locationSelected item true state{data{source = (getString CURRENT_LOCATION)}, props{isSource = Just false}}
+  if state.data.blockRideFlow then continue state{props{showCancellationFeePopUp = true}}
+  else do
+    let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_suggested_destination"
+    locationSelected item false state{data{source = (getString CURRENT_LOCATION)}, props{isSource = Just false}}
 
 eval (PredictionClickedAction (LocationListItemController.FavClick item)) state = do
   if (length state.data.savedLocations >= 20) then do
@@ -1864,7 +1934,7 @@ eval (SearchLocationModelActionController (SearchLocationModelController.SetLoca
   _ <- pure $ removeAllPolylines ""
   _ <- pure $ unsafePerformEffect $ runEffectFn1 locateOnMap locateOnMapConfig { goToCurrentLocation = false, lat = lat, lon = lon, geoJson = state.data.polygonCoordinates, points = state.data.nearByPickUpPoints, zoomLevel = pickupZoomLevel, labelId = getNewIDWithTag "LocateOnMapPin"}
   pure $ unsafePerformEffect $ logEvent state.data.logField if state.props.isSource == Just true  then "ny_user_src_set_location_on_map" else "ny_user_dest_set_location_on_map"
-  let srcValue = if state.data.source == "" then getString CURRENT_LOCATION else state.data.source
+  let srcValue = if STR.null state.data.source then getString CURRENT_LOCATION else state.data.source
   when (state.data.destination == "") $ do
     pure $ setText (getNewIDWithTag "DestinationEditText") ""
   let newState = state
@@ -2208,6 +2278,12 @@ eval (RequestInfoCardAction RequestInfoCard.BackPressed) state = continue state 
 
 eval (RequestInfoCardAction RequestInfoCard.NoAction) state = continue state
 
+eval (CancellationFeeInfoPopUpAC RequestInfoCard.Close ) state = continue state { props { showCancellationFeeInfo = false}}
+
+eval (CancellationFeeInfoPopUpAC RequestInfoCard.BackPressed) state = continue state { props { showCancellationFeeInfo = false}}
+
+eval (CancellationFeeInfoPopUpAC RequestInfoCard.NoAction) state = continue state
+
 eval (GenderBannerModal Banner.OnClick) state = exit $ GoToMyProfile state true
 
 eval (UpdateProfileButtonAC PrimaryButtonController.OnClick) state = do 
@@ -2226,6 +2302,11 @@ eval (SkipAccessibilityUpdateAC PrimaryButtonController.OnClick) state = do
 eval (DisabilityPopUpAC PopUpModal.OnButton1Click) state = do 
   _ <- pure $ pauseYoutubeVideo unit
   continue state{props{showDisabilityPopUp = false}}
+
+eval (CancellationFeePopUpAC PopUpModal.OnButton1Click) state = continue state
+
+eval (CancellationFeePopUpAC PopUpModal.OnButton2Click) state = do 
+  continue state{props{showCancellationFeePopUp = false}}
 
 eval ShowRateCard state = do
   continue state { props { showRateCard = true } }
@@ -2263,13 +2344,16 @@ eval (UpdateETA currentETA currentDistance) state = do
   continue newState
 
 eval (RepeatRide index item) state = do 
-  let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_repeat_trip"
-  void $ pure $ setValueToLocalStore FLOW_WITHOUT_OFFERS (show true)
-  void $ pure $ setValueToLocalStore TEST_MINIMUM_POLLING_COUNT $ "4" 
-  void $ pure $ setValueToLocalStore TEST_POLLING_INTERVAL $ "8000.0" 
-  void $ pure $ setValueToLocalStore TEST_POLLING_COUNT $ "22" 
-  -- updateAndExit state{props{currentStage = LoadMap}, data{settingSideBar { opened = SettingSideBarController.CLOSED }}} $ RepeatTrip state{props{isRepeatRide = true}} item
-  updateAndExit state{data{settingSideBar { opened = SettingSideBarController.CLOSED }}} $ RepeatTrip state{props{isRepeatRide = true}} item
+  if state.data.blockRideFlow then continue state{props{showCancellationFeePopUp = true}}
+  else do 
+    let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_repeat_trip"
+    void $ pure $ setValueToLocalStore FLOW_WITHOUT_OFFERS (show true)
+    void $ pure $ setValueToLocalStore TEST_MINIMUM_POLLING_COUNT $ "4" 
+    void $ pure $ setValueToLocalStore TEST_POLLING_INTERVAL $ "8000.0" 
+    void $ pure $ setValueToLocalStore TEST_POLLING_COUNT $ "22" 
+    updateAndExit state{props{currentStage = LoadMap}, data{settingSideBar { opened = SettingSideBarController.CLOSED }}} $ RepeatTrip state{props{isRepeatRide = true}} item
+
+
 
 eval (ReferralFlowAction) state = exit $ GoToReferral state
 eval NewUser state = continueWithCmd state [ do

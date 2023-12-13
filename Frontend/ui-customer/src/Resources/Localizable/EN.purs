@@ -1,6 +1,7 @@
 module Resources.Localizable.EN where
 
 import Language.Types (STR(..))
+import Prelude
 
 getEN :: STR -> String
 getEN stringKey =
@@ -693,3 +694,16 @@ getEN stringKey =
         I_DID_NOT_FEEL_SAFE -> "I did not feel safe"
         LOOKING_FOR_ANOTHER_RIDE -> "Looking for another ride..."
         THE_RIDE_HAD_BEEN_CANCELLED_WE_ARE_FINDING_YOU_ANOTHER -> "The ride had to be cancelled, we’re finding you another"
+        IF_YOU_FEEL_THIS_IS_WRONGLY_CHARGED -> "If you feel this is wrongly charged, you may raise a ticket under Help and Support"
+        CANCELLATION_FEE_WILL_BE_APPLIED -> "Cancellation charges will be applied"
+        DRIVER_IS_ALREADY_ON_THE_WAY -> "Driver is already on the way"
+        YOUR_DRIVER_IS_DISTANCE_AWAY distance -> "Your driver is just" <> show distance <> "m away."
+        YOU_HAVE_DUE_AGAINST_PREVIOUS_CANCELLATIONS cancellationDues -> "You have " <> "₹" <> show cancellationDues <> " due against (" <> show (cancellationDues / 10) <> ") previous cancellation"
+        THIS_WILL_BE_ADDED_TO_YOUR_NEXT_RIDE -> "This will be added to your next ride"
+        CHARGE_DUE_AGAINST_PREVIOUS_CANCELLATION_WILL_BE_ADDED_TO_THIS_RIDE cancellationFee -> "₹" <> (show cancellationFee) <> " due against (" <> show (cancellationFee / 10) <> ") previous cancellation will be added to this ride"
+        RUPEES_PAYABLE cancellationDues -> "₹" <> show cancellationDues <> " payable"
+        CLEAR_DUES -> "Clear Dues"
+        INCLUDES_PREVIOUS_CANCELLATION_FEE cancellationDues -> "Includes ₹" <> show cancellationDues <> " as (" <> show (cancellationDues / 10) <> ") previous cancellation fee"
+        RIDE_CANCELLATION_DUE -> "Ride Cancellation Due"
+        WHICH_IS_ADDED_TO_THIS_RIDE -> "which is added to this ride"
+        CLEAR_YOUR_DUES_TO_CONTINUE_TAKING_RIDES -> "Clear your dues to continue taking rides"

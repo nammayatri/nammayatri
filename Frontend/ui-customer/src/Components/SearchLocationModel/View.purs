@@ -27,7 +27,7 @@ import Components.SearchLocationModel.Controller (Action(..), SearchLocationMode
 import Components.SeparatorView.View as SeparatorView
 import Data.Array (mapWithIndex, length, take)
 import Data.Function (flip)
-import Data.Maybe (Maybe(..), fromMaybe)
+import Data.Maybe (Maybe(..), fromMaybe, isJust)
 import Data.String as DS
 import Debug (spy)
 import Effect (Effect)
@@ -40,7 +40,7 @@ import JBridge (getBtnLoader, showKeyboard, getCurrentPosition, firebaseLogEvent
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import MerchantConfig.Utils (Merchant(..), getMerchant)
-import Prelude ((<>))
+import Prelude
 import Prelude (Unit, bind, const, map, pure, unit, ($), (&&), (+), (-), (/), (/=), (<<<), (<>), (==), (||), not, discard, (>=), void)
 import PrestoDOM (Accessiblity(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), accessibility, accessibilityHint, adjustViewWithKeyboard, afterRender, alignParentBottom, alpha, autoCorrectionType, background, clickable, color, cornerRadius, cursorColor, disableClickFeedback, editText, ellipsize, fontStyle, frameLayout, gravity, height, hint, hintColor, id, imageUrl, imageView, imageWithFallback, inputTypeI, layoutGravity, lineHeight, linearLayout, lottieAnimationView, margin, onBackPressed, onChange, onClick, onFocus, orientation, padding, relativeLayout, scrollBarY, scrollView, selectAllOnFocus, singleLine, stroke, text, textSize, textView, visibility, weight, width)
 import PrestoDOM.Animation as PrestoAnim
@@ -123,13 +123,18 @@ view push state =
 
 searchResultsParentView :: forall w. SearchLocationModelState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 searchResultsParentView state push =
+  let cancellationFee = fromMaybe 0 state.cancellationDues
+  in
   linearLayout
   [ width MATCH_PARENT
   , height MATCH_PARENT
   , margin $ Margin 16 15 16 0
   , orientation VERTICAL
   , visibility if state.isSearchLocation == SearchLocation && state.isRideServiceable && not state.showLoader then VISIBLE else GONE
-    ][  savedLocationBar state push
+    ][ if isJust state.cancellationDues
+        then cancellationFeeBar cancellationFee
+        else linearLayout[][]
+      , savedLocationBar state push
       , findPlacesIllustration  push state
       , searchResultsView state push ]
 
@@ -393,7 +398,7 @@ searchResultsView state push =
     scrollView
     [ height WRAP_CONTENT
     , width MATCH_PARENT
-    , padding (PaddingBottom 60)
+    , padding $ PaddingVertical 10 60
     , background Color.white900
     , scrollBarY false
     , visibility if (length state.locationList == 0 || state.findPlaceIllustration) then GONE else VISIBLE
@@ -464,6 +469,27 @@ savedLocationBar state push =
      [ width MATCH_PARENT
      , height WRAP_CONTENT
      ][ LocationTagBar.view (push <<< SavedAddressClicked) {savedLocations:state.savedlocationList}]
+    ]
+
+cancellationFeeBar :: forall w. Int -> PrestoDOM (Effect Unit) w
+cancellationFeeBar cancellationFee = 
+  linearLayout
+    [ width MATCH_PARENT
+    , height WRAP_CONTENT
+    , background Color.apricot
+    , padding $ Padding 12 12 12 12
+    , cornerRadius 8.0
+    ]
+    [ imageView 
+        [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_chevrons_up"
+        , height $ V 20
+        , width $ V 20
+        ]
+    , textView
+        [ text $ getString $ CHARGE_DUE_AGAINST_PREVIOUS_CANCELLATION_WILL_BE_ADDED_TO_THIS_RIDE cancellationFee 
+        , color Color.orange900
+        , margin $ MarginLeft 8
+        ]
     ]
 
 ---------------------------- primaryButtonView ---------------------------------

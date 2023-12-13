@@ -33,6 +33,8 @@ data Action = NoAction
             | OnNavigateToZone
             | ToggleBottomSheet
             | CollapseBottomSheet
+            | ExpandBottomSheet
+            | CancellationFeeInfo
 
 type DriverInfoCardState =
   { props :: DriverInfoCardProps
@@ -87,4 +89,5 @@ type DriverInfoCardData =
   , vehicleVariant :: String
   , defaultPeekHeight :: Int
   , bottomSheetState :: SheetState
+  , cancellationDues :: Maybe Int
   }

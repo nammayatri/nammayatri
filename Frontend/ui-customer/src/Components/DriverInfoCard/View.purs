@@ -692,10 +692,17 @@ paymentMethodView push state title shouldShowIcon uid =
           [ text title
           , color Color.black700
           ] <> FontStyle.body3 TypoGraphy
-        , textView $
-          [ text $ state.data.config.currency <> show state.data.price
-          , color Color.black800
-          ] <> FontStyle.h2 TypoGraphy
+        , linearLayout 
+            [ width WRAP_CONTENT
+            , height WRAP_CONTENT
+            , gravity CENTER_VERTICAL
+            ][ textView $
+                [ text $ state.data.config.currency <> show state.data.price
+                , color Color.black800
+                , margin $ MarginRight 6
+                ] <> FontStyle.h2 TypoGraphy
+              , cancellationFeePillView push state
+            ]
       ]
       , linearLayout
         [ height WRAP_CONTENT
@@ -718,6 +725,35 @@ paymentMethodView push state title shouldShowIcon uid =
               , padding $ PaddingLeft 4
               ] <> FontStyle.body3 TypoGraphy
             ]
+    ]
+
+---------------------------------- cancellationFeePillView ---------------------------------------
+
+cancellationFeePillView :: forall w.(Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM (Effect Unit) w
+cancellationFeePillView push state =
+  let 
+    cancellationFee = fromMaybe 0 state.data.cancellationDues
+  in
+  linearLayout 
+    [ width WRAP_CONTENT
+    , height WRAP_CONTENT
+    , cornerRadius 17.0
+    , padding $ Padding 6 4 6 4
+    , background $ Color.apricot
+    , gravity CENTER_VERTICAL
+    , onClick push $ const $ CancellationFeeInfo 
+    , visibility $ boolToVisibility $ isJust state.data.cancellationDues
+    ]
+    [ textView $
+        [ text $ "+ " <> state.data.config.currency <> show cancellationFee <> " dues"
+        , color Color.orange900
+        ] <> FontStyle.tags TypoGraphy
+    , imageView 
+        [ imageWithFallback $ fetchImage FF_ASSET  "ny_ic_info_orange"
+        , height $ V 10
+        , width $ V 10
+        , margin $ Margin 2 1 0 0
+        ]
     ]
 
 ---------------------------------- tripDetailsView ---------------------------------------

@@ -1025,3 +1025,12 @@ getTicketStatus shortId = do
   withAPIResult (EP.ticketStatus shortId) unwrapResponse $ callAPI headers (GetTicketStatusReq shortId)
   where
   unwrapResponse x = x
+
+---------------------------------------------------------------------- GetCancellationDues --------------------------------------------------------------------------------
+
+getCancellationDues :: String -> Flow GlobalState (Either ErrorResponse GetCancellationDuesResp)
+getCancellationDues dummy = do
+    headers <- getHeaders "" false
+    withAPIResult (EP.cancellationDueDetails "") unwrapResponse $ callAPI headers (GetCancellationDuesReq)
+    where
+    unwrapResponse x = x

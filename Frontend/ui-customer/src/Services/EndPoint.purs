@@ -173,3 +173,6 @@ ticketStatus shortId = (getBaseUrl "41") <> "/ticket/bookings/" <> shortId <> "/
 
 ticketBookingDetails :: String -> String
 ticketBookingDetails shortid = (getBaseUrl "41") <> "/ticket/bookings/" <> shortid <> "/details"
+
+cancellationDueDetails :: String -> String
+cancellationDueDetails dummy = (getBaseUrl "47") <> "/getCancellationDuesDetails"

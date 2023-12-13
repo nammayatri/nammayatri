@@ -1,6 +1,7 @@
 module Resources.Localizable.BN where
 
 import Language.Types (STR(..))
+import Prelude
 
 getBN :: STR -> String
 getBN stringKey =
@@ -693,3 +694,16 @@ getBN stringKey =
         I_DID_NOT_FEEL_SAFE -> "আমি নিরাপদ বোধ করিনি"
         LOOKING_FOR_ANOTHER_RIDE -> "আরেকটি চলার জন্য খোঁজ করছি..."
         THE_RIDE_HAD_BEEN_CANCELLED_WE_ARE_FINDING_YOU_ANOTHER -> "চলন্ত ছিল, তা বাতিল করতে হয়েছে, আমরা তার জন্য আরও খোঁজছি"
+        IF_YOU_FEEL_THIS_IS_WRONGLY_CHARGED -> "আপনি মনে করতে পারেন যে, এটি ভুল খরিদ হয়েছে, তাদের সাহায্য এবং সমর্থন অধীনে একটি টিকিট তৈরি করতে পারেন।"
+        CANCELLATION_FEE_WILL_BE_APPLIED -> "বাতিলের চার্জ প্রযোজ্য হবে।"
+        DRIVER_IS_ALREADY_ON_THE_WAY -> "ড্রাইভার ইতিমধ্যেই পথে আছে।"
+        YOUR_DRIVER_IS_DISTANCE_AWAY distance -> "আপনার ড্রাইভার একমাত্র" <> show distance <> "মিটার দূরে আছে।"
+        YOU_HAVE_DUE_AGAINST_PREVIOUS_CANCELLATIONS cancellationDues -> "আপনার পূর্ববর্তী বাতিলের বিরুদ্ধে " <> "₹" <> show cancellationDues <> " বাকি আছে (" <> show (cancellationDues / 10) <> ")"
+        THIS_WILL_BE_ADDED_TO_YOUR_NEXT_RIDE -> "এটি আপনার পরবর্তী রাইডে যোগ করা হবে"
+        CHARGE_DUE_AGAINST_PREVIOUS_CANCELLATION_WILL_BE_ADDED_TO_THIS_RIDE cancellationFee -> "এই সঞ্চালনের জন্য পূর্ববর্তী বাতিলের বিরুদ্ধে " <> "₹" <> (show cancellationFee) <> " বাকি আছে (" <> (show (cancellationFee / 10)) <> ") যোগ করা হবে"
+        RUPEES_PAYABLE cancellationDues -> "₹" <> show cancellationDues <> " প্রদেয়"
+        CLEAR_DUES -> "পরিষ্কার বাকি"
+        INCLUDES_PREVIOUS_CANCELLATION_FEE cancellationDues -> "অন্তর্ভুক্ত টাকা" <> show cancellationDues <> " হিসাবে (" <> show (cancellationDues / 10) <> ") পূর্বের বাতিল ফি"
+        RIDE_CANCELLATION_DUE -> "রাইড বাতিলের কারণ"
+        WHICH_IS_ADDED_TO_THIS_RIDE -> "যা এই রাইডে যোগ করা হয়েছে"
+        CLEAR_YOUR_DUES_TO_CONTINUE_TAKING_RIDES -> "আপনার বাকি পরিষ্কার করুন যাত্রা নিতে চালিয়ে যাওয়া যাবে"

@@ -48,7 +48,7 @@ import Data.Array as DA
 import Data.Either (Either(..))
 import Data.Int (toNumber)
 import Data.Int as INT
-import Data.Maybe (Maybe(..), fromMaybe, isJust)
+import Data.Maybe (Maybe(..), fromMaybe, isJust, maybe)
 import Data.String as DS
 import Effect (Effect)
 import Engineering.Helpers.Commons as EHC
@@ -57,7 +57,7 @@ import Font.Size as FontSize
 import Font.Style as FontStyle
 import Foreign.Class (class Encode)
 import Foreign.Generic (decodeJSON, encodeJSON)
-import Helpers.Utils (fetchImage, FetchImageFrom(..), parseFloat)
+import Helpers.Utils (fetchImage, FetchImageFrom(..), parseFloat, getDifferenceBetweenDates)
 import Helpers.Utils as HU
 import JBridge as JB
 import Language.Types (STR(..))
@@ -81,6 +81,10 @@ import Accessor (_fareBreakup, _description)
 import Resources.Localizable.EN(getEN)
 import Engineering.Helpers.Utils as EHU
 import Mobility.Prelude
+import Data.Function.Uncurried (runFn2)
+import Data.Ord (abs)
+
+
 
 shareAppConfig :: ST.HomeScreenState -> PopUpModal.Config
 shareAppConfig state = let
@@ -124,6 +128,7 @@ shareAppConfig state = let
 
 cancelAppConfig :: ST.HomeScreenState -> PopUpModal.Config
 cancelAppConfig state = let
+  cancelRideConfig = getCancelRideConfig state $ isCancelFeeApplicable state
   config' = PopUpModal.config
   popUpConfig' = config'{
       gravity = BOTTOM,
@@ -131,9 +136,21 @@ cancelAppConfig state = let
       optionButtonOrientation = "VERTICAL",
       buttonLayoutMargin = Margin 16 0 16 20,
       primaryText {
-        text = distanceString <> getString PLEASE_CONTACT_THE_DRIVER_BEFORE_CANCELLING
-      , margin = Margin 16 20 16 20},
-      secondaryText { visibility = GONE },
+        text = cancelRideConfig.primaryText
+      , margin = MarginHorizontal 16 16
+      }
+      , primarySubText {
+        text = cancelRideConfig.primarySubText
+      , visibility = cancelRideConfig.primarySubtextVisibility
+      , color = cancelRideConfig.primarySubTextColor
+      , margin = Margin 16 4 16 12
+      },
+      secondaryText {
+        visibility = cancelRideConfig.secondaryTextVisibility 
+      , text = cancelRideConfig.secondaryText
+      , margin = MarginBottom 20 
+
+      },
       option1 {
         text = getString CALL_DRIVER
       , color = state.data.config.primaryTextColor
@@ -143,7 +160,7 @@ cancelAppConfig state = let
       , width = MATCH_PARENT
       },
       option2 {
-        text = getString CANCEL_RIDE
+        text = getString CANCEL_RIDE <> cancelRideConfig.option2
       , textStyle = FontStyle.SubHeading1
       , color = Color.black700
       , background = Color.white900
@@ -163,8 +180,41 @@ cancelAppConfig state = let
       }
   }
   in popUpConfig'
-      where distanceString = getDistanceString state.data.driverInfoCardState.distance (fromMaybe 0 state.data.driverInfoCardState.initDistance) state.props.zoneType.priorityTag
 
+  where
+    getCancelRideConfig :: ST.HomeScreenState -> Boolean -> { primaryText :: String, primarySubText :: String, secondaryText :: String, primarySubTextColor :: String, primarySubtextVisibility :: Visibility, secondaryTextVisibility :: Visibility, option2 :: String}
+    getCancelRideConfig state isCancelFee =
+      let distanceString = getDistanceString state.data.driverInfoCardState.distance (fromMaybe 0 state.data.driverInfoCardState.initDistance) state.props.zoneType.priorityTag
+          cancelRideWithFeeConfig = 
+            { primaryText : if state.data.driverInfoCardState.distance < 200 then getString DRIVER_IS_ALREADY_ON_THE_WAY else getString $ YOUR_DRIVER_IS_DISTANCE_AWAY state.data.driverInfoCardState.distance
+            , primarySubText : getString CANCELLATION_FEE_WILL_BE_APPLIED
+            , primarySubTextColor : Color.red900
+            , primarySubtextVisibility : VISIBLE
+            , secondaryText : "(" <> getString IF_YOU_FEEL_THIS_IS_WRONGLY_CHARGED <> ")"
+            , secondaryTextVisibility : VISIBLE
+            , option2 : " (" <> getString (RUPEES_PAYABLE (fromMaybe 0 state.data.cancellationDues)) <> ")"
+            }
+          cancelRideWithoutFeeConfig = 
+            { primaryText : distanceString <> getString PLEASE_CONTACT_THE_DRIVER_BEFORE_CANCELLING
+            , primarySubText : ""
+            , primarySubTextColor : Color.black900
+            , primarySubtextVisibility : GONE
+            , secondaryText : ""
+            , secondaryTextVisibility : GONE
+            , option2 : ""
+            }
+            
+      in if isCancelFee 
+          then cancelRideWithFeeConfig 
+          else cancelRideWithoutFeeConfig
+  
+isCancelFeeApplicable :: ST.HomeScreenState -> Boolean
+isCancelFeeApplicable state =
+  let rideDistance = fromMaybe 0 state.data.driverInfoCardState.initDistance
+      distanceTravelledByDriver = rideDistance - state.data.driverInfoCardState.distance
+      timeDifferenceInMinutes = (runFn2 getDifferenceBetweenDates state.data.driverInfoCardState.createdAt (EHC.getCurrentUTC "")) / 60
+  in
+  distanceTravelledByDriver > state.data.config.cancelFeeThresholdDist || (timeDifferenceInMinutes >= 10 && state.data.driverInfoCardState.distance <= 50)
 
 getDistanceString :: Int -> Int -> ZoneType -> String
 getDistanceString currDistance initDistance zoneType
@@ -178,6 +228,87 @@ getDistanceString currDistance initDistance zoneType
                   getString THE_DRIVER_PREFERRED_YOUR_SPECIAL_REQUEST_AND_IS_ALREADY_ON_THE_WAY_TO_YOUR_LOCATION
                 else
                   getString DRIVER_IS_ALREADY_ON_THE_WAY_TO_YOUR_LOCATION
+
+
+cancellationFeeInfoPopUpConfig :: ST.HomeScreenState -> RequestInfoCard.Config
+cancellationFeeInfoPopUpConfig state = let
+  cancelFee = fromMaybe 0 state.data.cancellationDues
+  config = RequestInfoCard.config
+  cancellationFeeInfoPopUpConfig' = config {
+    title {
+      visibility = VISIBLE,
+      text = getString RIDE_CANCELLATION_DUE
+    }
+  , primaryText {
+      text = (getString $ YOU_HAVE_DUE_AGAINST_PREVIOUS_CANCELLATIONS cancelFee) 
+              <>  ", " 
+              <> (getString WHICH_IS_ADDED_TO_THIS_RIDE) 
+      , visibility = VISIBLE
+    }
+  , secondaryText {
+      visibility = GONE
+    }
+  , imageConfig {
+      imageUrl = fetchImage FF_ASSET "ny_ic_cancel_fee_info",
+      height = V 122,
+      width = V 116
+    }
+  , buttonConfig {
+      text = getString GOT_IT
+    }
+  }
+  in cancellationFeeInfoPopUpConfig'
+
+cancellationFeePopUpConfig :: Maybe Int -> PopUpModal.Config
+cancellationFeePopUpConfig cancellationFee = 
+   let 
+     cancellationDues = fromMaybe 0 cancellationFee
+     config = PopUpModal.config
+     config' = config
+       {
+         gravity = CENTER,
+         optionButtonOrientation = "VERTICAL",
+         margin = MarginHorizontal 24 24 ,
+         buttonLayoutMargin = MarginHorizontal 16 16 ,
+         primaryText {
+           text = (getString $ YOU_HAVE_DUE_AGAINST_PREVIOUS_CANCELLATIONS cancellationDues) 
+                  <>  ". " 
+                  <> (getString CLEAR_YOUR_DUES_TO_CONTINUE_TAKING_RIDES) 
+         , margin = Margin 16 16 16 4 
+         , padding = Padding 0 0 0 0
+         , textStyle = Heading2
+         },
+         secondaryText {
+           visibility = GONE
+         },
+         dismissPopup = true,
+         option1 {
+            text = getString CLEAR_DUES
+          , background = Color.black900
+          , margin = MarginVertical 24 8 
+          , width = MATCH_PARENT
+          , color = Color.yellow900
+         },
+         option2 {
+            text = getString GO_BACK_
+          , width = MATCH_PARENT
+          , background = Color.white900
+          , strokeColor = Color.white900
+          , color = Color.black650
+          , padding = PaddingBottom 12
+          , margin = MarginBottom 20
+          },
+         backgroundClickable = false,
+         cornerRadius = Corners 15.0 true true true true,
+         coverImageConfig {
+           imageUrl = fetchImage FF_ASSET "ny_ic_cancel_fee_illust"
+         , visibility = VISIBLE
+         , height = V 160
+         , width = MATCH_PARENT
+         , margin = Margin 16 20 16 0
+         }
+       }
+   in config'
 
 skipButtonConfig :: ST.HomeScreenState -> PrimaryButton.Config
 skipButtonConfig state =
@@ -292,7 +423,7 @@ primaryButtonRequestRideConfig state =
           , accessibilityHint = "Request Ride : Button"
           }
         , cornerRadius = state.data.config.primaryButtonCornerRadius
-        , margin = (Margin 0 32 0 0)
+        , margin = (Margin 0 24 0 0)
         , id = "RequestRideButton"
         , background = state.data.config.primaryBackground
         }
@@ -386,6 +517,25 @@ disabilityBannerConfig state =
       , actionTextColor = Color.purple
       , imageUrl = fetchImage FF_ASSET "ny_ic_accessibility_banner_img"
       , stroke = "1,"<> Color.fadedPurple
+      }
+  in config'
+
+cancellationFeeBannerConfig :: ST.HomeScreenState -> Banner.Config
+cancellationFeeBannerConfig state =
+  let
+    config = Banner.config
+    cancellationFee = fromMaybe 0 state.data.cancellationDues
+    config' = config
+      {
+        backgroundColor = Color.apricot
+      , title = getString $ YOU_HAVE_DUE_AGAINST_PREVIOUS_CANCELLATIONS cancellationFee
+      , titleColor = Color.orange900
+      , actionText = getString CLEAR_DUES
+      , actionTextColor = Color.orange900
+      , imageUrl = fetchImage FF_ASSET "ny_ic_cancellation_fee_banner"
+      , stroke = "1,"<> Color.lightPeach
+      , imageHeight = (V 95)
+      , imageWidth = (V 100)
       }
   in config'
 
@@ -944,6 +1094,7 @@ driverInfoTransformer state =
     , vehicleVariant : cardState.vehicleVariant
     , defaultPeekHeight : getDefaultPeekHeight state
     , bottomSheetState : state.props.bottomSheetState
+    , cancellationDues : state.data.cancellationDues
     }
 
 emergencyHelpModelViewState :: ST.HomeScreenState -> EmergencyHelp.EmergencyHelpModelState
@@ -1007,6 +1158,7 @@ searchLocationModelViewState state = { isSearchLocation: state.props.isSearchLoc
                                     , showLoader: state.props.searchLocationModelProps.showLoader
                                     , prevLocation: state.data.searchLocationModelData.prevLocation
                                     , findPlaceIllustration : state.props.searchLocationModelProps.findPlaceIllustration
+                                    , cancellationDues : state.data.cancellationDues
                                     }
 
 quoteListModelViewState :: ST.HomeScreenState -> QuoteListModel.QuoteListModelState
@@ -1336,6 +1488,7 @@ rideCompletedCardConfig state =
       topCardGradient = if topCardConfig.enableGradient then [state.data.config.primaryBackground, state.data.config.primaryBackground, topCardConfig.gradient, state.data.config.primaryBackground] else [topCardConfig.background,topCardConfig.background]
       waitingChargesApplied = isJust $ DA.find (\entity  -> entity ^._description == "WAITING_OR_PICKUP_CHARGES") (state.data.ratingViewState.rideBookingRes ^._fareBreakup)
       headerConfig = mkHeaderConfig state.props.nightSafetyFlow state.props.showOfferedAssistancePopUp
+      cancelChargesApplied = isJust state.data.cancellationDues 
   in RideCompletedCard.config {
         isDriver = false,
         customerIssueCard{
@@ -1361,12 +1514,9 @@ rideCompletedCardConfig state =
           fareUpdatedVisiblity = state.data.finalAmount /= state.data.driverInfoCardState.price && state.props.estimatedDistance /= Nothing,
           gradient = topCardGradient,
           infoPill {
-            text = getFareUpdatedStr state.data.rideRatingState.distanceDifference waitingChargesApplied,
-            background = topCardConfig.rideDescription.background,
-            color = topCardConfig.rideDescription.textColor,
-            image = fetchImage FF_COMMON_ASSET "ny_ic_parallel_arrows",
-            imageVis = VISIBLE,
-            visible = if state.data.finalAmount == state.data.driverInfoCardState.price || state.props.estimatedDistance == Nothing then GONE else VISIBLE
+            visible = boolToVisibility $ state.data.finalAmount /= state.data.driverInfoCardState.price || isJust state.props.estimatedDistance || cancelChargesApplied 
+          , background = topCardConfig.rideDescription.background
+          , contentConfigs = getTopCardContentConfigs state waitingChargesApplied cancelChargesApplied
           },
           bottomText =  getString RIDE_DETAILS
         },
@@ -1379,24 +1529,41 @@ rideCompletedCardConfig state =
         primaryButtonConfig = skipButtonConfig state,
         enableContactSupport = state.data.config.feature.enableSupport
       }
-  where 
+  where
     mkHeaderConfig :: Boolean -> Boolean -> {title :: String, subTitle :: String}
     mkHeaderConfig isNightSafety offeredAssistance = case isNightSafety, offeredAssistance of
                                                       true,_ -> {title : getString DID_YOU_HAVE_A_SAFE_JOURNEY, subTitle : getString TRIP_WAS_SAFE_AND_WORRY_FREE}
                                                       _,true -> {title : getString DID_THE_DRIVER_OFFER_ASSISTANCE, subTitle : getString WAS_THE_DRIVER_UNDERSTANDING_OF_YOUR_NEEDS}
-                                                      _,_ -> {title : getString DID_YOU_FACE_ANY_ISSUE, subTitle : getString WE_NOTICED_YOUR_RIDE_ENDED_AWAY} 
+                                                      _,_ -> {title : getString DID_YOU_FACE_ANY_ISSUE, subTitle : getString WE_NOTICED_YOUR_RIDE_ENDED_AWAY}
 
-getFareUpdatedStr :: Int -> Boolean -> String
-getFareUpdatedStr diffInDist waitingChargeApplied = do
-  let shorter = diffInDist > 0
-      positiveDist = if shorter then diffInDist else -diffInDist
-      distInKm = parseFloat (toNumber positiveDist / 1000.0) 2
-      distanceChanged = diffInDist/= 0
-  case waitingChargeApplied, distanceChanged of
-    true, false -> getString FARE_UPDATED_WITH_CHARGES
-    false, true -> getVarString (if shorter then FARE_UPDATED_WITH_SHORTER_DIST else FARE_UPDATED_WITH_LONGER_DIST) [distInKm]
-    true , true -> getVarString (if shorter then FARE_UPDATED_WITH_CHARGES_SHORTER_DIST else FARE_UPDATED_WITH_CHARGES_LONGER_DIST) [distInKm]
-    false, false -> getString FARE_UPDATED
+    getFareUpdatedStr :: Int -> Boolean -> String
+    getFareUpdatedStr diffInDist waitingChargeApplied = do
+      let shorter = diffInDist > 0
+          positiveDist = if shorter then diffInDist else -diffInDist
+          distInKm = parseFloat (toNumber positiveDist / 1000.0) 2
+          distanceChanged = diffInDist/= 0
+      case waitingChargeApplied, distanceChanged of
+        true, false -> getString FARE_UPDATED_WITH_CHARGES
+        false, true -> getVarString (if shorter then FARE_UPDATED_WITH_SHORTER_DIST else FARE_UPDATED_WITH_LONGER_DIST) [distInKm]
+        true , true -> getVarString (if shorter then FARE_UPDATED_WITH_CHARGES_SHORTER_DIST else FARE_UPDATED_WITH_CHARGES_LONGER_DIST) [distInKm]
+        false, false -> getString FARE_UPDATED
+    
+    getTopCardContentConfigs :: ST.HomeScreenState -> Boolean -> Boolean -> Array RideCompletedCard.InfoPillContent
+    getTopCardContentConfigs state waitingChargesApplied cancelChargesApplied =  
+          [] <> [makeContentConfig (getFareUpdatedStr state.data.rideRatingState.distanceDifference waitingChargesApplied) "ny_ic_parallel_arrows"] 
+             <> if cancelChargesApplied 
+                  then [makeContentConfig 
+                          (getString  (INCLUDES_PREVIOUS_CANCELLATION_FEE (fromMaybe 0 state.data.cancellationDues)))
+                           "ny_ic_chevrons_up_grey"] 
+                  else []
+      where
+        makeContentConfig text image = 
+            { text : text
+            , image : fetchImage FF_COMMON_ASSET image
+            , imageVisibility : VISIBLE
+            , fontStyle : Tags
+            , color : state.data.config.rideCompletedCardConfig.topCard.rideDescription.textColor
+            }
 
 customerFeedbackPillData :: LazyCheck -> Array (Array (Array RatingCard.FeedbackItem)) 
 customerFeedbackPillData lazyCheck = [feedbackPillDataWithRating1 Language, feedbackPillDataWithRating2 Language, feedbackPillDataWithRating3 Language, feedbackPillDataWithRating4 Language, feedbackPillDataWithRating5 Language]

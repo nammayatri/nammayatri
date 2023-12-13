@@ -15,7 +15,7 @@
 
 module Components.MenuButton.Controller where
 
-import Prelude((<>))
+import Prelude
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Padding(..), Visibility(..))
 import Font.Size as FontSize
 import Font.Style (Style(..))

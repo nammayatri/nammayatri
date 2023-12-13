@@ -136,9 +136,9 @@ config =
         geohashLimitForMap : 60,
         geohashPrecision : 7,
         maxLocationsToBeShown : 5,
-        minLocationsToBeShown : 2,
+        minLocationsToBeShown : 1,
         maxTripsToBeShown : 5,
-        minTripsToBeShown : 2,
+        minTripsToBeShown : 1,
         locationsToBeStored : 30,
         tripsToBeStored : 30,
         frequencyWeight : 0.7,
@@ -260,6 +260,7 @@ config =
   , otpRegex :  "is your OTP for login to [A-Za-z]+ [A-Za-z]+ [A-Za-z]+"
   , termsLink : "https://docs.google.com/document/d/1-oRR_oI8ncZRPZvFZEJZeCVQjTmXTmHA"
   , privacyLink : "https://docs.google.com/document/d/128VU80K5E1iz-x6QnP1R127m_lwmDO3F"
+  , cancelFeeThresholdDist : 200
   , shareAppConfig : {
       title : "Share Namma Yatri!"
     , description : "Hey there!\n\nCheck India's first Zero Commission auto booking app.\n100% Open source | 100% Open Data\n\nDownload Namma Yatri now! \nhttps://nammayatri.in/link/rider/SJ8D \n\n #beOpen #chooseOpen"

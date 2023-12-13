@@ -1,6 +1,6 @@
 module Components.RideCompletedCard.View where
 
-import Components.RideCompletedCard.Controller (Config, Action(..), Theme(..), RideCompletedElements(..))
+import Components.RideCompletedCard.Controller (Config(..), Action(..), Theme(..), RideCompletedElements(..), InfoPillContent(..))
 
 import PrestoDOM ( Gradient(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), Accessiblity(..), singleLine, scrollView, background, clickable, color, cornerRadius, disableClickFeedback, ellipsize, fontStyle, gradient, gravity, height, id, imageView, imageWithFallback, lineHeight, linearLayout, margin, onClick, alpha, orientation, padding, relativeLayout, stroke, text, textFromHtml, textSize, textView, url, visibility, webView, weight, width, layoutGravity, accessibility, accessibilityHint, afterRender, alignParentBottom)
 import Components.Banner.View as Banner
@@ -162,24 +162,35 @@ pillView config push =
     , background config.topCard.infoPill.background
     , alpha config.topCard.infoPill.alpha
     , cornerRadius config.topCard.infoPill.cornerRadius
-    , gravity CENTER
     , stroke config.topCard.infoPill.stroke
     , visibility config.topCard.infoPill.visible
-    ]
-    [ imageView
+    , orientation VERTICAL
+    ](map 
+      ( \contentConfig -> infoPillContentView contentConfig push)
+      config.topCard.infoPill.contentConfigs)
+    
+
+infoPillContentView :: forall w. InfoPillContent -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+infoPillContentView config push =
+  linearLayout
+    [ height WRAP_CONTENT
+    , width WRAP_CONTENT
+    , margin $ MarginBottom 7
+    , gravity CENTER_VERTICAL
+    ][ imageView
         [ width $ V 20
         , height $ V 20
-        , imageWithFallback config.topCard.infoPill.image 
-        , visibility config.topCard.infoPill.imageVis
+        , imageWithFallback config.image 
+        , visibility config.imageVisibility
         , margin $ MarginRight 12
         ]
     , textView $
         [ height WRAP_CONTENT
         , width WRAP_CONTENT
         , gravity CENTER_VERTICAL
-        , text config.topCard.infoPill.text 
-        , color config.topCard.infoPill.color
-        ] <> (FontStyle.getFontStyle config.topCard.infoPill.fontStyle LanguageStyle)
+        , text config.text 
+        , color config.color
+        ] <> (FontStyle.getFontStyle config.fontStyle LanguageStyle)
     ]
 
 rideDetailsButtonView :: forall w. Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w

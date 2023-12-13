@@ -91,6 +91,7 @@ data KeyStore
   | SOURCE_GEOHASHES
   | REALLOCATE_PRODUCT_ENABLED
   | UPDATE_REPEAT_TRIPS
+  | BLOCK_RIDE_FLOW
 
 derive instance genericKeyStore :: Generic KeyStore _
 

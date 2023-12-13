@@ -86,7 +86,7 @@ import Screens.HomeScreen.ScreenData as HomeScreenData
 import Screens.HomeScreen.Transformer (transformSavedLocations)
 import Screens.RideBookingFlow.HomeScreen.Config
 import Screens.Types (CallType(..), HomeScreenState, LocationListItemState, PopupType(..), SearchLocationModelType(..), SearchResultType(..), Stage(..), ZoneType(..), SheetState(..), Trip(..), SuggestionsMap(..), Suggestions(..))
-import Services.API (GetDriverLocationResp(..), GetQuotesRes(..), GetRouteResp(..), LatLong(..), RideAPIEntity(..), RideBookingRes(..), Route(..), SavedLocationsListRes(..), SearchReqLocationAPIEntity(..), SelectListRes(..), Snapped(..), GetPlaceNameResp(..), PlaceName(..), RideBookingListRes(..))
+import Services.API (GetDriverLocationResp(..), GetQuotesRes(..), GetRouteResp(..), LatLong(..), RideAPIEntity(..), RideBookingRes(..), Route(..), SavedLocationsListRes(..), SearchReqLocationAPIEntity(..), SelectListRes(..), Snapped(..), GetPlaceNameResp(..), PlaceName(..), GetCancellationDuesResp(..), RideBookingListRes(..))
 import Services.Backend (getDriverLocation, getQuotes, getRoute, makeGetRouteReq, rideBooking, selectList, getRouteMarkers, walkCoordinates, walkCoordinate, getSavedLocationList)
 import Services.Backend as Remote
 import Storage (KeyStore(..), getValueToLocalStore, isLocalStageOn, setValueToLocalStore, updateLocalStage, getValueToLocalNativeStore)
@@ -422,6 +422,9 @@ view push state =
             , if state.props.callSupportPopUp then callSupportPopUpView push state else emptyTextView state
             , if state.props.showDisabilityPopUp &&  (getValueToLocalStore DISABILITY_UPDATED == "true") then disabilityPopUpView push state else emptyTextView state
             , if state.data.waitTimeInfo && state.props.currentStage == RideAccepted then waitTimeInfoPopUp push state else emptyTextView state
+            , if state.data.waitTimeInfo then waitTimeInfoPopUp push state else emptyTextView state
+            , if  state.props.showCancellationFeePopUp then cancellationFeePopUpView push state else emptyTextView state
+            , if  state.props.showCancellationFeeInfo then cancellationFeeInfoPopUpView push state else emptyTextView state
             , if state.props.repeatRideTimer /= "0" 
               then linearLayout
                     [ width MATCH_PARENT
@@ -453,6 +456,14 @@ rideCompletedCardView push state =
 disabilityPopUpView :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 disabilityPopUpView push state = 
   PopUpModal.view (push <<< DisabilityPopUpAC) (CommonComponentConfig.accessibilityPopUpConfig state.data.disability state.data.config.purpleRideConfig)
+
+cancellationFeePopUpView :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+cancellationFeePopUpView push state = 
+  PopUpModal.view (push <<< CancellationFeePopUpAC) (cancellationFeePopUpConfig state.data.cancellationDues)
+
+cancellationFeeInfoPopUpView :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+cancellationFeeInfoPopUpView push state =
+  RequestInfoCard.view (push <<< CancellationFeeInfoPopUpAC) (cancellationFeeInfoPopUpConfig state) 
 
 callSupportPopUpView :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 callSupportPopUpView push state =
@@ -960,7 +971,9 @@ buttonLayout state push =
             ]
             [ if state.data.config.feature.enableZooTicketBookingFlow
                 then zooTicketBookingBanner state push 
-                else linearLayout[visibility GONE][]
+              else if isJust state.data.cancellationDues 
+                  then cancellationFeeBanner state push
+              else linearLayout[visibility GONE][]
             , PrimaryButton.view (push <<< PrimaryButtonActionController) (whereToButtonConfig state)
             , if state.props.isSearchLocation == LocateOnMap
                 then emptyLayout state 
@@ -1000,6 +1013,15 @@ updateDisabilityBanner state push =
     -- , margin $ Margin 16 10 16 10
     , margin $ MarginVertical 10 10
     ][  Banner.view (push <<< DisabilityBannerAC) (disabilityBannerConfig state)]
+
+cancellationFeeBanner :: forall w. HomeScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+cancellationFeeBanner state push = 
+  linearLayout
+    [ height MATCH_PARENT
+    , width MATCH_PARENT
+    , orientation VERTICAL
+    , margin $ Margin 16 0 16 10
+    ][  Banner.view (push <<< CancellationFeeBannerAC) (cancellationFeeBannerConfig state)]
 
 zooTicketBookingBanner :: forall w. HomeScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 zooTicketBookingBanner state push = 
@@ -1456,6 +1478,17 @@ estimatedFareView push state =
            , bookingPreferencesView push state
            ]
         , sourceDestinationDetailsView push state
+        , if isJust state.data.cancellationDues
+          then 
+            let cancellationDues = fromMaybe 0 state.data.cancellationDues
+            in linearLayout
+              [ height WRAP_CONTENT
+              , width WRAP_CONTENT
+              , margin $ MarginTop 16
+              ]
+              [SearchLocationModel.cancellationFeeBar cancellationDues]
+          else 
+            emptyTextView state
         , requestRideButtonView push state
         , linearLayout
             [ width MATCH_PARENT
@@ -1581,7 +1614,7 @@ requestRideButtonView push state =
             , alpha 0.5
             , background Color.white900
             , visibility if not DS.null state.props.repeatRideTimerId then VISIBLE else GONE
-            , margin $ MarginTop 32
+            , margin $ MarginTop 24
             ][]
     ]
 
@@ -2092,7 +2125,6 @@ rideTrackingView push state =
         [ height WRAP_CONTENT
         , width MATCH_PARENT
         , background Color.transparent
-        , orientation VERTICAL
         -- , gravity BOTTOM -- Check it in Android.
         ]
         [ -- TODO Add Animations
@@ -3288,10 +3320,19 @@ homeScreenViewV2 push state =
                                   , orientation VERTICAL
                                   ][savedLocationsView state push
                                   , if isHomeScreenView state then mapView push state else emptyTextView state
-                                  , if isBannerVisible state then updateDisabilityBanner state push else emptyTextView state
-                                  , if state.props.showShimmer && null state.data.tripSuggestions then shimmerView state
-                                    else if (suggestionViewVisibility state)  then  suggestionsView push state
-                                    else emptySuggestionsBanner state push
+                                  , if isJust state.data.cancellationDues 
+                                      then cancellationFeeBanner state push
+                                    else if isBannerVisible state
+                                      then updateDisabilityBanner state push 
+                                    else emptyTextView state
+                                  , if state.props.showShimmer && null state.data.tripSuggestions 
+                                      then 
+                                        shimmerView state
+                                      else if suggestionViewVisibility state 
+                                      then  
+                                        suggestionsView push state
+                                      else 
+                                        emptySuggestionsBanner state push
                                   , footerView push state
                                   ]
                               ]
@@ -3670,10 +3711,8 @@ getMapDimensions :: HomeScreenState -> {height :: Length, width :: Length}
 getMapDimensions state = 
   let mapHeight = if (any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithDriver ] && os /= "IOS") then 
                     V (getMapHeight state)
-                  else if ( (suggestionViewVisibility state) && (isBannerVisible state)|| suggestionViewVisibility state) then 
+                  else if isHomeScreenView state then
                     V (getHeightFromPercent 27)
-                  else if (isHomeScreenView state) then
-                    V (getHeightFromPercent 45)
                   else
                     MATCH_PARENT
       mapWidth =  if state.props.currentStage /= HomeScreen then MATCH_PARENT else V ((screenWidth unit)-32)
@@ -3949,3 +3988,11 @@ reAllocateConfirmation push state action duration = do
   when state.props.reAllocation.showPopUp $
     void $ delay $ Milliseconds duration
   doAff do liftEffect $ push $ action
+  
+getCancellationDues :: forall action. (action -> Effect Unit) -> (GetCancellationDuesResp -> action) -> HomeScreenState -> Flow GlobalState Unit
+getCancellationDues push action state = do
+  cancellationResp <- Remote.getCancellationDues ""
+  case cancellationResp of
+    Right dueDetails -> doAff do liftEffect $ push $ action $ dueDetails
+    Left err -> pure unit
+  pure unit

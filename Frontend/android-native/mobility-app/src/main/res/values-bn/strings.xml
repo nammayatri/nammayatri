@@ -49,4 +49,5 @@
     <string name="accept_goto">প্রস্তাব গ্রহণ “গো-টু”</string>
     <string name="take_a_clear_selfie">চিহ্নিত এলাকার ভিতরে আপনার ড্রাইভিং লাইসেন্স \n সহ একটি পরিষ্কার ছবি তুলুন</string>
     <string name="need_help">সাহায্য চাই?</string>
+    <string name="cancel_fee">বাতিল ফি</string>
 </resources>

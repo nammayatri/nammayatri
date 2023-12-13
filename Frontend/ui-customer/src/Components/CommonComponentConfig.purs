@@ -17,6 +17,7 @@ import Language.Types (STR(..))
 import Common.Styles.Colors as Color
 import MerchantConfig.Types 
 import JBridge as JB
+import Font.Style(Style(..))
 
 type ContentConfig = 
    { primaryText :: String,
@@ -77,7 +78,7 @@ accessibilityPopUpConfig selectedDisability purpleRideConfig =
           }
        }
    in config'
-  
+
 
 getAccessibilityPopupData :: Mb.Maybe ST.DisabilityT -> PurpleRideConfig -> ContentConfig
 getAccessibilityPopupData pwdtype purpleRideConfig = 

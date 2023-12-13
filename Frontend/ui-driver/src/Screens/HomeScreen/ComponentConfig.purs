@@ -1096,15 +1096,6 @@ getRideCompletedConfig state = let
       initalAmount = state.data.endRideData.finalAmount,
       gradient =  ["#F5F8FF","#E2EAFF"],
       infoPill {
-        text = getString COLLECT_VIA_CASE_UPI,
-        color = Color.white900,
-        cornerRadius = 100.0,
-        padding = Padding 16 16 16 16,
-        margin = MarginTop 16,
-        background = Color.peacoat,
-        stroke = "1," <> Color.peacoat,
-        alpha = 0.8,
-        fontStyle = Body1,
         visible = GONE
       },
       topPill{

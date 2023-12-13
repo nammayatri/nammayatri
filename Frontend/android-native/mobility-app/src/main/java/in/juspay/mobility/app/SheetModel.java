@@ -15,6 +15,7 @@ public class SheetModel {
     private double updatedAmount;
     private double offeredPrice;
     private int customerExtraFee;
+    private int customerCancellationDues;
     private final int baseFare;
     private final int reqExpiryTime;
     private final int driverMinExtraFee;
@@ -49,6 +50,7 @@ public class SheetModel {
                       String requestedVehicleVariant,
                       Boolean disabilityTag,
                       Boolean isTranslated,
+                      int customerCancellationDues,
                       Boolean gotoTag){
 
         this.pickUpDistance = pickUpDistance;
@@ -78,6 +80,7 @@ public class SheetModel {
         this.destinationPinCode = destinationPinCode;
         this.requestedVehicleVariant = requestedVehicleVariant;
         this.disabilityTag = disabilityTag;
+        this.customerCancellationDues = customerCancellationDues;
         this.durationToPickup = durationToPickup;
         this.gotoTag = gotoTag;
         this.isTranslated = isTranslated;
@@ -102,6 +105,8 @@ public class SheetModel {
     public int getCustomerTip() {return customerExtraFee;}
 
     public Boolean getDisabilityTag() {return disabilityTag; }
+
+    public int getCustomerCancellationDues() {return customerCancellationDues;}
 
     public void setOfferedPrice(double offeredPrice) {
         this.offeredPrice = offeredPrice;

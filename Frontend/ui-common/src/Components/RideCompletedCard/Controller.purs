@@ -78,17 +78,19 @@ config = {
       visible : false
     },
     infoPill : {
-      image : "",
-      imageVis : GONE,
-      text :  "",
-      color : Color.black600,
+      contentConfigs : [{
+        image : "",
+        imageVisibility : VISIBLE,
+        text : "",
+        color : Color.black600,
+        fontStyle : Tags
+      }],
       background : Color.transparent,
       stroke : "1," <> Color.black700,
       cornerRadius : 8.0, 
-      padding :  Padding 16 12 16 12,
+      padding :  Padding 16 12 16 5,
       margin : MarginVertical 10 20,
       alpha : 1.0,
-      fontStyle : Tags,
       visible : VISIBLE
     },
     bottomText : ""
@@ -182,17 +184,13 @@ type TopCard = {
 }
 
 type InfoPill = {
-  image :: String ,
-  imageVis :: Visibility, 
-  text :: String ,
-  color :: String ,
+  contentConfigs :: Array InfoPillContent, 
   background :: String ,
   stroke :: String, 
   cornerRadius :: Number, 
   padding ::  Padding,
   margin :: Margin,
   alpha :: Number,
-  fontStyle :: Style,
   visible :: Visibility
 }
 
@@ -245,4 +243,12 @@ type TopPill = {
   background :: String,
   text :: String,
   textColor :: String
+}
+
+type InfoPillContent = {
+  image :: String,
+  imageVisibility :: Visibility,
+  text :: String,
+  color :: String,
+  fontStyle :: Style
 }

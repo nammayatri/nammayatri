@@ -138,15 +138,39 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
     private void updateTagsView (SheetAdapter.SheetViewHolder holder, SheetModel model) {
         mainLooper.post(() -> {
             String variant = model.getRequestedVehicleVariant();
-            if (model.getCustomerTip() > 0 || model.getDisabilityTag() || model.isGotoTag() || (!variant.equals(NO_VARIANT) && key.equals("yatrisathiprovider"))) {
-                String pickupChargesText = model.getCustomerTip() > 0 ?
-                        getString(R.string.includes_pickup_charges_10) + " " + getString(R.string.and) + sharedPref.getString("CURRENCY", "₹") + " " + model.getCustomerTip() + " " + getString(R.string.tip) :
-                        getString(R.string.includes_pickup_charges_10);
+            if (model.getCustomerTip() > 0 || model.getDisabilityTag() || model.isGotoTag() || model.getCustomerCancellationDues() > 0 || (!variant.equals(NO_VARIANT) && key.equals("yatrisathiprovider"))) {
+                String baseText = getString(R.string.includes_pickup_charges_10); 
+                String currency = sharedPref.getString("CURRENCY", "₹");
+                StringBuilder chargesTextBuilder = new StringBuilder(baseText);
+            
+                boolean previousChargeAdded = false;
+                boolean noChargesAdded = true;
+                if (model.getCustomerTip() > 0) {
+                    chargesTextBuilder.append(", ")
+                                      .append(currency)
+                                      .append(model.getCustomerTip())
+                                      .append(" ")
+                                      .append(getString(R.string.tip));
+                    previousChargeAdded = true;
+                    noChargesAdded = false;
+                }
+            
+                if (model.getCustomerCancellationDues() > 0) {
+                    chargesTextBuilder.append((previousChargeAdded || noChargesAdded) ? " " + getString(R.string.and) + " " : ", ")
+                                      .append(currency)
+                                      .append(model.getCustomerCancellationDues())
+                                      .append(" ")
+                                      .append(getString(R.string.cancel_fee));
+                }
+                String pickupChargesText = chargesTextBuilder.toString();
                 holder.tagsBlock.setVisibility(View.VISIBLE);
                 holder.accessibilityTag.setVisibility(model.getDisabilityTag() ? View.VISIBLE : View.GONE);
                 holder.textIncludesCharges.setText(pickupChargesText);
                 holder.customerTipText.setText(sharedPref.getString("CURRENCY", "₹") + " " + model.getCustomerTip() + " " + getString(R.string.tip));
                 holder.customerTipTag.setVisibility(model.getCustomerTip() > 0 ? View.VISIBLE : View.GONE);
+                holder.cancelFeeTag.setVisibility(model.getCustomerCancellationDues() > 0 ? View.VISIBLE : View.GONE);
+                holder.cancelFeeTagText.setText(sharedPref.getString("CURRENCY", "₹") + " " + model.getCustomerCancellationDues() + " " + getString(R.string.cancel_fee)) ;
+                holder.cancelFeeTag.setVisibility(model.getCustomerCancellationDues() > 0 ? View.VISIBLE : View.GONE);
                 holder.gotoTag.setVisibility(model.isGotoTag() ? View.VISIBLE : View.GONE);
                 holder.reqButton.setTextColor(model.isGotoTag() ? getColor(R.color.yellow900) : getColor(R.color.white));
                 holder.reqButton.setBackgroundTintList(model.isGotoTag() ?
@@ -596,6 +620,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                     int negotiationUnit = Integer.parseInt(sharedPref.getString( "NEGOTIATION_UNIT", "10"));
                     int rideRequestedBuffer = Integer.parseInt(sharedPref.getString("RIDE_REQUEST_BUFFER", "2"));
                     int customerExtraFee = rideRequestBundle.getInt("customerExtraFee");
+                    int customerCancellationDues = rideRequestBundle.getInt("customerCancellationDues");
                     boolean gotoTag = rideRequestBundle.getBoolean("gotoTag");
                     if (calculatedTime > rideRequestedBuffer) {
                         calculatedTime -= rideRequestedBuffer;
@@ -624,6 +649,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                             requestedVehicleVariant,
                             disabilityTag,
                             isTranslated,
+                            customerCancellationDues,
                             gotoTag);
 
                     if (floatyView == null) {

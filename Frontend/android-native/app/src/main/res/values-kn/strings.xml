@@ -47,4 +47,5 @@
     <string name="message_from_customer">ಗ್ರಾಹಕರಿಂದ ಸಂದೇಶ</string>
     <string name="go_to">ಗೋ-ಟು</string>
     <string name="call_support">ಬೆಂಬಲವನ್ನು ಕರೆಯಿರಿ</string>
+    <string name="cancel_fee">ರದ್ದು ಶುಲ್ಕ</string>
 </resources>

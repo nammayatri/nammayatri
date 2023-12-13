@@ -1,6 +1,7 @@
 module Resources.Localizable.FR where
 
 import Language.Types (STR(..))
+import Prelude
 
 getFR :: STR -> String
 getFR stringKey =
@@ -693,3 +694,16 @@ getFR stringKey =
         I_DID_NOT_FEEL_SAFE -> "je ne me sentais pas en sécurité"
         LOOKING_FOR_ANOTHER_RIDE -> "À la recherche d'une autre course..."
         THE_RIDE_HAD_BEEN_CANCELLED_WE_ARE_FINDING_YOU_ANOTHER -> "Le trajet a dû être annulé, nous vous en trouvons un autre"
+        IF_YOU_FEEL_THIS_IS_WRONGLY_CHARGED -> "Si vous pensez que cela a été facturé à tort, vous pouvez soulever un ticket sous Aide et Support."
+        CANCELLATION_FEE_WILL_BE_APPLIED -> "Des frais d'annulation seront appliqués."
+        DRIVER_IS_ALREADY_ON_THE_WAY -> "Le chauffeur est déjà en route."
+        YOUR_DRIVER_IS_DISTANCE_AWAY distance -> "Votre chauffeur est à seulement" <> show distance <> "m."
+        YOU_HAVE_DUE_AGAINST_PREVIOUS_CANCELLATIONS cancellationDues -> "Vous avez " <> "₹" <> show cancellationDues <> " dus pour (" <> show (cancellationDues / 10) <> ") annulation précédente"
+        THIS_WILL_BE_ADDED_TO_YOUR_NEXT_RIDE -> "Cela sera ajouté à votre prochain trajet."
+        CHARGE_DUE_AGAINST_PREVIOUS_CANCELLATION_WILL_BE_ADDED_TO_THIS_RIDE cancellationFee -> "Un montant de " <> "₹" <> (show cancellationFee) <> " dû pour (" <> (show (cancellationFee / 10)) <> ") annulation précédente sera ajouté à ce trajet"
+        RUPEES_PAYABLE cancellationDues -> show cancellationDues <> "₹ " <> " à payer"
+        CLEAR_DUES -> "Effacer les dettes"
+        INCLUDES_PREVIOUS_CANCELLATION_FEE cancellationDues -> "Inclut ₹" <> show cancellationDues <> " comme (" <> show (cancellationDues / 10) <> ") frais d'annulation précédents"
+        RIDE_CANCELLATION_DUE -> "Annulation de trajet due"
+        WHICH_IS_ADDED_TO_THIS_RIDE -> "qui est ajouté à ce trajet"
+        CLEAR_YOUR_DUES_TO_CONTINUE_TAKING_RIDES -> "Effacez vos dettes pour continuer à prendre des trajets"
