@@ -191,7 +191,7 @@ config =
       , enableGradient : true
       , background : "#2C2F3A"
       , titleColor : "#E5E7EB"
-      , rideDesctiption : { 
+      , rideDescription : { 
           background : "#00FFFFFF"
         , textColor : "#A7A7A7"
         }                     

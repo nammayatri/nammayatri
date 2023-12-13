@@ -97,20 +97,3 @@ type DashboardConfig = {
     url :: String
   , enable :: Boolean
 }
-
-type RideCompletedCardConfig = {
-  topCard :: TopCardConfig
-}
-
-type TopCardConfig = {
-  gradient :: String
-, enableGradient :: Boolean
-, background :: String
-, titleColor :: String
-, rideDesctiption :: RideDesctiptionConfig
-}
-
-type RideDesctiptionConfig = {
-  background :: String
-, textColor :: String
-}

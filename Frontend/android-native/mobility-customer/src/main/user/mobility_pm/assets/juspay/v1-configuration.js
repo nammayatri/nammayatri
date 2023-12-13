@@ -194,7 +194,7 @@ window.getMerchantConfig = function () {
         , "enableGradient" : false
         , "background" : "#012A72"
         , "titleColor" : "#60FFFFFF"
-        , "rideDesctiption" : {
+        , "rideDescription" : {
           "background" : "#22101010"
           , "textColor" : "#FFFFFF"
         }

@@ -1308,8 +1308,8 @@ rideCompletedCardConfig state =
           gradient = topCardGradient,
           infoPill {
             text = getFareUpdatedStr state.data.rideRatingState.distanceDifference waitingChargesApplied,
-            background = topCardConfig.rideDesctiption.background,
-            color = topCardConfig.rideDesctiption.textColor,
+            background = topCardConfig.rideDescription.background,
+            color = topCardConfig.rideDescription.textColor,
             image = fetchImage FF_COMMON_ASSET "ny_ic_parallel_arrows",
             imageVis = VISIBLE,
             visible = if state.data.finalAmount == state.data.driverInfoCardState.price || state.props.estimatedDistance == Nothing then GONE else VISIBLE

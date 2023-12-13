@@ -232,10 +232,10 @@ type TopCardConfig = {
 , enableGradient :: Boolean
 , background :: String
 , titleColor :: String
-, rideDesctiption :: RideDesctiptionConfig
+, rideDescription :: RideDescriptionConfig
 }
 
-type RideDesctiptionConfig = {
+type RideDescriptionConfig = {
   background :: String
 , textColor :: String
 }
