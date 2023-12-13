@@ -44,7 +44,7 @@ import qualified Domain.Types.Ride as DRide
 import Domain.Types.RideDetails as RideDetails
 import Domain.Types.RiderDetails as RiderDetails
 import qualified EulerHS.Language as L
-import EulerHS.Prelude hiding (id, length, null, sum, traverse_)
+import EulerHS.Prelude hiding (all, elem, id, length, null, sum, traverse_)
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.External.Maps.Types (LatLong (..), lat, lon)
@@ -436,22 +436,18 @@ data StuckRideItem = StuckRideItem
 findStuckRideItems :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Merchant -> DMOC.MerchantOperatingCity -> [Id Booking] -> UTCTime -> m [StuckRideItem]
 findStuckRideItems merchant opCity bookingIds now = do
   let now6HrBefore = addUTCTime (- (6 * 60 * 60) :: NominalDiffTime) now
-      bookingSeConditionWithCity =
-        [ Se.And
-            [ Se.Is BeamB.providerId $ Se.Eq merchant.id.getId,
-              Se.Is BeamB.merchantOperatingCityId (Se.Eq $ Just opCity.id.getId),
-              Se.Is BeamB.id $ Se.In $ getId <$> bookingIds
-            ]
-        ]
-      bookingSeConditionWithoutCity =
-        [ Se.And
-            [ Se.Is BeamB.providerId $ Se.Eq merchant.id.getId,
-              Se.Is BeamB.merchantOperatingCityId (Se.Eq Nothing),
-              Se.Is BeamB.id $ Se.In $ getId <$> bookingIds
-            ]
-          | merchant.city == opCity.city
-        ]
-  bookings <- findAllBookingsWithSeConditions (bookingSeConditionWithCity <> bookingSeConditionWithoutCity)
+  bookings <-
+    findAllWithKV
+      [ Se.And
+          [ Se.Is BeamB.providerId $ Se.Eq merchant.id.getId,
+            Se.Is BeamB.merchantOperatingCityId (Se.Eq $ Just opCity.id.getId),
+            Se.Is BeamB.id $ Se.In $ getId <$> bookingIds,
+            Se.Or
+              ( [Se.Is BeamB.merchantOperatingCityId $ Se.Eq (Just $ getId opCity.id)]
+                  <> [Se.Is BeamB.merchantOperatingCityId $ Se.Eq Nothing | merchant.city == opCity.city]
+              )
+          ]
+      ]
   rides <-
     findAllWithKV
       [ Se.And
@@ -478,15 +474,24 @@ findStuckRideItems merchant opCity bookingIds now = do
 findLastRideAssigned :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> m (Maybe Ride)
 findLastRideAssigned (Id driverId) = findAllWithOptionsKV [Se.Is BeamR.driverId $ Se.Eq driverId] (Se.Desc BeamR.createdAt) (Just 1) Nothing <&> listToMaybe
 
-findRideBookingsById :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Merchant -> [Id Booking] -> m (HashMap.HashMap Text (Booking, Maybe DRide.Ride))
-findRideBookingsById merchantId bookingIds = do
-  bookings <- findBookingsById merchantId bookingIds
+findRideBookingsById :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Merchant -> DMOC.MerchantOperatingCity -> [Id Booking] -> m (HashMap.HashMap Text (Booking, Maybe DRide.Ride))
+findRideBookingsById merchant moCity bookingIds = do
+  bookings <- findBookingsById merchant moCity bookingIds
   rides <- findRidesByBookingId (bookings <&> (.id))
   let tuple = map (\booking -> (getId booking.id, (booking, Kernel.Prelude.find (\ride -> ride.bookingId == booking.id) rides))) bookings
   pure $ HashMap.fromList tuple
 
-findBookingsById :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Merchant -> [Id Booking] -> m [Booking]
-findBookingsById (Id merchantId) bookingIds = findAllWithKV [Se.And [Se.Is BeamB.providerId $ Se.Eq merchantId, Se.Is BeamB.id $ Se.In $ getId <$> bookingIds]]
+findBookingsById :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Merchant -> DMOC.MerchantOperatingCity -> [Id Booking] -> m [Booking]
+findBookingsById merchant moCity bookingIds =
+  findAllWithKV
+    [ Se.And
+        [ Se.Is BeamB.id $ Se.In $ getId <$> bookingIds,
+          Se.Or
+            ( [Se.Is BeamB.merchantOperatingCityId $ Se.Eq $ Just (getId moCity.id)]
+                <> [Se.Is BeamB.merchantOperatingCityId $ Se.Eq Nothing | moCity.city == merchant.city]
+            )
+        ]
+    ]
 
 findRidesByBookingId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Id Booking] -> m [DRide.Ride]
 findRidesByBookingId bookingIds = findAllWithKV [Se.Is BeamR.bookingId $ Se.In $ getId <$> bookingIds]

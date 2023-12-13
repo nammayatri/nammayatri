@@ -87,7 +87,7 @@ data CancelRideResp = CancelRideResp
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
-data RequestorId = PersonRequestorId (Id DP.Person) | DashboardRequestorId (Id DM.Merchant)
+data RequestorId = PersonRequestorId (Id DP.Person) | DashboardRequestorId (Id DM.Merchant, Id DMOC.MerchantOperatingCity)
 
 driverCancelRideHandler ::
   ( MonadHandler m,
@@ -124,12 +124,13 @@ dashboardCancelRideHandler ::
   ) =>
   ServiceHandle m ->
   Id DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
   Id DRide.Ride ->
   CancelRideReq ->
   m APISuccess.APISuccess
-dashboardCancelRideHandler shandle merchantId rideId req =
+dashboardCancelRideHandler shandle merchantId merchantOpCityId rideId req =
   withLogTag ("merchantId-" <> merchantId.getId) $ do
-    void $ cancelRideImpl shandle (DashboardRequestorId merchantId) rideId req
+    void $ cancelRideImpl shandle (DashboardRequestorId (merchantId, merchantOpCityId)) rideId req
     return APISuccess.Success
 
 cancelRideHandler ::
@@ -220,8 +221,8 @@ cancelRideImpl ServiceHandle {..} requestorId rideId req = do
           fork "DriverRideCancelledCoin Event : " $ DC.driverCoinsEvent driverId driver.merchantId booking.merchantOperatingCityId (DCT.Cancellation ride.createdAt booking.distanceToPickup disToPickup)
           buildRideCancelationReason currentDriverLocation disToPickup (Just driverId) DBCR.ByDriver ride (Just driver.merchantId) >>= \res -> return (res, cancellationCount, isGoToDisabled)
       return (rideCancellationReason, mbCancellationCnt, isGoToDisabled)
-    DashboardRequestorId reqMerchantId -> do
-      unless (driver.merchantId == reqMerchantId) $ throwError (RideDoesNotExist rideId.getId)
+    DashboardRequestorId (reqMerchantId, mocId) -> do
+      unless (driver.merchantId == reqMerchantId && mocId == driver.merchantOperatingCityId) $ throwError (RideDoesNotExist rideId.getId)
       logTagInfo "dashboard -> cancelRide : " ("DriverId " <> getId driverId <> ", RideId " <> getId ride.id)
       buildRideCancelationReason Nothing Nothing Nothing DBCR.ByMerchant ride (Just driver.merchantId) >>= \res -> return (res, Nothing, Nothing) -- is it correct DBCR.ByMerchant?
   cancelRide rideId rideCancelationReason

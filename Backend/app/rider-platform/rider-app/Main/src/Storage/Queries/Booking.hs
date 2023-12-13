@@ -27,6 +27,7 @@ import qualified Domain.Types.FarePolicy.FareProductType as DQuote
 import qualified Domain.Types.Location as DL
 import qualified Domain.Types.LocationMapping as DLM
 import Domain.Types.Merchant
+import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import Domain.Types.Person (Person)
 import qualified EulerHS.Language as L
 import EulerHS.Prelude (whenNothingM_)
@@ -197,16 +198,20 @@ findAllByPersonIdLimitOffset (Id personId) mlimit moffset = do
       offset' = fmap fromIntegral $ moffset <|> Just 0
   findAllWithOptionsKV [Se.Is BeamB.riderId $ Se.Eq personId] (Se.Desc BeamB.createdAt) limit' offset'
 
-findStuckBookings :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Merchant -> [Id Booking] -> UTCTime -> m [Id Booking]
-findStuckBookings (Id merchantId) bookingIds now =
+findStuckBookings :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Merchant -> DMOC.MerchantOperatingCity -> [Id Booking] -> UTCTime -> m [Id Booking]
+findStuckBookings merchant moCity bookingIds now =
   do
     let updatedTimestamp = addUTCTime (- (6 * 60 * 60) :: NominalDiffTime) now
     findAllWithDb
       [ Se.And
-          [ Se.Is BeamB.merchantId $ Se.Eq merchantId,
+          [ Se.Is BeamB.merchantId $ Se.Eq merchant.id.getId,
             Se.Is BeamB.id (Se.In $ getId <$> bookingIds),
             Se.Is BeamB.status $ Se.In [NEW, CONFIRMED, TRIP_ASSIGNED],
-            Se.Is BeamB.createdAt $ Se.LessThanOrEq updatedTimestamp
+            Se.Is BeamB.createdAt $ Se.LessThanOrEq updatedTimestamp,
+            Se.Or
+              ( [Se.Is BeamB.merchantOperatingCityId $ Se.Eq $ Just (getId moCity.id)]
+                  <> [Se.Is BeamB.merchantOperatingCityId $ Se.Eq Nothing | moCity.city == merchant.defaultCity]
+              )
           ]
       ]
     <&> (Domain.id <$>)

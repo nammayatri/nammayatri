@@ -28,4 +28,4 @@ data Merchant = Merchant
     supportedOperatingCities :: [City.City],
     createdAt :: UTCTime
   }
-  deriving (Generic, Show)
+  deriving (Generic, Show, Eq, Ord)

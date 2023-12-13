@@ -27,7 +27,7 @@ getMerchantOpCityId mbMerchantOpCityId merchant mbCity =
     Nothing -> do
       let city = fromMaybe merchant.city mbCity
       (.id)
-        <$> ( findByMerchantIdAndCity merchant.id (fromMaybe merchant.city mbCity)
+        <$> ( findByMerchantIdAndCity merchant.id city
                 >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchant.id.getId <> "-city-" <> show city)
             )
 

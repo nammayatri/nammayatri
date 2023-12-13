@@ -88,7 +88,7 @@ merchantUpdate merchantShortId opCity req = do
 
   mbAllExophones <- forM req.exoPhones $ \exophones -> do
     allExophones <- CQExophone.findAllExophones
-    let alreadyUsedPhones = getAllPhones $ filter (\exophone -> exophone.merchantId /= merchant.id) allExophones
+    let alreadyUsedPhones = getAllPhones $ filter (\exophone -> exophone.merchantOperatingCityId /= merchantOpCityId) allExophones
     let reqPhones = getAllPhones $ toList exophones
     let busyPhones = filter (`elem` alreadyUsedPhones) reqPhones
     unless (null busyPhones) $ do
@@ -106,7 +106,7 @@ merchantUpdate merchantShortId opCity req = do
 
   CQM.clearCache updMerchant
   whenJust mbAllExophones $ \allExophones -> do
-    let oldExophones = filter (\exophone -> exophone.merchantId == merchant.id) allExophones
+    let oldExophones = filter (\exophone -> exophone.merchantOperatingCityId == merchantOpCityId) allExophones
     CQExophone.clearCache merchantOpCityId oldExophones
   whenJust req.fcmConfig $ \_ -> CQTC.clearCache merchantOpCityId
   logTagInfo "dashboard -> merchantUpdate : " (show merchant.id)

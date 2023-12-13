@@ -93,9 +93,10 @@ multipleRideEnd merchantShortId opCity req = withFlowHandlerAPI $ do
   pure $ Common.MultipleRideSyncResp {list = respItems}
 
 multipleRideCancel :: ShortId DM.Merchant -> Context.City -> Common.MultipleRideCancelReq -> FlowHandler Common.MultipleRideCancelResp
-multipleRideCancel merchantShortId _ req = withFlowHandlerAPI $ do
+multipleRideCancel merchantShortId opCity req = withFlowHandlerAPI $ do
   runRequestValidation Common.validateMultipleRideCancelReq req
   merchant <- findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   logTagInfo "dashboard -> multipleRideCancel : " $ show (req.rides <&> (.rideId))
   respItems <- forM req.rides $ \reqItem -> do
     info <- handle Common.listItemErrHandler $ do
@@ -105,22 +106,25 @@ multipleRideCancel merchantShortId _ req = withFlowHandlerAPI $ do
               { reasonCode = coerce @Common.CancellationReasonCode @DCReason.CancellationReasonCode reqItem.reasonCode,
                 additionalInfo = reqItem.additionalInfo
               }
-      Success <- CHandler.dashboardCancelRideHandler CHandler.cancelRideHandle merchant.id rideId dashboardReq
+      Success <- CHandler.dashboardCancelRideHandler CHandler.cancelRideHandle merchant.id merchantOpCityId rideId dashboardReq
       pure Common.SuccessItem
     pure $ Common.MultipleRideSyncRespItem {rideId = reqItem.rideId, info}
   pure $ Common.MultipleRideSyncResp {list = respItems}
 
 rideInfo :: ShortId DM.Merchant -> Context.City -> Id Common.Ride -> FlowHandler Common.RideInfoRes
-rideInfo merchantShortId _ = withFlowHandlerAPI . DRide.rideInfo merchantShortId
+rideInfo merchantShortId opCity rideId = withFlowHandlerAPI $ do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  DRide.rideInfo merchant.id merchantOpCityId rideId
 
 rideSync :: ShortId DM.Merchant -> Context.City -> Id Common.Ride -> FlowHandler Common.RideSyncRes
-rideSync merchantShortId _ = withFlowHandlerAPI . DRide.rideSync merchantShortId
+rideSync merchantShortId opCity = withFlowHandlerAPI . DRide.rideSync merchantShortId opCity
 
 multipleRideSync :: ShortId DM.Merchant -> Context.City -> Common.MultipleRideSyncReq -> FlowHandler Common.MultipleRideSyncRes
-multipleRideSync merchantShortId _ = withFlowHandlerAPI . DRide.multipleRideSync merchantShortId
+multipleRideSync merchantShortId opCity = withFlowHandlerAPI . DRide.multipleRideSync merchantShortId opCity
 
 rideRoute :: ShortId DM.Merchant -> Context.City -> Id Common.Ride -> FlowHandler Common.RideRouteRes
-rideRoute merchantShortId _ rideId = withFlowHandlerAPI $ DRide.rideRoute merchantShortId rideId
+rideRoute merchantShortId opCity rideId = withFlowHandlerAPI $ DRide.rideRoute merchantShortId opCity rideId
 
 ticketRideList :: ShortId DM.Merchant -> Context.City -> Maybe (ShortId Common.Ride) -> Maybe Text -> Maybe Text -> Maybe Text -> FlowHandler Common.TicketRideListRes
-ticketRideList merchantShortId _ mbRideShortId mbCountryCode mbPhoneNumber mbSupportPhoneNumber = withFlowHandlerAPI $ DRide.ticketRideList merchantShortId mbRideShortId mbCountryCode mbPhoneNumber mbSupportPhoneNumber
+ticketRideList merchantShortId opCity mbRideShortId mbCountryCode mbPhoneNumber mbSupportPhoneNumber = withFlowHandlerAPI $ DRide.ticketRideList merchantShortId opCity mbRideShortId mbCountryCode mbPhoneNumber mbSupportPhoneNumber

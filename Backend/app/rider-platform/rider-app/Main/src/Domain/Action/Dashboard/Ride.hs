@@ -211,7 +211,7 @@ ticketRideList merchantShortId mbRideShortId countryCode mbPhoneNumber _ = do
   let rideItem = DL.sortBy (\a b -> compare b.ride.createdAt a.ride.createdAt) rideItems
   let lastNRides = map (.ride) rideItem
       lastNBookingStatus = map (.bookingStatus) rideItem
-  ridesDetail <- mapM (\ride -> rideInfo merchantShortId (cast ride.id)) lastNRides
+  ridesDetail <- mapM (\ride -> rideInfo merchant.id (cast ride.id)) lastNRides
   let rdList = map (makeRequiredRideDetail personId) (zip3 lastNRides ridesDetail lastNBookingStatus)
   return Common.TicketRideListRes {rides = rdList}
   where
@@ -249,8 +249,8 @@ ticketRideList merchantShortId mbRideShortId countryCode mbPhoneNumber _ = do
           classification = Ticket.CUSTOMER
         }
 
-rideInfo :: (EncFlow m r, EsqDBReplicaFlow m r, CacheFlow m r, EsqDBFlow m r) => ShortId DM.Merchant -> Id Common.Ride -> m Common.RideInfoRes
-rideInfo merchantShortId reqRideId = do
+rideInfo :: (EncFlow m r, EsqDBReplicaFlow m r, CacheFlow m r, EsqDBFlow m r) => Id DM.Merchant -> Id Common.Ride -> m Common.RideInfoRes
+rideInfo merchantId reqRideId = do
   let rideId = cast @Common.Ride @DRide.Ride reqRideId
   ride <- B.runInReplica $ QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
   booking <- B.runInReplica $ QRB.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
@@ -265,8 +265,7 @@ rideInfo merchantShortId reqRideId = do
             Nothing -> pure Nothing
         Nothing -> pure Nothing
     Nothing -> pure Nothing
-  merchant <- findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
-  unless (merchant.id == booking.merchantId) $ throwError (RideDoesNotExist rideId.getId)
+  unless (merchantId == booking.merchantId) $ throwError (RideDoesNotExist rideId.getId)
   person <- B.runInReplica $ QP.findById booking.riderId >>= fromMaybeM (PersonDoesNotExist booking.riderId.getId)
   mbBCReason <-
     if ride.status == DRide.CANCELLED

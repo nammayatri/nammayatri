@@ -163,19 +163,21 @@ translationToDomainType :: UTCTime -> Common.MessageTranslation -> Domain.Messag
 translationToDomainType createdAt Common.MessageTranslation {..} = Domain.MessageTranslation {..}
 
 addMessage :: ShortId DM.Merchant -> Context.City -> Common.AddMessageRequest -> Flow Common.AddMessageResponse
-addMessage merchantShortId _ Common.AddMessageRequest {..} = do
+addMessage merchantShortId opCity Common.AddMessageRequest {..} = do
   merchant <- findMerchantByShortId merchantShortId
-  message <- mkMessage merchant
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  message <- mkMessage merchant merchantOpCityId
   _ <- MQuery.create message
   return $ Common.AddMessageResponse {messageId = cast $ message.id}
   where
-    mkMessage merchant = do
+    mkMessage merchant merchantOpCityId = do
       id <- generateGUID
       now <- getCurrentTime
       return $
         Domain.Message
           { id,
             merchantId = merchant.id,
+            merchantOperatingCityId = merchantOpCityId,
             _type = toDomainType _type,
             title,
             label,
@@ -194,15 +196,16 @@ instance FromNamedRecord CSVRow where
   parseNamedRecord r = CSVRow <$> r .: "driverId"
 
 sendMessage :: ShortId DM.Merchant -> Context.City -> Common.SendMessageRequest -> Flow APISuccess
-sendMessage merchantShortId _ Common.SendMessageRequest {..} = do
+sendMessage merchantShortId opCity Common.SendMessageRequest {..} = do
   merchant <- findMerchantByShortId merchantShortId
+  merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
   message <- B.runInReplica $ MQuery.findById (Id messageId) >>= fromMaybeM (InvalidRequest "Message Not Found")
   allDriverIds <- case _type of
-    AllEnabled -> B.runInReplica $ QP.findAllDriverIdExceptProvided (merchant.id) []
+    AllEnabled -> B.runInReplica $ QP.findAllDriverIdExceptProvided merchant merchantOpCity []
     Include -> readCsv
     Exclude -> do
       driverIds <- readCsv
-      B.runInReplica $ QP.findAllDriverIdExceptProvided (merchant.id) driverIds
+      B.runInReplica $ QP.findAllDriverIdExceptProvided merchant merchantOpCity driverIds
   logDebug $ "DriverId to which the message is sent" <> show allDriverIds
   fork "Adding messages to kafka queue" $ mapM_ (addToKafka message) allDriverIds
   return Success
@@ -231,9 +234,10 @@ sendMessage merchantShortId _ Common.SendMessageRequest {..} = do
       (show trans.language, Domain.RawMessage {title = trans.title, description = trans.description, shortDescription = trans.shortDescription, label = trans.label, ..})
 
 messageList :: ShortId DM.Merchant -> Context.City -> Maybe Int -> Maybe Int -> Flow Common.MessageListResponse
-messageList merchantShortId _ mbLimit mbOffset = do
+messageList merchantShortId opCity mbLimit mbOffset = do
   merchant <- findMerchantByShortId merchantShortId
-  messages <- MQuery.findAllWithLimitOffset mbLimit mbOffset merchant.id
+  merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
+  messages <- MQuery.findAllWithLimitOffset mbLimit mbOffset merchant merchantOpCity
   let count = length messages
   let summary = Common.Summary {totalCount = count, count}
   return $ Common.MessageListResponse {messages = buildMessage <$> messages, summary}

@@ -56,7 +56,6 @@ stuckBookingsCancel ::
   Flow Common.StuckBookingsCancelRes
 stuckBookingsCancel merchantShortId opCity req = do
   merchant <- findMerchantByShortId merchantShortId
-  -- merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchant.id.getId <> "-city-" <> show opCity)
   let reqBookingIds = cast @Common.Booking @DBooking.Booking <$> req.bookingIds
 
@@ -112,11 +111,12 @@ multipleBookingSync ::
   Context.City ->
   Common.MultipleBookingSyncReq ->
   Flow Common.MultipleBookingSyncResp
-multipleBookingSync merchantShortId _ req = do
+multipleBookingSync merchantShortId opCity req = do
   runRequestValidation Common.validateMultipleBookingSyncReq req
   merchant <- findMerchantByShortId merchantShortId
+  merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchant.id.getId <> "-city-" <> show opCity)
   let reqBookingIds = cast @Common.Booking @DBooking.Booking . (.bookingId) <$> req.bookings
-  rideBookingsMap <- B.runInReplica $ QRide.findRideBookingsById merchant.id reqBookingIds
+  rideBookingsMap <- B.runInReplica $ QRide.findRideBookingsById merchant merchantOpCity reqBookingIds
   respItems <- forM req.bookings $ \reqItem -> do
     info <- handle Common.listItemErrHandler $ do
       let bookingId = cast @Common.Booking @DBooking.Booking reqItem.bookingId

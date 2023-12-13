@@ -83,7 +83,9 @@ callRideInfo ::
   ShortId DM.Merchant ->
   Id Common.Ride ->
   FlowHandler Common.RideInfoRes
-callRideInfo merchantShortId rideId = withFlowHandlerAPI $ DRide.rideInfo merchantShortId rideId
+callRideInfo merchantShortId rideId = withFlowHandlerAPI $ do
+  merchant <- findMerchantByShortId merchantShortId
+  DRide.rideInfo merchant.id rideId
 
 multipleRideCancel ::
   DRide.MultipleRideCancelReq ->

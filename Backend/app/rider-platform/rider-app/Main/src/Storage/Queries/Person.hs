@@ -248,16 +248,21 @@ updatingEnabledAndBlockedState (Id personId) blockedByRule isBlocked = do
     )
     [Se.Is BeamP.id (Se.Eq personId)]
 
-findAllCustomers :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Merchant -> Int -> Int -> Maybe Bool -> Maybe Bool -> Maybe DbHash -> m [Person]
-findAllCustomers merchantId limitVal offsetVal mbEnabled mbBlocked mbSearchPhoneDBHash = do
+findAllCustomers :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Merchant -> DMOC.MerchantOperatingCity -> Int -> Int -> Maybe Bool -> Maybe Bool -> Maybe DbHash -> m [Person]
+findAllCustomers merchant moCity limitVal offsetVal mbEnabled mbBlocked mbSearchPhoneDBHash =
   findAllWithOptionsKV
     [ Se.And
-        ( [ Se.Is BeamP.merchantId (Se.Eq (getId merchantId)),
+        ( [ Se.Is BeamP.merchantId (Se.Eq (getId merchant.id)),
             Se.Is BeamP.role (Se.Eq USER)
           ]
             <> [Se.Is BeamP.enabled $ Se.Eq (fromJust mbEnabled) | isJust mbEnabled]
             <> [Se.Is BeamP.blocked $ Se.Eq (fromJust mbBlocked) | isJust mbBlocked]
             <> ([Se.Is BeamP.mobileNumberHash $ Se.Eq mbSearchPhoneDBHash | isJust mbSearchPhoneDBHash])
+            <> [ Se.Or
+                   ( [Se.Is BeamP.merchantOperatingCityId $ Se.Eq $ Just (getId moCity.id)]
+                       <> [Se.Is BeamP.merchantOperatingCityId $ Se.Eq Nothing | moCity.city == merchant.defaultCity]
+                   )
+               ]
         )
     ]
     (Se.Asc BeamP.firstName)

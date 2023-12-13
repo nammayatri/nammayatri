@@ -117,7 +117,7 @@ deleteOverlay merchantShortId opCity req = do
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   overlayPresent <- SQMO.findAllByOverlayKeyUdf merchantOpCityId req.overlayKey req.udf1
   when (null overlayPresent) $ throwError $ OverlayKeyAndUdfNotFound ("overlayKey : " <> req.overlayKey <> " and " <> "udf : " <> show req.udf1)
-  SQMO.deleteByOverlayKeyMerchantIdUdf merchantOpCityId req.overlayKey req.udf1
+  SQMO.deleteByOverlayKeyMerchantOpCityIdUdf merchantOpCityId req.overlayKey req.udf1
   mapM_ (\language -> CMP.clearMerchantIdPNKeyLangaugeUdf merchantOpCityId req.overlayKey language req.udf1) availableLanguages
   pure Success
 
