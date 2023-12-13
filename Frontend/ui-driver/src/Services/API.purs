@@ -1695,7 +1695,8 @@ instance encodeOTPRideRequest :: Encode OTPRideRequest where encode = defaultEnc
 
 newtype OnCallReq = OnCallReq
   {
-     rideId :: String
+     rideId :: String,
+     exophoneNumber :: String
   }
 
 newtype OnCallRes = OnCallRes

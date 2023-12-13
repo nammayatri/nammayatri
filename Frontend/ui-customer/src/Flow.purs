@@ -1185,8 +1185,8 @@ homeScreenFlow = do
           homeScreenFlow
         Left (err) -> homeScreenFlow
     GO_TO_REFERRAL -> referralScreenFlow
-    ON_CALL state callType -> do
-      (OnCallRes res) <- Remote.onCallBT (Remote.makeOnCallReq state.data.driverInfoCardState.rideId (show callType))
+    ON_CALL state callType exophoneNumber -> do
+      (OnCallRes res) <- Remote.onCallBT (Remote.makeOnCallReq state.data.driverInfoCardState.rideId (show callType) exophoneNumber)
       homeScreenFlow
     TRIGGER_PERMISSION_FLOW flowType -> do 
       modifyScreenState $ PermissionScreenStateType (\permissionScreen -> permissionScreen{stage = flowType})

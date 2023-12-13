@@ -914,9 +914,10 @@ onCallBT payload = do
   where
     errorHandler errorPayload = BackT $ pure GoBack
 
-makeOnCallReq :: String -> OnCallReq
-makeOnCallReq rideID = OnCallReq {
-    "rideId" : rideID
+makeOnCallReq :: String -> String -> OnCallReq
+makeOnCallReq rideID exophoneNumber = OnCallReq {
+    "rideId" : rideID,
+    "exophoneNumber" : exophoneNumber
 }
 
 --------------------------------- leaderBoard  --------------------------------------------------------------------------------------------------------

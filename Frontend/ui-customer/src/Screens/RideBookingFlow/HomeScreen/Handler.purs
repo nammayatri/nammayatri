@@ -156,9 +156,9 @@ homeScreen = do
     RetryFindingQuotes showLoader updatedState -> do
       modifyScreenState $ HomeScreenStateType (\homeScreenState -> updatedState)
       App.BackT $ App.BackPoint <$> (pure $ RETRY_FINDING_QUOTES showLoader)
-    CallDriver updatedState callType-> do
+    CallDriver updatedState callType exophoneNumber -> do
       modifyScreenState $ HomeScreenStateType (\homeScreenState -> updatedState)
-      App.BackT $ App.BackPoint <$> (pure $ ON_CALL updatedState callType)
+      App.BackT $ App.BackPoint <$> (pure $ ON_CALL updatedState callType exophoneNumber)
     ExitToPermissionFlow flowType -> App.BackT $ App.NoBack <$> (pure $ TRIGGER_PERMISSION_FLOW flowType)
     ReportIssue updatedState -> do
       modifyScreenState $ HomeScreenStateType (\homeScreenState -> updatedState)

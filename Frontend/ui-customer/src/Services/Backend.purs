@@ -287,10 +287,11 @@ onCallBT payload = do
   where
     errorHandler errorPayload = BackT $ pure GoBack
 
-makeOnCallReq :: String -> String -> OnCallReq
-makeOnCallReq rideID callType = OnCallReq {
+makeOnCallReq :: String -> String -> String -> OnCallReq
+makeOnCallReq rideID callType exophoneNumber = OnCallReq {
     "rideId" : rideID,
-    "callType" : callType
+    "callType" : callType,
+    "exophoneNumber" : exophoneNumber
 }
 
 ------------------------------------------------------------------------ PlaceDetailsBT Function --------------------------------------------------------------------------------------
