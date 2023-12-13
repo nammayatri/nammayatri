@@ -17,6 +17,7 @@
 module Storage.Queries.Booking where
 
 import Data.Ord
+import qualified Data.Text as T
 import Domain.Types.Booking
 import qualified Domain.Types.Booking.BookingLocation as DBBL
 import Domain.Types.DriverQuote as DDQ
@@ -286,9 +287,19 @@ buildLocation DBBL.BookingLocation {..} =
 mkLocationAddress :: DBBL.LocationAddress -> DL.LocationAddress
 mkLocationAddress DBBL.LocationAddress {..} =
   DL.LocationAddress
-    { fullAddress = Nothing,
+    { fullAddress = mkFullAddress DBBL.LocationAddress {..},
       ..
     }
+
+mkFullAddress :: DBBL.LocationAddress -> Maybe Text
+mkFullAddress DBBL.LocationAddress {..} = do
+  let strictFields = catMaybes $ filter (not . isEmpty) [door, building, street, city, state, areaCode, country]
+  if null strictFields
+    then Nothing
+    else Just $ T.intercalate ", " strictFields
+
+isEmpty :: Maybe Text -> Bool
+isEmpty = maybe True (T.null . T.replace " " "")
 
 upsertLocationForOldData :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Maybe (Id DBBL.BookingLocation) -> Text -> m DL.Location
 upsertLocationForOldData locationId bookingId = do

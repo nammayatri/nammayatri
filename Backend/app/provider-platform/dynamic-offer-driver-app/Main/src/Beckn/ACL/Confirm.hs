@@ -53,7 +53,7 @@ buildConfirmReq req = do
       { ..
       }
   where
-    castAddress Confirm.Address {..} = DL.LocationAddress {areaCode = area_code, area = locality, fullAddress = Nothing, ..}
+    castAddress Confirm.Address {..} = DL.LocationAddress {areaCode = area_code, area = locality, fullAddress = mkFullAddress Confirm.Address {..}, ..}
     castVehicleVariant = \case
       Confirm.SEDAN -> VehVar.SEDAN
       Confirm.SUV -> VehVar.SUV
@@ -61,6 +61,14 @@ buildConfirmReq req = do
       Confirm.AUTO_RICKSHAW -> VehVar.AUTO_RICKSHAW
       Confirm.TAXI -> VehVar.TAXI
       Confirm.TAXI_PLUS -> VehVar.TAXI_PLUS
+    mkFullAddress Confirm.Address {..} = do
+      let strictFields = catMaybes $ filter (not . isEmpty) [door, building, street, locality, city, state, area_code, country]
+      if null strictFields
+        then Nothing
+        else Just $ T.intercalate ", " strictFields
+
+isEmpty :: Maybe Text -> Bool
+isEmpty = maybe True (T.null . T.replace " " "")
 
 buildNightSafetyCheckTag :: Maybe Confirm.TagGroups -> Bool
 buildNightSafetyCheckTag tagGroups' = do

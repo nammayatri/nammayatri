@@ -414,7 +414,7 @@ notifyOnEstimatedReallocated booking estimateId = do
       unwords
         [ "The driver had to cancel the ride for",
           showTimeIst (booking.startTime) <> ".",
-          "Please wait until we allocate other driver."
+          "Please wait until we allocate another driver."
         ]
 
 notifyOnQuoteReceived ::
