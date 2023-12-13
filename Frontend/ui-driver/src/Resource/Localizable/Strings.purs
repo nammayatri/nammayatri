@@ -12,7 +12,6 @@
  
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
 module Language.Strings where
 
 import Data.String.Common (trim)
@@ -31,27 +30,27 @@ import Resources.Localizable.FR (getFR)
 import Resources.Localizable.TE (getTE)
 
 getString :: STR -> String
-getString key = 
-  let language = getKeyInSharedPrefKeysConfig "LANGUAGE_KEY"
-  in getStringFromConfigOrLocal language key
+getString key =
+  let
+    language = getKeyInSharedPrefKeysConfig "LANGUAGE_KEY"
+  in
+    getStringFromConfigOrLocal language key
 
 getStringFromConfigOrLocal :: String -> STR -> String
-getStringFromConfigOrLocal language key = 
-  case (getStringFromConfig key Just Nothing) of
-    Just value -> value
-    Nothing    -> getStringFromLocal language key
+getStringFromConfigOrLocal language key = case (getStringFromConfig key Just Nothing) of
+  Just value -> value
+  Nothing -> getStringFromLocal language key
 
 getStringFromLocal :: String -> STR -> String
-getStringFromLocal language key = 
-  case language of
-    "BN_IN" -> getBN key
-    "HI_IN" -> getHI key
-    "KN_IN" -> getKN key
-    "ML_IN" -> getML key
-    "TA_IN" -> getTA key
-    "TE_IN" -> getTE key
-    "FR_FR" -> getFR key
-    _       -> getEN key
+getStringFromLocal language key = case language of
+  "BN_IN" -> getBN key
+  "HI_IN" -> getHI key
+  "KN_IN" -> getKN key
+  "ML_IN" -> getML key
+  "TA_IN" -> getTA key
+  "TE_IN" -> getTE key
+  "FR_FR" -> getFR key
+  _ -> getEN key
 
 getVarString :: STR -> Array String -> String
 getVarString key vals = getStringWithVar (getString key) vals

@@ -12,11 +12,9 @@
  
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
 module Components.OnboardingHeader.View where
 
-
-import Prelude (Unit, const, unit, map,($), (/), (<>), (>=))
+import Prelude (Unit, const, unit, map, ($), (/), (<>), (>=))
 import Effect (Effect)
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, background, color, cornerRadius, fontStyle, gravity, height, imageUrl, imageView, linearLayout, margin, onClick, orientation, padding, stroke, text, textSize, textView, weight, width, imageWithFallback)
 import Font.Style as FontStyle
@@ -31,46 +29,49 @@ import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Common.Types.App (LazyCheck(..))
 import Prelude ((<>))
 
-view :: forall w .  (Action  -> Effect Unit) -> OnboardingHeaderState -> PrestoDOM (Effect Unit) w
+view :: forall w. (Action -> Effect Unit) -> OnboardingHeaderState -> PrestoDOM (Effect Unit) w
 view push state =
   linearLayout
-  [ width MATCH_PARENT
-  , height WRAP_CONTENT
-  , orientation VERTICAL
-  ][ statusBarView state
-  ,  navigationView state push
-  ]
+    [ width MATCH_PARENT
+    , height WRAP_CONTENT
+    , orientation VERTICAL
+    ]
+    [ statusBarView state
+    , navigationView state push
+    ]
 
-statusBarView :: OnboardingHeaderState -> forall w . PrestoDOM (Effect Unit) w
+statusBarView :: OnboardingHeaderState -> forall w. PrestoDOM (Effect Unit) w
 statusBarView state =
   linearLayout
     [ width MATCH_PARENT
     , height WRAP_CONTENT
     , orientation HORIZONTAL
     , gravity CENTER
-    ][ linearLayout
+    ]
+    [ linearLayout
         [ width MATCH_PARENT
         , padding (Padding 10 16 10 0)
         , height WRAP_CONTENT
         , orientation HORIZONTAL
         , margin (Margin 0 30 0 20)
-        ](map
-            (\(item) ->
+        ]
+        ( map
+            ( \(item) ->
                 linearLayout
-                  [
-                    width $ V ((screenWidth unit) / 5)
+                  [ width $ V ((screenWidth unit) / 5)
                   , height (V 7)
-                  , background if(state.barNumber >= item) then Color.black900 else Color.lightGreyShade
+                  , background if (state.barNumber >= item) then Color.black900 else Color.lightGreyShade
                   , cornerRadius 6.0
                   , margin (Margin 6 0 6 0)
-                  ][]
+                  ]
+                  []
             )
-          [1,2,3,4]
+            [ 1, 2, 3, 4 ]
         )
     ]
 
-navigationView :: OnboardingHeaderState -> forall w .  (Action  -> Effect Unit) -> PrestoDOM (Effect Unit) w
-navigationView state push = 
+navigationView :: OnboardingHeaderState -> forall w. (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+navigationView state push =
   linearLayout
     [ height WRAP_CONTENT
     , width MATCH_PARENT
@@ -78,13 +79,14 @@ navigationView state push =
     , gravity CENTER_VERTICAL
     , padding (Padding 16 16 16 0)
     , onClick push (const BackPressed)
-    ][ linearLayout
-        [
-          weight 1.0
+    ]
+    [ linearLayout
+        [ weight 1.0
         , height MATCH_PARENT
         , width MATCH_PARENT
-        ][]
-      , linearLayout
+        ]
+        []
+    , linearLayout
         [ width WRAP_CONTENT
         , padding (Padding 13 7 13 7)
         , height WRAP_CONTENT
@@ -93,10 +95,12 @@ navigationView state push =
         , cornerRadius 5.0
         , stroke ("1," <> Color.blueBtn)
         , onClick push (const TriggerRegModal)
-        ][ textView $
-            [ text ((getString STEP) <>state.stepNumber <> "/4" )
-            , color Color.blueBtn
-            ] <> FontStyle.paragraphText TypoGraphy
+        ]
+        [ textView
+            $ [ text ((getString STEP) <> state.stepNumber <> "/4")
+              , color Color.blueBtn
+              ]
+            <> FontStyle.paragraphText TypoGraphy
         , imageView
             [ imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_drop_down"
             , height (V 11)

@@ -1,7 +1,6 @@
 module Components.PaymentHistoryModel.View where
 
 import Prelude
-
 import Animation (translateInXAnim, translateInXForwardAnim)
 import Animation.Config (animConfig, translateYAnimConfig)
 import Common.Types.App (LazyCheck(..))
@@ -135,7 +134,7 @@ errorModalConfig state =
       }
     , buttonConfig
       { text = (getString OKAY)
-      , margin = (Margin 0 0 0 24) 
+      , margin = (Margin 0 0 0 24)
       , background = Color.black900
       , color = Color.yellow900
       , visibility = VISIBLE

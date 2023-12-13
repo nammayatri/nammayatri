@@ -12,12 +12,10 @@
  
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
 module Screens.SelectLanguageScreen.ComponentConfig where
 
 import Language.Strings
 import PrestoDOM
-
 import Components.PrimaryButton as PrimaryButton
 import Font.Size as FontSize
 import Language.Types (STR(..))
@@ -28,25 +26,27 @@ import MerchantConfig.Types as MT
 import Prelude ((==))
 
 primaryButtonConfig :: ST.SelectLanguageScreenState -> PrimaryButton.Config
-primaryButtonConfig state = PrimaryButton.config { textConfig
+primaryButtonConfig state =
+  PrimaryButton.config
+    { textConfig
       { text = (getString UPDATE)
-      , color = Color.primaryButtonColor}
-      , margin = (Margin 0 0 0 0)
-      , cornerRadius = 0.0
-      , background = Color.black900
-      , height = (V 60)
-      , id = "SelectLanguageScreenPrimaryButton"
+      , color = Color.primaryButtonColor
       }
-  
-
+    , margin = (Margin 0 0 0 0)
+    , cornerRadius = 0.0
+    , background = Color.black900
+    , height = (V 60)
+    , id = "SelectLanguageScreenPrimaryButton"
+    }
 
 menuButtonConfig :: ST.SelectLanguageScreenState -> MT.Language -> Int -> MenuButton.State
-menuButtonConfig state language index = MenuButton.config
+menuButtonConfig state language index =
+  MenuButton.config
     { text =
-        { name : language.name
-        , value : language.value
-        , subtitle : language.subtitle
-        }
+      { name: language.name
+      , value: language.value
+      , subtitle: language.subtitle
+      }
     , isSelected = (state.props.selectedLanguage == language.value)
     , index = index
     , lineVisibility = false

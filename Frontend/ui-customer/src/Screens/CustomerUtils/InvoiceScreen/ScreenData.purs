@@ -12,7 +12,6 @@
  
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
 module Screens.InvoiceScreen.ScreenData where
 
 import Screens.Types (InvoiceScreenState)
@@ -24,20 +23,20 @@ import MerchantConfig.Utils as MU
 import Common.Types.App (LazyCheck(..))
 
 initData :: InvoiceScreenState
-initData = {
-  data: {
-    tripCharges : "",
-    promotion : 0.0,
-    gst : 0.0,
-    totalAmount : "",
-    date : "wed,10,45",
-    selectedItem : dummyIndividualCard,
-    config : getAppConfig appConfig,
-    logField : empty,
-    pdfHeading : if (MU.getMerchant FunctionCall == MU.NAMMAYATRI) then ", here's your driver receipt" else ", here's your invoice"
-  },
-  props: {
-    paymentMode : "Cash"
-  , fromHomeScreen : false
+initData =
+  { data:
+      { tripCharges: ""
+      , promotion: 0.0
+      , gst: 0.0
+      , totalAmount: ""
+      , date: "wed,10,45"
+      , selectedItem: dummyIndividualCard
+      , config: getAppConfig appConfig
+      , logField: empty
+      , pdfHeading: if (MU.getMerchant FunctionCall == MU.NAMMAYATRI) then ", here's your driver receipt" else ", here's your invoice"
+      }
+  , props:
+      { paymentMode: "Cash"
+      , fromHomeScreen: false
+      }
   }
-}

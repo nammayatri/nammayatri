@@ -12,19 +12,18 @@
  
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
 module Screens.AboutUsScreen.ScreenData where
 
-import Screens.Types(AboutUsScreenState)
+import Screens.Types (AboutUsScreenState)
 
 initData :: AboutUsScreenState
-initData = {
-  data:  { 
-    versionNumber : ""
-  },
-  props: { 
-    demoModePopup : false,
-    enableConfirmPassword : false,
-    enableDemoModeCount : 0
+initData =
+  { data:
+      { versionNumber: ""
+      }
+  , props:
+      { demoModePopup: false
+      , enableConfirmPassword: false
+      , enableDemoModeCount: 0
+      }
   }
-}

@@ -12,8 +12,6 @@
  
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
-
 module Screens.SubscriptionScreen.ScreenData where
 
 import Common.Types.App (PaymentStatus(..))
@@ -23,108 +21,108 @@ import Screens.Types (AutoPayStatus(..), KeyValType, OptionsMenuState(..), PlanC
 import Services.API (AutopayPaymentStage(..), DriverDuesEntity(..), FeeType(..), InvoiceStatus(..), OfferEntity(..), PaymentBreakUp(..))
 
 initData :: SubscriptionScreenState
-initData = 
-  let config = getAppConfig appConfig 
-  in {
-    data: {
-        driverId : "",
-        paymentMode : "",
-        planId : "",
-        orderId : Mb.Nothing,
-        errorMessage : "",
-        joinPlanData : {
-            allPlans : [],
-            subscriptionStartDate : ""
-        },
-        myPlanData : {
-            dueItems : [],
-            planEntity : dummyPlanConfig,
-            autoPayStatus : NO_AUTOPAY,
-            lowAccountBalance : Mb.Nothing,
-            paymentMethodWarning : false,
-            switchAndSave : false,
-            maxDueAmount : 0.0,
-            totalDueAmount : 0.0,
-            autoPayDueAmount : 0.0,
-            manualDueAmount : 0.0,
-            mandateStatus : "",
-            selectedDue : "",
-            dueBoothCharges : Mb.Nothing
-        },
-        managePlanData : {
-            currentPlan : dummyPlanConfig,
-            alternatePlans : []
-        },
-        autoPayDetails : {
-            isActive : false,
-            detailsList : [],
-            payerUpiId : Mb.Nothing,
-            pspLogo : ""
-        },
-        config
-    },
-    props : {
-        isSelectedLangTamil : false,
-        subView : NoSubView,
-        popUpState : Mb.Nothing,
-        resumeBtnVisibility : false,
-        showError : false,
-        showShimmer : true ,
-        refreshPaymentStatus : false,
-        confirmCancel : false,
-        joinPlanProps : {
-            paymentMode : "",
-            selectedPlanItem : Mb.Nothing,
-            isIntroductory : false
-        },
-        myPlanProps : {
-            isDuesExpanded : false,
-            isDueViewExpanded : false,
-            overDue : false,
-            multiTypeDues : false,
-            dueType : MANUAL_PAYMENT
-        },
-        managePlanProps : {
-            selectedPlanItem : dummyPlanConfig
-        },
-        currentLat : 0.0,
-        currentLon : 0.0,
-        destLat : 0.0,
-        destLon : 0.0,
-        kioskLocation : [],
-        prevSubView : NoSubView,
-        noKioskLocation : false,
-        optionsMenuState : ALL_COLLAPSED,
-        redirectToNav : "",
-        lastPaymentType : Mb.Nothing,
-        offerBannerProps : {
-          showOfferBanner : config.subscriptionConfig.offerBannerConfig.showDUOfferBanner,
-          offerBannerValidTill : config.subscriptionConfig.offerBannerConfig.offerBannerValidTill,
-          offerBannerDeadline : config.subscriptionConfig.offerBannerConfig.offerBannerDeadline
-        },
-        isEndRideModal : false
+initData =
+  let
+    config = getAppConfig appConfig
+  in
+    { data:
+        { driverId: ""
+        , paymentMode: ""
+        , planId: ""
+        , orderId: Mb.Nothing
+        , errorMessage: ""
+        , joinPlanData:
+            { allPlans: []
+            , subscriptionStartDate: ""
+            }
+        , myPlanData:
+            { dueItems: []
+            , planEntity: dummyPlanConfig
+            , autoPayStatus: NO_AUTOPAY
+            , lowAccountBalance: Mb.Nothing
+            , paymentMethodWarning: false
+            , switchAndSave: false
+            , maxDueAmount: 0.0
+            , totalDueAmount: 0.0
+            , autoPayDueAmount: 0.0
+            , manualDueAmount: 0.0
+            , mandateStatus: ""
+            , selectedDue: ""
+            , dueBoothCharges: Mb.Nothing
+            }
+        , managePlanData:
+            { currentPlan: dummyPlanConfig
+            , alternatePlans: []
+            }
+        , autoPayDetails:
+            { isActive: false
+            , detailsList: []
+            , payerUpiId: Mb.Nothing
+            , pspLogo: ""
+            }
+        , config
+        }
+    , props:
+        { isSelectedLangTamil: false
+        , subView: NoSubView
+        , popUpState: Mb.Nothing
+        , resumeBtnVisibility: false
+        , showError: false
+        , showShimmer: true
+        , refreshPaymentStatus: false
+        , confirmCancel: false
+        , joinPlanProps:
+            { paymentMode: ""
+            , selectedPlanItem: Mb.Nothing
+            , isIntroductory: false
+            }
+        , myPlanProps:
+            { isDuesExpanded: false
+            , isDueViewExpanded: false
+            , overDue: false
+            , multiTypeDues: false
+            , dueType: MANUAL_PAYMENT
+            }
+        , managePlanProps:
+            { selectedPlanItem: dummyPlanConfig
+            }
+        , currentLat: 0.0
+        , currentLon: 0.0
+        , destLat: 0.0
+        , destLon: 0.0
+        , kioskLocation: []
+        , prevSubView: NoSubView
+        , noKioskLocation: false
+        , optionsMenuState: ALL_COLLAPSED
+        , redirectToNav: ""
+        , lastPaymentType: Mb.Nothing
+        , offerBannerProps:
+            { showOfferBanner: config.subscriptionConfig.offerBannerConfig.showDUOfferBanner
+            , offerBannerValidTill: config.subscriptionConfig.offerBannerConfig.offerBannerValidTill
+            , offerBannerDeadline: config.subscriptionConfig.offerBannerConfig.offerBannerDeadline
+            }
+        , isEndRideModal: false
+        }
     }
-}
 
 dummyPlanConfig :: PlanCardConfig
-dummyPlanConfig = 
-    { id : ""
-    , title : ""
-    , description : ""
-    , isSelected : false
-    , offers : [
-                {
-                title : Mb.Nothing,
-                isGradient : true,
-                gradient : [],
-                hasImage : true,
-                imageURL : "",
-                offerDescription : Mb.Nothing,
-                addedFromUI : false
-                }
-                ]
-    , priceBreakup : []
-    , frequency : ""
-    , freeRideCount : 1
-    , showOffer : true
-}
+dummyPlanConfig =
+  { id: ""
+  , title: ""
+  , description: ""
+  , isSelected: false
+  , offers:
+      [ { title: Mb.Nothing
+        , isGradient: true
+        , gradient: []
+        , hasImage: true
+        , imageURL: ""
+        , offerDescription: Mb.Nothing
+        , addedFromUI: false
+        }
+      ]
+  , priceBreakup: []
+  , frequency: ""
+  , freeRideCount: 1
+  , showOffer: true
+  }

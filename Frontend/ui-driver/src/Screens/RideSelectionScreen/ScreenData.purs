@@ -12,7 +12,6 @@
  
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
 module Screens.RideSelectionScreen.ScreenData where
 
 import Screens.Types (AnimationState(..), RideSelectionScreenState)
@@ -20,18 +19,18 @@ import Data.Maybe (Maybe(..))
 
 initData :: RideSelectionScreenState
 initData =
-  { rideList      : []
-  , offsetValue   : 0
-  , selectedItem  : Nothing
-  , shimmerLoader : AnimatingIn
-  , loadMoreDisabled : false
-  , recievedResponse : false
-  , selectedCategory :
-    { categoryId     : ""
-    , categoryName   : ""
-    , categoryAction : ""
-    , categoryImageUrl : ""
-    }
-  , prestoListArrayItems   : []
-  , loaderButtonVisibility : false
-}
+  { rideList: []
+  , offsetValue: 0
+  , selectedItem: Nothing
+  , shimmerLoader: AnimatingIn
+  , loadMoreDisabled: false
+  , recievedResponse: false
+  , selectedCategory:
+      { categoryId: ""
+      , categoryName: ""
+      , categoryAction: ""
+      , categoryImageUrl: ""
+      }
+  , prestoListArrayItems: []
+  , loaderButtonVisibility: false
+  }

@@ -12,14 +12,12 @@
  
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
 module Screens.EnterOTPScreen.ComponentConfig where
 
 import Components.PrimaryButton as PrimaryButton
 import Styles.Colors as Color
 import Language.Strings
 import PrestoDOM
-
 import Common.Types.App as Common
 import Language.Types (STR(..))
 import Resource.Constants as Constant
@@ -34,29 +32,36 @@ import Engineering.Helpers.Commons as EHC
 import Screens.Types as ST
 
 primaryButtonViewConfig :: ST.EnterOTPScreenState -> PrimaryButton.Config
-primaryButtonViewConfig state = let
+primaryButtonViewConfig state =
+  let
     config = PrimaryButton.config
-    primaryButtonConfig' = config 
-      { textConfig{ text = (getString REGISTER) }
-      , id = "PrimaryButtonOtpNumber"
-      , isClickable = state.props.btnActive
-      , alpha = if state.props.btnActive then 1.0 else 0.6
-      , height = (V 60)
-      , cornerRadius = 0.0
-      , margin = (Margin 0 0 0 0)
-      }
-  in primaryButtonConfig'
 
+    primaryButtonConfig' =
+      config
+        { textConfig { text = (getString REGISTER) }
+        , id = "PrimaryButtonOtpNumber"
+        , isClickable = state.props.btnActive
+        , alpha = if state.props.btnActive then 1.0 else 0.6
+        , height = (V 60)
+        , cornerRadius = 0.0
+        , margin = (Margin 0 0 0 0)
+        }
+  in
+    primaryButtonConfig'
 
 verifyOTPButtonConfig :: ST.EnterOTPScreenState -> PrimaryButton.Config
-verifyOTPButtonConfig state = let 
+verifyOTPButtonConfig state =
+  let
     config = PrimaryButton.config
-    primaryButtonConfig' = config 
-      { textConfig{ text = (getString CONTINUE) }
-      , id = "PrimaryButtonOTP"
-      , isClickable = state.props.btnActive
-      , alpha = if state.props.btnActive then 1.0 else 0.4
-      , margin = (Margin 0 0 0 0 )
-      , enableLoader = (JB.getBtnLoader "PrimaryButtonOTP")
-      }
-  in primaryButtonConfig'
+
+    primaryButtonConfig' =
+      config
+        { textConfig { text = (getString CONTINUE) }
+        , id = "PrimaryButtonOTP"
+        , isClickable = state.props.btnActive
+        , alpha = if state.props.btnActive then 1.0 else 0.4
+        , margin = (Margin 0 0 0 0)
+        , enableLoader = (JB.getBtnLoader "PrimaryButtonOTP")
+        }
+  in
+    primaryButtonConfig'

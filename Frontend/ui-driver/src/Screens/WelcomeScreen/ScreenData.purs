@@ -6,9 +6,9 @@ import Common.Styles.Colors as Color
 import Prelude (map)
 import Common.Types.App (YoutubeData, CarouselData)
 import Language.Strings (getString)
-import Language.Types(STR(..))
+import Language.Types (STR(..))
 
 initData :: WelcomeScreenState
-initData = {
-  data : { logField : empty }
-}
+initData =
+  { data: { logField: empty }
+  }

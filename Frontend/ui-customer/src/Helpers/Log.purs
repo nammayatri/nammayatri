@@ -12,7 +12,6 @@
 
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
 module Helpers.Logs where
 
 import Prelude
@@ -36,31 +35,29 @@ baseAppLogs :: FlowBT String Unit
 baseAppLogs = do
   let
     bundle = getVersionByKey "app"
-    config = getVersionByKey "configuration"
-    customerId = getValueToLocalStore CUSTOMER_ID
 
+    config = getVersionByKey "configuration"
+
+    customerId = getValueToLocalStore CUSTOMER_ID
   versionCode <- liftFlowBT $ getVersionCode
   versionName <- liftFlowBT $ getVersionName
-
   logField_ <- lift $ lift $ getLogFields
-
   void $ pure $ setCleverTapUserProp [ { key: "App Version", value: unsafeToForeign versionName } ]
   void $ pure $ setCleverTapUserProp [ { key: "Bundle version", value: unsafeToForeign bundle } ]
   void $ pure $ setCleverTapUserProp [ { key: "Platform", value: unsafeToForeign os } ]
-
   void $ lift $ lift $ setLogField "app_version" $ encode $ show versionCode
   void $ lift $ lift $ setLogField "bundle_version" $ encode bundle
   void $ lift $ lift $ setLogField "config_version" $ encode config
   void $ lift $ lift $ setLogField "platform" $ encode os
   void $ lift $ lift $ setLogField "customer_id" $ encode customerId
-
   void $ liftFlowBT $ logEventWithParams logField_ "ny_user_app_version" "version" versionName
   void $ liftFlowBT $ logEvent logField_ "ny_user_entered_app"
   pure unit
 
 updateCTEventData :: GetProfileRes -> FlowBT String Unit
 updateCTEventData response = do
-  let name = catMaybeStrings [ response ^. _firstName, response ^. _middleName, response ^. _lastName ]
+  let
+    name = catMaybeStrings [ response ^. _firstName, response ^. _middleName, response ^. _lastName ]
   void $ liftFlowBT $ setCleverTapUserData "Name" name
   void $ liftFlowBT $ traverse (setCleverTapUserData "gender") $ response ^. _gender
   void $ liftFlowBT $ traverse (setCleverTapUserData "preferred Language") $ response ^. _language

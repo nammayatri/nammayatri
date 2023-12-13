@@ -12,7 +12,6 @@
  
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
 module Screens.RideHistoryScreen.ScreenData where
 
 import Data.Maybe (Maybe(..))
@@ -23,62 +22,62 @@ import Resource.Constants (tripDatesCount)
 import Screens.Types (AnimationState(..), RideHistoryScreenState)
 
 initData :: RideHistoryScreenState
-initData = {
-  shimmerLoader : AnimatingIn,
-  recievedResponse: false,
-  prestoListArrayItems : [],
-  rideList: [],
-  currentTab: "COMPLETED",
-  loadMoreDisabled: false,
-  selectedItem: {
-    date : "",
-    time : "",
-    total_amount : 0,
-    card_visibility : "",
-    shimmer_visibility : "",
-    rideDistance : "",
-    status : "",
-    vehicleModel : "",
-    shortRideId : "",
-    vehicleNumber : "",
-    driverName : "",
-    driverSelectedFare : 0,
-    vehicleColor : "",
-    id : "",
-    updatedAt : "",
-    source : "",
-    destination : "",
-    vehicleType : "",
-    riderName : "",
-    customerExtraFee : Nothing,
-    purpleTagVisibility : false,
-    gotoTagVisibility : false,
-    spLocTagVisibility : false,
-    specialZoneLayoutBackground : "",
-    specialZoneImage : "",
-    specialZoneText : ""
-  },
-  offsetValue: 0,
-  loaderButtonVisibility: false,
-  logField : empty ,
-  datePickerState : {
-    activeIndex : tripDatesCount - 1 -- based on no of dates we are showing
-  , selectedItem : {
-      date : 0
-    , month : ""
-    , year : 0
-    , utcDate : ""
+initData =
+  { shimmerLoader: AnimatingIn
+  , recievedResponse: false
+  , prestoListArrayItems: []
+  , rideList: []
+  , currentTab: "COMPLETED"
+  , loadMoreDisabled: false
+  , selectedItem:
+      { date: ""
+      , time: ""
+      , total_amount: 0
+      , card_visibility: ""
+      , shimmer_visibility: ""
+      , rideDistance: ""
+      , status: ""
+      , vehicleModel: ""
+      , shortRideId: ""
+      , vehicleNumber: ""
+      , driverName: ""
+      , driverSelectedFare: 0
+      , vehicleColor: ""
+      , id: ""
+      , updatedAt: ""
+      , source: ""
+      , destination: ""
+      , vehicleType: ""
+      , riderName: ""
+      , customerExtraFee: Nothing
+      , purpleTagVisibility: false
+      , gotoTagVisibility: false
+      , spLocTagVisibility: false
+      , specialZoneLayoutBackground: ""
+      , specialZoneImage: ""
+      , specialZoneText: ""
+      }
+  , offsetValue: 0
+  , loaderButtonVisibility: false
+  , logField: empty
+  , datePickerState:
+      { activeIndex: tripDatesCount - 1 -- based on no of dates we are showing
+      , selectedItem:
+          { date: 0
+          , month: ""
+          , year: 0
+          , utcDate: ""
+          }
+      }
+  , data:
+      { pastDays: 30
+      , paymentHistory:
+          { paymentHistoryList: []
+          }
+      , config: getAppConfig appConfig
+      }
+  , props:
+      { showDatePicker: false
+      , showPaymentHistory: false
+      }
   }
-  }
-  , data : {
-    pastDays : 30
-  , paymentHistory : {
-    paymentHistoryList : []
-  }
-  , config  : getAppConfig appConfig
-  }
-  , props : {
-    showDatePicker : false
-  , showPaymentHistory : false
-  }
-}

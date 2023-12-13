@@ -12,7 +12,6 @@
 
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
 module Components.SettingSideBar.Controller where
 
 import Prelude (class Eq)
@@ -21,46 +20,64 @@ import Data.Eq.Generic (genericEq)
 import Data.Maybe (Maybe(..))
 import MerchantConfig.Types (AppConfig)
 
-data Action = ChangeLanguage
-            | EditProfile
-            | PastRides
-            | GoToEmergencyContacts
-            | GoToAbout
-            | ShareAppLink
-            | OnLogout
-            | NoAction
-            | OnHelp
-            | OnClose
-            | OnClosed
-            | GoToFavourites
-            | GoToMyTickets
-            | GoToMyProfile
-            | LiveStatsDashboard
+data Action
+  = ChangeLanguage
+  | EditProfile
+  | PastRides
+  | GoToEmergencyContacts
+  | GoToAbout
+  | ShareAppLink
+  | OnLogout
+  | NoAction
+  | OnHelp
+  | OnClose
+  | OnClosed
+  | GoToFavourites
+  | GoToMyTickets
+  | GoToMyProfile
+  | LiveStatsDashboard
 
-data Status = OPEN | CLOSING | CLOSED
+data Status
+  = OPEN
+  | CLOSING
+  | CLOSED
 
-data Tag = SETTINGS_LOGOUT | SETTINGS_ABOUT | SETTINGS_FAVOURITES | SETTINGS_HELP | SETTINGS_LANGUAGE | SETTINGS_RIDES | SETTINGS_SHARE_APP | SETTINGS_EMERGENCY_CONTACTS | SETTINGS_LIVE_DASHBOARD | SETTINGS_TICKETS
+data Tag
+  = SETTINGS_LOGOUT
+  | SETTINGS_ABOUT
+  | SETTINGS_FAVOURITES
+  | SETTINGS_HELP
+  | SETTINGS_LANGUAGE
+  | SETTINGS_RIDES
+  | SETTINGS_SHARE_APP
+  | SETTINGS_EMERGENCY_CONTACTS
+  | SETTINGS_LIVE_DASHBOARD
+  | SETTINGS_TICKETS
 
 derive instance genericStatus :: Generic Status _
-instance eqStatus :: Eq Status where eq = genericEq
+
+instance eqStatus :: Eq Status where
+  eq = genericEq
 
 derive instance genericTag :: Generic Tag _
-instance eqTag :: Eq Tag where eq = genericEq
 
-type SettingSideBarState =
-  { opened :: Status
-  , name :: String
-  , number :: String
-  , email :: Maybe String
-  , gender :: Maybe String
-  , appConfig :: AppConfig
-  , sideBarList :: Array String
-  }
+instance eqTag :: Eq Tag where
+  eq = genericEq
 
-type Item =
-  { imageUrl :: String
-  , text :: String
-  , tag :: Tag
-  , iconUrl :: String
-  , accessibilityHint :: String
-  }
+type SettingSideBarState
+  = { opened :: Status
+    , name :: String
+    , number :: String
+    , email :: Maybe String
+    , gender :: Maybe String
+    , appConfig :: AppConfig
+    , sideBarList :: Array String
+    }
+
+type Item
+  = { imageUrl :: String
+    , text :: String
+    , tag :: Tag
+    , iconUrl :: String
+    , accessibilityHint :: String
+    }

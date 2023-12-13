@@ -12,7 +12,6 @@
  
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
 module Screens.ReferralScreen.View where
 
 import Common.Types.App (LazyCheck(..))
@@ -20,7 +19,7 @@ import Components.GenericHeader as GenericHeader
 import Components.PrimaryButton as PrimaryButton
 import Components.PrimaryEditText as PrimaryEditText
 import Effect (Effect)
-import Engineering.Helpers.Commons  as EHC
+import Engineering.Helpers.Commons as EHC
 import Font.Style as FontStyle
 import Helpers.Utils (adjustViewWithKeyboard, FetchImageFrom(..), fetchImage)
 import Language.Strings (getString)
@@ -65,7 +64,7 @@ view push state =
         [ height $ V 1
         , width MATCH_PARENT
         , background Color.grey900
-        , visibility if state.config.nyBrandingVisibility then GONE else VISIBLE 
+        , visibility if state.config.nyBrandingVisibility then GONE else VISIBLE
         ]
         []
     , referralCodeView push state

@@ -12,7 +12,6 @@
 
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
 module Screens.RideHistoryScreen.Handler where
 
 import Components.IndividualRideCard as IndividualRideCard
@@ -33,35 +32,34 @@ import Services.API (RidesInfo(..), Status(..))
 import Types.App (FlowBT, GlobalState(..), MY_RIDES_SCREEN_OUTPUT(..), NAVIGATION_ACTIONS(..), ScreenType(..))
 import Types.ModifyScreenState (modifyScreenState)
 
-
 rideHistory :: FlowBT String MY_RIDES_SCREEN_OUTPUT
 rideHistory = do
   (GlobalState state) <- getState
   push <- lift $ lift $ liftFlow $ getPushFn Nothing "RideHistoryScreen"
   rideListItem <- lift $ lift $ PrestoList.preComputeListItem $ IndividualRideCard.view push
-  act <- lift $ lift $ runScreen $ RideHistoryScreen.screen state.rideHistoryScreen{shimmerLoader = AnimatedIn} rideListItem
+  act <- lift $ lift $ runScreen $ RideHistoryScreen.screen state.rideHistoryScreen { shimmerLoader = AnimatedIn } rideListItem
   case act of
     GoBack -> App.BackT $ pure App.GoBack
     HomeScreen -> do
       modifyScreenState $ RideHistoryScreenStateType (\_ -> RideHistoryScreenData.initData)
-      App.BackT $ App.BackPoint <$> (pure $ HOME_SCREEN )
+      App.BackT $ App.BackPoint <$> (pure $ HOME_SCREEN)
     ProfileScreen -> do
       modifyScreenState $ RideHistoryScreenStateType (\_ -> RideHistoryScreenData.initData)
-      App.BackT $ App.BackPoint <$> (pure $ PROFILE_SCREEN )
+      App.BackT $ App.BackPoint <$> (pure $ PROFILE_SCREEN)
     GoToReferralScreen -> do
       modifyScreenState $ RideHistoryScreenStateType (\_ -> RideHistoryScreenData.initData)
       App.BackT $ App.BackPoint <$> pure GO_TO_REFERRAL_SCREEN
     GoToTripDetails updatedState -> do
-      modifyScreenState $ RideHistoryScreenStateType (\_ -> updatedState{currentTab = updatedState.currentTab})
+      modifyScreenState $ RideHistoryScreenStateType (\_ -> updatedState { currentTab = updatedState.currentTab })
       App.BackT $ App.BackPoint <$> (pure $ GO_TO_TRIP_DETAILS updatedState.selectedItem)
     LoaderOutput updatedState -> App.BackT $ App.NoBack <$> (pure $ LOADER_OUTPUT updatedState)
     RefreshScreen updatedState -> App.BackT $ App.NoBack <$> (pure $ REFRESH updatedState)
     GoToFilter currentTab -> App.BackT $ App.BackPoint <$> (pure $ FILTER currentTab)
-    GoToNotification -> do 
+    GoToNotification -> do
       modifyScreenState $ RideHistoryScreenStateType (\_ -> RideHistoryScreenData.initData)
       App.BackT $ App.BackPoint <$> (pure $ NOTIFICATION_FLOW)
     SelectedTab updatedState -> do
-      modifyScreenState $ RideHistoryScreenStateType (\rideHistoryScreen -> rideHistoryScreen{currentTab = updatedState.currentTab, offsetValue = 0})
+      modifyScreenState $ RideHistoryScreenStateType (\rideHistoryScreen -> rideHistoryScreen { currentTab = updatedState.currentTab, offsetValue = 0 })
       App.BackT $ App.NoBack <$> (pure $ SELECTED_TAB updatedState)
     OpenPaymentHistoryScreen updatedState -> do
       modifyScreenState $ RideHistoryScreenStateType (\_ -> updatedState)

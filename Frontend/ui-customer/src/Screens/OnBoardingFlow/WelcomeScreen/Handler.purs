@@ -1,14 +1,13 @@
 module Screens.OnBoardingFlow.WelcomeScreen.Handler where
 
-import Prelude (bind, ($), pure , (<$>))
+import Prelude (bind, ($), pure, (<$>))
 import Engineering.Helpers.BackTrack (getState)
 import Screens.OnBoardingFlow.WelcomeScreen.Controller (ScreenOutput(..))
 import Control.Monad.Except.Trans (lift)
 import Control.Transformers.Back.Trans as App
 import PrestoDOM.Core.Types.Language.Flow (runScreen)
 import Screens.OnBoardingFlow.WelcomeScreen.View as WelcomeScreen
-import Types.App (FlowBT, GlobalState(..),WELCOME_SCREEN_OUTPUT(..))
-
+import Types.App (FlowBT, GlobalState(..), WELCOME_SCREEN_OUTPUT(..))
 
 welcomeScreen :: FlowBT String WELCOME_SCREEN_OUTPUT
 welcomeScreen = do

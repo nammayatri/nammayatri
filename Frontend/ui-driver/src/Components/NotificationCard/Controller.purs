@@ -12,7 +12,6 @@
  
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
 module Components.NotificationCard.Controller where
 
 data Action
@@ -21,15 +20,14 @@ data Action
   | IllutrationClick Int
   | NoAction
 
-data CounterData = CounterData
-    { 
-      icon :: String,
-      value :: String
+data CounterData
+  = CounterData
+    { icon :: String
+    , value :: String
     }
 
 getCounters :: String -> Array CounterData
-getCounters dummy = 
-    [
-       CounterData {icon : "ny_ic_heart_grey,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_heart_grey.png", value : "likeCount"}, 
-       CounterData {icon : "ny_ic_eye,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_eye.png", value : "viewCount"}
-    ]
+getCounters dummy =
+  [ CounterData { icon: "ny_ic_heart_grey,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_heart_grey.png", value: "likeCount" }
+  , CounterData { icon: "ny_ic_eye,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_eye.png", value: "viewCount" }
+  ]

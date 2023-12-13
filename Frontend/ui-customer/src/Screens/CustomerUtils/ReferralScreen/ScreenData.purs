@@ -12,7 +12,6 @@
  
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
 module Screens.ReferralScreen.ScreenData where
 
 import ConfigProvider
@@ -26,6 +25,6 @@ initData =
   , showThanks: false
   , isInvalidCode: false
   , isExpandReference: false
-  , config : getAppConfig appConfig
-  , logField : empty 
+  , config: getAppConfig appConfig
+  , logField: empty
   }

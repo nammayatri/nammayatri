@@ -12,9 +12,7 @@
  
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
 module Screens.UploadDrivingLicenseScreen.Handler where
-
 
 import Prelude (bind, pure, ($), (<$>), discard)
 import Engineering.Helpers.BackTrack (getState)
@@ -23,9 +21,8 @@ import Control.Monad.Except.Trans (lift)
 import Control.Transformers.Back.Trans (BackT(..), FailBack(..)) as App
 import PrestoDOM.Core.Types.Language.Flow (runScreen)
 import Screens.UploadDrivingLicenseScreen.View as UploadDrivingLicenseScreen
-import Types.App (FlowBT, GlobalState(..), UPLOAD_DRIVER_LICENSE_SCREENOUTPUT(..),ScreenType(..))
+import Types.App (FlowBT, GlobalState(..), UPLOAD_DRIVER_LICENSE_SCREENOUTPUT(..), ScreenType(..))
 import Types.ModifyScreenState (modifyScreenState)
-
 
 uploadDrivingLicense :: FlowBT String UPLOAD_DRIVER_LICENSE_SCREENOUTPUT
 uploadDrivingLicense = do
@@ -34,7 +31,7 @@ uploadDrivingLicense = do
   case action of
     GoBack updatedState -> do
       modifyScreenState $ UploadDrivingLicenseScreenStateType $ \uploadDrivingLicenseScreen -> updatedState
-      modifyScreenState $ UploadDrivingLicenseScreenStateType $ \uploadDrivingLicenseScreen -> uploadDrivingLicenseScreen { props {errorVisibility = false}, data {errorMessage = ""}}
+      modifyScreenState $ UploadDrivingLicenseScreenStateType $ \uploadDrivingLicenseScreen -> uploadDrivingLicenseScreen { props { errorVisibility = false }, data { errorMessage = "" } }
       App.BackT $ App.NoBack <$> (pure $ GOTO_ONBOARDING_FLOW)
     ValidateDetails updatedState -> do
       modifyScreenState $ UploadDrivingLicenseScreenStateType (\uploadDrivingLicenseScreen -> updatedState)

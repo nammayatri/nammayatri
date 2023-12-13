@@ -12,11 +12,9 @@
  
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
 module Screens.BankDetailScreen.Handler
   ( bankDetail
-  )
-  where
+  ) where
 
 import Engineering.Helpers.BackTrack (getState)
 import Prelude (bind, pure, ($), (<$>))
@@ -26,7 +24,6 @@ import Control.Transformers.Back.Trans (BackT(..), FailBack(..)) as App
 import PrestoDOM.Core.Types.Language.Flow (runScreen)
 import Screens.BankDetailScreen.View as BankDetailScreen
 import Types.App (FlowBT, GlobalState(..), BANK_DETAILS_SCREENOUTPUT(..))
-
 
 bankDetail :: FlowBT String BANK_DETAILS_SCREENOUTPUT
 bankDetail = do

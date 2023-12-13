@@ -15,7 +15,8 @@ type Config
     , paymentBreakUp :: Array PaymentBreakUp
     , id :: String
     }
-type PaymentBreakUp = {
-  description :: String
-, amount :: Number
-}
+
+type PaymentBreakUp
+  = { description :: String
+    , amount :: Number
+    }

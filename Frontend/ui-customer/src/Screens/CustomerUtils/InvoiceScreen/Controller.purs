@@ -12,7 +12,6 @@
  
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
 module Screens.InvoiceScreen.Controller where
 
 import Prelude (class Show, bind, pure, unit, ($), discard, void)
@@ -71,11 +70,13 @@ eval (GenericHeaderAC (GenericHeaderController.PrefixImgOnClick)) state = contin
 eval (PrimaryButtonAC (PrimaryButton.OnClick)) state = do
   continueWithCmd state
     [ do
-        void $ logEventWithMultipleParams state.data.logField "ny_user_invoice_download" $ [ { key : "Base fare", value : unsafeToForeign state.data.selectedItem.baseFare},
-                                                                                                                    { key : "Distance", value : unsafeToForeign state.data.selectedItem.baseDistance},
-                                                                                                                    { key : "Driver pickup charges", value : unsafeToForeign "₹ 10"},
-                                                                                                                    { key : "Total fare", value : unsafeToForeign state.data.selectedItem.totalAmount},
-                                                                                                                    { key : "Ride completion timestamp", value : unsafeToForeign state.data.selectedItem.rideEndTime}]
+        void $ logEventWithMultipleParams state.data.logField "ny_user_invoice_download"
+          $ [ { key: "Base fare", value: unsafeToForeign state.data.selectedItem.baseFare }
+            , { key: "Distance", value: unsafeToForeign state.data.selectedItem.baseDistance }
+            , { key: "Driver pickup charges", value: unsafeToForeign "₹ 10" }
+            , { key: "Total fare", value: unsafeToForeign state.data.selectedItem.totalAmount }
+            , { key: "Ride completion timestamp", value: unsafeToForeign state.data.selectedItem.rideEndTime }
+            ]
         _ <- pure $ generatePDF state "NEW"
         pure NoAction
     ]

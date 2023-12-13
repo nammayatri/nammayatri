@@ -9,7 +9,6 @@ import Screens.WelcomeScreen.Controller (ScreenOutput(..))
 import Screens.WelcomeScreen.View as WelcomeScreen
 import Types.App (FlowBT, GlobalState(..), WELCOME_SCREEN_OUTPUT(..))
 
-
 welcomeScreen :: FlowBT String WELCOME_SCREEN_OUTPUT
 welcomeScreen = do
   (GlobalState state) <- getState

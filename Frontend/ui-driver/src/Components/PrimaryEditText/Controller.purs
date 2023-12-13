@@ -12,7 +12,9 @@
  
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
 module Components.PrimaryEditText.Controllers where
 
-data Action = OnClick | TextChanged String String | TextClicked
+data Action
+  = OnClick
+  | TextChanged String String
+  | TextClicked

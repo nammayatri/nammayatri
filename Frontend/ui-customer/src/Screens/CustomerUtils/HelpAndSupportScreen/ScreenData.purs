@@ -12,47 +12,45 @@
  
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
 module Screens.HelpAndSupportScreen.ScreenData where
 
 import Screens.Types (HelpAndSupportScreenState, DeleteStatus(..))
 import Screens.MyRidesScreen.ScreenData (dummyIndividualCard)
 import Screens.Types (DeleteStatus(..))
 import ConfigProvider
-import Data.Maybe(Maybe(..))
+import Data.Maybe (Maybe(..))
 import Foreign.Object (empty)
 
 initData :: HelpAndSupportScreenState
-initData = {
-  data: {
-    source : "",
-    destination : "",
-    date : "",
-    time : "",
-    rating : 0,
-    driverName : "",
-    totalAmount : "",
-    isNull : true,
-    status : "",
-    rideStartTime : "",
-    rideEndTime : "",
-    vehicleNumber : "",
-    rideId : "",
-    tripId : "",
-    bookingId : "",
-    faresList : [],
-    email : "",
-    description : "",
-    accountStatus : ACTIVE,
-    config : getAppConfig appConfig,
-    vehicleVariant : Nothing,
-    logField : empty
-  },
-  props:{
-    apiFailure : false
-  , isCallConfirmation : false
-  , showDeleteAccountView : false
-  , btnActive : false
+initData =
+  { data:
+      { source: ""
+      , destination: ""
+      , date: ""
+      , time: ""
+      , rating: 0
+      , driverName: ""
+      , totalAmount: ""
+      , isNull: true
+      , status: ""
+      , rideStartTime: ""
+      , rideEndTime: ""
+      , vehicleNumber: ""
+      , rideId: ""
+      , tripId: ""
+      , bookingId: ""
+      , faresList: []
+      , email: ""
+      , description: ""
+      , accountStatus: ACTIVE
+      , config: getAppConfig appConfig
+      , vehicleVariant: Nothing
+      , logField: empty
+      }
+  , props:
+      { apiFailure: false
+      , isCallConfirmation: false
+      , showDeleteAccountView: false
+      , btnActive: false
+      }
   }
-
-}

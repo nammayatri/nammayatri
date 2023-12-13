@@ -42,13 +42,17 @@ carouselData state =
   }
 
 primaryButtonConfig :: WelcomeScreenState -> PrimaryButton.Config
-primaryButtonConfig state = let 
+primaryButtonConfig state =
+  let
     config = PrimaryButton.config
-    primaryButtonConfig' = config 
-      { textConfig { text = getString GET_STARTED }
-      , id = "PrimaryButtonWelcomeScreen"
-      }
-  in primaryButtonConfig'
+
+    primaryButtonConfig' =
+      config
+        { textConfig { text = getString GET_STARTED }
+        , id = "PrimaryButtonWelcomeScreen"
+        }
+  in
+    primaryButtonConfig'
 
 dummyYoutubeData :: Common.YoutubeData
 dummyYoutubeData =

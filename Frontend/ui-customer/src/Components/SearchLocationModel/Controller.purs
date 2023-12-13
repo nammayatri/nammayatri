@@ -12,7 +12,6 @@
 
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
 module Components.SearchLocationModel.Controller where
 
 import Components.LocationListItem as LocationListItem
@@ -29,130 +28,128 @@ import Prelude ((<>))
 import Foreign.Object (Object)
 import Foreign (Foreign)
 
-data Action = GoBack
-            | NoAction
-            | SourceChanged String
-            | DestinationChanged String
-            | SourceClear
-            | UpdateSource Number Number String
-            | DestinationClear
-            | SetLocationOnMap
-            | SetCurrentLocation
-            | EditTextFocusChanged String
-            | LocationListItemActionController LocationListItem.Action
-            | PrimaryButtonActionController PrimaryButton.Action
-            | DebounceCallBack String Boolean
-            | SavedAddressClicked LocationTagBarController.Action
-            | UpdateCurrentLocation String String
-            | RecenterCurrentLocation
+data Action
+  = GoBack
+  | NoAction
+  | SourceChanged String
+  | DestinationChanged String
+  | SourceClear
+  | UpdateSource Number Number String
+  | DestinationClear
+  | SetLocationOnMap
+  | SetCurrentLocation
+  | EditTextFocusChanged String
+  | LocationListItemActionController LocationListItem.Action
+  | PrimaryButtonActionController PrimaryButton.Action
+  | DebounceCallBack String Boolean
+  | SavedAddressClicked LocationTagBarController.Action
+  | UpdateCurrentLocation String String
+  | RecenterCurrentLocation
 
-type SearchLocationModelState = {
-    isSearchLocation :: SearchLocationModelType
-  , locationList :: Array LocationListItemState
-  , savedlocationList :: Array LocationListItemState
-  , isSource :: Maybe Boolean
-  , source :: String
-  , destination :: String
-  , isSrcServiceable :: Boolean
-  , isDestServiceable :: Boolean
-  , isRideServiceable :: Boolean
-  , appConfig :: AppConfig
-  , logField :: Object Foreign
-  , crossBtnSrcVisibility :: Boolean
-  , crossBtnDestVisibility :: Boolean
-  , isAutoComplete :: Boolean
-  , showLoader :: Boolean
-  , prevLocation :: String
-  , findPlaceIllustration :: Boolean
-}
+type SearchLocationModelState
+  = { isSearchLocation :: SearchLocationModelType
+    , locationList :: Array LocationListItemState
+    , savedlocationList :: Array LocationListItemState
+    , isSource :: Maybe Boolean
+    , source :: String
+    , destination :: String
+    , isSrcServiceable :: Boolean
+    , isDestServiceable :: Boolean
+    , isRideServiceable :: Boolean
+    , appConfig :: AppConfig
+    , logField :: Object Foreign
+    , crossBtnSrcVisibility :: Boolean
+    , crossBtnDestVisibility :: Boolean
+    , isAutoComplete :: Boolean
+    , showLoader :: Boolean
+    , prevLocation :: String
+    , findPlaceIllustration :: Boolean
+    }
 
 dummy_data :: Array LocationListItemState
-dummy_data = [
-    { prefixImageUrl : fetchImage FF_ASSET "ny_ic_briefcase"
-    , postfixImageUrl : fetchImage FF_ASSET "ny_ic_fav"
-    , postfixImageVisibility : true
-    , title : "Work"
-    , subTitle : "KIAL Rd, Devanahalli, Bengaluru,  Karnataka"
-    , placeId : Nothing
-    , lat : Nothing
-    , lon : Nothing
-    , description : ""
-    , tag : ""
-    , tagType : Just (show LOC_LIST)
-    , cardType : Nothing
-    , address : ""
-    , tagName : ""
-    , isEditEnabled : true
-    , savedLocation : ""
-    , placeName : ""
-    , isClickable : true
-    , alpha : 1.0
-    , fullAddress : LocationListItem.dummyAddress
-    , locationItemType : Nothing
-    , distance : Nothing
-    , showDistance : Just false
-    , actualDistance : Nothing
-    , frequencyCount : Nothing
-    , recencyDate : Nothing
-    , locationScore : Nothing
-
+dummy_data =
+  [ { prefixImageUrl: fetchImage FF_ASSET "ny_ic_briefcase"
+    , postfixImageUrl: fetchImage FF_ASSET "ny_ic_fav"
+    , postfixImageVisibility: true
+    , title: "Work"
+    , subTitle: "KIAL Rd, Devanahalli, Bengaluru,  Karnataka"
+    , placeId: Nothing
+    , lat: Nothing
+    , lon: Nothing
+    , description: ""
+    , tag: ""
+    , tagType: Just (show LOC_LIST)
+    , cardType: Nothing
+    , address: ""
+    , tagName: ""
+    , isEditEnabled: true
+    , savedLocation: ""
+    , placeName: ""
+    , isClickable: true
+    , alpha: 1.0
+    , fullAddress: LocationListItem.dummyAddress
+    , locationItemType: Nothing
+    , distance: Nothing
+    , showDistance: Just false
+    , actualDistance: Nothing
+    , frequencyCount: Nothing
+    , recencyDate: Nothing
+    , locationScore: Nothing
     }
-  , { prefixImageUrl : fetchImage FF_ASSET "ny_ic_recent_search"
-    , postfixImageUrl : fetchImage FF_ASSET "ny_ic_fav"
-    , postfixImageVisibility : true
-    , title : "Work"
-    , subTitle : "KIAL Rd, Devanahalli, Bengaluru,  Karnataka"
-    , placeId : Nothing
-    , lat : Nothing
-    , lon : Nothing
-    , description : ""
-    , tag : ""
-    , tagType : Just (show LOC_LIST)
-    , cardType : Nothing
-    , address : ""
-    , tagName : ""
-    , isEditEnabled : true
-    , savedLocation : ""
-    , placeName : ""
-    , isClickable : true
-    , alpha : 1.0
-    , fullAddress : LocationListItem.dummyAddress
-    , locationItemType : Nothing
-    , distance : Nothing
-    , showDistance : Just false
-    , actualDistance : Nothing
-    , frequencyCount : Nothing
-    , recencyDate : Nothing
-    , locationScore : Nothing
-
+  , { prefixImageUrl: fetchImage FF_ASSET "ny_ic_recent_search"
+    , postfixImageUrl: fetchImage FF_ASSET "ny_ic_fav"
+    , postfixImageVisibility: true
+    , title: "Work"
+    , subTitle: "KIAL Rd, Devanahalli, Bengaluru,  Karnataka"
+    , placeId: Nothing
+    , lat: Nothing
+    , lon: Nothing
+    , description: ""
+    , tag: ""
+    , tagType: Just (show LOC_LIST)
+    , cardType: Nothing
+    , address: ""
+    , tagName: ""
+    , isEditEnabled: true
+    , savedLocation: ""
+    , placeName: ""
+    , isClickable: true
+    , alpha: 1.0
+    , fullAddress: LocationListItem.dummyAddress
+    , locationItemType: Nothing
+    , distance: Nothing
+    , showDistance: Just false
+    , actualDistance: Nothing
+    , frequencyCount: Nothing
+    , recencyDate: Nothing
+    , locationScore: Nothing
     }
-  , { prefixImageUrl : fetchImage FF_ASSET "ny_ic_loc_grey"
-    , postfixImageUrl : fetchImage FF_ASSET "ny_ic_fav"
-    , postfixImageVisibility : true
-    , title : "Work"
-    , subTitle : "KIAL Rd, Devanahalli, Bengaluru,  Karnataka"
-    , placeId : Nothing
-    , lat : Nothing
-    , lon : Nothing
-    , description : ""
-    , tag : ""
-    , tagType : Just (show LOC_LIST)
-    , cardType : Nothing
-    , address : ""
-    , tagName : ""
-    , isEditEnabled : true
-    , savedLocation : ""
-    , placeName : ""
-    , isClickable : true
-    , alpha : 1.0
-    , fullAddress : LocationListItem.dummyAddress
-    , locationItemType : Nothing
-    , distance : Nothing
-    , showDistance : Just false
-    , actualDistance : Nothing
-    , frequencyCount : Nothing
-    , recencyDate : Nothing
-    , locationScore : Nothing
-
+  , { prefixImageUrl: fetchImage FF_ASSET "ny_ic_loc_grey"
+    , postfixImageUrl: fetchImage FF_ASSET "ny_ic_fav"
+    , postfixImageVisibility: true
+    , title: "Work"
+    , subTitle: "KIAL Rd, Devanahalli, Bengaluru,  Karnataka"
+    , placeId: Nothing
+    , lat: Nothing
+    , lon: Nothing
+    , description: ""
+    , tag: ""
+    , tagType: Just (show LOC_LIST)
+    , cardType: Nothing
+    , address: ""
+    , tagName: ""
+    , isEditEnabled: true
+    , savedLocation: ""
+    , placeName: ""
+    , isClickable: true
+    , alpha: 1.0
+    , fullAddress: LocationListItem.dummyAddress
+    , locationItemType: Nothing
+    , distance: Nothing
+    , showDistance: Just false
+    , actualDistance: Nothing
+    , frequencyCount: Nothing
+    , recencyDate: Nothing
+    , locationScore: Nothing
     }
-]
+  ]

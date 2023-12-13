@@ -12,8 +12,6 @@
  
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
-
 module Screens.ChooseCityScreen.ScreenData where
 
 import Screens.Types (ChooseCityScreenStage(..), ChooseCityScreenState)
@@ -27,32 +25,33 @@ import Language.Types (STR(..))
 import ConfigProvider
 
 initData :: ChooseCityScreenState
-initData = {
-  data: {
-    config : getAppConfig appConfig,
-    locationSelected : Mb.Nothing,
-    locationDetectionFailed : false,
-    merchantOperatingCityConfig : [],
-    logField : empty
-  },
-  props : {
-    selectedLanguage: "EN_US",
-    currentStage : ENABLE_PERMISSION,
-    isLocationPermissionGiven : false,
-    radioMenuFocusedLang : "",
-    radioMenuFocusedCity : "",
-    locationUnserviceable : false,
-    isMockLocation : false
+initData =
+  { data:
+      { config: getAppConfig appConfig
+      , locationSelected: Mb.Nothing
+      , locationDetectionFailed: false
+      , merchantOperatingCityConfig: []
+      , logField: empty
+      }
+  , props:
+      { selectedLanguage: "EN_US"
+      , currentStage: ENABLE_PERMISSION
+      , isLocationPermissionGiven: false
+      , radioMenuFocusedLang: ""
+      , radioMenuFocusedCity: ""
+      , locationUnserviceable: false
+      , isMockLocation: false
+      }
   }
-}
 
 dummyYoutubeData :: YoutubeData
-dummyYoutubeData = { videoTitle: ""
+dummyYoutubeData =
+  { videoTitle: ""
   , setVideoTitle: false
   , showMenuButton: false
   , showDuration: true
   , showSeekBar: true
   , videoId: ""
   , videoType: ""
-  , videoHeight : 0
+  , videoHeight: 0
   }

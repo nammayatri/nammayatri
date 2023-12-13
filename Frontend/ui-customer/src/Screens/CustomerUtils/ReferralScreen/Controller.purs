@@ -12,7 +12,6 @@
  
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
 module Screens.ReferralScreen.Controller where
 
 import Components.GenericHeader as GenericHeader
@@ -72,9 +71,10 @@ eval (ReferralEditText (PrimaryEditText.TextChanged id value)) state = do
     btnActive = (DS.length refCode) == 6
 
     newState = state { referralCode = refCode, isInvalidCode = false }
-  if btnActive then 
-    void $ pure $ hideKeyboardOnNavigation true 
-    else pure unit
+  if btnActive then
+    void $ pure $ hideKeyboardOnNavigation true
+  else
+    pure unit
   continue newState { btnActive = btnActive }
 
 eval (ContinueButtonAC PrimaryButton.OnClick) state = do
@@ -87,8 +87,10 @@ eval (GoToHomeButtonAC PrimaryButton.OnClick) state = continueWithCmd state [ do
 
 eval ExpandReference state = continue state { isExpandReference = not state.isExpandReference }
 
-eval BackPressed state = do 
-  if state.isExpandReference then continue state{ isExpandReference = not state.isExpandReference }
-    else exit GoToHome
+eval BackPressed state = do
+  if state.isExpandReference then
+    continue state { isExpandReference = not state.isExpandReference }
+  else
+    exit GoToHome
 
 eval _ state = continue state

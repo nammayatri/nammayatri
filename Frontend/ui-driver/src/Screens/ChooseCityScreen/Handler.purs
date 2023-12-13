@@ -12,8 +12,6 @@
  
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
-
 module Screens.ChooseCityScreen.Handler where
 
 import Control.Monad.Except.Trans (lift)
@@ -26,13 +24,12 @@ import Screens.ChooseCityScreen.View as ChooseCityScreen
 import Types.App (CHOOSE_CITY_SCREEN_OUTPUT(..), FlowBT, GlobalState(..), ScreenType(..))
 import Types.ModifyScreenState (modifyScreenState)
 
-
 chooseCityScreen :: FlowBT String CHOOSE_CITY_SCREEN_OUTPUT
 chooseCityScreen = do
   (GlobalState state) <- getState
   act <- lift $ lift $ runScreen $ ChooseCityScreen.screen state.chooseCityScreen
   case act of
-    SelectLanguageScreen -> App.BackT $ pure App.GoBack 
+    SelectLanguageScreen -> App.BackT $ pure App.GoBack
     WelcomeScreen -> App.BackT $ App.NoBack <$> (pure GoToWelcomeScreen)
     RefreshScreen updatedState -> do
       modifyScreenState $ ChooseCityScreenStateType (\chooseCityScreen -> updatedState)

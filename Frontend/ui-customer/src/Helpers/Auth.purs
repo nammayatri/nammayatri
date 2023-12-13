@@ -12,7 +12,6 @@
 
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
 module Helpers.Auth where
 
 import Prelude
@@ -35,29 +34,26 @@ import Accessor (_authData, _maskedMobileNumber, _id)
 import Data.Lens ((^.))
 
 validateSignaturePayload :: SignatureAuthData -> (Either ErrorResponse TriggerSignatureOTPResp) -> FlowBT String Boolean
-validateSignaturePayload signatureAuth resp = 
-  case resp of
-    Right (TriggerSignatureOTPResp triggerSignatureOtpResp) -> do
-      case triggerSignatureOtpResp.person of
-        Just person -> do
-          mobileNumber <- liftFlowBT $ runEffectFn2 getMobileNumber (signatureAuth ^._authData) $ fromMaybe "" (person ^._maskedMobileNumber)
-          updateCustomerDetails person mobileNumber
-        _ -> pure unit
-      case triggerSignatureOtpResp.token of
-        Just token -> setValueToLocalStore REGISTERATION_TOKEN token
-        Nothing -> pure unit
-      pure true
-    Left err -> do
-      void $ liftFlowBT $ pure $ runFn3 emitJOSEvent "java" "onEvent" $ encode $ EventPayload { event: "signature_auth_failed", payload: Nothing }
-      pure false
+validateSignaturePayload signatureAuth resp = case resp of
+  Right (TriggerSignatureOTPResp triggerSignatureOtpResp) -> do
+    case triggerSignatureOtpResp.person of
+      Just person -> do
+        mobileNumber <- liftFlowBT $ runEffectFn2 getMobileNumber (signatureAuth ^. _authData) $ fromMaybe "" (person ^. _maskedMobileNumber)
+        updateCustomerDetails person mobileNumber
+      _ -> pure unit
+    case triggerSignatureOtpResp.token of
+      Just token -> setValueToLocalStore REGISTERATION_TOKEN token
+      Nothing -> pure unit
+    pure true
+  Left err -> do
+    void $ liftFlowBT $ pure $ runFn3 emitJOSEvent "java" "onEvent" $ encode $ EventPayload { event: "signature_auth_failed", payload: Nothing }
+    pure false
   where
-    updateCustomerDetails :: User -> String -> FlowBT String Unit
-    updateCustomerDetails person mobileNumber = do
-      lift $ lift $ setLogField "customer_id" $ encode $ person^._id
-      setValueToLocalStore CUSTOMER_ID $ person^._id
-      setValueToLocalStore MOBILE_NUMBER mobileNumber
-
-
+  updateCustomerDetails :: User -> String -> FlowBT String Unit
+  updateCustomerDetails person mobileNumber = do
+    lift $ lift $ setLogField "customer_id" $ encode $ person ^. _id
+    setValueToLocalStore CUSTOMER_ID $ person ^. _id
+    setValueToLocalStore MOBILE_NUMBER mobileNumber
 
 validateToken :: Maybe SignatureAuthData -> FlowBT String Boolean
 validateToken signatureAuth =

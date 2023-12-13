@@ -12,7 +12,6 @@
  
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
 module Screens.PermissionsScreen.Handler where
 
 import Control.Monad.Except.Trans (lift)
@@ -28,13 +27,13 @@ import Types.ModifyScreenState (modifyScreenState)
 
 permissions :: FlowBT String PERMISSIONS_SCREEN_OUTPUT
 permissions = do
-    (GlobalState state) <- getState
-    logField_ <- lift $ lift $ getLogFields 
-    action <- lift $ lift $ runScreen $ PermissionsScreen.screen state.permissionsScreen{data{logField = logField_}}
-    case action of 
-        GoBack -> App.BackT $ pure App.GoBack
-        GoToHome -> App.BackT $ App.BackPoint <$> pure DRIVER_HOME_SCREEN
-        LogoutAccount -> App.BackT $ App.BackPoint <$> pure LOGOUT_FROM_PERMISSIONS_SCREEN
-        GoToRegisteration updatedState -> do
-          modifyScreenState $ PermissionsScreenStateType (\_ -> updatedState)
-          App.BackT $ App.BackPoint <$> (pure $ GO_TO_REGISTERATION_SCREEN updatedState)
+  (GlobalState state) <- getState
+  logField_ <- lift $ lift $ getLogFields
+  action <- lift $ lift $ runScreen $ PermissionsScreen.screen state.permissionsScreen { data { logField = logField_ } }
+  case action of
+    GoBack -> App.BackT $ pure App.GoBack
+    GoToHome -> App.BackT $ App.BackPoint <$> pure DRIVER_HOME_SCREEN
+    LogoutAccount -> App.BackT $ App.BackPoint <$> pure LOGOUT_FROM_PERMISSIONS_SCREEN
+    GoToRegisteration updatedState -> do
+      modifyScreenState $ PermissionsScreenStateType (\_ -> updatedState)
+      App.BackT $ App.BackPoint <$> (pure $ GO_TO_REGISTERATION_SCREEN updatedState)

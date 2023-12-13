@@ -12,7 +12,6 @@
  
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
 module Screens.TripDetailsScreen.ScreenData where
 
 import Data.Maybe (Maybe(..))
@@ -20,34 +19,33 @@ import Screens.Types (TripDetailsScreenState, PaymentMode(..))
 import MerchantConfig.DefaultConfig as DC
 
 initData :: TripDetailsScreenState
-initData = {
-  data: {
-      tripId : "",
-      distance: "",
-      message : "",
-      timeTaken : "",
-      rider : "",
-      date : "",
-      time : "" ,
-      source : "" ,
-      destination : "",
-      totalAmount : 0,
-      paymentMode : CASH,
-      status : "",
-      vehicleType : "",
-      customerExtraFee : Nothing,
-      purpleTagVisibility : false,
-      gotoTagVisibility : false,
-      spLocTagVisibility : false,
-      specialZoneLayoutBackground : "",
-      specialZoneImage : "",
-      specialZoneText : "",
-      config : DC.config
-  },
-  props: {
-    rating : 4,
-    reportIssue : false,
-    issueReported : false
+initData =
+  { data:
+      { tripId: ""
+      , distance: ""
+      , message: ""
+      , timeTaken: ""
+      , rider: ""
+      , date: ""
+      , time: ""
+      , source: ""
+      , destination: ""
+      , totalAmount: 0
+      , paymentMode: CASH
+      , status: ""
+      , vehicleType: ""
+      , customerExtraFee: Nothing
+      , purpleTagVisibility: false
+      , gotoTagVisibility: false
+      , spLocTagVisibility: false
+      , specialZoneLayoutBackground: ""
+      , specialZoneImage: ""
+      , specialZoneText: ""
+      , config: DC.config
+      }
+  , props:
+      { rating: 4
+      , reportIssue: false
+      , issueReported: false
+      }
   }
-}
-

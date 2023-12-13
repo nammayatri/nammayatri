@@ -12,7 +12,6 @@
  
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
 module Screens.ChooseLanguageScreen.Handler where
 
 import Engineering.Helpers.BackTrack (getState)
@@ -33,7 +32,7 @@ chooseLanguage :: FlowBT String TA.CHOOSE_LANG_SCREEN_OUTPUT
 chooseLanguage = do
   (GlobalState state) <- getState
   config <- getAppConfigFlowBT appConfig
-  action <- lift $ lift $ runScreen $ ChooseLanguageScreen.screen state.chooseLanguageScreen{props{selectedLanguage = config.defaultLanguage}}
+  action <- lift $ lift $ runScreen $ ChooseLanguageScreen.screen state.chooseLanguageScreen { props { selectedLanguage = config.defaultLanguage } }
   case action of
     GoToEnterMobileScreen updateState -> do
       modifyScreenState $ ChooseLanguageScreenStateType (\chooseLanguageScreenScreen -> updateState)

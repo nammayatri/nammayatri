@@ -12,7 +12,6 @@
  
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
 module Screens.UploadAdhaarScreen.View where
 
 import Prelude (Unit, bind, const, pure, unit, ($), (<<<), (<>), (/=), (==))
@@ -39,232 +38,264 @@ screen :: ST.UploadAdhaarScreenState -> Screen Action ST.UploadAdhaarScreenState
 screen initialState =
   { initialState
   , view
-  , name : "UploadAdhaarScreen"
-  , globalEvents : [(\push -> do
-    _ <- JB.storeCallBackImageUpload push CallBackImageUpload
-    pure $ pure unit)]
+  , name: "UploadAdhaarScreen"
+  , globalEvents:
+      [ ( \push -> do
+            _ <- JB.storeCallBackImageUpload push CallBackImageUpload
+            pure $ pure unit
+        )
+      ]
   , eval
   }
 
-view
-  :: forall w
-  . (Action -> Effect Unit)
-  -> ST.UploadAdhaarScreenState
-  -> PrestoDOM (Effect Unit) w
+view ::
+  forall w.
+  (Action -> Effect Unit) ->
+  ST.UploadAdhaarScreenState ->
+  PrestoDOM (Effect Unit) w
 view push state =
-  Anim.screenAnimation $
-  frameLayout
-  [ height MATCH_PARENT
-  , width MATCH_PARENT
-  ][
-linearLayout
-    [ height MATCH_PARENT
-    , width MATCH_PARENT
-    , orientation VERTICAL
-    , background Color.white900
-    , clickable true
-    , onBackPressed push (const BackPressed)
-    , afterRender  (\action -> do
-                      _<- push action
-                      pure unit
-                      ) $ const (AfterRender)
-    ][  onboardingHeaderView state push
-      , linearLayout
-        [ width MATCH_PARENT
-        , weight 1.0
-        , orientation VERTICAL
-        ][ scrollView
-            [ width MATCH_PARENT
-            , height MATCH_PARENT
-            ][ linearLayout
-                [ height MATCH_PARENT
-                , width MATCH_PARENT
-                , orientation VERTICAL
-                , padding (Padding 20 25 20 0)
-                ][
-                  instructionSectionView state
-                , frontUploadSection state push
-                , backUploadSection state push
-                    
-                ]
-              ]
-          ]
-      , linearLayout
-        [ height WRAP_CONTENT
+  Anim.screenAnimation
+    $ frameLayout
+        [ height MATCH_PARENT
         , width MATCH_PARENT
-        , gravity CENTER
-        ][PrimaryButton.view (push <<< PrimaryButtonAction) (primaryButtonConfig state)]
+        ]
+        [ linearLayout
+            [ height MATCH_PARENT
+            , width MATCH_PARENT
+            , orientation VERTICAL
+            , background Color.white900
+            , clickable true
+            , onBackPressed push (const BackPressed)
+            , afterRender
+                ( \action -> do
+                    _ <- push action
+                    pure unit
+                )
+                $ const (AfterRender)
+            ]
+            [ onboardingHeaderView state push
+            , linearLayout
+                [ width MATCH_PARENT
+                , weight 1.0
+                , orientation VERTICAL
+                ]
+                [ scrollView
+                    [ width MATCH_PARENT
+                    , height MATCH_PARENT
+                    ]
+                    [ linearLayout
+                        [ height MATCH_PARENT
+                        , width MATCH_PARENT
+                        , orientation VERTICAL
+                        , padding (Padding 20 25 20 0)
+                        ]
+                        [ instructionSectionView state
+                        , frontUploadSection state push
+                        , backUploadSection state push
+                        ]
+                    ]
+                ]
+            , linearLayout
+                [ height WRAP_CONTENT
+                , width MATCH_PARENT
+                , gravity CENTER
+                ]
+                [ PrimaryButton.view (push <<< PrimaryButtonAction) (primaryButtonConfig state) ]
+            ]
+        , if state.props.openRegistrationModal then
+            linearLayout
+              [ width MATCH_PARENT
+              , height MATCH_PARENT
+              ]
+              [ registrationModalView state push ]
+          else
+            linearLayout [] []
+        ]
 
-    ]   
-    , if state.props.openRegistrationModal then 
-    linearLayout[
-      width MATCH_PARENT
-    , height MATCH_PARENT
-      ] [registrationModalView state push] else linearLayout [][]
+registrationModalView :: ST.UploadAdhaarScreenState -> (Action -> Effect Unit) -> forall w. PrestoDOM (Effect Unit) w
+registrationModalView state push =
+  RegistrationModal.view (push <<< RegistrationModalAction)
+    ( { openRegistrationModal: state.props.openRegistrationModal
+      }
+    )
 
-  ] 
-  
-
-registrationModalView :: ST.UploadAdhaarScreenState -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w
-registrationModalView state push = 
-  RegistrationModal.view (push <<< RegistrationModalAction) ({
-    openRegistrationModal: state.props.openRegistrationModal
-  })
-
-onboardingHeaderView :: ST.UploadAdhaarScreenState -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w
+onboardingHeaderView :: ST.UploadAdhaarScreenState -> (Action -> Effect Unit) -> forall w. PrestoDOM (Effect Unit) w
 onboardingHeaderView state push =
-  OnboardingHeader.view (push <<< OnboardingHeaderAction) ({
-    stepNumber: "2",
-    barNumber: 2
-  })
+  OnboardingHeader.view (push <<< OnboardingHeaderAction)
+    ( { stepNumber: "2"
+      , barNumber: 2
+      }
+    )
 
-frontUploadSection :: ST.UploadAdhaarScreenState -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w
+frontUploadSection :: ST.UploadAdhaarScreenState -> (Action -> Effect Unit) -> forall w. PrestoDOM (Effect Unit) w
 frontUploadSection state push =
   linearLayout
-  [ width MATCH_PARENT
+    [ width MATCH_PARENT
     , height WRAP_CONTENT
     , orientation VERTICAL
     , margin (MarginTop 20)
-    , onClick push (const( UploadFileAction "front"))
-  ][
-    textView
-    ([ text (getString FRONT_SIDE)
-    , color Color.black800
-    ]<>FontStyle.body3 TypoGraphy)
-  , linearLayout
-    [ width MATCH_PARENT
-    , height WRAP_CONTENT
-    , orientation HORIZONTAL
-    , margin (Margin 0 10 0 10)
-    , padding (Padding 16 16 16 16)
-    , cornerRadius 4.0
-    , stroke ("1," <> Color.borderGreyColor)
-    ][ 
-      textView
-      ([ text if (state.data.imageFront == "") then (getString UPLOAD_FRONT_SIDE) else state.data.imageName
-      , color if (state.data.imageFront == "") then Color.darkGrey else Color.greyTextColor
-      , weight 1.0
-      ]<> FontStyle.subHeading1 TypoGraphy)
-    , if (state.data.imageFront /= "") then previewIcon state push "front" else
-      imageView
-      [ width ( V 20 )
-      , height ( V 20 )
-      , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_upload"
-      ]
+    , onClick push (const (UploadFileAction "front"))
     ]
-  ]
+    [ textView
+        ( [ text (getString FRONT_SIDE)
+          , color Color.black800
+          ]
+            <> FontStyle.body3 TypoGraphy
+        )
+    , linearLayout
+        [ width MATCH_PARENT
+        , height WRAP_CONTENT
+        , orientation HORIZONTAL
+        , margin (Margin 0 10 0 10)
+        , padding (Padding 16 16 16 16)
+        , cornerRadius 4.0
+        , stroke ("1," <> Color.borderGreyColor)
+        ]
+        [ textView
+            ( [ text if (state.data.imageFront == "") then (getString UPLOAD_FRONT_SIDE) else state.data.imageName
+              , color if (state.data.imageFront == "") then Color.darkGrey else Color.greyTextColor
+              , weight 1.0
+              ]
+                <> FontStyle.subHeading1 TypoGraphy
+            )
+        , if (state.data.imageFront /= "") then
+            previewIcon state push "front"
+          else
+            imageView
+              [ width (V 20)
+              , height (V 20)
+              , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_upload"
+              ]
+        ]
+    ]
 
-backUploadSection :: ST.UploadAdhaarScreenState -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w
-backUploadSection state push = 
+backUploadSection :: ST.UploadAdhaarScreenState -> (Action -> Effect Unit) -> forall w. PrestoDOM (Effect Unit) w
+backUploadSection state push =
   linearLayout
-  [ width MATCH_PARENT
-  , height WRAP_CONTENT
-  , margin (MarginTop 20)
-  , orientation VERTICAL
-  , onClick push (const (UploadFileAction "back"))
-  ][
-    textView
-    ([ text (getString BACK_SIDE)
-    , color Color.black800
-    ]<>FontStyle.body3 TypoGraphy)
-  , linearLayout
     [ width MATCH_PARENT
     , height WRAP_CONTENT
-    , orientation HORIZONTAL
-    , margin (Margin 0 10 0 10)
-    , padding (Padding 16 16 16 16)
-    , cornerRadius 4.0
-    , stroke ("1," <> Color.borderGreyColor)
-    ][
-      textView
-      ([ text if (state.data.imageBack == "") then (getString UPLOAD_BACK_SIDE) else state.data.imageName
-      , color if (state.data.imageBack == "") then Color.darkGrey else Color.greyTextColor
-      , weight 1.0
-      ]<>FontStyle.subHeading1 TypoGraphy)
-    , if (state.data.imageBack /= "") then previewIcon state push "back" else
-      imageView
-      [ width ( V 20 )
-      , height ( V 20 )
-      , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_upload"
-      ]
+    , margin (MarginTop 20)
+    , orientation VERTICAL
+    , onClick push (const (UploadFileAction "back"))
     ]
-  ]
-instructionSectionView :: ST.UploadAdhaarScreenState -> forall w . PrestoDOM (Effect Unit) w
-instructionSectionView state = 
+    [ textView
+        ( [ text (getString BACK_SIDE)
+          , color Color.black800
+          ]
+            <> FontStyle.body3 TypoGraphy
+        )
+    , linearLayout
+        [ width MATCH_PARENT
+        , height WRAP_CONTENT
+        , orientation HORIZONTAL
+        , margin (Margin 0 10 0 10)
+        , padding (Padding 16 16 16 16)
+        , cornerRadius 4.0
+        , stroke ("1," <> Color.borderGreyColor)
+        ]
+        [ textView
+            ( [ text if (state.data.imageBack == "") then (getString UPLOAD_BACK_SIDE) else state.data.imageName
+              , color if (state.data.imageBack == "") then Color.darkGrey else Color.greyTextColor
+              , weight 1.0
+              ]
+                <> FontStyle.subHeading1 TypoGraphy
+            )
+        , if (state.data.imageBack /= "") then
+            previewIcon state push "back"
+          else
+            imageView
+              [ width (V 20)
+              , height (V 20)
+              , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_upload"
+              ]
+        ]
+    ]
+
+instructionSectionView :: ST.UploadAdhaarScreenState -> forall w. PrestoDOM (Effect Unit) w
+instructionSectionView state =
   linearLayout
     [ height MATCH_PARENT
     , width MATCH_PARENT
     , orientation VERTICAL
     , margin (MarginBottom 10)
-    ][
-      imageView
-      [ width ( V 100 )
-      , height ( V 100 ) 
-      , imageWithFallback $ fetchImage FF_ASSET "ny_ic_aadhaar"
-      ]
+    ]
+    [ imageView
+        [ width (V 100)
+        , height (V 100)
+        , imageWithFallback $ fetchImage FF_ASSET "ny_ic_aadhaar"
+        ]
     , textView
-      ([ width WRAP_CONTENT
-      , text (getString UPLOAD_ADHAAR_CARD)
-      , color Color.black800
-      , margin (Margin 0 20 0 15)
-      ] <> FontStyle.h1 TypoGraphy)
-    , linearLayout
-      [ width MATCH_PARENT
-      , height WRAP_CONTENT
-      , orientation HORIZONTAL
-      , margin (Margin 0 11 0 11)
-      ][
-        imageView
-        [ width ( V 20 )
-        , height ( V 20 ) 
-        , margin (MarginRight 9)
-        , imageWithFallback $ fetchImage FF_ASSET "ny_ic_text_pointer_right"
-        ]
-      , textView
-        ([ text (getString ADHAAR_INTRUCTION_PICTURE)
-        , color Color.black800
-        ]<>FontStyle.body3 TypoGraphy)
-      ]
-    , linearLayout
-      [ width MATCH_PARENT
-      , height WRAP_CONTENT
-      , orientation HORIZONTAL
-      , margin (Margin 0 11 0 11)
-      ][
-        imageView
-        [ width ( V 20 )
-        , height ( V 20 ) 
-        , margin (MarginRight 9)
-        , imageWithFallback $ fetchImage FF_ASSET "ny_ic_text_pointer_right"
-        ]
-      , textView
-        ([ text (getString LICENSE_INSTRUCTION_CLARITY)
+        ( [ width WRAP_CONTENT
+          , text (getString UPLOAD_ADHAAR_CARD)
           , color Color.black800
-        ]<>FontStyle.body3 TypoGraphy)
-      ]
+          , margin (Margin 0 20 0 15)
+          ]
+            <> FontStyle.h1 TypoGraphy
+        )
+    , linearLayout
+        [ width MATCH_PARENT
+        , height WRAP_CONTENT
+        , orientation HORIZONTAL
+        , margin (Margin 0 11 0 11)
+        ]
+        [ imageView
+            [ width (V 20)
+            , height (V 20)
+            , margin (MarginRight 9)
+            , imageWithFallback $ fetchImage FF_ASSET "ny_ic_text_pointer_right"
+            ]
+        , textView
+            ( [ text (getString ADHAAR_INTRUCTION_PICTURE)
+              , color Color.black800
+              ]
+                <> FontStyle.body3 TypoGraphy
+            )
+        ]
+    , linearLayout
+        [ width MATCH_PARENT
+        , height WRAP_CONTENT
+        , orientation HORIZONTAL
+        , margin (Margin 0 11 0 11)
+        ]
+        [ imageView
+            [ width (V 20)
+            , height (V 20)
+            , margin (MarginRight 9)
+            , imageWithFallback $ fetchImage FF_ASSET "ny_ic_text_pointer_right"
+            ]
+        , textView
+            ( [ text (getString LICENSE_INSTRUCTION_CLARITY)
+              , color Color.black800
+              ]
+                <> FontStyle.body3 TypoGraphy
+            )
+        ]
     ]
 
-
-previewIcon :: ST.UploadAdhaarScreenState -> (Action -> Effect Unit) -> String -> forall w . PrestoDOM (Effect Unit) w
-previewIcon state push previewType = 
+previewIcon :: ST.UploadAdhaarScreenState -> (Action -> Effect Unit) -> String -> forall w. PrestoDOM (Effect Unit) w
+previewIcon state push previewType =
   linearLayout
     [ height MATCH_PARENT
     , width WRAP_CONTENT
     , gravity CENTER
-    ][ textView
+    ]
+    [ textView
         [ height WRAP_CONTENT
         , width WRAP_CONTENT
         , text (getString PREVIEW)
         , color Color.blueTextColor
-        , onClick (\action-> do
-                      _ <- liftEffect $ JB.previewImage $ if(previewType == "front") then state.data.imageFront else state.data.imageBack
-                      pure unit)(const PreviewImageAction)
-        ] 
-      , imageView
-          [ height (V 20)
-          , width (V 20)
-          , margin (Margin 10 0 0 0)
-          , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_cancel"
-          , onClick push (const(RemoveUploadedFile previewType))
-          ]
+        , onClick
+            ( \action -> do
+                _ <- liftEffect $ JB.previewImage $ if (previewType == "front") then state.data.imageFront else state.data.imageBack
+                pure unit
+            )
+            (const PreviewImageAction)
+        ]
+    , imageView
+        [ height (V 20)
+        , width (V 20)
+        , margin (Margin 10 0 0 0)
+        , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_cancel"
+        , onClick push (const (RemoveUploadedFile previewType))
+        ]
     ]

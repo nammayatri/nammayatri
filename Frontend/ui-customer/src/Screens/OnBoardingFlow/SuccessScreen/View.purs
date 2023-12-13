@@ -12,11 +12,9 @@
 
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
 module Screens.SuccessScreen.View where
 
 import Prelude
-
 import Common.Types.App (LazyCheck(..))
 import Common.Types.App (LazyCheck(..))
 import Control.Monad.Except.Trans (lift, runExceptT)
@@ -49,11 +47,12 @@ screen initialState =
   , parent: Just "SuccessScreen"
   , globalEvents:
       [ ( \push -> do
-            _ <- launchAff $ EHC.flowRunner defaultGlobalState $ runExceptT $ runBackT
-              $ do
-                  lift $ lift $ void $ delay $ Milliseconds 3500.0
-                  lift $ lift $ doAff do liftEffect $ push CountDown
-                  pure unit
+            _ <-
+              launchAff $ EHC.flowRunner defaultGlobalState $ runExceptT $ runBackT
+                $ do
+                    lift $ lift $ void $ delay $ Milliseconds 3500.0
+                    lift $ lift $ doAff do liftEffect $ push CountDown
+                    pure unit
             pure $ pure unit
         )
       ]
@@ -80,12 +79,14 @@ view push state =
         , cornerRadii $ Corners 16.0 true true true true
         , padding (Padding 16 24 16 24)
         ]
-        [ if EHC.os == "IOS" && (getValueToLocalStore VERSION_NAME == "1.2.4" ) then
+        [ if EHC.os == "IOS" && (getValueToLocalStore VERSION_NAME == "1.2.4") then
             imageView
-            [ height $ V 160
-            , width $ V 280
-            , imageUrl $ fetchImage FF_ASSET "ny_ic_success_lottie_placeholder"] 
-            else lottieLoaderView state push
+              [ height $ V 160
+              , width $ V 280
+              , imageUrl $ fetchImage FF_ASSET "ny_ic_success_lottie_placeholder"
+              ]
+          else
+            lottieLoaderView state push
         , textView
             $ [ width MATCH_PARENT
               , height WRAP_CONTENT
@@ -112,7 +113,7 @@ lottieLoaderView state push =
     [ id (getNewIDWithTag "SuccessLottieView")
     , afterRender
         ( \action ->
-            void $ pure $ startLottieProcess lottieAnimationConfig{ rawJson = (getAssetsBaseUrl FunctionCall) <> "lottie/success_lottie.json", lottieId = (EHC.getNewIDWithTag "SuccessLottieView"), speed = 1.0 }
+            void $ pure $ startLottieProcess lottieAnimationConfig { rawJson = (getAssetsBaseUrl FunctionCall) <> "lottie/success_lottie.json", lottieId = (EHC.getNewIDWithTag "SuccessLottieView"), speed = 1.0 }
         )
         (const CountDown)
     , height MATCH_PARENT

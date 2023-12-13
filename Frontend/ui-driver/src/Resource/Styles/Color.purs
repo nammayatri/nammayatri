@@ -12,18 +12,15 @@
 
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
 module Styles.Colors
-    ( module Styles.Colors
-    , module Common.Styles.Colors
-    )
-    where
+  ( module Styles.Colors
+  , module Common.Styles.Colors
+  ) where
 
 import Styles.Types
 import Common.Styles.Colors
 
 -- Text Color
-
 textListItemTitle :: Color
 textListItemTitle = "#666666"
 
@@ -77,6 +74,7 @@ whiteBlue = "#3f2172FF"
 
 blackBlurColor :: Color
 blackBlurColor = "#8B8B8B"
+
 -- Component Background
 landingDisableBG :: Color
 landingDisableBG = "#1A2d2d2d"
@@ -133,7 +131,7 @@ paymentPageBack :: Color
 paymentPageBack = "#f8f9f9"
 
 loanOffersBack :: Color
-loanOffersBack  = "#7FBCFF"
+loanOffersBack = "#7FBCFF"
 
 activeLoansBack :: Color
 activeLoansBack = "#89EBA5"
@@ -172,7 +170,7 @@ lightGreen :: Color
 lightGreen = "#68D08D"
 
 incorrectAlert :: Color
-incorrectAlert  = "#F76F6F"
+incorrectAlert = "#F76F6F"
 
 darkMint :: Color
 darkMint = "#53BB6F"
@@ -244,7 +242,7 @@ lightGrey :: Color
 lightGrey = "#E1E1E1"
 
 grayDarker :: Color
-grayDarker =  "#777777"
+grayDarker = "#777777"
 
 charcoalReyBorder :: Color
 charcoalReyBorder = "#1e323643"
@@ -301,7 +299,6 @@ yellowRadler :: Color
 yellowRadler = "#FFD058"
 
 -- ================================================================================
-
 mainPrimary :: Color
 mainPrimary = "#3D64F4"
 
@@ -330,7 +327,7 @@ inactiveButtonTextPrimary :: Color
 inactiveButtonTextPrimary = "#FEF2BD"
 
 hintText :: Color
-hintText =  "#E5E7E8"
+hintText = "#E5E7E8"
 
 whiteGrey :: Color
 whiteGrey = "#F2F6F9"
@@ -369,7 +366,7 @@ grey :: Color
 grey = "#999"
 
 redOpacity50 :: Color
-redOpacity50  = "#50E55454"
+redOpacity50 = "#50E55454"
 
 highlightBorderColor :: Color
 highlightBorderColor = "#2167ff"
@@ -378,10 +375,11 @@ bg_grey :: Color
 bg_grey = "#F6F6F6"
 
 separatorViewColor :: Color
-separatorViewColor =  "#E6E6E6"
+separatorViewColor = "#E6E6E6"
 
 peach :: Color
 peach = "#f5c6c6"
+
 lightShadeGrey :: Color
 lightShadeGrey = "#EEEEEE"
 
@@ -436,8 +434,8 @@ lightPurple = "#F4ECFF"
 purple :: Color
 purple = "#9747FF"
 
-peacoat :: Color 
+peacoat :: Color
 peacoat = "#33394A"
 
-mangolia :: Color 
+mangolia :: Color
 mangolia = "#F4ECFF"

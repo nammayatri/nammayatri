@@ -12,7 +12,6 @@
  
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
 module Screens.TripDetailsScreen.Controller where
 
 import Components.GenericHeader as GenericHeaderController
@@ -32,86 +31,94 @@ import Screens (ScreenName(..), getScreen)
 import Screens.Types (TripDetailsScreenState, TripDetailsGoBackType)
 
 instance showAction :: Show Action where
-    show _ = ""
+  show _ = ""
 
 instance loggableAction :: Loggable Action where
-    performLog action appId = case action of
-        AfterRender -> trackAppScreenRender appId "screen" (getScreen TRIP_DETAILS_SCREEN)
-        BackPressed -> do
-            trackAppBackPress appId (getScreen TRIP_DETAILS_SCREEN)
-            trackAppEndScreen appId (getScreen TRIP_DETAILS_SCREEN)
-        PrimaryButtonActionController act -> case act of
-            PrimaryButtonController.OnClick -> trackAppActionClick appId (getScreen TRIP_DETAILS_SCREEN) "primary_button" "go_home_or_submit"
-            PrimaryButtonController.NoAction -> trackAppActionClick appId (getScreen TRIP_DETAILS_SCREEN) "primary_button" "no_action"
-        GenericHeaderActionController act -> case act of
-            GenericHeaderController.PrefixImgOnClick -> do
-                trackAppActionClick appId (getScreen TRIP_DETAILS_SCREEN) "generic_header_action" "back_icon"
-                trackAppEndScreen appId (getScreen TRIP_DETAILS_SCREEN)
-            GenericHeaderController.SuffixImgOnClick -> trackAppActionClick appId (getScreen TRIP_DETAILS_SCREEN) "generic_header_action" "forward_icon"
-        ReportIssue -> trackAppActionClick appId (getScreen TRIP_DETAILS_SCREEN) "in_screen" "report_issue"
-        MessageTextChanged str -> trackAppActionClick appId (getScreen TRIP_DETAILS_SCREEN) "in_screen" "message_text_changed"
-        ViewInvoice -> trackAppActionClick appId (getScreen TRIP_DETAILS_SCREEN) "in_screen" "view_invoice"
-        Copy -> trackAppActionClick appId (getScreen TRIP_DETAILS_SCREEN) "in_screen" "copy"
-        ShowPopUp -> trackAppActionClick appId (getScreen TRIP_DETAILS_SCREEN) "in_screen" "show_confirmation_popup"
-        PopUpModalAction act -> case act of
-            PopUpModalController.OnButton1Click -> trackAppActionClick appId (getScreen TRIP_DETAILS_SCREEN) "popup_modal_action" "contact_driver_decline"
-            PopUpModalController.OnButton2Click -> do
-                trackAppActionClick appId (getScreen TRIP_DETAILS_SCREEN) "popup_modal_action" "contact_driver_accept"
-                trackAppEndScreen appId (getScreen TRIP_DETAILS_SCREEN)
-            PopUpModalController.NoAction -> trackAppActionClick appId (getScreen TRIP_DETAILS_SCREEN) "popup_modal_action" "no_action"
-            PopUpModalController.OnImageClick -> trackAppActionClick appId (getScreen TRIP_DETAILS_SCREEN) "popup_modal_action" "image"
-            PopUpModalController.ETextController act -> trackAppTextInput appId (getScreen TRIP_DETAILS_SCREEN) "popup_modal_action" "primary_edit_text"
-            PopUpModalController.CountDown arg1 arg2 arg3 arg4 -> trackAppScreenEvent appId (getScreen TRIP_DETAILS_SCREEN) "popup_modal_action" "countdown_updated"
-            PopUpModalController.Tipbtnclick arg1 arg2 -> trackAppScreenEvent appId (getScreen TRIP_DETAILS_SCREEN) "popup_modal_action" "tip_clicked"
-            PopUpModalController.OnSecondaryTextClick -> trackAppScreenEvent appId (getScreen TRIP_DETAILS_SCREEN) "popup_modal_action" "secondary_text_clicked"
-            PopUpModalController.OptionWithHtmlClick -> trackAppScreenEvent appId (getScreen TRIP_DETAILS_SCREEN) "popup_modal_action" "option_with_html_clicked"
-            PopUpModalController.DismissPopup -> trackAppScreenEvent appId (getScreen TRIP_DETAILS_SCREEN) "popup_modal_action" "popup_dismissed"
-        SourceToDestinationActionController (SourceToDestinationController.Dummy) -> trackAppScreenEvent appId (getScreen TRIP_DETAILS_SCREEN) "in_screen" "source_to_destination"
-        NoAction -> trackAppScreenEvent appId (getScreen TRIP_DETAILS_SCREEN) "in_screen" "no_action"
+  performLog action appId = case action of
+    AfterRender -> trackAppScreenRender appId "screen" (getScreen TRIP_DETAILS_SCREEN)
+    BackPressed -> do
+      trackAppBackPress appId (getScreen TRIP_DETAILS_SCREEN)
+      trackAppEndScreen appId (getScreen TRIP_DETAILS_SCREEN)
+    PrimaryButtonActionController act -> case act of
+      PrimaryButtonController.OnClick -> trackAppActionClick appId (getScreen TRIP_DETAILS_SCREEN) "primary_button" "go_home_or_submit"
+      PrimaryButtonController.NoAction -> trackAppActionClick appId (getScreen TRIP_DETAILS_SCREEN) "primary_button" "no_action"
+    GenericHeaderActionController act -> case act of
+      GenericHeaderController.PrefixImgOnClick -> do
+        trackAppActionClick appId (getScreen TRIP_DETAILS_SCREEN) "generic_header_action" "back_icon"
+        trackAppEndScreen appId (getScreen TRIP_DETAILS_SCREEN)
+      GenericHeaderController.SuffixImgOnClick -> trackAppActionClick appId (getScreen TRIP_DETAILS_SCREEN) "generic_header_action" "forward_icon"
+    ReportIssue -> trackAppActionClick appId (getScreen TRIP_DETAILS_SCREEN) "in_screen" "report_issue"
+    MessageTextChanged str -> trackAppActionClick appId (getScreen TRIP_DETAILS_SCREEN) "in_screen" "message_text_changed"
+    ViewInvoice -> trackAppActionClick appId (getScreen TRIP_DETAILS_SCREEN) "in_screen" "view_invoice"
+    Copy -> trackAppActionClick appId (getScreen TRIP_DETAILS_SCREEN) "in_screen" "copy"
+    ShowPopUp -> trackAppActionClick appId (getScreen TRIP_DETAILS_SCREEN) "in_screen" "show_confirmation_popup"
+    PopUpModalAction act -> case act of
+      PopUpModalController.OnButton1Click -> trackAppActionClick appId (getScreen TRIP_DETAILS_SCREEN) "popup_modal_action" "contact_driver_decline"
+      PopUpModalController.OnButton2Click -> do
+        trackAppActionClick appId (getScreen TRIP_DETAILS_SCREEN) "popup_modal_action" "contact_driver_accept"
+        trackAppEndScreen appId (getScreen TRIP_DETAILS_SCREEN)
+      PopUpModalController.NoAction -> trackAppActionClick appId (getScreen TRIP_DETAILS_SCREEN) "popup_modal_action" "no_action"
+      PopUpModalController.OnImageClick -> trackAppActionClick appId (getScreen TRIP_DETAILS_SCREEN) "popup_modal_action" "image"
+      PopUpModalController.ETextController act -> trackAppTextInput appId (getScreen TRIP_DETAILS_SCREEN) "popup_modal_action" "primary_edit_text"
+      PopUpModalController.CountDown arg1 arg2 arg3 arg4 -> trackAppScreenEvent appId (getScreen TRIP_DETAILS_SCREEN) "popup_modal_action" "countdown_updated"
+      PopUpModalController.Tipbtnclick arg1 arg2 -> trackAppScreenEvent appId (getScreen TRIP_DETAILS_SCREEN) "popup_modal_action" "tip_clicked"
+      PopUpModalController.OnSecondaryTextClick -> trackAppScreenEvent appId (getScreen TRIP_DETAILS_SCREEN) "popup_modal_action" "secondary_text_clicked"
+      PopUpModalController.OptionWithHtmlClick -> trackAppScreenEvent appId (getScreen TRIP_DETAILS_SCREEN) "popup_modal_action" "option_with_html_clicked"
+      PopUpModalController.DismissPopup -> trackAppScreenEvent appId (getScreen TRIP_DETAILS_SCREEN) "popup_modal_action" "popup_dismissed"
+    SourceToDestinationActionController (SourceToDestinationController.Dummy) -> trackAppScreenEvent appId (getScreen TRIP_DETAILS_SCREEN) "in_screen" "source_to_destination"
+    NoAction -> trackAppScreenEvent appId (getScreen TRIP_DETAILS_SCREEN) "in_screen" "no_action"
 
-data Action = PrimaryButtonActionController PrimaryButtonController.Action
-            | GenericHeaderActionController GenericHeaderController.Action
-            | SourceToDestinationActionController SourceToDestinationController.Action 
-            | BackPressed
-            | ReportIssue 
-            | MessageTextChanged String
-            | ViewInvoice
-            | AfterRender
-            | NoAction
-            | Copy
-            | ShowPopUp
-            | PopUpModalAction PopUpModalController.Action
+data Action
+  = PrimaryButtonActionController PrimaryButtonController.Action
+  | GenericHeaderActionController GenericHeaderController.Action
+  | SourceToDestinationActionController SourceToDestinationController.Action
+  | BackPressed
+  | ReportIssue
+  | MessageTextChanged String
+  | ViewInvoice
+  | AfterRender
+  | NoAction
+  | Copy
+  | ShowPopUp
+  | PopUpModalAction PopUpModalController.Action
 
-data ScreenOutput = GoBack TripDetailsGoBackType | OnSubmit TripDetailsScreenState | GoToInvoice TripDetailsScreenState | GoHome TripDetailsScreenState | ConnectWithDriver TripDetailsScreenState
+data ScreenOutput
+  = GoBack TripDetailsGoBackType
+  | OnSubmit TripDetailsScreenState
+  | GoToInvoice TripDetailsScreenState
+  | GoHome TripDetailsScreenState
+  | ConnectWithDriver TripDetailsScreenState
 
 eval :: Action -> TripDetailsScreenState -> Eval Action ScreenOutput TripDetailsScreenState
-
 eval BackPressed state = exit $ GoBack state.props.fromMyRides
 
-eval ShowPopUp state = continue state{props{showConfirmationPopUp = true}}
+eval ShowPopUp state = continue state { props { showConfirmationPopUp = true } }
 
-eval (PopUpModalAction (PopUpModalController.OnButton1Click)) state = continue state{props{showConfirmationPopUp = false}}
+eval (PopUpModalAction (PopUpModalController.OnButton1Click)) state = continue state { props { showConfirmationPopUp = false } }
 
-eval (PopUpModalAction (PopUpModalController.OnButton2Click)) state = exit $ ConnectWithDriver state{props{showConfirmationPopUp = false}}
+eval (PopUpModalAction (PopUpModalController.OnButton2Click)) state = exit $ ConnectWithDriver state { props { showConfirmationPopUp = false } }
 
 eval ViewInvoice state = exit $ GoToInvoice state
 
-eval ReportIssue state = continue state { props { reportIssue = not state.props.reportIssue}}
+eval ReportIssue state = continue state { props { reportIssue = not state.props.reportIssue } }
 
-eval (MessageTextChanged a) state = continue state { data { message = trim(a) }, props{activateSubmit = if (length (trim(a)) > 1) then true else false}}
+eval (MessageTextChanged a) state = continue state { data { message = trim (a) }, props { activateSubmit = if (length (trim (a)) > 1) then true else false } }
 
-eval (GenericHeaderActionController (GenericHeaderController.PrefixImgOnClick )) state = continueWithCmd state [do pure BackPressed]
+eval (GenericHeaderActionController (GenericHeaderController.PrefixImgOnClick)) state = continueWithCmd state [ do pure BackPressed ]
 
 eval (PrimaryButtonActionController PrimaryButtonController.OnClick) state = do
-    _ <- pure $ hideKeyboardOnNavigation true
-    if state.props.issueReported then 
-        updateAndExit state $ GoHome state
-    else updateAndExit state $ OnSubmit state
+  _ <- pure $ hideKeyboardOnNavigation true
+  if state.props.issueReported then
+    updateAndExit state $ GoHome state
+  else
+    updateAndExit state $ OnSubmit state
 
-eval Copy state = continueWithCmd state [ do 
-    _ <- pure $ copyToClipboard state.data.tripId
-    _ <- pure $ toast (getString COPIED)
-    pure NoAction
-  ]
+eval Copy state =
+  continueWithCmd state
+    [ do
+        _ <- pure $ copyToClipboard state.data.tripId
+        _ <- pure $ toast (getString COPIED)
+        pure NoAction
+    ]
 
 eval _ state = continue state

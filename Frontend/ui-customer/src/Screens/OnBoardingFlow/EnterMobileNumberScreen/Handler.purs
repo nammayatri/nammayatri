@@ -12,7 +12,6 @@
  
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
 module Screens.EnterMobileNumberScreen.Handler where
 
 import Control.Monad.Except.Trans (lift)
@@ -26,29 +25,29 @@ import Screens.EnterMobileNumberScreen.View as EnterMobileNumberScreen
 import Types.App (GlobalState(..), FlowBT, ScreenType(..), defaultGlobalState)
 import Presto.Core.Types.Language.Flow (getLogFields)
 
-
-enterMobileNumberScreen ::FlowBT String ScreenOutput
+enterMobileNumberScreen :: FlowBT String ScreenOutput
 enterMobileNumberScreen = do
   (GlobalState state') <- getState
-  let (GlobalState defaultGlobalState') = defaultGlobalState
+  let
+    (GlobalState defaultGlobalState') = defaultGlobalState
   logField_ <- lift $ lift $ getLogFields
-  act <- lift $ lift $ runScreen $ EnterMobileNumberScreen.screen state'.enterMobileNumberScreen{data{logField = logField_}}
+  act <- lift $ lift $ runScreen $ EnterMobileNumberScreen.screen state'.enterMobileNumberScreen { data { logField = logField_ } }
   case act of
-    GoToAccountSetUp state -> do 
-                    modifyScreenState $ EnterMobileNumberScreenType (\enterMobileNumber ->  state) 
-                    App.BackT $ App.NoBack <$> pure act
-    GoToOTP state -> do 
-                    modifyScreenState $ EnterMobileNumberScreenType (\enterMobileNumber ->  state)
-                    App.BackT  $ App.BackPoint <$> pure act 
-    ResendOTP state -> do 
-                    modifyScreenState $ EnterMobileNumberScreenType (\enterMobileNumber ->  state)
-                    App.BackT  $ App.BackPoint <$> pure act 
+    GoToAccountSetUp state -> do
+      modifyScreenState $ EnterMobileNumberScreenType (\enterMobileNumber -> state)
+      App.BackT $ App.NoBack <$> pure act
+    GoToOTP state -> do
+      modifyScreenState $ EnterMobileNumberScreenType (\enterMobileNumber -> state)
+      App.BackT $ App.BackPoint <$> pure act
+    ResendOTP state -> do
+      modifyScreenState $ EnterMobileNumberScreenType (\enterMobileNumber -> state)
+      App.BackT $ App.BackPoint <$> pure act
     GoBack state -> do
-                    modifyScreenState $ EnterMobileNumberScreenType (\enterMobileNumber ->  state{ data { otp = "" }, props { wrongOTP = false}})
-                    App.BackT  $ App.BackPoint <$> pure act
+      modifyScreenState $ EnterMobileNumberScreenType (\enterMobileNumber -> state { data { otp = "" }, props { wrongOTP = false } })
+      App.BackT $ App.BackPoint <$> pure act
     GoToWelcomeScreen state -> do
-                    modifyScreenState $ EnterMobileNumberScreenType (\enterMobileNumber -> defaultGlobalState'.enterMobileNumberScreen )
-                    App.BackT  $ App.NoBack <$> pure act
+      modifyScreenState $ EnterMobileNumberScreenType (\enterMobileNumber -> defaultGlobalState'.enterMobileNumberScreen)
+      App.BackT $ App.NoBack <$> pure act
 
 -- REFERENCE TO UPDATE STATE GLOBALLY
 -- modifyScreenState $ EnterMobileNumberScreenType (\enterMobileNumberScreen ->  state)

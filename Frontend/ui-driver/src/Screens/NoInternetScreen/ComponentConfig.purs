@@ -12,7 +12,6 @@
  
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
 module Screens.NoInternetScreen.ComponentConfig where
 
 import Common.Types.App
@@ -25,18 +24,22 @@ import Prelude
 import PrestoDOM
 import Styles.Colors as Color
 
-primaryButtonConfig :: String -> PrimaryButton.Config 
-primaryButtonConfig triggertype = let
-    config' = PrimaryButton.config 
-    primaryButtonConfig' = config' 
-      { textConfig 
-        { text = if triggertype == "INTERNET_ACTION" then (getString TRY_AGAIN) else (getString GRANT_ACCESS)
-        , color = Color.yellow900
+primaryButtonConfig :: String -> PrimaryButton.Config
+primaryButtonConfig triggertype =
+  let
+    config' = PrimaryButton.config
+
+    primaryButtonConfig' =
+      config'
+        { textConfig
+          { text = if triggertype == "INTERNET_ACTION" then (getString TRY_AGAIN) else (getString GRANT_ACCESS)
+          , color = Color.yellow900
+          }
+        , width = MATCH_PARENT
+        , background = Color.black900
+        , margin = (Margin 0 0 0 0)
+        , cornerRadius = 0.0
+        , id = "NoInternetScreenPrimaryButton"
         }
-      , width = MATCH_PARENT 
-      , background = Color.black900
-      , margin = (Margin 0 0 0 0)
-      , cornerRadius = 0.0
-      , id = "NoInternetScreenPrimaryButton"
-      }
-  in primaryButtonConfig'
+  in
+    primaryButtonConfig'

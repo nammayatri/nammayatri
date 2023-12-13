@@ -4,6 +4,6 @@ import Screens.Types (AboutUsScreenState)
 import ConfigProvider
 
 initData :: AboutUsScreenState
-initData = { 
-    appConfig : getAppConfig appConfig
-}
+initData =
+  { appConfig: getAppConfig appConfig
+  }

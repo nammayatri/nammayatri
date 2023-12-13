@@ -33,7 +33,7 @@ import Screens.InvoiceScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.Types as ST
 import Styles.Colors as Color
 import Helpers.Utils (isHaveFare)
-import MerchantConfig.Utils (getMerchant, Merchant (..))
+import MerchantConfig.Utils (getMerchant, Merchant(..))
 
 screen :: ST.InvoiceScreenState -> Screen Action ST.InvoiceScreenState ScreenOutput
 screen initialState =
@@ -104,8 +104,8 @@ view push state =
 
 referenceList :: ST.InvoiceScreenState -> Array String
 referenceList state =
-  (if (state.data.selectedItem.nightCharges ) then [ "1.5" <> (getString DAYTIME_CHARGES_APPLICABLE_AT_NIGHT) ] else [])
-    <> (if (isHaveFare "DRIVER_SELECTED_FARE" state.data.selectedItem.faresList) then [(getString DRIVERS_CAN_CHARGE_AN_ADDITIONAL_FARE_UPTO) ] else [])
+  (if (state.data.selectedItem.nightCharges) then [ "1.5" <> (getString DAYTIME_CHARGES_APPLICABLE_AT_NIGHT) ] else [])
+    <> (if (isHaveFare "DRIVER_SELECTED_FARE" state.data.selectedItem.faresList) then [ (getString DRIVERS_CAN_CHARGE_AN_ADDITIONAL_FARE_UPTO) ] else [])
     <> (if (isHaveFare "WAITING_OR_PICKUP_CHARGES" state.data.selectedItem.faresList) then [ (getString WAITING_CHARGE_DESCRIPTION) ] else [])
     <> (if (isHaveFare "EARLY_END_RIDE_PENALTY" state.data.selectedItem.faresList) then [ (getString EARLY_END_RIDE_CHARGES_DESCRIPTION) ] else [])
     <> (if (isHaveFare "CUSTOMER_SELECTED_FARE" state.data.selectedItem.faresList) then [ (getString CUSTOMER_TIP_DESCRIPTION) ] else [])
@@ -127,28 +127,30 @@ amountBreakupView state =
               , padding (Padding 0 5 0 5)
               , margin (MarginBottom 16)
               ]
-              [ textView $
-                  [ text (getFareText item.fareType state.data.selectedItem.baseDistance)
-                  , color Color.black800
-                  , accessibilityHint $ (getFareText item.fareType state.data.selectedItem.baseDistance) <> " : " <> (DS.replaceAll (DS.Pattern "₹") (DS.Replacement "") item.price) <> " Rupees"
-                  , accessibility ENABLE
-                  , layoutGravity "bottom"
-                  ] <> FontStyle.paragraphText LanguageStyle
+              [ textView
+                  $ [ text (getFareText item.fareType state.data.selectedItem.baseDistance)
+                    , color Color.black800
+                    , accessibilityHint $ (getFareText item.fareType state.data.selectedItem.baseDistance) <> " : " <> (DS.replaceAll (DS.Pattern "₹") (DS.Replacement "") item.price) <> " Rupees"
+                    , accessibility ENABLE
+                    , layoutGravity "bottom"
+                    ]
+                  <> FontStyle.paragraphText LanguageStyle
               , linearLayout
                   [ width MATCH_PARENT
                   , height WRAP_CONTENT
                   , gravity RIGHT
                   , orientation HORIZONTAL
                   ]
-                  [ textView $
-                      [ text item.price
-                      , alignParentRight "true,-1"
-                      , color Color.black800
-                      , accessibility DISABLE
-                      , height WRAP_CONTENT
-                      , width WRAP_CONTENT
-                      , lineHeight "18"
-                      ] <> FontStyle.body1 LanguageStyle
+                  [ textView
+                      $ [ text item.price
+                        , alignParentRight "true,-1"
+                        , color Color.black800
+                        , accessibility DISABLE
+                        , height WRAP_CONTENT
+                        , width WRAP_CONTENT
+                        , lineHeight "18"
+                        ]
+                      <> FontStyle.body1 LanguageStyle
                   ]
               ]
         )
@@ -164,24 +166,26 @@ totalAmountView state =
     , orientation HORIZONTAL
     , margin (MarginTop 8)
     ]
-    [ textView $
-        [ text $ getString TOTAL_PAID
-        , accessibilityHint $ "Total Paid : "<> (DS.replaceAll (DS.Pattern "₹") (DS.Replacement "") state.data.totalAmount) <> " Rupees"
-        , accessibility ENABLE
-        , color Color.black800
-        , lineHeight "28"
-        ] <> FontStyle.h1 LanguageStyle
+    [ textView
+        $ [ text $ getString TOTAL_PAID
+          , accessibilityHint $ "Total Paid : " <> (DS.replaceAll (DS.Pattern "₹") (DS.Replacement "") state.data.totalAmount) <> " Rupees"
+          , accessibility ENABLE
+          , color Color.black800
+          , lineHeight "28"
+          ]
+        <> FontStyle.h1 LanguageStyle
     , linearLayout
         [ height WRAP_CONTENT
         , orientation HORIZONTAL
         , weight 1.0
         ]
         []
-    , textView $
-        [ text state.data.totalAmount
-        , color Color.black800
-        , accessibility DISABLE
-        ] <> FontStyle.h1 LanguageStyle
+    , textView
+        $ [ text state.data.totalAmount
+          , color Color.black800
+          , accessibility DISABLE
+          ]
+        <> FontStyle.h1 LanguageStyle
     ]
 
 --------------------------- RideDateAndTimeView --------------------
@@ -208,26 +212,27 @@ rideDateAndTimeView state =
 
 localTextView :: forall w. String -> String -> PrestoDOM (Effect Unit) w
 localTextView textValue colorValue =
-  textView $
-    [ text textValue
-    , color colorValue
-    , width MATCH_PARENT
-    ] <> FontStyle.tags LanguageStyle
+  textView
+    $ [ text textValue
+      , color colorValue
+      , width MATCH_PARENT
+      ]
+    <> FontStyle.tags LanguageStyle
 
 getFareText :: String -> String -> String
 getFareText fareType baseDistance = case fareType of
-                      "BASE_FARE" -> (getString BASE_FARES) <> if baseDistance == "0 m" then "" else " (" <> baseDistance <> ")"
-                      "EXTRA_DISTANCE_FARE" -> getString NOMINAL_FARE
-                      "DRIVER_SELECTED_FARE" -> getString DRIVER_ADDITIONS
-                      "TOTAL_FARE" -> getString TOTAL_PAID
-                      "DEAD_KILOMETER_FARE" -> getString PICKUP_CHARGE
-                      "PICKUP_CHARGES" -> getString PICKUP_CHARGE
-                      "WAITING_CHARGES" -> getString WAITING_CHARGE
-                      "EARLY_END_RIDE_PENALTY" -> getString EARLY_END_RIDE_CHARGES
-                      "CUSTOMER_SELECTED_FARE" -> getString CUSTOMER_SELECTED_FARE
-                      "SERVICE_CHARGE" -> getString SERVICE_CHARGES
-                      "FIXED_GOVERNMENT_RATE" -> getString GOVERNMENT_CHAGRES
-                      "WAITING_OR_PICKUP_CHARGES"  -> getString WAITING_CHARGE
-                      "PLATFORM_FEE" -> getString PLATFORM_FEE
-                      "SGST" -> getString PLATFORM_GST
-                      _ -> "BASE_FARE"
+  "BASE_FARE" -> (getString BASE_FARES) <> if baseDistance == "0 m" then "" else " (" <> baseDistance <> ")"
+  "EXTRA_DISTANCE_FARE" -> getString NOMINAL_FARE
+  "DRIVER_SELECTED_FARE" -> getString DRIVER_ADDITIONS
+  "TOTAL_FARE" -> getString TOTAL_PAID
+  "DEAD_KILOMETER_FARE" -> getString PICKUP_CHARGE
+  "PICKUP_CHARGES" -> getString PICKUP_CHARGE
+  "WAITING_CHARGES" -> getString WAITING_CHARGE
+  "EARLY_END_RIDE_PENALTY" -> getString EARLY_END_RIDE_CHARGES
+  "CUSTOMER_SELECTED_FARE" -> getString CUSTOMER_SELECTED_FARE
+  "SERVICE_CHARGE" -> getString SERVICE_CHARGES
+  "FIXED_GOVERNMENT_RATE" -> getString GOVERNMENT_CHAGRES
+  "WAITING_OR_PICKUP_CHARGES" -> getString WAITING_CHARGE
+  "PLATFORM_FEE" -> getString PLATFORM_FEE
+  "SGST" -> getString PLATFORM_GST
+  _ -> "BASE_FARE"

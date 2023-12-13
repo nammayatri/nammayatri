@@ -12,7 +12,6 @@
  
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
 module Screens.SplashScreen.Handler where
 
 import Control.Monad.Trans.Class (lift)
@@ -22,7 +21,6 @@ import Prelude (Unit, bind, discard, void, ($))
 import PrestoDOM.Core.Types.Language.Flow (initUIWithNameSpace, showScreenWithNameSpace)
 import Screens.SplashScreen.View as SplashScreen
 import Types.App (GlobalState(..), FlowBT)
-
 
 splashScreen :: FlowBT String Unit
 splashScreen = do

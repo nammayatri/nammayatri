@@ -12,7 +12,6 @@
 
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
 module Helpers.Storage.Flow.SearchStatus where
 
 import Prelude
@@ -30,14 +29,13 @@ updateFlowStatusStorage response = do
     name = catMaybeStrings [ response ^. _firstName, response ^. _middleName, response ^. _lastName ]
 
     userRideStatus =  -- TODO:: Confirm with @kranti, can we fix this as code doesn't look good here because of vairable values
-      if response ^. _hasTakenRide 
-        then "HAS_TAKEN_RIDE"
-        else 
-          if (response ^. _referralCode /= Nothing && not (response ^. _hasTakenRide)) 
-            then "REFERRED_NOT_TAKEN_RIDE"
-            else "NOT_REFERRED_NOT_TAKEN_RIDE"
+      if response ^. _hasTakenRide then
+        "HAS_TAKEN_RIDE"
+      else if (response ^. _referralCode /= Nothing && not (response ^. _hasTakenRide)) then
+        "REFERRED_NOT_TAKEN_RIDE"
+      else
+        "NOT_REFERRED_NOT_TAKEN_RIDE"
   -- (PersonStatsRes resp) <- Remote.getPersonStatsBT "" -- TODO:: Make this function async in non critical flow @ashkriti
-  
   setValueToLocalStore DRIVER_ARRIVAL_ACTION "TRIGGER_DRIVER_ARRIVAL" --TODO:: How is this being used @rohit??
   setValueToLocalStore DISABILITY_UPDATED $ show $ isJust $ response ^. _hasDisability
   setValueToLocalStore REFERRAL_STATUS userRideStatus

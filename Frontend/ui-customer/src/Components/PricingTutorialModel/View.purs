@@ -12,7 +12,6 @@
 
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
 module Components.PricingTutorialModel.View where
 
 import Components.PricingTutorialModel.Controller (Action(..))
@@ -29,132 +28,143 @@ import Debug (spy)
 import Common.Types.App
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
 
-view :: forall w .  (Action  -> Effect Unit) -> PrestoDOM (Effect Unit) w
+view :: forall w. (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 view push =
-    linearLayout
-      [ height MATCH_PARENT
-      , width MATCH_PARENT
-      , orientation VERTICAL
-      , clickable true
-      , background Color.white900
-      , padding $ Padding 16 16 16 16
-      ][  closeBtnView push
-        , textView $
-            [ height WRAP_CONTENT
-            , width MATCH_PARENT
-            , text (getString HOW_THE_PRICING_WORKS)
-            , color Color.black800
-            , gravity CENTER
-            , margin (Margin 0 12 0 14)
-            ] <> FontStyle.body8 TypoGraphy
-        , listComponentView ""
-      ]
+  linearLayout
+    [ height MATCH_PARENT
+    , width MATCH_PARENT
+    , orientation VERTICAL
+    , clickable true
+    , background Color.white900
+    , padding $ Padding 16 16 16 16
+    ]
+    [ closeBtnView push
+    , textView
+        $ [ height WRAP_CONTENT
+          , width MATCH_PARENT
+          , text (getString HOW_THE_PRICING_WORKS)
+          , color Color.black800
+          , gravity CENTER
+          , margin (Margin 0 12 0 14)
+          ]
+        <> FontStyle.body8 TypoGraphy
+    , listComponentView ""
+    ]
 
-
-closeBtnView :: forall w .  (Action  -> Effect Unit) -> PrestoDOM (Effect Unit) w
+closeBtnView :: forall w. (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 closeBtnView push =
   linearLayout
     [ height WRAP_CONTENT
     , width MATCH_PARENT
     , gravity RIGHT
-    ][  linearLayout
+    ]
+    [ linearLayout
         [ height WRAP_CONTENT
         , width WRAP_CONTENT
         , onClick push $ const Close
-        ][  imageView
+        ]
+        [ imageView
             [ height $ V 25
             , width $ V 25
             , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_close"
             , margin (Margin 12 12 12 12)
             ]
-          ]
         ]
+    ]
 
-
-listComponentView :: forall w . String -> PrestoDOM (Effect Unit) w
+listComponentView :: forall w. String -> PrestoDOM (Effect Unit) w
 listComponentView dummy =
   linearLayout
     [ height WRAP_CONTENT
     , width MATCH_PARENT
     , orientation VERTICAL
     , margin (Margin 0 0 0 10)
-    ](map (\item ->
-        linearLayout
-          [ width MATCH_PARENT
-          , height if (item.image == "ic_mask_3") then (V 146) else WRAP_CONTENT
-          , orientation VERTICAL
-          , background Color.catskillWhite
-          , cornerRadius 20.0
-          , margin (Margin 0 16 0 0)
-          ][linearLayout
+    ]
+    ( map
+        ( \item ->
+            linearLayout
               [ width MATCH_PARENT
-              , height WRAP_CONTENT
-              , orientation HORIZONTAL
-              , margin (Margin 0 0 0 0)
-              -- , gravity CENTER
-              ][linearLayout
-                [ height WRAP_CONTENT
-                , width $ V 0
-                , weight 1.0
-                , orientation VERTICAL
-                , margin (Margin 16 20 10 9)
-                ][textView (
-                  [ height WRAP_CONTENT
-                  , width WRAP_CONTENT
-                  , text item.heading
-                  , color Color.black800
-                  , margin (Margin 0 0 0 9)
-                  ] <> FontStyle.subHeading1 TypoGraphy)
-                , textView $
-                  [ height WRAP_CONTENT
-                  , width WRAP_CONTENT
-                  , textFromHtml item.subHeading
-                  , color Color.black700
-                  ]<> FontStyle.paragraphText TypoGraphy
-                , textView (
-                  [ height WRAP_CONTENT
-                  , width WRAP_CONTENT
-                  , text (fromMaybe "" item.note)
-                  , color Color.black700
-                  , lineHeight "13"
-                  , margin (MarginTop 6)
-                  , visibility if item.note /= Nothing then VISIBLE else GONE
-                  ] <> FontStyle.tags TypoGraphy)
-                ]
-                , imageView
-                      [height $ V 110
+              , height if (item.image == "ic_mask_3") then (V 146) else WRAP_CONTENT
+              , orientation VERTICAL
+              , background Color.catskillWhite
+              , cornerRadius 20.0
+              , margin (Margin 0 16 0 0)
+              ]
+              [ linearLayout
+                  [ width MATCH_PARENT
+                  , height WRAP_CONTENT
+                  , orientation HORIZONTAL
+                  , margin (Margin 0 0 0 0)
+                  -- , gravity CENTER
+                  ]
+                  [ linearLayout
+                      [ height WRAP_CONTENT
+                      , width $ V 0
+                      , weight 1.0
+                      , orientation VERTICAL
+                      , margin (Margin 16 20 10 9)
+                      ]
+                      [ textView
+                          ( [ height WRAP_CONTENT
+                            , width WRAP_CONTENT
+                            , text item.heading
+                            , color Color.black800
+                            , margin (Margin 0 0 0 9)
+                            ]
+                              <> FontStyle.subHeading1 TypoGraphy
+                          )
+                      , textView
+                          $ [ height WRAP_CONTENT
+                            , width WRAP_CONTENT
+                            , textFromHtml item.subHeading
+                            , color Color.black700
+                            ]
+                          <> FontStyle.paragraphText TypoGraphy
+                      , textView
+                          ( [ height WRAP_CONTENT
+                            , width WRAP_CONTENT
+                            , text (fromMaybe "" item.note)
+                            , color Color.black700
+                            , lineHeight "13"
+                            , margin (MarginTop 6)
+                            , visibility if item.note /= Nothing then VISIBLE else GONE
+                            ]
+                              <> FontStyle.tags TypoGraphy
+                          )
+                      ]
+                  , imageView
+                      [ height $ V 110
                       , width $ V 110
                       , imageWithFallback item.image
                       ]
-                ]
-            ]) (cardData ""))
-
+                  ]
+              ]
+        )
+        (cardData "")
+    )
 
 cardData :: String -> Array CardData
 cardData dummy =
-  [
-    { heading : (getString GET_ESTIMATE_FARE),
-      subHeading : (getString ASK_FOR_PRICE_INFO),
-      note : Nothing,
-      image : fetchImage FF_ASSET "ny_ic_ask_price"
-    },
-    { heading : (getString SELECT_AN_OFFER_FROM_OUR_DRIVERS),
-      subHeading : (getString SELECT_AN_OFFER_FROM_OUR_DRIVERS_INFO),
-      note : Nothing,
-      image : fetchImage FF_ASSET "ny_ic_select_offer"
-    },
-    { heading : (getString PAY_THE_DRIVER),
-      subHeading : (getString PAY_THE_DRIVER_INFO),
-      note : Just (getString PAY_THE_DRIVER_NOTE),
-      image : fetchImage FF_ASSET"ny_ic_pay_driver"
+  [ { heading: (getString GET_ESTIMATE_FARE)
+    , subHeading: (getString ASK_FOR_PRICE_INFO)
+    , note: Nothing
+    , image: fetchImage FF_ASSET "ny_ic_ask_price"
+    }
+  , { heading: (getString SELECT_AN_OFFER_FROM_OUR_DRIVERS)
+    , subHeading: (getString SELECT_AN_OFFER_FROM_OUR_DRIVERS_INFO)
+    , note: Nothing
+    , image: fetchImage FF_ASSET "ny_ic_select_offer"
+    }
+  , { heading: (getString PAY_THE_DRIVER)
+    , subHeading: (getString PAY_THE_DRIVER_INFO)
+    , note: Just (getString PAY_THE_DRIVER_NOTE)
+    , image: fetchImage FF_ASSET "ny_ic_pay_driver"
     }
   ]
 
-type CardData =
-  { heading :: String
-  , image :: String
-  , note :: Maybe String
-  , subHeading :: String
-  }
-
-
+type CardData
+  = { heading :: String
+    , image :: String
+    , note :: Maybe String
+    , subHeading :: String
+    }

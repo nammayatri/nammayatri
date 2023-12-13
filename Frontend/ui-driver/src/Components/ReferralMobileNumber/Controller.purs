@@ -12,7 +12,6 @@
 
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
 module Components.ReferralMobileNumber.Controller where
 
 import Prelude
@@ -21,13 +20,14 @@ import PrestoDOM (LetterSpacing(..))
 import Components.PrimaryEditText.Controller as PrimaryEditTextController
 import Components.PrimaryButton.Controller as PrimaryButtonController
 
-data Action =  OnBackClick
-            | PrimaryEditTextActionController PrimaryEditTextController.Action
-            | PrimaryButtonActionController PrimaryButtonController.Action
-            | OnSubTextClick
+data Action
+  = OnBackClick
+  | PrimaryEditTextActionController PrimaryEditTextController.Action
+  | PrimaryButtonActionController PrimaryButtonController.Action
+  | OnSubTextClick
 
-type Config = {
-    isApplyButtonActive :: Boolean
+type Config
+  = { isApplyButtonActive :: Boolean
     , referralNumber :: String
     , mainText :: String
     , subTextView :: Boolean
@@ -39,20 +39,20 @@ type Config = {
     , placeholder :: String
     , subText1 :: String
     , subText2 :: String
-}
+    }
 
 config :: Config
-config = {
-    isApplyButtonActive : false
-    , referralNumber : ""
-    , errorText : ""
-    , mainText : "Enter Referral Mobile Number"
-    , subTextView : false
-    , primaryButtonText : "Apply"
-    , isValid : false
-    , pattern  : Just "[0-9]*,10"
-    , letterSpacing : PX 0.0
-    , placeholder : ""
-    , subText1 : ""
-    , subText2 : ""
-}
+config =
+  { isApplyButtonActive: false
+  , referralNumber: ""
+  , errorText: ""
+  , mainText: "Enter Referral Mobile Number"
+  , subTextView: false
+  , primaryButtonText: "Apply"
+  , isValid: false
+  , pattern: Just "[0-9]*,10"
+  , letterSpacing: PX 0.0
+  , placeholder: ""
+  , subText1: ""
+  , subText2: ""
+  }

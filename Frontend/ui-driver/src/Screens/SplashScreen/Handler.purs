@@ -12,8 +12,8 @@
  
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
 module Screens.SplashScreen.Handler where
+
 import Prelude
 import Control.Monad.Except.Trans (lift)
 import PrestoDOM.Core.Types.Language.Flow (initUIWithScreen)
@@ -25,5 +25,5 @@ import JBridge (initiateLocationServiceClient)
 
 splashScreen :: SplashScreenState → FlowBT String Unit
 splashScreen screenState = do
-    _ <- lift $ lift $ liftFlow $ initiateLocationServiceClient
-    lift $ lift $ initUIWithScreen $ SplashScreen.screen screenState
+  _ <- lift $ lift $ liftFlow $ initiateLocationServiceClient
+  lift $ lift $ initUIWithScreen $ SplashScreen.screen screenState

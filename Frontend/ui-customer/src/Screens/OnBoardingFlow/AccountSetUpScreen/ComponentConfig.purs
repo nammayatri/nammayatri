@@ -12,7 +12,6 @@
  
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
 module Screens.AccountSetUpScreen.ComponentConfig where
 
 import Components.GenericHeader as GenericHeader
@@ -37,17 +36,20 @@ import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Prelude ((<>))
 
 primaryButtonConfig :: ST.AccountSetUpScreenState -> PrimaryButton.Config
-primaryButtonConfig state = PrimaryButton.config
-  { textConfig { text = "Let’s go!" 
-    , color = state.data.config.primaryTextColor
-    , accessibilityHint = if state.props.btnActive then "Let's go : Button" else "Let's go : Button disabled"}
-  , isClickable = state.props.btnActive
-  , alpha = if state.props.btnActive then 1.0 else 0.4
-  , margin = (Margin 0 0 0 0)
-  , enableLoader = (JB.getBtnLoader "AccountSetupScreen")
-  , id = "AccountSetupScreen"
-  , background = state.data.config.primaryBackground
-  }
+primaryButtonConfig state =
+  PrimaryButton.config
+    { textConfig
+      { text = "Let’s go!"
+      , color = state.data.config.primaryTextColor
+      , accessibilityHint = if state.props.btnActive then "Let's go : Button" else "Let's go : Button disabled"
+      }
+    , isClickable = state.props.btnActive
+    , alpha = if state.props.btnActive then 1.0 else 0.4
+    , margin = (Margin 0 0 0 0)
+    , enableLoader = (JB.getBtnLoader "AccountSetupScreen")
+    , id = "AccountSetupScreen"
+    , background = state.data.config.primaryBackground
+    }
 
 genericHeaderConfig :: GenericHeader.Config
 genericHeaderConfig =
@@ -77,14 +79,14 @@ goBackPopUpModelConfig state =
       config'
         { primaryText { text = (getString GO_BACK_) }
         , secondaryText { text = (getString REGISTER_USING_DIFFERENT_NUMBER) }
-        , option1 { 
-            background = state.data.config.popupBackground
+        , option1
+          { background = state.data.config.popupBackground
           , strokeColor = state.data.config.primaryBackground
           , color = state.data.config.primaryBackground
           , text = (getString NO)
           }
-        , option2 { 
-            color = state.data.config.primaryTextColor
+        , option2
+          { color = state.data.config.primaryTextColor
           , strokeColor = state.data.config.primaryBackground
           , background = state.data.config.primaryBackground
           , text = (getString YES)
@@ -94,32 +96,34 @@ goBackPopUpModelConfig state =
     popUpConfig
 
 translateFullYAnimWithDurationConfigs :: ST.AccountSetUpScreenState -> AnimConfig
-translateFullYAnimWithDurationConfigs state = animConfig {
-  fromScaleY = if state.props.genderOptionExpanded then 0.0 else 1.0
-, toScaleY =if state.props.genderOptionExpanded then 1.0 else 0.0
-, fromY = if state.props.genderOptionExpanded then -100 else  0
-, toY = if state.props.genderOptionExpanded then 0 else -100
-, repeatCount = (PrestoAnim.Repeat 0)
-, ifAnim = state.props.expandEnabled
-, duration = 200
-}
+translateFullYAnimWithDurationConfigs state =
+  animConfig
+    { fromScaleY = if state.props.genderOptionExpanded then 0.0 else 1.0
+    , toScaleY = if state.props.genderOptionExpanded then 1.0 else 0.0
+    , fromY = if state.props.genderOptionExpanded then -100 else 0
+    , toY = if state.props.genderOptionExpanded then 0 else -100
+    , repeatCount = (PrestoAnim.Repeat 0)
+    , ifAnim = state.props.expandEnabled
+    , duration = 200
+    }
 
 getRadioButtonConfig :: Int -> String -> ST.AccountSetUpScreenState -> GenericRadioButton.Config
-getRadioButtonConfig index item state = GenericRadioButton.config {
-  activeButtonConfig {
-    stroke = Color.blue900
-  , buttonColor = Color.black800
-  , background = Color.blue600
-  },
-  buttonTextConfig {
-    text = item
-  , color = Color.black900
-  }
-  , inActiveButtonConfig {
-    stroke = Color.grey900
-  , buttonColor = Color.black600
-  , background = Color.white900
-  }
-  , isSelected = index == state.data.disabilityOptions.activeIndex
-  , id = index
-}
+getRadioButtonConfig index item state =
+  GenericRadioButton.config
+    { activeButtonConfig
+      { stroke = Color.blue900
+      , buttonColor = Color.black800
+      , background = Color.blue600
+      }
+    , buttonTextConfig
+      { text = item
+      , color = Color.black900
+      }
+    , inActiveButtonConfig
+      { stroke = Color.grey900
+      , buttonColor = Color.black600
+      , background = Color.white900
+      }
+    , isSelected = index == state.data.disabilityOptions.activeIndex
+    , id = index
+    }

@@ -12,9 +12,7 @@
 
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
 module Screens.ReferralScreen.Handler where
-
 
 import Control.Monad.Except.Trans (lift)
 import Control.Transformers.Back.Trans as App
@@ -32,10 +30,10 @@ import Types.ModifyScreenState (modifyScreenState)
 import MerchantConfig.Utils (getMerchant, Merchant(..))
 import Common.Types.App (LazyCheck(..))
 
-referralScreen:: FlowBT String REFERRAL_SCREEN_OUTPUT
+referralScreen :: FlowBT String REFERRAL_SCREEN_OUTPUT
 referralScreen = do
   (GlobalState state) <- getState
-  action <- lift $ lift $ runScreen $ ReferralScreen.screen state.referralScreen{ props{ stage = getReferralStage state.referralScreen } }
+  action <- lift $ lift $ runScreen $ ReferralScreen.screen state.referralScreen { props { stage = getReferralStage state.referralScreen } }
   case action of
     GoBack -> do
       modifyScreenState $ ReferralScreenStateType (\referralScreen -> ReferralScreenData.initData)

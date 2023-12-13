@@ -12,12 +12,9 @@
 
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
-
 module Screens.DriverSavedLocationScreen.Transformer where
 
 import Prelude
-
 import Data.Array as DA
 import Data.Maybe (isJust)
 import Data.String (toLower, trim)
@@ -25,17 +22,21 @@ import Screens.Types (GoToLocation, DriverSavedLocationScreenState)
 import Services.API (DriverHomeLocationAPIEntity(..), GetHomeLocationsRes(..))
 
 getLocationArray :: GetHomeLocationsRes -> Array GoToLocation
-getLocationArray (GetHomeLocationsRes resp) = 
-    let locations = resp.locations
-    in map (\ (DriverHomeLocationAPIEntity entity) -> {
-        id : entity.id,
-        lat : entity.lat,
-        lon : entity.lon,
-        address : entity.address,
-        tag : entity.tag,
-        disabled : false
-        }
-    ) locations
+getLocationArray (GetHomeLocationsRes resp) =
+  let
+    locations = resp.locations
+  in
+    map
+      ( \(DriverHomeLocationAPIEntity entity) ->
+          { id: entity.id
+          , lat: entity.lat
+          , lon: entity.lon
+          , address: entity.address
+          , tag: entity.tag
+          , disabled: false
+          }
+      )
+      locations
 
 tagAlreadySaved :: Array GoToLocation -> String -> Boolean
-tagAlreadySaved arr tag = isJust (DA.find (\ item -> (toLower (trim item.tag)) == toLower tag) arr)
+tagAlreadySaved arr tag = isJust (DA.find (\item -> (toLower (trim item.tag)) == toLower tag) arr)

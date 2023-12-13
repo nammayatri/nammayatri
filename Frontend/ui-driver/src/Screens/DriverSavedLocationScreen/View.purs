@@ -465,7 +465,7 @@ locateOnMap state push =
         , imageView
             [ width $ V 35
             , height $ V 35
-            , imageWithFallback $ fetchImage FF_COMMON_ASSET"ny_ic_src_marker"
+            , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_src_marker"
             ]
         ]
     , linearLayout

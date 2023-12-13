@@ -34,7 +34,7 @@ screen initialState =
   , name: "SplashScreen"
   , globalEvents: []
   , eval
-  , parent : Just "SplashScreen"
+  , parent: Just "SplashScreen"
   }
 
 view ::

@@ -12,26 +12,26 @@ import Language.Strings (getString)
 import Helpers.Utils (parseFloat, fetchImage, FetchImageFrom(..))
 import Data.Int (toNumber)
 import Storage (getValueToLocalStore, KeyStore(..))
-import PrestoDOM (Length(..) , Margin(..), Orientation(..), Padding(..) , Visibility(..), Gravity(..), PrestoDOM,Gradient(..), Accessiblity(..), gradient, weight, cornerRadius, height, width, margin, padding, linearLayout, gravity, orientation, fontStyle, textSize, textView, text, background, clickable, color, imageView, imageUrl, ellipsize, maxLines, lineHeight, visibility, textFromHtml, layoutGravity, imageWithFallback, relativeLayout, accessibilityHint, accessibility, singleLine)
+import PrestoDOM (Length(..), Margin(..), Orientation(..), Padding(..), Visibility(..), Gravity(..), PrestoDOM, Gradient(..), Accessiblity(..), gradient, weight, cornerRadius, height, width, margin, padding, linearLayout, gravity, orientation, fontStyle, textSize, textView, text, background, clickable, color, imageView, imageUrl, ellipsize, maxLines, lineHeight, visibility, textFromHtml, layoutGravity, imageWithFallback, relativeLayout, accessibilityHint, accessibility, singleLine)
 import Common.Types.App
 import Data.Maybe
-import Screens.Types(NewContacts)
+import Screens.Types (NewContacts)
 import Engineering.Helpers.Commons (os)
 import PrestoDOM.List as PrestoList
 import Screens.EmergencyContactsScreen.Controller (Action(..)) as Screen
 import PrestoDOM.Types.Core (toPropValue)
 import Data.Maybe (Maybe(..), fromMaybe)
 
-view :: forall w . (Screen.Action  -> Effect Unit) -> NewContacts -> PrestoDOM (Effect Unit) w
+view :: forall w. (Screen.Action -> Effect Unit) -> NewContacts -> PrestoDOM (Effect Unit) w
 view push item =
-    linearLayout
-    [ height  MATCH_PARENT
+  linearLayout
+    [ height MATCH_PARENT
     , width MATCH_PARENT
     , orientation VERTICAL
     , weight 1.0
     , background Color.red
     , PrestoList.backgroundHolder "contactBackgroundColor"
-    , PrestoList.onClickHolder push  $ Screen.NewContactActionController <<< ContactSelected
+    , PrestoList.onClickHolder push $ Screen.NewContactActionController <<< ContactSelected
     ]
     [ linearLayout
         [ height WRAP_CONTENT
@@ -42,7 +42,7 @@ view push item =
             [ height $ V 40
             , width $ V 40
             , margin (Margin 16 16 0 16)
-            , imageWithFallback $ fetchImage FF_ASSET  "ny_ic_user"
+            , imageWithFallback $ fetchImage FF_ASSET "ny_ic_user"
             , cornerRadius if os == "IOS" then 16.0 else 20.0
             , gravity CENTER
             ]
@@ -60,7 +60,7 @@ view push item =
                 , textSize FontSize.a_14
                 , margin (Margin 0 0 4 0)
                 , lineHeight "16"
-                , maxLines 1 
+                , maxLines 1
                 , singleLine true
                 , ellipsize true
                 , fontStyle $ FontStyle.medium LanguageStyle
@@ -79,14 +79,15 @@ view push item =
             , margin (Margin 0 23 16 23)
             , padding (Padding 0 0 0 0)
             , gravity CENTER
-            ][ imageView
-                [ height $ V 24 
-                , width $ V 24 
+            ]
+            [ imageView
+                [ height $ V 24
+                , width $ V 24
                 , accessibility ENABLE
                 , PrestoList.imageUrlHolder "isSelectImage"
                 , accessibilityHint "Selected"
                 , PrestoList.visibilityHolder "visibilitySelectedImage"
-                ] 
+                ]
             , imageView
                 [ height $ V 17
                 , width $ V 17
@@ -106,4 +107,5 @@ horizontalLine =
     [ height $ V 1
     , width MATCH_PARENT
     , background Color.grey900
-    ][]
+    ]
+    []

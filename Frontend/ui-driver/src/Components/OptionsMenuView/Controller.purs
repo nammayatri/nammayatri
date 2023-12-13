@@ -12,7 +12,6 @@
  
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
 module Components.OptionsMenu.Controller where
 
 import Common.Types.App (LazyCheck(..))
@@ -26,39 +25,40 @@ import PrestoDOM (Gravity(..), Length(..), Margin(..), Padding(..), Visibility(.
 import Screens.Types (IssueInfo(..), IssueModalType(..))
 import Styles.Colors as Color
 
-data Action = ItemClick String
-              | BackgroundClick
+data Action
+  = ItemClick String
+  | BackgroundClick
 
-type MenuItemData = {
-    image :: String,
-    textdata :: String,
-    action :: String,
-    isVisible :: Boolean
-}
+type MenuItemData
+  = { image :: String
+    , textdata :: String
+    , action :: String
+    , isVisible :: Boolean
+    }
 
-type Config = {
-    menuItems :: Array MenuItemData,
-    backgroundColor :: String,
-    menuBackgroundColor :: String,
-    gravity :: Gravity,
-    menuExpanded :: Boolean,
-    width :: Length,
-    marginRight :: Int,
-    itemHeight :: Length,
-    itemPadding :: Padding,
-    cornerRadius :: Number
-}
+type Config
+  = { menuItems :: Array MenuItemData
+    , backgroundColor :: String
+    , menuBackgroundColor :: String
+    , gravity :: Gravity
+    , menuExpanded :: Boolean
+    , width :: Length
+    , marginRight :: Int
+    , itemHeight :: Length
+    , itemPadding :: Padding
+    , cornerRadius :: Number
+    }
 
 config :: Config
-config = {
-  menuItems : [{image : "", textdata : "", action : "", isVisible : false}],
-  backgroundColor : Color.transparent,
-  menuBackgroundColor : Color.white900,
-  gravity : RIGHT,
-  menuExpanded : false,
-  width : V 170,
-  marginRight : 16,
-  itemHeight : V 50,
-  itemPadding : Padding 16 16 16 16,
-  cornerRadius : 4.0
-}
+config =
+  { menuItems: [ { image: "", textdata: "", action: "", isVisible: false } ]
+  , backgroundColor: Color.transparent
+  , menuBackgroundColor: Color.white900
+  , gravity: RIGHT
+  , menuExpanded: false
+  , width: V 170
+  , marginRight: 16
+  , itemHeight: V 50
+  , itemPadding: Padding 16 16 16 16
+  , cornerRadius: 4.0
+  }

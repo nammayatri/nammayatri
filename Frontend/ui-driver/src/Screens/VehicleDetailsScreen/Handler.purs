@@ -12,11 +12,10 @@
  
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
 module Screens.VehicleDetailsScreen.Handler where
 
 import Engineering.Helpers.BackTrack (getState)
-import Prelude (bind, pure, ($),(<$>))
+import Prelude (bind, pure, ($), (<$>))
 import Screens.VehicleDetailsScreen.Controller (ScreenOutput(..))
 import Control.Monad.Except.Trans (lift)
 import Control.Transformers.Back.Trans (BackT(..), FailBack(..)) as App

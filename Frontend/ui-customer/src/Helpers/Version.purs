@@ -12,7 +12,6 @@
 
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
 module Helpers.Version where
 
 import Prelude
@@ -40,126 +39,147 @@ import Services.API (UpdateProfileReq(..))
 import Data.Lens ((^.))
 import Accessor (_minor, _major, _maintenance)
 
-type IosVersion = {
-  majorUpdateIndex :: Int,
-  minorUpdateIndex :: Int,
-  patchUpdateIndex :: Int,
-  enableForceUpdateIOS :: Boolean
-}
+type IosVersion
+  = { majorUpdateIndex :: Int
+    , minorUpdateIndex :: Int
+    , patchUpdateIndex :: Int
+    , enableForceUpdateIOS :: Boolean
+    }
 
 checkVersion :: FlowBT String Unit
 checkVersion = do
   versionCodeAndroid <- liftFlowBT $ JB.getVersionCode
   versionName <- liftFlowBT $ JB.getVersionName
-
-  let updatedIOSversion = getIosVersion (getMerchant FunctionCall)
-
-  if androidUpdateRequired versionCodeAndroid 
-    then do
-      liftFlowBT $ JB.hideLoader
-      modifyScreenState $ AppUpdatePopUpScreenType (\appUpdatePopUpScreenState → appUpdatePopUpScreenState {updatePopup = AppVersion}) --TODO:: Make update popUp screen generic if it's used for other purposes also
-      appUpdatedFlow <- UI.handleAppUpdatePopUp
-      case appUpdatedFlow of
-        Later -> pure unit
-        _ -> checkVersion
-    else if iosUpdateRequired updatedIOSversion.enableForceUpdateIOS versionName 
-      then do
-      let {majorUpdateIndex, minorUpdateIndex, patchUpdateIndex} = iosVersionSplit versionName
-      when (
-        all (_ /= -1) [majorUpdateIndex, minorUpdateIndex, patchUpdateIndex]
-        && forceIOSupdate majorUpdateIndex minorUpdateIndex patchUpdateIndex updatedIOSversion
-      ) $ do
+  let
+    updatedIOSversion = getIosVersion (getMerchant FunctionCall)
+  if androidUpdateRequired versionCodeAndroid then do
+    liftFlowBT $ JB.hideLoader
+    modifyScreenState $ AppUpdatePopUpScreenType (\appUpdatePopUpScreenState → appUpdatePopUpScreenState { updatePopup = AppVersion }) --TODO:: Make update popUp screen generic if it's used for other purposes also
+    appUpdatedFlow <- UI.handleAppUpdatePopUp
+    case appUpdatedFlow of
+      Later -> pure unit
+      _ -> checkVersion
+  else if iosUpdateRequired updatedIOSversion.enableForceUpdateIOS versionName then do
+    let
+      { majorUpdateIndex, minorUpdateIndex, patchUpdateIndex } = iosVersionSplit versionName
+    when
+      ( all (_ /= -1) [ majorUpdateIndex, minorUpdateIndex, patchUpdateIndex ]
+          && forceIOSupdate majorUpdateIndex minorUpdateIndex patchUpdateIndex updatedIOSversion
+      )
+      $ do
           liftFlowBT $ JB.hideLoader
           void $ UI.handleAppUpdatePopUp
           checkVersion
-      else pure unit
+  else
+    pure unit
+  where
+  iosVersionSplit :: String -> { majorUpdateIndex :: Int, minorUpdateIndex :: Int, patchUpdateIndex :: Int }
+  iosVersionSplit versionName =
+    let
+      versionArray = (split (Pattern ".") versionName)
 
-  where 
-    iosVersionSplit :: String -> {majorUpdateIndex :: Int, minorUpdateIndex :: Int, patchUpdateIndex :: Int}
-    iosVersionSplit versionName =
-      let versionArray = (split (Pattern ".") versionName)
-          majorUpdateIndex = versionIndex versionArray 0
-          minorUpdateIndex = versionIndex versionArray 1
-          patchUpdateIndex = versionIndex versionArray 2
-      in {majorUpdateIndex, minorUpdateIndex, patchUpdateIndex}
+      majorUpdateIndex = versionIndex versionArray 0
 
-    androidUpdateRequired :: Int -> Boolean
-    androidUpdateRequired versionCodeAndroid = os /= "IOS" && versionCodeAndroid < (getLatestAndroidVersion (getMerchant FunctionCall))
+      minorUpdateIndex = versionIndex versionArray 1
 
-    iosUpdateRequired :: Boolean  -> String -> Boolean
-    iosUpdateRequired forceUpdate versionName = os == "IOS" && versionName /= "" && forceUpdate
+      patchUpdateIndex = versionIndex versionArray 2
+    in
+      { majorUpdateIndex, minorUpdateIndex, patchUpdateIndex }
 
-    versionIndex :: Array String -> Int -> Int
-    versionIndex versionArray index = fromMaybe (-1) $ INT.fromString =<< versionArray !! index
+  androidUpdateRequired :: Int -> Boolean
+  androidUpdateRequired versionCodeAndroid = os /= "IOS" && versionCodeAndroid < (getLatestAndroidVersion (getMerchant FunctionCall))
+
+  iosUpdateRequired :: Boolean -> String -> Boolean
+  iosUpdateRequired forceUpdate versionName = os == "IOS" && versionName /= "" && forceUpdate
+
+  versionIndex :: Array String -> Int -> Int
+  versionIndex versionArray index = fromMaybe (-1) $ INT.fromString =<< versionArray !! index
 
 appUpdatedFlow :: FCMBundleUpdate -> FlowBT String Unit
 appUpdatedFlow payload = do
-  modifyScreenState $ AppUpdatePopUpScreenType (\appUpdatePopUpScreenState → appUpdatePopUpScreenState {updatePopup = AppUpdated ,appUpdatedView{secondaryText=payload.description,primaryText=payload.title,coverImageUrl=payload.image}})
+  modifyScreenState $ AppUpdatePopUpScreenType (\appUpdatePopUpScreenState → appUpdatePopUpScreenState { updatePopup = AppUpdated, appUpdatedView { secondaryText = payload.description, primaryText = payload.title, coverImageUrl = payload.image } })
   fl <- UI.handleAppUpdatePopUp
   case fl of
-    UpdateNow -> do 
+    UpdateNow -> do
       liftFlowBT showSplash
       liftFlowBT reboot
     Later -> pure unit
 
 updateVersion :: Maybe Version -> Maybe Version -> FlowBT String Unit
 updateVersion dbClientVersion dbBundleVersion = do
-  if isJust dbClientVersion && isJust dbBundleVersion 
-    then do
-      let versionName = getValueToLocalStore VERSION_NAME
-          bundle = getValueToLocalStore BUNDLE_VERSION
-          clientVersion' = stringToVersion versionName
-          bundleVersion' = stringToVersion bundle
-          {clientVersion, bundleVersion} = getAppVersions dbClientVersion dbBundleVersion clientVersion' bundleVersion'
-      when (
-        versionValid clientVersion bundleVersion 
-        && ( bundleVersion' /= bundleVersion || clientVersion' /= clientVersion )
-      ) $ do
-          let (UpdateProfileReq initialData) = Remote.mkUpdateProfileRequest FunctionCall
-              requiredData = initialData{clientVersion = Just clientVersion, bundleVersion = Just bundleVersion}
+  if isJust dbClientVersion && isJust dbBundleVersion then do
+    let
+      versionName = getValueToLocalStore VERSION_NAME
+
+      bundle = getValueToLocalStore BUNDLE_VERSION
+
+      clientVersion' = stringToVersion versionName
+
+      bundleVersion' = stringToVersion bundle
+
+      { clientVersion, bundleVersion } = getAppVersions dbClientVersion dbBundleVersion clientVersion' bundleVersion'
+    when
+      ( versionValid clientVersion bundleVersion
+          && (bundleVersion' /= bundleVersion || clientVersion' /= clientVersion)
+      )
+      $ do
+          let
+            (UpdateProfileReq initialData) = Remote.mkUpdateProfileRequest FunctionCall
+
+            requiredData = initialData { clientVersion = Just clientVersion, bundleVersion = Just bundleVersion }
           resp <- lift $ lift $ Remote.updateProfile (UpdateProfileReq requiredData)
           pure unit
-  else pure unit
-  where 
-    getAppVersions :: Maybe Version -> Maybe Version -> Version -> Version -> {clientVersion :: Version, bundleVersion :: Version}
-    getAppVersions dbClientVersion dbBundleVersion clientVersion' bundleVersion' =
-      let clientVersion = fromMaybe clientVersion' dbClientVersion
-          bundleVersion = fromMaybe bundleVersion' dbBundleVersion
-      in {clientVersion, bundleVersion}
-    
-    versionValid :: Version -> Version -> Boolean
-    versionValid clientVersion bundleVersion =
-      let cvMinor = clientVersion ^. _minor
-          cvMajor = clientVersion ^. _major
-          cvMaintenance = clientVersion ^. _maintenance
-          bvMinor = bundleVersion ^. _minor
-          bvMajor = bundleVersion ^. _major
-          bvMaintenance = bundleVersion ^. _maintenance 
-      in all (_ /= -1) [cvMinor, cvMajor, cvMaintenance, bvMinor, bvMajor, bvMaintenance]
+  else
+    pure unit
+  where
+  getAppVersions :: Maybe Version -> Maybe Version -> Version -> Version -> { clientVersion :: Version, bundleVersion :: Version }
+  getAppVersions dbClientVersion dbBundleVersion clientVersion' bundleVersion' =
+    let
+      clientVersion = fromMaybe clientVersion' dbClientVersion
+
+      bundleVersion = fromMaybe bundleVersion' dbBundleVersion
+    in
+      { clientVersion, bundleVersion }
+
+  versionValid :: Version -> Version -> Boolean
+  versionValid clientVersion bundleVersion =
+    let
+      cvMinor = clientVersion ^. _minor
+
+      cvMajor = clientVersion ^. _major
+
+      cvMaintenance = clientVersion ^. _maintenance
+
+      bvMinor = bundleVersion ^. _minor
+
+      bvMajor = bundleVersion ^. _major
+
+      bvMaintenance = bundleVersion ^. _maintenance
+    in
+      all (_ /= -1) [ cvMinor, cvMajor, cvMaintenance, bvMinor, bvMajor, bvMaintenance ]
 
 -- IOS latest version : 1.2.4
 getIosVersion :: Merchant -> IosVersion
-getIosVersion merchant =
-  case merchant of
-    NAMMAYATRI  -> mkIOSVersion 1 2 4 false
-    YATRI       -> mkIOSVersion 1 1 0 true
-    YATRISATHI  -> mkIOSVersion 0 1 0 false
-    _           -> mkIOSVersion 0 1 0 false
-  where 
-    mkIOSVersion :: Int -> Int -> Int -> Boolean -> IosVersion
-    mkIOSVersion majorUpdateIndex minorUpdateIndex patchUpdateIndex enableForceUpdateIOS =
-      { majorUpdateIndex, minorUpdateIndex, patchUpdateIndex, enableForceUpdateIOS }
+getIosVersion merchant = case merchant of
+  NAMMAYATRI -> mkIOSVersion 1 2 4 false
+  YATRI -> mkIOSVersion 1 1 0 true
+  YATRISATHI -> mkIOSVersion 0 1 0 false
+  _ -> mkIOSVersion 0 1 0 false
+  where
+  mkIOSVersion :: Int -> Int -> Int -> Boolean -> IosVersion
+  mkIOSVersion majorUpdateIndex minorUpdateIndex patchUpdateIndex enableForceUpdateIOS = { majorUpdateIndex, minorUpdateIndex, patchUpdateIndex, enableForceUpdateIOS }
 
 getLatestAndroidVersion :: Merchant -> Int
-getLatestAndroidVersion merchant =
-  case merchant of
-    NAMMAYATRI -> 31
-    YATRI -> 49
-    YATRISATHI -> 105
-    _ -> 1
+getLatestAndroidVersion merchant = case merchant of
+  NAMMAYATRI -> 31
+  YATRI -> 49
+  YATRISATHI -> 105
+  _ -> 1
 
 forceIOSupdate :: Int -> Int -> Int -> IosVersion -> Boolean
-forceIOSupdate c_maj c_min c_patch updatedIOSversion=
-  c_maj < updatedIOSversion.majorUpdateIndex ||
-  c_min < updatedIOSversion.minorUpdateIndex ||
-  c_patch < updatedIOSversion.patchUpdateIndex
+forceIOSupdate c_maj c_min c_patch updatedIOSversion =
+  c_maj < updatedIOSversion.majorUpdateIndex
+    || c_min
+    < updatedIOSversion.minorUpdateIndex
+    || c_patch
+    < updatedIOSversion.patchUpdateIndex

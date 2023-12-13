@@ -9,15 +9,14 @@ import ConfigProvider
 
 initData :: AppUpdatePopUpState
 initData =
-    {
-        version : 1, 
-        logField : empty,
-        updatePopup : NoUpdatePopup,
-        appUpdatedView : {
-            primaryText : "App Update",
-            secondaryText : "",
-            optionTwoText : getString UPDATE,
-            coverImageUrl : ""
-        },
-        config : getAppConfig appConfig
-    }
+  { version: 1
+  , logField: empty
+  , updatePopup: NoUpdatePopup
+  , appUpdatedView:
+      { primaryText: "App Update"
+      , secondaryText: ""
+      , optionTwoText: getString UPDATE
+      , coverImageUrl: ""
+      }
+  , config: getAppConfig appConfig
+  }

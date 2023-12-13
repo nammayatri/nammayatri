@@ -12,14 +12,15 @@
  
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
 module Components.ViewImageModel.Controller where
 
 import Data.Maybe
 
-data Action = BackPressed | NoAction
+data Action
+  = BackPressed
+  | NoAction
 
-type ViewImageModelState = {
-  image :: String,
-  imageName :: Maybe String
-}
+type ViewImageModelState
+  = { image :: String
+    , imageName :: Maybe String
+    }

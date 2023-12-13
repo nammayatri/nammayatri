@@ -26,6 +26,6 @@ config =
   , rideDuration: ""
   , activeIndex: 0
   , quoteList: []
-  , showTollExtraCharges : (getAppConfig appConfig).searchLocationConfig.showAdditionalChargesText
-  , nearByDrivers : Nothing
+  , showTollExtraCharges: (getAppConfig appConfig).searchLocationConfig.showAdditionalChargesText
+  , nearByDrivers: Nothing
   }

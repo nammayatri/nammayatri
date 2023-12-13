@@ -12,8 +12,6 @@
 
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
-
 module Screens.DriverSavedLocationScreen.Handler where
 
 import Control.Monad.Except.Trans (lift)
@@ -54,12 +52,13 @@ driverSavedLocationScreen = do
     EditLocation updatedState -> do
       modifyScreenState $ DriverSavedLocationScreenStateType (\_ -> updatedState)
       App.BackT $ App.NoBack <$> pure (UPDATE_HOME_LOCATION updatedState)
-    CallAutoComplete searchVal updatedState -> 
-      case updatedState.data.currentLat, updatedState.data.currentLon of
-        Just lat, Just lon -> App.BackT $ App.NoBack <$> pure (AUTO_COMPLETE updatedState searchVal lat lon)
-        _ , _ -> do
-                  let currentDriverLat = fromMaybe 0.0 $ Number.fromString $ getValueToLocalNativeStore LAST_KNOWN_LAT
-                      currentDriverLon = fromMaybe 0.0 $ Number.fromString $ getValueToLocalNativeStore LAST_KNOWN_LON
-                  (LatLon lat lon) <- getCurrentLocation currentDriverLat currentDriverLon currentDriverLat currentDriverLon 500 false
-                  modifyScreenState $ DriverSavedLocationScreenStateType (\_ -> updatedState{ data { currentLat = Just lat, currentLon = Just lon}})
-                  App.BackT $ App.NoBack <$> pure (AUTO_COMPLETE updatedState searchVal lat lon)
+    CallAutoComplete searchVal updatedState -> case updatedState.data.currentLat, updatedState.data.currentLon of
+      Just lat, Just lon -> App.BackT $ App.NoBack <$> pure (AUTO_COMPLETE updatedState searchVal lat lon)
+      _, _ -> do
+        let
+          currentDriverLat = fromMaybe 0.0 $ Number.fromString $ getValueToLocalNativeStore LAST_KNOWN_LAT
+
+          currentDriverLon = fromMaybe 0.0 $ Number.fromString $ getValueToLocalNativeStore LAST_KNOWN_LON
+        (LatLon lat lon) <- getCurrentLocation currentDriverLat currentDriverLon currentDriverLat currentDriverLon 500 false
+        modifyScreenState $ DriverSavedLocationScreenStateType (\_ -> updatedState { data { currentLat = Just lat, currentLon = Just lon } })
+        App.BackT $ App.NoBack <$> pure (AUTO_COMPLETE updatedState searchVal lat lon)

@@ -12,14 +12,14 @@
 
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
 module Screens.PermissionScreen.Handler where
+
 import Control.Monad.Except.Trans (lift)
 import Control.Transformers.Back.Trans as App
 import Engineering.Helpers.BackTrack (getState)
 import Prelude (bind, ($), pure, (<$>))
 import PrestoDOM.Core.Types.Language.Flow (showScreen)
-import Presto.Core.Types.Language.Flow (doAff , getLogFields)
+import Presto.Core.Types.Language.Flow (doAff, getLogFields)
 import Screens.PermissionScreen.Controller (ScreenOutput(..))
 import Screens.PermissionScreen.View as PermissionScreen
 import Types.App (FlowBT, GlobalState(..), PERMISSION_SCREEN_OUTPUT(..))
@@ -28,7 +28,7 @@ permissionScreen :: FlowBT String PERMISSION_SCREEN_OUTPUT
 permissionScreen = do
   (GlobalState state) <- getState
   logField_ <- lift $ lift $ getLogFields
-  act <- lift $ lift $ showScreen $ PermissionScreen.screen state.permissionScreen{logField = logField_}
+  act <- lift $ lift $ showScreen $ PermissionScreen.screen state.permissionScreen { logField = logField_ }
   case act of
     GoBack -> App.BackT $ pure App.GoBack
     Refresh -> App.BackT $ App.BackPoint <$> (pure REFRESH_INTERNET)

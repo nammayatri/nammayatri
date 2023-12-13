@@ -12,8 +12,8 @@
  
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
 module Screens.EnterMobileNumberScreen.Controller where
+
 import Prelude (class Show, not, pure, unit, (&&), (<=), (==), (||), discard, bind, ($), (>))
 import PrestoDOM (Eval, continue, continueWithCmd, exit)
 import Screens.Types (EnterMobileNumberScreenState)
@@ -24,7 +24,7 @@ import PrestoDOM.Types.Core (class Loggable)
 import Data.String (length)
 import Data.String.CodeUnits (charAt)
 import Data.Maybe (Maybe(..))
-import JBridge (requestKeyboardShow,hideKeyboardOnNavigation)
+import JBridge (requestKeyboardShow, hideKeyboardOnNavigation)
 import Engineering.Helpers.Commons (getNewIDWithTag)
 import Effect.Class (liftEffect)
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppTextInput, trackAppScreenEvent)
@@ -59,39 +59,64 @@ instance loggableAction :: Loggable Action where
     NoAction -> trackAppScreenEvent appId (getScreen ENTER_MOBILE_NUMBER_SCREEN) "in_screen" "no_action"
     _ -> trackAppScreenEvent appId (getScreen ENTER_MOBILE_NUMBER_SCREEN) "in_screen" "no_action"
 
-data ScreenOutput = GoBack | GoToNextScreen EnterMobileNumberScreenState
-data Action = BackPressed 
-            | PrimaryEditTextAction MobileNumberEditor.Action
-            | PrimaryButtonActionController PrimaryButton.Action
-            | NoAction
-            | CheckBoxClicked
-            | CheckClickability
-            | AfterRender
-            | NonDisclosureAgreementAction
+data ScreenOutput
+  = GoBack
+  | GoToNextScreen EnterMobileNumberScreenState
+
+data Action
+  = BackPressed
+  | PrimaryEditTextAction MobileNumberEditor.Action
+  | PrimaryButtonActionController PrimaryButton.Action
+  | NoAction
+  | CheckBoxClicked
+  | CheckClickability
+  | AfterRender
+  | NonDisclosureAgreementAction
 
 eval :: Action -> EnterMobileNumberScreenState -> Eval Action ScreenOutput EnterMobileNumberScreenState
 eval AfterRender state = continue state
+
 eval BackPressed state = do
-        pure $ hideKeyboardOnNavigation true
-        exit GoBack
+  pure $ hideKeyboardOnNavigation true
+  exit GoBack
+
 eval (PrimaryButtonActionController (PrimaryButton.OnClick)) state = exit (GoToNextScreen state)
+
 eval (PrimaryEditTextAction (MobileNumberEditor.TextChanged valId newVal)) state = do
-  _ <- if length newVal == 10 then do
-            pure $ hideKeyboardOnNavigation true 
-            else pure unit    
-  let config = getAppConfig appConfig
-      isValidMobileNumber = if config.allowAllMobileNumber then true
-                              else case (charAt 0 newVal) of 
-                                Just a -> if a=='0' || a=='1' || a=='2' || a=='5' then false 
-                                            else if a=='3' || a=='4' then
-                                                if newVal=="4000400040" || newVal=="3000300030" || newVal=="5000500050" then true else false 
-                                                    else true 
-                                Nothing -> true
-  if (length newVal == 10 && isValidMobileNumber) then do 
-    let _ = unsafePerformEffect $ logEvent state.data.logField "ny_driver_mobnum_entry"
+  _ <-
+    if length newVal == 10 then do
+      pure $ hideKeyboardOnNavigation true
+    else
+      pure unit
+  let
+    config = getAppConfig appConfig
+
+    isValidMobileNumber =
+      if config.allowAllMobileNumber then
+        true
+      else case (charAt 0 newVal) of
+        Just a ->
+          if a == '0' || a == '1' || a == '2' || a == '5' then
+            false
+          else if a == '3' || a == '4' then
+            if newVal == "4000400040" || newVal == "3000300030" || newVal == "5000500050" then true else false
+          else
+            true
+        Nothing -> true
+  if (length newVal == 10 && isValidMobileNumber) then do
+    let
+      _ = unsafePerformEffect $ logEvent state.data.logField "ny_driver_mobnum_entry"
     pure unit
-    else pure unit
-  continue  state { props = state.props { btnActive = if (length newVal == 10 && isValidMobileNumber) then true else false
-                                        , isValid = not isValidMobileNumber }
-                                        , data = state.data { mobileNumber = if length newVal <= 10 then newVal else state.data.mobileNumber}}
+  else
+    pure unit
+  continue
+    state
+      { props =
+        state.props
+          { btnActive = if (length newVal == 10 && isValidMobileNumber) then true else false
+          , isValid = not isValidMobileNumber
+          }
+      , data = state.data { mobileNumber = if length newVal <= 10 then newVal else state.data.mobileNumber }
+      }
+
 eval _ state = continue state

@@ -12,7 +12,6 @@
  
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
 module Screens.DriverRideRatingScreen.Handler where
 
 import Engineering.Helpers.BackTrack (getState)
@@ -24,11 +23,10 @@ import PrestoDOM.Core.Types.Language.Flow (runScreen)
 import Screens.DriverRideRatingScreen.View as DriverRideRatingScreen
 import Types.App (FlowBT, GlobalState(..), DRIVER_RIDE_RATING_SCREEN_OUTPUT(..))
 
-
 driverRideRatingScreen :: FlowBT String DRIVER_RIDE_RATING_SCREEN_OUTPUT
 driverRideRatingScreen = do
   (GlobalState state) <- getState
   action <- lift $ lift $ runScreen $ DriverRideRatingScreen.screen state.driverRideRatingScreen
   case action of
     SendFeedBack updatedState -> App.BackT $ App.NoBack <$> pure (SendCustomerFeedBack updatedState)
-    Close                     -> App.BackT $ App.NoBack <$> pure CloseScreen
+    Close -> App.BackT $ App.NoBack <$> pure CloseScreen

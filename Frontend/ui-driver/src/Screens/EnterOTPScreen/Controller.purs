@@ -12,7 +12,6 @@
  
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
 module Screens.EnterOTPScreen.Controller where
 
 import Components.PrimaryButton as PrimaryButton
@@ -37,64 +36,83 @@ instance loggableAction :: Loggable Action where
     BackPressed -> do
       trackAppBackPress appId (getScreen ENTER_OTP_NUMBER_SCREEN)
       trackAppEndScreen appId (getScreen ENTER_OTP_NUMBER_SCREEN)
-    ResendOTP -> trackAppActionClick appId (getScreen ENTER_OTP_NUMBER_SCREEN) "in_screen" "resend_otp" 
+    ResendOTP -> trackAppActionClick appId (getScreen ENTER_OTP_NUMBER_SCREEN) "in_screen" "resend_otp"
     PrimaryEditTextAction act -> case act of
       PrimaryEditText.OnClick -> trackAppActionClick appId (getScreen ENTER_OTP_NUMBER_SCREEN) "primary_edit_text" "on_click"
       PrimaryEditText.TextChanged valId newVal -> trackAppTextInput appId (getScreen ENTER_OTP_NUMBER_SCREEN) "otp_number_text_changed" "primary_edit_text"
       PrimaryEditText.TextClicked -> trackAppActionClick appId (getScreen ENTER_OTP_NUMBER_SCREEN) "primary_edit_text" "text_field_click"
     PrimaryButtonActionController act -> case act of
-      PrimaryButton.OnClick-> do
+      PrimaryButton.OnClick -> do
         trackAppActionClick appId (getScreen ENTER_OTP_NUMBER_SCREEN) "in_screen" "primary_button_register_on_click"
         trackAppEndScreen appId (getScreen ENTER_OTP_NUMBER_SCREEN)
       PrimaryButton.NoAction -> trackAppActionClick appId (getScreen ENTER_OTP_NUMBER_SCREEN) "in_screen" "primary_button_no_action"
-    TIMERACTION time-> trackAppScreenEvent appId (getScreen ENTER_OTP_NUMBER_SCREEN) "in_screen" "timer_action"
-    AutoFill otp-> trackAppScreenEvent appId (getScreen ENTER_OTP_NUMBER_SCREEN) "in_screen" "otp_autofill"
+    TIMERACTION time -> trackAppScreenEvent appId (getScreen ENTER_OTP_NUMBER_SCREEN) "in_screen" "timer_action"
+    AutoFill otp -> trackAppScreenEvent appId (getScreen ENTER_OTP_NUMBER_SCREEN) "in_screen" "otp_autofill"
     SetToken id -> trackAppScreenEvent appId (getScreen ENTER_OTP_NUMBER_SCREEN) "in_screen" "set_token"
     NoAction -> trackAppScreenEvent appId (getScreen ENTER_OTP_NUMBER_SCREEN) "in_screen" "no_action"
     _ -> trackAppScreenEvent appId (getScreen ENTER_OTP_NUMBER_SCREEN) "in_screen" "no_action"
-    
-data ScreenOutput = GoBack  EnterOTPScreenState | GoToHome EnterOTPScreenState | Retry EnterOTPScreenState
-data Action = BackPressed 
-            | ResendOTP
-            | PrimaryEditTextAction PrimaryEditText.Action
-            | PrimaryButtonActionController PrimaryButton.Action
-            | NoAction
-            | AutoFill String 
-            | SetToken String
-            | TIMERACTION String
-            | AfterRender
+
+data ScreenOutput
+  = GoBack EnterOTPScreenState
+  | GoToHome EnterOTPScreenState
+  | Retry EnterOTPScreenState
+
+data Action
+  = BackPressed
+  | ResendOTP
+  | PrimaryEditTextAction PrimaryEditText.Action
+  | PrimaryButtonActionController PrimaryButton.Action
+  | NoAction
+  | AutoFill String
+  | SetToken String
+  | TIMERACTION String
+  | AfterRender
 
 eval :: Action -> EnterOTPScreenState -> Eval Action ScreenOutput EnterOTPScreenState
 eval AfterRender state = continue state
-eval BackPressed state = do 
-  _ <- pure $ toggleBtnLoader "" false
-  exit $ GoBack state{props{isValid = false}} 
-eval (PrimaryEditTextAction PrimaryEditText.OnClick) state = continue state
-eval (PrimaryButtonActionController (PrimaryButton.OnClick)) state = do
-  _ <- pure $ hideKeyboardOnNavigation true 
-  exit (GoToHome state)
-eval (ResendOTP) state = do
-  if state.props.resendEnabled then exit (Retry state)
-  else continue state
-eval (TIMERACTION time) state = do
-    if time == "EXPIRED" then do 
-      continue state { data = state.data {timer = "10s"}, props = state.props{resendEnabled = true}}
-      else continue $ state {  data = state.data {timer = time }, props = state.props{resendEnabled = false}}
-eval (PrimaryEditTextAction (PrimaryEditText.TextChanged valId newVal)) state = do
-  let newState = state { props = state.props { btnActive = if length newVal == 4 then true else false, isValid = false}
-                  , data = state.data { otp = if length newVal <= 4 then newVal else state.data.otp }}
-  if length newVal >= 4 then do
-      _ <- pure $ hideKeyboardOnNavigation true
-      exit (GoToHome newState)
-      else continue newState
-  
 
-eval (AutoFill otpReceived) state = do 
+eval BackPressed state = do
+  _ <- pure $ toggleBtnLoader "" false
+  exit $ GoBack state { props { isValid = false } }
+
+eval (PrimaryEditTextAction PrimaryEditText.OnClick) state = continue state
+
+eval (PrimaryButtonActionController (PrimaryButton.OnClick)) state = do
+  _ <- pure $ hideKeyboardOnNavigation true
+  exit (GoToHome state)
+
+eval (ResendOTP) state = do
+  if state.props.resendEnabled then
+    exit (Retry state)
+  else
+    continue state
+
+eval (TIMERACTION time) state = do
+  if time == "EXPIRED" then do
+    continue state { data = state.data { timer = "10s" }, props = state.props { resendEnabled = true } }
+  else
+    continue $ state { data = state.data { timer = time }, props = state.props { resendEnabled = false } }
+
+eval (PrimaryEditTextAction (PrimaryEditText.TextChanged valId newVal)) state = do
+  let
+    newState =
+      state
+        { props = state.props { btnActive = if length newVal == 4 then true else false, isValid = false }
+        , data = state.data { otp = if length newVal <= 4 then newVal else state.data.otp }
+        }
+  if length newVal >= 4 then do
+    _ <- pure $ hideKeyboardOnNavigation true
+    exit (GoToHome newState)
+  else
+    continue newState
+
+eval (AutoFill otpReceived) state = do
   _ <- pure $ firebaseLogEvent "ny_driver_otp_autoread"
-  updateAndExit (state { data {capturedOtp = otpReceived, otp = if (length otpReceived) == 4 then otpReceived else state.data.otp } }) $ GoToHome (state { data {capturedOtp = otpReceived, otp = if (length otpReceived) == 4 then otpReceived else state.data.otp } })
-eval (SetToken id )state = do 
-  _ <-  pure $ setValueToLocalNativeStore FCM_TOKEN  id
-  _ <-  pure $ setValueToLocalStore FCM_TOKEN  id
+  updateAndExit (state { data { capturedOtp = otpReceived, otp = if (length otpReceived) == 4 then otpReceived else state.data.otp } }) $ GoToHome (state { data { capturedOtp = otpReceived, otp = if (length otpReceived) == 4 then otpReceived else state.data.otp } })
+
+eval (SetToken id) state = do
+  _ <- pure $ setValueToLocalNativeStore FCM_TOKEN id
+  _ <- pure $ setValueToLocalStore FCM_TOKEN id
   continue state
 
 eval _ state = continue state

@@ -12,7 +12,6 @@
 
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
 module Screens.MyRidesScreen.ScreenData where
 
 import Data.Maybe (Maybe(..))
@@ -38,7 +37,7 @@ initData =
       , offsetValue: 0
       , loadMoreText: "LoadMore"
       , config: getAppConfig appConfig
-      , logField : empty
+      , logField: empty
       , isSrcServiceable: true
       }
   , prestoListArrayItems: []
@@ -57,52 +56,52 @@ dummyBookingDetails =
     , city: Nothing
     , areaCode: Nothing
     , lon: 0.0
-    , placeId : Nothing
-    , ward : Nothing
+    , placeId: Nothing
+    , ward: Nothing
     }
 
 dummyIndividualCard :: IndividualRideCardState
-dummyIndividualCard = {
-    date :  "",
-    time : "",
-    source : "",
-    destination :  "",
-    totalAmount : "",
-    cardVisibility : "",
-    shimmerVisibility : "",
-    driverImage : "",
-    isCancelled :  "",
-    isSuccessfull :  "",
-    rating : 0,
-    driverName : "",
-    rideStartTime : "",
-    rideEndTime : "",
-    vehicleNumber : "",
-    rideId : "",
-    status : "" ,
-    shortRideId : "",
-    bookingId : "",
-    rideEndTimeUTC : "",
-    sourceLocation : dummyBookingDetails,
-    destinationLocation : dummyBookingDetails,
-    alpha : "",
-    fareBreakUpList : {
-      baseFare : "₹ 0"
-    , pickupCharges : "₹ 0"
-    , nominalFare : "₹ 0"
-    , waitingCharges : "₹ 0"
-    }
-  , faresList : []
-  , baseFare : "₹ 0"
-  , pickupCharges : "₹ 0"
-  , extraFare : "₹ 0"
-  , waitingCharges : "₹ 0"
-  , baseDistance : "0 km"
-  , extraDistance : "0 km"
-  , referenceString : ""
-  , isSpecialZone : false
-  , nightCharges : false
-  , zoneType : NOZONE
-  , vehicleVariant : Nothing
-  , isSrcServiceable : true
-}
+dummyIndividualCard =
+  { date: ""
+  , time: ""
+  , source: ""
+  , destination: ""
+  , totalAmount: ""
+  , cardVisibility: ""
+  , shimmerVisibility: ""
+  , driverImage: ""
+  , isCancelled: ""
+  , isSuccessfull: ""
+  , rating: 0
+  , driverName: ""
+  , rideStartTime: ""
+  , rideEndTime: ""
+  , vehicleNumber: ""
+  , rideId: ""
+  , status: ""
+  , shortRideId: ""
+  , bookingId: ""
+  , rideEndTimeUTC: ""
+  , sourceLocation: dummyBookingDetails
+  , destinationLocation: dummyBookingDetails
+  , alpha: ""
+  , fareBreakUpList:
+      { baseFare: "₹ 0"
+      , pickupCharges: "₹ 0"
+      , nominalFare: "₹ 0"
+      , waitingCharges: "₹ 0"
+      }
+  , faresList: []
+  , baseFare: "₹ 0"
+  , pickupCharges: "₹ 0"
+  , extraFare: "₹ 0"
+  , waitingCharges: "₹ 0"
+  , baseDistance: "0 km"
+  , extraDistance: "0 km"
+  , referenceString: ""
+  , isSpecialZone: false
+  , nightCharges: false
+  , zoneType: NOZONE
+  , vehicleVariant: Nothing
+  , isSrcServiceable: true
+  }

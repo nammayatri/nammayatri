@@ -12,85 +12,84 @@
 
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
 module Components.DriverInfoCard.Controller where
 
 import Components.PrimaryButton as PrimaryButtonController
 import Components.SourceToDestination as SourceToDestinationController
-import Screens.Types(Stage, ZoneType(..), SearchResultType)
-import Data.Maybe(Maybe)
+import Screens.Types (Stage, ZoneType(..), SearchResultType)
+import Data.Maybe (Maybe)
 import Components.ChatView as ChatView
 import MerchantConfig.Types
 
-data Action = NoAction
-            | Support
-            | PrimaryButtonAC PrimaryButtonController.Action
-            | SourceToDestinationAC SourceToDestinationController.Action
-            | CancelRide DriverInfoCardState
-            | LocationTracking
-            | OpenEmergencyHelp
-            | MessageDriver
-            | ShareRide
-            | OnNavigate
-            | RemoveNotification
-            | CallDriver
-            | LoadMessages
-            | OnNavigateToZone
-            | ExpandBottomSheet
+data Action
+  = NoAction
+  | Support
+  | PrimaryButtonAC PrimaryButtonController.Action
+  | SourceToDestinationAC SourceToDestinationController.Action
+  | CancelRide DriverInfoCardState
+  | LocationTracking
+  | OpenEmergencyHelp
+  | MessageDriver
+  | ShareRide
+  | OnNavigate
+  | RemoveNotification
+  | CallDriver
+  | LoadMessages
+  | OnNavigateToZone
+  | ExpandBottomSheet
 
-type DriverInfoCardState =
-  { props :: DriverInfoCardProps
-  , data :: DriverInfoCardData
-  }
+type DriverInfoCardState
+  = { props :: DriverInfoCardProps
+    , data :: DriverInfoCardData
+    }
 
-type DriverInfoCardProps =
-  {
-    currentStage :: Stage,
-    currentSearchResultType :: SearchResultType,
-    trackingEnabled :: Boolean,
-    unReadMessages :: Boolean,
-    showChatNotification :: Boolean,
-    showCallPopUp :: Boolean,
-    isSpecialZone :: Boolean,
-    estimatedTime :: String,
-    zoneType :: ZoneType,
-    isChatOpened :: Boolean,
-    chatcallbackInitiated :: Boolean,
-    merchantCity :: Maybe String
-  }
+type DriverInfoCardProps
+  = { currentStage :: Stage
+    , currentSearchResultType :: SearchResultType
+    , trackingEnabled :: Boolean
+    , unReadMessages :: Boolean
+    , showChatNotification :: Boolean
+    , showCallPopUp :: Boolean
+    , isSpecialZone :: Boolean
+    , estimatedTime :: String
+    , zoneType :: ZoneType
+    , isChatOpened :: Boolean
+    , chatcallbackInitiated :: Boolean
+    , merchantCity :: Maybe String
+    }
 
-type DriverInfoCardData =
-  { otp :: String
-  , driverName :: String
-  , eta :: Int
-  , vehicleDetails :: String
-  , registrationNumber :: String
-  , rating :: Number
-  , startedAt :: String
-  , endedAt :: String
-  , source :: String
-  , destination :: String
-  , rideId :: String
-  , price :: Int
-  , sourceLat :: Number
-  , sourceLng :: Number
-  , destinationLat :: Number
-  , destinationLng :: Number
-  , driverLat :: Number
-  , driverLng :: Number
-  , distance :: Int
-  , waitingTime :: String
-  , driverArrived :: Boolean
-  , estimatedDistance :: String
-  , driverArrivalTime :: Int
-  , bppRideId :: String
-  , driverNumber :: Maybe String
-  , merchantExoPhone :: String
-  , estimatedDropTime :: String
-  , isSpecialZone :: Boolean
-  , isLocationTracking :: Boolean
-  , bookingCreatedAt :: String
-  , lastMessage :: ChatView.ChatComponent
-  , config :: AppConfig
-  , vehicleVariant :: String
-  }
+type DriverInfoCardData
+  = { otp :: String
+    , driverName :: String
+    , eta :: Int
+    , vehicleDetails :: String
+    , registrationNumber :: String
+    , rating :: Number
+    , startedAt :: String
+    , endedAt :: String
+    , source :: String
+    , destination :: String
+    , rideId :: String
+    , price :: Int
+    , sourceLat :: Number
+    , sourceLng :: Number
+    , destinationLat :: Number
+    , destinationLng :: Number
+    , driverLat :: Number
+    , driverLng :: Number
+    , distance :: Int
+    , waitingTime :: String
+    , driverArrived :: Boolean
+    , estimatedDistance :: String
+    , driverArrivalTime :: Int
+    , bppRideId :: String
+    , driverNumber :: Maybe String
+    , merchantExoPhone :: String
+    , estimatedDropTime :: String
+    , isSpecialZone :: Boolean
+    , isLocationTracking :: Boolean
+    , bookingCreatedAt :: String
+    , lastMessage :: ChatView.ChatComponent
+    , config :: AppConfig
+    , vehicleVariant :: String
+    }

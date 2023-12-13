@@ -12,7 +12,6 @@
  
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
 module Screens.ReportIssueChatScreen.Handler where
 
 import Prelude (bind, pure, ($), (<$>))
@@ -26,9 +25,9 @@ import Screens.ReportIssueChatScreen.View (screen)
 
 reportIssueChatScreen :: FlowBT String REPORT_ISSUE_CHAT_SCREEN_OUTPUT
 reportIssueChatScreen = do
-    (GlobalState state) <- getState
-    act <- lift $ lift $ runScreen $ screen state.reportIssueChatScreen
-    case act of
-        GoBack -> App.BackT $ pure App.GoBack
-        UploadIssue updatedState -> App.BackT $ App.NoBack <$> (pure $ SUBMIT_ISSUE updatedState)
-        CallCustomer updatedState -> App.BackT $ App.NoBack <$> (pure $ CALL_CUSTOMER updatedState)
+  (GlobalState state) <- getState
+  act <- lift $ lift $ runScreen $ screen state.reportIssueChatScreen
+  case act of
+    GoBack -> App.BackT $ pure App.GoBack
+    UploadIssue updatedState -> App.BackT $ App.NoBack <$> (pure $ SUBMIT_ISSUE updatedState)
+    CallCustomer updatedState -> App.BackT $ App.NoBack <$> (pure $ CALL_CUSTOMER updatedState)

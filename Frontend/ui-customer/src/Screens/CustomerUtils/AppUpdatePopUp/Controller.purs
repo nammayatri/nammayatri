@@ -12,11 +12,9 @@
  
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
 module Screens.AppUpdatePopUp.Controller where
 
 import Prelude (Unit, pure, unit, class Show, ($), bind, discard)
-
 import Effect (Effect)
 import PrestoDOM (Eval, Props, exit, continue)
 import PrestoDOM.Types.Core (class Loggable)
@@ -28,7 +26,6 @@ import Engineering.Helpers.LogEvent (logEvent)
 import Effect.Unsafe (unsafePerformEffect)
 import Components.PopUpModal as PopUpModal
 
-
 instance showAction :: Show Action where
   show _ = ""
 
@@ -36,30 +33,39 @@ instance loggableAction :: Loggable Action where
   performLog action appId = case action of
     AfterRender -> trackAppScreenRender appId "screen" (getScreen APP_UPDATE_POPUP_SCREEN)
     OnAccept -> do
-        trackAppActionClick appId (getScreen APP_UPDATE_POPUP_SCREEN) "in_screen" "accept_update"
-        -- trackAppEndScreen appId (getScreen APP_UPDATE_POPUP_SCREEN)
+      trackAppActionClick appId (getScreen APP_UPDATE_POPUP_SCREEN) "in_screen" "accept_update"
+    -- trackAppEndScreen appId (getScreen APP_UPDATE_POPUP_SCREEN)
     OnCloseClick -> do
-        trackAppActionClick appId (getScreen APP_UPDATE_POPUP_SCREEN) "in_screen" "decline_update"
-        -- trackAppEndScreen appId (getScreen APP_UPDATE_POPUP_SCREEN)
-    AppUpdatedModelAction action-> trackAppActionClick appId (getScreen APP_UPDATE_POPUP_SCREEN) "in_screen" "on_popupmodal_click"
+      trackAppActionClick appId (getScreen APP_UPDATE_POPUP_SCREEN) "in_screen" "decline_update"
+    -- trackAppEndScreen appId (getScreen APP_UPDATE_POPUP_SCREEN)
+    AppUpdatedModelAction action -> trackAppActionClick appId (getScreen APP_UPDATE_POPUP_SCREEN) "in_screen" "on_popupmodal_click"
 
-data ScreenOutput = Decline | Accept 
+data ScreenOutput
+  = Decline
+  | Accept
 
-data Action = OnCloseClick
-            | OnAccept
-            | AfterRender
-            | AppUpdatedModelAction PopUpModal.Action
+data Action
+  = OnCloseClick
+  | OnAccept
+  | AfterRender
+  | AppUpdatedModelAction PopUpModal.Action
 
 eval :: Action -> AppUpdatePopUpState -> Eval Action ScreenOutput AppUpdatePopUpState
 eval OnCloseClick state = do
-    exit Decline 
-eval OnAccept state = do 
-  let _ = unsafePerformEffect $ logEvent state.logField "ny_user_update_popup_click"
+  exit Decline
+
+eval OnAccept state = do
+  let
+    _ = unsafePerformEffect $ logEvent state.logField "ny_user_update_popup_click"
   exit Accept
+
 eval (AppUpdatedModelAction (PopUpModal.OnButton1Click)) state = exit Decline
+
 eval (AppUpdatedModelAction (PopUpModal.OnButton2Click)) state = exit Accept
+
 eval AfterRender state = continue state
+
 eval _ state = continue state
 
 overrides :: String -> (Action -> Effect Unit) -> AppUpdatePopUpState -> Props (Effect Unit)
-overrides _ push state = [] 
+overrides _ push state = []

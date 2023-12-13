@@ -12,7 +12,6 @@
 
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
 module Screens.DriverProfileScreen.Handler where
 
 import Control.Monad.Except.Trans (lift)
@@ -32,37 +31,47 @@ driverProfileScreen :: FlowBT String DRIVER_PROFILE_SCREEN_OUTPUT
 driverProfileScreen = do
   (GlobalState state) <- getState
   logField_ <- lift $ lift $ getLogFields
-  action <- lift $ lift $ runScreen $ DriverProfileScreen.screen state.driverProfileScreen{data{logField = logField_}}
+  action <- lift $ lift $ runScreen $ DriverProfileScreen.screen state.driverProfileScreen { data { logField = logField_ } }
   case action of
     GoToDriverDetailsScreen updatedState -> do
-      modifyScreenState $ DriverDetailsScreenStateType (\driverDetails ->
-        driverDetails { data { driverName = updatedState.data.driverName,
-        driverVehicleType = updatedState.data.driverVehicleType,
-        driverRating = updatedState.data.driverRating,
-        base64Image = updatedState.data.base64Image,
-        driverMobile = updatedState.data.driverMobile,
-        driverAlternateMobile = updatedState.data.driverAlternateNumber
-        },
-        props {
-          checkAlternateNumber = (if (updatedState.data.driverAlternateNumber == Nothing) then true else false)
-        }})
+      modifyScreenState
+        $ DriverDetailsScreenStateType
+            ( \driverDetails ->
+                driverDetails
+                  { data
+                    { driverName = updatedState.data.driverName
+                    , driverVehicleType = updatedState.data.driverVehicleType
+                    , driverRating = updatedState.data.driverRating
+                    , base64Image = updatedState.data.base64Image
+                    , driverMobile = updatedState.data.driverMobile
+                    , driverAlternateMobile = updatedState.data.driverAlternateNumber
+                    }
+                  , props
+                    { checkAlternateNumber = (if (updatedState.data.driverAlternateNumber == Nothing) then true else false)
+                    }
+                  }
+            )
       App.BackT $ App.BackPoint <$> pure DRIVER_DETAILS_SCREEN
-
     GoToVehicleDetailsScreen updatedState -> do
-      modifyScreenState $ VehicleDetailsScreenStateType (\vehicleDetails ->
-        vehicleDetails { data { vehicleRegNumber = updatedState.data.vehicleRegNumber,
-        vehicleType = updatedState.data.driverVehicleType,
-        vehicleModel = updatedState.data.vehicleModelName,
-        vehicleColor = updatedState.data.vehicleColor
-        }})
+      modifyScreenState
+        $ VehicleDetailsScreenStateType
+            ( \vehicleDetails ->
+                vehicleDetails
+                  { data
+                    { vehicleRegNumber = updatedState.data.vehicleRegNumber
+                    , vehicleType = updatedState.data.driverVehicleType
+                    , vehicleModel = updatedState.data.vehicleModelName
+                    , vehicleColor = updatedState.data.vehicleColor
+                    }
+                  }
+            )
       App.BackT $ App.BackPoint <$> pure VEHICLE_DETAILS_SCREEN
-
     GoToAboutUsScreen -> App.BackT $ App.BackPoint <$> pure ABOUT_US_SCREEN
     GoToLogout -> App.BackT $ App.BackPoint <$> pure GO_TO_LOGOUT
     GoToHelpAndSupportScreen state -> do
       modifyScreenState $ DriverProfileScreenStateType (\driverProfile -> state)
       App.BackT $ App.BackPoint <$> pure HELP_AND_SUPPORT_SCREEN
-    GoToHomeScreen state-> do
+    GoToHomeScreen state -> do
       modifyScreenState $ DriverProfileScreenStateType (\driverProfile -> state)
       App.BackT $ App.BackPoint <$> pure GO_TO_HOME_FROM_PROFILE
     GoToReferralScreen -> App.BackT $ App.BackPoint <$> pure GO_TO_REFERRAL_SCREEN_FROM_DRIVER_PROFILE_SCREEN
@@ -79,25 +88,32 @@ driverProfileScreen = do
       App.BackT $ App.BackPoint <$> pure (GO_TO_BOOKING_OPTIONS_SCREEN state)
     VerifyAlternateNumberOTP state -> App.BackT $ App.BackPoint <$> pure (VERIFY_OTP1 state)
     ResendAlternateNumberOTP state -> App.BackT $ App.BackPoint <$> pure (RESEND_ALTERNATE_OTP1 state)
-    ValidateAlternateNumber  updatedState -> App.BackT $ App.NoBack <$> pure (DRIVER_ALTERNATE_CALL_API1 updatedState)
+    ValidateAlternateNumber updatedState -> App.BackT $ App.NoBack <$> pure (DRIVER_ALTERNATE_CALL_API1 updatedState)
     RemoveAlternateNumber state -> App.BackT $ App.NoBack <$> pure (ALTERNATE_NUMBER_REMOVE1 state)
     UpdateGender state -> App.BackT $ App.NoBack <$> pure (DRIVER_GENDER1 state)
     ActivatingOrDeactivatingRC state -> App.BackT $ App.NoBack <$> pure (GO_TO_ACTIVATE_OR_DEACTIVATE_RC state)
     DeletingRc state -> App.BackT $ App.NoBack <$> pure (GO_TO_DELETE_RC state)
     CallingDriver state -> App.BackT $ App.NoBack <$> pure (GO_TO_CALL_DRIVER state)
     AddingRC state -> App.BackT $ App.NoBack <$> pure (ADD_RC state)
-    SubscriptionScreen -> App.BackT $ App.NoBack <$> pure (SUBCRIPTION )
+    SubscriptionScreen -> App.BackT $ App.NoBack <$> pure (SUBCRIPTION)
     UpdateLanguages updatedState language -> do
       modifyScreenState $ DriverProfileScreenStateType (\driverProfile -> updatedState)
-      App.BackT $ App.NoBack  <$> (pure $ UPDATE_LANGUAGES language)
-    GoToDriverSavedLocationScreen state -> do 
+      App.BackT $ App.NoBack <$> (pure $ UPDATE_LANGUAGES language)
+    GoToDriverSavedLocationScreen state -> do
       modifyScreenState $ DriverProfileScreenStateType (\_ -> state)
       App.BackT $ App.BackPoint <$> pure SAVED_LOCATIONS_SCREEN
     GoBack -> do
-      modifyScreenState $ DriverProfileScreenStateType (\driverDetailsScreen ->
-        DriverProfileScreenData.initData { data { driverVehicleType = driverDetailsScreen.data.driverVehicleType
-                                                , capacity = driverDetailsScreen.data.capacity
-                                                , downgradeOptions = driverDetailsScreen.data.downgradeOptions
-                                                , vehicleSelected = driverDetailsScreen.data.vehicleSelected
-                                                , profileImg = driverDetailsScreen.data.profileImg}})
+      modifyScreenState
+        $ DriverProfileScreenStateType
+            ( \driverDetailsScreen ->
+                DriverProfileScreenData.initData
+                  { data
+                    { driverVehicleType = driverDetailsScreen.data.driverVehicleType
+                    , capacity = driverDetailsScreen.data.capacity
+                    , downgradeOptions = driverDetailsScreen.data.downgradeOptions
+                    , vehicleSelected = driverDetailsScreen.data.vehicleSelected
+                    , profileImg = driverDetailsScreen.data.profileImg
+                    }
+                  }
+            )
       App.BackT $ App.NoBack <$> pure GO_HOME

@@ -12,7 +12,6 @@
 
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
 module Screens.RegistrationScreen.ScreenData where
 
 import Data.Eq.Generic (genericEq)
@@ -25,50 +24,46 @@ import Screens.Types (RegisterationStep(..), RegistrationScreenState, StageStatu
 import ConfigProvider
 
 initData :: RegistrationScreenState
-initData = {
-      data: {
-        activeIndex : 1,
-        registerationSteps : [
-          {
-            stageName : "Driving License",
-            stage : DRIVING_LICENSE_OPTION
-          },
-          {
-            stageName : "Vehicle Registration",
-            stage : VEHICLE_DETAILS_OPTION
-          },
-          {
-            stageName : "Grant Permission",
-            stage : GRANT_PERMISSION
-          },
-          {
-            stageName : "Namma Yatri Plan",
-            stage : SUBSCRIPTION_PLAN
-          }
-        ],
-        drivingLicenseStatus : NOT_STARTED,
-        vehicleDetailsStatus : NOT_STARTED,
-        permissionsStatus : NOT_STARTED,
-        subscriptionStatus : NOT_STARTED,
-        phoneNumber : "",
-        lastUpdateTime : "",
-        cityConfig : dummyCityConfig,
-        config : getAppConfig appConfig
-      },
-      props: {
-        limitReachedFor : Nothing,
-        logoutModalView : false
+initData =
+  { data:
+      { activeIndex: 1
+      , registerationSteps:
+          [ { stageName: "Driving License"
+            , stage: DRIVING_LICENSE_OPTION
+            }
+          , { stageName: "Vehicle Registration"
+            , stage: VEHICLE_DETAILS_OPTION
+            }
+          , { stageName: "Grant Permission"
+            , stage: GRANT_PERMISSION
+            }
+          , { stageName: "Namma Yatri Plan"
+            , stage: SUBSCRIPTION_PLAN
+            }
+          ]
+      , drivingLicenseStatus: NOT_STARTED
+      , vehicleDetailsStatus: NOT_STARTED
+      , permissionsStatus: NOT_STARTED
+      , subscriptionStatus: NOT_STARTED
+      , phoneNumber: ""
+      , lastUpdateTime: ""
+      , cityConfig: dummyCityConfig
+      , config: getAppConfig appConfig
+      }
+  , props:
+      { limitReachedFor: Nothing
+      , logoutModalView: false
       }
   }
 
 dummyCityConfig :: CityConfig
-dummyCityConfig = {
-                    cityName : "",
-                    mapImage : "",
-                    cityCode : "",
-                    showSubscriptions : false,
-                    cityLat : 0.0,
-                    cityLong : 0.0,
-                    supportNumber : "",
-                    languageKey : ""
-                  }
+dummyCityConfig =
+  { cityName: ""
+  , mapImage: ""
+  , cityCode: ""
+  , showSubscriptions: false
+  , cityLat: 0.0
+  , cityLong: 0.0
+  , supportNumber: ""
+  , languageKey: ""
+  }

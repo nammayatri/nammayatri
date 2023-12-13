@@ -12,14 +12,13 @@
 
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
 module Screens.AppUpdatePopUpScreen.Handler where
 
 import Prelude (bind, pure, ($), (<$>), unit, Unit)
 import Presto.Core.Types.Language.Flow (doAff)
 import Screens.AppUpdatePopUpScreen.Controller as CD
 import Screens.AppUpdatePopUpScreen.View as AppUpdatePopUpScreen
-import PrestoDOM.Core.Types.Language.Flow(showScreenWithNameSpace, initUIWithNameSpace)
+import PrestoDOM.Core.Types.Language.Flow (showScreenWithNameSpace, initUIWithNameSpace)
 import Types.App (FlowBT, GlobalState(..), APP_UPDATE_POPUP(..))
 import Control.Monad.Except.Trans (lift)
 import Effect.Class (liftEffect)
@@ -28,15 +27,13 @@ import Engineering.Helpers.BackTrack (getState)
 import Data.Maybe (Maybe(..))
 import PrestoDOM.Core (terminateUI)
 
-
 handleAppUpdatePopUp :: FlowBT String APP_UPDATE_POPUP
-handleAppUpdatePopUp  = do
+handleAppUpdatePopUp = do
   (GlobalState state) ← getState
   _ <- lift $ lift $ doAff $ liftEffect $ initUIWithNameSpace "AppUpdatePopUpScreen" Nothing
-  act <- lift $ lift $ showScreenWithNameSpace ( AppUpdatePopUpScreen.screen state.appUpdatePopUpScreen)
+  act <- lift $ lift $ showScreenWithNameSpace (AppUpdatePopUpScreen.screen state.appUpdatePopUpScreen)
   _ <- lift $ lift $ doAff $ liftEffect $ terminateUI $ Just "AppUpdatePopUpScreen"
   case act of
     CD.Accept -> App.BackT $ App.NoBack <$> pure UpdateNow
     CD.Decline -> App.BackT $ App.BackPoint <$> pure Later
     CD.Exit -> pure Later
-  

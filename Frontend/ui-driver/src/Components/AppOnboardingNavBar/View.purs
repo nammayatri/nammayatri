@@ -12,8 +12,6 @@
  
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
-
 module Components.AppOnboardingNavBar.View where
 
 import Prelude (Unit, const, ($), (<>), (<<<))
@@ -31,54 +29,59 @@ import Components.GenericHeader as GenericHeader
 view :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push state =
   linearLayout
-  [ height WRAP_CONTENT
-  , width MATCH_PARENT
-  , gravity CENTER_VERTICAL
-  , padding $ Padding 16 16 16 16
-  , orientation VERTICAL
-  , background state.appConfig.primaryBackground
-  ][  linearLayout
-      [ height WRAP_CONTENT
-      , width MATCH_PARENT
-      ][  imageView
-          [ imageWithFallback $ HU.fetchImage HU.FF_ASSET state.prefixImageConfig.image
-          , height state.prefixImageConfig.height
-          , width state.prefixImageConfig.width 
-          , layoutGravity "center_vertical"
-          , visibility $ state.prefixImageConfig.visibility
-          , onClick push $ const PrefixImgOnClick
-          ]
+    [ height WRAP_CONTENT
+    , width MATCH_PARENT
+    , gravity CENTER_VERTICAL
+    , padding $ Padding 16 16 16 16
+    , orientation VERTICAL
+    , background state.appConfig.primaryBackground
+    ]
+    [ linearLayout
+        [ height WRAP_CONTENT
+        , width MATCH_PARENT
+        ]
+        [ imageView
+            [ imageWithFallback $ HU.fetchImage HU.FF_ASSET state.prefixImageConfig.image
+            , height state.prefixImageConfig.height
+            , width state.prefixImageConfig.width
+            , layoutGravity "center_vertical"
+            , visibility $ state.prefixImageConfig.visibility
+            , onClick push $ const PrefixImgOnClick
+            ]
         , linearLayout
-          [weight 1.0
-          ][ GenericHeader.view (push <<< GenericHeaderAC) (state.genericHeaderConfig)]
+            [ weight 1.0
+            ]
+            [ GenericHeader.view (push <<< GenericHeaderAC) (state.genericHeaderConfig) ]
         , logoutButtonView push
-      ]
-    , textView $
-      [ height WRAP_CONTENT
-      , width MATCH_PARENT
-      , text state.headerTextConfig.text
-      , color state.headerTextConfig.color
-      , margin state.headerTextConfig.margin
-      ] <> (FontStyle.getFontStyle state.headerTextConfig.fontStyle TypoGraphy)
+        ]
+    , textView
+        $ [ height WRAP_CONTENT
+          , width MATCH_PARENT
+          , text state.headerTextConfig.text
+          , color state.headerTextConfig.color
+          , margin state.headerTextConfig.margin
+          ]
+        <> (FontStyle.getFontStyle state.headerTextConfig.fontStyle TypoGraphy)
     ]
 
-
 logoutButtonView :: forall w. (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
-logoutButtonView push = 
+logoutButtonView push =
   linearLayout
-  [ height WRAP_CONTENT
-  , width WRAP_CONTENT
-  , orientation VERTICAL
-  , layoutGravity "center_vertical"
-  , cornerRadius 12.0
-  , stroke ("1,"<>Color.white900)
-  , padding $ Padding 4 2 4 4
-  , onClick push $ const Logout 
-  ][  textView $
     [ height WRAP_CONTENT
     , width WRAP_CONTENT
-    , text $ getString LOGOUT
-    , color Color.white900
-    , margin $ MarginHorizontal 5 5
-    ] <> FontStyle.body3 TypoGraphy
-  ]
+    , orientation VERTICAL
+    , layoutGravity "center_vertical"
+    , cornerRadius 12.0
+    , stroke ("1," <> Color.white900)
+    , padding $ Padding 4 2 4 4
+    , onClick push $ const Logout
+    ]
+    [ textView
+        $ [ height WRAP_CONTENT
+          , width WRAP_CONTENT
+          , text $ getString LOGOUT
+          , color Color.white900
+          , margin $ MarginHorizontal 5 5
+          ]
+        <> FontStyle.body3 TypoGraphy
+    ]

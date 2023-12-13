@@ -12,7 +12,6 @@
 
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
 module Screens.NoInternetScreen.Handler where
 
 import Prelude (bind, ($), pure, (<$>))
@@ -29,7 +28,7 @@ import Screens.NoInternetScreen.Controller (ScreenOutput(..))
 import Types.App (FlowBT, GlobalState(..), NO_INTERNET_SCREEN_OUTPUT(..))
 
 noInternetScreen :: String -> FlowBT String NO_INTERNET_SCREEN_OUTPUT
-noInternetScreen triggertype= do
+noInternetScreen triggertype = do
   (GlobalState state) <- getState
   _ <- lift $ lift $ doAff $ liftEffect $ initUIWithNameSpace "NoInternetScreen" Nothing
   act <- lift $ lift $ runScreenWithNameSpace $ NoInternetScreen.screen state.noInternetScreen triggertype

@@ -12,11 +12,9 @@
  
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
 module Components.AddImagesModel.Controller where
 
 import Prelude
-
 import Components.PrimaryButton.Controller as PrimaryButton
 import Styles.Colors (black700, black900, primaryButtonColor, white900) as Color
 import Font.Size (a_18) as FontSize
@@ -24,51 +22,61 @@ import PrestoDOM.Types.DomAttributes (Length(..))
 import Language.Strings (getString)
 import Language.Types (STR(..))
 
-data Action = OnClickDone PrimaryButton.Action
-            | OnClickCancel PrimaryButton.Action
-            | OnClickDelete Int
-            | OnClickView String String
-            | AddImage
-            | BackPressed
-            | NoAction
+data Action
+  = OnClickDone PrimaryButton.Action
+  | OnClickCancel PrimaryButton.Action
+  | OnClickDelete Int
+  | OnClickView String String
+  | AddImage
+  | BackPressed
+  | NoAction
 
-type AddImagesModelState = {
-  images :: Array {image :: String, imageName :: String},
-  stateChanged :: Boolean,
-  isLoading :: Boolean,
-  imageMediaIds :: Array String
-}
+type AddImagesModelState
+  = { images :: Array { image :: String, imageName :: String }
+    , stateChanged :: Boolean
+    , isLoading :: Boolean
+    , imageMediaIds :: Array String
+    }
 
 doneButtonConfig :: AddImagesModelState -> PrimaryButton.Config
-doneButtonConfig state = let
+doneButtonConfig state =
+  let
     config = PrimaryButton.config
-    primaryButtonConfig' = config
-      { textConfig
-      { text = (getString DONE)
-      , color = Color.primaryButtonColor
-      }
-      , cornerRadius = 8.0
-      , background = Color.black900
-      , height = (V 60)
-      , alpha = if (state.stateChanged) then 1.0 else 0.5
-      , isClickable = state.stateChanged
-      , enableLoader = state.isLoading
-      , id = "add_images_model_done_button"
-      }
-  in primaryButtonConfig'
+
+    primaryButtonConfig' =
+      config
+        { textConfig
+          { text = (getString DONE)
+          , color = Color.primaryButtonColor
+          }
+        , cornerRadius = 8.0
+        , background = Color.black900
+        , height = (V 60)
+        , alpha = if (state.stateChanged) then 1.0 else 0.5
+        , isClickable = state.stateChanged
+        , enableLoader = state.isLoading
+        , id = "add_images_model_done_button"
+        }
+  in
+    primaryButtonConfig'
 
 cancelButtonConfig :: AddImagesModelState -> PrimaryButton.Config
-cancelButtonConfig state = let
+cancelButtonConfig state =
+  let
     config = PrimaryButton.config
-    primaryButtonConfig' = config
-      { textConfig
-      { text = (getString CANCEL)
-      , color = Color.black700}
-      , cornerRadius = 8.0
-      , background = Color.white900
-      , stroke = "1,"<>Color.black700
-      , height = (V 60)
-      , isClickable = true
-      , id = "AddImagesModelCancelButton"
-      }
-  in primaryButtonConfig'
+
+    primaryButtonConfig' =
+      config
+        { textConfig
+          { text = (getString CANCEL)
+          , color = Color.black700
+          }
+        , cornerRadius = 8.0
+        , background = Color.white900
+        , stroke = "1," <> Color.black700
+        , height = (V 60)
+        , isClickable = true
+        , id = "AddImagesModelCancelButton"
+        }
+  in
+    primaryButtonConfig'

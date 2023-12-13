@@ -12,7 +12,6 @@
  
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
 module Screens.SelectLanguageScreen.Handler where
 
 import Engineering.Helpers.BackTrack (getState)
@@ -23,8 +22,7 @@ import ModifyScreenState (modifyScreenState)
 import Control.Transformers.Back.Trans as App
 import PrestoDOM.Core.Types.Language.Flow (runScreen)
 import Screens.SelectLanguageScreen.View as SelectLanguageScreen
-import Types.App (FlowBT, GlobalState(..), SELECT_LANGUAGE_SCREEN_OUTPUT(..),ScreenType(..))
-
+import Types.App (FlowBT, GlobalState(..), SELECT_LANGUAGE_SCREEN_OUTPUT(..), ScreenType(..))
 
 selectLanguageScreen :: FlowBT String SELECT_LANGUAGE_SCREEN_OUTPUT
 selectLanguageScreen = do
@@ -32,6 +30,6 @@ selectLanguageScreen = do
   action <- lift $ lift $ runScreen $ SelectLanguageScreen.screen state.selectLanguageScreen
   case action of
     GoToHomeScreen -> App.BackT $ App.NoBack <$> (pure $ GO_TO_HOME_SCREEN)
-    UpdateLanguage state -> do   
-                            modifyScreenState $ SelectLanguageScreenStateType (\selectLanguageScreen -> state)
-                            App.BackT $ App.NoBack <$> (pure $ UPDATE_LANGUAGE state)
+    UpdateLanguage state -> do
+      modifyScreenState $ SelectLanguageScreenStateType (\selectLanguageScreen -> state)
+      App.BackT $ App.NoBack <$> (pure $ UPDATE_LANGUAGE state)

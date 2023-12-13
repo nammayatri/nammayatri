@@ -12,14 +12,15 @@
  
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
 module Components.SelectVehicleTypeModal.Controller where
 
 import Screens.Types (VehicalTypes)
 
-data Action = OnCloseClick | OnSelect VehicalTypes
+data Action
+  = OnCloseClick
+  | OnSelect VehicalTypes
 
-type SelectVehicleTypeModalState =
-  { title :: String
-  , listItems :: Array VehicalTypes
-  }
+type SelectVehicleTypeModalState
+  = { title :: String
+    , listItems :: Array VehicalTypes
+    }

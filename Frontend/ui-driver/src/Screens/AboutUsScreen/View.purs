@@ -156,80 +156,83 @@ footerView state =
 --------------------------------- applicationInformationLayout ----------------------------
 applicationInformationLayout :: ST.AboutUsScreenState -> (Action -> Effect Unit) -> forall w. PrestoDOM (Effect Unit) w
 applicationInformationLayout state push =
-  let config = getAppConfig appConfig
+  let
+    config = getAppConfig appConfig
   in
-  linearLayout
-    [ width MATCH_PARENT
-    , height WRAP_CONTENT
-    , orientation VERTICAL
-    , margin (MarginTop 20)
-    , padding (PaddingHorizontal 20 20)
-    ]
-    [ imageView
-        ( [ width $ V 150
-          , height $ V 100
-          , layoutGravity "center_horizontal"
-          , imageWithFallback $ fetchImage FF_ASSET "ic_launcher"
+    linearLayout
+      [ width MATCH_PARENT
+      , height WRAP_CONTENT
+      , orientation VERTICAL
+      , margin (MarginTop 20)
+      , padding (PaddingHorizontal 20 20)
+      ]
+      [ imageView
+          ( [ width $ V 150
+            , height $ V 100
+            , layoutGravity "center_horizontal"
+            , imageWithFallback $ fetchImage FF_ASSET "ic_launcher"
+            ]
+              <> if getValueToLocalStore DRIVER_STATUS == "true" then [ onClick push (const ShowDemoPopUp) ] else []
+          )
+      , textView
+          $ [ width MATCH_PARENT
+            , height WRAP_CONTENT
+            , text $ getString $ ABOUT_TEXT "ABOUT_TEXT"
+            , color Color.black800
+            , gravity LEFT
+            , margin (MarginTop 20)
+            , padding (Padding 20 0 20 0)
+            ]
+          <> FontStyle.body5 TypoGraphy
+      , linearLayout
+          [ height WRAP_CONTENT
+          , width WRAP_CONTENT
+          , visibility if config.showCorporateAddress then VISIBLE else GONE
           ]
-            <> if getValueToLocalStore DRIVER_STATUS == "true" then [ onClick push (const ShowDemoPopUp) ] else []
-        )
-    , textView
-        $ [ width MATCH_PARENT
-          , height WRAP_CONTENT
-          , text $ getString $ ABOUT_TEXT "ABOUT_TEXT"
-          , color Color.black800
-          , gravity LEFT
-          , margin (MarginTop 20)
-          , padding (Padding 20 0 20 0)
-          ]
-        <> FontStyle.body5 TypoGraphy
-    , linearLayout
-        [ height WRAP_CONTENT
-        , width WRAP_CONTENT
-        , visibility if config.showCorporateAddress then VISIBLE else GONE
-        ][ComplaintsModel.view (ComplaintsModel.config { cardData = contactUsData state })]
-    , underlinedTextView (getString T_C) push
-    , underlinedTextView (getString PRIVACY_POLICY) push
-    ]
+          [ ComplaintsModel.view (ComplaintsModel.config { cardData = contactUsData state }) ]
+      , underlinedTextView (getString T_C) push
+      , underlinedTextView (getString PRIVACY_POLICY) push
+      ]
 
 --------------------------------- underlinedTextView ----------------------
 underlinedTextView :: String -> (Action -> Effect Unit) -> forall w. PrestoDOM (Effect Unit) w
 underlinedTextView value push =
-  let config = getAppConfig appConfig
+  let
+    config = getAppConfig appConfig
   in
-  linearLayout
-    [ width WRAP_CONTENT
-    , height WRAP_CONTENT
-    , orientation VERTICAL
-    , onClick
-        ( \action -> do
-            _ <- push action
-            _ <-
-              JB.openUrlInApp
-                if (value == (getString T_C)) then
-                  config.termsLink
-                else
-                  config.privacyLink
-            pure unit
-        )
-        (const TermsAndConditionAction)
-    , margin (Margin 20 30 0 0)
-    ]
-    [ textView
-        $ [ width WRAP_CONTENT
-          , height WRAP_CONTENT
-          , text value
-          , color Color.primaryBlue
+    linearLayout
+      [ width WRAP_CONTENT
+      , height WRAP_CONTENT
+      , orientation VERTICAL
+      , onClick
+          ( \action -> do
+              _ <- push action
+              _ <-
+                JB.openUrlInApp
+                  if (value == (getString T_C)) then
+                    config.termsLink
+                  else
+                    config.privacyLink
+              pure unit
+          )
+          (const TermsAndConditionAction)
+      , margin (Margin 20 30 0 0)
+      ]
+      [ textView
+          $ [ width WRAP_CONTENT
+            , height WRAP_CONTENT
+            , text value
+            , color Color.primaryBlue
+            ]
+          <> FontStyle.body5 TypoGraphy
+      , linearLayout
+          [ height $ V 1
+          , width MATCH_PARENT
+          , background Color.primaryBlue
+          , margin (Margin 1 0 2 0)
           ]
-        <> FontStyle.body5 TypoGraphy
-    , linearLayout
-        [ height $ V 1
-        , width MATCH_PARENT
-        , background Color.primaryBlue
-        , margin (Margin 1 0 2 0)
-        ]
-        []
-    ]
+          []
+      ]
 
 -------------------------------------- horizontalLine ---------------------
 horizontalLine :: Int -> Int -> forall w. PrestoDOM (Effect Unit) w

@@ -12,7 +12,6 @@
  
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
 module Screens.RideSelectionScreen.ComponentConfig where
 
 import Common.Types.App (LazyCheck(..))
@@ -28,48 +27,56 @@ import Components.PrimaryButton as PrimaryButton
 import Screens.Types (RideSelectionScreenState)
 
 cancelButtonConfig :: RideSelectionScreenState -> PrimaryButton.Config
-cancelButtonConfig state = let
-  config = PrimaryButton.config
-  primaryButtonConfig' = config
-    { margin     = (Margin 16 12 16 16)
-    , textConfig
-      { text     = (getString I_DONT_KNOW_WHICH_RIDE)
-      , color    = Color.black700
-      }
-    , stroke     = "1,"<>Color.black700
-    , background = Color.white900
-    , height     = (V 60)
-    , isClickable  = true
-    , cornerRadius = 8.0
-    , id = "RideSelectionScreenPrimaryButton"
-    }
-  in primaryButtonConfig'
+cancelButtonConfig state =
+  let
+    config = PrimaryButton.config
+
+    primaryButtonConfig' =
+      config
+        { margin = (Margin 16 12 16 16)
+        , textConfig
+          { text = (getString I_DONT_KNOW_WHICH_RIDE)
+          , color = Color.black700
+          }
+        , stroke = "1," <> Color.black700
+        , background = Color.white900
+        , height = (V 60)
+        , isClickable = true
+        , cornerRadius = 8.0
+        , id = "RideSelectionScreenPrimaryButton"
+        }
+  in
+    primaryButtonConfig'
 
 errorModalConfig :: ErrorModal.Config
-errorModalConfig = let
-  config = ErrorModal.config
-  errorModalConfig' = config
-    { imageConfig {
-        imageUrl = "ic_no_past_rides"
-      , height   = V 110
-      , width    = V 124
-      , margin   = (MarginBottom 61)
-      }
-    , errorConfig {
-        text     = (getString EMPTY_RIDES)
-      , margin   = (MarginBottom 7)
-      , color    = Color.black900
-      }
-    , errorDescriptionConfig {
-        text     = (getString YOU_HAVE_NOT_TAKEN_A_TRIP_YET)
-      , color    = Color.black700
-      }
-    , buttonConfig {
-        text     = (getString BOOK_NOW)
-      , color    = Color.yellow900
-      , margin   = (Margin 16 0 16 24)
-      , visibility = GONE
-      , background = Color.black900
-      }
-    }
-  in errorModalConfig'
+errorModalConfig =
+  let
+    config = ErrorModal.config
+
+    errorModalConfig' =
+      config
+        { imageConfig
+          { imageUrl = "ic_no_past_rides"
+          , height = V 110
+          , width = V 124
+          , margin = (MarginBottom 61)
+          }
+        , errorConfig
+          { text = (getString EMPTY_RIDES)
+          , margin = (MarginBottom 7)
+          , color = Color.black900
+          }
+        , errorDescriptionConfig
+          { text = (getString YOU_HAVE_NOT_TAKEN_A_TRIP_YET)
+          , color = Color.black700
+          }
+        , buttonConfig
+          { text = (getString BOOK_NOW)
+          , color = Color.yellow900
+          , margin = (Margin 16 0 16 24)
+          , visibility = GONE
+          , background = Color.black900
+          }
+        }
+  in
+    errorModalConfig'

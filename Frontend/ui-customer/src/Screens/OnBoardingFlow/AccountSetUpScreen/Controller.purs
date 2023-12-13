@@ -12,7 +12,6 @@
 
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
 module Screens.AccountSetUpScreen.Controller where
 
 import Components.GenericHeader as GenericHeaderController
@@ -40,7 +39,7 @@ instance showAction :: Show Action where
   show _ = ""
 
 instance loggableAction :: Loggable Action where
-  performLog action appId  = case action of
+  performLog action appId = case action of
     AfterRender -> trackAppScreenRender appId "screen" (getScreen ACCOUNT_SET_UP_SCREEN)
     BackPressed -> do
       trackAppBackPress appId (getScreen ACCOUNT_SET_UP_SCREEN)
@@ -80,8 +79,6 @@ instance loggableAction :: Loggable Action where
     SpecialAssistanceListAC _ -> trackAppActionClick appId (getScreen ACCOUNT_SET_UP_SCREEN) "in_screen" "special_assistance_list_click"
     GenericRadioButtonAC _ -> trackAppActionClick appId (getScreen ACCOUNT_SET_UP_SCREEN) "in_screen" "disability_radio_btn_click"
     _ -> pure unit
-      
-
 
 data ScreenOutput
   = GoHome AccountSetUpScreenState
@@ -107,11 +104,12 @@ data Action
 eval :: Action -> AccountSetUpScreenState -> Eval Action ScreenOutput AccountSetUpScreenState
 eval (PrimaryButtonActionController PrimaryButtonController.OnClick) state = do
   _ <- pure $ hideKeyboardOnNavigation true
-  if state.data.disabilityOptions.activeIndex == 1 then 
-    continue state{props{isSpecialAssistList = true},data{disabilityOptions{editedDisabilityReason = fromMaybe "" state.data.disabilityOptions.otherDisabilityReason}}}
-    else do 
-      let newState = state{data{disabilityOptions{editedDisabilityReason = "" , selectedDisability = Nothing, otherDisabilityReason = Nothing}}}
-      updateAndExit newState $ GoHome newState
+  if state.data.disabilityOptions.activeIndex == 1 then
+    continue state { props { isSpecialAssistList = true }, data { disabilityOptions { editedDisabilityReason = fromMaybe "" state.data.disabilityOptions.otherDisabilityReason } } }
+  else do
+    let
+      newState = state { data { disabilityOptions { editedDisabilityReason = "", selectedDisability = Nothing, otherDisabilityReason = Nothing } } }
+    updateAndExit newState $ GoHome newState
 
 eval (GenericHeaderActionController (GenericHeaderController.PrefixImgOnClick)) state =
   continueWithCmd state
@@ -119,69 +117,82 @@ eval (GenericHeaderActionController (GenericHeaderController.PrefixImgOnClick)) 
         pure $ BackPressed
     ]
 
-eval (StepsHeaderModelAC StepsHeaderModelController.OnArrowClick) state = continueWithCmd state[ do pure $ BackPressed]
+eval (StepsHeaderModelAC StepsHeaderModelController.OnArrowClick) state = continueWithCmd state [ do pure $ BackPressed ]
 
-eval EditTextFocusChanged state = continue state {props{genderOptionExpanded = false, activeField = Just NameSection}}
+eval EditTextFocusChanged state = continue state { props { genderOptionExpanded = false, activeField = Just NameSection } }
 
-eval (GenderSelected value) state = continue state{data{gender = Just value}, props{genderOptionExpanded = false, btnActive = (state.data.name /= "") && (length state.data.name >= 3) }}
+eval (GenderSelected value) state = continue state { data { gender = Just value }, props { genderOptionExpanded = false, btnActive = (state.data.name /= "") && (length state.data.name >= 3) } }
 
 eval (TextChanged value) state = do
   let
-    newState = state { data { name = trim value } ,props{ btnActive = getBtnActive state {data{name = trim value}}} }
-  continue newState { data{nameErrorMessage = if (length newState.data.name >= 3) then Nothing else if (newState.data.gender /= Nothing && length newState.data.name < 3) then Just INVALID_NAME else newState.data.nameErrorMessage}, props { expandEnabled = false, genderOptionExpanded = false, isNameValid = (length newState.data.name >= 3)} }
+    newState = state { data { name = trim value }, props { btnActive = getBtnActive state { data { name = trim value } } } }
+  continue newState { data { nameErrorMessage = if (length newState.data.name >= 3) then Nothing else if (newState.data.gender /= Nothing && length newState.data.name < 3) then Just INVALID_NAME else newState.data.nameErrorMessage }, props { expandEnabled = false, genderOptionExpanded = false, isNameValid = (length newState.data.name >= 3) } }
 
 eval (ShowOptions) state = do
   _ <- pure $ hideKeyboardOnNavigation true
-  continue state{data {nameErrorMessage = if(length state.data.name >= 3) then Nothing else Just INVALID_NAME}, props{genderOptionExpanded = not state.props.genderOptionExpanded, expandEnabled = true, activeField = Just DropDown}}
+  continue state { data { nameErrorMessage = if (length state.data.name >= 3) then Nothing else Just INVALID_NAME }, props { genderOptionExpanded = not state.props.genderOptionExpanded, expandEnabled = true, activeField = Just DropDown } }
 
-eval NameSectionClick state = continue state {props{genderOptionExpanded = false, activeField = Just NameSection}}
+eval NameSectionClick state = continue state { props { genderOptionExpanded = false, activeField = Just NameSection } }
 
-eval (AnimationEnd _)  state = continue state{props{showOptions = false}}
+eval (AnimationEnd _) state = continue state { props { showOptions = false } }
 
 eval BackPressed state = do
-  if state.props.isSpecialAssistList then continue state {props{isSpecialAssistList = false}}
-    else do 
-      _ <- pure $ hideKeyboardOnNavigation true
-      _ <- pure $ clearCountDownTimer ""
-      continue state { props { backPressed = true } }
+  if state.props.isSpecialAssistList then
+    continue state { props { isSpecialAssistList = false } }
+  else do
+    _ <- pure $ hideKeyboardOnNavigation true
+    _ <- pure $ clearCountDownTimer ""
+    continue state { props { backPressed = true } }
 
 eval (PopUpModalAction (PopUpModal.OnButton1Click)) state = continue state { props { backPressed = false } }
 
 eval (PopUpModalAction (PopUpModal.OnButton2Click)) state = exit $ ChangeMobileNumber
 
-eval (GenericRadioButtonAC (GenericRadioButton.OnSelect idx)) state = do 
-  let newState = state{data{disabilityOptions = 
-                      if idx == 0 then 
-                        state.data.disabilityOptions{ activeIndex = idx, specialAssistActiveIndex = 0, editedDisabilityReason = "", selectedDisability = Nothing, otherDisabilityReason = Nothing }
-                        else state.data.disabilityOptions{ activeIndex = idx}
-                          }}
-      isBtnActive = getBtnActive newState 
-  continue newState{ props{btnActive = isBtnActive }}
+eval (GenericRadioButtonAC (GenericRadioButton.OnSelect idx)) state = do
+  let
+    newState =
+      state
+        { data
+          { disabilityOptions =
+            if idx == 0 then
+              state.data.disabilityOptions { activeIndex = idx, specialAssistActiveIndex = 0, editedDisabilityReason = "", selectedDisability = Nothing, otherDisabilityReason = Nothing }
+            else
+              state.data.disabilityOptions { activeIndex = idx }
+          }
+        }
+
+    isBtnActive = getBtnActive newState
+  continue newState { props { btnActive = isBtnActive } }
 
 eval (SpecialAssistanceListAC action) state = case action of
-  SelectListModal.OnGoBack -> continue state{props{isSpecialAssistList = false}}
-  SelectListModal.UpdateIndex idx -> continue state{data{disabilityOptions{specialAssistActiveIndex = idx, editedDisabilityReason = fromMaybe "" state.data.disabilityOptions.otherDisabilityReason}}}
-  SelectListModal.TextChanged id input -> continue state {data{disabilityOptions{ otherDisabilityReason = Just input}}}
-  SelectListModal.Button2 (PrimaryButtonController.OnClick) -> do 
+  SelectListModal.OnGoBack -> continue state { props { isSpecialAssistList = false } }
+  SelectListModal.UpdateIndex idx -> continue state { data { disabilityOptions { specialAssistActiveIndex = idx, editedDisabilityReason = fromMaybe "" state.data.disabilityOptions.otherDisabilityReason } } }
+  SelectListModal.TextChanged id input -> continue state { data { disabilityOptions { otherDisabilityReason = Just input } } }
+  SelectListModal.Button2 (PrimaryButtonController.OnClick) -> do
     _ <- pure $ hideKeyboardOnNavigation true
-    let selectedDisability = (state.data.disabilityOptions.disabilityOptionList DA.!! state.data.disabilityOptions.specialAssistActiveIndex)
-        selectedDisabilityTag = case selectedDisability of 
-          Just disability -> disability.tag 
-          Nothing -> ""
-        newState = state{data{disabilityOptions{otherDisabilityReason = if selectedDisabilityTag == "OTHER" then state.data.disabilityOptions.otherDisabilityReason else Nothing , selectedDisability = selectedDisability }}}
+    let
+      selectedDisability = (state.data.disabilityOptions.disabilityOptionList DA.!! state.data.disabilityOptions.specialAssistActiveIndex)
+
+      selectedDisabilityTag = case selectedDisability of
+        Just disability -> disability.tag
+        Nothing -> ""
+
+      newState = state { data { disabilityOptions { otherDisabilityReason = if selectedDisabilityTag == "OTHER" then state.data.disabilityOptions.otherDisabilityReason else Nothing, selectedDisability = selectedDisability } } }
     updateAndExit newState $ GoHome newState
   _ -> continue state
 
 eval _ state = continue state
 
-
 getBtnActive :: AccountSetUpScreenState -> Boolean
-getBtnActive state = do 
-  let disabilityOptions = state.data.disabilityOptions
-      selectedTag  = case disabilityOptions.selectedDisability of 
-                      Just disability -> Just disability.tag 
-                      _ -> Nothing
-      disabilityType  = case disabilityOptions.otherDisabilityReason of 
-                          Just disabilityType -> disabilityType
-                          _ -> ""
+getBtnActive state = do
+  let
+    disabilityOptions = state.data.disabilityOptions
+
+    selectedTag = case disabilityOptions.selectedDisability of
+      Just disability -> Just disability.tag
+      _ -> Nothing
+
+    disabilityType = case disabilityOptions.otherDisabilityReason of
+      Just disabilityType -> disabilityType
+      _ -> ""
   (state.data.name /= "") && (length state.data.name >= 3) && (state.data.gender /= Nothing) && (if disabilityOptions.activeIndex == 1 then (if (selectedTag == Just "OTHER") then (length (disabilityType) >= 3) else true) else true)

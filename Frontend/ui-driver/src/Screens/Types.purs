@@ -12,7 +12,6 @@
 
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
 module Screens.Types where
 
 import Common.Types.App as Common
@@ -42,499 +41,540 @@ import Services.API (AutopayPaymentStage, BankError(..), FeeType, GetDriverInfoR
 import Styles.Types (FontSize)
 import Common.Types.Config
 
-type EditTextInLabelState =
- {
-    topLabel :: String
-  , showTopLabel :: Boolean
-  , inLabel :: String
-  , showInLabel :: Boolean
-  , valueId :: String
-  , hint :: String
-  , pattern :: Maybe String
-  , id :: String
-  }
-
-type LanguageItemState =
- {
-    key :: String
-  , language :: String
-  , selected :: Boolean
-  }
-
-type NotificationItemState = {
-    color :: String
-  , color1 :: String
-  , icon :: String
-  , title :: String
-  , description :: String
-}
-
-type EditTextState =
- {
-    title :: String
-  , hint :: String
-  }
-
-type EditTextInImageState =
- {
-    topLabel :: String
-  , showTopLabel :: Boolean
-  , inImage :: String
-  , showInImage :: Boolean
-  , hint :: String
-  }
-
-type DateEditTextState =
- {
-    label :: String
-  , hint :: String
-  , id :: String
-  , value :: String
-  }
-
-type SplashScreenState =  {
-   data :: SplashScreenData
- }
-
-type SplashScreenData =  {
-   message :: String
- }
-
-type NoInternetScreenState =  { }
-
--- ############################################################# ChooseLanguageScreen ################################################################################
-
-type ChooseLanguageScreenState = {
-  data :: ChooseLanguageScreenData,
-  props :: ChooseLanguageScreenProps
-}
-
-type ChooseLanguageScreenData =  {
-  config :: AppConfig,
-  isSelected :: Boolean,
-  logField :: Object Foreign
- }
-
-type ChooseLanguageScreenProps =  {
-  selectedLanguage :: String,
-  btnActive :: Boolean
- }
-
--- ############################################################# AddVehicleDetailsScreen ################################################################################
-
-type AddVehicleDetailsScreenState = {
-  data :: AddVehicleDetailsScreenData,
-  props :: AddVehicleDetailsScreenProps
-}
-
-type AddVehicleDetailsScreenData =  {
-  vehicle_type :: String,
-  vehicle_model_name :: String,
-  vehicle_color :: String,
-  vehicle_registration_number :: String,
-  reEnterVehicleRegistrationNumber :: String,
-  rc_base64 :: String,
-  vehicle_rc_number :: String,
-  referral_mobile_number :: String,
-  rcImageID :: String,
-  errorMessage :: String,
-  dateOfRegistration :: Maybe String,
-  dateOfRegistrationView :: String,
-  logField :: Object Foreign,
-  driverMobileNumber :: String,
-  cityConfig :: CityConfig,
-  config :: AppConfig
- }
-
-type AddVehicleDetailsScreenProps =  {
-  rcAvailable :: Boolean,
-  vehicleTypes :: Array VehicalTypes,
-  openSelectVehicleTypeModal :: Boolean,
-  openRegistrationModal :: Boolean,
-  rc_name :: String,
-  input_data :: String,
-  enable_upload :: Boolean,
-  openRCManual :: Boolean,
-  openReferralMobileNumber :: Boolean,
-  isValid :: Boolean,
-  btnActive :: Boolean,
-  referralViewstatus :: Boolean,
-  isEdit :: Boolean,
-  isValidState :: Boolean,
-  limitExceedModal :: Boolean,
-  errorVisibility :: Boolean,
-  openRegistrationDateManual :: Boolean,
-  addRcFromProfile :: Boolean,
-  isDateClickable :: Boolean,
-  openHowToUploadManual :: Boolean,
-  logoutModalView :: Boolean,
-  validateProfilePicturePopUp :: Boolean,
-  imageCaptureLayoutView :: Boolean,
-  fileCameraOption :: Boolean,
-  fileCameraPopupModal :: Boolean,
-  validating :: Boolean,
-  successfulValidation :: Boolean,
-  multipleRCstatus :: StageStatus
- }
-
-data ValidationStatus  =  Success | Failure | InProgress | None
-
-derive instance genericValidationStatus :: Generic ValidationStatus _
-instance showValidationStatus :: Show ValidationStatus where show = genericShow
-instance eqValidationStatus :: Eq ValidationStatus where eq = genericEq
-
-
-data VehicalTypes = Sedan | Hatchback | SUV | Auto
-
- -- ############################################################# UploadingDrivingLicenseScreen ################################################################################
-type UploadDrivingLicenseState = {
-  data :: UploadDrivingLicenseStateData,
-  props :: UploadDrivingLicenseStateProps
-
-}
-
-type UploadDrivingLicenseStateData = {
-  driver_license_number :: String
-  , reEnterDriverLicenseNumber :: String
-  , imageFront :: String
-  , imageBack :: String
-  , imageNameFront :: String
-  , imageNameBack :: String
-  , dob :: String
-  , dobView :: String
-  , imageIDFront :: String
-  , imageIDBack :: String
-  , rcVerificationStatus :: String
-  , errorMessage :: String
-  , dateOfIssue :: Maybe String
-  , dateOfIssueView :: String
-  , imageFrontUrl :: String
-  , logField :: Object Foreign
-  , mobileNumber :: String
-  , cityConfig :: CityConfig
-  , config :: AppConfig
-}
-
-type UploadDrivingLicenseStateProps = {
-    openRegistrationModal :: Boolean
-  , openLicenseManual :: Boolean
-  , input_data :: String
-  , clickedButtonType :: String
-  , openGenericMessageModal :: Boolean
-  , errorVisibility :: Boolean
-  , openDateOfIssueManual :: Boolean
-  , isDateClickable :: Boolean
-  , openHowToUploadManual :: Boolean
-  , logoutPopupModal :: Boolean
-  , validateProfilePicturePopUp :: Boolean
-  , imageCaptureLayoutView :: Boolean 
-  , fileCameraPopupModal :: Boolean
-  , fileCameraOption :: Boolean
-  , validating :: Boolean
-  , successfulValidation :: Boolean
-}
-
- -- ############################################################# RegistrationScreen ################################################################################
-type RegistrationScreenState = {
-  data :: RegistrationScreenData,
-  props :: RegistrationScreenProps
-}
-type RegistrationScreenData = {
-  activeIndex :: Int,
-  registerationSteps :: Array StepProgress,
-  phoneNumber :: String,
-  drivingLicenseStatus :: StageStatus,
-  vehicleDetailsStatus :: StageStatus,
-  permissionsStatus :: StageStatus,
-  subscriptionStatus :: StageStatus,
-  lastUpdateTime :: String,
-  cityConfig :: CityConfig,
-  config :: AppConfig
-}
-
-type StepProgress = {
-  stageName :: String,
-  stage :: RegisterationStep
-}
-
-type RegistrationScreenProps = {
-  logoutModalView :: Boolean,
-  limitReachedFor :: Maybe String
-}
-
-data RegisterationStep = DRIVING_LICENSE_OPTION | VEHICLE_DETAILS_OPTION | GRANT_PERMISSION | SUBSCRIPTION_PLAN
-derive instance genericRegisterationStep :: Generic RegisterationStep _
-instance eqRegisterationStep :: Eq RegisterationStep where eq = genericEq
-
-data StageStatus = COMPLETED | IN_PROGRESS | NOT_STARTED | FAILED
-derive instance genericStageStatus :: Generic StageStatus _
-instance eqStageStatus :: Eq StageStatus where eq = genericEq
-
- -- ############################################################# UploadAdhaarScreen ################################################################################
-
-type UploadAdhaarScreenState = {
-  data :: UploadAdhaarScreenData,
-  props :: UploadAdhaarScreenProps
-}
-type UploadAdhaarScreenData = {
-  imageFront :: String,
-  imageBack :: String,
-  imageName :: String
-}
-
-type UploadAdhaarScreenProps = {
-    openRegistrationModal :: Boolean,
-    clickedButtonType :: String
-}
- ----------------------------------------------------  PrimaryEditTextState   ------------------------------------------------
-type PrimaryEditTextState = {
-  title :: String,
-  type :: String,
-  hint :: String,
-  valueId :: String,
-  pattern :: Maybe String,
-  isinValid :: Boolean,
-  error :: Maybe String,
-  text :: String,
-  fontSize :: FontSize,
-  letterSpacing :: LetterSpacing,
-  id :: String
-}
-
------------------------------------------------------ DriverProfileScreen ------------------------------------------------
-type DriverProfileScreenState = {
-  data :: DriverProfileScreenData,
-  props :: DriverProfileScreenProps
-}
-
-type DriverProfileScreenData = {
-  driverName :: String,
-  driverVehicleType :: String,
-  driverRating :: Maybe Number,
-  base64Image :: String,
-  drivingLicenseNo :: String,
-  driverMobile :: Maybe String,
-  vehicleRegNumber :: String,
-  vehicleModelName :: String,
-  vehicleColor :: String,
-  driverAlternateNumber :: Maybe String,
-  capacity :: Int,
-  downgradeOptions :: Array String,
-  vehicleSelected :: Array VehicleP,
-  genderTypeSelect :: Maybe String,
-  alterNumberEditableText :: Boolean,
-  driverEditAlternateMobile :: Maybe String,
-  otpLimit :: Int,
-  otpBackAlternateNumber :: Maybe String,
-  languagesSpoken :: Array String,
-  gender :: Maybe String,
-  driverGender :: Maybe String,
-  languageList :: Array Common.CheckBoxOptions,
-  vehicleAge :: Int,
-  vehicleName :: String,
-  rcDataArray :: Array RcData,
-  inactiveRCArray :: Array RcData,
-  activeRCData :: RcData,
-  rcNumber :: String,
-  isRCActive :: Boolean,
-  openInactiveRCViewOrNotArray :: Array Int,
-  logField :: Object Foreign,
-  analyticsData :: AnalyticsData,
-  fromHomeScreen :: Boolean,
-  profileImg :: Maybe String,
-  payerVpa :: String,
-  autoPayStatus :: AutoPayStatus,
-  config :: AppConfig,
-  goHomeActive :: Boolean
-}
-
-type RcData = {
-  rcStatus  :: Boolean,
-  rcDetails :: RcDetails
-  }
-
-type RcDetails = {
-    certificateNumber :: String,
-    vehicleModel      :: Maybe String,
-    vehicleColor      :: Maybe String
+type EditTextInLabelState
+  = { topLabel :: String
+    , showTopLabel :: Boolean
+    , inLabel :: String
+    , showInLabel :: Boolean
+    , valueId :: String
+    , hint :: String
+    , pattern :: Maybe String
+    , id :: String
     }
 
-type AnalyticsData = {
-    totalEarnings :: String
-  , bonusEarned :: String
-  , totalCompletedTrips :: Int
-  , totalUsersRated :: Int
-  , rating :: Maybe Number
-  , lateNightTrips :: Int
-  , lastRegistered :: String
-  , badges :: Array Badge
-  , missedEarnings :: Int
-  , ridesCancelled :: Int
-  , cancellationRate :: Int
-  , totalRidesAssigned :: Int
-  , totalDistanceTravelled :: String
-}
+type LanguageItemState
+  = { key :: String
+    , language :: String
+    , selected :: Boolean
+    }
 
-type ChipRailData = {
-    mainTxt :: String
-  , subTxt :: String
-}
+type NotificationItemState
+  = { color :: String
+    , color1 :: String
+    , icon :: String
+    , title :: String
+    , description :: String
+    }
 
-type Badge =  {
-    badgeImage :: String
-  , primaryText :: String
-  , subText :: String
-  }
+type EditTextState
+  = { title :: String
+    , hint :: String
+    }
 
-type VehicleP = {
-  vehicleName :: String,
-  isSelected :: Boolean
-}
+type EditTextInImageState
+  = { topLabel :: String
+    , showTopLabel :: Boolean
+    , inImage :: String
+    , showInImage :: Boolean
+    , hint :: String
+    }
 
-type DriverProfileScreenProps = {
-  logoutModalView :: Boolean,
-  showLiveDashboard :: Boolean,
-  screenType :: DriverProfileScreenType,
-  openSettings :: Boolean,
-  updateDetails :: Boolean,
-  showGenderView :: Boolean,
-  alternateNumberView :: Boolean,
-  removeAlternateNumber :: Boolean,
-  enterOtpModal :: Boolean,
-  enterOtpFocusIndex :: Int,
-  otpIncorrect :: Boolean,
-  otpAttemptsExceeded :: Boolean,
-  alternateMobileOtp :: String,
-  checkAlternateNumber :: Boolean,
-  isEditAlternateMobile :: Boolean,
-  numberExistError :: Boolean,
-  mNumberEdtFocused :: Boolean,
-  updateLanguages :: Boolean,
-  activateRcView :: Boolean,
-  activateOrDeactivateRcView :: Boolean,
-  activeRcIndex :: Int,
-  deleteRcView :: Boolean,
-  alreadyActive :: Boolean,
-  callDriver :: Boolean,
-  openRcView :: Boolean,
-  detailsUpdationType :: Maybe UpdateType,
-  btnActive :: Boolean,
-  showBookingOptionForTaxi :: Boolean,
-  upiQrView :: Boolean,
-  paymentInfoView :: Boolean,
-  enableGoto :: Boolean,
-  isRideActive :: Boolean
-}
-data Gender = MALE | FEMALE | OTHER | PREFER_NOT_TO_SAY
+type DateEditTextState
+  = { label :: String
+    , hint :: String
+    , id :: String
+    , value :: String
+    }
 
-data DriverProfileScreenType = DRIVER_DETAILS | VEHICLE_DETAILS | SETTINGS
+type SplashScreenState
+  = { data :: SplashScreenData
+    }
+
+type SplashScreenData
+  = { message :: String
+    }
+
+type NoInternetScreenState
+  = {}
+
+-- ############################################################# ChooseLanguageScreen ################################################################################
+type ChooseLanguageScreenState
+  = { data :: ChooseLanguageScreenData
+    , props :: ChooseLanguageScreenProps
+    }
+
+type ChooseLanguageScreenData
+  = { config :: AppConfig
+    , isSelected :: Boolean
+    , logField :: Object Foreign
+    }
+
+type ChooseLanguageScreenProps
+  = { selectedLanguage :: String
+    , btnActive :: Boolean
+    }
+
+-- ############################################################# AddVehicleDetailsScreen ################################################################################
+type AddVehicleDetailsScreenState
+  = { data :: AddVehicleDetailsScreenData
+    , props :: AddVehicleDetailsScreenProps
+    }
+
+type AddVehicleDetailsScreenData
+  = { vehicle_type :: String
+    , vehicle_model_name :: String
+    , vehicle_color :: String
+    , vehicle_registration_number :: String
+    , reEnterVehicleRegistrationNumber :: String
+    , rc_base64 :: String
+    , vehicle_rc_number :: String
+    , referral_mobile_number :: String
+    , rcImageID :: String
+    , errorMessage :: String
+    , dateOfRegistration :: Maybe String
+    , dateOfRegistrationView :: String
+    , logField :: Object Foreign
+    , driverMobileNumber :: String
+    , cityConfig :: CityConfig
+    , config :: AppConfig
+    }
+
+type AddVehicleDetailsScreenProps
+  = { rcAvailable :: Boolean
+    , vehicleTypes :: Array VehicalTypes
+    , openSelectVehicleTypeModal :: Boolean
+    , openRegistrationModal :: Boolean
+    , rc_name :: String
+    , input_data :: String
+    , enable_upload :: Boolean
+    , openRCManual :: Boolean
+    , openReferralMobileNumber :: Boolean
+    , isValid :: Boolean
+    , btnActive :: Boolean
+    , referralViewstatus :: Boolean
+    , isEdit :: Boolean
+    , isValidState :: Boolean
+    , limitExceedModal :: Boolean
+    , errorVisibility :: Boolean
+    , openRegistrationDateManual :: Boolean
+    , addRcFromProfile :: Boolean
+    , isDateClickable :: Boolean
+    , openHowToUploadManual :: Boolean
+    , logoutModalView :: Boolean
+    , validateProfilePicturePopUp :: Boolean
+    , imageCaptureLayoutView :: Boolean
+    , fileCameraOption :: Boolean
+    , fileCameraPopupModal :: Boolean
+    , validating :: Boolean
+    , successfulValidation :: Boolean
+    , multipleRCstatus :: StageStatus
+    }
+
+data ValidationStatus
+  = Success
+  | Failure
+  | InProgress
+  | None
+
+derive instance genericValidationStatus :: Generic ValidationStatus _
+
+instance showValidationStatus :: Show ValidationStatus where
+  show = genericShow
+
+instance eqValidationStatus :: Eq ValidationStatus where
+  eq = genericEq
+
+data VehicalTypes
+  = Sedan
+  | Hatchback
+  | SUV
+  | Auto
+
+-- ############################################################# UploadingDrivingLicenseScreen ################################################################################
+type UploadDrivingLicenseState
+  = { data :: UploadDrivingLicenseStateData
+    , props :: UploadDrivingLicenseStateProps
+    }
+
+type UploadDrivingLicenseStateData
+  = { driver_license_number :: String
+    , reEnterDriverLicenseNumber :: String
+    , imageFront :: String
+    , imageBack :: String
+    , imageNameFront :: String
+    , imageNameBack :: String
+    , dob :: String
+    , dobView :: String
+    , imageIDFront :: String
+    , imageIDBack :: String
+    , rcVerificationStatus :: String
+    , errorMessage :: String
+    , dateOfIssue :: Maybe String
+    , dateOfIssueView :: String
+    , imageFrontUrl :: String
+    , logField :: Object Foreign
+    , mobileNumber :: String
+    , cityConfig :: CityConfig
+    , config :: AppConfig
+    }
+
+type UploadDrivingLicenseStateProps
+  = { openRegistrationModal :: Boolean
+    , openLicenseManual :: Boolean
+    , input_data :: String
+    , clickedButtonType :: String
+    , openGenericMessageModal :: Boolean
+    , errorVisibility :: Boolean
+    , openDateOfIssueManual :: Boolean
+    , isDateClickable :: Boolean
+    , openHowToUploadManual :: Boolean
+    , logoutPopupModal :: Boolean
+    , validateProfilePicturePopUp :: Boolean
+    , imageCaptureLayoutView :: Boolean
+    , fileCameraPopupModal :: Boolean
+    , fileCameraOption :: Boolean
+    , validating :: Boolean
+    , successfulValidation :: Boolean
+    }
+
+-- ############################################################# RegistrationScreen ################################################################################
+type RegistrationScreenState
+  = { data :: RegistrationScreenData
+    , props :: RegistrationScreenProps
+    }
+
+type RegistrationScreenData
+  = { activeIndex :: Int
+    , registerationSteps :: Array StepProgress
+    , phoneNumber :: String
+    , drivingLicenseStatus :: StageStatus
+    , vehicleDetailsStatus :: StageStatus
+    , permissionsStatus :: StageStatus
+    , subscriptionStatus :: StageStatus
+    , lastUpdateTime :: String
+    , cityConfig :: CityConfig
+    , config :: AppConfig
+    }
+
+type StepProgress
+  = { stageName :: String
+    , stage :: RegisterationStep
+    }
+
+type RegistrationScreenProps
+  = { logoutModalView :: Boolean
+    , limitReachedFor :: Maybe String
+    }
+
+data RegisterationStep
+  = DRIVING_LICENSE_OPTION
+  | VEHICLE_DETAILS_OPTION
+  | GRANT_PERMISSION
+  | SUBSCRIPTION_PLAN
+
+derive instance genericRegisterationStep :: Generic RegisterationStep _
+
+instance eqRegisterationStep :: Eq RegisterationStep where
+  eq = genericEq
+
+data StageStatus
+  = COMPLETED
+  | IN_PROGRESS
+  | NOT_STARTED
+  | FAILED
+
+derive instance genericStageStatus :: Generic StageStatus _
+
+instance eqStageStatus :: Eq StageStatus where
+  eq = genericEq
+
+-- ############################################################# UploadAdhaarScreen ################################################################################
+type UploadAdhaarScreenState
+  = { data :: UploadAdhaarScreenData
+    , props :: UploadAdhaarScreenProps
+    }
+
+type UploadAdhaarScreenData
+  = { imageFront :: String
+    , imageBack :: String
+    , imageName :: String
+    }
+
+type UploadAdhaarScreenProps
+  = { openRegistrationModal :: Boolean
+    , clickedButtonType :: String
+    }
+
+----------------------------------------------------  PrimaryEditTextState   ------------------------------------------------
+type PrimaryEditTextState
+  = { title :: String
+    , type :: String
+    , hint :: String
+    , valueId :: String
+    , pattern :: Maybe String
+    , isinValid :: Boolean
+    , error :: Maybe String
+    , text :: String
+    , fontSize :: FontSize
+    , letterSpacing :: LetterSpacing
+    , id :: String
+    }
+
+----------------------------------------------------- DriverProfileScreen ------------------------------------------------
+type DriverProfileScreenState
+  = { data :: DriverProfileScreenData
+    , props :: DriverProfileScreenProps
+    }
+
+type DriverProfileScreenData
+  = { driverName :: String
+    , driverVehicleType :: String
+    , driverRating :: Maybe Number
+    , base64Image :: String
+    , drivingLicenseNo :: String
+    , driverMobile :: Maybe String
+    , vehicleRegNumber :: String
+    , vehicleModelName :: String
+    , vehicleColor :: String
+    , driverAlternateNumber :: Maybe String
+    , capacity :: Int
+    , downgradeOptions :: Array String
+    , vehicleSelected :: Array VehicleP
+    , genderTypeSelect :: Maybe String
+    , alterNumberEditableText :: Boolean
+    , driverEditAlternateMobile :: Maybe String
+    , otpLimit :: Int
+    , otpBackAlternateNumber :: Maybe String
+    , languagesSpoken :: Array String
+    , gender :: Maybe String
+    , driverGender :: Maybe String
+    , languageList :: Array Common.CheckBoxOptions
+    , vehicleAge :: Int
+    , vehicleName :: String
+    , rcDataArray :: Array RcData
+    , inactiveRCArray :: Array RcData
+    , activeRCData :: RcData
+    , rcNumber :: String
+    , isRCActive :: Boolean
+    , openInactiveRCViewOrNotArray :: Array Int
+    , logField :: Object Foreign
+    , analyticsData :: AnalyticsData
+    , fromHomeScreen :: Boolean
+    , profileImg :: Maybe String
+    , payerVpa :: String
+    , autoPayStatus :: AutoPayStatus
+    , config :: AppConfig
+    , goHomeActive :: Boolean
+    }
+
+type RcData
+  = { rcStatus :: Boolean
+    , rcDetails :: RcDetails
+    }
+
+type RcDetails
+  = { certificateNumber :: String
+    , vehicleModel :: Maybe String
+    , vehicleColor :: Maybe String
+    }
+
+type AnalyticsData
+  = { totalEarnings :: String
+    , bonusEarned :: String
+    , totalCompletedTrips :: Int
+    , totalUsersRated :: Int
+    , rating :: Maybe Number
+    , lateNightTrips :: Int
+    , lastRegistered :: String
+    , badges :: Array Badge
+    , missedEarnings :: Int
+    , ridesCancelled :: Int
+    , cancellationRate :: Int
+    , totalRidesAssigned :: Int
+    , totalDistanceTravelled :: String
+    }
+
+type ChipRailData
+  = { mainTxt :: String
+    , subTxt :: String
+    }
+
+type Badge
+  = { badgeImage :: String
+    , primaryText :: String
+    , subText :: String
+    }
+
+type VehicleP
+  = { vehicleName :: String
+    , isSelected :: Boolean
+    }
+
+type DriverProfileScreenProps
+  = { logoutModalView :: Boolean
+    , showLiveDashboard :: Boolean
+    , screenType :: DriverProfileScreenType
+    , openSettings :: Boolean
+    , updateDetails :: Boolean
+    , showGenderView :: Boolean
+    , alternateNumberView :: Boolean
+    , removeAlternateNumber :: Boolean
+    , enterOtpModal :: Boolean
+    , enterOtpFocusIndex :: Int
+    , otpIncorrect :: Boolean
+    , otpAttemptsExceeded :: Boolean
+    , alternateMobileOtp :: String
+    , checkAlternateNumber :: Boolean
+    , isEditAlternateMobile :: Boolean
+    , numberExistError :: Boolean
+    , mNumberEdtFocused :: Boolean
+    , updateLanguages :: Boolean
+    , activateRcView :: Boolean
+    , activateOrDeactivateRcView :: Boolean
+    , activeRcIndex :: Int
+    , deleteRcView :: Boolean
+    , alreadyActive :: Boolean
+    , callDriver :: Boolean
+    , openRcView :: Boolean
+    , detailsUpdationType :: Maybe UpdateType
+    , btnActive :: Boolean
+    , showBookingOptionForTaxi :: Boolean
+    , upiQrView :: Boolean
+    , paymentInfoView :: Boolean
+    , enableGoto :: Boolean
+    , isRideActive :: Boolean
+    }
+
+data Gender
+  = MALE
+  | FEMALE
+  | OTHER
+  | PREFER_NOT_TO_SAY
+
+data DriverProfileScreenType
+  = DRIVER_DETAILS
+  | VEHICLE_DETAILS
+  | SETTINGS
 
 derive instance genericDriverProfileScreenType :: Generic DriverProfileScreenType _
-instance showDriverProfileScreenType :: Show DriverProfileScreenType where show = genericShow
-instance eqDriverProfileScreenType :: Eq DriverProfileScreenType where eq = genericEq
 
+instance showDriverProfileScreenType :: Show DriverProfileScreenType where
+  show = genericShow
 
-data UpdateType = LANGUAGE | HOME_TOWN | VEHICLE_AGE | VEHICLE_NAME | PAYMENT
+instance eqDriverProfileScreenType :: Eq DriverProfileScreenType where
+  eq = genericEq
+
+data UpdateType
+  = LANGUAGE
+  | HOME_TOWN
+  | VEHICLE_AGE
+  | VEHICLE_NAME
+  | PAYMENT
 
 derive instance genericUpdateType :: Generic UpdateType _
-instance showUpdateType :: Show UpdateType where show = genericShow
-instance eqUpdateType :: Eq UpdateType where eq = genericEq
+
+instance showUpdateType :: Show UpdateType where
+  show = genericShow
+
+instance eqUpdateType :: Eq UpdateType where
+  eq = genericEq
 
 -----------------------------------------------ApplicationStatusScreen ---------------------------------------
-type ApplicationStatusScreenState = {
-  data :: ApplicationStatusScreenData,
-  props :: ApplicationStatusScreenProps
-}
-type ApplicationStatusScreenData =  {
-  rcVerificationStatus :: String,
-  dlVerificationStatus :: String,
-  mobileNumber :: String,
-  otpValue :: String
-}
-type ApplicationStatusScreenProps =  {
-  isSelected :: Boolean,
-  onBoardingFailure :: Boolean,
-  isVerificationFailed :: Boolean,
-  popupview :: Boolean,
-  enterMobileNumberView :: Boolean,
-  alternateNumberAdded :: Boolean,
-  isValidAlternateNumber :: Boolean,
-  buttonVisibilty :: Boolean,
-  enterOtp :: Boolean,
-  isValidOtp :: Boolean,
-  isAlternateMobileNumberExists :: Boolean
-}
+type ApplicationStatusScreenState
+  = { data :: ApplicationStatusScreenData
+    , props :: ApplicationStatusScreenProps
+    }
+
+type ApplicationStatusScreenData
+  = { rcVerificationStatus :: String
+    , dlVerificationStatus :: String
+    , mobileNumber :: String
+    , otpValue :: String
+    }
+
+type ApplicationStatusScreenProps
+  = { isSelected :: Boolean
+    , onBoardingFailure :: Boolean
+    , isVerificationFailed :: Boolean
+    , popupview :: Boolean
+    , enterMobileNumberView :: Boolean
+    , alternateNumberAdded :: Boolean
+    , isValidAlternateNumber :: Boolean
+    , buttonVisibilty :: Boolean
+    , enterOtp :: Boolean
+    , isValidOtp :: Boolean
+    , isAlternateMobileNumberExists :: Boolean
+    }
 
 --------------------------------------------------------------- EnterMobileNumberScreenState -----------------------------------------------------------------------------
-type EnterMobileNumberScreenState = {
-  data :: EnterMobileNumberScreenStateData,
-  props :: EnterMobileNumberScreenStateProps
-}
+type EnterMobileNumberScreenState
+  = { data :: EnterMobileNumberScreenStateData
+    , props :: EnterMobileNumberScreenStateProps
+    }
 
-type EnterMobileNumberScreenStateData = {
-    mobileNumber :: String,
-    logField :: Object Foreign,
-    config :: AppConfig
-}
+type EnterMobileNumberScreenStateData
+  = { mobileNumber :: String
+    , logField :: Object Foreign
+    , config :: AppConfig
+    }
 
-type EnterMobileNumberScreenStateProps = {
-  btnActive :: Boolean,
-  isValid :: Boolean,
-  mobileNumberEditFocused :: Boolean
-}
+type EnterMobileNumberScreenStateProps
+  = { btnActive :: Boolean
+    , isValid :: Boolean
+    , mobileNumberEditFocused :: Boolean
+    }
 
 --------------------------------------------------------------- BankDetailScreenState -----------------------------------------------------------------------------
-type BankDetailScreenState = {
-  data :: BankDetailScreenStateData,
-  props :: BankDetailScreenStateProps
-}
+type BankDetailScreenState
+  = { data :: BankDetailScreenStateData
+    , props :: BankDetailScreenStateProps
+    }
 
-type BankDetailScreenStateData =  {
-  beneficiaryNumber :: String,
-  ifsc :: String
-}
+type BankDetailScreenStateData
+  = { beneficiaryNumber :: String
+    , ifsc :: String
+    }
 
-type BankDetailScreenStateProps =  {
-  openRegistrationModal :: Boolean,
-  inputData :: String,
-  isBeneficiaryMatching :: Boolean
-}
+type BankDetailScreenStateProps
+  = { openRegistrationModal :: Boolean
+    , inputData :: String
+    , isBeneficiaryMatching :: Boolean
+    }
 
 -------------------------------------------------------EnterOTPScreenState ------------------------------
-type EnterOTPScreenState = {
-  data :: EnterOTPScreenStateData,
-  props :: EnterOTPScreenStateProps
-}
+type EnterOTPScreenState
+  = { data :: EnterOTPScreenStateData
+    , props :: EnterOTPScreenStateProps
+    }
 
-type EnterOTPScreenStateData = {
-  otp :: String,
-  tokenId :: String,
-  attemptCount :: Int,
-  mobileNo :: String,
-  timer :: String,
-  capturedOtp :: String,
-  focusedIndex :: Int,
-  editTextId :: String,
-  config :: AppConfig
-}
+type EnterOTPScreenStateData
+  = { otp :: String
+    , tokenId :: String
+    , attemptCount :: Int
+    , mobileNo :: String
+    , timer :: String
+    , capturedOtp :: String
+    , focusedIndex :: Int
+    , editTextId :: String
+    , config :: AppConfig
+    }
 
-type EnterOTPScreenStateProps = {
-  btnActive :: Boolean,
-  isValid :: Boolean,
-  resendEnabled :: Boolean,
-  otpTmp :: Boolean
-}
+type EnterOTPScreenStateProps
+  = { btnActive :: Boolean
+    , isValid :: Boolean
+    , resendEnabled :: Boolean
+    , otpTmp :: Boolean
+    }
 
 ---------------------PrimaryButtonState----------------------------------------
-type PrimaryButtonState = {
-  title :: String,
-  active :: Boolean,
-  size :: Boolean,
-  screenName :: String,
-  isEndScreen :: Boolean,
-  specificLog :: String
-  }
-
+type PrimaryButtonState
+  = { title :: String
+    , active :: Boolean
+    , size :: Boolean
+    , screenName :: String
+    , isEndScreen :: Boolean
+    , specificLog :: String
+    }
 
 -- ################################################ RideHistoryScreenState ##################################################
 data AnimationState
@@ -544,1570 +584,1833 @@ data AnimationState
   | AnimatedOut
 
 derive instance genericAnimationState :: Generic AnimationState _
-instance showAnimationState :: Show AnimationState where show = genericShow
-instance eqAnimationState :: Eq AnimationState where eq = genericEq
-instance encodeAnimationState :: Encode AnimationState where encode = defaultEnumEncode
-instance decodeAnimationState :: Decode AnimationState where decode = defaultEnumDecode
 
-type RideHistoryScreenState =
-  {
-    shimmerLoader :: AnimationState,
-    prestoListArrayItems :: Array ItemState,
-    rideList :: Array IndividualRideCardState,
-    selectedItem :: IndividualRideCardState,
-    currentTab :: String,
-    offsetValue :: Int,
-    loaderButtonVisibility :: Boolean,
-    loadMoreDisabled :: Boolean,
-    recievedResponse :: Boolean,
-    logField :: Object Foreign
-  , datePickerState :: DatePickerState
-  , props :: RideHistoryScreenStateProps
-  , data :: RideHistoryScreenStateData
-  }
-type DatePickerState = {
-  activeIndex :: Int
-, selectedItem :: Common.CalendarDate
-}
-type RideHistoryScreenStateProps = {
-    showDatePicker :: Boolean
- , showPaymentHistory :: Boolean
-}
-type RideHistoryScreenStateData = {
-    pastDays :: Int
-  , paymentHistory :: PaymentHistoryModelState
-  , config :: AppConfig
-}
+instance showAnimationState :: Show AnimationState where
+  show = genericShow
 
-data EditRc = DEACTIVATING_RC | DELETING_RC | ACTIVATING_RC
+instance eqAnimationState :: Eq AnimationState where
+  eq = genericEq
+
+instance encodeAnimationState :: Encode AnimationState where
+  encode = defaultEnumEncode
+
+instance decodeAnimationState :: Decode AnimationState where
+  decode = defaultEnumDecode
+
+type RideHistoryScreenState
+  = { shimmerLoader :: AnimationState
+    , prestoListArrayItems :: Array ItemState
+    , rideList :: Array IndividualRideCardState
+    , selectedItem :: IndividualRideCardState
+    , currentTab :: String
+    , offsetValue :: Int
+    , loaderButtonVisibility :: Boolean
+    , loadMoreDisabled :: Boolean
+    , recievedResponse :: Boolean
+    , logField :: Object Foreign
+    , datePickerState :: DatePickerState
+    , props :: RideHistoryScreenStateProps
+    , data :: RideHistoryScreenStateData
+    }
+
+type DatePickerState
+  = { activeIndex :: Int
+    , selectedItem :: Common.CalendarDate
+    }
+
+type RideHistoryScreenStateProps
+  = { showDatePicker :: Boolean
+    , showPaymentHistory :: Boolean
+    }
+
+type RideHistoryScreenStateData
+  = { pastDays :: Int
+    , paymentHistory :: PaymentHistoryModelState
+    , config :: AppConfig
+    }
+
+data EditRc
+  = DEACTIVATING_RC
+  | DELETING_RC
+  | ACTIVATING_RC
 
 derive instance genericEditRc :: Generic EditRc _
-instance eqEditRc :: Eq EditRc where eq = genericEq
 
-data CallOptions = CALLING_DRIVER | CALLING_CUSTOMER_SUPPORT
+instance eqEditRc :: Eq EditRc where
+  eq = genericEq
+
+data CallOptions
+  = CALLING_DRIVER
+  | CALLING_CUSTOMER_SUPPORT
+
 derive instance genericCallOptions :: Generic CallOptions _
-instance eqCallOptions :: Eq CallOptions where eq = genericEq
-instance showCallOptions :: Show CallOptions where show = genericShow
-instance encodeCallOptions :: Encode CallOptions where encode = defaultEnumEncode
-instance decodeCallOptions :: Decode CallOptions where decode = defaultEnumDecode
 
-type RideSelectionScreenState =
-  {
-    shimmerLoader :: AnimationState,
-    prestoListArrayItems :: Array ItemState,
-    rideList :: Array IndividualRideCardState,
-    selectedItem :: Maybe IndividualRideCardState,
-    offsetValue :: Int,
-    loaderButtonVisibility :: Boolean,
-    loadMoreDisabled :: Boolean,
-    recievedResponse :: Boolean,
-    selectedCategory :: CategoryListType
-  }
+instance eqCallOptions :: Eq CallOptions where
+  eq = genericEq
 
-type VehicleDetails = { rcStatus :: Boolean
-                , rcDetails :: { certificateNumber  :: String
-                , vehicleModel :: Maybe String
-                , vehicleColor :: Maybe String
-                }}
+instance showCallOptions :: Show CallOptions where
+  show = genericShow
+
+instance encodeCallOptions :: Encode CallOptions where
+  encode = defaultEnumEncode
+
+instance decodeCallOptions :: Decode CallOptions where
+  decode = defaultEnumDecode
+
+type RideSelectionScreenState
+  = { shimmerLoader :: AnimationState
+    , prestoListArrayItems :: Array ItemState
+    , rideList :: Array IndividualRideCardState
+    , selectedItem :: Maybe IndividualRideCardState
+    , offsetValue :: Int
+    , loaderButtonVisibility :: Boolean
+    , loadMoreDisabled :: Boolean
+    , recievedResponse :: Boolean
+    , selectedCategory :: CategoryListType
+    }
+
+type VehicleDetails
+  = { rcStatus :: Boolean
+    , rcDetails ::
+        { certificateNumber :: String
+        , vehicleModel :: Maybe String
+        , vehicleColor :: Maybe String
+        }
+    }
 
 ------------------------------------------- ReferralScreenState -----------------------------------------
-
-type ReferralScreenState = {
-    data :: ReferralScreenStateData
-  , props :: ReferralScreenStateProps
-}
-
-type ReferralScreenStateData = {
-    referralCode :: String
-  , confirmReferralCode :: String
-  , password :: String
-  , driverInfo :: {
-      driverName :: String,
-      driverMobile :: Maybe String,
-      vehicleRegNumber :: String,
-      referralCode     :: Maybe String,
-      vehicleVariant :: String
+type ReferralScreenState
+  = { data :: ReferralScreenStateData
+    , props :: ReferralScreenStateProps
     }
-  , driverPerformance :: {
-      referrals :: {
-        totalActivatedCustomers :: Int,
-        totalReferredCustomers :: Int
-      }
-    }
-  , logField :: Object Foreign
-  , config :: AppConfig
-}
 
-type ReferralScreenStateProps = {
-    primarybtnActive :: Boolean
-  , passwordPopUpVisible  :: Boolean
-  , callSupportPopUpVisible :: Boolean
-  , confirmBtnActive :: Boolean
-  , enableReferralFlowCount :: Int
-  , stage :: ReferralType
-  , seconds :: Int
-  , id :: String
-  , firstTime :: Boolean
-  , leaderBoardType :: LeaderBoardType
-  , showDateSelector :: Boolean
-  , days :: Array Common.CalendarDate
-  , weeks :: Array Common.CalendarWeek
-  , selectedDay :: Common.CalendarDate
-  , selectedWeek :: Common.CalendarWeek
-  , rankersData :: Array RankCardData
-  , currentDriverData :: RankCardData
-  , showShimmer :: Boolean
-  , noData :: Boolean
-  , lastUpdatedAt :: String
-}
+type ReferralScreenStateData
+  = { referralCode :: String
+    , confirmReferralCode :: String
+    , password :: String
+    , driverInfo ::
+        { driverName :: String
+        , driverMobile :: Maybe String
+        , vehicleRegNumber :: String
+        , referralCode :: Maybe String
+        , vehicleVariant :: String
+        }
+    , driverPerformance ::
+        { referrals ::
+            { totalActivatedCustomers :: Int
+            , totalReferredCustomers :: Int
+            }
+        }
+    , logField :: Object Foreign
+    , config :: AppConfig
+    }
+
+type ReferralScreenStateProps
+  = { primarybtnActive :: Boolean
+    , passwordPopUpVisible :: Boolean
+    , callSupportPopUpVisible :: Boolean
+    , confirmBtnActive :: Boolean
+    , enableReferralFlowCount :: Int
+    , stage :: ReferralType
+    , seconds :: Int
+    , id :: String
+    , firstTime :: Boolean
+    , leaderBoardType :: LeaderBoardType
+    , showDateSelector :: Boolean
+    , days :: Array Common.CalendarDate
+    , weeks :: Array Common.CalendarWeek
+    , selectedDay :: Common.CalendarDate
+    , selectedWeek :: Common.CalendarWeek
+    , rankersData :: Array RankCardData
+    , currentDriverData :: RankCardData
+    , showShimmer :: Boolean
+    , noData :: Boolean
+    , lastUpdatedAt :: String
+    }
 
 -- ################################################ IndividualRideCardState ##################################################
+type IndividualRideCardState
+  = { date :: String
+    , time :: String
+    , total_amount :: Int
+    , card_visibility :: String
+    , shimmer_visibility :: String
+    , rideDistance :: String
+    , status :: String
+    , vehicleModel :: String
+    , shortRideId :: String
+    , vehicleNumber :: String
+    , driverName :: String
+    , driverSelectedFare :: Int
+    , vehicleColor :: String
+    , id :: String
+    , updatedAt :: String
+    , source :: String
+    , destination :: String
+    , vehicleType :: String
+    , riderName :: String
+    , customerExtraFee :: Maybe Int
+    , purpleTagVisibility :: Boolean
+    , gotoTagVisibility :: Boolean
+    , specialZoneLayoutBackground :: String
+    , specialZoneImage :: String
+    , specialZoneText :: String
+    , spLocTagVisibility :: Boolean
+    }
 
-type IndividualRideCardState =
-  {
-    date :: String,
-    time :: String,
-    total_amount :: Int,
-    card_visibility :: String,
-    shimmer_visibility :: String,
-    rideDistance :: String,
-    status :: String,
-    vehicleModel :: String,
-    shortRideId :: String,
-    vehicleNumber :: String,
-    driverName :: String,
-    driverSelectedFare :: Int,
-    vehicleColor :: String,
-    id :: String,
-    updatedAt :: String,
-    source :: String,
-    destination :: String,
-    vehicleType :: String,
-    riderName :: String,
-    customerExtraFee :: Maybe Int,
-    purpleTagVisibility :: Boolean,
-    gotoTagVisibility :: Boolean,
-    specialZoneLayoutBackground :: String,
-    specialZoneImage :: String,
-    specialZoneText :: String,
-    spLocTagVisibility :: Boolean
-  }
+type ItemState
+  = { date :: PropValue
+    , time :: PropValue
+    , total_amount :: PropValue
+    , card_visibility :: PropValue
+    , shimmer_visibility :: PropValue
+    , rideDistance :: PropValue
+    , status :: PropValue
+    , vehicleModel :: PropValue
+    , shortRideId :: PropValue
+    , vehicleNumber :: PropValue
+    , driverName :: PropValue
+    , driverSelectedFare :: PropValue
+    , vehicleColor :: PropValue
+    , id :: PropValue
+    , updatedAt :: PropValue
+    , source :: PropValue
+    , destination :: PropValue
+    , amountColor :: PropValue
+    , riderName :: PropValue
+    , spLocTagVisibility :: PropValue
+    , specialZoneText :: PropValue
+    , specialZoneImage :: PropValue
+    , specialZoneLayoutBackground :: PropValue
+    , gotoTagVisibility :: PropValue
+    , purpleTagVisibility :: PropValue
+    , tipTagVisibility :: PropValue
+    }
 
-
-type ItemState =
-  {
-    date :: PropValue,
-    time :: PropValue,
-    total_amount :: PropValue,
-    card_visibility :: PropValue,
-    shimmer_visibility :: PropValue,
-    rideDistance :: PropValue,
-    status :: PropValue,
-    vehicleModel :: PropValue,
-    shortRideId :: PropValue,
-    vehicleNumber :: PropValue,
-    driverName :: PropValue,
-    driverSelectedFare :: PropValue,
-    vehicleColor :: PropValue,
-    id :: PropValue,
-    updatedAt :: PropValue,
-    source :: PropValue,
-    destination :: PropValue,
-    amountColor :: PropValue,
-    riderName :: PropValue,
-    spLocTagVisibility :: PropValue,
-    specialZoneText :: PropValue,
-    specialZoneImage :: PropValue,
-    specialZoneLayoutBackground :: PropValue,
-    gotoTagVisibility :: PropValue,
-    purpleTagVisibility :: PropValue,
-    tipTagVisibility :: PropValue
-  }
 -----------------------------------------------ApplicationStatusScreen -------------------
+type DriverDetailsScreenState
+  = { data :: DriverDetailsScreenStateData
+    , props :: DriverDetailsScreenStateProps
+    }
 
-type DriverDetailsScreenState = {
-  data :: DriverDetailsScreenStateData,
-  props :: DriverDetailsScreenStateProps
-}
-
-data KeyboardModalType = MOBILE__NUMBER | OTP | NONE
+data KeyboardModalType
+  = MOBILE__NUMBER
+  | OTP
+  | NONE
 
 derive instance genericKeyboardModalType :: Generic KeyboardModalType _
-instance eqKeyboardModalType :: Eq KeyboardModalType where eq = genericEq
-type DriverDetailsScreenStateData =  {
-  driverName :: String,
-  driverVehicleType :: String,
-  driverRating :: Maybe Number,
-  base64Image :: String,
-  drivingLicenseNo :: String,
-  driverMobile :: Maybe String,
-  driverAlternateMobile :: Maybe String,
-  driverEditAlternateMobile :: Maybe String,
-  genderSelectionModal ::  GenderSelectionModalData,
-  driverGender :: Maybe String,
-  otpLimit :: Int,
-  otpBackAlternateNumber :: Maybe String
-}
 
-type DriverDetailsScreenStateProps =  {
-  keyboardModalType :: KeyboardModalType,
-  checkAlternateNumber :: Boolean,
-  enterOtpFocusIndex :: Int,
-  otpIncorrect :: Boolean,
-  otpAttemptsExceeded :: Boolean,
-  genderSelectionModalShow :: Boolean,
-  alternateMobileOtp :: String,
-  removeNumberPopup :: Boolean,
-  isEditAlternateMobile :: Boolean,
-  numberExistError :: Boolean
-}
+instance eqKeyboardModalType :: Eq KeyboardModalType where
+  eq = genericEq
 
+type DriverDetailsScreenStateData
+  = { driverName :: String
+    , driverVehicleType :: String
+    , driverRating :: Maybe Number
+    , base64Image :: String
+    , drivingLicenseNo :: String
+    , driverMobile :: Maybe String
+    , driverAlternateMobile :: Maybe String
+    , driverEditAlternateMobile :: Maybe String
+    , genderSelectionModal :: GenderSelectionModalData
+    , driverGender :: Maybe String
+    , otpLimit :: Int
+    , otpBackAlternateNumber :: Maybe String
+    }
+
+type DriverDetailsScreenStateProps
+  = { keyboardModalType :: KeyboardModalType
+    , checkAlternateNumber :: Boolean
+    , enterOtpFocusIndex :: Int
+    , otpIncorrect :: Boolean
+    , otpAttemptsExceeded :: Boolean
+    , genderSelectionModalShow :: Boolean
+    , alternateMobileOtp :: String
+    , removeNumberPopup :: Boolean
+    , isEditAlternateMobile :: Boolean
+    , numberExistError :: Boolean
+    }
 
 ----------------------------------------------- VehicleDetailsScreen -------------------
+type VehicleDetailsScreenState
+  = { data :: VehicleDetailsScreenData
+    , props :: VehicleDetailsScreenProps
+    }
 
-type VehicleDetailsScreenState = {
-  data :: VehicleDetailsScreenData,
-  props :: VehicleDetailsScreenProps
-}
+type VehicleDetailsScreenData
+  = { imageName :: String
+    , vehicleTypes :: Array VehicalTypes
+    , base64Image :: String
+    , vehicleRegNumber :: String
+    , vehicleType :: String
+    , vehicleModel :: String
+    , vehicleColor :: String
+    }
 
-type VehicleDetailsScreenData =  {
-  imageName :: String,
-  vehicleTypes :: Array VehicalTypes,
-  base64Image :: String,
-  vehicleRegNumber :: String,
-  vehicleType :: String,
-  vehicleModel :: String,
-  vehicleColor :: String
-}
-
-type VehicleDetailsScreenProps =  {
-  isInEditVehicleDetailsView :: Boolean,
-  openSelectVehicleTypeModal :: Boolean,
-  isModalVisible :: Boolean,
-  deleteButtonVisibility :: Boolean,
-  isValid :: Boolean
-}
+type VehicleDetailsScreenProps
+  = { isInEditVehicleDetailsView :: Boolean
+    , openSelectVehicleTypeModal :: Boolean
+    , isModalVisible :: Boolean
+    , deleteButtonVisibility :: Boolean
+    , isValid :: Boolean
+    }
 
 --------------------------------------------- AboutUsScreenState ---------------------------
-type AboutUsScreenState = {
-  data :: AboutUsScreenData,
-  props :: AboutUsScreenProps
-}
+type AboutUsScreenState
+  = { data :: AboutUsScreenData
+    , props :: AboutUsScreenProps
+    }
 
-type AboutUsScreenData = {
-  versionNumber :: String
-}
+type AboutUsScreenData
+  = { versionNumber :: String
+    }
 
-type AboutUsScreenProps = {
-  demoModePopup :: Boolean,
-  enableConfirmPassword :: Boolean,
-  enableDemoModeCount :: Int
-}
+type AboutUsScreenProps
+  = { demoModePopup :: Boolean
+    , enableConfirmPassword :: Boolean
+    , enableDemoModeCount :: Int
+    }
 
 --------------------------------------------- SelectLanguageScreenState ---------------------------
-type SelectLanguageScreenState = {
-  data :: SelectLanguageScreenData,
-  props :: SelectLanguageScreenProps
-}
+type SelectLanguageScreenState
+  = { data :: SelectLanguageScreenData
+    , props :: SelectLanguageScreenProps
+    }
 
-type SelectLanguageScreenData = {
-  isSelected :: Boolean
-, config :: AppConfig
-, logField :: Object Foreign
-}
+type SelectLanguageScreenData
+  = { isSelected :: Boolean
+    , config :: AppConfig
+    , logField :: Object Foreign
+    }
 
-type SelectLanguageScreenProps = {
-  selectedLanguage :: String,
-  btnActive :: Boolean
-}
+type SelectLanguageScreenProps
+  = { selectedLanguage :: String
+    , btnActive :: Boolean
+    }
 
 ----------------------------------------------- HomeScreenState ---------------------------------------------
-
-type HomeScreenState = {
-  data :: HomeScreenData,
-  props :: HomeScreenProps
-}
+type HomeScreenState
+  = { data :: HomeScreenData
+    , props :: HomeScreenProps
+    }
 
 -- check something here as well
+type HomeScreenData
+  = { driverName :: String
+    , vehicleType :: String
+    , activeRide :: ActiveRide
+    , cancelRideModal :: CancelRideModalData
+    , currentDriverLat :: Number
+    , currentDriverLon :: Number
+    , locationLastUpdatedTime :: String
+    , totalRidesOfDay :: Int
+    , totalEarningsOfDay :: Int
+    , bonusEarned :: Int
+    , route :: Array Route
+    , cancelRideConfirmationPopUp :: CancelRidePopUpData
+    , messages :: Array ChatView.ChatComponent
+    , messagesSize :: String
+    , suggestionsList :: Array String
+    , messageToBeSent :: String
+    , driverAlternateMobile :: Maybe String
+    , logField :: Object Foreign
+    , paymentState :: PaymentState
+    , profileImg :: Maybe String
+    , endRideData :: EndRideData
+    , config :: AppConfig
+    , triggerPatchCounter :: Int
+    , peekHeight :: Int
+    , driverGotoState :: DriverGoToState
+    , snappedOrigin :: Maybe Location
+    , gender :: String
+    }
 
-type HomeScreenData =  {
-  driverName :: String,
-  vehicleType :: String,
-  activeRide :: ActiveRide,
-  cancelRideModal :: CancelRideModalData,
-  currentDriverLat :: Number,
-  currentDriverLon :: Number,
-  locationLastUpdatedTime :: String,
-  totalRidesOfDay :: Int,
-  totalEarningsOfDay :: Int,
-  bonusEarned :: Int ,
-  route :: Array Route,
-  cancelRideConfirmationPopUp :: CancelRidePopUpData,
-  messages :: Array ChatView.ChatComponent,
-  messagesSize :: String,
-  suggestionsList :: Array String,
-  messageToBeSent :: String,
-  driverAlternateMobile :: Maybe String,
-  logField :: Object Foreign,
-  paymentState :: PaymentState,
-  profileImg :: Maybe String, 
-  endRideData :: EndRideData,
-  config :: AppConfig,
-  triggerPatchCounter :: Int,
-  peekHeight :: Int,
-  driverGotoState :: DriverGoToState,
-  snappedOrigin :: Maybe Location,
-  gender :: String
-}
+type DriverGoToState
+  = { gotoCount :: Int
+    , goToInfo :: Boolean
+    , selectedGoTo :: String
+    , showGoto :: Boolean
+    , savedLocationsArray :: Array GoToLocation
+    , gotoValidTill :: String
+    , timerInMinutes :: String
+    , isGotoEnabled :: Boolean
+    , timerId :: String
+    , gotoReducedCount :: Maybe Int
+    , gotoLocInRange :: Boolean
+    , goToPopUpType :: GoToPopUpType
+    , gotoEnabledForMerchant :: Boolean
+    , confirmGotoCancel :: Boolean
+    }
 
-type DriverGoToState = {
-  gotoCount :: Int,
-  goToInfo :: Boolean,
-  selectedGoTo :: String,
-  showGoto :: Boolean,
-  savedLocationsArray :: Array GoToLocation,
-  gotoValidTill :: String,
-  timerInMinutes :: String,
-  isGotoEnabled :: Boolean,
-  timerId :: String,
-  gotoReducedCount :: Maybe Int,
-  gotoLocInRange :: Boolean,
-  goToPopUpType :: GoToPopUpType,
-  gotoEnabledForMerchant :: Boolean,
-  confirmGotoCancel :: Boolean
-}
+type EndRideData
+  = { rideId :: String
+    , zeroCommision :: Int
+    , tip :: Maybe Int
+    , finalAmount :: Int
+    , riderName :: String
+    , rating :: Int
+    , feedback :: String
+    , disability :: Maybe String
+    , payerVpa :: String
+    }
 
+type PaymentState
+  = { rideCount :: Int
+    , totalMoneyCollected :: Int
+    , payableAndGST :: Int
+    , platFromFee :: Int
+    , date :: String
+    , makePaymentModal :: Boolean
+    , showRateCard :: Boolean
+    , paymentStatusBanner :: Boolean
+    , paymentStatus :: Common.PaymentStatus
+    , invoiceId :: String
+    , bannerBG :: String
+    , bannerTitle :: String
+    , bannerTitleColor :: String
+    , banneActionText :: String
+    , actionTextColor :: String
+    , bannerImage :: String
+    , showBannerImage :: Boolean
+    , chargesBreakup :: Array PaymentBreakUp
+    , blockedDueToPayment :: Boolean
+    , dateObj :: String
+    , laterButtonVisibility :: Boolean
+    , orderId :: String
+    , subscribed :: Boolean
+    , showShimmer :: Boolean
+    , driverBlocked :: Boolean
+    , showBlockingPopup :: Boolean
+    , totalPendingManualDues :: Number
+    , autoPayStatus :: AutoPayStatus
+    }
 
-type EndRideData = {
-    rideId :: String,
-    zeroCommision :: Int,
-    tip :: Maybe Int,
-    finalAmount :: Int, 
-    riderName :: String,
-    rating :: Int,
-    feedback :: String,
-    disability :: Maybe String,
-    payerVpa :: String
-  }
-type PaymentState = {
-  rideCount :: Int,
-  totalMoneyCollected :: Int,
-  payableAndGST :: Int,
-  platFromFee :: Int,
-  date :: String,
-  makePaymentModal :: Boolean,
-  showRateCard :: Boolean,
-  paymentStatusBanner :: Boolean,
-  paymentStatus :: Common.PaymentStatus,
-  invoiceId :: String,
-  bannerBG :: String,
-  bannerTitle :: String,
-  bannerTitleColor :: String,
-  banneActionText :: String,
-  actionTextColor :: String,
-  bannerImage :: String,
-  showBannerImage :: Boolean,
-  chargesBreakup :: Array PaymentBreakUp,
-  blockedDueToPayment :: Boolean,
-  dateObj :: String,
-  laterButtonVisibility :: Boolean,
-  orderId :: String,
-  subscribed :: Boolean,
-  showShimmer :: Boolean,
-  driverBlocked :: Boolean,
-  showBlockingPopup :: Boolean,
-  totalPendingManualDues :: Number,
-  autoPayStatus :: AutoPayStatus
-}
+type CancelRidePopUpData
+  = { delayInSeconds :: Int
+    , timerID :: String
+    , continueEnabled :: Boolean
+    , enableTimer :: Boolean
+    }
 
-type CancelRidePopUpData = {
-  delayInSeconds :: Int,
-  timerID :: String,
-  continueEnabled :: Boolean,
-  enableTimer :: Boolean
-}
+type CancelRideModalData
+  = { selectionOptions :: Array Common.OptionButtonList
+    , activeIndex :: Maybe Int
+    , selectedReasonCode :: String
+    , selectedReasonDescription :: String
+    , isMandatoryTextHidden :: Boolean
+    , isSelectButtonActive :: Boolean
+    }
 
-type CancelRideModalData = {
-  selectionOptions :: Array Common.OptionButtonList,
-  activeIndex ::Maybe Int,
-  selectedReasonCode :: String,
-  selectedReasonDescription :: String,
-  isMandatoryTextHidden :: Boolean,
-  isSelectButtonActive :: Boolean
-}
+type GenderSelectionModalData
+  = { selectionOptions :: Array Common.OptionButtonList
+    , activeIndex :: Maybe Int
+    , selectedReasonCode :: String
+    , selectedReasonDescription :: String
+    , isSelectButtonActive :: Boolean
+    }
 
-type GenderSelectionModalData = {
-  selectionOptions :: Array Common.OptionButtonList,
-  activeIndex ::Maybe Int,
-  selectedReasonCode :: String,
-  selectedReasonDescription :: String,
-  isSelectButtonActive :: Boolean
-}
+type Rides
+  = { id :: String
+    , timer :: Int
+    , seconds :: Int
+    , pickupDistance :: Int
+    , journeyDistance :: Int
+    , sourceAddress :: String
+    , destinationAddress :: String
+    , totalAmount :: Number
+    , baseAmount :: Number
+    , increasePrice :: Number
+    , decreasePrice :: Number
+    , destinationArea :: String
+    }
 
-type Rides = {
-  id :: String,
-  timer :: Int,
-  seconds :: Int,
-  pickupDistance :: Int,
-  journeyDistance :: Int,
-  sourceAddress :: String,
-  destinationAddress :: String,
-  totalAmount :: Number,
-  baseAmount :: Number ,
-  increasePrice :: Number,
-  decreasePrice :: Number,
-  destinationArea :: String
-}
+type ActiveRide
+  = { id :: String
+    , source :: String
+    , destination :: String
+    , src_lat :: Number
+    , src_lon :: Number
+    , dest_lat :: Number
+    , dest_lon :: Number
+    , actualRideDistance :: Number
+    , status :: Status
+    , distance :: Number
+    , exoPhone :: String
+    , duration :: Int
+    , riderName :: String
+    , estimatedFare :: Int
+    , waitTimerId :: String
+    , notifiedCustomer :: Boolean
+    , waitTimeInfo :: Boolean
+    , rideCreatedAt :: String
+    , specialLocationTag :: Maybe String
+    , requestedVehicleVariant :: Maybe String
+    , disabilityTag :: Maybe DisabilityType
+    , waitTimeSeconds :: Int
+    }
 
-type ActiveRide = {
-  id :: String,
-  source :: String,
-  destination :: String,
-  src_lat :: Number,
-  src_lon :: Number,
-  dest_lat :: Number,
-  dest_lon :: Number,
-  actualRideDistance :: Number,
-  status :: Status,
-  distance :: Number,
-  exoPhone :: String,
-  duration :: Int,
-  riderName :: String,
-  estimatedFare :: Int,
-  waitTimerId :: String,
-  notifiedCustomer :: Boolean,
-  waitTimeInfo :: Boolean,
-  rideCreatedAt :: String,
-  specialLocationTag :: Maybe String,
-  requestedVehicleVariant :: Maybe String,
-  disabilityTag :: Maybe DisabilityType,
-  waitTimeSeconds :: Int
-}
+type HomeScreenProps
+  = { statusOnline :: Boolean
+    , goOfflineModal :: Boolean
+    , screenName :: String
+    , rideActionModal :: Boolean
+    , enterOtpModal :: Boolean
+    , rideOtp :: String
+    , enterOtpFocusIndex :: Int
+    , time :: Int
+    , otpIncorrect :: Boolean
+    , wrongVehicleVariant :: Boolean
+    , endRidePopUp :: Boolean
+    , cancelRideModalShow :: Boolean
+    , routeVisible :: Boolean
+    , otpAttemptsExceeded :: Boolean
+    , refreshAnimation :: Boolean
+    , showDottedRoute :: Boolean
+    , currentStage :: HomeScreenStage
+    , mapRendered :: Boolean
+    , cancelConfirmationPopup :: Boolean
+    , chatcallbackInitiated :: Boolean
+    , sendMessageActive :: Boolean
+    , unReadMessages :: Boolean
+    , openChatScreen :: Boolean
+    , updatedArrivalInChat :: Boolean
+    , driverStatusSet :: DriverStatus
+    , silentPopUpView :: Boolean
+    , zoneRideBooking :: Boolean
+    , showGenderBanner :: Boolean
+    , notRemoveBanner :: Boolean
+    , showBonusInfo :: Boolean
+    , showlinkAadhaarPopup :: Boolean
+    , isChatOpened :: Boolean
+    , showAadharPopUp :: Boolean
+    , canSendSuggestion :: Boolean
+    , showOffer :: Boolean
+    , autoPayBanner :: SubscriptionBannerType
+    , subscriptionPopupType :: SubscriptionPopupType
+    , rcActive :: Boolean
+    , rcDeactivePopup :: Boolean
+    , showAccessbilityPopup :: Boolean
+    , showRideCompleted :: Boolean
+    , showRideRating :: Boolean
+    , showContactSupportPopUp :: Boolean
+    , showChatBlockerPopUp :: Boolean
+    , showGenericAccessibilityPopUp :: Boolean
+    , waitTimeStatus :: TimerStatus
+    , isMockLocation :: Boolean
+    , accountBlockedPopup :: Boolean
+    }
 
-type HomeScreenProps =  {
-  statusOnline :: Boolean,
-  goOfflineModal :: Boolean,
-  screenName :: String,
-  rideActionModal :: Boolean,
-  enterOtpModal :: Boolean,
-  rideOtp :: String,
-  enterOtpFocusIndex :: Int,
-  time :: Int,
-  otpIncorrect :: Boolean,
-  wrongVehicleVariant :: Boolean,
-  endRidePopUp :: Boolean,
-  cancelRideModalShow :: Boolean,
-  routeVisible :: Boolean,
-  otpAttemptsExceeded :: Boolean,
-  refreshAnimation :: Boolean,
-  showDottedRoute :: Boolean,
-  currentStage :: HomeScreenStage,
-  mapRendered :: Boolean,
-  cancelConfirmationPopup :: Boolean,
-  chatcallbackInitiated :: Boolean,
-  sendMessageActive :: Boolean,
-  unReadMessages :: Boolean,
-  openChatScreen :: Boolean,
-  updatedArrivalInChat :: Boolean,
-  driverStatusSet :: DriverStatus,
-  silentPopUpView :: Boolean,
-  zoneRideBooking :: Boolean,
-  showGenderBanner :: Boolean,
-  notRemoveBanner :: Boolean,
-  showBonusInfo :: Boolean,
-  showlinkAadhaarPopup :: Boolean,
-  isChatOpened :: Boolean,
-  showAadharPopUp :: Boolean,
-  canSendSuggestion :: Boolean,
-  showOffer :: Boolean,
-  autoPayBanner :: SubscriptionBannerType,
-  subscriptionPopupType :: SubscriptionPopupType,
-  rcActive :: Boolean, 
-  rcDeactivePopup :: Boolean,
-  showAccessbilityPopup :: Boolean,
-  showRideCompleted :: Boolean,
-  showRideRating :: Boolean,
-  showContactSupportPopUp :: Boolean,
-  showChatBlockerPopUp :: Boolean,
-  showGenericAccessibilityPopUp :: Boolean,
-  waitTimeStatus :: TimerStatus,
-  isMockLocation :: Boolean,
-  accountBlockedPopup :: Boolean
- }
-
-data SubscriptionBannerType = FREE_TRIAL_BANNER | SETUP_AUTOPAY_BANNER | CLEAR_DUES_BANNER | NO_SUBSCRIPTION_BANNER | DUE_LIMIT_WARNING_BANNER | LOW_DUES_BANNER
+data SubscriptionBannerType
+  = FREE_TRIAL_BANNER
+  | SETUP_AUTOPAY_BANNER
+  | CLEAR_DUES_BANNER
+  | NO_SUBSCRIPTION_BANNER
+  | DUE_LIMIT_WARNING_BANNER
+  | LOW_DUES_BANNER
 
 derive instance genericSubscriptionBannerType :: Generic SubscriptionBannerType _
-instance eqSubscriptionBannerType :: Eq SubscriptionBannerType where eq = genericEq
-instance showSubscriptionBannerType :: Show SubscriptionBannerType where show = genericShow
-instance encodeSubscriptionBannerType :: Encode SubscriptionBannerType where encode = defaultEnumEncode
-instance decodeSubscriptionBannerType :: Decode SubscriptionBannerType where decode = defaultEnumDecode
 
-data SubscriptionPopupType = GO_ONLINE_BLOCKER | LOW_DUES_CLEAR_POPUP | SOFT_NUDGE_POPUP | FREE_TRIAL_POPUP | NO_SUBSCRIPTION_POPUP
+instance eqSubscriptionBannerType :: Eq SubscriptionBannerType where
+  eq = genericEq
+
+instance showSubscriptionBannerType :: Show SubscriptionBannerType where
+  show = genericShow
+
+instance encodeSubscriptionBannerType :: Encode SubscriptionBannerType where
+  encode = defaultEnumEncode
+
+instance decodeSubscriptionBannerType :: Decode SubscriptionBannerType where
+  decode = defaultEnumDecode
+
+data SubscriptionPopupType
+  = GO_ONLINE_BLOCKER
+  | LOW_DUES_CLEAR_POPUP
+  | SOFT_NUDGE_POPUP
+  | FREE_TRIAL_POPUP
+  | NO_SUBSCRIPTION_POPUP
 
 derive instance genericSubscriptionPopupType :: Generic SubscriptionPopupType _
-instance eqSubscriptionPopupType :: Eq SubscriptionPopupType where eq = genericEq
-instance showSubscriptionPopupType :: Show SubscriptionPopupType where show = genericShow
-instance encodeSubscriptionPopupType :: Encode SubscriptionPopupType where encode = defaultEnumEncode
-instance decodeSubscriptionPopupType :: Decode SubscriptionPopupType where decode = defaultEnumDecode
 
-data DisabilityType = BLIND_AND_LOW_VISION | HEAR_IMPAIRMENT | LOCOMOTOR_DISABILITY | OTHER_DISABILITY
+instance eqSubscriptionPopupType :: Eq SubscriptionPopupType where
+  eq = genericEq
+
+instance showSubscriptionPopupType :: Show SubscriptionPopupType where
+  show = genericShow
+
+instance encodeSubscriptionPopupType :: Encode SubscriptionPopupType where
+  encode = defaultEnumEncode
+
+instance decodeSubscriptionPopupType :: Decode SubscriptionPopupType where
+  decode = defaultEnumDecode
+
+data DisabilityType
+  = BLIND_AND_LOW_VISION
+  | HEAR_IMPAIRMENT
+  | LOCOMOTOR_DISABILITY
+  | OTHER_DISABILITY
 
 derive instance genericPwdType :: Generic DisabilityType _
-instance eqPwdType :: Eq DisabilityType where eq = genericEq
-instance showPwdType :: Show DisabilityType where show = genericShow
-instance encodePwdType :: Encode DisabilityType where encode = defaultEnumEncode
-instance decodePwdType :: Decode DisabilityType where decode = defaultEnumDecode
 
-data DriverStatus = Online | Offline | Silent
+instance eqPwdType :: Eq DisabilityType where
+  eq = genericEq
 
-data TimerStatus = Triggered | PostTriggered | NoStatus
+instance showPwdType :: Show DisabilityType where
+  show = genericShow
+
+instance encodePwdType :: Encode DisabilityType where
+  encode = defaultEnumEncode
+
+instance decodePwdType :: Decode DisabilityType where
+  decode = defaultEnumDecode
+
+data DriverStatus
+  = Online
+  | Offline
+  | Silent
+
+data TimerStatus
+  = Triggered
+  | PostTriggered
+  | NoStatus
 
 derive instance genericTimerStatus :: Generic TimerStatus _
-instance eqTimerStatus :: Eq TimerStatus where eq = genericEq
-instance showTimerStatus :: Show TimerStatus where show = genericShow
-instance encodeTimerStatus :: Encode TimerStatus where encode = defaultEnumEncode
-instance decodeTimerStatus :: Decode TimerStatus where decode = defaultEnumDecode
 
-type PillButtonState = {
-  status :: DriverStatus,
-  background :: String,
-  imageUrl :: String,
-  textColor :: String
-}
+instance eqTimerStatus :: Eq TimerStatus where
+  eq = genericEq
 
-data DriverStatusResult = ACTIVE | DEFAULT | DEMO_
+instance showTimerStatus :: Show TimerStatus where
+  show = genericShow
+
+instance encodeTimerStatus :: Encode TimerStatus where
+  encode = defaultEnumEncode
+
+instance decodeTimerStatus :: Decode TimerStatus where
+  decode = defaultEnumDecode
+
+type PillButtonState
+  = { status :: DriverStatus
+    , background :: String
+    , imageUrl :: String
+    , textColor :: String
+    }
+
+data DriverStatusResult
+  = ACTIVE
+  | DEFAULT
+  | DEMO_
 
 derive instance genericDriverStatus :: Generic DriverStatus _
-instance showDriverStatus :: Show DriverStatus where show = genericShow
-instance eqDriverStatus :: Eq DriverStatus where eq = genericEq
-instance encodeDriverStatus :: Encode DriverStatus where encode = defaultEnumEncode
-instance decodeDriverStatus :: Decode DriverStatus where decode = defaultEnumDecode
 
-type Location = {
-  place :: String,
-  lat :: Number,
-  lon :: Number
-}
+instance showDriverStatus :: Show DriverStatus where
+  show = genericShow
 
-data LocationType = LATITUDE | LONGITUDE
+instance eqDriverStatus :: Eq DriverStatus where
+  eq = genericEq
+
+instance encodeDriverStatus :: Encode DriverStatus where
+  encode = defaultEnumEncode
+
+instance decodeDriverStatus :: Decode DriverStatus where
+  decode = defaultEnumDecode
+
+type Location
+  = { place :: String
+    , lat :: Number
+    , lon :: Number
+    }
+
+data LocationType
+  = LATITUDE
+  | LONGITUDE
 
 derive instance genericLocationType :: Generic LocationType _
-instance eqLocationType :: Eq LocationType where eq = genericEq
+
+instance eqLocationType :: Eq LocationType where
+  eq = genericEq
 
 -- ############################################################# BottomNavBarState ################################################################################
+type BottomNavBarState
+  = { activeIndex :: Int
+    , navButton :: Array NavIcons
+    }
 
-type BottomNavBarState = {
-  activeIndex :: Int,
-  navButton :: Array NavIcons
-}
+type NavIcons
+  = { activeIcon :: String
+    , defaultIcon :: String
+    , text :: String
+    , screenName :: ScreenName
+    , showNewBanner :: Boolean
+    , isVisible :: Boolean
+    }
 
-type NavIcons = {
-  activeIcon :: String,
-  defaultIcon :: String,
-  text :: String,
-  screenName :: ScreenName,
-  showNewBanner :: Boolean,
-  isVisible :: Boolean
-}
- -- ######################################  TripDetailsScreenState   ######################################
+-- ######################################  TripDetailsScreenState   ######################################
+type TripDetailsScreenState
+  = { data :: TripDetailsScreenData
+    , props :: TripDetailsScreenProps
+    }
 
-type TripDetailsScreenState =
-  {
-    data :: TripDetailsScreenData,
-    props :: TripDetailsScreenProps
-}
-
-data PaymentMode = CASH | PAYMENT_ONLINE
+data PaymentMode
+  = CASH
+  | PAYMENT_ONLINE
 
 derive instance genericPaymentMode :: Generic PaymentMode _
-instance showPaymentMode :: Show PaymentMode where show = genericShow
-instance eqPaymentMode :: Eq PaymentMode where eq = genericEq
-instance encodePaymentMode :: Encode PaymentMode where encode = defaultEnumEncode
-instance decodePaymentMode :: Decode PaymentMode where decode = defaultEnumDecode
 
-type TripDetailsScreenData =
-  {
-    message :: String,
-    tripId :: String,
-    rider :: String,
-    date :: String,
-    time :: String,
-    timeTaken :: String,
-    source :: String,
-    destination :: String,
-    totalAmount :: Int,
-    paymentMode :: PaymentMode,
-    distance :: String,
-    status :: String,
-    vehicleType :: String,
-    customerExtraFee :: Maybe Int,
-    purpleTagVisibility :: Boolean,
-    gotoTagVisibility :: Boolean,
-    spLocTagVisibility :: Boolean,
-    specialZoneLayoutBackground :: String,
-    specialZoneImage :: String,
-    specialZoneText :: String,
-    config :: AppConfig
-  }
+instance showPaymentMode :: Show PaymentMode where
+  show = genericShow
 
-type TripDetailsScreenProps =
-  {
-    rating :: Int,
-    reportIssue :: Boolean,
-    issueReported :: Boolean
-  }
+instance eqPaymentMode :: Eq PaymentMode where
+  eq = genericEq
+
+instance encodePaymentMode :: Encode PaymentMode where
+  encode = defaultEnumEncode
+
+instance decodePaymentMode :: Decode PaymentMode where
+  decode = defaultEnumDecode
+
+type TripDetailsScreenData
+  = { message :: String
+    , tripId :: String
+    , rider :: String
+    , date :: String
+    , time :: String
+    , timeTaken :: String
+    , source :: String
+    , destination :: String
+    , totalAmount :: Int
+    , paymentMode :: PaymentMode
+    , distance :: String
+    , status :: String
+    , vehicleType :: String
+    , customerExtraFee :: Maybe Int
+    , purpleTagVisibility :: Boolean
+    , gotoTagVisibility :: Boolean
+    , spLocTagVisibility :: Boolean
+    , specialZoneLayoutBackground :: String
+    , specialZoneImage :: String
+    , specialZoneText :: String
+    , config :: AppConfig
+    }
+
+type TripDetailsScreenProps
+  = { rating :: Int
+    , reportIssue :: Boolean
+    , issueReported :: Boolean
+    }
 
 --------------------------------------------- AboutUsScreenState ---------------------------
-type HelpAndSupportScreenState = {
-  data :: HelpAndSupportScreenData,
-  props :: HelpAndSupportScreenProps
-}
+type HelpAndSupportScreenState
+  = { data :: HelpAndSupportScreenData
+    , props :: HelpAndSupportScreenProps
+    }
 
-type HelpAndSupportScreenData = {
-  categories :: Array CategoryListType,
-  issueList :: Array IssueInfo,
-  ongoingIssueList :: Array IssueInfo,
-  resolvedIssueList :: Array IssueInfo,
-  issueListType :: IssueModalType
-}
+type HelpAndSupportScreenData
+  = { categories :: Array CategoryListType
+    , issueList :: Array IssueInfo
+    , ongoingIssueList :: Array IssueInfo
+    , resolvedIssueList :: Array IssueInfo
+    , issueListType :: IssueModalType
+    }
 
-type CategoryListType = {
-    categoryName :: String
-  , categoryImageUrl :: String
-  , categoryAction :: String
-  , categoryId :: String
-  }
+type CategoryListType
+  = { categoryName :: String
+    , categoryImageUrl :: String
+    , categoryAction :: String
+    , categoryId :: String
+    }
 
-type HelpAndSupportScreenProps = {
-  isNoRides :: Boolean
+type HelpAndSupportScreenProps
+  = { isNoRides :: Boolean
+    }
 
-}
+type ReportIssueChatScreenState
+  = { data :: ReportIssueChatScreenData
+    , props :: ReportIssueChatScreenProps
+    }
 
-type ReportIssueChatScreenState = {
-    data :: ReportIssueChatScreenData,
-    props :: ReportIssueChatScreenProps
-}
+type ReportIssueChatScreenData
+  = { tripId :: Maybe String
+    , categoryName :: String
+    , messageToBeSent :: String
+    , issueId :: Maybe String
+    , chatConfig :: ChatView.Config
+    , selectedOptionId :: Maybe String
+    , categoryAction :: String
+    , addedImages :: Array { image :: String, imageName :: String }
+    , categoryId :: String
+    , recordAudioState :: RecordAudioModel.RecordAudioModelState
+    , addImagesState :: { images :: Array { image :: String, imageName :: String }, stateChanged :: Boolean, isLoading :: Boolean, imageMediaIds :: Array String }
+    , viewImageState :: { image :: String, imageName :: Maybe String }
+    , recordedAudioUrl :: Maybe String
+    , addAudioState :: { audioFile :: Maybe String, stateChanged :: Boolean }
+    , uploadedImagesIds :: Array String
+    , uploadedAudioId :: Maybe String
+    , options ::
+        Array
+          { issueOptionId :: String
+          , option :: String
+          , label :: String
+          }
+    }
 
-type ReportIssueChatScreenData = {
-  tripId :: Maybe String,
-  categoryName :: String,
-  messageToBeSent :: String,
-  issueId :: Maybe String,
-  chatConfig :: ChatView.Config,
-  selectedOptionId :: Maybe String,
-  categoryAction :: String,
-  addedImages :: Array { image :: String, imageName :: String },
-  categoryId :: String,
-  recordAudioState :: RecordAudioModel.RecordAudioModelState,
-  addImagesState :: { images :: Array { image :: String, imageName :: String }, stateChanged :: Boolean, isLoading :: Boolean, imageMediaIds :: Array String },
-  viewImageState :: { image :: String, imageName :: Maybe String },
-  recordedAudioUrl :: Maybe String,
-  addAudioState :: { audioFile :: Maybe String, stateChanged :: Boolean },
-  uploadedImagesIds :: Array String,
-  uploadedAudioId :: Maybe String,
-  options :: Array
-             { issueOptionId :: String
-             , option :: String
-             , label :: String
-             }
-}
+type ReportIssueChatScreenProps
+  = { showSubmitComp :: Boolean
+    , showImageModel :: Boolean
+    , showAudioModel :: Boolean
+    , showRecordModel :: Boolean
+    , showCallCustomerModel :: Boolean
+    , isReversedFlow :: Boolean
+    , showViewImageModel :: Boolean
+    , isPopupModelOpen :: Boolean
+    , submitIsInProgress :: Boolean
+    }
 
-type ReportIssueChatScreenProps = {
-  showSubmitComp :: Boolean,
-  showImageModel :: Boolean,
-  showAudioModel :: Boolean,
-  showRecordModel :: Boolean,
-  showCallCustomerModel :: Boolean,
-  isReversedFlow :: Boolean,
-  showViewImageModel :: Boolean,
-  isPopupModelOpen :: Boolean,
-  submitIsInProgress :: Boolean
-}
+type IssueInfo
+  = { issueReportId :: String
+    , status :: String
+    , category :: String
+    , createdAt :: String
+    }
 
-type IssueInfo = {
-
-    issueReportId :: String,
-    status :: String,
-    category :: String,
-    createdAt :: String
-
-}
-
-data IssueModalType = HELP_AND_SUPPORT_SCREEN_MODAL | ONGOING_ISSUES_MODAL | RESOLVED_ISSUES_MODAL | BACKPRESSED_MODAL
+data IssueModalType
+  = HELP_AND_SUPPORT_SCREEN_MODAL
+  | ONGOING_ISSUES_MODAL
+  | RESOLVED_ISSUES_MODAL
+  | BACKPRESSED_MODAL
 
 derive instance genericIssueModalType :: Generic IssueModalType _
-instance eqIssueModalType :: Eq IssueModalType where eq = genericEq
+
+instance eqIssueModalType :: Eq IssueModalType where
+  eq = genericEq
+
 --------------------------------------------- AboutUsScreenState ---------------------------
-type WriteToUsScreenState = {
-  data :: WriteToUsScreenData,
-  props :: WriteToUsScreenProps
-}
+type WriteToUsScreenState
+  = { data :: WriteToUsScreenData
+    , props :: WriteToUsScreenProps
+    }
 
-type WriteToUsScreenData = {
+type WriteToUsScreenData
+  = {
+    }
 
-}
-
-type WriteToUsScreenProps = {
-  isThankYouScreen :: Boolean
-}
-
+type WriteToUsScreenProps
+  = { isThankYouScreen :: Boolean
+    }
 
 ------------------------------------------- PermissionsScreenState ---------------------------
-type PermissionsScreenState = {
-  data :: PermissionsScreenData
-  , props :: PermissionsScreenProps
-}
+type PermissionsScreenState
+  = { data :: PermissionsScreenData
+    , props :: PermissionsScreenProps
+    }
 
-type PermissionsScreenData = {
-  logField :: Object Foreign,
-  driverMobileNumber :: String,
-  config :: AppConfig
-}
+type PermissionsScreenData
+  = { logField :: Object Foreign
+    , driverMobileNumber :: String
+    , config :: AppConfig
+    }
 
-type PermissionsScreenProps = {
-  isNotificationPermissionChecked :: Boolean
-  , isOverlayPermissionChecked :: Boolean
-  , isAutoStartPermissionChecked :: Boolean
-  , androidVersion :: Int
-  , isBatteryOptimizationChecked :: Boolean
-  , isLocationPermissionChecked :: Boolean
-  , logoutModalView :: Boolean
-  , isDriverEnabled :: Boolean
-}
+type PermissionsScreenProps
+  = { isNotificationPermissionChecked :: Boolean
+    , isOverlayPermissionChecked :: Boolean
+    , isAutoStartPermissionChecked :: Boolean
+    , androidVersion :: Int
+    , isBatteryOptimizationChecked :: Boolean
+    , isLocationPermissionChecked :: Boolean
+    , logoutModalView :: Boolean
+    , isDriverEnabled :: Boolean
+    }
 
 ------------------------------------------- OnBoardingSubscriptionScreenState ---------------------------
-type OnBoardingSubscriptionScreenState = {
-  data :: OnBoardingSubscriptionScreenData
-  , props :: OnBoardingSubscriptionScreenProps
-}
+type OnBoardingSubscriptionScreenState
+  = { data :: OnBoardingSubscriptionScreenData
+    , props :: OnBoardingSubscriptionScreenProps
+    }
 
-type OnBoardingSubscriptionScreenData = {
-  plansList :: Array PlanCardConfig,
-  selectedPlanItem :: Maybe PlanCardConfig,
-  subscriptionConfig :: SubscriptionConfig
-}
+type OnBoardingSubscriptionScreenData
+  = { plansList :: Array PlanCardConfig
+    , selectedPlanItem :: Maybe PlanCardConfig
+    , subscriptionConfig :: SubscriptionConfig
+    }
 
-type OnBoardingSubscriptionScreenProps = {
-  isSelectedLangTamil :: Boolean,
-  screenCount :: Int,
-  supportPopup :: Boolean
-}
-
+type OnBoardingSubscriptionScreenProps
+  = { isSelectedLangTamil :: Boolean
+    , screenCount :: Int
+    , supportPopup :: Boolean
+    }
 
 --------------------------------------------- RideDetailScreenState ---------------------------------------------
+type RideDetailScreenState
+  = { data :: RideDetailScreenData
+    , props :: RideDetailScreenProps
+    }
 
-type RideDetailScreenState = {
-  data :: RideDetailScreenData,
-  props :: RideDetailScreenProps
-}
+type RideDetailScreenData
+  = { sourceAddress :: Location
+    , destAddress :: Location
+    , rideStartTime :: String
+    , rideEndTime :: String
+    , bookingDateAndTime :: String
+    , totalAmount :: Int
+    , customerName :: String
+    }
 
-type RideDetailScreenData =  {
-  sourceAddress :: Location,
-  destAddress :: Location,
-  rideStartTime :: String,
-  rideEndTime :: String,
-  bookingDateAndTime :: String,
-  totalAmount :: Int,
-  customerName :: String
- }
-
-type RideDetailScreenProps =  {
-  cashCollectedButton :: Boolean
- }
+type RideDetailScreenProps
+  = { cashCollectedButton :: Boolean
+    }
 
 --------------------------------------------- EditBankDetailsScreen ---------------------------
-type EditBankDetailsScreenState = {
-  data :: EditBankDetailsScreenData,
-  props :: EditBankDetailsScreenProps
-}
+type EditBankDetailsScreenState
+  = { data :: EditBankDetailsScreenData
+    , props :: EditBankDetailsScreenProps
+    }
 
-type EditBankDetailsScreenData = {
+type EditBankDetailsScreenData
+  = {
+    }
 
-}
-
-type EditBankDetailsScreenProps = {
-  isInEditBankDetailsScreen :: Boolean
-}
+type EditBankDetailsScreenProps
+  = { isInEditBankDetailsScreen :: Boolean
+    }
 
 --------------------------------------------- EditAadhaarDetailsScreen ---------------------------
-type EditAadhaarDetailsScreenState = {
-  data :: EditAadhaarDetailsScreenData,
-  props :: EditAadhaarDetailsScreenProps
-}
+type EditAadhaarDetailsScreenState
+  = { data :: EditAadhaarDetailsScreenData
+    , props :: EditAadhaarDetailsScreenProps
+    }
 
-type EditAadhaarDetailsScreenData = {
+type EditAadhaarDetailsScreenData
+  = {
+    }
 
-}
-
-type EditAadhaarDetailsScreenProps = {
-  isInEditAadharDetailsScreen :: Boolean
-}
-
+type EditAadhaarDetailsScreenProps
+  = { isInEditAadharDetailsScreen :: Boolean
+    }
 
 -- ######################################  InvoiceScreenState   ######################################
+type InvoiceScreenState
+  = { data :: InvoiceScreenData
+    , props :: InvoiceScreenProps
+    }
 
-type InvoiceScreenState =
-  {
-    data :: InvoiceScreenData,
-    props :: InvoiceScreenProps
-  }
+type InvoiceScreenData
+  = { tripCharges :: Number
+    , promotion :: Number
+    , gst :: Number
+    , totalAmount :: Number
+    , date :: String
+    }
 
-type InvoiceScreenData =
-  {
-    tripCharges :: Number,
-    promotion :: Number,
-    gst :: Number,
-    totalAmount :: Number,
-    date :: String
-  }
-
-type InvoiceScreenProps =
-  {
-    paymentMode :: String
-  }
+type InvoiceScreenProps
+  = { paymentMode :: String
+    }
 
 --------------------------------------------- PopUpScreenState ---------------------------
-type PopUpScreenState = {
-  data :: PopUpScreenData,
-  props :: PopUpScreenProps
-}
+type PopUpScreenState
+  = { data :: PopUpScreenData
+    , props :: PopUpScreenProps
+    }
 
-type PopUpScreenData = {
-  availableRides :: Array Rides
-}
+type PopUpScreenData
+  = { availableRides :: Array Rides
+    }
 
-type PopUpScreenProps = {}
+type PopUpScreenProps
+  = {}
 
-type AllocationData = {
-  searchRequestValidTill :: String,
-  searchRequestId :: String,
-  startTime :: String,
-  baseFare :: Number,
-  distance :: Int,
-  distanceToPickup :: Int,
-  fromLocation :: {
-    area :: String,
-    state :: String,
-    full_address :: String,
-    createdAt :: String,
-    country :: String,
-    building :: String,
-    street :: String,
-    lat :: Number,
-    city :: String,
-    areaCode :: String,
-    id :: String,
-    lon :: Number,
-    updatedAt :: String
-  },
-  toLocation :: {
-    area :: String,
-    state :: String,
-    full_address :: String,
-    createdAt :: String,
-    country :: String,
-    building :: String,
-    street :: String,
-    lat :: Number,
-    city :: String,
-    areaCode :: String,
-    id :: String,
-    lon :: Number,
-    updatedAt :: String
-  },
-  durationToPickup :: Int
-}
+type AllocationData
+  = { searchRequestValidTill :: String
+    , searchRequestId :: String
+    , startTime :: String
+    , baseFare :: Number
+    , distance :: Int
+    , distanceToPickup :: Int
+    , fromLocation ::
+        { area :: String
+        , state :: String
+        , full_address :: String
+        , createdAt :: String
+        , country :: String
+        , building :: String
+        , street :: String
+        , lat :: Number
+        , city :: String
+        , areaCode :: String
+        , id :: String
+        , lon :: Number
+        , updatedAt :: String
+        }
+    , toLocation ::
+        { area :: String
+        , state :: String
+        , full_address :: String
+        , createdAt :: String
+        , country :: String
+        , building :: String
+        , street :: String
+        , lat :: Number
+        , city :: String
+        , areaCode :: String
+        , id :: String
+        , lon :: Number
+        , updatedAt :: String
+        }
+    , durationToPickup :: Int
+    }
 
-type RegCardDetails =  {
-  title :: String,
-  reason :: String,
-  image :: String,
-  verificationStatus :: String,
-  visibility :: String,
-  docType :: String,
-  status :: String
-}
+type RegCardDetails
+  = { title :: String
+    , reason :: String
+    , image :: String
+    , verificationStatus :: String
+    , visibility :: String
+    , docType :: String
+    , status :: String
+    }
 
+type DriverRideRatingScreenState
+  = { data :: DriverRideRatingScreenData
+    , props :: DriverRideRatingScreenProps
+    }
 
-type DriverRideRatingScreenState = {
-  data :: DriverRideRatingScreenData,
-  props :: DriverRideRatingScreenProps
-}
+type DriverRideRatingScreenData
+  = { rating :: Int
+    , rideId :: String
+    , feedback :: String
+    , customerName :: String
+    , activeFeedBackOption :: Maybe FeedbackSuggestions
+    , selectedFeedbackOption :: String
+    }
 
-type DriverRideRatingScreenData = {
-    rating :: Int
-  , rideId :: String
-  , feedback :: String
-  , customerName :: String
-  , activeFeedBackOption :: Maybe FeedbackSuggestions
-  , selectedFeedbackOption :: String
-}
+type DriverRideRatingScreenProps
+  = {
+    }
 
-type DriverRideRatingScreenProps = {
+type AppUpdatePopUpScreenState
+  = { version :: Int
+    , updatePopup :: UpdatePopupType
+    , appUpdatedView :: AppUpdatedViewState
+    }
 
-}
+type AppUpdatedViewState
+  = { primaryText :: String
+    , secondaryText :: String
+    , optionTwoText :: String
+    , coverImageUrl :: String
+    }
 
-type AppUpdatePopUpScreenState = {
-  version :: Int
-  , updatePopup :: UpdatePopupType
-  , appUpdatedView :: AppUpdatedViewState
-}
-
-type AppUpdatedViewState = {
-  primaryText :: String,
-  secondaryText :: String,
-  optionTwoText :: String,
-  coverImageUrl :: String
-}
-
-data UpdatePopupType =  AppVersion
-                      | DateAndTime
-                      | NoUpdatePopup
-                      | AppUpdated
+data UpdatePopupType
+  = AppVersion
+  | DateAndTime
+  | NoUpdatePopup
+  | AppUpdated
 
 derive instance genericUpdatePopupType :: Generic UpdatePopupType _
-instance showUpdatePopupType :: Show UpdatePopupType where show = genericShow
-instance eqUpdatePopupType :: Eq UpdatePopupType where eq = genericEq
+
+instance showUpdatePopupType :: Show UpdatePopupType where
+  show = genericShow
+
+instance eqUpdatePopupType :: Eq UpdatePopupType where
+  eq = genericEq
 
 data FeedbackSuggestions
- = CUSTOMER_RUDE_BEHAVIOUR
+  = CUSTOMER_RUDE_BEHAVIOUR
   | LONG_WAIT_TIME
   | DIDNT_COME_TO_PICUP
   | NOTHING
 
 derive instance genericFeedbackSuggestions :: Generic FeedbackSuggestions _
-instance eqFeedbackSuggestions :: Eq FeedbackSuggestions where eq = genericEq
 
-data HomeScreenStage =  HomeScreen
-                      | RideRequested
-                      | RideAccepted
-                      | RideStarted
-                      | RideCompleted
-                      | ChatWithCustomer
+instance eqFeedbackSuggestions :: Eq FeedbackSuggestions where
+  eq = genericEq
+
+data HomeScreenStage
+  = HomeScreen
+  | RideRequested
+  | RideAccepted
+  | RideStarted
+  | RideCompleted
+  | ChatWithCustomer
 
 derive instance genericHomeScreenStage :: Generic HomeScreenStage _
-instance showHomeScreenStage :: Show HomeScreenStage where show = genericShow
-instance eqHomeScreenStage :: Eq HomeScreenStage where eq = genericEq
-instance decodeHomeScreenStage :: Decode HomeScreenStage where decode = defaultEnumDecode
-instance encodeHomeScreenStage :: Encode HomeScreenStage where encode = defaultEnumEncode
 
-data NotificationType =  DRIVER_REACHED
-                      | CANCELLED_PRODUCT
-                      | DRIVER_ASSIGNMENT
-                      | RIDE_REQUESTED
+instance showHomeScreenStage :: Show HomeScreenStage where
+  show = genericShow
+
+instance eqHomeScreenStage :: Eq HomeScreenStage where
+  eq = genericEq
+
+instance decodeHomeScreenStage :: Decode HomeScreenStage where
+  decode = defaultEnumDecode
+
+instance encodeHomeScreenStage :: Encode HomeScreenStage where
+  encode = defaultEnumEncode
+
+data NotificationType
+  = DRIVER_REACHED
+  | CANCELLED_PRODUCT
+  | DRIVER_ASSIGNMENT
+  | RIDE_REQUESTED
 
 derive instance genericNotificationType :: Generic NotificationType _
-instance showNotificationType :: Show NotificationType where show = genericShow
-instance eqNotificationType :: Eq NotificationType where eq = genericEq
 
+instance showNotificationType :: Show NotificationType where
+  show = genericShow
+
+instance eqNotificationType :: Eq NotificationType where
+  eq = genericEq
 
 ------------------------------------- NotificationScreen ------------------------------
-type NotificationsScreenState = {
-  shimmerLoader :: AnimationState,
-  prestoListArrayItems :: Array NotificationCardPropState,
-  notificationList :: Array NotificationCardState,
-  selectedItem :: NotificationCardState,
-  offsetValue :: Int,
-  loaderButtonVisibility :: Boolean,
-  loadMoreDisabled :: Boolean,
-  recievedResponse :: Boolean,
-  notificationDetailModelState :: NotificationDetailModelState,
-  notifsDetailModelVisibility :: Visibility,
-  loadMore :: Boolean,
-  selectedNotification :: Maybe String,
-  deepLinkActivated :: Boolean,
-  config :: AppConfig
-}
-
-type NotificationCardState = {
-  mediaUrl :: String,
-  title :: String,
-  description :: String,
-  action1Text :: String,
-  action2Text :: String,
-  notificationLabel :: String,
-  timeLabel :: String,
-  messageId :: String,
-  notificationNotSeen :: Boolean,
-  comment :: Maybe String,
-  imageUrl :: String,
-  mediaType :: Maybe MediaType,
-  likeCount :: Int,
-  viewCount :: Int,
-  likeStatus :: Boolean
-}
-
-type NotificationCardPropState = {
-  mediaUrl :: PropValue,
-  title :: PropValue,
-  action1Text :: PropValue,
-  action2Text :: PropValue,
-  notificationLabel :: PropValue,
-  timeLabel :: PropValue,
-  description :: PropValue,
-  cardVisibility :: PropValue,
-  shimmerVisibility :: PropValue,
-  notificationLabelColor :: PropValue,
-  action1Visibility :: PropValue,
-  action2Visibility :: PropValue,
-  descriptionVisibility :: PropValue,
-  illustrationVisibility :: PropValue,
-  notificationNotSeen :: PropValue,
-  playBtnVisibility :: PropValue,
-  imageUrl :: PropValue,
-  playButton :: PropValue,
-  previewImage :: PropValue,
-  previewImageTitle :: PropValue,
-  imageVisibility :: PropValue,
-  messageId :: PropValue,
-  imageWithUrl :: PropValue,
-  imageWithUrlVisibility :: PropValue,
-  likeCount :: PropValue,
-  viewCount :: PropValue
-}
-
-type NotificationDetailModelState = {
-  mediaUrl :: String,
-  title :: String,
-  timeLabel :: String,
-  description :: Array String,
-  actionText :: String,
-  actionVisibility :: Visibility,
-  addCommentModelVisibility :: Visibility,
-  comment :: Maybe String,
-  commentBtnActive :: Boolean,
-  messageId :: String,
-  notificationNotSeen :: Boolean,
-  imageUrl :: String,
-  mediaType :: Maybe MediaType,
-  likeCount :: Int,
-  likeStatus :: Boolean,
-  viewCount :: Int
-}
-
-data YoutubeVideoStatus = PLAY | PAUSE
-
-derive instance genericYoutubeVideoStatus:: Generic YoutubeVideoStatus _
-instance showYoutubeVideoStatus :: Show YoutubeVideoStatus where show = genericShow
-instance eqYoutubeVideoStatus :: Eq YoutubeVideoStatus where eq = genericEq
-
-
-data ReferralType = SuccessScreen | ComingSoonScreen | ReferralFlow | QRScreen | LeaderBoard
-
-derive instance genericReferralType :: Generic ReferralType _
-instance eqReferralType :: Eq ReferralType where eq = genericEq
-
-
-type BookingOptionsScreenState = {
-  data :: BookingOptionsScreenData,
-  props :: BookingOptionsScreenProps
-}
-
-type BookingOptionsScreenData = {
-  vehicleType :: String,
-  vehicleNumber :: String,
-  vehicleName :: String,
-  vehicleCapacity :: Int,
-  downgradeOptions :: Array ChooseVehicle.Config
-}
-
-type BookingOptionsScreenProps = {
-  isBtnActive :: Boolean,
-  downgraded :: Boolean
-}
-
-data LeaderBoardType = Daily | Weekly
-
-derive instance genericLeaderBoardType :: Generic LeaderBoardType _
-instance eqLeaderBoardType :: Eq LeaderBoardType where eq = genericEq
-
-
-data DateSelector = DaySelector Common.CalendarDate | WeekSelector Common.CalendarWeek
-
-type RankCardData = {
-    goodName :: String
-  , profileUrl :: Maybe String
-  , rank :: Int
-  , rides :: Int
-  , gender :: String
-}
-
-type AcknowledgementScreenState = {
-  data :: AcknowledgementScreenData,
-  props :: AcknowledgementScreenProps
-}
-
-type AcknowledgementScreenData = {
-  illustrationAsset :: String,
-  title :: Maybe String,
-  description ::Maybe String,
-  primaryButtonText :: Maybe String,
-  orderId  :: Maybe String,
-  amount :: String
-}
-
-type AcknowledgementScreenProps = {
-  primaryButtonVisibility :: Visibility,
-  paymentStatus :: Common.PaymentStatus,
-  illustrationType :: IllustrationType
-}
-
-data IllustrationType = Image | Lottie
-
-derive instance genericIllustrationType:: Generic IllustrationType _
-instance showIllustrationType :: Show IllustrationType where show = genericShow
-instance eqIllustrationType :: Eq IllustrationType where eq = genericEq
-
-type PaymentHistoryModelState = {
-  paymentHistoryList :: Array PaymentHistoryListItem.Config
-}
---------------------------------------------------------------- AadhaarVerificationScreenState -----------------------------------------------------------------------------
-type AadhaarVerificationScreenState = {
-  data :: EnterAadhaarNumberScreenStateData,
-  props :: EnterAadhaarNumberScreenStateProps
-}
-
-type EnterAadhaarNumberScreenStateData = {
-    aadhaarNumber :: String
-  , timer :: String
-  , otp :: String
-  , driverName :: String
-  , driverGender :: String
-  , driverDob :: String
-}
-
-type EnterAadhaarNumberScreenStateProps = {
-  btnActive :: Boolean
-, isValid :: Boolean
-, resendEnabled :: Boolean
-, currentStage :: AadhaarStage
-, showErrorAadhaar :: Boolean
-, fromHomeScreen :: Boolean
-, showLogoutPopup :: Boolean
-, isDateClickable :: Boolean
-}
-
-data AadhaarStage = EnterAadhaar | VerifyAadhaar | AadhaarDetails
-
-derive instance genericAadhaarStage :: Generic AadhaarStage _
-instance eqAadhaarStage :: Eq AadhaarStage where eq = genericEq
-
-type GlobalProps = {
-  aadhaarVerificationRequired :: Boolean,
-  driverInformation :: Maybe GetDriverInfoResp,
-  driverRideStats :: Maybe DriverProfileStatsResp,
-  callScreen :: ScreenName,
-  gotoPopupType :: GoToPopUpType
-}
-
---------------------------------------------------------------- SubscriptionScreenState ---------------------------------------------------
-
-type SubscriptionScreenState = {
-  data :: SubscriptionScreenData,
-  props :: SubscriptionScreenProps
-}
-
-type SubscriptionScreenData = {
-  myPlanData :: MyPlanData,
-  managePlanData :: ManagePlanData,
-  joinPlanData :: JoinPlanData,
-  autoPayDetails :: AutoPayDetails,
-  driverId :: String,
-  paymentMode :: String,
-  planId :: String,
-  orderId :: Maybe String,
-  errorMessage :: String,
-  config :: AppConfig
-}
-
-type AutoPayDetails = {
-  isActive :: Boolean,
-  detailsList :: Array KeyValType,
-  payerUpiId :: Maybe String,
-  pspLogo :: String
-}
-
-type KeyValType = {
-  key :: String,
-  val :: String
-}
-
-type SubscriptionScreenProps = {
-  subView :: SubscriptionSubview,
-  myPlanProps :: MyPlanProps,
-  managePlanProps :: ManagePlanProps,
-  joinPlanProps :: JoinPlanProps,
-  popUpState :: Maybe SubscribePopupType,
-  resumeBtnVisibility :: Boolean,
-  showError :: Boolean,
-  showShimmer :: Boolean,
-  refreshPaymentStatus :: Boolean,
-  confirmCancel :: Boolean,
-  isSelectedLangTamil :: Boolean,
-  currentLat :: Number,
-  currentLon :: Number,
-  destLat :: Number,
-  destLon :: Number,
-  kioskLocation :: Array KioskLocation,
-  prevSubView :: SubscriptionSubview,
-  noKioskLocation :: Boolean,
-  optionsMenuState :: OptionsMenuState,
-  redirectToNav :: String,
-  lastPaymentType :: Maybe LastPaymentType,
-  offerBannerProps :: OfferBanner,
-  isEndRideModal :: Boolean
-}
-
-type OfferBanner = {
-    showOfferBanner :: Boolean,
-    offerBannerValidTill :: String,
-    offerBannerDeadline :: String
-}
-
-type JoinPlanData = {
-  allPlans :: Array PlanCardConfig,
-  subscriptionStartDate :: String
-}
-
-type JoinPlanProps = {
-  paymentMode :: String,
-  selectedPlanItem :: Maybe PlanCardConfig,
-  isIntroductory :: Boolean
-}
-
-type ManagePlanData = {
-  currentPlan :: PlanCardConfig,
-  alternatePlans :: Array PlanCardConfig
-}
-
-type ManagePlanProps = {
-  selectedPlanItem :: PlanCardConfig
-}
-
-type MyPlanData = {
-  dueItems :: Array DueItem,
-  planEntity :: PlanCardConfig,
-  autoPayStatus :: AutoPayStatus,
-  lowAccountBalance :: Maybe Number,
-  switchAndSave :: Boolean,
-  paymentMethodWarning :: Boolean,
-  maxDueAmount :: Number,
-  totalDueAmount :: Number,
-  autoPayDueAmount :: Number,
-  manualDueAmount :: Number,
-  mandateStatus :: String,
-  selectedDue :: String,
-  dueBoothCharges :: Maybe Number
-}
-
-type MyPlanProps = {
-  isDuesExpanded :: Boolean,
-  isDueViewExpanded :: Boolean,
-  overDue :: Boolean,
-  multiTypeDues :: Boolean,
-  dueType :: FeeType
-}
-
-type DueItem = {
-  randomId :: String,
-  tripDate :: String,
-  amount :: Number,
-  earnings :: Number,
-  noOfRides :: Int,
-  scheduledAt :: String,
-  paymentStatus :: String,
-  feeBreakup :: String,
-  plan :: String,
-  mode :: FeeType,
-  autoPayStage :: Maybe AutopayPaymentStage,
-  isSplit :: Boolean,
-  specialZoneRideCount :: Maybe Int,
-  totalSpecialZoneCharges :: Maybe Number
-}
-
-type KioskLocation = {
-  longitude :: Number,
-  address :: String,
-  contact :: Maybe String,
-  latitude :: Number,
-  landmark :: String,
-  distance :: Number
-}
-
-type PlanCardConfig = {
-    id :: String
-  , title :: String
-  , description :: String
-  , isSelected :: Boolean
-  , offers :: Array PromoConfig
-  , priceBreakup :: Array PaymentBreakUp
-  , frequency :: String
-  , freeRideCount :: Int
-  , showOffer :: Boolean
-}
-
-type PromoConfig = {
-    title :: Maybe String
-  , isGradient :: Boolean
-  , gradient :: Array String
-  , hasImage :: Boolean
-  , imageURL :: String
-  , offerDescription :: Maybe String
-  , addedFromUI :: Boolean
-}
-
-data SubscribePopupType = SuccessPopup | FailedPopup | DuesClearedPopup | CancelAutoPay | SwitchedPlan | SupportPopup | PaymentSuccessPopup
-
-derive instance genericSubscribePopupType :: Generic SubscribePopupType _
-instance showSubscribePopupType :: Show SubscribePopupType where show = genericShow
-instance eqSubscribePopupType :: Eq SubscribePopupType where eq = genericEq
-instance decodeSubscribePopupType :: Decode SubscribePopupType where decode = defaultEnumDecode
-instance encodeSubscribePopupType :: Encode SubscribePopupType where encode = defaultEnumEncode
-
-data AutoPayStatus = ACTIVE_AUTOPAY | SUSPENDED | PAUSED_PSP | CANCELLED_PSP | NO_AUTOPAY | PENDING | MANDATE_FAILED | RESUME_PENDING
-
-derive instance genericAutoPayStatus:: Generic AutoPayStatus _
-instance showAutoPayStatus:: Show AutoPayStatus where show = genericShow
-instance eqAutoPayStatus:: Eq AutoPayStatus where eq = genericEq
-instance encodeAutoPayStatus :: Encode AutoPayStatus where encode = defaultEnumEncode
-
-data SubscriptionSubview = JoinPlan | ManagePlan | MyPlan | PlanDetails | FindHelpCentre | DuesView | DueDetails | NoSubView 
-
-derive instance genericSubscriptionSubview :: Generic SubscriptionSubview _
-instance showSubscriptionSubview :: Show SubscriptionSubview where show = genericShow
-instance eqSubscriptionSubview :: Eq SubscriptionSubview where eq = genericEq
-instance decodeSubscriptionSubview :: Decode SubscriptionSubview where decode = defaultEnumDecode
-instance encodeSubscriptionSubview :: Encode SubscriptionSubview where encode = defaultEnumEncode
-
-data OptionsMenuState = ALL_COLLAPSED | PLAN_MENU  -- SUPPORT_MENU  | CALL_MENU disabled for now.
-
-derive instance genericOptionsMenuState :: Generic OptionsMenuState _
-instance showOptionsMenuState :: Show OptionsMenuState where show = genericShow
-instance eqOptionsMenuState :: Eq OptionsMenuState where eq = genericEq
-
-type LocalStoreSubscriptionInfo = {
-  projectedInvoice :: Number,
-  maxDueLimit :: Number,
-  expiry :: String
-}
-
----------------------------------------------------- PaymentHistoryScreen ----------------------------------
-
-type PaymentHistoryScreenState = {
-  data :: PaymentHistoryScreenData,
-  props :: PaymentHistoryScreenProps
-}
-
-type PaymentHistoryScreenData = {
-  transactionDetails :: TransactionInfo,
-  planData :: PlanCardConfig,
-  autoPayList :: Array PaymentListItem,
-  manualPayList :: Array PaymentListItem,
-  gradientConfig :: Array GradientConfig,
-  autoPayStatus :: AutoPayStatus
-}
-
-type TransactionInfo = {
-  notificationStatus :: Maybe AutopayPaymentStage,
-  paymentStatus :: Common.PaymentStatus,
-  statusTime :: String,
-  details :: Array TransactionListItem,
-  manualSpecificDetails :: Array DueCard,
-  isSplit :: Boolean,
-  isAutoPayFailed :: Boolean,
-  feeType :: FeeType,
-  numOfDriverFee :: Int
-}
-type PaymentListItem = {
-  transactionDate :: String,
-  invoiceId :: String,
-  paymentStatus :: Common.PaymentStatus,
-  amount :: Number,
-  feeType :: FeeType,
-  description :: String,
-  ridesTakenDate :: String
-}
-
-type ChargeBreakupItem = {
-  amount :: Number,
-  component :: String
-}
-
-type TransactionListItem = {
-  key :: String,
-  title :: String,
-  val :: String
-}
-
-type DueCard = {
-  date :: String,
-  planType :: String,
-  offerApplied :: Maybe PromoConfig,
-  noOfRides :: Int,
-  totalEarningsOfDay :: Number,
-  dueAmount :: Number,
-  fareBreakup :: String,
-  expanded :: Boolean,
-  isAutoPayFailed :: Boolean,
-  isSplitPayment :: Boolean,
-  id :: String,
-  scheduledAt :: Maybe String,
-  paymentMode :: FeeType,
-  paymentStatus :: Maybe String,
-  boothCharges :: Maybe String,
-  isDue :: Boolean
-}
-
-type PaymentHistoryScreenProps = {
-  subView :: PaymentHistorySubview,
-  autoPayHistory :: Boolean,
-  autoPaySetup :: Boolean,
-  selectedDue :: String,
-  offset :: Int,
-  enableLoadMore :: Boolean
-}
-
-data PaymentHistorySubview = PaymentHistory | TransactionDetails | RideDetails
-
-derive instance genericPaymentHistorySubview :: Generic PaymentHistorySubview _
-instance showPaymentHistorySubview :: Show PaymentHistorySubview where show = genericShow
-instance eqPaymentHistorySubview :: Eq PaymentHistorySubview where eq = genericEq
-instance decodePaymentHistorySubview :: Decode PaymentHistorySubview where decode = defaultEnumDecode
-instance encodePaymentHistorySubview :: Encode PaymentHistorySubview where encode = defaultEnumEncode
-
-
-type DriverSavedLocationScreenState = {
-  data :: DriverSavedLocationScreenData,
-  props :: DriverSavedLocationScreenProps
-}
-
-type DriverSavedLocationScreenData = {
-  address :: String,
-  currentLat :: Maybe String,
-  currentLon :: Maybe String,
-  savedLocationsArray :: Array GoToLocation,
-  predictions :: Array PredictionItem,
-  saveLocationObject :: SaveLocationObject,
-  maxGotoLocations :: Int
-}
-
-type GoToLocation = {
-  id :: String,
-  lat :: Number,
-  lon :: Number,
-  address :: String,
-  tag :: String,
-  disabled :: Boolean
-}
-
-type PredictionItem = {
- description :: String,
- title :: String,
- placeId :: Maybe String,
- distance :: Maybe Int
-}
-
-
-type DriverSavedLocationScreenProps = {
-  viewType :: SavedLocationScreenType,
-  selectedPrediction :: PredictionItem,
-  confirmDelete :: Boolean,
-  selectedLocation :: GoToModal.GoToModalConfig,
-  fromEditButton :: Maybe GoToScrEntryType,
-  gotBackToHomeScreen :: Boolean,
-  errorText :: Maybe String,
-  defTag :: String
-}
-
-data GoToScrEntryType = FromEdit | FromPrediction
-
-derive instance genericGoToScrEntryType :: Generic GoToScrEntryType _
-instance eqGoToScrEntryType :: Eq GoToScrEntryType where eq = genericEq
-
-data SavedLocationScreenType = GoToList | SearchLocation | LOCATE_ON_MAP | ConfirmLocation
-
-derive instance genericSavedLocationScreenType :: Generic SavedLocationScreenType _
-instance eqSavedLocationScreenType :: Eq SavedLocationScreenType where eq = genericEq
-
-data GoToPopUpType = REDUCED Int | MORE_GOTO_RIDES | VALIDITY_EXPIRED | REACHED_HOME | NO_POPUP_VIEW
-
-derive instance genericGoToPopUpType :: Generic GoToPopUpType _
-instance showGoToPopUpType :: Show GoToPopUpType where show = genericShow
-instance eqGoToPopUpType :: Eq GoToPopUpType where eq = genericEq
-instance standardEncodeGoToPopUpType :: StandardEncode GoToPopUpType where standardEncode _ = standardEncode {}
-instance decodeGoToPopUpType :: Decode GoToPopUpType where decode = defaultDecode
-instance encodeGoToPopUpType  :: Encode GoToPopUpType where encode = defaultEncode
-
-data HomeScreenPopUpTypes = KnowMore | DisableGotoPopup | LocInRange | AccountBlocked
-
-derive instance genericHomeScreenPopUpTypes :: Generic HomeScreenPopUpTypes _
-instance showHomeScreenPopUpTypes :: Show HomeScreenPopUpTypes where show = genericShow
-instance eqHomeScreenPopUpTypes :: Eq HomeScreenPopUpTypes where eq = genericEq
-instance standardEncodeHomeScreenPopUpTypes :: StandardEncode HomeScreenPopUpTypes where standardEncode _ = standardEncode {}
-instance decodeHomeScreenPopUpTypes :: Decode HomeScreenPopUpTypes where decode = defaultDecode
-instance encodeHomeScreenPopUpTypes  :: Encode HomeScreenPopUpTypes where encode = defaultEncode
-
-data MenuOptions = DRIVER_PRESONAL_DETAILS |DRIVER_BANK_DETAILS | DRIVER_VEHICLE_DETAILS | ABOUT_APP | MULTI_LANGUAGE | HELP_AND_FAQS | DRIVER_LOGOUT | DRIVER_BOOKING_OPTIONS | REFER | APP_INFO_SETTINGS | LIVE_STATS_DASHBOARD | GO_TO_LOCATIONS
-derive instance genericMenuoptions :: Generic MenuOptions _
-instance eqMenuoptions :: Eq MenuOptions where eq = genericEq
-
-type Listtype =
-    { icon :: String,
-      menuOptions :: MenuOptions
+type NotificationsScreenState
+  = { shimmerLoader :: AnimationState
+    , prestoListArrayItems :: Array NotificationCardPropState
+    , notificationList :: Array NotificationCardState
+    , selectedItem :: NotificationCardState
+    , offsetValue :: Int
+    , loaderButtonVisibility :: Boolean
+    , loadMoreDisabled :: Boolean
+    , recievedResponse :: Boolean
+    , notificationDetailModelState :: NotificationDetailModelState
+    , notifsDetailModelVisibility :: Visibility
+    , loadMore :: Boolean
+    , selectedNotification :: Maybe String
+    , deepLinkActivated :: Boolean
+    , config :: AppConfig
     }
 
-type SaveLocationObject = {
-  position :: Location,
-  address :: String,
-  tag :: String
-}
+type NotificationCardState
+  = { mediaUrl :: String
+    , title :: String
+    , description :: String
+    , action1Text :: String
+    , action2Text :: String
+    , notificationLabel :: String
+    , timeLabel :: String
+    , messageId :: String
+    , notificationNotSeen :: Boolean
+    , comment :: Maybe String
+    , imageUrl :: String
+    , mediaType :: Maybe MediaType
+    , likeCount :: Int
+    , viewCount :: Int
+    , likeStatus :: Boolean
+    }
 
-type Tag = {
-  background :: String, 
-  image :: String, 
-  visibility :: Boolean, 
-  text :: String, 
-  textColor :: String
-}
+type NotificationCardPropState
+  = { mediaUrl :: PropValue
+    , title :: PropValue
+    , action1Text :: PropValue
+    , action2Text :: PropValue
+    , notificationLabel :: PropValue
+    , timeLabel :: PropValue
+    , description :: PropValue
+    , cardVisibility :: PropValue
+    , shimmerVisibility :: PropValue
+    , notificationLabelColor :: PropValue
+    , action1Visibility :: PropValue
+    , action2Visibility :: PropValue
+    , descriptionVisibility :: PropValue
+    , illustrationVisibility :: PropValue
+    , notificationNotSeen :: PropValue
+    , playBtnVisibility :: PropValue
+    , imageUrl :: PropValue
+    , playButton :: PropValue
+    , previewImage :: PropValue
+    , previewImageTitle :: PropValue
+    , imageVisibility :: PropValue
+    , messageId :: PropValue
+    , imageWithUrl :: PropValue
+    , imageWithUrlVisibility :: PropValue
+    , likeCount :: PropValue
+    , viewCount :: PropValue
+    }
+
+type NotificationDetailModelState
+  = { mediaUrl :: String
+    , title :: String
+    , timeLabel :: String
+    , description :: Array String
+    , actionText :: String
+    , actionVisibility :: Visibility
+    , addCommentModelVisibility :: Visibility
+    , comment :: Maybe String
+    , commentBtnActive :: Boolean
+    , messageId :: String
+    , notificationNotSeen :: Boolean
+    , imageUrl :: String
+    , mediaType :: Maybe MediaType
+    , likeCount :: Int
+    , likeStatus :: Boolean
+    , viewCount :: Int
+    }
+
+data YoutubeVideoStatus
+  = PLAY
+  | PAUSE
+
+derive instance genericYoutubeVideoStatus :: Generic YoutubeVideoStatus _
+
+instance showYoutubeVideoStatus :: Show YoutubeVideoStatus where
+  show = genericShow
+
+instance eqYoutubeVideoStatus :: Eq YoutubeVideoStatus where
+  eq = genericEq
+
+data ReferralType
+  = SuccessScreen
+  | ComingSoonScreen
+  | ReferralFlow
+  | QRScreen
+  | LeaderBoard
+
+derive instance genericReferralType :: Generic ReferralType _
+
+instance eqReferralType :: Eq ReferralType where
+  eq = genericEq
+
+type BookingOptionsScreenState
+  = { data :: BookingOptionsScreenData
+    , props :: BookingOptionsScreenProps
+    }
+
+type BookingOptionsScreenData
+  = { vehicleType :: String
+    , vehicleNumber :: String
+    , vehicleName :: String
+    , vehicleCapacity :: Int
+    , downgradeOptions :: Array ChooseVehicle.Config
+    }
+
+type BookingOptionsScreenProps
+  = { isBtnActive :: Boolean
+    , downgraded :: Boolean
+    }
+
+data LeaderBoardType
+  = Daily
+  | Weekly
+
+derive instance genericLeaderBoardType :: Generic LeaderBoardType _
+
+instance eqLeaderBoardType :: Eq LeaderBoardType where
+  eq = genericEq
+
+data DateSelector
+  = DaySelector Common.CalendarDate
+  | WeekSelector Common.CalendarWeek
+
+type RankCardData
+  = { goodName :: String
+    , profileUrl :: Maybe String
+    , rank :: Int
+    , rides :: Int
+    , gender :: String
+    }
+
+type AcknowledgementScreenState
+  = { data :: AcknowledgementScreenData
+    , props :: AcknowledgementScreenProps
+    }
+
+type AcknowledgementScreenData
+  = { illustrationAsset :: String
+    , title :: Maybe String
+    , description :: Maybe String
+    , primaryButtonText :: Maybe String
+    , orderId :: Maybe String
+    , amount :: String
+    }
+
+type AcknowledgementScreenProps
+  = { primaryButtonVisibility :: Visibility
+    , paymentStatus :: Common.PaymentStatus
+    , illustrationType :: IllustrationType
+    }
+
+data IllustrationType
+  = Image
+  | Lottie
+
+derive instance genericIllustrationType :: Generic IllustrationType _
+
+instance showIllustrationType :: Show IllustrationType where
+  show = genericShow
+
+instance eqIllustrationType :: Eq IllustrationType where
+  eq = genericEq
+
+type PaymentHistoryModelState
+  = { paymentHistoryList :: Array PaymentHistoryListItem.Config
+    }
+
+--------------------------------------------------------------- AadhaarVerificationScreenState -----------------------------------------------------------------------------
+type AadhaarVerificationScreenState
+  = { data :: EnterAadhaarNumberScreenStateData
+    , props :: EnterAadhaarNumberScreenStateProps
+    }
+
+type EnterAadhaarNumberScreenStateData
+  = { aadhaarNumber :: String
+    , timer :: String
+    , otp :: String
+    , driverName :: String
+    , driverGender :: String
+    , driverDob :: String
+    }
+
+type EnterAadhaarNumberScreenStateProps
+  = { btnActive :: Boolean
+    , isValid :: Boolean
+    , resendEnabled :: Boolean
+    , currentStage :: AadhaarStage
+    , showErrorAadhaar :: Boolean
+    , fromHomeScreen :: Boolean
+    , showLogoutPopup :: Boolean
+    , isDateClickable :: Boolean
+    }
+
+data AadhaarStage
+  = EnterAadhaar
+  | VerifyAadhaar
+  | AadhaarDetails
+
+derive instance genericAadhaarStage :: Generic AadhaarStage _
+
+instance eqAadhaarStage :: Eq AadhaarStage where
+  eq = genericEq
+
+type GlobalProps
+  = { aadhaarVerificationRequired :: Boolean
+    , driverInformation :: Maybe GetDriverInfoResp
+    , driverRideStats :: Maybe DriverProfileStatsResp
+    , callScreen :: ScreenName
+    , gotoPopupType :: GoToPopUpType
+    }
+
+--------------------------------------------------------------- SubscriptionScreenState ---------------------------------------------------
+type SubscriptionScreenState
+  = { data :: SubscriptionScreenData
+    , props :: SubscriptionScreenProps
+    }
+
+type SubscriptionScreenData
+  = { myPlanData :: MyPlanData
+    , managePlanData :: ManagePlanData
+    , joinPlanData :: JoinPlanData
+    , autoPayDetails :: AutoPayDetails
+    , driverId :: String
+    , paymentMode :: String
+    , planId :: String
+    , orderId :: Maybe String
+    , errorMessage :: String
+    , config :: AppConfig
+    }
+
+type AutoPayDetails
+  = { isActive :: Boolean
+    , detailsList :: Array KeyValType
+    , payerUpiId :: Maybe String
+    , pspLogo :: String
+    }
+
+type KeyValType
+  = { key :: String
+    , val :: String
+    }
+
+type SubscriptionScreenProps
+  = { subView :: SubscriptionSubview
+    , myPlanProps :: MyPlanProps
+    , managePlanProps :: ManagePlanProps
+    , joinPlanProps :: JoinPlanProps
+    , popUpState :: Maybe SubscribePopupType
+    , resumeBtnVisibility :: Boolean
+    , showError :: Boolean
+    , showShimmer :: Boolean
+    , refreshPaymentStatus :: Boolean
+    , confirmCancel :: Boolean
+    , isSelectedLangTamil :: Boolean
+    , currentLat :: Number
+    , currentLon :: Number
+    , destLat :: Number
+    , destLon :: Number
+    , kioskLocation :: Array KioskLocation
+    , prevSubView :: SubscriptionSubview
+    , noKioskLocation :: Boolean
+    , optionsMenuState :: OptionsMenuState
+    , redirectToNav :: String
+    , lastPaymentType :: Maybe LastPaymentType
+    , offerBannerProps :: OfferBanner
+    , isEndRideModal :: Boolean
+    }
+
+type OfferBanner
+  = { showOfferBanner :: Boolean
+    , offerBannerValidTill :: String
+    , offerBannerDeadline :: String
+    }
+
+type JoinPlanData
+  = { allPlans :: Array PlanCardConfig
+    , subscriptionStartDate :: String
+    }
+
+type JoinPlanProps
+  = { paymentMode :: String
+    , selectedPlanItem :: Maybe PlanCardConfig
+    , isIntroductory :: Boolean
+    }
+
+type ManagePlanData
+  = { currentPlan :: PlanCardConfig
+    , alternatePlans :: Array PlanCardConfig
+    }
+
+type ManagePlanProps
+  = { selectedPlanItem :: PlanCardConfig
+    }
+
+type MyPlanData
+  = { dueItems :: Array DueItem
+    , planEntity :: PlanCardConfig
+    , autoPayStatus :: AutoPayStatus
+    , lowAccountBalance :: Maybe Number
+    , switchAndSave :: Boolean
+    , paymentMethodWarning :: Boolean
+    , maxDueAmount :: Number
+    , totalDueAmount :: Number
+    , autoPayDueAmount :: Number
+    , manualDueAmount :: Number
+    , mandateStatus :: String
+    , selectedDue :: String
+    , dueBoothCharges :: Maybe Number
+    }
+
+type MyPlanProps
+  = { isDuesExpanded :: Boolean
+    , isDueViewExpanded :: Boolean
+    , overDue :: Boolean
+    , multiTypeDues :: Boolean
+    , dueType :: FeeType
+    }
+
+type DueItem
+  = { randomId :: String
+    , tripDate :: String
+    , amount :: Number
+    , earnings :: Number
+    , noOfRides :: Int
+    , scheduledAt :: String
+    , paymentStatus :: String
+    , feeBreakup :: String
+    , plan :: String
+    , mode :: FeeType
+    , autoPayStage :: Maybe AutopayPaymentStage
+    , isSplit :: Boolean
+    , specialZoneRideCount :: Maybe Int
+    , totalSpecialZoneCharges :: Maybe Number
+    }
+
+type KioskLocation
+  = { longitude :: Number
+    , address :: String
+    , contact :: Maybe String
+    , latitude :: Number
+    , landmark :: String
+    , distance :: Number
+    }
+
+type PlanCardConfig
+  = { id :: String
+    , title :: String
+    , description :: String
+    , isSelected :: Boolean
+    , offers :: Array PromoConfig
+    , priceBreakup :: Array PaymentBreakUp
+    , frequency :: String
+    , freeRideCount :: Int
+    , showOffer :: Boolean
+    }
+
+type PromoConfig
+  = { title :: Maybe String
+    , isGradient :: Boolean
+    , gradient :: Array String
+    , hasImage :: Boolean
+    , imageURL :: String
+    , offerDescription :: Maybe String
+    , addedFromUI :: Boolean
+    }
+
+data SubscribePopupType
+  = SuccessPopup
+  | FailedPopup
+  | DuesClearedPopup
+  | CancelAutoPay
+  | SwitchedPlan
+  | SupportPopup
+  | PaymentSuccessPopup
+
+derive instance genericSubscribePopupType :: Generic SubscribePopupType _
+
+instance showSubscribePopupType :: Show SubscribePopupType where
+  show = genericShow
+
+instance eqSubscribePopupType :: Eq SubscribePopupType where
+  eq = genericEq
+
+instance decodeSubscribePopupType :: Decode SubscribePopupType where
+  decode = defaultEnumDecode
+
+instance encodeSubscribePopupType :: Encode SubscribePopupType where
+  encode = defaultEnumEncode
+
+data AutoPayStatus
+  = ACTIVE_AUTOPAY
+  | SUSPENDED
+  | PAUSED_PSP
+  | CANCELLED_PSP
+  | NO_AUTOPAY
+  | PENDING
+  | MANDATE_FAILED
+  | RESUME_PENDING
+
+derive instance genericAutoPayStatus :: Generic AutoPayStatus _
+
+instance showAutoPayStatus :: Show AutoPayStatus where
+  show = genericShow
+
+instance eqAutoPayStatus :: Eq AutoPayStatus where
+  eq = genericEq
+
+instance encodeAutoPayStatus :: Encode AutoPayStatus where
+  encode = defaultEnumEncode
+
+data SubscriptionSubview
+  = JoinPlan
+  | ManagePlan
+  | MyPlan
+  | PlanDetails
+  | FindHelpCentre
+  | DuesView
+  | DueDetails
+  | NoSubView
+
+derive instance genericSubscriptionSubview :: Generic SubscriptionSubview _
+
+instance showSubscriptionSubview :: Show SubscriptionSubview where
+  show = genericShow
+
+instance eqSubscriptionSubview :: Eq SubscriptionSubview where
+  eq = genericEq
+
+instance decodeSubscriptionSubview :: Decode SubscriptionSubview where
+  decode = defaultEnumDecode
+
+instance encodeSubscriptionSubview :: Encode SubscriptionSubview where
+  encode = defaultEnumEncode
+
+data OptionsMenuState
+  = ALL_COLLAPSED
+  | PLAN_MENU -- SUPPORT_MENU  | CALL_MENU disabled for now.
+
+derive instance genericOptionsMenuState :: Generic OptionsMenuState _
+
+instance showOptionsMenuState :: Show OptionsMenuState where
+  show = genericShow
+
+instance eqOptionsMenuState :: Eq OptionsMenuState where
+  eq = genericEq
+
+type LocalStoreSubscriptionInfo
+  = { projectedInvoice :: Number
+    , maxDueLimit :: Number
+    , expiry :: String
+    }
+
+---------------------------------------------------- PaymentHistoryScreen ----------------------------------
+type PaymentHistoryScreenState
+  = { data :: PaymentHistoryScreenData
+    , props :: PaymentHistoryScreenProps
+    }
+
+type PaymentHistoryScreenData
+  = { transactionDetails :: TransactionInfo
+    , planData :: PlanCardConfig
+    , autoPayList :: Array PaymentListItem
+    , manualPayList :: Array PaymentListItem
+    , gradientConfig :: Array GradientConfig
+    , autoPayStatus :: AutoPayStatus
+    }
+
+type TransactionInfo
+  = { notificationStatus :: Maybe AutopayPaymentStage
+    , paymentStatus :: Common.PaymentStatus
+    , statusTime :: String
+    , details :: Array TransactionListItem
+    , manualSpecificDetails :: Array DueCard
+    , isSplit :: Boolean
+    , isAutoPayFailed :: Boolean
+    , feeType :: FeeType
+    , numOfDriverFee :: Int
+    }
+
+type PaymentListItem
+  = { transactionDate :: String
+    , invoiceId :: String
+    , paymentStatus :: Common.PaymentStatus
+    , amount :: Number
+    , feeType :: FeeType
+    , description :: String
+    , ridesTakenDate :: String
+    }
+
+type ChargeBreakupItem
+  = { amount :: Number
+    , component :: String
+    }
+
+type TransactionListItem
+  = { key :: String
+    , title :: String
+    , val :: String
+    }
+
+type DueCard
+  = { date :: String
+    , planType :: String
+    , offerApplied :: Maybe PromoConfig
+    , noOfRides :: Int
+    , totalEarningsOfDay :: Number
+    , dueAmount :: Number
+    , fareBreakup :: String
+    , expanded :: Boolean
+    , isAutoPayFailed :: Boolean
+    , isSplitPayment :: Boolean
+    , id :: String
+    , scheduledAt :: Maybe String
+    , paymentMode :: FeeType
+    , paymentStatus :: Maybe String
+    , boothCharges :: Maybe String
+    , isDue :: Boolean
+    }
+
+type PaymentHistoryScreenProps
+  = { subView :: PaymentHistorySubview
+    , autoPayHistory :: Boolean
+    , autoPaySetup :: Boolean
+    , selectedDue :: String
+    , offset :: Int
+    , enableLoadMore :: Boolean
+    }
+
+data PaymentHistorySubview
+  = PaymentHistory
+  | TransactionDetails
+  | RideDetails
+
+derive instance genericPaymentHistorySubview :: Generic PaymentHistorySubview _
+
+instance showPaymentHistorySubview :: Show PaymentHistorySubview where
+  show = genericShow
+
+instance eqPaymentHistorySubview :: Eq PaymentHistorySubview where
+  eq = genericEq
+
+instance decodePaymentHistorySubview :: Decode PaymentHistorySubview where
+  decode = defaultEnumDecode
+
+instance encodePaymentHistorySubview :: Encode PaymentHistorySubview where
+  encode = defaultEnumEncode
+
+type DriverSavedLocationScreenState
+  = { data :: DriverSavedLocationScreenData
+    , props :: DriverSavedLocationScreenProps
+    }
+
+type DriverSavedLocationScreenData
+  = { address :: String
+    , currentLat :: Maybe String
+    , currentLon :: Maybe String
+    , savedLocationsArray :: Array GoToLocation
+    , predictions :: Array PredictionItem
+    , saveLocationObject :: SaveLocationObject
+    , maxGotoLocations :: Int
+    }
+
+type GoToLocation
+  = { id :: String
+    , lat :: Number
+    , lon :: Number
+    , address :: String
+    , tag :: String
+    , disabled :: Boolean
+    }
+
+type PredictionItem
+  = { description :: String
+    , title :: String
+    , placeId :: Maybe String
+    , distance :: Maybe Int
+    }
+
+type DriverSavedLocationScreenProps
+  = { viewType :: SavedLocationScreenType
+    , selectedPrediction :: PredictionItem
+    , confirmDelete :: Boolean
+    , selectedLocation :: GoToModal.GoToModalConfig
+    , fromEditButton :: Maybe GoToScrEntryType
+    , gotBackToHomeScreen :: Boolean
+    , errorText :: Maybe String
+    , defTag :: String
+    }
+
+data GoToScrEntryType
+  = FromEdit
+  | FromPrediction
+
+derive instance genericGoToScrEntryType :: Generic GoToScrEntryType _
+
+instance eqGoToScrEntryType :: Eq GoToScrEntryType where
+  eq = genericEq
+
+data SavedLocationScreenType
+  = GoToList
+  | SearchLocation
+  | LOCATE_ON_MAP
+  | ConfirmLocation
+
+derive instance genericSavedLocationScreenType :: Generic SavedLocationScreenType _
+
+instance eqSavedLocationScreenType :: Eq SavedLocationScreenType where
+  eq = genericEq
+
+data GoToPopUpType
+  = REDUCED Int
+  | MORE_GOTO_RIDES
+  | VALIDITY_EXPIRED
+  | REACHED_HOME
+  | NO_POPUP_VIEW
+
+derive instance genericGoToPopUpType :: Generic GoToPopUpType _
+
+instance showGoToPopUpType :: Show GoToPopUpType where
+  show = genericShow
+
+instance eqGoToPopUpType :: Eq GoToPopUpType where
+  eq = genericEq
+
+instance standardEncodeGoToPopUpType :: StandardEncode GoToPopUpType where
+  standardEncode _ = standardEncode {}
+
+instance decodeGoToPopUpType :: Decode GoToPopUpType where
+  decode = defaultDecode
+
+instance encodeGoToPopUpType :: Encode GoToPopUpType where
+  encode = defaultEncode
+
+data HomeScreenPopUpTypes
+  = KnowMore
+  | DisableGotoPopup
+  | LocInRange
+  | AccountBlocked
+
+derive instance genericHomeScreenPopUpTypes :: Generic HomeScreenPopUpTypes _
+
+instance showHomeScreenPopUpTypes :: Show HomeScreenPopUpTypes where
+  show = genericShow
+
+instance eqHomeScreenPopUpTypes :: Eq HomeScreenPopUpTypes where
+  eq = genericEq
+
+instance standardEncodeHomeScreenPopUpTypes :: StandardEncode HomeScreenPopUpTypes where
+  standardEncode _ = standardEncode {}
+
+instance decodeHomeScreenPopUpTypes :: Decode HomeScreenPopUpTypes where
+  decode = defaultDecode
+
+instance encodeHomeScreenPopUpTypes :: Encode HomeScreenPopUpTypes where
+  encode = defaultEncode
+
+data MenuOptions
+  = DRIVER_PRESONAL_DETAILS
+  | DRIVER_BANK_DETAILS
+  | DRIVER_VEHICLE_DETAILS
+  | ABOUT_APP
+  | MULTI_LANGUAGE
+  | HELP_AND_FAQS
+  | DRIVER_LOGOUT
+  | DRIVER_BOOKING_OPTIONS
+  | REFER
+  | APP_INFO_SETTINGS
+  | LIVE_STATS_DASHBOARD
+  | GO_TO_LOCATIONS
+
+derive instance genericMenuoptions :: Generic MenuOptions _
+
+instance eqMenuoptions :: Eq MenuOptions where
+  eq = genericEq
+
+type Listtype
+  = { icon :: String
+    , menuOptions :: MenuOptions
+    }
+
+type SaveLocationObject
+  = { position :: Location
+    , address :: String
+    , tag :: String
+    }
+
+type Tag
+  = { background :: String
+    , image :: String
+    , visibility :: Boolean
+    , text :: String
+    , textColor :: String
+    }
 
 ---------------------------------------------ChooseCityScreen -------------------------------------
+type ChooseCityScreenState
+  = { data :: ChooseCityScreenData
+    , props :: ChooseCityScreenProps
+    }
 
-type ChooseCityScreenState = {
-  data :: ChooseCityScreenData,
-  props :: ChooseCityScreenProps
-}
+type ChooseCityScreenData
+  = { config :: AppConfig
+    , locationSelected :: Maybe String
+    , locationDetectionFailed :: Boolean
+    , merchantOperatingCityConfig :: Array CityConfig
+    , logField :: Object Foreign
+    }
 
-type ChooseCityScreenData = {
-  config :: AppConfig,
-  locationSelected :: Maybe String,
-  locationDetectionFailed :: Boolean,
-  merchantOperatingCityConfig :: Array CityConfig,
-  logField :: Object Foreign
-}
+type ChooseCityScreenProps
+  = { selectedLanguage :: String
+    , currentStage :: ChooseCityScreenStage
+    , isLocationPermissionGiven :: Boolean
+    , radioMenuFocusedLang :: String
+    , radioMenuFocusedCity :: String
+    , locationUnserviceable :: Boolean
+    , isMockLocation :: Boolean
+    }
 
-type ChooseCityScreenProps = {
-  selectedLanguage :: String,
-  currentStage :: ChooseCityScreenStage,
-  isLocationPermissionGiven :: Boolean,
-  radioMenuFocusedLang :: String,
-  radioMenuFocusedCity :: String,
-  locationUnserviceable :: Boolean,
-  isMockLocation :: Boolean
-}
-
-data ChooseCityScreenStage = SELECT_LANG | SELECT_CITY | ENABLE_PERMISSION | DETECT_LOCATION
+data ChooseCityScreenStage
+  = SELECT_LANG
+  | SELECT_CITY
+  | ENABLE_PERMISSION
+  | DETECT_LOCATION
 
 derive instance genericChooseCityScreenStage :: Generic ChooseCityScreenStage _
-instance showChooseCityScreenStage :: Show ChooseCityScreenStage where show = genericShow
-instance eqChooseCityScreenStage :: Eq ChooseCityScreenStage where eq = genericEq
+
+instance showChooseCityScreenStage :: Show ChooseCityScreenStage where
+  show = genericShow
+
+instance eqChooseCityScreenStage :: Eq ChooseCityScreenStage where
+  eq = genericEq
 
 ---------------------------------------------WelcomeScreen -------------------------------------
+type WelcomeScreenState
+  = { data :: WelcomeScreenData
+    }
 
-type WelcomeScreenState = {
-  data :: WelcomeScreenData
-}
-
-type WelcomeScreenData = {
-  logField :: Object Foreign
-}
+type WelcomeScreenData
+  = { logField :: Object Foreign
+    }

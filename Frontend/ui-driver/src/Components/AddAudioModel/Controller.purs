@@ -12,7 +12,6 @@
  
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
 module Components.AddAudioModel.Controller where
 
 import Prelude
@@ -24,46 +23,57 @@ import Data.Maybe (Maybe)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 
-data Action = OnClickDone PrimaryButton.Action
-            | OnClickCancel PrimaryButton.Action
-            | OnClickDelete
-            | AddAudio
-            | BackPressed
-            | NoAction
+data Action
+  = OnClickDone PrimaryButton.Action
+  | OnClickCancel PrimaryButton.Action
+  | OnClickDelete
+  | AddAudio
+  | BackPressed
+  | NoAction
 
-type AddAudioModelState = {
-  audioFile :: Maybe String,
-  stateChanged :: Boolean
-}
+type AddAudioModelState
+  = { audioFile :: Maybe String
+    , stateChanged :: Boolean
+    }
 
 doneButtonConfig :: AddAudioModelState -> PrimaryButton.Config
-doneButtonConfig state = let
+doneButtonConfig state =
+  let
     config = PrimaryButton.config
-    primaryButtonConfig' = config
-      { textConfig
-      { text = (getString DONE)
-      , color = Color.primaryButtonColor}
-      , cornerRadius = 8.0
-      , background = Color.black900
-      , height = (V 60)
-      , alpha = if (state.stateChanged) then 1.0 else 0.5
-      , isClickable = state.stateChanged
-      , id = "AddAudioModelDoneButton"
-      }
-  in primaryButtonConfig'
+
+    primaryButtonConfig' =
+      config
+        { textConfig
+          { text = (getString DONE)
+          , color = Color.primaryButtonColor
+          }
+        , cornerRadius = 8.0
+        , background = Color.black900
+        , height = (V 60)
+        , alpha = if (state.stateChanged) then 1.0 else 0.5
+        , isClickable = state.stateChanged
+        , id = "AddAudioModelDoneButton"
+        }
+  in
+    primaryButtonConfig'
 
 cancelButtonConfig :: AddAudioModelState -> PrimaryButton.Config
-cancelButtonConfig state = let
+cancelButtonConfig state =
+  let
     config = PrimaryButton.config
-    primaryButtonConfig' = config
-      { textConfig
-      { text = (getString CANCEL)
-      , color = Color.black700}
-      , cornerRadius = 8.0
-      , background = Color.white900
-      , stroke = "1," <> Color.black700
-      , height = (V 60)
-      , isClickable = true
-      , id = "AddAudioModelCancelButton"
-      }
-  in primaryButtonConfig'
+
+    primaryButtonConfig' =
+      config
+        { textConfig
+          { text = (getString CANCEL)
+          , color = Color.black700
+          }
+        , cornerRadius = 8.0
+        , background = Color.white900
+        , stroke = "1," <> Color.black700
+        , height = (V 60)
+        , isClickable = true
+        , id = "AddAudioModelCancelButton"
+        }
+  in
+    primaryButtonConfig'

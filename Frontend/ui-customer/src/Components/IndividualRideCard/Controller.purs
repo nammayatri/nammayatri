@@ -12,7 +12,9 @@
  
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
 module Components.IndividualRideCard.Controller where
 
-data Action = OnClick Int | RepeatRide Int | NoAction Int
+data Action
+  = OnClick Int
+  | RepeatRide Int
+  | NoAction Int

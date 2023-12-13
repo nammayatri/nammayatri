@@ -12,39 +12,42 @@
 
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
 module Screens.HelpAndSupportScreen.ScreenData where
 
-import Screens.Types(HelpAndSupportScreenState)
+import Screens.Types (HelpAndSupportScreenState)
 import Prelude (class Eq, (<>))
 import Data.Eq.Generic (genericEq)
 import Data.Generic.Rep (class Generic)
 import Screens.Types as ST
 
-
 initData :: HelpAndSupportScreenState
-initData = {
-  data:  {
-          categories: [],
-          issueList : [],
-          resolvedIssueList : [],
-          ongoingIssueList : [],
-          issueListType : ST.HELP_AND_SUPPORT_SCREEN_MODAL
-          },
-  props: {isNoRides: false }
-}
+initData =
+  { data:
+      { categories: []
+      , issueList: []
+      , resolvedIssueList: []
+      , ongoingIssueList: []
+      , issueListType: ST.HELP_AND_SUPPORT_SCREEN_MODAL
+      }
+  , props: { isNoRides: false }
+  }
 
-data IssueOptions = OngoingIssues | ResolvedIssues | CallSupportCenter
+data IssueOptions
+  = OngoingIssues
+  | ResolvedIssues
+  | CallSupportCenter
 
 derive instance genericIssueOptions :: Generic IssueOptions _
-instance eqIssueOptions :: Eq IssueOptions where eq = genericEq
 
-type IssueListType = { menuOptions :: IssueOptions }
+instance eqIssueOptions :: Eq IssueOptions where
+  eq = genericEq
+
+type IssueListType
+  = { menuOptions :: IssueOptions }
 
 otherIssueList :: Array IssueListType
 otherIssueList =
-    [
-      {menuOptions: OngoingIssues},
-      {menuOptions: ResolvedIssues},
-      {menuOptions: CallSupportCenter}
-    ]
+  [ { menuOptions: OngoingIssues }
+  , { menuOptions: ResolvedIssues }
+  , { menuOptions: CallSupportCenter }
+  ]

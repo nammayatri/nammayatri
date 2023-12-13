@@ -21,12 +21,13 @@ screen initialState =
   , globalEvents: []
   , eval:
       ( \state action -> do
-          let _ = spy "WelcomeScreen ----- state" state
-          let _ = spy "WelcomeScreen --------action" action
+          let
+            _ = spy "WelcomeScreen ----- state" state
+          let
+            _ = spy "WelcomeScreen --------action" action
           eval state action
       )
   }
-
 
 view :: forall w. (Action -> Effect Unit) -> WelcomeScreenState -> PrestoDOM (Effect Unit) w
 view push state =
@@ -41,19 +42,19 @@ view push state =
         , afterRender push $ const AfterRender
         , background "#FFFAED"
         , padding $ PaddingBottom 24
-        ][  imageView
+        ]
+        [ imageView
             [ height $ V 50
             , width $ V 147
             , margin $ MarginTop 50
-            , imageWithFallback "ic_namma_yatri_logo,https://assets.juspay.in/nammayatri/images/user/ic_namma_yatri_logo.png"   -- "ic_namma_yatri_logo"
+            , imageWithFallback "ic_namma_yatri_logo,https://assets.juspay.in/nammayatri/images/user/ic_namma_yatri_logo.png" -- "ic_namma_yatri_logo"
             ]
-            , carouselView state push
-            , PrimaryButton.view (push <<< PrimaryButtonAC ) (primaryButtonConfig state)
+        , carouselView state push
+        , PrimaryButton.view (push <<< PrimaryButtonAC) (primaryButtonConfig state)
         ]
 
-
-carouselView:: WelcomeScreenState -> (Action -> Effect Unit)  -> forall w . PrestoDOM (Effect Unit) w
-carouselView state push = 
+carouselView :: WelcomeScreenState -> (Action -> Effect Unit) -> forall w. PrestoDOM (Effect Unit) w
+carouselView state push =
   linearLayout
     [ height WRAP_CONTENT
     , width MATCH_PARENT
@@ -63,9 +64,12 @@ carouselView state push =
     , gravity CENTER
     , weight 1.0
     , margin $ MarginBottom 20
-    , afterRender (\action -> do
-        _ <- push action
-        _ <- runFn2 addCarousel (carouselData state) (getNewIDWithTag "CarouselView")
-        pure unit
-        ) (const AfterRender)
-    ][]
+    , afterRender
+        ( \action -> do
+            _ <- push action
+            _ <- runFn2 addCarousel (carouselData state) (getNewIDWithTag "CarouselView")
+            pure unit
+        )
+        (const AfterRender)
+    ]
+    []

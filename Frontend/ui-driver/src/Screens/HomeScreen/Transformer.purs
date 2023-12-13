@@ -12,19 +12,22 @@
 
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
-
 module Screens.HomeScreen.Transformer where
 
 import Prelude
 import Screens.Types (GoToLocation)
 
 getDisabledLocById :: String -> Array GoToLocation -> Array GoToLocation
-getDisabledLocById id gotoArray = (map (\item ->  {   
-    id : item.id,
-    lat : item.lat,
-    lon : item.lon,
-    address : item.address,
-    tag : item.tag,
-    disabled : item.id == id || item.disabled
-    }) gotoArray)
+getDisabledLocById id gotoArray =
+  ( map
+      ( \item ->
+          { id: item.id
+          , lat: item.lat
+          , lon: item.lon
+          , address: item.address
+          , tag: item.tag
+          , disabled: item.id == id || item.disabled
+          }
+      )
+      gotoArray
+  )

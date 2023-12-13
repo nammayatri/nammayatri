@@ -12,14 +12,13 @@
  
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
 module Components.ReferralMobileNumber.View where
 
-import Prelude(Unit,const,(<<<),($),(<>))
+import Prelude (Unit, const, (<<<), ($), (<>))
 import Effect (Effect)
 import Components.ReferralMobileNumber.Controller (Action(..), Config(..))
 import PrestoDOM (Gravity(..), Length(..), PrestoDOM(..), Margin(..), Orientation(..), Padding(..), Visibility(..), linearLayout, textView, editText, onBackPressed, onClick, imageView, imageWithFallback)
-import PrestoDOM.Properties(alpha, background, clickable, color, cornerRadii, fontStyle, gravity, height, hint, id, imageUrl, margin, orientation, padding, pattern, sheetState, stroke, text, textSize, visibility, weight, width, cornerRadius)
+import PrestoDOM.Properties (alpha, background, clickable, color, cornerRadii, fontStyle, gravity, height, hint, id, imageUrl, margin, orientation, padding, pattern, sheetState, stroke, text, textSize, visibility, weight, width, cornerRadius)
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Styles.Colors as Color
 import Language.Strings (getString)
@@ -36,9 +35,9 @@ import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Common.Types.App (LazyCheck(..))
 import Prelude ((<>))
 
-view :: forall w .(Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
-view push state = 
-    linearLayout
+view :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
+view push state =
+  linearLayout
     [ height MATCH_PARENT
     , width MATCH_PARENT
     , gravity BOTTOM
@@ -46,7 +45,8 @@ view push state =
     , background Color.black9000
     , onBackPressed push (const OnBackClick)
     , clickable true
-    ][  linearLayout
+    ]
+    [ linearLayout
         [ height WRAP_CONTENT
         , width MATCH_PARENT
         , gravity CENTER
@@ -54,103 +54,117 @@ view push state =
         , padding (Padding 0 20 0 0)
         , cornerRadii $ Corners 20.0 true true false false
         , orientation VERTICAL
-        ][  linearLayout
+        ]
+        [ linearLayout
             [ height WRAP_CONTENT
             , width MATCH_PARENT
             , gravity LEFT
             , orientation HORIZONTAL
-            ][  imageView
+            ]
+            [ imageView
                 [ width (V 25)
                 , height (V 25)
                 , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_chevron_left"
                 , margin (MarginLeft 14)
                 , onClick push (const OnBackClick)
                 ]
-              , textView (
-                [ width WRAP_CONTENT
-                , height WRAP_CONTENT
-                , text  state.mainText
-                , color Color.black800
-                , margin (MarginLeft 15)
-                ] <> FontStyle.h3 TypoGraphy
+            , textView
+                ( [ width WRAP_CONTENT
+                  , height WRAP_CONTENT
+                  , text state.mainText
+                  , color Color.black800
+                  , margin (MarginLeft 15)
+                  ]
+                    <> FontStyle.h3 TypoGraphy
                 )
             ]
-            , textEditView push state
-            , PrimaryButton.view (push <<< PrimaryButtonActionController) (primaryButtonConfig state)
+        , textEditView push state
+        , PrimaryButton.view (push <<< PrimaryButtonActionController) (primaryButtonConfig state)
         ]
     ]
 
-textEditView :: forall w . (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
+textEditView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 textEditView push state =
-    linearLayout
+  linearLayout
     [ width MATCH_PARENT
     , height WRAP_CONTENT
     , orientation VERTICAL
-    , gravity CENTER    
-    ][ PrimaryEditText.view (push <<< PrimaryEditTextActionController) (primaryEditTextConfig state)
-     , subTextView push state
+    , gravity CENTER
     ]
-subTextView :: forall w . (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
-subTextView push state = 
-    linearLayout
+    [ PrimaryEditText.view (push <<< PrimaryEditTextActionController) (primaryEditTextConfig state)
+    , subTextView push state
+    ]
+
+subTextView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
+subTextView push state =
+  linearLayout
     [ width MATCH_PARENT
     , height WRAP_CONTENT
     , orientation VERTICAL
     , gravity CENTER
     , visibility if state.subTextView then VISIBLE else GONE
-    ][ textView 
-      [ width WRAP_CONTENT
-      , height WRAP_CONTENT
-      , text state.subText1
-      , color Color.black800
-      , gravity CENTER
-      ]
-    , textView 
-      [ width WRAP_CONTENT
-      , height WRAP_CONTENT
-      , margin (MarginVertical 8 32)
-      , text  state.subText2
-      , color Color.blue900
-      , gravity CENTER
-      , onClick push (const OnSubTextClick)
-      ]
+    ]
+    [ textView
+        [ width WRAP_CONTENT
+        , height WRAP_CONTENT
+        , text state.subText1
+        , color Color.black800
+        , gravity CENTER
+        ]
+    , textView
+        [ width WRAP_CONTENT
+        , height WRAP_CONTENT
+        , margin (MarginVertical 8 32)
+        , text state.subText2
+        , color Color.blue900
+        , gravity CENTER
+        , onClick push (const OnSubTextClick)
+        ]
     ]
 
 primaryEditTextConfig :: Config -> PrimaryEditText.Config
-primaryEditTextConfig state = let 
+primaryEditTextConfig state =
+  let
     config = PrimaryEditText.config
-    primaryEditTextConfig' = config
-        {   
-            editText
-            {   singleLine = true
-                , pattern = state.pattern
-                , color = Color.black800
-                , letterSpacing = state.letterSpacing
-                , placeholder = state.placeholder
-            }
-            , showErrorLabel = state.isValid
-            , errorLabel  { 
-            text = state.errorText
-            }
-            , type = "number"
-            , id = (getNewIDWithTag "Referalnumber")
-            , margin = (Margin 16 0 16 24)}
-    in primaryEditTextConfig'
 
-primaryButtonConfig :: Config -> PrimaryButton.Config 
-primaryButtonConfig state = let 
+    primaryEditTextConfig' =
+      config
+        { editText
+          { singleLine = true
+          , pattern = state.pattern
+          , color = Color.black800
+          , letterSpacing = state.letterSpacing
+          , placeholder = state.placeholder
+          }
+        , showErrorLabel = state.isValid
+        , errorLabel
+          { text = state.errorText
+          }
+        , type = "number"
+        , id = (getNewIDWithTag "Referalnumber")
+        , margin = (Margin 16 0 16 24)
+        }
+  in
+    primaryEditTextConfig'
+
+primaryButtonConfig :: Config -> PrimaryButton.Config
+primaryButtonConfig state =
+  let
     config = PrimaryButton.config
-    primaryButtonConfig' = config
-      { textConfig
-      { text = state.primaryButtonText
-      , color = Color.primaryButtonColor
-      }
-      , margin = (Margin 16 0 16 10)
-      , cornerRadius = 8.0
-      , background = Color.black900
-      , height = (V 60)
-      , alpha = if (state.isApplyButtonActive) then 1.0 else 0.7
-      , isClickable = state.isApplyButtonActive
-      , id = "ReferralMobileNumberButton"
-      }
-  in primaryButtonConfig'
+
+    primaryButtonConfig' =
+      config
+        { textConfig
+          { text = state.primaryButtonText
+          , color = Color.primaryButtonColor
+          }
+        , margin = (Margin 16 0 16 10)
+        , cornerRadius = 8.0
+        , background = Color.black900
+        , height = (V 60)
+        , alpha = if (state.isApplyButtonActive) then 1.0 else 0.7
+        , isClickable = state.isApplyButtonActive
+        , id = "ReferralMobileNumberButton"
+        }
+  in
+    primaryButtonConfig'

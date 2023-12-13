@@ -12,11 +12,9 @@
 
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
 module Screens.NotificationsScreen.View where
 
 import Prelude
-
 import Animation (fadeIn, fadeOut, screenAnimationFadeInOut)
 import Common.Types.App (LazyCheck(..))
 import Types.App (defaultGlobalState)
@@ -52,7 +50,6 @@ import Components.BottomNavBar.View as BottomNavBar
 import Components.BottomNavBar.Controller (navData)
 import Screens as ScreenNames
 
-
 screen :: NotificationsScreenState -> PrestoList.ListItem -> Screen Action NotificationsScreenState ScreenOutput
 screen initialState notificationListItem =
   { initialState: initialState { shimmerLoader = AnimatedIn }
@@ -86,31 +83,36 @@ view notificationListItem push state =
     , background Color.white900
     , orientation VERTICAL
     , onBackPressed push $ const BackPressed
-    ] $ [ linearLayout
+    ]
+    $ [ linearLayout
           [ height MATCH_PARENT
           , width MATCH_PARENT
           , orientation VERTICAL
-          ][ screenAnimationFadeInOut $
-              linearLayout
-                [ height WRAP_CONTENT
-                , width MATCH_PARENT
-                , orientation VERTICAL
-                , weight 1.0
-                ][ linearLayout
-                    [ height WRAP_CONTENT
-                    , width MATCH_PARENT
-                    , orientation VERTICAL
-                    , weight 1.0
-                    ][ headerLayout state push
-                    ,  notificationListView notificationListItem push state
-                    ]
+          ]
+          [ screenAnimationFadeInOut
+              $ linearLayout
+                  [ height WRAP_CONTENT
+                  , width MATCH_PARENT
+                  , orientation VERTICAL
+                  , weight 1.0
+                  ]
+                  [ linearLayout
+                      [ height WRAP_CONTENT
+                      , width MATCH_PARENT
+                      , orientation VERTICAL
+                      , weight 1.0
+                      ]
+                      [ headerLayout state push
+                      , notificationListView notificationListItem push state
+                      ]
                   , loadMoreView push state
-                ]
+                  ]
           , BottomNavBar.view (push <<< BottomNavBarAction) (navData ScreenNames.ALERTS_SCREEN state.config.bottomNavConfig)
           ]
-      ] <> (if (state.notifsDetailModelVisibility == VISIBLE) then [ notificationDetailModel push state ] else [])
+      ]
+    <> (if (state.notifsDetailModelVisibility == VISIBLE) then [ notificationDetailModel push state ] else [])
 
-loadMoreView :: forall w . (Action -> Effect Unit) -> NotificationsScreenState -> PrestoDOM (Effect Unit) w
+loadMoreView :: forall w. (Action -> Effect Unit) -> NotificationsScreenState -> PrestoDOM (Effect Unit) w
 loadMoreView push state =
   linearLayout
     [ height WRAP_CONTENT
@@ -124,11 +126,12 @@ loadMoreView push state =
     , visibility if (state.loaderButtonVisibility && (not state.loadMoreDisabled)) then VISIBLE else GONE
     ]
     [ linearLayout
-        [height $ V 1
+        [ height $ V 1
         , width MATCH_PARENT
         , background Color.grey900
-        ][]
-      , textView
+        ]
+        []
+    , textView
         ( [ width WRAP_CONTENT
           , height WRAP_CONTENT
           , text (getString LOAD_OLDER_ALERTS)
@@ -138,7 +141,6 @@ loadMoreView push state =
             <> FontStyle.subHeading1 TypoGraphy
         )
     ]
-
 
 notificationDetailModel :: forall w. (Action -> Effect Unit) -> NotificationsScreenState -> PrestoDOM (Effect Unit) w
 notificationDetailModel push state =
@@ -283,6 +285,7 @@ noNotificationsConfig :: LazyCheck -> ErrorModal.Config
 noNotificationsConfig _ =
   let
     config = ErrorModal.config
+
     noNotificationsConfig' =
       config
         { imageConfig
@@ -294,7 +297,7 @@ noNotificationsConfig _ =
         , errorConfig
           { text = getString NO_NOTIFICATIONS_RIGHT_NOW
           , margin = MarginBottom 7
-          , color = Color.black900      
+          , color = Color.black900
           }
         , errorDescriptionConfig
           { text = getString NO_NOTIFICATIONS_RIGHT_NOW_DESC
@@ -328,10 +331,10 @@ shimmerData i =
   , playButton: toPropValue "ic_play_btn"
   , previewImage: toPropValue "gone"
   , previewImageTitle: toPropValue "Preview Image"
-  , imageVisibility : toPropValue "gone"
+  , imageVisibility: toPropValue "gone"
   , messageId: toPropValue ""
-  , imageWithUrl : toPropValue ""
-  , imageWithUrlVisibility : toPropValue ""
-  , likeCount : toPropValue 0
-  , viewCount : toPropValue 0
+  , imageWithUrl: toPropValue ""
+  , imageWithUrlVisibility: toPropValue ""
+  , likeCount: toPropValue 0
+  , viewCount: toPropValue 0
   }

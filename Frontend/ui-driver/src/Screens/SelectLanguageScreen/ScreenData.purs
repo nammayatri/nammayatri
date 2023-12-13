@@ -12,7 +12,6 @@
  
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
 module Screens.SelectLanguageScreen.ScreenData where
 
 import ConfigProvider
@@ -20,14 +19,14 @@ import Screens.Types (SelectLanguageScreenState)
 import Foreign.Object (empty)
 
 initData :: SelectLanguageScreenState
-initData = {
-    data: {
-    isSelected : true
-  , config : getAppConfig appConfig
-  , logField : empty
-    },
-    props: {
-      btnActive :false,
-      selectedLanguage: ""
-    }
-}
+initData =
+  { data:
+      { isSelected: true
+      , config: getAppConfig appConfig
+      , logField: empty
+      }
+  , props:
+      { btnActive: false
+      , selectedLanguage: ""
+      }
+  }

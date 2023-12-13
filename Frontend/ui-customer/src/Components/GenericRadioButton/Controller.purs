@@ -74,7 +74,7 @@ config =
   , editTextConfig:
       { hint: ""
       , textStyle: Body1
-      , id : ""
-      , defaultText : ""
+      , id: ""
+      , defaultText: ""
       }
   }

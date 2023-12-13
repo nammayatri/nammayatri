@@ -12,57 +12,57 @@
 
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
 module Components.LocationListItem.Controller where
 
 import Data.Maybe (Maybe(..))
 import Screens.Types (LocationListItemState, Address)
 
-data Action = OnClick LocationListItemState
-            | SelectedCurrentLocation Number Number String
-            | FavClick LocationListItemState
-
+data Action
+  = OnClick LocationListItemState
+  | SelectedCurrentLocation Number Number String
+  | FavClick LocationListItemState
 
 locationListStateObj :: LocationListItemState
-locationListStateObj = { prefixImageUrl : ""
-  , postfixImageUrl : ""
-  , postfixImageVisibility : true
-  , title : ""
-  , subTitle : ""
-  , placeId : Nothing
-  , lat : Nothing
-  , lon : Nothing
-  , description : ""
-  , tag : ""
-  , tagType : Nothing
-  , cardType : Nothing
-  , address : ""
-  , tagName : ""
-  , isEditEnabled : true
-  , savedLocation : ""
-  , placeName : ""
-  , isClickable : true
-  , alpha : 1.0
-  , fullAddress : dummyAddress
-  , locationItemType : Nothing
-  , distance : Nothing
-  , showDistance : Just false
-  , actualDistance : Nothing
-  , frequencyCount : Nothing
-  , recencyDate : Nothing
-  , locationScore : Nothing
+locationListStateObj =
+  { prefixImageUrl: ""
+  , postfixImageUrl: ""
+  , postfixImageVisibility: true
+  , title: ""
+  , subTitle: ""
+  , placeId: Nothing
+  , lat: Nothing
+  , lon: Nothing
+  , description: ""
+  , tag: ""
+  , tagType: Nothing
+  , cardType: Nothing
+  , address: ""
+  , tagName: ""
+  , isEditEnabled: true
+  , savedLocation: ""
+  , placeName: ""
+  , isClickable: true
+  , alpha: 1.0
+  , fullAddress: dummyAddress
+  , locationItemType: Nothing
+  , distance: Nothing
+  , showDistance: Just false
+  , actualDistance: Nothing
+  , frequencyCount: Nothing
+  , recencyDate: Nothing
+  , locationScore: Nothing
   }
 
 dummyAddress :: Address
-dummyAddress = {
-              "area" : Nothing
-            , "state" : Nothing
-            , "country" : Nothing
-            , "building" : Nothing
-            , "door" : Nothing
-            , "street" : Nothing
-            , "city" : Nothing
-            , "areaCode" : Nothing
-            , "ward" : Nothing
-            , "placeId" : Nothing
-            }
+dummyAddress =
+  { "area": Nothing
+  , "state": Nothing
+  , "country": Nothing
+  , "building": Nothing
+  , "door": Nothing
+  , "street": Nothing
+  , "city": Nothing
+  , "areaCode": Nothing
+  , "ward": Nothing
+  , "placeId": Nothing
+  }

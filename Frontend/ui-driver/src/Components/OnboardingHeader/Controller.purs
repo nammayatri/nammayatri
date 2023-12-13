@@ -12,7 +12,6 @@
  
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
 module Components.OnboardingHeader.Controller where
 
 import Prelude (pure, unit, class Show)
@@ -22,11 +21,13 @@ instance showAction :: Show Action where
   show _ = ""
 
 instance loggableAction :: Loggable Action where
-   performLog _ _ = pure unit
+  performLog _ _ = pure unit
 
-data Action = TriggerRegModal
-            | BackPressed
-type OnboardingHeaderState = {
-  stepNumber :: String,
-  barNumber :: Int
-}
+data Action
+  = TriggerRegModal
+  | BackPressed
+
+type OnboardingHeaderState
+  = { stepNumber :: String
+    , barNumber :: Int
+    }

@@ -12,7 +12,6 @@
  
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
 module Screens.AddVehicleDetailsScreen.Handler where
 
 import Control.Monad.Except.Trans (lift)
@@ -25,7 +24,6 @@ import Screens.AddVehicleDetailsScreen.Views as AddVehicleDetailsScreen
 import Types.App (FlowBT, GlobalState(..), ADD_VEHICLE_DETAILS_SCREENOUTPUT(..), ScreenType(..))
 import Types.ModifyScreenState (modifyScreenState)
 
-
 addVehicleDetails :: FlowBT String ADD_VEHICLE_DETAILS_SCREENOUTPUT
 addVehicleDetails = do
   (GlobalState state) <- getState
@@ -33,7 +31,7 @@ addVehicleDetails = do
   case action of
     GoBack updatedState -> do
       modifyScreenState $ AddVehicleDetailsScreenStateType $ \addVehicleDetailsScreen -> updatedState
-      modifyScreenState $ AddVehicleDetailsScreenStateType $ \addVehicleDetailsScreen -> addVehicleDetailsScreen { props {errorVisibility = false}, data {errorMessage = ""}}
+      modifyScreenState $ AddVehicleDetailsScreenStateType $ \addVehicleDetailsScreen -> addVehicleDetailsScreen { props { errorVisibility = false }, data { errorMessage = "" } }
       App.BackT $ App.NoBack <$> (pure $ if updatedState.props.addRcFromProfile then DRIVER_PROFILE_SCREEN else ONBOARDING_FLOW)
     ValidateDetails updatedState -> do
       modifyScreenState $ AddVehicleDetailsScreenStateType (\addVehicleDetailsScreen -> updatedState)
@@ -44,7 +42,7 @@ addVehicleDetails = do
     ReferApiCall updatedState -> App.BackT $ App.BackPoint <$> (pure $ REFER_API_CALL updatedState)
     ApplicationSubmittedScreen -> App.BackT $ App.BackPoint <$> (pure $ APPLICATION_STATUS_SCREEN)
     LogoutAccount -> App.BackT $ App.BackPoint <$> pure LOGOUT_USER
-    GoToRegisteration  -> App.BackT $ App.BackPoint <$> pure ONBOARDING_FLOW
+    GoToRegisteration -> App.BackT $ App.BackPoint <$> pure ONBOARDING_FLOW
     GoToDriverProfile -> App.BackT $ App.BackPoint <$> pure DRIVER_PROFILE_SCREEN
     ActivateRC updatedState -> do
       modifyScreenState $ AddVehicleDetailsScreenStateType (\addVehicleDetailsScreen -> updatedState)

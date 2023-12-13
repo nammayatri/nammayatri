@@ -21,19 +21,19 @@ initData =
   { data:
       { aadhaarNumber: ""
       , timer: ""
-      , otp : ""
-      , driverName : ""
-      , driverGender : ""
-      , driverDob : ""
+      , otp: ""
+      , driverName: ""
+      , driverGender: ""
+      , driverDob: ""
       }
   , props:
       { btnActive: false
       , isValid: false
       , resendEnabled: false
-      , currentStage : EnterAadhaar
-      , showErrorAadhaar : false
-      , fromHomeScreen : false
-      , showLogoutPopup : false
-      , isDateClickable : true
+      , currentStage: EnterAadhaar
+      , showErrorAadhaar: false
+      , fromHomeScreen: false
+      , showLogoutPopup: false
+      , isDateClickable: true
       }
   }

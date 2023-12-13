@@ -12,13 +12,12 @@
  
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
 module Screens.OnBoardingFlow.PermissionScreen.ComponentConfig where
 
 import Components.ErrorModal as ErrorModal
 import Components.PrimaryButton as PrimaryButton
 import Components.PopUpModal as PopUpModal
-import Engineering.Helpers.Commons as EHC 
+import Engineering.Helpers.Commons as EHC
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import JBridge as JB
@@ -35,91 +34,111 @@ import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Common.Types.App (LazyCheck(..))
 import Engineering.Helpers.Commons (os)
 
-errorModalConfig :: PermissionScreenState -> ErrorModal.Config 
-errorModalConfig state = let 
-  config = ErrorModal.config 
-  errorModalConfig' = config 
-    { imageConfig {
-        imageUrl = fetchImage FF_COMMON_ASSET "ny_ic_offline"
-      , height = V 124
-      , width = V 124
-      , margin = (MarginBottom 32)
-      }
-    , errorConfig {
-        text = (getString YOU_ARE_OFFLINE)
-      , margin = (MarginBottom 7)  
-      , color = Color.black900
-      }
-    , errorDescriptionConfig {
-        text = (getString CHECK_YOUR_INTERNET_CONNECTION_AND_TRY_AGAIN)
-      , color = Color.black700
-      }
-    , buttonConfig {
-        text = (getString TRY_AGAIN)
-      , margin = (Margin 16 0 16 24)
-      , background = state.appConfig.primaryBackground
-      , color = state.appConfig.primaryTextColor
-      }
-    }
-  in errorModalConfig' 
+errorModalConfig :: PermissionScreenState -> ErrorModal.Config
+errorModalConfig state =
+  let
+    config = ErrorModal.config
 
-primaryButtonConfig :: PermissionScreenState -> PrimaryButton.Config 
-primaryButtonConfig  state = let
-    config' = PrimaryButton.config 
-    primaryButtonConfig' = config' 
-      { textConfig 
-        { text = getString if EHC.os == "IOS" then CONTINUE
-                  else if (getValueToLocalStore PERMISSION_POPUP_TIRGGERED) /= "true" then ALLOW_LOCATION_ACCESS else GRANT_ACCESS
-        , textStyle = FontStyle.Body7
-        , accessibilityHint =  (getString if EHC.os == "IOS" then CONTINUE
-                  else if (getValueToLocalStore PERMISSION_POPUP_TIRGGERED) /= "true" then ALLOW_LOCATION_ACCESS else GRANT_ACCESS) <> " Button"
-        , color = state.appConfig.primaryTextColor
+    errorModalConfig' =
+      config
+        { imageConfig
+          { imageUrl = fetchImage FF_COMMON_ASSET "ny_ic_offline"
+          , height = V 124
+          , width = V 124
+          , margin = (MarginBottom 32)
+          }
+        , errorConfig
+          { text = (getString YOU_ARE_OFFLINE)
+          , margin = (MarginBottom 7)
+          , color = Color.black900
+          }
+        , errorDescriptionConfig
+          { text = (getString CHECK_YOUR_INTERNET_CONNECTION_AND_TRY_AGAIN)
+          , color = Color.black700
+          }
+        , buttonConfig
+          { text = (getString TRY_AGAIN)
+          , margin = (Margin 16 0 16 24)
+          , background = state.appConfig.primaryBackground
+          , color = state.appConfig.primaryTextColor
+          }
         }
-      , width = MATCH_PARENT 
-      , background = state.appConfig.primaryBackground
-      , margin = (Margin 0 0 0 0)
-      , id = "PermissionScreenButton"
-      , enableLoader = (JB.getBtnLoader "PermissionScreenButton")
-      }
-  in primaryButtonConfig'
+  in
+    errorModalConfig'
 
-getLocationBlockerPopUpConfig :: PermissionScreenState -> PopUpModal.Config 
-getLocationBlockerPopUpConfig state = let 
-  config = PopUpModal.config 
-  config' = config{
-    cornerRadius = Corners 15.0 true true true true
-  , gravity = CENTER
-  , margin = MarginHorizontal 24 24
-  , buttonLayoutMargin = Margin 0 0 0 0 
-  , padding = Padding 16 20 16 20
-  , topTitle {
-      text = getString ENABLE_LOCATION_PERMISSION_TO
-    , height = WRAP_CONTENT
-    , width = MATCH_PARENT 
-    , gravity = CENTER
-    , visibility = VISIBLE
-    , margin = MarginBottom 0
-    }
-  , primaryText {
-      visibility = GONE
-    }
-  , secondaryText {
-      text = getString $ PLEASE_ENABLE_LOCATION_PERMISSION "PLEASE_ENABLE_LOCATION_PERMISSION"
-    , margin = MarginTop 0
-    , padding = Padding 0 0 0 0
-    }
-  , coverImageConfig {
-      imageUrl = fetchImage FF_COMMON_ASSET $ if (os == "IOS") then "ny_ic_enable_location_in_settings_ios" else "ny_ic_enable_location_in_settings_android"
-    , visibility = VISIBLE
-    , width = MATCH_PARENT
-    , height = V 260
-    , margin = Margin 0 0 0 0 
-    }
-  , option1 {
-      visibility = false
-    }
-  , option2 {
-      visibility = false
-    }
-  }
-  in config'
+primaryButtonConfig :: PermissionScreenState -> PrimaryButton.Config
+primaryButtonConfig state =
+  let
+    config' = PrimaryButton.config
+
+    primaryButtonConfig' =
+      config'
+        { textConfig
+          { text =
+            getString
+              if EHC.os == "IOS" then
+                CONTINUE
+              else if (getValueToLocalStore PERMISSION_POPUP_TIRGGERED) /= "true" then ALLOW_LOCATION_ACCESS else GRANT_ACCESS
+          , textStyle = FontStyle.Body7
+          , accessibilityHint =
+            ( getString
+                if EHC.os == "IOS" then
+                  CONTINUE
+                else if (getValueToLocalStore PERMISSION_POPUP_TIRGGERED) /= "true" then ALLOW_LOCATION_ACCESS else GRANT_ACCESS
+            )
+              <> " Button"
+          , color = state.appConfig.primaryTextColor
+          }
+        , width = MATCH_PARENT
+        , background = state.appConfig.primaryBackground
+        , margin = (Margin 0 0 0 0)
+        , id = "PermissionScreenButton"
+        , enableLoader = (JB.getBtnLoader "PermissionScreenButton")
+        }
+  in
+    primaryButtonConfig'
+
+getLocationBlockerPopUpConfig :: PermissionScreenState -> PopUpModal.Config
+getLocationBlockerPopUpConfig state =
+  let
+    config = PopUpModal.config
+
+    config' =
+      config
+        { cornerRadius = Corners 15.0 true true true true
+        , gravity = CENTER
+        , margin = MarginHorizontal 24 24
+        , buttonLayoutMargin = Margin 0 0 0 0
+        , padding = Padding 16 20 16 20
+        , topTitle
+          { text = getString ENABLE_LOCATION_PERMISSION_TO
+          , height = WRAP_CONTENT
+          , width = MATCH_PARENT
+          , gravity = CENTER
+          , visibility = VISIBLE
+          , margin = MarginBottom 0
+          }
+        , primaryText
+          { visibility = GONE
+          }
+        , secondaryText
+          { text = getString $ PLEASE_ENABLE_LOCATION_PERMISSION "PLEASE_ENABLE_LOCATION_PERMISSION"
+          , margin = MarginTop 0
+          , padding = Padding 0 0 0 0
+          }
+        , coverImageConfig
+          { imageUrl = fetchImage FF_COMMON_ASSET $ if (os == "IOS") then "ny_ic_enable_location_in_settings_ios" else "ny_ic_enable_location_in_settings_android"
+          , visibility = VISIBLE
+          , width = MATCH_PARENT
+          , height = V 260
+          , margin = Margin 0 0 0 0
+          }
+        , option1
+          { visibility = false
+          }
+        , option2
+          { visibility = false
+          }
+        }
+  in
+    config'

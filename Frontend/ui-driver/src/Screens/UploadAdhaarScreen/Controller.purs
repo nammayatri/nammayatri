@@ -12,7 +12,6 @@
  
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
 module Screens.UploadAdhaarScreen.Controller where
 
 import Prelude (pure, (==), unit, ($), class Show, bind, discard)
@@ -54,36 +53,53 @@ instance loggableAction :: Loggable Action where
     PreviewImageAction -> trackAppActionClick appId (getScreen UPLOAD_AADHAR_SCREEN) "in_screen" "preview"
     NoAction -> trackAppScreenEvent appId (getScreen UPLOAD_AADHAR_SCREEN) "in_screen" "no_action"
 
-data ScreenOutput = GoBack | GoToBankDetails UploadAdhaarScreenState
-data Action = BackPressed 
-            | NoAction
-            | AfterRender
-            | RegistrationModalAction RegistrationModalController.Action
-            | OnboardingHeaderAction OnboardingHeaderController.Action
-            | PrimaryButtonAction PrimaryButton.Action
-            | RemoveUploadedFile String
-            | CallBackImageUpload String String String
-            | UploadFileAction String
-            | UploadImage
-            | PreviewImageAction
+data ScreenOutput
+  = GoBack
+  | GoToBankDetails UploadAdhaarScreenState
+
+data Action
+  = BackPressed
+  | NoAction
+  | AfterRender
+  | RegistrationModalAction RegistrationModalController.Action
+  | OnboardingHeaderAction OnboardingHeaderController.Action
+  | PrimaryButtonAction PrimaryButton.Action
+  | RemoveUploadedFile String
+  | CallBackImageUpload String String String
+  | UploadFileAction String
+  | UploadImage
+  | PreviewImageAction
 
 eval :: Action -> UploadAdhaarScreenState -> Eval Action ScreenOutput UploadAdhaarScreenState
 eval AfterRender state = continue state
+
 eval BackPressed state = exit GoBack
+
 eval (OnboardingHeaderAction (OnboardingHeaderController.BackPressed)) state = exit GoBack
-eval (OnboardingHeaderAction (OnboardingHeaderController.TriggerRegModal)) state = continue state{props{openRegistrationModal = true}}
-eval (RegistrationModalAction (RegistrationModalController.OnCloseClick)) state = continue state{props{openRegistrationModal = false}}
+
+eval (OnboardingHeaderAction (OnboardingHeaderController.TriggerRegModal)) state = continue state { props { openRegistrationModal = true } }
+
+eval (RegistrationModalAction (RegistrationModalController.OnCloseClick)) state = continue state { props { openRegistrationModal = false } }
+
 eval (PrimaryButtonAction (PrimaryButton.OnClick)) state = exit (GoToBankDetails state)
-eval (RemoveUploadedFile removeType) state = if(removeType == "front") then continue state{data{imageFront = ""}} else continue state{data{imageBack = ""}}
-eval (UploadFileAction clickedType) state = continueWithCmd (state {props {clickedButtonType = clickedType}}) [ pure UploadImage]
-eval (UploadImage) state = continueWithCmd state [do
-  _ <- liftEffect $ uploadFile false
-  pure NoAction]
-eval (CallBackImageUpload image imageName imagePath) state = if(state.props.clickedButtonType == "front") then continue $ state {data {imageFront = image}}
-                                            else if(state.props.clickedButtonType == "back") then continue $ state {data {imageBack = image}}
-                                              else continue state
-                                              
+
+eval (RemoveUploadedFile removeType) state = if (removeType == "front") then continue state { data { imageFront = "" } } else continue state { data { imageBack = "" } }
+
+eval (UploadFileAction clickedType) state = continueWithCmd (state { props { clickedButtonType = clickedType } }) [ pure UploadImage ]
+
+eval (UploadImage) state =
+  continueWithCmd state
+    [ do
+        _ <- liftEffect $ uploadFile false
+        pure NoAction
+    ]
+
+eval (CallBackImageUpload image imageName imagePath) state =
+  if (state.props.clickedButtonType == "front") then
+    continue $ state { data { imageFront = image } }
+  else if (state.props.clickedButtonType == "back") then
+    continue $ state { data { imageBack = image } }
+  else
+    continue state
+
 eval _ state = continue state
-
-
-

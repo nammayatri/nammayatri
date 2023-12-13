@@ -12,7 +12,6 @@
  
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
 module Screens.RideSelectionScreen.Handler where
 
 import Control.Monad.Except.Trans (lift)
@@ -33,11 +32,11 @@ import Screens.RideSelectionScreen.View as RideSelectionScreen
 rideSelection :: FlowBT String RIDES_SELECTION_SCREEN_OUTPUT
 rideSelection = do
   (GlobalState state) <- getState
-  push         <- lift $ lift $ liftFlow $ getPushFn Nothing "RideSelectionScreen"
+  push <- lift $ lift $ liftFlow $ getPushFn Nothing "RideSelectionScreen"
   rideListItem <- lift $ lift $ PrestoList.preComputeListItem $ IndividualRideCard.selectView push
-  act          <- lift $ lift $ runScreen $ RideSelectionScreen.screen state.rideSelectionScreen{shimmerLoader = AnimatedIn} rideListItem
+  act <- lift $ lift $ runScreen $ RideSelectionScreen.screen state.rideSelectionScreen { shimmerLoader = AnimatedIn } rideListItem
   case act of
     GoBack -> App.BackT $ pure App.GoBack
-    SelectRide    updatedState -> App.BackT $ App.BackPoint <$> (pure $ SELECT_RIDE updatedState)
-    LoaderOutput  updatedState -> App.BackT $ App.NoBack <$> (pure $ LOADER_RIDES_OUTPUT updatedState)
+    SelectRide updatedState -> App.BackT $ App.BackPoint <$> (pure $ SELECT_RIDE updatedState)
+    LoaderOutput updatedState -> App.BackT $ App.NoBack <$> (pure $ LOADER_RIDES_OUTPUT updatedState)
     RefreshScreen updatedState -> App.BackT $ App.NoBack <$> (pure $ REFRESH_RIDES updatedState)

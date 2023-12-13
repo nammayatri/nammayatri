@@ -12,7 +12,6 @@
 
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
 module Screens.EnterMobileNumberScreen.ScreenData where
 
 import Data.Monoid.MList (get)
@@ -23,37 +22,37 @@ import Screens.Types (EnterMobileNumberScreenState)
 import Common.Types.App (OTPChannel(..))
 
 initData :: EnterMobileNumberScreenState
-initData = {
-    data: {
-      mobileNumber: ""
-    , countryObj: {
-        countryCode : "+91",
-        countryName : "India",
-        countryShortCode : "IN"
+initData =
+  { data:
+      { mobileNumber: ""
+      , countryObj:
+          { countryCode: "+91"
+          , countryName: "India"
+          , countryShortCode: "IN"
+          }
+      , tokenId: ""
+      , attempts: 0
+      , otp: ""
+      , timer: 30
+      , timerID: ""
+      , config: getAppConfig appConfig
+      , logField: empty
+      , otpChannel: SMS
       }
-    , tokenId : ""
-    , attempts : 0
-    , otp : ""
-    , timer : 30
-    , timerID : ""
-    , config : getAppConfig appConfig
-    , logField : empty 
-    , otpChannel : SMS
-    },
-    props: {
-        enterOTP : false,
-        btnActiveMobileNumber : false,
-        btnActiveOTP :false,
-        isValidMobileNumber : true,
-        wrongOTP : false,
-        resendEnable : false,
-        capturedOtp : "",
-        isReadingOTP : true,
-        letterSpacing : PX 1.0,
-        mNumberEdtFocused : false,
-        otpEdtFocused : false,
-        editTextVal : "",
-        attemptLeft : "",
-        countryCodeOptionExpanded : false
-    }
-}
+  , props:
+      { enterOTP: false
+      , btnActiveMobileNumber: false
+      , btnActiveOTP: false
+      , isValidMobileNumber: true
+      , wrongOTP: false
+      , resendEnable: false
+      , capturedOtp: ""
+      , isReadingOTP: true
+      , letterSpacing: PX 1.0
+      , mNumberEdtFocused: false
+      , otpEdtFocused: false
+      , editTextVal: ""
+      , attemptLeft: ""
+      , countryCodeOptionExpanded: false
+      }
+  }

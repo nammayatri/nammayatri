@@ -12,48 +12,55 @@
 
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
 module Screens.PermissionsScreen.ScreenData where
 
 import Prelude (class Eq, (<>), (>=))
-import Screens.Types(PermissionsScreenState)
+import Screens.Types (PermissionsScreenState)
 import Data.Eq.Generic (genericEq)
 import Foreign.Object (empty)
 import Data.Generic.Rep (class Generic)
 import ConfigProvider
 
 initData :: PermissionsScreenState
-initData = {
-    data:{ 
-      logField : empty,
-      driverMobileNumber : "",
-      config : getAppConfig appConfig
-    },
-    props:{
-      isNotificationPermissionChecked : false
-    , isOverlayPermissionChecked : false
-    , isAutoStartPermissionChecked : false
-    , isBatteryOptimizationChecked : false
-    , isLocationPermissionChecked : false
-    , androidVersion : 0
-    , logoutModalView : false
-    , isDriverEnabled : false
-    }
-}
+initData =
+  { data:
+      { logField: empty
+      , driverMobileNumber: ""
+      , config: getAppConfig appConfig
+      }
+  , props:
+      { isNotificationPermissionChecked: false
+      , isOverlayPermissionChecked: false
+      , isAutoStartPermissionChecked: false
+      , isBatteryOptimizationChecked: false
+      , isLocationPermissionChecked: false
+      , androidVersion: 0
+      , logoutModalView: false
+      , isDriverEnabled: false
+      }
+  }
 
-data Permissions = Overlay | Battery | AutoStart | Notifications | LocationPermission
+data Permissions
+  = Overlay
+  | Battery
+  | AutoStart
+  | Notifications
+  | LocationPermission
+
 derive instance genericPermissions :: Generic Permissions _
-instance eqPermissions :: Eq Permissions where eq = genericEq
 
-type Listtype =
-    { icon :: String,
-      permission :: Permissions
+instance eqPermissions :: Eq Permissions where
+  eq = genericEq
+
+type Listtype
+  = { icon :: String
+    , permission :: Permissions
     }
 
 permissionsList :: PermissionsScreenState -> Array Listtype
 permissionsList state =
-    [
-      {permission: Overlay , icon:"" },
-      {permission: AutoStart , icon:""},
-      {permission: Battery , icon:""}
-    ] <> if state.data.config.permissions.locationPermission then [{permission: LocationPermission , icon:""}] else []
+  [ { permission: Overlay, icon: "" }
+  , { permission: AutoStart, icon: "" }
+  , { permission: Battery, icon: "" }
+  ]
+    <> if state.data.config.permissions.locationPermission then [ { permission: LocationPermission, icon: "" } ] else []

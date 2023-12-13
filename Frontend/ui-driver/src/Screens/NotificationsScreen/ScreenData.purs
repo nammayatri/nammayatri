@@ -12,7 +12,6 @@
 
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
 module Screens.NotificationsScreen.ScreenData where
 
 import Data.Maybe (Maybe(..))
@@ -22,55 +21,55 @@ import Screens.Types (AnimationState(..), NotificationCardPropState, Notificatio
 import Services.API (MediaType(..))
 
 initData :: NotificationsScreenState
-initData = {
-  shimmerLoader : AnimatingIn,
-  prestoListArrayItems : [],
-  recievedResponse: false,
-  notificationList: [],
-  loadMoreDisabled: false,
-  selectedItem: dummyNotificationCard,
-  offsetValue: 0,
-  loaderButtonVisibility: false,
-  notificationDetailModelState : {
-    mediaUrl : "",
-    title : "",
-    timeLabel : "",
-    description : [],
-    actionText : "",
-    actionVisibility : VISIBLE,
-    addCommentModelVisibility : GONE,
-    comment : Nothing,
-    commentBtnActive : false,
-    messageId : "",
-    notificationNotSeen : false,
-    imageUrl : "",
-    mediaType : Nothing,
-    likeCount : 0,
-    likeStatus : false,
-    viewCount : 0
-  },
-  notifsDetailModelVisibility : GONE,
-  loadMore : false,
-  selectedNotification : Nothing,
-  deepLinkActivated : false,
-  config : getAppConfig appConfig
-}
+initData =
+  { shimmerLoader: AnimatingIn
+  , prestoListArrayItems: []
+  , recievedResponse: false
+  , notificationList: []
+  , loadMoreDisabled: false
+  , selectedItem: dummyNotificationCard
+  , offsetValue: 0
+  , loaderButtonVisibility: false
+  , notificationDetailModelState:
+      { mediaUrl: ""
+      , title: ""
+      , timeLabel: ""
+      , description: []
+      , actionText: ""
+      , actionVisibility: VISIBLE
+      , addCommentModelVisibility: GONE
+      , comment: Nothing
+      , commentBtnActive: false
+      , messageId: ""
+      , notificationNotSeen: false
+      , imageUrl: ""
+      , mediaType: Nothing
+      , likeCount: 0
+      , likeStatus: false
+      , viewCount: 0
+      }
+  , notifsDetailModelVisibility: GONE
+  , loadMore: false
+  , selectedNotification: Nothing
+  , deepLinkActivated: false
+  , config: getAppConfig appConfig
+  }
 
 dummyNotificationCard :: NotificationCardState
-dummyNotificationCard = {
-    mediaUrl : "",
-    title : "",
-    description : "",
-    timeLabel : "",
-    action1Text : "",
-    action2Text : "",
-    notificationLabel : "",
-    messageId : "",
-    notificationNotSeen : false,
-    comment : Nothing,
-    imageUrl : "",
-    mediaType : Nothing,
-    likeCount : 0,
-    viewCount : 0,
-    likeStatus : false
+dummyNotificationCard =
+  { mediaUrl: ""
+  , title: ""
+  , description: ""
+  , timeLabel: ""
+  , action1Text: ""
+  , action2Text: ""
+  , notificationLabel: ""
+  , messageId: ""
+  , notificationNotSeen: false
+  , comment: Nothing
+  , imageUrl: ""
+  , mediaType: Nothing
+  , likeCount: 0
+  , viewCount: 0
+  , likeStatus: false
   }

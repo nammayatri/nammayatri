@@ -12,12 +12,10 @@
  
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
 module Components.EmergencyHelp.Controller where
 
 import Prelude
 import Styles.Types
-
 import Components.GenericHeader.Controller (Action(..)) as GenericHeaderController
 import Components.PopUpModal.Controller as PopUpModalController
 import MerchantConfig.Types (AppConfig)
@@ -26,47 +24,47 @@ import Screens.Types (Contact)
 import Styles.Colors as Color
 import ConfigProvider
 
-data Action = NoAction 
-            | CallPolicePopup
-            | ContactSupportPopup
-            | CallSuccessfulPopup
-            | CallContactPopUp Contact
-            | CallPolice PopUpModalController.Action
-            | ContactSupport PopUpModalController.Action
-            | CallEmergencyContact PopUpModalController.Action
-            | CallSuccessful PopUpModalController.Action
-            | GenericHeaderAC GenericHeaderController.Action
-            | StoreContacts
-            | AddedEmergencyContacts
+data Action
+  = NoAction
+  | CallPolicePopup
+  | ContactSupportPopup
+  | CallSuccessfulPopup
+  | CallContactPopUp Contact
+  | CallPolice PopUpModalController.Action
+  | ContactSupport PopUpModalController.Action
+  | CallEmergencyContact PopUpModalController.Action
+  | CallSuccessful PopUpModalController.Action
+  | GenericHeaderAC GenericHeaderController.Action
+  | StoreContacts
+  | AddedEmergencyContacts
 
-type EmergencyHelpModelState = {
-     showContactSupportPopUp :: Boolean,
-     showCallPolicePopUp :: Boolean, 
-     showCallContactPopUp :: Boolean,
-     showCallSuccessfulPopUp :: Boolean,
-     emergencyContactData :: Array Contact,
-     currentlySelectedContact :: Contact,
-     config :: AppConfig
-}
+type EmergencyHelpModelState
+  = { showContactSupportPopUp :: Boolean
+    , showCallPolicePopUp :: Boolean
+    , showCallContactPopUp :: Boolean
+    , showCallSuccessfulPopUp :: Boolean
+    , emergencyContactData :: Array Contact
+    , currentlySelectedContact :: Contact
+    , config :: AppConfig
+    }
 
-config :: EmergencyHelpModelState 
-config = {
-     showContactSupportPopUp : false
-   , showCallPolicePopUp : false
-   , showCallContactPopUp : false
-   , showCallSuccessfulPopUp : false
-   , emergencyContactData : []
-   , currentlySelectedContact : selectedContactData
-   , config : getAppConfig appConfig
-}
+config :: EmergencyHelpModelState
+config =
+  { showContactSupportPopUp: false
+  , showCallPolicePopUp: false
+  , showCallContactPopUp: false
+  , showCallSuccessfulPopUp: false
+  , emergencyContactData: []
+  , currentlySelectedContact: selectedContactData
+  , config: getAppConfig appConfig
+  }
 
-selectedContactData ::  Contact
-selectedContactData = 
-  { name : "", phoneNo : "" } 
+selectedContactData :: Contact
+selectedContactData = { name: "", phoneNo: "" }
 
 contactColorsList :: Array (Array Color)
-contactColorsList = [
-    [Color.yellow900, Color.black800],
-    [Color.blue800, Color.white900],
-    [Color.orange800, Color.black800]
-]
+contactColorsList =
+  [ [ Color.yellow900, Color.black800 ]
+  , [ Color.blue800, Color.white900 ]
+  , [ Color.orange800, Color.black800 ]
+  ]

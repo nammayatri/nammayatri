@@ -12,7 +12,6 @@
  
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
 module Screens.PaymentHistoryScreen.ScreenData where
 
 import Common.Types.App (PaymentStatus(..))
@@ -23,67 +22,64 @@ import Screens.Types as ST
 import ConfigProvider
 
 initData :: PaymentHistoryScreenState
-initData = {
-    data: {
-        autoPayList : [],
-        manualPayList : [],
-        transactionDetails : {
-            notificationStatus : Mb.Just NOTIFICATION_SCHEDULED,
-            paymentStatus : Pending,
-            statusTime : "",
-            details : [],
-            manualSpecificDetails : [],
-            isSplit : false,
-            isAutoPayFailed : false,
-            feeType : AUTOPAY_PAYMENT,
-            numOfDriverFee : 0
-        },
-        planData : dummyPlanConfig,
-        gradientConfig : [],
-        autoPayStatus : ST.NO_AUTOPAY
-    },
-
-    props: {
-        subView : PaymentHistory,
-        autoPayHistory : true,
-        autoPaySetup : false,
-        selectedDue : "",
-        offset : 0,
-        enableLoadMore : true
-    }
-}
-
+initData =
+  { data:
+      { autoPayList: []
+      , manualPayList: []
+      , transactionDetails:
+          { notificationStatus: Mb.Just NOTIFICATION_SCHEDULED
+          , paymentStatus: Pending
+          , statusTime: ""
+          , details: []
+          , manualSpecificDetails: []
+          , isSplit: false
+          , isAutoPayFailed: false
+          , feeType: AUTOPAY_PAYMENT
+          , numOfDriverFee: 0
+          }
+      , planData: dummyPlanConfig
+      , gradientConfig: []
+      , autoPayStatus: ST.NO_AUTOPAY
+      }
+  , props:
+      { subView: PaymentHistory
+      , autoPayHistory: true
+      , autoPaySetup: false
+      , selectedDue: ""
+      , offset: 0
+      , enableLoadMore: true
+      }
+  }
 
 dummyPlanConfig :: PlanCardConfig
-dummyPlanConfig = 
-    { id : ""
-    , title : ""
-    , description : ""
-    , isSelected : false
-    , offers : [
-                {
-                title : Mb.Nothing,
-                isGradient : true,
-                gradient : [],
-                hasImage : true,
-                imageURL : "",
-                offerDescription : Mb.Nothing,
-                addedFromUI : false
-                }
-                ]
-    , priceBreakup : []
-    , frequency : ""
-    , freeRideCount : 1
-    , showOffer : true
-}
+dummyPlanConfig =
+  { id: ""
+  , title: ""
+  , description: ""
+  , isSelected: false
+  , offers:
+      [ { title: Mb.Nothing
+        , isGradient: true
+        , gradient: []
+        , hasImage: true
+        , imageURL: ""
+        , offerDescription: Mb.Nothing
+        , addedFromUI: false
+        }
+      ]
+  , priceBreakup: []
+  , frequency: ""
+  , freeRideCount: 1
+  , showOffer: true
+  }
 
 dummyPromoConfig :: PromoConfig
-dummyPromoConfig = {
-                        title : Mb.Nothing,
-                        offerDescription : Mb.Nothing,
-                        isGradient : false,
-                        gradient : [],
-                        hasImage : false,
-                        imageURL : "",
-                        addedFromUI : false
-                    }
+dummyPromoConfig =
+  { title: Mb.Nothing
+  , offerDescription: Mb.Nothing
+  , isGradient: false
+  , gradient: []
+  , hasImage: false
+  , imageURL: ""
+  , addedFromUI: false
+  }

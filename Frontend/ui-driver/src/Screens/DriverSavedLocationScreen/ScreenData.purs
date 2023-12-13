@@ -12,12 +12,9 @@
 
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
-
 module Screens.DriverSavedLocationScreen.ScreenData where
 
 import Prelude
-
 import Common.Types.App as Common
 import Data.Maybe (Maybe(..))
 import Screens.Types (DriverSavedLocationScreenState, SavedLocationScreenType(..))
@@ -29,15 +26,16 @@ initData =
       { address: ""
       , currentLat: Nothing
       , currentLon: Nothing
-      , maxGotoLocations : (getAppConfig appConfig).gotoConfig.maxGotoLocations
-      , savedLocationsArray: [
-        { id : "",
-          lat : 0.0,
-          lon : 0.0,
-          address : "",
-          tag : "",
-          disabled : false }
-      ]
+      , maxGotoLocations: (getAppConfig appConfig).gotoConfig.maxGotoLocations
+      , savedLocationsArray:
+          [ { id: ""
+            , lat: 0.0
+            , lon: 0.0
+            , address: ""
+            , tag: ""
+            , disabled: false
+            }
+          ]
       , predictions: []
       , saveLocationObject:
           { position:
@@ -52,28 +50,28 @@ initData =
   , props:
       { viewType: GoToList
       , confirmDelete: false
-      , selectedLocation: {
-        id : "",
-        lat : 0.0,
-        lon : 0.0,
-        address : "",
-        tag : "",
-        isSelectable : false,
-        isEditEnabled : false,
-        isSelected : false,
-        removeAcText : Nothing,
-        editAcText : Nothing,
-        disabled : false
-      }
+      , selectedLocation:
+          { id: ""
+          , lat: 0.0
+          , lon: 0.0
+          , address: ""
+          , tag: ""
+          , isSelectable: false
+          , isEditEnabled: false
+          , isSelected: false
+          , removeAcText: Nothing
+          , editAcText: Nothing
+          , disabled: false
+          }
       , fromEditButton: Nothing
-      , gotBackToHomeScreen : false
-      , errorText : Nothing
-      , defTag : "Home"
+      , gotBackToHomeScreen: false
+      , errorText: Nothing
+      , defTag: "Home"
       , selectedPrediction:
-         { description: ""
-            , title: ""
-            , placeId: Nothing
-            , distance: Nothing
-              }
+          { description: ""
+          , title: ""
+          , placeId: Nothing
+          , distance: Nothing
+          }
       }
   }

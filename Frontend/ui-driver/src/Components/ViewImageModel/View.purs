@@ -38,36 +38,39 @@ import Helpers.Utils (fetchImage, FetchImageFrom(..))
 view :: forall w. (Action -> Effect Unit) -> ViewImageModelState -> PrestoDOM (Effect Unit) w
 view push state =
   screenAnimationFadeInOut
-  $ linearLayout
-  [ width MATCH_PARENT
-  , height MATCH_PARENT
-  , background Color.black
-  , onClick push (const BackPressed)
-  , onBackPressed push (const BackPressed)
-  , orientation VERTICAL
-  ][ headerLayout push state
-   , linearLayout
-   [ width MATCH_PARENT
-   , height MATCH_PARENT
-   , onClick push (const BackPressed)
-   , gravity CENTER
-   ][ linearLayout
-    [ onClick push (const NoAction)
-    , afterRender (\action -> do renderBase64Image state.image (getNewIDWithTag "view_image_model_image") false "CENTER_CROP") (const NoAction)
-    , id (getNewIDWithTag "view_image_model_image")
-    , width MATCH_PARENT
-    , height MATCH_PARENT
-    , gravity CENTER
-    ][ progressBar
-       [ width WRAP_CONTENT
-       , height WRAP_CONTENT
-       ]
-     ]
-   ]
- ]
+    $ linearLayout
+        [ width MATCH_PARENT
+        , height MATCH_PARENT
+        , background Color.black
+        , onClick push (const BackPressed)
+        , onBackPressed push (const BackPressed)
+        , orientation VERTICAL
+        ]
+        [ headerLayout push state
+        , linearLayout
+            [ width MATCH_PARENT
+            , height MATCH_PARENT
+            , onClick push (const BackPressed)
+            , gravity CENTER
+            ]
+            [ linearLayout
+                [ onClick push (const NoAction)
+                , afterRender (\action -> do renderBase64Image state.image (getNewIDWithTag "view_image_model_image") false "CENTER_CROP") (const NoAction)
+                , id (getNewIDWithTag "view_image_model_image")
+                , width MATCH_PARENT
+                , height MATCH_PARENT
+                , gravity CENTER
+                ]
+                [ progressBar
+                    [ width WRAP_CONTENT
+                    , height WRAP_CONTENT
+                    ]
+                ]
+            ]
+        ]
 
 -------------------------------------------------- headerLayout --------------------------
-headerLayout :: (Action -> Effect Unit) -> ViewImageModelState -> forall w . PrestoDOM (Effect Unit) w
+headerLayout :: (Action -> Effect Unit) -> ViewImageModelState -> forall w. PrestoDOM (Effect Unit) w
 headerLayout push state =
   linearLayout
     [ width MATCH_PARENT
@@ -94,10 +97,11 @@ headerLayout push state =
         , textView
             $ [ width WRAP_CONTENT
               , height WRAP_CONTENT
-              , text (case state.imageName of
-                        Just name -> name
-                        _         -> (getString IMAGE_PREVIEW)
-                     )
+              , text
+                  ( case state.imageName of
+                      Just name -> name
+                      _ -> (getString IMAGE_PREVIEW)
+                  )
               , textSize FontSize.a_18
               , margin $ MarginLeft 20
               , weight 1.0

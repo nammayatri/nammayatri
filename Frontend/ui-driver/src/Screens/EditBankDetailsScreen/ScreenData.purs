@@ -12,39 +12,40 @@
 
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
 module Screens.EditBankDetailsScreen.ScreenData where
 
-import Screens.Types(EditBankDetailsScreenState)
+import Screens.Types (EditBankDetailsScreenState)
 import Prelude (class Eq)
 import Data.Eq.Generic (genericEq)
 import Data.Generic.Rep (class Generic)
 
-
 initData :: EditBankDetailsScreenState
-initData = {
-  data:  {
-
-  },
-
-  props: {
-    isInEditBankDetailsScreen : false
+initData =
+  { data:
+      {}
+  , props:
+      { isInEditBankDetailsScreen: false
+      }
   }
-}
 
-data ListOptions = DRIVER_BANK_NAME | ACCOUNT_NO | IFSC
+data ListOptions
+  = DRIVER_BANK_NAME
+  | ACCOUNT_NO
+  | IFSC
+
 derive instance genericListOptions :: Generic ListOptions _
-instance eqListOptions :: Eq ListOptions where eq = genericEq
 
-type Listtype =
-    { value :: String,
-      title :: ListOptions
+instance eqListOptions :: Eq ListOptions where
+  eq = genericEq
+
+type Listtype
+  = { value :: String
+    , title :: ListOptions
     }
 
 viewsItemList :: Array Listtype
 viewsItemList =
-    [
-      {title:DRIVER_BANK_NAME, value:"" },
-      {title:ACCOUNT_NO, value:"" },
-      {title:IFSC, value:"" }
-    ]
+  [ { title: DRIVER_BANK_NAME, value: "" }
+  , { title: ACCOUNT_NO, value: "" }
+  , { title: IFSC, value: "" }
+  ]

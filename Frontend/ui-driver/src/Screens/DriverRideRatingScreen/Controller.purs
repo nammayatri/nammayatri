@@ -12,7 +12,6 @@
  
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
 module Screens.DriverRideRatingScreen.Controller where
 
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress)
@@ -24,11 +23,12 @@ import Screens (ScreenName(..), getScreen)
 import JBridge (hideKeyboardOnNavigation)
 import PrestoDOM (Eval, continue, exit)
 import Language.Strings (getString)
-import Language.Types(STR(..))
+import Language.Types (STR(..))
 import Data.Maybe
 
 instance showAction :: Show Action where
   show _ = ""
+
 instance loggableAction :: Loggable Action where
   performLog action appId = case action of
     AfterRender -> trackAppScreenRender appId "screen" (getScreen DRIVER_RIDE_RATING_SCREEN)
@@ -38,47 +38,46 @@ instance loggableAction :: Loggable Action where
     PrimaryButtonActionController act -> case act of
       PrimaryButtonController.OnClick -> trackAppActionClick appId (getScreen DRIVER_RIDE_RATING_SCREEN) "primary_button" "on_click"
       PrimaryButtonController.NoAction -> trackAppActionClick appId (getScreen DRIVER_RIDE_RATING_SCREEN) "primary_button" "no_action"
-    FeedbackChanged value-> trackAppActionClick appId (getScreen DRIVER_RIDE_RATING_SCREEN) "in_screen" "feedback_changed"
-    Rating index-> trackAppActionClick appId (getScreen DRIVER_RIDE_RATING_SCREEN) "in_screen" "rating_onclick"
-    FeedBackClick feedBackOption-> trackAppActionClick appId (getScreen DRIVER_RIDE_RATING_SCREEN) "in_screen" "feedback_click"
+    FeedbackChanged value -> trackAppActionClick appId (getScreen DRIVER_RIDE_RATING_SCREEN) "in_screen" "feedback_changed"
+    Rating index -> trackAppActionClick appId (getScreen DRIVER_RIDE_RATING_SCREEN) "in_screen" "rating_onclick"
+    FeedBackClick feedBackOption -> trackAppActionClick appId (getScreen DRIVER_RIDE_RATING_SCREEN) "in_screen" "feedback_click"
 
-data ScreenOutput = Close | SendFeedBack DriverRideRatingScreenState
+data ScreenOutput
+  = Close
+  | SendFeedBack DriverRideRatingScreenState
 
-data Action = BackPressed 
-              | AfterRender
-              | PrimaryButtonActionController PrimaryButtonController.Action  
-              | FeedbackChanged String
-              | FeedBackClick FeedbackSuggestions
-              | Rating Int
+data Action
+  = BackPressed
+  | AfterRender
+  | PrimaryButtonActionController PrimaryButtonController.Action
+  | FeedbackChanged String
+  | FeedBackClick FeedbackSuggestions
+  | Rating Int
 
 eval :: Action -> DriverRideRatingScreenState -> Eval Action ScreenOutput DriverRideRatingScreenState
-
 eval BackPressed state = exit $ Close
 
 eval (PrimaryButtonActionController (PrimaryButtonController.OnClick)) state = do
   _ <- pure $ hideKeyboardOnNavigation true
   exit $ SendFeedBack state
 
-eval (FeedbackChanged value) state = continue state { data { feedback = value }}
+eval (FeedbackChanged value) state = continue state { data { feedback = value } }
 
-eval (Rating index) state = continue state {data{rating = index}}
+eval (Rating index) state = continue state { data { rating = index } }
 
-eval (FeedBackClick feedBackOption) state = continue state { data {activeFeedBackOption = Just feedBackOption , selectedFeedbackOption = getSelectedFeedbackOption feedBackOption}}
+eval (FeedBackClick feedBackOption) state = continue state { data { activeFeedBackOption = Just feedBackOption, selectedFeedbackOption = getSelectedFeedbackOption feedBackOption } }
 
 eval _ state = continue state
 
-
 getFeedBackString :: FeedbackSuggestions -> String
-getFeedBackString feedBackOption =
- case feedBackOption of
+getFeedBackString feedBackOption = case feedBackOption of
   CUSTOMER_RUDE_BEHAVIOUR -> getString RUDE_BEHAVIOUR
   LONG_WAIT_TIME -> getString LONG_WAITING_TIME
   DIDNT_COME_TO_PICUP -> getString DIDNT_COME_TO_PICUP_LOCATION
   _ -> ""
 
 getSelectedFeedbackOption :: FeedbackSuggestions -> String
-getSelectedFeedbackOption feedBackOption =
- case feedBackOption of
+getSelectedFeedbackOption feedBackOption = case feedBackOption of
   CUSTOMER_RUDE_BEHAVIOUR -> "Customer rude behaviour"
   LONG_WAIT_TIME -> "Long waiting time"
   DIDNT_COME_TO_PICUP -> "Didn't come to pickup"

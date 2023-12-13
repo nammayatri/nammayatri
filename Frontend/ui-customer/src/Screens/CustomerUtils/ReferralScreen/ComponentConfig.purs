@@ -12,11 +12,9 @@
  
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
 module Screens.ReferralScreen.ComponentConfig where
 
 import Common.Types.App
-
 import Common.Types.App (LazyCheck(..))
 import Components.GenericHeader as GenericHeader
 import Components.PrimaryButton as PrimaryButton
@@ -35,9 +33,9 @@ import Styles.Colors as Color
 continueButtonConfig :: ST.ReferralScreenState -> PrimaryButton.Config
 continueButtonConfig state =
   PrimaryButton.config
-    { textConfig { 
-        text = (getString CONTINUE) 
-      ,  color = state.config.primaryTextColor
+    { textConfig
+      { text = (getString CONTINUE)
+      , color = state.config.primaryTextColor
       }
     , background = state.config.primaryBackground
     , isClickable = state.btnActive
@@ -49,9 +47,9 @@ continueButtonConfig state =
 goToHomeButtonConfig :: ST.ReferralScreenState -> PrimaryButton.Config
 goToHomeButtonConfig state =
   PrimaryButton.config
-    { textConfig { 
-        text = (getString GO_TO_HOME__)     
-      , accessibilityHint = "Go To Home : Button" 
+    { textConfig
+      { text = (getString GO_TO_HOME__)
+      , accessibilityHint = "Go To Home : Button"
       , color = state.config.primaryTextColor
       }
     , background = state.config.primaryBackground
@@ -91,20 +89,23 @@ primaryEditTextConfig state =
 
 genericHeaderConfig :: ST.ReferralScreenState -> GenericHeader.Config
 genericHeaderConfig state =
-  let config = if state.config.nyBrandingVisibility then GenericHeader.merchantConfig else GenericHeader.config
-  in config { height = WRAP_CONTENT
-    , prefixImageConfig
-      { height = V 25
-      , width = V 25
-      , imageUrl = fetchImage FF_COMMON_ASSET "ny_ic_chevron_left"
-      , margin = (Margin 12 12 12 12)
+  let
+    config = if state.config.nyBrandingVisibility then GenericHeader.merchantConfig else GenericHeader.config
+  in
+    config
+      { height = WRAP_CONTENT
+      , prefixImageConfig
+        { height = V 25
+        , width = V 25
+        , imageUrl = fetchImage FF_COMMON_ASSET "ny_ic_chevron_left"
+        , margin = (Margin 12 12 12 12)
+        }
+      , textConfig
+        { text = (getString HAVE_REFERRAL_CODE)
+        , color = Color.black900
+        }
+      , suffixImageConfig
+        { visibility = GONE
+        }
+      , padding = (Padding 0 5 0 5)
       }
-    , textConfig
-      { text = (getString HAVE_REFERRAL_CODE)
-      , color = Color.black900
-      }
-    , suffixImageConfig
-      { visibility = GONE
-      }
-    , padding = (Padding 0 5 0 5)
-    }

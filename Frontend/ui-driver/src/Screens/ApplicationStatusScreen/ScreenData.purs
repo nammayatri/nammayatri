@@ -12,30 +12,29 @@
  
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
 module Screens.ApplicationStatusScreen.ScreenData where
 
 import Screens.Types
 
 initData :: ApplicationStatusScreenState
-initData = {
-  data: {
-    dlVerificationStatus : "",
-    rcVerificationStatus : "",
-    mobileNumber : "",
-    otpValue : ""
-    },
-  props : {
-      isSelected : true,
-      onBoardingFailure : false,
-      isVerificationFailed : false,
-      popupview : false,
-      enterMobileNumberView : false,
-      buttonVisibilty : false,
-      enterOtp : false,
-      alternateNumberAdded : false,
-      isValidAlternateNumber : false,
-      isValidOtp : false,
-      isAlternateMobileNumberExists : false
+initData =
+  { data:
+      { dlVerificationStatus: ""
+      , rcVerificationStatus: ""
+      , mobileNumber: ""
+      , otpValue: ""
+      }
+  , props:
+      { isSelected: true
+      , onBoardingFailure: false
+      , isVerificationFailed: false
+      , popupview: false
+      , enterMobileNumberView: false
+      , buttonVisibilty: false
+      , enterOtp: false
+      , alternateNumberAdded: false
+      , isValidAlternateNumber: false
+      , isValidOtp: false
+      , isAlternateMobileNumberExists: false
+      }
   }
-}

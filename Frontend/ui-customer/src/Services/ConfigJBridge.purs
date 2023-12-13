@@ -12,7 +12,6 @@
  
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
 module ConfigJBridge where
 
 import Effect (Effect)
@@ -21,6 +20,7 @@ import Prelude (Unit)
 import Engineering.Helpers.Commons (liftFlow)
 
 foreign import getKeyInSharedPrefKeysConfig :: String -> String
+
 foreign import getValueToLocalNativeStoreConfig :: String -> String
 
 foreign import setKeyInSharedPrefKeysImpl :: String -> String -> Effect Unit

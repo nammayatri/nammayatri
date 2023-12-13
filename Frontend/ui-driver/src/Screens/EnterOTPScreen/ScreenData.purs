@@ -12,7 +12,6 @@
  
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
 module Screens.EnterOTPScreen.ScreenData where
 
 import Screens.Types (EnterOTPScreenState)
@@ -20,22 +19,22 @@ import Engineering.Helpers.Commons as EHC
 import ConfigProvider
 
 initData :: EnterOTPScreenState
-initData =  {
-  data:  {
-    otp : "",
-    tokenId : "",
-    attemptCount : 3,
-    mobileNo : "",
-    timer: "10s",
-    capturedOtp : "",
-    focusedIndex : 1,
-    editTextId : (EHC.getNewIDWithTag "EnterOTPNumberEditText"),
-    config : getAppConfig appConfig
-    },
-  props: {
-    btnActive :false,
-    isValid : false,
-    resendEnabled : false,
-    otpTmp :false
-    }
-}
+initData =
+  { data:
+      { otp: ""
+      , tokenId: ""
+      , attemptCount: 3
+      , mobileNo: ""
+      , timer: "10s"
+      , capturedOtp: ""
+      , focusedIndex: 1
+      , editTextId: (EHC.getNewIDWithTag "EnterOTPNumberEditText")
+      , config: getAppConfig appConfig
+      }
+  , props:
+      { btnActive: false
+      , isValid: false
+      , resendEnabled: false
+      , otpTmp: false
+      }
+  }

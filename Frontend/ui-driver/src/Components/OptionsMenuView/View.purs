@@ -12,11 +12,9 @@
  
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
 module Components.OptionsMenu.View where
 
 import Common.Types.App
-
 import Animation as Anim
 import Components.OptionsMenu.Controller (Action(..), Config, MenuItemData)
 import Data.Maybe (Maybe(..), fromMaybe, isJust)
@@ -37,61 +35,68 @@ import PrestoDOM.Types.DomAttributes (Corners(..))
 import Screens.Types as ST
 import Styles.Colors as Color
 
-view :: forall w . (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
-view push config = 
-  linearLayout[
-    width MATCH_PARENT
+view :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
+view push config =
+  linearLayout
+    [ width MATCH_PARENT
     , height MATCH_PARENT
     , background Color.transparent
-  ][
-    linearLayout[
-      background config.backgroundColor
-    , visibility if config.menuExpanded then VISIBLE else GONE
-      , height MATCH_PARENT
-      , width MATCH_PARENT
-      , gravity config.gravity
-      , onClick push $ const BackgroundClick
-    ][
-      linearLayout[
-        background config.menuBackgroundColor
-      , orientation VERTICAL
-      , height WRAP_CONTENT
-      , width config.width
-      , margin $ MarginRight config.marginRight
-      , cornerRadius config.cornerRadius
-      ](map (\item -> 
-                linearLayout[
-                  height WRAP_CONTENT
-                  , width MATCH_PARENT
-                  , gravity CENTER_VERTICAL
-                  , orientation VERTICAL
-                  , onClick push $ const $ ItemClick item.action
-                  , visibility if item.isVisible then VISIBLE else GONE
-                ][
-                  linearLayout[
-                    gravity CENTER_VERTICAL
-                    , padding config.itemPadding
-                    , height WRAP_CONTENT
-                  ][
-                    imageView [
-                      imageWithFallback item.image
-                      , margin $ MarginRight 8
-                      , visibility if length item.image /= 0 then VISIBLE else GONE
-                      , height $ V 16
-                      , width $ V 16
-                    ]
-                    , textView $ [
-                      text item.textdata
-                      , margin $ MarginBottom 1
-                      , color Color.black800
-                    ] <> FontStyle.paragraphText TypoGraphy
-                  ]
-                  , linearLayout [
-                      width MATCH_PARENT
-                      , height $ V 2
-                      , background Color.grey700
-                      , margin $ MarginHorizontal 16 16
-                    ][]
-                ]) config.menuItems)
     ]
-  ]
+    [ linearLayout
+        [ background config.backgroundColor
+        , visibility if config.menuExpanded then VISIBLE else GONE
+        , height MATCH_PARENT
+        , width MATCH_PARENT
+        , gravity config.gravity
+        , onClick push $ const BackgroundClick
+        ]
+        [ linearLayout
+            [ background config.menuBackgroundColor
+            , orientation VERTICAL
+            , height WRAP_CONTENT
+            , width config.width
+            , margin $ MarginRight config.marginRight
+            , cornerRadius config.cornerRadius
+            ]
+            ( map
+                ( \item ->
+                    linearLayout
+                      [ height WRAP_CONTENT
+                      , width MATCH_PARENT
+                      , gravity CENTER_VERTICAL
+                      , orientation VERTICAL
+                      , onClick push $ const $ ItemClick item.action
+                      , visibility if item.isVisible then VISIBLE else GONE
+                      ]
+                      [ linearLayout
+                          [ gravity CENTER_VERTICAL
+                          , padding config.itemPadding
+                          , height WRAP_CONTENT
+                          ]
+                          [ imageView
+                              [ imageWithFallback item.image
+                              , margin $ MarginRight 8
+                              , visibility if length item.image /= 0 then VISIBLE else GONE
+                              , height $ V 16
+                              , width $ V 16
+                              ]
+                          , textView
+                              $ [ text item.textdata
+                                , margin $ MarginBottom 1
+                                , color Color.black800
+                                ]
+                              <> FontStyle.paragraphText TypoGraphy
+                          ]
+                      , linearLayout
+                          [ width MATCH_PARENT
+                          , height $ V 2
+                          , background Color.grey700
+                          , margin $ MarginHorizontal 16 16
+                          ]
+                          []
+                      ]
+                )
+                config.menuItems
+            )
+        ]
+    ]

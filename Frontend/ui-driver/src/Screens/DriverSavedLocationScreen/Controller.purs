@@ -104,7 +104,8 @@ eval OnAnimationEnd state = do
   void case state.props.viewType of
     SearchLocation -> pure $ JB.requestKeyboardShow $ EHC.getNewIDWithTag "SavedLocationEditText"
     ConfirmLocation -> do
-      let _ = setText (getNewIDWithTag "ConfirmLocEDT") state.data.saveLocationObject.tag
+      let
+        _ = setText (getNewIDWithTag "ConfirmLocEDT") state.data.saveLocationObject.tag
       pure $ JB.requestKeyboardShow $ EHC.getNewIDWithTag "ConfirmLocEDT"
     _ -> pure $ pure $ JB.hideKeyboardOnNavigation true
   continue state
@@ -114,27 +115,26 @@ eval (UpdateLocation _ lat lon) state = case NUM.fromString lat, NUM.fromString 
   _, _ -> continue state
 
 eval LocateOnMap state = do
-  let _ = unsafePerformEffect $ runEffectFn1 locateOnMap locateOnMapConfig { goToCurrentLocation = true, lat = 0.0, lon = 0.0, geoJson = "", points = [], zoomLevel = zoomLevel}
+  let
+    _ = unsafePerformEffect $ runEffectFn1 locateOnMap locateOnMapConfig { goToCurrentLocation = true, lat = 0.0, lon = 0.0, geoJson = "", points = [], zoomLevel = zoomLevel }
   exit $ ChangeView state { props { viewType = LOCATE_ON_MAP } }
 
 eval (ConfirmLocEDT val) state =
   continue
     state
       { data { saveLocationObject { tag = val } }
-      , props { errorText = if (tagAlreadySaved state.data.savedLocationsArray (toLower (trim val))) then Just $ (getString LOCATION_ALREADY_EXISTS) <> " ‘" <>  val <> "’" else Nothing }
+      , props { errorText = if (tagAlreadySaved state.data.savedLocationsArray (toLower (trim val))) then Just $ (getString LOCATION_ALREADY_EXISTS) <> " ‘" <> val <> "’" else Nothing }
       }
-
 
 eval (DebounceCallback textVal _) state =
   if length (trim textVal) < 3 then
     continue state
   else
     exit $ CallAutoComplete textVal state
-    
+
 eval (OnTextChanged textVal) state = do
   _ <- pure $ JB.updateInputString textVal
   continue state
-
 
 eval (PrimaryButtonAC PrimaryButton.OnClick) state = case state.props.viewType of
   GoToList -> do
@@ -173,7 +173,7 @@ eval (GoToLocationModalAC (GoToLocationModal.EditLocation loc)) state = do
         }
       }
 
-eval (GoToLocationModalAC (GoToLocationModal.DeleteLocation loc)) state = continue state { props { confirmDelete = true, selectedLocation = loc} }
+eval (GoToLocationModalAC (GoToLocationModal.DeleteLocation loc)) state = continue state { props { confirmDelete = true, selectedLocation = loc } }
 
 eval (PopUpModalAction PopUpModal.OnButton2Click) state = do
   let

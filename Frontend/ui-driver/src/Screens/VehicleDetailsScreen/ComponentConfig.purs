@@ -12,7 +12,6 @@
  
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
 module Screens.VehicleDetailsScreen.ComponentConfig where
 
 import Common.Types.App
@@ -29,37 +28,45 @@ import Screens.Types as ST
 
 ------------------------------ primaryButtonConfig ---------------------------------
 primaryButtonConfig :: ST.VehicleDetailsScreenState -> PrimaryButton.Config
-primaryButtonConfig state = let 
+primaryButtonConfig state =
+  let
     config = PrimaryButton.config
-    primaryButtonConfig' = config 
-      { textConfig
-      { text = (getString UPDATE)
-      , color = Color.primaryButtonColor
-      }
-      , margin = (Margin 0 0 0 0)
-      , cornerRadius = 0.0
-      , background = Color.black900
-      , height = (V 60)
-      , isClickable = state.props.deleteButtonVisibility
-      , alpha = if state.props.deleteButtonVisibility then 1.0 else 0.7
-      , id = "VehicleDetailsScreenPrimaryButton"
-      }
-  in primaryButtonConfig'
+
+    primaryButtonConfig' =
+      config
+        { textConfig
+          { text = (getString UPDATE)
+          , color = Color.primaryButtonColor
+          }
+        , margin = (Margin 0 0 0 0)
+        , cornerRadius = 0.0
+        , background = Color.black900
+        , height = (V 60)
+        , isClickable = state.props.deleteButtonVisibility
+        , alpha = if state.props.deleteButtonVisibility then 1.0 else 0.7
+        , id = "VehicleDetailsScreenPrimaryButton"
+        }
+  in
+    primaryButtonConfig'
 
 ------------------------------ primaryEditTextConfig ---------------------------------
 primaryEditTextConfig :: String -> String -> PrimaryEditText.Config
-primaryEditTextConfig label value = let 
+primaryEditTextConfig label value =
+  let
     config = PrimaryEditText.config
-    primaryEditTextConfig' = config
-      { editText
-        { singleLine = true
+
+    primaryEditTextConfig' =
+      config
+        { editText
+          { singleLine = true
           , pattern = Just "[0-9]*,10"
           , text = value
           , alpha = 0.9
+          }
+        , topLabel
+          { text = label
+          , color = Color.greyTextColor
+          }
         }
-      , topLabel
-        { text = label
-        , color = Color.greyTextColor
-        }
-      }
-    in primaryEditTextConfig'
+  in
+    primaryEditTextConfig'

@@ -12,20 +12,19 @@
  
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
 module Screens.UploadAdhaarScreen.ScreenData where
 
 import Screens.Types (UploadAdhaarScreenState)
 
 initData :: UploadAdhaarScreenState
-initData = {
-      data: {
-        imageFront : "",
-        imageBack : "",
-        imageName : "image.jpg"
-      },
-      props : {
-        openRegistrationModal : false,
-        clickedButtonType : ""
+initData =
+  { data:
+      { imageFront: ""
+      , imageBack: ""
+      , imageName: "image.jpg"
       }
-    }
+  , props:
+      { openRegistrationModal: false
+      , clickedButtonType: ""
+      }
+  }

@@ -12,27 +12,26 @@
  
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
 module Screens.ContactUsScreen.ScreenData where
 
-import Screens.Types(ContactUsScreenState)
-import Data.Maybe(Maybe(..))
+import Screens.Types (ContactUsScreenState)
+import Data.Maybe (Maybe(..))
 import ConfigProvider
 import Foreign.Object (empty)
 
 initData :: ContactUsScreenState
-initData = {
-  data: {
-    email : "",
-    subject : "",
-    description : "",
-    bookingId : "",
-    errorMessage : Nothing,
-    config : getAppConfig appConfig,
-    logField : empty
-  },
-  props: {
-    btnActive : false,
-    isSubmitted : false
+initData =
+  { data:
+      { email: ""
+      , subject: ""
+      , description: ""
+      , bookingId: ""
+      , errorMessage: Nothing
+      , config: getAppConfig appConfig
+      , logField: empty
+      }
+  , props:
+      { btnActive: false
+      , isSubmitted: false
+      }
   }
-}

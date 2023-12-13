@@ -12,13 +12,13 @@
  
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
 module Components.FavouriteLocationModel.Controller where
 
 import Components.SavedLocationCard.Controller as SavedLocationCardController
 import Components.GenericHeader.Controller (Action(..)) as GenericHeaderController
 import Components.ErrorModal.Controller as ErrorModalController
 
-data Action = FavouriteLocationAC SavedLocationCardController.Action 
-                | GenericHeaderAC GenericHeaderController.Action
-                | ErrorModalAC ErrorModalController.Action
+data Action
+  = FavouriteLocationAC SavedLocationCardController.Action
+  | GenericHeaderAC GenericHeaderController.Action
+  | ErrorModalAC ErrorModalController.Action

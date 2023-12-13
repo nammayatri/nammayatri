@@ -12,11 +12,9 @@
 
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
 module Screens.AadhaarVerificationScreen.Controller where
 
 import Debug
-
 import Components.PopUpModal as PopUpModal
 import Components.PrimaryButton.Controller as PrimaryButton
 import Components.PrimaryEditText as PrimaryEditText
@@ -65,9 +63,10 @@ instance loggableAction :: Loggable Action where
     Logout -> trackAppEndScreen appId (getScreen AADHAAR_VERIFICATION_SCREEN)
     PopUpModalAC _ -> pure unit
     SelectDateOfBirthAction -> pure unit
-    DatePicker _ _ _ _ _-> pure unit
+    DatePicker _ _ _ _ _ -> pure unit
 
-data ScreenOutput = GoToOtpStage AadhaarVerificationScreenState
+data ScreenOutput
+  = GoToOtpStage AadhaarVerificationScreenState
   | VerfiyOTP AadhaarVerificationScreenState
   | ResendAadhaarOTP AadhaarVerificationScreenState
   | GoToHomeScreen AadhaarVerificationScreenState
@@ -75,64 +74,70 @@ data ScreenOutput = GoToOtpStage AadhaarVerificationScreenState
   | UnVerifiedAadhaarData AadhaarVerificationScreenState
   | GoBack
 
-data Action = BackPressed
-            | AadhaarNumberEditText PrimaryEditText.Action
-            | AadhaarOtpEditText PrimaryEditText.Action
-            | AadhaarNameEditText PrimaryEditText.Action
-            | AadhaarGenderEditText PrimaryEditText.Action
-            | PrimaryButtonAC PrimaryButton.Action
-            | ResendOTP
-            | AfterRender
-            | ResendTimer String
-            | Logout
-            | PopUpModalAC PopUpModal.Action
-            | SelectDateOfBirthAction
-            | DatePicker String String Int Int Int
+data Action
+  = BackPressed
+  | AadhaarNumberEditText PrimaryEditText.Action
+  | AadhaarOtpEditText PrimaryEditText.Action
+  | AadhaarNameEditText PrimaryEditText.Action
+  | AadhaarGenderEditText PrimaryEditText.Action
+  | PrimaryButtonAC PrimaryButton.Action
+  | ResendOTP
+  | AfterRender
+  | ResendTimer String
+  | Logout
+  | PopUpModalAC PopUpModal.Action
+  | SelectDateOfBirthAction
+  | DatePicker String String Int Int Int
 
 eval :: Action -> AadhaarVerificationScreenState -> Eval Action ScreenOutput AadhaarVerificationScreenState
 eval action state = case action of
   AfterRender -> continue state
-  BackPressed ->  if state.props.currentStage == VerifyAadhaar then continue state{props{currentStage = EnterAadhaar}}
-                  else exit $ GoBack
-
-  (PrimaryButtonAC (PrimaryButton.OnClick)) ->
-    case state.props.currentStage of
-      EnterAadhaar -> do
-        pure $ setText (getNewIDWithTag "EnterAadhaarOTPEditText") ""
-        exit $ GoToOtpStage state
-      VerifyAadhaar -> exit $ VerfiyOTP state
-      AadhaarDetails -> exit $ UnVerifiedAadhaarData state
+  BackPressed ->
+    if state.props.currentStage == VerifyAadhaar then
+      continue state { props { currentStage = EnterAadhaar } }
+    else
+      exit $ GoBack
+  (PrimaryButtonAC (PrimaryButton.OnClick)) -> case state.props.currentStage of
+    EnterAadhaar -> do
+      pure $ setText (getNewIDWithTag "EnterAadhaarOTPEditText") ""
+      exit $ GoToOtpStage state
+    VerifyAadhaar -> exit $ VerfiyOTP state
+    AadhaarDetails -> exit $ UnVerifiedAadhaarData state
   (AadhaarNumberEditText (PrimaryEditText.TextChanged _ newVal)) -> do
-    let aadhaarNumber = (replaceAll (Pattern " ") (Replacement "") newVal)
-    let len = length aadhaarNumber
+    let
+      aadhaarNumber = (replaceAll (Pattern " ") (Replacement "") newVal)
+    let
+      len = length aadhaarNumber
     pure $ hideKeyboardOnNavigation (len == 12)
-    continue state { props = state.props { btnActive = len == 12}, data = state.data { aadhaarNumber = if len <= 12 then aadhaarNumber else state.data.aadhaarNumber}}
+    continue state { props = state.props { btnActive = len == 12 }, data = state.data { aadhaarNumber = if len <= 12 then aadhaarNumber else state.data.aadhaarNumber } }
   (AadhaarOtpEditText (PrimaryEditText.TextChanged _ newVal)) -> do
-    let otp = (replace (Pattern " ") (Replacement "") newVal)
-    let len = length otp
+    let
+      otp = (replace (Pattern " ") (Replacement "") newVal)
+    let
+      len = length otp
     pure $ hideKeyboardOnNavigation (len == 6)
-    continue state { props = state.props { btnActive = len == 6}, data = state.data { otp = if len <= 6 then otp else state.data.otp}}
+    continue state { props = state.props { btnActive = len == 6 }, data = state.data { otp = if len <= 6 then otp else state.data.otp } }
   ResendTimer time -> do
     if time == "EXPIRED" then
-      continue state{props{resendEnabled = true}, data{timer ="60s"}}
-      else continue state{data{timer = time}}
-  ResendOTP -> exit $ ResendAadhaarOTP state {props{resendEnabled = false}}
+      continue state { props { resendEnabled = true }, data { timer = "60s" } }
+    else
+      continue state { data { timer = time } }
+  ResendOTP -> exit $ ResendAadhaarOTP state { props { resendEnabled = false } }
   Logout -> do
     pure $ hideKeyboardOnNavigation true
-    continue state{props{showLogoutPopup = true}}
-  PopUpModalAC (PopUpModal.OnButton1Click) -> continue $ (state {props {showLogoutPopup = false}})
+    continue state { props { showLogoutPopup = true } }
+  PopUpModalAC (PopUpModal.OnButton1Click) -> continue $ (state { props { showLogoutPopup = false } })
   PopUpModalAC (PopUpModal.OnButton2Click) -> exit $ LogOut state
-
-  DatePicker _ resp year month date -> do 
-    case resp of 
-      "SELECTED" -> continue state {data { driverDob = (show date) <> "/" <> (show (month+1)) <> "/" <> (show year)}
-                                    , props {isDateClickable = true}}
-      _ -> continue state {props {isDateClickable = true}}
-
-  SelectDateOfBirthAction -> continue state {props {isDateClickable = false}}
-
-  AadhaarNameEditText (PrimaryEditText.TextChanged _ val) -> continue state {data { driverName =  val }}
-
-  AadhaarGenderEditText (PrimaryEditText.TextChanged _ val) -> continue state {data { driverGender =  val }}
-
+  DatePicker _ resp year month date -> do
+    case resp of
+      "SELECTED" ->
+        continue
+          state
+            { data { driverDob = (show date) <> "/" <> (show (month + 1)) <> "/" <> (show year) }
+            , props { isDateClickable = true }
+            }
+      _ -> continue state { props { isDateClickable = true } }
+  SelectDateOfBirthAction -> continue state { props { isDateClickable = false } }
+  AadhaarNameEditText (PrimaryEditText.TextChanged _ val) -> continue state { data { driverName = val } }
+  AadhaarGenderEditText (PrimaryEditText.TextChanged _ val) -> continue state { data { driverGender = val } }
   _ -> continue state

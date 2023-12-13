@@ -12,14 +12,13 @@
 
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
 module Components.DueDetailsList.Controller where
 
-import Screens.Types(DueCard)
+import Screens.Types (DueCard)
 
-data Action = SelectDue DueCard
+data Action
+  = SelectDue DueCard
 
-type DueDetailsListState = {
-  dues :: Array DueCard
-}
-
+type DueDetailsListState
+  = { dues :: Array DueCard
+    }

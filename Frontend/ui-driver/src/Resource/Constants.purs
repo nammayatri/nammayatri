@@ -12,7 +12,6 @@
  
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
 module Resource.Constants where
 
 import Common.Types.App as Common
@@ -26,69 +25,67 @@ import Prelude ((==), (&&), (<>))
 import Screens.Types as ST
 import Services.API (LocationInfo(..))
 
-type Language =
-    {
-        name :: String,
-        value :: String
+type Language
+  = { name :: String
+    , value :: String
     }
 
 getLanguages :: Array Language
-getLanguages = 
-    [
-        {name:"English",value:"EN_US"},
-        {name:"ಕನ್ನಡ",value:"KN_IN"},
-        {name:"हिन्दी",value :"HI_IN"},
-        {name:"தமிழ்",value :"TA_IN"},
-        {name:"తెలుగు", value : "TE_IN"}
-    ]
+getLanguages =
+  [ { name: "English", value: "EN_US" }
+  , { name: "ಕನ್ನಡ", value: "KN_IN" }
+  , { name: "हिन्दी", value: "HI_IN" }
+  , { name: "தமிழ்", value: "TA_IN" }
+  , { name: "తెలుగు", value: "TE_IN" }
+  ]
 
 decodeAddress :: LocationInfo -> Boolean -> String
-decodeAddress ( LocationInfo address) fullAddress =
-        if fullAddress then 
-             if ( trim (fromMaybe "" address.city) == "" && trim (fromMaybe "" address.area) == "" && trim (fromMaybe "" address.street) == "" && trim (fromMaybe "" address.door) == "" && trim (fromMaybe "" address.building) == "" ) then
-                    ((fromMaybe "" address.state) <> ", " <> (fromMaybe "" address.country))
-            else if ( trim (fromMaybe "" address.area) == "" && trim (fromMaybe "" address.street) == "" && trim (fromMaybe "" address.door) == "" && trim (fromMaybe "" address.building) == "" ) then
-                    ((fromMaybe "" address.city) <> ", " <> (fromMaybe "" address.state) <> ", " <> (fromMaybe "" address.country))
-            else if ( trim (fromMaybe "" address.street) == "" && trim (fromMaybe "" address.door) == "" && trim (fromMaybe "" address.building) == "" ) then
-                    ((fromMaybe "" address.area) <> ", " <> (fromMaybe "" address.city) <> ", " <> (fromMaybe "" address.state) <> ", " <> (fromMaybe "" address.country))
-            else if ( trim (fromMaybe "" address.door) == "" && trim (fromMaybe "" address.building) == "") then
-                    ((fromMaybe "" address.street) <> ", " <> (fromMaybe "" address.area) <> ", " <> (fromMaybe "" address.city) <> ", " <> (fromMaybe "" address.state) <> ", " <> (fromMaybe "" address.country))
-            else if ( trim (fromMaybe "" address.door) == "") then
-                    ((fromMaybe "" address.building) <> ", " <> (fromMaybe "" address.street) <> ", " <> (fromMaybe "" address.area) <> ", " <> (fromMaybe "" address.city) <> ", " <> (fromMaybe "" address.state) <> ", " <> (fromMaybe "" address.country))
-                    else
-                    ((fromMaybe "" address.door) <> ", " <> (fromMaybe "" address.building) <> ", " <> (fromMaybe "" address.street) <> ", " <> (fromMaybe "" address.area) <> ", " <> (fromMaybe "" address.city) <> ", " <> (fromMaybe "" address.state) <> ", " <> (fromMaybe "" address.country))
-        else 
-            if ( trim (fromMaybe "" address.city) == "" && trim (fromMaybe "" address.area) == "" && trim (fromMaybe "" address.street) == ""  ) then
-                    (trim (fromMaybe "" address.state) <> ", " <> (fromMaybe "" address.country))
-            else if ( trim (fromMaybe "" address.area) == "" && trim (fromMaybe "" address.street) == "" ) then
-                    (trim (fromMaybe "" address.city) <> ", " <> (fromMaybe "" address.state) <> ", " <> (fromMaybe "" address.country))
-            else if ( trim (fromMaybe "" address.street) == "") then
-                    (trim (fromMaybe "" address.area) <> ", " <> (fromMaybe "" address.city) <> ", " <> (fromMaybe "" address.state) <> ", " <> (fromMaybe "" address.country))
-                    else
-                    (trim (fromMaybe "" address.street)) <> ", " <> (fromMaybe "" address.area) <> ", " <> (fromMaybe "" address.city) <> ", " <> (fromMaybe "" address.state) <> ", " <> (fromMaybe "" address.country)
+decodeAddress (LocationInfo address) fullAddress =
+  if fullAddress then
+    if (trim (fromMaybe "" address.city) == "" && trim (fromMaybe "" address.area) == "" && trim (fromMaybe "" address.street) == "" && trim (fromMaybe "" address.door) == "" && trim (fromMaybe "" address.building) == "") then
+      ((fromMaybe "" address.state) <> ", " <> (fromMaybe "" address.country))
+    else if (trim (fromMaybe "" address.area) == "" && trim (fromMaybe "" address.street) == "" && trim (fromMaybe "" address.door) == "" && trim (fromMaybe "" address.building) == "") then
+      ((fromMaybe "" address.city) <> ", " <> (fromMaybe "" address.state) <> ", " <> (fromMaybe "" address.country))
+    else if (trim (fromMaybe "" address.street) == "" && trim (fromMaybe "" address.door) == "" && trim (fromMaybe "" address.building) == "") then
+      ((fromMaybe "" address.area) <> ", " <> (fromMaybe "" address.city) <> ", " <> (fromMaybe "" address.state) <> ", " <> (fromMaybe "" address.country))
+    else if (trim (fromMaybe "" address.door) == "" && trim (fromMaybe "" address.building) == "") then
+      ((fromMaybe "" address.street) <> ", " <> (fromMaybe "" address.area) <> ", " <> (fromMaybe "" address.city) <> ", " <> (fromMaybe "" address.state) <> ", " <> (fromMaybe "" address.country))
+    else if (trim (fromMaybe "" address.door) == "") then
+      ((fromMaybe "" address.building) <> ", " <> (fromMaybe "" address.street) <> ", " <> (fromMaybe "" address.area) <> ", " <> (fromMaybe "" address.city) <> ", " <> (fromMaybe "" address.state) <> ", " <> (fromMaybe "" address.country))
+    else
+      ((fromMaybe "" address.door) <> ", " <> (fromMaybe "" address.building) <> ", " <> (fromMaybe "" address.street) <> ", " <> (fromMaybe "" address.area) <> ", " <> (fromMaybe "" address.city) <> ", " <> (fromMaybe "" address.state) <> ", " <> (fromMaybe "" address.country))
+  else if (trim (fromMaybe "" address.city) == "" && trim (fromMaybe "" address.area) == "" && trim (fromMaybe "" address.street) == "") then
+    (trim (fromMaybe "" address.state) <> ", " <> (fromMaybe "" address.country))
+  else if (trim (fromMaybe "" address.area) == "" && trim (fromMaybe "" address.street) == "") then
+    (trim (fromMaybe "" address.city) <> ", " <> (fromMaybe "" address.state) <> ", " <> (fromMaybe "" address.country))
+  else if (trim (fromMaybe "" address.street) == "") then
+    (trim (fromMaybe "" address.area) <> ", " <> (fromMaybe "" address.city) <> ", " <> (fromMaybe "" address.state) <> ", " <> (fromMaybe "" address.country))
+  else
+    (trim (fromMaybe "" address.street)) <> ", " <> (fromMaybe "" address.area) <> ", " <> (fromMaybe "" address.city) <> ", " <> (fromMaybe "" address.state) <> ", " <> (fromMaybe "" address.country)
 
 tripDatesCount :: Int
 tripDatesCount = 15
 
-getPspIcon :: String -> String 
+getPspIcon :: String -> String
 getPspIcon vpa = do
-    let handleName = ((split (Pattern "@") (vpa)) DA.!! 1)
-    case handleName of 
-        Nothing -> "ny_ic_defaultpg"
-        Just handle -> case handle of
-            "ybl" -> "ny_ic_phonepe"
-            "ibl" -> "ny_ic_phonepe"
-            "axl" -> "ny_ic_phonepe"
-            "okhdfcbank" -> "ny_ic_gpay"
-            "okicici" -> "ny_ic_gpay"
-            "oksbi" -> "ny_ic_gpay"
-            "okaxis" -> "ny_ic_gpay"
-            "paytm" -> "ny_ic_paytm"
-            "apl" -> "ny_ic_amazonpay"
-            "yapl" -> "ny_ic_amazonpay"
-            "indus" -> "ny_ic_induspay"
-            "upi" -> "ny_ic_bhim"
-            _ -> "ny_ic_defaultpg"
+  let
+    handleName = ((split (Pattern "@") (vpa)) DA.!! 1)
+  case handleName of
+    Nothing -> "ny_ic_defaultpg"
+    Just handle -> case handle of
+      "ybl" -> "ny_ic_phonepe"
+      "ibl" -> "ny_ic_phonepe"
+      "axl" -> "ny_ic_phonepe"
+      "okhdfcbank" -> "ny_ic_gpay"
+      "okicici" -> "ny_ic_gpay"
+      "oksbi" -> "ny_ic_gpay"
+      "okaxis" -> "ny_ic_gpay"
+      "paytm" -> "ny_ic_paytm"
+      "apl" -> "ny_ic_amazonpay"
+      "yapl" -> "ny_ic_amazonpay"
+      "indus" -> "ny_ic_induspay"
+      "upi" -> "ny_ic_bhim"
+      _ -> "ny_ic_defaultpg"
 
 waitTimeConstructor :: String -> ST.TimerStatus
 waitTimeConstructor key = case key of

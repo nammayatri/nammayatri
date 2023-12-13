@@ -15,7 +15,7 @@
 module Screens.DriverProfileScreen.Controller where
 
 import Common.Types.App (CheckBoxOptions)
-import Common.Types.App (LazyCheck(..), ShareImageConfig (..))
+import Common.Types.App (LazyCheck(..), ShareImageConfig(..))
 import Components.BottomNavBar.Controller as BottomNavBar
 import Components.CheckListView as CheckList
 import Components.GenericHeader.Controller as GenericHeaderController
@@ -33,7 +33,7 @@ import Data.String as DS
 import Data.String.CodeUnits (charAt)
 import Debug (spy)
 import Effect.Unsafe (unsafePerformEffect)
-import Engineering.Helpers.Commons (getNewIDWithTag,setText)
+import Engineering.Helpers.Commons (getNewIDWithTag, setText)
 import Engineering.Helpers.Commons (getNewIDWithTag)
 import Engineering.Helpers.LogEvent (logEvent)
 import Helpers.Utils (getTime, getCurrentUTC, differenceBetweenTwoUTC, launchAppSettings, generateQR, downloadQR)
@@ -57,12 +57,13 @@ import Storage (setValueToLocalNativeStore, KeyStore(..), getValueToLocalStore)
 import Screens.DriverProfileScreen.ScreenData as DriverProfileScreenData
 import Screens.SubscriptionScreen.Controller
 import Effect.Aff (launchAff_)
-import Effect.Uncurried(runEffectFn4)
+import Effect.Uncurried (runEffectFn4)
 import Storage (isLocalStageOn)
-import Helpers.Utils(fetchImage, FetchImageFrom(..))
+import Helpers.Utils (fetchImage, FetchImageFrom(..))
 
 instance showAction :: Show Action where
   show _ = ""
+
 instance loggableAction :: Loggable Action where
   performLog action appId = case action of
     AfterRender -> trackAppScreenRender appId "screen" (getScreen DRIVER_PROFILE_SCREEN)
@@ -167,115 +168,131 @@ instance loggableAction :: Loggable Action where
     InAppKeyboardModalOtp (InAppKeyboardModal.OnClickResendOtp) -> trackAppActionClick appId (getScreen DRIVER_DETAILS_SCREEN) "in_app_otp_modal" "on_click_done"
     _ -> pure unit
 
-data ScreenOutput = GoToDriverDetailsScreen DriverProfileScreenState
-                    | GoToVehicleDetailsScreen DriverProfileScreenState
-                    | GoToBookingOptions DriverProfileScreenState
-                    | GoToSelectLanguageScreen DriverProfileScreenState
-                    | GoToHelpAndSupportScreen DriverProfileScreenState
-                    | GoToDriverHistoryScreen DriverProfileScreenState
-                    | ResendAlternateNumberOTP DriverProfileScreenState
-                    | VerifyAlternateNumberOTP DriverProfileScreenState
-                    | RemoveAlternateNumber DriverProfileScreenState
-                    | ValidateAlternateNumber DriverProfileScreenState
-                    | UpdateGender DriverProfileScreenState
-                    | GoToNotifications
-                    | GoToAboutUsScreen
-                    | OnBoardingFlow
-                    | GoToHomeScreen DriverProfileScreenState
-                    | GoToReferralScreen
-                    | GoToLogout
-                    | GoBack
-                    | ActivatingOrDeactivatingRC DriverProfileScreenState
-                    | DeletingRc DriverProfileScreenState
-                    | CallingDriver DriverProfileScreenState
-                    | AddingRC DriverProfileScreenState
-                    | UpdateLanguages DriverProfileScreenState (Array String)
-                    | SubscriptionScreen
-                    | GoToDriverSavedLocationScreen DriverProfileScreenState
+data ScreenOutput
+  = GoToDriverDetailsScreen DriverProfileScreenState
+  | GoToVehicleDetailsScreen DriverProfileScreenState
+  | GoToBookingOptions DriverProfileScreenState
+  | GoToSelectLanguageScreen DriverProfileScreenState
+  | GoToHelpAndSupportScreen DriverProfileScreenState
+  | GoToDriverHistoryScreen DriverProfileScreenState
+  | ResendAlternateNumberOTP DriverProfileScreenState
+  | VerifyAlternateNumberOTP DriverProfileScreenState
+  | RemoveAlternateNumber DriverProfileScreenState
+  | ValidateAlternateNumber DriverProfileScreenState
+  | UpdateGender DriverProfileScreenState
+  | GoToNotifications
+  | GoToAboutUsScreen
+  | OnBoardingFlow
+  | GoToHomeScreen DriverProfileScreenState
+  | GoToReferralScreen
+  | GoToLogout
+  | GoBack
+  | ActivatingOrDeactivatingRC DriverProfileScreenState
+  | DeletingRc DriverProfileScreenState
+  | CallingDriver DriverProfileScreenState
+  | AddingRC DriverProfileScreenState
+  | UpdateLanguages DriverProfileScreenState (Array String)
+  | SubscriptionScreen
+  | GoToDriverSavedLocationScreen DriverProfileScreenState
 
-data Action = BackPressed
-            | NoAction
-            | OptionClick MenuOptions
-            | BottomNavBarAction BottomNavBar.Action
-            | GetDriverInfoResponse SA.GetDriverInfoResp
-            | DriverSummary DriverProfileSummaryRes
-            | PopUpModalAction PopUpModal.Action
-            | AfterRender
-            | HideLiveDashboard String
-            | ChangeScreen DriverProfileScreenType
-            | GenericHeaderAC GenericHeaderController.Action
-            | PrimaryEditTextAC PrimaryEditTextController.Action
-            | UpdateValue UpdateType
-            | DriverGenericHeaderAC GenericHeaderController.Action
-            | PrimaryButtonActionController PrimaryButton.Action
-            | PrimaryEditTextActionController PrimaryEditText.Action
-            | InAppKeyboardModalOtp InAppKeyboardModal.Action
-            | UpdateValueAC PrimaryButton.Action
-            | OpenSettings
-            | SelectGender
-            | UpdateAlternateNumber
-            | EditNumberText
-            | RemoveAlterNumber
-            | RemoveAlternateNumberAC PopUpModal.Action
-            | CheckBoxClick ST.Gender
-            | LanguageSelection CheckList.Action
-            | UpdateButtonClicked PrimaryButton.Action
-            | ActivateRc
-            | DeactivateRc EditRc
-            | CloseEditRc
-            | ShowEditRcx
-            | ChangeRcDetails Int
-            | GetRcsDataResponse SA.GetAllRcDataResp
-            | UpdateRC String Boolean
-            | ActivateOrDeactivateRcPopUpModalAction PopUpModal.Action
-            | PaymentInfoPopUpModalAction PopUpModal.Action
-            | DeleteRcPopUpModalAction PopUpModal.Action
-            | CallDriverPopUpModalAction PopUpModal.Action
-            | AddRc
-            | CallDriver
-            | CallCustomerSupport
-            | OpenRcView Int
-            | AddRcButtonAC PrimaryButtonController.Action
-            | SkipActiveRc
-            | RemoveEditRC
-            | DirectActivateRc EditRc
-            | UpiQrRendered String
-            | DismissQrPopup
-            | PaymentInfo
-            | LeftKeyAction
-            | DownloadQR PrimaryButtonController.Action
-            | ShareQR PrimaryButtonController.Action
+data Action
+  = BackPressed
+  | NoAction
+  | OptionClick MenuOptions
+  | BottomNavBarAction BottomNavBar.Action
+  | GetDriverInfoResponse SA.GetDriverInfoResp
+  | DriverSummary DriverProfileSummaryRes
+  | PopUpModalAction PopUpModal.Action
+  | AfterRender
+  | HideLiveDashboard String
+  | ChangeScreen DriverProfileScreenType
+  | GenericHeaderAC GenericHeaderController.Action
+  | PrimaryEditTextAC PrimaryEditTextController.Action
+  | UpdateValue UpdateType
+  | DriverGenericHeaderAC GenericHeaderController.Action
+  | PrimaryButtonActionController PrimaryButton.Action
+  | PrimaryEditTextActionController PrimaryEditText.Action
+  | InAppKeyboardModalOtp InAppKeyboardModal.Action
+  | UpdateValueAC PrimaryButton.Action
+  | OpenSettings
+  | SelectGender
+  | UpdateAlternateNumber
+  | EditNumberText
+  | RemoveAlterNumber
+  | RemoveAlternateNumberAC PopUpModal.Action
+  | CheckBoxClick ST.Gender
+  | LanguageSelection CheckList.Action
+  | UpdateButtonClicked PrimaryButton.Action
+  | ActivateRc
+  | DeactivateRc EditRc
+  | CloseEditRc
+  | ShowEditRcx
+  | ChangeRcDetails Int
+  | GetRcsDataResponse SA.GetAllRcDataResp
+  | UpdateRC String Boolean
+  | ActivateOrDeactivateRcPopUpModalAction PopUpModal.Action
+  | PaymentInfoPopUpModalAction PopUpModal.Action
+  | DeleteRcPopUpModalAction PopUpModal.Action
+  | CallDriverPopUpModalAction PopUpModal.Action
+  | AddRc
+  | CallDriver
+  | CallCustomerSupport
+  | OpenRcView Int
+  | AddRcButtonAC PrimaryButtonController.Action
+  | SkipActiveRc
+  | RemoveEditRC
+  | DirectActivateRc EditRc
+  | UpiQrRendered String
+  | DismissQrPopup
+  | PaymentInfo
+  | LeftKeyAction
+  | DownloadQR PrimaryButtonController.Action
+  | ShareQR PrimaryButtonController.Action
 
 eval :: Action -> DriverProfileScreenState -> Eval Action ScreenOutput DriverProfileScreenState
-
 eval AfterRender state = continue state
 
 eval (PrimaryEditTextAC (PrimaryEditTextController.TextChanged id val)) state = do
   case state.props.detailsUpdationType of
-    Just VEHICLE_AGE -> continue state{props{btnActive = (DS.length val >= 1)}, data{vehicleAge = (fromMaybe 0 (fromString val))}}
-    Just VEHICLE_NAME -> continue state{props{btnActive = (DS.length val >= 3)}, data{vehicleName = val}}
+    Just VEHICLE_AGE -> continue state { props { btnActive = (DS.length val >= 1) }, data { vehicleAge = (fromMaybe 0 (fromString val)) } }
+    Just VEHICLE_NAME -> continue state { props { btnActive = (DS.length val >= 3) }, data { vehicleName = val } }
     _ -> continue state
 
-eval BackPressed state = if state.props.logoutModalView then continue $ state { props{ logoutModalView = false}}
-                                else if state.props.enterOtpModal then continue $ state { props{ enterOtpModal = false}}
-                                else if state.props.removeAlternateNumber then continue $ state { props{ removeAlternateNumber = false}}
-                                else if state.props.showGenderView then continue $ state { props{ showGenderView = false}}
-                                else if state.props.alternateNumberView then if state.data.fromHomeScreen then exit GoBack else continue $ state { props{ alternateNumberView = false},data{driverEditAlternateMobile = Nothing}}
-                                else if state.props.alreadyActive then continue $ state {props { alreadyActive = false}}
-                                else if state.props.deleteRcView then continue $ state { props{ deleteRcView = false}}
-                                else if state.props.activateOrDeactivateRcView then continue $ state { props{ activateOrDeactivateRcView = false}}
-                                else if state.props.activateRcView then continue $ state { props{ activateRcView = false}}
-                                else if state.props.showLiveDashboard then do
-                                continueWithCmd state [do
-                                  _ <- pure $ goBackPrevWebPage (getNewIDWithTag "webview")
-                                  pure NoAction
-                                ]
-                                else if state.props.openSettings then continue state{props{openSettings = false}}
-                                else if state.props.updateLanguages then continue state{props{updateLanguages = false}}
-                                else if isJust state.props.detailsUpdationType then continue state{props{detailsUpdationType = Nothing}}
-                                else if state.props.openSettings then continue state{props{openSettings = false}}
-                                else exit GoBack
-
+eval BackPressed state =
+  if state.props.logoutModalView then
+    continue $ state { props { logoutModalView = false } }
+  else if state.props.enterOtpModal then
+    continue $ state { props { enterOtpModal = false } }
+  else if state.props.removeAlternateNumber then
+    continue $ state { props { removeAlternateNumber = false } }
+  else if state.props.showGenderView then
+    continue $ state { props { showGenderView = false } }
+  else if state.props.alternateNumberView then
+    if state.data.fromHomeScreen then exit GoBack else continue $ state { props { alternateNumberView = false }, data { driverEditAlternateMobile = Nothing } }
+  else if state.props.alreadyActive then
+    continue $ state { props { alreadyActive = false } }
+  else if state.props.deleteRcView then
+    continue $ state { props { deleteRcView = false } }
+  else if state.props.activateOrDeactivateRcView then
+    continue $ state { props { activateOrDeactivateRcView = false } }
+  else if state.props.activateRcView then
+    continue $ state { props { activateRcView = false } }
+  else if state.props.showLiveDashboard then do
+    continueWithCmd state
+      [ do
+          _ <- pure $ goBackPrevWebPage (getNewIDWithTag "webview")
+          pure NoAction
+      ]
+  else if state.props.openSettings then
+    continue state { props { openSettings = false } }
+  else if state.props.updateLanguages then
+    continue state { props { updateLanguages = false } }
+  else if isJust state.props.detailsUpdationType then
+    continue state { props { detailsUpdationType = Nothing } }
+  else if state.props.openSettings then
+    continue state { props { openSettings = false } }
+  else
+    exit GoBack
 
 eval (BottomNavBarAction (BottomNavBar.OnNavigate screen)) state = do
   case screen of
@@ -283,7 +300,8 @@ eval (BottomNavBarAction (BottomNavBar.OnNavigate screen)) state = do
     "Rides" -> exit $ GoToDriverHistoryScreen state
     "Alert" -> do
       _ <- pure $ setValueToLocalNativeStore ALERT_RECEIVED "false"
-      let _ = unsafePerformEffect $ logEvent state.data.logField "ny_driver_alert_click"
+      let
+        _ = unsafePerformEffect $ logEvent state.data.logField "ny_driver_alert_click"
       exit $ GoToNotifications
     "Rankings" -> do
       _ <- pure $ setValueToLocalNativeStore REFERRAL_ACTIVATED "false"
@@ -292,10 +310,10 @@ eval (BottomNavBarAction (BottomNavBar.OnNavigate screen)) state = do
 
 eval (UpdateValue value) state = do
   case value of
-    LANGUAGE -> continue state {props{updateLanguages = true, detailsUpdationType = Just LANGUAGE}, data {languageList = updateLanguageList state state.data.languagesSpoken}}
-    VEHICLE_AGE -> continue state {props{ detailsUpdationType = Just VEHICLE_AGE}}
-    VEHICLE_NAME -> continue state{props {detailsUpdationType = Just VEHICLE_NAME}}
-    PAYMENT -> continue state{props {upiQrView = true }}
+    LANGUAGE -> continue state { props { updateLanguages = true, detailsUpdationType = Just LANGUAGE }, data { languageList = updateLanguageList state state.data.languagesSpoken } }
+    VEHICLE_AGE -> continue state { props { detailsUpdationType = Just VEHICLE_AGE } }
+    VEHICLE_NAME -> continue state { props { detailsUpdationType = Just VEHICLE_NAME } }
+    PAYMENT -> continue state { props { upiQrView = true } }
     _ -> continue state
 
 eval (OptionClick optionIndex) state = do
@@ -308,290 +326,336 @@ eval (OptionClick optionIndex) state = do
     MULTI_LANGUAGE -> exit $ GoToSelectLanguageScreen state
     HELP_AND_FAQS -> exit $ GoToHelpAndSupportScreen state
     ABOUT_APP -> exit $ GoToAboutUsScreen
-    DRIVER_LOGOUT -> continue $ (state {props = state.props {logoutModalView = true}})
+    DRIVER_LOGOUT -> continue $ (state { props = state.props { logoutModalView = true } })
     REFER -> exit $ OnBoardingFlow
     APP_INFO_SETTINGS -> do
       _ <- pure $ launchAppSettings unit
       continue state
-    LIVE_STATS_DASHBOARD -> continue state {props {showLiveDashboard = true}}
+    LIVE_STATS_DASHBOARD -> continue state { props { showLiveDashboard = true } }
 
 eval (UpiQrRendered id) state = do
-  continueWithCmd state [ do
-                    runEffectFn4 generateQR ("upi://pay?pa=" <> state.data.payerVpa) id 200 0
-                    pure $ NoAction
-                ]
-eval (DismissQrPopup) state = continue state {props { upiQrView = false}}
+  continueWithCmd state
+    [ do
+        runEffectFn4 generateQR ("upi://pay?pa=" <> state.data.payerVpa) id 200 0
+        pure $ NoAction
+    ]
 
-eval (PaymentInfo) state = continue state {props { paymentInfoView = true }}
+eval (DismissQrPopup) state = continue state { props { upiQrView = false } }
+
+eval (PaymentInfo) state = continue state { props { paymentInfoView = true } }
 
 eval (LeftKeyAction) state = exit $ SubscriptionScreen
 
-eval (DownloadQR (PrimaryButton.OnClick)) state = do 
-  continueWithCmd state [do 
-    _ <- downloadQR $ getNewIDWithTag "QRpaymentview"
-    pure DismissQrPopup]
+eval (DownloadQR (PrimaryButton.OnClick)) state = do
+  continueWithCmd state
+    [ do
+        _ <- downloadQR $ getNewIDWithTag "QRpaymentview"
+        pure DismissQrPopup
+    ]
 
-eval (ShareQR (PrimaryButton.OnClick)) state = do 
+eval (ShareQR (PrimaryButton.OnClick)) state = do
   _ <- pure $ shareImageMessage "Hey!\nPay your Namma Yatri fare directly to me ..." (shareImageMessageConfig state)
   continue state
 
-eval (HideLiveDashboard val) state = continue state {props {showLiveDashboard = false}}
+eval (HideLiveDashboard val) state = continue state { props { showLiveDashboard = false } }
 
-eval (PopUpModalAction (PopUpModal.OnButton1Click)) state = continue $ (state {props {logoutModalView = false}})
+eval (PopUpModalAction (PopUpModal.OnButton1Click)) state = continue $ (state { props { logoutModalView = false } })
 
 eval (PopUpModalAction (PopUpModal.OnButton2Click)) state = exit $ GoToLogout
 
 eval (GetDriverInfoResponse (SA.GetDriverInfoResp driverProfileResp)) state = do
-  let (SA.Vehicle linkedVehicle) = (fromMaybe dummyVehicleObject driverProfileResp.linkedVehicle)
-  let (SA.DriverGoHomeInfo driverGoHomeInfo) =  driverProfileResp.driverGoHomeInfo
-  continue state {data = state.data {driverName = driverProfileResp.firstName,
-                                      driverVehicleType = linkedVehicle.variant,
-                                      driverRating = driverProfileResp.rating,
-                                      driverMobile = driverProfileResp.mobileNumber,
-                                      vehicleRegNumber = linkedVehicle.registrationNo,
-                                      drivingLicenseNo = "",
-                                      vehicleModelName = linkedVehicle.model,
-                                      vehicleColor = linkedVehicle.color,
-                                      vehicleSelected = getDowngradeOptionsSelected  (SA.GetDriverInfoResp driverProfileResp),
-                                      driverAlternateNumber = driverProfileResp.alternateNumber ,
-                                      driverGender = driverProfileResp.gender,
-                                      payerVpa = fromMaybe "" driverProfileResp.payerVpa,
-                                      autoPayStatus = getAutopayStatus driverProfileResp.autoPayStatus,
-                                      goHomeActive = driverGoHomeInfo.status == Just "ACTIVE"
-                                      },
-                    props { enableGoto = driverProfileResp.isGoHomeEnabled && state.data.config.gotoConfig.enableGoto}}
+  let
+    (SA.Vehicle linkedVehicle) = (fromMaybe dummyVehicleObject driverProfileResp.linkedVehicle)
+  let
+    (SA.DriverGoHomeInfo driverGoHomeInfo) = driverProfileResp.driverGoHomeInfo
+  continue
+    state
+      { data =
+        state.data
+          { driverName = driverProfileResp.firstName
+          , driverVehicleType = linkedVehicle.variant
+          , driverRating = driverProfileResp.rating
+          , driverMobile = driverProfileResp.mobileNumber
+          , vehicleRegNumber = linkedVehicle.registrationNo
+          , drivingLicenseNo = ""
+          , vehicleModelName = linkedVehicle.model
+          , vehicleColor = linkedVehicle.color
+          , vehicleSelected = getDowngradeOptionsSelected (SA.GetDriverInfoResp driverProfileResp)
+          , driverAlternateNumber = driverProfileResp.alternateNumber
+          , driverGender = driverProfileResp.gender
+          , payerVpa = fromMaybe "" driverProfileResp.payerVpa
+          , autoPayStatus = getAutopayStatus driverProfileResp.autoPayStatus
+          , goHomeActive = driverGoHomeInfo.status == Just "ACTIVE"
+          }
+      , props { enableGoto = driverProfileResp.isGoHomeEnabled && state.data.config.gotoConfig.enableGoto }
+      }
 
-eval (GetRcsDataResponse  (SA.GetAllRcDataResp rcDataArray)) state = do
-  let rctransformedData = makeRcsTransformData rcDataArray
-  if (length rctransformedData == 1)
-    then do
-      let activeRcVal = rctransformedData
-      continue state{data{rcDataArray = rctransformedData, inactiveRCArray = drop 1 rctransformedData, activeRCData = fromMaybe ({ rcStatus : false, rcDetails : {certificateNumber : "", vehicleColor : Nothing, vehicleModel : Nothing}}) (activeRcVal!!0)}}
-    else do
-      let activeRcVal = filter _.rcStatus rctransformedData
-      if (length activeRcVal == 0)
-        then continue state {data{rcDataArray = rctransformedData, inactiveRCArray = drop 1 rctransformedData, activeRCData = fromMaybe ({ rcStatus : false, rcDetails : {certificateNumber : "", vehicleColor : Nothing, vehicleModel : Nothing}}) (rctransformedData!!0) }}
-        else
-          continue state{data{rcDataArray = rctransformedData, inactiveRCArray = filter (not _.rcStatus) $ rctransformedData, activeRCData = fromMaybe ({ rcStatus : false, rcDetails : {certificateNumber : "", vehicleColor : Nothing, vehicleModel : Nothing}}) (activeRcVal!!0)}}
+eval (GetRcsDataResponse (SA.GetAllRcDataResp rcDataArray)) state = do
+  let
+    rctransformedData = makeRcsTransformData rcDataArray
+  if (length rctransformedData == 1) then do
+    let
+      activeRcVal = rctransformedData
+    continue state { data { rcDataArray = rctransformedData, inactiveRCArray = drop 1 rctransformedData, activeRCData = fromMaybe ({ rcStatus: false, rcDetails: { certificateNumber: "", vehicleColor: Nothing, vehicleModel: Nothing } }) (activeRcVal !! 0) } }
+  else do
+    let
+      activeRcVal = filter _.rcStatus rctransformedData
+    if (length activeRcVal == 0) then
+      continue state { data { rcDataArray = rctransformedData, inactiveRCArray = drop 1 rctransformedData, activeRCData = fromMaybe ({ rcStatus: false, rcDetails: { certificateNumber: "", vehicleColor: Nothing, vehicleModel: Nothing } }) (rctransformedData !! 0) } }
+    else
+      continue state { data { rcDataArray = rctransformedData, inactiveRCArray = filter (not _.rcStatus) $ rctransformedData, activeRCData = fromMaybe ({ rcStatus: false, rcDetails: { certificateNumber: "", vehicleColor: Nothing, vehicleModel: Nothing } }) (activeRcVal !! 0) } }
 
 eval (DriverSummary response) state = do
-  let (DriverProfileSummaryRes resp) = response
-  continue state{data{analyticsData = getAnalyticsData response, languagesSpoken = (fromMaybe [] resp.languagesSpoken), languageList = updateLanguageList state (fromMaybe [] resp.languagesSpoken)}}
+  let
+    (DriverProfileSummaryRes resp) = response
+  continue state { data { analyticsData = getAnalyticsData response, languagesSpoken = (fromMaybe [] resp.languagesSpoken), languageList = updateLanguageList state (fromMaybe [] resp.languagesSpoken) } }
 
 eval (ChangeScreen screenType) state = do
   case screenType of
     ST.DRIVER_DETAILS -> do
-      let _ = unsafePerformEffect $ logEvent state.data.logField "ny_driver_profile_personal_click"
+      let
+        _ = unsafePerformEffect $ logEvent state.data.logField "ny_driver_profile_personal_click"
       pure unit
     ST.VEHICLE_DETAILS -> do
-      let _ = unsafePerformEffect $ logEvent state.data.logField "ny_driver_profile_vehicle_click"
+      let
+        _ = unsafePerformEffect $ logEvent state.data.logField "ny_driver_profile_vehicle_click"
       pure unit
     _ -> do
-      let _ = unsafePerformEffect $ logEvent state.data.logField "ny_driver_profile_settings_click"
+      let
+        _ = unsafePerformEffect $ logEvent state.data.logField "ny_driver_profile_settings_click"
       pure unit
-  continue state{props{ screenType = screenType }}
+  continue state { props { screenType = screenType } }
 
-eval OpenSettings state = continue state{props{openSettings = true}}
+eval OpenSettings state = continue state { props { openSettings = true } }
 
 eval (GenericHeaderAC (GenericHeaderController.PrefixImgOnClick)) state = do
-  if state.props.updateLanguages then continue state{props{updateLanguages = false}}
-  else if (isJust state.props.detailsUpdationType ) then continue state {props{detailsUpdationType = Nothing}}
-  else continue state{ props { openSettings = false }}
+  if state.props.updateLanguages then
+    continue state { props { updateLanguages = false } }
+  else if (isJust state.props.detailsUpdationType) then
+    continue state { props { detailsUpdationType = Nothing } }
+  else
+    continue state { props { openSettings = false } }
 
-eval (DriverGenericHeaderAC(GenericHeaderController.PrefixImgOnClick )) state = if state.data.fromHomeScreen then exit GoBack else continue state {props{showGenderView=false, alternateNumberView=false},data{driverEditAlternateMobile = Nothing}}
-
+eval (DriverGenericHeaderAC (GenericHeaderController.PrefixImgOnClick)) state = if state.data.fromHomeScreen then exit GoBack else continue state { props { showGenderView = false, alternateNumberView = false }, data { driverEditAlternateMobile = Nothing } }
 
 eval (PrimaryButtonActionController (PrimaryButton.OnClick)) state = do
   if state.props.alternateNumberView then do
-      _ <- pure $ hideKeyboardOnNavigation true
-      exit (ValidateAlternateNumber state {props {numberExistError = false, otpIncorrect = false}})
-  else exit (UpdateGender state{data{driverGender = state.data.genderTypeSelect},props{showGenderView = false}})
+    _ <- pure $ hideKeyboardOnNavigation true
+    exit (ValidateAlternateNumber state { props { numberExistError = false, otpIncorrect = false } })
+  else
+    exit (UpdateGender state { data { driverGender = state.data.genderTypeSelect }, props { showGenderView = false } })
 
 eval SelectGender state = do
-  continue state{props{showGenderView = true}, data{genderTypeSelect = if (fromMaybe "" state.data.driverGender) == "UNKNOWN" then Nothing else state.data.driverGender}}
+  continue state { props { showGenderView = true }, data { genderTypeSelect = if (fromMaybe "" state.data.driverGender) == "UNKNOWN" then Nothing else state.data.driverGender } }
 
 eval UpdateAlternateNumber state = do
-  let curr_time = getCurrentUTC ""
-  let last_attempt_time = getValueToLocalStore SET_ALTERNATE_TIME
-  let time_diff = differenceBetweenTwoUTC curr_time last_attempt_time
-  if(time_diff <= 600) then do
+  let
+    curr_time = getCurrentUTC ""
+  let
+    last_attempt_time = getValueToLocalStore SET_ALTERNATE_TIME
+  let
+    time_diff = differenceBetweenTwoUTC curr_time last_attempt_time
+  if (time_diff <= 600) then do
     pure $ toast (getString STR.LIMIT_EXCEEDED_FOR_ALTERNATE_NUMBER)
     continue state
   else
-    continue state{props{alternateNumberView = true, isEditAlternateMobile = false, mNumberEdtFocused = false}, data{alterNumberEditableText = isJust state.data.driverAlternateNumber}}
+    continue state { props { alternateNumberView = true, isEditAlternateMobile = false, mNumberEdtFocused = false }, data { alterNumberEditableText = isJust state.data.driverAlternateNumber } }
 
-eval (PrimaryEditTextActionController (PrimaryEditText.TextChanged id value))state = do
-  if DS.length value <= 10 then (do
-        let isValidMobileNumber = case (charAt 0 value) of
-                              Just a -> if a=='0' || a=='1' || a=='2' || a=='5' then false
-                                        else if a=='3' || a=='4' then(
-                                              if value=="4000400040" || value=="3000300030" then
-                                              true
-                                              else false )
-                                        else true
-                              Nothing -> true
-        continue state {data{ driverEditAlternateMobile = Just value}, props = state.props {checkAlternateNumber = isValidMobileNumber,  numberExistError = false}}
-  )else continue state
+eval (PrimaryEditTextActionController (PrimaryEditText.TextChanged id value)) state = do
+  if DS.length value <= 10 then
+    ( do
+        let
+          isValidMobileNumber = case (charAt 0 value) of
+            Just a ->
+              if a == '0' || a == '1' || a == '2' || a == '5' then
+                false
+              else if a == '3' || a == '4' then
+                ( if value == "4000400040" || value == "3000300030" then
+                    true
+                  else
+                    false
+                )
+              else
+                true
+            Nothing -> true
+        continue state { data { driverEditAlternateMobile = Just value }, props = state.props { checkAlternateNumber = isValidMobileNumber, numberExistError = false } }
+    )
+  else
+    continue state
 
-eval (PrimaryEditTextActionController (PrimaryEditTextController.FocusChanged boolean)) state = continue state { props{ mNumberEdtFocused = boolean}}
+eval (PrimaryEditTextActionController (PrimaryEditTextController.FocusChanged boolean)) state = continue state { props { mNumberEdtFocused = boolean } }
 
 eval EditNumberText state = do
-  let curr_time = getCurrentUTC ""
-  let last_attempt_time = getValueToLocalStore SET_ALTERNATE_TIME
-  let time_diff = differenceBetweenTwoUTC curr_time last_attempt_time
-  if(time_diff <= 600) then do
-   pure $ toast (getString STR.LIMIT_EXCEEDED_FOR_ALTERNATE_NUMBER)
-   continue state
+  let
+    curr_time = getCurrentUTC ""
+  let
+    last_attempt_time = getValueToLocalStore SET_ALTERNATE_TIME
+  let
+    time_diff = differenceBetweenTwoUTC curr_time last_attempt_time
+  if (time_diff <= 600) then do
+    pure $ toast (getString STR.LIMIT_EXCEEDED_FOR_ALTERNATE_NUMBER)
+    continue state
   else
-    continueWithCmd state {data{alterNumberEditableText=false}, props{numberExistError=false, isEditAlternateMobile = true, checkAlternateNumber = true, mNumberEdtFocused = false}}[do
-        _ <- pure $ setText (getNewIDWithTag "alternateMobileNumber") (fromMaybe "" state.data.driverAlternateNumber)
-        pure NoAction
-    ]
+    continueWithCmd state { data { alterNumberEditableText = false }, props { numberExistError = false, isEditAlternateMobile = true, checkAlternateNumber = true, mNumberEdtFocused = false } }
+      [ do
+          _ <- pure $ setText (getNewIDWithTag "alternateMobileNumber") (fromMaybe "" state.data.driverAlternateNumber)
+          pure NoAction
+      ]
 
-eval RemoveAlterNumber state = continue state {props = state.props {removeAlternateNumber = true}}
+eval RemoveAlterNumber state = continue state { props = state.props { removeAlternateNumber = true } }
 
-eval (RemoveAlternateNumberAC (PopUpModal.OnButton1Click)) state = continue state {props{ removeAlternateNumber = false}}
+eval (RemoveAlternateNumberAC (PopUpModal.OnButton1Click)) state = continue state { props { removeAlternateNumber = false } }
 
-eval (RemoveAlternateNumberAC (PopUpModal.OnButton2Click)) state =
-  exit (RemoveAlternateNumber state {props{removeAlternateNumber = false, otpIncorrect = false, alternateNumberView = false, isEditAlternateMobile = false, checkAlternateNumber = true},data{driverEditAlternateMobile = Nothing}})
+eval (RemoveAlternateNumberAC (PopUpModal.OnButton2Click)) state = exit (RemoveAlternateNumber state { props { removeAlternateNumber = false, otpIncorrect = false, alternateNumberView = false, isEditAlternateMobile = false, checkAlternateNumber = true }, data { driverEditAlternateMobile = Nothing } })
 
-eval ( CheckBoxClick genderType ) state = do
-  continue state{data{genderTypeSelect = getGenderValue genderType}}
+eval (CheckBoxClick genderType) state = do
+  continue state { data { genderTypeSelect = getGenderValue genderType } }
 
 eval (InAppKeyboardModalOtp (InAppKeyboardModal.OnClickResendOtp)) state = exit (ResendAlternateNumberOTP state)
 
-eval (InAppKeyboardModalOtp (InAppKeyboardModal.BackPressed)) state =
-  continue state { props = state.props {enterOtpModal = false, alternateMobileOtp = "", enterOtpFocusIndex = 0, otpIncorrect = false, otpAttemptsExceeded = false}}
+eval (InAppKeyboardModalOtp (InAppKeyboardModal.BackPressed)) state = continue state { props = state.props { enterOtpModal = false, alternateMobileOtp = "", enterOtpFocusIndex = 0, otpIncorrect = false, otpAttemptsExceeded = false } }
 
 eval (InAppKeyboardModalOtp (InAppKeyboardModal.OnClickBack text)) state = do
-  let newVal = (if DS.length( text ) > 0 then (DS.take (DS.length ( text ) - 1 ) text) else "" )
-      focusIndex = DS.length newVal
-  continue state {props = state.props { alternateMobileOtp = newVal, enterOtpFocusIndex = focusIndex,otpIncorrect = false, otpAttemptsExceeded = false}}
+  let
+    newVal = (if DS.length (text) > 0 then (DS.take (DS.length (text) - 1) text) else "")
+
+    focusIndex = DS.length newVal
+  continue state { props = state.props { alternateMobileOtp = newVal, enterOtpFocusIndex = focusIndex, otpIncorrect = false, otpAttemptsExceeded = false } }
 
 eval (InAppKeyboardModalOtp (InAppKeyboardModal.OnSelection key index)) state = do
   let
-    alternateMobileOtp = if (index + 1) > (DS.length state.props.alternateMobileOtp) then ( DS.take 4 (state.props.alternateMobileOtp <> key)) else (DS.take index (state.props.alternateMobileOtp)) <> key <> (DS.take 4 (DS.drop (index+1) state.props.alternateMobileOtp))
+    alternateMobileOtp = if (index + 1) > (DS.length state.props.alternateMobileOtp) then (DS.take 4 (state.props.alternateMobileOtp <> key)) else (DS.take index (state.props.alternateMobileOtp)) <> key <> (DS.take 4 (DS.drop (index + 1) state.props.alternateMobileOtp))
+
     focusIndex = DS.length alternateMobileOtp
   continue state { props = state.props { alternateMobileOtp = alternateMobileOtp, enterOtpFocusIndex = focusIndex, otpIncorrect = false } }
 
 eval (InAppKeyboardModalOtp (InAppKeyboardModal.OnClickDone text)) state = exit (VerifyAlternateNumberOTP state)
+
 eval (LanguageSelection (CheckList.ChangeCheckBoxSate item)) state = do
-  let languageChange = map (\ele -> if ele.value == item.value then ele{isSelected = not ele.isSelected} else ele) state.data.languageList
-  continue state {data {languageList = languageChange}}
+  let
+    languageChange = map (\ele -> if ele.value == item.value then ele { isSelected = not ele.isSelected } else ele) state.data.languageList
+  continue state { data { languageList = languageChange } }
 
 eval (UpdateButtonClicked (PrimaryButton.OnClick)) state = do
-  let languagesSelected = getSelectedLanguages state
+  let
+    languagesSelected = getSelectedLanguages state
   pure $ toast $ (getString STR.LANGUAGE_UPDATED)
   exit $ UpdateLanguages state languagesSelected
 
-eval ActivateRc state = continue state{props{activateRcView = true}}
+eval ActivateRc state = continue state { props { activateRcView = true } }
 
-eval CallDriver state =
-  continue state{props{callDriver = true}}
+eval CallDriver state = continue state { props { callDriver = true } }
 
 eval CallCustomerSupport state = do
   void $ pure $ showDialer (getSupportNumber "") false
   continue state
 
 eval (DeactivateRc rcType) state = do
-  if rcType == DEACTIVATING_RC then continue state{props{activateOrDeactivateRcView = true}}
-  else if rcType == ACTIVATING_RC then continue state{props{activateOrDeactivateRcView = true}}
+  if rcType == DEACTIVATING_RC then
+    continue state { props { activateOrDeactivateRcView = true } }
+  else if rcType == ACTIVATING_RC then
+    continue state { props { activateOrDeactivateRcView = true } }
+  else if (length state.data.rcDataArray == 1) then do
+    pure $ toast $ (getString STR.SINGLE_RC_CANNOT_BE_DELETED)
+    continue state
   else
-    if (length state.data.rcDataArray == 1)
-      then do
-        pure $ toast $ (getString STR.SINGLE_RC_CANNOT_BE_DELETED)
-        continue state
-      else
-        continue state{props{deleteRcView = true}}
+    continue state { props { deleteRcView = true } }
 
-eval (UpdateRC rcNo rcStatus) state  = do
-  continue state{props{activateRcView = true}, data{rcNumber = rcNo, isRCActive = rcStatus}}
+eval (UpdateRC rcNo rcStatus) state = do
+  continue state { props { activateRcView = true }, data { rcNumber = rcNo, isRCActive = rcStatus } }
 
-eval (OpenRcView idx) state  = do
-  let val = if elem idx state.data.openInactiveRCViewOrNotArray then filter(\x -> x/=idx) state.data.openInactiveRCViewOrNotArray else state.data.openInactiveRCViewOrNotArray <> [idx]
-  continue state{props{openRcView = not state.props.openRcView}, data{openInactiveRCViewOrNotArray = val}}
+eval (OpenRcView idx) state = do
+  let
+    val = if elem idx state.data.openInactiveRCViewOrNotArray then filter (\x -> x /= idx) state.data.openInactiveRCViewOrNotArray else state.data.openInactiveRCViewOrNotArray <> [ idx ]
+  continue state { props { openRcView = not state.props.openRcView }, data { openInactiveRCViewOrNotArray = val } }
 
-eval (ActivateOrDeactivateRcPopUpModalAction (PopUpModal.OnButton1Click)) state =   exit $ ActivatingOrDeactivatingRC state
+eval (ActivateOrDeactivateRcPopUpModalAction (PopUpModal.OnButton1Click)) state = exit $ ActivatingOrDeactivatingRC state
 
-eval (ActivateOrDeactivateRcPopUpModalAction (PopUpModal.OnButton2Click)) state = continue state {props{activateOrDeactivateRcView=false}}
+eval (ActivateOrDeactivateRcPopUpModalAction (PopUpModal.OnButton2Click)) state = continue state { props { activateOrDeactivateRcView = false } }
 
-eval (ActivateOrDeactivateRcPopUpModalAction (PopUpModal.DismissPopup)) state = continue state {props{activateOrDeactivateRcView=false}}
+eval (ActivateOrDeactivateRcPopUpModalAction (PopUpModal.DismissPopup)) state = continue state { props { activateOrDeactivateRcView = false } }
 
-eval (PaymentInfoPopUpModalAction (PopUpModal.OnButton1Click)) state = continue state {props{ paymentInfoView = false}}
+eval (PaymentInfoPopUpModalAction (PopUpModal.OnButton1Click)) state = continue state { props { paymentInfoView = false } }
 
-eval (PaymentInfoPopUpModalAction (PopUpModal.DismissPopup)) state = continue state {props{ paymentInfoView = false}}
+eval (PaymentInfoPopUpModalAction (PopUpModal.DismissPopup)) state = continue state { props { paymentInfoView = false } }
 
-eval (DeleteRcPopUpModalAction (PopUpModal.OnButton1Click)) state =  exit $ DeletingRc state
+eval (DeleteRcPopUpModalAction (PopUpModal.OnButton1Click)) state = exit $ DeletingRc state
 
-eval (DeleteRcPopUpModalAction (PopUpModal.OnButton2Click)) state = continue state {props{deleteRcView=false}}
+eval (DeleteRcPopUpModalAction (PopUpModal.OnButton2Click)) state = continue state { props { deleteRcView = false } }
 
-eval (CallDriverPopUpModalAction (PopUpModal.OnButton1Click)) state =  do
-   exit $ CallingDriver state
+eval (CallDriverPopUpModalAction (PopUpModal.OnButton1Click)) state = do
+  exit $ CallingDriver state
 
-eval (CallDriverPopUpModalAction (PopUpModal.OnButton2Click)) state = continue state { props {callDriver = false}}
+eval (CallDriverPopUpModalAction (PopUpModal.OnButton2Click)) state = continue state { props { callDriver = false } }
 
-eval (GenericHeaderAC (GenericHeaderController.PrefixImgOnClick)) state = continue state{ props { screenType = VEHICLE_DETAILS }}
+eval (GenericHeaderAC (GenericHeaderController.PrefixImgOnClick)) state = continue state { props { screenType = VEHICLE_DETAILS } }
 
 eval (AddRcButtonAC PrimaryButtonController.OnClick) state = do
   exit $ AddingRC state
 
-eval SkipActiveRc state = continue state { props {alreadyActive = false}}
+eval SkipActiveRc state = continue state { props { alreadyActive = false } }
 
-eval RemoveEditRC state = continue state { props {activateRcView = false}}
-
-eval (UpdateValueAC (PrimaryButton.OnClick)) state = do
-  if (state.props.detailsUpdationType == Just VEHICLE_AGE) then continue state{props{detailsUpdationType = Nothing}} -- update age
-    else if (state.props.detailsUpdationType == Just VEHICLE_NAME) then continue state{props{detailsUpdationType = Nothing}} -- update name
-    else continue state
+eval RemoveEditRC state = continue state { props { activateRcView = false } }
 
 eval (UpdateValueAC (PrimaryButton.OnClick)) state = do
-  if (state.props.detailsUpdationType == Just VEHICLE_AGE) then continue state{props{detailsUpdationType = Nothing}} -- update age
-    else if (state.props.detailsUpdationType == Just VEHICLE_NAME) then continue state{props{detailsUpdationType = Nothing}} -- update name
-    else continue state
+  if (state.props.detailsUpdationType == Just VEHICLE_AGE) then
+    continue state { props { detailsUpdationType = Nothing } } -- update age
+  else if (state.props.detailsUpdationType == Just VEHICLE_NAME) then
+    continue state { props { detailsUpdationType = Nothing } } -- update name
+  else
+    continue state
 
-eval (DirectActivateRc rcType) state = continueWithCmd state{data{rcNumber = state.data.activeRCData.rcDetails.certificateNumber, isRCActive = state.data.activeRCData.rcStatus}} [
-    pure $ DeactivateRc rcType
-  ]
+eval (UpdateValueAC (PrimaryButton.OnClick)) state = do
+  if (state.props.detailsUpdationType == Just VEHICLE_AGE) then
+    continue state { props { detailsUpdationType = Nothing } } -- update age
+  else if (state.props.detailsUpdationType == Just VEHICLE_NAME) then
+    continue state { props { detailsUpdationType = Nothing } } -- update name
+  else
+    continue state
+
+eval (DirectActivateRc rcType) state =
+  continueWithCmd state { data { rcNumber = state.data.activeRCData.rcDetails.certificateNumber, isRCActive = state.data.activeRCData.rcStatus } }
+    [ pure $ DeactivateRc rcType
+    ]
 
 eval _ state = continue state
 
 getTitle :: MenuOptions -> String
-getTitle menuOption =
-  case menuOption of
-    DRIVER_PRESONAL_DETAILS -> getString STR.PERSONAL_DETAILS
-    DRIVER_VEHICLE_DETAILS -> getString STR.VEHICLE_DETAILS
-    DRIVER_BANK_DETAILS -> getString STR.BANK_DETAILS
-    MULTI_LANGUAGE -> getString STR.LANGUAGES
-    HELP_AND_FAQS -> getString STR.HELP_AND_FAQ
-    ABOUT_APP -> getString STR.ABOUT
-    REFER -> getString STR.ADD_YOUR_FRIEND
-    DRIVER_LOGOUT -> getString STR.LOGOUT
-    APP_INFO_SETTINGS -> getString STR.APP_INFO
-    LIVE_STATS_DASHBOARD -> getString STR.LIVE_DASHBOARD
-    DRIVER_BOOKING_OPTIONS -> getString STR.BOOKING_OPTIONS
-    GO_TO_LOCATIONS -> getString STR.GOTO_LOCATIONS
+getTitle menuOption = case menuOption of
+  DRIVER_PRESONAL_DETAILS -> getString STR.PERSONAL_DETAILS
+  DRIVER_VEHICLE_DETAILS -> getString STR.VEHICLE_DETAILS
+  DRIVER_BANK_DETAILS -> getString STR.BANK_DETAILS
+  MULTI_LANGUAGE -> getString STR.LANGUAGES
+  HELP_AND_FAQS -> getString STR.HELP_AND_FAQ
+  ABOUT_APP -> getString STR.ABOUT
+  REFER -> getString STR.ADD_YOUR_FRIEND
+  DRIVER_LOGOUT -> getString STR.LOGOUT
+  APP_INFO_SETTINGS -> getString STR.APP_INFO
+  LIVE_STATS_DASHBOARD -> getString STR.LIVE_DASHBOARD
+  DRIVER_BOOKING_OPTIONS -> getString STR.BOOKING_OPTIONS
+  GO_TO_LOCATIONS -> getString STR.GOTO_LOCATIONS
 
 getDowngradeOptionsSelected :: SA.GetDriverInfoResp -> Array VehicleP
 getDowngradeOptionsSelected (SA.GetDriverInfoResp driverInfoResponse) =
-  [
-    {vehicleName: "HATCHBACK", isSelected: driverInfoResponse.canDowngradeToHatchback}
-  , {vehicleName: "SEDAN", isSelected: driverInfoResponse.canDowngradeToSedan}
-  , {vehicleName: "TAXI" , isSelected: driverInfoResponse.canDowngradeToTaxi}
+  [ { vehicleName: "HATCHBACK", isSelected: driverInfoResponse.canDowngradeToHatchback }
+  , { vehicleName: "SEDAN", isSelected: driverInfoResponse.canDowngradeToSedan }
+  , { vehicleName: "TAXI", isSelected: driverInfoResponse.canDowngradeToTaxi }
   ]
 
 getGenderValue :: ST.Gender -> Maybe String
-getGenderValue gender =
-  case gender of
-    ST.MALE -> Just "MALE"
-    ST.FEMALE -> Just "FEMALE"
-    ST.OTHER -> Just "OTHER"
-    _ -> Just "PREFER_NOT_TO_SAY"
+getGenderValue gender = case gender of
+  ST.MALE -> Just "MALE"
+  ST.FEMALE -> Just "FEMALE"
+  ST.OTHER -> Just "OTHER"
+  _ -> Just "PREFER_NOT_TO_SAY"
 
 checkGenderSelect :: Maybe String -> ST.Gender -> Boolean
 checkGenderSelect genderTypeSelect genderType =
-  if not (isJust genderTypeSelect) then false
+  if not (isJust genderTypeSelect) then
+    false
   else do
-    let gender = fromMaybe "" genderTypeSelect
+    let
+      gender = fromMaybe "" genderTypeSelect
     case genderType of
       ST.MALE -> gender == "MALE"
       ST.FEMALE -> gender == "FEMALE"
@@ -599,57 +663,65 @@ checkGenderSelect genderTypeSelect genderType =
       ST.OTHER -> gender == "OTHER"
 
 getGenderName :: Maybe String -> Maybe String
-getGenderName gender =
-  case gender of
-    Just value -> case value of
-      "MALE" -> Just (getString STR.MALE)
-      "FEMALE" -> Just (getString STR.FEMALE)
-      "OTHER" -> Just (getString STR.OTHER)
-      "PREFER_NOT_TO_SAY" -> Just (getString STR.PREFER_NOT_TO_SAY)
-      _ -> Nothing
-    Nothing -> Nothing
+getGenderName gender = case gender of
+  Just value -> case value of
+    "MALE" -> Just (getString STR.MALE)
+    "FEMALE" -> Just (getString STR.FEMALE)
+    "OTHER" -> Just (getString STR.OTHER)
+    "PREFER_NOT_TO_SAY" -> Just (getString STR.PREFER_NOT_TO_SAY)
+    _ -> Nothing
+  Nothing -> Nothing
 
 getSelectedLanguages :: DriverProfileScreenState -> Array String
 getSelectedLanguages state =
-  let languages = filter _.isSelected state.data.languageList
-  in  foldl (\acc item -> acc <> [item.value]) [] languages
-
+  let
+    languages = filter _.isSelected state.data.languageList
+  in
+    foldl (\acc item -> acc <> [ item.value ]) [] languages
 
 makeRcsTransformData :: Array SA.GetAllRcDataRecords -> Array VehicleDetails
-makeRcsTransformData (listRes) = map (\ (SA.GetAllRcDataRecords rc)-> {
-  rcStatus : rc.rcActive,
-  rcDetails : {certificateNumber : (rc.rcDetails) ^. _certificateNumber,
-  vehicleColor : (rc.rcDetails) ^. _vehicleColor,
-  vehicleModel : (rc.rcDetails) ^. _vehicleModel}
-  }
-  ) listRes
+makeRcsTransformData (listRes) =
+  map
+    ( \(SA.GetAllRcDataRecords rc) ->
+        { rcStatus: rc.rcActive
+        , rcDetails:
+            { certificateNumber: (rc.rcDetails) ^. _certificateNumber
+            , vehicleColor: (rc.rcDetails) ^. _vehicleColor
+            , vehicleModel: (rc.rcDetails) ^. _vehicleModel
+            }
+        }
+    )
+    listRes
 
 optionList :: DriverProfileScreenState -> Array Listtype
 optionList state =
-    [
-      {menuOptions: GO_TO_LOCATIONS , icon: fetchImage FF_ASSET "ny_ic_loc_grey"},
-      {menuOptions: DRIVER_BOOKING_OPTIONS , icon: fetchImage FF_ASSET "ic_booking_options"},
-      {menuOptions: APP_INFO_SETTINGS , icon: fetchImage FF_ASSET "ny_ic_app_info"},
-      {menuOptions: MULTI_LANGUAGE , icon: fetchImage FF_ASSET "ny_ic_language"},
-      {menuOptions: HELP_AND_FAQS , icon: fetchImage FF_ASSET "ny_ic_head_phones"},
-      {menuOptions: LIVE_STATS_DASHBOARD , icon: fetchImage FF_ASSET "ic_graph_black"},
-      {menuOptions: ABOUT_APP , icon: fetchImage FF_ASSET "ny_ic_about"},
-      {menuOptions: DRIVER_LOGOUT , icon: fetchImage FF_ASSET "ny_ic_logout_grey"}
-    ]
+  [ { menuOptions: GO_TO_LOCATIONS, icon: fetchImage FF_ASSET "ny_ic_loc_grey" }
+  , { menuOptions: DRIVER_BOOKING_OPTIONS, icon: fetchImage FF_ASSET "ic_booking_options" }
+  , { menuOptions: APP_INFO_SETTINGS, icon: fetchImage FF_ASSET "ny_ic_app_info" }
+  , { menuOptions: MULTI_LANGUAGE, icon: fetchImage FF_ASSET "ny_ic_language" }
+  , { menuOptions: HELP_AND_FAQS, icon: fetchImage FF_ASSET "ny_ic_head_phones" }
+  , { menuOptions: LIVE_STATS_DASHBOARD, icon: fetchImage FF_ASSET "ic_graph_black" }
+  , { menuOptions: ABOUT_APP, icon: fetchImage FF_ASSET "ny_ic_about" }
+  , { menuOptions: DRIVER_LOGOUT, icon: fetchImage FF_ASSET "ny_ic_logout_grey" }
+  ]
 
 updateLanguageList :: DriverProfileScreenState -> Array String -> Array CheckBoxOptions
 updateLanguageList state language =
-  map (\item -> if (any (_ == item.value)) language
-                  then item{isSelected = true}
-                  else item{isSelected = false}) (state.data.languageList)
-
+  map
+    ( \item ->
+        if (any (_ == item.value)) language then
+          item { isSelected = true }
+        else
+          item { isSelected = false }
+    )
+    (state.data.languageList)
 
 shareImageMessageConfig :: DriverProfileScreenState -> ShareImageConfig
-shareImageMessageConfig _ = {
-  code : "",
-  viewId : getNewIDWithTag "QRpaymentview",
-  logoId : "",
-  isReferral : false
+shareImageMessageConfig _ =
+  { code: ""
+  , viewId: getNewIDWithTag "QRpaymentview"
+  , logoId: ""
+  , isReferral: false
   }
 
 handleGotoClick :: DriverProfileScreenState -> Eval Action ScreenOutput DriverProfileScreenState

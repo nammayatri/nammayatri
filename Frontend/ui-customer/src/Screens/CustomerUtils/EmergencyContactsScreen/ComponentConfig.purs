@@ -1,7 +1,6 @@
 module Screens.CustomerUtils.EmergencyContactsScreen.ComponentConfig where
 
 import Common.Types.App
-
 import Components.GenericHeader as GenericHeader
 import Components.PopUpModal as PopUpModal
 import Components.PrimaryButton as PrimaryButton
@@ -36,8 +35,8 @@ genericHeaderConfig state =
           }
         , padding = (Padding 0 5 0 5)
         , textConfig
-          { text = if state.props.showContactList then (show (length state.data.contactsList) <> "/3 " <> (getString CONTACTS_SELECTED)) else  (getString EMERGENCY_CONTACTS)
-          , accessibilityHint = if state.props.showContactList then (show (length state.data.contactsList) <> " Of 3 " <> (getString CONTACTS_SELECTED)) else  (getString EMERGENCY_CONTACTS)
+          { text = if state.props.showContactList then (show (length state.data.contactsList) <> "/3 " <> (getString CONTACTS_SELECTED)) else (getString EMERGENCY_CONTACTS)
+          , accessibilityHint = if state.props.showContactList then (show (length state.data.contactsList) <> " Of 3 " <> (getString CONTACTS_SELECTED)) else (getString EMERGENCY_CONTACTS)
           , color = Color.darkCharcoal
           }
         , suffixImageConfig
@@ -67,7 +66,6 @@ primaryButtonConfig state =
         }
   in
     primaryButtonConfig'
-
 
 --------------------------------------------------- removeContactPopUpModelConfig -----------------------------------------------------
 removeContactPopUpModelConfig :: EmergencyContactsScreenState -> PopUpModal.Config

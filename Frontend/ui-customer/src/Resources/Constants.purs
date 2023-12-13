@@ -12,7 +12,6 @@
  
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
 module Resources.Constants where
 
 import Accessor (_description, _amount)
@@ -82,7 +81,9 @@ encodeAddress :: String -> Array AddressComponents -> Maybe String -> ST.Address
 encodeAddress fullAddress addressComponents placeId =
   let
     totalAddressComponents = length $ split (Pattern ", ") fullAddress
+
     areaCodeFromFullAdd = runFn2 extractKeyByRegex areaCodeRegex fullAddress
+
     areaCodeFromAddComp = getValueByComponent addressComponents "postal_code"
 
     splitedAddress = split (Pattern ", ") fullAddress
@@ -177,125 +178,126 @@ getWard ward area street building =
     if isJust actualWard then actualWard else (actualArea <> actualStreet <> actualBuilding)
 
 getKeyByLanguage :: String -> String
-getKeyByLanguage language = case language of 
+getKeyByLanguage language = case language of
   "ENGLISH" -> "EN_US"
-  "KANNADA" -> "KN_IN" 
-  "HINDI"   -> "HI_IN" 
-  "MALAYALAM" -> "ML_IN" 
-  "TAMIL"   ->"TA_IN"
+  "KANNADA" -> "KN_IN"
+  "HINDI" -> "HI_IN"
+  "MALAYALAM" -> "ML_IN"
+  "TAMIL" -> "TA_IN"
   "BENGALI" -> "BN_IN"
-  _ -> "EN_US" 
+  _ -> "EN_US"
 
-getGender :: Maybe ST.Gender -> String -> String 
-getGender gender placeHolderText = 
-  case gender of 
-    Just value -> case value of 
-      ST.MALE -> (getString MALE)
-      ST.FEMALE -> (getString FEMALE)
-      ST.OTHER ->  (getString OTHER)
-      _ -> (getString PREFER_NOT_TO_SAY)
-    Nothing -> placeHolderText
+getGender :: Maybe ST.Gender -> String -> String
+getGender gender placeHolderText = case gender of
+  Just value -> case value of
+    ST.MALE -> (getString MALE)
+    ST.FEMALE -> (getString FEMALE)
+    ST.OTHER -> (getString OTHER)
+    _ -> (getString PREFER_NOT_TO_SAY)
+  Nothing -> placeHolderText
 
 getFaresList :: Array FareBreakupAPIEntity -> String -> Array ST.FareComponent
 getFaresList fares baseDistance =
-  let currency = (getAppConfig appConfig).currency
+  let
+    currency = (getAppConfig appConfig).currency
   in
-  map
-    ( \(FareBreakupAPIEntity item) ->
-          { fareType : item.description
-          , price : currency <> " " <> 
-            (show $ case item.description of 
-              "BASE_FARE" -> item.amount + getMerchSpecBaseFare fares
-              "SGST" -> (item.amount * 2) + getFareFromArray fares "FIXED_GOVERNMENT_RATE"
-              "WAITING_OR_PICKUP_CHARGES" -> item.amount + getFareFromArray fares "PLATFORM_FEE"
-              _ -> item.amount)
-          , title : case item.description of
-                      "BASE_FARE" -> (getEN BASE_FARES) <> if baseDistance == "0 m" then "" else " (" <> baseDistance <> ")"
-                      "EXTRA_DISTANCE_FARE" -> getEN NOMINAL_FARE
-                      "DRIVER_SELECTED_FARE" -> getEN DRIVER_ADDITIONS
-                      "TOTAL_FARE" -> getEN TOTAL_PAID
-                      "DEAD_KILOMETER_FARE" -> getEN PICKUP_CHARGE
-                      "PICKUP_CHARGES" -> getEN PICKUP_CHARGE
-                      "CUSTOMER_SELECTED_FARE" -> getEN CUSTOMER_SELECTED_FARE
-                      "WAITING_CHARGES" -> getEN WAITING_CHARGE
-                      "EARLY_END_RIDE_PENALTY" -> getEN EARLY_END_RIDE_CHARGES
-                      "WAITING_OR_PICKUP_CHARGES" -> getEN WAITING_CHARGE 
-                      "SERVICE_CHARGE" -> getEN SERVICE_CHARGES
-                      "FIXED_GOVERNMENT_RATE" -> getEN GOVERNMENT_CHAGRES
-                      "PLATFORM_FEE" -> getEN PLATFORM_FEE
-                      "SGST" -> getEN PLATFORM_GST
-                      _ -> getEN BASE_FARES
+    map
+      ( \(FareBreakupAPIEntity item) ->
+          { fareType: item.description
+          , price:
+              currency <> " "
+                <> ( show
+                      $ case item.description of
+                          "BASE_FARE" -> item.amount + getMerchSpecBaseFare fares
+                          "SGST" -> (item.amount * 2) + getFareFromArray fares "FIXED_GOVERNMENT_RATE"
+                          "WAITING_OR_PICKUP_CHARGES" -> item.amount + getFareFromArray fares "PLATFORM_FEE"
+                          _ -> item.amount
+                  )
+          , title:
+              case item.description of
+                "BASE_FARE" -> (getEN BASE_FARES) <> if baseDistance == "0 m" then "" else " (" <> baseDistance <> ")"
+                "EXTRA_DISTANCE_FARE" -> getEN NOMINAL_FARE
+                "DRIVER_SELECTED_FARE" -> getEN DRIVER_ADDITIONS
+                "TOTAL_FARE" -> getEN TOTAL_PAID
+                "DEAD_KILOMETER_FARE" -> getEN PICKUP_CHARGE
+                "PICKUP_CHARGES" -> getEN PICKUP_CHARGE
+                "CUSTOMER_SELECTED_FARE" -> getEN CUSTOMER_SELECTED_FARE
+                "WAITING_CHARGES" -> getEN WAITING_CHARGE
+                "EARLY_END_RIDE_PENALTY" -> getEN EARLY_END_RIDE_CHARGES
+                "WAITING_OR_PICKUP_CHARGES" -> getEN WAITING_CHARGE
+                "SERVICE_CHARGE" -> getEN SERVICE_CHARGES
+                "FIXED_GOVERNMENT_RATE" -> getEN GOVERNMENT_CHAGRES
+                "PLATFORM_FEE" -> getEN PLATFORM_FEE
+                "SGST" -> getEN PLATFORM_GST
+                _ -> getEN BASE_FARES
           }
-    )
-    (getFilteredFares fares)
+      )
+      (getFilteredFares fares)
 
 getMerchSpecBaseFare :: Array FareBreakupAPIEntity -> Int
-getMerchSpecBaseFare fares =
-  case getMerchant FunctionCall of
-    YATRISATHI -> getAllFareFromArray fares ["EXTRA_DISTANCE_FARE", "NIGHT_SHIFT_CHARGE"]
-    _ -> getAllFareFromArray fares ["EXTRA_DISTANCE_FARE"]
-
+getMerchSpecBaseFare fares = case getMerchant FunctionCall of
+  YATRISATHI -> getAllFareFromArray fares [ "EXTRA_DISTANCE_FARE", "NIGHT_SHIFT_CHARGE" ]
+  _ -> getAllFareFromArray fares [ "EXTRA_DISTANCE_FARE" ]
 
 getAllFareFromArray :: Array FareBreakupAPIEntity -> Array String -> Int
 getAllFareFromArray fares titles =
   let
-    matchingFares = filter (\fare -> (fare^._description) `elem` titles) fares
+    matchingFares = filter (\fare -> (fare ^. _description) `elem` titles) fares
   in
-    foldl (\acc fare -> acc + fare^._amount) 0 matchingFares
+    foldl (\acc fare -> acc + fare ^. _amount) 0 matchingFares
 
 getFareFromArray :: Array FareBreakupAPIEntity -> String -> Int
-getFareFromArray fareBreakUp fareType = (fromMaybe dummyFareBreakUp (head (filter (\fare -> fare^._description == (fareType)) fareBreakUp)))^._amount
+getFareFromArray fareBreakUp fareType = (fromMaybe dummyFareBreakUp (head (filter (\fare -> fare ^. _description == (fareType)) fareBreakUp))) ^. _amount
 
 dummyFareBreakUp :: FareBreakupAPIEntity
-dummyFareBreakUp = FareBreakupAPIEntity{amount: 0,description: ""}
+dummyFareBreakUp = FareBreakupAPIEntity { amount: 0, description: "" }
 
 getMerchantSpecificFilteredFares :: Merchant -> Array String
-getMerchantSpecificFilteredFares merchant = 
-  case merchant of
-    YATRISATHI -> ["EXTRA_DISTANCE_FARE", "TOTAL_FARE", "BASE_DISTANCE_FARE", "NIGHT_SHIFT_CHARGE", "CGST", "PLATFORM_FEE", "FIXED_GOVERNMENT_RATE"]
-    _ -> ["EXTRA_DISTANCE_FARE", "TOTAL_FARE", "BASE_DISTANCE_FARE", "CGST", "NIGHT_SHIFT_CHARGE"]
+getMerchantSpecificFilteredFares merchant = case merchant of
+  YATRISATHI -> [ "EXTRA_DISTANCE_FARE", "TOTAL_FARE", "BASE_DISTANCE_FARE", "NIGHT_SHIFT_CHARGE", "CGST", "PLATFORM_FEE", "FIXED_GOVERNMENT_RATE" ]
+  _ -> [ "EXTRA_DISTANCE_FARE", "TOTAL_FARE", "BASE_DISTANCE_FARE", "CGST", "NIGHT_SHIFT_CHARGE" ]
 
 getFilteredFares :: Array FareBreakupAPIEntity -> Array FareBreakupAPIEntity
-getFilteredFares = filter (\(FareBreakupAPIEntity item) -> (all (_ /=  item.description) (getMerchantSpecificFilteredFares (getMerchant FunctionCall))))--["EXTRA_DISTANCE_FARE", "TOTAL_FARE", "BASE_DISTANCE_FARE", "CGST", "NIGHT_SHIFT_CHARGE"]) )
+getFilteredFares = filter (\(FareBreakupAPIEntity item) -> (all (_ /= item.description) (getMerchantSpecificFilteredFares (getMerchant FunctionCall)))) --["EXTRA_DISTANCE_FARE", "TOTAL_FARE", "BASE_DISTANCE_FARE", "CGST", "NIGHT_SHIFT_CHARGE"]) )
 
 getKmMeter :: Int -> String
-getKmMeter distance = if (distance < 1000) then toStringJSON distance <> " m" else (parseFloat ((toNumber distance)/ 1000.0)) 2 <> " km"
+getKmMeter distance = if (distance < 1000) then toStringJSON distance <> " m" else (parseFloat ((toNumber distance) / 1000.0)) 2 <> " km"
 
 -- Info ::
 -- Vehicle Variants for yatri sathi are SEDAN_TAXI (SEDAN , SUV, HATCHBACK) and NON_AC_TAXI (TAXI)
 fetchVehicleVariant :: String -> Maybe ST.VehicleVariant
-fetchVehicleVariant variant = case variant of 
-                                "SUV" -> Just ST.SUV
-                                "SEDAN" -> Just ST.SEDAN
-                                "HATCHBACK" -> Just ST.HATCHBACK
-                                "AUTO_RICKSHAW" -> Just ST.AUTO_RICKSHAW
-                                "TAXI" -> Just ST.TAXI 
-                                "TAXI_PLUS" -> Just ST.TAXI_PLUS
-                                _ -> Nothing
+fetchVehicleVariant variant = case variant of
+  "SUV" -> Just ST.SUV
+  "SEDAN" -> Just ST.SEDAN
+  "HATCHBACK" -> Just ST.HATCHBACK
+  "AUTO_RICKSHAW" -> Just ST.AUTO_RICKSHAW
+  "TAXI" -> Just ST.TAXI
+  "TAXI_PLUS" -> Just ST.TAXI_PLUS
+  _ -> Nothing
 
-getVehicleCapacity :: String -> String 
+getVehicleCapacity :: String -> String
 getVehicleCapacity variant = case getMerchant FunctionCall of
   YATRISATHI -> case fetchVehicleVariant variant of
-          Just ST.TAXI -> getString ECONOMICAL <> " · " <>  "4 " <> getString PEOPLE
-          Just ST.SUV  -> getString SPACIOUS <> " · " <> "6 " <> getString PEOPLE
-          _            -> getString COMFY <> " · " <> "4 " <> getString PEOPLE
+    Just ST.TAXI -> getString ECONOMICAL <> " · " <> "4 " <> getString PEOPLE
+    Just ST.SUV -> getString SPACIOUS <> " · " <> "6 " <> getString PEOPLE
+    _ -> getString COMFY <> " · " <> "4 " <> getString PEOPLE
   YATRI -> case fetchVehicleVariant variant of
-          Just ST.SUV -> "6 " <> (getString SEATS)
-          Just ST.AUTO_RICKSHAW -> "3 " <> (getString SEATS)
-          _ -> "4 " <> (getString SEATS)
-  _ ->    ""
+    Just ST.SUV -> "6 " <> (getString SEATS)
+    Just ST.AUTO_RICKSHAW -> "3 " <> (getString SEATS)
+    _ -> "4 " <> (getString SEATS)
+  _ -> ""
 
-getDisabilityType :: String -> Array ST.DisabilityT -> ST.DisabilityT 
-getDisabilityType disType disList = (fromMaybe dummyDisabilityList (head (filter(\item -> item.tag == disType) disList)))
+getDisabilityType :: String -> Array ST.DisabilityT -> ST.DisabilityT
+getDisabilityType disType disList = (fromMaybe dummyDisabilityList (head (filter (\item -> item.tag == disType) disList)))
 
 dummyDisabilityList :: ST.DisabilityT
-dummyDisabilityList ={
-  tag : "OTHER",
-  id : "8a365d73-b81e-6b21-962b-b1397aa687e0",
-  description : "Other"
-}
+dummyDisabilityList =
+  { tag: "OTHER"
+  , id: "8a365d73-b81e-6b21-962b-b1397aa687e0"
+  , description: "Other"
+  }
 
-areaCodeRegex :: String 
+areaCodeRegex :: String
 areaCodeRegex = "\\b\\d{6}\\b"
 
 ticketPlaceId :: String

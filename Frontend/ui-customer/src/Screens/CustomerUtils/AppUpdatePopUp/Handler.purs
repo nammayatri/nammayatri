@@ -12,14 +12,13 @@
 
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
 module Screens.AppUpdatePopUp.Handler where
 
 import Prelude (bind, pure, ($), (<$>))
 import Presto.Core.Types.Language.Flow (doAff)
 import Screens.AppUpdatePopUp.Controller as CD
 import Screens.AppUpdatePopUp.View as AppUpdatePopUpScreen
-import PrestoDOM.Core.Types.Language.Flow(runScreenWithNameSpace, initUIWithNameSpace)
+import PrestoDOM.Core.Types.Language.Flow (runScreenWithNameSpace, initUIWithNameSpace)
 import Types.App (FlowBT, GlobalState(..), APP_UPDATE_POPUP(..))
 import Control.Monad.Except.Trans (lift)
 import Effect.Class (liftEffect)
@@ -30,11 +29,11 @@ import PrestoDOM.Core (terminateUI)
 import Presto.Core.Types.Language.Flow (getLogFields)
 
 handleAppUpdatePopUp :: FlowBT String APP_UPDATE_POPUP
-handleAppUpdatePopUp  = do
+handleAppUpdatePopUp = do
   (GlobalState state) ← getState
-  logField_ <-lift $ lift $ getLogFields
-  _ <- lift $ lift $ doAff $ liftEffect $ initUIWithNameSpace "AppUpdatePopUpScreen" Nothing 
-  act <- lift $ lift $ runScreenWithNameSpace ( AppUpdatePopUpScreen.screen state.appUpdatePopUpScreen{logField = logField_})
+  logField_ <- lift $ lift $ getLogFields
+  _ <- lift $ lift $ doAff $ liftEffect $ initUIWithNameSpace "AppUpdatePopUpScreen" Nothing
+  act <- lift $ lift $ runScreenWithNameSpace (AppUpdatePopUpScreen.screen state.appUpdatePopUpScreen { logField = logField_ })
   _ <- lift $ lift $ doAff $ liftEffect $ terminateUI $ Just "AppUpdatePopUpScreen"
   case act of
     CD.Accept -> App.BackT $ App.NoBack <$> pure UpdateNow

@@ -12,11 +12,10 @@
  
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
 module Components.LocationTagBar.View where
 
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), Accessiblity(..),PrestoDOM, accessibilityHint, color, cornerRadius, ellipsize, fontStyle, gravity, height, imageUrl, imageView, lineHeight, linearLayout, margin, onClick, orientation, padding, stroke, text, textSize, textView, weight, width, background, imageWithFallback, singleLine, accessibility)
-import Components.LocationTagBar.Controller(Action(..))
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), Accessiblity(..), PrestoDOM, accessibilityHint, color, cornerRadius, ellipsize, fontStyle, gravity, height, imageUrl, imageView, lineHeight, linearLayout, margin, onClick, orientation, padding, stroke, text, textSize, textView, weight, width, background, imageWithFallback, singleLine, accessibility)
+import Components.LocationTagBar.Controller (Action(..))
 import Data.Array (mapWithIndex, filter, findIndex, (!!), null)
 import Effect (Effect)
 import Font.Size as FontSize
@@ -27,73 +26,87 @@ import Screens.Types (LocationTagBarState, CardType(..), LocationListItemState)
 import Language.Strings (getString)
 import Data.Maybe (Maybe(..))
 import Language.Types (STR(..))
-import Engineering.Helpers.Commons(os, screenWidth)
+import Engineering.Helpers.Commons (os, screenWidth)
 import Common.Types.App
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import ConfigProvider
 
-view :: forall w. (Action -> Effect Unit) -> LocationTagBarState -> PrestoDOM ( Effect Unit ) w
-view push state = 
-  let config = (getAppConfig appConfig).locationTagBar
+view :: forall w. (Action -> Effect Unit) -> LocationTagBarState -> PrestoDOM (Effect Unit) w
+view push state =
+  let
+    config = (getAppConfig appConfig).locationTagBar
   in
- linearLayout
- [ width MATCH_PARENT
- , height WRAP_CONTENT
- , orientation VERTICAL
- , gravity CENTER 
- ][ linearLayout
-    [ width $ V (screenWidth unit - 32)
-    , height WRAP_CONTENT 
-    ](mapWithIndex (\index item -> 
-        linearLayout
-        [ height WRAP_CONTENT
-        , stroke $ config.stroke
-        , gravity CENTER
-        , weight 1.0
-        , background Color.white900
-        , padding $ Padding 6 8 6 8
-        , margin $ MarginRight if index == 2 then 0 else 8
-        , onClick push $ const $ TagClick item (getSavedLocationByTag state item)
-        , cornerRadius config.cornerRadius
-        ][ imageView
-            [ width $ V 15
-            , height $ V 17
-            , imageWithFallback $ fetchImage FF_ASSET $  case item of
-                        HOME_TAG -> if (getSavedLocationByTag state item) == Nothing then "ny_ic_add_address" else "ny_ic_home_blue"
-                        WORK_TAG -> if  (getSavedLocationByTag state item) == Nothing then "ny_ic_add_address" else "ny_ic_work_blue"
-                        _      -> "ny_ic_fav_red"
-            ]
-          , textView $
-            [ height WRAP_CONTENT
-            , width WRAP_CONTENT
-            , margin $ MarginLeft 8
-            , singleLine true
-            , color config.textColor
-            , gravity CENTER_VERTICAL
-            , lineHeight "18"
-            , padding $ PaddingBottom 1
-            , ellipsize true
-            , accessibility ENABLE
-            , accessibilityHint ((case item of
-                    WORK_TAG -> if (getSavedLocationByTag state item) == Nothing then "Add Work" else "Select to Book a ride to Work"
-                    HOME_TAG -> if  (getSavedLocationByTag state item) == Nothing then "Add Home" else "Select to book a ride to Home"
-                    _        -> "Select to show all added favourites") <> " : Button")
-            , text case item of
-                    WORK_TAG -> getString WORK
-                    HOME_TAG -> getString HOME
-                    _        -> getString ALL_FAVOURITES
-            ] <> FontStyle.body2 LanguageStyle
-            ]) [HOME_TAG, WORK_TAG, OTHER_TAG] )
-    ]
+    linearLayout
+      [ width MATCH_PARENT
+      , height WRAP_CONTENT
+      , orientation VERTICAL
+      , gravity CENTER
+      ]
+      [ linearLayout
+          [ width $ V (screenWidth unit - 32)
+          , height WRAP_CONTENT
+          ]
+          ( mapWithIndex
+              ( \index item ->
+                  linearLayout
+                    [ height WRAP_CONTENT
+                    , stroke $ config.stroke
+                    , gravity CENTER
+                    , weight 1.0
+                    , background Color.white900
+                    , padding $ Padding 6 8 6 8
+                    , margin $ MarginRight if index == 2 then 0 else 8
+                    , onClick push $ const $ TagClick item (getSavedLocationByTag state item)
+                    , cornerRadius config.cornerRadius
+                    ]
+                    [ imageView
+                        [ width $ V 15
+                        , height $ V 17
+                        , imageWithFallback $ fetchImage FF_ASSET
+                            $ case item of
+                                HOME_TAG -> if (getSavedLocationByTag state item) == Nothing then "ny_ic_add_address" else "ny_ic_home_blue"
+                                WORK_TAG -> if (getSavedLocationByTag state item) == Nothing then "ny_ic_add_address" else "ny_ic_work_blue"
+                                _ -> "ny_ic_fav_red"
+                        ]
+                    , textView
+                        $ [ height WRAP_CONTENT
+                          , width WRAP_CONTENT
+                          , margin $ MarginLeft 8
+                          , singleLine true
+                          , color config.textColor
+                          , gravity CENTER_VERTICAL
+                          , lineHeight "18"
+                          , padding $ PaddingBottom 1
+                          , ellipsize true
+                          , accessibility ENABLE
+                          , accessibilityHint
+                              ( ( case item of
+                                    WORK_TAG -> if (getSavedLocationByTag state item) == Nothing then "Add Work" else "Select to Book a ride to Work"
+                                    HOME_TAG -> if (getSavedLocationByTag state item) == Nothing then "Add Home" else "Select to book a ride to Home"
+                                    _ -> "Select to show all added favourites"
+                                )
+                                  <> " : Button"
+                              )
+                          , text case item of
+                              WORK_TAG -> getString WORK
+                              HOME_TAG -> getString HOME
+                              _ -> getString ALL_FAVOURITES
+                          ]
+                        <> FontStyle.body2 LanguageStyle
+                    ]
+              )
+              [ HOME_TAG, WORK_TAG, OTHER_TAG ]
+          )
+      ]
 
 getSavedLocationByTag :: LocationTagBarState -> CardType -> Maybe LocationListItemState
-getSavedLocationByTag state tag = do 
+getSavedLocationByTag state tag = do
   case (findIndex (\item -> item.tag == (getCard tag)) state.savedLocations) of
     Just index -> state.savedLocations !! index
-    _          -> Nothing
+    _ -> Nothing
 
-getCard :: CardType -> String 
-getCard cardType = case cardType of 
+getCard :: CardType -> String
+getCard cardType = case cardType of
   HOME_TAG -> "Home"
   WORK_TAG -> "Work"
   _ -> ""

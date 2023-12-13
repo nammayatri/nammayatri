@@ -12,43 +12,41 @@
 
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
-
 module Components.GoToLocationModal.Controller where
-
 
 import Data.Maybe (Maybe(..))
 
-data Action = EditLocation GoToModalConfig
-            | DeleteLocation GoToModalConfig
-            | CardClicked GoToModalConfig
-            | NoAction 
+data Action
+  = EditLocation GoToModalConfig
+  | DeleteLocation GoToModalConfig
+  | CardClicked GoToModalConfig
+  | NoAction
 
-type GoToModalConfig = {
-  id :: String,
-  lat :: Number,
-  lon :: Number,
-  address :: String,
-  tag :: String,
-  isSelectable :: Boolean,
-  isEditEnabled :: Boolean,
-  isSelected :: Boolean,
-  removeAcText :: Maybe String,
-  editAcText :: Maybe String,
-  disabled :: Boolean
-}
+type GoToModalConfig
+  = { id :: String
+    , lat :: Number
+    , lon :: Number
+    , address :: String
+    , tag :: String
+    , isSelectable :: Boolean
+    , isEditEnabled :: Boolean
+    , isSelected :: Boolean
+    , removeAcText :: Maybe String
+    , editAcText :: Maybe String
+    , disabled :: Boolean
+    }
 
 config :: GoToModalConfig
-config = {
-  id : "",
-  lat : 0.0,
-  lon : 0.0,
-  address : "",
-  tag : "",
-  isSelectable : false,
-  isEditEnabled : false,
-  isSelected : false,
-  removeAcText : Nothing,
-  editAcText : Nothing,
-  disabled : false
-}
+config =
+  { id: ""
+  , lat: 0.0
+  , lon: 0.0
+  , address: ""
+  , tag: ""
+  , isSelectable: false
+  , isEditEnabled: false
+  , isSelected: false
+  , removeAcText: Nothing
+  , editAcText: Nothing
+  , disabled: false
+  }

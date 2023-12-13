@@ -12,10 +12,10 @@
  
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
 module Components.LocationTagBar.Controller where
 
 import Screens.Types (CardType, LocationListItemState)
 import Data.Maybe (Maybe(..))
 
-data Action = TagClick CardType (Maybe LocationListItemState)
+data Action
+  = TagClick CardType (Maybe LocationListItemState)

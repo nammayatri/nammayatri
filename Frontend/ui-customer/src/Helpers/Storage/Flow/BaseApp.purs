@@ -12,7 +12,6 @@
 
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
 module Helpers.Storage.Flow.BaseApp where
 
 import Prelude
@@ -31,31 +30,35 @@ import Types.App (FlowBT)
 
 baseAppStorage :: FlowBT String Unit
 baseAppStorage = do
-    let bundle = getVersionByKey "app"
-        config = getVersionByKey "configuration"
-        sessionId = getValueToLocalStore SESSION_ID
-        countryCode = getValueToLocalStore COUNTRY_CODE
-    void $ pure $ saveSuggestions "SUGGESTIONS" (getSuggestions "")
-    void $ pure $ saveSuggestionDefs "SUGGESTIONS_DEFINITIONS" (suggestionsDefinitions "")
-    versionCode <- lift $ lift $ liftFlow $ getVersionCode
-    versionName <- lift $ lift $ liftFlow $ getVersionName
-    setValueToLocalStore VERSION_NAME $ joinWith "." $ take 3 $ split (Pattern ".") versionName
-    setValueToLocalStore BUNDLE_VERSION bundle
-    setValueToLocalStore CONFIG_VERSION config
-    setValueToLocalNativeStore BUNDLE_VERSION bundle
-    setValueToLocalStore TRACKING_ENABLED "True"
-    setValueToLocalStore RELOAD_SAVED_LOCATION "true"
-    setValueToLocalStore TEST_MINIMUM_POLLING_COUNT if (flowWithoutOffers WithoutOffers) then "4" else "17"
-    setValueToLocalStore TEST_POLLING_INTERVAL if (flowWithoutOffers WithoutOffers) then "8000.0" else "1500.0"
-    setValueToLocalStore TEST_POLLING_COUNT if (flowWithoutOffers WithoutOffers) then "22" else "117"
-    setValueToLocalStore BASE_URL (getBaseUrl "dummy")
-    setValueToLocalStore RATING_SKIPPED "false"
-    setValueToLocalStore POINTS_FACTOR "3"
-    setValueToLocalStore TRACKING_DRIVER "False"
-    setValueToLocalStore ACCURACY_THRESHOLD "23.0"
-    setValueToLocalStore BUNDLE_TIME_OUT "1000"
-    setValueToLocalStore MESSAGES_DELAY "0"
-    when (sessionId `elem` ["__failed", "(null)"]) do
-        setValueToLocalStore SESSION_ID $ generateSessionId unit
-    when (countryCode `elem` ["__failed", "(null)"]) do
-        setValueToLocalStore COUNTRY_CODE "+91"
+  let
+    bundle = getVersionByKey "app"
+
+    config = getVersionByKey "configuration"
+
+    sessionId = getValueToLocalStore SESSION_ID
+
+    countryCode = getValueToLocalStore COUNTRY_CODE
+  void $ pure $ saveSuggestions "SUGGESTIONS" (getSuggestions "")
+  void $ pure $ saveSuggestionDefs "SUGGESTIONS_DEFINITIONS" (suggestionsDefinitions "")
+  versionCode <- lift $ lift $ liftFlow $ getVersionCode
+  versionName <- lift $ lift $ liftFlow $ getVersionName
+  setValueToLocalStore VERSION_NAME $ joinWith "." $ take 3 $ split (Pattern ".") versionName
+  setValueToLocalStore BUNDLE_VERSION bundle
+  setValueToLocalStore CONFIG_VERSION config
+  setValueToLocalNativeStore BUNDLE_VERSION bundle
+  setValueToLocalStore TRACKING_ENABLED "True"
+  setValueToLocalStore RELOAD_SAVED_LOCATION "true"
+  setValueToLocalStore TEST_MINIMUM_POLLING_COUNT if (flowWithoutOffers WithoutOffers) then "4" else "17"
+  setValueToLocalStore TEST_POLLING_INTERVAL if (flowWithoutOffers WithoutOffers) then "8000.0" else "1500.0"
+  setValueToLocalStore TEST_POLLING_COUNT if (flowWithoutOffers WithoutOffers) then "22" else "117"
+  setValueToLocalStore BASE_URL (getBaseUrl "dummy")
+  setValueToLocalStore RATING_SKIPPED "false"
+  setValueToLocalStore POINTS_FACTOR "3"
+  setValueToLocalStore TRACKING_DRIVER "False"
+  setValueToLocalStore ACCURACY_THRESHOLD "23.0"
+  setValueToLocalStore BUNDLE_TIME_OUT "1000"
+  setValueToLocalStore MESSAGES_DELAY "0"
+  when (sessionId `elem` [ "__failed", "(null)" ]) do
+    setValueToLocalStore SESSION_ID $ generateSessionId unit
+  when (countryCode `elem` [ "__failed", "(null)" ]) do
+    setValueToLocalStore COUNTRY_CODE "+91"

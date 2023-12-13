@@ -12,8 +12,7 @@
 
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
-module Components.GoToLocationModal  (module Reexport) where
+module Components.GoToLocationModal (module Reexport) where
 
 import Components.GoToLocationModal.View as Reexport
 import Components.GoToLocationModal.Controller as Reexport

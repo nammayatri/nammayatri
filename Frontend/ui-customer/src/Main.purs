@@ -38,18 +38,20 @@ import Prelude (Unit, bind, pure, show, unit, void, ($), (<$>), (<<<), discard)
 import Presto.Core.Types.Language.Flow (throwErr)
 import PrestoDOM.Core (processEvent) as PrestoDom
 import Types.App (defaultGlobalState, FlowBT, ScreenType(..))
-import Screens.Types(PermissionScreenStage(..))
+import Screens.Types (PermissionScreenStage(..))
 import AssetsProvider (fetchAssets)
 
 main :: Event -> Effect Unit
 main event = do
-  payload  ::  Either MultipleErrors GlobalPayload  <- runExcept <<< decode <<< fromMaybe (unsafeToForeign {}) <$> (liftEffect $ getWindowVariable "__payload" Just Nothing)
+  payload :: Either MultipleErrors GlobalPayload <- runExcept <<< decode <<< fromMaybe (unsafeToForeign {}) <$> (liftEffect $ getWindowVariable "__payload" Just Nothing)
   case payload of
-    Right payload'  -> do
-      mainFiber <- launchAff $ flowRunner defaultGlobalState $ do
-          _ <- runExceptT $ runBackT $ updateEventData event
-          resp ← runExceptT $ runBackT $ Flow.baseAppFlow payload' true
-          case resp of
+    Right payload' -> do
+      mainFiber <-
+        launchAff $ flowRunner defaultGlobalState
+          $ do
+              _ <- runExceptT $ runBackT $ updateEventData event
+              resp ← runExceptT $ runBackT $ Flow.baseAppFlow payload' true
+              case resp of
                 Right x → pure unit
                 Left err → do
                   _ <- pure $ printLog "printLog error in main is : " err
@@ -59,55 +61,68 @@ main event = do
       JBridge.storeMainFiberOb mainFiber
       pure unit
     Left e -> do
-        _ <- launchAff $ flowRunner defaultGlobalState $ do
-            throwErr $ show e
-        pure unit
+      _ <-
+        launchAff $ flowRunner defaultGlobalState
+          $ do
+              throwErr $ show e
+      pure unit
 
 onEvent :: String -> Effect Unit
 onEvent event = do
   _ <- pure $ JBridge.toggleBtnLoader "" false
-  case event of 
+  case event of
     "onBackPressed" -> do
       PrestoDom.processEvent "onBackPressedEvent" unit
     _ -> pure unit
 
 onConnectivityEvent :: String -> Effect Unit
 onConnectivityEvent triggertype = do
-  payload  ::  Either MultipleErrors GlobalPayload  <- runExcept <<< decode <<< fromMaybe (unsafeToForeign {}) <$> (liftEffect $ getWindowVariable "__payload" Just Nothing)
+  payload :: Either MultipleErrors GlobalPayload <- runExcept <<< decode <<< fromMaybe (unsafeToForeign {}) <$> (liftEffect $ getWindowVariable "__payload" Just Nothing)
   case payload of
-    Right payload'  -> do
-        mainFiber <- launchAff $ flowRunner defaultGlobalState $ do
-          _  <- case (runFn2 JBridge.getMainFiber Just Nothing) of
-            Nothing -> pure unit
-            Just fiber -> liftFlow $ launchAff_ $ killFiber (error "error in killing fiber") fiber
-          _ ← runExceptT $ runBackT do 
-              case triggertype of 
-                "LOCATION_DISABLED" -> do 
-                  modifyScreenState $ PermissionScreenStateType (\permissionScreen -> permissionScreen {stage = LOCATION_DISABLED})
-                  Flow.permissionScreenFlow
-                "INTERNET_ACTION" -> do 
-                  modifyScreenState $ PermissionScreenStateType (\permissionScreen -> permissionScreen {stage = INTERNET_ACTION})
-                  Flow.permissionScreenFlow
-                "REFRESH" -> Flow.baseAppFlow payload' false
-                _ -> Flow.baseAppFlow payload' false
-          pure unit
-        JBridge.storeMainFiberOb mainFiber
-        pure unit
+    Right payload' -> do
+      mainFiber <-
+        launchAff $ flowRunner defaultGlobalState
+          $ do
+              _ <- case (runFn2 JBridge.getMainFiber Just Nothing) of
+                Nothing -> pure unit
+                Just fiber -> liftFlow $ launchAff_ $ killFiber (error "error in killing fiber") fiber
+              _ ←
+                runExceptT
+                  $ runBackT do
+                      case triggertype of
+                        "LOCATION_DISABLED" -> do
+                          modifyScreenState $ PermissionScreenStateType (\permissionScreen -> permissionScreen { stage = LOCATION_DISABLED })
+                          Flow.permissionScreenFlow
+                        "INTERNET_ACTION" -> do
+                          modifyScreenState $ PermissionScreenStateType (\permissionScreen -> permissionScreen { stage = INTERNET_ACTION })
+                          Flow.permissionScreenFlow
+                        "REFRESH" -> Flow.baseAppFlow payload' false
+                        _ -> Flow.baseAppFlow payload' false
+              pure unit
+      JBridge.storeMainFiberOb mainFiber
+      pure unit
     Left e -> do
-        _ <- launchAff $ flowRunner defaultGlobalState $ do
-          throwErr $ show e
-        pure unit        
-updateEventData :: Event -> FlowBT String Unit 
+      _ <-
+        launchAff $ flowRunner defaultGlobalState
+          $ do
+              throwErr $ show e
+      pure unit
+
+updateEventData :: Event -> FlowBT String Unit
 updateEventData event = do
-    case event.type of
-      "CHAT_MESSAGE" -> do
-        modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{ props{ openChatScreen = true } })
-      _ -> pure unit            
+  case event.type of
+    "CHAT_MESSAGE" -> do
+      modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props { openChatScreen = true } })
+    _ -> pure unit
 
 onBundleUpdatedEvent :: FCMBundleUpdate -> Effect Unit
-onBundleUpdatedEvent description= do 
-  _ <- launchAff $ flowRunner defaultGlobalState $ do
-    _ ← runExceptT $ runBackT $ do
-      appUpdatedFlow description
-    pure unit
+onBundleUpdatedEvent description = do
+  _ <-
+    launchAff $ flowRunner defaultGlobalState
+      $ do
+          _ ←
+            runExceptT $ runBackT
+              $ do
+                  appUpdatedFlow description
+          pure unit
   pure unit

@@ -12,7 +12,6 @@
 
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
 module Services.Config where
 
 import Prelude (class Eq, (==), (||))
@@ -26,89 +25,107 @@ foreign import environment :: String -> String
 
 foreign import getMerchant :: String -> String
 
-data Env = LOCAL | DEV | UAT | PROD
-derive instance genericEnv :: Generic Env _
-instance eqEnv :: Eq Env where eq = genericEq
+data Env
+  = LOCAL
+  | DEV
+  | UAT
+  | PROD
 
-newtype Config = Config
+derive instance genericEnv :: Generic Env _
+
+instance eqEnv :: Eq Env where
+  eq = genericEq
+
+newtype Config
+  = Config
   { baseUrl :: String
   , fingerprint :: String
   }
 
 getEnv :: Env
 getEnv = case spy "Selected Environment :- " (environment "") of
-  "local"       -> LOCAL
-  "master"      -> DEV
-  "sandbox"     -> UAT
-  "prod"        -> PROD
-  _             -> PROD
+  "local" -> LOCAL
+  "master" -> DEV
+  "sandbox" -> UAT
+  "prod" -> PROD
+  _ -> PROD
 
-getMerchantId :: String ->  String
+getMerchantId :: String -> String
 getMerchantId dummy = "NA"
 
 getConfig :: Config
 getConfig = do
   case getEnv of
-    LOCAL -> Config
+    LOCAL ->
+      Config
         { baseUrl: ""
-        , fingerprint : ""
+        , fingerprint: ""
         }
-    DEV  -> Config
+    DEV ->
+      Config
         { baseUrl: getValueToLocalNativeStoreConfig "BASE_URL"
-        , fingerprint : ""
+        , fingerprint: ""
         }
-    UAT  -> Config
+    UAT ->
+      Config
         { baseUrl: getValueToLocalNativeStoreConfig "BASE_URL"
-        , fingerprint : ""
+        , fingerprint: ""
         }
-    PROD -> Config
+    PROD ->
+      Config
         { baseUrl: getValueToLocalNativeStoreConfig "BASE_URL"
-        , fingerprint : ""
+        , fingerprint: ""
         }
 
 getEndpoint :: String -> String
 getEndpoint dummy = do
   if ((getKeyInSharedPrefKeysConfig "MOBILE_NUMBER_KEY") == "" || (getKeyInSharedPrefKeysConfig "MOBILE_NUMBER_KEY") == "") then
     ""
-    else
-      let Config config = getConfig
-      in config.baseUrl
+  else
+    let
+      Config config = getConfig
+    in
+      config.baseUrl
 
 getBaseUrl :: String -> String
 getBaseUrl dummy = do
-  let a = printLog "dummy" dummy
+  let
+    a = printLog "dummy" dummy
   if ((getKeyInSharedPrefKeysConfig "MOBILE_NUMBER_KEY") == "" || (getKeyInSharedPrefKeysConfig "MOBILE_NUMBER_KEY") == "") then
     ""
-    else
-      let Config config = getConfig
-      in (config.baseUrl)
+  else
+    let
+      Config config = getConfig
+    in
+      (config.baseUrl)
 
 getFingerPrint :: String -> String
 getFingerPrint dummy = do
   if ((getKeyInSharedPrefKeysConfig "MOBILE_NUMBER_KEY") == "" || (getKeyInSharedPrefKeysConfig "MOBILE_NUMBER_KEY") == "") then
     ""
-    else
-      let Config config = getConfig
-      in config.fingerprint
+  else
+    let
+      Config config = getConfig
+    in
+      config.fingerprint
 
 getCustomerNumber :: String -> String
 getCustomerNumber _ = case getEnv of
-                        DEV  -> ""
-                        UAT  -> ""
-                        PROD -> ""
-                        _    -> ""
+  DEV -> ""
+  UAT -> ""
+  PROD -> ""
+  _ -> ""
 
 getSupportNumber :: String -> String
 getSupportNumber _ = case getEnv of
-                        DEV  -> ""
-                        UAT  -> ""
-                        PROD -> ""
-                        _ -> ""
+  DEV -> ""
+  UAT -> ""
+  PROD -> ""
+  _ -> ""
 
 getWhatsAppSupportNo :: String -> String
 getWhatsAppSupportNo _ = case getEnv of
-                        DEV  -> ""
-                        UAT  -> ""
-                        PROD -> ""
-                        _ -> ""
-                  
+  DEV -> ""
+  UAT -> ""
+  PROD -> ""
+  _ -> ""

@@ -2,313 +2,315 @@ module MerchantConfig.Types where
 
 import Common.Types.Config
 
-type AppConfig = AppConfigCustomer CommonAppConfig
+type AppConfig
+  = AppConfigCustomer CommonAppConfig
 
-type AppConfigCustomer a =
-  {
-    primaryTextColor :: String,
-    primaryBackground :: String,
-    estimateConfirmText :: String,
-    autoConfirmingLoaderColor :: String,
-    quoteListModelBackground :: String,
-    quoteListModel :: QuoteListConfig,
-    profileBackground :: String,
-    showPickUpandDrop :: Boolean,
-    profileName :: String,
-    profileImage :: String,
-    profileCompletion :: String,
-    profileArrowImage :: String,
-    showProfileStatus :: Boolean,
-    feedbackBackground :: String,
-    sideBarList :: Array String,
-    rateCardColor :: String,
-    showHamMenu :: Boolean,
-    showQuoteFindingText :: Boolean,
-    nyBrandingVisibility :: Boolean,
-    fontType :: String,
-    languageList :: Array Language,
-    confirmPickUpLocationBorder ::String,
-    bannerConfig :: BannerViewState,
-    popupBackground :: String,
-    cancelRideColor :: String,
-    infoIconUrl :: String,
-    profileEditGravity :: String,
-    merchantLogo :: String,
-    logs :: Array String,
-    searchLocationConfig :: SearchLocationConfig,
-    quoteListItemConfig :: QuoteListItemConfig,
-    alertDialogPrimaryColor :: String,
-    driverInfoConfig :: DriverInfoConfig,
-    ratingConfig :: RatingConfig,
-    primaryButtonCornerRadius :: Number,
-    cancelSearchTextColor :: String,
-    cancelReasonConfig :: CancelReasonConfig,
-    terminateBtnConfig :: TerminateBtnConfig,
-    suggestedTripsAndLocationConfig  :: SuggestedDestinationAndTripsConfig,
-    showDeleteAccount :: Boolean
-  , autoSelectBackground :: String
-  , showGenderBanner :: Boolean
-  , enableMockLocation :: Boolean
-  , specialLocationView :: Boolean
-  , callOptions :: Array String
-  , autoVariantEnabled :: Boolean
-  , showDisabilityBanner :: Boolean
-  , mapConfig :: MapConfig
-  , enableWhatsappOTP :: Array String
-  , notifyRideConfirmationConfig :: NotifyRideConfirmationConfig
-  , estimateAndQuoteConfig :: EstimateAndQuoteConfig
-  , customerTip :: CustomerTip
-  , feature :: Features
-  , rideCompletedCardConfig :: RideCompletedCardConfig
-  , purpleRideConfig :: PurpleRideConfig
-  , geoCoder :: GeoCoderConfig
-  , shareAppConfig :: ShareAppConfig
-  , homeScreen :: HomeScreen
-  , locationTagBar :: LocationTagBarConfig
-  | a
-  }
+type AppConfigCustomer a
+  = { primaryTextColor :: String
+    , primaryBackground :: String
+    , estimateConfirmText :: String
+    , autoConfirmingLoaderColor :: String
+    , quoteListModelBackground :: String
+    , quoteListModel :: QuoteListConfig
+    , profileBackground :: String
+    , showPickUpandDrop :: Boolean
+    , profileName :: String
+    , profileImage :: String
+    , profileCompletion :: String
+    , profileArrowImage :: String
+    , showProfileStatus :: Boolean
+    , feedbackBackground :: String
+    , sideBarList :: Array String
+    , rateCardColor :: String
+    , showHamMenu :: Boolean
+    , showQuoteFindingText :: Boolean
+    , nyBrandingVisibility :: Boolean
+    , fontType :: String
+    , languageList :: Array Language
+    , confirmPickUpLocationBorder :: String
+    , bannerConfig :: BannerViewState
+    , popupBackground :: String
+    , cancelRideColor :: String
+    , infoIconUrl :: String
+    , profileEditGravity :: String
+    , merchantLogo :: String
+    , logs :: Array String
+    , searchLocationConfig :: SearchLocationConfig
+    , quoteListItemConfig :: QuoteListItemConfig
+    , alertDialogPrimaryColor :: String
+    , driverInfoConfig :: DriverInfoConfig
+    , ratingConfig :: RatingConfig
+    , primaryButtonCornerRadius :: Number
+    , cancelSearchTextColor :: String
+    , cancelReasonConfig :: CancelReasonConfig
+    , terminateBtnConfig :: TerminateBtnConfig
+    , suggestedTripsAndLocationConfig :: SuggestedDestinationAndTripsConfig
+    , showDeleteAccount :: Boolean
+    , autoSelectBackground :: String
+    , showGenderBanner :: Boolean
+    , enableMockLocation :: Boolean
+    , specialLocationView :: Boolean
+    , callOptions :: Array String
+    , autoVariantEnabled :: Boolean
+    , showDisabilityBanner :: Boolean
+    , mapConfig :: MapConfig
+    , enableWhatsappOTP :: Array String
+    , notifyRideConfirmationConfig :: NotifyRideConfirmationConfig
+    , estimateAndQuoteConfig :: EstimateAndQuoteConfig
+    , customerTip :: CustomerTip
+    , feature :: Features
+    , rideCompletedCardConfig :: RideCompletedCardConfig
+    , purpleRideConfig :: PurpleRideConfig
+    , geoCoder :: GeoCoderConfig
+    , shareAppConfig :: ShareAppConfig
+    , homeScreen :: HomeScreen
+    , locationTagBar :: LocationTagBarConfig
+    | a
+    }
 
-type GeoCoderConfig = {
-  enableLLtoAddress :: Boolean,
-  enableAddressToLL :: Boolean
-}
+type GeoCoderConfig
+  = { enableLLtoAddress :: Boolean
+    , enableAddressToLL :: Boolean
+    }
 
-type NotifyRideConfirmationConfig = {
-  notify :: Boolean,
-  autoGeneratedText :: String
-}
+type NotifyRideConfirmationConfig
+  = { notify :: Boolean
+    , autoGeneratedText :: String
+    }
 
-type QuoteListItemConfig = {
-  primaryButtonCorner :: Number,
-  expiresColor :: String,
-  driverImagebg :: String,
-  vehicleHeight :: Int,
-  vehicleWidth :: Int
-}
+type QuoteListItemConfig
+  = { primaryButtonCorner :: Number
+    , expiresColor :: String
+    , driverImagebg :: String
+    , vehicleHeight :: Int
+    , vehicleWidth :: Int
+    }
 
-type RatingConfig = {
-  secondaryButtonTextColor :: String,
-  secondaryButtonStroke :: String,
-  buttonCornerRadius :: Number
-}
+type RatingConfig
+  = { secondaryButtonTextColor :: String
+    , secondaryButtonStroke :: String
+    , buttonCornerRadius :: Number
+    }
 
-type CancelReasonConfig = {
-  secondaryButtonTextColor :: String,
-  secondaryButtonStroke :: String,
-  buttonCornerRadius :: Number
-}
+type CancelReasonConfig
+  = { secondaryButtonTextColor :: String
+    , secondaryButtonStroke :: String
+    , buttonCornerRadius :: Number
+    }
 
-type DriverInfoConfig = {
-  ratingTextColor :: String,
-  ratingBackground :: String,
-  ratingStroke :: String,
-  ratingCornerRadius :: Number,
-  callBackground :: String,
-  showTrackingButton :: Boolean,
-  callButtonStroke :: String,
-  cardStroke :: String,
-  otpStroke :: String,
-  showNumberPlatePrefix :: Boolean,
-  showNumberPlateSuffix :: Boolean,
-  callHeight :: Int,
-  callWidth :: Int
-, numberPlateBackground :: String
-, showCancelPrevention :: Boolean
-, specialZoneQuoteExpirySeconds :: Int
-, footerVisibility :: Boolean
-, footerImageUrl :: String
-, footerBackgroundColor :: String
-}
+type DriverInfoConfig
+  = { ratingTextColor :: String
+    , ratingBackground :: String
+    , ratingStroke :: String
+    , ratingCornerRadius :: Number
+    , callBackground :: String
+    , showTrackingButton :: Boolean
+    , callButtonStroke :: String
+    , cardStroke :: String
+    , otpStroke :: String
+    , showNumberPlatePrefix :: Boolean
+    , showNumberPlateSuffix :: Boolean
+    , callHeight :: Int
+    , callWidth :: Int
+    , numberPlateBackground :: String
+    , showCancelPrevention :: Boolean
+    , specialZoneQuoteExpirySeconds :: Int
+    , footerVisibility :: Boolean
+    , footerImageUrl :: String
+    , footerBackgroundColor :: String
+    }
 
-type SearchLocationConfig = {
-  searchLocationTheme :: String, 
-  setLocationOnMapColor :: String, 
-  strokeColor :: String,
-  enableLocationTagbar :: String,
-  resultsCardCornerRadius :: Number,
-  showRateCardDetails :: Boolean,
-  backgroundColor :: String,
-  separatorColor :: String,
-  editTextColor :: String,
-  showAdditionalChargesText :: Boolean,
-  lottieHeight :: Int,
-  lottieWidth :: Int,
-  primaryButtonHeight :: Int
-, backArrow :: String
-, editTextBackground :: String
-, editTextDefaultColor :: String
-, hintColor :: String
-, showSeparator :: Boolean
-, showChargeDesc :: Boolean
-, enableRateCard :: Boolean
-, clearTextImage :: String
-}
+type SearchLocationConfig
+  = { searchLocationTheme :: String
+    , setLocationOnMapColor :: String
+    , strokeColor :: String
+    , enableLocationTagbar :: String
+    , resultsCardCornerRadius :: Number
+    , showRateCardDetails :: Boolean
+    , backgroundColor :: String
+    , separatorColor :: String
+    , editTextColor :: String
+    , showAdditionalChargesText :: Boolean
+    , lottieHeight :: Int
+    , lottieWidth :: Int
+    , primaryButtonHeight :: Int
+    , backArrow :: String
+    , editTextBackground :: String
+    , editTextDefaultColor :: String
+    , hintColor :: String
+    , showSeparator :: Boolean
+    , showChargeDesc :: Boolean
+    , enableRateCard :: Boolean
+    , clearTextImage :: String
+    }
 
-type QuoteListConfig = {
-  backgroundColor :: String,
-  textColor :: String,
-  loaderColor :: String,
-  otpTextBackground :: String,
-  otpBackground :: String,
-  otpTextColor :: String,
-  otpTitleColor :: String,
-  selectRideTextColor :: String,
-  lineImage :: String,
-  lottieHeight :: Int,
-  lottieWidth :: Int,
-  topMargin :: Int,
-  noQuotesImageHeight :: Int,
-  noQuotesImageWidth :: Int,
-  closeIcon :: String,
-  showSeparator :: Boolean,
-  separatorColor :: String
-}
- 
-type SuggestedDestinationAndTripsConfig = {
-  geohashLimitForMap :: Int,
-  geohashPrecision :: Int,
-  locationsToBeShown :: Int,
-  tripsToBeShown :: Int,
-  locationsToBeStored :: Int,
-  tripsToBeStored :: Int,
-  frequencyWeight :: Number,
-  tripDistanceThreshold :: Number
-}
+type QuoteListConfig
+  = { backgroundColor :: String
+    , textColor :: String
+    , loaderColor :: String
+    , otpTextBackground :: String
+    , otpBackground :: String
+    , otpTextColor :: String
+    , otpTitleColor :: String
+    , selectRideTextColor :: String
+    , lineImage :: String
+    , lottieHeight :: Int
+    , lottieWidth :: Int
+    , topMargin :: Int
+    , noQuotesImageHeight :: Int
+    , noQuotesImageWidth :: Int
+    , closeIcon :: String
+    , showSeparator :: Boolean
+    , separatorColor :: String
+    }
 
-type Language =  {
-  name :: String,
-  value :: String,
-  subTitle :: String
- }
+type SuggestedDestinationAndTripsConfig
+  = { geohashLimitForMap :: Int
+    , geohashPrecision :: Int
+    , locationsToBeShown :: Int
+    , tripsToBeShown :: Int
+    , locationsToBeStored :: Int
+    , tripsToBeStored :: Int
+    , frequencyWeight :: Number
+    , tripDistanceThreshold :: Number
+    }
 
-type BannerViewState = {
-  backgroundColor :: String,
-  title :: String,
-  titleColor :: String,
-  actionText :: String,
-  actionTextColor :: String,
-  imageUrl :: String
-}
-type TerminateBtnConfig = {
-    visibility :: Boolean, 
-    title :: String,
-    imageUrl :: String,
-    backgroundColor :: String
-}
+type Language
+  = { name :: String
+    , value :: String
+    , subTitle :: String
+    }
 
-type EstimateAndQuoteConfig = {
-  variantTypes :: Array (Array String),
-  variantOrder :: Array String,
-  enableOnlyAuto :: Boolean,
-  showNearByDrivers :: Boolean,
-  enableBookingPreference :: Boolean, 
-  textColor :: String
-}
+type BannerViewState
+  = { backgroundColor :: String
+    , title :: String
+    , titleColor :: String
+    , actionText :: String
+    , actionTextColor :: String
+    , imageUrl :: String
+    }
 
-type CustomerTip = {
-  auto :: Boolean,
-  cabs :: Boolean
-}
+type TerminateBtnConfig
+  = { visibility :: Boolean
+    , title :: String
+    , imageUrl :: String
+    , backgroundColor :: String
+    }
 
-type Features = {
-  enableAutoReadOtp :: Boolean ,
-  enableZooTicketBookingFlow :: Boolean,
-  enableLiveDashboard :: Boolean,
-  enableSuggestions :: Boolean,
-  enableShareRide :: Boolean,
-  enableChat :: Boolean,
-  enableEmergencyContacts :: Boolean,
-  enableReferral :: Boolean,
-  enableSupport :: Boolean,
-  enableShareApp:: Boolean
-  }
+type EstimateAndQuoteConfig
+  = { variantTypes :: Array (Array String)
+    , variantOrder :: Array String
+    , enableOnlyAuto :: Boolean
+    , showNearByDrivers :: Boolean
+    , enableBookingPreference :: Boolean
+    , textColor :: String
+    }
 
-type RideCompletedCardConfig = {
-  topCard :: TopCardConfig
-}
+type CustomerTip
+  = { auto :: Boolean
+    , cabs :: Boolean
+    }
 
-type TopCardConfig = {
-  gradient :: String
-, enableGradient :: Boolean
-, background :: String
-, titleColor :: String
-, rideDesctiption :: RideDesctiptionConfig
-}
+type Features
+  = { enableAutoReadOtp :: Boolean
+    , enableZooTicketBookingFlow :: Boolean
+    , enableLiveDashboard :: Boolean
+    , enableSuggestions :: Boolean
+    , enableShareRide :: Boolean
+    , enableChat :: Boolean
+    , enableEmergencyContacts :: Boolean
+    , enableReferral :: Boolean
+    , enableSupport :: Boolean
+    , enableShareApp :: Boolean
+    }
 
-type RideDesctiptionConfig = {
-  background :: String
-, textColor :: String
-}
+type RideCompletedCardConfig
+  = { topCard :: TopCardConfig
+    }
 
-type MapConfig = {
-  locateOnMapConfig :: LocateOnMapConfigs,
-  labelTextSize :: Int,
-  animationDuration :: Int,
-  vehicleMarkerSize :: Int
-}
+type TopCardConfig
+  = { gradient :: String
+    , enableGradient :: Boolean
+    , background :: String
+    , titleColor :: String
+    , rideDesctiption :: RideDesctiptionConfig
+    }
 
-type LocateOnMapConfigs = {
-  dottedLineConfig :: DottedLineConfig
-, apiTriggerRadius :: Number
-, pickUpToSourceThreshold :: Number
-}
+type RideDesctiptionConfig
+  = { background :: String
+    , textColor :: String
+    }
 
-type DottedLineConfig = {
-  visible :: Boolean,
-  range :: Int,
-  color :: String
-}
+type MapConfig
+  = { locateOnMapConfig :: LocateOnMapConfigs
+    , labelTextSize :: Int
+    , animationDuration :: Int
+    , vehicleMarkerSize :: Int
+    }
 
-type PurpleRideConfig = {
-  genericVideoUrl :: String,
-  visualImpairmentVideo :: String,
-  physicalImpairmentVideo :: String,
-  hearingImpairmentVideo :: String
-}
+type LocateOnMapConfigs
+  = { dottedLineConfig :: DottedLineConfig
+    , apiTriggerRadius :: Number
+    , pickUpToSourceThreshold :: Number
+    }
 
-type HomeScreen = {
-  primaryBackground :: String,
-  pickUpViewColor :: String,
-  header :: HomeScreenHeader,
-  bannerViewVisibility :: Boolean,
-  whereToButton :: WhereToButton,
-  pickupLocationTextColor :: String
-}
+type DottedLineConfig
+  = { visible :: Boolean
+    , range :: Int
+    , color :: String
+    }
 
-type HomeScreenHeader = {
-  menuButtonBackground :: String,
-  showLogo :: Boolean,
-  titleColor :: String,
-  showSeparator :: Boolean
-}
+type PurpleRideConfig
+  = { genericVideoUrl :: String
+    , visualImpairmentVideo :: String
+    , physicalImpairmentVideo :: String
+    , hearingImpairmentVideo :: String
+    }
 
-type WhereToButton = {
-  margin :: MarginConfig,
-  shadow :: ShadowConfig
-}
+type HomeScreen
+  = { primaryBackground :: String
+    , pickUpViewColor :: String
+    , header :: HomeScreenHeader
+    , bannerViewVisibility :: Boolean
+    , whereToButton :: WhereToButton
+    , pickupLocationTextColor :: String
+    }
 
-type MarginConfig = {
-  top :: Int,
-  bottom :: Int,
-  left :: Int,
-  right :: Int
-}
-type ShadowConfig = {
-  color :: String,
-  blur :: Number,
-  x :: Number,
-  y :: Number,
-  spread :: Number,
-  opacity :: Number
-}
+type HomeScreenHeader
+  = { menuButtonBackground :: String
+    , showLogo :: Boolean
+    , titleColor :: String
+    , showSeparator :: Boolean
+    }
 
-type ShareAppConfig = {
-  title :: String
-, description :: String
-}
+type WhereToButton
+  = { margin :: MarginConfig
+    , shadow :: ShadowConfig
+    }
 
-type LocationTagBarConfig = {
-  cornerRadius :: Number
-, textColor :: String
-, stroke:: String
-}
+type MarginConfig
+  = { top :: Int
+    , bottom :: Int
+    , left :: Int
+    , right :: Int
+    }
+
+type ShadowConfig
+  = { color :: String
+    , blur :: Number
+    , x :: Number
+    , y :: Number
+    , spread :: Number
+    , opacity :: Number
+    }
+
+type ShareAppConfig
+  = { title :: String
+    , description :: String
+    }
+
+type LocationTagBarConfig
+  = { cornerRadius :: Number
+    , textColor :: String
+    , stroke :: String
+    }

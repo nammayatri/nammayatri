@@ -5,8 +5,8 @@ import ConfigProvider
 import Foreign.Object (empty)
 
 initData :: PermissionScreenState
-initData = { 
-    appConfig : getAppConfig appConfig,
-    logField : empty,
-    stage : NORMAL
-}
+initData =
+  { appConfig: getAppConfig appConfig
+  , logField: empty
+  , stage: NORMAL
+  }

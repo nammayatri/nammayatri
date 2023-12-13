@@ -12,16 +12,15 @@
  
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
 module Screens.PopUpScreen.ScreenData where
 
 import Prelude
-import Screens.Types(PopUpScreenState)
+import Screens.Types (PopUpScreenState)
 
 initData :: PopUpScreenState
-initData = {
-    data : {
-        availableRides : []
-    },
-    props : {}
-}
+initData =
+  { data:
+      { availableRides: []
+      }
+  , props: {}
+  }

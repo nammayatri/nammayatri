@@ -12,7 +12,6 @@
  
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
 module Screens.BankDetailScreen.Controller where
 
 import Prelude (Unit, bind, pure, ($), class Show, unit, (==), discard)
@@ -32,7 +31,7 @@ instance showAction :: Show Action where
   show _ = ""
 
 instance loggableAction :: Loggable Action where
-  performLog action appId = case action of 
+  performLog action appId = case action of
     AfterRender -> trackAppScreenRender appId "screen" (getScreen BANK_DETAILS_SCREEN)
     BackPressed -> do
       trackAppBackPress appId (getScreen BANK_DETAILS_SCREEN)
@@ -54,10 +53,14 @@ instance loggableAction :: Loggable Action where
     Dummy -> trackAppScreenEvent appId (getScreen BANK_DETAILS_SCREEN) "in_screen" "dummy_action"
     NoAction -> trackAppScreenEvent appId (getScreen BANK_DETAILS_SCREEN) "in_screen" "no_action"
 
+data ScreenOutput
+  = GoToAddVehicleDetails BankDetailScreenState
+  | GoBack
 
-data ScreenOutput = GoToAddVehicleDetails BankDetailScreenState | GoBack
-
-data Action =   Dummy | BackPressed | NoAction
+data Action
+  = Dummy
+  | BackPressed
+  | NoAction
   | BeneficiaryNumber String
   | ReEnterBeneficiaryNumber String
   | IFSCNumber String
@@ -68,21 +71,31 @@ data Action =   Dummy | BackPressed | NoAction
 
 eval :: Action -> BankDetailScreenState -> Eval Action ScreenOutput BankDetailScreenState
 eval AfterRender state = continue state
+
 eval BackPressed state = exit GoBack
+
 eval (OnboardingHeaderAction (OnboardingHeaderController.TriggerRegModal)) state = do --{props{openRegistrationModal = true}}
   continue state { props = state.props { openRegistrationModal = true } }
-eval (BeneficiaryNumber val) state = do 
-  continue state {data { beneficiaryNumber = val }}
-eval (ReEnterBeneficiaryNumber val) state = do 
+
+eval (BeneficiaryNumber val) state = do
+  continue state { data { beneficiaryNumber = val } }
+
+eval (ReEnterBeneficiaryNumber val) state = do
   _ <- pure $ disableActionEditText (getNewIDWithTag "verifybeneficiary")
-  continue state {props { isBeneficiaryMatching = if(val == state.data.beneficiaryNumber) then true else false }}
-eval (IFSCNumber val) state = do 
+  continue state { props { isBeneficiaryMatching = if (val == state.data.beneficiaryNumber) then true else false } }
+
+eval (IFSCNumber val) state = do
   _ <- pure $ printLog "State" state
-  continue state {data = state.data { ifsc = val }}
+  continue state { data = state.data { ifsc = val } }
+
 eval (PrimaryButtonAction (PrimaryButtonController.OnClick)) state = exit (GoToAddVehicleDetails state)
+
 eval (OnboardingHeaderAction (OnboardingHeaderController.BackPressed)) state = exit GoBack
-eval (RegistrationModalAction (RegistrationModalController.OnCloseClick)) state = do 
+
+eval (RegistrationModalAction (RegistrationModalController.OnCloseClick)) state = do
   continue state { props = state.props { openRegistrationModal = false } }
+
 eval _ state = continue state
+
 overrides :: String -> (Action -> Effect Unit) -> BankDetailScreenState -> Props (Effect Unit)
 overrides _ push state = []

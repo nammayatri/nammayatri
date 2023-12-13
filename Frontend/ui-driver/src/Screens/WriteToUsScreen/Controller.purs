@@ -12,7 +12,6 @@
  
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
 module Screens.WriteToUsScreen.Controller where
 
 import Prelude (class Show, pure, unit, ($), discard)
@@ -21,14 +20,15 @@ import Screens.Types (WriteToUsScreenState)
 import PrestoDOM.Types.Core (class Loggable)
 import Components.PrimaryButton as PrimaryButton
 import Components.PrimaryEditText as PrimaryEditText
-import Screens.WriteToUsScreen.ScreenData(ListOptions(..))
+import Screens.WriteToUsScreen.ScreenData (ListOptions(..))
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppTextInput,trackAppScreenEvent)
+import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppTextInput, trackAppScreenEvent)
 import Screens (ScreenName(..), getScreen)
 
 instance showAction :: Show Action where
   show _ = ""
+
 instance loggableAction :: Loggable Action where
   performLog action appId = case action of
     AfterRender -> trackAppScreenRender appId "screen" (getScreen WRITE_TO_US_SCREEN)
@@ -51,25 +51,34 @@ instance loggableAction :: Loggable Action where
         PrimaryButton.NoAction -> trackAppActionClick appId (getScreen WRITE_TO_US_SCREEN) "primary_button" "submit_no_action"
     NoAction -> trackAppScreenEvent appId (getScreen WRITE_TO_US_SCREEN) "in_screen" "no_action"
 
-data ScreenOutput = GoBack | GoToHomeScreen
-data Action = NoAction
-            | PrimaryEditTextActionController PrimaryEditText.Action 
-            | PrimaryButtonActionController WriteToUsScreenState PrimaryButton.Action 
-            | BackPressed
-            | AfterRender
+data ScreenOutput
+  = GoBack
+  | GoToHomeScreen
+
+data Action
+  = NoAction
+  | PrimaryEditTextActionController PrimaryEditText.Action
+  | PrimaryButtonActionController WriteToUsScreenState PrimaryButton.Action
+  | BackPressed
+  | AfterRender
 
 eval :: Action -> WriteToUsScreenState -> Eval Action ScreenOutput WriteToUsScreenState
 eval AfterRender state = continue state
+
 eval BackPressed state = exit GoBack
-eval (PrimaryButtonActionController primaryButtonState (PrimaryButton.OnClick) ) state = if(state.props.isThankYouScreen) then exit GoToHomeScreen
-  else continue $ state {props = state.props {isThankYouScreen = true}}
+
+eval (PrimaryButtonActionController primaryButtonState (PrimaryButton.OnClick)) state =
+  if (state.props.isThankYouScreen) then
+    exit GoToHomeScreen
+  else
+    continue $ state { props = state.props { isThankYouScreen = true } }
+
 eval (PrimaryEditTextActionController (PrimaryEditText.TextChanged id value)) state = continue state
+
 eval _ state = continue state
 
-
 getTitle :: ListOptions -> String
-getTitle listOptions =
-  case listOptions of
-    Subject -> (getString SUBJECT)
-    YourEmaiId -> (getString YOUR_EMAIL_ID)
-    DescribeYourIssue -> ( getString DESCRIBE_YOUR_ISSUE)
+getTitle listOptions = case listOptions of
+  Subject -> (getString SUBJECT)
+  YourEmaiId -> (getString YOUR_EMAIL_ID)
+  DescribeYourIssue -> (getString DESCRIBE_YOUR_ISSUE)

@@ -12,27 +12,27 @@
  
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
 module Components.RecordAudioModel.Controller where
 
 import Prelude
 import Data.Maybe (Maybe)
 import Effect (Effect)
 
-data Action = OnClickDone
-            | OnClickRestart
-            | OnClickClose
-            | OnClickRecord (Action -> Effect Unit)
-            | OnClickStop
-            | BackPressed
-            | NoAction
-            | TimerCallback String
+data Action
+  = OnClickDone
+  | OnClickRestart
+  | OnClickClose
+  | OnClickRecord (Action -> Effect Unit)
+  | OnClickStop
+  | BackPressed
+  | NoAction
+  | TimerCallback String
 
-type RecordAudioModelState = {
-  timer         :: String,
-  isRecording   :: Boolean,
-  isUploading   :: Boolean,
-  recordedFile  :: Maybe String,
-  recordingDone :: Boolean,
-  openAddAudioModel :: Boolean
-}
+type RecordAudioModelState
+  = { timer :: String
+    , isRecording :: Boolean
+    , isUploading :: Boolean
+    , recordedFile :: Maybe String
+    , recordingDone :: Boolean
+    , openAddAudioModel :: Boolean
+    }

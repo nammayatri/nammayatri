@@ -12,12 +12,10 @@
  
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
 module Screens.AboutUsScreen.View where
 
 import Common.Types.App
 import Screens.CustomerUtils.AboutUsScreen.ComponentConfig
-
 import Animation as Anim
 import Common.Types.App (LazyCheck(..))
 import Screens.CustomerUtils.AboutUsScreen.ComponentConfig (genericHeaderConfig)
@@ -44,100 +42,108 @@ screen :: ST.AboutUsScreenState -> Screen Action ST.AboutUsScreenState ScreenOut
 screen initialState =
   { initialState
   , view
-  , name : "AboutUsScreen"
-  , globalEvents : []
+  , name: "AboutUsScreen"
+  , globalEvents: []
   , eval
   }
 
-view :: forall w . (Action -> Effect Unit) -> ST.AboutUsScreenState -> PrestoDOM (Effect Unit) w
+view :: forall w. (Action -> Effect Unit) -> ST.AboutUsScreenState -> PrestoDOM (Effect Unit) w
 view push state =
-  Anim.screenAnimation $
-    linearLayout 
-    [ height MATCH_PARENT
-    , width MATCH_PARENT
-    , orientation VERTICAL
-    , onBackPressed push (const BackPressed) 
-    , background Color.white900
-    , padding if EHC.os == "IOS" then (Padding 0 EHC.safeMarginTop 0 EHC.safeMarginBottom) else (Padding 0 0 0 10)
-    , gravity CENTER_HORIZONTAL
-    , afterRender push (const AfterRender)
-    
-    ][  GenericHeader.view (push <<< GenericHeaderActionController) (genericHeaderConfig state)
-      , if (not state.appConfig.nyBrandingVisibility) then
-                  linearLayout
-                    [ height $ V 1
-                    , width MATCH_PARENT
-                    , background Color.greySmoke
+  Anim.screenAnimation
+    $ linearLayout
+        [ height MATCH_PARENT
+        , width MATCH_PARENT
+        , orientation VERTICAL
+        , onBackPressed push (const BackPressed)
+        , background Color.white900
+        , padding if EHC.os == "IOS" then (Padding 0 EHC.safeMarginTop 0 EHC.safeMarginBottom) else (Padding 0 0 0 10)
+        , gravity CENTER_HORIZONTAL
+        , afterRender push (const AfterRender)
+        ]
+        [ GenericHeader.view (push <<< GenericHeaderActionController) (genericHeaderConfig state)
+        , if (not state.appConfig.nyBrandingVisibility) then
+            linearLayout
+              [ height $ V 1
+              , width MATCH_PARENT
+              , background Color.greySmoke
+              ]
+              []
+          else
+            linearLayout [] []
+        , scrollView
+            [ width MATCH_PARENT
+            , scrollBarY false
+            ]
+            [ linearLayout
+                [ height WRAP_CONTENT
+                , width MATCH_PARENT
+                , orientation VERTICAL
+                ]
+                [ topTextView push state
+                , linearLayout
+                    [ orientation VERTICAL
+                    , weight 1.0
                     ]
                     []
-                  else
-                    linearLayout [] []
-      , scrollView
-        [ width MATCH_PARENT
-        , scrollBarY false
-        ][  linearLayout
-            [ height WRAP_CONTENT
-            , width MATCH_PARENT
-            , orientation VERTICAL
-            ][ topTextView push state
-              , linearLayout
-                [ orientation VERTICAL
-                , weight 1.0
-                ][]
-              , bottomLinksView state
-              ]
-          ]
-      ]
+                , bottomLinksView state
+                ]
+            ]
+        ]
 
 --------------------------------------------------- topTextView -----------------------------------------------------
-topTextView :: (Action -> Effect Unit)  -> ST.AboutUsScreenState -> forall w . PrestoDOM (Effect Unit) w
+topTextView :: (Action -> Effect Unit) -> ST.AboutUsScreenState -> forall w. PrestoDOM (Effect Unit) w
 topTextView push state =
   linearLayout
     [ height WRAP_CONTENT
     , width MATCH_PARENT
     , orientation VERTICAL
     , padding (Padding 20 0 20 10)
-    ][  logoView state
-      , textView $
-        [ height WRAP_CONTENT
-        , width MATCH_PARENT
-        , text (getString $ ABOUT_APP_DESCRIPTION "ABOUT_APP_DESCRIPTION")
-        , color Color.black800
-        , gravity LEFT
-        , lineHeight "22"
-        , margin (Margin 0 40 0 32)
-        ] <> FontStyle.body5 LanguageStyle
-      , linearLayout
+    ]
+    [ logoView state
+    , textView
+        $ [ height WRAP_CONTENT
+          , width MATCH_PARENT
+          , text (getString $ ABOUT_APP_DESCRIPTION "ABOUT_APP_DESCRIPTION")
+          , color Color.black800
+          , gravity LEFT
+          , lineHeight "22"
+          , margin (Margin 0 40 0 32)
+          ]
+        <> FontStyle.body5 LanguageStyle
+    , linearLayout
         [ height WRAP_CONTENT
         , width MATCH_PARENT
         , visibility if state.appConfig.showCorporateAddress then VISIBLE else GONE
-        ][ ComplaintsModel.view (ComplaintsModel.config{cardData = contactUsData state})]
-      , linearLayout
+        ]
+        [ ComplaintsModel.view (ComplaintsModel.config { cardData = contactUsData state }) ]
+    , linearLayout
         [ gravity LEFT
         , width WRAP_CONTENT
         , height WRAP_CONTENT
         , orientation VERTICAL
         , visibility if state.appConfig.nyBrandingVisibility then GONE else VISIBLE
-        ][  softwareLicenseView state
-          , termsAndConditionsView state
-          , privacyPolicyView state
-          ]
-      ]
+        ]
+        [ softwareLicenseView state
+        , termsAndConditionsView state
+        , privacyPolicyView state
+        ]
+    ]
 
 --------------------------------------------------- logoView -----------------------------------------------------
-logoView :: forall w . ST.AboutUsScreenState -> PrestoDOM (Effect Unit) w
-logoView state = 
+logoView :: forall w. ST.AboutUsScreenState -> PrestoDOM (Effect Unit) w
+logoView state =
   linearLayout
-        [ height WRAP_CONTENT
-        , width MATCH_PARENT
-        , gravity CENTER
-        , margin $ MarginTop 48
-        ][  imageView
-              [ height $ V 52
-              , width $ V 176
-              , imageWithFallback state.appConfig.merchantLogo
-              ]
-          ]
+    [ height WRAP_CONTENT
+    , width MATCH_PARENT
+    , gravity CENTER
+    , margin $ MarginTop 48
+    ]
+    [ imageView
+        [ height $ V 52
+        , width $ V 176
+        , imageWithFallback state.appConfig.merchantLogo
+        ]
+    ]
 
 --------------------------------------------------- bottomLinksView -----------------------------------------------------
 bottomLinksView :: ST.AboutUsScreenState -> forall w. PrestoDOM (Effect Unit) w
@@ -190,7 +196,7 @@ bottomLinksView state =
         $ [ width WRAP_CONTENT
           , height WRAP_CONTENT
           , accessibility ENABLE
-          , accessibilityHint $ "App Version : " <>  (getValueToLocalStore VERSION_NAME) <> " : Bundle Version : " <> (getValueToLocalStore BUNDLE_VERSION)
+          , accessibilityHint $ "App Version : " <> (getValueToLocalStore VERSION_NAME) <> " : Bundle Version : " <> (getValueToLocalStore BUNDLE_VERSION)
           , text $ "v" <> (getValueToLocalStore VERSION_NAME) <> " [ " <> (getValueToLocalStore BUNDLE_VERSION) <> " ]"
           , color "#354052"
           , margin (Margin 0 20 0 10)
@@ -198,98 +204,112 @@ bottomLinksView state =
           ]
         <> FontStyle.body6 LanguageStyle
     ]
-  
+
 --------------------------------------------------- softwareLicenseView -----------------------------------------------------
-softwareLicenseView :: forall w . ST.AboutUsScreenState -> PrestoDOM (Effect Unit) w
-softwareLicenseView state = 
+softwareLicenseView :: forall w. ST.AboutUsScreenState -> PrestoDOM (Effect Unit) w
+softwareLicenseView state =
   linearLayout
     [ height WRAP_CONTENT
     , orientation VERTICAL
     , width WRAP_CONTENT
-    ][  linearLayout
+    ]
+    [ linearLayout
         [ height WRAP_CONTENT
         , orientation VERTICAL
         , width WRAP_CONTENT
         , visibility GONE
-        ][  textView $
-            [ width WRAP_CONTENT
-            , height WRAP_CONTENT
-            , text (getString SOFTWARE_LICENSE)
-            , color Color.blue900
-            , margin (Margin 0 0 0 0)
-            ] <> FontStyle.paragraphText LanguageStyle
-          , linearLayout
+        ]
+        [ textView
+            $ [ width WRAP_CONTENT
+              , height WRAP_CONTENT
+              , text (getString SOFTWARE_LICENSE)
+              , color Color.blue900
+              , margin (Margin 0 0 0 0)
+              ]
+            <> FontStyle.paragraphText LanguageStyle
+        , linearLayout
             [ width MATCH_PARENT
             , height (V 1)
             , background Color.blue900
-            ][]
-          ]
+            ]
+            []
         ]
-      
+    ]
+
 --------------------------------------------------- termsAndConditionsView -----------------------------------------------------      
-termsAndConditionsView :: ST.AboutUsScreenState -> forall w . PrestoDOM (Effect Unit) w
+termsAndConditionsView :: ST.AboutUsScreenState -> forall w. PrestoDOM (Effect Unit) w
 termsAndConditionsView state =
   linearLayout
     [ height WRAP_CONTENT
     , width WRAP_CONTENT
     , orientation VERTICAL
-    ][  textView $
-        [ width WRAP_CONTENT
-        , height WRAP_CONTENT
-        , text (getString TERMS_AND_CONDITIONS)
-        , accessibilityHint "Terms and Conditions : Button"
-        , accessibility ENABLE
-        , color Color.blue900
-        , onClick (\action -> do
-            _ <- pure action
-            _ <- JB.openUrlInApp $ state.appConfig.termsLink
-            pure unit
-          ) (const TermsAndConditions)
-        , margin (Margin 0 20 0 0)
-        ] <> FontStyle.paragraphText LanguageStyle
-      , linearLayout
-              [ width MATCH_PARENT
-              , height (V 1)
-              , background Color.blue900
-              ][]
+    ]
+    [ textView
+        $ [ width WRAP_CONTENT
+          , height WRAP_CONTENT
+          , text (getString TERMS_AND_CONDITIONS)
+          , accessibilityHint "Terms and Conditions : Button"
+          , accessibility ENABLE
+          , color Color.blue900
+          , onClick
+              ( \action -> do
+                  _ <- pure action
+                  _ <- JB.openUrlInApp $ state.appConfig.termsLink
+                  pure unit
+              )
+              (const TermsAndConditions)
+          , margin (Margin 0 20 0 0)
+          ]
+        <> FontStyle.paragraphText LanguageStyle
+    , linearLayout
+        [ width MATCH_PARENT
+        , height (V 1)
+        , background Color.blue900
         ]
+        []
+    ]
 
 --------------------------------------------------- privacyPolicyView -----------------------------------------------------
-privacyPolicyView :: forall w .ST.AboutUsScreenState -> PrestoDOM (Effect Unit) w
+privacyPolicyView :: forall w. ST.AboutUsScreenState -> PrestoDOM (Effect Unit) w
 privacyPolicyView state =
   linearLayout
     [ height WRAP_CONTENT
     , orientation VERTICAL
     , width WRAP_CONTENT
-    ][  textView $
-        [ width WRAP_CONTENT
-        , height WRAP_CONTENT
-        , text (getString PRIVACY_POLICY)
-        , accessibilityHint "Privacy Policy : Button"
-        , accessibility ENABLE
-        , color Color.blue900
-        , margin (Margin 0 20 0 0)
-        , onClick (\action -> do
-            _ <- pure action
-            _ <- JB.openUrlInApp $ state.appConfig.privacyLink
-            pure unit
-          ) (const PrivacyPolicy)
-        ] <> FontStyle.paragraphText LanguageStyle
-      , linearLayout
+    ]
+    [ textView
+        $ [ width WRAP_CONTENT
+          , height WRAP_CONTENT
+          , text (getString PRIVACY_POLICY)
+          , accessibilityHint "Privacy Policy : Button"
+          , accessibility ENABLE
+          , color Color.blue900
+          , margin (Margin 0 20 0 0)
+          , onClick
+              ( \action -> do
+                  _ <- pure action
+                  _ <- JB.openUrlInApp $ state.appConfig.privacyLink
+                  pure unit
+              )
+              (const PrivacyPolicy)
+          ]
+        <> FontStyle.paragraphText LanguageStyle
+    , linearLayout
         [ width MATCH_PARENT
         , height (V 1)
         , background Color.blue900
-        ][]
-      ]
+        ]
+        []
+    ]
 
 contactUsData :: ST.AboutUsScreenState -> Array ComplaintsModel.CardData
-contactUsData state = [
-  { title : (getString CORPORATE_ADDRESS)
-  , subTitle : (getString $ CORPORATE_ADDRESS_DESCRIPTION "CORPORATE_ADDRESS_DESCRIPTION")
-  , addtionalData : Just (getString $ CORPORATE_ADDRESS_DESCRIPTION_ADDITIONAL "CORPORATE_ADDRESS_DESCRIPTION_ADDITIONAL")
-  }
-, { title : (getString REGISTERED_ADDRESS)
-  , subTitle : (getString $ REGISTERED_ADDRESS_DESCRIPTION "REGISTERED_ADDRESS_DESCRIPTION")
-  , addtionalData : Just (getString $ REGISTERED_ADDRESS_DESCRIPTION_ADDITIONAL "REGISTERED_ADDRESS_DESCRIPTION_ADDITIONAL")
-  }
-]
+contactUsData state =
+  [ { title: (getString CORPORATE_ADDRESS)
+    , subTitle: (getString $ CORPORATE_ADDRESS_DESCRIPTION "CORPORATE_ADDRESS_DESCRIPTION")
+    , addtionalData: Just (getString $ CORPORATE_ADDRESS_DESCRIPTION_ADDITIONAL "CORPORATE_ADDRESS_DESCRIPTION_ADDITIONAL")
+    }
+  , { title: (getString REGISTERED_ADDRESS)
+    , subTitle: (getString $ REGISTERED_ADDRESS_DESCRIPTION "REGISTERED_ADDRESS_DESCRIPTION")
+    , addtionalData: Just (getString $ REGISTERED_ADDRESS_DESCRIPTION_ADDITIONAL "REGISTERED_ADDRESS_DESCRIPTION_ADDITIONAL")
+    }
+  ]

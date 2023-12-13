@@ -12,7 +12,6 @@
  
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
 module Screens.RegistrationScreen.Handler where
 
 import Control.Monad.Except.Trans (lift)
@@ -24,7 +23,6 @@ import Screens.RegistrationScreen.Controller (ScreenOutput(..))
 import Screens.RegistrationScreen.View as RegistrationScreen
 import Types.App (FlowBT, GlobalState(..), REGISTRATION_SCREEN_OUTPUT(..), ScreenType(..))
 import Types.ModifyScreenState (modifyScreenState)
-
 
 registration :: FlowBT String REGISTRATION_SCREEN_OUTPUT
 registration = do

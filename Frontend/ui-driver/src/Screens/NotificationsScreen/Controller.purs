@@ -12,11 +12,9 @@
 
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
 module Screens.NotificationsScreen.Controller where
 
 import Prelude
-
 import Components.BottomNavBar.Controller (Action(..)) as BottomNavBar
 import Components.ErrorModal as ErrorModalController
 import Components.NotificationCard.Controller as NotificationCardAC
@@ -47,7 +45,7 @@ import Storage (KeyStore(..), getValueToLocalNativeStore, setValueToLocalNativeS
 import Types.App (defaultGlobalState)
 import Effect.Unsafe (unsafePerformEffect)
 import Data.Function.Uncurried (runFn3)
-import Common.Types.App(YoutubeData)
+import Common.Types.App (YoutubeData)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -94,10 +92,9 @@ eval BackPressed state = do
           pure NoAction
       ]
   else if state.notificationDetailModelState.addCommentModelVisibility == VISIBLE then
-    continue state { notificationDetailModelState { addCommentModelVisibility = GONE, comment = Nothing} }
+    continue state { notificationDetailModelState { addCommentModelVisibility = GONE, comment = Nothing } }
   else
     exit $ if state.deepLinkActivated then GoToCurrentRideFlow else GoBack
-
 
 eval (NotificationCardClick (NotificationCardAC.Action1Click index)) state = do
   case state.notificationList Array.!! index of
@@ -117,27 +114,34 @@ eval (NotificationDetailModelAC NotificationDetailModel.BackArrow) state =
     ]
 
 eval (NotificationDetailModelAC (NotificationDetailModel.LikeMessage)) state = do
-  let likes = if state.notificationDetailModelState.likeStatus then state.notificationDetailModelState.likeCount - 1 else state.notificationDetailModelState.likeCount + 1
-      likeStatus = not state.notificationDetailModelState.likeStatus
-      updatedNotificationList = (map(\item -> if(item.messageId == state.notificationDetailModelState.messageId) then item{likeCount = likes, likeStatus = likeStatus } else item)state.notificationList)
-      updatedPrestoListArrayItems = (map(\item -> if(item.messageId == (toPropValue state.notificationDetailModelState.messageId)) then item{likeCount = toPropValue $ parseNumber likes } else item) state.prestoListArrayItems)
+  let
+    likes = if state.notificationDetailModelState.likeStatus then state.notificationDetailModelState.likeCount - 1 else state.notificationDetailModelState.likeCount + 1
+
+    likeStatus = not state.notificationDetailModelState.likeStatus
+
+    updatedNotificationList = (map (\item -> if (item.messageId == state.notificationDetailModelState.messageId) then item { likeCount = likes, likeStatus = likeStatus } else item) state.notificationList)
+
+    updatedPrestoListArrayItems = (map (\item -> if (item.messageId == (toPropValue state.notificationDetailModelState.messageId)) then item { likeCount = toPropValue $ parseNumber likes } else item) state.prestoListArrayItems)
   continueWithCmd state { notificationDetailModelState { likeStatus = likeStatus, likeCount = likes }, notificationList = updatedNotificationList, prestoListArrayItems = updatedPrestoListArrayItems }
-        [ do
-            void $ launchAff $ flowRunner defaultGlobalState $ runExceptT $ runBackT
-              $ do
-                  _ <- Remote.likeMessageBT state.notificationDetailModelState.messageId
-                  pure unit
-            pure NoAction
-        ]
+    [ do
+        void $ launchAff $ flowRunner defaultGlobalState $ runExceptT $ runBackT
+          $ do
+              _ <- Remote.likeMessageBT state.notificationDetailModelState.messageId
+              pure unit
+        pure NoAction
+    ]
 
 eval (NotificationDetailModelAC NotificationDetailModel.AddCommentClick) state = do
   _ <- pure $ requestKeyboardShow $ getNewIDWithTag "NotificationDetailModel"
   continue state { notificationDetailModelState { addCommentModelVisibility = VISIBLE } }
 
 eval (NotificationDetailModelAC NotificationDetailModel.IncreaseViewCount) state = do
-  let views = state.notificationDetailModelState.viewCount + 1
-      updatedNotificationList = (map(\item -> if(item.messageId == state.notificationDetailModelState.messageId) then item{viewCount = views } else item)state.notificationList)
-      updatedPrestoListArrayItems = (map(\item -> if(item.messageId == (toPropValue state.notificationDetailModelState.messageId)) then item{viewCount = toPropValue $ parseNumber views } else item) state.prestoListArrayItems)
+  let
+    views = state.notificationDetailModelState.viewCount + 1
+
+    updatedNotificationList = (map (\item -> if (item.messageId == state.notificationDetailModelState.messageId) then item { viewCount = views } else item) state.notificationList)
+
+    updatedPrestoListArrayItems = (map (\item -> if (item.messageId == (toPropValue state.notificationDetailModelState.messageId)) then item { viewCount = toPropValue $ parseNumber views } else item) state.prestoListArrayItems)
   continue state { notificationList = updatedNotificationList, prestoListArrayItems = updatedPrestoListArrayItems }
 
 eval (NotificationDetailModelAC (NotificationDetailModel.AddCommentModelAction PopUpModal.OnImageClick)) state = do
@@ -157,7 +161,8 @@ eval (NotificationDetailModelAC (NotificationDetailModel.AddCommentModelAction P
   _ <- pure $ hideKeyboardOnNavigation true
   case state.notificationDetailModelState.comment of
     Just comment -> do
-      let updatedNotificationList = (map(\item -> if(item.messageId == state.notificationDetailModelState.messageId) then item{comment = Just comment } else item)state.notificationList)
+      let
+        updatedNotificationList = (map (\item -> if (item.messageId == state.notificationDetailModelState.messageId) then item { comment = Just comment } else item) state.notificationList)
       continueWithCmd state { notificationDetailModelState { addCommentModelVisibility = GONE }, notificationList = updatedNotificationList }
         [ do
             void $ launchAff $ flowRunner defaultGlobalState $ runExceptT $ runBackT
@@ -170,14 +175,15 @@ eval (NotificationDetailModelAC (NotificationDetailModel.AddCommentModelAction P
 
 eval (NotificationDetailModelAC NotificationDetailModel.AfterRender) state = do
   let
-    updatedItem = map (\a -> if a.messageId == state.notificationDetailModelState.messageId then a{ notificationNotSeen = false } else a) state.notificationList
-    updatedPrestoItem = map (\a -> if a.messageId == toPropValue state.notificationDetailModelState.messageId then a{ notificationNotSeen = toPropValue "gone" } else a) state.prestoListArrayItems
-  continue state{ prestoListArrayItems = updatedPrestoItem, notificationList = updatedItem }
+    updatedItem = map (\a -> if a.messageId == state.notificationDetailModelState.messageId then a { notificationNotSeen = false } else a) state.notificationList
+
+    updatedPrestoItem = map (\a -> if a.messageId == toPropValue state.notificationDetailModelState.messageId then a { notificationNotSeen = toPropValue "gone" } else a) state.prestoListArrayItems
+  continue state { prestoListArrayItems = updatedPrestoItem, notificationList = updatedItem }
 
 eval (ScrollStateChanged scrollState) state = do
   _ <- case scrollState of
-           SCROLL_STATE_FLING -> pure $ setEnabled (getNewIDWithTag "NotificationSwipeRefresh") false
-           _ -> pure unit
+    SCROLL_STATE_FLING -> pure $ setEnabled (getNewIDWithTag "NotificationSwipeRefresh") false
+    _ -> pure unit
   continue state
 
 eval (Scroll value) state = do
@@ -218,43 +224,45 @@ eval (MessageListResAction (MessageListRes notificationArray)) state = do
   let
     loadBtnDisabled = if (Array.length notificationArray == 0) then true else false
   let
-    newState =  case state.loadMore of
-                  true  -> state { shimmerLoader = AnimatedOut, recievedResponse = true, notificationList = Array.unionBy (\a b -> a.messageId == b.messageId) state.notificationList notificationsList, prestoListArrayItems = Array.unionBy (\a b -> a.messageId == b.messageId) state.prestoListArrayItems propValueList, loadMoreDisabled = loadBtnDisabled, loadMore = false }
-                  false -> state { shimmerLoader = AnimatedOut, recievedResponse = true, notificationList = Array.unionBy (\a b -> a.messageId == b.messageId) notificationsList state.notificationList, prestoListArrayItems = Array.unionBy (\a b -> a.messageId == b.messageId) propValueList state.prestoListArrayItems, loadMoreDisabled = loadBtnDisabled }
+    newState = case state.loadMore of
+      true -> state { shimmerLoader = AnimatedOut, recievedResponse = true, notificationList = Array.unionBy (\a b -> a.messageId == b.messageId) state.notificationList notificationsList, prestoListArrayItems = Array.unionBy (\a b -> a.messageId == b.messageId) state.prestoListArrayItems propValueList, loadMoreDisabled = loadBtnDisabled, loadMore = false }
+      false -> state { shimmerLoader = AnimatedOut, recievedResponse = true, notificationList = Array.unionBy (\a b -> a.messageId == b.messageId) notificationsList state.notificationList, prestoListArrayItems = Array.unionBy (\a b -> a.messageId == b.messageId) propValueList state.prestoListArrayItems, loadMoreDisabled = loadBtnDisabled }
   case newState.selectedNotification of
     Just id -> do
-      let notificationItem = Array.filter (\a -> a.messageId == id) newState.notificationList
+      let
+        notificationItem = Array.filter (\a -> a.messageId == id) newState.notificationList
       case notificationItem Array.!! 0 of
-        Just item -> continue newState{ notificationDetailModelState = notifisDetailStateTransformer item, notifsDetailModelVisibility = VISIBLE, selectedNotification = Nothing }
-        Nothing   -> continue newState{ selectedNotification = Nothing }
+        Just item -> continue newState { notificationDetailModelState = notifisDetailStateTransformer item, notifsDetailModelVisibility = VISIBLE, selectedNotification = Nothing }
+        Nothing -> continue newState { selectedNotification = Nothing }
     Nothing -> continue newState
 
 eval LoadMore state = do
-  exit $ LoaderOutput state{loadMore = true}
+  exit $ LoaderOutput state { loadMore = true }
 
-eval (BottomNavBarAction (BottomNavBar.OnNavigate item)) state =
-  case item of
-    "Home" -> do
-      _ <- pure $ setValueToLocalNativeStore ALERT_RECEIVED "false"
-      exit GoToHomeScreen
-    "Rides" -> do
-      _ <- pure $ setValueToLocalNativeStore ALERT_RECEIVED "false"
-      exit GoToRidesScreen
-    "Profile" -> do
-      _ <- pure $ setValueToLocalNativeStore ALERT_RECEIVED "false"
-      exit GoToProfileScreen
-    "Rankings" -> do
-      _ <- pure $ setValueToLocalNativeStore ALERT_RECEIVED "false"
-      exit $ GoToReferralScreen
-    "Join" -> do 
-      _ <- pure $ setValueToLocalNativeStore ALERT_RECEIVED "false"
-      void $ pure $ incrementValueOfLocalStoreKey TIMES_OPENED_NEW_SUBSCRIPTION
-      let driverSubscribed = getValueToLocalNativeStore DRIVER_SUBSCRIBED == "true"
-      _ <- pure $ cleverTapCustomEvent if driverSubscribed then "ny_driver_myplan_option_clicked" else "ny_driver_plan_option_clicked"
-      _ <- pure $ metaLogEvent if driverSubscribed then "ny_driver_myplan_option_clicked" else "ny_driver_plan_option_clicked"
-      let _ = unsafePerformEffect $ firebaseLogEvent if driverSubscribed then "ny_driver_myplan_option_clicked" else "ny_driver_plan_option_clicked"
-      exit $ SubscriptionScreen state
-    _ -> continue state
+eval (BottomNavBarAction (BottomNavBar.OnNavigate item)) state = case item of
+  "Home" -> do
+    _ <- pure $ setValueToLocalNativeStore ALERT_RECEIVED "false"
+    exit GoToHomeScreen
+  "Rides" -> do
+    _ <- pure $ setValueToLocalNativeStore ALERT_RECEIVED "false"
+    exit GoToRidesScreen
+  "Profile" -> do
+    _ <- pure $ setValueToLocalNativeStore ALERT_RECEIVED "false"
+    exit GoToProfileScreen
+  "Rankings" -> do
+    _ <- pure $ setValueToLocalNativeStore ALERT_RECEIVED "false"
+    exit $ GoToReferralScreen
+  "Join" -> do
+    _ <- pure $ setValueToLocalNativeStore ALERT_RECEIVED "false"
+    void $ pure $ incrementValueOfLocalStoreKey TIMES_OPENED_NEW_SUBSCRIPTION
+    let
+      driverSubscribed = getValueToLocalNativeStore DRIVER_SUBSCRIBED == "true"
+    _ <- pure $ cleverTapCustomEvent if driverSubscribed then "ny_driver_myplan_option_clicked" else "ny_driver_plan_option_clicked"
+    _ <- pure $ metaLogEvent if driverSubscribed then "ny_driver_myplan_option_clicked" else "ny_driver_plan_option_clicked"
+    let
+      _ = unsafePerformEffect $ firebaseLogEvent if driverSubscribed then "ny_driver_myplan_option_clicked" else "ny_driver_plan_option_clicked"
+    exit $ SubscriptionScreen state
+  _ -> continue state
 
 eval _ state = continue state
 
@@ -273,8 +281,8 @@ notifisDetailStateTransformer selectedItem =
   , notificationNotSeen: selectedItem.notificationNotSeen
   , imageUrl: getImageUrl $ selectedItem.mediaUrl
   , mediaType: selectedItem.mediaType
-  , likeCount : selectedItem.likeCount
-  , likeStatus : selectedItem.likeStatus
+  , likeCount: selectedItem.likeCount
+  , likeStatus: selectedItem.likeStatus
   , viewCount: selectedItem.viewCount
   }
 
@@ -305,9 +313,9 @@ notificationListTransformer notificationArray =
                   AudioLink -> "ny_ic_audio_file"
                   Audio -> "ny_ic_audio_file"
             , mediaType: Just media.fileType
-            , likeCount : notificationItem.likeCount
-            , viewCount : notificationItem.viewCount
-            , likeStatus : notificationItem.likeStatus
+            , likeCount: notificationItem.likeCount
+            , viewCount: notificationItem.viewCount
+            , likeStatus: notificationItem.likeStatus
             }
       )
       notificationArray
@@ -348,13 +356,13 @@ propValueTransformer notificationArray =
                       AudioLink -> "ny_ic_audio_file"
                       Audio -> "ny_ic_audio_file"
             , previewImage: toPropValue $ if media.fileType == Image then "visible" else "gone"
-            , imageVisibility : toPropValue $ if media.fileType /= Image then "visible" else "gone"
+            , imageVisibility: toPropValue $ if media.fileType /= Image then "visible" else "gone"
             , previewImageTitle: toPropValue "Preview Image"
             , messageId: toPropValue notificationItem.messageId
-            , imageWithUrl : toPropValue media.url
-            , imageWithUrlVisibility : toPropValue $ if media.fileType == ImageLink then "visible" else "gone"
-            , likeCount : toPropValue $ parseNumber $ notificationItem.likeCount
-            , viewCount : toPropValue $ parseNumber $ notificationItem.viewCount
+            , imageWithUrl: toPropValue media.url
+            , imageWithUrlVisibility: toPropValue $ if media.fileType == ImageLink then "visible" else "gone"
+            , likeCount: toPropValue $ parseNumber $ notificationItem.likeCount
+            , viewCount: toPropValue $ parseNumber $ notificationItem.viewCount
             }
       )
       notificationArray
@@ -376,7 +384,7 @@ youtubeData =
   , showSeekBar: true
   , videoId: ""
   , videoType: ""
-  , videoHeight : 0
+  , videoHeight: 0
   }
 
 splitUrlsAndText :: String -> Array String
@@ -386,20 +394,25 @@ notificationCardDesc :: String -> String
 notificationCardDesc text =
   let
     splittedArray = splitUrlsAndText text
-    filteredArray = map (\word ->
-    let
-      wordLength = length word
-      in
-        if charAt 0 word == Just '*' && charAt (wordLength - 1) word == Just '*'
-          then let
-          titleAndUrl = fetchTitleAndUrl wordLength word
-          linkTitle = trim $ fromMaybe "" (titleAndUrl Array.!! 0)
-          in
-            linkTitle
-          else
-          word
-          ) splittedArray
+
+    filteredArray =
+      map
+        ( \word ->
+            let
+              wordLength = length word
+            in
+              if charAt 0 word == Just '*' && charAt (wordLength - 1) word == Just '*' then
+                let
+                  titleAndUrl = fetchTitleAndUrl wordLength word
+
+                  linkTitle = trim $ fromMaybe "" (titleAndUrl Array.!! 0)
+                in
+                  linkTitle
+              else
+                word
+        )
+        splittedArray
+
     combinedString = joinWith " " filteredArray
   in
     combinedString
-

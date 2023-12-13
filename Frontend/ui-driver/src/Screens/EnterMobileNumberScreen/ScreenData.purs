@@ -12,7 +12,6 @@
  
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
 module Screens.EnterMobileNumberScreen.ScreenData where
 
 import Screens.Types (EnterMobileNumberScreenState)
@@ -20,14 +19,15 @@ import Foreign.Object (empty)
 import ConfigProvider
 
 initData :: EnterMobileNumberScreenState
-initData =  {
-  data: { mobileNumber : "",
-          logField : empty,
-          config : getAppConfig appConfig
-        },
-  props: {
-    btnActive :false,
-    isValid : false,
-    mobileNumberEditFocused : true
-    }
-}
+initData =
+  { data:
+      { mobileNumber: ""
+      , logField: empty
+      , config: getAppConfig appConfig
+      }
+  , props:
+      { btnActive: false
+      , isValid: false
+      , mobileNumberEditFocused: true
+      }
+  }

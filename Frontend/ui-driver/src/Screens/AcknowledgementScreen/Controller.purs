@@ -11,6 +11,7 @@ import Common.Types.App as Common
 
 instance showAction :: Show Action where
   show _ = ""
+
 instance loggableAction :: Loggable Action where
   performLog action appId = case action of
     AfterRender -> trackAppScreenRender appId "screen" "AcknowledgementScreen"
@@ -20,13 +21,15 @@ instance loggableAction :: Loggable Action where
       PrimaryButtonController.NoAction -> trackAppActionClick appId (getScreen ACKNOWLEDGEMENT_SCREEN) "primary_button" "no_action"
     NoAction -> pure unit
 
+data Action
+  = BackPressed
+  | AfterRender
+  | NoAction
+  | PrimaryButtonAC PrimaryButtonController.Action
 
-data Action = BackPressed
-            | AfterRender
-            | NoAction
-            | PrimaryButtonAC PrimaryButtonController.Action
-
-data ScreenOutput = HomeScreen | RetryPayment
+data ScreenOutput
+  = HomeScreen
+  | RetryPayment
 
 eval :: Action -> AcknowledgementScreenState -> Eval Action ScreenOutput AcknowledgementScreenState
 eval BackPressed state = continue state
@@ -34,6 +37,6 @@ eval BackPressed state = continue state
 eval (PrimaryButtonAC PrimaryButtonController.OnClick) state = do
   case state.props.paymentStatus of
     Common.Failed -> exit RetryPayment
-    _             -> exit HomeScreen
+    _ -> exit HomeScreen
 
 eval _ state = continue state

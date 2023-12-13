@@ -12,12 +12,9 @@
 
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
-
 module Components.GoToLocationModal.View where
 
 import Prelude
-
 import Common.Types.App (LazyCheck(..))
 import Components.GoToLocationModal.Controller (GoToModalConfig, Action(..))
 import Data.Maybe (Maybe(..), fromMaybe)
@@ -51,9 +48,10 @@ view push state =
         , gravity CENTER_HORIZONTAL
         ]
         [ imageView
-            [ imageWithFallback $ fetchImage FF_ASSET $ case tag of
-                "home" -> "ny_ic_home"
-                _ -> "ny_ic_location_unfilled"
+            [ imageWithFallback $ fetchImage FF_ASSET
+                $ case tag of
+                    "home" -> "ny_ic_home"
+                    _ -> "ny_ic_location_unfilled"
             , height $ V 20
             , margin $ Margin 0 2 12 0
             , width $ V 20
@@ -62,8 +60,8 @@ view push state =
         , if state.isSelectable then radioButton state push else linearLayout [] []
         ]
     ]
-
-    where tag = toLower $ trim state.tag
+  where
+  tag = toLower $ trim state.tag
 
 savedLocationView :: forall w. GoToModalConfig -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 savedLocationView state push =
@@ -84,14 +82,15 @@ savedLocationView state push =
             , height WRAP_CONTENT
             , weight 1.0
             ]
-            [ textView $
-                [ text state.tag
-                , ellipsize true
-                , maxLines 2
-                , weight 1.0
-                , margin $ MarginRight 22
-                , color Color.black800
-                ] <> FontStyle.subHeading1 LanguageStyle
+            [ textView
+                $ [ text state.tag
+                  , ellipsize true
+                  , maxLines 2
+                  , weight 1.0
+                  , margin $ MarginRight 22
+                  , color Color.black800
+                  ]
+                <> FontStyle.subHeading1 LanguageStyle
             ]
         , linearLayout
             [ orientation HORIZONTAL
@@ -125,7 +124,7 @@ savedLocationView state push =
                 , onClick push $ const $ DeleteLocation state
                 ]
                 [ textView
-                    $ [  color Color.blue900
+                    $ [ color Color.blue900
                       ]
                     <> FontStyle.body1 LanguageStyle
                     <> case state.removeAcText of
@@ -140,7 +139,8 @@ savedLocationView state push =
           , ellipsize true
           , margin $ MarginTop 5
           , color Color.black700
-          ] <> FontStyle.body3 LanguageStyle
+          ]
+        <> FontStyle.body3 LanguageStyle
     ]
 
 radioButton :: forall w. GoToModalConfig -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w

@@ -1,7 +1,6 @@
 module Screens.DriverProfileScreen.Transformer where
 
 import Prelude
-
 import Data.Array (length)
 import Data.Int (toNumber)
 import Data.Maybe (fromMaybe, Maybe(..))
@@ -38,7 +37,7 @@ transformSelectedVehicles :: Array ChooseVehicle.Config -> Array VehicleP
 transformSelectedVehicles vehicleDetails = map (\vehicleDetail -> transformSelectedVehicle vehicleDetail) vehicleDetails
 
 transformSelectedVehicle :: ChooseVehicle.Config -> VehicleP
-transformSelectedVehicle vehicleDetail = 
-  { vehicleName : vehicleDetail.vehicleVariant,
-    isSelected : vehicleDetail.isSelected
+transformSelectedVehicle vehicleDetail =
+  { vehicleName: vehicleDetail.vehicleVariant
+  , isSelected: vehicleDetail.isSelected
   }

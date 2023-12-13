@@ -8,7 +8,7 @@ import Control.Transformers.Back.Trans as App
 import PrestoDOM.Core.Types.Language.Flow (runScreen)
 import Screens.EmergencyContactsScreen.View as EmergencyContactsScreen
 import ModifyScreenState (modifyScreenState)
-import Types.App (FlowBT, GlobalState(..), EMERGECY_CONTACTS_SCREEN_OUTPUT(..),ScreenType(..))
+import Types.App (FlowBT, GlobalState(..), EMERGECY_CONTACTS_SCREEN_OUTPUT(..), ScreenType(..))
 import Screens.Types (NewContacts)
 import PrestoDOM.List as PrestoList
 import Components.NewContact.View as NewContact
@@ -16,8 +16,7 @@ import Engineering.Helpers.Commons (liftFlow)
 import PrestoDOM.Core (getPushFn)
 import Data.Maybe (Maybe(..))
 
-
-emergencyContactsScreen:: FlowBT String EMERGECY_CONTACTS_SCREEN_OUTPUT
+emergencyContactsScreen :: FlowBT String EMERGECY_CONTACTS_SCREEN_OUTPUT
 emergencyContactsScreen = do
   (GlobalState state) <- getState
   push <- lift $ lift $ liftFlow $ getPushFn Nothing "EmergencyContactsScreen"
@@ -34,8 +33,8 @@ emergencyContactsScreen = do
     Refresh updatedState -> App.BackT $ App.NoBack <$> (pure $ REFRESH_EMERGECY_CONTACTS_SCREEN updatedState)
 
 listItem1 :: NewContacts
-listItem1 = {
-  name: "",
-  number: "",
-  isSelected: false
-}
+listItem1 =
+  { name: ""
+  , number: ""
+  , isSelected: false
+  }

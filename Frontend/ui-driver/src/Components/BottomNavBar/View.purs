@@ -12,12 +12,10 @@
 
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
 module Components.BottomNavBar.View where
 
 import Common.Types.App
 import Components.BottomNavBar.Controller
-
 import Data.Array (mapWithIndex)
 import Data.Monoid.Split (Split(..))
 import Effect (Effect)
@@ -36,89 +34,99 @@ import Screens.Types (BottomNavBarState)
 import Storage (getValueToLocalNativeStore, KeyStore(..))
 import Styles.Colors as Color
 
-view :: forall w . (Action -> Effect Unit) -> BottomNavBarState -> PrestoDOM (Effect Unit) w
+view :: forall w. (Action -> Effect Unit) -> BottomNavBarState -> PrestoDOM (Effect Unit) w
 view push state =
-    linearLayout
+  linearLayout
     [ width MATCH_PARENT
     , height WRAP_CONTENT
     , alignParentBottom "true,-1"
     , gravity CENTER
-    ][ linearLayout
-       [ width MATCH_PARENT
-       , height MATCH_PARENT
-       , stroke ("1,"<> Color.grey900)
-       , background Color.white900
-       ](mapWithIndex
-         (\index item ->
-          linearLayout
-          [ width WRAP_CONTENT
-          , height MATCH_PARENT
-          , weight 1.0
-          , gravity CENTER
-          , orientation VERTICAL
-          , onClick push (const (OnNavigate item.text))
-          ][ textView $
-             [ text $ " " <> getString NEW_ <> "✨"
-             , background Color.blue800
-             , color Color.white900
-             , cornerRadii $ Corners 6.0 false false true true
-             , gravity CENTER
-             , padding $ PaddingVertical 1 1
-             , margin $ MarginHorizontal 6 6
-             , width MATCH_PARENT
-             , visibility if item.showNewBanner then VISIBLE else GONE
-             ] <> FontStyle.body18 TypoGraphy
-            , linearLayout
-              [ width $ V 60
-              , height WRAP_CONTENT
-              , gravity CENTER
-              , padding $ PaddingVertical (if item.showNewBanner then 0 else 10) 10
-              , orientation VERTICAL
-              ][ if ((item.text == "Alert") && ((getValueToLocalNativeStore ALERT_RECEIVED) == "true") && state.activeIndex /= 3) then
-                    lottieLoaderView state push state.activeIndex item.text
-                 else
-                    imageView
-                    [ width (V 24)
-                    , height (V 24)
-                    , imageWithFallback if state.activeIndex == index then item.activeIcon else item.defaultIcon
-                    ]
-                  , textView (
-                    [ weight 1.0
-                    , height WRAP_CONTENT
-                    , gravity CENTER_HORIZONTAL
-                    , maxLines 1
-                    , color if index == state.activeIndex then Color.black else Color.black600
-                    , text case item.text of
-                              "Home"          -> getString HOME
-                              "Rides"         -> getString RIDES
-                              "Rankings"      -> getString RANKINGS
-                              "Profile"       -> getString PROFILE
-                              "Alert"         -> getString MESSAGES
-                              "Join"          -> getString if getValueToLocalNativeStore DRIVER_SUBSCRIBED == "true" then MY_PLAN else PLANS
-                              _               -> ""
-                    ] <> FontStyle.tags TypoGraphy)
-                ]
-           ]
-         ) state.navButton
-         )
+    ]
+    [ linearLayout
+        [ width MATCH_PARENT
+        , height MATCH_PARENT
+        , stroke ("1," <> Color.grey900)
+        , background Color.white900
+        ]
+        ( mapWithIndex
+            ( \index item ->
+                linearLayout
+                  [ width WRAP_CONTENT
+                  , height MATCH_PARENT
+                  , weight 1.0
+                  , gravity CENTER
+                  , orientation VERTICAL
+                  , onClick push (const (OnNavigate item.text))
+                  ]
+                  [ textView
+                      $ [ text $ " " <> getString NEW_ <> "✨"
+                        , background Color.blue800
+                        , color Color.white900
+                        , cornerRadii $ Corners 6.0 false false true true
+                        , gravity CENTER
+                        , padding $ PaddingVertical 1 1
+                        , margin $ MarginHorizontal 6 6
+                        , width MATCH_PARENT
+                        , visibility if item.showNewBanner then VISIBLE else GONE
+                        ]
+                      <> FontStyle.body18 TypoGraphy
+                  , linearLayout
+                      [ width $ V 60
+                      , height WRAP_CONTENT
+                      , gravity CENTER
+                      , padding $ PaddingVertical (if item.showNewBanner then 0 else 10) 10
+                      , orientation VERTICAL
+                      ]
+                      [ if ((item.text == "Alert") && ((getValueToLocalNativeStore ALERT_RECEIVED) == "true") && state.activeIndex /= 3) then
+                          lottieLoaderView state push state.activeIndex item.text
+                        else
+                          imageView
+                            [ width (V 24)
+                            , height (V 24)
+                            , imageWithFallback if state.activeIndex == index then item.activeIcon else item.defaultIcon
+                            ]
+                      , textView
+                          ( [ weight 1.0
+                            , height WRAP_CONTENT
+                            , gravity CENTER_HORIZONTAL
+                            , maxLines 1
+                            , color if index == state.activeIndex then Color.black else Color.black600
+                            , text case item.text of
+                                "Home" -> getString HOME
+                                "Rides" -> getString RIDES
+                                "Rankings" -> getString RANKINGS
+                                "Profile" -> getString PROFILE
+                                "Alert" -> getString MESSAGES
+                                "Join" -> getString if getValueToLocalNativeStore DRIVER_SUBSCRIBED == "true" then MY_PLAN else PLANS
+                                _ -> ""
+                            ]
+                              <> FontStyle.tags TypoGraphy
+                          )
+                      ]
+                  ]
+            )
+            state.navButton
+        )
     ]
 
 lottieLoaderView :: forall w. BottomNavBarState -> (Action -> Effect Unit) -> Int -> String -> PrestoDOM (Effect Unit) w
 lottieLoaderView state push activeIndex text =
   linearLayout
-  [ width (V 25)
-  , height (V 25)
-  , visibility if((getValueToLocalNativeStore ALERT_RECEIVED) == "false" ) then GONE else VISIBLE
-  ][ lottieAnimationView
-    [ height (V 25)
-    , width (V 25)
-    , id (getIdForScreenIndex activeIndex)
-    , afterRender
-        ( \action ->
-            void $ pure $ startLottieProcess lottieAnimationConfig {rawJson = "notification_bell.json", lottieId = (getIdForScreenIndex activeIndex), speed = 1.0 }
-        )(const OnNavigate text)
+    [ width (V 25)
+    , height (V 25)
+    , visibility if ((getValueToLocalNativeStore ALERT_RECEIVED) == "false") then GONE else VISIBLE
     ]
-  ]
+    [ lottieAnimationView
+        [ height (V 25)
+        , width (V 25)
+        , id (getIdForScreenIndex activeIndex)
+        , afterRender
+            ( \action ->
+                void $ pure $ startLottieProcess lottieAnimationConfig { rawJson = "notification_bell.json", lottieId = (getIdForScreenIndex activeIndex), speed = 1.0 }
+            )
+            (const OnNavigate text)
+        ]
+    ]
 
 getIdForScreenIndex :: Int -> String
 getIdForScreenIndex activeIndex = getNewIDWithTag ("NotificationBellAlertView" <> (toStringJSON activeIndex))

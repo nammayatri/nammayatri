@@ -12,7 +12,6 @@
  
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
 module Screens.MyProfileScreen.Handler where
 
 import Prelude (bind, discard, pure, void, ($), (<$>))
@@ -24,7 +23,6 @@ import PrestoDOM.Core.Types.Language.Flow (runScreen)
 import Screens.MyProfileScreen.View as MyProfileScreen
 import Types.App (FlowBT, GlobalState(..), MY_PROFILE_SCREEN_OUTPUT(..), ScreenType(..))
 import ModifyScreenState (modifyScreenState)
-
 
 myProfileScreen :: FlowBT String MY_PROFILE_SCREEN_OUTPUT
 myProfileScreen = do

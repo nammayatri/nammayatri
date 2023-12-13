@@ -12,7 +12,6 @@
  
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
 module Screens.ChooseLanguageScreen.View where
 
 import Common.Types.App (LazyCheck(..))
@@ -43,16 +42,16 @@ screen :: ST.ChooseLanguageScreenState -> Screen Action ST.ChooseLanguageScreenS
 screen initialState =
   { initialState
   , view
-  , name : "ChooseLanguageScreen" 
-  , globalEvents : [(\_ -> pure $ runEffectFn1 consumeBP unit)]
+  , name: "ChooseLanguageScreen"
+  , globalEvents: [ (\_ -> pure $ runEffectFn1 consumeBP unit) ]
   , eval
   }
 
-view
-  :: forall w
-  . (Action -> Effect Unit)
-  -> ST.ChooseLanguageScreenState
-  -> PrestoDOM (Effect Unit) w
+view ::
+  forall w.
+  (Action -> Effect Unit) ->
+  ST.ChooseLanguageScreenState ->
+  PrestoDOM (Effect Unit) w
 view push state =
   linearLayout
     [ height MATCH_PARENT
@@ -63,86 +62,107 @@ view push state =
     , gravity BOTTOM
     , onBackPressed push (const BackPressed)
     , afterRender push (const AfterRender)
-    ][ linearLayout
+    ]
+    [ linearLayout
         [ width MATCH_PARENT
         , height WRAP_CONTENT
         , orientation VERTICAL
-        ][ PrestoAnim.animationSet 
+        ]
+        [ PrestoAnim.animationSet
             [ Anim.translateYAnimFromTopWithAlpha AnimConfig.translateYAnimConfig
-            ] $ scrollableView state push
-          , linearLayout
+            ]
+            $ scrollableView state push
+        , linearLayout
             [ height WRAP_CONTENT
             , width MATCH_PARENT
-            ][PrestoAnim.animationSet 
-              [ Anim.fadeIn $ true
-              ] $ PrimaryButton.view (push <<< PrimaryButtonActionController) (primaryButtonViewConfig state)]
+            ]
+            [ PrestoAnim.animationSet
+                [ Anim.fadeIn $ true
+                ]
+                $ PrimaryButton.view (push <<< PrimaryButtonActionController) (primaryButtonViewConfig state)
+            ]
         ]
     ]
 
 ------------------------------ scrollableView ------------------------------
-scrollableView :: ST.ChooseLanguageScreenState -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w
-scrollableView state push = 
- scrollView
-  [ width MATCH_PARENT
-  , weight 1.0
-  ][ linearLayout
+scrollableView :: ST.ChooseLanguageScreenState -> (Action -> Effect Unit) -> forall w. PrestoDOM (Effect Unit) w
+scrollableView state push =
+  scrollView
+    [ width MATCH_PARENT
+    , weight 1.0
+    ]
+    [ linearLayout
         [ height MATCH_PARENT
         , width MATCH_PARENT
         , orientation VERTICAL
-        ][ linearLayout
-        [ height MATCH_PARENT
-        , width MATCH_PARENT
-        , gravity CENTER
-        ][PrestoAnim.animationSet 
-          [ Anim.translateYAnimFromTopWithAlpha AnimConfig.translateYAnimConfig
-          ] $ imageView
-              [ width ( V 300)
-              , height ( V 190)
-              , imageWithFallback $ fetchImage FF_ASSET "ny_ic_welcome"
-              ]]
+        ]
+        [ linearLayout
+            [ height MATCH_PARENT
+            , width MATCH_PARENT
+            , gravity CENTER
+            ]
+            [ PrestoAnim.animationSet
+                [ Anim.translateYAnimFromTopWithAlpha AnimConfig.translateYAnimConfig
+                ]
+                $ imageView
+                    [ width (V 300)
+                    , height (V 190)
+                    , imageWithFallback $ fetchImage FF_ASSET "ny_ic_welcome"
+                    ]
+            ]
         , linearLayout
-          [ height WRAP_CONTENT
-          , width MATCH_PARENT
-          , orientation VERTICAL
-          , gravity CENTER_HORIZONTAL
-          ][ PrestoAnim.animationSet 
+            [ height WRAP_CONTENT
+            , width MATCH_PARENT
+            , orientation VERTICAL
+            , gravity CENTER_HORIZONTAL
+            ]
+            [ PrestoAnim.animationSet
+                [ Anim.translateYAnimFromTopWithAlpha AnimConfig.translateYAnimConfig
+                ]
+                $ textView
+                $ [ height WRAP_CONTENT
+                  , width WRAP_CONTENT
+                  , text $ getString $ WELCOME_TEXT "WELCOME_TEXT"
+                  , color Color.greyTextColor
+                  , gravity CENTER_HORIZONTAL
+                  , margin $ Margin 70 32 74 32
+                  ]
+                <> FontStyle.h1 TypoGraphy
+            ]
+        , PrestoAnim.animationSet
             [ Anim.translateYAnimFromTopWithAlpha AnimConfig.translateYAnimConfig
-            ] $ textView $
-                [ height WRAP_CONTENT
-                , width WRAP_CONTENT
-                , text $ getString $ WELCOME_TEXT "WELCOME_TEXT"
-                , color Color.greyTextColor
-                , gravity CENTER_HORIZONTAL
-                , margin $ Margin 70 32 74 32
-                ] <> FontStyle.h1 TypoGraphy
-          ]
-        , PrestoAnim.animationSet 
-          [ Anim.translateYAnimFromTopWithAlpha AnimConfig.translateYAnimConfig 
-          ] $ textView (
-              [ height WRAP_CONTENT
-              , width WRAP_CONTENT
-              , text $ getString CHOOSE_LANGUAGE
-              , color Color.inactive
-              , margin $ Margin 16 0 0 0
-              ] <> FontStyle.body1 TypoGraphy
-              )
+            ]
+            $ textView
+                ( [ height WRAP_CONTENT
+                  , width WRAP_CONTENT
+                  , text $ getString CHOOSE_LANGUAGE
+                  , color Color.inactive
+                  , margin $ Margin 16 0 0 0
+                  ]
+                    <> FontStyle.body1 TypoGraphy
+                )
         , menuButtonDriver state push
-      ]
-  ]
+        ]
+    ]
 
 ----------------------------- menuButtonDriver ------------------------
-menuButtonDriver :: ST.ChooseLanguageScreenState -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w
+menuButtonDriver :: ST.ChooseLanguageScreenState -> (Action -> Effect Unit) -> forall w. PrestoDOM (Effect Unit) w
 menuButtonDriver state push =
- linearLayout
-  [ height WRAP_CONTENT
-  , width MATCH_PARENT
-  , orientation VERTICAL
-  , margin $ Margin 0 0 1 5
-  , background Color.white900
-  ](DA.mapWithIndex
-      (\ index language ->
-      PrestoAnim.animationSet 
-      [ Anim.translateYAnimFromTopWithAlpha $ AnimConfig.translateYAnimMapConfig index
-      ] $ MenuButton.view
-          (push <<< MenuButtonAction) (menuButtonConfig state index language)) (state.data.config.languageList)
-  )
+  linearLayout
+    [ height WRAP_CONTENT
+    , width MATCH_PARENT
+    , orientation VERTICAL
+    , margin $ Margin 0 0 1 5
+    , background Color.white900
+    ]
+    ( DA.mapWithIndex
+        ( \index language ->
+            PrestoAnim.animationSet
+              [ Anim.translateYAnimFromTopWithAlpha $ AnimConfig.translateYAnimMapConfig index
+              ]
+              $ MenuButton.view
+                  (push <<< MenuButtonAction)
+                  (menuButtonConfig state index language)
+        )
+        (state.data.config.languageList)
+    )

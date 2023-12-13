@@ -12,8 +12,6 @@
  
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
-
 module Screens.SubscriptionScreen.Handler where
 
 import Control.Monad.Except.Trans (lift)
@@ -33,16 +31,16 @@ subscriptionScreen = do
   (GlobalState state) <- getState
   act <- lift $ lift $ runScreen $ SubscriptionScreen.screen state.subscriptionScreen (GlobalState state)
   case act of
-    HomeScreen updatedState -> do 
+    HomeScreen updatedState -> do
       modifyScreenState $ SubscriptionScreenStateType (\_ -> updatedState)
       App.BackT $ App.BackPoint <$> (pure $ NAV HomeScreenNav)
-    RideHistory updatedState -> do 
+    RideHistory updatedState -> do
       modifyScreenState $ SubscriptionScreenStateType (\_ -> updatedState)
       App.BackT $ App.BackPoint <$> (pure $ NAV GoToRideHistory)
-    Contest updatedState -> do 
+    Contest updatedState -> do
       modifyScreenState $ SubscriptionScreenStateType (\_ -> updatedState)
       App.BackT $ App.BackPoint <$> (pure $ NAV GoToContest)
-    Alerts updatedState -> do 
+    Alerts updatedState -> do
       modifyScreenState $ SubscriptionScreenStateType (\_ -> updatedState)
       App.BackT $ App.BackPoint <$> (pure $ NAV GoToAlerts)
     JoinPlanExit updatedState -> do
@@ -82,6 +80,6 @@ subscriptionScreen = do
     ClearDues updatedState -> do
       modifyScreenState $ SubscriptionScreenStateType (\_ -> updatedState)
       App.BackT $ App.NoBack <$> (pure $ CLEAR_DUES_ACT)
-    SubscribeAPI updatedState -> do 
+    SubscribeAPI updatedState -> do
       modifyScreenState $ SubscriptionScreenStateType (\_ -> updatedState)
       App.BackT $ App.NoBack <$> (pure $ SUBSCRIBE_API updatedState)

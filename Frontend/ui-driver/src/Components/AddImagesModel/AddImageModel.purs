@@ -12,7 +12,6 @@
  
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
 module Components.AddImagesModel (module Reexport) where
 
 import Components.AddImagesModel.Controller as Reexport

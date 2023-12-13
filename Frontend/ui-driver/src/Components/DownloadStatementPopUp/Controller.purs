@@ -1,6 +1,7 @@
 module Components.DownloadStatementPopUp.Controller where
 
-data Action = OnSelect
+data Action
+  = OnSelect
 
-
-type Config = {}
+type Config
+  = {}

@@ -12,70 +12,68 @@
  
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
 module Services.Accessor where
 
 import Prelude
 import Data.Lens (Lens', lens)
 import Data.Newtype (class Newtype, unwrap, wrap)
 
-_id :: forall a b c. Newtype a {id :: c | b} => Lens' a c
-_id = lens (unwrap >>> _.id) (\oldRec newVal -> wrap ((unwrap oldRec) {id = newVal}))
+_id :: forall a b c. Newtype a { id :: c | b } => Lens' a c
+_id = lens (unwrap >>> _.id) (\oldRec newVal -> wrap ((unwrap oldRec) { id = newVal }))
 
-_list :: forall a b c. Newtype a { list :: b | c} => Lens' a b
-_list = lens (unwrap >>> _.list) (\oldRec newVal -> wrap ((unwrap oldRec) {list = newVal}))
+_list :: forall a b c. Newtype a { list :: b | c } => Lens' a b
+_list = lens (unwrap >>> _.list) (\oldRec newVal -> wrap ((unwrap oldRec) { list = newVal }))
 
-_status :: forall a b c. Newtype a { status :: b | c} => Lens' a b
-_status = lens (unwrap >>> _.status) (\oldRec newVal -> wrap ((unwrap oldRec) {status = newVal}))
+_status :: forall a b c. Newtype a { status :: b | c } => Lens' a b
+_status = lens (unwrap >>> _.status) (\oldRec newVal -> wrap ((unwrap oldRec) { status = newVal }))
 
-_vehicleModel :: forall a b c. Newtype a { vehicleModel :: b | c} => Lens' a b
-_vehicleModel = lens (unwrap >>> _.vehicleModel) (\oldRec newVal -> wrap ((unwrap oldRec) {vehicleModel = newVal}))
+_vehicleModel :: forall a b c. Newtype a { vehicleModel :: b | c } => Lens' a b
+_vehicleModel = lens (unwrap >>> _.vehicleModel) (\oldRec newVal -> wrap ((unwrap oldRec) { vehicleModel = newVal }))
 
-_createdAt :: forall a b c. Newtype a { createdAt :: b | c} => Lens' a b
-_createdAt = lens (unwrap >>> _.createdAt) (\oldRec newVal -> wrap ((unwrap oldRec) {createdAt = newVal}))
+_createdAt :: forall a b c. Newtype a { createdAt :: b | c } => Lens' a b
+_createdAt = lens (unwrap >>> _.createdAt) (\oldRec newVal -> wrap ((unwrap oldRec) { createdAt = newVal }))
 
-_driverNumber :: forall a b c. Newtype a { driverNumber :: b | c} => Lens' a b
-_driverNumber = lens (unwrap >>> _.driverNumber) (\oldRec newVal -> wrap ((unwrap oldRec) {driverNumber = newVal}))
+_driverNumber :: forall a b c. Newtype a { driverNumber :: b | c } => Lens' a b
+_driverNumber = lens (unwrap >>> _.driverNumber) (\oldRec newVal -> wrap ((unwrap oldRec) { driverNumber = newVal }))
 
-_shortRideId :: forall a b c. Newtype a { shortRideId :: b | c} => Lens' a b
-_shortRideId = lens (unwrap >>> _.shortRideId) (\oldRec newVal -> wrap ((unwrap oldRec) {shortRideId = newVal}))
+_shortRideId :: forall a b c. Newtype a { shortRideId :: b | c } => Lens' a b
+_shortRideId = lens (unwrap >>> _.shortRideId) (\oldRec newVal -> wrap ((unwrap oldRec) { shortRideId = newVal }))
 
-_vehicleNumber :: forall a b c. Newtype a { vehicleNumber :: b | c} => Lens' a b
-_vehicleNumber = lens (unwrap >>> _.vehicleNumber) (\oldRec newVal -> wrap ((unwrap oldRec) {vehicleNumber = newVal}))
+_vehicleNumber :: forall a b c. Newtype a { vehicleNumber :: b | c } => Lens' a b
+_vehicleNumber = lens (unwrap >>> _.vehicleNumber) (\oldRec newVal -> wrap ((unwrap oldRec) { vehicleNumber = newVal }))
 
-_driverName :: forall a b c. Newtype a { driverName :: b | c} => Lens' a b
-_driverName = lens (unwrap >>> _.driverName) (\oldRec newVal -> wrap ((unwrap oldRec) {driverName = newVal}))
+_driverName :: forall a b c. Newtype a { driverName :: b | c } => Lens' a b
+_driverName = lens (unwrap >>> _.driverName) (\oldRec newVal -> wrap ((unwrap oldRec) { driverName = newVal }))
 
-_driverSelectedFare :: forall a b c. Newtype a { driverSelectedFare :: b | c} => Lens' a b
-_driverSelectedFare = lens (unwrap >>> _.driverSelectedFare) (\oldRec newVal -> wrap ((unwrap oldRec) {driverSelectedFare = newVal}))
+_driverSelectedFare :: forall a b c. Newtype a { driverSelectedFare :: b | c } => Lens' a b
+_driverSelectedFare = lens (unwrap >>> _.driverSelectedFare) (\oldRec newVal -> wrap ((unwrap oldRec) { driverSelectedFare = newVal }))
 
-_actualRideDistance :: forall a b c. Newtype a { actualRideDistance :: b | c} => Lens' a b
-_actualRideDistance = lens (unwrap >>> _.actualRideDistance) (\oldRec newVal -> wrap ((unwrap oldRec) {actualRideDistance = newVal}))
+_actualRideDistance :: forall a b c. Newtype a { actualRideDistance :: b | c } => Lens' a b
+_actualRideDistance = lens (unwrap >>> _.actualRideDistance) (\oldRec newVal -> wrap ((unwrap oldRec) { actualRideDistance = newVal }))
 
-_vehicleVariant :: forall a b c. Newtype a { vehicleVariant :: b | c} => Lens' a b
-_vehicleVariant = lens (unwrap >>> _.vehicleVariant) (\oldRec newVal -> wrap ((unwrap oldRec) {vehicleVariant = newVal}))
+_vehicleVariant :: forall a b c. Newtype a { vehicleVariant :: b | c } => Lens' a b
+_vehicleVariant = lens (unwrap >>> _.vehicleVariant) (\oldRec newVal -> wrap ((unwrap oldRec) { vehicleVariant = newVal }))
 
-_estimatedBaseFare :: forall a b c. Newtype a { estimatedBaseFare :: b | c} => Lens' a b
-_estimatedBaseFare = lens (unwrap >>> _.estimatedBaseFare) (\oldRec newVal -> wrap ((unwrap oldRec) {estimatedBaseFare = newVal}))
+_estimatedBaseFare :: forall a b c. Newtype a { estimatedBaseFare :: b | c } => Lens' a b
+_estimatedBaseFare = lens (unwrap >>> _.estimatedBaseFare) (\oldRec newVal -> wrap ((unwrap oldRec) { estimatedBaseFare = newVal }))
 
-_vehicleColor :: forall a b c. Newtype a { vehicleColor :: b | c} => Lens' a b
-_vehicleColor = lens (unwrap >>> _.vehicleColor) (\oldRec newVal -> wrap ((unwrap oldRec) {vehicleColor = newVal}))
+_vehicleColor :: forall a b c. Newtype a { vehicleColor :: b | c } => Lens' a b
+_vehicleColor = lens (unwrap >>> _.vehicleColor) (\oldRec newVal -> wrap ((unwrap oldRec) { vehicleColor = newVal }))
 
-_updatedAt :: forall a b c. Newtype a { updatedAt :: b | c} => Lens' a b
-_updatedAt = lens (unwrap >>> _.updatedAt) (\oldRec newVal -> wrap ((unwrap oldRec) {updatedAt = newVal}))
+_updatedAt :: forall a b c. Newtype a { updatedAt :: b | c } => Lens' a b
+_updatedAt = lens (unwrap >>> _.updatedAt) (\oldRec newVal -> wrap ((unwrap oldRec) { updatedAt = newVal }))
 
-_lat :: forall a b c. Newtype a { lat :: b | c} => Lens' a b
-_lat = lens (unwrap >>> _.lat) (\oldRec newVal -> wrap ((unwrap oldRec) {lat = newVal}))
+_lat :: forall a b c. Newtype a { lat :: b | c } => Lens' a b
+_lat = lens (unwrap >>> _.lat) (\oldRec newVal -> wrap ((unwrap oldRec) { lat = newVal }))
 
+_lon :: forall a b c. Newtype a { lon :: b | c } => Lens' a b
+_lon = lens (unwrap >>> _.lon) (\oldRec newVal -> wrap ((unwrap oldRec) { lon = newVal }))
 
-_lon :: forall a b c. Newtype a { lon :: b | c} => Lens' a b
-_lon = lens (unwrap >>> _.lon) (\oldRec newVal -> wrap ((unwrap oldRec) {lon = newVal}))
+_certificateNumber :: forall a b c. Newtype a { certificateNumber :: b | c } => Lens' a b
+_certificateNumber = lens (unwrap >>> _.certificateNumber) (\oldRec newVal -> wrap (unwrap oldRec) { certificateNumber = newVal })
 
-_certificateNumber :: forall a b c. Newtype a { certificateNumber :: b | c} => Lens' a b 
-_certificateNumber = lens (unwrap >>> _.certificateNumber) (\oldRec newVal -> wrap (unwrap oldRec) {certificateNumber = newVal})
-
-_distance :: forall a b c. Newtype a {distance :: c | b} => Lens' a c
-_distance = lens (unwrap >>> _.distance) (\oldRec newVal -> wrap ((unwrap oldRec) {distance = newVal}))
+_distance :: forall a b c. Newtype a { distance :: c | b } => Lens' a c
+_distance = lens (unwrap >>> _.distance) (\oldRec newVal -> wrap ((unwrap oldRec) { distance = newVal }))
 
 _orderId :: forall a b c. Newtype a { orderId :: b | c } => Lens' a b
 _orderId = lens (unwrap >>> _.orderId) (\oldRec newVal -> wrap ((unwrap oldRec) { orderId = newVal }))

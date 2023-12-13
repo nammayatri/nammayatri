@@ -12,9 +12,7 @@
  
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
 module Screens.RideHistoryScreen.ComponentConfig where
-
 
 import Common.Types.App (LazyCheck(..))
 import Components.DatePickerModel as DatePickerModel
@@ -32,42 +30,50 @@ import Screens.Types as ST
 import Styles.Colors as Color
 import Storage (getValueToLocalStore, KeyStore(..))
 
-errorModalConfig :: ST.RideHistoryScreenState -> ErrorModal.Config 
-errorModalConfig state = let 
-  config = ErrorModal.config 
-  errorModalConfig' = config 
-    { imageConfig {
-        imageUrl = if (getValueToLocalStore VEHICLE_VARIANT /= "AUTO_RICKSHAW") then fetchImage FF_COMMON_ASSET "ny_ic_no_past_rides" else fetchImage FF_ASSET "ny_ic_no_past_rides_auto"
-      , height = V 110
-      , width = V 124
-      , margin = (MarginBottom 61)
-      }
-    , errorConfig {
-        text = (getString EMPTY_RIDES)
-      , margin = (MarginBottom 7)  
-      , color = Color.black900
-      }
-    , errorDescriptionConfig {
-        text = (getString YOU_HAVE_NOT_TAKEN_A_TRIP_YET)
-      , color = Color.black700
-      }
-    , buttonConfig {
-        text = (getString BOOK_NOW)
-      , margin = (Margin 16 0 16 24)
-      , background = Color.black900
-      , color = Color.yellow900
-      , visibility  = GONE
-      }
-    , background = Color.transparent
-    }
-  in errorModalConfig' 
+errorModalConfig :: ST.RideHistoryScreenState -> ErrorModal.Config
+errorModalConfig state =
+  let
+    config = ErrorModal.config
+
+    errorModalConfig' =
+      config
+        { imageConfig
+          { imageUrl = if (getValueToLocalStore VEHICLE_VARIANT /= "AUTO_RICKSHAW") then fetchImage FF_COMMON_ASSET "ny_ic_no_past_rides" else fetchImage FF_ASSET "ny_ic_no_past_rides_auto"
+          , height = V 110
+          , width = V 124
+          , margin = (MarginBottom 61)
+          }
+        , errorConfig
+          { text = (getString EMPTY_RIDES)
+          , margin = (MarginBottom 7)
+          , color = Color.black900
+          }
+        , errorDescriptionConfig
+          { text = (getString YOU_HAVE_NOT_TAKEN_A_TRIP_YET)
+          , color = Color.black700
+          }
+        , buttonConfig
+          { text = (getString BOOK_NOW)
+          , margin = (Margin 16 0 16 24)
+          , background = Color.black900
+          , color = Color.yellow900
+          , visibility = GONE
+          }
+        , background = Color.transparent
+        }
+  in
+    errorModalConfig'
 
 datePickerConfig :: ST.RideHistoryScreenState -> DatePickerModel.Config
-datePickerConfig state = let
-  config = DatePickerModel.config
-  datePickerConfig' = config
-    { activeIndex = state.datePickerState.activeIndex
-    , dates = getPastDays tripDatesCount
-    , id = "DatePickerScrollView"
-    }
-  in datePickerConfig'
+datePickerConfig state =
+  let
+    config = DatePickerModel.config
+
+    datePickerConfig' =
+      config
+        { activeIndex = state.datePickerState.activeIndex
+        , dates = getPastDays tripDatesCount
+        , id = "DatePickerScrollView"
+        }
+  in
+    datePickerConfig'

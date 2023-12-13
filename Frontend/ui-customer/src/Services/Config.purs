@@ -12,7 +12,6 @@
 
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
 module Services.Config where
 
 import Debug (spy)
@@ -21,86 +20,104 @@ import Data.Eq.Generic (genericEq)
 import Data.Generic.Rep (class Generic)
 import ConfigJBridge (getKeyInSharedPrefKeysConfig, getValueToLocalNativeStoreConfig)
 
-
 foreign import environment :: String -> String
 
 foreign import getMerchant :: String -> String
 
-data Env = LOCAL | DEV | UAT | PROD
-derive instance genericEnv :: Generic Env _
-instance eqEnv :: Eq Env where eq = genericEq
+data Env
+  = LOCAL
+  | DEV
+  | UAT
+  | PROD
 
-newtype Config = Config
+derive instance genericEnv :: Generic Env _
+
+instance eqEnv :: Eq Env where
+  eq = genericEq
+
+newtype Config
+  = Config
   { baseUrl :: String
   , fingerprint :: String
   }
 
 getEnv :: Env
 getEnv = case spy "Selected Environment :- " (environment "") of
-  "local"       -> LOCAL
-  "master"      -> DEV
-  "sandbox"     -> UAT
-  "prod"        -> PROD
-  _             -> PROD
+  "local" -> LOCAL
+  "master" -> DEV
+  "sandbox" -> UAT
+  "prod" -> PROD
+  _ -> PROD
 
 getConfig :: Config
 getConfig = do
   case getEnv of
-    LOCAL -> Config
+    LOCAL ->
+      Config
         { baseUrl: "http://localhost:8013/v2"
-        , fingerprint : ""
+        , fingerprint: ""
         }
-    DEV  -> Config
+    DEV ->
+      Config
         { baseUrl: getValueToLocalNativeStoreConfig "BASE_URL"
-        , fingerprint : ""
+        , fingerprint: ""
         }
-    UAT  -> Config
+    UAT ->
+      Config
         { baseUrl: getValueToLocalNativeStoreConfig "BASE_URL"
-        , fingerprint : ""
+        , fingerprint: ""
         }
-    PROD -> Config
+    PROD ->
+      Config
         { baseUrl: getValueToLocalNativeStoreConfig "BASE_URL"
-        , fingerprint : ""
+        , fingerprint: ""
         }
 
 getMerchantId :: String -> String
 getMerchantId dummy = "NA"
+
 getEndpoint :: String -> String
 getEndpoint dummy = do
   if ((getKeyInSharedPrefKeysConfig "MOBILE_NUMBER") == "5000500050") then
     ""
-    else
-      let Config config = getConfig
-      in config.baseUrl
+  else
+    let
+      Config config = getConfig
+    in
+      config.baseUrl
 
 getBaseUrl :: String -> String
 getBaseUrl dummy = do
-  let a = spy "dummy" dummy
+  let
+    a = spy "dummy" dummy
   if ((getKeyInSharedPrefKeysConfig "MOBILE_NUMBER") == "5000500050") then
     spy "getBaseUrl inside if" ""
-    else
-      let Config config = getConfig
-      in spy "getBaseUrl inside else" (config.baseUrl)
+  else
+    let
+      Config config = getConfig
+    in
+      spy "getBaseUrl inside else" (config.baseUrl)
 
 getFingerPrint :: String -> String
 getFingerPrint dummy = do
   if ((getKeyInSharedPrefKeysConfig "MOBILE_NUMBER") == "5000500050") then
     ""
-    else
-      let Config config = getConfig
-      in config.fingerprint
-
+  else
+    let
+      Config config = getConfig
+    in
+      config.fingerprint
 
 getDriverNumber :: String -> String
 getDriverNumber _ = case getEnv of
-                        DEV  -> "9999999999"
-                        UAT  -> "9999999999"
-                        PROD -> "9999999999"
-                        _    -> "9999999999"
+  DEV -> "9999999999"
+  UAT -> "9999999999"
+  PROD -> "9999999999"
+  _ -> "9999999999"
 
 getSupportNumber :: String -> String
 getSupportNumber _ = case getEnv of
-                        DEV  -> "9999999999"
-                        UAT  -> "9999999999"
-                        PROD -> "9999999999"
-                        _    -> "9999999999"
+  DEV -> "9999999999"
+  UAT -> "9999999999"
+  PROD -> "9999999999"
+  _ -> "9999999999"

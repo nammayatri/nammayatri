@@ -12,28 +12,26 @@
 
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
 module Services.EndPoints where
 
 import Data.Maybe (Maybe(..))
 import Prelude (show, (<>), (==))
 import Services.Config (getBaseUrl)
 
-
 triggerOTP :: String -> String
-triggerOTP  dummy = (getBaseUrl "" ) <> "/auth"
+triggerOTP dummy = (getBaseUrl "") <> "/auth"
 
 verifyToken :: String -> String
-verifyToken token = (getBaseUrl "") <> "/auth/"<>token<>"/verify"
+verifyToken token = (getBaseUrl "") <> "/auth/" <> token <> "/verify"
 
 resendOTP :: String -> String
-resendOTP token = (getBaseUrl "") <> "/auth/otp/"<>token<>"/resend"
+resendOTP token = (getBaseUrl "") <> "/auth/otp/" <> token <> "/resend"
 
 driverActiveInactive :: String -> String
-driverActiveInactive status = (getBaseUrl "") <> "/driver/setActivity?active="<> status
+driverActiveInactive status = (getBaseUrl "") <> "/driver/setActivity?active=" <> status
 
 driverActiveInactiveSilent :: String -> String -> String
-driverActiveInactiveSilent status status_n = (getBaseUrl "") <> "/driver/setActivity?active="<> status <>"&mode="<> show status_n
+driverActiveInactiveSilent status status_n = (getBaseUrl "") <> "/driver/setActivity?active=" <> status <> "&mode=" <> show status_n
 
 startRide :: String -> String
 startRide rideId = (getBaseUrl "") <> "/driver/ride/" <> rideId <> "/start"
@@ -51,10 +49,10 @@ getDriverInfo :: String -> String
 getDriverInfo dummyString = (getBaseUrl "") <> "/driver/profile"
 
 getRideHistory :: String -> String -> String -> String -> String -> String
-getRideHistory limit offset isActive status day= do
+getRideHistory limit offset isActive status day = do
   case status of
-    "null" -> (getBaseUrl "") <> "/driver/ride/list?limit="<>limit<>"&offset="<>offset<>"&onlyActive="<>isActive
-    _ -> (getBaseUrl "") <> "/driver/ride/list?onlyActive="<>isActive<>"&status="<> (show status) <> if day == "null" then "" else "&day=" <> day
+    "null" -> (getBaseUrl "") <> "/driver/ride/list?limit=" <> limit <> "&offset=" <> offset <> "&onlyActive=" <> isActive
+    _ -> (getBaseUrl "") <> "/driver/ride/list?onlyActive=" <> isActive <> "&status=" <> (show status) <> if day == "null" then "" else "&day=" <> day
 
 offerRide :: String -> String
 offerRide dummyString = (getBaseUrl "") <> "/driver/searchRequest/quote/offer"
@@ -66,7 +64,7 @@ listCancelReason :: String -> String
 listCancelReason dummyString = (getBaseUrl "") <> "/cancellationReason/list"
 
 getRoute :: String -> String
-getRoute routeType = (getBaseUrl "") <> "/" <> routeType <>"/route"
+getRoute routeType = (getBaseUrl "") <> "/" <> routeType <> "/route"
 
 registerDriverRC :: String -> String
 registerDriverRC dummyString = (getBaseUrl "") <> "/driver/register/rc"
@@ -84,7 +82,7 @@ deleteRc :: String -> String
 deleteRc dummyString = (getBaseUrl "") <> "/rc/delete"
 
 callDriverToDriver :: String -> String
-callDriverToDriver rcNo = (getBaseUrl "") <> "/driver/register/call/driver?RC=" <> rcNo 
+callDriverToDriver rcNo = (getBaseUrl "") <> "/driver/register/call/driver?RC=" <> rcNo
 
 driverRegistrationStatus :: String -> String
 driverRegistrationStatus dummyString = (getBaseUrl "") <> "/driver/register/status?multipleRC=true"
@@ -96,13 +94,14 @@ referDriver :: String -> String
 referDriver dummyString = (getBaseUrl "") <> "/driver/referral"
 
 getstatsInfo :: String -> String
-getstatsInfo day = (getBaseUrl "") <> "/driver/profile/stats?day="<> day
+getstatsInfo day = (getBaseUrl "") <> "/driver/profile/stats?day=" <> day
 
 driverArrived :: String -> String
 driverArrived rideId = (getBaseUrl "") <> "/driver/ride/" <> rideId <> "/arrived/pickup"
 
 flowStatus :: String -> String
 flowStatus dummy = (getBaseUrl "33") <> "/frontend/flowStatus"
+
 messageList :: String -> String -> String
 messageList limit offset = (getBaseUrl "") <> "/message/list?limit=" <> limit <> "&offset=" <> offset
 
@@ -119,7 +118,7 @@ getPerformance :: String -> String
 getPerformance dummyString = (getBaseUrl "") <> "/driver/performance"
 
 driverAlternateNumber :: String -> String
-driverAlternateNumber  dummy = (getBaseUrl "" ) <> "/driver/alternateNumber/validate"
+driverAlternateNumber dummy = (getBaseUrl "") <> "/driver/alternateNumber/validate"
 
 alternateNumberResendOTP :: String -> String
 alternateNumberResendOTP dummy = (getBaseUrl "") <> "/driver/alternateNumber/resendOtp"
@@ -145,15 +144,14 @@ postIssue dummy = (getBaseUrl "") <> "/issue"
 issueInfo :: String -> String
 issueInfo issueId = (getBaseUrl "") <> "/issue/" <> issueId <> "/info"
 
-callDriverToCustomer :: String ->  String
-callDriverToCustomer  rideId =  (getBaseUrl "") <> "/driver/ride/" <> rideId <> "/call/customer"
-
+callDriverToCustomer :: String -> String
+callDriverToCustomer rideId = (getBaseUrl "") <> "/driver/ride/" <> rideId <> "/call/customer"
 
 fetchIssueList :: String -> String
 fetchIssueList dummy = (getBaseUrl "") <> "/issue/list"
 
 deleteIssue :: String -> String
-deleteIssue issueId = (getBaseUrl "") <> "/issue/"<> issueId <> "/delete"
+deleteIssue issueId = (getBaseUrl "") <> "/issue/" <> issueId <> "/delete"
 
 otpRide :: String -> String
 otpRide dummyRideOtp = (getBaseUrl "") <> "/driver/otpRide/start"
@@ -177,10 +175,10 @@ profileSummary :: String -> String
 profileSummary _ = getBaseUrl "" <> "/driver/profile/summary"
 
 createOrder :: String -> String
-createOrder id = (getBaseUrl "37") <> "/payment/" <> id <>"/createOrder"
+createOrder id = (getBaseUrl "37") <> "/payment/" <> id <> "/createOrder"
 
 orderStatus :: String -> String
-orderStatus orderId = (getBaseUrl "37") <> "/payment/" <> orderId <>"/status"
+orderStatus orderId = (getBaseUrl "37") <> "/payment/" <> orderId <> "/status"
 
 paymentHistory :: String -> String -> Maybe String -> String
 paymentHistory to from status = case status of
@@ -199,28 +197,28 @@ unVerifiedAadhaarData _ = (getBaseUrl "") <> "/driver/register/unVerifiedAadhaar
 getKioskLocations :: String -> String
 getKioskLocations _ = (getBaseUrl "") <> "/kioskLocation/list"
 
-getUiPlans :: String -> String 
+getUiPlans :: String -> String
 getUiPlans _ = (getBaseUrl "") <> "/plan/list"
 
-getCurrentPlan :: String -> String 
+getCurrentPlan :: String -> String
 getCurrentPlan driverId = (getBaseUrl "") <> "/plan/currentPlan"
 
-subscribePlan :: String -> String 
-subscribePlan planId = (getBaseUrl "") <> "/plan/"<> planId <>"/subscribe"
+subscribePlan :: String -> String
+subscribePlan planId = (getBaseUrl "") <> "/plan/" <> planId <> "/subscribe"
 
-paymentDues :: String -> String 
+paymentDues :: String -> String
 paymentDues _ = (getBaseUrl "") <> "/payment/dues"
 
-resumeMandate :: String -> String 
+resumeMandate :: String -> String
 resumeMandate _ = (getBaseUrl "") <> "/plan/resume"
 
 selectPlan :: String -> String
-selectPlan planId = (getBaseUrl "") <> "/plan/"<> planId <>"/select"
+selectPlan planId = (getBaseUrl "") <> "/plan/" <> planId <> "/select"
 
-suspendMandate :: String -> String 
-suspendMandate driverId = (getBaseUrl "") <> "/plan/suspend" 
+suspendMandate :: String -> String
+suspendMandate driverId = (getBaseUrl "") <> "/plan/suspend"
 
-postRideFeedback :: String -> String 
+postRideFeedback :: String -> String
 postRideFeedback _ = (getBaseUrl "") <> "/feedback/rateRide"
 
 generateReferralCode :: String -> String
@@ -229,19 +227,19 @@ generateReferralCode dummyString = (getBaseUrl "") <> "/driver/generateReferralC
 paymentHistoryListV2 :: String -> String -> String -> String
 paymentHistoryListV2 limit offset historyType = (getBaseUrl "") <> "/driver/v2/payments/history?limit=" <> limit <> "&offset=" <> offset <> "&paymentMode=" <> show historyType
 
-paymentEntityDetails :: String -> String 
+paymentEntityDetails :: String -> String
 paymentEntityDetails id = (getBaseUrl "") <> "/driver/v2/payments/history/" <> id <> "/entity"
 
-cleardues :: String -> String 
+cleardues :: String -> String
 cleardues _ = (getBaseUrl "") <> "/driver/cleardues"
 
 autoComplete :: String -> String
 autoComplete _ = (getBaseUrl "") <> "/maps/autoComplete"
 
 placeDetails :: String -> String
-placeDetails _ =  (getBaseUrl "") <> "/maps/getPlaceDetails"
+placeDetails _ = (getBaseUrl "") <> "/maps/getPlaceDetails"
 
-getPlaceName :: String -> String 
+getPlaceName :: String -> String
 getPlaceName _ = (getBaseUrl "") <> "/maps/getPlaceName"
 
 activateDriverGoTo :: String -> String -> String
@@ -263,7 +261,7 @@ updateDriverHomeLocation :: String -> String
 updateDriverHomeLocation homeLocationId = getBaseUrl "" <> "/driver/goHome/update?homeLocationId=" <> homeLocationId
 
 rideRoute :: String -> String
-rideRoute rideId = (getBaseUrl "") <> "/" <> rideId <>"/route"
+rideRoute rideId = (getBaseUrl "") <> "/" <> rideId <> "/route"
 
-getMerchantIdList :: String -> String 
+getMerchantIdList :: String -> String
 getMerchantIdList merchantId = getBaseUrl "" <> "/city/" <> merchantId <> "/list"

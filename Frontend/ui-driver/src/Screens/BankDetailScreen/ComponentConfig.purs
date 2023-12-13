@@ -12,7 +12,6 @@
  
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
 module Screens.BankDetailScreen.ComponentConfig where
 
 import Components.PrimaryButton as PrimaryButton
@@ -23,15 +22,19 @@ import Screens.Types as ST
 import Styles.Colors as Color
 
 primaryButtonConfig :: ST.BankDetailScreenState -> PrimaryButton.Config
-primaryButtonConfig state = let 
+primaryButtonConfig state =
+  let
     config = PrimaryButton.config
-    primaryButtonConfig' = config 
-      { textConfig{ text = (getString NEXT)}
-      , width = MATCH_PARENT
-      , cornerRadius = 0.0
-      , height = (V 64)
-      , background = Color.black900
-      , margin = (Margin 0 0 0 0)
-      , id = "BankDetailScreenPrimaryButton"
-      }
-  in primaryButtonConfig'
+
+    primaryButtonConfig' =
+      config
+        { textConfig { text = (getString NEXT) }
+        , width = MATCH_PARENT
+        , cornerRadius = 0.0
+        , height = (V 64)
+        , background = Color.black900
+        , margin = (Margin 0 0 0 0)
+        , id = "BankDetailScreenPrimaryButton"
+        }
+  in
+    primaryButtonConfig'

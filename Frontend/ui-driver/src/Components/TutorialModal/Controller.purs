@@ -12,12 +12,13 @@
  
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
 module Components.TutorialModal.Controller where
 
-data Action = OnCloseClick | CallSupport | Logout
+data Action
+  = OnCloseClick
+  | CallSupport
+  | Logout
 
-type State =
-    {
-        imageUrl :: String
+type State
+  = { imageUrl :: String
     }

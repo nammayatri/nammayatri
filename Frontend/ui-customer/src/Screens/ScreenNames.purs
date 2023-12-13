@@ -12,59 +12,59 @@
  
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
 module Screens where
 
-data ScreenName = SPLASH_SCREEN
-                | CHOOSE_LANGUAGE_SCREEN
-                | ENTER_MOBILE_NUMBER_SCREEN
-                | HOME_SCREEN
-                | PERMISSION_SCREEN
-                | MY_PROFILE_SCREEN
-                | MY_RIDES_SCREEN
-                | SELECT_LANGUAGE_SCREEN
-                | HELP_AND_SUPPORT_SCREEN
-                | ABOUT_US_SCREEN
-                | EMERGENCY_CONTACS_SCREEN
-                | ACCOUNT_SET_UP_SCREEN
-                | CONTACT_US_SCREEN
-                | TRIP_DETAILS_SCREEN
-                | INVOICE_SCREEN
-                | RIDE_RATING_SCREEN
-                | EDIT_PROFILE_SCREEN
-                | ADD_NEW_ADDRESS_SCREEN
-                | SAVED_LOCATION_SCREEN
-                | SUCCESS_SCREEN
-                | REFERRAL_SCREEN
-                | APP_UPDATE_POPUP_SCREEN
-                | ENTER_OTP_NUMBER_SCREEN
-                | WELCOME_SCREEN
-                | TICKET_BOOKING_SCREEN
+data ScreenName
+  = SPLASH_SCREEN
+  | CHOOSE_LANGUAGE_SCREEN
+  | ENTER_MOBILE_NUMBER_SCREEN
+  | HOME_SCREEN
+  | PERMISSION_SCREEN
+  | MY_PROFILE_SCREEN
+  | MY_RIDES_SCREEN
+  | SELECT_LANGUAGE_SCREEN
+  | HELP_AND_SUPPORT_SCREEN
+  | ABOUT_US_SCREEN
+  | EMERGENCY_CONTACS_SCREEN
+  | ACCOUNT_SET_UP_SCREEN
+  | CONTACT_US_SCREEN
+  | TRIP_DETAILS_SCREEN
+  | INVOICE_SCREEN
+  | RIDE_RATING_SCREEN
+  | EDIT_PROFILE_SCREEN
+  | ADD_NEW_ADDRESS_SCREEN
+  | SAVED_LOCATION_SCREEN
+  | SUCCESS_SCREEN
+  | REFERRAL_SCREEN
+  | APP_UPDATE_POPUP_SCREEN
+  | ENTER_OTP_NUMBER_SCREEN
+  | WELCOME_SCREEN
+  | TICKET_BOOKING_SCREEN
 
 getScreen :: ScreenName -> String
-getScreen str = case str of 
-        SPLASH_SCREEN                 -> "splash_screen"
-        CHOOSE_LANGUAGE_SCREEN        -> "choose_language_screen"
-        ENTER_MOBILE_NUMBER_SCREEN    -> "enter_mobile_number_screen"
-        HOME_SCREEN                   -> "home_screen"
-        PERMISSION_SCREEN             -> "permission_screen"
-        MY_PROFILE_SCREEN             -> "my_profile_screen"
-        MY_RIDES_SCREEN               -> "my_rides_screen"
-        SELECT_LANGUAGE_SCREEN        -> "select_language_screen"
-        HELP_AND_SUPPORT_SCREEN       -> "help_and_support_screen"
-        ABOUT_US_SCREEN               -> "about_us_screen"
-        EMERGENCY_CONTACS_SCREEN      -> "emergency_contacts_screen"
-        ACCOUNT_SET_UP_SCREEN         -> "account_set_up_screen"
-        CONTACT_US_SCREEN             -> "contact_us_screen"
-        TRIP_DETAILS_SCREEN           -> "trip_details_screen"
-        INVOICE_SCREEN                -> "invoice_screen"
-        RIDE_RATING_SCREEN            -> "ride_rating_screen"
-        EDIT_PROFILE_SCREEN           -> "edit_profile_screen"
-        ADD_NEW_ADDRESS_SCREEN        -> "add_new_address_screen"
-        SAVED_LOCATION_SCREEN         -> "saved_location_screen"
-        SUCCESS_SCREEN                -> "success_screen"
-        REFERRAL_SCREEN               -> "referral_screen"
-        APP_UPDATE_POPUP_SCREEN       -> "app_update_popup_screen"
-        ENTER_OTP_NUMBER_SCREEN       -> "enter_otp_number_screen"
-        WELCOME_SCREEN                -> "welcome_screen"
-        TICKET_BOOKING_SCREEN         -> "ticket_booking_screen"
+getScreen str = case str of
+  SPLASH_SCREEN -> "splash_screen"
+  CHOOSE_LANGUAGE_SCREEN -> "choose_language_screen"
+  ENTER_MOBILE_NUMBER_SCREEN -> "enter_mobile_number_screen"
+  HOME_SCREEN -> "home_screen"
+  PERMISSION_SCREEN -> "permission_screen"
+  MY_PROFILE_SCREEN -> "my_profile_screen"
+  MY_RIDES_SCREEN -> "my_rides_screen"
+  SELECT_LANGUAGE_SCREEN -> "select_language_screen"
+  HELP_AND_SUPPORT_SCREEN -> "help_and_support_screen"
+  ABOUT_US_SCREEN -> "about_us_screen"
+  EMERGENCY_CONTACS_SCREEN -> "emergency_contacts_screen"
+  ACCOUNT_SET_UP_SCREEN -> "account_set_up_screen"
+  CONTACT_US_SCREEN -> "contact_us_screen"
+  TRIP_DETAILS_SCREEN -> "trip_details_screen"
+  INVOICE_SCREEN -> "invoice_screen"
+  RIDE_RATING_SCREEN -> "ride_rating_screen"
+  EDIT_PROFILE_SCREEN -> "edit_profile_screen"
+  ADD_NEW_ADDRESS_SCREEN -> "add_new_address_screen"
+  SAVED_LOCATION_SCREEN -> "saved_location_screen"
+  SUCCESS_SCREEN -> "success_screen"
+  REFERRAL_SCREEN -> "referral_screen"
+  APP_UPDATE_POPUP_SCREEN -> "app_update_popup_screen"
+  ENTER_OTP_NUMBER_SCREEN -> "enter_otp_number_screen"
+  WELCOME_SCREEN -> "welcome_screen"
+  TICKET_BOOKING_SCREEN -> "ticket_booking_screen"

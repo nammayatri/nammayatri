@@ -12,7 +12,6 @@
 
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
 module Screens.AccountSetUpScreen.ScreenData where
 
 import Screens.Types (AccountSetUpScreenState)
@@ -26,25 +25,25 @@ initData =
       , email: ""
       , gender: Nothing
       , nameErrorMessage: Nothing
-      , config : getAppConfig appConfig
-      , disabilityOptions : {
-          activeIndex : 0
-        , specialAssistActiveIndex : 0
-        , disabilityOptionList : []
-        , selectedDisability : Nothing
-        , otherDisabilityReason : Nothing
-        , editedDisabilityReason : ""
-        }
+      , config: getAppConfig appConfig
+      , disabilityOptions:
+          { activeIndex: 0
+          , specialAssistActiveIndex: 0
+          , disabilityOptionList: []
+          , selectedDisability: Nothing
+          , otherDisabilityReason: Nothing
+          , editedDisabilityReason: ""
+          }
       }
   , props:
       { btnActive: false
       , backPressed: false
       , genderSelected: Nothing
       , genderOptionExpanded: false
-      , expandEnabled : false
-      , showOptions : false
-      , activeField : Nothing
-      , isNameValid : false
-      , isSpecialAssistList : false
+      , expandEnabled: false
+      , showOptions: false
+      , activeField: Nothing
+      , isNameValid: false
+      , isSpecialAssistList: false
       }
   }

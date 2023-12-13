@@ -7,13 +7,12 @@ import Language.Types (STR(..))
 
 initData :: AppUpdatePopUpScreenState
 initData =
-    {
-        version : 1, 
-        updatePopup : NoUpdatePopup,
-        appUpdatedView : {
-            primaryText : "App Update",
-            secondaryText : "",
-            optionTwoText : getString UPDATE,
-            coverImageUrl : ""
-        }
-    }
+  { version: 1
+  , updatePopup: NoUpdatePopup
+  , appUpdatedView:
+      { primaryText: "App Update"
+      , secondaryText: ""
+      , optionTwoText: getString UPDATE
+      , coverImageUrl: ""
+      }
+  }

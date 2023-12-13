@@ -12,7 +12,6 @@
  
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
 module Screens.SelectLanguageScreen.Controller where
 
 import Prelude (class Show, pure, unit, (==), bind, ($), discard)
@@ -31,28 +30,41 @@ import Foreign (unsafeToForeign)
 
 instance showAction :: Show Action where
   show _ = ""
+
 instance loggableAction :: Loggable Action where
   performLog action appId = case action of
     AfterRender -> trackAppScreenRender appId "screen" (getScreen SELECT_LANGUAGE_SCREEN)
     BackPressed -> do
       trackAppBackPress appId (getScreen SELECT_LANGUAGE_SCREEN)
       trackAppEndScreen appId (getScreen SELECT_LANGUAGE_SCREEN)
-    MenuButtonAction (MenuButton.OnSelection btnState)-> trackAppActionClick appId (getScreen SELECT_LANGUAGE_SCREEN) "menu_button" btnState.text.value
+    MenuButtonAction (MenuButton.OnSelection btnState) -> trackAppActionClick appId (getScreen SELECT_LANGUAGE_SCREEN) "menu_button" btnState.text.value
     PrimaryButtonActionController act -> case act of
       PrimaryButtonController.OnClick -> do
         trackAppActionClick appId (getScreen SELECT_LANGUAGE_SCREEN) "primary_button" "update_on_click"
         trackAppEndScreen appId (getScreen SELECT_LANGUAGE_SCREEN)
       PrimaryButtonController.NoAction -> trackAppActionClick appId (getScreen SELECT_LANGUAGE_SCREEN) "primary_button" "no_action"
-      
-data ScreenOutput = GoBack
-data Action = BackPressed | MenuButtonAction MenuButton.Action | PrimaryButtonActionController PrimaryButtonController.Action | AfterRender   
+
+data ScreenOutput
+  = GoBack
+
+data Action
+  = BackPressed
+  | MenuButtonAction MenuButton.Action
+  | PrimaryButtonActionController PrimaryButtonController.Action
+  | AfterRender
+
 eval :: Action -> SelectLanguageScreenState -> Eval Action ScreenOutput SelectLanguageScreenState
 eval (PrimaryButtonActionController (PrimaryButtonController.OnClick)) state = do
-   _ <- pure $ setValueToLocalStore LANGUAGE_KEY state.props.selectedLanguage
-   _ <- pure $ setCleverTapUserProp [{key : "Preferred Language", value : unsafeToForeign state.props.selectedLanguage}]
-   let _ = unsafePerformEffect $ logEventWithParams state.data.logField "ny_driver_language_selection" "Language" state.props.selectedLanguage
-   exit GoBack
+  _ <- pure $ setValueToLocalStore LANGUAGE_KEY state.props.selectedLanguage
+  _ <- pure $ setCleverTapUserProp [ { key: "Preferred Language", value: unsafeToForeign state.props.selectedLanguage } ]
+  let
+    _ = unsafePerformEffect $ logEventWithParams state.data.logField "ny_driver_language_selection" "Language" state.props.selectedLanguage
+  exit GoBack
+
 eval BackPressed state = exit GoBack
-eval AfterRender state = continue state {props {selectedLanguage = if getValueToLocalStore LANGUAGE_KEY == "__failed" then "EN_US" else getValueToLocalStore LANGUAGE_KEY}}
-eval (MenuButtonAction (MenuButton.OnSelection btnState)) state = continue state { props { selectedLanguage = btnState.text.value }}
+
+eval AfterRender state = continue state { props { selectedLanguage = if getValueToLocalStore LANGUAGE_KEY == "__failed" then "EN_US" else getValueToLocalStore LANGUAGE_KEY } }
+
+eval (MenuButtonAction (MenuButton.OnSelection btnState)) state = continue state { props { selectedLanguage = btnState.text.value } }
+
 eval (PrimaryButtonActionController (PrimaryButtonController.NoAction)) state = continue state

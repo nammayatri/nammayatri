@@ -12,10 +12,9 @@
  
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
 module Components.StatsModel.Controller where
 
-import PrestoDOM ( Length(..), Margin(..), Visibility(..), Padding(..), Gravity(..))
+import PrestoDOM (Length(..), Margin(..), Visibility(..), Padding(..), Gravity(..))
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Font.Size as FontSize
 import Font.Style as FontStyle
@@ -23,69 +22,71 @@ import Styles.Colors as Color
 import Prelude
 import Effect (Effect)
 
-data Action = NoAction | OnIconClick
+data Action
+  = NoAction
+  | OnIconClick
 
-type Config =
-  { countTextConfig :: TextConfig,
-    earningsTextConfig :: TextConfig,
-    bonusTextConfig :: TextConfig,
-    textConfig :: TextConfig,
-    totalRidesOfDay :: Int,
-    totalEarningsOfDay :: Int,
-    bonusEarned :: Int,
-    visibility :: Visibility
-  }
+type Config
+  = { countTextConfig :: TextConfig
+    , earningsTextConfig :: TextConfig
+    , bonusTextConfig :: TextConfig
+    , textConfig :: TextConfig
+    , totalRidesOfDay :: Int
+    , totalEarningsOfDay :: Int
+    , bonusEarned :: Int
+    , visibility :: Visibility
+    }
 
-type TextConfig =
-  { width :: Length
-  , height :: Length
-  , text :: String
-  , color :: String 
-  , visibility :: Visibility
-  , gravity :: Gravity
-  , weight :: Number
-  }
+type TextConfig
+  = { width :: Length
+    , height :: Length
+    , text :: String
+    , color :: String
+    , visibility :: Visibility
+    , gravity :: Gravity
+    , weight :: Number
+    }
 
-config :: Config 
-config = 
-  { countTextConfig :
-    { width : MATCH_PARENT
-    , height : WRAP_CONTENT
-    , text : ""
-    , color : Color.black800
-    , visibility : VISIBLE
-    , gravity : CENTER_HORIZONTAL
-    , weight : 1.0
-    },
-    earningsTextConfig :
-    { width : MATCH_PARENT
-    , height : WRAP_CONTENT
-    , text : ""
-    , color : Color.black800
-    , visibility : VISIBLE
-    , gravity : CENTER_HORIZONTAL
-    , weight : 1.0
-    },
-    bonusTextConfig :
-    { width : MATCH_PARENT
-    , height : WRAP_CONTENT
-    , text : ""
-    , color : Color.green900
-    , visibility : VISIBLE
-    , gravity : CENTER_HORIZONTAL
-    , weight : 1.0
-    },
-    textConfig :
-    { width : MATCH_PARENT
-    , height : WRAP_CONTENT
-    , text : ""
-    , color : Color.black800
-    , visibility : VISIBLE
-    , gravity : CENTER_HORIZONTAL
-    , weight : 1.0
-    },
-    totalRidesOfDay : 2,
-    totalEarningsOfDay : 2,
-    bonusEarned : 0,
-    visibility : VISIBLE
+config :: Config
+config =
+  { countTextConfig:
+      { width: MATCH_PARENT
+      , height: WRAP_CONTENT
+      , text: ""
+      , color: Color.black800
+      , visibility: VISIBLE
+      , gravity: CENTER_HORIZONTAL
+      , weight: 1.0
+      }
+  , earningsTextConfig:
+      { width: MATCH_PARENT
+      , height: WRAP_CONTENT
+      , text: ""
+      , color: Color.black800
+      , visibility: VISIBLE
+      , gravity: CENTER_HORIZONTAL
+      , weight: 1.0
+      }
+  , bonusTextConfig:
+      { width: MATCH_PARENT
+      , height: WRAP_CONTENT
+      , text: ""
+      , color: Color.green900
+      , visibility: VISIBLE
+      , gravity: CENTER_HORIZONTAL
+      , weight: 1.0
+      }
+  , textConfig:
+      { width: MATCH_PARENT
+      , height: WRAP_CONTENT
+      , text: ""
+      , color: Color.black800
+      , visibility: VISIBLE
+      , gravity: CENTER_HORIZONTAL
+      , weight: 1.0
+      }
+  , totalRidesOfDay: 2
+  , totalEarningsOfDay: 2
+  , bonusEarned: 0
+  , visibility: VISIBLE
   }

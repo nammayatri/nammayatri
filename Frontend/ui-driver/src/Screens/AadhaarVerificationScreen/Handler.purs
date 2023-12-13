@@ -12,7 +12,6 @@
 
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
 module Screens.AadhaarVerificationScreen.Handler where
 
 import Control.Monad.Except.Trans (lift)
@@ -32,7 +31,7 @@ aadhaarVerificationScreen = do
   (GlobalState state) <- getState
   act <- lift $ lift $ runScreen $ AadhaarVerificationScreen.screen state.aadhaarVerificationScreen
   case act of
-    GoToOtpStage updatedState-> do
+    GoToOtpStage updatedState -> do
       modifyScreenState $ AadhaarVerificationScreenType (\_ -> updatedState)
       App.BackT $ App.NoBack <$> (pure $ ENTER_AADHAAR_OTP updatedState)
     VerfiyOTP updatedState -> do

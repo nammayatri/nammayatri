@@ -12,7 +12,6 @@
 
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
 module Screens.ReferralScreen.ScreenData where
 
 import Screens.Types (ReferralScreenState, BottomNavBarState, ReferralType(..), LeaderBoardType(..), RankCardData)
@@ -23,71 +22,71 @@ import ConfigProvider
 import Common.Types.App (CalendarDate, CalendarWeek)
 
 initData :: ReferralScreenState
-initData =  {
-  data:  {
-    referralCode : ""
-  , confirmReferralCode : ""
-  , password : ""
-  , driverInfo : {
-      driverName : "",
-      driverMobile : Just "",
-      vehicleRegNumber : "",
-      referralCode : Nothing,
-      vehicleVariant : ""
-    }
-  , driverPerformance : {
-      referrals : {
-        totalActivatedCustomers : 0,
-        totalReferredCustomers : 0
-    }
-}
-  , logField : empty
-  , config : getAppConfig appConfig
+initData =
+  { data:
+      { referralCode: ""
+      , confirmReferralCode: ""
+      , password: ""
+      , driverInfo:
+          { driverName: ""
+          , driverMobile: Just ""
+          , vehicleRegNumber: ""
+          , referralCode: Nothing
+          , vehicleVariant: ""
+          }
+      , driverPerformance:
+          { referrals:
+              { totalActivatedCustomers: 0
+              , totalReferredCustomers: 0
+              }
+          }
+      , logField: empty
+      , config: getAppConfig appConfig
+      }
+  , props:
+      { primarybtnActive: false
+      , confirmBtnActive: false
+      , passwordPopUpVisible: false
+      , callSupportPopUpVisible: false
+      , enableReferralFlowCount: 0
+      , stage: LeaderBoard
+      , seconds: 4
+      , id: "SuccessScreenTimerId"
+      , firstTime: false
+      , leaderBoardType: Daily
+      , showDateSelector: false
+      , days: []
+      , weeks: []
+      , selectedDay: dummyDay
+      , selectedWeek: dummyWeek
+      , rankersData: []
+      , currentDriverData: dummyCurrentDriverData
+      , showShimmer: true
+      , noData: false
+      , lastUpdatedAt: ""
+      }
   }
-,  props: {
-      primarybtnActive :false
-    , confirmBtnActive : false
-    , passwordPopUpVisible : false
-    , callSupportPopUpVisible : false
-    , enableReferralFlowCount : 0
-    , stage : LeaderBoard
-    , seconds : 4
-    , id : "SuccessScreenTimerId"
-    , firstTime : false
-    , leaderBoardType : Daily
-    , showDateSelector : false
-    , days : []
-    , weeks : []
-    , selectedDay : dummyDay
-    , selectedWeek : dummyWeek
-    , rankersData : []
-    , currentDriverData : dummyCurrentDriverData
-    , showShimmer : true
-    , noData : false
-    , lastUpdatedAt : ""
-  }
-}
 
 dummyRankData :: RankCardData
-dummyRankData = { goodName : "-", profileUrl : Nothing, rank : 0, rides : 0 , gender : "UNKNOWN"}
+dummyRankData = { goodName: "-", profileUrl: Nothing, rank: 0, rides: 0, gender: "UNKNOWN" }
 
 dummyCurrentDriverData :: RankCardData
-dummyCurrentDriverData = {goodName : "Driver", profileUrl : Nothing, rank : 8, rides : 155, gender : "UNKNOWN"}
+dummyCurrentDriverData = { goodName: "Driver", profileUrl: Nothing, rank: 8, rides: 155, gender: "UNKNOWN" }
 
 dummyDay :: CalendarDate
-dummyDay = {
-    date : 0
-  , utcDate : ""
-  , month : ""
-  , year : 0
-}
+dummyDay =
+  { date: 0
+  , utcDate: ""
+  , month: ""
+  , year: 0
+  }
 
 dummyWeek :: CalendarWeek
-dummyWeek = {
-    startDate : 0
-  , utcStartDate : ""
-  , endDate : 0
-  , utcEndDate : ""
-  , startMonth : ""
-  , endMonth : ""
-}
+dummyWeek =
+  { startDate: 0
+  , utcStartDate: ""
+  , endDate: 0
+  , utcEndDate: ""
+  , startMonth: ""
+  , endMonth: ""
+  }

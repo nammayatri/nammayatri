@@ -12,7 +12,6 @@
  
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
 module Screens.InvoiceScreen.Handler where
 
 import Prelude (Unit, bind, ($), (<$>), pure)
@@ -25,9 +24,9 @@ import Screens.InvoiceScreen.View as InvoiceScreen
 import Types.App (FlowBT, GlobalState(..))
 
 invoiceScreen :: FlowBT String ScreenOutput
-invoiceScreen = do 
+invoiceScreen = do
   (GlobalState state) <- getState
   act <- lift $ lift $ runScreen $ InvoiceScreen.screen state.invoiceScreen
   case act of
-    GoBack -> App.BackT $ App.NoBack <$> (pure $ act) 
-    GoToHome -> App.BackT  $ App.NoBack <$> (pure $ act)
+    GoBack -> App.BackT $ App.NoBack <$> (pure $ act)
+    GoToHome -> App.BackT $ App.NoBack <$> (pure $ act)

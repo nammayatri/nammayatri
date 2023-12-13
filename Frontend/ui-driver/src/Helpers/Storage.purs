@@ -12,10 +12,9 @@
 
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
 module Storage where
 
-import Prelude (show, Unit, void, pure, class Show, ($), (<<<), (==),(>))
+import Prelude (show, Unit, void, pure, class Show, ($), (<<<), (==), (>))
 import JBridge as JBridge
 import Types.App (FlowBT)
 import Control.Monad.Trans.Class (lift)
@@ -25,97 +24,99 @@ import Effect (Effect)
 import Screens.Types (HomeScreenStage)
 import Common.Types.App (LazyCheck(..))
 import Data.Maybe (Maybe(..), fromMaybe)
-import Data.Int(fromString)
+import Data.Int (fromString)
 
-data KeyStore = USER_NAME
-                | LANGUAGE_KEY
-                | FCM_TOKEN
-                | REGISTERATION_TOKEN
-                | VERSION_NAME
-                | BASE_URL
-                | TEST_FLOW_FOR_REGISTRATOION
-                | MOBILE_NUMBER_KEY
-                | IS_RIDE_ACTIVE
-                | IS_DRIVER_ENABLED
-                | DRIVER_STATUS
-                | DRIVER_STATUS_N
-                | LOCATION_UPDATE_TIME
-                | DRIVER_ID
-                | BUNDLE_VERSION
-                | TEST_FLOW_FOR_PERMISSIONS
-                | LOCAL_STAGE
-                | RIDE_STATUS_POLLING
-                | RIDE_STATUS_POLLING_ID
-                | RIDE_T_FREQUENCY
-                | RIDE_G_FREQUENCY
-                | IS_DRIVER_VERIFIED
-                | DRIVER_MIN_DISPLACEMENT
-                | DEMO_MODE_PASSWORD
-                | IS_DEMOMODE_ENABLED
-                | RIDE_REQUEST_TIME
-                | LAST_KNOWN_LAT
-                | LAST_KNOWN_LON
-                | GPS_METHOD
-                | MAKE_NULL_API_CALL
-                | ALERT_RECEIVED
-                | REFERRAL_ACTIVATED
-                | REFERRAL_CODE
-                | READ_MESSAGES
-                | CHAT_CHANNEL_ID
-                | MERCHANT_ID
-                | DOCUMENT_UPLOAD_TIME
-                | INVALID_OTP_TIME
-                | RIDE_REQUEST_BUFFER
-                | SESSION_ID
-                | PROFILE_DEMO
-                | SET_ALTERNATE_TIME
-                | SUGGESTIONS
-                | SUGGESTIONS_DEFINITIONS
-                | TRIGGER_MAPS
-                | DEVICE_DETAILS
-                | HAS_TAKEN_FIRST_RIDE
-                | CURRENCY
-                | IS_BANNER_ACTIVE
-                | IS_DRIVER_AT_PICKUP
-                | RIDE_START_LAT
-                | RIDE_START_LON
-                | RIDE_END_LAT
-                | RIDE_END_LON
-                | RIDE_WAYPOINT_DEVIATION_COUNT
-                | WAYPOINT_DEVIATION_COUNT
-                | TOLERANCE_EARTH
-                | RIDE_ID
-                | LAUNCH_DATE_SETTING
-                | MESSAGES_DELAY
-                | NEGOTIATION_UNIT
-                | WAITING_TIME_STATUS
-                | WAITING_TIME_VAL
-                | VEHICLE_VARIANT
-                | MAX_LIMIT_TO_STORE_LOCATION_PT_NOT
-                | SHOW_PAYMENT_MODAL
-                | PAYMENT_STATUS_POOLING
-                | NEGOTIATION_UNIT_CABS
-                | DISABLE_WIDGET
-                | SHOW_JOIN_NAMMAYATRI
-                | DRIVER_SUBSCRIBED
-                | ONBOARDING_SUBSCRIPTION_SCREEN_COUNT
-                | FREE_TRIAL_DAYS
-                | KIOSK_LOCATIONS
-                | ENABLE_BLOCKING
-                | BUNDLE_TIME_OUT
-                | APP_SESSION_TRACK_COUNT
-                | MOVED_TO_OFFLINE_DUE_TO_HIGH_DUE
-                | TRIP_DISTANCE_ACC
-                | TRIP_DISTANCE
-                | TRIP_STATUS
-                | TRIP_STARTED
-                | TIMES_OPENED_NEW_SUBSCRIPTION
-                | CONFIG_VERSION
-                | DRIVER_LOCATION
-                | SHOW_SUBSCRIPTIONS
-                | TOTAL_WAITED
+data KeyStore
+  = USER_NAME
+  | LANGUAGE_KEY
+  | FCM_TOKEN
+  | REGISTERATION_TOKEN
+  | VERSION_NAME
+  | BASE_URL
+  | TEST_FLOW_FOR_REGISTRATOION
+  | MOBILE_NUMBER_KEY
+  | IS_RIDE_ACTIVE
+  | IS_DRIVER_ENABLED
+  | DRIVER_STATUS
+  | DRIVER_STATUS_N
+  | LOCATION_UPDATE_TIME
+  | DRIVER_ID
+  | BUNDLE_VERSION
+  | TEST_FLOW_FOR_PERMISSIONS
+  | LOCAL_STAGE
+  | RIDE_STATUS_POLLING
+  | RIDE_STATUS_POLLING_ID
+  | RIDE_T_FREQUENCY
+  | RIDE_G_FREQUENCY
+  | IS_DRIVER_VERIFIED
+  | DRIVER_MIN_DISPLACEMENT
+  | DEMO_MODE_PASSWORD
+  | IS_DEMOMODE_ENABLED
+  | RIDE_REQUEST_TIME
+  | LAST_KNOWN_LAT
+  | LAST_KNOWN_LON
+  | GPS_METHOD
+  | MAKE_NULL_API_CALL
+  | ALERT_RECEIVED
+  | REFERRAL_ACTIVATED
+  | REFERRAL_CODE
+  | READ_MESSAGES
+  | CHAT_CHANNEL_ID
+  | MERCHANT_ID
+  | DOCUMENT_UPLOAD_TIME
+  | INVALID_OTP_TIME
+  | RIDE_REQUEST_BUFFER
+  | SESSION_ID
+  | PROFILE_DEMO
+  | SET_ALTERNATE_TIME
+  | SUGGESTIONS
+  | SUGGESTIONS_DEFINITIONS
+  | TRIGGER_MAPS
+  | DEVICE_DETAILS
+  | HAS_TAKEN_FIRST_RIDE
+  | CURRENCY
+  | IS_BANNER_ACTIVE
+  | IS_DRIVER_AT_PICKUP
+  | RIDE_START_LAT
+  | RIDE_START_LON
+  | RIDE_END_LAT
+  | RIDE_END_LON
+  | RIDE_WAYPOINT_DEVIATION_COUNT
+  | WAYPOINT_DEVIATION_COUNT
+  | TOLERANCE_EARTH
+  | RIDE_ID
+  | LAUNCH_DATE_SETTING
+  | MESSAGES_DELAY
+  | NEGOTIATION_UNIT
+  | WAITING_TIME_STATUS
+  | WAITING_TIME_VAL
+  | VEHICLE_VARIANT
+  | MAX_LIMIT_TO_STORE_LOCATION_PT_NOT
+  | SHOW_PAYMENT_MODAL
+  | PAYMENT_STATUS_POOLING
+  | NEGOTIATION_UNIT_CABS
+  | DISABLE_WIDGET
+  | SHOW_JOIN_NAMMAYATRI
+  | DRIVER_SUBSCRIBED
+  | ONBOARDING_SUBSCRIPTION_SCREEN_COUNT
+  | FREE_TRIAL_DAYS
+  | KIOSK_LOCATIONS
+  | ENABLE_BLOCKING
+  | BUNDLE_TIME_OUT
+  | APP_SESSION_TRACK_COUNT
+  | MOVED_TO_OFFLINE_DUE_TO_HIGH_DUE
+  | TRIP_DISTANCE_ACC
+  | TRIP_DISTANCE
+  | TRIP_STATUS
+  | TRIP_STARTED
+  | TIMES_OPENED_NEW_SUBSCRIPTION
+  | CONFIG_VERSION
+  | DRIVER_LOCATION
+  | SHOW_SUBSCRIPTIONS
+  | TOTAL_WAITED
 
 derive instance genericKeyStore :: Generic KeyStore _
+
 instance showKeyStore :: Show KeyStore where
   show = genericShow
 

@@ -12,7 +12,6 @@
 
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
 module Components.NotificationDetailModel.View where
 
 import Animation (screenAnimationFadeInOut)
@@ -106,8 +105,8 @@ view push state =
 
                                             url = state.mediaUrl
                                           case mediaType of
-                                            VideoLink -> pure $ runFn3 setYoutubePlayer (getYoutubeData (getVideoID url) "VIDEO" 0 ) id (show PLAY)
-                                            PortraitVideoLink -> pure $ runFn3 setYoutubePlayer (getYoutubeData (getVideoID url) "PORTRAIT_VIDEO" 0 ) id (show PLAY)
+                                            VideoLink -> pure $ runFn3 setYoutubePlayer (getYoutubeData (getVideoID url) "VIDEO" 0) id (show PLAY)
+                                            PortraitVideoLink -> pure $ runFn3 setYoutubePlayer (getYoutubeData (getVideoID url) "PORTRAIT_VIDEO" 0) id (show PLAY)
                                             Image -> renderBase64Image state.mediaUrl (getNewIDWithTag "illustrationView") true "FIT_CENTER"
                                             Audio -> addMediaPlayer (getNewIDWithTag "illustrationView") state.mediaUrl
                                             AudioLink -> addMediaPlayer (getNewIDWithTag "illustrationView") state.mediaUrl
@@ -126,7 +125,7 @@ view push state =
                                           , height WRAP_CONTENT
                                           ]
                                       ]
-                                    , linearLayout
+                                  , linearLayout
                                       [ width MATCH_PARENT
                                       , height WRAP_CONTENT
                                       , gravity CENTER
@@ -137,24 +136,25 @@ view push state =
                                           , height WRAP_CONTENT
                                           , padding $ PaddingVertical 5 5
                                           ]
-                                        , imageView
+                                      , imageView
                                           [ width MATCH_PARENT
                                           , visibility GONE
                                           , gravity CENTER
                                           , id $ getNewIDWithTag "imageWithUrl"
                                           , afterRender
                                               ( \action -> do
-                                              _ <- pure $ setScaleType (getNewIDWithTag "imageWithUrl") state.mediaUrl "FIT_XY"
-                                              pure unit)
+                                                  _ <- pure $ setScaleType (getNewIDWithTag "imageWithUrl") state.mediaUrl "FIT_XY"
+                                                  pure unit
+                                              )
                                               (const AfterRender)
                                           ]
                                       ]
                                   ]
-                        ]
+                          ]
                       , titleAndLikeCount state push
                       , descriptionAndComment state push
-                    ]
-                ]
+                      ]
+                  ]
               ]
           ]
             <> if state.addCommentModelVisibility == VISIBLE then [ addCommentModel state push ] else []
@@ -176,40 +176,45 @@ descriptionText push state =
     [ width MATCH_PARENT
     , height WRAP_CONTENT
     , orientation VERTICAL
-    ] (Array.mapWithIndex
-            (\index item ->
-             let
+    ]
+    ( Array.mapWithIndex
+        ( \index item ->
+            let
               desLength = length item
-              in
-               if desLength == 0
-                then
-                linearLayout[][]
-                else
-                  if charAt 0 item == Just '*' && charAt (desLength - 1) item == Just '*'
-                    then
-                      let
-                      titleAndUrl = fetchTitleAndUrl desLength item
-                      linkTitle = trim $ fromMaybe "" (titleAndUrl Array.!! 0)
-                      linkUrl = trim $ fromMaybe "" (titleAndUrl Array.!! 1)
-                      in
-                      textView $
-                        [ width WRAP_CONTENT
-                        , height WRAP_CONTENT
-                        , color Color.blue900
-                        , textFromHtml linkTitle
-                        , onClick (\action -> do
-                                          _ <- openUrlInApp linkUrl
-                                          pure unit
-                                    ) (const $ NoAction)
-                        ] <> FontStyle.paragraphText LanguageStyle
-                  else
-                    textView $
-                      [ width WRAP_CONTENT
+            in
+              if desLength == 0 then
+                linearLayout [] []
+              else if charAt 0 item == Just '*' && charAt (desLength - 1) item == Just '*' then
+                let
+                  titleAndUrl = fetchTitleAndUrl desLength item
+
+                  linkTitle = trim $ fromMaybe "" (titleAndUrl Array.!! 0)
+
+                  linkUrl = trim $ fromMaybe "" (titleAndUrl Array.!! 1)
+                in
+                  textView
+                    $ [ width WRAP_CONTENT
                       , height WRAP_CONTENT
-                      , textFromHtml item
-                      ] <> FontStyle.paragraphText LanguageStyle
-            ) state.description
-      )
+                      , color Color.blue900
+                      , textFromHtml linkTitle
+                      , onClick
+                          ( \action -> do
+                              _ <- openUrlInApp linkUrl
+                              pure unit
+                          )
+                          (const $ NoAction)
+                      ]
+                    <> FontStyle.paragraphText LanguageStyle
+              else
+                textView
+                  $ [ width WRAP_CONTENT
+                    , height WRAP_CONTENT
+                    , textFromHtml item
+                    ]
+                  <> FontStyle.paragraphText LanguageStyle
+        )
+        state.description
+    )
 
 descriptionAndComment :: NotificationDetailModelState -> (Action -> Effect Unit) -> forall w. PrestoDOM (Effect Unit) w
 descriptionAndComment state push =
@@ -220,14 +225,15 @@ descriptionAndComment state push =
     , margin $ Margin 16 0 16 16
     ]
     [ descriptionText push state
-    , textView $
-        [ width WRAP_CONTENT
-        , height WRAP_CONTENT
-        , color Color.blue800
-        , margin $ MarginTop 16
-        , visibility GONE -- TODO :: Change the visibility in next iteration
-        , text state.actionText
-        ] <> FontStyle.body15 TypoGraphy
+    , textView
+        $ [ width WRAP_CONTENT
+          , height WRAP_CONTENT
+          , color Color.blue800
+          , margin $ MarginTop 16
+          , visibility GONE -- TODO :: Change the visibility in next iteration
+          , text state.actionText
+          ]
+        <> FontStyle.body15 TypoGraphy
     , if isJust state.comment then customTextView (getString YOUR_COMMENT) FontSize.a_14 Color.black900 (MarginTop 16) $ FontStyle.medium LanguageStyle else textView []
     , linearLayout
         [ height WRAP_CONTENT
@@ -292,41 +298,43 @@ titleAndLikeCount state push =
     , margin $ Margin 16 0 16 8
     ]
     [ linearLayout
-      [ width $ V ((screenWidth unit) * 65/100)
-      , height WRAP_CONTENT
-      , orientation VERTICAL
-      ][ customTextView state.title FontSize.a_14 Color.black800 (Margin 0 0 0 0) $ FontStyle.semiBold LanguageStyle
-       , customTextView state.timeLabel FontSize.a_10 Color.black500 (Margin 0 0 0 0) $ FontStyle.regular LanguageStyle
-      ]
+        [ width $ V ((screenWidth unit) * 65 / 100)
+        , height WRAP_CONTENT
+        , orientation VERTICAL
+        ]
+        [ customTextView state.title FontSize.a_14 Color.black800 (Margin 0 0 0 0) $ FontStyle.semiBold LanguageStyle
+        , customTextView state.timeLabel FontSize.a_10 Color.black500 (Margin 0 0 0 0) $ FontStyle.regular LanguageStyle
+        ]
     , linearLayout
         [ height WRAP_CONTENT
         , weight 1.0
         ]
         []
     , linearLayout
-      [ height WRAP_CONTENT
-      , width WRAP_CONTENT
-      , padding (Padding 8 4 8 4)
-      , cornerRadius 48.0
-      , stroke if state.likeStatus then "1," <> Color.transparent else "1," <> Color.grey900 
-      , background if state.likeStatus then Color.red100 else Color.transparent
-      , onClick push (const $ LikeMessage)
-      ][ imageView
-         [ height $ V 16
-         , width $ V 16
-         , imageWithFallback $ fetchImage FF_ASSET $ if state.likeStatus then "ny_ic_heart_red" else "ny_ic_heart_outline"
-         , margin $ MarginRight 4
-         ]
-       , textView 
-         [ height WRAP_CONTENT
-         , width WRAP_CONTENT
-         , textSize FontSize.a_12
-         , lineHeight "20"
-         , color Color.black700
-         , fontStyle $ FontStyle.medium LanguageStyle
-         , text $ parseNumber state.likeCount
-         ]
-      ]
+        [ height WRAP_CONTENT
+        , width WRAP_CONTENT
+        , padding (Padding 8 4 8 4)
+        , cornerRadius 48.0
+        , stroke if state.likeStatus then "1," <> Color.transparent else "1," <> Color.grey900
+        , background if state.likeStatus then Color.red100 else Color.transparent
+        , onClick push (const $ LikeMessage)
+        ]
+        [ imageView
+            [ height $ V 16
+            , width $ V 16
+            , imageWithFallback $ fetchImage FF_ASSET $ if state.likeStatus then "ny_ic_heart_red" else "ny_ic_heart_outline"
+            , margin $ MarginRight 4
+            ]
+        , textView
+            [ height WRAP_CONTENT
+            , width WRAP_CONTENT
+            , textSize FontSize.a_12
+            , lineHeight "20"
+            , color Color.black700
+            , fontStyle $ FontStyle.medium LanguageStyle
+            , text $ parseNumber state.likeCount
+            ]
+        ]
     ]
 
 customTextView :: String -> Int -> String -> Margin -> FontStyle -> forall w. PrestoDOM (Effect Unit) w
@@ -370,4 +378,3 @@ addCommentModelConfig state =
         }
   in
     popUpConfig'
-

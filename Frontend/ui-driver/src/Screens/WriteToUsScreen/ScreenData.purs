@@ -12,34 +12,37 @@
 
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
 module Screens.WriteToUsScreen.ScreenData where
 
-import Screens.Types(WriteToUsScreenState)
+import Screens.Types (WriteToUsScreenState)
 import Prelude (class Eq)
 import Data.Eq.Generic (genericEq)
 import Data.Generic.Rep (class Generic)
 
 initData :: WriteToUsScreenState
-initData = {
-  data:  { },
-  props: { isThankYouScreen : false}
-}
+initData =
+  { data: {}
+  , props: { isThankYouScreen: false }
+  }
 
+data ListOptions
+  = Subject
+  | YourEmaiId
+  | DescribeYourIssue
 
-data ListOptions = Subject | YourEmaiId | DescribeYourIssue
 derive instance genericListOptions :: Generic ListOptions _
-instance eqListOptions :: Eq ListOptions where eq = genericEq
 
-type Listtype =
-    { value :: String,
-      title :: ListOptions
+instance eqListOptions :: Eq ListOptions where
+  eq = genericEq
+
+type Listtype
+  = { value :: String
+    , title :: ListOptions
     }
 
 viewsItemList :: Array Listtype
 viewsItemList =
-    [
-      {title:Subject, value:"" },
-      {title:YourEmaiId, value:"" },
-      {title:DescribeYourIssue , value:""}
-    ]
+  [ { title: Subject, value: "" }
+  , { title: YourEmaiId, value: "" }
+  , { title: DescribeYourIssue, value: "" }
+  ]
