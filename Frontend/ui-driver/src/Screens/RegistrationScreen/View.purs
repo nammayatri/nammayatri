@@ -104,9 +104,7 @@ view push state =
                 [ height WRAP_CONTENT
                 , width MATCH_PARENT
                 , orientation VERTICAL
-                , padding (Padding 16 16 16 0)
-                , visibility VISIBLE
-                , onClick push (const BackPressed)
+                , padding $ Padding 16 16 16 0
                 , weight 1.0
                 ]
                 [ imageView
