@@ -37,8 +37,20 @@ findByShortId (Kernel.Types.Id.ShortId shortId) = do
     [ Se.Is Beam.shortId $ Se.Eq shortId
     ]
 
-getAllBookingsByPersonId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Maybe Int -> Maybe Int -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity) -> Domain.Types.TicketBooking.BookingStatus -> m ([Domain.Types.TicketBooking.TicketBooking])
-getAllBookingsByPersonId limit offset (Kernel.Types.Id.Id personId) merchantOperatingCityId status = do
+getAllBookingsByPersonId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Maybe Int -> Maybe Int -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity) -> m ([Domain.Types.TicketBooking.TicketBooking])
+getAllBookingsByPersonId limit offset (Kernel.Types.Id.Id personId) merchantOperatingCityId = do
+  findAllWithOptionsKV
+    [ Se.And
+        [ Se.Is Beam.personId $ Se.Eq personId,
+          Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId <$> merchantOperatingCityId)
+        ]
+    ]
+    (Se.Desc Beam.createdAt)
+    limit
+    offset
+
+getAllBookingsByPersonIdAndStatus :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Maybe Int -> Maybe Int -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity) -> Domain.Types.TicketBooking.BookingStatus -> m ([Domain.Types.TicketBooking.TicketBooking])
+getAllBookingsByPersonIdAndStatus limit offset (Kernel.Types.Id.Id personId) merchantOperatingCityId status = do
   findAllWithOptionsKV
     [ Se.And
         [ Se.Is Beam.personId $ Se.Eq personId,

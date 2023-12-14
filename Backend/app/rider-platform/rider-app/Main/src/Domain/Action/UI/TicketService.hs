@@ -147,7 +147,10 @@ getTicketPlacesServices _ placeId mbDate = do
             description = peopleCategory.description
           }
 
-    findSpecialOccasion service = QSO.findAllSpecialOccasionByEntityId service.id.getId Nothing
+    findSpecialOccasion service = do
+      specialOccWODate <- QSO.findAllSpecialOccasionByEntityId service.id.getId Nothing
+      specialOccWDate <- QSO.findAllSpecialOccasionByEntityIdAndDate service.id.getId
+      pure $ specialOccWODate <> specialOccWDate
 
     calcAllowedSeats serC mSeatM =
       case serC.availableSeats of
@@ -320,11 +323,13 @@ postTicketPlacesBook (mbPersonId, merchantId) placeId req = do
       Domain.Types.TicketService.InstantExpiry minutes -> addUTCTime (fromIntegral (minutes * 60)) currentTime
       Domain.Types.TicketService.VisitDate timeOfDay -> UTCTime visitDate (timeOfDayToTime timeOfDay)
 
-getTicketBookings :: (Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Domain.Types.TicketBooking.BookingStatus -> Environment.Flow [API.Types.UI.TicketService.TicketBookingAPIEntity]
-getTicketBookings (mbPersonId, merchantId_) mbLimit mbOffset status_ = do
+getTicketBookings :: (Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe Domain.Types.TicketBooking.BookingStatus -> Environment.Flow [API.Types.UI.TicketService.TicketBookingAPIEntity]
+getTicketBookings (mbPersonId, merchantId_) mbLimit mbOffset mbStatus = do
   personId_ <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   merchantOpCity <- CQM.getDefaultMerchantOperatingCity merchantId_
-  ticketBookings <- QTB.getAllBookingsByPersonId mbLimit mbOffset personId_ (Just merchantOpCity.id) status_
+  ticketBookings <- case mbStatus of
+    Just status -> QTB.getAllBookingsByPersonIdAndStatus mbLimit mbOffset personId_ (Just merchantOpCity.id) status
+    Nothing -> QTB.getAllBookingsByPersonId mbLimit mbOffset personId_ (Just merchantOpCity.id)
   convertToApiEntity `mapM` ticketBookings
   where
     convertToApiEntity :: DTTB.TicketBooking -> Environment.Flow TicketBookingAPIEntity

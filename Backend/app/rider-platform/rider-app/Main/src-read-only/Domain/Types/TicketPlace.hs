@@ -12,6 +12,7 @@ import Tools.Beam.UtilsTH
 data TicketPlace = TicketPlace
   { closeTimings :: Kernel.Prelude.Maybe Kernel.Prelude.TimeOfDay,
     description :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    enabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     gallery :: [Kernel.Prelude.Text],
     iconUrl :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     id :: Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace,

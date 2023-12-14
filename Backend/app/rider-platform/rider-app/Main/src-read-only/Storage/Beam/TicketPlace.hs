@@ -17,6 +17,7 @@ import Tools.Beam.UtilsTH
 data TicketPlaceT f = TicketPlaceT
   { closeTimings :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.TimeOfDay),
     description :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    enabled :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     gallery :: B.C f [Kernel.Prelude.Text],
     iconUrl :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     id :: B.C f Kernel.Prelude.Text,

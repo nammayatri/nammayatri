@@ -48,6 +48,7 @@ updateByPrimaryKey Domain.Types.TicketService.TicketService {..} = do
   updateWithKV
     [ Se.Set Beam.allowFutureBooking allowFutureBooking,
       Se.Set Beam.businessHours (Kernel.Types.Id.getId <$> businessHours),
+      Se.Set Beam.enabled enabled,
       Se.Set Beam.expiry expiry,
       Se.Set Beam.maxVerification maxVerification,
       Se.Set Beam.operationalDays operationalDays,
@@ -71,6 +72,7 @@ instance FromTType' Beam.TicketService Domain.Types.TicketService.TicketService 
         Domain.Types.TicketService.TicketService
           { allowFutureBooking = allowFutureBooking,
             businessHours = Kernel.Types.Id.Id <$> businessHours,
+            enabled = enabled,
             expiry = expiry,
             id = Kernel.Types.Id.Id id,
             maxVerification = maxVerification,
@@ -89,6 +91,7 @@ instance ToTType' Beam.TicketService Domain.Types.TicketService.TicketService wh
     Beam.TicketServiceT
       { Beam.allowFutureBooking = allowFutureBooking,
         Beam.businessHours = Kernel.Types.Id.getId <$> businessHours,
+        Beam.enabled = enabled,
         Beam.expiry = expiry,
         Beam.id = Kernel.Types.Id.getId id,
         Beam.maxVerification = maxVerification,

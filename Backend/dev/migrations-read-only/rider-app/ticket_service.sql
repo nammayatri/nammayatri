@@ -2,6 +2,7 @@ CREATE TABLE atlas_app.ticket_service ();
 
 ALTER TABLE atlas_app.ticket_service ADD COLUMN allow_future_booking boolean NOT NULL default true;
 ALTER TABLE atlas_app.ticket_service ADD COLUMN business_hours text[] NOT NULL;
+ALTER TABLE atlas_app.ticket_service ADD COLUMN enabled boolean ;
 ALTER TABLE atlas_app.ticket_service ADD COLUMN expiry text NOT NULL default 'VisitDate 12:00:00';
 ALTER TABLE atlas_app.ticket_service ADD COLUMN id character varying(36) NOT NULL;
 ALTER TABLE atlas_app.ticket_service ADD COLUMN max_verification integer NOT NULL;

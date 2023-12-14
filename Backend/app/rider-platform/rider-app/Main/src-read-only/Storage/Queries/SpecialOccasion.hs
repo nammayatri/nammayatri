@@ -3,6 +3,7 @@
 
 module Storage.Queries.SpecialOccasion where
 
+import Data.Time (utctDay)
 import qualified Data.Time.Calendar
 import qualified Domain.Types.BusinessHour
 import qualified Domain.Types.Merchant
@@ -30,6 +31,17 @@ findAllSpecialOccasionByEntityId entityId date = do
         [ Se.Is Beam.entityId $ Se.Eq entityId,
           Se.Is Beam.date $ Se.Eq date
         ]
+    ]
+
+findAllSpecialOccasionByEntityIdAndDate :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Prelude.Text -> m ([Domain.Types.SpecialOccasion.SpecialOccasion])
+findAllSpecialOccasionByEntityIdAndDate entityId = do
+  now <- getCurrentTime
+  let currDate = utctDay now
+  let dateAfterOneMonth = Data.Time.Calendar.addGregorianMonthsClip 1 currDate
+  findAllWithKV
+    [ Se.Is Beam.entityId $ Se.Eq entityId,
+      Se.Is Beam.date $ Se.GreaterThanOrEq (Just currDate),
+      Se.Is Beam.date $ Se.LessThanOrEq (Just dateAfterOneMonth)
     ]
 
 findSpecialOccasionByEntityIdAndDate :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Prelude.Text -> Kernel.Prelude.Maybe Data.Time.Calendar.Day -> m (Maybe (Domain.Types.SpecialOccasion.SpecialOccasion))
