@@ -14,7 +14,7 @@ data UrlParts
 
 data ApiType = GET | POST | PUT | DELETE deriving (Show)
 
-data AuthType = AdminTokenAuth | TokenAuth deriving (Show)
+data AuthType = AdminTokenAuth | TokenAuth | NoAuth deriving (Show)
 
 data HeaderType = Header Text Text deriving (Show)
 

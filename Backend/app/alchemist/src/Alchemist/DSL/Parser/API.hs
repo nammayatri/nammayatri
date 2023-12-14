@@ -174,6 +174,7 @@ getAuthType :: Text -> AuthType
 getAuthType = \case
   "AdminTokenAuth" -> AdminTokenAuth
   "TokenAuth" -> TokenAuth
+  "NoAuth" -> NoAuth
   _ -> error "Not a valid auth type"
 
 getApiType :: Text -> ApiType

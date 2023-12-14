@@ -24,6 +24,11 @@ generateDomainHandler input =
     -- <> T.unpack (generateHaskellTypes (_types input))
     <> T.unpack (T.intercalate "\n\n" (map handlerFunctionDef (_apis input)))
   where
+    isAuthPresent :: ApiTT -> Bool
+    isAuthPresent apiT = case _authType apiT of
+      Just NoAuth -> False
+      _ -> True
+
     qualifiedModuleName = T.unpack ("Domain.Action.UI." <> _moduleName input)
 
     defaultImports :: [String]
@@ -45,8 +50,8 @@ generateDomainHandler input =
           showType = case filter (/= T.empty) (init allTypes) of
             [] -> T.empty
             ty -> " -> " <> T.intercalate " -> " ty
-          handlerTypes = showType <> " -> " <> "Environment.Flow " <> last allTypes
-       in functionName <> " :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant)" <> handlerTypes
+          handlerTypes = showType <> (if length allTypes > 1 then " -> " else " ") <> "Environment.Flow " <> last allTypes
+       in functionName <> (if isAuthPresent apiT then " :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant)" else " ::") <> handlerTypes
             <> "\n"
             <> functionName
             <> " = error \"Logic yet to be decided\""
