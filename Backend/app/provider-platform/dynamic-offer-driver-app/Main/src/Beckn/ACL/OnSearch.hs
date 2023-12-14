@@ -15,15 +15,24 @@
 module Beckn.ACL.OnSearch where
 
 import qualified Beckn.ACL.Common as Common
+import qualified Beckn.OnDemand.Transformer.OnSearch as TOnSearch
+import qualified Beckn.OnDemand.Utils.Common as Utils
 import qualified Beckn.Types.Core.Taxi.OnSearch as OS
 import Beckn.Types.Core.Taxi.OnSearch.Item (BreakupItem (..), BreakupPrice (..))
+import qualified BecknV2.OnDemand.Types as Spec
+import qualified BecknV2.OnDemand.Utils.Context as ContextV2
+import qualified Data.List as List
 import qualified Domain.Action.Beckn.Search as DSearch
 import qualified Domain.Types.Estimate as DEst
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
 import GHC.Float (double2Int)
 import Kernel.Prelude
+import Kernel.Types.App
+import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Beckn.DecimalValue as DecimalValue
+import Kernel.Utils.Error
+import Tools.Error
 
 autoOneWayCategory :: OS.Category
 autoOneWayCategory =
@@ -74,6 +83,26 @@ mkOnSearchMessage res@DSearch.DSearchRes {..} = do
     mkProviderLocations estimatesList =
       foldl (<>) [] $ map mkProviderLocation estimatesList
     mkProviderLocation DSearch.EstimateInfo {..} = toList driverLatLongs
+
+mkOnSearchRequest ::
+  (MonadFlow m) =>
+  DSearch.DSearchRes ->
+  Context.Action ->
+  Context.Domain ->
+  Text ->
+  Maybe Text ->
+  Text ->
+  BaseUrl ->
+  Maybe Text ->
+  Maybe BaseUrl ->
+  Context.City ->
+  Context.Country ->
+  m Spec.OnSearchReq
+mkOnSearchRequest res@DSearch.DSearchRes {..} action domain messageId transactionId bapId bapUri bppId bppUri city country = do
+  case (estimateList, specialQuoteList) of
+    (Just estimates, _) -> TOnSearch.buildOnSearchRideReq estimates res action domain messageId transactionId bapId bapUri bppId bppUri city country -- map (mkQuoteEntities startInfo stopInfo provider) estimates
+    (Nothing, Just quotes) -> buildOnSearchRideOtpRequest quotes res action domain messageId transactionId bapId bapUri bppId bppUri city country
+    (_, _) -> throwError (InvalidRequest "No estimates or quotes are present") --this won't happen
 
 mkStartInfo :: DSearch.DSearchRes -> OS.StartInfo
 mkStartInfo dReq =
@@ -301,3 +330,150 @@ mkPayment DMPM.PaymentMethodInfo {..} =
       _type = Common.castDPaymentType paymentType,
       uri = Nothing
     }
+
+buildOnSearchRideOtpRequest :: MonadFlow m => [DSearch.SpecialZoneQuoteInfo] -> DSearch.DSearchRes -> Context.Action -> Context.Domain -> Text -> Maybe Text -> Text -> Kernel.Prelude.BaseUrl -> Maybe Text -> Maybe Kernel.Prelude.BaseUrl -> Context.City -> Context.Country -> m (Spec.OnSearchReq)
+buildOnSearchRideOtpRequest quotes res action domain messageId transactionId bapId bapUri bppId bppUri city country = do
+  let onSearchReqError_ = Nothing
+  onSearchReqContext_ <- ContextV2.buildContextV2 action domain messageId transactionId bapId bapUri bppId bppUri city country
+  let onSearchReqMessage_ = buildOnSearchMessage quotes res
+  pure $ Spec.OnSearchReq {onSearchReqContext = onSearchReqContext_, onSearchReqError = onSearchReqError_, onSearchReqMessage = onSearchReqMessage_}
+
+buildOnSearchMessage :: [DSearch.SpecialZoneQuoteInfo] -> DSearch.DSearchRes -> Maybe Spec.OnSearchReqMessage
+buildOnSearchMessage quotes res = do
+  Just $
+    Spec.OnSearchReqMessage
+      { onSearchReqMessageCatalog = tfCatalog quotes res
+      }
+
+tfCatalog :: [DSearch.SpecialZoneQuoteInfo] -> DSearch.DSearchRes -> Spec.Catalog
+tfCatalog quotes res =
+  Spec.Catalog
+    { catalogDescriptor = tfCatalogDescriptor res,
+      catalogProviders = tfCatalogProviders res quotes
+    }
+
+tfCatalogDescriptor :: DSearch.DSearchRes -> Maybe Spec.Descriptor
+tfCatalogDescriptor res =
+  Just $
+    Spec.Descriptor
+      { descriptorCode = Nothing,
+        descriptorName = Just $ res.provider.name,
+        descriptorShortDesc = Nothing
+      }
+
+tfCatalogProviders :: DSearch.DSearchRes -> [DSearch.SpecialZoneQuoteInfo] -> Maybe [Spec.Provider]
+tfCatalogProviders res quotes = do
+  items <- mapM (tfProviderItems res) quotes <&> Just
+  fulfillments <- mapM (tfProviderFulfillments res) quotes <&> Just
+  Just $
+    [ Spec.Provider
+        { providerId = Just $ res.provider.subscriberId.getShortId,
+          providerLocations = Nothing,
+          providerPayments = Nothing,
+          providerDescriptor = tfCatalogDescriptor res,
+          providerFulfillments = fulfillments,
+          providerItems = items
+        }
+    ]
+
+tfProviderFulfillments :: DSearch.DSearchRes -> DSearch.SpecialZoneQuoteInfo -> Maybe Spec.Fulfillment
+tfProviderFulfillments res quote =
+  Just $
+    Spec.Fulfillment
+      { fulfillmentId = Just $ quote.quoteId.getId,
+        fulfillmentType = Just "RIDE_OTP",
+        fulfillmentVehicle = tfVehicle quote,
+        fulfillmentStops = Utils.mkStops res.fromLocation res.toLocation,
+        fulfillmentTags = Nothing,
+        fulfillmentState = Nothing,
+        fulfillmentCustomer = Nothing,
+        fulfillmentAgent = Nothing
+      }
+
+tfVehicle :: DSearch.SpecialZoneQuoteInfo -> Maybe Spec.Vehicle
+tfVehicle quote =
+  Just $
+    Spec.Vehicle
+      { vehicleVariant = Utils.castVariant quote.vehicleVariant & Just,
+        vehicleCategory = Nothing,
+        vehicleColor = Nothing,
+        vehicleMake = Nothing,
+        vehicleModel = Nothing,
+        vehicleRegistration = Nothing
+      }
+
+tfProviderItems :: DSearch.DSearchRes -> DSearch.SpecialZoneQuoteInfo -> Maybe Spec.Item
+tfProviderItems res quote =
+  Just $
+    Spec.Item
+      { itemFulfillmentIds = Just [quote.quoteId.getId],
+        itemId = Common.mkItemId res.provider.shortId.getShortId quote.vehicleVariant & Just,
+        itemPrice = tfItemPrice quote,
+        itemTags = mkQuoteItemTags quote,
+        itemLocationIds = Nothing,
+        itemDescriptor = Nothing,
+        itemPaymentIds = Nothing
+      }
+
+tfItemPrice :: DSearch.SpecialZoneQuoteInfo -> Maybe Spec.Price
+tfItemPrice quote =
+  Just $
+    Spec.Price
+      { priceComputedValue = Nothing,
+        priceCurrency = Just "INR",
+        priceMaximumValue = Utils.rationaliseMoney quote.estimatedFare & Just,
+        priceMinimumValue = Utils.rationaliseMoney quote.estimatedFare & Just,
+        priceOfferedValue = Utils.rationaliseMoney quote.estimatedFare & Just,
+        priceValue = Utils.rationaliseMoney quote.estimatedFare & Just
+      }
+
+mkQuoteItemTags :: DSearch.SpecialZoneQuoteInfo -> Maybe [Spec.TagGroup]
+mkQuoteItemTags quote =
+  Just $
+    [ Spec.TagGroup
+        { tagGroupDisplay = Just False,
+          tagGroupDescriptor =
+            Just
+              Spec.Descriptor
+                { descriptorCode = Just "general_info",
+                  descriptorName = Just "General Information",
+                  descriptorShortDesc = Nothing
+                },
+          tagGroupList = Just $ specialLocationTagSingleton quote.specialLocationTag
+        }
+    ]
+  where
+    specialLocationTagSingleton specialLocationTag
+      | isNothing specialLocationTag = []
+      | otherwise =
+        List.singleton $
+          Spec.Tag
+            { tagDisplay = Just True,
+              tagDescriptor =
+                Just
+                  Spec.Descriptor
+                    { descriptorCode = Just "special_location_tag",
+                      descriptorName = Just "Special Location Tag",
+                      descriptorShortDesc = Nothing
+                    },
+              tagValue = specialLocationTag
+            }
+
+-- mkQuoteItemTag :: DSearch.SpecialZoneQuoteInfo -> [Spec.Tag]
+-- mkQuoteItemTag quote =
+--   let specialLocationTag = quote.specialLocationTag
+--    in [ Spec.Tag
+--           { tagDisplay = (\_ -> Just True) =<< specialLocationTag,
+--             tagDescriptor =
+--               ( \_ ->
+--                   Just
+--                     Spec.Descriptor
+--                       { descriptorCode = (\_ -> Just "special_location_tag") =<< specialLocationTag,
+--                         descriptorName = (\_ -> Just "Special Location Tag") =<< specialLocationTag,
+--                         descriptorShortDesc = Nothing
+--                       }
+--               )
+--                 =<< specialLocationTag,
+--             tagValue = specialLocationTag
+--           }
+--       ]

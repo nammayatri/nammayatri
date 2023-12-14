@@ -67,9 +67,9 @@ confirm ::
 confirm (personId, _) quoteId mbPaymentMethodId =
   withFlowHandlerAPI . withPersonIdLogTag personId $ do
     dConfirmRes <- DConfirm.confirm personId quoteId mbPaymentMethodId
-    becknInitReq <- ACL.buildInitReq dConfirmRes
+    becknInitReq <- ACL.buildInitReqV2 dConfirmRes
     handle (errHandler dConfirmRes.booking) $
-      void $ withShortRetry $ CallBPP.init dConfirmRes.providerUrl becknInitReq
+      void $ withShortRetry $ CallBPP.initV2 dConfirmRes.providerUrl becknInitReq
     return $
       ConfirmRes
         { bookingId = dConfirmRes.booking.id

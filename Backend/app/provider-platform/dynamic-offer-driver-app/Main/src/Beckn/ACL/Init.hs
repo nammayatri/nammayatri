@@ -15,8 +15,10 @@
 module Beckn.ACL.Init where
 
 import qualified Beckn.ACL.Common as Common
+import qualified Beckn.OnDemand.Transformer.Init as TInit
 import qualified Beckn.Types.Core.Taxi.API.Init as Init
 import qualified Beckn.Types.Core.Taxi.Init as Init
+import qualified BecknV2.OnDemand.Utils.Context as Utils
 import qualified Data.Text as T
 import qualified Domain.Action.Beckn.Init as DInit
 import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
@@ -91,3 +93,25 @@ getMaxEstimateDistance tagGroups = do
   tagValue <- Common.getTag "estimations" "max_estimated_distance" tagGroups
   maxEstimatedDistance <- readMaybe $ T.unpack tagValue
   Just $ HighPrecMeters maxEstimatedDistance
+
+buildInitReqV2 ::
+  ( MonadThrow m,
+    (HasFlowEnv m r '["_version" ::: Text])
+  ) =>
+  Subscriber.Subscriber ->
+  Init.InitReqV2 ->
+  m DInit.InitReq
+buildInitReqV2 subscriber req = do
+  let context = req.initReqContext
+  Utils.validateContext Context.INIT context
+  unless (Just subscriber.subscriber_id == context.contextBppId) $
+    throwError (InvalidRequest "Invalid bap_id")
+  bapUri <- mapM parseBaseUrl context.contextBapUri >>= fromMaybeM (InvalidRequest "bap_uri not found")
+  unless (subscriber.subscriber_url == bapUri) $
+    throwError (InvalidRequest "Invalid bap_uri")
+  items <- req.initReqMessage.confirmReqMessageOrder.orderItems & fromMaybeM (InvalidRequest "items not found")
+  case items of
+    [_it] -> return ()
+    _ -> throwError $ InvalidRequest "There must be exactly one item in init request"
+
+  TInit.buildDInitReq subscriber req

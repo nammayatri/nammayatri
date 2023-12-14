@@ -13,10 +13,20 @@
 -}
 {-# LANGUAGE OverloadedLabels #-}
 
-module Beckn.ACL.Search (buildRentalSearchReq, buildOneWaySearchReq) where
+-- shrey00 : this is the reference file
+
+module Beckn.ACL.Search
+  ( buildRentalSearchReq,
+    buildOneWaySearchReq,
+    buildOneWaySearchReqV2,
+  )
+where
 
 import Beckn.ACL.Common (mkLocation)
+import qualified Beckn.OnDemand.Transformer.Search as Search
+import qualified Beckn.OnDemand.Utils.Common as Utils
 import qualified Beckn.Types.Core.Taxi.Search as Search
+import qualified BecknV2.OnDemand.Types as Spec
 import Control.Lens ((%~))
 import Data.Aeson (encode)
 import qualified Data.Text as T
@@ -51,6 +61,30 @@ buildOneWaySearchReq DOneWaySearch.OneWaySearchRes {..} =
     disabilityTag
     merchant
     city
+    (getPoints shortestRouteInfo)
+    phoneNumber
+    isReallocationEnabled
+  where
+    getPoints val = val >>= (\routeInfo -> Just routeInfo.points)
+
+buildOneWaySearchReqV2 ::
+  (MonadFlow m, HasFlowEnv m r '["nwAddress" ::: BaseUrl]) =>
+  DOneWaySearch.OneWaySearchRes ->
+  m (Spec.SearchReq)
+buildOneWaySearchReqV2 DOneWaySearch.OneWaySearchRes {..} = do
+  bapUri <- Utils.mkBapUri merchant.id
+  Search.buildBecknSearchReqV2
+    Context.SEARCH
+    Context.MOBILITY
+    origin
+    destination
+    searchId
+    (shortestRouteInfo >>= (.distance))
+    (shortestRouteInfo >>= (.duration))
+    customerLanguage
+    disabilityTag
+    merchant
+    bapUri
     (getPoints shortestRouteInfo)
     phoneNumber
     isReallocationEnabled

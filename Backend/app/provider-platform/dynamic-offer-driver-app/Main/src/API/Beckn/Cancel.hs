@@ -15,8 +15,12 @@
 module API.Beckn.Cancel (API, handler) where
 
 import qualified Beckn.ACL.Cancel as ACL
+import qualified Beckn.OnDemand.Utils.Common as Utils
 import qualified Beckn.Types.Core.Taxi.API.Cancel as API
 import qualified Beckn.Types.Core.Taxi.API.Cancel as Cancel
+import qualified Data.Aeson as A
+import qualified Data.Text as T
+import qualified Data.Text.Encoding as T
 import qualified Domain.Action.Beckn.Cancel as DCancel
 import Domain.Types.Merchant (Merchant)
 import qualified Domain.Types.Merchant as DM
@@ -27,8 +31,9 @@ import Kernel.Types.Beckn.Ack
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth
-import Servant
+import Servant hiding (throwError)
 import Storage.Beam.SystemConfigs ()
+import Tools.Error (GenericError (InvalidRequest))
 
 type API =
   Capture "merchantId" (Id Merchant)
@@ -41,23 +46,41 @@ handler = cancel
 cancel ::
   Id DM.Merchant ->
   SignatureAuthResult ->
-  Cancel.CancelReq ->
+  -- Cancel.CancelReq ->
+  ByteString ->
   FlowHandler AckResponse
-cancel transporterId subscriber req =
-  withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
-    logTagInfo "Cancel API Flow" "Reached"
-    dCancelReq <- ACL.buildCancelReq req
-    case dCancelReq of
-      Left cancelReq -> do
-        Redis.whenWithLockRedis (cancelLockKey cancelReq.bookingId.getId) 60 $ do
-          (merchant, booking) <- DCancel.validateCancelRequest transporterId subscriber cancelReq
-          fork ("cancelBooking:" <> cancelReq.bookingId.getId) $
-            DCancel.cancel cancelReq merchant booking
-      Right cancelSearchReq -> do
-        searchTry <- DCancel.validateCancelSearchRequest transporterId subscriber cancelSearchReq
-        fork ("cancelSearch:" <> cancelSearchReq.transactionId) $
-          DCancel.cancelSearch transporterId cancelSearchReq searchTry
-    return Ack
+cancel transporterId subscriber reqBS = withFlowHandlerBecknAPI do
+  req <- decodeReq reqBS
+  dCancelReq <- case req of
+    Right reqV2 -> do
+      transactionId <- Utils.getTransactionId reqV2.cancelReqContext
+      Utils.withTransactionIdLogTag transactionId $ do
+        logTagInfo "Cancel APIV2 Flow" "Reached"
+        ACL.buildCancelReqV2 reqV2
+    Left reqV1 ->
+      withTransactionIdLogTag reqV1 $ do
+        logTagInfo "Cancel API Flow" "Reached"
+        ACL.buildCancelReq reqV1
+  case dCancelReq of
+    Left cancelReq -> do
+      Redis.whenWithLockRedis (cancelLockKey cancelReq.bookingId.getId) 60 $ do
+        (merchant, booking) <- DCancel.validateCancelRequest transporterId subscriber cancelReq
+        fork ("cancelBooking:" <> cancelReq.bookingId.getId) $
+          DCancel.cancel cancelReq merchant booking
+    Right cancelSearchReq -> do
+      searchTry <- DCancel.validateCancelSearchRequest transporterId subscriber cancelSearchReq
+      fork ("cancelSearch:" <> cancelSearchReq.transactionId) $
+        DCancel.cancelSearch transporterId cancelSearchReq searchTry
+  return Ack
 
 cancelLockKey :: Text -> Text
 cancelLockKey id = "Driver:Cancel:BookingId-" <> id
+
+decodeReq :: MonadFlow m => ByteString -> m (Either Cancel.CancelReq Cancel.CancelReqV2)
+decodeReq reqBS =
+  case A.eitherDecodeStrict reqBS of
+    Right reqV2 -> pure $ Right reqV2
+    Left _ ->
+      case A.eitherDecodeStrict reqBS of
+        Right reqV1 -> pure $ Left reqV1
+        Left err -> throwError . InvalidRequest $ "Unable to parse request: " <> T.pack err <> T.decodeUtf8 reqBS

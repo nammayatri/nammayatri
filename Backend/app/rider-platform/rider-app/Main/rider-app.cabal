@@ -117,6 +117,10 @@ library
       Beckn.ACL.Track
       Beckn.ACL.Update
       Beckn.Core
+      Beckn.OnDemand.Utils.Common
+      Beckn.OnDemand.Utils.Init
+      Beckn.OnDemand.Utils.OnSearch
+      Beckn.OnDemand.Utils.Search
       Domain.Action.Beckn.OnConfirm
       Domain.Action.Beckn.OnInit
       Domain.Action.Beckn.OnSearch
@@ -380,6 +384,9 @@ library
       API.Types.UI.FollowRide
       API.Types.UI.Sos
       API.Types.UI.TicketService
+      Beckn.OnDemand.Transformer.Init
+      Beckn.OnDemand.Transformer.OnSearch
+      Beckn.OnDemand.Transformer.Search
       Domain.Types.BusinessHour
       Domain.Types.MerchantOperatingCity
       Domain.Types.NextBillionData

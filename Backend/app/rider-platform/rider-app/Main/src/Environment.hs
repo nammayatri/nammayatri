@@ -121,7 +121,9 @@ data AppCfg = AppCfg
     dontEnableForKafka :: [Text],
     maxMessages :: Text,
     incomingAPIResponseTimeout :: Int,
-    internalEndPointMap :: M.Map BaseUrl BaseUrl
+    internalEndPointMap :: M.Map BaseUrl BaseUrl,
+    isBecknSpecVersion2 :: Bool,
+    _version :: Text
   }
   deriving (Generic, FromDhall)
 
@@ -187,7 +189,9 @@ data AppEnv = AppEnv
     dontEnableForKafka :: [Text],
     maxMessages :: Text,
     incomingAPIResponseTimeout :: Int,
-    internalEndPointHashMap :: HM.HashMap BaseUrl BaseUrl
+    internalEndPointHashMap :: HM.HashMap BaseUrl BaseUrl,
+    isBecknSpecVersion2 :: Bool,
+    _version :: Text
   }
   deriving (Generic)
 

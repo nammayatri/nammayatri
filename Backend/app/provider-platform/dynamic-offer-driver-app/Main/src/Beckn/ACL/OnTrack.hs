@@ -12,10 +12,12 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Beckn.ACL.OnTrack (mkOnTrackMessage) where
+module Beckn.ACL.OnTrack (mkOnTrackMessage, mkOnTrackMessageV2) where
 
 import qualified Beckn.Types.Core.Taxi.OnTrack as OnTrack
+import qualified BecknV2.OnDemand.Types as Spec
 import qualified Domain.Action.Beckn.Track as DTrack
+import Kernel.Prelude
 
 mkOnTrackMessage :: DTrack.DTrackRes -> OnTrack.OnTrackMessage
 mkOnTrackMessage res = do
@@ -24,5 +26,15 @@ mkOnTrackMessage res = do
         OnTrack.Tracking
           { url = res.url,
             status = if res.isRideCompleted then OnTrack.INACTIVE else OnTrack.ACTIVE
+          }
+    }
+
+mkOnTrackMessageV2 :: DTrack.DTrackRes -> Spec.OnTrackReqMessage
+mkOnTrackMessageV2 res = do
+  Spec.OnTrackReqMessage
+    { onTrackReqMessageTracking =
+        Spec.Tracking
+          { trackingUrl = Just $ show res.url,
+            trackingStatus = if res.isRideCompleted then Just "INACTIVE" else Just "ACTIVE"
           }
     }

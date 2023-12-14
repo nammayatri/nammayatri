@@ -12,11 +12,15 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Beckn.ACL.OnConfirm (buildOnConfirmReq) where
+module Beckn.ACL.OnConfirm (buildOnConfirmReq, buildOnConfirmReqV2) where
 
 import qualified Beckn.Types.Core.Taxi.API.OnConfirm as OnConfirm
 import qualified Beckn.Types.Core.Taxi.OnConfirm as OnConfirm
+import qualified BecknV2.OnDemand.Types as Spec
+import qualified BecknV2.OnDemand.Utils.Common as Utils
+import qualified BecknV2.OnDemand.Utils.Context as ContextV2
 import qualified Domain.Action.Beckn.OnConfirm as DOnConfirm
+import Domain.Types.Booking (BPPBooking)
 import Kernel.Prelude
 import Kernel.Product.Validation.Context
 import qualified Kernel.Types.Beckn.Context as Context
@@ -49,5 +53,58 @@ handleError etr action =
     Right msg -> do
       Just <$> action msg
     Left err -> do
+      logTagError "on_confirm req" $ "on_confirm error: " <> show err
+      pure Nothing
+
+buildOnConfirmReqV2 ::
+  ( HasFlowEnv m r '["_version" ::: Text]
+  ) =>
+  Spec.OnConfirmReq ->
+  m (Maybe DOnConfirm.OnConfirmReq)
+buildOnConfirmReqV2 req = do
+  ContextV2.validateContext Context.ON_CONFIRM req.onConfirmReqContext
+  handleErrorV2 req $ \message -> do
+    case parseData message of
+      Left err -> do
+        logTagError "on_init req" $ "on_init error: " <> show err
+        return Nothing
+      Right (bppBookingId, mAuthorization) -> do
+        return $
+          Just $
+            DOnConfirm.OnConfirmReq
+              { bppBookingId,
+                specialZoneOtp = case mAuthorization of
+                  Nothing -> Nothing
+                  Just auth -> Just auth
+              }
+  where
+    parseData :: Spec.ConfirmReqMessage -> Either Text (Id BPPBooking, Maybe Text)
+    parseData message = do
+      let order = message.confirmReqMessageOrder
+
+      bppBookingIdText <-
+        order.orderId
+          & maybe (Left "Invalid OrderId") Right
+      let bppBookingId = Id bppBookingIdText
+
+      let startOtp =
+            order.orderFulfillments
+              >>= listToMaybe
+              >>= (.fulfillmentStops)
+              >>= Utils.getStartLocation
+              >>= (.stopAuthorization)
+              >>= \auth -> if auth.authorizationType == Just "OTP" then auth.authorizationToken else Nothing
+
+      return (bppBookingId, startOtp)
+
+handleErrorV2 ::
+  (MonadFlow m) =>
+  Spec.OnConfirmReq ->
+  (Spec.ConfirmReqMessage -> m (Maybe DOnConfirm.OnConfirmReq)) ->
+  m (Maybe DOnConfirm.OnConfirmReq)
+handleErrorV2 req action =
+  case req.onConfirmReqError of
+    Nothing -> req.onConfirmReqMessage & maybe (pure Nothing) action
+    Just err -> do
       logTagError "on_confirm req" $ "on_confirm error: " <> show err
       pure Nothing

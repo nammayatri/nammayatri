@@ -386,6 +386,12 @@ rideSync merchant reqRideId = do
     Nothing -> pure merchant.defaultCity
     Just merchantOperatingCityId -> CQMOC.findById merchantOperatingCityId >>= fmap (.city) . fromMaybeM (MerchantOperatingCityNotFound merchantOperatingCityId.getId)
   let dStatusReq = DStatusReq {booking, merchant, city}
-  becknStatusReq <- buildStatusReq dStatusReq
-  void $ withShortRetry $ CallBPP.callStatus booking.providerUrl becknStatusReq
+  isBecknSpecVersion2 <- asks (.isBecknSpecVersion2)
+  if isBecknSpecVersion2
+    then do
+      becknStatusReq <- buildStatusReqV2 dStatusReq
+      void $ withShortRetry $ CallBPP.callStatusV2 booking.providerUrl becknStatusReq
+    else do
+      becknStatusReq <- buildStatusReq dStatusReq
+      void $ withShortRetry $ CallBPP.callStatus booking.providerUrl becknStatusReq
   pure Success

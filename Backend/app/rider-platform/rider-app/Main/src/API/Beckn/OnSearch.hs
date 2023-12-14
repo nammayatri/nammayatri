@@ -15,15 +15,21 @@
 module API.Beckn.OnSearch (API, handler) where
 
 import qualified Beckn.ACL.OnSearch as TaxiACL
+import qualified Beckn.OnDemand.Utils.Common as Utils
 import Beckn.Types.Core.Taxi.API.OnSearch as OnSearch
+import Data.Aeson as A
+import Data.Text as T
+import Data.Text.Encoding as T
 import qualified Domain.Action.Beckn.OnSearch as DOnSearch
 import Environment
+import EulerHS.Prelude (ByteString)
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth
 import Servant hiding (throwError)
 import Storage.Beam.SystemConfigs ()
+import Tools.Error (GenericError (InvalidRequest))
 
 type API =
   SignatureAuth "X-Gateway-Authorization"
@@ -35,16 +41,29 @@ handler = onSearch
 onSearch ::
   SignatureAuthResult ->
   SignatureAuthResult ->
-  OnSearch.OnSearchReq ->
+  -- OnSearch.OnSearchReqV2 ->
+  ByteString ->
   FlowHandler AckResponse
-onSearch _ _ req = withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
-  mbDOnSearchReq <- TaxiACL.buildOnSearchReq req
+onSearch _ _ reqBS = withFlowHandlerBecknAPI do
+  req <- decodeReq reqBS
+
+  (mbDOnSearchReq, messageId) <- case req of
+    Right reqV2 -> do
+      transactionId <- Utils.getTransactionId reqV2.onSearchReqContext
+      mbDOnSearchReq <- Utils.withTransactionIdLogTag transactionId $ TaxiACL.buildOnSearchReqV2 reqV2
+      messageId <- Utils.getMessageIdText reqV2.onSearchReqContext
+      pure (mbDOnSearchReq, messageId)
+    Left reqV1 -> do
+      mbDOnSearchReq <- withTransactionIdLogTag reqV1 $ TaxiACL.buildOnSearchReq reqV1
+      let messageId = reqV1.context.message_id
+      pure (mbDOnSearchReq, messageId)
+
   whenJust mbDOnSearchReq $ \request -> do
-    Redis.whenWithLockRedis (onSearchLockKey req.context.message_id) 60 $ do
+    Redis.whenWithLockRedis (onSearchLockKey messageId) 60 $ do
       validatedRequest <- DOnSearch.validateRequest request
       fork "on search processing" $ do
-        Redis.whenWithLockRedis (onSearchProcessingLockKey req.context.message_id) 60 $
-          DOnSearch.onSearch req.context.message_id validatedRequest
+        Redis.whenWithLockRedis (onSearchProcessingLockKey messageId) 60 $
+          DOnSearch.onSearch messageId validatedRequest
   pure Ack
 
 onSearchLockKey :: Text -> Text
@@ -52,3 +71,12 @@ onSearchLockKey id = "Customer:OnSearch:MessageId-" <> id
 
 onSearchProcessingLockKey :: Text -> Text
 onSearchProcessingLockKey id = "Customer:OnSearch:Processing:MessageId-" <> id
+
+decodeReq :: MonadFlow m => ByteString -> m (Either OnSearch.OnSearchReq OnSearch.OnSearchReqV2)
+decodeReq reqBS =
+  case A.eitherDecodeStrict reqBS of
+    Right reqV2 -> pure $ Right reqV2
+    Left _ ->
+      case A.eitherDecodeStrict reqBS of
+        Right reqV1 -> pure $ Left reqV1
+        Left err -> throwError . InvalidRequest $ "Unable to parse request: " <> T.pack err <> T.decodeUtf8 reqBS

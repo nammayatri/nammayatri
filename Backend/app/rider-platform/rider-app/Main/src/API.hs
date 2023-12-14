@@ -40,14 +40,16 @@ import Storage.Beam.SystemConfigs ()
 
 type API =
   MainAPI
+    :<|> Beckn.API -- TODO : Revert after 2.x release
+    :<|> Beckn.APIV2 -- TODO : Revert after 2.x release
     :<|> SwaggerAPI
     :<|> OpenAPI
     :<|> Raw
 
 type MainAPI =
   UI.API
-    :<|> Beckn.API -- TODO :: Needs to be deprecated
-    :<|> Beckn.APIV2
+    -- :<|> Beckn.API -- TODO :: Needs to be deprecated  -- TODO : Revert after 2.x release
+    -- :<|> Beckn.APIV2 -- TODO : Revert after 2.x release
     :<|> MetroBeckn.API
     :<|> ( Capture "merchantId" (ShortId DM.Merchant)
              :> Juspay.JuspayWebhookAPI
@@ -59,6 +61,8 @@ type MainAPI =
 handler :: FlowServer API
 handler =
   mainServer
+    :<|> Beckn.handler -- TODO : Revert after 2.x release
+    :<|> const Beckn.handler -- TODO : Revert after 2.x release
     :<|> writeSwaggerHTMLFlow
     :<|> writeOpenAPIFlow
     :<|> serveDirectoryWebApp "swagger"
@@ -66,8 +70,8 @@ handler =
 mainServer :: FlowServer MainAPI
 mainServer =
   UI.handler
-    :<|> Beckn.handler
-    :<|> const Beckn.handler
+    -- :<|> Beckn.handler  -- TODO : Revert after 2.x release
+    -- :<|> const Beckn.handler  -- TODO : Revert after 2.x release
     :<|> MetroBeckn.handler
     :<|> juspayWebhookHandler
     :<|> Dashboard.handler

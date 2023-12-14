@@ -15,8 +15,11 @@
 module Beckn.ACL.Search where
 
 import Beckn.ACL.Common (getTag)
+import qualified Beckn.OnDemand.Transformer.Search as TSearch
+import qualified Beckn.OnDemand.Utils.Common as Utils
 import qualified Beckn.Types.Core.Taxi.API.Search as Search
 import qualified Beckn.Types.Core.Taxi.Search as Search
+import qualified BecknV2.OnDemand.Utils.Context as ContextUtils
 import Data.Aeson
 import qualified Data.Text as T
 import qualified Domain.Action.Beckn.Search as DSearch
@@ -36,13 +39,13 @@ import Storage.Queries.Geometry
 import Tools.Error
 import qualified Tools.Maps as Maps
 
-buildSearchReq ::
+buildSearchReqV1 ::
   (HasFlowEnv m r '["coreVersion" ::: Text], CacheFlow m r, EsqDBFlow m r) =>
   Id Merchant.Merchant ->
   Subscriber.Subscriber ->
   Search.SearchReq ->
   m DSearch.DSearchReq
-buildSearchReq merchantId subscriber req = do
+buildSearchReqV1 merchantId subscriber req = do
   now <- getCurrentTime
   let context = req.context
   validateContext Context.SEARCH context
@@ -96,6 +99,33 @@ buildSearchReq merchantId subscriber req = do
         customerPhoneNum = buildCustomerPhoneNumber =<< intent.fulfillment.customer,
         ..
       }
+
+buildSearchReqV2 ::
+  (HasFlowEnv m r '["_version" ::: Text], CacheFlow m r, EsqDBFlow m r) =>
+  Id Merchant.Merchant ->
+  Subscriber.Subscriber ->
+  Search.SearchReqV2 ->
+  m DSearch.DSearchReq
+buildSearchReqV2 merchantId subscriber req = do
+  let context = req.searchReqContext
+  ContextUtils.validateContext Context.SEARCH context
+  messageId <- Utils.getMessageId context
+  let message = req.searchReqMessage
+  merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
+  -- let geoRestriction = merchant.geofencingConfig.origin
+  city <- pure merchant.city -- shrey00 : handle geoRestriction later
+  -- case geoRestriction of
+  --   Unrestricted -> pure merchant.city
+  --   Regions regions -> do
+  --     geometry <-
+  --       runInReplica $
+  --         findGeometriesContaining LatLong {lat = Beckn.OnDemand.Utils.Common.parseLatLong pickup.location.gps & (.lat), lon = Beckn.OnDemand.Utils.Common.parseLatLong pickup.location.gps & (.lon)} regions >>= \case
+  --           [] -> do
+  --             logError $ "No geometry found for pickup: " <> show pickup <> " for regions: " <> show regions
+  --             pure Nothing
+  --           (g : _) -> pure $ Just g
+  --     pure $ fromMaybe merchant.city ((.city) <$> geometry)
+  TSearch.buildSearchReq messageId city subscriber message context
 
 getDistance :: Search.TagGroups -> Maybe Meters
 getDistance tagGroups = do

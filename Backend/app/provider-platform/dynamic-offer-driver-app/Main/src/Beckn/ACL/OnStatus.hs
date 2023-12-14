@@ -13,7 +13,7 @@
 -}
 
 module Beckn.ACL.OnStatus
-  ( buildOnStatusMessage,
+  ( buildOnStatusMessage, mkOnStatusMessageV2,
   )
 where
 
@@ -21,6 +21,7 @@ import qualified Beckn.ACL.Common as Common
 import qualified Beckn.ACL.Common.Order as Common
 import qualified Beckn.Types.Core.Taxi.Common.Tags as Tags
 import qualified Beckn.Types.Core.Taxi.OnStatus as OnStatus
+import qualified BecknV2.OnDemand.Types as Spec
 import qualified Beckn.Types.Core.Taxi.OnStatus.Order.BookingCancelledOrder as BookingCancelledOS
 import qualified Beckn.Types.Core.Taxi.OnStatus.Order.BookingReallocationOrder as BookingReallocationOS
 import qualified Beckn.Types.Core.Taxi.OnStatus.Order.NewBookingOrder as NewBookingOS
@@ -127,3 +128,65 @@ buildOnStatusMessage DStatus.BookingReallocationBuildReq {bookingReallocationInf
                 fulfillment
               }
       }
+
+mkOnStatusMessageV2 :: DStatus.DStatusRes -> Maybe Spec.ConfirmReqMessage
+mkOnStatusMessageV2 res =
+  Just $
+    Spec.ConfirmReqMessage
+      { confirmReqMessageOrder = tfOrder res
+      }
+
+tfOrder :: DStatus.DStatusRes -> Spec.Order
+tfOrder res =
+  Spec.Order
+    { orderId = Just res.bookingId.getId,
+      orderStatus = Just $ mapToBecknBookingStatusV2 res.bookingStatus,
+      orderFulfillments = tfFulfillment res,
+      orderBilling = Nothing,
+      orderCancellation = Nothing,
+      orderCancellationTerms = Nothing,
+      orderItems = Nothing,
+      orderPayments = Nothing,
+      orderProvider = Nothing,
+      orderQuote = Nothing
+    }
+  where
+    tfFulfillment resp =
+      resp.mbRide <&> \ride ->
+        [ Spec.Fulfillment
+            { fulfillmentId = Just ride.id.getId,
+              fulfillmentType = Nothing,
+              fulfillmentState = Just $ tfFulfillmentState ride,
+              fulfillmentAgent = Nothing,
+              fulfillmentCustomer = Nothing,
+              fulfillmentStops = Nothing,
+              fulfillmentTags = Nothing,
+              fulfillmentVehicle = Nothing
+            }
+        ]
+
+tfFulfillmentState :: DRide.Ride -> Spec.FulfillmentState
+tfFulfillmentState ride =
+  Spec.FulfillmentState
+    { fulfillmentStateDescriptor = Just $ tfFulfillmentStateDescriptor ride
+    }
+
+tfFulfillmentStateDescriptor :: DRide.Ride -> Spec.Descriptor
+tfFulfillmentStateDescriptor ride =
+  Spec.Descriptor
+    { descriptorCode = Just "RideStatus",
+      descriptorName = Just "Ride Status",
+      descriptorShortDesc = Just $ mapToBecknRideStatusV2 ride.status
+    }
+
+mapToBecknBookingStatusV2 :: DBooking.BookingStatus -> Text
+mapToBecknBookingStatusV2 DBooking.NEW = "NEW_BOOKING"
+mapToBecknBookingStatusV2 DBooking.TRIP_ASSIGNED = "TRIP_ASSIGNED"
+mapToBecknBookingStatusV2 DBooking.COMPLETED = "BOOKING_COMPLETED"
+mapToBecknBookingStatusV2 DBooking.CANCELLED = "BOOKING_CANCELLED"
+
+mapToBecknRideStatusV2 :: DRide.RideStatus -> Text
+mapToBecknRideStatusV2 DRide.NEW = "NEW"
+mapToBecknRideStatusV2 DRide.INPROGRESS = "INPROGRESS"
+mapToBecknRideStatusV2 DRide.COMPLETED = "COMPLETED"
+mapToBecknRideStatusV2 DRide.CANCELLED = "CANCELLED"
