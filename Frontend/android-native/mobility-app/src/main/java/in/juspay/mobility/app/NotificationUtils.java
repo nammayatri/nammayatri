@@ -294,7 +294,7 @@ public class NotificationUtils {
 
     public static void showNotification(Context context, String title, String msg, JSONObject data, String imageUrl) throws JSONException {
         Log.e(TAG, "SHOWNOTIFICATION MESSAGE");
-        int smallIcon = Utils.getResIdentifier(context,"ic_launcher", "drawable");
+        int smallIcon =  Utils.getResIdentifier(context, (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) ? "ic_launcher_small_icon" : "ic_launcher", "drawable") ;
         Bitmap bitmap = null;
         if (imageUrl != null) {
             bitmap = getBitmapfromUrl(imageUrl);
@@ -307,7 +307,7 @@ public class NotificationUtils {
         System.out.println("Notificationn111" + data.getString("notification_type"));
         System.out.println("Notificationn222" + (data.getString("entity_ids")));
         System.out.println("imageUrl" + imageUrl);
-        System.out.println("imageUrl" + imageUrl);
+        System.out.println("smallIcon" + smallIcon);
         intent.putExtra("NOTIFICATION_DATA", data.toString());
         //            intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
         intent.setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP);
@@ -333,6 +333,7 @@ public class NotificationUtils {
         if (imageUrl != null) {
             mBuilder.setLargeIcon(bitmap)
                     .setSmallIcon(smallIcon)
+                    .setColor(rgb(252, 197, 43))
                     .setContentTitle(title)
                     .setContentText(msg)
                     .setAutoCancel(true)
@@ -344,6 +345,7 @@ public class NotificationUtils {
                                     .bigLargeIcon(null));
         } else {
             mBuilder.setSmallIcon(smallIcon)
+                    .setColor(rgb(252, 197, 42))
                     .setContentTitle(title)
                     .setContentText(msg)
                     .setAutoCancel(true)
@@ -549,9 +551,9 @@ public class NotificationUtils {
                 new NotificationCompat.Builder(context, "MessageUpdates")
                         .setContentTitle(titleBold)
                         .setAutoCancel(true)
-                        .setColor(rgb(33,148,255))
+                        .setColor(rgb(251, 197, 44))
                         .setContentText(message)
-                        .setSmallIcon(R.drawable.ny_ic_launcher)
+                        .setSmallIcon(Utils.getResIdentifier(context, (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) ? "ic_launcher_small_icon" : "ny_ic_launcher", "drawable"))
                         .setDefaults(Notification.DEFAULT_ALL)
                         .setPriority(NotificationCompat.PRIORITY_HIGH)
                         .setContentIntent(pendingIntent)

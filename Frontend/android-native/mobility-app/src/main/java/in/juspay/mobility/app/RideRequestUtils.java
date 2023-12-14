@@ -8,6 +8,7 @@
  */
 
 package in.juspay.mobility.app;
+import static android.graphics.Color.rgb;
 
 import android.Manifest;
 import android.app.Notification;
@@ -190,7 +191,8 @@ public class RideRequestUtils {
         mBuilder.setLargeIcon(BitmapFactory.decodeResource(context.getResources(), R.mipmap.ic_launcher));
         mBuilder.setContentTitle(context.getString(R.string.new_ride_req))
                 .setContentText(context.getString(R.string.new_ride_available_for_offering))
-                .setSmallIcon((R.mipmap.ic_launcher))
+                .setSmallIcon(Utils.getResIdentifier(context, (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) ? "ic_launcher_small_icon" : "ny_ic_launcher", (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) ? "drawable" : "mipmap"))
+                .setColor(rgb(253, 197, 44))
                 .setAutoCancel(true)
                 .setVibrate(vibrationPattern)
                 .setSound(null)

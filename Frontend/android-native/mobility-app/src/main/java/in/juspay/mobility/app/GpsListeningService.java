@@ -8,6 +8,7 @@
  */
 
 package in.juspay.mobility.app;
+import static android.graphics.Color.rgb;
 
 import android.Manifest;
 import android.app.AlarmManager;
@@ -132,7 +133,7 @@ public class GpsListeningService extends Service {
                 new NotificationCompat.Builder(this, channelId)
                         .setContentTitle("GPS")
                         .setContentText(getString(R.string.waiting_for_gps_signal))
-                        .setSmallIcon(Utils.getResIdentifier(getApplicationContext(),"ic_launcher", "drawable"))
+                        .setSmallIcon(Utils.getResIdentifier(getApplicationContext(), (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) ? "ic_launcher_small_icon" : "ny_ic_launcher", "drawable"))
                         .setProgress(100, 0, true)
                         .setPriority(NotificationCompat.PRIORITY_MIN)
                         .setOngoing(true)
@@ -146,7 +147,8 @@ public class GpsListeningService extends Service {
         NotificationCompat.Builder mBuilder = new NotificationCompat.Builder(this, "General");
         mBuilder.setLargeIcon(BitmapFactory.decodeResource(this.getResources(), Utils.getResIdentifier(getApplicationContext(),"ic_launcher", "drawable")));
         mBuilder.setContentTitle(getString(R.string.we_made_you_online))
-                .setSmallIcon(Utils.getResIdentifier(getApplicationContext(),"ic_launcher", "drawable"))
+                .setSmallIcon(Utils.getResIdentifier(getApplicationContext(), (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) ? "ic_launcher_small_icon" : "ny_ic_launcher", "drawable"))
+                .setColor(rgb(252, 196, 44))
                 .setContentText(getString(R.string.location_is_turned_on))
                 .setAutoCancel(true)
                 .setPriority(NotificationCompat.PRIORITY_MAX);

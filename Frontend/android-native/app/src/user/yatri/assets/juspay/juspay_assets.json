@@ -75,6 +75,7 @@
       "ic_invoice_logo" : true,
       "ic_launcher" : true,
       "ic_launcher_background" : true,
+      "ic_launcher_small_icon" : true,
       "ic_line" : true,
       "ic_loader" : true,
       "ic_location_permission_logo" : true,

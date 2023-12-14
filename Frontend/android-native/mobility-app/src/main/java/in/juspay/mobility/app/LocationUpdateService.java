@@ -10,6 +10,7 @@
 package in.juspay.mobility.app;
 
 import static android.Manifest.permission.ACCESS_FINE_LOCATION;
+import static android.graphics.Color.rgb;
 
 import android.Manifest;
 import android.annotation.SuppressLint;
@@ -786,7 +787,8 @@ public class LocationUpdateService extends Service {
                 new NotificationCompat.Builder(this, LOCATION_UPDATES)
                         .setContentTitle("Updating")
                         .setContentText(getString(R.string.your_location_is_being_updated))
-                        .setSmallIcon(Utils.getResIdentifier(context, "ic_launcher", "drawable"))
+                        .setSmallIcon(Utils.getResIdentifier(context, (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) ? "ic_launcher_small_icon" : "ny_ic_launcher", "drawable"))
+                        .setColor(rgb(252, 198, 44))
                         .setPriority(NotificationCompat.PRIORITY_MIN)
                         .setOngoing(true)
                         .setContentIntent(pendingIntent);
@@ -804,7 +806,8 @@ public class LocationUpdateService extends Service {
         NotificationCompat.Builder mBuilder = new NotificationCompat.Builder(context, "General");
         mBuilder.setLargeIcon(BitmapFactory.decodeResource(getResources(), Utils.getResIdentifier(context, "ic_launcher", "drawable")));
         mBuilder.setContentTitle(getString(R.string.we_made_you_offline))
-                .setSmallIcon(Utils.getResIdentifier(context, "ic_launcher", "drawable"))
+                .setSmallIcon(Utils.getResIdentifier(context, (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) ? "ic_launcher_small_icon" : "ny_ic_launcher", "drawable"))
+                .setColor(rgb(252, 195, 44))
                 .setContentText(getString(R.string.location_is_turned_off_permission_is_disabled))
                 .setAutoCancel(true)
                 .setPriority(NotificationCompat.PRIORITY_MAX);

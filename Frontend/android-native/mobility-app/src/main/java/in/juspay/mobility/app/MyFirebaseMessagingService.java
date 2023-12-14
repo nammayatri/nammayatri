@@ -192,7 +192,11 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                             if (remoteMessage.getData().containsKey("driver_notification_payload")) {
                                 String driverNotification = remoteMessage.getData().get("driver_notification_payload");
                                 if (driverNotification != null){
-                                    showOverlayMessage(new JSONObject(driverNotification));
+                                    JSONObject driverNotificationJsonObject = new JSONObject(driverNotification);
+                                    showOverlayMessage(driverNotificationJsonObject);
+                                    if (driverNotificationJsonObject.has("showPushNotification") && !driverNotificationJsonObject.isNull("showPushNotification") ? driverNotificationJsonObject.getBoolean("showPushNotification") : false) {
+                                       NotificationUtils.showNotification(this, title, body, payload, null);
+                                    }
                                 }
                             }
                             break;
