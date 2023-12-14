@@ -253,3 +253,9 @@ _fareBreakup = lens (unwrap >>> _.fareBreakup) (\oldRec newVal -> wrap ((unwrap 
 
 _paymentMethod :: forall a b c. Newtype a { payment_method :: b | c } => Lens' a b
 _paymentMethod = lens (unwrap >>> _.payment_method) (\oldRec newVal -> wrap ((unwrap oldRec) { payment_method = newVal }))
+
+_hasCompletedSafetySetup :: forall a b c. Newtype a { hasCompletedSafetySetup :: b | c } => Lens' a b
+_hasCompletedSafetySetup = lens (unwrap >>> _.hasCompletedSafetySetup) (\oldRec newVal -> wrap ((unwrap oldRec) { hasCompletedSafetySetup = newVal }))
+
+_enableLocalPoliceSupport :: forall a b c. Newtype a { enableLocalPoliceSupport :: b | c } => Lens' a b
+_enableLocalPoliceSupport = lens (unwrap >>> _.enableLocalPoliceSupport) (\oldRec newVal -> wrap ((unwrap oldRec) { enableLocalPoliceSupport = newVal }))

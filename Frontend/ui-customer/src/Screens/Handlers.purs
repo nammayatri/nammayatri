@@ -38,3 +38,5 @@ import Screens.EmergencyContactsScreen.Handler (emergencyContactsScreen) as UI
 import Screens.OnBoardingFlow.WelcomeScreen.Handler (welcomeScreen) as UI
 import Screens.TicketBookingScreen.Handler (ticketBookingScreen) as UI
 import Screens.TicketInfoScreen.Handler (ticketInfoScreen) as UI
+import Screens.NammaSafetyScreen.Handler (nammaSafetyScreen) as UI
+import Screens.NammaSafetyScreen.VideoRecordScreen.Handler (videoScreen) as UI

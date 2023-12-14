@@ -10,11 +10,16 @@
 package in.juspay.mobility.app;
 
 import static android.app.Activity.RESULT_OK;
+import static androidx.core.app.ActivityCompat.requestPermissions;
 import static androidx.core.app.ActivityCompat.startIntentSenderForResult;
 
+import android.Manifest;
+import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.AlarmManager;
 import android.app.PendingIntent;
+import android.content.ActivityNotFoundException;
+import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentSender;
@@ -23,23 +28,41 @@ import android.content.pm.PackageManager;
 import android.content.res.Resources;
 import android.graphics.Color;
 import android.graphics.drawable.GradientDrawable;
+import android.database.Cursor;
+import android.graphics.Color;
 import android.location.Location;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.RemoteException;
 import android.text.Html;
+import android.provider.MediaStore;
 import android.util.Log;
+import android.util.Size;
 import android.view.Gravity;
+import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.webkit.JavascriptInterface;
+import android.widget.Button;
+import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.camera.core.CameraSelector;
+import androidx.camera.core.ImageCapture;
+import androidx.camera.core.Preview;
+import androidx.camera.core.VideoCapture;
+import androidx.camera.lifecycle.ProcessCameraProvider;
+import androidx.camera.view.PreviewView;
+import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
+import androidx.core.content.FileProvider;
+import androidx.lifecycle.LifecycleOwner;
 import androidx.viewpager2.widget.ViewPager2;
 
 import com.android.installreferrer.api.InstallReferrerClient;
@@ -54,6 +77,7 @@ import com.google.android.gms.tasks.Task;
 import com.google.android.play.core.review.ReviewInfo;
 import com.google.android.play.core.review.ReviewManager;
 import com.google.android.play.core.review.ReviewManagerFactory;
+import com.google.common.util.concurrent.ListenableFuture;
 import com.google.firebase.analytics.FirebaseAnalytics;
 import com.google.firebase.crashlytics.FirebaseCrashlytics;
 import com.google.firebase.messaging.FirebaseMessaging;
@@ -67,14 +91,18 @@ import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.options.IFram
 import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.views.YouTubePlayerView;
 import com.pierfrancescosoffritti.androidyoutubeplayer.core.ui.DefaultPlayerUiController;
 
+import org.checkerframework.checker.units.qual.C;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Executor;
 
 import in.juspay.hyper.bridge.HyperBridge;
 import in.juspay.hyper.core.BridgeComponents;
@@ -84,6 +112,32 @@ import in.juspay.mobility.app.RemoteConfigs.MobilityRemoteConfigs;
 import in.juspay.mobility.app.callbacks.CallBack;
 import in.juspay.mobility.app.carousel.VPAdapter;
 import in.juspay.mobility.app.carousel.ViewPagerItem;
+import android.Manifest;
+import android.annotation.SuppressLint;
+import android.content.ContentValues;
+import android.content.pm.PackageManager;
+import android.os.Bundle;
+import android.provider.MediaStore;
+import android.view.View;
+import android.widget.Button;
+import android.widget.Toast;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.camera.core.CameraSelector;
+import androidx.camera.core.ImageCapture;
+import androidx.camera.core.Preview;
+import androidx.camera.core.VideoCapture;
+import androidx.camera.lifecycle.ProcessCameraProvider;
+import androidx.camera.view.PreviewView;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
+
+import com.google.common.util.concurrent.ListenableFuture;
+
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Executor;
 
 public class MobilityAppBridge extends HyperBridge {
 
@@ -92,6 +146,8 @@ public class MobilityAppBridge extends HyperBridge {
     private static final String META_LOG = "META_LOG";
     private static final String CALLBACK = "CALLBACK";
     private static final String UTILS = "UTILS";
+    private static final int CALL_REQUEST_CODE = 90;
+    private ListenableFuture<ProcessCameraProvider> cameraProviderFuture;
 
     private static final String REFERRER = "REFERRER";
     private final ArrayList<ViewPagerItem> viewPagerItemArrayList = new ArrayList<>();
@@ -103,7 +159,6 @@ public class MobilityAppBridge extends HyperBridge {
     public static String storeCallBackOpenChatScreen = null;
     public static String storeDetectPhoneNumbersCallBack = null;
 
-
     // Permission request Code
     private static final int CREDENTIAL_PICKER_REQUEST = 74;
 
@@ -111,6 +166,8 @@ public class MobilityAppBridge extends HyperBridge {
     public static YouTubePlayer youtubePlayer;
     public static String youtubeVideoStatus;
     public static float videoDuration = 0;
+
+    CameraUtils cameraUtils;
 
     protected HashMap<String, Trace> traceElements;
 
@@ -930,6 +987,50 @@ public class MobilityAppBridge extends HyperBridge {
         bridgeComponents.getContext().startActivity(intent);
     }
 
+    @JavascriptInterface
+    public void askRequestedPermissions(String[] requests) {
+        PermissionUtils.askRequestedPermissions(bridgeComponents.getActivity(), bridgeComponents.getContext(), requests, null);
+    }
+
+    @JavascriptInterface
+    public void askRequestedPermissionsWithCallback(String[] requests, final String callback) {
+        PermissionUtils.askRequestedPermissions(bridgeComponents.getActivity(), bridgeComponents.getContext(), requests, new PermissionUtils.PermissionCallback() {
+            @Override
+            public void onPermissionsGranted() {
+                String javascript = String.format(Locale.ENGLISH, "window.callUICallback('%s','%s');", callback, true);
+                if (callback != null) {
+                    bridgeComponents.getJsCallback().addJsToWebView(javascript);
+                }
+            }
+
+            @Override
+            public void onPermissionsDenied() {
+                String javascript = String.format(Locale.ENGLISH, "window.callUICallback('%s','%s');", callback, false);
+                if (callback != null) {
+                    bridgeComponents.getJsCallback().addJsToWebView(javascript);
+                }
+            }
+        });
+    }
+
+    @JavascriptInterface
+    public void setupCamera(String previewViewId, boolean isBackCamera) {
+        cameraUtils = new CameraUtils();
+        cameraUtils.setupCamera(bridgeComponents.getActivity(), bridgeComponents.getContext(), previewViewId, isBackCamera);
+    }
+
+    @JavascriptInterface
+    public void recordVideo(final String callback) {
+        if(cameraUtils != null)
+            cameraUtils.recordVideo(bridgeComponents.getActivity(), bridgeComponents.getContext(), callback, bridgeComponents);
+    }
+
+    @JavascriptInterface
+    public void stopRecord() {
+        if(cameraUtils != null)
+            cameraUtils.stopRecord();
+    }
+
     // region Override functions
     @Override
     public boolean onActivityResult(int requestCode, int resultCode, Intent data) {
@@ -948,6 +1049,58 @@ public class MobilityAppBridge extends HyperBridge {
     @Override
     public boolean onRequestPermissionResult(int requestCode, String[] permissions, int[] grantResults) {
         return super.onRequestPermissionResult(requestCode, permissions, grantResults);
+    }
+
+    @JavascriptInterface
+    public void shareVideoViaWhatsApp(String videoFilePath) {
+        System.out.println("shareVideoViaWhatsApp");
+        // Check if WhatsApp is installed on the device
+        Intent intent = new Intent(Intent.ACTION_SEND);
+        intent.setType("video/*");
+        intent.setPackage("com.whatsapp");
+        String phoneNumber = "8303155184";
+        String message =  "Hello";
+        Context context = bridgeComponents.getContext();
+
+        // Add phone number if available
+        if (phoneNumber != null && !phoneNumber.isEmpty()) {
+            intent.putExtra("jid", phoneNumber + "@s.whatsapp.net");
+        }
+
+        // Add message text
+        if (message != null && !message.isEmpty()) {
+            intent.putExtra(Intent.EXTRA_TEXT, message);
+        }
+//        intent.setData(Uri.parse(phoneNumber));
+        // Add video file
+        File videoFile = new File(videoFilePath);
+        if (videoFile.exists()) {
+            Uri videoUri = FileProvider.getUriForFile(
+                    context,
+                    context.getPackageName() + ".provider",
+                    videoFile
+            );
+            intent.putExtra(Intent.EXTRA_STREAM, videoUri);
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+        }
+
+        try {
+            context.startActivity(intent);
+        } catch (ActivityNotFoundException e) {
+            // Handle the case where WhatsApp is not installed
+            Toast.makeText(context, "WhatsApp not installed", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private static boolean isWhatsAppInstalled(Context context) {
+        PackageManager pm = context.getPackageManager();
+        try {
+            pm.getPackageInfo("com.whatsapp", PackageManager.GET_ACTIVITIES);
+            return true;
+        } catch (PackageManager.NameNotFoundException e) {
+            return false;
+        }
     }
     // endregion
 }

@@ -383,6 +383,24 @@ disabilityBannerConfig state =
       , stroke = "1,"<> Color.fadedPurple
       }
   in config'
+  
+sosSetupBannerConfig :: ST.HomeScreenState -> Banner.Config
+sosSetupBannerConfig state = 
+  let 
+    config = Banner.config
+    config' = config
+      { 
+        backgroundColor = Color.lightMintGreen
+      , title = getString if state.data.config.safetyConfig.enableSupport || state.props.enableLocalPoliceSupport 
+                            then COMPLETE_YOUR_NAMMA_SAFETY_SETUP_FOR_SAFE_RIDE_EXPERIENCE_PLUS
+                            else COMPLETE_YOUR_NAMMA_SAFETY_SETUP_FOR_SAFE_RIDE_EXPERIENCE
+      , titleColor = Color.elfGreen
+      , actionText = (getString SETUP_NOW)
+      , actionTextColor = Color.elfGreen
+      , imageUrl = fetchImage FF_ASSET "ny_ic_banner_sos"
+      , isBanner = true
+      }
+  in config'
 
 ticketBannerConfig :: ST.HomeScreenState -> Banner.Config
 ticketBannerConfig state =
@@ -807,6 +825,7 @@ driverInfoCardViewState state = { props:
                                   , isChatOpened : state.props.isChatOpened
                                   , chatcallbackInitiated : state.props.chatcallbackInitiated
                                   , merchantCity : state.props.city
+                                  , enableLocalPoliceSupport : state.props.enableLocalPoliceSupport
                                   }
                               , data: driverInfoTransformer state
                             }
@@ -1433,3 +1452,93 @@ getSelectedEstimatesObject dummy =
   case runExcept (decodeJSON (getValueToLocalStore ESTIMATE_DATA) :: _ ChooseVehicle.Config) of
     Right res -> Just res
     Left err -> Nothing
+
+safetyAlertConfig :: ST.HomeScreenState -> PopUpModal.Config
+safetyAlertConfig state = let
+  config' = PopUpModal.config
+  popUpConfig' = config'{
+      dismissPopup =true,
+      optionButtonOrientation = "VERTICAL",
+      buttonLayoutMargin = Margin 24 0 24 20,
+      gravity = CENTER,
+      margin = MarginHorizontal 20 20,
+      primaryText {
+        text = getString EVERYTHING_OKAY_Q
+      , margin = Margin 16 0 16 10
+      }
+      , secondaryText { 
+        text = getSafetyText $ getValueToLocalStore SAFETY_ALERT_TYPE
+        , margin = MarginHorizontal 16 16 
+       },
+      option1 {
+        text = getString I_FEEL_SAFE
+      , color = Color.yellow900
+      , background = Color.black900
+      , strokeColor = Color.transparent
+      , width = MATCH_PARENT
+      , margin = MarginVertical 20 10
+      },
+      option2 {
+        text = getString I_NEED_HELP
+      , color = Color.black700
+      , background = Color.white900
+      , width = MATCH_PARENT
+      , margin = MarginBottom 10
+      },
+      cornerRadius = Corners 15.0 true true true true,
+      coverImageConfig {
+        imageUrl = HU.fetchImage HU.FF_ASSET "ny_ic_safety_alert"
+      , visibility = VISIBLE
+      , margin = Margin 16 16 16 16
+      , width = MATCH_PARENT
+      , height = V 225
+      }
+  }
+  in popUpConfig'
+
+getSafetyText :: String -> String
+getSafetyText reason
+            | reason == "Deviation" = getString WE_NOTICED_YOUR_RIDE_IS_ON_DIFFERENT_ROUTE
+            | otherwise             = getString WE_NOTICED_YOUR_RIDE_HASNT_MOVED
+
+
+reportingIssueConfig :: ST.HomeScreenState -> PopUpModal.Config
+reportingIssueConfig state =
+  let
+    config' = PopUpModal.config
+    popUpConfig' =
+      config'
+        { optionButtonOrientation = "VERTICAL",
+          buttonLayoutMargin = Margin 16 0 16 20,
+          gravity = CENTER,
+          margin = MarginHorizontal 20 20,
+          cornerRadius = Corners 15.0 true true true true,
+          primaryText
+          { text = getString WE_ARE_HERE_FOR_YOU
+          , margin = (Margin 16 20 16 0)
+          }
+        , secondaryText
+          { text = getString if state.data.config.safetyConfig.enableSupport 
+                                then PLEASE_REMAIN_CALM_YOU_CAN_REQUEST_AN_IMMEDIATE_CALL 
+                                else PLEASE_REMAIN_CALM_CALL_POLICE
+          , margin = (Margin 0 16 0 20)
+          }
+        , option1 { 
+          text = getString if state.data.config.safetyConfig.enableSupport 
+                                then RECEIVE_CALL_FROM_SUPPORT
+                                else CALL_POLICE_HELPLINE
+          , margin = MarginBottom 10
+          , width = MATCH_PARENT
+          , color = Color.yellow900
+          , background = Color.black900
+          }
+        , option2 { 
+          text = getString DISMISS
+          , margin = MarginBottom EHC.safeMarginBottom
+          , width = MATCH_PARENT
+          , color  = Color.black900
+          , background = Color.white900
+          }
+        }
+  in
+    popUpConfig'

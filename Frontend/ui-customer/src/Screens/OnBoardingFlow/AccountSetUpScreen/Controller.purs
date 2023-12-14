@@ -25,8 +25,8 @@ import Components.SelectListModal as SelectListModal
 import Components.StepsHeaderModel.Controller as StepsHeaderModelController
 import Data.Maybe (Maybe(..), fromMaybe)
 import Data.String (length, trim)
-import Engineering.Helpers.Commons (getNewIDWithTag)
-import Helpers.Utils (clearCountDownTimer, setText)
+import Engineering.Helpers.Commons (getNewIDWithTag, clearCountDownTimer)
+import Helpers.Utils (setText)
 import JBridge (hideKeyboardOnNavigation)
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppTextInput, trackAppScreenEvent)
 import Prelude (class Show, bind, discard, pure, unit, not, ($), (/=), (&&), (>=), (==), (<))

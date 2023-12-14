@@ -40,6 +40,8 @@ android {
     }
 }
 
+def cameraxVersion = "1.1.0-alpha05"
+
 dependencies {
     implementation 'androidx.appcompat:appcompat:1.6.1'
     implementation 'com.google.android.material:material:1.6.0'
@@ -75,4 +77,11 @@ dependencies {
     implementation("com.google.firebase:firebase-crashlytics-ndk")
     implementation 'com.google.firebase:firebase-perf'
     implementation fileTree(dir: 'libs', include: ['*.jar', '*.aar'])
+    implementation 'androidx.camera:camera-view:1.0.0-alpha25'
+    implementation 'androidx.appcompat:appcompat:1.4.1'
+    implementation 'com.google.android.material:material:1.6.0'
+    implementation "androidx.camera:camera-core:${cameraxVersion}"
+    implementation "androidx.camera:camera-camera2:${cameraxVersion}"
+    implementation "androidx.camera:camera-lifecycle:${cameraxVersion}"
+
 }

@@ -161,7 +161,7 @@ export const storeCallBackContacts = function (cb) {
         });
 
         console.log("In storeCallBackContacts ---------- + " + action);
-        window.JBridge.storeCallBackContacts(callback);
+        return window.JBridge.storeCallBackContacts(callback);
       } catch (err) {
         console.log("storeCallBackContacts error " + err);
       }
@@ -215,16 +215,6 @@ export const clearWaitingTimer = function (id) {
   }
 }
 
-export const clearCountDownTimer = function (id) {
-  if (window.__OS == "IOS") {
-    if (window.JBridge.clearCountDownTimer) {
-      window.JBridge.clearCountDownTimer();
-    }
-  }
-  else {
-    clearInterval(parseInt(id));
-  }
-}
 
 export const setRefreshing = function (id) {
   return function (bool) {
@@ -463,3 +453,8 @@ export const getPixels = function (){
   }
 }
 
+export const requestCameraAndMicrophonePermissions = function () {
+  if (window.JBridge.requestCameraAndMicrophonePermissions) {
+    return window.JBridge.requestCameraAndMicrophonePermissions();
+  }
+}

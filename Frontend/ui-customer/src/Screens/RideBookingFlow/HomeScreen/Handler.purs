@@ -49,15 +49,15 @@ homeScreen = do
     ChangeLanguage updatedState -> do
       modifyScreenState $ HomeScreenStateType (\homeScreenState -> updatedState)
       App.BackT $ App.BackPoint <$> (pure CHANGE_LANGUAGE)
-    GoToEmergencyContacts updatedState -> do
-      modifyScreenState $ HomeScreenStateType (\homeScreenState -> updatedState)
-      App.BackT $ App.BackPoint <$> (pure GO_TO_EMERGENCY_CONTACTS)
     GoToMyTickets updatedState -> do
       modifyScreenState $ HomeScreenStateType (\homeScreenState -> updatedState)
       App.BackT $ App.BackPoint <$> (pure GO_TO_MY_TICKETS)
     GoToAbout updatedState -> do
       modifyScreenState $ HomeScreenStateType (\homeScreenState -> updatedState)
       App.BackT $ App.BackPoint <$> (pure GO_TO_ABOUT)
+    GoToNammaSafety updatedState -> do
+      modifyScreenState $ HomeScreenStateType (\homeScreenState -> updatedState)
+      App.BackT $ App.BackPoint <$> (pure $ GO_TO_NAMMASAFETY updatedState)
     GoToMyProfile updatedState updateProfile -> do
       modifyScreenState $ HomeScreenStateType (\homeScreenState -> updatedState)
       App.BackT $ App.BackPoint <$> (pure $ GO_TO_MY_PROFILE updateProfile)
@@ -170,3 +170,6 @@ homeScreen = do
     RepeatTrip state trip-> do
       modifyScreenState $ HomeScreenStateType (\homeScreenState -> state)
       App.BackT $ App.BackPoint <$> (pure $ REPEAT_RIDE_FLOW_HOME trip)
+    SafetySupport updatedState isSafe -> do
+      modifyScreenState $ HomeScreenStateType (\homeScreenState -> updatedState)
+      App.BackT $ App.BackPoint <$> (pure $ SAFETY_SUPPORT updatedState isSafe)

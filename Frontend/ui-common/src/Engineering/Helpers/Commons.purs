@@ -82,6 +82,7 @@ foreign import getOs :: Unit -> String
 foreign import setText :: String -> String -> Unit
 foreign import countDown :: forall action. Int -> String -> (action -> Effect Unit) -> (Int -> String -> String -> String-> action)  -> Effect Unit
 foreign import clearTimer :: String -> Unit
+foreign import clearCountDownTimer :: String -> Unit
 foreign import getExpiryTime :: String -> Boolean -> Int
 foreign import getCurrentUTC :: String -> String
 foreign import convertUTCtoISC :: String -> String -> String
@@ -96,6 +97,7 @@ foreign import getPastDays :: Int -> Array CalendarDate
 foreign import getPastWeeks :: Int -> Array CalendarWeek
 foreign import setEventTimestamp :: String -> Effect Unit
 foreign import getTimeStampObject :: Unit -> Effect (Array ClevertapEventParams)
+foreign import encodeURIData :: String -> String
 
 
 os :: String

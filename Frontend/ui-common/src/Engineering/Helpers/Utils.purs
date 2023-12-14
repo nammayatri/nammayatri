@@ -29,7 +29,7 @@ import Effect (Effect)
 import Effect.Aff (launchAff)
 import Effect.Aff.Compat (EffectFnAff, fromEffectFnAff)
 import Effect.Class (liftEffect)
-import Effect.Uncurried (EffectFn1, mkEffectFn1, runEffectFn1)
+import Effect.Uncurried (EffectFn1, EffectFn5, EffectFn7, mkEffectFn1, runEffectFn1)
 import Engineering.Helpers.BackTrack (liftFlowBT)
 import Engineering.Helpers.Commons (flowRunner, liftFlow)
 import Foreign (unsafeToForeign)
@@ -46,6 +46,10 @@ import Types.App (FlowBT, GlobalState(..))
 import Unsafe.Coerce (unsafeCoerce)
 
 -- Common Utils
+
+foreign import uploadMultiPartData :: EffectFn5 String String String String String String
+foreign import uploadMultiPartDataIOS :: forall action. EffectFn7 String String String String String (action -> Effect Unit) (String -> String -> action) Unit
+
 
 foreign import reboot :: Effect Unit
 
@@ -72,15 +76,13 @@ toggleLoader =
 loaderText :: String -> String -> Flow GlobalState Unit
 loaderText mainTxt subTxt = void $ modifyState (\(GlobalState state) -> GlobalState state { loaderOverlay { data { title = mainTxt, subTitle = subTxt } } })
 
-showAndHideLoader :: Number -> String -> String -> GlobalState -> Effect Unit
-showAndHideLoader delayInMs title description state = do
-  _ <-
+showAndHideLoader :: Boolean -> String -> String -> GlobalState -> Effect Unit
+showAndHideLoader showLoader title description state = do
+  void $
     launchAff $ flowRunner state
       $ do
-          _ <- loaderText title description
-          _ <- toggleLoader true
-          _ <- delay $ Milliseconds delayInMs
-          _ <- toggleLoader false
+          void $ loaderText title description
+          void $ toggleLoader showLoader
           pure unit
   pure unit
 

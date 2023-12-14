@@ -184,6 +184,9 @@ yellowOpacity10 = "#1AFCC32C"
 greenOpacity16 :: Color
 greenOpacity16 = "#2953BB6F"
 
+redOpacity20 :: Color
+redOpacity20 = "#33E55454"
+
 redOpacity16 :: Color
 redOpacity16 = "#29E55454"
 
@@ -213,3 +216,6 @@ green600 = "#269574"
 
 squidInkBlue :: Color
 squidInkBlue = "#303440"
+
+blackOpacity12 :: Color
+blackOpacity12 = "#373A45"

@@ -180,10 +180,9 @@ export const setText = function (id) {
   }
 }
 
-function instantGetTimer (fn , delay) {
-  fn();
-  window.timerId = setInterval( fn, delay );
-  return window.timerId;
+function instantGetTimer (fn ,id, delay) {
+  const timerId = setInterval( fn, delay, id);
+  return timerId;
 }
 
 export const countDown = function (countDownTime) {
@@ -191,27 +190,50 @@ export const countDown = function (countDownTime) {
     return function (cb) {
       return function (action) {
         return function () {
+          console.log("countDown", countDownTime, id, action);
           if (countDownTimers[id] != undefined) {
-            clearInterval(parseInt(countDownTimers[id]));
+            clearInterval(countDownTimers[id].id);
           }
-          const callback = PrestoCallbackMapper.map(function () {
-            let countDownCounter = countDownTime;
-            countDownTimers[id] = instantGetTimer(function () {
-              const timerIID = countDownTimers[id];
-              if (timerIID != undefined) {
-                countDownCounter -= 1;
-                if (countDownCounter <= 0) {
-                  delete countDownTimers[id];
-                  cb(action(0)(id)("EXPIRED")(timerIID))();
-                } else {
-                  cb(action(countDownCounter)(id)("INPROGRESS")(timerIID))();
-                }
+          const handler = function (keyId) {
+            const timer = countDownTimers[keyId];
+            if (timer) {
+              console.log("countDown", countDownTimers, keyId, timer);
+              timer.time = timer.time -= 1;
+              if (timer.time <= 0) {
+                console.log("countDownEXPIRED", "EXPIRED", timer, countDownTimers[keyId]);
+                clearInterval(timer.id);
+                countDownTimers[keyId] = undefined;
+                delete countDownTimers[keyId];
+                cb(action(0)(keyId)("EXPIRED")(timer.id))();
+              } else {
+                cb(action(timer.time)(keyId)("INPROGRESS")(timer.id))();
               }
-            }, 1000);
-          });
-          window.callUICallback(callback);
+            }
+          }
+          const timerId = instantGetTimer(handler, id, 1000);
+          const timer = {
+            time: countDownTime,
+            id: timerId
+          }
+          countDownTimers[id] = timer;
+          handler(id);
         }
       }
+    }
+  }
+}
+
+export const clearCountDownTimer = function (timerId) {
+  console.log("clearCountDownTimer", timerId, countDownTimers, countDownTimers[timerId]);
+  if (window.__OS == "IOS") {
+    if (window.JBridge.clearCountDownTimer) {
+      window.JBridge.clearCountDownTimer();
+    }
+  } else {
+    if(countDownTimers[timerId]) {
+      clearInterval(countDownTimers[timerId].id);
+      countDownTimers[timerId] = undefined;
+      delete countDownTimers[timerId];
     }
   }
 }
@@ -501,4 +523,8 @@ export const getTimeStampObject = function(){
     });
     return keyValuePairArray;
   }
+}
+
+export const encodeURIData = function (uri){
+  return encodeURIComponent(uri);
 }

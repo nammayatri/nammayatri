@@ -32,13 +32,13 @@ import Effect.Class (liftEffect)
 import Engineering.Helpers.Commons (flowRunner, os, safeMarginBottom, screenWidth, getExpiryTime)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (fetchImage, FetchImageFrom(..), getAssetsBaseUrl, getPaymentMethod, secondsToHms, makeNumber, getVariantRideType)
+import Helpers.Utils 
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import MerchantConfig.Utils (Merchant(..), getMerchant)
-import Prelude (Unit, (<<<), ($), (/), (<>), (==), unit, show, const, map, (>), (-), (*), bind, pure, discard, not, (&&), (||), (/=), (+))
+import Prelude 
 import Presto.Core.Types.Language.Flow (doAff)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), Accessiblity(..), afterRender, alignParentBottom, alignParentLeft, alpha, background, clickable, color, cornerRadius, ellipsize, fontSize, fontStyle, frameLayout, gravity, height, imageUrl, imageView, imageWithFallback, letterSpacing, lineHeight, linearLayout, margin, maxLines, onClick, orientation, padding, scrollBarY, scrollView, singleLine, stroke, text, textSize, textView, visibility, weight, width, layoutGravity, accessibilityHint, accessibility, onAnimationEnd, horizontalScrollView, scrollBarX)
+import PrestoDOM 
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Properties (cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
@@ -411,23 +411,54 @@ locationTrackButton push state =
       ]
   ]
 
-sosView :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM ( Effect Unit) w
+sosView :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM (Effect Unit) w
 sosView push state =
   linearLayout
-    [ height WRAP_CONTENT
-    , width WRAP_CONTENT
-    , visibility if (Array.any (_ == state.props.currentStage) [ RideAccepted, RideStarted, ChatWithDriver ]) && (not ((state.data.config.feature.enableChat) && state.props.showChatNotification)) then VISIBLE else GONE
-    , orientation VERTICAL
-    , gravity if os == "IOS" then CENTER_VERTICAL else BOTTOM
-    ][ imageView
-        [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_sos"
-        , height $ V 50
-        , width $ V 50
-        , accessibilityHint $ "S O S Button, Select to view S O S options"
-        , accessibility ENABLE
+    [ width WRAP_CONTENT
+    , height WRAP_CONTENT
+    , cornerRadius 20.0
+    , clipChildren false
+    ]
+    [ linearLayout
+        [ height WRAP_CONTENT
+        , width WRAP_CONTENT
+        , margin $ Margin 12 12 12 12
+        , shadow $ Shadow 0.1 2.0 10.0 24.0 Color.greyBackDarkColor 0.5
+        , background Color.white900
+        , cornerRadius 20.0
         , onClick push $ const OpenEmergencyHelp
+        , visibility visibility'
+        ]
+        [ linearLayout
+            [ gravity CENTER_VERTICAL
+            , padding $ Padding 12 6 12 6
+            ]
+            [ imageView
+                [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_sos"
+                , height $ V 24
+                , width $ V 24
+                , margin $ MarginRight 8
+                , accessibilityHint $ "S O S Button, Select to view S O S options"
+                , accessibility ENABLE
+                , onClick push $ const OpenEmergencyHelp
+                ]
+            , textView
+                $ [ text $ getString if state.props.enableLocalPoliceSupport || state.data.config.safetyConfig.enableSupport then NAMMA_SAFETY_PLUS else NAMMA_SAFETY
+                  , color Color.blue900
+                  , margin $ MarginBottom 1
+                  ]
+                <> FontStyle.body1 TypoGraphy
+            ]
+        , imageView
+            [ imageWithFallback $ fetchImage FF_ASSET "ic_red_icon"
+            , height $ V 12
+            , width $ V 12
+            , visibility if getValueToLocalStore IS_SOS_ACTIVE == "true" then VISIBLE else GONE
+            ]
         ]
     ]
+  where
+    visibility' = if (Array.any (_ == state.props.currentStage) [ RideAccepted, RideStarted, ChatWithDriver ]) && (not state.props.showChatNotification) then VISIBLE else GONE
 
 messageNotificationView :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM ( Effect Unit) w
 messageNotificationView push state =

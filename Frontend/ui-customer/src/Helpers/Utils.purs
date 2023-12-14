@@ -135,6 +135,8 @@ foreign import setEnabled :: String -> Boolean -> Unit
 
 foreign import _generateQRCode :: EffectFn5 String String Int Int (AffSuccess String) Unit
 
+foreign import requestCameraAndMicrophonePermissions :: Unit -> Effect Unit
+
 generateQR:: EffectFn4 String String Int Int Unit
 generateQR  = mkEffectFn4 \qrString viewId size margin ->  launchAff_  $ void $ makeAff $
   \cb ->
@@ -159,7 +161,6 @@ foreign import seperateByWhiteSpaces :: String -> String
 
 foreign import getKeyInSharedPrefKeysConfigEff :: String -> Effect String
 foreign import clearWaitingTimer :: String -> Unit
-foreign import clearCountDownTimer :: String -> Unit
 foreign import contactPermission :: Unit -> Effect Unit
 foreign import performHapticFeedback :: Unit -> Effect Unit
 foreign import adjustViewWithKeyboard :: String -> Effect Unit

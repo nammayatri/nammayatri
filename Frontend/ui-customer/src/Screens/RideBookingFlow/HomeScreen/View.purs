@@ -415,6 +415,8 @@ view push state =
             -- , if state.props.zoneTimerExpired then zoneTimerExpiredView state push else emptyTextView state
             , if state.props.callSupportPopUp then callSupportPopUpView push state else emptyTextView state
             , if state.props.showDisabilityPopUp &&  (getValueToLocalStore DISABILITY_UPDATED == "true") then disabilityPopUpView push state else emptyTextView state
+            , safetyAlertPopup push state
+            , if state.props.reportUnsafe then issueReportedPopup push state else emptyTextView state
             , if state.props.repeatRideTimer /= "0" 
               then linearLayout
                     [ width MATCH_PARENT
@@ -856,12 +858,14 @@ recentSearchesAndFavourites state push hideSavedLocsView hideRecentSearches =
         then  suggestionsView push state
         else emptySuggestionsBanner state push
     -- , if (not hideRecentSearches) then recentSearchesView state push else linearLayout[visibility GONE][]
-    , if (getValueToLocalStore DISABILITY_UPDATED == "false" && state.data.config.showDisabilityBanner) 
-        then updateDisabilityBanner state push
-        else 
-          if (state.data.config.feature.enableZooTicketBookingFlow) 
-            then zooTicketBookingBanner state push 
-            else linearLayout[visibility GONE][]])
+    , if (state.data.config.feature.enableZooTicketBookingFlow) then
+          zooTicketBookingBanner state push
+        else if state.props.showSosBanner then
+          sosSetupBannerView state push
+        else if (getValueToLocalStore DISABILITY_UPDATED == "false" && state.data.config.showDisabilityBanner) then
+          updateDisabilityBanner state push
+        else
+          linearLayout [visibility GONE][]])
 
 updateDisabilityBanner :: forall w. HomeScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 updateDisabilityBanner state push = 
@@ -2616,7 +2620,9 @@ homeScreenViewV2 push state =
                                   , orientation VERTICAL
                                   ][savedLocationsView state push
                                   , if isHomeScreenView state then mapView push state else emptyTextView state
-                                  , if isBannerVisible state then updateDisabilityBanner state push else emptyTextView state
+                                  , if state.props.showSosBanner then sosSetupBannerView state push
+                                    else if isBannerVisible state then updateDisabilityBanner state push 
+                                    else emptyTextView state
                                   , if (suggestionViewVisibility state) then  suggestionsView push state
                                     else emptySuggestionsBanner state push
                                   , footerView push state
@@ -3227,3 +3233,31 @@ suggestionViewVisibility state =  ((length state.data.tripSuggestions  > 0 || le
 
 isBannerVisible :: HomeScreenState -> Boolean
 isBannerVisible state = getValueToLocalStore DISABILITY_UPDATED == "false" && state.data.config.showDisabilityBanner && isHomeScreenView state
+    
+sosSetupBannerView :: forall w. HomeScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w 
+sosSetupBannerView state push = 
+  linearLayout
+    [ height MATCH_PARENT
+    , width MATCH_PARENT
+    , orientation VERTICAL
+    , margin (Margin 10 10 10 10)
+    , gravity BOTTOM
+    ][     
+        Banner.view (push <<< StartSOSOnBoarding) (sosSetupBannerConfig state)
+    ]
+
+safetyAlertPopup :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+safetyAlertPopup push state =
+  linearLayout
+  [ height MATCH_PARENT
+      , width MATCH_PARENT
+      , visibility  if not $ any (_ == (getValueToLocalNativeStore SAFETY_ALERT_TYPE))["__failed", "false"]
+                    then VISIBLE else GONE
+  ][PopUpModal.view (push <<< SafetyAlertAction) (safetyAlertConfig state)]
+
+issueReportedPopup :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+issueReportedPopup push state =
+  linearLayout
+  [ height MATCH_PARENT
+  , width MATCH_PARENT
+  ][PopUpModal.view (push <<< ReportUnsafe) (reportingIssueConfig state)]

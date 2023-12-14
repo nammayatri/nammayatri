@@ -29,10 +29,10 @@ import Data.Maybe (Maybe(..))
 import Data.String (length)
 import Data.String.CodeUnits (charAt)
 import Debug (spy)
-import Engineering.Helpers.Commons (getNewIDWithTag, os, clearTimer)
+import Engineering.Helpers.Commons (getNewIDWithTag, os, clearTimer, clearCountDownTimer)
 import Engineering.Helpers.LogEvent (logEvent)
 import Engineering.Helpers.Utils (mobileNumberValidator, mobileNumberMaxLength)
-import Helpers.Utils (setText, clearCountDownTimer, showCarouselScreen)
+import Helpers.Utils (setText, showCarouselScreen)
 import JBridge (firebaseLogEvent, hideKeyboardOnNavigation, minimizeApp, toast, toggleBtnLoader)
 import Language.Strings (getString)
 import Language.Types (STR(..))
@@ -141,8 +141,8 @@ eval (WhatsAppOTPButtonAction PrimaryButtonController.OnClick) state = do
 eval (StepsHeaderModelAC StepsHeaderModelController.OnArrowClick) state = continueWithCmd state [ do pure $ BackPressed state.props.enterOTP]
 
 eval (VerifyOTPButtonAction PrimaryButtonController.OnClick) state = do
-    _ <- pure $ hideKeyboardOnNavigation true
-    _ <- pure $ clearCountDownTimer state.data.timerID
+    void $ pure $ hideKeyboardOnNavigation true
+    void $ pure $ clearCountDownTimer "otp"
     updateAndExit state $ GoToAccountSetUp state
 
 eval (MobileNumberEditTextAction (MobileNumberEditorController.TextChanged id value)) state = do
@@ -187,7 +187,7 @@ eval (OTPEditTextAction (PrimaryEditTextController.TextChanged id value)) state 
                   , data = state.data { otp = if length value <= 4 then value else state.data.otp }}
     if length value == 4 then do
         pure $ hideKeyboardOnNavigation true
-        _ <- pure $ clearCountDownTimer state.data.timerID
+        void $ pure $ clearCountDownTimer "otp"
         updateAndExit newState $ GoToAccountSetUp newState
     else
         continue newState
@@ -212,7 +212,7 @@ eval (AutoFill otp) state = do
 eval (BackPressed flag) state = do
       _ <- pure $ spy "state" state
       _ <- pure $ toggleBtnLoader "" false
-      _ <- pure $ clearCountDownTimer state.data.timerID
+      _ <- pure $ clearCountDownTimer "otp"
       let newState = state {props{enterOTP =  false,letterSpacing = PX 1.0},data{otp = ""}}
       _ <- pure $ hideKeyboardOnNavigation true
       if state.props.enterOTP then exit $ GoBack newState
@@ -224,7 +224,7 @@ eval (BackPressed flag) state = do
 eval (CountDown seconds id status timerID) state = do
         _ <- pure $ printLog "timer" $ show seconds
         if status == "EXPIRED" then do
-            _ <- pure $ clearCountDownTimer state.data.timerID
+            _ <- pure $ clearCountDownTimer "otp"
             let newState = state{data{timer = 30, timerID = ""},props = state.props{resendEnable = true}}
             continue newState
         else
