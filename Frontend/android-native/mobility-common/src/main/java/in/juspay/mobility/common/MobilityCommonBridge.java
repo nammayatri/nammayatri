@@ -14,6 +14,7 @@ import static android.Manifest.permission.POST_NOTIFICATIONS;
 import static android.Manifest.permission.READ_EXTERNAL_STORAGE;
 import static android.Manifest.permission.WRITE_EXTERNAL_STORAGE;
 import static android.content.Context.MODE_PRIVATE;
+import static android.graphics.Color.rgb;
 
 import android.Manifest;
 import android.animation.Animator;
@@ -2195,9 +2196,9 @@ public class MobilityCommonBridge extends HyperBridge {
                 notificationManager.createNotificationChannel(channel);
             }
             NotificationCompat.Builder mBuilder = new NotificationCompat.Builder(context, CHANNEL_ID);
-            int launcher = bridgeComponents.getContext().getResources().getIdentifier("ic_launcher", "mipmap", bridgeComponents.getContext().getPackageName());
             mBuilder.setContentTitle(toastMessage)
-                    .setSmallIcon(launcher)
+                    .setSmallIcon(bridgeComponents.getContext().getResources().getIdentifier((Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) ? "ic_launcher_small_icon" : "ic_launcher", (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) ? "drawable" : "mipmap", bridgeComponents.getContext().getPackageName()))
+                    .setColor(rgb(250, 197, 44))
                     .setContentText(notificationContent)
                     .setAutoCancel(true)
                     .setSound(RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION))
