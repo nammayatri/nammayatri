@@ -65,8 +65,7 @@ data RawMessage = RawMessage
     viewCount :: Int,
     mediaFiles :: [Id MF.MediaFile],
     merchantId :: Id Merchant,
-    createdAt :: UTCTime,
-    sentAt :: Maybe UTCTime
+    createdAt :: UTCTime
   }
   deriving (Generic, ToJSON, FromJSON)
 

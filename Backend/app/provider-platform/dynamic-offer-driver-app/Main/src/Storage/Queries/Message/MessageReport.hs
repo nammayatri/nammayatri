@@ -74,7 +74,6 @@ findByDriverIdAndLanguage driverId language mbLimit mbOffset = do
       p <- catMaybes <$> mapM fromTType' messageReport
       di <- catMaybes <$> mapM fromTType' message
       v <- mapM (maybe (pure Nothing) fromTType') messageTranslation
-      now <- getCurrentTime
       let rawMessageFromMessage Message {..} =
             RawMessage
               { id = id,
@@ -87,8 +86,7 @@ findByDriverIdAndLanguage driverId language mbLimit mbOffset = do
                 viewCount = viewCount,
                 mediaFiles = mediaFiles,
                 merchantId = merchantId,
-                createdAt = createdAt,
-                sentAt = Just now
+                createdAt = createdAt
               }
       pure $ zip3 p (rawMessageFromMessage <$> di) v
     Left _ -> pure []

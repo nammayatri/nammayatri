@@ -1,0 +1,1 @@
+Alter Table atlas_driver_offer_bpp.message_report ADD COLUMN sent_at timestamp with time zone;

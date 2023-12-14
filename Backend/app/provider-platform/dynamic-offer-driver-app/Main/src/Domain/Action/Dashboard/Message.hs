@@ -199,9 +199,7 @@ sendMessage merchantShortId _ Common.SendMessageRequest {..} = do
   now <- getCurrentTime
   merchant <- findMerchantByShortId merchantShortId
   message <- B.runInReplica $ MQuery.findById (Id messageId) >>= fromMaybeM (InvalidRequest "Message Not Found")
-  MRQuery.updateSentAtByMessageIds [getField @"id" message] now
-  -- let updatedMessage = message & MS.sentAt .~ (Just now)
-  let updatedMessage = message {MS.sentAt = Just now}
+  MRQuery.updateSentAtByMessageIds [Id messageId] now
   allDriverIds <- case _type of
     AllEnabled -> B.runInReplica $ QP.findAllDriverIdExceptProvided (merchant.id) []
     Include -> readCsv
@@ -209,7 +207,7 @@ sendMessage merchantShortId _ Common.SendMessageRequest {..} = do
       driverIds <- readCsv
       B.runInReplica $ QP.findAllDriverIdExceptProvided (merchant.id) driverIds
   logDebug $ "DriverId to which the message is sent" <> show allDriverIds
-  fork "Adding messages to kafka queue" $ mapM_ (addToKafka updatedMessage) allDriverIds
+  fork "Adding messages to kafka queue" $ mapM_ (addToKafka message) allDriverIds
   return Success
   where
     addToKafka message driverId = do
