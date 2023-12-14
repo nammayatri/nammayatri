@@ -475,10 +475,10 @@ data ScreenOutput = LogoutUser
                   | GoToHelp HomeScreenState
                   | ConfirmRide HomeScreenState
                   | GoToAbout HomeScreenState
+                  | GoToNammaSafety HomeScreenState
                   | PastRides HomeScreenState
                   | GoToMyProfile HomeScreenState Boolean
                   | ChangeLanguage HomeScreenState
-                  | GoToEmergencyContacts HomeScreenState
                   | Retry HomeScreenState
                   | GetQuotes HomeScreenState
                   | UpdatedState HomeScreenState Boolean
@@ -518,6 +518,7 @@ data ScreenOutput = LogoutUser
                   | GoToTicketBookingFlow HomeScreenState
                   | GoToMyTickets HomeScreenState
                   | RepeatTrip HomeScreenState Trip
+                  | SafetySupport HomeScreenState Boolean
 
 data Action = NoAction
             | BackPressed
@@ -643,6 +644,9 @@ data Action = NoAction
             | StopRepeatRideTimer 
             | OpenLiveDashboard
             | UpdatePeekHeight 
+            | StartSOSOnBoarding Banner.Action
+            | SafetyAlertAction PopUpModal.Action
+            | ReportUnsafe PopUpModal.Action
 
 eval :: Action -> HomeScreenState -> Eval Action ScreenOutput HomeScreenState
 
@@ -1072,9 +1076,8 @@ eval (SettingSideBarActionController (SettingSideBarController.GoToAbout)) state
   let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_about"
   exit $ GoToAbout state { data { settingSideBar { opened = SettingSideBarController.OPEN } } }
 
-eval (SettingSideBarActionController (SettingSideBarController.GoToEmergencyContacts)) state = do
-  let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_emergency_contacts"
-  exit $ GoToEmergencyContacts state { data{settingSideBar{opened = SettingSideBarController.OPEN}}}
+eval (SettingSideBarActionController (SettingSideBarController.GoToNammaSafety)) state = do
+  exit $ GoToNammaSafety state { data { settingSideBar { opened = SettingSideBarController.OPEN } } }
 
 eval (SettingSideBarActionController (SettingSideBarController.GoToMyTickets)) state = do
   let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_zoo_tickets"
@@ -1299,7 +1302,7 @@ eval (DriverInfoCardActionController (DriverInfoCardController.LocationTracking)
 
 eval (DriverInfoCardActionController (DriverInfoCardController.OpenEmergencyHelp)) state = do
   _ <- pure $ performHapticFeedback unit
-  continue state{props{emergencyHelpModal = true}}
+  exit $ GoToNammaSafety state
 
 eval (DriverInfoCardActionController (DriverInfoCardController.ExpandBottomSheet)) state = continue state{props{sheetState = if state.props.sheetState == EXPANDED then COLLAPSED else EXPANDED}}
 eval (DriverInfoCardActionController (DriverInfoCardController.ShareRide)) state = do
@@ -1328,8 +1331,6 @@ eval (EmergencyHelpModalAC (EmergencyHelpController.StoreContacts)) state  = do
     let newContacts = transformContactList contactsInJson
         newState = state{props{emergencyHelpModelState{emergencyContactData = newContacts}}}
     continue newState
-
-eval (EmergencyHelpModalAC (EmergencyHelpController.AddedEmergencyContacts)) state  =  updateAndExit state{props{emergencyHelpModelState{isSelectEmergencyContact = true}}} $ GoToEmergencyContacts state {props {emergencyHelpModelState{isSelectEmergencyContact = true}}}
 
 eval (EmergencyHelpModalAC (EmergencyHelpController.CallEmergencyContact PopUpModal.OnButton2Click)) state = do
     void <- pure $ showDialer state.props.emergencyHelpModelState.currentlySelectedContact.phoneNo false -- TODO: FIX_DIALER
@@ -1897,6 +1898,8 @@ eval (DisabilityPopUpAC PopUpModal.OnButton1Click) state = do
   _ <- pure $ pauseYoutubeVideo unit
   continue state{props{showDisabilityPopUp = false}}
 
+eval (StartSOSOnBoarding Banner.OnClick) state = exit $ GoToNammaSafety state
+
 eval ShowRateCard state = do
   continue state { props { showRateCard = true } }
 
@@ -2033,6 +2036,21 @@ eval CheckAndAskNotificationPermission state = do
 eval (TriggerPermissionFlow flowType) state = exit $ ExitToPermissionFlow flowType
 
 eval (GenderBannerModal (Banner.OnClick)) state = exit $ GoToMyProfile state true
+
+eval (SafetyAlertAction PopUpModal.OnButton1Click) state = exit $ SafetySupport state true
+
+eval (SafetyAlertAction PopUpModal.OnButton2Click) state = do
+    _ <- pure $ setValueToLocalNativeStore SAFETY_ALERT_TYPE "false"
+    continue state {props {reportUnsafe = true}}
+
+eval (ReportUnsafe PopUpModal.OnButton1Click) state = 
+    case state.data.config.safetyConfig.enableSupport of
+      true -> exit $ SafetySupport state false
+      false -> do
+        void $ pure $ showDialer "112" false
+        continue state {props {reportUnsafe = false}}
+
+eval (ReportUnsafe PopUpModal.OnButton2Click) state = continue state{props {reportUnsafe = false}}
 
 eval _ state = continue state
 

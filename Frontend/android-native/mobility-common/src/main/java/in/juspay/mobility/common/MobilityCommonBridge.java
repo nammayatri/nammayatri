@@ -97,6 +97,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
 import androidx.browser.customtabs.CustomTabsIntent;
 import androidx.core.app.ActivityCompat;
@@ -144,10 +145,13 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.io.BufferedInputStream;
 import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
+import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -155,19 +159,24 @@ import java.io.Reader;
 import java.io.StringWriter;
 import java.io.Writer;
 import java.lang.reflect.Method;
+import java.net.HttpURLConnection;
 import java.net.URISyntaxException;
+import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import java.util.TimeZone;
 
+import java.util.UUID;
 
 import in.juspay.hyper.bridge.HyperBridge;
 import in.juspay.hyper.constants.LogCategory;
@@ -177,6 +186,8 @@ import in.juspay.hyper.core.ExecutorManager;
 import in.juspay.hyper.core.JsCallback;
 import in.juspay.hyper.core.JuspayLogger;
 import in.juspay.mobility.app.GeoCoderHelper;
+import in.juspay.mobility.app.services.MobilityAPIResponse;
+import in.juspay.mobility.app.services.MobilityCallAPI;
 
 public class MobilityCommonBridge extends HyperBridge {
 
@@ -2585,5 +2596,44 @@ public class MobilityCommonBridge extends HyperBridge {
             } catch (Exception ignored) {
             }
         }
+
+
+    }
+    @JavascriptInterface
+    public String uploadMultiPartData(String filePath, String uploadUrl, String fileType, String fileField, String outputField) throws IOException {
+        String res = "";
+        try {
+            MobilityCallAPI mobilityApiHandler = new MobilityCallAPI();
+            Map<String, String> baseHeaders = mobilityApiHandler.getBaseHeaders(bridgeComponents.getContext());
+            File file = new File(filePath);
+            String fileName = file.getName();
+            FileInputStream fileInputStream = new FileInputStream(file);
+            int bytesAvailable = fileInputStream.available();
+            int maxBufferSize = 1024 * 1024;
+            int bufferSize = Math.min(bytesAvailable, maxBufferSize);
+
+            byte[] buffer = new byte[bufferSize];
+            int bytesRead = fileInputStream.read(buffer, 0, bufferSize);
+
+            while (bytesRead > 0) {
+                bytesAvailable = fileInputStream.available();
+                bufferSize = Math.min(bytesAvailable, maxBufferSize);
+                bytesRead = fileInputStream.read(buffer, 0, bufferSize);
+            }
+            Map<String, String> formData = new HashMap<>();
+            formData.put("fileType", fileType);
+            MobilityAPIResponse apiResponse = mobilityApiHandler.callMultipartAPI(uploadUrl, baseHeaders, formData, buffer, fileName, fileField,"POST");
+            System.out.println("Response Multipart" + apiResponse);
+            if (apiResponse.getStatusCode() == 200) {
+                JSONObject jsonObject = new JSONObject(apiResponse.getResponseBody());
+                res = jsonObject.optString(outputField, "Success");
+            }
+            else {
+                Toast.makeText(bridgeComponents.getContext(), "Unable to upload " + fileType.toLowerCase(), Toast.LENGTH_SHORT).show();
+            }
+        } catch (Exception error) {
+            Log.d(LOG_TAG, "Catch in uploadMultiPartData : " + error);
+        }
+        return res;
     }
 }

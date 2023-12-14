@@ -56,13 +56,12 @@ primaryButtonConfig state =
     primaryButtonConfig' =
       config
         { textConfig
-          { text = if null state.data.contactsList then (getString ADD_EMERGENCY_CONTACTS) else (getString ADD_ANOTHER_CONTACT)
-          , accessibilityHint = (if null state.data.contactsList then (getString ADD_EMERGENCY_CONTACTS) else (getString ADD_ANOTHER_CONTACT)) <> " : Button"
+          { text = if null state.data.contactsList then (getString ADD_EMERGENCY_CONTACTS) else (getString CONFIRM_EMERGENCY_CONTACTS)
+          , accessibilityHint = (if null state.data.contactsList then (getString ADD_EMERGENCY_CONTACTS) else (getString CONFIRM_EMERGENCY_CONTACTS)) <> " : Button"
           }
         , isClickable = true
         , width = if os == "IOS" then (V 360) else (MATCH_PARENT)
         , margin = (MarginBottom 24)
-        , visibility = if ((length state.data.contactsList) == 3) then GONE else VISIBLE
         , id = "ConfirmEmergencyContactsButton"
         }
   in

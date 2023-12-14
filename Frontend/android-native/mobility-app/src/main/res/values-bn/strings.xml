@@ -48,4 +48,6 @@
     <string name="qr_downloaded">QR ডাউনলোড !!!</string>
     <string name="accept_goto">প্রস্তাব গ্রহণ “গো-টু”</string>
     <string name="take_a_clear_selfie">চিহ্নিত এলাকার ভিতরে আপনার ড্রাইভিং লাইসেন্স \n সহ একটি পরিষ্কার ছবি তুলুন</string>
+    <string name="safety_deviation_alert">আমরা দেখেছি আপনার রাইডটি একটি বিভিন্ন রুটে আছে। আপনি আপনার ভ্রমণে সুরক্ষিত আছেন?</string>
+    <string name="everything_okay">Everything Okay?</string>
 </resources>

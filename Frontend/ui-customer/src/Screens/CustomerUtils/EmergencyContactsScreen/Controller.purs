@@ -93,17 +93,23 @@ data Action = GenericHeaderActionController GenericHeader.Action
             | ContactTextChanged String
             | ContactListPrimaryEditTextAction PrimaryEditTextController.Action
             | ContactListClearText
+            | AddContacts
             | ContactListScroll String
             | ContactListScrollStateChanged ScrollState
             | NewContactActionController NewContactController.Action
 
-data ScreenOutput = GoToHomeScreen
+data ScreenOutput = GoToSafetyScreen EmergencyContactsScreenState
                   | PostContacts EmergencyContactsScreenState
                   | GetContacts EmergencyContactsScreenState
                   | Refresh EmergencyContactsScreenState
 
 eval :: Action -> EmergencyContactsScreenState -> Eval Action ScreenOutput EmergencyContactsScreenState
-eval (PrimaryButtonActionControll PrimaryButton.OnClick) state = continueWithCmd state
+
+eval (PrimaryButtonActionControll PrimaryButton.OnClick) state = 
+  if null state.data.contactsList then continueWithCmd state [pure AddContacts]
+  else exit $ GoToSafetyScreen state
+
+eval AddContacts state = continueWithCmd state
       [do
         _ <- pure $ setRefreshing (getNewIDWithTag "EmergencyContactTag")false
         pure $ setEnabled (getNewIDWithTag "EmergencyContactTag") false
@@ -210,7 +216,7 @@ eval BackPressed state =
   else if state.props.showInfoPopUp then
     continue state{props{showInfoPopUp = false, showContactList = false}}
   else
-    exit $ GoToHomeScreen
+    exit $ GoToSafetyScreen state
 
 eval (ContactListGenericHeaderActionController GenericHeader.PrefixImgOnClick) state = do
   if(state.props.showContactList) then do
@@ -228,7 +234,7 @@ eval (ContactListGenericHeaderActionController GenericHeader.PrefixImgOnClick) s
   else if state.props.showInfoPopUp then
     continue state{props{showInfoPopUp = false, showContactList = false}}
   else
-    exit $ GoToHomeScreen
+    exit $ GoToSafetyScreen state
 
 
 eval (ContactListScroll value) state = do

@@ -737,6 +737,9 @@ type HomeScreenStateProps =
   , repeatRideTimer :: String
   , repeatRideTimerId :: String
   , showShimmer :: Boolean
+  , showSosBanner :: Boolean
+  , enableLocalPoliceSupport :: Boolean
+  , reportUnsafe :: Boolean
   }
 
 type SearchLocationModelProps = {
@@ -1534,3 +1537,65 @@ data TicketBookingScreenStage = DescriptionStage
 derive instance genericTicketBookingScreenStage :: Generic TicketBookingScreenStage _
 instance showTicketBookingScreenStage :: Show TicketBookingScreenStage where show = genericShow
 instance eqTicketBookingScreenStage :: Eq TicketBookingScreenStage where eq = genericEq
+
+-- ############################################## NammaSafetyScreenState #############################
+
+data NammaSafetyStage =  NammaSafetyDashboard
+                        | AboutNammaSafety
+                        | SafetyFeaturesStage
+                        | SetTriggerCustomerSupport
+                        | SetNightTimeSafetyAlert
+                        | SetDefaultEmergencyContacts
+                        | SetPersonalSafetySettings
+                        | EduNammaSafetyMeasures
+                        | EduNammaSafetyGuidelines
+                        | EduNammaSafetyAboutSOS
+                        | ActivateNammaSafety
+                        | TriggeredNammaSafety
+                        | NammaSafetyVideoRecord
+                        | EmergencyContactsStage
+
+derive instance genericNammaSafetyStage :: Generic NammaSafetyStage _
+instance eqNammaSafetyStage :: Eq NammaSafetyStage where eq = genericEq
+instance showNammaSafetyStage :: Show NammaSafetyStage where show = genericShow
+instance encodeNammaSafetyStage :: Encode NammaSafetyStage where encode = defaultEncode
+instance decodeNammaSafetyStage :: Decode NammaSafetyStage where decode = defaultDecode
+
+type NammaSafetyScreenState = {
+  data :: NammaSafetyScreenData,
+  props :: NammaSafetyScreenProps
+}
+
+type NammaSafetyScreenData =  {
+  shareToEmergencyContacts :: Boolean,
+  nightSafetyChecks :: Boolean,
+  triggerSupport :: Boolean,
+  hasCompletedSafetySetup :: Boolean,
+  contactsList :: Array NewContacts,
+  sosId :: String,
+  rideId :: String,
+  videoPath :: String,
+  updateActionType :: String,
+  removedContactDetail :: NewContacts,
+  safetyConfig :: SafetyConfig
+ }
+
+type NammaSafetyScreenProps =  {
+  onRide :: Boolean,
+  currentStage :: NammaSafetyStage,
+  recordingState :: RecordingState,
+  confirmPopup :: Boolean,
+  timerId :: String,
+  timerValue :: Int,
+  enableLocalPoliceSupport :: Boolean,
+  showInfoPopUp :: Boolean,
+  localPoliceNumber :: String,
+  shareTimerId :: String,
+  shareTimerValue :: Int,
+  showShimmer :: Boolean
+}
+data RecordingState = RECORDING | NOT_RECORDING | SHARING | UPLOADING | SHARED
+
+derive instance genericRecordingState :: Generic RecordingState _
+instance eqRecordingState :: Eq RecordingState where eq = genericEq
+instance showRecordingState :: Show RecordingState where show = genericShow

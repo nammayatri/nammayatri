@@ -54,5 +54,7 @@
     <string name="qr_downloaded">Qr ಡೌನ್‌ಲೋಡ್ ಮಾಡಲಾಗಿದೆ !!!</string>
     <string name="accept_goto">ಒಪ್ಪಿಕೊಳ್ಳಿ “ಗೋ-ಟು”</string>
     <string name="take_a_clear_selfie">ಗುರುತಿಸಲಾದ ಪ್ರದೇಶದಲ್ಲಿ ನಿಮ್ಮ ಡ್ರೈವಿಂಗ್ \n ಲೈಸೆನ್ಸ್‌ನೊಂದಿಗೆ ಸ್ಪಷ್ಟವಾದ ಫೋಟೋ ತೆಗೆದುಕೊಳ್ಳಿ</string>
+    <string name="safety_deviation_alert">ನಾವು ನಿನ್ನ ಸವಾರಿ ವೇಗದ ರೂಟ್ ಯಲ್ಲಿ ಇದ್ದೇವೆ ಎಂದು ಗುರುತಿಸಿದ್ದೇವೆ. ನೀವು ನಿಮ್ಮ ಪ್ರಯಾಣದಲ್ಲಿ ಸುರಕ್ಷಿತವಾಗಿದ್ದೀರಾ?</string>
+    <string name="everything_okay">ಎಲ್ಲಾ ಸರಿಯಾಗಿದೆಯೇ?</string>
 
 </resources>

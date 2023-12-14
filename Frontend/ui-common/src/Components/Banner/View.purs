@@ -23,7 +23,9 @@ import PrestoDOM.Types.DomAttributes (Gravity(..), Corners(..))
 import Font.Style as FontStyle
 import Font.Size as FontSize
 import Components.Banner.Controller
+import Styles.Colors as Color
 import Common.Types.App (LazyCheck(..))
+import Engineering.Helpers.Commons (os, screenWidth)
 
 
 view :: forall w. (Action  -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w

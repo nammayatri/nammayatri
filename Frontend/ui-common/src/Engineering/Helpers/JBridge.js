@@ -2275,3 +2275,40 @@ export const isNotificationPermissionEnabled = function () {
     }
   }
 }
+
+export const askRequestedPermissions = function(permissions){
+  if(window.JBridge.askRequestedPermissions)
+    return window.JBridge.askRequestedPermissions(permissions);
+}
+
+export const setupCamera = function(id){
+  if (window.__OS == "IOS" && window.JBridge.renderCameraView) {
+    return window.JBridge.renderCameraView(id);
+  }
+  else if(window.JBridge.setupCamera){
+    return window.JBridge.setupCamera(id);
+  }
+}
+
+export const startRecord = function (cb){
+  return function (action){
+    return function () {
+      const callback = callbackMapper.map(function (videostatus, videoUri) {
+        cb(action(videostatus)(videoUri))();
+      });
+      if (window.__OS == "IOS" && window.JBridge.startRecording) {
+        return window.JBridge.startRecording(callback);
+      }
+      else if(window.JBridge.recordVideo){
+        return window.JBridge.recordVideo(callback);
+      }
+    }
+  }
+}
+  
+
+export const stopRecord = function(){
+  if(window.JBridge.stopRecord){
+    return window.JBridge.stopRecord();
+  }
+}

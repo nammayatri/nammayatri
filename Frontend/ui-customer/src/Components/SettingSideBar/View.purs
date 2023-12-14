@@ -95,17 +95,31 @@ settingsView state push =
         "MyRides" -> settingsMenuView {imageUrl : fetchImage FF_ASSET "ic_past_rides", text : (getString MY_RIDES), accessibilityHint : "My Rides " ,tag : SETTINGS_RIDES, iconUrl : ""} push
         "Tickets" -> settingsMenuView {imageUrl : fetchImage FF_ASSET "ny_ic_ticket_grey", text : getString MY_TICKETS, accessibilityHint : "Tickets", tag : SETTINGS_TICKETS, iconUrl : ""} push
         "Favorites" -> if DA.any (\stage -> isLocalStageOn stage)  [RideStarted, RideAccepted, RideCompleted] then emptyLayout else settingsMenuView {imageUrl : fetchImage FF_ASSET "ic_fav", text : (getString FAVOURITES) , accessibilityHint : "Favourites " , tag : SETTINGS_FAVOURITES, iconUrl : ""} push
-        "EmergencyContacts" ->  settingsMenuView {imageUrl : fetchImage FF_COMMON_ASSET "ny_ic_emergency_contacts" , text : (getString EMERGENCY_CONTACTS) , accessibilityHint : "Emergency Contacts " , tag : SETTINGS_EMERGENCY_CONTACTS, iconUrl : ""} push
+        "NammaSafety" -> settingsMenuView {imageUrl : fetchImage FF_ASSET "ny_ic_shield_heart", text : getSafetyModeString, accessibilityHint : " Safety ", tag : SETTINGS_NAMMASAFETY, iconUrl : safetyActiveImage} push
         "HelpAndSupport" -> settingsMenuView (helpAndSupportConfig state.appConfig.feature.enableSupport) push
         "Language" -> settingsMenuView {imageUrl : fetchImage FF_ASSET "ic_change_language", text : (getString LANGUAGE), accessibilityHint : "Language ", tag : SETTINGS_LANGUAGE, iconUrl : ""} push
         "ShareApp" -> settingsMenuView {imageUrl : fetchImage FF_ASSET "ic_share", text : (getString SHARE_APP), accessibilityHint : "Share App ", tag : SETTINGS_SHARE_APP, iconUrl : ""} push
-        "LiveStatsDashboard" -> settingsMenuView {imageUrl : fetchImage FF_ASSET "ic_graph_black", accessibilityHint : "Live Stats Dashboard ",text : (getString LIVE_STATS_DASHBOARD), tag : SETTINGS_LIVE_DASHBOARD, iconUrl : fetchImage FF_ASSET  "ic_red_icon"} push
+        "LiveStatsDashboard" -> settingsMenuView {imageUrl : fetchImage FF_ASSET "ic_graph_black", accessibilityHint : "Live Stats Dashboard ",text : (getString LIVE_STATS_DASHBOARD), tag : SETTINGS_LIVE_DASHBOARD, iconUrl : liveStatsDashboardImage} push
         "About" -> settingsMenuView {imageUrl : fetchImage FF_ASSET "ic_info", text : (getString ABOUT), accessibilityHint : "About " , tag : SETTINGS_ABOUT, iconUrl : ""} push
         "Logout" -> logoutView state push
         "Separator" -> separator
         _ -> emptyLayout
       ) state.appConfig.sideBarList
     )
+  where 
+    getSafetyModeString = 
+      getString $
+        if state.appConfig.safetyConfig.enableSupport || state.isLocalPoliceSupportEnabled 
+          then NAMMA_SAFETY_PLUS 
+          else NAMMA_SAFETY
+    safetyActiveImage = 
+      if state.hasCompletedSafetySetup 
+        then "" 
+        else fetchImage FF_ASSET "ic_red_icon"
+    liveStatsDashboardImage = 
+      if getValueToLocalStore LIVE_DASHBOARD /= "LIVE_DASHBOARD_SELECTED" 
+        then fetchImage FF_ASSET "ic_red_icon"
+        else ""
 
 helpAndSupportConfig :: Boolean -> Item
 helpAndSupportConfig enableContactSupport = {
@@ -253,9 +267,9 @@ settingsMenuView item push  =
                               SETTINGS_HELP           -> OnHelp
                               SETTINGS_LANGUAGE       -> ChangeLanguage
                               SETTINGS_ABOUT          -> GoToAbout
+                              SETTINGS_NAMMASAFETY    -> GoToNammaSafety
                               SETTINGS_LOGOUT         -> OnLogout
                               SETTINGS_SHARE_APP      -> ShareAppLink
-                              SETTINGS_EMERGENCY_CONTACTS       -> GoToEmergencyContacts
                               SETTINGS_LIVE_DASHBOARD -> LiveStatsDashboard)
   , accessibility case item.tag of
                               SETTINGS_RIDES          -> ENABLE
@@ -266,7 +280,7 @@ settingsMenuView item push  =
                               SETTINGS_ABOUT          -> ENABLE
                               SETTINGS_LOGOUT         -> ENABLE
                               SETTINGS_SHARE_APP      -> DISABLE_DESCENDANT
-                              SETTINGS_EMERGENCY_CONTACTS       -> ENABLE
+                              SETTINGS_NAMMASAFETY       -> ENABLE
                               SETTINGS_LIVE_DASHBOARD -> DISABLE_DESCENDANT
   ][  imageView
       [ width ( V 25 )
@@ -283,7 +297,7 @@ settingsMenuView item push  =
     , imageView
       [ width ( V 8 )
       , height ( V 8 )
-      , visibility if item.tag == SETTINGS_LIVE_DASHBOARD && getValueToLocalStore LIVE_DASHBOARD /= "LIVE_DASHBOARD_SELECTED" then VISIBLE else GONE
+      , visibility if DS.null item.iconUrl then GONE else VISIBLE
       , margin ( Margin 6 1 0 0)
       , imageWithFallback item.iconUrl
       ]

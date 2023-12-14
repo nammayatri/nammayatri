@@ -33,7 +33,13 @@ window.getMerchantConfig = function () {
       "ACCESSIBILITY_TEXT",
       "TO_CATER_YOUR_SPECIFIC_NEEDS",
       "PLEASE_ENABLE_LOCATION_PERMISSION",
-      "MOST_LOVED_APP"
+      "MOST_LOVED_APP",
+      "ABOUT_SOS_12",
+      "SAFETY_MEASURE_5",
+      "SHARE_LOCATION_AND_RIDE_DETAILS_WITH_NAMMA_YATRI_SUPPORT_TEAM",
+      "TRIGGER_ALERT_TO_NAMMA_YATRI_SUPPORT",
+      "TRIGGER_ALERT_TO_NAMMAYATRI_SUPPORT_TITLE",
+      "PERSONAL_SAFETY_SETTINGS_ACTIONS"
     ],
     "isReferralEnabled": "true",
     "showBookingPreference": "false",
@@ -95,7 +101,7 @@ window.getMerchantConfig = function () {
     "cancelRideColor" : "#E55454",
     "infoIconUrl" : "ny_ic_info,https://assets.juspay.in/nammayatri/images/user/ny_ic_information_grey.png",
     "merchantLogo" : "ic_launcher,https://assets.juspay.in/beckn/yatri/user/images/ic_launcher.png",
-    "sideBarList": ["MyRides", "Favorites", "EmergencyContacts", "HelpAndSupport", "Language", "Separator", "ShareApp", "About", "Logout"],
+    "sideBarList": ["MyRides", "Favorites", "NammaSafety", "EmergencyContacts", "HelpAndSupport", "Language", "Separator", "ShareApp", "About", "Logout"],
     "rateCardColor": "#2C2F3A",
     "nyBrandingVisibility": false,
     "fontType": "Assets",
@@ -124,7 +130,13 @@ window.getMerchantConfig = function () {
       "DRIVER_ADDITIONS_ARE_CALCULATED_AT_RATE": "Driver addition limits are in increments of ₹10",
       "ACCESSIBILITY_TEXT" : "Yatri, now customised for you!",
       "TO_CATER_YOUR_SPECIFIC_NEEDS" : "To cater to your specific needs, we have customised certain features of Yatri.",
-      "PLEASE_ENABLE_LOCATION_PERMISSION" : "Please enable location permissions for Yatri from the settings app to start looking for rides."
+      "PLEASE_ENABLE_LOCATION_PERMISSION" : "Please enable location permissions for Yatri from the settings app to start looking for rides.",
+      "ABOUT_SOS_12" : "Choose an appropriate SOS option from: Call Police (112)/ Call Yatri support/ Record video (to share with emergency contacts & Yatri",
+      "SAFETY_MEASURE_5" : "Safety Training and Certification for all Yatri Drivers",
+      "SHARE_LOCATION_AND_RIDE_DETAILS_WITH_NAMMA_YATRI_SUPPORT_TEAM" : "Share location and ride details with Yatri Support Team",
+      "TRIGGER_ALERT_TO_NAMMA_YATRI_SUPPORT" : "Trigger alert to Yatri support",
+      "TRIGGER_ALERT_TO_NAMMAYATRI_SUPPORT_TITLE" : "Trigger alert to Yatri support",
+      "PERSONAL_SAFETY_SETTINGS_ACTIONS" : " •  Call 112\n •  Call Yatri support\n •  Record video",
     },
     "malayalamStrings": {
       "WELCOME_TEXT" : "യാത്രയിലേക്ക് സ്വാഗതം",
@@ -147,7 +159,13 @@ window.getMerchantConfig = function () {
       "DRIVER_ADDITIONS_ARE_CALCULATED_AT_RATE": "ഡ്രൈവർ കൂട്ടിച്ചേർക്കൽ പരിധികൾ ₹10 ഇൻക്രിമെന്റിലാണ്",
       "ACCESSIBILITY_TEXT" : "യാത്രി, ഇപ്പോൾ നിങ്ങൾക്കായി ഇഷ്‌ടാനുസൃതമാക്കി!",
       "TO_CATER_YOUR_SPECIFIC_NEEDS" : "നിങ്ങളുടെ പ്രത്യേക ആവശ്യങ്ങൾ നിറവേറ്റുന്നതിനായി, ഞങ്ങൾ യാത്രിയുടെ ചില സവിശേഷതകൾ ഇഷ്‌ടാനുസൃതമാക്കിയിട്ടുണ്ട്.",
-      "PLEASE_ENABLE_LOCATION_PERMISSION" : "റൈഡുകൾക്കായി തിരയാൻ ക്രമീകരണ ആപ്പിൽ നിന്ന് യാത്രയ്‌ക്ക് ലൊക്കേഷൻ അനുമതികൾ പ്രവർത്തനക്ഷമമാക്കുക."
+      "PLEASE_ENABLE_LOCATION_PERMISSION" : "റൈഡുകൾക്കായി തിരയാൻ ക്രമീകരണ ആപ്പിൽ നിന്ന് യാത്രയ്‌ക്ക് ലൊക്കേഷൻ അനുമതികൾ പ്രവർത്തനക്ഷമമാക്കുക.",
+      "ABOUT_SOS_12" : "കുറഞ്ഞുപയോഗിക്കാൻ പോലീസ് (112) / യാത്രി പിന്തുണ / വീഡിയോ റെക്കോർഡ് (എയർ ഇമേജന്‍സി കോണ്ടാക്ട്സ് & യാത്രി) നിരവധി എസ്ഓഎസ് ഓപ്ഷനുകൾക്ക് ഉചിതമായി തിരഞ്ഞെടുക്കുക",
+      "SAFETY_MEASURE_5" : "എല്ലാ യാത്രി ഡ്രൈവറുകളും സുരക്ഷാ പ്രശിക്ഷണം ലഭിക്കുന്നു",
+      "SHARE_LOCATION_AND_RIDE_DETAILS_WITH_NAMMA_YATRI_SUPPORT_TEAM" : "യാത്രി പിന്തുണ ടീംയോട് ലൊക്കേഷൻ പങ്കിടുക വാഹന വിശദാംശങ്ങൾക്കോട്",
+      "TRIGGER_ALERT_TO_NAMMA_YATRI_SUPPORT" : "യാത്രി പിന്തുണയ്ക്ക് ചെയ്ത മുന്നോട്ടു ചെയ്യുക",
+      "TRIGGER_ALERT_TO_NAMMAYATRI_SUPPORT_TITLE" : "യാത്രി പിന്തുണയ്ക്ക് ചെയ്ത മുന്നോട്ടു ചെയ്യുക",
+      "PERSONAL_SAFETY_SETTINGS_ACTIONS" : " •  പോലീസ് വിളിക്കുക (112)\n •  യാത്രി പിന്തുണയ്ക്കുക\n •  വീഡിയോ റെക്കോർഡുചെയ്യുക"
     },
     "languageList": [{
       "name": "English",

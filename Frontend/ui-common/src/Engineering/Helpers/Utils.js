@@ -1,3 +1,5 @@
+import { callbackMapper } from "presto-ui";
+
 const JBridge = window.JBridge;
 
 export const saveToLocalStoreImpl = function(key) {
@@ -98,4 +100,42 @@ export const getCurrentDay = function (dummy) {
   const date = new Date();
   return { utcDate: date.toISOString(), date: date.getDate(), shortMonth: date.toLocaleString("default", { month: "short" }), year: date.getFullYear(), intMonth : date.getMonth(),
     isInRange : false, isStart: false , isEnd: false }
+}
+
+export const uploadMultiPartData = function (path) {
+  return function (url) {
+    return function(fileType) {
+      return function(fileField) {
+        return function (outputField){
+          return function() {
+            if (window.JBridge.uploadMultiPartData)
+              return window.JBridge.uploadMultiPartData(path, url, fileType, fileField, outputField);
+          }
+        }
+      }
+    }
+  }
+}
+
+export const uploadMultiPartDataIOS = function (path) {
+  return function (url) {
+    return function(fileType) {
+      return function(fileField) {
+        return function (outputField){
+          return function (cb){
+            return function (action){
+              return function() {
+                const callback = callbackMapper.map(function (ftype, videoUri) {
+                  cb(action(ftype)(videoUri))();
+                });
+                if (window.JBridge.uploadMultiPartData){
+                  return window.JBridge.uploadMultiPartData(path, url, fileType, fileField, outputField, callback);
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
 }

@@ -46,7 +46,7 @@ screen initialState listItemm =
                         pure (pure unit)
                     )
                   ]
-  , eval
+  , eval 
   }
 
 view :: forall w. PrestoList.ListItem -> (Action -> Effect Unit) -> EmergencyContactsScreenState -> PrestoDOM (Effect Unit) w
@@ -302,18 +302,38 @@ emergencyContactsListView push state =
     , weight 1.0
     ]
     [ textView $ 
-        [ height $ WRAP_CONTENT
-        , width if os == "IOS" then V (screenWidth unit - 20) else WRAP_CONTENT
-        , text (getString EMERGENCY_CONTACTS_SCREEN_DESCRIPTION)
-        , color Color.black700
-        , padding (Padding 0 10 0 10)
-        ] <> FontStyle.paragraphText LanguageStyle
+      [ height $ WRAP_CONTENT
+      , width if os == "IOS" then V (screenWidth unit - 20) else WRAP_CONTENT
+      , text (getString EMERGENCY_CONTACTS_SCREEN_DESCRIPTION)
+      , color Color.black700
+      , padding (Padding 0 10 0 10)
+      ] <> FontStyle.paragraphText LanguageStyle
     , linearLayout
-        [ height WRAP_CONTENT
-        , width MATCH_PARENT
-        , orientation VERTICAL
-        ]
-        (mapWithIndex (\index item -> contactCardView push state item index) state.data.contactsList)
+      [ height WRAP_CONTENT
+      , width MATCH_PARENT
+      , orientation VERTICAL
+      ]
+      (mapWithIndex (\index item -> contactCardView push state item index) state.data.contactsList)
+    , linearLayout 
+      [ width MATCH_PARENT
+      , height WRAP_CONTENT
+      , stroke $ "1,"<> Color.grey900
+      , padding $ Padding 16 16 16 16
+      , visibility if length state.data.contactsList /= 3 then VISIBLE else GONE
+      , cornerRadius 8.0
+      , margin $ MarginTop 12
+      , onClick push $ const $ AddContacts
+      ][ imageView 
+          [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_add_filled"
+          , height $ V 24
+          , width $ V 24
+          , margin $ MarginRight 12
+          ]
+        , textView $ 
+          [ text $ getString ADD_A_CONTACT
+          , color Color.blue900
+          ] <> FontStyle.subHeading1 TypoGraphy
+      ]
     ]
 
 --------------------------------------------------- emergencyContactsListView -----------------------------------------------------

@@ -64,6 +64,7 @@ type AppConfigCustomer a =
   , geoCoder :: GeoCoderConfig
   , shareAppConfig :: ShareAppConfig
   , homeScreen :: HomeScreen
+  , safetyConfig :: SafetyConfig
   | a
   }
 
@@ -283,6 +284,7 @@ type MarginConfig = {
   left :: Int,
   right :: Int
 }
+
 type ShadowConfig = {
   color :: String,
   blur :: Number,
@@ -295,4 +297,8 @@ type ShadowConfig = {
 type ShareAppConfig = {
   title :: String
 , description :: String
+}
+
+type SafetyConfig = {
+  enableSupport :: Boolean
 }

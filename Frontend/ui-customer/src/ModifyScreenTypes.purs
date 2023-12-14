@@ -49,6 +49,7 @@ modifyScreenState st =
     AppUpdatePopUpScreenType a->  modifyState (\(GlobalState state) -> GlobalState $ state { appUpdatePopUpScreen = a state.appUpdatePopUpScreen })
     TicketInfoScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {ticketInfoScreen = a state.ticketInfoScreen})
     AppConfigType a->  modifyState (\(GlobalState state) -> GlobalState $ state { appConfig = a state.appConfig })
+    NammaSafetyScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {nammaSafetyScreen = a state.nammaSafetyScreen})
 
 
 updateRideDetails :: MyRidesScreenState -> FlowBT String Unit
@@ -108,5 +109,6 @@ updateRepeatRideDetails state = do
     , rideRequestFlow = true
     , isSpecialZone = state.isSpecialZone
     , isBanner = globalState.homeScreen.props.isBanner
+    , enableLocalPoliceSupport = globalState.homeScreen.props.enableLocalPoliceSupport
     }
     })

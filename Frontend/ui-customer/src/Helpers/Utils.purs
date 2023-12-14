@@ -135,6 +135,8 @@ foreign import setEnabled :: String -> Boolean -> Unit
 
 foreign import _generateQRCode :: EffectFn5 String String Int Int (AffSuccess String) Unit
 
+foreign import requestCameraAndMicrophonePermissions :: Unit -> Effect Unit
+
 generateQR:: EffectFn4 String String Int Int Unit
 generateQR  = mkEffectFn4 \qrString viewId size margin ->  launchAff_  $ void $ makeAff $
   \cb ->

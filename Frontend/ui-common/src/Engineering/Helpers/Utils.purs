@@ -47,6 +47,10 @@ import Unsafe.Coerce (unsafeCoerce)
 
 -- Common Utils
 
+foreign import uploadMultiPartData :: String -> String -> String -> String -> String -> Effect String
+foreign import uploadMultiPartDataIOS :: forall action. String -> String -> String -> String -> String -> (action -> Effect Unit) -> (String -> String -> action) -> Effect Unit
+
+
 foreign import reboot :: Effect Unit
 
 foreign import showSplash :: Effect Unit
@@ -72,15 +76,13 @@ toggleLoader =
 loaderText :: String -> String -> Flow GlobalState Unit
 loaderText mainTxt subTxt = void $ modifyState (\(GlobalState state) -> GlobalState state { loaderOverlay { data { title = mainTxt, subTitle = subTxt } } })
 
-showAndHideLoader :: Number -> String -> String -> GlobalState -> Effect Unit
-showAndHideLoader delayInMs title description state = do
-  _ <-
+showAndHideLoader :: Boolean -> String -> String -> GlobalState -> Effect Unit
+showAndHideLoader showLoader title description state = do
+  void $
     launchAff $ flowRunner state
       $ do
-          _ <- loaderText title description
-          _ <- toggleLoader true
-          _ <- delay $ Milliseconds delayInMs
-          _ <- toggleLoader false
+          void $ loaderText title description
+          void $ toggleLoader showLoader
           pure unit
   pure unit
 

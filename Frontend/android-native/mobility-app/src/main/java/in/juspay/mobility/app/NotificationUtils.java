@@ -81,6 +81,7 @@ public class NotificationUtils {
     public static String DRIVER_REACHED = "DRIVER_REACHED";
     public static String RIDE_STARTED = "RIDE_STARTED";
     public static String NO_VARIANT = "NO_VARIANT";
+    public static String SAFETY_ALERT = "SAFETY_ALERT";
     public static Uri soundUri = null;
     public static OverlaySheetService.OverlayBinder binder;
     public static ArrayList<Bundle> listData = new ArrayList<>();
@@ -443,7 +444,7 @@ public class NotificationUtils {
                 callBack.get(i).driverCallBack(notificationType);
             }
         }
-        if ((TRIP_FINISHED.equals(notificationType) || DRIVER_ASSIGNMENT.equals(notificationType) || REALLOCATE_PRODUCT.equals(notificationType) || CANCELLED_PRODUCT.equals(notificationType) || TRIP_STARTED.equals(notificationType)) && (key.equals("USER"))) {
+        if ((TRIP_FINISHED.equals(notificationType) || DRIVER_ASSIGNMENT.equals(notificationType) || REALLOCATE_PRODUCT.equals(notificationType) || CANCELLED_PRODUCT.equals(notificationType) || TRIP_STARTED.equals(notificationType) || SAFETY_ALERT.equals(notificationType)) && (key.equals("USER"))) {
             for (int i = 0; i < callBack.size(); i++) {
                 callBack.get(i).customerCallBack(notificationType);
             }
