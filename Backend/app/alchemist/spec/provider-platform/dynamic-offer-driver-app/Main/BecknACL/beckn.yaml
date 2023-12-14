@@ -1,0 +1,78 @@
+imports:
+  Text: Data.Text
+  UTCTime: Kernel.Prelude
+  BaseUrl: Kernel.Prelude
+
+module: BecknSearch
+types:
+  SearchReq:
+    context: Context
+    message: SearchMessage
+
+  Context:
+    action: ContextAction
+    messageId: Text
+    transactionId: Text
+    bapId: Text
+    bapUri: BaseUrl
+    loction: ContextLocation
+    bapCity: Text
+    bapCountry: Text
+
+  ContextAction:
+    enum: "search,on_search"
+
+  ContextLocation:
+    city: Descriptor
+    country: Descriptor
+
+  Descriptor:
+    code: Text
+
+  SearchMessage:
+    intent: SearchIntent
+
+  SearchIntent:
+    fulfillment: SearchFulfillment
+
+  SearchFulfillment:
+    stops: [FulfillmentStop]
+
+  FulfillmentStop:
+    location: Location
+
+  Location:
+    gps: Text
+
+  DSearchReq:
+    messageId: Text
+    transactionId: Text
+    bapId: Text
+    bapUri: BaseUrl
+    bapCity: Text
+    bapCountry: Text
+    customerPhoneNum: Maybe Text
+    pickupLocation: LatLong
+    pickupTime: UTCTime
+    dropLocation: LatLong
+    pickupAddress: Maybe Address
+    dropAddrress: Maybe Address
+    routeDistance: Maybe Meters
+    routeDuration: Maybe Seconds
+    device: Maybe Text
+    disabilityTag: Maybe Text
+    routePoints: Maybe [LatLong]
+
+  Address:
+    city: Text
+    area: Text
+
+  LatLong:
+    lat: Double
+    lon: Double
+
+  Meters:
+    getMeters: Int
+
+  Seconds:
+    getSeconds: Int
