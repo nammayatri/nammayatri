@@ -15,8 +15,11 @@
 
 module Beckn.ACL.Confirm (buildConfirmReq) where
 
+import qualified Beckn.OnDemand.Utils.Common as Utils
 import qualified Beckn.Types.Core.Taxi.Common.Tags as Tags
 import qualified Beckn.Types.Core.Taxi.Confirm as Confirm
+import qualified BecknV2.OnDemand.Types as Spec
+import qualified BecknV2.OnDemand.Utils.Context as ContextV2
 import Control.Lens ((%~))
 import qualified Data.Text as T
 import qualified Domain.Action.Beckn.OnInit as DOnInit
@@ -182,3 +185,202 @@ mkPayment estimatedTotalFare uri =
           },
       uri
     }
+
+_buildConfirmReqV2 ::
+  (MonadFlow m, HasFlowEnv m r '["nwAddress" ::: BaseUrl]) =>
+  DOnInit.OnInitRes ->
+  m Spec.ConfirmReq
+_buildConfirmReqV2 res = do
+  messageId <- generateGUID
+  bapUrl <- asks (.nwAddress) <&> #baseUrlPath %~ (<> "/" <> T.unpack res.merchant.id.getId)
+  -- TODO :: Add request city, after multiple city support on gateway.
+  context <- ContextV2.buildContextV2 Context.CONFIRM Context.MOBILITY messageId (Just res.transactionId) res.merchant.bapId bapUrl (Just res.bppId) (Just res.bppUrl) res.merchant.defaultCity res.merchant.country
+
+  let message = mkConfirmMessageV2 res
+  pure $ Spec.ConfirmReq context message
+
+mkConfirmMessageV2 :: DOnInit.OnInitRes -> Spec.ConfirmReqMessage
+mkConfirmMessageV2 res = do
+  Spec.ConfirmReqMessage
+    { confirmReqMessageOrder = tfOrder res
+    }
+
+tfOrder :: DOnInit.OnInitRes -> Spec.Order
+tfOrder res =
+  Spec.Order
+    { orderBilling = Nothing,
+      orderCancellation = Nothing,
+      orderCancellationTerms = Nothing,
+      orderFulfillments = tfFulfillments res,
+      orderId = Just res.bppBookingId.getId,
+      orderItems = tfItems res,
+      orderPayments = tfPayments res,
+      orderProvider = tfProvider res,
+      orderQuote = tfQuotation res,
+      orderStatus = Nothing
+    }
+
+tfFulfillments :: DOnInit.OnInitRes -> Maybe [Spec.Fulfillment]
+tfFulfillments res =
+  Just $
+    [ Spec.Fulfillment
+        { fulfillmentAgent = Nothing,
+          fulfillmentCustomer = tfCustomer res,
+          fulfillmentId = res.fulfillmentId,
+          fulfillmentState = Nothing,
+          fulfillmentStops = Utils.mkStops' res.fromLocation res.mbToLocation,
+          fulfillmentTags = Nothing,
+          fulfillmentType = Just $ mkFulfillmentType res.bookingDetails,
+          fulfillmentVehicle = tfVehicle res
+        }
+    ]
+  where
+    mkFulfillmentType = \case
+      DRB.OneWaySpecialZoneDetails _ -> "RIDE_OTP"
+      _ -> "RIDE"
+
+tfItems :: DOnInit.OnInitRes -> Maybe [Spec.Item]
+tfItems res =
+  Just $
+    [ Spec.Item
+        { itemDescriptor = Nothing,
+          itemFulfillmentIds = Nothing,
+          itemId = Just res.itemId,
+          itemLocationIds = Nothing,
+          itemPaymentIds = Nothing,
+          itemPrice = Nothing,
+          itemTags = Nothing
+        }
+    ]
+
+-- TODO: Discuss payment info transmission with ONDC
+tfPayments :: DOnInit.OnInitRes -> Maybe [Spec.Payment]
+tfPayments res =
+  Just $
+    [ Spec.Payment
+        { paymentCollectedBy = Just "BPP",
+          paymentId = Nothing,
+          paymentParams = mkParams,
+          paymentStatus = Nothing,
+          paymentTags = Nothing,
+          paymentType = Just "ON_FULFILLMENT"
+        }
+    ]
+  where
+    mkParams =
+      Just $
+        Spec.PaymentParams
+          { paymentParamsAmount = Just $ encodeToText res.estimatedTotalFare,
+            paymentParamsBankAccountNumber = Nothing,
+            paymentParamsBankCode = Nothing,
+            paymentParamsCurrency = Just "INR",
+            paymentParamsVirtualPaymentAddress = Nothing
+          }
+
+tfProvider :: DOnInit.OnInitRes -> Maybe Spec.Provider
+tfProvider res = do
+  driverId <- res.driverId
+  return $
+    Spec.Provider
+      { providerDescriptor = Nothing,
+        providerFulfillments = Nothing,
+        providerId = Just driverId,
+        providerItems = Nothing,
+        providerLocations = Nothing,
+        providerPayments = Nothing
+      }
+
+tfQuotation :: DOnInit.OnInitRes -> Maybe Spec.Quotation
+tfQuotation res =
+  Just $
+    Spec.Quotation
+      { quotationBreakup = Nothing,
+        quotationPrice = tfQuotationPrice res,
+        quotationTtl = Nothing
+      }
+
+tfQuotationPrice :: DOnInit.OnInitRes -> Maybe Spec.Price
+tfQuotationPrice res =
+  Just $
+    Spec.Price
+      { priceComputedValue = Nothing,
+        priceCurrency = Just "INR",
+        priceMaximumValue = Nothing,
+        priceMinimumValue = Nothing,
+        priceOfferedValue = Just $ encodeToText res.estimatedTotalFare,
+        priceValue = Just $ encodeToText res.estimatedFare
+      }
+
+tfCustomer :: DOnInit.OnInitRes -> Maybe Spec.Customer
+tfCustomer res =
+  Just $
+    Spec.Customer
+      { customerContact = mkContact,
+        customerPerson = mkPerson
+      }
+  where
+    mkContact =
+      Just $
+        Spec.Contact
+          { contactPhone = Just res.riderPhoneNumber
+          }
+
+    mkPerson = do
+      riderName <- res.mbRiderName
+      return $
+        Spec.Person
+          { personId = Nothing,
+            personImage = Nothing,
+            personName = Just riderName,
+            personTags = mkPersonTags
+          }
+
+    mkPersonTags =
+      Just $
+        [ Spec.TagGroup
+            { tagGroupDescriptor =
+                Just $
+                  Spec.Descriptor
+                    { descriptorCode = Just "customer_info",
+                      descriptorName = Just "Customer Information",
+                      descriptorShortDesc = Nothing
+                    },
+              tagGroupDisplay = Just False,
+              tagGroupList = mkPersonTag
+            }
+        ]
+
+    mkPersonTag =
+      Just $
+        [ Spec.Tag
+            { tagDescriptor =
+                Just $
+                  Spec.Descriptor
+                    { descriptorCode = Just "night_safety_check",
+                      descriptorName = Just "Night Safety Check",
+                      descriptorShortDesc = Nothing
+                    },
+              tagDisplay = Just False,
+              tagValue = Just $ show res.nightSafetyCheck
+            }
+        ]
+
+tfVehicle :: DOnInit.OnInitRes -> Maybe Spec.Vehicle
+tfVehicle res =
+  Just $
+    Spec.Vehicle
+      { vehicleCategory = Just $ castVehicleVariant res.vehicleVariant,
+        vehicleColor = Nothing,
+        vehicleMake = Nothing,
+        vehicleModel = Nothing,
+        vehicleRegistration = Nothing,
+        vehicleVariant = Nothing
+      }
+  where
+    castVehicleVariant = \case
+      VehVar.SEDAN -> "SEDAN"
+      VehVar.SUV -> "SUV"
+      VehVar.HATCHBACK -> "HATCHBACK"
+      VehVar.AUTO_RICKSHAW -> "AUTO_RICKSHAW"
+      VehVar.TAXI -> "TAXI"
+      VehVar.TAXI_PLUS -> "TAXI_PLUS"

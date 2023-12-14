@@ -119,6 +119,14 @@ library
       Beckn.ACL.Track
       Beckn.ACL.Update
       Beckn.Core
+      Beckn.OnDemand.Transformer.OnUpdate
+      Beckn.OnDemand.Utils.Callback
+      Beckn.OnDemand.Utils.Common
+      Beckn.OnDemand.Utils.Init
+      Beckn.OnDemand.Utils.OnInit
+      Beckn.OnDemand.Utils.OnSearch
+      Beckn.OnDemand.Utils.OnUpdate
+      Beckn.OnDemand.Utils.Search
       Domain.Action.Beckn.Cancel
       Domain.Action.Beckn.Confirm
       Domain.Action.Beckn.Init
@@ -261,6 +269,7 @@ library
       Domain.Types.Message.MessageTranslation
       Domain.Types.MetaData
       Domain.Types.Notification
+      Domain.Types.OnUpdate
       Domain.Types.Person
       Domain.Types.Plan
       Domain.Types.PlanTranslation
@@ -574,10 +583,15 @@ library
       Tools.Ticket
       Tools.Verification
       Tools.Whatsapp
+      Beckn.OnDemand.Transformer.Init
+      Beckn.OnDemand.Transformer.OnSearch
+      Beckn.OnDemand.Transformer.RideAssigned
+      Beckn.OnDemand.Transformer.Search
   other-modules:
       Paths_dynamic_offer_driver_app
   hs-source-dirs:
       src
+      src-read-only
   default-extensions:
       ConstraintKinds
       DataKinds

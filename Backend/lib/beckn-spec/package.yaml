@@ -94,6 +94,7 @@ dependencies:
   - servant-multipart
   - servant-server
   - servant-openapi3
+  - syb
   - text
   - wai
   - warp
@@ -133,6 +134,7 @@ dependencies:
   - transformers
   - extra
   - hw-kafka-client
+  - hashmap
 
 ghc-options:
   - -fwrite-ide-info

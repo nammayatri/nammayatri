@@ -136,6 +136,10 @@ library
       Domain.Action.Beckn.FRFS.OnInit
       Domain.Action.Beckn.FRFS.OnSearch
       Domain.Action.Beckn.FRFS.OnStatus
+      Beckn.OnDemand.Utils.Common
+      Beckn.OnDemand.Utils.Init
+      Beckn.OnDemand.Utils.OnSearch
+      Beckn.OnDemand.Utils.Search
       Domain.Action.Beckn.OnConfirm
       Domain.Action.Beckn.OnInit
       Domain.Action.Beckn.OnSearch
@@ -406,6 +410,9 @@ library
       API.Types.UI.Sos
       API.Types.UI.TicketService
       Domain.Types.BecknConfig
+      Beckn.OnDemand.Transformer.Init
+      Beckn.OnDemand.Transformer.OnSearch
+      Beckn.OnDemand.Transformer.Search
       Domain.Types.BusinessHour
       Domain.Types.FRFSQuote
       Domain.Types.FRFSSearch

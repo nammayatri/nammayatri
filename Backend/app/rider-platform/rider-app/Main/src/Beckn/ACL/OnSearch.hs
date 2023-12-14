@@ -15,9 +15,18 @@
 module Beckn.ACL.OnSearch where
 
 import Beckn.ACL.Common (getTag, validatePrices)
+-- import Beckn.Types.Core.Taxi.OnSearch.Item (BreakupItem (..))
+
+-- import Kernel.External.Maps (LatLong)
+
+-- import Kernel.Storage.Esqueleto (runTransaction)
+
+import qualified Beckn.OnDemand.Transformer.OnSearch as TOnSearch
+import qualified Beckn.OnDemand.Utils.Common as Utils
 import qualified Beckn.Types.Core.Taxi.API.OnSearch as OnSearch
 import qualified Beckn.Types.Core.Taxi.OnSearch as OnSearch
--- import Beckn.Types.Core.Taxi.OnSearch.Item (BreakupItem (..))
+import qualified BecknV2.OnDemand.Types as Spec
+import qualified BecknV2.OnDemand.Utils.Context as ContextUtils
 import qualified Data.Text as T
 import qualified Domain.Action.Beckn.OnSearch as DOnSearch
 import qualified Domain.Types.Estimate as DEstimate
@@ -25,10 +34,8 @@ import Domain.Types.OnSearchEvent
 import qualified Domain.Types.VehicleVariant as VehVar
 import EulerHS.Prelude hiding (find, id, map, readMaybe, state, unpack)
 import GHC.Float (int2Double)
--- import Kernel.External.Maps (LatLong)
 import Kernel.Prelude
 import Kernel.Product.Validation.Context (validateContext)
--- import Kernel.Storage.Esqueleto (runTransaction)
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Beckn.DecimalValue as DecimalValue
 import Kernel.Types.Beckn.ReqTypes
@@ -52,6 +59,28 @@ buildOnSearchReq req = do
       let catalog = msg.catalog
       Just <$> searchCbService req.context catalog
     Left err -> do
+      logTagError "on_search req" $ "on_search error: " <> show err
+      pure Nothing
+
+buildOnSearchReqV2 ::
+  ( HasFlowEnv m r '["_version" ::: Text],
+    EsqDBFlow m r
+  ) =>
+  Spec.OnSearchReq ->
+  m (Maybe DOnSearch.DOnSearchReq)
+buildOnSearchReqV2 req = do
+  ContextUtils.validateContext Context.ON_SEARCH req.onSearchReqContext
+  logOnSearchEventV2 req
+  case req.onSearchReqError of
+    Nothing -> do
+      -- generated function
+      message <- req.onSearchReqMessage & fromMaybeM (InvalidRequest "Missing message")
+      let catalog = message.onSearchReqMessageCatalog
+      providers <- catalog.catalogProviders & fromMaybeM (InvalidRequest "Missing Providers")
+      provider <- safeHead providers & fromMaybeM (InvalidRequest "Missing Provider")
+      items <- provider.providerItems & fromMaybeM (InvalidRequest "Missing Items")
+      Just <$> TOnSearch.buildOnSearchReq req provider items
+    Just err -> do
       logTagError "on_search req" $ "on_search error: " <> show err
       pure Nothing
 
@@ -88,6 +117,25 @@ logOnSearchEvent (BecknCallbackReq context (leftToMaybe -> mbErr)) = do
   let errorCode = (.code) <$> mbErr
   let errorMessage = (.message) =<< mbErr
   -- runTransaction $
+  void $
+    OnSearchEvent.create $
+      OnSearchEvent {..}
+
+logOnSearchEventV2 :: EsqDBFlow m r => Spec.OnSearchReq -> m ()
+logOnSearchEventV2 req = do
+  let context = req.onSearchReqContext
+  createdAt <- getCurrentTime
+  id <- generateGUID
+  bppId <- Utils.getContextBapId context
+  messageId <- Utils.getMessageIdText context
+  (errorCode, errorMessage, errorType) <- case req.onSearchReqError of
+    Just err -> do
+      let errorCode = err.errorCode
+      let errorMessage = err.errorMessage
+      let errorType = err.errorMessage
+      return (errorCode, errorMessage, errorType)
+    Nothing ->
+      return (Nothing, Nothing, Nothing)
   void $
     OnSearchEvent.create $
       OnSearchEvent {..}

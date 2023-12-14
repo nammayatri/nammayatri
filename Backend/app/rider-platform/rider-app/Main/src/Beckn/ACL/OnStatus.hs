@@ -12,7 +12,7 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Beckn.ACL.OnStatus (buildOnStatusReq) where
+module Beckn.ACL.OnStatus (buildOnStatusReq, buildOnStatusReqV2) where
 
 import Beckn.ACL.Common (getTag)
 import qualified Beckn.ACL.Common as Common
@@ -20,6 +20,8 @@ import qualified Beckn.Types.Core.Taxi.API.OnStatus as OnStatus
 import qualified Beckn.Types.Core.Taxi.OnStatus as OnStatus
 import Beckn.Types.Core.Taxi.OnStatus.Order.RideAssignedOrder as OnStatusRideAssigned
 import qualified Data.Text as T
+import qualified BecknV2.OnDemand.Types as Spec
+import qualified BecknV2.OnDemand.Utils.Context as ContextV2
 import qualified Domain.Action.Beckn.OnStatus as DOnStatus
 import Kernel.Prelude
 import Kernel.Product.Validation.Context
@@ -175,3 +177,84 @@ handleError etr action =
     Left err -> do
       logTagError "on_status req" $ "on_status error: " <> show err
       pure Nothing
+
+buildOnStatusReqV2 ::
+  ( HasFlowEnv m r '["_version" ::: Text]
+  ) =>
+  Spec.OnStatusReq ->
+  m (Maybe DOnStatus.OnStatusReq)
+buildOnStatusReqV2 req = do
+  ContextV2.validateContext Context.ON_STATUS req.onStatusReqContext
+  handleErrorV2 req $ \message ->
+    case parseData message of
+      Left err -> do
+        logTagError "on_status req" $ "on_status error: " <> show err
+        return Nothing
+      Right (bppBookingId, bookingStatus, mbRideInfo) -> do
+        return $
+          Just $
+            DOnStatus.OnStatusReq
+              { bppBookingId,
+                bookingStatus,
+                mbRideInfo
+              }
+  where
+    parseData :: Spec.ConfirmReqMessage -> Either Text (Id DBooking.BPPBooking, DBooking.BookingStatus, Maybe DOnStatus.RideInfo)
+    parseData message = do
+      let order = message.confirmReqMessageOrder
+
+      bppBookingIdText <-
+        order.orderId
+          & maybe (Left "Invalid OrderId") Right
+      let bppBookingId = Id bppBookingIdText
+
+      bookingStatusText <-
+        order.orderStatus
+          & maybe (Left "Invalid OrderStatus") Right
+      let bookingStatus = mapToDomainBookingStatusV2 bookingStatusText
+
+      rideIdText <-
+        order.orderFulfillments
+          >>= listToMaybe
+          >>= (.fulfillmentId)
+          & maybe (Left "Invalid Fulfillment Id") Right
+
+      let rideId = Id rideIdText
+
+      rideStatusText <-
+        order.orderFulfillments
+          >>= listToMaybe
+          >>= (.fulfillmentType)
+          & maybe (Left "Invalid Fulfillment Type") Right
+
+      let rideStatus = mapToDomainRideStatusV2 rideStatusText
+
+      let mbRideInfo = Just $ DOnStatus.RideInfo rideId rideStatus
+
+      Right (bppBookingId, bookingStatus, mbRideInfo)
+
+handleErrorV2 ::
+  (MonadFlow m) =>
+  Spec.OnStatusReq ->
+  (Spec.ConfirmReqMessage -> m (Maybe DOnStatus.OnStatusReq)) ->
+  m (Maybe DOnStatus.OnStatusReq)
+handleErrorV2 req action =
+  case req.onStatusReqError of
+    Nothing -> req.onStatusReqMessage & maybe (pure Nothing) action
+    Just err -> do
+      logTagError "on_status req" $ "on_status error: " <> show err
+      pure Nothing
+
+mapToDomainBookingStatusV2 :: Text -> DBooking.BookingStatus
+mapToDomainBookingStatusV2 "NEW_BOOKING" = DBooking.NEW
+mapToDomainBookingStatusV2 "TRIP_ASSIGNED" = DBooking.TRIP_ASSIGNED
+mapToDomainBookingStatusV2 "BOOKING_COMPLETED" = DBooking.COMPLETED
+mapToDomainBookingStatusV2 "BOOKING_CANCELLED" = DBooking.CANCELLED
+mapToDomainBookingStatusV2 _ = DBooking.CANCELLED
+
+mapToDomainRideStatusV2 :: Text -> DRide.RideStatus
+mapToDomainRideStatusV2 "NEW" = DRide.NEW
+mapToDomainRideStatusV2 "INPROGRESS" = DRide.INPROGRESS
+mapToDomainRideStatusV2 "COMPLETED" = DRide.COMPLETED
+mapToDomainRideStatusV2 "CANCELLED" = DRide.CANCELLED
+mapToDomainRideStatusV2 _ = DRide.CANCELLED

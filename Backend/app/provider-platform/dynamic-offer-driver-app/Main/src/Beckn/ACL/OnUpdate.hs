@@ -11,15 +11,18 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-{-# OPTIONS_GHC -Wwarn=incomplete-record-updates #-}
 
 module Beckn.ACL.OnUpdate
   ( buildOnUpdateMessage,
-    OnUpdateBuildReq (..),
+    buildOnUpdateMessageV2,
+    module Reexport,
   )
 where
 
 import qualified Beckn.ACL.Common as Common
+import qualified Beckn.OnDemand.Transformer.OnUpdate as TFOU
+import qualified Beckn.OnDemand.Utils.Common as BUtils
+import qualified Beckn.OnDemand.Utils.OnUpdate as Utils
 import qualified Beckn.ACL.Common.Order as Common
 import qualified Beckn.Types.Core.Taxi.Common.Tags as Tags
 import qualified Beckn.Types.Core.Taxi.OnUpdate as OnUpdate
@@ -32,16 +35,16 @@ import Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.RideCompletedEvent as OnUpda
 import qualified Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.RideCompletedEvent as RideCompletedOU
 import qualified Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.RideStartedEvent as RideStartedOU
 import qualified Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.SafetyAlertEvent as SafetyAlertDU
+import qualified BecknV2.OnDemand.Types as Spec
 import qualified Domain.Types.Booking as DRB
-import qualified Domain.Types.BookingCancellationReason as SBCR
-import qualified Domain.Types.Estimate as DEst
-import qualified Domain.Types.FareParameters as Fare
-import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
+import qualified Domain.Types.Merchant as DM
+import Domain.Types.OnUpdate as Reexport
 import qualified Domain.Types.Person as SP
 import Domain.Types.Ride as DRide
 import qualified Domain.Types.Vehicle as SVeh
 import Kernel.External.Maps.Types as Maps
 import Kernel.Prelude
+import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common
 import Kernel.Types.Id
 
@@ -118,6 +121,7 @@ buildOnUpdateMessage RideAssignedBuildReq {..} = do
                 state = "ACTIVE",
                 ..
               },
+        -- JAYPAL, TODO check where to place update_target
         update_target = "order.fufillment.state.code, order.fulfillment.agent, order.fulfillment.vehicle" <> ", order.fulfillment.start.authorization" -- TODO :: Remove authorization for NormalBooking once Customer side code is decoupled.
       }
 buildOnUpdateMessage RideStartedBuildReq {..} = do
@@ -150,7 +154,7 @@ buildOnUpdateMessage req@RideCompletedBuildReq {tripEndLocation} = do
               },
         update_target = "order.payment, order.quote, order.fulfillment.tags, order.fulfillment.state.tags"
       }
-buildOnUpdateMessage BookingCancelledBuildReq {..} = do
+buildOnUpdateMessage (BookingCancelledBuildReq DBookingCancelledReq {..}) = do
   return $
     OnUpdate.OnUpdateMessage
       { order =
@@ -162,7 +166,7 @@ buildOnUpdateMessage BookingCancelledBuildReq {..} = do
               },
         update_target = "state,fufillment.state.code"
       }
-buildOnUpdateMessage DriverArrivedBuildReq {..} = do
+buildOnUpdateMessage (DriverArrivedBuildReq DDriverArrivedReq {..}) = do
   let tagGroups = Common.mkArrivalTimeTagGroup arrivalTime
   fulfillment <- Common.mkFulfillment (Just driver) ride booking (Just vehicle) Nothing (Just $ Tags.TG tagGroups) Nothing False False
   return $
@@ -175,7 +179,7 @@ buildOnUpdateMessage DriverArrivedBuildReq {..} = do
               },
         update_target = "order.fufillment.state.code, order.fulfillment.tags"
       }
-buildOnUpdateMessage EstimateRepetitionBuildReq {..} = do
+buildOnUpdateMessage (EstimateRepetitionBuildReq DEstimateRepetitionReq {..}) = do
   let tagGroups =
         [ Tags.TagGroup
             { display = False,
@@ -197,7 +201,7 @@ buildOnUpdateMessage EstimateRepetitionBuildReq {..} = do
               },
         update_target = "order.fufillment.state.code, order.tags"
       }
-buildOnUpdateMessage NewMessageBuildReq {..} = do
+buildOnUpdateMessage (NewMessageBuildReq DNewMessageReq {..}) = do
   let tagGroups =
         [ Tags.TagGroup
             { display = False,
@@ -217,7 +221,7 @@ buildOnUpdateMessage NewMessageBuildReq {..} = do
                 fulfillment = fulfillment
               }
       }
-buildOnUpdateMessage SafetyAlertBuildReq {..} = do
+buildOnUpdateMessage (SafetyAlertBuildReq DSafetyAlertReq {..}) = do
   let tagGroups =
         [ Tags.TagGroup
             { display = False,
@@ -237,3 +241,31 @@ buildOnUpdateMessage SafetyAlertBuildReq {..} = do
               },
         update_target = "order.fufillment.state.code, order.fulfillment.tags"
       }
+
+buildOnUpdateMessageV2 ::
+  ( MonadFlow m,
+    EsqDBFlow m r,
+    EncFlow m r,
+    HasFlowEnv m r '["nwAddress" ::: BaseUrl]
+  ) =>
+  DM.Merchant ->
+  Maybe Context.City ->
+  Maybe Context.Country ->
+  OnUpdateBuildReq ->
+  m Spec.OnUpdateReq
+buildOnUpdateMessageV2 merchant mbBapCity mbBapCountry req = do
+  msgId <- generateGUID
+  let bppId = getShortId $ merchant.subscriberId
+      city = fromMaybe merchant.city mbBapCity
+      country = fromMaybe merchant.country mbBapCountry
+  bppUri <- BUtils.mkBppUri merchant.id.getId
+  TFOU.buildOnUpdateReqV2 Context.ON_UPDATE Context.MOBILITY msgId bppId bppUri city country req
+
+-- buildOnUpdateMessageV2 merchant mbBapCity mbBapCountry (RideAssignedBuildReq req) = do
+--   msgId <- generateGUID
+--   let bppId = getShortId $ merchant.subscriberId
+--       city = fromMaybe merchant.city mbBapCity
+--       country = fromMaybe merchant.country mbBapCountry
+--   bppUri <- BUtils.mkBppUri merchant.id.getId
+--   driverNumber <- SP.getPersonNumber req.driver >>= fromMaybeM (InternalError "Driver mobile number is not present in RideAssignedBuildReq.")
+--   TFRA.buildOnUpdateReqV2 Context.ON_UPDATE Context.MOBILITY msgId bppId bppUri city country req driverNumber

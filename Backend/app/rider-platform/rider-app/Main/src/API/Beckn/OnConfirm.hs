@@ -15,15 +15,21 @@
 module API.Beckn.OnConfirm (API, handler) where
 
 import qualified Beckn.ACL.OnConfirm as ACL
+import qualified Beckn.OnDemand.Utils.Common as Utils
 import qualified Beckn.Types.Core.Taxi.API.OnConfirm as OnConfirm
+import Data.Aeson as A
+import Data.Text as T
+import Data.Text.Encoding as T
 import qualified Domain.Action.Beckn.OnConfirm as DOnConfirm
 import Environment
+import EulerHS.Prelude (ByteString)
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Beckn.Ack
 import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth
 import Storage.Beam.SystemConfigs ()
+import Tools.Error (GenericError (InvalidRequest))
 
 type API = OnConfirm.OnConfirmAPI
 
@@ -32,10 +38,16 @@ handler = onConfirm
 
 onConfirm ::
   SignatureAuthResult ->
-  OnConfirm.OnConfirmReq ->
+  -- OnConfirm.OnConfirmReqV2 ->
+  ByteString ->
   FlowHandler AckResponse
-onConfirm _ req = withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
-  mbDOnConfirmReq <- ACL.buildOnConfirmReq req
+onConfirm _ reqBS = withFlowHandlerBecknAPI do
+  req <- decodeReq reqBS
+  mbDOnConfirmReq <- case req of
+    Right reqV2 -> do
+      transactionId <- Utils.getTransactionId reqV2.onConfirmReqContext
+      Utils.withTransactionIdLogTag transactionId $ ACL.buildOnConfirmReqV2 reqV2
+    Left reqV1 -> withTransactionIdLogTag reqV1 $ ACL.buildOnConfirmReq reqV1
   whenJust mbDOnConfirmReq $ \onConfirmReq ->
     Redis.whenWithLockRedis (onConfirmLockKey onConfirmReq.bppBookingId.getId) 60 $ do
       validatedReq <- DOnConfirm.validateRequest onConfirmReq
@@ -49,3 +61,12 @@ onConfirmLockKey id = "Customer:OnConfirm:BppBookingId-" <> id
 
 onConfirmProcessingLockKey :: Text -> Text
 onConfirmProcessingLockKey id = "Customer:OnConfirm:Processing:BppBookingId-" <> id
+
+decodeReq :: MonadFlow m => ByteString -> m (Either OnConfirm.OnConfirmReq OnConfirm.OnConfirmReqV2)
+decodeReq reqBS =
+  case A.eitherDecodeStrict reqBS of
+    Right reqV2 -> pure $ Right reqV2
+    Left _ ->
+      case A.eitherDecodeStrict reqBS of
+        Right reqV1 -> pure $ Left reqV1
+        Left err -> throwError . InvalidRequest $ "Unable to parse request: " <> T.pack err <> T.decodeUtf8 reqBS

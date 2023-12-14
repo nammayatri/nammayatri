@@ -12,10 +12,13 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Beckn.ACL.OnTrack (buildOnTrackReq) where
+module Beckn.ACL.OnTrack (buildOnTrackReq, buildOnTrackReqV2) where
 
 import qualified Beckn.Types.Core.Taxi.API.OnTrack as OnTrack
 import qualified Beckn.Types.Core.Taxi.OnTrack as OnTrack
+import qualified BecknV2.OnDemand.Types as Spec
+import qualified BecknV2.OnDemand.Utils.Context as ContextV2
+import qualified Data.UUID as UUID
 import qualified Domain.Action.Beckn.OnTrack as DOnTrack
 import Kernel.Prelude
 import Kernel.Product.Validation.Context
@@ -53,5 +56,54 @@ handleError etr action =
     Right msg -> do
       Just <$> action msg
     Left err -> do
+      logTagError "on_track req" $ "on_track error: " <> show err
+      pure Nothing
+
+buildOnTrackReqV2 ::
+  ( HasFlowEnv m r '["_version" ::: Text],
+    HedisFlow m r
+  ) =>
+  Spec.OnTrackReq ->
+  m (Maybe DOnTrack.OnTrackReq)
+buildOnTrackReqV2 req = do
+  ContextV2.validateContext Context.ON_TRACK req.onTrackReqContext
+  handleErrorV2 req $ \_message -> do
+    messageUuid <- req.onTrackReqContext.contextMessageId & fromMaybeM (InvalidRequest "Missing message_id")
+    let messageId = UUID.toText messageUuid
+    bppRideId <- Redis.get (key messageId) >>= fromMaybeM (InternalError "Track:bppRideId not found.")
+    Redis.del $ key messageId
+    case parsedData of
+      Left err -> do
+        logTagError "on_track req" $ "on_track error: " <> show err
+        pure Nothing
+      Right (trackUrl) ->
+        return $
+          Just $
+            DOnTrack.OnTrackReq
+              { trackUrl = trackUrl,
+                ..
+              }
+  where
+    key messageId = "Track:bppRideId:" <> messageId
+    parsedData :: Either Text (BaseUrl)
+    parsedData = do
+      message <- req.onTrackReqMessage & maybe (Left "Missing on_track message") Right
+
+      trackUrl <-
+        message.onTrackReqMessageTracking.trackingUrl
+          >>= parseBaseUrl
+          & maybe (Left "Missing tracking url") Right
+
+      Right trackUrl
+
+handleErrorV2 ::
+  (MonadFlow m) =>
+  Spec.OnTrackReq ->
+  (Spec.OnTrackReqMessage -> m (Maybe DOnTrack.OnTrackReq)) ->
+  m (Maybe DOnTrack.OnTrackReq)
+handleErrorV2 req action = do
+  case req.onTrackReqError of
+    Nothing -> req.onTrackReqMessage & maybe (pure Nothing) action
+    Just err -> do
       logTagError "on_track req" $ "on_track error: " <> show err
       pure Nothing

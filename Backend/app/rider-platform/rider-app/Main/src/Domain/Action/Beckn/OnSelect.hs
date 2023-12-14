@@ -113,8 +113,8 @@ onSelect OnSelectValidatedReq {..} = do
         Just autoAssignQuote -> do
           let dConfirmReq = SConfirm.DConfirmReq {personId = person.id, quoteId = autoAssignQuote.id, paymentMethodId = searchRequest.selectedPaymentMethodId}
           dConfirmRes <- SConfirm.confirm dConfirmReq
-          becknInitReq <- ACL.buildInitReq dConfirmRes
-          handle (errHandler dConfirmRes.booking) $ void $ withShortRetry $ CallBPP.init dConfirmRes.providerUrl becknInitReq
+          becknInitReq <- ACL.buildInitReqV2 dConfirmRes
+          handle (errHandler dConfirmRes.booking) $ void $ withShortRetry $ CallBPP.initV2 dConfirmRes.providerUrl becknInitReq
         Nothing -> Notify.notifyOnDriverOfferIncoming estimate.id quotes person
     else do
       Notify.notifyOnDriverOfferIncoming estimate.id quotes person
