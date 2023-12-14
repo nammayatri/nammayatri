@@ -324,7 +324,7 @@ markRideAsSafe (personId, merchantId) sosId = do
   void $ QSos.updateStatus sosId SosStatus.Resolved
   emergencyContacts <- getDefaultEmergencyNumbers (personId, merchantId)
   let sender = smsCfg.sender
-  withLogTag ("personId" <> getId personId) $ do
+  when (person.shareEmergencyContacts) $ do
     message <-
       MessageBuilder.buildMarkRideAsSafeMessage person.merchantOperatingCityId $
         MessageBuilder.BuildMarkRideAsSafeMessageReq
