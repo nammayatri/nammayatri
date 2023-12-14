@@ -1,4 +1,4 @@
-ALTER TABLE atlas_driver_offer_bpp.fare_parameters ADD column customer_cancellation_dues double precision DEFAULT 0 NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.fare_parameters ADD column customer_cancellation_dues double precision;
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD column cancellation_fee double precision DEFAULT 10 NOT NULL;
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD column driver_distance_travelled_on_pickup_threshold_on_cancel bigint DEFAULT 500 NOT NULL;
@@ -20,6 +20,6 @@ CREATE TABLE atlas_driver_offer_bpp.cancellation_charges (
 
 CREATE INDEX ON atlas_driver_offer_bpp.cancellation_charges USING btree (driver_id);
 
-ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ADD column customer_cancellation_dues double precision DEFAULT 0 NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ADD column customer_cancellation_dues double precision;
 
-ALTER TABLE atlas_driver_offer_bpp.search_request ADD column customer_cancellation_dues double precision DEFAULT 0 NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.search_request ADD column customer_cancellation_dues double precision;
