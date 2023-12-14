@@ -53,6 +53,7 @@ buildOneWaySearchReq DOneWaySearch.OneWaySearchRes {..} =
     city
     (getPoints shortestRouteInfo)
     phoneNumber
+    isReallocationEnabled
   where
     getPoints val = val >>= (\routeInfo -> Just routeInfo.points)
 
@@ -74,6 +75,7 @@ buildRentalSearchReq DRentalSearch.RentalSearchRes {..} =
     city
     Nothing
     phoneNumber
+    Nothing
 
 buildSearchReq ::
   (MonadFlow m, HasFlowEnv m r '["nwAddress" ::: BaseUrl]) =>
@@ -89,14 +91,15 @@ buildSearchReq ::
   Context.City ->
   Maybe [Maps.LatLong] ->
   Maybe Text ->
+  Maybe Bool ->
   m (BecknReq Search.SearchMessage)
-buildSearchReq origin destination searchId _ distance duration customerLanguage disabilityTag merchant _city mbPoints mbPhoneNumber = do
+buildSearchReq origin destination searchId _ distance duration customerLanguage disabilityTag merchant _city mbPoints mbPhoneNumber mbIsReallocationEnabled = do
   let transactionId = getId searchId
       messageId = transactionId
   bapUrl <- asks (.nwAddress) <&> #baseUrlPath %~ (<> "/" <> T.unpack merchant.id.getId)
   -- TODO :: Add request city, after multiple city support on gateway.
   context <- buildTaxiContext Context.SEARCH messageId (Just transactionId) merchant.bapId bapUrl Nothing Nothing merchant.defaultCity merchant.country False
-  let intent = mkIntent origin destination customerLanguage disabilityTag distance duration mbPoints mbPhoneNumber
+  let intent = mkIntent origin destination customerLanguage disabilityTag distance duration mbPoints mbPhoneNumber mbIsReallocationEnabled
   let searchMessage = Search.SearchMessage intent
 
   pure $ BecknReq context searchMessage
@@ -110,8 +113,9 @@ mkIntent ::
   Maybe Seconds ->
   Maybe [Maps.LatLong] ->
   Maybe Text ->
+  Maybe Bool ->
   Search.Intent
-mkIntent origin destination customerLanguage disabilityTag distance duration mbPoints mbPhoneNumber = do
+mkIntent origin destination customerLanguage disabilityTag distance duration mbPoints mbPhoneNumber mbIsReallocationEnabled = do
   let startLocation =
         Search.StartInfo
           { location = mkLocation origin
@@ -130,7 +134,8 @@ mkIntent origin destination customerLanguage disabilityTag distance duration mbP
                 then
                   Just $
                     Search.TG
-                      [ mkRouteInfoTags
+                      [ mkRouteInfoTags,
+                        mkReallocationInfoTags
                       ]
                 else Nothing,
             customer =
@@ -199,6 +204,21 @@ mkIntent origin destination customerLanguage disabilityTag distance duration mbP
                   code = (\_ -> Just "customer_phone_number") =<< mbPhoneNumber,
                   name = (\_ -> Just "Customer Phone Number") =<< mbPhoneNumber,
                   value = (Just . show) =<< mbPhoneNumber
+                }
+            ]
+        }
+
+    mkReallocationInfoTags =
+      Search.TagGroup
+        { display = False,
+          code = "reallocation_info",
+          name = "Reallocation Information",
+          list =
+            [ Search.Tag
+                { display = (\_ -> Just False) =<< mbIsReallocationEnabled,
+                  code = (\_ -> Just "is_reallocation_enabled") =<< mbIsReallocationEnabled,
+                  name = (\_ -> Just "Is Reallocation Enabled") =<< mbIsReallocationEnabled,
+                  value = (Just . show) =<< mbIsReallocationEnabled
                 }
             ]
         }

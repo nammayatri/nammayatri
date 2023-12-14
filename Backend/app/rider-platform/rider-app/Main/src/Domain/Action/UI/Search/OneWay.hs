@@ -66,7 +66,8 @@ data OneWaySearchReq = OneWaySearchReq
   { origin :: DSearch.SearchReqLocation,
     destination :: DSearch.SearchReqLocation,
     isSourceManuallyMoved :: Maybe Bool,
-    isSpecialLocation :: Maybe Bool
+    isSpecialLocation :: Maybe Bool,
+    isReallocationEnabled :: Maybe Bool
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
@@ -83,7 +84,8 @@ data OneWaySearchRes = OneWaySearchRes
     disabilityTag :: Maybe Text,
     device :: Maybe Text,
     shortestRouteInfo :: Maybe Maps.RouteInfo,
-    phoneNumber :: Maybe Text
+    phoneNumber :: Maybe Text,
+    isReallocationEnabled :: Maybe Bool
   }
 
 hotSpotUpdate ::
@@ -210,6 +212,7 @@ oneWaySearch personId req bundleVersion clientVersion device = do
             disabilityTag = tag,
             device,
             shortestRouteInfo,
+            isReallocationEnabled = req.isReallocationEnabled,
             ..
           }
   fork "updating search counters" $ do

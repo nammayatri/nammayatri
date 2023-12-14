@@ -36,7 +36,6 @@ import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import Lib.SessionizerMetrics.Types.Event
 import SharedLogic.Allocator
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers
-import qualified SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal as I
 import qualified SharedLogic.CallBAP as BP
 import SharedLogic.DriverPool
 import qualified SharedLogic.DriverPool as DP
@@ -110,11 +109,12 @@ cancelRideImpl rideId bookingCReason = do
     let searchRepeatLimit = transpConf.searchRepeatLimit
     now <- getCurrentTime
     farePolicy <- getFarePolicy searchReq.merchantOperatingCityId searchTry.vehicleVariant searchReq.area
-    isSearchTryValid <- I.isSearchTryValid searchTry.id
+    let isSearchTryValid = searchTry.validTill > now
     let isRepeatSearch =
           searchTry.searchRepeatCounter < searchRepeatLimit
             && bookingCReason.source == SBCR.ByDriver
             && isSearchTryValid
+            && fromMaybe False searchReq.isReallocationEnabled
             && maybe True (\nsBounds -> isJust booking.fareParams.nightShiftCharge == isNightShift nsBounds now) farePolicy.nightShiftBounds
     if isRepeatSearch
       then do
