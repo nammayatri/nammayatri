@@ -5,6 +5,7 @@ import Alchemist.Utils
 import Control.Lens ((^.))
 import Data.List (intercalate, nub)
 import Data.List.Extra (snoc)
+import Data.Maybe (fromMaybe)
 import Data.Text (Text)
 import qualified Data.Text as T
 import Prelude
@@ -39,6 +40,11 @@ generateServantAPI input =
           <> T.intercalate "\n" (map handlerFunctionDef (_apis input))
       )
   where
+    isAuthPresent :: ApiTT -> Bool
+    isAuthPresent apiT = case _authType apiT of
+      Just NoAuth -> False
+      _ -> True
+
     defaultImports :: [String]
     defaultImports = ["EulerHS.Prelude", "Servant", "Tools.Auth", "Kernel.Utils.Common"]
 
@@ -48,14 +54,14 @@ generateServantAPI input =
     makeQualifiedImport :: String -> String
     makeQualifiedImport impts = "import qualified " <> impts
 
-    generateParams :: Bool -> Int -> Int -> Text
-    generateParams _ _ 0 = ""
-    generateParams isbackParam mx n =
-      ( if mx == n && isbackParam
-          then "(Kernel.Prelude.first Kernel.Prelude.Just a" <> T.pack (show n) <> ")"
+    generateParams :: Bool -> Bool -> Int -> Int -> Text
+    generateParams _ _ _ 0 = ""
+    generateParams isAuth isbackParam mx n =
+      ( if mx == n && isbackParam && isAuth
+          then " (Kernel.Prelude.first Kernel.Prelude.Just a" <> T.pack (show n) <> ")"
           else " a" <> T.pack (show n)
       )
-        <> generateParams isbackParam mx (n - 1)
+        <> generateParams isAuth isbackParam mx (n - 1)
 
     handlerFunctionDef :: ApiTT -> Text
     handlerFunctionDef apiT =
@@ -63,33 +69,36 @@ generateServantAPI input =
           allTypes = handlerSignature apiT
           showType = case filter (/= T.empty) (init allTypes) of
             [] -> T.empty
-            ty -> " -> " <> T.intercalate " -> " ty
-          handlerTypes = showType <> " -> Environment.FlowHandler " <> last allTypes
-       in functionName <> " :: (Kernel.Types.Id.Id Domain.Types.Person.Person, Kernel.Types.Id.Id Domain.Types.Merchant.Merchant)" <> handlerTypes
+            ty -> T.intercalate " -> " ty
+          handlerTypes = showType <> (if length allTypes > 1 then " -> " else " ") <> "Environment.FlowHandler " <> last allTypes
+       in functionName <> (if isAuthPresent apiT then " :: (Kernel.Types.Id.Id Domain.Types.Person.Person, Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> " else " :: ") <> handlerTypes
             <> "\n"
             <> functionName
-            <> generateParams False (length allTypes) (length allTypes)
+            <> generateParams (isAuthPresent apiT) False (length allTypes) (if isAuthPresent apiT then length allTypes else length allTypes - 1)
             <> " = withFlowHandlerAPI $ "
             <> "Domain.Action.UI."
             <> _moduleName input
             <> "."
             <> functionName
-            <> generateParams True (length allTypes) (length allTypes)
+            <> generateParams (isAuthPresent apiT) True (length allTypes) (if isAuthPresent apiT then length allTypes else length allTypes - 1)
             <> "\n"
 
 apiTTToText :: ApiTT -> Text
 apiTTToText apiTT =
   let urlPartsText = map urlPartToText (_urlParts apiTT)
-      authTypeText = case _authType apiTT of
-        Just AdminTokenAuth -> "AdminTokenAuth"
-        Just TokenAuth -> "TokenAuth"
-        Nothing -> "TokenAuth"
       apiTypeText = apiTypeToText (_apiType apiTT)
       apiReqText = apiReqToText (_apiReqType apiTT)
       apiResText = apiResToText (_apiResType apiTT)
       headerText = map headerToText (_header apiTT)
-   in authTypeText <> T.concat urlPartsText <> T.concat headerText <> apiReqText <> " :> " <> apiTypeText <> apiResText
+   in addAuthToApi (_authType apiTT) (T.concat urlPartsText <> T.concat headerText <> apiReqText <> " :> " <> apiTypeText <> apiResText)
   where
+    addAuthToApi :: Maybe AuthType -> Text -> Text
+    addAuthToApi authtype apiDef = case authtype of
+      Just AdminTokenAuth -> "AdminTokenAuth" <> apiDef
+      Just TokenAuth -> "TokenAuth" <> apiDef
+      Just NoAuth -> fromMaybe apiDef (T.stripPrefix " :>" apiDef)
+      Nothing -> "TokenAuth" <> apiDef
+
     urlPartToText :: UrlParts -> Text
     urlPartToText (UnitPath path) = " :> \"" <> path <> "\""
     urlPartToText (Capture path ty) = " :> Capture \"" <> path <> "\" (" <> ty <> ")"
