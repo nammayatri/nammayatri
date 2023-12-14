@@ -69,7 +69,9 @@ messageList :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> 
 messageList (driverId, _, _) mbLimit mbOffset = do
   person <- B.runInReplica (QP.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId))
   messageDetails <- B.runInReplica $ MRQ.findByDriverIdAndLanguage (cast driverId) (fromMaybe ENGLISH person.language) mbLimit mbOffset
-  sortOn (Down . (.created_at)) <$> mapM makeMessageAPIEntity messageDetails
+  let messagesSortedByCreatedAt = sortOn (\(x, _, _) -> Down (x.createdAt)) $ filter (\(x, _, _) -> isNothing (x.sentAt)) messageDetails
+      messagesSortedBySentAt = sortOn (\(x, _, _) -> Down (x.sentAt)) $ filter (\(x, _, _) -> isJust (x.sentAt)) messageDetails
+  mapM makeMessageAPIEntity (messagesSortedBySentAt <> messagesSortedByCreatedAt)
   where
     makeMessageAPIEntity (messageReport, rawMessage, messageTranslation) = do
       mediaFilesApiType <- map (\mediaFile -> MediaFileApiResponse mediaFile.url mediaFile._type) <$> MFQ.findAllIn rawMessage.mediaFiles

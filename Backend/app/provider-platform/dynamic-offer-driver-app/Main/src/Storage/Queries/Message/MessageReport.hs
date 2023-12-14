@@ -74,6 +74,7 @@ findByDriverIdAndLanguage driverId language mbLimit mbOffset = do
       p <- catMaybes <$> mapM fromTType' messageReport
       di <- catMaybes <$> mapM fromTType' message
       v <- mapM (maybe (pure Nothing) fromTType') messageTranslation
+      now <- getCurrentTime
       let rawMessageFromMessage Message {..} =
             RawMessage
               { id = id,
@@ -86,7 +87,8 @@ findByDriverIdAndLanguage driverId language mbLimit mbOffset = do
                 viewCount = viewCount,
                 mediaFiles = mediaFiles,
                 merchantId = merchantId,
-                createdAt = createdAt
+                createdAt = createdAt,
+                sentAt = Just now
               }
       pure $ zip3 p (rawMessageFromMessage <$> di) v
     Left _ -> pure []
@@ -205,6 +207,12 @@ updateDeliveryStatusByMessageIdAndDriverId messageId driverId deliveryStatus = d
     ]
     [Se.And [Se.Is BeamMR.messageId $ Se.Eq $ getId messageId, Se.Is BeamMR.driverId $ Se.Eq $ getId driverId]]
 
+updateSentAtByMessageIds :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Id Msg.Message] -> UTCTime -> m ()
+updateSentAtByMessageIds messageIds now = do
+  updateWithKV
+    [Se.Set BeamMR.sentAt (Just $ T.utcToLocalTime T.utc now)]
+    [Se.Is BeamMR.messageId $ Se.In (getId <$> messageIds)]
+
 deleteByPersonId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id P.Person -> m ()
 deleteByPersonId (Id personId) = deleteWithKV [Se.Is BeamMR.driverId (Se.Eq personId)]
 
@@ -222,6 +230,7 @@ instance FromTType' BeamMR.MessageReport MessageReport where
             messageDynamicFields = case A.fromJSON messageDynamicFields of
               A.Success val -> val
               _ -> Map.empty,
+            sentAt = T.localTimeToUTC T.utc <$> sentAt,
             createdAt = T.localTimeToUTC T.utc createdAt,
             updatedAt = T.localTimeToUTC T.utc updatedAt
           }
@@ -236,6 +245,7 @@ instance ToTType' BeamMR.MessageReport MessageReport where
         BeamMR.likeStatus = likeStatus,
         BeamMR.reply = reply,
         BeamMR.messageDynamicFields = A.toJSON messageDynamicFields,
+        BeamMR.sentAt = T.utcToLocalTime T.utc <$> sentAt,
         BeamMR.createdAt = T.utcToLocalTime T.utc createdAt,
         BeamMR.updatedAt = T.utcToLocalTime T.utc updatedAt
       }

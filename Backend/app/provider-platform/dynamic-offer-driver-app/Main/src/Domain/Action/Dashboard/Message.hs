@@ -27,6 +27,7 @@ import Data.Time.Format.ISO8601 (iso8601Show)
 import Data.Tuple.Extra (secondM)
 import qualified Data.Vector as V
 import qualified Domain.Types.Merchant as DM
+import Domain.Types.Message.Message as MS
 import qualified Domain.Types.Message.Message as Domain
 import qualified Domain.Types.Message.MessageReport as Domain
 import Environment
@@ -195,8 +196,12 @@ instance FromNamedRecord CSVRow where
 
 sendMessage :: ShortId DM.Merchant -> Context.City -> Common.SendMessageRequest -> Flow APISuccess
 sendMessage merchantShortId _ Common.SendMessageRequest {..} = do
+  now <- getCurrentTime
   merchant <- findMerchantByShortId merchantShortId
   message <- B.runInReplica $ MQuery.findById (Id messageId) >>= fromMaybeM (InvalidRequest "Message Not Found")
+  MRQuery.updateSentAtByMessageIds [getField @"id" message] now
+  -- let updatedMessage = message & MS.sentAt .~ (Just now)
+  let updatedMessage = message {MS.sentAt = Just now}
   allDriverIds <- case _type of
     AllEnabled -> B.runInReplica $ QP.findAllDriverIdExceptProvided (merchant.id) []
     Include -> readCsv
@@ -204,7 +209,7 @@ sendMessage merchantShortId _ Common.SendMessageRequest {..} = do
       driverIds <- readCsv
       B.runInReplica $ QP.findAllDriverIdExceptProvided (merchant.id) driverIds
   logDebug $ "DriverId to which the message is sent" <> show allDriverIds
-  fork "Adding messages to kafka queue" $ mapM_ (addToKafka message) allDriverIds
+  fork "Adding messages to kafka queue" $ mapM_ (addToKafka updatedMessage) allDriverIds
   return Success
   where
     addToKafka message driverId = do

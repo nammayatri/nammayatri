@@ -67,6 +67,7 @@ data MessageReport = MessageReport
     likeStatus :: Bool,
     reply :: Maybe Text,
     messageDynamicFields :: MessageDynamicFieldsType,
+    sentAt :: Maybe UTCTime,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }

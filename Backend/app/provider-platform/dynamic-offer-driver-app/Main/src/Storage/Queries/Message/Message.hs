@@ -40,6 +40,7 @@ create = createWithKV
 findById :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Message -> m (Maybe RawMessage)
 findById (Id messageId) = do
   message <- findOneWithKV [Se.Is BeamM.id $ Se.Eq messageId]
+  now <- getCurrentTime
   pure $
     ( \Message {..} ->
         RawMessage
@@ -53,7 +54,8 @@ findById (Id messageId) = do
             viewCount = viewCount,
             mediaFiles = mediaFiles,
             merchantId = merchantId,
-            createdAt = createdAt
+            createdAt = createdAt,
+            sentAt = Just now
           }
     )
       <$> message
@@ -61,6 +63,7 @@ findById (Id messageId) = do
 findAllWithLimitOffset :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Maybe Int -> Maybe Int -> Id Merchant -> m [RawMessage]
 findAllWithLimitOffset mbLimit mbOffset merchantIdParam = do
   messages <- findAllWithOptionsDb [Se.Is BeamM.merchantId $ Se.Eq (getId merchantIdParam)] (Se.Desc BeamM.createdAt) (Just limitVal) (Just offsetVal)
+  now <- getCurrentTime
   pure $
     map
       ( \Message {..} ->
@@ -75,7 +78,8 @@ findAllWithLimitOffset mbLimit mbOffset merchantIdParam = do
               viewCount = viewCount,
               mediaFiles = mediaFiles,
               merchantId = merchantId,
-              createdAt = createdAt
+              createdAt = createdAt,
+              sentAt = Just now
             }
       )
       messages

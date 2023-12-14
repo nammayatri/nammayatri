@@ -31,6 +31,7 @@ data MessageReportT f = MessageReportT
     likeStatus :: B.C f Bool,
     reply :: B.C f (Maybe Text),
     messageDynamicFields :: B.C f A.Value,
+    sentAt :: B.C f (Maybe LocalTime),
     updatedAt :: B.C f LocalTime,
     createdAt :: B.C f LocalTime
   }

@@ -51,6 +51,7 @@ broadcastMessage messageDict driverId = do
                 likeStatus = False,
                 messageDynamicFields = HM.empty,
                 reply = Nothing,
+                sentAt = Just now,
                 createdAt = now,
                 updatedAt = now
               }
