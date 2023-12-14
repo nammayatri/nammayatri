@@ -45,9 +45,22 @@ handler = getHotSpot
 getHotSpot :: (Id Person.Person, Id Merchant.Merchant) -> Maps.LatLong -> FlowHandler HotSpotResponse
 getHotSpot (_, merchantId) latlong = withFlowHandlerAPI (getHotspot latlong merchantId)
 
--- hotspot
-allPreciseHotSpot :: Int -> [String]
-allPreciseHotSpot maxLen = [1 .. maxLen] >>= \len -> replicateM len "0123456789bcdefghjkmnpqrstuvwxyz"
+allPreciseHotSpot :: Double -> Int -> Maps.LatLong -> [String] -> [String]
+allPreciseHotSpot hotSpotRadius maxLen currentCoordinate allPossibleGeoHashes =
+  if maxLen > 0
+    then
+      let possibleGeoHashes = [geohash ++ [suffix] | geohash <- allPossibleGeoHashes, suffix <- "0123456789bcdefghjkmnpqrstuvwxyz"]
+          possibleGeoHashesWithInRadius =
+            filter
+              ( \geohash ->
+                  let geoHashLatLong :: Maybe (Double, Double) = DG.decode geohash
+                   in case geoHashLatLong of
+                        Just (lat, lon) -> fromIntegral (highPrecMetersToMeters (distanceBetweenInMeters currentCoordinate (Maps.LatLong lat lon))).getMeters <= hotSpotRadius
+                        Nothing -> False
+              )
+              possibleGeoHashes
+       in allPreciseHotSpot hotSpotRadius (maxLen - 1) currentCoordinate possibleGeoHashesWithInRadius
+    else allPossibleGeoHashes
 
 filterAccordingMaxFrequency :: Int -> [HotSpot] -> [HotSpot]
 filterAccordingMaxFrequency threshold =
@@ -81,17 +94,9 @@ getHotspot Maps.LatLong {..} merchantId = do
             Just currentGeoHash -> do
               let neighbourGeoHashes = neighboringGeohashes currentGeoHash hotSpotRadius (geoHashCellHeight precisionToGetGeohash)
               let deviatedCharLen = precisionToSetGeohash - precisionToGetGeohash
-              let listOfGeoHashToCheck =
-                    concatMap
-                      ( \ghash -> do
-                          let addedCharacters = allPreciseHotSpot deviatedCharLen
-                          let listOfStringsAddedToGeohash = map (ghash ++) addedCharacters
-                          listOfStringsAddedToGeohash
-                      )
-                      neighbourGeoHashes
+              let listOfGeoHashToCheck = allPreciseHotSpot hotSpotRadius deviatedCharLen (Maps.LatLong lat lon) neighbourGeoHashes
               filteredAccordingToGeoHash :: [HotSpot] <- mapMaybeM (Hedis.hGet makeHotSpotKey . Dt.pack) listOfGeoHashToCheck
-              let hotSpotWithInRadius = Dl.filter (\hotSpot -> fromIntegral (highPrecMetersToMeters (distanceBetweenInMeters Maps.LatLong {..} hotSpot._centroidLatLong)).getMeters <= hotSpotRadius) filteredAccordingToGeoHash
-              let finalHotSpot = filterAccordingMaxFrequency minFrequencyOfHotSpot hotSpotWithInRadius
+              let finalHotSpot = filterAccordingMaxFrequency minFrequencyOfHotSpot filteredAccordingToGeoHash
               let sortedHotSpotWithFrequency = Dl.sortOn (Down . (\x -> do (x._manualMovedSaved * weightOfManualSaved) + (x._manualMovedPickup * weightOfManualPickup) + (x._nonManualMovedPickup * weightOfAutoPickup) + (x._nonManualMovedSaved * weightOfAutoSaved) + (x._tripStart * weightOfTripStart) + (x._tripEnd * weightOfTripEnd) + (x._specialLocation * weightOfSpecialLocation))) finalHotSpot
               let filteredHotSpotWithPrecisions = groupAndFilterHotSpotWithPrecision precisionToFilterGeohash maxGeoHashToFilter sortedHotSpotWithFrequency
               let hotSpots = take maxNumHotSpotsToShow filteredHotSpotWithPrecisions
