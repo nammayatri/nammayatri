@@ -120,7 +120,8 @@ config =
               cityLong : 77.594566,
               supportNumber : "",
               languageKey : "KN_IN",
-              showDriverReferral : false
+              showDriverReferral : false,
+              uploadRCandDL : true
             },
             {
               cityName : "Hyderabad",
@@ -131,7 +132,8 @@ config =
               cityLong : 78.491684,
               supportNumber : "+918069724900",
               languageKey : "TE_IN",
-              showDriverReferral : true
+              showDriverReferral : true,
+              uploadRCandDL : true
             },
             {
               cityName : "Mysore",
@@ -142,7 +144,8 @@ config =
               cityLong : 76.639381,
               supportNumber : "",
               languageKey : "TA_IN",
-              showDriverReferral : true
+              showDriverReferral : true,
+              uploadRCandDL : true
             },
             {
               cityName : "Delhi",
@@ -153,7 +156,8 @@ config =
               cityLong : 77.216721,
               supportNumber : "+918069724848",
               languageKey : "HI_IN",
-              showDriverReferral : true
+              showDriverReferral : true,
+              uploadRCandDL : true
             },
             {
               cityName : "Chennai",
@@ -164,7 +168,8 @@ config =
               cityLong : 80.237617,
               supportNumber : "08069724899",
               languageKey : "TA_IN",
-              showDriverReferral : true
+              showDriverReferral : true,
+              uploadRCandDL : false
             },
             {
               cityName : "Coimbatore",
@@ -175,7 +180,8 @@ config =
               cityLong : 76.961632,
               supportNumber : "",
               languageKey : "TA_IN",
-              showDriverReferral : true
+              showDriverReferral : true,
+              uploadRCandDL : true
             },
             {
               cityName : "Puducherry",
@@ -186,7 +192,8 @@ config =
               cityLong : 79.808292,
               supportNumber : "08069724899",
               languageKey : "TA_IN",
-              showDriverReferral : true
+              showDriverReferral : true,
+              uploadRCandDL : true
             }--, For future use
             -- {
             --   cityName : "Madurai",

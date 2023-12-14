@@ -45,6 +45,7 @@ import ConfigProvider
 primaryButtonConfig :: ST.UploadDrivingLicenseState -> PrimaryButton.Config
 primaryButtonConfig state = let 
     config = PrimaryButton.config
+    imageUploadCondition = state.props.openHowToUploadManual && not state.data.cityConfig.uploadRCandDL
     primaryButtonConfig' = config 
       { textConfig{ text = if isJust state.data.dateOfIssue then getString CONFIRM 
                            else if state.props.openHowToUploadManual then getString UPLOAD_PHOTO
@@ -52,7 +53,7 @@ primaryButtonConfig state = let
       }
       , width = MATCH_PARENT
       , background = Color.black900
-      , margin = Margin 15 0 15 30
+      , margin = if imageUploadCondition then Margin 15 0 15 10 else Margin 15 0 15 30
       , cornerRadius = 6.0
       , height = V 50
       , isClickable =  state.data.dob /= "" && DS.length state.data.driver_license_number >= 9 && (DS.toLower(state.data.driver_license_number) == DS.toLower(state.data.reEnterDriverLicenseNumber)) && state.data.dateOfIssue /= Just ""

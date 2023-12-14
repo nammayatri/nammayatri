@@ -153,7 +153,8 @@ linearLayout
             , padding( PaddingHorizontal 20 20)
             , margin (MarginBottom 10)
             ]
-          , PrimaryButton.view (push <<< PrimaryButtonAction) (primaryButtonConfig state)]
+          , PrimaryButton.view (push <<< PrimaryButtonAction) (primaryButtonConfig state)
+          , if state.props.openHowToUploadManual && not state.data.cityConfig.uploadRCandDL then skipButton push state else dummyLinearLayout]
 
     ]   
     , if state.props.openRegistrationModal then 
@@ -594,6 +595,18 @@ validateProfilePictureModalState state = let
   }
   in inAppModalConfig'
 
+skipButton :: forall w . (Action -> Effect Unit) -> ST.UploadDrivingLicenseState -> PrestoDOM (Effect Unit) w
+skipButton push state =
+  textView $
+  [ width MATCH_PARENT
+  , height WRAP_CONTENT
+  , color Color.black
+  , gravity CENTER
+  , onClick push $ const SkipButton
+  , text $ getString SKIP
+  , margin $ MarginBottom 15
+  ] <> FontStyle.body1 TypoGraphy
+
 imageCaptureLayout :: forall w . (Action -> Effect Unit) -> ST.UploadDrivingLicenseState -> PrestoDOM (Effect Unit) w
 imageCaptureLayout push state  =  
   ValidateDocumentModal.view  (push <<< ValidateDocumentModalAction) 
@@ -617,3 +630,10 @@ fromMaybeVisibility val = if isNothing val
 
 fromBooleanVisibility :: Boolean -> Visibility
 fromBooleanVisibility val = if val then VISIBLE else GONE
+
+dummyLinearLayout :: forall w . PrestoDOM (Effect Unit) w
+dummyLinearLayout =
+  linearLayout
+    [ width WRAP_CONTENT
+    , height $ V 0
+    ][]

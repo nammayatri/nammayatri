@@ -148,7 +148,8 @@ view push state =
            , padding( PaddingHorizontal 20 20)
            , margin (MarginBottom 10)
            ]
-           , PrimaryButton.view (push <<< PrimaryButtonAction) (primaryButtonConfig state)]
+           , PrimaryButton.view (push <<< PrimaryButtonAction) (primaryButtonConfig state)
+           , if state.props.openHowToUploadManual && not state.data.cityConfig.uploadRCandDL then skipButton push state else dummyLinearLayout]
     ]   
     , if state.props.openRCManual then 
         linearLayout
@@ -766,6 +767,18 @@ logoutPopupModal push state =
         , background Color.blackLessTrans
         ][ PopUpModal.view (push <<<PopUpModalLogoutAction) (logoutPopUp Language) ] 
 
+skipButton :: forall w . (Action -> Effect Unit) -> AddVehicleDetailsScreenState -> PrestoDOM (Effect Unit) w
+skipButton push state =
+  textView $
+  [ width MATCH_PARENT
+  , height WRAP_CONTENT
+  , color Color.black
+  , gravity CENTER
+  , onClick push $ const SkipButton
+  , text $ getString SKIP
+  , margin $ MarginBottom 15
+  ] <> FontStyle.body1 TypoGraphy
+
 validateProfilePicturePopUp :: forall w . (Action -> Effect Unit) -> AddVehicleDetailsScreenState -> PrestoDOM (Effect Unit) w
 validateProfilePicturePopUp push state =
   ValidateDocumentModal.view (push <<< ValidateDocumentModalAction) (validateProfilePictureModalState state)
@@ -875,3 +888,10 @@ addRCFromProfileStatusView state push =
       ] <> FontStyle.subHeading2 TypoGraphy
     ]
   ]
+
+dummyLinearLayout :: forall w . PrestoDOM (Effect Unit) w
+dummyLinearLayout =
+  linearLayout
+    [ width WRAP_CONTENT
+    , height $ V 0
+    ][]

@@ -77,5 +77,6 @@ dummyCityConfig = {
                     cityLong : 0.0,
                     supportNumber : "",
                     languageKey : "",
-                    showDriverReferral : false
+                    showDriverReferral : false,
+                    uploadRCandDL : true
                   }

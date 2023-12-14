@@ -129,6 +129,7 @@ instance loggableAction :: Loggable Action where
         GenericHeader.SuffixImgOnClick -> trackAppScreenEvent appId (getScreen UPLOAD_DRIVING_LICENSE_SCREEN) "in_screen" "generic_header_on_click"
       AppOnboardingNavBar.Logout -> trackAppScreenEvent appId (getScreen UPLOAD_DRIVING_LICENSE_SCREEN) "in_screen" "onboarding_nav_bar_logout"
       AppOnboardingNavBar.PrefixImgOnClick -> trackAppScreenEvent appId (getScreen UPLOAD_DRIVING_LICENSE_SCREEN) "in_screen" "app_onboarding_nav_bar_prefix_img_on_click"
+    SkipButton -> trackAppActionClick appId (getScreen UPLOAD_DRIVING_LICENSE_SCREEN) "in_screen" "skip_button_click"
 
 data ScreenOutput = GoBack UploadDrivingLicenseState
                     | ValidateDetails UploadDrivingLicenseState 
@@ -163,6 +164,7 @@ data Action = BackPressed Boolean
             | PopUpModalActions PopUpModal.Action
             | RedirectScreen
             | AppOnboardingNavBarAC AppOnboardingNavBar.Action
+            | SkipButton
 
 eval :: Action -> UploadDrivingLicenseState -> Eval Action ScreenOutput UploadDrivingLicenseState
 eval AfterRender state = 
@@ -294,7 +296,9 @@ eval (ValidateDocumentModalAction (ValidateDocumentModal.AfterRender)) state = d
  continueWithCmd state [do pure (AfterRender)] 
 
 eval (ValidateDocumentModalAction (ValidateDocumentModal.BackPressed)) state = do
- continueWithCmd state [do pure (BackPressed false)]  
+ continueWithCmd state [do pure (BackPressed false)]
+
+eval SkipButton state = exit $ ValidateDataCall state
 
 eval (ValidateDocumentModalAction (ValidateDocumentModal.PrimaryButtonActionController (PrimaryButton.OnClick))) state = do
    if (not state.props.errorVisibility) then do

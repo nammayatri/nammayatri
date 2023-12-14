@@ -185,18 +185,20 @@ window.getMerchantConfig = function () {
         "cityLong" : 77.594566,
         "supportNumber" : "",
         "languageKey" : "KN_IN",
-        "showDriverReferral" : false
+        "showDriverReferral" : false,
+        "uploadRCandDL" : true
       },
       {
         "cityName" : "Hyderabad",
         "mapImage" : "ny_ic_hyderabad_map",
         "cityCode" : "std:040",
         "showSubscriptions" : false,
-        "cityLat" : 17.387140,
-        "cityLong" : 78.491684,
+        "cityLat" : 17.402113,
+        "cityLong" : 78.499827,
         "supportNumber" : "+918069724900",
         "languageKey" : "TE_IN",
-        "showDriverReferral" : true
+        "showDriverReferral" : true,
+        "uploadRCandDL" : true
       },
       {
         "cityName" : "Mysore",
@@ -207,18 +209,20 @@ window.getMerchantConfig = function () {
         "cityLong" : 76.639381,
         "supportNumber" : "",
         "languageKey" : "TA_IN",
-        "showDriverReferral" : true
+        "showDriverReferral" : true,
+        "uploadRCandDL" : true
       },
       {
         "cityName" : "Delhi",
         "mapImage" : "ny_ic_delhi_map",
         "cityCode" : "std:011",
         "showSubscriptions" : false,
-        "cityLat" : 28.644800,
-        "cityLong" : 77.216721,
+        "cityLat" : 28.618978,
+        "cityLong" : 77.207795,
         "supportNumber" : "+918069724848",
         "languageKey" : "HI_IN",
-        "showDriverReferral" : true
+        "showDriverReferral" : true,
+        "uploadRCandDL" : true
       },
       {
         "cityName" : "Chennai",
@@ -229,18 +233,20 @@ window.getMerchantConfig = function () {
         "cityLong" : 80.237617,
         "supportNumber" : "08069724899",
         "languageKey" : "TA_IN",
-        "showDriverReferral" : true
+        "showDriverReferral" : true,
+        "uploadRCandDL" : false
       },
       {
         "cityName" : "Coimbatore",
         "mapImage" : "ny_ic_coimbatore_map",
         "cityCode" : "std:0422",
         "showSubscriptions" : false,
-        "cityLat" : 11.004556,
-        "cityLong" : 76.961632,
+        "cityLat" : 11.023481,
+        "cityLong" : 76.966429,
         "supportNumber" : "",
         "languageKey" : "TA_IN",
-        "showDriverReferral" : true
+        "showDriverReferral" : true,
+        "uploadRCandDL" : true
       },
       {
         "cityName" : "Puducherry",
@@ -251,7 +257,8 @@ window.getMerchantConfig = function () {
         "cityLong" : 79.808292,
         "supportNumber" : "08069724899",
         "languageKey" : "TA_IN",
-        "showDriverReferral" : true
+        "showDriverReferral" : true,
+        "uploadRCandDL" : true
       }
   ]
   , "dashboard" : {
