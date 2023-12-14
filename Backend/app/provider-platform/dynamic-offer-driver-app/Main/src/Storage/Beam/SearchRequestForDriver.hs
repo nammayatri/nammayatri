@@ -64,7 +64,7 @@ data SearchRequestForDriverT f = SearchRequestForDriverT
     mode :: B.C f (Maybe D.DriverMode),
     goHomeRequestId :: B.C f (Maybe Text),
     rideFrequencyScore :: B.C f (Maybe Double),
-    customerCancellationDues :: B.C f HighPrecMoney,
+    customerCancellationDues :: B.C f (Maybe HighPrecMoney),
     createdAt :: B.C f LocalTime
   }
   deriving (Generic, B.Beamable)
