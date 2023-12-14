@@ -149,6 +149,7 @@ instance loggableAction :: Loggable Action where
         GenericHeader.SuffixImgOnClick -> trackAppScreenEvent appId (getScreen ADD_VEHICLE_DETAILS_SCREEN) "in_screen" "generic_header_on_click"
       AppOnboardingNavBar.Logout -> trackAppScreenEvent appId (getScreen ADD_VEHICLE_DETAILS_SCREEN) "in_screen" "onboarding_nav_bar_logout"
       AppOnboardingNavBar.PrefixImgOnClick -> trackAppScreenEvent appId (getScreen ADD_VEHICLE_DETAILS_SCREEN) "in_screen" "app_onboarding_nav_bar_prefix_img_on_click"
+    SkipButton -> trackAppActionClick appId (getScreen ADD_VEHICLE_DETAILS_SCREEN) "in_screen" "skip_button_click"
 
 data ScreenOutput = ValidateDetails AddVehicleDetailsScreenState
                     | GoBack AddVehicleDetailsScreenState
@@ -192,6 +193,7 @@ data Action =   WhatsAppSupport | BackPressed Boolean | PrimarySelectItemAction 
   | ActivateRCbtn PrimaryButtonController.Action
   | CancelButtonMultiRCPopup
   | AppOnboardingNavBarAC AppOnboardingNavBar.Action
+  | SkipButton
 
 
 eval :: Action -> AddVehicleDetailsScreenState -> Eval Action ScreenOutput AddVehicleDetailsScreenState
@@ -329,6 +331,8 @@ eval (PrimaryButtonAction (PrimaryButtonController.OnClick)) state = do
      _ <- liftEffect $ uploadFile false
      pure NoAction]
 eval (GenericMessageModalAction (GenericMessageModalController.PrimaryButtonActionController (PrimaryButtonController.OnClick))) state = exit ApplicationSubmittedScreen
+
+eval SkipButton state = exit $ ValidateDataAPICall state
 
 eval (DatePicker resp year month date) state = do
   case resp of 

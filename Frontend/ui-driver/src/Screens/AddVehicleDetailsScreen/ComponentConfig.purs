@@ -45,12 +45,11 @@ primaryButtonConfig :: ST.AddVehicleDetailsScreenState -> PrimaryButton.Config
 primaryButtonConfig state = let 
     config = PrimaryButton.config
     feature = (getAppConfig appConfig).feature
-    imageUploadCondition = true --feature.enableImageUpload || state.props.isValidState
+    imageUploadCondition = state.props.openHowToUploadManual && not state.data.cityConfig.uploadRCandDL
     activate = ((toLower(state.data.vehicle_registration_number) == toLower(state.data.reEnterVehicleRegistrationNumber)) && 
                 -- (state.data.dateOfRegistration /= Just "") && 
                 state.data.vehicle_registration_number /= "" &&
-                ((DS.length state.data.vehicle_registration_number >= 2) && validateRegistrationNumber (DS.take 2 state.data.vehicle_registration_number)) &&
-                imageUploadCondition)
+                ((DS.length state.data.vehicle_registration_number >= 2) && validateRegistrationNumber (DS.take 2 state.data.vehicle_registration_number)))
     primaryButtonConfig' = config 
       { textConfig{ text = if isJust state.data.dateOfRegistration then getString CONFIRM 
                            else if state.props.openHowToUploadManual then getString UPLOAD_PHOTO
@@ -58,7 +57,7 @@ primaryButtonConfig state = let
       , width = MATCH_PARENT
       , height = (V 50)
       , background = Color.black900 
-      , margin = Margin 15 0 15 30
+      , margin = if imageUploadCondition then Margin 15 0 15 10 else Margin 15 0 15 30
       , cornerRadius = 6.0
       , alpha = if activate then 1.0 else 0.8
       , isClickable = activate
