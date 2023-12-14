@@ -212,7 +212,7 @@ useCoinsHandler (driverId, merchantId_, merchantOpCityId) ConvertCoinToCashReq {
       histories <- CHistory.getDriverCoinInfo driverId
       let result = accumulateCoins coins histories
       mapM_ (\(id, coinValue, status) -> CHistory.updateStatusOfCoins id coinValue status) result
-      void $ Hedis.incrby (Coins.mkCoinAccumulationByDriverIdKey driverId currentDate) (fromIntegral (- coins))
+      void $ Hedis.withCrossAppRedis $ Hedis.incrby (Coins.mkCoinAccumulationByDriverIdKey driverId currentDate) (fromIntegral (- coins))
     else do
       throwError $ InsufficientCoins driverId.getId coins
   pure Success
