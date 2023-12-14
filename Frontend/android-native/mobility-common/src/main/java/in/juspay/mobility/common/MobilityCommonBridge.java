@@ -574,14 +574,14 @@ public class MobilityCommonBridge extends HyperBridge {
 
     @JavascriptInterface
     public void initiateLocationServiceClient() {
+        setKeyboardVisibilityListener();
         if (!isLocationPermissionEnabled()) return;
         resolvableLocationSettingsReq();
-        setKeyboardVisibilityListener();
     }
     
     // Alternate way to get the keyboard status since there is no Keyboard Listener or Events in android
     private void setKeyboardVisibilityListener() {
-        if (bridgeComponents.getActivity() != null){
+        if (bridgeComponents.getActivity() != null && onGlobalLayoutListener == null){
             try {
                 final View parentView = ((ViewGroup) bridgeComponents.getActivity().findViewById(android.R.id.content)).getRootView();
                 onGlobalLayoutListener = new ViewTreeObserver.OnGlobalLayoutListener() {
