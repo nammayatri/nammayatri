@@ -66,6 +66,7 @@ buildSearchReq merchantId subscriber req = do
   let distance = getDistance =<< intent.fulfillment.tags
   let duration = getDuration =<< intent.fulfillment.tags
   let customerLanguage = buildCustomerLanguage =<< intent.fulfillment.customer
+  let isReallocationEnabled = getIsReallocationEnabled =<< intent.fulfillment.tags
   unless (subscriber.subscriber_id == context.bap_id) $
     throwError (InvalidRequest "Invalid bap_id")
   unless (subscriber.subscriber_url == context.bap_uri) $
@@ -92,7 +93,8 @@ buildSearchReq merchantId subscriber req = do
         routePoints = buildRoutePoints =<< intent.fulfillment.tags, --------TODO------Take proper input---------
         customerLanguage = customerLanguage,
         disabilityTag = disabilityTag,
-        customerPhoneNum = buildCustomerPhoneNumber =<< intent.fulfillment.customer
+        customerPhoneNum = buildCustomerPhoneNumber =<< intent.fulfillment.customer,
+        ..
       }
 
 getDistance :: Search.TagGroups -> Maybe Meters
@@ -106,6 +108,11 @@ getDuration tagGroups = do
   tagValue <- getTag "route_info" "duration_info_in_s" tagGroups
   durationValue <- readMaybe $ T.unpack tagValue
   Just $ Seconds durationValue
+
+getIsReallocationEnabled :: Search.TagGroups -> Maybe Bool
+getIsReallocationEnabled tagGroups = do
+  tagValue <- getTag "reallocation_info" "is_reallocation_enabled" tagGroups
+  readMaybe $ T.unpack tagValue
 
 buildCustomerLanguage :: Search.Customer -> Maybe Language
 buildCustomerLanguage Search.Customer {..} = do

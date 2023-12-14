@@ -120,7 +120,8 @@ instance FromTType' BeamSR.SearchRequest SearchRequest where
             createdAt = createdAt,
             specialLocationTag = specialLocationTag,
             autoAssignEnabled = autoAssignEnabled,
-            customerCancellationDues = fromMaybe 0 customerCancellationDues
+            customerCancellationDues = fromMaybe 0 customerCancellationDues,
+            isReallocationEnabled = isReallocationEnabled
           }
 
 instance ToTType' BeamSR.SearchRequest SearchRequest where
@@ -145,7 +146,8 @@ instance ToTType' BeamSR.SearchRequest SearchRequest where
         BeamSR.createdAt = createdAt,
         BeamSR.autoAssignEnabled = autoAssignEnabled,
         BeamSR.specialLocationTag = specialLocationTag,
-        BeamSR.customerCancellationDues = Just customerCancellationDues
+        BeamSR.customerCancellationDues = Just customerCancellationDues,
+        BeamSR.isReallocationEnabled = isReallocationEnabled
       }
 
 -- FUNCTIONS FOR HANDLING OLD DATA : TO BE REMOVED AFTER SOME TIME
