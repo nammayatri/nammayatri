@@ -45,7 +45,8 @@ data SearchRequestT f = SearchRequestT
     autoAssignEnabled :: B.C f (Maybe Bool),
     specialLocationTag :: B.C f (Maybe Text),
     customerCancellationDues :: B.C f (Maybe HighPrecMoney),
-    createdAt :: B.C f UTCTime
+    createdAt :: B.C f UTCTime,
+    isReallocationEnabled :: B.C f (Maybe Bool)
   }
   deriving (Generic, B.Beamable)
 
