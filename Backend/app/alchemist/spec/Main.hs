@@ -50,13 +50,14 @@ main = do
   maybeGitRoot <- findGitRoot currentDir
   let rootDir = fromMaybe (error "Could not find git root") maybeGitRoot
 
-  processApp rootDir riderAppPath rideAppName
+  -- processApp rootDir riderAppPath rideAppName
   processApp rootDir driverAppPath driverAppName
   where
     processApp :: FilePath -> FilePath -> FilePath -> IO ()
     processApp rootDir appPath appName = do
-      applyDirectory (rootDir </> dslInputPathPrefix </> appPath </> "Storage") (processStorageDSL rootDir appPath appName)
-      applyDirectory (rootDir </> dslInputPathPrefix </> appPath </> "API") (processAPIDSL rootDir appPath)
+      -- applyDirectory (rootDir </> dslInputPathPrefix </> appPath </> "Storage") (processStorageDSL rootDir appPath appName)
+      -- applyDirectory (rootDir </> dslInputPathPrefix </> appPath </> "API") (processAPIDSL rootDir appPath)
+      applyDirectory (rootDir </> dslInputPathPrefix </> appPath </> "BecknACL") (processBecknACL rootDir appPath)
 
     processStorageDSL rootDir appPath appName inputFile = do
       let readOnlySrc = rootDir </> haskellOutputPathPrefix </> appPath </> "src-read-only/"
@@ -74,6 +75,11 @@ main = do
       Alchemist.mkServantAPI (readOnlySrc </> "API/Action/UI") inputFile
       Alchemist.mkApiTypes (readOnlySrc </> "API/Types/UI") inputFile
       Alchemist.mkDomainHandler (src </> "Domain/Action/UI") inputFile
+
+    processBecknACL rootDir appPath inputFile = do
+      let readOnlySrc = rootDir </> haskellOutputPathPrefix </> appPath </> "src-read-only/"
+
+      Alchemist.mkApiTypes (readOnlySrc </> "BecknACL") inputFile
 
 -- Alchemist.mkFrontendAPIBackend (targetFolder </> "Domain/Action") inputFile
 -- Alchemist.mkFrontendAPIEndpoint (targetFolder </> "Domain/Action") inputFile
