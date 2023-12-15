@@ -28,6 +28,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth
 import Servant hiding (throwError)
+import Storage.Beam.SystemConfigs ()
 import Tools.Error
 
 type API =

@@ -18,6 +18,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant hiding (Unauthorized, throwError)
 import Storage.Beam.IssueManagement ()
+import Storage.Beam.SystemConfigs ()
 import qualified Storage.Queries.Person as QP
 
 type API = IMD.DashboardIssueAPI

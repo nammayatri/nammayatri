@@ -10,6 +10,7 @@ import EulerHS.Prelude hiding (id)
 import Kernel.Types.APISuccess
 import Kernel.Utils.Common
 import Servant
+import Storage.Beam.SystemConfigs ()
 
 type API =
   ( "bulkLocUpdate"

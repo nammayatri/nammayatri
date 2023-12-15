@@ -30,6 +30,7 @@ import EulerHS.Prelude hiding (id)
 import Kernel.Types.Id (Id (..))
 import Kernel.Utils.Common
 import Servant
+import Storage.Beam.SystemConfigs ()
 import Tools.Auth
 
 -- Following is organization creation

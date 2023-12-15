@@ -20,6 +20,7 @@ import Kernel.Types.Common
 import Kernel.Utils.Common
 import Kernel.Utils.IOLogging (LoggerEnv)
 import Servant (Get, JSON)
+import Storage.Beam.SystemConfigs ()
 import Tools.Error
 import Tools.Metrics (HasCoreMetrics)
 

@@ -6,12 +6,12 @@
 
     # Backend inputs
     shared-kernel = {
-      url = "github:nammayatri/shared-kernel";
+      url = "github:nammayatri/shared-kernel/Backend/systemconfig-changes";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
     beckn-gateway = {
-      url = "github:nammayatri/beckn-gateway";
+      url = "github:nammayatri/beckn-gateway/backend/shared-kernel-handlerAPi-change";
       inputs = {
         common.follows = "common";
         haskell-flake.follows = "haskell-flake";
