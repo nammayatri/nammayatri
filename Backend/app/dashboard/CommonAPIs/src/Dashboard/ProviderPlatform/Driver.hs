@@ -475,7 +475,7 @@ data DriverInfoRes = DriverInfoRes
     alternateNumber :: Maybe Text,
     rating :: Maybe Centesimal,
     availableMerchants :: [Text],
-    merchantOperatingCity :: Context.City,
+    merchantOperatingCity :: Maybe Context.City,
     blockStateModifier :: Maybe Text
   }
   deriving stock (Show, Generic)
