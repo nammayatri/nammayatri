@@ -11,7 +11,7 @@ data Action
   = NoAction
   | OnSelect Config
   | OnImageClick
-  | ShowRateCard String
+  | ShowRateCard Config
 
 type Config
   = { vehicleImage :: String
@@ -30,6 +30,7 @@ type Config
     , showInfo :: Boolean
     , searchResultType :: SearchType
     , isBookingOption :: Boolean
+    , pickUpCharges :: Int 
     }
 
 data SearchType = QUOTES | ESTIMATES
@@ -59,4 +60,5 @@ config =
   , showInfo : false
   , searchResultType : QUOTES
   , isBookingOption : false
+  , pickUpCharges : 0
   }

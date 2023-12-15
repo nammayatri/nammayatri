@@ -726,26 +726,26 @@ yatriRateCardList vehicleVariant state = do
                    , { key : "5 km - 13 km" , val : "₹18 / km"}
                    , { key : "13 km - 30 km" , val : "₹25 / km"}
                    , { key : if lang == "EN_US" then (getString MORE_THAN) <> " 30 km" else "30 " <> (getString MORE_THAN), val : "₹36 / km"}
-                   , { key : (getString PICKUP_CHARGE), val : "₹" <> (show state.data.pickUpCharges) }
+                   , { key : (getString PICKUP_CHARGE), val : "₹" <> (show state.data.rateCard.pickUpCharges) }
                    , { key : (getString DRIVER_ADDITIONS) , val : "₹0 - ₹60"}]
 
     "SEDAN"     -> [ { key : if lang == "EN_US" then (getString MIN_FARE_UPTO) <> " 5 km" else "5 km " <> (getString MIN_FARE_UPTO), val : "₹150"}
                    , { key : "5 km - 13 km" , val : "₹18 / km"}
                    , { key : "13 km - 30 km" , val : "₹25 / km"}
                    , { key : if lang == "EN_US" then (getString MORE_THAN) <> " 30 km" else "30 " <> (getString MORE_THAN) ,val : "₹36 / km"}
-                   , { key : (getString PICKUP_CHARGE), val : "₹" <> (show state.data.pickUpCharges) }
+                   , { key : (getString PICKUP_CHARGE), val : "₹" <> (show state.data.rateCard.pickUpCharges) }
                    , { key : (getString DRIVER_ADDITIONS) ,val : "₹0 - ₹60"}]
 
     "SUV"       -> [ { key : if lang == "EN_US" then (getString MIN_FARE_UPTO) <> " 5 km" else "5 km " <> (getString MIN_FARE_UPTO) , val : "₹165"}
                    , { key : "5 km - 13 km" , val : "₹20 / km"}
                    , { key : "13 km - 30 km" , val : "₹28 / km"}
                    , { key : if lang == "EN_US" then (getString MORE_THAN) <> " 30 km" else "30 " <> (getString MORE_THAN) , val :"₹40 / km"}
-                   , { key : (getString PICKUP_CHARGE), val : "₹" <> (show state.data.pickUpCharges) }
+                   , { key : (getString PICKUP_CHARGE), val : "₹" <> (show state.data.rateCard.pickUpCharges) }
                    , { key : (getString DRIVER_ADDITIONS) ,val : "₹0 - ₹60"}]
 
     "AUTO_RICKSHAW"  -> [ { key : if lang == "EN_US" then (getString MIN_FARE_UPTO) <> " 1.5 km" else "1.5 km " <> (getString MIN_FARE_UPTO) , val : "₹30"}
                         , { key : (getString RATE_ABOVE_MIN_FARE), val : "₹15 / km"}
-                        , { key : (getString PICKUP_CHARGE), val : "₹" <> (show state.data.pickUpCharges) }
+                        , { key : (getString PICKUP_CHARGE), val : "₹" <> (show state.data.rateCard.pickUpCharges) }
                         , { key : (getString DRIVER_ADDITIONS) , val : "10% of the base fare"}]
 
     _ -> []
