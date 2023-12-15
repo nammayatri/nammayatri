@@ -66,7 +66,7 @@ import Engineering.Helpers.Utils (showAndHideLoader)
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Helpers.Utils (fetchImage, FetchImageFrom(..), decodeError, fetchAndUpdateCurrentLocation, getAssetsBaseUrl, getCurrentLocationMarker, getLocationName, getNewTrackingId, getSearchType, parseFloat, storeCallBackCustomer)
-import JBridge (addMarker, animateCamera, drawRoute, enableMyLocation, firebaseLogEvent, getCurrentPosition, getHeightFromPercent, isCoordOnPath, isInternetAvailable, removeAllPolylines, removeMarker, requestKeyboardShow, showMap, startLottieProcess, toast, updateRoute, getExtendedPath, generateSessionId, initialWebViewSetUp, stopChatListenerService, startChatListenerService, startTimerWithTime, storeCallBackMessageUpdated, isMockLocation, storeCallBackOpenChatScreen, scrollOnResume, waitingCountdownTimer, lottieAnimationConfig, storeKeyBoardCallback, getLayoutBounds, clearChatMessages, startTimerWithTime, addCarousel, updateRouteConfig, addCarouselWithVideoExists, storeCallBackLocateOnMap, storeOnResumeCallback)
+import JBridge (addMarker, animateCamera, drawRoute, enableMyLocation, firebaseLogEvent, getCurrentPosition, getHeightFromPercent, isCoordOnPath, isInternetAvailable, removeAllPolylines, removeMarker, requestKeyboardShow, showMap, startLottieProcess, toast, updateRoute, getExtendedPath, generateSessionId, initialWebViewSetUp, stopChatListenerService, startChatListenerService, startTimerWithTime, storeCallBackMessageUpdated, isMockLocation, storeCallBackOpenChatScreen, scrollOnResume, waitingCountdownTimer, lottieAnimationConfig, storeKeyBoardCallback, getLayoutBounds, clearChatMessages, startTimerWithTime, addCarousel, updateRouteConfig, addCarouselWithVideoExists, storeCallBackLocateOnMap, storeOnResumeCallback, setMapPadding)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (printLog)
@@ -105,6 +105,7 @@ import Data.Map as Map
 import SuggestionUtils
 import MerchantConfig.Types (MarginConfig, ShadowConfig)
 import ConfigProvider
+import Mobility.Prelude
 
 screen :: HomeScreenState -> Screen Action HomeScreenState ScreenOutput
 screen initialState =
@@ -118,6 +119,11 @@ screen initialState =
             -- push NewUser -- TODO :: Handle the functionality
             _ <- if initialState.data.config.enableMockLocation then isMockLocation push IsMockLocation else pure unit
             _ <- launchAff $ flowRunner defaultGlobalState $ checkForLatLongInSavedLocations push UpdateSavedLoc initialState
+            if(initialState.props.currentStage /= HomeScreen) then do
+              setMapPadding 0 0 0 0
+            else do
+              let recentViewHeight = (runFn1 getLayoutBounds (getNewIDWithTag "buttonLayout")).height + 200
+              setMapPadding 0 0 0 recentViewHeight
             if (not initialState.props.callbackInitiated) then do
               _ <- pure $ printLog "storeCallBackCustomer initiateCallback" "."
               _ <- storeCallBackCustomer push NotificationListener
@@ -283,6 +289,18 @@ view push state =
         , orientation VERTICAL
         , accessibility DISABLE
         , clickable true
+        , afterRender
+             ( \action -> do
+                 push action
+                 getCurrentPosition push CurrentLocation
+                 void $ showMap (getNewIDWithTag "CustomerHomeScreenMap") isCurrentLocationEnabled "satellite" zoomLevel push MAPREADY
+                 if state.props.openChatScreen && state.props.currentStage == RideAccepted then push OpenChatScreen
+                 else pure unit
+                 case state.props.currentStage of
+                   HomeScreen -> if ((getSearchType unit) == "direct_search") then push DirectSearch else pure unit
+                   _ -> pure unit
+             )
+             (const MapReadyAction)
         ]
        [ relativeLayout
             [ width MATCH_PARENT
@@ -305,9 +323,19 @@ view push state =
                   , accessibility if any (_ == state.props.currentStage) [RideAccepted, RideStarted, HomeScreen] && not isAnyOverlayEnabled state then ENABLE else DISABLE
                   , accessibilityHint $ camelCaseToSentenceCase (show state.props.currentStage)
                   ][ 
-                    if isHomeScreenView state then homeScreenView push state else emptyTextView state
-                  , if isHomeScreenView state then emptyTextView state else mapView push state
-                    ]
+                  --   if isHomeScreenView state then homeScreenView push state else emptyTextView state
+                  -- , if isHomeScreenView state then emptyTextView state else mapView push state
+                  --   ]
+                   linearLayout
+                     [ height if any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithDriver] && os /= "IOS" 
+                                then (V (((screenHeight unit)/ 15)*10)) 
+                                else MATCH_PARENT
+                     , width MATCH_PARENT
+                     , accessibility DISABLE_DESCENDANT
+                     , id $ getNewIDWithTag "CustomerHomeScreenMap"
+                     , visibility $ boolToVisibility state.props.isSrcServiceable
+                     ]
+                     []]
                 , imageView
                     [ width  MATCH_PARENT
                     , height  MATCH_PARENT
@@ -350,6 +378,8 @@ view push state =
                         ]
                     ]
                 ]
+            , homeScreenView push state
+            , buttonLayoutParentView push state
             , if (not state.props.rideRequestFlow) || (state.props.currentStage == FindingEstimate || state.props.currentStage == ConfirmingRide) then emptyTextView state else topLeftIconView state push
             , rideRequestFlowView push state
             , if state.props.currentStage == PricingTutorial then (pricingTutorialView push state) else emptyTextView state
@@ -638,12 +668,14 @@ shareAppPopUp push state =
 
 buttonLayoutParentView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 buttonLayoutParentView push state =
-  linearLayout
-  [ height WRAP_CONTENT
-  , width MATCH_PARENT
-  , alignParentBottom "true,-1"
-  , orientation VERTICAL
-  ][ if (state.props.currentStage == HomeScreen && (not state.props.rideRequestFlow) && (not state.props.showlocUnserviceablePopUp)) then buttonLayout state push else emptyTextView state]
+  PrestoAnim.animationSet (buttonLayoutAnimation state) $
+      linearLayout
+      [ height WRAP_CONTENT
+      , width MATCH_PARENT
+      , id $ getNewIDWithTag "buttonLayout"
+      , alignParentBottom "true,-1"
+      , orientation VERTICAL
+      ][ if (state.props.currentStage == HomeScreen && (not state.props.rideRequestFlow) && (not state.props.showlocUnserviceablePopUp)) then buttonLayout state push else emptyTextView state]
 
 recenterButtonView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 recenterButtonView push state =
@@ -820,7 +852,10 @@ recentSearchesAndFavourites state push hideSavedLocsView hideRecentSearches =
   , padding $ Padding 16 0 16 (16+safeMarginBottom)
   , cornerRadii $ Corners (4.0) true true false false
   ]([ if (not hideSavedLocsView) then savedLocationsView state push else linearLayout[visibility GONE][]
-    , if (not hideRecentSearches) then recentSearchesView state push else linearLayout[visibility GONE][]
+    , if (suggestionViewVisibility state)
+        then  suggestionsView push state
+        else emptySuggestionsBanner state push
+    -- , if (not hideRecentSearches) then recentSearchesView state push else linearLayout[visibility GONE][]
     , if (getValueToLocalStore DISABILITY_UPDATED == "false" && state.data.config.showDisabilityBanner) 
         then updateDisabilityBanner state push
         else 
@@ -834,7 +869,8 @@ updateDisabilityBanner state push =
     [ height MATCH_PARENT
     , width MATCH_PARENT
     , orientation VERTICAL
-    , margin $ Margin 16 10 16 10
+    -- , margin $ Margin 16 10 16 10
+    , margin $ MarginVertical 10 10
     ][  Banner.view (push <<< DisabilityBannerAC) (disabilityBannerConfig state)]
 
 zooTicketBookingBanner :: forall w. HomeScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
@@ -852,7 +888,8 @@ emptySuggestionsBanner state push =
     [ height WRAP_CONTENT
     , width MATCH_PARENT
     , cornerRadius 12.0
-    , margin $ Margin 16 10 16 10
+    -- , margin $ Margin 16 10 16 10
+    , margin $ MarginVertical 10 10
     , background Color.white900
     , gravity CENTER_VERTICAL
     , visibility if state.data.config.homeScreen.bannerViewVisibility then VISIBLE else GONE
@@ -1855,7 +1892,7 @@ pricingTutorialView push state =
     [ height MATCH_PARENT
     , width MATCH_PARENT
     , weight 1.0
-    , padding (Padding 0 safeMarginTop 0 safeMarginBottom)
+    , padding $ PaddingVertical safeMarginTop safeMarginBottom
     , background Color.white900
     ]
     [ -- TODO Add Animations
@@ -2503,10 +2540,26 @@ carouselView state push =
         ]
     , PrimaryButton.view (push <<< UpdateProfileButtonAC) (updateProfileConfig state)
     , PrimaryButton.view (push <<< SkipAccessibilityUpdateAC) (maybeLaterButtonConfig state)]
------------------------------------------ UPDATED HOME SCREEN -------------------------------------------
+
 
 homeScreenView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
-homeScreenView push state = 
+homeScreenView push state =
+  PrestoAnim.animationSet
+    [ fadeOut (state.props.currentStage == SearchLocationModel)
+    ]
+    $ linearLayout
+        [ height WRAP_CONTENT
+        , width MATCH_PARENT
+        , padding $ PaddingVertical safeMarginTop safeMarginBottom
+        , accessibility if state.data.settingSideBar.opened /= SettingSideBar.CLOSED then DISABLE_DESCENDANT else DISABLE
+        , orientation VERTICAL
+        ]
+        [ if not state.props.rideRequestFlow then homeScreenTopIconView push state else emptyTextView state ]
+
+----------------------------------------- UPDATED HOME SCREEN -------------------------------------------
+
+homeScreenViewV2 :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+homeScreenViewV2 push state = 
   relativeLayout
     [ height $ V (screenHeight unit)
     , width $ V (screenWidth unit)
@@ -2959,8 +3012,9 @@ suggestionsView push state =
     [ width MATCH_PARENT
     , height WRAP_CONTENT
     , orientation VERTICAL
-    , padding $ Padding 0 0 0 16
-    , margin $ Margin 8 16 8 0
+    , padding $ PaddingBottom 16
+    , margin $ MarginTop 16
+    -- , margin $ Margin 8 16 8 0
     ][ textView $
         [ height WRAP_CONTENT
         , width (MATCH_PARENT)
@@ -2985,10 +3039,11 @@ suggestionsView push state =
       , linearLayout
         [ height WRAP_CONTENT
         , width MATCH_PARENT
-        , visibility if (length state.data.tripSuggestions  > 2 ) then VISIBLE 
-                      else if length state.data.tripSuggestions >0 then GONE
-                      else if length state.data.destinationSuggestions  > 2 then VISIBLE
-                      else GONE
+        , visibility GONE
+                      -- if (length state.data.tripSuggestions  > 2 ) then VISIBLE 
+                      -- else if length state.data.tripSuggestions >0 then GONE
+                      -- else if length state.data.destinationSuggestions  > 2 then VISIBLE
+                      -- else GONE
         , margin $ MarginTop 10
         , gravity CENTER_HORIZONTAL
         , onClick push $ const ShowMoreSuggestions
@@ -3016,7 +3071,7 @@ movingRightArrowView viewId =
 
 suggestedLocationCardView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 suggestedLocationCardView push state = 
-  let takeValue = if state.props.suggestionsListExpanded then 5 else 2
+  let takeValue = if state.props.suggestionsListExpanded then state.data.config.suggestedTripsAndLocationConfig.locationsToBeShown else 2
   in
   linearLayout
     [ height WRAP_CONTENT
@@ -3088,7 +3143,7 @@ suggestedDestinationCard push state index suggestion =
 
 repeatRideCardParentView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 repeatRideCardParentView push state = 
-  let takeValue = if state.props.suggestionsListExpanded then 5 else 2
+  let takeValue = if state.props.suggestionsListExpanded then state.data.config.suggestedTripsAndLocationConfig.tripsToBeShown else 2
   in
   linearLayout
     [ height WRAP_CONTENT

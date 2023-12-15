@@ -35,7 +35,7 @@ import Foreign.Generic (decodeJSON)
 import Presto.Core.Utils.Encoding (defaultDecode, defaultEncode)
 import Data.Either (Either(..))
 import Engineering.Helpers.Commons (screenHeight, screenWidth, parseFloat)
-import Effect.Uncurried (EffectFn3, EffectFn2, EffectFn1, runEffectFn1)
+import Effect.Uncurried (EffectFn3, EffectFn2, EffectFn1, runEffectFn1, EffectFn4, runEffectFn4)
 import Data.Maybe (Maybe(..))
 -- import LoaderOverlay.Handler as UI
 -- import Effect.Aff (launchAff)
@@ -49,7 +49,7 @@ import Presto.Core.Flow (doAff)
 import Effect.Aff.Compat (EffectFnAff, fromEffectFnAff)
 import Foreign.Generic (encodeJSON)
 import Data.Either (Either(..), hush)
-import Data.Function.Uncurried (Fn3, runFn3, Fn1, runFn2)
+import Data.Function.Uncurried (Fn3, runFn3, Fn1,Fn4, runFn2)
 import Foreign.Class (encode)
 -- -- import Control.Monad.Except.Trans (lift)
 -- -- foreign import _keyStoreEntryPresent :: String -> Effect Boolean
@@ -255,6 +255,11 @@ foreign import storeOnResumeCallback :: forall action. Fn2 (action -> Effect Uni
 foreign import getLocationNameV2 :: Fn2 Number Number String
 foreign import getLatLonFromAddress :: Fn1 String { latitude :: Number, longitude :: Number }
 foreign import isNotificationPermissionEnabled :: Unit -> Effect Boolean
+
+foreign import setMapPaddingImpl :: EffectFn4 Int Int Int Int Unit
+
+setMapPadding :: Int -> Int -> Int -> Int -> Effect Unit
+setMapPadding = runEffectFn4 setMapPaddingImpl
 
 type LottieAnimationConfig = {
     rawJson :: String

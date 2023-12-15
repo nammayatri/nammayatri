@@ -1853,7 +1853,11 @@ export const startTimerWithTime = function (time) {
     }
   }
 }
-
+export const setMapPaddingImpl = function (left, topPadding, right, bottom) {
+  if (JBridge.setMapPadding) {
+    JBridge.setMapPadding(left, topPadding, right, bottom);
+  }
+}
 
 export const generateSessionId = function () {
   try {
