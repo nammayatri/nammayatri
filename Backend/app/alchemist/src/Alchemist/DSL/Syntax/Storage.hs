@@ -35,6 +35,7 @@ data FieldDef = FieldDef
   { fieldName :: String,
     haskellType :: String,
     beamType :: String,
+    beamFields :: [BeamField],
     sqlType :: String,
     constraints :: [FieldConstraint],
     defaultVal :: Maybe String,
@@ -45,3 +46,16 @@ data FieldDef = FieldDef
   deriving (Show)
 
 data FieldConstraint = PrimaryKey | SecondaryKey | NotNull | AUTOINCREMENT deriving (Show, Eq)
+
+data BeamField = BeamField
+  { bFieldName :: String,
+    hFieldType :: String,
+    bFieldType :: String,
+    bConstraints :: [FieldConstraint],
+    bSqlType :: String,
+    bDefaultVal :: Maybe String,
+    bfieldExtractor :: [String],
+    bToTType :: Maybe String,
+    bIsEncrypted :: Bool
+  }
+  deriving (Show)

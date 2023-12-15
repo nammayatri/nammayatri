@@ -43,7 +43,7 @@ derivingInstances :: Bool -> [String]
 derivingInstances containsEncryptedField =
   if containsEncryptedField
     then ["Generic"]
-    else ["Generic", "Show", "ToJSON", "FromJSON", "ToSchema"]
+    else ["Generic", "ToJSON", "FromJSON", "ToSchema"]
 
 generateEncryptionInstance :: TableDef -> String
 generateEncryptionInstance tableDef =
