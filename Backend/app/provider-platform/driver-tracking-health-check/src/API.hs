@@ -15,6 +15,7 @@
 module API (healthCheckAPI, healthCheck, iAmAlive) where
 
 import EulerHS.Prelude
+import Kernel.Storage.Esqueleto.Config (EsqDBEnv)
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Common
 import Kernel.Utils.Common
@@ -40,7 +41,9 @@ healthCheck ::
     HasField "hedisMigrationStage" r Bool,
     HasField "driverAppName" r Text,
     HasField "enablePrometheusMetricLogging" r Bool,
-    HasField "enableRedisLatencyLogging" r Bool
+    HasField "enableRedisLatencyLogging" r Bool,
+    (HasField "cacheConfig" r CacheConfig),
+    (HasField "esqDBEnv" r EsqDBEnv)
   ) =>
   FlowHandlerR r Text
 healthCheck = withFlowHandlerAPI do

@@ -46,6 +46,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant hiding (throwError)
 import qualified SharedLogic.CallBPP as CallBPP
+import Storage.Beam.SystemConfigs ()
 import qualified Storage.Queries.Booking as QRB
 import Tools.Auth
 

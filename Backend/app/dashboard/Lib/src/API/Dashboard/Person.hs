@@ -23,7 +23,7 @@ import Environment
 import Kernel.Prelude
 import Kernel.Types.APISuccess
 import Kernel.Types.Id
-import Kernel.Utils.Common (fromMaybeM, withFlowHandlerAPI)
+import Kernel.Utils.Common (fromMaybeM, withFlowHandlerAPI')
 import Servant hiding (Unauthorized, throwError)
 import qualified Storage.Queries.Merchant as QMerchant
 import Tools.Auth
@@ -135,64 +135,64 @@ handler =
 
 listPerson :: TokenInfo -> Maybe Text -> Maybe Integer -> Maybe Integer -> Maybe (Id DP.Person) -> FlowHandler DPerson.ListPersonRes
 listPerson tokenInfo mbSearchString mbLimit mbPersonId =
-  withFlowHandlerAPI . DPerson.listPerson tokenInfo mbSearchString mbLimit mbPersonId
+  withFlowHandlerAPI' . DPerson.listPerson tokenInfo mbSearchString mbLimit mbPersonId
 
 createPerson :: TokenInfo -> DPerson.CreatePersonReq -> FlowHandler DPerson.CreatePersonRes
-createPerson tokenInfo = withFlowHandlerAPI . DPerson.createPerson tokenInfo
+createPerson tokenInfo = withFlowHandlerAPI' . DPerson.createPerson tokenInfo
 
 assignRole :: TokenInfo -> Id DP.Person -> Id DRole.Role -> FlowHandler APISuccess
 assignRole tokenInfo personId =
-  withFlowHandlerAPI . DPerson.assignRole tokenInfo personId
+  withFlowHandlerAPI' . DPerson.assignRole tokenInfo personId
 
 assignMerchantAccess :: TokenInfo -> Id DP.Person -> DPerson.MerchantAccessReq -> FlowHandler APISuccess
 assignMerchantAccess tokenInfo personId req = do
-  city <- withFlowHandlerAPI $ QMerchant.findByShortId req.merchantId >>= fmap (.defaultOperatingCity) . fromMaybeM (MerchantNotFound req.merchantId.getShortId)
+  city <- withFlowHandlerAPI' $ QMerchant.findByShortId req.merchantId >>= fmap (.defaultOperatingCity) . fromMaybeM (MerchantNotFound req.merchantId.getShortId)
   let req' = DPerson.MerchantCityAccessReq {merchantId = req.merchantId, operatingCity = city}
-  withFlowHandlerAPI $ DPerson.assignMerchantCityAccess tokenInfo personId req'
+  withFlowHandlerAPI' $ DPerson.assignMerchantCityAccess tokenInfo personId req'
 
 assignMerchantCityAccess :: TokenInfo -> Id DP.Person -> DPerson.MerchantCityAccessReq -> FlowHandler APISuccess
 assignMerchantCityAccess tokenInfo personId =
-  withFlowHandlerAPI . DPerson.assignMerchantCityAccess tokenInfo personId
+  withFlowHandlerAPI' . DPerson.assignMerchantCityAccess tokenInfo personId
 
 resetMerchantAccess :: TokenInfo -> Id DP.Person -> DPerson.MerchantAccessReq -> FlowHandler APISuccess
 resetMerchantAccess tokenInfo personId =
-  withFlowHandlerAPI . DPerson.resetMerchantAccess tokenInfo personId
+  withFlowHandlerAPI' . DPerson.resetMerchantAccess tokenInfo personId
 
 resetMerchantCityAccess :: TokenInfo -> Id DP.Person -> DPerson.MerchantCityAccessReq -> FlowHandler APISuccess
 resetMerchantCityAccess tokenInfo personId =
-  withFlowHandlerAPI . DPerson.resetMerchantCityAccess tokenInfo personId
+  withFlowHandlerAPI' . DPerson.resetMerchantCityAccess tokenInfo personId
 
 profile :: TokenInfo -> FlowHandler DP.PersonAPIEntity
 profile =
-  withFlowHandlerAPI . DPerson.profile
+  withFlowHandlerAPI' . DPerson.profile
 
 getCurrentMerchant :: TokenInfo -> FlowHandler DPerson.MerchantAccessRes
 getCurrentMerchant =
-  withFlowHandlerAPI . DPerson.getCurrentMerchant
+  withFlowHandlerAPI' . DPerson.getCurrentMerchant
 
 changePassword :: TokenInfo -> DPerson.ChangePasswordReq -> FlowHandler APISuccess
 changePassword req =
-  withFlowHandlerAPI . DPerson.changePassword req
+  withFlowHandlerAPI' . DPerson.changePassword req
 
 getAccessMatrix :: TokenInfo -> FlowHandler AccessMatrixRowAPIEntity
 getAccessMatrix =
-  withFlowHandlerAPI . DPerson.getAccessMatrix
+  withFlowHandlerAPI' . DPerson.getAccessMatrix
 
 changeEmailByAdmin :: TokenInfo -> Id DP.Person -> DPerson.ChangeEmailByAdminReq -> FlowHandler APISuccess
 changeEmailByAdmin tokenInfo personId req =
-  withFlowHandlerAPI $ DPerson.changeEmailByAdmin tokenInfo personId req
+  withFlowHandlerAPI' $ DPerson.changeEmailByAdmin tokenInfo personId req
 
 changePasswordByAdmin :: TokenInfo -> Id DP.Person -> DPerson.ChangePasswordByAdminReq -> FlowHandler APISuccess
 changePasswordByAdmin tokenInfo personId req =
-  withFlowHandlerAPI $ DPerson.changePasswordByAdmin tokenInfo personId req
+  withFlowHandlerAPI' $ DPerson.changePasswordByAdmin tokenInfo personId req
 
 changeMobileByAdmin :: TokenInfo -> Id DP.Person -> DPerson.ChangeMobileNumberByAdminReq -> FlowHandler APISuccess
 changeMobileByAdmin tokenInfo personId req =
-  withFlowHandlerAPI $ DPerson.changeMobileNumberByAdmin tokenInfo personId req
+  withFlowHandlerAPI' $ DPerson.changeMobileNumberByAdmin tokenInfo personId req
 
 registerRelease :: TokenInfo -> DPerson.ReleaseRegisterReq -> FlowHandler DPerson.ReleaseRegisterRes
-registerRelease tokenInfo = withFlowHandlerAPI . DPerson.registerRelease tokenInfo
+registerRelease tokenInfo = withFlowHandlerAPI' . DPerson.registerRelease tokenInfo
 
 getProductSpecInfo :: Maybe Text -> FlowHandler DPerson.GetProductSpecInfoResp
 getProductSpecInfo releaseId =
-  withFlowHandlerAPI $ DPerson.getProductSpecInfo releaseId
+  withFlowHandlerAPI' $ DPerson.getProductSpecInfo releaseId

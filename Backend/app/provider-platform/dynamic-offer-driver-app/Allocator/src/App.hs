@@ -87,7 +87,7 @@ runDriverOfferAllocator configModifier = do
                 esqDBReplicaCfg = handlerCfg.appCfg.esqDBReplicaCfg,
                 hedisClusterCfg = handlerCfg.appCfg.hedisClusterCfg
               }
-            handlerCfg.appCfg.tables
+            handlerCfg.appCfg.kvConfigUpdateFrequency
         )
           >> L.setOption KafkaConn handlerEnv.kafkaProducerTools
       )
@@ -106,4 +106,4 @@ runDriverOfferAllocator configModifier = do
 
         logInfo ("Runtime created. Starting server at port " <> show (handlerCfg.schedulerConfig.port))
         pure flowRt'
-    runSchedulerService handlerCfg.schedulerConfig handlerEnv.jobInfoMap handlerEnv.tables $ allocatorHandle flowRt' handlerEnv
+    runSchedulerService handlerCfg.schedulerConfig handlerEnv.jobInfoMap handlerEnv.kvConfigUpdateFrequency $ allocatorHandle flowRt' handlerEnv

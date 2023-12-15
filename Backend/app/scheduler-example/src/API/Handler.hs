@@ -26,10 +26,10 @@ handler :: FlowServer API.API
 handler = helloHandler :<|> createJobHandler
 
 helloHandler :: FlowHandler Text
-helloHandler = withFlowHandlerAPI $ pure "Hello, world!"
+helloHandler = withFlowHandlerAPI' $ pure "Hello, world!"
 
 createJobHandler :: Text -> FlowHandler APISuccess
-createJobHandler jobType = withFlowHandlerAPI $ do
+createJobHandler jobType = withFlowHandlerAPI' $ do
   case jobType of
     "bananas" -> void $ createBananasCountingJob 7
     "failing_time" -> void $ createTimePrinterJob 7

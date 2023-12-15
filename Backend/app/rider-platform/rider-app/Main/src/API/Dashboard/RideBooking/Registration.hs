@@ -29,6 +29,7 @@ import Kernel.Types.APISuccess
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant hiding (throwError)
+import Storage.Beam.SystemConfigs ()
 
 -- Customer Registration Flow ------
 data RegistrationEndPoint

@@ -30,7 +30,7 @@ import Kernel.External.Maps (LatLong)
 import Kernel.Prelude
 import Kernel.Types.APISuccess (APISuccess)
 import Kernel.Types.Id
-import Kernel.Utils.Common (MonadFlow, withFlowHandlerAPI)
+import Kernel.Utils.Common (MonadFlow, withFlowHandlerAPI')
 import qualified ProviderPlatformClient.SpecialZone as Client
 import Servant
 import qualified SharedLogic.Transaction as T
@@ -67,23 +67,23 @@ buildTransaction endpoint =
   T.buildTransaction (DT.SpecialZoneAPI endpoint) (Just SPECIAL_ZONE) Nothing Nothing Nothing
 
 lookupSpecialZone :: ApiTokenInfo -> LatLong -> LatLong -> FlowHandler [SpecialZone]
-lookupSpecialZone _ minLatLng maxLatLng = withFlowHandlerAPI $ do
+lookupSpecialZone _ minLatLng maxLatLng = withFlowHandlerAPI' $ do
   Client.callSpecialZone (.lookupSpecialZone) minLatLng maxLatLng
 
 createSpecialZone :: ApiTokenInfo -> SpecialZoneAPIEntity -> FlowHandler APISuccess
-createSpecialZone _ req = withFlowHandlerAPI $ do
+createSpecialZone _ req = withFlowHandlerAPI' $ do
   transaction <- buildTransaction Common.CreateSpecialZoneEndpoint (Just req)
   T.withTransactionStoring transaction $
     Client.callSpecialZone (.createSpecialZone) req
 
 updateSpecialZone :: ApiTokenInfo -> SpecialZone -> FlowHandler APISuccess
-updateSpecialZone _ req = withFlowHandlerAPI $ do
+updateSpecialZone _ req = withFlowHandlerAPI' $ do
   transaction <- buildTransaction Common.UpdateSpecialZoneEndpoint (Just req)
   T.withTransactionStoring transaction $
     Client.callSpecialZone (.updateSpecialZone) req
 
 deleteSpecialZone :: ApiTokenInfo -> Id SpecialZone -> FlowHandler APISuccess
-deleteSpecialZone _ req = withFlowHandlerAPI $ do
+deleteSpecialZone _ req = withFlowHandlerAPI' $ do
   transaction <- buildTransaction Common.DeleteSpecialZoneEndpoint (Just req)
   T.withTransactionStoring transaction $
     Client.callSpecialZone (.deleteSpecialZone) req

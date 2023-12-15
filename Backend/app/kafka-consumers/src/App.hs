@@ -53,7 +53,7 @@ startConsumerWithEnv appCfg appEnv@AppEnv {..} = do
                 hedisClusterCfg = appCfg.hedisClusterCfg
               }
           )
-          appCfg.tables
+          appCfg.kvConfigUpdateFrequency
       )
     CF.runConsumer flowRt appEnv consumerType kafkaConsumer
   where

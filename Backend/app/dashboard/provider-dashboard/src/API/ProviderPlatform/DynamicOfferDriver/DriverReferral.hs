@@ -26,7 +26,7 @@ import Kernel.Prelude
 import Kernel.Types.APISuccess (APISuccess)
 import qualified Kernel.Types.Beckn.City as City
 import Kernel.Types.Id
-import Kernel.Utils.Common (MonadFlow, withFlowHandlerAPI)
+import Kernel.Utils.Common (MonadFlow, withFlowHandlerAPI')
 import qualified ProviderPlatformClient.DynamicOfferDriver.Operations as Client
 import Servant hiding (throwError)
 import qualified SharedLogic.Transaction as T
@@ -69,7 +69,7 @@ updateReferralLinkPassword ::
   ApiTokenInfo ->
   Common.ReferralLinkPasswordUpdateAPIReq ->
   FlowHandler APISuccess
-updateReferralLinkPassword merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI $ do
+updateReferralLinkPassword merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction Common.ReferralProgramUpdateOpsPasswordEndpoint apiTokenInfo (Just req)
   T.withTransactionStoring transaction $
@@ -81,7 +81,7 @@ linkDriverReferralCode ::
   ApiTokenInfo ->
   Common.ReferralLinkReq ->
   FlowHandler Common.LinkReport
-linkDriverReferralCode merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI $ do
+linkDriverReferralCode merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction Common.ReferralProgramUpdateOpsPasswordEndpoint apiTokenInfo (Just req)
   T.withTransactionStoring transaction $

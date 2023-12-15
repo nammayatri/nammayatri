@@ -27,7 +27,7 @@ import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.APISuccess
 import Kernel.Types.Error
-import Kernel.Utils.Common (MonadFlow, decodeFromText, fork, logTagInfo, throwError, withFlowHandlerAPI)
+import Kernel.Utils.Common (MonadFlow, decodeFromText, fork, logTagInfo, throwError, withFlowHandlerAPI')
 import qualified ProviderPlatformClient.DynamicOfferDriver.Exotel as Client
 import qualified RiderPlatformClient.RiderApp as Client
 import Servant hiding (throwError)
@@ -56,7 +56,7 @@ buildTransaction endpoint serverName =
 
 -- store request and call bap/bpp only when status changed OK to not OK and vice versa, or affected numbers changed.
 exotelHeartbeat :: Text -> Common.ExotelHeartbeatReq -> FlowHandler APISuccess
-exotelHeartbeat incomingExotelToken req = withFlowHandlerAPI $ do
+exotelHeartbeat incomingExotelToken req = withFlowHandlerAPI' $ do
   exotelToken <- asks (.exotelToken)
   unless (incomingExotelToken == exotelToken) $
     throwError $ InvalidToken incomingExotelToken

@@ -22,11 +22,12 @@ import qualified EulerHS.Language as L
 import qualified EulerHS.Runtime as L
 import Kernel.Beam.Connection.Flow (prepareConnectionRider)
 import Kernel.Beam.Connection.Types (ConnectionConfigRider (..))
-import Kernel.Beam.Types (KafkaConn (..))
+import Kernel.Beam.Types (KafkaConn (..), Tables (..))
 import Kernel.Prelude
 import Kernel.Tools.LoopGracefully (loopGracefully)
 import qualified Kernel.Tools.Metrics.Init as Metrics
 import Kernel.Types.Flow (runFlowR)
+import qualified Kernel.Utils.Common as KUC
 import Kernel.Utils.Dhall (readDhallConfigDefault)
 import qualified Kernel.Utils.FlowLogging as L
 import Kernel.Utils.Time ()
@@ -51,9 +52,10 @@ startProducerWithEnv flowRt appCfg appEnv = do
                 hedisClusterCfg = appCfg.hedisClusterCfg
               }
           )
-          appCfg.tables
+          appCfg.kvConfigUpdateFrequency
       )
         >> L.setOption KafkaConn appEnv.kafkaProducerTools
+        >> L.setOption Tables (KUC.Tables [] [])
     )
   runFlowR flowRt appEnv $ do
     loopGracefully $ bool [PF.runProducer] [PF.runReviver, PF.runProducer] appEnv.runReviver

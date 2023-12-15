@@ -29,6 +29,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
 import SharedLogic.Merchant
+import Storage.Beam.SystemConfigs ()
 
 data RideEstimatesEndPoint
   = EstimatesEndPoint

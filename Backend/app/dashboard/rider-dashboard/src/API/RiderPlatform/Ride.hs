@@ -103,7 +103,7 @@ shareRideInfo ::
   City.City ->
   Id Common.Ride ->
   FlowHandler Common.ShareRideInfoRes
-shareRideInfo merchantShortId opCity rideId = withFlowHandlerAPI $ do
+shareRideInfo merchantShortId opCity rideId = withFlowHandlerAPI' $ do
   shareRideApiRateLimitOptions <- asks (.shareRideApiRateLimitOptions)
   checkSlidingWindowLimitWithOptions (rideInfoHitsCountKey rideId) shareRideApiRateLimitOptions
   checkedMerchantId <- merchantCityAccessCheck merchantShortId merchantShortId opCity opCity
@@ -122,7 +122,7 @@ rideList ::
   Maybe UTCTime ->
   FlowHandler Common.RideListRes
 rideList merchantShortId opCity mbLimit mbOffset mbBookingStatus mbShortRideId mbCustomerPhone mbDriverPhone mbFrom mbTo =
-  withFlowHandlerAPI $ do
+  withFlowHandlerAPI' $ do
     checkedMerchantId <- merchantCityAccessCheck merchantShortId merchantShortId opCity opCity
     Client.callRiderAppOperations checkedMerchantId opCity (.rides.rideList) mbLimit mbOffset mbBookingStatus mbShortRideId mbCustomerPhone mbDriverPhone mbFrom mbTo
 
@@ -133,7 +133,7 @@ tripRoute ::
   Double ->
   Double ->
   FlowHandler Maps.GetRoutesResp
-tripRoute merchantShortId opCity rideId pickupLocationLat pickupLocationLon = withFlowHandlerAPI $ do
+tripRoute merchantShortId opCity rideId pickupLocationLat pickupLocationLon = withFlowHandlerAPI' $ do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId merchantShortId opCity opCity
   Client.callRiderAppOperations checkedMerchantId opCity (.rides.tripRoute) rideId pickupLocationLat pickupLocationLon
 
@@ -143,19 +143,19 @@ rideInfo ::
   ApiTokenInfo ->
   Id Common.Ride ->
   FlowHandler Common.RideInfoRes
-rideInfo merchantShortId opCity apiTokenInfo rideId = withFlowHandlerAPI $ do
+rideInfo merchantShortId opCity apiTokenInfo rideId = withFlowHandlerAPI' $ do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity opCity
   Client.callRiderAppOperations checkedMerchantId opCity (.rides.rideInfo) rideId
 
 multipleRideCancel :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Domain.MultipleRideCancelReq -> FlowHandler APISuccess
-multipleRideCancel merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI $ do
+multipleRideCancel merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity opCity
   transaction <- buildTransaction Common.MultipleRideCancelEndpoint apiTokenInfo (Just req)
   T.withTransactionStoring transaction $
     Client.callRiderAppOperations checkedMerchantId opCity (.rides.multipleRideCancel) req
 
 multipleRideSync :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.MultipleRideSyncReq -> FlowHandler Common.MultipleRideSyncResp
-multipleRideSync merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI $ do
+multipleRideSync merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ do
   runRequestValidation Common.validateMultipleRideSyncReq req
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity opCity
   transaction <- buildTransaction Common.MultipleRideSyncEndpoint apiTokenInfo (Just req)
@@ -163,7 +163,7 @@ multipleRideSync merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI $ 
     Client.callRiderAppOperations checkedMerchantId opCity (.rides.multipleRideSync) req
 
 ticketRideList :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Maybe (ShortId Common.Ride) -> Maybe Text -> Maybe Text -> Maybe Text -> FlowHandler Common.TicketRideListRes
-ticketRideList merchantShortId opCity apiTokenInfo mbRideShortId mbCountryCode mbPhoneNumber mbSupportPhoneNumber = withFlowHandlerAPI $ do
+ticketRideList merchantShortId opCity apiTokenInfo mbRideShortId mbCountryCode mbPhoneNumber mbSupportPhoneNumber = withFlowHandlerAPI' $ do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity opCity
   transaction <- buildTransaction Common.TicketRideListEndpoint apiTokenInfo T.emptyRequest
   T.withTransactionStoring transaction $

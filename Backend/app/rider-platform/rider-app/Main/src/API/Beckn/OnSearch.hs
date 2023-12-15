@@ -23,6 +23,7 @@ import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth
 import Servant hiding (throwError)
+import Storage.Beam.SystemConfigs ()
 
 type API =
   SignatureAuth "X-Gateway-Authorization"

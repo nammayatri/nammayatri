@@ -61,22 +61,22 @@ handler =
     :<|> registerFleetOwner
 
 login :: DReg.LoginReq -> FlowHandler DReg.LoginRes
-login = withFlowHandlerAPI . DReg.login
+login = withFlowHandlerAPI' . DReg.login
 
 logout :: TokenInfo -> FlowHandler DReg.LogoutRes
-logout = withFlowHandlerAPI . DReg.logout
+logout = withFlowHandlerAPI' . DReg.logout
 
 logoutAllMerchants :: TokenInfo -> FlowHandler DReg.LogoutRes
-logoutAllMerchants = withFlowHandlerAPI . DReg.logoutAllMerchants
+logoutAllMerchants = withFlowHandlerAPI' . DReg.logoutAllMerchants
 
 enable2fa :: DReg.Enable2FAReq -> FlowHandler DReg.Enable2FARes
-enable2fa = withFlowHandlerAPI . DReg.enable2fa
+enable2fa = withFlowHandlerAPI' . DReg.enable2fa
 
 switchMerchant :: TokenInfo -> DReg.SwitchMerchantReq -> FlowHandler DReg.LoginRes
-switchMerchant token = withFlowHandlerAPI . DReg.switchMerchant token
+switchMerchant token = withFlowHandlerAPI' . DReg.switchMerchant token
 
 switchMerchantAndCity :: TokenInfo -> DReg.SwitchMerchantAndCityReq -> FlowHandler DReg.LoginRes
-switchMerchantAndCity token = withFlowHandlerAPI . DReg.switchMerchantAndCity token
+switchMerchantAndCity token = withFlowHandlerAPI' . DReg.switchMerchantAndCity token
 
 registerFleetOwner :: DReg.FleetRegisterReq -> FlowHandler APISuccess
-registerFleetOwner = withFlowHandlerAPI . DReg.registerFleetOwner
+registerFleetOwner = withFlowHandlerAPI' . DReg.registerFleetOwner
