@@ -83,7 +83,6 @@ runRiderApp' appCfg = do
             appCfg.kvConfigUpdateFrequency
         )
           >> L.setOption KafkaConn appEnv.kafkaProducerTools
-          >> L.setOption KBT.Tables (Tables [] [])
       )
     flowRt' <- runFlowR flowRt appEnv $ do
       withLogTag "Server startup" $ do

@@ -97,7 +97,7 @@ runDynamicOfferDriverApp' appCfg = do
         logInfo "Setting up for signature auth..."
         kvConfigs <-
           findById "kv_configs" >>= pure . decodeFromText' @Tables
-            >>= fromMaybeM (InternalError "Couldn't find kv_configs table for rider app")
+            >>= fromMaybeM (InternalError "Couldn't find kv_configs table for driver app")
         L.setOption KBT.Tables kvConfigs
         allProviders <-
           try Storage.loadAllProviders
